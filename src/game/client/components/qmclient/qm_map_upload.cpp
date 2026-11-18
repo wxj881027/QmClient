@@ -3,6 +3,8 @@
 #include <engine/shared/json.h>
 
 #include <algorithm>
+#include <new>
+#include <utility>
 
 namespace QmMapUpload
 {
@@ -28,16 +30,15 @@ namespace QmMapUpload
 		{
 			if(StopIfCancelled())
 				return;
-			IOHANDLE File = io_open(m_Path.c_str(), IOFLAG_READ);
+			std::unique_ptr<void, decltype(&io_close)> File(io_open_read_regular_checked(m_Path.c_str(), nullptr), io_close);
 			if(!File)
 			{
 				m_Status = EStatus::READ_FAILED;
 				return;
 			}
-			const int64_t FileSize = io_length(File);
+			const int64_t FileSize = io_length(File.get());
 			if(FileSize <= 0 || FileSize > static_cast<int64_t>(MAX_MAP_SIZE))
 			{
-				io_close(File);
 				m_Status = FileSize > static_cast<int64_t>(MAX_MAP_SIZE) ? EStatus::TOO_LARGE : EStatus::READ_FAILED;
 				return;
 			}
@@ -46,20 +47,17 @@ namespace QmMapUpload
 			while(Read < vData.size())
 			{
 				if(StopIfCancelled())
-				{
-					io_close(File);
 					return;
-				}
 				const unsigned Chunk = static_cast<unsigned>(std::min<size_t>(vData.size() - Read, 1024 * 1024));
-				const unsigned Received = io_read(File, vData.data() + Read, Chunk);
+				const unsigned Received = io_read(File.get(), vData.data() + Read, Chunk);
 				Read += Received;
 				if(Received != Chunk)
 					break;
 			}
 			unsigned char Extra = 0;
-			const bool Complete = Read == vData.size() && io_read(File, &Extra, 1) == 0;
-			io_close(File);
-			if(!Complete || StopIfCancelled())
+			const bool Complete = Read == vData.size() && io_read(File.get(), &Extra, 1) == 0 && io_error(File.get()) == 0;
+			const bool Closed = io_close(File.release()) == 0;
+			if(!Complete || !Closed || StopIfCancelled())
 			{
 				if(m_Status != EStatus::CANCELLED)
 					m_Status = EStatus::READ_FAILED;
@@ -146,10 +144,23 @@ namespace QmMapUpload
 		}
 		char aAbsolutePath[IO_MAX_PATH_LENGTH];
 		pStorage->GetCompletePath(StorageType, pPath, aAbsolutePath, sizeof(aAbsolutePath));
+		try
+		{
+			auto pPrepareJob = std::make_shared<CPrepareJob>(aAbsolutePath, fs_filename(pPath), pPlayerName, pEndpoint);
+			if(!pEngine->TryAddJob(pPrepareJob))
+			{
+				m_Status = EStatus::READ_FAILED;
+				return;
+			}
+			m_pPrepareJob = std::move(pPrepareJob);
+		}
+		catch(const std::bad_alloc &)
+		{
+			m_Status = EStatus::READ_FAILED;
+			return;
+		}
 		m_pHttp = pHttp;
-		m_pPrepareJob = std::make_shared<CPrepareJob>(aAbsolutePath, fs_filename(pPath), pPlayerName, pEndpoint);
 		m_Status = EStatus::UPLOADING;
-		pEngine->AddJob(m_pPrepareJob);
 	}
 
 	void CUpload::Poll()
@@ -163,7 +174,17 @@ namespace QmMapUpload
 				m_Status = m_pPrepareJob->Status();
 				m_pRequest = m_pPrepareJob->Request();
 				if(m_pRequest)
-					m_pHttp->Run(m_pRequest);
+				{
+					try
+					{
+						m_pHttp->Run(m_pRequest);
+					}
+					catch(const std::bad_alloc &)
+					{
+						m_pRequest.reset();
+						m_Status = EStatus::NETWORK_ERROR;
+					}
+				}
 			}
 			else if(m_Status != EStatus::CANCELLED)
 				m_Status = m_pPrepareJob->State() == IJob::STATE_FAILED ? EStatus::READ_FAILED : EStatus::CANCELLED;
@@ -186,8 +207,8 @@ namespace QmMapUpload
 		unsigned char *pData = nullptr;
 		size_t Length = 0;
 		m_pRequest->Result(&pData, &Length);
-		const SResponse Response = ParseResponse(m_StatusCode, reinterpret_cast<const char *>(pData), Length);
-		m_Detail = Response.m_Message;
+		SResponse Response = ParseResponse(m_StatusCode, reinterpret_cast<const char *>(pData), Length);
+		m_Detail = std::move(Response.m_Message);
 		if(Response.m_Success)
 			m_Status = EStatus::SUCCESS;
 		else if(m_StatusCode < 200 || m_StatusCode >= 300 || Response.m_Valid)
@@ -251,24 +272,28 @@ namespace QmMapUpload
 		SResponse Result;
 		if(!pData || Length == 0 || Length > MAX_RESPONSE_SIZE)
 			return Result;
-		json_value *pRoot = JsonParse(pData, Length);
-		if(!pRoot)
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(JsonParse(pData, Length), json_value_free);
+		if(!pRoot || pRoot->type != json_object)
 			return Result;
-		if(pRoot->type == json_object)
+		const json_value *pSuccess = json_object_get(pRoot.get(), "success");
+		Result.m_Valid = pSuccess && pSuccess->type == json_boolean;
+		Result.m_Success = Result.m_Valid && pSuccess->u.boolean && StatusCode >= 200 && StatusCode < 300;
+		const json_value *pMessage = json_object_get(pRoot.get(), "message");
+		if(pMessage && pMessage->type == json_string)
 		{
-			const json_value *pSuccess = json_object_get(pRoot, "success");
-			Result.m_Valid = pSuccess && pSuccess->type == json_boolean;
-			Result.m_Success = Result.m_Valid && pSuccess->u.boolean && StatusCode >= 200 && StatusCode < 300;
-			const json_value *pMessage = json_object_get(pRoot, "message");
-			if(pMessage && pMessage->type == json_string)
+			try
 			{
 				Result.m_Message.assign(pMessage->u.string.ptr, pMessage->u.string.length);
-				for(char &Character : Result.m_Message)
-					if(static_cast<unsigned char>(Character) < 32 || Character == 127)
-						Character = ' ';
 			}
+			catch(const std::bad_alloc &)
+			{
+				// 详情复制失败时仍保留已确定的上传结果。
+				return Result;
+			}
+			for(char &Character : Result.m_Message)
+				if(static_cast<unsigned char>(Character) < 32 || Character == 127)
+					Character = ' ';
 		}
-		json_value_free(pRoot);
 		return Result;
 	}
 }

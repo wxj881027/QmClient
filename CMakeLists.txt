@@ -6774,6 +6774,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_chat_bubble_state_test.cpp
       src/test/integration/qmclient/client/qm_chat_bubble_geometry_test.cpp
       src/test/integration/client/graph_rendering_test.cpp
+      src/test/integration/qmclient/client/qm_map_upload_file_failure_test.cpp
       src/test/integration/qmclient/client/qm_sponsors_publication_allocation_test.cpp
       src/test/integration/engine/graphics_frontend_lifecycle_test.cpp
       src/test/integration/qmclient/settings/qm_tclient_config_string_edit_test.cpp
@@ -6901,6 +6902,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/ui_scrollregion.cpp
       src/game/client/lineinput.cpp
       src/game/client/components/qmclient/warlist_model.cpp
+      src/game/client/components/qmclient/qm_map_upload.cpp
       src/game/client/components/qmclient/bind_editor.cpp
       src/game/client/QmUi/UiTextCaret.cpp
       src/game/client/QmUi/SettingsCardGeometry.cpp
