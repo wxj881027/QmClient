@@ -159,6 +159,15 @@ namespace
 		CTmpQuadVertexTextured m_aVertices[4];
 	};
 
+	int ImmediateTileRenderFlags(const CRenderLayerParams &Params, bool TileAndQuadBuffering)
+	{
+		int Flags = Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0;
+		// 整图导出按完整设计绘制并显式关闭图层缓冲，保留完整导出范围。
+		if(TileAndQuadBuffering || Params.m_RenderType != ERenderType::RENDERTYPE_FULL_DESIGN)
+			Flags |= TILERENDERFLAG_LIMIT_IMMEDIATE_WORK;
+		return Flags;
+	}
+
 }
 
 static bool CheckedDataSize(size_t Count, size_t ItemSize, size_t &DataSize)
@@ -615,10 +624,11 @@ void CRenderLayerTile::RenderTileLayerWithTileBuffer(const ColorRGBA &Color, con
 
 void CRenderLayerTile::RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)
 {
+	const int TileRenderFlags = ImmediateTileRenderFlags(Params, m_TileAndQuadBuffering);
 	Graphics()->BlendNone();
-	RenderMap()->RenderTilemap(m_pTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, Color, (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0) | LAYERRENDERFLAG_OPAQUE);
+	RenderMap()->RenderTilemap(m_pTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, Color, TileRenderFlags | LAYERRENDERFLAG_OPAQUE);
 	Graphics()->BlendNormal();
-	RenderMap()->RenderTilemap(m_pTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, Color, (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0) | LAYERRENDERFLAG_TRANSPARENT);
+	RenderMap()->RenderTilemap(m_pTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, Color, TileRenderFlags | LAYERRENDERFLAG_TRANSPARENT);
 }
 
 CMapLoadTask CRenderLayerTile::Init()
@@ -1753,7 +1763,7 @@ void CRenderLayerEntityGame::RenderTileLayerWithTileBuffer(const ColorRGBA &Colo
 
 void CRenderLayerEntityGame::RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)
 {
-	const int TileRenderFlags = Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0;
+	const int TileRenderFlags = ImmediateTileRenderFlags(Params, m_TileAndQuadBuffering);
 
 	auto RenderFiltered = [&](ColorRGBA GroupColor, CRenderMap::FTileRenderFilter Filter) {
 		if(GroupColor.a <= 0.0f)
@@ -1770,7 +1780,7 @@ void CRenderLayerEntityGame::RenderTileLayerNoTileBuffer(const ColorRGBA &Color,
 	{
 		RenderMap()->RenderTileRectangle(-BorderRenderDistance, -BorderRenderDistance, m_pLayerTilemap->m_Width + 2 * BorderRenderDistance, m_pLayerTilemap->m_Height + 2 * BorderRenderDistance,
 			TILE_AIR, TILE_DEATH, // display air inside, death outside
-			32.0f, Color.Multiply(GetDeathBorderColor()), TILERENDERFLAG_EXTEND | LAYERRENDERFLAG_TRANSPARENT);
+			32.0f, Color.Multiply(GetDeathBorderColor()), TileRenderFlags | LAYERRENDERFLAG_TRANSPARENT);
 	}
 
 	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeathAlpha)), FilterDeathAlphaTile);
@@ -1885,7 +1895,7 @@ void CRenderLayerEntityFront::RenderTileLayerWithTileBuffer(const ColorRGBA &Col
 
 void CRenderLayerEntityFront::RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)
 {
-	const int TileRenderFlags = Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0;
+	const int TileRenderFlags = ImmediateTileRenderFlags(Params, m_TileAndQuadBuffering);
 
 	auto RenderFiltered = [&](ColorRGBA GroupColor, CRenderMap::FTileRenderFilter Filter) {
 		if(GroupColor.a <= 0.0f)
@@ -2017,7 +2027,7 @@ void CRenderLayerEntityTele::RenderTileLayerNoTileBuffer(const ColorRGBA &Color,
 	const ColorRGBA TeleColor(1.0f, 1.0f, 1.0f, TeleAlpha);
 	const float CheckpointAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlayTeleCheckpointAlpha);
 	const ColorRGBA CheckpointColor(1.0f, 1.0f, 1.0f, CheckpointAlpha);
-	const int TileRenderFlags = (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0);
+	const int TileRenderFlags = ImmediateTileRenderFlags(Params, m_TileAndQuadBuffering);
 
 	auto RenderFiltered = [&](ColorRGBA GroupColor, CRenderMap::FTileRenderFilter Filter) {
 		if(GroupColor.a <= 0.0f)
@@ -2310,7 +2320,7 @@ void CRenderLayerEntitySwitch::RenderTileLayerNoTileBuffer(const ColorRGBA &Colo
 	if(!m_pSwitchTiles)
 		return;
 
-	const int TileRenderFlags = Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0;
+	const int TileRenderFlags = ImmediateTileRenderFlags(Params, m_TileAndQuadBuffering);
 
 	auto RenderFiltered = [&](ColorRGBA GroupColor, CRenderMap::FTileRenderFilter Filter) {
 		if(GroupColor.a <= 0.0f)
@@ -2378,5 +2388,6 @@ void CRenderLayerEntityTune::RenderTileLayerNoTileBuffer(const ColorRGBA &Color,
 {
 	// 开关关闭时传空 mapper，RenderTunemap 会退回原始单色 tile。
 	CTuneColorMapper *pTuneColorMapper = g_Config.m_QmShowTuneZoneColors ? &m_TuneColorMapper : nullptr;
-	RenderMap()->RenderTunemap(m_pTuneTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, Color, (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0) | LAYERRENDERFLAG_TRANSPARENT, pTuneColorMapper);
+	const int TileRenderFlags = ImmediateTileRenderFlags(Params, m_TileAndQuadBuffering);
+	RenderMap()->RenderTunemap(m_pTuneTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, Color, TileRenderFlags | LAYERRENDERFLAG_TRANSPARENT, pTuneColorMapper);
 }

@@ -97,6 +97,35 @@ void CRenderMap::ForceRenderQuads(CQuad *pQuads, int NumQuads, const IEnvelopeEv
 	Graphics()->TrianglesEnd();
 }
 
+namespace
+{
+	// 默认无缓冲缩放上限在最大投影视口下约有 140 万格。
+	constexpr int64_t MAX_IMMEDIATE_TILE_VISITS = 2 * 1024 * 1024;
+
+	bool CanDrawImmediateTileRange(const MapRenderScreen::STileRange &Range)
+	{
+		const int64_t Columns = static_cast<int64_t>(Range.m_X1) - Range.m_X0;
+		const int64_t Rows = static_cast<int64_t>(Range.m_Y1) - Range.m_Y0;
+		return Columns > 0 && Rows > 0 && Columns * Rows <= MAX_IMMEDIATE_TILE_VISITS;
+	}
+
+	bool PrepareImmediateTilemapRange(MapRenderScreen::STileRange &Range, int Width, int Height, int RenderFlags)
+	{
+		if(Width <= 0 || Height <= 0)
+			return false;
+		const bool LimitWork = (RenderFlags & TILERENDERFLAG_LIMIT_IMMEDIATE_WORK) != 0;
+		if((RenderFlags & TILERENDERFLAG_EXTEND) && (!LimitWork || CanDrawImmediateTileRange(Range)))
+			return true;
+
+		// 视口太大时先去掉重复边缘，地图本体仍按原来的格子绘制。
+		Range.m_X0 = std::max(0, Range.m_X0);
+		Range.m_Y0 = std::max(0, Range.m_Y0);
+		Range.m_X1 = std::min(Width, Range.m_X1);
+		Range.m_Y1 = std::min(Height, Range.m_Y1);
+		return !LimitWork || CanDrawImmediateTileRange(Range);
+	}
+}
+
 void CRenderMap::RenderTileRectangle(int RectX, int RectY, int RectW, int RectH,
 	unsigned char IndexIn, unsigned char IndexOut,
 	float Scale, ColorRGBA Color, int RenderFlags)
@@ -104,7 +133,7 @@ void CRenderMap::RenderTileRectangle(int RectX, int RectY, int RectW, int RectH,
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	const auto Range = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Scale, MapRenderScreen::ETileRangeMode::IMMEDIATE);
-	if(!Range)
+	if(!Range || ((RenderFlags & TILERENDERFLAG_LIMIT_IMMEDIATE_WORK) && !CanDrawImmediateTileRange(*Range)))
 		return;
 
 	// calculate the final pixelsize for the tiles
@@ -264,8 +293,9 @@ void CRenderMap::RenderTilemap(CTile *pTiles, int w, int h, float Scale, ColorRG
 {
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	const auto Range = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Scale, MapRenderScreen::ETileRangeMode::IMMEDIATE);
-	if(!Range)
+	const bool ExtendTiles = (RenderFlags & TILERENDERFLAG_EXTEND) != 0;
+	auto Range = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Scale, MapRenderScreen::ETileRangeMode::IMMEDIATE);
+	if(!Range || !PrepareImmediateTilemapRange(*Range, w, h, RenderFlags))
 		return;
 
 	// calculate the final pixelsize for the tiles
@@ -280,19 +310,10 @@ void CRenderMap::RenderTilemap(CTile *pTiles, int w, int h, float Scale, ColorRG
 	Graphics()->SetColor(Color);
 	const bool ColorOpaque = Color.a > 254.0f / 255.0f;
 
-	bool ExtendTiles = (RenderFlags & TILERENDERFLAG_EXTEND) != 0;
-
-	int StartY = Range->m_Y0;
-	int StartX = Range->m_X0;
-	int EndY = Range->m_Y1;
-	int EndX = Range->m_X1;
-	if(!ExtendTiles)
-	{
-		StartY = std::max(0, StartY);
-		StartX = std::max(0, StartX);
-		EndY = std::min(h, EndY);
-		EndX = std::min(w, EndX);
-	}
+	const int StartY = Range->m_Y0;
+	const int StartX = Range->m_X0;
+	const int EndY = Range->m_Y1;
+	const int EndX = Range->m_X1;
 
 	// adjust the texture shift according to mipmap level
 	float TexSize = 1024.0f;
@@ -669,8 +690,9 @@ void CRenderMap::RenderTelemap(CTeleTile *pTele, int w, int h, float Scale, Colo
 {
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	const auto Range = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Scale, MapRenderScreen::ETileRangeMode::IMMEDIATE);
-	if(!Range)
+	const bool ExtendTiles = (RenderFlags & TILERENDERFLAG_EXTEND) != 0;
+	auto Range = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Scale, MapRenderScreen::ETileRangeMode::IMMEDIATE);
+	if(!Range || !PrepareImmediateTilemapRange(*Range, w, h, RenderFlags))
 		return;
 
 	// calculate the final pixelsize for the tiles
@@ -684,19 +706,10 @@ void CRenderMap::RenderTelemap(CTeleTile *pTele, int w, int h, float Scale, Colo
 		Graphics()->QuadsBegin();
 	Graphics()->SetColor(Color);
 
-	bool ExtendTiles = (RenderFlags & TILERENDERFLAG_EXTEND) != 0;
-
-	int StartY = Range->m_Y0;
-	int StartX = Range->m_X0;
-	int EndY = Range->m_Y1;
-	int EndX = Range->m_X1;
-	if(!ExtendTiles)
-	{
-		StartY = std::max(0, StartY);
-		StartX = std::max(0, StartX);
-		EndY = std::min(h, EndY);
-		EndX = std::min(w, EndX);
-	}
+	const int StartY = Range->m_Y0;
+	const int StartX = Range->m_X0;
+	const int EndY = Range->m_Y1;
+	const int EndX = Range->m_X1;
 
 	// adjust the texture shift according to mipmap level
 	float TexSize = 1024.0f;
@@ -789,8 +802,9 @@ void CRenderMap::RenderSwitchmap(CSwitchTile *pSwitchTile, int w, int h, float S
 {
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	const auto Range = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Scale, MapRenderScreen::ETileRangeMode::IMMEDIATE);
-	if(!Range)
+	const bool ExtendTiles = (RenderFlags & TILERENDERFLAG_EXTEND) != 0;
+	auto Range = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Scale, MapRenderScreen::ETileRangeMode::IMMEDIATE);
+	if(!Range || !PrepareImmediateTilemapRange(*Range, w, h, RenderFlags))
 		return;
 
 	// calculate the final pixelsize for the tiles
@@ -804,19 +818,10 @@ void CRenderMap::RenderSwitchmap(CSwitchTile *pSwitchTile, int w, int h, float S
 		Graphics()->QuadsBegin();
 	Graphics()->SetColor(Color);
 
-	bool ExtendTiles = (RenderFlags & TILERENDERFLAG_EXTEND) != 0;
-
-	int StartY = Range->m_Y0;
-	int StartX = Range->m_X0;
-	int EndY = Range->m_Y1;
-	int EndX = Range->m_X1;
-	if(!ExtendTiles)
-	{
-		StartY = std::max(0, StartY);
-		StartX = std::max(0, StartX);
-		EndY = std::min(h, EndY);
-		EndX = std::min(w, EndX);
-	}
+	const int StartY = Range->m_Y0;
+	const int StartX = Range->m_X0;
+	const int EndY = Range->m_Y1;
+	const int EndX = Range->m_X1;
 
 	// adjust the texture shift according to mipmap level
 	float TexSize = 1024.0f;
@@ -952,8 +957,9 @@ void CRenderMap::RenderTunemap(CTuneTile *pTune, int w, int h, float Scale, Colo
 {
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	const auto Range = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Scale, MapRenderScreen::ETileRangeMode::IMMEDIATE);
-	if(!Range)
+	const bool ExtendTiles = (RenderFlags & TILERENDERFLAG_EXTEND) != 0;
+	auto Range = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Scale, MapRenderScreen::ETileRangeMode::IMMEDIATE);
+	if(!Range || !PrepareImmediateTilemapRange(*Range, w, h, RenderFlags))
 		return;
 
 	// calculate the final pixelsize for the tiles
@@ -967,19 +973,10 @@ void CRenderMap::RenderTunemap(CTuneTile *pTune, int w, int h, float Scale, Colo
 		Graphics()->QuadsBegin();
 	Graphics()->SetColor(Color);
 
-	bool ExtendTiles = (RenderFlags & TILERENDERFLAG_EXTEND) != 0;
-
-	int StartY = Range->m_Y0;
-	int StartX = Range->m_X0;
-	int EndY = Range->m_Y1;
-	int EndX = Range->m_X1;
-	if(!ExtendTiles)
-	{
-		StartY = std::max(0, StartY);
-		StartX = std::max(0, StartX);
-		EndY = std::min(h, EndY);
-		EndX = std::min(w, EndX);
-	}
+	const int StartY = Range->m_Y0;
+	const int StartX = Range->m_X0;
+	const int EndY = Range->m_Y1;
+	const int EndX = Range->m_X1;
 
 	// adjust the texture shift according to mipmap level
 	float TexSize = 1024.0f;
