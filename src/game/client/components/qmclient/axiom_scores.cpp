@@ -954,7 +954,8 @@ void CQmAxiomScores::ProcessSearchRequest()
 	}
 	Entry.m_Result.m_SearchErrorDetail.clear();
 
-	const bool MatchChanged = Entry.m_Result.m_Match.m_UserId != Match.m_UserId;
+	const int64_t PreviousUserId = Entry.m_Result.m_Match.m_UserId;
+	const bool MatchChanged = PreviousUserId != Match.m_UserId;
 	Entry.m_Result.m_Match = std::move(Match);
 	Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::READY;
 	if(MatchChanged)
@@ -969,12 +970,16 @@ void CQmAxiomScores::ProcessSearchRequest()
 		m_PersistentCacheDirty = true;
 		for(SQmAxiomModeResult &ModeResult : Entry.m_Result.m_aModes)
 			ModeResult = {};
-		Entry.m_aDdStatsPlayTime.fill(0);
-		Entry.m_aHasDdStatsPlayTime.fill(false);
 		Entry.m_aAxiomPlayTime.fill(0);
 		Entry.m_aHasAxiomPlayTime.fill(false);
-		Entry.m_vDdStatsGameTypes.clear();
-		Entry.m_LastDdStatsSuccessTick = 0;
+		// 首次匹配前，按玩家名查询的 DDStats 可能已经返回。
+		if(PreviousUserId > 0)
+		{
+			Entry.m_aDdStatsPlayTime.fill(0);
+			Entry.m_aHasDdStatsPlayTime.fill(false);
+			Entry.m_vDdStatsGameTypes.clear();
+			Entry.m_LastDdStatsSuccessTick = 0;
+		}
 		ClearFailure(Entry.m_DdStatsFailureCount);
 		Entry.m_LastDdStatsFailureTick = 0;
 	}
@@ -983,7 +988,8 @@ void CQmAxiomScores::ProcessSearchRequest()
 	Entry.m_LastSearchFailureTick = 0;
 	StartModeRequest(ResponsePlayerName.c_str(), Entry, EQmAxiomMode::GORES);
 	StartModeRequest(ResponsePlayerName.c_str(), Entry, EQmAxiomMode::AXRACE);
-	StartDdStatsRequest(ResponsePlayerName.c_str(), Entry);
+	if(!IsWithinWindow(Entry.m_LastDdStatsSuccessTick, Now, AXIOM_SCORE_CACHE_TTL_MS))
+		StartDdStatsRequest(ResponsePlayerName.c_str(), Entry);
 }
 
 void CQmAxiomScores::BeginActiveQuery(const char *pPlayerName)

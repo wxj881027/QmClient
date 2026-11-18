@@ -133,6 +133,36 @@ namespace
 	};
 }
 
+TEST_F(QmAxiomParseDispatch, FirstMatchKeepsDdStatsThatFinishedEarlier)
+{
+	m_Scores.EnsureQueried("player");
+	ASSERT_EQ(m_Http.m_vRequests.size(), 2u);
+	m_Http.m_vRequests[1]->Complete(RESPONSE);
+	m_Scores.OnUpdate();
+	ASSERT_NE(m_Scores.m_pLastJob, nullptr);
+	m_Scores.m_pLastJob->Parse();
+	m_Scores.OnUpdate();
+	ASSERT_NE(m_Scores.GetDdStatsGameTypes("player"), nullptr);
+	m_Scores.ClearPersistentCacheDirty();
+
+	m_Http.m_vRequests[0]->Complete(R"({"code":200,"data":{"results":[{"user_id":7,"player_name":"player"}]}})");
+	m_Scores.OnUpdate();
+	ASSERT_EQ(m_Http.m_vRequests.size(), 4u);
+	const auto *pTypes = m_Scores.GetDdStatsGameTypes("player");
+	ASSERT_NE(pTypes, nullptr);
+	ASSERT_EQ(pTypes->size(), 1u);
+	EXPECT_EQ(pTypes->front().m_PlayTimeSeconds, 10);
+	EXPECT_TRUE(m_Scores.PersistentCacheDirty());
+
+	m_Http.m_vRequests[2]->Complete(R"({"code":200,"data":{"player":{"player_name":"player","points":1,"total_play_time":2,"total_maps_completed":0,"performance_points":0,"mileage":0},"difficultyData":{}}})");
+	m_Scores.OnUpdate();
+	const auto *pResult = m_Scores.GetResult("player");
+	ASSERT_NE(pResult, nullptr);
+	const auto &Gores = pResult->Mode(EQmAxiomMode::GORES);
+	ASSERT_TRUE(Gores.m_HasData);
+	EXPECT_EQ(Gores.m_Score.m_TotalPlayTime, 10);
+}
+
 TEST_F(QmAxiomParseDispatch, ClosedPoolReleasesRequestAndAllowsRetryAfterBackoff)
 {
 	ASSERT_TRUE(m_Scores.StartPool());
