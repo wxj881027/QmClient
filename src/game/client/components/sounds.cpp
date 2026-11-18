@@ -21,6 +21,8 @@
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
+#include <new>
+
 CSoundLoading::CSoundLoading(CGameClient *pGameClient, bool Render) :
 	m_pGameClient(pGameClient),
 	m_Render(Render),
@@ -91,6 +93,22 @@ static bool IsSoundMuted(int SoundId)
 	}
 }
 
+static int LoadSoundPackSample(const CSoundPack &SoundPack, const char *pFilename, IStorage *pStorage, ISound *pSound)
+{
+	char aPath[IO_MAX_PATH_LENGTH];
+	const char *pLoadFilename;
+	try
+	{
+		pLoadFilename = SoundPack.Resolve(pFilename, pStorage, aPath, sizeof(aPath));
+	}
+	catch(const std::bad_alloc &)
+	{
+		// Windows 路径查询的分配失败只影响当前样本。
+		return -1;
+	}
+	return pSound->LoadWV(pLoadFilename);
+}
+
 void CSoundLoading::Run()
 {
 	for(int s = 0; s < g_pData->m_NumSounds; s++)
@@ -103,11 +121,8 @@ void CSoundLoading::Run()
 			if(State() == IJob::STATE_ABORTED)
 				return;
 
-			char aPath[IO_MAX_PATH_LENGTH];
-			const char *pFilename = g_pData->m_aSounds[s].m_aSounds[i].m_pFilename;
-			const char *pLoadFilename = m_SoundPack.Resolve(pFilename, m_pGameClient->Storage(), aPath, sizeof(aPath));
-			int Id = m_pGameClient->Sound()->LoadWV(pLoadFilename);
-			g_pData->m_aSounds[s].m_aSounds[i].m_Id = Id;
+			auto &Sample = g_pData->m_aSounds[s].m_aSounds[i];
+			Sample.m_Id = LoadSoundPackSample(m_SoundPack, Sample.m_pFilename, m_pGameClient->Storage(), m_pGameClient->Sound());
 			// try to render a frame
 			if(m_Render)
 				m_pGameClient->m_Menus.RenderLoading(pLoadingCaption, pLoadingContent, 0);
@@ -168,6 +183,19 @@ int CSounds::GetSampleId(int SetId)
 	{
 		Id = rand() % pSet->m_NumSounds;
 	} while(Id == pSet->m_Last);
+	if(pSet->m_aSounds[Id].m_Id == -1)
+	{
+		// 另外还有已加载变体时，继续避开上次播放的变体。
+		for(int Offset = 1; Offset < pSet->m_NumSounds; ++Offset)
+		{
+			const int Candidate = (Id + Offset) % pSet->m_NumSounds;
+			if(Candidate == pSet->m_Last || pSet->m_aSounds[Candidate].m_Id == -1)
+				continue;
+			pSet->m_Last = Candidate;
+			return pSet->m_aSounds[Candidate].m_Id;
+		}
+		return pSet->m_Last >= 0 ? pSet->m_aSounds[pSet->m_Last].m_Id : -1;
+	}
 	pSet->m_Last = Id;
 	return pSet->m_aSounds[Id].m_Id;
 }
@@ -180,9 +208,20 @@ void CSounds::OnInit()
 	// load sounds
 	if(g_Config.m_ClThreadsoundloading)
 	{
-		m_pSoundJob = std::make_shared<CSoundLoading>(GameClient(), false);
-		GameClient()->Engine()->AddJob(m_pSoundJob);
-		m_WaitForSoundJob = true;
+		try
+		{
+			m_pSoundJob = std::make_shared<CSoundLoading>(GameClient(), false);
+			m_WaitForSoundJob = true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 异步启动的进度总数未计入各声音组。
+			m_WaitForSoundJob = false;
+		}
+		if(m_WaitForSoundJob)
+			GameClient()->Engine()->AddJob(m_pSoundJob);
+		else
+			CSoundLoading(GameClient(), false).Run();
 		GameClient()->m_Menus.RenderLoading(Localize("Loading DDNet Client"), Localize("Loading sound files"), 0);
 	}
 	else
@@ -224,20 +263,23 @@ bool CSounds::Reload()
 		}
 	}
 
+	bool Complete = true;
 	for(int s = 0; s < g_pData->m_NumSounds; s++)
 	{
 		for(int i = 0; i < g_pData->m_aSounds[s].m_NumSounds; i++)
 		{
-			char aPath[IO_MAX_PATH_LENGTH];
-			const char *pFilename = g_pData->m_aSounds[s].m_aSounds[i].m_pFilename;
-			const char *pLoadFilename = SoundPack.Resolve(pFilename, Storage(), aPath, sizeof(aPath));
-			int Id = Sound()->LoadWV(pLoadFilename);
-			g_pData->m_aSounds[s].m_aSounds[i].m_Id = Id;
+			auto &Sample = g_pData->m_aSounds[s].m_aSounds[i];
+			Sample.m_Id = LoadSoundPackSample(SoundPack, Sample.m_pFilename, Storage(), Sound());
+			if(Sample.m_Id == -1)
+				Complete = false;
 		}
 	}
 
 	UpdateChannels();
-	return true;
+	// 部分加载失败时，调用方不会重新排队菜单音乐。
+	if(!Complete && Client()->State() == IClient::STATE_OFFLINE && g_Config.m_SndEnable && g_Config.m_SndMusic)
+		Enqueue(CHN_MUSIC, SOUND_MENU);
+	return Complete;
 }
 
 void CSounds::OnReset()
@@ -254,6 +296,8 @@ void CSounds::OnStateChange(int NewState, int OldState)
 {
 	if(NewState == IClient::STATE_ONLINE || NewState == IClient::STATE_DEMOPLAYBACK)
 		OnReset();
+	else if(OldState == IClient::STATE_ONLINE || OldState == IClient::STATE_DEMOPLAYBACK)
+		ClearQueue();
 }
 
 void CSounds::OnRender()
