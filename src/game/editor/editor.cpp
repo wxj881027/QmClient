@@ -2158,8 +2158,8 @@ void CEditor::DoQuadEnvelopes(const CLayerQuads *pLayerQuads)
 void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadIndex, int PointIndex)
 {
 	CEnvPoint_runtime *pPoint = &pEnvelope->m_vPoints[PointIndex];
-	const int Channel = pEnvelope->m_vPoints[PointIndex].m_Channel;
-	if(!(Map()->m_EnvelopeEditorState.m_ActiveChannels & (1 << Channel)))
+	const int Channel = pPoint->m_Channel;
+	if(Channel < 0 || Channel >= CEnvPoint::MAX_CHANNELS || !(Map()->m_EnvelopeEditorState.m_ActiveChannels & (1 << Channel)))
 		return;
 	ColorRGBA Position(0, 0, 0, 0);
 	pEnvelope->Eval(pPoint->m_Time.AsSeconds(), Position, 3, false);
@@ -2170,6 +2170,7 @@ void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadI
 	{
 		if(MapView()->MouseDeltaWorld() != vec2(0.0f, 0.0f))
 		{
+			const int PreviousValue = pPoint->m_aValues[Channel];
 			if(m_QuadEnvelopePointOperation == EQuadEnvelopePointOperation::MOVE)
 			{
 				vec2 Pos = MapView()->MouseWorldPos();
@@ -2186,6 +2187,8 @@ void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadI
 			{
 				pPoint->m_aValues[2] += 10 * Ui()->MouseDeltaX();
 			}
+			if(pPoint->m_aValues[Channel] != PreviousValue)
+				Map()->OnModify();
 		}
 
 		if(!Ui()->MouseButton(0))
@@ -2236,6 +2239,18 @@ void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadI
 
 void CEditor::UpdateHotQuadPoint(const CLayerQuads *pLayer)
 {
+	if(Map()->SelectedLayer(0).get() != pLayer)
+		return;
+
+	const auto &vSelectedQuads = Map()->m_vSelectedQuads;
+	if(std::any_of(vSelectedQuads.begin(), vSelectedQuads.end(), [pLayer](int Index) {
+		   return Index < 0 || (size_t)Index >= pLayer->m_vQuads.size();
+	   }))
+	{
+		Map()->DeselectQuads();
+		Map()->DeselectQuadPoints();
+	}
+
 	const vec2 MouseWorld = MapView()->MouseWorldPos();
 
 	float MinDist = 500.0f;
@@ -2261,7 +2276,8 @@ void CEditor::UpdateHotQuadPoint(const CLayerQuads *pLayer)
 		{
 			for(const auto &EnvPoint : Map()->m_vpEnvelopes[Quad.m_PosEnv]->m_vPoints)
 			{
-				if(!(Map()->m_EnvelopeEditorState.m_ActiveChannels & (1 << EnvPoint.m_Channel)))
+				const int Channel = EnvPoint.m_Channel;
+				if(Channel < 0 || Channel >= CEnvPoint::MAX_CHANNELS || !(Map()->m_EnvelopeEditorState.m_ActiveChannels & (1 << Channel)))
 					continue;
 				ColorRGBA Value(0, 0, 0, 0);
 				Map()->m_vpEnvelopes[Quad.m_PosEnv]->Eval(EnvPoint.m_Time.AsSeconds(), Value, 2, false);
@@ -2442,7 +2458,7 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 		UnscrolledLayersBox.HSplitTop(State.m_InitialCutHeight, nullptr, &UnscrolledLayersBox);
 		UnscrolledLayersBox.y -= State.m_InitialMouseY - Ui()->MouseY();
 
-		UnscrolledLayersBox.y = std::clamp(UnscrolledLayersBox.y, MinDraggableValue, MaxDraggableValue);
+		UnscrolledLayersBox.y = std::clamp(UnscrolledLayersBox.y, MinDraggableValue, std::max(MinDraggableValue, MaxDraggableValue));
 
 		UnscrolledLayersBox.w = LayersBox.w;
 	}
@@ -2703,17 +2719,17 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 				if(Map()->m_vpGroups[g]->m_vpLayers[i]->m_Type == LAYERTYPE_TILES)
 				{
 					std::shared_ptr<CLayerTiles> pTiles = std::static_pointer_cast<CLayerTiles>(Map()->m_vpGroups[g]->m_vpLayers[i]);
-					str_copy(aBuf, pTiles->m_Image >= 0 ? Map()->m_vpImages[pTiles->m_Image]->m_aName : Localize("Tiles", "Editor"));
+					str_copy(aBuf, pTiles->m_Image >= 0 && (size_t)pTiles->m_Image < Map()->m_vpImages.size() ? Map()->m_vpImages[pTiles->m_Image]->m_aName : Localize("Tiles", "Editor"));
 				}
 				else if(Map()->m_vpGroups[g]->m_vpLayers[i]->m_Type == LAYERTYPE_QUADS)
 				{
 					std::shared_ptr<CLayerQuads> pQuads = std::static_pointer_cast<CLayerQuads>(Map()->m_vpGroups[g]->m_vpLayers[i]);
-					str_copy(aBuf, pQuads->m_Image >= 0 ? Map()->m_vpImages[pQuads->m_Image]->m_aName : Localize("Quads", "Editor"));
+					str_copy(aBuf, pQuads->m_Image >= 0 && (size_t)pQuads->m_Image < Map()->m_vpImages.size() ? Map()->m_vpImages[pQuads->m_Image]->m_aName : Localize("Quads", "Editor"));
 				}
 				else if(Map()->m_vpGroups[g]->m_vpLayers[i]->m_Type == LAYERTYPE_SOUNDS)
 				{
 					std::shared_ptr<CLayerSounds> pSounds = std::static_pointer_cast<CLayerSounds>(Map()->m_vpGroups[g]->m_vpLayers[i]);
-					str_copy(aBuf, pSounds->m_Sound >= 0 ? Map()->m_vpSounds[pSounds->m_Sound]->m_aName : Localize("Sound", "Editor"));
+					str_copy(aBuf, pSounds->m_Sound >= 0 && (size_t)pSounds->m_Sound < Map()->m_vpSounds.size() ? Map()->m_vpSounds[pSounds->m_Sound]->m_aName : Localize("Sound", "Editor"));
 				}
 			}
 
@@ -2952,12 +2968,21 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 		}
 	}
 
+	const auto ExtendLayerSelection = [&](int Direction) {
+		const auto pGroup = Map()->SelectedGroup();
+		const auto &vSelected = Map()->m_vSelectedLayers;
+		if(!pGroup || vSelected.empty() || vSelected.back() < 0 || (size_t)vSelected.back() >= pGroup->m_vpLayers.size())
+			return;
+
+		const int Index = vSelected.back() + Direction;
+		if(Index >= 0 && (size_t)Index < pGroup->m_vpLayers.size() && std::find(vSelected.begin(), vSelected.end(), Index) == vSelected.end())
+			Map()->AddSelectedLayer(Index);
+	};
 	if(Input()->KeyPress(KEY_DOWN) && m_Dialog == DIALOG_NONE && !Ui()->IsPopupOpen() && CLineInput::GetActiveInput() == nullptr && State.m_Operation == ELayerOperation::NONE)
 	{
 		if(Input()->ShiftIsPressed())
 		{
-			if(Map()->m_vSelectedLayers[Map()->m_vSelectedLayers.size() - 1] < (int)Map()->m_vpGroups[Map()->m_SelectedGroup]->m_vpLayers.size() - 1)
-				Map()->AddSelectedLayer(Map()->m_vSelectedLayers[Map()->m_vSelectedLayers.size() - 1] + 1);
+			ExtendLayerSelection(1);
 		}
 		else
 		{
@@ -2969,8 +2994,7 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 	{
 		if(Input()->ShiftIsPressed())
 		{
-			if(Map()->m_vSelectedLayers[Map()->m_vSelectedLayers.size() - 1] > 0)
-				Map()->AddSelectedLayer(Map()->m_vSelectedLayers[Map()->m_vSelectedLayers.size() - 1] - 1);
+			ExtendLayerSelection(-1);
 		}
 		else
 		{
