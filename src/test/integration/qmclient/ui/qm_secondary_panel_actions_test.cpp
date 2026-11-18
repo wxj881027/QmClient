@@ -112,7 +112,7 @@ TEST_F(QmSecondaryPanelActions, SplitSurfaceReusesOrdinaryFillAndSubmitsOneShare
 	EXPECT_FLOAT_EQ(Border.m_Params.x, Ordinary.m_Params.x);
 }
 
-TEST_F(QmSecondaryPanelActions, HoveringOneHalfHighlightsTheWholeSharedBorder)
+TEST_F(QmSecondaryPanelActions, HoveringOneHalfHighlightsOnlyThatHalf)
 {
 	auto &Graphics = *static_cast<qm_ui_test::CRealUiTestGraphics *>(m_Ui.Graphics());
 	Frame({10, 10}, false);
@@ -126,11 +126,16 @@ TEST_F(QmSecondaryPanelActions, HoveringOneHalfHighlightsTheWholeSharedBorder)
 	Frame({80, 52}, false);
 	Graphics.m_vRoundedSubmissions.clear();
 	Draw();
-	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
-	const auto &Border = Graphics.m_vRoundedSubmissions.back();
-	// 外框与两半底色使用同一整条矩形，整圈换色，不会只亮被悬停的半边、从中缝断开。
-	EXPECT_EQ(Border.m_Rect, Graphics.m_vRoundedSubmissions[0].m_Rect);
-	EXPECT_NE(Border.m_BorderColor, RestBorder);
+	// 静止外框恒在，悬停再叠一条按半裁剪的激活色：两半底色 + 共用外框 + 半圈高亮。
+	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 4u);
+	const auto &SharedBorder = Graphics.m_vRoundedSubmissions[2];
+	const auto &HoverBorder = Graphics.m_vRoundedSubmissions[3];
+	// 共用外框不随悬停消失或换色，轮廓与普通按钮保持一致。
+	EXPECT_EQ(SharedBorder.m_BorderColor, RestBorder);
+	EXPECT_EQ(SharedBorder.m_Rect, Graphics.m_vRoundedSubmissions[0].m_Rect);
+	// 高亮仍按整条矩形提交、只靠裁剪落在被悬停的半边，所以左侧端头曲线不变。
+	EXPECT_EQ(HoverBorder.m_Rect, SharedBorder.m_Rect);
+	EXPECT_NE(HoverBorder.m_BorderColor, RestBorder);
 	// 底色反馈仍按半边独立：被悬停的一侧变亮，另一侧保持静止。
 	EXPECT_NE(Graphics.m_vRoundedSubmissions[0].m_FillColor, RestLeftFill);
 	EXPECT_EQ(Graphics.m_vRoundedSubmissions[1].m_FillColor, RestRightFill);
@@ -147,8 +152,8 @@ TEST_F(QmSecondaryPanelActions, MouseClickDoesNotLeaveAKeyboardFocusRing)
 	EXPECT_EQ(Draw(), 0);
 	Graphics.m_vRoundedSubmissions.clear();
 	Draw();
-	// 只剩两半底色和一条整条外框；没有内缩到半边的焦点环。
-	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
+	// 只剩两半底色、一条整条外框和鼠标仍悬停带来的半圈高亮；没有内缩到半边的焦点环。
+	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 4u);
 	for(const auto &Submission : Graphics.m_vRoundedSubmissions)
 		EXPECT_FLOAT_EQ(Submission.m_Rect.z, m_Button.w);
 }

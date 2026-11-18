@@ -290,22 +290,26 @@ namespace ui_widget
 			const SUiTheme &Theme = Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi->QmControlTheme();
 			const auto BorderStyle = ResolveUiButtonStyle(EUiButtonRole::SECONDARY, ResolveConfiguredControlSurface(), CUiScopedSurfaceText::CurrentSurface(), Theme, BorderState);
 			const float Radius = ResolveUiSurfaceRadius(Rect, Geometry);
-			// 外框按半绘制：只高亮被悬停的那一半。外侧端头沿用整条按钮的胶囊曲线，
-			// 中缝一侧被裁剪成直边，所以左悬停只亮左半圈、右悬停只亮右半圈。
-			const auto DrawHalfBorder = [&](const CUIRect &Half, bool Hovered, bool Disabled) {
-				if(Disabled || !Hovered)
-					return;
-				SUiButtonState HalfState = BorderState;
-				HalfState.m_Hovered = true;
-				const ColorRGBA HalfBorder = ResolveActiveButtonBorder(EUiButtonRole::SECONDARY, BorderStyle, HalfState);
-				Ctx.m_pUi->ClipEnable(&Half);
-				DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(HalfBorder), Radius, ui_token::feedback::ICON_BORDER_WIDTH);
+			// 静止时保留整条共用外框：双操作按钮和旁边的普通二级按钮必须同一条轮廓，
+			// 外框只在悬停时换色、不能整条消失。悬停后按半裁剪叠加激活色，外侧端头仍
+			// 沿用整条按钮的胶囊曲线，中缝一侧是直边，所以只有被悬停的半圈发亮。
+			SUiButtonState RestState;
+			RestState.m_Enabled = BorderState.m_Enabled;
+			// 样式本身已按 BorderState 解析过边框色，静止外框必须用同一套解析重新取一次，
+			// 否则会把悬停色当成静止色画在整条轮廓上。
+			const auto RestStyle = ResolveUiButtonStyle(EUiButtonRole::SECONDARY, ResolveConfiguredControlSurface(), CUiScopedSurfaceText::CurrentSurface(), Theme, RestState);
+			const ColorRGBA RestBorder = ResolveActiveButtonBorder(EUiButtonRole::SECONDARY, RestStyle, RestState);
+			DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(RestBorder), Radius, ui_token::feedback::ICON_BORDER_WIDTH);
+			if(LeftHovered || RightHovered)
+			{
+				const CUIRect &HoverHalf = RightHovered ? Right : Left;
+				const ColorRGBA HoverBorder = ResolveActiveButtonBorder(EUiButtonRole::SECONDARY, BorderStyle, BorderState);
+				Ctx.m_pUi->ClipEnable(&HoverHalf);
+				DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(HoverBorder), Radius, ui_token::feedback::ICON_BORDER_WIDTH);
 				Ctx.m_pUi->ClipDisable();
-			};
-			DrawHalfBorder(Left, LeftHovered, LeftDisabled);
+			}
 			if(HasRight)
 			{
-				DrawHalfBorder(Right, RightHovered, RightDisabled);
 				// 中缝跟着被悬停的半边走强调色：左悬停时中线是左按钮的右边界，右悬停时是右按钮的左边界。
 				const ColorRGBA DividerColor = (LeftHovered || RightHovered) ? Theme.m_Accent : ui_token::color::BORDER_SUBTLE;
 				Divider.Draw(Ctx.m_pUi->ScaleBackgroundAlpha(DividerColor), IGraphics::CORNER_NONE, 0.0f);
