@@ -460,6 +460,13 @@ void CGraphics_Threaded::UnloadTexture(CTextureHandle *pIndex)
 	if(pIndex->IsNullTexture() || !pIndex->IsValid())
 		return;
 
+	// 越界的精灵共用透明占位纹理，单个素材只放弃自己的句柄。
+	if(pIndex->Id() == m_BlankTexture.Id() && pIndex->Generation() == m_BlankTexture.Generation())
+	{
+		pIndex->Invalidate();
+		return;
+	}
+
 	if(!IsTextureHandleAllocated(*pIndex))
 	{
 		if(g_Config.m_Debug)
@@ -576,31 +583,18 @@ static CCommandBuffer::SCommand_Texture_Create LoadTextureCreateCommand(int Text
 	return Cmd;
 }
 
-static bool TextureDataSizeRgba(size_t Width, size_t Height, size_t &DataSize)
+static bool TextureDimensionsFitBackend(size_t Width, size_t Height)
 {
-	if(Width == 0 || Height == 0 || Width > std::numeric_limits<size_t>::max() / Height)
-	{
-		DataSize = 0;
-		return false;
-	}
-	const size_t PixelCount = Width * Height;
-	if(PixelCount > std::numeric_limits<size_t>::max() / 4)
-	{
-		DataSize = 0;
-		return false;
-	}
-	DataSize = PixelCount * 4;
-	return true;
+	// 渲染后端以 int 接收纹理尺寸。
+	constexpr size_t MaxDimension = std::numeric_limits<int>::max();
+	return Width > 0 && Width <= MaxDimension && Height > 0 && Height <= MaxDimension;
 }
 
-static bool TextureDataSizeGrayscale(size_t Width, size_t Height, size_t &DataSize)
+static bool TextureUploadDataSize(size_t Width, size_t Height, size_t PixelSize, size_t &DataSize)
 {
-	if(Width == 0 || Height == 0 || Width > std::numeric_limits<size_t>::max() / Height)
-	{
-		DataSize = 0;
+	if(!TextureDimensionsFitBackend(Width, Height) || Width > std::numeric_limits<size_t>::max() / Height / PixelSize)
 		return false;
-	}
-	DataSize = Width * Height;
+	DataSize = Width * Height * PixelSize;
 	return true;
 }
 
@@ -619,10 +613,12 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(const CImageInfo &I
 {
 	dbg_assert(IsMainThread(), "GPU texture upload must be called from main thread");
 
+	if(!m_pCommandBuffer)
+		return {};
 	LoadTextureAddWarning(Image.m_Width, Image.m_Height, Flags, pTexName);
 
-	if(Image.m_Width == 0 || Image.m_Height == 0)
-		return IGraphics::CTextureHandle();
+	if(!TextureDimensionsFitBackend(Image.m_Width, Image.m_Height))
+		return {};
 	if(Image.m_pData == nullptr)
 	{
 		log_error("graphics", "Texture '%s' has no image data.", pTexName ? pTexName : "(no name)");
@@ -666,32 +662,24 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRawMove(CImageInfo &Ima
 {
 	dbg_assert(IsMainThread(), "GPU texture upload must be called from main thread");
 
-	if(Image.m_Format != CImageInfo::FORMAT_RGBA)
-	{
-		// Moving not possible, texture needs to be converted
-		IGraphics::CTextureHandle TextureHandle = LoadTextureRaw(Image, Flags, pTexName);
-		Image.Free();
-		return TextureHandle;
-	}
+	CImageInfo Source = std::move(Image);
+	CGraphicsUploadData<uint8_t> pData(Source.m_pData);
+	if(!m_pCommandBuffer)
+		return {};
+	if(Source.m_Format != CImageInfo::FORMAT_RGBA)
+		return LoadTextureRaw(Source, Flags, pTexName);
 
-	LoadTextureAddWarning(Image.m_Width, Image.m_Height, Flags, pTexName);
-
-	if(Image.m_Width == 0 || Image.m_Height == 0)
-	{
-		Image.Free();
-		return IGraphics::CTextureHandle();
-	}
-	if(Image.m_pData == nullptr)
+	const size_t Width = Source.m_Width, Height = Source.m_Height;
+	LoadTextureAddWarning(Width, Height, Flags, pTexName);
+	size_t DataSize = 0;
+	if(!TextureUploadDataSize(Width, Height, 4, DataSize))
+		return {};
+	if(pData == nullptr)
 	{
 		log_error("graphics", "Texture '%s' has no image data.", pTexName ? pTexName : "(no name)");
-		Image.Free();
-		return IGraphics::CTextureHandle();
+		return {};
 	}
 
-	std::unique_ptr<uint8_t, decltype(&free)> pData(Image.m_pData, free);
-	const size_t Width = Image.m_Width, Height = Image.m_Height;
-	Image.m_pData = nullptr;
-	Image.Free();
 	auto Slots = m_TextureSlots.Reserve<1>();
 	if(!Slots.IsValid())
 		return {};
@@ -715,6 +703,9 @@ bool CGraphics_Threaded::TryLoadTextureRawMoveOwned(CImageInfo &Image, int Flags
 {
 	dbg_assert(IsMainThread(), "GPU texture upload must be called from main thread");
 	Texture.Invalidate();
+	if(!m_pCommandBuffer)
+		return false;
+
 	int TextureId = -1;
 	uint32_t TextureGeneration = 0;
 	try
@@ -910,15 +901,15 @@ void CGraphics_Threaded::EndRenderTarget()
 
 void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRenderTargetDrawParams &InputParams)
 {
-	SRenderTargetDrawParams Params = InputParams;
-	if(Params.m_NativeTextureCoordinates)
-		Params.SetNativeTextureCoordinates(m_pBackend->GetBackendType());
-	if(!IsRenderTargetSupported() || !Target.IsValid() || Params.m_W <= 0.0f || Params.m_H <= 0.0f)
+	if(!IsRenderTargetSupported() || !Target.IsValid() || InputParams.m_W <= 0.0f || InputParams.m_H <= 0.0f)
 		return;
 	const size_t TargetId = Target.Id();
 	if(!m_RenderTargets.IsLive(TargetId))
 		return;
 
+	SRenderTargetDrawParams Params = InputParams;
+	if(Params.m_NativeTextureCoordinates)
+		Params.SetNativeTextureCoordinates(m_pBackend->GetBackendType());
 	FlushVertices();
 	CCommandBuffer::SCommand_RenderTarget_Draw Cmd;
 	Cmd.m_TargetId = TargetId;
@@ -1564,8 +1555,11 @@ int CGraphics_Threaded::FlushVideoFrameReadbacks(CImageInfo *pOutImages, int Max
 void CGraphics_Threaded::StopVideoFrame()
 {
 	if(m_VideoFrameActive)
+	{
+		EndRenderTarget();
 		SetRenderScreenSize(0, 0);
-	m_VideoFrameActive = false;
+		m_VideoFrameActive = false;
+	}
 	if(!m_VideoFrameReadbacks.Empty())
 	{
 		// 正常收尾在 CVideo::Stop 里经 FlushVideoFrameReadbacks 结算过；走到这里说明
@@ -1577,10 +1571,7 @@ void CGraphics_Threaded::StopVideoFrame()
 	}
 	if(!m_VideoFrameTarget.IsValid())
 		return;
-	// 活动目标属于未收尾的错误状态（EndVideoFrame 未配对调用）；此时不销毁，
-	// 交由设备重建时的清理兜底，这里只复位簿记，避免下次录制复用悬挂句柄。
-	if(!m_RenderTargetActive)
-		DestroyRenderTarget(&m_VideoFrameTarget);
+	DestroyRenderTarget(&m_VideoFrameTarget);
 	m_VideoFrameWidth = 0;
 	m_VideoFrameHeight = 0;
 	m_VideoFrameSampleCount = 1;
@@ -1590,8 +1581,11 @@ bool CGraphics_Threaded::LoadTextTextures(size_t Width, size_t Height, CTextureH
 {
 	std::unique_ptr<uint8_t, decltype(&free)> pFill(pTextData, free);
 	std::unique_ptr<uint8_t, decltype(&free)> pOutline(pTextOutlineData, free);
+	if(!m_pCommandBuffer)
+		return false;
+
 	size_t MemSize = 0;
-	if(pTextData == nullptr || pTextOutlineData == nullptr || !TextureDataSizeGrayscale(Width, Height, MemSize))
+	if(pTextData == nullptr || pTextOutlineData == nullptr || !TextureUploadDataSize(Width, Height, 1, MemSize))
 	{
 		log_error("graphics/texture", "Ignoring text texture create with invalid data or size.");
 		return false;
@@ -1635,7 +1629,7 @@ bool CGraphics_Threaded::UpdateTextTexture(CTextureHandle TextureId, int x, int 
 {
 	std::unique_ptr<uint8_t, decltype(&free)> pUpload(IsMovedPointer ? pData : nullptr, free);
 	size_t MemSize = 0;
-	if(pData == nullptr || !TextureDataSizeGrayscale(Width, Height, MemSize))
+	if(pData == nullptr || !TextureUploadDataSize(Width, Height, 1, MemSize))
 	{
 		log_error("graphics/texture", "Ignoring text texture update with invalid data or size.");
 		return false;
@@ -1682,19 +1676,16 @@ bool CGraphics_Threaded::UpdateTextTexture(CTextureHandle TextureId, int x, int 
 
 bool CGraphics_Threaded::UpdateTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, uint8_t *pData, bool IsMovedPointer)
 {
+	CGraphicsUploadData<uint8_t> pUpload(IsMovedPointer ? pData : nullptr);
 	size_t MemSize = 0;
-	if(pData == nullptr || !TextureDataSizeRgba(Width, Height, MemSize))
+	if(pData == nullptr || !TextureUploadDataSize(Width, Height, 4, MemSize))
 	{
-		if(IsMovedPointer)
-			free(pData);
 		log_error("graphics/texture", "Ignoring texture update with invalid data or size.");
 		return false;
 	}
 
 	if(!IsTextureHandleAllocated(TextureId))
 	{
-		if(IsMovedPointer)
-			free(pData);
 		if(g_Config.m_Debug && TextureId.IsValid())
 			log_trace("graphics/texture", "Ignoring update of stale texture handle %d.", TextureId.Id());
 		return false;
@@ -1707,22 +1698,27 @@ bool CGraphics_Threaded::UpdateTexture(CTextureHandle TextureId, int x, int y, s
 	Cmd.m_Width = Width;
 	Cmd.m_Height = Height;
 
-	if(IsMovedPointer)
+	if(!IsMovedPointer)
 	{
-		Cmd.m_pData = pData;
-	}
-	else
-	{
-		uint8_t *pTmpData = static_cast<uint8_t *>(malloc(MemSize));
-		if(pTmpData == nullptr)
+		pUpload.reset(static_cast<uint8_t *>(malloc(MemSize)));
+		if(pUpload == nullptr)
 		{
 			log_error("graphics/texture", "Failed to allocate texture update buffer.");
 			return false;
 		}
-		mem_copy(pTmpData, pData, MemSize);
-		Cmd.m_pData = pTmpData;
+		mem_copy(pUpload.get(), pData, MemSize);
 	}
-	AddCmd(Cmd);
+	Cmd.m_pData = pUpload.get();
+	try
+	{
+		AddCmd(Cmd);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics/texture", "Failed to queue texture update: %s", Error.what());
+		return false;
+	}
+	pUpload.release();
 
 	return true;
 }
@@ -4199,6 +4195,15 @@ int CGraphics_Threaded::InitWindow()
 
 	if(VulkanRequested)
 	{
+		// 环境变量优先于配置，回退时必须显式覆盖它选择的 Vulkan。
+		if(VulkanForcedByEnvironment)
+		{
+#if defined(CONF_BACKEND_OPENGL_ES)
+			m_pBackend->SetBackendOverride(BACKEND_TYPE_OPENGL_ES);
+#else
+			m_pBackend->SetBackendOverride(BACKEND_TYPE_OPENGL);
+#endif
+		}
 		str_copy(g_Config.m_GfxBackend, "OpenGL");
 		g_Config.m_GfxGLMajor = 0;
 		g_Config.m_GfxGLMinor = 0;
@@ -4341,19 +4346,6 @@ int CGraphics_Threaded::Init()
 		return -1;
 	}
 
-	m_RenderTargets.Clear();
-	m_RenderTargetActive = false;
-	m_RenderTargetReadbacks.Clear();
-	SetRenderScreenSize(0, 0);
-	// 视频离屏目标同样随设备销毁：句柄、簿记与「本帧进行中」一起复位，
-	// 否则重建后第一帧会拿到悬挂句柄（后端槽位已全部回收）。
-	m_VideoFrameTarget = CRenderTargetHandle();
-	m_VideoFrameActive = false;
-	m_VideoFrameReadbacks.Reset();
-	m_VideoFrameWidth = 0;
-	m_VideoFrameHeight = 0;
-	m_VideoFrameSampleCount = 1;
-
 	// 这三类资源由 vector 自身保存对象，没有独立的代数校验，因此必须连容器一起清空。
 	// 只把空闲链表头置 -1 会把旧条目留成「看起来仍然已分配」的孤儿：
 	// 旧的 GPU 对象已经随设备消失，但索引仍会被当作有效值返回。
@@ -4444,9 +4436,33 @@ void CGraphics_Threaded::Shutdown()
 			pCommandBuffer->CompleteReadbacks();
 
 	m_RenderTargetReadbacks.Clear();
+	m_VideoFrameReadbacks.Reset();
+	m_RenderTargets.Clear();
+	if(m_RenderTargetActive)
+		m_State = m_RenderTargetSavedState;
+	m_RenderTargetActive = false;
+	m_GLRenderTargetsSupported = false;
+	m_GLRenderTargetGaussianBlurSupported = false;
+	m_GLBackbufferCaptureSupported = false;
+	m_GLRenderTargetMSAASupported = false;
+	m_ReadbackCompletionSignal = false;
+	m_OffscreenFrameTarget.Invalidate();
+	m_OffscreenFrameWidth = 0;
+	m_OffscreenFrameHeight = 0;
+	m_VideoFrameTarget.Invalidate();
+	m_VideoFrameActive = false;
+	m_VideoFrameWidth = 0;
+	m_VideoFrameHeight = 0;
+	m_VideoFrameSampleCount = 1;
+	SetRenderScreenSize(0, 0);
+
 	delete m_pBackend;
 	m_pBackend = nullptr;
 	m_pCommandBuffer = nullptr;
+	m_NullTexture.Invalidate();
+	m_BlankTexture.Invalidate();
+	m_TextureSlots.Reset(0);
+	m_State.m_Texture = -1;
 	m_BufferObjects.Clear();
 	m_BufferContainers.Clear();
 
@@ -4960,6 +4976,10 @@ void CGraphics_Threaded::ReadFramebuffer(CImageInfo &Image)
 
 void CGraphics_Threaded::Swap()
 {
+	// 回放菜单可以在渲染中停录。交换窗口前结束被放弃的离屏帧。
+	if(m_VideoFrameActive)
+		StopVideoFrame();
+
 	FlushPendingBufferObjectDeletes();
 	if(m_pScreenshotCompletions)
 		m_pScreenshotCompletions->Flush();

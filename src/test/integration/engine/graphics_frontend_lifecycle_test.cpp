@@ -5,12 +5,15 @@
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
+#include <generated/data_types.h>
+
 #include <gtest/gtest.h>
 #include <test/support/prediction_allocation_failure.h>
 #include <test/support/threaded_graphics_backend.h>
 #include <test/test.h>
 
 #include <cstdlib>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -215,6 +218,95 @@ TEST_F(CGraphicsFrontendTest, RenderTargetAllocationFailureLeavesNoCreateCommand
 	m_pGraphics->Swap();
 	m_pGraphics->WaitForIdle();
 	EXPECT_EQ(m_Probe.m_RenderTargetCreates, 1);
+}
+
+TEST_F(CGraphicsFrontendTest, SwapClosesInterruptedVideoFrameBeforePresenting)
+{
+	ASSERT_EQ(m_pGraphics->Init(), 0);
+	auto &Graphics = static_cast<IGraphics &>(*m_pGraphics);
+	ASSERT_TRUE(Graphics.BeginVideoFrame(1600, 1200, 1));
+
+	m_pGraphics->Swap();
+
+	ASSERT_NE(m_Probe.m_pSubmitted, nullptr);
+	std::vector<unsigned> vCommands;
+	for(const auto *pCommand = m_Probe.m_pSubmitted->Head(); pCommand != nullptr; pCommand = pCommand->m_pNext)
+	{
+		if(pCommand->m_Cmd == CCommandBuffer::CMD_RENDER_TARGET_END ||
+			pCommand->m_Cmd == CCommandBuffer::CMD_RENDER_TARGET_DESTROY ||
+			pCommand->m_Cmd == CCommandBuffer::CMD_SWAP)
+			vCommands.push_back(pCommand->m_Cmd);
+	}
+	const std::vector<unsigned> vExpectedCommands{
+		CCommandBuffer::CMD_RENDER_TARGET_END,
+		CCommandBuffer::CMD_RENDER_TARGET_DESTROY,
+		CCommandBuffer::CMD_SWAP,
+	};
+	EXPECT_EQ(vCommands, vExpectedCommands);
+	EXPECT_EQ(m_pGraphics->ScreenWidth(), 800);
+	EXPECT_EQ(m_pGraphics->ScreenHeight(), 600);
+	EXPECT_TRUE(Graphics.BeginVideoFrame(1600, 1200, 1));
+	Graphics.StopVideoFrame();
+}
+
+TEST_F(CGraphicsFrontendTest, ShutdownClearsInterruptedOffscreenFrameBeforeReinitialization)
+{
+	ASSERT_EQ(m_pGraphics->Init(), 0);
+	auto &Graphics = static_cast<IGraphics &>(*m_pGraphics);
+	ASSERT_TRUE(Graphics.BeginOffscreenFrame(1600, 1200));
+
+	m_pGraphics->Shutdown();
+
+	EXPECT_FALSE(m_pGraphics->IsRenderTargetSupported());
+	EXPECT_EQ(m_pGraphics->ScreenWidth(), 800);
+	EXPECT_EQ(m_pGraphics->ScreenHeight(), 600);
+	ASSERT_EQ(m_pGraphics->Init(), 0);
+	EXPECT_TRUE(Graphics.BeginOffscreenFrame(1600, 1200));
+}
+
+TEST_F(CGraphicsFrontendTest, UnloadingOneMissingSpriteKeepsTheOtherSpriteOnTheBlankTexture)
+{
+	ASSERT_EQ(m_pGraphics->Init(), 0);
+	CDataSpriteset Set{nullptr, 1, 1};
+	const CDataSprite Sprite{"test", &Set, 1, 0, 1, 1};
+	screenshot_save::COwnedImage Atlas(MakePixel());
+	ASSERT_NE(Atlas.Image().m_pData, nullptr);
+	auto First = m_pGraphics->LoadSpriteTexture(Atlas.Image(), std::nullopt, &Sprite);
+	const auto Second = m_pGraphics->LoadSpriteTexture(Atlas.Image(), std::nullopt, &Sprite);
+	ASSERT_TRUE(First.IsValid());
+	ASSERT_FALSE(First.IsNullTexture());
+	ASSERT_EQ(First.Id(), Second.Id());
+	ASSERT_EQ(First.Generation(), Second.Generation());
+
+	m_pGraphics->UnloadTexture(&First);
+	EXPECT_FALSE(First.IsValid());
+	m_pGraphics->TextureSet(Second);
+	m_pGraphics->QuadsBegin();
+	const IGraphics::CQuadItem Quad(0.0f, 0.0f, 1.0f, 1.0f);
+	m_pGraphics->QuadsDrawTL(&Quad, 1);
+	m_pGraphics->QuadsEnd();
+	m_pGraphics->Swap();
+
+	ASSERT_NE(m_Probe.m_pSubmitted, nullptr);
+	const auto *pCommand = m_Probe.m_pSubmitted->Head();
+	while(pCommand != nullptr && pCommand->m_Cmd != CCommandBuffer::CMD_RENDER)
+		pCommand = pCommand->m_pNext;
+	ASSERT_NE(pCommand, nullptr);
+	const auto *pRender = static_cast<const CCommandBuffer::SCommand_Render *>(pCommand);
+	EXPECT_EQ(pRender->m_State.m_Texture, Second.Id());
+}
+
+TEST_F(CGraphicsFrontendTest, MovedTextureWithUnrepresentableWidthIsRejected)
+{
+	ASSERT_EQ(m_pGraphics->Init(), 0);
+	screenshot_save::COwnedImage Source(MakePixel());
+	ASSERT_NE(Source.Image().m_pData, nullptr);
+	Source.Image().m_Width = static_cast<size_t>(std::numeric_limits<int>::max()) + 1;
+
+	const auto Texture = m_pGraphics->LoadTextureRawMove(Source.Image(), 0);
+
+	EXPECT_FALSE(Texture.IsValid());
+	EXPECT_EQ(Source.Image().m_pData, nullptr);
 }
 
 TEST_F(CGraphicsFrontendTest, OffscreenSaveKeepsPendingWindowScreenshotPath)
