@@ -7,8 +7,14 @@
  seconds (never)
 == sekund (nigdy)
 
+ · %d finishers
+==  · %d ukończyło
+
  · %d finishers · average %d:%02d:%02d
 ==  · Ukończyło: %d · Średnio %d:%02d:%02d
+
+ · median %d:%02d:%02d
+==  · mediana %d:%02d:%02d
 
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == „%s” nie jest kompatybilne z pnglite i nie może być załadowane przez stare wersje DDNet
@@ -48,9 +54,6 @@
 
 "None" hides all name plates including your own team, so choose "Others" if you only want a cleaner screen.
 == Brak ukrywa wszystkie tabliczki, także twojej drużyny, więc wybierz Inni, jeśli chcesz tylko czystszy ekran.
-
-"Save power by lowering update rate (higher input latency)" adds input delay, so keep it off while racing.
-== Oszczędzanie energii przez niższą częstotliwość (większe opóźnienie wejścia) dodaje opóźnienie, więc trzymaj to wyłączone podczas wyścigów.
 
 "Scoreboard filter" keeps only players whose name or clan matches, so clear it when the scoreboard looks empty.
 == Filtr tabeli wyników zostawia tylko graczy o pasującej nazwie lub klanie; jeśli tabela wygląda na pustą, wyczyść filtr.
@@ -325,9 +328,6 @@
 0-51, empty = default
 == 0-51, puste = domyślne
 
-1% low
-== 1% najniższych
-
 128 player id <-> 64 player id map update rate
 == Częstotliwość aktualizacji mapy identyfikatorów graczy 128 <-> 64
 
@@ -595,9 +595,6 @@ Add demo timeline marker
 
 Add Entry
 == Dodaj wpis
-
-Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off.
-== Dodaje skórkę każdego gracza do kolejki przy wejściu na mapę. Ręczna edycja kolejki wyłącza tę opcję.
 
 Add friend
 == Dodaj znajomego
@@ -2120,6 +2117,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Nie można zapisać pliku Wiki
 
+Cap update rate to save power
+== Ogranicz częstotliwość aktualizacji, aby oszczędzać energię
+
+Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
+== Ograniczenie częstotliwości aktualizacji zwiększa opóźnienie wejścia; używaj tylko do oszczędzania energii. Jeśli ekskluzywny pełny ekran zawiedzie, wróć najpierw do okna lub trybu bez ramki.
+
 Capsule end strength
 == Siła końców kapsuły
 
@@ -2170,9 +2173,6 @@ Center line color (requires qm_show_center)
 
 Center line width (requires qm_show_center)
 == Szerokość linii środkowej (wymaga qm_show_center)
-
-Change "Update Rate" in Hz, tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
-== Zmień Częstotliwość odświeżania w Hz, zaznacz Pomiń menu główne i otwieraj te miejsca przez Plik ustawień lub Katalog motywów.
 
 Change colors and style options, then compare the preview.
 == Zmień kolory i opcje stylu, a potem porównaj z podglądem.
@@ -2468,8 +2468,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == Wybiera, które tabliczki z nazwami są rysowane, i dodaje do nich klan, kolor drużyny, ikonę znajomego, współrzędne i ID klienta.
 
-Chooses windowed or fullscreen mode, the monitor and the resolution; switching recreates the swap chain, so the screen may flash briefly.
-== Wybiera tryb okienkowy lub pełnoekranowy, monitor i rozdzielczość; przełączenie odtwarza łańcuch wymiany, więc ekran może na chwilę mignąć.
+Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
+== Wybiera tryb okna lub pełnego ekranu, monitor i rozdzielczość oraz dwa limity tempa klatek: liczbę klatek renderowania i częstotliwość aktualizacji klienta.
 
 Chroma sampling
 == Próbkowanie koloru
@@ -2693,14 +2693,17 @@ Client self-kill is disabled (server commands are not affected)
 Client self-kill is enabled
 == Samobójstwo zainicjowane przez klienta jest włączone
 
+Client update rate
+== Częstotliwość aktualizacji klienta
+
 Client uptime
 == Czas działania klienta
 
 Client-side prediction and latency compensation
 == Client-side prediction and latency compensation
 
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
-== Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+== Predykcja po stronie klienta i kompensacja opóźnień: margines predykcji, AntiPing i przewidywane obiekty, przewidywane zdarzenia, nadmiarowość pakietów wychodzących i znakowanie ruchu DSCP.
 
 Client-side self-kill protection
 == Ochrona przed samobójstwem po stronie klienta
@@ -2725,6 +2728,9 @@ Collapse console
 
 Collect all players' skins on map join
 == Zbieraj skórki wszystkich graczy przy wejściu na mapę
+
+Collect all players' skins on map join; manual edits turn it off.
+== Zbieraj skiny wszystkich graczy przy wejściu na mapę; ręczna edycja kolejki wyłącza to.
 
 Collect CP %d before teleporting
 == Aktywuj CP %d przed teleportacją
@@ -6119,20 +6125,14 @@ Fraction of players needed to pass a vote
 Frags
 == Zabójstwa
 
-Frame rate
-== Liczba klatek na sekundę
-
 Frame time
 == Czas klatki
 
-Frame time p95
-== Czas klatki P95
-
-Frame time p99
-== Czas klatki p99
-
 Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
 == Klatki buforowane między przechwytywaniem a kodowaniem. Głębsza kolejka łagodzi wolne klatki kosztem pamięci; mniejsze wartości wcześniej włączają back-pressure.
+
+Frames drawn per second when V-Sync is off; 0 = unlimited
+== Maksymalna liczba klatek na sekundę przy wyłączonej synchronizacji pionowej; 0 = bez ograniczeń
 
 Frankenstein (drop parts on right)
 == Frankenstein (upuść części po prawej)
@@ -6332,9 +6332,6 @@ Game paused
 Game sound volume
 == Głośność dźwięków gry
 
-Game time margin
-== Margines czasu gry
-
 Game type
 == Typ gry
 
@@ -6349,9 +6346,6 @@ Game update rate when window inactive (Hz)
 
 Game window mode
 == Tryb okna gry
-
-Game/predicted tick
-== Gra/przewidziany tick
 
 Gamemode. When enabled, players join as spectators
 == Tryb gry. Po włączeniu gracze dołączają jako widzowie
@@ -6628,9 +6622,6 @@ Graphics settings sub-tab: 0=display, 1=visual effects
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Poziom śledzenia grafiki: 0 = wyłączone, 1 = okresowe podsumowanie, 2 = podsumowanie i wolne klatki, 3 = szczegółowe śledzenie backendu
-
-Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the debug graph toggle is on.
-== Rysuje wykresy RTT, predykcji, wieku snapshotu i liczby klatek na panelu widocznym przy włączonym przełączniku wykresu debugowania.
 
 Greek
 == Grecki
@@ -7202,9 +7193,6 @@ If a device disappears after unplugging headphones, reselect it or restart the c
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
 == Jeśli wynik czatu przekroczy tę wartość, gracz zostanie wyciszony na sv_spam_mute_duration sekund
 
-If exclusive fullscreen fails, switch back to windowed or borderless first.
-== Jeśli ekskluzywny tryb pełnoekranowy nie działa, najpierw wróć do trybu okienkowego lub bez ramek.
-
 If lasers can hit you when shot and pull you to bounce origin (0 for all new maps), or lasers cannot hit you and pull others to shooter.
 == Jeśli lasery mogą cię trafić po strzale i przyciągnąć do źródła odbicia (0 dla wszystkich nowych map), lub lasery nie mogą cię trafić i przyciągają innych do strzelca.
 
@@ -7672,9 +7660,6 @@ Jelly others
 
 Jelly strength
 == Siła jelly
-
-Jitter
-== Drganie
 
 Join
 == Dołącz
@@ -8441,6 +8426,9 @@ Log realtime WebSocket channel events
 Log the network
 == Rejestruj sieć
 
+Logic and input ticks per second; rendering follows this beat.
+== Ticki logiki i wejścia na sekundę; renderowanie podąża za tym rytmem.
+
 Logout of econ
 == Wyloguj z econ
 
@@ -8449,9 +8437,6 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == Zapisuje wolne klatki i zacinanie się przy starcie, aby można było zgłosić, dlaczego gra wydawała się zacinać.
-
-Long frames
-== Długie klatki
 
 Lose weapons when teleporting (useful for race maps)
 == Strać broń podczas teleportacji (przydatne na mapach wyścigowych)
@@ -8798,6 +8783,9 @@ Max Screenshots
 Max size
 == Maksymalny rozmiar
 
+Max skins in the rotation queue; 0 stops collecting.
+== Maksymalna liczba skinów w kolejce rotacji; 0 wyłącza zbieranie.
+
 Max stroke entries to keep
 == Maksymalna liczba przechowywanych wpisów obrysu
 
@@ -8864,9 +8852,6 @@ Maximum number of resend requests answered per second (0 for no limit)
 Maximum number of server info responses of any size sent per second (0 = unlimited).
 == Maksymalna liczba odpowiedzi z informacjami o serwerze dowolnego rozmiaru wysyłanych na sekundę (0 = bez ograniczeń).
 
-Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting.
-== Maksymalna liczba skórek w kolejce rotacji; nadmiar jest usuwany od najstarszych. 0 czyści kolejkę i zatrzymuje zbieranie.
-
 Maximum number of skins loaded simultaneously
 == Maksymalna liczba jednocześnie załadowanych skórek
 
@@ -8902,9 +8887,6 @@ May overload the service
 
 Medium
 == Średnia
-
-Memory
-== Pamięć
 
 Mention
 == Wzmianka
@@ -10010,8 +9992,8 @@ Ok
 Old chat style: no tee icons, no background
 == Stary styl czatu: brak ikon tee, brak tła
 
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else.
-== Po osiągnięciu limitu zapisu stare pliki są usuwane, więc skopiuj w inne miejsce każde demo, które chcesz zachować.
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+== Po osiągnięciu limitu stare pliki są usuwane, więc skopiuj dema, które chcesz zachować. Budżet pikseli zrzutu pozy nie jest tutaj: to opcja wyjściowa w oknie renderowania pliku .poses.
 
 Old single-segment hook collision line
 == Stara jednoodcinkowa linia kolizji haka
@@ -10225,6 +10207,9 @@ Optional
 
 Optional authentication key for the DNSBL provider
 == Opcjonalny klucz uwierzytelniający dla dostawcy DNSBL
+
+Optional Axiom API key for scoreboard points and vote map details (leave empty for anonymous queries)
+== Opcjonalny klucz API Axiom do punktów tabeli wyników i szczegółów mapy głosowania (puste = zapytania anonimowe).
 
 Optional export range in seconds. Leave empty to export the whole demo.
 == Opcjonalny zakres eksportu w sekundach. Pozostaw puste, aby wyeksportować całe demo.
@@ -10601,8 +10586,8 @@ Pick each color row and choose a color; the authed and same-clan colors apply to
 Pick result: %s
 == Wynik losowania: %s
 
-Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode.
-== Najpierw wybierz tryb, potem monitor i rozdzielczość; częstotliwość odświeżania zależy od bieżącego trybu monitora.
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
+== Najpierw wybierz tryb, potem monitor i rozdzielczość. „Limit liczby klatek renderowania” ogranicza klatki przy wyłączonej synchronizacji pionowej; „Częstotliwość aktualizacji klienta” ogranicza przetwarzanie logiki i wejścia, a wraz z nim renderowanie.
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == Wybierz elementy do pokolorowania, a potem tryb gradientu i kolory.
@@ -10648,6 +10633,9 @@ Pistol
 
 Pistol guide line
 == Linia pomocnicza pistoletu
+
+Pixel budget
+== Budżet pikseli
 
 Pixel: Layer Shift
 == Piksele: przesunięcie warstw
@@ -11033,9 +11021,6 @@ Pose render supersampling scale (1-4)
 Pose render unsharp mask strength (0 = off)
 == Siła maski wyostrzającej renderowania poz (0 = wyłączone)
 
-Pose screenshot pixel budget (MP, 0 = unlimited)
-== Budżet pikseli zrzutu pozy (MP, 0 = bez limitu)
-
 Poses
 == Pozy
 
@@ -11144,8 +11129,8 @@ Prediction margin
 Prediction margin when frozen
 == Margines predykcji podczas zamrożenia
 
-Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== Przewidywanie wymienia dokładność na responsywność: większy margines i AntiPing wygładzają drgania pingu, ale mogą błędnie przewidzieć pobliskie akcje, a redundancja wysyłania może potroić ruch wychodzący.
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+== Predykcja wymienia dokładność na responsywność; nadmiarowość może potroić ruch wychodzący. „Priorytet ruchu gry” tylko znakuje pakiety w Windows i wymaga routera obsługującego QoS.
 
 Preparing chat export: %d%%
 == Przygotowywanie eksportu czatu: %d%%
@@ -11384,11 +11369,11 @@ Projectile / explosion range
 ProRes profile
 == Profil ProRes
 
+ProRes profile for 4:4:4 input; other encoders ignore it.
+== Profil ProRes dla wejścia 4:4:4; pozostałe kodery go ignorują.
+
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 == Nadpisanie profilu ProRes: -1=auto (4444 dla 4:4:4, w innym wypadku HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
-
-ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this.
-== Profil ProRes używany, gdy enkoderem jest ProRes. Automatyczny wybiera 4444 dla wejścia 4:4:4, w pozostałych przypadkach HQ; inne enkodery to ignorują.
 
 Protect names and skins while streaming
 == Chroń nazwy i skórki podczas streamowania
@@ -11915,9 +11900,6 @@ Refresh interval
 Refresh isolated serverlist consumer
 == Odśwież izolowanego odbiorcę listy serwerów
 
-Refresh Rate
-== Częstotliwość odświeżania
-
 Refresh the demo list
 == Odśwież listę dem
 
@@ -12205,6 +12187,9 @@ Render entity text data
 
 Render entity text data in editor
 == Renderuj dane tekstowe encji w edytorze
+
+Render frame rate limit
+== Limit liczby klatek renderowania
 
 Render ghosts as circles
 == Renderuj duchy jako okręgi
@@ -12733,12 +12718,6 @@ Save player names in replay
 
 Save PNG copy
 == Zapisz kopię PNG
-
-Save power by lowering update rate
-== Oszczędzaj energię poprzez obniżenie częstotliwości odświeżania
-
-Save power by lowering update rate (higher input latency)
-== Oszczędzaj energię poprzez obniżenie częstotliwości odświeżania (wyższe opóźnienie wejścia)
 
 Save replay of best time per game
 == Zapisz powtórkę najlepszego czasu na grę
@@ -13391,8 +13370,8 @@ Sets one of the two rescue modes (auto or manual). Prints current mode if no arg
 Sets player and dummy name, clan and identity information.
 == Ustawia nazwę gracza i dummy, klan oraz dane tożsamości.
 
-Sets the client update rate, whether the main menu is skipped, and opens the folders for settings, saves and themes.
-== Ustawia częstotliwość odświeżania klienta, pomijanie menu głównego i otwiera foldery ustawień, zapisów oraz motywów.
+Sets the client update rate to 480 Hz (0 = unlimited)
+== Ustawia częstotliwość aktualizacji klienta na 480 Hz (0 = bez ograniczeń)
 
 Sets the position, size and text style of the status bar.
 == Ustawia położenie, rozmiar i styl tekstu paska statusu.
@@ -14582,6 +14561,9 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 == Pokazuje 5 rang drużynowych tabeli lub gracza od miejsca i (domyślnie 1, -1 dla najgorszego)
 
+Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
+== Pokazuje FPS, czas klatki, RTT i wyprzedzenie predykcji. Słupki powyżej linii przekraczają budżet klatki 60 FPS.
+
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 == Pokazuje na ekranie ułamkowe wartości pozycji dla skoków z krawędzi, by oddać skok w odpowiednim miejscu.
 
@@ -14890,15 +14872,6 @@ Snapshot age
 
 Snapshot Latency
 == Opóźnienie snapshotów
-
-Snapshot payload
-== Ładunek snapshotów
-
-Snapshot rate
-== Częstotliwość snapshotów
-
-Snapshot tick gap
-== Odstęp ticków snapshotów
 
 Social
 == Społecznościowe
@@ -16046,6 +16019,9 @@ The server rejected the map upload.
 The two keys that cast your vote: one for yes and one for no.
 == Dwa klawisze oddające twój głos: jeden za, drugi przeciw.
 
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+== Limity częstotliwości aktualizacji i klatek przeniesiono na stronę Grafiki; należą one do ustawień renderowania, nie tutaj.
+
 The watermarked screenshot was saved next to the original
 == Zrzut z dodanym znakiem wodnym zapisano obok oryginału
 
@@ -16240,6 +16216,9 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
 == Zaznacz „Pokaż innych”, aby rysować inne drużyny półprzezroczysto; krycie ich cienia ustawisz w zależnym wierszu poniżej, a dla widoku użyj „Pokaż tła kwadratów” i „Domyślne powiększenie”.
+
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+== Zaznacz „Pomiń menu główne” i użyj „Pliku ustawień” lub „Katalogu motywów”, aby otworzyć te lokalizacje.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Zaznacz dowolne z: pokazuj stan zablokowanych klawiszy, pokazuj stan młotka, pokazuj stan sterowania dummy lub pokazuj stan kopii dummy.
@@ -17135,6 +17114,9 @@ Unknown status
 Unknown title style
 == Nieznany styl tytułu
 
+Unlimited
+== Bez ograniczeń
+
 Unload the rank ghost
 == Wyładuj ducha rangi
 
@@ -17218,9 +17200,6 @@ Update notice
 
 Update or add a specific war group
 == Zaktualizuj lub dodaj określoną grupę wojenną
-
-Update Rate
-== Częstotliwość odświeżania
 
 Update ready to install
 == Aktualizacja gotowa do instalacji
@@ -17950,6 +17929,9 @@ Whether players see all tees by default
 
 Whether players see others by default (own team = 2)
 == Czy gracze domyślnie widzą innych (własna drużyna = 2)
+
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
+== Pomijanie menu głównego, tagi map społeczności, raporty o awariach przy starcie oraz foldery ustawień, zapisów i motywów.
 
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 == Czy kontrolować kukłę jednocześnie (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
