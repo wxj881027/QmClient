@@ -12,6 +12,8 @@
 #include <test/support/qm_ui_test_client.h>
 #include <test/support/qm_ui_test_input.h>
 
+#include <limits>
+
 namespace
 {
 	// 数值框路径的 GPU 提交静音：基座对 Blend/Wrap/DrawRect4/quad 容器等抛边界异常。
@@ -243,6 +245,22 @@ namespace
 		BeginFrame();
 		ui_widget::NumericField(ui_widget::ControlContext(&m_Ui), &m_State, &m_Id, &m_Value, 2, 100, m_Rect, Options());
 		EXPECT_FALSE(m_State.m_Input.IsActive()) << "小键盘回车后下一帧输入框复活";
+	}
+
+	TEST_F(QmNumericFieldEnter, SubmittingLargestIntegerClampsToUpperBound)
+	{
+		BeginFrame();
+		RenderField(Options());
+		ClickInputField();
+		ASSERT_TRUE(m_State.m_Input.IsActive());
+		m_State.m_Input.SetInteger(std::numeric_limits<int>::max());
+
+		PressKey(KEY_RETURN);
+		BeginFrame();
+		RenderField(Options());
+
+		EXPECT_EQ(m_Value, 100);
+		EXPECT_EQ(m_State.m_Input.GetInteger(), 100);
 	}
 
 	TEST_F(QmNumericFieldEnter, DelayedSliderDiscardsPendingValueAfterLosingCapture)
