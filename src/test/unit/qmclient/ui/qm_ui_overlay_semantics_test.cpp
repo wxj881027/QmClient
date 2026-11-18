@@ -56,6 +56,21 @@ TEST(QmToastQueue, ExpiresAfterHoldPlusFadeOut)
 	EXPECT_EQ(Queue.Size(), 0u);
 }
 
+TEST(QmToastQueue, ToastExpiresUsingFrameTimeInSeconds)
+{
+	qm_ui::ClearToasts();
+	const double BeforeSec = static_cast<double>(time_get()) / static_cast<double>(time_freq());
+	qm_ui::Toast(EQmToastKind::INFO, "Saved");
+	const double AfterSec = static_cast<double>(time_get()) / static_cast<double>(time_freq());
+
+	qm_ui::CToastQueue &Queue = qm_ui::Toasts();
+	Queue.Expire(BeforeSec + 3.5);
+	EXPECT_EQ(Queue.Size(), 1u);
+	Queue.Expire(AfterSec + 4.0);
+	EXPECT_EQ(Queue.Size(), 0u);
+	qm_ui::ClearToasts();
+}
+
 TEST(QmToastQueue, AlphaFadesInAndOutWhileReducedMotionKeepsFullAlpha)
 {
 	qm_ui::CToastQueue Queue;

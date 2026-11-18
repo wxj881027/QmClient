@@ -43,8 +43,8 @@ namespace qm_ui
 			return;
 		const CUIRect Screen = *pUi->Screen();
 		CToastQueue &Queue = Toasts();
-		const double Now = time_get();
-		Queue.Expire(Now);
+		const double NowSec = static_cast<double>(time_get()) / static_cast<double>(time_freq());
+		Queue.Expire(NowSec);
 		if(Queue.Size() == 0 || Screen.w <= 0.0f)
 			return;
 
@@ -58,7 +58,7 @@ namespace qm_ui
 		for(size_t Index = Queue.Size(); Index-- > 0;)
 		{
 			CToastQueue::SEntry &Entry = Queue.At(Index);
-			const float Alpha = Queue.EntryAlpha(Entry, Now, MotionLevel);
+			const float Alpha = Queue.EntryAlpha(Entry, NowSec, MotionLevel);
 			if(Alpha <= 0.01f)
 			{
 				// 退场结束但还没被清理：跳过绘制，等下一帧 Expire。
@@ -75,7 +75,7 @@ namespace qm_ui
 			Rect.w = Width;
 			Rect.h = TOAST_HEIGHT;
 			Rect.x = Screen.x + (Screen.w - Width) * 0.5f;
-			Rect.y = Bottom - TOAST_HEIGHT + Queue.EntryOffset(Entry, Now, MotionLevel);
+			Rect.y = Bottom - TOAST_HEIGHT + Queue.EntryOffset(Entry, NowSec, MotionLevel);
 
 			ColorRGBA Surface = ui_token::color::SURFACE_ELEVATED;
 			Surface.a *= Alpha;
