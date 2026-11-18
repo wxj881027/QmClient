@@ -334,6 +334,84 @@ namespace
 		Render.m_pOffset = nullptr;
 		return RunCommand(pBackend, &Render);
 	}
+
+	class CScopedUnavailableMetalDrawable
+	{
+		Method m_Method = nullptr;
+		IMP m_Original = nullptr;
+		static inline std::atomic<int> s_AcquireCount{0};
+
+		static id ReturnUnavailable(id Layer, SEL)
+		{
+			auto ReadBool = reinterpret_cast<BOOL (*)(id, SEL)>(objc_msgSend);
+			EXPECT_TRUE(ReadBool(Layer, sel_registerName("allowsNextDrawableTimeout")));
+			++s_AcquireCount;
+			return nullptr;
+		}
+
+	public:
+		CScopedUnavailableMetalDrawable() = default;
+		CScopedUnavailableMetalDrawable(const CScopedUnavailableMetalDrawable &) = delete;
+		CScopedUnavailableMetalDrawable &operator=(const CScopedUnavailableMetalDrawable &) = delete;
+
+		bool Install()
+		{
+			m_Method = class_getInstanceMethod(reinterpret_cast<Class>(objc_getClass("CAMetalLayer")), sel_registerName("nextDrawable"));
+			if(m_Method == nullptr)
+				return false;
+			s_AcquireCount = 0;
+			m_Original = method_setImplementation(m_Method, reinterpret_cast<IMP>(&ReturnUnavailable));
+			return true;
+		}
+
+		~CScopedUnavailableMetalDrawable()
+		{
+			if(m_Method != nullptr)
+				method_setImplementation(m_Method, m_Original);
+		}
+
+		int AcquireCount() const { return s_AcquireCount.load(); }
+	};
+
+	bool BeginBlackRenderTarget(CCommandProcessorFragment_GLBase *pBackend)
+	{
+		CCommandBuffer::SCommand_RenderTarget_Create Create;
+		Create.m_TargetId = 0;
+		Create.m_Width = 32;
+		Create.m_Height = 32;
+		if(!RunCommand(pBackend, &Create))
+			return false;
+		CCommandBuffer::SCommand_RenderTarget_Begin Begin;
+		Begin.m_TargetId = 0;
+		Begin.m_ClearColor = {0.0f, 0.0f, 0.0f, 1.0f};
+		return RunCommand(pBackend, &Begin);
+	}
+
+	void ExpectRedAndGreenHalves(CCommandProcessorFragment_GLBase *pBackend)
+	{
+		CCommandBuffer::SCommand_RenderTarget_End End;
+		ASSERT_TRUE(RunCommand(pBackend, &End));
+		CImageInfo Image;
+		CCommandBuffer::SCommand_RenderTarget_Readback Readback;
+		Readback.m_TargetId = 0;
+		Readback.m_pImage = &Image;
+		const bool Read = RunCommand(pBackend, &Readback);
+		std::unique_ptr<uint8_t, decltype(&std::free)> pPixels(Image.m_pData, std::free);
+		pBackend->EndCommands();
+		ASSERT_TRUE(Read);
+		ASSERT_NE(pPixels, nullptr);
+		ASSERT_EQ(Image.m_Width, 32);
+		ASSERT_EQ(Image.m_Height, 32);
+		ASSERT_EQ(Image.m_Format, CImageInfo::FORMAT_RGBA);
+		const auto Red = Image.PixelColor(8, 16);
+		const auto Green = Image.PixelColor(24, 16);
+		EXPECT_FLOAT_EQ(Red.r, 1.0f);
+		EXPECT_FLOAT_EQ(Red.g, 0.0f);
+		EXPECT_FLOAT_EQ(Red.b, 0.0f);
+		EXPECT_FLOAT_EQ(Green.r, 0.0f);
+		EXPECT_FLOAT_EQ(Green.g, 1.0f);
+		EXPECT_FLOAT_EQ(Green.b, 0.0f);
+	}
 } // namespace
 
 TEST(MetalBackendRuntime, RenderTargetGaussianBlurAndReadbackUseNativeGpu)
@@ -874,5 +952,152 @@ TEST(MetalBackendRuntime, QuadContainerExBindsFragmentUniforms)
 	EXPECT_GE(pPixels[2], 250);
 	EXPECT_GE(pPixels[3], 250);
 	Image.Free();
+}
+
+TEST(MetalBackendRuntime, UnavailableDrawableAllowsSwapAndNextFrameReadback)
+{
+	CMetalRuntimeBackend Runtime;
+	ASSERT_TRUE(Runtime.Init()) << Runtime.Error();
+	auto *pBackend = Runtime.Backend();
+	CScopedUnavailableMetalDrawable Drawable;
+	ASSERT_TRUE(Drawable.Install());
+
+	pBackend->StartCommands(2, 0);
+	CCommandBuffer::SCommand_Clear Clear;
+	Clear.m_Color = {1.0f, 0.0f, 0.0f, 1.0f};
+	Clear.m_ForceClear = true;
+	ASSERT_TRUE(RunCommand(pBackend, &Clear));
+	CCommandBuffer::SCommand_Swap Swap;
+	ASSERT_TRUE(RunCommand(pBackend, &Swap));
+	pBackend->EndCommands();
+
+	pBackend->StartCommands(2, 0);
+	Clear.m_Color = {0.0f, 1.0f, 0.0f, 1.0f};
+	ASSERT_TRUE(RunCommand(pBackend, &Clear));
+	CCommandBuffer::SColorf Color{};
+	bool Swapped = false;
+	CCommandBuffer::SCommand_TrySwapAndReadPixel ReadPixel;
+	ReadPixel.m_Position = {0, 0};
+	ReadPixel.m_pColor = &Color;
+	ReadPixel.m_pSwapped = &Swapped;
+	ASSERT_TRUE(RunCommand(pBackend, &ReadPixel));
+	pBackend->EndCommands();
+	EXPECT_TRUE(Swapped);
+	EXPECT_EQ(Drawable.AcquireCount(), 2);
+	EXPECT_FLOAT_EQ(Color.r, 0.0f);
+	EXPECT_FLOAT_EQ(Color.g, 1.0f);
+	EXPECT_FLOAT_EQ(Color.b, 0.0f);
+}
+
+TEST(MetalBackendRuntime, TextureUpdatePreservesEarlierDrawInSameBatch)
+{
+	CMetalRuntimeBackend Runtime;
+	ASSERT_TRUE(Runtime.Init()) << Runtime.Error();
+	auto *pBackend = Runtime.Backend();
+
+	pBackend->StartCommands(8, 2);
+	ASSERT_TRUE(BeginBlackRenderTarget(pBackend));
+
+	std::unique_ptr<uint8_t, decltype(&std::free)> pPixel(static_cast<uint8_t *>(std::malloc(4)), std::free);
+	ASSERT_NE(pPixel, nullptr);
+	pPixel.get()[0] = 255;
+	pPixel.get()[1] = 0;
+	pPixel.get()[2] = 0;
+	pPixel.get()[3] = 255;
+	CCommandBuffer::SCommand_Texture_Create Create;
+	Create.m_Slot = 0;
+	Create.m_Width = 1;
+	Create.m_Height = 1;
+	Create.m_Flags = TextureFlag::NO_MIPMAPS;
+	Create.m_pData = pPixel.release();
+	ASSERT_TRUE(RunCommand(pBackend, &Create));
+
+	auto aVertices = SdfQuadVertices(16.0f, 32.0f);
+	CCommandBuffer::SCommand_Render Render;
+	Render.m_State = {};
+	Render.m_State.m_BlendMode = EBlendMode::NONE;
+	Render.m_State.m_WrapMode = EWrapMode::CLAMP;
+	Render.m_State.m_Texture = 0;
+	Render.m_State.m_ScreenBR = {32.0f, 32.0f};
+	Render.m_PrimType = EPrimitiveType::QUADS;
+	Render.m_PrimCount = 1;
+	Render.m_pVertices = aVertices.data();
+	ASSERT_TRUE(RunCommand(pBackend, &Render));
+
+	pPixel.reset(static_cast<uint8_t *>(std::malloc(4)));
+	ASSERT_NE(pPixel, nullptr);
+	pPixel.get()[0] = 0;
+	pPixel.get()[1] = 255;
+	pPixel.get()[2] = 0;
+	pPixel.get()[3] = 255;
+	CCommandBuffer::SCommand_Texture_Update Update;
+	Update.m_Slot = 0;
+	Update.m_X = 0;
+	Update.m_Y = 0;
+	Update.m_Width = 1;
+	Update.m_Height = 1;
+	Update.m_pData = pPixel.release();
+	ASSERT_TRUE(RunCommand(pBackend, &Update));
+
+	for(auto &Vertex : aVertices)
+		Vertex.m_Pos.x += 16.0f;
+	ASSERT_TRUE(RunCommand(pBackend, &Render));
+	ExpectRedAndGreenHalves(pBackend);
+}
+
+TEST(MetalBackendRuntime, RecreatingSharedBufferPreservesEarlierDrawInSameBatch)
+{
+	CMetalRuntimeBackend Runtime;
+	ASSERT_TRUE(Runtime.Init()) << Runtime.Error();
+	auto *pBackend = Runtime.Backend();
+
+	pBackend->StartCommands(9, 2);
+	ASSERT_TRUE(BeginBlackRenderTarget(pBackend));
+	auto aVertices = SdfQuadVertices(16.0f, 32.0f);
+	for(auto &Vertex : aVertices)
+		Vertex.m_Color = {255, 0, 0, 255};
+	CCommandBuffer::SCommand_CreateBufferObject Create;
+	Create.m_BufferIndex = 0;
+	Create.m_DataSize = sizeof(aVertices);
+	Create.m_pUploadData = aVertices.data();
+	Create.m_Flags = 0;
+	ASSERT_TRUE(RunCommand(pBackend, &Create));
+
+	std::array<SBufferContainerInfo::SAttribute, 3> aAttributes{};
+	aAttributes[0] = {2, GRAPHICS_TYPE_FLOAT, false, reinterpret_cast<void *>(offsetof(CCommandBuffer::SVertex, m_Pos)), 0};
+	aAttributes[1] = {2, GRAPHICS_TYPE_FLOAT, false, reinterpret_cast<void *>(offsetof(CCommandBuffer::SVertex, m_Tex)), 0};
+	aAttributes[2] = {4, GRAPHICS_TYPE_UNSIGNED_BYTE, true, reinterpret_cast<void *>(offsetof(CCommandBuffer::SVertex, m_Color)), 0};
+	CCommandBuffer::SCommand_CreateBufferContainer Container;
+	Container.m_BufferContainerIndex = 0;
+	Container.m_Stride = sizeof(CCommandBuffer::SVertex);
+	Container.m_VertBufferBindingIndex = 0;
+	Container.m_AttrCount = aAttributes.size();
+	Container.m_pAttributes = aAttributes.data();
+	ASSERT_TRUE(RunCommand(pBackend, &Container));
+
+	CCommandBuffer::SCommand_RenderQuadContainer Render;
+	Render.m_State = {};
+	Render.m_State.m_BlendMode = EBlendMode::NONE;
+	Render.m_State.m_WrapMode = EWrapMode::CLAMP;
+	Render.m_State.m_Texture = -1;
+	Render.m_State.m_ScreenBR = {32.0f, 32.0f};
+	Render.m_BufferContainerIndex = 0;
+	Render.m_DrawNum = 6;
+	Render.m_pOffset = nullptr;
+	ASSERT_TRUE(RunCommand(pBackend, &Render));
+
+	for(auto &Vertex : aVertices)
+	{
+		Vertex.m_Pos.x += 16.0f;
+		Vertex.m_Color = {0, 255, 0, 255};
+	}
+	CCommandBuffer::SCommand_RecreateBufferObject Recreate;
+	Recreate.m_BufferIndex = 0;
+	Recreate.m_DataSize = sizeof(aVertices);
+	Recreate.m_pUploadData = aVertices.data();
+	Recreate.m_Flags = 0;
+	ASSERT_TRUE(RunCommand(pBackend, &Recreate));
+	ASSERT_TRUE(RunCommand(pBackend, &Render));
+	ExpectRedAndGreenHalves(pBackend);
 }
 #endif

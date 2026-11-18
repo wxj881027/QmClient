@@ -33,6 +33,7 @@
 #include <cstring>
 #include <limits>
 #include <mutex>
+#include <new>
 #include <string>
 #include <utility>
 #include <vector>
@@ -513,9 +514,16 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			return;
 		if(Buffer.m_DataBytes <= gs_TransientBufferPoolByteLimit - m_aTransientBufferPoolBytes[Slot])
 		{
-			m_aTransientBuffers[Slot].push_back(Buffer);
-			m_aTransientBufferPoolBytes[Slot] += Buffer.m_DataBytes;
-			return;
+			try
+			{
+				m_aTransientBuffers[Slot].push_back(Buffer);
+				m_aTransientBufferPoolBytes[Slot] += Buffer.m_DataBytes;
+				return;
+			}
+			catch(const std::bad_alloc &)
+			{
+				// 缓存扩容失败时直接释放，完成槽位的回收。
+			}
 		}
 		SubBufferMemory(Buffer.m_DataBytes);
 		ReleaseMetalObject(Buffer.m_Buffer);
@@ -832,11 +840,6 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		return Mask;
 	}
 
-	bool IsBufferInFlight(const SBufferSlot &Buffer) const
-	{
-		return BufferInFlightMask(Buffer, false) != 0;
-	}
-
 	size_t PreferredBufferSlot(const SBufferSlot &Buffer) const
 	{
 		size_t PreferredSlot = m_CurrentFrameSlot;
@@ -1084,7 +1087,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		m_vRenderTargets.clear();
 	}
 
-	// 小于该尺寸的持久 buffer 使用 Shared 存储：CPU 直写 + didModifyRange 更新，
+	// 小于该尺寸的持久 buffer 使用 Shared 存储，空闲时可以直接写入，
 	// 避免每次更新都结束 render encoder 并插入 blit encoder，消除服务器列表等
 	// UI 场景每帧数百次 encoder 打断。Apple Silicon 统一内存下 Shared 读性能接近 Private。
 	static constexpr size_t QM_METAL_MAX_SHARED_BUFFER_BYTES = 256 * 1024;
@@ -1095,14 +1098,10 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			return false;
 		if(Destination.storageMode == MTLStorageModeShared)
 		{
-			// Shared buffer 直接写内存并通知 GPU，不需要 blit，不打断 render encoder。
 			if(pData != nullptr)
 				mem_copy(static_cast<uint8_t *>(Destination.contents) + DestinationOffset, pData, DataBytes);
 			else
 				std::memset(static_cast<uint8_t *>(Destination.contents) + DestinationOffset, 0, DataBytes);
-	#if defined(CONF_PLATFORM_MACOS)
-			[Destination didModifyRange:NSMakeRange(DestinationOffset, DataBytes)];
-	#endif
 			if(m_MetalPerfEnabled)
 				m_MetalPerfUploadBytes += DataBytes;
 			return true;
@@ -1236,7 +1235,9 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		if(Slot >= 0 && static_cast<size_t>(Slot) < m_vBufferSlots.size())
 		{
 			SBufferSlot &Existing = m_vBufferSlots[Slot];
-			if(Existing.m_Allocated && !OneTimeUse && !Existing.m_OneTimeUse && Existing.m_DataBytes == DataBytes && !IsBufferInFlight(Existing))
+			// Shared buffer 由 CPU 直接写入，同一批次中已编码的绘制也必须保留旧内容。
+			if(Existing.m_Allocated && !OneTimeUse && !Existing.m_OneTimeUse && Existing.m_DataBytes == DataBytes &&
+				BufferInFlightMask(Existing, Existing.m_Buffer.storageMode == MTLStorageModeShared) == 0)
 			{
 				const bool Success = UpdateBuffer(Slot, 0, DataBytes, pData);
 				if(Success && m_MetalPerfEnabled)
@@ -1317,7 +1318,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		});
 		NSError *pError = nil;
 		m_ShaderLibrary = [m_Device newLibraryWithData:Data error:&pError];
-#if !OS_OBJECT_USE_OBJC
+#if !__has_feature(objc_arc) || !OS_OBJECT_USE_OBJC
 		dispatch_release(Data);
 #endif
 		if(m_ShaderLibrary == nil && pError != nil)
@@ -1902,9 +1903,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 
 		const MTLPixelFormat PixelFormat = Format == EMetalTextureFormat::R8 ? MTLPixelFormatR8Unorm : MTLPixelFormatRGBA8Unorm;
 		// 创建即上传且无 mipmap 的纹理（UI 图标、旗帜、头像等）在统一内存设备上
-		// 使用 Shared 存储，首次上传走 CPU 直写（replaceRegion）：不打断活跃的
-		// render encoder、无需 staging buffer、内容即时可见。有 mipmap 或动态
-		// 更新的纹理保持 Private + blit（成本低且不改变既有语义）。
+		// 统一内存设备上的单级纹理可用 Shared，首次上传无需 staging buffer。
+		// 已存在纹理的更新统一在命令队列中提交。
 		const bool UseSharedStorage = pData != nullptr && [m_Device hasUnifiedMemory] &&
 			(!Wants2D || Layout.m_MipLevels <= 1) && (!Wants2DArray || ArrayLayout.m_MipLevels <= 1);
 		id<MTLTexture> pTexture = nil;
@@ -1970,7 +1970,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 
 		bool Uploaded = pData == nullptr || pTexture == nil;
 		if(pData != nullptr && pTexture != nil)
-			Uploaded = UploadTextureRegion(Texture, 0, 0, Width, Height, pData);
+			Uploaded = UploadTextureRegion(Texture, 0, 0, Width, Height, pData, true);
 		if(Uploaded && pTextureArray != nil && pData != nullptr)
 		{
 			const uint8_t *pArraySourceData = pData;
@@ -1989,7 +1989,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 				int ConvertedWidth = 0;
 				int ConvertedHeight = 0;
 				Texture2DTo3D(const_cast<uint8_t *>(pArraySourceData), static_cast<int>(ArraySourceWidth), static_cast<int>(ArraySourceHeight), MetalTextureBytesPerPixel(Format), 16, 16, vArrayData.data(), ConvertedWidth, ConvertedHeight);
-				Uploaded = ConvertedWidth == static_cast<int>(ArrayWidth) && ConvertedHeight == static_cast<int>(ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), ArrayWidth, ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS);
+				Uploaded = ConvertedWidth == static_cast<int>(ArrayWidth) && ConvertedHeight == static_cast<int>(ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), ArrayWidth, ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS, true);
 			}
 		}
 		if(!Uploaded)
@@ -2018,7 +2018,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			return false;
 		if(pData == nullptr)
 			return true;
-		bool Uploaded = Texture.m_Texture == nil || UploadTextureRegion(Texture, X, Y, Width, Height, pData);
+		bool Uploaded = Texture.m_Texture == nil || UploadTextureRegion(Texture, X, Y, Width, Height, pData, false);
 		if(Uploaded && Texture.m_Is2DArray)
 		{
 			const uint8_t *pArraySourceData = pData;
@@ -2037,7 +2037,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			int ConvertedWidth = 0;
 			int ConvertedHeight = 0;
 			Texture2DTo3D(const_cast<uint8_t *>(pArraySourceData), static_cast<int>(Texture.m_ArraySourceWidth), static_cast<int>(Texture.m_ArraySourceHeight), MetalTextureBytesPerPixel(Format), 16, 16, vArrayData.data(), ConvertedWidth, ConvertedHeight);
-			Uploaded = ConvertedWidth == static_cast<int>(Texture.m_ArrayWidth) && ConvertedHeight == static_cast<int>(Texture.m_ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), Texture.m_ArrayWidth, Texture.m_ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS);
+			Uploaded = ConvertedWidth == static_cast<int>(Texture.m_ArrayWidth) && ConvertedHeight == static_cast<int>(Texture.m_ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), Texture.m_ArrayWidth, Texture.m_ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS, false);
 		}
 		if(Uploaded && m_CurrentBlitEncoder != nil)
 		{
@@ -2096,9 +2096,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		// therefore the drawable must remain usable outside a render pass.
 		pLayer.framebufferOnly = NO;
 		pLayer.presentsWithTransaction = NO;
-		// 仅在关闭 VSync 时允许 drawable 获取超时。开启 VSync 时必须保留
-		// 系统背压，否则 nextDrawable 返回 nil 会直接丢掉本帧呈现。
-		pLayer.allowsNextDrawableTimeout = !m_VSync;
+		// 窗口暂时无法呈现时，允许 nextDrawable 超时，让图形线程继续处理后续命令。
+		pLayer.allowsNextDrawableTimeout = YES;
 		// displaySyncEnabled 仅在 macOS 上可用；iOS 的 CAMetalLayer 始终由系统
 		// 管理显示同步，不能访问该属性，否则 iOS deployment target 会产生不可用 API。
 #if defined(CONF_PLATFORM_MACOS)
@@ -2561,7 +2560,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		return true;
 	}
 
-	bool UploadTextureRegion(STextureSlot &Texture, size_t X, size_t Y, size_t Width, size_t Height, const uint8_t *pData)
+	bool UploadTextureRegion(STextureSlot &Texture, size_t X, size_t Y, size_t Width, size_t Height, const uint8_t *pData, bool InitialUpload)
 	{
 		if(pData == nullptr || m_CurrentCommandBuffer == nil || Texture.m_Texture == nil)
 			return false;
@@ -2572,9 +2571,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		if(Height > std::numeric_limits<size_t>::max() / RowBytes)
 			return false;
 		const size_t TightBytes = RowBytes * Height;
-		// Shared 纹理由 CPU 直接写入，源数据本身是紧凑行布局，不需要为
-		// replaceRegion 额外构造 256 字节对齐的 staging 副本。
-		if(Texture.m_Texture.storageMode == MTLStorageModeShared)
+		// 新建 Shared 纹理可以直接写入。后续更新通过 GPU 拷贝排在先前绘制之后。
+		if(InitialUpload && Texture.m_Texture.storageMode == MTLStorageModeShared)
 		{
 			[Texture.m_Texture replaceRegion:MTLRegionMake2D((NSUInteger)X, (NSUInteger)Y, (NSUInteger)Width, (NSUInteger)Height) mipmapLevel:0 withBytes:pData bytesPerRow:RowBytes];
 			if(m_MetalPerfEnabled)
@@ -2631,7 +2629,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		return true;
 	}
 
-	bool UploadTextureArray(STextureSlot &Texture, const uint8_t *pData, size_t Width, size_t Height, size_t LayerStart, size_t LayerCount)
+	bool UploadTextureArray(STextureSlot &Texture, const uint8_t *pData, size_t Width, size_t Height, size_t LayerStart, size_t LayerCount, bool InitialUpload)
 	{
 		if(pData == nullptr || m_CurrentCommandBuffer == nil || Texture.m_TextureArray == nil || LayerCount == 0 || LayerStart > METAL_TEXTURE_ARRAY_LAYERS - 1 || LayerCount > METAL_TEXTURE_ARRAY_LAYERS - LayerStart || Width == 0 || Height == 0)
 			return false;
@@ -2644,7 +2642,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		const size_t TightSliceBytes = RowBytes * Height;
 		if(LayerCount > std::numeric_limits<size_t>::max() / TightSliceBytes)
 			return false;
-		if(Texture.m_TextureArray.storageMode == MTLStorageModeShared)
+		if(InitialUpload && Texture.m_TextureArray.storageMode == MTLStorageModeShared)
 		{
 			for(size_t Layer = 0; Layer < LayerCount; ++Layer)
 				[Texture.m_TextureArray replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)Width, (NSUInteger)Height) mipmapLevel:0 slice:(NSUInteger)(LayerStart + Layer) withBytes:pData + Layer * TightSliceBytes bytesPerRow:RowBytes bytesPerImage:TightSliceBytes];
@@ -3697,7 +3695,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		// 周期性锁帧卡顿。无 VSync 时按刷新周期主动节流 present：逻辑帧照常渲染
 		// 提交，呈现均匀且不阻塞（录像/截图路径独立，不受节流影响）。
 		bool EffectivePresent = Present;
-		bool ThrottledPresent = false;
+		bool SkippedPresent = false;
 		// 刷新率优先级：显式配置 > 显示器实际刷新率 > 不节流。
 		// 配置为 0（未设置）时用缓存的实际刷新率，仍无法获取则不节流，
 		// 避免 120/144Hz 显示器被错误地限制到 60Hz 呈现。
@@ -3711,7 +3709,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			if(m_LastPresentTimeNs.count() != 0 && Now - m_LastPresentTimeNs < PresentInterval)
 			{
 				EffectivePresent = false;
-				ThrottledPresent = true;
+				SkippedPresent = true;
 			}
 		}
 		// The drawable pool is finite. Keep presentation late and do not add an
@@ -3734,28 +3732,34 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 				m_MetalPerfDrawableAcquireOver33MsCount += DrawableAcquireMs > 33.333;
 				m_MetalPerfDrawableAcquireOver100MsCount += DrawableAcquireMs > 100.0;
 			}
-			if(m_CurrentDrawable != nil)
+			id<MTLTexture> DrawableTexture = m_CurrentDrawable.texture;
+			// SDL 可能已调整图层尺寸，渲染线程仍在使用上一帧的尺寸。
+			if(DrawableTexture == nil || DrawableTexture.width != m_DrawableWidth || DrawableTexture.height != m_DrawableHeight)
+			{
+				SkippedPresent = true;
+				if(m_MetalPerfEnabled)
+					++m_MetalPerfDrawableUnavailableCount;
+			}
+			else
 			{
 				m_CurrentBlitEncoder = RetainMetalObject([m_CurrentCommandBuffer blitCommandEncoder]);
 				if(m_MetalPerfEnabled && m_CurrentBlitEncoder != nil)
 					++m_MetalPerfBlitEncoderCount;
 				if(m_CurrentBlitEncoder != nil)
 				{
-					[m_CurrentBlitEncoder copyFromTexture:CurrentBackbufferTexture() sourceSlice:0 sourceLevel:0 sourceOrigin:MTLOriginMake(0, 0, 0) sourceSize:MTLSizeMake(m_DrawableWidth, m_DrawableHeight, 1) toTexture:m_CurrentDrawable.texture destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(0, 0, 0)];
+					[m_CurrentBlitEncoder copyFromTexture:CurrentBackbufferTexture() sourceSlice:0 sourceLevel:0 sourceOrigin:MTLOriginMake(0, 0, 0) sourceSize:MTLSizeMake(m_DrawableWidth, m_DrawableHeight, 1) toTexture:DrawableTexture destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(0, 0, 0)];
 					[m_CurrentBlitEncoder endEncoding];
 					ReleaseMetalObject(m_CurrentBlitEncoder);
 					m_CurrentBlitEncoder = nil;
 					CanPresent = true;
 				}
 			}
-			if(m_CurrentDrawable == nil && m_MetalPerfEnabled)
-				++m_MetalPerfDrawableUnavailableCount;
 		}
 		const bool FrameFinalized = CanPresent ?
 			m_FrameState.FinalizeFrameForPresent(true) == CMetalFrameState::EFinalizeResult::PRESENTED :
 			m_FrameState.FinalizeFrameWithoutPresent();
 		const bool BackbufferPresented = CanPresent && FrameFinalized;
-		const bool PresentationSucceeded = !PresentationRequested || BackbufferPresented;
+		const bool PresentationSucceeded = !PresentationRequested || SkippedPresent || BackbufferPresented;
 		if(BackbufferPresented)
 		{
 			m_LastPresentTimeNs = time_get_nanoseconds();
@@ -3777,10 +3781,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		}
 		[m_CurrentCommandBuffer commit];
 		m_CommandBufferCommitted = true;
-		// 只有命令缓冲区容量切片才需要沿用当前私有 backbuffer。present
-		// 失败时当前内容没有进入屏幕，丢弃这次未呈现的 slot，避免下一帧
-		// 复用同一 slot 并等待仍在 GPU 队列中的 command buffer。节流跳过的
-		// present 同样视为已消费，下一帧正常轮转清屏。
+		// 只有同一逻辑帧的命令缓冲区分片需要沿用当前 backbuffer。
+		// 节流或 drawable 不可用时也结束逻辑帧，下一帧按正常顺序轮转。
 		m_BackbufferContinuationPending = CurrentBackbufferHasContents() && !Present;
 		// 非 present 提交可能只是同一逻辑帧的 buffer slice；保留 drawable 和
 		// backbuffer 内容供下一段继续 load。真正 present 或无 backbuffer 时再释放。
@@ -3789,9 +3791,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			ReleaseMetalObject(m_CurrentDrawable);
 			m_CurrentDrawable = nil;
 		}
-		if(BackbufferPresented)
-			SetCurrentBackbufferHasContents(false);
-		if(ThrottledPresent)
+		if(BackbufferPresented || SkippedPresent)
 			SetCurrentBackbufferHasContents(false);
 		if(!WaitForCompletion)
 			return PresentationSucceeded;
