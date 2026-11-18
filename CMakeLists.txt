@@ -5575,6 +5575,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_console_text_pipeline_test.cpp
     src/test/unit/qmclient/client/qm_red_packet_auto_claim_test.cpp
     src/test/unit/qmclient/client/qm_tclient_warlist_test.cpp
+    src/test/integration/qmclient/client/qm_tclient_favorite_map_console_test.cpp
+    src/test/unit/qmclient/client/qm_tclient_random_flag_test.cpp
     src/test/unit/qmclient/client/qm_auto_vote_test.cpp
     src/test/unit/qmclient/client/qm_bg_draw_state_test.cpp
     src/test/unit/qmclient/client/qm_bg_draw_geometry_test.cpp
@@ -7005,6 +7007,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_map_progress_allocation_test.cpp
       src/test/unit/engine/net_client_allocation_test.cpp
       src/test/unit/engine/favorites_allocation_test.cpp
+      src/test/unit/qmclient/client/qm_auto_reply_allocation_test.cpp
       src/test/unit/qmclient/client/qm_chat_avatar_allocation_test.cpp
       src/test/support/prediction_collision_map.h
       src/test/integration/client/prediction_world_copy_failure_test.cpp

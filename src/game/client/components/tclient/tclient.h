@@ -3,6 +3,7 @@
 
 #include <base/color.h>
 #include <base/hash.h>
+#include <base/str.h>
 
 #include <engine/client/enums.h>
 #include <engine/external/regex.h>
@@ -54,6 +55,38 @@ namespace qm_update
 	class CPackageDownload;
 }
 struct CNetMsg_Sv_Chat;
+
+namespace qm_tclient_map_data
+{
+	inline bool FormatFavoriteCommand(const char *pMapName, char (&aLine)[IConsole::CMDLINE_LENGTH])
+	{
+		if(!str_utf8_check(pMapName))
+			return false;
+		constexpr char PREFIX[] = "add_favorite_map \"";
+		size_t Length = sizeof(PREFIX) + 1;
+		for(const char *pChar = pMapName; *pChar; ++pChar)
+		{
+			if(static_cast<unsigned char>(*pChar) < ' ' && *pChar != '\t')
+				return false;
+			Length += (*pChar == '"' || *pChar == '\\') ? 2 : 1;
+			if(Length > sizeof(aLine))
+				return false;
+		}
+		str_copy(aLine, PREFIX);
+		char *pEnd = aLine + sizeof(PREFIX) - 1;
+		str_escape(&pEnd, pMapName, aLine + sizeof(aLine) - 1);
+		*pEnd++ = '"';
+		*pEnd = '\0';
+		return true;
+	}
+}
+
+template<typename TPickFlagCode>
+void QmApplyRandomFlag(int &CountryCode, size_t FlagCount, TPickFlagCode &&PickFlagCode)
+{
+	if(FlagCount != 0)
+		CountryCode = PickFlagCode(FlagCount);
+}
 
 // 玩家统计数据结构
 struct SPlayerStats

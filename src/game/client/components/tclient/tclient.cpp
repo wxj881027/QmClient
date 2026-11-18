@@ -54,6 +54,7 @@
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <new>
 #include <queue>
 #include <string>
 #include <string_view>
@@ -496,7 +497,7 @@ bool CTClient::TryHandleRedPacketAutoClaim(const CNetMsg_Sv_Chat *pMsg)
 	return true;
 }
 
-void CTClient::OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection)
+void CTClient::OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection) try
 {
 	if(Client()->State() != IClient::STATE_ONLINE || pMsg == nullptr || pMsg->m_pMessage == nullptr ||
 		pMsg->m_ClientId < 0 || pMsg->m_ClientId >= MAX_CLIENTS)
@@ -508,8 +509,11 @@ void CTClient::OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection)
 	const auto &Player = GameClient()->m_aClients[Sender];
 	if(!Player.m_Active)
 		return;
+	const bool MutedEnabled = g_Config.m_QmAutoReplyMuted != 0;
 	const bool Away = g_Config.m_QmAutoReplyMinimized && m_pGraphics && !m_pGraphics->WindowActive();
-	m_AutoReplySendState.UpdateStatus(g_Config.m_QmAutoReplyMuted != 0, Away);
+	m_AutoReplySendState.UpdateStatus(MutedEnabled, Away);
+	if(!MutedEnabled && !Away && !g_Config.m_QmKeywordReplyEnabled)
+		return;
 	const int64_t Now = time_get();
 	const int64_t Cooldown = (int64_t)maximum(0, g_Config.m_QmAutoReplyCooldown) * time_freq();
 	if(!m_AutoReplySendState.Ready(Now, Cooldown))
@@ -547,7 +551,7 @@ void CTClient::OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection)
 	}
 	if(!Ping)
 		return;
-	const bool Muted = g_Config.m_QmAutoReplyMuted && (Player.m_Foe || Player.m_ChatIgnore);
+	const bool Muted = MutedEnabled && (Player.m_Foe || Player.m_ChatIgnore);
 	const char *pReply = Muted ? g_Config.m_QmAutoReplyMutedMessage : g_Config.m_QmAutoReplyMinimizedMessage;
 	if((!Muted && !Away) || *str_utf8_skip_whitespaces(pReply) == '\0')
 		return;
@@ -555,6 +559,11 @@ void CTClient::OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection)
 					 qm_auto_reply::Whisper(Player.m_aName, pReply) :
 					 std::string(Player.m_aName) + ": " + pReply;
 	Send(Connection, Muted ? qm_auto_reply::EKind::MUTED : qm_auto_reply::EKind::AWAY, Text);
+}
+catch(const std::bad_alloc &)
+{
+	// 配置解析可能只编译了部分规则，清空后由下一条消息重新加载。
+	m_KeywordReplyRules = {};
 }
 
 void CTClient::OnMessage(int MsgType, void *pRawMsg)
@@ -1118,18 +1127,11 @@ void CTClient::RandomSkin(void *pUserData)
 
 void CTClient::RandomFlag(void *pUserData)
 {
-	CTClient *pThis = static_cast<CTClient *>(pUserData);
-	// get the flag count
-	int FlagCount = pThis->GameClient()->m_CountryFlags.Num();
-
-	// get a random flag number
-	int FlagNumber = std::rand() % FlagCount;
-
-	// get the flag name
-	const CCountryFlags::CCountryFlag &Flag = pThis->GameClient()->m_CountryFlags.GetByIndex(FlagNumber);
-
-	// set the flag code as number
-	g_Config.m_PlayerCountry = Flag.m_CountryCode;
+	auto &CountryFlags = static_cast<CTClient *>(pUserData)->GameClient()->m_CountryFlags;
+	// 启动配置先于国旗索引加载，索引为空时保留当前选择。
+	QmApplyRandomFlag(g_Config.m_PlayerCountry, CountryFlags.Num(), [&](size_t FlagCount) {
+		return CountryFlags.GetByIndex(std::rand() % FlagCount).m_CountryCode;
+	});
 }
 
 void CTClient::ResetFinishRenameState(int Dummy)
@@ -3934,6 +3936,12 @@ void CTClient::AddFavoriteMap(const char *pMapName)
 {
 	if(!pMapName || pMapName[0] == '\0')
 		return;
+	char aCommand[IConsole::CMDLINE_LENGTH];
+	if(!qm_tclient_map_data::FormatFavoriteCommand(pMapName, aCommand))
+	{
+		log_warn("qmclient", "Map name could not be saved as a favorite map command");
+		return;
+	}
 	m_FavoriteMaps.insert(std::string(pMapName));
 	// 启动恢复收藏会复用本方法，成功路径不打 info 避免启动期刷屏。
 	log_debug("qmclient", "Added favorite map: %s", pMapName);
@@ -3974,10 +3982,14 @@ void CTClient::ConClearFavoriteMaps(IConsole::IResult *pResult, void *pUserData)
 void CTClient::ConfigSaveFavoriteMaps(IConfigManager *pConfigManager, void *pUserData)
 {
 	CTClient *pThis = static_cast<CTClient *>(pUserData);
-	char aBuf[256];
+	char aBuf[IConsole::CMDLINE_LENGTH];
 	for(const auto &Map : pThis->m_FavoriteMaps)
 	{
-		str_format(aBuf, sizeof(aBuf), "add_favorite_map \"%s\"", Map.c_str());
+		if(!qm_tclient_map_data::FormatFavoriteCommand(Map.c_str(), aBuf))
+		{
+			pConfigManager->MarkSaveFailed();
+			return;
+		}
 		pConfigManager->WriteLine(aBuf);
 	}
 }
