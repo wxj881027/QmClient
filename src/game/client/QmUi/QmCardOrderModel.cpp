@@ -207,21 +207,19 @@ namespace qm_card_order
 
 	void CModel::SetEntries(std::vector<SEntry> Entries)
 	{
-		m_vOwnedTabs.clear();
-		m_vEntries.clear();
-		m_vEntries.reserve(Entries.size());
-		for(SEntry Entry : Entries)
+		CModel Prepared;
+		Prepared.m_vEntries = std::move(Entries);
+		for(SEntry &Entry : Prepared.m_vEntries)
 		{
 			if(Entry.m_pDefaultTab != nullptr)
 			{
-				m_vOwnedTabs.emplace_back(Entry.m_pDefaultTab);
-				Entry.m_pDefaultTab = m_vOwnedTabs.back().c_str();
+				Prepared.m_vOwnedTabs.emplace_back(Entry.m_pDefaultTab);
+				Entry.m_pDefaultTab = Prepared.m_vOwnedTabs.back().c_str();
 			}
-			m_vEntries.push_back(Entry);
 		}
-		m_Dirty = true;
-		++m_LayoutRevision;
-		BuildStateIndex(); // 维护 stableId→index 注册表（让位 lerp O(1) 地基）
+		Prepared.BuildStateIndex();
+		Prepared.m_Dirty = true;
+		SwapContent(Prepared);
 	}
 
 	void CModel::SwapContent(CModel &Other) noexcept
@@ -250,7 +248,6 @@ namespace qm_card_order
 			return;
 		const char *pTab = m_vEntries[Idx].m_pDefaultTab;
 		const int FromColumn = m_vEntries[Idx].m_Column;
-		m_vEntries[Idx].m_Column = ToColumn;
 		// 重建目标列 order（erase + insert 语义）
 		std::vector<int> vOthers;
 		for(size_t i = 0; i < m_vEntries.size(); ++i)
@@ -264,11 +261,9 @@ namespace qm_card_order
 		});
 		ToOrder = std::clamp(ToOrder, 0, (int)vOthers.size());
 		vOthers.insert(vOthers.begin() + ToOrder, Idx);
-		for(int o = 0; o < (int)vOthers.size(); ++o)
-			m_vEntries[vOthers[o]].m_OrderInColumn = o;
+		std::vector<int> vSource;
 		if(FromColumn != ToColumn)
 		{
-			std::vector<int> vSource;
 			for(size_t i = 0; i < m_vEntries.size(); ++i)
 			{
 				if((int)i == Idx || m_vEntries[i].m_Column != FromColumn || !SameTab(m_vEntries[i].m_pDefaultTab, pTab))
@@ -278,12 +273,24 @@ namespace qm_card_order
 			std::stable_sort(vSource.begin(), vSource.end(), [&](int a, int b) {
 				return m_vEntries[a].m_OrderInColumn < m_vEntries[b].m_OrderInColumn;
 			});
-			for(int o = 0; o < (int)vSource.size(); ++o)
-				m_vEntries[vSource[o]].m_OrderInColumn = o;
+		}
+		CommitColumnOrders({{ToColumn, vOthers}, {FromColumn, vSource}});
+	}
+
+	void CModel::CommitColumnOrders(std::initializer_list<SColumnOrder> ColumnOrders) noexcept
+	{
+		for(const SColumnOrder &ColumnOrder : ColumnOrders)
+		{
+			int Order = 0;
+			for(const int StateIndex : ColumnOrder.m_vStateIndices)
+			{
+				SEntry &Entry = m_vEntries[StateIndex];
+				Entry.m_Column = ColumnOrder.m_Column;
+				Entry.m_OrderInColumn = Order++;
+			}
 		}
 		m_Dirty = true;
 		++m_LayoutRevision;
-		// Move 仅改 column/order，不改 stableId 集合与 vector 位置，state index 注册表无需重建
 	}
 
 	void CModel::MoveToTab(const char *pStableId, const char *pToTab, int ToColumn, int ToOrder)
@@ -293,23 +300,13 @@ namespace qm_card_order
 			return;
 		const char *pFromTab = m_vEntries[Idx].m_pDefaultTab;
 		const int FromColumn = m_vEntries[Idx].m_Column;
-		m_vOwnedTabs.emplace_back(pToTab);
-		m_vEntries[Idx].m_pDefaultTab = m_vOwnedTabs.back().c_str();
-		m_vEntries[Idx].m_Column = ToColumn;
-		// 重建目标 tab+column order（跨页组件编辑器 erase + insert 语义）
-		std::vector<int> vOthers;
-		for(int i : ColumnIndices(pToTab, ToColumn))
-		{
-			if(i != Idx)
-				vOthers.push_back(i);
-		}
+		std::vector<int> vOthers = ColumnIndices(pToTab, ToColumn);
+		vOthers.erase(std::remove(vOthers.begin(), vOthers.end(), Idx), vOthers.end());
 		ToOrder = std::clamp(ToOrder, 0, (int)vOthers.size());
 		vOthers.insert(vOthers.begin() + ToOrder, Idx);
-		for(int o = 0; o < (int)vOthers.size(); ++o)
-			m_vEntries[vOthers[o]].m_OrderInColumn = o;
+		std::vector<int> vSource;
 		if(!SameTab(pFromTab, pToTab) || FromColumn != ToColumn)
 		{
-			std::vector<int> vSource;
 			for(size_t i = 0; i < m_vEntries.size(); ++i)
 			{
 				if((int)i == Idx || m_vEntries[i].m_Column != FromColumn || !SameTab(m_vEntries[i].m_pDefaultTab, pFromTab))
@@ -319,12 +316,11 @@ namespace qm_card_order
 			std::stable_sort(vSource.begin(), vSource.end(), [&](int a, int b) {
 				return m_vEntries[a].m_OrderInColumn < m_vEntries[b].m_OrderInColumn;
 			});
-			for(int o = 0; o < (int)vSource.size(); ++o)
-				m_vEntries[vSource[o]].m_OrderInColumn = o;
 		}
-		m_Dirty = true;
-		++m_LayoutRevision;
-		// MoveToTab 仅改 tab/column/order，不改 stableId 集合与 vector 位置，state index 注册表无需重建
+		// 两列排序和目标页签准备完毕后，一次提交归属与顺序。
+		m_vOwnedTabs.emplace_back(pToTab);
+		m_vEntries[Idx].m_pDefaultTab = m_vOwnedTabs.back().c_str();
+		CommitColumnOrders({{ToColumn, vOthers}, {FromColumn, vSource}});
 	}
 
 	void CModel::NormalizeColumns()
@@ -596,9 +592,10 @@ namespace qm_card_order
 			vMerged.push_back(Entry);
 		}
 
-		SetEntries(vMerged);
-		NormalizeColumns();
-		ClearDirty();
+		ParsedModel.SetEntries(std::move(vMerged));
+		ParsedModel.NormalizeColumns();
+		ParsedModel.ClearDirty();
+		SwapContent(ParsedModel);
 		return Parsed;
 	}
 
@@ -728,10 +725,7 @@ namespace qm_card_order
 			Candidate.MoveToTab(Target.m_pStableId, Target.m_pDefaultTab, Target.m_Column, Target.m_OrderInColumn);
 		if(!LayoutMatches(Candidate, vTargetLayout))
 			return false;
-		vCandidateEntries.clear();
-		for(int EntryIndex = 0; EntryIndex < Candidate.Count(); ++EntryIndex)
-			vCandidateEntries.push_back(Candidate.Entry(EntryIndex));
-		Model.SetEntries(std::move(vCandidateEntries));
+		Model.SwapContent(Candidate);
 		return true;
 	}
 

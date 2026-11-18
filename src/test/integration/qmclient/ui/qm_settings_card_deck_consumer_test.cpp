@@ -5,6 +5,7 @@
 #include <game/client/QmUi/SettingsCardInfo.h>
 #include <game/client/QmUi/SettingsMenuPrewarmScope.h>
 #include <game/client/QmUi/UiContext.h>
+#include <game/client/ui_scrollregion.h>
 
 #include <test/support/prediction_allocation_failure.h>
 #include <test/support/qm_real_ui_fixture.h>
@@ -14,6 +15,7 @@
 #include <memory>
 #include <new>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -110,7 +112,7 @@ namespace
 			m_Ui.Update();
 		}
 		template<typename FBuild>
-		SSettingsCardDeckResult Draw(CSettingsCardDeck &Deck, uint64_t Revision, FBuild &&Build)
+		SSettingsCardDeckResult Draw(CSettingsCardDeck &Deck, uint64_t Revision, FBuild &&Build, CScrollRegion *pScrollRegion = nullptr)
 		{
 			m_Diagnostics = {};
 			IUiContext Ctx;
@@ -123,9 +125,9 @@ namespace
 			Input.m_MousePressed = m_Ui.MouseButtonClicked(0);
 			Input.m_MouseDown = m_Ui.MouseButton(0);
 			Input.m_MouseReleased = !Input.m_MouseDown && m_Ui.LastMouseButton(0);
-			Input.m_AllowHeaderDrag = false;
+			Input.m_AllowHeaderDrag = pScrollRegion != nullptr;
 			Input.m_pDiagnostics = &m_Diagnostics;
-			return Deck.RenderCached(Ctx, m_Layout, TAB, Revision, std::forward<FBuild>(Build), m_Model, nullptr, Input, m_Motion, m_VisualOptions, 1);
+			return Deck.RenderCached(Ctx, m_Layout, TAB, Revision, std::forward<FBuild>(Build), m_Model, pScrollRegion, Input, m_Motion, m_VisualOptions, 1);
 		}
 		SSettingsCardDeckResult DrawDirect(CSettingsCardDeck &Deck, const std::vector<SSettingsCardDefinition> &vCards)
 		{
@@ -528,6 +530,119 @@ TEST_F(QmSettingsCardDeckConsumer, DirectBackgroundViewChangeDefersUntilItsPress
 	EXPECT_EQ(m_Diagnostics.m_DefinitionsPrepareCount, 0u);
 	EXPECT_EQ(m_Diagnostics.m_MeasureCount, 0u);
 	ExpectGeometry(CARD_B, 30);
+}
+
+TEST_F(QmSettingsCardDeckConsumer, ClippedCardHeaderCannotStartDrag)
+{
+	CSettingsCardDeck Deck;
+	CScrollRegion ScrollRegion;
+	m_Layout = SettingsPageLayout({20, 65, 500, 250}, 1.0f);
+	m_Model.SetEntries({{CARD_A, TAB, 1, 0}, {CARD_B, TAB, 1, 1}});
+	const auto pA = std::make_shared<SCardOwner>(CARD_A, 100);
+	const auto pB = std::make_shared<SCardOwner>(CARD_B, 80);
+	const auto Build = [&](auto &vCards) {
+		AddCard(vCards, pA);
+		AddCard(vCards, pB);
+	};
+	const auto DrawCards = [&] { return Draw(Deck, 1, Build, &ScrollRegion); };
+
+	Frame();
+	DrawCards();
+	ScrollRegion.SetScrollOffsetY(-40.0f);
+	Frame();
+	DrawCards();
+	ASSERT_EQ(m_Diagnostics.m_GeometryCount, 2u);
+	const CUIRect First = m_Diagnostics.m_aGeometry[0].m_Rect;
+	const CUIRect Second = m_Diagnostics.m_aGeometry[1].m_Rect;
+	const SSettingsCardSpec Spec{CARD_A, "Card", nullptr};
+	const CUIRect HiddenHeader = BuildSettingsCardFrame(First, Spec, pA->m_Height, 1.0f).m_HeaderRect;
+	const vec2 HiddenPress{HiddenHeader.x + 12.0f, HiddenHeader.y + HiddenHeader.h * 0.5f};
+	const vec2 Drop{HiddenPress.x, Second.y + Second.h * 0.5f + 4.0f};
+	ASSERT_LT(HiddenPress.y, ScrollRegion.ClipRect()->y);
+	ASSERT_TRUE(ScrollRegion.ClipRect()->Inside(Drop));
+
+	const uint64_t LayoutRevision = m_Model.LayoutRevision();
+	Frame(HiddenPress, true);
+	DrawCards();
+	Frame(Drop);
+	EXPECT_FALSE(DrawCards().m_OrderChanged);
+	ASSERT_EQ(m_Model.LayoutRevision(), LayoutRevision);
+
+	const SSettingsCardSpec SecondSpec{CARD_B, "Card", nullptr};
+	const CUIRect VisibleHeader = BuildSettingsCardFrame(Second, SecondSpec, pB->m_Height, 1.0f).m_HeaderRect;
+	const vec2 VisiblePress{HiddenPress.x, VisibleHeader.y + VisibleHeader.h * 0.5f};
+	const vec2 VisibleDrop{HiddenPress.x, ScrollRegion.ClipRect()->y + 4.0f};
+	ASSERT_TRUE(ScrollRegion.ClipRect()->Inside(VisiblePress));
+	Frame(VisiblePress, true);
+	DrawCards();
+	Frame(VisibleDrop);
+	EXPECT_TRUE(DrawCards().m_OrderChanged);
+	EXPECT_EQ(m_Model.Entry(m_Model.FindByStableId(CARD_B)).m_OrderInColumn, 0);
+}
+
+TEST_F(QmSettingsCardDeckConsumer, RejectedContentInputRestoresScrollClipAndContinuesWithTheNextCard)
+{
+	for(const bool LengthError : {false, true})
+	{
+		SCOPED_TRACE(LengthError);
+		CSettingsCardDeck Deck;
+		CScrollRegion ScrollRegion;
+		const auto pFirst = std::make_shared<SCardOwner>(CARD_A, 24.0f);
+		const auto pSecond = std::make_shared<SCardOwner>(CARD_B, 24.0f);
+		CSettingsContentLayoutCache Cache;
+		const auto pLayout = Cache.Resolve({{"control", "", 24.0f}}, 240.0f, 0, {});
+		int Inputs = 0;
+		int CompletedInputs = 0;
+		bool RejectInput = true;
+		const auto Build = [&](auto &vCards) {
+			AddCard(vCards, pFirst);
+			vCards.back().m_ResolveContentLayout = [pLayout](CSettingsContentLayoutCache &, float) { return pLayout; };
+			vCards.back().m_ContentLayoutInput = [&](const CSettingsContentLayout &, CUIRect) {
+				++Inputs;
+				EXPECT_TRUE(m_Ui.PreLayoutInput());
+				EXPECT_TRUE(m_Ui.IsClipped());
+				if(RejectInput)
+				{
+					if(LengthError)
+						throw std::length_error("card input");
+					throw std::bad_alloc();
+				}
+				++CompletedInputs;
+			};
+			AddCard(vCards, pSecond);
+			vCards.back().m_PreLayoutHeaderInput = [&](const SSettingsCardFrame &, bool) {
+				++pSecond->m_HeaderInputs;
+				EXPECT_TRUE(m_Ui.PreLayoutInput());
+				EXPECT_TRUE(m_Ui.IsClipped());
+				if(m_Ui.IsClipped())
+					EXPECT_FLOAT_EQ(m_Ui.ClipArea()->w, ScrollRegion.ClipRect()->w);
+				return false;
+			};
+		};
+
+		const CUIRect ParentClip{0, 0, 1000, 700};
+		Frame();
+		m_Ui.ClipEnable(&ParentClip);
+		EXPECT_NO_THROW(Draw(Deck, 1, Build, &ScrollRegion));
+		EXPECT_FALSE(m_Ui.PreLayoutInput());
+		EXPECT_TRUE(m_Ui.IsClipped());
+		if(m_Ui.IsClipped())
+			EXPECT_FLOAT_EQ(m_Ui.ClipArea()->w, ParentClip.w);
+		m_Ui.ResetClipState();
+		EXPECT_EQ(Inputs, 1);
+		EXPECT_EQ(CompletedInputs, 0);
+		EXPECT_EQ(pSecond->m_HeaderInputs, 1);
+		EXPECT_EQ(pSecond->m_Draws, 1);
+
+		RejectInput = false;
+		Frame();
+		Draw(Deck, 1, Build, &ScrollRegion);
+		EXPECT_FALSE(m_Ui.PreLayoutInput());
+		EXPECT_FALSE(m_Ui.IsClipped());
+		EXPECT_EQ(Inputs, 2);
+		EXPECT_EQ(CompletedInputs, 1);
+		EXPECT_EQ(pSecond->m_HeaderInputs, 2);
+	}
 }
 
 TEST_F(QmSettingsCardDeckConsumer, PreparedRevealStringCommitsWithoutAllocationAndIsConsumedOnce)

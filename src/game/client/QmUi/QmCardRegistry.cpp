@@ -10,6 +10,8 @@
 
 #include <algorithm>
 #include <iterator>
+#include <new>
+#include <stdexcept>
 #include <utility>
 
 namespace qm_card_registry
@@ -86,7 +88,7 @@ namespace qm_card_registry
 		return true;
 	}
 
-	ETClientMainCardsMigrationResult MigrateTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model, char *pSerialized, const int SerializedSize)
+	ETClientMainCardsMigrationResult MigrateTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model, char *pSerialized, const int SerializedSize) try
 	{
 		if(!IsTClientMainCardsLegacyLeft(Model))
 		{
@@ -105,9 +107,19 @@ namespace qm_card_registry
 		if(!Candidate.Serialize(pSerialized, SerializedSize))
 			return ETClientMainCardsMigrationResult::PERSIST_FAILED;
 
-		MoveTClientMainCardsToAlternatingColumns(Model);
+		// 发布已序列化的候选，避免再次分配或在正式模型上留下只迁移了一半的列。
+		Model.SwapContent(Candidate);
 		return ETClientMainCardsMigrationResult::MIGRATED;
 	}
+	catch(const std::bad_alloc &)
+	{
+		return ETClientMainCardsMigrationResult::PERSIST_FAILED;
+	}
+	catch(const std::length_error &)
+	{
+		return ETClientMainCardsMigrationResult::PERSIST_FAILED;
+	}
+
 	static const std::vector<SCardDefault> &DefaultsTable()
 	{
 		// 注册表行序就是默认阅读序：BuildDefaultEntries() 按此顺序做对称瀑布分配

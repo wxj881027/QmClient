@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <initializer_list>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -52,6 +53,15 @@ namespace qm_card_order
 
 		// 核心操作：把 pStableId 移到 ToColumn 的 ToOrder 位置
 		void Move(const char *pStableId, int ToColumn, int ToOrder);
+
+		struct SColumnOrder
+		{
+			int m_Column;
+			const std::vector<int> &m_vStateIndices;
+		};
+		// 调用方预备各受影响列的完整顺序，索引有效且各卡仅出现一次。
+		// 提交只改列和顺序，保留条目、tab 字符串和 state index 的存储。
+		void CommitColumnOrders(std::initializer_list<SColumnOrder> ColumnOrders) noexcept;
 		// 跨 tab/列移动：tab 是可变位置维度，组件编辑器跨页搬卡时使用。
 		void MoveToTab(const char *pStableId, const char *pToTab, int ToColumn, int ToOrder);
 

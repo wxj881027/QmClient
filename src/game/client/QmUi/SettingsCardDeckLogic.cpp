@@ -9,6 +9,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <new>
+#include <stdexcept>
 
 void CSettingsCardDeckPackingPlan::Reset(const float CursorY, const float CardGap)
 {
@@ -80,10 +82,14 @@ namespace settings_card_deck_logic
 		if(m_LayoutRevision == Model.LayoutRevision() && str_comp(m_Tab.c_str(), pResolvedTab) == 0 && m_vActiveStateIndices == vActiveStateIndices)
 			return m_aColumns;
 
-		m_aColumns = BuildSettingsCardDeckColumnOrder(Model, pResolvedTab, vActiveStateIndices);
+		// 先准备投影与缓存键。准备失败时，旧键仍能取到对应的旧列顺序。
+		std::string Tab(pResolvedTab);
+		std::vector<int> vActive(vActiveStateIndices);
+		auto aColumns = BuildSettingsCardDeckColumnOrder(Model, pResolvedTab, vActiveStateIndices);
+		m_aColumns.swap(aColumns);
+		m_Tab.swap(Tab);
+		m_vActiveStateIndices.swap(vActive);
 		m_LayoutRevision = Model.LayoutRevision();
-		m_Tab = pResolvedTab;
-		m_vActiveStateIndices = vActiveStateIndices;
 		++m_RebuildCount;
 		return m_aColumns;
 	}
@@ -433,6 +439,7 @@ SSettingsCardColumnFrame ResolveSettingsCardColumnFrame(const float CursorY, con
 }
 
 bool CommitSettingsCardDeckDrop(qm_card_order::CModel &Model, const char *pTab, const char *pStableId, int TargetColumn, int TargetOrder, const std::vector<int> *pActiveStateIndices)
+try
 {
 	if(pTab == nullptr || pStableId == nullptr || TargetColumn < 0 || TargetColumn > 2)
 		return false;
@@ -503,8 +510,17 @@ bool CommitSettingsCardDeckDrop(qm_card_order::CModel &Model, const char *pTab, 
 	Model.Move(pStableId, TargetColumn, ClampedOrder);
 	return true;
 }
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
 
 bool CommitSettingsCardDeckSingleColumnDrop(qm_card_order::CModel &Model, const char *pTab, const char *pStableId, int TargetOrder, const std::vector<int> &vActiveStateIndices)
+try
 {
 	const int Index = Model.FindByStableId(pStableId);
 	if(Index < 0 || Model.Entry(Index).m_pDefaultTab == nullptr || str_comp(Model.Entry(Index).m_pDefaultTab, pTab != nullptr ? pTab : "") != 0)
@@ -536,15 +552,14 @@ bool CommitSettingsCardDeckSingleColumnDrop(qm_card_order::CModel &Model, const 
 		}
 	}
 
-	// 先固定完整 canonical 顺序再提交，避免连续移动时动态可见锚点把隐藏卡推离原槽位。
-	for(const int Column : {1, 2})
-	{
-		for(int Order = 0; Order < (int)aCanonicalColumns[Column].size(); ++Order)
-		{
-			const int StateIndex = aCanonicalColumns[Column][Order];
-			if(StateIndex >= 0 && StateIndex < Model.Count())
-				Model.Move(Model.Entry(StateIndex).m_pStableId, Column, Order);
-		}
-	}
+	Model.CommitColumnOrders({{1, aCanonicalColumns[1]}, {2, aCanonicalColumns[2]}});
 	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }

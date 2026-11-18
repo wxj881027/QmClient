@@ -23,10 +23,32 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <new>
+#include <stdexcept>
 #include <type_traits>
 
 namespace
 {
+	struct SPreLayoutInputScope
+	{
+		CUi *m_pUi;
+		~SPreLayoutInputScope()
+		{
+			if(m_pUi != nullptr)
+				m_pUi->EndPreLayoutInput();
+		}
+	};
+
+	struct SPreLayoutCardClipScope
+	{
+		CUi *m_pUi;
+		~SPreLayoutCardClipScope()
+		{
+			if(m_pUi != nullptr)
+				m_pUi->ClipDisable();
+		}
+	};
+
 	bool PointInRect(const CUIRect &Rect, float X, float Y)
 	{
 		return X >= Rect.x && X <= Rect.x + Rect.w && Y >= Rect.y && Y <= Rect.y + Rect.h;
@@ -581,15 +603,14 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	// 先用当前 active snapshot 的几何处理控制器输入，再为最终 active snapshot 重新计算布局。
 	m_vPreviousActiveStateIndices = m_vActiveStateIndices;
 	bool PreLayoutGeometryChanged = false;
-	std::vector<int> vPreLayoutGeometryChangedStates;
 	const bool HasPointerInput = Input.m_MousePressed || Input.m_MouseDown || Input.m_MouseReleased;
 	// Header buttons必须每帧运行以先建立 HotItem；否则鼠标首次按下时
 	// DoButtonLogic 无法进入 active，释放时也就不会提交点击。
 	{
 		if(Ctx.m_pUi != nullptr)
 			Ctx.m_pUi->BeginPreLayoutInput();
-		for(SPreparedCard &Card : m_vPreparedCards)
-		{
+		const SPreLayoutInputScope PreLayoutInputScope{Ctx.m_pUi};
+		const auto RunCardInput = [&](SPreparedCard &Card) {
 			SRuntimeState &Runtime = m_vRuntimeStates[Card.m_StateIndex];
 			CUiScopedInteractionOwner InteractionOwner(Ctx.m_pUi, this, Card.m_pDefinition->m_Spec.m_pStableId);
 			// 鼠标按下与释放跨帧完成。预布局必须沿用上一帧实际绘制位置，
@@ -649,26 +670,40 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 					const CUIRect Clip = ResolveSettingsCardContentClipRect(PreLayoutFrame.m_ContentRect, PreLayoutFrame.m_Rect, Ctx.m_UiScale);
 					Ctx.m_pUi->ClipEnable(&Clip);
 				}
+				const SPreLayoutCardClipScope ClipScope{Ctx.m_pUi};
 				CardGeometryChanged = qm_settings_content::ExecuteInput(*Card.m_pDefinition, Card.m_pContentLayout, m_vContentLayoutCaches[Card.m_StateIndex], PreLayoutFrame.m_ContentRect,
 							      ControllerVisible, HasActiveContentContinuation, Collapsed, Ctx.m_pUi) ||
 						      CardGeometryChanged;
-				if(Ctx.m_pUi != nullptr)
-					Ctx.m_pUi->ClipDisable();
 			}
 			if(SettingsCardDeckShouldRunPreLayoutInput(HasPointerInput, HasPendingPreLayoutInput, HasActiveContentContinuation, ControllerVisible, Collapsed, PreLayoutFrame.m_ContentRect.h) && Card.m_pDefinition->m_PreLayoutInput)
 			{
 				m_FrameRuntime.CountPreLayoutInput();
 				CardGeometryChanged = Card.m_pDefinition->m_PreLayoutInput(PreLayoutFrame.m_ContentRect) || CardGeometryChanged;
 			}
+			return CardGeometryChanged;
+		};
+		for(SPreparedCard &Card : m_vPreparedCards)
+		{
+			bool CardGeometryChanged;
+			try
+			{
+				CardGeometryChanged = RunCardInput(Card);
+			}
+			catch(const std::bad_alloc &)
+			{
+				CardGeometryChanged = true;
+			}
+			catch(const std::length_error &)
+			{
+				CardGeometryChanged = true;
+			}
 			if(CardGeometryChanged)
 			{
+				// 输入可能已提交一部分状态。仅失效本卡测量，在最终布局中重新读取。
 				m_vContentHeights[Card.m_StateIndex] = -1.0f;
-				vPreLayoutGeometryChangedStates.push_back(Card.m_StateIndex);
 				PreLayoutGeometryChanged = true;
 			}
 		}
-		if(Ctx.m_pUi != nullptr)
-			Ctx.m_pUi->EndPreLayoutInput();
 	}
 	// 预布局回调可能刚打开颜色选择器，原始按键快照不得驱动同帧拖动。
 	Input = ResolveSettingsCardDeckPointerInput(Input, Ctx.m_pUi != nullptr && (Ctx.m_pUi->RenderOnly() || Ctx.m_pUi->PointerInputBlocked()));
@@ -676,16 +711,6 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	if(m_vActiveStateIndices != m_vPreviousActiveStateIndices || PreLayoutGeometryChanged)
 	{
 		GeometryStateChanged = true;
-		if(PreLayoutGeometryChanged)
-		{
-			// 只失效实际处理了输入的卡片。后续卡片的 Y 会由列布局自然
-			// 推进，但它们的内容高度和测量缓存不能因邻卡折叠而被重算。
-			for(const int StateIndex : vPreLayoutGeometryChangedStates)
-			{
-				if(StateIndex >= 0 && StateIndex < (int)m_vContentHeights.size())
-					m_vContentHeights[StateIndex] = -1.0f;
-			}
-		}
 		pColumns = &m_ProjectionCache->Resolve(Model, pTab, m_vActiveStateIndices);
 		BuildPreparedCards(*pColumns);
 	}
@@ -735,7 +760,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		}
 	}
 	m_LastEntryOffsetY = DeckEntryOffsetY;
-	if(!m_Drag.Active() && SettingsCardDeckAllowsDragStart(EntryPending, EntryPositionActive, ReflowTargetChanged, ReflowPositionActive || ContentHeightAnimationActive) && (Input.m_CtrlPressed || Input.m_AllowHeaderDrag) && Input.m_MousePressed)
+	if(!m_Drag.Active() && Input.m_MousePressed && (Input.m_CtrlPressed || Input.m_AllowHeaderDrag) &&
+		ScrollViewport.Inside({Input.m_MouseX, Input.m_MouseY}) && (Ctx.m_pUi == nullptr || Ctx.m_pUi->MouseInsideClip()) &&
+		SettingsCardDeckAllowsDragStart(EntryPending, EntryPositionActive, ReflowTargetChanged, ReflowPositionActive || ContentHeightAnimationActive))
 	{
 		for(const SPreparedCard &Card : m_vPreparedCards)
 		{

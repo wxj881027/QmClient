@@ -3512,6 +3512,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogVoiceContent.cpp
     QmUi/cards/QmCardCatalogBackground3DContent.cpp
     QmUi/cards/QmCardCatalogKeywordReply.cpp
+    QmUi/cards/QmKeywordReplyCardPersistence.h
     QmUi/cards/QmCardCatalogBetterScoreboard.cpp
     QmUi/cards/QmCardCatalogSteam.cpp
     QmUi/cards/QmSteamProbeState.h
@@ -6798,6 +6799,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_scaled_label_test.cpp
       src/test/integration/qmclient/ui/qm_search_answer_card_test.cpp
       src/test/integration/qmclient/ui/qm_settings_card_deck_consumer_test.cpp
+      src/test/unit/qmclient/settings/settings_card_projection_allocation_test.cpp
+      src/test/unit/qmclient/ui/qm_card_registry_migration_allocation_test.cpp
+      src/test/unit/qmclient/settings/settings_card_drop_allocation_test.cpp
       src/test/support/qm_settings_card_menu_boundary.cpp
       src/test/integration/qmclient/ui/qm_checkpoint_guide_text_test.cpp
       src/test/integration/qmclient/ui/qm_pie_menu_settings_text_test.cpp
