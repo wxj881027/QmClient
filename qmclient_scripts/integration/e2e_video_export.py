@@ -500,6 +500,55 @@ def scenario_video_export_failed_start_preserves_output(env: ProcessEnvironment)
 		client.stop()
 
 
+def scenario_video_export_segment_failed_start_keeps_progress(env: ProcessEnvironment) -> None:
+	"""分段录制无法打开临时输出时，旧段不能被登记为本次完成。"""
+	fixture = os.environ.get("QM_E2E_DEMO")
+	if not fixture or not Path(fixture).is_file():
+		raise SkipTest("缺少隔离 demo fixture：设置 QM_E2E_DEMO")
+	demo = Path(fixture).resolve()
+	name = "qme2e_segment_start_fail"
+	client = start_demo_client(env, [
+		"demo_speed 1",
+		"qm_video_segment_seconds 0",
+		"qm_video_encoder libx264",
+		"qm_video_container mkv",
+		f"qm_video_width {OUTPUT_WIDTH}",
+		f"qm_video_height {OUTPUT_HEIGHT}",
+		"cl_show_welcome 1",
+	])
+	try:
+		client.command(f'play "{demo}"')
+		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
+		command = f"start_video {name} {RANGE_START_SECONDS} {RANGE_END_SECONDS}"
+		client.command(command)
+		client.wait_for(lambda line: "Concatenated" in line and f"{name}.mkv" in line, "生成旧段和成片", 180)
+
+		progress = env.path("videos", f"{name}.progress")
+		previous_progress = progress.read_bytes()
+		segment_name = f"{name}_p001.mkv"
+		env.path("videos", f"{segment_name}.recording").mkdir()
+		# 改变输出尺寸，让续渲重新录制同名片段。
+		client.command(f"qm_video_width {OUTPUT_WIDTH - 16}")
+		client.command(command)
+		client.wait_for(
+			lambda line: "Could not open temporary file" in line and segment_name in line,
+			"分段录制无法打开临时输出",
+			60,
+		)
+		client.wait_for(
+			lambda line: line.startswith("client: disconnecting.") and "Failed to start video recording" in line,
+			"录制失败后的回放收尾",
+			30,
+		)
+		if progress.read_bytes() != previous_progress:
+			raise AssertionError("启动失败后把旧段写入了当前导出进度")
+		client.command("quit")
+		if client.wait_for_exit(30) != 0:
+			raise AssertionError("客户端未正常退出")
+	finally:
+		client.stop()
+
+
 def scenario_video_export_display_snapshot_and_resume(env: ProcessEnvironment) -> None:
 	"""导出中改显示配置不改变当前任务快照；重启后指纹失效并从第一段重渲。"""
 	demo = demo_path()
@@ -865,6 +914,7 @@ def scenario_video_export_upscale_output(env: ProcessEnvironment) -> None:
 
 E2E_TESTS = {
 	"video_export_failed_start_preserves_output": scenario_video_export_failed_start_preserves_output,
+	"video_export_segment_failed_start_keeps_progress": scenario_video_export_segment_failed_start_keeps_progress,
 	"video_export_noninteger_fps_audio_sync": scenario_video_export_noninteger_fps_audio_sync,
 	"video_export_display_snapshot_and_resume": scenario_video_export_display_snapshot_and_resume,
 	"video_export_audio_failure_keeps_segment_pending": scenario_video_export_audio_failure_keeps_segment_pending,

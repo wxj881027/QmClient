@@ -6471,9 +6471,9 @@ void CClient::FinishSegmentedExport()
 	if(SegmentIndex < 0)
 		return;
 
-	// 录制以错误终止：不标记完成、不写进度，保留该段为待渲状态，下次续渲重做。
-	// 容器是否"能打开"不足以判断内容完整（mkv 截断文件同样可打开）。
-	if(pTask->SegmentRecordingFailed())
+	// 录制未启动或以错误终止时，保留该段为待渲状态。
+	// 同名旧段和未完整写出的段都可能通过容器检查。
+	if(pTask->State() != CVideoExportTask::EState::RECORDING || pTask->SegmentRecordingFailed())
 	{
 		log_error("video_export", "Segment %d recording failed; keeping it pending for the next run.", SegmentIndex + 1);
 		// 本次导出失败：让 UI 不弹"渲染完成"。
@@ -6614,6 +6614,8 @@ void CClient::DriveSegmentedExport(int CurrentTick)
 		StartVideo(aSegmentName, false);
 		if(IVideo::Current())
 			pTask->OnRecordingStarted();
+		else
+			FinishSegmentedExport();
 		break;
 	}
 	case CVideoExportTask::ACT_STOP_RECORD:
