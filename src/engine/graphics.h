@@ -371,8 +371,8 @@ public:
 	{
 		if(SourceDimension <= 0 || Level < 0)
 			return 0;
-		for(int CurrentLevel = 0; CurrentLevel <= Level; ++CurrentLevel)
-			SourceDimension = (SourceDimension + 1) / 2;
+		for(int CurrentLevel = 0; CurrentLevel <= Level && SourceDimension > 1; ++CurrentLevel)
+			SourceDimension = SourceDimension / 2 + SourceDimension % 2;
 		return SourceDimension;
 	}
 
@@ -682,7 +682,7 @@ public:
 		return Image.m_pData ? LoadTextureRawMove(Image, Flags, pName) : CTextureHandle();
 	}
 	/**
-	 * 判断句柄当前是否真的还指向一张已分配贴图。
+	 * 检查纹理槽位是否仍由该句柄占用。GPU 上传由后端异步执行。
 	 *
 	 * 贴图被卸载（UnloadTexture）或经历显卡设备重建后，旧句柄的 IsValid() 依旧为真，
 	 * 但 TextureSet 会把它降级成「无贴图」，于是绘制出来的是一块没有贴图的实心色块。
@@ -908,21 +908,15 @@ public:
 	virtual const char *GetRendererString() = 0;
 	virtual const char *GetFatalError() const = 0;
 	/**
-	 * 非破坏性查询图形后端是否已经记录了致命错误。
+	 * 查询后端是否记录了尚未消费的致命错误。
+	 * 线程后端会先等待当前渲染命令执行结束。主循环用 TakeFatalError() 轮询。
 	 *
-	 * 后端一旦把致命错误提交出去（CGraphicsBackend_Threaded::ProcessError 会调用
-	 * dbg_assert_failed 直接中止进程），就没有任何恢复余地，所以主循环必须在提交
-	 * 之前轮询这个接口，才能在设备丢失这类故障上主动做恢复/退出，而不是让进程
-	 * 卡在断言弹出的模态错误框里（那会让心跳停止并写出误导性的 hang 报告）。
-	 *
-	 * @return true 表示后端已记录致命错误，图形输出不可继续信任。
+	 * @return true 表示存在尚未消费的致命错误。
 	 */
 	virtual bool HasFatalError() const { return false; }
 	/**
-	 * 检查并清除图形后端的致命错误标记。
-	 *
-	 * 只有在「已经决定不再信任本帧图形输出、准备收尾/重启」时才允许调用：
-	 * 清除标记的目的是让随后的收尾流程（关停仍会提交清理命令）不再重复触发断言。
+	 * 渲染线程空闲时消费致命错误，保留首份诊断并停止正常命令提交。
+	 * 渲染线程忙时立即返回 false，主循环可在后续帧继续轮询。
 	 *
 	 * @return true 表示刚刚消费掉一个致命错误。
 	 */
@@ -1203,8 +1197,7 @@ public:
 	virtual void SetWindowGrab(bool Grab) = 0;
 	virtual void NotifyWindow() = 0;
 
-	// be aware that this function should only be called from the graphics thread, and even then you should really know what you are doing
-	// this function always returns the pixels in RGB
+	// 仅在图形线程调用。读回成功时，回调输出 RGBA 像素、宽高和格式。
 	virtual TGLBackendReadPresentedImageData &GetReadPresentedImageDataFuncUnsafe() = 0;
 
 	virtual std::optional<SWarning> CurrentWarning() = 0;
