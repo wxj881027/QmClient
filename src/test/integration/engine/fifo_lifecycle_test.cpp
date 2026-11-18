@@ -155,6 +155,28 @@ TEST_F(FifoLifecycle, NormalCommandsKeepTheirExistingLineDispatch)
 	EXPECT_EQ(m_Calls, 3);
 }
 
+#if defined(CONF_FAMILY_WINDOWS)
+TEST_F(FifoLifecycle, QueuedMessagesKeepWriteBoundariesAndCommandOrder)
+{
+	std::string Commands;
+	m_pConsole->Register(
+		"fifo_record", "s[value]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUser) {
+			auto &Output = *static_cast<std::string *>(pUser);
+			Output.append(pResult->GetString(0));
+			Output.push_back('\n');
+		},
+		&Commands, "");
+	Start();
+	ASSERT_TRUE(OpenWriter());
+	ASSERT_TRUE(Send("fifo_record first"));
+	ASSERT_TRUE(Send("fifo_record second\r\nfifo_record third\nfifo_record fourth"));
+
+	m_Fifo.Update();
+
+	EXPECT_EQ(Commands, "first\nsecond\nthird\nfourth\n");
+}
+#endif
+
 TEST_F(FifoLifecycle, InvalidUtf8LineDoesNotPreventNextValidLine)
 {
 	Start();

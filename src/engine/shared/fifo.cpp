@@ -55,13 +55,14 @@ try
 #if defined(O_NOFOLLOW)
 	OpenFlags |= O_NOFOLLOW;
 #endif
+	struct stat OpenedAttribute;
 	m_File = open(m_aFilename, OpenFlags);
 	if(m_File < 0)
 	{
 		log_error("fifo", "Failed to open fifo '%s' (%d '%s')", m_aFilename, errno, strerror(errno));
 	}
-	else if(fstat(m_File, &Attribute) != 0 || !S_ISFIFO(Attribute.st_mode) ||
-		(m_OwnsFifo && (Attribute.st_dev != m_Device || Attribute.st_ino != m_Inode)))
+	else if(fstat(m_File, &OpenedAttribute) != 0 || !S_ISFIFO(OpenedAttribute.st_mode) ||
+		OpenedAttribute.st_dev != Attribute.st_dev || OpenedAttribute.st_ino != Attribute.st_ino)
 	{
 		close(std::exchange(m_File, -1));
 		log_error("fifo", "Opened path '%s' does not match the fifo", m_aFilename);
@@ -79,15 +80,17 @@ catch(...)
 
 void CFifo::Shutdown() noexcept
 {
-	if(m_File >= 0)
-		close(std::exchange(m_File, -1));
+	const int File = std::exchange(m_File, -1);
 	if(std::exchange(m_OwnsFifo, false))
 	{
+		// 清理路径时仍持有描述符，避免已打开节点的 inode 被提前复用。
 		struct stat Attribute;
 		if(lstat(m_aFilename, &Attribute) == 0 && S_ISFIFO(Attribute.st_mode) &&
 			Attribute.st_dev == m_Device && Attribute.st_ino == m_Inode)
 			(void)fs_remove(m_aFilename);
 	}
+	if(File >= 0)
+		close(File);
 	m_IsInit = false;
 }
 
@@ -212,7 +215,8 @@ try
 	while(m_pPipe) // read all messages from the pipe
 	{
 		DWORD BytesAvailable;
-		if(!PeekNamedPipe(m_pPipe, nullptr, 0, nullptr, &BytesAvailable, nullptr))
+		DWORD MessageBytes;
+		if(!PeekNamedPipe(m_pPipe, nullptr, 0, nullptr, &BytesAvailable, &MessageBytes))
 		{
 			const DWORD LastError = GetLastError();
 			if(LastError == ERROR_BROKEN_PIPE)
@@ -230,14 +234,16 @@ try
 		if(BytesAvailable == 0) // pipe connected but no data available
 			return;
 
-		if(static_cast<uint64_t>(BytesAvailable) >= std::numeric_limits<size_t>::max())
+		// 队首可能是零长度消息，仍用非零的读取长度消费它。
+		const DWORD ReadSize = MessageBytes == 0 ? 1 : MessageBytes;
+		if(static_cast<uint64_t>(ReadSize) >= std::numeric_limits<size_t>::max())
 			return;
-		std::unique_ptr<char, decltype(&free)> Buffer(static_cast<char *>(malloc(static_cast<size_t>(BytesAvailable) + 1)), &free);
+		std::unique_ptr<char, decltype(&free)> Buffer(static_cast<char *>(malloc(static_cast<size_t>(ReadSize) + 1)), &free);
 		if(!Buffer)
 			return;
 		char *pBuf = Buffer.get();
 		DWORD Length;
-		if(!ReadFile(m_pPipe, pBuf, BytesAvailable, &Length, nullptr))
+		if(!ReadFile(m_pPipe, pBuf, ReadSize, &Length, nullptr))
 		{
 			const DWORD LastError = GetLastError();
 			log_error("fifo", "Failed to read from pipe '%s' (%ld '%s')", m_aFilename, LastError, windows_format_system_message(LastError).c_str());
