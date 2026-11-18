@@ -707,7 +707,8 @@ public:
 		float m_TopPinch = 0.0f;
 		// 绘制表面边界的覆盖率过渡宽度，使用当前映射坐标。
 		float m_EdgeFeather = 0.0f;
-		// 整张离屏表面使用后端原生纹理方向，自定义UV仍沿用原有约定。
+		// 整张离屏表面使用后端原生纹理方向；若调用方先给出自定义 UV，
+		// 只翻转 V 轴以适配后端原点，不重置裁切范围。
 		bool m_NativeTextureCoordinates = false;
 		// 已合成背景的实时画面直接复制颜色，避免纹理 Alpha 再混合一次。
 		bool m_Opaque = false;
@@ -722,6 +723,7 @@ public:
 		float m_V0 = 1.0f;
 		float m_U1 = 1.0f;
 		float m_V1 = 0.0f;
+		bool m_HasCustomTextureCoordinates = false;
 
 		// 以表面的几何上缘为起点向下减弱黑色，独立于纹理方向与边缘覆盖率。
 		float m_TopShade = 0.0f;
@@ -752,10 +754,30 @@ public:
 			return Center + vec2(RotatedX, RotatedY) * (Distance / (Distance + Depth));
 		}
 
+		// 自定义 UV 范围必须走这个入口登记，原生方向才能只翻 V 而不覆盖裁切。
+		void SetTextureCoordinates(float U0, float V0, float U1, float V1)
+		{
+			m_U0 = U0;
+			m_V0 = V0;
+			m_U1 = U1;
+			m_V1 = V1;
+			m_HasCustomTextureCoordinates = true;
+		}
+
 		// 整幅预览按实际后端的纹理原点取样，不改变导出像素的读回方向。
 		void SetNativeTextureCoordinates(EBackendType Backend)
 		{
 			const bool TopLeftOrigin = Backend == BACKEND_TYPE_VULKAN || Backend == BACKEND_TYPE_METAL;
+			if(m_HasCustomTextureCoordinates)
+			{
+				if(!TopLeftOrigin)
+				{
+					const float V0 = m_V0;
+					m_V0 = 1.0f - m_V1;
+					m_V1 = 1.0f - V0;
+				}
+				return;
+			}
 			m_U0 = 0.0f;
 			m_U1 = 1.0f;
 			m_V0 = TopLeftOrigin ? 0.0f : 1.0f;

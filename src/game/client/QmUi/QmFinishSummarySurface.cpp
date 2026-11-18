@@ -115,10 +115,7 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 			Backdrop.m_Y = Rect.y;
 			Backdrop.m_W = Rect.w;
 			Backdrop.m_H = Rect.h;
-			Backdrop.m_U0 = Uv.x;
-			Backdrop.m_V0 = Uv.y;
-			Backdrop.m_U1 = Uv.x + Uv.z;
-			Backdrop.m_V1 = Uv.y + Uv.w;
+			Backdrop.SetTextureCoordinates(Uv.x, Uv.y, Uv.x + Uv.z, Uv.y + Uv.w);
 			Graphics.DrawRenderTarget(Style.m_Backdrop, Backdrop);
 		}
 		// 字形按离屏像素密度生成，最终缩回 HUD 时仍有足够的笔画采样。

@@ -1160,10 +1160,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect Vi
 	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
 	DrawParams.m_CornerSeam = QmEffectiveCapsuleSeam();
 	if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
-	{
-		DrawParams.m_V0 = 0.0f;
-		DrawParams.m_V1 = 1.0f;
-	}
+		DrawParams.SetTextureCoordinates(0.0f, 0.0f, 1.0f, 1.0f);
 	pUi->FlushQuadBatch();
 	pUi->ClipEnable(&Preview);
 	pMenus->Graphics()->DrawRenderTarget(pEntry->m_RenderTarget, DrawParams);

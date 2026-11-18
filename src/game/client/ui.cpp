@@ -708,10 +708,11 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 	DrawParams.m_CornerSmoothing = QmEffectiveCornerSmoothing();
 	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
 	DrawParams.m_CornerSeam = QmEffectiveCapsuleSeam();
-	DrawParams.m_U0 = (MaskRect.x - ScreenX0) / MappedWidth;
-	DrawParams.m_U1 = (MaskRect.x + MaskRect.w - ScreenX0) / MappedWidth;
-	DrawParams.m_V0 = 1.0f - (MaskRect.y - ScreenY0) / MappedHeight;
-	DrawParams.m_V1 = 1.0f - (MaskRect.y + MaskRect.h - ScreenY0) / MappedHeight;
+	DrawParams.SetTextureCoordinates(
+		(MaskRect.x - ScreenX0) / MappedWidth,
+		1.0f - (MaskRect.y - ScreenY0) / MappedHeight,
+		(MaskRect.x + MaskRect.w - ScreenX0) / MappedWidth,
+		1.0f - (MaskRect.y + MaskRect.h - ScreenY0) / MappedHeight);
 	Graphics()->DrawRenderTarget(m_GaussianBlurTarget, DrawParams);
 	if(IsClipped())
 		UpdateClipping();

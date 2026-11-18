@@ -2279,10 +2279,7 @@ void CHud::RenderDummyMiniMap()
 				DrawParams.m_CornerSeam = QmEffectiveCapsuleSeam();
 				DrawParams.m_Opaque = true;
 				if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
-				{
-					DrawParams.m_V0 = 0.0f;
-					DrawParams.m_V1 = 1.0f;
-				}
+					DrawParams.SetTextureCoordinates(0.0f, 0.0f, 1.0f, 1.0f);
 				Graphics()->DrawRenderTarget(m_DummyMiniViewRenderTarget, DrawParams);
 			}
 		}
