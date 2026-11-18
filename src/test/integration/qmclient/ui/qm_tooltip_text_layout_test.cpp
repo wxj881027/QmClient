@@ -551,7 +551,9 @@ TEST_F(QmTooltipTextLayout, OverlongHintKeepsTheEllipsisOnTheLastVisibleLineInsi
 	EXPECT_EQ(EndCursor.m_GlyphCount, 1);
 	// 省略号落在气泡内、且在屏幕内：不溢出。
 	ASSERT_TRUE(EndCursor.m_HasVisualBoundingBox);
-	EXPECT_LE(EllipsisY + EndCursor.m_VisualBottom, Facts.m_Layout.m_Size.y + 0.001f);
+	// 文字引擎的可视包围盒是相对容器原点的绝对坐标（测量入口也用 m_VisualTop 直接反推
+	// 偏移），不能再加一次 EllipsisY：重复计入会把 42 变成 76，误判成溢出。
+	EXPECT_LE(EndCursor.m_VisualBottom, Facts.m_Layout.m_Size.y + 0.001f);
 }
 
 TEST(QmTooltipFontScale, ConfiguredValueIsTheRenderedFontSize)

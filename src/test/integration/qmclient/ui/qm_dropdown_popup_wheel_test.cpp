@@ -18,10 +18,15 @@ namespace
 		CUi::SDropDownState m_State;
 		CScrollRegion m_ScrollRegion;
 		SPopupMenuId m_ParentId;
+		qm_ui_test::CTestUiClient m_Client;
+		qm_ui_test::CTestInput m_Input;
 		int m_PageOwner = 0;
 		CUIRect m_Anchor{-10.0f, -24.0f, 100.0f, 24.0f};
 		CUIRect m_Viewport{-100.0f, -100.0f, 400.0f, 400.0f};
 		std::array<const char *, 10> m_aEntries{"Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"};
+
+		IInput *UiInput() override { return &m_Input; }
+		IClient *UiClient() override { return &m_Client; }
 
 		static CUi::EPopupMenuFunctionResult KeepOpen(void *, CUIRect, bool)
 		{
@@ -282,6 +287,7 @@ namespace
 		Props.m_pAnchorViewport = &m_Viewport;
 		Props.m_pPopupViewport = &m_Viewport;
 		Graphics.m_vRoundedSubmissions.clear();
+		m_Ui.Update();
 		m_Ui.DoDropDown(&m_Anchor, 0, m_aEntries.data(), (int)m_aEntries.size(), m_State, Props);
 		ASSERT_FALSE(Graphics.m_vRoundedSubmissions.empty());
 		// 24 高的触发器：四角都是行高一半的胶囊端头，与弹层条目同一条派生；
