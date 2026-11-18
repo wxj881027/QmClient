@@ -441,7 +441,11 @@ namespace ui_widget
 	inline int SliderInputStoredMinimum(int DisplayMin, int ValueMultiplier) { return DisplayMin / std::max(1, ValueMultiplier); }
 	inline int SliderInputStoredMaximum(int DisplayMax, int ValueMultiplier) { return DisplayMax / std::max(1, ValueMultiplier); }
 	inline int SliderInputDisplayValue(int StoredValue, int ValueMultiplier) { return StoredValue * std::max(1, ValueMultiplier); }
-	inline int SliderInputStoredValue(int DisplayValue, int ValueMultiplier) { return (int)std::round(DisplayValue / (float)std::max(1, ValueMultiplier)); }
+	inline int SliderInputStoredValue(int DisplayValue, int ValueMultiplier)
+	{
+		// 保留 int 上界的精度，避免转换回 int 前被舍入到范围外。
+		return static_cast<int>(std::round(static_cast<double>(DisplayValue) / std::max(1, ValueMultiplier)));
+	}
 	inline int QuantizeNumericFieldStoredValue(int Value, int Minimum, int Maximum, int Step)
 	{
 		const int ClampedValue = std::clamp(Value, Minimum, Maximum);
