@@ -19,10 +19,20 @@
 #include "snapshot.h"
 
 #include <algorithm>
+#include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <memory>
 #include <stdexcept>
 #include <utility>
+
+#if defined(CONF_FAMILY_WINDOWS)
+#include <io.h>
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 const CUuid SHA256_EXTENSION =
 	{{0x6b, 0xe6, 0xda, 0x4a, 0xce, 0xbd, 0x38, 0x0c,
@@ -458,6 +468,97 @@ void CDemoRecorder::RecordMessage(const void *pData, int Size)
 	Write(CHUNKTYPE_MESSAGE, pData, Size);
 }
 
+namespace
+{
+	bool IsCapturedFile(IOHANDLE Original, const char *pPath)
+	{
+		std::unique_ptr<void, decltype(&io_close)> Other(io_open_read_regular_checked(pPath, nullptr), &io_close);
+		if(!Other)
+			return false;
+#if defined(CONF_FAMILY_WINDOWS)
+		BY_HANDLE_FILE_INFORMATION A{}, B{};
+		const auto Info = [](IOHANDLE File, BY_HANDLE_FILE_INFORMATION &Result) {
+			const HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(static_cast<FILE *>(File))));
+			if(GetFileInformationByHandle(Handle, &Result))
+				return true;
+			// 录制流可能只有写入权限，按同一个文件对象补开属性句柄。
+			const HANDLE Attributes = ReOpenFile(Handle, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0);
+			if(Attributes == INVALID_HANDLE_VALUE)
+				return false;
+			const bool Read = GetFileInformationByHandle(Attributes, &Result) != 0;
+			CloseHandle(Attributes);
+			return Read;
+		};
+		return Info(Original, A) && Info(Other.get(), B) && (A.nFileIndexHigh || A.nFileIndexLow) &&
+		       A.dwVolumeSerialNumber == B.dwVolumeSerialNumber && A.nFileIndexHigh == B.nFileIndexHigh && A.nFileIndexLow == B.nFileIndexLow;
+#else
+		struct stat A{}, B{};
+		return fstat(fileno(static_cast<FILE *>(Original)), &A) == 0 && fstat(fileno(static_cast<FILE *>(Other.get())), &B) == 0 &&
+		       A.st_dev == B.st_dev && A.st_ino == B.st_ino;
+#endif
+	}
+} // namespace
+
+bool demo_output::CCapturedSource::Claim(IOHANDLE Original, const char *pSource)
+{
+	if(!IsCapturedFile(Original, pSource))
+		return false;
+	m_Original = std::filesystem::u8path(pSource);
+	std::error_code Error;
+	const std::string OriginalName(pSource);
+	const size_t NameStart = OriginalName.find_last_of("/\\") + 1;
+	// 超长文件名也要能停录；同目录的短名避免超出单段或完整路径限制。
+	const std::string Prefix = OriginalName.size() - NameStart > 240 || OriginalName.size() + sizeof(".saving.63/source.demo") > IO_MAX_PATH_LENGTH ?
+		OriginalName.substr(0, NameStart) + ".qm-replay" : OriginalName + ".saving";
+	for(int Attempt = 0; Attempt < 64; ++Attempt)
+	{
+		const auto Directory = Attempt ? Prefix + "." + std::to_string(Attempt) : Prefix;
+		m_Filename = Directory + "/source.demo";
+		if(m_Filename.size() >= IO_MAX_PATH_LENGTH)
+			return false;
+		m_Directory = std::filesystem::u8path(Directory);
+		m_Private = std::filesystem::u8path(m_Filename);
+		m_OwnDirectory = std::filesystem::create_directory(m_Directory, Error);
+		if(m_OwnDirectory || (Error && Error != std::errc::file_exists))
+			break;
+	}
+	if(!m_OwnDirectory)
+		return false;
+	std::filesystem::rename(m_Original, m_Private, Error);
+	if(Error)
+		return false;
+	m_Restore = true;
+	// 检查与移动之间也可能换入新文件，必须对已接管的目录项再核对一次。
+	return IsCapturedFile(Original, Filename());
+}
+
+demo_output::CCapturedSource::~CCapturedSource() noexcept
+{
+	if(!m_OwnDirectory)
+		return;
+	try
+	{
+		std::error_code Error;
+		if(m_Restore)
+		{
+			// 原名可被复用，恢复时也只允许创建；恢复失败则保留可找回的源录像。
+			std::filesystem::create_hard_link(m_Private, m_Original, Error);
+			if(Error && Error != std::errc::file_exists)
+				std::filesystem::copy_file(m_Private, m_Original, std::filesystem::copy_options::none, Error);
+			if(Error)
+			{
+				log_warn("replay", "Source recording retained at '%s'", Filename());
+				return;
+			}
+			std::filesystem::remove(m_Private, Error);
+		}
+		std::filesystem::remove(m_Directory, Error);
+	}
+	catch(...)
+	{
+	}
+}
+
 int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilename)
 {
 	if(!m_File)
@@ -484,6 +585,30 @@ int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilena
 		}
 	}
 
+	demo_output::CCapturedSource Source;
+	std::string Destination;
+	const bool Remove = Mode == IDemoRecorder::EStopMode::REMOVE_FILE;
+	const bool Rename = !Remove && !m_WriteError && pTargetFilename[0] != '\0';
+	bool Claimed = false;
+	bool SameFile = false;
+	if(Remove || Rename)
+	{
+		try
+		{
+			std::string Original;
+			if(demo_output::Resolve(*m_pStorage, m_aCurrentFilename, Original) &&
+				(!Rename || demo_output::Resolve(*m_pStorage, pTargetFilename, Destination)))
+			{
+				std::error_code Error;
+				SameFile = Rename && (Original == Destination || std::filesystem::equivalent(std::filesystem::u8path(Original), std::filesystem::u8path(Destination), Error));
+				Claimed = SameFile ? IsCapturedFile(m_File, Original.c_str()) : Source.Claim(m_File, Original.c_str());
+			}
+		}
+		catch(...)
+		{
+			Claimed = false;
+		}
+	}
 	const IOHANDLE File = std::exchange(m_File, nullptr);
 	if(FileOperations().Flush(File) != 0)
 		MarkWriteError();
@@ -492,26 +617,30 @@ int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilena
 	if(FileOperations().Close(File) != 0)
 		MarkWriteError();
 
-	if(Mode == IDemoRecorder::EStopMode::REMOVE_FILE)
+	if((Remove || Rename) && !Claimed)
+		return -1;
+	if(Remove)
 	{
-		if(!m_pStorage->RemoveFile(m_aCurrentFilename, fs_is_relative_path(m_aCurrentFilename) ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE))
+		if(!m_pStorage->RemoveFile(Source.Filename(), IStorage::TYPE_ABSOLUTE))
 		{
 			log_error_color(DEMO_PRINT_COLOR, "demo_recorder", "Could not remove demo file '%s'.", m_aCurrentFilename);
 			return -1;
 		}
+		Source.Removed();
 	}
 	else if(m_WriteError)
 	{
 		// 关闭并不代表写入完整；损坏的源文件不能移动到成功录像的位置。
 		return -1;
 	}
-	else if(pTargetFilename[0] != '\0')
+	else if(Rename && !SameFile)
 	{
-		if(!m_pStorage->RenameFile(m_aCurrentFilename, pTargetFilename, fs_is_relative_path(m_aCurrentFilename) ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE))
+		if(!m_pStorage->RenameFile(Source.Filename(), Destination.c_str(), IStorage::TYPE_ABSOLUTE, false))
 		{
 			log_error_color(DEMO_PRINT_COLOR, "demo_recorder", "Could not move demo file '%s' to '%s'.", m_aCurrentFilename, pTargetFilename);
 			return -1;
 		}
+		Source.Removed();
 	}
 
 	if(m_WriteError)
@@ -1092,8 +1221,10 @@ bool CDemoPlayer::ExtractMap(class IStorage *pStorage, demo_output::COperations 
 		if(!pMapData)
 			return false;
 
-		// 旧版和已被读取器接受的无扩展录像都从内嵌地图计算缺失摘要。
-		const SHA256_DIGEST Sha256 = m_MapInfo.m_Sha256.has_value() ? m_MapInfo.m_Sha256.value() : sha256(pMapData.get(), m_MapInfo.m_Size);
+		// 缓存名由内嵌内容决定，已有摘要必须与实际读到的地图一致。
+		const SHA256_DIGEST Sha256 = sha256(pMapData.get(), m_MapInfo.m_Size);
+		if(m_MapInfo.m_Sha256 && *m_MapInfo.m_Sha256 != Sha256)
+			return false;
 
 		char aSha[SHA256_MAXSTRSIZE], aMapFilename[IO_MAX_PATH_LENGTH];
 		sha256_str(Sha256, aSha, sizeof(aSha));
@@ -1277,6 +1408,7 @@ bool CDemoPlayer::SetPos(int WantedTick)
 		m_Info.m_NextTick = -1;
 		m_Info.m_Info.m_CurrentTick = -1;
 		m_Info.m_PreviousTick = -1;
+		m_LastSnapshotDataSize = -1;
 	}
 
 	// playback everything until we hit our tick
@@ -1293,7 +1425,8 @@ bool CDemoPlayer::SetPos(int WantedTick)
 
 void CDemoPlayer::SetSpeed(float Speed)
 {
-	m_Info.m_Info.m_Speed = std::clamp(Speed, 0.f, 256.f);
+	if(!std::isnan(Speed))
+		m_Info.m_Info.m_Speed = std::clamp(Speed, 0.f, 256.f);
 }
 
 void CDemoPlayer::SetSpeedIndex(int SpeedIndex)
@@ -1428,9 +1561,12 @@ void CDemoPlayer::UpdateTimes()
 	const int64_t Freq = time_freq();
 	const int64_t CurrentTickStart = m_Info.m_Info.m_CurrentTick * Freq / SERVER_TICK_SPEED;
 	const int64_t PreviousTickStart = m_Info.m_PreviousTick * Freq / SERVER_TICK_SPEED;
-	m_Info.m_IntraTick = (m_Info.m_CurrentTime - PreviousTickStart) / (float)(CurrentTickStart - PreviousTickStart);
-	m_Info.m_IntraTickSincePrev = (m_Info.m_CurrentTime - PreviousTickStart) / (float)(Freq / SERVER_TICK_SPEED);
-	m_Info.m_TickTime = (m_Info.m_CurrentTime - PreviousTickStart) / (float)Freq;
+	// 预热和重复 tick 没有可插值的区间，客户端时钟回调也应收到有限值。
+	const bool HasInterval = m_Info.m_PreviousTick >= 0 && CurrentTickStart > PreviousTickStart;
+	const int64_t Elapsed = HasInterval ? m_Info.m_CurrentTime - PreviousTickStart : 0;
+	m_Info.m_IntraTick = HasInterval ? Elapsed / (float)(CurrentTickStart - PreviousTickStart) : 0.0f;
+	m_Info.m_IntraTickSincePrev = Elapsed / (float)(Freq / SERVER_TICK_SPEED);
+	m_Info.m_TickTime = Elapsed / (float)Freq;
 	m_Info.m_Info.m_LivePlayback = m_Info.m_Info.m_LastTick - m_Info.m_Info.m_CurrentTick < 3 * SERVER_TICK_SPEED;
 
 	if(m_UpdateIntraTimesFunc)
@@ -1576,6 +1712,18 @@ namespace
 		int m_RecordedTicks = 0;
 		bool m_NeedsKeyframe;
 
+		bool AcceptTick(int Tick)
+		{
+			if(m_EndTick != -1 && Tick > m_EndTick)
+			{
+				m_Stop = true;
+				// 离线 Update 会连续解码，须暂停播放器才能在本段末尾返回。
+				m_pDemoPlayer->Pause();
+				return false;
+			}
+			return m_StartTick == -1 || Tick >= m_StartTick;
+		}
+
 		void TrackRecordedTick(int Tick)
 		{
 			// 只需判断是否有播放预热所需的两条 tick，避免长期计数溢出。
@@ -1590,11 +1738,7 @@ namespace
 		{
 			const CDemoPlayer::CPlaybackInfo *pInfo = m_pDemoPlayer->Info();
 
-			if(m_EndTick != -1 && pInfo->m_Info.m_CurrentTick > m_EndTick)
-			{
-				m_Stop = true;
-			}
-			else if(m_StartTick == -1 || pInfo->m_Info.m_CurrentTick >= m_StartTick)
+			if(AcceptTick(pInfo->m_Info.m_CurrentTick))
 			{
 				const int OutputTick = static_cast<int>(pInfo->m_Info.m_CurrentTick + m_TickOffset);
 				m_pDemoRecorder->RecordSnapshot(OutputTick, pData, Size, m_NeedsKeyframe);
@@ -1607,11 +1751,7 @@ namespace
 		{
 			const CDemoPlayer::CPlaybackInfo *pInfo = m_pDemoPlayer->Info();
 
-			if(m_EndTick != -1 && pInfo->m_Info.m_CurrentTick > m_EndTick)
-			{
-				m_Stop = true;
-			}
-			else if(m_StartTick == -1 || pInfo->m_Info.m_CurrentTick >= m_StartTick)
+			if(AcceptTick(pInfo->m_Info.m_CurrentTick))
 			{
 				const int OutputTick = static_cast<int>(pInfo->m_Info.m_CurrentTick + m_TickOffset);
 				if(OutputTick != m_LastRecordedTick)

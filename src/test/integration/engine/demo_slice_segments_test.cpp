@@ -115,6 +115,26 @@ namespace
 	};
 }
 
+TEST_F(DemoSliceSegmentsIntegration, EarlySelectionOnlyReachesEndOfFileDuringIndexing)
+{
+	struct CReads : CDemoPlayer::CMapDataOperations
+	{
+		int m_EndReads = 0;
+		unsigned ReadChunkHeaderBytes(IOHANDLE File, void *pData, unsigned Size) noexcept override
+		{
+			const unsigned Bytes = CMapDataOperations::ReadChunkHeaderBytes(File, pData, Size);
+			if(!Bytes)
+				++m_EndReads;
+			return Bytes;
+		}
+	} Reads;
+	ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline({100, 200, 300, 400, 500, 600}));
+	m_Editor.Init(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, m_State.m_pStorage.get(), &Reads, &m_Output);
+	ASSERT_TRUE(Slice({{100, 200}}));
+	EXPECT_EQ(Reads.m_EndReads, 1);
+	ExpectOutput(100, 200);
+}
+
 TEST_F(DemoSliceSegmentsIntegration, EmptySelectionKeepsTheExistingWholeDemoFallback)
 {
 	ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline({100, 200}, {170}));

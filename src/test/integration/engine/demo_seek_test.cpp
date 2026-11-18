@@ -2,6 +2,7 @@
 #include <test/support/demo_storage_state.h>
 
 #include <limits>
+#include <vector>
 
 namespace
 {
@@ -59,6 +60,36 @@ TEST_F(DemoSeekIntegration, AZeroSpanWithRepeatedTicksDoesNotProduceANonFiniteIn
 	EXPECT_EQ(m_Player.Info()->m_Info.m_CurrentTick, 100);
 }
 
+TEST_F(DemoSeekIntegration, RepeatedTicksPublishZeroInterpolation)
+{
+	ASSERT_NO_FATAL_FAILURE(Load({100, 100}));
+	ASSERT_TRUE(m_Player.Play());
+	m_Player.Update(false);
+	EXPECT_FLOAT_EQ(m_Player.Info()->m_IntraTick, 0.0f);
+	EXPECT_FLOAT_EQ(m_Player.Info()->m_IntraTickSincePrev, 0.0f);
+	EXPECT_FLOAT_EQ(m_Player.Info()->m_TickTime, 0.0f);
+}
+
+TEST_F(DemoSeekIntegration, RewindingStartsTheListenerWithSnapshotDataFromTheNewPosition)
+{
+	ASSERT_NO_FATAL_FAILURE(Load({100, 200, 300, 400, 500}));
+	ASSERT_TRUE(m_Player.Play());
+	ASSERT_TRUE(m_Player.SetPos(401));
+	struct CListener : CDemoPlayer::IListener
+	{
+		const CDemoPlayer &m_Player;
+		std::vector<int> m_vTicks;
+		explicit CListener(const CDemoPlayer &Player) : m_Player(Player) {}
+		void OnDemoPlayerSnapshot(void *, int) override { m_vTicks.push_back(m_Player.Info()->m_Info.m_CurrentTick); }
+		void OnDemoPlayerMessage(void *, int) override {}
+	} Listener(m_Player);
+	m_Player.SetListener(&Listener);
+	EXPECT_TRUE(m_Player.SetPos(101));
+	m_Player.SetListener(nullptr);
+	ASSERT_FALSE(Listener.m_vTicks.empty());
+	EXPECT_EQ(Listener.m_vTicks.front(), 100);
+}
+
 TEST_F(DemoSeekIntegration, SeekingBeforeTheFirstTickKeepsTheExistingClamp)
 {
 	ASSERT_NO_FATAL_FAILURE(Load({100, 101}));
@@ -66,6 +97,16 @@ TEST_F(DemoSeekIntegration, SeekingBeforeTheFirstTickKeepsTheExistingClamp)
 	EXPECT_TRUE(m_Player.IsPlaying());
 	EXPECT_EQ(m_Player.Info()->m_Info.m_FirstTick, 100);
 	EXPECT_EQ(m_Player.Info()->m_Info.m_LastTick, 101);
+}
+
+TEST_F(DemoSeekIntegration, InvalidSpeedKeepsTheLastPlayableSpeed)
+{
+	ASSERT_NO_FATAL_FAILURE(Load({100, 101, 102}));
+	m_Player.SetSpeed(2.0f);
+	m_Player.SetSpeed(std::numeric_limits<float>::quiet_NaN());
+	EXPECT_FLOAT_EQ(m_Player.BaseInfo()->m_Speed, 2.0f);
+	m_Player.SetSpeed(1.0f);
+	EXPECT_FLOAT_EQ(m_Player.BaseInfo()->m_Speed, 1.0f);
 }
 
 TEST_F(DemoSeekIntegration, OrdinarySeekingStillPlaysTheWantedTick)

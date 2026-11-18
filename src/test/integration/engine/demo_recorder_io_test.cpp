@@ -446,6 +446,19 @@ TEST_F(DemoRecorderIoIntegration, TimelineMarkerWriteFailureStillClosesAndReject
 	ExpectClosedFailure();
 }
 
+TEST_F(DemoRecorderIoIntegration, FailedFinalRenameKeepsTheExistingDestination)
+{
+	Write(TARGET, "previous recording");
+	ASSERT_EQ(Start(), 0);
+	m_Recorder.RecordTickMarker(100, true);
+	ASSERT_TRUE(m_pStorage->RenameFile(SOURCE, "moved.demo", IStorage::TYPE_SAVE, false));
+	Write(SOURCE, "new recording at the old name");
+	EXPECT_NE(m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE, TARGET), 0);
+	EXPECT_EQ(Read(SOURCE), "new recording at the old name");
+	EXPECT_EQ(Read(TARGET), "previous recording");
+	EXPECT_TRUE(m_pStorage->FileExists("moved.demo", IStorage::TYPE_SAVE));
+}
+
 TEST_F(DemoRecorderIoIntegration, FlushFailureCannotRenameToExistingSuccessFile)
 {
 	Write(TARGET, "previous success");
@@ -482,6 +495,29 @@ TEST_F(DemoRecorderIoIntegration, StreamErrorAtStopStillClosesAndKeepsSource)
 	ExpectClosedFailure();
 	EXPECT_TRUE(m_pStorage->FileExists(SOURCE, IStorage::TYPE_SAVE));
 	EXPECT_FALSE(m_pStorage->FileExists(TARGET, IStorage::TYPE_SAVE));
+}
+
+TEST_F(DemoRecorderIoIntegration, DiscardLeavesAReplacementAtTheOriginalName)
+{
+	ASSERT_EQ(Start(), 0);
+	m_Recorder.RecordTickMarker(100, true);
+	ASSERT_TRUE(m_pStorage->RenameFile(SOURCE, "moved.demo", IStorage::TYPE_SAVE, false));
+	Write(SOURCE, "replacement");
+	EXPECT_EQ(m_Recorder.Stop(IDemoRecorder::EStopMode::REMOVE_FILE), -1);
+	EXPECT_FALSE(m_Recorder.IsRecording());
+	EXPECT_EQ(Read(SOURCE), "replacement");
+	EXPECT_TRUE(m_pStorage->FileExists("moved.demo", IStorage::TYPE_SAVE));
+}
+
+TEST_F(DemoRecorderIoIntegration, FinalizingAtTheSourceNameKeepsTheRecording)
+{
+	ASSERT_EQ(Start(), 0);
+	m_Recorder.RecordTickMarker(100, true);
+	m_Recorder.RecordTickMarker(101, true);
+	ASSERT_EQ(m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE, SOURCE), 0);
+	CDemoPlayer Player(nullptr, nullptr, false);
+	EXPECT_EQ(Player.Load(m_pStorage.get(), SOURCE, IStorage::TYPE_SAVE, false), 0);
+	Player.Stop();
 }
 
 TEST_F(DemoRecorderIoIntegration, ExplicitDiscardRemovesBrokenCaptureWithoutPublishingIt)

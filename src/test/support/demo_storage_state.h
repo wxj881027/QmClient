@@ -54,10 +54,10 @@ struct CDemoStorageState
 		return m_pStorage->FileExists(pPath, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 	}
 
-	void Begin(const char *pPath = "source.demo", bool Snapshots = true)
+	void Begin(const char *pPath = "source.demo", bool Snapshots = true, const SHA256_DIGEST &MapSha = SHA256_DIGEST{})
 	{
 		unsigned char aMap[] = {'m', 'a', 'p', 'b', 'y', 't', 'e', 's'};
-		ASSERT_EQ(m_Recorder.Start(m_pStorage.get(), pPath, "test", "map", SHA256_DIGEST{}, 0, "client", sizeof(aMap), aMap, nullptr, nullptr, nullptr), 0);
+		ASSERT_EQ(m_Recorder.Start(m_pStorage.get(), pPath, "test", "map", MapSha, 0, "client", sizeof(aMap), aMap, nullptr, nullptr, nullptr), 0);
 		if(Snapshots)
 		{
 			const CSnapshot *pSnapshot = CSnapshot::EmptySnapshot();

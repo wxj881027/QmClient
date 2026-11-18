@@ -100,6 +100,14 @@ namespace
 	public:
 		IOHANDLE m_File = nullptr;
 		int64_t m_Position = -1;
+		bool m_ChangeReadData = false;
+		unsigned Read(IOHANDLE File, void *pData, unsigned Size) noexcept override
+		{
+			const unsigned Bytes = CMapDataOperations::Read(File, pData, Size);
+			if(m_ChangeReadData && Bytes)
+				static_cast<unsigned char *>(pData)[0] ^= 1;
+			return Bytes;
+		}
 		int64_t Tell(IOHANDLE File) noexcept override
 		{
 			m_File = File;
@@ -125,7 +133,8 @@ namespace
 		void TearDown() override { m_Player.Stop(); }
 		void Load()
 		{
-			m_State.Create();
+			ASSERT_NO_FATAL_FAILURE(m_State.Begin("source.demo", true, ContentSha()));
+			ASSERT_EQ(m_State.m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE), 0);
 			ASSERT_EQ(m_Player.Load(m_State.m_pStorage.get(), "source.demo", IStorage::TYPE_SAVE, false), 0);
 		}
 		void LoadWithoutExtension(unsigned char Version)
@@ -142,7 +151,8 @@ namespace
 			ASSERT_FALSE(m_Player.GetMapInfo()->m_Sha256.has_value());
 		}
 		SHA256_DIGEST ContentSha() { return sha256("mapbytes", 8); }
-		std::string Destination(const SHA256_DIGEST &Sha = SHA256_DIGEST{})
+		std::string Destination() { return Destination(ContentSha()); }
+		std::string Destination(const SHA256_DIGEST &Sha)
 		{
 			char aSha[SHA256_MAXSTRSIZE];
 			sha256_str(Sha, aSha, sizeof(aSha));
@@ -193,6 +203,20 @@ TEST_F(DemoMapExtractIntegration, OldCacheRemainsIntactUntilClosedCandidateIsPub
 	ASSERT_TRUE(Extract());
 	EXPECT_EQ(m_State.Read(Destination().c_str()), "mapbytes");
 	EXPECT_FALSE(TemporaryExists());
+}
+
+TEST_F(DemoMapExtractIntegration, ChangedEmbeddedBytesKeepTheExistingCacheAndAllowRetry)
+{
+	ASSERT_NO_FATAL_FAILURE(Load());
+	KeepOld();
+	m_ReadOperations.m_ChangeReadData = true;
+	EXPECT_FALSE(Extract());
+	EXPECT_EQ(m_OutputOperations.m_Creates, 0);
+	EXPECT_EQ(m_State.Read(Destination().c_str()), "old map");
+	ExpectUnchangedPlayback();
+	m_ReadOperations.m_ChangeReadData = false;
+	EXPECT_TRUE(Extract());
+	EXPECT_EQ(m_State.Read(Destination().c_str()), "mapbytes");
 }
 
 TEST_F(DemoMapExtractIntegration, ShortWriteClosesCandidateAndKeepsOldCache)

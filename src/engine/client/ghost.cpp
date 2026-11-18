@@ -48,7 +48,7 @@ IOHANDLE CGhostRecorder::CFileOperations::Open(IStorage *pStorage, const char *p
 	{
 		if(!GhostPathFits(pStorage, pFilename))
 			return nullptr;
-		return pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		return pStorage->OpenFile(pFilename, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE);
 	}
 	catch(...)
 	{
@@ -145,6 +145,25 @@ int CGhostRecorder::Start(const char *pFilename, const char *pMap, const SHA256_
 	str_copy(m_aFilename, pFilename);
 	str_format(m_aTemporary, sizeof(m_aTemporary), "%s.tmp", pFilename);
 	m_File = m_pOperations->Open(m_pStorage, m_aTemporary);
+	// 其他实例或上次退出可能留下同名暂存文件，只接管本次独占创建的路径。
+	for(int Attempt = 1; !m_File && Attempt < 64; ++Attempt)
+	{
+		try
+		{
+			if(!m_pStorage->FileExists(m_aTemporary, IStorage::TYPE_SAVE))
+				break;
+		}
+		catch(...)
+		{
+			break;
+		}
+		char aSuffix[16];
+		str_format(aSuffix, sizeof(aSuffix), ".%d.tmp", Attempt);
+		if(str_length(m_aFilename) + str_length(aSuffix) >= static_cast<int>(sizeof(m_aTemporary)))
+			break;
+		str_format(m_aTemporary, sizeof(m_aTemporary), "%s%s", m_aFilename, aSuffix);
+		m_File = m_pOperations->Open(m_pStorage, m_aTemporary);
+	}
 	if(!m_File)
 	{
 		m_WriteError = true;

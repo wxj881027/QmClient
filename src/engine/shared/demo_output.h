@@ -52,6 +52,26 @@ namespace demo_output
 		       (!Error && (!std::filesystem::exists(Status) || std::filesystem::is_regular_file(Status)));
 	}
 
+	// 只有接管后核对过身份的目录项才可清理，失败时尽量按原名恢复。
+	class CCapturedSource
+	{
+		std::filesystem::path m_Original;
+		std::filesystem::path m_Directory;
+		std::filesystem::path m_Private;
+		std::string m_Filename;
+		bool m_OwnDirectory = false;
+		bool m_Restore = false;
+
+	public:
+		CCapturedSource() = default;
+		CCapturedSource(const CCapturedSource &) = delete;
+		CCapturedSource &operator=(const CCapturedSource &) = delete;
+		~CCapturedSource() noexcept;
+		bool Claim(IOHANDLE Original, const char *pSource);
+		const char *Filename() const { return m_Filename.c_str(); }
+		void Removed() { m_Restore = false; }
+	};
+
 	class COperations
 	{
 	public:

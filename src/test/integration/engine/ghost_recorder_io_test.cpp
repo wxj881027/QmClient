@@ -333,6 +333,24 @@ TEST_F(GhostRecorderIoIntegration, DestructionClosesWithoutPublishingOrUsingStor
 	EXPECT_TRUE(m_pStorage->FileExists(TEMPORARY, IStorage::TYPE_SAVE));
 }
 
+TEST_F(GhostRecorderIoIntegration, ConcurrentRecordersWithTheSameNamePublishTheirOwnSamples)
+{
+	ASSERT_EQ(Start(), 0);
+	ASSERT_NO_FATAL_FAILURE(RecordOne(1));
+	std::unique_ptr<IKernel> pKernel{IKernel::Create()};
+	CGhostRecorder Other;
+	pKernel->RegisterInterface<IStorage>(m_pStorage.get(), false);
+	pKernel->RegisterInterface<IGhostRecorder>(&Other, false);
+	Other.Init();
+	ASSERT_EQ(Other.Start(SOURCE, "map", SHA256_DIGEST{}, "test"), 0);
+	const uint32_t Value = 2;
+	ASSERT_TRUE(Other.WriteData(2, &Value, sizeof(Value)));
+	ASSERT_TRUE(Other.Stop(1, 1000, FINAL));
+	ASSERT_TRUE(m_Recorder.Stop(1, 1000));
+	ASSERT_NO_FATAL_FAILURE(ExpectRecord(SOURCE, 1));
+	ASSERT_NO_FATAL_FAILURE(ExpectRecord(FINAL, 2));
+}
+
 TEST_F(GhostRecorderIoIntegration, RepeatedStartDoesNotReplaceTheActiveCandidate)
 {
 	ASSERT_EQ(Start(), 0);

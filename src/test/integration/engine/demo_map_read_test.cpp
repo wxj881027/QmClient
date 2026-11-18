@@ -141,7 +141,7 @@ namespace
 		void CreateDemo(bool WithMap = true)
 		{
 			unsigned char aMap[] = {'m', 'a', 'p', 'b', 'y', 't', 'e', 's'};
-			ASSERT_EQ(m_Recorder.Start(m_pStorage.get(), SOURCE, "test", "map", SHA256_DIGEST{}, 0, "client", WithMap ? static_cast<unsigned>(sizeof(aMap)) : 0, aMap, nullptr, nullptr, nullptr), 0);
+			ASSERT_EQ(m_Recorder.Start(m_pStorage.get(), SOURCE, "test", "map", sha256(aMap, sizeof(aMap)), 0, "client", WithMap ? static_cast<unsigned>(sizeof(aMap)) : 0, aMap, nullptr, nullptr, nullptr), 0);
 			const CSnapshot *pSnapshot = CSnapshot::EmptySnapshot();
 			const int SnapshotSize = static_cast<int>(sizeof(CSnapshot));
 			m_Recorder.RecordSnapshot(100, pSnapshot, SnapshotSize);
@@ -171,7 +171,7 @@ namespace
 		std::string MapDestination()
 		{
 			char aSha[SHA256_MAXSTRSIZE];
-			sha256_str(SHA256_DIGEST{}, aSha, sizeof(aSha));
+			sha256_str(sha256(MAP_BYTES, str_length(MAP_BYTES)), aSha, sizeof(aSha));
 			return std::string("downloadedmaps/map_") + aSha + ".map";
 		}
 
