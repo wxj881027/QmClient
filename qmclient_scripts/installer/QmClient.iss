@@ -28,7 +28,6 @@ OutputDir={#OutputDir}
 OutputBaseFilename=QmClient-Setup
 Compression=lzma2/ultra64
 SolidCompression=yes
-LZMAUseSeparateProcess=yes
 WizardStyle=modern
 SetupIconFile=assets\setup-icon.ico
 WizardImageFile=assets\wizard-side.png
