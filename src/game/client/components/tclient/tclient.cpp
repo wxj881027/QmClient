@@ -20,7 +20,6 @@
 #include <engine/shared/config.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
-#include <engine/shared/jsonwriter.h>
 #include <engine/storage.h>
 
 #include <generated/client_data.h>
@@ -65,9 +64,7 @@
 #include <windows.h>
 #endif
 
-static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.json";
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
-static constexpr const char *MAP_NOTES_FILE = "qmclient/map_notes.json";
 static constexpr int64_t MAP_NOTES_SAVE_DELAY_SEC = 5;
 static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
 static constexpr int LOCAL_SAVE_JOIN_HINT_MAX_ITEMS = 12;
@@ -4000,7 +3997,7 @@ void CTClient::LoadMapCategoryCache()
 {
 	void *pFileData = nullptr;
 	unsigned FileSize = 0;
-	if(!Storage()->ReadFile(MAP_CATEGORY_CACHE_FILE, IStorage::TYPE_SAVE, &pFileData, &FileSize))
+	if(!Storage()->ReadFile(qm_tclient_map_data::CATEGORIES.m_pPath, IStorage::TYPE_SAVE, &pFileData, &FileSize))
 		return;
 
 	json_settings JsonSettings{};
@@ -4020,7 +4017,7 @@ void CTClient::LoadMapCategoryCache()
 		return;
 	}
 
-	const json_value *pMaps = json_object_get(pJson, "maps");
+	const json_value *pMaps = json_object_get(pJson, qm_tclient_map_data::CATEGORIES.m_pKey);
 	const json_value *pMapObject = (pMaps && pMaps->type == json_object) ? pMaps : pJson;
 	if(pMapObject->type == json_object)
 	{
@@ -4047,33 +4044,12 @@ void CTClient::LoadMapCategoryCache()
 
 void CTClient::SaveMapCategoryCache()
 {
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-
-	IOHANDLE File = Storage()->OpenFile(MAP_CATEGORY_CACHE_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
+	if(!qm_tclient_map_data::Save(*Storage(), qm_tclient_map_data::CATEGORIES, m_MapCategoryCache, m_MapCategoryCacheDirty))
 	{
-		log_error("qmclient", "map category cache file open failed");
+		log_error("qmclient", "map category cache save failed; previous cache and pending changes retained");
 		m_MapCategoryCacheNextSave = time_get() + time_freq() * MAP_CATEGORY_CACHE_SAVE_DELAY_SEC;
 		return;
 	}
-
-	CJsonFileWriter Writer(File);
-	Writer.BeginObject();
-	Writer.WriteAttribute("version");
-	Writer.WriteIntValue(1);
-	Writer.WriteAttribute("maps");
-	Writer.BeginObject();
-	for(const auto &Entry : m_MapCategoryCache)
-	{
-		if(Entry.first.empty() || Entry.second.empty())
-			continue;
-		Writer.WriteAttribute(Entry.first.c_str());
-		Writer.WriteStrValue(Entry.second.c_str());
-	}
-	Writer.EndObject();
-	Writer.EndObject();
-
-	m_MapCategoryCacheDirty = false;
 	m_MapCategoryCacheNextSave = 0;
 }
 
@@ -4131,7 +4107,7 @@ void CTClient::LoadMapNotes()
 {
 	void *pFileData = nullptr;
 	unsigned FileSize = 0;
-	if(!Storage()->ReadFile(MAP_NOTES_FILE, IStorage::TYPE_SAVE, &pFileData, &FileSize))
+	if(!Storage()->ReadFile(qm_tclient_map_data::NOTES.m_pPath, IStorage::TYPE_SAVE, &pFileData, &FileSize))
 		return;
 
 	json_settings JsonSettings{};
@@ -4151,7 +4127,7 @@ void CTClient::LoadMapNotes()
 		return;
 	}
 
-	const json_value *pNotes = json_object_get(pJson, "notes");
+	const json_value *pNotes = json_object_get(pJson, qm_tclient_map_data::NOTES.m_pKey);
 	const json_value *pNotesObject = (pNotes && pNotes->type == json_object) ? pNotes : pJson;
 	if(pNotesObject->type == json_object)
 	{
@@ -4178,33 +4154,12 @@ void CTClient::LoadMapNotes()
 
 void CTClient::SaveMapNotes()
 {
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-
-	IOHANDLE File = Storage()->OpenFile(MAP_NOTES_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
+	if(!qm_tclient_map_data::Save(*Storage(), qm_tclient_map_data::NOTES, m_MapNotes, m_MapNotesDirty))
 	{
-		log_error("qmclient", "map notes file open failed");
+		log_error("qmclient", "map notes save failed; previous notes and pending changes retained");
 		m_MapNotesNextSave = time_get() + time_freq() * MAP_NOTES_SAVE_DELAY_SEC;
 		return;
 	}
-
-	CJsonFileWriter Writer(File);
-	Writer.BeginObject();
-	Writer.WriteAttribute("version");
-	Writer.WriteIntValue(1);
-	Writer.WriteAttribute("notes");
-	Writer.BeginObject();
-	for(const auto &Entry : m_MapNotes)
-	{
-		if(Entry.first.empty() || Entry.second.empty())
-			continue;
-		Writer.WriteAttribute(Entry.first.c_str());
-		Writer.WriteStrValue(Entry.second.c_str());
-	}
-	Writer.EndObject();
-	Writer.EndObject();
-
-	m_MapNotesDirty = false;
 	m_MapNotesNextSave = 0;
 }
 

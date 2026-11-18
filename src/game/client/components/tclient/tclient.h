@@ -3,6 +3,7 @@
 
 #include <base/color.h>
 #include <base/hash.h>
+#include <base/io.h>
 #include <base/str.h>
 
 #include <engine/client/enums.h>
@@ -11,7 +12,9 @@
 #include <engine/http.h>
 #include <engine/shared/console.h>
 #include <engine/shared/json.h>
+#include <engine/shared/jsonwriter.h>
 #include <engine/shared/protocol.h>
+#include <engine/storage.h>
 #include <engine/textrender.h>
 
 #include <generated/protocol.h>
@@ -26,6 +29,7 @@
 #include <game/client/components/qmclient/keyword_reply_rules.h>
 #include <game/client/components/qmclient/local_saves.h>
 #include <game/client/components/qmclient/map_history_session.h>
+#include <game/client/components/qmclient/map_history_storage.h>
 #include <game/client/components/qmclient/map_progress.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/red_packet_auto_claim.h>
@@ -41,6 +45,7 @@
 
 #include <array>
 #include <deque>
+#include <memory>
 #include <queue>
 #include <set>
 #include <string>
@@ -58,6 +63,15 @@ struct CNetMsg_Sv_Chat;
 
 namespace qm_tclient_map_data
 {
+	struct SFile
+	{
+		const char *m_pPath;
+		const char *m_pKey;
+	};
+
+	inline constexpr SFile NOTES{"qmclient/map_notes.json", "notes"};
+	inline constexpr SFile CATEGORIES{"qmclient/map_categories.json", "maps"};
+
 	inline bool FormatFavoriteCommand(const char *pMapName, char (&aLine)[IConsole::CMDLINE_LENGTH])
 	{
 		if(!str_utf8_check(pMapName))
@@ -78,6 +92,50 @@ namespace qm_tclient_map_data
 		*pEnd++ = '"';
 		*pEnd = '\0';
 		return true;
+	}
+
+	inline bool Save(IStorage &Storage, const SFile &File, const std::unordered_map<std::string, std::string> &Entries, bool &Dirty) noexcept try
+	{
+		char aCandidate[IO_MAX_PATH_LENGTH];
+		IStorage::FormatTmpPath(aCandidate, sizeof(aCandidate), File.m_pPath);
+		char aRoot[IO_MAX_PATH_LENGTH] = "";
+		Storage.GetCompletePath(IStorage::TYPE_SAVE, "", aRoot, sizeof(aRoot));
+		if(str_length(aRoot) + str_length(aCandidate) >= IO_MAX_PATH_LENGTH)
+			return false;
+		Storage.CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		qm_map_history_storage::STemporaryFile Candidate{Storage, aCandidate};
+		std::unique_ptr<void, decltype(&io_close)> pFile(Storage.OpenFile(aCandidate, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE), io_close);
+		if(!pFile)
+			return false;
+		Candidate.m_Owned = true;
+		CJsonFileWriter Writer(pFile.get());
+		pFile.release();
+		Writer.BeginObject();
+		Writer.WriteAttribute("version");
+		Writer.WriteIntValue(1);
+		Writer.WriteAttribute(File.m_pKey);
+		Writer.BeginObject();
+		for(const auto &[Map, Value] : Entries)
+		{
+			if(Map.empty() || Value.empty())
+				continue;
+			if(!str_utf8_check(Map.c_str()) || !str_utf8_check(Value.c_str()))
+				return false;
+			Writer.WriteAttribute(Map.c_str());
+			Writer.WriteStrValue(Value.c_str());
+		}
+		Writer.EndObject();
+		Writer.EndObject();
+		// 候选写入、同步和关闭都成功后才能替换，重命名失败时保留旧文件。
+		if(!Writer.Finish() || !Storage.RenameFile(aCandidate, File.m_pPath, IStorage::TYPE_SAVE, false))
+			return false;
+		Candidate.m_Owned = false;
+		Dirty = false;
+		return true;
+	}
+	catch(...)
+	{
+		return false;
 	}
 }
 
