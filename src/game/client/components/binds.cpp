@@ -481,6 +481,13 @@ void CBinds::ConBind(IConsole::IResult *pResult, void *pUserData)
 void CBinds::ConBinds(IConsole::IResult *pResult, void *pUserData)
 {
 	CBinds *pBinds = (CBinds *)pUserData;
+	const auto PrintBinding = [pBinds](const CBindSlot &Slot) {
+		const auto Line = pBinds->GetKeyBindCommand(Slot, std::string::npos);
+		if(Line)
+			log_info_color(BIND_PRINT_COLOR, "binds", "%s", Line->c_str());
+		else
+			log_error("binds", "could not format binding");
+	};
 	if(pResult->NumArguments() == 1)
 	{
 		const char *pKeyName = pResult->GetString(0);
@@ -497,9 +504,7 @@ void CBinds::ConBinds(IConsole::IResult *pResult, void *pUserData)
 			}
 			else
 			{
-				char *pBuf = pBinds->GetKeyBindCommand(BindSlot.m_ModifierMask, BindSlot.m_Key);
-				log_info_color(BIND_PRINT_COLOR, "binds", "%s", pBuf);
-				free(pBuf);
+				PrintBinding(BindSlot);
 			}
 		}
 	}
@@ -511,9 +516,7 @@ void CBinds::ConBinds(IConsole::IResult *pResult, void *pUserData)
 			{
 				if(!pBinds->m_Storage.m_aapKeyBindings[Modifier][Key])
 					continue;
-				char *pBuf = pBinds->GetKeyBindCommand(Modifier, Key);
-				log_info_color(BIND_PRINT_COLOR, "binds", "%s", pBuf);
-				free(pBuf);
+				PrintBinding(CBindSlot(Key, Modifier));
 			}
 		}
 	}
@@ -608,19 +611,11 @@ void CBinds::GetKeyBindName(int Key, int ModifierMask, char *pBuf, size_t BufSiz
 	str_append(pBuf, Input()->KeyName(Key), BufSize);
 }
 
-char *CBinds::GetKeyBindCommand(int ModifierCombination, int Key) const
+std::optional<std::string> CBinds::GetKeyBindCommand(const CBindSlot &Slot, size_t MaxBytes) const
 {
 	char aBindName[128];
-	GetKeyBindName(Key, ModifierCombination, aBindName, sizeof(aBindName));
-	// worst case the str_escape can double the string length
-	int Size = str_length(m_Storage.m_aapKeyBindings[ModifierCombination][Key]) * 2 + str_length(aBindName) + 16;
-	auto *pBuf = static_cast<char *>(malloc(Size));
-	str_format(pBuf, Size, "bind %s \"", aBindName);
-	char *pDst = pBuf + str_length(pBuf);
-	// process the string. we need to escape some characters
-	str_escape(&pDst, m_Storage.m_aapKeyBindings[ModifierCombination][Key], pBuf + Size);
-	str_append(pBuf, "\"", Size);
-	return pBuf;
+	GetKeyBindName(Slot.m_Key, Slot.m_ModifierMask, aBindName, sizeof(aBindName));
+	return FormatBindLine(aBindName, Get(Slot), MaxBytes);
 }
 
 void CBinds::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
@@ -634,9 +629,17 @@ void CBinds::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
 		{
 			if(!pSelf->m_Storage.m_aapKeyBindings[Modifier][Key])
 				continue;
-			char *pBuf = pSelf->GetKeyBindCommand(Modifier, Key);
-			pConfigManager->WriteLine(pBuf);
-			free(pBuf);
+			const CBindSlot Slot(Key, Modifier);
+			const auto Line = pSelf->GetKeyBindCommand(Slot);
+			if(!Line)
+			{
+				pConfigManager->MarkSaveFailed();
+				char aBindName[128];
+				pSelf->GetKeyBindName(Key, Modifier, aBindName, sizeof(aBindName));
+				log_error("binds", "could not serialize binding %s", aBindName);
+				return;
+			}
+			pConfigManager->WriteLine(Line->c_str());
 		}
 	}
 }

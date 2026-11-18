@@ -8,6 +8,7 @@
 #include <engine/shared/qm_legacy_config.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/bind_editor.h>
 #include <game/client/components/qmclient/shortcut_held_bind.h>
 
 #include <algorithm>
@@ -16,8 +17,10 @@
 #include <limits>
 #include <memory>
 #include <new>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -288,8 +291,7 @@ class CBinds : public CComponent
 	int DetectDeepflyModeFromAllBinds() const;
 	void OnBindChanged(int Key, int Modifiers) const noexcept;
 
-	// free buffer after use
-	char *GetKeyBindCommand(int ModifierCombination, int Key) const;
+	std::optional<std::string> GetKeyBindCommand(const CBindSlot &Slot, size_t MaxBytes = qm_bind_editor::MAX_CONFIG_LINE_BYTES) const;
 
 public:
 	CBinds();
@@ -347,6 +349,25 @@ public:
 	static const char *GetModifierName(int Modifier);
 	void GetKeyBindName(int Key, int ModifierMask, char *pBuf, size_t BufSize) const;
 	void RefreshActiveBinds();
+	static std::optional<std::string> FormatBindLine(std::string_view KeyName, std::string_view Command, size_t MaxBytes = qm_bind_editor::MAX_CONFIG_LINE_BYTES)
+	{
+		if(Command.size() > MaxBytes)
+			return std::nullopt;
+		try
+		{
+			std::string Line = qm_bind_editor::BindCommand(KeyName, Command);
+			if(Line.size() <= MaxBytes)
+				return Line;
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
+		return std::nullopt;
+	}
+
 	static void ExecuteCommand(IConsole *pConsole, const char *pBind, bool AppendGoresPrevWeapon, int Stroke, int ClientId)
 	{
 		if(pBind == nullptr)

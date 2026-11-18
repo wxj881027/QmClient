@@ -20,6 +20,21 @@ namespace
 	}
 }
 
+TEST(BindCommandSerializationAllocation, FormattingReportsAllocationFailureAndCanRetry)
+{
+	const std::string Command(2048, 'x');
+	std::optional<std::string> Line;
+	bool Triggered;
+	{
+		CPredictionAllocationFailure Failure;
+		Line = CBinds::FormatBindLine("q", Command);
+		Triggered = Failure.Triggered();
+	}
+	EXPECT_TRUE(Triggered);
+	EXPECT_FALSE(Line.has_value());
+	EXPECT_TRUE(CBinds::FormatBindLine("q", Command).has_value());
+}
+
 TEST(BindRebindAllocation, EveryCppPreparationFailurePreservesBothSlotsAndAllowsRetry)
 {
 	size_t Allocations = 0;

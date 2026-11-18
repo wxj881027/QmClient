@@ -7,6 +7,18 @@
 #include <new>
 #include <stdexcept>
 
+TEST(BindCommandSerialization, RejectsBindingsWhoseEscapedLineExceedsTheReadLimit)
+{
+	constexpr size_t Limit = qm_bind_editor::MAX_CONFIG_LINE_BYTES;
+	const std::string AtLimit(Limit - std::string_view("bind q \"\"").size(), 'x');
+	const auto Line = CBinds::FormatBindLine("q", AtLimit);
+	ASSERT_TRUE(Line.has_value());
+	EXPECT_EQ(Line->size(), Limit);
+
+	const std::string NeedsEscaping(Limit / 2, '\\');
+	EXPECT_FALSE(CBinds::FormatBindLine("q", NeedsEscaping).has_value());
+}
+
 TEST(Binds, AllowsUnmodifiedFallbackForSingleModifierKey)
 {
 	EXPECT_TRUE(CBinds::AllowsUnmodifiedFallback(KEY_LSHIFT, KeyModifier::NONE));
