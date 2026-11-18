@@ -26,7 +26,7 @@ void CEditorHistory::RecordAction(const std::shared_ptr<IEditorAction> &pAction,
 
 	m_vpRedoActions.clear();
 
-	if((int)m_vpUndoActions.size() >= g_Config.m_ClEditorMaxHistory)
+	while((int)m_vpUndoActions.size() >= g_Config.m_ClEditorMaxHistory)
 	{
 		m_vpUndoActions.pop_front();
 	}
