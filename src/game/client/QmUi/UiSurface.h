@@ -127,43 +127,56 @@ inline SRoundedSurfacePlan ResolveRoundedSurfacePlan(const CUIRect &Rect, const 
 	return Plan;
 }
 
-// 固定大小环带网格，不分配内存；供几何回退、行为测试和基准共用。
-inline std::array<IGraphics::CFreeformItem, 36> ResolveRoundedSurfaceBorderMesh(const SRoundedSurfacePlan &Plan, int Corners)
+inline constexpr int ROUNDED_SURFACE_CORNER_SEGMENTS = 24;
+inline constexpr int ROUNDED_SURFACE_OUTLINE_POINTS = 4 * (ROUNDED_SURFACE_CORNER_SEGMENTS + 1);
+
+// 无 SDF 时的曲线轮廓。轮廓按「左上 → 右上 → 右下 → 左下」顺序取点，
+// 每个角严格复用 SDF 的曲线采样；直边由相邻角点自然连成。
+// 不分配内存，供填充扇、边框环带、行为测试和基准共用。
+inline std::array<vec2, ROUNDED_SURFACE_OUTLINE_POINTS> ResolveRoundedSurfaceOutline(const SRoundedSurfacePlan &Plan, int Corners,
+	int Curve, float Smoothing, float Seam)
 {
-	static const std::array<vec2, 9> s_aDirections = [] {
-		std::array<vec2, 9> aDirections;
-		for(int i = 0; i <= 8; ++i)
-		{
-			const float Angle = i * pi / 16.0f;
-			aDirections[i] = vec2(std::cos(Angle), std::sin(Angle));
-		}
-		aDirections.front() = vec2(1, 0);
-		aDirections.back() = vec2(0, 1);
-		return aDirections;
-	}();
-	const CUIRect Inner{Plan.m_Rect.x + Plan.m_BorderWidth, Plan.m_Rect.y + Plan.m_BorderWidth,
-		Plan.m_Rect.w - 2.0f * Plan.m_BorderWidth, Plan.m_Rect.h - 2.0f * Plan.m_BorderWidth};
-	std::array<vec2, 36> aOuter, aInner;
+	std::array<vec2, ROUNDED_SURFACE_OUTLINE_POINTS> aOutline{};
+	const SRoundedCornerShape Shape = ResolveRoundedCornerShape(
+		Plan.m_Radius, Plan.m_Rect.w, Plan.m_Rect.h, Smoothing, Curve, Seam);
 	const int aCornerFlags[] = {IGraphics::CORNER_TL, IGraphics::CORNER_TR, IGraphics::CORNER_BR, IGraphics::CORNER_BL};
 	for(int Corner = 0; Corner < 4; ++Corner)
 	{
 		const bool Right = Corner == 1 || Corner == 2;
 		const bool Bottom = Corner >= 2;
-		const float Radius = Corners & aCornerFlags[Corner] ? Plan.m_Radius : 0.0f;
-		const float InnerRadius = std::max(0.0f, Radius - Plan.m_BorderWidth);
-		const vec2 OuterCenter(Plan.m_Rect.x + (Right ? Plan.m_Rect.w - Radius : Radius), Plan.m_Rect.y + (Bottom ? Plan.m_Rect.h - Radius : Radius));
-		const vec2 InnerCenter(Inner.x + (Right ? Inner.w - InnerRadius : InnerRadius), Inner.y + (Bottom ? Inner.h - InnerRadius : InnerRadius));
-		for(int i = 0; i <= 8; ++i)
+		const float Radius = Corners & aCornerFlags[Corner] ? Shape.m_Radius : 0.0f;
+		const vec2 Center(Plan.m_Rect.x + (Right ? Plan.m_Rect.w - Radius : Radius),
+			Plan.m_Rect.y + (Bottom ? Plan.m_Rect.h - Radius : Radius));
+		for(int i = 0; i <= ROUNDED_SURFACE_CORNER_SEGMENTS; ++i)
 		{
-			const vec2 D = s_aDirections[i];
-			const vec2 Direction = Corner == 0 ? vec2(-D.x, -D.y) : Corner == 1 ? vec2(D.y, -D.x) :
-									Corner == 2         ? D :
-											      vec2(-D.y, D.x);
-			aOuter[Corner * 9 + i] = OuterCenter + Direction * Radius;
-			aInner[Corner * 9 + i] = InnerCenter + Direction * InnerRadius;
+			float X = 0.0f;
+			float Y = 0.0f;
+			// 采样器按「上边切点 → 侧边切点」参数化；两侧角在顺时针轮廓里要反向取点。
+			const int Sample = Corner == 0 || Corner == 2 ? ROUNDED_SURFACE_CORNER_SEGMENTS - i : i;
+			RoundedCornerCurveDirection(Curve, Shape.m_Amount, Sample, ROUNDED_SURFACE_CORNER_SEGMENTS, X, Y);
+			const vec2 Direction = Corner == 0 ? vec2(-Y, -X) : Corner == 1 ? vec2(Y, -X) :
+									Corner == 2         ? vec2(Y, X) :
+											      vec2(-Y, X);
+			aOutline[Corner * (ROUNDED_SURFACE_CORNER_SEGMENTS + 1) + i] = Center + Direction * Radius;
 		}
 	}
-	std::array<IGraphics::CFreeformItem, 36> aMesh;
+	return aOutline;
+}
+
+// 固定大小环带网格，不分配内存；供几何回退、行为测试和基准共用。
+inline std::array<IGraphics::CFreeformItem, ROUNDED_SURFACE_OUTLINE_POINTS> ResolveRoundedSurfaceBorderMesh(
+	const SRoundedSurfacePlan &Plan, int Corners, int Curve = ROUNDED_CORNER_CURVE_CLASSIC,
+	float Smoothing = 0.0f, float Seam = 0.0f)
+{
+	const auto aOuter = ResolveRoundedSurfaceOutline(Plan, Corners, Curve, Smoothing, Seam);
+	SRoundedSurfacePlan InnerPlan = Plan;
+	InnerPlan.m_Rect.x += Plan.m_BorderWidth;
+	InnerPlan.m_Rect.y += Plan.m_BorderWidth;
+	InnerPlan.m_Rect.w = std::max(0.0f, Plan.m_Rect.w - 2.0f * Plan.m_BorderWidth);
+	InnerPlan.m_Rect.h = std::max(0.0f, Plan.m_Rect.h - 2.0f * Plan.m_BorderWidth);
+	InnerPlan.m_Radius = std::max(0.0f, Plan.m_Radius - Plan.m_BorderWidth);
+	const auto aInner = ResolveRoundedSurfaceOutline(InnerPlan, Corners, Curve, Smoothing, Seam);
+	std::array<IGraphics::CFreeformItem, ROUNDED_SURFACE_OUTLINE_POINTS> aMesh;
 	for(size_t i = 0; i < aMesh.size(); ++i)
 	{
 		const size_t Next = (i + 1) % aMesh.size();

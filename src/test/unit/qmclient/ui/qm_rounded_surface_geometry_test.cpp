@@ -275,6 +275,31 @@ TEST(QmRoundedSurface, PartialCornersBordersAndFallbackRemainBounded)
 	EXPECT_FLOAT_EQ(Unsupported.m_PixelSize, 0.0001f);
 }
 
+TEST(QmRoundedSurface, FallbackOutlineUsesTheConfiguredCornerCurve)
+{
+	SRoundedSurfaceParams Params;
+	Params.m_Radius = 8.0f;
+	const auto Plan = ResolveRoundedSurfacePlan({20, 30, 100, 100}, Params, false);
+	const auto Classic = ResolveRoundedSurfaceOutline(Plan, IGraphics::CORNER_TL, ROUNDED_CORNER_CURVE_CLASSIC, 0.0f, 0.0f);
+	const auto Apple = ResolveRoundedSurfaceOutline(Plan, IGraphics::CORNER_TL, ROUNDED_CORNER_CURVE_APPLE, 1.0f, 0.0f);
+	float ClassicMaxX = Plan.m_Rect.x;
+	float AppleMaxX = Plan.m_Rect.x;
+	for(int i = 0; i <= ROUNDED_SURFACE_CORNER_SEGMENTS; ++i)
+	{
+		ClassicMaxX = std::max(ClassicMaxX, Classic[i].x);
+		AppleMaxX = std::max(AppleMaxX, Apple[i].x);
+	}
+	EXPECT_NEAR(ClassicMaxX, Plan.m_Rect.x + Plan.m_Radius, 1e-4f);
+	EXPECT_GT(AppleMaxX, ClassicMaxX);
+	for(const auto &Point : Apple)
+	{
+		EXPECT_GE(Point.x, Plan.m_Rect.x);
+		EXPECT_LE(Point.x, Plan.m_Rect.x + Plan.m_Rect.w);
+		EXPECT_GE(Point.y, Plan.m_Rect.y);
+		EXPECT_LE(Point.y, Plan.m_Rect.y + Plan.m_Rect.h);
+	}
+}
+
 TEST(QmRoundedSurface, AppleCurveMatchesMeasuredContinuousCorner)
 {
 	// 满强度就是 UIBezierPath(roundedRect:) 实测的三段三次贝塞尔：单侧足迹 1.528665 r、

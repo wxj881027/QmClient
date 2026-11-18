@@ -142,8 +142,14 @@ namespace
 		int m_Surfaces = 0;
 		bool m_HasSdf = true;
 		std::vector<std::pair<CUIRect, ColorRGBA>> m_vRectangles;
-		std::vector<CFreeformItem> m_vBorderMesh;
+		struct SFreeformDraw
+		{
+			CFreeformItem m_Item;
+			ColorRGBA m_Color;
+		};
+		std::vector<SFreeformDraw> m_vFreeforms;
 		std::vector<std::pair<CUIRect, ColorRGBA>> m_vAntialiasEdges;
+		int m_VertexColorCalls = 0;
 		// 设备负责外缘羽化；这里记录该边界，不把它当作整面矩形填充。
 		void DrawRoundedRectAntialias(float X, float Y, float W, float H, float, int, const ColorRGBA &Color) override
 		{
@@ -158,8 +164,13 @@ namespace
 		bool HasRoundedRectSdfTexture() override { return false; }
 		void TextureSet(CTextureHandle) override {}
 		void QuadsBegin() override {}
-		void SetColor(ColorRGBA) override {}
-		void QuadsDrawFreeform(const CFreeformItem *pItems, int Count) override { m_vBorderMesh.insert(m_vBorderMesh.end(), pItems, pItems + Count); }
+		void SetColor(ColorRGBA Color) override { m_CurrentColor = Color; }
+		void SetColorVertex(const CColorVertex *, size_t) override { ++m_VertexColorCalls; }
+		void QuadsDrawFreeform(const CFreeformItem *pItems, int Count) override
+		{
+			for(int i = 0; i < Count; ++i)
+				m_vFreeforms.push_back({pItems[i], m_CurrentColor});
+		}
 		void QuadsEnd() override {}
 		std::vector<SRoundedRectSdfParams> m_vRoundedSubmissions;
 		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override
@@ -226,6 +237,7 @@ namespace
 			*pY1 = 1080;
 		}
 		bool m_ClipEnabled = false;
+		ColorRGBA m_CurrentColor{1.0f, 1.0f, 1.0f, 1.0f};
 		void ClipEnable(int, int, int, int) override { m_ClipEnabled = true; }
 		void ClipDisable() override { m_ClipEnabled = false; }
 		void BlendNormal() override {}
@@ -656,24 +668,34 @@ TEST_F(QmUiBlurGraphics, FallbackBorderNeverFillsTranslucentInputInterior)
 			SCOPED_TRACE(Corners);
 			SCOPED_TRACE(Alpha);
 			m_Graphics.m_vRectangles.clear();
-			m_Graphics.m_vBorderMesh.clear();
+				m_Graphics.m_vFreeforms.clear();
 			m_Graphics.m_vAntialiasEdges.clear();
+				m_Graphics.m_VertexColorCalls = 0;
 			const ColorRGBA Fill(0.1f, 0.1f, 0.1f, Alpha), Accent(1, 0, 0, 0.8f);
 			ASSERT_TRUE(DrawRoundedSurface(&m_Ui, m_Rect, Fill, Accent, 8, 2, Corners));
-			ASSERT_EQ(m_Graphics.m_vRectangles.size(), 1u);
-			EXPECT_EQ(m_Graphics.m_vRectangles.front().second, Fill);
-			ASSERT_FALSE(m_Graphics.m_vBorderMesh.empty());
-			ASSERT_EQ(m_Graphics.m_vAntialiasEdges.size(), 1u);
-			EXPECT_EQ(m_Graphics.m_vAntialiasEdges.front().second, Accent);
+				// 无 SDF 时不再有「整块底色 + 边框垫底」的矩形提交。
+				EXPECT_TRUE(m_Graphics.m_vRectangles.empty());
+				ASSERT_FALSE(m_Graphics.m_vFreeforms.empty());
 			const vec2 Center = m_Rect.Center();
-			for(const auto &Quad : m_Graphics.m_vBorderMesh)
+				bool SawFill = false, SawBorder = false;
+				for(const auto &Draw : m_Graphics.m_vFreeforms)
 			{
+					const IGraphics::CFreeformItem &Quad = Draw.m_Item;
+					if(Draw.m_Color == Fill)
+						SawFill = true;
+					if(Draw.m_Color != Accent)
+						continue;
+					SawBorder = true;
 				const float Left = std::min({Quad.m_X0, Quad.m_X1, Quad.m_X2, Quad.m_X3});
 				const float Right = std::max({Quad.m_X0, Quad.m_X1, Quad.m_X2, Quad.m_X3});
 				const float Top = std::min({Quad.m_Y0, Quad.m_Y1, Quad.m_Y2, Quad.m_Y3});
 				const float Bottom = std::max({Quad.m_Y0, Quad.m_Y1, Quad.m_Y2, Quad.m_Y3});
 				EXPECT_FALSE(Center.x > Left && Center.x < Right && Center.y > Top && Center.y < Bottom);
 			}
+				EXPECT_TRUE(SawFill);
+				EXPECT_TRUE(SawBorder);
+				// 外缘羽化由逐顶点透明到实色的自由网格完成。
+				EXPECT_GT(m_Graphics.m_VertexColorCalls, 0);
 		}
 	}
 }

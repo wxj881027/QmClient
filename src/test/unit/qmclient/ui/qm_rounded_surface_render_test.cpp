@@ -132,6 +132,8 @@ namespace
 		void SetUp() override
 		{
 			g_Config.m_QmRectCornerSegments = 16;
+			g_Config.m_QmUiCornerCurve = ROUNDED_CORNER_CURVE_CLASSIC;
+			g_Config.m_QmUiCornerSmoothing = 0;
 			m_Params.m_Radius = 4.0f;
 			m_Params.m_BorderWidth = 1.0f;
 			m_Params.m_PixelSize = 1.0f;
@@ -154,7 +156,6 @@ TEST_F(CQmRoundedSurfaceRender, TransparentFillLeavesInteriorUnpainted)
 	ASSERT_TRUE(DrawRoundedSurface(&m_Graphics, m_Rect, ColorRGBA(1, 0, 0, 0), ColorRGBA(0, 0, 1, 0.7f), m_Params));
 	ExpectColor(m_Graphics.Sample(vec2(10.37f, 6.23f)), ColorRGBA(0, 0, 0, 0));
 	ExpectColor(m_Graphics.Sample(vec2(10.37f, 0.43f)), ColorRGBA(0, 0, 1, 0.7f));
-	EXPECT_EQ(m_Graphics.m_AntialiasDraws, 1);
 }
 
 TEST_F(CQmRoundedSurfaceRender, TranslucentFillDoesNotBlendWithBorderUnderneath)
@@ -244,6 +245,31 @@ TEST_F(CQmRoundedSurfaceRender, ZeroBorderKeepsFillAcrossSurface)
 	ASSERT_TRUE(DrawRoundedSurface(&m_Graphics, m_Rect, Fill, ColorRGBA(0, 0, 1, 1), m_Params));
 	ExpectColor(m_Graphics.Sample(vec2(10.37f, 6.23f)), Fill);
 	ExpectColor(m_Graphics.Sample(vec2(10.37f, 0.43f)), Fill);
+}
+
+TEST_F(CQmRoundedSurfaceRender, GradientFallbackRendersEveryCornerCurve)
+{
+	const CUIRect Rect{0, 0, 100, 100};
+	SQmColorGradient Gradient;
+	Gradient.m_NumColors = 2;
+	Gradient.m_aColors[0] = Gradient.m_aColors[1] = ColorRGBA(1, 0, 0, 1);
+	SRoundedSurfaceParams Params;
+	Params.m_Radius = 20.0f;
+	Params.m_PixelSize = 1.0f;
+	g_Config.m_QmUiCornerSmoothing = 100;
+	g_Config.m_QmUiCornerSmoothingSquircle = 100;
+	g_Config.m_QmUiCornerSmoothingConic = 100;
+	g_Config.m_QmUiCornerSmoothingApple = 100;
+	for(int Curve = ROUNDED_CORNER_CURVE_CLASSIC; Curve <= ROUNDED_CORNER_CURVE_APPLE; ++Curve)
+	{
+		SCOPED_TRACE(Curve);
+		CSurfaceGraphics Graphics;
+		g_Config.m_QmUiCornerCurve = Curve;
+		ASSERT_TRUE(DrawRoundedGradientSurface(&Graphics, Rect, Gradient, 1.0f, ColorRGBA(0, 0, 0, 0), Params));
+		const ColorRGBA Center = Graphics.Sample(Rect.Center());
+		EXPECT_GT(Center.r, 0.99f);
+		EXPECT_GT(Center.a, 0.99f);
+	}
 }
 
 TEST_F(CQmRoundedSurfaceRender, SdfReceivesIndependentFillAndBorderAlpha)

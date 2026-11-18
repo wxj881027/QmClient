@@ -83,8 +83,8 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.5 圆角与表面（rounded surface）
 
 - 定义：圆角按尺寸与曲线档推导，表面统一走同一个绘制入口，描边与光晕只是参数。
-- 唯一实现：`DrawRoundedSurface(...)`、`DrawRoundedSurfaceGlow(...)`、`ResolveRoundedSurfacePlan(...)`、`ResolveRoundedSurfaceCornerRadii(...)`、`QmCornerSmoothingForCurve` / `QmEffectiveCornerSmoothing`（`src/game/client/QmUi/UiSurface.h`、`UiSurface.cpp`）；圆角档 `ui_token::radius::*`、列表档 `ui_token::list::RowRadius(H)` 与 `ContainerRadius(W,H)`。
-- 禁止的反面写法：用 `Row.Draw(Color, CORNER_ALL, 5.0f)` 写死圆角；自己按 `min(w,h)/2` 算胶囊；两套描边宽度并存；用「矩形放大 + 半径加宽」手拼光晕。
+- 唯一实现：`DrawRoundedSurface(...)`、`DrawRoundedSurfaceGlow(...)`、`ResolveRoundedSurfacePlan(...)`、`ResolveRoundedSurfaceCornerRadii(...)`、`QmCornerSmoothingForCurve` / `QmEffectiveCornerSmoothing`（`src/game/client/QmUi/UiSurface.h`、`UiSurface.cpp`）；无 SDF 回退轮廓的唯一入口是 `ResolveRoundedSurfaceOutline(...)`，每角固定 `ROUNDED_SURFACE_CORNER_SEGMENTS = 24` 段，填充扇、边框环带和外缘羽化都从这一条轮廓生成（`ResolveRoundedSurfaceBorderMesh(...)` 只是它的环带拼装）；圆角档 `ui_token::radius::*`、列表档 `ui_token::list::RowRadius(H)` 与 `ContainerRadius(W,H)`。
+- 禁止的反面写法：用 `Row.Draw(Color, CORNER_ALL, 5.0f)` 写死圆角；自己按 `min(w,h)/2` 算胶囊；两套描边宽度并存；用「矩形放大 + 半径加宽」手拼光晕；回退路径另写正圆、`sqrt(R²-d²)` 或固定 32×16 网格；填充、边框、羽化各取一套几何。
 
 ### 2.6 动效运行时（animation runtime）
 
