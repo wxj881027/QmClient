@@ -310,7 +310,11 @@ def scenario_legacy_icon_font_residual_ignored(env: ProcessEnvironment) -> None:
 def scenario_connection_failure_recovery(env: ProcessEnvironment) -> None:
 	"""验证服务端断开后客户端报告离线并可正常退出。"""
 	port = env.start_server()
-	env.start_client([], connect=True, connect_address=f"localhost:{port}")
+	address = f"tw-0.6+udp://127.0.0.1:{port}"
+	# 候选都指向同一台本地服务端，列表长度超过旧的命令缓冲容量。
+	addresses = ",".join([address] * 12)
+	client = env.start_client([], connect=True, connect_address=addresses)
+	client.wait_for(lambda line: line == f"client: connecting to '{addresses}'", "complete connection address list", 15)
 	env.server.wait_for(lambda line: line.startswith("server: player has entered the game"), "client connection", 15)
 	env.server.command("shutdown")
 	env.client.wait_for(lambda line: "offline error='" in line, "connection failure fallback", 15)

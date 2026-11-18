@@ -225,7 +225,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	CFriends m_Friends;
 	CFriends m_Foes;
 
-	char m_aConnectAddressStr[MAX_SERVER_ADDRESSES * NETADDR_MAXSTRSIZE] = "";
+	char m_aConnectAddressStr[sizeof(g_Config.m_UiServerAddress)] = "";
 
 	CUuid m_ConnectionId = UUID_ZEROED;
 	bool m_Sixup;
@@ -305,7 +305,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	// TClient
 	std::array<bool, NUM_DUMMIES> m_aExecuteOnJoinDone = {};
 
-	char m_aCmdConnect[256] = "";
+	char m_aCmdConnect[sizeof(m_aConnectAddressStr)] = "";
 	char m_aCmdPlayDemo[IO_MAX_PATH_LENGTH] = "";
 	char m_aCmdOpenPoses[IO_MAX_PATH_LENGTH] = "";
 	char m_aCmdEditMap[IO_MAX_PATH_LENGTH] = "";
@@ -313,8 +313,8 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	// map download
 	char m_aMapDownloadUrl[256] = "";
 	std::shared_ptr<IHttpRequest> m_pMapdownloadTask = nullptr;
-	char m_aMapdownloadFilename[256] = "";
-	char m_aMapdownloadFilenameTemp[256] = "";
+	char m_aMapdownloadFilename[IO_MAX_PATH_LENGTH] = "";
+	char m_aMapdownloadFilenameTemp[IO_MAX_PATH_LENGTH] = "";
 	char m_aMapdownloadName[256] = "";
 	CMapDownloadFile m_MapdownloadFileTemp;
 	int m_MapdownloadChunk = 0;
