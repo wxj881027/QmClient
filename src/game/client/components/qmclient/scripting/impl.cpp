@@ -34,8 +34,9 @@ namespace
 	};
 
 	using TScriptParser = chaiscript::parser::ChaiScript_Parser<chaiscript::eval::Tracer<CQmScriptCallDepth>, chaiscript::optimizer::Optimizer_Default>;
-	using FRegexMatch = std::function<void(const std::string &, int, int)>;
-	using FRegexReplace = std::function<std::string(const std::string &, int, int)>;
+	// 回调可以保存匹配文本，传入持有字符串的脚本常量。
+	using FRegexMatch = std::function<void(chaiscript::Boxed_Value, int, int)>;
+	using FRegexReplace = std::function<std::string(chaiscript::Boxed_Value, int, int)>;
 
 	void CheckRegexProgress(bool Global, const std::string &Match, int Group)
 	{
@@ -59,7 +60,7 @@ static const auto NAMESPACE_RE = [](chaiscript::Namespace &Re) {
 		const std::string Subject(Text);
 		PatternCopy.match(Subject, Global, [&](const std::string &Match, int Index, int Group) {
 			CheckRegexProgress(Global, Match, Group);
-			Callback(Match, Index, Group);
+			Callback(chaiscript::const_var(Match), Index, Group);
 		});
 	}));
 	Re["replace"] = chaiscript::var(chaiscript::fun([](Regex &Pattern, const std::string &Text, bool Global, FRegexReplace Callback) {
@@ -67,7 +68,7 @@ static const auto NAMESPACE_RE = [](chaiscript::Namespace &Re) {
 		const std::string Subject(Text);
 		return PatternCopy.replace(Subject, Global, [&](const std::string &Match, int Index, int Group) {
 			CheckRegexProgress(Global, Match, Group);
-			return Callback(Match, Index, Group);
+			return Callback(chaiscript::const_var(Match), Index, Group);
 		});
 	}));
 };
@@ -114,10 +115,11 @@ public:
 				pScript.reset();
 			return pScript;
 		};
-		const auto Evaluate = [this, pFilename](const char *pScript) {
-			return m_Chai.eval(pScript, chaiscript::Exception_Handler(), pFilename);
-		};
-		return QmEvaluateScriptFile(pFilename, Read, Evaluate);
+		// 求值前释放存储读取缓冲，避免嵌套 include 累积两份源码。
+		const std::string Script = QmEvaluateScriptFile(pFilename, Read, [](const char *pScript) {
+			return std::string(pScript);
+		});
+		return m_Chai.eval(Script, chaiscript::Exception_Handler(), pFilename);
 	}
 };
 

@@ -298,6 +298,48 @@ TEST_F(CQmScriptingExecution, GlobalRegexMatchReadsTheOriginalTextAcrossCallback
 	EXPECT_EQ(m_vRecorded, (std::vector<std::string>{"a", "b", "ax"}));
 }
 
+TEST_F(CQmScriptingExecution, RegexMatchCallbackCanKeepReadOnlyGroups)
+{
+	Write("match.chai", R"(
+		import("re");
+		var pattern := re.compile("a(b)");
+		var groups := Vector();
+		re.match(pattern, "ab", false, fun[groups](part, index, group) {
+			if (is_var_const(part) && !is_var_reference(part)) {
+				groups.push_back_ref(part);
+			}
+		});
+		for (var i = 0; i < groups.size(); ++i) {
+			record(groups[i]);
+		}
+	)");
+
+	ASSERT_NO_THROW(Run("match.chai"));
+	EXPECT_EQ(m_vRecorded, (std::vector<std::string>{"ab", "b"}));
+}
+
+TEST_F(CQmScriptingExecution, RegexReplacementCallbackCanKeepReadOnlyGroups)
+{
+	Write("replace.chai", R"(
+		import("re");
+		var pattern := re.compile("[ab]");
+		var groups := Vector();
+		var result = re.replace(pattern, "a b", true, fun[groups](part, index, group) {
+			if (is_var_const(part) && !is_var_reference(part)) {
+				groups.push_back_ref(part);
+			}
+			return "x";
+		});
+		record(result);
+		for (var i = 0; i < groups.size(); ++i) {
+			record(groups[i]);
+		}
+	)");
+
+	ASSERT_NO_THROW(Run("replace.chai"));
+	EXPECT_EQ(m_vRecorded, (std::vector<std::string>{"x x", "a", "b"}));
+}
+
 TEST_F(CQmScriptingExecution, BuiltInEmoticonPassesOneLiteralMessageToSay)
 {
 	const std::string Source = TestSourcePath("data/qmclient/builtinscripts/sayemoticon.chai");
