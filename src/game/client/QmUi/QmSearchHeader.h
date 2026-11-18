@@ -100,27 +100,28 @@ namespace qm_search_header
 		const float Available = std::max(0.0f, Viewport.h - InputHeight);
 		Result.m_InputOffsetY = Available * 0.5f;
 		const float Gap = 12.0f * UiScale;
-		const float SubtitleHeight = std::max(22.0f * UiScale, TextHeight);
+		const float SingleLineHeight = 22.0f * UiScale;
+		const float SubtitleHeight = std::max(SingleLineHeight, TextHeight);
 		const float LogoBudget = std::max(0.0f, Available - SubtitleHeight - 2.0f * Gap);
 		// 极矮视口优先保留输入框。
 		if(LogoBudget < 20.0f * UiScale || Viewport.w <= 0.0f)
 			return Result;
-		// 图片中心位于视口的 1/4，输入卡片中心位于 1/2；短句与间距预留在两者之间。
+		// 按单行文案确定常规图高，换行时让输入框为新增的行腾出空间。
 		const float LogoCenterY = Viewport.h * 0.25f;
-		const float CenteredLogoBudget = 2.0f * std::min(LogoCenterY, Result.m_InputOffsetY - LogoCenterY - SubtitleHeight - 2.0f * Gap);
+		const float CenteredLogoBudget = 2.0f * std::min(LogoCenterY, Result.m_InputOffsetY - LogoCenterY - SingleLineHeight - 2.0f * Gap);
 		const bool UseAnchors = CenteredLogoBudget >= 20.0f * UiScale;
 		const float LogoHeightBudget = UseAnchors ? std::min(LogoBudget, CenteredLogoBudget) : LogoBudget;
 		const float LogoAspect = s_aLogos[Result.m_LogoIndex].Aspect();
 		const float LogoWidth = std::min({340.0f * UiScale, Viewport.w * 0.8f, LogoHeightBudget * LogoAspect});
 		const float LogoHeight = LogoWidth / LogoAspect;
 		const float HeaderHeight = LogoHeight + SubtitleHeight + 2.0f * Gap;
-		// 高度不足时沿用整组居中的紧凑布局，避免图片、短句和输入卡片重叠。
-		const float Top = UseAnchors ? LogoCenterY - LogoHeight * 0.5f : (Available - HeaderHeight) * 0.5f;
+		// 输入框到达底边后，标题组向上让位。
+		const float FreeHeight = std::max(0.0f, Available - HeaderHeight);
+		const float Top = UseAnchors ? std::min(LogoCenterY - LogoHeight * 0.5f, FreeHeight) : FreeHeight * 0.5f;
 		Result.m_Logo = {Viewport.x + (Viewport.w - LogoWidth) * 0.5f, Viewport.y + Top, LogoWidth, LogoHeight};
 		const float TextWidth = SubtitleWidth(Viewport);
 		Result.m_Subtitle = {Viewport.x + (Viewport.w - TextWidth) * 0.5f, Result.m_Logo.y + LogoHeight + Gap, TextWidth, SubtitleHeight};
-		if(!UseAnchors)
-			Result.m_InputOffsetY = Top + HeaderHeight;
+		Result.m_InputOffsetY = std::max(Result.m_InputOffsetY, Top + HeaderHeight);
 		return Result;
 	}
 

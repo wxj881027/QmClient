@@ -176,3 +176,27 @@ TEST(QmSearchHeader, MultilineSubtitleReservesHeightBeforeInput)
 		EXPECT_LE(Layout.m_InputOffsetY + InputHeight, Viewport.h);
 	}
 }
+
+TEST(QmSearchHeader, WrappingSubtitleKeepsLogoSizeAndMovesInputBelowText)
+{
+	const CUIRect Viewport{20.0f, 30.0f, 900.0f, 600.0f};
+	const float InputHeight = 100.0f;
+	for(int Image = 0; Image < qm_search_header::NUM_LOGOS; ++Image)
+	{
+		SCOPED_TRACE(Image);
+		const auto SingleLine = qm_search_header::Layout(Viewport, InputHeight, 1.0f, false, Image);
+		for(const float TextHeight : {50.0f, 80.0f, 300.0f})
+		{
+			SCOPED_TRACE(TextHeight);
+			const auto Wrapped = qm_search_header::Layout(Viewport, InputHeight, 1.0f, false, Image, TextHeight);
+			EXPECT_FLOAT_EQ(Wrapped.m_Logo.w, SingleLine.m_Logo.w);
+			EXPECT_FLOAT_EQ(Wrapped.m_Logo.h, SingleLine.m_Logo.h);
+			EXPECT_GE(Wrapped.m_Logo.y, Viewport.y);
+			EXPECT_LT(Wrapped.m_Logo.y + Wrapped.m_Logo.h, Wrapped.m_Subtitle.y);
+			EXPECT_FLOAT_EQ(Wrapped.m_Subtitle.h, TextHeight);
+			EXPECT_LT(Wrapped.m_Subtitle.y + TextHeight, Viewport.y + Wrapped.m_InputOffsetY);
+			EXPECT_GT(Wrapped.m_InputOffsetY, SingleLine.m_InputOffsetY);
+			EXPECT_LE(Wrapped.m_InputOffsetY + InputHeight, Viewport.h);
+		}
+	}
+}
