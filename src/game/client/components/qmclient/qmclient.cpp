@@ -2646,18 +2646,32 @@ void CQmClient::FinishQmDdnetPlayerStats()
 	// 此时调用 StatusCode() 会触发 http.cpp 的断言并弹出崩溃报告
 	const EHttpState State = m_pQmDdnetPlayerTask->State();
 	const int StatusCode = State == EHttpState::DONE ? m_pQmDdnetPlayerTask->StatusCode() : -1;
-	if(State != EHttpState::DONE || StatusCode != 200)
+	if(State == EHttpState::DONE && StatusCode == 200)
+	{
+		try
+		{
+			auto pParseJob = std::make_shared<CQmDdnetPlayerStatsParseJob>(m_pQmDdnetPlayerTask);
+			if(Engine()->TryAddJob(pParseJob))
+			{
+				m_pQmDdnetPlayerParseJob = std::move(pParseJob);
+				m_QmDdnetPlayerState.CompleteHttp(true, time_get(), 0, 0);
+				m_pQmDdnetPlayerTask = nullptr;
+				return;
+			}
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 分配失败与队列拒收使用同一条退避路径。
+		}
+		log_warn("qmclient", "Could not queue DDNet statistics parsing for '%s'",
+			m_QmDdnetPlayerState.RequestPlayerName().c_str());
+	}
+	else
 	{
 		log_warn("qmclient", "DDNet statistics request failed for '%s': state=%d status=%d",
 			m_QmDdnetPlayerState.RequestPlayerName().c_str(), (int)State, StatusCode);
-		m_QmDdnetPlayerState.CompleteHttp(false, time_get(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq(), (int64_t)QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS * time_freq());
-		m_pQmDdnetPlayerTask = nullptr;
-		return;
 	}
-
-	m_pQmDdnetPlayerParseJob = std::make_shared<CQmDdnetPlayerStatsParseJob>(m_pQmDdnetPlayerTask);
-	m_QmDdnetPlayerState.CompleteHttp(true, time_get(), 0, 0);
-	Engine()->AddJob(m_pQmDdnetPlayerParseJob);
+	m_QmDdnetPlayerState.CompleteHttp(false, time_get(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq(), (int64_t)QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS * time_freq());
 	m_pQmDdnetPlayerTask = nullptr;
 }
 
