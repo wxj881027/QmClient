@@ -21,6 +21,14 @@
 #include <stdexcept>
 #include <utility>
 
+template<typename TTile>
+static TTile *ReadTileLayer(IMap &Map, int DataIndex, int TileCount)
+{
+	if(TileCount > Map.GetDataSize(DataIndex) / static_cast<int>(sizeof(TTile)))
+		return nullptr;
+	return static_cast<TTile *>(Map.GetData(DataIndex));
+}
+
 static bool IsValidTileIndex(int Index, int Width, int Height)
 {
 	return Width > 0 && Height > 0 && Index >= 0 && Index < Width * Height;
@@ -64,6 +72,7 @@ CCollision::~CCollision()
 }
 
 void CCollision::Init(class CLayers *pLayers)
+try
 {
 	Unload();
 
@@ -82,98 +91,36 @@ void CCollision::Init(class CLayers *pLayers)
 		return;
 	}
 
-	const int64_t TileCount = static_cast<int64_t>(m_Width) * static_cast<int64_t>(m_Height);
-	if(TileCount <= 0 || TileCount > std::numeric_limits<int>::max())
+	const int64_t TileCount64 = static_cast<int64_t>(m_Width) * m_Height;
+	if(TileCount64 > std::numeric_limits<int>::max())
 	{
 		Unload();
 		return;
 	}
+	const int TileCount = static_cast<int>(TileCount64);
 
-	const int TileDataSize = m_pLayers->Map()->GetDataSize(m_pLayers->GameLayer()->m_Data);
-	const size_t RequiredTileDataSize = static_cast<size_t>(TileCount) * sizeof(CTile);
-	if(TileDataSize < 0 || static_cast<size_t>(TileDataSize) < RequiredTileDataSize)
-	{
-		Unload();
-		return;
-	}
-
-	m_pTiles = static_cast<CTile *>(m_pLayers->Map()->GetData(m_pLayers->GameLayer()->m_Data));
+	IMap &Map = *m_pLayers->Map();
+	m_pTiles = ReadTileLayer<CTile>(Map, m_pLayers->GameLayer()->m_Data, TileCount);
 	if(!m_pTiles)
 	{
 		Unload();
 		return;
 	}
-	m_HasHookTeleIns = false;
 
 	if(m_pLayers->TeleLayer())
-	{
-		unsigned int Size = m_pLayers->Map()->GetDataSize(m_pLayers->TeleLayer()->m_Tele);
-		if(Size >= (size_t)m_Width * m_Height * sizeof(CTeleTile))
-			m_pTele = static_cast<CTeleTile *>(m_pLayers->Map()->GetData(m_pLayers->TeleLayer()->m_Tele));
-	}
-
+		m_pTele = ReadTileLayer<CTeleTile>(Map, m_pLayers->TeleLayer()->m_Tele, TileCount);
 	if(m_pLayers->SpeedupLayer())
-	{
-		unsigned int Size = m_pLayers->Map()->GetDataSize(m_pLayers->SpeedupLayer()->m_Speedup);
-		if(Size >= (size_t)m_Width * m_Height * sizeof(CSpeedupTile))
-			m_pSpeedup = static_cast<CSpeedupTile *>(m_pLayers->Map()->GetData(m_pLayers->SpeedupLayer()->m_Speedup));
-	}
-
+		m_pSpeedup = ReadTileLayer<CSpeedupTile>(Map, m_pLayers->SpeedupLayer()->m_Speedup, TileCount);
 	if(m_pLayers->SwitchLayer())
-	{
-		unsigned int Size = m_pLayers->Map()->GetDataSize(m_pLayers->SwitchLayer()->m_Switch);
-		if(Size >= (size_t)m_Width * m_Height * sizeof(CSwitchTile))
-			m_pSwitch = static_cast<CSwitchTile *>(m_pLayers->Map()->GetData(m_pLayers->SwitchLayer()->m_Switch));
-
-		m_pDoor = new CDoorTile[m_Width * m_Height];
-		mem_zero(m_pDoor, (size_t)m_Width * m_Height * sizeof(CDoorTile));
-	}
-
+		m_pSwitch = ReadTileLayer<CSwitchTile>(Map, m_pLayers->SwitchLayer()->m_Switch, TileCount);
 	if(m_pLayers->TuneLayer())
-	{
-		unsigned int Size = m_pLayers->Map()->GetDataSize(m_pLayers->TuneLayer()->m_Tune);
-		if(Size >= (size_t)m_Width * m_Height * sizeof(CTuneTile))
-			m_pTune = static_cast<CTuneTile *>(m_pLayers->Map()->GetData(m_pLayers->TuneLayer()->m_Tune));
-	}
-
+		m_pTune = ReadTileLayer<CTuneTile>(Map, m_pLayers->TuneLayer()->m_Tune, TileCount);
 	if(m_pLayers->FrontLayer())
-	{
-		unsigned int Size = m_pLayers->Map()->GetDataSize(m_pLayers->FrontLayer()->m_Front);
-		if(Size >= (size_t)m_Width * m_Height * sizeof(CTile))
-			m_pFront = static_cast<CTile *>(m_pLayers->Map()->GetData(m_pLayers->FrontLayer()->m_Front));
-	}
-
-	if(m_pSwitch)
-	{
-		for(int i = 0; i < m_Width * m_Height; i++)
-		{
-			if(m_pSwitch[i].m_Number > m_HighestSwitchNumber)
-			{
-				m_HighestSwitchNumber = m_pSwitch[i].m_Number;
-			}
-
-			m_pDoor[i].m_Number = m_pSwitch[i].m_Number;
-
-			const unsigned char Index = m_pSwitch[i].m_Type;
-			if(Index <= TILE_NPH_ENABLE)
-			{
-				if((Index >= TILE_JUMP && Index <= TILE_SUBTRACT_TIME) ||
-					Index == TILE_ALLOW_TELE_GUN ||
-					Index == TILE_ALLOW_BLUE_TELE_GUN)
-				{
-					m_pSwitch[i].m_Type = Index;
-				}
-				else
-				{
-					m_pSwitch[i].m_Type = 0;
-				}
-			}
-		}
-	}
+		m_pFront = ReadTileLayer<CTile>(Map, m_pLayers->FrontLayer()->m_Front, TileCount);
 
 	if(m_pTele)
 	{
-		for(int i = 0; i < m_Width * m_Height; i++)
+		for(int i = 0; i < TileCount; i++)
 		{
 			const unsigned char Number = m_pTele[i].m_Number;
 			const unsigned char Type = m_pTele[i].m_Type;
@@ -201,6 +148,43 @@ void CCollision::Init(class CLayers *pLayers)
 			}
 		}
 	}
+
+	if(m_pLayers->SwitchLayer())
+		m_pDoor = new CDoorTile[TileCount]{};
+
+	if(m_pSwitch)
+	{
+		for(int i = 0; i < TileCount; i++)
+		{
+			if(m_pSwitch[i].m_Number > m_HighestSwitchNumber)
+			{
+				m_HighestSwitchNumber = m_pSwitch[i].m_Number;
+			}
+
+			m_pDoor[i].m_Number = m_pSwitch[i].m_Number;
+
+			const unsigned char Index = m_pSwitch[i].m_Type;
+			if(Index <= TILE_NPH_ENABLE)
+			{
+				if((Index >= TILE_JUMP && Index <= TILE_SUBTRACT_TIME) ||
+					Index == TILE_ALLOW_TELE_GUN ||
+					Index == TILE_ALLOW_BLUE_TELE_GUN)
+				{
+					m_pSwitch[i].m_Type = Index;
+				}
+				else
+				{
+					m_pSwitch[i].m_Type = 0;
+				}
+			}
+		}
+	}
+}
+catch(...)
+{
+	// 先清理部分初始化的状态，再把失败交给调用方。
+	Unload();
+	throw;
 }
 
 void CCollision::Unload()
@@ -503,6 +487,15 @@ int CCollision::GetTile(int x, int y) const
 	return 0;
 }
 
+static int LineMiss(vec2 Pos, vec2 *pOutCollision, vec2 *pOutBeforeCollision)
+{
+	if(pOutCollision)
+		*pOutCollision = Pos;
+	if(pOutBeforeCollision)
+		*pOutBeforeCollision = Pos;
+	return 0;
+}
+
 // TODO: rewrite this smarter!
 static int QuadLineHit(int Tile, vec2 Pos0, vec2 Pos1, float Fraction, vec2 *pOutCollision, vec2 *pOutBeforeCollision)
 {
@@ -518,10 +511,12 @@ static int QuadLineHit(int Tile, vec2 Pos0, vec2 Pos1, float Fraction, vec2 *pOu
 
 int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const
 {
+	const int End = round_truncate(distance(Pos0, Pos1) + 1.0f);
+	if(!m_pTiles || End <= 0)
+		return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
+
 	float QuadFraction = 2;
 	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
-	float Distance = distance(Pos0, Pos1);
-	int End(Distance + 1);
 	vec2 Last = Pos0;
 	for(int i = 0; i <= End; i++)
 	{
@@ -546,21 +541,19 @@ int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *p
 	}
 	if(QuadHit)
 		return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
-	if(pOutCollision)
-		*pOutCollision = Pos1;
-	if(pOutBeforeCollision)
-		*pOutBeforeCollision = Pos1;
-	return 0;
+	return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
 }
 
 int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const
 {
-	float QuadFraction = 2;
-	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
 	if(pTeleNr)
 		*pTeleNr = 0;
-	float Distance = distance(Pos0, Pos1);
-	int End(Distance + 1);
+	const int End = round_truncate(distance(Pos0, Pos1) + 1.0f);
+	if(!m_pTiles || End <= 0)
+		return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
+
+	float QuadFraction = 2;
+	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
 	vec2 Last = Pos0;
 	int dx = 0, dy = 0; // Offset for checking the "through" tile
 	ThroughOffset(Pos0, Pos1, &dx, &dy);
@@ -614,21 +607,19 @@ int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision,
 	}
 	if(QuadHit)
 		return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
-	if(pOutCollision)
-		*pOutCollision = Pos1;
-	if(pOutBeforeCollision)
-		*pOutBeforeCollision = Pos1;
-	return 0;
+	return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
 }
 
 int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const
 {
-	float QuadFraction = 2;
-	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
 	if(pTeleNr)
 		*pTeleNr = 0;
-	float Distance = distance(Pos0, Pos1);
-	int End(Distance + 1);
+	const int End = round_truncate(distance(Pos0, Pos1) + 1.0f);
+	if(!m_pTiles || End <= 0)
+		return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
+
+	float QuadFraction = 2;
+	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
 	vec2 Last = Pos0;
 	for(int i = 0; i <= End; i++)
 	{
@@ -670,11 +661,7 @@ int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollisio
 	}
 	if(QuadHit)
 		return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
-	if(pOutCollision)
-		*pOutCollision = Pos1;
-	if(pOutBeforeCollision)
-		*pOutBeforeCollision = Pos1;
-	return 0;
+	return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
 }
 
 // TODO: OPT: rewrite this smarter!
@@ -794,10 +781,10 @@ void CCollision::MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, vec2 Elast
 	vec2 Vel = *pInoutVel;
 	PushBoxOutsideQmAxiomQuads(&Pos, &Vel, Size, Elasticity, pGrounded);
 
-	float Distance = length(Vel);
-	int Max = (int)Distance;
+	const float Distance = length(Vel);
+	const int Max = round_truncate(Distance);
 
-	if(Distance > 0.00001f)
+	if(Max >= 0 && Distance > 0.00001f)
 	{
 		float Fraction = 1.0f / (float)(Max + 1);
 		float ElasticityX = std::clamp(Elasticity.x, -1.0f, 1.0f);
@@ -884,7 +871,9 @@ bool CCollision::IsThrough(int x, int y, int OffsetX, int OffsetY, vec2 Pos0, ve
 		return true;
 	if(m_pFront && m_pFront[Index].m_Index == TILE_THROUGH_DIR && ((m_pFront[Index].m_Flags == ROTATION_0 && Pos0.y > Pos1.y) || (m_pFront[Index].m_Flags == ROTATION_90 && Pos0.x < Pos1.x) || (m_pFront[Index].m_Flags == ROTATION_180 && Pos0.y < Pos1.y) || (m_pFront[Index].m_Flags == ROTATION_270 && Pos0.x > Pos1.x)))
 		return true;
-	const int OffsetIndex = GetPureMapIndex(x + OffsetX, y + OffsetY);
+	const float OffsetPosX = static_cast<float>(static_cast<int64_t>(x) + OffsetX);
+	const float OffsetPosY = static_cast<float>(static_cast<int64_t>(y) + OffsetY);
+	const int OffsetIndex = GetPureMapIndex(OffsetPosX, OffsetPosY);
 	if(!IsValidTileIndex(OffsetIndex, m_Width, m_Height))
 		return false;
 
@@ -1192,14 +1181,17 @@ static int TileIndexFromCoord(float Coord, int Size)
 	return (int)std::min((double)Coord / 32.0, (double)(Size - 1));
 }
 
+static int MapIndexFromPosition(vec2 Pos, int Width, int Height)
+{
+	return TileIndexFromCoord(Pos.y, Height) * Width + TileIndexFromCoord(Pos.x, Width);
+}
+
 int CCollision::GetMapIndex(vec2 Pos) const
 {
 	if(!m_pTiles || m_Width <= 0 || m_Height <= 0)
 		return -1;
 
-	int Nx = TileIndexFromCoord(Pos.x, m_Width);
-	int Ny = TileIndexFromCoord(Pos.y, m_Height);
-	int Index = Ny * m_Width + Nx;
+	const int Index = MapIndexFromPosition(Pos, m_Width, m_Height);
 
 	if(TileExists(Index))
 		return Index;
@@ -1213,45 +1205,51 @@ std::vector<int> CCollision::GetMapIndices(vec2 PrevPos, vec2 Pos, unsigned MaxI
 	if(!m_pTiles || m_Width <= 0 || m_Height <= 0)
 		return vIndices;
 
-	float d = distance(PrevPos, Pos);
-	int End(d + 1);
-	if(!d)
-	{
-		int Nx = std::clamp((int)Pos.x / 32, 0, m_Width - 1);
-		int Ny = std::clamp((int)Pos.y / 32, 0, m_Height - 1);
-		int Index = Ny * m_Width + Nx;
+	const float Distance = distance(PrevPos, Pos);
+	const int End = round_truncate(Distance + 1.0f);
+	if(End <= 0)
+		return vIndices;
 
+	if(Distance == 0)
+	{
+		const int Index = MapIndexFromPosition(Pos, m_Width, m_Height);
 		if(TileExists(Index))
-		{
 			vIndices.push_back(Index);
-			return vIndices;
-		}
-		else
-		{
-			return vIndices;
-		}
-	}
-	else
-	{
-		int LastIndex = 0;
-		for(int i = 0; i < End; i++)
-		{
-			float a = i / d;
-			vec2 Tmp = mix(PrevPos, Pos, a);
-			int Nx = std::clamp((int)Tmp.x / 32, 0, m_Width - 1);
-			int Ny = std::clamp((int)Tmp.y / 32, 0, m_Height - 1);
-			int Index = Ny * m_Width + Nx;
-			if(TileExists(Index) && LastIndex != Index)
-			{
-				if(MaxIndices && vIndices.size() > MaxIndices)
-					return vIndices;
-				vIndices.push_back(Index);
-				LastIndex = Index;
-			}
-		}
-
 		return vIndices;
 	}
+
+	const auto IndexAtSample = [&](int Sample) {
+		return MapIndexFromPosition(mix(PrevPos, Pos, Sample / Distance), m_Width, m_Height);
+	};
+	const int LastCell = IndexAtSample(End - 1);
+	int LastIndex = 0;
+	for(int Sample = 0; Sample < End;)
+	{
+		const int Index = IndexAtSample(Sample);
+		if(Index != LastIndex && TileExists(Index))
+		{
+			if(MaxIndices && vIndices.size() > MaxIndices)
+				break;
+			vIndices.push_back(Index);
+			LastIndex = Index;
+		}
+		if(Index == LastCell)
+			break;
+
+		// 两轴的样本坐标各自单调，离开当前格后不会再回到这一格。
+		int Low = Sample + 1;
+		int High = End - 1;
+		while(Low < High)
+		{
+			const int Middle = Low + (High - Low) / 2;
+			if(IndexAtSample(Middle) == Index)
+				Low = Middle + 1;
+			else
+				High = Middle;
+		}
+		Sample = Low;
+	}
+	return vIndices;
 }
 
 vec2 CCollision::GetPos(int Index) const
@@ -1259,9 +1257,9 @@ vec2 CCollision::GetPos(int Index) const
 	if(!IsValidTileIndex(Index, m_Width, m_Height))
 		return vec2(0, 0);
 
-	int x = Index % m_Width;
-	int y = Index / m_Width;
-	return vec2(x * 32 + 16, y * 32 + 16);
+	const int x = Index % m_Width;
+	const int y = Index / m_Width;
+	return vec2(static_cast<float>(static_cast<int64_t>(x) * 32 + 16), static_cast<float>(static_cast<int64_t>(y) * 32 + 16));
 }
 
 int CCollision::GetTileIndex(int Index) const
@@ -1305,32 +1303,24 @@ int CCollision::GetIndex(vec2 PrevPos, vec2 Pos) const
 	if(m_Width <= 0 || m_Height <= 0 || (!m_pTele && !m_pSpeedup))
 		return -1;
 
-	float Distance = distance(PrevPos, Pos);
+	const float Distance = distance(PrevPos, Pos);
+	const int DistanceRounded = round_truncate(std::ceil(Distance));
+	if(DistanceRounded < 0)
+		return -1;
 
-	if(!Distance)
+	if(Distance == 0)
 	{
-		int Nx = std::clamp((int)Pos.x / 32, 0, m_Width - 1);
-		int Ny = std::clamp((int)Pos.y / 32, 0, m_Height - 1);
-
-		if((m_pTele) ||
-			(m_pSpeedup && m_pSpeedup[Ny * m_Width + Nx].m_Force > 0))
-		{
-			return Ny * m_Width + Nx;
-		}
+		const int Index = MapIndexFromPosition(Pos, m_Width, m_Height);
+		if(m_pTele || (m_pSpeedup && m_pSpeedup[Index].m_Force > 0))
+			return Index;
 	}
 
-	const int DistanceRounded = std::ceil(Distance);
 	for(int i = 0; i < DistanceRounded; i++)
 	{
-		float a = (float)i / Distance;
-		vec2 Tmp = mix(PrevPos, Pos, a);
-		int Nx = std::clamp((int)Tmp.x / 32, 0, m_Width - 1);
-		int Ny = std::clamp((int)Tmp.y / 32, 0, m_Height - 1);
-		if((m_pTele) ||
-			(m_pSpeedup && m_pSpeedup[Ny * m_Width + Nx].m_Force > 0))
-		{
-			return Ny * m_Width + Nx;
-		}
+		const float a = static_cast<float>(i) / Distance;
+		const int Index = MapIndexFromPosition(mix(PrevPos, Pos, a), m_Width, m_Height);
+		if(m_pTele || (m_pSpeedup && m_pSpeedup[Index].m_Force > 0))
+			return Index;
 	}
 
 	return -1;
@@ -1472,12 +1462,15 @@ void ThroughOffset(vec2 Pos0, vec2 Pos1, int *pOffsetX, int *pOffsetY)
 
 int CCollision::IntersectNoLaser(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const
 {
+	const float Distance = distance(Pos0, Pos1);
+	const int DistanceRounded = round_truncate(std::ceil(Distance));
+	if(!m_pTiles || DistanceRounded < 0)
+		return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
+
 	float QuadFraction = 2;
 	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
-	float Distance = distance(Pos0, Pos1);
 	vec2 Last = Pos0;
 
-	const int DistanceRounded = std::ceil(Distance);
 	for(int i = 0; i < DistanceRounded; i++)
 	{
 		float a = i / Distance;
@@ -1501,19 +1494,17 @@ int CCollision::IntersectNoLaser(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2
 	}
 	if(QuadHit)
 		return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
-	if(pOutCollision)
-		*pOutCollision = Pos1;
-	if(pOutBeforeCollision)
-		*pOutBeforeCollision = Pos1;
-	return 0;
+	return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
 }
 
 int CCollision::IntersectNoLaserNoWalls(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const
 {
-	float Distance = distance(Pos0, Pos1);
-	vec2 Last = Pos0;
+	const float Distance = distance(Pos0, Pos1);
+	const int DistanceRounded = round_truncate(std::ceil(Distance));
+	if(!m_pTiles || DistanceRounded < 0)
+		return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
 
-	const int DistanceRounded = std::ceil(Distance);
+	vec2 Last = Pos0;
 	for(int i = 0; i < DistanceRounded; i++)
 	{
 		float a = (float)i / Distance;
@@ -1531,19 +1522,14 @@ int CCollision::IntersectNoLaserNoWalls(vec2 Pos0, vec2 Pos1, vec2 *pOutCollisio
 		}
 		Last = Pos;
 	}
-	if(pOutCollision)
-		*pOutCollision = Pos1;
-	if(pOutBeforeCollision)
-		*pOutBeforeCollision = Pos1;
-	return 0;
+	return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
 }
 
 int CCollision::IntersectAir(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const
 {
-	float Distance = distance(Pos0, Pos1);
+	const float Distance = distance(Pos0, Pos1);
+	const int DistanceRounded = round_truncate(std::ceil(Distance));
 	vec2 Last = Pos0;
-
-	const int DistanceRounded = std::ceil(Distance);
 	for(int i = 0; i < DistanceRounded; i++)
 	{
 		float a = (float)i / Distance;
@@ -1563,11 +1549,7 @@ int CCollision::IntersectAir(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pO
 		}
 		Last = Pos;
 	}
-	if(pOutCollision)
-		*pOutCollision = Pos1;
-	if(pOutBeforeCollision)
-		*pOutBeforeCollision = Pos1;
-	return 0;
+	return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
 }
 
 int CCollision::IsTimeCheckpoint(int Index) const

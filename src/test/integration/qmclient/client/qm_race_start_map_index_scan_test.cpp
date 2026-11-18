@@ -273,3 +273,22 @@ TEST_F(QmRaceStartMapIndexScan, InvalidOrUnloadedScanDoesNotProduceAnIndex)
 	EXPECT_FALSE(Scan.NextAcceptedIndex(Index));
 	EXPECT_EQ(Index, 77);
 }
+
+TEST_F(QmRaceStartMapIndexScan, SharedScanPreservesOrderWhenEndingInTheFirstCell)
+{
+	m_Map.SetGameTile(0, 0, TILE_FREEZE);
+	m_Map.SetGameTile(3, 0, TILE_FREEZE);
+	m_Map.SetFrontTile(6, 0, TILE_START);
+	Initialize();
+
+	EXPECT_EQ(m_Collision.GetMapIndices(vec2(224, 16), vec2(-512, 16)), (std::vector<int>{6, 3, 0}));
+}
+
+TEST_F(QmRaceStartMapIndexScan, SharedStationaryScanClampsFarPositiveCoordinates)
+{
+	m_Map.SetGameTile(15, 1, TILE_START);
+	Initialize();
+
+	const vec2 Pos(std::numeric_limits<float>::max(), 48);
+	EXPECT_EQ(m_Collision.GetMapIndices(Pos, Pos), (std::vector<int>{31}));
+}

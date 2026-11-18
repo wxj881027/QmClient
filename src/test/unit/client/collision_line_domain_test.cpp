@@ -1,4 +1,5 @@
 #include <game/client/components/qmclient/collision_position.h>
+#include <game/collision.h>
 
 #include <gtest/gtest.h>
 
@@ -74,4 +75,17 @@ TEST(CollisionLineDomain, HookThroughOffsetKeepsSafeOffMapAndBoundaryLines)
 	EXPECT_TRUE(QmCollision::CanQueryHookLine(vec2(-100000, 0), vec2(-99000, 0)));
 	EXPECT_TRUE(QmCollision::CanQueryHookLine(vec2(-2147483520.0f, 0), vec2(-2147483392.0f, 0)));
 	EXPECT_TRUE(QmCollision::CanQueryHookLine(vec2(2147483520.0f, 0), vec2(2147483264.0f, 0)));
+}
+
+TEST(CollisionLineDomain, UnloadedLaserTraceReturnsEndpointWithoutHit)
+{
+	CCollision Collision;
+	const vec2 From(16, 16);
+	const vec2 To(80, 16);
+	vec2 Hit = From;
+	vec2 Before = From;
+
+	EXPECT_EQ(Collision.IntersectNoLaser(From, To, &Hit, &Before), 0);
+	EXPECT_EQ(Hit, To);
+	EXPECT_EQ(Before, To);
 }

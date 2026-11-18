@@ -12,6 +12,7 @@
 #include <test/support/prediction_world.h>
 
 #include <initializer_list>
+#include <new>
 
 namespace
 {
@@ -367,4 +368,61 @@ TEST_F(PredictionDoorRebuild, SnapshotCharacterAllocationFailureClearsBothCharac
 	EXPECT_EQ(m_World.m_Core.m_apCharacters[0], nullptr);
 	EXPECT_EQ(m_World.GetCharacterById(1), nullptr);
 	EXPECT_EQ(m_World.m_Core.m_apCharacters[1], nullptr);
+}
+
+TEST_F(PredictionDoorRebuild, DoorAllocationFailureClearsCollisionAndAllowsRetry)
+{
+	m_Map.SetGameTile(0, 0, TILE_SOLID);
+	bool Threw = false;
+	bool Triggered;
+	{
+		CPredictionAllocationFailure Failure;
+		try
+		{
+			m_Collision.Init(&m_Layers);
+		}
+		catch(const std::bad_alloc &)
+		{
+			Threw = true;
+		}
+		Triggered = Failure.Triggered();
+	}
+
+	ASSERT_TRUE(Triggered);
+	ASSERT_TRUE(Threw);
+	EXPECT_EQ(m_Collision.Layers(), nullptr);
+	EXPECT_EQ(m_Collision.GameLayer(), nullptr);
+	EXPECT_EQ(m_Collision.SwitchLayer(), nullptr);
+	EXPECT_EQ(m_Collision.GetWidth(), 0);
+	EXPECT_EQ(m_Collision.GetHeight(), 0);
+
+	m_Collision.Init(&m_Layers);
+	EXPECT_EQ(m_Collision.GetTile(16, 16), TILE_SOLID);
+	m_Collision.SetDoorCollisionAt(48, 16, TILE_STOPA, 0, 3);
+	EXPECT_EQ(Tile(1).m_Index, TILE_STOPA);
+}
+
+TEST(CollisionDoorLayer, NegativeSwitchDataSizeKeepsDoorGeometryFallback)
+{
+	class CInvalidSwitchSizeMap : public CPredictionCollisionMap
+	{
+		int GetDataSize(int Index) const override
+		{
+			return Index == 1 ? -1 : CPredictionCollisionMap::GetDataSize(Index);
+		}
+	};
+
+	CInvalidSwitchSizeMap Map;
+	Map.SetGameTile(0, 0, TILE_SOLID);
+	CLayers Layers;
+	Layers.Init(&Map, false);
+	CCollision Collision;
+	Collision.Init(&Layers);
+
+	EXPECT_EQ(Collision.GetTile(16, 16), TILE_SOLID);
+	EXPECT_EQ(Collision.SwitchLayer(), nullptr);
+	Collision.SetDoorCollisionAt(48, 16, TILE_STOPA, 0, 0);
+	CDoorTile Door{};
+	Collision.GetDoorTile(1, &Door);
+	EXPECT_EQ(Door.m_Index, TILE_STOPA);
 }
