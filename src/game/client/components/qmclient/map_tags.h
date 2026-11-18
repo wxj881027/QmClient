@@ -59,7 +59,8 @@ namespace QmMapTags
 		void SetContext(const char *pCommunity, const char *pMap, const char *pPlayer);
 		void Poll();
 		void Update(IHttp *pHttp, double Now);
-		void Submit(IHttp *pHttp, const char *pTag);
+		// 返回 false 表示当前状态不允许提交（忙、未就绪、无资格或标签无效）。
+		bool Submit(IHttp *pHttp, const char *pTag);
 		void Refresh() { m_NextRefresh = 0; }
 		const SSnapshot &Snapshot() const { return m_Snapshot; }
 		bool Ready() const { return m_Ready; }

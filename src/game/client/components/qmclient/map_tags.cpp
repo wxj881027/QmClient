@@ -210,10 +210,10 @@ void QmMapTags::CClient::Update(IHttp *pHttp, double Now)
 	m_NextRefresh = Now + 30.0;
 }
 
-void QmMapTags::CClient::Submit(IHttp *pHttp, const char *pTag)
+bool QmMapTags::CClient::Submit(IHttp *pHttp, const char *pTag)
 {
 	if(!pHttp || m_pWrite || !m_Ready || !m_Snapshot.m_Eligible || !ValidTag(pTag))
-		return;
+		return false;
 	CJsonStringWriter Writer;
 	Writer.BeginObject();
 	for(const auto &Field : {std::pair{"community", m_Community.c_str()}, {"map", m_Map.c_str()}, {"player", m_Player.c_str()}, {"text", pTag}})
@@ -229,4 +229,5 @@ void QmMapTags::CClient::Submit(IHttp *pHttp, const char *pTag)
 		m_pRead->Abort();
 	m_pRead.reset();
 	pHttp->Run(m_pWrite);
+	return true;
 }

@@ -63,8 +63,13 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 	// 只允许一个请求），因此这里每帧最多取队首一个。
 	if(!m_vUploadQueue.empty() && Tags.Ready() && Snapshot.m_Eligible && !Tags.Busy())
 	{
-		Tags.Submit(pGameClient->Http(), m_vUploadQueue.front().c_str());
-		m_vUploadQueue.erase(m_vUploadQueue.begin());
+		const std::string &Front = m_vUploadQueue.front();
+		// 排队后标签可能已被删除：先确认仍在本地；提交被拒时不丢队首，
+		// 下一帧仍可重试，避免静默跳过。
+		if(!m_LocalTags.Has(pCommunity, pMapName, Front.c_str()))
+			m_vUploadQueue.erase(m_vUploadQueue.begin());
+		else if(Tags.Submit(pGameClient->Http(), Front.c_str()))
+			m_vUploadQueue.erase(m_vUploadQueue.begin());
 	}
 	pUi->ClipEnable(&View);
 	SLabelProperties LabelProps;
@@ -443,7 +448,10 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 
 	if(ClickedRemove >= 0)
 	{
-		m_LocalTags.Remove(pGameClient->Storage(), pCommunity, pMapName, MyTags[ClickedRemove].c_str());
+		const std::string Removed = MyTags[ClickedRemove];
+		m_LocalTags.Remove(pGameClient->Storage(), pCommunity, pMapName, Removed.c_str());
+		// 删除只改本地文件；队列里还没发出的同名标签也必须一起撤销。
+		m_vUploadQueue.erase(std::remove(m_vUploadQueue.begin(), m_vUploadQueue.end(), Removed), m_vUploadQueue.end());
 		// 删掉的正是展开那颗：连 × 一起收掉，不给下一颗留下「已经展开」的错觉。
 		m_ExpandedTag.clear();
 		m_VisibleTag.clear();
