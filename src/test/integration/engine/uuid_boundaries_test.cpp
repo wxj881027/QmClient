@@ -1,8 +1,11 @@
 #include <base/bytes.h>
 #include <base/system.h>
 
+#include <engine/message.h>
 #include <engine/shared/datafile.h>
 #include <engine/shared/packer.h>
+#include <engine/shared/protocol.h>
+#include <engine/shared/protocol_ex.h>
 #include <engine/shared/snapshot.h>
 #include <engine/shared/uuid_manager.h>
 
@@ -82,6 +85,29 @@ TEST(UuidPacket, ExistingPackerFailureIsPropagated)
 	ASSERT_TRUE(Packer.Error());
 	EXPECT_FALSE(Manager.PackUuid(OFFSET_UUID, &Packer));
 	EXPECT_EQ(Packer.Size(), 0);
+}
+
+TEST(UuidPacket, UnknownUuidQueryEchoesWireValue)
+{
+	const CUuid Requested = CalculateUuid("unregistered@uuid-boundaries");
+	ASSERT_EQ(g_UuidManager.LookupUuid(Requested), UUID_UNKNOWN);
+
+	CPacker Request;
+	Request.Reset();
+	Request.AddInt(1);
+	ASSERT_TRUE(g_UuidManager.PackUuid(NETMSG_WHATIS, &Request));
+	Request.AddRaw(&Requested, sizeof(Requested));
+	ASSERT_FALSE(Request.Error());
+
+	CUnpacker Unpacker;
+	Unpacker.Reset(Request.Data(), Request.Size());
+	CMsgPacker Answer(NETMSG_EX, true);
+	int Id;
+	bool System;
+	ASSERT_EQ(UnpackMessageId(&Id, &System, &Unpacker, &Answer), UNPACKMESSAGE_ANSWER);
+	EXPECT_EQ(Answer.m_MsgId, NETMSG_IDONTKNOW);
+	ASSERT_EQ(Answer.Size(), sizeof(Requested));
+	EXPECT_EQ(mem_comp(Answer.Data(), &Requested, sizeof(Requested)), 0);
 }
 
 TEST(UuidSnapshot, InvalidRegisteredTypeCannotAliasNilUuidDefinition)

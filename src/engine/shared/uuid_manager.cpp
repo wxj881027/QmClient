@@ -207,13 +207,13 @@ int CUuidManager::UnpackUuid(CUnpacker *pUnpacker) const
 
 int CUuidManager::UnpackUuid(CUnpacker *pUnpacker, CUuid *pOut) const
 {
-	const CUuid *pUuid = (const CUuid *)pUnpacker->GetRaw(sizeof(*pUuid));
-	if(pUuid == nullptr)
+	const unsigned char *pData = pUnpacker->GetRaw(sizeof(*pOut));
+	if(pData == nullptr)
 	{
 		return UUID_INVALID;
 	}
-	*pOut = *pUuid;
-	return LookupUuid(*pUuid);
+	mem_move(pOut, pData, sizeof(*pOut));
+	return LookupUuid(*pOut);
 }
 
 bool CUuidManager::PackUuid(int Id, CPacker *pPacker) const
