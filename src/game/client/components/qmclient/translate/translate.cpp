@@ -330,6 +330,9 @@ void CTranslate::OnRender()
 					continue;
 				}
 				if(!DispatchOutgoingTranslation(Completed, [&](int Team, const char *pTranslated, const char *pLocalOriginal, int Connection) {
+					   // 译文只作为聊天正文，不能触发本地或服务端命令。
+					   if(*str_utf8_skip_whitespaces(pTranslated) == '/')
+						   return false;
 					   const auto Result = GameClient()->m_Chat.SendChatQueued(Team, pTranslated, false, pLocalOriginal, Connection);
 					   return Result == CChat::EChatSendResult::SENT || Result == CChat::EChatSendResult::QUEUED;
 				   }))
