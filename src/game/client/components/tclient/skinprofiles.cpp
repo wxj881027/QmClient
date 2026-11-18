@@ -3,6 +3,7 @@
 #include <engine/config.h>
 #include <engine/shared/config.h>
 #include <engine/storage.h>
+#include <generated/protocol.h>
 
 #include <game/client/gameclient.h>
 #include <game/localization.h>
@@ -12,15 +13,26 @@ static void EscapeParam(char *pDst, const char *pSrc, int Size)
 	str_escape(&pDst, pSrc, pDst + Size);
 }
 
+static void CopyProfileText(char *pDst, const char *pSrc, int Size)
+{
+	str_copy(pDst, pSrc, Size);
+	// 用空格替换会破坏单行配置的控制字符，保留制表符。
+	for(char *pChar = pDst; *pChar; ++pChar)
+	{
+		if(static_cast<unsigned char>(*pChar) < ' ' && *pChar != '\t')
+			*pChar = ' ';
+	}
+}
+
 CProfile::CProfile(int BodyColor, int FeetColor, int CountryFlag, int Emote, const char *pSkinName, const char *pName, const char *pClan)
 {
 	m_BodyColor = BodyColor;
 	m_FeetColor = FeetColor;
 	m_CountryFlag = CountryFlag;
 	m_Emote = Emote;
-	str_copy(m_SkinName, pSkinName);
-	str_copy(m_Name, pName);
-	str_copy(m_Clan, pClan);
+	CopyProfileText(m_SkinName, pSkinName, sizeof(m_SkinName));
+	CopyProfileText(m_Name, pName, sizeof(m_Name));
+	CopyProfileText(m_Clan, pClan, sizeof(m_Clan));
 }
 
 void CSkinProfiles::OnConsoleInit()
@@ -81,7 +93,7 @@ void CSkinProfiles::ApplyProfile(int Dummy, const CProfile &Profile)
 		(Dummy ? g_Config.m_ClDummyColorBody : g_Config.m_ClPlayerColorBody) = Profile.m_BodyColor;
 		(Dummy ? g_Config.m_ClDummyColorFeet : g_Config.m_ClPlayerColorFeet) = Profile.m_FeetColor;
 	}
-	if(g_Config.m_QmProfileEmote && Profile.m_Emote != -1)
+	if(g_Config.m_QmProfileEmote && Profile.m_Emote >= EMOTE_NORMAL && Profile.m_Emote < NUM_EMOTES)
 		(Dummy ? g_Config.m_ClDummyDefaultEyes : g_Config.m_ClPlayerDefaultEyes) = Profile.m_Emote;
 	if(g_Config.m_QmProfileName && strlen(Profile.m_Name) != 0)
 		str_copy(Dummy ? g_Config.m_ClDummyName : g_Config.m_PlayerName, Profile.m_Name); // TODO m_ClPlayerName

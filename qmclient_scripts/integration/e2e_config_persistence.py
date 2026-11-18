@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""使用 Windows 隔离测试客户端验证多开顺序保存和坏配置保护。"""
+"""使用 Windows 隔离测试客户端验证配置写入和坏配置保护。"""
 
 from __future__ import annotations
 
@@ -91,6 +91,33 @@ def scenario_invalid_utf8_preserves_original_config(binary: Path, workspace: Pat
 		client.stop()
 
 
+def scenario_profile_load_preserves_default_eyes_for_invalid_emote(binary: Path, workspace: Path) -> None:
+	root = workspace / "profile-invalid-emote"
+	settings = root / MANAGED_PATHS[0]
+	profiles = root / MANAGED_PATHS[1]
+	settings.parent.mkdir(parents=True)
+	settings.write_text(
+		'player_name "BeforeLoad"\nplayer_default_eyes 2\n'
+		"qm_profile_name 1\nqm_profile_emote 1\nqm_sponsor_nudge_at 100000000\n",
+		encoding="utf-8",
+	)
+	profiles.write_text('add_profile -1 -1 -2 6 "" "AfterLoad" ""\n', encoding="utf-8")
+	client = start_client(binary, root, "profile-invalid-emote")
+	try:
+		client.wait_for(lambda line: line.startswith("client: version"), "client startup", 30)
+		client.command("qm_profile_queue 1")
+		client.command("quit")
+		if client.wait_for_exit(30) != 0:
+			raise AssertionError("client did not exit normally after applying the profile")
+		saved = settings.read_text(encoding="utf-8").splitlines()
+		if 'player_name "AfterLoad"' not in saved:
+			raise AssertionError("profile did not apply its valid name")
+		if "player_default_eyes 2" not in saved:
+			raise AssertionError("invalid profile emote replaced the previous default eyes")
+	finally:
+		client.stop()
+
+
 def main() -> None:
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument("build_dir", type=Path, help="DEV=ON、QMCLIENT_TEST_STORAGE=ON 的 Windows 构建")
@@ -111,6 +138,7 @@ def main() -> None:
 	scenario_sequential_clients_save_last_writer(binary, workspace)
 	scenario_sequential_clients_save_last_writer(binary, workspace, reverse_order=True)
 	scenario_invalid_utf8_preserves_original_config(binary, workspace)
+	scenario_profile_load_preserves_default_eyes_for_invalid_emote(binary, workspace)
 	print(f"configuration persistence scenarios passed; artifacts: {workspace}")
 
 
