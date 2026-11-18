@@ -43,6 +43,27 @@ TEST(Network, UnpackLegacyKeepaliveClearsHeaderSecurityToken)
 	EXPECT_EQ(SecurityToken, NET_SECURITY_TOKEN_UNKNOWN);
 }
 
+TEST(Network, FeedRejectsLegacyControlWithoutCommand)
+{
+	CNetConnection Connection;
+	Connection.Init(nullptr, false);
+	NETADDR Addr = {};
+	Addr.type = NETTYPE_IPV4;
+	constexpr SECURITY_TOKEN Token = 0x12345678;
+	Connection.DirectInit(Addr, Token, NET_SECURITY_TOKEN_UNKNOWN, false);
+
+	CNetPacketConstruct Packet = {};
+	Packet.m_Flags = NET_PACKETFLAG_CONTROL;
+	Packet.m_DataSize = sizeof(Token);
+	WriteSecurityToken(Packet.m_aChunkData, Token);
+	EXPECT_EQ(Connection.Feed(&Packet, &Addr), 0);
+
+	Packet.m_aChunkData[0] = NET_CTRLMSG_KEEPALIVE;
+	Packet.m_DataSize = 1 + sizeof(Token);
+	WriteSecurityToken(Packet.m_aChunkData + 1, Token);
+	EXPECT_EQ(Connection.Feed(&Packet, &Addr), 1);
+}
+
 TEST(Network, UnpackChunks)
 {
 	constexpr int NumChunks = 3;
