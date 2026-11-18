@@ -81,7 +81,12 @@ namespace qm_island
 	// 倒计时只在完整展开后推进（形变阶段不吃时间）。返回 true 表示本轮到时。
 	inline bool AdvanceCountdown(SNoticeState &State, bool Visible, float DeltaSeconds, float SettledEpsilon = NOTICE_SETTLED_EPSILON)
 	{
-		if(!Visible || State.m_ExpandProgress < 1.0f - SettledEpsilon)
+		if(!Visible)
+			return false;
+		// 到时后调用方会关闭提醒。退场期间重新显示时，倒计时从头开始。
+		if(State.m_ElapsedSeconds >= State.m_DurationSeconds)
+			State.m_ElapsedSeconds = 0.0f;
+		if(State.m_ExpandProgress < 1.0f - SettledEpsilon)
 			return false;
 		State.m_ElapsedSeconds += DeltaSeconds;
 		return State.m_ElapsedSeconds >= State.m_DurationSeconds;
