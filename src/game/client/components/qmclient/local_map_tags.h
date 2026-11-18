@@ -2,6 +2,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_LOCAL_MAP_TAGS_H
 
 #include <string>
+#include <utility>
 #include <vector>
 
 class IStorage;
@@ -20,9 +21,9 @@ namespace QmMapTags
 	class CLocalTags
 	{
 	public:
-		// 只在首次调用时读盘；之后都在内存里，改动立即落盘。
+		// 首次尝试读盘。读取失败时在下一次编辑前重试。
 		void Load(IStorage *pStorage);
-		// 添加一个标签；已存在或非法返回 false。
+		// 有存储时，编辑只有成功落盘才更新内存。空存储只操作内存。
 		bool Add(IStorage *pStorage, const char *pCommunity, const char *pMap, const char *pTag);
 		bool Remove(IStorage *pStorage, const char *pCommunity, const char *pMap, const char *pTag);
 		// 调整同一张图上自己的标签顺序：把该图的第 FromIndex 个标签移到最终第 ToIndex 位。
@@ -33,10 +34,14 @@ namespace QmMapTags
 		bool Loaded() const { return m_Loaded; }
 
 	private:
-		static std::string MakeKey(const char *pCommunity, const char *pMap);
-		bool Save(IStorage *pStorage);
+		using TTagEntries = std::vector<std::pair<std::string, std::string>>;
+		void LoadFromStorage(IStorage &Storage);
+		static bool Save(IStorage &Storage, const TTagEntries &vEntries);
+		template<typename TEdit>
+		bool Edit(IStorage *pStorage, TEdit &&Apply);
 		// 保留插入顺序（先加的排前面），所以用扁平数组而不是 map。
-		std::vector<std::pair<std::string, std::string>> m_vEntries; // {key, tag}
+		TTagEntries m_vEntries; // {key, tag}
+		bool m_LoadAttempted = false;
 		bool m_Loaded = false;
 	};
 } // namespace QmMapTags

@@ -5092,6 +5092,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_gallery_layout_test.cpp
     src/test/unit/qmclient/ui/qm_ui_tag_test.cpp
     src/test/unit/qmclient/ui/qm_local_map_tags_test.cpp
+    src/test/integration/qmclient/client/qm_local_map_tags_storage_test.cpp
     src/test/unit/qmclient/ui/qm_media_cover_spin_test.cpp
     src/test/unit/qmclient/ui/qm_media_session_pick_test.cpp
     src/test/unit/qmclient/ui/qm_button_surface_radius_test.cpp
@@ -5566,6 +5567,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_dummy_mini_view_layout_test.cpp
     src/test/unit/qmclient/client/qm_browser_map_preview_test.cpp
     src/test/unit/qmclient/client/qm_browser_map_preview_path_test.cpp
+    src/test/unit/qmclient/client/qm_map_download_index_test.cpp
     src/test/unit/qmclient/client/qm_map_render_pass_test.cpp
     src/test/unit/qmclient/client/qm_entity_overlay_build_plan_test.cpp
     src/test/integration/qmclient/client/qm_browser_map_preview_loader_test.cpp

@@ -4,6 +4,7 @@
 #include "script_file.h"
 
 #include <base/log.h>
+#include <base/mem.h>
 
 #include <engine/external/regex.h>
 #include <engine/storage.h>
@@ -16,6 +17,34 @@
 #define CHAISCRIPT_NO_THREADS_WARNING
 #include <chaiscript.hpp>
 
+namespace
+{
+	constexpr int MAX_SCRIPT_CALL_DEPTH = 64;
+	constexpr unsigned MAX_SCRIPT_FILE_BYTES = 1024u * 1024 * 1024;
+
+	struct CQmScriptCallDepth
+	{
+		template<typename T>
+		void trace(const chaiscript::detail::Dispatch_State &Dispatch, const chaiscript::eval::AST_Node_Impl<T> *) const
+		{
+			// include/exec 的文件预算不计 Chai 内部函数调用。
+			if(Dispatch.stack_holder().call_depth > MAX_SCRIPT_CALL_DEPTH)
+				throw std::runtime_error("Maximum script function call depth exceeded");
+		}
+	};
+
+	using TScriptParser = chaiscript::parser::ChaiScript_Parser<chaiscript::eval::Tracer<CQmScriptCallDepth>, chaiscript::optimizer::Optimizer_Default>;
+	using FRegexMatch = std::function<void(const std::string &, int, int)>;
+	using FRegexReplace = std::function<std::string(const std::string &, int, int)>;
+
+	void CheckRegexProgress(bool Global, const std::string &Match, int Group)
+	{
+		// 第 0 组是整个匹配。全局模式的空匹配会让底层游标停在原处。
+		if(Global && Group == 0 && Match.empty())
+			throw std::runtime_error("Empty match in global regular expression");
+	}
+} // namespace
+
 static const auto NAMESPACE_RE = [](chaiscript::Namespace &Re) {
 	Re["compile"] = chaiscript::var(chaiscript::fun([](const std::string &s) {
 		const auto R = Regex(s);
@@ -24,8 +53,23 @@ static const auto NAMESPACE_RE = [](chaiscript::Namespace &Re) {
 		return R;
 	}));
 	Re["test"] = chaiscript::var(chaiscript::fun(&Regex::test));
-	Re["match"] = chaiscript::var(chaiscript::fun(&Regex::match));
-	Re["replace"] = chaiscript::var(chaiscript::fun(&Regex::replace));
+	Re["match"] = chaiscript::var(chaiscript::fun([](Regex &Pattern, const std::string &Text, bool Global, FRegexMatch Callback) {
+		// 脚本回调可能改写原表达式或文本。正则迭代只引用本次调用的副本。
+		Regex PatternCopy(Pattern);
+		const std::string Subject(Text);
+		PatternCopy.match(Subject, Global, [&](const std::string &Match, int Index, int Group) {
+			CheckRegexProgress(Global, Match, Group);
+			Callback(Match, Index, Group);
+		});
+	}));
+	Re["replace"] = chaiscript::var(chaiscript::fun([](Regex &Pattern, const std::string &Text, bool Global, FRegexReplace Callback) {
+		Regex PatternCopy(Pattern);
+		const std::string Subject(Text);
+		return PatternCopy.replace(Subject, Global, [&](const std::string &Match, int Index, int Group) {
+			CheckRegexProgress(Global, Match, Group);
+			return Callback(Match, Index, Group);
+		});
+	}));
 };
 
 static const auto NAMESPACE_MATH = [](chaiscript::Namespace &Math) {
@@ -53,12 +97,22 @@ class CScriptingCtx::CScriptingCtxData
 {
 public:
 	IStorage *m_pStorage = nullptr;
-	chaiscript::ChaiScript m_Chai{{}, {}, {chaiscript::Options::No_Load_Modules, chaiscript::Options::No_External_Scripts}};
+	chaiscript::ChaiScript_Basic m_Chai{
+		chaiscript::Std_Lib::library(),
+		std::make_unique<TScriptParser>(),
+		{}, {},
+		{chaiscript::Options::No_Load_Modules, chaiscript::Options::No_External_Scripts}};
 
 	chaiscript::Boxed_Value EvaluateFile(const char *pFilename)
 	{
 		const auto Read = [this](const char *pPath) {
-			return std::unique_ptr<char, decltype(&std::free)>(m_pStorage->ReadFileStr(pPath, IStorage::TYPE_ALL), &std::free);
+			void *pRaw = nullptr;
+			unsigned Size = 0;
+			const auto Result = m_pStorage->ReadFileCheckedBounded(pPath, IStorage::TYPE_ALL, &pRaw, &Size, MAX_SCRIPT_FILE_BYTES);
+			std::unique_ptr<char, decltype(&std::free)> pScript(static_cast<char *>(pRaw), std::free);
+			if(Result != IStorage::EReadFileResult::SUCCESS || !pScript || mem_has_null(pScript.get(), Size))
+				pScript.reset();
+			return pScript;
 		};
 		const auto Evaluate = [this, pFilename](const char *pScript) {
 			return m_Chai.eval(pScript, chaiscript::Exception_Handler(), pFilename);
@@ -157,6 +211,8 @@ void CScriptingCtx::Run(IStorage *pStorage, const char *pFilename, const char *p
 	m_pData->m_pStorage = pStorage;
 	try
 	{
+		if(pStorage == nullptr)
+			throw std::runtime_error("Script storage is unavailable");
 		m_pData->m_Chai.add_global_const(chaiscript::const_var(std::string(pArgs)), "args");
 		m_pData->EvaluateFile(pFilename);
 	}

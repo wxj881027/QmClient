@@ -1,3 +1,5 @@
+#include <engine/console.h>
+#include <engine/shared/config.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/scripting/impl.h>
@@ -214,4 +216,103 @@ TEST_F(CQmScriptingExecution, SetupFailureReleasesRegisteredCallbacksAndAllowsNe
 	EXPECT_TRUE(m_vRecorded.empty());
 	ASSERT_NO_THROW(Run("main.chai"));
 	EXPECT_EQ(m_vRecorded, (std::vector<std::string>{"executed"}));
+}
+
+TEST_F(CQmScriptingExecution, FunctionDepthLimitReturnsControlToTheCaller)
+{
+	Write("nested.chai", R"(
+		def descend(n) {
+			if (n == 0) { return "done"; }
+			return descend(n - 1);
+		}
+		record(descend(4));
+		record(descend(70));
+	)");
+	Write("next.chai", "record(\"next\");");
+
+	ASSERT_NO_THROW(Run("nested.chai"));
+	ASSERT_NO_THROW(Run("next.chai"));
+	EXPECT_EQ(m_vRecorded, (std::vector<std::string>{"done", "next"}));
+}
+
+TEST_F(CQmScriptingExecution, GlobalRegexMatchStopsBeforeAnEmptyMatch)
+{
+	// 即使缺少生产保护，记录回调也会在第二次调用时终止测试脚本。
+	m_MaxRecords = 2;
+	Write("match.chai", R"(
+		import("re");
+		var pattern := re.compile("^");
+		record("before");
+		re.match(pattern, "text", true, fun(part, index, group) { record(part); });
+		record("after");
+	)");
+
+	ASSERT_NO_THROW(Run("match.chai"));
+	EXPECT_EQ(m_vRecorded, (std::vector<std::string>{"before"}));
+}
+
+TEST_F(CQmScriptingExecution, GlobalRegexReplacementStopsBeforeAnEmptyMatch)
+{
+	m_MaxRecords = 2;
+	Write("replace.chai", R"(
+		import("re");
+		var pattern := re.compile("^");
+		record("before");
+		re.replace(pattern, "text", true, fun(part, index, group) {
+			record(part);
+			return "start ";
+		});
+		record("after");
+	)");
+
+	ASSERT_NO_THROW(Run("replace.chai"));
+	EXPECT_EQ(m_vRecorded, (std::vector<std::string>{"before"}));
+}
+
+TEST_F(CQmScriptingExecution, SingleRegexReplacementStillAcceptsAnEmptyMatch)
+{
+	Write("replace.chai", R"(
+		import("re");
+		var pattern := re.compile("^");
+		record(re.replace(pattern, "text", false, fun(part, index, group) { return "start "; }));
+	)");
+
+	ASSERT_NO_THROW(Run("replace.chai"));
+	EXPECT_EQ(m_vRecorded, (std::vector<std::string>{"start text"}));
+}
+
+TEST_F(CQmScriptingExecution, GlobalRegexMatchReadsTheOriginalTextAcrossCallbacks)
+{
+	Write("match.chai", R"(
+		import("re");
+		var pattern := re.compile("[ab]");
+		var text = "ab";
+		re.match(pattern, text, true, fun[text](part, index, group) {
+			record(part);
+			text[1] = 'x';
+		});
+		record(text);
+	)");
+
+	ASSERT_NO_THROW(Run("match.chai"));
+	EXPECT_EQ(m_vRecorded, (std::vector<std::string>{"a", "b", "ax"}));
+}
+
+TEST_F(CQmScriptingExecution, BuiltInEmoticonPassesOneLiteralMessageToSay)
+{
+	const std::string Source = TestSourcePath("data/qmclient/builtinscripts/sayemoticon.chai");
+	const auto Target = std::filesystem::u8path(m_Info.StoragePath()) / "sayemoticon.chai";
+	ASSERT_TRUE(std::filesystem::copy_file(std::filesystem::u8path(Source), Target));
+
+	std::vector<std::string> vMessages;
+	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
+	pConsole->Register(
+		"say", "r[message]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUser) {
+			static_cast<std::vector<std::string> *>(pUser)->emplace_back(pResult->GetString(0));
+		},
+		&vMessages, "");
+	CScriptingCtx::Execute(m_pStorage.get(), "sayemoticon.chai", R"(\o/D "hello" #1)", [&](CScriptingCtx &Context) {
+		Context.AddFunction("exec", [&](const std::string &Line) { pConsole->ExecuteLine(Line.c_str()); });
+	});
+	EXPECT_EQ(vMessages, (std::vector<std::string>{R"("hello" #1 \o/)"}));
 }

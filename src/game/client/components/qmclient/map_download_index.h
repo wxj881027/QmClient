@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_DOWNLOAD_INDEX_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_DOWNLOAD_INDEX_H
 
+#include <engine/client/map_download_resolver.h>
+
 #include <string>
 #include <string_view>
 #include <vector>
@@ -10,19 +12,17 @@
 // 取文件名最长的（通常带 crc + sha256），避免退回到旧的短哈希文件。
 inline std::string QmSelectMapDownloadHref(const std::vector<std::string> &vHrefs, const std::string_view EscapedPrefix)
 {
-	std::string Best;
-	for(const auto &Href : vHrefs)
+	std::string_view Best;
+	for(const std::string_view Href : vHrefs)
 	{
-		if(Href.size() <= EscapedPrefix.size() || Href.compare(0, EscapedPrefix.size(), EscapedPrefix) != 0)
+		if(!Href.starts_with(EscapedPrefix) || Href.find('/') != std::string_view::npos)
 			continue;
-		if(Href.size() < 4 || Href.compare(Href.size() - 4, 4, ".map") != 0)
-			continue;
-		if(Href.find('/') != std::string::npos)
+		if(!QmMapDownloadSuffixIsHashed(Href.substr(EscapedPrefix.size())))
 			continue;
 		if(Href.size() >= Best.size())
 			Best = Href;
 	}
-	return Best;
+	return std::string(Best);
 }
 
 #endif
