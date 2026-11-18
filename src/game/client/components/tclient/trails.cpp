@@ -63,7 +63,7 @@ void CTrails::RenderTeeTrails()
 	const float PixelSize = std::max(0.025f, (X1 - X0) / std::max(1, Graphics()->ScreenWidth()));
 	const bool ZoomAllowed = GameClient()->m_Camera.ZoomAllowed();
 	// 两条连接的快照时钟有偏差；切换帧只计入真实帧间隔，Demo 仍跟随游戏时间。
-	const double GameTime = double(Client()->GameTick(g_Config.m_ClDummy)) + Client()->IntraGameTick(g_Config.m_ClDummy);
+	const double GameTime = double(Client()->PrevGameTick(g_Config.m_ClDummy)) + Client()->IntraGameTickSincePrev(g_Config.m_ClDummy);
 	const double Time = m_Clock.Update(GameTime, double(Client()->RenderFrameTime()) * Client()->GameTickSpeed(), DummyChanged);
 	const auto Prepare = [&](std::vector<qm_tee_trail::SQuad> &vFrame) {
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
@@ -81,7 +81,12 @@ void CTrails::RenderTeeTrails()
 			const vec2 Velocity = mix(vec2(Data.m_RenderPrev.m_VelX, Data.m_RenderPrev.m_VelY), vec2(Data.m_RenderCur.m_VelX, Data.m_RenderCur.m_VelY), Intra) / 256.0f;
 			const float Speed = length(Velocity);
 			const float MovementBudget = Data.m_RenderCur.m_Weapon == WEAPON_NINJA ? std::max(Speed, float(g_pData->m_Weapons.m_Ninja.m_Velocity)) : Speed;
-			const int Source = int(Data.m_IsPredicted) | (g_Config.m_QmRemoveAnti << 1) | (int(g_Config.m_QmUnpredOthersInFreeze && Client()->m_IsLocalFrozen) << 2) | (g_Config.m_QmSwapGhosts << 3) | (int(GameClient()->m_TClient.IsFastInputActive()) << 4);
+			const bool UnpredictedInFreeze = g_Config.m_QmUnpredOthersInFreeze && Client()->m_IsLocalFrozen;
+			// 与 UpdateRenderedCharacters 的 ghost 分支对齐，显隐变化也会切换位置来源。
+			const bool SwappedGhostPosition = Data.m_IsPredicted && !Data.m_IsPredictedLocal && !UnpredictedInFreeze &&
+				g_Config.m_QmShowOthersGhosts && g_Config.m_QmSwapGhosts && !(Data.m_FreezeEnd > 0 && g_Config.m_QmHideFrozenGhosts);
+			const int Source = int(Data.m_IsPredicted) | (g_Config.m_QmRemoveAnti << 1) | (int(UnpredictedInFreeze) << 2) |
+					   (g_Config.m_QmSwapGhosts << 3) | (int(GameClient()->m_TClient.IsFastInputActive()) << 4) | (int(SwappedGhostPosition) << 5);
 			const bool SourceChanged = m_aPositionSources[ClientId] != Source;
 			m_aPositionSources[ClientId] = Source;
 			// 拦截传送端点的插值窗口，否则远端 Tee 会在几帧内沿传送直线留下假轨迹。
