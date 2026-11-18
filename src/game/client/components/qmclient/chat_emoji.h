@@ -127,18 +127,13 @@ inline bool QmChatEmojiFormatCandidates(const SQmChatEmojiDefinition *const *apM
 
 inline EQmChatEmoji QmChatEmojiFromText(const char *pText)
 {
-	if(pText == nullptr)
-		return EQmChatEmoji::NONE;
 	const int ColonLength = QmChatEmojiColonUtf8Length(pText);
 	if(ColonLength <= 0)
 		return EQmChatEmoji::NONE;
-	// 归一化为半角冒号再比对，使 :ax 与 ：ax 都能识别为表情。
-	char aNormalized[16];
-	aNormalized[0] = ':';
-	str_copy(aNormalized + 1, pText + ColonLength, sizeof(aNormalized) - 1);
+	const char *pCode = pText + ColonLength;
 	for(const SQmChatEmojiDefinition &Definition : QM_CHAT_EMOJI_DEFINITIONS)
 	{
-		if(str_comp(aNormalized, Definition.m_pText) == 0)
+		if(str_comp(pCode, Definition.m_pText + 1) == 0)
 			return Definition.m_Emoji;
 	}
 	return EQmChatEmoji::NONE;

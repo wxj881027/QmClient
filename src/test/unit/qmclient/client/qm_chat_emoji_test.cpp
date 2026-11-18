@@ -52,6 +52,12 @@ TEST(QmChatEmoji, MatchesOnlyExactCodes)
 	EXPECT_EQ(QmChatEmojiTexturePath(static_cast<EQmChatEmoji>(999)), nullptr);
 }
 
+TEST(QmChatEmoji, IncompleteUtf8SuffixDoesNotMatchEmojiCode)
+{
+	EXPECT_EQ(QmChatEmojiFromText(":sq\xE4\xB8"), EQmChatEmoji::NONE);
+	EXPECT_EQ(QmChatEmojiFromText("：sq\xE4\xB8"), EQmChatEmoji::NONE);
+}
+
 TEST(QmChatEmoji, MatchesFullWidthColonCodes)
 {
 	EXPECT_EQ(QmChatEmojiFromText("：ax"), EQmChatEmoji::LOVE);
