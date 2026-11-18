@@ -188,15 +188,10 @@ Usage example:
 
 	// -- Initialization --
 	static CScrollRegion s_ScrollRegion;
-	s_ScrollRegion.Begin(&Content);
-	// Content rect is now offset by the scroll offset
-
-	// -- [Optional] Initialization with parameters --
-	static CScrollRegion s_ScrollRegion;
-	CScrollRegionParams ScrollParams;
-	ScrollParams.m_ScrollUnit = 3 * LineHeight;
-	s_ScrollRegion.Begin(&Content, &ScrollParams);
-	// Content rect is now offset by the scroll offset
+	vec2 ScrollOffset;
+	s_ScrollRegion.Begin(&Content, &ScrollOffset);
+	Content.y += ScrollOffset.y;
+	// 横向滚动把 ScrollOffset.x 加到 Content.x。自定义参数通过 Begin 的第三个参数传入。
 
 	// -- "Register" your content rects --
 	CUIRect Rect;
@@ -226,7 +221,8 @@ Usage example:
 	s_ScrollRegion.End();
 */
 
-// Instances of CScrollRegion must be static, as member addresses are used as UI item IDs
+// UI 使用对象和成员地址作为标识，并可能跨帧引用。实例须保持地址稳定，
+// 直到 UI 不再引用它。每次 Begin 成功后都要配对调用 End，即使没有可见条目。
 class CScrollRegion : private CUIElementBase
 {
 public:
