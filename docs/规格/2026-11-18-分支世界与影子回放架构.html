@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分支世界、Rank 1 与 Ghost 影子回放架构 · QmClient</title>
+<style>
+	:root
+	{
+		--bg: #0e1116;
+		--panel: #161b23;
+		--panel-2: #1c232d;
+		--line: #2a3441;
+		--text: #dbe2ea;
+		--muted: #8d9aa9;
+		--accent: #4fa3ff;
+		--accent-2: #65d6a6;
+		--warn: #ffb454;
+		--danger: #ff6b6b;
+		--code: #0a0d12;
+	}
+	* { box-sizing: border-box; }
+	body
+	{
+		margin: 0;
+		background: var(--bg);
+		color: var(--text);
+		font: 15px/1.75 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+	}
+	main { max-width: 1180px; margin: 0 auto; padding: 48px 28px 96px; }
+	h1 { font-size: 34px; line-height: 1.25; margin: 0 0 8px; letter-spacing: .2px; }
+	h2 { font-size: 23px; margin: 52px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+	h3 { font-size: 17px; margin: 30px 0 10px; color: #eaf1f8; }
+	h4 { font-size: 15px; margin: 20px 0 8px; color: var(--accent-2); }
+	p { margin: 10px 0; }
+	a { color: var(--accent); text-decoration: none; }
+	a:hover { text-decoration: underline; }
+	code
+	{
+		background: var(--code);
+		border: 1px solid #222b36;
+		border-radius: 5px;
+		padding: 1px 6px;
+		font: 13px/1.5 "Cascadia Code", Consolas, monospace;
+		color: #a8d1ff;
+		word-break: break-all;
+	}
+	pre
+	{
+		background: var(--code);
+		border: 1px solid var(--line);
+		border-radius: 9px;
+		padding: 14px 16px;
+		overflow: auto;
+		font: 13px/1.65 "Cascadia Code", Consolas, monospace;
+		color: #cfe3f7;
+	}
+	.subtitle { color: var(--muted); font-size: 15px; margin: 0 0 20px; }
+	.meta { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 8px; }
+	.chip
+	{
+		border: 1px solid var(--line);
+		background: var(--panel);
+		border-radius: 999px;
+		padding: 4px 12px;
+		font-size: 12.5px;
+		color: var(--muted);
+	}
+	.chip b { color: var(--text); font-weight: 600; }
+	.chip.ok { border-color: #28543f; color: #9fe3c2; }
+	.chip.warn { border-color: #5b4621; color: #ffd08a; }
+	.panel
+	{
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		padding: 18px 20px;
+		margin: 16px 0;
+	}
+	.panel.note { border-left: 3px solid var(--accent); }
+	.panel.warn { border-left: 3px solid var(--warn); }
+	.panel.danger { border-left: 3px solid var(--danger); }
+	.panel h3, .panel h4 { margin-top: 0; }
+	.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+	.card
+	{
+		background: var(--panel-2);
+		border: 1px solid var(--line);
+		border-radius: 10px;
+		padding: 14px 16px;
+	}
+	.card h4 { margin: 0 0 6px; color: var(--text); }
+	.card p { margin: 5px 0; color: var(--muted); font-size: 13.5px; }
+	table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+	th, td { border: 1px solid var(--line); padding: 9px 11px; vertical-align: top; text-align: left; }
+	th { background: #1b222c; color: #cfe0f2; font-weight: 600; }
+	tr:nth-child(even) td { background: #131922; }
+	td code { white-space: nowrap; }
+	ul, ol { margin: 8px 0 8px 22px; padding: 0; }
+	li { margin: 5px 0; }
+	.timeline
+	{
+		display: grid;
+		grid-template-columns: 220px 1fr;
+		gap: 10px 14px;
+		align-items: start;
+		margin: 16px 0;
+	}
+	.timeline .lane
+	{
+		background: var(--panel-2);
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		padding: 10px 12px;
+		font-size: 13px;
+		color: var(--muted);
+	}
+	.timeline .lane b { display: block; color: var(--text); margin-bottom: 3px; }
+	.flow
+	{
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px;
+		margin: 12px 0;
+	}
+	.flow span
+	{
+		background: var(--panel-2);
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		padding: 7px 11px;
+		font-size: 13px;
+	}
+	.flow i { color: var(--muted); font-style: normal; }
+	.tag
+	{
+		display: inline-block;
+		border-radius: 5px;
+		padding: 0 7px;
+		font-size: 11.5px;
+		line-height: 20px;
+		margin-right: 5px;
+	}
+	.tag.done { background: #1d3b2c; color: #9fe3c2; }
+	.tag.plan { background: #3b3320; color: #ffd08a; }
+	.tag.risk { background: #3d2226; color: #ffb3b3; }
+	.toc
+	{
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		padding: 14px 20px;
+		margin: 22px 0 10px;
+	}
+	.toc ol { columns: 2; column-gap: 40px; margin-left: 18px; }
+	.toc a { color: var(--text); }
+	.toc a:hover { color: var(--accent); }
+	.small { color: var(--muted); font-size: 12.5px; }
+	hr { border: 0; border-top: 1px solid var(--line); margin: 40px 0; }
+	@media (max-width: 720px)
+	{
+		.toc ol { columns: 1; }
+		.timeline { grid-template-columns: 1fr; }
+		h1 { font-size: 27px; }
+	}
+</style>
+</head>
+<body>
+<main>
+
+<h1>分支世界、Rank 1 与 Ghost 影子回放架构</h1>
+<p class="subtitle">QmClient 客户端侧并行时间线的现状、边界与演进路线</p>
+
+<div class="meta">
+	<span class="chip">规格日期 <b>2026-11-18</b></span>
+	<span class="chip">基线提交 <b>104ff23b9a</b></span>
+	<span class="chip ok">快速练习平行化 已落地</span>
+	<span class="chip warn">影子机关世界 规划中</span>
+</div>
+
+<div class="panel note">
+	<p><b>一句话结论：</b>QmClient 现在有三条明确分开的时间线——服务器世界、快速练习分支世界、影子回放轨道。分支世界已经是“可独立推进的沙盒”，影子回放仍然是“只看不碰的轨迹层”。把两者接成 demo 式影子世界，下一步缺的不是物理，而是一个只读机关世界和更宽的轨迹数据模型。</p>
+</div>
+
+<div class="toc">
+	<b>目录</b>
+	<ol>
+		<li><a href="#model">三条时间线模型</a></li>
+		<li><a href="#practice">快速练习分支世界</a></li>
+		<li><a href="#rank1">Rank 1：官方 demo 到本地影子</a></li>
+		<li><a href="#ghost">Ghost：本地练习组回放</a></li>
+		<li><a href="#ui">回放控制卡与交互</a></li>
+		<li><a href="#fields">字段归属表</a></li>
+		<li><a href="#diagnostics">诊断与失败模式</a></li>
+		<li><a href="#verification">验证证据</a></li>
+		<li><a href="#roadmap">演进路线</a></li>
+		<li><a href="#files">文件索引</a></li>
+	</ol>
+</div>
+
+<h2 id="model">1. 三条时间线模型</h2>
+
+<p>DDNet 原生只有一条时间线：服务器快照决定一切。QmClient 在这个前提上增加了两类“客户端侧时间线”，它们权威范围不同，不能混为一谈。</p>
+
+<div class="timeline">
+	<div class="lane"><b>服务器世界</b><code>CGameClient::<br>m_GameWorld</code></div>
+	<div class="lane">权威来源是服务器快照与预测。负责真实联机、其他玩家、聊天、计分、比赛时间、击杀信息。快速练习期间仍然存在并继续接收快照，但不驱动练习参与者。</div>
+
+	<div class="lane"><b>快速练习分支</b><code>CFastPractice::<br>m_PracticeBaseWorld</code></div>
+	<div class="lane">从服务器世界 <code>CopyWorldClean</code> fork 出来的本地沙盒，参与者（本体 + 分身）的权威状态在这里。每帧经 <code>m_PredictedWorld</code> 往返推进，再写回分支。门、拖拉、静态激光、拾取物、机关炮按整张地图重建，因此走出网络裁剪范围仍然成立。</div>
+
+	<div class="lane"><b>影子回放</b><code>CLocalWorld</code> +<br><code>CGhost</code> 手动渲染</div>
+	<div class="lane">只保存轨迹、事件与开关状态，不持有可玩世界。Rank 1 与练习组共用同一套播放/查看模式；影子只画，不勾人、不挡人、不吃机关。</div>
+</div>
+
+<table>
+	<thead><tr><th>能力</th><th>服务器世界</th><th>练习分支</th><th>影子回放</th></tr></thead>
+	<tbody>
+		<tr><td>推进时钟</td><td>服务器 tick + 客户端预测</td><td>自己按预测 tick 追赶</td><td>播放头（可暂停/拖动）</td></tr>
+		<tr><td>参与者碰撞</td><td>是</td><td>是</td><td>否</td></tr>
+		<tr><td>门 / 拖拉 / 激光</td><td>快照 + 预测</td><td>整图重建 + 分支开关</td><td>目前只读快照；规划为只读机关世界</td></tr>
+		<tr><td>聊天 / 计分 / 击杀</td><td>权威</td><td>不参与（仍显示服务器）</td><td>不参与</td></tr>
+		<tr><td>能否影响主世界</td><td>—</td><td>只通过最终回到服务器时同步位置</td><td>绝对不能</td></tr>
+	</tbody>
+</table>
+
+<h2 id="practice">2. 快速练习分支世界</h2>
+
+<h3>2.1 生命周期</h3>
+
+<div class="flow">
+	<span>启用练习</span><i>→</i>
+	<span><code>InitPracticeWorld()</code></span><i>→</i>
+	<span><code>CopyWorldClean(&amp;m_GameWorld)</code></span><i>→</i>
+	<span>清掉继承实体</span><i>→</i>
+	<span><code>LoadPracticeMapMechanisms()</code></span><i>→</i>
+	<span><code>PrunePracticeWorld()</code></span><i>→</i>
+	<span><code>EnsurePracticeParticipants()</code></span>
+</div>
+
+<p>关键入口：<code>src/game/client/components/tclient/fast_practice.cpp:1171</code>。分支不是“服务器世界的一份引用”，而是一棵独立实体树；<code>CopyWorldClean</code> 只复制世界配置、队伍、开关和实体，之后两边各自推进。</p>
+
+<ul>
+	<li><b>重新 fork 前必须先切段</b>：<code>InitPracticeWorld</code> 开头调用 <code>m_Recorder.MarkBoundary()</code>，否则重绑/重开会在轨迹里连出一条穿墙直线。</li>
+	<li><b>开关状态跨 fork 保留</b>：只有 base 世界仍然装着上一条练习时间线时，才把 <code>Switchers()</code> 暂存并在新 fork 上按 tick 差平移，避免 <code>/setswitch</code> 被服务器快照冲掉。</li>
+	<li><b>参与者重绑</b>：<code>TryRebindPracticeParticipants()</code>（<code>fast_practice.cpp:451</code>）在 client id 变化时迁移命令状态，并把旧分支的 <code>/solo</code> 寄存到 <code>m_PendingLocalSolo</code>/<code>m_PendingDummySolo</code>，等新角色建好再写回。</li>
+</ul>
+
+<h3>2.2 时钟与 tick 平移</h3>
+
+<p>分支时钟永远不倒退：<code>PracticeClockTarget()</code>（<code>fast_practice.cpp:601</code>）取“预测 tick”和“当前分支 tick”的较大值，专门防 <code>cl_dummy</code> 刚切换连接时预测 tick 停在 0 导致的世界倒退。</p>
+
+<table>
+	<thead><tr><th>函数</th><th>平移范围</th><th>使用场景</th></tr></thead>
+	<tbody>
+		<tr>
+			<td><code>ShiftPracticeWorldTicks()</code><br><span class="small">fast_practice.cpp:608</span></td>
+			<td>轨迹 tick、事件屏障、世界实体、攻击 tick、眼表情结束 tick</td>
+			<td>服务器暂停恢复、旁观进入前对齐、超过两秒的断崖追赶</td>
+		</tr>
+		<tr>
+			<td><code>ShiftPracticeWorldEntityTicks()</code><br><span class="small">fast_practice.cpp:637</span></td>
+			<td>角色、投射物、激光、等离子、练习灯、开关 <code>m_aEndTick</code>/<code>m_aLastUpdateTick</code></td>
+			<td><code>/restart</code> 从入口快照恢复；不碰轨迹与事件屏障</td>
+		</tr>
+	</tbody>
+</table>
+
+<div class="panel note">
+	<p><b>为什么 /restart 不能直接改 <code>m_GameTick</code>：</b>入口快照里的投射物、激光和定时开关都带着“启用练习那一刻”的绝对 tick。直接把世界时钟改到现在，它们会全部被判定为早已过期，机关相位会一次性错位。正确顺序是“先把实体平移到当前时刻，再落世界时钟”。</p>
+</div>
+
+<p>静态地图激光的 <code>m_EvalTick</code> 是 <code>-1</code>（没有开火时刻），平移时必须跳过，否则光柱会重新播放生长动画。该判断在 <code>ShiftPracticeWorldEntityTicks()</code> 内。</p>
+
+<h3>2.3 参与者渲染权威</h3>
+
+<p>渲染发布统一在 <code>CGameClient::UpdateRenderedCharacters()</code>（<code>src/game/client/gameclient.cpp:7445</code>）。对练习参与者，以下字段以分支为准：</p>
+
+<table>
+	<thead><tr><th>字段</th><th>写入来源</th><th>原因</th></tr></thead>
+	<tbody>
+		<tr><td>位置 / 速度 / 角度</td><td>分支 <code>CCharacterCore</code></td><td>练习参与者的真正物理状态</td></tr>
+		<tr><td>武器 / 攻击 tick</td><td>分支 <code>GetActiveWeapon()</code> / <code>GetAttackTick()</code></td><td>快照武器在旁观时不会跟随分支</td></tr>
+		<tr><td>表情</td><td><code>ResolvePracticeEyeEmote()</code></td><td>服务器会把长期中性输入判成 AFK 并强制眨眼</td></tr>
+		<tr><td>挂机坐姿</td><td>参与者屏蔽 <code>m_Afk</code></td><td>坐姿是服务器 AFK 姿态，不是练习状态</td></tr>
+		<tr><td>冻结</td><td>分支 <code>m_FreezeEnd</code>、<code>m_DeepFrozen</code>、<code>m_LiveFrozen</code></td><td>冻结隐身、解冻进度与 HUD 必须和分支碰撞一致</td></tr>
+	</tbody>
+</table>
+
+<p>参与者判定入口是 <code>IsPracticeParticipant(ClientId)</code>，角色解析入口是 <code>ResolvePracticeCharacter(ClientId)</code>。前者决定“是不是这条分支的人”，后者在分支未建立或非参与者时返回 <code>nullptr</code>。</p>
+
+<h3>2.4 机关重建与渲染</h3>
+
+<p>分支世界不能依赖快照范围，否则走出镜头就会“看不见但还在挡”。<code>LoadPracticeMapMechanisms()</code>（<code>fast_practice.cpp:784</code>）直接读地图三层的实体 tile，按服务端创建规则重建：</p>
+
+<div class="grid">
+	<div class="card"><h4>拾取物</h4><p>护甲、武器、生命、忍者，按 <code>ENTITY_*</code> 还原类型与子类型。</p></div>
+	<div class="card"><h4>门</h4><p><code>CDoor</code>，记录 hub、方向、长度；<code>ResetCollision()</code> 把门碰撞端点写进当前碰撞缓存。</p></div>
+	<div class="card"><h4>拖拉</h4><p><code>CDragger</code>，记录强度、穿墙、开关编号与目标。</p></div>
+	<div class="card"><h4>静态激光</h4><p><code>CPracticeLight</code>，复用快照端点与服务器 eval tick，保留生长相位。</p></div>
+	<div class="card"><h4>机关炮</h4><p><code>m_vPracticeGuns</code> 单独模拟，按 <code>MoverSpeed</code> 跟随移动平台，按队伍/solo 选择目标。</p></div>
+</div>
+
+<p>渲染在 <code>CItems::OnRender()</code>（<code>src/game/client/components/items.cpp:598</code>）内完成。练习机关段从 <code>items.cpp:678</code> 开始，按 <code>ENTTYPE_LIGHT</code>、<code>ENTTYPE_DOOR</code>、<code>ENTTYPE_DRAGGER</code> 遍历分支世界，并把 hub 收集到去重表；随后快照激光如果与分支 hub 重合就跳过，避免双重曝光。</p>
+
+<div class="panel note">
+	<p><b>渲染门控不跟 <code>Predict()</code> 走：</b>旁观和服务器暂停时 <code>Predict()</code> 为假，但分支仍在推进碰撞。机制段只要求“非小地图渲染且分支世界存在”，因此不会出现“看不见的激光把人冻住”。<span class="small">（<code>items.cpp:678</code>，提交 104ff23b9a）</span></p>
+</div>
+
+<h4>门与拖拉的渲染语义</h4>
+
+<table>
+	<thead><tr><th>实体</th><th>开启</th><th>关闭</th><th>实现</th></tr></thead>
+	<tbody>
+		<tr>
+			<td>门</td>
+			<td>从 hub 画到碰撞端点，长度取碰撞几何而不是快照可视端点</td>
+			<td>折叠到 hub，保留激光头，与原版快照一致</td>
+			<td><code>CDoor::RenderData()</code>（<code>door.cpp:148</code>）</td>
+		</tr>
+		<tr>
+			<td>拖拉</td>
+			<td>有目标时画向目标，无目标时保留零长度轮毂</td>
+			<td>开关关闭时整只不画（与原版闪烁规则一致）</td>
+			<td><code>CDragger::RenderData()</code>（<code>dragger.cpp:163</code>）</td>
+		</tr>
+		<tr>
+			<td>静态激光</td>
+			<td>按分支开关与 eval tick 绘制</td>
+			<td>开关关闭时不画</td>
+			<td><code>CPracticeLight::RenderData()</code></td>
+		</tr>
+	</tbody>
+</table>
+
+<p>开关编号越界按“开启”处理，与客户端快照的 <code>Inactive</code> 判定一致；无效队伍不回退到 0，而是不判定为关闭，避免把整只机关误隐藏。</p>
+
+<h3>2.5 队伍与 solo：只是开关索引</h3>
+
+<div class="panel note">
+	<p>快速练习不是团队玩法，队伍号在这里只做一件事：选择开关、门、激光、拖拉和机关炮读取哪一组 <code>m_aStatus[Team]</code>。因此不实现本地 <code>/team</code>，也不让分支队伍与服务器分叉。</p>
+</div>
+
+<ul>
+	<li><b>队伍号</b>：<code>SyncPracticeWorldConfig()</code>（<code>fast_practice.cpp:722</code>）只同步参与者本人；服务器是 <code>TEAM_SPECTATORS</code> 时跳过，避免旁观期间把可玩队伍覆盖掉。</li>
+	<li><b>solo</b>：分支本地状态，<code>/solo</code>、<code>/unsolo</code> 直接写分支 <code>m_Teams</code>；fork/重绑时按旧角色迁移。</li>
+	<li><b>Rank 1</b>：<code>.qmevt</code> 记录 <code>m_Team</code>，回放时按录制队伍还原开关，不套用查看者当前队伍。这是队伍字段真正有跨时间线意义的地方。</li>
+</ul>
+
+<h3>2.6 旁观：时间继续走</h3>
+
+<p>旧行为是旁观期间冻结分支、回来一次性对齐。现在的行为是：</p>
+
+<ol>
+	<li><code>OverridePredict()</code> 识别旁观（<code>fast_practice.cpp:2166</code>），不把分支铺进 <code>m_PredictedWorld</code>，因为那时它归服务器预测所有。</li>
+	<li><code>PrepareForSpectating()</code>（<code>fast_practice.cpp:1743</code>）先把分支对齐到当前预测时刻，实体 tick 一起平移。</li>
+	<li>每帧调用 <code>TickPracticeWorldDuringSpectate()</code>（<code>fast_practice.cpp:2094</code>）：本体与分身使用中性输入，继续步进、机关炮、死亡 tile 反馈、计时、轨迹/事件/开关采样。</li>
+	<li>事件先交给录制采样，再只做去重记账，不直接播放音效/特效，避免把练习世界的声音叠到当前旁观视角。</li>
+	<li>退出旁观不补跳；主循环从当前分支 tick 继续追赶，超过两秒才走断崖平移。</li>
+</ol>
+
+<p>因此旁观者看到的是“练习世界在自己走”，而不是一张暂停的画面；回到游戏时也不会出现时间跳变。</p>
+
+<h3>2.7 仍然共享的东西</h3>
+
+<table>
+	<thead><tr><th>项目</th><th>现状</th><th>原因 / 影响</th></tr></thead>
+	<tbody>
+		<tr>
+			<td>地图碰撞缓存 <code>CCollision</code></td>
+			<td>主世界与分支共用；门碰撞由分支写入，退出练习时用 <code>m_GameWorld.ResetDoorCollision()</code> 装回主世界</td>
+			<td>钩子辅助线、HUD、路径查询仍读同一份缓存；给分支单独一份需要把所有本地查询改成按世界取碰撞，收益小于回归风险</td>
+		</tr>
+		<tr>
+			<td>计分 / 比赛时间 / 终点</td>
+			<td>仍读服务器世界</td>
+			<td>客户端无法 fork 服务器成绩状态；练习计时由 <code>m_PracticeRunTicks</code> 单独累计</td>
+		</tr>
+		<tr>
+			<td>聊天 / 击杀信息 / 其他玩家</td>
+			<td>仍读服务器世界</td>
+			<td>练习分支会清掉非参与者角色，本质是单人沙盒 + 分身</td>
+		</tr>
+		<tr>
+			<td>移动方块</td>
+			<td>客户端没有独立预测实体；仅在 <code>QmAxiomQuadPrediction</code> 开启时由碰撞层按 tick 处理</td>
+			<td>要做完整平行世界需要新增移动方块实体与复制/回放模型，属于下一阶段</td>
+		</tr>
+		<tr>
+			<td>机关炮重开</td>
+			<td><code>/restart</code> 不回退炮位与冷却</td>
+			<td>炮位跟随移动平台增量移动，倒回入口坐标反而会和当前平台位置错开；正确做法是从入口 tick 重放到当前 tick</td>
+		</tr>
+	</tbody>
+</table>
+
+<h2 id="rank1">3. Rank 1：官方 demo 到本地影子</h2>
+
+<div class="panel note">
+	<p><b>来源链路先说清楚：</b>Rank 1 下载的是<b>官方 demo</b>，不是官方 <code>.qmevt</code>。官方站点没有 <code>.qmevt</code> 这种文件；<code>.qmevt</code> 是 QmClient 在本地解析 demo 时生成的 sidecar（事件、开关状态、成绩消息）。</p>
+</div>
+
+<div class="flow">
+	<span>manifest</span><i>→</i>
+	<span>官方 demo 下载</span><i>→</i>
+	<span><code>StartParse()</code></span><i>→</i>
+	<span>逐 tick 解析</span><i>→</i>
+	<span><code>trackN.gho</code> + <code>events.qmevt</code></span><i>→</i>
+	<span><code>EnterViewMode()</code></span>
+</div>
+
+<ul>
+	<li><b>清单</b>：<code>rank_demo_manifest</code> 提供地图、名次、demo 地址、时间、ghost 成员列表。空 <code>ghosts</code> 只阻止“生成影子/查看”，不阻止“仅下载回放”。</li>
+	<li><b>下载</b>：<code>CRankGhost::StartDemoFetch()</code> 取官方 demo 到缓存目录；断点/重试/跨图等待由 <code>m_RetryLoadPending</code> 维护。</li>
+	<li><b>转换</b>：<code>StartParse()</code>（<code>rank_ghost_parse.cpp:341</code>）打开 demo，逐 tick 采样目标玩家轨迹，结束时调用 <code>WriteViewTimeline()</code>（<code>rank_ghost_parse.cpp:544</code>、<code>:636</code>）写出 <code>.qmevt</code>。界面文案就是 “converting the replay”。</li>
+	<li><b>查看</b>：<code>EnterViewMode()</code>（<code>rank_ghost_view.cpp:81</code>）把多轨交给 <code>CGhost::StartRenderManual()</code>，用独立播放头驱动轨迹、事件、消息与开关状态，不播放 demo 快照，也不改服务器世界。</li>
+</ul>
+
+<h3>3.1 两段式进入</h3>
+
+<p>按最新交互，Rank 1 行上的 “View replay” 分两步：</p>
+
+<ol>
+	<li><b>demo 未缓存</b>：只下载 demo，不自动切画面；按钮在任务期间置灰，下载结束后恢复。</li>
+	<li><b>demo 已缓存、影子未生成</b>：点击后加载/解析影子，完成后进入查看模式；这是玩家明确点击的结果，不是下载的副作用。</li>
+</ol>
+
+<p>实现入口：<code>CRankGhost::RequestGhostViewForDemo()</code>（<code>src/game/client/components/qmclient/rank_ghost.cpp:624</code>）。双击行等同“下载回放”，不会直接进查看模式。</p>
+
+<h3>3.2 查看模式的数据</h3>
+
+<table>
+	<thead><tr><th>数据</th><th>来源</th><th>用途</th></tr></thead>
+	<tbody>
+		<tr><td>轨迹</td><td><code>trackN.gho</code>（CGhost 多轨格式）</td><td>虚影位置、角度、武器、皮肤</td></tr>
+		<tr><td>事件</td><td><code>events.qmevt</code> 的 events 段</td><td>锤击、爆炸、出生、死亡、伤害、终点</td></tr>
+		<tr><td>开关</td><td><code>events.qmevt</code> 的 switch states 段</td><td>按录制队伍还原门、激光、拖拉状态</td></tr>
+		<tr><td>消息</td><td><code>events.qmevt</code> 的 messages 段</td><td>全局音效、地图音效、终点成绩与差值</td></tr>
+		<tr><td>总时长</td><td><code>CGhost::ManualEndTick()</code></td><td>进度条、成绩、终点 HUD</td></tr>
+	</tbody>
+</table>
+
+<p><code>.qmevt</code> 当前 magic 是 <code>QMGHEVT3</code>，兼容读取 <code>QMGHEVT2</code>；V2 没有 <code>m_Team</code>，按 <code>-1</code> 处理并回落到查看者当前队伍。代码在 <code>rank_view_timeline.h:19</code> 与 <code>:38</code>。</p>
+
+<h2 id="ghost">4. Ghost：本地练习组回放</h2>
+
+<h3>4.1 练习组是什么</h3>
+
+<p>快速练习里 <code>/pg</code> 保存的不是单个文件，而是一个目录：</p>
+
+<pre>practice_group/
+  track0.gho      # 本体轨迹
+  track1.gho      # 分身轨迹（如果有）
+  events.qmevt    # 事件 / 开关 / 消息 sidecar</pre>
+
+<p><code>.qmevt</code> 单独没有 Tee 轨迹，不能独立播放；Ghost 页扫描的是“目录里同时有 <code>events.qmevt</code> 和 <code>track0.gho</code>”的练习组。<code>menus_ingame.cpp:2363</code> 起是扫描入口。</p>
+
+<h3>4.2 入口与交互</h3>
+
+<ul>
+	<li>Ghost 页中显示为 <code>[Practice] 玩家名</code>，用青色区分。</li>
+	<li>动作按钮是 “View replay”（旧版是含糊的 “View”），双击条目等价。</li>
+	<li>点击调用 <code>CRankGhost::ViewPracticeGroup()</code>（<code>rank_ghost_view.cpp:49</code>）：清掉跨图 Rank 的等待状态，按组目录加载所有轨，复用 Rank 1 的查看模式与 <code>.qmevt</code> 读取。</li>
+	<li>练习组没有源 demo，因此查看模式隐藏切片/导出；进度与总时长由 <code>ManualEndTick()</code> 计算。</li>
+</ul>
+
+<h3>4.3 影子为什么不参与物理</h3>
+
+<p><code>CLocalWorld</code>（<code>src/game/client/components/qmclient/local_world.h:131</code>）只保存轨迹会话，不持有 <code>CGameWorld</code>。CGhost 手动渲染把轨迹插值成虚影，没有角色实体，也没有碰撞查询。这是设计底线：Rank 1 和 Ghost 都来自“另一个平行时空”，只允许看。</p>
+
+<h3>4.4 双模式路线图</h3>
+
+<div class="grid">
+	<div class="card">
+		<h4>模式 A · 原版影子（默认）</h4>
+		<p>只画轨迹与事件，零物理、零机关。适合边玩边看，成本最低，保持现状。</p>
+	</div>
+	<div class="card">
+		<h4>模式 B · Demo 式影子世界</h4>
+		<p>新建只读 <code>CGameWorld</code>，复用本轮的门/拖拉/静态激光重建与 <code>RenderData</code>，用 <code>.qmevt</code> 的开关状态驱动机关，半透明绘制。不写入共享 <code>CCollision</code>、不加入主世界 tick、不影响聊天。</p>
+	</div>
+</div>
+
+<h4>模式 B 的分阶段实现</h4>
+
+<table>
+	<thead><tr><th>阶段</th><th>内容</th><th>可行性</th></tr></thead>
+	<tbody>
+		<tr>
+			<td>B1</td>
+			<td>门、拖拉、静态激光影子化：只读机关世界 + <code>.qmevt</code> 开关驱动</td>
+			<td><span class="tag done">高</span>本轮的分支机关重建与 <code>RenderData</code> 可直接复用</td>
+		</tr>
+		<tr>
+			<td>B2</td>
+			<td>移动方块、机关炮影子化</td>
+			<td><span class="tag plan">中</span>需要按播放头重放平台位移与炮位，不能只读当前 tick</td>
+		</tr>
+		<tr>
+			<td>B3</td>
+			<td>多 Tee：所有玩家/分身同时显示</td>
+			<td><span class="tag plan">中</span><code>MAX_TRACKS</code> 从 2 扩成按 ClientId 的 N 轨；demo 解析记录所有角色</td>
+		</tr>
+		<tr>
+			<td>B4</td>
+			<td>音效/特效本地播放开关</td>
+			<td><span class="tag plan">低</span>复用 <code>SQmFocusModeDecisions</code> 与预测事件门控，默认关闭避免盖住主世界</td>
+		</tr>
+	</tbody>
+</table>
+
+<div class="panel warn">
+	<p><b>边界：</b>影子世界即使拥有完整机关，也不能写共享碰撞、不能向服务器发送输入、不能修改主世界实体。它可以有“影子碰撞”仅用于影子内部演示，但绝不能参与玩家判定。</p>
+</div>
+
+<h2 id="ui">5. 回放控制卡与交互</h2>
+
+<p>demo 播放与 Rank 1/练习组查看模式共用同一张底部控制卡。<code>CMenus::RenderDemoPlayer()</code>（<code>menus_demo.cpp:1217</code>）是唯一绘制入口。</p>
+
+<table>
+	<thead><tr><th>项目</th><th>实现</th></tr></thead>
+	<tbody>
+		<tr><td>颜色</td><td><code>ui_token::replay::*</code>（<code>UiTokens.h</code>）+ <code>Ui()-&gt;QmControlTheme().m_Accent</code></td></tr>
+		<tr><td>尺寸</td><td><code>qm_demo_ui::{PLAYER_PANEL_HEIGHT, PLAYER_MARGIN, NAME_BAR_HEIGHT, SEEK_BAR_HEIGHT, TIME_BAR_HEIGHT, BUTTON_BAR_HEIGHT, CUT_BAR_GAP, CUT_BAR_HEIGHT, CUT_SECTION_HEIGHT}</code></td></tr>
+		<tr><td>查看模式切片行</td><td><code>ShowCutControls = !OnlineReplay</code>，整行隐藏，卡片高度减 <code>CUT_SECTION_HEIGHT</code></td></tr>
+		<tr><td>Esc</td><td>单击开关控制卡；0.4 秒内双击打开游戏菜单，播放不中断</td></tr>
+		<tr><td>X</td><td>退出查看模式 / 关闭 demo 播放</td></tr>
+		<tr><td>眼睛按钮</td><td>只隐藏控制卡，不结束回放；再次 Esc 呼出</td></tr>
+		<tr><td>点击卡外</td><td>只收起控制卡；弹窗打开时让位给弹窗，不误收卡</td></tr>
+	</tbody>
+</table>
+
+<p>快捷键沿用 <code>PlaybackShortcutsActive()</code>：暂停/播放、前进/后退、倍速、上一/下一标记、Home/End、P/K/J/L 等与原版 demo 一致。控制卡矩形每帧记录在 <code>m_OnlineReplayPanelRect</code>，供 <code>OnlineReplayPanelContains()</code> 做“点外关闭”判定。</p>
+
+<div class="panel note">
+	<p><b>仍可继续 token 化的部分：</b>卡片圆角 12/11.4、按钮圆角 6、Live 图标 24 等还是尺寸字面量。建议下一轮并入 <code>ui_token::radius</code> 与 <code>ui_token::replay</code> 尺寸组，但不要和本轮交互修复混在一起。</p>
+</div>
+
+<h2 id="fields">6. 字段归属表</h2>
+
+<p>排查“画面和判定不一致”时，先问“这个字段是谁写的”。</p>
+
+<table>
+	<thead><tr><th>字段</th><th>快速练习</th><th>Rank 1 / 练习组查看</th><th>写入点</th></tr></thead>
+	<tbody>
+		<tr><td>位置 / 速度</td><td>分支</td><td>轨迹插值</td><td><code>UpdateRenderedCharacters</code> / CGhost 手动渲染</td></tr>
+		<tr><td>武器 / 攻击 tick</td><td>分支</td><td>轨迹/成员数据</td><td><code>UpdateRenderedCharacters</code></td></tr>
+		<tr><td>表情</td><td>分支练习状态</td><td>轨迹/成员数据</td><td><code>ResolvePracticeEyeEmote</code></td></tr>
+		<tr><td>AFK 坐姿</td><td>参与者屏蔽服务器标记</td><td>不适用</td><td><code>players.cpp</code> 渲染门</td></tr>
+		<tr><td>冻结</td><td>分支 <code>CCharacterCore</code></td><td>不适用</td><td><code>gameclient.cpp</code> 覆盖</td></tr>
+		<tr><td>门 / 拖拉 / 激光</td><td>分支重建 + 分支开关</td><td>快照 + <code>.qmevt</code> 开关（现状）</td><td><code>items.cpp</code> / <code>RenderData</code></td></tr>
+		<tr><td>队伍</td><td>参与者跟随服务器，solo 本地</td><td><code>.qmevt</code> 的 <code>m_Team</code></td><td><code>SyncPracticeWorldConfig</code> / <code>UpdateViewTimeline</code></td></tr>
+		<tr><td>聊天 / 计分 / 击杀</td><td>服务器</td><td>服务器</td><td>不接管</td></tr>
+	</tbody>
+</table>
+
+<h2 id="diagnostics">7. 诊断与失败模式</h2>
+
+<ul>
+	<li><code>qm_local_world_dump</code> 输出 <code>render_pos</code>（本地/分身/相机）与 <code>dummy_tee</code>（位置/速度/角度/最新输入），用于区分“位置问题”和“武器字段问题”。</li>
+	<li><code>qm_local_world_dump</code> 的 <code>spec:</code> 行显示 <code>active</code>、<code>use_position</code>、<code>spectator_id</code>、<code>branch_spec</code>、<code>local_team</code>，用于确认旁观是否真的进入。</li>
+	<li>练习机制日志：<code>map mechanisms: pickups=... doors=... draggers=... lights=...</code>；开关携带日志：<code>switch carry: live=... has=... count=... status0=...</code>。</li>
+	<li>分支 tick 追赶日志：<code>tick shift: +N branch_tick=... track_start=... frames=...</code>，只在单次平移 ≥10 tick 时打印。</li>
+	<li>Rank 1 转换日志：<code>converting the replay (N%)</code>；时间线写出日志：<code>view timeline written: N events, N switch states, N messages</code>。</li>
+</ul>
+
+<table>
+	<thead><tr><th>症状</th><th>优先检查</th></tr></thead>
+	<tbody>
+		<tr><td>分身坐姿 / 闭眼</td><td>参与者是否被 <code>IsPracticeParticipant</code> 命中；服务器 AFK 是否仍写入 <code>m_Afk</code></td></tr>
+		<tr><td>旁观回来武器变手枪</td><td><code>AntiPingGunfire()</code> 为假时，<code>UpdateRenderedCharacters</code> 的参与者分支是否执行</td></tr>
+		<tr><td>按 DF 后分身消失但碰撞还在</td><td>快照失活时 <code>ResolvePracticeCharacter</code> 是否仍返回角色</td></tr>
+		<tr><td>走出镜头后门/激光消失</td><td><code>LoadPracticeMapMechanisms</code> 是否重建；<code>PracticeLightWorld()</code> 是否非空</td></tr>
+		<tr><td>旁观时被看不见的激光冻住</td><td><code>items.cpp</code> 机制渲染是否仍被 <code>UsePredicted</code> 包住（旧缺陷）</td></tr>
+		<tr><td>换队后门状态不对</td><td><code>SyncPracticeWorldConfig</code> 是否同步参与者队伍；分支 solo 是否保留</td></tr>
+		<tr><td>查看模式缺终点成绩</td><td><code>.qmevt</code> 是否为当前 <code>QMGHEVT3</code>；旧 sidecar 是否触发重建</td></tr>
+	</tbody>
+</table>
+
+<h2 id="verification">8. 验证证据</h2>
+
+<table>
+	<thead><tr><th>项目</th><th>结果</th></tr></thead>
+	<tbody>
+		<tr><td>构建 <code>game-client</code></td><td>成功（基线 104ff23b9a）</td></tr>
+		<tr><td><code>testrunner</code></td><td>7309 / 7309 通过</td></tr>
+		<tr><td><code>qm-nmt-tests</code></td><td>176 / 176 通过</td></tr>
+		<tr><td><code>qm-ui-popup-tests</code></td><td>502 / 502 通过</td></tr>
+		<tr><td><code>qm-practice-predict-tests</code></td><td>37 / 37 通过</td></tr>
+		<tr><td><code>BM_GhostPathAppend/1000</code></td><td>均值 6.8µs（1s × 5 次聚合）</td></tr>
+		<tr><td><code>BM_OnlineReplayClock</code></td><td>均值 4.5ns</td></tr>
+		<tr><td><code>BM_PracticeEyeEmoteResolve</code></td><td>均值 15–56ns</td></tr>
+	</tbody>
+</table>
+
+<p class="small">基准只证明纯逻辑开销，不代表帧时间、实机交互或视觉正确性。旁观、换队、关门折叠、跨图查看仍需窗口化实机验收。</p>
+
+<h2 id="roadmap">9. 演进路线</h2>
+
+<table>
+	<thead><tr><th>优先级</th><th>工作项</th><th>验收标准</th></tr></thead>
+	<tbody>
+		<tr>
+			<td>P0</td>
+			<td>实机验收本轮四项：旁观计时继续、退出不跳、<code>/restart</code> 机关相位、换队后门状态</td>
+			<td>窗口化客户端复现通过；<code>qm_local_world_dump</code> 的 <code>render_pos</code>/<code>dummy_tee</code>/<code>spec</code> 一致</td>
+		</tr>
+		<tr>
+			<td>P1</td>
+			<td>影子世界 B1：门、拖拉、静态激光只读机关世界</td>
+			<td>Rank 1/练习组查看时机关随播放头开合；主世界碰撞、聊天、计分不受影响</td>
+		</tr>
+		<tr>
+			<td>P2</td>
+			<td>多 Tee 轨迹：N 轨 + demo 解析记录所有角色</td>
+			<td>多人地图回放能看到所有玩家影子；内存与加载时间有上限</td>
+		</tr>
+		<tr>
+			<td>P2</td>
+			<td>移动方块/机关炮影子化</td>
+			<td>按播放头重放平台相位；不写入共享碰撞</td>
+		</tr>
+		<tr>
+			<td>P3</td>
+			<td>控制卡剩余尺寸 token 化</td>
+			<td><code>menus_demo.cpp</code> 不再出现卡片/按钮圆角与图标字号字面量</td>
+		</tr>
+	</tbody>
+</table>
+
+<h2 id="files">10. 文件索引</h2>
+
+<table>
+	<thead><tr><th>职责</th><th>文件</th></tr></thead>
+	<tbody>
+		<tr><td>练习分支、时钟、参与者、机关</td><td><code>src/game/client/components/tclient/fast_practice.cpp</code><br><code>src/game/client/components/tclient/fast_practice.h</code></td></tr>
+		<tr><td>练习命令与诊断</td><td><code>src/game/client/components/tclient/fast_practice_commands.cpp</code></td></tr>
+		<tr><td>渲染发布、冻结/武器/表情覆盖、开关队伍</td><td><code>src/game/client/gameclient.cpp</code></td></tr>
+		<tr><td>分支机关绘制与快照去重</td><td><code>src/game/client/components/items.cpp</code></td></tr>
+		<tr><td>门、拖拉、练习灯</td><td><code>src/game/client/prediction/entities/door.cpp</code><br><code>src/game/client/prediction/entities/dragger.cpp</code><br><code>src/game/client/prediction/entities/practice_light.cpp</code></td></tr>
+		<tr><td>Rank 1 清单/下载/重绑</td><td><code>src/game/client/components/qmclient/rank_ghost.cpp</code></td></tr>
+		<tr><td>demo 解析与 <code>.qmevt</code> 生成</td><td><code>src/game/client/components/qmclient/rank_ghost_parse.cpp</code></td></tr>
+		<tr><td>查看模式、练习组加载、时间线</td><td><code>src/game/client/components/qmclient/rank_ghost_view.cpp</code><br><code>src/game/client/components/qmclient/rank_view_timeline.h</code></td></tr>
+		<tr><td>轨迹会话与多轨</td><td><code>src/game/client/components/qmclient/local_world.h</code></td></tr>
+		<tr><td>Ghost 页入口</td><td><code>src/game/client/components/menus_ingame.cpp</code></td></tr>
+		<tr><td>回放控制卡</td><td><code>src/game/client/components/menus_demo.cpp</code><br><code>src/game/client/components/qmclient/demo_ui.h</code><br><code>src/game/client/QmUi/UiTokens.h</code></td></tr>
+		<tr><td>控制卡显隐与点外关闭</td><td><code>src/game/client/components/spectator.cpp</code><br><code>src/game/client/components/qmclient/online_replay_player.h</code></td></tr>
+		<tr><td>UI 术语规范</td><td><code>docs/规格/UI全局术语与组件规范.md</code></td></tr>
+	</tbody>
+</table>
+
+<hr>
+
+<p class="small">本文是现行架构规格，记录 2026-11-18 基线 <code>104ff23b9a</code> 的实际代码行为与后续路线。实现变化时优先更新本文，不为每轮验证另建报告。</p>
+
+</main>
+</body>
+</html>
