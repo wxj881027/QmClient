@@ -9,6 +9,7 @@
 
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
+#include <engine/http.h>
 #include <engine/storage.h>
 
 #include <cstdlib>
@@ -95,20 +96,9 @@ namespace qm_community_icons
 		PROCESSING_FAILED,
 	};
 
-	// 仅借用存储；解码与摘要消费同一份快照，完整准备后再交接输出。
-	template<typename TStorage>
-	ELoadResult LoadImage(TStorage &Storage, const char *pPath, int StorageType, CImageInfo &Original, CImageInfo &Grayscale, SHA256_DIGEST &Sha256, std::size_t MaxDecodedBytes = MAX_DECODED_RGBA_BYTES) noexcept
+	// 完整解码彩色和灰度图后才交接输出。
+	inline ELoadResult PrepareImage(const void *pBytes, size_t Size, const char *pSource, CImageInfo &Original, CImageInfo &Grayscale, size_t MaxDecodedBytes) noexcept
 	{
-		struct SFile
-		{
-			void *m_pData = nullptr;
-			~SFile() { Free(); }
-			void Free()
-			{
-				std::free(m_pData);
-				m_pData = nullptr;
-			}
-		} File;
 		struct SImage
 		{
 			CImageInfo m_Image;
@@ -116,28 +106,60 @@ namespace qm_community_icons
 		} Decoded, Grey;
 		try
 		{
-			unsigned FileSize = 0;
-			if(!Storage.ReadFile(pPath, StorageType, &File.m_pData, &FileSize))
-				return ELoadResult::READ_FAILED;
-			if(!CImageLoader::LoadPng(File.m_pData, FileSize, pPath, Decoded.m_Image, MaxDecodedBytes))
+			if(!pBytes || !CImageLoader::LoadPng(pBytes, Size, pSource, Decoded.m_Image, MaxDecodedBytes))
 				return ELoadResult::DECODE_FAILED;
 			if(Decoded.m_Image.m_Format != CImageInfo::FORMAT_RGBA)
 				return ELoadResult::FORMAT_UNSUPPORTED;
-			const auto Digest = sha256(File.m_pData, FileSize);
-			File.Free();
 			Grey.m_Image = Decoded.m_Image.DeepCopy();
 			if(!Grey.m_Image.m_pData)
 				return ELoadResult::COPY_FAILED;
 			ConvertToGrayscale(Grey.m_Image);
 			Original = std::move(Decoded.m_Image);
 			Grayscale = std::move(Grey.m_Image);
-			Sha256 = Digest;
 			return ELoadResult::LOADED;
 		}
 		catch(...)
 		{
 			return ELoadResult::PROCESSING_FAILED;
 		}
+	}
+
+	// 解码与摘要消费同一份文件快照。
+	template<typename TStorage>
+	ELoadResult LoadImage(TStorage &Storage, const char *pPath, int StorageType, CImageInfo &Original, CImageInfo &Grayscale, SHA256_DIGEST &Sha256, std::size_t MaxDecodedBytes = MAX_DECODED_RGBA_BYTES) noexcept
+	{
+		struct SFile
+		{
+			void *m_pData = nullptr;
+			~SFile() { std::free(m_pData); }
+		} File;
+		try
+		{
+			unsigned Size = 0;
+			if(!Storage.ReadFile(pPath, StorageType, &File.m_pData, &Size))
+				return ELoadResult::READ_FAILED;
+			const auto Result = PrepareImage(File.m_pData, Size, pPath, Original, Grayscale, MaxDecodedBytes);
+			if(Result == ELoadResult::LOADED)
+				Sha256 = sha256(File.m_pData, Size);
+			return Result;
+		}
+		catch(...)
+		{
+			return ELoadResult::PROCESSING_FAILED;
+		}
+	}
+
+	inline ELoadResult LoadResponseImage(const IHttpRequest &Response, CImageInfo &Original, CImageInfo &Grayscale, SHA256_DIGEST &Sha256) noexcept
+	{
+		if(Response.State() != EHttpState::DONE || Response.StatusCode() != 200)
+			return ELoadResult::READ_FAILED;
+		unsigned char *pBytes;
+		size_t Size;
+		Response.Result(&pBytes, &Size);
+		const auto Result = PrepareImage(pBytes, Size, Response.Url(), Original, Grayscale, MAX_DECODED_RGBA_BYTES);
+		if(Result == ELoadResult::LOADED)
+			Sha256 = Response.ResultSha256();
+		return Result;
 	}
 }
 

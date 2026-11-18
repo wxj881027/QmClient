@@ -2,6 +2,7 @@
 
 #include <engine/storage.h>
 
+#include <game/client/components/community_icons.h>
 #include <game/client/components/qmclient/community_icon_image.h>
 #include <game/client/components/qmclient/community_icon_scan.h>
 
@@ -56,6 +57,32 @@ namespace
 		}
 	};
 
+	class CIconResponse : public IHttpRequest
+	{
+	public:
+		explicit CIconResponse(IStorage &Storage) :
+			IHttpRequest("https://icons.test/icon.png")
+		{
+			WriteToFileAndMemory(&Storage, "icon.png", IStorage::TYPE_SAVE);
+			SkipByFileTime(false);
+			ValidateBeforeOverwrite(true);
+			LogProgress(HTTPLOG::NONE);
+		}
+
+		void Header(const char *) override {}
+
+		void Receive(const std::vector<uint8_t> &Data)
+		{
+			ExpectSha256(sha256(Data.data(), Data.size()));
+			ASSERT_TRUE(BeforeInit());
+			m_State = EHttpState::RUNNING;
+			EXPECT_EQ(OnData(reinterpret_cast<const char *>(Data.data()), Data.size()), Data.size());
+			m_StatusCode = 200;
+			OnCompletionInternal(EHttpState::DONE);
+			ASSERT_EQ(State(), EHttpState::DONE);
+		}
+	};
+
 	class CommunityIconImage : public ::testing::Test
 	{
 	protected:
@@ -93,6 +120,66 @@ namespace
 			return qm_community_icons::LoadImage(*m_pStorage, pPath, IStorage::TYPE_SAVE, m_Original, m_Gray, m_Digest);
 		}
 	};
+}
+
+TEST_F(CommunityIconImage, InvalidDownloadedImagePreservesExistingCache)
+{
+	const auto Old = Png(90);
+	ASSERT_TRUE(Write(*m_pStorage, "icon.png", Old));
+	const std::vector<uint8_t> Body{'n', 'o', ' ', 'i', 'm', 'a', 'g', 'e'};
+	CIconResponse Response(*m_pStorage);
+	ASSERT_NO_FATAL_FAILURE(Response.Receive(Body));
+	const CCommunity Current("a", "A", sha256(Body.data(), Body.size()), Response.Url());
+	const auto Decoded = qm_community_icons::LoadResponseImage(Response, m_Original, m_Gray, m_Digest);
+	EXPECT_EQ(Decoded, ELoadResult::DECODE_FAILED);
+	EXPECT_FALSE(CCommunityIcons::AcceptLoadResult(Decoded == ELoadResult::LOADED, &Response, true, &Current, m_Digest));
+	ASSERT_EQ(Load(), ELoadResult::LOADED);
+	EXPECT_EQ(m_Digest, sha256(Old.data(), Old.size()));
+}
+
+TEST_F(CommunityIconImage, SupersededDownloadedImagePreservesExistingCache)
+{
+	const auto Old = Png(90);
+	const auto Body = Png(120);
+	const auto Newer = Png(180);
+	ASSERT_TRUE(Write(*m_pStorage, "icon.png", Old));
+	CIconResponse Response(*m_pStorage);
+	ASSERT_NO_FATAL_FAILURE(Response.Receive(Body));
+	const CCommunity NewCurrent("a", "A", sha256(Newer.data(), Newer.size()), Response.Url());
+	const auto Decoded = qm_community_icons::LoadResponseImage(Response, m_Original, m_Gray, m_Digest);
+	ASSERT_EQ(Decoded, ELoadResult::LOADED);
+	EXPECT_EQ(m_Digest, sha256(Body.data(), Body.size()));
+	EXPECT_FALSE(CCommunityIcons::AcceptLoadResult(Decoded == ELoadResult::LOADED, &Response, true, &NewCurrent, m_Digest));
+
+	CImageInfo Existing, Gray;
+	SHA256_DIGEST Digest{};
+	const auto Cached = qm_community_icons::LoadImage(*m_pStorage, "icon.png", IStorage::TYPE_SAVE, Existing, Gray, Digest);
+	Existing.Free();
+	Gray.Free();
+	EXPECT_EQ(Cached, ELoadResult::LOADED);
+	EXPECT_EQ(Digest, sha256(Old.data(), Old.size()));
+}
+
+TEST_F(CommunityIconImage, CurrentDownloadedImageReplacesCacheAfterDecode)
+{
+	const auto Old = Png(90);
+	const auto Body = Png(120);
+	ASSERT_TRUE(Write(*m_pStorage, "icon.png", Old));
+	CIconResponse Response(*m_pStorage);
+	ASSERT_NO_FATAL_FAILURE(Response.Receive(Body));
+	ASSERT_EQ(Load(), ELoadResult::LOADED);
+	EXPECT_EQ(m_Digest, sha256(Old.data(), Old.size()));
+	m_Original.Free();
+	m_Gray.Free();
+
+	const CCommunity Current("a", "A", sha256(Body.data(), Body.size()), Response.Url());
+	const auto Decoded = qm_community_icons::LoadResponseImage(Response, m_Original, m_Gray, m_Digest);
+	ASSERT_EQ(Decoded, ELoadResult::LOADED);
+	ASSERT_TRUE(CCommunityIcons::AcceptLoadResult(Decoded == ELoadResult::LOADED, &Response, true, &Current, m_Digest));
+	m_Original.Free();
+	m_Gray.Free();
+	ASSERT_EQ(Load(), ELoadResult::LOADED);
+	EXPECT_EQ(m_Digest, sha256(Body.data(), Body.size()));
 }
 
 TEST_F(CommunityIconImage, ActualStoragePngAndGrayscalePreserveOriginalPixelsAndAlpha)
