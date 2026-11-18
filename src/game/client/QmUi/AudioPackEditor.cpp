@@ -25,11 +25,16 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <cstdlib>
+#include <filesystem>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
 using namespace FontIcons;
+
+static constexpr char AUDIO_PACK_EDITOR_INTERACTION_ID[] = "audio-pack-editor";
 
 void CMenus::AudioPackEditorOpen(const char *pPackName)
 {
@@ -54,6 +59,7 @@ void CMenus::AudioPackEditorOpen(const char *pPackName)
 
 void CMenus::AudioPackEditorClose()
 {
+	Ui()->CloseInteractionSource(&m_AudioPackEditorState, AUDIO_PACK_EDITOR_INTERACTION_ID);
 	AudioPackEditorStopPreview();
 	m_AudioPackEditorState.m_Open = false;
 	m_AudioPackEditorState.m_Initialized = false;
@@ -155,7 +161,6 @@ void CMenus::AudioPackEditorStopPreview()
 {
 	if(m_AudioPackEditorState.m_PreviewSampleId >= 0)
 	{
-		Sound()->Stop(m_AudioPackEditorState.m_PreviewSampleId);
 		Sound()->UnloadSample(m_AudioPackEditorState.m_PreviewSampleId);
 		m_AudioPackEditorState.m_PreviewSampleId = -1;
 	}
@@ -168,12 +173,30 @@ bool CMenus::AudioPackEditorPlayPreview(const char *pFilename, int StorageType)
 
 	AudioPackEditorStopPreview();
 
-	const int SampleId = Sound()->LoadWV(pFilename, StorageType);
+	ISound *pSound = Sound();
+	if(!pSound->IsSoundEnabled())
+		return false;
+
+	// 沿用原读取的 1 GiB 上限，同时在打开后确认是普通文件。
+	constexpr unsigned MAX_PREVIEW_FILE_BYTES = 1024u * 1024 * 1024;
+	void *pFileData = nullptr;
+	unsigned FileSize = 0;
+	const auto ReadResult = Storage()->ReadFileCheckedBounded(pFilename, StorageType, &pFileData, &FileSize, MAX_PREVIEW_FILE_BYTES);
+	const std::unique_ptr<void, decltype(&free)> pData(pFileData, free);
+	if(ReadResult != IStorage::EReadFileResult::SUCCESS)
+		return false;
+
+	const int SampleId = pSound->LoadWVFromMem(pData.get(), FileSize, false, pFilename);
 	if(SampleId < 0)
 		return false;
 
+	const auto Voice = GameClient()->m_Sounds.PlaySample(CSounds::CHN_GUI, SampleId, ISound::FLAG_PREVIEW, 1.0f);
+	if(!Voice.IsValid())
+	{
+		pSound->UnloadSample(SampleId);
+		return false;
+	}
 	m_AudioPackEditorState.m_PreviewSampleId = SampleId;
-	GameClient()->m_Sounds.PlaySample(CSounds::CHN_GUI, SampleId, ISound::FLAG_PREVIEW, 1.0f);
 	return true;
 }
 
@@ -187,17 +210,25 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 	using namespace qm_audio_pack;
 	if(!m_AudioPackEditorState.m_Open)
 		return;
-	const bool Initialize = !m_AudioPackEditorState.m_Initialized;
-	if(Initialize)
+	if(m_MenuTextPlanCollecting)
 	{
-		AudioPackEditorRefreshCandidates();
-		m_AudioPackEditorState.m_Initialized = true;
+		RenderSettingsCatalogPage(MainView, "sound");
+		return;
 	}
 	if(!Ui()->IsPopupOpen() && Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 	{
 		AudioPackEditorClose();
 		return;
 	}
+
+	const bool Initialize = !Ui()->RenderOnly() && !m_AudioPackEditorState.m_Initialized;
+	if(Initialize)
+	{
+		AudioPackEditorRefreshCandidates();
+		m_AudioPackEditorState.m_Initialized = true;
+	}
+	const CUiScopedInteractionOwner InteractionOwner(Ui(), &m_AudioPackEditorState, AUDIO_PACK_EDITOR_INTERACTION_ID);
+	Ui()->RefreshInteractionSource(&m_AudioPackEditorState, AUDIO_PACK_EDITOR_INTERACTION_ID);
 
 	const auto Metrics = ResolveSettingsContentMetrics(MainView.w);
 	const float EditorFontSize = Metrics.m_BodySize;
@@ -589,6 +620,12 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 			}
 
 			const std::string ExportPath = BuildAudioPackExportPath(pPackName, SelectedSlot.m_pRelativePath);
+			const auto BuiltinPath = std::filesystem::u8path(BuildAudioPackBuiltinCandidatePath(SelectedSlot.m_pRelativePath));
+			if(std::filesystem::u8path(ExportPath).lexically_normal() == BuiltinPath)
+			{
+				AudioPackEditorSetStatus(Localize("Failed to export audio pack file."), true);
+				goto AudioPackExportDone;
+			}
 			if(AudioPackEditorCopyFileToStorage(SourcePath.c_str(), SourceStorageType, ExportPath.c_str()))
 			{
 				str_copy(g_Config.m_SndPack, pPackName, sizeof(g_Config.m_SndPack));
