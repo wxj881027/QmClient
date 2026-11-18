@@ -18,6 +18,7 @@
 #include <game/client/components/qmclient/practice_cursor.h>
 #include <game/client/components/qmclient/practice_predict_publish.h>
 #include <game/client/components/qmclient/practice_rescue.h>
+#include <game/client/components/qmclient/predicted_event_queue.h>
 #include <game/client/components/qmclient/world_event_gate.h>
 #include <game/client/gameclient.h>
 #include <game/client/laser_data.h>
@@ -280,6 +281,10 @@ void CFastPractice::ResetPracticeState()
 	m_HasDummyAnchor = false;
 	m_HasPendingLocalTee = false;
 	m_PendingLocalTee = {};
+	m_HasPendingLocalSolo = false;
+	m_PendingLocalSolo = false;
+	m_HasPendingDummySolo = false;
+	m_PendingDummySolo = false;
 	m_PracticeBranchLive = false;
 	m_HasCarriedSwitchers = false;
 	m_CarriedSwitchersTick = 0;
@@ -470,6 +475,21 @@ bool CFastPractice::TryRebindPracticeParticipants()
 		m_aPracticeCommandState[Decision.m_LocalClientId] = m_aPracticeCommandState[m_EnableLocalClientId];
 	if(Decision.m_MigrateDummyState)
 		m_aPracticeCommandState[Decision.m_DummyClientId] = m_aPracticeCommandState[m_EnableDummyClientId];
+	// solo 也存在旧 id 的 CTeamsCore 里。先寄存，等重新 fork 出新角色的 id 再还原，
+	// 否则 /solo 会在重连或 dummy 换 id 后静默丢失。
+	if(m_PracticeBranchLive)
+	{
+		if(Decision.m_MigrateLocalState)
+		{
+			m_HasPendingLocalSolo = true;
+			m_PendingLocalSolo = m_PracticeBaseWorld.m_Teams.GetSolo(m_EnableLocalClientId);
+		}
+		if(Decision.m_MigrateDummyState)
+		{
+			m_HasPendingDummySolo = true;
+			m_PendingDummySolo = m_PracticeBaseWorld.m_Teams.GetSolo(m_EnableDummyClientId);
+		}
+	}
 
 	m_EnableLocalClientId = Decision.m_LocalClientId;
 	m_EnableDummyClientId = Decision.m_DummyClientId;
@@ -605,7 +625,21 @@ void CFastPractice::ShiftPracticeWorldTicks(int TickDelta)
 	QmShiftPracticePredictedEventTicks(m_PracticeBaseWorld.m_PredictedEvents, TickDelta);
 	if(m_EventBarrierTick >= 0)
 		m_EventBarrierTick += TickDelta;
-	for(auto &Switcher : m_PracticeBaseWorld.Switchers())
+	ShiftPracticeWorldEntityTicks(m_PracticeBaseWorld, TickDelta);
+	for(int &LastAttackTick : m_aLastAttackTick)
+		if(LastAttackTick >= 0)
+			LastAttackTick += TickDelta;
+	for(auto &State : m_aPracticeCommandState)
+		if(State.m_EyeEmote.m_EndTick >= 0)
+			State.m_EyeEmote.m_EndTick += TickDelta;
+}
+
+void CFastPractice::ShiftPracticeWorldEntityTicks(CGameWorld &World, int TickDelta)
+{
+	if(TickDelta == 0)
+		return;
+
+	for(auto &Switcher : World.Switchers())
 	{
 		for(int Team = 0; Team < NUM_DDRACE_TEAMS; Team++)
 		{
@@ -615,20 +649,22 @@ void CFastPractice::ShiftPracticeWorldTicks(int TickDelta)
 				Switcher.m_aLastUpdateTick[Team] += TickDelta;
 		}
 	}
-	for(int &LastAttackTick : m_aLastAttackTick)
-		if(LastAttackTick >= 0)
-			LastAttackTick += TickDelta;
-	for(auto &State : m_aPracticeCommandState)
-		if(State.m_EyeEmote.m_EndTick >= 0)
-			State.m_EyeEmote.m_EndTick += TickDelta;
-	for(CCharacter *pChar = (CCharacter *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChar; pChar = (CCharacter *)pChar->TypeNext())
+	for(CCharacter *pChar = (CCharacter *)World.FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChar; pChar = (CCharacter *)pChar->TypeNext())
 		pChar->ShiftTickBase(TickDelta);
-	for(CProjectile *pProj = (CProjectile *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_PROJECTILE); pProj; pProj = (CProjectile *)pProj->TypeNext())
+	for(CProjectile *pProj = (CProjectile *)World.FindFirst(CGameWorld::ENTTYPE_PROJECTILE); pProj; pProj = (CProjectile *)pProj->TypeNext())
 		pProj->ShiftStartTick(TickDelta);
-	for(CLaser *pLaser = (CLaser *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_LASER); pLaser; pLaser = (CLaser *)pLaser->TypeNext())
-		pLaser->ShiftEvalTick(TickDelta);
-	for(CPlasma *pPlasma = (CPlasma *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_PLASMA); pPlasma; pPlasma = (CPlasma *)pPlasma->TypeNext())
+	for(CLaser *pLaser = (CLaser *)World.FindFirst(CGameWorld::ENTTYPE_LASER); pLaser; pLaser = (CLaser *)pLaser->TypeNext())
+	{
+		// 静态地图激光的 eval tick 是 -1（没有开火时刻），平移会把它变成“刚发射”，
+		// 让光柱重新播放生长动画。
+		if(pLaser->GetEvalTick() >= 0)
+			pLaser->ShiftEvalTick(TickDelta);
+	}
+	for(CPlasma *pPlasma = (CPlasma *)World.FindFirst(CGameWorld::ENTTYPE_PLASMA); pPlasma; pPlasma = (CPlasma *)pPlasma->TypeNext())
 		pPlasma->ShiftEvalTick(TickDelta);
+	for(CEntity *pEnt = World.FindFirst(CGameWorld::ENTTYPE_LIGHT); pEnt; pEnt = pEnt->TypeNext())
+		if(auto *pLight = dynamic_cast<CPracticeLight *>(pEnt))
+			pLight->ShiftEvalTick(TickDelta);
 }
 
 void CFastPractice::FreezePracticeWorldForServerPause()
@@ -695,12 +731,9 @@ void CFastPractice::SyncPracticeWorldConfig()
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictTiles = true;
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictDDRace = true;
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictTeleport = true;
-	// 队伍号跟随服务器，但 solo 是分支世界的本地状态（/solo /unsolo）。
-	// 整份覆盖会把练习里的 solo 每帧冲掉，表现为 solo 不生效、分身仍是实体。
-	CTeamsCore Teams = GameClient()->m_Teams;
-	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
-		Teams.SetSolo(ClientId, m_PracticeBaseWorld.m_Teams.GetSolo(ClientId));
-	m_PracticeBaseWorld.m_Teams = Teams;
+	// 队伍只在 fork/重绑时由 CopyWorldClean 从服务器快照带入一次；之后分支里的
+	// 队伍与 solo 都由练习世界自己维护。每帧用服务器 m_Teams 覆盖会把 /solo、
+	// /unsolo 和队伍变化冲掉，也会让已经进入分支的机关继续看服务器世界。
 }
 
 void CFastPractice::ResetPracticeMapEntities(CGameWorld &World)
@@ -1129,6 +1162,21 @@ bool CFastPractice::InitPracticeWorld()
 	// 必须先切段，否则存出来的幽灵会带一道穿墙的直线。
 	m_Recorder.MarkBoundary(GameClient()->m_LocalWorld);
 
+	// 队伍号在 fork 时取服务器快照，但 /solo 是练习分支自己的状态。
+	// 重新 fork 会整份换掉 m_Teams，这里只保存旧分支参与者的 solo，
+	// 新加入的分身仍以服务器快照为准。
+	std::array<bool, MAX_CLIENTS> aPreviousSolo{};
+	std::array<bool, MAX_CLIENTS> aHadPreviousCharacter{};
+	if(m_PracticeBranchLive)
+	{
+		for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
+		{
+			aHadPreviousCharacter[ClientId] = m_PracticeBaseWorld.GetCharacterById(ClientId) != nullptr;
+			if(aHadPreviousCharacter[ClientId])
+				aPreviousSolo[ClientId] = m_PracticeBaseWorld.m_Teams.GetSolo(ClientId);
+		}
+	}
+
 	// 重新 fork 会把开关状态换回服务器世界那份，练习里 /setswitch 的改动会丢。
 	// 只要 base 世界里还是上一次练习分支的内容就刷新暂存；旁观、分身断开和重绑
 	// 都会先清 m_PracticeWorldInitialized 再 fork，用那个标志当条件会漏掉这些路径。
@@ -1160,6 +1208,34 @@ bool CFastPractice::InitPracticeWorld()
 	QmResetPracticePredictedEvents(m_PracticeBaseWorld.m_PredictedEvents);
 	PrunePracticeWorld(m_PracticeBaseWorld);
 	EnsurePracticeParticipants();
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
+	{
+		if(!aHadPreviousCharacter[ClientId])
+			continue;
+		m_PracticeBaseWorld.m_Teams.SetSolo(ClientId, aPreviousSolo[ClientId]);
+		if(CCharacter *pChar = m_PracticeBaseWorld.GetCharacterById(ClientId))
+			pChar->SetSolo(aPreviousSolo[ClientId]);
+	}
+	if(m_HasPendingLocalSolo)
+	{
+		if(CCharacter *pChar = m_PracticeBaseWorld.GetCharacterById(m_EnableLocalClientId))
+		{
+			pChar->SetSolo(m_PendingLocalSolo);
+			m_HasPendingLocalSolo = false;
+		}
+	}
+	if(m_HasPendingDummySolo)
+	{
+		if(!m_RequireDummy)
+		{
+			m_HasPendingDummySolo = false;
+		}
+		else if(CCharacter *pChar = m_PracticeBaseWorld.GetCharacterById(m_EnableDummyClientId))
+		{
+			pChar->SetSolo(m_PendingDummySolo);
+			m_HasPendingDummySolo = false;
+		}
+	}
 	SanitizePracticeWorldHooks(m_PracticeBaseWorld);
 	SyncPracticeWorldConfig();
 	m_PracticeWorldInitialized = true;
@@ -1678,7 +1754,9 @@ void CFastPractice::PrepareForSpectating()
 	}
 
 	SyncPracticeWorldConfig();
-	m_PracticeBaseWorld.m_GameTick = PracticeClockTarget();
+	// 进入旁观前把分支对齐到当前预测时刻；实体绝对 tick 必须一起走，
+	// 否则从这一刻开始继续推进时会看到已经过期的投射物和机关相位。
+	ShiftPracticeWorldTicks(PracticeClockTarget() - m_PracticeBaseWorld.GameTick());
 
 	StandbyCharacter(m_PracticeBaseWorld.GetCharacterById(LocalClientId));
 	if(m_RequireDummy && DummyClientId >= 0)
@@ -1784,7 +1862,13 @@ bool CFastPractice::RestartPracticeFromStart()
 
 	// 世界树：主世界一直在推进，重新 fork 只会得到“现在”。这里改用启用练习那一刻的
 	// 快照，机关、移动方块、投射物、开关与角色一起回到入口状态。
+	const CTeamsCore BranchTeams = m_PracticeBaseWorld.m_Teams;
 	m_PracticeBaseWorld.CopyWorldClean(&m_PracticeStartWorld);
+	// 重开只重置世界实体；队伍与 solo 是整段练习会话的分支配置，不随入口快照回退。
+	m_PracticeBaseWorld.m_Teams = BranchTeams;
+	for(CCharacter *pChar = (CCharacter *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChar; pChar = (CCharacter *)pChar->TypeNext())
+		if(const int ClientId = pChar->GetCid(); ClientId >= 0 && ClientId < MAX_CLIENTS)
+			pChar->SetSolo(BranchTeams.GetSolo(ClientId));
 	// 门副本不接管碰撞，重开后必须重新装回共享 CCollision 的端点。
 	m_PracticeBaseWorld.ResetDoorCollision();
 	// 快照初刻留下的事件 tick 早已被屏障盖过，留着会在下一帧集中播放。
@@ -1806,7 +1890,12 @@ bool CFastPractice::RestartPracticeFromStart()
 		NeutralizeRestartedInput(m_PracticeBaseWorld.GetCharacterById(m_EnableDummyClientId), DummyFire);
 
 	ResetPracticeTimelineState();
-	m_PracticeBaseWorld.m_GameTick = PracticeClockTarget();
+	// 入口快照里的实体保留着启用练习那一刻的绝对 tick。把世界时钟直接改到现在
+	// 会让投射物、定时开关与激光/等离子相位全部过期；先按时间差平移实体，
+	// 再落世界时钟，重开后机关仍从入口相位继续。
+	const int TargetTick = PracticeClockTarget();
+	ShiftPracticeWorldEntityTicks(m_PracticeBaseWorld, TargetTick - m_PracticeBaseWorld.GameTick());
+	m_PracticeBaseWorld.m_GameTick = TargetTick;
 	PublishPracticeWorldState();
 
 	// 重开是一次瞬移。轨迹历史保留，只切段，避免回放里连出一条穿墙直线。
@@ -1990,6 +2079,78 @@ void CFastPractice::TrackPracticeTileFeedback(int ClientId, CCharacter *pChar, c
 	pChar->Unfreeze();
 }
 
+void CFastPractice::TickPracticeWorldDuringSpectate()
+{
+	if(!m_PracticeWorldInitialized)
+		return;
+
+	const int LocalClientId = m_EnableLocalClientId;
+	const int DummyClientId = m_RequireDummy ? m_EnableDummyClientId : -1;
+	CCharacter *pLocalChar = m_PracticeBaseWorld.GetCharacterById(LocalClientId);
+	CCharacter *pDummyChar = DummyClientId >= 0 ? m_PracticeBaseWorld.GetCharacterById(DummyClientId) : nullptr;
+	if(!pLocalChar || (m_RequireDummy && !pDummyChar))
+		return;
+
+	const int BaseTick = m_PracticeBaseWorld.GameTick();
+	const int TargetTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	const SPracticePredictTickPlan TickPlan = QmBuildPracticePredictTickPlan(BaseTick, TargetTick, 0, true);
+	if(TickPlan.Empty())
+		return;
+
+	// 与主预测循环相同的断崖保护：超过两秒只平移时钟，不逐 tick 补算。
+	if(QmPracticeCatchUpNeedsShift(TickPlan.StepCount(), Client()->GameTickSpeed()))
+	{
+		ShiftPracticeWorldTicks(TickPlan.m_FinalTickSelf - BaseTick);
+		return;
+	}
+
+	CQmAxiomQuadTimeScope PredictedQuadTime(Collision(), BaseTick, Client()->GameTickSpeed());
+	for(int Tick = TickPlan.m_FirstTick; Tick <= TickPlan.m_FinalTickSelf; Tick++)
+	{
+		Collision()->SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
+		pLocalChar = m_PracticeBaseWorld.GetCharacterById(LocalClientId);
+		pDummyChar = DummyClientId >= 0 ? m_PracticeBaseWorld.GetCharacterById(DummyClientId) : nullptr;
+		if(!pLocalChar || (m_RequireDummy && !pDummyChar))
+			return;
+
+		// 旁观期间 m_PredictedWorld 归服务器预测所有，不能把分支铺进去再消费事件。
+		// 分支只在事件屏障之后创建自己的事件，随后在本函数末尾统一记账。
+		m_PracticeBaseWorld.m_WorldConfig.m_PredictEvents = QmPracticeTickAllowsPredictedEvents(Tick, m_EventBarrierTick);
+
+		// 玩家不操控时两个参与者都保持中性输入，分支世界继续按自己的时间线走。
+		CNetObj_PlayerInput LocalInput = {};
+		CNetObj_PlayerInput DummyInput = {};
+		LocalInput.m_TargetY = -1;
+		DummyInput.m_TargetY = -1;
+
+		const vec2 LocalPosBeforeTick = pLocalChar->Core()->m_Pos;
+		const vec2 DummyPosBeforeTick = pDummyChar ? pDummyChar->Core()->m_Pos : vec2(0.0f, 0.0f);
+		ApplyPracticeActorInputs(pLocalChar, pDummyChar, &LocalInput, pDummyChar ? &DummyInput : nullptr, Tick, TargetTick);
+		StepPracticeWorld(GameClient(), m_PracticeBaseWorld, Tick, pLocalChar, pDummyChar, &LocalInput, pDummyChar ? &DummyInput : nullptr);
+		TickPracticeGuns(m_PracticeBaseWorld, Tick);
+		m_PracticeBaseWorld.Tick();
+
+		m_PracticeRunTicks++;
+		TrackPracticeTileFeedback(LocalClientId, pLocalChar, LocalPosBeforeTick);
+		if(pDummyChar)
+			TrackPracticeTileFeedback(DummyClientId, pDummyChar, DummyPosBeforeTick);
+
+		RecordPracticeFrames(m_PracticeBaseWorld, Tick, LocalClientId, DummyClientId);
+		RecordPracticeEvents(m_PracticeBaseWorld, Tick);
+		RecordPracticeSwitchState(m_PracticeBaseWorld, Tick);
+
+		TrackSafeRescuePosition(LocalClientId, pLocalChar);
+		if(pDummyChar)
+			TrackSafeRescuePosition(DummyClientId, pDummyChar);
+
+		// 旁观分支的事件先交给录制采样，再只做去重记账。服务器预测世界才是音效/特效
+		// 消费方，这里若直接播放会把观察中的练习世界声音叠到当前旁观视角上。
+		QmProcessPredictedEvents(m_PracticeBaseWorld.m_PredictedEvents, Tick, Client()->GameTickSpeed(),
+			[](const CGameWorld::CPredictedEvent &) { return true; });
+		m_EventBarrierTick = std::max(m_EventBarrierTick, Tick);
+	}
+}
+
 bool CFastPractice::OverridePredict()
 {
 	if(!m_Enabled)
@@ -2003,10 +2164,11 @@ bool CFastPractice::OverridePredict()
 	// 旁观优先于“服务器暂停”判断：pause 型旁观在快照里同样带 paused 标记。
 	if(GameClient()->m_Snap.m_SpecInfo.m_Active || (GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS))
 	{
-		// 旁观不结束练习：分支世界停住但继续是渲染与镜头的权威，位置与
-		// 机关状态都保留。退出旁观时再一次性把时钟对齐，不补算这段时间。
+		// 旁观不结束练习：分支世界继续推进并保持渲染/镜头权威。这里直接推进
+		// m_PracticeBaseWorld，因为旁观期间 m_PredictedWorld 已归服务器预测。
 		m_SpectatingBranch = m_PracticeWorldInitialized;
 		GameClient()->m_PredictedDummyId = -1;
+		TickPracticeWorldDuringSpectate();
 		return false;
 	}
 	if(IsPracticeServerPauseActive())
@@ -2016,10 +2178,9 @@ bool CFastPractice::OverridePredict()
 	}
 	if(m_SpectatingBranch)
 	{
-		// 从旁观回到游戏：分支世界原样保留，只把时钟平移到当前预测 tick。
+		// 旁观期间分支已经按自己的时间线推进到当前预测 tick，回到游戏时
+		// 直接接回，不再补跳；只清理旁观期间保留的输入状态。
 		m_SpectatingBranch = false;
-		const int TargetTick = Client()->PredGameTick(g_Config.m_ClDummy);
-		ShiftPracticeWorldTicks(TargetTick - m_PracticeBaseWorld.GameTick());
 		CapturePracticeInputFilterStates();
 		ReleaseBufferedActionInputState();
 		m_SuppressFireOnNextPredictTick = true;
@@ -2481,8 +2642,8 @@ void CFastPractice::OnNewSnapshot()
 		return;
 	}
 
-	// 自身旁观同样会带上 paused 标记，先认旁观，否则会被当成“服务器暂停”，
-	// 每帧走冻结路径并把分支时钟追赶一遍。旁观只冻结世界、等回来时一次性对齐。
+	// 自身旁观同样会带上 paused 标记，先认旁观，否则会被当成“服务器暂停”。
+	// 旁观期间分支仍由 OverridePredict 按自己的时间线推进，不冻结世界。
 	if(GameClient()->m_Snap.m_SpecInfo.m_Active || (GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS))
 	{
 		m_SpectatingBranch = m_PracticeWorldInitialized;

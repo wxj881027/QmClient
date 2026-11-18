@@ -7579,6 +7579,16 @@ void CGameClient::UpdateRenderedCharacters()
 			const int Emote = m_FastPractice.ResolvePracticeEyeEmote(i, ServerEmote, ServerActive, m_aClients[i].m_Afk);
 			m_aClients[i].m_RenderCur.m_Emote = Emote;
 			m_aClients[i].m_RenderPrev.m_Emote = Emote;
+			// 冻结状态也只有分支世界知道：快照里的 FreezeEnd 属于服务器时间线。
+			// players/hud 在渲染阶段统一读 ClientData，因此在这里覆盖一次，冻结隐身、
+			// 解冻进度与 HUD 计数才会和分支里的实际碰撞状态一致。
+			if(CCharacter *pPracticeChar = m_FastPractice.ResolvePracticeCharacter(i))
+			{
+				const CCharacterCore *pCore = pPracticeChar->Core();
+				m_aClients[i].m_FreezeEnd = pCore->m_FreezeEnd;
+				m_aClients[i].m_DeepFrozen = pCore->m_DeepFrozen;
+				m_aClients[i].m_LiveFrozen = pCore->m_LiveFrozen;
+			}
 		}
 		m_aClients[i].m_RenderPos = Pos;
 		if(Predict() && i == m_Snap.m_LocalClientId)

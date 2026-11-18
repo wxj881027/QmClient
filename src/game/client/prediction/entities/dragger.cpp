@@ -2,6 +2,7 @@
 #include "dragger.h"
 
 #include "character.h"
+#include "door.h"
 
 #include <engine/shared/config.h>
 
@@ -157,4 +158,28 @@ void CDragger::Read(const CLaserData *pData)
 bool CDragger::Match(CDragger *pDragger)
 {
 	return pDragger->m_Strength == m_Strength && pDragger->m_Number == m_Number && pDragger->m_IgnoreWalls == m_IgnoreWalls;
+}
+
+std::optional<CLaserData> CDragger::RenderData(int Team)
+{
+	const auto &vSwitchers = GameWorld()->Switchers();
+	const bool IsSwitchLayer = m_Layer == LAYER_SWITCH;
+	const bool SwitchStatus = IsSwitchLayer && m_Number > 0 && m_Number < (int)vSwitchers.size() &&
+				  Team >= 0 && Team < NUM_DDRACE_TEAMS && vSwitchers[m_Number].m_aStatus[Team];
+	if(!QmPracticeSwitchActive(IsSwitchLayer, m_Number, Team, (int)vSwitchers.size(), SwitchStatus))
+		return std::nullopt;
+
+	CCharacter *pTarget = m_TargetId >= 0 ? GameWorld()->GetCharacterById(m_TargetId) : nullptr;
+	CLaserData Data = {};
+	Data.m_From = m_Pos;
+	Data.m_To = pTarget != nullptr ? pTarget->m_Pos : m_Pos;
+	Data.m_StartTick = GameWorld()->GameTick();
+	Data.m_ExtraInfo = true;
+	Data.m_Owner = pTarget != nullptr ? pTarget->GetCid() : -1;
+	Data.m_Type = LASERTYPE_DRAGGER;
+	Data.m_SwitchNumber = m_Number;
+	Data.m_Subtype = QmPracticeDraggerSubtype(m_Strength, m_IgnoreWalls);
+	Data.m_Predict = false;
+	Data.m_TuneZone = GameWorld()->m_WorldConfig.m_UseTuneZones ? Collision()->IsTune(Collision()->GetMapIndex(m_Pos)) : 0;
+	return Data;
 }

@@ -35,6 +35,7 @@ public:
 	bool InitFromSnapshot(vec2 SnapshotHub, vec2 SnapshotFrom, int SnapshotEvalTick);
 	// 配置完角度/长度/速度后立即重算碰撞端点，避免首帧停在零长度或旧角度上。
 	void RefreshGeometry();
+	void ShiftEvalTick(int TickDelta) { m_EvalTick += TickDelta; }
 	// 渲染层数据。开关关闭时返回空，网络裁剪外也能画出与分支碰撞一致的激光。
 	std::optional<CLaserData> RenderData(int Team);
 

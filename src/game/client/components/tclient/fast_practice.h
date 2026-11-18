@@ -145,14 +145,20 @@ private:
 	int m_EnableLocalClientId = -1;
 	int m_EnableDummyClientId = -1;
 	bool m_PracticeWorldInitialized = false;
-	// 旁观期间分支世界不推进，但仍是渲染与镜头权威。退出旁观时把分支时钟
-	// 平移到当前预测 tick，避免把旁观这段时间当作要补算的 tick。
+	// 旁观期间分支世界继续按自己的时间线推进，玩家不操控时两个参与者使用中性输入。
+	// 退出旁观直接接回当前分支状态，不再补跳时钟。
 	bool m_SpectatingBranch = false;
 	bool m_HasDummyAnchor = false;
 	// 分身接入/断开会重新 fork 分支世界。这份待还原的本地 tee 让角色留在
 	// 练习分支的位置上，而不是被换回服务器世界里的 tee。
 	bool m_HasPendingLocalTee = false;
 	SQmPracticeSavedTee m_PendingLocalTee;
+	// client id 改变时旧分支的 solo 不能按新 id 找到；重绑时先把状态寄存，
+	// 等 InitPracticeWorld 建出新参与者后再写回。
+	bool m_HasPendingLocalSolo = false;
+	bool m_PendingLocalSolo = false;
+	bool m_HasPendingDummySolo = false;
+	bool m_PendingDummySolo = false;
 	CPracticeRecorder m_Recorder;
 	bool m_SuppressFireOnNextPredictTick = false;
 	int m_InputSuppressTicks = 0;
@@ -233,6 +239,12 @@ private:
 	bool ResolvePracticeRoles(int &LocalClientId, int &DummyClientId) const;
 	bool IsPracticeServerPauseActive() const;
 	void ShiftPracticeWorldTicks(int TickDelta);
+	// 只平移世界实体与开关的绝对 tick；/restart 从入口快照恢复时使用，
+	// 不碰 LocalWorld 轨迹、事件屏障和当前练习会话的命令状态。
+	void ShiftPracticeWorldEntityTicks(CGameWorld &World, int TickDelta);
+	// 旁观时 m_PredictedWorld 归服务器预测所有；这里直接推进分支世界，
+	// 用中性输入继续计时、机关与轨迹采样，退出旁观无需追赶。
+	void TickPracticeWorldDuringSpectate();
 	// 分支时钟的对齐目标：取预测 tick 与当前分支 tick 的较大值，绝不倒退。
 	int PracticeClockTarget() const;
 	void FreezePracticeWorldForServerPause();

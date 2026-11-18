@@ -1,4 +1,6 @@
 #include <game/client/components/qmclient/practice_predict_plan.h>
+#include <game/client/prediction/entities/door.h>
+#include <game/client/prediction/entities/dragger.h>
 
 #include <gtest/gtest.h>
 
@@ -143,4 +145,55 @@ TEST(QmPracticePredictPlan, CatchUpShiftOnlyForGapsBeyondTwoSeconds)
 	EXPECT_FALSE(QmPracticeCatchUpNeedsShift(100, 50));
 	EXPECT_TRUE(QmPracticeCatchUpNeedsShift(101, 50));
 	EXPECT_TRUE(QmPracticeCatchUpNeedsShift(60000, 50));
+}
+
+TEST(QmPracticeMechanismRender, DoorEndpointUsesCollisionLengthAndFallsBackToSnapshot)
+{
+	const vec2 Pos(32.0f, 64.0f);
+	const vec2 Direction(0.0f, 1.0f);
+	const vec2 End = QmPracticeDoorRenderEnd(Pos, vec2(0.0f, 0.0f), Direction, 96);
+	EXPECT_FLOAT_EQ(End.x, 32.0f);
+	EXPECT_FLOAT_EQ(End.y, 160.0f);
+
+	const vec2 SnapshotEnd(12.0f, 34.0f);
+	const vec2 Fallback = QmPracticeDoorRenderEnd(Pos, SnapshotEnd, Direction, 0);
+	EXPECT_FLOAT_EQ(Fallback.x, SnapshotEnd.x);
+	EXPECT_FLOAT_EQ(Fallback.y, SnapshotEnd.y);
+
+	// 关门折叠到 hub：端点回到门的固定端，而不是留下整条挡路激光。
+	const vec2 Closed = QmPracticeDoorRenderEnd(Pos, SnapshotEnd, Direction, 96, false);
+	EXPECT_FLOAT_EQ(Closed.x, Pos.x);
+	EXPECT_FLOAT_EQ(Closed.y, Pos.y);
+	const vec2 Open = QmPracticeDoorRenderEnd(Pos, SnapshotEnd, Direction, 96, true);
+	EXPECT_FLOAT_EQ(Open.y, 160.0f);
+}
+
+TEST(QmPracticeMechanismRender, DraggerSubtypeMatchesServerSnapEncoding)
+{
+	EXPECT_EQ(QmPracticeDraggerSubtype(1.0f, false), 0);
+	EXPECT_EQ(QmPracticeDraggerSubtype(1.0f, true), 1);
+	EXPECT_EQ(QmPracticeDraggerSubtype(3.0f, false), 4);
+	EXPECT_EQ(QmPracticeDraggerSubtype(3.0f, true), 5);
+	// 越界强度按服务端 Snap 的 clamp 收口到三档。
+	EXPECT_EQ(QmPracticeDraggerSubtype(0.0f, false), 0);
+	EXPECT_EQ(QmPracticeDraggerSubtype(8.0f, false), 4);
+}
+
+TEST(QmPracticeMechanismRender, SwitchActiveRequiresKnownTeamAndOpenSwitch)
+{
+	EXPECT_TRUE(QmPracticeSwitchActive(false, 0, -1, 0, false));
+	EXPECT_TRUE(QmPracticeSwitchActive(true, 0, -1, 0, false));
+	EXPECT_FALSE(QmPracticeSwitchActive(true, 3, 2, 4, false));
+	EXPECT_FALSE(QmPracticeSwitchActive(true, 3, -1, 4, true));
+	// 快照里编号越界不参与 Inactive 判定，按开启处理，避免整只机关消失。
+	EXPECT_TRUE(QmPracticeSwitchActive(true, 4, 2, 4, true));
+	EXPECT_TRUE(QmPracticeSwitchActive(true, 3, 2, 4, true));
+}
+
+TEST(QmPracticeMechanismRender, SnapshotHubDedupeUsesTwoPixelTolerance)
+{
+	const vec2 Hub(100.0f, 100.0f);
+	EXPECT_TRUE(QmPracticeLaserHubMatches(vec2(101.9f, 100.0f), Hub));
+	EXPECT_FALSE(QmPracticeLaserHubMatches(vec2(102.0f, 100.0f), Hub));
+	EXPECT_FALSE(QmPracticeLaserHubMatches(vec2(98.0f, 100.0f), Hub));
 }

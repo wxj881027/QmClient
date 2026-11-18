@@ -14,6 +14,9 @@ CDoor::CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData) :
 {
 	m_Id = Id;
 	m_Active = false;
+	m_To = vec2(0.0f, 0.0f);
+	m_Direction = vec2(0.0f, 0.0f);
+	m_Length = 0;
 
 	m_Number = pData->m_SwitchNumber;
 	m_Layer = m_Number > 0 ? LAYER_SWITCH : LAYER_GAME;
@@ -140,4 +143,26 @@ void CDoor::Read(const CLaserData *pData)
 bool CDoor::Match(const CDoor *pDoor) const
 {
 	return pDoor->m_Pos == m_Pos && pDoor->m_To == m_To && pDoor->m_Number == m_Number;
+}
+
+CLaserData CDoor::RenderData(int Team)
+{
+	const auto &vSwitchers = GameWorld()->Switchers();
+	const bool IsSwitchLayer = m_Layer == LAYER_SWITCH;
+	const bool SwitchStatus = IsSwitchLayer && m_Number > 0 && m_Number < (int)vSwitchers.size() &&
+				  Team >= 0 && Team < NUM_DDRACE_TEAMS && vSwitchers[m_Number].m_aStatus[Team];
+	const bool Active = QmPracticeSwitchActive(IsSwitchLayer, m_Number, Team, (int)vSwitchers.size(), SwitchStatus);
+
+	CLaserData Data = {};
+	Data.m_From = QmPracticeDoorRenderEnd(m_Pos, m_To, m_Direction, m_Length, Active);
+	Data.m_To = m_Pos;
+	Data.m_StartTick = GameWorld()->GameTick();
+	Data.m_ExtraInfo = true;
+	Data.m_Owner = -1;
+	Data.m_Type = LASERTYPE_DOOR;
+	Data.m_SwitchNumber = m_Number;
+	Data.m_Subtype = 0;
+	Data.m_Predict = false;
+	Data.m_TuneZone = GameWorld()->m_WorldConfig.m_UseTuneZones ? Collision()->IsTune(Collision()->GetMapIndex(m_Pos)) : 0;
+	return Data;
 }

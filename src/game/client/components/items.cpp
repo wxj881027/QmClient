@@ -17,6 +17,8 @@
 #include <game/client/gameclient.h>
 #include <game/client/laser_data.h>
 #include <game/client/pickup_data.h>
+#include <game/client/prediction/entities/door.h>
+#include <game/client/prediction/entities/dragger.h>
 #include <game/client/prediction/entities/laser.h>
 #include <game/client/prediction/entities/pickup.h>
 #include <game/client/prediction/entities/practice_light.h>
@@ -671,11 +673,15 @@ void CItems::OnRender()
 	// 练习分支重建的静态激光没有对应的服务器快照，必须由分支世界自己绘制，
 	// 否则走出网络裁剪范围后会出现看不见、却仍在冻结的机关。
 	std::vector<vec2> vPracticeLightHubs;
+	std::vector<vec2> vPracticeDoorHubs;
+	std::vector<vec2> vPracticeDraggerHubs;
 	if(UsePredicted)
 	{
 		if(CGameWorld *pPracticeWorld = GameClient()->m_FastPractice.PracticeLightWorld())
 		{
 			vPracticeLightHubs.reserve(64);
+			vPracticeDoorHubs.reserve(64);
+			vPracticeDraggerHubs.reserve(64);
 			for(CEntity *pEnt = pPracticeWorld->FindFirst(CGameWorld::ENTTYPE_LIGHT); pEnt; pEnt = pEnt->TypeNext())
 			{
 				auto *pLight = dynamic_cast<CPracticeLight *>(pEnt);
@@ -683,6 +689,28 @@ void CItems::OnRender()
 					continue;
 				vPracticeLightHubs.push_back(pLight->m_Pos);
 				const std::optional<CLaserData> Data = pLight->RenderData(SwitcherTeam);
+				if(!Data.has_value() || !IsLaserInside(*Data))
+					continue;
+				RenderLaser(&*Data, true);
+			}
+			for(CEntity *pEnt = pPracticeWorld->FindFirst(CGameWorld::ENTTYPE_DOOR); pEnt; pEnt = pEnt->TypeNext())
+			{
+				auto *pDoor = dynamic_cast<CDoor *>(pEnt);
+				if(pDoor == nullptr)
+					continue;
+				vPracticeDoorHubs.push_back(pDoor->m_Pos);
+				const CLaserData Data = pDoor->RenderData(SwitcherTeam);
+				if(!IsLaserInside(Data))
+					continue;
+				RenderLaser(&Data, true);
+			}
+			for(CEntity *pEnt = pPracticeWorld->FindFirst(CGameWorld::ENTTYPE_DRAGGER); pEnt; pEnt = pEnt->TypeNext())
+			{
+				auto *pDragger = dynamic_cast<CDragger *>(pEnt);
+				if(pDragger == nullptr)
+					continue;
+				vPracticeDraggerHubs.push_back(pDragger->m_Pos);
+				const std::optional<CLaserData> Data = pDragger->RenderData(SwitcherTeam);
 				if(!Data.has_value() || !IsLaserInside(*Data))
 					continue;
 				RenderLaser(&*Data, true);
@@ -803,7 +831,29 @@ void CItems::OnRender()
 			{
 				for(const vec2 &Hub : vPracticeLightHubs)
 				{
-					if(distance(Hub, Data.m_To) < 2.0f)
+					if(QmPracticeLaserHubMatches(Data.m_To, Hub))
+					{
+						PracticeDuplicate = true;
+						break;
+					}
+				}
+			}
+			else if(Data.m_Type == LASERTYPE_DOOR && Data.m_Owner < 0)
+			{
+				for(const vec2 &Hub : vPracticeDoorHubs)
+				{
+					if(QmPracticeLaserHubMatches(Data.m_To, Hub))
+					{
+						PracticeDuplicate = true;
+						break;
+					}
+				}
+			}
+			else if(Data.m_Type == LASERTYPE_DRAGGER)
+			{
+				for(const vec2 &Hub : vPracticeDraggerHubs)
+				{
+					if(QmPracticeLaserHubMatches(Data.m_From, Hub))
 					{
 						PracticeDuplicate = true;
 						break;
