@@ -40,6 +40,10 @@ bool CByteBufferReader::Read(void *pData, size_t Size)
 	}
 }
 
+// 为调试构建中的 allocator_traits 提供字节分配函数的链接定义。
+template uint8_t *CByteBufferWriter::CAllocator<uint8_t>::allocate(size_t);
+template void CByteBufferWriter::CAllocator<uint8_t>::deallocate(uint8_t *, size_t) noexcept;
+
 bool CByteBufferWriter::Write(const void *pData, size_t Size) noexcept
 {
 	if(!Size)
