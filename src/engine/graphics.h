@@ -724,6 +724,10 @@ public:
 		float m_U1 = 1.0f;
 		float m_V1 = 0.0f;
 		bool m_HasCustomTextureCoordinates = false;
+		float m_CustomU0 = 0.0f;
+		float m_CustomV0 = 0.0f;
+		float m_CustomU1 = 1.0f;
+		float m_CustomV1 = 1.0f;
 
 		// 以表面的几何上缘为起点向下减弱黑色，独立于纹理方向与边缘覆盖率。
 		float m_TopShade = 0.0f;
@@ -761,6 +765,10 @@ public:
 			m_V0 = V0;
 			m_U1 = U1;
 			m_V1 = V1;
+			m_CustomU0 = U0;
+			m_CustomV0 = V0;
+			m_CustomU1 = U1;
+			m_CustomV1 = V1;
 			m_HasCustomTextureCoordinates = true;
 		}
 
@@ -770,12 +778,10 @@ public:
 			const bool TopLeftOrigin = Backend == BACKEND_TYPE_VULKAN || Backend == BACKEND_TYPE_METAL;
 			if(m_HasCustomTextureCoordinates)
 			{
-				if(!TopLeftOrigin)
-				{
-					const float V0 = m_V0;
-					m_V0 = 1.0f - m_V1;
-					m_V1 = 1.0f - V0;
-				}
+				m_U0 = m_CustomU0;
+				m_U1 = m_CustomU1;
+				m_V0 = TopLeftOrigin ? m_CustomV0 : 1.0f - m_CustomV1;
+				m_V1 = TopLeftOrigin ? m_CustomV1 : 1.0f - m_CustomV0;
 				return;
 			}
 			m_U0 = 0.0f;

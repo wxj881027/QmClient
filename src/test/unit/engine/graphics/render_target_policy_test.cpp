@@ -118,4 +118,11 @@ TEST(GraphicsRenderTarget, NativeCoordinatesPreserveCustomRangeAndOnlyFlipV)
 	EXPECT_FLOAT_EQ(BottomLeft.m_U1, 0.8f);
 	EXPECT_FLOAT_EQ(BottomLeft.m_V0, 0.6f);
 	EXPECT_FLOAT_EQ(BottomLeft.m_V1, 0.9f);
+	// 同一组参数重复请求原生方向必须幂等；切回左上原点后端也要从原始裁切重新派生。
+	BottomLeft.SetNativeTextureCoordinates(BACKEND_TYPE_OPENGL);
+	EXPECT_FLOAT_EQ(BottomLeft.m_V0, 0.6f);
+	EXPECT_FLOAT_EQ(BottomLeft.m_V1, 0.9f);
+	BottomLeft.SetNativeTextureCoordinates(BACKEND_TYPE_VULKAN);
+	EXPECT_FLOAT_EQ(BottomLeft.m_V0, 0.1f);
+	EXPECT_FLOAT_EQ(BottomLeft.m_V1, 0.4f);
 }
