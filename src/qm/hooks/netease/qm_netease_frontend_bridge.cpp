@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cmath>
 #include <limits>
+#include <stdexcept>
 #include <utility>
 
 #if defined(_WIN32)
@@ -690,8 +691,6 @@ namespace QmNeteaseBridge
 				Snapshot.m_Flags |= QmNeteaseHook::V5_FLAG_HAS_SONG;
 			if(m_PositionValid)
 				Snapshot.m_Flags |= QmNeteaseHook::V5_FLAG_POSITION_VALID;
-			if(PositionAnchored && m_PositionValid)
-				Snapshot.m_Flags |= QmNeteaseHook::V5_FLAG_POSITION_ANCHORED;
 			if(m_PlayingHint)
 				Snapshot.m_Flags |= QmNeteaseHook::V5_FLAG_PLAYING_HINT;
 			HighPriorityTimelineActive = m_Timeline.m_HasTiming && !m_Timeline.m_vLines.empty() &&
@@ -700,13 +699,30 @@ namespace QmNeteaseBridge
 				Snapshot.m_Flags |= QmNeteaseHook::V5_FLAG_LYRIC_TIMELINE_VALID;
 			if(HighPriorityTimelineActive)
 				Snapshot.m_LyricSource = (uint32_t)m_Source;
-			if(!m_CurrentLyric.empty() && m_Source != QmNeteaseHook::ENeteaseLyricSource::None)
+			std::string_view CurrentLyric = m_CurrentLyric;
+			int64_t LineStartMs = m_LineStartMs;
+			int64_t LineEndMs = m_LineEndMs;
+			if(PositionAnchored && m_PositionValid)
+			{
+				// 拖动进度后，客户端会用带锚点的快照更新当前句。按该锚点取句，避免带上上一轮 Tick 的歌词。
+				Snapshot.m_Flags |= QmNeteaseHook::V5_FLAG_POSITION_ANCHORED;
+				Snapshot.m_PositionMs = m_Anchor.m_PositionMs;
+				const auto Selected = NeteaseLyrics::SelectCurrentLine(m_Timeline, Snapshot.m_PositionMs);
+				CurrentLyric = {};
+				if(Selected.m_pLine)
+				{
+					CurrentLyric = Selected.m_pLine->m_Text;
+					LineStartMs = Selected.m_pLine->m_StartMs;
+					LineEndMs = Selected.m_pLine->m_EndMs;
+				}
+			}
+			if(m_Source != QmNeteaseHook::ENeteaseLyricSource::None &&
+				QmNeteaseHook::CopyUtf8Truncated(Snapshot.m_aCurrentLyric, sizeof(Snapshot.m_aCurrentLyric), CurrentLyric.data(), CurrentLyric.size()) != 0)
 			{
 				Snapshot.m_Flags |= QmNeteaseHook::V5_FLAG_LYRIC_VALID;
 				Snapshot.m_LyricSource = (uint32_t)m_Source;
-				Snapshot.m_LineStartMs = m_LineStartMs;
-				Snapshot.m_LineEndMs = m_LineEndMs;
-				QmNeteaseHook::CopyUtf8Truncated(Snapshot.m_aCurrentLyric, sizeof(Snapshot.m_aCurrentLyric), m_CurrentLyric.data(), m_CurrentLyric.size());
+				Snapshot.m_LineStartMs = LineStartMs;
+				Snapshot.m_LineEndMs = LineEndMs;
 			}
 		}
 		if(!Force && !HighPriorityTimelineActive)
@@ -715,6 +731,8 @@ namespace QmNeteaseBridge
 			if(m_pOperations->ReadSnapshot(Existing) && QmNeteaseHook::ShouldPreserveDesktopFallbackV5(Existing, Snapshot, Snapshot.m_UpdatedAtTick, FALLBACK_SNAPSHOT_STALE_MS))
 				return;
 		}
-		m_pOperations->PublishSnapshot(Snapshot);
+		// 启动时首份快照写入失败也要触发回滚，让 helper 可以重试。
+		if(!m_pOperations->PublishSnapshot(Snapshot) && Force)
+			throw std::runtime_error("Netease v5 snapshot publication failed");
 	}
 }

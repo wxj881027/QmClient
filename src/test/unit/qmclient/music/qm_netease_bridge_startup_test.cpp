@@ -83,6 +83,24 @@ TEST(QmNeteaseBridgeStartup, InitialPublishExceptionStopsReportsWithoutCreatingT
 	EXPECT_EQ(Operations.m_ThreadCalls, 0);
 }
 
+TEST(QmNeteaseBridgeStartup, DeclinedInitialSnapshotStopsReportsWithoutCreatingTickThread)
+{
+	class CRejectingSnapshotOperations : public COperations
+	{
+	public:
+		bool PublishSnapshot(QmNeteaseHook::SSnapshotV5) override { return false; }
+	};
+
+	CRejectingSnapshotOperations Operations;
+	CFrontendLyricBridge Bridge(Operations);
+	EXPECT_FALSE(Bridge.Start(42, L""));
+	EXPECT_FALSE(Bridge.IsRunning());
+	EXPECT_EQ(Operations.m_ReportStops, 1);
+	EXPECT_EQ(Operations.m_Closed, 1);
+	EXPECT_LT(Operations.m_LastStopOrder, Operations.m_LastCloseOrder);
+	EXPECT_EQ(Operations.m_ThreadCalls, 0);
+}
+
 TEST(QmNeteaseBridgeStartup, TickThreadCreationExceptionsReleaseReportsAndMapping)
 {
 	for(int Kind : {1, 2, 3})

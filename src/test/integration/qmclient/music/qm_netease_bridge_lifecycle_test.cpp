@@ -85,6 +85,53 @@ TEST(QmNeteaseBridgeLifecycleIntegration, ReportsParserAndTickPublishTheSelected
 	EXPECT_TRUE(QmNeteaseHook::ValidateSnapshotV5(Snapshot));
 }
 
+TEST(QmNeteaseBridgeLifecycleIntegration, PausedSeekPublishesTheNewLineWithThePositionAnchor)
+{
+	COperations Operations;
+	Operations.m_RealThread = true;
+	CFrontendLyricBridge Bridge(Operations);
+	ASSERT_TRUE(Bridge.Start(42, L""));
+	ASSERT_TRUE(Operations.Wait([&] { return Operations.m_Waits >= 1; }));
+	PausedSong(Operations);
+	Operations.Advance();
+	ASSERT_TRUE(Operations.Wait([&] { return Operations.m_Waits >= 2; }));
+	ASSERT_STREQ(Operations.Latest().m_aCurrentLyric, "hello");
+
+	Operations.Emit(R"({"kind":"progress","songId":"42","positionMs":2500,"playing":false})");
+	const auto Snapshot = Operations.Latest();
+	ASSERT_TRUE(QmNeteaseHook::ValidateSnapshotV5(Snapshot));
+	EXPECT_NE(Snapshot.m_Flags & QmNeteaseHook::V5_FLAG_POSITION_ANCHORED, 0U);
+	EXPECT_EQ(Snapshot.m_PositionMs, 2500);
+	EXPECT_EQ(Snapshot.m_LineStartMs, 2000);
+	EXPECT_EQ(Snapshot.m_LineEndMs, -1);
+	EXPECT_STREQ(Snapshot.m_aCurrentLyric, "world");
+}
+
+TEST(QmNeteaseBridgeLifecycleIntegration, EmptyTransportTextKeepsThePositionAndTimelineReadable)
+{
+	COperations Operations;
+	Operations.m_RealThread = true;
+	CFrontendLyricBridge Bridge(Operations);
+	ASSERT_TRUE(Bridge.Start(42, L""));
+	ASSERT_TRUE(Operations.Wait([&] { return Operations.m_Waits >= 1; }));
+	Operations.Emit(R"({"kind":"progress","songId":"42","positionMs":1500,"playing":false})");
+	Operations.Emit(R"({"kind":"lyrics","songId":"42","rawLyrics":{"lrc":"[00:01.00]\u0000\n[00:02.00]world"}})");
+	const int Published = Operations.m_Published;
+	Operations.Advance();
+	ASSERT_TRUE(Operations.Wait([&] { return Operations.m_Waits >= 2; }));
+	ASSERT_GT(Operations.m_Published, Published);
+
+	const auto Snapshot = Operations.Latest();
+	EXPECT_TRUE(QmNeteaseHook::ValidateSnapshotV5(Snapshot));
+	EXPECT_EQ(Snapshot.m_SongId, 42U);
+	EXPECT_EQ(Snapshot.m_PositionMs, 1500);
+	EXPECT_NE(Snapshot.m_Flags & QmNeteaseHook::V5_FLAG_POSITION_VALID, 0U);
+	EXPECT_NE(Snapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_TIMELINE_VALID, 0U);
+	EXPECT_EQ(Snapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_VALID, 0U);
+	EXPECT_EQ(Snapshot.m_LineStartMs, -1);
+	EXPECT_EQ(Snapshot.m_LineEndMs, -1);
+}
+
 TEST(QmNeteaseBridgeLifecycleIntegration, DelayedTickCannotOverwriteNewSong)
 {
 	CDelayedSongPublication Operations;
