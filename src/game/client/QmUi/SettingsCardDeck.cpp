@@ -47,6 +47,12 @@ namespace
 		const uint64_t TabKey = str_quickhash(pTab != nullptr ? pTab : "");
 		return BuildUiAnimNodeKey(BuildUiAnimNodeKey(str_quickhash("settings-card-height"), TabKey), str_quickhash(pStableId != nullptr ? pStableId : ""));
 	}
+
+	uint64_t SettingsCardWidthNodeKey(const char *pTab, const char *pStableId)
+	{
+		const uint64_t TabKey = str_quickhash(pTab != nullptr ? pTab : "");
+		return BuildUiAnimNodeKey(BuildUiAnimNodeKey(str_quickhash("settings-card-width"), TabKey), str_quickhash(pStableId != nullptr ? pStableId : ""));
+	}
 }
 
 void CSettingsCardDeck::ResetDefinitionViewState()
@@ -159,6 +165,7 @@ void CSettingsCardDeck::BeginDisplayCycle(uint64_t DisplayCycle, bool AnimateEnt
 			Runtime.m_ContentHeightAnimFrom = 0.0f;
 			Runtime.m_ContentHeightAnimTo = 0.0f;
 			Runtime.m_ContentHeightAnimElapsed = 0.0f;
+			Runtime.m_WidthMotion.Invalidate();
 			Runtime.m_CollapsedInitialized = false;
 			Runtime.m_HasLayoutReference = false;
 			Runtime.m_PointerInsideLastFrame = false;
@@ -291,7 +298,10 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		m_WidthLayoutRevision = Model.LayoutRevision();
 		m_WidthAnchorStateIndex = -1;
 		for(auto &Runtime : m_vRuntimeStates)
+		{
 			Runtime.m_HasLayoutReference = false;
+			Runtime.m_WidthMotion.Invalidate();
+		}
 	}
 	bool ScrollMovedThisFrame = false;
 	if(pScrollRegion != nullptr)
@@ -311,6 +321,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	m_ObservedContentChanged = false;
 	bool ContentHeightTargetChanged = false;
 	bool ContentHeightAnimationActive = false;
+	bool WidthAnimationActive = false;
 	// 内容高度补间由 Deck 自己按帧推进。动效运行时的帧时钟每帧只 Advance 一次，
 	// 用它识别帧边界，避免同一帧跑两趟（预布局输入前后各一次）时推进两次。
 	float ContentHeightFrameDt = 0.0f;
@@ -349,12 +360,16 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 					ColumnRect = DrawLayout.m_aColumns[LayoutColumn - 1];
 				}
 			}
+			SRuntimeState &Runtime = m_vRuntimeStates[StateIndex];
 			CUIRect Slot{ColumnRect.x, ColumnRect.y, ColumnRect.w, 0.0f};
+			const CUIRect TargetSlot = Slot;
+			Slot = Runtime.m_WidthMotion.Update(Ctx.m_pAnim, SettingsCardWidthNodeKey(pTab, pDefinition->m_Spec.m_pStableId), TargetSlot, Motion.m_ReflowDuration, m_Drag.Active());
+			const bool CardWidthAnimationActive = Runtime.m_WidthMotion.IsActive();
+			WidthAnimationActive = WidthAnimationActive || CardWidthAnimationActive;
 			float &CachedContentHeight = m_vContentHeights[StateIndex];
 			float &CachedContentWidth = m_vContentWidths[StateIndex];
 			uint64_t &CachedMeasureRevision = m_vMeasureRevisions[StateIndex];
 			const float PreviousContentHeight = CachedContentHeight;
-			SRuntimeState &Runtime = m_vRuntimeStates[StateIndex];
 			const bool HasCustomCollapsedState = static_cast<bool>(pDefinition->m_IsCollapsed);
 			const bool Collapsed = SettingsCardDeckResolveCollapsed(HasCustomCollapsedState, HasCustomCollapsedState && pDefinition->m_IsCollapsed(), Runtime.m_DefaultCollapsed);
 			const float ContentWidth = std::max(0.0f, Slot.w - 2.0f * ui_token::settings::CARD_PADDING * (Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f));
@@ -392,7 +407,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			const float TargetContentHeight = Collapsed ? 0.0f : std::max(0.0f, CachedContentHeight);
 			const bool HeightInitializedThisFrame = !Runtime.m_ContentHeightInitialized;
 			const bool HeightTargetChanged = Runtime.m_ContentHeightInitialized && std::abs(Runtime.m_LastContentHeightTarget - TargetContentHeight) > 0.01f;
-			const SSettingsCardHeightAnimationWork HeightWork = ResolveSettingsCardHeightAnimationWork(HeightInitializedThisFrame, HeightTargetChanged, Runtime.m_ContentHeightWasActive, Motion.m_ContentHeightDuration, m_Drag.Active() || Ctx.m_pAnim == nullptr);
+			// 宽度过渡期间内容会在每一帧重新换行；高度直接采用当前宽度下的测量值，
+			// 不再叠加另一条追赶轨道，卡片外壳才能贴住正在变化的内容。
+			const SSettingsCardHeightAnimationWork HeightWork = ResolveSettingsCardHeightAnimationWork(HeightInitializedThisFrame, HeightTargetChanged, Runtime.m_ContentHeightWasActive, Motion.m_ContentHeightDuration, m_Drag.Active() || Ctx.m_pAnim == nullptr || CardWidthAnimationActive);
 			if(HeightInitializedThisFrame)
 			{
 				if(Input.m_pDiagnostics != nullptr)
@@ -657,7 +674,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		}
 	}
 	m_LastEntryOffsetY = DeckEntryOffsetY;
-	if(!m_Drag.Active() && SettingsCardDeckAllowsDragStart(EntryPending, EntryPositionActive, ReflowTargetChanged, ReflowPositionActive || ContentHeightAnimationActive) && (Input.m_CtrlPressed || Input.m_AllowHeaderDrag) && Input.m_MousePressed)
+	if(!m_Drag.Active() && SettingsCardDeckAllowsDragStart(EntryPending, EntryPositionActive, ReflowTargetChanged, ReflowPositionActive || ContentHeightAnimationActive || WidthAnimationActive) && (Input.m_CtrlPressed || Input.m_AllowHeaderDrag) && Input.m_MousePressed)
 	{
 		for(const SPreparedCard &Card : m_vPreparedCards)
 		{
@@ -848,7 +865,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			State.m_Collapsed = Collapsed;
 			State.m_ShowDefaultCollapseButton = SettingsCardDeckUsesDefaultCollapseControl(HasCustomCollapsedState, static_cast<bool>(Card.m_pDefinition->m_PreLayoutHeaderInput));
 			State.m_HoverFeedbackEnabled = !m_SuppressHoverFeedbackOnce && !ScrollMovedThisFrame && !EntryPositionActive &&
-						       !ContentHeightAnimationActive && !ReflowTargetChanged && !ReflowPositionActive;
+						       !ContentHeightAnimationActive && !ReflowTargetChanged && !ReflowPositionActive && !WidthAnimationActive;
 			bool PointerInsideDrawFrame = false;
 			SSettingsCardFrame Frame = Card.m_Frame;
 			const auto HeaderAction = [&](const SSettingsCardFrame &DrawFrame, bool IsCollapsed) {
@@ -919,7 +936,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	}
 	// 入场或重排期间鼠标可能仍停在卡片最终位置；只有布局稳定后再次移动鼠标才恢复 hover 亮度，
 	// 避免动画结束的首帧从普通背景突然跳到高亮背景。
-	const bool LayoutStable = !EntryPending && !EntryPositionActive && !ContentHeightAnimationActive && !ReflowTargetChanged && !ReflowPositionActive;
+	const bool LayoutStable = !EntryPending && !EntryPositionActive && !ContentHeightAnimationActive && !ReflowTargetChanged && !ReflowPositionActive && !WidthAnimationActive;
 	// 把「卡片还在动」发布给外部：语音冷启动这类一次性重活要等动画播完，
 	// 否则展开动画和音频子系统初始化会压在同一帧。
 	qm_settings_motion::PublishCardAnimationActive(!LayoutStable);
