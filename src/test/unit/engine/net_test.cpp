@@ -471,6 +471,27 @@ TEST(NetClient, QosCanBeDisabledAndReenabledWithoutAConnection)
 	Client.Close();
 }
 
+TEST(NetClient, ConnectionlessSendFailsAfterClose)
+{
+	CNetClient Client{};
+	NETADDR BindAddr{};
+	ASSERT_EQ(net_addr_from_str(&BindAddr, "127.0.0.1"), 0);
+	ASSERT_TRUE(Client.Open(BindAddr));
+	Client.Close();
+
+	const char aRequest[] = "request";
+	CNetChunk Chunk{};
+	Chunk.m_ClientId = -1;
+	Chunk.m_Address = BindAddr;
+	Chunk.m_Flags = NETSENDFLAG_CONNLESS;
+	Chunk.m_pData = aRequest;
+	Chunk.m_DataSize = sizeof(aRequest) - 1;
+
+	EXPECT_EQ(Client.Send(&Chunk), -1);
+	Chunk.m_Address.type |= NETTYPE_TW7;
+	EXPECT_EQ(Client.Send(&Chunk), -1);
+}
+
 TEST(Net, ConnectionRejectsUnexpectedAddressWhileConnecting)
 {
 	InitNetBase();
