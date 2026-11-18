@@ -3,8 +3,6 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
-#include <new>
-
 namespace
 {
 	class CSaveRootView
@@ -12,7 +10,7 @@ namespace
 		IStorage &m_Storage;
 
 	public:
-		bool m_ThrowAfterList = false;
+		bool m_FailAfterList = false;
 		explicit CSaveRootView(IStorage &Storage) :
 			m_Storage(Storage) {}
 		int NumPaths() const { return 1; }
@@ -20,11 +18,16 @@ namespace
 		{
 			m_Storage.GetCompletePath(Type, pPath, pOut, Size);
 		}
-		void ListDirectoryInfo(int Type, const char *pPath, FS_LISTDIR_CALLBACK_FILEINFO pfnCallback, void *pUser)
+		bool FileExists(const char *pPath, int Type)
 		{
-			m_Storage.ListDirectoryInfo(Type, pPath, pfnCallback, pUser);
-			if(m_ThrowAfterList)
-				throw std::bad_alloc();
+			return m_Storage.FileExists(pPath, Type);
+		}
+		EFsListDirectoryResult ListDirectoryChecked(int Type, const char *pPath, FS_LISTDIR_CALLBACK pfnCallback, void *pUser)
+		{
+			const auto Result = m_Storage.ListDirectoryChecked(Type, pPath, pfnCallback, pUser);
+			if(m_FailAfterList && Result == EFsListDirectoryResult::SUCCESS)
+				return EFsListDirectoryResult::IO_FAILURE;
+			return Result;
 		}
 	};
 
@@ -81,7 +84,7 @@ TEST_F(CQmAudioPackCandidates, NativeEnumerationBoundaryFailureKeepsSnapshotUnti
 {
 	Store("audio/new.wv");
 	CSaveRootView View(*m_pStorage);
-	View.m_ThrowAfterList = true;
+	View.m_FailAfterList = true;
 	qm_audio_pack::CCandidateScan Scan(View);
 	std::vector<std::string> Paths{"audio/old.wv"};
 	auto Entries = qm_audio_pack::BuildCandidateEntries(Paths, "pack", "");
@@ -96,7 +99,7 @@ TEST_F(CQmAudioPackCandidates, NativeEnumerationBoundaryFailureKeepsSnapshotUnti
 	ASSERT_EQ(Entries.size(), 1u);
 	EXPECT_EQ(Entries.front().m_Path, "audio/old.wv");
 	EXPECT_EQ(Selection, 0);
-	View.m_ThrowAfterList = false;
+	View.m_FailAfterList = false;
 	ASSERT_TRUE(Refresh());
 	ASSERT_GE(Selection, 0);
 	ASSERT_LT(static_cast<size_t>(Selection), Entries.size());

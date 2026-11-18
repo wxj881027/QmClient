@@ -195,15 +195,15 @@ namespace qm_audio_pack
 			const SScanDirectory &m_Directory;
 			std::unordered_set<std::string> m_SeenNames;
 			size_t m_DirectoryLength = 0;
-			bool m_Failed = false;
+			bool m_VisitedEntry = false;
 		};
 
-		static int Visit(const CFsFileInfo *pInfo, int IsDir, int, void *pUser) noexcept
+		static int Visit(const char *pName, int IsDir, int, void *pUser) noexcept
 		{
 			auto &Context = *static_cast<SContext *>(pUser);
+			Context.m_VisitedEntry = true;
 			try
 			{
-				const char *pName = pInfo->m_pName;
 				// 与TYPE_ALL一致：先确定存储优先级，再应用隐藏目录或路径过滤。
 				if(!Context.m_SeenNames.emplace(pName).second)
 					return 0;
@@ -229,9 +229,20 @@ namespace qm_audio_pack
 			catch(...)
 			{
 				// 不把本模块的分配异常越过原生枚举回调，整批结果仍不发布。
-				Context.m_Failed = true;
 				return 1;
 			}
+		}
+
+		bool IsBlockedByFile(std::string Path, int Type)
+		{
+			while(!m_Storage.FileExists(Path.c_str(), Type))
+			{
+				const auto Slash = Path.rfind('/');
+				if(Slash == std::string::npos)
+					return false;
+				Path.resize(Slash);
+			}
+			return true;
 		}
 
 	public:
@@ -263,9 +274,14 @@ namespace qm_audio_pack
 						if(!aDirectory[0] || Context.m_DirectoryLength + 3 > IO_MAX_PATH_LENGTH)
 							continue;
 						// 逐存储根枚举，回调内去重，避免TYPE_ALL在回调外分配去重节点。
-						m_Storage.ListDirectoryInfo(Type, ScanPath.c_str(), Visit, &Context);
-						if(Context.m_Failed)
-							return false;
+						Context.m_VisitedEntry = false;
+						const auto Result = m_Storage.ListDirectoryChecked(Type, ScanPath.c_str(), Visit, &Context);
+						if(Result == EFsListDirectoryResult::SUCCESS || Result == EFsListDirectoryResult::NOT_FOUND)
+							continue;
+						// 其他存储根的同名文件可挡住这一路目录，保留已知文件的遮蔽行为。
+						if(Result == EFsListDirectoryResult::IO_FAILURE && !Context.m_VisitedEntry && IsBlockedByFile(ScanPath, Type))
+							continue;
+						return false;
 					}
 				}
 				Out.swap(m_Paths);
