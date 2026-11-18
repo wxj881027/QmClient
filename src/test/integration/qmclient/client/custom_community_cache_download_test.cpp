@@ -74,6 +74,47 @@ TEST_F(QmCustomCommunityCacheDownload, InvalidResponseKeepsTheOldCacheAndDiscard
 	EXPECT_FALSE(fs_is_file(pRequest->TemporaryPath()));
 }
 
+TEST_F(QmCustomCommunityCacheDownload, MissingOrNonArrayCommunitiesKeepsTheOldCache)
+{
+	const char *apInvalidBodies[] = {
+		"{}",
+		R"({"communities":null})",
+		R"({"communities":{}})",
+		R"({"communities":"none"})",
+		R"({"communities":0})",
+		R"({"communities":false})",
+	};
+	for(const char *pBody : apInvalidBodies)
+	{
+		SCOPED_TRACE(pBody);
+		auto pRequest = Request();
+		ASSERT_NO_FATAL_FAILURE(pRequest->Finish(pBody));
+		ASSERT_EQ(pRequest->State(), EHttpState::DONE);
+		auto pJob = Job(pRequest);
+		ASSERT_NO_FATAL_FAILURE(RunJob(pJob));
+		EXPECT_EQ(pJob->TakeInfo(), nullptr);
+		EXPECT_EQ(Cached(), m_Old);
+		EXPECT_EQ(pRequest->State(), EHttpState::ERROR);
+		EXPECT_FALSE(fs_is_file(pRequest->TemporaryPath()));
+	}
+}
+
+TEST_F(QmCustomCommunityCacheDownload, EmptyCommunitiesArrayReplacesTheOldCache)
+{
+	const std::string Body = R"({"communities":[]})";
+	auto pRequest = Request();
+	ASSERT_NO_FATAL_FAILURE(pRequest->Finish(Body));
+	auto pJob = Job(pRequest);
+	ASSERT_NO_FATAL_FAILURE(RunJob(pJob));
+	auto pInfo = pJob->TakeInfo();
+	ASSERT_NE(pInfo, nullptr);
+	const json_value &Communities = (*pInfo)["communities"];
+	ASSERT_EQ(Communities.type, json_array);
+	EXPECT_EQ(Communities.u.array.length, 0u);
+	EXPECT_EQ(Cached(), Body);
+	EXPECT_FALSE(fs_is_file(pRequest->TemporaryPath()));
+}
+
 TEST_F(QmCustomCommunityCacheDownload, FailedRenameDoesNotPublishThePreparedInfo)
 {
 	auto pRequest = Request();

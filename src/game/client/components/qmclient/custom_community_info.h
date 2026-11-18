@@ -47,6 +47,11 @@ inline TQmCommunityInfo QmLoadCustomCommunityInfo(IStorage *pStorage, const IHtt
 		log_error("customcommunities", "invalid info: %s", pInfo ? "root must be an object" : aError);
 		pInfo.reset();
 	}
+	else if(pResponse && (*pInfo)["communities"].type != json_array)
+	{
+		log_error("customcommunities", "invalid info: communities must be an array");
+		pInfo.reset();
+	}
 	return pInfo;
 }
 
