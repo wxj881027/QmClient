@@ -149,7 +149,7 @@ TEST(QmDemoUi, PresetQualityWritesExplicitValuesAndClearsForOthers)
 
 TEST(QmDemoUi, ResolutionCustomKeepsInputsEqualAndDropDownCapped)
 {
-	for(const float Width : {300.0f, 360.0f, 500.0f})
+	for(const float Width : {160.0f, 200.0f, 300.0f, 360.0f, 500.0f})
 	{
 		SCOPED_TRACE(Width);
 		const CUIRect Control{10.0f, 20.0f, Width, 20.0f};
@@ -160,9 +160,9 @@ TEST(QmDemoUi, ResolutionCustomKeepsInputsEqualAndDropDownCapped)
 
 		const auto CustomLayout = qm_demo_ui::ResolutionControlLayout(Control, true);
 		EXPECT_FLOAT_EQ(CustomLayout.m_WidthInput.w, CustomLayout.m_HeightInput.w);
-		EXPECT_GT(CustomLayout.m_WidthInput.w, 0.0f);
+		EXPECT_GE(CustomLayout.m_WidthInput.w, Control.h);
 		EXPECT_LE(CustomLayout.m_DropDown.w, qm_demo_ui::RESOLUTION_DROPDOWN_MAX_WIDTH);
-		EXPECT_GE(CustomLayout.m_DropDown.w, 0.0f);
+		EXPECT_GT(CustomLayout.m_DropDown.w, 0.0f);
 		EXPECT_FLOAT_EQ(CustomLayout.m_DropDown.x + CustomLayout.m_DropDown.w, Control.x + Control.w);
 		EXPECT_FLOAT_EQ(CustomLayout.m_WidthInput.x, Control.x);
 		EXPECT_LE(CustomLayout.m_HeightInput.x + CustomLayout.m_HeightInput.w, CustomLayout.m_DropDown.x);
@@ -173,6 +173,12 @@ TEST(QmDemoUi, ResolutionCustomKeepsInputsEqualAndDropDownCapped)
 	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(1280, 720), 1);
 	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(1920, 1080), 2);
 	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(1919, 1080), qm_demo_ui::RESOLUTION_PRESET_CUSTOM);
+}
+
+TEST(QmDemoUi, SingleResolutionDimensionStillSelectsCustom)
+{
+	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(1280, 0), qm_demo_ui::RESOLUTION_PRESET_CUSTOM);
+	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(0, 720), qm_demo_ui::RESOLUTION_PRESET_CUSTOM);
 }
 
 TEST(QmDemoUi, PopupFitsTheViewportAndKeepsContentHeightWhenPossible)
