@@ -1278,6 +1278,13 @@ static bool WriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *pExc
 	gs_LastMiniDumpFinalError = ERROR_SUCCESS;
 	gs_LastMiniDumpRetriedWithMinimalFlags = false;
 
+	const crashdump_windows::CMiniDumpWriteGuard DumpGuard;
+	if(!DumpGuard.Acquired())
+	{
+		gs_LastMiniDumpFinalError = ERROR_BUSY;
+		return false;
+	}
+
 	if(TryWriteMiniDumpFile(pFilename, pExceptionPointers, gs_ExtendedDumpType, &gs_LastMiniDumpExtendedAttemptError))
 	{
 		gs_LastMiniDumpWrittenFlags = (DWORD)gs_ExtendedDumpType;

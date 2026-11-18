@@ -7,10 +7,30 @@
 #include <windows.h>
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 
 namespace crashdump_windows
 {
+	// 致命处理与看门狗共用同一份 DbgHelp。已有采集时立即放弃本次转储，继续写文本。
+	class CMiniDumpWriteGuard
+	{
+		inline static std::atomic_flag s_Busy = ATOMIC_FLAG_INIT;
+		const bool m_Acquired = !s_Busy.test_and_set(std::memory_order_acquire);
+
+	public:
+		CMiniDumpWriteGuard() noexcept = default;
+		CMiniDumpWriteGuard(const CMiniDumpWriteGuard &) = delete;
+		CMiniDumpWriteGuard &operator=(const CMiniDumpWriteGuard &) = delete;
+		~CMiniDumpWriteGuard()
+		{
+			if(m_Acquired)
+				s_Busy.clear(std::memory_order_release);
+		}
+
+		bool Acquired() const noexcept { return m_Acquired; }
+	};
+
 	// 仅供一次诊断串行使用；不借用故障内存，不分配堆或在原始指针上解引用。
 	class CExceptionSnapshot
 	{

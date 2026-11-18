@@ -120,13 +120,14 @@ std::optional<int> QmCrashdumpProcessProbe(int argc, const char **ppArgv)
 	const bool Recovered = str_comp(ppArgv[2], "recovered") == 0;
 	const bool RecoveredThenTerminate = str_comp(ppArgv[2], "recovered-then-terminate") == 0;
 	const bool Terminate = str_comp(ppArgv[2], "terminate") == 0;
+	const bool TerminateDuringHangDump = str_comp(ppArgv[2], "terminate-during-hangdump") == 0;
 	const bool Unhandled = str_comp(ppArgv[2], "unhandled") == 0;
 	const bool AssertCopy = str_comp(ppArgv[2], "assert-copy-failure") == 0;
 	const bool AssertThrow = str_comp(ppArgv[2], "assert-handler-throws") == 0;
 	const bool AssertReenter = str_comp(ppArgv[2], "assert-reenter") == 0;
 	const bool AssertFinish = str_comp(ppArgv[2], "assert-finish-throws") == 0;
 	const bool AssertAtExit = str_comp(ppArgv[2], "assert-at-exit") == 0;
-	if(!Recovered && !RecoveredThenTerminate && !Terminate && !Unhandled && !AssertCopy && !AssertThrow && !AssertReenter && !AssertFinish && !AssertAtExit)
+	if(!Recovered && !RecoveredThenTerminate && !Terminate && !TerminateDuringHangDump && !Unhandled && !AssertCopy && !AssertThrow && !AssertReenter && !AssertFinish && !AssertAtExit)
 		return 2;
 	// 只作用于此独立探测进程，不启动报告窗口或系统错误弹窗。
 	SetErrorMode(SEM_NOGPFAULTERRORBOX | SEM_FAILCRITICALERRORS);
@@ -137,6 +138,12 @@ std::optional<int> QmCrashdumpProcessProbe(int argc, const char **ppArgv)
 	else
 		log_set_global_logger_default();
 	crashdump_init_if_available(ppArgv[3]);
+	if(TerminateDuringHangDump)
+	{
+		// 在真实卡死转储的路径准备阶段进入致命处理，转储占用尚未释放。
+		QmHangDiagnostics::WriteDump(ppArgv[3], [](const char *) -> std::wstring { std::terminate(); });
+		return 7;
+	}
 	if(AssertAtExit)
 	{
 		// 先登记退出断言再首次创建槽位：槽位不能先于本回调析构。

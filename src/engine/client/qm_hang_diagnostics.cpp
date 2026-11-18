@@ -11,6 +11,8 @@
 #include <utility>
 
 #if defined(CONF_FAMILY_WINDOWS)
+#include <base/crashdump_windows.h>
+
 #include <windows.h>
 
 #include <dbghelp.h>
@@ -176,6 +178,11 @@ namespace QmHangDiagnostics
 			const MINIDUMP_EXCEPTION_INFORMATION *, const MINIDUMP_USER_STREAM_INFORMATION *, const MINIDUMP_CALLBACK_INFORMATION *);
 		if(!pFilename || !pFilename[0] || !str_utf8_check(pFilename))
 			return {EDumpStage::OPEN_FILE, ERROR_INVALID_PARAMETER};
+
+		const crashdump_windows::CMiniDumpWriteGuard DumpGuard;
+		if(!DumpGuard.Acquired())
+			return {EDumpStage::WRITE_DUMP, ERROR_BUSY};
+
 		EDumpStage Stage = EDumpStage::LOAD_LIBRARY;
 		try
 		{

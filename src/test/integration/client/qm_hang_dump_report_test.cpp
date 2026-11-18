@@ -12,6 +12,8 @@
 #include <string>
 
 #if defined(CONF_FAMILY_WINDOWS)
+#include <base/crashdump_windows.h>
+
 #include <windows.h>
 #endif
 
@@ -102,6 +104,22 @@ TEST_F(CQmHangDumpReportTest, PublishFailureIsRecordedWithoutClaimingACompletedD
 }
 
 #if defined(CONF_FAMILY_WINDOWS)
+TEST_F(CQmHangDumpReportTest, BusyDumpReturnsWithoutOpeningCandidate)
+{
+	char aCandidatePath[IO_MAX_PATH_LENGTH + 4];
+	str_format(aCandidatePath, sizeof(aCandidatePath), "%s.tmp", m_aDumpPath);
+
+	const crashdump_windows::CMiniDumpWriteGuard ActiveDump;
+	ASSERT_TRUE(ActiveDump.Acquired());
+	const auto Result = QmHangDiagnostics::WriteDump(m_aDumpPath);
+
+	EXPECT_FALSE(Result.Written());
+	EXPECT_EQ(Result.m_Stage, QmHangDiagnostics::EDumpStage::WRITE_DUMP);
+	EXPECT_EQ(Result.m_Error, ERROR_BUSY);
+	EXPECT_FALSE(fs_is_file(aCandidatePath));
+	EXPECT_FALSE(fs_is_file(m_aDumpPath));
+}
+
 TEST_F(CQmHangDumpReportTest, InvalidFilenameReturnsOpenFailureBeforeNativePreparation)
 {
 	const char aInvalid[] = {'x', static_cast<char>(0xff), '\0'};

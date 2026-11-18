@@ -147,6 +147,24 @@ def scenario_fatal_after_recovery_uses_current_reason(binary: Path, directory: P
 	check_fatal_report(directory, "Unhandled C++ exception (std::terminate)")
 
 
+def scenario_fatal_report_survives_busy_dump(binary: Path, directory: Path) -> None:
+	log, report, dump, confirmed = paths(directory)
+	dump.write_bytes(b"previous dump")
+	require_exit(run_probe(binary, directory, "terminate-during-hangdump", log), 3)
+	text = report.read_text(encoding="utf-8")
+	lines = (
+		"Reason: Unhandled C++ exception (std::terminate)",
+		"Fallback minidump written: no",
+		"Final minidump error: 0x000000AA",
+	)
+	if any(line not in text for line in lines):
+		raise AssertionError(f"fatal report did not record the busy minidump writer: {report}")
+	if dump.read_bytes() != b"previous dump":
+		raise AssertionError("busy minidump writer changed the previous dump")
+	if confirmed.read_bytes() != b"confirmed fatal crash\r\n":
+		raise AssertionError("fatal text report was not confirmed while the dump writer was busy")
+
+
 def scenario_unhandled_seh_still_writes_current_exception(binary: Path, directory: Path) -> None:
 	log, _, _, _ = paths(directory)
 	result = run_probe(binary, directory, "unhandled", log)
@@ -320,6 +338,7 @@ SCENARIOS = {
 	"recovered_no_artifacts": scenario_recovered_exception_does_not_create_fatal_files,
 	"recovered_preserves_existing": scenario_recovered_exception_preserves_existing_report,
 	"fatal_after_recovery": scenario_fatal_after_recovery_uses_current_reason,
+	"fatal_report_busy_dump": scenario_fatal_report_survives_busy_dump,
 	"unhandled_seh": scenario_unhandled_seh_still_writes_current_exception,
 	"unicode_directory": scenario_unicode_directory_keeps_all_fatal_artifacts,
 }
