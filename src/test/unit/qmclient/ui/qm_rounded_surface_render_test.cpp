@@ -272,6 +272,19 @@ TEST_F(CQmRoundedSurfaceRender, GradientFallbackRendersEveryCornerCurve)
 	}
 }
 
+TEST_F(CQmRoundedSurfaceRender, GradientFallbackFeatherFollowsEdgeColorAndOpacity)
+{
+	SQmColorGradient Gradient;
+	Gradient.m_NumColors = 2;
+	Gradient.m_aColors[0] = ColorRGBA(1, 0, 0, 1);
+	Gradient.m_aColors[1] = ColorRGBA(0, 0, 1, 0.5f);
+	m_Params.m_BorderWidth = 0.0f;
+
+	ASSERT_TRUE(DrawRoundedGradientSurface(&m_Graphics, m_Rect, Gradient, 0.25f, ColorRGBA(), m_Params));
+	ExpectColor(m_Graphics.Sample(vec2(-0.5f, 9.0f)), ColorRGBA(1, 0, 0, 0.125f));
+	ExpectColor(m_Graphics.Sample(vec2(30.5f, 9.0f)), ColorRGBA(0, 0, 1, 0.0625f));
+}
+
 TEST_F(CQmRoundedSurfaceRender, SdfReceivesIndependentFillAndBorderAlpha)
 {
 	m_Graphics.m_HasSdf = true;

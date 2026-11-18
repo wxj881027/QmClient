@@ -350,18 +350,25 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 		}
 		pGraphics->QuadsDrawFreeform(aBorder.data(), aBorder.size());
 	}
-	const ColorRGBA Edge = Plan.m_BorderWidth > 0.0f ? Border : Gradient.m_aColors[0];
-	const ColorRGBA aFringeColors[] = {Edge.WithAlpha(0.0f), Edge.WithAlpha(0.0f), Edge, Edge};
+	// 羽化沿用内缘的颜色和透明度，避免无描边的渐变在淡出时留下首色外框。
+	const auto SampleEdge = [&](vec2 Point) {
+		if(Plan.m_BorderWidth > 0.0f)
+			return Border;
+		if(!(Plan.m_Rect.w > 0.0f && Plan.m_Rect.h > 0.0f))
+			return ui_token::color::COLOR_TRANSPARENT;
+		return Gradient.Sample((Point - Plan.m_Rect.TopLeft()) / Plan.m_Rect.Size()).WithMultipliedAlpha(Alpha);
+	};
+	ColorRGBA Edge = SampleEdge(aOuter.front());
 	for(size_t i = 0; i < aOuter.size(); ++i)
 	{
 		const size_t Next = (i + 1) % aOuter.size();
-		const std::array<vec2, 4> aPoints = {aFringe[i], aFringe[Next], aOuter[i], aOuter[Next]};
-		std::array<IGraphics::CColorVertex, 4> aColors;
-		for(int Corner = 0; Corner < 4; ++Corner)
-			aColors[Corner] = IGraphics::CColorVertex(Corner, aFringeColors[Corner]);
-		pGraphics->SetColorVertex(aColors.data(), aColors.size());
-		const IGraphics::CFreeformItem Quad(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
+		const ColorRGBA NextEdge = SampleEdge(aOuter[Next]);
+		const IGraphics::CColorVertex aColors[] = {
+			{0, Edge.WithAlpha(0.0f)}, {1, NextEdge.WithAlpha(0.0f)}, {2, Edge}, {3, NextEdge}};
+		pGraphics->SetColorVertex(aColors, std::size(aColors));
+		const IGraphics::CFreeformItem Quad(aFringe[i], aFringe[Next], aOuter[i], aOuter[Next]);
 		pGraphics->QuadsDrawFreeform(&Quad, 1);
+		Edge = NextEdge;
 	}
 	pGraphics->QuadsEnd();
 	pGraphics->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
