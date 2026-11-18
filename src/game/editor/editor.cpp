@@ -4209,19 +4209,14 @@ bool CEditor::ApplyCollabSnapshotBase64(const char *pMapBase64, int Revision, bo
 	}
 	io_close(File);
 
-	m_CollabApplyingRemoteSnapshot = true;
 	const bool FollowPlacement = ShouldFollowEditorCollabPlacement(g_Config.m_QmEditorCollabFollowPlacement != 0, RemoteUpdate, m_CollabRevision, Revision);
-	const bool Loaded = LoadCollabSnapshot(QM_EDITOR_COLLAB_INCOMING_PATH, IStorage::TYPE_SAVE, FollowPlacement);
-	m_CollabApplyingRemoteSnapshot = false;
-	if(!Loaded)
-	{
-		SetCollabStatus(Localizable("Sync failed: could not load the remote map snapshot", "Editor"));
+	if(!LoadCollabSnapshot(QM_EDITOR_COLLAB_INCOMING_PATH, IStorage::TYPE_SAVE, FollowPlacement))
 		return false;
-	}
 
 	m_CollabSnapshotReady = false;
 	m_CollabRevision = Revision;
 	m_CollabLastUploadedModifiedTime = Map()->m_LastModifiedTime;
+	log_info("editor/collab", Localize("Loaded the collaboration room's map snapshot", "Editor"));
 	return true;
 }
 
@@ -4239,24 +4234,33 @@ bool CEditor::LoadCollabSnapshot(const char *pFilename, int StorageType, bool Fo
 		log_error("editor/collab", "%s", pErrorMessage);
 	};
 
-	return ReloadEditorCollabSnapshot(Map()->m_MapViewState, FollowPlacement, Capture, [&]() {
-		Reset(false);
-		// Load 在新地图通过基础校验后清理旧内容，加载失败时保留原地图与撤销记录。
-		const bool Loaded = Map()->Load(pFilename, StorageType, std::move(ErrorHandler));
-		if(Loaded)
+	bool MapCommitted = false;
+	const auto Load = [&] {
 		{
-			str_copy(Map()->m_aFilename, aPreviousFilename);
-			Map()->m_ValidSaveFilename = ValidSaveFilename;
-			Map()->SortImages();
-			Map()->SelectGameLayer();
-
-			for(CEditorComponent &Component : m_vComponents)
-				Component.OnMapLoad();
-
-			log_info("editor/collab", Localize("Loaded the collaboration room's map snapshot", "Editor"));
+			const EditorCollab::CRestoreOnExit RestoreFilename([&] {
+				str_copy(Map()->m_aFilename, aPreviousFilename);
+				Map()->m_ValidSaveFilename = ValidSaveFilename;
+			});
+			if(!Map()->Load(pFilename, StorageType, ErrorHandler))
+				return false;
 		}
-		return Loaded;
-	});
+
+		MapCommitted = true;
+		Reset(false);
+		for(CEditorComponent &Component : m_vComponents)
+			Component.OnMapLoad();
+		return true;
+	};
+	if(EditorCollab::TryApplyingSnapshot(m_CollabApplyingRemoteSnapshot, [&] {
+		   return ReloadEditorCollabSnapshot(Map()->m_MapViewState, FollowPlacement, Capture, Load);
+	   }))
+		return true;
+
+	if(MapCommitted)
+		SetCollabStatus(Localizable("Sync interrupted: the map was loaded, but the editor could not refresh it", "Editor"));
+	else
+		SetCollabStatus(Localizable("Sync failed: could not load the remote map snapshot", "Editor"));
+	return false;
 }
 
 void CEditor::UpdateCollab()

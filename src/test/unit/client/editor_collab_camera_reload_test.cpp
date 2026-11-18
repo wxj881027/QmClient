@@ -67,6 +67,56 @@ TEST(EditorCollabCameraReload, FailedMapLoadSkipsSecondCapture)
 	EXPECT_EQ(Captures, 1);
 }
 
+TEST(EditorCollabCameraReload, ThrowingLoadRestoresViewAndAllowsRetry)
+{
+	SView View;
+	const SView Previous = View;
+	bool Applying = false;
+	int Captures = 0;
+	const auto Capture = [&] {
+		++Captures;
+		return CEditorCollabPlacementSnapshot{};
+	};
+	const bool Loaded = EditorCollab::TryApplyingSnapshot(Applying, [&] {
+		return ReloadEditorCollabSnapshot(View, true, Capture, [&]() -> bool {
+			EXPECT_TRUE(Applying);
+			View.m_Zoom = View.m_WorldZoom = 1.0f;
+			View.m_WorldOffset = View.m_EditorOffset = vec2(5.0f, 6.0f);
+			throw std::bad_alloc();
+		});
+	});
+	EXPECT_FALSE(Loaded);
+	EXPECT_FALSE(Applying);
+	EXPECT_EQ(Captures, 1);
+	EXPECT_EQ(View.m_Zoom, Previous.m_Zoom);
+	EXPECT_EQ(View.m_WorldZoom, Previous.m_WorldZoom);
+	EXPECT_EQ(View.m_WorldOffset, Previous.m_WorldOffset);
+	EXPECT_EQ(View.m_EditorOffset, Previous.m_EditorOffset);
+	EXPECT_TRUE(EditorCollab::TryApplyingSnapshot(Applying, [&] { return Applying; }));
+	EXPECT_FALSE(Applying);
+}
+
+TEST(EditorCollabCameraReload, NestedCapacityFailureLeavesOuterLoadActive)
+{
+	bool Applying = false;
+	EXPECT_TRUE(EditorCollab::TryApplyingSnapshot(Applying, [&] {
+		EXPECT_FALSE(EditorCollab::TryApplyingSnapshot(Applying, []() -> bool {
+			throw std::length_error("map capacity");
+		}));
+		return Applying;
+	}));
+	EXPECT_FALSE(Applying);
+}
+
+TEST(EditorCollabCameraReload, UnhandledExceptionRestoresApplyingFlag)
+{
+	bool Applying = false;
+	EXPECT_THROW(EditorCollab::TryApplyingSnapshot(Applying, []() -> bool {
+		throw std::runtime_error("unexpected load error");
+	}), std::runtime_error);
+	EXPECT_FALSE(Applying);
+}
+
 TEST(EditorCollabCameraReload, SuccessfulLoadFollowsNewPlacementAfterRestoringCamera)
 {
 	SView View;
