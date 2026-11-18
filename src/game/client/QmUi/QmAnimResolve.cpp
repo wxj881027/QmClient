@@ -159,6 +159,12 @@ CUIRect ResolveUiAnimSpringRectXY(CUiV2AnimationRuntime &AnimRuntime, uint64_t N
 
 ColorRGBA ResolveUiAnimValueColor(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, const ColorRGBA &Target, float DurationSec, EEasing Easing)
 {
+	const bool HasColorMix = AnimRuntime.HasValue(NodeKey, EUiAnimProperty::COLOR_MIX);
+	const auto SyncColorMix = [&](const ColorRGBA &Color) {
+		AnimRuntime.ResolveColorFromValue(NodeKey, Color, Color);
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::COLOR_MIX, 1.0f);
+	};
+
 	if(g_Config.m_QmUiColorInterpolation != 0)
 	{
 		const ColorRGBA Current(
@@ -166,6 +172,9 @@ ColorRGBA ResolveUiAnimValueColor(CUiV2AnimationRuntime &AnimRuntime, uint64_t N
 			AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_G, Target.g),
 			AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_B, Target.b),
 			AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_A, Target.a));
+		// 混合值淘汰后，后端可能仍保存旧起点。用当前颜色重新初始化。
+		if(!HasColorMix)
+			SyncColorMix(Current);
 		const ColorRGBA From = AnimRuntime.ResolveColorFromValue(NodeKey, Current, Target);
 		const float Mix = AnimRuntime.ResolveColorMixValue(NodeKey, Target, DurationSec, Easing);
 		const ColorRGBA Out = ResolveUiAnimInterpolatedColor(From, Target, Mix);
@@ -181,6 +190,9 @@ ColorRGBA ResolveUiAnimValueColor(CUiV2AnimationRuntime &AnimRuntime, uint64_t N
 	Out.g = ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::COLOR_G, Target.g, DurationSec, Easing);
 	Out.b = ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::COLOR_B, Target.b, DurationSec, Easing);
 	Out.a = ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::COLOR_A, Target.a, DurationSec, Easing);
+	// 结束旧 OKLab 轨道。切回时，从 sRGB 的实际输出接续。
+	if(HasColorMix)
+		SyncColorMix(Out);
 	return Out;
 }
 

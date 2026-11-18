@@ -81,3 +81,37 @@ TEST_F(QmAnimationResolverLifetime, RefusedLowPriorityTargetRetriesAfterTheOwner
 	ASSERT_NO_FATAL_FAILURE(AdvanceToRest());
 	EXPECT_FLOAT_EQ(m_Runtime.GetValue(NODE, PROPERTY), 20.0f);
 }
+
+TEST_F(QmAnimationResolverLifetime, ReturningToOklabContinuesFromTheCurrentSrgbColor)
+{
+	const ColorRGBA Idle(1.0f, 0.0f, 0.0f, 0.25f);
+	const ColorRGBA Hover(0.0f, 1.0f, 0.0f, 0.75f);
+	const auto Resolve = [this](const ColorRGBA &Target) {
+		return ResolveUiAnimValueColor(m_Runtime, NODE, Target, 1.0f, EEasing::LINEAR);
+	};
+
+	const int PreviousInterpolation = g_Config.m_QmUiColorInterpolation;
+	g_Config.m_QmUiColorInterpolation = 1;
+	Resolve(Idle);
+	m_Runtime.Advance(1.0f);
+	Resolve(Hover);
+	m_Runtime.Advance(0.25f);
+	Resolve(Hover);
+
+	g_Config.m_QmUiColorInterpolation = 0;
+	Resolve(Hover);
+	m_Runtime.Advance(0.5f);
+	const ColorRGBA Before = Resolve(Hover);
+
+	g_Config.m_QmUiColorInterpolation = 1;
+	const ColorRGBA After = Resolve(Hover);
+	m_Runtime.Advance(1.0f);
+	const ColorRGBA Settled = Resolve(Hover);
+	g_Config.m_QmUiColorInterpolation = PreviousInterpolation;
+
+	EXPECT_NEAR(After.r, Before.r, 0.0001f);
+	EXPECT_NEAR(After.g, Before.g, 0.0001f);
+	EXPECT_NEAR(After.b, Before.b, 0.0001f);
+	EXPECT_NEAR(After.a, Before.a, 0.0001f);
+	EXPECT_FLOAT_EQ(Settled.a, Hover.a);
+}
