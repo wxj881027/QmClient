@@ -172,6 +172,35 @@ TEST_F(ServerBrowserPingCache, FailedWriteKeepsMemoryAndNextMeasurementPersists)
 	EXPECT_EQ(m_pCache->GetPing(&m_Localhost4, 1), 222);
 }
 
+TEST_F(ServerBrowserPingCache, ReloadKeepsMeasurementAfterFailedWriteOverOlderDiskValue)
+{
+	CreateCache();
+	ASSERT_EQ(Execute("INSERT INTO server_pings VALUES ('127.0.0.1', 400, datetime('now', '-1 day'))"), SQLITE_OK);
+	m_pCache->Load();
+	ASSERT_EQ(m_pCache->GetPing(&m_Localhost4, 1), 400);
+
+	ASSERT_EQ(Execute("CREATE TRIGGER fail_ping BEFORE INSERT ON server_pings BEGIN SELECT RAISE(ABORT, 'injected write failure'); END"), SQLITE_OK);
+	m_pCache->CachePing(m_Localhost4, 111);
+	m_pCache->Load();
+
+	EXPECT_EQ(m_pCache->NumEntries(), 1);
+	EXPECT_EQ(m_pCache->GetPing(&m_Localhost4, 1), 111);
+}
+
+TEST_F(ServerBrowserPingCache, ReloadAcceptsNewerDiskMeasurementAfterFailedWrite)
+{
+	CreateCache();
+	ASSERT_EQ(Execute("CREATE TRIGGER fail_ping BEFORE INSERT ON server_pings BEGIN SELECT RAISE(ABORT, 'injected write failure'); END"), SQLITE_OK);
+	m_pCache->CachePing(m_Localhost4, 111);
+	ASSERT_EQ(m_pCache->GetPing(&m_Localhost4, 1), 111);
+
+	ASSERT_EQ(Execute("DROP TRIGGER fail_ping; INSERT INTO server_pings VALUES ('127.0.0.1', 222, datetime('now', '+1 day'))"), SQLITE_OK);
+	m_pCache->Load();
+
+	EXPECT_EQ(m_pCache->NumEntries(), 1);
+	EXPECT_EQ(m_pCache->GetPing(&m_Localhost4, 1), 222);
+}
+
 TEST_F(ServerBrowserPingCache, IncompatibleTableKeepsInMemoryCacheUsable)
 {
 	ASSERT_EQ(Execute("CREATE TABLE server_pings (unrelated_column INTEGER)"), SQLITE_OK);

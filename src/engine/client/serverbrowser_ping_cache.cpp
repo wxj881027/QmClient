@@ -1,5 +1,6 @@
 #include "serverbrowser_ping_cache.h"
 
+#include <base/log.h>
 #include <base/system.h>
 
 #include <engine/console.h>
@@ -8,8 +9,8 @@
 
 #include <sqlite3.h>
 
+#include <new>
 #include <unordered_map>
-#include <vector>
 
 namespace
 {
@@ -43,10 +44,10 @@ namespace
 		class CEntry
 		{
 		public:
-			NETADDR m_Addr;
 			int m_Ping;
 			// 缓存写入时间（UTC 秒），0 表示时间未知。用于丢弃过期的历史测量。
 			int64_t m_UtcTimestamp;
+			bool m_Unpersisted;
 		};
 
 		CServerBrowserPingCache(IConsole *pConsole, IStorage *pStorage);
@@ -90,10 +91,12 @@ namespace
 	}
 
 	void CServerBrowserPingCache::Load()
+	try
 	{
 		if(m_pDisk)
 		{
-			std::vector<CEntry> vNewEntries;
+			std::unordered_map<NETADDR, CEntry> Entries;
+			Entries.reserve(m_Entries.size());
 
 			sqlite3 *pSqlite = m_pDisk.get();
 			IConsole *pConsole = m_pConsole;
@@ -113,7 +116,7 @@ namespace
 					// 列转换分配失败时 SQLite 同样返回空指针，整次读取失败并保留旧缓存。
 					if(!pIpAddress && sqlite3_errcode(pSqlite) == SQLITE_NOMEM)
 					{
-						SqliteHandleError(pConsole, SQLITE_NOMEM, pSqlite, "sqlite3_column_text(m_pLoadStmt.get(), 0)");
+						SqliteHandleError(SQLITE_NOMEM, pSqlite, "sqlite3_column_text(m_pLoadStmt.get(), 0)");
 						Error = true;
 						break;
 					}
@@ -133,7 +136,7 @@ namespace
 						}
 						continue;
 					}
-					vNewEntries.push_back(CEntry{Addr, Ping, UtcTimestamp});
+					Entries.insert_or_assign(Addr, CEntry{Ping, UtcTimestamp, false});
 				}
 				else
 				{
@@ -146,11 +149,20 @@ namespace
 				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverbrowse_ping_cache", "failed to load ping cache");
 				return;
 			}
-			for(const CEntry &Entry : vNewEntries)
+			for(const auto &[Address, Entry] : m_Entries)
 			{
-				m_Entries[Entry.m_Addr] = Entry;
+				const auto [It, Inserted] = Entries.try_emplace(Address, Entry);
+				// 秒级时间相同时，未写入磁盘的本次测量仍比磁盘记录更新。
+				if(!Inserted && (Entry.m_UtcTimestamp > It->second.m_UtcTimestamp ||
+							(Entry.m_UtcTimestamp == It->second.m_UtcTimestamp && Entry.m_Unpersisted)))
+					It->second = Entry;
 			}
+			m_Entries.swap(Entries);
 		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		log_error("serverbrowse_ping_cache", "failed to allocate ping cache; retaining previous measurements");
 	}
 
 	int CServerBrowserPingCache::NumEntries() const
@@ -159,11 +171,12 @@ namespace
 	}
 
 	void CServerBrowserPingCache::CachePing(const NETADDR &Addr, int Ping)
+	try
 	{
 		NETADDR StoredAddr = Addr;
 		StoredAddr.type &= ~NETTYPE_TW7;
 		StoredAddr.port = 0;
-		m_Entries[StoredAddr] = CEntry{StoredAddr, Ping, time_timestamp()};
+		auto Entry = m_Entries.insert_or_assign(StoredAddr, CEntry{Ping, time_timestamp(), true}).first;
 		if(m_pDisk)
 		{
 			sqlite3 *pSqlite = m_pDisk.get();
@@ -180,7 +193,15 @@ namespace
 			{
 				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverbrowse_ping_cache", "failed to store ping");
 			}
+			else
+			{
+				Entry->second.m_Unpersisted = false;
+			}
 		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		log_error("serverbrowse_ping_cache", "failed to allocate ping cache entry");
 	}
 
 	int CServerBrowserPingCache::GetPing(const NETADDR *pAddrs, int NumAddrs) const

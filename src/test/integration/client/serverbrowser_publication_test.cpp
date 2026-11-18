@@ -72,6 +72,61 @@ TEST_F(ServerBrowserPublication, UnknownLatencyFailureRestoresAddressAndRequestC
 	EXPECT_EQ(CServerBrowserTestAccess::MaxRequests(m_Browser), 8);
 }
 
+TEST_F(ServerBrowserPublication, DuplicateFavoriteRequestLeavesBothRepliesUsable)
+{
+	Publish({Server("Registered", 8303)});
+	const auto First = Server("First favorite", 8301);
+	const auto Second = Server("Second favorite", 8302);
+	for(const auto *pInfo : {&First, &Second})
+	{
+		m_pFavorites->Add(pInfo->m_aAddresses, pInfo->m_NumAddresses);
+		m_pFavorites->AllowPing(pInfo->m_aAddresses, pInfo->m_NumAddresses, true);
+	}
+	m_Browser.Refresh(IServerBrowser::TYPE_FAVORITES);
+	auto *pFirst = m_Browser.Find(First.m_aAddresses[0]);
+	auto *pSecond = m_Browser.Find(Second.m_aAddresses[0]);
+	ASSERT_NE(pFirst, nullptr);
+	ASSERT_NE(pSecond, nullptr);
+	pFirst->m_RequestTime = pSecond->m_RequestTime = time_get();
+
+	m_Browser.QueueRequest(pFirst);
+	EXPECT_EQ(m_Browser.LoadingProgression(), 0);
+	const auto Reply = [this](const CServerInfo &Info) {
+		const NETADDR &Address = Info.m_aAddresses[0];
+		const int Token = CServerBrowserTestAccess::GenerateToken(m_Browser, Address);
+		m_Browser.OnServerInfoUpdate(Address, CServerBrowserTestAccess::BasicToken(Token), &Info);
+	};
+	Reply(Second);
+	EXPECT_TRUE(m_Browser.IsRefreshing());
+	EXPECT_STREQ(m_Browser.Find(Second.m_aAddresses[0])->m_Info.m_aName, "Second favorite");
+	Reply(First);
+	EXPECT_FALSE(m_Browser.IsRefreshing());
+	EXPECT_EQ(m_Browser.LoadingProgression(), 100);
+}
+
+TEST_F(ServerBrowserPublication, AnsweredRequestCanBeQueuedForASecondQuery)
+{
+	Publish({Server("Server", 8301)});
+	const NETADDR Addr = m_Browser.Get(0)->m_aAddresses[0];
+	auto *pEntry = m_Browser.Find(Addr);
+	ASSERT_NE(pEntry, nullptr);
+	m_Browser.QueueRequest(pEntry);
+	pEntry->m_RequestTime = time_get();
+	const auto Info = Server("Server", 8301);
+	const int Token = CServerBrowserTestAccess::GenerateToken(m_Browser, Addr);
+	m_Browser.OnServerInfoUpdate(Addr, CServerBrowserTestAccess::BasicToken(Token), &Info);
+	ASSERT_FALSE(m_Browser.IsRefreshing());
+	ASSERT_EQ(pEntry->m_RequestTime, -1);
+
+	m_Browser.QueueRequest(pEntry);
+	ASSERT_TRUE(m_Browser.IsRefreshing());
+	EXPECT_EQ(pEntry->m_RequestTime, 0);
+
+	m_Browser.OnServerInfoUpdate(Addr, CServerBrowserTestAccess::BasicToken(Token), &Info);
+	EXPECT_TRUE(m_Browser.IsRefreshing());
+	EXPECT_EQ(m_Browser.LoadingProgression(), 0);
+}
+
 TEST_F(ServerBrowserPublication, SortFailureRestoresCommunityCountsOrderAndPendingSort)
 {
 	ASSERT_NO_FATAL_FAILURE(LoadCommunities());
@@ -226,6 +281,55 @@ TEST_F(ServerBrowserPublication, RetryWaitsOneSecondButManualRefreshCanRecoverIm
 	ASSERT_EQ(m_Browser.NumServers(), 1);
 	EXPECT_STREQ(m_Browser.Get(0)->m_aName, "Manual");
 	EXPECT_FALSE(m_Browser.IsServerlistError());
+}
+
+TEST_F(ServerBrowserPublication, RemovedFavoriteCommunityFallsBackWhenUpdatingItsCache)
+{
+	ASSERT_NO_FATAL_FAILURE(LoadCommunities());
+	Publish({Server("Alpha", 8301), Server("Beta", 8302)});
+	m_Browser.FavoriteCommunitiesFilter().Add("a");
+	m_Browser.Refresh(IServerBrowser::TYPE_FAVORITE_COMMUNITY_1);
+	m_Browser.CommunityCache().Update(true);
+	ASSERT_EQ(m_Browser.NumServers(), 1);
+	ASSERT_STREQ(m_Browser.CommunityCache().CountryTypeFilterKey(), "a");
+
+	m_Browser.CountriesFilter().Add(IServerBrowser::COMMUNITY_ALL, "AA");
+	m_Browser.FavoriteCommunitiesFilter().Remove("a");
+	m_Browser.CommunityCache().Update(false);
+
+	EXPECT_EQ(m_Browser.GetCurrentType(), IServerBrowser::TYPE_INTERNET);
+	EXPECT_EQ(m_Browser.NumServers(), 2);
+	ASSERT_EQ(m_Browser.NumSortedServers(), 1);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Beta");
+	EXPECT_STREQ(m_Browser.CommunityCache().CountryTypeFilterKey(), IServerBrowser::COMMUNITY_ALL);
+}
+
+TEST_F(ServerBrowserPublication, FailedFallbackKeepsPreviousListAndRetriesTheSameRevision)
+{
+	ASSERT_NO_FATAL_FAILURE(LoadCommunities());
+	Publish({Server("Alpha", 8301), Server("Beta", 8302)});
+	m_Browser.FavoriteCommunitiesFilter().Add("a");
+	m_Browser.Refresh(IServerBrowser::TYPE_FAVORITE_COMMUNITY_1);
+	m_Browser.CommunityCache().Update(true);
+	m_pHttp->m_Refreshing = false;
+	m_Browser.Update();
+	ASSERT_EQ(m_Browser.NumServers(), 1);
+	const auto *pPrevious = m_Browser.Get(0);
+	const uint64_t PreviousRevision = CServerBrowserTestAccess::HttpRevision(m_Browser);
+
+	m_Browser.FavoriteCommunitiesFilter().Remove("a");
+	m_pHttp->m_FailAt = 1;
+	Publish({Server("Alpha", 8301), Server("Beta", 8302)});
+	EXPECT_EQ(m_Browser.GetCurrentType(), IServerBrowser::TYPE_FAVORITE_COMMUNITY_1);
+	EXPECT_EQ(m_Browser.Get(0), pPrevious);
+	EXPECT_STREQ(m_Browser.CommunityCache().CountryTypeFilterKey(), "a");
+	EXPECT_EQ(CServerBrowserTestAccess::HttpRevision(m_Browser), PreviousRevision);
+
+	m_pHttp->m_FailAt = -1;
+	Retry();
+	EXPECT_EQ(m_Browser.GetCurrentType(), IServerBrowser::TYPE_INTERNET);
+	EXPECT_EQ(m_Browser.NumServers(), 2);
+	EXPECT_EQ(CServerBrowserTestAccess::HttpRevision(m_Browser), m_pHttp->m_Revision);
 }
 
 TEST_F(ServerBrowserPublication, FavoriteCommunityCacheKeepsItsIdentityAfterPlayerCountReorder)

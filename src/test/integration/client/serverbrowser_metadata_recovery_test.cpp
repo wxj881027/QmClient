@@ -16,11 +16,11 @@ namespace
 			m_pStorage = m_TestInfo.CreateTestStorage();
 			CServerBrowserTestAccess::SetStorage(m_Browser, m_pStorage.get());
 		}
-		std::string Info(const char *pId, const char *pLocation = "eu", const char *pMap = "Map")
+		std::string Info(const char *pId, const char *pLocation = "eu", const char *pMap = "Map", int Port = 8301)
 		{
 			return std::string(R"({"location":")") + pLocation + R"(","communities":[{"id":")" + pId +
 			       R"(","name":"Community","icon":{"sha256":"0000000000000000000000000000000000000000000000000000000000000000","url":"https://community.test/icon"},"has_finishes":true,"finishes":[")" + pMap +
-			       R"("],"servers":[{"name":"Country","flagId":1,"servers":{"Race":["127.0.0.1:8301"]}}]}]})";
+			       R"("],"servers":[{"name":"Country","flagId":1,"servers":{"Race":["127.0.0.1:)" + std::to_string(Port) + R"("]}}]}]})";
 		}
 		void Write(const std::string &Json)
 		{
@@ -146,6 +146,59 @@ TEST_F(ServerBrowserMetadataRecovery, SuccessfulReloadPublishesNewCacheBeforeRet
 	EXPECT_EQ(Cache.SelectableTypes()[0], &m_Browser.Community("new")->Types()[0]);
 	EXPECT_TRUE(Cache.AnyRanksAvailable());
 	EXPECT_TRUE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+}
+
+TEST_F(ServerBrowserMetadataRecovery, MembershipChangeRebuildsFromTheAlreadyPublishedList)
+{
+	ASSERT_NO_FATAL_FAILURE(LoadInitial());
+	Publish({Server("Previous member", 8301), Server("New member", 8302)});
+	m_Browser.FavoriteCommunitiesFilter().Add("old");
+	m_Browser.Refresh(IServerBrowser::TYPE_FAVORITE_COMMUNITY_1);
+	m_pHttp->m_Refreshing = false;
+	m_Browser.Update();
+	ASSERT_EQ(m_Browser.NumServers(), 1);
+	ASSERT_STREQ(m_Browser.Get(0)->m_aName, "Previous member");
+	const uint64_t Revision = m_pHttp->m_Revision;
+
+	m_Browser.Refresh(IServerBrowser::TYPE_FAVORITE_COMMUNITY_1);
+	ASSERT_TRUE(m_pHttp->IsRefreshing());
+	ASSERT_NO_FATAL_FAILURE(Write(Info("old", "eu", "Map", 8302)));
+	ASSERT_NE(m_Browser.LoadDDNetInfo(), nullptr);
+	m_Browser.Update();
+
+	EXPECT_EQ(m_pHttp->m_Revision, Revision);
+	EXPECT_TRUE(CServerBrowserTestAccess::RefreshPending(m_Browser));
+	EXPECT_EQ(m_Browser.GetCurrentType(), IServerBrowser::TYPE_FAVORITE_COMMUNITY_1);
+	ASSERT_EQ(m_Browser.NumServers(), 1);
+	EXPECT_STREQ(m_Browser.Get(0)->m_aName, "New member");
+}
+
+TEST_F(ServerBrowserMetadataRecovery, RemovedCommunityRebuildRetriesWithoutAnotherHttpRevision)
+{
+	ASSERT_NO_FATAL_FAILURE(LoadInitial());
+	Publish({Server("Community server", 8301), Server("Other server", 8302)});
+	m_Browser.FavoriteCommunitiesFilter().Add("old");
+	m_Browser.Refresh(IServerBrowser::TYPE_FAVORITE_COMMUNITY_1);
+	m_pHttp->m_Refreshing = false;
+	m_Browser.Update();
+	ASSERT_EQ(m_Browser.NumServers(), 1);
+	const uint64_t Revision = m_pHttp->m_Revision;
+	const auto *pVisible = m_Browser.Get(0);
+
+	ASSERT_NO_FATAL_FAILURE(Write(Info("new")));
+	ASSERT_NE(m_Browser.LoadDDNetInfo(), nullptr);
+	ASSERT_EQ(m_Browser.GetCurrentType(), IServerBrowser::TYPE_INTERNET);
+	m_pHttp->m_FailAt = 1;
+	m_Browser.Update();
+	EXPECT_TRUE(m_Browser.IsServerlistError());
+	EXPECT_EQ(m_Browser.Get(0), pVisible);
+
+	m_pHttp->m_FailAt = -1;
+	Retry();
+	EXPECT_FALSE(m_Browser.IsServerlistError());
+	EXPECT_EQ(m_pHttp->m_Revision, Revision);
+	ASSERT_EQ(m_Browser.NumServers(), 2);
+	EXPECT_STREQ(m_Browser.Get(1)->m_aName, "Other server");
 }
 
 TEST_F(ServerBrowserMetadataRecovery, MissingFileRetainsThePreviousJson)

@@ -459,11 +459,13 @@ void CServerBrowser::Con_LeakIpAddress(IConsole::IResult *pResult, void *pUserDa
 		{
 			int Chosen = Start + secure_rand_below(i - Start);
 			CServerEntry *pChosen = pThis->m_vpServerlist[vSortedServers[Chosen]];
-			pChosen->m_RequestIgnoreInfo = true;
-			pThis->QueueRequest(pChosen);
-			char aAddr[NETADDR_MAXSTRSIZE];
-			net_addr_str(&pChosen->m_Info.m_aAddresses[0], aAddr, sizeof(aAddr), true);
-			dbg_msg("serverbrowser", "queuing ping request for %s", aAddr);
+			if(pThis->QueueRequest(pChosen))
+			{
+				pChosen->m_RequestIgnoreInfo = true;
+				char aAddr[NETADDR_MAXSTRSIZE];
+				net_addr_str(&pChosen->m_Info.m_aAddresses[0], aAddr, sizeof(aAddr), true);
+				dbg_msg("serverbrowser", "queuing ping request for %s", aAddr);
+			}
 		}
 		if(i < (int)vSortedServers.size() && New)
 		{
@@ -1119,9 +1121,14 @@ void CServerBrowser::SortCommunities()
 		m_CommunityCache.Invalidate();
 }
 
+bool CServerBrowser::IsRequestQueued(const CServerEntry *pEntry) const
+{
+	return pEntry->m_pPrevReq || pEntry->m_pNextReq || m_pFirstReqServer == pEntry;
+}
+
 void CServerBrowser::RemoveRequest(CServerEntry *pEntry)
 {
-	if(pEntry->m_pPrevReq || pEntry->m_pNextReq || m_pFirstReqServer == pEntry)
+	if(IsRequestQueued(pEntry))
 	{
 		if(pEntry->m_pPrevReq)
 			pEntry->m_pPrevReq->m_pNextReq = pEntry->m_pNextReq;
@@ -1149,9 +1156,13 @@ CServerBrowser::CServerEntry *CServerBrowser::Find(const NETADDR &Addr)
 	return m_vpServerlist[Entry->second];
 }
 
-void CServerBrowser::QueueRequest(CServerEntry *pEntry)
+bool CServerBrowser::QueueRequest(CServerEntry *pEntry)
 {
-	// add it to the list of servers that we should request info from
+	if(IsRequestQueued(pEntry))
+		return false;
+
+	// 上次查询已结束时，重新入队要作为一次尚未发送的新请求。
+	pEntry->m_RequestTime = 0;
 	pEntry->m_pPrevReq = m_pLastReqServer;
 	if(m_pLastReqServer)
 		m_pLastReqServer->m_pNextReq = pEntry;
@@ -1160,6 +1171,7 @@ void CServerBrowser::QueueRequest(CServerEntry *pEntry)
 	m_pLastReqServer = pEntry;
 	pEntry->m_pNextReq = nullptr;
 	m_NumRequests++;
+	return true;
 }
 
 void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info)
@@ -1392,8 +1404,11 @@ void CServerBrowser::OnServerInfoUpdate(const NETADDR &Addr, int Token, const CS
 		SetInfo(pEntry, *pInfo);
 		pEntry->m_Info.m_Latency = minimum(static_cast<int>((time_get() - m_BroadcastTime) * 1000 / time_freq()), CServerInfo::LATENCY_UNKNOWN);
 	}
-	else if(pEntry->m_RequestTime > 0)
+	else
 	{
+		if(pEntry->m_RequestTime <= 0)
+			return;
+
 		if(!pEntry->m_RequestIgnoreInfo)
 		{
 			SetInfo(pEntry, *pInfo);
@@ -1437,6 +1452,7 @@ void CServerBrowser::Refresh(int Type, bool Force)
 
 	if(Type == IServerBrowser::TYPE_LAN)
 	{
+		m_CommunityListDirty = false;
 		m_HttpUpdateFailed = false;
 		m_HttpUpdateRetryAt = 0;
 		m_SortUpdateFailed = false;
@@ -1596,6 +1612,8 @@ class CServerBrowser::CServerListUpdate
 	std::vector<int> m_vSorted;
 	std::unordered_map<NETADDR, int> m_ByAddr;
 	std::vector<int> m_vCommunityPlayers;
+	std::optional<CCommunityCache> m_PreviousCommunityCache;
+	int m_PreviousType;
 	CServerEntry *m_pFirstRequest;
 	CServerEntry *m_pLastRequest;
 	int m_NumRequests;
@@ -1618,6 +1636,7 @@ public:
 	explicit CServerListUpdate(CServerBrowser &Browser) :
 		m_Browser(Browser),
 		m_vCommunityPlayers(Browser.m_vCommunities.size()),
+		m_PreviousType(Browser.m_ServerlistType),
 		m_pFirstRequest(Browser.m_pFirstReqServer),
 		m_pLastRequest(Browser.m_pLastReqServer),
 		m_NumRequests(Browser.m_NumRequests),
@@ -1640,6 +1659,9 @@ public:
 		if(m_Committed)
 			return;
 		SwapLists();
+		m_Browser.m_ServerlistType = m_PreviousType;
+		if(m_PreviousCommunityCache)
+			m_Browser.m_CommunityCache.Swap(*m_PreviousCommunityCache);
 		m_Browser.m_pFirstReqServer = m_pFirstRequest;
 		m_Browser.m_pLastReqServer = m_pLastRequest;
 		m_Browser.m_NumRequests = m_NumRequests;
@@ -1651,6 +1673,15 @@ public:
 		// Sort 的最后一步才无异常地交换社区；此前失败时顺序仍与备份一致。
 		for(size_t Index = 0; Index < m_vCommunityPlayers.size(); ++Index)
 			m_Browser.m_vCommunities[Index].m_NumPlayers = m_vCommunityPlayers[Index];
+	}
+	void FallbackToInternet()
+	{
+		// 先为回退列表准备互联网筛选。重建失败时，旧列表和筛选一起恢复。
+		m_Browser.m_ServerlistType = TYPE_INTERNET;
+		CCommunityCache Prepared(&m_Browser);
+		Prepared.Prepare(m_Browser.CurrentCommunities(), m_Browser.DDNetInfoSha256(), TYPE_INTERNET, m_Browser.CurrentCommunitiesHash());
+		m_PreviousCommunityCache.emplace(std::move(Prepared));
+		m_PreviousCommunityCache->Swap(m_Browser.m_CommunityCache);
 	}
 	void Commit() noexcept { m_Committed = true; }
 };
@@ -1665,9 +1696,20 @@ bool CServerBrowser::TryUpdateFromHttp()
 	try
 	{
 		CServerListUpdate Update(*this);
-		UpdateFromHttp();
+		const CCommunity *pWantedCommunity = nullptr;
+		if(m_ServerlistType >= TYPE_FAVORITE_COMMUNITY_1 && m_ServerlistType <= TYPE_FAVORITE_COMMUNITY_5)
+		{
+			const size_t CommunityIndex = m_ServerlistType - TYPE_FAVORITE_COMMUNITY_1;
+			const auto vpFavorites = FavoriteCommunities();
+			if(CommunityIndex < vpFavorites.size())
+				pWantedCommunity = vpFavorites[CommunityIndex];
+			else
+				Update.FallbackToInternet();
+		}
+		UpdateFromHttp(pWantedCommunity);
 		Sort();
 		Update.Commit();
+		m_CommunityListDirty = false;
 		m_HttpUpdateFailed = false;
 		m_HttpUpdateRetryAt = 0;
 		m_SortUpdateFailed = false;
@@ -1686,7 +1728,7 @@ bool CServerBrowser::TryUpdateFromHttp()
 	}
 }
 
-void CServerBrowser::UpdateFromHttp()
+void CServerBrowser::UpdateFromHttp(const CCommunity *pWantedCommunity)
 {
 	const int OwnLocation = DetermineOwnLocation();
 
@@ -1699,12 +1741,8 @@ void CServerBrowser::UpdateFromHttp()
 			return m_pFavorites->IsFavorite(pAddrs, NumAddrs) != TRISTATE::NONE;
 		};
 	}
-	else if(m_ServerlistType >= IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 && m_ServerlistType <= IServerBrowser::TYPE_FAVORITE_COMMUNITY_5)
+	else if(pWantedCommunity)
 	{
-		const size_t CommunityIndex = m_ServerlistType - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1;
-		std::vector<const CCommunity *> vpFavoriteCommunities = FavoriteCommunities();
-		dbg_assert(CommunityIndex < vpFavoriteCommunities.size(), "Invalid community index");
-		const CCommunity *pWantedCommunity = vpFavoriteCommunities[CommunityIndex];
 		const bool IsNoneCommunity = str_comp(pWantedCommunity->Id(), COMMUNITY_NONE) == 0;
 		Want = [this, pWantedCommunity, IsNoneCommunity](const NETADDR *pAddrs, int NumAddrs) -> bool {
 			for(int AddressIndex = 0; AddressIndex < NumAddrs; AddressIndex++)
@@ -1804,13 +1842,16 @@ void CServerBrowser::Update()
 	m_pHttp->Update();
 
 	const uint64_t HttpRevision = m_pHttp->Revision();
-	if(m_ServerlistType != TYPE_LAN && (m_HttpUpdateFailed || (m_RefreshingHttp && !m_pHttp->IsRefreshing()) || m_HttpRevision != HttpRevision))
+	const bool HttpListChanged = m_HttpRevision != HttpRevision;
+	const bool HttpRefreshFinished = m_RefreshingHttp && !m_pHttp->IsRefreshing();
+	if(m_ServerlistType != TYPE_LAN && (m_CommunityListDirty || m_HttpUpdateFailed || HttpRefreshFinished || HttpListChanged))
 	{
 		if(m_HttpUpdateFailed && UpdateNow() < m_HttpUpdateRetryAt)
 			return;
 		if(TryUpdateFromHttp())
 		{
-			m_RefreshingHttp = false;
+			if(HttpRefreshFinished || HttpListChanged)
+				m_RefreshingHttp = false;
 			m_HttpRevision = HttpRevision;
 		}
 		return;
@@ -1942,7 +1983,11 @@ public:
 		m_Browser.m_TypesFilter.Swap(m_Types);
 		m_Browser.m_CommunityCache.Swap(m_Cache);
 		m_Browser.m_OwnLocation = m_OwnLocation;
+		const int PreviousType = m_Browser.m_ServerlistType;
 		m_Browser.m_ServerlistType = m_ServerlistType;
+		// 收藏社区只保留原始列表的子集。归属变更或退回互联网后需要重新选取条目。
+		if(PreviousType >= TYPE_FAVORITE_COMMUNITY_1 && PreviousType <= TYPE_FAVORITE_COMMUNITY_5)
+			m_Browser.m_CommunityListDirty = true;
 		for(const auto &Entry : m_vEntries)
 			Entry.Publish();
 		m_Browser.RequestResort();
@@ -2364,21 +2409,6 @@ int CServerBrowser::DetermineOwnLocation() const
 		log_error("serverbrowser", "Cannot parse br_location: '%s'", g_Config.m_BrLocation);
 	}
 	return OwnLocation;
-}
-
-void CServerBrowser::ValidateServerlistType()
-{
-	if(m_ServerlistType >= IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 &&
-		m_ServerlistType <= IServerBrowser::TYPE_FAVORITE_COMMUNITY_5)
-	{
-		const size_t CommunityIndex = m_ServerlistType - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1;
-		if(CommunityIndex >= FavoriteCommunities().size())
-		{
-			// Reset to internet type if there is no favorite community for the current browser type,
-			// in case communities have been removed.
-			m_ServerlistType = IServerBrowser::TYPE_INTERNET;
-		}
-	}
 }
 
 const char *CServerBrowser::GetTutorialServer()

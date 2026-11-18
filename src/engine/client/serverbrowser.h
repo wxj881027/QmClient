@@ -333,7 +333,6 @@ public:
 	void UpdateServerRank(CServerInfo *pInfo) const;
 	void UpdateServerLatency(CServerInfo *pInfo, int OwnLocation) const;
 	int DetermineOwnLocation() const;
-	void ValidateServerlistType();
 	const char *GetTutorialServer() override;
 
 	const std::vector<CCommunity> &Communities() const override;
@@ -369,7 +368,7 @@ public:
 	void SetBaseInfo(class CNetClient *pClient, const char *pNetVersion);
 	void OnInit();
 
-	void QueueRequest(CServerEntry *pEntry);
+	bool QueueRequest(CServerEntry *pEntry);
 	CServerEntry *Find(const NETADDR &Addr) override;
 	int GetCurrentType() override { return m_ServerlistType; }
 	bool IsRegistered(const NETADDR &Addr);
@@ -392,6 +391,7 @@ private:
 	char m_aNetVersion[128];
 
 	bool m_RefreshingHttp = false;
+	bool m_CommunityListDirty = false;
 	bool m_HttpUpdateFailed = false;
 	int64_t m_HttpUpdateRetryAt = 0;
 	std::function<int64_t()> m_UpdateClock;
@@ -471,12 +471,13 @@ private:
 
 	void CleanUp();
 
-	void UpdateFromHttp();
+	void UpdateFromHttp(const CCommunity *pWantedCommunity);
 	bool TryUpdateFromHttp();
 	int64_t UpdateNow() const;
 	CServerEntry *Add(const NETADDR *pAddrs, int NumAddrs);
 	CServerEntry *ReplaceEntry(CServerEntry *pEntry, const NETADDR *pAddrs, int NumAddrs);
 
+	bool IsRequestQueued(const CServerEntry *pEntry) const;
 	void RemoveRequest(CServerEntry *pEntry);
 
 	void RequestImpl(const NETADDR &Addr, CServerEntry *pEntry, int *pBasicToken, int *pToken, bool RandomToken) const;
