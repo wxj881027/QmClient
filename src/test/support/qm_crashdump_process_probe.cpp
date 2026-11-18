@@ -192,6 +192,8 @@ std::optional<int> QmCrashdumpProcessProbe(int argc, const char **ppArgv)
 	}
 	if(Unhandled)
 	{
+		std::printf("fault-thread=%lu\n", GetCurrentThreadId());
+		std::fflush(stdout);
 		// 在Google Test接管SEH之前触发，实际进入生产顶层过滤器。
 		RaiseException(EXCEPTION_ILLEGAL_INSTRUCTION, EXCEPTION_NONCONTINUABLE, 0, nullptr);
 		return 7;

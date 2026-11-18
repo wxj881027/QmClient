@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import struct
 from pathlib import Path
 import subprocess
 import tempfile
@@ -165,13 +166,36 @@ def scenario_fatal_report_survives_busy_dump(binary: Path, directory: Path) -> N
 		raise AssertionError("fatal text report was not confirmed while the dump writer was busy")
 
 
+def read_minidump_exception_thread(dump: Path) -> int:
+	with dump.open("rb") as file:
+		# MINIDUMP_HEADER 和 MINIDUMP_DIRECTORY 中的字段是小端 32 位值。
+		file.seek(8)
+		stream_count, directory_rva = struct.unpack("<II", file.read(8))
+		file.seek(directory_rva)
+		for _ in range(stream_count):
+			stream_type, size, rva = struct.unpack("<III", file.read(12))
+			if stream_type == 6 and size >= 4:  # ExceptionStream
+				file.seek(rva)
+				return struct.unpack("<I", file.read(4))[0]  # MINIDUMP_EXCEPTION_STREAM.ThreadId
+	raise AssertionError(f"minidump has no exception stream: {dump}")
+
+
 def scenario_unhandled_seh_still_writes_current_exception(binary: Path, directory: Path) -> None:
-	log, _, _, _ = paths(directory)
+	log, report, dump, _ = paths(directory)
 	result = run_probe(binary, directory, "unhandled", log)
 	# Windows/CRT或前置filter可决定终止码；必须是异常终止并有真实故障报告。
 	if result.returncode in (0, 2, 4, 5, 6, 7, 77):
 		raise AssertionError(f"native unhandled exception did not terminate as expected: {result.returncode}")
 	check_fatal_report(directory, "Unhandled structured exception", exception="EXCEPTION_ILLEGAL_INSTRUCTION")
+	prefix = b"fault-thread="
+	thread_line = next((line for line in result.stdout.splitlines() if line.startswith(prefix)), None)
+	if thread_line is None:
+		raise AssertionError("unhandled exception probe did not report the origin thread")
+	thread_id = int(thread_line[len(prefix):])
+	if f"Thread ID: {thread_id}" not in report.read_text(encoding="utf-8").splitlines():
+		raise AssertionError(f"fatal report does not identify the origin thread: {report}")
+	if read_minidump_exception_thread(dump) != thread_id:
+		raise AssertionError(f"minidump does not identify the origin thread: {dump}")
 
 
 def scenario_unicode_directory_keeps_all_fatal_artifacts(binary: Path, directory: Path) -> None:
@@ -229,6 +253,8 @@ def scenario_dump_publish_failure_is_reported_as_unsaved(binary: Path, directory
 		raise AssertionError("failed native dump publication was reported as saved")
 	if "Final minidump error: 0x00000000" in text or not dump.is_dir():
 		raise AssertionError("failed dump publication lost its error or replaced a directory")
+	if "Fallback to minimal minidump flags: no" not in text:
+		raise AssertionError("publication failure retried and could overwrite an already complete dump candidate")
 	_, dump_candidate, _ = candidate_paths(directory)
 	with dump_candidate.open("rb") as file:
 		if file.read(4) != b"MDMP":

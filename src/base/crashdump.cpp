@@ -59,57 +59,110 @@ const char *crashdump_signal_name(int Signal)
 	}
 }
 
+namespace
+{
+	// Android 在信号处理器里使用这份格式化逻辑。只写调用方给的缓冲区，不进入 printf。
+	class CCrashReportText
+	{
+		char *m_pBuffer;
+		size_t m_MaxLength;
+		size_t m_Length;
+
+	public:
+		CCrashReportText(char *pBuffer, size_t BufferSize, size_t Length = 0) :
+			m_pBuffer(pBuffer),
+			m_MaxLength(BufferSize - 1),
+			m_Length(Length)
+		{
+		}
+
+		bool Full() const { return m_Length == m_MaxLength; }
+
+		void Append(const char *pText)
+		{
+			while(!Full() && *pText != '\0')
+				m_pBuffer[m_Length++] = *pText++;
+		}
+
+		void AppendUnsigned(uint64_t Value, unsigned Base = 10, size_t MinWidth = 0)
+		{
+			static constexpr char s_aDigits[] = "0123456789ABCDEF";
+			char aNumber[20];
+			size_t Begin = sizeof(aNumber);
+			do
+			{
+				aNumber[--Begin] = s_aDigits[Value % Base];
+				Value /= Base;
+			} while(Value != 0 || sizeof(aNumber) - Begin < MinWidth);
+
+			while(!Full() && Begin < sizeof(aNumber))
+				m_pBuffer[m_Length++] = aNumber[Begin++];
+		}
+
+		void AppendSigned(int Value)
+		{
+			unsigned Magnitude = static_cast<unsigned>(Value);
+			if(Value < 0)
+			{
+				Append("-");
+				Magnitude = 0u - Magnitude;
+			}
+			AppendUnsigned(Magnitude);
+		}
+
+		size_t Finish()
+		{
+			m_pBuffer[m_Length] = '\0';
+			return Full() ? static_cast<size_t>(str_utf8_fix_truncation(m_pBuffer)) : m_Length;
+		}
+	};
+}
+
 size_t crashdump_format_fatal_report(char *pBuffer, size_t BufferSize, const SCrashFatalReport &Report)
 {
 	if(pBuffer == nullptr || BufferSize == 0)
 		return 0;
 
-	// 可选行先单独成串，主格式只做一次拼接：handler 内调用次数越少越安全。
-	char aVersionLine[192] = "";
-	if(Report.m_pVersion != nullptr && Report.m_pVersion[0] != '\0')
-		str_format(aVersionLine, sizeof(aVersionLine), "Version: %s\n", Report.m_pVersion);
-
-	char aBackendLine[128] = "";
-	if(Report.m_pGraphicsBackend != nullptr && Report.m_pGraphicsBackend[0] != '\0')
-		str_format(aBackendLine, sizeof(aBackendLine), "Graphics backend: %s\n", Report.m_pGraphicsBackend);
-
-	const int Length = str_format(pBuffer, (int)BufferSize,
+	CCrashReportText Text(pBuffer, BufferSize);
+	Text.Append(
 		"QmClient fatal crash report\n"
 		"===========================\n"
-		"Program: %s\n"
-		"%s"
-		"Platform: %s\n"
-		"%s"
-		"Started at: %s\n"
-		"Process id: %d\n"
-		"\n"
-		"Signal: %s (%d)\n"
-		"Signal code: %d\n"
-		"Fault address: 0x%016llX\n"
-		"\n"
-		"Registers:\n"
-		"  pc 0x%016llX\n"
-		"  lr 0x%016llX\n"
-		"  sp 0x%016llX\n"
-		"  fp 0x%016llX\n"
-		"\n",
-		Report.m_pProgramName != nullptr ? Report.m_pProgramName : "(unknown)",
-		aVersionLine,
-		Report.m_pPlatform != nullptr ? Report.m_pPlatform : "(unknown)",
-		aBackendLine,
-		Report.m_pStartTime != nullptr ? Report.m_pStartTime : "(unknown)",
-		Report.m_Pid,
-		crashdump_signal_name(Report.m_Signal), Report.m_Signal,
-		Report.m_SignalCode,
-		(unsigned long long)Report.m_FaultAddress,
-		(unsigned long long)Report.m_Pc,
-		(unsigned long long)Report.m_Lr,
-		(unsigned long long)Report.m_Sp,
-		(unsigned long long)Report.m_Fp);
-
-	if(Length <= 0)
-		return 0;
-	return (size_t)Length < BufferSize ? (size_t)Length : BufferSize - 1;
+		"Program: ");
+	Text.Append(Report.m_pProgramName ? Report.m_pProgramName : "(unknown)");
+	if(Report.m_pVersion && Report.m_pVersion[0] != '\0')
+	{
+		Text.Append("\nVersion: ");
+		Text.Append(Report.m_pVersion);
+	}
+	Text.Append("\nPlatform: ");
+	Text.Append(Report.m_pPlatform ? Report.m_pPlatform : "(unknown)");
+	if(Report.m_pGraphicsBackend && Report.m_pGraphicsBackend[0] != '\0')
+	{
+		Text.Append("\nGraphics backend: ");
+		Text.Append(Report.m_pGraphicsBackend);
+	}
+	Text.Append("\nStarted at: ");
+	Text.Append(Report.m_pStartTime ? Report.m_pStartTime : "(unknown)");
+	Text.Append("\nProcess id: ");
+	Text.AppendSigned(Report.m_Pid);
+	Text.Append("\n\nSignal: ");
+	Text.Append(crashdump_signal_name(Report.m_Signal));
+	Text.Append(" (");
+	Text.AppendSigned(Report.m_Signal);
+	Text.Append(")\nSignal code: ");
+	Text.AppendSigned(Report.m_SignalCode);
+	Text.Append("\nFault address: 0x");
+	Text.AppendUnsigned(Report.m_FaultAddress, 16, 16);
+	Text.Append("\n\nRegisters:\n  pc 0x");
+	Text.AppendUnsigned(Report.m_Pc, 16, 16);
+	Text.Append("\n  lr 0x");
+	Text.AppendUnsigned(Report.m_Lr, 16, 16);
+	Text.Append("\n  sp 0x");
+	Text.AppendUnsigned(Report.m_Sp, 16, 16);
+	Text.Append("\n  fp 0x");
+	Text.AppendUnsigned(Report.m_Fp, 16, 16);
+	Text.Append("\n\n");
+	return Text.Finish();
 }
 
 size_t crashdump_walk_frame_chain(FS_CRASH_READ_MEMORY pReadMemory, void *pUser, uintptr_t Pc, uintptr_t Fp, uintptr_t Sp, uintptr_t *pFrames, size_t MaxFrames)
@@ -121,13 +174,15 @@ size_t crashdump_walk_frame_chain(FS_CRASH_READ_MEMORY pReadMemory, void *pUser,
 	pFrames[Count++] = Pc;
 
 	const uintptr_t PointerSize = (uintptr_t)sizeof(uintptr_t);
-	// frame pointer 必须对齐且不低于当前栈指针，否则视为现场不可回溯。
-	if(Fp == 0 || Fp % PointerSize != 0 || (Sp != 0 && Fp < Sp))
+	if(Fp == 0 || Fp < Sp)
 		return Count;
 
 	uintptr_t Frame = Fp;
 	while(Count < MaxFrames)
 	{
+		// 损坏的链可以在任一层给出错位地址，或让 Frame + PointerSize 回绕。
+		if(Frame % PointerSize != 0 || Frame > UINTPTR_MAX - PointerSize)
+			break;
 		uintptr_t NextFrame = 0;
 		uintptr_t ReturnAddress = 0;
 		if(!pReadMemory(Frame, &NextFrame, pUser))
@@ -137,15 +192,15 @@ size_t crashdump_walk_frame_chain(FS_CRASH_READ_MEMORY pReadMemory, void *pUser,
 		if(ReturnAddress == 0)
 			break;
 		pFrames[Count++] = ReturnAddress;
-		// 栈向低地址增长：上一层 frame pointer 必须更大，否则按链已损坏处理，避免死循环。
-		if(NextFrame <= Frame)
+		// 上一层必须在当前两字长的栈帧之后。
+		if(NextFrame <= Frame + PointerSize)
 			break;
 		Frame = NextFrame;
 	}
 	return Count;
 }
 
-const char *crashdump_find_module(const SCrashModuleRange *pModules, size_t NumModules, uintptr_t Address, uintptr_t *pOffset)
+static const char *FindCrashModule(const SCrashModuleRange *pModules, size_t NumModules, uintptr_t Address, uintptr_t *pOffset, const uintptr_t *pLoadBiases)
 {
 	if(pModules == nullptr || Address == 0)
 		return nullptr;
@@ -155,19 +210,26 @@ const char *crashdump_find_module(const SCrashModuleRange *pModules, size_t NumM
 		if(Address >= pModules[i].m_Start && Address < pModules[i].m_End)
 		{
 			if(pOffset != nullptr)
-				*pOffset = Address - pModules[i].m_Start;
+				*pOffset = Address - (pLoadBiases ? pLoadBiases[i] : pModules[i].m_Start);
 			return pModules[i].m_aName;
 		}
 	}
 	return nullptr;
 }
 
+const char *crashdump_find_module(const SCrashModuleRange *pModules, size_t NumModules, uintptr_t Address, uintptr_t *pOffset)
+{
+	return FindCrashModule(pModules, NumModules, Address, pOffset, nullptr);
+}
+
 bool crashdump_add_module_range(SCrashModuleRange *pModules, size_t *pNumModules, size_t MaxModules, uintptr_t Start, uintptr_t End, const char *pPath)
 {
 	if(pModules == nullptr || pNumModules == nullptr || pPath == nullptr || pPath[0] == '\0')
 		return false;
+	if(*pNumModules > MaxModules || str_length(pPath) >= static_cast<int>(sizeof(pModules[0].m_aPath)))
+		return false;
 
-	// 按完整路径合并同一模块的多个映射，基址取最小值即 ELF 装载基址。
+	// 只用能完整保存的路径作合并键。
 	for(size_t i = 0; i < *pNumModules; i++)
 	{
 		if(str_comp(pModules[i].m_aPath, pPath) == 0)
@@ -236,34 +298,44 @@ size_t crashdump_append_frame_lines(char *pBuffer, size_t BufferSize, size_t Len
 	return crashdump_append_frame_lines(pBuffer, BufferSize, Length, pFrames, NumFrames, nullptr, 0);
 }
 
-size_t crashdump_append_frame_lines(char *pBuffer, size_t BufferSize, size_t Length, const uintptr_t *pFrames, size_t NumFrames, const SCrashModuleRange *pModules, size_t NumModules)
+static size_t AppendCrashFrameLines(char *pBuffer, size_t BufferSize, size_t Length, const uintptr_t *pFrames, size_t NumFrames,
+	const SCrashModuleRange *pModules, size_t NumModules, const uintptr_t *pLoadBiases)
 {
 	if(pBuffer == nullptr || BufferSize == 0)
 		return 0;
 	if(Length >= BufferSize - 1)
-		return Length;
+		return BufferSize - 1;
 	if(pFrames == nullptr || NumFrames == 0)
 		return Length;
 
-	int Written = str_format(pBuffer + Length, (int)(BufferSize - Length),
-		"Backtrace (%zu frames, raw addresses; resolve them with addr2line against the unstripped library):\n", NumFrames);
-	if(Written <= 0)
-		return Length;
-	Length += (size_t)Written;
-
-	for(size_t i = 0; i < NumFrames && Length < BufferSize - 1; i++)
+	CCrashReportText Text(pBuffer, BufferSize, Length);
+	Text.Append("Backtrace (");
+	Text.AppendUnsigned(NumFrames);
+	Text.Append(" frames, raw addresses; resolve them with addr2line against the unstripped library):\n");
+	for(size_t i = 0; i < NumFrames && !Text.Full(); i++)
 	{
+		Text.Append("  #");
+		Text.AppendUnsigned(i, 10, 2);
+		Text.Append(" 0x");
+		Text.AppendUnsigned(pFrames[i], 16, 16);
+
 		uintptr_t Offset = 0;
-		const char *pModule = crashdump_find_module(pModules, NumModules, pFrames[i], &Offset);
-		if(pModule != nullptr)
-			Written = str_format(pBuffer + Length, (int)(BufferSize - Length), "  #%02zu 0x%016llX %s+0x%llX\n", i, (unsigned long long)pFrames[i], pModule, (unsigned long long)Offset);
-		else
-			Written = str_format(pBuffer + Length, (int)(BufferSize - Length), "  #%02zu 0x%016llX\n", i, (unsigned long long)pFrames[i]);
-		if(Written <= 0)
-			break;
-		Length += (size_t)Written;
+		if(const char *pModule = FindCrashModule(pModules, NumModules, pFrames[i], &Offset, pLoadBiases))
+		{
+			Text.Append(" ");
+			Text.Append(pModule);
+			Text.Append("+0x");
+			Text.AppendUnsigned(Offset, 16);
+		}
+		Text.Append("\n");
 	}
-	return Length < BufferSize ? Length : BufferSize - 1;
+	return Text.Finish();
+}
+
+size_t crashdump_append_frame_lines(char *pBuffer, size_t BufferSize, size_t Length, const uintptr_t *pFrames, size_t NumFrames,
+	const SCrashModuleRange *pModules, size_t NumModules)
+{
+	return AppendCrashFrameLines(pBuffer, BufferSize, Length, pFrames, NumFrames, pModules, NumModules, nullptr);
 }
 
 static std::atomic<bool> gs_SuppressNextFatalReporter{false};
@@ -382,21 +454,25 @@ bool crashdump_launch_reporter_if_available(const char *report_path)
 #include "log.h"
 
 #include <fcntl.h>
+#include <link.h>
+#include <sys/syscall.h>
+#include <sys/uio.h>
 #include <ucontext.h>
 #include <unistd.h>
 
-#include <csignal>
+#include <cerrno>
 #include <cstdio>
 #include <iterator>
 
 static char gs_aAndroidReportPath[IO_MAX_PATH_LENGTH] = "";
+static char gs_aAndroidCandidatePath[IO_MAX_PATH_LENGTH + 16] = "";
+static char gs_aAndroidPendingPath[IO_MAX_PATH_LENGTH + 16] = "";
 static char gs_aAndroidStartTime[64] = "";
-static int gs_AndroidPid = 0;
 static bool gs_AndroidHandlersInstalled = false;
-// handler 重入即意味着回溯读到了不可访问的内存：核心现场已落盘，直接结束进程。
-static volatile sig_atomic_t gs_AndroidHandlerDepth = 0;
+static std::atomic_flag gs_AndroidReportInProgress = ATOMIC_FLAG_INIT;
+static_assert(std::atomic<const char *>::is_always_lock_free);
 
-static const int gs_aAndroidFatalSignals[] = {
+static constexpr int gs_aAndroidFatalSignals[] = {
 	SIGSEGV,
 	SIGABRT,
 #ifdef SIGBUS
@@ -405,83 +481,108 @@ static const int gs_aAndroidFatalSignals[] = {
 	SIGFPE,
 	SIGILL,
 };
+static struct sigaction gs_aAndroidPreviousActions[std::size(gs_aAndroidFatalSignals)];
+static char gs_aAndroidReportBuffer[8192];
 
-// 报告写成独立文件，沿用桌面的 _fatal_report.txt 约定：拷到手机「下载」后
-// 文件管理器可以按 text/plain 直接打开。主日志路径本身是 .RTP，不能当报告用。
-static void AndroidBuildReportPath(const char *pLogPath, char *pBuffer, size_t BufferSize)
-{
-	str_copy(pBuffer, pLogPath, (int)BufferSize);
-	const char *pExtension = str_rchr(pBuffer, '.');
-	if(pExtension != nullptr)
-		pBuffer[pExtension - pBuffer] = '\0';
-	str_append(pBuffer, "_fatal_report.txt", (int)BufferSize);
-}
-
-// 模块表在初始化阶段（进程健康）填充，信号处理器只做纯内存查表。
+// 启动时记录 ELF 可执行段和真正的装载偏移。崩溃后只查这张固定表。
 static SCrashModuleRange gs_aAndroidModules[64];
+static uintptr_t gs_aAndroidLoadBiases[std::size(gs_aAndroidModules)];
 static size_t gs_NumAndroidModules = 0;
 
-static void AndroidAddModule(uintptr_t Start, uintptr_t End, const char *pPath)
+static int AndroidAddModule(struct dl_phdr_info *pInfo, size_t, void *)
 {
-	crashdump_add_module_range(gs_aAndroidModules, &gs_NumAndroidModules, std::size(gs_aAndroidModules), Start, End, pPath);
-}
-
-static void AndroidLoadModuleRanges()
-{
-	gs_NumAndroidModules = 0;
-	FILE *pFile = fopen("/proc/self/maps", "r");
-	if(pFile == nullptr)
-		return;
-
-	char aLine[512];
-	while(fgets(aLine, sizeof(aLine), pFile) != nullptr)
+	if(!pInfo->dlpi_name || pInfo->dlpi_name[0] == '\0')
+		return 0;
+	const char *pName = fs_filename(pInfo->dlpi_name);
+	for(size_t i = 0; i < pInfo->dlpi_phnum; ++i)
 	{
-		unsigned long long Start = 0;
-		unsigned long long End = 0;
-		char aPermissions[8] = "";
-		char aPath[384] = "";
-		// 行格式："start-end perms offset dev inode pathname"，路径是最后一个字段。
-		if(sscanf(aLine, "%llx-%llx %7s %*s %*s %*s %383s", &Start, &End, aPermissions, aPath) != 4)
+		const auto &Segment = pInfo->dlpi_phdr[i];
+		if(Segment.p_type != PT_LOAD || !(Segment.p_flags & PF_X) || Segment.p_memsz == 0)
 			continue;
-		// 只有可执行映射才可能出现在栈帧里。
-		if(aPermissions[2] != 'x')
+		const uintptr_t Start = pInfo->dlpi_addr + Segment.p_vaddr;
+		if(Segment.p_memsz > UINTPTR_MAX - Start)
 			continue;
-		if(str_find(aPath, ".so") == nullptr)
-			continue;
-		AndroidAddModule((uintptr_t)Start, (uintptr_t)End, aPath);
+		if(gs_NumAndroidModules == std::size(gs_aAndroidModules))
+			return 1;
+
+		const size_t Index = gs_NumAndroidModules++;
+		SCrashModuleRange &Range = gs_aAndroidModules[Index];
+		Range.m_Start = Start;
+		Range.m_End = Start + Segment.p_memsz;
+		str_copy(Range.m_aName, pName, sizeof(Range.m_aName));
+		gs_aAndroidLoadBiases[Index] = pInfo->dlpi_addr;
 	}
-	fclose(pFile);
+	return 0;
 }
 
-static void AndroidWriteAll(int File, const char *pData, size_t Size)
+static bool AndroidWriteAll(int File, const char *pData, size_t Size)
 {
 	while(Size > 0)
 	{
 		const ssize_t Written = write(File, pData, Size);
+		if(Written < 0 && errno == EINTR)
+			continue;
 		if(Written <= 0)
-			return;
+			return false;
 		pData += Written;
-		Size -= (size_t)Written;
+		Size -= static_cast<size_t>(Written);
 	}
+	return true;
+}
+
+static bool AndroidPublishReport(const char *pData, size_t Size)
+{
+	const int File = open(gs_aAndroidCandidatePath, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+	if(File < 0)
+		return false;
+	const bool Complete = AndroidWriteAll(File, pData, Size) && fsync(File) == 0;
+	const bool Closed = close(File) == 0;
+	if(Complete && Closed && rename(gs_aAndroidCandidatePath, gs_aAndroidReportPath) == 0)
+		return true;
+	unlink(gs_aAndroidCandidatePath);
+	return false;
 }
 
 #if !defined(__arm__)
-static bool AndroidReadMemory(uintptr_t Address, uintptr_t *pValue, void *pUser)
+static bool AndroidReadMemory(uintptr_t Address, uintptr_t *pValue, void *)
 {
-	(void)pUser;
-	// 地址 0 附近必然是无效页；其余交给重入保护兜底。
-	if(Address < 4096)
-		return false;
-	*pValue = *reinterpret_cast<const uintptr_t *>(Address);
-	return true;
+	// 内核校验地址和读取长度，坏栈帧只会结束回溯。
+	const iovec Local{pValue, sizeof(*pValue)};
+	const iovec Remote{reinterpret_cast<void *>(Address), sizeof(*pValue)};
+	return process_vm_readv(getpid(), &Local, 1, &Remote, 1, 0) == static_cast<ssize_t>(sizeof(*pValue));
 }
 #endif
 
+static void AndroidForwardFatalSignal(int Signal, siginfo_t *pInfo)
+{
+	for(size_t i = 0; i < std::size(gs_aAndroidFatalSignals); ++i)
+	{
+		if(gs_aAndroidFatalSignals[i] != Signal)
+			continue;
+
+		struct sigaction Previous = gs_aAndroidPreviousActions[i];
+		if(Previous.sa_handler == SIG_IGN)
+			Previous.sa_handler = SIG_DFL;
+		if(sigaction(Signal, &Previous, nullptr) == 0)
+		{
+			// 当前信号在 handler 内被阻塞。返回后由系统向原线程递送，并保留故障地址。
+			if(pInfo && syscall(SYS_rt_tgsigqueueinfo, getpid(), gettid(), Signal, pInfo) == 0)
+				return;
+			if(raise(Signal) == 0)
+				return;
+		}
+		break;
+	}
+	_exit(128 + Signal);
+}
+
 static void AndroidFatalSignalHandler(int Signal, siginfo_t *pInfo, void *pContext)
 {
-	if(gs_AndroidHandlerDepth != 0)
-		_exit(128 + Signal);
-	gs_AndroidHandlerDepth = 1;
+	if(gs_AndroidReportInProgress.test_and_set(std::memory_order_acquire))
+	{
+		AndroidForwardFatalSignal(Signal, pInfo);
+		return;
+	}
 
 	uintptr_t Pc = 0;
 	uintptr_t Sp = 0;
@@ -521,98 +622,93 @@ static void AndroidFatalSignalHandler(int Signal, siginfo_t *pInfo, void *pConte
 	Report.m_pPlatform = CONF_PLATFORM_STRING;
 	Report.m_pStartTime = gs_aAndroidStartTime;
 	Report.m_pGraphicsBackend = crashdump_graphics_backend_for_report();
-	Report.m_Pid = gs_AndroidPid;
+	Report.m_Pid = getpid();
 	Report.m_Signal = Signal;
 	Report.m_SignalCode = pInfo != nullptr ? pInfo->si_code : 0;
-	Report.m_FaultAddress = pInfo != nullptr ? (uintptr_t)pInfo->si_addr : 0;
+	if(pInfo && pInfo->si_code > 0 && Signal != SIGABRT)
+		Report.m_FaultAddress = reinterpret_cast<uintptr_t>(pInfo->si_addr);
 	Report.m_Pc = Pc;
 	Report.m_Sp = Sp;
 	Report.m_Fp = Fp;
 	Report.m_Lr = Lr;
 
-	char aBuffer[8192];
-	const size_t Length = crashdump_format_fatal_report(aBuffer, sizeof(aBuffer), Report);
-	if(Length > 0)
+	char *pBuffer = gs_aAndroidReportBuffer;
+	const size_t Capacity = sizeof(gs_aAndroidReportBuffer);
+	const size_t Length = crashdump_format_fatal_report(pBuffer, Capacity, Report);
+	if(Length > 0 && AndroidPublishReport(pBuffer, Length))
 	{
-		// 核心现场先落盘：后面的栈回溯可能踩到坏内存触发二次崩溃。
-		const int File = open(gs_aAndroidReportPath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-		if(File >= 0)
-		{
-			AndroidWriteAll(File, aBuffer, Length);
-			fsync(File);
-			close(File);
-		}
-	}
+		// 正文已完整发布。先标记供下次启动导出，回溯失败仍能拿到正文。
+		const int PendingFile = open(gs_aAndroidPendingPath, O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
+		if(PendingFile >= 0)
+			close(PendingFile);
 
-	size_t AppendedLength = 0;
+		size_t FullLength = Length;
 #if defined(__arm__)
-	// 32 位 ARM 的 frame pointer 布局随编译选项变化，宁可明确说明也不给错栈。
-	str_copy(aBuffer, "Backtrace not collected: 32-bit ARM frame pointer layout is not reliable.\n");
-	AppendedLength = (size_t)str_length(aBuffer);
+		CCrashReportText Text(pBuffer, Capacity, Length);
+		Text.Append("Backtrace not collected: 32-bit ARM frame pointer layout is not reliable.\n");
+		FullLength = Text.Finish();
 #else
-	uintptr_t aFrames[32];
-	const size_t NumFrames = crashdump_walk_frame_chain(AndroidReadMemory, nullptr, Pc, Fp, Sp, aFrames, std::size(aFrames));
-	if(NumFrames > 0)
-		AppendedLength = crashdump_append_frame_lines(aBuffer, sizeof(aBuffer), 0, aFrames, NumFrames, gs_aAndroidModules, gs_NumAndroidModules);
+		uintptr_t aFrames[32];
+		const size_t NumFrames = crashdump_walk_frame_chain(AndroidReadMemory, nullptr, Pc, Fp, Sp, aFrames, std::size(aFrames));
+		FullLength = AppendCrashFrameLines(pBuffer, Capacity, Length, aFrames, NumFrames,
+			gs_aAndroidModules, gs_NumAndroidModules, gs_aAndroidLoadBiases);
 #endif
-	if(AppendedLength > 0)
-	{
-		const int File = open(gs_aAndroidReportPath, O_WRONLY | O_APPEND);
-		if(File >= 0)
-		{
-			AndroidWriteAll(File, aBuffer, AppendedLength);
-			fsync(File);
-			close(File);
-		}
+		if(FullLength > Length)
+			AndroidPublishReport(pBuffer, FullLength);
 	}
 
-	// 空标记文件：下次启动只搬运本次崩溃新产生、尚未导出的报告。
-	char aPendingPath[IO_MAX_PATH_LENGTH + 16];
-	str_format(aPendingPath, sizeof(aPendingPath), "%s.pending", gs_aAndroidReportPath);
-	const int PendingFile = open(aPendingPath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-	if(PendingFile >= 0)
-		close(PendingFile);
-
-	// 交回系统默认处理，让 Android 侧仍能生成 tombstone 与崩溃统计。
-	struct sigaction Default = {};
-	Default.sa_handler = SIG_DFL;
-	sigemptyset(&Default.sa_mask);
-	sigaction(Signal, &Default, nullptr);
-	raise(Signal);
-	_exit(128 + Signal);
+	AndroidForwardFatalSignal(Signal, pInfo);
 }
 
 void crashdump_init_if_available(const char *log_file_path)
 {
-	if(log_file_path == nullptr || log_file_path[0] == '\0')
+	if(gs_AndroidHandlersInstalled || !log_file_path || !log_file_path[0])
 		return;
 
-	AndroidBuildReportPath(log_file_path, gs_aAndroidReportPath, sizeof(gs_aAndroidReportPath));
+	if(!crash_output::MakeSidecarPath(log_file_path, "_fatal_report.txt", gs_aAndroidReportPath, sizeof(gs_aAndroidReportPath)) ||
+		!crash_output::AppendPathSuffix(gs_aAndroidReportPath, ".tmp", gs_aAndroidCandidatePath, sizeof(gs_aAndroidCandidatePath)) ||
+		!crash_output::AppendPathSuffix(gs_aAndroidReportPath, ".pending", gs_aAndroidPendingPath, sizeof(gs_aAndroidPendingPath)))
+	{
+		log_warn("crashdump", "crash output paths are invalid or exceed the path budget; file output disabled");
+		return;
+	}
+
 	str_timestamp(gs_aAndroidStartTime, sizeof(gs_aAndroidStartTime));
-	gs_AndroidPid = pid();
-	AndroidLoadModuleRanges();
-	if(gs_AndroidHandlersInstalled)
-		return;
+	gs_NumAndroidModules = 0;
+	dl_iterate_phdr(AndroidAddModule, nullptr);
 
-	// 栈溢出时处理函数仍要能运行，因此需要独立信号栈。
-	static char s_aAltStack[64 * 1024];
 	stack_t AltStack = {};
-	AltStack.ss_sp = s_aAltStack;
-	AltStack.ss_size = sizeof(s_aAltStack);
-	if(sigaltstack(&AltStack, nullptr) != 0)
-		log_warn("crashdump", "failed to install the alternate signal stack");
+	if(sigaltstack(nullptr, &AltStack) != 0)
+		log_warn("crashdump", "failed to query the alternate signal stack");
+	else if(AltStack.ss_flags & SS_DISABLE)
+	{
+		static char s_aAltStack[64 * 1024];
+		AltStack = {};
+		AltStack.ss_sp = s_aAltStack;
+		AltStack.ss_size = sizeof(s_aAltStack);
+		if(sigaltstack(&AltStack, nullptr) != 0)
+			log_warn("crashdump", "failed to install the alternate signal stack");
+	}
+
+	bool aPreviousRead[std::size(gs_aAndroidFatalSignals)];
+	for(size_t i = 0; i < std::size(gs_aAndroidFatalSignals); ++i)
+		aPreviousRead[i] = sigaction(gs_aAndroidFatalSignals[i], nullptr, &gs_aAndroidPreviousActions[i]) == 0;
+	gs_AndroidReportInProgress.clear(std::memory_order_release);
 
 	struct sigaction Action = {};
 	Action.sa_sigaction = AndroidFatalSignalHandler;
 	sigemptyset(&Action.sa_mask);
 	Action.sa_flags = SA_SIGINFO | SA_ONSTACK | SA_RESTART;
-	for(const int Signal : gs_aAndroidFatalSignals)
+	for(size_t i = 0; i < std::size(gs_aAndroidFatalSignals); ++i)
 	{
-		if(sigaction(Signal, &Action, nullptr) != 0)
+		const int Signal = gs_aAndroidFatalSignals[i];
+		if(!aPreviousRead[i] || sigaction(Signal, &Action, nullptr) != 0)
 			log_warn("crashdump", "failed to install handler for signal %d", Signal);
+		else
+			gs_AndroidHandlersInstalled = true;
 	}
-	gs_AndroidHandlersInstalled = true;
-	log_info("crashdump", "fatal signal handlers installed, report path '%s'", gs_aAndroidReportPath);
+	if(gs_AndroidHandlersInstalled)
+		log_info("crashdump", "fatal signal handlers installed, report path '%s'", gs_aAndroidReportPath);
 }
 
 #else
@@ -632,6 +728,7 @@ void crashdump_init_if_available(const char *log_file_path)
 #include "windows.h"
 
 #include <dbghelp.h>
+#include <process.h>
 #include <tlhelp32.h>
 
 #include <csignal>
@@ -659,13 +756,21 @@ static wchar_t gs_aWideConfirmedCandidatePath[IO_MAX_PATH_LENGTH + 32] = L"";
 static HMODULE gs_pDbgHelpLib = nullptr;
 static MiniDumpWriteDumpFunc gs_pMiniDumpWriteDump = nullptr;
 
-static std::atomic<bool> gs_FallbackHandlersInstalled{false};
-static std::atomic_flag gs_FatalReportInProgress = ATOMIC_FLAG_INIT;
-static std::atomic_flag gs_FatalReporterLaunched = ATOMIC_FLAG_INIT;
-static std::atomic<bool> gs_FallbackReportWritten{false};
+static std::atomic_flag gs_CrashdumpInitialized = ATOMIC_FLAG_INIT;
+static std::atomic<DWORD> gs_FatalOwnerThreadId{0};
+static HANDLE gs_pFatalRequestEvent = nullptr;
+static HANDLE gs_pFatalFinishedEvent = nullptr;
+static unsigned gs_FatalWorkerThreadId = 0;
+static constexpr DWORD FATAL_DIAGNOSTICS_TIMEOUT_MS = 10000;
 
-static LPTOP_LEVEL_EXCEPTION_FILTER gs_pPreviousUnhandledExceptionFilter = nullptr;
-// 首个致命入口独占此固定快照，不额外占用已受损线程的大块栈空间。
+struct SFatalCrashRequest
+{
+	const char *m_pReason;
+	DWORD m_ThreadId;
+	int m_SignalNumber;
+};
+static SFatalCrashRequest gs_FatalRequest;
+// 首个致命入口独占固定快照，提交工作前保存现场，不借用故障线程的内存。
 static crashdump_windows::CExceptionSnapshot gs_ExceptionSnapshot;
 
 using CNativeCrashFile = crash_output::CWindowsFile;
@@ -689,10 +794,13 @@ static constexpr MINIDUMP_TYPE gs_MinimalDumpType = static_cast<MINIDUMP_TYPE>(
 	MiniDumpWithHandleData |
 	MiniDumpWithIndirectlyReferencedMemory);
 
-static DWORD gs_LastMiniDumpWrittenFlags = 0;
-static DWORD gs_LastMiniDumpExtendedAttemptError = ERROR_SUCCESS;
-static DWORD gs_LastMiniDumpFinalError = ERROR_SUCCESS;
-static bool gs_LastMiniDumpRetriedWithMinimalFlags = false;
+struct SMiniDumpResult
+{
+	DWORD m_WrittenFlags = 0;
+	DWORD m_ExtendedAttemptError = ERROR_SUCCESS;
+	DWORD m_FinalError = ERROR_SUCCESS;
+	bool m_RetriedWithMinimalFlags = false;
+};
 
 static void WideToUtf8(const wchar_t *pWide, char *pOut, size_t OutSize)
 {
@@ -926,7 +1034,7 @@ static void WriteLoadedModules(CCrashWriter &Output)
 	CloseHandle(SnapshotHandle);
 }
 
-static void WriteExceptionContext(CCrashWriter &Output, const CONTEXT *pContext)
+static void WriteExceptionContext(CCrashWriter &Output, const CONTEXT *pContext, bool IncludeMemory)
 {
 	if(pContext == nullptr)
 		return;
@@ -967,8 +1075,11 @@ static void WriteExceptionContext(CCrashWriter &Output, const CONTEXT *pContext)
 		(unsigned long long)pContext->R15);
 	WriteRaw(Output, aLine);
 
-	WriteMemoryBytes(Output, "Instruction bytes near RIP", reinterpret_cast<const void *>(pContext->Rip), 32, 64);
-	WriteMemoryBytes(Output, "Stack bytes near RSP", reinterpret_cast<const void *>(pContext->Rsp), 0, 128);
+	if(IncludeMemory)
+	{
+		WriteMemoryBytes(Output, "Instruction bytes near RIP", reinterpret_cast<const void *>(pContext->Rip), 32, 64);
+		WriteMemoryBytes(Output, "Stack bytes near RSP", reinterpret_cast<const void *>(pContext->Rsp), 0, 128);
+	}
 #elif defined(CONF_ARCH_IA32)
 	str_format(aLine, sizeof(aLine), "EIP=0x%08lX ESP=0x%08lX EBP=0x%08lX EFLAGS=0x%08lX\r\n",
 		(unsigned long)pContext->Eip,
@@ -987,14 +1098,17 @@ static void WriteExceptionContext(CCrashWriter &Output, const CONTEXT *pContext)
 		(unsigned long)pContext->Edi);
 	WriteRaw(Output, aLine);
 
-	WriteMemoryBytes(Output, "Instruction bytes near EIP", reinterpret_cast<const void *>(pContext->Eip), 32, 64);
-	WriteMemoryBytes(Output, "Stack bytes near ESP", reinterpret_cast<const void *>(pContext->Esp), 0, 128);
+	if(IncludeMemory)
+	{
+		WriteMemoryBytes(Output, "Instruction bytes near EIP", reinterpret_cast<const void *>(pContext->Eip), 32, 64);
+		WriteMemoryBytes(Output, "Stack bytes near ESP", reinterpret_cast<const void *>(pContext->Esp), 0, 128);
+	}
 #else
 	WriteRaw(Output, "Register dump: unsupported architecture\r\n");
 #endif
 }
 
-static void WriteExceptionDetails(CCrashWriter &Output, const EXCEPTION_RECORD *pRecord)
+static void WriteExceptionDetails(CCrashWriter &Output, const EXCEPTION_RECORD *pRecord, bool IncludeDiagnostics)
 {
 	if(pRecord == nullptr)
 		return;
@@ -1011,7 +1125,8 @@ static void WriteExceptionDetails(CCrashWriter &Output, const EXCEPTION_RECORD *
 	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Exception address: 0x%p\r\n", pRecord->ExceptionAddress);
 	WriteRaw(Output, aLine);
-	WriteExceptionModule(Output, pRecord->ExceptionAddress);
+	if(IncludeDiagnostics)
+		WriteExceptionModule(Output, pRecord->ExceptionAddress);
 	str_format(aLine, sizeof(aLine), "Exception parameters: %lu\r\n", (unsigned long)pRecord->NumberParameters);
 	WriteRaw(Output, aLine);
 
@@ -1044,7 +1159,8 @@ static void WriteExceptionDetails(CCrashWriter &Output, const EXCEPTION_RECORD *
 		str_format(aLine, sizeof(aLine), "Access violation target address: 0x%016llX\r\n",
 			(unsigned long long)pRecord->ExceptionInformation[1]);
 		WriteRaw(Output, aLine);
-		WriteMemoryBytes(Output, "Bytes at fault address", reinterpret_cast<const void *>(pRecord->ExceptionInformation[1]), 0, 64);
+		if(IncludeDiagnostics)
+			WriteMemoryBytes(Output, "Bytes at fault address", reinterpret_cast<const void *>(pRecord->ExceptionInformation[1]), 0, 64);
 	}
 
 	if(ExceptionCode == EXCEPTION_IN_PAGE_ERROR && pRecord->NumberParameters >= 3)
@@ -1150,16 +1266,16 @@ static void WriteRaw(CCrashWriter &Output, const char *pText)
 	Output.WriteText(pText);
 }
 
-static bool WriteMinimalCrashReport(const char *pReason, const crashdump_windows::CExceptionSnapshot &Exception, int SignalNumber, bool DumpWritten)
+static bool WriteCrashReport(const SFatalCrashRequest &Request, const SMiniDumpResult *pDumpResult)
 {
-	gs_FallbackReportWritten.store(false, std::memory_order_release);
-	if(gs_aWideFallbackReportPath[0] == L'\0')
+	if(gs_aWideReportCandidatePath[0] == L'\0')
 		return false;
 
 	HANDLE FileHandle = CreateFileW(gs_aWideReportCandidatePath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if(FileHandle == INVALID_HANDLE_VALUE)
 		return false;
 
+	const bool DumpWritten = pDumpResult && pDumpResult->m_WrittenFlags != 0;
 	CNativeCrashFile File(FileHandle);
 	CCrashWriter Output(File);
 	char aLine[2048];
@@ -1177,72 +1293,86 @@ static bool WriteMinimalCrashReport(const char *pReason, const crashdump_windows
 		(unsigned)LocalTime.wSecond,
 		(unsigned)LocalTime.wMilliseconds);
 	WriteRaw(Output, aLine);
-	str_format(aLine, sizeof(aLine), "Reason: %s\r\n", pReason != nullptr ? pReason : "unknown");
+	str_format(aLine, sizeof(aLine), "Reason: %s\r\n", Request.m_pReason);
 	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Process ID: %lu\r\n", (unsigned long)GetCurrentProcessId());
 	WriteRaw(Output, aLine);
-	str_format(aLine, sizeof(aLine), "Thread ID: %lu\r\n", (unsigned long)GetCurrentThreadId());
+	str_format(aLine, sizeof(aLine), "Thread ID: %lu\r\n", (unsigned long)Request.m_ThreadId);
 	WriteRaw(Output, aLine);
-	WriteExecutablePath(Output);
+	if(pDumpResult)
+		WriteExecutablePath(Output);
 	str_format(aLine, sizeof(aLine), "Crash log path (.RTP): %s\r\n", gs_aCrashLogPath);
 	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Fallback minidump path: %s\r\n", gs_aFallbackDumpPath);
 	WriteRaw(Output, aLine);
-	str_format(aLine, sizeof(aLine), "Fallback minidump written: %s\r\n", DumpWritten ? "yes" : "no");
-	WriteRaw(Output, aLine);
-	str_format(aLine, sizeof(aLine), "Requested extended minidump flags: 0x%08lX\r\n", (unsigned long)gs_ExtendedDumpType);
-	WriteRaw(Output, aLine);
-	str_format(aLine, sizeof(aLine), "Fallback to minimal minidump flags: %s\r\n", gs_LastMiniDumpRetriedWithMinimalFlags ? "yes" : "no");
-	WriteRaw(Output, aLine);
-	str_format(aLine, sizeof(aLine), "Written minidump flags: 0x%08lX\r\n", (unsigned long)gs_LastMiniDumpWrittenFlags);
-	WriteRaw(Output, aLine);
+	if(pDumpResult)
+	{
+		str_format(aLine, sizeof(aLine), "Fallback minidump written: %s\r\n", DumpWritten ? "yes" : "no");
+		WriteRaw(Output, aLine);
+		str_format(aLine, sizeof(aLine), "Requested extended minidump flags: 0x%08lX\r\n", (unsigned long)gs_ExtendedDumpType);
+		WriteRaw(Output, aLine);
+		str_format(aLine, sizeof(aLine), "Fallback to minimal minidump flags: %s\r\n", pDumpResult->m_RetriedWithMinimalFlags ? "yes" : "no");
+		WriteRaw(Output, aLine);
+		str_format(aLine, sizeof(aLine), "Written minidump flags: 0x%08lX\r\n", (unsigned long)pDumpResult->m_WrittenFlags);
+		WriteRaw(Output, aLine);
+	}
+	else
+	{
+		WriteRaw(Output, "Minidump and extended diagnostics had not completed when this report was saved.\r\n");
+	}
 	if(const char *pGraphicsBackend = crashdump_graphics_backend_for_report())
 	{
 		str_format(aLine, sizeof(aLine), "Graphics backend: %s\r\n", pGraphicsBackend);
 		WriteRaw(Output, aLine);
 	}
-	if(gs_LastMiniDumpRetriedWithMinimalFlags)
+	if(pDumpResult)
 	{
-		str_format(aLine, sizeof(aLine), "Extended minidump attempt error: 0x%08lX\r\n", (unsigned long)gs_LastMiniDumpExtendedAttemptError);
-		WriteRaw(Output, aLine);
+		if(pDumpResult->m_RetriedWithMinimalFlags)
+		{
+			str_format(aLine, sizeof(aLine), "Extended minidump attempt error: 0x%08lX\r\n", (unsigned long)pDumpResult->m_ExtendedAttemptError);
+			WriteRaw(Output, aLine);
+		}
+		if(!DumpWritten)
+		{
+			str_format(aLine, sizeof(aLine), "Final minidump error: 0x%08lX\r\n", (unsigned long)pDumpResult->m_FinalError);
+			WriteRaw(Output, aLine);
+		}
 	}
-	if(!DumpWritten)
+
+	if(Request.m_SignalNumber != 0)
 	{
-		str_format(aLine, sizeof(aLine), "Final minidump error: 0x%08lX\r\n", (unsigned long)gs_LastMiniDumpFinalError);
+		str_format(aLine, sizeof(aLine), "Signal: %d (%s)\r\n", Request.m_SignalNumber, SignalToString(Request.m_SignalNumber));
 		WriteRaw(Output, aLine);
 	}
 
-	if(SignalNumber != 0)
-	{
-		str_format(aLine, sizeof(aLine), "Signal: %d (%s)\r\n", SignalNumber, SignalToString(SignalNumber));
-		WriteRaw(Output, aLine);
-	}
+	WriteExceptionDetails(Output, gs_ExceptionSnapshot.Record(), pDumpResult != nullptr);
+	WriteExceptionContext(Output, gs_ExceptionSnapshot.Context(), pDumpResult != nullptr);
+	if(pDumpResult)
+		WriteLoadedModules(Output);
 
-	WriteExceptionDetails(Output, Exception.Record());
-	WriteExceptionContext(Output, Exception.Context());
-	WriteLoadedModules(Output);
-
-	const bool Completed = Output.Finish();
-	const bool Published = Completed && crash_output::PublishWindowsOutput(gs_aWideReportCandidatePath, gs_aWideFallbackReportPath);
-	gs_FallbackReportWritten.store(Published, std::memory_order_release);
-	return Published;
+	return Output.Finish() && crash_output::PublishWindowsOutput(gs_aWideReportCandidatePath, gs_aWideFallbackReportPath);
 }
 
-static bool TryWriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *pExceptionPointers, MINIDUMP_TYPE DumpType, DWORD *pOutError)
+enum class EMiniDumpAttempt
 {
-	if(gs_pMiniDumpWriteDump == nullptr || pFilename == nullptr || pFilename[0] == L'\0')
+	WRITTEN,
+	DUMP_FAILED,
+	OUTPUT_FAILED
+};
+
+static EMiniDumpAttempt TryWriteMiniDumpFile(const wchar_t *pFilename, DWORD ThreadId, EXCEPTION_POINTERS *pExceptionPointers, MINIDUMP_TYPE DumpType, DWORD &Error)
+{
+	if(gs_pMiniDumpWriteDump == nullptr || pFilename[0] == L'\0')
 	{
-		if(pOutError != nullptr)
-			*pOutError = gs_pMiniDumpWriteDump == nullptr ? ERROR_PROC_NOT_FOUND : ERROR_INVALID_PARAMETER;
-		return false;
+		Error = gs_pMiniDumpWriteDump == nullptr ? ERROR_PROC_NOT_FOUND : ERROR_INVALID_PARAMETER;
+		return EMiniDumpAttempt::OUTPUT_FAILED;
 	}
 
 	HANDLE FileHandle = CreateFileW(gs_aWideDumpCandidatePath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if(FileHandle == INVALID_HANDLE_VALUE)
 	{
-		if(pOutError != nullptr)
-			*pOutError = GetLastError();
-		return false;
+		Error = GetLastError();
+		return EMiniDumpAttempt::OUTPUT_FAILED;
 	}
 
 	CNativeCrashFile File(FileHandle);
@@ -1251,7 +1381,7 @@ static bool TryWriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *p
 	PMINIDUMP_EXCEPTION_INFORMATION pExceptionInfo = nullptr;
 	if(pExceptionPointers != nullptr)
 	{
-		ExceptionInfo.ThreadId = GetCurrentThreadId();
+		ExceptionInfo.ThreadId = ThreadId;
 		ExceptionInfo.ExceptionPointers = pExceptionPointers;
 		ExceptionInfo.ClientPointers = FALSE;
 		pExceptionInfo = &ExceptionInfo;
@@ -1260,45 +1390,42 @@ static bool TryWriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *p
 	const BOOL Result = gs_pMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), FileHandle, DumpType, pExceptionInfo, nullptr, nullptr);
 	if(!Result)
 		File.Fail(GetLastError());
-	bool Completed = Output.Finish(Result != FALSE);
+	const bool Completed = Output.Finish(Result != FALSE);
 	if(Completed && !crash_output::PublishWindowsOutput(gs_aWideDumpCandidatePath, pFilename))
-	{
-		File.Fail(GetLastError());
-		Completed = false;
-	}
-	if(pOutError != nullptr)
-		*pOutError = File.Error();
-	return Completed;
+		File.Fail(GetLastError(), CNativeCrashFile::EOperation::PUBLISH);
+	Error = File.Error();
+	if(!Result)
+		return EMiniDumpAttempt::DUMP_FAILED;
+	return Error == ERROR_SUCCESS ? EMiniDumpAttempt::WRITTEN : EMiniDumpAttempt::OUTPUT_FAILED;
 }
 
-static bool WriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *pExceptionPointers)
+static SMiniDumpResult WriteMiniDumpFile(DWORD ThreadId, EXCEPTION_POINTERS *pExceptionPointers)
 {
-	gs_LastMiniDumpWrittenFlags = 0;
-	gs_LastMiniDumpExtendedAttemptError = ERROR_SUCCESS;
-	gs_LastMiniDumpFinalError = ERROR_SUCCESS;
-	gs_LastMiniDumpRetriedWithMinimalFlags = false;
-
+	SMiniDumpResult Result;
 	const crashdump_windows::CMiniDumpWriteGuard DumpGuard;
 	if(!DumpGuard.Acquired())
 	{
-		gs_LastMiniDumpFinalError = ERROR_BUSY;
-		return false;
+		Result.m_FinalError = ERROR_BUSY;
+		return Result;
 	}
 
-	if(TryWriteMiniDumpFile(pFilename, pExceptionPointers, gs_ExtendedDumpType, &gs_LastMiniDumpExtendedAttemptError))
+	const auto Attempt = TryWriteMiniDumpFile(gs_aWideFallbackDumpPath, ThreadId, pExceptionPointers, gs_ExtendedDumpType, Result.m_ExtendedAttemptError);
+	if(Attempt == EMiniDumpAttempt::WRITTEN)
 	{
-		gs_LastMiniDumpWrittenFlags = (DWORD)gs_ExtendedDumpType;
-		return true;
+		Result.m_WrittenFlags = static_cast<DWORD>(gs_ExtendedDumpType);
+		return Result;
 	}
-
-	gs_LastMiniDumpRetriedWithMinimalFlags = true;
-	if(TryWriteMiniDumpFile(pFilename, pExceptionPointers, gs_MinimalDumpType, &gs_LastMiniDumpFinalError))
+	if(Attempt == EMiniDumpAttempt::OUTPUT_FAILED)
 	{
-		gs_LastMiniDumpWrittenFlags = (DWORD)gs_MinimalDumpType;
-		return true;
+		// 更换转储选项无法修复文件输出错误。保留可能已经完整写好的候选。
+		Result.m_FinalError = Result.m_ExtendedAttemptError;
+		return Result;
 	}
 
-	return false;
+	Result.m_RetriedWithMinimalFlags = true;
+	if(TryWriteMiniDumpFile(gs_aWideFallbackDumpPath, ThreadId, pExceptionPointers, gs_MinimalDumpType, Result.m_FinalError) == EMiniDumpAttempt::WRITTEN)
+		Result.m_WrittenFlags = static_cast<DWORD>(gs_MinimalDumpType);
+	return Result;
 }
 
 // QmClient: 判断异常地址是否落在已知图形驱动模块内。
@@ -1316,7 +1443,7 @@ static bool IsShutdownGraphicsFault(const EXCEPTION_RECORD *pRecord)
 		return false;
 
 	HMODULE hModule = nullptr;
-	if(!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+	if(!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
 		   reinterpret_cast<LPCWSTR>(pFaultAddress), &hModule) ||
 		hModule == nullptr)
 	{
@@ -1331,31 +1458,9 @@ static bool IsShutdownGraphicsFault(const EXCEPTION_RECORD *pRecord)
 	return crashdump_is_ignorable_shutdown_driver_module(fs_filename(aModulePath));
 }
 
-static void HandleFatalCrash(const char *pReason, EXCEPTION_POINTERS *pExceptionPointers, int SignalNumber)
-{
-	if(gs_FatalReportInProgress.test_and_set(std::memory_order_acq_rel))
-		return;
-
-	gs_ExceptionSnapshot.Capture(pExceptionPointers);
-	// 退出阶段的已知图形驱动故障：只留日志，不写转储、不生成报告。
-	if(IsShutdownGraphicsFault(gs_ExceptionSnapshot.Record()))
-	{
-		gs_ShutdownGraphicsFault.store(true, std::memory_order_release);
-		log_warn("crashdump", "ignoring graphics driver fault '%s' during shutdown; process is already exiting", pReason);
-		return;
-	}
-
-	const bool DumpWritten = WriteMiniDumpFile(gs_aWideFallbackDumpPath, gs_ExceptionSnapshot.PointersForDump());
-	WriteMinimalCrashReport(pReason, gs_ExceptionSnapshot, SignalNumber, DumpWritten);
-}
-
 static void LaunchFatalCrashReporter()
 {
 	if(gs_SuppressNextFatalReporter.exchange(false, std::memory_order_acq_rel))
-		return;
-	if(!gs_FallbackReportWritten.load(std::memory_order_acquire) || gs_aFallbackReportPath[0] == '\0')
-		return;
-	if(gs_FatalReporterLaunched.test_and_set(std::memory_order_acq_rel))
 		return;
 
 	if(gs_aWideConfirmedPath[0] == L'\0' || gs_aWideConfirmedCandidatePath[0] == L'\0')
@@ -1371,36 +1476,105 @@ static void LaunchFatalCrashReporter()
 	crashdump_launch_reporter_if_available(gs_aFallbackReportPath);
 }
 
-static LONG WINAPI FallbackUnhandledExceptionFilter(EXCEPTION_POINTERS *pExceptionPointers)
+static unsigned __stdcall FatalCrashWorker(void *)
 {
-	HandleFatalCrash("Unhandled structured exception", pExceptionPointers, 0);
-	LaunchFatalCrashReporter();
-	// 本地报告完成后结束异常处理。继续调用旧处理器会进入 exchndl 的在线符号
-	// 下载，使已经崩溃的主线程再次阻塞并触发误导性的 hang 报告。
-	return EXCEPTION_EXECUTE_HANDLER;
+	if(WaitForSingleObject(gs_pFatalRequestEvent, INFINITE) != WAIT_OBJECT_0)
+		return 0;
+
+	const SFatalCrashRequest &Request = gs_FatalRequest;
+	if(IsShutdownGraphicsFault(gs_ExceptionSnapshot.Record()))
+	{
+		gs_ShutdownGraphicsFault.store(true, std::memory_order_release);
+		log_warn("crashdump", "ignoring graphics driver fault '%s' during shutdown; process is already exiting", Request.m_pReason);
+	}
+	else
+	{
+		// DbgHelp 和模块枚举可能在故障进程内阻塞。先提交能供下次启动读取的现场。
+		const bool BasicReportWritten = WriteCrashReport(Request, nullptr);
+		const SMiniDumpResult DumpResult = WriteMiniDumpFile(Request.m_ThreadId, gs_ExceptionSnapshot.PointersForDump());
+		const bool FullReportWritten = WriteCrashReport(Request, &DumpResult);
+		if((FullReportWritten || BasicReportWritten) && Request.m_SignalNumber == 0)
+			LaunchFatalCrashReporter();
+	}
+
+	SetEvent(gs_pFatalFinishedEvent);
+	return 0;
 }
 
-static void TerminateFromFatalHandler()
+static bool InitFatalCrashWorker()
+{
+	gs_pFatalRequestEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+	if(!gs_pFatalRequestEvent)
+		return false;
+
+	gs_pFatalFinishedEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+	if(gs_pFatalFinishedEvent)
+	{
+		const uintptr_t Thread = _beginthreadex(nullptr, 0, FatalCrashWorker, nullptr, 0, &gs_FatalWorkerThreadId);
+		if(Thread != 0)
+		{
+			// 处理器、事件和等待请求的线程都随进程存活。这里只释放创建线程时的句柄。
+			CloseHandle(reinterpret_cast<HANDLE>(Thread));
+			return true;
+		}
+		CloseHandle(gs_pFatalFinishedEvent);
+		gs_pFatalFinishedEvent = nullptr;
+	}
+	CloseHandle(gs_pFatalRequestEvent);
+	gs_pFatalRequestEvent = nullptr;
+	return false;
+}
+
+static bool HandleFatalCrash(const char *pReason, EXCEPTION_POINTERS *pExceptionPointers, int SignalNumber)
+{
+	const DWORD ThreadId = GetCurrentThreadId();
+	DWORD Owner = 0;
+	if(!gs_FatalOwnerThreadId.compare_exchange_strong(Owner, ThreadId, std::memory_order_relaxed))
+	{
+		// 其他故障线程给首个报告留出完成时间。故障线程或采集线程重入时不能等待自己。
+		return gs_pFatalFinishedEvent && ThreadId != Owner && ThreadId != gs_FatalWorkerThreadId &&
+		       WaitForSingleObject(gs_pFatalFinishedEvent, FATAL_DIAGNOSTICS_TIMEOUT_MS) == WAIT_OBJECT_0;
+	}
+
+	gs_ExceptionSnapshot.Capture(pExceptionPointers);
+	gs_FatalRequest = {pReason, ThreadId, SignalNumber};
+	if(!gs_pFatalRequestEvent)
+	{
+		if(!gs_ShutdownInProgress.load(std::memory_order_acquire))
+			WriteCrashReport(gs_FatalRequest, nullptr);
+		return true;
+	}
+
+	return SetEvent(gs_pFatalRequestEvent) &&
+	       WaitForSingleObject(gs_pFatalFinishedEvent, FATAL_DIAGNOSTICS_TIMEOUT_MS) == WAIT_OBJECT_0;
+}
+
+[[noreturn]] static void TerminateFromFatalHandler()
 {
 	TerminateProcess(GetCurrentProcess(), 3);
 	ExitProcess(3);
 }
 
+static LONG WINAPI FallbackUnhandledExceptionFilter(EXCEPTION_POINTERS *pExceptionPointers)
+{
+	if(!HandleFatalCrash("Unhandled structured exception", pExceptionPointers, 0))
+		TerminateFromFatalHandler();
+	// 旧过滤器可能进入 exchndl 的在线符号下载，延长已崩溃进程的退出。
+	return EXCEPTION_EXECUTE_HANDLER;
+}
+
 static void FallbackTerminateHandler()
 {
 	HandleFatalCrash("Unhandled C++ exception (std::terminate)", nullptr, 0);
-	LaunchFatalCrashReporter();
 	TerminateFromFatalHandler();
 }
 
 static void FallbackSignalHandler(int SignalNumber)
 {
-	// 先恢复默认处理，防止报告失败时递归进入信号处理器。
+	// 报告器不在 SIGABRT 入口启动，已写入的文本留给下次启动。
 	std::signal(SignalNumber, SIG_DFL);
-	HandleFatalCrash("Fatal signal", nullptr, SignalNumber);
-	// C 信号处理器中不要创建子进程。报告文件已在上面落盘，下一次启动会
-	// 通过 pending-report 流程展示，避免 CreateProcess/窗口初始化再次触发未定义行为。
-	std::raise(SignalNumber);
+	if(HandleFatalCrash("Fatal signal", nullptr, SignalNumber))
+		std::raise(SignalNumber);
 	TerminateFromFatalHandler();
 }
 
@@ -1433,18 +1607,6 @@ static void InitMiniDumpWriterIfNeeded()
 	}
 }
 
-static void InstallFallbackHandlersIfNeeded()
-{
-	bool Expected = false;
-	if(!gs_FallbackHandlersInstalled.compare_exchange_strong(Expected, true, std::memory_order_acq_rel))
-		return;
-
-	// VEH先于栈上的异常处理器，已恢复异常不能占用致命报告名额。
-	// SEH只在未处理过滤器收集，C++终止与致命信号保留各自入口。
-	std::set_terminate(FallbackTerminateHandler);
-	std::signal(SIGABRT, FallbackSignalHandler);
-}
-
 static void InstallUnhandledExceptionFilter()
 {
 	SetUnhandledExceptionFilter(FallbackUnhandledExceptionFilter);
@@ -1452,6 +1614,10 @@ static void InstallUnhandledExceptionFilter()
 
 void crashdump_init_if_available(const char *log_file_path)
 {
+	// 路径和工作线程在启动时发布一次，安装过滤器后保持可供任何线程读取。
+	if(gs_CrashdumpInitialized.test_and_set(std::memory_order_relaxed))
+		return;
+
 	char aConfirmedPath[IO_MAX_PATH_LENGTH + 16];
 	const bool PathsReady = log_file_path &&
 				crash_output::AppendPathSuffix(log_file_path, {}, gs_aCrashLogPath, sizeof(gs_aCrashLogPath)) &&
@@ -1483,8 +1649,18 @@ void crashdump_init_if_available(const char *log_file_path)
 		fs_makedir_rec_for(gs_aFallbackDumpPath);
 
 	if(PathsReady)
+	{
 		InitMiniDumpWriterIfNeeded();
-	InstallFallbackHandlersIfNeeded();
+		ULONG StackGuarantee = 32 * 1024;
+		if(!SetThreadStackGuarantee(&StackGuarantee))
+			log_warn("crashdump", "failed to reserve exception stack space for the startup thread");
+		if(!InitFatalCrashWorker())
+			log_warn("crashdump", "failed to start fatal diagnostics worker; only a basic fatal report will be attempted");
+	}
+	// 恢复成功的 SEH 不占用报告名额。这里只安装 C++ 终止与致命信号入口。
+	std::set_terminate(FallbackTerminateHandler);
+	if(std::signal(SIGABRT, FallbackSignalHandler) == SIG_ERR)
+		log_warn("crashdump", "failed to install the fatal signal handler");
 	if(!PathsReady)
 	{
 		InstallUnhandledExceptionFilter();
