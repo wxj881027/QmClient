@@ -245,15 +245,6 @@ static float TangentValue(int Value, int Delta)
 	return (static_cast<int64_t>(Value) + Delta) / (float)fxpscale;
 }
 
-static double ClampDelta(double Val, double Delta, double Min, double Max)
-{
-	if(Val + Delta <= Min)
-		return Min - Val;
-	if(Val + Delta >= Max)
-		return Max - Val;
-	return Delta;
-}
-
 namespace
 {
 
@@ -273,7 +264,7 @@ namespace
 			m_Value = t;
 		}
 
-		CTimeStep operator*(int k) const
+		CTimeStep operator*(int64_t k) const
 		{
 			return CTimeStep(m_Value * k, m_Unit);
 		}
@@ -600,7 +591,26 @@ void CEnvelopeEditor::Render(CUIRect View)
 		ColorBar.HMargin(2.0f, &ColorBar);
 	}
 
+	const int ScreenWidth = Graphics()->ScreenWidth();
+	const int ScreenHeight = Graphics()->ScreenHeight();
+	const float PixelSize = ScreenHeight > 0 ? Ui()->Screen()->h / ScreenHeight : 0.0f;
+	if(ScreenWidth <= 0 || !(PixelSize > 0.0f && View.w >= PixelSize && View.h >= PixelSize) ||
+		!std::isfinite(View.w) || !std::isfinite(View.h))
+	{
+		if(Editor()->m_pContainerPanned == &m_EnvelopeEditorId)
+			Editor()->m_pContainerPanned = nullptr;
+		if(m_Operation == EEnvelopeEditorOp::OP_SCALE)
+			Map()->m_EnvOpTracker.Cancel();
+		else if(m_Operation != EEnvelopeEditorOp::OP_NONE)
+			Map()->m_EnvOpTracker.Stop(false);
+		ResetOperation();
+		return;
+	}
+
 	Editor()->RenderBackground(View, Editor()->m_CheckerTexture, 32.0f, 0.1f);
+
+	if(!pEnvelope && Editor()->m_pContainerPanned == &m_EnvelopeEditorId)
+		Editor()->m_pContainerPanned = nullptr;
 
 	if(pEnvelope)
 	{
@@ -753,6 +763,32 @@ void CEnvelopeEditor::Render(CUIRect View)
 		UpdateZoomEnvelopeX(View);
 		UpdateZoomEnvelopeY(View);
 
+		// 采样器将时间转为整数纳秒，坐标超出表示范围时恢复自动缩放。
+		constexpr double MAX_PREVIEW_SECONDS = std::chrono::duration<double>(std::chrono::nanoseconds::max()).count();
+		const float ViewStartTime = ScreenToEnvelopeX(View, View.x);
+		const float ViewEndTime = ScreenToEnvelopeX(View, View.x + View.w);
+		if(!(std::abs(ViewStartTime) < MAX_PREVIEW_SECONDS && std::abs(ViewEndTime) < MAX_PREVIEW_SECONDS) ||
+			!std::isfinite(State.m_Offset.y * State.m_ZoomY.GetValue()))
+		{
+			ResetZoomEnvelope(pEnvelope, State.m_ActiveChannels);
+		}
+
+		const auto PointTimeBounds = [&](int PointIndex, int Channel) {
+			CFixedTime Lower = std::max(CFixedTime(0), SecondsToEnvelopeTime(ScreenToEnvelopeX(View, View.x)));
+			CFixedTime Upper = SecondsToEnvelopeTime(ScreenToEnvelopeX(View, View.x + View.w));
+			for(int i = 0; i < PointIndex; ++i)
+			{
+				if(pEnvelope->m_vPoints[i].HasChannel(Channel) && !Map()->IsEnvPointSelected(i, Channel))
+					Lower = std::max(Lower, CFixedTime(EnvelopeEditor::RoundFixedPoint(pEnvelope->m_vPoints[i].m_Time.GetInternal() + 1.0)));
+			}
+			for(int i = PointIndex + 1; i < (int)pEnvelope->m_vPoints.size(); ++i)
+			{
+				if(pEnvelope->m_vPoints[i].HasChannel(Channel) && !Map()->IsEnvPointSelected(i, Channel))
+					Upper = std::min(Upper, CFixedTime(EnvelopeEditor::RoundFixedPoint(pEnvelope->m_vPoints[i].m_Time.GetInternal() - 1.0)));
+			}
+			return std::pair{Lower.GetInternal(), Upper.GetInternal()};
+		};
+
 		{
 			float UnitsPerLineY = 0.001f;
 			static const float s_aUnitPerLineOptionsY[] = {0.005f, 0.01f, 0.025f, 0.05f, 0.1f, 0.25f, 0.5f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 2 * 32.0f, 5 * 32.0f, 10 * 32.0f, 20 * 32.0f, 50 * 32.0f, 100 * 32.0f};
@@ -768,7 +804,8 @@ void CEnvelopeEditor::Render(CUIRect View)
 			Graphics()->LinesBegin();
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.2f);
 
-			float BaseValue = static_cast<int>(State.m_Offset.y * State.m_ZoomY.GetValue() / UnitsPerLineY) * UnitsPerLineY;
+			const double OffsetSteps = static_cast<double>(State.m_Offset.y) * State.m_ZoomY.GetValue() / UnitsPerLineY;
+			const float BaseValue = std::trunc(OffsetSteps) * UnitsPerLineY;
 			for(int i = 0; i <= NumLinesY; i++)
 			{
 				float Value = UnitsPerLineY * i - BaseValue;
@@ -785,7 +822,7 @@ void CEnvelopeEditor::Render(CUIRect View)
 				char aValueBuffer[16];
 				if(UnitsPerLineY >= 1.0f)
 				{
-					str_format(aValueBuffer, sizeof(aValueBuffer), "%d", static_cast<int>(Value));
+					str_format(aValueBuffer, sizeof(aValueBuffer), "%.0f", std::trunc(Value) + 0.0f);
 				}
 				else
 				{
@@ -813,7 +850,8 @@ void CEnvelopeEditor::Render(CUIRect View)
 			Graphics()->LinesBegin();
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.2f);
 
-			CTimeStep BaseValue = UnitsPerLineX * static_cast<int>(State.m_Offset.x * State.m_ZoomX.GetValue() / UnitsPerLineX.AsSeconds());
+			const double OffsetSteps = static_cast<double>(State.m_Offset.x) * State.m_ZoomX.GetValue() / UnitsPerLineX.AsSeconds();
+			const CTimeStep BaseValue = UnitsPerLineX * static_cast<int64_t>(OffsetSteps);
 			for(int i = 0; i <= NumLinesX; i++)
 			{
 				float Value = UnitsPerLineX.AsSeconds() * i - BaseValue.AsSeconds();
@@ -846,11 +884,12 @@ void CEnvelopeEditor::Render(CUIRect View)
 
 			float EndTime = ScreenToEnvelopeX(View, EndX);
 			float StartTime = ScreenToEnvelopeX(View, StartX);
+			const int Steps = static_cast<int>(((EndX - StartX) / Ui()->Screen()->w) * ScreenWidth);
 
 			Ui()->ClipEnable(&View);
 			Graphics()->TextureClear();
 			IGraphics::CLineItemBatch LineItemBatch;
-			for(int c = 0; c < pEnvelope->GetChannels(); c++)
+			for(int c = 0; Steps > 0 && c < pEnvelope->GetChannels(); c++)
 			{
 				Graphics()->LinesBatchBegin(&LineItemBatch);
 				if(State.m_ActiveChannels & (1 << c))
@@ -858,7 +897,6 @@ void CEnvelopeEditor::Render(CUIRect View)
 				else
 					Graphics()->SetColor(aColors[c].r * 0.5f, aColors[c].g * 0.5f, aColors[c].b * 0.5f, 1);
 
-				const int Steps = static_cast<int>(((EndX - StartX) / Ui()->Screen()->w) * Graphics()->ScreenWidth());
 				const float StepTime = (EndTime - StartTime) / static_cast<float>(Steps);
 				const float StepSize = (EndX - StartX) / static_cast<float>(Steps);
 
@@ -992,10 +1030,13 @@ void CEnvelopeEditor::Render(CUIRect View)
 					{
 						const int PrevCurve = pEnvelope->m_vPoints[i].m_Curvetype;
 						const int Direction = Input()->ShiftIsPressed() ? -1 : 1;
-						pEnvelope->m_vPoints[i].m_Curvetype = (pEnvelope->m_vPoints[i].m_Curvetype + Direction + NUM_CURVETYPES) % NUM_CURVETYPES;
+						const int Curve = PrevCurve >= 0 && PrevCurve < NUM_CURVETYPES ? PrevCurve : CURVETYPE_LINEAR;
+						const int NewCurve = (Curve + Direction + NUM_CURVETYPES) % NUM_CURVETYPES;
 
-						Map()->m_EnvelopeEditorHistory.RecordAction(std::make_shared<CEditorActionEnvelopeEditPoint>(Map(),
-							Map()->m_SelectedEnvelope, i, c, CEditorActionEnvelopeEditPoint::EEditType::CURVE_TYPE, PrevCurve, pEnvelope->m_vPoints[i].m_Curvetype));
+						const auto pAction = std::make_shared<CEditorActionEnvelopeEditPoint>(Map(),
+							Map()->m_SelectedEnvelope, i, c, CEditorActionEnvelopeEditPoint::EEditType::CURVE_TYPE, PrevCurve, NewCurve);
+						pEnvelope->m_vPoints[i].m_Curvetype = NewCurve;
+						Map()->m_EnvelopeEditorHistory.RecordAction(pAction);
 						Map()->OnModify();
 					}
 					else if(ButtonResult == 2)
@@ -1172,31 +1213,27 @@ void CEnvelopeEditor::Render(CUIRect View)
 									}
 									else
 									{
-										double DeltaX = ScreenToEnvelopeDX(View, Ui()->MouseDeltaX()) * 1000.0;
+										const double MouseDeltaX = ScreenToEnvelopeDX(View, Ui()->MouseDeltaX()) * 1000.0;
+										double MinDelta = -std::numeric_limits<double>::infinity();
+										double MaxDelta = std::numeric_limits<double>::infinity();
 
 										for(size_t k = 0; k < Map()->m_vSelectedEnvelopePoints.size(); k++)
 										{
-											auto [SelectedIndex, SelectedChannel] = Map()->m_vSelectedEnvelopePoints[k];
-											CFixedTime BoundLow = std::max(CFixedTime(0), SecondsToEnvelopeTime(ScreenToEnvelopeX(View, View.x)));
-											CFixedTime BoundHigh = SecondsToEnvelopeTime(ScreenToEnvelopeX(View, View.x + View.w));
-											for(int j = 0; j < SelectedIndex; j++)
-											{
-												if(pEnvelope->m_vPoints[j].HasChannel(SelectedChannel) && !Map()->IsEnvPointSelected(j, SelectedChannel))
-													BoundLow = std::max(CFixedTime(EnvelopeEditor::RoundFixedPoint(pEnvelope->m_vPoints[j].m_Time.GetInternal() + 1.0)), BoundLow);
-											}
-											for(int j = SelectedIndex + 1; j < (int)pEnvelope->m_vPoints.size(); j++)
-											{
-												if(pEnvelope->m_vPoints[j].HasChannel(SelectedChannel) && !Map()->IsEnvPointSelected(j, SelectedChannel))
-													BoundHigh = std::min(CFixedTime(EnvelopeEditor::RoundFixedPoint(pEnvelope->m_vPoints[j].m_Time.GetInternal() - 1.0)), BoundHigh);
-											}
-
-											DeltaX = ClampDelta(m_vAccurateDragValuesX[k], DeltaX, BoundLow.GetInternal(), BoundHigh.GetInternal());
+											const auto [SelectedIndex, SelectedChannel] = Map()->m_vSelectedEnvelopePoints[k];
+											const auto [Lower, Upper] = PointTimeBounds(SelectedIndex, SelectedChannel);
+											MinDelta = std::max(MinDelta, Lower - m_vAccurateDragValuesX[k]);
+											MaxDelta = std::min(MaxDelta, Upper - m_vAccurateDragValuesX[k]);
 										}
-										for(size_t k = 0; k < Map()->m_vSelectedEnvelopePoints.size(); k++)
+
+										if(MinDelta <= MaxDelta)
 										{
-											auto [SelectedIndex, SelectedChannel] = Map()->m_vSelectedEnvelopePoints[k];
-											m_vAccurateDragValuesX[k] += DeltaX;
-											pEnvelope->m_vPoints[SelectedIndex].m_Time = CFixedTime(EnvelopeEditor::RoundFixedPoint(m_vAccurateDragValuesX[k]));
+											const double DeltaX = std::clamp(MouseDeltaX, MinDelta, MaxDelta);
+											for(size_t k = 0; k < Map()->m_vSelectedEnvelopePoints.size(); k++)
+											{
+												const int SelectedIndex = Map()->m_vSelectedEnvelopePoints[k].first;
+												m_vAccurateDragValuesX[k] += DeltaX;
+												pEnvelope->m_vPoints[SelectedIndex].m_Time = CFixedTime(EnvelopeEditor::RoundFixedPoint(m_vAccurateDragValuesX[k]));
+											}
 										}
 									}
 								}
@@ -1646,43 +1683,51 @@ void CEnvelopeEditor::Render(CUIRect View)
 
 			if(Input()->ShiftIsPressed())
 			{
-				m_ScaleFactor.x += Ui()->MouseDeltaX() / Graphics()->ScreenWidth() * 10.0f;
-				double Midpoint = Input()->AltIsPressed() ? m_Midpoint.x : 0.0f;
-				for(size_t k = 0; k < Map()->m_vSelectedEnvelopePoints.size(); k++)
-				{
-					auto [SelectedIndex, SelectedChannel] = Map()->m_vSelectedEnvelopePoints[k];
-					CFixedTime BoundLow = std::max(CFixedTime(0), SecondsToEnvelopeTime(ScreenToEnvelopeX(View, View.x)));
-					CFixedTime BoundHigh = SecondsToEnvelopeTime(ScreenToEnvelopeX(View, View.x + View.w));
-					for(int j = 0; j < SelectedIndex; j++)
-					{
-						if(pEnvelope->m_vPoints[j].HasChannel(SelectedChannel) && !Map()->IsEnvPointSelected(j, SelectedChannel))
-							BoundLow = std::max(CFixedTime(EnvelopeEditor::RoundFixedPoint(pEnvelope->m_vPoints[j].m_Time.GetInternal() + 1.0)), BoundLow);
-					}
-					for(int j = SelectedIndex + 1; j < (int)pEnvelope->m_vPoints.size(); j++)
-					{
-						if(pEnvelope->m_vPoints[j].HasChannel(SelectedChannel) && !Map()->IsEnvPointSelected(j, SelectedChannel))
-							BoundHigh = std::min(CFixedTime(EnvelopeEditor::RoundFixedPoint(pEnvelope->m_vPoints[j].m_Time.GetInternal() - 1.0)), BoundHigh);
-					}
-
-					double Value = m_vInitialPositionsX[k];
-					if(Value == Midpoint)
-						continue;
-					double ScaleBoundLow = (BoundLow.GetInternal() - Midpoint) / (Value - Midpoint);
-					double ScaleBoundHigh = (BoundHigh.GetInternal() - Midpoint) / (Value - Midpoint);
-					double ScaleBoundMin = minimum(ScaleBoundLow, ScaleBoundHigh);
-					double ScaleBoundMax = maximum(ScaleBoundLow, ScaleBoundHigh);
-					m_ScaleFactor.x = std::clamp(m_ScaleFactor.x, ScaleBoundMin, ScaleBoundMax);
-				}
+				const double Midpoint = Input()->AltIsPressed() ? m_Midpoint.x : 0.0;
+				double MinScale = 0.0;
+				double MaxScale = std::numeric_limits<double>::infinity();
+				bool Valid = true;
 
 				for(size_t k = 0; k < Map()->m_vSelectedEnvelopePoints.size(); k++)
 				{
-					auto [SelectedIndex, SelectedChannel] = Map()->m_vSelectedEnvelopePoints[k];
-					double ScaleMinimum = m_vInitialPositionsX[k] - Midpoint > CFixedTime(1).AsSeconds() ? CFixedTime(1).AsSeconds() / (m_vInitialPositionsX[k] - Midpoint) : 0.0f;
-					double ScaleFactor = maximum(ScaleMinimum, m_ScaleFactor.x);
-					pEnvelope->m_vPoints[SelectedIndex].m_Time = CFixedTime(EnvelopeEditor::RoundFixedPoint((m_vInitialPositionsX[k] - Midpoint) * ScaleFactor + Midpoint));
+					const auto [SelectedIndex, SelectedChannel] = Map()->m_vSelectedEnvelopePoints[k];
+					const auto [Lower, Upper] = PointTimeBounds(SelectedIndex, SelectedChannel);
+					const double Offset = m_vInitialPositionsX[k] - Midpoint;
+					if(Lower > Upper || (Offset == 0.0 && (Midpoint < Lower || Midpoint > Upper)))
+					{
+						Valid = false;
+						break;
+					}
+					if(Offset != 0.0)
+					{
+						const double ScaleAtLower = (Lower - Midpoint) / Offset;
+						const double ScaleAtUpper = (Upper - Midpoint) / Offset;
+						MinScale = std::max(MinScale, std::min(ScaleAtLower, ScaleAtUpper));
+						MaxScale = std::min(MaxScale, std::max(ScaleAtLower, ScaleAtUpper));
+					}
+
+					// 保留轨道内原有的同刻关键帧，原本分开的相邻帧至少间隔一毫秒。
+					const int Previous = pEnvelope->PreviousPoint(SelectedIndex, SelectedChannel);
+					const int PreviousSelection = Previous >= 0 ? Map()->FindEnvPointIndex(Previous, SelectedChannel) : -1;
+					if(PreviousSelection >= 0)
+					{
+						const double Gap = m_vInitialPositionsX[k] - m_vInitialPositionsX[PreviousSelection];
+						if(Gap > 0.0)
+							MinScale = std::max(MinScale, 1.0 / Gap);
+					}
 				}
-				for(auto [SelectedIndex, SelectedChannel] : Map()->m_vSelectedEnvelopePoints)
-					pEnvelope->m_vPoints[SelectedIndex].m_Time = pEnvelope->ClampPointTime(SelectedIndex, SelectedChannel, pEnvelope->m_vPoints[SelectedIndex].m_Time);
+
+				if(Valid && MinScale <= MaxScale)
+				{
+					const double Delta = Ui()->MouseDeltaX() / ScreenWidth * 10.0f;
+					m_ScaleFactor.x = std::clamp(m_ScaleFactor.x + Delta, MinScale, MaxScale);
+					for(size_t k = 0; k < Map()->m_vSelectedEnvelopePoints.size(); k++)
+					{
+						const int SelectedIndex = Map()->m_vSelectedEnvelopePoints[k].first;
+						const double Time = (m_vInitialPositionsX[k] - Midpoint) * m_ScaleFactor.x + Midpoint;
+						pEnvelope->m_vPoints[SelectedIndex].m_Time = CFixedTime(EnvelopeEditor::RoundFixedPoint(Time));
+					}
+				}
 			}
 			else
 			{
@@ -1775,6 +1820,10 @@ void CEnvelopeEditor::RenderColorBar(CUIRect ColorBar, const std::shared_ptr<CEn
 	}
 	const float StartX = maximum(EnvelopeToScreenX(ColorBar, 0.0f), ColorBar.x);
 	const float TotalWidth = minimum(EnvelopeToScreenX(ColorBar, pEnvelope->EndTime()) - StartX, ColorBar.x + ColorBar.w - StartX);
+	if(TotalWidth <= 0.0f)
+	{
+		return;
+	}
 
 	Ui()->ClipEnable(&ColorBar);
 	CUIRect ColorBarBackground = CUIRect{StartX, ColorBar.y, TotalWidth, ColorBar.h};
