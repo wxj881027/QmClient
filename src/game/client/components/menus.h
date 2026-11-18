@@ -959,22 +959,24 @@ public:
 
 	static void AssetsEditorApplyColorOverrideToImageRect(CImageInfo &Image, int X, int Y, int W, int H, const ColorRGBA &Tint, int BlendMode)
 	{
-		if(Image.m_pData == nullptr || Image.m_Format != CImageInfo::FORMAT_RGBA || W <= 0 || H <= 0)
+		if(Image.m_pData == nullptr || Image.m_Format != CImageInfo::FORMAT_RGBA || X < 0 || Y < 0 || W <= 0 || H <= 0)
 			return;
 		if(!AssetsEditorHasColorOverride(Tint, BlendMode))
 			return;
 
-		const int ImageWidth = Image.m_Width;
-		const int ImageHeight = Image.m_Height;
-		if(X < 0 || Y < 0 || X + W > ImageWidth || Y + H > ImageHeight)
+		const size_t Left = X;
+		const size_t Top = Y;
+		const size_t Right = Left + W;
+		const size_t Bottom = Top + H;
+		if(Right > Image.m_Width || Bottom > Image.m_Height)
 			return;
 
 		uint8_t *pData = Image.m_pData;
-		for(int PosY = Y; PosY < Y + H; ++PosY)
+		for(size_t PosY = Top; PosY < Bottom; ++PosY)
 		{
-			for(int PosX = X; PosX < X + W; ++PosX)
+			for(size_t PosX = Left; PosX < Right; ++PosX)
 			{
-				const int Offset = (PosY * ImageWidth + PosX) * 4;
+				const size_t Offset = (PosY * Image.m_Width + PosX) * 4;
 				if(pData[Offset + 3] == 0)
 					continue;
 
@@ -1148,13 +1150,19 @@ public:
 		}
 		if(State.m_aLastAddress[0] == '\0')
 			str_copy(State.m_aLastAddress, pAddress);
-		if(str_comp(State.m_aLastAddress, pAddress) != 0 && (!State.m_HasPendingAddress || str_comp(State.m_aPendingAddress, pAddress) != 0))
+		if(str_comp(State.m_aLastAddress, pAddress) == 0)
+		{
+			State.m_HasPendingAddress = false;
+			State.m_aPendingAddress[0] = '\0';
+			return false;
+		}
+		if(!State.m_HasPendingAddress || str_comp(State.m_aPendingAddress, pAddress) != 0)
 		{
 			str_copy(State.m_aPendingAddress, pAddress);
 			State.m_PendingConnectTime = Now + maximum(0, DelaySeconds);
 			State.m_HasPendingAddress = true;
 		}
-		if(!State.m_HasPendingAddress || Now < State.m_PendingConnectTime)
+		if(Now < State.m_PendingConnectTime)
 			return false;
 		if(State.m_JumpCount >= maximum(0, MaxJumps))
 		{
@@ -1756,9 +1764,9 @@ protected:
 
 		bool m_InfosLoaded;
 		bool m_Valid;
-		CDemoHeader m_Info;
-		CTimelineMarkers m_TimelineMarkers;
-		CMapInfo m_MapInfo;
+		CDemoHeader m_Info{};
+		CTimelineMarkers m_TimelineMarkers{};
+		CMapInfo m_MapInfo{};
 
 		bool IsDemoFile() const
 		{
@@ -1804,25 +1812,25 @@ protected:
 			const CDemoItem &Left = g_Config.m_BrDemoSortOrder ? Other : *this;
 			const CDemoItem &Right = g_Config.m_BrDemoSortOrder ? *this : Other;
 
-			if(g_Config.m_BrDemoSort == SORT_DEMONAME)
-				return str_comp_filenames(Left.m_aFilename, Right.m_aFilename) < 0;
-			if(g_Config.m_BrDemoSort == SORT_DATE)
+			const int Sort = g_Config.m_BrDemoSort;
+			if(Sort == SORT_DATE)
 				return Left.m_Date < Right.m_Date;
-			if(!Left.IsDemoFile() || !Right.IsDemoFile())
-				return str_comp_filenames(Left.m_aFilename, Right.m_aFilename) < 0;
-
-			if(!Other.m_InfosLoaded)
-				return m_InfosLoaded;
-			if(!m_InfosLoaded)
-				return !Other.m_InfosLoaded;
-
-			if(g_Config.m_BrDemoSort == SORT_MARKERS)
-				return Left.NumMarkers() < Right.NumMarkers();
-			if(g_Config.m_BrDemoSort == SORT_LENGTH)
-				return Left.Length() < Right.Length();
-
-			// Unknown sort
-			return true;
+			if(Sort == SORT_MARKERS || Sort == SORT_LENGTH)
+			{
+				const bool IsDemo = IsDemoFile();
+				const bool IsOtherDemo = Other.IsDemoFile();
+				if(IsDemo != IsOtherDemo)
+					return IsDemo;
+				if(IsDemo)
+				{
+					if(m_InfosLoaded != Other.m_InfosLoaded)
+						return m_InfosLoaded;
+					if(!m_InfosLoaded)
+						return false;
+					return Sort == SORT_MARKERS ? Left.NumMarkers() < Right.NumMarkers() : Left.Length() < Right.Length();
+				}
+			}
+			return str_comp_filenames(Left.m_aFilename, Right.m_aFilename) < 0;
 		}
 	};
 
@@ -2827,7 +2835,7 @@ public:
 		char m_aFilename[IO_MAX_PATH_LENGTH];
 		char m_aPlayer[MAX_NAME_LENGTH];
 
-		bool m_Failed;
+		bool m_Failed = false;
 		int m_Time;
 		int m_Slot;
 		bool m_Own;
