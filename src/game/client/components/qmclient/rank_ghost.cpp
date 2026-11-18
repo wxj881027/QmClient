@@ -478,7 +478,7 @@ namespace
 	public:
 		bool Open(IStorage *pStorage, const char *pPath, const char *pMap, const SHA256_DIGEST &MapSha256, const char *pOwner, int NumTicks, int TimeMs)
 		{
-			m_File = pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			m_File = pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 			if(m_File == nullptr)
 				return false;
 
@@ -1931,17 +1931,24 @@ void CRankGhost::FinishParse()
 
 	if(vpTracks.size() == 1)
 	{
-		// 单轨：沿用单文件缓存
-		const int NumTicks = (int)vpTracks[0]->m_vPath.size();
-		char aTempGhostPath[IO_MAX_PATH_LENGTH];
-		str_format(aTempGhostPath, sizeof(aTempGhostPath), "%s.tmp", m_aGhostStoragePath);
-		Storage()->RemoveFile(aTempGhostPath, IStorage::TYPE_SAVE);
-		str_copy(m_aGhostWritePath, aTempGhostPath, sizeof(m_aGhostWritePath));
-		CGhostFileWriter TempWriter;
-		const bool WriteOk = WriteTrack(TempWriter, vpTracks[0], NumTicks);
-		if(!WriteOk || !Storage()->RenameFile(aTempGhostPath, m_aGhostStoragePath, IStorage::TYPE_SAVE, false))
+		bool Published = false;
+		try
 		{
-			Storage()->RemoveFile(aTempGhostPath, IStorage::TYPE_SAVE);
+			demo_output::CTransaction Output;
+			if(Output.Prepare(*Storage(), m_aGhostStoragePath))
+			{
+				str_copy(m_aGhostWritePath, Output.Filename(), sizeof(m_aGhostWritePath));
+				CGhostFileWriter Writer;
+				const int NumTicks = static_cast<int>(vpTracks[0]->m_vPath.size());
+				Published = WriteTrack(Writer, vpTracks[0], NumTicks) && Output.Publish();
+			}
+		}
+		catch(...)
+		{
+			// 候选路径或发布失败时，事务只回收本次准备的文件。
+		}
+		if(!Published)
+		{
 			Fail(Localize("Rank ghost: failed to write the ghost file"));
 			return;
 		}
