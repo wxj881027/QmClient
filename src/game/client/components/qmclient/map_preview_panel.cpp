@@ -105,6 +105,7 @@ namespace
 		std::unique_ptr<CLayers> m_pLayers;
 		std::unique_ptr<CMapPreviewImages> m_pImages;
 		std::shared_ptr<CQmBrowserMapPreviewLoadJob> m_pLoadJob;
+		std::weak_ptr<IHttpRequest> m_ValidationDownload;
 		int m_UploadIndex = 0;
 		std::unique_ptr<CMapPreviewLayers> m_pRenderer;
 		CQmMapPreviewLayerPreparation m_LayerPreparation;
@@ -158,104 +159,32 @@ namespace
 class CQmMapPreviewCache
 {
 public:
-	std::shared_ptr<IHttpRequest> m_pDownloadTask;
-	char m_aDownloadName[MAX_MAP_LENGTH] = {};
-	bool m_DownloadRecheckRequested = false;
-	std::shared_ptr<IHttpRequest> m_pIndexTask;
-	bool m_IndexLoaded = false;
-	bool m_IndexFailed = false;
-	std::string m_NotFoundName;
-	std::vector<std::string> m_vIndexHrefs;
-
 	explicit CQmMapPreviewCache(IGraphics *pGraphics) :
 		m_pGraphics(pGraphics), m_Entries(pGraphics) {}
 
-	// 本地缺图时按地图名拉一次，进度供预览控件显示。
+	// 请求和取消状态独立于客户端，只在这里借用传输接口与本地路径。
 	bool EnsureDownloaded(CGameClient *pGameClient, const char *pMapName)
 	{
-		if(pMapName == nullptr || pMapName[0] == '\0')
-			return false;
-		if(m_pDownloadTask && str_comp(m_aDownloadName, pMapName) == 0)
-			return true;
 		auto *pClient = static_cast<CClient *>(pGameClient->Client());
 		if(pClient == nullptr || pClient->Http() == nullptr)
 			return false;
-		if(m_NotFoundName != pMapName)
-			m_NotFoundName.clear();
-		if(!EnsureIndex(pGameClient))
-			return m_pIndexTask != nullptr;
-		char aEscaped[MAX_MAP_LENGTH * 3];
-		EscapeUrl(aEscaped, sizeof(aEscaped), pMapName);
-		const std::string Prefix = std::string(aEscaped) + "_";
-		const std::string Href = QmSelectMapDownloadHref(m_vIndexHrefs, Prefix);
-		if(Href.empty())
-		{
-			m_NotFoundName = pMapName;
-			return false;
-		}
-		SQmMapDownloadPlan Plan;
-		if(!QmBuildIndexedMapDownloadPlan(pMapName, Href, g_Config.m_ClMapDownloadUrl, &Plan))
-		{
-			m_NotFoundName = pMapName;
-			return false;
-		}
-		std::shared_ptr<IHttpRequest> pTask(HttpGetFile(Plan.m_Url.c_str(), pGameClient->Storage(), Plan.m_FileName.c_str(), IStorage::TYPE_SAVE).release());
-		if(!pTask)
-			return false;
-		m_pDownloadTask = pTask;
-		m_DownloadRecheckRequested = false;
-		str_copy(m_aDownloadName, pMapName);
-		pClient->Http()->Run(m_pDownloadTask);
-		return true;
+		return m_Download.Ensure(pMapName, g_Config.m_ClMapDownloadUrl, *pClient->Http(), pGameClient->Storage());
 	}
-
-	int DownloadProgress(const char *pMapName) const
-	{
-		if(m_pIndexTask)
-			return m_pIndexTask->Progress();
-		if(!m_pDownloadTask || str_comp(m_aDownloadName, pMapName) != 0)
-			return -1;
-		return m_pDownloadTask->Progress();
-	}
-
-	bool DownloadFailed(const char *pMapName) const
-	{
-		if(m_IndexFailed || m_NotFoundName == pMapName)
-			return true;
-		if(!m_pDownloadTask || str_comp(m_aDownloadName, pMapName) != 0)
-			return false;
-		const EHttpState State = m_pDownloadTask->State();
-		return State == EHttpState::ERROR || State == EHttpState::ABORTED;
-	}
-
-	void CancelDownload()
-	{
-		m_pDownloadTask.reset();
-		m_aDownloadName[0] = '\0';
-		m_DownloadRecheckRequested = false;
-		if(m_pIndexTask)
-			m_pIndexTask->Abort();
-		m_pIndexTask.reset();
-		m_IndexFailed = false;
-		m_NotFoundName.clear();
-	}
-
-	bool DownloadFinished(const char *pMapName) const
-	{
-		return m_pDownloadTask && str_comp(m_aDownloadName, pMapName) == 0 &&
-		       m_pDownloadTask->State() == EHttpState::DONE && m_pDownloadTask->Progress() >= 100;
-	}
-
+	int DownloadProgress(const char *pMapName) const { return m_Download.Progress(pMapName); }
+	bool DownloadFailed(const char *pMapName) const { return m_Download.HasFailed(pMapName); }
+	void CancelDownload() { m_Download.Retry(); }
 	void RecheckDownloaded(const char *pMapName)
 	{
-		if(!m_DownloadRecheckRequested && DownloadFinished(pMapName))
-		{
+		if(m_Download.TakeCompletedDownload(pMapName))
 			m_Entries.RetryMissing(pMapName);
-			m_DownloadRecheckRequested = true;
-		}
 	}
-
-	bool Clear() { return m_Entries.Clear(); }
+	bool Clear()
+	{
+		// Init 替换缓存也必须等旧文件请求结束，不能让两个 cache 写同一临时路径。
+		const bool DownloadStopped = m_Download.Stop();
+		const bool EntriesReleased = m_Entries.Clear();
+		return DownloadStopped && EntriesReleased;
+	}
 
 	// 返回命中的缓存项；没有可回收槽位时返回空，由画布显示初始化占位。
 	SMapPreviewEntry *Acquire(const char *pMapName, float NowTime, IStorage *pStorage, CGameClient *pGameClient)
@@ -287,15 +216,15 @@ public:
 
 		if(!m_Entries.MakeRoom(NowTime))
 			return nullptr;
-		auto pEntry = std::make_unique<SMapPreviewEntry>();
-		str_copy(pEntry->m_aMapName, pMapName, sizeof(pEntry->m_aMapName));
-		pEntry->m_LastUseTime = NowTime;
-		LoadEntry(*pEntry, pStorage, pGameClient, NowTime);
-		pEntry->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
-		return m_Entries.Insert(std::move(pEntry));
+		return m_Entries.Create([&](SMapPreviewEntry &Entry) {
+			str_copy(Entry.m_aMapName, pMapName);
+			Entry.m_LastUseTime = NowTime;
+			LoadEntry(Entry, pStorage, pGameClient, NowTime);
+			Entry.m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
+		});
 	}
 
-	static bool AdvanceEntry(SMapPreviewEntry &Entry, CGameClient *pGameClient, float Now)
+	bool AdvanceEntry(SMapPreviewEntry &Entry, CGameClient *pGameClient, float Now)
 	try
 	{
 		if(!Entry.m_pLoadJob)
@@ -303,7 +232,10 @@ public:
 		auto &Job = *Entry.m_pLoadJob;
 		if(!Job.Finished())
 			return false;
-		if(Job.State() != IJob::STATE_DONE || !Job.m_Success)
+		const bool Loaded = Job.State() == IJob::STATE_DONE && Job.m_Success;
+		m_Download.LocalLoadResult(Entry.m_ValidationDownload, Loaded);
+		Entry.m_ValidationDownload.reset();
+		if(!Loaded)
 		{
 			Entry.m_LoadFailed = true;
 			Entry.m_RetryAfterTime = Now + MAP_PREVIEW_FAILED_RETRY_DELAY;
@@ -364,71 +296,17 @@ private:
 		return pRenderer;
 	}
 
-	bool EnsureIndex(CGameClient *pGameClient)
-	{
-		if(m_IndexLoaded)
-			return true;
-		if(m_pIndexTask)
-		{
-			if(!m_pIndexTask->Done())
-				return false;
-			if(m_pIndexTask->State() == EHttpState::DONE)
-			{
-				unsigned char *pData = nullptr;
-				size_t Length = 0;
-				m_pIndexTask->Result(&pData, &Length);
-				ParseIndex(pData, Length);
-				m_IndexLoaded = true;
-			}
-			else
-				m_IndexFailed = true;
-			m_pIndexTask.reset();
-			return m_IndexLoaded;
-		}
-		if(m_IndexFailed)
-			return false;
-		auto *pClient = static_cast<CClient *>(pGameClient->Client());
-		if(pClient == nullptr || pClient->Http() == nullptr)
-			return false;
-		char aIndexUrl[512];
-		str_format(aIndexUrl, sizeof(aIndexUrl), "%s/", g_Config.m_ClMapDownloadUrl);
-		auto pTask = HttpGet(aIndexUrl);
-		pTask->WriteToMemory();
-		pTask->MaxResponseSize(8 * 1024 * 1024);
-		pTask->Timeout(CTimeout{10000, 60000, 1024, 10});
-		pTask->LogProgress(HTTPLOG::FAILURE);
-		m_pIndexTask = std::shared_ptr<IHttpRequest>(pTask.release());
-		pClient->Http()->Run(m_pIndexTask);
-		return false;
-	}
-
-	void ParseIndex(const unsigned char *pData, size_t Length)
-	{
-		if(pData == nullptr || Length == 0)
-			return;
-		const std::string_view Html(reinterpret_cast<const char *>(pData), Length);
-		size_t Pos = 0;
-		while((Pos = Html.find("href=\"", Pos)) != std::string_view::npos)
-		{
-			Pos += 6;
-			const size_t End = Html.find('"', Pos);
-			if(End == std::string_view::npos)
-				break;
-			std::string Href(Html.substr(Pos, End - Pos));
-			if(Href.size() > 4 && Href.compare(Href.size() - 4, 4, ".map") == 0 && Href.find('/') == std::string::npos)
-				m_vIndexHrefs.push_back(std::move(Href));
-			Pos = End + 1;
-		}
-	}
-
-	static void LoadEntry(SMapPreviewEntry &Entry, IStorage *pStorage, CGameClient *pGameClient, float Now) noexcept
+	void LoadEntry(SMapPreviewEntry &Entry, IStorage *pStorage, CGameClient *pGameClient, float Now) noexcept
 	{
 		try
 		{
+			// 先记录下载终态，再提交 worker；不能给早已开始的旧任务补挂新下载身份。
+			const auto ValidationDownload = m_Download.ValidationRequest(Entry.m_aMapName);
 			auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(pStorage, Entry.m_aMapName, str_comp(pGameClient->Client()->GetCurrentMap(), Entry.m_aMapName) == 0 ? pGameClient->Client()->GetCurrentMapPath() : "", pGameClient->Client()->IsSixup());
 			if(pGameClient->Engine()->TryAddJob(pJob))
 			{
 				Entry.m_pLoadJob = std::move(pJob);
+				Entry.m_ValidationDownload = ValidationDownload;
 				Entry.m_UploadIndex = 0;
 				return;
 			}
@@ -443,6 +321,7 @@ private:
 
 	IGraphics *m_pGraphics;
 	CQmMapPreviewCacheEntries<SMapPreviewEntry> m_Entries;
+	CQmMapPreviewDownloadState m_Download;
 };
 
 namespace
@@ -509,7 +388,7 @@ namespace
 		}
 
 		const CPerfTimer PrepareTimer(QmPerfEnabled());
-		const bool Ready = CQmMapPreviewCache::AdvanceEntry(*pEntry, pGameClient, Now) && pEntry->m_LayerPreparation.Advance(pEntry->m_pRenderer, Now);
+		const bool Ready = pCache->AdvanceEntry(*pEntry, pGameClient, Now) && pEntry->m_LayerPreparation.Advance(pEntry->m_pRenderer, Now);
 		QmPerfLogStage("perf/map_preview", "prepare", PrepareTimer.ElapsedMs(), false, pGameClient->Client());
 		if(!Ready)
 		{

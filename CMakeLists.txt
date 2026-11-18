@@ -6707,6 +6707,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_measurement_clip_failure_test.cpp
       src/test/integration/qmclient/ui/qm_browser_map_preview_input_test.cpp
       src/test/integration/qmclient/ui/qm_map_preview_draw_scope_test.cpp
+      src/test/integration/client/map_preview_download_state_test.cpp
+      src/test/unit/client/map_preview_allocation_test.cpp
       src/test/integration/qmclient/ui/qm_settings_action_group_test.cpp
       src/test/integration/qmclient/ui/qm_settings_text_columns_test.cpp
       src/test/integration/qmclient/ui/qm_adaptive_choice_test.cpp

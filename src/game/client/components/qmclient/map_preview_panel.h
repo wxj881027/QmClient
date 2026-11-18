@@ -1,12 +1,16 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_PREVIEW_PANEL_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_PREVIEW_PANEL_H
 
+#include <engine/client/map_download_resolver.h>
+#include <engine/http.h>
 #include <engine/map.h>
+#include <engine/storage.h>
 
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/components/qmclient/browser_map_preview.h>
+#include <game/client/components/qmclient/map_download_index.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 
@@ -15,6 +19,8 @@
 #include <memory>
 #include <new>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -82,6 +88,253 @@ public:
 		}
 		catch(const std::bad_alloc &) {}
 		catch(const std::length_error &) {}
+	}
+};
+
+// 目录正文先完整解析为候选；资源失败不追加半份条目，也不覆盖已发布列表。
+class CQmMapPreviewDownloadIndex
+{
+	std::vector<std::string> m_vHrefs;
+
+public:
+	const std::vector<std::string> &Hrefs() const { return m_vHrefs; }
+	bool Prepare(std::string_view Html) noexcept
+	{
+		try
+		{
+			std::vector<std::string> vCandidate;
+			size_t Pos = 0;
+			while((Pos = Html.find("href=\"", Pos)) != std::string_view::npos)
+			{
+				Pos += 6;
+				const size_t End = Html.find('"', Pos);
+				if(End == std::string_view::npos)
+					break;
+				const auto Href = Html.substr(Pos, End - Pos);
+				if(Href.size() > 4 && Href.compare(Href.size() - 4, 4, ".map") == 0 && Href.find('/') == std::string_view::npos)
+					vCandidate.emplace_back(Href);
+				Pos = End + 1;
+			}
+			m_vHrefs.swap(vCandidate);
+			return true;
+		}
+		catch(const std::bad_alloc &) { return false; }
+		catch(const std::length_error &) { return false; }
+	}
+};
+
+// 面板只保留一份地图文件请求。Abort 只提出取消，Done 才表示旧临时文件 owner 已结束。
+class CQmMapPreviewDownloadState
+{
+	CQmMapPreviewDownloadIndex m_Index;
+	std::shared_ptr<IHttpRequest> m_pIndexTask;
+	bool m_IndexLoaded = false;
+	bool m_IndexFailed = false;
+	std::shared_ptr<IHttpRequest> m_pDownloadTask;
+	char m_aDownloadName[MAX_MAP_LENGTH] = {};
+	char m_aFailedName[MAX_MAP_LENGTH] = {};
+	char m_aUnconditionalRetryName[MAX_MAP_LENGTH] = {};
+	bool m_StoppingDownload = false;
+	bool m_RecheckRequested = false;
+	bool m_LocalReadFailed = false;
+
+	bool Matches(const char *pMapName) const
+	{
+		return m_pDownloadTask != nullptr && str_comp(m_aDownloadName, pMapName) == 0;
+	}
+	void ResetDownload() noexcept
+	{
+		m_pDownloadTask.reset();
+		m_aDownloadName[0] = '\0';
+		m_StoppingDownload = false;
+		m_RecheckRequested = false;
+		m_LocalReadFailed = false;
+	}
+	void CancelIndex() noexcept
+	{
+		if(m_pIndexTask != nullptr && !m_pIndexTask->Done())
+			m_pIndexTask->Abort();
+		m_pIndexTask.reset();
+	}
+
+	template<typename TCreateRequest>
+	bool EnsureIndex(IHttp &Http, const char *pBaseUrl, TCreateRequest &CreateRequest)
+	{
+		if(m_IndexLoaded)
+			return true;
+		if(m_pIndexTask != nullptr)
+		{
+			if(!m_pIndexTask->Done())
+				return false;
+			if(m_pIndexTask->State() == EHttpState::DONE)
+			{
+				unsigned char *pData = nullptr;
+				size_t Length = 0;
+				m_pIndexTask->Result(&pData, &Length);
+				const std::string_view Html = pData != nullptr ? std::string_view(reinterpret_cast<const char *>(pData), Length) : std::string_view{};
+				m_IndexLoaded = m_Index.Prepare(Html);
+			}
+			m_IndexFailed = !m_IndexLoaded;
+			m_pIndexTask.reset();
+			return m_IndexLoaded;
+		}
+		if(m_IndexFailed)
+			return false;
+		char aIndexUrl[512];
+		str_format(aIndexUrl, sizeof(aIndexUrl), "%s/", pBaseUrl);
+		auto pTask = CreateRequest(aIndexUrl);
+		if(pTask == nullptr)
+		{
+			m_IndexFailed = true;
+			return false;
+		}
+		pTask->WriteToMemory();
+		pTask->MaxResponseSize(8 * 1024 * 1024);
+		pTask->Timeout(CTimeout{10000, 60000, 1024, 10});
+		pTask->LogProgress(HTTPLOG::FAILURE);
+		std::shared_ptr<IHttpRequest> pCandidate(std::move(pTask));
+		Http.Run(pCandidate);
+		m_pIndexTask = std::move(pCandidate);
+		return false;
+	}
+
+public:
+	~CQmMapPreviewDownloadState() { Stop(); }
+	CQmMapPreviewDownloadState() = default;
+	CQmMapPreviewDownloadState(const CQmMapPreviewDownloadState &) = delete;
+	CQmMapPreviewDownloadState &operator=(const CQmMapPreviewDownloadState &) = delete;
+
+	bool HasFailed(const char *pMapName) const
+	{
+		if(m_IndexFailed || (m_aFailedName[0] != '\0' && str_comp(m_aFailedName, pMapName) == 0))
+			return true;
+		if(!Matches(pMapName) || m_StoppingDownload)
+			return false;
+		const auto State = m_pDownloadTask->State();
+		return m_LocalReadFailed || State == EHttpState::ERROR || State == EHttpState::ABORTED;
+	}
+	int Progress(const char *pMapName) const
+	{
+		if(m_pIndexTask != nullptr)
+			return m_pIndexTask->Progress();
+		return Matches(pMapName) && !m_StoppingDownload ? m_pDownloadTask->Progress() : -1;
+	}
+
+	template<typename TCreateRequest>
+	bool Ensure(const char *pMapName, const char *pBaseUrl, IHttp &Http, IStorage *pStorage, TCreateRequest &&CreateRequest) noexcept
+	{
+		if(pMapName == nullptr || pMapName[0] == '\0')
+			return false;
+		if(str_comp(m_aFailedName, pMapName) != 0)
+			m_aFailedName[0] = '\0';
+		if(HasFailed(pMapName))
+			return false;
+		if(m_pDownloadTask != nullptr)
+		{
+			if(!m_StoppingDownload && Matches(pMapName))
+				return true;
+			if(!m_pDownloadTask->Done())
+			{
+				m_StoppingDownload = true;
+				m_pDownloadTask->Abort();
+				return true;
+			}
+			ResetDownload();
+		}
+		try
+		{
+			if(!EnsureIndex(Http, pBaseUrl, CreateRequest))
+				return m_pIndexTask != nullptr;
+			char aEscaped[MAX_MAP_LENGTH * 3];
+			EscapeUrl(aEscaped, sizeof(aEscaped), pMapName);
+			const std::string Prefix = std::string(aEscaped) + "_";
+			const std::string Href = QmSelectMapDownloadHref(m_Index.Hrefs(), Prefix);
+			SQmMapDownloadPlan Plan;
+			if(Href.empty() || !QmBuildIndexedMapDownloadPlan(pMapName, Href, pBaseUrl, &Plan))
+			{
+				str_copy(m_aFailedName, pMapName);
+				return false;
+			}
+			auto pTask = CreateRequest(Plan.m_Url.c_str());
+			if(pTask == nullptr)
+			{
+				str_copy(m_aFailedName, pMapName);
+				return false;
+			}
+			pTask->WriteToFile(pStorage, Plan.m_FileName.c_str(), IStorage::TYPE_SAVE);
+			pTask->Timeout(CTimeout{4000, 0, 500, 5});
+			// 已知同名本地地图不可读时获取完整正文，避免 304 继续保留坏文件。
+			if(str_comp(m_aUnconditionalRetryName, pMapName) == 0)
+				pTask->SkipByFileTime(false);
+			std::shared_ptr<IHttpRequest> pCandidate(std::move(pTask));
+			// Run 接管前的资源异常留在局部；返回后只做无分配的所有权发布。
+			Http.Run(pCandidate);
+			m_pDownloadTask = std::move(pCandidate);
+			str_copy(m_aDownloadName, pMapName);
+			return true;
+		}
+		catch(const std::bad_alloc &) {}
+		catch(const std::length_error &) {}
+		// 失败记录只写固定数组；不能在分配失败的恢复分支再申请字符串。
+		str_copy(m_aFailedName, pMapName);
+		if(!m_IndexLoaded)
+		{
+			m_IndexFailed = true;
+			CancelIndex();
+		}
+		return false;
+	}
+	bool Ensure(const char *pMapName, const char *pBaseUrl, IHttp &Http, IStorage *pStorage) noexcept
+	{
+		return Ensure(pMapName, pBaseUrl, Http, pStorage, &HttpGet);
+	}
+
+	void Retry() noexcept
+	{
+		m_aFailedName[0] = '\0';
+		m_IndexFailed = false;
+		CancelIndex();
+		if(m_pDownloadTask == nullptr || m_pDownloadTask->Done())
+			ResetDownload();
+		else
+		{
+			m_StoppingDownload = true;
+			m_pDownloadTask->Abort();
+		}
+	}
+	bool Stop() noexcept
+	{
+		CancelIndex();
+		if(m_pDownloadTask == nullptr || m_pDownloadTask->Done())
+			return true;
+		m_StoppingDownload = true;
+		m_pDownloadTask->Abort();
+		return false;
+	}
+	bool TakeCompletedDownload(const char *pMapName) noexcept
+	{
+		if(!Matches(pMapName) || m_StoppingDownload || m_RecheckRequested || m_pDownloadTask->State() != EHttpState::DONE)
+			return false;
+		m_RecheckRequested = true;
+		return true;
+	}
+	std::weak_ptr<IHttpRequest> ValidationRequest(const char *pMapName) const noexcept
+	{
+		if(Matches(pMapName) && !m_StoppingDownload && m_pDownloadTask->State() == EHttpState::DONE)
+			return m_pDownloadTask;
+		return {};
+	}
+	void LocalLoadResult(const std::weak_ptr<IHttpRequest> &Request, bool Success) noexcept
+	{
+		const auto pRequest = Request.lock();
+		if(pRequest != nullptr && pRequest == m_pDownloadTask && !m_StoppingDownload && pRequest->State() == EHttpState::DONE)
+		{
+			m_LocalReadFailed = !Success;
+			if(!Success)
+				str_copy(m_aUnconditionalRetryName, m_aDownloadName);
+			else if(str_comp(m_aUnconditionalRetryName, m_aDownloadName) == 0)
+				m_aUnconditionalRetryName[0] = '\0';
+		}
 	}
 };
 
@@ -190,6 +443,19 @@ public:
 		auto *pResult = pEntry.get();
 		m_vEntries.insert(m_vEntries.begin(), std::move(pEntry));
 		return pResult;
+	}
+	template<typename TInitialize>
+	TEntry *Create(TInitialize &&Initialize)
+	{
+		try
+		{
+			// 初始化只排队本地加载，不创建 GPU 对象；失败仍走原初始化占位。
+			auto pEntry = std::make_unique<TEntry>();
+			Initialize(*pEntry);
+			return Insert(std::move(pEntry));
+		}
+		catch(const std::bad_alloc &) { return nullptr; }
+		catch(const std::length_error &) { return nullptr; }
 	}
 	void RetryMissing(const char *pMapName)
 	{
