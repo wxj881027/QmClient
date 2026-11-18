@@ -135,6 +135,23 @@ TEST(QmHudNotifications, LocalizesChineseServerChatToItsCanonicalKey)
 	EXPECT_STREQ(aBuf, "");
 }
 
+TEST(QmHudNotifications, LocalizesBothTimesInChineseKickVoteCooldown)
+{
+	char aBuf[256];
+
+	ASSERT_TRUE(QmHudNotifications::TryFormatLocalizedServerChatMessage("每位玩家的踢人投票之间有 60 秒冷却，请等待 23 秒", aBuf, sizeof(aBuf)));
+	EXPECT_STREQ(aBuf, "There's a 60 second wait time between kick votes for each player please wait 23 second(s)");
+}
+
+TEST(QmHudNotifications, KeepsGeneratedTeamSaveCodeAndServerInLoadHint)
+{
+	const char *pMessage = "Team successfully saved by Alice. The database connection failed, using generated save code instead to avoid collisions. Use '/load gold meadow' on EUR to continue";
+	char aBuf[256];
+
+	ASSERT_TRUE(QmHudNotifications::TryFormatLocalizedServerChatMessage(pMessage, aBuf, sizeof(aBuf)));
+	EXPECT_STREQ(aBuf, pMessage);
+}
+
 TEST(QmHudNotifications, StaticEnglishAndChineseMessagesShareTheSameSemanticKey)
 {
 	const auto English = QmHudNotifications::AnalyzeServerMessage("Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee ", QmHudNotifications::ESoloPrompt::None);
