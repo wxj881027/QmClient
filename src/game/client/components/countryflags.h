@@ -17,6 +17,7 @@
 #include <deque>
 #include <memory>
 #include <new>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -113,10 +114,37 @@ public:
 		IGraphics::CTextureHandle m_Texture;
 		bool m_Loaded = false;
 		int64_t m_LoadedTimestamp = 0;
+		std::optional<int64_t> m_LastUploadFailure;
 		// 动画起始时间，支持持续播放并在重现时重置；mutable 因 Render 持 const 引用。
 		mutable int64_t m_AnimStartTimestamp = 0;
 		// 后台显示也算可见；仅测量不更新时刻。mutable 因 Render 持 const 引用。
 		mutable int64_t m_LastRenderTimestamp = 0;
+
+		bool UploadRetryDue(int64_t Now, int64_t Frequency) const
+		{
+			return !m_LastUploadFailure || Now - *m_LastUploadFailure >= Frequency;
+		}
+
+		bool TryUpload(CImageInfo &Image, IGraphics &Graphics, int64_t Now) noexcept
+		{
+			try
+			{
+				const auto Texture = Graphics.LoadTextureRawMove(Image, 0, m_aCountryCodeString);
+				if(Texture.IsValid() && !Texture.IsNullTexture() && Graphics.IsTextureHandleAllocated(Texture))
+				{
+					m_Texture = Texture;
+					m_Loaded = true;
+					m_LoadedTimestamp = Now;
+					m_LastUploadFailure.reset();
+					return true;
+				}
+			}
+			catch(...)
+			{
+			}
+			m_LastUploadFailure = Now;
+			return false;
+		}
 
 		// Render 与行为测试共用的生命周期入口；时钟由调用方提供。
 		SCountryFlagEntryVisual ResolveEntryAnimation(EQmCountryFlagRenderPass Pass, bool Enabled, int MotionLevel, int64_t CustomStartTime, int64_t Now, int64_t Frequency) const

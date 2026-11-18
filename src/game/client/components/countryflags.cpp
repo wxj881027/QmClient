@@ -176,7 +176,8 @@ void CCountryFlags::StartFlagLoadJob(size_t Index)
 	if(Index >= m_vCountryFlags.size() || Index >= m_vLoadTriggered.size())
 		return;
 
-	if(m_vLoadTriggered[Index])
+	const auto &Flag = m_vCountryFlags[Index];
+	if(m_vLoadTriggered[Index] || (Flag.m_LastUploadFailure && !Flag.UploadRetryDue(time_get(), time_freq())))
 		return;
 
 	char aPath[128];
@@ -212,15 +213,17 @@ void CCountryFlags::ProcessCompletedJobs()
 		{
 			if(auto *pFlag = FindFlagLoadTarget(m_vCountryFlags, Result))
 			{
-				pFlag->m_Texture = Graphics()->LoadTextureRawMove(Result.m_Image, 0, pFlag->m_aCountryCodeString);
-				pFlag->m_Loaded = true;
-				pFlag->m_LoadedTimestamp = time_get();
 				GameClient()->GpuUploadLimiter()->OnUploaded();
-				LogCountryFlagSettingsResourcePerf("upload", 1, 1, (int)m_PendingJobs.size() - 1, ESettingsWarmupMissReason::NONE, 0.0);
-
-				if(g_Config.m_Debug)
+				if(!pFlag->TryUpload(Result.m_Image, *Graphics(), time_get()))
 				{
-					log_debug("countryflags", "loaded country flag '%s'", pFlag->m_aCountryCodeString);
+					// 上传失败消耗一次预算。等待一秒后，后续使用可重新请求该条目。
+					m_vLoadTriggered[Result.m_FlagIndex] = false;
+				}
+				else
+				{
+					LogCountryFlagSettingsResourcePerf("upload", 1, 1, (int)m_PendingJobs.size() - 1, ESettingsWarmupMissReason::NONE, 0.0);
+					if(g_Config.m_Debug)
+						log_debug("countryflags", "loaded country flag '%s'", pFlag->m_aCountryCodeString);
 				}
 			}
 		}

@@ -1,9 +1,12 @@
+#include <base/str.h>
+
 #include <engine/gfx/image_loader.h>
 #include <engine/storage.h>
 
 #include <game/client/components/countryflags.h>
 
 #include <gtest/gtest.h>
+#include <test/support/icon_benchmark_graphics.h>
 #include <test/support/job_wait.h>
 #include <test/test.h>
 
@@ -56,6 +59,20 @@ namespace
 		}
 	};
 
+	class CFlagUploadGraphics : public CIconBenchmarkGraphics
+	{
+	public:
+		bool m_Reject = true;
+
+		CTextureHandle LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pName) override
+		{
+			if(!m_Reject)
+				return CIconBenchmarkGraphics::LoadTextureRawMove(Image, Flags, pName);
+			Image.Free();
+			return {};
+		}
+	};
+
 	class CThrowingCountryFlagJob : public CJob
 	{
 	protected:
@@ -92,6 +109,38 @@ TEST_F(CCountryFlagJob, AcceptedNativePngResultOutlivesJobAndPool)
 	EXPECT_EQ(Result.m_Image.m_Height, 1u);
 	ASSERT_NE(Result.m_Image.m_pData, nullptr);
 	EXPECT_EQ(Result.m_Image.m_pData[0], 21);
+}
+
+TEST_F(CCountryFlagJob, RejectedUploadCanRetryAfterCooldown)
+{
+	WritePng();
+	CFlagUploadGraphics Graphics;
+	CCountryFlags::CCountryFlag Flag{};
+	str_copy(Flag.m_aCountryCodeString, "flag");
+	constexpr int64_t FailedAt = 10;
+	constexpr int64_t Frequency = 1000;
+	auto pFirst = std::make_shared<CJob>("flag.png", 42, m_pStorage.get());
+	ASSERT_TRUE(m_Pool.TryAdd(pFirst));
+	ASSERT_TRUE(WaitForJobDone(*pFirst));
+	auto First = pFirst->GetResult();
+	ASSERT_TRUE(First.m_Success);
+	EXPECT_FALSE(Flag.TryUpload(First.m_Image, Graphics, FailedAt));
+	EXPECT_FALSE(Flag.m_Loaded);
+	EXPECT_FALSE(Flag.m_Texture.IsValid());
+	EXPECT_FALSE(Flag.UploadRetryDue(FailedAt + Frequency - 1, Frequency));
+
+	const int64_t RetryAt = FailedAt + Frequency;
+	ASSERT_TRUE(Flag.UploadRetryDue(RetryAt, Frequency));
+	Graphics.m_Reject = false;
+	auto pRetry = std::make_shared<CJob>("flag.png", 42, m_pStorage.get());
+	ASSERT_TRUE(m_Pool.TryAdd(pRetry));
+	ASSERT_TRUE(WaitForJobDone(*pRetry));
+	auto Retry = pRetry->GetResult();
+	ASSERT_TRUE(Retry.m_Success);
+	ASSERT_TRUE(Flag.TryUpload(Retry.m_Image, Graphics, RetryAt));
+	EXPECT_TRUE(Flag.m_Loaded);
+	EXPECT_EQ(Flag.m_LoadedTimestamp, RetryAt);
+	EXPECT_TRUE(Graphics.IsTextureHandleAllocated(Flag.m_Texture));
 }
 
 TEST_F(CCountryFlagJob, MissingFilePublishesFailedCompletion)
