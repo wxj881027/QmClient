@@ -5,7 +5,6 @@
 #include "audio_sdl3.h"
 #include "sound_buffer.h"
 
-#include <base/bytes.h>
 #include <base/dbg.h>
 #include <base/log.h>
 #include <base/math.h>
@@ -35,6 +34,9 @@ extern "C" {
 static constexpr int SAMPLE_INDEX_USED = -2;
 static constexpr int SAMPLE_INDEX_FULL = -1;
 
+// 调试开关来自全局配置，由主线程发布给后台音效加载任务。
+static std::atomic<bool> s_DebugSoundLoads = false;
+
 unsigned CSound::AdvanceVoice(CVoice &Voice, unsigned Frames)
 {
 	// make sure that we don't go outside the sound data
@@ -59,11 +61,10 @@ unsigned CSound::AdvanceVoice(CVoice &Voice, unsigned Frames)
 
 void CSound::Mix(short *pFinalOut, unsigned Frames)
 {
+	// SDL 回调和录像共用累加缓冲，清零和输出也需要在同一把锁内。
+	const CLockScope LockScope(m_SoundLock);
 	Frames = std::min(Frames, m_MaxFrames);
 	mem_zero(m_pMixBuffer, Frames * 2 * sizeof(int));
-
-	// acquire lock while we are mixing
-	m_SoundLock.lock();
 
 	const int MasterVol = m_SoundVolume.load(std::memory_order_relaxed);
 
@@ -168,15 +169,9 @@ void CSound::Mix(short *pFinalOut, unsigned Frames)
 		}
 	}
 
-	m_SoundLock.unlock();
-
-	// clamp accumulated values
+	// SDL_AUDIO_S16 和录像使用的 AV_SAMPLE_FMT_S16 都采用本机字节序。
 	for(unsigned i = 0; i < Frames * 2; i++)
 		pFinalOut[i] = QmSoundMixSample(m_pMixBuffer[i], MasterVol);
-
-#if defined(CONF_ARCH_ENDIAN_BIG)
-	swap_endian(pFinalOut, sizeof(short), Frames * 2);
-#endif
 }
 
 void CSound::FillAudioStream(SDL_AudioStream *pStream, int AdditionalAmount)
@@ -202,16 +197,18 @@ int CSound::Init()
 
 	// Initialize sample indices. We always need them to load sounds in
 	// the editor even if sound is disabled or failed to be enabled.
-	const CLockScope LockScope(m_SoundLock);
-	m_FirstFreeSampleIndex = 0;
-	for(size_t i = 0; i < std::size(m_aSamples) - 1; ++i)
 	{
-		m_aSamples[i].m_Index = i;
-		m_aSamples[i].m_NextFreeSampleIndex = i + 1;
-		m_aSamples[i].m_pData = nullptr;
+		const CLockScope LockScope(m_SoundLock);
+		m_FirstFreeSampleIndex = 0;
+		for(size_t i = 0; i < std::size(m_aSamples) - 1; ++i)
+		{
+			m_aSamples[i].m_Index = i;
+			m_aSamples[i].m_NextFreeSampleIndex = i + 1;
+			m_aSamples[i].m_pData = nullptr;
+		}
+		m_aSamples[std::size(m_aSamples) - 1].m_Index = std::size(m_aSamples) - 1;
+		m_aSamples[std::size(m_aSamples) - 1].m_NextFreeSampleIndex = SAMPLE_INDEX_FULL;
 	}
-	m_aSamples[std::size(m_aSamples) - 1].m_Index = std::size(m_aSamples) - 1;
-	m_aSamples[std::size(m_aSamples) - 1].m_NextFreeSampleIndex = SAMPLE_INDEX_FULL;
 
 	if(!g_Config.m_SndEnable)
 		return 0;
@@ -253,14 +250,8 @@ int CSound::Init()
 	}
 	m_SoundEnabled = true;
 	UpdateVolume();
-	if(OpenDevice())
-	{
-		log_info("sound", "Sound init successful using audio driver '%s'", SDL_GetCurrentAudioDriver());
-	}
-	else
-	{
-		log_error("sound", "Unable to open audio device (%s), waiting for one to become available", SDL_GetError());
-	}
+	m_DeviceChanged.store(true, std::memory_order_relaxed);
+	UpdateDevice();
 	return 0;
 }
 
@@ -306,20 +297,31 @@ void CSound::UpdateDevice()
 	if(!m_SoundEnabled || m_pDevice != nullptr)
 		return;
 
-	// Opening the device when the system has none blocks for up to eight seconds
-	// in SDL's WASAPI backend, which would stall the main loop
+	// 客户端只有一个游戏混音器，重试时间只在主线程使用。
+	static int64_t s_NextAttempt = 0;
+	const bool DeviceChanged = m_DeviceChanged.exchange(false, std::memory_order_relaxed);
+	if(!DeviceChanged && time_get() < s_NextAttempt)
+		return;
+
+	// 先确认有输出设备，再调用可能阻塞的设备打开操作。
 	int NumDevices = 0;
 	SDL_free(SDL_GetAudioPlaybackDevices(&NumDevices));
-	if(NumDevices <= 0)
-		return;
-
-	if(!m_DeviceChanged.exchange(false, std::memory_order_relaxed))
-		return;
-
-	if(OpenDevice())
+	if(NumDevices > 0)
 	{
-		log_info("sound", "Audio device connected, using audio driver '%s'", SDL_GetCurrentAudioDriver());
+		if(OpenDevice())
+		{
+			log_info("sound", "Audio device connected, using audio driver '%s'", SDL_GetCurrentAudioDriver());
+			return;
+		}
+		if(DeviceChanged)
+			log_error("sound", "Unable to open audio device: %s", SDL_GetError());
 	}
+	else if(DeviceChanged)
+	{
+		log_info("sound", "Waiting for an available playback device");
+	}
+	// 从驱动返回后开始计时，避免驱动打开失败后立即再试。
+	s_NextAttempt = time_get() + time_freq();
 }
 
 bool CSound::HasAudioOutput() const
@@ -381,6 +383,7 @@ void CSound::AdvancePlayback()
 
 void CSound::UpdateVolume()
 {
+	s_DebugSoundLoads.store(g_Config.m_Debug != 0, std::memory_order_relaxed);
 	int WantedVolume = g_Config.m_SndVolume;
 	if(!m_pGraphics->WindowActive() && g_Config.m_SndNonactiveMute)
 		WantedVolume = 0;
@@ -391,10 +394,13 @@ void CSound::Shutdown()
 {
 	StopAll();
 
-	// Stop sound callback before freeing sample data
-	SDL_RemoveEventWatch(HandleAudioDeviceEvent, this);
-	CloseDevice();
-	SDL_QuitSubSystem(SDL_INIT_AUDIO);
+	if(m_SoundEnabled)
+	{
+		// 先停止回调，再释放本实例持有的 SDL 音频引用和混音数据。
+		SDL_RemoveEventWatch(HandleAudioDeviceEvent, this);
+		CloseDevice();
+		SDL_QuitSubSystem(SDL_INIT_AUDIO);
+	}
 
 	free(m_pCallbackBuffer);
 	m_pCallbackBuffer = nullptr;
@@ -442,21 +448,21 @@ bool CSound::RateConvert(CSample &Sample) const
 	if(pNewData == nullptr)
 		return false;
 
+	const double LastFrame = Sample.m_NumFrames - 1;
 	for(int i = 0; i < NumFrames; i++)
 	{
-		// resample TODO: this should be done better, like linear at least
-		float a = i / (float)NumFrames;
-		int f = (int)(a * Sample.m_NumFrames);
-		if(f >= Sample.m_NumFrames)
-			f = Sample.m_NumFrames - 1;
+		// 保留原有采样取整。长音频的 float 结果可能越过 int 上限，先限制再转换。
+		const float Fraction = i / static_cast<float>(NumFrames);
+		const double SourceFrame = Fraction * Sample.m_NumFrames;
+		const int SourceIndex = static_cast<int>(std::min(SourceFrame, LastFrame));
 
 		// set new data
 		if(Sample.m_Channels == 1)
-			pNewData[i] = Sample.m_pData[f];
+			pNewData[i] = Sample.m_pData[SourceIndex];
 		else if(Sample.m_Channels == 2)
 		{
-			pNewData[i * 2] = Sample.m_pData[f * 2];
-			pNewData[i * 2 + 1] = Sample.m_pData[f * 2 + 1];
+			pNewData[i * 2] = Sample.m_pData[SourceIndex * 2];
+			pNewData[i * 2 + 1] = Sample.m_pData[SourceIndex * 2 + 1];
 		}
 	}
 
@@ -478,12 +484,22 @@ bool CSound::DecodeOpus(CSample &Sample, const void *pData, unsigned DataSize, c
 	if(pOpusFile)
 	{
 		const std::unique_ptr<OggOpusFile, decltype(&op_free)> OpusFile(pOpusFile, &op_free);
-		const int NumChannels = op_channel_count(pOpusFile, -1);
-		if(NumChannels < 1 || NumChannels > 2)
+		int MinChannels = 2;
+		int NumChannels = 1;
+		const int NumLinks = op_link_count(pOpusFile);
+		for(int Link = 0; Link < NumLinks; ++Link)
 		{
-			log_error("sound/opus", "File is not mono or stereo. Filename='%s'", pContextName);
-			return false;
+			const int LinkChannels = op_channel_count(pOpusFile, Link);
+			if(LinkChannels < 1 || LinkChannels > 2)
+			{
+				log_error("sound/opus", "File is not mono or stereo. Filename='%s'", pContextName);
+				return false;
+			}
+			MinChannels = std::min(MinChannels, LinkChannels);
+			NumChannels = std::max(NumChannels, LinkChannels);
 		}
+		// 串接的 Opus 段可以切换声道数，混合声道时统一解码为立体声。
+		const bool MixedChannels = MinChannels != NumChannels;
 
 		const int64_t NumSamples = op_pcm_total(pOpusFile, -1); // per channel!
 		size_t SampleCount = 0;
@@ -497,7 +513,10 @@ bool CSound::DecodeOpus(CSample &Sample, const void *pData, unsigned DataSize, c
 		auto pSampleData = QmCreateSoundBuffer<short>(NumSamples, NumChannels, [&](short *pBuffer, int Count) {
 			while(Pos < NumSamples)
 			{
-				const int Read = op_read(pOpusFile, pBuffer + Pos * NumChannels, Count - Pos * NumChannels, nullptr);
+				const int Offset = Pos * NumChannels;
+				const int Read = MixedChannels ?
+							 op_read_stereo(pOpusFile, pBuffer + Offset, Count - Offset) :
+							 op_read(pOpusFile, pBuffer + Offset, Count - Offset, nullptr);
 				if(Read < 0)
 				{
 					log_error("sound/opus", "op_read error %d at %d. Filename='%s'", Read, Pos, pContextName);
@@ -672,8 +691,9 @@ bool CSound::DecodeWV(CSample &Sample, const void *pData, unsigned DataSize, con
 			return false;
 		}
 
-		auto pBuffer = QmCreateSoundBuffer<int>(NumSamples, NumChannels, [&](int *pDecoded, int) {
-			return WavpackUnpackSamples(pContext, pDecoded, static_cast<uint32_t>(NumSamples)) != 0;
+		const auto RequestedFrames = static_cast<uint32_t>(NumSamples);
+		auto pBuffer = QmCreateSoundBuffer<int32_t>(NumSamples, NumChannels, [&](int32_t *pDecoded, int) {
+			return WavpackUnpackSamples(pContext, pDecoded, RequestedFrames) == RequestedFrames;
 		});
 		if(!pBuffer)
 		{
@@ -735,7 +755,7 @@ int CSound::LoadOpus(const char *pFilename, int StorageType)
 		return -1;
 	}
 
-	if(g_Config.m_Debug)
+	if(s_DebugSoundLoads.load(std::memory_order_relaxed))
 		log_trace("sound/opus", "Loaded '%s' (index %d)", pFilename, pSample->m_Index);
 
 	if(!RateConvert(*pSample))
@@ -776,7 +796,7 @@ int CSound::LoadWV(const char *pFilename, int StorageType)
 		return -1;
 	}
 
-	if(g_Config.m_Debug)
+	if(s_DebugSoundLoads.load(std::memory_order_relaxed))
 		log_trace("sound/wv", "Loaded '%s' (index %d)", pFilename, pSample->m_Index);
 
 	if(!RateConvert(*pSample))
