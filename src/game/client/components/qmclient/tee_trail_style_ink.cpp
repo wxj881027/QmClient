@@ -333,7 +333,9 @@ void qm_tee_trail::style_detail::BuildInk(const SStyleSample *pSamples, size_t C
 	{
 		const vec2 HeadNormal = Unit(HeadSample.m_Normal);
 		const vec2 HeadAlong = Tangent(HeadSample);
-		const float Radius = std::clamp(InkBodyWidth(HeadSample, Seed) * 0.72f, PixelSize * 2.2f, 11.0f);
+		constexpr float MaxRadius = 11.0f;
+		const float MinRadius = std::min(PixelSize * 2.2f, MaxRadius);
+		const float Radius = std::clamp(InkBodyWidth(HeadSample, Seed) * 0.72f, MinRadius, MaxRadius);
 		const vec2 Center = HeadSample.m_Pos + HeadAlong * (Radius * 1.15f) + HeadNormal * (Radius * 0.06f);
 		// 印章随笔锋方向略微转动，避免每帧完全正交。
 		const float Angle = (Random(Seed + 311u) - 0.5f) * 0.8f;

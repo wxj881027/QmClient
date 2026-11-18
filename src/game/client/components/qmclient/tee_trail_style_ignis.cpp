@@ -183,8 +183,8 @@ namespace
 				while(Segment + 2 < Count && pSamples[Segment + 1].m_Head < Target)
 					++Segment;
 				const SStyleSample &A = pSamples[Segment], &B = pSamples[Segment + 1];
-				const float Span = A.m_Head - B.m_Head;
-				Out = Interpolate(A, B, Span > 0.0001f ? std::clamp((A.m_Head - Target) / Span, 0.0f, 1.0f) : 0.0f);
+				const float Span = B.m_Head - A.m_Head;
+				Out = Interpolate(A, B, Span > 0.0001f ? std::clamp((Target - A.m_Head) / Span, 0.0f, 1.0f) : 0.0f);
 				Out.m_Head = Target;
 			}
 		}
