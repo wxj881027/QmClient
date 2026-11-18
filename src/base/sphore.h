@@ -41,6 +41,9 @@ bool sphore_try_init(SEMAPHORE *sem);
  */
 void sphore_wait(SEMAPHORE *sem);
 
+// 尝试立即取走一个信号。没有可用信号时返回 false，原生错误沿用等待的断言处理。
+bool sphore_try_wait(SEMAPHORE *sem);
+
 /**
  * @ingroup Semaphore
  */
@@ -106,6 +109,13 @@ public:
 	{
 		sphore_wait(&m_Sem);
 		m_Count.fetch_sub(1);
+	}
+	bool TryWait()
+	{
+		if(!sphore_try_wait(&m_Sem))
+			return false;
+		m_Count.fetch_sub(1);
+		return true;
 	}
 	void Signal()
 	{

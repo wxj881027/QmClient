@@ -124,7 +124,9 @@ namespace
 #include <exception>
 #include <iterator>
 #include <limits>
+#include <new>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <tuple>
@@ -190,6 +192,7 @@ static void QmProcessTokenDescription(char *pBuffer, int BufferSize)
 #endif
 }
 static constexpr ColorRGBA gs_ClientNetworkErrPrintColor{1.0f, 0.25f, 0.25f, 1.0f};
+static constexpr char gs_aMapResourcePreparationError[] = "Could not prepare map resources.";
 // 网络积压分帧处理，避免异常 burst 把整个渲染帧占满。
 static constexpr int gs_NetworkPumpMaxChunksPerFrame = 256;
 static constexpr std::chrono::nanoseconds gs_NetworkPumpOnlineBudget = 2ms;
@@ -1463,7 +1466,17 @@ void CClient::DisconnectWithReason(const char *pReason)
 	m_pConsole->DeregisterTempAll();
 	m_ExpectedMaplistEntries = -1;
 	m_vMaplistEntries.clear();
-	GameClient()->ForceUpdateConsoleRemoteCompletionSuggestions();
+	// 补全建议分配失败时保持待刷新，继续关闭连接并释放地图。
+	try
+	{
+		GameClient()->ForceUpdateConsoleRemoteCompletionSuggestions();
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
 	m_aNetClient[CONN_MAIN].Disconnect(pReason);
 	SetState(IClient::STATE_OFFLINE);
 	m_pMap->Unload();
@@ -2795,6 +2808,11 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				return;
 			}
 			GameClient()->OnConnected();
+			if(GameClient()->ConnectionResourcePreparationFailed())
+			{
+				DisconnectWithReason(gs_aMapResourcePreparationError);
+				return;
+			}
 			if(m_DummyReconnectOnReload)
 			{
 				m_DummySendConnInfo = true;
@@ -4209,6 +4227,11 @@ void CClient::Update()
 	UpdateUpstreamRedundancy();
 
 	GameClient()->OnConnectionResourceUpdate();
+	if(GameClient()->ConnectionResourcePreparationFailed())
+	{
+		DisconnectWithReason(gs_aMapResourcePreparationError);
+		return;
+	}
 	// 官方 178da1ead：在采集/发送输入之前先更新 editor/gameclient，
 	// 低刷新率下输入能早一个循环发出。
 	if(m_EditorActive)

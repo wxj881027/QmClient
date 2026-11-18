@@ -1204,7 +1204,7 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 
 void CGameClient::CancelConnectionResourcePreparation()
 {
-	if(m_ConnectionResourcePreparation.Pending())
+	if(m_ConnectionResourcePreparation.NeedsCleanup())
 	{
 		m_MapLayersBackground.UnloadMap();
 		m_MapLayersForeground.UnloadMap();
@@ -1227,25 +1227,30 @@ void CGameClient::OnConnectionResourceUpdate()
 	const bool Trace = QmPerfEnabled();
 	CPerfTimer Timer(Trace);
 	const auto Deadline = CMapLoadTask::TClock::now() + std::chrono::milliseconds(2);
-	if(!m_MapImages.ImagesReady())
-		m_MapImages.AdvanceImageLoad();
+	bool DataReady = false;
+	const auto Prepare = [&] {
+		if(!m_MapImages.ImagesReady())
+			m_MapImages.AdvanceImageLoad();
 
-	// 等贴图解码时可以先做装饰层跳距，创建图层时再读取已经就绪的纹理句柄。
-	if(!m_DesignTileSkips.Done() && CMapLoadTask::TClock::now() < Deadline)
-	{
-		CPerfTimer SkipTimer(Trace);
-		m_DesignTileSkips.RunUntil(Deadline);
-		if(Trace)
-			QmPerfLogStage("perf/connect", "map_design_tile_skips", SkipTimer.ElapsedMs(), true, Client());
-	}
-	const bool DataReady = m_MapImages.ImagesReady() && m_DesignTileSkips.Done();
-	if(DataReady && CMapLoadTask::TClock::now() < Deadline)
-	{
-		if(!m_MapLayersBackground.IsMapLoaded())
-			m_MapLayersBackground.AdvanceMapLoad(1, Deadline);
-		else if(!m_MapLayersForeground.IsMapLoaded())
-			m_MapLayersForeground.AdvanceMapLoad(1, Deadline);
-	}
+		// 等贴图解码时可以先做装饰层跳距，创建图层时再读取已经就绪的纹理句柄。
+		if(!m_DesignTileSkips.Done() && CMapLoadTask::TClock::now() < Deadline)
+		{
+			CPerfTimer SkipTimer(Trace);
+			m_DesignTileSkips.RunUntil(Deadline);
+			if(Trace)
+				QmPerfLogStage("perf/connect", "map_design_tile_skips", SkipTimer.ElapsedMs(), true, Client());
+		}
+		DataReady = m_MapImages.ImagesReady() && m_DesignTileSkips.Done();
+		if(DataReady && CMapLoadTask::TClock::now() < Deadline)
+		{
+			if(!m_MapLayersBackground.IsMapLoaded())
+				m_MapLayersBackground.AdvanceMapLoad(1, Deadline);
+			else if(!m_MapLayersForeground.IsMapLoaded())
+				m_MapLayersForeground.AdvanceMapLoad(1, Deadline);
+		}
+	};
+	if(!m_ConnectionResourcePreparation.TryPrepare(Prepare))
+		return;
 	if(m_ConnectionResourcePreparation.CompleteWhenReady(DataReady, m_MapLayersBackground.IsMapLoaded(), m_MapLayersForeground.IsMapLoaded()))
 		FinishConnectionResourcePreparation();
 	LogPerfStage(this, "connection_resource_prepare", Timer.ElapsedMs());
@@ -1751,9 +1756,13 @@ void CGameClient::OnConnected()
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0);
 	LogConnectStage("loading_screen");
 	const bool Live = Client()->State() == IClient::STATE_LOADING;
-	m_Layers.Init(Kernel()->RequestInterface<IMap>(), false, true, Live);
-	if(Live)
-		m_DesignTileSkips = m_Layers.PrepareDesignTileSkips();
+	const auto PrepareLayers = [&] {
+		m_Layers.Init(Kernel()->RequestInterface<IMap>(), false, true, Live);
+		if(Live)
+			m_DesignTileSkips = m_Layers.PrepareDesignTileSkips();
+	};
+	if(!m_ConnectionResourcePreparation.TryPrepare(PrepareLayers, Live))
+		return;
 	LogConnectStage("layers_init");
 	m_Collision.Init(Layers());
 	LogConnectStage("collision_init");
@@ -1769,7 +1778,10 @@ void CGameClient::OnConnected()
 	{
 		auto *pComponent = m_vpAll[ComponentIndex];
 		CPerfTimer MapLoadTimer(QmPerfEnabled());
-		pComponent->OnMapLoad();
+		const bool PrepareLiveGraphics = Live &&
+			(pComponent == &m_MapImages || pComponent == &m_MapLayersBackground || pComponent == &m_MapLayersForeground);
+		if(!m_ConnectionResourcePreparation.TryPrepare([&] { pComponent->OnMapLoad(); }, PrepareLiveGraphics))
+			return;
 		pComponent->OnReset();
 		if(QmPerfEnabled())
 		{

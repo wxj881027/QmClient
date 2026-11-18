@@ -62,9 +62,8 @@ private:
 
 	static void Update(SRequest &Request)
 	{
-		if(Request.m_State != EState::PENDING || Request.m_pCompletion->GetApproximateValue() <= 0)
+		if(Request.m_State != EState::PENDING || !Request.m_pCompletion->TryWait())
 			return;
-		Request.m_pCompletion->Wait();
 		Request.m_State = Request.m_Image.m_pData != nullptr ? EState::READY : EState::FAILED;
 	}
 
@@ -84,9 +83,8 @@ private:
 		for(size_t Index = 0; Index < m_Requests->size(); ++Index)
 		{
 			SRequest &Request = (*m_Requests)[Index];
-			if(Request.m_State != EState::CANCELED || Request.m_pCompletion->GetApproximateValue() <= 0)
+			if(Request.m_State != EState::CANCELED || !Request.m_pCompletion->TryWait())
 				continue;
-			Request.m_pCompletion->Wait();
 			Release(static_cast<int>(Index));
 		}
 	}

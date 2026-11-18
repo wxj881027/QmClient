@@ -914,6 +914,7 @@ public:
 	// hooks
 	void OnConnected() override;
 	void OnConnectionResourceUpdate() override;
+	bool ConnectionResourcePreparationFailed() const override { return m_ConnectionResourcePreparation.Failed(); }
 	void OnMapLoadStart() override;
 	void OnRender() override;
 	void OnUpdate() override;

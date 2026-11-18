@@ -515,6 +515,7 @@ public:
 	virtual bool QmUiAnimationsIdle() const { return true; }
 	// 连接资源在常规主循环推进，编辑器占用游戏更新时也不能暂停准备。
 	virtual void OnConnectionResourceUpdate() {}
+	virtual bool ConnectionResourcePreparationFailed() const { return false; }
 	// 每次替换地图前都通知，即使客户端仍处于加载状态。
 	virtual void OnMapLoadStart() {}
 	// Render-only idle throttle requested by the game UI; 0 keeps the configured rate.

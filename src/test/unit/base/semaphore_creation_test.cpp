@@ -51,6 +51,23 @@ TEST(SemaphoreCreation, CreatedSemaphoreRetainsAndConsumesBothSignals)
 	}));
 }
 
+TEST(SemaphoreCreation, TryWaitConsumesOnePostedSignalPerSuccess)
+{
+	ASSERT_TRUE(WaitForAsyncIo([] {
+		const auto pSemaphore = CSemaphore::TryCreate();
+		ASSERT_NE(pSemaphore, nullptr);
+		EXPECT_FALSE(pSemaphore->TryWait());
+		EXPECT_EQ(pSemaphore->GetApproximateValue(), 0);
+		pSemaphore->Signal();
+		pSemaphore->Signal();
+		ASSERT_TRUE(pSemaphore->TryWait());
+		EXPECT_EQ(pSemaphore->GetApproximateValue(), 1);
+		ASSERT_TRUE(pSemaphore->TryWait());
+		EXPECT_FALSE(pSemaphore->TryWait());
+		EXPECT_EQ(pSemaphore->GetApproximateValue(), 0);
+	}));
+}
+
 TEST(SemaphoreCreation, FailedInitializationCanBeFollowedByAnOwnedNativeSemaphore)
 {
 	ASSERT_TRUE(WaitForAsyncIo([] {
