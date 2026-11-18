@@ -3,6 +3,7 @@
 #include <game/mapitems_ex.h>
 
 #include <gtest/gtest.h>
+#include <test/support/datafile_reader_operations.h>
 #include <test/support/datafile_writer_operations.h>
 #include <test/test.h>
 
@@ -98,6 +99,39 @@ TEST_F(DatafileWriterFailure, DataAllocationFailureRejectsOtherwiseValidPartialM
 	ASSERT_EQ(Writer.AddItem(1, 0, 0, nullptr), 0);
 	m_Operations.m_FailAllocationAt = 1;
 	EXPECT_EQ(Writer.AddDataString("payload"), -1);
+	EXPECT_FALSE(Writer.Finish());
+	EXPECT_EQ(m_Operations.m_Writes, 0);
+	EXPECT_EQ(m_Operations.m_Closes, 1);
+}
+
+TEST_F(DatafileWriterFailure, FailedLazyReadPreventsWritingOutput)
+{
+	CDataFileWriter Source;
+	ASSERT_NO_FATAL_FAILURE(Prepare(Source, "source.map"));
+	ASSERT_TRUE(Source.Finish());
+	CTestDatafileReaderOperations ReadOperations;
+	CDataFileReader Reader;
+	ASSERT_TRUE(Reader.Open(m_pStorage.get(), "source.map", IStorage::TYPE_SAVE, nullptr, &ReadOperations));
+	ReadOperations.m_MaxRead = 0;
+	const void *pData = Reader.GetData(0);
+	ASSERT_EQ(pData, nullptr);
+	const int Size = Reader.GetDataSize(0);
+	ASSERT_EQ(Size, 0);
+
+	CDataFileWriter Writer(&m_Operations);
+	ASSERT_NO_FATAL_FAILURE(Prepare(Writer));
+	EXPECT_EQ(Writer.AddData(Size, pData), -1);
+	EXPECT_FALSE(Writer.Finish());
+	EXPECT_EQ(m_Operations.m_Writes, 0);
+	EXPECT_EQ(m_Operations.m_Closes, 1);
+}
+
+TEST_F(DatafileWriterFailure, MissingUuidForUnknownItemPreventsWritingOutput)
+{
+	CDataFileWriter Writer(&m_Operations);
+	ASSERT_NO_FATAL_FAILURE(Prepare(Writer));
+	const int Value = 456;
+	EXPECT_EQ(Writer.AddItem(UUID_UNKNOWN, 0, sizeof(Value), &Value), -1);
 	EXPECT_FALSE(Writer.Finish());
 	EXPECT_EQ(m_Operations.m_Writes, 0);
 	EXPECT_EQ(m_Operations.m_Closes, 1);
@@ -290,6 +324,22 @@ TEST_F(DatafileWriterFailure, DataPreparedBeforeOpenIsPreserved)
 	ASSERT_TRUE(Writer.Open(m_pStorage.get(), "candidate.map"));
 	ASSERT_TRUE(Writer.Finish());
 	ExpectItem("candidate.map", 1, 7, Value);
+}
+
+TEST_F(DatafileWriterFailure, PreparationFailureBeforeOpenPreservesExistingFile)
+{
+	CDataFileWriter Original;
+	ASSERT_NO_FATAL_FAILURE(Prepare(Original));
+	ASSERT_TRUE(Original.Finish());
+
+	CDataFileWriter Writer(&m_Operations);
+	m_Operations.m_FailAllocationAt = 1;
+	const int Value = 456;
+	ASSERT_EQ(Writer.AddItem(2, 9, sizeof(Value), &Value), -1);
+	EXPECT_FALSE(Writer.Open(m_pStorage.get(), "candidate.map"));
+	EXPECT_FALSE(Writer.Finish());
+	EXPECT_EQ(m_Operations.m_Closes, 0);
+	ExpectItem("candidate.map", 1, 7, 123);
 }
 
 TEST_F(DatafileWriterFailure, OpenFailureCanRetryWithoutLosingPreparedItems)

@@ -1113,6 +1113,9 @@ bool CDataFileWriter::Open(class IStorage *pStorage, const char *pFilename, int 
 		m_Error = false;
 		m_Finished = false;
 	}
+	// 组装已经失败时，保留已有的目标文件。
+	if(m_Error)
+		return false;
 	try
 	{
 		m_File = pStorage->OpenFile(pFilename, IOFLAG_WRITE, StorageType);
@@ -1177,18 +1180,24 @@ int CDataFileWriter::GetExtendedItemTypeIndex(int Type, const CUuid *pUuid)
 
 int CDataFileWriter::AddItem(int Type, int Id, size_t Size, const void *pData, const CUuid *pUuid)
 {
-	dbg_assert((Type >= 0 && Type <= MAX_ITEM_TYPE) || Type >= OFFSET_UUID || (Type == -1 && pUuid != nullptr), "Invalid Type: %d", Type);
+	if(m_Error || m_Finished)
+		return -1;
+	if(Type == UUID_UNKNOWN && pUuid == nullptr)
+	{
+		m_Error = true;
+		return -1;
+	}
+
+	dbg_assert((Type >= 0 && Type <= MAX_ITEM_TYPE) || Type >= OFFSET_UUID || Type == UUID_UNKNOWN, "Invalid Type: %d", Type);
 	dbg_assert(Id >= 0 && Id <= MAX_ITEM_ID, "Invalid Id: %d", Id);
 	dbg_assert(Size == 0 || pData != nullptr, "Data missing"); // Items without data are allowed
 	dbg_assert(Size <= (size_t)std::numeric_limits<int>::max(), "Data too large");
 	dbg_assert(Size % sizeof(int) == 0, "Invalid data boundary");
 	dbg_assert(m_vItems.size() < (size_t)std::numeric_limits<int>::max(), "Too many items");
 
-	if(m_Error || m_Finished)
-		return -1;
 	try
 	{
-		if(Type == -1 || Type >= OFFSET_UUID)
+		if(Type == UUID_UNKNOWN || Type >= OFFSET_UUID)
 		{
 			const int Index = GetExtendedItemTypeIndex(Type, pUuid);
 			if(Index < 0)
@@ -1242,12 +1251,17 @@ int CDataFileWriter::AddItem(int Type, int Id, size_t Size, const void *pData, c
 
 int CDataFileWriter::AddData(size_t Size, const void *pData, ECompressionLevel CompressionLevel)
 {
-	dbg_assert(Size > 0 && pData != nullptr, "Data missing");
+	if(m_Error || m_Finished)
+		return -1;
+	if(Size == 0 || pData == nullptr)
+	{
+		m_Error = true;
+		return -1;
+	}
+
 	dbg_assert(Size <= (size_t)std::numeric_limits<int>::max(), "Data too large");
 	dbg_assert(m_vDatas.size() < (size_t)std::numeric_limits<int>::max(), "Too many data");
 
-	if(m_Error || m_Finished)
-		return -1;
 	try
 	{
 		CDataInfo Info{};
