@@ -273,7 +273,8 @@ SQmDropdownUpdateResult QmUpdateDropdownPopupSelection(const SQmDropdownInput &I
 	}
 
 	ActiveIndex = std::clamp(ActiveIndex, 0, ItemCount - 1);
-	if(Input.m_HoveredIndex >= 0 && Input.m_HoveredIndex < ItemCount)
+	const bool HasHoveredItem = Input.m_HoveredIndex >= 0 && Input.m_HoveredIndex < ItemCount;
+	if(HasHoveredItem)
 		ActiveIndex = Input.m_HoveredIndex;
 
 	if(Input.m_KeyUp)
@@ -281,9 +282,10 @@ SQmDropdownUpdateResult QmUpdateDropdownPopupSelection(const SQmDropdownInput &I
 	if(Input.m_KeyDown)
 		ActiveIndex = (ActiveIndex + 1) % ItemCount;
 
-	if(Input.m_KeyEnter || (Input.m_MouseSelectPressed && Input.m_HoveredIndex >= 0 && Input.m_HoveredIndex < ItemCount))
+	const bool MouseSelected = Input.m_MouseSelectPressed && HasHoveredItem;
+	if(Input.m_KeyEnter || MouseSelected)
 	{
-		if(Input.m_MouseSelectPressed)
+		if(MouseSelected)
 			ActiveIndex = Input.m_HoveredIndex;
 		Result.m_Selected = true;
 		Result.m_SelectedIndex = ActiveIndex;

@@ -59,3 +59,16 @@ TEST(QmDropdownSelectionBounds, SingleItemNavigationRemainsAtZero)
 	QmUpdateDropdownPopupSelection(Input, 1, true, ActiveIndex);
 	EXPECT_EQ(ActiveIndex, 0);
 }
+
+TEST(QmDropdownSelectionBounds, EnterUsesActiveItemWhenMouseIndexIsOutOfRange)
+{
+	SQmDropdownInput Input;
+	Input.m_KeyEnter = true;
+	Input.m_MouseSelectPressed = true;
+	Input.m_HoveredIndex = 3;
+	int ActiveIndex = 1;
+	const auto Result = QmUpdateDropdownPopupSelection(Input, 3, true, ActiveIndex);
+	EXPECT_TRUE(Result.m_Selected);
+	EXPECT_EQ(Result.m_SelectedIndex, 1);
+	EXPECT_TRUE(Result.m_Closed);
+}
