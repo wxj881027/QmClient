@@ -339,6 +339,11 @@ mod ffi {
         /// flags that specify metadata about the command, a callback function
         /// with associated `UserPtr` and a help string.
         ///
+        /// 控制台会保留命令名、参数格式和帮助文本的指针，因此这些字符串
+        /// 必须是 `StrRef<'static>`。可以用 `s!` 传入字符串字面量。
+        /// 回调若解引用 `UserPtr`，数据必须在每次调用时仍然有效，
+        /// 包括命令延迟执行时。
+        ///
         /// `Flags` must be a combination of
         /// - [`CFGFLAG_SAVE`](../ddnet_engine_shared/constant.CFGFLAG_SAVE.html)
         /// - [`CFGFLAG_CLIENT`](../ddnet_engine_shared/constant.CFGFLAG_CLIENT.html)
@@ -437,12 +442,12 @@ mod ffi {
         /// ```
         pub fn Register(
             self: Pin<&mut IConsole>,
-            pName: StrRef<'_>,
-            pParams: StrRef<'_>,
+            pName: StrRef<'static>,
+            pParams: StrRef<'static>,
             Flags: i32,
             pfnFunc: IConsole_FCommandCallback,
             pUser: UserPtr,
-            pHelp: StrRef<'_>,
+            pHelp: StrRef<'static>,
         );
 
         /// 尝试注册可选命令。命令节点分配失败时返回 `false`。
