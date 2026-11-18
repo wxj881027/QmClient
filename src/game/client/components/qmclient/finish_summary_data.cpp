@@ -4,6 +4,7 @@
 
 #include <base/detect.h>
 #include <base/str.h>
+#include <base/time.h>
 
 #include <engine/shared/json.h>
 
@@ -22,6 +23,7 @@ namespace
 	using namespace QmFinishSummary;
 	using TJson = std::unique_ptr<json_value, decltype(&json_value_free)>;
 	constexpr size_t MAX_JSON_BYTES = 8 * 1024 * 1024;
+	constexpr unsigned MAX_TEXT_BYTES = 512;
 	constexpr int64_t MAX_TIME_MS = std::numeric_limits<int>::max();
 
 	int64_t Centiseconds(int64_t Milliseconds)
@@ -48,7 +50,7 @@ namespace
 
 	bool Text(const json_value *pValue, std::string &Out)
 	{
-		if(pValue->type != json_string || pValue->u.string.length > 512)
+		if(pValue->type != json_string || pValue->u.string.length > MAX_TEXT_BYTES)
 			return false;
 		const char *pText = json_string_get(pValue);
 		if(!pText || !str_utf8_check(pText) || pValue->u.string.length != static_cast<unsigned>(str_length(pText)))
@@ -228,17 +230,18 @@ namespace QmFinishSummary
 			Result.m_RankPoints = 0;
 		for(unsigned Type = 0; Type < pTypes->u.object.length; ++Type)
 		{
-			const json_value *pMaps = Field(pTypes->u.object.values[Type].value, "maps");
+			const auto &TypeEntry = pTypes->u.object.values[Type];
+			const json_value *pMaps = Field(TypeEntry.value, "maps");
 			const json_value *pMap = Field(pMaps, Map.c_str());
 			if(pMap->type != json_object)
 				continue;
 			// 同名地图出现在多个分类时保持未知，避免选择错误的分类分母。
 			if(!Result.m_Map.empty())
 				return false;
-			Result.m_Map = Map;
-			Result.m_Category = pTypes->u.object.values[Type].name;
-			if(Result.m_Category.size() > 512 || !str_utf8_check(Result.m_Category.c_str()))
+			if(TypeEntry.name_length > MAX_TEXT_BYTES || TypeEntry.name_length != static_cast<unsigned>(str_length(TypeEntry.name)) || !str_utf8_check(TypeEntry.name))
 				return false;
+			Result.m_Map = Map;
+			Result.m_Category.assign(TypeEntry.name, TypeEntry.name_length);
 			const auto Finishes = MapFinishes(pMap);
 			Result.m_BestTimeMs = TimeMs(Field(pMap, "time"));
 			Result.m_HistoryKnown = Finishes && (*Finishes == 0 || Result.m_BestTimeMs.has_value());
@@ -442,6 +445,17 @@ namespace QmFinishSummary
 		}
 		Out = std::move(Result);
 		return true;
+	}
+
+	void ApplyBestPreviewDate(SSnapshot &Snapshot, const SRemoteData &Remote)
+	{
+		if(Remote.m_LatestTimeMs != Snapshot.m_TimeMs || !Remote.m_LatestTimestamp)
+			return;
+		char aDate[64];
+		if(str_timestamp_ex_try(*Remote.m_LatestTimestamp, aDate, sizeof(aDate), "%Y-%m-%d %H:%M"))
+			Snapshot.m_FinishedAt = aDate;
+		else
+			Snapshot.m_FinishedAt.clear();
 	}
 
 	void ResolveComparison(SSnapshot &Snapshot, std::optional<int64_t> PreviousBest, bool HistoryKnown, std::optional<int64_t> Difference, bool PersonalRecord)

@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <new>
 #include <utility>
 
 using namespace QmFinishSummary;
@@ -36,6 +37,11 @@ class CQmFinishSummary::CParseJob : public IJob
 
 	void Run() override
 	{
+		if(State() == STATE_ABORTED)
+		{
+			m_pRequest.reset();
+			return;
+		}
 		unsigned char *pData = nullptr;
 		size_t Length = 0;
 		m_pRequest->Result(&pData, &Length);
@@ -63,7 +69,10 @@ public:
 	SRemoteData m_Result;
 	uint64_t m_Generation;
 	CParseJob(std::shared_ptr<IHttpRequest> pRequest, EQuery Query, ECommunity Community, const std::string &Map, const std::string &Player, const SRemoteData &Data, uint64_t Generation) :
-		m_pRequest(std::move(pRequest)), m_Query(Query), m_Community(Community), m_Map(Map), m_Player(Player), m_Category(Data.m_Category), m_UserId(Data.m_UserId), m_Generation(Generation) {}
+		m_pRequest(std::move(pRequest)), m_Query(Query), m_Community(Community), m_Map(Map), m_Player(Player), m_Category(Data.m_Category), m_UserId(Data.m_UserId), m_Generation(Generation)
+	{
+		Abortable(true);
+	}
 };
 
 double CQmFinishSummary::Now()
@@ -83,7 +92,8 @@ void CQmFinishSummary::CancelRequests()
 	{
 		if(Request.m_pHttp)
 			Request.m_pHttp->Abort();
-		// 解析任务只持有自己的请求与值数据，释放句柄即可隔离迟到结果。
+		if(Request.m_pJob)
+			Request.m_pJob->Abort();
 		Request = {};
 		Request.m_Done = true;
 	}
@@ -313,8 +323,21 @@ void CQmFinishSummary::UpdateRequests(double CurrentTime)
 			Changed = true;
 			if(Request.m_pHttp->State() == EHttpState::DONE && Request.m_pHttp->StatusCode() == 200)
 			{
-				Request.m_pJob = std::make_shared<CParseJob>(Request.m_pHttp, Query, m_Community, m_Map, m_Player, m_Data, m_Generation);
-				Engine()->AddJob(Request.m_pJob);
+				try
+				{
+					auto pJob = std::make_shared<CParseJob>(Request.m_pHttp, Query, m_Community, m_Map, m_Player, m_Data, m_Generation);
+					if(Engine()->TryAddJob(pJob))
+						Request.m_pJob = std::move(pJob);
+				}
+				catch(const std::bad_alloc &)
+				{
+					// 创建失败和入队被拒都沿用解析失败的退避。
+				}
+				if(!Request.m_pJob)
+				{
+					Request.m_Done = Request.m_Attempts >= 2;
+					Request.m_NotBefore = CurrentTime + 3.0;
+				}
 			}
 			else
 			{
@@ -389,12 +412,7 @@ void CQmFinishSummary::RefreshSnapshot()
 	if(BestPreview)
 	{
 		pSnapshot->m_PointsGained = {-1, EStatus::UNAVAILABLE};
-		if(m_Data.m_LatestTimeMs == pSnapshot->m_TimeMs && m_Data.m_LatestTimestamp)
-		{
-			char aDate[64];
-			str_timestamp_ex(*m_Data.m_LatestTimestamp, aDate, sizeof(aDate), "%Y-%m-%d %H:%M");
-			pSnapshot->m_FinishedAt = aDate;
-		}
+		ApplyBestPreviewDate(*pSnapshot, m_Data);
 	}
 	++pSnapshot->m_Revision;
 	const auto Finalize = [&](SValue &Value, EQuery Query, bool AwaitingSync = false) {

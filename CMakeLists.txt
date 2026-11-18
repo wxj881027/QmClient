@@ -312,6 +312,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64" AND CMAKE_C_COMPIL
     src/qm/music/qm_kugou_protocol.h
     src/qm/music/qm_qqmusic_source.cpp
     src/qm/music/qm_qqmusic_source.h
+    src/qm/music/qm_qqmusic_lyric_request.h
     src/qm/music/qm_qqmusic_protocol.cpp
     src/qm/music/qm_qqmusic_protocol.h
     src/qm/hooks/soda/qm_soda_protocol.cpp
@@ -5732,6 +5733,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/music/qm_netease_bridge_lifecycle_test.cpp
     src/test/unit/qmclient/music/qm_music_app_watcher_test.cpp
     src/test/unit/qmclient/music/qm_qqmusic_protocol_test.cpp
+    src/test/unit/qmclient/music/qm_qqmusic_lyric_request_test.cpp
     src/test/unit/qmclient/music/qm_music_transport_test.cpp
     src/test/unit/qmclient/music/qm_kugou_protocol_test.cpp
     src/test/unit/qmclient/music/qm_kugou_patch_test.cpp
@@ -6521,6 +6523,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/music/qm_spotify_token_test.cpp
       src/test/unit/qmclient/music/qm_spotify_parser_test.cpp
       src/test/unit/qmclient/music/qm_qqmusic_protocol_test.cpp
+      src/test/unit/qmclient/music/qm_qqmusic_lyric_request_test.cpp
       src/test/unit/qmclient/music/qm_music_transport_test.cpp
       src/test/unit/qmclient/music/qm_kugou_protocol_test.cpp
       src/test/unit/qmclient/music/qm_kugou_patch_test.cpp

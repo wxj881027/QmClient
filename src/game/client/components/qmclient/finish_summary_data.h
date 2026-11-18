@@ -111,6 +111,7 @@ namespace QmFinishSummary
 	bool ParseAxiomProgress(const char *pJson, size_t Length, int64_t UserId, const std::string &Category, SRemoteData &Out, const char *pMode = nullptr);
 	bool ParseAxiomTimes(const char *pJson, size_t Length, const std::string &Map, int64_t UserId, SRemoteData &Out, const char *pMode = nullptr);
 
+	void ApplyBestPreviewDate(SSnapshot &Snapshot, const SRemoteData &Remote);
 	void ResolveComparison(SSnapshot &Snapshot, std::optional<int64_t> PreviousBest, bool HistoryKnown, std::optional<int64_t> Difference, bool PersonalRecord);
 	void ResolveLocalRank(SSnapshot &Snapshot, const std::vector<SOnlineTime> &vTimes, std::optional<int64_t> PreviousBest, bool Precise);
 	// 基线只在通关前取得；账号首通和本次成绩同步分别核对。

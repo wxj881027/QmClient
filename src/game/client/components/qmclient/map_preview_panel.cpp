@@ -28,7 +28,9 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <new>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -54,13 +56,18 @@ namespace
 		IGraphics::CTextureHandle Get(int Index) const override { return m_vTextures[Index]; }
 		int Num() const override { return m_vTextures.size(); }
 		void Resize(int Count) { m_vTextures.resize(Count); }
-		void Upload(int Index, const CImageInfo &Image, int Usage)
+		bool Upload(int Index, const CImageInfo &Image, int Usage)
 		{
-			if(Image.m_pData == nullptr)
-				return;
+			// 未使用或解码失败的图片沿原规则跳过；有像素的上传拒绝必须重试。
+			if(Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0)
+				return true;
 			const int ArrayFlag = Graphics()->TextureLoadFlags();
 			const int Flags = ((Usage & 1) ? ArrayFlag : 0) | ((Usage & 2) ? 0 : (Graphics()->HasTextureArraysSupport() ? IGraphics::TEXLOAD_NO_2D_TEXTURE : 0));
-			m_vTextures[Index] = Graphics()->LoadTextureRaw(Image, Flags, "map-preview");
+			const auto Texture = Graphics()->LoadTextureRaw(Image, Flags, "map-preview");
+			if(!Texture.IsValid())
+				return false;
+			m_vTextures[Index] = Texture;
+			return true;
 		}
 		void UnloadPreview()
 		{
@@ -298,6 +305,7 @@ public:
 	}
 
 	static bool AdvanceEntry(SMapPreviewEntry &Entry, CGameClient *pGameClient, float Now)
+	try
 	{
 		if(!Entry.m_pLoadJob)
 			return Entry.m_pRenderer != nullptr;
@@ -313,34 +321,48 @@ public:
 		}
 		if(!Entry.m_pImages)
 		{
-			Entry.m_pImages = std::make_unique<CMapPreviewImages>(pGameClient->m_MapImages);
-			Entry.m_pImages->OnInterfacesInit(pGameClient);
-			Entry.m_pImages->Resize(Job.m_vImages.size());
+			auto pImages = std::make_unique<CMapPreviewImages>(pGameClient->m_MapImages);
+			pImages->OnInterfacesInit(pGameClient);
+			pImages->Resize(Job.m_vImages.size());
+			Entry.m_pImages = std::move(pImages);
 		}
 		// 一帧最多上传一张贴图，不让高分辨率纹理集中复制并挤满图形命令缓冲。
 		if(Entry.m_UploadIndex < static_cast<int>(Job.m_vImages.size()))
 		{
 			const CPerfTimer Timer(QmPerfEnabled());
-			const int Index = Entry.m_UploadIndex++;
-			Entry.m_pImages->Upload(Index, Job.m_vImages[Index], Job.m_vUsage[Index]);
+			const int Index = Entry.m_UploadIndex;
+			if(!Entry.m_pImages->Upload(Index, Job.m_vImages[Index], Job.m_vUsage[Index]))
+				return false;
 			Job.m_vImages[Index].Free();
+			++Entry.m_UploadIndex;
 			QmPerfLogStage("perf/map_preview", "upload", Timer.ElapsedMs(), false, pGameClient->Client());
 			return false;
 		}
+		// OnMapLoad 在离线模式只 BeginLoad，尚未上传图层；失败候选可直接析构。
+		// 先备好求值器和加载状态，再移走 job 的来源，避免下一帧读取半发布状态。
+		auto pRenderer = std::make_unique<CMapPreviewLayers>();
+		pRenderer->OnInterfacesInit(pGameClient);
+		pRenderer->SetSources(Job.m_pLayers.get(), Entry.m_pImages.get());
+		pRenderer->OnMapLoad();
 		Entry.m_pMap = std::move(Job.m_pMap);
 		Entry.m_Start = Job.m_Start;
 		Entry.m_pLayers = std::move(Job.m_pLayers);
-		auto pRenderer = std::make_unique<CMapPreviewLayers>();
-		pRenderer->OnInterfacesInit(pGameClient);
-		pRenderer->SetSources(Entry.m_pLayers.get(), Entry.m_pImages.get());
 		Entry.m_pRenderer = std::move(pRenderer);
-		Entry.m_pRenderer->OnMapLoad();
 
 		// 整图范围以游戏层瓦片数为准；缺游戏层的地图退回 64x64 默认值。
 		if(Entry.m_pLayers->GameLayer() != nullptr)
 			Entry.m_WorldSize = vec2(Entry.m_pLayers->GameLayer()->m_Width * 32.0f, Entry.m_pLayers->GameLayer()->m_Height * 32.0f);
 		Entry.m_NeedsRender = true;
 		Entry.m_pLoadJob.reset();
+		return false;
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 保留完成的 job、当前图片和已成功上传的纹理，下帧继续当前准备阶段。
+		return false;
+	}
+	catch(const std::length_error &)
+	{
 		return false;
 	}
 

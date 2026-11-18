@@ -26,6 +26,22 @@ TEST(SwapEndian, Generic)
 	EXPECT_EQ(aData, aExpectedDataInt32);
 }
 
+TEST(SwapEndian, ReversesEachOddWidthElement)
+{
+	std::array<char, 8> aData = {10, 1, 2, 3, 4, 5, 6, 20};
+	const std::array<char, 8> aExpected = {10, 3, 2, 1, 6, 5, 4, 20};
+
+	swap_endian(aData.data() + 1, 3, 2);
+
+	EXPECT_EQ(aData, aExpected);
+}
+
+TEST(SwapEndian, EmptyRangeRequiresNoBuffer)
+{
+	swap_endian(nullptr, 0, 3);
+	swap_endian(nullptr, 4, 0);
+}
+
 static int SwapEndianInt(int Number)
 {
 	swap_endian(&Number, sizeof(Number), 1);

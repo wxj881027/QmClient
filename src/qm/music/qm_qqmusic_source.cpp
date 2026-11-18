@@ -1,5 +1,6 @@
 #include "qm_qqmusic_source.h"
 
+#include "qm_qqmusic_lyric_request.h"
 #include "qm_qqmusic_protocol.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -19,6 +20,8 @@
 #include <chrono>
 #include <cstring>
 #include <future>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -59,17 +62,9 @@ namespace QmMusicHook
 			return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 		}
 
-		struct SFetchResult
+		QQMusic::SLyricFetchResult FetchLyrics(uint32_t SongId, const std::string &SongMid)
 		{
-			uint64_t m_Generation = 0;
-			bool m_Success = false;
-			QQMusic::SLyrics m_Lyrics;
-		};
-
-		SFetchResult FetchLyrics(uint64_t Generation, uint32_t SongId, const std::string &SongMid)
-		{
-			SFetchResult Result;
-			Result.m_Generation = Generation;
+			QQMusic::SLyricFetchResult Result;
 			const bool MidRequest = !SongMid.empty();
 			const wchar_t *pHost = MidRequest ? L"c.y.qq.com" : L"u.y.qq.com";
 			std::wstring Path = L"/cgi-bin/musicu.fcg";
@@ -155,13 +150,8 @@ namespace QmMusicHook
 		QQMusic::CPlaybackClock m_Clock;
 		QQMusic::CSongIdentity m_Identity;
 		std::string m_CurrentIdentity;
-		uint64_t m_Generation = 0;
-		QQMusic::SLyrics m_Lyrics;
-		std::future<SFetchResult> m_Fetch;
-		int m_Attempts = 0;
-		int64_t m_NextFetch = 0;
+		QQMusic::CLyricRequest m_LyricRequest;
 		int64_t m_SongSince = 0;
-		bool m_Fetched = false;
 
 		bool Read(uintptr_t Address, void *pOut, size_t Size) const
 		{
@@ -217,22 +207,22 @@ namespace QmMusicHook
 			return Result;
 		}
 
-		void Disconnect()
+		void Disconnect(int64_t Now)
 		{
 			m_Process.Reset();
 			m_ProcessId = 0;
 			m_Module = 0;
+			m_ModuleSize = 0;
 			m_pOffsets = nullptr;
+			m_AttachError.clear();
 			m_CurrentIdentity.clear();
-			m_Lyrics = {};
 			m_Identity = {};
 			m_Clock = {};
-			m_Attempts = 0;
-			m_Fetched = false;
-			++m_Generation;
+			m_LyricRequest.Reset(Now);
 		}
 
-		void Attach()
+		void Attach(int64_t Now)
+		try
 		{
 			CHandle Snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
 			if(Snapshot.m_Value == INVALID_HANDLE_VALUE)
@@ -299,6 +289,15 @@ namespace QmMusicHook
 				return;
 			}
 		}
+		catch(const std::bad_alloc &)
+		{
+			// 版本准备失败时丢弃临时接入，下次按原间隔重试。
+			Disconnect(Now);
+		}
+		catch(const std::length_error &)
+		{
+			Disconnect(Now);
+		}
 
 		bool ReadSample(SSample &Out) const
 		{
@@ -353,21 +352,23 @@ namespace QmMusicHook
 			{
 				DWORD ExitCode = 0;
 				if(!GetExitCodeProcess(m_Process.m_Value, &ExitCode) || ExitCode != STILL_ACTIVE)
-					Disconnect();
+					Disconnect(Now);
 			}
 			if(!m_Process.m_Value && Now >= m_NextAttach)
 			{
 				m_NextAttach = Now + 2000;
-				Attach();
+				Attach(Now);
 			}
 			if(!m_Process.m_Value)
 			{
+				m_LyricRequest.ConsumeReady(Now);
 				Out.m_Error = "Waiting for QQ Music";
 				return false;
 			}
 			Out.m_ProcessId = m_ProcessId;
 			if(!m_pOffsets)
 			{
+				m_LyricRequest.ConsumeReady(Now);
 				Out.m_Error = m_AttachError;
 				return true;
 			}
@@ -377,11 +378,11 @@ namespace QmMusicHook
 				if(!m_CurrentIdentity.empty())
 				{
 					m_CurrentIdentity.clear();
-					m_Lyrics = {};
 					m_Identity.Suspend();
 					m_Clock = {};
-					++m_Generation;
+					m_LyricRequest.Reset(Now);
 				}
+				m_LyricRequest.ConsumeReady(Now);
 				Out.m_Error = "Waiting for QQ Music playback";
 				return true;
 			}
@@ -391,30 +392,12 @@ namespace QmMusicHook
 			if(m_CurrentIdentity != Identity)
 			{
 				m_CurrentIdentity = Identity;
-				m_Lyrics = {};
-				m_Attempts = 0;
-				m_NextFetch = Now;
 				m_SongSince = Now;
-				m_Fetched = false;
-				++m_Generation;
+				m_LyricRequest.Reset(Now);
 			}
-			if(m_Fetch.valid() && m_Fetch.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
-			{
-				SFetchResult Result = m_Fetch.get();
-				if(Result.m_Generation == m_Generation)
-				{
-					m_Fetched = Result.m_Success;
-					if(Result.m_Success)
-						m_Lyrics = std::move(Result.m_Lyrics);
-					else
-						m_NextFetch = Now + 2000 * m_Attempts;
-				}
-			}
-			if(!Key.empty() && !m_Fetch.valid() && !m_Fetched && m_Attempts < 3 && Now >= m_NextFetch)
-			{
-				++m_Attempts;
-				m_Fetch = std::async(std::launch::async, FetchLyrics, m_Generation, Sample.m_SongId, Sample.m_Mid);
-			}
+			m_LyricRequest.Update(Now, !Key.empty(), [&Sample] {
+				return std::async(std::launch::async, FetchLyrics, Sample.m_SongId, Sample.m_Mid);
+			});
 			Out.m_HasSong = true;
 			Out.m_MediaId = "qqmusic:" + (Key.empty() ? "pending:" + Sample.Metadata() : Key);
 			Out.m_Title = Sample.m_Title;
@@ -424,13 +407,14 @@ namespace QmMusicHook
 			Out.m_PositionMs = std::min(Sample.m_Progress, Sample.m_Duration);
 			Out.m_PositionValid = true;
 			Out.m_Playing = m_Clock.Update(Identity, Out.m_PositionMs, Now);
-			Out.m_Loading = !m_Fetched && (Key.empty() ? Now - m_SongSince < 8000 : m_Attempts < 3 || m_Fetch.valid());
-			Out.m_LyricType = m_Lyrics.m_Type;
-			Out.m_LyricContent = m_Lyrics.m_Content;
-			Out.m_TranslationLrc = m_Lyrics.m_Translation;
+			Out.m_Loading = Key.empty() ? Now - m_SongSince < 8000 : m_LyricRequest.Loading();
+			const auto &Lyrics = m_LyricRequest.Lyrics();
+			Out.m_LyricType = Lyrics.m_Type;
+			Out.m_LyricContent = Lyrics.m_Content;
+			Out.m_TranslationLrc = Lyrics.m_Translation;
 			if(Key.empty())
 				Out.m_Error = "Waiting for QQ Music song identity";
-			else if(!m_Fetched && m_Attempts >= 3 && !m_Fetch.valid())
+			else if(m_LyricRequest.Exhausted())
 				Out.m_Error = "QQ Music lyrics are unavailable";
 			return true;
 		}
