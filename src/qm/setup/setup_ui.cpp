@@ -426,7 +426,11 @@ namespace
 				DestroyWindow(m_Window);
 				return;
 			}
-			if(!m_CancelRequested && MessageBoxW(m_Window, L"要取消本次安装吗？安装程序会完成必要的清理后退出安装。", L"取消安装", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES)
+			const auto CanCancel = [this] { return m_Page == EPage::INSTALLING && !m_CancelRequested; };
+			const auto Confirm = [this] {
+				return MessageBoxW(m_Window, L"要取消本次安装吗？安装程序会完成必要的清理后退出安装。", L"取消安装", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES;
+			};
+			if(QmSetup::ConfirmCancellation(CanCancel, Confirm))
 			{
 				m_CancelRequested = true;
 				SetWindowTextW(m_Status, L"正在取消，请稍候。");

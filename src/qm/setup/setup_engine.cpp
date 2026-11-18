@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <exception>
+#include <memory>
 #include <utility>
 
 namespace QmSetup
@@ -35,8 +36,8 @@ namespace QmSetup
 	{
 		wchar_t *pMessage = nullptr;
 		FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, Code, 0, reinterpret_cast<wchar_t *>(&pMessage), 0, nullptr);
-		std::wstring Result = pMessage ? pMessage : L"Windows 操作失败";
-		LocalFree(pMessage);
+		const std::unique_ptr<wchar_t, decltype(&LocalFree)> Message(pMessage, LocalFree);
+		const std::wstring Result = Message ? Message.get() : L"Windows 操作失败";
 		return Result + L"（" + std::to_wstring(Code) + L"）";
 	}
 
@@ -70,14 +71,14 @@ namespace QmSetup
 			m_Error = L"无法准备安装临时目录。";
 			return false;
 		}
-		const std::wstring Directory = std::wstring(aTemporary.data()) + L"QmClient-Setup-" + aId;
+		std::wstring Directory = std::wstring(aTemporary.data()) + L"QmClient-Setup-" + aId;
 		if(!CreateDirectoryW(Directory.c_str(), nullptr))
 		{
 			m_Error = L"无法创建安装临时目录：" + WindowsError(GetLastError());
 			return false;
 		}
-		m_Directory = Directory;
-		const std::wstring Executable = m_Directory + L"\\engine.exe";
+		m_Directory = std::move(Directory);
+		std::wstring Executable = m_Directory + L"\\engine.exe";
 		m_Log = m_Directory + L"\\setup.log";
 		CHandle File(CreateFileW(Executable.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr));
 		if(File.Get() == INVALID_HANDLE_VALUE)
@@ -85,7 +86,7 @@ namespace QmSetup
 			m_Error = L"无法写入安装文件：" + WindowsError(GetLastError());
 			return false;
 		}
-		m_Executable = Executable;
+		m_Executable = std::move(Executable);
 		for(DWORD Offset = 0; Offset < Size;)
 		{
 			const DWORD Count = std::min<DWORD>(1024 * 1024, Size - Offset);

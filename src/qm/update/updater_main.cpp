@@ -208,6 +208,13 @@ namespace
 		return true;
 	}
 
+	void ShowUpdateError(HWND Window, const char *pError, const wchar_t *pFallback)
+	{
+		wchar_t aMessage[1024];
+		const bool Converted = *pError && MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, pError, -1, aMessage, static_cast<int>(std::size(aMessage))) > 0;
+		MessageBoxW(Window, Converted ? aMessage : pFallback, WINDOW_TITLE, MB_OK | MB_ICONERROR);
+	}
+
 	bool ReadInstalledVersion(const std::wstring &InstallPath, std::string &Version)
 	{
 		const std::wstring ClientPath = std::filesystem::path(InstallPath) / L"DDNet.exe";
@@ -337,6 +344,17 @@ int WINAPI wWinMain(HINSTANCE Instance, HINSTANCE, PWSTR, int)
 		DestroyWindow(Window);
 		return 1;
 	}
+	QmUpdate::CInstallLock InstallLock(Arguments.m_Install);
+	using ELockResult = QmUpdate::CInstallLock::EResult;
+	if(InstallLock.Result() != ELockResult::ACQUIRED)
+	{
+		SetStatus(L"暂时无法开始更新。", false);
+		MessageBoxW(Window, InstallLock.Result() == ELockResult::BUSY ? L"已有更新任务正在处理此安装目录。" : L"无法锁定安装目录，更新已取消。", WINDOW_TITLE, MB_OK | MB_ICONERROR);
+		CleanupTemporaryFiles(Arguments);
+		g_AllowClose = true;
+		DestroyWindow(Window);
+		return 1;
+	}
 	if(!ReadInstalledVersion(Arguments.m_Install, CurrentVersion))
 	{
 		SetStatus(L"无法验证已安装的客户端。", false);
@@ -361,10 +379,15 @@ int WINAPI wWinMain(HINSTANCE Instance, HINSTANCE, PWSTR, int)
 		Sleep(20);
 	}
 	Worker.join();
-	if(!Success && !Arguments.m_Elevated && QmUpdate::IsPermissionError(aError) && RelaunchElevated(Arguments))
+	if(!Success && !Arguments.m_Elevated && QmUpdate::IsPermissionError(aError))
 	{
-		DestroyWindow(Window);
-		return 0;
+		// 提权后的助手会重新获取锁并读取磁盘上的版本。
+		InstallLock.Release();
+		if(RelaunchElevated(Arguments))
+		{
+			DestroyWindow(Window);
+			return 0;
+		}
 	}
 	if(Arguments.m_Setup)
 	{
@@ -373,7 +396,7 @@ int WINAPI wWinMain(HINSTANCE Instance, HINSTANCE, PWSTR, int)
 			[&] { return RunSetup(Arguments, aError, sizeof(aError)); },
 			[&] { CleanupTemporaryFiles(Arguments); });
 		if(Result != QmUpdate::ESetupResult::SUCCEEDED)
-			MessageBoxA(Window, aError[0] ? aError : "Setup failed", "QmClient update", MB_OK | MB_ICONERROR);
+			ShowUpdateError(Window, aError, L"安装程序未能完成更新。");
 		g_AllowClose = true;
 		DestroyWindow(Window);
 		return Result == QmUpdate::ESetupResult::SUCCEEDED ? 0 : 1;
@@ -386,7 +409,7 @@ int WINAPI wWinMain(HINSTANCE Instance, HINSTANCE, PWSTR, int)
 	else
 	{
 		SetStatus(L"更新失败。", false);
-		MessageBoxA(Window, aError[0] ? aError : "Update failed", "QmClient update", MB_OK | MB_ICONERROR);
+		ShowUpdateError(Window, aError, L"更新失败。");
 	}
 	CleanupTemporaryFiles(Arguments);
 	g_AllowClose = true;

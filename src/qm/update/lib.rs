@@ -701,15 +701,8 @@ struct AppliedFile {
 fn rollback(applied: &[AppliedFile]) -> Result<(), String> {
     let mut errors = Vec::new();
     for file in applied.iter().rev() {
-        if let Err(error) = fs::remove_file(&file.target) {
-            if error.kind() != io::ErrorKind::NotFound {
-                errors.push(format_io_error(
-                    &format!("failed removing {} during rollback", file.target.display()),
-                    &error,
-                ));
-            }
-        }
         if let Some(backup) = &file.backup {
+            // 直接替换当前文件。备份恢复失败时保留仍在安装目录中的文件。
             if let Err(error) = fs::rename(backup, &file.target) {
                 errors.push(format_io_error(
                     &format!(
@@ -717,6 +710,13 @@ fn rollback(applied: &[AppliedFile]) -> Result<(), String> {
                         file.target.display(),
                         backup.display()
                     ),
+                    &error,
+                ));
+            }
+        } else if let Err(error) = fs::remove_file(&file.target) {
+            if error.kind() != io::ErrorKind::NotFound {
+                errors.push(format_io_error(
+                    &format!("failed removing {} during rollback", file.target.display()),
                     &error,
                 ));
             }
@@ -748,8 +748,9 @@ fn rollback_install(message: String, applied: &[AppliedFile], backup: &Path) -> 
             },
         },
         Err(error) => InstallFailure {
+            // 恢复未完成时提示人工恢复，避免权限错误标记触发自动提权重试。
             message: format!(
-                "{message}; rollback failed: {error}; recovery files remain in {}",
+                "update rollback failed. Recovery files remain in {}\n{message}\n{error}",
                 backup.display()
             ),
         },
@@ -890,11 +891,22 @@ fn apply_update_with_key(
     }
     let result = install_staged(&staging, &backup, install_path, &manifest);
     let _ = fs::remove_dir_all(&staging);
-    match result {
-        Ok(()) => fs::remove_dir_all(&backup)
-            .map_err(|error| format_io_error("failed removing completed update backup", &error)),
-        Err(error) => Err(error.message),
+    finish_install(result, &backup)
+}
+
+fn finish_install(result: Result<(), InstallFailure>, backup: &Path) -> Result<(), String> {
+    result.map_err(|error| error.message)?;
+    // 替换已完成，清理失败仍返回成功，未删掉的备份留在原处。
+    if let Err(error) = fs::remove_dir_all(backup) {
+        if error.kind() != io::ErrorKind::NotFound {
+            let _ = writeln!(
+                io::stderr(),
+                "failed removing completed update backup {}: {error}",
+                backup.display()
+            );
+        }
     }
+    Ok(())
 }
 
 unsafe fn input_bytes<'a>(data: *const u8, size: usize) -> Result<&'a [u8], String> {
@@ -931,7 +943,10 @@ unsafe fn write_error(error: &str, output: *mut c_char, output_size: usize) {
         return;
     }
     let bytes = error.as_bytes();
-    let copy_size = bytes.len().min(output_size - 1);
+    let mut copy_size = bytes.len().min(output_size - 1);
+    while !error.is_char_boundary(copy_size) {
+        copy_size -= 1;
+    }
     std::ptr::copy_nonoverlapping(bytes.as_ptr(), output.cast(), copy_size);
     *output.add(copy_size) = 0;
 }
@@ -1367,6 +1382,16 @@ mod tests {
             .unwrap()
             .is_empty());
         assert!(unsafe { input_bytes(std::ptr::null(), 1) }.is_err());
+    }
+
+    #[test]
+    fn ffi_error_buffer_keeps_complete_utf8_characters() {
+        let mut output = [0 as c_char; 5];
+        unsafe { write_error("已安装", output.as_mut_ptr(), output.len()) };
+        assert_eq!(
+            unsafe { CStr::from_ptr(output.as_ptr()) }.to_str().unwrap(),
+            "已"
+        );
     }
 
     #[test]
@@ -1879,6 +1904,32 @@ mod tests {
     }
 
     #[test]
+    fn rollback_keeps_current_file_when_backup_cannot_be_restored() {
+        let root = tempdir().unwrap();
+        let target = root.path().join("DDNet.exe");
+        fs::write(&target, b"installed update").unwrap();
+        let missing_backup = root.path().join("missing/DDNet.exe");
+
+        let result = rollback(&[AppliedFile {
+            target: target.clone(),
+            backup: Some(missing_backup),
+        }]);
+
+        assert!(result.is_err());
+        assert_eq!(fs::read(target).unwrap(), b"installed update");
+    }
+
+    #[test]
+    fn completed_install_remains_successful_when_backup_cleanup_fails() {
+        let root = tempdir().unwrap();
+        let backup = root.path().join("backup");
+        fs::write(&backup, b"obstructed backup path").unwrap();
+
+        assert!(finish_install(Ok(()), &backup).is_ok());
+        assert_eq!(fs::read(backup).unwrap(), b"obstructed backup path");
+    }
+
+    #[test]
     fn failed_rollback_preserves_backup_for_manual_recovery() {
         let root = tempdir().unwrap();
         let backup = root.path().join("backup");
@@ -1886,7 +1937,10 @@ mod tests {
         fs::create_dir(&backup).unwrap();
         fs::create_dir(&target).unwrap();
         let failure = rollback_install(
-            "installation failed".into(),
+            format_io_error(
+                "installation failed",
+                &io::Error::from(io::ErrorKind::PermissionDenied),
+            ),
             &[AppliedFile {
                 target,
                 backup: None,
@@ -1895,6 +1949,7 @@ mod tests {
         );
         assert!(failure.message.contains("rollback failed"));
         assert!(failure.message.contains(&backup.display().to_string()));
+        assert!(!failure.message.starts_with(PERMISSION_DENIED_MARKER));
         assert!(backup.exists());
     }
 

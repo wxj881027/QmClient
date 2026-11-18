@@ -3,8 +3,79 @@
 
 #include "updater_arguments.h"
 
+#if defined(_WIN32)
+#include <windows.h>
+
+#include <cwchar>
+#endif
+
 namespace QmUpdate
 {
+#if defined(_WIN32)
+	class CInstallLock
+	{
+	public:
+		enum class EResult
+		{
+			ACQUIRED,
+			BUSY,
+			FAILED,
+		};
+
+	private:
+		HANDLE m_Handle = nullptr;
+		EResult m_Result = EResult::FAILED;
+
+	public:
+		explicit CInstallLock(const std::filesystem::path &Directory)
+		{
+			const HANDLE DirectoryHandle = CreateFileW(Directory.c_str(), FILE_READ_ATTRIBUTES,
+				FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+			if(DirectoryHandle == INVALID_HANDLE_VALUE)
+				return;
+			BY_HANDLE_FILE_INFORMATION Info{};
+			const BOOL ReadInfo = GetFileInformationByHandle(DirectoryHandle, &Info);
+			CloseHandle(DirectoryHandle);
+			if(!ReadInfo || !(Info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+				return;
+
+			// 按目录身份互斥，路径别名和不同登录会话也使用同一把锁。
+			wchar_t aName[64];
+			if(std::swprintf(aName, std::size(aName), L"Global\\QmClientUpdate-%08lX-%08lX-%08lX",
+				   Info.dwVolumeSerialNumber, Info.nFileIndexHigh, Info.nFileIndexLow) <= 0)
+				return;
+			const HANDLE Mutex = CreateMutexExW(nullptr, aName, 0, SYNCHRONIZE | MUTEX_MODIFY_STATE);
+			if(!Mutex)
+				return;
+			const DWORD Wait = WaitForSingleObject(Mutex, 0);
+			if(Wait == WAIT_OBJECT_0 || Wait == WAIT_ABANDONED)
+			{
+				m_Handle = Mutex;
+				m_Result = EResult::ACQUIRED;
+			}
+			else
+			{
+				CloseHandle(Mutex);
+				if(Wait == WAIT_TIMEOUT)
+					m_Result = EResult::BUSY;
+			}
+		}
+
+		CInstallLock(const CInstallLock &) = delete;
+		CInstallLock &operator=(const CInstallLock &) = delete;
+		~CInstallLock() { Release(); }
+		EResult Result() const { return m_Result; }
+		void Release()
+		{
+			if(!m_Handle)
+				return;
+			ReleaseMutex(m_Handle);
+			CloseHandle(m_Handle);
+			m_Handle = nullptr;
+		}
+	};
+#endif
+
 	// 精确删除会话拥有的下载附件；单个文件失败不能阻止其他附件回收。
 	inline bool CleanupDownloadedFiles(const SArguments &Arguments)
 	{

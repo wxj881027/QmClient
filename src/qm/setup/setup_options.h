@@ -14,6 +14,13 @@ namespace QmSetup
 		return ExitCode == 2 || (ExitCode == 5 && CancellationRequested);
 	}
 
+	template<typename TCanCancel, typename TConfirm>
+	bool ConfirmCancellation(TCanCancel CanCancel, TConfirm Confirm)
+	{
+		// 模态确认期间会处理安装完成消息，返回时需要重新检查。
+		return CanCancel() && Confirm() && CanCancel();
+	}
+
 	inline std::wstring Lower(std::wstring Value)
 	{
 		std::transform(Value.begin(), Value.end(), Value.begin(), [](wchar_t Character) { return static_cast<wchar_t>(std::towlower(Character)); });

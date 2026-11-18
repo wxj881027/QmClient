@@ -3,8 +3,10 @@
 #include <qm/update/updater_session.h>
 #include <test/test.h>
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <vector>
 
 namespace
@@ -146,6 +148,52 @@ TEST(QmUpdateArguments, ElevatedSetupRetainsItsOriginalSession)
 	EXPECT_TRUE(QmUpdate::ValidateSessionPaths(Arguments, UpdaterPath(42)));
 	EXPECT_FALSE(QmUpdate::ValidateSessionPaths(Arguments, UpdaterPath(43)));
 }
+
+#if defined(_WIN32)
+TEST(QmUpdateInstallLock, AliasContendsForTheSameDirectoryUntilRelease)
+{
+	using EResult = QmUpdate::CInstallLock::EResult;
+	CTestInfo Info;
+	const auto Directory = std::filesystem::absolute(Info.StoragePath());
+	ASSERT_TRUE(std::filesystem::create_directories(Directory));
+	Info.m_HasCreatedStoragePath = true;
+
+	QmUpdate::CInstallLock First(Directory);
+	ASSERT_EQ(First.Result(), EResult::ACQUIRED);
+	auto Contender = std::async(std::launch::async, [Directory] {
+		const QmUpdate::CInstallLock Second(Directory / L".");
+		return Second.Result();
+	});
+	const auto Status = Contender.wait_for(std::chrono::seconds(5));
+	First.Release();
+	ASSERT_EQ(Status, std::future_status::ready);
+	EXPECT_EQ(Contender.get(), EResult::BUSY);
+
+	const QmUpdate::CInstallLock Next(Directory);
+	EXPECT_EQ(Next.Result(), EResult::ACQUIRED);
+}
+
+TEST(QmUpdateInstallLock, DifferentInstallDirectoriesCanBeUpdatedIndependently)
+{
+	using EResult = QmUpdate::CInstallLock::EResult;
+	CTestInfo Info;
+	const auto Directory = std::filesystem::absolute(Info.StoragePath());
+	ASSERT_TRUE(std::filesystem::create_directories(Directory / "first"));
+	Info.m_HasCreatedStoragePath = true;
+	ASSERT_TRUE(std::filesystem::create_directories(Directory / "second"));
+
+	QmUpdate::CInstallLock First(Directory / "first");
+	ASSERT_EQ(First.Result(), EResult::ACQUIRED);
+	auto Other = std::async(std::launch::async, [Directory] {
+		const QmUpdate::CInstallLock Second(Directory / "second");
+		return Second.Result();
+	});
+	const auto Status = Other.wait_for(std::chrono::seconds(5));
+	First.Release();
+	ASSERT_EQ(Status, std::future_status::ready);
+	EXPECT_EQ(Other.get(), EResult::ACQUIRED);
+}
+#endif
 
 TEST(QmUpdateSetupSession, RejectingSignatureCleansFilesWithoutStartingInstaller)
 {

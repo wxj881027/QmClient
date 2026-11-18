@@ -10,6 +10,21 @@ TEST(QmSetupResult, FileErrorAbortIsNotReportedAsUserCancellation)
 	EXPECT_FALSE(QmSetup::IsCancelled(4, true));
 }
 
+TEST(QmSetupResult, ConfirmedCancellationAppliesWhileInstallIsActive)
+{
+	EXPECT_TRUE(QmSetup::ConfirmCancellation([] { return true; }, [] { return true; }));
+}
+
+TEST(QmSetupResult, InstallCompletionDuringConfirmationKeepsTheFinalState)
+{
+	bool Installing = true;
+	const bool Cancel = QmSetup::ConfirmCancellation([&] { return Installing; }, [&] {
+		Installing = false;
+		return true;
+	});
+	EXPECT_FALSE(Cancel);
+}
+
 TEST(QmSetupOptions, InteractiveInstallStartsWithNativeUi)
 {
 	const auto Options = QmSetup::ParseOptions({});
