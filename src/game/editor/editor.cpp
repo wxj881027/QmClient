@@ -49,6 +49,7 @@
 #include <limits>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using namespace FontIcons;
@@ -250,7 +251,12 @@ bool CEditor::CallbackSaveImage(const char *pFilename, int StorageType, void *pU
 
 	CEditor *pEditor = static_cast<CEditor *>(pUser);
 
-	std::shared_ptr<CEditorImage> pImg = pEditor->Map()->SelectedImage();
+	const auto pImg = pEditor->Map()->SelectedImage();
+	if(!pImg || !pImg->m_pData)
+	{
+		pEditor->ShowFileDialogError(Localize("Exporting is not possible because the image could not be loaded.", "Editor"));
+		return false;
+	}
 
 	if(CImageLoader::SavePng(pEditor->Storage()->OpenFile(pFilename, IOFLAG_WRITE, StorageType), pFilename, *pImg))
 	{
@@ -270,18 +276,28 @@ bool CEditor::CallbackSaveSound(const char *pFilename, int StorageType, void *pU
 
 	CEditor *pEditor = static_cast<CEditor *>(pUser);
 
-	std::shared_ptr<CEditorSound> pSound = pEditor->Map()->SelectedSound();
+	const auto pSound = pEditor->Map()->SelectedSound();
+	if(!pSound || !pSound->m_pData || pSound->m_DataSize == 0)
+	{
+		pEditor->ShowFileDialogError(Localize("Exporting is not possible because the sound could not be loaded.", "Editor"));
+		return false;
+	}
 
 	IOHANDLE File = pEditor->Storage()->OpenFile(pFilename, IOFLAG_WRITE, StorageType);
-	if(File)
+	if(!File)
 	{
-		io_write(File, pSound->m_pData, pSound->m_DataSize);
-		io_close(File);
-		pEditor->OnDialogClose();
-		return true;
+		pEditor->ShowFileDialogError(Localize("Failed to open file '%s'.", "Editor"), pFilename);
+		return false;
 	}
-	pEditor->ShowFileDialogError(Localize("Failed to open file '%s'.", "Editor"), pFilename);
-	return false;
+	const bool WroteAll = io_write(File, pSound->m_pData, pSound->m_DataSize) == pSound->m_DataSize;
+	const bool Closed = io_close(File) == 0;
+	if(!WroteAll || !Closed)
+	{
+		pEditor->ShowFileDialogError(Localize("Failed to write sound to file '%s'.", "Editor"), pFilename);
+		return false;
+	}
+	pEditor->OnDialogClose();
+	return true;
 }
 
 bool CEditor::CallbackCustomEntities(const char *pFilename, int StorageType, void *pUser)
@@ -304,12 +320,19 @@ bool CEditor::CallbackCustomEntities(const char *pFilename, int StorageType, voi
 		return false;
 	}
 
+	const auto Texture = pEditor->Graphics()->LoadTextureRawMove(ImgInfo, pEditor->GetTextureUsageFlag(), pFilename);
+	if(!Texture.IsValid())
+	{
+		pEditor->ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilename);
+		return false;
+	}
+
 	pEditor->m_SelectEntitiesImage = aBuf;
 	pEditor->m_AllowPlaceUnusedTiles = EUnusedEntities::ALLOWED_IMPLICIT;
 	pEditor->m_PreventUnusedTilesWasWarned = false;
 
 	pEditor->Graphics()->UnloadTexture(&pEditor->m_EntitiesTexture);
-	pEditor->m_EntitiesTexture = pEditor->Graphics()->LoadTextureRawMove(ImgInfo, pEditor->GetTextureUsageFlag());
+	pEditor->m_EntitiesTexture = Texture;
 
 	pEditor->OnDialogClose();
 	return true;
@@ -3077,8 +3100,45 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 	}
 }
 
+static bool LoadEditorMapImage(CEditor &Editor, CEditorImage &Image, const char *pFilename, int StorageType, const char *pName)
+{
+	if(!Editor.Graphics()->LoadPng(Image, pFilename, StorageType))
+	{
+		Editor.ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilename);
+		return false;
+	}
+
+	ConvertToRgba(Image);
+	if(Image.m_pData == nullptr || Image.m_Format != CImageInfo::FORMAT_RGBA)
+	{
+		Editor.ShowFileDialogError(Localize("Failed to convert image from file \"%s\".", "Editor"), pFilename);
+		return false;
+	}
+	DilateImage(Image);
+
+	const int Flags = Image.m_Width % 16 == 0 && Image.m_Height % 16 == 0 ? Editor.Graphics()->TextureLoadFlags() : 0;
+	Image.m_Texture = Editor.Graphics()->LoadTextureRaw(Image, Flags, pFilename);
+	if(!Image.m_Texture.IsValid())
+	{
+		Editor.ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilename);
+		return false;
+	}
+
+	str_copy(Image.m_aName, pName);
+	Image.m_External = CEditor::IsVanillaImage(Image.m_aName);
+	Image.m_Automapper.Load(Image.m_aName);
+	return true;
+}
+
 bool CEditor::ReplaceImage(const char *pFilename, int StorageType, bool CheckDuplicate)
 {
+	const auto pImg = Map()->SelectedImage();
+	if(!pImg)
+	{
+		ShowFileDialogError(Localize("No image selected.", "Editor"));
+		return false;
+	}
+
 	// check if we have that image already
 	char aBuf[IO_MAX_PATH_LENGTH];
 	IStorage::StripPathAndExtension(pFilename, aBuf, sizeof(aBuf));
@@ -3094,37 +3154,20 @@ bool CEditor::ReplaceImage(const char *pFilename, int StorageType, bool CheckDup
 		}
 	}
 
-	CImageInfo ImgInfo;
-	if(!Graphics()->LoadPng(ImgInfo, pFilename, StorageType))
-	{
-		ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilename);
+	CEditorImage Replacement(Map());
+	if(!LoadEditorMapImage(*this, Replacement, pFilename, StorageType, aBuf))
 		return false;
-	}
 
-	std::shared_ptr<CEditorImage> pImg = Map()->SelectedImage();
 	pImg->CEditorImage::Free();
-	pImg->m_Width = ImgInfo.m_Width;
-	pImg->m_Height = ImgInfo.m_Height;
-	pImg->m_Format = ImgInfo.m_Format;
-	pImg->m_pData = ImgInfo.m_pData;
-	str_copy(pImg->m_aName, aBuf);
-	pImg->m_External = IsVanillaImage(pImg->m_aName);
-
-	if(!ConvertToRgba(*pImg) && (pImg->m_pData == nullptr || pImg->m_Format != CImageInfo::FORMAT_RGBA))
-	{
-		ShowFileDialogError(Localize("Failed to convert image from file \"%s\".", "Editor"), pFilename);
-		return false;
-	}
-	DilateImage(*pImg);
-
-	pImg->m_Automapper.Load(pImg->m_aName);
-	int TextureLoadFlag = Graphics()->TextureLoadFlags();
-	if(pImg->m_Width % 16 != 0 || pImg->m_Height % 16 != 0)
-		TextureLoadFlag = 0;
-	pImg->m_Texture = Graphics()->LoadTextureRaw(*pImg, TextureLoadFlag, pFilename);
+	static_cast<CImageInfo &>(*pImg) = std::move(Replacement);
+	pImg->m_Texture = std::exchange(Replacement.m_Texture, IGraphics::CTextureHandle());
+	str_copy(pImg->m_aName, Replacement.m_aName);
+	pImg->m_External = Replacement.m_External;
+	pImg->m_Automapper = std::move(Replacement.m_Automapper);
 
 	Map()->SortImages();
 	Map()->SelectImage(pImg);
+	Map()->OnModify();
 	OnDialogClose();
 	return true;
 }
@@ -3157,37 +3200,31 @@ bool CEditor::AddImage(const char *pFilename, int StorageType, void *pUser)
 		return false;
 	}
 
-	CImageInfo ImgInfo;
-	if(!pEditor->Graphics()->LoadPng(ImgInfo, pFilename, StorageType))
-	{
-		pEditor->ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilename);
+	const auto pImg = std::make_shared<CEditorImage>(pEditor->Map());
+	if(!LoadEditorMapImage(*pEditor, *pImg, pFilename, StorageType, aBuf))
 		return false;
-	}
 
-	std::shared_ptr<CEditorImage> pImg = std::make_shared<CEditorImage>(pEditor->Map());
-	pImg->m_Width = ImgInfo.m_Width;
-	pImg->m_Height = ImgInfo.m_Height;
-	pImg->m_Format = ImgInfo.m_Format;
-	pImg->m_pData = ImgInfo.m_pData;
-	pImg->m_External = IsVanillaImage(aBuf);
-
-	if(!ConvertToRgba(*pImg) && (pImg->m_pData == nullptr || pImg->m_Format != CImageInfo::FORMAT_RGBA))
-	{
-		pEditor->ShowFileDialogError(Localize("Failed to convert image from file \"%s\".", "Editor"), pFilename);
-		return false;
-	}
-	DilateImage(*pImg);
-
-	int TextureLoadFlag = pEditor->Graphics()->TextureLoadFlags();
-	if(pImg->m_Width % 16 != 0 || pImg->m_Height % 16 != 0)
-		TextureLoadFlag = 0;
-	pImg->m_Texture = pEditor->Graphics()->LoadTextureRaw(*pImg, TextureLoadFlag, pFilename);
-	str_copy(pImg->m_aName, aBuf);
-	pImg->m_Automapper.Load(pImg->m_aName);
 	pEditor->Map()->m_vpImages.push_back(pImg);
 	pEditor->Map()->SortImages();
 	pEditor->Map()->SelectImage(pImg);
+	pEditor->Map()->OnModify();
 	pEditor->OnDialogClose();
+	return true;
+}
+
+static bool LoadEditorMapSound(CEditor &Editor, CEditorSound &Sound, const char *pFilename, int StorageType)
+{
+	if(!Editor.Storage()->ReadFile(pFilename, StorageType, &Sound.m_pData, &Sound.m_DataSize))
+	{
+		Editor.ShowFileDialogError(Localize("Failed to open sound file '%s'.", "Editor"), pFilename);
+		return false;
+	}
+	Sound.m_SoundId = Editor.Sound()->LoadOpusFromMem(Sound.m_pData, Sound.m_DataSize, true, pFilename);
+	if(Sound.m_SoundId < 0)
+	{
+		Editor.ShowFileDialogError(Localize("Failed to load sound from file '%s'.", "Editor"), pFilename);
+		return false;
+	}
 	return true;
 }
 
@@ -3214,39 +3251,27 @@ bool CEditor::AddSound(const char *pFilename, int StorageType, void *pUser)
 		return false;
 	}
 
-	// load external
-	void *pData;
-	unsigned DataSize;
-	if(!pEditor->Storage()->ReadFile(pFilename, StorageType, &pData, &DataSize))
-	{
-		pEditor->ShowFileDialogError(Localize("Failed to open sound file '%s'.", "Editor"), pFilename);
+	const auto pSound = std::make_shared<CEditorSound>(pEditor->Map());
+	if(!LoadEditorMapSound(*pEditor, *pSound, pFilename, StorageType))
 		return false;
-	}
 
-	// load sound
-	const int SoundId = pEditor->Sound()->LoadOpusFromMem(pData, DataSize, true, pFilename);
-	if(SoundId == -1)
-	{
-		free(pData);
-		pEditor->ShowFileDialogError(Localize("Failed to load sound from file '%s'.", "Editor"), pFilename);
-		return false;
-	}
-
-	// add sound
-	std::shared_ptr<CEditorSound> pSound = std::make_shared<CEditorSound>(pEditor->Map());
-	pSound->m_SoundId = SoundId;
-	pSound->m_DataSize = DataSize;
-	pSound->m_pData = pData;
 	str_copy(pSound->m_aName, aBuf);
 	pEditor->Map()->m_vpSounds.push_back(pSound);
-
 	pEditor->Map()->SelectSound(pSound);
+	pEditor->Map()->OnModify();
 	pEditor->OnDialogClose();
 	return true;
 }
 
 bool CEditor::ReplaceSound(const char *pFilename, int StorageType, bool CheckDuplicate)
 {
+	const auto pSound = Map()->SelectedSound();
+	if(!pSound)
+	{
+		ShowFileDialogError(Localize("No sound selected.", "Editor"));
+		return false;
+	}
+
 	// check if we have that sound already
 	char aBuf[IO_MAX_PATH_LENGTH];
 	IStorage::StripPathAndExtension(pFilename, aBuf, sizeof(aBuf));
@@ -3262,42 +3287,20 @@ bool CEditor::ReplaceSound(const char *pFilename, int StorageType, bool CheckDup
 		}
 	}
 
-	// load external
-	void *pData;
-	unsigned DataSize;
-	if(!Storage()->ReadFile(pFilename, StorageType, &pData, &DataSize))
-	{
-		ShowFileDialogError(Localize("Failed to open sound file '%s'.", "Editor"), pFilename);
+	CEditorSound Replacement(Map());
+	if(!LoadEditorMapSound(*this, Replacement, pFilename, StorageType))
 		return false;
-	}
-
-	// load sound
-	const int SoundId = Sound()->LoadOpusFromMem(pData, DataSize, true, pFilename);
-	if(SoundId == -1)
-	{
-		free(pData);
-		ShowFileDialogError(Localize("Failed to load sound from file '%s'.", "Editor"), pFilename);
-		return false;
-	}
-
-	std::shared_ptr<CEditorSound> pSound = Map()->SelectedSound();
 
 	if(m_ToolbarPreviewSound == pSound->m_SoundId)
-	{
-		m_ToolbarPreviewSound = SoundId;
-	}
+		m_ToolbarPreviewSound = Replacement.m_SoundId;
 
-	// unload sample
-	Sound()->UnloadSample(pSound->m_SoundId);
-	free(pSound->m_pData);
-
-	// replace sound
 	str_copy(pSound->m_aName, aBuf);
-	pSound->m_SoundId = SoundId;
-	pSound->m_pData = pData;
-	pSound->m_DataSize = DataSize;
+	std::swap(pSound->m_SoundId, Replacement.m_SoundId);
+	std::swap(pSound->m_pData, Replacement.m_pData);
+	std::swap(pSound->m_DataSize, Replacement.m_DataSize);
 
 	Map()->SelectSound(pSound);
+	Map()->OnModify();
 	OnDialogClose();
 	return true;
 }
@@ -3435,7 +3438,7 @@ void CEditor::RenderImagesList(CUIRect ToolBox)
 void CEditor::RenderSelectedImage(CUIRect View) const
 {
 	std::shared_ptr<CEditorImage> pSelectedImage = Map()->SelectedImage();
-	if(pSelectedImage == nullptr)
+	if(!pSelectedImage || !pSelectedImage->m_Texture.IsValid() || pSelectedImage->m_Width == 0 || pSelectedImage->m_Height == 0)
 		return;
 
 	View.Margin(10.0f, &View);
