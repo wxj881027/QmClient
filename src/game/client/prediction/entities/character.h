@@ -10,6 +10,8 @@
 #include <game/gamecore.h>
 #include <game/race_state.h>
 
+#include <utility>
+
 enum
 {
 	FAKETUNE_FREEZE = 1 << 0,
@@ -91,11 +93,20 @@ public:
 	void SetLastWeapon(int LastWeap) { m_LastWeapon = LastWeap; }
 	int GetActiveWeapon() const { return m_Core.m_ActiveWeapon; }
 	void SetActiveWeapon(int ActiveWeapon);
-	CCharacterCore GetCore() { return m_Core; }
-	void SetCore(const CCharacterCore &Core)
+	CCharacterCore GetCore()
 	{
-		m_Core = Core;
-		BindAntiPingInterferenceCallback();
+		// 角色核心副本可能在预测世界释放后继续使用。
+		CCharacterCore Core = m_Core;
+		Core.SetCoreWorld(nullptr, nullptr, nullptr);
+		Core.SetAntiPingInterfereCallback(+[](int, bool) {});
+		return Core;
+	}
+	void SetCore(CCharacterCore Core)
+	{
+		// 快练编辑副本中的钩子，写回时同步实际世界的挂接关系。
+		m_Core.SetHookedPlayer(Core.HookedPlayer());
+		m_Core = std::move(Core);
+		SetCoreWorld(GameWorld());
 	}
 	const CCharacterCore *Core() const { return &m_Core; }
 	bool GetWeaponGot(int Type) { return m_Core.m_aWeapons[Type].m_Got; }

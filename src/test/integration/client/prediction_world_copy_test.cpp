@@ -1,6 +1,7 @@
 #include <game/client/pickup_data.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/client/prediction/entities/pickup.h>
+#include <game/collision.h>
 #include <game/mapitems.h>
 
 #include <gtest/gtest.h>
@@ -254,4 +255,32 @@ TEST(PredictionWorldCharacters, RemovingCurrentCharacterClearsBothIndexes)
 	EXPECT_EQ(World.GetCharacterById(0), nullptr);
 	EXPECT_EQ(World.m_Core.m_apCharacters[0], nullptr);
 	EXPECT_EQ(World.FindFirst(CGameWorld::ENTTYPE_CHARACTER), nullptr);
+}
+
+TEST(PredictionWorldCharacters, CoreSnapshotAppliesHookChangeOnlyOnWriteBack)
+{
+	CCollision Collision;
+	CPredictionTestWorld World;
+	World.Init(&Collision, World.TuningList(), nullptr);
+	auto Idle = CharacterInput();
+	auto Hooked = Idle;
+	Hooked.m_HookState = HOOK_GRABBED;
+	Hooked.m_HookedPlayer = 1;
+	auto *pHooked = new CCharacter(&World, 1, &Idle);
+	World.InsertEntity(pHooked);
+	auto *pHooker = new CCharacter(&World, 0, &Hooked);
+	World.InsertEntity(pHooker);
+	ASSERT_TRUE(pHooked->Core()->m_AttachedPlayers.contains(0));
+
+	CCharacterCore Core = pHooker->GetCore();
+	Core.Read(&Idle);
+	EXPECT_EQ(Core.HookedPlayer(), -1);
+	EXPECT_TRUE(pHooked->Core()->m_AttachedPlayers.contains(0));
+
+	pHooker->SetCore(Core);
+	EXPECT_EQ(pHooker->Core()->HookedPlayer(), -1);
+	EXPECT_FALSE(pHooked->Core()->m_AttachedPlayers.contains(0));
+
+	pHooker->Read(&Hooked, nullptr, true);
+	EXPECT_TRUE(pHooked->Core()->m_AttachedPlayers.contains(0));
 }
