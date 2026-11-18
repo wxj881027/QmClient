@@ -200,3 +200,28 @@ TEST(QmScreenshotImageJob, ViewerLoadFailureClearsPreviousImageAndCanRetry)
 	EXPECT_TRUE(CQmScreenshotImageJob::LoadRgbaImageFromDisk(pStorage.get(), "viewer-retry.png", IStorage::TYPE_SAVE, Loaded.m_Image));
 	EXPECT_EQ(Loaded.m_Image.m_Format, CImageInfo::FORMAT_RGBA);
 }
+
+TEST(QmScreenshotImageJob, ViewerAcceptsExactEncodedSizeBudget)
+{
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	ASSERT_TRUE(StorePng(pStorage.get(), "viewer-budget.png", 3, 2, ColorRGBA(0.25f, 0.5f, 0.75f, 1.0f)));
+
+	IOHANDLE File = pStorage->OpenFile("viewer-budget.png", IOFLAG_READ, IStorage::TYPE_SAVE);
+	ASSERT_NE(File, nullptr);
+	const int64_t FileSize = io_length(File);
+	EXPECT_EQ(io_close(File), 0);
+	ASSERT_GT(FileSize, 3 * 2 * 4);
+
+	char aPath[IO_MAX_PATH_LENGTH];
+	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "viewer-budget.png", aPath, sizeof(aPath));
+	auto pLocalStorage = CreateLocalStorage();
+	ASSERT_NE(pLocalStorage, nullptr);
+	SLoadedImage Loaded;
+	EXPECT_FALSE(CQmScreenshotImageJob::LoadRgbaImageFromDisk(pLocalStorage.get(), aPath, IStorage::TYPE_ABSOLUTE, Loaded.m_Image, static_cast<size_t>(FileSize) - 1));
+	EXPECT_EQ(Loaded.m_Image.m_pData, nullptr);
+	ASSERT_TRUE(CQmScreenshotImageJob::LoadRgbaImageFromDisk(pLocalStorage.get(), aPath, IStorage::TYPE_ABSOLUTE, Loaded.m_Image, static_cast<size_t>(FileSize)));
+	EXPECT_EQ(Loaded.m_Image.m_Width, (size_t)3);
+	EXPECT_EQ(Loaded.m_Image.m_Height, (size_t)2);
+}

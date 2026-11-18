@@ -105,14 +105,18 @@ namespace
 			m_Graphics.m_ThrowUnload = false;
 			m_Manager.ClearThumbnails(&m_Graphics);
 		}
-		void Decode(const char *pPath = "source.png")
+		bool StoreScreenshot(const char *pPath)
 		{
 			std::array<uint8_t, 4> aPixel{23, 45, 67, 255};
 			CImageInfo Image;
 			Image.m_Width = Image.m_Height = 1;
 			Image.m_Format = CImageInfo::FORMAT_RGBA;
 			Image.m_pData = aPixel.data();
-			ASSERT_TRUE(CImageLoader::SavePng(m_pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE), pPath, Image));
+			return CImageLoader::SavePng(m_pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE), pPath, Image);
+		}
+		void Decode(const char *pPath = "source.png")
+		{
+			ASSERT_TRUE(StoreScreenshot(pPath));
 			ASSERT_NE(m_Manager.LoadThumbnail(pPath, IStorage::TYPE_SAVE), nullptr);
 			m_Manager.PumpThumbnails(nullptr, m_pStorage.get(), &m_Engine, nullptr);
 			auto pJob = m_Engine.m_LastJob.lock();
@@ -219,6 +223,58 @@ TEST_F(QmScreenshotThumbnailUpload, ExhaustedUploadBudgetRetainsDecodedImageUnti
 	EXPECT_EQ(m_Graphics.m_UploadAttempts, 1);
 	EXPECT_TRUE(Thumbnail()->m_Texture.IsValid());
 	EXPECT_EQ(pJob->Image(), nullptr);
+}
+
+TEST_F(QmScreenshotThumbnailUpload, DecodeFailureDoesNotWaitForGpuBudget)
+{
+	ASSERT_NE(m_Manager.LoadThumbnail("missing.png", IStorage::TYPE_SAVE), nullptr);
+	m_Manager.PumpThumbnails(nullptr, m_pStorage.get(), &m_Engine, nullptr);
+	auto pJob = m_Engine.m_LastJob.lock();
+	ASSERT_NE(pJob, nullptr);
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+
+	m_Limiter.OnFrameStart(0);
+	Pump();
+	const auto *pThumbnail = m_Manager.LoadThumbnail("missing.png", IStorage::TYPE_SAVE);
+	ASSERT_NE(pThumbnail, nullptr);
+	EXPECT_FALSE(pThumbnail->m_Loading);
+	EXPECT_TRUE(pThumbnail->m_LoadFailed);
+	EXPECT_EQ(m_Graphics.m_UploadAttempts, 0);
+}
+
+TEST_F(QmScreenshotThumbnailUpload, DecodedBacklogBlocksNewWorkUntilAnUploadFreesASlot)
+{
+	constexpr int MaxJobs = QM_SCREENSHOT_THUMBNAIL_MAX_CONCURRENT_JOBS;
+	for(int Index = 0; Index < MaxJobs; ++Index)
+	{
+		char aPath[64];
+		str_format(aPath, sizeof(aPath), "source-%d.png", Index);
+		ASSERT_NO_FATAL_FAILURE(Decode(aPath));
+	}
+	ASSERT_EQ(m_Engine.m_Submissions, MaxJobs);
+
+	ASSERT_TRUE(StoreScreenshot("next.png"));
+	m_Limiter.OnFrameStart(0);
+	ASSERT_NE(m_Manager.LoadThumbnail("next.png", IStorage::TYPE_SAVE), nullptr);
+	Pump();
+	ASSERT_EQ(m_Engine.m_Submissions, MaxJobs);
+	EXPECT_EQ(m_Graphics.m_UploadAttempts, 0);
+
+	m_Limiter.OnFrameStart(1);
+	ASSERT_NE(m_Manager.LoadThumbnail("next.png", IStorage::TYPE_SAVE), nullptr);
+	Pump();
+	EXPECT_EQ(m_Graphics.m_UploadAttempts, 1);
+	ASSERT_EQ(m_Engine.m_Submissions, MaxJobs + 1);
+	auto pNextJob = m_Engine.m_LastJob.lock();
+	ASSERT_NE(pNextJob, nullptr);
+	ASSERT_TRUE(WaitForJobDone(*pNextJob));
+
+	m_Limiter.OnFrameStart();
+	Pump();
+	const auto *pNext = m_Manager.LoadThumbnail("next.png", IStorage::TYPE_SAVE);
+	ASSERT_NE(pNext, nullptr);
+	EXPECT_TRUE(pNext->m_Texture.IsValid());
+	EXPECT_EQ(m_Engine.m_Submissions, MaxJobs + 1);
 }
 
 TEST_F(QmScreenshotThumbnailUpload, EvictionFailureRetainsTextureOwnershipAndRetriesNextFrame)

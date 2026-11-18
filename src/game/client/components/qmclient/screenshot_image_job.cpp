@@ -1,16 +1,14 @@
 #include "screenshot_image_job.h"
 
-#include <base/system.h>
+#include "bounded_file_reader.h"
 
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
-#include <engine/storage.h>
 
 #include <game/client/components/assets_preview_scale.h>
 
 #include <exception>
 #include <utility>
-#include <vector>
 
 CQmScreenshotImageJob::CQmScreenshotImageJob(IStorage *pStorage, std::string Path, int StorageType, int MaxEdge) :
 	m_pStorage(pStorage),
@@ -57,39 +55,14 @@ bool CQmScreenshotImageJob::LoadImageFromDisk(IStorage *pStorage, const std::str
 	if(pStorage == nullptr || Path.empty())
 		return false;
 
-	IOHANDLE File = pStorage->OpenFile(Path.c_str(), IOFLAG_READ, StorageType);
-	if(File == nullptr)
-		return false;
-
-	io_seek(File, 0, IOSEEK_END);
-	const int64_t FileSize = io_tell(File);
-	io_seek(File, 0, IOSEEK_START);
-	// 超采样静帧的文件本身也可能超过列表页的 64 MiB 上限：预算由调用方决定。
-	if(FileSize <= 0 || FileSize > (int64_t)MaxDecodedBytes)
-	{
-		io_close(File);
-		return false;
-	}
-
-	struct SCloseFile
-	{
-		IOHANDLE m_File;
-		~SCloseFile()
-		{
-			if(m_File)
-				io_close(m_File);
-		}
-	} Close{File};
-	std::vector<uint8_t> vFileData((size_t)FileSize);
-	const size_t Read = io_read(File, vFileData.data(), (unsigned)vFileData.size());
-	io_close(File);
-	Close.m_File = nullptr;
-	if(Read != vFileData.size())
+	// 文件读取与解码沿用调用方的预算，查看器可以读取更大的超采样静帧。
+	CQmCheckedFileData FileData;
+	if(!FileData.Read(*pStorage, Path.c_str(), StorageType, MaxDecodedBytes))
 		return false;
 
 	// 按内容而不是扩展名判断格式：截图目录里可能出现改名或后缀不符的文件。
-	const bool Decoded = CImageLoader::LoadPng(vFileData.data(), vFileData.size(), Path.c_str(), Image, MaxDecodedBytes) ||
-			     CImageLoader::LoadWebP(vFileData.data(), vFileData.size(), Path.c_str(), Image, MaxDecodedBytes);
+	const bool Decoded = CImageLoader::LoadPng(FileData.Data(), FileData.Size(), Path.c_str(), Image, MaxDecodedBytes) ||
+			     CImageLoader::LoadWebP(FileData.Data(), FileData.Size(), Path.c_str(), Image, MaxDecodedBytes);
 	if(!Decoded || Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0)
 	{
 		Image.Free();

@@ -351,12 +351,13 @@ void CQmScreenshotManager::PumpThumbnailWork(IGraphics *pGraphics, IStorage *pSt
 				Entry.m_pJob.reset();
 				continue;
 			}
-			if(UploadsLeft <= 0 || (pLimiter != nullptr && !pLimiter->CanUpload()))
-				continue;
 
 			CImageInfo *pImage = Entry.m_pJob->Image();
 			if(pImage != nullptr && pImage->m_Width > 0 && pImage->m_Height > 0)
 			{
+				if(UploadsLeft <= 0 || (pLimiter != nullptr && !pLimiter->CanUpload()))
+					continue;
+
 				const int Width = (int)pImage->m_Width;
 				const int Height = (int)pImage->m_Height;
 				const auto Texture = pGraphics->LoadTextureRawMove(*pImage, 0, Entry.m_Path.c_str());
@@ -377,13 +378,13 @@ void CQmScreenshotManager::PumpThumbnailWork(IGraphics *pGraphics, IStorage *pSt
 		}
 	}
 
-	int RunningJobs = 0;
+	int OutstandingJobs = 0;
 	for(const auto &[Key, Entry] : m_vThumbnails)
 	{
 		(void)Key;
-		// 已完成但还没上传的条目只占内存，不占用后台解码槽位。
-		if(Entry.m_pJob != nullptr && !Entry.m_pJob->Finished())
-			++RunningJobs;
+		// 等待上传的解码结果也占名额，上传预算不足时暂停启动新任务。
+		if(Entry.m_pJob != nullptr)
+			++OutstandingJobs;
 	}
 
 	int PendingRequests = 0;
@@ -396,7 +397,7 @@ void CQmScreenshotManager::PumpThumbnailWork(IGraphics *pGraphics, IStorage *pSt
 
 	if(pEngine != nullptr && pStorage != nullptr)
 	{
-		int JobsToStart = QmScreenshotImageJobsToStart(RunningJobs, PendingRequests, QM_SCREENSHOT_THUMBNAIL_MAX_CONCURRENT_JOBS);
+		int JobsToStart = QmScreenshotImageJobsToStart(OutstandingJobs, PendingRequests, QM_SCREENSHOT_THUMBNAIL_MAX_CONCURRENT_JOBS);
 		for(const std::string &Key : m_vThumbnailRequests)
 		{
 			if(JobsToStart <= 0)
