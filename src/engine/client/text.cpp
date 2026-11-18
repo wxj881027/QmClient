@@ -2203,20 +2203,29 @@ public:
 		if(pFilename == nullptr || pFilename[0] == '.' || pScan == nullptr)
 			return 0;
 		char aRelativePath[IO_MAX_PATH_LENGTH];
+		if(pScan->m_Directory.size() + 1 + std::strlen(pFilename) >= sizeof(aRelativePath))
+			return 0;
 		str_format(aRelativePath, sizeof(aRelativePath), "%s/%s", pScan->m_Directory.c_str(), pFilename);
 		if(IsDir)
 		{
 			// 未发布过的旧商店目录不做兼容读取；未知常规字体子目录仍正常递归。
 			if(str_comp_nocase(aRelativePath, "fonts/downloaded_fonts") == 0)
 				return 0;
-			SRecursiveFontScan Child{pScan->m_pThis, aRelativePath, pScan->m_pFiles};
-			pScan->m_pThis->Storage()->ListDirectory(StorageType, aRelativePath, RecursiveFontFileCallback, &Child);
+			pScan->m_pThis->ScanCustomFontDirectory(StorageType, aRelativePath, *pScan->m_pFiles);
 			return 0;
 		}
 		if(QmIsFontFile(pFilename))
 			pScan->m_pFiles->push_back({aRelativePath, StorageType});
 		return 0;
 	}
+	void ScanCustomFontDirectory(int StorageType, const char *pDirectory, std::vector<SQmScannedFontFile> &vFiles)
+	{
+		SRecursiveFontScan Scan{this, pDirectory, &vFiles};
+		// 完整路径超出上限时停止当前目录，避免截断后递归回到同一目录。
+		if(Storage()->ListDirectoryChecked(StorageType, pDirectory, RecursiveFontFileCallback, &Scan) == EFsListDirectoryResult::IO_FAILURE)
+			log_warn("textrender", "Failed to scan custom font directory '%s' in storage %d", pDirectory, StorageType);
+	}
+
 	// TClient
 	void UpdateCustomFontList()
 	{
@@ -2322,10 +2331,7 @@ public:
 				// TYPE_ALL 的目录合并会先按文件名去重，坏用户文件会令同名随包文件根本不进入扫描。
 				// 按实际存储来源分别枚举，读取与递归继续保持该来源。
 				for(int StorageType = IStorage::TYPE_SAVE; StorageType < Storage()->NumPaths(); ++StorageType)
-				{
-					SRecursiveFontScan Scan{this, pDirectory, &vFontFiles};
-					Storage()->ListDirectory(StorageType, pDirectory, RecursiveFontFileCallback, &Scan);
-				}
+					ScanCustomFontDirectory(StorageType, pDirectory, vFontFiles);
 			}
 			std::sort(vFontFiles.begin(), vFontFiles.end(), [](const SQmScannedFontFile &Left, const SQmScannedFontFile &Right) {
 				return Left.m_Path != Right.m_Path ? Left.m_Path < Right.m_Path : Left.m_StorageType < Right.m_StorageType;
@@ -3222,9 +3228,6 @@ public:
 		const char *pCurrent = pText;
 		const char *pEnd = pCurrent + Length;
 		const char *pPrevBatchEnd = nullptr;
-		// 内部终止标记必须独占地址，避免与调用者的省略号常量合并后误判为空文本。
-		const char aEllipsis[] = "…";
-		const char *pEllipsis = aEllipsis;
 		const SGlyph *pEllipsisGlyph = nullptr;
 		// Only text that does not fit as a whole is ellipsized. Both the ellipsis glyph and
 		// the width of the whole text are only determined once the line width is nearly
@@ -3420,7 +3423,7 @@ public:
 		// QmClient：逐字符顶点偏移的游标，按字符顺序消费 m_vCharOffsets。
 		int OffsetOption = 0;
 
-		while(pCurrent < pEnd && pCurrent != pEllipsis)
+		while(pCurrent < pEnd)
 		{
 			bool NewLine = false;
 			const char *pBatchEnd = pEnd;
@@ -3464,14 +3467,25 @@ public:
 
 			const char *pTmp = pCurrent;
 			int NextCharacter = str_utf8_decode(&pTmp);
+			bool EllipsisPending = false;
 
-			while(pCurrent < pBatchEnd && pCurrent != pEllipsis)
+			while(pCurrent < pBatchEnd || EllipsisPending)
 			{
 				const int PrevCharCount = pCursor->m_CharCount;
-				pCursor->m_CharCount += pTmp - pCurrent;
-				pCurrent = pTmp;
+				const bool IsEllipsis = std::exchange(EllipsisPending, false);
 				int Character = NextCharacter;
-				NextCharacter = str_utf8_decode(&pTmp);
+				if(IsEllipsis)
+				{
+					Character = 0x2026;
+					NextCharacter = 0;
+					pCurrent = pEnd;
+				}
+				else
+				{
+					pCursor->m_CharCount += pTmp - pCurrent;
+					pCurrent = pTmp;
+					NextCharacter = str_utf8_decode(&pTmp);
+				}
 
 				if(Character == '\n')
 				{
@@ -3498,7 +3512,7 @@ public:
 					}
 				}
 
-				const SGlyph *pGlyph = m_pGlyphMap->GetGlyph(Character, ActualSize, Nameplate);
+				const SGlyph *pGlyph = IsEllipsis ? pEllipsisGlyph : m_pGlyphMap->GetGlyph(Character, ActualSize, Nameplate);
 				if(pGlyph)
 				{
 					const float Scale = 1.0f / pGlyph->m_FontSize;
@@ -3512,9 +3526,8 @@ public:
 					float CharKerning = 0.0f;
 					if((RenderFlags & TEXT_RENDER_FLAG_KERNING) != 0)
 						CharKerning = m_pGlyphMap->Kerning(pLastGlyph, pGlyph).x * Scale * pCursor->m_AlignedFontSize;
-					pLastGlyph = pGlyph;
 
-					if((pCursor->m_Flags & TEXTFLAG_ELLIPSIS_AT_END) != 0 && pCursor->m_LineWidth > 0.0f && pCurrent < pBatchEnd && pCurrent != pEllipsis)
+					if((pCursor->m_Flags & TEXTFLAG_ELLIPSIS_AT_END) != 0 && pCursor->m_LineWidth > 0.0f && pCurrent < pBatchEnd)
 					{
 						if(!EllipsisGlyphResolved)
 						{
@@ -3540,14 +3553,14 @@ public:
 								if(!EllipsisFitResolved)
 								{
 									EllipsisFitResolved = true;
-									if(pCursor->m_LineWidth >= TextWidth(pCursor->m_FontSize, pText))
+									if(pCursor->m_LineWidth >= TextWidth(pCursor->m_FontSize, pText, Length))
 										pEllipsisGlyph = nullptr;
 								}
 								if(pEllipsisGlyph != nullptr)
 								{
-									// we hit the end, only render ellipsis and finish
-									pTmp = pEllipsis;
-									NextCharacter = 0x2026;
+									// 省略号只参与排版，被替换的字形及其后缀不计入原文字节。
+									pCursor->m_CharCount = PrevCharCount;
+									EllipsisPending = true;
 									pCursor->m_Truncated = true;
 									continue;
 								}
@@ -3565,6 +3578,7 @@ public:
 						break;
 					}
 
+					pLastGlyph = pGlyph;
 					float BearingX = (Nameplate ? pGlyph->m_OffsetX - (!ApplyBearingX ? LayoutBearingX : 0.f) : (!ApplyBearingX ? 0.f : pGlyph->m_OffsetX)) * Scale * pCursor->m_AlignedFontSize;
 					float CharWidth = pGlyph->m_Width * Scale * pCursor->m_AlignedFontSize;
 
