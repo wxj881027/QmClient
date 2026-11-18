@@ -565,6 +565,9 @@ int CSnapshotDelta::UnpackDelta(const CSnapshot *pFrom, CSnapshotBuffer *pTo, co
 		}
 	}
 
+	// 负计数不会被 for 循环执行，若不提前拒绝会被当成零次更新而静默成功。
+	if(pDelta->m_NumUpdateItems < 0 || pDelta->m_NumTempItems < 0)
+		return -208;
 	// unpack updated stuff
 	for(int i = 0; i < pDelta->m_NumUpdateItems; i++)
 	{

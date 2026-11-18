@@ -172,6 +172,14 @@ TEST(SnapshotDelta, MalformedDeltaIsRejected)
 		std::vector<int32_t> vHugeDeleted = {std::numeric_limits<int32_t>::max(), 0, 0};
 		EXPECT_LT(Delta.UnpackDelta(CSnapshot::EmptySnapshot(), &To, vHugeDeleted.data(), (int)vHugeDeleted.size() * sizeof(int32_t)), 0);
 	}
+
+	// 更新项或临时项为负：循环会当成零次而静默成功，必须在进入循环前拒绝。
+	{
+		std::vector<int32_t> vNegativeUpdate = {0, -1, 0};
+		EXPECT_LT(Delta.UnpackDelta(CSnapshot::EmptySnapshot(), &To, vNegativeUpdate.data(), (int)vNegativeUpdate.size() * sizeof(int32_t)), 0);
+		std::vector<int32_t> vNegativeTemp = {0, 0, -1};
+		EXPECT_LT(Delta.UnpackDelta(CSnapshot::EmptySnapshot(), &To, vNegativeTemp.data(), (int)vNegativeTemp.size() * sizeof(int32_t)), 0);
+	}
 }
 
 TEST(SnapshotDelta, CreateRejectsTooSmallOutput)
