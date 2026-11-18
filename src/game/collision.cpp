@@ -17,6 +17,9 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <new>
+#include <stdexcept>
+#include <utility>
 
 static bool IsValidTileIndex(int Index, int Width, int Height)
 {
@@ -203,6 +206,7 @@ void CCollision::Init(class CLayers *pLayers)
 void CCollision::Unload()
 {
 	m_pQmAxiomQuads.reset();
+	m_QmAxiomQuadFailed = false;
 	m_QmAxiomRoundStartTick = 0;
 	m_QmAxiomQuadTime = 0;
 	m_pTiles = nullptr;
@@ -229,19 +233,30 @@ void CCollision::Unload()
 
 void CCollision::SetQmAxiomQuadCollision(bool Enabled)
 {
-	if(Enabled == QmAxiomQuadCollisionEnabled())
-		return;
 	if(!Enabled)
 	{
 		m_pQmAxiomQuads.reset();
+		m_QmAxiomQuadFailed = false;
 		return;
 	}
-	if(m_pLayers)
+	if(m_pQmAxiomQuads || m_QmAxiomQuadFailed || !m_pLayers)
+		return;
+
+	try
 	{
-		m_pQmAxiomQuads = std::make_unique<CQmAxiomQuadCollision>();
-		m_pQmAxiomQuads->Init(m_pLayers);
-		m_pQmAxiomQuads->SetTime(m_QmAxiomQuadTime);
+		auto pQuads = std::make_unique<CQmAxiomQuadCollision>();
+		pQuads->Init(m_pLayers);
+		pQuads->SetTime(m_QmAxiomQuadTime);
+		m_pQmAxiomQuads = std::move(pQuads);
+		return;
 	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
+	m_QmAxiomQuadFailed = true;
 }
 
 void CCollision::SetQmAxiomQuadTick(int Tick, int TickSpeed)
@@ -255,8 +270,23 @@ void CCollision::SetQmAxiomQuadTime(double Seconds)
 	if(!std::isfinite(Seconds))
 		return;
 	m_QmAxiomQuadTime = Seconds;
-	if(m_pQmAxiomQuads)
+	if(!m_pQmAxiomQuads)
+		return;
+
+	try
+	{
 		m_pQmAxiomQuads->SetTime(Seconds);
+		return;
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
+	// 更新失败时网格可能只更新了一部分，不再使用这份索引。
+	m_pQmAxiomQuads.reset();
+	m_QmAxiomQuadFailed = true;
 }
 
 int CCollision::GetQmAxiomQuadTile(vec2 Pos) const

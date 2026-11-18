@@ -5324,6 +5324,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/editor_collab_camera_reload_test.cpp
     src/test/unit/client/editor_collab_join_test.cpp
     src/test/unit/client/editor_quad_slice_test.cpp
+    src/test/unit/client/character_core_test.cpp
+    src/test/integration/client/character_core_switcher_test.cpp
     src/test/unit/client/editor_envelope_channels_test.cpp
     src/test/integration/client/editor_envelope_channel_io_test.cpp
     src/test/unit/base/fs_test.cpp

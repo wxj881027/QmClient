@@ -10,6 +10,7 @@
 
 #include <engine/shared/config.h>
 
+#include <cmath>
 #include <limits>
 
 const char *CTuningParams::ms_apNames[] =
@@ -450,7 +451,8 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 		}
 
 		// release hook (max default hook time is 1.25 s)
-		m_HookTick++;
+		if(m_HookTick < std::numeric_limits<int>::max())
+			++m_HookTick;
 		if(m_HookedPlayer != -1 && (m_HookTick > SERVER_TICK_SPEED + SERVER_TICK_SPEED / 5 || (m_pWorld && !m_pWorld->m_apCharacters[m_HookedPlayer])))
 		{
 			SetHookedPlayer(-1);
@@ -506,9 +508,10 @@ void CCharacterCore::TickDeferred()
 				// handle hook influence
 				if(!m_HookHitDisabled && m_HookedPlayer == i && m_Tuning.m_PlayerHooking)
 				{
-					if(Distance > PhysicalSize() * 1.50f)
+					const float HookLength = m_Tuning.m_HookLength;
+					if(Distance > PhysicalSize() * 1.50f && HookLength != 0.0f)
 					{
-						float HookAccel = m_Tuning.m_HookDragAccel * (Distance / m_Tuning.m_HookLength);
+						float HookAccel = m_Tuning.m_HookDragAccel * (Distance / HookLength);
 						float DragSpeed = m_Tuning.m_HookDragSpeed;
 
 						vec2 Temp;
@@ -539,6 +542,12 @@ void CCharacterCore::TickDeferred()
 void CCharacterCore::Move()
 {
 	float RampValue = VelocityRamp(length(m_Vel) * 50, m_Tuning.m_VelrampStart, m_Tuning.m_VelrampRange, m_Tuning.m_VelrampCurvature);
+	float InverseRamp = std::isfinite(RampValue) && RampValue != 0.0f ? 1.0f / RampValue : 0.0f;
+	if(!std::isfinite(InverseRamp) || InverseRamp == 0.0f)
+	{
+		RampValue = 1.0f;
+		InverseRamp = 1.0f;
+	}
 
 	m_Vel.x = m_Vel.x * RampValue;
 
@@ -570,7 +579,7 @@ void CCharacterCore::Move()
 		m_LeftWall = true;
 	}
 
-	m_Vel.x = m_Vel.x * (1.0f / RampValue);
+	m_Vel.x = m_Vel.x * InverseRamp;
 
 	if(m_pWorld && (m_Super || (m_Tuning.m_PlayerCollision && !m_CollisionDisabled && !m_Solo)))
 	{
@@ -752,7 +761,7 @@ void CCharacterCore::SetTeamsCore(CTeamsCore *pTeams)
 bool CCharacterCore::IsSwitchActiveCb(unsigned char Number, void *pUser)
 {
 	CCharacterCore *pThis = (CCharacterCore *)pUser;
-	if(pThis->m_pWorld && !pThis->m_pWorld->m_vSwitchers.empty())
+	if(pThis->m_pWorld && Number < pThis->m_pWorld->m_vSwitchers.size())
 		if(pThis->m_Id != -1 && pThis->m_pTeams->Team(pThis->m_Id) != pThis->m_pTeams->TeamSuper())
 			return pThis->m_pWorld->m_vSwitchers[Number].m_aStatus[pThis->m_pTeams->Team(pThis->m_Id)];
 	return false;

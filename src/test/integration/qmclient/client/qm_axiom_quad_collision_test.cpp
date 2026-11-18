@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <new>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,8 @@ namespace
 		std::vector<std::vector<int>> m_vData;
 
 	public:
+		bool m_FailSwappedRead = false;
+
 		template<typename T>
 		void AddItem(int Type, int Id, const T &Item)
 		{
@@ -55,7 +58,12 @@ namespace
 		}
 		int GetDataSize(int Index) const override { return static_cast<int>(m_vData.at(Index).size() * sizeof(int)); }
 		void *GetData(int Index) override { return m_vData.at(Index).data(); }
-		void *GetDataSwapped(int Index) override { return GetData(Index); }
+		void *GetDataSwapped(int Index) override
+		{
+			if(m_FailSwappedRead)
+				throw std::bad_alloc();
+			return GetData(Index);
+		}
 		const char *GetDataString(int) override { return ""; }
 		void UnloadData(int) override {}
 		int NumData() const override { return static_cast<int>(m_vData.size()); }
@@ -200,6 +208,30 @@ TEST(QmAxiomQuadCollision, DisabledCollisionKeepsDecorativeQuadsNonSolid)
 	EXPECT_TRUE(F.m_Collision.CheckPoint(48, 48));
 	F.m_Collision.SetQmAxiomQuadCollision(false);
 	EXPECT_FALSE(F.m_Collision.CheckPoint(48, 48));
+}
+
+TEST(QmAxiomQuadCollision, SetupAllocationFailureKeepsTileCollisionUntilReenabled)
+{
+	SQuadFixture F;
+	F.m_vLayers.push_back({"QHook", {MakeQuad()}});
+	F.Init(false);
+	F.m_Collision.SetCollisionAt(80, 48, TILE_SOLID);
+	F.m_Map.m_FailSwappedRead = true;
+
+	F.m_Collision.SetQmAxiomQuadCollision(true);
+
+	EXPECT_FALSE(F.m_Collision.QmAxiomQuadCollisionEnabled());
+	EXPECT_FALSE(F.m_Collision.CheckPoint(48, 48));
+	EXPECT_TRUE(F.m_Collision.CheckPoint(80, 48));
+
+	F.m_Map.m_FailSwappedRead = false;
+	F.m_Collision.SetQmAxiomQuadCollision(true);
+	EXPECT_FALSE(F.m_Collision.QmAxiomQuadCollisionEnabled());
+
+	F.m_Collision.SetQmAxiomQuadCollision(false);
+	F.m_Collision.SetQmAxiomQuadCollision(true);
+	EXPECT_TRUE(F.m_Collision.CheckPoint(48, 48));
+	EXPECT_TRUE(F.m_Collision.CheckPoint(80, 48));
 }
 
 TEST(QmAxiomQuadCollision, TickUsesRoundStartAndCanRewind)
