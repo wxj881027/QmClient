@@ -469,6 +469,36 @@ TEST(QmCrashdumpModuleTable, LongPathDoesNotOccupyAModuleSlot)
 	EXPECT_TRUE(crashdump_add_module_range(aModules, &NumModules, 1, 0x1000, 0x2000, "/vendor/libfoo.so"));
 }
 
+TEST(QmCrashdumpModuleTable, LongPathMergesAtFullCapacity)
+{
+	SCrashModuleRange aModules[1] = {};
+	size_t NumModules = 0;
+	// Android 解析器最多传入 383 字节的路径。
+	const std::string Path = "/data/app/" + std::string(180, 'a') + "/lib/" + std::string(179, 'b') + "/libqm.so";
+
+	ASSERT_TRUE(crashdump_add_module_range(aModules, &NumModules, 1, 0x1000, 0x2000, Path.c_str()));
+	EXPECT_FALSE(crashdump_add_module_range(aModules, &NumModules, 1, 0x3000, 0x4000, Path.c_str()));
+
+	ASSERT_EQ(NumModules, 1u);
+	uintptr_t Offset = 0;
+	EXPECT_STREQ(crashdump_find_module(aModules, NumModules, 0x3100, &Offset), "libqm.so");
+	EXPECT_EQ(Offset, 0x2100u);
+}
+
+TEST(QmCrashdumpModuleTable, LongPathStaysSeparateFromItsPrefix)
+{
+	SCrashModuleRange aModules[2] = {};
+	size_t NumModules = 0;
+	const std::string ShortPath = "/data/app/" + std::string(75, 'a') + "/libfoo.so";
+	const std::string LongPath = ShortPath + ".1";
+
+	ASSERT_TRUE(crashdump_add_module_range(aModules, &NumModules, 2, 0x1000, 0x2000, LongPath.c_str()));
+	ASSERT_TRUE(crashdump_add_module_range(aModules, &NumModules, 2, 0x5000, 0x6000, ShortPath.c_str()));
+
+	EXPECT_EQ(NumModules, 2u);
+	EXPECT_EQ(crashdump_find_module(aModules, NumModules, 0x3000, nullptr), nullptr);
+}
+
 TEST(QmCrashdumpModuleTable, InvalidInputsAreRejected)
 {
 	SCrashModuleRange aModules[2] = {};
