@@ -17,10 +17,10 @@ namespace
 	class CFileResultRequest : public IHttpRequest
 	{
 	public:
-		explicit CFileResultRequest(IStorage *pStorage) :
+		explicit CFileResultRequest(IStorage *pStorage, const char *pDest = "body.bin") :
 			IHttpRequest("https://file-result.test/body")
 		{
-			WriteToFileAndMemory(pStorage, "body.bin", IStorage::TYPE_SAVE);
+			WriteToFileAndMemory(pStorage, pDest, IStorage::TYPE_SAVE);
 			LogProgress(HTTPLOG::NONE);
 		}
 		void Header(const char *) override {}
@@ -447,6 +447,56 @@ TEST_F(HttpFileResult, CachedValidationCleanupExceptionFailsWithoutRenaming)
 	EXPECT_FALSE(Validation.Commit());
 	EXPECT_EQ(Request.State(), EHttpState::ERROR);
 	EXPECT_EQ(Request.m_RenameCalls, 0);
+	EXPECT_EQ(Cached(), "old");
+}
+
+TEST_F(HttpFileResult, CancelledDownloadCannotDiscardAnotherRequestsCandidate)
+{
+	CFileResultRequest Cancelled(m_pStorage.get());
+	CFileResultRequest Replacement(m_pStorage.get());
+	ASSERT_TRUE(Cancelled.Start());
+	const auto CancelledBytes = Cancelled.Feed("partial");
+	const bool ReplacementStarted = Replacement.Start();
+	const auto ReplacementBytes = ReplacementStarted ? Replacement.Feed("replacement") : 0;
+	Cancelled.Complete(EHttpState::ABORTED);
+	EXPECT_EQ(Cached(), "old");
+	ASSERT_TRUE(ReplacementStarted);
+	Replacement.Complete();
+
+	EXPECT_EQ(CancelledBytes, 7u);
+	EXPECT_EQ(ReplacementBytes, 11u);
+	EXPECT_EQ(Cancelled.State(), EHttpState::ABORTED);
+	EXPECT_EQ(Replacement.State(), EHttpState::DONE);
+	EXPECT_EQ(Cached(), "replacement");
+	EXPECT_FALSE(fs_is_file(Cancelled.TemporaryPath()));
+	EXPECT_FALSE(fs_is_file(Replacement.TemporaryPath()));
+}
+
+TEST_F(HttpFileResult, QueuedCancellationCannotDiscardAValidatedDownloadsCandidate)
+{
+	CFileResultRequest Cancelled(m_pStorage.get());
+	CFileResultRequest Download(m_pStorage.get());
+	Download.ValidateBeforeOverwrite(true);
+	ASSERT_NO_FATAL_FAILURE(Receive(Download));
+	Download.Complete();
+	ASSERT_EQ(Download.State(), EHttpState::DONE);
+	Cancelled.Complete(EHttpState::ABORTED);
+
+	CHttpResponseValidation Validation(Download);
+	EXPECT_EQ(Cached(), "old");
+	EXPECT_TRUE(Validation.Commit());
+	EXPECT_EQ(Cached(), "new");
+}
+
+TEST_F(HttpFileResult, DestinationWithoutRoomForCandidateIsRejected)
+{
+	const std::string LongDestination(IO_MAX_PATH_LENGTH, 'a');
+	CFileResultRequest Request(m_pStorage.get(), LongDestination.c_str());
+	const bool Started = Request.Start();
+	Request.Complete(Started ? EHttpState::ABORTED : EHttpState::ERROR);
+
+	EXPECT_FALSE(Started);
+	EXPECT_STREQ(Request.TemporaryPath(), "");
 	EXPECT_EQ(Cached(), "old");
 }
 

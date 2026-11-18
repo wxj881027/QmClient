@@ -772,6 +772,7 @@ void CConsole::ExecuteLineFlag(const char *pStr, int FlagMask, int ClientId, boo
 }
 
 bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure, int StorageType, bool RejectInvalidLines)
+try
 {
 	int Count = 0;
 	// make sure that this isn't being executed already and that recursion limit isn't met
@@ -789,10 +790,13 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 	}
 
 	// push this one to the stack
-	CExecFile ThisFile;
-	CExecFile *pPrev = m_pFirstExec;
-	ThisFile.m_pFilename = pFilename;
-	ThisFile.m_pPrev = m_pFirstExec;
+	CExecFile ThisFile{pFilename, m_pFirstExec};
+	struct CRestoreExecStack
+	{
+		CExecFile *&m_pCurrent;
+		CExecFile *m_pPrevious;
+		~CRestoreExecStack() { m_pCurrent = m_pPrevious; }
+	} Restore{m_pFirstExec, ThisFile.m_pPrev};
 	m_pFirstExec = &ThisFile;
 
 	// exec the file
@@ -821,8 +825,12 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 			log_error("console", "failed to open '%s'", pFilename);
 	}
 
-	m_pFirstExec = pPrev;
 	return Success;
+}
+catch(...)
+{
+	log_error("console", "failed while executing '%s'", pFilename);
+	return false;
 }
 
 void CConsole::Con_Echo(IResult *pResult, void *pUserData)

@@ -16,6 +16,8 @@
 #include <game/version.h>
 
 #include <algorithm>
+#include <cinttypes>
+#include <cstdio>
 #include <limits>
 #include <utility>
 
@@ -65,7 +67,12 @@ void IHttpRequest::WriteToFile(IStorage *pStorage, const char *pDest, int Storag
 	{
 		pStorage->GetCompletePath(StorageType, m_aDest, m_aDestAbsolute, sizeof(m_aDestAbsolute));
 	}
-	IStorage::FormatTmpPath(m_aDestAbsoluteTmp, sizeof(m_aDestAbsoluteTmp), m_aDestAbsolute);
+	// 同一目标可能同时有在途重试和取消中的旧请求，每个请求各自持有候选文件。
+	static std::atomic<uint64_t> s_NextResponseFileId{0};
+	const int Length = std::snprintf(m_aDestAbsoluteTmp, sizeof(m_aDestAbsoluteTmp), "%s.%" PRIu64 ".%d.tmp",
+		m_aDestAbsolute, s_NextResponseFileId.fetch_add(1, std::memory_order_relaxed), pid());
+	if(m_aDestAbsolute[0] == '\0' || Length < 0 || static_cast<size_t>(Length) >= sizeof(m_aDestAbsoluteTmp))
+		m_aDestAbsoluteTmp[0] = '\0';
 }
 
 void IHttpRequest::WriteToFileAndMemory(IStorage *pStorage, const char *pDest, int StorageType)
@@ -307,7 +314,7 @@ bool IHttpRequest::ShouldSkipRequest()
 {
 	if(m_pResponseBufferBudget && (!m_WriteToMemory || m_WriteToFile))
 		return false;
-	if(m_WriteToFile && m_ExpectedSha256.has_value())
+	if(m_WriteToFile && m_aDestAbsoluteTmp[0] != '\0' && m_ExpectedSha256.has_value())
 	{
 		SHA256_DIGEST Sha256;
 		if(CalculateSha256(m_aDestAbsolute, &Sha256) && Sha256 == m_ExpectedSha256.value())
@@ -331,6 +338,11 @@ bool IHttpRequest::BeforeInit()
 	}
 	if(m_WriteToFile)
 	{
+		if(m_aDestAbsoluteTmp[0] == '\0')
+		{
+			log_error("http", "i/o error, invalid or too long destination path: %s", m_aDest);
+			return false;
+		}
 		if(m_SkipByFileTime)
 		{
 			time_t FileCreatedTime, FileModifiedTime;
@@ -416,6 +428,8 @@ bool IHttpRequest::ReadResponseFile(void **ppResult, unsigned *pLength)
 
 void IHttpRequest::RemoveResponseFileBestEffort() noexcept
 {
+	if(m_aDestAbsoluteTmp[0] == '\0')
+		return;
 	try
 	{
 		(void)RemoveResponseFile();

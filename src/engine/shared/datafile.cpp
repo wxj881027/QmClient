@@ -163,8 +163,8 @@ public:
 
 	int GetDataSize(int Index) const
 	{
-		// Invalid data indices may appear in map items
-		if(Index < 0 || Index >= m_Header.m_NumRawData)
+		// 无效索引和已加载失败的数据块没有可用长度。
+		if(Index < 0 || Index >= m_Header.m_NumRawData || m_pDataSizes[Index] < 0)
 		{
 			return 0;
 		}
@@ -181,12 +181,7 @@ public:
 			}
 		}
 
-		const int Size = m_pDataSizes[Index];
-		if(Size < 0)
-		{
-			return 0; // summarize all errors as zero size
-		}
-		return Size;
+		return m_pDataSizes[Index];
 	}
 
 	void *GetData(int Index, bool Swap) const

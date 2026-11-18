@@ -162,9 +162,12 @@ TEST_F(DatafileReaderLimits, InputBudgetFailureIsStickyAcrossUnload)
 {
 	ASSERT_TRUE(Open());
 	SetBudget(0);
+	EXPECT_EQ(m_Reader.GetDataSize(0), 8);
 	ASSERT_EQ(m_Reader.GetData(0), nullptr);
+	EXPECT_EQ(m_Reader.GetDataSize(0), 0);
 	m_Reader.UnloadData(0);
 	EXPECT_EQ(m_Reader.GetDataSwapped(0), nullptr);
+	EXPECT_EQ(m_Reader.GetDataSize(0), 0);
 	EXPECT_EQ(m_Operations.m_Allocations, 0);
 	EXPECT_EQ(m_ProcessorCalls, 0);
 }
@@ -209,7 +212,9 @@ TEST_F(DatafileReaderLimits, VersionThreeRawBlocksUseTheirFileLengthForInputBudg
 	ASSERT_TRUE(m_Reader.Open(m_pStorage.get(), "raw.map", IStorage::TYPE_SAVE, nullptr, &m_Operations));
 	SetBudget(7);
 	const int Reads = m_Operations.m_Reads;
+	EXPECT_EQ(m_Reader.GetDataSize(0), 8);
 	EXPECT_EQ(m_Reader.GetData(0), nullptr);
+	EXPECT_EQ(m_Reader.GetDataSize(0), 0);
 	EXPECT_EQ(m_Operations.m_Reads, Reads);
 	EXPECT_EQ(m_Operations.m_Allocations, 0);
 	m_Reader.Close();
