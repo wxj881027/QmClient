@@ -77,6 +77,19 @@ void CQmWeaponTrajectory::Render(
 	vec2 LandingPos;
 	bool HasValidHit = false;
 	const bool Prepared = m_Scratch.TryPrepare([&]() -> bool {
+		// 逐像素碰撞按整段最坏采样数计入这一条预览的预算。
+		constexpr int MaxLineSamples = 1'048'576;
+		int LineSamplesRemaining = MaxLineSamples;
+		const auto TryUseLineSamples = [&](vec2 From, vec2 To) {
+			if(!QmCollision::CanQueryLine(From, To))
+				return false;
+			const int Samples = static_cast<int>(distance(From, To) + 1.0f) + 1;
+			if(Samples > LineSamplesRemaining)
+				return false;
+			LineSamplesRemaining -= Samples;
+			return true;
+		};
+
 		float Intra = GameClient()->m_aClients[ClientId].m_IsPredicted ? Client()->PredIntraGameTick(g_Config.m_ClDummy) : Client()->IntraGameTick(g_Config.m_ClDummy);
 		const float Angle = GameClient()->m_Players.GetPlayerTargetAngle(pPrevChar, pPlayerChar, ClientId, Intra);
 		const vec2 Direction = direction(Angle);
@@ -208,7 +221,7 @@ void CQmWeaponTrajectory::Render(
 					return false;
 				if(i > 0)
 				{
-					if(!QmCollision::CanQueryLine(PrevPos, Pos))
+					if(!TryUseLineSamples(PrevPos, Pos))
 						return false;
 					vec2 ColPos, BeforePos;
 					const bool CollidesWithWorld = Collision()->IntersectLine(PrevPos, Pos, &ColPos, &BeforePos);
@@ -253,7 +266,10 @@ void CQmWeaponTrajectory::Render(
 			if(GameClient()->m_GameWorld.m_WorldConfig.m_IsFNG && Energy < 10.0f)
 				Energy = 800.0f;
 
-			if(!m_Scratch.ReserveBounces(pTuning->m_LaserBounceNum))
+			// 限制预留容量和实际模拟段数，保留调参中的反弹判定。
+			constexpr size_t MaxLaserSegments = 2'048;
+			const float BounceLimit = pTuning->m_LaserBounceNum;
+			if(!m_Scratch.ReserveBounces(std::min(BounceLimit, static_cast<float>(MaxLaserSegments - 2))))
 				return false;
 
 			vec2 From = Position;
@@ -263,8 +279,10 @@ void CQmWeaponTrajectory::Render(
 
 			while(Energy > 0.0f)
 			{
+				if(vLineSegments.size() >= MaxLaserSegments)
+					return false;
 				vec2 To = From + Dir * Energy;
-				if(!QmCollision::CanQueryLine(From, To))
+				if(!TryUseLineSamples(From, To))
 					return false;
 				vec2 ColTile;
 				vec2 HitPos;
@@ -324,7 +342,7 @@ void CQmWeaponTrajectory::Render(
 				}
 
 				Bounces++;
-				if(Bounces > pTuning->m_LaserBounceNum)
+				if(Bounces > BounceLimit)
 				{
 					HasValidHit = ValidTeleGunWallHit;
 					break;
