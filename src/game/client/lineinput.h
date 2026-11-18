@@ -105,8 +105,8 @@ private:
 	char *m_pStr = nullptr; // explicitly set to nullptr outside of constructor, so SetBuffer works in this case
 	size_t m_MaxSize;
 	size_t m_MaxChars;
-	size_t m_Len;
-	size_t m_NumChars;
+	size_t m_Len = 0;
+	size_t m_NumChars = 0;
 
 	size_t m_CursorPos;
 	size_t m_SelectionStart;
@@ -134,7 +134,7 @@ private:
 	// 多行输入：回车产生换行、粘贴保留换行；单行输入保持既有语义。
 	bool m_Multiline = false;
 
-	char m_ClearButtonId;
+	char m_ClearButtonId = 0;
 
 	void UpdateStrData();
 	enum EMoveDirection
