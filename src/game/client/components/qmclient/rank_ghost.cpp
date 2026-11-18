@@ -72,20 +72,14 @@ namespace
 		str_sanitize_filename(pOut);
 	}
 
-	// ===== 缓存去重 =====
-	// 同一条官方回放在 manifest 里可能对应多条记录（每名成员一条，uuid 各异），
-	// 而缓存文件名含 uuid8，会让同一内容生成多份缓存、被反复下载。
-	// 统一按 <map>_rank<N>_<kind>_<time>s_ 前缀复用与清理，保证同一内容只保留一份。
-	void EntryCachePrefix(const qmclient::rank_demo::SEntry &Entry, char *pOut, size_t OutSize)
+	// ===== 缓存身份 =====
+	// manifest 会为同一 demo 中的每名成员各生成一条记录，uuid 不同但内容相同；
+	// 不同 demo 也可能共享地图、名次、模式和成绩。缓存身份必须使用完整 demo 名，
+	// 既合并同一场次的多条记录，又绝不把另一场回放当成当前条目。
+	void EntryCacheIdentity(const qmclient::rank_demo::SEntry &Entry, char *pOut, size_t OutSize)
 	{
-		char aSafeMap[64];
-		str_copy(aSafeMap, Entry.m_Map.c_str(), sizeof(aSafeMap));
-		str_sanitize_filename(aSafeMap);
-		char aSafeTime[32];
-		str_copy(aSafeTime, Entry.m_Time.c_str(), sizeof(aSafeTime));
-		str_sanitize_filename(aSafeTime);
-		str_format(pOut, OutSize, "%s_rank%d_%s_%ss_",
-			aSafeMap, Entry.m_Rank, qmclient::rank_demo::IsTeamEntry(Entry) ? "team" : "solo", aSafeTime);
+		const std::string Identity = qmclient::rank_demo::RankGhostDemoIdentity(Entry);
+		str_copy(pOut, Identity.c_str(), OutSize);
 	}
 
 	// 新命名的缓存：文件名带 _solo_ / _team_ 段；不匹配的旧命名 ghost
@@ -95,35 +89,13 @@ namespace
 		return str_find(pName, "_solo_") != nullptr || str_find(pName, "_team_") != nullptr;
 	}
 
-	// 前缀键：取文件名中 uuid8 之前的部分（uuid8 内不含下划线，取最后一个 '_' 即可）
+	// 文件名就是完整缓存身份；同名文件才是同一场次，不能按地图/成绩前缀合并。
 	bool EntryCacheKeyFromName(const char *pName, char *pKey, size_t KeySize)
 	{
-		const char *pLastSep = str_rchr(pName, '_');
-		if(pLastSep == nullptr || pLastSep == pName || (size_t)(pLastSep - pName) + 1 >= KeySize)
+		if(pName == nullptr || pName[0] == '\0' || str_length(pName) >= KeySize)
 			return false;
-		mem_copy(pKey, pName, pLastSep - pName + 1);
-		pKey[pLastSep - pName + 1] = '\0';
+		str_copy(pKey, pName, KeySize);
 		return true;
-	}
-
-	// 复用同前缀中最新的缓存文件（忽略 uuid 差异）：“下载过一次后就不再下载”。
-	void ReuseEntryCachePath(IStorage *pStorage, const char *pDir, const char *pPrefix, const char *pSuffix, char *pPath, size_t PathSize)
-	{
-		const std::vector<SCacheNameTime> vFiles = ListCacheFiles(pStorage, pDir, pSuffix);
-		const SCacheNameTime *pBest = nullptr;
-		for(const SCacheNameTime &File : vFiles)
-		{
-			if(!str_startswith(File.m_Name.c_str(), pPrefix))
-				continue;
-			if(pBest == nullptr || File.m_Modified > pBest->m_Modified)
-				pBest = &File;
-		}
-		if(pBest == nullptr)
-			return;
-		char aPath[IO_MAX_PATH_LENGTH];
-		str_format(aPath, sizeof(aPath), "%s/%s", pDir, pBest->m_Name.c_str());
-		if(str_comp(aPath, pPath) != 0)
-			str_copy(pPath, aPath, PathSize);
 	}
 
 	// 迁移完成后清理空的遗留目录（demos/rank_ghost），避免 demo 浏览器残留无效入口；
@@ -139,7 +111,7 @@ namespace
 
 	// 清理 rank 缓存目录：
 	//  - ghosts/rank_ghost 里旧命名的 .gho 全部删除（demo 目录的旧命名仍有效，保留）；
-	//  - 同前缀（同地图/名次/类型/成绩）的多份缓存只保留最新一份。
+	//  - 完全同名的多份缓存只保留最新一份。
 	void PruneRankGhostCaches(IStorage *pStorage, const char *pGhostDir, const char *pDemoDir)
 	{
 		std::vector<std::string> vRemove;
@@ -443,6 +415,8 @@ void CRankGhost::OnUpdate()
 		if(m_RetryLoadPending && Now >= m_RetryLoadDeadline)
 		{
 			m_RetryLoadPending = false;
+			// 目标地图一直没来，查看意图也随之作废，否则下一次普通加载会误进查看模式。
+			m_PendingView = false;
 			m_PendingNotify = Localize("Rank ghost: timed out waiting for the map to load");
 		}
 	}
@@ -479,9 +453,15 @@ void CRankGhost::OnReset()
 	if(GameClient() != nullptr)
 		EndViewSessionState();
 	const bool KeepRetryLoad = m_RetryLoadPending && m_aGhostStoragePath[0] != '\0';
+	// 跨图“查看回放”在下载或解析途中切图时同样不能丢：保留请求并在新地图上重新排队。
+	// 普通影子加载没有跨图语义，仍按原行为中止，避免拿旧地图的影子去装新地图。
+	const bool TaskActive = m_Stage != EStage::IDLE || m_StartPending;
+	const bool HasPendingTarget = !m_PendingDemo.empty() || !m_PendingMap.empty();
+	const bool ResumeTask = TaskActive && HasPendingTarget && m_PendingView;
+	const bool KeepPendingView = m_PendingView && (ResumeTask || KeepRetryLoad);
 	if(m_Stage != EStage::IDLE)
 		AbortTask();
-	m_StartPending = false;
+	m_StartPending = ResumeTask;
 	m_RetryLoadPending = KeepRetryLoad;
 	m_RetryLoadDeadline = KeepRetryLoad ? time_get() + time_freq() * 30 : 0;
 	// 地图切换后稍等片刻再尝试加载，避开地图数据尚未就绪的窗口
@@ -491,7 +471,7 @@ void CRankGhost::OnReset()
 	m_vLoadedSlots.clear();
 	m_vLoadedGhostPaths.clear();
 	m_aLoadingGroupPrefix[0] = '\0';
-	m_PendingView = false;
+	m_PendingView = KeepPendingView;
 	m_EventRebuildOnly = false;
 	m_LastAlignedRaceTick = -1;
 	m_ViewZoomPersonal = 0.0f;
@@ -543,6 +523,7 @@ void CRankGhost::StartLookup(const char *pMap, int Rank)
 	m_RetryLoadPending = false;
 	m_RetryLoadDeadline = 0;
 	m_RetryLoadNextAttempt = 0;
+	m_PendingView = false;
 	m_PendingMap = aMap;
 	m_PendingRank = std::clamp(Rank, 1, 9999);
 	m_PendingDemo.clear();
@@ -564,6 +545,7 @@ void CRankGhost::StartPendingLookup(const char *pDemoName, EPendingMode Mode)
 	m_RetryLoadPending = false;
 	m_RetryLoadDeadline = 0;
 	m_RetryLoadNextAttempt = 0;
+	m_PendingView = false;
 	m_PendingMap.clear();
 	m_PendingDemo = pDemoName;
 	m_PendingMode = Mode;
@@ -662,8 +644,10 @@ void CRankGhost::RequestGhostViewForDemo(const char *pDemoName)
 		Echo(Localize("Rank ghost: another task is already running"));
 		return;
 	}
-	m_PendingView = true;
 	StartPendingLookup(pDemoName, EPendingMode::GHOST);
+	// 排队成功后登记查看意图；StartPendingLookup 会先清掉上一条请求残留的标记。
+	if(m_StartPending)
+		m_PendingView = true;
 }
 
 void CRankGhost::RequestGhostOff()
@@ -773,24 +757,17 @@ void CRankGhost::BuildEntryCachePaths(const SEntry &Entry, char *pDemoPath, size
 	str_copy(aSafeTime, Entry.m_Time.c_str(), sizeof(aSafeTime));
 	str_sanitize_filename(aSafeTime);
 
-	// demo 标识：manifest 的 uuid 前 8 位（缺失时回退 demo 名前 8 位）
-	char aUuid8[9] = "";
-	const char *pUuid = Entry.m_Uuid.c_str();
-	if(pUuid[0] == '\0')
-		pUuid = Entry.m_Demo.c_str();
-	for(int i = 0, j = 0; i < 8 && pUuid[j] != '\0'; j++)
-	{
-		if(pUuid[j] == '-')
-			continue;
-		aUuid8[i++] = pUuid[j];
-	}
+	// 完整 demo 名是回放内容身份：同一 demo 的多名成员共享一份缓存，
+	// 不同 demo 即使地图、名次、模式与成绩完全相同也不会串场。
+	char aSafeDemo[256];
+	EntryCacheIdentity(Entry, aSafeDemo, sizeof(aSafeDemo));
 
 	str_format(pDemoPath, DemoPathSize, "%s/%s_rank%d_%s_%ss_%s.demo",
 		DEMO_CACHE_DIR, aSafeMap, Entry.m_Rank,
-		IsTeamEntry(Entry) ? "team" : "solo", aSafeTime, aUuid8);
+		IsTeamEntry(Entry) ? "team" : "solo", aSafeTime, aSafeDemo);
 	str_format(pGhostPath, GhostPathSize, "%s/%s/%s_rank%d_%s_%ss_%s.gho",
 		RANK1_ROOT, GHOST_SUBDIR, aSafeMap, Entry.m_Rank,
-		IsTeamEntry(Entry) ? "team" : "solo", aSafeTime, aUuid8);
+		IsTeamEntry(Entry) ? "team" : "solo", aSafeTime, aSafeDemo);
 }
 
 bool CRankGhost::IsEntryDemoCached(const SEntry &Entry, char *pDemoPath, size_t DemoPathSize) const
@@ -840,11 +817,20 @@ void CRankGhost::DeleteEntryCache(const SEntry &Entry)
 	char aDemoPath[IO_MAX_PATH_LENGTH];
 	char aGhostPath[IO_MAX_PATH_LENGTH];
 	BuildEntryCachePaths(Entry, aDemoPath, sizeof(aDemoPath), aGhostPath, sizeof(aGhostPath));
+	const bool IsActiveEntry = Entry.m_Demo == m_ActiveEntry.m_Demo;
 	if(IsEntryGhostActive(Entry))
 	{
 		UnloadGhost();
-		// 缓存已删，等待中的“加载后进入查看模式”也随之取消
+	}
+	if(IsActiveEntry)
+	{
+		// 删除同时取消等待地图、加载和“加载后进入查看模式”的后续动作，
+		// 否则进入目标地图后会自动重新下载，删除按钮等于无效。
 		m_PendingView = false;
+		m_RetryLoadPending = false;
+		m_RetryLoadDeadline = 0;
+		m_RetryLoadNextAttempt = 0;
+		m_PendingNotify.clear();
 	}
 	Storage()->RemoveFile(aDemoPath, IStorage::TYPE_SAVE);
 	RemoveGhostCacheFiles(Storage(), aGhostPath);
@@ -913,11 +899,17 @@ void CRankGhost::LookupInManifest()
 
 	m_ActiveEntry = *pEntry;
 	log_info("rank_ghost", "entry found: demo='%s' time='%s' cid=%d", m_ActiveEntry.m_Demo.c_str(), m_ActiveEntry.m_Time.c_str(), m_ActiveEntry.m_Cid);
+	// 仅下载回放不需要可播放影子；只有影子/查看请求才在这里拒绝。
+	if(m_PendingMode != EPendingMode::DEMO_ONLY && m_ActiveEntry.m_HasGhosts && m_ActiveEntry.m_vGhosts.empty())
+	{
+		Fail(Localize("Rank ghost: this replay has no playable tee"));
+		return;
+	}
 
 	// manifest 缺 ts 字段时用 0 兜底，避免生成异常的文件名
 	const int64_t DemoModifiedAt = m_ActiveEntry.m_Ts == std::numeric_limits<int64_t>::min() ? 0 : m_ActiveEntry.m_Ts;
 
-	// 可读缓存命名：<map>_rank<N>_<kind>_<time>s_<uuid8>
+	// 可读缓存命名：<map>_rank<N>_<kind>_<time>s_<完整demo名>
 	BuildEntryCachePaths(m_ActiveEntry, m_aDemoStoragePath, sizeof(m_aDemoStoragePath), m_aGhostStoragePath, sizeof(m_aGhostStoragePath));
 
 	// 旧 demo 内容有效：搬运到新目录复用（目录已由 EnsureFolders 创建）
@@ -932,8 +924,7 @@ void CRankGhost::LookupInManifest()
 		str_format(aLegacyNamedDemo, sizeof(aLegacyNamedDemo), "%s/%s_%lld.demo", LEGACY_DEMO_DIR, aSafeDemo, (long long)DemoModifiedAt);
 		MigrateLegacyDemos(Storage(), m_aDemoStoragePath, aOldNamedDemo, aLegacyNamedDemo);
 	}
-	// 仅下载回放：不复用已有影子，也不进入解析。否则“下载”会被影子缓存或
-	// 前缀去重截走，页面却仍显示未下载，玩家看到的就是“点了没反应”。
+	// 仅下载回放：不复用已有影子，也不进入解析。
 	if(m_PendingMode == EPendingMode::DEMO_ONLY)
 	{
 		EnsureDemoOnlyReady();
@@ -942,17 +933,8 @@ void CRankGhost::LookupInManifest()
 
 	char aRankGhostDir[IO_MAX_PATH_LENGTH];
 	str_format(aRankGhostDir, sizeof(aRankGhostDir), "%s/%s", RANK1_ROOT, GHOST_SUBDIR);
-
-	// 去重：同一 (地图, 名次, 类型, 成绩) 在 manifest 里可能有多条记录（uuid 不同），
-	// 这里复用已有缓存中最新的一份，避免同一内容被反复下载、影子列表出现重复项；
-	// 顺带清理旧命名的损坏 ghost 缓存与重复文件。
-	{
-		char aCachePrefix[128];
-		EntryCachePrefix(m_ActiveEntry, aCachePrefix, sizeof(aCachePrefix));
-		ReuseEntryCachePath(Storage(), aRankGhostDir, aCachePrefix, ".gho", m_aGhostStoragePath, sizeof(m_aGhostStoragePath));
-		ReuseEntryCachePath(Storage(), DEMO_CACHE_DIR, aCachePrefix, ".demo", m_aDemoStoragePath, sizeof(m_aDemoStoragePath));
-		PruneRankGhostCaches(Storage(), aRankGhostDir, DEMO_CACHE_DIR);
-	}
+	// 清理旧命名缓存与完全重名的重复文件；实际命中路径已由完整 demo 名决定。
+	PruneRankGhostCaches(Storage(), aRankGhostDir, DEMO_CACHE_DIR);
 
 	// 已生成过 ghost：直接加载（多轨目录优先于单文件）
 	{
@@ -1074,12 +1056,7 @@ void CRankGhost::OnGhostUnloaded(int Slot)
 		break;
 	}
 	if(m_vLoadedSlots.empty())
-	{
-		m_ViewMode = false;
-		GameClient()->m_Ghost.StopManual();
-		GameClient()->m_Spectator.OnReset();
-		m_ViewSelected = 0;
-	}
+		EndViewSessionState();
 	else if(m_ViewSelected >= (int)m_vLoadedSlots.size())
 		m_ViewSelected = 0;
 	m_LastAlignedRaceTick = -1;
@@ -1268,10 +1245,7 @@ bool CRankGhost::ViewMemberPosition(int Index, vec2 *pPosition) const
 void CRankGhost::UnloadGhost()
 {
 	m_LastAlignedRaceTick = -1;
-	m_ViewMode = false;
-	m_ViewSwitchersActive = false;
-	m_vViewSwitchers.clear();
-	GameClient()->m_LocalWorld.EndViewSession();
+	EndViewSessionState();
 	// 注意：这里不能清 m_PendingView —— 加载管线（LoadGhostFile/LoadGhostGroup）
 	// 第一步就会调用本函数卸载旧影子，而 m_PendingView 正是"加载完成后进入查看
 	// 模式"的请求标记；显式卸载/失败路径各自负责清除它。

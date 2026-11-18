@@ -50,6 +50,17 @@ bool CRankGhost::ViewPracticeGroup(const char *pGroupDir)
 {
 	if(pGroupDir == nullptr || pGroupDir[0] == '\0' || !Storage()->FolderExists(pGroupDir, IStorage::TYPE_SAVE))
 		return false;
+	if(IsBusy())
+	{
+		Echo(Localize("Rank ghost: another task is already running"));
+		return false;
+	}
+	// 练习回放接管影子：清掉跨图 Rank 的等待与待查看标记，
+	// 否则目标地图加载后旧 retry 会替换本次练习回放。
+	m_RetryLoadPending = false;
+	m_RetryLoadDeadline = 0;
+	m_RetryLoadNextAttempt = 0;
+	m_PendingView = false;
 
 	// 组目录 + ".gho"：ViewTimelinePath / LoadGhostTarget 都用"去掉 .gho 后缀 = 组目录"
 	// 这一约定，练习回放因此直接复用 Rank 1 的组加载与 .qmevt 读取，不另写一套。
@@ -197,6 +208,10 @@ void CRankGhost::EndViewSessionState()
 	m_ViewMode = false;
 	m_ViewSwitchersActive = false;
 	m_vViewSwitchers.clear();
+	m_ViewSelected = 0;
+	m_ViewCameraMode = EViewCameraMode::MEMBER;
+	m_ViewFreeCameraValid = false;
+	m_ViewFreeCameraCenter = vec2(0.0f, 0.0f);
 	GameClient()->m_LocalWorld.EndViewSession();
 	GameClient()->m_Ghost.StopManual();
 	GameClient()->m_Spectator.OnReset();
@@ -209,9 +224,6 @@ void CRankGhost::ViewStop()
 	EndViewSessionState();
 	if(!WasViewing)
 		return;
-	m_ViewSelected = 0;
-	m_ViewCameraMode = EViewCameraMode::MEMBER;
-	m_ViewFreeCameraValid = false;
 	m_ViewZoomPersonal = 0.0f;
 	Echo(Localize("Ghost view mode off. The ghost follows your runs again."));
 }
@@ -219,7 +231,7 @@ void CRankGhost::ViewStop()
 // ===== 查看模式时间线：录制 / 缓存 / 回放 =====
 
 // 从解析中的快照收集交互事件与开关状态（run 区间内，tick 已转为相对值）
-void CRankGhost::RecordViewTimeline(const CSnapshot *pSnapshot, int RelTick)
+void CRankGhost::RecordViewTimeline(const CSnapshot *pSnapshot, int RelTick, int SwitchTeam)
 {
 	const int NumItems = pSnapshot->NumItems();
 	for(int i = 0; i < NumItems; i++)
@@ -250,6 +262,8 @@ void CRankGhost::RecordViewTimeline(const CSnapshot *pSnapshot, int RelTick)
 			SViewSwitchState Record;
 			Record.m_RelTick = RelTick;
 			Record.m_HighestSwitchNumber = std::clamp(pState->m_HighestSwitchNumber, 0, 255);
+			// -1 表示这份 demo 没带队伍消息，回放时沿用查看者当前队伍。
+			Record.m_Team = SwitchTeam >= TEAM_FLOCK && SwitchTeam < NUM_DDRACE_TEAMS ? SwitchTeam : -1;
 			mem_zero(Record.m_aStatus, sizeof(Record.m_aStatus));
 			const int MaxSwitch = minimum(Record.m_HighestSwitchNumber, (int)std::size(Record.m_aStatus) * 32 - 1);
 			for(int j = 0; j <= MaxSwitch; j++)
@@ -261,6 +275,7 @@ void CRankGhost::RecordViewTimeline(const CSnapshot *pSnapshot, int RelTick)
 			{
 				const SViewSwitchState &Last = m_vViewSwitchStates.back();
 				if(Last.m_HighestSwitchNumber == Record.m_HighestSwitchNumber &&
+					Last.m_Team == Record.m_Team &&
 					mem_comp(Last.m_aStatus, Record.m_aStatus, sizeof(Record.m_aStatus)) == 0)
 					continue;
 			}
@@ -278,10 +293,6 @@ void CRankGhost::RecordViewTimeline(const CSnapshot *pSnapshot, int RelTick)
 		m_vViewEvents.push_back(Event);
 	}
 }
-
-// sidecar 版本号：加入消息段（终点成绩/差值、全局音效）后为 QMGHEVT2。
-// 旧版本文件会被 ViewTimelineCached() 判为未缓存，由补齐流程重建一次。
-using qmclient::rank_ghost::VIEW_TIMELINE_MAGIC;
 
 // sidecar 缓存路径：多轨组 <base>/events.qmevt，单轨迹 <base>.qmevt
 bool CRankGhost::ViewTimelinePath(char *pBuf, size_t BufSize) const
@@ -310,9 +321,9 @@ bool CRankGhost::ViewTimelineCached() const
 	IOHANDLE File = Storage()->OpenFile(aPath, IOFLAG_READ, IStorage::TYPE_SAVE);
 	if(File == nullptr)
 		return false;
-	char aMagic[8];
-	const bool Current = io_read(File, aMagic, sizeof(aMagic)) == sizeof(aMagic) &&
-			     mem_comp(aMagic, VIEW_TIMELINE_MAGIC, sizeof(aMagic)) == 0;
+	// 截断文件即使保留 magic 也不能算有效缓存；完整读取一次才能触发重建。
+	qmclient::rank_ghost::SViewTimeline Timeline;
+	const bool Current = qmclient::rank_ghost::ReadViewTimeline(File, Timeline);
 	io_close(File);
 	// 旧版本 sidecar（例如没有消息段的 QMGHEVT1）按未缓存处理，
 	// 由补齐流程重放一次回放重建，避免查看模式永远缺终点成绩与全局音效。
@@ -325,16 +336,31 @@ void CRankGhost::WriteViewTimeline()
 		return;
 	char aPath[IO_MAX_PATH_LENGTH];
 	ViewTimelinePath(aPath, sizeof(aPath));
-	IOHANDLE File = Storage()->OpenFile(aPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	char aTmpPath[IO_MAX_PATH_LENGTH];
+	str_format(aTmpPath, sizeof(aTmpPath), "%s.tmp_%d", aPath, pid());
+	Storage()->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
+	IOHANDLE File = Storage()->OpenFile(aTmpPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(File == nullptr)
 	{
-		log_error("rank_ghost", "failed to write view timeline '%s'", aPath);
+		log_error("rank_ghost", "failed to open view timeline '%s'", aTmpPath);
 		return;
 	}
 
-	if(!qmclient::rank_ghost::WriteViewTimeline(File, m_vViewEvents, m_vViewSwitchStates, m_vViewMessages))
-		log_error("rank_ghost", "failed to write view timeline '%s'", aPath);
-	io_close(File);
+	const bool Written = qmclient::rank_ghost::WriteViewTimeline(File, m_vViewEvents, m_vViewSwitchStates, m_vViewMessages);
+	const bool Closed = io_close(File) == 0;
+	if(!Written || !Closed)
+	{
+		log_error("rank_ghost", "failed to write view timeline '%s'", aTmpPath);
+		Storage()->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
+		return;
+	}
+	// RenameFile 在 Windows 上带替换语义；先删旧文件会在改名失败时丢掉可用时间线。
+	if(!Storage()->RenameFile(aTmpPath, aPath, IStorage::TYPE_SAVE))
+	{
+		log_error("rank_ghost", "failed to publish view timeline '%s'", aPath);
+		Storage()->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
+		return;
+	}
 	log_info("rank_ghost", "view timeline written: %d events, %d switch states, %d messages ('%s')",
 		(int)m_vViewEvents.size(), (int)m_vViewSwitchStates.size(), (int)m_vViewMessages.size(), aPath);
 }
@@ -418,12 +444,14 @@ void CRankGhost::UpdateViewTimeline()
 
 	// 消息时间线：只有全局音效是"播一次"的动作，成绩类消息由 GetViewState 按
 	// 播放头查询，不需要游标状态
-	while(m_ViewMessageCursor < m_vViewMessages.size())
+	int MessageBudget = 96;
+	while(m_ViewMessageCursor < m_vViewMessages.size() && MessageBudget-- > 0)
 	{
 		const SViewMessage &Message = m_vViewMessages[m_ViewMessageCursor];
 		if(Message.m_RelTick > CurTick)
 			break;
-		if(Message.m_Type == EViewMessageType::SOUND_GLOBAL || Message.m_Type == EViewMessageType::MAP_SOUND_GLOBAL)
+		if((Message.m_Type == EViewMessageType::SOUND_GLOBAL || Message.m_Type == EViewMessageType::MAP_SOUND_GLOBAL) &&
+			qmclient::rank_ghost::ViewEventFresh(Message.m_RelTick, CurTick, MaxEventLagTicks))
 			DispatchViewMessage(Message);
 		m_ViewMessageCursor++;
 	}
@@ -534,7 +562,10 @@ void CRankGhost::ApplyViewSwitchState(const SViewSwitchState &State)
 	if(pViewSwitchers == nullptr || pViewSwitchers->empty())
 		return;
 	auto &vSwitchers = *pViewSwitchers;
-	const int Team = std::clamp(GameClient()->SwitchStateTeam(), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
+	// 旧 QMGHEVT2 没有录制队伍，沿用查看者当前队伍。
+	const int Team = State.m_Team < 0 ?
+				 std::clamp(GameClient()->SwitchStateTeam(), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1) :
+				 std::clamp(State.m_Team, (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
 	const int Count = minimum(std::clamp(State.m_HighestSwitchNumber, 0, 255) + 1, (int)vSwitchers.size());
 	for(int j = 0; j < Count; j++)
 	{

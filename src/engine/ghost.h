@@ -25,6 +25,8 @@ public:
 
 	virtual void WriteData(int Type, const void *pData, size_t Size) = 0;
 	virtual bool IsRecording() const = 0;
+	// 写入失败后 Stop 会删除残缺文件；调用方据此决定是否登记回放。
+	virtual bool HasWriteError() const = 0;
 };
 
 class IGhostLoader : public IInterface

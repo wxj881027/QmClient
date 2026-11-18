@@ -13,11 +13,13 @@
 
 #include <game/client/components/effects.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/tclient/fast_practice.h>
 #include <game/client/gameclient.h>
 #include <game/client/laser_data.h>
 #include <game/client/pickup_data.h>
 #include <game/client/prediction/entities/laser.h>
 #include <game/client/prediction/entities/pickup.h>
+#include <game/client/prediction/entities/practice_light.h>
 #include <game/client/prediction/entities/projectile.h>
 #include <game/client/projectile_data.h>
 #include <game/mapitems.h>
@@ -666,6 +668,28 @@ void CItems::OnRender()
 		}
 	}
 
+	// 练习分支重建的静态激光没有对应的服务器快照，必须由分支世界自己绘制，
+	// 否则走出网络裁剪范围后会出现看不见、却仍在冻结的机关。
+	std::vector<vec2> vPracticeLightHubs;
+	if(UsePredicted)
+	{
+		if(CGameWorld *pPracticeWorld = GameClient()->m_FastPractice.PracticeLightWorld())
+		{
+			vPracticeLightHubs.reserve(64);
+			for(CEntity *pEnt = pPracticeWorld->FindFirst(CGameWorld::ENTTYPE_LIGHT); pEnt; pEnt = pEnt->TypeNext())
+			{
+				auto *pLight = dynamic_cast<CPracticeLight *>(pEnt);
+				if(pLight == nullptr)
+					continue;
+				vPracticeLightHubs.push_back(pLight->m_Pos);
+				const std::optional<CLaserData> Data = pLight->RenderData(SwitcherTeam);
+				if(!Data.has_value() || !IsLaserInside(*Data))
+					continue;
+				RenderLaser(&*Data, true);
+			}
+		}
+	}
+
 	for(const CSnapEntities &Ent : GameClient()->SnapEntities())
 	{
 		const IClient::CSnapItem Item = Ent.m_Item;
@@ -772,6 +796,22 @@ void CItems::OnRender()
 			{
 				Data.m_StartTick = EntStartTick;
 			}
+
+			// 同一束静态激光已经由分支世界绘制，跳过快照副本避免双重曝光与相位错位。
+			bool PracticeDuplicate = false;
+			if(Data.m_Type == LASERTYPE_FREEZE && Data.m_Owner < 0)
+			{
+				for(const vec2 &Hub : vPracticeLightHubs)
+				{
+					if(distance(Hub, Data.m_To) < 2.0f)
+					{
+						PracticeDuplicate = true;
+						break;
+					}
+				}
+			}
+			if(PracticeDuplicate)
+				continue;
 
 			RenderLaser(&Data);
 		}

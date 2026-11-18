@@ -12,6 +12,7 @@
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -51,6 +52,43 @@ namespace qmclient::rank_demo
 		Context.m_pSuffix = pSuffix;
 		pStorage->ListDirectoryInfo(qmclient::media_paths::StorageType(pDir), pDir, detail::CacheListCallback, &Context);
 		return std::move(Context.m_vFiles);
+	}
+
+	// Rank 影子/回放缓存的稳定身份。必须保留完整 demo 名：
+	// 同一 demo 的多名成员应共享缓存，不同 demo 即使成绩相同也绝不能串用。
+	inline uint64_t RankGhostDemoNameHash(const std::string &Name)
+	{
+		// FNV-1a：只用于把超长文件名压到缓存路径预算内，不做安全哈希。
+		uint64_t Hash = 1469598103934665603ULL;
+		for(const char Char : Name)
+		{
+			Hash ^= (unsigned char)Char;
+			Hash *= 1099511628211ULL;
+		}
+		return Hash;
+	}
+
+	inline std::string RankGhostDemoIdentity(const SEntry &Entry)
+	{
+		std::string Name = Entry.m_Demo;
+		if(Name.size() > 3 && str_endswith_nocase(Name.c_str(), ".gz"))
+			Name.resize(Name.size() - 3);
+		if(Name.size() > 5 && str_endswith_nocase(Name.c_str(), ".demo"))
+			Name.resize(Name.size() - 5);
+		// 文件名段必须连同地图、名次、模式、成绩一起塞进 IO_MAX_PATH_LENGTH；
+		// 超长 demo 名截断后附加全名哈希，避免只靠前缀相同而串用别人的回放。
+		constexpr size_t MAX_IDENTITY_PREFIX = 96;
+		const uint64_t Hash = RankGhostDemoNameHash(Name);
+		std::string Identity = Name;
+		str_sanitize_filename(Identity.data());
+		if(Identity.size() > MAX_IDENTITY_PREFIX)
+		{
+			char aHash[32];
+			str_format(aHash, sizeof(aHash), "_%016llx", (unsigned long long)Hash);
+			Identity.resize(MAX_IDENTITY_PREFIX);
+			Identity += aHash;
+		}
+		return Identity;
 	}
 
 	// 查找 demo 浏览器落盘的同一场次回放。

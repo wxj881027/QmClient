@@ -296,6 +296,8 @@ namespace
 			auto TrackIt = Parse.m_Tracks.find(Cid);
 			if(TrackIt == Parse.m_Tracks.end())
 			{
+				if(Parse.m_RestrictGhosts && std::find(Parse.m_vAllowedGhosts.begin(), Parse.m_vAllowedGhosts.end(), Cid) == Parse.m_vAllowedGhosts.end())
+					continue;
 				if((int)Parse.m_Tracks.size() >= SParseContext::MAX_TRACKS)
 					continue;
 				// 观战者不参与跑图，直接排除（避免静止 Tee 混入轨迹）
@@ -352,6 +354,23 @@ void CRankGhost::StartParse()
 	m_pParse = std::make_unique<SParseState>();
 	SParseContext &Parse = m_pParse->m_Context;
 	Parse.m_Cid = m_ActiveEntry.m_Cid;
+	// 队伍消息缺失时保持 -1：回放阶段回落到查看者当前队伍，而不是误判成 flock。
+	std::fill(std::begin(Parse.m_aTeams), std::end(Parse.m_aTeams), -1);
+	Parse.m_RestrictGhosts = m_ActiveEntry.m_HasGhosts;
+	Parse.m_vAllowedGhosts = m_ActiveEntry.m_vGhosts;
+	if(Parse.m_RestrictGhosts)
+	{
+		if(Parse.m_vAllowedGhosts.empty())
+		{
+			m_pParse.reset();
+			Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
+			Fail(Localize("Rank ghost: this replay has no playable tee"));
+			return;
+		}
+		if(std::find(Parse.m_vAllowedGhosts.begin(), Parse.m_vAllowedGhosts.end(), Parse.m_Cid) == Parse.m_vAllowedGhosts.end())
+			Parse.m_Cid = Parse.m_vAllowedGhosts.front();
+		m_ActiveEntry.m_Cid = Parse.m_Cid;
+	}
 	STrackContext &Primary = Parse.m_Tracks[Parse.m_Cid];
 	StrToInts(Primary.m_Skin.m_aSkin, std::size(Primary.m_Skin.m_aSkin), "default");
 	Primary.m_Skin.m_UseCustomColor = 0;
@@ -671,7 +690,7 @@ void CRankGhost::OnDemoPlayerSnapshot(void *pData, int Size)
 	}
 
 	// run 区间内顺手记录交互事件与开关状态，供查看模式回放
-	RecordViewTimeline(pSnapshot, Tick - Parse.m_RunStart);
+	RecordViewTimeline(pSnapshot, Tick - Parse.m_RunStart, Parse.m_aTeams[Parse.m_Cid]);
 
 	ExtractCharacter(Parse, pSnapshot, Tick);
 }
@@ -693,6 +712,18 @@ void CRankGhost::OnDemoPlayerMessage(void *pData, int Size)
 	CUuid Uuid;
 	if(UnpackMessageId(&Msg, &Sys, &Uuid, &Unpacker, &Packer) == UNPACKMESSAGE_ERROR || Sys)
 		return;
+	if(Msg == NETMSGTYPE_SV_TEAMSSTATE || Msg == NETMSGTYPE_SV_TEAMSSTATELEGACY)
+	{
+		// demo 的开关状态不携带队伍号，必须从同一时间线的队伍消息恢复。
+		for(int i = 0; i < MAX_CLIENTS; ++i)
+		{
+			const int Team = Unpacker.GetInt();
+			if(Unpacker.Error())
+				break;
+			Parse.m_aTeams[i] = Team >= TEAM_FLOCK && Team < NUM_DDRACE_TEAMS ? Team : -1;
+		}
+		return;
+	}
 
 	// 消息按 tick 顺序到达。终点成绩可能紧跟在 run 结束标记之后（服务端在终点帧
 	// 才发送），因此允许越过终点两个 tick，并把相对 tick 钳在轨迹长度内，

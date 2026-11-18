@@ -283,7 +283,7 @@ public:
 	// 钩子辅助线的碰撞目标每帧从服务器快照重建，而练习参与者活在分支世界里。
 	// 位置和 solo 都必须取分支权威值，否则辅助线会按另一条时间线判断，
 	// 从画面上紧挨着的分身身上穿过去、颜色也不随 Tee 改变。
-	bool ResolvePracticeHookCollTarget(int ClientId, vec2 &Pos, bool &Solo);
+	bool ResolvePracticeHookCollTarget(int ClientId, vec2 &Pos, bool &Solo, bool &Super, bool &HookHitDisabled);
 	// 分支世界里的练习角色（只对参与者有效，世界未建好时为 nullptr）。
 	// 渲染层用它兜住“服务器快照失活、分支还在模拟”的参与者：武器与挥锤相位
 	// 不在核心字段里，必须从角色实体取；服务器侧死亡/暂停也不能让人直接消失。
@@ -302,6 +302,9 @@ public:
 	// 服务器快照里的 FreezeEnd 属于另一条世界线。返回 false 表示该 client
 	// 不在练习分支世界里，调用方回落到服务器快照。
 	bool ResolvePracticeCharacterCore(int ClientId, const CCharacterCore **ppCore, int &Tick);
+	// 分支世界里重建的静态激光。网络裁剪外的服务器快照没有它们，
+	// 渲染层必须自己遍历这棵树，才能让画面与分支碰撞一致。
+	CGameWorld *PracticeLightWorld();
 
 private:
 	// 服务器重进会换 client id，重新 fork 前必须把参与者 id 换成本次连接的实际 id。

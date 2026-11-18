@@ -74,6 +74,7 @@ struct SLocalSwitchState
 {
 	int m_Tick = 0;
 	int m_HighestSwitchNumber = 0;
+	int m_Team = 0;
 	unsigned m_aStatus[8] = {};
 };
 
@@ -84,6 +85,7 @@ inline SLocalSwitchState QmEncodeLocalSwitchState(int Tick, const std::vector<SS
 	State.m_Tick = Tick;
 	State.m_HighestSwitchNumber = std::clamp((int)vSwitchers.size() - 1, 0, 255);
 	const int SafeTeam = std::clamp(Team, 0, NUM_DDRACE_TEAMS - 1);
+	State.m_Team = SafeTeam;
 	for(int j = 0; j <= State.m_HighestSwitchNumber; j++)
 	{
 		if(vSwitchers[j].m_aStatus[SafeTeam])

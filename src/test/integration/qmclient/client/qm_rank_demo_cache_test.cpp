@@ -93,6 +93,22 @@ TEST_F(CQmRankDemoCache, DoesNotReuseAnotherEntryOfTheSameMap)
 	EXPECT_FALSE(Find(Requested, nullptr));
 }
 
+TEST(QmRankGhostDemoIdentity, UsesTheCompleteDemoNameIgnoringSuffixCase)
+{
+	qmclient::rank_demo::SEntry First;
+	First.m_Map = "Kobra";
+	First.m_Time = "176.96";
+	First.m_Demo = "6227f2fe-84f9-467e-94f3-dc85612cdffd-a.demo.gz";
+	qmclient::rank_demo::SEntry Second = First;
+	Second.m_Demo = "31e0186c-521d-4024-939a-ac361f2f9ef2-b.demo.gz";
+
+	EXPECT_EQ(qmclient::rank_demo::RankGhostDemoIdentity(First), "6227f2fe-84f9-467e-94f3-dc85612cdffd-a");
+	EXPECT_NE(qmclient::rank_demo::RankGhostDemoIdentity(First), qmclient::rank_demo::RankGhostDemoIdentity(Second));
+
+	Second.m_Demo = "6227f2fe-84f9-467e-94f3-dc85612cdffd-a.DEMO.GZ";
+	EXPECT_EQ(qmclient::rank_demo::RankGhostDemoIdentity(First), qmclient::rank_demo::RankGhostDemoIdentity(Second));
+}
+
 TEST_F(CQmRankDemoCache, MatchesFileNameCaseInsensitively)
 {
 	const auto Entry = MakeEntry("uuid-a-hash.demo.gz", 1700);

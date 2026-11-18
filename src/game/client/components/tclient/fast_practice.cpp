@@ -28,6 +28,7 @@
 #include <game/client/prediction/entities/laser.h>
 #include <game/client/prediction/entities/pickup.h>
 #include <game/client/prediction/entities/plasma.h>
+#include <game/client/prediction/entities/practice_light.h>
 #include <game/client/prediction/entities/projectile.h>
 #include <game/client/projectile_data.h>
 #include <game/gamecore.h>
@@ -706,7 +707,7 @@ void CFastPractice::ResetPracticeMapEntities(CGameWorld &World)
 {
 	// 主世界按预测开关与快照范围只包含一部分拾取物/门/拖拉。分支世界如果
 	// 继续带着它们，再叠加地图重建的同位置实体会让拖拉翻倍、拾取物重复生效。
-	const int aTypes[] = {CGameWorld::ENTTYPE_PICKUP, CGameWorld::ENTTYPE_DOOR, CGameWorld::ENTTYPE_DRAGGER, CGameWorld::ENTTYPE_PLASMA};
+	const int aTypes[] = {CGameWorld::ENTTYPE_PICKUP, CGameWorld::ENTTYPE_DOOR, CGameWorld::ENTTYPE_DRAGGER, CGameWorld::ENTTYPE_LIGHT, CGameWorld::ENTTYPE_PLASMA};
 	for(const int Type : aTypes)
 	{
 		CEntity *pEnt = World.FindFirst(Type);
@@ -717,6 +718,22 @@ void CFastPractice::ResetPracticeMapEntities(CGameWorld &World)
 			pEnt = pNext;
 		}
 	}
+}
+
+// 从服务器快照继承来的同一束静态激光。练习入口不是地图加载时刻，
+// 端点几何能给出服务器当前的旋转与伸缩相位，用来对齐分支世界。
+static const CLaser *FindInheritedPracticeLight(CGameWorld &World, vec2 Pos, int Number)
+{
+	for(CEntity *pEnt = World.FindFirst(CGameWorld::ENTTYPE_LASER); pEnt; pEnt = pEnt->TypeNext())
+	{
+		const auto *pLaser = dynamic_cast<CLaser *>(pEnt);
+		if(pLaser == nullptr || distance(pLaser->m_Pos, Pos) > 2.0f)
+			continue;
+		if(pLaser->GetData().m_SwitchNumber != Number)
+			continue;
+		return pLaser;
+	}
+	return nullptr;
 }
 
 void CFastPractice::LoadPracticeMapMechanisms(CGameWorld &World)
@@ -736,6 +753,7 @@ void CFastPractice::LoadPracticeMapMechanisms(CGameWorld &World)
 	int NumPickups = 0;
 	int NumDoors = 0;
 	int NumDraggers = 0;
+	int NumLights = 0;
 	for(int y = 0; y < Height; y++)
 	{
 		for(int x = 0; x < Width; x++)
@@ -825,6 +843,63 @@ void CFastPractice::LoadPracticeMapMechanisms(CGameWorld &World)
 					return;
 				}
 
+				if(EntityIndex >= ENTITY_LASER_FAST_CCW && EntityIndex <= ENTITY_LASER_FAST_CW)
+				{
+					int aSides[8];
+					int aModifiers[8];
+					for(int Side = 0; Side < 8; ++Side)
+					{
+						aSides[Side] = Collision()->Entity(x + s_aPracticeSideOffsetX[Side], y + s_aPracticeSideOffsetY[Side], Layer);
+						aModifiers[Side] = Collision()->Entity(x + 2 * s_aPracticeSideOffsetX[Side], y + 2 * s_aPracticeSideOffsetY[Side], Layer);
+					}
+					int Ind = EntityIndex - ENTITY_LASER_STOP;
+					int M = -1;
+					if(Ind < 0)
+					{
+						Ind = -Ind;
+						M = 1;
+					}
+					else if(Ind == 0)
+						M = 0;
+					float AngularSpeed = 0.0f;
+					if(Ind == 1)
+						AngularSpeed = pi / 360;
+					else if(Ind == 2)
+						AngularSpeed = pi / 180;
+					else if(Ind == 3)
+						AngularSpeed = pi / 90;
+					AngularSpeed *= M;
+					for(int Side = 0; Side < 8; ++Side)
+					{
+						if(aSides[Side] < ENTITY_LASER_SHORT || aSides[Side] > ENTITY_LASER_LONG)
+							continue;
+						const int Length = 32 * 3 + 32 * (aSides[Side] - ENTITY_LASER_SHORT) * 3;
+						CPracticeLight *pLight = new CPracticeLight(&World, Pos, pi / 4 * Side, Length, Layer, Number);
+						bool FromSnapshot = false;
+						if(const CLaser *pInherited = FindInheritedPracticeLight(World, Pos, Number))
+							FromSnapshot = pLight->InitFromSnapshot(pInherited->m_Pos, pInherited->GetFrom(), pInherited->GetEvalTick());
+						pLight->m_AngularSpeed = AngularSpeed;
+						// 快照已经给出当前长度时不要按地图初值重置，否则伸缩激光会跳回起点。
+						if(aModifiers[Side] >= ENTITY_LASER_C_SLOW && aModifiers[Side] <= ENTITY_LASER_C_FAST)
+						{
+							pLight->m_Speed = 1 + (aModifiers[Side] - ENTITY_LASER_C_SLOW) * 2;
+							if(!FromSnapshot)
+								pLight->m_CurveLength = pLight->m_Length;
+						}
+						else if(aModifiers[Side] >= ENTITY_LASER_O_SLOW && aModifiers[Side] <= ENTITY_LASER_O_FAST)
+						{
+							pLight->m_Speed = 1 + (aModifiers[Side] - ENTITY_LASER_O_SLOW) * 2;
+							if(!FromSnapshot)
+								pLight->m_CurveLength = 0;
+						}
+						else if(!FromSnapshot)
+							pLight->m_CurveLength = pLight->m_Length;
+						pLight->RefreshGeometry();
+						NumLights++;
+					}
+					return;
+				}
+
 				int Strength = 0;
 				bool IgnoreWalls = false;
 				if(EntityIndex >= ENTITY_DRAGGER_WEAK && EntityIndex <= ENTITY_DRAGGER_STRONG)
@@ -861,7 +936,8 @@ void CFastPractice::LoadPracticeMapMechanisms(CGameWorld &World)
 	}
 	// 新加入的门需要把自己的碰撞端点装进共享的 CCollision。
 	World.ResetDoorCollision();
-	dbg_msg("fast_practice", "map mechanisms: pickups=%d doors=%d draggers=%d", NumPickups, NumDoors, NumDraggers);
+	dbg_msg("fast_practice", "map mechanisms: pickups=%d doors=%d draggers=%d lights=%d",
+		NumPickups, NumDoors, NumDraggers, NumLights);
 }
 
 void CFastPractice::LoadPracticeGuns()
@@ -1211,7 +1287,7 @@ bool CFastPractice::ResolvePracticeSoloState(int ClientId, bool &Solo) const
 	return true;
 }
 
-bool CFastPractice::ResolvePracticeHookCollTarget(int ClientId, vec2 &Pos, bool &Solo)
+bool CFastPractice::ResolvePracticeHookCollTarget(int ClientId, vec2 &Pos, bool &Solo, bool &Super, bool &HookHitDisabled)
 {
 	if(!IsPracticeParticipant(ClientId) || !m_PracticeWorldInitialized)
 		return false;
@@ -1224,7 +1300,9 @@ bool CFastPractice::ResolvePracticeHookCollTarget(int ClientId, vec2 &Pos, bool 
 	// 取渲染位置而不是核心位置：辅助线起点同样用 m_RenderPos 绘制，
 	// 目标与起点必须落在同一帧的画面上，插值误差才不会让线贴着身体边缘漏过去。
 	Pos = GameClient()->m_aClients[ClientId].m_RenderPos;
-	ResolvePracticeSoloState(ClientId, Solo);
+	Solo = m_PracticeBaseWorld.m_Teams.GetSolo(ClientId);
+	Super = pCore->m_Super;
+	HookHitDisabled = pCore->m_HookHitDisabled;
 	return true;
 }
 
@@ -1264,6 +1342,13 @@ int CFastPractice::PracticeSwitchTeam() const
 		return -1;
 
 	return std::clamp(m_PracticeBaseWorld.m_Teams.Team(ClientId), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
+}
+
+CGameWorld *CFastPractice::PracticeLightWorld()
+{
+	if(!m_Enabled || !m_PracticeWorldInitialized)
+		return nullptr;
+	return &m_PracticeBaseWorld;
 }
 
 bool CFastPractice::ResolvePracticeCharacterCore(int ClientId, const CCharacterCore **ppCore, int &Tick)

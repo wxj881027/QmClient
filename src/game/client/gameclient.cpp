@@ -5282,13 +5282,13 @@ void CGameClient::OnPredict()
 	CCharacterCore BeforePrevChar = m_PredictedPrevChar;
 	CCharacterCore BeforeChar = m_PredictedChar;
 
-	// we can't predict without our own id or own character
-	if(m_Snap.m_LocalClientId == -1 || !m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_Active)
+	// 快速练习是平行世界：全服暂停不冻结练习，先由练习预测接管渲染。
+	// 服务器侧本地角色死亡/短暂失活时也必须继续推进分支，不能先被快照门挡掉。
+	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
 		return;
 
-	// 快速练习是平行世界：全服暂停不冻结练习，先由练习预测接管渲染。
-	// 练习接管失败（例如瞬态解析失败）时再落到下面的暂停分支。
-	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
+	// we can't predict without our own id or own character
+	if(m_Snap.m_LocalClientId == -1 || !m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_Active)
 		return;
 
 	// don't predict anything if we are paused
@@ -7040,10 +7040,14 @@ void CGameClient::UpdateHookCollTargets()
 		// solo 取分支队伍状态。否则辅助线对着另一条时间线的位置做碰撞，
 		// 会从画面里紧挨着的分身身上直接穿过去，颜色也不会切到 Tee 命中色。
 		vec2 PracticePos;
-		if(m_FastPractice.ResolvePracticeHookCollTarget(i, PracticePos, Target.m_Solo))
+		bool PracticeSuper;
+		bool PracticeHookHitDisabled;
+		if(m_FastPractice.ResolvePracticeHookCollTarget(i, PracticePos, Target.m_Solo, PracticeSuper, PracticeHookHitDisabled))
 		{
 			Target.m_Valid = true;
 			Target.m_Pos = PracticePos;
+			Target.m_Super = PracticeSuper;
+			Target.m_HookHitDisabled = PracticeHookHitDisabled;
 			continue;
 		}
 		const CNetObj_Character &Prev = m_Snap.m_aCharacters[i].m_Prev;

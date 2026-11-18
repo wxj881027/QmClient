@@ -8,6 +8,7 @@
 #include <game/client/component.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/ghost_freeze_bar.h>
+#include <game/client/components/qmclient/ghost_path.h>
 #include <game/client/components/qmclient/local_world.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/render.h>
@@ -63,29 +64,7 @@ public:
 	};
 
 private:
-	class CGhostPath
-	{
-		int m_ChunkSize;
-		int m_NumItems;
-
-		std::vector<CGhostCharacter *> m_vpChunks;
-
-	public:
-		CGhostPath() { Reset(); }
-		~CGhostPath() { Reset(); }
-		CGhostPath(const CGhostPath &Other) = delete;
-		CGhostPath &operator=(const CGhostPath &Other) = delete;
-
-		CGhostPath(CGhostPath &&Other) noexcept;
-		CGhostPath &operator=(CGhostPath &&Other) noexcept;
-
-		void Reset(int ChunkSize = 25 * 60); // one minute with default snap rate
-		void SetSize(int Items);
-		int Size() const { return m_NumItems; }
-
-		void Add(const CGhostCharacter &Char);
-		CGhostCharacter *Get(int Index);
-	};
+	using CGhostPath = qm_ghost_path::CChunkedPath<CGhostCharacter>;
 
 	class CGhostItem
 	{
@@ -95,6 +74,9 @@ private:
 		CGhostPath m_Path;
 		int m_StartTick;
 		char m_aPlayer[MAX_NAME_LENGTH];
+		// 槽位实际装载的文件。地图重载后菜单的旧列表项会按槽位复用，
+		// 只判断“槽位非空”会把别的影子误标成已激活。
+		char m_aFilename[IO_MAX_PATH_LENGTH];
 		int m_PlaybackPos;
 
 		CGhostItem() { Reset(); }
@@ -106,6 +88,7 @@ private:
 			m_Path.Reset();
 			m_StartTick = -1;
 			m_PlaybackPos = -1;
+			m_aFilename[0] = '\0';
 		}
 	};
 
@@ -265,6 +248,10 @@ public:
 	}
 
 	int FreeSlots() const;
+	// 菜单保存的槽位可能跨地图重载失效，写回前必须以引擎当前状态为准。
+	bool IsSlotActive(int Slot) const;
+	// 槽位里装的必须仍是同一个文件，不能只看“槽位非空”。
+	bool IsSlotLoadedWith(int Slot, const char *pFilename) const;
 	int Load(const char *pFilename);
 	void Unload(int Slot);
 	void UnloadAll();

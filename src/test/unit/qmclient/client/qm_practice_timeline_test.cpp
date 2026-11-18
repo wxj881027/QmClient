@@ -16,6 +16,7 @@ TEST(QmPracticeTimeline, ConvertsEventsAndSwitchStatesToTheViewFormat)
 	std::vector<SLocalSwitchState> vSwitchStates(1);
 	vSwitchStates[0].m_Tick = 50;
 	vSwitchStates[0].m_HighestSwitchNumber = 3;
+	vSwitchStates[0].m_Team = 4;
 	vSwitchStates[0].m_aStatus[0] = 0x80000001u;
 	vSwitchStates[0].m_aStatus[7] = 0x2u;
 
@@ -27,6 +28,7 @@ TEST(QmPracticeTimeline, ConvertsEventsAndSwitchStatesToTheViewFormat)
 	ASSERT_EQ(Timeline.m_vSwitchStates.size(), 1u);
 	EXPECT_EQ(Timeline.m_vSwitchStates[0].m_RelTick, 50);
 	EXPECT_EQ(Timeline.m_vSwitchStates[0].m_HighestSwitchNumber, 3);
+	EXPECT_EQ(Timeline.m_vSwitchStates[0].m_Team, 4);
 	EXPECT_EQ(Timeline.m_vSwitchStates[0].m_aStatus[0], 0x80000001u);
 	EXPECT_EQ(Timeline.m_vSwitchStates[0].m_aStatus[7], 0x2u);
 	EXPECT_TRUE(Timeline.m_vMessages.empty());

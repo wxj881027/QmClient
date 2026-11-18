@@ -57,6 +57,9 @@ struct SParseContext
 	// 无标记时的实际结束 tick（解析过程中观察到的最大 tick）
 	int m_LastSeenTick = 0;
 	int m_Cid = 0;
+	bool m_RestrictGhosts = false;
+	std::vector<int> m_vAllowedGhosts;
+	int m_aTeams[MAX_CLIENTS] = {};
 	// 观战者判定缓存（cid → 是否观战）
 	std::map<int, bool> m_aSpectatorCache;
 	// 是否在解析中看到过 run 终点之后的快照，用于识别被截断的回放

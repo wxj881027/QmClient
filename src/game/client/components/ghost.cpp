@@ -16,6 +16,7 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/players.h>
 #include <game/client/components/qmclient/demo_display.h>
+#include <game/client/components/qmclient/ghost_start_detection.h>
 #include <game/client/components/qmclient/practice_timeline.h>
 #include <game/client/components/qmclient/rank_view_timeline.h>
 #include <game/client/components/skins.h>
@@ -73,63 +74,6 @@ void CGhost::GetNetObjCharacter(CNetObj_Character *pChar, const CGhostCharacter 
 	pChar->m_Tick = pGhostChar->m_Tick;
 }
 
-CGhost::CGhostPath::CGhostPath(CGhostPath &&Other) noexcept :
-	m_ChunkSize(Other.m_ChunkSize), m_NumItems(Other.m_NumItems), m_vpChunks(std::move(Other.m_vpChunks))
-{
-	Other.m_NumItems = 0;
-	Other.m_vpChunks.clear();
-}
-
-CGhost::CGhostPath &CGhost::CGhostPath::operator=(CGhostPath &&Other) noexcept
-{
-	Reset(Other.m_ChunkSize);
-	m_NumItems = Other.m_NumItems;
-	m_vpChunks = std::move(Other.m_vpChunks);
-	Other.m_NumItems = 0;
-	Other.m_vpChunks.clear();
-	return *this;
-}
-
-void CGhost::CGhostPath::Reset(int ChunkSize)
-{
-	for(auto &pChunk : m_vpChunks)
-		free(pChunk);
-	m_vpChunks.clear();
-	m_ChunkSize = ChunkSize;
-	m_NumItems = 0;
-}
-
-void CGhost::CGhostPath::SetSize(int Items)
-{
-	int Chunks = m_vpChunks.size();
-	int NeededChunks = (Items + m_ChunkSize - 1) / m_ChunkSize;
-
-	if(NeededChunks > Chunks)
-	{
-		m_vpChunks.resize(NeededChunks);
-		for(int i = Chunks; i < NeededChunks; i++)
-			m_vpChunks[i] = (CGhostCharacter *)calloc(m_ChunkSize, sizeof(CGhostCharacter));
-	}
-
-	m_NumItems = Items;
-}
-
-void CGhost::CGhostPath::Add(const CGhostCharacter &Char)
-{
-	SetSize(m_NumItems + 1);
-	*Get(m_NumItems - 1) = Char;
-}
-
-CGhostCharacter *CGhost::CGhostPath::Get(int Index)
-{
-	if(Index < 0 || Index >= m_NumItems)
-		return nullptr;
-
-	int Chunk = Index / m_ChunkSize;
-	int Pos = Index % m_ChunkSize;
-	return &m_vpChunks[Chunk][Pos];
-}
-
 void CGhost::GetPath(char *pBuf, int Size, const char *pPlayerName, int Time) const
 {
 	const char *pMap = Client()->GetCurrentMap();
@@ -158,17 +102,19 @@ void CGhost::AddInfos(const CNetObj_Character *pChar, const CNetObj_DDNetCharact
 	if(g_Config.m_ClRaceSaveGhost && !GhostRecorder()->IsRecording() && NumTicks > 0)
 	{
 		GetPath(m_aTmpFilename, sizeof(m_aTmpFilename), m_CurGhost.m_aPlayer);
-		GhostRecorder()->Start(m_aTmpFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), m_CurGhost.m_aPlayer);
-
-		GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &m_CurGhost.m_StartTick, sizeof(int));
-		GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &m_CurGhost.m_Skin, sizeof(CGhostSkin));
-		for(int i = 0; i < NumTicks; i++)
-			GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, m_CurGhost.m_Path.Get(i), sizeof(CGhostCharacter));
+		if(GhostRecorder()->Start(m_aTmpFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), m_CurGhost.m_aPlayer) == 0)
+		{
+			GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &m_CurGhost.m_StartTick, sizeof(int));
+			GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &m_CurGhost.m_Skin, sizeof(CGhostSkin));
+			for(int i = 0; i < NumTicks; i++)
+				GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, m_CurGhost.m_Path.Get(i), sizeof(CGhostCharacter));
+		}
 	}
 
 	CGhostCharacter GhostChar;
 	GetGhostCharacter(&GhostChar, pChar, pDDnetChar);
-	m_CurGhost.m_Path.Add(GhostChar);
+	if(!m_CurGhost.m_Path.Add(GhostChar))
+		return;
 	if(GhostRecorder()->IsRecording())
 		GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, &GhostChar, sizeof(CGhostCharacter));
 }
@@ -188,6 +134,16 @@ int CGhost::FreeSlots() const
 		if(ActiveGhost.Empty())
 			Num++;
 	return Num;
+}
+
+bool CGhost::IsSlotActive(int Slot) const
+{
+	return Slot >= 0 && Slot < MAX_ACTIVE_GHOSTS && !m_aActiveGhosts[Slot].Empty();
+}
+
+bool CGhost::IsSlotLoadedWith(int Slot, const char *pFilename) const
+{
+	return IsSlotActive(Slot) && pFilename != nullptr && str_comp_nocase(m_aActiveGhosts[Slot].m_aFilename, pFilename) == 0;
 }
 
 void CGhost::CheckStart()
@@ -235,26 +191,14 @@ void CGhost::CheckStartLocal(bool Predicted)
 	}
 	else // recording
 	{
-		int PrevTick = GameClient()->m_Snap.m_pLocalPrevCharacter->m_Tick;
-		int CurTick = GameClient()->m_Snap.m_pLocalCharacter->m_Tick;
-		vec2 PrevPos = vec2(GameClient()->m_Snap.m_pLocalPrevCharacter->m_X, GameClient()->m_Snap.m_pLocalPrevCharacter->m_Y);
-		vec2 Pos = vec2(GameClient()->m_Snap.m_pLocalCharacter->m_X, GameClient()->m_Snap.m_pLocalCharacter->m_Y);
-
-		// detecting death, needed because race allows immediate respawning
-		if((!m_Recording || m_AllowRestart) && m_LastDeathTick < PrevTick)
+		if(!m_Recording || m_AllowRestart)
 		{
-			// estimate the exact start tick
-			int RecordTick = -1;
-			int TickDiff = CurTick - PrevTick;
-			for(int i = 0; i < TickDiff; i++)
-			{
-				if(GameClient()->RaceHelper()->IsStart(mix(PrevPos, Pos, (float)i / TickDiff), mix(PrevPos, Pos, (float)(i + 1) / TickDiff)))
-				{
-					RecordTick = PrevTick + i + 1;
-					if(!m_AllowRestart)
-						break;
-				}
-			}
+			const auto *pPrev = GameClient()->m_Snap.m_pLocalPrevCharacter;
+			const auto *pCur = GameClient()->m_Snap.m_pLocalCharacter;
+			const qm_ghost_start::SSample Prev{pPrev->m_Tick, Client()->PrevGameTick(g_Config.m_ClDummy), vec2(pPrev->m_X, pPrev->m_Y)};
+			const qm_ghost_start::SSample Cur{pCur->m_Tick, Client()->GameTick(g_Config.m_ClDummy), vec2(pCur->m_X, pCur->m_Y)};
+			const int RecordTick = qm_ghost_start::FindStartTick(Prev, Cur, m_LastDeathTick, m_AllowRestart,
+				[this](vec2 PrevPos, vec2 Pos) { return GameClient()->RaceHelper()->IsStart(PrevPos, Pos); });
 			if(RecordTick != -1)
 			{
 				if(GhostRecorder()->IsRecording()) // race restarted: stop recording
@@ -317,20 +261,36 @@ void CGhost::OnNewPredictedSnapshot()
 
 // 练习组里的交互时间线：与 Rank 1 查看模式读取的 .qmevt 完全同格式
 // （事件 / 开关状态 / 消息 三段）。消息段练习里没有，写 0 条。
-static void WritePracticeViewTimeline(IStorage *pStorage, const char *pGroupDir,
+static bool WritePracticeViewTimeline(IStorage *pStorage, const char *pGroupDir,
 	const std::vector<SLocalActorEvent> &vEvents, const std::vector<SLocalSwitchState> &vSwitchStates)
 {
 	char aPath[IO_MAX_PATH_LENGTH];
 	str_format(aPath, sizeof(aPath), "%s/events.qmevt", pGroupDir);
-	IOHANDLE File = pStorage->OpenFile(aPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	char aTmpPath[IO_MAX_PATH_LENGTH];
+	str_format(aTmpPath, sizeof(aTmpPath), "%s.tmp_%d", aPath, pid());
+	pStorage->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
+	IOHANDLE File = pStorage->OpenFile(aTmpPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(File == nullptr)
-		return;
+		return false;
 
 	// 写出逻辑统一在 rank_view_timeline：练习只负责把中性轨迹适配成查看格式。
 	const qmclient::rank_ghost::SViewTimeline Timeline = QmBuildPracticeViewTimeline(vEvents, vSwitchStates);
-	if(!qmclient::rank_ghost::WriteViewTimeline(File, Timeline))
-		log_error("ghost", "failed to write practice view timeline '%s'", aPath);
-	io_close(File);
+	const bool Written = qmclient::rank_ghost::WriteViewTimeline(File, Timeline);
+	const bool Closed = io_close(File) == 0;
+	if(!Written || !Closed)
+	{
+		log_error("ghost", "failed to write practice view timeline '%s'", aTmpPath);
+		pStorage->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
+		return false;
+	}
+	// RenameFile 在 Windows 上带替换语义；先删旧文件会在改名失败时丢掉可用时间线。
+	if(!pStorage->RenameFile(aTmpPath, aPath, IStorage::TYPE_SAVE))
+	{
+		log_error("ghost", "failed to publish practice view timeline '%s'", aPath);
+		pStorage->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
+		return false;
+	}
+	return true;
 }
 
 bool CGhost::SavePracticeTrack(const char *pName, const SLocalSegment &Segment)
@@ -408,15 +368,24 @@ bool CGhost::SavePracticeTrack(const char *pName, const SLocalSegment &Segment)
 			GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, &GhostChar, sizeof(CGhostCharacter));
 		}
 		GhostRecorder()->Stop((int)Track.m_vFrames.size(), TimeMs);
+		if(GhostRecorder()->HasWriteError())
+		{
+			log_error("ghost", "failed to write practice track '%s'", aTmp);
+			Storage()->RemoveFile(aTmp, IStorage::TYPE_SAVE);
+			return false;
+		}
 
 		char aFinal[IO_MAX_PATH_LENGTH];
 		str_format(aFinal, sizeof(aFinal), "%s/track%d.gho", aGroupDir, (int)TrackIndex);
-		Storage()->RemoveFile(aFinal, IStorage::TYPE_SAVE);
-		Storage()->RenameFile(aTmp, aFinal, IStorage::TYPE_SAVE);
+		if(!Storage()->RenameFile(aTmp, aFinal, IStorage::TYPE_SAVE))
+		{
+			log_error("ghost", "failed to publish practice track '%s'", aFinal);
+			Storage()->RemoveFile(aTmp, IStorage::TYPE_SAVE);
+			return false;
+		}
 	}
 
-	WritePracticeViewTimeline(Storage(), aGroupDir, Segment.m_vEvents, Segment.m_vSwitchStates);
-	return true;
+	return WritePracticeViewTimeline(Storage(), aGroupDir, Segment.m_vEvents, Segment.m_vSwitchStates);
 }
 
 namespace
@@ -772,10 +741,14 @@ void CGhost::StopRecord(int Time)
 	CMenus::CGhostItem *pOwnGhost = nullptr;
 	if(Time > 0)
 		pOwnGhost = GameClient()->m_Menus.GetOwnGhost();
-	const bool StoreGhost = Time > 0 && (!pOwnGhost || Time < pOwnGhost->m_Time || !g_Config.m_ClRaceGhostSaveBest);
+	const bool StoreGhost = Time > 0 && !m_CurGhost.Empty() && (!pOwnGhost || Time < pOwnGhost->m_Time || !g_Config.m_ClRaceGhostSaveBest);
 
+	bool WriteFailed = false;
 	if(RecordingToFile)
+	{
 		GhostRecorder()->Stop(m_CurGhost.m_Path.Size(), StoreGhost ? Time : -1);
+		WriteFailed = GhostRecorder()->HasWriteError();
+	}
 
 	if(StoreGhost)
 	{
@@ -789,15 +762,20 @@ void CGhost::StopRecord(int Time)
 
 		// create ghost item
 		CMenus::CGhostItem Item;
-		if(RecordingToFile)
+		if(RecordingToFile && !WriteFailed)
 			GetPath(Item.m_aFilename, sizeof(Item.m_aFilename), m_CurGhost.m_aPlayer, Time);
 		str_copy(Item.m_aPlayer, m_CurGhost.m_aPlayer);
 		Item.m_Time = Time;
 		Item.m_Slot = Slot;
 
 		// save new ghost file
-		if(Item.HasFile())
-			Storage()->RenameFile(m_aTmpFilename, Item.m_aFilename, IStorage::TYPE_SAVE);
+		if(Item.HasFile() && !Storage()->RenameFile(m_aTmpFilename, Item.m_aFilename, IStorage::TYPE_SAVE))
+		{
+			log_error("ghost", "failed to publish ghost file '%s'", Item.m_aFilename);
+			Item.m_aFilename[0] = '\0';
+		}
+		else if(Item.HasFile() && Slot >= 0)
+			str_copy(m_aActiveGhosts[Slot].m_aFilename, Item.m_aFilename);
 
 		// add item to menu list
 		GameClient()->m_Menus.UpdateOwnGhost(Item);
@@ -959,7 +937,6 @@ int CGhost::Load(const char *pFilename)
 	// select ghost
 	CGhostItem *pGhost = &m_aActiveGhosts[Slot];
 	pGhost->Reset();
-	pGhost->m_Path.SetSize(pInfo->m_NumTicks);
 
 	str_copy(pGhost->m_aPlayer, pInfo->m_aOwner);
 
@@ -997,12 +974,13 @@ int CGhost::Load(const char *pFilename)
 				Error = true;
 				break;
 			}
-			else if(!GhostLoader()->ReadData(Type, pGhost->m_Path.Get(Index++), sizeof(CGhostCharacter_NoTick)))
+			else if(!pGhost->m_Path.ReadAndAdd([&](CGhostCharacter &Value) { return GhostLoader()->ReadData(Type, &Value, sizeof(CGhostCharacter_NoTick)); }))
 			{
 				log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: failed to read ghost character (without tick)");
 				Error = true;
 				break;
 			}
+			++Index;
 			FoundCharacterNoTick = true;
 		}
 		else if(Type == GHOSTDATA_TYPE_CHARACTER)
@@ -1013,12 +991,13 @@ int CGhost::Load(const char *pFilename)
 				Error = true;
 				break;
 			}
-			else if(!GhostLoader()->ReadData(Type, pGhost->m_Path.Get(Index++), sizeof(CGhostCharacter)))
+			else if(!pGhost->m_Path.ReadAndAdd([&](CGhostCharacter &Value) { return GhostLoader()->ReadData(Type, &Value, sizeof(CGhostCharacter)); }))
 			{
 				log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: failed to read ghost character (with tick)");
 				Error = true;
 				break;
 			}
+			++Index;
 			FoundCharacterTick = true;
 		}
 		else if(Type == GHOSTDATA_TYPE_START_TICK)
@@ -1063,6 +1042,7 @@ int CGhost::Load(const char *pFilename)
 	{
 		SetGhostSkinData(&pGhost->m_Skin, "default", 0, 0, 0);
 	}
+	str_copy(pGhost->m_aFilename, pFilename);
 	UpdateTeeRenderInfo(*pGhost);
 
 	return Slot;
@@ -1090,8 +1070,10 @@ void CGhost::SaveGhost(CMenus::CGhostItem *pItem)
 	CGhostItem *pGhost = &m_aActiveGhosts[Slot];
 
 	int NumTicks = pGhost->m_Path.Size();
-	GetPath(pItem->m_aFilename, sizeof(pItem->m_aFilename), pItem->m_aPlayer, pItem->m_Time);
-	GhostRecorder()->Start(pItem->m_aFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), pItem->m_aPlayer);
+	char aFilename[IO_MAX_PATH_LENGTH];
+	GetPath(aFilename, sizeof(aFilename), pItem->m_aPlayer, pItem->m_Time);
+	if(GhostRecorder()->Start(aFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), pItem->m_aPlayer) != 0)
+		return;
 
 	GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &pGhost->m_StartTick, sizeof(int));
 	GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &pGhost->m_Skin, sizeof(CGhostSkin));
@@ -1099,6 +1081,14 @@ void CGhost::SaveGhost(CMenus::CGhostItem *pItem)
 		GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, pGhost->m_Path.Get(i), sizeof(CGhostCharacter));
 
 	GhostRecorder()->Stop(NumTicks, pItem->m_Time);
+	if(GhostRecorder()->HasWriteError())
+	{
+		Storage()->RemoveFile(aFilename, IStorage::TYPE_SAVE);
+		log_error("ghost", "failed to save ghost file '%s'", aFilename);
+		return;
+	}
+	str_copy(pItem->m_aFilename, aFilename);
+	str_copy(pGhost->m_aFilename, aFilename);
 }
 
 void CGhost::ConGPlay(IConsole::IResult *pResult, void *pUserData)

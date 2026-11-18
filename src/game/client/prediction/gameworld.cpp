@@ -9,6 +9,7 @@
 #include "entities/laser.h"
 #include "entities/pickup.h"
 #include "entities/plasma.h"
+#include "entities/practice_light.h"
 #include "entities/projectile.h"
 #include "entity.h"
 
@@ -697,6 +698,8 @@ void CGameWorld::CopyWorldClean(CGameWorld *pFrom)
 				pCopy = new CPickup(*((CPickup *)pEnt));
 			else if(Type == ENTTYPE_PLASMA)
 				pCopy = new CPlasma(*((CPlasma *)pEnt));
+			else if(Type == ENTTYPE_LIGHT)
+				pCopy = new CPracticeLight(*((CPracticeLight *)pEnt));
 			if(pCopy)
 			{
 				pCopy->m_pParent = nullptr;
@@ -752,6 +755,8 @@ void CGameWorld::CopyWorld(CGameWorld *pFrom)
 				pCopy = new CPickup(*((CPickup *)pEnt));
 			else if(Type == ENTTYPE_PLASMA)
 				pCopy = new CPlasma(*((CPlasma *)pEnt));
+			else if(Type == ENTTYPE_LIGHT)
+				pCopy = new CPracticeLight(*((CPracticeLight *)pEnt));
 			if(pCopy)
 			{
 				pCopy->m_pParent = pEnt;
@@ -856,7 +861,12 @@ void CGameWorld::Clear()
 			CEntity *pEntity = pFirstEntityType;
 			CEntity *pNextEntity = pEntity->m_pNextTypeEntity;
 			RemoveEntity(pEntity);
-			delete pEntity; // NOLINT(clang-analyzer-cplusplus.NewDelete)
+			// 门在共享 CCollision 上安装了碰撞端点，必须走虚销毁清理；
+			// 直接 delete 会把分支世界的门碰撞残留到主世界。
+			if(pEntity->m_ObjType == ENTTYPE_DOOR)
+				pEntity->Destroy();
+			else
+				delete pEntity; // NOLINT(clang-analyzer-cplusplus.NewDelete)
 			pFirstEntityType = pNextEntity;
 		}
 }

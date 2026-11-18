@@ -48,6 +48,7 @@ void CGhostRecorder::Init()
 int CGhostRecorder::Start(const char *pFilename, const char *pMap, const SHA256_DIGEST &MapSha256, const char *pName)
 {
 	dbg_assert(!m_File, "File already open");
+	m_Failed = false;
 
 	m_File = m_pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!m_File)
@@ -65,7 +66,15 @@ int CGhostRecorder::Start(const char *pFilename, const char *pMap, const SHA256_
 	str_copy(Header.m_aOwner, pName);
 	str_copy(Header.m_aMap, pMap);
 	Header.m_MapSha256 = MapSha256;
-	io_write(m_File, &Header, sizeof(Header));
+	if(io_write(m_File, &Header, sizeof(Header)) != sizeof(Header))
+	{
+		log_error_color(LOG_COLOR_GHOST, "ghost_recorder", "Failed to write header to '%s'", pFilename);
+		io_close(m_File);
+		m_File = nullptr;
+		m_aFilename[0] = '\0';
+		m_pStorage->RemoveFile(pFilename, IStorage::TYPE_SAVE);
+		return -1;
+	}
 
 	m_LastItem = std::nullopt;
 	ResetBuffer();
@@ -95,7 +104,8 @@ static void DiffItem(const uint32_t *pPast, const uint32_t *pCurrent, uint32_t *
 
 void CGhostRecorder::WriteData(int Type, const void *pData, size_t Size)
 {
-	dbg_assert((bool)m_File, "File not open");
+	if(!m_File)
+		return;
 	dbg_assert(Type >= 0 && Type <= (int)std::numeric_limits<unsigned char>::max(), "Type invalid");
 	dbg_assert(Size > 0 && Size <= MAX_ITEM_SIZE && Size % sizeof(uint32_t) == 0, "Size invalid");
 
@@ -164,8 +174,12 @@ void CGhostRecorder::FlushChunk()
 	aChunkHeader[2] = (Size >> 8) & 0xff;
 	aChunkHeader[3] = Size & 0xff;
 
-	io_write(m_File, aChunkHeader, sizeof(aChunkHeader));
-	io_write(m_File, m_aBuffer, Size);
+	if(io_write(m_File, aChunkHeader, sizeof(aChunkHeader)) != sizeof(aChunkHeader) ||
+		io_write(m_File, m_aBuffer, Size) != (size_t)Size)
+	{
+		log_error_color(LOG_COLOR_GHOST, "ghost_recorder", "Failed to write chunk to '%s'", m_aFilename);
+		m_Failed = true;
+	}
 
 	m_LastItem = std::nullopt;
 	ResetBuffer();
@@ -185,23 +199,29 @@ void CGhostRecorder::Stop(int Ticks, int Time)
 		FlushChunk();
 
 		// write number of ticks and time
-		io_seek(m_File, offsetof(CGhostHeader, m_aNumTicks), IOSEEK_START);
+		if(io_seek(m_File, offsetof(CGhostHeader, m_aNumTicks), IOSEEK_START) != 0)
+			m_Failed = true;
 
 		unsigned char aNumTicks[sizeof(int32_t)];
 		uint_to_bytes_be(aNumTicks, Ticks);
-		io_write(m_File, aNumTicks, sizeof(aNumTicks));
+		if(io_write(m_File, aNumTicks, sizeof(aNumTicks)) != sizeof(aNumTicks))
+			m_Failed = true;
 
 		unsigned char aTime[sizeof(int32_t)];
 		uint_to_bytes_be(aTime, Time);
-		io_write(m_File, aTime, sizeof(aTime));
+		if(io_write(m_File, aTime, sizeof(aTime)) != sizeof(aTime))
+			m_Failed = true;
 	}
 
-	io_close(m_File);
+	if(io_close(m_File) != 0)
+		m_Failed = true;
 	m_File = nullptr;
 
-	if(DiscardFile)
+	if(DiscardFile || m_Failed)
 	{
 		m_pStorage->RemoveFile(m_aFilename, IStorage::TYPE_SAVE);
+		if(m_Failed && !DiscardFile)
+			log_error_color(LOG_COLOR_GHOST, "ghost_recorder", "Discarded incomplete recording '%s'", m_aFilename);
 	}
 
 	log_info_color(LOG_COLOR_GHOST, "ghost_recorder", "Stopped recording to '%s'", m_aFilename);
@@ -476,8 +496,12 @@ bool CGhostLoader::ReadData(int Type, void *pData, size_t Size)
 	Data.m_Type = Type;
 	if(m_LastItem.has_value())
 	{
-		dbg_assert(m_LastItem.value().m_Type == Data.m_Type, "Type mismatch between current and last item");
-		dbg_assert(m_LastItem.value().m_Size == Data.m_Size, "Size mismatch between current and last item");
+		// 旧格式跨块保留差分基准，损坏文件中的类型或尺寸不匹配应返回读取失败。
+		if(m_LastItem.value().m_Type != Data.m_Type || m_LastItem.value().m_Size != Data.m_Size)
+		{
+			log_error_color(LOG_COLOR_GHOST, "ghost_loader", "Failed to read ghost file '%s': incompatible delta base", m_aFilename);
+			return false;
+		}
 		UndiffItem((const uint32_t *)m_LastItem.value().m_aData, (const uint32_t *)m_pBufferPos, (uint32_t *)Data.m_aData, Data.m_Size / sizeof(uint32_t));
 	}
 	else

@@ -33,6 +33,7 @@ inline qmclient::rank_ghost::SViewTimeline QmBuildPracticeViewTimeline(
 		qmclient::rank_ghost::SViewSwitchState View = {};
 		View.m_RelTick = State.m_Tick;
 		View.m_HighestSwitchNumber = State.m_HighestSwitchNumber;
+		View.m_Team = State.m_Team;
 		std::copy(std::begin(State.m_aStatus), std::end(State.m_aStatus), std::begin(View.m_aStatus));
 		Timeline.m_vSwitchStates.push_back(View);
 	}

@@ -713,7 +713,10 @@ void CPlayers::RenderHook(
 	const int HookedPlayer = pPlayerChar->m_HookedPlayer;
 	if(HookedPlayer != -1 && !in_range(HookedPlayer, MAX_CLIENTS - 1))
 		return;
-	if(HookedPlayer != -1 && !GameClient()->m_Snap.m_aCharacters[HookedPlayer].m_Active)
+	// 服务器快照失活不代表练习分支里没有这个角色：分身被击杀或暂停时，
+	// 钩子仍然挂在分支世界的目标上，不能因为快照门把整条钩绳藏掉。
+	if(HookedPlayer != -1 && !GameClient()->m_Snap.m_aCharacters[HookedPlayer].m_Active &&
+		GameClient()->m_FastPractice.ResolvePracticeCharacter(HookedPlayer) == nullptr)
 		return;
 
 	if(ClientId >= 0)
@@ -836,7 +839,8 @@ void CPlayers::RenderPlayer(
 	const CTeeRenderInfo *pRenderInfo,
 	int ClientId,
 	float Intra,
-	std::optional<float> AttackTimeOverride)
+	std::optional<float> AttackTimeOverride,
+	bool PredictWeaponsForOverride)
 {
 	// 禅模式判定只取一次，避免在逐玩家渲染路径里重复解析配置。
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
@@ -892,7 +896,9 @@ void CPlayers::RenderPlayer(
 	// 直接沿用会让暂停画面的锤子一直上下摆动。
 	if(AttackTimeOverride.has_value())
 	{
-		PredictLocalWeapons = false;
+		// 回放与练习共用相位覆盖；练习参与者的枪口方向必须取分支渲染位置，
+		// 不能退回服务器快照。
+		PredictLocalWeapons = PredictWeaponsForOverride;
 		AttackTime = *AttackTimeOverride;
 		LastAttackTime = *AttackTimeOverride;
 	}
@@ -1497,7 +1503,9 @@ void CPlayers::RenderPlayerGhost(
 	const CNetObj_Character *pPlayerChar,
 	const CTeeRenderInfo *pRenderInfo,
 	int ClientId,
-	float Intra)
+	float Intra,
+	std::optional<float> AttackTimeOverride,
+	bool PredictWeaponsForOverride)
 {
 	// 禅模式判定只取一次，避免在逐玩家渲染路径里重复解析配置。
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
@@ -1561,6 +1569,12 @@ void CPlayers::RenderPlayerGhost(
 		PredictLocalWeapons = true;
 		AttackTime = (Client()->PredIntraGameTick(g_Config.m_ClDummy) + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)SERVER_TICK_SPEED;
 		LastAttackTime = (s_LastPredIntraTick + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)SERVER_TICK_SPEED;
+	}
+	if(AttackTimeOverride.has_value())
+	{
+		PredictLocalWeapons = PredictWeaponsForOverride;
+		AttackTime = *AttackTimeOverride;
+		LastAttackTime = *AttackTimeOverride;
 	}
 	float AttackTicksPassed = AttackTime * (float)SERVER_TICK_SPEED;
 
@@ -1995,6 +2009,21 @@ void CPlayers::OnRender()
 		return IsPlayerInfoAvailable(ClientId) ||
 		       GameClient()->m_FastPractice.ResolvePracticeCharacter(ClientId) != nullptr;
 	};
+	const auto PracticeAttackTime = [&](int ClientId) -> std::optional<float> {
+		if(!GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
+			return std::nullopt;
+		CCharacter *pPracticeChar = GameClient()->m_FastPractice.ResolvePracticeCharacter(ClientId);
+		const CCharacterCore *pPracticeCore = nullptr;
+		int PracticeTick = 0;
+		if(pPracticeChar == nullptr ||
+			!GameClient()->m_FastPractice.ResolvePracticeCharacterCore(ClientId, &pPracticeCore, PracticeTick) ||
+			pPracticeCore == nullptr)
+			return std::nullopt;
+		// 分支 tick 是整数，补上当前预测帧的小数相位，挥锤/忍者动画才不会 50 Hz 跳变。
+		const float TickSpeed = (float)maximum(1, Client()->GameTickSpeed());
+		return maximum(0.0f, (PracticeTick - 1 - pPracticeChar->GetAttackTick()) / TickSpeed +
+					     Client()->PredIntraGameTick(g_Config.m_ClDummy) / TickSpeed);
+	};
 
 	// update render info for ninja
 	CTeeRenderInfo aRenderInfo[MAX_CLIENTS];
@@ -2108,13 +2137,13 @@ void CPlayers::OnRender()
 	const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 	{
-		if(ClientId == LocalClientId || !IsPlayerInfoAvailable(ClientId))
+		if(ClientId == LocalClientId || !IsRenderableClient(ClientId))
 		{
 			continue;
 		}
 		RenderHook(ScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &GameClient()->m_aClients[ClientId].m_RenderCur, &aRenderInfo[ClientId], ClientId);
 	}
-	if(LocalClientId != -1 && IsPlayerInfoAvailable(LocalClientId))
+	if(LocalClientId != -1 && IsRenderableClient(LocalClientId))
 	{
 		const CGameClient::CClientData *pLocalClientData = &GameClient()->m_aClients[LocalClientId];
 		RenderHook(ScreenRect, &pLocalClientData->m_RenderPrev, &pLocalClientData->m_RenderCur, &aRenderInfo[LocalClientId], LocalClientId);
@@ -2188,16 +2217,16 @@ void CPlayers::OnRender()
 
 		// If we are frozen and hiding frozen ghosts and not swapping render only the regular player
 		if(RenderGhost && g_Config.m_QmShowOthersGhosts && !Spec && Client()->State() != IClient::STATE_DEMOPLAYBACK)
-			RenderPlayerGhost(&GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId);
+			RenderPlayerGhost(&GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId, 0.0f, PracticeAttackTime(ClientId), true);
 
-		RenderPlayer(PlayerScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId);
+		RenderPlayer(PlayerScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId, 0.0f, PracticeAttackTime(ClientId), true);
 	}
 	if(RenderLastId != -1 && IsRenderableClient(RenderLastId))
 	{
 		const CGameClient::CClientData *pClientData = &GameClient()->m_aClients[RenderLastId];
 		RenderHookCollLine(ScreenRect, &pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);
 		RenderWeaponTrajectory(&pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);
-		RenderPlayer(PlayerScreenRect, &pClientData->m_RenderPrev, &aRenderCurForTee[RenderLastId], &aRenderInfo[RenderLastId], RenderLastId);
+		RenderPlayer(PlayerScreenRect, &pClientData->m_RenderPrev, &aRenderCurForTee[RenderLastId], &aRenderInfo[RenderLastId], RenderLastId, 0.0f, PracticeAttackTime(RenderLastId), true);
 	}
 }
 

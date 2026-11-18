@@ -4,6 +4,7 @@
 #include <base/str.h>
 
 #include <engine/shared/json.h>
+#include <engine/shared/protocol.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -29,6 +30,9 @@ namespace qmclient::rank_demo
 		std::string m_Kind;
 		int m_Team = 0;
 		std::vector<int> m_vFinishers;
+		// 新版清单显式列出可回放角色；缺失该字段的旧记录保持兼容。
+		bool m_HasGhosts = false;
+		std::vector<int> m_vGhosts;
 		std::string m_Uuid;
 		std::string m_Rev;
 	};
@@ -162,6 +166,20 @@ namespace qmclient::rank_demo
 				if(!Entry.m_Names.empty())
 					Entry.m_Names += ", ";
 				Entry.m_Names += pString;
+			}
+		}
+		const json_value *pGhosts = Field(pRoot, "ghosts");
+		if(pGhosts != nullptr && pGhosts->type == json_array)
+		{
+			Entry.m_HasGhosts = true;
+			for(unsigned i = 0; i < pGhosts->u.array.length; ++i)
+			{
+				const json_value *pGhost = pGhosts->u.array.values[i];
+				if(pGhost == nullptr || pGhost->type != json_integer || pGhost->u.integer < 0 || pGhost->u.integer >= MAX_CLIENTS)
+					continue;
+				const int Cid = static_cast<int>(pGhost->u.integer);
+				if(std::find(Entry.m_vGhosts.begin(), Entry.m_vGhosts.end(), Cid) == Entry.m_vGhosts.end())
+					Entry.m_vGhosts.push_back(Cid);
 			}
 		}
 		return true;

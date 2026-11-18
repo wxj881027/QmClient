@@ -56,13 +56,16 @@ class CPlayers : public CComponent
 		const CTeeRenderInfo *pRenderInfo,
 		int ClientId,
 		float Intra = 0.f,
-		std::optional<float> AttackTimeOverride = std::nullopt);
+		std::optional<float> AttackTimeOverride = std::nullopt,
+		bool PredictWeaponsForOverride = false);
 	void RenderPlayerGhost(
 		const CNetObj_Character *pPrevChar,
 		const CNetObj_Character *pPlayerChar,
 		const CTeeRenderInfo *pRenderInfo,
 		int ClientId,
-		float Intra = 0.f);
+		float Intra = 0.f,
+		std::optional<float> AttackTimeOverride = std::nullopt,
+		bool PredictWeaponsForOverride = false);
 
 	void RenderHook(
 		const CScreenRect &ScreenRect,

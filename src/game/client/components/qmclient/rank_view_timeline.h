@@ -7,6 +7,8 @@
 
 #include <generated/protocol.h>
 
+#include <game/teamscore.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <new>
@@ -16,7 +18,11 @@
 
 namespace qmclient::rank_ghost
 {
-	inline constexpr char VIEW_TIMELINE_MAGIC[8] = {'Q', 'M', 'G', 'H', 'E', 'V', 'T', '2'};
+	// 3：开关状态记录录制时队伍，不再套用查看者当前队伍。
+	inline constexpr char VIEW_TIMELINE_MAGIC[8] = {'Q', 'M', 'G', 'H', 'E', 'V', 'T', '3'};
+	// 2：没有 m_Team 字段。练习组没有源 demo 可重建，必须继续可读；
+	// 缺失队伍按 -1 处理，回放时回落到查看者当前队伍（旧行为）。
+	inline constexpr char LEGACY_VIEW_TIMELINE_MAGIC[8] = {'Q', 'M', 'G', 'H', 'E', 'V', 'T', '2'};
 	inline constexpr int64_t MAX_TIMELINE_BYTES = 128 * 1024 * 1024;
 
 	struct SViewEvent
@@ -29,6 +35,8 @@ namespace qmclient::rank_ghost
 	{
 		int m_RelTick;
 		int m_HighestSwitchNumber;
+		// -1：旧 QMGHEVT2 文件没有记录队伍，回放时沿用查看者当前队伍。
+		int m_Team = -1;
 		unsigned m_aStatus[8];
 	};
 	enum class EViewMessageType
@@ -97,8 +105,12 @@ namespace qmclient::rank_ghost
 			return true;
 		};
 		char aMagic[8];
-		if(!Read(aMagic, sizeof(aMagic)) || mem_comp(aMagic, VIEW_TIMELINE_MAGIC, sizeof(aMagic)) != 0)
+		if(!Read(aMagic, sizeof(aMagic)))
 			return false;
+		const bool LegacyV2 = mem_comp(aMagic, LEGACY_VIEW_TIMELINE_MAGIC, sizeof(aMagic)) == 0;
+		if(!LegacyV2 && mem_comp(aMagic, VIEW_TIMELINE_MAGIC, sizeof(aMagic)) != 0)
+			return false;
+		const size_t SwitchRecordBytes = LegacyV2 ? 2 * sizeof(int) + 8 * sizeof(unsigned) : 3 * sizeof(int) + 8 * sizeof(unsigned);
 		SViewTimeline Candidate;
 		size_t MemoryRemaining = MAX_TIMELINE_BYTES;
 		const auto ReadSection = [&](auto &vRecords, size_t RecordBytes, auto ReadRecord) {
@@ -124,9 +136,11 @@ namespace qmclient::rank_ghost
 			if(!ReadSection(Candidate.m_vEvents, 5 * sizeof(int), [&](SViewEvent &Event) {
 				   return Read(&Event.m_RelTick, sizeof(Event.m_RelTick)) && Read(&Event.m_Type, sizeof(Event.m_Type)) &&
 					  Read(Event.m_aData, sizeof(Event.m_aData)) && ValidViewEvent(Event);
-			   }) || !ReadSection(Candidate.m_vSwitchStates, 2 * sizeof(int) + 8 * sizeof(unsigned), [&](SViewSwitchState &State) {
+			   }) || !ReadSection(Candidate.m_vSwitchStates, SwitchRecordBytes, [&](SViewSwitchState &State) {
 				   return Read(&State.m_RelTick, sizeof(State.m_RelTick)) && Read(&State.m_HighestSwitchNumber, sizeof(State.m_HighestSwitchNumber)) &&
-					  Read(State.m_aStatus, sizeof(State.m_aStatus)) && State.m_HighestSwitchNumber >= 0 && State.m_HighestSwitchNumber < 256;
+					  (LegacyV2 || Read(&State.m_Team, sizeof(State.m_Team))) && Read(State.m_aStatus, sizeof(State.m_aStatus)) &&
+					  State.m_HighestSwitchNumber >= 0 && State.m_HighestSwitchNumber < 256 &&
+					  State.m_Team >= -1 && State.m_Team < NUM_DDRACE_TEAMS;
 			   }) || !ReadSection(Candidate.m_vMessages, 7 * sizeof(int), [&](SViewMessage &Message) {
 				   int Type = 0;
 				   if(!Read(&Message.m_RelTick, sizeof(Message.m_RelTick)) || !Read(&Type, sizeof(Type)) ||
@@ -155,32 +169,43 @@ namespace qmclient::rank_ghost
 	{
 		if(File == nullptr)
 			return false;
-		io_write(File, VIEW_TIMELINE_MAGIC, sizeof(VIEW_TIMELINE_MAGIC));
+		const auto Write = [File](const void *pData, size_t Size) {
+			return io_write(File, pData, (unsigned)Size) == Size;
+		};
+		if(!Write(VIEW_TIMELINE_MAGIC, sizeof(VIEW_TIMELINE_MAGIC)))
+			return false;
 		uint32_t Count = (uint32_t)vEvents.size();
-		io_write(File, &Count, sizeof(Count));
+		if(!Write(&Count, sizeof(Count)))
+			return false;
 		for(const SViewEvent &Event : vEvents)
 		{
-			io_write(File, &Event.m_RelTick, sizeof(Event.m_RelTick));
-			io_write(File, &Event.m_Type, sizeof(Event.m_Type));
-			io_write(File, Event.m_aData, sizeof(Event.m_aData));
+			if(!Write(&Event.m_RelTick, sizeof(Event.m_RelTick)) ||
+				!Write(&Event.m_Type, sizeof(Event.m_Type)) ||
+				!Write(Event.m_aData, sizeof(Event.m_aData)))
+				return false;
 		}
 		Count = (uint32_t)vSwitchStates.size();
-		io_write(File, &Count, sizeof(Count));
+		if(!Write(&Count, sizeof(Count)))
+			return false;
 		for(const SViewSwitchState &State : vSwitchStates)
 		{
-			io_write(File, &State.m_RelTick, sizeof(State.m_RelTick));
-			io_write(File, &State.m_HighestSwitchNumber, sizeof(State.m_HighestSwitchNumber));
-			io_write(File, State.m_aStatus, sizeof(State.m_aStatus));
+			if(!Write(&State.m_RelTick, sizeof(State.m_RelTick)) ||
+				!Write(&State.m_HighestSwitchNumber, sizeof(State.m_HighestSwitchNumber)) ||
+				!Write(&State.m_Team, sizeof(State.m_Team)) ||
+				!Write(State.m_aStatus, sizeof(State.m_aStatus)))
+				return false;
 		}
 		Count = (uint32_t)vMessages.size();
-		io_write(File, &Count, sizeof(Count));
+		if(!Write(&Count, sizeof(Count)))
+			return false;
 		for(const SViewMessage &Message : vMessages)
 		{
 			// 枚举按 int 落盘：底层宽度由实现决定，按字节写会破坏跨版本读取。
 			const int Type = (int)Message.m_Type;
-			io_write(File, &Message.m_RelTick, sizeof(Message.m_RelTick));
-			io_write(File, &Type, sizeof(Type));
-			io_write(File, Message.m_aData, sizeof(Message.m_aData));
+			if(!Write(&Message.m_RelTick, sizeof(Message.m_RelTick)) ||
+				!Write(&Type, sizeof(Type)) ||
+				!Write(Message.m_aData, sizeof(Message.m_aData)))
+				return false;
 		}
 		return true;
 	}

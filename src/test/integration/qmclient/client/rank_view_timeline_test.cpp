@@ -18,9 +18,9 @@ namespace
 		Data.append(reinterpret_cast<const char *>(&Value), sizeof(Value));
 	}
 	// 独立构造现有磁盘协议：magic、事件段、开关段、消息段。
-	std::string TimelineData(const std::vector<std::vector<int32_t>> &vEvents = {}, const std::vector<std::vector<int32_t>> &vSwitches = {}, const std::vector<std::vector<int32_t>> &vMessages = {})
+	std::string TimelineData(const std::vector<std::vector<int32_t>> &vEvents = {}, const std::vector<std::vector<int32_t>> &vSwitches = {}, const std::vector<std::vector<int32_t>> &vMessages = {}, const char *pMagic = "QMGHEVT3")
 	{
-		std::string Data("QMGHEVT2", 8);
+		std::string Data(pMagic, 8);
 		for(const auto *pSection : {&vEvents, &vSwitches, &vMessages})
 		{
 			AppendInt(Data, (int32_t)pSection->size());
@@ -75,20 +75,32 @@ namespace
 TEST(RankViewTimeline, ReadsValidEventSwitchAndMessageSections)
 {
 	SViewTimeline Timeline;
-	ASSERT_TRUE(ReadData(TimelineData({{3, NETEVENTTYPE_DEATH, 100, 200, MAX_CLIENTS - 1}}, {{4, 255, 1, 0, 0, 0, 0, 0, 0, 0}}, {{5, 0, MAX_CLIENTS - 1, 1000, 0, 0, 0}}), Timeline));
+	ASSERT_TRUE(ReadData(TimelineData({{3, NETEVENTTYPE_DEATH, 100, 200, MAX_CLIENTS - 1}}, {{4, 255, 3, 1, 0, 0, 0, 0, 0, 0, 0}}, {{5, 0, MAX_CLIENTS - 1, 1000, 0, 0, 0}}), Timeline));
 	ASSERT_EQ(Timeline.m_vEvents.size(), 1u);
 	EXPECT_EQ(Timeline.m_vEvents[0].m_aData[2], MAX_CLIENTS - 1);
 	ASSERT_EQ(Timeline.m_vSwitchStates.size(), 1u);
 	EXPECT_EQ(Timeline.m_vSwitchStates[0].m_HighestSwitchNumber, 255);
+	EXPECT_EQ(Timeline.m_vSwitchStates[0].m_Team, 3);
 	ASSERT_EQ(Timeline.m_vMessages.size(), 1u);
 	EXPECT_EQ(Timeline.m_vMessages[0].m_Type, EViewMessageType::RACE_FINISH);
+}
+
+// 旧 QMGHEVT2 的开关段没有队伍字段。练习组没有源 demo 可重建，
+// 读取必须继续成功，并把队伍交给回放阶段回落到查看者当前队伍。
+TEST(RankViewTimeline, ReadsLegacyV2SwitchSectionWithoutTeam)
+{
+	SViewTimeline Timeline;
+	ASSERT_TRUE(ReadData(TimelineData({}, {{4, 255, 1, 0, 0, 0, 0, 0, 0, 0}}, {}, "QMGHEVT2"), Timeline));
+	ASSERT_EQ(Timeline.m_vSwitchStates.size(), 1u);
+	EXPECT_EQ(Timeline.m_vSwitchStates[0].m_Team, -1);
+	EXPECT_EQ(Timeline.m_vSwitchStates[0].m_aStatus[0], 1u);
 }
 
 TEST(RankViewTimeline, RejectsHugeCountInShortFileAndClearsPreviouslyLoadedState)
 {
 	SViewTimeline Timeline;
 	ASSERT_TRUE(ReadData(TimelineData({{1, NETEVENTTYPE_SPAWN, 0, 0, 0}}), Timeline));
-	std::string Data("QMGHEVT2", 8);
+	std::string Data("QMGHEVT3", 8);
 	AppendInt(Data, -1);
 	EXPECT_FALSE(ReadData(Data, Timeline));
 	EXPECT_TRUE(Timeline.m_vEvents.empty());
@@ -108,7 +120,7 @@ TEST(RankViewTimeline, RejectsDeathClientIdOutsideClientArray)
 TEST(RankViewTimeline, RejectsInvalidSwitchNumber)
 {
 	SViewTimeline Timeline;
-	EXPECT_FALSE(ReadData(TimelineData({}, {{1, 256, 0, 0, 0, 0, 0, 0, 0, 0}}), Timeline));
+	EXPECT_FALSE(ReadData(TimelineData({}, {{1, 256, 0, 0, 0, 0, 0, 0, 0, 0, 0}}), Timeline));
 }
 
 TEST(RankViewTimeline, RejectsUnknownMessageType)
@@ -157,6 +169,7 @@ TEST(RankViewTimeline, WriteAndReadRoundTripsAllSections)
 	SViewSwitchState Switch = {};
 	Switch.m_RelTick = 20;
 	Switch.m_HighestSwitchNumber = 2;
+	Switch.m_Team = 7;
 	Switch.m_aStatus[0] = 0x5;
 	Source.m_vSwitchStates.push_back(Switch);
 
@@ -174,6 +187,7 @@ TEST(RankViewTimeline, WriteAndReadRoundTripsAllSections)
 	EXPECT_EQ(Read.m_vEvents[0].m_aData[2], MAX_CLIENTS - 1);
 	ASSERT_EQ(Read.m_vSwitchStates.size(), 1u);
 	EXPECT_EQ(Read.m_vSwitchStates[0].m_RelTick, 20);
+	EXPECT_EQ(Read.m_vSwitchStates[0].m_Team, 7);
 	EXPECT_EQ(Read.m_vSwitchStates[0].m_aStatus[0], 0x5u);
 	ASSERT_EQ(Read.m_vMessages.size(), 1u);
 	EXPECT_EQ(Read.m_vMessages[0].m_Type, EViewMessageType::RACE_TIME);

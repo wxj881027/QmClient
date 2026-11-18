@@ -51,6 +51,7 @@ class CGhostRecorder : public IGhostRecorder
 	const char *m_pBufferEnd;
 	int m_BufferNumItems;
 	std::optional<CGhostItem> m_LastItem;
+	bool m_Failed = false;
 
 	void ResetBuffer();
 	void FlushChunk();
@@ -65,6 +66,7 @@ public:
 
 	void WriteData(int Type, const void *pData, size_t Size) override;
 	bool IsRecording() const override { return m_File != nullptr; }
+	bool HasWriteError() const override { return m_Failed; }
 };
 
 class CGhostLoader : public IGhostLoader

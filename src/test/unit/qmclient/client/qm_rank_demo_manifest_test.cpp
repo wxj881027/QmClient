@@ -71,6 +71,28 @@ TEST(QmRankDemoManifest, ParsesKindTeamFinishersAndUuid)
 	EXPECT_FALSE(qmclient::rank_demo::IsTeamEntry(Entries[1]));
 }
 
+TEST(QmRankDemoManifest, ParsesPlayableGhostSetAndKeepsLegacyEntriesCompatible)
+{
+	const std::string Manifest =
+		std::string(R"({"status":"ok","map":"Map","rank":1,"ts":1700,"demo":"a.demo.gz","cid":0,"ghosts":[0,4]})") +
+		"\n" + R"({"status":"ok","map":"Map","rank":1,"ts":1600,"demo":"b.demo.gz","cid":0,"ghosts":[]})" +
+		"\n" + R"({"status":"ok","map":"Map","rank":1,"ts":1500,"demo":"c.demo.gz","cid":0})";
+	std::vector<qmclient::rank_demo::SEntry> Entries;
+	ASSERT_TRUE(qmclient::rank_demo::ParseManifest(reinterpret_cast<const unsigned char *>(Manifest.data()), Manifest.size(), Entries));
+	ASSERT_EQ(Entries.size(), 3U);
+
+	EXPECT_TRUE(Entries[0].m_HasGhosts);
+	ASSERT_EQ(Entries[0].m_vGhosts.size(), 2U);
+	EXPECT_EQ(Entries[0].m_vGhosts[0], 0);
+	EXPECT_EQ(Entries[0].m_vGhosts[1], 4);
+
+	EXPECT_TRUE(Entries[1].m_HasGhosts);
+	EXPECT_TRUE(Entries[1].m_vGhosts.empty());
+
+	EXPECT_FALSE(Entries[2].m_HasGhosts);
+	EXPECT_TRUE(Entries[2].m_vGhosts.empty());
+}
+
 TEST(QmRankDemoManifest, CollectRankEntriesMergesMembersAndSortsSoloFirst)
 {
 	const std::string Manifest =

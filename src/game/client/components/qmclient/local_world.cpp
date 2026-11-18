@@ -74,6 +74,7 @@ void CLocalWorld::AddTrackSwitchState(const SLocalSwitchState &State)
 	{
 		const SLocalSwitchState &Last = m_vSwitchStates.back();
 		if(Last.m_HighestSwitchNumber == State.m_HighestSwitchNumber &&
+			Last.m_Team == State.m_Team &&
 			mem_comp(Last.m_aStatus, State.m_aStatus, sizeof(State.m_aStatus)) == 0)
 			return;
 	}

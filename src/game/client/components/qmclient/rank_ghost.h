@@ -353,7 +353,7 @@ private:
 
 	// ===== 查看模式时间线：录制 / 缓存 / 回放 =====
 	// 解析时从快照收集交互事件与开关状态
-	void RecordViewTimeline(const CSnapshot *pSnapshot, int RelTick);
+	void RecordViewTimeline(const CSnapshot *pSnapshot, int RelTick, int SwitchTeam);
 	// 解析时从 demo 消息流收集终点/检查点成绩与全局音效
 	void RecordViewMessage(int RelTick, EViewMessageType Type, const int *pData, int NumInts);
 	// 最近一条不晚于 RelTick 的成绩类消息（终点/检查点）；无则返回 nullptr

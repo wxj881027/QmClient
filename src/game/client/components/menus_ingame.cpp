@@ -2429,7 +2429,7 @@ void CMenus::GhostlistPopulate()
 	std::vector<SActiveGhost> vActiveGhosts;
 	for(const CGhostItem &Ghost : m_vGhosts)
 	{
-		if(Ghost.m_Slot < 0 || !Ghost.HasFile())
+		if(Ghost.m_Slot < 0 || !Ghost.HasFile() || !GameClient()->m_Ghost.IsSlotLoadedWith(Ghost.m_Slot, Ghost.m_aFilename))
 			continue;
 		SActiveGhost Active;
 		str_copy(Active.m_aFilename, Ghost.m_aFilename);

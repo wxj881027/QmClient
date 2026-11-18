@@ -3446,6 +3446,7 @@ if(CLIENT)
     components/qmclient/demo_camera.h
     components/qmclient/demo_camera_path.h
     components/qmclient/demo_camera_file.h
+    components/qmclient/ghost_path.h
     components/camera.cpp
     components/camera.h
     components/censor.cpp
@@ -3476,6 +3477,7 @@ if(CLIENT)
     components/freezebars.h
     components/ghost.cpp
     components/ghost.h
+    components/qmclient/ghost_start_detection.h
     components/hud.cpp
     components/hud.h
     components/hud_frozen_tee_state.h
@@ -3973,6 +3975,8 @@ if(CLIENT)
     prediction/entities/pickup.h
     prediction/entities/plasma.cpp
     prediction/entities/plasma.h
+    prediction/entities/practice_light.cpp
+    prediction/entities/practice_light.h
     prediction/entities/projectile.cpp
     prediction/entities/projectile.h
     prediction/entity.cpp
@@ -4824,6 +4828,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/friends_pin_test.cpp
     src/test/unit/engine/input_ring_test.cpp
     src/test/integration/engine/friends_pin_persistence_test.cpp
+    src/test/integration/engine/ghost_loader_test.cpp
     src/test/integration/qmclient/client/qm_browser_friend_pin_test.cpp
     src/test/unit/qmclient/monitoring/qm_perf_diagnostics_test.cpp
     src/test/unit/qmclient/monitoring/qm_perf_json_test.cpp
@@ -4853,6 +4858,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_nameplate_layout_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
     src/test/unit/qmclient/client/qm_route_visited_test.cpp
+    src/test/unit/qmclient/client/qm_ghost_start_detection_test.cpp
     src/test/unit/qmclient/client/qm_route_render_cache_test.cpp
     src/test/integration/qmclient/client/qm_map_route_cache_test.cpp
     src/test/unit/qmclient/monitoring/qm_stutter_sample_series_test.cpp
@@ -5101,6 +5107,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_media_paths_storage_test.cpp
     src/test/unit/qmclient/client/qm_demo_camera_path_test.cpp
     src/test/unit/qmclient/client/qm_demo_camera_file_test.cpp
+    src/test/unit/qmclient/client/qm_ghost_path_test.cpp
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
@@ -5654,6 +5661,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/generated/data_types.h
     ${DEPS}
   )
+  # GhostLoaderIntegration 直接构造真实引擎读写器，验证文件事务与分块轨迹协议。
+  target_sources(${TARGET_TESTRUNNER} PRIVATE src/engine/client/ghost.cpp)
   add_dependencies(${TARGET_TESTRUNNER} generate_protocol)
   target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
   if(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
@@ -5914,6 +5923,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/prediction/entities/laser.cpp
       src/game/client/prediction/entities/pickup.cpp
       src/game/client/prediction/entities/plasma.cpp
+      src/game/client/prediction/entities/practice_light.cpp
       src/game/client/prediction/entities/projectile.cpp
       src/game/client/projectile_data.cpp
       src/game/client/laser_data.cpp
@@ -5983,6 +5993,7 @@ endif()
 if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
   # 对象库集合与 testrunner 一致，基准可覆盖 base/engine/game 各层代码
   add_executable(qm-benchmarks EXCLUDE_FROM_ALL
+    src/test/benchmark/qm_ghost_benchmark.cpp
     src/test/benchmark/qm_local_world_benchmark.cpp
     src/test/benchmark/qm_practice_predict_benchmark.cpp
     src/game/client/components/qmclient/local_world.cpp

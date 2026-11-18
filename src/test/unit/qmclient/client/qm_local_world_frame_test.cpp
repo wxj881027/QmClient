@@ -235,6 +235,7 @@ TEST(QmLocalWorldSwitchers, EncodesOnlyTheActiveTeamIntoTheTimelineBitmask)
 	const SLocalSwitchState State = QmEncodeLocalSwitchState(123, vSwitchers, 3);
 	EXPECT_EQ(State.m_Tick, 123);
 	EXPECT_EQ(State.m_HighestSwitchNumber, 39);
+	EXPECT_EQ(State.m_Team, 3);
 	EXPECT_EQ(State.m_aStatus[0] & (1u << 0), 1u);
 	EXPECT_EQ(State.m_aStatus[0] & (1u << 7), 1u << 7);
 	EXPECT_EQ(State.m_aStatus[1] & (1u << 7), 1u << 7); // 39 = 32 + 7
