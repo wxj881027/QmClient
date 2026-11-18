@@ -344,14 +344,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		if(s_ProfileDeleteRows.Update(s_AllowDelete, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 		{
 			const CSettingsContentRevealScope ProfileDeleteRevealScope(Ui(), Flow, s_ProfileDeleteRows.Fade(g_Config.m_QmUiMotionLevel));
+			// 收起动画仍会绘制按钮，关闭开关时立即禁用操作。
+			const int DeleteActionState = s_AllowDelete ? 0 : -1;
 			if(Flow.Control("tclient-profile-delete", ProfileMetrics.m_ButtonHeight, Row, RowSpacing))
 			{
-				if(DoTClientSettingsButton_Menu(&s_DeleteButton, "tclient-profile-delete", Localize("Delete"), 0, &Row) && !ReadOnly && !Ui()->RenderOnly())
+				if(DoTClientSettingsButton_Menu(&s_DeleteButton, "tclient-profile-delete", Localize("Delete"), DeleteActionState, &Row) && !ReadOnly && !Ui()->RenderOnly())
 					DeleteSelectedProfile();
 			}
 			if(Flow.Control("tclient-profile-override", ProfileMetrics.m_ButtonHeight, Row, RowSpacing))
 			{
-				if(DoTClientSettingsButton_Menu(&s_OverrideButton, "tclient-profile-override", Localize("Override"), 0, &Row) && !ReadOnly && !Ui()->RenderOnly())
+				if(DoTClientSettingsButton_Menu(&s_OverrideButton, "tclient-profile-override", Localize("Override"), DeleteActionState, &Row) && !ReadOnly && !Ui()->RenderOnly())
 				{
 					if(CProfile *pProfile = pSelectedProfile())
 						*pProfile = BuildProfileFromCurrentSettings();
