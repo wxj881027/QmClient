@@ -186,13 +186,13 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_End(const CCommandBuffer
 	if(m_ActiveRenderTargetId >= 0 && (size_t)m_ActiveRenderTargetId < m_vRenderTargets.size())
 	{
 		const SOpenGLRenderTarget &Target = m_vRenderTargets[m_ActiveRenderTargetId];
-		if(Target.m_SampleCount > 1 && Target.m_MultisampleFramebuffer != 0)
-		{
-			// 多采样 renderbuffer 不能直接采样；结束前一次性 resolve 到单采样纹理。
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, Target.m_MultisampleFramebuffer);
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, Target.m_Framebuffer);
-			glBlitFramebuffer(0, 0, Target.m_Width, Target.m_Height, 0, 0, Target.m_Width, Target.m_Height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-		}
+		opengl_render_target::ResolveMultisample(
+			Target, m_LastClipEnable, [] { glDisable(GL_SCISSOR_TEST); },
+			[](TWGLuint ReadFramebuffer, TWGLuint DrawFramebuffer, int Width, int Height) {
+				glBindFramebuffer(GL_READ_FRAMEBUFFER, ReadFramebuffer);
+				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, DrawFramebuffer);
+				glBlitFramebuffer(0, 0, Width, Height, 0, 0, Width, Height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+			});
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, m_RenderTargetPreviousFramebuffer);
 	glViewport(m_aRenderTargetPreviousViewport[0], m_aRenderTargetPreviousViewport[1], m_aRenderTargetPreviousViewport[2], m_aRenderTargetPreviousViewport[3]);

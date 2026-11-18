@@ -120,6 +120,17 @@ namespace opengl_render_target
 			Operations.DeleteTexture(Previous.m_Texture);
 		return true;
 	}
+
+	template<typename TDisableScissor, typename TBlit>
+	void ResolveMultisample(const STarget &Target, bool ClipEnabled, TDisableScissor DisableScissor, TBlit Blit) noexcept
+	{
+		if(Target.m_SampleCount <= 1 || Target.m_MultisampleFramebuffer == 0)
+			return;
+		// 上一次绘制的裁剪区仍然会限制 blit。合成与读回都需要整张目标纹理。
+		if(ClipEnabled)
+			DisableScissor();
+		Blit(Target.m_MultisampleFramebuffer, Target.m_Framebuffer, Target.m_Width, Target.m_Height);
+	}
 }
 
 #endif

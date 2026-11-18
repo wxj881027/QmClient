@@ -373,3 +373,36 @@ TEST_F(OpenGLRenderTargetAllocation, FailedPoolGrowthCanRetryWithoutLosingTheExi
 	EXPECT_EQ(m_Operations.m_FramebufferDeletes, 0);
 	EXPECT_EQ(m_Operations.m_TextureDeletes, 0);
 }
+
+TEST(OpenGLRenderTargetResolve, ResolveClearsTheLastDrawScissorBeforeCopyingTheFullTarget)
+{
+	const STarget Target{5, 7, 32, 16, 23, 24, 4};
+	bool ClipEnabled = true;
+	bool ClipAtBlit = true;
+	int Blits = 0;
+	std::array<TWGLuint, 2> aFramebuffers{};
+	std::array<int, 2> aSize{};
+	opengl_render_target::ResolveMultisample(
+		Target, ClipEnabled, [&] { ClipEnabled = false; },
+		[&](TWGLuint ReadFramebuffer, TWGLuint DrawFramebuffer, int Width, int Height) {
+			++Blits;
+			ClipAtBlit = ClipEnabled;
+			aFramebuffers = {ReadFramebuffer, DrawFramebuffer};
+			aSize = {Width, Height};
+		});
+	EXPECT_EQ(Blits, 1);
+	EXPECT_FALSE(ClipAtBlit);
+	EXPECT_EQ(aFramebuffers, (std::array<TWGLuint, 2>{Target.m_MultisampleFramebuffer, Target.m_Framebuffer}));
+	EXPECT_EQ(aSize, (std::array<int, 2>{Target.m_Width, Target.m_Height}));
+}
+
+TEST(OpenGLRenderTargetResolve, SingleSampleFallbackDoesNotChangeScissorOrCopy)
+{
+	bool ScissorChanged = false;
+	bool Blitted = false;
+	opengl_render_target::ResolveMultisample(
+		OLD, true, [&] { ScissorChanged = true; },
+		[&](TWGLuint, TWGLuint, int, int) { Blitted = true; });
+	EXPECT_FALSE(ScissorChanged);
+	EXPECT_FALSE(Blitted);
+}

@@ -23,13 +23,11 @@ public:
 	bool IsLoaded() const;
 	TWGLuint GetShaderId() const;
 
-	CGLSL();
+	CGLSL() = default;
 	virtual ~CGLSL();
 
 private:
-	TWGLuint m_ShaderId;
-	int m_Type;
-	bool m_IsLoaded;
+	TWGLuint m_ShaderId = 0;
 };
 
 #endif

@@ -6507,6 +6507,19 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       target_link_libraries(${TARGET_TESTRUNNER} oleaut32)
     endif()
   endif()
+  if(CLIENT AND GLEW_FOUND AND NOT (TARGET_OS STREQUAL "android" OR TARGET_OS STREQUAL "ios" OR TARGET_OS STREQUAL "emscripten"))
+    target_sources(${TARGET_TESTRUNNER} PRIVATE
+      src/engine/client/backend/opengl/opengl_sl.cpp
+      src/engine/client/backend/opengl/opengl_sl_program.cpp
+      src/test/integration/engine/opengl_shader_lifecycle_test.cpp
+      ${GLEW_DEP}
+    )
+    target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${GLEW_INCLUDE_DIRS})
+    target_link_libraries(${TARGET_TESTRUNNER} ${GLEW_LIBRARIES} ${OPENGL_gl_LIBRARY})
+    if(TARGET_OS STREQUAL "windows")
+      target_link_libraries(${TARGET_TESTRUNNER} opengl32)
+    endif()
+  endif()
   if(FFMPEG_FOUND)
     target_link_libraries(${TARGET_TESTRUNNER} ${FFMPEG_LIBRARIES})
   endif()

@@ -24,6 +24,8 @@
 void CGLSLProgram::CreateProgram()
 {
 	m_ProgramId = glCreateProgram();
+	if(m_ProgramId == 0)
+		log_error("gfx/opengl/shader", "Failed to create a shader program.");
 }
 
 void CGLSLProgram::DeleteProgram()
@@ -37,7 +39,7 @@ void CGLSLProgram::DeleteProgram()
 
 bool CGLSLProgram::AddShader(CGLSL *pShader) const
 {
-	if(pShader->IsLoaded())
+	if(m_ProgramId != 0 && pShader->IsLoaded())
 	{
 		glAttachShader(m_ProgramId, pShader->GetShaderId());
 		return true;
@@ -60,8 +62,11 @@ void CGLSLProgram::DetachShaderById(TWGLuint ShaderId) const
 
 bool CGLSLProgram::LinkProgram()
 {
+	if(m_ProgramId == 0)
+		return false;
+
 	glLinkProgram(m_ProgramId);
-	TWGLint LinkStatus;
+	TWGLint LinkStatus = GL_FALSE;
 	glGetProgramiv(m_ProgramId, GL_LINK_STATUS, &LinkStatus);
 	m_IsLinked = LinkStatus == GL_TRUE;
 	if(!m_IsLinked)
@@ -143,7 +148,7 @@ void CGLSLProgram::SetUniform(int Loc, const bool Value)
 
 int CGLSLProgram::GetUniformLoc(const char *pName) const
 {
-	return glGetUniformLocation(m_ProgramId, pName);
+	return m_IsLinked ? glGetUniformLocation(m_ProgramId, pName) : -1;
 }
 
 void CGLSLProgram::UseProgram() const
