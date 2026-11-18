@@ -977,8 +977,9 @@ void CSpectator::OnRender()
 		}
 		float TeeAlpha;
 		float NameAlpha;
-		if(Client()->State() == IClient::STATE_DEMOPLAYBACK &&
-			!GameClient()->m_Snap.m_aCharacters[pInfo->m_Id].m_Active)
+		if(QmSpectatorSelection::ShouldDimDemoPlayer(Client()->State() == IClient::STATE_DEMOPLAYBACK, ViewModeActive, [&] {
+			   return GameClient()->m_Snap.m_aCharacters[pInfo->m_Id].m_Active;
+		   }))
 		{
 			NameAlpha = 0.25f;
 			TeeAlpha = 0.5f;

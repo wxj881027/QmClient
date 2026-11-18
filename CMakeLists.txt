@@ -5331,6 +5331,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/editor_collab_camera_reload_test.cpp
     src/test/unit/client/editor_collab_join_test.cpp
     src/test/unit/client/editor_quad_slice_test.cpp
+    src/test/unit/qmclient/client/qm_spectator_demo_row_test.cpp
     src/test/integration/client/section_loader_cache_open_test.cpp
     src/test/integration/client/local_server_port_file_test.cpp
     src/test/unit/client/envelope_state_time_test.cpp
