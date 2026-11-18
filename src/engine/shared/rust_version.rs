@@ -7,6 +7,7 @@ use ddnet_engine::IConsole;
 use ddnet_engine::IConsole_FCommandCallback;
 use ddnet_engine::IConsole_IResult;
 use ddnet_engine::IConsole_OUTPUT_LEVEL_STANDARD;
+use ddnet_engine::TryRegisterRustConsoleCommand;
 use std::pin::Pin;
 
 #[cxx::bridge]
@@ -48,12 +49,17 @@ extern "C" fn PrintRustVersionCallback(_: &IConsole_IResult, user: UserPtr) {
 #[allow(non_snake_case)]
 pub fn RustVersionRegister(console: Pin<&mut IConsole>) {
     let user = console.as_ref().get_ref().into();
-    console.Register(
-        s!("rust_version"),
-        s!(""),
-        CFGFLAG_CLIENT | CFGFLAG_SERVER,
-        IConsole_FCommandCallback(PrintRustVersionCallback),
-        user,
-        s!("Prints the Rust version used to compile DDNet"),
-    );
+    // SAFETY: 用户指针借用的是持有该命令的控制台。
+    // 节点分配失败时略过可选的版本命令，继续初始化。
+    let _ = unsafe {
+        TryRegisterRustConsoleCommand(
+            console,
+            s!("rust_version"),
+            s!(""),
+            CFGFLAG_CLIENT | CFGFLAG_SERVER,
+            IConsole_FCommandCallback(PrintRustVersionCallback),
+            user,
+            s!("Prints the Rust version used to compile DDNet"),
+        )
+    };
 }

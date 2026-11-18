@@ -4,6 +4,7 @@ use ddnet_base::UserPtr;
 pub use self::ffi::CreateConsole;
 pub use self::ffi::IConsole;
 pub use self::ffi::IConsole_IResult;
+pub use self::ffi::TryRegisterRustConsoleCommand;
 
 /// Command callback for `IConsole`.
 ///
@@ -443,6 +444,20 @@ mod ffi {
             pUser: UserPtr,
             pHelp: StrRef<'_>,
         );
+
+        /// 尝试注册可选命令。命令节点分配失败时返回 `false`。
+        ///
+        /// # Safety
+        /// 调用方须保证 `pUser` 在命令可执行期间对回调有效。
+        pub unsafe fn TryRegisterRustConsoleCommand(
+            console: Pin<&mut IConsole>,
+            pName: StrRef<'static>,
+            pParams: StrRef<'static>,
+            Flags: i32,
+            pfnFunc: IConsole_FCommandCallback,
+            pUser: UserPtr,
+            pHelp: StrRef<'static>,
+        ) -> bool;
 
         /// Create a console instance.
         ///
