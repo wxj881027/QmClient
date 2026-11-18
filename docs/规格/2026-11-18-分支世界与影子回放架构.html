@@ -174,9 +174,9 @@
 
 <div class="meta">
 	<span class="chip">规格日期 <b>2026-11-18</b></span>
-	<span class="chip">基线提交 <b>104ff23b9a</b></span>
+	<span class="chip">基线提交 <b>fea008fed2</b></span>
 	<span class="chip ok">快速练习平行化 已落地</span>
-	<span class="chip warn">影子机关世界 规划中</span>
+	<span class="chip warn">影子机关世界 B1/B2 已接入，实机验收待</span>
 </div>
 
 <div class="panel note">
@@ -472,7 +472,7 @@
 
 <h3>4.3 影子为什么不参与物理</h3>
 
-<p><code>CLocalWorld</code>（<code>src/game/client/components/qmclient/local_world.h:131</code>）只保存轨迹会话，不持有 <code>CGameWorld</code>。CGhost 手动渲染把轨迹插值成虚影，没有角色实体，也没有碰撞查询。这是设计底线：Rank 1 和 Ghost 都来自“另一个平行时空”，只允许看。</p>
+<p><code>CLocalWorld</code>（<code>src/game/client/components/qmclient/local_world.h:131</code>）只保存轨迹会话，不持有 <code>CGameWorld</code>。查看模式另有一棵只读机关世界（<code>CRankGhost::m_pViewMechanismWorld</code>），只重建门、拖拉、静态激光，并按播放头推进激光相位；它不进入主世界 tick、不写共享 <code>CCollision</code>。CGhost 手动渲染仍把轨迹插值成虚影，没有可碰撞角色，也没有勾人、挡人查询。这是设计底线：Rank 1 和 Ghost 都来自“另一个平行时空”，只允许看。</p>
 
 <h3>4.4 双模式路线图</h3>
 
@@ -495,22 +495,22 @@
 		<tr>
 			<td>B1</td>
 			<td>门、拖拉、静态激光影子化：只读机关世界 + <code>.qmevt</code> 开关驱动</td>
-			<td><span class="tag done">高</span>本轮的分支机关重建与 <code>RenderData</code> 可直接复用</td>
+			<td><span class="tag done">已实现</span><code>map_mechanism_builder</code> 共用地图扫描；门不注册共享碰撞，激光按播放头重算相位，拖拉指向影子 Tee</td>
 		</tr>
 		<tr>
 			<td>B2</td>
 			<td>移动方块、机关炮影子化</td>
-			<td><span class="tag plan">中</span>需要按播放头重放平台位移与炮位，不能只读当前 tick</td>
+			<td><span class="tag done">已实现</span>移动方块包络按播放头求值；机关炮用 <code>shadow_gun_replay</code> 对影子轨迹只读重放</td>
 		</tr>
 		<tr>
 			<td>B3</td>
 			<td>多 Tee：所有玩家/分身同时显示</td>
-			<td><span class="tag plan">中</span><code>MAX_TRACKS</code> 从 2 扩成按 ClientId 的 N 轨；demo 解析记录所有角色</td>
+			<td><span class="tag done">已具备</span>解析器按 ClientId 收集最多 128 轨（与服务端最大客户端数一致）；<code>CGhost</code> 可同时装载 256 个影子槽位。单人 demo 只显示一个 Tee 是录制内容本身</td>
 		</tr>
 		<tr>
 			<td>B4</td>
 			<td>音效/特效本地播放开关</td>
-			<td><span class="tag plan">低</span>复用 <code>SQmFocusModeDecisions</code> 与预测事件门控，默认关闭避免盖住主世界</td>
+			<td><span class="tag done">已实现</span><code>qm_ghost_view_feedback</code> 默认关闭；开启后事件与音效仍走既有 <code>QmShouldPlayWorldSound</code> 门控</td>
 		</tr>
 	</tbody>
 </table>
@@ -539,6 +539,8 @@
 
 <p>快捷键沿用 <code>PlaybackShortcutsActive()</code>：暂停/播放、前进/后退、倍速、上一/下一标记、Home/End、P/K/J/L 等与原版 demo 一致。控制卡矩形每帧记录在 <code>m_OnlineReplayPanelRect</code>，供 <code>OnlineReplayPanelContains()</code> 做“点外关闭”判定。</p>
 
+<p>影子回放的音效与命中特效默认不播放，避免盖住玩家正在操作的本地世界；需要时用控制台 <code>qm_ghost_view_feedback 1</code> 打开。开启后仍受 <code>snd_game</code>、专注模式与地图音效门控约束。</p>
+
 <div class="panel note">
 	<p><b>仍可继续 token 化的部分：</b>卡片圆角 12/11.4、按钮圆角 6、Live 图标 24 等还是尺寸字面量。建议下一轮并入 <code>ui_token::radius</code> 与 <code>ui_token::replay</code> 尺寸组，但不要和本轮交互修复混在一起。</p>
 </div>
@@ -555,7 +557,9 @@
 		<tr><td>表情</td><td>分支练习状态</td><td>轨迹/成员数据</td><td><code>ResolvePracticeEyeEmote</code></td></tr>
 		<tr><td>AFK 坐姿</td><td>参与者屏蔽服务器标记</td><td>不适用</td><td><code>players.cpp</code> 渲染门</td></tr>
 		<tr><td>冻结</td><td>分支 <code>CCharacterCore</code></td><td>轨迹冻结标记 + 查看模式进度条</td><td><code>gameclient.cpp</code> / <code>CFreezeBars</code></td></tr>
-		<tr><td>门 / 拖拉 / 激光</td><td>分支重建 + 分支开关</td><td>快照 + <code>.qmevt</code> 开关（现状）</td><td><code>items.cpp</code> / <code>RenderData</code></td></tr>
+		<tr><td>门 / 拖拉 / 激光</td><td>分支重建 + 分支开关</td><td>只读机关世界 + <code>.qmevt</code> 开关</td><td><code>items.cpp</code> / <code>map_mechanism_builder.cpp</code></td></tr>
+		<tr><td>移动方块</td><td>分支 tick</td><td>包络按回放播放头求值</td><td><code>moving_tiles.cpp</code> / <code>EnvelopeEvalAtTick</code></td></tr>
+		<tr><td>机关炮</td><td>分支 <code>m_vPracticeGuns</code></td><td>影子轨迹只读重放</td><td><code>shadow_gun_replay.cpp</code></td></tr>
 		<tr><td>队伍</td><td>参与者跟随服务器，solo 本地</td><td><code>.qmevt</code> 的 <code>m_Team</code></td><td><code>SyncPracticeWorldConfig</code> / <code>UpdateViewTimeline</code></td></tr>
 		<tr><td>聊天 / 计分 / 击杀</td><td>服务器</td><td>服务器</td><td>不接管</td></tr>
 	</tbody>
@@ -589,18 +593,19 @@
 <table>
 	<thead><tr><th>项目</th><th>结果</th></tr></thead>
 	<tbody>
-		<tr><td>构建 <code>game-client</code></td><td>成功（基线 71cc5b8069 + 本轮改动）</td></tr>
-		<tr><td><code>testrunner</code></td><td>7314 / 7314 通过</td></tr>
+		<tr><td>构建 <code>game-client</code></td><td>成功（基线 fea008fed2 + B1–B4 改动）</td></tr>
+		<tr><td><code>testrunner</code></td><td>7324 / 7324 通过</td></tr>
 		<tr><td><code>qm-nmt-tests</code></td><td>176 / 176 通过</td></tr>
 		<tr><td><code>qm-ui-popup-tests</code></td><td>502 / 502 通过</td></tr>
-		<tr><td><code>qm-practice-predict-tests</code></td><td>37 / 37 通过</td></tr>
-		<tr><td><code>BM_GhostPathAppend/1000</code></td><td>CPU 中位数约 5.75µs（0.2s × 5 次聚合）</td></tr>
-		<tr><td><code>BM_GhostExtraDataDecode</code></td><td>CPU 中位数约 1.19ns</td></tr>
-		<tr><td><code>BM_OnlineReplayClock</code></td><td>CPU 中位数约 3.49ns</td></tr>
+		<tr><td><code>qm-practice-predict-tests</code></td><td>40 / 40 通过</td></tr>
+		<tr><td><code>BM_GhostPathAppend/1000</code></td><td>CPU 中位数约 4.71µs（0.2s × 5 次聚合）</td></tr>
+		<tr><td><code>BM_GhostExtraDataDecode</code></td><td>CPU 中位数约 1.26ns</td></tr>
+		<tr><td><code>BM_OnlineReplayClock</code></td><td>CPU 中位数约 4.97ns</td></tr>
+		<tr><td><code>BM_PracticeLightPhase/12000</code></td><td>CPU 中位数约 3.97µs（12000 tick 从零点重算）</td></tr>
 	</tbody>
 </table>
 
-<p class="small">基准只证明纯逻辑开销，不代表帧时间、实机交互或视觉正确性。旁观、换队、关门折叠、跨图查看仍需窗口化实机验收。</p>
+<p class="small">基准只证明纯逻辑开销，不代表帧时间、实机交互或视觉正确性。影子机关、多人回放、移动方块与机关炮仍需窗口化实机验收。</p>
 
 <h2 id="roadmap">9. 演进路线</h2>
 
@@ -615,17 +620,17 @@
 		<tr>
 			<td>P1</td>
 			<td>影子世界 B1：门、拖拉、静态激光只读机关世界</td>
-			<td>Rank 1/练习组查看时机关随播放头开合；主世界碰撞、聊天、计分不受影响</td>
+			<td>已实现；待窗口化实机确认主世界碰撞、聊天、计分不受影响</td>
 		</tr>
 		<tr>
 			<td>P2</td>
 			<td>多 Tee 轨迹：N 轨 + demo 解析记录所有角色</td>
-			<td>多人地图回放能看到所有玩家影子；内存与加载时间有上限</td>
+			<td>已具备；待用多人地图回放实机确认全员可见</td>
 		</tr>
 		<tr>
 			<td>P2</td>
 			<td>移动方块/机关炮影子化</td>
-			<td>按播放头重放平台相位；不写入共享碰撞</td>
+			<td>已实现；待确认长回放跳转的追赶耗时</td>
 		</tr>
 		<tr>
 			<td>P3</td>
@@ -644,6 +649,10 @@
 		<tr><td>练习命令与诊断</td><td><code>src/game/client/components/tclient/fast_practice_commands.cpp</code></td></tr>
 		<tr><td>渲染发布、冻结/武器/表情覆盖、开关队伍</td><td><code>src/game/client/gameclient.cpp</code></td></tr>
 		<tr><td>分支机关绘制与快照去重</td><td><code>src/game/client/components/items.cpp</code></td></tr>
+		<tr><td>地图机关统一扫描</td><td><code>src/game/client/components/qmclient/map_mechanism_builder.cpp</code><br><code>src/game/client/components/qmclient/map_mechanism_builder.h</code></td></tr>
+		<tr><td>静态激光相位纯计算</td><td><code>src/game/client/components/qmclient/practice_light_phase.h</code></td></tr>
+		<tr><td>影子机关炮只读重放</td><td><code>src/game/client/components/qmclient/shadow_gun_replay.cpp</code><br><code>src/game/client/components/qmclient/shadow_gun_replay.h</code></td></tr>
+		<tr><td>移动方块包络播放头</td><td><code>src/game/client/components/tclient/moving_tiles.cpp</code><br><code>src/game/client/components/envelope_state.cpp</code></td></tr>
 		<tr><td>门、拖拉、练习灯</td><td><code>src/game/client/prediction/entities/door.cpp</code><br><code>src/game/client/prediction/entities/dragger.cpp</code><br><code>src/game/client/prediction/entities/practice_light.cpp</code></td></tr>
 		<tr><td>Rank 1 清单/下载/重绑</td><td><code>src/game/client/components/qmclient/rank_ghost.cpp</code></td></tr>
 		<tr><td>demo 解析与 <code>.qmevt</code> 生成</td><td><code>src/game/client/components/qmclient/rank_ghost_parse.cpp</code></td></tr>
@@ -658,7 +667,7 @@
 
 <hr>
 
-<p class="small">本文是现行架构规格，记录 2026-11-18 基线 <code>71cc5b8069</code> 与本轮 Rank 1 交互修复后的实际代码行为与后续路线。实现变化时优先更新本文，不为每轮验证另建报告。</p>
+<p class="small">本文是现行架构规格，记录 2026-11-18 基线 <code>fea008fed2</code> 与 B1–B4 机关世界实现后的实际代码行为与后续路线。实现变化时优先更新本文，不为每轮验证另建报告。</p>
 
 </main>
 </body>

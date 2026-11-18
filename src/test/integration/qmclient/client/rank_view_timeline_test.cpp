@@ -96,6 +96,13 @@ TEST(RankViewTimeline, ReadsLegacyV2SwitchSectionWithoutTeam)
 	EXPECT_EQ(Timeline.m_vSwitchStates[0].m_aStatus[0], 1u);
 }
 
+TEST(RankViewTimeline, RecordedSwitchTeamWinsOverViewerTeam)
+{
+	EXPECT_EQ(ResolveViewSwitchTeam(5, 2), 5);
+	EXPECT_EQ(ResolveViewSwitchTeam(-1, 2), 2);
+	EXPECT_EQ(ResolveViewSwitchTeam(NUM_DDRACE_TEAMS + 10, -1), TEAM_FLOCK);
+}
+
 TEST(RankViewTimeline, RejectsHugeCountInShortFileAndClearsPreviouslyLoadedState)
 {
 	SViewTimeline Timeline;

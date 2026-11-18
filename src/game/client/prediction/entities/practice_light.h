@@ -20,6 +20,13 @@ class CPracticeLight : public CEntity
 	void Move();
 	void Step();
 
+	// 影子回放的时间线基准：构造函数与地图配置完成时的相位。
+	float m_PhaseStartRotation = 0.0f;
+	int m_PhaseStartCurveLength = 0;
+	int m_PhaseStartSpeed = 0;
+	int m_PhaseTick = 0;
+	bool m_PhaseOriginCaptured = false;
+
 public:
 	int m_CurveLength = 0;
 	int m_LengthL = 0;
@@ -35,6 +42,10 @@ public:
 	bool InitFromSnapshot(vec2 SnapshotHub, vec2 SnapshotFrom, int SnapshotEvalTick);
 	// 配置完角度/长度/速度后立即重算碰撞端点，避免首帧停在零长度或旧角度上。
 	void RefreshGeometry();
+	// 记录“时间线零点”的相位。影子世界在开关状态或播放头跳转后从这里重放。
+	void CapturePhaseOrigin();
+	// 把相位推进到指定回放 tick；小于上次 tick 时会从头重算，支持倒退拖动。
+	void SetPhaseTick(int Tick);
 	void ShiftEvalTick(int TickDelta) { m_EvalTick += TickDelta; }
 	// 渲染层数据。开关关闭时返回空，网络裁剪外也能画出与分支碰撞一致的激光。
 	std::optional<CLaserData> RenderData(int Team);

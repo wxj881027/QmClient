@@ -21,6 +21,7 @@
 #include <engine/shared/demo.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/shadow_gun_replay.h>
 #include <game/gamecore.h>
 
 #include <deque>
@@ -32,6 +33,7 @@
 class IStorage;
 class CSnapshot;
 class CTeeRenderInfo;
+class CGameWorld;
 
 class CRankGhost : public CComponent, private CDemoPlayer::IListener, private COnlineReplayPlayer::ISource
 {
@@ -129,6 +131,14 @@ public:
 	// 查看模式下的开关状态画布：进入时复制一份服务器世界的开关，回放时间线只改
 	// 这一份。非查看模式返回 nullptr，调用方回落到可玩时间线的权威开关。
 	std::vector<SSwitchers> *ViewSwitchers() { return m_ViewSwitchersActive && IsViewModeActive() ? &m_vViewSwitchers : nullptr; }
+	// 影子机关世界：只读几何，不接受 tick、不写共享碰撞。
+	CGameWorld *ViewMechanismWorld() const;
+	// 回放当前开关状态所属的录制队伍；无记录时返回 -1。
+	int ViewSwitchTeam() const { return IsViewModeActive() ? m_ViewSwitchTeam : -1; }
+	// 影子里最近的可被机关拖拽命中的 Tee；用于补全只读世界的拖拉光束。
+	bool ViewDraggerTarget(vec2 Pos, vec2 *pTarget) const;
+	// 影子机关炮的只读等离子球，仅供渲染。
+	const std::vector<qm_shadow_gun::SPlasma> &ViewPlasmas() const { return m_vViewPlasmas; }
 	uint64_t ViewGeneration() const { return m_ViewGeneration; }
 	bool ExportViewCut(const char *pDestination, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pFilter, void *pUser);
 	bool ViewMemberRenderInfo(int Index, CTeeRenderInfo *pInfo) const;
@@ -298,6 +308,12 @@ private:
 	// 回放时间线只允许改画面（items/命中盒读 GameClient()->Switchers()）。
 	std::vector<SSwitchers> m_vViewSwitchers;
 	bool m_ViewSwitchersActive = false;
+	// 影子机关世界与回放开关共用同一条只读时间线。
+	std::unique_ptr<CGameWorld> m_pViewMechanismWorld;
+	int m_ViewSwitchTeam = -1;
+	std::vector<qm_shadow_gun::SGun> m_vViewGuns;
+	std::vector<qm_shadow_gun::SPlasma> m_vViewPlasmas;
+	int m_ViewGunTick = -1;
 	// 旁观面板选中的跟随成员（多轨顺序索引，0 = 主选手）
 	int m_ViewSelected = 0;
 	COnlineReplayMembers m_ViewMembers;

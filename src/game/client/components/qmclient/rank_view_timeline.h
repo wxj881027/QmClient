@@ -68,6 +68,15 @@ namespace qmclient::rank_ghost
 		return EventTick >= CurTick - std::max(1, MaxLagTicks);
 	}
 
+	// 回放开关优先使用录制队伍；旧缓存没有队伍时回落到查看者当前队伍。
+	// 渲染和状态写入必须共用这个入口，否则开关会写进一条时间线、画面却读另一条。
+	inline int ResolveViewSwitchTeam(int RecordedTeam, int FallbackTeam)
+	{
+		if(RecordedTeam >= TEAM_FLOCK && RecordedTeam < NUM_DDRACE_TEAMS)
+			return RecordedTeam;
+		return std::clamp(FallbackTeam, (int)TEAM_FLOCK, (int)NUM_DDRACE_TEAMS - 1);
+	}
+
 	inline bool ValidViewEvent(const SViewEvent &Event)
 	{
 		switch(Event.m_Type)

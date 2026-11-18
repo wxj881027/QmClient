@@ -254,6 +254,12 @@ void CMovingTiles::OnRender()
 
 	auto RenderPass = [&]() {
 		constexpr float ColorConv = 1.0f / 255.0f;
+		const auto EvalEnvelope = [&](int Offset, int Index, ColorRGBA &Result, size_t Channels) {
+			if(m_ViewTick >= 0)
+				m_EnvEvaluator.EnvelopeEvalAtTick(Offset, Index, Result, Channels, m_ViewTick, m_ViewIntraTick);
+			else
+				m_EnvEvaluator.EnvelopeEval(Offset, Index, Result, Channels);
+		};
 
 		size_t QuadStart = 0;
 		while(QuadStart < m_vQuads.size())
@@ -297,7 +303,7 @@ void CMovingTiles::OnRender()
 					continue;
 
 				ColorRGBA Color(1.0f, 1.0f, 1.0f, 1.0f);
-				m_EnvEvaluator.EnvelopeEval(pQuad->m_ColorEnvOffset, pQuad->m_ColorEnv, Color, 4);
+				EvalEnvelope(pQuad->m_ColorEnvOffset, pQuad->m_ColorEnv, Color, 4);
 				if(Color.a <= 0.0f)
 					continue;
 
@@ -308,7 +314,7 @@ void CMovingTiles::OnRender()
 					fx2f(pQuad->m_aTexcoords[3].x), fx2f(pQuad->m_aTexcoords[3].y));
 
 				ColorRGBA PositionEval(0.0f, 0.0f, 0.0f, 0.0f);
-				m_EnvEvaluator.EnvelopeEval(pQuad->m_PosEnvOffset, pQuad->m_PosEnv, PositionEval, 3);
+				EvalEnvelope(pQuad->m_PosEnvOffset, pQuad->m_PosEnv, PositionEval, 3);
 
 				const vec2 Offset(PositionEval.r, PositionEval.g);
 				const float Rotation = PositionEval.b / 180.0f * pi + QuadData.m_Angle;

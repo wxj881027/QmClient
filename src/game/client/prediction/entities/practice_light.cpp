@@ -2,6 +2,7 @@
 
 #include "character.h"
 
+#include <game/client/components/qmclient/practice_light_phase.h>
 #include <game/collision.h>
 #include <game/mapitems.h>
 #include <game/teamscore.h>
@@ -21,6 +22,11 @@ CPracticeLight::CPracticeLight(CGameWorld *pGameWorld, vec2 Pos, float Rotation,
 	m_Rotation = Rotation;
 	m_Length = Length;
 	m_EvalTick = GameWorld()->GameTick();
+	m_PhaseStartRotation = m_Rotation;
+	m_PhaseStartCurveLength = m_CurveLength;
+	m_PhaseStartSpeed = m_Speed;
+	m_PhaseTick = 0;
+	m_PhaseOriginCaptured = true;
 	GameWorld()->InsertEntity(this);
 	RefreshGeometry();
 }
@@ -46,29 +52,12 @@ bool CPracticeLight::HitCharacter()
 
 void CPracticeLight::Move()
 {
-	if(m_Speed != 0)
-	{
-		if((m_CurveLength >= m_Length && m_Speed > 0) || (m_CurveLength <= 0 && m_Speed < 0))
-			m_Speed = -m_Speed;
-		m_CurveLength += m_Speed * m_Tick + m_LengthL;
-		m_LengthL = 0;
-		if(m_CurveLength > m_Length)
-		{
-			m_LengthL = m_CurveLength - m_Length;
-			m_CurveLength = m_Length;
-		}
-		else if(m_CurveLength < 0)
-		{
-			m_LengthL = m_CurveLength;
-			m_CurveLength = 0;
-		}
-	}
-
-	m_Rotation += m_AngularSpeed * m_Tick;
-	if(m_Rotation > pi * 2)
-		m_Rotation -= pi * 2;
-	else if(m_Rotation < 0)
-		m_Rotation += pi * 2;
+	qm_practice_light::SPhase Phase{m_Rotation, m_CurveLength, m_LengthL, m_Speed};
+	qm_practice_light::Step(Phase, m_Length, m_AngularSpeed, m_Tick);
+	m_Rotation = Phase.m_Rotation;
+	m_CurveLength = Phase.m_CurveLength;
+	m_LengthL = Phase.m_LengthL;
+	m_Speed = Phase.m_Speed;
 }
 
 void CPracticeLight::Step()
@@ -82,6 +71,37 @@ void CPracticeLight::RefreshGeometry()
 	const vec2 Direction = vec2(std::sin(m_Rotation), std::cos(m_Rotation));
 	const vec2 NextPosition = m_Pos + normalize(Direction) * m_CurveLength;
 	Collision()->IntersectNoLaser(m_Pos, NextPosition, &m_To, nullptr);
+}
+
+void CPracticeLight::CapturePhaseOrigin()
+{
+	m_PhaseStartRotation = m_Rotation;
+	m_PhaseStartCurveLength = m_CurveLength;
+	m_PhaseStartSpeed = m_Speed;
+	m_PhaseTick = 0;
+	m_PhaseOriginCaptured = true;
+}
+
+void CPracticeLight::SetPhaseTick(int Tick)
+{
+	if(!m_PhaseOriginCaptured)
+		CapturePhaseOrigin();
+	if(Tick < m_PhaseTick)
+	{
+		// 拖动回退：回到地图初始相位，再从零点重放到目标 tick。
+		m_Rotation = m_PhaseStartRotation;
+		m_CurveLength = m_PhaseStartCurveLength;
+		m_LengthL = 0;
+		m_Speed = m_PhaseStartSpeed;
+		m_PhaseTick = 0;
+	}
+	while(m_PhaseTick + m_Tick <= Tick)
+	{
+		m_PhaseTick += m_Tick;
+		Move();
+	}
+	m_EvalTick = m_PhaseTick;
+	RefreshGeometry();
 }
 
 bool CPracticeLight::InitFromSnapshot(vec2 SnapshotHub, vec2 SnapshotFrom, int SnapshotEvalTick)

@@ -25,10 +25,12 @@
 #include <game/client/components/effects.h>
 #include <game/client/components/ghost.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/map_mechanism_builder.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/world_event_gate.h>
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
+#include <game/client/prediction/gameworld.h>
 #include <game/gamecore.h>
 #include <game/localization.h>
 #include <game/mapitems.h>
@@ -116,6 +118,16 @@ void CRankGhost::EnterViewMode()
 	// 权威状态，回放期间不允许改写它们，退出回放也就不需要还原。
 	m_vViewSwitchers = GameClient()->m_GameWorld.m_Core.m_vSwitchers;
 	m_ViewSwitchersActive = true;
+	// 影子机关世界只保存地图几何和回放开关，不加入主世界 tick。
+	// 它只在查看模式存在，因此退出时整棵释放即可，不需要触碰共享 CCollision。
+	m_pViewMechanismWorld = std::make_unique<CGameWorld>();
+	int NextMechanismEntityId = 600000;
+	qm_map_mechanisms::Build(*m_pViewMechanismWorld, GameClient()->Collision(), NextMechanismEntityId,
+		{.m_BuildPickups = false, .m_RegisterDoorCollision = false, .m_InheritSnapshotLights = false});
+	m_pViewMechanismWorld->Switchers() = m_vViewSwitchers;
+	qm_shadow_gun::Load(GameClient()->Collision(), m_vViewGuns);
+	qm_shadow_gun::Reset(m_vViewGuns, m_vViewPlasmas);
+	m_ViewGunTick = -1;
 	// 只在父集登记会话状态；播放链（CGhost 独立时钟 + CRankGhost 事件派发）
 	// 保持原样，Rank 1 与练习组回放的观感完全一致。
 	GameClient()->m_LocalWorld.BeginViewSession((int)m_vLoadedSlots.size());
@@ -208,6 +220,13 @@ void CRankGhost::EndViewSessionState()
 	m_ViewMode = false;
 	m_ViewSwitchersActive = false;
 	m_vViewSwitchers.clear();
+	m_pViewMechanismWorld.reset();
+	m_ViewSwitchTeam = -1;
+	m_vViewGuns.clear();
+	m_vViewPlasmas.clear();
+	m_ViewGunTick = -1;
+	GameClient()->m_MovingTilesBackground.ClearViewPlaybackTime();
+	GameClient()->m_MovingTilesForeground.ClearViewPlaybackTime();
 	m_ViewSelected = 0;
 	m_ViewCameraMode = EViewCameraMode::MEMBER;
 	m_ViewFreeCameraValid = false;
@@ -423,6 +442,9 @@ void CRankGhost::UpdateViewTimeline()
 {
 	CGhost *pGhost = &GameClient()->m_Ghost;
 	const int CurTick = pGhost->ManualPlaybackTick();
+	// 移动方块的包络按回放播放头求值，暂停时随播放头冻结。
+	GameClient()->m_MovingTilesBackground.SetViewPlaybackTime(CurTick, pGhost->ManualRenderIntra());
+	GameClient()->m_MovingTilesForeground.SetViewPlaybackTime(CurTick, pGhost->ManualRenderIntra());
 	if(CurTick < m_ViewLastTick)
 	{
 		// 播放头后退（拖进度条）：重置游标，重放这段的特效与状态
@@ -488,10 +510,58 @@ void CRankGhost::UpdateViewTimeline()
 			}
 		}
 	}
+
+	if(m_pViewMechanismWorld != nullptr)
+	{
+		m_pViewMechanismWorld->m_GameTick = std::max(0, CurTick);
+		qm_map_mechanisms::AdvanceLights(*m_pViewMechanismWorld, CurTick);
+	}
+
+	if(!m_vViewGuns.empty())
+	{
+		if(CurTick < m_ViewGunTick)
+		{
+			// 拖动回退：机关炮从零点重放，冷却与在飞等离子球不能沿用未来状态。
+			qm_shadow_gun::Reset(m_vViewGuns, m_vViewPlasmas);
+			m_ViewGunTick = -1;
+		}
+		const auto TargetProvider = [&](int Tick, std::vector<qm_shadow_gun::STarget> &vTargets) {
+			vTargets.clear();
+			for(size_t i = 0; i < m_vLoadedSlots.size(); ++i)
+			{
+				vec2 Pos;
+				if(!pGhost->GetManualRenderPosAtTick(m_vLoadedSlots[i], Tick, &Pos))
+					continue;
+				const int Team = i < m_vLoadedGhostTeams.size() ? m_vLoadedGhostTeams[i] : -1;
+				vTargets.push_back({Pos, (int)i, Team});
+			}
+		};
+		// 首次进入从零点开始；单次跳转最多追赶一分钟，超出则只重放最近一段，
+		// 避免在超长回放上拖进度条时阻塞渲染线程。
+		// 一屏内只需要覆盖等离子寿命与最近几次射击的冷却，500 tick 足够。
+		constexpr int MAX_CATCHUP_TICKS = 10 * SERVER_TICK_SPEED;
+		if(m_ViewGunTick < 0)
+			m_ViewGunTick = std::max(0, CurTick - MAX_CATCHUP_TICKS);
+		if(CurTick - m_ViewGunTick > MAX_CATCHUP_TICKS)
+		{
+			qm_shadow_gun::Reset(m_vViewGuns, m_vViewPlasmas);
+			m_ViewGunTick = CurTick - MAX_CATCHUP_TICKS;
+		}
+		while(m_ViewGunTick < CurTick)
+		{
+			++m_ViewGunTick;
+			qm_shadow_gun::Tick(m_vViewGuns, m_vViewPlasmas, m_ViewGunTick, m_vViewSwitchers,
+				m_ViewSwitchTeam >= 0 ? m_ViewSwitchTeam : GameClient()->SwitchStateTeam(),
+				GameClient()->Collision(), TargetProvider);
+		}
+	}
 }
 
 void CRankGhost::DispatchViewEvent(const SViewEvent &Event)
 {
+	// 默认不把影子的命中/爆炸/终点特效叠到玩家正在操作的主世界。
+	if(!g_Config.m_QmGhostViewFeedback)
+		return;
 	CGameClient *pGameClient = GameClient();
 	const vec2 Pos(Event.m_aData[0], Event.m_aData[1]);
 	switch(Event.m_Type)
@@ -546,7 +616,7 @@ void CRankGhost::DispatchViewMessage(const SViewMessage &Message)
 	// 只有全局音效需要在这里派发：成绩类消息由 GetViewState 按播放头查询。
 	// 门控与 CGameClient::OnMessage 的同名消息保持一致（关闭游戏音效即静音）。
 	CGameClient *pGameClient = GameClient();
-	if(!Config()->m_SndGame)
+	if(!g_Config.m_QmGhostViewFeedback || !Config()->m_SndGame)
 		return;
 	if(Message.m_Type == EViewMessageType::SOUND_GLOBAL)
 	{
@@ -573,9 +643,8 @@ void CRankGhost::ApplyViewSwitchState(const SViewSwitchState &State)
 		return;
 	auto &vSwitchers = *pViewSwitchers;
 	// 旧 QMGHEVT2 没有录制队伍，沿用查看者当前队伍。
-	const int Team = State.m_Team < 0 ?
-				 std::clamp(GameClient()->SwitchStateTeam(), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1) :
-				 std::clamp(State.m_Team, (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
+	const int Team = qmclient::rank_ghost::ResolveViewSwitchTeam(State.m_Team, GameClient()->SwitchStateTeam());
+	m_ViewSwitchTeam = Team;
 	const int Count = minimum(std::clamp(State.m_HighestSwitchNumber, 0, 255) + 1, (int)vSwitchers.size());
 	for(int j = 0; j < Count; j++)
 	{
@@ -586,6 +655,39 @@ void CRankGhost::ApplyViewSwitchState(const SViewSwitchState &State)
 		vSwitchers[j].m_aEndTick[Team] = 0;
 		vSwitchers[j].m_aType[Team] = Status ? TILE_SWITCHOPEN : TILE_SWITCHCLOSE;
 	}
+	if(m_pViewMechanismWorld != nullptr)
+		m_pViewMechanismWorld->Switchers() = vSwitchers;
+}
+
+CGameWorld *CRankGhost::ViewMechanismWorld() const
+{
+	return IsViewModeActive() ? m_pViewMechanismWorld.get() : nullptr;
+}
+
+bool CRankGhost::ViewDraggerTarget(vec2 Pos, vec2 *pTarget) const
+{
+	if(pTarget == nullptr || !IsViewModeActive())
+		return false;
+	float BestDistance = (float)g_Config.m_SvDraggerRange;
+	bool Found = false;
+	for(size_t i = 0; i < m_vLoadedSlots.size(); ++i)
+	{
+		if(!m_ViewMembers.Selected(i))
+			continue;
+		vec2 MemberPos;
+		if(!GameClient()->m_Ghost.GetManualRenderPos(m_vLoadedSlots[i], &MemberPos))
+			continue;
+		const float Distance = distance(Pos, MemberPos);
+		if(Distance > BestDistance)
+			continue;
+		// 机关按服务器同一规则检查视线；影子世界只读，不会因此改变任何实体。
+		if(GameClient()->Collision()->IntersectLine(Pos, MemberPos, nullptr, nullptr))
+			continue;
+		BestDistance = Distance;
+		*pTarget = MemberPos;
+		Found = true;
+	}
+	return Found;
 }
 
 void CRankGhost::ViewSelectMember(int Index)

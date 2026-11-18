@@ -7918,6 +7918,11 @@ bool CGameClient::IsOtherTeam(int ClientId) const
 
 int CGameClient::SwitchStateTeam() const
 {
+	// Rank 1 / 练习组查看模式使用录制队伍。否则开关状态写进录制队伍槽位，
+	// 渲染却读查看者当前队伍，门和激光会按另一条时间线开合。
+	const int ViewTeam = m_RankGhost.ViewSwitchTeam();
+	if(ViewTeam >= TEAM_FLOCK && ViewTeam < NUM_DDRACE_TEAMS)
+		return ViewTeam;
 	// 练习分支世界的开关状态按分支里的队伍取，与服务器快照的队伍无关。
 	const int PracticeTeam = m_FastPractice.PracticeSwitchTeam();
 	if(PracticeTeam >= 0)

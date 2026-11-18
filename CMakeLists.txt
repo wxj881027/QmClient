@@ -3750,6 +3750,11 @@ if(CLIENT)
     components/qmclient/rank_ghost_parse.cpp
     components/qmclient/rank_ghost_fetch.cpp
     components/qmclient/rank_ghost.h
+    components/qmclient/map_mechanism_builder.cpp
+    components/qmclient/map_mechanism_builder.h
+    components/qmclient/practice_light_phase.h
+    components/qmclient/shadow_gun_replay.cpp
+    components/qmclient/shadow_gun_replay.h
     components/qmclient/local_world.cpp
     components/qmclient/local_world.h
     components/qmclient/world_event_gate.h
@@ -5418,6 +5423,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/translate/translate_jobs_integration_test.cpp
     src/test/unit/qmclient/translate/translate_responses_test.cpp
     src/test/unit/qmclient/translate/translate_llm_parse_test.cpp
+    src/test/unit/qmclient/client/qm_practice_light_phase_test.cpp
     src/test/unit/base/unix_test.cpp
     src/test/unit/engine/uuid_test.cpp
     src/test/unit/base/vmath_test.cpp
@@ -5912,6 +5918,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/support/qm_open_link_probe.cpp
       src/test/integration/qmclient/client/qm_fast_practice_predict_loop_test.cpp
       src/test/integration/qmclient/client/qm_fast_practice_predict_publish_test.cpp
+      src/test/integration/qmclient/client/qm_shadow_mechanism_test.cpp
       src/test/unit/qmclient/client/qm_practice_predict_plan_test.cpp
       src/generated/client_data.cpp
       # 同时列出生成头，CMake 才会为编译加上生成规则的顺序依赖；
@@ -5926,6 +5933,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/prediction/entities/pickup.cpp
       src/game/client/prediction/entities/plasma.cpp
       src/game/client/prediction/entities/practice_light.cpp
+      src/game/client/components/qmclient/shadow_gun_replay.cpp
       src/game/client/prediction/entities/projectile.cpp
       src/game/client/projectile_data.cpp
       src/game/client/laser_data.cpp

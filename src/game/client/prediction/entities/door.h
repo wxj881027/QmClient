@@ -46,6 +46,9 @@ class CDoor : public CEntity
 	vec2 m_Direction;
 	int m_Length;
 	bool m_Active;
+	// 只有真正写入共享 CCollision 的门才允许在销毁时清碰撞。
+	// 影子世界的门只需要几何，不得因为析构误删主世界的门端点。
+	bool m_CollisionRegistered;
 
 	int MapSide() const;
 	int MapLength(int Side);
@@ -55,7 +58,12 @@ public:
 	// 副本只复制几何，不接管共享 CCollision 上的门碰撞端点：世界树里
 	// 同一扇门同时存在于多个 CGameWorld 副本，只有权威世界负责销毁清理。
 	CDoor(const CDoor &Other);
+	// 只建立渲染几何，不写共享碰撞；影子世界使用。
+	void PrepareRenderGeometry();
 	void ResetCollision();
+	// 校验与诊断：只表示渲染几何是否成立，不代表当前开关是否打开。
+	bool Active() const { return m_Active; }
+	int Length() const { return m_Length; }
 	bool Match(const CDoor *pDoor) const;
 	void Read(const CLaserData *pData);
 	// 渲染层数据。几何与分支碰撞端点一致；开关关闭时折叠到 hub，与快照一致。

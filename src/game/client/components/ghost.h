@@ -236,6 +236,9 @@ public:
 		*pOut = m_aManualRenderPos[Slot];
 		return true;
 	}
+	// 任意回放 tick 的轨迹位置（线性插值）。影子机关按射击时刻查询目标，
+	// 不能只拿当前帧位置反推过去。
+	bool GetManualRenderPosAtTick(int Slot, int Tick, vec2 *pOut) const;
 	// 槽位虚影的所有者名字（ghost 文件头）
 	bool GetGhostPlayer(int Slot, char *pBuf, size_t BufSize) const
 	{

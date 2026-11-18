@@ -14,6 +14,7 @@
 #include <game/client/components/ghost.h>
 #include <game/client/components/particles.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/map_mechanism_builder.h>
 #include <game/client/components/qmclient/practice_branch_state.h>
 #include <game/client/components/qmclient/practice_cursor.h>
 #include <game/client/components/qmclient/practice_predict_publish.h>
@@ -133,11 +134,6 @@ namespace
 		const CCharacterCore &Core = *pChar->Core();
 		return pChar->m_FreezeTime > 0 || Core.m_DeepFrozen || Core.m_LiveFrozen || Core.m_FreezeEnd != 0;
 	}
-
-	// 与服务端 IGameController::OnEntity 的八个相邻方向一致：方向 i 的
-	// 单位向量是 (sin(pi/4*i), cos(pi/4*i))。
-	constexpr int s_aPracticeSideOffsetX[8] = {0, 1, 1, 1, 0, -1, -1, -1};
-	constexpr int s_aPracticeSideOffsetY[8] = {1, 1, 0, -1, -1, -1, 0, 1};
 
 	struct STrackedProjectile
 	{
@@ -765,224 +761,15 @@ void CFastPractice::ResetPracticeMapEntities(CGameWorld &World)
 	}
 }
 
-// 从服务器快照继承来的同一束静态激光。练习入口不是地图加载时刻，
-// 端点几何能给出服务器当前的旋转与伸缩相位，用来对齐分支世界。
-static const CLaser *FindInheritedPracticeLight(CGameWorld &World, vec2 Pos, int Number)
-{
-	for(CEntity *pEnt = World.FindFirst(CGameWorld::ENTTYPE_LASER); pEnt; pEnt = pEnt->TypeNext())
-	{
-		const auto *pLaser = dynamic_cast<CLaser *>(pEnt);
-		if(pLaser == nullptr || distance(pLaser->m_Pos, Pos) > 2.0f)
-			continue;
-		if(pLaser->GetData().m_SwitchNumber != Number)
-			continue;
-		return pLaser;
-	}
-	return nullptr;
-}
-
 void CFastPractice::LoadPracticeMapMechanisms(CGameWorld &World)
 {
 	// 分支世界从服务器世界 fork，而快照只覆盖镜头附近；练习路线一旦走出
 	// 网络裁剪范围，武器、门与拖拉就会凭空消失。地图图层是整张地图的
 	// 静态数据源，直接按服务端 IGameController::OnEntity 的规则重建这些
 	// 机制，机关炮仍由 m_vPracticeGuns 模拟（它们不是地图实体）。
-	const CTile *pGame = Collision()->GameLayer();
-	const CTile *pFront = Collision()->FrontLayer();
-	const CSwitchTile *pSwitch = Collision()->SwitchLayer();
-	if(!pGame)
-		return;
-
-	const int Width = Collision()->GetWidth();
-	const int Height = Collision()->GetHeight();
-	int NumPickups = 0;
-	int NumDoors = 0;
-	int NumDraggers = 0;
-	int NumLights = 0;
-	for(int y = 0; y < Height; y++)
-	{
-		for(int x = 0; x < Width; x++)
-		{
-			const int TileIndex = y * Width + x;
-			const vec2 Pos(x * 32.0f + 16.0f, y * 32.0f + 16.0f);
-
-			const auto HandleEntity = [&](int EntityIndex, int Layer, int Number, int TileFlags) {
-				int PickupType = -1;
-				int PickupSubtype = 0;
-				if(EntityIndex == ENTITY_ARMOR_1)
-					PickupType = POWERUP_ARMOR;
-				else if(EntityIndex == ENTITY_ARMOR_SHOTGUN)
-					PickupType = POWERUP_ARMOR_SHOTGUN;
-				else if(EntityIndex == ENTITY_ARMOR_GRENADE)
-					PickupType = POWERUP_ARMOR_GRENADE;
-				else if(EntityIndex == ENTITY_ARMOR_NINJA)
-					PickupType = POWERUP_ARMOR_NINJA;
-				else if(EntityIndex == ENTITY_ARMOR_LASER)
-					PickupType = POWERUP_ARMOR_LASER;
-				else if(EntityIndex == ENTITY_HEALTH_1)
-					PickupType = POWERUP_FREEZE;
-				else if(EntityIndex == ENTITY_WEAPON_SHOTGUN)
-				{
-					PickupType = POWERUP_WEAPON;
-					PickupSubtype = WEAPON_SHOTGUN;
-				}
-				else if(EntityIndex == ENTITY_WEAPON_GRENADE)
-				{
-					PickupType = POWERUP_WEAPON;
-					PickupSubtype = WEAPON_GRENADE;
-				}
-				else if(EntityIndex == ENTITY_WEAPON_LASER)
-				{
-					PickupType = POWERUP_WEAPON;
-					PickupSubtype = WEAPON_LASER;
-				}
-				else if(EntityIndex == ENTITY_POWERUP_NINJA)
-				{
-					PickupType = POWERUP_NINJA;
-					PickupSubtype = WEAPON_NINJA;
-				}
-
-				if(PickupType != -1)
-				{
-					CPickupData Data;
-					Data.m_Pos = Pos;
-					Data.m_Type = PickupType;
-					Data.m_Subtype = PickupSubtype;
-					Data.m_SwitchNumber = Number;
-					Data.m_Flags = 0;
-					if(TileFlags & TILEFLAG_XFLIP)
-						Data.m_Flags |= PICKUPFLAG_XFLIP;
-					if(TileFlags & TILEFLAG_YFLIP)
-						Data.m_Flags |= PICKUPFLAG_YFLIP;
-					if(TileFlags & TILEFLAG_ROTATE)
-						Data.m_Flags |= PICKUPFLAG_ROTATE;
-					World.InsertEntity(new CPickup(&World, m_NextPracticeMapEntityId++, &Data), true);
-					NumPickups++;
-					return;
-				}
-
-				if(EntityIndex == ENTITY_DOOR)
-				{
-					for(int Side = 0; Side < 8; Side++)
-					{
-						const int Neighbor = Collision()->Entity(x + s_aPracticeSideOffsetX[Side], y + s_aPracticeSideOffsetY[Side], Layer);
-						if(Neighbor < ENTITY_LASER_SHORT || Neighbor > ENTITY_LASER_LONG)
-							continue;
-						const int Length = 32 * 3 + 32 * (Neighbor - ENTITY_LASER_SHORT) * 3;
-						const vec2 Dir(std::sin(pi / 4 * Side), std::cos(pi / 4 * Side));
-						vec2 To = Pos + Dir * Length;
-						Collision()->IntersectNoLaser(Pos, To, &To, nullptr);
-						// 客户端 CDoor::Read 会把 From/To 翻转：m_From 是远端，
-						// m_To 是门中心。
-						CLaserData Data = {};
-						Data.m_From = To;
-						Data.m_To = Pos;
-						Data.m_StartTick = -1;
-						Data.m_ExtraInfo = true;
-						Data.m_Owner = -1;
-						Data.m_Type = LASERTYPE_DOOR;
-						Data.m_SwitchNumber = Number;
-						World.InsertEntity(new CDoor(&World, m_NextPracticeMapEntityId++, &Data));
-						NumDoors++;
-					}
-					return;
-				}
-
-				if(EntityIndex >= ENTITY_LASER_FAST_CCW && EntityIndex <= ENTITY_LASER_FAST_CW)
-				{
-					int aSides[8];
-					int aModifiers[8];
-					for(int Side = 0; Side < 8; ++Side)
-					{
-						aSides[Side] = Collision()->Entity(x + s_aPracticeSideOffsetX[Side], y + s_aPracticeSideOffsetY[Side], Layer);
-						aModifiers[Side] = Collision()->Entity(x + 2 * s_aPracticeSideOffsetX[Side], y + 2 * s_aPracticeSideOffsetY[Side], Layer);
-					}
-					int Ind = EntityIndex - ENTITY_LASER_STOP;
-					int M = -1;
-					if(Ind < 0)
-					{
-						Ind = -Ind;
-						M = 1;
-					}
-					else if(Ind == 0)
-						M = 0;
-					float AngularSpeed = 0.0f;
-					if(Ind == 1)
-						AngularSpeed = pi / 360;
-					else if(Ind == 2)
-						AngularSpeed = pi / 180;
-					else if(Ind == 3)
-						AngularSpeed = pi / 90;
-					AngularSpeed *= M;
-					for(int Side = 0; Side < 8; ++Side)
-					{
-						if(aSides[Side] < ENTITY_LASER_SHORT || aSides[Side] > ENTITY_LASER_LONG)
-							continue;
-						const int Length = 32 * 3 + 32 * (aSides[Side] - ENTITY_LASER_SHORT) * 3;
-						CPracticeLight *pLight = new CPracticeLight(&World, Pos, pi / 4 * Side, Length, Layer, Number);
-						bool FromSnapshot = false;
-						if(const CLaser *pInherited = FindInheritedPracticeLight(World, Pos, Number))
-							FromSnapshot = pLight->InitFromSnapshot(pInherited->m_Pos, pInherited->GetFrom(), pInherited->GetEvalTick());
-						pLight->m_AngularSpeed = AngularSpeed;
-						// 快照已经给出当前长度时不要按地图初值重置，否则伸缩激光会跳回起点。
-						if(aModifiers[Side] >= ENTITY_LASER_C_SLOW && aModifiers[Side] <= ENTITY_LASER_C_FAST)
-						{
-							pLight->m_Speed = 1 + (aModifiers[Side] - ENTITY_LASER_C_SLOW) * 2;
-							if(!FromSnapshot)
-								pLight->m_CurveLength = pLight->m_Length;
-						}
-						else if(aModifiers[Side] >= ENTITY_LASER_O_SLOW && aModifiers[Side] <= ENTITY_LASER_O_FAST)
-						{
-							pLight->m_Speed = 1 + (aModifiers[Side] - ENTITY_LASER_O_SLOW) * 2;
-							if(!FromSnapshot)
-								pLight->m_CurveLength = 0;
-						}
-						else if(!FromSnapshot)
-							pLight->m_CurveLength = pLight->m_Length;
-						pLight->RefreshGeometry();
-						NumLights++;
-					}
-					return;
-				}
-
-				int Strength = 0;
-				bool IgnoreWalls = false;
-				if(EntityIndex >= ENTITY_DRAGGER_WEAK && EntityIndex <= ENTITY_DRAGGER_STRONG)
-					Strength = EntityIndex - ENTITY_DRAGGER_WEAK + 1;
-				else if(EntityIndex >= ENTITY_DRAGGER_WEAK_NW && EntityIndex <= ENTITY_DRAGGER_STRONG_NW)
-				{
-					Strength = EntityIndex - ENTITY_DRAGGER_WEAK_NW + 1;
-					IgnoreWalls = true;
-				}
-				if(Strength <= 0)
-					return;
-
-				CLaserData Data = {};
-				Data.m_From = Pos;
-				Data.m_To = Pos;
-				Data.m_StartTick = -1;
-				Data.m_ExtraInfo = true;
-				Data.m_Owner = -1;
-				Data.m_Type = LASERTYPE_DRAGGER;
-				Data.m_SwitchNumber = Number;
-				// 与服务端 CDragger::Snap 的 subtype 编码一致。
-				Data.m_Subtype = ((Strength - 1) << 1) | (IgnoreWalls ? 1 : 0);
-				World.InsertEntity(new CDragger(&World, m_NextPracticeMapEntityId++, &Data));
-				NumDraggers++;
-			};
-
-			if(pGame[TileIndex].m_Index >= ENTITY_OFFSET)
-				HandleEntity(pGame[TileIndex].m_Index - ENTITY_OFFSET, LAYER_GAME, 0, pGame[TileIndex].m_Flags);
-			if(pFront && pFront[TileIndex].m_Index >= ENTITY_OFFSET)
-				HandleEntity(pFront[TileIndex].m_Index - ENTITY_OFFSET, LAYER_FRONT, 0, pFront[TileIndex].m_Flags);
-			if(pSwitch && pSwitch[TileIndex].m_Type >= ENTITY_OFFSET)
-				HandleEntity(pSwitch[TileIndex].m_Type - ENTITY_OFFSET, LAYER_SWITCH, pSwitch[TileIndex].m_Number, pSwitch[TileIndex].m_Flags);
-		}
-	}
-	// 新加入的门需要把自己的碰撞端点装进共享的 CCollision。
-	World.ResetDoorCollision();
+	const qm_map_mechanisms::SBuildCounts Counts = qm_map_mechanisms::Build(World, Collision(), m_NextPracticeMapEntityId);
 	dbg_msg("fast_practice", "map mechanisms: pickups=%d doors=%d draggers=%d lights=%d",
-		NumPickups, NumDoors, NumDraggers, NumLights);
+		Counts.m_Pickups, Counts.m_Doors, Counts.m_Draggers, Counts.m_Lights);
 }
 
 void CFastPractice::LoadPracticeGuns()

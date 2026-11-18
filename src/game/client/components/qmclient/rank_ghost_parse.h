@@ -66,7 +66,8 @@ struct SParseContext
 	// 是否在解析中看到过 run 终点之后的快照，用于识别被截断的回放
 	bool m_ReachedRunEnd = false;
 
-	static constexpr int MAX_TRACKS = 64;
+	// 与服务端最大客户端数一致；旧值 64 会在大房间回放里静默丢掉后半玩家。
+	static constexpr int MAX_TRACKS = MAX_CLIENTS;
 
 	SParseContext();
 };

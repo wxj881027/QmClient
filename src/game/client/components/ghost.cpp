@@ -998,6 +998,40 @@ float CGhost::ManualRenderIntra() const
 	return m_ManualMode ? m_ManualClock.Intra(Client()->LocalTime()) : 0.0f;
 }
 
+bool CGhost::GetManualRenderPosAtTick(int Slot, int Tick, vec2 *pOut) const
+{
+	if(pOut == nullptr || Slot < 0 || Slot >= MAX_ACTIVE_GHOSTS)
+		return false;
+	const CGhostItem &Ghost = m_aActiveGhosts[Slot];
+	if(Ghost.Empty())
+		return false;
+	const int Size = Ghost.m_Path.Size();
+	if(Size <= 0)
+		return false;
+
+	const int TargetTick = Ghost.m_StartTick + std::clamp(Tick, 0, m_ManualEndTick);
+	int Lo = 0;
+	int Hi = Size - 1;
+	while(Lo < Hi)
+	{
+		const int Mid = (Lo + Hi) / 2;
+		if(Ghost.m_Path.Get(Mid)->m_Tick < TargetTick)
+			Lo = Mid + 1;
+		else
+			Hi = Mid;
+	}
+	const CGhostCharacter *pCur = Ghost.m_Path.Get(Lo);
+	const CGhostCharacter *pPrev = Ghost.m_Path.Get(maximum(0, Lo - 1));
+	if(Lo == 0 || pCur->m_Tick <= pPrev->m_Tick)
+	{
+		*pOut = vec2(pCur->m_X, pCur->m_Y);
+		return true;
+	}
+	const float Ratio = std::clamp((TargetTick - pPrev->m_Tick) / (float)(pCur->m_Tick - pPrev->m_Tick), 0.0f, 1.0f);
+	*pOut = mix(vec2(pPrev->m_X, pPrev->m_Y), vec2(pCur->m_X, pCur->m_Y), Ratio);
+	return true;
+}
+
 void CGhost::ManualSetPlaying(bool Playing)
 {
 	if(m_ManualMode)

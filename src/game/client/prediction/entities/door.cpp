@@ -17,6 +17,7 @@ CDoor::CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData) :
 	m_To = vec2(0.0f, 0.0f);
 	m_Direction = vec2(0.0f, 0.0f);
 	m_Length = 0;
+	m_CollisionRegistered = false;
 
 	m_Number = pData->m_SwitchNumber;
 	m_Layer = m_Number > 0 ? LAYER_SWITCH : LAYER_GAME;
@@ -31,7 +32,8 @@ CDoor::CDoor(const CDoor &Other) :
 	m_Direction = Other.m_Direction;
 	m_Length = Other.m_Length;
 	// 副本不拥有碰撞：销毁时不能清掉权威世界仍在使用的门碰撞端点。
-	m_Active = false;
+	m_Active = Other.m_Active;
+	m_CollisionRegistered = false;
 }
 
 // OnEntity 按这个顺序检查八个相邻 tile 来确定激光门长度。
@@ -74,12 +76,11 @@ int CDoor::MapLength(int Side)
 	return Length;
 }
 
-void CDoor::ResetCollision()
+void CDoor::PrepareRenderGeometry()
 {
+	m_Active = false;
 	if(Collision()->GetTile(m_Pos.x, m_Pos.y) || Collision()->GetFrontTile(m_Pos.x, m_Pos.y))
 		return;
-
-	m_Active = true;
 
 	const vec2 Dir = m_To - m_Pos;
 	const float DirLength = length(Dir);
@@ -99,12 +100,17 @@ void CDoor::ResetCollision()
 		// 防止畸形或无界的网络数据使每个 snapshot 执行过长遍历。
 		const float MaxLength = (Collision()->GetWidth() + Collision()->GetHeight()) * 32.0f;
 		if(DirLength <= 0.0f || DirLength > MaxLength)
-		{
-			m_Active = false;
 			return;
-		}
 		m_Length = round_to_int(DirLength);
 	}
+	m_Active = true;
+}
+
+void CDoor::ResetCollision()
+{
+	PrepareRenderGeometry();
+	if(!m_Active)
+		return;
 
 	for(int i = 0; i < m_Length - 1; i++)
 	{
@@ -115,11 +121,12 @@ void CDoor::ResetCollision()
 		else
 			Collision()->SetDoorCollisionAt(CurrentPos.x, CurrentPos.y, TILE_STOPA, 0, m_Number);
 	}
+	m_CollisionRegistered = true;
 }
 
 void CDoor::Destroy()
 {
-	if(m_Active)
+	if(m_CollisionRegistered)
 	{
 		for(int i = 0; i < m_Length - 1; i++)
 		{
@@ -129,6 +136,7 @@ void CDoor::Destroy()
 			else
 				Collision()->SetDoorCollisionAt(CurrentPos.x, CurrentPos.y, TILE_AIR, 0, 0);
 		}
+		m_CollisionRegistered = false;
 	}
 	delete this;
 }

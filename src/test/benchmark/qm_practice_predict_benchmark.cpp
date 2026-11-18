@@ -9,6 +9,7 @@
 //   * 回放会话解析：HUD、相机与菜单每帧查询。
 // 输入是固定组合，稳态计时；不含文件、网络与配置读取。
 #include <game/client/components/qmclient/practice_branch_state.h>
+#include <game/client/components/qmclient/practice_light_phase.h>
 #include <game/client/components/qmclient/practice_predict_plan.h>
 #include <game/client/components/qmclient/replay_session.h>
 
@@ -145,3 +146,14 @@ static void BM_ReplaySessionStatusResolve(benchmark::State &State)
 }
 // 0：查看模式；1：手动回放；2：无回放。
 BENCHMARK(BM_ReplaySessionStatusResolve)->Arg(0)->Arg(1)->Arg(2);
+
+static void BM_PracticeLightPhase(benchmark::State &State)
+{
+	const int Ticks = (int)State.range(0);
+	for(auto _ : State)
+	{
+		const qm_practice_light::SPhase Phase = qm_practice_light::After(0.25f, 40, 3, 256, pi / 180, 7, Ticks);
+		benchmark::DoNotOptimize(Phase);
+	}
+}
+BENCHMARK(BM_PracticeLightPhase)->Arg(120)->Arg(1200)->Arg(12000);
