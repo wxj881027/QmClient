@@ -417,9 +417,10 @@ public:
 static void SetNameplateTitle(CGameClient &This, CNamePlateData &Data, int ClientId)
 {
 	// 先测量完整头衔，绘制时再按隐私状态隐藏并保留占位。
-	str_copy(Data.m_aQmTitle, Data.m_ShowName && This.m_QmClient.ShouldShowPlayerTitle(ClientId) ? This.m_QmClient.PlayerTitle(ClientId, true) : "");
+	const bool ShowTitle = Data.m_ShowName && This.m_QmClient.ShouldShowPlayerTitle(ClientId);
+	str_copy(Data.m_aQmTitle, ShowTitle ? This.m_QmClient.PlayerTitle(ClientId, true) : "");
 	Data.m_TitleAppearance = This.m_QmClient.PlayerTitleAppearance(ClientId, true);
-	Data.m_DeveloperBadge = Data.m_aQmTitle[0] != '\0' && This.m_QmClient.PlayerHasDeveloperBadge(ClientId, true) && This.m_QmClient.DeveloperBadge().Available();
+	Data.m_DeveloperBadge = ShowTitle && This.m_QmClient.PlayerHasDeveloperBadge(ClientId, true) && This.m_QmClient.DeveloperBadge().Available();
 }
 
 static ColorRGBA NameplateTextColor(const CGameClient &This, int ClientId)

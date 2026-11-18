@@ -59,7 +59,8 @@ void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, 
 		return true;
 	};
 
-	for(int PointId = pEnvelopeItem->m_StartPoint; PointId < pEnvelopeItem->m_StartPoint + pEnvelopeItem->m_NumPoints; ++PointId)
+	const int End = Start + Count;
+	for(int PointId = Start; PointId < End; ++PointId)
 	{
 		const CEnvPoint *pEnvPoint = m_EnvelopePoints.GetPoint(PointId);
 		if(!pEnvPoint)
@@ -73,31 +74,30 @@ void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, 
 		{
 			EnvExt.m_Minima[Channel] = std::min(pEnvPoint->m_aValues[Channel], EnvExt.m_Minima[Channel]);
 			EnvExt.m_Maxima[Channel] = std::max(pEnvPoint->m_aValues[Channel], EnvExt.m_Maxima[Channel]);
-
-			// bezier curves can have offsets beyond the fixed points
-			// using the bezier position is just an estimate, but clipping like this is good enough
-			if(PointId < pEnvelopeItem->m_StartPoint + pEnvelopeItem->m_NumPoints - 1 && pEnvPoint->m_Curvetype == CURVETYPE_BEZIER)
-			{
-				const CEnvPointBezier *pEnvPointBezier = m_EnvelopePoints.GetBezier(PointId);
-				if(!pEnvPointBezier)
-					return;
-
-				// we are only interested in the height not in the time, meaning we only need delta Y
-				if(!ExpandByTangent(Channel, pEnvPoint->m_aValues[Channel], pEnvPointBezier->m_aOutTangentDeltaY[Channel]))
-					return;
-			}
-
-			if(PointId > 0 && m_EnvelopePoints.GetPoint(PointId - 1)->m_Curvetype == CURVETYPE_BEZIER)
-			{
-				const CEnvPointBezier *pEnvPointBezier = m_EnvelopePoints.GetBezier(PointId);
-				if(!pEnvPointBezier)
-					return;
-
-				// we are only interested in the height not in the time, meaning we only need delta Y
-				if(!ExpandByTangent(Channel, pEnvPoint->m_aValues[Channel], pEnvPointBezier->m_aInTangentDeltaY[Channel]))
-					return;
-			}
 		}
+
+		const bool HasOutgoing = PointId < End - 1 && pEnvPoint->m_Curvetype == CURVETYPE_BEZIER;
+		const CEnvPoint *pPreviousPoint = PointId > Start ? m_EnvelopePoints.GetPoint(PointId - 1) : nullptr;
+		const bool HasIncoming = pPreviousPoint != nullptr && pPreviousPoint->m_Curvetype == CURVETYPE_BEZIER;
+		if(!HasOutgoing && !HasIncoming)
+			continue;
+		const CEnvPointBezier *pBezier = m_EnvelopePoints.GetBezier(PointId);
+		if(!pBezier)
+			return;
+
+		const auto IncludeTangent = [&](const int *pDeltaY) {
+			if(pDeltaY[2] != 0)
+				EnvExt.m_Rotating = true;
+			for(int Channel = 0; Channel < 2; ++Channel)
+			{
+				if(!ExpandByTangent(Channel, pEnvPoint->m_aValues[Channel], pDeltaY[Channel]))
+					return false;
+			}
+			return true;
+		};
+		if((HasOutgoing && !IncludeTangent(pBezier->m_aOutTangentDeltaY)) ||
+			(HasIncoming && !IncludeTangent(pBezier->m_aInTangentDeltaY)))
+			return;
 	}
 
 	EnvExt.m_Available = true;

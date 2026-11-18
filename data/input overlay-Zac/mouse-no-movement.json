@@ -1,105 +1,21 @@
 {
-    "default_height": 0,
-    "default_width": 0,
-    "elements": [
-        {
-            "id": "body",
-            "mapping": [
-                328,
-                1,
-                283,
-                242
-            ],
-            "pos": [
-                2,
-                179
-            ],
-            "type": 0,
-            "z_level": 1
-        },
-        {
-            "code": 1,
-            "id": "lmb",
-            "mapping": [
-                1,
-                1,
-                139,
-                174
-            ],
-            "pos": [
-                2,
-                0
-            ],
-            "type": 3,
-            "z_level": 1
-        },
-        {
-            "code": 2,
-            "id": "rmb",
-            "mapping": [
-                143,
-                1,
-                139,
-                174
-            ],
-            "pos": [
-                146,
-                0
-            ],
-            "type": 3,
-            "z_level": 1
-        },
-        {
-            "id": "wheel",
-            "mapping": [
-                285,
-                246,
-                48,
-                95
-            ],
-            "pos": [
-                117,
-                79
-            ],
-            "type": 4,
-            "z_level": 1
-        },
-        {
-            "code": 5,
-            "id": "smb1",
-            "mapping": [
-                285,
-                1,
-                40,
-                62
-            ],
-            "pos": [
-                0,
-                210
-            ],
-            "type": 3,
-            "z_level": 1
-        },
-        {
-            "code": 4,
-            "id": "smb2",
-            "mapping": [
-                284,
-                1,
-                41,
-                62
-            ],
-            "pos": [
-                11,
-                273
-            ],
-            "type": 3,
-            "z_level": 1
-        }
-    ],
-    "flags": 0,
-    "overlay_height": 421,
-    "overlay_width": 285,
-    "space_h": 0,
-    "space_v": 0
+  "default_height": 0,
+  "default_width": 0,
+  "flags": 0,
+  "overlay_height": 421,
+  "overlay_width": 214,
+  "space_h": 0,
+  "space_v": 0,
+  "pressed_offset_y": 0,
+  "image": "input overlay-Zac/mouse.png",
+  "elements": [
+    {"id":"body","type":0,"z_level":0,"mapping":[2,2,214,421],"pos":[0,0]},
+    {"id":"lmb","type":3,"z_level":2,"mapping":[290,2,107,180],"pos":[0,2],"code":1,"active_only":true},
+    {"id":"rmb","type":3,"z_level":2,"mapping":[437,2,107,180],"pos":[107,2],"code":2,"active_only":true},
+    {"id":"mmb","type":3,"z_level":2,"mapping":[221,190,31,68],"pos":[92,58],"code":3,"active_only":true},
+    {"id":"smb2","type":3,"z_level":2,"mapping":[351,190,8,34],"pos":[7,144],"code":5,"active_only":true},
+    {"id":"smb1","type":3,"z_level":2,"mapping":[335,190,8,34],"pos":[7,184],"code":4,"active_only":true},
+    {"id":"wheel_up","type":4,"z_level":3,"mapping":[374,190,22,23],"pos":[96,66],"active_only":true},
+    {"id":"wheel_down","type":4,"z_level":3,"mapping":[400,190,22,23],"pos":[96,94],"active_only":true}
+  ]
 }

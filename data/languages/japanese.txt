@@ -7,8 +7,14 @@
  seconds (never)
 == 秒 (消えない)
 
+ · %d finishers
+==  · %d 人が完走
+
  · %d finishers · average %d:%02d:%02d
 ==  · クリア %d 人 · 平均 %d:%02d:%02d
+
+ · median %d:%02d:%02d
+==  · 中央値 %d:%02d:%02d
 
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == "%s" は pnglite と互換性がなく、古いバージョンの DDNet では読み込めません
@@ -48,9 +54,6 @@
 
 "None" hides all name plates including your own team, so choose "Others" if you only want a cleaner screen.
 == なしは自分のチームも含めてすべてのネームプレートを隠すので、画面をすっきりさせたいだけなら他のプレイヤーを選びます。
-
-"Save power by lowering update rate (higher input latency)" adds input delay, so keep it off while racing.
-== 更新レートを下げる省電力設定は入力遅延を増やすので、走るときはオフにしてください。
 
 "Scoreboard filter" keeps only players whose name or clan matches, so clear it when the scoreboard looks empty.
 == スコアボードフィルターは名前かクランが一致するプレイヤーだけを残します。スコアボードが空に見えたら入力を消してください。
@@ -325,9 +328,6 @@
 0-51, empty = default
 == 0-51、空 = 既定
 
-1% low
-== 1%最低フレーム
-
 128 player id <-> 64 player id map update rate
 == 128 プレイヤーID と 64 プレイヤーID のマップ更新頻度
 
@@ -595,9 +595,6 @@ Add demo timeline marker
 
 Add Entry
 == エントリーを追加
-
-Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off.
-== マップに入ると全プレイヤーのスキンをキューに追加します。手動でキューを編集するとオフになります。
 
 Add friend
 == フレンドを追加
@@ -2120,6 +2117,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Wiki ファイルを書き込めません
 
+Cap update rate to save power
+== 更新レートを制限して消費電力を抑える
+
+Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
+== 更新レートの制限は入力遅延を増やします。省電力目的以外では使わないでください。排他全画面に失敗したら、まずウィンドウまたはボーダーレスに戻してください。
+
 Capsule end strength
 == カプセル端の強さ
 
@@ -2170,9 +2173,6 @@ Center line color (requires qm_show_center)
 
 Center line width (requires qm_show_center)
 == センターラインの幅（qm_show_center が必要）
-
-Change "Update Rate" in Hz, tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
-== 更新レートを Hz 単位で変更し、メインメニューをスキップにチェックを入れ、設定ファイルやテーマディレクトリで各場所を開けます。
 
 Change colors and style options, then compare the preview.
 == 色とスタイルのオプションを変えて、プレビューと見比べます。
@@ -2468,8 +2468,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == どのネームプレートを描くかを選び、クラン、チームカラー、フレンドアイコン、座標、クライアント ID を付け加えます。
 
-Chooses windowed or fullscreen mode, the monitor and the resolution; switching recreates the swap chain, so the screen may flash briefly.
-== ウィンドウモードかフルスクリーンモードか、使用するモニターと解像度を選びます。切り替えるとスワップチェーンが再作成されるため、画面が一瞬ちらつくことがあります。
+Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
+== ウィンドウ/全画面モード、モニター、解像度に加え、描画フレームレートとクライアント更新レートの 2 つの上限を設定します。
 
 Chroma sampling
 == 色差サンプリング
@@ -2693,14 +2693,17 @@ Client self-kill is disabled (server commands are not affected)
 Client self-kill is enabled
 == クライアントの自殺は有効になりました
 
+Client update rate
+== クライアント更新レート
+
 Client uptime
 == クライアント稼働時間
 
 Client-side prediction and latency compensation
 == Client-side prediction and latency compensation
 
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
-== Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+== クライアント側予測と遅延補正：予測マージン、AntiPing とその予測対象、予測イベント、上りパケット冗長化、DSCP トラフィックマーキング。
 
 Client-side self-kill protection
 == クライアント側自殺保護
@@ -2725,6 +2728,9 @@ Collapse console
 
 Collect all players' skins on map join
 == マップ開始時に全プレイヤーのスキンを収集
+
+Collect all players' skins on map join; manual edits turn it off.
+== マップ参加時に全プレイヤーのスキンを収集します。手動でキューを編集するとオフになります。
 
 Collect CP %d before teleporting
 == テレポートする前に CP %d に触れてください
@@ -6119,20 +6125,14 @@ Fraction of players needed to pass a vote
 Frags
 == フラグ数
 
-Frame rate
-== フレームレート
-
 Frame time
 == フレーム時間
 
-Frame time p95
-== フレーム時間 P95
-
-Frame time p99
-== フレーム時間 p99
-
 Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
 == キャプチャとエンコードの間にバッファするフレーム数。深いほどエンコードが遅いフレームを吸収できますがメモリを使います。小さいほど早くバックプレッシャーがかかります。
+
+Frames drawn per second when V-Sync is off; 0 = unlimited
+== 垂直同期オフ時に毎秒描画するフレーム数の上限。0 = 無制限
 
 Frankenstein (drop parts on right)
 == フランケンシュタイン（パーツを右側にドロップ）
@@ -6332,9 +6332,6 @@ Game paused
 Game sound volume
 == ゲームサウンド音量
 
-Game time margin
-== ゲーム時間マージン
-
 Game type
 == ゲームタイプ
 
@@ -6349,9 +6346,6 @@ Game update rate when window inactive (Hz)
 
 Game window mode
 == ゲームウィンドウモード
-
-Game/predicted tick
-== ゲーム/予測 tick
 
 Gamemode. When enabled, players join as spectators
 == ゲームモード。有効にするとプレイヤーは観戦者として参加
@@ -6628,9 +6622,6 @@ Graphics settings sub-tab: 0=display, 1=visual effects
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == グラフィックス追跡レベル：0 = オフ、1 = 定期サマリー、2 = サマリーと遅いフレーム、3 = 詳細なバックエンド追跡
-
-Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the debug graph toggle is on.
-== デバッググラフの切り替えがオンの間に出るパネルに、RTT、予測、スナップショット経過時間、フレームレートをグラフ表示します。
 
 Greek
 == ギリシャ文字
@@ -7202,9 +7193,6 @@ If a device disappears after unplugging headphones, reselect it or restart the c
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
 == チャットスコアがこの値を超えると、プレイヤーは sv_spam_mute_duration 秒間ミュートされます。
 
-If exclusive fullscreen fails, switch back to windowed or borderless first.
-== 排他フルスクリーンに失敗する場合は、まずウィンドウモードかボーダーレスに戻してください。
-
 If lasers can hit you when shot and pull you to bounce origin (0 for all new maps), or lasers cannot hit you and pull others to shooter.
 == レーザーを撃ったときにレーザーが自分に当たり、バウンス元に引き寄せられるか（すべての新しいマップでは 0）、またはレーザーが自分に当たらず、他の人を射手に引き寄せるかを設定します。
 
@@ -7672,9 +7660,6 @@ Jelly others
 
 Jelly strength
 == ゼリー強度
-
-Jitter
-== ジッター
 
 Join
 == 参加
@@ -8441,6 +8426,9 @@ Log realtime WebSocket channel events
 Log the network
 == ネットワークをログに記録
 
+Logic and input ticks per second; rendering follows this beat.
+== 1 秒あたりのゲームロジックと入力の処理回数。描画もこのリズムに従います。
+
 Logout of econ
 == econ からログアウト
 
@@ -8449,9 +8437,6 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == 遅いフレームや起動時の引っかかりの時間を記録し、もたつきの原因を報告できるようにします。
-
-Long frames
-== 長いフレーム
 
 Lose weapons when teleporting (useful for race maps)
 == テレポート時に武器を失う（レースマップに便利）
@@ -8798,6 +8783,9 @@ Max Screenshots
 Max size
 == 最大サイズ
 
+Max skins in the rotation queue; 0 stops collecting.
+== ローテーションキューに保持するスキンの上限。0 で収集を停止します。
+
 Max stroke entries to keep
 == 保持する最大ストロークエントリ数
 
@@ -8864,9 +8852,6 @@ Maximum number of resend requests answered per second (0 for no limit)
 Maximum number of server info responses of any size sent per second (0 = unlimited).
 == サイズを問わず毎秒送信できるサーバー情報応答の最大数（0 = 無制限）。
 
-Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting.
-== ローテーションキューに保持するスキンの上限。超えた分は古い順に削除されます。0 にするとキューを空にして収集を停止します。
-
 Maximum number of skins loaded simultaneously
 == 同時に読み込まれる最大スキン数
 
@@ -8902,9 +8887,6 @@ May overload the service
 
 Medium
 == 中
-
-Memory
-== メモリ
 
 Mention
 == メンション
@@ -10010,8 +9992,8 @@ Ok
 Old chat style: no tee icons, no background
 == 古いチャットスタイル: ティーアイコンなし、背景なし
 
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else.
-== 保存上限に達すると古いファイルは削除されるので、残したいデモは別の場所にコピーしておきましょう。
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+== 保存数の上限に達すると古いファイルが削除されます。残したいデモは別の場所へコピーしてください。ポーズスクリーンショットの画素予算はここではなく、.poses ファイルのレンダーダイアログにある出力和オプションです。
 
 Old single-segment hook collision line
 == 旧式の単一セグメントフック衝突線
@@ -10225,6 +10207,9 @@ Optional
 
 Optional authentication key for the DNSBL provider
 == DNSBL プロバイダーのオプションの認証キー
+
+Optional Axiom API key for scoreboard points and vote map details (leave empty for anonymous queries)
+== スコアボードのポイントと投票マップの詳細を取得する Axiom API キー（任意）。空欄なら匿名で照会します。
 
 Optional export range in seconds. Leave empty to export the whole demo.
 == 省略可能な書き出し範囲（秒）。空欄ならデモ全体を書き出します。
@@ -10601,8 +10586,8 @@ Pick each color row and choose a color; the authed and same-clan colors apply to
 Pick result: %s
 == 抽選結果：%s
 
-Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode.
-== まずモードを選び、次にモニターと解像度を選びます。リフレッシュレートはモニターの現在のモードによって決まります。
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
+== まずモード、次にモニターと解像度を選びます。「描画フレームレート上限」は垂直同期オフ時に描画するフレーム数を制限し、「クライアント更新レート」はゲームロジックと入力の処理頻度を制限して描画も一緒に絞ります。
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == 色を付ける部分を選び、グラデーションモードと色を選びます。
@@ -10648,6 +10633,9 @@ Pistol
 
 Pistol guide line
 == ピストル補助線
+
+Pixel budget
+== 画素予算
 
 Pixel: Layer Shift
 == ピクセル風：レイヤーシフト
@@ -11033,9 +11021,6 @@ Pose render supersampling scale (1-4)
 Pose render unsharp mask strength (0 = off)
 == ポーズレンダリングのアンシャープマスク強度（0 = オフ）
 
-Pose screenshot pixel budget (MP, 0 = unlimited)
-== ポーズスクリーンショットの画素上限（MP、0 = 無制限）
-
 Poses
 == ポーズ
 
@@ -11144,8 +11129,8 @@ Prediction margin
 Prediction margin when frozen
 == フリーズ時の予測マージン
 
-Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== 予測は精度と引き換えに応答性を得ます。大きなマージンと AntiPing は ping の揺れを滑らかにしますが、近くの動作を誤予測することがあり、上流冗長化はアップロード通信量を最大 3 倍にします。
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+== 予測は正確さと応答性のトレードオフです。上り冗長化は送信量を 3 倍にします。「ゲームトラフィックを優先」は Windows でパケットに印を付けるだけで、QoS 対応ルーターがなければ効果ありません。
 
 Preparing chat export: %d%%
 == チャットのエクスポートを準備中：%d%%
@@ -11384,11 +11369,11 @@ Projectile / explosion range
 ProRes profile
 == ProRes プロファイル
 
+ProRes profile for 4:4:4 input; other encoders ignore it.
+== 4:4:4 入力時の ProRes プロファイル。他のエンコーダーは無視します。
+
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 == ProRes プロファイル上書き: -1=自動（4:4:4 は 4444、その他は HQ）、0=Proxy、1=LT、2=422、3=HQ、4=4444、5=4444XQ
-
-ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this.
-== エンコーダーが ProRes のときのプロファイル。自動では 4:4:4 入力なら 4444、それ以外は HQ を選びます。他のエンコーダーでは無視されます。
 
 Protect names and skins while streaming
 == 配信時に名前とスキンを保護
@@ -11915,9 +11900,6 @@ Refresh interval
 Refresh isolated serverlist consumer
 == 隔離サーバーリスト利用側を更新
 
-Refresh Rate
-== リフレッシュレート
-
 Refresh the demo list
 == デモリストを更新
 
@@ -12205,6 +12187,9 @@ Render entity text data
 
 Render entity text data in editor
 == エディターでエンティティテキストデータをレンダリング
+
+Render frame rate limit
+== 描画フレームレート上限
 
 Render ghosts as circles
 == ゴーストを円としてレンダリング
@@ -12733,12 +12718,6 @@ Save player names in replay
 
 Save PNG copy
 == PNG コピーを保存
-
-Save power by lowering update rate
-== 更新レートを下げて省電力
-
-Save power by lowering update rate (higher input latency)
-== 更新レートを下げて省電力（入力遅延増加）
 
 Save replay of best time per game
 == ゲームごとのベストタイムのリプレイを保存
@@ -13391,8 +13370,8 @@ Sets one of the two rescue modes (auto or manual). Prints current mode if no arg
 Sets player and dummy name, clan and identity information.
 == プレイヤーとダミーの名前、クラン、プロフィール情報を設定します。
 
-Sets the client update rate, whether the main menu is skipped, and opens the folders for settings, saves and themes.
-== クライアントの更新レート、メインメニューをスキップするかを設定し、設定、セーブ、テーマのフォルダーを開けます。
+Sets the client update rate to 480 Hz (0 = unlimited)
+== クライアント更新レートを 480 Hz に設定します（0 = 無制限）
 
 Sets the position, size and text style of the status bar.
 == ステータスバーの位置、サイズ、文字スタイルを設定します。
@@ -14582,6 +14561,9 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 == ランキングのチーム順位（またはプレイヤー順位）を i 位から 5 件表示（デフォルト 1、-1 は最下位）
 
+Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
+== FPS、フレーム時間、RTT、予測リードを表示します。ガイド線を超えるバーは 60 FPS のフレーム予算を超えています。
+
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 == エッジジャンプ用の小数の位置数値を画面テキストで表示し、正しい位置でジャンプのタイミングを取れるようにします。
 
@@ -14890,15 +14872,6 @@ Snapshot age
 
 Snapshot Latency
 == スナップショットレイテンシ
-
-Snapshot payload
-== スナップショットのペイロード
-
-Snapshot rate
-== スナップショットレート
-
-Snapshot tick gap
-== スナップショット tick 間隔
 
 Social
 == ソーシャル
@@ -16046,6 +16019,9 @@ The server rejected the map upload.
 The two keys that cast your vote: one for yes and one for no.
 == 投票用のキーは二つ。賛成用と反対用が一つずつです。
 
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+== 更新レートとフレームレートの上限は画像ページへ移しました。描画設定の隣にあるべき項目で、ここには属しません。
+
 The watermarked screenshot was saved next to the original
 == ウォーターマーク付きのスクリーンショットを元画像の隣に保存しました
 
@@ -16240,6 +16216,9 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
 == 「他のチームを表示」をオンにすると他チームを半透明で描画します。影の不透明度はその下の従属行で設定し、視界は「背景クワッドを表示」と「既定のズーム」で調整します。
+
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+== 「メインメニューをスキップ」にチェックを入れ、「設定ファイル」や「テーマディレクトリ」から各場所を開けます。
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == キーの引っかかり表示、ハンマー状態を表示、dummy 操作状態を表示、dummy コピー状態を表示のうち、必要なものをオンにします。
@@ -17135,6 +17114,9 @@ Unknown status
 Unknown title style
 == 不明なタイトルスタイル
 
+Unlimited
+== 無制限
+
 Unload the rank ghost
 == Rankゴーストを解除
 
@@ -17218,9 +17200,6 @@ Update notice
 
 Update or add a specific war group
 == 特定の敵対グループを更新または追加
-
-Update Rate
-== 更新レート
 
 Update ready to install
 == 更新をインストールできます
@@ -17950,6 +17929,9 @@ Whether players see all tees by default
 
 Whether players see others by default (own team = 2)
 == デフォルトで他のプレイヤーを表示するかどうか（自チームは 2）
+
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
+== メインメニューをスキップするか、コミュニティのマップタグ、起動時のクラッシュレポート、設定・セーブ・テーマのフォルダを開く入口です。
 
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 == ダミーを同時に制御するかどうか（cl_dummy_jump、cl_dummy_fire、cl_dummy_hook）

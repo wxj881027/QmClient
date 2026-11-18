@@ -7,8 +7,14 @@
  seconds (never)
 == 秒 (不消失)
 
+ · %d finishers
+==  · %d 人完赛
+
  · %d finishers · average %d:%02d:%02d
 ==  · %d 人完成 · 平均 %d:%02d:%02d
+
+ · median %d:%02d:%02d
+==  · 中位数 %d:%02d:%02d
 
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == "%s" 与 pnglite 不兼容，无法被旧版本 DDNet 加载
@@ -48,9 +54,6 @@
 
 "None" hides all name plates including your own team, so choose "Others" if you only want a cleaner screen.
 == 无会连自己队伍的昵称一起隐藏，只想要画面干净请选其他玩家。
-
-"Save power by lowering update rate (higher input latency)" adds input delay, so keep it off while racing.
-== 降低刷新率省电（输入延迟更高）会让输入更迟钝，跑图时保持关闭。
 
 "Scoreboard filter" keeps only players whose name or clan matches, so clear it when the scoreboard looks empty.
 == 计分板筛选只保留名字或战队匹配的玩家；计分板看起来空了，先清掉筛选内容。
@@ -330,9 +333,6 @@
 
 0-51, empty = default
 == 0-51，留空 = 默认
-
-1% low
-== 1% 最低帧
 
 128 player id <-> 64 player id map update rate
 == 128 玩家 ID <-> 64 玩家 ID 地图更新速率
@@ -619,9 +619,6 @@ Add demo timeline marker
 
 Add Entry
 == 添加条目
-
-Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off.
-== 进入地图时把所有玩家的皮肤加入队列。手动编辑队列会关闭此项。
 
 Add friend
 == 添加好友
@@ -2207,6 +2204,12 @@ Cannot write cfg file
 Cannot write the wiki file
 == 无法写入 Wiki 文件
 
+Cap update rate to save power
+== 限制更新频率以节约功耗
+
+Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
+== 限制更新频率会增加输入延迟，只建议为省电开启。独占全屏失败时，先切回窗口或无边框模式。
+
 Capsule end strength
 == 胶囊端部强度
 
@@ -2260,9 +2263,6 @@ Center line width (requires qm_show_center)
 
 cfg installed
 == cfg 已安装
-
-Change "Update Rate" in Hz, tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
-== 以 Hz 为单位修改客户端刷新率，勾选跳过主菜单，用设置文件或主题目录打开对应位置。
 
 Change colors and style options, then compare the preview.
 == 修改颜色和样式选项后与预览对比。
@@ -2558,8 +2558,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == 选择要绘制哪些昵称，并给昵称加上战队、队伍颜色、好友图标、坐标和客户端 ID。
 
-Chooses windowed or fullscreen mode, the monitor and the resolution; switching recreates the swap chain, so the screen may flash briefly.
-== 选择窗口化模式或全屏模式，以及显示器和分辨率；切换时会重建交换链，画面可能短暂闪烁。
+Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
+== 设置窗口/全屏模式、显示器与分辨率，以及两个帧节奏上限：渲染帧率和客户端更新频率。
 
 Chroma sampling
 == 色彩采样
@@ -2789,14 +2789,17 @@ Client self-kill is disabled (server commands are not affected)
 Client self-kill is enabled
 == 客户端自杀已开启
 
+Client update rate
+== 客户端更新频率
+
 Client uptime
 == 客户端启动时间
 
 Client-side prediction and latency compensation
 == 客户端预测与延迟补偿
 
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
-== 客户端预测与延迟补偿：预测余量、AntiPing 与其预测实体、预测事件，以及上行数据包冗余。
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+== 客户端预测与延迟补偿：预测余量、AntiPing 及其预测对象、预测事件、上行包冗余与 DSCP 流量标记。
 
 Client-side self-kill protection
 == 客户端侧自杀保护
@@ -2824,6 +2827,9 @@ Collapse console
 
 Collect all players' skins on map join
 == 进图时收集所有玩家皮肤
+
+Collect all players' skins on map join; manual edits turn it off.
+== 进图时收集所有玩家皮肤；手动编辑队列会自动关闭它。
 
 Collect CP %d before teleporting
 == 请先吃 CP %d，再进入回传入口
@@ -6344,20 +6350,14 @@ Fraction of players needed to pass a vote
 Frags
 == 击杀数
 
-Frame rate
-== 帧率
-
 Frame time
 == 帧耗时
 
-Frame time p95
-== 帧时间 P95
-
-Frame time p99
-== 帧时间 p99
-
 Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
 == 采集与编码之间缓冲的帧数。队列越深越能吸收编码较慢的帧，但更吃内存；数值越低越早产生背压。
+
+Frames drawn per second when V-Sync is off; 0 = unlimited
+== 关闭垂直同步时每秒最多绘制多少帧；0 = 不限
 
 Frankenstein (drop parts on right)
 == 拼合结果（将部件拖放到右侧）
@@ -6560,9 +6560,6 @@ Game paused
 Game sound volume
 == 游戏音效音量
 
-Game time margin
-== 游戏时间边距
-
 Game type
 == 游戏模式
 
@@ -6577,9 +6574,6 @@ Game update rate when window inactive (Hz)
 
 Game window mode
 == 游戏窗口模式
-
-Game/predicted tick
-== 游戏/预测 tick
 
 Gamemode. When enabled, players join as spectators
 == 比赛模式。启用时玩家以观众身份加入服务器
@@ -6856,9 +6850,6 @@ Graphics settings sub-tab: 0=display, 1=visual effects
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 图形跟踪级别：0 = 关闭，1 = 定期摘要，2 = 摘要和慢帧，3 = 详细后端跟踪
-
-Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the debug graph toggle is on.
-== 在调试图形开关打开时显示的面板中，绘制 RTT、预测、快照时延和帧率曲线。
 
 Greek
 == 希腊文
@@ -7460,9 +7451,6 @@ If a device disappears after unplugging headphones, reselect it or restart the c
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
 == 如果聊天分数超过此值，玩家将被静音 sv_spam_mute_duration 秒
 
-If exclusive fullscreen fails, switch back to windowed or borderless first.
-== 如果独占全屏模式无法启动，请先切回窗口化或无边框模式。
-
 If lasers can hit you when shot and pull you to bounce origin (0 for all new maps), or lasers cannot hit you and pull others to shooter.
 == 激光被射击时是否可以击中自己并将自己拉回反弹起点（所有新地图设为 0）；否则激光不会击中自己，而是将其他玩家拉向射击者。
 
@@ -7942,9 +7930,6 @@ Jelly others
 
 Jelly strength
 == Q 弹强度
-
-Jitter
-== 抖动
 
 Join
 == 进入
@@ -8759,6 +8744,9 @@ Log realtime WebSocket channel events
 Log the network
 == 记录网络
 
+Logic and input ticks per second; rendering follows this beat.
+== 每秒处理游戏逻辑与输入的次数；渲染跟着这个节拍走。
+
 Logout of econ
 == 退出 econ 登录
 
@@ -8767,9 +8755,6 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == 记录慢帧和启动卡顿耗时，方便你反馈游戏为何感觉卡顿。
-
-Long frames
-== 长帧
 
 Lose weapons when teleporting (useful for race maps)
 == 传送时失去武器（对某些竞速地图有用）
@@ -9131,6 +9116,9 @@ Max Screenshots
 Max size
 == 最大尺寸
 
+Max skins in the rotation queue; 0 stops collecting.
+== 轮换队列最多保留多少皮肤；0 表示停止收集。
+
 Max stroke entries to keep
 == 最多保留的描边条目数
 
@@ -9197,9 +9185,6 @@ Maximum number of resend requests answered per second (0 for no limit)
 Maximum number of server info responses of any size sent per second (0 = unlimited).
 == 每秒发送的任意大小服务器信息响应最大数量（0 = 不限）。
 
-Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting.
-== 轮换队列最多保留的皮肤数量，超出时从最早的开始丢弃。0 表示清空队列并停止收集。
-
 Maximum number of skins loaded simultaneously
 == 最多可同时加载皮肤数量
 
@@ -9235,9 +9220,6 @@ May overload the service
 
 Medium
 == 中
-
-Memory
-== 内存
 
 Mention
 == 提及
@@ -10430,8 +10412,8 @@ Ok
 Old chat style: no tee icons, no background
 == 旧版聊天样式：不显示 Tee 图标，不显示背景
 
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else.
-== 达到保存上限后旧文件会被删掉，想留的回放记得另存一份。
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+== 保存数量到上限后会删除旧文件，想留的录像记得另存。姿势截图像素预算不在这里，它是 .poses 文件渲染弹窗里的出图选项。
 
 Old single-segment hook collision line
 == 旧版单段钩索碰撞线
@@ -10651,6 +10633,9 @@ Optional
 
 Optional authentication key for the DNSBL provider
 == 指定 DNSBL 提供商的可选身份验证密钥
+
+Optional Axiom API key for scoreboard points and vote map details (leave empty for anonymous queries)
+== 可选的 Axiom API 密钥，用于查询计分板积分与投票地图详情（留空则匿名查询）
 
 Optional export range in seconds. Leave empty to export the whole demo.
 == 可选的导出范围（秒）；留空导出整个回放。
@@ -11045,8 +11030,8 @@ Pick result: %s
 Pick the key that starts this flow.
 == 选择启动这条流程的按键。
 
-Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode.
-== 先选择模式，再选择显示器和分辨率；刷新率由显示器当前的模式决定。
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
+== 先选模式，再选显示器与分辨率。「渲染帧率上限」限制关闭垂直同步时每秒画多少帧；「客户端更新频率」限制游戏逻辑与输入的处理频率，并连带限制渲染。
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == 勾选需要上色的部分，再选择渐变模式和颜色。
@@ -11092,6 +11077,9 @@ Pistol
 
 Pistol guide line
 == 手枪辅助线
+
+Pixel budget
+== 像素预算
 
 Pixel: Layer Shift
 == 像素风：层移
@@ -11480,9 +11468,6 @@ Pose render supersampling scale (1-4)
 Pose render unsharp mask strength (0 = off)
 == 姿态渲染锐化遮罩强度（0 = 关闭）
 
-Pose screenshot pixel budget (MP, 0 = unlimited)
-== 姿势截图像素预算（百万像素，0 = 不限）
-
 Poses
 == 姿态
 
@@ -11597,8 +11582,8 @@ Prediction margin
 Prediction margin when frozen
 == 冻结时的预测边距
 
-Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== 预测用精度换取响应速度：更大的余量和 AntiPing 能抹平 ping 抖动，但可能误判近处动作，上游冗余最多会让上行流量增至三倍。
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+== 预测是用准确性换响应速度；上行冗余会让上传流量翻三倍。「优先游戏流量」只在 Windows 上给数据包打标记，还需要路由器识别 QoS 才有效。
 
 Preparing chat export: %d%%
 == 正在准备聊天导出：%d%%
@@ -11846,11 +11831,11 @@ Projectile / explosion range
 ProRes profile
 == ProRes 档位
 
+ProRes profile for 4:4:4 input; other encoders ignore it.
+== 4:4:4 输入时使用的 ProRes 档位；其它编码器忽略此项。
+
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 == ProRes 档位覆盖：-1=自动（4:4:4 用 4444，其余用 HQ），0=Proxy，1=LT，2=422，3=HQ，4=4444，5=4444XQ
-
-ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this.
-== 编码器为 ProRes 时使用的档位。自动会在 4:4:4 输入时选 4444，其余情况选 HQ；其他编码器忽略此项。
 
 Protect names and skins while streaming
 == 直播时保护名称和皮肤
@@ -12383,9 +12368,6 @@ Refresh interval
 Refresh isolated serverlist consumer
 == 刷新隔离服务器列表消费者
 
-Refresh Rate
-== 刷新率
-
 Refresh the demo list
 == 刷新回放列表
 
@@ -12673,6 +12655,9 @@ Render entity text data
 
 Render entity text data in editor
 == 在编辑器中渲染实体文本数据
+
+Render frame rate limit
+== 渲染帧率上限
 
 Render ghosts as circles
 == 将影子渲染为圆圈
@@ -13225,12 +13210,6 @@ Save player names in replay
 
 Save PNG copy
 == 另存 PNG 副本
-
-Save power by lowering update rate
-== 降低刷新率以节约功耗
-
-Save power by lowering update rate (higher input latency)
-== 降低刷新率以节约功耗（增加输入延迟）
 
 Save replay of best time per game
 == 保存每场游戏最佳记录的回放
@@ -13901,8 +13880,8 @@ Sets one of the two rescue modes (auto or manual). Prints current mode if no arg
 Sets player and dummy name, clan and identity information.
 == 设置玩家和分身的名称、战队与身份信息。
 
-Sets the client update rate, whether the main menu is skipped, and opens the folders for settings, saves and themes.
-== 设置客户端刷新率、是否跳过主菜单，并打开设置、存档和主题所在目录。
+Sets the client update rate to 480 Hz (0 = unlimited)
+== 把客户端更新频率设为 480 Hz（0 = 不限）
 
 Sets the position, size and text style of the status bar.
 == 设置状态栏的位置、大小和文字样式。
@@ -15101,6 +15080,9 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 == 显示天梯队伍排名（或玩家排名）从第 i 名开始的 5 条（默认 1，-1 为最差）
 
+Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
+== 显示 FPS、帧耗时、RTT 与预测提前量；超过参考线的帧耗时条表示已超出 60 FPS 的帧预算。
+
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 == 以屏幕文字显示边缘跳的小数位置数值，帮你卡在准确的位置起跳。
 
@@ -15412,15 +15394,6 @@ Snapshot age
 
 Snapshot Latency
 == 快照延迟
-
-Snapshot payload
-== 快照负载
-
-Snapshot rate
-== 快照速率
-
-Snapshot tick gap
-== 快照 tick 间隔
 
 Social
 == 社交功能
@@ -16622,6 +16595,9 @@ The server rejected the map upload.
 The two keys that cast your vote: one for yes and one for no.
 == 投出你那一票的两个键：一个赞成，一个反对。
 
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+== 更新频率与帧率上限已移到图像页：它们属于渲染设置，不该放在这里。
+
 The watermarked screenshot was saved next to the original
 == 带水印的截图已保存到原图旁边
 
@@ -16825,6 +16801,9 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
 == 勾选「显示其他队伍」可半透明绘制其他队伍，其影子不透明度在下方从属行设置；视野相关还有「显示背景方块」和「默认缩放」。
+
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+== 勾选「跳过主菜单」，用「设置文件」或「主题目录」打开对应位置。
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == 按需勾选显示卡键状态、显示锤子状态、显示分身控制状态或显示分身同步状态。
@@ -17741,6 +17720,9 @@ Unknown status
 Unknown title style
 == 未知的头衔风格
 
+Unlimited
+== 不限
+
 Unload the rank ghost
 == 卸载 Rank 影子
 
@@ -17833,9 +17815,6 @@ Update notice
 
 Update or add a specific war group
 == 更新或添加指定敌对分组
-
-Update Rate
-== 客户端刷新率
 
 Update ready to install
 == 更新已准备就绪，可以安装
@@ -18598,6 +18577,9 @@ Whether players see all tees by default
 
 Whether players see others by default (own team = 2)
 == 玩家是否默认看到其他人（本队为 2）
+
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
+== 是否跳过主菜单、社区地图标签、启动时显示崩溃报告，以及设置/存档/主题目录的入口。
 
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 == 是否同时控制分身（cl_dummy_jump、cl_dummy_fire、cl_dummy_hook）

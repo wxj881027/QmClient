@@ -253,22 +253,8 @@ static const char *FavoriteMapCategoryDisplayName(const char *pType)
 	return Localize("Unknown");
 }
 
-static const char *MapDifficultyStars(int Stars)
-{
-	static constexpr const char *s_apStarLabels[] = {
-		"☆☆☆☆☆",
-		"★☆☆☆☆",
-		"★★☆☆☆",
-		"★★★☆☆",
-		"★★★★☆",
-		"★★★★★",
-	};
-	return Stars >= 0 && Stars <= 5 ? s_apStarLabels[Stars] : "";
-}
-
-// 独立难度列只显示星级符号；
-// 无目录条目返回空串，由调用方显示占位符。
-static void FormatMapDifficultyText(const CQmMapDifficultyCatalog::SEntry *pDifficulty, char *pOut, size_t OutSize)
+// Axiom 地图同时显示原始分类与模式星级。
+static void FormatMapDifficultyText(const CQmMapDifficultyCatalog::SEntry *pDifficulty, bool ShowCategory, char *pOut, size_t OutSize)
 {
 	if(pOut == nullptr || OutSize == 0)
 		return;
@@ -278,7 +264,10 @@ static void FormatMapDifficultyText(const CQmMapDifficultyCatalog::SEntry *pDiff
 	const char *pStars = pDifficulty->StarLabel();
 	if(pStars[0] == '\0')
 		return;
-	str_copy(pOut, pStars, OutSize);
+	if(ShowCategory)
+		str_format(pOut, OutSize, "%s · %s", pStars, pDifficulty->m_Category.c_str());
+	else
+		str_copy(pOut, pStars, OutSize);
 }
 
 // 浏览器名称列的区段短名：解析器输出「类别 - 区段」（如「简单 - CHN5 上海」），
@@ -640,8 +629,10 @@ static ColorRGBA GetServerListPingColor(const CServerInfo *pInfo, int OwnLocatio
 
 void CMenus::OpenMapPreviewPopup(const CServerInfo *pItem)
 {
-	const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.Find(pItem->m_aMap);
-	const char *pStars = pDifficulty != nullptr ? MapDifficultyStars(pDifficulty->m_Stars) : "";
+	const auto *pDifficulty = str_comp_nocase(pItem->m_aCommunityId, "axiom") == 0 ?
+					 m_MapDifficultyCatalog.FindForServer(*pItem) :
+					 m_MapDifficultyCatalog.Find(pItem->m_aMap);
+	const char *pStars = pDifficulty != nullptr ? pDifficulty->StarLabel() : "";
 	char aCaption[192];
 	if(pStars[0] != '\0')
 		str_format(aCaption, sizeof(aCaption), "%s · %s · %d/%d", pStars, pItem->m_aGameType, pItem->m_NumFilteredPlayers, ServerBrowser()->Max(*pItem));
@@ -1267,6 +1258,12 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 	Ui()->ClipDisable();
 
+	const int64_t Now = time_get();
+	const bool NeedDifficultyForList = g_Config.m_QmMapBrowserStarMask || g_Config.m_QmMapBrowserCategoryMask || g_Config.m_BrSort == IServerBrowser::SORT_DIFFICULTY;
+	auto RequestDifficulty = [&](const CServerInfo &Server) {
+		if(!Ui()->RenderOnly())
+			m_MapDifficultyCatalog.RequestAxiomDifficulty(Server, *Http(), GameClient()->m_QmAxiomScores.OpenApiBudget(), g_Config.m_QmAxiomApiKey, Now);
+	};
 	std::vector<int> vVisibleServerIndices;
 	vVisibleServerIndices.reserve(ServerBrowser()->NumSortedServers());
 	for(int SortedIndex = 0; SortedIndex < ServerBrowser()->NumSortedServers(); ++SortedIndex)
@@ -1277,6 +1274,10 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pServer, MapCategoryHintFromServer(pServer));
 		const int Stars = pDifficulty != nullptr ? pDifficulty->m_Stars : -1;
 		const bool IsFavorite = GameClient()->m_TClient.IsFavoriteMap(pServer->m_aMap);
+		// 星级筛选会隐藏未知地图，需在过滤前补查，否则这些图永远无法进入可见行。
+		if(NeedDifficultyForList && !pDifficulty && (!g_Config.m_QmMapBrowserEmptyOnly || !pServer->m_NumFilteredPlayers) &&
+			(!g_Config.m_QmMapBrowserFavoriteOnly || IsFavorite))
+			RequestDifficulty(*pServer);
 		// 目录条目给出权威类别；没有目录收录时退回服务器名/社区类型里解析出的类别。
 		const char *pCategory = pDifficulty != nullptr ? pDifficulty->m_Category.c_str() : MapCategoryHintFromServer(pServer);
 		if(QmMapVotes::MatchesFilter(Stars, pCategory, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserCategoryMask, g_Config.m_QmMapBrowserFavoriteOnly != 0, IsFavorite))
@@ -1461,6 +1462,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			// don't render invisible items
 			continue;
 		}
+
+		if(!NeedDifficultyForList)
+			RequestDifficulty(*pItem);
 
 		// Resolve row-only data after visibility is known. The list can contain
 		// hundreds of servers while only a few rows are on screen; doing these
@@ -1647,10 +1651,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_DIFFICULTY)
 			{
-				// 独立难度列只显示星级符号；无目录条目显示占位。
 				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pItem, MapCategoryHintFromServer(pItem));
-				char aDifficulty[64];
-				FormatMapDifficultyText(pDifficulty, aDifficulty, sizeof(aDifficulty));
+				char aDifficulty[96];
+				FormatMapDifficultyText(pDifficulty, str_comp_nocase(pItem->m_aCommunityId, "axiom") == 0, aDifficulty, sizeof(aDifficulty));
 				MeasureColumn(Id, aDifficulty[0] != '\0' ? aDifficulty : "--", FontSize);
 				if(aDifficulty[0] != '\0')
 				{
@@ -1659,6 +1662,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					Props.m_StopAtEnd = true;
 					Props.m_EllipsisAtEnd = true;
 					Props.m_EnableWidthCheck = false;
+					Props.m_pTooltipId = pUiElement->Rect(UI_ELEM_DIFFICULTY);
 					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_DIFFICULTY), &Button, aDifficulty, FontSize, TEXTALIGN_ML, Props);
 				}
 				else

@@ -215,17 +215,17 @@ void CQmVoteMapLoader::Update(IHttp *pHttp, IEngine *pEngine, float Now, CQmAxio
 	// 键盘快速浏览时不为每个经过的条目发请求。
 	if(!m_Selected.m_Name.empty() && (Axiom || !m_Selected.m_Category.empty()) && !m_DetailRequest.m_Attempted && Now - m_SelectedAt >= 0.3f)
 	{
-		char aEscaped[MAX_MAP_LENGTH * 3];
-		EscapeUrl(aEscaped, m_Selected.m_Name.c_str());
-		char aUrl[1024];
 		if(Axiom)
 		{
 			if(!pBudget || !pBudget->TryStart(time_get(), pApiKey[0] != 0))
 				return;
-			str_format(aUrl, sizeof(aUrl), "https://api.axiom.teeworlds.cn/v1/open/map/info?mode=%s&map=%s", m_AxiomMode == EQmAxiomMode::GORES ? "gores" : "axrace", aEscaped);
-			Start(m_DetailRequest, pHttp, aUrl, 2 * 1024 * 1024, pApiKey);
+			const std::string Url = QmBuildAxiomMapInfoUrl(m_Selected.m_Name.c_str(), m_AxiomMode);
+			Start(m_DetailRequest, pHttp, Url.c_str(), 2 * 1024 * 1024, pApiKey);
 			return;
 		}
+		char aEscaped[MAX_MAP_LENGTH * 3];
+		EscapeUrl(aEscaped, m_Selected.m_Name.c_str());
+		char aUrl[1024];
 		str_format(aUrl, sizeof(aUrl), "https://ddnet.org/maps/?json=%s", aEscaped);
 		Start(m_DetailRequest, pHttp, aUrl, 2 * 1024 * 1024);
 	}

@@ -442,12 +442,17 @@ void CInputOverlay::OnRender()
 				DrawColor.a *= Alpha;
 				Graphics()->SetColor(DrawColor);
 
+				vec2 Center(X + W * 0.5f, Y + H * 0.5f);
 				if(Element.m_InputKind == EObsInputKind::MOUSE_MOVE && Element.m_MouseType == 1)
+				{
 					Graphics()->QuadsSetRotation(MouseMoveAngle);
+					if(Element.m_MovementRadius > 0.0f)
+						Center += QmInputOverlay::MouseArrowOffset(AimPos, GameClient()->m_Controls.GetMaxMouseDistance(), vec2(MapW, MapH), Element.m_MovementRadius) * LayoutScale;
+				}
 				else
 					Graphics()->QuadsSetRotation(0.0f);
 
-				IGraphics::CQuadItem Quad(X + W * 0.5f, Y + H * 0.5f, W, H);
+				IGraphics::CQuadItem Quad(Center.x, Center.y, W, H);
 				Graphics()->QuadsDraw(&Quad, 1);
 			}
 
@@ -1468,6 +1473,7 @@ bool CInputOverlay::ParseObsElement(const json_value &Object, SObsElement &Out) 
 		break;
 	case 9:
 		Out.m_InputKind = EObsInputKind::MOUSE_MOVE;
+		ParseFloat(Object["movement_radius"], Out.m_MovementRadius);
 		break;
 	default:
 		Out.m_InputKind = EObsInputKind::NONE;

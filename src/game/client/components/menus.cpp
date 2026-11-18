@@ -13,6 +13,7 @@
 #include <base/vmath.h>
 
 #include <engine/client.h>
+#include <engine/client/serverbrowser.h>
 #include <engine/client/updater.h>
 #include <engine/config.h>
 #include <engine/editor.h>
@@ -6963,6 +6964,9 @@ void CMenus::OnReset()
 
 void CMenus::OnShutdown()
 {
+	m_MapDifficultyCatalog.CancelAxiomRequests();
+	if(m_MapDifficultyCatalog.AxiomCacheDirty() && !m_MapDifficultyCatalog.SaveAxiomCache(Storage()))
+		log_warn("map_difficulty", "could not save Axiom map difficulty cache");
 	m_QmVoteMenu.m_Loader.Suspend();
 	m_ScreenshotEditor.Close(this);
 	m_TranslateProbe.Cancel();
@@ -8701,6 +8705,20 @@ void CMenus::OnWindowResize()
 
 void CMenus::OnUpdate()
 {
+	const int64_t Now = time_get();
+	if(m_MapDifficultyCatalog.PollAxiomRequests(GameClient()->m_QmAxiomScores.OpenApiBudget(), Now) && g_Config.m_BrSort == IServerBrowser::SORT_DIFFICULTY)
+	{
+		if(auto *pBrowser = dynamic_cast<CServerBrowser *>(ServerBrowser()))
+			pBrowser->RequestResort();
+	}
+	if(m_MapDifficultyCatalog.AxiomCacheDirty() && Now >= m_NextAxiomDifficultySave)
+	{
+		// 多个房间连续返回时合并落盘，写入失败则保留内存数据等待重试。
+		m_NextAxiomDifficultySave = Now + 10 * time_freq();
+		if(!m_MapDifficultyCatalog.SaveAxiomCache(Storage()))
+			log_warn("map_difficulty", "could not save Axiom map difficulty cache");
+	}
+
 	// QmClient: 游戏中菜单关闭时的空闲帧，提前完成 ESC 文本 plan 收集与预建
 	// （operation 固定为 ingame_esc_open 以命中打开时的缓存），避免打开时同步
 	// 收集造成 20ms 尖峰。放在 OnUpdate 而非 OnRender，遵守“预建与可见渲染分离”

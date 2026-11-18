@@ -2420,6 +2420,7 @@ set(EXPECTED_DATA
   skins/tuzi.png
   skins/twinbop.png
   skins/twintri.png
+  skins/vaporeon_acqua.png
   skins/veteran.png
   skins/voodoo_tee.png
   skins/warpaint.png
@@ -5518,6 +5519,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_console_slide_test.cpp
     src/test/unit/qmclient/client/qm_streamer_word_filter_test.cpp
     src/test/unit/qmclient/client/qm_map_tags_test.cpp
+    src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp
+    src/test/support/map_http_recorder.h
     src/test/integration/qmclient/client/qm_map_tags_lifecycle_test.cpp
     src/test/unit/qmclient/client/qm_public_word_filter_test.cpp
     src/test/unit/qmclient/client/qm_word_filter_list_test.cpp
@@ -6020,6 +6023,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/map_image_decode_test.cpp
     src/test/integration/client/map_layer_buffer_ownership_test.cpp
     src/test/integration/client/map_preview_layer_retry_test.cpp
+    src/test/integration/client/map_quad_culling_test.cpp
     src/test/unit/client/map_load_task_test.cpp
     src/test/unit/client/connection_resource_preparation_test.cpp
     src/test/unit/client/skins/skins_preview_layers_test.cpp

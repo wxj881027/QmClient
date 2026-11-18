@@ -1151,6 +1151,7 @@ void CRenderLayerQuads::OnInit(IGraphics *pGraphics, ITextRender *pTextRender, C
 
 CMapLoadTask CRenderLayerQuads::Init()
 {
+	m_LayerClip.reset();
 	if(m_pLayerQuads->m_Image >= 0 && m_pLayerQuads->m_Image < m_pMapImages->Num())
 		m_TextureHandle = m_pMapImages->Get(m_pLayerQuads->m_Image);
 	else
@@ -1250,6 +1251,7 @@ CMapLoadTask CRenderLayerQuads::Init()
 	m_vQuadClusters.clear();
 
 	// create quad clusters
+	bool AllClustersBounded = true;
 	int QuadStart = 0;
 	while(QuadStart < m_pLayerQuads->m_NumQuads)
 	{
@@ -1306,9 +1308,13 @@ CMapLoadTask CRenderLayerQuads::Init()
 
 		co_await CalculateClipping(QuadCluster);
 
+		if(!QuadCluster.m_ClipRegion.has_value())
+			AllClustersBounded = false;
 		m_vQuadClusters.push_back(std::move(QuadCluster));
 		QuadStart += QuadOffset;
 	}
+	if(!AllClustersBounded)
+		m_LayerClip.reset();
 
 	// gpu upload
 	pQLayerVisuals->m_BufferObjectIndex = Graphics()->CreateBufferObject(UploadDataSize, pUploadData.release(), 0, true);

@@ -2429,7 +2429,7 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 	QueueLengthOptions.m_FontSize = BodySize;
 	QueueLengthOptions.m_CommitPolicy = ui_widget::EInputCommitPolicy::ON_RELEASE_OR_SUBMIT;
 	ui_widget::NumericField(TeeSkinQueueLengthCtx, &s_aQueueLengthStates[QueueDummy], &QueueLength, &QueueLength, 0, 1024, LengthControls, QueueLengthOptions);
-	GameClient()->m_Tooltips.DoToolTip(&QueueLength, &LengthRow, Localize("Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting."));
+	GameClient()->m_Tooltips.DoToolTip(&QueueLength, &LengthRow, Localize("Max skins in the rotation queue; 0 stops collecting."));
 	QueueSection.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &QueueSection);
 
 	// 按地图收集：进图时把所有玩家的皮肤加入队列，等同「服务器预设」的行为。
@@ -2439,7 +2439,7 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 	{
 		QueueRotateMap ^= 1;
 	}
-	GameClient()->m_Tooltips.DoToolTip(&QueueRotateMap, &RotateMapRow, Localize("Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off."));
+	GameClient()->m_Tooltips.DoToolTip(&QueueRotateMap, &RotateMapRow, Localize("Collect all players' skins on map join; manual edits turn it off."));
 	QueueSection.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &QueueSection);
 
 	QueueSection.HSplitTop(minimum(QueueSection.h, QueueGeometry.m_QueueListSurfaceHeight), &QueueList, &QueueSection);
