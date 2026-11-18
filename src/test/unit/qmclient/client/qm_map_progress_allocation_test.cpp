@@ -1,4 +1,5 @@
 #include <game/client/components/qmclient/map_progress.h>
+#include <game/client/components/qmclient/route_render_cache.h>
 
 #include <gtest/gtest.h>
 #include <test/support/prediction_allocation_failure.h>
@@ -88,7 +89,7 @@ TEST(QmMapProgressAllocation, FailedFrontierExpansionCanRestartAtTheSameTile)
 	EXPECT_EQ(vRoute, (std::vector<int>{1, 4}));
 }
 
-TEST(QmMapProgressAllocation, FailedDebugRouteOutputClearsThePartialPathAndCanRetry)
+TEST(QmMapProgressAllocation, FailedDebugRouteOutputIsRetriedByCacheWithTheSameKey)
 {
 	std::vector<int> vRoute;
 	vRoute.reserve(1);
@@ -97,17 +98,37 @@ TEST(QmMapProgressAllocation, FailedDebugRouteOutputClearsThePartialPathAndCanRe
 	QmMapProgress::CPlayer Player;
 	Player.Update(Map, 1, 0, Width);
 	ASSERT_TRUE(Player.Estimate().m_Valid);
+	CQmRouteRenderCache Cache;
+	const CQmRouteRenderCache::SKey Key{Player.RouteRevision(), Player.RouteIndex(), 0, 0, true, Player.UsesSegmentRoute()};
+	int Builds = 0;
+	const auto Build = [&](std::vector<vec2> &vPoints) {
+		++Builds;
+		if(!Player.BuildRoute(vRoute))
+			return false;
+		for(const int Index : vRoute)
+			vPoints.emplace_back(static_cast<float>(Index), 0.0f);
+		return true;
+	};
 	bool Built, Triggered;
 	{
 		CPredictionAllocationFailure Fault;
-		Built = Player.BuildRoute(vRoute);
+		Built = Cache.Update(Key, Build);
 		Triggered = Fault.Triggered();
 	}
 	ASSERT_TRUE(Triggered);
 	EXPECT_FALSE(Built);
+	EXPECT_EQ(Builds, 1);
 	EXPECT_TRUE(vRoute.empty());
 	EXPECT_TRUE(Player.Estimate().m_Valid);
-	ASSERT_TRUE(Player.BuildRoute(vRoute));
+	EXPECT_TRUE(Cache.QueryVisible({0.0f, -1.0f, static_cast<float>(Width), 1.0f}).empty());
+	Player.Update(Map, 1, 0, Width);
+	ASSERT_EQ(Player.RouteRevision(), Key.m_Revision);
+	ASSERT_EQ(Player.RouteIndex(), Key.m_StartIndex);
+	ASSERT_TRUE(Cache.Update(Key, Build));
+	EXPECT_EQ(Builds, 2);
 	EXPECT_EQ(vRoute.front(), 1);
 	EXPECT_EQ(vRoute.back(), Width - 1);
+	EXPECT_EQ(Cache.QueryVisible({0.0f, -1.0f, static_cast<float>(Width), 1.0f}).size(), static_cast<size_t>(Width - 1));
+	EXPECT_TRUE(Cache.Update(Key, Build));
+	EXPECT_EQ(Builds, 2);
 }

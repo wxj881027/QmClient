@@ -591,12 +591,13 @@ namespace QmMapProgress
 		catch(const std::bad_alloc &)
 		{
 			vRoute.clear();
-			return false;
+			// 资源失败交给路线缓存处理，不能发布成同一键下的无路线结果。
+			throw;
 		}
 		catch(const std::length_error &)
 		{
 			vRoute.clear();
-			return false;
+			throw std::bad_alloc();
 		}
 	};
 }
