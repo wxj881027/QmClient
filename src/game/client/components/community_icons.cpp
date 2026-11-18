@@ -1,6 +1,7 @@
 #include "community_icons.h"
 
 #include <base/log.h>
+#include <base/str.h>
 
 #include <engine/engine.h>
 #include <engine/http.h>
@@ -9,13 +10,14 @@
 #include <game/client/components/qmclient/community_icon_image.h>
 
 static constexpr size_t MAX_CONCURRENT_ICON_DOWNLOADS = 4;
+static constexpr char COMMUNITY_ICON_EXTENSION[] = ".png";
 
 CCommunityIcons::CAbstractCommunityIconJob::CAbstractCommunityIconJob(CCommunityIcons *pCommunityIcons, const char *pCommunityId, int StorageType) :
 	m_pCommunityIcons(pCommunityIcons),
 	m_StorageType(StorageType)
 {
 	str_copy(m_aCommunityId, pCommunityId);
-	str_format(m_aPath, sizeof(m_aPath), "communityicons/%s.png", pCommunityId);
+	str_format(m_aPath, sizeof(m_aPath), "communityicons/%s%s", m_aCommunityId, COMMUNITY_ICON_EXTENSION);
 }
 
 CCommunityIcons::CCommunityIconDownloadJob::CCommunityIconDownloadJob(CCommunityIcons *pCommunityIcons, const char *pCommunityId, const char *pUrl, const SHA256_DIGEST &Sha256) :
@@ -51,7 +53,7 @@ CCommunityIcons::CCommunityIconLoadJob::~CCommunityIconLoadJob()
 
 int CCommunityIcons::FileScan(const char *pName, int IsDir, int DirType, void *pUser)
 {
-	const char *pExtension = ".png";
+	const char *pExtension = COMMUNITY_ICON_EXTENSION;
 	CCommunityIcons *pSelf = static_cast<CCommunityIcons *>(pUser);
 	if(IsDir || !str_endswith(pName, pExtension) || str_length(pName) - str_length(pExtension) >= (int)CServerInfo::MAX_COMMUNITY_ID_LENGTH)
 		return 0;
@@ -208,8 +210,18 @@ void CCommunityIcons::Update()
 	if(Changed && !m_Icons.Prune(ServerBrowser()->Communities(), Graphics()))
 		return;
 
-	const auto HasCurrent = [&](const qm_community_icons::SRequest &Request) {
-		return m_Icons.IsCurrent(Request.m_aId, Request.m_Sha256);
+	const auto SkipDownload = [&](const qm_community_icons::SRequest &Request) {
+		if(m_Icons.IsCurrent(Request.m_aId, Request.m_Sha256))
+			return true;
+
+		char aFilename[CServerInfo::MAX_COMMUNITY_ID_LENGTH + sizeof(COMMUNITY_ICON_EXTENSION) - 1];
+		str_format(aFilename, sizeof(aFilename), "%s%s", Request.m_aId, COMMUNITY_ICON_EXTENSION);
+		if(Request.m_aId[0] && str_valid_filename(aFilename))
+			return false;
+
+		// 仅跳过当前项，不占用并发下载名额。
+		log_warn("menus/browser", "Skipping community icon download: invalid cache filename");
+		return true;
 	};
 	const auto FindActive = [&](const qm_community_icons::SRequest &Request) {
 		const auto Existing = std::find_if(m_CommunityIconDownloadJobs.begin(), m_CommunityIconDownloadJobs.end(), [&](const auto &pJob) {
@@ -224,5 +236,5 @@ void CCommunityIcons::Update()
 				Http()->Run(pJob->HttpRequest());
 				return true; });
 	};
-	m_IconScan.Pump(m_CommunityIconDownloadJobs.size(), MAX_CONCURRENT_ICON_DOWNLOADS, HasCurrent, FindActive, Start);
+	m_IconScan.Pump(m_CommunityIconDownloadJobs.size(), MAX_CONCURRENT_ICON_DOWNLOADS, SkipDownload, FindActive, Start);
 }

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Callable
+import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
@@ -306,6 +307,34 @@ def scenario_valid_source_publishes_while_other_source_pending(s: Scenario):
 	s.quit()
 
 
+def scenario_invalid_icon_filename_does_not_block_valid_download(s: Scenario):
+	s.sources("/servers.json")
+	s.http.set("/servers.json", 200, s.payload("Local"), Age="0")
+	image = (s.build / "data/skins/default.png").read_bytes()
+	digest = hashlib.sha256(image).hexdigest()
+	valid_path = "/valid-community-icon.png"
+	invalid_path = "/nested-community-icon.png"
+	s.http.set(valid_path, 200, image)
+	communities = [
+		{
+			"id": community_id,
+			"name": community_id,
+			"icon": {"sha256": digest, "url": s.http.url + path},
+			"has_finishes": False,
+			"servers": [],
+		}
+		for community_id, path in (("division/team", invalid_path), ("qm_icon_cache", valid_path))
+	]
+	(s.artifacts / "ddnet-info.json").write_text(json.dumps({"communities": communities}), encoding="utf-8")
+	s.start()
+	assert s.client is not None
+	s.client.wait_for(lambda line: "Skipping community icon download: invalid cache filename" in line, "invalid icon filename rejected", 20)
+	s.http.wait_requests(valid_path, 1)
+	s.quit()
+	with s.http.condition:
+		assert all(path != invalid_path for path, _ in s.http.requests), s.http.requests
+
+
 SCENARIOS = {
 	"default_master_success_skips_fallbacks": scenario_default_master_success_skips_fallbacks,
 	"default_failed_masters_publish_mirror": scenario_default_failed_masters_publish_mirror,
@@ -317,6 +346,7 @@ SCENARIOS = {
 	"older_refresh_retains_fresher_consumer": scenario_older_refresh_retains_fresher_consumer,
 	"restart_loads_cache_when_network_fails": scenario_restart_loads_cache_when_network_fails,
 	"valid_source_publishes_while_other_source_pending": scenario_valid_source_publishes_while_other_source_pending,
+	"invalid_icon_filename_does_not_block_valid_download": scenario_invalid_icon_filename_does_not_block_valid_download,
 }
 
 
