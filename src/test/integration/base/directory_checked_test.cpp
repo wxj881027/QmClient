@@ -218,7 +218,7 @@ TEST_F(CCheckedStorageDirectoryTest, NativeStorageKeepsFirstRootNameShadowing)
 	WriteAbsolute(m_DataDirectory + "/" + m_Relative + "/data_only");
 	SVisitor Visitor;
 	EXPECT_EQ(m_pLayered->ListDirectoryChecked(IStorage::TYPE_ALL, m_Relative.c_str(), Visit, &Visitor), EResult::SUCCESS);
-	EXPECT_EQ(Visitor.m_Entries.at("shared"), std::make_pair(0, IStorage::TYPE_SAVE));
+	EXPECT_EQ(Visitor.m_Entries.at("shared"), std::make_pair(0, static_cast<int>(IStorage::TYPE_SAVE)));
 	EXPECT_TRUE(Visitor.m_Entries.count("data_only"));
 }
 
@@ -271,7 +271,7 @@ TEST_F(CCheckedStorageDirectoryTest, AbsoluteDirectorySearchPreservesRequestedTy
 	}
 	SVisitor Visitor;
 	EXPECT_EQ(m_pLayered->ListDirectoryChecked(IStorage::TYPE_ABSOLUTE, Absolute.c_str(), Visit, &Visitor), EResult::SUCCESS);
-	EXPECT_EQ(Visitor.m_Entries.at("entry"), std::make_pair(0, IStorage::TYPE_ABSOLUTE));
+	EXPECT_EQ(Visitor.m_Entries.at("entry"), std::make_pair(0, static_cast<int>(IStorage::TYPE_ABSOLUTE)));
 }
 
 #if defined(CONF_FAMILY_UNIX)
@@ -282,6 +282,6 @@ TEST_F(CCheckedStorageDirectoryTest, BrokenLinkStillShadowsSameNameFromLaterRoot
 	WriteAbsolute(m_DataDirectory + "/" + m_Relative + "/shared");
 	SVisitor Visitor;
 	EXPECT_EQ(m_pLayered->ListDirectoryChecked(IStorage::TYPE_ALL, m_Relative.c_str(), Visit, &Visitor), EResult::SUCCESS);
-	EXPECT_EQ(Visitor.m_Entries.at("shared"), std::make_pair(0, IStorage::TYPE_SAVE));
+	EXPECT_EQ(Visitor.m_Entries.at("shared"), std::make_pair(0, static_cast<int>(IStorage::TYPE_SAVE)));
 }
 #endif
