@@ -429,6 +429,15 @@ void CMenusSettingsControls::PrepareSettingsCards(const SSettingsContentMetrics 
 	m_CardMetrics = Metrics;
 	m_pCardScrollRegion = pScrollRegion;
 	SyncBindGroupExpanded(m_aBindGroupExpanded);
+	// 卡片仍会刷新交互来源，设备选择器消失时要单独撤销旧选择。
+	auto &DropDown = m_JoystickDropDownState;
+	if(!ReadOnly && (DropDown.m_DropDownState.IsOpen() || DropDown.m_SelectionPopupContext.m_SelectionIndex >= 0) &&
+		(!g_Config.m_InpControllerEnable || Input()->NumJoysticks() < 2 || Input()->GetActiveJoystick() == nullptr))
+	{
+		Ui()->ClosePopupMenu(&DropDown.m_SelectionPopupContext, false, false);
+		DropDown.m_DropDownState.Reset();
+		DropDown.m_SelectionPopupContext.Reset();
+	}
 	if(!ReadOnly && (m_BindOptionsDirty || GameClient()->m_KeyBinder.IsActive() || m_BindOptionsRevision != GameClient()->m_Binds.Revision()))
 	{
 		UpdateBindOptions();
