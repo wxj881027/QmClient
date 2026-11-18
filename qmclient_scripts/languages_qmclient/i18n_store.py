@@ -226,6 +226,17 @@ def translation_quality_errors(
                         f"{module_name}: [{context}] {key}: {language} "
                         f"{terminology_reason}"
                     )
+                # 译文会被调用点直接当 printf 格式串用（str_format(..., Localize(...))），
+                # 占位符数量或类型不一致会让参数错位，多出来的 %n 更会写坏内存。这条必须拦。
+                if not PENDING_TRANSLATION_RE.fullmatch(translation.strip()):
+                    source_placeholders = PLACEHOLDER_RE.findall(key)
+                    translation_placeholders = PLACEHOLDER_RE.findall(translation)
+                    if source_placeholders != translation_placeholders:
+                        errors.append(
+                            f"{module_name}: [{context}] {key}: {language} "
+                            f"placeholder mismatch: source {source_placeholders} "
+                            f"translation {translation_placeholders}"
+                        )
                 if limit is not None and len(errors) >= limit:
                     return errors
     return errors
@@ -275,7 +286,6 @@ def translation_quality_warnings(
                 and (key, context) not in active_identities
             ):
                 continue
-            source_placeholders = PLACEHOLDER_RE.findall(key)
             for language, translation in sorted(translations.items()):
                 pending_match = PENDING_TRANSLATION_RE.fullmatch(translation.strip())
                 if pending_match:
@@ -286,13 +296,6 @@ def translation_quality_warnings(
                     if limit is not None and len(warnings) >= limit:
                         return warnings
                     continue
-                translation_placeholders = PLACEHOLDER_RE.findall(translation)
-                if source_placeholders != translation_placeholders:
-                    warnings.append(
-                        f"{module_name}: [{context}] {key}: {language} "
-                        f"placeholder mismatch: source {source_placeholders} "
-                        f"translation {translation_placeholders}"
-                    )
                 # 中文 source 与拉丁文字译文的字符密度不同，不能用同一长度比率判定 UI 风险。
                 if (
                     not source_keys.has_cjk(key)
