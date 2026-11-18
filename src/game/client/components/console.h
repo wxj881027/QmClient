@@ -22,6 +22,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -33,6 +34,15 @@ enum
 	CONSOLE_OPEN,
 	CONSOLE_CLOSING,
 };
+
+namespace QmConsoleCompletion
+{
+	inline void CollectSuggestion(int, const char *pText, void *pUser)
+	{
+		auto &vSuggestions = *static_cast<std::vector<std::string> *>(pUser);
+		vSuggestions.emplace_back(pText);
+	}
+}
 
 class CConsoleLogger;
 class CQmChatExportJob;
@@ -139,15 +149,18 @@ private:
 		bool m_UserGot;
 		bool m_UsernameReq;
 
-		bool m_IsCommand;
-		const char *m_pCommandName;
-		const char *m_pCommandHelp;
-		const char *m_pCommandParams;
+		struct SCommandHint
+		{
+			std::string m_Name;
+			std::string m_Help;
+			std::string m_Params;
+		};
+		std::optional<SCommandHint> m_CommandHint;
 
 		bool m_CompletionDirty;
 		bool m_QueueResetAnimation;
-		std::vector<const char *> m_vpCommandSuggestions;
-		std::vector<const char *> m_vpArgumentSuggestions;
+		std::vector<std::string> m_vCommandSuggestions;
+		std::vector<std::string> m_vArgumentSuggestions;
 
 		CQmConsoleSearchInput m_SearchInput;
 		mutable QmConsoleSearch::CResults<IConsole::CMDLINE_LENGTH> m_SearchResults;
@@ -204,6 +217,7 @@ private:
 
 		bool IsInputHidden() const;
 		void UpdateCompletionSuggestions();
+		void UpdateCommandHint();
 		void UpdateInputState(bool ResetCompletion);
 
 		/** 顶栏筛选按钮对应的日志类别位；下标即按钮顺序。 */

@@ -526,11 +526,6 @@ static int PossibleKeys(const char *pStr, IInput *pInput, IConsole::FPossibleCal
 	return Index;
 }
 
-static void CollectPossibleCommandsCallback(int Index, const char *pStr, void *pUser)
-{
-	((std::vector<const char *> *)pUser)->push_back(pStr);
-}
-
 struct SPossibleSettingsContext
 {
 	IConsole::FPossibleCallback m_pfnCallback;
@@ -544,12 +539,14 @@ static void CollectPossibleSettingsCallback(const SConfigVariable *pVariable, vo
 	pContext->m_pfnCallback(pContext->m_Index++, pVariable->m_pScriptName, pContext->m_pUser);
 }
 
-static void SortCompletions(std::vector<const char *> &vCompletions, const char *pSearch)
+static void SortCompletions(std::vector<std::string> &vCompletions, const char *pSearch)
 {
 	if(pSearch[0] == '\0')
 		return;
 
-	std::sort(vCompletions.begin(), vCompletions.end(), [pSearch](const char *pA, const char *pB) {
+	std::sort(vCompletions.begin(), vCompletions.end(), [pSearch](const std::string &A, const std::string &B) {
+		const char *pA = A.c_str();
+		const char *pB = B.c_str();
 		const char *pMatchA = str_find_nocase(pA, pSearch);
 		const char *pMatchB = str_find_nocase(pB, pSearch);
 		int MatchPosA = pMatchA ? (pMatchA - pA) : -1;
@@ -596,8 +593,6 @@ CGameConsole::CInstance::CInstance(int Type)
 	m_aUser[0] = '\0';
 	m_UserGot = false;
 	m_UsernameReq = false;
-
-	m_IsCommand = false;
 
 	m_Backlog.SetPopCallback([this](CBacklogEntry *pEntry) {
 		m_Selection.OnEntryRemoved(pEntry->m_ExportId);
@@ -750,17 +745,15 @@ void CGameConsole::CInstance::Reset()
 {
 	m_CompletionRenderOffset = 0.0f;
 	m_CompletionRenderOffsetChange = 0.0f;
-	m_pCommandName = "";
-	m_pCommandHelp = "";
-	m_pCommandParams = "";
+	m_CommandHint.reset();
 	m_CompletionArgumentPosition = 0;
 	m_CompletionDirty = true;
 }
 
 void CGameConsole::ForceUpdateRemoteCompletionSuggestions()
 {
+	// 命令和地图列表可连续更新，在控制台需要显示或使用补全时重建。
 	m_RemoteConsole.m_CompletionDirty = true;
-	m_RemoteConsole.UpdateCompletionSuggestions();
 }
 
 void CGameConsole::CInstance::UpdateCompletionSuggestions()
@@ -768,52 +761,54 @@ void CGameConsole::CInstance::UpdateCompletionSuggestions()
 	if(!m_CompletionDirty)
 		return;
 
+	UpdateCommandHint();
+
 	// Store old selection
 	char aOldCommand[IConsole::CMDLINE_LENGTH];
 	aOldCommand[0] = '\0';
-	if(m_CompletionChosen != -1 && (size_t)m_CompletionChosen < m_vpCommandSuggestions.size())
-		str_copy(aOldCommand, m_vpCommandSuggestions[m_CompletionChosen]);
+	if(m_CompletionChosen != -1 && (size_t)m_CompletionChosen < m_vCommandSuggestions.size())
+		str_copy(aOldCommand, m_vCommandSuggestions[m_CompletionChosen].c_str());
 
 	char aOldArgument[IConsole::CMDLINE_LENGTH];
 	aOldArgument[0] = '\0';
-	if(m_CompletionChosenArgument != -1 && (size_t)m_CompletionChosenArgument < m_vpArgumentSuggestions.size())
-		str_copy(aOldArgument, m_vpArgumentSuggestions[m_CompletionChosenArgument]);
+	if(m_CompletionChosenArgument != -1 && (size_t)m_CompletionChosenArgument < m_vArgumentSuggestions.size())
+		str_copy(aOldArgument, m_vArgumentSuggestions[m_CompletionChosenArgument].c_str());
 
-	m_vpCommandSuggestions.clear();
-	m_vpArgumentSuggestions.clear();
+	m_vCommandSuggestions.clear();
+	m_vArgumentSuggestions.clear();
 
 	// Command completion
 	char aSearch[IConsole::CMDLINE_LENGTH];
 	GetCommand(m_aCompletionBuffer, aSearch);
 	const bool RemoteConsoleCompletion = m_Type == CGameConsole::CONSOLETYPE_REMOTE && m_pGameConsole->Client()->RconAuthed();
 	const bool UseTempCommands = RemoteConsoleCompletion && m_pGameConsole->Client()->UseTempRconCommands();
-	m_pGameConsole->m_pConsole->PossibleCommands(aSearch, m_CompletionFlagmask, UseTempCommands, CollectPossibleCommandsCallback, &m_vpCommandSuggestions);
-	SortCompletions(m_vpCommandSuggestions, aSearch);
+	m_pGameConsole->m_pConsole->PossibleCommands(aSearch, m_CompletionFlagmask, UseTempCommands, QmConsoleCompletion::CollectSuggestion, &m_vCommandSuggestions);
+	SortCompletions(m_vCommandSuggestions, aSearch);
 
 	// Argument completion
 	const auto [CompletionType, CompletionPos] = ArgumentCompletion(GetString());
 	if(CompletionType != EArgumentCompletionType::NONE)
 	{
 		if(CompletionType == EArgumentCompletionType::MAP)
-			m_pGameConsole->PossibleMaps(m_aCompletionBufferArgument, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
+			m_pGameConsole->PossibleMaps(m_aCompletionBufferArgument, QmConsoleCompletion::CollectSuggestion, &m_vArgumentSuggestions);
 		else if(CompletionType == EArgumentCompletionType::TUNE)
-			PossibleTunings(m_aCompletionBufferArgument, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
+			PossibleTunings(m_aCompletionBufferArgument, QmConsoleCompletion::CollectSuggestion, &m_vArgumentSuggestions);
 		else if(CompletionType == EArgumentCompletionType::SETTING)
-			m_pGameConsole->PossibleSettings(m_aCompletionBufferArgument, m_CompletionFlagmask, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
+			m_pGameConsole->PossibleSettings(m_aCompletionBufferArgument, m_CompletionFlagmask, QmConsoleCompletion::CollectSuggestion, &m_vArgumentSuggestions);
 		else if(CompletionType == EArgumentCompletionType::KEY)
-			PossibleKeys(m_aCompletionBufferArgument, m_pGameConsole->Input(), CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
+			PossibleKeys(m_aCompletionBufferArgument, m_pGameConsole->Input(), QmConsoleCompletion::CollectSuggestion, &m_vArgumentSuggestions);
 		else if(CompletionType == EArgumentCompletionType::COMMAND)
-			m_pGameConsole->m_pConsole->PossibleCommands(m_aCompletionBufferArgument, m_CompletionFlagmask, UseTempCommands, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
-		SortCompletions(m_vpArgumentSuggestions, m_aCompletionBufferArgument);
+			m_pGameConsole->m_pConsole->PossibleCommands(m_aCompletionBufferArgument, m_CompletionFlagmask, UseTempCommands, QmConsoleCompletion::CollectSuggestion, &m_vArgumentSuggestions);
+		SortCompletions(m_vArgumentSuggestions, m_aCompletionBufferArgument);
 	}
 
 	// Restore old selection if it changed
-	if(m_CompletionChosen != -1 && (size_t)m_CompletionChosen < m_vpCommandSuggestions.size() &&
-		aOldCommand[0] != '\0' && str_comp(m_vpCommandSuggestions[m_CompletionChosen], aOldCommand) != 0)
+	if(m_CompletionChosen != -1 && (size_t)m_CompletionChosen < m_vCommandSuggestions.size() &&
+		aOldCommand[0] != '\0' && str_comp(m_vCommandSuggestions[m_CompletionChosen].c_str(), aOldCommand) != 0)
 	{
-		for(size_t SuggestedId = 0; SuggestedId < m_vpCommandSuggestions.size(); SuggestedId++)
+		for(size_t SuggestedId = 0; SuggestedId < m_vCommandSuggestions.size(); SuggestedId++)
 		{
-			if(str_comp(m_vpCommandSuggestions[SuggestedId], aOldCommand) == 0)
+			if(str_comp(m_vCommandSuggestions[SuggestedId].c_str(), aOldCommand) == 0)
 			{
 				m_CompletionChosen = SuggestedId;
 				m_QueueResetAnimation = true;
@@ -821,12 +816,12 @@ void CGameConsole::CInstance::UpdateCompletionSuggestions()
 			}
 		}
 	}
-	if(m_CompletionChosenArgument != -1 && (size_t)m_CompletionChosenArgument < m_vpArgumentSuggestions.size() &&
-		aOldArgument[0] != '\0' && str_comp(m_vpArgumentSuggestions[m_CompletionChosenArgument], aOldArgument) != 0)
+	if(m_CompletionChosenArgument != -1 && (size_t)m_CompletionChosenArgument < m_vArgumentSuggestions.size() &&
+		aOldArgument[0] != '\0' && str_comp(m_vArgumentSuggestions[m_CompletionChosenArgument].c_str(), aOldArgument) != 0)
 	{
-		for(size_t SuggestedId = 0; SuggestedId < m_vpArgumentSuggestions.size(); SuggestedId++)
+		for(size_t SuggestedId = 0; SuggestedId < m_vArgumentSuggestions.size(); SuggestedId++)
 		{
-			if(str_comp(m_vpArgumentSuggestions[SuggestedId], aOldArgument) == 0)
+			if(str_comp(m_vArgumentSuggestions[SuggestedId].c_str(), aOldArgument) == 0)
 			{
 				m_CompletionChosenArgument = SuggestedId;
 				m_QueueResetAnimation = true;
@@ -1011,7 +1006,7 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 				UpdateCompletionSuggestions();
 
 				// Command completion
-				int CompletionEnumerationCount = m_vpCommandSuggestions.size();
+				int CompletionEnumerationCount = m_vCommandSuggestions.size();
 
 				if(m_Type == CGameConsole::CONSOLETYPE_LOCAL || m_pGameConsole->Client()->RconAuthed())
 				{
@@ -1025,9 +1020,9 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 						char aBefore[IConsole::CMDLINE_LENGTH];
 						str_truncate(aBefore, sizeof(aBefore), m_aCompletionBuffer, m_CompletionCommandStart);
 						char aBuf[IConsole::CMDLINE_LENGTH];
-						str_format(aBuf, sizeof(aBuf), "%s%s%s", aBefore, m_vpCommandSuggestions[m_CompletionChosen], m_aCompletionBuffer + m_CompletionCommandEnd);
+						str_format(aBuf, sizeof(aBuf), "%s%s%s", aBefore, m_vCommandSuggestions[m_CompletionChosen].c_str(), m_aCompletionBuffer + m_CompletionCommandEnd);
 						m_Input.Set(aBuf);
-						m_Input.SetCursorOffset(str_length(m_vpCommandSuggestions[m_CompletionChosen]) + m_CompletionCommandStart);
+						m_Input.SetCursorOffset(str_length(m_vCommandSuggestions[m_CompletionChosen].c_str()) + m_CompletionCommandStart);
 					}
 					else if(m_CompletionChosen != -1)
 					{
@@ -1038,7 +1033,7 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 
 				// Argument completion
 				const auto [CompletionType, CompletionPos] = ArgumentCompletion(GetString());
-				int CompletionEnumerationCountArgs = m_vpArgumentSuggestions.size();
+				int CompletionEnumerationCountArgs = m_vArgumentSuggestions.size();
 				if(CompletionEnumerationCountArgs)
 				{
 					if(m_CompletionChosenArgument == -1 && Direction < 0)
@@ -1052,7 +1047,7 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 					str_append(aBuf, " ");
 
 					// append argument
-					str_append(aBuf, m_vpArgumentSuggestions[m_CompletionChosenArgument]);
+					str_append(aBuf, m_vArgumentSuggestions[m_CompletionChosenArgument].c_str());
 					m_Input.Set(aBuf);
 				}
 				else if(m_CompletionChosenArgument != -1)
@@ -1156,27 +1151,27 @@ void CGameConsole::CInstance::UpdateInputState(bool ResetCompletion)
 		Reset();
 	}
 
-	// 更新当前命令信息；鼠标切换搜索也走同一入口。
-	{
-		char aCmd[IConsole::CMDLINE_LENGTH];
-		GetCommand(GetString(), aCmd);
-		char aBuf[IConsole::CMDLINE_LENGTH];
-		StrCopyUntilSpace(aBuf, sizeof(aBuf), aCmd);
+	UpdateCommandHint();
+}
 
-		const IConsole::ICommandInfo *pCommand = m_pGameConsole->m_pConsole->GetCommandInfo(aBuf, m_CompletionFlagmask,
-			m_Type != CGameConsole::CONSOLETYPE_LOCAL && m_pGameConsole->Client()->RconAuthed() && m_pGameConsole->Client()->UseTempRconCommands());
-		if(pCommand)
-		{
-			m_IsCommand = true;
-			m_pCommandName = pCommand->Name();
-			m_pCommandHelp = pCommand->Help();
-			m_pCommandParams = pCommand->Params();
-		}
-		else
-		{
-			m_IsCommand = false;
-		}
+void CGameConsole::CInstance::UpdateCommandHint()
+{
+	char aCmd[IConsole::CMDLINE_LENGTH];
+	GetCommand(GetString(), aCmd);
+	char aBuf[IConsole::CMDLINE_LENGTH];
+	StrCopyUntilSpace(aBuf, sizeof(aBuf), aCmd);
+
+	const IConsole::ICommandInfo *pCommand = m_pGameConsole->m_pConsole->GetCommandInfo(aBuf, m_CompletionFlagmask,
+		m_Type != CGameConsole::CONSOLETYPE_LOCAL && m_pGameConsole->Client()->RconAuthed() && m_pGameConsole->Client()->UseTempRconCommands());
+	if(!pCommand)
+	{
+		m_CommandHint.reset();
+		return;
 	}
+
+	const char *pHelp = pCommand->Help();
+	const char *pParams = pCommand->Params();
+	m_CommandHint = SCommandHint{pCommand->Name(), pHelp ? pHelp : "", pParams ? pParams : ""};
 }
 
 void CGameConsole::CInstance::PrintLine(const char *pLine, int Len, ColorRGBA PrintColor, const SColorSpan *pColorSpans, size_t NumColorSpans, std::shared_ptr<const QmChatExport::SMetadata> pChatMetadata, bool CommandEcho)
@@ -2251,27 +2246,26 @@ void CGameConsole::OnRender()
 		else if(ShowCompletionInfo)
 		{
 			pConsole->UpdateCompletionSuggestions();
-			const bool HasSuggestions = !pConsole->m_vpCommandSuggestions.empty() || !pConsole->m_vpArgumentSuggestions.empty();
+			const bool HasSuggestions = !pConsole->m_vCommandSuggestions.empty() || !pConsole->m_vArgumentSuggestions.empty();
 			if(HasSuggestions)
 			{
 				HintLines = 1;
 			}
-			else if(pConsole->m_IsCommand)
+			else if(pConsole->m_CommandHint)
 			{
 				HasCommandHint = true;
-				const char *pCommandHelp = pConsole->m_pCommandHelp != nullptr ? pConsole->m_pCommandHelp : "";
-				const char *pCommandParams = pConsole->m_pCommandParams != nullptr ? pConsole->m_pCommandParams : "";
+				const auto &CommandHint = *pConsole->m_CommandHint;
 				char aLocalizedConfigHelp[1024];
 				const char *pLocalizedHelp = nullptr;
-				SConfigHelpLookup Lookup{pConsole->m_pCommandName};
-				ConfigManager()->PossibleConfigVariables(pConsole->m_pCommandName, pConsole->m_CompletionFlagmask, FindConfigHelpVariable, &Lookup);
+				SConfigHelpLookup Lookup{CommandHint.m_Name.c_str()};
+				ConfigManager()->PossibleConfigVariables(CommandHint.m_Name.c_str(), pConsole->m_CompletionFlagmask, FindConfigHelpVariable, &Lookup);
 				if(BuildLocalizedConfigHelpText(Lookup.m_pVariable, aLocalizedConfigHelp, sizeof(aLocalizedConfigHelp)))
 					pLocalizedHelp = aLocalizedConfigHelp;
 				if(pLocalizedHelp == nullptr)
-					pLocalizedHelp = Localize(pCommandHelp);
-				const char *pLocalizedParams = Localize(pCommandParams);
+					pLocalizedHelp = Localize(CommandHint.m_Help.c_str());
+				const char *pLocalizedParams = Localize(CommandHint.m_Params.c_str());
 				str_format(aCommandHelpText, sizeof(aCommandHelpText), Localize("Help: %s"), pLocalizedHelp);
-				str_format(aCommandUsageText, sizeof(aCommandUsageText), Localize("Usage: %s %s"), pConsole->m_pCommandName, pLocalizedParams);
+				str_format(aCommandUsageText, sizeof(aCommandUsageText), Localize("Usage: %s %s"), CommandHint.m_Name.c_str(), pLocalizedParams);
 				const float HintWidth = maximum(1.0f, Screen.w - x - 10.0f);
 				const float HelpHeight = TextRender()->TextBoundingBox(FontSize, aCommandHelpText, -1, HintWidth, ConsoleLineSpacing(FontSize)).m_H;
 				const int HelpLines = std::clamp((int)std::ceil(HelpHeight / maximum(1.0f, LineHeight)), 1, 2);
@@ -2471,33 +2465,33 @@ void CGameConsole::OnRender()
 			Info.m_Cursor.SetPosition(vec2(InitialX - Info.m_Offset, pConsole->m_BoundingBox.m_Y + pConsole->m_BoundingBox.m_H + 4.0f));
 			Info.m_Cursor.m_FontSize = FontSize;
 
-			for(size_t SuggestionId = 0; SuggestionId < pConsole->m_vpCommandSuggestions.size(); ++SuggestionId)
+			for(size_t SuggestionId = 0; SuggestionId < pConsole->m_vCommandSuggestions.size(); ++SuggestionId)
 			{
-				PossibleCommandsRenderCallback(SuggestionId, pConsole->m_vpCommandSuggestions[SuggestionId], &Info);
+				PossibleCommandsRenderCallback(SuggestionId, pConsole->m_vCommandSuggestions[SuggestionId].c_str(), &Info);
 			}
-			const int NumCommands = pConsole->m_vpCommandSuggestions.size();
+			const int NumCommands = pConsole->m_vCommandSuggestions.size();
 			Info.m_TotalWidth = Info.m_Cursor.m_X + Info.m_Offset;
 			pConsole->m_CompletionRenderOffset = Info.m_Offset;
 
-			if(NumCommands <= 0 && pConsole->m_IsCommand)
+			if(NumCommands <= 0 && pConsole->m_CommandHint)
 			{
 				int NumArguments = 0;
-				if(!pConsole->m_vpArgumentSuggestions.empty())
+				if(!pConsole->m_vArgumentSuggestions.empty())
 				{
 					Info.m_WantedCompletion = pConsole->m_CompletionChosenArgument;
 					Info.m_TotalWidth = 0.0f;
 					Info.m_pCurrentCmd = pConsole->m_aCompletionBufferArgument;
 
-					for(size_t SuggestionId = 0; SuggestionId < pConsole->m_vpArgumentSuggestions.size(); ++SuggestionId)
+					for(size_t SuggestionId = 0; SuggestionId < pConsole->m_vArgumentSuggestions.size(); ++SuggestionId)
 					{
-						PossibleCommandsRenderCallback(SuggestionId, pConsole->m_vpArgumentSuggestions[SuggestionId], &Info);
+						PossibleCommandsRenderCallback(SuggestionId, pConsole->m_vArgumentSuggestions[SuggestionId].c_str(), &Info);
 					}
-					NumArguments = pConsole->m_vpArgumentSuggestions.size();
+					NumArguments = pConsole->m_vArgumentSuggestions.size();
 					Info.m_TotalWidth = Info.m_Cursor.m_X + Info.m_Offset;
 					pConsole->m_CompletionRenderOffset = Info.m_Offset;
 				}
 
-				if(NumArguments <= 0 && pConsole->m_IsCommand && HasCommandHint)
+				if(NumArguments <= 0 && HasCommandHint)
 				{
 					// 帮助与用法拆成两段：帮助按可用宽度换行（最多两行），
 					// 用法固定跟在下方一行并省略超长尾部，不再把两段挤在同一行互相覆盖。

@@ -1,6 +1,8 @@
 #include <engine/shared/config.h>
 #include <engine/shared/console.h>
 
+#include <game/client/components/console.h>
+
 #include <gtest/gtest.h>
 #include <test/support/heap_allocation_probe.h>
 
@@ -141,4 +143,19 @@ TEST(ConsoleTempAllocation, StoredMetadataDoesNotBorrowCallerBuffers)
 	ASSERT_NE(pInfo, nullptr);
 	EXPECT_STREQ(pInfo->Help(), "help");
 	EXPECT_STREQ(pInfo->Params(), "r");
+}
+
+TEST(ConsoleCompletionOwnership, SavedSuggestionSurvivesReuseOfTemporaryCommandStorage)
+{
+	CConsole Console(CFGFLAG_SERVER);
+	Console.RegisterTemp("temporary_first", "", CFGFLAG_SERVER, "");
+	std::vector<std::string> vSuggestions;
+	ASSERT_EQ(Console.PossibleCommands("temporary_", CFGFLAG_SERVER, true, QmConsoleCompletion::CollectSuggestion, &vSuggestions), 1);
+
+	Console.DeregisterTemp("temporary_first");
+	Console.RegisterTemp("temporary_next", "", CFGFLAG_SERVER, "");
+	ASSERT_NE(Console.GetCommandInfo("temporary_next", CFGFLAG_SERVER, true), nullptr);
+
+	ASSERT_EQ(vSuggestions.size(), 1u);
+	EXPECT_EQ(vSuggestions.front(), "temporary_first");
 }
