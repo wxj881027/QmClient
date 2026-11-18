@@ -6788,6 +6788,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_sponsors_publication_allocation_test.cpp
       src/test/integration/engine/graphics_frontend_lifecycle_test.cpp
       src/test/integration/qmclient/settings/qm_tclient_config_string_edit_test.cpp
+      src/test/integration/qmclient/settings/settings_card_width_allocation_test.cpp
       src/test/integration/qmclient/settings/qm_warlist_card_removal_test.cpp
       src/test/unit/qmclient/settings/qm_bindwheel_card_selection_test.cpp
       src/test/unit/qmclient/settings/qm_sound_card_pack_selection_test.cpp
