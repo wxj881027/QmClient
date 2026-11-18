@@ -259,6 +259,9 @@
 (Update required)
 == (Güncelleme Gerekli)
 
++%s Rank
+== +%s sıralama
+
 - Save codes in order:
 == - Kayıt kodları sırayla:
 

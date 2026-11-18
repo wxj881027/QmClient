@@ -259,6 +259,9 @@
 (Update required)
 == (Atualização necessária)
 
++%s Rank
+== +%s de ranking
+
 - Save codes in order:
 == - Salve os códigos em ordem:
 

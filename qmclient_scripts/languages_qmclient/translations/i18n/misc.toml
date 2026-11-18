@@ -16872,6 +16872,22 @@ turkish = "İlk bitirme"
 polish = "Pierwsze ukończenie"
 
 [[message]]
+key = "+%s Rank"
+[message.translations]
+simplified_chinese = "+%s 积分"
+traditional_chinese = "+%s 積分"
+japanese = "+%s ランク"
+korean = "+%s 랭크"
+russian = "+%s к рейтингу"
+german = "+%s Rang"
+spanish = "+%s de rango"
+french = "+%s de classement"
+brazilian_portuguese = "+%s de ranking"
+portuguese = "+%s de classificação"
+turkish = "+%s sıralama"
+polish = "+%s rankingu"
+
+[[message]]
 key = "Improved -%s"
 [message.translations]
 simplified_chinese = "进步 -%s"

@@ -265,6 +265,9 @@
 (Update required)
 == （需要更新）
 
++%s Rank
+== +%s 积分
+
 - Save codes in order:
 == - 密码依次为：
 

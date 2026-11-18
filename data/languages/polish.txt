@@ -259,6 +259,9 @@
 (Update required)
 == (Wymagana aktualizacja)
 
++%s Rank
+== +%s rankingu
+
 - Save codes in order:
 == - Kody zapisu w kolejności:
 

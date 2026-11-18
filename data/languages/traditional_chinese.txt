@@ -259,6 +259,9 @@
 (Update required)
 == （需要更新）
 
++%s Rank
+== +%s 積分
+
 - Save codes in order:
 == - 密碼依次為：
 

@@ -259,6 +259,9 @@
 (Update required)
 == （アップデートが必要です）
 
++%s Rank
+== +%s ランク
+
 - Save codes in order:
 == - セーブコードを順に：
 

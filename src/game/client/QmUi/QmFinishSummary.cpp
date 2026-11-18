@@ -242,7 +242,16 @@ void qm_finish_summary::CContentCache::Update(const QmFinishSummary::SSnapshot &
 		m_Id = Snapshot.m_Id;
 		m_Revision = Snapshot.m_Revision;
 		m_Language = g_Config.m_ClLanguagefile;
-		m_RankGain = Snapshot.m_RankPointsGained > 0 ? "+" + Number(Snapshot.m_RankPointsGained) + " Rank" : "";
+		if(Snapshot.m_RankPointsGained > 0)
+		{
+			char aRankGain[64];
+			str_format(aRankGain, sizeof(aRankGain), Localize("+%s Rank"), Number(Snapshot.m_RankPointsGained).c_str());
+			m_RankGain = aRankGain;
+		}
+		else
+		{
+			m_RankGain.clear();
+		}
 		m_Type = Snapshot.m_Category.empty() ? Localize("No data") : Localize(Snapshot.m_Category.c_str());
 		if(Snapshot.m_Stars >= 0)
 			m_Type += " ·";

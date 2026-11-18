@@ -87,6 +87,7 @@
 (no note)
 (On Latest)
 (Update required)
++%s Rank
 - Save codes in order:
 - Save owners in order:
 - You have %d saves on this map!
