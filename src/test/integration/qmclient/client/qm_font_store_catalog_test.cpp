@@ -8,6 +8,7 @@
 
 #include <new>
 #include <string>
+#include <string_view>
 
 namespace
 {
@@ -22,12 +23,12 @@ namespace
 			ASSERT_NE(m_pStorage, nullptr);
 			ASSERT_TRUE(qm_font_download::EnsureDirectory(*m_pStorage));
 		}
-		void WriteFile(const char *pPath, const char *pText)
+		void WriteFile(const char *pPath, std::string_view Text)
 		{
 			IOHANDLE File = m_pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 			ASSERT_NE(File, nullptr);
-			const unsigned Length = str_length(pText);
-			EXPECT_EQ(io_write(File, pText, Length), Length);
+			const auto Length = static_cast<unsigned>(Text.size());
+			EXPECT_EQ(io_write(File, Text.data(), Length), Length);
 			io_close(File);
 		}
 		fontstore::SCatalog Load()
@@ -93,6 +94,81 @@ TEST_F(CQmFontStoreCatalog, MalformedCatalogCompletesWithEmptyResult)
 	const auto Result = Load();
 	EXPECT_TRUE(Result.m_vEntries.empty());
 	EXPECT_TRUE(Result.m_vFamilies.empty());
+}
+
+TEST_F(CQmFontStoreCatalog, InvalidUtf8CatalogCompletesWithEmptyResult)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json",
+		R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf","c":")" "\xE9" R"("}]})"));
+	const auto Result = Load();
+	EXPECT_TRUE(Result.m_vEntries.empty());
+	EXPECT_TRUE(Result.m_vFamilies.empty());
+}
+
+TEST_F(CQmFontStoreCatalog, RawNullRejectsCatalogWithValidPrefix)
+{
+	const char aCatalog[] = R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf"}]})" "\0padding";
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", std::string_view(aCatalog, sizeof(aCatalog) - 1)));
+	const auto Result = Load();
+	EXPECT_TRUE(Result.m_vEntries.empty());
+	EXPECT_TRUE(Result.m_vFamilies.empty());
+}
+
+TEST_F(CQmFontStoreCatalog, EscapedNullDoesNotMatchCatalogFieldNames)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[
+		{"n\u0000note":"Extra metadata","n":"Alpha","f":"ofl/alpha/Alpha.ttf"}]})"));
+	const auto Result = Load();
+	ASSERT_EQ(Result.m_vFamilies.size(), 1u);
+	EXPECT_EQ(Result.m_vFamilies[0].m_Name, "Alpha");
+}
+
+TEST_F(CQmFontStoreCatalog, EscapedNullRejectsRequiredTextAndIgnoresOptionalText)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[
+		{"n":"Broken\u0000 name","f":"ofl/broken/Broken.ttf"},
+		{"n":"Broken path","f":"ofl/broken/Broken.ttf\u0000 note"},
+		{"n":"Alpha","f":"ofl/alpha/Alpha.ttf","c":"serif\u0000 note","s":["latin\u0000 note","greek"],
+		 "u":"https://fonts.gstatic.cn/font.ttf\u0000 note"}]})"));
+	const auto Result = Load();
+	ASSERT_EQ(Result.m_vEntries.size(), 1u);
+	ASSERT_EQ(Result.m_vFamilies.size(), 1u);
+	EXPECT_EQ(Result.m_vEntries[0].m_Family, "Alpha");
+	EXPECT_TRUE(Result.m_vEntries[0].m_Category.empty());
+	EXPECT_EQ(Result.m_vEntries[0].m_vSubsets, (std::vector<std::string>{"greek"}));
+	EXPECT_TRUE(Result.m_vEntries[0].m_DirectUrl.empty());
+}
+
+TEST_F(CQmFontStoreCatalog, SkipsReservedTargetNameAndKeepsRegularFilename)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[
+		{"n":"Reserved","f":"ofl/reserved/AUX.ttf"},
+		{"n":"Regular","f":"ofl/regular/Regular[wght].otf"}]})"));
+	std::vector<fontstore::SEntry> vEntries;
+	std::vector<fontstore::SFamily> vFamilies;
+	fontstore::LoadCatalog(m_pStorage.get(), vEntries, vFamilies);
+	ASSERT_EQ(vEntries.size(), 1u);
+	ASSERT_EQ(vFamilies.size(), 1u);
+	EXPECT_EQ(vEntries[0].m_File, "Regular[wght].otf");
+}
+
+TEST_F(CQmFontStoreCatalog, DuplicateTargetsKeepFirstOwnerAndOtherFamilyFiles)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[
+		{"n":"Alpha","f":"ofl/alpha/Shared.ttf"},
+		{"n":"Beta","f":"ofl/beta/Shared.ttf"},
+		{"n":"Gamma","f":"ofl/gamma/shared.TTF"},
+		{"n":"Beta","f":"ofl/beta/Beta.ttf"}]})"));
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/Shared.ttf", "font"));
+	const auto Result = Load();
+	ASSERT_EQ(Result.m_vEntries.size(), 2u);
+	ASSERT_EQ(Result.m_vFamilies.size(), 2u);
+	EXPECT_EQ(Result.m_vEntries[0].m_RepoPath, "ofl/alpha/Shared.ttf");
+	EXPECT_EQ(Result.m_vEntries[1].m_File, "Beta.ttf");
+	EXPECT_EQ(Result.m_vFamilies[0].m_vEntryIndices, (std::vector<size_t>{0}));
+	EXPECT_EQ(Result.m_vFamilies[1].m_vEntryIndices, (std::vector<size_t>{1}));
+	EXPECT_TRUE(Result.m_vFamilies[0].m_Installed);
+	EXPECT_FALSE(Result.m_vFamilies[1].m_Installed);
 }
 
 TEST_F(CQmFontStoreCatalog, RejectsCatalogAboveReadLimitAndLoadsAtTheLimit)

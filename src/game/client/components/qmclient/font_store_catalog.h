@@ -5,6 +5,7 @@
 #include "font_download_storage.h"
 
 #include <base/log.h>
+#include <base/str.h>
 
 #include <engine/engine.h>
 #include <engine/shared/jobs.h>
@@ -16,7 +17,9 @@
 #include <map>
 #include <memory>
 #include <new>
+#include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace fontstore
@@ -52,7 +55,7 @@ namespace fontstore
 
 	inline bool IsValidFontFileName(const std::string &File)
 	{
-		return qm_font_download::ValidFilename(File);
+		return qm_font_download::ValidFilename(File) && str_valid_filename(File.c_str());
 	}
 
 	// 仓库相对路径会拼进下载 URL 与落盘路径：锁死形态，禁止任何穿越写法。
@@ -64,6 +67,23 @@ namespace fontstore
 		       Path.find('\\') == std::string::npos &&
 		       Path.find("//") == std::string::npos &&
 		       IsValidFontFileName(Path.substr(Path.rfind('/') + 1));
+	}
+
+	// 按完整字段名匹配，避免含零字节的键被当成已知字段。
+	inline const json_value &CatalogField(const json_value &Object, std::string_view Name)
+	{
+		for(unsigned i = 0; i < Object.u.object.length; ++i)
+		{
+			const json_object_entry &Field = Object.u.object.values[i];
+			if(std::string_view(Field.name, Field.name_length) == Name)
+				return *Field.value;
+		}
+		return json_value_none;
+	}
+
+	inline bool IsCatalogString(const json_value &Value)
+	{
+		return Value.type == json_string && Value.u.string.length == static_cast<unsigned>(str_length(Value.u.string.ptr));
 	}
 
 	// 目录与族聚合共用一次解析（懒加载）：条目按族名（大小写不敏感）归并，
@@ -78,50 +98,67 @@ namespace fontstore
 
 		json_settings Settings{};
 		Settings.max_memory = MAX_CATALOG_JSON_BYTES;
-		const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(json_parse_ex(&Settings, static_cast<const json_char *>(File.Data()), File.Size(), nullptr), json_value_free);
+		const std::string_view Text(static_cast<const char *>(File.Data()), File.Size());
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(
+			Text.find('\0') == std::string_view::npos ? JsonParseEx(&Settings, Text.data(), Text.size(), nullptr) : nullptr,
+			json_value_free);
 		// 同一对候选完成后才替换调用方状态，异常不能留下先写入的族索引。
 		std::vector<SEntry, TEntryAllocator> vCandidateEntries(vEntries, vEntries.get_allocator());
 		std::vector<SFamily, TFamilyAllocator> vCandidateFamilies(vFamilies, vFamilies.get_allocator());
 		if(pJson != nullptr && pJson->type == json_object)
 		{
-			const json_value &Fonts = (*pJson)["fonts"];
+			const json_value &Fonts = CatalogField(*pJson, "fonts");
 			if(Fonts.type == json_array)
 			{
+				auto CompareTargets = [](const std::string &Left, const std::string &Right) {
+					return str_utf8_comp_nocase(Left.c_str(), Right.c_str()) < 0;
+				};
+				std::set<std::string, decltype(CompareTargets)> UsedTargets(CompareTargets);
+				for(const SEntry &Existing : vEntries)
+					UsedTargets.insert(Existing.m_File);
 				std::map<std::string, size_t> FamilyIndex;
 				for(unsigned i = 0; i < Fonts.u.array.length; ++i)
 				{
 					const json_value &Entry = Fonts[i];
 					if(Entry.type != json_object)
 						continue;
-					const json_value &Name = Entry["n"];
-					const json_value &Path = Entry["f"];
-					if(Name.type != json_string || Path.type != json_string)
+					const json_value &Name = CatalogField(Entry, "n");
+					const json_value &Path = CatalogField(Entry, "f");
+					if(!IsCatalogString(Name) || !IsCatalogString(Path))
 						continue;
 					SEntry Parsed;
 					Parsed.m_Family = Name.u.string.ptr;
 					Parsed.m_RepoPath = Path.u.string.ptr;
-					const json_value &Category = Entry["c"];
-					if(Category.type == json_string)
-						Parsed.m_Category = Category.u.string.ptr;
-					const json_value &Variable = Entry["v"];
-					Parsed.m_Variable = Variable.type == json_integer && Variable.u.integer != 0;
-					// 国内直链锁死 gstatic.cn 域，避免目录被换入任意下载源。
-					const json_value &Direct = Entry["u"];
-					if(Direct.type == json_string && str_startswith(Direct.u.string.ptr, "https://fonts.gstatic.cn/") && str_endswith(Direct.u.string.ptr, ".ttf"))
-						Parsed.m_DirectUrl = Direct.u.string.ptr;
-					const json_value &Subsets = Entry["s"];
-					if(Subsets.type == json_array)
-					{
-						for(unsigned si = 0; si < Subsets.u.array.length; ++si)
-							if(Subsets[si].type == json_string)
-								Parsed.m_vSubsets.emplace_back(Subsets[si].u.string.ptr);
-					}
 					if(Parsed.m_Family.empty() || !IsValidRepoPath(Parsed.m_RepoPath))
 					{
 						log_warn("fontstore", "Font catalog entry for '%s' has an unsafe path, skipped", Parsed.m_Family.c_str());
 						continue;
 					}
 					Parsed.m_File = Parsed.m_RepoPath.substr(Parsed.m_RepoPath.rfind('/') + 1);
+
+					// 安装和预览缓存都按基名存储，只保留最先占用目标的条目。
+					if(!UsedTargets.insert(Parsed.m_File).second)
+					{
+						log_warn("fontstore", "Duplicate font catalog target '%s', skipped", Parsed.m_File.c_str());
+						continue;
+					}
+
+					const json_value &Category = CatalogField(Entry, "c");
+					if(IsCatalogString(Category))
+						Parsed.m_Category = Category.u.string.ptr;
+					const json_value &Variable = CatalogField(Entry, "v");
+					Parsed.m_Variable = Variable.type == json_integer && Variable.u.integer != 0;
+					// 国内直链锁死 gstatic.cn 域，避免目录被换入任意下载源。
+					const json_value &Direct = CatalogField(Entry, "u");
+					if(IsCatalogString(Direct) && str_startswith(Direct.u.string.ptr, "https://fonts.gstatic.cn/") && str_endswith(Direct.u.string.ptr, ".ttf"))
+						Parsed.m_DirectUrl = Direct.u.string.ptr;
+					const json_value &Subsets = CatalogField(Entry, "s");
+					if(Subsets.type == json_array)
+					{
+						for(unsigned si = 0; si < Subsets.u.array.length; ++si)
+							if(IsCatalogString(Subsets[si]))
+								Parsed.m_vSubsets.emplace_back(Subsets[si].u.string.ptr);
+					}
 
 					std::string LowerFamily = Parsed.m_Family;
 					std::transform(LowerFamily.begin(), LowerFamily.end(), LowerFamily.begin(), [](unsigned char c) { return (char)std::tolower(c); });
