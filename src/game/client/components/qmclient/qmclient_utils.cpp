@@ -7,13 +7,16 @@
 
 #include <base/mem.h>
 #include <base/str.h>
+#include <base/system.h>
 
 #include <engine/shared/json.h>
 #include <engine/shared/protocol.h>
 #include <engine/storage.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
+#include <charconv>
 #include <cstdlib>
 #include <memory>
 #include <new>
@@ -27,6 +30,19 @@ namespace
 	// 彩虹档的饱和度与明度：与既有名牌彩虹（以及开发者彩虹）保持同一观感。
 	constexpr float QM_TITLE_RAINBOW_SATURATION = 0.8f;
 	constexpr float QM_TITLE_RAINBOW_LIGHTNESS = 0.65f;
+
+	int ParseLifecycleMarkerTime(std::string_view Value)
+	{
+		if(Value.ends_with('\r'))
+			Value.remove_suffix(1);
+		// 恢复上报使用 int 范围内的时间戳。
+		int Timestamp = 0;
+		const char *pEnd = Value.data() + Value.size();
+		const auto [pAfter, Error] = std::from_chars(Value.data(), pEnd, Timestamp);
+		if(Error != std::errc{} || pAfter != pEnd || Timestamp < 0)
+			return 0;
+		return Timestamp;
+	}
 
 	bool JsonReadBoolean(const json_value *pValue, bool &OutValue)
 	{
@@ -100,17 +116,23 @@ try
 		return Storage.FileExists(QMCLIENT_LIFECYCLE_MARKER_FILE, IStorage::TYPE_SAVE);
 	}
 
-	char aContent[QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES + 1];
-	mem_copy(aContent, Data.get(), Size);
-	aContent[Size] = '\0';
-	char aLine[256];
-	const char *pStr = aContent;
-	while((pStr = str_next_token(pStr, "\n", aLine, sizeof(aLine))))
+	std::string_view Content(static_cast<const char *>(Data.get()), Size);
+	if(mem_has_null(Content.data(), Content.size()))
+		return true;
+
+	constexpr std::string_view STARTED_AT = "started_at=";
+	constexpr std::string_view LAST_SEEN_AT = "last_seen_at=";
+	while(!Content.empty())
 	{
-		if(const char *pValue = str_startswith(aLine, "started_at="))
-			OutStartedAt = std::max<int64_t>(0, str_toint(pValue));
-		else if(const char *pLastSeenValue = str_startswith(aLine, "last_seen_at="))
-			OutLastSeenAt = std::max<int64_t>(0, str_toint(pLastSeenValue));
+		const size_t LineEnd = Content.find('\n');
+		const std::string_view Line = Content.substr(0, LineEnd);
+		if(Line.starts_with(STARTED_AT))
+			OutStartedAt = ParseLifecycleMarkerTime(Line.substr(STARTED_AT.size()));
+		else if(Line.starts_with(LAST_SEEN_AT))
+			OutLastSeenAt = ParseLifecycleMarkerTime(Line.substr(LAST_SEEN_AT.size()));
+		if(LineEnd == std::string_view::npos)
+			break;
+		Content.remove_prefix(LineEnd + 1);
 	}
 	return true;
 }
@@ -128,7 +150,14 @@ try
 	char aTemporary[sizeof(QMCLIENT_LIFECYCLE_MARKER_FILE) + 32];
 	IStorage::FormatTmpPath(aTemporary, sizeof(aTemporary), QMCLIENT_LIFECYCLE_MARKER_FILE);
 	Storage.CreateFolder("qmclient", IStorage::TYPE_SAVE);
-	IOHANDLE File = Storage.OpenFile(aTemporary, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	IOHANDLE File = Storage.OpenFile(aTemporary, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE);
+	if(!File)
+	{
+		// 原候选路径被占用时，写入独占的备用文件。
+		static std::atomic<unsigned> s_NextCandidate{0};
+		str_format(aTemporary, sizeof(aTemporary), "%s.%d.%u.tmp", QMCLIENT_LIFECYCLE_MARKER_FILE, pid(), s_NextCandidate.fetch_add(1, std::memory_order_relaxed));
+		File = Storage.OpenFile(aTemporary, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE);
+	}
 	if(!File)
 		return false;
 

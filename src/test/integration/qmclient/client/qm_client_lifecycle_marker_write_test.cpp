@@ -80,6 +80,27 @@ TEST_F(CQmLifecycleMarkerWriteTest, FailedPublishCleansCandidateAndCanRetry)
 	EXPECT_STREQ(Published.get(), NEW_MARKER);
 }
 
+TEST_F(CQmLifecycleMarkerWriteTest, OccupiedCandidateIsPreservedAndMarkerCanStillUpdate)
+{
+	ASSERT_TRUE(QmWriteLifecycleMarker(*m_pStorage, OLD_MARKER));
+	char aTemporary[IO_MAX_PATH_LENGTH];
+	IStorage::FormatTmpPath(aTemporary, sizeof(aTemporary), QMCLIENT_LIFECYCLE_MARKER_FILE);
+	IOHANDLE File = m_pStorage->OpenFile(aTemporary, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE);
+	ASSERT_NE(File, nullptr);
+	EXPECT_EQ(io_write(File, OLD_MARKER, sizeof(OLD_MARKER) - 1), sizeof(OLD_MARKER) - 1);
+	ASSERT_EQ(io_close(File), 0);
+
+	ASSERT_TRUE(QmWriteLifecycleMarker(*m_pStorage, NEW_MARKER));
+	const std::unique_ptr<char, decltype(&free)> ExistingCandidate(
+		m_pStorage->ReadFileStr(aTemporary, IStorage::TYPE_SAVE), free);
+	ASSERT_NE(ExistingCandidate, nullptr);
+	EXPECT_STREQ(ExistingCandidate.get(), OLD_MARKER);
+	const std::unique_ptr<char, decltype(&free)> Published(
+		m_pStorage->ReadFileStr(QMCLIENT_LIFECYCLE_MARKER_FILE, IStorage::TYPE_SAVE), free);
+	ASSERT_NE(Published, nullptr);
+	EXPECT_STREQ(Published.get(), NEW_MARKER);
+}
+
 TEST_F(CQmLifecycleMarkerWriteTest, ReadsTimesFromPublishedMarker)
 {
 	ASSERT_TRUE(QmWriteLifecycleMarker(*m_pStorage, NEW_MARKER));
@@ -89,6 +110,53 @@ TEST_F(CQmLifecycleMarkerWriteTest, ReadsTimesFromPublishedMarker)
 	ASSERT_TRUE(QmReadLifecycleMarker(*m_pStorage, StartedAt, LastSeenAt));
 	EXPECT_EQ(StartedAt, 100);
 	EXPECT_EQ(LastSeenAt, 130);
+}
+
+TEST_F(CQmLifecycleMarkerWriteTest, ReadsCompleteLongTimestampLine)
+{
+	std::string Content = "started_at=100\r\nlast_seen_at=";
+	Content.append(260, '0');
+	Content += "130";
+	ASSERT_TRUE(QmWriteLifecycleMarker(*m_pStorage, Content.c_str()));
+
+	int64_t StartedAt = -1;
+	int64_t LastSeenAt = -1;
+	ASSERT_TRUE(QmReadLifecycleMarker(*m_pStorage, StartedAt, LastSeenAt));
+	EXPECT_EQ(StartedAt, 100);
+	EXPECT_EQ(LastSeenAt, 130);
+}
+
+TEST_F(CQmLifecycleMarkerWriteTest, InvalidLastSeenTimeLeavesStartTimeAvailableForRecovery)
+{
+	for(const char *pInvalidTime : {"120 seconds", "4294967297"})
+	{
+		SCOPED_TRACE(pInvalidTime);
+		const std::string Content = std::string("started_at=100\nlast_seen_at=") + pInvalidTime + "\n";
+		ASSERT_TRUE(QmWriteLifecycleMarker(*m_pStorage, Content.c_str()));
+
+		int64_t StartedAt = -1;
+		int64_t LastSeenAt = -1;
+		ASSERT_TRUE(QmReadLifecycleMarker(*m_pStorage, StartedAt, LastSeenAt));
+		EXPECT_EQ(StartedAt, 100);
+		EXPECT_EQ(LastSeenAt, 0);
+	}
+}
+
+TEST_F(CQmLifecycleMarkerWriteTest, EmbeddedNullKeepsRecoveryPendingWithoutPartialTimes)
+{
+	constexpr char CORRUPTED_MARKER[] = "started_at=100\nlast_seen_at=12\0\n";
+	constexpr unsigned Size = sizeof(CORRUPTED_MARKER) - 1;
+	ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+	IOHANDLE File = m_pStorage->OpenFile(QMCLIENT_LIFECYCLE_MARKER_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	ASSERT_NE(File, nullptr);
+	EXPECT_EQ(io_write(File, CORRUPTED_MARKER, Size), Size);
+	ASSERT_EQ(io_close(File), 0);
+
+	int64_t StartedAt = -1;
+	int64_t LastSeenAt = -1;
+	ASSERT_TRUE(QmReadLifecycleMarker(*m_pStorage, StartedAt, LastSeenAt));
+	EXPECT_EQ(StartedAt, 0);
+	EXPECT_EQ(LastSeenAt, 0);
 }
 
 TEST_F(CQmLifecycleMarkerWriteTest, EmptyMarkerTriggersRecoveryWithoutKnownTimes)
