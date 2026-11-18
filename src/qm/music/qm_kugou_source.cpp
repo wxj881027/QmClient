@@ -1,6 +1,7 @@
 // 酷狗 CDP 调用与补丁指纹参考 Metabox-Nexus-PlayerCap（MIT），授权见 license.txt。
 #include "qm_kugou_source.h"
 
+#include "qm_kugou_lyric_request.h"
 #include "qm_kugou_protocol.h"
 
 #include <engine/external/json-parser/json.h>
@@ -13,6 +14,7 @@
 #include <chrono>
 #include <future>
 #include <mutex>
+#include <optional>
 #include <thread>
 #include <vector>
 
@@ -260,20 +262,11 @@ catch (_) { finish(''); }
 			return Encoded;
 		}
 
-		struct SLyricResult
+		SKugouLyricResult FetchLyrics(std::string MediaId, int64_t DurationMs)
 		{
-			std::string m_MediaId;
-			std::string m_Type;
-			std::string m_Text;
-			bool m_Success = false;
-		};
-
-		SLyricResult FetchLyrics(std::string MediaId, int64_t DurationMs)
-		{
-			SLyricResult Result;
-			Result.m_MediaId = std::move(MediaId);
+			SKugouLyricResult Result;
 			std::string Json, Id, Key;
-			const std::wstring Search = L"/search?ver=1&man=yes&client=mobi&keyword=&duration=" + std::to_wstring(DurationMs) + L"&hash=" + UrlEncode(Result.m_MediaId);
+			const std::wstring Search = L"/search?ver=1&man=yes&client=mobi&keyword=&duration=" + std::to_wstring(DurationMs) + L"&hash=" + UrlEncode(MediaId);
 			if(!HttpGet(L"krcs.kugou.com", INTERNET_DEFAULT_HTTPS_PORT, Search, true, &Json) || !SelectKugouLyricCandidate(Json, &Id, &Key))
 				return Result;
 			if(Id.empty())
@@ -424,66 +417,55 @@ catch (_) { finish(''); }
 		void Run()
 		{
 #if defined(_WIN32)
-			QmNeteaseCdp::CCdpSession Session;
+			std::optional<QmNeteaseCdp::CCdpSession> Session;
 			DWORD SessionPid = 0;
-			std::future<SLyricResult> Pending;
-			SLyricResult Lyrics;
-			std::string CurrentId;
-			TClock::time_point RetryAt{};
+			CKugouLyricRequest Lyrics;
 			while(!m_Stop)
 			{
-				SPlayback State;
-				const auto Processes = KugouProcesses();
-				const DWORD Listener = Processes.empty() ? 0 : ListenerProcess();
-				const bool KnownProcess = Listener != 0 && std::find(Processes.begin(), Processes.end(), Listener) != Processes.end() && !ProcessPath(Listener).empty();
-				State.m_ProcessId = Processes.empty() ? 0 : Processes.front();
-				if(!KnownProcess)
+				try
 				{
-					Session.Close();
-					State.m_Error = Processes.empty() ? "Kugou is not running" : "Kugou CDP is unavailable; use Enable Kugou integration, then restart Kugou";
-				}
-				else
-				{
-					if(SessionPid != Listener)
-						Session.Close();
-					SessionPid = Listener;
-					std::string Json;
-					if((Session.IsConnected() || ConnectPage(Session, Listener)) && Session.EvaluateAwaitPromise(PLAY_INFO_SCRIPT, &Json, 1000) && !Json.empty() && ParseKugouPlayback(Json, &State))
-						State.m_ProcessId = Listener;
+					if(!Session)
+						Session.emplace();
+					SPlayback State;
+					const auto Processes = KugouProcesses();
+					const DWORD Listener = Processes.empty() ? 0 : ListenerProcess();
+					const bool KnownProcess = Listener != 0 && std::find(Processes.begin(), Processes.end(), Listener) != Processes.end() && !ProcessPath(Listener).empty();
+					State.m_ProcessId = Processes.empty() ? 0 : Processes.front();
+					if(!KnownProcess)
+					{
+						Session->Close();
+						State.m_Error = Processes.empty() ? "Kugou is not running" : "Kugou CDP is unavailable; use Enable Kugou integration, then restart Kugou";
+					}
 					else
 					{
-						Session.Close();
-						State = {};
-						State.m_ProcessId = Listener;
-						State.m_Error = "Kugou playback data is unavailable";
+						if(SessionPid != Listener)
+							Session->Close();
+						SessionPid = Listener;
+						std::string Json;
+						if((Session->IsConnected() || ConnectPage(*Session, Listener)) && Session->EvaluateAwaitPromise(PLAY_INFO_SCRIPT, &Json, 1000) && !Json.empty() && ParseKugouPlayback(Json, &State))
+							State.m_ProcessId = Listener;
+						else
+						{
+							Session->Close();
+							State = {};
+							State.m_ProcessId = Listener;
+							State.m_Error = "Kugou playback data is unavailable";
+						}
 					}
+					Lyrics.Update(State, TClock::now(), [](const std::string &MediaId, int64_t DurationMs) {
+						return std::async(std::launch::async, FetchLyrics, MediaId, DurationMs);
+					});
+					Publish(std::move(State));
 				}
-				if(CurrentId != State.m_MediaId)
+				catch(const std::bad_alloc &)
 				{
-					CurrentId = State.m_MediaId;
-					Lyrics = {};
-					RetryAt = {};
+					// 下轮重连；不刷新旧发布的时间，也不丢掉已经接纳的歌词。
+					Session.reset();
 				}
-				if(Pending.valid() && Pending.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+				catch(const std::length_error &)
 				{
-					auto Result = Pending.get();
-					if(Result.m_MediaId == CurrentId)
-					{
-						Lyrics = std::move(Result);
-						RetryAt = TClock::now() + std::chrono::seconds(Lyrics.m_Success ? 60 : 10);
-					}
+					Session.reset();
 				}
-				if(State.m_HasSong && !Pending.valid() && !Lyrics.m_Success && TClock::now() >= RetryAt)
-					Pending = std::async(std::launch::async, FetchLyrics, CurrentId, State.m_DurationMs);
-				if(State.m_HasSong)
-				{
-					State.m_LyricType = Lyrics.m_Type;
-					State.m_LyricContent = Lyrics.m_Text;
-					State.m_Loading = !Lyrics.m_Success;
-					if(!Lyrics.m_Success && Lyrics.m_MediaId == CurrentId)
-						State.m_Error = "Kugou lyric request failed; retrying";
-				}
-				Publish(std::move(State));
 				for(int Step = 0; Step < 2 && !m_Stop; ++Step)
 					std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
@@ -507,14 +489,14 @@ catch (_) { finish(''); }
 	bool CKugouSource::Poll(SPlayback &State)
 	{
 		std::lock_guard<std::mutex> Lock(m_pImpl->m_Mutex);
-		State = m_pImpl->m_State;
 		if(TClock::now() - m_pImpl->m_Updated > std::chrono::milliseconds(1500))
 		{
-			const auto ProcessId = State.m_ProcessId;
 			State = {};
-			State.m_ProcessId = ProcessId;
+			State.m_ProcessId = m_pImpl->m_State.m_ProcessId;
 			State.m_Error = "Waiting for Kugou playback data";
 		}
+		else
+			State = m_pImpl->m_State;
 		return State.m_ProcessId != 0;
 	}
 

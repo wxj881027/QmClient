@@ -307,6 +307,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64" AND CMAKE_C_COMPIL
     src/qm/music/qm_music_publication.h
     src/qm/music/qm_kugou_source.cpp
     src/qm/music/qm_kugou_source.h
+    src/qm/music/qm_kugou_lyric_request.h
     src/qm/music/qm_kugou_protocol.cpp
     src/qm/music/qm_kugou_protocol.h
     src/qm/music/qm_qqmusic_source.cpp
@@ -6591,6 +6592,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/music/qm_soda_hook_provider_allocation_test.cpp
       src/test/integration/qmclient/music/qm_soda_lyric_file_load_test.cpp
       src/test/unit/qmclient/music/qm_music_publication_allocation_test.cpp
+      src/test/unit/qmclient/music/qm_kugou_lyric_request_test.cpp
       src/test/integration/qmclient/music/music_world_lyrics_renderer_test.cpp
       src/test/unit/qmclient/music/netease_lyric_state_allocation_test.cpp
       src/test/unit/qmclient/music/music_lyrics_krc_allocation_test.cpp
