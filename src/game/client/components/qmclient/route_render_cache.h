@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <new>
 #include <vector>
 
 // 路线选择由调用方负责；缓存只复用结果，并按连续路径分块保留原绘制顺序。
@@ -126,19 +127,25 @@ public:
 	{
 		if(m_KeyValid && m_Key == Key)
 			return !m_vPoints.empty();
+		Invalidate();
+		try
+		{
+			if(!Builder(m_vPoints))
+				m_vPoints.clear();
+			if(!m_vPoints.empty())
+			{
+				m_vNodes.reserve(m_vPoints.size() / (LEAF_POINTS / 2) + 1);
+				BuildNode(0, m_vPoints.size());
+			}
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 保持键无效，下一帧可以为同一条路线重建。
+			Invalidate();
+			return false;
+		}
 		m_Key = Key;
 		m_KeyValid = true;
-		m_ViewValid = false;
-		m_vPoints.clear();
-		m_vNodes.clear();
-		m_vVisible.clear();
-		if(!Builder(m_vPoints))
-			m_vPoints.clear();
-		if(!m_vPoints.empty())
-		{
-			m_vNodes.reserve(m_vPoints.size() / (LEAF_POINTS / 2) + 1);
-			BuildNode(0, m_vPoints.size());
-		}
 		return !m_vPoints.empty();
 	}
 
@@ -150,11 +157,19 @@ public:
 		size_t TestedPoints = 0;
 		if(!m_ViewValid || !(m_View == View))
 		{
-			m_View = View;
-			m_ViewValid = true;
+			m_ViewValid = false;
 			m_vVisible.clear();
-			if(!m_vNodes.empty())
-				QueryNode(0, View, TestedPoints);
+			try
+			{
+				if(!m_vNodes.empty())
+					QueryNode(0, View, TestedPoints);
+				m_View = View;
+				m_ViewValid = true;
+			}
+			catch(const std::bad_alloc &)
+			{
+				m_vVisible.clear();
+			}
 		}
 		if(pTestedPoints)
 			*pTestedPoints = TestedPoints;

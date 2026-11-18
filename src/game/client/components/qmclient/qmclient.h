@@ -208,9 +208,9 @@ class CQmClient : public CComponent
 	void InitQmClientLifecycle();
 	void UpdateQmClientLifecycleAndServerTime();
 	bool EnsureQmClientPlaytimeClientId();
-	bool ReadQmClientLifecycleMarker(int64_t &OutStartedAt, int64_t &OutLastSeenAt);
 	void TouchQmClientLifecycleMarker(bool ForceWrite);
 	void WriteQmClientLifecycleMarker();
+	void CancelQmClientLifecycleMarkerWrite();
 	void ClearQmClientLifecycleMarker();
 
 	void UpdateQmClientRecognition();

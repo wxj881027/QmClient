@@ -115,15 +115,12 @@ static void LogQmClientDistributionFailureEvent(const char *pStage, const char *
 
 static constexpr const char *QMCLIENT_DEVELOPER_TOKEN_FILE = "qmclient/developer_token.txt";
 static constexpr int QMCLIENT_DEVELOPER_SYNC_INTERVAL_SECONDS = 5;
-static constexpr const char *QMCLIENT_LIFECYCLE_MARKER_FILE = "qmclient/lifecycle_pending.marker";
 static constexpr const char *QMCLIENT_PLAYTIME_CLIENT_ID_FILE = qm_identity_file::CLIENT_ID_FILE;
 static constexpr const char *QMCLIENT_MACHINE_ID_FALLBACK_FILE = qm_identity_file::MACHINE_ID_FILE;
 // 广播 markdown 的磁盘缓存：界面立即生效，落盘只保留最新完整快照（交给作业完成）。
 static constexpr const char *QMCLIENT_MARKDOWN_BROADCAST_CACHE_FILE = "qmclient/markdown_broadcast.json";
 static constexpr int QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION = 1;
 static constexpr const char *QMCLIENT_NEWS_PUBLISH_URL = "https://qmclient.icu/api/v1/news/publish";
-static constexpr const char *QMCLIENT_NEWS_DRAFT_FILE = "qmclient/news_draft.md";
-static constexpr size_t QMCLIENT_NEWS_MAX_BYTES = 64 * 1024;
 static constexpr const char *QMCLIENT_SPONSORS_PUBLISH_URL = "https://qmclient.icu/api/v1/sponsors/publish";
 static constexpr const char *QMCLIENT_SPONSORS_CACHE_FILE = "qmclient/sponsors_cache.json";
 static constexpr const char *QMCLIENT_SPONSORS_DRAFT_FILE = "qmclient/sponsors_draft.md";
@@ -243,7 +240,8 @@ namespace
 			SResult Result;
 			if(m_pTask && m_pTask->State() == EHttpState::DONE && m_pTask->StatusCode() == 200)
 			{
-				json_value *pRoot = m_pTask->ResultJson();
+				const std::unique_ptr<json_value, decltype(&json_value_free)> Root(m_pTask->ResultJson(), json_value_free);
+				const json_value *pRoot = Root.get();
 				if(pRoot && pRoot->type == json_object)
 				{
 					const json_value *pPoints = JsonObjectField(pRoot, "points");
@@ -345,8 +343,6 @@ namespace
 					const json_value *pPastYearHours = JsonObjectField(pRoot, "hours_played_past_365_days");
 					if(pPastYearHours->type == json_integer && pPastYearHours->u.integer >= 0)
 						Result.m_PlaytimeHoursPastYear = pPastYearHours->u.integer;
-
-					json_value_free(pRoot);
 				}
 			}
 
@@ -387,18 +383,7 @@ namespace
 			if(m_pStorage == nullptr || State() == IJob::STATE_ABORTED)
 				return;
 
-			m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-			IOHANDLE File = m_pStorage->OpenFile(QMCLIENT_LIFECYCLE_MARKER_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-			if(!File)
-				return;
-			if(State() == IJob::STATE_ABORTED)
-			{
-				io_close(File);
-				return;
-			}
-
-			io_write(File, m_Content.data(), m_Content.size());
-			io_close(File);
+			QmWriteLifecycleMarker(*m_pStorage, m_Content.c_str());
 		}
 
 	public:
@@ -1730,14 +1715,7 @@ void CQmClient::QmNewsReloadDraft()
 {
 	if(QmNewsPublishing())
 		return;
-	m_QmNewsDraft.clear();
-	char *pDraft = Storage()->ReadFileStr(QMCLIENT_NEWS_DRAFT_FILE, IStorage::TYPE_SAVE);
-	if(pDraft)
-	{
-		if(str_length(pDraft) <= QMCLIENT_NEWS_MAX_BYTES && str_utf8_check(pDraft))
-			m_QmNewsDraft = pDraft;
-		free(pDraft);
-	}
+	QmLoadNewsDraft(*Storage(), m_QmNewsDraft);
 	m_QmNewsStatus = EQmNewsStatus::IDLE;
 }
 
@@ -2427,35 +2405,6 @@ void CQmClient::OnStateChange(int NewState, int OldState)
 	m_QmRealtimeNextPresenceCheck = 0;
 }
 
-bool CQmClient::ReadQmClientLifecycleMarker(int64_t &OutStartedAt, int64_t &OutLastSeenAt)
-{
-	OutStartedAt = 0;
-	OutLastSeenAt = 0;
-
-	void *pFileData = nullptr;
-	unsigned FileSize = 0;
-	if(!Storage()->ReadFile(QMCLIENT_LIFECYCLE_MARKER_FILE, IStorage::TYPE_SAVE, &pFileData, &FileSize))
-		return false;
-
-	std::string Marker;
-	if(pFileData && FileSize > 0)
-		Marker.assign(static_cast<const char *>(pFileData), FileSize);
-	free(pFileData);
-	if(Marker.empty())
-		return true;
-
-	char aLine[256];
-	const char *pStr = Marker.c_str();
-	while((pStr = str_next_token(pStr, "\n", aLine, sizeof(aLine))))
-	{
-		if(const char *pValue = str_startswith(aLine, "started_at="))
-			OutStartedAt = maximum<int64_t>(0, str_toint(pValue));
-		else if(const char *pLastSeenValue = str_startswith(aLine, "last_seen_at="))
-			OutLastSeenAt = maximum<int64_t>(0, str_toint(pLastSeenValue));
-	}
-	return true;
-}
-
 void CQmClient::WriteQmClientLifecycleMarker()
 {
 	std::lock_guard<std::mutex> Lock(*m_pQmClientLifecycleMarkerMutex);
@@ -2464,18 +2413,11 @@ void CQmClient::WriteQmClientLifecycleMarker()
 	if(m_QmClientMarkerLastSeenAt <= 0)
 		m_QmClientMarkerLastSeenAt = m_QmClientMarkerStartedAt;
 
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-
-	IOHANDLE File = Storage()->OpenFile(QMCLIENT_LIFECYCLE_MARKER_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-		return;
-
-	char aLine[384];
+	char aLine[QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES + 1];
 	str_format(aLine, sizeof(aLine),
 		"session=%s\nstarted_at=%d\nlast_seen_at=%d\nclient_id=%s\n",
 		m_aQmClientLifecycleSessionId, (int)m_QmClientMarkerStartedAt, (int)m_QmClientMarkerLastSeenAt, m_aQmClientPlaytimeClientId);
-	io_write(File, aLine, str_length(aLine));
-	io_close(File);
+	QmWriteLifecycleMarker(*Storage(), aLine);
 }
 
 void CQmClient::TouchQmClientLifecycleMarker(bool ForceWrite)
@@ -2492,11 +2434,7 @@ void CQmClient::TouchQmClientLifecycleMarker(bool ForceWrite)
 
 	if(ForceWrite)
 	{
-		if(m_pQmClientLifecycleMarkerWriteJob && !m_pQmClientLifecycleMarkerWriteJob->Done())
-		{
-			m_pQmClientLifecycleMarkerWriteJob->Abort();
-			m_pQmClientLifecycleMarkerWriteJob = nullptr;
-		}
+		CancelQmClientLifecycleMarkerWrite();
 		WriteQmClientLifecycleMarker();
 		return;
 	}
@@ -2504,16 +2442,33 @@ void CQmClient::TouchQmClientLifecycleMarker(bool ForceWrite)
 	if(m_pQmClientLifecycleMarkerWriteJob && !m_pQmClientLifecycleMarkerWriteJob->Done())
 		return;
 
-	char aLine[384];
+	char aLine[QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES + 1];
 	str_format(aLine, sizeof(aLine),
 		"session=%s\nstarted_at=%d\nlast_seen_at=%d\nclient_id=%s\n",
 		m_aQmClientLifecycleSessionId, (int)m_QmClientMarkerStartedAt, (int)m_QmClientMarkerLastSeenAt, m_aQmClientPlaytimeClientId);
-	m_pQmClientLifecycleMarkerWriteJob = std::make_shared<CQmClientLifecycleMarkerWriteJob>(Storage(), aLine, m_pQmClientLifecycleMarkerMutex);
-	Engine()->AddJob(m_pQmClientLifecycleMarkerWriteJob);
+	try
+	{
+		auto pJob = std::make_shared<CQmClientLifecycleMarkerWriteJob>(Storage(), aLine, m_pQmClientLifecycleMarkerMutex);
+		if(Engine()->TryAddJob(pJob))
+			m_pQmClientLifecycleMarkerWriteJob = std::move(pJob);
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 保留上次已写入的标记，下次定期刷新再尝试。
+	}
+}
+
+void CQmClient::CancelQmClientLifecycleMarkerWrite()
+{
+	if(m_pQmClientLifecycleMarkerWriteJob && !m_pQmClientLifecycleMarkerWriteJob->Done())
+		m_pQmClientLifecycleMarkerWriteJob->Abort();
+	m_pQmClientLifecycleMarkerWriteJob.reset();
 }
 
 void CQmClient::ClearQmClientLifecycleMarker()
 {
+	CancelQmClientLifecycleMarkerWrite();
+	const std::lock_guard<std::mutex> Lock(*m_pQmClientLifecycleMarkerMutex);
 	Storage()->RemoveFile(QMCLIENT_LIFECYCLE_MARKER_FILE, IStorage::TYPE_SAVE);
 }
 
@@ -2778,7 +2733,7 @@ void CQmClient::InitQmClientLifecycle()
 	EnsureQmClientPlaytimeClientId();
 	int64_t PreviousStartedAt = 0;
 	int64_t PreviousLastSeenAt = 0;
-	const bool HadPendingMarker = ReadQmClientLifecycleMarker(PreviousStartedAt, PreviousLastSeenAt);
+	const bool HadPendingMarker = QmReadLifecycleMarker(*Storage(), PreviousStartedAt, PreviousLastSeenAt);
 	m_QmClientRecoveryStopAt = PreviousLastSeenAt > 0 ? PreviousLastSeenAt : PreviousStartedAt;
 	if(m_QmClientRecoveryStopAt <= 0)
 		m_QmClientRecoveryStopAt = time_timestamp();

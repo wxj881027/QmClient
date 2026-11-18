@@ -1,16 +1,21 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "qmclient_utils.h"
 
+#include "bounded_file_reader.h"
 #include "qm_json_fields.h"
 #include "qm_presence_prepare.h"
 
+#include <base/mem.h>
 #include <base/str.h>
 
 #include <engine/shared/json.h>
 #include <engine/shared/protocol.h>
+#include <engine/storage.h>
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
+#include <memory>
 #include <new>
 #include <string>
 #include <string_view>
@@ -77,6 +82,92 @@ namespace
 		return EClientBrand::QM;
 	}
 } // namespace
+
+bool QmReadLifecycleMarker(IStorage &Storage, int64_t &OutStartedAt, int64_t &OutLastSeenAt) noexcept
+try
+{
+	OutStartedAt = 0;
+	OutLastSeenAt = 0;
+	void *pData = nullptr;
+	unsigned Size = 0;
+	const auto Result = Storage.ReadFileCheckedBounded(QMCLIENT_LIFECYCLE_MARKER_FILE, IStorage::TYPE_SAVE, &pData, &Size, QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES);
+	const std::unique_ptr<void, decltype(&free)> Data(pData, free);
+	if(Result == IStorage::EReadFileResult::NOT_FOUND)
+		return false;
+	if(Result != IStorage::EReadFileResult::SUCCESS || !Data || Size > QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES)
+	{
+		// 标记仍在时，沿用旧空标记的恢复路径。
+		return Storage.FileExists(QMCLIENT_LIFECYCLE_MARKER_FILE, IStorage::TYPE_SAVE);
+	}
+
+	char aContent[QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES + 1];
+	mem_copy(aContent, Data.get(), Size);
+	aContent[Size] = '\0';
+	char aLine[256];
+	const char *pStr = aContent;
+	while((pStr = str_next_token(pStr, "\n", aLine, sizeof(aLine))))
+	{
+		if(const char *pValue = str_startswith(aLine, "started_at="))
+			OutStartedAt = std::max<int64_t>(0, str_toint(pValue));
+		else if(const char *pLastSeenValue = str_startswith(aLine, "last_seen_at="))
+			OutLastSeenAt = std::max<int64_t>(0, str_toint(pLastSeenValue));
+	}
+	return true;
+}
+catch(...)
+{
+	return false;
+}
+
+bool QmWriteLifecycleMarker(IStorage &Storage, const char *pContent) noexcept
+try
+{
+	const size_t Size = str_length(pContent);
+	if(Size > QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES)
+		return false;
+	char aTemporary[sizeof(QMCLIENT_LIFECYCLE_MARKER_FILE) + 32];
+	IStorage::FormatTmpPath(aTemporary, sizeof(aTemporary), QMCLIENT_LIFECYCLE_MARKER_FILE);
+	Storage.CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	IOHANDLE File = Storage.OpenFile(aTemporary, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
+
+	const bool Complete = io_write(File, pContent, static_cast<unsigned>(Size)) == Size && io_sync(File) == 0 && io_error(File) == 0;
+	const bool Closed = io_close(File) == 0;
+	try
+	{
+		if(Complete && Closed && Storage.RenameFile(aTemporary, QMCLIENT_LIFECYCLE_MARKER_FILE, IStorage::TYPE_SAVE, false))
+			return true;
+	}
+	catch(...)
+	{
+		// 目录替换失败时仍尝试清理候选文件。
+	}
+	Storage.RemoveFile(aTemporary, IStorage::TYPE_SAVE);
+	return false;
+}
+catch(...)
+{
+	return false;
+}
+
+bool QmLoadNewsDraft(IStorage &Storage, std::string &Output) noexcept
+try
+{
+	Output.clear();
+	CQmCheckedFileData Data;
+	if(!Data.Read(Storage, QMCLIENT_NEWS_DRAFT_FILE, IStorage::TYPE_SAVE, QMCLIENT_NEWS_MAX_BYTES))
+		return false;
+	const char *pText = static_cast<const char *>(Data.Data());
+	if(mem_has_null(pText, Data.Size()) || !str_utf8_check(pText))
+		return false;
+	Output.assign(pText, Data.Size());
+	return true;
+}
+catch(...)
+{
+	return false;
+}
 
 std::string NormalizeQmServerAddress(const char *pServerAddress)
 {

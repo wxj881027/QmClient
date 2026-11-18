@@ -5210,6 +5210,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_route_visited_test.cpp
     src/test/unit/qmclient/client/qm_ghost_start_detection_test.cpp
     src/test/unit/qmclient/client/qm_route_render_cache_test.cpp
+    src/test/integration/qmclient/client/qm_client_lifecycle_marker_write_test.cpp
+    src/test/integration/qmclient/client/qm_client_news_draft_file_test.cpp
     src/test/integration/qmclient/client/qm_map_route_cache_test.cpp
     src/test/unit/qmclient/monitoring/qm_stutter_sample_series_test.cpp
     src/test/unit/qmclient/monitoring/qm_stutter_capture_test.cpp

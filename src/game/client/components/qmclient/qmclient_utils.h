@@ -11,11 +11,24 @@
 
 #include <game/client/QmUi/UiTokens.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
 
+class IStorage;
 typedef struct _json_value json_value;
+
+inline constexpr char QMCLIENT_LIFECYCLE_MARKER_FILE[] = "qmclient/lifecycle_pending.marker";
+inline constexpr unsigned QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES = 383;
+inline constexpr char QMCLIENT_NEWS_DRAFT_FILE[] = "qmclient/news_draft.md";
+inline constexpr std::size_t QMCLIENT_NEWS_MAX_BYTES = 64 * 1024;
+
+// 返回是否有待恢复标记。标记内容不可用时，两个时间都为 0。
+bool QmReadLifecycleMarker(IStorage &Storage, int64_t &OutStartedAt, int64_t &OutLastSeenAt) noexcept;
+// 调用方串行提交标记。提交失败时保留上次完整写入的文件。
+bool QmWriteLifecycleMarker(IStorage &Storage, const char *pContent) noexcept;
+bool QmLoadNewsDraft(IStorage &Storage, std::string &Output) noexcept;
 
 // 地址标准化失败或分配失败返回空串。
 std::string NormalizeQmServerAddress(const char *pServerAddress);
