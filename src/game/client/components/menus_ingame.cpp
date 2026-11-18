@@ -3214,6 +3214,8 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 						pState = Localize("Ghost ready");
 					else if(RankGhost.IsEntryDemoCached(*pEntry, aBuf, sizeof(aBuf)))
 						pState = Localize("Replay downloaded");
+					else if(RankGhost.IsDemoDownloadQueued(pEntry->m_Demo.c_str()))
+						pState = Localize("Task running ...");
 					SLabelProperties StateProps;
 					StateProps.m_MaxWidth = Cell.w;
 					StateProps.m_EllipsisAtEnd = true;
@@ -3267,6 +3269,10 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 		char aDemoPath[IO_MAX_PATH_LENGTH];
 		const bool DemoCached = RankGhost.IsEntryDemoCached(Entry, aDemoPath, sizeof(aDemoPath));
 		const bool GhostActive = RankGhost.IsEntryGhostActive(Entry);
+		CRankGhost::EEntryTaskPhase EntryTaskPhase = CRankGhost::EEntryTaskPhase::NONE;
+		int EntryTaskPercent = 0;
+		const bool EntryTaskActive = RankGhost.EntryTaskProgress(Entry, EntryTaskPhase, EntryTaskPercent);
+		const bool DownloadQueued = RankGhost.IsDemoDownloadQueued(Entry.m_Demo.c_str());
 		// 任务进行中统一禁用条目动作，避免下载/转换中途删改缓存
 		const bool TaskBusy = RankGhost.IsBusy();
 		const bool ItemActivated = s_ListBox.WasItemActivated();
@@ -3310,7 +3316,7 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 		{
 			const CUIRect Button = NextIngameActionButton(Status, Localize("Download replay"));
 			// 双击行等同「下载回放」：未缓存且没有其它任务时直接开始下载。
-			if(Button.w > 0.0f && (DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-download", &s_DownloadButton, Localize("Download replay"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy || DemoCached) ||
+			if(Button.w > 0.0f && (DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-download", &s_DownloadButton, Localize("Download replay"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, DemoCached || DownloadQueued || EntryTaskActive) ||
 						      Activation == qmclient::rank_demo::ERowActivation::DOWNLOAD_REPLAY))
 				RankGhost.RequestDemoDownload(Entry.m_Demo.c_str());
 		}
@@ -3344,6 +3350,45 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 			const CUIRect Button = NextIngameActionButton(Status, Localize("Delete"));
 			if(Button.w > 0.0f && DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-delete", &s_DeleteButton, Localize("Delete"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL, TaskBusy))
 				RankGhost.DeleteEntryCache(Entry);
+		}
+
+		// 官方 watch 链接是只读动作，不受下载/转换任务禁用；按钮靠左，避免挤占主操作。
+		{
+			CUIRect LinkButton = Status;
+			if(LinkButton.w >= LinkButton.h)
+				LinkButton.VSplitLeft(LinkButton.h, &LinkButton, &Status);
+			else
+				LinkButton.w = 0.0f;
+			if(LinkButton.w > 0.0f)
+			{
+				if(Status.w > ui_token::spacing::XS)
+					Status.VSplitLeft(ui_token::spacing::XS, nullptr, &Status);
+				static CButtonContainer s_OpenWebsiteButton;
+				if(Ui()->DoButton_QmIcon(&s_OpenWebsiteButton, EQmIcon::ARROW_UP_RIGHT_FROM_SQUARE, FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 0, &LinkButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL))
+				{
+					char aEncoded[384];
+					char aUrl[640];
+					if(!Entry.m_Uuid.empty())
+					{
+						EscapeUrl(aEncoded, sizeof(aEncoded), Entry.m_Uuid.c_str());
+						if(!Entry.m_Time.empty())
+						{
+							char aEncodedTime[64];
+							EscapeUrl(aEncodedTime, sizeof(aEncodedTime), Entry.m_Time.c_str());
+							str_format(aUrl, sizeof(aUrl), "https://ddnet.org/watch/?uuid=%s&time=%s", aEncoded, aEncodedTime);
+						}
+						else
+							str_format(aUrl, sizeof(aUrl), "https://ddnet.org/watch/?uuid=%s", aEncoded);
+					}
+					else
+					{
+						EscapeUrl(aEncoded, sizeof(aEncoded), Entry.m_Demo.c_str());
+						str_format(aUrl, sizeof(aUrl), "https://ddnet.org/watch/?demo=demos/%s", aEncoded);
+					}
+					Client()->ViewLink(aUrl);
+				}
+				GameClient()->m_Tooltips.DoToolTip(&s_OpenWebsiteButton, &LinkButton, Localize("Website"));
+			}
 		}
 	}
 }

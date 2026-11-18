@@ -23,6 +23,7 @@
 #include <game/client/component.h>
 #include <game/gamecore.h>
 
+#include <deque>
 #include <memory>
 #include <string>
 #include <vector>
@@ -100,6 +101,7 @@ public:
 	void RequestGhostOff();
 	// 按 manifest 的 demo 文件名仅下载回放到缓存（供回放播放/分享）
 	void RequestDemoDownload(const char *pDemoName);
+	bool IsDemoDownloadQueued(const char *pDemoName) const;
 	// 影子/下载任务是否进行中
 	bool IsBusy() const;
 	// 当前任务的进度描述（下载/转换百分比）；空闲时返回 false
@@ -234,6 +236,9 @@ private:
 	bool m_StartPending = false;
 	bool m_UnloadPending = false;
 	std::string m_PendingNotify;
+	// demo 下载与影子转换共用同一套网络/解析状态机，因此额外下载按 FIFO 排队，
+	// 当前任务结束后自动启动下一条；影子加载与查看流程不进入这条队列。
+	std::deque<std::string> m_vDemoDownloadQueue;
 
 	// 索引
 	std::vector<SEntry> m_vEntries;
@@ -331,6 +336,7 @@ private:
 
 	void StartLookup(const char *pMap, int Rank);
 	void StartPendingLookup(const char *pDemoName, EPendingMode Mode);
+	void StartNextQueuedDemoDownload();
 	void LookupInManifest();
 
 	// 下载/转换阶段与百分比只在这里计算一次，状态栏文案与列表行进度条共用，

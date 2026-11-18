@@ -1,4 +1,5 @@
 // 幽灵轨迹分块容器基准：.gho 加载/录制逐帧追加的生产实现。
+#include <game/client/components/qmclient/ghost_extra_data.h>
 #include <game/client/components/qmclient/ghost_path.h>
 
 #include <benchmark/benchmark.h>
@@ -39,3 +40,17 @@ static void BM_GhostPathAppend(benchmark::State &State)
 	State.SetItemsProcessed(State.iterations() * Samples);
 }
 BENCHMARK(BM_GhostPathAppend)->Arg(1000)->Arg(100000);
+
+// 查看模式每帧都要从 .gho 的 m_Direction 拆出方向与强弱钩字段；
+// 固定一次编码，循环内只测生产解码函数，避免把打包成本混进每帧读取。
+static void BM_GhostExtraDataDecode(benchmark::State &State)
+{
+	const int Packed = QmEncodeGhostDirection(1, 37);
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(QmDecodeGhostDirection(Packed));
+		benchmark::DoNotOptimize(QmDecodeGhostStrongWeak(Packed));
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_GhostExtraDataDecode);

@@ -343,9 +343,9 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled, bool WithTogg
 	const char *apDirection[] = {Localize("None", "Show players' key presses"), Localize("Others", "Show players' key presses"), Localize("All", "Show players' key presses"), Localize("Own", "Show players' key presses")};
 	Segments(Localize("Show key presses"), &g_Config.m_QmDemoShowDirection, apDirection, std::size(apDirection), s_aDirectionButtons);
 	const char *apStrength[] = {Localize("Off"), Localize("Icons"), Localize("Icon and number")};
-	Segments(Localize("Strong Weak Hook"), &g_Config.m_QmDemoShowStrongWeak, apStrength, std::size(apStrength), s_aStrongWeakButtons, !GameClient()->ReplaySessionStatus().ViewMode());
+	Segments(Localize("Strong Weak Hook"), &g_Config.m_QmDemoShowStrongWeak, apStrength, std::size(apStrength), s_aStrongWeakButtons);
 	const char *apScope[] = {Localize("Self"), Localize("Others"), Localize("Strong hook"), Localize("Weak hook"), Localize("All")};
-	Segments(Localize("Hook strength scope"), &g_Config.m_QmDemoStrongWeakScope, apScope, std::size(apScope), s_aScopeButtons, !GameClient()->ReplaySessionStatus().ViewMode());
+	Segments(Localize("Hook strength scope"), &g_Config.m_QmDemoStrongWeakScope, apScope, std::size(apScope), s_aScopeButtons);
 
 	// 渲染回放弹窗的 HUD 与聊天开关由主区提供，显示分组内不重复绘制。
 	if(!WithToggles)
@@ -2154,6 +2154,24 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		static CButtonContainer s_HideHudButton;
 		if(Ui()->DoButton_QmIcon(&s_HideHudButton, EQmIcon::EYE_OFF, FONT_ICON_EYE_SLASH, 0, &Button, BUTTONFLAG_LEFT))
 			GameClient()->m_Spectator.CloseReplayPanel();
+		GameClient()->m_Tooltips.DoToolTip(&s_HideHudButton, &Button, Localize("Hide HUD"));
+
+		NameBar.VSplitRight(Margins, &NameBar, nullptr);
+		NameBar.VSplitRight(NameBarHeight, &NameBar, &Button);
+		static CButtonContainer s_LocateGhostButton;
+		if(Ui()->DoButton_QmIcon(&s_LocateGhostButton, EQmIcon::CAMERA, FONT_ICON_CAMERA, 0, &Button, BUTTONFLAG_LEFT))
+		{
+			const int Count = GameClient()->m_RankGhost.ViewMemberCount();
+			if(Count > 0)
+			{
+				const int Current = std::clamp(GameClient()->m_RankGhost.ViewSelectedMember(), 0, Count - 1);
+				const int Next = GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::MEMBER ?
+							 (Current + 1) % Count :
+							 Current;
+				GameClient()->m_RankGhost.ViewSelectMember(Next);
+			}
+		}
+		GameClient()->m_Tooltips.DoToolTip(&s_LocateGhostButton, &Button, Localize("Locate"));
 	}
 
 	// toggle keyboard shortcuts button

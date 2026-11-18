@@ -85,12 +85,13 @@ namespace qmclient::rank_demo
 		DOWNLOAD_REPLAY,
 	};
 
-	// 双击行与「加载影子 / 下载回放」按钮共用的动作判定：任务进行中一律不响应；
-	// 已缓存时双击等价于加载影子（已处于激活态则无动作），未缓存时等价于下载。
+	// 双击行与「加载影子 / 下载回放」按钮共用的动作判定：
+	// 已缓存时双击等价于加载影子（已处于激活态则无动作）；未缓存时等价于下载，
+	// 即使其它下载正在运行也允许入队，否则连续补档只能靠按钮。
 	inline ERowActivation ResolveRowActivation(bool TaskBusy, bool GhostActive, bool DemoCached)
 	{
 		if(TaskBusy)
-			return ERowActivation::NONE;
+			return DemoCached ? ERowActivation::NONE : ERowActivation::DOWNLOAD_REPLAY;
 		if(DemoCached)
 			return GhostActive ? ERowActivation::NONE : ERowActivation::LOAD_GHOST;
 		return ERowActivation::DOWNLOAD_REPLAY;

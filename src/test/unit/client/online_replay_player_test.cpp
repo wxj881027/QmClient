@@ -78,6 +78,28 @@ TEST(OnlineReplayPlayer, TickSeekMovesOneTickAndPreservesPause)
 	EXPECT_EQ(Player.BaseInfo()->m_CurrentTick, 350);
 }
 
+TEST(OnlineReplayPlayer, PercentSeekWorksWhilePausedAndKeepsPauseState)
+{
+	CReplaySource Source;
+	COnlineReplayPlayer Player(Source);
+	Player.Pause();
+	ASSERT_TRUE(Player.SeekPercent(0.25f));
+	EXPECT_EQ(Player.BaseInfo()->m_CurrentTick, 225);
+	EXPECT_TRUE(Player.BaseInfo()->m_Paused);
+	EXPECT_FALSE(Player.IsPlaying());
+}
+
+TEST(OnlineReplayPlayer, ArrowTimeSeekWorksWhilePausedAndKeepsPauseState)
+{
+	CReplaySource Source;
+	COnlineReplayPlayer Player(Source);
+	Player.Pause();
+	ASSERT_TRUE(Player.SeekTime(2.0f));
+	EXPECT_EQ(Player.BaseInfo()->m_CurrentTick, 450);
+	EXPECT_TRUE(Player.BaseInfo()->m_Paused);
+	EXPECT_FALSE(Player.IsPlaying());
+}
+
 TEST(OnlineReplayPlayer, SharedSpeedStepsIncludeIntermediateAndHighRates)
 {
 	CReplaySource Source;

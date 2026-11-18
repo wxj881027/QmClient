@@ -428,6 +428,8 @@
 
 <p>实现入口：<code>CRankGhost::RequestGhostViewForDemo()</code>（<code>src/game/client/components/qmclient/rank_ghost.cpp:624</code>）。双击行等同“下载回放”，不会直接进查看模式。</p>
 
+<p>下载任务共用一套 demo 请求状态机，因此多个回放按 FIFO 排队：当前条目结束后自动开始下一条，排队中的行显示任务状态。Rank 1 条目左侧另有官网按钮，优先打开 <code>https://ddnet.org/watch/?uuid=&lt;uuid&gt;&amp;time=&lt;time&gt;</code>；缺少 uuid 时回退到 demo 路径。</p>
+
 <h3>3.2 查看模式的数据</h3>
 
 <table>
@@ -438,10 +440,13 @@
 		<tr><td>开关</td><td><code>events.qmevt</code> 的 switch states 段</td><td>按录制队伍还原门、激光、拖拉状态</td></tr>
 		<tr><td>消息</td><td><code>events.qmevt</code> 的 messages 段</td><td>全局音效、地图音效、终点成绩与差值</td></tr>
 		<tr><td>总时长</td><td><code>CGhost::ManualEndTick()</code></td><td>进度条、成绩、终点 HUD</td></tr>
+		<tr><td>强弱钩</td><td><code>trackN.gho</code> 的 <code>m_Direction</code> 高位</td><td>每帧方向值与 <code>StrongWeakId</code> 打包；旧缓存按原方向兼容读取</td></tr>
 	</tbody>
 </table>
 
 <p><code>.qmevt</code> 当前 magic 是 <code>QMGHEVT3</code>，兼容读取 <code>QMGHEVT2</code>；V2 没有 <code>m_Team</code>，按 <code>-1</code> 处理并回落到查看者当前队伍。代码在 <code>rank_view_timeline.h:19</code> 与 <code>:38</code>。</p>
+
+<p>冻结进度条由 <code>CFreezeBars</code> 在玩家与地图前景之后绘制，不再混在虚影实体绘制阶段；<code>cl_show_freeze_bars</code> 继续控制显示。查看模式还会绘制官方 demo 同语义的强弱钩图标/数字，并用屏幕边缘箭头指向当前查看目标。</p>
 
 <h2 id="ghost">4. Ghost：本地练习组回放</h2>
 
@@ -527,6 +532,7 @@
 		<tr><td>Esc</td><td>单击开关控制卡；0.4 秒内双击打开游戏菜单，播放不中断</td></tr>
 		<tr><td>X</td><td>退出查看模式 / 关闭 demo 播放</td></tr>
 		<tr><td>眼睛按钮</td><td>只隐藏控制卡，不结束回放；再次 Esc 呼出</td></tr>
+		<tr><td>定位按钮</td><td>自由视角回到当前成员；已跟随时循环下一个成员。边缘箭头同步当前目标</td></tr>
 		<tr><td>点击卡外</td><td>只收起控制卡；弹窗打开时让位给弹窗，不误收卡</td></tr>
 	</tbody>
 </table>
@@ -548,7 +554,7 @@
 		<tr><td>武器 / 攻击 tick</td><td>分支</td><td>轨迹/成员数据</td><td><code>UpdateRenderedCharacters</code></td></tr>
 		<tr><td>表情</td><td>分支练习状态</td><td>轨迹/成员数据</td><td><code>ResolvePracticeEyeEmote</code></td></tr>
 		<tr><td>AFK 坐姿</td><td>参与者屏蔽服务器标记</td><td>不适用</td><td><code>players.cpp</code> 渲染门</td></tr>
-		<tr><td>冻结</td><td>分支 <code>CCharacterCore</code></td><td>不适用</td><td><code>gameclient.cpp</code> 覆盖</td></tr>
+		<tr><td>冻结</td><td>分支 <code>CCharacterCore</code></td><td>轨迹冻结标记 + 查看模式进度条</td><td><code>gameclient.cpp</code> / <code>CFreezeBars</code></td></tr>
 		<tr><td>门 / 拖拉 / 激光</td><td>分支重建 + 分支开关</td><td>快照 + <code>.qmevt</code> 开关（现状）</td><td><code>items.cpp</code> / <code>RenderData</code></td></tr>
 		<tr><td>队伍</td><td>参与者跟随服务器，solo 本地</td><td><code>.qmevt</code> 的 <code>m_Team</code></td><td><code>SyncPracticeWorldConfig</code> / <code>UpdateViewTimeline</code></td></tr>
 		<tr><td>聊天 / 计分 / 击杀</td><td>服务器</td><td>服务器</td><td>不接管</td></tr>
@@ -583,14 +589,14 @@
 <table>
 	<thead><tr><th>项目</th><th>结果</th></tr></thead>
 	<tbody>
-		<tr><td>构建 <code>game-client</code></td><td>成功（基线 104ff23b9a）</td></tr>
-		<tr><td><code>testrunner</code></td><td>7309 / 7309 通过</td></tr>
+		<tr><td>构建 <code>game-client</code></td><td>成功（基线 71cc5b8069 + 本轮改动）</td></tr>
+		<tr><td><code>testrunner</code></td><td>7314 / 7314 通过</td></tr>
 		<tr><td><code>qm-nmt-tests</code></td><td>176 / 176 通过</td></tr>
 		<tr><td><code>qm-ui-popup-tests</code></td><td>502 / 502 通过</td></tr>
 		<tr><td><code>qm-practice-predict-tests</code></td><td>37 / 37 通过</td></tr>
-		<tr><td><code>BM_GhostPathAppend/1000</code></td><td>均值 6.8µs（1s × 5 次聚合）</td></tr>
-		<tr><td><code>BM_OnlineReplayClock</code></td><td>均值 4.5ns</td></tr>
-		<tr><td><code>BM_PracticeEyeEmoteResolve</code></td><td>均值 15–56ns</td></tr>
+		<tr><td><code>BM_GhostPathAppend/1000</code></td><td>CPU 中位数约 5.75µs（0.2s × 5 次聚合）</td></tr>
+		<tr><td><code>BM_GhostExtraDataDecode</code></td><td>CPU 中位数约 1.19ns</td></tr>
+		<tr><td><code>BM_OnlineReplayClock</code></td><td>CPU 中位数约 3.49ns</td></tr>
 	</tbody>
 </table>
 
@@ -652,7 +658,7 @@
 
 <hr>
 
-<p class="small">本文是现行架构规格，记录 2026-11-18 基线 <code>104ff23b9a</code> 的实际代码行为与后续路线。实现变化时优先更新本文，不为每轮验证另建报告。</p>
+<p class="small">本文是现行架构规格，记录 2026-11-18 基线 <code>71cc5b8069</code> 与本轮 Rank 1 交互修复后的实际代码行为与后续路线。实现变化时优先更新本文，不为每轮验证另建报告。</p>
 
 </main>
 </body>

@@ -439,44 +439,6 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 			return true;
 	}
 
-	// 共用播放快捷键先取得输入，避免同一方向键同时触发旁观绑定。
-	if(GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_Menus.PlaybackShortcutsActive())
-	{
-		switch(Event.m_Key)
-		{
-		case KEY_P:
-		case KEY_UP:
-		case KEY_DOWN:
-		case KEY_SPACE:
-		case KEY_RETURN:
-		case KEY_KP_ENTER:
-		case KEY_K:
-		case KEY_LEFT:
-		case KEY_RIGHT:
-		case KEY_J:
-		case KEY_L:
-		case KEY_HOME:
-		case KEY_END:
-		case KEY_PERIOD:
-		case KEY_COMMA:
-		case KEY_0:
-		case KEY_1:
-		case KEY_2:
-		case KEY_3:
-		case KEY_4:
-		case KEY_5:
-		case KEY_6:
-		case KEY_7:
-		case KEY_8:
-		case KEY_9:
-			return true;
-		case KEY_C:
-			return PlaybackControlsActive();
-		default:
-			break;
-		}
-	}
-
 	// 查看模式：左键跟随离镜头中心最近的成员，对齐 demo/旁观的点选习惯。
 	// 控制条、弹窗、选择器与菜单都优先处理鼠标，以上分支已提前返回。
 	if(GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_ClSpectatorMouseclicks &&

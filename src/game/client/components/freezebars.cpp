@@ -238,7 +238,11 @@ inline bool CFreezeBars::IsPlayerInfoAvailable(int ClientId) const
 void CFreezeBars::OnRender()
 {
 	if(GameClient()->ReplaySessionStatus().ViewMode())
+	{
+		if(g_Config.m_ClShowFreezeBars)
+			GameClient()->m_Ghost.RenderManualFreezeBars();
 		return;
+	}
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 

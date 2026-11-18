@@ -438,6 +438,7 @@ void CRankGhost::OnUpdate()
 		UpdateParseStage();
 		break;
 	}
+	StartNextQueuedDemoDownload();
 }
 
 void CRankGhost::OnMapLoad()
@@ -475,6 +476,7 @@ void CRankGhost::OnReset()
 	m_EventRebuildOnly = false;
 	m_LastAlignedRaceTick = -1;
 	m_ViewZoomPersonal = 0.0f;
+	m_vDemoDownloadQueue.clear();
 }
 
 void CRankGhost::OnShutdown()
@@ -483,6 +485,7 @@ void CRankGhost::OnShutdown()
 	if(m_StartPending || m_Stage != EStage::IDLE)
 		AbortTask();
 	m_StartPending = false;
+	m_vDemoDownloadQueue.clear();
 	UnloadGhost();
 }
 
@@ -551,6 +554,23 @@ void CRankGhost::StartPendingLookup(const char *pDemoName, EPendingMode Mode)
 	m_PendingMode = Mode;
 	m_StartPending = true;
 	log_info("rank_ghost", "request queued: demo='%s' mode=%s", pDemoName, Mode == EPendingMode::DEMO_ONLY ? "demo" : "ghost");
+}
+
+void CRankGhost::StartNextQueuedDemoDownload()
+{
+	if(m_vDemoDownloadQueue.empty() || m_Stage != EStage::IDLE || m_StartPending ||
+		m_UnloadPending || m_RetryLoadPending || m_PendingView)
+		return;
+	while(!m_vDemoDownloadQueue.empty())
+	{
+		const std::string Demo = std::move(m_vDemoDownloadQueue.front());
+		m_vDemoDownloadQueue.pop_front();
+		if(Demo.empty())
+			continue;
+		StartPendingLookup(Demo.c_str(), EPendingMode::DEMO_ONLY);
+		if(m_StartPending)
+			return;
+	}
 }
 
 CRankGhost::EManifestState CRankGhost::ManifestState() const
@@ -665,7 +685,21 @@ void CRankGhost::RequestGhostOff()
 
 void CRankGhost::RequestDemoDownload(const char *pDemoName)
 {
-	StartPendingLookup(pDemoName, EPendingMode::DEMO_ONLY);
+	if(pDemoName == nullptr || pDemoName[0] == '\0')
+		return;
+	if(m_PendingMode == EPendingMode::DEMO_ONLY && m_PendingDemo == pDemoName)
+		return;
+	if(IsDemoDownloadQueued(pDemoName))
+		return;
+	m_vDemoDownloadQueue.emplace_back(pDemoName);
+	StartNextQueuedDemoDownload();
+}
+
+bool CRankGhost::IsDemoDownloadQueued(const char *pDemoName) const
+{
+	if(pDemoName == nullptr || pDemoName[0] == '\0')
+		return false;
+	return std::find(m_vDemoDownloadQueue.begin(), m_vDemoDownloadQueue.end(), pDemoName) != m_vDemoDownloadQueue.end();
 }
 
 bool CRankGhost::IsBusy() const
@@ -773,7 +807,9 @@ void CRankGhost::BuildEntryCachePaths(const SEntry &Entry, char *pDemoPath, size
 	str_format(pDemoPath, DemoPathSize, "%s/%s_rank%d_%s_%ss_%s.demo",
 		DEMO_CACHE_DIR, aSafeMap, Entry.m_Rank,
 		IsTeamEntry(Entry) ? "team" : "solo", aSafeTime, aSafeDemo);
-	str_format(pGhostPath, GhostPathSize, "%s/%s/%s_rank%d_%s_%ss_%s.gho",
+	// ghost 缓存版本只影响派生轨迹，不影响 demo 缓存身份。旧缓存没有强弱钩
+	// 与冻结标记时不会被误当成新数据；保留的 demo 会被直接重新解析。
+	str_format(pGhostPath, GhostPathSize, "%s/%s/%s_rank%d_%s_%ss_%s_v2.gho",
 		RANK1_ROOT, GHOST_SUBDIR, aSafeMap, Entry.m_Rank,
 		IsTeamEntry(Entry) ? "team" : "solo", aSafeTime, aSafeDemo);
 }

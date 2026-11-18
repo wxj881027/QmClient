@@ -588,6 +588,7 @@ void CRankGhost::ViewSelectMember(int Index)
 	m_ViewSelected = std::clamp(Index, 0, (int)m_vLoadedSlots.size() - 1);
 	// 点选成员即恢复跟随视角
 	m_ViewCameraMode = EViewCameraMode::MEMBER;
+	GameClient()->m_Ghost.ManualSetFocusSlot(m_vLoadedSlots[m_ViewSelected]);
 }
 
 void CRankGhost::ViewSetCameraMode(EViewCameraMode Mode)

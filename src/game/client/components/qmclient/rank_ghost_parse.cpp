@@ -204,7 +204,7 @@ namespace
 		// 真实忍者帧因此能正常显示；旧版 .gho 才回退到武器判定。
 		Out.m_VelY = QmEncodeGhostFreezeMarker(pDDNetChar != nullptr ? QmGhostFreezeTicksFromEnd(pDDNetChar->m_FreezeEnd, GhostTick) : 0);
 		Out.m_Angle = Char.m_Angle;
-		Out.m_Direction = Char.m_Direction;
+		Out.m_Direction = QmEncodeGhostDirection(Char.m_Direction, pDDNetChar != nullptr ? pDDNetChar->m_StrongWeakId : 0);
 		Out.m_Weapon = Char.m_Weapon;
 		Out.m_HookState = Char.m_HookState;
 		Out.m_HookX = Char.m_HookX;

@@ -47,7 +47,7 @@ void CGhost::GetGhostCharacter(CGhostCharacter *pGhostChar, const CNetObj_Charac
 	// 旧版文件没有标记位，播放侧才回退到“武器=忍者”的历史判定。
 	pGhostChar->m_VelY = QmEncodeGhostFreezeMarker(pDDnetChar != nullptr ? QmGhostFreezeTicksFromEnd(pDDnetChar->m_FreezeEnd, pChar->m_Tick) : 0);
 	pGhostChar->m_Angle = pChar->m_Angle;
-	pGhostChar->m_Direction = pChar->m_Direction;
+	pGhostChar->m_Direction = QmEncodeGhostDirection(pChar->m_Direction, pDDnetChar != nullptr ? pDDnetChar->m_StrongWeakId : 0);
 	pGhostChar->m_Weapon = pChar->m_Weapon;
 	pGhostChar->m_HookState = pChar->m_HookState;
 	pGhostChar->m_HookX = pChar->m_HookX;
@@ -64,7 +64,7 @@ void CGhost::GetNetObjCharacter(CNetObj_Character *pChar, const CGhostCharacter 
 	pChar->m_VelX = pGhostChar->m_VelX;
 	pChar->m_VelY = 0;
 	pChar->m_Angle = pGhostChar->m_Angle;
-	pChar->m_Direction = pGhostChar->m_Direction;
+	pChar->m_Direction = QmDecodeGhostDirection(pGhostChar->m_Direction);
 	pChar->m_Weapon = pGhostChar->m_Weapon;
 	pChar->m_HookState = pGhostChar->m_HookState;
 	pChar->m_HookX = pGhostChar->m_HookX;
@@ -525,6 +525,8 @@ void CGhost::OnRender()
 		Draw.m_Slot = Slot;
 		GetNetObjCharacter(&Draw.m_Player, Ghost.m_Path.Get(CurPos));
 		GetNetObjCharacter(&Draw.m_Prev, Ghost.m_Path.Get(PrevPos));
+		Draw.m_StrongWeakId = QmDecodeGhostStrongWeak(Ghost.m_Path.Get(CurPos)->m_Direction);
+		Draw.m_HasStrongWeak = Draw.m_StrongWeakId >= 0;
 
 		int TickDiff = Draw.m_Player.m_Tick - Draw.m_Prev.m_Tick;
 		if(TickDiff > 0)
@@ -628,20 +630,21 @@ void CGhost::OnRender()
 		return;
 	}
 
-	// 查看模式：全部 hook -> 全部 Tee -> 冻结进度条 -> 名字与方向指示叠加
+	// 查看模式：全部 hook -> 全部 Tee -> 名字、强弱钩与方向指示叠加。
+	// 冻结条由 CFreezeBars 在玩家与地图前景之后绘制。
 	for(const SGhostDrawData &Draw : m_vGhostDraws)
 		GameClient()->m_Players.RenderHook(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
 	for(const SGhostDrawData &Draw : m_vGhostDraws)
 		GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick, Draw.m_AttackTimeOverride);
 
-	// 冻结段画与实机一致的进度条：回放里看到“无武器”的 Tee 时，直接能读出
-	// 它正处在冻结倒计时中。开关沿用 cl_show_freeze_bars（在 CFreezeBars 内判定）。
+	int PrimaryStrongWeakId = -1;
 	for(const SGhostDrawData &Draw : m_vGhostDraws)
 	{
-		const float FreezeProgress = QmGhostFreezeProgress(m_aManualFreezeSpans[Draw.m_Slot], PlaybackTick);
-		if(FreezeProgress < 0.0f)
-			continue;
-		GameClient()->m_FreezeBars.RenderBarAt(Draw.m_Pos, FreezeProgress);
+		if(Draw.m_Slot == m_ManualPrimarySlot && Draw.m_HasStrongWeak)
+		{
+			PrimaryStrongWeakId = Draw.m_StrongWeakId;
+			break;
+		}
 	}
 
 	// QmClient: 查看模式下为每个虚影标注名字（多轨回放的信息可读性，对齐 demo 播放器）
@@ -650,13 +653,52 @@ void CGhost::OnRender()
 	{
 		const CGhostItem &Ghost = m_aActiveGhosts[Draw.m_Slot];
 		const vec2 TeePos = Draw.m_Pos;
+		float NameWidth = 0.0f;
 		if(g_Config.m_ClNamePlates && Ghost.m_aPlayer[0] != '\0')
 		{
 			const float NameFontSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
-			const float NameWidth = TextRender()->TextWidth(NameFontSize, Ghost.m_aPlayer, -1);
+			NameWidth = TextRender()->TextWidth(NameFontSize, Ghost.m_aPlayer, -1);
 			TextRender()->TextColor(1, 1, 1, 1);
 			TextRender()->TextOutlineColor(0, 0, 0, 0.6f);
 			TextRender()->Text(TeePos.x - NameWidth / 2, TeePos.y - 56.0f, NameFontSize, Ghost.m_aPlayer);
+		}
+
+		// 强弱钩与官方 demo 名字牌同语义：主选手作为参照，其它成员显示强/弱钩。
+		const auto DisplaySettings = qm_demo_display::Resolve(g_Config, true, false);
+		if(Draw.m_HasStrongWeak && PrimaryStrongWeakId >= 0 && DisplaySettings.StrongWeakEnabled())
+		{
+			const bool Own = Draw.m_Slot == m_ManualPrimarySlot;
+			int State = 0;
+			if(!Own)
+				State = PrimaryStrongWeakId > Draw.m_StrongWeakId ? 1 : -1;
+			const bool Strong = State > 0;
+			const bool Weak = State < 0;
+			if(DisplaySettings.ShowStrongWeak(Own, Strong, Weak))
+			{
+				const float StrongSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesStrongSize / 100.0f;
+				const vec2 IconPos(
+					TeePos.x - (NameWidth > 0.0f ? NameWidth * 0.5f + StrongSize * 0.75f + 4.0f : 0.0f),
+					TeePos.y - 56.0f);
+				const ColorRGBA StrongColor = State > 0 ?
+								      color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmNameplateStrongHookColor)) :
+							      State < 0 ? color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmNameplateWeakHookColor)) :
+									  ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+				Graphics()->TextureSet(g_pData->m_aImages[IMAGE_STRONGWEAK].m_Id);
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(StrongColor);
+				Graphics()->SelectSprite(State > 0 ? SPRITE_HOOK_STRONG : State < 0 ? SPRITE_HOOK_WEAK :
+												      SPRITE_HOOK_ICON);
+				Graphics()->DrawSprite(IconPos.x, IconPos.y, StrongSize, StrongSize);
+				Graphics()->QuadsEnd();
+				if(DisplaySettings.ShowStrongWeakId())
+				{
+					char aStrongWeakId[4];
+					str_format(aStrongWeakId, sizeof(aStrongWeakId), "%d", Draw.m_StrongWeakId);
+					TextRender()->TextColor(StrongColor);
+					TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.6f);
+					TextRender()->Text(IconPos.x + StrongSize * 0.7f, IconPos.y - StrongSize * 0.45f, StrongSize * 0.8f, aStrongWeakId);
+				}
+			}
 		}
 
 		// 查看模式使用共用 demo 的方向显示配置，主选手作为回放的自身成员。
@@ -695,6 +737,33 @@ void CGhost::OnRender()
 		}
 		Graphics()->QuadsEnd();
 		Graphics()->QuadsSetRotation(0.0f);
+	}
+
+	// 自由视角或镜头过渡时，主选手可能在屏幕外：边缘箭头持续指向影子，
+	// 玩家不用逐个拖动镜头寻找。
+	if(m_ManualFocusSlot >= 0 && m_aManualRenderPosValid[m_ManualFocusSlot])
+	{
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		const vec2 Focus = m_aManualRenderPos[m_ManualFocusSlot];
+		const float Margin = 28.0f;
+		if(Focus.x < ScreenX0 + Margin || Focus.x > ScreenX1 - Margin || Focus.y < ScreenY0 + Margin || Focus.y > ScreenY1 - Margin)
+		{
+			const vec2 Center = GameClient()->m_Camera.m_Center;
+			const vec2 Direction = normalize(Focus - Center);
+			const vec2 MarkerPos(
+				std::clamp(Focus.x, ScreenX0 + Margin, ScreenX1 - Margin),
+				std::clamp(Focus.y, ScreenY0 + Margin, ScreenY1 - Margin));
+			const float MarkerSize = 22.0f;
+			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_ARROW].m_Id);
+			Graphics()->QuadsBegin();
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.85f);
+			Graphics()->QuadsSetRotation(angle(Direction));
+			IGraphics::CQuadItem Quad(MarkerPos.x - MarkerSize * 0.5f, MarkerPos.y - MarkerSize * 0.5f, MarkerSize, MarkerSize);
+			Graphics()->QuadsDrawTL(&Quad, 1);
+			Graphics()->QuadsEnd();
+			Graphics()->QuadsSetRotation(0.0f);
+		}
 	}
 }
 
@@ -799,6 +868,8 @@ void CGhost::StopRender()
 	m_Rendering = false;
 	m_NewRenderTick = -1;
 	m_ManualMode = false;
+	m_ManualPrimarySlot = -1;
+	m_ManualFocusSlot = -1;
 	m_ManualClock.SetPlaying(false, Client()->LocalTime());
 	std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
 	for(auto &vSpans : m_aManualFreezeSpans)
@@ -839,11 +910,34 @@ void CGhost::ManualSetSpeed(float Speed)
 		m_ManualClock.SetSpeed(Speed, Client()->LocalTime());
 }
 
+void CGhost::ManualSetFocusSlot(int Slot)
+{
+	if(m_ManualMode && Slot >= 0 && Slot < MAX_ACTIVE_GHOSTS && m_aManualSlots[Slot])
+		m_ManualFocusSlot = Slot;
+}
+
+void CGhost::RenderManualFreezeBars()
+{
+	if(!m_ManualMode)
+		return;
+	const int PlaybackTick = ManualPlaybackTick();
+	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
+	{
+		if(!m_aManualSlots[Slot] || !m_aManualRenderPosValid[Slot])
+			continue;
+		const float FreezeProgress = QmGhostFreezeProgress(m_aManualFreezeSpans[Slot], PlaybackTick);
+		if(FreezeProgress <= 0.0f)
+			continue;
+		GameClient()->m_FreezeBars.RenderBarAt(m_aManualRenderPos[Slot], FreezeProgress);
+	}
+}
+
 void CGhost::StartRenderManual(const std::vector<int> &vSlots)
 {
 	StopRender();
 	BuildManualFreezeSpans(vSlots);
 	m_ManualPrimarySlot = vSlots.empty() ? -1 : vSlots.front();
+	m_ManualFocusSlot = m_ManualPrimarySlot;
 	m_vManualSampleTicks.clear();
 	std::fill(std::begin(m_aManualSlots), std::end(m_aManualSlots), false);
 	for(int Slot : vSlots)

@@ -7,6 +7,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/ghost_extra_data.h>
 #include <game/client/components/qmclient/ghost_freeze_bar.h>
 #include <game/client/components/qmclient/ghost_path.h>
 #include <game/client/components/qmclient/local_world.h>
@@ -115,6 +116,9 @@ private:
 		const CTeeRenderInfo *m_pSharedRenderInfo = nullptr;
 		// 查看模式：挥锤/开枪相位（秒），由回放播放头换算；跑图模式不用。
 		std::optional<float> m_AttackTimeOverride;
+		// 新转换的影子把 DDNetCharacter 的 StrongWeakId 打包在方向字段高位。
+		bool m_HasStrongWeak = false;
+		int m_StrongWeakId = 0;
 	};
 	std::vector<SGhostDrawData> m_vGhostDraws;
 
@@ -140,6 +144,7 @@ private:
 	bool m_ManualMode = false;
 	COnlineReplayClock m_ManualClock;
 	int m_ManualPrimarySlot = -1;
+	int m_ManualFocusSlot = -1;
 	std::vector<int> m_vManualSampleTicks;
 	int m_ManualEndTick = 0; // 本回放最长成员轨迹
 	vec2 m_aManualRenderPos[MAX_ACTIVE_GHOSTS] = {}; // 每个槽位虚影当前插值位置（供镜头跟随）
@@ -216,6 +221,10 @@ public:
 	bool ManualPlaying() const { return m_ManualClock.Playing(); }
 	int ManualPlaybackTick() const;
 	int ManualAdjacentTick(int Current, IDemoPlayer::ETickOffset Offset) const { return OnlineReplayAdjacentTick(m_vManualSampleTicks, Current, Offset); }
+	// 冻结条必须画在玩家与地图前景之后，否则会被前景瓦片盖住。
+	void RenderManualFreezeBars();
+	// 边缘定位箭头跟随当前查看目标；多成员回放里切换成员后不再只指向主轨。
+	void ManualSetFocusSlot(int Slot);
 	// 手动播放的 tick 内插值相位（0–1）；暂停时冻结，不随本地预测波动（避免画面抖动）
 	float ManualRenderIntra() const;
 	int ManualEndTick() const { return m_ManualEndTick; }

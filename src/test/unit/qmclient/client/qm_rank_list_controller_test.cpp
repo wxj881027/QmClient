@@ -192,9 +192,10 @@ TEST(QmRankListController, RowActivationLoadsGhostWhenReplayIsCached)
 	EXPECT_EQ(qmclient::rank_demo::ResolveRowActivation(false, true, true), qmclient::rank_demo::ERowActivation::NONE);
 }
 
-TEST(QmRankListController, RowActivationIsIgnoredWhileTaskIsRunning)
+TEST(QmRankListController, RowActivationQueuesUncachedDownloadWhileTaskIsRunning)
 {
-	EXPECT_EQ(qmclient::rank_demo::ResolveRowActivation(true, false, false), qmclient::rank_demo::ERowActivation::NONE);
+	EXPECT_EQ(qmclient::rank_demo::ResolveRowActivation(true, false, false), qmclient::rank_demo::ERowActivation::DOWNLOAD_REPLAY);
+	EXPECT_EQ(qmclient::rank_demo::ResolveRowActivation(true, true, false), qmclient::rank_demo::ERowActivation::DOWNLOAD_REPLAY);
 	EXPECT_EQ(qmclient::rank_demo::ResolveRowActivation(true, false, true), qmclient::rank_demo::ERowActivation::NONE);
 	EXPECT_EQ(qmclient::rank_demo::ResolveRowActivation(true, true, true), qmclient::rank_demo::ERowActivation::NONE);
 }
