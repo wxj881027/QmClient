@@ -80,8 +80,8 @@ void CCommandProcessorFragment_SDL::Cmd_Init(const SCommand_Init *pCommand)
 
 void CCommandProcessorFragment_SDL::Cmd_Shutdown(const SCommand_Shutdown *pCommand)
 {
-	if(m_GLContext)
-		SDL_GL_MakeCurrent(nullptr, nullptr);
+	if(m_GLContext != nullptr && !SDL_GL_MakeCurrent(nullptr, nullptr))
+		log_error("gfx", "Unable to release graphics context on the render thread: %s", SDL_GetError());
 }
 
 void CCommandProcessorFragment_SDL::Cmd_Swap(const CCommandBuffer::SCommand_Swap *pCommand)
@@ -773,6 +773,12 @@ std::optional<int> CGraphicsBackend_SDL_GL::ShowMessageBox(const IGraphics::CMes
 	if(m_BackendType == EBackendType::BACKEND_TYPE_VULKAN)
 		return ShowMessageBoxImpl(MessageBox, nullptr);
 #endif
+	if(m_GLContext != nullptr)
+	{
+		// 先隐藏窗口，等关闭流程在线程上解绑上下文后再销毁窗口。
+		HideWindow();
+		return ShowMessageBoxWithoutGraphics(MessageBox);
+	}
 	if(m_pProcessor != nullptr)
 	{
 		m_pProcessor->ErroneousCleanup();
@@ -1068,6 +1074,7 @@ CGraphicsBackend_SDL_GL::CGraphicsBackend_SDL_GL(TTranslateFunc &&TranslateFunc)
 int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, int *pHeight, int *pRefreshRate, int *pFsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight, int *pCurrentWidth, int *pCurrentHeight, IStorage *pStorage)
 {
 	crashdump_set_graphics_backend(nullptr);
+	m_aErrorString[0] = '\0';
 #if defined(CONF_HEADLESS_CLIENT)
 	m_BackendType = BACKEND_TYPE_OPENGL;
 	g_Config.m_GfxGLMajor = 0;
@@ -1166,6 +1173,11 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		else if(UseModernGL)
 		{
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		}
+		else
+		{
+			// SDL 保留上一次尝试的属性，旧版上下文需要清掉 profile 才能走兼容入口。
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0);
 		}
 	}
 	else if(m_BackendType == BACKEND_TYPE_OPENGL_ES)
@@ -1279,15 +1291,17 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		}
 	}
 
-	SDL_PropertiesID Props = SDL_CreateProperties();
-	SDL_SetStringProperty(Props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, pName);
-	SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(DisplayId));
-	SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(DisplayId));
-	SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, *pWidth);
-	SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, *pHeight);
-	SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SdlFlags);
-	m_pWindow = SDL_CreateWindowWithProperties(Props);
-	SDL_DestroyProperties(Props);
+	const SDL_PropertiesID Props = SDL_CreateProperties();
+	const bool WindowPropertiesReady = Props != 0 &&
+					   SDL_SetStringProperty(Props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, pName) &&
+					   SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(DisplayId)) &&
+					   SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(DisplayId)) &&
+					   SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, *pWidth) &&
+					   SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, *pHeight) &&
+					   SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SdlFlags);
+	m_pWindow = WindowPropertiesReady ? SDL_CreateWindowWithProperties(Props) : nullptr;
+	if(Props != 0)
+		SDL_DestroyProperties(Props);
 
 #if !defined(CONF_PLATFORM_MACOS) && !defined(CONF_PLATFORM_HAIKU)
 	if(m_pWindow != nullptr && IsExclusiveFullscreen)
@@ -1507,6 +1521,13 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 			CmdBuffer.Reset();
 		}
 
+		if(m_GLContext != nullptr && !ContextBindFailed)
+		{
+			// GL 初始化失败后，仍需把解绑命令提交给持有当前上下文的线程。
+			ProcessError(m_pProcessor->GetError());
+			m_pProcessor->ClearError();
+			ResetSubmissionStopForCleanup();
+		}
 		CCommandProcessorFragment_SDL::SCommand_Shutdown Cmd;
 		CmdBuffer.AddCommandUnsafe(Cmd);
 		RunBuffer(&CmdBuffer);
@@ -1583,6 +1604,13 @@ int CGraphicsBackend_SDL_GL::Shutdown()
 		WaitForIdle();
 		CmdBuffer.Reset();
 
+		if(m_GLContext != nullptr)
+		{
+			// 停止提交后，只恢复 SDL 解绑命令的提交，避免主线程直接销毁仍绑定的上下文。
+			ProcessError(m_pProcessor->GetError());
+			m_pProcessor->ClearError();
+			ResetSubmissionStopForCleanup();
+		}
 		CCommandProcessorFragment_SDL::SCommand_Shutdown Cmd;
 		CmdBuffer.AddCommandUnsafe(Cmd);
 		RunBuffer(&CmdBuffer);
