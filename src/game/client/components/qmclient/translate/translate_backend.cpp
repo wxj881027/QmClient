@@ -324,6 +324,12 @@ namespace
 			pWithoutScheme = Url.c_str();
 		}
 
+		if(Url.find_first_of("?#") != std::string::npos)
+		{
+			str_copy(pError, "TencentCloud endpoint must not contain query parameters or fragments", ErrorSize);
+			return false;
+		}
+
 		const char *pPath = str_find(pWithoutScheme, "/");
 		if(pPath)
 		{
@@ -339,13 +345,6 @@ namespace
 		if(Host.empty())
 		{
 			str_copy(pError, "TencentCloud endpoint host is empty", ErrorSize);
-			return false;
-		}
-		if(Path.empty())
-			Path = "/";
-		if(Path.find('?') != std::string::npos)
-		{
-			str_copy(pError, "TencentCloud endpoint must not contain query parameters", ErrorSize);
 			return false;
 		}
 		return true;
@@ -652,8 +651,8 @@ public:
 		const std::string Signature = HmacSha256Hex(
 			reinterpret_cast<const unsigned char *>(SecretSigning.data()), SecretSigning.size(), StringToSign);
 
-		const std::string Authorization =
-			"TC3-HMAC-SHA256 Credential=" + std::string(pSecretId) + "/" + CredentialScope +
+		const std::string AuthorizationHeader =
+			"Authorization: TC3-HMAC-SHA256 Credential=" + std::string(pSecretId) + "/" + CredentialScope +
 			", SignedHeaders=" + SignedHeaders +
 			", Signature=" + Signature;
 
@@ -663,8 +662,8 @@ public:
 		m_pHttpRequest->MaxResponseSize(64 * 1024);
 		m_pHttpRequest->Timeout(CTimeout{10000, 30000, 500, 10});
 		m_pHttpRequest->HeaderString("Content-Type", CONTENT_TYPE);
-		m_pHttpRequest->HeaderString("Authorization", Authorization.c_str());
-		m_pHttpRequest->HeaderString("Host", Host.c_str());
+		m_pHttpRequest->Header(AuthorizationHeader.c_str());
+		m_pHttpRequest->Header(("Host: " + Host).c_str());
 		m_pHttpRequest->HeaderString("X-TC-Action", TENCENTCLOUD_TMT_ACTION);
 		m_pHttpRequest->HeaderString("X-TC-Version", TENCENTCLOUD_TMT_VERSION);
 		m_pHttpRequest->HeaderString("X-TC-Region", g_Config.m_QmTranslateTcRegion);
@@ -841,8 +840,10 @@ private:
 			return false;
 		}
 
-		// 语言对相同时服务以 200 + 固定英文提示代替译文，按服务提示处理，不能直出到聊天
-		if(str_find_nocase(pTranslatedText->u.string.ptr, "SELECT TWO DISTINCT LANGUAGES"))
+		// 只识别完整的语言对提示，正常译文也可能包含相同短语。
+		static constexpr char s_aLanguagePairNotice[] = "PLEASE SELECT TWO DISTINCT LANGUAGES";
+		if(pTranslatedText->u.string.length == sizeof(s_aLanguagePairNotice) - 1 &&
+			str_comp_nocase(pTranslatedText->u.string.ptr, s_aLanguagePairNotice) == 0)
 		{
 			Out.m_Notice = ETranslateNotice::SERVICE_NOTICE;
 			str_copy(Out.m_Text, "MyMemory rejected the language pair instead of translating");
@@ -1096,9 +1097,8 @@ public:
 		m_pHttpRequest->MaxResponseSize(64 * 1024);
 		m_pHttpRequest->Timeout(CTimeout{10000, 30000, 500, 10});
 		m_pHttpRequest->HeaderString("Content-Type", "application/json");
-		char aAuthorization[512];
-		str_format(aAuthorization, sizeof(aAuthorization), "DeepL-Auth-Key %s", pApiKey);
-		m_pHttpRequest->HeaderString("Authorization", aAuthorization);
+		const std::string AuthorizationHeader = std::string("Authorization: DeepL-Auth-Key ") + pApiKey;
+		m_pHttpRequest->Header(AuthorizationHeader.c_str());
 		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(Payload.data()), Payload.size());
 		Http.Run(m_pHttpRequest);
 	}
@@ -1118,12 +1118,17 @@ private:
 	bool m_Retried = false;
 	std::string m_ChatPayload;
 	std::string m_ResponsesPayload;
-	char m_aAuthorization[512] = "";
+	std::string m_AuthorizationHeader;
+
+	bool ParseLlmJson(const json_value *pObj, SLlmParseResult &Parsed) const
+	{
+		return m_ActiveStyle == ELlmApiStyle::RESPONSES ? ParseLlmResponsesJson(pObj, Parsed) : ParseLlmResponseJson(pObj, Parsed);
+	}
 
 	bool ParseResponseJson(const json_value *pObj, CTranslateResponse &Out)
 	{
 		SLlmParseResult Parsed;
-		const bool Success = m_ActiveStyle == ELlmApiStyle::RESPONSES ? ParseLlmResponsesJson(pObj, Parsed) : ParseLlmResponseJson(pObj, Parsed);
+		const bool Success = ParseLlmJson(pObj, Parsed);
 		Out.m_Language[0] = '\0';
 		if(!Success)
 		{
@@ -1168,7 +1173,7 @@ protected:
 				if(const ETranslateNotice Notice = LlmErrorNotice(pObj, m_Provider == ELlmProvider::ZHIPU_AI); Notice != ETranslateNotice::NONE)
 					Out.m_Notice = Notice;
 				SLlmParseResult Parsed;
-				ParseLlmResponseJson(pObj, Parsed);
+				ParseLlmJson(pObj, Parsed);
 				if(Parsed.m_Refused)
 				{
 					Out.m_Notice = ETranslateNotice::CONTENT_REFUSED;
@@ -1310,8 +1315,8 @@ protected:
 		// 连接最多 10 秒，完整请求最多 60 秒；低速限制独立于总时限。
 		pRequest->Timeout(IsLocalTranslateEndpoint(m_aBaseUrl) ? CTimeout{2000, 30000, 100, 15} : CTimeout{10000, 60000, 100, 30});
 		pRequest->HeaderString("Content-Type", "application/json");
-		if(m_aAuthorization[0])
-			pRequest->HeaderString("Authorization", m_aAuthorization);
+		if(!m_AuthorizationHeader.empty())
+			pRequest->Header(m_AuthorizationHeader.c_str());
 		pRequest->Post(reinterpret_cast<const unsigned char *>(pPayload), str_length(pPayload));
 		m_pHttp->Run(pRequest);
 		m_pHttpRequest = std::move(pRequest);
@@ -1358,7 +1363,7 @@ public:
 				LearnApiStyle(m_aBaseUrl, m_ActiveStyle);
 			return Result;
 		}
-		if(Result.has_value() && ShouldRetryWithOtherApiStyle())
+		if(Result.has_value() && Out.m_Notice != ETranslateNotice::CONTENT_REFUSED && ShouldRetryWithOtherApiStyle())
 		{
 			StartRequest(m_ActiveStyle == ELlmApiStyle::CHAT ? ELlmApiStyle::RESPONSES : ELlmApiStyle::CHAT);
 			m_Retried = true;
@@ -1474,7 +1479,7 @@ public:
 			m_ResponsesPayload += ",\"max_output_tokens\":1024";
 		m_ResponsesPayload += "}";
 		if(!NoAuth)
-			str_format(m_aAuthorization, sizeof(m_aAuthorization), "Bearer %s", pApiKey);
+			m_AuthorizationHeader = std::string("Authorization: Bearer ") + pApiKey;
 
 		// 确定初始接口格式：显式后缀 > 会话记忆 > 默认 Chat
 		std::optional<ELlmApiStyle> Remembered;

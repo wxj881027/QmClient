@@ -2,6 +2,8 @@
 
 #include <test/support/translate_http_test_support.h>
 
+#include <algorithm>
+
 TEST_F(CTranslateBackendTest, LibreRequestIsCompleteAtSubmission)
 {
 	str_copy(g_Config.m_QmTranslateBackend, "libretranslate");
@@ -105,6 +107,29 @@ TEST_F(CTranslateBackendTest, HttpPolicyErrorIsRefusalRatherThanAuthentication)
 	EXPECT_EQ(Response.m_Notice, ETranslateNotice::CONTENT_REFUSED);
 }
 
+TEST_F(CTranslateBackendTest, AutoDoesNotRetryHttpContentRefusal)
+{
+	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://refusal-terminal.test/v1");
+	auto pBackend = Create();
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"error":{"code":"content_policy_violation","message":"Provider explanation"}})", 404);
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::CONTENT_REFUSED);
+	EXPECT_EQ(m_Http.m_vSubmissions.size(), 1u);
+}
+
+TEST_F(CTranslateBackendTest, ResponsesHttpErrorKeepsContentRefusal)
+{
+	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://responses-refusal.test/v1/responses");
+	auto pBackend = Create();
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"status":"incomplete","incomplete_details":{"reason":"content_filter"}})", 403);
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::CONTENT_REFUSED);
+}
+
 TEST_F(CTranslateBackendTest, HttpErrorsExposeStableNoticeCategories)
 {
 	struct SCase
@@ -146,6 +171,26 @@ TEST_F(CTranslateBackendTest, AutoRetriesUnsupportedChatOnceThenParsesAllRespons
 	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(true));
 	EXPECT_STREQ(Response.m_Text, "你好世界");
 	EXPECT_EQ(m_Http.m_vSubmissions.size(), 2u);
+}
+
+TEST_F(CTranslateBackendTest, LlmKeepsFullAuthorizationAcrossApiFallback)
+{
+	const std::string Key(245, 'k');
+	str_copy(g_Config.m_QmTranslateLlmKeyCustom, Key.c_str());
+	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://full-auth-fallback.test/v1");
+	auto pBackend = Create();
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	str_copy(g_Config.m_QmTranslateLlmKeyCustom, "updated-key");
+	m_Http.m_vSubmissions[0].m_pRequest->Finish("{}", 404);
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::nullopt);
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 2u);
+	const std::string Expected = "Authorization: Bearer " + Key;
+	for(const auto &Submission : m_Http.m_vSubmissions)
+	{
+		const auto &vHeaders = Submission.m_pRequest->m_vHeaders;
+		EXPECT_NE(std::find(vHeaders.begin(), vHeaders.end(), Expected), vHeaders.end());
+	}
 }
 
 TEST_F(CTranslateBackendTest, AutoRecoversWhenCachedResponsesEndpointLosesSupport)
@@ -391,6 +436,18 @@ TEST_F(CTranslateBackendTest, MymemoryTargetOnlyTextSkipsRequest)
 	EXPECT_EQ(Response.m_Notice, ETranslateNotice::ALREADY_TARGET_LANGUAGE);
 }
 
+TEST_F(CTranslateBackendTest, MymemoryKeepsTranslationContainingLanguagePairPhrase)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "mymemory");
+	auto pBackend = Create("请选择两种不同的语言以继续。", "en", "zh");
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"responseStatus":200,"responseData":{"translatedText":"Please select two distinct languages to continue."}})");
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(true));
+	EXPECT_STREQ(Response.m_Text, "Please select two distinct languages to continue.");
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::NONE);
+}
+
 TEST_F(CTranslateBackendTest, MymemoryStringStatusErrorIsNotRenderedAsTranslation)
 {
 	str_copy(g_Config.m_QmTranslateBackend, "mymemory");
@@ -403,17 +460,60 @@ TEST_F(CTranslateBackendTest, MymemoryStringStatusErrorIsNotRenderedAsTranslatio
 	EXPECT_EQ(str_find(Response.m_Text, "PLEASE SELECT"), nullptr);
 }
 
+TEST_F(CTranslateBackendTest, TencentRejectsEndpointQueryOrFragmentBeforeHttp)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "tencentcloud");
+	str_copy(g_Config.m_QmTranslateTcSecretId, "test-id");
+	str_copy(g_Config.m_QmTranslateTcSecretKey, "test-key");
+	for(const char *pEndpoint : {"https://tencent.test?region=test", "https://tencent.test/translate#settings"})
+	{
+		SCOPED_TRACE(pEndpoint);
+		str_copy(g_Config.m_QmTranslateTcEndpoint, pEndpoint);
+		auto pBackend = Create();
+		CTranslateResponse Response;
+		EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+		EXPECT_EQ(Response.m_Notice, ETranslateNotice::INVALID_CONFIGURATION);
+		EXPECT_TRUE(m_Http.m_vSubmissions.empty());
+	}
+}
+
+TEST_F(CTranslateBackendTest, TencentKeepsFullSignedHeaderValues)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "tencentcloud");
+	const std::string SecretId(100, 'i');
+	str_copy(g_Config.m_QmTranslateTcSecretId, SecretId.c_str());
+	str_copy(g_Config.m_QmTranslateTcSecretKey, "test-key");
+	const std::string Label(63, 'a');
+	const std::string Host = Label + "." + Label + "." + Label + "." + std::string(56, 'b') + ".test";
+	str_copy(g_Config.m_QmTranslateTcEndpoint, Host.c_str());
+	auto pBackend = Create();
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	const auto &vHeaders = m_Http.m_vSubmissions[0].m_pRequest->m_vHeaders;
+	const std::string HostHeader = "Host: " + Host;
+	EXPECT_NE(std::find(vHeaders.begin(), vHeaders.end(), HostHeader), vHeaders.end());
+	const std::string Prefix = "Authorization: TC3-HMAC-SHA256 Credential=" + SecretId + "/";
+	const auto It = std::find_if(vHeaders.begin(), vHeaders.end(), [&](const std::string &Header) {
+		return str_startswith(Header.c_str(), Prefix.c_str()) != nullptr;
+	});
+	ASSERT_NE(It, vHeaders.end());
+	const std::string SignatureField = ", Signature=";
+	const size_t Offset = It->find(SignatureField);
+	ASSERT_NE(Offset, std::string::npos);
+	EXPECT_EQ(It->size() - Offset - SignatureField.size(), 64u);
+}
+
 TEST_F(CTranslateBackendTest, DeeplFreeKeyUsesFreeHostAndAuthHeader)
 {
 	str_copy(g_Config.m_QmTranslateBackend, "deepl");
-	str_copy(g_Config.m_QmTranslateDeeplKey, "279a2e9d-83b3-c416-7e2d-f721593e42a0:fx");
+	const std::string Key = std::string(240, 'k') + ":fx";
+	str_copy(g_Config.m_QmTranslateDeeplKey, Key.c_str());
 	auto pFree = Create("hello", "zh", "auto");
 	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
 	EXPECT_NE(str_find(m_Http.m_vSubmissions[0].m_pRequest->Url(), "https://api-free.deepl.com/v2/translate"), nullptr);
 	EXPECT_STREQ(m_Http.m_vSubmissions[0].m_Method.c_str(), "POST");
 	ASSERT_EQ(m_Http.m_vSubmissions[0].m_pRequest->m_vHeaders.size(), 2u);
 	EXPECT_STREQ(m_Http.m_vSubmissions[0].m_pRequest->m_vHeaders[0].c_str(), "Content-Type: application/json");
-	EXPECT_STREQ(m_Http.m_vSubmissions[0].m_pRequest->m_vHeaders[1].c_str(), "Authorization: DeepL-Auth-Key 279a2e9d-83b3-c416-7e2d-f721593e42a0:fx");
+	EXPECT_EQ(m_Http.m_vSubmissions[0].m_pRequest->m_vHeaders[1], "Authorization: DeepL-Auth-Key " + Key);
 	// auto 源不提交 source_lang
 	EXPECT_EQ(str_find(m_Http.m_vSubmissions[0].m_Body.c_str(), "source_lang"), nullptr);
 	// Pro key 走 api.deepl.com
