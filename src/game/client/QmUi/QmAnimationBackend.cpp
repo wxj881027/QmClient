@@ -347,13 +347,10 @@ bool CQmAnimationBackend::StartTrackInterrupt(const STrackKey &Key, const SUiAni
 		return true;
 	}
 
-	// 统一打断语义（可中断 + 速度继承）：任何打断都以 (当前值, 当前速度) 为初值
-	// 落到弹簧继续运动——请求本身是弹簧就用它的参数，是 tween 就按时长映射接管弹簧，
-	// 不再“从当前值重放曲线”。
+	// 保留接管请求的延迟。等待结束后，弹簧从打断时的值和速度接续。
 	SUiAnimRequest Takeover = Request;
 	Takeover.m_Transition.m_Driver = EUiAnimDriver::SPRING;
 	Takeover.m_Transition.m_DurationSec = 0.0f;
-	Takeover.m_Transition.m_DelaySec = 0.0f;
 	if(Request.m_Transition.m_Driver != EUiAnimDriver::SPRING)
 		Takeover.m_Transition.m_Spring = InterruptSpringFromTween(Request.m_Transition);
 	if(Takeover.m_TrackId != ActiveTrackId)
@@ -503,10 +500,13 @@ void CQmAnimationBackend::PruneValueCache()
 		}
 		It = m_Values.erase(It);
 	}
-	// 兜底：长期只增不减说明窗口外仍有大量键被反复触碰，直接清空——值缓存丢了
-	// 只影响下一帧的一次"首见同步"，不会产生可见动画。
+	// 超过硬上限时释放其余缓存值，避免 HasValue 把仍在播放或排队的轨道报成首见。
 	if(m_Values.size() > MAX_VALUES_HARD)
-		m_Values.clear();
+	{
+		std::erase_if(m_Values, [this](const auto &Pair) {
+			return !m_ActiveTracks.contains(Pair.first) && !m_QueuedTracks.contains(Pair.first);
+		});
+	}
 }
 
 void CQmAnimationBackend::SetValue(uint64_t NodeKey, EUiAnimProperty Property, float Value)
