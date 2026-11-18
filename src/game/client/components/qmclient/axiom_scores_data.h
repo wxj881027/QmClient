@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-// 计分板和选图菜单共用开放平台的请求额度。
+// 计分板、选图菜单与服务器浏览器共用开放平台的请求额度。
 class CQmAxiomRequestBudget
 {
 	std::deque<int64_t> m_RecentStarts;
@@ -93,6 +93,7 @@ struct SQmAxiomPopupSize
 const char *QmAxiomModeName(EQmAxiomMode Mode);
 // 把解析结果翻成可显示的简短原因；SUCCESS 返回空串。
 const char *QmAxiomParseResultLabel(EQmAxiomParseResult Result);
+std::string QmBuildAxiomMapInfoUrl(const char *pMapName, EQmAxiomMode Mode);
 std::string QmBuildAxiomPointsUrl(const char *pPlayerName, EQmAxiomMode Mode);
 EQmAxiomParseResult QmParseAxiomPointsResponse(const char *pData, size_t DataSize, const char *pPlayerName, EQmAxiomMode Mode, int64_t &OutPoints);
 std::string QmBuildAxiomSearchUrl(const char *pPlayerName);

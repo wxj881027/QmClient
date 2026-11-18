@@ -8,52 +8,14 @@
 #include <game/client/components/qmclient/vote_map_loader.h>
 
 #include <gtest/gtest.h>
+#include <test/support/map_http_recorder.h>
 
 #include <chrono>
-#include <cstdlib>
 #include <thread>
 #include <utility>
 
 namespace
 {
-	class CResponse : public IHttpRequest
-	{
-	public:
-		std::string m_Header;
-		bool m_Aborted = false;
-		explicit CResponse(const char *pUrl) :
-			IHttpRequest(pUrl) {}
-		void Header(const char *pHeader) override { m_Header = pHeader; }
-		void Abort() override { m_Aborted = true; }
-		void Fail() { m_State = EHttpState::ERROR; }
-		void Finish(const char *pJson)
-		{
-			free(m_pBuffer);
-			m_ResponseLength = str_length(pJson);
-			m_pBuffer = static_cast<unsigned char *>(malloc(m_ResponseLength + 1));
-			mem_copy(m_pBuffer, pJson, m_ResponseLength + 1);
-			m_BufferSize = m_ResponseLength + 1;
-			m_StatusCode = 200;
-			m_State = EHttpState::DONE;
-		}
-	};
-
-	std::unique_ptr<IHttpRequest> CreateResponse(const char *pUrl)
-	{
-		return std::make_unique<CResponse>(pUrl);
-	}
-
-	class CHttpRecorder : public IHttp
-	{
-	public:
-		std::vector<std::shared_ptr<CResponse>> m_vRequests;
-		void Run(std::shared_ptr<IHttpRequest> pRequest) override
-		{
-			m_vRequests.push_back(std::static_pointer_cast<CResponse>(pRequest));
-		}
-		bool HasIpresolveBug() const override { return false; }
-	};
-
 	class CDeferredEngine : public IEngine
 	{
 	public:
@@ -83,9 +45,9 @@ namespace
 	class VoteMapLoader : public ::testing::Test
 	{
 	protected:
-		CHttpRecorder m_Http;
+		MapHttpTest::CHttpRecorder m_Http;
 		CDeferredEngine m_Engine;
-		CQmVoteMapLoader m_Loader{CreateResponse};
+		CQmVoteMapLoader m_Loader{MapHttpTest::CreateResponse};
 		const QmVoteMaps::SMap m_Alpha{"Alpha", "Author", "Novice"};
 		const QmVoteMaps::SMap m_Beta{"Beta", "Author", "Brutal"};
 		void Update(float Now = 1.0f) { m_Loader.Update(&m_Http, &m_Engine, Now); }

@@ -1,10 +1,13 @@
 #include "map_difficulty_catalog.h"
 
+#include "axiom_scores_data.h"
+
 #include <base/log.h>
 #include <base/str.h>
 #include <base/system.h>
 
 #include <engine/console.h>
+#include <engine/http.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
@@ -135,7 +138,12 @@ bool CQmMapDifficultyCatalog::RecordAxiomMotd(const CServerInfo &Server, const c
 	}
 	if(Total != MaxStars)
 		return false;
-	const auto Key = std::make_pair(MaxStars, Entry.m_MapName);
+	return StoreAxiomEntry(std::move(Entry));
+}
+
+bool CQmMapDifficultyCatalog::StoreAxiomEntry(SEntry Entry)
+{
+	const auto Key = std::make_pair(Entry.m_MaxStars, Entry.m_MapName);
 	const auto It = m_AxiomEntries.find(Key);
 	if(It != m_AxiomEntries.end() && It->second.m_Stars == Entry.m_Stars && It->second.m_Category == Entry.m_Category)
 		return false;
@@ -144,6 +152,99 @@ bool CQmMapDifficultyCatalog::RecordAxiomMotd(const CServerInfo &Server, const c
 	m_AxiomEntries.insert_or_assign(Key, std::move(Entry));
 	m_AxiomCacheDirty = true;
 	return true;
+}
+
+CQmMapDifficultyCatalog::CQmMapDifficultyCatalog(TRequestFactory CreateRequest) :
+	m_CreateRequest(CreateRequest ? CreateRequest : HttpGet)
+{
+}
+
+void CQmMapDifficultyCatalog::RequestAxiomDifficulty(const CServerInfo &Server, IHttp &Http, CQmAxiomRequestBudget &Budget, const char *pApiKey, int64_t Now)
+{
+	if(m_AxiomRequests.size() >= 4 || m_AxiomEntries.size() >= MAX_AXIOM_ENTRIES)
+		return;
+	const int MaxStars = AxiomMaxStars(Server);
+	if(!MaxStars || !Server.m_aMap[0])
+		return;
+	const auto Key = std::make_pair(MaxStars, std::string_view(Server.m_aMap));
+	if(m_AxiomEntries.contains(Key) || m_AxiomRequests.contains(Key))
+		return;
+	const auto Retry = m_AxiomRetryAfter.find(Key);
+	if(Retry != m_AxiomRetryAfter.end() && Now < Retry->second)
+		return;
+	if(!Budget.TryStart(Now, pApiKey[0] != '\0'))
+		return;
+	if(Retry != m_AxiomRetryAfter.end())
+		m_AxiomRetryAfter.erase(Retry);
+	const auto Url = QmBuildAxiomMapInfoUrl(Server.m_aMap, MaxStars == 3 ? EQmAxiomMode::GORES : EQmAxiomMode::AXRACE);
+	std::shared_ptr<IHttpRequest> pRequest = m_CreateRequest(Url.c_str());
+	pRequest->Timeout({3000, 8000, 0, 0});
+	pRequest->MaxResponseSize(16 * 1024);
+	pRequest->LogProgress(HTTPLOG::NONE);
+	if(pApiKey[0])
+		pRequest->Header((std::string("Authorization: Bearer ") + pApiKey).c_str());
+	m_AxiomRequests.emplace(TAxiomKey{MaxStars, Server.m_aMap}, pRequest);
+	Http.Run(std::move(pRequest));
+}
+
+bool CQmMapDifficultyCatalog::RecordAxiomResponse(const TAxiomKey &Key, const IHttpRequest &Request)
+{
+	std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(Request.ResultJson(), json_value_free);
+	if(!pRoot || pRoot->type != json_object)
+		return false;
+	const auto *pCode = json_object_get(pRoot.get(), "code");
+	const auto *pData = json_object_get(pRoot.get(), "data");
+	if(pCode->type != json_integer || pCode->u.integer != 200 || pData->type != json_object)
+		return false;
+	const auto *pMap = json_object_get(pData, "map");
+	const auto *pStars = json_object_get(pData, "stars");
+	const auto *pCategory = json_object_get(pData, "difficulty");
+	if(pMap->type != json_string || std::string_view(pMap->u.string.ptr, pMap->u.string.length) != Key.second ||
+		pStars->type != json_integer || pStars->u.integer < 0 || pStars->u.integer > Key.first || pCategory->type != json_string)
+		return false;
+	std::string Category(pCategory->u.string.ptr, pCategory->u.string.length);
+	if(!ValidField(Key.second, MAX_MAP_LENGTH - 1) || !ValidField(Category, 64))
+		return false;
+	return StoreAxiomEntry({Key.second, std::move(Category), (int)pStars->u.integer, Key.first});
+}
+
+bool CQmMapDifficultyCatalog::PollAxiomRequests(CQmAxiomRequestBudget &Budget, int64_t Now)
+{
+	bool Changed = false;
+	for(auto It = m_AxiomRequests.begin(); It != m_AxiomRequests.end();)
+	{
+		const auto &Request = *It->second;
+		if(!Request.Done())
+		{
+			++It;
+			continue;
+		}
+		const int Code = Request.CompletedStatusCode();
+		if(Code == 429)
+			Budget.RateLimited(Now);
+		if(Code == 200 && Request.State() == EHttpState::DONE && RecordAxiomResponse(It->first, Request))
+			Changed = true;
+		else if(!m_AxiomEntries.contains(It->first))
+		{
+			if(m_AxiomRetryAfter.size() >= MAX_AXIOM_ENTRIES)
+				m_AxiomRetryAfter.erase(m_AxiomRetryAfter.begin());
+			int DelaySeconds = 30;
+			if(Code == 404)
+				DelaySeconds = 600;
+			else if(Code == 429)
+				DelaySeconds = 1;
+			m_AxiomRetryAfter[It->first] = Now + DelaySeconds * time_freq();
+		}
+		It = m_AxiomRequests.erase(It);
+	}
+	return Changed;
+}
+
+void CQmMapDifficultyCatalog::CancelAxiomRequests()
+{
+	for(const auto &[Key, pRequest] : m_AxiomRequests)
+		pRequest->Abort();
+	m_AxiomRequests.clear();
 }
 
 bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Length)
