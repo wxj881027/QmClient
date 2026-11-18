@@ -190,9 +190,9 @@ TEST_F(MapSoundSourceQueue, LayersAndSourcesKeepTheirOrder)
 	std::vector<SMapSoundSource> vQueue;
 	ASSERT_TRUE(PrepareMapSoundSourceQueue(m_Layers, m_aSounds, vQueue));
 	ASSERT_EQ(vQueue.size(), 3u);
-	EXPECT_EQ(vQueue[0].m_pSource->m_Position.x, 10);
-	EXPECT_EQ(vQueue[1].m_pSource->m_Position.x, 20);
-	EXPECT_EQ(vQueue[2].m_pSource->m_Position.x, 30);
+	EXPECT_EQ(vQueue[0].m_Source.m_Position.x, 10);
+	EXPECT_EQ(vQueue[1].m_Source.m_Position.x, 20);
+	EXPECT_EQ(vQueue[2].m_Source.m_Position.x, 30);
 	EXPECT_EQ(vQueue[2].m_Sound, 1);
 }
 
@@ -206,21 +206,23 @@ TEST_F(MapSoundSourceQueue, GroupsKeepTheirOrderAndBorrowedIdentity)
 	ASSERT_EQ(vQueue.size(), 2u);
 	EXPECT_EQ(vQueue[0].m_pGroup, m_Layers.GetGroup(0));
 	EXPECT_EQ(vQueue[1].m_pGroup, m_Layers.GetGroup(1));
-	EXPECT_EQ(vQueue[0].m_pSource->m_Position.x, 100);
-	EXPECT_EQ(vQueue[1].m_pSource->m_Position.x, 200);
+	EXPECT_EQ(vQueue[0].m_Source.m_Position.x, 100);
+	EXPECT_EQ(vQueue[1].m_Source.m_Position.x, 200);
 }
 
-TEST_F(MapSoundSourceQueue, EntriesBorrowActualMapSourceDataAndStartWithoutVoices)
+TEST_F(MapSoundSourceQueue, EntriesRetainSoundSourceValuesAfterBlockRelease)
 {
-	Load({SLayer{}});
+	SLayer Layer;
+	Layer.m_vSources.front().m_TimeDelay = 3;
+	Load({Layer});
 	std::vector<SMapSoundSource> vQueue;
 	ASSERT_TRUE(PrepareMapSoundSourceQueue(m_Layers, m_aSounds, vQueue));
 	ASSERT_EQ(vQueue.size(), 1u);
-	const auto Layer = MapRenderItems::ReadSoundLayer(*m_pMap, m_pMap->FindItemIndex(MAPITEMTYPE_LAYER, 0));
-	ASSERT_TRUE(Layer);
-	const auto Data = MapRenderItems::ReadDataItems<CSoundSource>(*m_pMap, Layer->m_Data, 1);
-	ASSERT_EQ(Data.size(), 1u);
-	EXPECT_EQ(vQueue[0].m_pSource, Data.data());
+	const auto MapLayer = MapRenderItems::ReadSoundLayer(*m_pMap, m_pMap->FindItemIndex(MAPITEMTYPE_LAYER, 0));
+	ASSERT_TRUE(MapLayer);
+	m_pMap->UnloadData(MapLayer->m_Data);
+	EXPECT_EQ(vQueue[0].m_Source.m_Position.x, 100);
+	EXPECT_EQ(vQueue[0].m_Source.m_TimeDelay, 3);
 	EXPECT_FALSE(vQueue[0].m_Voice.IsValid());
 }
 
@@ -288,7 +290,7 @@ TEST_F(MapSoundSourceQueue, VersionOneSourcesStillLoad)
 	std::vector<SMapSoundSource> vQueue;
 	ASSERT_TRUE(PrepareMapSoundSourceQueue(m_Layers, m_aSounds, vQueue));
 	ASSERT_EQ(vQueue.size(), 1u);
-	EXPECT_EQ(vQueue[0].m_pSource->m_Position.x, 100);
+	EXPECT_EQ(vQueue[0].m_Source.m_Position.x, 100);
 }
 
 TEST_F(MapSoundSourceQueue, TruncatedSourceArrayKeepsAvailablePrefix)
@@ -300,7 +302,7 @@ TEST_F(MapSoundSourceQueue, TruncatedSourceArrayKeepsAvailablePrefix)
 	std::vector<SMapSoundSource> vQueue;
 	ASSERT_TRUE(PrepareMapSoundSourceQueue(m_Layers, m_aSounds, vQueue));
 	ASSERT_EQ(vQueue.size(), 2u);
-	EXPECT_EQ(vQueue.back().m_pSource->m_Position.x, 20);
+	EXPECT_EQ(vQueue.back().m_Source.m_Position.x, 20);
 }
 
 TEST_F(MapSoundSourceQueue, ZeroCountPublishesNoSources)
@@ -424,5 +426,5 @@ TEST_F(MapSoundSourceQueue, AllocationFailureCanBeRetried)
 	State.m_Fail = false;
 	ASSERT_TRUE(PrepareMapSoundSourceQueue(m_Layers, m_aSounds, vQueue));
 	ASSERT_EQ(vQueue.size(), 1u);
-	EXPECT_EQ(vQueue[0].m_pSource->m_Position.x, 100);
+	EXPECT_EQ(vQueue[0].m_Source.m_Position.x, 100);
 }

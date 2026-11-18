@@ -15,11 +15,11 @@ struct SMapSoundSource
 	bool m_HighDetail = false;
 	ISound::CVoiceHandle m_Voice;
 	const CMapItemGroup *m_pGroup = nullptr;
-	const CSoundSource *m_pSource = nullptr;
+	CSoundSource m_Source{};
 };
 
-// 调用前须终结旧来源的播放；复用队列容量，完整准备后才重新发布。
-// 来源仍借用地图数据，调用方须在卸载地图前清空队列。
+// 调用前须终结旧来源的播放，复用队列容量并在完整准备后发布。
+// 声源值可独立于原数据块使用，组元数据的借用在整张地图卸载时失效。
 template<typename TAllocator>
 bool PrepareMapSoundSourceQueue(const CLayers &Layers, std::span<const int> aSounds,
 	std::vector<SMapSoundSource, TAllocator> &vOutput) noexcept
@@ -54,7 +54,7 @@ bool PrepareMapSoundSourceQueue(const CLayers &Layers, std::span<const int> aSou
 				for(const auto &Source : Sources)
 				{
 					vCandidate.push_back({SoundLayer->m_Sound, (pLayer->m_Flags & LAYERFLAG_DETAIL) != 0,
-						{}, pGroup, &Source});
+						{}, pGroup, Source});
 				}
 			}
 		}
