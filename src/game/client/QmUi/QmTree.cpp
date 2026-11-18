@@ -8,6 +8,11 @@
 #include <algorithm>
 #include <cmath>
 
+namespace
+{
+	constexpr int PRESENCE_EXIT_PRIORITY = 1000;
+}
+
 void CUiV2Tree::Reset()
 {
 	m_FrameNodeKeys.clear();
@@ -94,7 +99,7 @@ SUiPresenceResult CUiV2Tree::ResolvePresence(CUiV2AnimationRuntime &AnimRuntime,
 		{
 			SUiAnimTransition ExitTransition = Transition;
 			ExitTransition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
-			ExitTransition.m_Priority = std::max(ExitTransition.m_Priority, 1000);
+			ExitTransition.m_Priority = std::max(ExitTransition.m_Priority, PRESENCE_EXIT_PRIORITY);
 			AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f, ExitTransition);
 			State.m_Phase = EPresencePhase::EXITING;
 		}
@@ -122,7 +127,8 @@ SUiPresenceResult CUiV2Tree::ResolvePresence(CUiV2AnimationRuntime &AnimRuntime,
 			{
 				SUiAnimTransition EnterTransition = Transition;
 				EnterTransition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
-				EnterTransition.m_Priority = std::max(EnterTransition.m_Priority, 1);
+				const int MinPriority = Inserted ? 1 : PRESENCE_EXIT_PRIORITY;
+				EnterTransition.m_Priority = std::max(EnterTransition.m_Priority, MinPriority);
 				AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f, EnterTransition);
 				State.m_Phase = EPresencePhase::ENTERING;
 			}
@@ -176,7 +182,7 @@ void CUiV2Tree::ResolveEndFrame(CUiV2AnimationRuntime *pAnimRuntime)
 
 	SUiAnimTransition ExitTransition;
 	ExitTransition.m_DurationSec = 0.16f;
-	ExitTransition.m_Priority = 1000;
+	ExitTransition.m_Priority = PRESENCE_EXIT_PRIORITY;
 	ExitTransition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
 	ExitTransition.m_Easing = EEasing::EASE_OUT;
 
