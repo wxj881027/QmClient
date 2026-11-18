@@ -2401,6 +2401,7 @@ set(EXPECTED_DATA
   skins/tuzi.png
   skins/twinbop.png
   skins/twintri.png
+  skins/vaporeon_acqua.png
   skins/veteran.png
   skins/voodoo_tee.png
   skins/warpaint.png

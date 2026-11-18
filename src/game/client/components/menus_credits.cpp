@@ -772,25 +772,13 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 				break;
 			}
 			Flow.Space(LineSpacing);
-			const char *pDraftLabel = pDevStatus ? "sponsors_draft.md:" : "sponsors_draft.md";
-			const float LabelWidth = TextRender()->TextWidth(TipSize, pDraftLabel);
-			const float Gap = TextRender()->TextWidth(TipSize, " ");
-			if(pDevStatus && Content.w > LabelWidth + Gap + TipSize)
+			std::string DraftStatus = "sponsors_draft.md";
+			if(pDevStatus)
 			{
-				const float Fraction = (LabelWidth + Gap) / Content.w;
-				Flow.TextColumns("qmclient-community-sponsors-draft-status", pDraftLabel, pDevStatus, TipSize, LineHeight, Fraction, Gap, 0.0f, Measure,
-					[this, TipSize](const CUIRect &Rect, const char *pText) { Ui()->DoLabel(&Rect, pText, TipSize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w, .m_EnableWidthCheck = false}); });
+				DraftStatus += ": ";
+				DraftStatus += pDevStatus;
 			}
-			else
-			{
-				std::string DraftStatus = pDraftLabel;
-				if(pDevStatus)
-				{
-					DraftStatus += " ";
-					DraftStatus += pDevStatus;
-				}
-				Text("qmclient-community-sponsors-draft-status", DraftStatus.c_str(), TipSize, 0.0f);
-			}
+			Text("qmclient-community-sponsors-draft-status", DraftStatus.c_str(), TipSize, 0.0f);
 		}
 	};
 	qm_settings_content::UseDeclaredContent(Sponsors, Ui(), TextRender());
