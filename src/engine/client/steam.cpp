@@ -17,7 +17,6 @@
 
 #include <windows.h>
 
-#include <objbase.h>
 #include <shellapi.h>
 
 #include <cfenv>
