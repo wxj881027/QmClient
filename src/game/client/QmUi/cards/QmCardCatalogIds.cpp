@@ -161,7 +161,7 @@ namespace qm_card_catalog
 		       (static_cast<uint64_t>(g_Config.m_ClNamePlatesStrong != 0) << 3) |
 		       (static_cast<uint64_t>(g_Config.m_ClShowDirection > 0) << 4) |
 		       (static_cast<uint64_t>(g_Config.m_QmNameplateEffectAutoLod != 0) << 5) |
-		       (static_cast<uint64_t>(g_Config.m_QmNameplateAdvanced != 0) << 6);
+		       (static_cast<uint64_t>(g_Config.m_QmNameplateTextEffectsEnabled != 0) << 6);
 	}
 
 	const std::vector<const char *> &TeeCardStableIds()

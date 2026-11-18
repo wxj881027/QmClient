@@ -2334,6 +2334,8 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 	int &QueueInterval = QueueDummy ? g_Config.m_QmDummySkinQueueInterval : g_Config.m_QmSkinQueueInterval;
 	int &QueueIndex = QueueDummy ? g_Config.m_QmDummySkinQueueIndex : g_Config.m_QmSkinQueueIndex;
 	int &QueueRandomJoin = QueueDummy ? g_Config.m_QmDummySkinQueueRandomJoin : g_Config.m_QmSkinQueueRandomJoin;
+	int &QueueLength = QueueDummy ? g_Config.m_QmDummySkinQueueLength : g_Config.m_QmSkinQueueLength;
+	int &QueueRotateMap = QueueDummy ? g_Config.m_QmDummySkinQueueRotateMap : g_Config.m_QmSkinQueueRotateMap;
 	const int AppliedPresetIndex = GameClient()->m_Skins.AppliedSkinQueuePresetIndex(QueueDummy);
 	int &SelectedPresetIndex = gs_TeeSettingsPageState.m_aSelectedQueuePreset[QueueDummy];
 	if(SelectedPresetIndex < 0 || (size_t)SelectedPresetIndex >= GameClient()->m_Skins.SkinQueuePresets(QueueDummy).size())
@@ -2441,6 +2443,39 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 	GameClient()->m_Tooltips.DoToolTip(&QueueRandomJoin, &RandomJoinRow, Localize("Start at a random queue position on every map join"));
 
 	QueueSection.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &QueueSection);
+
+	// 队列长度：收藏进队列的皮肤上限，0 表示不再收集新条目。
+	CUIRect LengthRow, LengthLabel, LengthControls;
+	QueueSection.HSplitTop(TeeMetrics.m_LineHeight, &LengthRow, &QueueSection);
+	LengthRow.VSplitRight(QueueValueInputWidth, &LengthLabel, &LengthControls);
+	LengthLabel.VSplitRight(TeeMetrics.m_LineSpacing, &LengthLabel, nullptr);
+	SLabelProperties LengthLabelProps = QueueControlLabelProps;
+	LengthLabelProps.m_MaxWidth = LengthLabel.w;
+	DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee-skin-queue-length", &LengthLabel, Localize("Queue length"), BodySize, TEXTALIGN_ML, LengthLabelProps, (int)LengthLabel.w);
+	static ui_widget::SNumericFieldState s_aQueueLengthStates[NUM_DUMMIES];
+	IUiContext TeeSkinQueueLengthCtx;
+	TeeSkinQueueLengthCtx.m_pUi = Ui();
+	TeeSkinQueueLengthCtx.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
+	TeeSkinQueueLengthCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
+	TeeSkinQueueLengthCtx.m_ScopeHash = MakeUiScopeHash("settings_tee_skin_queue_length_text_input");
+	TeeSkinQueueLengthCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
+	ui_widget::SNumericFieldOptions QueueLengthOptions;
+	QueueLengthOptions.m_FontSize = BodySize;
+	QueueLengthOptions.m_CommitPolicy = ui_widget::EInputCommitPolicy::ON_RELEASE_OR_SUBMIT;
+	ui_widget::NumericField(TeeSkinQueueLengthCtx, &s_aQueueLengthStates[QueueDummy], &QueueLength, &QueueLength, 0, 1024, LengthControls, QueueLengthOptions);
+	GameClient()->m_Tooltips.DoToolTip(&QueueLength, &LengthRow, Localize("Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting."));
+	QueueSection.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &QueueSection);
+
+	// 按地图收集：进图时把所有玩家的皮肤加入队列，等同「服务器预设」的行为。
+	CUIRect RotateMapRow;
+	QueueSection.HSplitTop(TeeMetrics.m_LineHeight, &RotateMapRow, &QueueSection);
+	if(DoSettingsButton_CheckBox(SETTINGS_TEE, -1, -1, &QueueRotateMap, QueueDummy ? "tee-dummy-skin-queue-rotate-map" : "tee-player-skin-queue-rotate-map", Localize("Collect all players' skins on map join"), QueueRotateMap, &RotateMapRow, QueueControlLabelProps))
+	{
+		QueueRotateMap ^= 1;
+	}
+	GameClient()->m_Tooltips.DoToolTip(&QueueRotateMap, &RotateMapRow, Localize("Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off."));
+	QueueSection.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &QueueSection);
+
 	QueueSection.HSplitTop(minimum(QueueSection.h, QueueGeometry.m_QueueListSurfaceHeight), &QueueList, &QueueSection);
 	QueueSection.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &QueueSection);
 	QueueSection.HSplitTop(minimum(QueueSection.h, QueueGeometry.m_QueuePresetHeight), &QueuePresets, &QueueSection);

@@ -138,9 +138,10 @@ namespace qm_demo_ui
 	constexpr float PLAYBACK_GROUP_HEIGHT = 2.0f * RENDER_SECTION_PADDING + RENDER_SECTION_TITLE_HEIGHT +
 						RENDER_SECTION_TITLE_GAP + 3.0f * (RENDER_ROW_HEIGHT + RENDER_ROW_GAP);
 
-	// 视频编码分组：标题 + CRF + 渲染预设 + 录制帧率 = 110。
+	// 视频编码分组：标题 + CRF + 渲染预设 + 录制帧率 + 转换线程 + 采集队列
+	// + 分段时长 + 分段预热 + ProRes 档位 = 8 行。
 	constexpr float ENCODE_HEIGHT = 2.0f * RENDER_SECTION_PADDING + RENDER_SECTION_TITLE_HEIGHT +
-					RENDER_SECTION_TITLE_GAP + 3.0f * (RENDER_ROW_HEIGHT + RENDER_ROW_GAP);
+					RENDER_SECTION_TITLE_GAP + 8.0f * (RENDER_ROW_HEIGHT + RENDER_ROW_GAP);
 
 	inline CUIRect PlayerRect(const CUIRect &Screen, bool DisplayExpanded, bool CameraExpanded = false)
 	{

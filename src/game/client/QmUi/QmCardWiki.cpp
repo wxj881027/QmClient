@@ -109,7 +109,7 @@ namespace
 		{
 			"deck:appearance-name-plate-text",
 			Localizable("Adds border, gradient, rainbow and glow effects to nameplate text, with separate scopes for play, spectating and demos."),
-			Localizable("Turn on \"Show advanced options\", then enable \"Border\", \"Gradient\", \"Rainbow\" or \"Glow\" and set the matching ranges and colors."),
+			Localizable("Turn on \"Nameplate text effects\", open \"Personal adjustments\", then enable \"Border\", \"Gradient\", \"Rainbow\" or \"Glow\" and set the matching ranges and colors."),
 			Localizable("Effects are heavy on crowded servers, so keep \"Automatic effect LOD when crowded\" enabled."),
 		},
 		{

@@ -29,8 +29,6 @@
 #include <engine/client/video_encoder.h>
 #endif
 
-#include <memory>
-
 #include <generated/client_data.h>
 
 #include <game/client/QmUi/QmCardWikiPanel.h>
@@ -57,6 +55,7 @@
 #include <chrono>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -1049,6 +1048,69 @@ void CMenus::RenderDemoEncodeSettings(CUIRect View)
 		g_Config.m_ClVideoRecorderFPS = NewFps;
 	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClVideoRecorderFPS, &Row, Localize("Recorded frame rate; higher is smoother and larger"));
 	Ui()->DoLabel(&RangeHint, "1-1000", FontSize, TEXTALIGN_MR, {.m_MaxWidth = RangeHint.w - 2.0f});
+
+	// 导出管线参数：缓冲线程、采集队列、分段，以及 ProRes 档位。
+	// 这些只在启动导出时读取，因此即时写回配置即可，不需要额外的「应用」按钮。
+	const auto DoPipelineIntRow = [&](const char *pLabel, CLineInputNumber &Input, int *pValue, int Min, int Max, const char *pHint, const char *pTip) {
+		CUIRect PipelineControl, PipelineField, PipelineValue, PipelineHint;
+		TwoColumn(qm_demo_ui::RENDER_ROW_HEIGHT, pLabel, &PipelineControl);
+		PipelineControl.VSplitRight(TierWidth, &PipelineField, &PipelineHint);
+		PipelineHint.VSplitLeft(4.0f, nullptr, &PipelineHint);
+		PipelineField.VSplitRight(ValueWidth, &PipelineField, &PipelineValue);
+		PipelineValue.VSplitLeft(4.0f, nullptr, &PipelineValue);
+		ui_widget::STextFieldOptions PipelineOptions;
+		PipelineOptions.m_FontSize = FontSize;
+		PipelineOptions.m_TextAlign = TEXTALIGN_MC;
+		ui_widget::IntegerField(EncodeInputCtx, &Input, pValue, Min, Max, PipelineValue, PipelineOptions);
+		GameClient()->m_Tooltips.DoToolTip(pValue, &Row, pTip);
+		Ui()->DoLabel(&PipelineHint, pHint, FontSize, TEXTALIGN_MR, {.m_MaxWidth = PipelineHint.w - 2.0f});
+	};
+	static CLineInputNumber s_ConvertThreadsInput;
+	DoPipelineIntRow(Localize("Convert threads"), s_ConvertThreadsInput, &g_Config.m_QmVideoConvertThreads, 1, 8, "1-8",
+		Localize("Worker threads that convert captured frames to the encoder pixel format. 2-4 is enough for most CPUs; more threads only help when the encoder is fast."));
+	static CLineInputNumber s_QueueFramesInput;
+	DoPipelineIntRow(Localize("Capture queue"), s_QueueFramesInput, &g_Config.m_QmVideoQueueFrames, 2, 32, "2-32",
+		Localize("Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier."));
+	static CLineInputNumber s_SegmentSecondsInput;
+	DoPipelineIntRow(Localize("Segment length (s)"), s_SegmentSecondsInput, &g_Config.m_QmVideoSegmentSeconds, 0, 3600, "0-3600",
+		Localize("Split the exported video into segments of this length. 0 writes a single file. Segments disable B-frames so they can be joined without timestamp errors."));
+	static CLineInputNumber s_SegmentWarmupInput;
+	DoPipelineIntRow(Localize("Segment warmup (ticks)"), s_SegmentWarmupInput, &g_Config.m_QmVideoSegmentWarmup, 0, 500, "0-500",
+		Localize("Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second."));
+
+	// ProRes 档位：-1 = 自动（4:4:4 输入用 4444，其余用 HQ）。
+	static const int s_aProresValues[] = {-1, 0, 1, 2, 3, 4, 5};
+	static const char *const s_apProresLabels[] = {
+		Localize("Auto"),
+		"Proxy",
+		"LT",
+		"422",
+		"HQ",
+		"4444",
+		"4444XQ",
+	};
+	int ProresIndex = 0;
+	for(int i = 0; i < (int)std::size(s_aProresValues); ++i)
+	{
+		if(s_aProresValues[i] == g_Config.m_QmVideoProresProfile)
+		{
+			ProresIndex = i;
+			break;
+		}
+	}
+	CUIRect ProresControl, ProresHint;
+	TwoColumn(qm_demo_ui::RENDER_ROW_HEIGHT, Localize("ProRes profile"), &ProresControl);
+	ProresControl.VSplitRight(TierWidth, &ProresControl, &ProresHint);
+	ProresHint.VSplitLeft(4.0f, nullptr, &ProresHint);
+	static CUi::SDropDownState s_ProresDropDownState;
+	CUi::SDropDownProperties ProresDropDownProps;
+	ProresDropDownProps.m_FontSize = FontSize;
+	const int NewProres = Ui()->DoDropDown(&ProresControl, ProresIndex, s_apProresLabels, (int)std::size(s_apProresLabels), s_ProresDropDownState, ProresDropDownProps);
+	if(NewProres != ProresIndex)
+		g_Config.m_QmVideoProresProfile = s_aProresValues[NewProres];
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmVideoProresProfile, &Row,
+		Localize("ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this."));
+	Ui()->DoLabel(&ProresHint, g_Config.m_QmVideoProresProfile < 0 ? Localize("Auto") : s_apProresLabels[ProresIndex], FontSize, TEXTALIGN_MR, {.m_MaxWidth = ProresHint.w - 2.0f});
 	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
 }
 

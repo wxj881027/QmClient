@@ -1,0 +1,155 @@
+{
+	"version": 1,
+	"entries": [
+		{
+			"name": "qm_auto_accept_team_invite",
+			"category": "pending-ui",
+			"note": "聊天页：自动接受组队邀请"
+		},
+		{
+			"name": "qm_chat_anim_fade_duration_ms",
+			"category": "pending-ui",
+			"note": "聊天页：淡出时长"
+		},
+		{
+			"name": "qm_chat_anim_slide_out",
+			"category": "pending-ui",
+			"note": "聊天页：滑出动画"
+		},
+		{
+			"name": "qm_color_picker_palette",
+			"category": "internal",
+			"note": "取色器调色板序列化数据，由弹层读写"
+		},
+		{
+			"name": "qm_color_picker_shape",
+			"category": "pending-ui",
+			"note": "视觉页：取色器形状"
+		},
+		{
+			"name": "qm_console_filter_mask",
+			"category": "pending-ui",
+			"note": "控制台页：日志分类过滤"
+		},
+		{
+			"name": "qm_deepfly_mode",
+			"category": "internal",
+			"note": "由按键绑定自动探测，不是用户手设项"
+		},
+		{
+			"name": "qm_defaults_profile_version",
+			"category": "internal",
+			"note": "默认外观配置迁移版本号，代码内部状态"
+		},
+		{
+			"name": "qm_echo_merge_window_ms",
+			"category": "internal",
+			"note": "聊天 echo 合并窗口，内部时序参数"
+		},
+		{
+			"name": "qm_enhanced_procedural_ring",
+			"category": "internal",
+			"note": "渲染管线开关，随性能档位自动选择"
+		},
+		{
+			"name": "qm_hide_chat_bubbles",
+			"category": "pending-ui",
+			"note": "HUD 页：隐藏聊天气泡"
+		},
+		{
+			"name": "qm_hitbox_show_tees",
+			"category": "pending-ui",
+			"note": "视觉页：碰撞框显示 Tee"
+		},
+		{
+			"name": "qm_hitbox_show_weapons",
+			"category": "pending-ui",
+			"note": "视觉页：碰撞框显示武器"
+		},
+		{
+			"name": "qm_jump_hint_defaults_migrated",
+			"category": "internal",
+			"note": "跳跃提示默认值迁移标记，代码内部状态"
+		},
+		{
+			"name": "qm_launch_count",
+			"category": "internal",
+			"note": "启动计数，用于运营提示阈值"
+		},
+		{
+			"name": "qm_mobile_crash_report_export",
+			"category": "pending-ui",
+			"note": "诊断页：移动端导出崩溃报告"
+		},
+		{
+			"name": "qm_nameplate_show_scope_migrated",
+			"category": "internal",
+			"note": "名牌作用域迁移标记，代码内部状态"
+		},
+		{
+			"name": "qm_netease_hook_helper_path",
+			"category": "internal",
+			"note": "网易云助手路径，首次使用时自动探测"
+		},
+		{
+			"name": "qm_ping_cache_max_age_hours",
+			"category": "internal",
+			"note": "服务器 ping 缓存过期策略，内部参数"
+		},
+		{
+			"name": "qm_rect_corner_segments",
+			"category": "pending-ui",
+			"note": "视觉页：圆角分段精度"
+		},
+		{
+			"name": "qm_scoreboard_sort_mode",
+			"category": "pending-ui",
+			"note": "计分板：排序模式开关"
+		},
+		{
+			"name": "qm_settings_prewarm_migrated",
+			"category": "internal",
+			"note": "设置页预热迁移标记，代码内部状态"
+		},
+		{
+			"name": "qm_showhud_dummy_angle",
+			"category": "pending-ui",
+			"note": "HUD 页：分身角度"
+		},
+		{
+			"name": "qm_showhud_dummy_position",
+			"category": "pending-ui",
+			"note": "HUD 页：分身坐标"
+		},
+		{
+			"name": "qm_showhud_dummy_speed",
+			"category": "pending-ui",
+			"note": "HUD 页：分身速度"
+		},
+		{
+			"name": "qm_translate_color_alpha_migrated",
+			"category": "internal",
+			"note": "翻译色 alpha 迁移标记，代码内部状态"
+		},
+		{
+			"name": "qm_ui_corner_smoothing",
+			"category": "internal",
+			"note": "UI 圆角平滑算法选择，随主题固定"
+		},
+		{
+			"name": "qm_ui_corner_smoothing_apple",
+			"category": "internal",
+			"note": "UI 圆角平滑参数（Apple 曲线），随主题固定"
+		},
+		{
+			"name": "qm_ui_corner_smoothing_conic",
+			"category": "internal",
+			"note": "UI 圆角平滑参数（Conic 曲线），随主题固定"
+		},
+		{
+			"name": "qm_ui_corner_smoothing_squircle",
+			"category": "internal",
+			"note": "UI 圆角平滑参数（Squircle 曲线），随主题固定"
+		}
+	]
+}

@@ -5152,6 +5152,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_demo_camera_file_test.cpp
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
+    src/test/unit/qmclient/client/qm_cursor_rotation_test.cpp
+    src/test/unit/qmclient/client/qm_snap_guides_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
     src/test/unit/qmclient/ui/qm_scroll_content_drag_test.cpp

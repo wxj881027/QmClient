@@ -124,7 +124,7 @@ TEST(QmNameplateCards, ConditionalRowsInvalidatePageAndSearchMeasurements)
 		&g_Config.m_ClNamePlatesStrong,
 		&g_Config.m_ClShowDirection,
 		&g_Config.m_QmNameplateEffectAutoLod,
-		&g_Config.m_QmNameplateAdvanced,
+		&g_Config.m_QmNameplateTextEffectsEnabled,
 	};
 	for(size_t Index = 0; Index < std::size(apOptions); ++Index)
 	{

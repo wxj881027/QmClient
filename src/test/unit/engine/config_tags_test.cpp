@@ -16,7 +16,6 @@ TEST(ConfigTags, MigratedNamesKeepPrefixSpecificCategories)
 		{"qm_show_chat_client", EConfigTag::HUD},
 		{"qm_show_local_time_seconds", EConfigTag::HUD},
 		{"qm_prediction_margin_smooth", EConfigTag::GAMEPLAY},
-		{"qm_hook_coll_cursor", EConfigTag::AUTOMATION},
 	};
 	for(const auto &Case : aCases)
 		EXPECT_TRUE(Tags.HasTag(Case.m_pName, Case.m_Tag)) << Case.m_pName;

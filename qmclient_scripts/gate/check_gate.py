@@ -25,6 +25,7 @@ from checks import (  # noqa: E402
 	clang_tidy_warn,
 	ci_build,
 	ci_deps,
+	config_exposure,
 	config_vars,
 	dilate,
 	env,
@@ -110,6 +111,7 @@ _ALL_MODES = frozenset({"quick", "default", "full", "build"})
 _CHECK_SPECS = (
 	CheckSpec("env", env, _ALL_MODES, skip_attr="skip_preflight"),
 	CheckSpec("config_vars", config_vars, _ALL_MODES, skip_attr="skip_config_checks"),
+	CheckSpec("config_exposure", config_exposure, _SOURCE_MODES, scope_kind="changed"),
 	CheckSpec("headers", headers, _ALL_MODES, skip_attr="skip_header_checks"),
 	CheckSpec("style", style, _ALL_MODES, skip_attr="skip_style_check"),
 	CheckSpec("python", python, _ALL_MODES, skip_attr="skip_ruff_check"),

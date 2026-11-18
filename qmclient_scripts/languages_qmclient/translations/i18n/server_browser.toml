@@ -2390,6 +2390,22 @@ turkish = "Harita önizlemesi oluşturulamıyor"
 polish = "Renderowanie podglądu mapy niedostępne"
 
 [[message]]
+key = "Map preview unavailable"
+[message.translations]
+simplified_chinese = "地图预览不可用"
+traditional_chinese = "地圖預覽無法使用"
+japanese = "マッププレビューを利用できません"
+korean = "맵 미리보기를 사용할 수 없습니다"
+russian = "Предпросмотр карты недоступен"
+german = "Kartenvorschau nicht verfügbar"
+spanish = "Vista previa del mapa no disponible"
+french = "Aperçu de la carte indisponible"
+brazilian_portuguese = "Prévia do mapa indisponível"
+portuguese = "Pré-visualização do mapa indisponível"
+turkish = "Harita önizlemesi kullanılamıyor"
+polish = "Podgląd mapy niedostępny"
+
+[[message]]
 key = "Toggle map preview"
 [message.translations]
 simplified_chinese = "地图预览"

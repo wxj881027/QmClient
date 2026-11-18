@@ -6,6 +6,7 @@
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
+#include <game/client/QmUi/SettingsRowReveal.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/menus.h>
@@ -118,9 +119,13 @@ namespace qm_card_catalog
 		{
 			Render = [=](CUIRect &Content) {
 				CSettingsContentLayoutFlow Flow(Content);
-				CheckBox(Flow, "appearance-nameplate-advanced", Localize("Show advanced options"), &g_Config.m_QmNameplateAdvanced);
-				if(!g_Config.m_QmNameplateAdvanced)
+				// 总开关只停绘制，不丢位掩码：关掉再打开，之前勾过的效果原样回来。
+				CheckBox(Flow, "appearance-nameplate-text-effects", Localize("Nameplate text effects"), &g_Config.m_QmNameplateTextEffectsEnabled);
+
+				float SectionReveal = 0.0f;
+				if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(pMenus, Content, "deck:appearance-name-plate-text", Metrics, &SectionReveal, pMenus->Ui()->RenderOnly()))
 					return;
+				const CSettingsContentRevealScope SectionRevealScope(pMenus->Ui(), Flow, SectionReveal);
 
 				const bool GlowWasEnabled = (g_Config.m_QmNameplateTextEffects & QM_TEXT_EFFECT_GLOW) != 0;
 				pMenus->DoSettingsToggleGroup(Page, Tab, Tab, Content,

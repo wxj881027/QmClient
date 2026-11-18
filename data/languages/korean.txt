@@ -596,6 +596,9 @@ Add demo timeline marker
 Add Entry
 == 항목 추가
 
+Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off.
+== 맵에 들어갈 때 모든 플레이어의 스킨을 큐에 추가합니다. 큐를 직접 편집하면 이 기능이 꺼집니다.
+
 Add friend
 == 친구 추가
 
@@ -949,6 +952,9 @@ Angry
 
 Angular gradient
 == 각도 그라데이션
+
+Animate country flags
+== 국기 애니메이션
 
 Animated title style id
 == 칭호 애니메이션 스타일 ID
@@ -1769,6 +1775,9 @@ Best
 Best quality (all-intra 4:4:4 / MP4)
 == 최고 화질 (전체 프레임 내 4:4:4 / MP4)
 
+Best-effort DSCP marking of the game connection; may be ignored by routers
+== 게임 연결에 DSCP 표시를 최대한 적용합니다(라우터가 무시할 수 있음)
+
 Better compression, slower
 == 압축률이 더 좋지만 느림
 
@@ -2119,6 +2128,9 @@ Capsule ends
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 == 캡슐 끝: 0 = 일반 원호, 1 = 부드러운 끝, 2 = Apple 연속 곡률
+
+Capture queue
+== 캡처 큐
 
 Capture the flag
 == 깃발 뺏기 (CTF)
@@ -2711,6 +2723,9 @@ Collapse
 Collapse console
 == 콘솔 축소
 
+Collect all players' skins on map join
+== 맵 입장 시 모든 플레이어 스킨 수집
+
 Collect CP %d before teleporting
 == 텔레포트 전에 CP %d에 닿으세요
 
@@ -3269,6 +3284,9 @@ Converse
 Converse with the last person you whispered to (private message)
 == 마지막으로 귓속말한 사람과 대화합니다 (개인 메시지)
 
+Convert threads
+== 변환 스레드
+
 Coordinate size on nameplate
 == 이름표에 표시되는 좌표 크기
 
@@ -3488,20 +3506,14 @@ Current aspect ratio: Show default
 Current cut is invalid or already added
 == 현재 잘라낸 구간이 유효하지 않거나 이미 추가되었습니다
 
-Current driver
-== 현재 드라이버
-
 Current file
 == 현재 파일
 
-Current GPU
-== 현재 GPU
-
-Current graphics backend
-== 현재 그래픽 백엔드
-
 Current rescue mode: %s
 == 현재 구조 모드: %s
+
+Current resolution
+== 현재 해상도
 
 Current status
 == 현재 상태
@@ -4574,6 +4586,60 @@ Dummy mini view zoom (percent)
 Dummy name
 == 더미 이름
 
+Dummy name plate clan line X offset
+== 더미 네임플레이트 클랜 행 X 오프셋
+
+Dummy name plate clan line Y offset
+== 더미 네임플레이트 클랜 행 Y 오프셋
+
+Dummy name plate coord line X offset
+== 더미 네임플레이트 좌표 행 X 오프셋
+
+Dummy name plate coord line Y offset
+== 더미 네임플레이트 좌표 행 Y 오프셋
+
+Dummy name plate hammer icon X offset
+== 더미 네임플레이트 망치 아이콘 X 오프셋
+
+Dummy name plate hammer icon Y offset
+== 더미 네임플레이트 망치 아이콘 Y 오프셋
+
+Dummy name plate hook icon X offset
+== 더미 네임플레이트 갈고리 아이콘 X 오프셋
+
+Dummy name plate hook icon Y offset
+== 더미 네임플레이트 갈고리 아이콘 Y 오프셋
+
+Dummy name plate jump key icon X offset
+== 더미 네임플레이트 점프 키 아이콘 X 오프셋
+
+Dummy name plate jump key icon Y offset
+== 더미 네임플레이트 점프 키 아이콘 Y 오프셋
+
+Dummy name plate left key icon X offset
+== 더미 네임플레이트 왼쪽 키 아이콘 X 오프셋
+
+Dummy name plate left key icon Y offset
+== 더미 네임플레이트 왼쪽 키 아이콘 Y 오프셋
+
+Dummy name plate name line X offset
+== 더미 네임플레이트 닉네임 행 X 오프셋
+
+Dummy name plate name line Y offset
+== 더미 네임플레이트 닉네임 행 Y 오프셋
+
+Dummy name plate right key icon X offset
+== 더미 네임플레이트 오른쪽 키 아이콘 X 오프셋
+
+Dummy name plate right key icon Y offset
+== 더미 네임플레이트 오른쪽 키 아이콘 Y 오프셋
+
+Dummy name plate strength line X offset
+== 더미 네임플레이트 강도 행 X 오프셋
+
+Dummy name plate strength line Y offset
+== 더미 네임플레이트 강도 행 Y 오프셋
+
 Dummy skin
 == 더미 스킨
 
@@ -5032,6 +5098,9 @@ Enable mod weapon on %d: %s
 
 Enable MySQL backend instead of SQLite (fallback to sv_sqlite_file when no MySQL server is reachable)
 == SQLite 대신 MySQL 백엔드 활성화 (MySQL 서버에 연결할 수 없을 때 sv_sqlite_file 으로 폴백)
+
+Enable nameplate text effects (master switch)
+== 네임플레이트 텍스트 효과 사용(마스터 스위치)
 
 Enable Netease lyric integration
 == Netease 가사 통합 활성화
@@ -6056,6 +6125,9 @@ Frame time p95
 Frame time p99
 == 프레임 시간 p99
 
+Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
+== 캡처와 인코딩 사이에 버퍼링하는 프레임 수입니다. 깊을수록 느린 인코더 프레임을 흡수하지만 메모리를 더 쓰고, 낮을수록 백프레셔가 빨리 걸립니다.
+
 Frankenstein (drop parts on right)
 == 프랑켄슈타인 (부품을 오른쪽에 놓기)
 
@@ -6185,6 +6257,9 @@ Friends imported for this session, but saving settings failed.
 Friends only
 == 친구만
 
+Frozen color darkening
+== 얼음 색 어둡게
+
 Frozen fire attempt
 == 빙결 중 발사 시도
 
@@ -6265,6 +6340,9 @@ Game update rate (Hz)
 
 Game update rate when window inactive (Hz)
 == 창 비활성화 시 게임 업데이트율 (Hz)
+
+Game window mode
+== 게임 창 모드
 
 Game/predicted tick
 == 게임/예측 틱
@@ -6517,6 +6595,9 @@ Graphics card
 
 Graphics display
 == 그래픽 표시
+
+Graphics hardware details
+== 그래픽 하드웨어 정보
 
 Graphics library major version (0 = auto-detect)
 == 그래픽 라이브러리 주 버전(0 = 자동 감지)
@@ -6923,9 +7004,6 @@ Hook collision line
 Hook collision line alpha (0 invisible, 100 fully visible)
 == 갈고리 충돌선 알파 (0 투명, 100 완전 불투명)
 
-Hook collision line length follows cursor distance
-== 갈고리 충돌선 길이가 커서 거리를 따름
-
 Hook collision line opacity
 == 갈고리 충돌선 불투명도
 
@@ -7226,6 +7304,9 @@ In pie menu
 In-game controller sensitivity
 == 게임 내 컨트롤러 감도
 
+In-game crosshair rotation speed in degrees per second (0=static, negative=reverse)
+== 게임 내 조준선 회전 속도(도/초, 0=정지, 음수=역방향)
+
 In-game crosshair scale percent (50=half, 200=double)
 == 게임 내 조준점 크기 비율 (50=절반, 200=두 배)
 
@@ -7336,6 +7417,9 @@ Ingame controller mode
 
 Ingame controller sens.
 == 게임 내 컨트롤러 감도
+
+Ingame cursor rotation
+== 게임 내 커서 회전
 
 Ingame cursor scale
 == 게임 내 커서 크기
@@ -7673,6 +7757,9 @@ Kawase
 Keep hook when teleporting
 == 순간이동 시 갈고리 유지
 
+Keep inside game window
+== 게임 창 안에 유지
+
 Keep it small and in a corner; a large overlay covers the map and hides what matters.
 == 작게 유지하고 구석에 두세요. 너무 큰 오버레이는 지도를 가려 중요한 것을 숨깁니다.
 
@@ -7682,8 +7769,14 @@ Keep it small and near an edge: the hint draws over the map and can cover the ti
 Keep messages short so they fit in one chat line.
 == 채팅 한 줄에 들어가도록 메시지를 짧게 유지하세요.
 
+Keep square inside game window
+== 사각형을 게임 창 안에 유지
+
 Keep the defaults unless you play with high ping; then try one option at a time and compare.
 == 핑이 높지 않다면 기본값을 그대로 두고, 바꿀 때는 한 번에 하나씩 시험해 비교하세요.
+
+Keep the feeling of the maximum cursor distance independent of resolution
+== 최대 커서 거리 감각을 해상도와 무관하게 유지
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == 어두운 배경에는 밝은 글자가 읽기 좋습니다. 기본 모양으로 되돌리려면 도움말 모양 초기화를 누르세요.
@@ -8021,6 +8114,9 @@ Legacy realtime WebSocket URL (migrated to qm_websocket_url)
 Legacy settings card collapse states migrated
 == 이전 설정 카드 접힘 상태 이전 완료
 
+Legacy team colors
+== 이전 팀 색상
+
 Length
 == 길이
 
@@ -8050,6 +8146,9 @@ LibreTranslate endpoint
 
 Light
 == 라이트
+
+Limit cursor to game window
+== 커서를 게임 창 안으로 제한
 
 Limit information in spectator mode
 == 관전자 모드에서 정보 제한
@@ -8537,6 +8636,9 @@ Map preview shows the entity layer only (hides textures)
 Map Preview TODO
 == 맵 미리보기 할 일
 
+Map preview unavailable
+== 맵 미리보기를 사용할 수 없습니다
+
 Map progress
 == 맵 진행도
 
@@ -8749,6 +8851,9 @@ Maximum number of resend requests answered per second (0 for no limit)
 
 Maximum number of server info responses of any size sent per second (0 = unlimited).
 == 크기와 관계없이 초당 전송할 수 있는 서버 정보 응답의 최대 수(0 = 제한 없음).
+
+Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting.
+== 순환 큐에 보관할 스킨의 최대 개수입니다. 초과분은 오래된 것부터 버려집니다. 0이면 큐를 비우고 수집을 중지합니다.
 
 Maximum number of skins loaded simultaneously
 == 동시에 로드되는 최대 스킨 수
@@ -9062,6 +9167,9 @@ MP4 is the most compatible for sharing, MOV is the editing standard and required
 Multi-resolution blur with a stronger result and balanced GPU cost.
 == 더 강한 효과와 균형 잡힌 GPU 부하를 제공하는 다중 해상도 블러입니다.
 
+Multi-select move
+== 다중 선택 이동
+
 Multi-View
 == 멀티 뷰
 
@@ -9212,17 +9320,29 @@ Name plate hook icon X offset
 Name plate hook icon Y offset
 == 이름표 훅 아이콘 Y 오프셋
 
-Name plate key line X offset
-== 네임플레이트 키 행 X 오프셋
+Name plate jump key icon X offset
+== 네임플레이트 점프 키 아이콘 X 오프셋
 
-Name plate key line Y offset
-== 네임플레이트 키 행 Y 오프셋
+Name plate jump key icon Y offset
+== 네임플레이트 점프 키 아이콘 Y 오프셋
+
+Name plate left key icon X offset
+== 네임플레이트 왼쪽 키 아이콘 X 오프셋
+
+Name plate left key icon Y offset
+== 네임플레이트 왼쪽 키 아이콘 Y 오프셋
 
 Name plate name line X offset
 == 네임플레이트 닉네임 행 X 오프셋
 
 Name plate name line Y offset
 == 네임플레이트 닉네임 행 Y 오프셋
+
+Name plate right key icon X offset
+== 네임플레이트 오른쪽 키 아이콘 X 오프셋
+
+Name plate right key icon Y offset
+== 네임플레이트 오른쪽 키 아이콘 Y 오프셋
 
 Name plate strength line X offset
 == 네임플레이트 강도 행 X 오프셋
@@ -9280,6 +9400,9 @@ Nameplate text border range
 
 Nameplate text effect auto LOD (0=Off 1=On: trim outer effect layers when crowded)
 == 네임플레이트 텍스트 효과 자동 LOD(0=끔, 1=켬: 혼잡할 때 바깥 효과 레이어 축소)
+
+Nameplate text effects
+== 네임플레이트 텍스트 효과
 
 Nameplate text effects (1=Border 2=Gradient 4=Rainbow 8=Glow)
 == 이름표 텍스트 효과 (1=테두리 2=그라데이션 4=무지개 8=발광)
@@ -9547,6 +9670,9 @@ No functions bound
 
 No input device available
 == 사용 가능한 입력 장치 없음
+
+No limit
+== 제한 없음
 
 No local saves file found (ddnet-saves.txt)
 == 로컬 저장 파일(ddnet-saves.txt)을 찾을 수 없음
@@ -9874,6 +10000,9 @@ Old chat style: no tee icons, no background
 
 Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else.
 == 저장 한도에 도달하면 오래된 파일이 삭제되니, 남기고 싶은 데모는 다른 곳에 복사해 두세요.
+
+Old single-segment hook collision line
+== 이전 단일 구간 갈고리 충돌선
 
 Oldschool
 == 올드스쿨
@@ -10892,6 +11021,9 @@ Pose render supersampling scale (1-4)
 Pose render unsharp mask strength (0 = off)
 == 포즈 렌더링 언샵 마스크 강도 (0 = 끔)
 
+Pose screenshot pixel budget (MP, 0 = unlimited)
+== 포즈 스크린샷 픽셀 예산(MP, 0 = 무제한)
+
 Poses
 == 포즈
 
@@ -11192,6 +11324,9 @@ Print command executed by this name or all chat binds
 Print daily messages to console
 == 일일 메시지를 콘솔에 출력
 
+Prioritize game traffic (QoS, Windows only)
+== 게임 트래픽 우선(QoS, Windows 전용)
+
 Prioritize outgoing game traffic on Windows (best effort)
 == Windows에서 송신 게임 트래픽 우선 처리(최선형)
 
@@ -11234,8 +11369,14 @@ Project and community websites
 Projectile / explosion range
 == 투사체 / 폭발 범위
 
+ProRes profile
+== ProRes 프로파일
+
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 == ProRes 프로필 재정의: -1=자동 (4:4:4는 4444, 그 외는 HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
+
+ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this.
+== 인코더가 ProRes일 때 사용할 프로파일입니다. 자동은 4:4:4 입력이면 4444, 그 외에는 HQ를 선택합니다. 다른 인코더는 이 값을 무시합니다.
 
 Protect names and skins while streaming
 == 스트리밍 중 이름과 스킨 보호
@@ -11443,6 +11584,9 @@ Querying...
 
 Queue is empty
 == 대기열이 비어 있습니다
+
+Queue length
+== 큐 길이
 
 Queue preset: %s
 == 큐 프리셋: %s
@@ -12665,6 +12809,9 @@ Say in chat
 Say in team chat
 == 팀 채팅에 말하기
 
+Scale cursor distance with resolution
+== 커서 거리를 해상도에 맞춰 조정
+
 Scale down other Tees as well
 == 다른 Tee도 함께 축소
 
@@ -12878,6 +13025,12 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 See you at the next checkpoint.
 == 다음 체크포인트에서 만나요.
 
+Segment length (s)
+== 분할 길이(초)
+
+Segment warmup (ticks)
+== 분할 예열(tick)
+
 Select a body part, change its sprite or color, then save the skin.
 == 신체 부위를 고르고 스프라이트나 색상을 바꾼 뒤 스킨을 저장하세요.
 
@@ -12910,6 +13063,9 @@ Select map
 
 Select map for the pose file
 == 포즈 파일 맵 선택
+
+Select several name plate blocks in the preview and move them together
+== 미리보기에서 여러 네임플레이트 블록을 선택해 함께 이동합니다
 
 Select the country flag for each player
 == Select the country flag for each player
@@ -13292,6 +13448,12 @@ Shape
 Shape, colors and text shared by the whole interface
 == 인터페이스 전체가 공유하는 모양, 색상, 텍스트
 
+Share layout with dummy
+== 더미와 레이아웃 공유
+
+Share name plate offsets between own tee and dummy (0=separate)
+== 본체와 더미가 네임플레이트 오프셋 공유(0=별도)
+
 Share of the server browser name/map split given to the name column (per mille)
 == 서버 브라우저 이름/맵 분할에서 이름 열에 할당할 비율(천분율)
 
@@ -13342,12 +13504,6 @@ Show a per-character wave on text titles locally
 
 Show a small view of the dummy
 == 더미의 작은 화면 표시
-
-Show advanced nameplate settings without changing effect values
-== 효과 값을 변경하지 않고 이름표 고급 설정 표시
-
-Show advanced options
-== 고급 옵션 표시
 
 Show advanced translation options
 == 고급 번역 옵션 표시
@@ -13669,6 +13825,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == 다른 플레이어의 예측 불가능한 위치에 유령 표시
+
+Show ghost direction
+== 고스트 방향 표시
 
 Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
 == 맵에 빛나며 떠 있는 가사를 표시합니다. 새 가사는 나타난 위치에 고정되고 이전 가사는 위로 떠오르며 서서히 사라집니다
@@ -14024,6 +14183,9 @@ Show pause/play indicator when changing
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == 시작 시 창으로 미처리 크래시 리포트를 표시합니다(0 = 리포트 파일만 남기고 로그에 기록)
 
+Show pending crash reports on startup
+== 시작 시 대기 중인 충돌 보고서 표시
+
 Show per-character title waves locally
 == 내 화면에서 칭호 글자 물결 효과 표시
 
@@ -14119,6 +14281,9 @@ Show scoreboard
 
 Show scoreboard after death
 == 사망 후 점수판 표시
+
+Show seconds in local time
+== 현지 시간에 초 표시
 
 Show seconds on clock
 == 시계에 초 표시
@@ -14260,6 +14425,9 @@ Show the original text locally below translated outgoing messages
 
 Show the pet
 == 펫 표시
+
+Show the reason in name plates
+== 네임플레이트에 사유 표시
 
 Show the screen center line
 == 화면 중심선 표시
@@ -14669,11 +14837,17 @@ Smooth free spectator camera
 Smooth other players' predicted movement
 == 다른 플레이어의 예측 이동을 부드럽게 처리
 
+Smooth prediction margin
+== 예측 여유 부드럽게
+
 Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 == 부드러운 예측 여백 (핑 지터 보정을 약화시키고 이전 동작으로 복원)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == 메뉴/편집기에서 부드러운 스크롤 애니메이션 지속 시간 (ms, 0 = 끄기)
+
+Smooth sudden prediction margin corrections caused by ping spikes
+== 핑 급증으로 생기는 예측 여유의 급격한 보정을 부드럽게 합니다
 
 Smooth the mouse-driven camera in live and demo free spectating
 == 게임과 데모의 자유 관전에서 마우스로 조작하는 카메라를 부드럽게 이동
@@ -14902,6 +15076,9 @@ Spin pop
 
 Split main and dummy into different teams for solo-run sync
 == 본체와 분신을 서로 다른 팀에 넣어 solo 런 시작을 동기화합니다（team-0 동기화가 어려운 맵용）
+
+Split the exported video into segments of this length. 0 writes a single file. Segments disable B-frames so they can be joined without timestamp errors.
+== 내보낼 영상의 분할 길이입니다. 0이면 단일 파일로 출력합니다. 분할 시에는 B 프레임을 꺼서 이어 붙일 때 타임스탬프 오류가 나지 않게 합니다.
 
 Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
 == 후원자 채팅 스타일 초안: 0=보통, 1=백금 하이라이트, 2=유체
@@ -16058,6 +16235,9 @@ Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"
 Ticks after freeze before applying max prediction reduction
 == 최대 예측 감소를 적용하기 전 얼어붙은 후 틱 수
 
+Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
+== 각 구간 전에 녹화 없이 재생하는 tick 수로, 효과와 채팅 상태를 구간 시작에 맞춥니다. 50 tick은 1초입니다.
+
 tile
 == 타일
 
@@ -16625,14 +16805,14 @@ Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visu
 Turn on "Message merging" in Dream Features.
 == "드림 기능"에서 "Message merging"을 켜세요.
 
+Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
+== "네임플레이트 텍스트 효과"를 켜고 "개별 조정"을 연 뒤 "테두리", "그라데이션", "무지개", "발광"을 켜고 해당 범위와 색상을 설정하세요.
+
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
 == 새 창은 새 IME를 켜고, 채팅창에 맞춰 입력 모드를 바꾸려면 입력 중 IME 자동 관리를 켭니다. 색은 색 편집에서 바꿉니다.
 
 Turn on "Notify when friends come online" and "Auto refresh server list", then tune "Refresh interval"; "Auto greet friends entering map" is optional.
 == 친구 접속 알림과 서버 목록 자동 새로 고침을 켜고 새로 고침 간격을 조절하세요. 맵에 들어온 친구에게 자동 인사는 선택 사항입니다.
-
-Turn on "Show advanced options", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
-== 고급 옵션 표시를 켠 뒤 테두리, 그라데이션, 무지개, 발광 중 원하는 것을 켜고 해당 범위와 색상을 설정하세요.
 
 Turn on "Show chat bubbles above players", then adjust "Duration", "Bubble opacity" and "Font size", or pick your own colors.
 == 플레이어 머리 위에 채팅 말풍선 표시를 켜고 표시 시간, 말풍선 불투명도, 글자 크기를 조절하세요. 색도 직접 고를 수 있습니다.
@@ -17206,6 +17386,9 @@ Use public word filter
 
 Use server defaults
 == 서버 기본값 사용
+
+Use skin color for frozen feet
+== 얼어붙은 발에 스킨 색 사용
 
 Use skin color for frozen Tee's feet
 == 얼어붙은 Tee의 발에도 스킨 색상 사용
@@ -17896,6 +18079,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == 단어 목록은 NUL 문자 없는 UTF-8 텍스트여야 합니다.
+
+Worker threads that convert captured frames to the encoder pixel format. 2-4 is enough for most CPUs; more threads only help when the encoder is fast.
+== 캡처한 프레임을 인코더 픽셀 형식으로 변환하는 작업 스레드 수입니다. 대부분의 CPU에서는 2~4개면 충분하며, 인코더가 빠를 때만 늘리는 것이 좋습니다.
 
 World lyrics
 == 월드 가사

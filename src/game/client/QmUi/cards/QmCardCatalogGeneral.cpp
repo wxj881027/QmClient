@@ -182,6 +182,17 @@ namespace qm_card_catalog
 					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &s_LowerRefreshRate, "general-lower-refresh-rate", Localize("Save power by lowering update rate (higher input latency)"), g_Config.m_ClRefreshRate <= 480 && g_Config.m_ClRefreshRate != 0, &Button))
 						g_Config.m_ClRefreshRate = g_Config.m_ClRefreshRate > 480 || g_Config.m_ClRefreshRate == 0 ? 480 : 0;
 				}
+				if(Flow.Control("general-net-qos", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
+				{
+					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_QmNetQos, "general-net-qos", Localize("Prioritize game traffic (QoS, Windows only)"), g_Config.m_QmNetQos, &Button))
+						g_Config.m_QmNetQos ^= 1;
+					pMenus->GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmNetQos, &Button, Localize("Best-effort DSCP marking of the game connection; may be ignored by routers"));
+				}
+				if(Flow.Control("general-crash-report-on-startup", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
+				{
+					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_QmCrashReportOnStartup, "general-crash-report-on-startup", Localize("Show pending crash reports on startup"), g_Config.m_QmCrashReportOnStartup, &Button))
+						g_Config.m_QmCrashReportOnStartup ^= 1;
+				}
 				Flow.Space(GeneralMetrics.m_SectionGap);
 				static CButtonContainer s_SettingsButtonId, s_SavesButtonId, s_ConfigButtonId, s_ThemesButtonId;
 				const auto DoOpenButton = [pMenus, GeneralMetrics](CButtonContainer &Id, const char *pTextId, const char *pText, const char *pPath, bool CreateDirectory, const char *pTooltip, const CUIRect &ButtonRect) {
@@ -251,6 +262,8 @@ namespace qm_card_catalog
 					Flow.Space(ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing));
 				}
 				DoToggle(&g_Config.m_QmScreenshotWatermark, "screenshot-watermark", Localize("Automatically add a watermark to screenshots"));
+				if(Flow.Control("general-pose-capture-megapixels", GeneralMetrics.m_LineHeight, Button, ui_token::settings::RowGap(GeneralMetrics.m_LineSpacing)))
+					DoNumericField("general-pose-capture-megapixels", &g_Config.m_QmPoseCaptureMaxMegapixels, &g_Config.m_QmPoseCaptureMaxMegapixels, Button, Localize("Pose screenshot pixel budget (MP, 0 = unlimited)"), 0, 300, CUi::SCROLLBAR_OPTION_INFINITE);
 				if(qm_mobile_spectator::Enabled())
 				{
 					CUIRect MediaRow;

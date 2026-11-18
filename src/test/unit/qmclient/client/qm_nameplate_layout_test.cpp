@@ -140,17 +140,21 @@ namespace
 		std::array<vec2, kNameplateCoreRowCount> aSizes{};
 		aSizes[static_cast<size_t>(ENameplateCoreRow::NAME)] = vec2(100.0f, 20.0f);
 		aSizes[static_cast<size_t>(ENameplateCoreRow::HOOK)] = vec2(0.0f, 29.0f);
-		aSizes[static_cast<size_t>(ENameplateCoreRow::KEYS)] = vec2((IconSize + 5.0f) * 3.0f, IconSize * 1.5f);
-		aSizes[static_cast<size_t>(ENameplateCoreRow::WATER_HAMMER)] = vec2(IconSize + 5.0f, IconSize * 1.5f);
-		aSizes[static_cast<size_t>(ENameplateCoreRow::WATER_HOOK)] = vec2(IconSize + 5.0f, IconSize * 1.5f);
+		// 方向键与卡键的高亮块与强弱钩同尺寸：图标 + 5px 留白。
+		for(const auto Row : {ENameplateCoreRow::KEYS_LEFT, ENameplateCoreRow::KEYS_UP, ENameplateCoreRow::KEYS_RIGHT})
+			aSizes[static_cast<size_t>(Row)] = vec2(IconSize + 5.0f, IconSize + 5.0f);
+		aSizes[static_cast<size_t>(ENameplateCoreRow::WATER_HAMMER)] = vec2(IconSize + 5.0f, IconSize + 5.0f);
+		aSizes[static_cast<size_t>(ENameplateCoreRow::WATER_HOOK)] = vec2(IconSize + 5.0f, IconSize + 5.0f);
 		return aSizes;
 	}
 }
 
-TEST(QmNameplateKeyLayout, DefaultsPlaceHammerAndHookBesideDirectionKeys)
+TEST(QmNameplateKeyLayout, DefaultsKeepDirectionKeysSideBySideOnOneBaseline)
 {
 	const auto aPositions = QmNameplateCoreRowPositions(NameplateKeyLayoutSizes());
-	EXPECT_EQ(aPositions[static_cast<size_t>(ENameplateCoreRow::KEYS)], vec2(0.0f, -49.0f));
+	EXPECT_EQ(aPositions[static_cast<size_t>(ENameplateCoreRow::KEYS_LEFT)], vec2(-23.0f, -49.0f));
+	EXPECT_EQ(aPositions[static_cast<size_t>(ENameplateCoreRow::KEYS_UP)], vec2(0.0f, -49.0f));
+	EXPECT_EQ(aPositions[static_cast<size_t>(ENameplateCoreRow::KEYS_RIGHT)], vec2(23.0f, -49.0f));
 	EXPECT_EQ(aPositions[static_cast<size_t>(ENameplateCoreRow::WATER_HAMMER)], vec2(-46.0f, -49.0f));
 	EXPECT_EQ(aPositions[static_cast<size_t>(ENameplateCoreRow::WATER_HOOK)], vec2(46.0f, -49.0f));
 }
@@ -159,7 +163,7 @@ TEST(QmNameplateKeyLayout, MovingEachInputOnlyChangesItsOwnPosition)
 {
 	const auto aSizes = NameplateKeyLayoutSizes();
 	const auto aOriginal = QmNameplateCoreRowPositions(aSizes);
-	for(const auto Target : {ENameplateCoreRow::KEYS, ENameplateCoreRow::WATER_HAMMER, ENameplateCoreRow::WATER_HOOK})
+	for(const auto Target : {ENameplateCoreRow::KEYS_LEFT, ENameplateCoreRow::KEYS_UP, ENameplateCoreRow::KEYS_RIGHT, ENameplateCoreRow::WATER_HAMMER, ENameplateCoreRow::WATER_HOOK})
 	{
 		SCOPED_TRACE(static_cast<size_t>(Target));
 		std::array<vec2, kNameplateCoreRowCount> aOffsets{};

@@ -856,7 +856,7 @@ inline SSettingsTeeQueuePanelGeometry ResolveSettingsTeeQueuePanelGeometry(const
 	Geometry.m_StackInterval = ContentWidth < 250.0f * Metrics.m_UiScale;
 	Geometry.m_IntervalHeight = Metrics.m_InputHeight + (Geometry.m_StackInterval ? Metrics.m_LineHeight + Metrics.m_LineSpacing : 0.0f);
 	const float RequiredHeight =
-		Metrics.m_LineSpacing * 5.0f + Metrics.m_LineHeight * 3.0f + Geometry.m_IntervalHeight +
+		Metrics.m_LineSpacing * 7.0f + Metrics.m_LineHeight * 5.0f + Geometry.m_IntervalHeight +
 		Geometry.m_QueueListSurfaceHeight + Geometry.m_QueuePresetHeight;
 	Geometry.m_ContentHeight = RequiredHeight;
 	return Geometry;

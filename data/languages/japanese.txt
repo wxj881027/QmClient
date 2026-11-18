@@ -596,6 +596,9 @@ Add demo timeline marker
 Add Entry
 == エントリーを追加
 
+Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off.
+== マップに入ると全プレイヤーのスキンをキューに追加します。手動でキューを編集するとオフになります。
+
 Add friend
 == フレンドを追加
 
@@ -949,6 +952,9 @@ Angry
 
 Angular gradient
 == 角度グラデーション
+
+Animate country flags
+== 国旗をアニメーション
 
 Animated title style id
 == タイトルのアニメーションスタイル ID
@@ -1769,6 +1775,9 @@ Best
 Best quality (all-intra 4:4:4 / MP4)
 == 最高画質 (全フレーム内 4:4:4 / MP4)
 
+Best-effort DSCP marking of the game connection; may be ignored by routers
+== ゲーム接続に可能な範囲で DSCP マーキングを付けます（ルーターが無視する場合があります）
+
 Better compression, slower
 == 圧縮率は向上するが遅い
 
@@ -2119,6 +2128,9 @@ Capsule ends
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 == カプセル端: 0 = 通常の円弧、1 = なめらかな端点、2 = Apple 連続曲率
+
+Capture queue
+== キャプチャキュー
 
 Capture the flag
 == キャプチャー・ザ・フラッグ (CTF)
@@ -2711,6 +2723,9 @@ Collapse
 Collapse console
 == コンソールを縮小
 
+Collect all players' skins on map join
+== マップ開始時に全プレイヤーのスキンを収集
+
 Collect CP %d before teleporting
 == テレポートする前に CP %d に触れてください
 
@@ -3269,6 +3284,9 @@ Converse
 Converse with the last person you whispered to (private message)
 == 最後にささやいた相手と会話（プライベートメッセージ）
 
+Convert threads
+== 変換スレッド
+
 Coordinate size on nameplate
 == ネームプレート上の座標のサイズ
 
@@ -3488,20 +3506,14 @@ Current aspect ratio: Show default
 Current cut is invalid or already added
 == 現在のカットは無効か、すでに追加されています
 
-Current driver
-== 現在のドライバー
-
 Current file
 == 現在のファイル
 
-Current GPU
-== 現在の GPU
-
-Current graphics backend
-== 現在のグラフィックスバックエンド
-
 Current rescue mode: %s
 == 現在のレスキューモード：%s
+
+Current resolution
+== 現在の解像度
 
 Current status
 == 現在のステータス
@@ -4574,6 +4586,60 @@ Dummy mini view zoom (percent)
 Dummy name
 == ダミー名
 
+Dummy name plate clan line X offset
+== ダミーネームプレートクラン行 X オフセット
+
+Dummy name plate clan line Y offset
+== ダミーネームプレートクラン行 Y オフセット
+
+Dummy name plate coord line X offset
+== ダミーネームプレート座標行 X オフセット
+
+Dummy name plate coord line Y offset
+== ダミーネームプレート座標行 Y オフセット
+
+Dummy name plate hammer icon X offset
+== ダミーネームプレートハンマーアイコン X オフセット
+
+Dummy name plate hammer icon Y offset
+== ダミーネームプレートハンマーアイコン Y オフセット
+
+Dummy name plate hook icon X offset
+== ダミーネームプレートフックアイコン X オフセット
+
+Dummy name plate hook icon Y offset
+== ダミーネームプレートフックアイコン Y オフセット
+
+Dummy name plate jump key icon X offset
+== ダミーネームプレートジャンプキーアイコン X オフセット
+
+Dummy name plate jump key icon Y offset
+== ダミーネームプレートジャンプキーアイコン Y オフセット
+
+Dummy name plate left key icon X offset
+== ダミーネームプレート左キーアイコン X オフセット
+
+Dummy name plate left key icon Y offset
+== ダミーネームプレート左キーアイコン Y オフセット
+
+Dummy name plate name line X offset
+== ダミーネームプレートネーム行 X オフセット
+
+Dummy name plate name line Y offset
+== ダミーネームプレートネーム行 Y オフセット
+
+Dummy name plate right key icon X offset
+== ダミーネームプレート右キーアイコン X オフセット
+
+Dummy name plate right key icon Y offset
+== ダミーネームプレート右キーアイコン Y オフセット
+
+Dummy name plate strength line X offset
+== ダミーネームプレート強度行 X オフセット
+
+Dummy name plate strength line Y offset
+== ダミーネームプレート強度行 Y オフセット
+
 Dummy skin
 == ダミースキン
 
@@ -5032,6 +5098,9 @@ Enable mod weapon on %d: %s
 
 Enable MySQL backend instead of SQLite (fallback to sv_sqlite_file when no MySQL server is reachable)
 == SQLite の代わりに MySQL バックエンドを有効にする（MySQL サーバーに接続できない場合は sv_sqlite_file にフォールバック）
+
+Enable nameplate text effects (master switch)
+== ネームプレートのテキスト効果を有効化（マスタースイッチ）
 
 Enable Netease lyric integration
 == Netease の歌詞統合を有効化
@@ -6056,6 +6125,9 @@ Frame time p95
 Frame time p99
 == フレーム時間 p99
 
+Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
+== キャプチャとエンコードの間にバッファするフレーム数。深いほどエンコードが遅いフレームを吸収できますがメモリを使います。小さいほど早くバックプレッシャーがかかります。
+
 Frankenstein (drop parts on right)
 == フランケンシュタイン（パーツを右側にドロップ）
 
@@ -6185,6 +6257,9 @@ Friends imported for this session, but saving settings failed.
 Friends only
 == フレンドのみ
 
+Frozen color darkening
+== 凍結色の暗さ
+
 Frozen fire attempt
 == 凍結中の発射試行
 
@@ -6265,6 +6340,9 @@ Game update rate (Hz)
 
 Game update rate when window inactive (Hz)
 == ウィンドウ非アクティブ時のゲーム更新レート（Hz）
+
+Game window mode
+== ゲームウィンドウモード
 
 Game/predicted tick
 == ゲーム/予測 tick
@@ -6517,6 +6595,9 @@ Graphics card
 
 Graphics display
 == グラフィック表示
+
+Graphics hardware details
+== グラフィックスハードウェアの詳細
 
 Graphics library major version (0 = auto-detect)
 == グラフィックスライブラリのメジャーバージョン（0 = 自動検出）
@@ -6923,9 +7004,6 @@ Hook collision line
 Hook collision line alpha (0 invisible, 100 fully visible)
 == フック衝突線のアルファ（0 不可視、100 完全可視）
 
-Hook collision line length follows cursor distance
-== フック衝突線の長さがカーソル距離に追従
-
 Hook collision line opacity
 == フック衝突線の不透明度
 
@@ -7226,6 +7304,9 @@ In pie menu
 In-game controller sensitivity
 == ゲーム内コントローラー感度
 
+In-game crosshair rotation speed in degrees per second (0=static, negative=reverse)
+== ゲーム内照準の回転速度（度/秒、0=静止、負=逆回転）
+
 In-game crosshair scale percent (50=half, 200=double)
 == ゲーム内クロスヘアのスケールパーセント（50=半分、200=二倍）
 
@@ -7336,6 +7417,9 @@ Ingame controller mode
 
 Ingame controller sens.
 == ゲーム内コントローラー感度
+
+Ingame cursor rotation
+== ゲーム内カーソルの回転
 
 Ingame cursor scale
 == ゲーム内カーソルスケール
@@ -7673,6 +7757,9 @@ Kawase
 Keep hook when teleporting
 == テレポート時にフックを維持する
 
+Keep inside game window
+== ゲームウィンドウ内に保つ
+
 Keep it small and in a corner; a large overlay covers the map and hides what matters.
 == 小さくして隅に置きましょう。大きすぎるオーバーレイはマップを覆い、大事なものを隠します。
 
@@ -7682,8 +7769,14 @@ Keep it small and near an edge: the hint draws over the map and can cover the ti
 Keep messages short so they fit in one chat line.
 == チャット 1 行に収まるよう、メッセージは短く保ちましょう。
 
+Keep square inside game window
+== 四角形をゲームウィンドウ内に保つ
+
 Keep the defaults unless you play with high ping; then try one option at a time and compare.
 == 高 ping で遊ぶ場合を除いて既定のままにし、変えるときは一度にひとつだけ試して比べます。
+
+Keep the feeling of the maximum cursor distance independent of resolution
+== 最大カーソル距離の感覚を解像度に依存させない
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == 暗い背景には明るい文字が見やすいです。既定の見た目に戻すにはヒントの外観をリセットを押します。
@@ -8021,6 +8114,9 @@ Legacy realtime WebSocket URL (migrated to qm_websocket_url)
 Legacy settings card collapse states migrated
 == 旧形式の設定カードの折りたたみ状態を移行済み
 
+Legacy team colors
+== 旧バージョンのチームカラー
+
 Length
 == 長さ
 
@@ -8050,6 +8146,9 @@ LibreTranslate endpoint
 
 Light
 == ライト
+
+Limit cursor to game window
+== カーソルをゲームウィンドウ内に制限
 
 Limit information in spectator mode
 == 観戦モードの情報を制限する
@@ -8537,6 +8636,9 @@ Map preview shows the entity layer only (hides textures)
 Map Preview TODO
 == マッププレビュー TODO
 
+Map preview unavailable
+== マッププレビューを利用できません
+
 Map progress
 == マップの進捗
 
@@ -8749,6 +8851,9 @@ Maximum number of resend requests answered per second (0 for no limit)
 
 Maximum number of server info responses of any size sent per second (0 = unlimited).
 == サイズを問わず毎秒送信できるサーバー情報応答の最大数（0 = 無制限）。
+
+Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting.
+== ローテーションキューに保持するスキンの上限。超えた分は古い順に削除されます。0 にするとキューを空にして収集を停止します。
 
 Maximum number of skins loaded simultaneously
 == 同時に読み込まれる最大スキン数
@@ -9062,6 +9167,9 @@ MP4 is the most compatible for sharing, MOV is the editing standard and required
 Multi-resolution blur with a stronger result and balanced GPU cost.
 == 強いぼかしとバランスの取れたGPU負荷を両立する多重解像度方式です。
 
+Multi-select move
+== 複数選択で移動
+
 Multi-View
 == マルチビュー
 
@@ -9212,17 +9320,29 @@ Name plate hook icon X offset
 Name plate hook icon Y offset
 == ネームプレートのフックアイコンの Y オフセット
 
-Name plate key line X offset
-== ネームプレートキー行 X オフセット
+Name plate jump key icon X offset
+== ネームプレートジャンプキーアイコン X オフセット
 
-Name plate key line Y offset
-== ネームプレートキー行 Y オフセット
+Name plate jump key icon Y offset
+== ネームプレートジャンプキーアイコン Y オフセット
+
+Name plate left key icon X offset
+== ネームプレート左キーアイコン X オフセット
+
+Name plate left key icon Y offset
+== ネームプレート左キーアイコン Y オフセット
 
 Name plate name line X offset
 == ネームプレートネーム行 X オフセット
 
 Name plate name line Y offset
 == ネームプレートネーム行 Y オフセット
+
+Name plate right key icon X offset
+== ネームプレート右キーアイコン X オフセット
+
+Name plate right key icon Y offset
+== ネームプレート右キーアイコン Y オフセット
 
 Name plate strength line X offset
 == ネームプレート強弱行 X オフセット
@@ -9280,6 +9400,9 @@ Nameplate text border range
 
 Nameplate text effect auto LOD (0=Off 1=On: trim outer effect layers when crowded)
 == ネームプレート文字効果の自動LOD（0=無効、1=有効：密集時に外側の効果層を削減）
+
+Nameplate text effects
+== ネームプレートのテキスト効果
 
 Nameplate text effects (1=Border 2=Gradient 4=Rainbow 8=Glow)
 == ネームプレートテキストエフェクト（1=境界 2=グラデーション 4=レインボー 8=グロー）
@@ -9547,6 +9670,9 @@ No functions bound
 
 No input device available
 == 利用可能な入力デバイスがありません
+
+No limit
+== 制限なし
 
 No local saves file found (ddnet-saves.txt)
 == ローカルセーブファイルが見つかりません（ddnet-saves.txt）
@@ -9874,6 +10000,9 @@ Old chat style: no tee icons, no background
 
 Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else.
 == 保存上限に達すると古いファイルは削除されるので、残したいデモは別の場所にコピーしておきましょう。
+
+Old single-segment hook collision line
+== 旧式の単一セグメントフック衝突線
 
 Oldschool
 == オールドスクール
@@ -10892,6 +11021,9 @@ Pose render supersampling scale (1-4)
 Pose render unsharp mask strength (0 = off)
 == ポーズレンダリングのアンシャープマスク強度（0 = オフ）
 
+Pose screenshot pixel budget (MP, 0 = unlimited)
+== ポーズスクリーンショットの画素上限（MP、0 = 無制限）
+
 Poses
 == ポーズ
 
@@ -11192,6 +11324,9 @@ Print command executed by this name or all chat binds
 Print daily messages to console
 == デイリーメッセージをコンソールに表示
 
+Prioritize game traffic (QoS, Windows only)
+== ゲーム通信を優先（QoS、Windows のみ）
+
 Prioritize outgoing game traffic on Windows (best effort)
 == Windows で送信ゲーム通信を優先する（ベストエフォート）
 
@@ -11234,8 +11369,14 @@ Project and community websites
 Projectile / explosion range
 == 投射物 / 爆発範囲
 
+ProRes profile
+== ProRes プロファイル
+
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 == ProRes プロファイル上書き: -1=自動（4:4:4 は 4444、その他は HQ）、0=Proxy、1=LT、2=422、3=HQ、4=4444、5=4444XQ
+
+ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this.
+== エンコーダーが ProRes のときのプロファイル。自動では 4:4:4 入力なら 4444、それ以外は HQ を選びます。他のエンコーダーでは無視されます。
 
 Protect names and skins while streaming
 == 配信時に名前とスキンを保護
@@ -11443,6 +11584,9 @@ Querying...
 
 Queue is empty
 == キューが空です
+
+Queue length
+== キューの長さ
 
 Queue preset: %s
 == キュープリセット: %s
@@ -12665,6 +12809,9 @@ Say in chat
 Say in team chat
 == チームチャットで発言
 
+Scale cursor distance with resolution
+== カーソル距離を解像度に合わせて拡大縮小
+
 Scale down other Tees as well
 == 他の Tee も同様に縮小
 
@@ -12878,6 +13025,12 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 See you at the next checkpoint.
 == 次のチェックポイントで会おう。
 
+Segment length (s)
+== セグメント長（秒）
+
+Segment warmup (ticks)
+== セグメント予熱（tick）
+
 Select a body part, change its sprite or color, then save the skin.
 == 体の部位を選び、スプライトや色を変えてからスキンを保存します。
 
@@ -12910,6 +13063,9 @@ Select map
 
 Select map for the pose file
 == ポーズファイルのマップを選択
+
+Select several name plate blocks in the preview and move them together
+== プレビューで複数のネームプレートブロックを選び、まとめて移動します
 
 Select the country flag for each player
 == Select the country flag for each player
@@ -13292,6 +13448,12 @@ Shape
 Shape, colors and text shared by the whole interface
 == インターフェース全体で共通の形状・色・文字
 
+Share layout with dummy
+== ダミーとレイアウトを共有
+
+Share name plate offsets between own tee and dummy (0=separate)
+== 本体とダミーでネームプレートのオフセットを共有（0=別々）
+
 Share of the server browser name/map split given to the name column (per mille)
 == サーバーブラウザーの名前/マップ分割で名前列に割り当てる割合（パーミル）
 
@@ -13342,12 +13504,6 @@ Show a per-character wave on text titles locally
 
 Show a small view of the dummy
 == ダミーの小さなビューを表示
-
-Show advanced nameplate settings without changing effect values
-== エフェクトの値を変更せずにネームプレートの詳細設定を表示
-
-Show advanced options
-== 詳細オプションを表示
 
 Show advanced translation options
 == 高度な翻訳オプションを表示
@@ -13669,6 +13825,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == 他のプレイヤーの予測不可能な位置にゴーストを表示
+
+Show ghost direction
+== ゴーストの向きを表示
 
 Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
 == マップ内に光りながら浮かぶ歌詞を表示する。新しい歌詞は出現した位置に留まり、前の歌詞は上に漂いながら消えていく
@@ -14024,6 +14183,9 @@ Show pause/play indicator when changing
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == 起動時にウィンドウで未処理のクラッシュレポートを表示する（0 = レポートファイルを残してログのみ記録）
 
+Show pending crash reports on startup
+== 起動時に未送信のクラッシュレポートを表示
+
 Show per-character title waves locally
 == 称号の文字を自分の画面で波打たせる
 
@@ -14119,6 +14281,9 @@ Show scoreboard
 
 Show scoreboard after death
 == 死亡後にスコアボードを表示
+
+Show seconds in local time
+== ローカル時刻に秒を表示
 
 Show seconds on clock
 == 時計に秒を表示
@@ -14260,6 +14425,9 @@ Show the original text locally below translated outgoing messages
 
 Show the pet
 == ペットを表示
+
+Show the reason in name plates
+== ネームプレートに理由を表示
 
 Show the screen center line
 == 画面中央線を表示
@@ -14669,11 +14837,17 @@ Smooth free spectator camera
 Smooth other players' predicted movement
 == 他のプレイヤーの予測移動をスムーズにする
 
+Smooth prediction margin
+== 予測マージンを滑らかに
+
 Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 == スムーズ予測マージン（Ping ジッター補正を弱め、旧動作に戻す）
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == メニュー/エディターでのスムーズスクロールアニメーション時間（ms、0 = オフ）
+
+Smooth sudden prediction margin corrections caused by ping spikes
+== ping の急上昇による予測マージンの急な補正を滑らかにします
 
 Smooth the mouse-driven camera in live and demo free spectating
 == ゲームとデモの自由観戦でマウス操作のカメラを滑らかに移動
@@ -14902,6 +15076,9 @@ Spin pop
 
 Split main and dummy into different teams for solo-run sync
 == 本体と分身を別々のチームに入れ、solo ランの開始を同期します（team-0 で同期しにくいマップ向け）
+
+Split the exported video into segments of this length. 0 writes a single file. Segments disable B-frames so they can be joined without timestamp errors.
+== 書き出す動画をこの長さで分割します。0 なら単一ファイル。分割時は B フレームを無効化し、結合時にタイムスタンプで失敗しないようにします。
 
 Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
 == 支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き、2=流体
@@ -16058,6 +16235,9 @@ Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"
 Ticks after freeze before applying max prediction reduction
 == フリーズ後、最大予測減少を適用するまでの tick 数
 
+Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
+== 各セグメントの前に録画せずに再生する tick 数。エフェクトやチャットの状態を区間の開始に合わせます。50 tick が 1 秒です。
+
 tile
 == タイル
 
@@ -16625,14 +16805,14 @@ Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visu
 Turn on "Message merging" in Dream Features.
 == 「ドリーム機能」で「Message merging」をオンにします。
 
+Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
+== 「ネームプレートのテキスト効果」をオンにし、「個別調整」を開いてから「枠線」「グラデーション」「レインボー」「発光」を有効にし、対応する範囲と色を設定してください。
+
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
 == 新しいバーには新しい IME をオンにし、チャット欄に合わせて入力モードを切り替えるには入力中に IME を自動管理の項目をオンにします。色は色を編集で変更します。
 
 Turn on "Notify when friends come online" and "Auto refresh server list", then tune "Refresh interval"; "Auto greet friends entering map" is optional.
 == フレンドのオンライン通知とサーバーリストの自動更新をオンにし、更新間隔を調整します。マップに入ったフレンドへの自動あいさつは任意です。
-
-Turn on "Show advanced options", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
-== 詳細オプション表示をオンにしてから、枠線、グラデーション、レインボー、発光を有効にし、それぞれの範囲と色を設定します。
 
 Turn on "Show chat bubbles above players", then adjust "Duration", "Bubble opacity" and "Font size", or pick your own colors.
 == プレイヤー頭上にチャット吹き出しを表示をオンにし、表示時間・吹き出しの不透明度・文字サイズを調整します。色も自由に選べます。
@@ -17206,6 +17386,9 @@ Use public word filter
 
 Use server defaults
 == サーバーの既定値を使用
+
+Use skin color for frozen feet
+== 凍結した足にスキンの色を使う
 
 Use skin color for frozen Tee's feet
 == フリーズ Tee の足にもスキン色を使用
@@ -17896,6 +18079,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == 単語リストは NUL 文字を含まない UTF-8 テキストである必要があります。
+
+Worker threads that convert captured frames to the encoder pixel format. 2-4 is enough for most CPUs; more threads only help when the encoder is fast.
+== キャプチャしたフレームをエンコーダーのピクセル形式へ変換するワーカースレッド数。多くの CPU では 2〜4 で十分で、エンコーダーが速い場合のみ増やす意味があります。
 
 World lyrics
 == ワールド内の歌詞

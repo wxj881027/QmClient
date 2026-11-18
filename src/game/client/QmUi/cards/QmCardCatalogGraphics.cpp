@@ -354,7 +354,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 		char aBuf[128];
 		CSettingsContentLayoutFlow Flow(ContentRect);
 		CUIRect ModeList;
-		CUIRect WindowModeDropDown;
+		CUIRect WindowModeRow;
 		CUIRect ModeLabel;
 		static CListBox s_ListBox;
 		const float RowHeightResList = GraphicsMetrics.m_ListRowHeight;
@@ -362,14 +362,19 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 		// 列表行与音频包列表等设置页列表同档：行文字用正文字号，小字只留给
 		// 单位、角标与说明行；胶囊行内边距由同一字号派生（SetCapsuleRows）。
 		const float FontSizeResList = GraphicsMetrics.m_BodySize;
-		if(Flow.Control("graphics-window-mode", GraphicsMetrics.m_LineHeight, WindowModeDropDown)) {
+		if(Flow.Control("graphics-window-mode", GraphicsMetrics.m_LineHeight, WindowModeRow)) {
 		const char *apWindowModes[] = {Localize("Windowed"), Localize("Windowed borderless"), Localize("Windowed fullscreen"), Localize("Desktop fullscreen"), Localize("Fullscreen")};
+		// 与其它设置行统一：左侧是行标题，右侧才是下拉框。
+		CUIRect WindowModeLabel, WindowModeDropDown;
+		SplitSettingsControlRow(WindowModeRow, GraphicsMetrics, &WindowModeLabel, &WindowModeDropDown, ESettingsControlWidth::LONG_CHOICE);
+		DoSettingsMenuLabel(SETTINGS_GRAPHICS, -1, -1, "graphics-window-mode", &WindowModeLabel, Localize("Game window mode"), GraphicsMetrics.m_BodySize, TEXTALIGN_ML);
 		static CUi::SDropDownState s_WindowModeDropDownState;
 		static CScrollRegion s_WindowModeDropDownScrollRegion;
 		s_WindowModeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_WindowModeDropDownScrollRegion;
 		CUi::SDropDownProperties WindowModeDropDownProps;
 		WindowModeDropDownProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
-		const int NewWindowMode = DoSettingsDropDown(&WindowModeDropDown, OldWindowMode, apWindowModes, std::size(apWindowModes), s_WindowModeDropDownState, WindowModeDropDownProps, &g_Config.m_GfxFullscreen, &g_Config.m_GfxBorderless);
+		// 同一行已经有标题，再弹配置名/长说明的悬浮提示只会挡住列表，这里不挂提示。
+		const int NewWindowMode = DoSettingsDropDown(&WindowModeDropDown, OldWindowMode, apWindowModes, std::size(apWindowModes), s_WindowModeDropDownState, WindowModeDropDownProps, nullptr);
 		if(OldWindowMode != NewWindowMode)
 		{
 			if(NewWindowMode == 0)
@@ -391,8 +396,12 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			const int AspectGcd = G > 0 ? G : 1;
 			const float RawHiDPIScale = Graphics()->ScreenHiDPIScale();
 			const float HiDPIScale = std::isfinite(RawHiDPIScale) && RawHiDPIScale > 0.0f ? RawHiDPIScale : 1.0f;
-			str_format(aBuf, sizeof(aBuf), "%s: %dx%d @%dhz (%d:%d)", Localize("Current"), (int)(g_Config.m_GfxScreenWidth * HiDPIScale), (int)(g_Config.m_GfxScreenHeight * HiDPIScale), g_Config.m_GfxScreenRefreshRate, g_Config.m_GfxScreenWidth / AspectGcd, g_Config.m_GfxScreenHeight / AspectGcd);
-			Ui()->DoLabel(&ModeLabel, aBuf, FontSizeResListHeader, TEXTALIGN_MC);
+			str_format(aBuf, sizeof(aBuf), "%dx%d @%dhz (%d:%d)", (int)(g_Config.m_GfxScreenWidth * HiDPIScale), (int)(g_Config.m_GfxScreenHeight * HiDPIScale), g_Config.m_GfxScreenRefreshRate, g_Config.m_GfxScreenWidth / AspectGcd, g_Config.m_GfxScreenHeight / AspectGcd);
+			// 和上面的窗口模式行共用同一套列布局：标签在左列，数值从下拉框的左边开始。
+			CUIRect CurrentLabel, CurrentValue;
+			SplitSettingsControlRow(ModeLabel, GraphicsMetrics, &CurrentLabel, &CurrentValue, ESettingsControlWidth::LONG_CHOICE);
+			DoSettingsMenuLabel(SETTINGS_GRAPHICS, -1, -1, "graphics-current-mode-label", &CurrentLabel, Localize("Current resolution"), FontSizeResListHeader, TEXTALIGN_ML);
+			Ui()->DoLabel(&CurrentValue, aBuf, FontSizeResListHeader, TEXTALIGN_ML);
 		}
 
 		if(Flow.Control("graphics-mode-list", std::max(0.0f, GraphicsModesTargetContentHeight - 2.0f * (GraphicsMetrics.m_LineHeight + GraphicsMetrics.m_LineSpacing)), ModeList, ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing)))
@@ -656,22 +665,31 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					});
 				});
 			}
-			const auto InfoLabel = [this, &Flow, GraphicsMetrics, BodySize](const char *pId, const char *pLabel, const char *pValue) {
-				char aText[1024];
-				str_format(aText, sizeof(aText), "%s: %s", pLabel, pValue != nullptr && pValue[0] != '\0' ? pValue : Localize("Unknown"));
-				Flow.Text(pId, aText, 0.0f, BodySize, ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing), [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [this, BodySize](const CUIRect &Row, const char *pText) {
-						SLabelProperties Props;
-						Props.m_MaxWidth = Row.w;
-						Props.m_EnableWidthCheck = false;
-						Ui()->DoLabel(&Row, pText, BodySize, TEXTALIGN_ML, Props); }, GraphicsMetrics.m_LineHeight);
+			const auto InfoLabel = [this, &Flow, GraphicsMetrics, BodySize](const char *pId, const char *pText) {
+				// 走和其它设置行同一条声明与绘制路径：行矩形、字号、左边缘都一致，
+				// 不会出现「图形模式」和「图形硬件详情」首个字差几个像素的问题。
+				CUIRect Row;
+				const bool HasRow = Flow.Control(pId, GraphicsMetrics.m_LineHeight, Row);
+				Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
+				if(!HasRow)
+					return;
+				SLabelProperties Props;
+				Props.m_MaxWidth = Row.w;
+				Props.m_MinimumFontSize = 9.0f;
+				DoSettingsMenuLabel(SETTINGS_GRAPHICS, -1, -1, pId, &Row, pText, BodySize, TEXTALIGN_ML, Props);
 			};
 			int Major = 0, Minor = 0, Patch = 0;
 			const char *pBackend = "";
 			Graphics()->GetDetectedContextVersion(Major, Minor, Patch, pBackend);
 			const auto RuntimeInfo = ResolveSettingsGraphicsRuntimeInfo(Graphics()->GetVersionString(), pBackend, Major, Minor, Patch);
-			InfoLabel("graphics-current-gpu", Localize("Current GPU"), Graphics()->GetRendererString());
-			InfoLabel("graphics-current-driver", Localize("Current driver"), RuntimeInfo.m_Driver.c_str());
-			InfoLabel("graphics-current-backend", Localize("Current graphics backend"), RuntimeInfo.m_Backend.c_str());
+			// 显卡 / 驱动 / 后端压成一段，用「 - 」分隔；逐行加前缀会把卡片撑得很高。
+			char aHardwareInfo[1024];
+			str_format(aHardwareInfo, sizeof(aHardwareInfo), "%s - %s - %s",
+				Graphics()->GetRendererString(),
+				RuntimeInfo.m_Driver.empty() ? Localize("Unknown") : RuntimeInfo.m_Driver.c_str(),
+				RuntimeInfo.m_Backend.empty() ? Localize("Unknown") : RuntimeInfo.m_Backend.c_str());
+			InfoLabel("graphics-hardware-title", Localize("Graphics hardware details"));
+			InfoLabel("graphics-hardware-info", aHardwareInfo);
 			if(ResolveSettingsGpuControl(Graphics()->GetGpus().m_vGpus.size(), Graphics()->GetGpus().m_CanSelect, HasSystemGpuSettings).m_ShowSelector)
 			{
 				RowAction("graphics-gpu", GraphicsMetrics.m_LineHeight, [&](CUIRect Row) {
