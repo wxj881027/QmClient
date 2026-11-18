@@ -197,7 +197,9 @@ private:
 
 	bool ReadFile(const char *pPath, int StorageType, SFileData &Data, unsigned &Size)
 	{
-		const auto Result = m_pStorage->ReadFileChecked(pPath, StorageType, &Data.m_pData, &Size);
+		// 沿用原有的 1 GiB 上限，打开时检查文件类型，避免扫描阻塞。
+		constexpr unsigned MAX_FILE_BYTES = 1024u * 1024 * 1024;
+		const auto Result = m_pStorage->ReadFileCheckedBounded(pPath, StorageType, &Data.m_pData, &Size, MAX_FILE_BYTES);
 		if(Result == IStorage::EReadFileResult::SUCCESS)
 			return true;
 		if(Result == IStorage::EReadFileResult::NOT_FOUND || State() == STATE_ABORTED)

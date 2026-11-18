@@ -100,7 +100,11 @@ namespace
 		}
 		EReadFileResult ReadFileChecked(const char *pName, int Type, void **ppData, unsigned *pSize) override
 		{
-			const auto Result = m_Storage.ReadFileChecked(pName, Type, ppData, pSize);
+			return m_Storage.ReadFileChecked(pName, Type, ppData, pSize);
+		}
+		EReadFileResult ReadFileCheckedBounded(const char *pName, int Type, void **ppData, unsigned *pSize, unsigned MaxBytes) override
+		{
+			const auto Result = m_Storage.ReadFileCheckedBounded(pName, Type, ppData, pSize, MaxBytes);
 			if(m_ThrowAfterRead && str_comp(pName, "skins7/qm_info_fail.json") == 0)
 				throw std::bad_alloc();
 			if(m_pFailReadPath && m_ForcedReadResult && str_comp(pName, m_pFailReadPath) == 0)
@@ -218,7 +222,8 @@ namespace
 		{
 			m_pJob = Decoder ? std::make_shared<CQmSkin7InfoJob>(m_pFault.get(), Decoder) : std::make_shared<CQmSkin7InfoJob>(m_pFault.get());
 			ASSERT_TRUE(m_Pool.TryAdd(m_pJob));
-			ASSERT_TRUE(WaitForJobDone(*m_pJob));
+			ASSERT_TRUE(WaitForJobFinished(*m_pJob));
+			ASSERT_EQ(m_pJob->State(), IJob::STATE_DONE);
 		}
 
 		void FailRoot()
@@ -473,9 +478,14 @@ TEST_F(CQmSkin7ScanRetryTest, CancellationAfterNativeCallbackDiscardsPartialResu
 	m_Pool.Shutdown();
 	m_PoolActive = false;
 	ASSERT_TRUE(Hit);
+	ASSERT_TRUE(m_pJob->Finished());
 	EXPECT_EQ(m_pJob->State(), IJob::STATE_ABORTED);
 	ExpectEmptyResult();
-	EXPECT_FALSE(m_Request.RetryFailedScan(m_pJob, m_Completion, TTime(0)));
+	// 组件主动取消时会丢弃任务。这里仍持有任务，刷新请求会接管已结束的失败扫描。
+	ASSERT_TRUE(m_Request.RetryFailedScan(m_pJob, m_Completion, TTime(0)));
+	EXPECT_EQ(m_pJob, nullptr);
+	EXPECT_TRUE(m_Request.IsPending());
+	EXPECT_FALSE(m_Completion.HasPending());
 }
 
 TEST_F(CQmSkin7ScanRetryTest, NativeDirectoryFailureStatusRejectsParsedResultAndCanRecover)
@@ -643,5 +653,6 @@ TEST_F(CQmSkin7ScanRetryTest, UnsupportedCheckedReadIsNotAcceptedAsMissingDescri
 	m_pFault->m_ForcedReadResult = IStorage::EReadFileResult::UNSUPPORTED;
 	Queue();
 	ASSERT_FALSE(HasFatalFailure());
+	EXPECT_TRUE(m_pFault->m_Triggered);
 	ExpectEmptyResult();
 }
