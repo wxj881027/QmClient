@@ -61,3 +61,17 @@ TEST(QmTClientConfigStringEdit, ShortEditsRespectTheActualVariableCapacity)
 	EXPECT_STREQ(State.m_Input.GetString(), "abcd");
 	EXPECT_STREQ(aValue, "a");
 }
+
+TEST(QmTClientConfigStringEdit, BoundedHumanReadableCommandKeepsUtf8AndClosingQuote)
+{
+	char aValue[16], aOldValue[16];
+	const auto pConsole = CreateConsole(CFGFLAG_CLIENT);
+	SStringConfigVariable Variable(pConsole.get(), "text", SConfigVariable::VAR_STRING, CFGFLAG_CLIENT, "", "", aValue, "abc界", sizeof(aValue), aOldValue);
+	Variable.Register();
+
+	char aCommand[12];
+	Variable.SerializeHumanReadable(aCommand, sizeof(aCommand));
+	EXPECT_STREQ(aCommand, "text \"abc\"");
+	pConsole->ExecuteLine(aCommand);
+	EXPECT_STREQ(aValue, "abc");
+}

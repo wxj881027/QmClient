@@ -19,9 +19,9 @@
 #include <chrono>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <thread>
-#include <unordered_map>
 #include <utility>
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -29,6 +29,7 @@
 #else
 #include <fcntl.h>
 #include <sys/file.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 
@@ -143,20 +144,56 @@ namespace
 #endif
 		}
 	};
-	// 此守卫在磁盘锁之后创建，异常退出先关闭候选，再释放锁。
+	// 此守卫在磁盘锁之后创建，先关闭句柄，再在锁内清理本次未发布的候选。
 	class CConfigSaveFiles
 	{
-		IOHANDLE *m_pFiles;
+		IStorage &m_Storage;
+		IOHANDLE (&m_aFiles)[ConfigDomain::NUM];
+		const char (&m_aaPaths)[ConfigDomain::NUM][IO_MAX_PATH_LENGTH];
+		bool m_aOpened[ConfigDomain::NUM] = {};
+		bool m_KeepCandidates = false;
 
 	public:
-		explicit CConfigSaveFiles(IOHANDLE *pFiles) :
-			m_pFiles(pFiles) {}
+		CConfigSaveFiles(IStorage &Storage, IOHANDLE (&aFiles)[ConfigDomain::NUM], const char (&aaPaths)[ConfigDomain::NUM][IO_MAX_PATH_LENGTH]) :
+			m_Storage(Storage),
+			m_aFiles(aFiles),
+			m_aaPaths(aaPaths)
+		{
+		}
+
 		~CConfigSaveFiles()
 		{
 			for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
-				if(m_pFiles[Domain])
-					io_close(std::exchange(m_pFiles[Domain], nullptr));
+				if(m_aFiles[Domain])
+					io_close(std::exchange(m_aFiles[Domain], nullptr));
+			if(m_KeepCandidates)
+				return;
+
+			for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
+			{
+				if(!m_aOpened[Domain])
+					continue;
+				try
+				{
+					m_Storage.RemoveFile(m_aaPaths[Domain], IStorage::TYPE_SAVE);
+				}
+				catch(...)
+				{
+					// 单个候选清理异常不能中断剩余清理。
+				}
+			}
 		}
+
+		CConfigSaveFiles(const CConfigSaveFiles &) = delete;
+		CConfigSaveFiles &operator=(const CConfigSaveFiles &) = delete;
+
+		void Open(ConfigDomain Domain)
+		{
+			m_aFiles[Domain] = m_Storage.OpenFile(m_aaPaths[Domain], IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			m_aOpened[Domain] = m_aFiles[Domain] != nullptr;
+		}
+
+		void KeepCandidates() { m_KeepCandidates = true; }
 	};
 
 	class CConfigSaveFlag
@@ -183,14 +220,11 @@ namespace
 	constexpr const char *QM_CONFIG_V0_CHATBINDS_PATH = "qmclient_chatbinds.cfg";
 	constexpr const char *QM_CONFIG_V0_WARLIST_PATH = "qmclient_warlist.cfg";
 
-	std::unordered_map<const SIntConfigVariable *, int> *s_pToggleRestoreInts = nullptr;
-
-	std::unordered_map<const SIntConfigVariable *, int> &ToggleRestoreInts()
+	struct SRegisteredIntConfigVariable : public SIntConfigVariable
 	{
-		if(s_pToggleRestoreInts == nullptr)
-			s_pToggleRestoreInts = new std::unordered_map<const SIntConfigVariable *, int>();
-		return *s_pToggleRestoreInts;
-	}
+		using SIntConfigVariable::SIntConfigVariable;
+		std::optional<int> m_ToggleRestoreValue;
+	};
 
 	bool EnsureConfigPathFolder(IStorage *pStorage, const char *pConfigPath)
 	{
@@ -312,7 +346,7 @@ bool QmFinalizeConfigMigration(IStorage *pStorage)
 	// v1 时代目录。注意：Windows 文件系统大小写不敏感，QmClient/ 与 qmclient/ 是同一物理目录，
 	// 其中的 settings_qmclient.cfg 等与当前 qmclient/ 文件是同一文件（已在 v2 清理中合并删除），
 	// 而 qmclient_profiles.cfg 等无变量文件仍是当前生效配置，绝不能动。
-	// 只有独立存在的 v1 目录（Linux/macOS）才删除其中的文件并移除目录。
+	// 只有确认 v1 目录独立存在，才删除其中的旧文件并移除目录。
 	char aV1DirPath[IO_MAX_PATH_LENGTH];
 	char aCurrentDirPath[IO_MAX_PATH_LENGTH];
 	pStorage->GetCompletePath(IStorage::TYPE_SAVE, QM_CONFIG_V1_DIR, aV1DirPath, sizeof(aV1DirPath));
@@ -320,7 +354,13 @@ bool QmFinalizeConfigMigration(IStorage *pStorage)
 #if defined(CONF_FAMILY_WINDOWS) || defined(CONF_PLATFORM_MACOS)
 	const bool SeparateV1Directory = str_comp_nocase(aV1DirPath, aCurrentDirPath) != 0;
 #else
-	const bool SeparateV1Directory = str_comp(aV1DirPath, aCurrentDirPath) != 0;
+	// 大小写不同的路径仍可能指向同一目录。旧目录是符号链接时也保留该目录。
+	struct stat V1Dir;
+	struct stat CurrentDir;
+	const bool SeparateV1Directory =
+		lstat(aV1DirPath, &V1Dir) == 0 && S_ISDIR(V1Dir.st_mode) &&
+		stat(aCurrentDirPath, &CurrentDir) == 0 && S_ISDIR(CurrentDir.st_mode) &&
+		(V1Dir.st_dev != CurrentDir.st_dev || V1Dir.st_ino != CurrentDir.st_ino);
 #endif
 	if(SeparateV1Directory)
 	{
@@ -344,11 +384,6 @@ bool QmFinalizeConfigMigration(IStorage *pStorage)
 
 	log_info("config", "Merged managed client configs into qmclient/settings.cfg and cleaned up legacy files");
 	return true;
-}
-
-static void EscapeParam(char *pDst, const char *pSrc, int Size)
-{
-	str_escape(&pDst, pSrc, pDst + Size);
 }
 
 void SConfigVariable::ExecuteLine(const char *pLine) const
@@ -585,10 +620,16 @@ size_t SStringConfigVariable::MaxSerializedSize() const
 
 void SStringConfigVariable::Serialize(char *pOut, size_t Size, const char *pValue) const
 {
+	if(Size == 0)
+		return;
+
 	str_copy(pOut, m_pScriptName, Size);
 	str_append(pOut, " \"", Size);
-	const int OutLen = str_length(pOut);
-	EscapeParam(pOut + OutLen, pValue, Size - OutLen - 1); // -1 to ensure space for final quote
+	char *const pValueStart = pOut + str_length(pOut);
+	char *pEscaped = pValueStart;
+	str_escape(&pEscaped, pValue, pOut + Size - 1);
+	// 在补上闭合引号前清掉末尾被截断的 UTF-8 字符。
+	str_utf8_fix_truncation(pValueStart);
 	str_append(pOut, "\"", Size);
 }
 
@@ -666,7 +707,7 @@ void CConfigManager::Init()
 			HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: %d, min: %d, max: %d)", pDesc, Default, Min, Max);
 		dbg_assert(HelpSize < sizeof(aHelp) - UTF8_BYTE_LENGTH - 1, "MACRO_CONFIG_INT(%s): help text possibly truncated. Increase size of aHelp.", pScriptName);
 
-		AddVariable(m_ConfigHeap.Allocate<SIntConfigVariable>(
+		AddVariable(m_ConfigHeap.Allocate<SRegisteredIntConfigVariable>(
 			m_pConsole, pScriptName, SConfigVariable::VAR_INT, Flags, m_ConfigHeap.StoreString(aHelp), pDesc, pVariable, Default, Min, Max));
 	};
 
@@ -946,7 +987,7 @@ try
 		log_error("config", "ERROR: could not lock client configs for saving");
 		return false;
 	}
-	const CConfigSaveFiles SaveFiles(m_aConfigFile);
+	CConfigSaveFiles SaveFiles(*m_pStorage, m_aConfigFile, aaConfigFileTmp);
 	// 锁内以最新磁盘内容为本次保存基线，允许多个实例依次保存，最后成功保存者生效。
 	// 序列化期间仍检查外部修改；不可读文件和实际写盘错误继续返回失败。
 	if(!CheckConfigFiles(true))
@@ -969,11 +1010,10 @@ try
 			SetSaveError("create_folder", s_aConfigDomains[ConfigDomain].m_aConfigPath);
 			log_error("config", "ERROR: creating config folder for %s failed", s_aConfigDomains[ConfigDomain].m_aConfigPath);
 			m_aConfigFile[ConfigDomain] = nullptr;
-			aaConfigFileTmp[ConfigDomain][0] = '\0';
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 			continue;
 		}
-		m_aConfigFile[ConfigDomain] = m_pStorage->OpenFile(aaConfigFileTmp[ConfigDomain], IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		SaveFiles.Open(ConfigDomain);
 
 		if(!m_aConfigFile[ConfigDomain])
 		{
@@ -1040,7 +1080,8 @@ try
 			log_error("config", "ERROR: closing %s failed", aaConfigFileTmp[ConfigDomain]);
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 		}
-		if(!m_aFailed[ConfigDomain] && !ReadConfigFileState(aaConfigFileTmp[ConfigDomain], aWrittenState[ConfigDomain]))
+		if(!m_aFailed[ConfigDomain] &&
+			(!ReadConfigFileState(aaConfigFileTmp[ConfigDomain], aWrittenState[ConfigDomain]) || !aWrittenState[ConfigDomain].m_Exists))
 		{
 			SetSaveError("read_tmp", aaConfigFileTmp[ConfigDomain]);
 			log_error("config", "ERROR: reading completed temporary config %s failed", aaConfigFileTmp[ConfigDomain]);
@@ -1053,13 +1094,9 @@ try
 		Failed |= m_aFailed[Domain];
 	// 所有文件完成写入后才替换，写入失败或写入期间发生外部修改都保留原配置。
 	if(Failed || !CheckConfigFiles())
-	{
-		for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
-			if(aaConfigFileTmp[Domain][0] != '\0')
-				m_pStorage->RemoveFile(aaConfigFileTmp[Domain], IStorage::TYPE_SAVE);
 		return false;
-	}
 
+	SaveFiles.KeepCandidates();
 	for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
 	{
 		if(s_aConfigDomains[Domain].m_aConfigPath == nullptr)
@@ -1079,7 +1116,7 @@ try
 }
 catch(...)
 {
-	// 候选句柄已在锁内关闭；不在资源不足的异常出口继续分配诊断文本。
+	// 候选句柄已在锁内关闭；异常出口不再分配诊断文本。
 	return false;
 }
 
@@ -1245,27 +1282,20 @@ void CConfigManager::Con_ToggleRestore(IConsole::IResult *pResult, void *pUserDa
 			continue;
 		}
 
-		SIntConfigVariable *pIntVariable = static_cast<SIntConfigVariable *>(pVariable);
+		auto *pIntVariable = static_cast<SRegisteredIntConfigVariable *>(pVariable);
 		if(pResult->GetInteger(0) != 0)
 		{
-			// Key repeat sends extra "press" strokes while held. Preserve the original value
-			// from the first press so release can restore correctly.
-			std::unordered_map<const SIntConfigVariable *, int> &ToggleRestoreIntsRef = ToggleRestoreInts();
-			if(!ToggleRestoreIntsRef.contains(pIntVariable))
-			{
-				ToggleRestoreIntsRef[pIntVariable] = *pIntVariable->m_pVariable;
-			}
+			// 重复按下事件保留第一次按下前的值。
+			if(!pIntVariable->m_ToggleRestoreValue)
+				pIntVariable->m_ToggleRestoreValue = *pIntVariable->m_pVariable;
 			pIntVariable->SetValue(pResult->GetInteger(2));
 		}
 		else
 		{
-			std::unordered_map<const SIntConfigVariable *, int> &ToggleRestoreIntsRef = ToggleRestoreInts();
-			auto It = ToggleRestoreIntsRef.find(pIntVariable);
-			if(It != ToggleRestoreIntsRef.end())
-			{
-				pIntVariable->SetValue(It->second);
-				ToggleRestoreIntsRef.erase(It);
-			}
+			// 先消费旧值，控制台回调中开始的新按键周期可再次登记。
+			const auto RestoreValue = std::exchange(pIntVariable->m_ToggleRestoreValue, std::nullopt);
+			if(RestoreValue)
+				pIntVariable->SetValue(*RestoreValue);
 		}
 		return;
 	}

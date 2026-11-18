@@ -462,6 +462,31 @@ TEST_F(CConfigPersistence, StagingFailureKeepsAllExistingConfigFiles)
 	EXPECT_TRUE(Session.Config()->Save());
 }
 
+#if defined(CONF_FAMILY_UNIX)
+TEST_F(CConfigPersistence, MissingCandidateAtValidationKeepsExistingSettings)
+{
+	const char *pWarList = s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath;
+	Write(SETTINGS_PATH, "cl_showhud 0\n");
+	Write(pWarList, "# existing war list\n");
+	CConfigSession Session(m_pStorage.get());
+	ASSERT_TRUE(Session.Load());
+
+	Session.Config()->RegisterCallback([](IConfigManager *, void *pUser) {
+		auto *pStorage = static_cast<IStorage *>(pUser);
+		char aCandidate[IO_MAX_PATH_LENGTH];
+		IStorage::FormatTmpPath(aCandidate, sizeof(aCandidate), s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath);
+		EXPECT_TRUE(pStorage->RemoveFile(aCandidate, IStorage::TYPE_SAVE));
+	},
+		m_pStorage.get(), ConfigDomain::TCLIENTWARLIST);
+	g_Config.m_ClShowhud = 1;
+
+	EXPECT_FALSE(Session.Config()->Save());
+	EXPECT_TRUE(std::string_view(Session.Config()->LastSaveError()).starts_with("stage=read_tmp "));
+	EXPECT_EQ(Read(), "cl_showhud 0\n");
+	EXPECT_EQ(Read(pWarList), "# existing war list\n");
+}
+#endif
+
 TEST_F(CConfigPersistence, ChangeDuringSerializationKeepsExternalSettings)
 {
 	Write(SETTINGS_PATH, "cl_showhud 0\n");
@@ -675,6 +700,9 @@ TEST_F(CConfigPersistence, CallbackAllocationExceptionPreservesBothFilesAndAllow
 	const char *pWarPath = s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath;
 	const std::string OldSettings = Read();
 	const std::string OldWarList = Read(pWarPath);
+	char aSettingsCandidate[IO_MAX_PATH_LENGTH], aWarListCandidate[IO_MAX_PATH_LENGTH];
+	IStorage::FormatTmpPath(aSettingsCandidate, sizeof(aSettingsCandidate), SETTINGS_PATH);
+	IStorage::FormatTmpPath(aWarListCandidate, sizeof(aWarListCandidate), pWarPath);
 	g_Config.m_ClShowhud = !g_Config.m_ClShowhud;
 	WarList.m_pLine = "# changed warlist";
 	State.m_Throw = true;
@@ -684,6 +712,8 @@ TEST_F(CConfigPersistence, CallbackAllocationExceptionPreservesBothFilesAndAllow
 		EXPECT_FALSE(Session.Config()->Save(true));
 		EXPECT_EQ(Read(), OldSettings);
 		EXPECT_EQ(Read(pWarPath), OldWarList);
+		EXPECT_FALSE(m_pStorage->FileExists(aSettingsCandidate, IStorage::TYPE_SAVE));
+		EXPECT_FALSE(m_pStorage->FileExists(aWarListCandidate, IStorage::TYPE_SAVE));
 	}
 	State.m_Throw = false;
 	ASSERT_TRUE(Session.Config()->Save());
