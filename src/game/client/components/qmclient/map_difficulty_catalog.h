@@ -62,11 +62,17 @@ private:
 	};
 	// 星级上限区分 Gores（3）与 AXRace（5），同名地图不跨玩法共用。
 	using TAxiomKey = std::pair<int, std::string>;
+	using TAxiomRetryMap = std::map<TAxiomKey, int64_t, SAxiomKeyLess>;
+	struct SAxiomRequest
+	{
+		std::shared_ptr<IHttpRequest> m_pRequest;
+		TAxiomRetryMap::node_type m_RetryNode;
+	};
 	bool StoreAxiomEntry(SEntry Entry);
 	bool RecordAxiomResponse(const TAxiomKey &Key, const IHttpRequest &Request);
 	TRequestFactory m_CreateRequest;
-	std::map<TAxiomKey, std::shared_ptr<IHttpRequest>, SAxiomKeyLess> m_AxiomRequests;
-	std::map<TAxiomKey, int64_t, SAxiomKeyLess> m_AxiomRetryAfter;
+	std::map<TAxiomKey, SAxiomRequest, SAxiomKeyLess> m_AxiomRequests;
+	TAxiomRetryMap m_AxiomRetryAfter;
 	std::map<TAxiomKey, SEntry, SAxiomKeyLess> m_AxiomEntries;
 	bool m_AxiomCacheDirty = false;
 	std::vector<SEntry> m_vEntries;

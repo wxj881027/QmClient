@@ -225,25 +225,57 @@ void CQmMapDifficultyCatalog::RequestAxiomDifficulty(const CServerInfo &Server, 
 	const auto Key = std::make_pair(MaxStars, std::string_view(Server.m_aMap));
 	if(m_AxiomEntries.contains(Key) || m_AxiomRequests.contains(Key))
 		return;
-	const auto Retry = m_AxiomRetryAfter.find(Key);
+	auto Retry = m_AxiomRetryAfter.find(Key);
 	if(Retry != m_AxiomRetryAfter.end() && Now < Retry->second)
 		return;
-	if(!Budget.TryStart(Now, pApiKey[0] != '\0'))
+
+	std::shared_ptr<IHttpRequest> pRequest;
+	try
+	{
+		if(!Budget.TryStart(Now, pApiKey[0] != '\0'))
+			return;
+
+		// 先备好退避节点，收到失败结果后可以直接归还原表。
+		if(Retry == m_AxiomRetryAfter.end())
+			Retry = m_AxiomRetryAfter.try_emplace(TAxiomKey{MaxStars, Server.m_aMap}, 0).first;
+		auto RetryNode = m_AxiomRetryAfter.extract(Retry);
+		const auto Url = QmBuildAxiomMapInfoUrl(RetryNode.key().second.c_str(), MaxStars == 3 ? EQmAxiomMode::GORES : EQmAxiomMode::AXRACE);
+		pRequest = m_CreateRequest(Url.c_str());
+		if(!pRequest)
+			return;
+		pRequest->Timeout({3000, 8000, 0, 0});
+		pRequest->MaxResponseSize(16 * 1024);
+		pRequest->LogProgress(HTTPLOG::NONE);
+		if(pApiKey[0])
+			pRequest->Header((std::string("Authorization: Bearer ") + pApiKey).c_str());
+
+		const auto [Pending, Inserted] = m_AxiomRequests.try_emplace(RetryNode.key());
+		if(!Inserted)
+			return;
+		Pending->second = {pRequest, std::move(RetryNode)};
+		Http.Run(pRequest);
 		return;
-	if(Retry != m_AxiomRetryAfter.end())
-		m_AxiomRetryAfter.erase(Retry);
-	const auto Url = QmBuildAxiomMapInfoUrl(Server.m_aMap, MaxStars == 3 ? EQmAxiomMode::GORES : EQmAxiomMode::AXRACE);
-	std::shared_ptr<IHttpRequest> pRequest = m_CreateRequest(Url.c_str());
-	pRequest->Timeout({3000, 8000, 0, 0});
-	pRequest->MaxResponseSize(16 * 1024);
-	pRequest->LogProgress(HTTPLOG::NONE);
-	if(pApiKey[0])
-		pRequest->Header((std::string("Authorization: Bearer ") + pApiKey).c_str());
-	m_AxiomRequests.emplace(TAxiomKey{MaxStars, Server.m_aMap}, pRequest);
-	Http.Run(std::move(pRequest));
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
+
+	// 提交过程中可能同步处理其他请求，只回收这一次登记。
+	if(pRequest)
+	{
+		const auto Pending = std::find_if(m_AxiomRequests.begin(), m_AxiomRequests.end(), [&](const auto &Entry) {
+			return Entry.second.m_pRequest == pRequest;
+		});
+		if(Pending != m_AxiomRequests.end())
+			m_AxiomRequests.erase(Pending);
+	}
 }
 
 bool CQmMapDifficultyCatalog::RecordAxiomResponse(const TAxiomKey &Key, const IHttpRequest &Request)
+try
 {
 	std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(Request.ResultJson(), json_value_free);
 	if(!pRoot || pRoot->type != json_object)
@@ -263,24 +295,33 @@ bool CQmMapDifficultyCatalog::RecordAxiomResponse(const TAxiomKey &Key, const IH
 		return false;
 	return StoreAxiomEntry({Key.second, std::move(Category), (int)pStars->u.integer, Key.first});
 }
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
 
 bool CQmMapDifficultyCatalog::PollAxiomRequests(CQmAxiomRequestBudget &Budget, int64_t Now)
 {
 	bool Changed = false;
 	for(auto It = m_AxiomRequests.begin(); It != m_AxiomRequests.end();)
 	{
-		const auto &Request = *It->second;
-		if(!Request.Done())
+		if(!It->second.m_pRequest->Done())
 		{
 			++It;
 			continue;
 		}
+		auto Completed = m_AxiomRequests.extract(It++);
+		const auto &Request = *Completed.mapped().m_pRequest;
 		const int Code = Request.CompletedStatusCode();
 		if(Code == 429)
 			Budget.RateLimited(Now);
-		if(Code == 200 && Request.State() == EHttpState::DONE && RecordAxiomResponse(It->first, Request))
+		if(Code == 200 && Request.State() == EHttpState::DONE && RecordAxiomResponse(Completed.key(), Request))
 			Changed = true;
-		else if(!m_AxiomEntries.contains(It->first))
+		else if(!m_AxiomEntries.contains(Completed.key()))
 		{
 			if(m_AxiomRetryAfter.size() >= MAX_AXIOM_ENTRIES)
 				m_AxiomRetryAfter.erase(m_AxiomRetryAfter.begin());
@@ -289,17 +330,18 @@ bool CQmMapDifficultyCatalog::PollAxiomRequests(CQmAxiomRequestBudget &Budget, i
 				DelaySeconds = 600;
 			else if(Code == 429)
 				DelaySeconds = 1;
-			m_AxiomRetryAfter[It->first] = Now + DelaySeconds * time_freq();
+			auto &RetryNode = Completed.mapped().m_RetryNode;
+			RetryNode.mapped() = Now + DelaySeconds * time_freq();
+			m_AxiomRetryAfter.insert(std::move(RetryNode));
 		}
-		It = m_AxiomRequests.erase(It);
 	}
 	return Changed;
 }
 
 void CQmMapDifficultyCatalog::CancelAxiomRequests()
 {
-	for(const auto &[Key, pRequest] : m_AxiomRequests)
-		pRequest->Abort();
+	for(const auto &[Key, Request] : m_AxiomRequests)
+		Request.m_pRequest->Abort();
 	m_AxiomRequests.clear();
 }
 
