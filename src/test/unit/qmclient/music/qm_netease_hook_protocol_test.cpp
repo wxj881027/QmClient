@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <cstring>
+#include <string>
 #include <vector>
 
 namespace
@@ -141,14 +142,19 @@ TEST(QmNeteaseHookMetadata, MatchesTitleContainingTheWindowSeparator)
 	EXPECT_EQ(pTrack->m_SongId, "100");
 }
 
-TEST(QmNeteaseHookMetadata, RejectsAmbiguousWindowTitleMatchingDifferentSongIds)
+TEST(QmNeteaseHookMetadata, RejectsAmbiguousWindowTitleWithoutASharedSongId)
 {
 	std::vector<QmNeteaseHook::SLocalTrackMetadata> Tracks = {
 		{"100", "Same Title", "Same Artist", "Album A", "", 180000},
 		{"200", "Same Title", "Same Artist", "Album B", "", 180000},
 	};
+	const char *pWindowTitle = "Same Title - Same Artist";
 
-	EXPECT_EQ(QmNeteaseHook::FindLocalTrackByWindowTitle(Tracks, "Same Title - Same Artist"), nullptr);
+	EXPECT_EQ(QmNeteaseHook::FindLocalTrackByWindowTitle(Tracks, pWindowTitle), nullptr);
+
+	Tracks[0].m_SongId.clear();
+	Tracks[1].m_SongId.clear();
+	EXPECT_EQ(QmNeteaseHook::FindLocalTrackByWindowTitle(Tracks, pWindowTitle), nullptr);
 }
 
 TEST(QmNeteaseHookMetadata, DoesNotInventMediaForAnIncompleteWindowTitle)
@@ -180,6 +186,16 @@ TEST(QmNeteaseHookMetadata, FillsIndependentMediaSnapshotFromMatchedTrack)
 	EXPECT_EQ(Snapshot.m_DurationMs, 199923);
 	EXPECT_EQ(Snapshot.m_PositionMs, 0);
 	EXPECT_EQ(Snapshot.m_Status & QmNeteaseHook::STATUS_PLAYING, 0u);
+}
+
+TEST(QmNeteaseHookMetadata, TruncatesLongTitleAtACompleteUtf8Character)
+{
+	QmNeteaseHook::SSnapshot Snapshot{};
+	const std::string TitlePrefix = std::string(sizeof(Snapshot.m_aTitle) - 5, 'a') + "\xe9\x9f\xb3";
+	const QmNeteaseHook::SLocalTrackMetadata Track{"42", TitlePrefix + "\xe4\xb9\x90", "Artist", "", "", 0};
+
+	ASSERT_TRUE(QmNeteaseHook::PopulateSnapshotFromLocalTrack(&Snapshot, Track));
+	EXPECT_STREQ(Snapshot.m_aTitle, TitlePrefix.c_str());
 }
 
 TEST(QmNeteaseHookMetadata, MediaKeyChangesWhenTheTrackChanges)
