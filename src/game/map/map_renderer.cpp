@@ -88,11 +88,15 @@ void CMapRenderer::LoadStep(int MaxLayers, CMapLoadTask::TClock::time_point Dead
 	int LayersStart, LayersCount;
 	m_pLoadLayers->Map()->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersCount);
 	int ProcessedLayers = 0;
-	while(ProcessedLayers < MaxLayers && m_LoadGroupId < m_pLoadLayers->NumGroups())
+	// 首轮至少推进一个位置，后续扫描都检查截止时间。
+	for(bool WithinDeadline = true;
+		WithinDeadline && ProcessedLayers < MaxLayers && m_LoadGroupId < m_pLoadLayers->NumGroups();
+		WithinDeadline = Deadline == CMapLoadTask::TClock::time_point::max() || CMapLoadTask::TClock::now() < Deadline)
 	{
 		CMapItemGroup *pGroup = m_pLoadLayers->GetGroup(m_LoadGroupId);
-		if(pGroup == nullptr)
+		if(pGroup == nullptr || m_LoadLayerId >= pGroup->m_NumLayers)
 		{
+			m_pLoadGroup.reset();
 			++m_LoadGroupId;
 			m_LoadLayerId = 0;
 			continue;
@@ -114,14 +118,6 @@ void CMapRenderer::LoadStep(int MaxLayers, CMapLoadTask::TClock::time_point Dead
 				}
 			}
 
-			if(m_LoadLayerId >= pGroup->m_NumLayers)
-			{
-				m_pLoadGroup.reset();
-				++m_LoadGroupId;
-				m_LoadLayerId = 0;
-				continue;
-			}
-
 			CMapItemLayer *pLayer = m_pLoadLayers->GetLayer(pGroup->m_StartLayer + m_LoadLayerId);
 			const int LayerType = GetLayerType(pLayer);
 			m_LoadPassedGameLayer |= LayerType == LAYER_GAME;
@@ -134,9 +130,6 @@ void CMapRenderer::LoadStep(int MaxLayers, CMapLoadTask::TClock::time_point Dead
 			if(m_LoadType == ERenderType::RENDERTYPE_FOREGROUND && !m_LoadPassedGameLayer)
 			{
 				++m_LoadLayerId;
-				++m_LoadCompletedWork;
-				if(m_LoadCallback.has_value())
-					(*m_LoadCallback)(m_LoadCompletedWork, m_LoadTotalWork);
 				++ProcessedLayers;
 				continue;
 			}
@@ -213,8 +206,6 @@ void CMapRenderer::LoadStep(int MaxLayers, CMapLoadTask::TClock::time_point Dead
 		if(m_LoadCallback.has_value())
 			(*m_LoadCallback)(m_LoadCompletedWork, m_LoadTotalWork);
 		++ProcessedLayers;
-		if(Deadline != CMapLoadTask::TClock::time_point::max() && CMapLoadTask::TClock::now() >= Deadline)
-			return;
 	}
 
 	if(m_LoadGroupId >= m_pLoadLayers->NumGroups())
