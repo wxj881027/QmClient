@@ -205,13 +205,32 @@ void CSkins7::ProcessCompletedJobs()
 	}
 	// GPU 句柄只能在主线程创建，读盘和解码已由描述任务完成。
 	// 1ms 是批处理软预算，单次驱动上传无法抢占，上传后不再开始超预算的下一项。
+	auto &UploadLimiter = *GameClient()->GpuUploadLimiter();
+	using ECompletion = CQmSkin7PartPublisher::ECompletion;
 	while(m_NextAccessory < 2 && time_get_nanoseconds() - Begin < std::chrono::milliseconds(1))
 	{
+		const char *pSkippedAccessory = nullptr;
 		if(!m_pSkinInfoJob->PublishNextAccessory(m_NextAccessory, [&](const CImageInfo &Image, bool Hat) {
-			   return m_PartPublisher.TryPublishAccessory(Image, Hat ? m_XmasHatTexture : m_BotTexture,
-				   *Graphics(), *GameClient()->GpuUploadLimiter(), Hat ? "skins7/xmas_hat.png" : "skins7/bot.png");
-		   }))
+			   const char *pName = Hat ? "skins7/xmas_hat.png" : "skins7/bot.png";
+			   const auto Completion = CQmSkin7PartPublisher::PublishWithRetry(UploadLimiter, m_FailedAccessoryUploadAttempts, [&] {
+				   return m_PartPublisher.TryPublishAccessory(Image, Hat ? m_XmasHatTexture : m_BotTexture, *Graphics(), UploadLimiter, pName);
+			   });
+			   if(Completion == ECompletion::SKIPPED)
+				   pSkippedAccessory = pName;
+			   return Completion != ECompletion::DEFERRED;
+			   }))
 			break;
+		m_FailedAccessoryUploadAttempts = 0;
+		if(pSkippedAccessory)
+		{
+			try
+			{
+				log_warn("skins7", "Skipping accessory '%s' after repeated upload failures", pSkippedAccessory);
+			}
+			catch(...)
+			{
+			}
+		}
 	}
 
 	auto Iter = m_PendingSkinPartJobs.begin();
@@ -226,21 +245,29 @@ void CSkins7::ProcessCompletedJobs()
 
 		char aLoadedName[24] = "";
 		int LoadedPart = -1;
+		bool Skipped = false;
 		if(!pJob->PublishResult([&](const CSkinPartLoadJob::SResult &Result) {
-			   if(!m_PartPublisher.TryPublish(Result, m_avSkinParts[Result.m_PartType], *Graphics(), *GameClient()->GpuUploadLimiter()))
+			   const auto Completion = CQmSkin7PartPublisher::PublishWithRetry(UploadLimiter, pJob->m_FailedUploadAttempts, [&] {
+				   return m_PartPublisher.TryPublish(Result, m_avSkinParts[Result.m_PartType], *Graphics(), UploadLimiter);
+			   });
+			   if(Completion == ECompletion::DEFERRED)
 				   return false;
 			   str_copy(aLoadedName, Result.m_aName);
 			   LoadedPart = Result.m_PartType;
+			   Skipped = Completion == ECompletion::SKIPPED;
 			   return true;
-		   }))
+			   }))
 			break;
 
 		// 诊断失败不能回滚已提交部件，也不能让同一任务再次上传。
-		if(LoadedPart >= 0 && Config()->m_Debug)
+		if(LoadedPart >= 0 && (Skipped || Config()->m_Debug))
 		{
 			try
 			{
-				log_trace("skins7", "Loaded skin part '%s/%s'", CSkins7::ms_apSkinPartNames[LoadedPart], aLoadedName);
+				if(Skipped)
+					log_warn("skins7", "Skipping skin part '%s/%s' after repeated upload failures", CSkins7::ms_apSkinPartNames[LoadedPart], aLoadedName);
+				else
+					log_trace("skins7", "Loaded skin part '%s/%s'", CSkins7::ms_apSkinPartNames[LoadedPart], aLoadedName);
 			}
 			catch(...)
 			{
@@ -463,6 +490,7 @@ void CSkins7::TryStartRefresh()
 		m_NextPart = 0;
 		m_NextSkin = 0;
 		m_NextAccessory = 0;
+		m_FailedAccessoryUploadAttempts = 0;
 		if(m_pSkinInfoJob)
 			m_pSkinInfoJob->Abort();
 		m_pSkinInfoJob.reset();

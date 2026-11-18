@@ -141,6 +141,9 @@ protected:
 	}
 
 public:
+	// 由主线程的发布队列记录，后台解码不访问。
+	unsigned m_FailedUploadAttempts = 0;
+
 	CQmSkin7PartLoadJob(const char *pPath, const char *pPartName, IStorage *pStorage, int StorageType, int PartType, int Flags, TPrepareVisuals pfnPrepareVisuals) :
 		m_Path(pPath),
 		m_PartName(pPartName),
@@ -159,7 +162,7 @@ public:
 		return m_Completed || Finished();
 	}
 
-	// 回调不得重入本任务；只有完整发布成功才释放原 CPU 结果。
+	// 回调不得重入本任务；发布成功或消费者明确放弃本项后释放 CPU 结果。
 	template<typename TPublish>
 	bool PublishResult(TPublish &&Publish) REQUIRES(!m_Mutex)
 	{
