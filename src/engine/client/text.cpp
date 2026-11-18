@@ -80,6 +80,23 @@ static float SafePixelAlign(float Value, float Scale)
 	return static_cast<float>(RoundedPixelValue / static_cast<double>(Scale));
 }
 
+static int DecodeTextLayoutCharacter(const char *&pCurrent, const char *pEnd)
+{
+	const auto Remaining = pEnd - pCurrent;
+	if(Remaining == 0)
+		return 0;
+	if(Remaining >= 4)
+		return str_utf8_decode(&pCurrent);
+
+	// UTF-8 最多四字节。末尾不足时给现有解码器提供带 NUL 的副本。
+	char aTail[4] = {};
+	mem_copy(aTail, pCurrent, Remaining);
+	const char *pTail = aTail;
+	const int Character = str_utf8_decode(&pTail);
+	pCurrent += pTail - aTail;
+	return Character;
+}
+
 // TClient
 static void ReplaceHyphensWithSpaces(char *pStr)
 {
@@ -1945,17 +1962,16 @@ class CTextRender : public IEngineTextRender
 		m_TextContainers.Clear();
 	}
 
-	int WordLength(const char *pText) const
+	static int WordLength(const char *pText, const char *pEnd)
 	{
 		const char *pCursor = pText;
-		while(true)
+		while(pCursor < pEnd)
 		{
-			if(*pCursor == '\0')
-				return pCursor - pText;
-			if(*pCursor == '\n' || *pCursor == '\t' || *pCursor == ' ')
-				return pCursor - pText + 1;
-			str_utf8_decode(&pCursor);
+			const char Byte = *pCursor++;
+			if(Byte == '\n' || Byte == '\t' || Byte == ' ')
+				break;
 		}
+		return pCursor - pText;
 	}
 
 	struct SFontLoadOptions
@@ -3194,7 +3210,11 @@ public:
 
 	void AppendTextContainerImpl(STextContainer &TextContainer, CTextCursor *pCursor, const char *pText, int Length = -1)
 	{
-		str_append(TextContainer.m_aDebugText, pText);
+		if(pText == nullptr)
+			pText = "";
+		Length = QmTextLayoutByteLength(pText, Length);
+		const int DebugLength = str_length(TextContainer.m_aDebugText);
+		str_truncate(TextContainer.m_aDebugText + DebugLength, sizeof(TextContainer.m_aDebugText) - DebugLength, pText, Length);
 
 		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
@@ -3218,12 +3238,6 @@ public:
 		const bool FloatFontSize = (TextContainer.m_RenderFlags & TEXT_RENDER_FLAG_QM_FLOAT_FONT_SIZE) != 0;
 		pCursor->m_AlignedFontSize = (Nameplate || FloatFontSize) ? pCursor->m_FontSize : ActualSize / FakeToScreen.y;
 		pCursor->m_AlignedLineSpacing = round_truncate(pCursor->m_LineSpacing * FakeToScreen.y) / FakeToScreen.y;
-
-		// string length
-		if(Length < 0)
-			Length = str_length(pText);
-		else
-			Length = QmTextLayoutByteLength(pText, Length);
 
 		const char *pCurrent = pText;
 		const char *pEnd = pCurrent + Length;
@@ -3429,7 +3443,7 @@ public:
 			const char *pBatchEnd = pEnd;
 			if(pCursor->m_LineWidth > 0.0f && !(pCursor->m_Flags & TEXTFLAG_STOP_AT_END) && !(pCursor->m_Flags & TEXTFLAG_ELLIPSIS_AT_END))
 			{
-				int Wlen = minimum(WordLength(pCurrent), (int)(pEnd - pCurrent));
+				int Wlen = WordLength(pCurrent, pEnd);
 				CTextCursor Compare = QmTextWordMeasureCursor(*pCursor, DrawX, DrawY);
 				Compare.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_NONE;
 				Compare.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_NONE;
@@ -3466,7 +3480,7 @@ public:
 			}
 
 			const char *pTmp = pCurrent;
-			int NextCharacter = str_utf8_decode(&pTmp);
+			int NextCharacter = DecodeTextLayoutCharacter(pTmp, pEnd);
 			bool EllipsisPending = false;
 
 			while(pCurrent < pBatchEnd || EllipsisPending)
@@ -3484,7 +3498,7 @@ public:
 				{
 					pCursor->m_CharCount += pTmp - pCurrent;
 					pCurrent = pTmp;
-					NextCharacter = str_utf8_decode(&pTmp);
+					NextCharacter = DecodeTextLayoutCharacter(pTmp, pEnd);
 				}
 
 				if(Character == '\n')

@@ -6763,6 +6763,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_color_picker_palette_lifecycle_test.cpp
       src/test/integration/qmclient/client/qm_font_loading_test.cpp
       src/test/integration/qmclient/client/qm_text_measurement_test.cpp
+      src/test/integration/qmclient/client/qm_text_layout_bounds_test.cpp
       src/test/integration/qmclient/client/qm_title_badge_text_test.cpp
       src/game/client/components/qmclient/qm_title_render.cpp
       src/game/client/components/qmclient/qm_title_style.cpp
