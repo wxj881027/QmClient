@@ -24,6 +24,7 @@
 #include <engine/http.h>
 #include <engine/http_response_validation.h>
 #include <engine/shared/config.h>
+#include <engine/shared/demo_output.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
 #include <engine/storage.h>
@@ -1385,7 +1386,6 @@ namespace
 		return pAuthor;
 	}
 
-	static bool WriteSmallTextFile(IStorage *pStorage, const char *pPath, std::string_view Text);
 	static void NormalizeNamedSingleFileWorkshopAsset(SWorkshopHudAsset &Asset, IStorage *pStorage, const SAssetResourceCategory &Category);
 
 	static const SWorkshopHudAsset *FindWorkshopAssetByLocalName(const SWorkshopHudState *pState, const char *pLocalName)
@@ -1479,6 +1479,8 @@ namespace
 		return true;
 	}
 
+	constexpr long MAX_LOCAL_ASSET_AUTHOR_CACHE_BYTES = 512 * 1024 - 1;
+
 	static SPersistedLocalAssetAuthorCache &PersistedLocalAssetAuthorCache(IStorage *pStorage)
 	{
 		SPersistedLocalAssetAuthorCache &Cache = gs_PersistedLocalAssetAuthors;
@@ -1494,7 +1496,7 @@ namespace
 			return Cache;
 
 		const long FileSize = io_length(File);
-		if(FileSize <= 0 || FileSize >= 1024 * 512)
+		if(FileSize <= 0 || FileSize > MAX_LOCAL_ASSET_AUTHOR_CACHE_BYTES)
 		{
 			io_close(File);
 			return Cache;
@@ -1551,6 +1553,31 @@ namespace
 		return Cache;
 	}
 
+	static bool WriteLocalAssetAuthorCache(IStorage &Storage, std::string_view Json)
+	try
+	{
+		if(Json.empty() || Json.size() > static_cast<size_t>(MAX_LOCAL_ASSET_AUTHOR_CACHE_BYTES))
+			return false;
+
+		Storage.CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		Storage.CreateFolder("qmclient/workshop", IStorage::TYPE_SAVE);
+		demo_output::CTransaction Output;
+		if(!Output.Prepare(Storage, LOCAL_ASSET_AUTHOR_CACHE_FILENAME))
+			return false;
+
+		const IOHANDLE File = io_open(Output.Filename(), IOFLAG_WRITE);
+		if(!File)
+			return false;
+		const unsigned Length = static_cast<unsigned>(Json.size());
+		const bool Written = io_write(File, Json.data(), Length) == Length && io_flush(File) == 0 && io_error(File) == 0;
+		const bool Closed = io_close(File) == 0;
+		return Written && Closed && Output.Publish();
+	}
+	catch(...)
+	{
+		return false;
+	}
+
 	static bool FlushPersistedLocalAssetAuthors(IStorage *pStorage)
 	{
 		SPersistedLocalAssetAuthorCache &Cache = PersistedLocalAssetAuthorCache(pStorage);
@@ -1583,7 +1610,7 @@ namespace
 			JsonStr += "}";
 		}
 		JsonStr += "]";
-		const bool Saved = WriteSmallTextFile(pStorage, LOCAL_ASSET_AUTHOR_CACHE_FILENAME, JsonStr);
+		const bool Saved = WriteLocalAssetAuthorCache(*pStorage, JsonStr);
 		if(Saved)
 			Cache.m_Dirty = false;
 		return Saved;
