@@ -10,11 +10,17 @@
 
 namespace
 {
+	class CConsoleScrollTestInput : public qm_ui_test::CTestInput
+	{
+	public:
+		bool AltIsPressed() const override { return KeyIsPressed(KEY_LALT); }
+	};
+
 	class QmConsoleSettingsScrollIntegration : public qm_ui_test::CRealUiFixture
 	{
 	protected:
 		qm_ui_test::CTestUiClient m_Client;
-		qm_ui_test::CTestInput m_Input;
+		CConsoleScrollTestInput m_Input;
 		CScrollRegion m_ParentScroll;
 		CScrollRegion m_ChildScroll;
 		SPopupMenuId m_ParentId;
@@ -63,16 +69,21 @@ namespace
 
 		vec2 DrawResizingRegion(float ContentExtent, CUIRect View, bool Horizontal = false, bool Premeasure = true)
 		{
-			m_Client.AdvanceFrame();
 			CScrollRegionParams Params;
 			Params.m_ScrollHorizontal = Horizontal;
+			return DrawResizingRegion(ContentExtent, View, Params, Premeasure);
+		}
+
+		vec2 DrawResizingRegion(float ContentExtent, CUIRect View, const CScrollRegionParams &Params, bool Premeasure = true)
+		{
+			m_Client.AdvanceFrame();
 			if(Premeasure)
 				m_ParentScroll.SetContentHeightForNextFrame(ContentExtent);
 			vec2 Offset;
 			m_ParentScroll.Begin(&View, &Offset, &Params);
 			View.x += Offset.x;
 			View.y += Offset.y;
-			if(Horizontal)
+			if(Params.m_ScrollHorizontal)
 				View.w = ContentExtent;
 			else
 				View.h = ContentExtent;
@@ -202,6 +213,60 @@ TEST_F(QmConsoleSettingsScrollIntegration, FittingContentDoesNotConsumeAndExpand
 	Frame(KEY_MOUSE_WHEEL_DOWN);
 	EXPECT_TRUE(m_ParentScroll.WheelConsumedThisFrame());
 	EXPECT_GT(m_ParentScroll.State().Offset(), 0.0f);
+}
+
+TEST_F(QmConsoleSettingsScrollIntegration, WheelMovesContentWhileThumbHasNoTravel)
+{
+	g_Config.m_QmUiScrollFeel = static_cast<int>(EQmScrollFeel::ORIGINAL);
+	const CUIRect View{40, 40, 240, 24};
+	DrawResizingRegion(View.h, View);
+	MoveMouse(View.Center());
+	Frame(KEY_MOUSE_WHEEL_DOWN);
+
+	// 本帧才测得内容溢出，下一帧轨道仍短于最小滑块。
+	DrawResizingRegion(900.0f, View, false, false);
+	ASSERT_TRUE(m_ParentScroll.WheelConsumedThisFrame());
+	const float Scrolled = m_ParentScroll.State().Offset();
+	ASSERT_GT(Scrolled, 0.0f);
+	EXPECT_FLOAT_EQ(DrawResizingRegion(900.0f, View).y, -Scrolled);
+	EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), Scrolled);
+}
+
+TEST_F(QmConsoleSettingsScrollIntegration, AltWheelMovesContentByThreeSteps)
+{
+	g_Config.m_QmUiScrollFeel = static_cast<int>(EQmScrollFeel::ORIGINAL);
+	const CUIRect View{40, 40, 240, 240};
+	MoveMouse(View.Center());
+	Frame(KEY_MOUSE_WHEEL_DOWN);
+	DrawResizingRegion(900.0f, View);
+	ASSERT_TRUE(m_ParentScroll.WheelConsumedThisFrame());
+	const float OneStep = m_ParentScroll.State().Offset();
+	ASSERT_GT(OneStep, 0.0f);
+
+	m_Input.m_HeldKey = KEY_LALT;
+	Frame(KEY_MOUSE_WHEEL_DOWN);
+	DrawResizingRegion(900.0f, View);
+	ASSERT_TRUE(m_ParentScroll.WheelConsumedThisFrame());
+	EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset() - OneStep, 3.0f * OneStep);
+}
+
+TEST_F(QmConsoleSettingsScrollIntegration, PressOutsidePreviouslyHoveredRailLeavesScrollUnchanged)
+{
+	const CUIRect View{40, 40, 240, 240};
+	const CScrollRegionParams Params;
+	MoveMouse({View.x + View.w - Params.m_ScrollbarThickness * 0.5f, View.Center().y});
+	Frame();
+	DrawResizingRegion(900.0f, View, Params);
+
+	MoveMouse(View.Center());
+	m_Input.m_HeldKey = KEY_MOUSE_1;
+	Frame();
+	ASSERT_TRUE(m_Ui.MouseButtonClicked(0));
+	ASSERT_NE(m_Ui.HotItem(), nullptr);
+	DrawResizingRegion(900.0f, View, Params);
+
+	EXPECT_FALSE(m_ParentScroll.Active());
+	EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), 0.0f);
 }
 
 TEST_F(QmConsoleSettingsScrollIntegration, DisabledUiUpdatePreservesWheelAcceptedDuringConsoleInput)
@@ -350,16 +415,23 @@ TEST_F(QmConsoleSettingsScrollIntegration, BackgroundContentMeasuredAtEndClampsA
 TEST_F(QmConsoleSettingsScrollIntegration, BackgroundValidOffsetPreservesPendingRevealUntilForeground)
 {
 	const CUIRect View{40, 40, 240, 240};
-	DrawResizingRegion(900.0f, View);
-	m_ParentScroll.SetScrollOffsetY(-200.0f);
-	m_ParentScroll.ScrollRelativeDirect(50.0f);
-	m_Ui.BeginBackgroundRender();
-	const vec2 Offset = DrawResizingRegion(900.0f, View);
-	m_Ui.EndBackgroundRender();
-	EXPECT_FLOAT_EQ(Offset.y, -200.0f);
-	EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), 200.0f);
-	DrawResizingRegion(900.0f, View);
-	EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), 250.0f);
+	for(const bool HideScrollbar : {false, true})
+	{
+		SCOPED_TRACE(HideScrollbar);
+		m_ParentScroll.Reset();
+		CScrollRegionParams Params;
+		Params.m_HideScrollbar = HideScrollbar;
+		DrawResizingRegion(900.0f, View, Params);
+		m_ParentScroll.SetScrollOffsetY(-200.0f);
+		m_ParentScroll.ScrollRelativeDirect(50.0f);
+		{
+			CUiScopedBackgroundRender Background(&m_Ui);
+			EXPECT_FLOAT_EQ(DrawResizingRegion(900.0f, View, Params).y, -200.0f);
+		}
+		EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), 200.0f);
+		DrawResizingRegion(900.0f, View, Params);
+		EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), 250.0f);
+	}
 }
 
 TEST_F(QmConsoleSettingsScrollIntegration, BackgroundValidOffsetPreservesPausedScrollAnimation)
