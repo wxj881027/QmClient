@@ -355,8 +355,7 @@ private:
 
 	void StartManifestFetch();
 	void StartDemoFetch();
-	// demo 下载完成后的公共收尾：校验并按请求模式收尾（仅下载 → 提示；影子 → 解析）
-	void FinishDemoFetch();
+	void FinishDemoFetch(const char *pCandidate);
 	void StartParse();
 	void FinishParse();
 

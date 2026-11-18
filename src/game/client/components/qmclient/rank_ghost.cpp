@@ -13,6 +13,7 @@
 #include <engine/client.h>
 #include <engine/client/ghost.h>
 #include <engine/graphics.h>
+#include <engine/http_response_validation.h>
 #include <engine/map.h>
 #include <engine/message.h>
 #include <engine/shared/compression.h>
@@ -39,7 +40,9 @@
 #include <zlib.h>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <limits>
@@ -837,7 +840,6 @@ void CRankGhost::Fail(const char *pMessage)
 
 void CRankGhost::AbortTask()
 {
-	const bool DownloadInProgress = m_Stage == EStage::FETCH_DEMO;
 	if(m_pManifestRequest)
 	{
 		m_pManifestRequest->Abort();
@@ -854,8 +856,6 @@ void CRankGhost::AbortTask()
 	m_Stage = EStage::IDLE;
 	// 时间线补齐被中断时必须清掉标记，否则下一次正常解析会误跳过影子写出
 	m_EventRebuildOnly = false;
-	if(DownloadInProgress && m_aDemoStoragePath[0] != '\0')
-		Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
 }
 
 void CRankGhost::OnUpdate()
@@ -1590,6 +1590,17 @@ void CRankGhost::StartDemoFetch()
 		return;
 	}
 
+	// 下载和本地复制都只写各自的候选，验收后才替换正式缓存。
+	static std::atomic<uint64_t> s_NextCandidate{0};
+	char aCandidate[64];
+	const int CandidateLength = std::snprintf(aCandidate, sizeof(aCandidate), "%s/.r%x-%llx",
+		DEMO_CACHE_DIR, static_cast<unsigned>(pid()), static_cast<unsigned long long>(s_NextCandidate.fetch_add(1, std::memory_order_relaxed)));
+	if(CandidateLength < 0 || static_cast<size_t>(CandidateLength) >= sizeof(aCandidate))
+	{
+		Fail(Localize("Rank ghost: failed to download the replay"));
+		return;
+	}
+
 	// QmClient：demo 浏览器目录已有同一份 rank1 回放时复用，避免重复下载
 	char aBrowserDemo[IO_MAX_PATH_LENGTH];
 	if(FindBrowserDownloadedDemo(Storage(), m_ActiveEntry, aBrowserDemo, sizeof(aBrowserDemo)))
@@ -1604,10 +1615,9 @@ void CRankGhost::StartDemoFetch()
 			return;
 		}
 		// 影子转换需要自己缓存目录里的副本：本地复制代替重新下载
-		if(CopyStorageFile(Storage(), aBrowserDemo, m_aDemoStoragePath))
+		if(CopyStorageFile(Storage(), aBrowserDemo, aCandidate))
 		{
-			log_info("rank_ghost", "reusing demo downloaded by demo browser: '%s'", aBrowserDemo);
-			FinishDemoFetch();
+			FinishDemoFetch(aCandidate);
 			return;
 		}
 		log_info("rank_ghost", "failed to reuse demo '%s', falling back to download", aBrowserDemo);
@@ -1616,7 +1626,20 @@ void CRankGhost::StartDemoFetch()
 	char aUrl[1024];
 	str_format(aUrl, sizeof(aUrl), "%s/%s", DEMO_URL_PREFIX, m_ActiveEntry.m_Demo.c_str());
 
-	m_pDemoRequest = HttpGetFile(aUrl, Storage(), m_aDemoStoragePath, IStorage::TYPE_SAVE);
+	// HTTP 还会在绝对路径后拼接一段临时后缀，提前拒绝无法完整写入缓冲的路径。
+	char aAbsoluteCandidate[IO_MAX_PATH_LENGTH + sizeof(aCandidate)];
+	Storage()->GetCompletePath(IStorage::TYPE_SAVE, aCandidate, aAbsoluteCandidate, sizeof(aAbsoluteCandidate));
+	char aHttpTemporary[sizeof(aAbsoluteCandidate) + 16];
+	IStorage::FormatTmpPath(aHttpTemporary, sizeof(aHttpTemporary), aAbsoluteCandidate);
+	if(aAbsoluteCandidate[0] == '\0' || str_length(aHttpTemporary) >= IO_MAX_PATH_LENGTH)
+	{
+		Fail(Localize("Rank ghost: failed to download the replay"));
+		return;
+	}
+
+	m_pDemoRequest = HttpGetFile(aUrl, Storage(), aCandidate, IStorage::TYPE_SAVE);
+	m_pDemoRequest->SkipByFileTime(false);
+	m_pDemoRequest->ValidateBeforeOverwrite(true);
 	m_pDemoRequest->MaxResponseSize(MAX_DEMO_BYTES);
 	m_pDemoRequest->Timeout(CTimeout{5000, 120000, 200, 10});
 	m_pDemoRequest->LogProgress(HTTPLOG::FAILURE);
@@ -1634,27 +1657,41 @@ void CRankGhost::UpdateDemoStage()
 	if(!m_pDemoRequest || !m_pDemoRequest->Done())
 		return;
 
-	const bool Ok = m_pDemoRequest->State() == EHttpState::DONE && m_pDemoRequest->StatusCode() == 200;
-	m_pDemoRequest = nullptr;
-
-	if(!Ok)
+	const auto pRequest = std::move(m_pDemoRequest);
+	if(pRequest->State() != EHttpState::DONE || pRequest->StatusCode() != 200 ||
+		!CHttpResponseValidation(*pRequest).Commit())
 	{
 		Fail(Localize("Rank ghost: failed to download the replay"));
 		return;
 	}
 
-	FinishDemoFetch();
+	FinishDemoFetch(pRequest->Dest());
 }
 
-// demo 下载（或本地复用）后的公共收尾：校验并按请求模式处理
-void CRankGhost::FinishDemoFetch()
+// 校验或解压候选回放，发布成功后再按请求模式处理。
+void CRankGhost::FinishDemoFetch(const char *pCandidate)
 {
-	if(!ValidateOrUnpackDemo(Storage(), m_aDemoStoragePath))
+	const auto RemoveCandidate = [this](const char *pPath) noexcept {
+		try
+		{
+			Storage()->RemoveFile(pPath, IStorage::TYPE_SAVE);
+		}
+		catch(...)
+		{
+		}
+	};
+	std::unique_ptr<const char, decltype(RemoveCandidate)> pCleanup(pCandidate, RemoveCandidate);
+	if(!ValidateOrUnpackDemo(Storage(), pCandidate))
 	{
-		Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
 		Fail(Localize("Rank ghost: the downloaded replay is not a valid demo"));
 		return;
 	}
+	if(!Storage()->RenameFile(pCandidate, m_aDemoStoragePath, IStorage::TYPE_SAVE, false))
+	{
+		Fail(Localize("Rank ghost: failed to download the replay"));
+		return;
+	}
+	pCleanup.release();
 
 	// 仅下载请求到此结束（Rank 1 页面的“下载回放”），不解析成影子
 	if(m_PendingMode == EPendingMode::DEMO_ONLY)
