@@ -4564,10 +4564,11 @@ void CEditor::RenderEditorHistory(CUIRect View)
 		{
 			for(int i = 0; i < (SelectedActionIndex - NewSelected); i++)
 			{
-				pCurrentHistory->Redo();
+				if(!pCurrentHistory->Redo())
+					break;
 			}
 		}
-		SelectedActionIndex = NewSelected;
+		SelectedActionIndex = static_cast<int>(pCurrentHistory->m_vpRedoActions.size());
 	}
 }
 

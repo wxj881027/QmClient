@@ -259,7 +259,7 @@ public:
 
 	void PlaceBorderTiles();
 
-	void AddTileArt(CImageInfo &&Image, const char *pFilename, bool IgnoreHistory);
+	bool AddTileArt(CImageInfo &&Image, const char *pFilename, bool IgnoreHistory);
 
 	void AddQuadArt(CImageInfo &&Image, const CQuadArtParameters &Parameters, bool IgnoreHistory);
 

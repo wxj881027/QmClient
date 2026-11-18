@@ -12,8 +12,8 @@ void CEditorHistory::RecordAction(const std::shared_ptr<IEditorAction> &pAction)
 
 void CEditorHistory::Execute(const std::shared_ptr<IEditorAction> &pAction, const char *pDisplay)
 {
-	pAction->Redo();
-	RecordAction(pAction, pDisplay);
+	if(pAction->TryRedo())
+		RecordAction(pAction, pDisplay);
 }
 
 void CEditorHistory::RecordAction(const std::shared_ptr<IEditorAction> &pAction, const char *pDisplay)
@@ -49,26 +49,6 @@ bool CEditorHistory::Undo()
 
 	m_vpRedoActions.emplace_back(pLastAction);
 	return true;
-}
-
-bool CEditorHistory::Redo()
-{
-	if(m_vpRedoActions.empty())
-		return false;
-
-	auto pLastAction = m_vpRedoActions.back();
-	m_vpRedoActions.pop_back();
-
-	pLastAction->Redo();
-
-	m_vpUndoActions.emplace_back(pLastAction);
-	return true;
-}
-
-void CEditorHistory::Clear()
-{
-	m_vpUndoActions.clear();
-	m_vpRedoActions.clear();
 }
 
 void CEditorHistory::BeginBulk()

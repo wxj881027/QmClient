@@ -1318,14 +1318,14 @@ void CEditorActionAppendMap::Undo()
 	Map()->OnModify();
 }
 
-void CEditorActionAppendMap::Redo()
+bool CEditorActionAppendMap::TryRedo()
 {
 	const auto &&ErrorHandler = [this](const char *pErrorMessage) {
 		Editor()->ShowFileDialogError("%s", pErrorMessage);
 		log_error("editor/append", "%s", pErrorMessage);
 	};
 	// Redo is just re-appending the same map
-	Map()->Append(m_aMapName, IStorage::TYPE_ALL, true, ErrorHandler);
+	return Map()->Append(m_aMapName, IStorage::TYPE_ALL, true, ErrorHandler);
 }
 
 // ---------------------------
@@ -1375,15 +1375,15 @@ void CEditorActionTileArt::Undo()
 	}
 }
 
-void CEditorActionTileArt::Redo()
+bool CEditorActionTileArt::TryRedo()
 {
 	CImageInfo Image;
 	if(!Graphics()->LoadPng(Image, m_aFilename, IStorage::TYPE_ALL))
 	{
 		Editor()->ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), m_aFilename);
-		return;
+		return false;
 	}
-	Map()->AddTileArt(std::move(Image), m_aFilename, true);
+	return Map()->AddTileArt(std::move(Image), m_aFilename, true);
 }
 
 // ---------------------------
