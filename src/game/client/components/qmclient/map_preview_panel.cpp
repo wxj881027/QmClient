@@ -475,7 +475,7 @@ namespace
 {
 	struct SRenderer
 	{
-		CQmMapPreviewCache *m_pCache = nullptr;
+		std::unique_ptr<CQmMapPreviewCache> m_pCache;
 	};
 
 	void DrawCanvas(void *pRenderState, CGameClient *pGameClient, CQmMapPreviewPanel::SContext *pCtx, CUIRect Preview, CUi *pUi, bool Active)
@@ -483,7 +483,7 @@ namespace
 		auto *pRenderer = static_cast<SRenderer *>(pRenderState);
 		if(pRenderer == nullptr || pRenderer->m_pCache == nullptr || pGameClient == nullptr || pCtx == nullptr || pUi == nullptr)
 			return;
-		CQmMapPreviewCache *pCache = pRenderer->m_pCache;
+		CQmMapPreviewCache *pCache = pRenderer->m_pCache.get();
 
 		// 预览框背板。
 		CUiScopedGaussianBlurSuppression PreviewBlurSuppression(pUi);
@@ -590,26 +590,33 @@ namespace
 					 (EntityOnly && (pEntry->m_RenderedBackgroundColor != g_Config.m_ClBackgroundEntitiesColor || str_comp(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities) != 0)) || DynamicBackground;
 		if(pEntry->m_NeedsRender || ViewChanged)
 		{
-			// UI 批次必须先落到原目标；地图渲染的投影和裁剪不得泄漏到菜单。
-			pUi->FlushQuadBatch();
-			pUi->ClipEnable(pUi->Screen());
-			pEntry->m_pRenderer->SetEntityOnly(EntityOnly);
-			if(pGameClient->Graphics()->BeginRenderTarget(pEntry->m_RenderTarget, ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f)))
+			try
 			{
-				if(EntityOnly)
-					pGameClient->m_Background.RenderPreview(Camera.Center(), Camera.Zoom(), *pEntry->m_pRenderer);
-				// FULL_DESIGN 明确跳过实体；实体模式使用包含完整实体层的前景策略。
-				pEntry->m_pRenderer->RenderCustomWithCamera(Camera.Center(), Camera.Zoom(), EntityOnly ? ERenderType::RENDERTYPE_FOREGROUND : ERenderType::RENDERTYPE_FULL_DESIGN);
-				pGameClient->Graphics()->EndRenderTarget();
-				pEntry->m_RenderedCenter = Camera.Center();
-				pEntry->m_RenderedZoom = Camera.Zoom();
-				pEntry->m_RenderedEntities = EntityOnly;
-				pEntry->m_RenderedBackgroundColor = g_Config.m_ClBackgroundEntitiesColor;
-				str_copy(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities);
-				pEntry->m_NeedsRender = false;
+				CQmMapPreviewDrawScope DrawScope(*pUi);
+				pEntry->m_pRenderer->SetEntityOnly(EntityOnly);
+				if(DrawScope.BeginRenderTarget(pEntry->m_RenderTarget, ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f)))
+				{
+					// Begin 已清除旧像素；只有整次绘制与 End 成功才重新标记完整。
+					pEntry->m_NeedsRender = true;
+					if(EntityOnly)
+						pGameClient->m_Background.RenderPreview(Camera.Center(), Camera.Zoom(), *pEntry->m_pRenderer);
+					// FULL_DESIGN 明确跳过实体；实体模式使用包含完整实体层的前景策略。
+					pEntry->m_pRenderer->RenderCustomWithCamera(Camera.Center(), Camera.Zoom(), EntityOnly ? ERenderType::RENDERTYPE_FOREGROUND : ERenderType::RENDERTYPE_FULL_DESIGN);
+					DrawScope.EndRenderTarget();
+					pEntry->m_RenderedCenter = Camera.Center();
+					pEntry->m_RenderedZoom = Camera.Zoom();
+					pEntry->m_RenderedEntities = EntityOnly;
+					pEntry->m_RenderedBackgroundColor = g_Config.m_ClBackgroundEntitiesColor;
+					str_copy(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities);
+					pEntry->m_NeedsRender = false;
+				}
 			}
-			pUi->MapScreen();
-			pUi->ClipDisable();
+			catch(const std::bad_alloc &)
+			{
+			}
+			catch(const std::length_error &)
+			{
+			}
 		}
 		if(pEntry->m_NeedsRender)
 		{
@@ -633,10 +640,19 @@ namespace
 		DrawParams.m_CornerSeam = QmEffectiveCapsuleSeam();
 		if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
 			DrawParams.SetTextureCoordinates(0.0f, 0.0f, 1.0f, 1.0f);
-		pUi->FlushQuadBatch();
-		pUi->ClipEnable(&Preview);
-		pGameClient->Graphics()->DrawRenderTarget(pEntry->m_RenderTarget, DrawParams);
-		pUi->ClipDisable();
+		const CUIRect Clip = pUi->IsClipped() ? Preview.Intersection(*pUi->ClipArea()) : Preview;
+		try
+		{
+			CQmMapPreviewDrawScope DrawScope(*pUi);
+			pUi->ClipEnable(&Clip);
+			pGameClient->Graphics()->DrawRenderTarget(pEntry->m_RenderTarget, DrawParams);
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
 	}
 } // namespace
 
@@ -644,28 +660,40 @@ void CQmMapPreviewPanel::Init(CGameClient *pGameClient)
 {
 	if(pGameClient == nullptr)
 		return;
-	if(m_pRenderState != nullptr)
+	if(m_pRenderState != nullptr && m_pGameClient == pGameClient)
 	{
-		if(m_pGameClient == pGameClient)
-			return;
-		Shutdown();
+		m_pInitRetryGameClient = nullptr;
+		m_pfnRetryInit = nullptr;
+		return;
 	}
-	auto *pRenderer = new SRenderer();
-	pRenderer->m_pCache = new CQmMapPreviewCache(pGameClient->Graphics());
-	m_pGameClient = pGameClient;
-	m_pRenderState = pRenderer;
-	m_pfnDrawCanvas = &DrawCanvas;
+	m_pInitRetryGameClient = pGameClient;
+	m_pfnRetryInit = [](CQmMapPreviewPanel *pPanel) {
+		pPanel->Init(pPanel->m_pInitRetryGameClient);
+	};
+	try
+	{
+		auto pRenderer = std::make_unique<SRenderer>();
+		pRenderer->m_pCache = std::make_unique<CQmMapPreviewCache>(pGameClient->Graphics());
+		// 候选全部备齐后才释放原 owner；失败时弹窗保留 unavailable 并继续重试。
+		Shutdown();
+		m_pGameClient = pGameClient;
+		m_pRenderState = pRenderer.release();
+		m_pfnDrawCanvas = &DrawCanvas;
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
 }
 
 void CQmMapPreviewPanel::Shutdown()
 {
-	auto *pRenderer = static_cast<SRenderer *>(m_pRenderState);
-	if(pRenderer != nullptr)
-	{
-		delete pRenderer->m_pCache;
-		delete pRenderer;
-	}
+	delete static_cast<SRenderer *>(m_pRenderState);
 	m_pRenderState = nullptr;
 	m_pfnDrawCanvas = nullptr;
 	m_pGameClient = nullptr;
+	m_pInitRetryGameClient = nullptr;
+	m_pfnRetryInit = nullptr;
 }

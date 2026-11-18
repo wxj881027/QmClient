@@ -19,9 +19,10 @@
  * @param argc A pointer to the argc parameter that was passed to the main function.
  * @param argv A pointer to the argv parameter that was passed to the main function.
  *
- * @remark You need to call @link cmdline_free @endlink once you're no longer using the results.
+ * @return `true` if new arguments were allocated. Otherwise the original arguments are retained.
+ * @remark After a `true` result, call @link cmdline_free @endlink once you're no longer using the results.
  */
-void cmdline_fix(int *argc, const char ***argv);
+bool cmdline_fix(int *argc, const char ***argv);
 
 /**
  * Frees memory that was allocated by @link cmdline_fix @endlink.
@@ -29,7 +30,7 @@ void cmdline_fix(int *argc, const char ***argv);
  * @ingroup OS
  *
  * @param argc The argc obtained from `cmdline_fix`.
- * @param argv The argv obtained from `cmdline_fix`.
+ * @param argv The argv obtained from a successful `cmdline_fix` or `nullptr`.
  */
 void cmdline_free(int argc, const char **argv);
 
@@ -41,21 +42,24 @@ void cmdline_free(int argc, const char **argv);
  */
 class CCmdlineFix
 {
-	int m_Argc;
-	const char **m_ppArgv;
+	int m_Argc = 0;
+	const char **m_ppArgv = nullptr;
 
 public:
 	CCmdlineFix(int *pArgc, const char ***pppArgv)
 	{
-		cmdline_fix(pArgc, pppArgv);
-		m_Argc = *pArgc;
-		m_ppArgv = *pppArgv;
+		if(cmdline_fix(pArgc, ppppArgv))
+		{
+			m_Argc = *pArgc;
+			m_ppArgv = *pppArgv;
+		}
 	}
 	~CCmdlineFix()
 	{
 		cmdline_free(m_Argc, m_ppArgv);
 	}
 	CCmdlineFix(const CCmdlineFix &) = delete;
+	CCmdlineFix &operator=(const CCmdlineFix &) = delete;
 };
 
 #if !defined(CONF_PLATFORM_ANDROID)

@@ -22,6 +22,7 @@ struct ASYNCIO
 	int error;
 	unsigned char finish;
 	unsigned char refcount;
+	bool waiting = false;
 };
 
 enum
@@ -45,6 +46,16 @@ static void aio_handle_free_and_unlock(ASYNCIO *aio) RELEASE(aio->lock)
 	}
 }
 
+static void aio_wake_unlocked(ASYNCIO *aio) REQUIRES(aio->lock)
+{
+	if(!aio->waiting)
+		return;
+
+	// 工作线程会主动排空队列，只为一次实际等待发送一次唤醒。
+	aio->waiting = false;
+	sphore_signal(&aio->sphore);
+}
+
 static void aio_thread(void *user)
 {
 	ASYNCIO *aio = (ASYNCIO *)user;
@@ -66,6 +77,7 @@ static void aio_thread(void *user)
 				aio_handle_free_and_unlock(aio);
 				break;
 			}
+			aio->waiting = true;
 			aio->lock.unlock();
 			sphore_wait(&aio->sphore);
 			aio->lock.lock();
@@ -122,8 +134,9 @@ void aio_lock(ASYNCIO *aio) ACQUIRE(aio->lock)
 
 void aio_unlock(ASYNCIO *aio) RELEASE(aio->lock)
 {
+	if(!aio->buffer.Empty())
+		aio_wake_unlocked(aio);
 	aio->lock.unlock();
-	sphore_signal(&aio->sphore);
 }
 
 void aio_write_unlocked(ASYNCIO *aio, const void *buffer, unsigned size)
@@ -166,11 +179,9 @@ int aio_error(ASYNCIO *aio)
 
 void aio_close(ASYNCIO *aio)
 {
-	{
-		CLockScope ls(aio->lock);
-		aio->finish = ASYNCIO_CLOSE;
-	}
-	sphore_signal(&aio->sphore);
+	CLockScope ls(aio->lock);
+	aio->finish = ASYNCIO_CLOSE;
+	aio_wake_unlocked(aio);
 }
 
 void aio_wait(ASYNCIO *aio)
@@ -184,8 +195,8 @@ void aio_wait(ASYNCIO *aio)
 		{
 			aio->finish = ASYNCIO_EXIT;
 		}
+		aio_wake_unlocked(aio);
 	}
-	sphore_signal(&aio->sphore);
 	thread_wait(thread);
 }
 

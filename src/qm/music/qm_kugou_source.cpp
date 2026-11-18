@@ -80,16 +80,6 @@ namespace QmMusicHook
 			HINTERNET m_Handle;
 		};
 
-		std::string Utf8(std::wstring_view Value)
-		{
-			if(Value.empty())
-				return {};
-			const int Size = WideCharToMultiByte(CP_UTF8, 0, Value.data(), (int)Value.size(), nullptr, 0, nullptr, nullptr);
-			std::string Result(Size, '\0');
-			WideCharToMultiByte(CP_UTF8, 0, Value.data(), (int)Value.size(), Result.data(), Size, nullptr, nullptr);
-			return Result;
-		}
-
 		std::wstring ParentPath(std::wstring_view Path)
 		{
 			const auto End = Path.find_last_of(L"\\/");
@@ -110,20 +100,21 @@ namespace QmMusicHook
 			return Process.Valid() && QueryFullProcessImageNameW(Process.Get(), 0, Buffer.data(), &Length) ? std::wstring(Buffer.data(), Length) : std::wstring();
 		}
 
-		std::vector<DWORD> KugouProcesses()
+		std::optional<std::vector<DWORD>> KugouProcesses()
 		{
-			std::vector<DWORD> Result;
 			const CHandle Snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
 			PROCESSENTRY32W Entry{};
 			Entry.dwSize = sizeof(Entry);
-			if(Snapshot.Valid() && Process32FirstW(Snapshot.Get(), &Entry))
+			if(!Snapshot.Valid() || !Process32FirstW(Snapshot.Get(), &Entry))
+				return std::nullopt;
+			std::vector<DWORD> Result;
+			do
 			{
-				do
-				{
-					if(_wcsicmp(Entry.szExeFile, L"KuGou.exe") == 0)
-						Result.push_back(Entry.th32ProcessID);
-				} while(Process32NextW(Snapshot.Get(), &Entry));
-			}
+				if(_wcsicmp(Entry.szExeFile, L"KuGou.exe") == 0)
+					Result.push_back(Entry.th32ProcessID);
+			} while(Process32NextW(Snapshot.Get(), &Entry));
+			if(GetLastError() != ERROR_NO_MORE_FILES)
+				return std::nullopt;
 			return Result;
 		}
 
@@ -377,9 +368,10 @@ catch (_) { finish(''); }
 
 		bool CreateBackup(HANDLE Current, const std::wstring &Path)
 		{
+			const std::wstring CandidatePath = Path + L".tmp-" + std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(GetTickCount64());
 			bool Success = false;
 			{
-				const CHandle Backup(CreateFileW(Path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr));
+				const CHandle Backup(CreateFileW(CandidatePath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr));
 				if(!Backup.Valid())
 					return false;
 				LARGE_INTEGER Size{};
@@ -392,9 +384,11 @@ catch (_) { finish(''); }
 				}
 				Success = Success && FlushFileBuffers(Backup.Get());
 			}
-			if(!Success)
-				DeleteFileW(Path.c_str());
-			return Success;
+			// 候选已写完并关闭。正式名称只用于完整备份，已有备份始终保留。
+			if(Success && MoveFileExW(CandidatePath.c_str(), Path.c_str(), MOVEFILE_WRITE_THROUGH))
+				return true;
+			DeleteFileW(CandidatePath.c_str());
+			return false;
 		}
 #endif
 	}
@@ -428,13 +422,17 @@ catch (_) { finish(''); }
 						Session.emplace();
 					SPlayback State;
 					const auto Processes = KugouProcesses();
-					const DWORD Listener = Processes.empty() ? 0 : ListenerProcess();
-					const bool KnownProcess = Listener != 0 && std::find(Processes.begin(), Processes.end(), Listener) != Processes.end() && !ProcessPath(Listener).empty();
-					State.m_ProcessId = Processes.empty() ? 0 : Processes.front();
+					const bool HasProcess = Processes && !Processes->empty();
+					const DWORD Listener = HasProcess ? ListenerProcess() : 0;
+					const bool KnownProcess = Listener != 0 && std::find(Processes->begin(), Processes->end(), Listener) != Processes->end() && !ProcessPath(Listener).empty();
+					State.m_ProcessId = HasProcess ? Processes->front() : 0;
 					if(!KnownProcess)
 					{
 						Session->Close();
-						State.m_Error = Processes.empty() ? "Kugou is not running" : "Kugou CDP is unavailable; use Enable Kugou integration, then restart Kugou";
+						if(!Processes)
+							State.m_Error = "Kugou playback data is unavailable";
+						else
+							State.m_Error = HasProcess ? "Kugou CDP is unavailable; use Enable Kugou integration, then restart Kugou" : "Kugou is not running";
 					}
 					else
 					{
@@ -500,59 +498,55 @@ catch (_) { finish(''); }
 		return State.m_ProcessId != 0;
 	}
 
-	int ConfigureKugou(bool Restore, std::string *pMessage)
+	SKugouConfigureResult ConfigureKugou(bool Restore)
 	{
 #if defined(_WIN32)
-		const auto Finish = [pMessage](int Code, const std::wstring &Message) {
-			if(pMessage)
-				*pMessage = Utf8(Message);
-			MessageBoxW(nullptr, Message.c_str(), L"QmClient · 酷狗歌词", MB_OK | (Code == 0 ? MB_ICONINFORMATION : MB_ICONWARNING));
-			return Code;
-		};
-		if(!KugouProcesses().empty())
-			return Finish(1, L"请先完全退出酷狗音乐，再执行启用或恢复。操作完成后请手动重新启动酷狗。");
+		const auto Processes = KugouProcesses();
+		if(!Processes)
+			return {1, L"无法确认酷狗是否退出，请完全退出酷狗音乐后重试。"};
+		if(!Processes->empty())
+			return {1, L"请先完全退出酷狗音乐，再执行启用或恢复。操作完成后请手动重新启动酷狗。"};
 		const auto Dll = FindLibcef();
 		if(Dll.empty())
-			return Finish(1, L"未找到受支持的酷狗安装目录。已知补丁来自酷狗 20.1.22.27795 / CEF 89.20.0。");
+			return {1, L"未找到受支持的酷狗安装目录。已知补丁来自酷狗 20.1.22.27795 / CEF 89.20.0。"};
 		const auto BackupPath = Dll + L".qmclient-original";
 		const auto Prompt = (Restore ? std::wstring(L"将恢复酷狗原始 libcef.dll 并停用歌词采集。\n") : std::wstring(L"将备份并修改酷狗 libcef.dll，启用本机调试端口 12233 以读取播放信息。\n")) +
 				    L"目标：" + Dll + L"\n备份：" + BackupPath + L"\n已有原始备份不会被覆盖。操作后请手动重启酷狗。是否继续？";
 		if(MessageBoxW(nullptr, Prompt.c_str(), L"QmClient · 酷狗歌词", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != IDYES)
-		{
-			if(pMessage)
-				*pMessage = "Cancelled";
-			return ERROR_CANCELLED;
-		}
-		if(!KugouProcesses().empty())
-			return Finish(1, L"酷狗已启动，请退出后重试。");
+			return {ERROR_CANCELLED, L"Cancelled"};
+		const auto ConfirmedProcesses = KugouProcesses();
+		if(!ConfirmedProcesses)
+			return {1, L"无法确认酷狗是否退出，请完全退出酷狗音乐后重试。"};
+		if(!ConfirmedProcesses->empty())
+			return {1, L"酷狗已启动，请退出后重试。"};
 		// 独占句柄阻止酷狗在校验与写入之间重新加载 DLL。
 		const CHandle Current(CreateFileW(Dll.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
 		if(!Current.Valid())
-			return Finish(1, L"无法独占写入 libcef.dll。请完全退出酷狗；安装目录需要管理员权限时，请以管理员身份执行 helper 的 --kugou-setup 或 --kugou-restore。");
+			return {1, L"无法独占写入 libcef.dll。请完全退出酷狗；安装目录需要管理员权限时，请以管理员身份执行 helper 的 --kugou-setup 或 --kugou-restore。"};
 		const auto Classify = [](HANDLE File) {
 			return ClassifyKugouPatch([File](uint64_t Offset, void *pData, size_t Size) { return ReadAt(File, Offset, pData, Size); });
 		};
 		const auto State = Classify(Current.Get());
 		if(State == EKugouPatchState::UNSUPPORTED && !Restore)
-			return Finish(1, L"libcef.dll 的九处字节指纹不匹配，或文件已被部分修改。为避免破坏未知版本，未写入任何补丁。");
+			return {1, L"libcef.dll 的九处字节指纹不匹配，或文件已被部分修改。为避免破坏未知版本，未写入任何补丁。"};
 		if(!IsFile(BackupPath))
 		{
 			if(Restore || State != EKugouPatchState::ORIGINAL)
-				return Finish(1, L"缺少原始备份，无法安全恢复或接管已修改的 DLL。");
+				return {1, L"缺少原始备份，无法安全恢复或接管已修改的 DLL。"};
 			if(!CreateBackup(Current.Get(), BackupPath))
-				return Finish(1, L"无法创建完整原始备份，未修改 libcef.dll。已有备份不会被覆盖。");
+				return {1, L"无法创建完整原始备份，未修改 libcef.dll。已有备份不会被覆盖。"};
 		}
 		const CHandle Backup(CreateFileW(BackupPath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
 		if(!Backup.Valid() || Classify(Backup.Get()) != EKugouPatchState::ORIGINAL || !CompareBackup(Backup.Get(), Current.Get(), State != EKugouPatchState::ORIGINAL, Restore))
-			return Finish(1, L"当前 libcef.dll 与原始备份不匹配，可能已经升级。未覆盖当前文件或已有备份。");
+			return {1, L"当前 libcef.dll 与原始备份不匹配，可能已经升级。未覆盖当前文件或已有备份。"};
 		if((Restore && State == EKugouPatchState::ORIGINAL) || (!Restore && State == EKugouPatchState::PATCHED))
-			return Finish(0, Restore ? L"酷狗已恢复原始状态。请手动启动酷狗。" : L"酷狗歌词接入已启用。请手动启动酷狗。");
+			return {0, Restore ? L"酷狗已恢复原始状态。请手动启动酷狗。" : L"酷狗歌词接入已启用。请手动启动酷狗。"};
 		std::vector<std::string> Before;
 		for(const auto &Patch : KugouPatches())
 		{
 			std::string Bytes(Patch.m_Original.size(), '\0');
 			if(!ReadAt(Current.Get(), Patch.m_Offset, Bytes.data(), Bytes.size()))
-				return Finish(1, L"无法读取补丁前状态，未写入文件。");
+				return {1, L"无法读取补丁前状态，未写入文件。"};
 			Before.push_back(std::move(Bytes));
 		}
 		bool Success = true;
@@ -580,14 +574,12 @@ catch (_) { finish(''); }
 				std::string Actual(Before[Index].size(), '\0');
 				RolledBack = ReadAt(Current.Get(), KugouPatches()[Index].m_Offset, Actual.data(), Actual.size()) && Actual == Before[Index];
 			}
-			return Finish(1, RolledBack ? L"写入失败，已恢复操作前状态。原始备份仍保留。" : L"写入失败且无法完整回退。请勿启动酷狗；原始备份仍保留，请退出所有相关进程后恢复安装。");
+			return {1, RolledBack ? L"写入失败，已恢复操作前状态。原始备份仍保留。" : L"写入失败且无法完整回退。请勿启动酷狗；原始备份仍保留，请退出所有相关进程后恢复安装。"};
 		}
-		return Finish(0, Restore ? L"已恢复酷狗原始 libcef.dll，备份保留。请手动启动酷狗。" : L"已备份原始 DLL 并启用酷狗歌词接入。请手动启动酷狗；升级后需重新检查兼容性。");
+		return {0, Restore ? L"已恢复酷狗原始 libcef.dll，备份保留。请手动启动酷狗。" : L"已备份原始 DLL 并启用酷狗歌词接入。请手动启动酷狗；升级后需重新检查兼容性。"};
 #else
 		(void)Restore;
-		if(pMessage)
-			*pMessage = "Kugou integration requires Windows";
-		return 1;
+		return {1, L"Kugou integration requires Windows"};
 #endif
 	}
 }

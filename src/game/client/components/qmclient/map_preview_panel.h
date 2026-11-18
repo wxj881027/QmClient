@@ -10,7 +10,47 @@
 #include <game/client/ui.h>
 #include <game/localization.h>
 
+#include <array>
+
 class CGameClient;
+
+// 预览绘制临时借用投影与裁剪；离屏目标只在 Begin 成功后由本作用域结束。
+class CQmMapPreviewDrawScope
+{
+	IGraphics &m_Graphics;
+	std::array<float, 4> m_aScreen;
+	CUiScopedClipSuspend m_Clips;
+	bool m_RenderTargetActive = false;
+
+public:
+	explicit CQmMapPreviewDrawScope(CUi &Ui) :
+		m_Graphics(*Ui.Graphics()), m_Clips(&Ui)
+	{
+		m_Graphics.GetScreen(&m_aScreen[0], &m_aScreen[1], &m_aScreen[2], &m_aScreen[3]);
+	}
+	~CQmMapPreviewDrawScope()
+	{
+		EndRenderTarget();
+		m_Graphics.MapScreen(m_aScreen[0], m_aScreen[1], m_aScreen[2], m_aScreen[3]);
+	}
+	CQmMapPreviewDrawScope(const CQmMapPreviewDrawScope &) = delete;
+	CQmMapPreviewDrawScope &operator=(const CQmMapPreviewDrawScope &) = delete;
+
+	bool BeginRenderTarget(IGraphics::CRenderTargetHandle Target, ColorRGBA ClearColor)
+	{
+		dbg_assert(!m_RenderTargetActive, "Preview render target already active");
+		m_RenderTargetActive = m_Graphics.BeginRenderTarget(Target, ClearColor);
+		return m_RenderTargetActive;
+	}
+	void EndRenderTarget()
+	{
+		if(m_RenderTargetActive)
+		{
+			m_Graphics.EndRenderTarget();
+			m_RenderTargetActive = false;
+		}
+	}
+};
 
 // 服务器列表与投票页共用的地图预览面板：同一份离屏地图缓存、同一套相机
 // 拖拽/滚轮缩放和实体层开关。调用点只决定目标地图、标题右侧说明，以及
@@ -84,7 +124,7 @@ public:
 		Ctx.m_pUi->DoPopupMenu(pContext, PanelRect.x, PanelRect.y, PanelRect.w, PanelRect.h, pContext, &CQmMapPreviewPanel::PopupThunk, Props);
 	}
 
-	CUi::EPopupMenuFunctionResult Popup(void *pContext, CUIRect View, bool Active) const
+	CUi::EPopupMenuFunctionResult Popup(void *pContext, CUIRect View, bool Active)
 	{
 		auto *pCtx = static_cast<SContext *>(pContext);
 		if(pCtx == nullptr || pCtx->m_pUi == nullptr || pCtx->m_Target.m_aMapName[0] == '\0')
@@ -113,7 +153,10 @@ public:
 		pUi->DoLabel(&Hint, Localize("Drag to pan, scroll to zoom"), Metrics.m_FontSize, TEXTALIGN_ML, HintProps);
 		if(Preview.w <= 2.0f || Preview.h <= 2.0f)
 			return CUi::POPUP_KEEP_OPEN;
-		if(m_pfnDrawCanvas == nullptr || m_pGameClient == nullptr)
+		// Init 的生产回调只在资源准备失败时存在；外壳测试无需链接客户端实现。
+		if(m_pfnRetryInit != nullptr)
+			m_pfnRetryInit(this);
+		if(m_pInitRetryGameClient != nullptr || m_pfnDrawCanvas == nullptr || m_pGameClient == nullptr)
 		{
 			pUi->DoLabel(&Preview, Localize("Map preview unavailable"), Metrics.m_FontSize, TEXTALIGN_MC);
 			return CUi::POPUP_KEEP_OPEN;
@@ -130,6 +173,8 @@ private:
 	}
 
 	CGameClient *m_pGameClient = nullptr;
+	CGameClient *m_pInitRetryGameClient = nullptr;
+	void (*m_pfnRetryInit)(CQmMapPreviewPanel *) = nullptr;
 	void *m_pRenderState = nullptr;
 	FDrawCanvas m_pfnDrawCanvas = nullptr;
 };

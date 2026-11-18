@@ -8004,6 +8004,21 @@ int main(int argc, const char **argv)
 	}
 #endif
 	CCmdlineFix CmdlineFix(&argc, &argv);
+#if defined(CONF_FAMILY_WINDOWS)
+	// 宽字符参数准备失败时可能沿用 CRT 参数，不把本地代码页字节交给 UTF-8 路径接口。
+	if(!std::all_of(argv, argv + argc, str_utf8_check))
+	{
+		try
+		{
+			log_error("client", "Failed to convert command-line arguments to UTF-8.");
+		}
+		catch(...)
+		{
+			// 诊断失败不影响失败退出。
+		}
+		return -1;
+	}
+#endif
 
 	// 独立看图进程在游戏、配置和网络初始化之前分流。
 	if(argc >= 2 && str_comp(argv[1], "--qm-screenshot-viewer") == 0)

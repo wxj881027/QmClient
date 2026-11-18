@@ -46,16 +46,6 @@ namespace
 		HANDLE Get() const { return m_Handle; }
 	};
 
-	std::wstring Utf8ToWide(const std::string &Text)
-	{
-		const int Length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, Text.data(), (int)Text.size(), nullptr, 0);
-		if(Length <= 0)
-			return {};
-		std::wstring Result((size_t)Length, L'\0');
-		MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, Text.data(), (int)Text.size(), Result.data(), Length);
-		return Result;
-	}
-
 	std::filesystem::path LyricDirectory(bool Kugou)
 	{
 		wchar_t aPath[32768];
@@ -201,11 +191,9 @@ try
 	{
 		if(wcscmp(argv[Index], L"--kugou-setup") == 0 || wcscmp(argv[Index], L"--kugou-restore") == 0)
 		{
-			std::string Message;
-			const int Result = QmMusicHook::ConfigureKugou(wcscmp(argv[Index], L"--kugou-restore") == 0, &Message);
-			if(!Message.empty())
-				MessageBoxW(nullptr, Utf8ToWide(Message).c_str(), L"QmClient 酷狗歌词", MB_OK | (Result == 0 ? MB_ICONINFORMATION : MB_ICONWARNING));
-			return Result;
+			const auto Result = QmMusicHook::ConfigureKugou(wcscmp(argv[Index], L"--kugou-restore") == 0);
+			MessageBoxW(nullptr, Result.m_pMessage, L"QmClient 酷狗歌词", MB_OK | (Result.m_Code == 0 ? MB_ICONINFORMATION : MB_ICONWARNING));
+			return Result.m_Code;
 		}
 		if(wcscmp(argv[Index], L"--source") == 0 && Index + 1 < argc)
 		{

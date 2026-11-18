@@ -4,6 +4,26 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#if defined(CONF_FAMILY_WINDOWS)
+TEST(Os, CmdlineOwnerReleasesStorageAfterAnArgumentIsReplaced)
+{
+	int Argc = 1;
+	const char *apOriginal[] = {"original", nullptr};
+	const char **ppArgv = apOriginal;
+	const CCmdlineFix Cmdline(&Argc, &ppArgv);
+	ASSERT_GT(Argc, 0);
+	ASSERT_NE(ppArgv, apOriginal);
+	EXPECT_EQ(ppArgv[Argc], nullptr);
+
+	ppArgv[0] = apOriginal[0];
+}
+
+TEST(Os, OpenLinkRejectsInvalidUtf8)
+{
+	EXPECT_EQ(os_open_link("\xF0"), 0);
+}
+#endif
+
 TEST(Os, VersionStr)
 {
 	char aVersion[128];

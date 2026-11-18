@@ -1,6 +1,5 @@
 #include "os.h"
 
-#include "dbg.h"
 #include "fs.h"
 #include "io.h"
 #include "mem.h"
@@ -10,6 +9,9 @@
 
 #include <cstdlib>
 #include <iterator> // std::size
+#include <limits>
+#include <memory>
+#include <new>
 #include <optional>
 #include <string>
 
@@ -30,49 +32,57 @@
 #error NOT IMPLEMENTED
 #endif
 
-void cmdline_fix(int *argc, const char ***argv)
+bool cmdline_fix(int *argc, const char ***argv)
 {
 #if defined(CONF_FAMILY_WINDOWS)
 	int wide_argc = 0;
-	WCHAR **wide_argv = CommandLineToArgvW(GetCommandLineW(), &wide_argc);
-	dbg_assert(wide_argv != NULL, "CommandLineToArgvW failure");
-	dbg_assert(wide_argc > 0, "Invalid argc value");
+	const std::unique_ptr<WCHAR *, decltype(&LocalFree)> wide_argv(CommandLineToArgvW(GetCommandLineW(), &wide_argc), LocalFree);
+	if(!wide_argv || wide_argc <= 0)
+		return false;
 
 	int total_size = 0;
-
 	for(int i = 0; i < wide_argc; i++)
 	{
-		int size = WideCharToMultiByte(CP_UTF8, 0, wide_argv[i], -1, nullptr, 0, nullptr, nullptr);
-		dbg_assert(size != 0, "WideCharToMultiByte failure");
+		const int size = WideCharToMultiByte(CP_UTF8, 0, wide_argv.get()[i], -1, nullptr, 0, nullptr, nullptr);
+		if(size <= 0 || size > std::numeric_limits<int>::max() - total_size)
+			return false;
 		total_size += size;
 	}
 
-	char **new_argv = (char **)malloc((wide_argc + 1) * sizeof(*new_argv));
-	new_argv[0] = (char *)malloc(total_size);
-	mem_zero(new_argv[0], total_size);
+	// 指针表和参数字符共用一块内存，调用者改写参数项后也能释放原缓冲。
+	const size_t pointer_count = static_cast<size_t>(wide_argc) + 1;
+	if(pointer_count > (std::numeric_limits<size_t>::max() - total_size) / sizeof(const char *))
+		return false;
+	std::unique_ptr<const char *, decltype(&std::free)> new_argv(
+		static_cast<const char **>(std::malloc(pointer_count * sizeof(const char *) + total_size)), std::free);
+	if(!new_argv)
+		return false;
 
+	char *next_argument = reinterpret_cast<char *>(new_argv.get() + pointer_count);
 	int remaining_size = total_size;
 	for(int i = 0; i < wide_argc; i++)
 	{
-		int size = WideCharToMultiByte(CP_UTF8, 0, wide_argv[i], -1, new_argv[i], remaining_size, nullptr, nullptr);
-		dbg_assert(size != 0, "WideCharToMultiByte failure");
-
+		const int size = WideCharToMultiByte(CP_UTF8, 0, wide_argv.get()[i], -1, next_argument, remaining_size, nullptr, nullptr);
+		if(size <= 0)
+			return false;
+		new_argv.get()[i] = next_argument;
 		remaining_size -= size;
-		new_argv[i + 1] = new_argv[i] + size;
+		next_argument += size;
 	}
 
-	LocalFree(wide_argv);
-	new_argv[wide_argc] = nullptr;
+	new_argv.get()[wide_argc] = nullptr;
 	*argc = wide_argc;
-	*argv = (const char **)new_argv;
+	*argv = new_argv.release();
+	return true;
+#else
+	return false;
 #endif
 }
 
 void cmdline_free(int argc, const char **argv)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	free((void *)*argv);
-	free((char **)argv);
+	std::free(argv);
 #endif
 }
 
@@ -80,7 +90,17 @@ void cmdline_free(int argc, const char **argv)
 int os_open_link(const char *link)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_link = windows_utf8_to_wide(link);
+	if(!link || !str_utf8_check(link))
+		return 0;
+	std::wstring wide_link;
+	try
+	{
+		wide_link = windows_utf8_to_wide(link);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return 0;
+	}
 
 	SHELLEXECUTEINFOW info;
 	mem_zero(&info, sizeof(SHELLEXECUTEINFOW));
@@ -157,25 +177,20 @@ bool os_version_str(char *version, size_t length)
 	{
 		return false;
 	}
-	void *data = malloc(size);
-	if(!GetFileVersionInfoW(module_path, handle, size, data))
-	{
-		free(data);
+	const std::unique_ptr<void, decltype(&std::free)> data(std::malloc(size), std::free);
+	if(!data || !GetFileVersionInfoW(module_path, handle, size, data.get()))
 		return false;
-	}
-	VS_FIXEDFILEINFO *fileinfo;
-	UINT unused;
-	if(!VerQueryValueW(data, L"\\", (void **)&fileinfo, &unused))
-	{
-		free(data);
+	void *version_info = nullptr;
+	UINT version_info_size = 0;
+	if(!VerQueryValueW(data.get(), L"\\", &version_info, &version_info_size) ||
+		!version_info || version_info_size < sizeof(VS_FIXEDFILEINFO))
 		return false;
-	}
+	const auto *fileinfo = static_cast<const VS_FIXEDFILEINFO *>(version_info);
 	str_format(version, length, "Windows %hu.%hu.%hu.%hu",
 		HIWORD(fileinfo->dwProductVersionMS),
 		LOWORD(fileinfo->dwProductVersionMS),
 		HIWORD(fileinfo->dwProductVersionLS),
 		LOWORD(fileinfo->dwProductVersionLS));
-	free(data);
 	return true;
 #else
 	struct utsname u;
