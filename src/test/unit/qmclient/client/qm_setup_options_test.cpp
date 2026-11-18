@@ -39,6 +39,21 @@ TEST(QmSetupOptions, DirectoryOverrideRemainsEditableAndUsesLastArgument)
 	EXPECT_EQ(Options.m_Directory, L"D:\\游戏 客户端");
 }
 
+TEST(QmSetupOptions, FinalDirectoryExpansionUsesTheOriginalEngine)
+{
+	const std::vector<std::wstring> vArguments{L"/DIR=C:\\old", L"/Dir=expand:{localappdata}\\Programs\\QmClient"};
+	const auto Options = QmSetup::ParseOptions(vArguments);
+	EXPECT_FALSE(Options.m_UseNativeUi);
+	EXPECT_EQ(Options.m_vArguments, vArguments);
+}
+
+TEST(QmSetupOptions, FinalLiteralDirectoryRemainsEditableAfterEarlierExpansion)
+{
+	const auto Options = QmSetup::ParseOptions({L"/DIR=expand:{localappdata}\\QmClient", L"/DIR=D:\\游戏 客户端"});
+	EXPECT_TRUE(Options.m_UseNativeUi);
+	EXPECT_EQ(Options.m_Directory, L"D:\\游戏 客户端");
+}
+
 TEST(QmSetupOptions, AutomaticUpdatesPreserveAllOriginalParameters)
 {
 	const std::vector<std::wstring> vArguments{L"/SILENT", L"/SUPPRESSMSGBOXES", L"/NORESTART", L"/CLOSEAPPLICATIONS", L"/NORESTARTAPPLICATIONS", L"/DIR=D:\\已有 客户端"};
@@ -73,9 +88,14 @@ TEST(QmSetupOptions, CheckedDesktopRequestsTheExistingInnoTask)
 	EXPECT_EQ(Arguments.back(), L"/TASKS=desktopicon");
 }
 
-TEST(QmSetupArguments, QuotesWhitespaceAndTrailingDirectorySeparator)
+TEST(QmSetupArguments, KeepsTheOriginalDirectorySeparatorWhenForwardingToInno)
 {
-	EXPECT_EQ(QmSetup::QuoteArgument(L"D:\\游戏 客户端\\"), L"\"D:\\游戏 客户端\\\\\"");
+	const std::wstring Expected = LR"("/DIR=D:\游戏 客户端\" "/NORESTART")";
+	EXPECT_EQ(QmSetup::CommandLine({L"/DIR=D:\\游戏 客户端\\", L"/NORESTART"}), Expected);
+}
+
+TEST(QmSetupArguments, QuotesEmptyArgument)
+{
 	EXPECT_EQ(QmSetup::QuoteArgument(L""), L"\"\"");
 }
 
