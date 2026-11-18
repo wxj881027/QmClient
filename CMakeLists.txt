@@ -5663,6 +5663,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_ghost_render_test.cpp
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
+    src/test/unit/qmclient/client/qm_touch_controls_state_test.cpp
+    src/test/integration/qmclient/client/qm_touch_controls_persistence_test.cpp
     src/test/unit/qmclient/client/qm_camera_boundaries_test.cpp
     src/test/unit/qmclient/client/qm_camera_network_test.cpp
     src/test/unit/qmclient/client/qm_camera_dynamic_fov_test.cpp
