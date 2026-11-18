@@ -319,6 +319,38 @@ TEST(QmPoseCapture, SharpenSteepensEdgesWithoutTouchingFlatAreas)
 	EXPECT_EQ(Pixels[(2 * 3 + 2) * 4], 10);
 }
 
+TEST(QmPoseCapture, SharpenLeavesAConstantColorChannelUntouchedAtAnEdge)
+{
+	constexpr int WIDTH = 3;
+	constexpr int HEIGHT = 4;
+	const uint8_t aOriginalRed[HEIGHT] = {88, 88, 120, 120};
+	const uint8_t aExpectedRed[HEIGHT] = {88, 54, 154, 120};
+	uint8_t aPixels[WIDTH * HEIGHT * 4];
+	for(int Y = 0; Y < HEIGHT; ++Y)
+	{
+		for(int X = 0; X < WIDTH; ++X)
+		{
+			uint8_t *pPixel = aPixels + (Y * WIDTH + X) * 4;
+			pPixel[0] = aOriginalRed[Y];
+			pPixel[1] = 100;
+			pPixel[2] = 0;
+			pPixel[3] = 255;
+		}
+	}
+
+	qm_pose::ApplyUnsharpMask(aPixels, WIDTH, HEIGHT, 17);
+
+	for(int Y = 0; Y < HEIGHT; ++Y)
+	{
+		for(int X = 0; X < WIDTH; ++X)
+		{
+			const uint8_t *pPixel = aPixels + (Y * WIDTH + X) * 4;
+			EXPECT_EQ(pPixel[0], aExpectedRed[Y]) << "row " << Y << ", column " << X;
+			EXPECT_EQ(pPixel[1], 100) << "row " << Y << ", column " << X;
+		}
+	}
+}
+
 // 缓变渐变（天空、地面底色）必须整片跳过：放大它会变成一层层等值线。
 // 这是实机在 40% 强度下看到天空分层后补的回归。
 TEST(QmPoseCapture, SharpenSkipsSmoothGradients)
