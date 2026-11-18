@@ -6370,6 +6370,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     list(APPEND TESTS
       src/test/unit/engine/input_tsf_test.cpp
       src/test/support/qm_tsf_test.h
+      src/test/support/qm_tsf_sink_test.h
       src/test/integration/engine/input_tsf_lifecycle_test.cpp
     )
     list(APPEND TESTS_EXTRA src/engine/client/input_tsf.cpp)
@@ -6513,6 +6514,23 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   )
   if(FFMPEG_FOUND)
     target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${FFMPEG_INCLUDE_DIRS})
+  endif()
+
+  if(QM_GTEST_MAIN_TARGET AND TARGET_OS STREQUAL "windows" AND MSVC)
+    add_executable(qm-tsf-allocation-tests EXCLUDE_FROM_ALL
+      src/test/integration/engine/input_tsf_allocation_test.cpp
+      src/test/support/allocation_failure_new.cpp
+      src/engine/client/input_tsf.cpp
+      ${DEPS}
+      $<TARGET_OBJECTS:engine-shared>
+      $<TARGET_OBJECTS:game-shared>
+      $<TARGET_OBJECTS:rust-bridge-shared>
+    )
+    target_compile_options(qm-tsf-allocation-tests PRIVATE /utf-8)
+    target_link_libraries(qm-tsf-allocation-tests ${QM_GTEST_MAIN_TARGET} ${LIBS} bcrypt winhttp ws2_32 oleaut32 ole32)
+    list(APPEND TARGETS_OWN qm-tsf-allocation-tests)
+    list(APPEND TARGETS_LINK qm-tsf-allocation-tests)
+    add_test(NAME qm-tsf-allocation-tests COMMAND $<TARGET_FILE:qm-tsf-allocation-tests>)
   endif()
 
   if(QM_GTEST_MAIN_TARGET AND TARGET_OS STREQUAL "windows")
@@ -7015,6 +7033,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   if(TARGET qm-script-allocation-tests)
     list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-script-allocation-tests> ${TESTRUNNER_ARGS})
     list(APPEND CXX_TEST_DEPENDS qm-script-allocation-tests)
+  endif()
+  if(TARGET qm-tsf-allocation-tests)
+    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-tsf-allocation-tests> ${TESTRUNNER_ARGS})
+    list(APPEND CXX_TEST_DEPENDS qm-tsf-allocation-tests)
   endif()
   add_custom_target(run_cxx_tests
     ${CXX_TEST_COMMANDS}
