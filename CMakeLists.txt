@@ -6862,6 +6862,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_ui_tag_render_test.cpp
       src/test/integration/qmclient/client/qm_chat_cloud_renderer_test.cpp
       src/test/integration/qmclient/ui/qm_chat_bubble_text_test.cpp
+      src/test/integration/qmclient/ui/qm_chat_command_hud_render_test.cpp
       src/test/integration/qmclient/ui/qm_popconfirm_source_test.cpp
       src/test/unit/qmclient/settings/settings_card_projection_allocation_test.cpp
       src/test/unit/qmclient/ui/qm_card_registry_migration_allocation_test.cpp
