@@ -6,8 +6,8 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
-#include <cstdlib>
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -85,6 +85,10 @@ TEST_F(CQmStorageLayout, MigratesKnownFilesAndTreesOnce)
 	Write("qmclient/mapcovers/cover.png", "cover");
 	Write("qmclient/chat_log/chat.txt", "chat");
 	Write("qmclient/lyrics/netease/1.yrc", "lyrics");
+	Write("qmclient/fonts/UserFont.ttf", "user-font");
+	Write("qmclient/state/legacy/old_fonts/LegacyUserFont.ttf", "legacy-user-font");
+	Write("qmclient/content/fonts/installed.ttf", "installed-font");
+	Write("qmclient/state/legacy/old_content_fonts/legacy-store.ttf", "legacy-store-font");
 	Write("fonts/fonts_store/installed.ttf", "installed-font");
 	Write("fonts/downloaded_fonts/obsolete.otf", "obsolete-font");
 	Write("map_preview_cache/preview.png", "map-preview");
@@ -105,7 +109,10 @@ TEST_F(CQmStorageLayout, MigratesKnownFilesAndTreesOnce)
 	EXPECT_EQ(Read("qmclient/cache/maps/covers/cover.png"), "cover");
 	EXPECT_EQ(Read("qmclient/content/chat_logs/chat.txt"), "chat");
 	EXPECT_EQ(Read("qmclient/content/lyrics/netease/1.yrc"), "lyrics");
-	EXPECT_EQ(Read("qmclient/content/fonts/installed.ttf"), "installed-font");
+	EXPECT_EQ(Read("fonts/UserFont.ttf"), "user-font");
+	EXPECT_EQ(Read("fonts/LegacyUserFont.ttf"), "legacy-user-font");
+	EXPECT_EQ(Read("fonts/fonts_store/installed.ttf"), "installed-font");
+	EXPECT_EQ(Read("fonts/fonts_store/legacy-store.ttf"), "legacy-store-font");
 	EXPECT_EQ(Read("qmclient/state/legacy/old_downloaded_fonts/obsolete.otf"), "obsolete-font");
 	EXPECT_EQ(Read("qmclient/cache/maps/previews/preview.png"), "map-preview");
 	EXPECT_EQ(Read(qm_storage::SERVERLIST_CACHE_FILE), "servers");
@@ -133,6 +140,34 @@ TEST_F(CQmStorageLayout, ConflictingTargetPreservesBothFilesAndSkipsMarker)
 	EXPECT_EQ(Read("qmclient/statistics.json"), "legacy-statistics");
 	EXPECT_EQ(Read(qm_storage::STATISTICS_FILE), "current-statistics");
 	EXPECT_FALSE(m_pStorage->FileExists(qm_storage::LAYOUT_MIGRATION_MARKER_FILE, IStorage::TYPE_SAVE));
+}
+
+TEST_F(CQmStorageLayout, FontConflictsArePreservedWithoutBlockingMigration)
+{
+	Write("qmclient/fonts/Shared.ttf", "legacy-user-font");
+	Write("fonts/Shared.ttf", "current-user-font");
+	Write("qmclient/content/fonts/Store.ttf", "legacy-store-font");
+	Write("fonts/fonts_store/Store.ttf", "current-store-font");
+
+	ASSERT_TRUE(qm_storage::MigrateStorageLayout(m_pStorage.get()));
+	EXPECT_FALSE(m_pStorage->FileExists("qmclient/fonts/Shared.ttf", IStorage::TYPE_SAVE));
+	EXPECT_FALSE(m_pStorage->FileExists("qmclient/content/fonts/Store.ttf", IStorage::TYPE_SAVE));
+	EXPECT_EQ(Read("fonts/Shared.ttf"), "current-user-font");
+	EXPECT_EQ(Read("fonts/fonts_store/Store.ttf"), "current-store-font");
+	EXPECT_EQ(Read("qmclient/state/legacy/font_conflicts/Shared.ttf"), "legacy-user-font");
+	EXPECT_EQ(Read("qmclient/state/legacy/content_font_conflicts/Store.ttf"), "legacy-store-font");
+	EXPECT_TRUE(m_pStorage->FileExists(qm_storage::LAYOUT_MIGRATION_MARKER_FILE, IStorage::TYPE_SAVE));
+}
+
+TEST_F(CQmStorageLayout, PreviousLayoutMarkerDoesNotSkipFontRestore)
+{
+	Write("qmclient/runtime/storage_layout_v1.done", "old-layout");
+	Write("qmclient/state/legacy/old_fonts/Restored.ttf", "legacy-font");
+
+	EXPECT_TRUE(qm_storage::StorageLayoutMigrationPending(m_pStorage.get()));
+	ASSERT_TRUE(qm_storage::MigrateStorageLayout(m_pStorage.get()));
+	EXPECT_EQ(Read("fonts/Restored.ttf"), "legacy-font");
+	EXPECT_TRUE(m_pStorage->FileExists(qm_storage::LAYOUT_MIGRATION_MARKER_FILE, IStorage::TYPE_SAVE));
 }
 
 TEST_F(CQmStorageLayout, IdenticalTargetCompletesMigrationWithoutOverwrite)

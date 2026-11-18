@@ -3817,6 +3817,7 @@ if(CLIENT)
     components/qmclient/scripting.cpp
     components/qmclient/scripting.h
     components/qmclient/skin_download_session.h
+    components/qmclient/skin_name_index.h
     components/qmclient/skin_prepared_textures.h
     components/qmclient/skin_prepared_visuals.h
     components/qmclient/snapshot_entities.h
@@ -5270,6 +5271,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_title_style_test.cpp
     src/test/unit/qmclient/ui/qm_chat_bubble_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp
+    src/test/unit/qmclient/client/qm_skin_name_index_test.cpp
     src/test/unit/qmclient/client/qm_skin_outline_test.cpp
     src/test/unit/qmclient/client/qm_scoreboard_skin_test.cpp
     src/test/unit/qmclient/client/qm_scoreboard_media_test.cpp

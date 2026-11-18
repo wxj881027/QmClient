@@ -54,16 +54,6 @@ TEST(QmNewUiMenuGameplayHudContract, HudNotificationsKeepEdgeGeometryStableDurin
 	EXPECT_EQ(RenderNotifications.find("OffsetX = (1.0f - Alpha) * 32.0f;"), std::string::npos);
 }
 
-TEST(QmNewUiMenuGameplayHudContract, SkinLookupReusesExistingNamesIgnoringCase)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/skins.cpp");
-	const std::string FindContainer = FunctionBody(Source, "const CSkins::CSkinContainer *CSkins::FindContainerImpl(");
-
-	EXPECT_NE(FindContainer.find("str_comp_nocase(Entry.first.c_str(), pName) == 0"), std::string::npos);
-	EXPECT_NE(FindContainer.find("Entry.second->State() != CSkinContainer::EState::ERROR"), std::string::npos);
-	EXPECT_NE(FindContainer.find("Entry.second->State() != CSkinContainer::EState::NOT_FOUND"), std::string::npos);
-}
-
 TEST(QmNewUiMenuGameplayHudContract, FastPracticeSurfacesPracticeStateInHud)
 {
 	const std::string HudSource = ReadTextFile("src/game/client/components/hud.cpp");

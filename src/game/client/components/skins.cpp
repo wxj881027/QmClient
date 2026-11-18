@@ -473,8 +473,19 @@ int CSkins::CSkinDirectoryScanJob::ScanCallback(const CFsFileInfo *pInfo, int Is
 	if(!CSkin::IsValidName(aSkinName))
 		return 0;
 
-	if(!pSelf->m_SeenNames.insert(aSkinName).second)
+	const std::string NameKey = CSkinNameIndex::Key(aSkinName);
+	const int Priority = pSelf->m_CurrentScanType == CSkinContainer::EType::LOCAL ? 1 : 0;
+	const auto Existing = pSelf->m_EntryByKey.find(NameKey);
+	if(Existing != pSelf->m_EntryByKey.end())
+	{
+		CSkinDirectoryScanJob::SResult::SEntry &Entry = pSelf->m_Result.m_vEntries[Existing->second];
+		const int ExistingPriority = Entry.m_Type == CSkinContainer::EType::LOCAL ? 1 : 0;
+		if(Priority > ExistingPriority ||
+			(Priority == ExistingPriority && !SkinNameHasUpperCase(Entry.m_Name.c_str()) && SkinNameHasUpperCase(aSkinName)))
+			Entry = {aSkinName, pSelf->m_CurrentScanType, StorageType, pInfo->m_TimeModified};
 		return 0;
+	}
+	pSelf->m_EntryByKey.emplace(NameKey, pSelf->m_Result.m_vEntries.size());
 	pSelf->m_Result.m_vEntries.push_back({aSkinName, pSelf->m_CurrentScanType, StorageType, pInfo->m_TimeModified});
 	return 0;
 }
@@ -1435,6 +1446,9 @@ void CSkins::OnShutdown()
 	m_UnresolvedSkinScanState = {};
 	m_vSkinsUnresolvedThisFrame.clear();
 	m_vSkinsTexturesUnloadedThisFrame.clear();
+	m_SkinNameIndex.Clear();
+	m_SkinNotFoundKeys.clear();
+	m_HasInitialSkinDirectoryScan = false;
 }
 
 void CSkins::OnUpdate()
@@ -2185,6 +2199,9 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 			pSkinContainer->m_pLoadJob = std::make_shared<CSkinLoadJob>(this, pSkinContainer->Name(), pSkinContainer->StorageType());
 			break;
 		case CSkinContainer::EType::DOWNLOAD:
+			// 初次目录扫描完成前先使用磁盘上的 canonical 名称，避免用服务器下发的小写名发出 404 请求。
+			if(!m_HasInitialSkinDirectoryScan)
+				return false;
 			pSkinContainer->m_pDownloadSession = CreateSkinDownloadSession(pSkinContainer->Name());
 			if(std::find(m_vSkinDownloadNames.begin(), m_vSkinDownloadNames.end(), pSkinContainer->Name()) == m_vSkinDownloadNames.end())
 				m_vSkinDownloadNames.emplace_back(pSkinContainer->Name());
@@ -2328,8 +2345,9 @@ void CSkins::UpdateSkinDownloads(CSkinLoadingStats &Stats)
 		if(Result == CQmSkinDownloadSession::EResult::READY)
 		{
 			pContainer->m_pLoadJob = std::static_pointer_cast<CAbstractSkinLoadJob>(pContainer->m_pDownloadSession->TakeReadyJob());
+			m_SkinNotFoundKeys.erase(CSkinNameIndex::Key(pContainer->Name()));
 			// 验证提交完成后取得当前磁盘身份，避免后续扫描重复加载已发布更新。
-			const std::string Path = std::string("downloadedskins/") + pContainer->Name() + ".png";
+			const std::string Path = std::string("downloadedskins/") + CanonicalSkinName(pContainer->Name()) + ".png";
 			pContainer->m_pLoadJob->m_Data.ReadLastModified(Storage(), Path.c_str(), IStorage::TYPE_SAVE);
 		}
 		else if(Result != CQmSkinDownloadSession::EResult::WAITING)
@@ -2338,6 +2356,8 @@ void CSkins::UpdateSkinDownloads(CSkinLoadingStats &Stats)
 			{
 				const auto State = Stats.FinishLoadingFailure(pContainer->m_State, pContainer->m_pSkin != nullptr, Result == CQmSkinDownloadSession::EResult::NOT_FOUND);
 				pContainer->SetState(State, pContainer->m_LoadPriority);
+				if(Result == CQmSkinDownloadSession::EResult::NOT_FOUND)
+					m_SkinNotFoundKeys.insert(CSkinNameIndex::Key(pContainer->Name()));
 				log_error("skins", "Skin '%s' download ended: %s", pContainer->Name(), Result == CQmSkinDownloadSession::EResult::NOT_FOUND ? "not found in enabled sources" : "request or image validation failed");
 			}
 			pContainer->m_pDownloadSession.reset();
@@ -2632,6 +2652,8 @@ void CSkins::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 	m_PendingSkinListUnfilteredCount = 0;
 	m_vPendingSkinDirectoryEntries.clear();
 	m_SkinDirectoryMergeCursor = 0;
+	m_SkinNameIndex.Clear();
+	m_HasInitialSkinDirectoryScan = false;
 
 	for(auto &[_, pSkinContainer] : m_Skins)
 	{
@@ -2971,6 +2993,13 @@ void CSkins::ProcessSkinDirectoryScanJob()
 	if(m_pSkinDirectoryScanJob && m_pSkinDirectoryScanJob->State() == IJob::STATE_DONE)
 	{
 		m_vPendingSkinDirectoryEntries = m_pSkinDirectoryScanJob->TakeResult().m_vEntries;
+		m_SkinNameIndex.Clear();
+		for(const CSkinDirectoryScanJob::SResult::SEntry &Entry : m_vPendingSkinDirectoryEntries)
+		{
+			m_SkinNameIndex.Add(Entry.m_Name.c_str(), Entry.m_Type == CSkinContainer::EType::LOCAL ? 1 : 0);
+			m_SkinNotFoundKeys.erase(CSkinNameIndex::Key(Entry.m_Name.c_str()));
+		}
+		m_HasInitialSkinDirectoryScan = true;
 		m_SkinDirectoryMergeCursor = 0;
 		m_pSkinDirectoryScanJob.reset();
 	}
@@ -3249,30 +3278,17 @@ const CSkins::CSkinContainer *CSkins::FindContainerImpl(const char *pName, bool 
 		return nullptr;
 	}
 
-	auto ExistingSkin = m_Skins.find(pName);
-	if(ExistingSkin == m_Skins.end() ||
-		(ExistingSkin->second->State() == CSkinContainer::EState::ERROR || ExistingSkin->second->State() == CSkinContainer::EState::NOT_FOUND))
-	{
-		const auto CaseInsensitiveSkin = std::find_if(
-			m_Skins.begin(),
-			m_Skins.end(),
-			[this, pName, &ExistingSkin](const auto &Entry) {
-				return (ExistingSkin == m_Skins.end() || Entry.second.get() != ExistingSkin->second.get()) &&
-				       str_comp_nocase(Entry.first.c_str(), pName) == 0 &&
-				       Entry.second->State() != CSkinContainer::EState::ERROR && Entry.second->State() != CSkinContainer::EState::NOT_FOUND;
-			});
-		if(CaseInsensitiveSkin != m_Skins.end())
-			ExistingSkin = CaseInsensitiveSkin;
-	}
+	const char *pCanonicalName = CanonicalSkinName(pName);
+	auto ExistingSkin = m_Skins.find(pCanonicalName);
 	if(ExistingSkin == m_Skins.end())
 	{
-		const CSkinContainer::EType Type = PreferredContainerType(pName);
-		CSkinContainer SkinContainer(this, pName, Type, ContainerStorageTypeFor(Type));
+		const CSkinContainer::EType Type = PreferredContainerType(pCanonicalName);
+		CSkinContainer SkinContainer(this, pCanonicalName, Type, ContainerStorageTypeFor(Type));
 		auto &&pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
 		pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
 		ExistingSkin = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;
 	}
-	if(RequestLoad)
+	if(RequestLoad && m_SkinNotFoundKeys.find(CSkinNameIndex::Key(pName)) == m_SkinNotFoundKeys.end())
 		ExistingSkin->second->RequestLoad(true);
 	return ExistingSkin->second.get();
 }
@@ -3802,13 +3818,13 @@ void CSkins::CSkinLoadJob::Run()
 
 std::unique_ptr<CQmSkinDownloadSession> CSkins::CreateSkinDownloadSession(const char *pName)
 {
+	const std::string Name = CanonicalSkinName(pName);
 	char aEscapedName[256];
-	EscapeUrl(aEscapedName, pName);
+	EscapeUrl(aEscapedName, Name.c_str());
 	const std::string OfficialUrl = std::string(g_Config.m_ClSkinDownloadUrl) + aEscapedName + ".png";
 	const std::string CommunityUrl = g_Config.m_ClDownloadCommunitySkins ? std::string(g_Config.m_ClSkinCommunityDownloadUrl) + aEscapedName + ".png" : "";
-	const std::string Name(pName);
 	const std::string Path = "downloadedskins/" + Name + ".png";
-	return std::make_unique<CQmSkinDownloadSession>(*Http(), OfficialUrl, CommunityUrl, std::make_shared<CQmSkinDownloadJob>(Storage(), pName, PrepareSkinData), [this, Path](const char *pUrl, bool Unconditional) -> std::shared_ptr<IHttpRequest> {
+	return std::make_unique<CQmSkinDownloadSession>(*Http(), OfficialUrl, CommunityUrl, std::make_shared<CQmSkinDownloadJob>(Storage(), Name.c_str(), PrepareSkinData), [this, Path](const char *pUrl, bool Unconditional) -> std::shared_ptr<IHttpRequest> {
 			auto pRequest = HttpGetBoth(pUrl, Storage(), Path.c_str(), IStorage::TYPE_SAVE);
 			pRequest->SkipByFileTime(!Unconditional);
 			return pRequest; }, [this, Name](std::shared_ptr<IHttpRequest> pResponse) -> std::shared_ptr<IQmSkinDataJob> { return std::make_shared<CQmSkinDownloadJob>(Storage(), Name.c_str(), PrepareSkinData, std::move(pResponse)); }, [this](std::shared_ptr<IJob> pJob) { Engine()->AddJob(std::move(pJob)); });

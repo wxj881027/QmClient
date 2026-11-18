@@ -30,7 +30,6 @@
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
-#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
@@ -2546,7 +2545,7 @@ public:
 		{
 			m_QmShowSystemFonts = g_Config.m_QmShowSystemFonts != 0;
 			std::vector<SQmScannedFontFile> vFontFiles;
-			for(const char *pDirectory : {"fonts", qm_storage::CONTENT_FONTS_DIR})
+			for(const char *pDirectory : {"fonts"})
 			{
 				// TYPE_ALL 的目录合并会先按文件名去重，坏用户文件会令同名随包文件根本不进入扫描。
 				// 按实际存储来源分别枚举，读取与递归继续保持该来源。

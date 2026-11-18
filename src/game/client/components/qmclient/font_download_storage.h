@@ -1,4 +1,4 @@
-// 字体商店只写 QmClient 的统一内容目录；启动迁移会把旧 fonts_store 搬入这里。
+// 字体商店沿用 DDNet 用户目录的 fonts/fonts_store；启动迁移只合并旧目录，不改归档位置。
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_FONT_DOWNLOAD_STORAGE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_FONT_DOWNLOAD_STORAGE_H
 
@@ -11,7 +11,7 @@
 
 namespace qm_font_download
 {
-	inline constexpr const char *DIRECTORY = qm_storage::CONTENT_FONTS_DIR;
+	inline constexpr const char *DIRECTORY = qm_storage::FONT_STORE_DIR;
 
 	inline bool ValidFilename(const std::string &File)
 	{
@@ -22,7 +22,8 @@ namespace qm_font_download
 
 	inline bool EnsureDirectory(IStorage &Storage)
 	{
-		return qm_storage::EnsureFolder(&Storage, DIRECTORY);
+		return qm_storage::EnsureFolder(&Storage, qm_storage::FONT_DIR) &&
+		       qm_storage::EnsureFolder(&Storage, DIRECTORY);
 	}
 
 	inline bool TargetPath(const std::string &File, char *pPath, unsigned PathSize)

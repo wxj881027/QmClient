@@ -40,7 +40,9 @@ namespace qm_storage
 	inline constexpr const char *CONTENT_RANK1_GHOSTS_DIR = "qmclient/content/rank1/ghosts";
 	inline constexpr const char *CONTENT_CHAT_LOG_DIR = "qmclient/content/chat_logs";
 	inline constexpr const char *CONTENT_LYRICS_DIR = "qmclient/content/lyrics";
-	inline constexpr const char *CONTENT_FONTS_DIR = "qmclient/content/fonts";
+	// 字体沿用 DDNet 用户根目录的 fonts；商店安装到其下独立子目录。
+	inline constexpr const char *FONT_DIR = "fonts";
+	inline constexpr const char *FONT_STORE_DIR = "fonts/fonts_store";
 
 	inline constexpr const char *RUNTIME_DIR = "qmclient/runtime";
 	inline constexpr const char *RUNTIME_EDITOR_DIR = "qmclient/runtime/editor";
@@ -82,7 +84,7 @@ namespace qm_storage
 	inline constexpr const char *GRAPHICS_RECOVERY_MARKER_FILE = "qmclient/runtime/graphics_recovery.marker";
 	inline constexpr const char *EDITOR_COLLAB_SNAPSHOT_FILE = "qmclient/runtime/editor/collab_snapshot.map";
 	inline constexpr const char *EDITOR_COLLAB_INCOMING_FILE = "qmclient/runtime/editor/collab_incoming.map";
-	inline constexpr const char *LAYOUT_MIGRATION_MARKER_FILE = "qmclient/runtime/storage_layout_v1.done";
+	inline constexpr const char *LAYOUT_MIGRATION_MARKER_FILE = "qmclient/runtime/storage_layout_v2.done";
 
 	bool EnsureStorageLayout(IStorage *pStorage);
 	bool EnsureFolder(IStorage *pStorage, const char *pPath);

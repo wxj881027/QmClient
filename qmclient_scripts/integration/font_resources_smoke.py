@@ -90,7 +90,7 @@ def create_scenario_fonts(directory: Path, name: str) -> list[tuple[str, tuple[s
 	data = directory / "data"
 	if name == "downloaded-font-unicode-name":
 		family = "Qm商店下载字体"
-		write_font(profile / "qmclient/content/fonts/downloaded-user.ttf", family, "Book", True)
+		write_font(profile / "fonts/fonts_store/downloaded-user.ttf", family, "Book", True)
 		return [(family, ("Book",))]
 	if name == "user-only-unicode-name":
 		family = "Qm字体中文族"
@@ -211,7 +211,7 @@ def run_font_scenario(source: Path, workspace: Path, name: str, proxy: str) -> d
 				line = wait_new(client, offset, lambda value: "event=font_diagnostics " in value and f"request='{family}' " in value, "old directory excluded")
 				if "resolved=0" not in line:
 					raise AssertionError(f"obsolete font directory was scanned: {line}")
-				current = directory / "profile/qmclient/content/fonts" / f"moved-{legacy_directory.replace('/', '-')}.ttf"
+				current = directory / "profile/fonts/fonts_store" / f"moved-{legacy_directory.replace('/', '-')}.ttf"
 				old.replace(current)
 				probe_font(client, family, family, "Regular", 65)
 
@@ -228,7 +228,7 @@ def run_font_scenario(source: Path, workspace: Path, name: str, proxy: str) -> d
 					raise AssertionError(f"style inventory duplicated or incomplete: {first}")
 				if name == "collection-and-cross-directory-duplicates" and baseline_counts is None:
 					# 首次查询记录单份集合的池大小，再把同内容放入用户目录并让生产接口重扫。
-					duplicate = directory / "profile/qmclient/content/fonts/multi-family.ttc"
+					duplicate = directory / "profile/fonts/fonts_store/multi-family.ttc"
 					duplicate.parent.mkdir(parents=True, exist_ok=True)
 					shutil.copy2(directory / "data/fonts/multi-family.ttc", duplicate)
 				second = probe_font(client, request, family, style, 65, name not in ("bundled-typographic-families", "canonical-alias-priority"))

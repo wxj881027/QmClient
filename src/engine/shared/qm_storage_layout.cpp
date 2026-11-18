@@ -50,7 +50,8 @@ namespace
 		qm_storage::CONTENT_RANK1_GHOSTS_DIR,
 		qm_storage::CONTENT_CHAT_LOG_DIR,
 		qm_storage::CONTENT_LYRICS_DIR,
-		qm_storage::CONTENT_FONTS_DIR,
+		qm_storage::FONT_DIR,
+		qm_storage::FONT_STORE_DIR,
 		qm_storage::RUNTIME_DIR,
 		qm_storage::RUNTIME_EDITOR_DIR,
 		qm_storage::RUNTIME_UPDATES_DIR,
@@ -114,11 +115,8 @@ namespace
 		{"qmclient/rank1", qm_storage::CONTENT_RANK1_DIR},
 		{"qmclient/chat_log", qm_storage::CONTENT_CHAT_LOG_DIR},
 		{"qmclient/lyrics", qm_storage::CONTENT_LYRICS_DIR},
-		// 旧字体安装目录没有进入运行时安装列表；整体保留到 legacy，绝不删除用户文件。
-		{"qmclient/fonts", "qmclient/state/legacy/old_fonts"},
 		{"fonts/downloaded_fonts", "qmclient/state/legacy/old_downloaded_fonts"},
 		{"map_preview_cache", qm_storage::CACHE_MAP_PREVIEWS_DIR},
-		{"fonts/fonts_store", qm_storage::CONTENT_FONTS_DIR},
 	};
 
 	constexpr const char *WORKSHOP_CATALOGS[] = {
@@ -421,6 +419,85 @@ namespace
 		return Success;
 	}
 
+	bool MoveDirectoryPreservingConflictsImpl(IStorage *pStorage, const char *pFrom, const char *pTo, const char *pLegacyRoot, const std::string &Relative)
+	{
+		if(!pStorage->FolderExists(pFrom, IStorage::TYPE_SAVE))
+			return true;
+		if(PathIsLink(pStorage, pFrom) || PathIsLink(pStorage, pTo))
+		{
+			log_error("storage_layout", "Refusing to migrate linked directory '%s'", pFrom);
+			return false;
+		}
+		if(!EnsureFolderPath(pStorage, pTo))
+		{
+			log_error("storage_layout", "Could not create migration directory '%s'", pTo);
+			return false;
+		}
+
+		std::vector<STreeEntry> vEntries;
+		pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, pFrom, CollectTreeEntry, &vEntries);
+		bool Success = true;
+		for(const STreeEntry &Entry : vEntries)
+		{
+			char aSource[IO_MAX_PATH_LENGTH];
+			char aTarget[IO_MAX_PATH_LENGTH];
+			str_format(aSource, sizeof(aSource), "%s/%s", pFrom, Entry.m_Name.c_str());
+			str_format(aTarget, sizeof(aTarget), "%s/%s", pTo, Entry.m_Name.c_str());
+			const std::string ChildRelative = Relative.empty() ? Entry.m_Name : Relative + "/" + Entry.m_Name;
+			if(Entry.m_IsDirectory)
+			{
+				Success &= MoveDirectoryPreservingConflictsImpl(pStorage, aSource, aTarget, pLegacyRoot, ChildRelative);
+				continue;
+			}
+			if(pStorage->FileExists(aTarget, IStorage::TYPE_SAVE) && !FilesEqual(pStorage, aSource, aTarget))
+			{
+				char aLegacy[IO_MAX_PATH_LENGTH];
+				char aLegacyFolder[IO_MAX_PATH_LENGTH];
+				const char *pSlash = str_rchr(ChildRelative.c_str(), '/');
+				if(pSlash != nullptr)
+				{
+					str_format(aLegacyFolder, sizeof(aLegacyFolder), "%s/%.*s", pLegacyRoot, static_cast<int>(pSlash - ChildRelative.c_str()), ChildRelative.c_str());
+					if(!EnsureFolderPath(pStorage, aLegacyFolder))
+					{
+						Success = false;
+						continue;
+					}
+				}
+				bool FoundName = false;
+				for(int Index = 0; Index < 100; ++Index)
+				{
+					if(Index == 0)
+						str_format(aLegacy, sizeof(aLegacy), "%s/%s", pLegacyRoot, ChildRelative.c_str());
+					else
+						str_format(aLegacy, sizeof(aLegacy), "%s/%s.%d", pLegacyRoot, ChildRelative.c_str(), Index);
+					if(!pStorage->FileExists(aLegacy, IStorage::TYPE_SAVE))
+					{
+						FoundName = true;
+						break;
+					}
+				}
+				if(!FoundName || !MoveFile(pStorage, aSource, aLegacy))
+				{
+					log_error("storage_layout", "Could not preserve conflicting font '%s'", aSource);
+					Success = false;
+				}
+				continue;
+			}
+			Success &= MoveFile(pStorage, aSource, aTarget);
+		}
+		if(Success && pStorage->FolderExists(pFrom, IStorage::TYPE_SAVE) && !pStorage->RemoveFolder(pFrom, IStorage::TYPE_SAVE))
+		{
+			log_error("storage_layout", "Migrated directory '%s' is not empty after migration", pFrom);
+			Success = false;
+		}
+		return Success;
+	}
+
+	bool MoveDirectoryPreservingConflicts(IStorage *pStorage, const char *pFrom, const char *pTo, const char *pLegacyRoot)
+	{
+		return MoveDirectoryPreservingConflictsImpl(pStorage, pFrom, pTo, pLegacyRoot, {});
+	}
+
 	bool RemoveStaleFiles(IStorage *pStorage, const char *pDirectory, const char *pPrefix, const char *pSuffix)
 	{
 		struct SFilter
@@ -501,6 +578,12 @@ namespace qm_storage
 		Success &= MigrateNewestCacheFile(pStorage, SERVERLIST_CACHE_SOURCES, std::size(SERVERLIST_CACHE_SOURCES), SERVERLIST_CACHE_FILE);
 		for(const SPathMove &Move : DIRECTORY_MOVES)
 			Success &= MoveDirectory(pStorage, Move.m_pFrom, Move.m_pTo);
+		// 6bf2 曾把 qmclient/fonts 暂存到 legacy；先迁回，再合并仍在旧路径的字体。
+		Success &= MoveDirectoryPreservingConflicts(pStorage, "qmclient/state/legacy/old_fonts", qm_storage::FONT_DIR, "qmclient/state/legacy/font_conflicts");
+		Success &= MoveDirectoryPreservingConflicts(pStorage, "qmclient/fonts", qm_storage::FONT_DIR, "qmclient/state/legacy/font_conflicts");
+		// 6bf2 的短暂中间布局也并入原字体商店目录。
+		Success &= MoveDirectoryPreservingConflicts(pStorage, "qmclient/state/legacy/old_content_fonts", qm_storage::FONT_STORE_DIR, "qmclient/state/legacy/content_font_conflicts");
+		Success &= MoveDirectoryPreservingConflicts(pStorage, "qmclient/content/fonts", qm_storage::FONT_STORE_DIR, "qmclient/state/legacy/content_font_conflicts");
 		Success &= MigrateWorkshopCatalogs(pStorage);
 
 		// 这些文件是本项目旧版原子写的残留，只删除明确前缀的临时文件。

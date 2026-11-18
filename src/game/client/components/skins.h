@@ -18,6 +18,7 @@
 #include <game/client/components/qmclient/settings_resource_preview.h>
 #include <game/client/components/qmclient/skin_download_session.h>
 #include <game/client/components/qmclient/skin_load_budget.h>
+#include <game/client/components/qmclient/skin_name_index.h>
 #include <game/client/components/qmclient/skin_prepared_textures.h>
 #include <game/client/components/qmclient/skin_prepared_visuals.h>
 #include <game/client/components/qmclient/skin_source_job.h>
@@ -962,7 +963,7 @@ private:
 		IStorage *m_pStorage;
 		SResult m_Result;
 		CSkinContainer::EType m_CurrentScanType = CSkinContainer::EType::LOCAL;
-		std::unordered_set<std::string> m_SeenNames;
+		std::unordered_map<std::string, size_t> m_EntryByKey;
 	};
 
 	static bool PrepareSkinData(const char *pName, CSkinLoadData &Data);
@@ -983,6 +984,11 @@ private:
 	void UpdateSkinDownloads(CSkinLoadingStats &Stats);
 	std::unique_ptr<CQmSkinDownloadSession> CreateSkinDownloadSession(const char *pName);
 	std::vector<std::string> m_vSkinDownloadNames;
+	const char *CanonicalSkinName(const char *pName) const
+	{
+		const char *pCanonical = m_SkinNameIndex.Find(pName);
+		return pCanonical == nullptr ? pName : pCanonical;
+	}
 	void UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseconds StartTime, std::chrono::nanoseconds MaxTime);
 	void CollectUnresolvedSkins();
 	size_t LoadedSkinLimit() const;
@@ -1029,7 +1035,10 @@ private:
 
 	friend class CSkinProfiles;
 
-	std::unordered_map<std::string, std::unique_ptr<CSkinContainer>> m_Skins;
+	std::unordered_map<std::string, std::unique_ptr<CSkinContainer>, SSkinNameHash, SSkinNameEqual> m_Skins;
+	CSkinNameIndex m_SkinNameIndex;
+	std::unordered_set<std::string> m_SkinNotFoundKeys;
+	bool m_HasInitialSkinDirectoryScan = false;
 	std::optional<std::chrono::nanoseconds> m_ContainerUpdateTime;
 	size_t m_NumLoadingSkins = 0;
 	CQmSkinUploadFrameBudget m_SkinUploadFrameBudget;
