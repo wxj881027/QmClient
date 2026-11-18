@@ -10,11 +10,13 @@
 #include <game/client/ui.h>
 #include <game/localization.h>
 
+#include <algorithm>
 #include <array>
 #include <memory>
 #include <new>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 class CGameClient;
 
@@ -80,6 +82,120 @@ public:
 		}
 		catch(const std::bad_alloc &) {}
 		catch(const std::length_error &) {}
+	}
+};
+
+// 缓存项进入回收后不再绘制；删除命令失败时，所有来源与 GPU 身份仍由原项持有。
+// 模板只隔离资源接口，生产缓存和真实 renderer 的回归共用这条清理、腾位入口。
+template<typename TEntry>
+class CQmMapPreviewCacheEntries
+{
+	IGraphics *m_pGraphics;
+	std::vector<std::unique_ptr<TEntry>> m_vEntries;
+
+public:
+	static constexpr size_t CAPACITY = 3;
+	static constexpr float MIN_AGE = 0.4f;
+
+	explicit CQmMapPreviewCacheEntries(IGraphics *pGraphics) :
+		m_pGraphics(pGraphics)
+	{
+		m_vEntries.reserve(CAPACITY);
+	}
+	~CQmMapPreviewCacheEntries()
+	{
+		// 显式 Clear 负责图形清理；终态析构只取消任务并释放 CPU owner。
+		for(auto &pEntry : m_vEntries)
+			pEntry->CancelLoad();
+	}
+
+	size_t Size() const { return m_vEntries.size(); }
+	TEntry *Find(const char *pMapName) const
+	{
+		for(const auto &pEntry : m_vEntries)
+			if(str_comp(pEntry->m_aMapName, pMapName) == 0)
+				return pEntry.get();
+		return nullptr;
+	}
+	static bool IsInitializing(const TEntry *pEntry) { return pEntry == nullptr || pEntry->m_Retiring; }
+
+	bool Release(TEntry &Entry)
+	{
+		Entry.m_Retiring = true;
+		Entry.CancelLoad();
+		try
+		{
+			if(m_pGraphics != nullptr && Entry.m_GraphicsResetVersion == m_pGraphics->GraphicsResourcesResetVersion())
+			{
+				// renderer 借用地图和图片；先收回图层，再删除图片和离屏目标。
+				if(Entry.m_pRenderer != nullptr)
+					Entry.m_pRenderer->UnloadMap();
+				if(Entry.m_pImages != nullptr)
+					Entry.m_pImages->UnloadPreview();
+				if(Entry.m_RenderTarget.IsValid())
+					m_pGraphics->DestroyRenderTarget(&Entry.m_RenderTarget);
+			}
+			else
+			{
+				// 旧代 GPU 已整体失效；先销毁协程借用，再关闭地图，不向新代发送删除。
+				Entry.m_pRenderer.reset();
+				Entry.m_RenderTarget.Invalidate();
+			}
+			if(Entry.m_pMap != nullptr)
+				Entry.m_pMap->Unload();
+			return true;
+		}
+		catch(const std::bad_alloc &) { return false; }
+		catch(const std::length_error &) { return false; }
+	}
+
+	bool Clear()
+	{
+		for(auto It = m_vEntries.begin(); It != m_vEntries.end();)
+		{
+			if(Release(**It))
+				It = m_vEntries.erase(It);
+			else
+				++It;
+		}
+		return m_vEntries.empty();
+	}
+
+	bool MakeRoom(float Now)
+	{
+		if(m_vEntries.size() < CAPACITY)
+			return true;
+		// Touch 和 Insert 维持最近使用顺序；失败项留在原位，继续尝试其他可淘汰项。
+		for(size_t Index = m_vEntries.size(); Index > 0; --Index)
+		{
+			auto &pEntry = m_vEntries[Index - 1];
+			if(Now - pEntry->m_LastUseTime < MIN_AGE || !Release(*pEntry))
+				continue;
+			m_vEntries.erase(m_vEntries.begin() + Index - 1);
+			return true;
+		}
+		return false;
+	}
+
+	void Touch(TEntry &Entry, float Now)
+	{
+		Entry.m_LastUseTime = Now;
+		const auto It = std::find_if(m_vEntries.begin(), m_vEntries.end(), [&](const auto &pEntry) { return pEntry.get() == &Entry; });
+		dbg_assert(It != m_vEntries.end(), "Preview cache entry must be owned before use");
+		std::rotate(m_vEntries.begin(), It, It + 1);
+	}
+	TEntry *Insert(std::unique_ptr<TEntry> pEntry)
+	{
+		dbg_assert(m_vEntries.size() < CAPACITY, "Preview cache must make room before insertion");
+		auto *pResult = pEntry.get();
+		m_vEntries.insert(m_vEntries.begin(), std::move(pEntry));
+		return pResult;
+	}
+	void RetryMissing(const char *pMapName)
+	{
+		auto *pEntry = Find(pMapName);
+		if(pEntry != nullptr && pEntry->m_LoadFailed && !pEntry->m_Retiring)
+			pEntry->m_RetryAfterTime = 0.0f;
 	}
 };
 
@@ -153,7 +269,11 @@ public:
 	using FDrawCanvas = void (*)(void *pRenderState, CGameClient *pGameClient, SContext *pContext, CUIRect Preview, CUi *pUi, bool Active);
 
 	CQmMapPreviewPanel() = default;
-	~CQmMapPreviewPanel() = default;
+	~CQmMapPreviewPanel()
+	{
+		if(m_pfnDestroyRenderState != nullptr)
+			m_pfnDestroyRenderState(m_pRenderState);
+	}
 	CQmMapPreviewPanel(const CQmMapPreviewPanel &) = delete;
 	CQmMapPreviewPanel &operator=(const CQmMapPreviewPanel &) = delete;
 
@@ -245,6 +365,7 @@ private:
 	CGameClient *m_pInitRetryGameClient = nullptr;
 	void (*m_pfnRetryInit)(CQmMapPreviewPanel *) = nullptr;
 	void *m_pRenderState = nullptr;
+	void (*m_pfnDestroyRenderState)(void *) noexcept = nullptr;
 	FDrawCanvas m_pfnDrawCanvas = nullptr;
 };
 

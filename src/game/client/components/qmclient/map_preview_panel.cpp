@@ -37,9 +37,6 @@
 
 namespace
 {
-	constexpr size_t MAP_PREVIEW_CACHE_CAPACITY = 3;
-	// LRU 逐出前的最小驻留时长：刚用过的条目即使超出容量也先保留一拍。
-	constexpr float MAP_PREVIEW_LRU_MIN_AGE = 0.4f;
 	// 失败条目的重查间隔：投票页下载完成后，占位应自行换成预览。
 	constexpr float MAP_PREVIEW_FAILED_RETRY_DELAY = CQmMapPreviewLayerPreparation::RETRY_DELAY;
 
@@ -124,8 +121,15 @@ namespace
 		uint32_t m_GraphicsResetVersion = 0;
 		vec2 m_WorldSize = vec2(32.0f * 64, 32.0f * 64);
 		bool m_LoadFailed = false;
+		bool m_Retiring = false;
 		float m_LastUseTime = 0.0f;
 		float m_RetryAfterTime = 0.0f;
+
+		void CancelLoad() noexcept
+		{
+			if(m_pLoadJob != nullptr)
+				m_pLoadJob->m_Cancelled.store(true);
+		}
 	};
 
 	// 预览框里的下载进度：轨道 + 已完成比例 + 百分比文字。
@@ -156,6 +160,7 @@ class CQmMapPreviewCache
 public:
 	std::shared_ptr<IHttpRequest> m_pDownloadTask;
 	char m_aDownloadName[MAX_MAP_LENGTH] = {};
+	bool m_DownloadRecheckRequested = false;
 	std::shared_ptr<IHttpRequest> m_pIndexTask;
 	bool m_IndexLoaded = false;
 	bool m_IndexFailed = false;
@@ -163,8 +168,7 @@ public:
 	std::vector<std::string> m_vIndexHrefs;
 
 	explicit CQmMapPreviewCache(IGraphics *pGraphics) :
-		m_pGraphics(pGraphics) {}
-	~CQmMapPreviewCache() { Clear(); }
+		m_pGraphics(pGraphics), m_Entries(pGraphics) {}
 
 	// 本地缺图时按地图名拉一次，进度供预览控件显示。
 	bool EnsureDownloaded(CGameClient *pGameClient, const char *pMapName)
@@ -199,6 +203,7 @@ public:
 		if(!pTask)
 			return false;
 		m_pDownloadTask = pTask;
+		m_DownloadRecheckRequested = false;
 		str_copy(m_aDownloadName, pMapName);
 		pClient->Http()->Run(m_pDownloadTask);
 		return true;
@@ -227,6 +232,7 @@ public:
 	{
 		m_pDownloadTask.reset();
 		m_aDownloadName[0] = '\0';
+		m_DownloadRecheckRequested = false;
 		if(m_pIndexTask)
 			m_pIndexTask->Abort();
 		m_pIndexTask.reset();
@@ -240,72 +246,53 @@ public:
 		       m_pDownloadTask->State() == EHttpState::DONE && m_pDownloadTask->Progress() >= 100;
 	}
 
-	void Clear()
+	void RecheckDownloaded(const char *pMapName)
 	{
-		if(m_pGraphics == nullptr)
+		if(!m_DownloadRecheckRequested && DownloadFinished(pMapName))
 		{
-			m_vEntries.clear();
-			return;
+			m_Entries.RetryMissing(pMapName);
+			m_DownloadRecheckRequested = true;
 		}
-		const uint32_t CurrentVersion = m_pGraphics->GraphicsResourcesResetVersion();
-		for(auto &pEntry : m_vEntries)
-			ReleaseEntry(*pEntry, CurrentVersion);
-		m_vEntries.clear();
 	}
 
-	// 返回命中的缓存项；本地没有对应 .map 时返回带 m_LoadFailed 的空项。
+	bool Clear() { return m_Entries.Clear(); }
+
+	// 返回命中的缓存项；没有可回收槽位时返回空，由画布显示初始化占位。
 	SMapPreviewEntry *Acquire(const char *pMapName, float NowTime, IStorage *pStorage, CGameClient *pGameClient)
 	{
-		for(auto It = m_vEntries.begin(); It != m_vEntries.end(); ++It)
+		if(auto *pEntry = m_Entries.Find(pMapName))
 		{
-			if(str_comp((*It)->m_aMapName, pMapName) == 0)
+			if(pEntry->m_Retiring || pEntry->m_GraphicsResetVersion != m_pGraphics->GraphicsResourcesResetVersion())
 			{
-				(*It)->m_LastUseTime = NowTime;
-				if((*It)->m_GraphicsResetVersion != m_pGraphics->GraphicsResourcesResetVersion())
-				{
-					ReleaseEntry(**It, m_pGraphics->GraphicsResourcesResetVersion());
-					**It = SMapPreviewEntry{};
-					str_copy((*It)->m_aMapName, pMapName);
-					(*It)->m_LastUseTime = NowTime;
-					(*It)->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
-					LoadEntry(**It, pStorage, pGameClient, NowTime);
-				}
-				(*It)->m_LayerPreparation.Retry((*It)->m_pRenderer, NowTime, [&] {
-					return CreateRenderer(pGameClient, (*It)->m_pLayers.get(), (*It)->m_pImages.get());
-				});
-				// 失败条目间隔重查：下载完成前打开过弹窗的图，下载完成后应直接出预览。
-				if((*It)->m_LoadFailed && NowTime >= (*It)->m_RetryAfterTime)
-				{
-					(*It)->m_RetryAfterTime = NowTime + MAP_PREVIEW_FAILED_RETRY_DELAY;
-					(*It)->m_LoadFailed = false;
-					LoadEntry(**It, pStorage, pGameClient, NowTime);
-					(*It)->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
-				}
-				auto pEntry = std::move(*It);
-				m_vEntries.erase(It);
-				m_vEntries.insert(m_vEntries.begin(), std::move(pEntry));
-				return m_vEntries.front().get();
+				if(!m_Entries.Release(*pEntry))
+					return pEntry;
+				*pEntry = SMapPreviewEntry{};
+				str_copy(pEntry->m_aMapName, pMapName);
+				pEntry->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
+				LoadEntry(*pEntry, pStorage, pGameClient, NowTime);
 			}
-		}
-
-		if(m_vEntries.size() >= MAP_PREVIEW_CACHE_CAPACITY)
-		{
-			auto ItLru = std::min_element(m_vEntries.begin(), m_vEntries.end(), [](const auto &A, const auto &B) {
-				return A->m_LastUseTime < B->m_LastUseTime;
+			pEntry->m_LayerPreparation.Retry(pEntry->m_pRenderer, NowTime, [&] {
+				return CreateRenderer(pGameClient, pEntry->m_pLayers.get(), pEntry->m_pImages.get());
 			});
-			if(ItLru == m_vEntries.end() || NowTime - (*ItLru)->m_LastUseTime < MAP_PREVIEW_LRU_MIN_AGE)
-				return nullptr;
-			ReleaseEntry(**ItLru, m_pGraphics->GraphicsResourcesResetVersion());
-			m_vEntries.erase(ItLru);
+			if(pEntry->m_LoadFailed && NowTime >= pEntry->m_RetryAfterTime)
+			{
+				pEntry->m_RetryAfterTime = NowTime + MAP_PREVIEW_FAILED_RETRY_DELAY;
+				pEntry->m_LoadFailed = false;
+				LoadEntry(*pEntry, pStorage, pGameClient, NowTime);
+				pEntry->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
+			}
+			m_Entries.Touch(*pEntry, NowTime);
+			return pEntry;
 		}
 
+		if(!m_Entries.MakeRoom(NowTime))
+			return nullptr;
 		auto pEntry = std::make_unique<SMapPreviewEntry>();
 		str_copy(pEntry->m_aMapName, pMapName, sizeof(pEntry->m_aMapName));
 		pEntry->m_LastUseTime = NowTime;
 		LoadEntry(*pEntry, pStorage, pGameClient, NowTime);
 		pEntry->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
-		m_vEntries.insert(m_vEntries.begin(), std::move(pEntry));
-		return m_vEntries.front().get();
+		return m_Entries.Insert(std::move(pEntry));
 	}
 
 	static bool AdvanceEntry(SMapPreviewEntry &Entry, CGameClient *pGameClient, float Now)
@@ -434,29 +421,6 @@ private:
 		}
 	}
 
-	void ReleaseEntry(SMapPreviewEntry &Entry, uint32_t CurrentResetVersion)
-	{
-		const bool HandleAlive = Entry.m_GraphicsResetVersion == CurrentResetVersion;
-		if(Entry.m_RenderTarget.IsValid())
-		{
-			if(HandleAlive)
-				m_pGraphics->DestroyRenderTarget(&Entry.m_RenderTarget);
-			else
-				Entry.m_RenderTarget.Invalidate();
-		}
-		if(Entry.m_pLoadJob)
-			Entry.m_pLoadJob->m_Cancelled.store(true);
-		if(HandleAlive)
-		{
-			if(Entry.m_pRenderer != nullptr)
-				Entry.m_pRenderer->UnloadMap();
-			if(Entry.m_pImages != nullptr)
-				Entry.m_pImages->UnloadPreview();
-			if(Entry.m_pMap != nullptr)
-				Entry.m_pMap->Unload();
-		}
-	}
-
 	static void LoadEntry(SMapPreviewEntry &Entry, IStorage *pStorage, CGameClient *pGameClient, float Now) noexcept
 	{
 		try
@@ -478,7 +442,7 @@ private:
 	}
 
 	IGraphics *m_pGraphics;
-	std::vector<std::unique_ptr<SMapPreviewEntry>> m_vEntries;
+	CQmMapPreviewCacheEntries<SMapPreviewEntry> m_Entries;
 };
 
 namespace
@@ -502,12 +466,12 @@ namespace
 
 		const float Now = pGameClient->Client()->GlobalTime();
 		SMapPreviewEntry *pEntry = pCache->Acquire(pCtx->m_Target.m_aMapName, Now, pGameClient->Storage(), pGameClient);
-		if(pEntry != nullptr && pEntry->m_LayerPreparation.HasFailed())
+		if(CQmMapPreviewCacheEntries<SMapPreviewEntry>::IsInitializing(pEntry) || pEntry->m_LayerPreparation.HasFailed())
 		{
 			pUi->DoLabel(&Preview, Localize("Initializing map layers"), 10.0f, TEXTALIGN_MC);
 			return;
 		}
-		if(pEntry == nullptr || pEntry->m_LoadFailed)
+		if(pEntry->m_LoadFailed)
 		{
 			if(pCtx->m_Target.m_AllowDownload)
 			{
@@ -524,8 +488,7 @@ namespace
 				if(pCache->EnsureDownloaded(pGameClient, pCtx->m_Target.m_aMapName))
 				{
 					DrawDownloadProgress(pGameClient, Preview, pCache->DownloadProgress(pCtx->m_Target.m_aMapName));
-					if(pCache->DownloadFinished(pCtx->m_Target.m_aMapName))
-						pCache->Clear();
+					pCache->RecheckDownloaded(pCtx->m_Target.m_aMapName);
 				}
 				else
 					pUi->DoLabel(&Preview, Localize("Map not downloaded yet — join the server to preview it"), ui_token::font::SMALL, TEXTALIGN_MC);
@@ -675,7 +638,7 @@ void CQmMapPreviewPanel::Init(CGameClient *pGameClient)
 {
 	if(pGameClient == nullptr)
 		return;
-	if(m_pRenderState != nullptr && m_pGameClient == pGameClient)
+	if(m_pRenderState != nullptr && m_pGameClient == pGameClient && m_pfnDrawCanvas != nullptr && m_pInitRetryGameClient == nullptr)
 	{
 		m_pInitRetryGameClient = nullptr;
 		m_pfnRetryInit = nullptr;
@@ -689,11 +652,21 @@ void CQmMapPreviewPanel::Init(CGameClient *pGameClient)
 	{
 		auto pRenderer = std::make_unique<SRenderer>();
 		pRenderer->m_pCache = std::make_unique<CQmMapPreviewCache>(pGameClient->Graphics());
-		// 候选全部备齐后才释放原 owner；失败时弹窗保留 unavailable 并继续重试。
-		Shutdown();
+		// 候选全部备齐后才回收原包；删除失败的包仍占着 owner，不能被候选覆盖。
+		auto *pPrevious = static_cast<SRenderer *>(m_pRenderState);
+		if(pPrevious != nullptr && !pPrevious->m_pCache->Clear())
+		{
+			m_pfnDrawCanvas = nullptr;
+			return;
+		}
+		if(m_pfnDestroyRenderState != nullptr)
+			m_pfnDestroyRenderState(m_pRenderState);
 		m_pGameClient = pGameClient;
 		m_pRenderState = pRenderer.release();
+		m_pfnDestroyRenderState = [](void *pState) noexcept { delete static_cast<SRenderer *>(pState); };
 		m_pfnDrawCanvas = &DrawCanvas;
+		m_pInitRetryGameClient = nullptr;
+		m_pfnRetryInit = nullptr;
 	}
 	catch(const std::bad_alloc &)
 	{
@@ -705,10 +678,15 @@ void CQmMapPreviewPanel::Init(CGameClient *pGameClient)
 
 void CQmMapPreviewPanel::Shutdown()
 {
-	delete static_cast<SRenderer *>(m_pRenderState);
-	m_pRenderState = nullptr;
 	m_pfnDrawCanvas = nullptr;
 	m_pGameClient = nullptr;
 	m_pInitRetryGameClient = nullptr;
 	m_pfnRetryInit = nullptr;
+	auto *pRenderer = static_cast<SRenderer *>(m_pRenderState);
+	if(pRenderer != nullptr && !pRenderer->m_pCache->Clear())
+		return;
+	if(m_pfnDestroyRenderState != nullptr)
+		m_pfnDestroyRenderState(m_pRenderState);
+	m_pRenderState = nullptr;
+	m_pfnDestroyRenderState = nullptr;
 }
