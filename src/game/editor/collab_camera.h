@@ -5,7 +5,9 @@
 
 #include <array>
 #include <cstdint>
+#include <new>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -64,5 +66,41 @@ public:
 	static CEditorCollabPlacementSnapshot Capture(const CEditorMap &Map);
 	std::optional<SEditorCollabPlacementTarget> FindPlacement(const CEditorCollabPlacementSnapshot &Previous) const;
 };
+
+// 镜头跟随的捕获或匹配失败时跳过居中，地图加载本身的结果由 Load 返回。
+template<typename TViewState, typename FCapture, typename FLoad>
+bool ReloadEditorCollabSnapshot(TViewState &State, bool FollowPlacement, const FCapture &Capture, const FLoad &Load)
+{
+	if(!FollowPlacement)
+		return ReloadEditorCollabSnapshotKeepingCamera(State, Load);
+
+	const auto TryPlacement = [](const auto &Operation) {
+		try
+		{
+			Operation();
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+	};
+
+	CEditorCollabPlacementSnapshot Previous;
+	const bool Captured = TryPlacement([&] { Previous = Capture(); });
+	const bool Loaded = ReloadEditorCollabSnapshotKeepingCamera(State, Load);
+	if(Loaded && Captured && Previous.m_Complete)
+	{
+		TryPlacement([&] {
+			if(const auto Target = Capture().FindPlacement(Previous))
+				Target->CenterCamera(State.m_WorldOffset, State.m_EditorOffset);
+		});
+	}
+	return Loaded;
+}
 
 #endif
