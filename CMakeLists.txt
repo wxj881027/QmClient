@@ -3642,6 +3642,8 @@ if(CLIENT)
     components/qmclient/map_covers.h
     components/qmclient/map_difficulty_catalog.cpp
     components/qmclient/map_difficulty_catalog.h
+    components/qmclient/map_image_decode_job.cpp
+    components/qmclient/map_image_decode_job.h
     components/qmclient/vote_map_library.cpp
     components/qmclient/vote_map_library.h
     components/qmclient/server_vote_list.h
@@ -4134,6 +4136,7 @@ if(CLIENT)
     envelope_manager.h
     map_preview_common.cpp
     map_preview_common.h
+    map_load_task.h
     map_renderer.cpp
     map_renderer.h
     qm_entity_overlay_build_plan.h
@@ -5348,6 +5351,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/client/skins/skin_source_job_test.cpp
     src/test/integration/client/skins/skin7_info_job_test.cpp
     src/test/unit/client/skin7_resource_lifecycle_test.cpp
+    src/test/integration/client/map_design_tile_skips_test.cpp
+    src/test/integration/client/map_image_decode_test.cpp
+    src/test/unit/client/map_load_task_test.cpp
     src/test/unit/client/connection_resource_preparation_test.cpp
     src/test/unit/client/skins/skins_preview_layers_test.cpp
     src/test/contract/client/skins/skins_resource_contract_test.cpp
@@ -5508,6 +5514,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/map_cover_art.cpp
     src/game/client/components/qmclient/map_covers.cpp
     src/game/client/components/qmclient/map_difficulty_catalog.cpp
+    src/game/client/components/qmclient/map_image_decode_job.cpp
     src/game/client/components/qmclient/vote_map_library.cpp
     src/game/client/components/qmclient/vote_map_loader.cpp
     src/game/client/components/qmclient/hammer_hit_detection.cpp

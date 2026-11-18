@@ -24,6 +24,14 @@ inline bool QmStutterFrameBelowTarget(double FrameMs)
 	return std::isfinite(FrameMs) && FrameMs > QmStutterFrameBudgetMs();
 }
 
+// 限帧时允许半个周期的调度抖动。未知上限或未限帧时沿用 300 FPS 诊断预算。
+inline bool QmStutterNeedsDetail(double FrameMs, int RenderLimit)
+{
+	if(RenderLimit <= 0 || RenderLimit >= QM_STUTTER_TARGET_FPS)
+		return QmStutterFrameBelowTarget(FrameMs);
+	return std::isfinite(FrameMs) && FrameMs >= 1500.0 / RenderLimit;
+}
+
 enum class EQmStutterFlushReason
 {
 	NONE,

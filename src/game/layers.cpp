@@ -6,12 +6,14 @@
 
 #include <engine/map.h>
 
+#include <game/map/map_load_task.h>
+
 CLayers::CLayers()
 {
 	Unload();
 }
 
-void CLayers::Init(IMap *pMap, bool GameOnly)
+void CLayers::Init(IMap *pMap, bool GameOnly, bool DeferDesignTileSkips)
 {
 	Unload();
 
@@ -95,7 +97,8 @@ void CLayers::Init(IMap *pMap, bool GameOnly)
 		}
 	}
 
-	InitTilemapSkip();
+	// 竞速组件在进服回调里就读取游戏层跳距，装饰层可在放行连接前补全。
+	InitTilemapSkip(true, !DeferDesignTileSkips).Finish();
 }
 
 void CLayers::Unload()
@@ -116,7 +119,12 @@ void CLayers::Unload()
 	m_pTuneLayer = nullptr;
 }
 
-void CLayers::InitTilemapSkip()
+CMapLoadTask CLayers::PrepareDesignTileSkips()
+{
+	return InitTilemapSkip(false, true);
+}
+
+CMapLoadTask CLayers::InitTilemapSkip(bool Game, bool Design)
 {
 	for(int GroupIndex = 0; GroupIndex < NumGroups(); GroupIndex++)
 	{
@@ -132,6 +140,9 @@ void CLayers::InitTilemapSkip()
 			if((pTilemap->m_Flags & (TILESLAYERFLAG_TELE | TILESLAYERFLAG_SPEEDUP | TILESLAYERFLAG_FRONT | TILESLAYERFLAG_SWITCH | TILESLAYERFLAG_TUNE)) != 0)
 				continue;
 
+			if((pTilemap->m_Flags & TILESLAYERFLAG_GAME) ? !Game : !Design)
+				continue;
+			co_await std::suspend_always{};
 			CTile *pTiles = static_cast<CTile *>(m_pMap->GetData(pTilemap->m_Data));
 			if(pTiles == nullptr || pTilemap->m_Width < 0 || pTilemap->m_Height < 0 ||
 				(int64_t)pTilemap->m_Width * pTilemap->m_Height > m_pMap->GetDataSize(pTilemap->m_Data) / (int)sizeof(CTile))
@@ -139,6 +150,7 @@ void CLayers::InitTilemapSkip()
 				continue;
 			}
 
+			unsigned TilesSinceYield = 0;
 			for(int y = 0; y < pTilemap->m_Height; y++)
 			{
 				for(int x = 1; x < pTilemap->m_Width;)
@@ -152,6 +164,12 @@ void CLayers::InitTilemapSkip()
 
 					pTiles[y * pTilemap->m_Width + x].m_Skip = SkippedX - 1;
 					x += SkippedX;
+					TilesSinceYield += SkippedX;
+					if(TilesSinceYield >= 8192)
+					{
+						TilesSinceYield = 0;
+						co_await std::suspend_always{};
+					}
 				}
 			}
 		}

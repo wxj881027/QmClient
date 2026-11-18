@@ -7,32 +7,32 @@ TEST(ConnectionResourcePreparation, WaitsForBothLayerSets)
 {
 	CConnectionResourcePreparation Preparation;
 	Preparation.Begin();
-	EXPECT_FALSE(Preparation.CompleteWhenReady(false, false));
-	EXPECT_FALSE(Preparation.CompleteWhenReady(true, false));
-	EXPECT_FALSE(Preparation.CompleteWhenReady(false, true));
+	EXPECT_FALSE(Preparation.CompleteWhenReady(true, false, false));
+	EXPECT_FALSE(Preparation.CompleteWhenReady(true, true, false));
+	EXPECT_FALSE(Preparation.CompleteWhenReady(true, false, true));
 	EXPECT_TRUE(Preparation.Pending());
-	EXPECT_TRUE(Preparation.CompleteWhenReady(true, true));
+	EXPECT_TRUE(Preparation.CompleteWhenReady(true, true, true));
 }
 
 TEST(ConnectionResourcePreparation, ReadyResourcesReleaseConnectionOnlyOnce)
 {
 	CConnectionResourcePreparation Preparation;
-	EXPECT_FALSE(Preparation.CompleteWhenReady(true, true));
+	EXPECT_FALSE(Preparation.CompleteWhenReady(true, true, true));
 	Preparation.Begin();
-	EXPECT_TRUE(Preparation.CompleteWhenReady(true, true));
+	EXPECT_TRUE(Preparation.CompleteWhenReady(true, true, true));
 	EXPECT_FALSE(Preparation.Pending());
-	EXPECT_FALSE(Preparation.CompleteWhenReady(true, true));
+	EXPECT_FALSE(Preparation.CompleteWhenReady(true, true, true));
 }
 
 TEST(ConnectionResourcePreparation, DisconnectCancelsPendingRelease)
 {
 	CConnectionResourcePreparation Preparation;
 	Preparation.Begin();
-	EXPECT_FALSE(Preparation.CompleteWhenReady(true, false));
+	EXPECT_FALSE(Preparation.CompleteWhenReady(true, true, false));
 	Preparation.Cancel();
 	Preparation.Cancel();
 	EXPECT_FALSE(Preparation.Pending());
-	EXPECT_FALSE(Preparation.CompleteWhenReady(true, true));
+	EXPECT_FALSE(Preparation.CompleteWhenReady(true, true, true));
 }
 
 TEST(ConnectionResourcePreparation, NewConnectionCanCompleteAfterCancelOrSuccess)
@@ -41,8 +41,18 @@ TEST(ConnectionResourcePreparation, NewConnectionCanCompleteAfterCancelOrSuccess
 	Preparation.Begin();
 	Preparation.Cancel();
 	Preparation.Begin();
-	EXPECT_FALSE(Preparation.CompleteWhenReady(false, true));
-	EXPECT_TRUE(Preparation.CompleteWhenReady(true, true));
+	EXPECT_FALSE(Preparation.CompleteWhenReady(true, false, true));
+	EXPECT_TRUE(Preparation.CompleteWhenReady(true, true, true));
 	Preparation.Begin();
-	EXPECT_TRUE(Preparation.CompleteWhenReady(true, true));
+	EXPECT_TRUE(Preparation.CompleteWhenReady(true, true, true));
+}
+
+TEST(ConnectionResourcePreparation, ReadyLayersStillWaitForMapData)
+{
+	CConnectionResourcePreparation Preparation;
+	Preparation.Begin();
+	EXPECT_FALSE(Preparation.CompleteWhenReady(false, true, true));
+	EXPECT_TRUE(Preparation.Pending());
+	EXPECT_TRUE(Preparation.CompleteWhenReady(true, true, true));
+	EXPECT_FALSE(Preparation.CompleteWhenReady(true, true, true));
 }

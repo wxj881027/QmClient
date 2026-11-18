@@ -355,6 +355,7 @@ private:
 	void ProcessQmStutterFrame();
 	void RecordComponentUpdate(size_t ComponentIndex, double DurationMs);
 	void RecordComponentRender(size_t ComponentIndex, double DurationMs);
+	void CaptureQmStutterContext();
 	void CaptureQmStutterFeatureSnapshot();
 	void FlushQmStutterWindow(const SQmStutterFrameDecision &Decision, bool ForceLog);
 	void ResetQmStutterWindowSamples();
@@ -372,6 +373,10 @@ private:
 	uint64_t m_QmStutterWindowStartFrame = 0;
 	uint64_t m_QmStutterWorstFrame = 0;
 	double m_QmStutterWorstFrameMs = 0.0;
+	double m_QmStutterDetailWorstMs = 0.0;
+	uint64_t m_QmStutterFeatureFrame = 0;
+	std::string m_QmStutterFeaturePage;
+	std::string m_QmStutterFeatureOperation;
 	EQmStutterLimitCause m_QmStutterLimitCause = EQmStutterLimitCause::NONE;
 	std::string m_QmStutterPage;
 	std::string m_QmStutterOperation;
@@ -1375,6 +1380,8 @@ public:
 private:
 	std::vector<CSnapEntities> m_vSnapEntities;
 	CConnectionResourcePreparation m_ConnectionResourcePreparation;
+	CMapLoadTask m_DesignTileSkips;
+	void CancelConnectionResourcePreparation();
 	void FinishConnectionResourcePreparation();
 	// 扩展信息暂存区：保留容量跨帧复用，只在构建快照时原地清空。
 	std::vector<CSnapEntities> m_vSnapEntityExtensionsScratch;

@@ -49,6 +49,28 @@ function formatFps(value: number): string {
   return `${value.toFixed(1)} FPS`;
 }
 
+function renderMapPreparation(entries: PerfEntry[]): string {
+  const samples = entries.filter(e => e.system === 'perf/connect');
+  const images = samples.filter(e => e.stage === 'map_image_prepare')
+    .sort((a, b) => b.durationMs - a.durationMs).slice(0, 5);
+  const layers = samples.filter(e => e.stage === 'map_layer_prepare')
+    .sort((a, b) => numericField(b, 'peak_ms') - numericField(a, 'peak_ms')).slice(0, 5);
+  if (!images.length && !layers.length) return '';
+  return `<section class="section">
+    <h2>进服和换图</h2>
+    ${images.length ? `<h3>贴图准备</h3><p>按样本中每张贴图的工作耗时排序，最多五条。后台解码可与主线程重叠。</p>
+      <table class="data-table compact"><thead><tr><th>帧</th><th>贴图</th><th>读取</th><th>解码</th><th>主线程提交</th></tr></thead>
+      <tbody>${images.map(e => `<tr><td>${numericField(e, 'frame')}</td><td>${numericField(e, 'image')}</td>
+        <td>${formatMs(numericField(e, 'read_ms'))}</td><td>${numericField(e, 'read_includes_decode') ? '已计入读取' : formatMs(numericField(e, 'decode_ms'))}</td>
+        <td>${formatMs(numericField(e, 'submit_ms'))}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${layers.length ? `<h3>图层准备</h3><p>按样本中单批主线程耗时排序，最多五条。</p>
+      <table class="data-table compact"><thead><tr><th>最慢批次所在帧</th><th>绘制阶段</th><th>组 / 层</th><th>批次</th><th>累计</th><th>最慢一批</th></tr></thead>
+      <tbody>${layers.map(e => `<tr><td>${numericField(e, 'peak_frame')}</td><td>${escapeHtml(String(e.fields.pass ?? ''))}</td>
+        <td>${numericField(e, 'group')} / ${numericField(e, 'layer')}</td><td>${numericField(e, 'slices')}</td>
+        <td>${formatMs(e.durationMs)}</td><td>${formatMs(numericField(e, 'peak_ms'))}</td></tr>`).join('')}</tbody></table>` : ''}
+  </section>`;
+}
+
 function statCell(label: string, value: string, tone = ''): string {
   return `<div class="stat-cell"><span>${escapeHtml(label)}</span><strong class="${tone}">${escapeHtml(value)}</strong></div>`;
 }
@@ -568,7 +590,11 @@ export function generateReport(
         ${statCell('Cap Reason', worstStutterWindow?.capReason ?? 'none', worstStutterWindow?.capLimited ? 'warn' : '')}
         ${statCell('Frame Range', worstStutterWindow ? `${worstStutterWindow.windowStartFrame}-${worstStutterWindow.windowEndFrame}` : 'N/A')}
       </div>
-      ${worstStutterWindow?.capLimited
+      ${worstStutterWindow?.detailMode === 'summary'
+        ? '<p class="body-text">此窗口只记录限帧摘要，完整渲染间隔仍计入帧统计。</p>'
+        : worstStutterWindow?.detailMode === 'slow_frames'
+        ? '<p class="body-text">组件统计仅计入超出当前帧预算的慢帧。限帧时，记录达到限帧周期 1.5 倍的帧。</p>'
+        : worstStutterWindow?.capLimited
         ? '<p class="body-text">检测到人为限帧、VSync、后台限帧或菜单 idle throttle。下面的 CPU 数据仅作为优化候选，不判定任何模块为卡顿原因。</p>'
         : '<p class="body-text">以下排名来自低于 300 FPS 帧对应的组件 CPU 回调实测耗时；total 反映持续负担，P95/Max 反映尾部尖峰。</p>'}
       <h3 class="mini-heading">主线程与 Graphics Swap</h3>
@@ -576,8 +602,8 @@ export function generateReport(
         <thead><tr><th>Stage</th><th>Samples</th><th>Total</th><th>Average</th><th>P95</th><th>Max</th></tr></thead>
         <tbody>${worstStutterStages.map(stage => `<tr><td class="mono">${escapeHtml(stage.stage)}</td><td class="num">${stage.samples}</td><td class="num">${formatMs(stage.totalMs)}</td><td class="num">${formatMs(stage.avgMs)}</td><td class="num">${formatMs(stage.p95Ms)}</td><td class="num">${formatMs(stage.maxMs)}</td></tr>`).join('')}</tbody>
       </table></div>`}
-      <h3 class="mini-heading">CPU 模块耗时排名</h3>
-      ${worstStutterComponents.length === 0 ? '<p class="small-note">该窗口缺少 component_sample，无法进行模块归因。</p>' : `<div class="table-scroll"><table class="data-table compact">
+      ${worstStutterWindow?.detailMode === 'summary' ? '' : '<h3 class="mini-heading">CPU 模块耗时排名</h3>'}
+      ${worstStutterWindow?.detailMode === 'summary' ? '' : worstStutterComponents.length === 0 ? '<p class="small-note">该窗口缺少 component_sample，无法进行模块归因。</p>' : `<div class="table-scroll"><table class="data-table compact">
         <thead><tr><th>#</th><th>Module</th><th>Phase</th><th>Samples</th><th>Total</th><th>Average</th><th>P95</th><th>Max</th><th>Max Frame</th></tr></thead>
         <tbody>${worstStutterComponents.map((component, index) => `<tr>
           <td class="num">${index + 1}</td><td class="mono">${escapeHtml(component.component)}</td><td>${escapeHtml(component.phase)}</td>
@@ -585,8 +611,8 @@ export function generateReport(
           <td class="num">${formatMs(component.p95Ms)}</td><td class="num">${formatMs(component.maxMs)}</td><td class="num">${component.maxFrame}</td>
         </tr>`).join('')}</tbody>
       </table></div>`}
-      <h3 class="mini-heading">最慢帧功能状态</h3>
-      ${worstStutterFeatures.length === 0 ? '<p class="small-note">该窗口没有启用的 qm_/tc_/cl_ 整数功能开关。</p>' : `<div class="table-scroll"><table class="data-table compact">
+      ${worstStutterWindow?.detailMode === 'summary' ? '' : '<h3 class="mini-heading">采样慢帧的功能状态</h3>'}
+      ${worstStutterWindow?.detailMode === 'summary' ? '' : worstStutterFeatures.length === 0 ? '<p class="small-note">该窗口没有启用的 qm_/tc_/cl_ 整数功能开关。</p>' : `<div class="table-scroll"><table class="data-table compact">
         <thead><tr><th>Owner</th><th>Feature</th><th>Value</th><th>HUD</th><th>Settings</th><th>Executed</th></tr></thead>
         <tbody>${worstStutterFeatures.map(feature => `<tr><td>${escapeHtml(feature.owner)}</td><td class="mono">${escapeHtml(feature.name)}</td><td class="num">${feature.value}</td><td>${feature.hudVisible < 0 ? 'unknown' : feature.hudVisible}</td><td>${feature.settingsVisible < 0 ? 'unknown' : feature.settingsVisible}</td><td>${feature.executedInFrame < 0 ? 'unknown' : feature.executedInFrame}</td></tr>`).join('')}</tbody>
       </table></div>`}
@@ -950,6 +976,8 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-weigh
   ${stutterDiagnosticsHtml}
   ${configurationReport(configuration)}
 </section>
+
+${renderMapPreparation(entries)}
 
 <section class="section">
   <div class="section-head">

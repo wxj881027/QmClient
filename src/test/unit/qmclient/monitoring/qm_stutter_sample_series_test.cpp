@@ -52,3 +52,20 @@ TEST(QmStutterSampleSeries, RepeatedPercentilesKeepTheSameValuesAndFrameAttribut
 		EXPECT_EQ(Samples.MaxFrame(), 11u);
 	}
 }
+
+TEST(QmStutterDiagnostics, StableLimitedFramesOnlyContributeToTheSummary)
+{
+	EXPECT_TRUE(QmStutterFrameBelowTarget(8.34));
+	EXPECT_FALSE(QmStutterNeedsDetail(8.34, 120));
+	EXPECT_FALSE(QmStutterNeedsDetail(16.7, 60));
+	EXPECT_TRUE(QmStutterNeedsDetail(12.5, 120));
+	EXPECT_TRUE(QmStutterNeedsDetail(155.0, 60));
+}
+
+TEST(QmStutterDiagnostics, UnknownOrHighCapKeepsTheOriginalDetailBudget)
+{
+	EXPECT_TRUE(QmStutterNeedsDetail(4.0, 0));
+	EXPECT_TRUE(QmStutterNeedsDetail(4.0, 360));
+	EXPECT_FALSE(QmStutterNeedsDetail(3.0, 0));
+	EXPECT_FALSE(QmStutterNeedsDetail(std::numeric_limits<double>::quiet_NaN(), 120));
+}

@@ -2,11 +2,15 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "maplayers.h"
 
+#include <base/perf_timer.h>
+
 #include <engine/map.h>
 
+#include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
+#include <cinttypes>
 #include <utility>
 
 CMapLayers::CMapLayers(ERenderType Type, bool OnlineOnly)
@@ -37,6 +41,10 @@ CCamera *CMapLayers::GetCurCamera()
 
 void CMapLayers::OnMapLoad()
 {
+	m_LoadLayerCpuMs = 0.0;
+	m_LoadLayerPeakMs = 0.0;
+	m_LoadLayerPeakFrame = 0;
+	m_LoadLayerSlices = 0;
 	m_MapLoaded = false;
 	m_MapLoadInProgress = false;
 	char aCaption[64 + MAX_MAP_LENGTH];
@@ -93,11 +101,41 @@ void CMapLayers::OnRender()
 	m_MapRenderer.Render(m_Params);
 }
 
-bool CMapLayers::AdvanceMapLoad(int MaxLayers)
+bool CMapLayers::AdvanceMapLoad(int MaxLayers, CMapLoadTask::TClock::time_point Deadline)
 {
 	if(!m_MapLoaded && m_MapLoadInProgress)
 	{
-		m_MapRenderer.LoadStep(MaxLayers);
+		const bool Trace = Deadline != CMapLoadTask::TClock::time_point::max() && QmPerfEnabled();
+		CPerfTimer Timer(Trace);
+		CMapRenderer::SLoadProfile Profile;
+		m_MapRenderer.LoadStep(MaxLayers, Deadline, Trace ? &Profile : nullptr);
+		if(Trace && Profile.m_Group >= 0)
+		{
+			const double SliceMs = Timer.ElapsedMs();
+			m_LoadLayerCpuMs += SliceMs;
+			if(SliceMs >= m_LoadLayerPeakMs)
+			{
+				m_LoadLayerPeakMs = SliceMs;
+				m_LoadLayerPeakFrame = Client()->PerfFrame();
+			}
+			++m_LoadLayerSlices;
+			if(Profile.m_Complete || QmPerfShouldLogDuration(SliceMs))
+			{
+				char aExtra[256];
+				str_format(aExtra, sizeof(aExtra), "pass=%s group=%d layer=%d type=%d width=%d height=%d quads=%d slices=%u peak_ms=%.3f peak_frame=%" PRIu64,
+					m_Type == ERenderType::RENDERTYPE_FOREGROUND ? "foreground" : "background",
+					Profile.m_Group, Profile.m_Layer, Profile.m_Type, Profile.m_Width, Profile.m_Height, Profile.m_Quads, m_LoadLayerSlices, m_LoadLayerPeakMs, m_LoadLayerPeakFrame);
+				QmPerfLogStage("perf/connect", Profile.m_Complete ? "map_layer_prepare" : "map_layer_prepare_slice",
+					Profile.m_Complete ? m_LoadLayerCpuMs : SliceMs, true, Client(), nullptr, nullptr, aExtra);
+			}
+		}
+		if(Profile.m_Complete || !Trace)
+		{
+			m_LoadLayerCpuMs = 0.0;
+			m_LoadLayerPeakMs = 0.0;
+			m_LoadLayerPeakFrame = 0;
+			m_LoadLayerSlices = 0;
+		}
 		if(m_MapRenderer.IsLoadFinished())
 		{
 			m_MapLoadInProgress = false;
@@ -164,4 +202,8 @@ void CMapLayers::SwapState(CMapLayers &Other)
 	swap(m_EnvEvaluator, Other.m_EnvEvaluator);
 	swap(m_MapLoaded, Other.m_MapLoaded);
 	swap(m_MapLoadInProgress, Other.m_MapLoadInProgress);
+	swap(m_LoadLayerCpuMs, Other.m_LoadLayerCpuMs);
+	swap(m_LoadLayerPeakMs, Other.m_LoadLayerPeakMs);
+	swap(m_LoadLayerPeakFrame, Other.m_LoadLayerPeakFrame);
+	swap(m_LoadLayerSlices, Other.m_LoadLayerSlices);
 }

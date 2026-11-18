@@ -1267,6 +1267,7 @@ public:
 	void UnloadTexture(IGraphics::CTextureHandle *pIndex) override;
 	void LoadTextureAddWarning(size_t Width, size_t Height, int Flags, const char *pTexName);
 	IGraphics::CTextureHandle LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pTexName = nullptr) override;
+	CTextureHandle FinishExternalTexture(CImageInfo &Image, int Flags, const char *pName, int PngliteIncompatible) override;
 	IGraphics::CTextureHandle LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pTexName = nullptr) override;
 
 	bool IsRenderTargetSupported() const override;

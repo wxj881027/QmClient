@@ -16,6 +16,7 @@
 
 #include <cstdlib>
 #include <limits>
+#include <new>
 #include <unordered_set>
 
 static constexpr int MAX_ITEM_TYPE = 0xFFFF;
@@ -771,6 +772,30 @@ int CDataFileReader::GetDataSize(int Index) const
 	dbg_assert(m_pDataFile != nullptr, "File not open");
 
 	return m_pDataFile->GetDataSize(Index);
+}
+
+bool CDataFileReader::ReadCompressedData(int Index, std::vector<unsigned char> &vData) const
+{
+	vData.clear();
+	const CDatafile *pFile = m_pDataFile;
+	if(!pFile || Index < 0 || Index >= pFile->m_Header.m_NumRawData || !pFile->m_Info.m_pDataSizes ||
+		pFile->m_ppDataProcessors[Index] || pFile->m_ppDataPtrs[Index] || pFile->m_pDataSizes[Index] < 0)
+		return false;
+	const int Size = pFile->GetFileDataSize(Index);
+	if(Size <= 0 || io_seek(pFile->m_File, pFile->m_DataStartOffset + pFile->m_Info.m_pDataOffsets[Index], IOSEEK_START) != 0)
+		return false;
+	try
+	{
+		vData.resize(Size);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	if(io_read(pFile->m_File, vData.data(), Size) == static_cast<unsigned>(Size))
+		return true;
+	vData.clear();
+	return false;
 }
 
 void *CDataFileReader::GetData(int Index)

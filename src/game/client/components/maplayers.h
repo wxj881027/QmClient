@@ -36,7 +36,7 @@ public:
 	void OnInit() override;
 	void OnRender() override;
 	void OnMapLoad() override;
-	bool AdvanceMapLoad(int MaxLayers = 2);
+	bool AdvanceMapLoad(int MaxLayers = 2, CMapLoadTask::TClock::time_point Deadline = CMapLoadTask::TClock::time_point::max());
 	// 离线地图缓存逐出时，必须在图形接口仍存活期间释放图层 GPU 资源。
 	void UnloadMap();
 	void RenderCustom(const vec2 &Center, float Zoom);
@@ -62,6 +62,10 @@ private:
 	CEnvelopeState m_EnvEvaluator;
 	bool m_MapLoaded = false;
 	bool m_MapLoadInProgress = false;
+	double m_LoadLayerCpuMs = 0.0;
+	double m_LoadLayerPeakMs = 0.0;
+	uint64_t m_LoadLayerPeakFrame = 0;
+	unsigned m_LoadLayerSlices = 0;
 };
 
 #endif

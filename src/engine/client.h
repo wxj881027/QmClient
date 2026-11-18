@@ -123,6 +123,7 @@ protected:
 	float m_RenderFrameTime = 0.0001f;
 	float m_FrameTimeAverage = 0.0001f;
 	uint64_t m_PerfFrame = 0;
+	int m_PerfRenderLimit = 0;
 
 	TLoadingCallback m_LoadingCallback = nullptr;
 
@@ -208,6 +209,7 @@ public:
 	// Exponentially weighted average of frame times.
 	float FrameTimeAverage() const { return m_FrameTimeAverage; }
 	uint64_t PerfFrame() const { return m_PerfFrame; }
+	int PerfRenderLimit() const { return m_PerfRenderLimit; }
 
 	// actions
 	virtual void Connect(const char *pAddress, const char *pPassword = nullptr) = 0;
