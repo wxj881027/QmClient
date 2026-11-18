@@ -11,9 +11,7 @@
 
 void CMenus::RenderQmChatCompletionContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
 {
-	const bool StartedRenderOnly = PrewarmOnly && !Ui()->RenderOnly();
-	if(StartedRenderOnly)
-		Ui()->BeginRenderOnly();
+	const CUiScopedMeasurement Measurement(Ui(), PrewarmOnly && !Ui()->RenderOnly());
 	const bool ReadOnly = Ui()->RenderOnly();
 	CSettingsContentLayoutFlow Flow(Content);
 	struct SControls
@@ -53,12 +51,7 @@ void CMenus::RenderQmChatCompletionContent(CUIRect &Content, const SSettingsCont
 	ColorRow("completion-selection", &s_Controls.m_Selection, Localize("Selection background color"), &g_Config.m_QmChatCompletionSelectedColor, DefaultConfig::QmChatCompletionSelectedColor, true);
 
 	// 预览使用实际补全布局和渲染，选中项与普通项共享聊天中的配色语义。
-	CQmChatCommandHud Preview;
-	Preview.BeginUpdate("/", 1, true, 0);
-	Preview.AddServerCommand("addweapon", "i[weapon-id]", Localize("Weapon"));
-	Preview.AddServerCommand("info", "", Localize("Info"));
-	Preview.EndUpdate();
-	Preview.MoveSelection(1, "/", 1);
+	CQmChatCommandHud Preview = qm_card_catalog::PrepareChatCompletionPreview(Localize("Weapon"), Localize("Info"));
 	const float FontSize = Metrics.m_BodySize / CQmChatCommandHud::UI_SCALE;
 	const float Width = Content.w / CQmChatCommandHud::UI_SCALE;
 	Preview.SetLayout(Content.x, Content.y, Width, 1000.0f, FontSize, Content.x, Content.x + Content.w);
@@ -78,8 +71,6 @@ void CMenus::RenderQmChatCompletionContent(CUIRect &Content, const SSettingsCont
 		g_Config.m_QmChatCompletionSelectedColor = DefaultConfig::QmChatCompletionSelectedColor;
 	}
 	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
-	if(StartedRenderOnly)
-		Ui()->EndRenderOnly();
 }
 
 namespace qm_card_catalog

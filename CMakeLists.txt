@@ -6765,6 +6765,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_chat_bubble_state_test.cpp
       src/test/integration/qmclient/client/qm_chat_bubble_geometry_test.cpp
       src/test/integration/client/graph_rendering_test.cpp
+      src/test/integration/qmclient/settings/qm_bind_command_card_commit_test.cpp
+      src/test/unit/qmclient/settings/qm_chat_completion_card_preview_test.cpp
+      src/test/unit/qmclient/settings/qm_graphics_mode_choice_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/integration/qmclient/ui/qm_clip_suspend_test.cpp
       src/test/integration/qmclient/ui/qm_author_name_blur_test.cpp
@@ -6875,6 +6878,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/ui_listbox.cpp
       src/game/client/ui_scrollregion.cpp
       src/game/client/lineinput.cpp
+      src/game/client/components/qmclient/bind_editor.cpp
       src/game/client/QmUi/UiTextCaret.cpp
       src/game/client/QmUi/SettingsCardGeometry.cpp
       src/game/client/QmUi/SettingsCard.cpp
