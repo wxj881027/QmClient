@@ -1200,9 +1200,9 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	// 截图命名与目录解析（screenshots/ + 时间戳 + media_paths），
 	// 供 TakeScreenshot 与「从内存图像落盘」共用，保证两条路径落盘规则一致。
-	bool PrepareScreenshotPath(const char *pFilename);
-	// 回调在编码真正写完之后由渲染线程触发：照片卡拿到的路径一定已经落盘。
-	bool QueueScreenshotSave(CImageInfo &&Image, FScreenshotProcessor pfnProcessor, FScreenshotCallback pfnCallback = nullptr);
+	bool PrepareScreenshotPath(const char *pFilename, char (&aScreenshotName)[IO_MAX_PATH_LENGTH]);
+	// 保存完成后在主线程的 Swap 中回调。
+	bool QueueScreenshotSave(CImageInfo &&Image, const char *pScreenshotName, FScreenshotProcessor pfnProcessor, FScreenshotCallback pfnCallback = nullptr);
 #if defined(CONF_PLATFORM_MACOS)
 	bool m_MacosGraphicsDiagnosticsEnabled = false;
 	uint32_t m_MacosGraphicsDiagnosticFrameCount = 0;
@@ -1333,6 +1333,8 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	int IssueInit();
 	int InitWindow();
+	bool CreateNullTexture();
+	void NotifyGraphicsResourcesReset();
 
 public:
 	CGraphics_Threaded();
@@ -1729,11 +1731,6 @@ public:
 	void AddWindowPropChangeListener(WINDOW_PROPS_CHANGED_FUNC pFunc) override;
 	void AddGraphicsResourcesResetListener(GRAPHICS_RESOURCES_RESET_FUNC pFunc) override;
 	uint32_t GraphicsResourcesResetVersion() const override { return m_GraphicsResourcesResetVersion; }
-	// 重建引擎自己持有的 GPU 资源（空纹理等），并广播「资源已重置」给所有监听者。
-	// 必须在主线程、且没有活动渲染目标时调用。设备重建后由恢复流程调用。
-	void NotifyGraphicsResourcesReset();
-	// 创建/重建引擎内部的空纹理（槽位 0）。设备重建后必须重新创建。
-	void CreateNullTexture();
 	int GetWindowScreen() override;
 	uint32_t GetWindowId() const override;
 

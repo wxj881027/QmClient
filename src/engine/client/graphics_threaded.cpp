@@ -814,7 +814,7 @@ IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width,
 
 IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width, int Height, int SampleCount)
 {
-	if(!IsRenderTargetSupported() || Width <= 0 || Height <= 0)
+	if(!m_pCommandBuffer || !IsRenderTargetSupported() || Width <= 0 || Height <= 0)
 		return CRenderTargetHandle();
 
 	const int Samples = std::clamp(SampleCount, 1, m_RenderTargetMaxSamples);
@@ -830,7 +830,19 @@ IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width,
 	Cmd.m_Width = Width;
 	Cmd.m_Height = Height;
 	Cmd.m_SampleCount = Samples;
-	AddCmd(Cmd);
+
+	bool Queued = m_pCommandBuffer->AddCommandUnsafe(Cmd);
+	if(!Queued)
+	{
+		KickCommandBuffer();
+		Queued = m_pCommandBuffer->AddCommandUnsafe(Cmd);
+	}
+	if(!Queued)
+	{
+		// 创建命令没有入队，直接归还仅在前端预留的槽位。
+		m_RenderTargets.Release(TargetId, false, [](int) {});
+		return CRenderTargetHandle();
+	}
 
 	return CreateRenderTargetHandle(TargetId);
 }
@@ -4060,11 +4072,18 @@ void CGraphics_Threaded::UpdateViewport(int X, int Y, int W, int H, bool ByResiz
 void CGraphics_Threaded::AddBackEndWarningIfExists()
 {
 	const char *pErrStr = m_pBackend->GetErrorString();
-	if(pErrStr != nullptr)
+	if(pErrStr == nullptr)
+		return;
+
+	try
 	{
 		SWarning NewWarning;
 		str_copy(NewWarning.m_aWarningMsg, Localize(pErrStr));
 		AddWarning(NewWarning);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics", "Failed to collect graphics warning: %s", Error.what());
 	}
 }
 
@@ -4343,7 +4362,15 @@ int CGraphics_Threaded::Init()
 	m_BufferObjects.Clear();
 	m_BufferContainers.Clear();
 
-	m_pBackend = CreateGraphicsBackend(Localize);
+	try
+	{
+		m_pBackend = CreateGraphicsBackend(Localize);
+	}
+	catch(const std::bad_alloc &)
+	{
+		log_error("graphics", "Failed to allocate graphics backend.");
+		return -1;
+	}
 	if(InitWindow() != 0)
 	{
 		Shutdown();
@@ -4357,12 +4384,28 @@ int CGraphics_Threaded::Init()
 		FakeMode.m_RefreshRate = g_Config.m_GfxScreenRefreshRate;
 	}
 
-	// create command buffers
-	for(auto &pCommandBuffer : m_apCommandBuffers)
-		pCommandBuffer = new CCommandBuffer(CMD_BUFFER_CMD_BUFFER_SIZE, CMD_BUFFER_DATA_BUFFER_SIZE);
-	m_pCommandBuffer = m_apCommandBuffers[0];
+	try
+	{
+		for(auto &pCommandBuffer : m_apCommandBuffers)
+			pCommandBuffer = new CCommandBuffer(CMD_BUFFER_CMD_BUFFER_SIZE, CMD_BUFFER_DATA_BUFFER_SIZE);
+	}
+	catch(const std::bad_alloc &)
+	{
+		log_error("graphics", "Failed to allocate frame command buffers.");
+		Shutdown();
+		return -1;
+	}
+	m_CurrentCommandBuffer = 0;
+	m_pCommandBuffer = m_apCommandBuffers[m_CurrentCommandBuffer];
 
-	CreateNullTexture();
+	if(!CreateNullTexture())
+	{
+		log_error("graphics", "Failed to queue placeholder textures.");
+		// 已排队的占位纹理上传尚未提交，直接释放它们。
+		m_pCommandBuffer->Reset();
+		Shutdown();
+		return -1;
+	}
 	if(WasInitialized)
 		NotifyGraphicsResourcesReset();
 
@@ -4677,7 +4720,7 @@ void CGraphics_Threaded::AddGraphicsResourcesResetListener(GRAPHICS_RESOURCES_RE
 	m_vGraphicsResourcesResetListeners.emplace_back(pFunc);
 }
 
-void CGraphics_Threaded::CreateNullTexture()
+bool CGraphics_Threaded::CreateNullTexture()
 {
 	// create null texture, will get id=0
 	const size_t PixelSize = 4;
@@ -4708,10 +4751,9 @@ void CGraphics_Threaded::CreateNullTexture()
 	NullTextureInfo.m_Height = NullTextureDimension;
 	NullTextureInfo.m_Format = CImageInfo::FORMAT_RGBA;
 	NullTextureInfo.m_pData = aNullTextureData;
-	const int NullTextureLoadFlags = TextureLoadFlags();
-	m_NullTexture.Invalidate();
-	m_NullTexture = LoadTextureRaw(NullTextureInfo, NullTextureLoadFlags, "null-texture");
-	dbg_assert(m_NullTexture.IsNullTexture(), "Null texture invalid");
+	const CTextureHandle NullTexture = LoadTextureRaw(NullTextureInfo, TextureLoadFlags(), "null-texture");
+	if(!NullTexture.IsNullTexture())
+		return false;
 
 	// 全透明占位纹理（16x16，与空纹理同尺寸以满足整除校验，避免触发警告弹窗）：
 	// sprite 超出自定义图集范围时按「不可见」处理用。
@@ -4722,18 +4764,17 @@ void CGraphics_Threaded::CreateNullTexture()
 	BlankTextureInfo.m_Height = BlankTextureDimension;
 	BlankTextureInfo.m_Format = CImageInfo::FORMAT_RGBA;
 	BlankTextureInfo.m_pData = aBlankData;
-	m_BlankTexture.Invalidate();
-	m_BlankTexture = LoadTextureRaw(BlankTextureInfo, TextureLoadFlags(), "blank-texture");
-	dbg_assert(m_BlankTexture.IsValid(), "Blank texture invalid");
+	const CTextureHandle BlankTexture = LoadTextureRaw(BlankTextureInfo, TextureLoadFlags(), "blank-texture");
+	if(!BlankTexture.IsValid())
+		return false;
+
+	m_NullTexture = NullTexture;
+	m_BlankTexture = BlankTexture;
+	return true;
 }
 
 void CGraphics_Threaded::NotifyGraphicsResourcesReset()
 {
-	// 引擎自己持有的 GPU 资源（空纹理）已经随设备一起丢失，先重建，
-	// 否则监听者在重建期间拿到的空纹理句柄也是失效的。
-	if(!m_NullTexture.IsValid() || !m_BlankTexture.IsValid())
-		CreateNullTexture();
-
 	++m_GraphicsResourcesResetVersion;
 	for(const GRAPHICS_RESOURCES_RESET_FUNC &Listener : m_vGraphicsResourcesResetListeners)
 	{
@@ -4833,11 +4874,11 @@ void CGraphics_Threaded::TakeScreenshot(const char *pFilename)
 	TakeScreenshot(pFilename, nullptr);
 }
 
-bool CGraphics_Threaded::PrepareScreenshotPath(const char *pFilename)
+bool CGraphics_Threaded::PrepareScreenshotPath(const char *pFilename, char (&aScreenshotName)[IO_MAX_PATH_LENGTH])
 {
 	char aDate[20];
 	str_timestamp(aDate, sizeof(aDate));
-	if(screenshot_path::Prepare(m_pStorage, g_Config, pFilename, aDate, m_aScreenshotName))
+	if(screenshot_path::Prepare(m_pStorage, g_Config, pFilename, aDate, aScreenshotName))
 		return true;
 	try
 	{
@@ -4855,7 +4896,7 @@ bool CGraphics_Threaded::PrepareScreenshotPath(const char *pFilename)
 	return false;
 }
 
-bool CGraphics_Threaded::QueueScreenshotSave(CImageInfo &&Image, FScreenshotProcessor Processor, FScreenshotCallback Callback)
+bool CGraphics_Threaded::QueueScreenshotSave(CImageInfo &&Image, const char *pScreenshotName, FScreenshotProcessor Processor, FScreenshotCallback Callback)
 {
 	FScreenshotCallback NoPreview;
 	return screenshot_save::Finish(Image, NoPreview, Processor, [&](CImageInfo &&Captured, FScreenshotProcessor &&SaveProcessor) {
@@ -4872,7 +4913,7 @@ bool CGraphics_Threaded::QueueScreenshotSave(CImageInfo &&Image, FScreenshotProc
 		}
 		SWarning Warning;
 		str_copy(Warning.m_aWarningMsg, Localize("Failed to save screenshot"));
-		return std::make_shared<screenshot_save::CSaveJob>(m_pStorage, m_aScreenshotName, std::move(Captured), std::move(SaveProcessor), [this, Warning] { AddWarning(Warning); }, std::move(Completion)); }, [this](const auto &pJob) { return m_pEngine->TryAddJob(pJob); }, [this] {
+		return std::make_shared<screenshot_save::CSaveJob>(m_pStorage, pScreenshotName, std::move(Captured), std::move(SaveProcessor), [this, Warning] { AddWarning(Warning); }, std::move(Completion)); }, [this](const auto &pJob) { return m_pEngine->TryAddJob(pJob); }, [this] {
 		SWarning Warning;
 		str_copy(Warning.m_aWarningMsg, Localize("Failed to save screenshot"));
 		AddWarning(Warning); });
@@ -4880,8 +4921,7 @@ bool CGraphics_Threaded::QueueScreenshotSave(CImageInfo &&Image, FScreenshotProc
 
 void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor)
 {
-	// TODO: screenshot support
-	if(!PrepareScreenshotPath(pFilename))
+	if(!PrepareScreenshotPath(pFilename, m_aScreenshotName))
 		return;
 	m_pfnScreenshotCallback = std::move(pfnCallback);
 	m_pfnScreenshotProcessor = std::move(pfnProcessor);
@@ -4892,12 +4932,11 @@ bool CGraphics_Threaded::TakeScreenshotFromImage(CImageInfo &&Image, const char 
 {
 	if(Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0)
 		return false;
-	if(!PrepareScreenshotPath(pFilename))
+	char aScreenshotName[IO_MAX_PATH_LENGTH];
+	if(!PrepareScreenshotPath(pFilename, aScreenshotName))
 		return false;
-	// 大图（2 倍 4K 约 3300 万像素）的 PNG 编码在主线程要好几秒，4 倍更是几十秒，
-	// 实测会直接触发「客户端卡死」看门狗。这里改成后台编码，写完之后再由渲染线程
-	// 把「图像 + 最终路径」交给回调：照片卡拿到的仍然是已经落盘的文件。
-	return QueueScreenshotSave(std::move(Image), std::move(pfnProcessor), std::move(pfnCallback));
+	// 大图在后台编码，保存完成后在 Swap 中从主线程交付图像和路径。
+	return QueueScreenshotSave(std::move(Image), aScreenshotName, std::move(pfnProcessor), std::move(pfnCallback));
 }
 
 void CGraphics_Threaded::TakeCustomScreenshot(const char *pFilename)

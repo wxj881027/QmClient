@@ -6765,6 +6765,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_chat_bubble_state_test.cpp
       src/test/integration/qmclient/client/qm_chat_bubble_geometry_test.cpp
       src/test/integration/client/graph_rendering_test.cpp
+      src/test/integration/engine/graphics_frontend_lifecycle_test.cpp
       src/test/integration/qmclient/settings/qm_tclient_config_string_edit_test.cpp
       src/test/integration/qmclient/settings/qm_warlist_card_removal_test.cpp
       src/test/unit/qmclient/settings/qm_bindwheel_card_selection_test.cpp
@@ -6876,6 +6877,12 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_ui_element_allocation_test.cpp
       src/test/support/allocation_failure_new.cpp
       src/engine/client/text.cpp
+      src/engine/client/backend_threaded.cpp
+      src/engine/client/graphics_threaded.cpp
+      src/engine/client/graphics_threaded_sprites.cpp
+      src/engine/client/warning.cpp
+      src/generated/client_data.cpp
+      src/generated/client_data7.cpp
       src/engine/client/graph.cpp
       src/game/client/ui.cpp
       src/game/client/ui_popups.cpp
@@ -6939,7 +6946,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     add_dependencies(qm-ui-popup-tests generate_protocol generate_content_types)
     target_link_libraries(qm-ui-popup-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${QM_GTEST_LIBRARIES} ${LIBS_SERVER} ${FREETYPE_LIBRARIES})
     target_include_directories(qm-ui-popup-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${WebP_INCLUDE_DIRS})
-    target_compile_definitions(qm-ui-popup-tests PRIVATE DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    target_compile_definitions(qm-ui-popup-tests PRIVATE BACKEND_NO_SDL DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    if(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
+      target_link_libraries(qm-ui-popup-tests "-framework Foundation" "-framework CoreFoundation")
+    endif()
     if(MSVC)
       target_compile_options(qm-ui-popup-tests PRIVATE /bigobj /utf-8)
     endif()
