@@ -7,6 +7,7 @@
 #if defined(CONF_FAMILY_UNIX)
 #include <fcntl.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include <vector>
@@ -54,6 +55,36 @@ TEST(NetSocketAllocation, NativeUdpCreationCanRetryAfterAllocationBoundaryFailur
 }
 
 #if defined(CONF_FAMILY_UNIX)
+#if GTEST_HAS_DEATH_TEST && !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+TEST(NetSocketAllocationDeathTest, NativeUdpSocketIsCloseOnExec)
+{
+	ASSERT_EXIT(
+		{
+			alarm(3);
+			const int Descriptor = socket(AF_INET, SOCK_DGRAM, 0);
+			if(Descriptor == -1 || close(Descriptor) != 0)
+				_exit(2);
+
+			NETADDR BindAddr = NETADDR_ZEROED;
+			BindAddr.type = NETTYPE_IPV4;
+			BindAddr.ip[0] = 127;
+			BindAddr.ip[3] = 1;
+			SSocketOwner Socket{net_udp_create(BindAddr)};
+			if(!Socket.m_Socket)
+				_exit(2);
+
+			// 子进程只有本测试分配描述符。确认重新占用的位置属于 UDP socket。
+			int SocketType = 0;
+			socklen_t TypeLength = sizeof(SocketType);
+			if(getsockopt(Descriptor, SOL_SOCKET, SO_TYPE, &SocketType, &TypeLength) != 0 || SocketType != SOCK_DGRAM)
+				_exit(2);
+			const int Flags = fcntl(Descriptor, F_GETFD);
+			_exit(Flags != -1 && (Flags & FD_CLOEXEC) != 0 ? 0 : 3);
+		},
+		testing::ExitedWithCode(0), "");
+}
+#endif
+
 TEST(NetSocketAllocation, NativeUdpCreationRejectsDescriptorOutsideSelectCapacity)
 {
 	struct SDescriptors

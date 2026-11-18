@@ -14,6 +14,8 @@
 #include <cstring>
 #include <iterator> // std::size
 #include <limits>
+#include <memory>
+#include <new>
 #include <string_view>
 
 #if defined(CONF_WEBSOCKETS)
@@ -32,6 +34,7 @@ static constexpr unsigned char LOOPBACKADDR_IPV6[16] = {0, 0, 0, 0, 0, 0, 0, 0, 
 
 /* unix net includes */
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
@@ -597,7 +600,7 @@ int net_addr_from_str(NETADDR *addr, const char *string)
 	if(str[0] == '[')
 	{
 		/* ipv6 */
-		sockaddr_in6 sa6;
+		sockaddr_in6 sa6{};
 		char buf[128];
 		int i;
 		str++;
@@ -741,7 +744,11 @@ static bool net_address_in_use()
 // `address_in_use` 只会被置为 true，因此同一个 NETSOCKET 的所有协议族可以共用。
 static int priv_net_create_socket(int domain, int type, const NETADDR *bindaddr, bool *address_in_use)
 {
-	int sock = socket(domain, type, 0);
+	int socket_type = type;
+#if defined(CONF_FAMILY_UNIX) && defined(SOCK_CLOEXEC) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+	socket_type |= SOCK_CLOEXEC;
+#endif
+	int sock = socket(domain, socket_type, 0);
 	if(sock < 0)
 	{
 		log_error("net", "Failed to create socket with domain %d and type %d (%s)", domain, type, net_error_message().c_str());
@@ -749,6 +756,18 @@ static int priv_net_create_socket(int domain, int type, const NETADDR *bindaddr,
 	}
 
 #if defined(CONF_FAMILY_UNIX)
+#if !defined(SOCK_CLOEXEC) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+	// 看图或开本地服启动的子进程不应继续占用客户端的监听端口。
+	const int descriptor_flags = fcntl(sock, F_GETFD);
+	if(descriptor_flags == -1 || fcntl(sock, F_SETFD, descriptor_flags | FD_CLOEXEC) == -1)
+	{
+		const int error = errno;
+		priv_net_close_socket(sock);
+		log_error("net", "Setting close-on-exec failed for socket with domain %d and type %d (errno %d)", domain, type, error);
+		errno = error;
+		return -1;
+	}
+#endif
 	if(!net_socket_is_selectable(sock))
 	{
 		priv_net_close_socket(sock);
@@ -833,8 +852,9 @@ NETSOCKET net_udp_create_with_allocator(NETADDR bindaddr, void *(*pfnAllocate)(s
 {
 	if(pfnAllocate == nullptr)
 		return nullptr;
-	NETSOCKET sock = static_cast<NETSOCKET_INTERNAL *>(pfnAllocate(sizeof(*sock)));
-	if(sock == nullptr)
+	std::unique_ptr<NETSOCKET_INTERNAL, decltype(&priv_net_close_all_sockets)> sock(
+		static_cast<NETSOCKET_INTERNAL *>(pfnAllocate(sizeof(NETSOCKET_INTERNAL))), priv_net_close_all_sockets);
+	if(!sock)
 		return nullptr;
 	*sock = invalid_socket;
 	bool address_in_use = false;
@@ -930,18 +950,11 @@ NETSOCKET net_udp_create_with_allocator(NETADDR bindaddr, void *(*pfnAllocate)(s
 	}
 #endif
 
-	if(sock->type == NETTYPE_INVALID || address_in_use)
-	{
-		priv_net_close_all_sockets(sock);
-		sock = nullptr;
-	}
-	else
-	{
-		net_set_non_blocking(sock);
-		net_buffer_init(&sock->buffer);
-	}
+	if(sock->type == NETTYPE_INVALID || address_in_use || net_set_non_blocking(sock.get()) != 0)
+		return nullptr;
 
-	return sock;
+	net_buffer_init(&sock->buffer);
+	return sock.release();
 }
 
 NETQOS net_qos_add_socket(NETSOCKET sock, const NETADDR *addr, ENetQosStatus *pStatus)
@@ -1267,9 +1280,10 @@ int net_udp_recv(NETSOCKET sock, NETADDR *addr, unsigned char **data)
 		return bytes;
 	}
 #else
+	// 与 Linux 批量读取一样限制单次扫描，调用方随后才能检查收包预算。
 	if(sock->ipv4sock >= 0)
 	{
-		do
+		for(int attempt = 0; attempt < VLEN; ++attempt)
 		{
 			sockaddr_storage recv_addr;
 			socklen_t fromlen = sizeof(recv_addr);
@@ -1281,12 +1295,14 @@ int net_udp_recv(NETSOCKET sock, NETADDR *addr, unsigned char **data)
 				update_stats(bytes);
 				return bytes;
 			}
-		} while(bytes == 0);
+			if(bytes < 0)
+				break;
+		}
 	}
 
 	if(sock->ipv6sock >= 0)
 	{
-		do
+		for(int attempt = 0; attempt < VLEN; ++attempt)
 		{
 			sockaddr_storage recv_addr;
 			socklen_t fromlen = sizeof(recv_addr);
@@ -1298,7 +1314,9 @@ int net_udp_recv(NETSOCKET sock, NETADDR *addr, unsigned char **data)
 				update_stats(bytes);
 				return bytes;
 			}
-		} while(bytes == 0);
+			if(bytes < 0)
+				break;
+		}
 	}
 #endif
 
@@ -1386,7 +1404,12 @@ NETSOCKET net_tcp_create(NETADDR bindaddr)
 
 static int net_set_blocking_impl(NETSOCKET sock, bool blocking)
 {
+#if defined(CONF_FAMILY_WINDOWS)
 	unsigned long mode = blocking ? 0 : 1;
+#else
+	int mode = blocking ? 0 : 1;
+#endif
+	int result = 0;
 	const char *mode_str = blocking ? "blocking" : "non-blocking";
 	int sockets[] = {sock->ipv4sock, sock->ipv6sock};
 	const char *socket_str[] = {"IPv4", "IPv6"};
@@ -1396,20 +1419,19 @@ static int net_set_blocking_impl(NETSOCKET sock, bool blocking)
 		if(sockets[i] >= 0)
 		{
 #if defined(CONF_FAMILY_WINDOWS)
-			if(ioctlsocket(sockets[i], FIONBIO, (unsigned long *)&mode) != NO_ERROR)
-			{
-				log_error("net", "Setting %s mode for %s socket failed (%s)", socket_str[i], mode_str, net_error_message().c_str());
-			}
+			const bool success = ioctlsocket(sockets[i], FIONBIO, &mode) == NO_ERROR;
 #else
-			if(ioctl(sockets[i], FIONBIO, (unsigned long *)&mode) == -1)
+			const bool success = ioctl(sockets[i], FIONBIO, &mode) != -1;
+#endif
+			if(!success)
 			{
 				log_error("net", "Setting %s mode for %s socket failed (%s)", socket_str[i], mode_str, net_error_message().c_str());
+				result = -1;
 			}
-#endif
 		}
 	}
 
-	return 0;
+	return result;
 }
 
 int net_set_non_blocking(NETSOCKET sock)
@@ -1572,6 +1594,7 @@ int net_errno()
 }
 
 std::string net_error_message()
+try
 {
 	const int error = net_errno();
 #if defined(CONF_FAMILY_WINDOWS)
@@ -1580,6 +1603,11 @@ std::string net_error_message()
 #else
 	return std::to_string(error) + " '" + strerror(error) + "'";
 #endif
+}
+catch(const std::bad_alloc &)
+{
+	// 诊断文本分配失败时，调用方仍须完成套接字清理。
+	return {};
 }
 
 int net_would_block()

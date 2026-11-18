@@ -201,6 +201,7 @@ int net_errno();
  * @ingroup Network-General
  *
  * @returns The error code and string combined into one string.
+ * 诊断文本无法分配时返回空串。
  */
 std::string net_error_message();
 
@@ -252,6 +253,7 @@ bool net_socket_is_selectable(int socket);
  * bind operation fails. Otherwise, if binding at least one protocol family
  * succeeds, the operation is treated as a success: the host may not support all
  * protocol families.
+ * 创建成功前必须设置非阻塞 I/O。
  *
  * @ingroup Network-UDP
  *
