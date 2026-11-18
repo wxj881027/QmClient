@@ -224,35 +224,38 @@ protected:
 		{
 		public:
 			CTileVisual() :
-				m_IndexBufferByteOffset(0) {}
+				m_QuadOffsetAndDrawFlag(0) {}
 
 		private:
-			offset_ptr32 m_IndexBufferByteOffset;
+			// 偏移按四边形计数，最高位保留给绘制状态。
+			static constexpr offset_ptr32 DRAW_FLAG = 0x80000000u;
+			static constexpr offset_ptr32 QUAD_OFFSET_MASK = ~DRAW_FLAG;
+			offset_ptr32 m_QuadOffsetAndDrawFlag;
 
 		public:
 			bool DoDraw() const
 			{
-				return (m_IndexBufferByteOffset & 0x10000000) != 0;
+				return (m_QuadOffsetAndDrawFlag & DRAW_FLAG) != 0;
 			}
 
 			void Draw(bool SetDraw)
 			{
-				m_IndexBufferByteOffset = (SetDraw ? 0x10000000 : (offset_ptr32)0) | (m_IndexBufferByteOffset & 0xEFFFFFFF);
+				m_QuadOffsetAndDrawFlag = (SetDraw ? DRAW_FLAG : 0u) | (m_QuadOffsetAndDrawFlag & QUAD_OFFSET_MASK);
 			}
 
 			offset_ptr IndexBufferByteOffset() const
 			{
-				return ((offset_ptr)(m_IndexBufferByteOffset & 0xEFFFFFFF) * 6 * sizeof(uint32_t));
+				return static_cast<offset_ptr>(m_QuadOffsetAndDrawFlag & QUAD_OFFSET_MASK) * 6 * sizeof(uint32_t);
 			}
 
-			void SetIndexBufferByteOffset(offset_ptr32 IndexBufferByteOff)
+			void SetIndexBufferByteOffset(offset_ptr32 QuadOffset)
 			{
-				m_IndexBufferByteOffset = IndexBufferByteOff | (m_IndexBufferByteOffset & 0x10000000);
+				m_QuadOffsetAndDrawFlag = QuadOffset | (m_QuadOffsetAndDrawFlag & DRAW_FLAG);
 			}
 
-			void AddIndexBufferByteOffset(offset_ptr32 IndexBufferByteOff)
+			void AddIndexBufferByteOffset(offset_ptr32 QuadOffset)
 			{
-				m_IndexBufferByteOffset = ((m_IndexBufferByteOffset & 0xEFFFFFFF) + IndexBufferByteOff) | (m_IndexBufferByteOffset & 0x10000000);
+				m_QuadOffsetAndDrawFlag = ((m_QuadOffsetAndDrawFlag & QUAD_OFFSET_MASK) + QuadOffset) | (m_QuadOffsetAndDrawFlag & DRAW_FLAG);
 			}
 		};
 

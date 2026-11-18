@@ -13,6 +13,7 @@ namespace
 	public:
 		float m_X0 = 0, m_Y0 = 0, m_X1 = 64, m_Y1 = 64;
 		int m_Begins = 0, m_Ends = 0, m_ImmediateDraws = 0, m_BufferVertices = 0, m_Borders = 0;
+		offset_ptr m_LastBufferOffset = 0;
 		bool HasTextureArraysSupport() const override { return false; }
 		void GetScreen(float *pX0, float *pY0, float *pX1, float *pY1) const override
 		{
@@ -28,7 +29,10 @@ namespace
 		void RenderTileLayer(int BufferContainerIndex, const ColorRGBA &Color, char **pOffsets, unsigned int *pCounts, size_t Count) override
 		{
 			for(size_t i = 0; i < Count; ++i)
+			{
+				m_LastBufferOffset = reinterpret_cast<offset_ptr>(pOffsets[i]);
 				m_BufferVertices += pCounts[i];
+			}
 		}
 		void RenderBorderTiles(int BufferContainerIndex, const ColorRGBA &Color, char *pOffset, const vec2 &Offset, const vec2 &Scale, uint32_t DrawNum) override { ++m_Borders; }
 	};
@@ -37,7 +41,7 @@ namespace
 	class CBufferedLayer : public CRenderLayerTile
 	{
 	public:
-		explicit CBufferedLayer(CMapItemLayerTilemap &Item, IGraphics &Graphics) :
+		explicit CBufferedLayer(CMapItemLayerTilemap &Item, IGraphics &Graphics, offset_ptr32 FirstQuad = 0) :
 			CRenderLayerTile(0, 0, 0, &Item)
 		{
 			CRenderComponent::OnInit(&Graphics, nullptr, nullptr);
@@ -48,7 +52,7 @@ namespace
 			Visuals.m_vTilesOfLayer.resize(4);
 			for(int i = 0; i < 4; ++i)
 			{
-				Visuals.m_vTilesOfLayer[i].SetIndexBufferByteOffset(i);
+				Visuals.m_vTilesOfLayer[i].SetIndexBufferByteOffset(FirstQuad + i);
 				Visuals.m_vTilesOfLayer[i].Draw(true);
 			}
 			Visuals.m_BorderKillTile.Draw(true);
@@ -145,6 +149,21 @@ TEST(MapRenderScreenIntegration, NormalBufferedLayerSubmitsAllFourTileIndices)
 	CBufferedLayer Layer(Item, Graphics);
 	Layer.Buffered();
 	EXPECT_EQ(Graphics.m_BufferVertices, 24);
+}
+
+TEST(MapRenderScreenIntegration, BufferedLayerPreservesLargeQuadOffsets)
+{
+	constexpr offset_ptr32 FirstQuad = 300'000'000u;
+	constexpr uint64_t ExpectedOffset = static_cast<uint64_t>(FirstQuad) * 6 * sizeof(uint32_t);
+	if(ExpectedOffset > std::numeric_limits<offset_ptr>::max())
+		GTEST_SKIP() << "The tile index offset exceeds the platform address width.";
+
+	CScreenGraphics Graphics;
+	CMapItemLayerTilemap Item{};
+	CBufferedLayer Layer(Item, Graphics, FirstQuad);
+	Layer.Buffered();
+	EXPECT_EQ(Graphics.m_BufferVertices, 24);
+	EXPECT_EQ(Graphics.m_LastBufferOffset, ExpectedOffset);
 }
 
 TEST(MapRenderScreenIntegration, EmptyVerticalMapIntersectionDoesNotReserveOffscreenRows)
