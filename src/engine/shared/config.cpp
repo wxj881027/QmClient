@@ -176,6 +176,7 @@ namespace
 	constexpr const char *QM_CONFIG_V2_QMCLIENT_PATH = "qmclient/settings_qmclient.cfg";
 	constexpr const char *QM_CONFIG_V2_DDNET_PATH = "qmclient/settings_ddnet.cfg";
 	constexpr const char *QM_CONFIG_V1_DIR = "QmClient";
+	constexpr const char *QM_CONFIG_V1_QMCLIENT_PATH = "QmClient/settings_qmclient.cfg";
 	constexpr const char *QM_CONFIG_V2_MARKER = "qmclient/config_migration_v2.done";
 	constexpr const char *QM_CONFIG_V0_QMCLIENT_PATH = "settings_qmclient.cfg";
 	constexpr const char *QM_CONFIG_V0_PROFILES_PATH = "qmclient_profiles.cfg";
@@ -240,7 +241,7 @@ bool QmConfigMigrationPending(IStorage *pStorage)
 // 读取变量配置的候选路径列表（v3 合并语义）：
 // 1. 优先 qmclient/settings.cfg（v3 合并文件）；
 // 2. 否则按 v2 → v1 → v0 顺序回退读取旧变量文件（存在才读），
-//    根目录 settings_ddnet.cfg 仅作为全新用户的官方导入源，不会被删除。
+//    根目录 settings_ddnet.cfg 仍可作为官方配置来源，迁移后保留。
 void QmGetVariableConfigLoadPaths(IStorage *pStorage, std::vector<const char *> &vOut)
 {
 	vOut.clear();
@@ -262,17 +263,22 @@ void QmGetVariableConfigLoadPaths(IStorage *pStorage, std::vector<const char *> 
 	{
 		if(V2DdnetExists)
 			vOut.push_back(QM_CONFIG_V2_DDNET_PATH);
+		// v2 可能只写成了官方配置，仍需读取上一代的 Qm 设置。
 		if(V2QmclientExists)
 			vOut.push_back(QM_CONFIG_V2_QMCLIENT_PATH);
+		else if(pStorage->FileExists(QM_CONFIG_V1_QMCLIENT_PATH, IStorage::TYPE_SAVE))
+			vOut.push_back(QM_CONFIG_V1_QMCLIENT_PATH);
+		else if(pStorage->FileExists(QM_CONFIG_V0_QMCLIENT_PATH, IStorage::TYPE_SAVE))
+			vOut.push_back(QM_CONFIG_V0_QMCLIENT_PATH);
 		if(!V2DdnetExists && pStorage->FileExists("settings_ddnet.cfg", IStorage::TYPE_SAVE))
 			vOut.push_back("settings_ddnet.cfg");
 		return;
 	}
 
 	// v1 时代：大写 QmClient/ 目录（qm 专属文件）+ 根目录官方共享配置
-	if(pStorage->FileExists("QmClient/settings_qmclient.cfg", IStorage::TYPE_SAVE))
+	if(pStorage->FileExists(QM_CONFIG_V1_QMCLIENT_PATH, IStorage::TYPE_SAVE))
 	{
-		vOut.push_back("QmClient/settings_qmclient.cfg");
+		vOut.push_back(QM_CONFIG_V1_QMCLIENT_PATH);
 		if(pStorage->FileExists("settings_ddnet.cfg", IStorage::TYPE_SAVE))
 			vOut.push_back("settings_ddnet.cfg");
 		return;
@@ -319,7 +325,7 @@ bool QmFinalizeConfigMigration(IStorage *pStorage)
 	if(SeparateV1Directory)
 	{
 		pStorage->RemoveFile("QmClient/settings_ddnet.cfg", IStorage::TYPE_SAVE);
-		pStorage->RemoveFile("QmClient/settings_qmclient.cfg", IStorage::TYPE_SAVE);
+		pStorage->RemoveFile(QM_CONFIG_V1_QMCLIENT_PATH, IStorage::TYPE_SAVE);
 		pStorage->RemoveFile("QmClient/qmclient_profiles.cfg", IStorage::TYPE_SAVE);
 		pStorage->RemoveFile("QmClient/qmclient_chatbinds.cfg", IStorage::TYPE_SAVE);
 		pStorage->RemoveFile("QmClient/qmclient_warlist.cfg", IStorage::TYPE_SAVE);
@@ -813,21 +819,20 @@ bool CConfigManager::ReadConfigFileState(const char *pPath, SConfigFileState &St
 	}
 	if(!m_pStorage)
 		return false;
-	IOHANDLE File = m_pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_SAVE);
-	if(!File)
-	{
-		State.m_Exists = m_pStorage->FileExists(pPath, IStorage::TYPE_SAVE) || m_pStorage->FolderExists(pPath, IStorage::TYPE_SAVE);
-		State.m_Readable = !State.m_Exists;
-		return State.m_Readable;
-	}
-	State.m_Exists = true;
+	// 沿用整文件读取的大小上限，并在读取前拒绝非普通文件。
+	constexpr unsigned MAX_CONFIG_FILE_BYTES = 1024u * 1024 * 1024;
 	void *pData = nullptr;
 	unsigned Length = 0;
-	const bool Read = io_read_all(File, &pData, &Length);
-	const int CloseError = io_close(File);
+	const auto Result = m_pStorage->ReadFileCheckedBounded(pPath, IStorage::TYPE_SAVE, &pData, &Length, MAX_CONFIG_FILE_BYTES);
 	std::unique_ptr<void, decltype(&free)> pContent(pData, free);
-	if(!Read || CloseError != 0)
+	if(Result == IStorage::EReadFileResult::NOT_FOUND)
+	{
+		State.m_Readable = true;
+		return true;
+	}
+	if(Result != IStorage::EReadFileResult::SUCCESS)
 		return false;
+	State.m_Exists = true;
 	State.m_Content.assign(static_cast<const char *>(pData), Length);
 	State.m_Readable = !mem_has_null(State.m_Content.data(), State.m_Content.size()) && CLineReader::IsValidBuffer(State.m_Content.c_str());
 	return State.m_Readable;
@@ -906,6 +911,24 @@ try
 	if(!Force && !g_Config.m_ClSaveSettings)
 		return true;
 	const CConfigSaveFlag SaveFlag(m_SaveInProgress);
+	char aaConfigFileTmp[ConfigDomain::NUM][IO_MAX_PATH_LENGTH] = {};
+	for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
+	{
+		const char *pConfigPath = s_aConfigDomains[Domain].m_aConfigPath;
+		if(!pConfigPath)
+			continue;
+		IStorage::FormatTmpPath(aaConfigFileTmp[Domain], sizeof(aaConfigFileTmp[Domain]), pConfigPath);
+
+		// 用更大的缓冲检查拼接后的路径，避免候选后缀被截掉后直接打开或清理正式文件。
+		char aCompletePath[2 * IO_MAX_PATH_LENGTH] = {};
+		m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, aaConfigFileTmp[Domain], aCompletePath, sizeof(aCompletePath));
+		if(str_length(aCompletePath) >= IO_MAX_PATH_LENGTH)
+		{
+			SetSaveError("path", pConfigPath);
+			log_error("config", "ERROR: temporary config path for %s is too long", pConfigPath);
+			return false;
+		}
+	}
 	if(!EnsureConfigPathFolder(m_pStorage, QM_CONFIG_MAIN_PATH))
 	{
 		SetSaveError("create_folder", QM_CONFIG_MAIN_PATH);
@@ -931,7 +954,6 @@ try
 	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
 		m_aFailed[ConfigDomain] = false;
 
-	char aaConfigFileTmp[ConfigDomain::NUM][IO_MAX_PATH_LENGTH] = {};
 	SConfigFileState aWrittenState[ConfigDomain::NUM];
 	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
 	{
@@ -945,12 +967,11 @@ try
 			SetSaveError("create_folder", s_aConfigDomains[ConfigDomain].m_aConfigPath);
 			log_error("config", "ERROR: creating config folder for %s failed", s_aConfigDomains[ConfigDomain].m_aConfigPath);
 			m_aConfigFile[ConfigDomain] = nullptr;
+			aaConfigFileTmp[ConfigDomain][0] = '\0';
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 			continue;
 		}
-		m_aConfigFile[ConfigDomain] = m_pStorage->OpenFile(IStorage::FormatTmpPath(
-									   aaConfigFileTmp[ConfigDomain], sizeof(aaConfigFileTmp[ConfigDomain]), s_aConfigDomains[ConfigDomain].m_aConfigPath),
-			IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		m_aConfigFile[ConfigDomain] = m_pStorage->OpenFile(aaConfigFileTmp[ConfigDomain], IOFLAG_WRITE, IStorage::TYPE_SAVE);
 
 		if(!m_aConfigFile[ConfigDomain])
 		{

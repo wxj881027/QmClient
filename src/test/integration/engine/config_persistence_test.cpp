@@ -18,6 +18,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <vector>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
@@ -355,6 +356,53 @@ TEST_F(CConfigPersistence, LegacyConfigCanBeLoadedAndSavedToMergedFile)
 	EXPECT_NE(Read().find("qm_show_chat_client 0"), std::string::npos);
 	EXPECT_EQ(Read().find("tc_show_chat_client"), std::string::npos);
 }
+
+TEST_F(CConfigPersistence, PartialV2MigrationPreservesPreviousQmSettings)
+{
+	constexpr const char *pLegacyPath = "settings_qmclient.cfg";
+	Write("qmclient/settings_ddnet.cfg", "cl_showhud 0\n");
+	Write(pLegacyPath, "tc_jump_hint_text \"legacy jump hint\"\n");
+
+	CConfigSession Session(m_pStorage.get());
+	std::vector<const char *> vPaths;
+	QmGetVariableConfigLoadPaths(m_pStorage.get(), vPaths);
+	for(const char *pPath : vPaths)
+		ASSERT_TRUE(Session.Load(pPath));
+	ASSERT_TRUE(Session.Config()->Save(true));
+	ASSERT_TRUE(QmFinalizeConfigMigration(m_pStorage.get()));
+	EXPECT_FALSE(m_pStorage->FileExists(pLegacyPath, IStorage::TYPE_SAVE));
+
+	CConfigSession Reloaded(m_pStorage.get());
+	ASSERT_TRUE(Reloaded.Load());
+	EXPECT_EQ(g_Config.m_ClShowhud, 0);
+	EXPECT_STREQ(g_Config.m_QmJumpHintText, "legacy jump hint");
+}
+
+#if defined(CONF_FAMILY_UNIX)
+TEST_F(CConfigPersistence, SaveRejectsPathThatWouldAliasTheMainConfig)
+{
+	// 正式路径刚好能容纳，追加临时后缀后则会被旧的拼接逻辑截成正式路径。
+	constexpr size_t ROOT_LENGTH = IO_MAX_PATH_LENGTH - 2 - std::string_view(SETTINGS_PATH).size();
+	const std::string FirstLevel = std::string(m_Info.StoragePath()) + "/" + std::string(220, 'a');
+	ASSERT_LT(FirstLevel.size() + 1, ROOT_LENGTH);
+	const std::string Root = FirstLevel + "/" + std::string(ROOT_LENGTH - FirstLevel.size() - 1, 'b');
+	ASSERT_EQ(fs_makedir(FirstLevel.c_str()), 0);
+	ASSERT_EQ(fs_makedir(Root.c_str()), 0);
+	const std::string ExecutablePath = testing::internal::GetArgvs().front();
+	const char *apArgs[] = {ExecutablePath.c_str()};
+	m_pStorage = CreateTempStorage(Root.c_str(), std::size(apArgs), apArgs);
+	ASSERT_NE(m_pStorage, nullptr);
+	ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+	Write(SETTINGS_PATH, "cl_showhud 0\n");
+
+	CConfigSession Session(m_pStorage.get());
+	ASSERT_TRUE(Session.Load());
+	g_Config.m_ClShowhud = 1;
+	EXPECT_FALSE(Session.Config()->Save());
+	EXPECT_STREQ(Session.Config()->LastSaveError(), "stage=path path=qmclient/settings.cfg");
+	EXPECT_EQ(Read(), "cl_showhud 0\n");
+}
+#endif
 
 TEST_F(CConfigPersistence, StagingFailureKeepsAllExistingConfigFiles)
 {
