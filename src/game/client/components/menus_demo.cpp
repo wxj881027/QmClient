@@ -3881,9 +3881,7 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 				}
 				else if(Col.m_Id == COL_DATE && !pItem->m_IsDir)
 				{
-					if(pItem->m_DateLoaded && pItem->m_DateValid)
-						str_timestamp_ex(pItem->m_Date, aBuf, sizeof(aBuf), FORMAT_SPACE);
-					else
+					if(!pItem->m_DateLoaded || !pItem->m_DateValid || !str_timestamp_ex_try(pItem->m_Date, aBuf, sizeof(aBuf), FORMAT_SPACE))
 						str_copy(aBuf, "-");
 					Button.VMargin(4.0f, &Button);
 					Ui()->DoLabel(&Button, aBuf, 12.0f, TEXTALIGN_MR);
@@ -4074,9 +4072,7 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 	Left.VSplitLeft(Contents.w / 2.f + 30.f, &Left, &Right);
 	Ui()->DoLabel(&Left, Localize("Created"), FontSize, TEXTALIGN_ML);
 	Ui()->DoLabel(&Right, Localize("Size"), FontSize, TEXTALIGN_ML);
-	if(pItem->m_DateLoaded && pItem->m_DateValid)
-		str_timestamp_ex(pItem->m_Date, aBuf, sizeof(aBuf), FORMAT_SPACE);
-	else
+	if(!pItem->m_DateLoaded || !pItem->m_DateValid || !str_timestamp_ex_try(pItem->m_Date, aBuf, sizeof(aBuf), FORMAT_SPACE))
 		str_copy(aBuf, "-");
 	Contents.HSplitTop(18.0f, &Left, &Contents);
 	Left.VSplitLeft(Contents.w / 2.f + 30.f, &Left, &Right);

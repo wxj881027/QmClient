@@ -18,6 +18,7 @@ from collections.abc import Callable
 
 try:
 	from qmclient_scripts.integration.e2e_crash_reporting import scenario_fatal_exception_exits_without_hang
+	from qmclient_scripts.integration.e2e_demo_browser import scenario_demo_browser_pre_epoch_date
 	from qmclient_scripts.integration.e2e_menu_background import (
 		scenario_menu_background_failed_switch_shutdown,
 		scenario_menu_background_pending_switch_shutdown,
@@ -33,6 +34,7 @@ try:
 	from qmclient_scripts.integration.process_harness import ProcessEnvironment
 except ModuleNotFoundError:
 	from e2e_crash_reporting import scenario_fatal_exception_exits_without_hang  # type: ignore[no-redef]
+	from e2e_demo_browser import scenario_demo_browser_pre_epoch_date  # type: ignore[no-redef]
 	from e2e_menu_background import (  # type: ignore[no-redef]
 		scenario_menu_background_failed_switch_shutdown,
 		scenario_menu_background_pending_switch_shutdown,
@@ -438,6 +440,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"hang_watchdog_reports_stall": scenario_hang_watchdog_reports_stall,
 	"connection_failure_recovery": scenario_connection_failure_recovery,
 	"fatal_exception_exits_without_hang": scenario_fatal_exception_exits_without_hang,
+	"demo_browser_pre_epoch_date": scenario_demo_browser_pre_epoch_date,
 	"demo_recording": scenario_demo_recording,
 	"online_replay_without_source": scenario_online_replay_without_source,
 	"invalid_statistics_preserved": scenario_invalid_statistics_preserved,
