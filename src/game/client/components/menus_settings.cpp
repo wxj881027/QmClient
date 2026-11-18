@@ -107,25 +107,12 @@ namespace
 {
 
 	CScrollRegion gs_LanguageScrollRegion;
-	bool gs_LanguageScrollToSelected = false;
 	std::array<unsigned char, QM_LANGUAGE_ROW_CACHE_CAPACITY> gs_aLanguageRowIds{};
-	std::array<CUIElement, QM_LANGUAGE_ROW_CACHE_CAPACITY> gs_aLanguageLabelElements;
-	bool gs_LanguageLabelElementsInit = false;
 	float gs_LanguageLabelWidth = -1.0f;
 	float gs_LanguageLabelFontSize = -1.0f;
 	bool gs_LanguagePageCacheComplete = false;
 
 	char gs_aLanguageCacheLanguageFile[IO_MAX_PATH_LENGTH] = {};
-
-	void EnsureLanguagePageCacheInit(CUi *pUi)
-	{
-		if(!gs_LanguageLabelElementsInit || !gs_aLanguageLabelElements[0].IsRegistered())
-		{
-			for(CUIElement &LabelElement : gs_aLanguageLabelElements)
-				LabelElement.Init(pUi, 1);
-			gs_LanguageLabelElementsInit = true;
-		}
-	}
 
 	void LayoutLanguagePageBaseRects(float MainViewWidth, CUIRect &List)
 	{
@@ -286,11 +273,6 @@ namespace
 
 void CMenus::ClearSettingsLanguageRowCache()
 {
-	if(gs_LanguageLabelElementsInit)
-	{
-		for(CUIElement &LabelElement : gs_aLanguageLabelElements)
-			Ui()->ResetUIElement(LabelElement);
-	}
 	gs_LanguageLabelWidth = -1.0f;
 	gs_LanguageLabelFontSize = -1.0f;
 	gs_LanguagePageCacheComplete = false;
@@ -730,7 +712,6 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 
 void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete)
 {
-	EnsureLanguagePageCacheInit(Ui());
 	if(!UseLanguagePageCache())
 	{
 		gs_aLanguageCacheLanguageFile[0] = '\0';
@@ -806,7 +787,6 @@ void CMenus::RenderLanguageSettings(CUIRect MainView)
 	const char *pCreditsText = Localize("English translation by the DDNet Team", "Translation credits: Add your own name here when you update translations");
 	const int NumLanguages = (int)g_Localization.Languages().size();
 	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
-	EnsureLanguagePageCacheInit(Ui());
 
 	CUIRect Header, CreditsButton, List;
 	MainView.HSplitTop(Metrics.m_ButtonHeight, &Header, &List);
@@ -836,27 +816,11 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 {
 	const bool MenuUiPerfEnabled = QmPerfEnabled();
 	const auto MenuUiStartTime = MenuUiPerfEnabled ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
-	static int s_SelectedLanguage = -2; // -2 = unloaded, -1 = unset
-	EnsureLanguagePageCacheInit(Ui());
+	static bool s_ScrollToInitialSelection = true;
 	const bool UseCache = UseLanguagePageCache();
 	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainView.w);
-
-	if(s_SelectedLanguage == -2)
-	{
-		s_SelectedLanguage = -1;
-		for(size_t i = 0; i < g_Localization.Languages().size(); i++)
-		{
-			if(str_comp(g_Localization.Languages()[i].m_Filename.c_str(), g_Config.m_ClLanguagefile) == 0)
-			{
-				s_SelectedLanguage = i;
-				gs_LanguageScrollToSelected = true;
-				break;
-			}
-		}
-	}
-
-	const int SelectedOld = s_SelectedLanguage;
-	bool Activated = false;
+	const CLanguage *pActivatedLanguage = nullptr;
+	bool FoundSelectedLanguage = false;
 
 	vec2 ScrollOffset(0.0f, 0.0f);
 	static float s_PrevLanguageScrollY = 0.0f;
@@ -951,8 +915,10 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		Content.HSplitTop(RowLayout.m_RowHeight, &ItemRect, &Content);
 		if(i + 1 < g_Localization.Languages().size())
 			Content.HSplitTop(RowLayout.m_RowSpacing, nullptr, &Content);
-		const bool Selected = s_SelectedLanguage == (int)i;
-		const bool Visible = gs_LanguageScrollRegion.AddRect(ItemRect, gs_LanguageScrollToSelected && Selected, Selected);
+		const bool Selected = !FoundSelectedLanguage && str_comp(Language.m_Filename.c_str(), g_Config.m_ClLanguagefile) == 0;
+		if(Selected)
+			FoundSelectedLanguage = true;
+		const bool Visible = gs_LanguageScrollRegion.AddRect(ItemRect, s_ScrollToInitialSelection && Selected, Selected);
 		if(!Visible)
 			continue;
 		++VisibleLanguages;
@@ -969,10 +935,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 		const int ButtonResult = Ui()->DoButtonLogic(pRowId, 0, &ItemRect, BUTTONFLAG_LEFT);
 		if(ButtonResult)
-		{
-			s_SelectedLanguage = i;
-			Activated = true;
-		}
+			pActivatedLanguage = &Language;
 
 		if(Selected)
 			s_SelectedFeedback.Observe((int)i);
@@ -1016,7 +979,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	}
 	s_SelectedFeedback.EndFrame();
 	s_HoverFeedback.EndFrame();
-	gs_LanguageScrollToSelected = false;
+	s_ScrollToInitialSelection = false;
 	CUIRect ScrollRegion;
 	ScrollRegion.x = MainView.x;
 	ScrollRegion.y = Content.y;
@@ -1041,18 +1004,19 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		QmLogMenuUiFramePerf(MenuUiPerf, Client());
 	}
 
-	if(SelectedOld != s_SelectedLanguage)
+	if(pActivatedLanguage != nullptr && str_comp(pActivatedLanguage->m_Filename.c_str(), g_Config.m_ClLanguagefile) != 0)
 	{
-		str_copy(g_Config.m_ClLanguagefile, g_Localization.Languages()[s_SelectedLanguage].m_Filename.c_str());
+		str_copy(g_Config.m_ClLanguagefile, pActivatedLanguage->m_Filename.c_str());
 		GameClient()->OnLanguageChange();
 	}
 
-	return Activated;
+	return pActivatedLanguage != nullptr;
 }
 
 void CMenus::RenderSettings(CUIRect MainView)
 {
 	const bool CollectingMenuTextPlan = m_MenuTextPlanCollecting;
+	const bool Interactive = !CollectingMenuTextPlan && !Ui()->RenderOnly();
 	const bool SettingsPerfEnabled = PerfDebugEnabled() && !CollectingMenuTextPlan;
 	const int64_t SettingsRenderStartTime = PerfDebugStartTime();
 	// This handles cases where old config files have an invalid page index
@@ -1068,6 +1032,34 @@ void CMenus::RenderSettings(CUIRect MainView)
 	// 手机端不呈现的页签（键鼠绑键、资源包等）也不能成为落地页：旧配置或搜索跳转会回落到通用页。
 	if(SettingsPageHiddenForMobile(g_Config.m_UiSettingsPage, SettingsMobilePlatform()))
 		g_Config.m_UiSettingsPage = SETTINGS_GENERAL;
+	// 退出确认仍在素材页绘制，结束后再执行离页操作。
+	struct SAssetsEditorExitRequest
+	{
+		std::optional<int> m_DestinationPage;
+		bool m_Restart = false;
+	};
+	static SAssetsEditorExitRequest s_AssetsEditorExitRequest;
+	const auto SelectSettingsPage = [this](int Page) {
+		if(Page != SETTINGS_ASSETS && (m_AssetsEditorState.m_Open || m_AssetsEditorState.m_Initialized))
+		{
+			if(m_AssetsEditorState.m_Open)
+				AssetsEditorRequestClose();
+			else
+				AssetsEditorCloseNow();
+			if(m_AssetsEditorState.m_Open)
+			{
+				s_AssetsEditorExitRequest = {Page, false};
+				Page = SETTINGS_ASSETS;
+			}
+		}
+		g_Config.m_UiSettingsPage = Page;
+	};
+	if(Interactive)
+	{
+		if(!m_AssetsEditorState.m_ShowExitConfirm)
+			s_AssetsEditorExitRequest = {};
+		SelectSettingsPage(g_Config.m_UiSettingsPage);
+	}
 	if(g_Config.m_UiSettingsPage == SETTINGS_CONFIGS)
 	{
 		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
@@ -1077,8 +1069,6 @@ void CMenus::RenderSettings(CUIRect MainView)
 	{
 		g_Config.m_UiSettingsPage = SettingsCanonicalPage(g_Config.m_UiSettingsPage);
 	}
-	if(!CollectingMenuTextPlan && g_Config.m_UiSettingsPage != SETTINGS_ASSETS && (m_AssetsEditorState.m_Open || m_AssetsEditorState.m_Initialized))
-		AssetsEditorCloseNow();
 	if(!CollectingMenuTextPlan && g_Config.m_UiSettingsPage != SETTINGS_SOUND && (m_AudioPackEditorState.m_Open || m_AudioPackEditorState.m_Initialized))
 		AudioPackEditorClose();
 
@@ -1192,8 +1182,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 			aPages[Count++] = i;
 		}
 		const int Pressed = ui_widget::CapsuleTabBarPressedIndex(TabBarUiContext(), aSlots.data(), Count, 0.0f);
-		if(Pressed >= 0)
-			g_Config.m_UiSettingsPage = aPages[Pressed];
+		if(Interactive && Pressed >= 0)
+			SelectSettingsPage(aPages[Pressed]);
 		for(int Index = 0; Index < Count; ++Index)
 		{
 			const int Page = aPages[Index];
@@ -1455,6 +1445,12 @@ void CMenus::RenderSettings(CUIRect MainView)
 			LogPerfStage(Client(), "settings_transition_overlay", PerfDebugElapsedMs(StageStartTime), false, aOverlayExtra);
 		}
 	}
+	const auto RestartClient = [this] {
+		if(Client()->State() == IClient::STATE_ONLINE || GameClient()->Editor()->HasUnsavedData())
+			m_Popup = POPUP_RESTART;
+		else
+			Client()->Restart();
+	};
 	if(NeedRestart)
 	{
 		const int64_t StageStartTime = PerfDebugStartTime();
@@ -1476,13 +1472,14 @@ void CMenus::RenderSettings(CUIRect MainView)
 		static CButtonContainer s_RestartButton;
 		if(DoSettingsButton_Menu(g_Config.m_UiSettingsPage, -1, -1, &s_RestartButton, "settings-restart-button", Localize("Restart"), 0, &RestartButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, RestartMetrics.m_BodySize))
 		{
-			if(Client()->State() == IClient::STATE_ONLINE || GameClient()->Editor()->HasUnsavedData())
+			if(m_AssetsEditorState.m_Open && m_AssetsEditorState.m_HasUnsavedChanges)
 			{
-				m_Popup = POPUP_RESTART;
+				AssetsEditorRequestClose();
+				s_AssetsEditorExitRequest = {std::nullopt, true};
 			}
 			else
 			{
-				Client()->Restart();
+				RestartClient();
 			}
 		}
 		if(SettingsPerfEnabled)
@@ -1526,6 +1523,17 @@ void CMenus::RenderSettings(CUIRect MainView)
 	}
 	Ui()->SetDropDownFontSize(PreviousDropDownFontSize);
 	m_SettingsShellLayoutValid = false;
+	if(Interactive && !m_AssetsEditorState.m_ShowExitConfirm)
+	{
+		if(!m_AssetsEditorState.m_Open)
+		{
+			if(s_AssetsEditorExitRequest.m_DestinationPage)
+				g_Config.m_UiSettingsPage = *s_AssetsEditorExitRequest.m_DestinationPage;
+			else if(s_AssetsEditorExitRequest.m_Restart)
+				RestartClient();
+		}
+		s_AssetsEditorExitRequest = {};
+	}
 }
 
 bool CMenus::RenderHslaScrollbars(CUIRect *pRect, unsigned int *pColor, bool Alpha, float DarkestLight, const SSettingsContentMetrics &Metrics)
