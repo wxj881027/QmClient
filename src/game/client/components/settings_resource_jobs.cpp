@@ -173,10 +173,18 @@ bool SettingsResourceConsumeGpuUploads(SSettingsResourceMergeBudget &Budget, SSe
 {
 	if(Count <= 0)
 		return true;
+	const int LocalUploadsBefore = Budget.m_MaxGpuUploads;
+	const int FrameUploadsBefore = pFrameBudget != nullptr ? pFrameBudget->m_MaxGpuUploads : 0;
 	for(int Upload = 0; Upload < Count; ++Upload)
 	{
 		if(!SettingsResourceConsumeGpuUpload(Budget, pFrameBudget))
+		{
+			// 批量申请失败时退回已扣额度，保留实际阻塞原因。
+			Budget.m_MaxGpuUploads = LocalUploadsBefore;
+			if(pFrameBudget != nullptr)
+				pFrameBudget->m_MaxGpuUploads = FrameUploadsBefore;
 			return false;
+		}
 	}
 	return true;
 }

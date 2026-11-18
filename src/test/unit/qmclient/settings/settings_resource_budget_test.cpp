@@ -128,6 +128,36 @@ TEST(SettingsResourceBudget, GpuUploadCanReserveMultipleUploads)
 	EXPECT_EQ(FrameBudget.m_StopReason, ESettingsWarmupStopReason::GPU_UPLOAD_BUDGET);
 }
 
+TEST(SettingsResourceBudget, FrameBudgetRejectsUploadBatchWithoutConsumingCapacity)
+{
+	SSettingsResourceMergeBudget ResourceBudget;
+	ResourceBudget.m_MaxGpuUploads = 8;
+	SSettingsWarmupFrameBudget FrameBudget;
+	FrameBudget.m_MaxGpuUploads = 2;
+
+	EXPECT_FALSE(SettingsResourceConsumeGpuUploads(ResourceBudget, &FrameBudget, 3));
+	EXPECT_EQ(ResourceBudget.m_StopReason, ESettingsWarmupStopReason::GPU_UPLOAD_BUDGET);
+	EXPECT_EQ(FrameBudget.m_StopReason, ESettingsWarmupStopReason::GPU_UPLOAD_BUDGET);
+	EXPECT_EQ(ResourceBudget.m_MaxGpuUploads, 8);
+	EXPECT_EQ(FrameBudget.m_MaxGpuUploads, 2);
+	EXPECT_TRUE(SettingsResourceConsumeGpuUploads(ResourceBudget, &FrameBudget, 2));
+}
+
+TEST(SettingsResourceBudget, LocalBudgetRejectsUploadBatchWithoutConsumingCapacity)
+{
+	SSettingsResourceMergeBudget ResourceBudget;
+	ResourceBudget.m_MaxGpuUploads = 2;
+	SSettingsWarmupFrameBudget FrameBudget;
+	FrameBudget.m_MaxGpuUploads = 8;
+
+	EXPECT_FALSE(SettingsResourceConsumeGpuUploads(ResourceBudget, &FrameBudget, 3));
+	EXPECT_EQ(ResourceBudget.m_StopReason, ESettingsWarmupStopReason::GPU_UPLOAD_BUDGET);
+	EXPECT_EQ(FrameBudget.m_StopReason, ESettingsWarmupStopReason::NONE);
+	EXPECT_EQ(ResourceBudget.m_MaxGpuUploads, 2);
+	EXPECT_EQ(FrameBudget.m_MaxGpuUploads, 8);
+	EXPECT_TRUE(SettingsResourceConsumeGpuUploads(ResourceBudget, &FrameBudget, 2));
+}
+
 TEST(SettingsResourceBudget, DefaultSettingsAllowsOneSkinUploadBatch)
 {
 	SSettingsResourceMergeBudget ResourceBudget;
