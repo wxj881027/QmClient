@@ -408,9 +408,27 @@ namespace
 			pEntry->m_RenderTarget.Invalidate();
 		if(!pEntry->m_RenderTarget.IsValid() || pEntry->m_TargetWidth != TargetWidth || pEntry->m_TargetHeight != TargetHeight)
 		{
+			// 候选创建失败时保留上一张完整目标与尺寸，下帧沿原条件重试。
+			IGraphics::CRenderTargetHandle Target;
+			try
+			{
+				Target = pGameClient->Graphics()->CreateRenderTarget(TargetWidth, TargetHeight);
+			}
+			catch(const std::bad_alloc &)
+			{
+			}
+			catch(const std::length_error &)
+			{
+			}
+			if(!Target.IsValid())
+			{
+				pUi->DoLabel(&Preview, Localize("Map preview rendering unavailable"), 10.0f, TEXTALIGN_MC);
+				return;
+			}
 			if(pEntry->m_RenderTarget.IsValid())
 				pGameClient->Graphics()->DestroyRenderTarget(&pEntry->m_RenderTarget);
-			pEntry->m_RenderTarget = pGameClient->Graphics()->CreateRenderTarget(TargetWidth, TargetHeight);
+			// 旧目标销毁命令已排队；无分配地把候选所有权交给缓存项。
+			pEntry->m_RenderTarget = Target;
 			pEntry->m_TargetHeight = TargetHeight;
 			pEntry->m_TargetWidth = TargetWidth;
 			pEntry->m_NeedsRender = true;
