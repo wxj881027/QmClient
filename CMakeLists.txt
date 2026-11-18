@@ -6959,6 +6959,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/support/prediction_allocation_main.cpp
       src/test/support/allocation_failure_new.cpp
       src/test/support/prediction_allocation_failure.h
+      src/test/unit/client/prediction_character_order_test.cpp
       src/test/unit/qmclient/monitoring/settings_perf_window_failure_test.cpp
       src/test/unit/qmclient/settings/settings_skin_load_viewport_failure_test.cpp
       src/test/unit/qmclient/ui/qm_vote_map_library_menu_failure_test.cpp

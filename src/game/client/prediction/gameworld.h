@@ -7,8 +7,9 @@
 #include <game/gamecore.h>
 #include <game/teamscore.h>
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
-#include <list>
 #include <vector>
 
 class CCollision;
@@ -387,32 +388,27 @@ inline bool QmCheckPredictedEventHandled(std::vector<CGameWorld::CPredictedEvent
 class CCharOrder
 {
 public:
-	std::list<int> m_Ids; // reverse of the order in the gameworld, since entities will be inserted in reverse
+	std::array<int, MAX_CLIENTS> m_Ids; // reverse of the order in the gameworld, since entities will be inserted in reverse
 	CCharOrder()
 	{
 		Reset();
 	}
 	void Reset()
 	{
-		m_Ids.clear();
-		for(int i = 0; i < MAX_CLIENTS; i++)
-			m_Ids.push_back(i);
+		for(int Id = 0; Id < MAX_CLIENTS; ++Id)
+			m_Ids[Id] = Id;
 	}
-	void GiveStrong(int c)
+	void GiveStrong(int ClientId)
 	{
-		if(0 <= c && c < MAX_CLIENTS)
-		{
-			m_Ids.remove(c);
-			m_Ids.push_front(c);
-		}
+		const auto It = std::find(m_Ids.begin(), m_Ids.end(), ClientId);
+		if(It != m_Ids.end())
+			std::rotate(m_Ids.begin(), It, It + 1);
 	}
-	void GiveWeak(int c)
+	void GiveWeak(int ClientId)
 	{
-		if(0 <= c && c < MAX_CLIENTS)
-		{
-			m_Ids.remove(c);
-			m_Ids.push_back(c);
-		}
+		const auto It = std::find(m_Ids.begin(), m_Ids.end(), ClientId);
+		if(It != m_Ids.end())
+			std::rotate(It, It + 1, m_Ids.end());
 	}
 	bool HasStrongAgainst(int From, int To)
 	{
