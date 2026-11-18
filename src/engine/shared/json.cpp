@@ -2,8 +2,21 @@
 
 #include <engine/shared/json.h>
 
+#include <cstring>
 #include <memory>
 #include <vector>
+
+static bool JsonStringHasValidUtf8(const char *pString, size_t Length)
+{
+	const char *pEnd = pString + Length;
+	// 解析器保留终止符，内嵌的 NUL 也可以作为一个字符解码。
+	while(pString < pEnd)
+	{
+		if(str_utf8_decode(&pString) < 0)
+			return false;
+	}
+	return pString == pEnd;
+}
 
 bool JsonValidateUtf8(const json_value *pRoot, const json_value *pIgnoredValue)
 {
@@ -20,7 +33,7 @@ bool JsonValidateUtf8(const json_value *pRoot, const json_value *pIgnoredValue)
 		switch(pValue->type)
 		{
 		case json_string:
-			if(!str_utf8_check(*pValue))
+			if(!JsonStringHasValidUtf8(pValue->u.string.ptr, pValue->u.string.length))
 			{
 				return false;
 			}
@@ -34,11 +47,12 @@ bool JsonValidateUtf8(const json_value *pRoot, const json_value *pIgnoredValue)
 		case json_object:
 			for(unsigned i = 0; i < pValue->u.object.length; i++)
 			{
-				if(!str_utf8_check(pValue->u.object.values[i].name))
+				const auto &Entry = pValue->u.object.values[i];
+				if(!JsonStringHasValidUtf8(Entry.name, Entry.name_length))
 				{
 					return false;
 				}
-				vpValues.push_back(pValue->u.object.values[i].value);
+				vpValues.push_back(Entry.value);
 			}
 			break;
 		default:
@@ -50,21 +64,28 @@ bool JsonValidateUtf8(const json_value *pRoot, const json_value *pIgnoredValue)
 
 json_value *JsonParse(const json_char *pJson, size_t Length)
 {
-	std::unique_ptr<json_value, decltype(&json_value_free)> pValue(json_parse(pJson, Length), json_value_free);
-	if(pValue == nullptr)
-	{
-		return nullptr;
-	}
-	if(!JsonValidateUtf8(pValue.get()))
-	{
-		return nullptr;
-	}
-	return pValue.release();
+	json_settings Settings{};
+	return JsonParseEx(&Settings, pJson, Length, nullptr);
 }
 
 json_value *JsonParseEx(json_settings *pSettings, const json_char *pJson, size_t Length, char *pError)
 {
-	std::unique_ptr<json_value, decltype(&json_value_free)> pValue(json_parse_ex(pSettings, pJson, Length, pError), json_value_free);
+	// 底层解析器会将输入中的 NUL 当成结束标记。
+	if(!pJson || std::memchr(pJson, '\0', Length))
+	{
+		if(pError)
+			str_copy(pError, !pJson ? "missing JSON input" : "unexpected NUL in JSON input", json_error_max);
+		return nullptr;
+	}
+
+	json_settings Settings = *pSettings;
+	const auto FreeValue = [&Settings](json_value *pValue) {
+		if(Settings.mem_free)
+			json_value_free_ex(&Settings, pValue);
+		else
+			json_value_free(pValue);
+	};
+	std::unique_ptr<json_value, decltype(FreeValue)> pValue(json_parse_ex(&Settings, pJson, Length, pError), FreeValue);
 	if(pValue == nullptr)
 	{
 		return nullptr;
@@ -82,24 +103,23 @@ json_value *JsonParseEx(json_settings *pSettings, const json_char *pJson, size_t
 
 const struct _json_value *json_object_get(const json_value *pObject, const char *pIndex)
 {
-	unsigned int i;
-
 	if(pObject->type != json_object)
 		return &json_value_none;
 
-	for(i = 0; i < pObject->u.object.length; ++i)
-		if(!str_comp(pObject->u.object.values[i].name, pIndex))
-			return pObject->u.object.values[i].value;
+	const size_t IndexLength = std::strlen(pIndex);
+	for(unsigned i = 0; i < pObject->u.object.length; ++i)
+	{
+		const auto &Entry = pObject->u.object.values[i];
+		if(Entry.name_length == IndexLength && std::memcmp(Entry.name, pIndex, IndexLength) == 0)
+			return Entry.value;
+	}
 
 	return &json_value_none;
 }
 
 const struct _json_value *json_array_get(const json_value *pArray, int Index)
 {
-	if(pArray->type != json_array || Index >= (int)pArray->u.array.length)
-		return &json_value_none;
-
-	return pArray->u.array.values[Index];
+	return &(*pArray)[Index];
 }
 
 int json_array_length(const json_value *pArray)
@@ -114,7 +134,7 @@ const char *json_string_get(const json_value *pString)
 
 int json_int_get(const json_value *pInteger)
 {
-	return pInteger->u.integer;
+	return pInteger->type == json_integer ? static_cast<int>(pInteger->u.integer) : 0;
 }
 
 int json_boolean_get(const json_value *pBoolean)
@@ -141,7 +161,6 @@ char *EscapeJson(char *pBuffer, int BufferSize, const char *pString)
 {
 	dbg_assert(str_utf8_check(pString), "invalid UTF-8 in string");
 	dbg_assert(BufferSize > 0, "can't null-terminate the string");
-	dbg_assert(str_utf8_check(pString), "invalid UTF-8 in string");
 	// Subtract the space for null termination early.
 	BufferSize--;
 
@@ -181,6 +200,8 @@ char *EscapeJson(char *pBuffer, int BufferSize, const char *pString)
 		}
 	}
 	*pBuffer = 0;
+	if(!str_utf8_isstart(*pString))
+		str_utf8_fix_truncation(pResult);
 	return pResult;
 }
 
