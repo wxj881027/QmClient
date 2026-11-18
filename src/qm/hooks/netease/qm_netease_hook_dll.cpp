@@ -16,6 +16,7 @@
 #include <winrt/Windows.Graphics.Imaging.h>
 #include <winrt/Windows.Media.Control.h>
 #include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.Web.Http.Headers.h>
 #include <winrt/Windows.Web.Http.h>
 #include <winrt/base.h>
 
@@ -30,6 +31,7 @@
 #include <cstring>
 #include <cwchar>
 #include <filesystem>
+#include <initializer_list>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -59,6 +61,7 @@ namespace
 	constexpr uint32_t COVER_MAX_DIMENSION = 256;
 	constexpr uint64_t COVER_MAX_PNG_BYTES = 8 * 1024 * 1024;
 	constexpr uint64_t COVER_MAX_DOWNLOAD_BYTES = 16 * 1024 * 1024;
+	constexpr int MAX_ASYNC_POLLS = 100;
 	constexpr uint64_t LOCAL_METADATA_REFRESH_MS = 750;
 	constexpr uint64_t LOCAL_METADATA_MAX_BYTES = 16 * 1024 * 1024;
 	constexpr uint64_t WAVE_OUT_POSITION_STALE_MS = 1500;
@@ -73,6 +76,7 @@ namespace
 	std::string g_CoverUrl;
 	std::string g_CoverSongId;
 	ULONGLONG g_CoverLastAttemptTick = 0;
+	uint64_t g_CoverGeneration = 0;
 	uint64_t g_CoverRequestedSerial = 0;
 	uint64_t g_CoverHandledSerial = 0;
 	bool g_CoverFetchScheduled = false;
@@ -92,7 +96,8 @@ namespace
 	std::vector<SLocalTrackMetadata> g_vLocalTracks;
 	ULONGLONG g_NextLocalMetadataRefreshTick = 0;
 
-	HANDLE g_hMapping = nullptr;
+	// WorkerMain 拥有视图。回调在共享锁内读取停止位，防止回收后继续访问。
+	SRWLOCK g_SharedViewLock = SRWLOCK_INIT;
 	QmNeteaseHook::SSharedBlock *g_pShared = nullptr;
 	std::unique_ptr<QmNeteaseHook::CV5Writer> g_pV5Writer;
 	std::atomic_bool g_V5WriterReady{false};
@@ -129,23 +134,37 @@ namespace
 	TWaveOutControl g_OriginalWaveOutReset = nullptr;
 	TWaveOutControl g_OriginalWaveOutClose = nullptr;
 
-	std::atomic<uintptr_t> g_ActiveWaveOutHandle{0};
-	std::atomic<uint32_t> g_WaveOutSampleRate{0};
-	std::atomic<uint32_t> g_WaveOutBytesPerSecond{0};
-	std::atomic<int64_t> g_WaveOutPositionMs{0};
-	std::atomic<uint64_t> g_WaveOutObservedQpc{0};
-	std::atomic<uint64_t> g_WaveOutObservedTick{0};
-	std::atomic<uint64_t> g_WaveOutTimelineGeneration{0};
-	std::atomic_bool g_WaveOutHasPosition{false};
-	std::atomic_bool g_WaveOutPlaying{false};
+	struct SWaveOutState
+	{
+		HWAVEOUT m_hActive = nullptr;
+		uint32_t m_SampleRate = 0;
+		uint32_t m_BytesPerSecond = 0;
+		int64_t m_PositionMs = 0;
+		uint64_t m_ObservedQpc = 0;
+		uint64_t m_ObservedTick = 0;
+		uint64_t m_TimelineGeneration = 0;
+		bool m_HasPosition = false;
+		bool m_Playing = false;
+	};
+
+	std::mutex g_WaveOutMutex;
+	SWaveOutState g_WaveOut;
+
+	void SetSharedView(QmNeteaseHook::SSharedBlock *pShared)
+	{
+		AcquireSRWLockExclusive(&g_SharedViewLock);
+		g_pShared = pShared;
+		ReleaseSRWLockExclusive(&g_SharedViewLock);
+	}
 
 	bool IsControlStopRequested()
 	{
-		if(g_pShared == nullptr)
-			return false;
-		const uint32_t Flags = (uint32_t)InterlockedCompareExchange(
-			reinterpret_cast<volatile LONG *>(&g_pShared->m_ControlFlags), 0, 0);
-		return (Flags & QmNeteaseHook::CONTROL_STOP_REQUESTED) != 0;
+		AcquireSRWLockShared(&g_SharedViewLock);
+		LONG Flags = 0;
+		if(g_pShared != nullptr)
+			Flags = InterlockedCompareExchange(reinterpret_cast<volatile LONG *>(&g_pShared->m_ControlFlags), 0, 0);
+		ReleaseSRWLockShared(&g_SharedViewLock);
+		return (Flags & (LONG)QmNeteaseHook::CONTROL_STOP_REQUESTED) != 0;
 	}
 
 	bool IsStopRequested()
@@ -209,7 +228,8 @@ namespace
 	struct SMainWindowTitleProbe
 	{
 		DWORD m_ProcessId = 0;
-		std::wstring m_Title;
+		wchar_t m_aTitle[MAX_WINDOW_TITLE_UTF16 + 1] = {};
+		int m_TitleLength = 0;
 		bool m_Ambiguous = false;
 	};
 
@@ -226,18 +246,29 @@ namespace
 		wchar_t aClassName[64] = {};
 		if(GetClassNameW(hWnd, aClassName, (int)std::size(aClassName)) <= 0 || _wcsicmp(aClassName, NETEASE_MAIN_WINDOW_CLASS) != 0)
 			return TRUE;
-		const int TitleLength = GetWindowTextLengthW(hWnd);
+		// 直接取顶层窗口的标题，避免工作线程同步等待窗口过程。
+		using TReadCaption = decltype(&InternalGetWindowText);
+		static const auto s_pReadCaption = []() -> TReadCaption {
+			const HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
+			return hUser32 != nullptr ? reinterpret_cast<TReadCaption>(GetProcAddress(hUser32, "InternalGetWindowText")) : nullptr;
+		}();
+		if(s_pReadCaption == nullptr)
+			return FALSE;
+
+		// 多留一个字符用于识别超过限制后被截断的标题。
+		wchar_t aTitle[MAX_WINDOW_TITLE_UTF16 + 2] = {};
+		const int TitleLength = s_pReadCaption(hWnd, aTitle, (int)std::size(aTitle));
 		if(TitleLength <= 0 || TitleLength > MAX_WINDOW_TITLE_UTF16)
 			return TRUE;
-		std::wstring Title((size_t)TitleLength + 1, L'\0');
-		const int Copied = GetWindowTextW(hWnd, Title.data(), (int)Title.size());
-		if(Copied <= 0)
-			return TRUE;
-		Title.resize((size_t)Copied);
-		if(pProbe->m_Title.empty())
-			pProbe->m_Title = std::move(Title);
-		else if(pProbe->m_Title != Title)
+		if(pProbe->m_TitleLength == 0)
+		{
+			std::wmemcpy(pProbe->m_aTitle, aTitle, (size_t)TitleLength + 1);
+			pProbe->m_TitleLength = TitleLength;
+		}
+		else if(pProbe->m_TitleLength != TitleLength || std::wmemcmp(pProbe->m_aTitle, aTitle, (size_t)TitleLength) != 0)
+		{
 			pProbe->m_Ambiguous = true;
+		}
 		return TRUE;
 	}
 
@@ -268,9 +299,9 @@ namespace
 		SMainWindowTitleProbe Probe;
 		Probe.m_ProcessId = GetCurrentProcessId();
 		EnumWindows(FindNeteaseMainWindow, reinterpret_cast<LPARAM>(&Probe));
-		if(Probe.m_Ambiguous || Probe.m_Title.empty())
+		if(Probe.m_Ambiguous || Probe.m_TitleLength == 0)
 			return false;
-		*pTitle = WideToUtf8(Probe.m_Title.data(), (int)Probe.m_Title.size());
+		*pTitle = WideToUtf8(Probe.m_aTitle, Probe.m_TitleLength);
 		return !pTitle->empty();
 	}
 
@@ -326,47 +357,46 @@ namespace
 			       0;
 	}
 
-	uintptr_t WaveOutHandleValue(HWAVEOUT hWaveOut)
+	bool ObserveWaveOutHandleLocked(HWAVEOUT hWaveOut)
 	{
-		return reinterpret_cast<uintptr_t>(hWaveOut);
-	}
-
-	bool ObserveWaveOutHandle(HWAVEOUT hWaveOut)
-	{
-		const uintptr_t HandleValue = WaveOutHandleValue(hWaveOut);
-		if(HandleValue == 0)
+		if(hWaveOut == nullptr)
 			return false;
-		uintptr_t Expected = 0;
-		if(g_ActiveWaveOutHandle.compare_exchange_strong(Expected, HandleValue, std::memory_order_acq_rel))
+		if(g_WaveOut.m_hActive == nullptr)
 		{
-			g_WaveOutTimelineGeneration.fetch_add(1, std::memory_order_acq_rel);
-			return true;
+			g_WaveOut.m_hActive = hWaveOut;
+			++g_WaveOut.m_TimelineGeneration;
 		}
-		return Expected == HandleValue;
+		return g_WaveOut.m_hActive == hWaveOut;
 	}
 
-	bool IsObservedWaveOutHandle(HWAVEOUT hWaveOut)
+	bool IsObservedWaveOutHandleLocked(HWAVEOUT hWaveOut)
 	{
-		const uintptr_t HandleValue = WaveOutHandleValue(hWaveOut);
-		return HandleValue != 0 && g_ActiveWaveOutHandle.load(std::memory_order_acquire) == HandleValue;
+		return hWaveOut != nullptr && g_WaveOut.m_hActive == hWaveOut;
+	}
+
+	void ResetWaveOutPositionLocked()
+	{
+		g_WaveOut.m_PositionMs = 0;
+		g_WaveOut.m_ObservedQpc = 0;
+		g_WaveOut.m_ObservedTick = 0;
+		g_WaveOut.m_HasPosition = false;
+		g_WaveOut.m_Playing = false;
 	}
 
 	void ObserveWaveOutOpen(HWAVEOUT hWaveOut, const WAVEFORMATEX *pFormat)
 	{
-		if(!ObserveWaveOutHandle(hWaveOut))
+		std::scoped_lock Lock(g_WaveOutMutex);
+		if(!ObserveWaveOutHandleLocked(hWaveOut))
 			return;
-		g_WaveOutSampleRate.store(pFormat != nullptr ? pFormat->nSamplesPerSec : 0, std::memory_order_release);
-		g_WaveOutBytesPerSecond.store(pFormat != nullptr ? pFormat->nAvgBytesPerSec : 0, std::memory_order_release);
-		g_WaveOutPositionMs.store(0, std::memory_order_release);
-		g_WaveOutObservedQpc.store(0, std::memory_order_release);
-		g_WaveOutObservedTick.store(0, std::memory_order_release);
-		g_WaveOutHasPosition.store(false, std::memory_order_release);
-		g_WaveOutPlaying.store(false, std::memory_order_release);
+		g_WaveOut.m_SampleRate = pFormat != nullptr ? pFormat->nSamplesPerSec : 0;
+		g_WaveOut.m_BytesPerSecond = pFormat != nullptr ? pFormat->nAvgBytesPerSec : 0;
+		ResetWaveOutPositionLocked();
 	}
 
 	void ObserveWaveOutPosition(HWAVEOUT hWaveOut, const MMTIME &Time)
 	{
-		if(!ObserveWaveOutHandle(hWaveOut))
+		std::scoped_lock Lock(g_WaveOutMutex);
+		if(!ObserveWaveOutHandleLocked(hWaveOut))
 			return;
 		uint32_t Value = 0;
 		if(Time.wType == TIME_MS)
@@ -379,62 +409,55 @@ namespace
 			return;
 		int64_t PositionMs = 0;
 		if(!QmNeteaseHook::ConvertWaveOutPositionToMs(
-			   Time.wType, Value,
-			   g_WaveOutSampleRate.load(std::memory_order_acquire),
-			   g_WaveOutBytesPerSecond.load(std::memory_order_acquire),
-			   &PositionMs))
+			   Time.wType, Value, g_WaveOut.m_SampleRate, g_WaveOut.m_BytesPerSecond, &PositionMs))
 			return;
-		const bool HadPosition = g_WaveOutHasPosition.exchange(true, std::memory_order_acq_rel);
-		const int64_t PreviousPosition = g_WaveOutPositionMs.exchange(PositionMs, std::memory_order_acq_rel);
-		if(HadPosition && PositionMs != PreviousPosition)
-			g_WaveOutPlaying.store(true, std::memory_order_release);
+		if(g_WaveOut.m_HasPosition && PositionMs != g_WaveOut.m_PositionMs)
+			g_WaveOut.m_Playing = true;
+		g_WaveOut.m_HasPosition = true;
+		g_WaveOut.m_PositionMs = PositionMs;
 		LARGE_INTEGER Qpc{};
 		QueryPerformanceCounter(&Qpc);
-		g_WaveOutObservedQpc.store((uint64_t)Qpc.QuadPart, std::memory_order_release);
-		g_WaveOutObservedTick.store(GetTickCount64(), std::memory_order_release);
+		g_WaveOut.m_ObservedQpc = (uint64_t)Qpc.QuadPart;
+		g_WaveOut.m_ObservedTick = GetTickCount64();
 	}
 
 	void ObserveWaveOutPause(HWAVEOUT hWaveOut)
 	{
-		if(!IsObservedWaveOutHandle(hWaveOut))
+		std::scoped_lock Lock(g_WaveOutMutex);
+		if(!IsObservedWaveOutHandleLocked(hWaveOut))
 			return;
-		g_WaveOutPlaying.store(false, std::memory_order_release);
-		g_WaveOutTimelineGeneration.fetch_add(1, std::memory_order_acq_rel);
+		g_WaveOut.m_Playing = false;
+		++g_WaveOut.m_TimelineGeneration;
 	}
 
 	void ObserveWaveOutRestart(HWAVEOUT hWaveOut)
 	{
-		if(!IsObservedWaveOutHandle(hWaveOut))
+		std::scoped_lock Lock(g_WaveOutMutex);
+		if(!IsObservedWaveOutHandleLocked(hWaveOut))
 			return;
-		g_WaveOutPlaying.store(true, std::memory_order_release);
-		g_WaveOutTimelineGeneration.fetch_add(1, std::memory_order_acq_rel);
+		g_WaveOut.m_Playing = true;
+		++g_WaveOut.m_TimelineGeneration;
 	}
 
 	void ObserveWaveOutReset(HWAVEOUT hWaveOut)
 	{
-		if(!IsObservedWaveOutHandle(hWaveOut))
+		std::scoped_lock Lock(g_WaveOutMutex);
+		if(!IsObservedWaveOutHandleLocked(hWaveOut))
 			return;
-		g_WaveOutPositionMs.store(0, std::memory_order_release);
-		g_WaveOutObservedQpc.store(0, std::memory_order_release);
-		g_WaveOutObservedTick.store(0, std::memory_order_release);
-		g_WaveOutHasPosition.store(false, std::memory_order_release);
-		g_WaveOutPlaying.store(false, std::memory_order_release);
-		g_WaveOutTimelineGeneration.fetch_add(1, std::memory_order_acq_rel);
+		ResetWaveOutPositionLocked();
+		++g_WaveOut.m_TimelineGeneration;
 	}
 
 	void ObserveWaveOutClose(HWAVEOUT hWaveOut)
 	{
-		uintptr_t Expected = WaveOutHandleValue(hWaveOut);
-		if(Expected == 0 || !g_ActiveWaveOutHandle.compare_exchange_strong(Expected, 0, std::memory_order_acq_rel))
+		std::scoped_lock Lock(g_WaveOutMutex);
+		if(!IsObservedWaveOutHandleLocked(hWaveOut))
 			return;
-		g_WaveOutSampleRate.store(0, std::memory_order_release);
-		g_WaveOutBytesPerSecond.store(0, std::memory_order_release);
-		g_WaveOutPositionMs.store(0, std::memory_order_release);
-		g_WaveOutObservedQpc.store(0, std::memory_order_release);
-		g_WaveOutObservedTick.store(0, std::memory_order_release);
-		g_WaveOutHasPosition.store(false, std::memory_order_release);
-		g_WaveOutPlaying.store(false, std::memory_order_release);
-		g_WaveOutTimelineGeneration.fetch_add(1, std::memory_order_acq_rel);
+		g_WaveOut.m_hActive = nullptr;
+		g_WaveOut.m_SampleRate = 0;
+		g_WaveOut.m_BytesPerSecond = 0;
+		ResetWaveOutPositionLocked();
+		++g_WaveOut.m_TimelineGeneration;
 	}
 
 	MMRESULT WINAPI HookWaveOutOpen(LPHWAVEOUT phwo, UINT DeviceId, LPCWAVEFORMATEX pFormat, DWORD_PTR Callback, DWORD_PTR Instance, DWORD Flags)
@@ -463,7 +486,10 @@ namespace
 			return MMSYSERR_ERROR;
 		const MMRESULT Result = g_OriginalWaveOutWrite(hWaveOut, pHeader, HeaderSize);
 		if(Result == MMSYSERR_NOERROR)
-			ObserveWaveOutHandle(hWaveOut);
+		{
+			std::scoped_lock Lock(g_WaveOutMutex);
+			ObserveWaveOutHandleLocked(hWaveOut);
+		}
 		return Result;
 	}
 
@@ -529,16 +555,23 @@ namespace
 		return Status == MH_OK || Status == MH_ERROR_ENABLED;
 	}
 
-	void DisableHookTarget(void *pTarget)
+	bool DisableHooks(std::initializer_list<void *> Targets)
 	{
-		if(pTarget != nullptr)
-			MH_DisableHook(pTarget);
+		bool Disabled = true;
+		for(void *pTarget : Targets)
+		{
+			if(pTarget == nullptr)
+				continue;
+			const MH_STATUS Status = MH_DisableHook(pTarget);
+			if(Status != MH_OK && Status != MH_ERROR_DISABLED)
+				Disabled = false;
+		}
+		return Disabled;
 	}
 
-	void DisableGdipHooks()
+	bool DisableGdipHooks()
 	{
-		DisableHookTarget(g_pGdipAddPathStringTarget);
-		DisableHookTarget(g_pGdipDrawStringTarget);
+		return DisableHooks({g_pGdipAddPathStringTarget, g_pGdipDrawStringTarget});
 	}
 
 	bool EnableGdipHooks()
@@ -568,7 +601,8 @@ namespace
 	void InstallWaveOutHooks()
 	{
 		HMODULE hWinmm = GetModuleHandleW(L"winmm.dll");
-		if(hWinmm == nullptr)
+		const bool LoadedByUs = hWinmm == nullptr;
+		if(LoadedByUs)
 			hWinmm = LoadLibraryW(L"winmm.dll");
 		if(hWinmm == nullptr)
 			return;
@@ -579,6 +613,10 @@ namespace
 		CreateWinmmHook(hWinmm, "waveOutRestart", reinterpret_cast<void *>(&HookWaveOutRestart), reinterpret_cast<void **>(&g_OriginalWaveOutRestart), &g_pWaveOutRestartTarget);
 		CreateWinmmHook(hWinmm, "waveOutReset", reinterpret_cast<void *>(&HookWaveOutReset), reinterpret_cast<void **>(&g_OriginalWaveOutReset), &g_pWaveOutResetTarget);
 		CreateWinmmHook(hWinmm, "waveOutClose", reinterpret_cast<void *>(&HookWaveOutClose), reinterpret_cast<void **>(&g_OriginalWaveOutClose), &g_pWaveOutCloseTarget);
+		if(LoadedByUs && g_pWaveOutOpenTarget == nullptr && g_pWaveOutGetPositionTarget == nullptr &&
+			g_pWaveOutWriteTarget == nullptr && g_pWaveOutPauseTarget == nullptr && g_pWaveOutRestartTarget == nullptr &&
+			g_pWaveOutResetTarget == nullptr && g_pWaveOutCloseTarget == nullptr)
+			FreeLibrary(hWinmm);
 	}
 
 	void EnableWaveOutHooks()
@@ -592,15 +630,10 @@ namespace
 		EnableHookTarget(g_pWaveOutCloseTarget);
 	}
 
-	void DisableWaveOutHooks()
+	bool DisableWaveOutHooks()
 	{
-		DisableHookTarget(g_pWaveOutOpenTarget);
-		DisableHookTarget(g_pWaveOutGetPositionTarget);
-		DisableHookTarget(g_pWaveOutWriteTarget);
-		DisableHookTarget(g_pWaveOutPauseTarget);
-		DisableHookTarget(g_pWaveOutRestartTarget);
-		DisableHookTarget(g_pWaveOutResetTarget);
-		DisableHookTarget(g_pWaveOutCloseTarget);
+		return DisableHooks({g_pWaveOutOpenTarget, g_pWaveOutGetPositionTarget, g_pWaveOutWriteTarget,
+			g_pWaveOutPauseTarget, g_pWaveOutRestartTarget, g_pWaveOutResetTarget, g_pWaveOutCloseTarget});
 	}
 
 	bool InstallHooks()
@@ -671,13 +704,13 @@ namespace
 		return true;
 	}
 
-	void SuspendHooks()
+	bool SuspendHooks()
 	{
-		if(!g_HooksInstalled.exchange(false, std::memory_order_acq_rel))
-			return;
-		if(HasGdipHooks())
-			DisableGdipHooks();
-		DisableWaveOutHooks();
+		g_HooksInstalled.store(false, std::memory_order_release);
+		// 安装中途失败时也可能留下已启用的回调，仍需逐个停用。
+		const bool GdipDisabled = DisableGdipHooks();
+		const bool WaveOutDisabled = DisableWaveOutHooks();
+		return GdipDisabled && WaveOutDisabled;
 	}
 
 	void Publish(QmNeteaseHook::SSnapshot Snapshot)
@@ -732,10 +765,10 @@ namespace
 	}
 
 	template<typename TOperation>
-	bool GetAsyncResult(const TOperation &Operation)
+	bool GetAsyncResult(const TOperation &Operation, int &RemainingPolls)
 	{
 		using winrt::Windows::Foundation::AsyncStatus;
-		for(int i = 0; i < 100 && !IsWorkCancelled(); ++i)
+		for(; RemainingPolls > 0 && !IsWorkCancelled(); --RemainingPolls)
 		{
 			const AsyncStatus Status = Operation.Status();
 			if(Status == AsyncStatus::Completed)
@@ -744,7 +777,16 @@ namespace
 				return false;
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
+		if(Operation.Status() == AsyncStatus::Started)
+			Operation.Cancel();
 		return false;
+	}
+
+	template<typename TOperation>
+	bool GetAsyncResult(const TOperation &Operation)
+	{
+		int RemainingPolls = MAX_ASYNC_POLLS;
+		return GetAsyncResult(Operation, RemainingPolls);
 	}
 
 	std::string WideStringToUtf8(const std::wstring &Value)
@@ -1123,7 +1165,7 @@ namespace
 		const ULONGLONG Size = ((ULONGLONG)Attributes.nFileSizeHigh << 32) | Attributes.nFileSizeLow;
 		const ULONGLONG WriteTime = ((ULONGLONG)Attributes.ftLastWriteTime.dwHighDateTime << 32) | Attributes.ftLastWriteTime.dwLowDateTime;
 		if(pCache->m_Loaded && pCache->m_Size == Size && pCache->m_WriteTime == WriteTime)
-			return true;
+			return false;
 		std::string Contents;
 		ULONGLONG ReadSize = 0;
 		ULONGLONG ReadWriteTime = 0;
@@ -1149,16 +1191,21 @@ namespace
 		if(BaseDirectory.empty())
 			return;
 		const std::filesystem::path FileDirectory = std::filesystem::path(BaseDirectory) / L"NetEase" / L"CloudMusic" / L"webdata" / L"file";
-		RefreshLocalMetadataFile((FileDirectory / L"playingList").wstring(), &g_PlayingListCache);
-		RefreshLocalMetadataFile((FileDirectory / L"lastTimePlayingList").wstring(), &g_LastTimePlayingListCache);
+		static bool s_TracksDirty = false;
+		if(RefreshLocalMetadataFile((FileDirectory / L"playingList").wstring(), &g_PlayingListCache))
+			s_TracksDirty = true;
+		if(RefreshLocalMetadataFile((FileDirectory / L"lastTimePlayingList").wstring(), &g_LastTimePlayingListCache))
+			s_TracksDirty = true;
+		if(!s_TracksDirty)
+			return;
 
-		g_vLocalTracks.clear();
-		const auto AppendTracks = [](const std::vector<SLocalTrackMetadata> &Tracks) {
+		std::vector<SLocalTrackMetadata> vTracks;
+		const auto AppendTracks = [&vTracks](const std::vector<SLocalTrackMetadata> &Tracks) {
 			for(const SLocalTrackMetadata &Track : Tracks)
 			{
 				const std::string Key = NormalizeMediaField(Track.m_Title) + '\n' + NormalizeArtistList(Track.m_Artist) + '\n' + NormalizeMediaField(Track.m_Album);
 				bool Duplicate = false;
-				for(const SLocalTrackMetadata &Existing : g_vLocalTracks)
+				for(const SLocalTrackMetadata &Existing : vTracks)
 				{
 					const std::string ExistingKey = NormalizeMediaField(Existing.m_Title) + '\n' + NormalizeArtistList(Existing.m_Artist) + '\n' + NormalizeMediaField(Existing.m_Album);
 					if((!Track.m_SongId.empty() && Track.m_SongId == Existing.m_SongId) || Key == ExistingKey)
@@ -1168,12 +1215,14 @@ namespace
 					}
 				}
 				if(!Duplicate)
-					g_vLocalTracks.push_back(Track);
+					vTracks.push_back(Track);
 			}
 		};
 		// playingList 更接近当前播放状态，必须优先放入候选。
 		AppendTracks(g_PlayingListCache.m_vTracks);
 		AppendTracks(g_LastTimePlayingListCache.m_vTracks);
+		g_vLocalTracks.swap(vTracks);
+		s_TracksDirty = false;
 	}
 
 	bool FindLocalTrack(const std::string &Title, const std::string &Artist, int64_t DurationMs, SLocalTrackMetadata *pTrack)
@@ -1265,12 +1314,9 @@ namespace
 		return Token;
 	}
 
-	bool WriteFileAtomically(const std::wstring &Path, const std::vector<uint8_t> &Data)
+	bool WriteTemporaryCoverFile(const std::wstring &Path, const std::vector<uint8_t> &Data)
 	{
-		if(Path.empty() || Data.empty())
-			return false;
-		const std::wstring TemporaryPath = Path + L".tmp";
-		HANDLE hFile = CreateFileW(TemporaryPath.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY, nullptr);
+		HANDLE hFile = CreateFileW(Path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_NEW, FILE_ATTRIBUTE_TEMPORARY, nullptr);
 		if(hFile == INVALID_HANDLE_VALUE)
 			return false;
 		bool Success = true;
@@ -1290,16 +1336,46 @@ namespace
 			Success = FlushFileBuffers(hFile) != FALSE;
 		CloseHandle(hFile);
 		if(!Success)
+			DeleteFileW(Path.c_str());
+		return Success;
+	}
+
+	void PublishCoverFile(const std::string &MediaKey, const std::string &SongId, uint64_t Generation, const std::vector<uint8_t> &PngBytes)
+	{
+		if(MediaKey.empty() || PngBytes.empty() || IsWorkCancelled())
+			return;
+		const std::wstring Directory = CoverCacheDirectory();
+		if(Directory.empty())
+			return;
+		const std::string Token = CoverFileToken(SongId, MediaKey);
+		const std::wstring Path = (std::filesystem::path(Directory) / (L"cover-" + std::wstring(Token.begin(), Token.end()) + L".png")).wstring();
+		std::string Utf8Path = WideStringToUtf8(Path);
+		if(Utf8Path.empty())
+			return;
+
+		static std::atomic<uint64_t> s_TemporaryId{0};
+		const std::wstring TemporaryPath = Path + L"." + std::to_wstring(GetCurrentProcessId()) + L"." +
+					   std::to_wstring(s_TemporaryId.fetch_add(1, std::memory_order_relaxed)) + L".tmp";
+		if(!WriteTemporaryCoverFile(TemporaryPath, PngBytes))
+			return;
+		struct CTemporaryFileCleanup
 		{
-			DeleteFileW(TemporaryPath.c_str());
-			return false;
-		}
-		if(!MoveFileExW(TemporaryPath.c_str(), Path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
-		{
-			DeleteFileW(TemporaryPath.c_str());
-			return false;
-		}
-		return true;
+			const std::wstring &m_Path;
+			bool m_Moved = false;
+			~CTemporaryFileCleanup()
+			{
+				if(!m_Moved)
+					DeleteFileW(m_Path.c_str());
+			}
+		} TemporaryFileCleanup{TemporaryPath};
+
+		// 写入和刷新临时文件放在锁外，替换成品前再核对请求是否仍然有效。
+		std::scoped_lock Lock(g_CoverMutex);
+		if(g_CoverGeneration != Generation || IsWorkCancelled() ||
+			!MoveFileExW(TemporaryPath.c_str(), Path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+			return;
+		TemporaryFileCleanup.m_Moved = true;
+		g_CoverPath = std::move(Utf8Path);
 	}
 
 	bool EncodeImageStreamPng(const winrt::Windows::Storage::Streams::IRandomAccessStream &Stream, std::vector<uint8_t> *pBytes)
@@ -1400,6 +1476,33 @@ namespace
 		}
 	}
 
+	class CBoundedCoverOutputStream : public winrt::implements<CBoundedCoverOutputStream,
+					       Windows::Storage::Streams::IOutputStream, Windows::Foundation::IClosable>
+	{
+		Windows::Storage::Streams::IOutputStream m_Output;
+		std::mutex m_Mutex;
+		uint64_t m_BytesAccepted = 0;
+
+	public:
+		explicit CBoundedCoverOutputStream(Windows::Storage::Streams::IOutputStream Output) :
+			m_Output(std::move(Output)) {}
+
+		Windows::Foundation::IAsyncOperationWithProgress<uint32_t, uint32_t> WriteAsync(const Windows::Storage::Streams::IBuffer &Buffer)
+		{
+			const uint32_t Length = Buffer.Length();
+			{
+				std::scoped_lock Lock(m_Mutex);
+				if(Length > COVER_MAX_DOWNLOAD_BYTES - m_BytesAccepted)
+					throw winrt::hresult_out_of_bounds();
+				m_BytesAccepted += Length;
+			}
+			return m_Output.WriteAsync(Buffer);
+		}
+
+		Windows::Foundation::IAsyncOperation<bool> FlushAsync() { return m_Output.FlushAsync(); }
+		void Close() { m_Output.Close(); }
+	};
+
 	bool EncodeCoverUrlPng(const std::string &Url, std::vector<uint8_t> *pBytes)
 	{
 		if(Url.empty() || pBytes == nullptr)
@@ -1409,19 +1512,33 @@ namespace
 			const std::wstring WideUrl = Utf8StringToWide(Url);
 			if(WideUrl.empty())
 				return false;
-			const winrt::Windows::Web::Http::HttpClient Client;
-			const auto BufferOperation = Client.GetBufferAsync(winrt::Windows::Foundation::Uri(winrt::hstring(WideUrl)));
-			if(!GetAsyncResult(BufferOperation))
-				return false;
-			const auto Buffer = BufferOperation.GetResults();
-			if(!Buffer || Buffer.Length() == 0 || Buffer.Length() > COVER_MAX_DOWNLOAD_BYTES)
-				return false;
 			const winrt::Windows::Storage::Streams::InMemoryRandomAccessStream Stream;
-			const winrt::Windows::Storage::Streams::DataWriter Writer(Stream);
-			Writer.WriteBuffer(Buffer);
-			const auto StoreOperation = Writer.StoreAsync();
-			if(!GetAsyncResult(StoreOperation))
-				return false;
+			{
+				using namespace winrt::Windows::Web::Http;
+				const HttpClient Client;
+				int RemainingPolls = MAX_ASYNC_POLLS;
+				const auto ResponseOperation = Client.GetAsync(winrt::Windows::Foundation::Uri(winrt::hstring(WideUrl)), HttpCompletionOption::ResponseHeadersRead);
+				if(!GetAsyncResult(ResponseOperation, RemainingPolls))
+					return false;
+				const auto Response = ResponseOperation.GetResults();
+				if(!Response || !Response.IsSuccessStatusCode())
+					return false;
+				const auto Content = Response.Content();
+				if(!Content)
+					return false;
+
+				// 写入前限制实际字节数，缺失 Content-Length 时也适用。
+				const auto Length = Content.Headers().ContentLength();
+				if(Length && Length.Value() > COVER_MAX_DOWNLOAD_BYTES)
+					return false;
+				const auto Output = winrt::make<CBoundedCoverOutputStream>(Stream.GetOutputStreamAt(0));
+				const auto WriteOperation = Content.WriteToStreamAsync(Output);
+				if(!GetAsyncResult(WriteOperation, RemainingPolls))
+					return false;
+				const uint64_t Written = WriteOperation.GetResults();
+				if(Written == 0 || Written > COVER_MAX_DOWNLOAD_BYTES || Stream.Size() != Written)
+					return false;
+			}
 			Stream.Seek(0);
 			return EncodeImageStreamPng(Stream, pBytes);
 		}
@@ -1429,6 +1546,20 @@ namespace
 		{
 			return false;
 		}
+	}
+
+	void SetCoverSourceLocked(const std::string &MediaKey, const std::string &SongId, const std::string &Url)
+	{
+		// 先完成可能失败的复制，随后一起更新请求字段。
+		std::string NewKey = MediaKey;
+		std::string NewSongId = SongId;
+		std::string NewUrl = Url;
+		g_CoverKey.swap(NewKey);
+		g_CoverSongId.swap(NewSongId);
+		g_CoverUrl.swap(NewUrl);
+		g_CoverPath.clear();
+		g_CoverLastAttemptTick = 0;
+		++g_CoverGeneration;
 	}
 
 	void ClearCoverCache()
@@ -1439,6 +1570,7 @@ namespace
 		g_CoverUrl.clear();
 		g_CoverSongId.clear();
 		g_CoverLastAttemptTick = 0;
+		++g_CoverGeneration;
 		++g_CoverRequestedSerial;
 	}
 
@@ -1447,16 +1579,13 @@ namespace
 		if(MediaKey.empty())
 			return;
 		bool NeedUpdate = false;
+		uint64_t Generation = 0;
 		const ULONGLONG Now = GetTickCount64();
 		{
 			std::scoped_lock Lock(g_CoverMutex);
 			if(g_CoverKey != MediaKey)
 			{
-				g_CoverKey = MediaKey;
-				g_CoverPath.clear();
-				g_CoverUrl.clear();
-				g_CoverSongId = SongId;
-				g_CoverLastAttemptTick = 0;
+				SetCoverSourceLocked(MediaKey, SongId, {});
 				++g_CoverRequestedSerial;
 				NeedUpdate = true;
 			}
@@ -1465,31 +1594,21 @@ namespace
 				NeedUpdate = true;
 			}
 			if(NeedUpdate)
+			{
 				g_CoverLastAttemptTick = Now;
+				Generation = g_CoverGeneration;
+			}
 		}
 		if(!NeedUpdate || !Thumbnail)
 			return;
 		std::vector<uint8_t> PngBytes;
-		if(!EncodeThumbnailPng(Thumbnail, &PngBytes))
-			return;
-		const std::wstring Directory = CoverCacheDirectory();
-		if(Directory.empty())
-			return;
-		const std::string Token = CoverFileToken(SongId, MediaKey);
-		const std::wstring Path = (std::filesystem::path(Directory) / (L"cover-" + std::wstring(Token.begin(), Token.end()) + L".png")).wstring();
-		if(!WriteFileAtomically(Path, PngBytes))
-			return;
-		const std::string Utf8Path = WideStringToUtf8(Path);
-		if(Utf8Path.empty())
-			return;
-		std::scoped_lock Lock(g_CoverMutex);
-		if(g_CoverKey == MediaKey)
-			g_CoverPath = Utf8Path;
+		if(EncodeThumbnailPng(Thumbnail, &PngBytes))
+			PublishCoverFile(MediaKey, SongId, Generation, PngBytes);
 	}
 
 	struct SCoverFetchRequest
 	{
-		uint64_t m_Serial = 0;
+		uint64_t m_Generation = 0;
 		std::string m_MediaKey;
 		std::string m_SongId;
 		std::string m_Url;
@@ -1505,31 +1624,12 @@ namespace
 			g_CoverFetchScheduled = false;
 			return false;
 		}
-		g_CoverHandledSerial = g_CoverRequestedSerial;
-		pRequest->m_Serial = g_CoverHandledSerial;
+		pRequest->m_Generation = g_CoverGeneration;
 		pRequest->m_MediaKey = g_CoverKey;
 		pRequest->m_SongId = g_CoverSongId;
 		pRequest->m_Url = g_CoverUrl;
+		g_CoverHandledSerial = g_CoverRequestedSerial;
 		return true;
-	}
-
-	void CompleteCoverFetchRequest(const SCoverFetchRequest &Request, const std::vector<uint8_t> &PngBytes)
-	{
-		if(Request.m_MediaKey.empty() || PngBytes.empty())
-			return;
-		const std::wstring Directory = CoverCacheDirectory();
-		if(Directory.empty())
-			return;
-		const std::string Token = CoverFileToken(Request.m_SongId, Request.m_MediaKey);
-		const std::wstring Path = (std::filesystem::path(Directory) / (L"cover-" + std::wstring(Token.begin(), Token.end()) + L".png")).wstring();
-		if(!WriteFileAtomically(Path, PngBytes))
-			return;
-		const std::string Utf8Path = WideStringToUtf8(Path);
-		if(Utf8Path.empty())
-			return;
-		std::scoped_lock Lock(g_CoverMutex);
-		if(g_CoverKey == Request.m_MediaKey && g_CoverUrl == Request.m_Url)
-			g_CoverPath = Utf8Path;
 	}
 
 	void CALLBACK CoverFetchWorkCallback(PTP_CALLBACK_INSTANCE, void *)
@@ -1552,8 +1652,8 @@ namespace
 				if(Request.m_MediaKey.empty() || Request.m_Url.empty())
 					continue;
 				std::vector<uint8_t> PngBytes;
-				if(EncodeCoverUrlPng(Request.m_Url, &PngBytes) && !IsWorkCancelled())
-					CompleteCoverFetchRequest(Request, PngBytes);
+				if(EncodeCoverUrlPng(Request.m_Url, &PngBytes))
+					PublishCoverFile(Request.m_MediaKey, Request.m_SongId, Request.m_Generation, PngBytes);
 			}
 		}
 		catch(...)
@@ -1577,13 +1677,7 @@ namespace
 		{
 			std::scoped_lock Lock(g_CoverMutex);
 			if(g_CoverKey != MediaKey || g_CoverUrl != Url)
-			{
-				g_CoverKey = MediaKey;
-				g_CoverPath.clear();
-				g_CoverUrl = Url;
-				g_CoverSongId = SongId;
-				g_CoverLastAttemptTick = 0;
-			}
+				SetCoverSourceLocked(MediaKey, SongId, Url);
 			if(g_CoverPath.empty() && (g_CoverLastAttemptTick == 0 || Now - g_CoverLastAttemptTick >= 1000))
 			{
 				g_CoverLastAttemptTick = Now;
@@ -1632,16 +1726,18 @@ namespace
 
 	void ApplyWaveOutTimeline(QmNeteaseHook::SSnapshot *pSnapshot)
 	{
-		if(pSnapshot == nullptr || !g_WaveOutHasPosition.load(std::memory_order_acquire))
+		if(pSnapshot == nullptr)
 			return;
-		const int64_t PositionMs = std::max<int64_t>(0, g_WaveOutPositionMs.load(std::memory_order_acquire));
-		pSnapshot->m_PositionMs = PositionMs;
+		std::scoped_lock Lock(g_WaveOutMutex);
+		if(!g_WaveOut.m_HasPosition)
+			return;
+		pSnapshot->m_PositionMs = std::max<int64_t>(0, g_WaveOut.m_PositionMs);
 		if(pSnapshot->m_DurationMs > 0 && pSnapshot->m_PositionMs > pSnapshot->m_DurationMs)
 			pSnapshot->m_PositionMs = pSnapshot->m_DurationMs;
-		pSnapshot->m_ObservedQpc = g_WaveOutObservedQpc.load(std::memory_order_acquire);
-		pSnapshot->m_TimelineGeneration = g_WaveOutTimelineGeneration.load(std::memory_order_acquire);
-		const uint64_t ObservedTick = g_WaveOutObservedTick.load(std::memory_order_acquire);
-		if(ObservedTick != 0 && GetTickCount64() - ObservedTick <= WAVE_OUT_POSITION_STALE_MS && g_WaveOutPlaying.load(std::memory_order_acquire))
+		pSnapshot->m_ObservedQpc = g_WaveOut.m_ObservedQpc;
+		pSnapshot->m_TimelineGeneration = g_WaveOut.m_TimelineGeneration;
+		const uint64_t ObservedTick = g_WaveOut.m_ObservedTick;
+		if(ObservedTick != 0 && GetTickCount64() - ObservedTick <= WAVE_OUT_POSITION_STALE_MS && g_WaveOut.m_Playing)
 			pSnapshot->m_Status |= QmNeteaseHook::STATUS_PLAYING;
 	}
 
@@ -1693,8 +1789,13 @@ namespace
 			}
 			if(Timeline)
 			{
-				const int64_t Duration100ns = std::max<int64_t>(0, Timeline.EndTime().count() - Timeline.StartTime().count());
-				pSnapshot->m_DurationMs = Duration100ns / 10000;
+				const int64_t Start100ns = Timeline.StartTime().count();
+				const int64_t End100ns = Timeline.EndTime().count();
+				if(End100ns > Start100ns)
+				{
+					const uint64_t Duration100ns = (uint64_t)End100ns - (uint64_t)Start100ns;
+					pSnapshot->m_DurationMs = (int64_t)(Duration100ns / 10000);
+				}
 			}
 
 			SLocalTrackMetadata LocalTrack;
@@ -1797,31 +1898,46 @@ namespace
 		PublishV5Fallback(Snapshot);
 	}
 
+	void ResetActiveSequence(QmNeteaseHook::SSharedBlock *pShared)
+	{
+		InterlockedExchange64(reinterpret_cast<volatile LONG64 *>(&pShared->m_ActiveSequence), 0);
+	}
+
 	void AcknowledgeStop()
 	{
 		if(g_pShared == nullptr)
 			return;
-		InterlockedExchange64(reinterpret_cast<volatile LONG64 *>(&g_pShared->m_ActiveSequence), 0);
-		MemoryBarrier();
-		InterlockedOr(reinterpret_cast<volatile LONG *>(&g_pShared->m_ControlFlags), (LONG)QmNeteaseHook::CONTROL_STOP_ACKNOWLEDGED);
+		ResetActiveSequence(g_pShared);
+		auto *pFlags = reinterpret_cast<volatile LONG *>(&g_pShared->m_ControlFlags);
+		LONG Flags = InterlockedCompareExchange(pFlags, 0, 0);
+		while((Flags & (LONG)QmNeteaseHook::CONTROL_STOP_REQUESTED) != 0)
+		{
+			const LONG Previous = InterlockedCompareExchange(pFlags, Flags | (LONG)QmNeteaseHook::CONTROL_STOP_ACKNOWLEDGED, Flags);
+			if(Previous == Flags)
+				break;
+			Flags = Previous;
+		}
 	}
 
-	void ClearStopAcknowledgement()
+	void ClearStopAcknowledgement(QmNeteaseHook::SSharedBlock *pShared)
 	{
-		if(g_pShared != nullptr)
-			InterlockedAnd(reinterpret_cast<volatile LONG *>(&g_pShared->m_ControlFlags), ~(LONG)QmNeteaseHook::CONTROL_STOP_ACKNOWLEDGED);
+		if(pShared != nullptr)
+			InterlockedAnd(reinterpret_cast<volatile LONG *>(&pShared->m_ControlFlags), ~(LONG)QmNeteaseHook::CONTROL_STOP_ACKNOWLEDGED);
 	}
 
-	void EnterDormantState()
+	bool EnterDormantState()
 	{
-		SuspendHooks();
+		if(!SuspendHooks())
+			return false;
 		ClearCapturedText();
 		ClearCoverCache();
 		AcknowledgeStop();
+		return true;
 	}
 
 	void WorkerMain()
 	{
+		std::unique_ptr<void, decltype(&CloseHandle)> Mapping(nullptr, CloseHandle);
 		bool ApartmentInitialized = false;
 		bool Dormant = false;
 		try
@@ -1830,28 +1946,32 @@ namespace
 			ApartmentInitialized = true;
 			g_pV5Writer = std::make_unique<QmNeteaseHook::CV5Writer>();
 			g_V5WriterReady.store(g_pV5Writer->Open(true), std::memory_order_release);
-			g_hMapping = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(QmNeteaseHook::SSharedBlock), SHARED_MAPPING_NAME);
-			if(g_hMapping != nullptr)
+			Mapping.reset(CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(QmNeteaseHook::SSharedBlock), SHARED_MAPPING_NAME));
+			if(Mapping)
 			{
-				g_pShared = static_cast<QmNeteaseHook::SSharedBlock *>(MapViewOfFile(g_hMapping, FILE_MAP_WRITE, 0, 0, sizeof(QmNeteaseHook::SSharedBlock)));
-				if(g_pShared != nullptr)
-					std::memset(g_pShared, 0, sizeof(*g_pShared));
+				auto *pShared = static_cast<QmNeteaseHook::SSharedBlock *>(MapViewOfFile(Mapping.get(), FILE_MAP_WRITE, 0, 0, sizeof(QmNeteaseHook::SSharedBlock)));
+				if(pShared == nullptr)
+					Mapping.reset();
+				else
+				{
+					// 保留客户端可能已写入的停止请求。旧快照在序号清零后不可读。
+					ResetActiveSequence(pShared);
+					ClearStopAcknowledgement(pShared);
+					SetSharedView(pShared);
+				}
 			}
 			while(!IsStopRequested())
 			{
 				if(IsControlStopRequested())
 				{
 					if(!Dormant)
-					{
-						EnterDormantState();
-						Dormant = true;
-					}
+						Dormant = EnterDormantState();
 					std::this_thread::sleep_for(std::chrono::milliseconds(50));
 					continue;
 				}
 				if(Dormant)
 				{
-					ClearStopAcknowledgement();
+					ClearStopAcknowledgement(g_pShared);
 					Dormant = false;
 				}
 				if(!g_HooksInstalled.load(std::memory_order_acquire) && !InstallHooks())
@@ -1859,24 +1979,36 @@ namespace
 					std::this_thread::sleep_for(std::chrono::milliseconds(250));
 					continue;
 				}
-				QueryAndPublish();
+				try
+				{
+					QueryAndPublish();
+				}
+				catch(...)
+				{
+					// 单轮采集失败后继续轮询。读取端按原规则判断快照时效。
+				}
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
 		}
 		catch(...)
 		{
 		}
-		// Helper 不会卸载 DLL；进程退出时由系统回收 Hook 资源。这里不能释放
-		// trampoline，否则并发的网易云渲染线程可能仍会从中返回。
-		SuspendHooks();
-		if(IsControlStopRequested())
-			AcknowledgeStop();
-		if(g_pV5Writer)
+		g_Stop.store(true, std::memory_order_release);
+		// Helper 不会卸载 DLL。仍在返回的回调需要跳板，跳板随进程回收。
+		const bool HooksSuspended = SuspendHooks();
+		auto *pShared = g_pShared;
+		if(pShared != nullptr)
 		{
-			g_pV5Writer->Close();
-			g_pV5Writer.reset();
+			if(HooksSuspended)
+				AcknowledgeStop();
+			else
+				ResetActiveSequence(pShared);
+			SetSharedView(nullptr);
+			UnmapViewOfFile(pShared);
 		}
+		Mapping.reset();
 		g_V5WriterReady.store(false, std::memory_order_release);
+		g_pV5Writer.reset();
 		if(ApartmentInitialized)
 			winrt::uninit_apartment();
 	}
