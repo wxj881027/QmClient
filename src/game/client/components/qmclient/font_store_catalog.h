@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_FONT_STORE_CATALOG_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_FONT_STORE_CATALOG_H
 
+#include "bounded_file_reader.h"
 #include "font_download_storage.h"
 
 #include <base/log.h>
@@ -12,7 +13,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <cstdlib>
 #include <map>
 #include <memory>
 #include <new>
@@ -21,6 +21,9 @@
 
 namespace fontstore
 {
+	inline constexpr unsigned MAX_CATALOG_FILE_BYTES = 8 * 1024 * 1024;
+	inline constexpr unsigned long MAX_CATALOG_JSON_BYTES = 64 * 1024 * 1024;
+
 	struct SEntry
 	{
 		std::string m_Family; // 字体族显示名
@@ -68,15 +71,14 @@ namespace fontstore
 	template<typename TEntryAllocator, typename TFamilyAllocator>
 	void LoadCatalog(IStorage *pStorage, std::vector<SEntry, TEntryAllocator> &vEntries, std::vector<SFamily, TFamilyAllocator> &vFamilies)
 	{
-		void *pCatalogData = nullptr;
-		unsigned CatalogSize = 0;
-		// TYPE_ALL 会先搜用户目录再搜数据目录：用户侧同名目录可整体覆盖随包目录。
-		const bool Read = pStorage->ReadFile("fonts/fonts_store/font_catalog.json", IStorage::TYPE_ALL, &pCatalogData, &CatalogSize);
-		const std::unique_ptr<void, decltype(&free)> pFile(pCatalogData, free);
-		if(!Read)
+		CQmCheckedFileData File;
+		// TYPE_ALL 优先读取用户目录，只有文件缺失时才搜索后续存储根。
+		if(!File.Read(*pStorage, "fonts/fonts_store/font_catalog.json", IStorage::TYPE_ALL, MAX_CATALOG_FILE_BYTES))
 			return;
 
-		const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(json_parse((json_char *)pFile.get(), CatalogSize), json_value_free);
+		json_settings Settings{};
+		Settings.max_memory = MAX_CATALOG_JSON_BYTES;
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(json_parse_ex(&Settings, static_cast<const json_char *>(File.Data()), File.Size(), nullptr), json_value_free);
 		// 同一对候选完成后才替换调用方状态，异常不能留下先写入的族索引。
 		std::vector<SEntry, TEntryAllocator> vCandidateEntries(vEntries, vEntries.get_allocator());
 		std::vector<SFamily, TFamilyAllocator> vCandidateFamilies(vFamilies, vFamilies.get_allocator());

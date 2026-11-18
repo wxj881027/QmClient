@@ -7,6 +7,7 @@
 #include <test/test.h>
 
 #include <new>
+#include <string>
 
 namespace
 {
@@ -25,7 +26,8 @@ namespace
 		{
 			IOHANDLE File = m_pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 			ASSERT_NE(File, nullptr);
-			io_write(File, pText, str_length(pText));
+			const unsigned Length = str_length(pText);
+			EXPECT_EQ(io_write(File, pText, Length), Length);
 			io_close(File);
 		}
 		fontstore::SCatalog Load()
@@ -91,6 +93,29 @@ TEST_F(CQmFontStoreCatalog, MalformedCatalogCompletesWithEmptyResult)
 	const auto Result = Load();
 	EXPECT_TRUE(Result.m_vEntries.empty());
 	EXPECT_TRUE(Result.m_vFamilies.empty());
+}
+
+TEST_F(CQmFontStoreCatalog, RejectsCatalogAboveReadLimitAndLoadsAtTheLimit)
+{
+	const char *pPath = "fonts/fonts_store/font_catalog.json";
+	const char aCatalog[] = R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf"}]})";
+	std::string PaddedCatalog(fontstore::MAX_CATALOG_FILE_BYTES + 1, ' ');
+	PaddedCatalog.replace(0, sizeof(aCatalog) - 1, aCatalog);
+
+	std::vector<fontstore::SEntry> vEntries;
+	std::vector<fontstore::SFamily> vFamilies;
+	ASSERT_NO_FATAL_FAILURE(WriteFile(pPath, PaddedCatalog.c_str()));
+	fontstore::LoadCatalog(m_pStorage.get(), vEntries, vFamilies);
+	EXPECT_TRUE(vEntries.empty());
+	EXPECT_TRUE(vFamilies.empty());
+
+	PaddedCatalog.pop_back();
+	ASSERT_NO_FATAL_FAILURE(WriteFile(pPath, PaddedCatalog.c_str()));
+	fontstore::LoadCatalog(m_pStorage.get(), vEntries, vFamilies);
+	ASSERT_EQ(vEntries.size(), 1u);
+	ASSERT_EQ(vFamilies.size(), 1u);
+	EXPECT_EQ(vEntries[0].m_File, "Alpha.ttf");
+	EXPECT_EQ(vFamilies[0].m_vEntryIndices, (std::vector<size_t>{0}));
 }
 
 namespace
