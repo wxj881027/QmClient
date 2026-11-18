@@ -77,7 +77,14 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelCol, &ControlCol);
 			Ui()->DoLabel(&LabelCol, pLabel, BodySize, TEXTALIGN_ML);
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, &Row, pValue, &LabelCol);
-			RenderSliderWithValueInput(pId, ControlCol, pValue, MinValue, MaxValue, pSuffix);
+			if(MinValue != MaxValue)
+				RenderSliderWithValueInput(pId, ControlCol, pValue, MinValue, MaxValue, pSuffix);
+			else if(Flow.Drawing())
+			{
+				char aValue[32];
+				str_format(aValue, sizeof(aValue), "%d%s", MinValue, pSuffix);
+				DoSettingsInlineHint(Ui(), pTextId, ControlCol, 0.0f, aValue, Metrics.m_SmallSize);
+			}
 		}
 		if(TrailingSpacing)
 			Flow.Space(ui_token::settings::RowGap(LineSpacing));
