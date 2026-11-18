@@ -70,6 +70,26 @@ TEST(QmRouteRenderCache, ResetRebuildsEvenWhenNewMapReusesTheSameKey)
 	EXPECT_EQ(Cache.Point(0), vec2(2.0f, 0.0f));
 }
 
+TEST(QmRouteRenderCache, InvalidatingReleasesRouteAndViewportBuffers)
+{
+	CQmRouteRenderCache Cache;
+	const CQmRouteRenderCache::SView View{-1.0f, -1.0f, 1.0f, 1.0f};
+	ASSERT_TRUE(Cache.Update({}, [](std::vector<vec2> &vPoints) {
+		vPoints.emplace_back(0.0f, 0.0f);
+		return true;
+	}));
+	ASSERT_EQ(Cache.QueryVisible(View).size(), 1u);
+
+	Cache.Invalidate();
+
+	EXPECT_EQ(Cache.QueryVisible(View).capacity(), 0u);
+	ASSERT_TRUE(Cache.Update({}, [](std::vector<vec2> &vPoints) {
+		EXPECT_EQ(vPoints.capacity(), 0u);
+		vPoints.emplace_back(0.0f, 0.0f);
+		return true;
+	}));
+}
+
 TEST(QmRouteRenderCache, FailedBuildHidesPartialPointsAndNewRevisionCanRecover)
 {
 	CQmRouteRenderCache Cache;

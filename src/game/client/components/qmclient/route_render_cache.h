@@ -63,6 +63,15 @@ private:
 	std::vector<SNode> m_vNodes;
 	std::vector<size_t> m_vVisible;
 
+	void ClearRoute()
+	{
+		m_KeyValid = false;
+		m_ViewValid = false;
+		m_vPoints.clear();
+		m_vNodes.clear();
+		m_vVisible.clear();
+	}
+
 	size_t BuildNode(size_t Begin, size_t End)
 	{
 		const size_t NodeIndex = m_vNodes.size();
@@ -127,7 +136,7 @@ public:
 	{
 		if(m_KeyValid && m_Key == Key)
 			return !m_vPoints.empty();
-		Invalidate();
+		ClearRoute();
 		try
 		{
 			if(!Builder(m_vPoints))
@@ -141,7 +150,7 @@ public:
 		catch(const std::bad_alloc &)
 		{
 			// 保持键无效，下一帧可以为同一条路线重建。
-			Invalidate();
+			ClearRoute();
 			return false;
 		}
 		m_Key = Key;
@@ -178,11 +187,11 @@ public:
 
 	void Invalidate()
 	{
-		m_KeyValid = false;
-		m_ViewValid = false;
-		m_vPoints.clear();
-		m_vNodes.clear();
-		m_vVisible.clear();
+		ClearRoute();
+		// 关闭调试路线或切换地图后回收旧缓冲，换路线键时仍可复用容量。
+		m_vPoints.shrink_to_fit();
+		m_vNodes.shrink_to_fit();
+		m_vVisible.shrink_to_fit();
 	}
 };
 
