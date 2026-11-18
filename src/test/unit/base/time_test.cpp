@@ -3,6 +3,9 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdlib>
+#include <future>
+#include <limits>
 #include <thread>
 
 TEST(Time, Timestamp)
@@ -28,6 +31,34 @@ TEST(Time, Nanoseconds)
 	const std::chrono::nanoseconds Time2 = time_get_nanoseconds();
 	EXPECT_LT(Time1, Time2);
 }
+
+#if GTEST_HAS_DEATH_TEST
+TEST(TimeDeathTest, ConcurrentReadersShareOneSamplePerTick)
+{
+	ASSERT_EXIT(
+		([] {
+			// 缓存启用后无法关闭，在子进程中测试以隔离其他用例。
+			set_new_tick();
+			const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+			std::promise<void> Start;
+			const auto Ready = Start.get_future().share();
+			const auto Read = [Ready, Deadline] {
+				if(Ready.wait_until(Deadline) != std::future_status::ready)
+					return int64_t{-1};
+				return time_get();
+			};
+			auto First = std::async(std::launch::async, Read);
+			auto Second = std::async(std::launch::async, Read);
+			Start.set_value();
+
+			if(First.wait_until(Deadline) != std::future_status::ready || Second.wait_until(Deadline) != std::future_status::ready)
+				std::_Exit(EXIT_FAILURE);
+			const int64_t Sample = First.get();
+			std::_Exit(Sample >= 0 && Sample == Second.get() ? EXIT_SUCCESS : EXIT_FAILURE);
+		}()),
+		::testing::ExitedWithCode(EXIT_SUCCESS), "");
+}
+#endif
 
 TEST(Time, DisabledPerfTimerStaysIdleAcrossReset)
 {
@@ -115,6 +146,32 @@ TEST(Time, CentisecondsFromSeconds)
 	EXPECT_EQ(time_even_centiseconds_from_seconds(1.000f), 100);
 	EXPECT_EQ(time_even_centiseconds_from_seconds(22.995f), 2300);
 	EXPECT_EQ(time_even_centiseconds_from_seconds(36000000.000f), 3600000000);
+}
+
+TEST(Time, NonFiniteSecondsReturnZero)
+{
+	const float Infinity = std::numeric_limits<float>::infinity();
+	const float aValues[] = {std::numeric_limits<float>::quiet_NaN(), Infinity, -Infinity};
+	for(const float Seconds : aValues)
+	{
+		EXPECT_EQ(time_milliseconds_from_seconds(Seconds), 0) << Seconds;
+		EXPECT_EQ(time_even_centiseconds_from_seconds(Seconds), 0) << Seconds;
+	}
+}
+
+TEST(Time, MillisecondsFromOutOfRangeSecondsReturnZero)
+{
+	const float Seconds = std::numeric_limits<float>::max();
+	EXPECT_EQ(time_milliseconds_from_seconds(Seconds), 0);
+	EXPECT_EQ(time_milliseconds_from_seconds(-Seconds), 0);
+}
+
+TEST(Time, CentisecondsFromOutOfRangeSecondsReturnZero)
+{
+	// 换算为 tick 后仍可存入 int64_t，换算为厘秒后超出范围。
+	const float Seconds = 1.0e17f;
+	EXPECT_EQ(time_even_centiseconds_from_seconds(Seconds), 0);
+	EXPECT_EQ(time_even_centiseconds_from_seconds(-Seconds), 0);
 }
 
 TEST(Time, CentisecondsFromSecondsAboveFloatPrecision)
