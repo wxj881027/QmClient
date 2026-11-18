@@ -6,6 +6,7 @@
 #include <base/system.h>
 
 #include <algorithm>
+#include <chrono>
 #include <utility>
 
 extern "C" {
@@ -15,9 +16,17 @@ extern "C" {
 static constexpr unsigned char s_aKcpMagic[] = {'Q', 'K', 'C', 'P'};
 static constexpr unsigned char s_KcpVersion = 1;
 
+static constexpr uint32_t KcpTimeMs(std::chrono::nanoseconds Time)
+{
+	return static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(Time).count());
+}
+
+// 跨过三次 32 位毫秒回绕后，仍保留剩余毫秒。
+static_assert(KcpTimeMs(std::chrono::milliseconds{(int64_t{3} << 32) + 42}) == 42);
+
 static uint32_t KcpNowMs()
 {
-	return (uint32_t)(time_get() * 1000 / time_freq());
+	return KcpTimeMs(std::chrono::nanoseconds{time_get()});
 }
 
 CNetKcpSession::~CNetKcpSession()
