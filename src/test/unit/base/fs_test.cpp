@@ -7,6 +7,7 @@
 #include <test/test.h>
 
 #include <cstdlib>
+#include <iterator>
 #include <optional>
 #include <string>
 
@@ -150,6 +151,29 @@ TEST_F(StoragePathTest, PreservesDataRootCaseAtExactCapacity)
 	ASSERT_EQ(fs_storage_path("DDNet", aPath, sizeof(aPath)), 0);
 	EXPECT_STREQ(aPath, "/QmTestData/ddnet");
 }
+
+TEST_F(StoragePathTest, IgnoresEmptyOrRelativeDataHome)
+{
+	for(const char *pDataHome : {"", "relative-data"})
+	{
+		SCOPED_TRACE(pDataHome);
+		ASSERT_EQ(setenv("XDG_DATA_HOME", pDataHome, 1), 0);
+
+		char aPath[IO_MAX_PATH_LENGTH];
+		ASSERT_EQ(fs_storage_path("DDNet", aPath, sizeof(aPath)), 0);
+		EXPECT_STREQ(aPath, "/QmTestHome/.local/share/ddnet");
+	}
+}
+
+TEST_F(StoragePathTest, AbsoluteDataHomeWorksWithoutHome)
+{
+	ASSERT_EQ(unsetenv("HOME"), 0);
+	ASSERT_EQ(setenv("XDG_DATA_HOME", "/QmTestData", 1), 0);
+
+	char aPath[IO_MAX_PATH_LENGTH];
+	ASSERT_EQ(fs_storage_path("DDNet", aPath, sizeof(aPath)), 0);
+	EXPECT_STREQ(aPath, "/QmTestData/ddnet");
+}
 #endif
 
 TEST(Filesystem, DoesNotCreateParentsForTruncatedPath)
@@ -165,6 +189,34 @@ TEST(Filesystem, DoesNotCreateParentsForTruncatedPath)
 	EXPECT_EQ(Result, -1);
 	EXPECT_FALSE(Created);
 }
+
+TEST(Filesystem, ExistingFileCannotServeAsDirectory)
+{
+	CTestInfo Info;
+	IOHANDLE File = io_open(Info.m_aFilename, IOFLAG_WRITE);
+	ASSERT_NE(File, nullptr);
+	ASSERT_EQ(io_close(File), 0);
+
+	const std::string Child = std::string(Info.m_aFilename) + "/child";
+	EXPECT_LT(fs_makedir(Info.m_aFilename), 0);
+	EXPECT_LT(fs_makedir_rec_for(Child.c_str()), 0);
+	EXPECT_TRUE(fs_is_file(Info.m_aFilename));
+	EXPECT_EQ(fs_remove(Info.m_aFilename), 0);
+}
+
+#if defined(CONF_FAMILY_UNIX)
+TEST(Filesystem, RecursiveCreationUsesUnixPathSeparators)
+{
+	CTestInfo Info;
+	for(const char *pParentName : {"parent:", "parent\\with-backslash"})
+	{
+		SCOPED_TRACE(pParentName);
+		const std::string Parent = std::string(Info.m_aFilename) + "/" + pParentName;
+		ASSERT_EQ(fs_makedir_rec_for((Parent + "/file").c_str()), 0);
+		EXPECT_TRUE(fs_is_dir(Parent.c_str()));
+	}
+}
+#endif
 
 TEST(Filesystem, ExecutablePath)
 {
@@ -184,6 +236,26 @@ TEST(Filesystem, CurrentDirectoryRejectsTooSmallBuffer)
 }
 
 #if defined(CONF_FAMILY_WINDOWS)
+TEST(Filesystem, CurrentDirectoryAtWindowsDriveRootRemainsAbsolute)
+{
+	wchar_t aPrevious[IO_MAX_PATH_LENGTH];
+	const DWORD Length = GetCurrentDirectoryW(std::size(aPrevious), aPrevious);
+	ASSERT_LT(Length, std::size(aPrevious));
+	ASSERT_GE(Length, 3u);
+	if(aPrevious[1] != L':' || aPrevious[2] != L'\\')
+		GTEST_SKIP() << "The test requires a drive-letter working directory";
+
+	const wchar_t aRoot[] = {aPrevious[0], L':', L'\\', L'\0'};
+	ASSERT_NE(SetCurrentDirectoryW(aRoot), FALSE);
+	char aDirectory[4] = {};
+	const bool Read = fs_getcwd(aDirectory, sizeof(aDirectory)) == aDirectory;
+	ASSERT_NE(SetCurrentDirectoryW(aPrevious), FALSE);
+
+	const char aExpected[] = {static_cast<char>(aRoot[0]), ':', '/', '\0'};
+	ASSERT_TRUE(Read);
+	EXPECT_EQ(str_comp_nocase(aDirectory, aExpected), 0);
+}
+
 TEST(Filesystem, ExecutablePathIgnoresPreviousWindowsError)
 {
 	char aExecutablePath[IO_MAX_PATH_LENGTH];
@@ -274,6 +346,123 @@ TEST(Filesystem, DeleteNonexistentDirectory)
 	EXPECT_FALSE(fs_is_dir(Info.m_aFilename));
 	EXPECT_FALSE(fs_removedir(Info.m_aFilename)); // Can delete a folder that does not exist.
 }
+
+TEST(Filesystem, DeleteFromMissingParent)
+{
+	CTestInfo Info;
+	ASSERT_FALSE(fs_is_dir(Info.m_aFilename));
+	const std::string Path = std::string(Info.m_aFilename) + "/child";
+	EXPECT_EQ(fs_remove(Path.c_str()), 0);
+	EXPECT_EQ(fs_removedir(Path.c_str()), 0);
+}
+
+#if defined(CONF_FAMILY_WINDOWS)
+static std::string ExtendedTestPath(const char *pPath)
+{
+	wchar_t aAbsolutePath[IO_MAX_PATH_LENGTH];
+	const std::wstring WidePath = windows_utf8_to_wide(pPath);
+	const DWORD Length = GetFullPathNameW(WidePath.c_str(), std::size(aAbsolutePath), aAbsolutePath, nullptr);
+	if(Length == 0 || Length >= std::size(aAbsolutePath))
+		return {};
+	const auto AbsolutePath = windows_wide_to_utf8(aAbsolutePath);
+	if(!AbsolutePath)
+		return {};
+	if(str_startswith(AbsolutePath->c_str(), "\\\\?\\"))
+		return *AbsolutePath;
+	if(str_startswith(AbsolutePath->c_str(), "\\\\"))
+		return "\\\\?\\UNC\\" + AbsolutePath->substr(2);
+	return "\\\\?\\" + *AbsolutePath;
+}
+
+TEST(Filesystem, CreatesParentsBelowExtendedWindowsRoot)
+{
+	CTestInfo Info;
+	const std::string Directory = ExtendedTestPath(Info.m_aFilename);
+	ASSERT_FALSE(Directory.empty());
+	ASSERT_EQ(fs_makedir_rec_for((Directory + "\\parent\\file").c_str()), 0);
+	EXPECT_TRUE(fs_is_dir((Directory + "\\parent").c_str()));
+}
+
+TEST(Filesystem, ListsDirectoryWithExtendedWindowsPath)
+{
+	CTestInfo Info;
+	ASSERT_EQ(fs_makedir(Info.m_aFilename), 0);
+	const std::string Directory = ExtendedTestPath(Info.m_aFilename);
+	ASSERT_FALSE(Directory.empty());
+	const std::string Path = Directory + "\\entry.txt";
+	IOHANDLE File = io_open(Path.c_str(), IOFLAG_WRITE);
+	ASSERT_NE(File, nullptr);
+	ASSERT_EQ(io_close(File), 0);
+
+	const auto Visit = [](const char *pName, int IsDir, int, void *pUser) {
+		if(!IsDir && str_comp(pName, "entry.txt") == 0)
+			++*static_cast<int *>(pUser);
+		return 0;
+	};
+	int Found = 0;
+	EXPECT_EQ(fs_listdir_checked(Directory.c_str(), Visit, 0, &Found), EFsListDirectoryResult::SUCCESS);
+	EXPECT_EQ(Found, 1);
+
+	Found = 0;
+	fs_listdir_fileinfo(Directory.c_str(), [](const CFsFileInfo *pInfo, int IsDir, int, void *pUser) {
+		if(!IsDir && str_comp(pInfo->m_pName, "entry.txt") == 0)
+			++*static_cast<int *>(pUser);
+		return 0;
+	}, 0, &Found);
+	EXPECT_EQ(Found, 1);
+}
+
+TEST(Filesystem, RejectsInvalidUtf8BeforeCreatingParents)
+{
+	CTestInfo Info;
+	std::string Path = std::string(Info.m_aFilename) + "/local";
+	Path.push_back(static_cast<char>(0xff));
+	Path += "/file";
+	EXPECT_LT(fs_makedir_rec_for(Path.c_str()), 0);
+	EXPECT_FALSE(fs_is_dir(Info.m_aFilename));
+}
+
+TEST(Filesystem, DeleteReadOnlyFilePreservesContentsOnFailure)
+{
+	CTestInfo Info;
+	ASSERT_EQ(fs_makedir(Info.m_aFilename), 0);
+	const std::string Path = std::string(Info.m_aFilename) + "/original.txt";
+	IOHANDLE File = io_open(Path.c_str(), IOFLAG_WRITE);
+	ASSERT_NE(File, nullptr);
+	EXPECT_EQ(io_write(File, "old", 3), 3u);
+	ASSERT_EQ(io_close(File), 0);
+
+	const auto WidePath = windows_utf8_to_wide(Path.c_str());
+	ASSERT_NE(SetFileAttributesW(WidePath.c_str(), FILE_ATTRIBUTE_READONLY), FALSE);
+	EXPECT_EQ(fs_remove(Path.c_str()), 1);
+	const DWORD Attributes = GetFileAttributesW(WidePath.c_str());
+	EXPECT_NE(Attributes, INVALID_FILE_ATTRIBUTES);
+	EXPECT_NE(Attributes & FILE_ATTRIBUTE_READONLY, 0u);
+	EXPECT_NE(SetFileAttributesW(WidePath.c_str(), FILE_ATTRIBUTE_NORMAL), FALSE);
+
+	File = io_open(Path.c_str(), IOFLAG_READ);
+	ASSERT_NE(File, nullptr);
+	char aContents[4] = {};
+	EXPECT_EQ(io_read(File, aContents, 3), 3u);
+	EXPECT_EQ(io_close(File), 0);
+	EXPECT_STREQ(aContents, "old");
+}
+
+TEST(Filesystem, DeletesOpenFileAtWindowsComponentLimit)
+{
+	CTestInfo Info;
+	ASSERT_EQ(fs_makedir(Info.m_aFilename), 0);
+	const std::string Directory = ExtendedTestPath(Info.m_aFilename);
+	ASSERT_FALSE(Directory.empty());
+	const std::string Path = Directory + "\\" + std::string(255, 'x');
+	IOHANDLE File = io_open(Path.c_str(), IOFLAG_WRITE);
+	ASSERT_NE(File, nullptr);
+
+	EXPECT_EQ(fs_remove(Path.c_str()), 0);
+	EXPECT_FALSE(fs_is_file(Path.c_str()));
+	EXPECT_EQ(io_close(File), 0);
+}
+#endif
 
 TEST(Filesystem, DeleteOpenFile)
 {

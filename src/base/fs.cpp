@@ -11,6 +11,7 @@
 
 #include <cerrno>
 #include <cstring>
+#include <iterator>
 #include <memory>
 
 #if defined(CONF_FAMILY_UNIX)
@@ -30,26 +31,57 @@
 
 #include <new>
 #include <string>
+#include <utility>
 #else
 #error NOT IMPLEMENTED
+#endif
+
+#if defined(CONF_PLATFORM_FREEBSD) || defined(CONF_PLATFORM_NETBSD)
+#include <sys/sysctl.h>
 #endif
 
 #if defined(CONF_PLATFORM_MACOS) || defined(CONF_PLATFORM_IOS)
 #include <mach-o/dyld.h> // _NSGetExecutablePath
 #endif
 
+static bool fs_is_path_separator(char c)
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	return c == '/' || c == '\\';
+#else
+	return c == '/';
+#endif
+}
+
+#if defined(CONF_FAMILY_WINDOWS)
+static std::optional<std::wstring> fs_windows_path(const char *path)
+{
+	if(path == nullptr || !str_utf8_check(path))
+		return std::nullopt;
+	return windows_utf8_to_wide(path);
+}
+
+static bool fs_windows_path_not_found(DWORD error)
+{
+	return error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND;
+}
+#endif
+
 int fs_makedir(const char *path)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_path = windows_utf8_to_wide(path);
-	if(CreateDirectoryW(wide_path.c_str(), nullptr) != 0)
-	{
+	const auto wide_path = fs_windows_path(path);
+	if(!wide_path)
+		return -1;
+	if(CreateDirectoryW(wide_path->c_str(), nullptr) != 0)
 		return 0;
-	}
+
 	const DWORD error = GetLastError();
-	if(error == ERROR_ALREADY_EXISTS)
+	if(error == ERROR_ALREADY_EXISTS || error == ERROR_FILE_EXISTS)
 	{
-		return 0;
+		const DWORD attributes = GetFileAttributesW(wide_path->c_str());
+		if(attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+			return 0;
 	}
 	log_error("filesystem", "Failed to create folder '%s' (%ld '%s')", path, error, windows_format_system_message(error).c_str());
 	return -1;
@@ -60,35 +92,75 @@ int fs_makedir(const char *path)
 		return 0;
 	}
 #endif
-	if(mkdir(path, 0755) == 0 || errno == EEXIST)
-	{
+	if(mkdir(path, 0755) == 0)
 		return 0;
-	}
-	log_error("filesystem", "Failed to create folder '%s' (%d '%s')", path, errno, strerror(errno));
+
+	const int error = errno;
+	if(error == EEXIST && fs_is_dir(path))
+		return 0;
+
+	log_error("filesystem", "Failed to create folder '%s' (%d '%s')", path, error, strerror(error));
 	return -1;
 #endif
 }
 
 int fs_makedir_rec_for(const char *path)
 {
-	char buffer[IO_MAX_PATH_LENGTH];
-	str_copy(buffer, path);
-	const int length = str_length(buffer);
-	if(static_cast<size_t>(length) != std::strlen(path))
+	if(path == nullptr)
 		return -1;
-	for(int index = 1; index < length; ++index)
+	char buffer[IO_MAX_PATH_LENGTH];
+	const size_t length = std::strlen(path);
+	if(length >= sizeof(buffer))
+		return -1;
+	std::memcpy(buffer, path, length + 1);
+
+#if defined(CONF_FAMILY_WINDOWS)
+	if(!str_utf8_check(path))
+		return -1;
+
+	size_t first = 1;
+	if(length >= 2 && fs_is_path_separator(buffer[0]) && fs_is_path_separator(buffer[1]))
 	{
-		// Do not try to create folder for drive letters on Windows,
-		// as this is not necessary and may fail for system drives.
-		if((buffer[index] == '/' || buffer[index] == '\\') && buffer[index + 1] != '\0' && buffer[index - 1] != ':')
+		// UNC 根包含服务器和共享名。设备路径需要先跳过命名空间前缀。
+		first = 2;
+		int root_components = 2;
+		if(length >= 4 && (buffer[2] == '?' || buffer[2] == '.') && fs_is_path_separator(buffer[3]))
 		{
-			buffer[index] = '\0';
-			if(fs_makedir(buffer) < 0)
-			{
-				return -1;
-			}
-			buffer[index] = '/';
+			first = 4;
+			if(length >= 8 && str_startswith_nocase(buffer + 4, "UNC") && fs_is_path_separator(buffer[7]))
+				first = 8;
+			else
+				root_components = 1;
 		}
+		for(int part = 0; part < root_components; ++part)
+		{
+			const size_t start = first;
+			while(first < length && !fs_is_path_separator(buffer[first]))
+				++first;
+			if(first == start)
+				return -1;
+			if(first == length)
+				return part + 1 == root_components ? 0 : -1;
+			++first;
+		}
+	}
+	else if(length >= 3 && buffer[1] == ':' && fs_is_path_separator(buffer[2]))
+		first = 3;
+#else
+	const size_t first = 1;
+#endif
+	size_t end = length;
+	while(end > first && fs_is_path_separator(buffer[end - 1]))
+		--end;
+	for(size_t index = first; index < end; ++index)
+	{
+		const char separator = buffer[index];
+		if(!fs_is_path_separator(separator) || fs_is_path_separator(buffer[index - 1]))
+			continue;
+		buffer[index] = '\0';
+		if(fs_makedir(buffer) < 0)
+			return -1;
+		buffer[index] = separator;
 	}
 	return 0;
 }
@@ -96,13 +168,15 @@ int fs_makedir_rec_for(const char *path)
 int fs_removedir(const char *path)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_path = windows_utf8_to_wide(path);
-	if(RemoveDirectoryW(wide_path.c_str()) != 0)
+	const auto wide_path = fs_windows_path(path);
+	if(!wide_path)
+		return -1;
+	if(RemoveDirectoryW(wide_path->c_str()) != 0)
 	{
 		return 0;
 	}
 	const DWORD error = GetLastError();
-	if(error == ERROR_FILE_NOT_FOUND)
+	if(fs_windows_path_not_found(error))
 	{
 		return 0;
 	}
@@ -121,45 +195,49 @@ int fs_removedir(const char *path)
 #if defined(CONF_FAMILY_WINDOWS)
 static inline time_t filetime_to_unixtime(LPFILETIME filetime)
 {
-	time_t t;
-	ULARGE_INTEGER li;
-	li.LowPart = filetime->dwLowDateTime;
-	li.HighPart = filetime->dwHighDateTime;
+	const uint64_t ticks = (static_cast<uint64_t>(filetime->dwHighDateTime) << 32) | filetime->dwLowDateTime;
+	const int64_t seconds = static_cast<int64_t>(ticks / 10000000) - 11644473600LL;
+	return std::in_range<time_t>(seconds) ? static_cast<time_t>(seconds) : static_cast<time_t>(-1);
+}
 
-	li.QuadPart /= 10000000; // 100ns to 1s
-	li.QuadPart -= 11644473600LL; // Windows epoch is in the past
-
-	t = li.QuadPart;
-	return t == (time_t)li.QuadPart ? t : (time_t)-1;
+static std::optional<std::wstring> fs_windows_listdir_pattern(const char *dir, size_t &name_capacity)
+{
+	if(dir == nullptr)
+		return std::nullopt;
+	char buffer[IO_MAX_PATH_LENGTH];
+	const size_t dir_length = std::strlen(dir);
+	const size_t separator_length = dir_length == 0 || !fs_is_path_separator(dir[dir_length - 1]) ? 1 : 0;
+	if(dir_length > sizeof(buffer) - separator_length - 2)
+		return std::nullopt;
+	name_capacity = sizeof(buffer) - dir_length - separator_length;
+	str_format(buffer, sizeof(buffer), "%s%s*", dir, separator_length ? "\\" : "");
+	return fs_windows_path(buffer);
 }
 #endif
 
 static EFsListDirectoryResult fs_listdir_impl(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user, bool checked)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	char buffer[IO_MAX_PATH_LENGTH];
-	const size_t dir_length = std::strlen(dir);
-	if(dir_length > sizeof(buffer) - 3 || !str_utf8_check(dir))
+	size_t name_capacity = 0;
+	const auto wide_pattern = fs_windows_listdir_pattern(dir, name_capacity);
+	if(!wide_pattern)
 		return EFsListDirectoryResult::IO_FAILURE;
-	const size_t name_capacity = sizeof(buffer) - dir_length - 1;
-	str_format(buffer, sizeof(buffer), "%s/*", dir);
-	const std::wstring wide_buffer = windows_utf8_to_wide(buffer);
 
 	WIN32_FIND_DATAW finddata;
-	HANDLE handle = FindFirstFileExW(wide_buffer.c_str(), FindExInfoBasic, &finddata, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
+	HANDLE handle = FindFirstFileExW(wide_pattern->c_str(), FindExInfoBasic, &finddata, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
 	if(handle == INVALID_HANDLE_VALUE)
 	{
 		if(!checked)
 			return EFsListDirectoryResult::IO_FAILURE;
 		const DWORD error = GetLastError();
-		if(error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND)
+		if(!fs_windows_path_not_found(error))
 			return EFsListDirectoryResult::IO_FAILURE;
 		const std::wstring wide_dir = windows_utf8_to_wide(dir);
 		const DWORD attributes = GetFileAttributesW(wide_dir.c_str());
 		if(attributes != INVALID_FILE_ATTRIBUTES)
 			return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0 ? EFsListDirectoryResult::SUCCESS : EFsListDirectoryResult::IO_FAILURE;
 		const DWORD attribute_error = GetLastError();
-		return attribute_error == ERROR_FILE_NOT_FOUND || attribute_error == ERROR_PATH_NOT_FOUND ? EFsListDirectoryResult::NOT_FOUND : EFsListDirectoryResult::IO_FAILURE;
+		return fs_windows_path_not_found(attribute_error) ? EFsListDirectoryResult::NOT_FOUND : EFsListDirectoryResult::IO_FAILURE;
 	}
 	const std::unique_ptr<void, decltype(&FindClose)> owned_handle(handle, FindClose);
 
@@ -240,16 +318,13 @@ EFsListDirectoryResult fs_listdir_checked(const char *dir, FS_LISTDIR_CALLBACK c
 void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int type, void *user)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	char buffer[IO_MAX_PATH_LENGTH];
-	const size_t dir_length = std::strlen(dir);
-	if(dir_length > sizeof(buffer) - 3 || !str_utf8_check(dir))
+	size_t name_capacity = 0;
+	const auto wide_pattern = fs_windows_listdir_pattern(dir, name_capacity);
+	if(!wide_pattern)
 		return;
-	const size_t name_capacity = sizeof(buffer) - dir_length - 1;
-	str_format(buffer, sizeof(buffer), "%s/*", dir);
-	const std::wstring wide_buffer = windows_utf8_to_wide(buffer);
 
 	WIN32_FIND_DATAW finddata;
-	HANDLE handle = FindFirstFileExW(wide_buffer.c_str(), FindExInfoBasic, &finddata, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
+	HANDLE handle = FindFirstFileExW(wide_pattern->c_str(), FindExInfoBasic, &finddata, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
 	if(handle == INVALID_HANDLE_VALUE)
 		return;
 	const std::unique_ptr<void, decltype(&FindClose)> owned_handle(handle, FindClose);
@@ -317,8 +392,8 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 int fs_chdir(const char *path)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_path = windows_utf8_to_wide(path);
-	return SetCurrentDirectoryW(wide_path.c_str()) != 0 ? 0 : 1;
+	const auto wide_path = fs_windows_path(path);
+	return wide_path && SetCurrentDirectoryW(wide_path->c_str()) != 0 ? 0 : 1;
 #else
 	return chdir(path) ? 1 : 0;
 #endif
@@ -343,7 +418,11 @@ char *fs_getcwd(char *buffer, int buffer_size)
 	auto current_dir = windows_wide_to_utf8_bounded(wide_current_dir.get(), wide_current_dir.get() + length + 1);
 	if(!current_dir)
 		return nullptr;
-	fs_normalize_path(current_dir->data());
+	// C: 表示该盘的当前目录，保留 C:/ 的根目录含义。
+	if(current_dir->size() == 3 && (*current_dir)[1] == ':' && (*current_dir)[2] == '\\')
+		(*current_dir)[2] = '/';
+	else
+		fs_normalize_path(current_dir->data());
 	if(str_length(current_dir->c_str()) >= buffer_size)
 		return nullptr;
 
@@ -388,15 +467,7 @@ int fs_storage_path(const char *appname, char *path, int max)
 	separator = "/";
 #else
 	root = getenv("HOME");
-	if(!root)
-		return -1;
-
-	if(!str_utf8_check(root))
-	{
-		log_error("filesystem", "ERROR: the HOME environment variable contains invalid UTF-8");
-		return -1;
-	}
-
+	const char *root_variable = "HOME";
 #if defined(CONF_PLATFORM_HAIKU)
 	separator = "/config/settings/";
 #elif defined(CONF_PLATFORM_IOS)
@@ -410,14 +481,10 @@ int fs_storage_path(const char *appname, char *path, int max)
 		// 旧 Teeworlds 目录仍优先从 HOME 中定位。
 		separator = "/.";
 	}
-	else if(const char *data_home = getenv("XDG_DATA_HOME"))
+	else if(const char *data_home = getenv("XDG_DATA_HOME"); data_home && data_home[0] == '/')
 	{
-		if(!str_utf8_check(data_home))
-		{
-			log_error("filesystem", "ERROR: the XDG_DATA_HOME environment variable contains invalid UTF-8");
-			return -1;
-		}
 		root = data_home;
+		root_variable = "XDG_DATA_HOME";
 		separator = "/";
 	}
 	else
@@ -425,6 +492,13 @@ int fs_storage_path(const char *appname, char *path, int max)
 		separator = "/.local/share/";
 	}
 #endif
+	if(!root || root[0] != '/')
+		return -1;
+	if(!str_utf8_check(root))
+	{
+		log_error("filesystem", "ERROR: the %s environment variable contains invalid UTF-8", root_variable);
+		return -1;
+	}
 #endif
 
 	const size_t prefix_length = std::strlen(root) + std::strlen(separator);
@@ -465,6 +539,26 @@ int fs_executable_path(char *buffer, int buffer_size)
 	return 0;
 #else
 	char path[IO_MAX_PATH_LENGTH];
+#if defined(CONF_PLATFORM_FREEBSD) || (defined(CONF_PLATFORM_NETBSD) && defined(KERN_PROC_PATHNAME))
+#if defined(CONF_PLATFORM_FREEBSD)
+	int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+#else
+	int mib[] = {CTL_KERN, KERN_PROC_ARGS, static_cast<int>(getpid()), KERN_PROC_PATHNAME};
+#endif
+	size_t path_size = sizeof(path);
+	if(sysctl(mib, std::size(mib), path, &path_size, nullptr, 0) == 0 &&
+		path_size > 1 && path_size <= sizeof(path) && path[path_size - 1] == '\0' &&
+		path[0] == '/' && str_utf8_check(path))
+	{
+		if(path_size <= static_cast<size_t>(buffer_size))
+		{
+			str_copy(buffer, path, buffer_size);
+			return 0;
+		}
+		buffer[0] = '\0';
+		return -1;
+	}
+#endif
 	static const char *NAMES[] = {
 		"/proc/self/exe", // Linux, Android
 		"/proc/curproc/exe", // NetBSD
@@ -494,8 +588,10 @@ int fs_executable_path(char *buffer, int buffer_size)
 int fs_is_file(const char *path)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_path = windows_utf8_to_wide(path);
-	DWORD attributes = GetFileAttributesW(wide_path.c_str());
+	const auto wide_path = fs_windows_path(path);
+	if(!wide_path)
+		return 0;
+	const DWORD attributes = GetFileAttributesW(wide_path->c_str());
 	return attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0;
 #else
 	struct stat sb;
@@ -508,8 +604,10 @@ int fs_is_file(const char *path)
 int fs_is_dir(const char *path)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_path = windows_utf8_to_wide(path);
-	DWORD attributes = GetFileAttributesW(wide_path.c_str());
+	const auto wide_path = fs_windows_path(path);
+	if(!wide_path)
+		return 0;
+	const DWORD attributes = GetFileAttributesW(wide_path->c_str());
 	return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0;
 #else
 	struct stat sb;
@@ -522,8 +620,8 @@ int fs_is_dir(const char *path)
 int fs_is_relative_path(const char *path)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_path = windows_utf8_to_wide(path);
-	return PathIsRelativeW(wide_path.c_str()) ? 1 : 0;
+	const auto wide_path = fs_windows_path(path);
+	return !wide_path || PathIsRelativeW(wide_path->c_str()) ? 1 : 0;
 #else
 	return path[0] == '/' ? 0 : 1; // yes, it's that simple
 #endif
@@ -602,63 +700,88 @@ void fs_normalize_path(char *path)
 }
 
 #if defined(CONF_FAMILY_WINDOWS)
-static std::wstring fs_windows_temporary_sibling(const std::wstring &wide_filename, const char *suffix)
+static DWORD fs_windows_move_to_temporary_sibling(const std::wstring &wide_filename, const char *suffix, std::wstring &temporary)
 {
+	size_t parent_length = wide_filename.find_last_of(L"/\\");
+	if(parent_length == std::wstring::npos)
+		parent_length = wide_filename.size() >= 2 && wide_filename[1] == L':' ? 2 : 0;
+	else
+		++parent_length;
+
 	unsigned random_num;
 	secure_random_fill(&random_num, sizeof(random_num));
-	std::wstring temporary;
-	do
+	temporary.assign(wide_filename, 0, parent_length);
+	constexpr unsigned MAX_ATTEMPTS = 16;
+	for(unsigned attempt = 0; attempt < MAX_ATTEMPTS; ++attempt)
 	{
-		char extension[64];
-		str_format(extension, sizeof(extension), ".%08X.%s", random_num, suffix);
-		temporary = wide_filename + windows_utf8_to_wide(extension);
-		++random_num;
-	} while(GetFileAttributesW(temporary.c_str()) != INVALID_FILE_ATTRIBUTES);
-	return temporary;
+		// 同目录的短文件名避免超出单个文件名的长度上限。
+		char name[32];
+		str_format(name, sizeof(name), ".%08X.%s", random_num + attempt, suffix);
+		temporary.resize(parent_length);
+		temporary += windows_utf8_to_wide(name);
+		if(CompareStringOrdinal(wide_filename.c_str(), -1, temporary.c_str(), -1, TRUE) == CSTR_EQUAL)
+			continue;
+		if(MoveFileExW(wide_filename.c_str(), temporary.c_str(), MOVEFILE_WRITE_THROUGH) != 0)
+			return ERROR_SUCCESS;
+		const DWORD error = GetLastError();
+		if(error != ERROR_FILE_EXISTS && error != ERROR_ALREADY_EXISTS)
+			return error;
+	}
+	return ERROR_ALREADY_EXISTS;
 }
 
-static void fs_windows_delete_temporary_file(const std::wstring &wide_filename)
+static bool fs_windows_delete_temporary_file(const std::wstring &wide_filename)
 {
 	if(DeleteFileW(wide_filename.c_str()) != 0)
-		return;
+		return true;
 	const DWORD error = GetLastError();
-	if(error == ERROR_FILE_NOT_FOUND)
-		return;
+	if(fs_windows_path_not_found(error))
+		return true;
 	const auto filename = windows_wide_to_utf8(wide_filename.c_str());
 	log_error("filesystem", "Failed to remove file '%s' (%ld '%s')", filename ? filename->c_str() : "(invalid filename)", error, windows_format_system_message(error).c_str());
+	return false;
+}
+
+static void fs_windows_restore_temporary_file(const std::wstring &backup, const std::wstring &destination, const char *filename)
+{
+	// 原路径可能已被另一写入者占用，恢复时不得覆盖它。
+	if(MoveFileExW(backup.c_str(), destination.c_str(), MOVEFILE_WRITE_THROUGH) != 0)
+		return;
+	const DWORD error = GetLastError();
+	const auto filename_backup = windows_wide_to_utf8(backup.c_str());
+	log_error("filesystem", "Failed to restore '%s' from '%s' (%ld '%s')", filename, filename_backup ? filename_backup->c_str() : "(invalid filename)", error, windows_format_system_message(error).c_str());
 }
 #endif
 
 int fs_remove(const char *filename)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	if(fs_is_dir(filename))
-	{
-		// Not great, but otherwise using this function on a folder would only rename the folder but fail to delete it.
+	const auto wide_filename = fs_windows_path(filename);
+	if(!wide_filename)
 		return 1;
-	}
-	const std::wstring wide_filename = windows_utf8_to_wide(filename);
-	const std::wstring wide_filename_temp = fs_windows_temporary_sibling(wide_filename, "toberemoved");
+	const DWORD attributes = GetFileAttributesW(wide_filename->c_str());
+	if(attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+		return 1;
 
-	// The DeleteFileW function only marks the file for deletion but the deletion may not take effect immediately, which can
-	// cause subsequent operations using this filename to fail until all handles are closed. The MoveFileExW function with the
-	// MOVEFILE_WRITE_THROUGH flag is guaranteed to wait for the file to be moved on disk, so we first rename the file to be
-	// deleted to a random temporary name and then mark that for deletion, to ensure that the filename is usable immediately.
-	if(MoveFileExW(wide_filename.c_str(), wide_filename_temp.c_str(), MOVEFILE_WRITE_THROUGH) == 0)
+	// 先移出原路径。若打开的句柄推迟实际删除，原文件名也可立即复用。
+	std::wstring wide_filename_temp;
+	const DWORD error = fs_windows_move_to_temporary_sibling(*wide_filename, "toberemoved", wide_filename_temp);
+	if(error != ERROR_SUCCESS)
 	{
-		const DWORD error = GetLastError();
-		if(error == ERROR_FILE_NOT_FOUND)
+		if(fs_windows_path_not_found(error))
 		{
-			return 0; // Success: Renaming failed because the original file did not exist.
+			const DWORD current_attributes = GetFileAttributesW(wide_filename->c_str());
+			if(current_attributes == INVALID_FILE_ATTRIBUTES && fs_windows_path_not_found(GetLastError()))
+				return 0;
 		}
-		const std::string filename_temp = windows_wide_to_utf8(wide_filename_temp.c_str()).value_or("(invalid filename)");
-		log_error("filesystem", "Failed to rename file '%s' to '%s' for removal (%ld '%s')", filename, filename_temp.c_str(), error, windows_format_system_message(error).c_str());
+		const auto filename_temp = windows_wide_to_utf8(wide_filename_temp.c_str());
+		log_error("filesystem", "Failed to rename file '%s' to '%s' for removal (%ld '%s')", filename, filename_temp ? filename_temp->c_str() : "(invalid filename)", error, windows_format_system_message(error).c_str());
 		return 1;
 	}
-	fs_windows_delete_temporary_file(wide_filename_temp);
-	// Success: While the temporary could not be deleted, this is also considered success because the original file does not exist anymore.
-	//          Callers of this function expect that the original file does not exist anymore if and only if the function succeeded.
-	return 0;
+	if(fs_windows_delete_temporary_file(wide_filename_temp))
+		return 0;
+	fs_windows_restore_temporary_file(wide_filename_temp, *wide_filename, filename);
+	return 1;
 #else
 	if(unlink(filename) == 0 || errno == ENOENT)
 	{
@@ -672,10 +795,12 @@ int fs_remove(const char *filename)
 int fs_rename(const char *oldname, const char *newname, bool allow_destination_removal)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_oldname = windows_utf8_to_wide(oldname);
-	const std::wstring wide_newname = windows_utf8_to_wide(newname);
+	const auto wide_oldname = fs_windows_path(oldname);
+	const auto wide_newname = fs_windows_path(newname);
+	if(!wide_oldname || !wide_newname)
+		return 1;
 	constexpr DWORD MOVE_FLAGS = MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH;
-	if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), MOVE_FLAGS | MOVEFILE_REPLACE_EXISTING) != 0)
+	if(MoveFileExW(wide_oldname->c_str(), wide_newname->c_str(), MOVE_FLAGS | MOVEFILE_REPLACE_EXISTING) != 0)
 	{
 		return 0;
 	}
@@ -690,7 +815,7 @@ int fs_rename(const char *oldname, const char *newname, bool allow_destination_r
 		for(int Attempt = 0; Attempt < RETRY_COUNT; ++Attempt)
 		{
 			Sleep(RETRY_DELAY_MS);
-			if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), MOVE_FLAGS | MOVEFILE_REPLACE_EXISTING) != 0)
+			if(MoveFileExW(wide_oldname->c_str(), wide_newname->c_str(), MOVE_FLAGS | MOVEFILE_REPLACE_EXISTING) != 0)
 				return 0;
 			error = GetLastError();
 			if(error != ERROR_ACCESS_DENIED && error != ERROR_SHARING_VIOLATION)
@@ -701,29 +826,22 @@ int fs_rename(const char *oldname, const char *newname, bool allow_destination_r
 	{
 		// 目标文件有打开句柄时，先在同目录暂存旧文件，等替换成功后再删除。
 		std::wstring backup;
-		const DWORD attributes = GetFileAttributesW(wide_newname.c_str());
-		if(attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-		{
-			backup = fs_windows_temporary_sibling(wide_newname, "rename-backup");
-			if(MoveFileExW(wide_newname.c_str(), backup.c_str(), MOVEFILE_WRITE_THROUGH) == 0)
-				backup.clear();
-		}
+		const DWORD attributes = GetFileAttributesW(wide_newname->c_str());
+		if(attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0 &&
+			fs_windows_move_to_temporary_sibling(*wide_newname, "rename-backup", backup) != ERROR_SUCCESS)
+			backup.clear();
 
 		// 暂存期间如果有其他写入者发布到目标名，保留对方写入和我们的备份。
 		const DWORD retry_flags = backup.empty() ? MOVE_FLAGS | MOVEFILE_REPLACE_EXISTING : MOVE_FLAGS;
-		if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), retry_flags) != 0)
+		if(MoveFileExW(wide_oldname->c_str(), wide_newname->c_str(), retry_flags) != 0)
 		{
 			if(!backup.empty())
-				fs_windows_delete_temporary_file(backup);
+				(void)fs_windows_delete_temporary_file(backup);
 			return 0;
 		}
 		error = GetLastError();
-		if(!backup.empty() && MoveFileExW(backup.c_str(), wide_newname.c_str(), MOVEFILE_WRITE_THROUGH) == 0)
-		{
-			const DWORD restore_error = GetLastError();
-			const auto filename_backup = windows_wide_to_utf8(backup.c_str());
-			log_error("filesystem", "Failed to restore '%s' from '%s' (%ld '%s')", newname, filename_backup ? filename_backup->c_str() : "(invalid filename)", restore_error, windows_format_system_message(restore_error).c_str());
-		}
+		if(!backup.empty())
+			fs_windows_restore_temporary_file(backup, *wide_newname, newname);
 	}
 	log_error("filesystem", "Failed to rename file '%s' to '%s' (%ld '%s')", oldname, newname, error, windows_format_system_message(error).c_str());
 	return 1;
@@ -742,8 +860,8 @@ int fs_file_time(const char *name, time_t *created, time_t *modified)
 {
 #if defined(CONF_FAMILY_WINDOWS)
 	WIN32_FILE_ATTRIBUTE_DATA attribute_data;
-	const std::wstring wide_name = windows_utf8_to_wide(name);
-	if(!GetFileAttributesExW(wide_name.c_str(), GetFileExInfoStandard, &attribute_data))
+	const auto wide_name = fs_windows_path(name);
+	if(!wide_name || !GetFileAttributesExW(wide_name->c_str(), GetFileExInfoStandard, &attribute_data))
 		return 1;
 
 	*created = filetime_to_unixtime(&attribute_data.ftCreationTime);
