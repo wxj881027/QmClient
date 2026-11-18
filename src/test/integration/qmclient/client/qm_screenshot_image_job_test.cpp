@@ -6,6 +6,7 @@
 #include <game/client/components/qmclient/screenshot_image_job.h>
 
 #include <gtest/gtest.h>
+#include <test/support/job_wait.h>
 #include <test/test.h>
 
 #include <chrono>
@@ -142,6 +143,57 @@ TEST(QmScreenshotImageJob, ReportsMissingAndUndecodableFilesAsFailed)
 	ASSERT_TRUE(RunJobToCompletion(pInvalid));
 	EXPECT_TRUE(pInvalid->LoadFailed());
 	EXPECT_EQ(pInvalid->Image(), nullptr);
+}
+
+TEST(QmScreenshotImageJob, PoolShutdownCancelsQueuedThumbnail)
+{
+	class CKeepThumbnailQueued : public IJob
+	{
+		const IJob &m_Thumbnail;
+
+		void Run() override { (void)WaitForJobFinished(m_Thumbnail); }
+
+	public:
+		explicit CKeepThumbnailQueued(const IJob &Thumbnail) :
+			m_Thumbnail(Thumbnail) {}
+	};
+
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	ASSERT_TRUE(StorePng(pStorage.get(), "queued.png", 2, 2, ColorRGBA(0.5f, 0.5f, 0.5f, 1.0f)));
+
+	auto pJob = std::make_shared<CQmScreenshotImageJob>(pStorage.get(), "queued.png", IStorage::TYPE_SAVE, QM_SCREENSHOT_THUMBNAIL_MAX_EDGE);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(std::make_shared<CKeepThumbnailQueued>(*pJob)));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	Pool.Shutdown();
+
+	EXPECT_TRUE(pJob->Finished());
+	EXPECT_EQ(pJob->State(), IJob::STATE_ABORTED);
+	EXPECT_EQ(pJob->Image(), nullptr);
+}
+
+TEST(QmScreenshotImageJob, ThumbnailKeepsGrayscaleOpaqueAfterDownscale)
+{
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	constexpr float Gray = 64.0f / 255.0f;
+	// FORMAT_R 的测试像素从 ColorRGBA 的 alpha 分量写入，PNG 编码器将它保存为灰度。
+	ASSERT_TRUE(StorePng(pStorage.get(), "gray.png", 4, 2, ColorRGBA(Gray, Gray, Gray, Gray), CImageInfo::FORMAT_R));
+
+	SLoadedImage Loaded;
+	ASSERT_TRUE(CQmScreenshotImageJob::LoadImageFromDisk(pStorage.get(), "gray.png", IStorage::TYPE_SAVE, 2, Loaded.m_Image));
+	EXPECT_EQ(Loaded.m_Image.m_Format, CImageInfo::FORMAT_RGBA);
+	EXPECT_EQ(Loaded.m_Image.m_Width, (size_t)2);
+	EXPECT_EQ(Loaded.m_Image.m_Height, (size_t)1);
+	const ColorRGBA Pixel = Loaded.m_Image.PixelColor(0, 0);
+	EXPECT_NEAR(Pixel.r, Gray, 0.01f);
+	EXPECT_NEAR(Pixel.g, Gray, 0.01f);
+	EXPECT_NEAR(Pixel.b, Gray, 0.01f);
+	EXPECT_FLOAT_EQ(Pixel.a, 1.0f);
 }
 
 TEST(QmScreenshotImageJob, ViewerConvertsRgbPngAndPreservesColors)
