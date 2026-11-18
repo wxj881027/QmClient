@@ -2,6 +2,7 @@
 #define ENGINE_CLIENT_CHECKSUM_H
 
 #include <base/hash.h>
+#include <base/hash_ctxt.h>
 #include <base/io.h>
 
 #include <engine/shared/config.h>

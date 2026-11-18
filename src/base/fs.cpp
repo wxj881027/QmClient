@@ -72,7 +72,8 @@ int fs_makedir(const char *path)
 int fs_makedir_rec_for(const char *path)
 {
 	char buffer[IO_MAX_PATH_LENGTH];
-	const int length = str_copy(buffer, path);
+	str_copy(buffer, path);
+	const int length = str_length(buffer);
 	if(static_cast<size_t>(length) != std::strlen(path))
 		return -1;
 	for(int index = 1; index < length; ++index)

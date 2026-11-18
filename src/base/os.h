@@ -48,7 +48,7 @@ class CCmdlineFix
 public:
 	CCmdlineFix(int *pArgc, const char ***pppArgv)
 	{
-		if(cmdline_fix(pArgc, ppppArgv))
+		if(cmdline_fix(pArgc, pppArgv))
 		{
 			m_Argc = *pArgc;
 			m_ppArgv = *pppArgv;

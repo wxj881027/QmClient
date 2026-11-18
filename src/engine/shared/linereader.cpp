@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "linereader.h"
 
+#include <base/io_read_all.h>
 #include <base/mem.h>
 #include <base/str.h>
 #include <base/system.h>
