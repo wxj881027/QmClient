@@ -6019,6 +6019,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/map_design_tile_skips_test.cpp
     src/test/integration/client/map_image_decode_test.cpp
     src/test/integration/client/map_layer_buffer_ownership_test.cpp
+    src/test/integration/client/map_preview_layer_retry_test.cpp
     src/test/unit/client/map_load_task_test.cpp
     src/test/unit/client/connection_resource_preparation_test.cpp
     src/test/unit/client/skins/skins_preview_layers_test.cpp
@@ -6160,6 +6161,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/map/envelope_extrema.cpp
     src/game/map/render_map.cpp
     src/game/map/render_component.cpp
+    src/game/map/map_renderer.cpp
     src/game/map/render_layer.cpp
     src/engine/client/backend_threaded.cpp
     src/engine/client/backend/vulkan/backend_vulkan_qm_ext.cpp

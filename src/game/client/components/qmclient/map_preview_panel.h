@@ -11,8 +11,77 @@
 #include <game/localization.h>
 
 #include <array>
+#include <memory>
+#include <new>
+#include <stdexcept>
+#include <utility>
 
 class CGameClient;
+
+// 只管理本面板的逐层准备失败；map、layers 和已上传图片继续由原缓存项持有。
+class CQmMapPreviewLayerPreparation
+{
+	bool m_Failed = false;
+	float m_RetryAfterTime = 0.0f;
+
+	template<typename TRenderer>
+	static bool ReleaseRenderer(std::unique_ptr<TRenderer> &pRenderer)
+	{
+		if(pRenderer == nullptr)
+			return true;
+		try
+		{
+			// Clear 先销毁失败协程；GPU 删除失败时，图层和 BO 身份仍留在原 owner。
+			pRenderer->UnloadMap();
+		}
+		catch(const std::bad_alloc &) { return false; }
+		catch(const std::length_error &) { return false; }
+		pRenderer.reset();
+		return true;
+	}
+
+public:
+	static constexpr float RETRY_DELAY = 2.0f;
+	bool HasFailed() const { return m_Failed; }
+
+	template<typename TRenderer>
+	bool Advance(std::unique_ptr<TRenderer> &pRenderer, float Now)
+	{
+		if(m_Failed || pRenderer == nullptr)
+			return false;
+		try
+		{
+			return pRenderer->AdvanceMapLoad(1);
+		}
+		catch(const std::bad_alloc &) {}
+		catch(const std::length_error &) {}
+		m_Failed = true;
+		m_RetryAfterTime = Now + RETRY_DELAY;
+		ReleaseRenderer(pRenderer);
+		return false;
+	}
+
+	template<typename TRenderer, typename TCreateRenderer>
+	void Retry(std::unique_ptr<TRenderer> &pRenderer, float Now, TCreateRenderer &&CreateRenderer)
+	{
+		if(!m_Failed || Now < m_RetryAfterTime)
+			return;
+		m_RetryAfterTime = Now + RETRY_DELAY;
+		if(!ReleaseRenderer(pRenderer))
+			return;
+		try
+		{
+			// 候选只初始化加载状态，不上传图层；完整缓存项与图片来源不参与替换。
+			auto pCandidate = CreateRenderer();
+			if(pCandidate == nullptr)
+				return;
+			pRenderer = std::move(pCandidate);
+			m_Failed = false;
+		}
+		catch(const std::bad_alloc &) {}
+		catch(const std::length_error &) {}
+	}
+};
 
 // 预览绘制临时借用投影与裁剪；离屏目标只在 Begin 成功后由本作用域结束。
 class CQmMapPreviewDrawScope

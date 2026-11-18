@@ -41,7 +41,7 @@ namespace
 	// LRU 逐出前的最小驻留时长：刚用过的条目即使超出容量也先保留一拍。
 	constexpr float MAP_PREVIEW_LRU_MIN_AGE = 0.4f;
 	// 失败条目的重查间隔：投票页下载完成后，占位应自行换成预览。
-	constexpr float MAP_PREVIEW_FAILED_RETRY_DELAY = 2.0f;
+	constexpr float MAP_PREVIEW_FAILED_RETRY_DELAY = CQmMapPreviewLayerPreparation::RETRY_DELAY;
 
 	// 地图贴图属于缓存项；实体和数字图集复用客户端资源，避免预览重复加载、
 	// 丢失玩家实体包配置，或逐出地图后遗留实体纹理。
@@ -110,6 +110,7 @@ namespace
 		std::shared_ptr<CQmBrowserMapPreviewLoadJob> m_pLoadJob;
 		int m_UploadIndex = 0;
 		std::unique_ptr<CMapPreviewLayers> m_pRenderer;
+		CQmMapPreviewLayerPreparation m_LayerPreparation;
 		IGraphics::CRenderTargetHandle m_RenderTarget;
 		bool m_NeedsRender = true;
 		vec2 m_RenderedCenter{};
@@ -269,6 +270,9 @@ public:
 					(*It)->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
 					LoadEntry(**It, pStorage, pGameClient, NowTime);
 				}
+				(*It)->m_LayerPreparation.Retry((*It)->m_pRenderer, NowTime, [&] {
+					return CreateRenderer(pGameClient, (*It)->m_pLayers.get(), (*It)->m_pImages.get());
+				});
 				// 失败条目间隔重查：下载完成前打开过弹窗的图，下载完成后应直接出预览。
 				if((*It)->m_LoadFailed && NowTime >= (*It)->m_RetryAfterTime)
 				{
@@ -340,10 +344,7 @@ public:
 		}
 		// OnMapLoad 在离线模式只 BeginLoad，尚未上传图层；失败候选可直接析构。
 		// 先备好求值器和加载状态，再移走 job 的来源，避免下一帧读取半发布状态。
-		auto pRenderer = std::make_unique<CMapPreviewLayers>();
-		pRenderer->OnInterfacesInit(pGameClient);
-		pRenderer->SetSources(Job.m_pLayers.get(), Entry.m_pImages.get());
-		pRenderer->OnMapLoad();
+		auto pRenderer = CreateRenderer(pGameClient, Job.m_pLayers.get(), Entry.m_pImages.get());
 		Entry.m_pMap = std::move(Job.m_pMap);
 		Entry.m_Start = Job.m_Start;
 		Entry.m_pLayers = std::move(Job.m_pLayers);
@@ -367,6 +368,15 @@ public:
 	}
 
 private:
+	static std::unique_ptr<CMapPreviewLayers> CreateRenderer(CGameClient *pGameClient, CLayers *pLayers, CMapPreviewImages *pImages)
+	{
+		auto pRenderer = std::make_unique<CMapPreviewLayers>();
+		pRenderer->OnInterfacesInit(pGameClient);
+		pRenderer->SetSources(pLayers, pImages);
+		pRenderer->OnMapLoad();
+		return pRenderer;
+	}
+
 	bool EnsureIndex(CGameClient *pGameClient)
 	{
 		if(m_IndexLoaded)
@@ -492,6 +502,11 @@ namespace
 
 		const float Now = pGameClient->Client()->GlobalTime();
 		SMapPreviewEntry *pEntry = pCache->Acquire(pCtx->m_Target.m_aMapName, Now, pGameClient->Storage(), pGameClient);
+		if(pEntry != nullptr && pEntry->m_LayerPreparation.HasFailed())
+		{
+			pUi->DoLabel(&Preview, Localize("Initializing map layers"), 10.0f, TEXTALIGN_MC);
+			return;
+		}
 		if(pEntry == nullptr || pEntry->m_LoadFailed)
 		{
 			if(pCtx->m_Target.m_AllowDownload)
@@ -531,7 +546,7 @@ namespace
 		}
 
 		const CPerfTimer PrepareTimer(QmPerfEnabled());
-		const bool Ready = CQmMapPreviewCache::AdvanceEntry(*pEntry, pGameClient, Now) && pEntry->m_pRenderer->AdvanceMapLoad(1);
+		const bool Ready = CQmMapPreviewCache::AdvanceEntry(*pEntry, pGameClient, Now) && pEntry->m_LayerPreparation.Advance(pEntry->m_pRenderer, Now);
 		QmPerfLogStage("perf/map_preview", "prepare", PrepareTimer.ElapsedMs(), false, pGameClient->Client());
 		if(!Ready)
 		{
