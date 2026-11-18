@@ -19,6 +19,7 @@
 #include <engine/console.h>
 #include <engine/http.h>
 #include <engine/shared/demo.h>
+#include <engine/shared/qm_storage_layout.h>
 
 #include <game/client/component.h>
 
@@ -171,9 +172,9 @@ public:
 	static void BuildEntryCachePaths(const qmclient::rank_demo::SEntry &Entry, char *pDemoPath, size_t DemoPathSize, char *pGhostPath, size_t GhostPathSize);
 
 	// QmClient 专属目录：rank 回放相关数据与玩家自有 ghosts/demos 完全分离
-	static constexpr const char *RANK1_ROOT = "qmclient/rank1";
-	static constexpr const char *GHOST_SUBDIR = "ghosts"; // qmclient/rank1/ghosts
-	static constexpr const char *DEMO_CACHE_DIR = "qmclient/rank1/demos";
+	static constexpr const char *RANK1_ROOT = qm_storage::CONTENT_RANK1_DIR;
+	static constexpr const char *GHOST_SUBDIR = "ghosts";
+	static constexpr const char *DEMO_CACHE_DIR = qm_storage::CONTENT_RANK1_DEMOS_DIR;
 	// 旧版本目录（一次性迁移/清理）
 	static constexpr const char *LEGACY_GHOST_DIR = "ghosts/rank_ghost";
 	static constexpr const char *LEGACY_DEMO_DIR = "demos/rank_ghost";

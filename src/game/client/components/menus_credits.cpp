@@ -10,6 +10,7 @@
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
@@ -754,7 +755,7 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 				if(ui_widget::SecondaryButton(Ctx, &s_OpenSponsorsFolderButton, apActions[2], Actions.m_aButtons[2]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				{
 					char aFolder[IO_MAX_PATH_LENGTH];
-					Storage()->GetCompletePath(IStorage::TYPE_SAVE, "qmclient", aFolder, sizeof(aFolder));
+					Storage()->GetCompletePath(IStorage::TYPE_SAVE, qm_storage::CONFIG_DRAFTS_DIR, aFolder, sizeof(aFolder));
 					Client()->ViewFile(aFolder);
 				}
 			}

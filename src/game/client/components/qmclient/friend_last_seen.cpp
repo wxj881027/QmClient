@@ -10,6 +10,7 @@
 #include <engine/http.h>
 #include <engine/shared/config.h>
 #include <engine/shared/jobs.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/gameclient.h>
@@ -18,8 +19,8 @@
 
 namespace
 {
-	constexpr const char *CACHE_FILE = "qm_friend_last_seen.json";
-	constexpr const char *CACHE_TEMP_FILE = "qm_friend_last_seen.json.tmp";
+	constexpr const char *CACHE_FILE = qm_storage::FRIEND_LAST_SEEN_CACHE_FILE;
+	constexpr const char *CACHE_TEMP_FILE = "qmclient/cache/social/friend_last_seen.json.tmp";
 }
 
 // 任务独立持有 HTTP 响应，不借用组件；关闭功能后可以直接丢弃其结果。
@@ -140,6 +141,7 @@ void CQmFriendLastSeen::OnShutdown()
 	CancelRequests();
 	if(!m_Cache.Dirty())
 		return;
+	qm_storage::EnsureFolder(Storage(), qm_storage::CACHE_SOCIAL_DIR);
 	const std::string Body = m_Cache.Serialize();
 	IOHANDLE File = Storage()->OpenFile(CACHE_TEMP_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)

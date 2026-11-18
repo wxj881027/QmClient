@@ -8,6 +8,7 @@
 #include <engine/engine.h>
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/update_package.h>
@@ -306,8 +307,8 @@ void CTClient::StartUpdateDownload(bool NextSource)
 	Storage()->GetBinaryPath("QmClient-Setup.ini", aSetupMarker, sizeof(aSetupMarker));
 	m_UpdateUseSetup = UseQmClientSetupUpdate(fs_is_file(aSetupMarker), m_UpdateRelease, IsQmClientPortableBuild());
 	// 每次换源使用独立目录，旧请求异步关闭时不会覆盖新请求的文件。
-	str_format(m_aUpdateAssetDirectory, sizeof(m_aUpdateAssetDirectory), "qmclient/update-%d-%llu", pid(), static_cast<unsigned long long>(++m_UpdateDownloadSession));
-	if(!Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE) || !Storage()->CreateFolder(m_aUpdateAssetDirectory, IStorage::TYPE_SAVE))
+	str_format(m_aUpdateAssetDirectory, sizeof(m_aUpdateAssetDirectory), "%s/update-%d-%llu", qm_storage::RUNTIME_UPDATES_DIR, pid(), static_cast<unsigned long long>(++m_UpdateDownloadSession));
+	if(!qm_storage::EnsureFolder(Storage(), qm_storage::RUNTIME_UPDATES_DIR) || !Storage()->CreateFolder(m_aUpdateAssetDirectory, IStorage::TYPE_SAVE))
 	{
 		m_UpdateCheckFailed = true;
 		str_copy(m_aUpdateError, Localizable("Failed to create the update working directory"));

@@ -2858,7 +2858,7 @@ void CMenus::DemolistPopulate()
 		m_DemoPopulateStartTime = time_get_nanoseconds();
 		Storage()->ListDirectory(m_DemolistStorageType, m_aCurrentDemoFolder, DemolistFetchCallback, this);
 
-		// QmClient: 顶层追加 Rank 1 回放缓存入口（文件存放在 qmclient/rank1/demos，不在 demos/ 下建目录）
+		// QmClient: 顶层追加 Rank 1 回放缓存入口（文件存放在 qmclient/content/rank1/demos，不在 demos/ 下建目录）
 		if(str_comp(m_aCurrentDemoFolder, pBaseFolder) == 0 && Storage()->FolderExists(CRankGhost::DEMO_CACHE_DIR, IStorage::TYPE_SAVE))
 		{
 			CDemoItem Item;

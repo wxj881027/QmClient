@@ -14,6 +14,7 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/csv.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/textrender.h>
 
 #include <generated/protocol.h>
@@ -191,7 +192,7 @@ namespace
 		std::vector<Regex> m_Regexes;
 	};
 
-	static constexpr const char *QM_CHAT_LOG_DIR = "qmclient/chat_log";
+	static constexpr const char *QM_CHAT_LOG_DIR = qm_storage::CONTENT_CHAT_LOG_DIR;
 	static constexpr const char *QM_CHAT_LOG_PREFIX = "auto_chat_";
 	static constexpr const char *QM_CHAT_LOG_EXTENSION = ".txt";
 
@@ -2134,12 +2135,7 @@ void CChat::StoreSave(const char *pText)
 
 static bool EnsureChatLogFolder(IStorage *pStorage)
 {
-	if(!pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE) && !pStorage->FolderExists("qmclient", IStorage::TYPE_SAVE))
-	{
-		log_error("chat", "Failed to create chat log root folder");
-		return false;
-	}
-	if(!pStorage->CreateFolder(QM_CHAT_LOG_DIR, IStorage::TYPE_SAVE) && !pStorage->FolderExists(QM_CHAT_LOG_DIR, IStorage::TYPE_SAVE))
+	if(!qm_storage::EnsureFolder(pStorage, QM_CHAT_LOG_DIR))
 	{
 		log_error("chat", "Failed to create chat log folder '%s'", QM_CHAT_LOG_DIR);
 		return false;

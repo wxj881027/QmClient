@@ -4,6 +4,7 @@
 #include <engine/console.h>
 #include <engine/kernel.h>
 #include <engine/shared/config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <gtest/gtest.h>
@@ -63,6 +64,7 @@ namespace
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
 			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(m_pStorage->CreateFolder(qm_storage::CONFIG_DIR, IStorage::TYPE_SAVE));
 		}
 
 		void TearDown() override { g_Config = m_PreviousConfig; }
@@ -198,16 +200,16 @@ TEST_F(CConfigPersistence, DeletedExternalSettingsAreNotRecreatedByStaleSession)
 TEST_F(CConfigPersistence, ReadableCommandDomainChangeBeforeSaveUsesLastWriterPolicy)
 {
 	Write(SETTINGS_PATH, "cl_showhud 0\n");
-	Write("qmclient/qmclient_profiles.cfg", "echo original\n");
+	Write(qm_storage::PROFILES_FILE, "echo original\n");
 	CConfigSession Session(m_pStorage.get());
-	Write("qmclient/qmclient_profiles.cfg", "echo external\n");
+	Write(qm_storage::PROFILES_FILE, "echo external\n");
 	Session.Config()->RegisterCallback([](IConfigManager *pConfig, void *) {
 		pConfig->WriteLine("echo last-writer", ConfigDomain::TCLIENTPROFILES);
 	},
 		nullptr, ConfigDomain::TCLIENTPROFILES);
 	ASSERT_TRUE(Session.Config()->Save());
 	EXPECT_EQ(Read().find("cl_showhud 0"), std::string::npos);
-	EXPECT_NE(Read("qmclient/qmclient_profiles.cfg").find("echo last-writer"), std::string::npos);
+	EXPECT_NE(Read(qm_storage::PROFILES_FILE).find("echo last-writer"), std::string::npos);
 }
 
 TEST_F(CConfigPersistence, UnreadableExternalChangeBeforeSaveStillPreservesOriginal)
@@ -291,15 +293,15 @@ TEST_F(CConfigPersistence, LegacyConfigCanBeLoadedAndSavedToMergedFile)
 TEST_F(CConfigPersistence, StagingFailureKeepsAllExistingConfigFiles)
 {
 	Write(SETTINGS_PATH, "cl_showhud 0\n");
-	Write("qmclient/qmclient_profiles.cfg", "echo original\n");
+	Write(qm_storage::PROFILES_FILE, "echo original\n");
 	CConfigSession Session(m_pStorage.get());
 	char aTempPath[IO_MAX_PATH_LENGTH];
-	IStorage::FormatTmpPath(aTempPath, sizeof(aTempPath), "qmclient/qmclient_profiles.cfg");
+	IStorage::FormatTmpPath(aTempPath, sizeof(aTempPath), qm_storage::PROFILES_FILE);
 	ASSERT_TRUE(m_pStorage->CreateFolder(aTempPath, IStorage::TYPE_SAVE));
 	g_Config.m_ClShowhud = 1;
 	EXPECT_FALSE(Session.Config()->Save());
 	EXPECT_EQ(Read(), "cl_showhud 0\n");
-	EXPECT_EQ(Read("qmclient/qmclient_profiles.cfg"), "echo original\n");
+	EXPECT_EQ(Read(qm_storage::PROFILES_FILE), "echo original\n");
 	ASSERT_TRUE(m_pStorage->RemoveFolder(aTempPath, IStorage::TYPE_SAVE));
 	EXPECT_TRUE(Session.Config()->Save());
 }
@@ -362,8 +364,9 @@ TEST_F(CConfigPersistence, ReentrantSaveDoesNotDisturbOuterStagedFiles)
 TEST_F(CConfigPersistence, SaveWaitsForAnotherInstanceReleasingTheLock)
 {
 	CConfigSession Session(m_pStorage.get());
+	ASSERT_TRUE(m_pStorage->CreateFolder(qm_storage::RUNTIME_DIR, IStorage::TYPE_SAVE));
 	char aLockPath[IO_MAX_PATH_LENGTH];
-	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "qmclient/config_save.lock", aLockPath, sizeof(aLockPath));
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, qm_storage::CONFIG_SAVE_LOCK_FILE, aLockPath, sizeof(aLockPath));
 	const std::wstring Path = windows_utf8_to_wide(aLockPath);
 	std::atomic<bool> Holding{false};
 	std::atomic<bool> Acquired{false};

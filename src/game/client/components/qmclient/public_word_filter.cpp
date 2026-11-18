@@ -7,6 +7,7 @@
 #include <engine/http.h>
 #include <engine/shared/localization.h>
 #include <engine/shared/protocol.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <algorithm>
@@ -15,13 +16,13 @@
 namespace
 {
 	constexpr const char *PUBLIC_WORDS_URL = "https://qmclient.icu/api/v1/word-filter";
-	constexpr const char *CACHE_PATH = "qmclient/public_word_filter.txt";
+	constexpr const char *CACHE_PATH = qm_storage::WORD_FILTER_CACHE_FILE;
 
 	void SaveCache(IStorage *pStorage, std::string_view Content)
 	{
 		if(!pStorage)
 			return;
-		pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		qm_storage::EnsureFolder(pStorage, qm_storage::CACHE_REMOTE_DIR);
 		char aTempPath[IO_MAX_PATH_LENGTH];
 		str_format(aTempPath, sizeof(aTempPath), "%s.%d.tmp", CACHE_PATH, pid());
 		IOHANDLE File = pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);

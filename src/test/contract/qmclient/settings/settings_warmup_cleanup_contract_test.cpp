@@ -36,5 +36,5 @@ TEST(SettingsWarmupCleanup, SourceKeepsTeeMemoryPreviewCacheAndWorkshopThumbCach
 
 	EXPECT_TRUE(ContainsAll(MenusSettings, {"SSettingsTeeListPreviewCache", "gs_TeeListPreviewCache"}));
 	EXPECT_FALSE(ContainsAny(MenusSettings, {"settings_skin_preview_cache"}));
-	EXPECT_TRUE(ContainsAll(Assets, {"qmclient/workshop/thumbs/%s.webp", "m_ThumbCachePath"}));
+	EXPECT_TRUE(ContainsAll(Assets, {"%s/%s.webp", "qm_storage::CACHE_WORKSHOP_THUMBS_DIR", "m_ThumbCachePath"}));
 }

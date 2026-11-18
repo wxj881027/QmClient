@@ -38,6 +38,7 @@ TEST(QmCustomCommunityInfo, StartupCacheLoadsBeforeAnOnlineRefresh)
 	CTestInfo Info;
 	auto pStorage = Info.CreateTestStorage();
 	ASSERT_NE(pStorage, nullptr);
+	ASSERT_TRUE(qm_storage::EnsureFolder(pStorage.get(), qm_storage::CACHE_NETWORK_DIR));
 	const std::string Cache = R"({"communities":[{"id":"cached"}]})";
 	IOHANDLE File = pStorage->OpenFile(QMCLIENT_CUSTOM_COMMUNITIES_INFO_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	ASSERT_NE(File, nullptr);
@@ -79,6 +80,7 @@ TEST(QmCustomCommunityInfo, StartupCacheIsReadAndParsedByWorkerBeforePublication
 	CTestInfo Info;
 	auto pStorage = Info.CreateTestStorage();
 	ASSERT_NE(pStorage, nullptr);
+	ASSERT_TRUE(qm_storage::EnsureFolder(pStorage.get(), qm_storage::CACHE_NETWORK_DIR));
 	const std::string Body = R"({"communities":[{"id":"cached"}]})";
 	IOHANDLE File = pStorage->OpenFile(QMCLIENT_CUSTOM_COMMUNITIES_INFO_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	ASSERT_NE(File, nullptr);

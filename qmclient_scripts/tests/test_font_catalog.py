@@ -3,7 +3,7 @@
 
 目录由 C++ 侧 json-parser 读取（不支持注释/尾逗号），仓库路径在运行时拼接为
 ghproxy.net / ghfast.top / raw.githubusercontent.com 下载链，基名直接落盘到
-fonts/fonts_store 与 qmclient/fontcache，这里锁住结构与路径安全约束。
+qmclient/content/fonts，预览缓存位于 qmclient/cache/fonts/previews；这里锁住结构与路径安全约束。
 """
 
 from pathlib import Path

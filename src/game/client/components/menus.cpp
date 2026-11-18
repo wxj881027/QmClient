@@ -23,6 +23,7 @@
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
@@ -4278,7 +4279,7 @@ void CMenus::OnInit()
 
 	// QmClient: 载入上次会话记录的字形缺失集合；进服后在菜单关闭的空闲帧逐步预热，
 	// 这样打开菜单时容器仍是同步构建、首帧即完整显示，但不会触发大量字形光栅化。
-	TextRender()->QmLoadRecentGlyphs(Storage(), "qmclient/glyph_prewarm.txt");
+	TextRender()->QmLoadRecentGlyphs(Storage(), qm_storage::GLYPH_PREWARM_FILE);
 
 	// load menu images
 	m_vMenuImages.clear();
@@ -6987,7 +6988,7 @@ void CMenus::OnShutdown()
 
 	// QmClient: 保存“最近缺失字形”集合，供下次启动后立即预热（详见 text.cpp）。
 	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-	TextRender()->QmSaveRecentGlyphs(Storage(), "qmclient/glyph_prewarm.txt");
+	TextRender()->QmSaveRecentGlyphs(Storage(), qm_storage::GLYPH_PREWARM_FILE);
 }
 
 CUIElement &CMenus::SettingsTextElement(int Page, int Tab, const char *pTextId)

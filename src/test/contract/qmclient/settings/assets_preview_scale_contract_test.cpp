@@ -119,7 +119,7 @@ TEST(AssetsPreviewScale, LocalAssetCardsUsePersistedAuthorMetadata)
 	const std::string Source = Buffer.str();
 	const std::string HelperSource = HelperBuffer.str();
 
-	EXPECT_NE(HelperSource.find("qmclient/workshop/local_asset_authors.json"), std::string::npos);
+	EXPECT_NE(HelperSource.find("LOCAL_ASSET_AUTHOR_CACHE_FILENAME = qm_storage::WORKSHOP_AUTHOR_CACHE_FILE"), std::string::npos);
 	EXPECT_NE(Source.find("FindPersistedLocalAssetAuthor("), std::string::npos);
 	EXPECT_NE(Source.find("pItem->m_aAuthor[0] != '\\0' ? pItem->m_aAuthor : \"--\""), std::string::npos);
 	EXPECT_NE(Source.find("\\\"content_hash\\\":\\\""), std::string::npos);

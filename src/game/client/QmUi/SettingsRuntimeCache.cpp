@@ -2,6 +2,7 @@
 
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
+#include <engine/shared/qm_storage_layout.h>
 
 #include <game/client/components/menus.h>
 #include <game/client/components/section_loader.h>
@@ -80,7 +81,7 @@ namespace
 		return Key;
 	}
 
-	constexpr const char *SETTINGS_RUNTIME_CACHE_METADATA_FILE = "qmclient/settings_section_cache_metadata.cfg";
+	constexpr const char *SETTINGS_RUNTIME_CACHE_METADATA_FILE = qm_storage::SETTINGS_METADATA_FILE;
 }
 
 std::vector<SSettingsSection> CMenus::BuildTClientLeftCacheSections()

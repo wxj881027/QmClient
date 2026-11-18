@@ -26,7 +26,7 @@ namespace
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
 			m_pFiles = std::make_unique<qm_config_package::CStorageFiles>(*m_pStorage);
-			for(const char *pPath : {"qmclient/settings.cfg", "qmclient/qmclient_profiles.cfg", "qmclient/qmclient_chatbinds.cfg", "qmclient/qmclient_warlist.cfg"})
+			for(const char *pPath : {"qmclient/settings.cfg", "qmclient/config/qmclient_profiles.cfg", "qmclient/config/qmclient_chatbinds.cfg", "qmclient/config/qmclient_warlist.cfg"})
 				ASSERT_TRUE(m_pFiles->Write(pPath, std::string("old:") + pPath + "\r\n"));
 			std::string Error;
 			ASSERT_TRUE(qm_config_package::Collect(*m_pFiles, {}, "3.3", "2026-10-09T08:00:00Z", m_Incoming, Error)) << Error;
@@ -54,7 +54,7 @@ namespace
 		std::unique_ptr<IStorage> m_pStorage;
 		std::unique_ptr<qm_config_package::CStorageFiles> m_pFiles;
 		qm_config_package::SPackage m_Incoming;
-		const std::string m_BackupPath = "qmclient/config_packages/backups/before.qmconfig";
+		const std::string m_BackupPath = "qmclient/config/packages/backups/before.qmconfig";
 	};
 
 	// 故障仅替换文件操作边界，备份、暂存、提交与回滚均调用同一生产恢复实现。
@@ -93,9 +93,9 @@ TEST_F(CQmConfigPackageStorage, ExportIncludesOnlySelectedCustomFilesAndPreserve
 	ASSERT_EQ(Exported.m_vFiles.size(), 5u);
 	EXPECT_EQ(Exported.m_vFiles.back().m_Path, "scripts/sub/action.cfg");
 	EXPECT_EQ(Exported.m_vFiles.back().m_Content, "echo \"中文\"\r\n");
-	ASSERT_TRUE(qm_config_package::Save(*m_pFiles, "qmclient/config_packages/export.qmconfig", Exported, Error));
+	ASSERT_TRUE(qm_config_package::Save(*m_pFiles, "qmclient/config/packages/export.qmconfig", Exported, Error));
 	qm_config_package::SPackage Loaded;
-	ASSERT_TRUE(qm_config_package::Load(*m_pFiles, "qmclient/config_packages/export.qmconfig", Loaded, Error));
+	ASSERT_TRUE(qm_config_package::Load(*m_pFiles, "qmclient/config/packages/export.qmconfig", Loaded, Error));
 	EXPECT_EQ(Loaded.m_vFiles.size(), 5u);
 	EXPECT_EQ(Loaded.m_vFiles.back().m_Content, Exported.m_vFiles.back().m_Content);
 }
@@ -170,7 +170,7 @@ TEST_F(CQmConfigPackageStorage, ImportingRecoveryBackupRemovesAFileThatDidNotPre
 	EXPECT_TRUE(m_pFiles->Exists("scripts/new.cfg"));
 	qm_config_package::SPackage Backup;
 	ASSERT_TRUE(qm_config_package::Load(*m_pFiles, m_BackupPath, Backup, Error));
-	ASSERT_TRUE(qm_config_package::Restore(*m_pFiles, Backup, "qmclient/config_packages/backups/undo.qmconfig", Error)) << Error;
+	ASSERT_TRUE(qm_config_package::Restore(*m_pFiles, Backup, "qmclient/config/packages/backups/undo.qmconfig", Error)) << Error;
 	ExpectOriginalManagedFiles();
 	EXPECT_FALSE(m_pFiles->Exists("scripts/new.cfg"));
 }

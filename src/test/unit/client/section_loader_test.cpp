@@ -1058,10 +1058,10 @@ TEST(SectionLoader, SessionCacheRoundTripsLastTabAndScroll)
 	Saved.m_RuntimeKey.m_WindowHash = 55;
 	Saved.m_Valid = true;
 
-	CSectionLoader::SaveSessionCache(Saved, "qmclient/settings_section_cache_metadata.cfg", pStorage.get());
+	CSectionLoader::SaveSessionCache(Saved, "qmclient/cache/settings/runtime_metadata.cfg", pStorage.get());
 
 	SSessionUiCache Loaded;
-	ASSERT_TRUE(CSectionLoader::LoadSessionCache(Loaded, "qmclient/settings_section_cache_metadata.cfg", pStorage.get()));
+	ASSERT_TRUE(CSectionLoader::LoadSessionCache(Loaded, "qmclient/cache/settings/runtime_metadata.cfg", pStorage.get()));
 	EXPECT_EQ(Loaded.m_LastSettingsPage, 8);
 	EXPECT_EQ(Loaded.m_LastTClientTab, 0);
 	EXPECT_EQ(Loaded.m_LastQmTab, -1);

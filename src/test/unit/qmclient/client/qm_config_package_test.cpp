@@ -13,10 +13,16 @@ namespace
 		Result.m_ExportedAt = "2026-10-09T08:00:00Z";
 		Result.m_vFiles = {
 			{"qmclient/settings.cfg", "qm_fast_input 1\r\nbind q \"exec scripts/action.cfg\"\r\n"},
-			{"qmclient/qmclient_profiles.cfg", "add_profile 1 2 3 4 \"default\" \"名字\" \"\"\n"},
-			{"qmclient/qmclient_chatbinds.cfg", "bindchat \"!test\" \"echo example\"\n"},
-			{"qmclient/qmclient_warlist.cfg", ""}};
+			{"qmclient/config/qmclient_profiles.cfg", "add_profile 1 2 3 4 \"default\" \"名字\" \"\"\n"},
+			{"qmclient/config/qmclient_chatbinds.cfg", "bindchat \"!test\" \"echo example\"\n"},
+			{"qmclient/config/qmclient_warlist.cfg", ""}};
 		return Result;
+	}
+
+	void ReplaceAll(std::string &Text, std::string_view From, std::string_view To)
+	{
+		for(size_t Position = Text.find(From); Position != std::string::npos; Position = Text.find(From, Position + To.size()))
+			Text.replace(Position, From.size(), To);
 	}
 }
 
@@ -41,13 +47,31 @@ TEST(QmConfigPackage, RoundTripPreservesMetadataOriginalBytesAndCustomDirectoryS
 
 TEST(QmConfigPackage, UnsafeAndLegacyConfigurationPathsAreRejected)
 {
-	for(const char *pPath : {"../settings.cfg", "scripts/../settings.cfg", "/settings.cfg", "C:/settings.cfg", "scripts\\action.cfg", "scripts//action.cfg", "scripts/con.cfg", "scripts/aux/action.cfg", "scripts/dir./action.cfg", "settings_ddnet.cfg", "qmclient/settings_qmclient.cfg", "QMCLIENT/settings.cfg", "qmclient/builtinscripts/action.cfg", "qmclient/config_packages/backup.cfg", "scripts/action.txt"})
+	for(const char *pPath : {"../settings.cfg", "scripts/../settings.cfg", "/settings.cfg", "C:/settings.cfg", "scripts\\action.cfg", "scripts//action.cfg", "scripts/con.cfg", "scripts/aux/action.cfg", "scripts/dir./action.cfg", "settings_ddnet.cfg", "qmclient/settings_qmclient.cfg", "QMCLIENT/settings.cfg", "qmclient/qmclient_profiles.cfg", "qmclient/qmclient_chatbinds.cfg", "qmclient/qmclient_warlist.cfg", "qmclient/builtinscripts/action.cfg", "qmclient/config_packages/backup.cfg", "qmclient/config/packages/backup.cfg", "scripts/action.txt"})
 	{
 		SCOPED_TRACE(pPath);
 		EXPECT_FALSE(qm_config_package::IsConfigPath(pPath));
 	}
 	EXPECT_TRUE(qm_config_package::IsConfigPath("scripts/自定义/action.cfg"));
 	EXPECT_TRUE(qm_config_package::IsConfigPath("autoexec_client.cfg"));
+	EXPECT_TRUE(qm_config_package::IsManagedPath("qmclient/qmclient_profiles.cfg"));
+	EXPECT_TRUE(qm_config_package::IsManagedPath(qm_storage::PROFILES_FILE));
+}
+
+TEST(QmConfigPackage, LegacyManagedPathsFromOlderPackagesAreCanonicalizedOnDecode)
+{
+	std::string Json, Error;
+	ASSERT_TRUE(qm_config_package::Encode(Package(), Json, Error)) << Error;
+	ReplaceAll(Json, qm_storage::PROFILES_FILE, "qmclient/qmclient_profiles.cfg");
+	ReplaceAll(Json, qm_storage::CHATBINDS_FILE, "qmclient/qmclient_chatbinds.cfg");
+	ReplaceAll(Json, qm_storage::WARLIST_FILE, "qmclient/qmclient_warlist.cfg");
+
+	qm_config_package::SPackage Restored;
+	ASSERT_TRUE(qm_config_package::Decode(Json, Restored, Error)) << Error;
+	ASSERT_EQ(Restored.m_vFiles.size(), 4u);
+	EXPECT_EQ(Restored.m_vFiles[1].m_Path, qm_storage::PROFILES_FILE);
+	EXPECT_EQ(Restored.m_vFiles[2].m_Path, qm_storage::CHATBINDS_FILE);
+	EXPECT_EQ(Restored.m_vFiles[3].m_Path, qm_storage::WARLIST_FILE);
 }
 
 TEST(QmConfigPackage, CaseAliasedDuplicatePathsCannotOverwriteTheSameWindowsFile)

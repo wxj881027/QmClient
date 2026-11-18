@@ -74,7 +74,7 @@ TEST(QmMapCoverArt, CacheFileNameMirrorsOfficialLeaf)
 {
 	char aPath[64];
 	ASSERT_TRUE(QmMapCover::ThumbnailCacheFileName("https://ddnet.org/ranks/maps/_MegaRosenkohl.png", aPath, sizeof(aPath)));
-	EXPECT_STREQ(aPath, "qmclient/mapcovers/cover__MegaRosenkohl.png");
+	EXPECT_STREQ(aPath, "qmclient/cache/maps/covers/cover__MegaRosenkohl.png");
 
 	char aSmall[8];
 	EXPECT_FALSE(QmMapCover::ThumbnailCacheFileName("https://ddnet.org/ranks/maps/_MegaRosenkohl.png", aSmall, sizeof(aSmall)));

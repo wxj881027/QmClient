@@ -2430,7 +2430,7 @@ void CMenus::GhostlistPopulate()
 	str_copy(m_aGhostScanDir, pGhostDir);
 	m_GhostScanIsRankDir = false;
 	Storage()->ListDirectoryInfo(IStorage::TYPE_ALL, pGhostDir, GhostlistFetchCallback, this);
-	// QmClient: rank 回放数据已迁至 qmclient/rank1 专属目录，与影子页完全分离
+	// QmClient: rank 回放数据位于 qmclient/content/rank1，与影子页完全分离
 	SortGhostlist();
 
 	CGhostItem *pOwnGhost = nullptr;

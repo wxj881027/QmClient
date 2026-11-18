@@ -18,6 +18,7 @@
 #include <engine/image.h>
 #include <engine/keys.h>
 #include <engine/shared/config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/shared/ringbuffer.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
@@ -222,11 +223,8 @@ class CQmChatExportJob : public IJob
 	{
 		if(m_Cancelled.load())
 			return;
-		for(const char *pDirectory : {"qmclient", "qmclient/chat_log"})
-		{
-			if(!m_pStorage->CreateFolder(pDirectory, IStorage::TYPE_SAVE) && !m_pStorage->FolderExists(pDirectory, IStorage::TYPE_SAVE))
-				return;
-		}
+		if(!qm_storage::EnsureFolder(m_pStorage, qm_storage::CONTENT_CHAT_LOG_DIR))
+			return;
 		m_Success = QmChatExport::Export(m_pStorage, m_BaseFilename, m_vLines, m_Glyphs, m_Labels, m_Cancelled, m_CompletedPages);
 	}
 
@@ -1710,7 +1708,7 @@ bool CGameConsole::CInstance::ExportSelectedChat()
 	char aTimestamp[20];
 	str_timestamp(aTimestamp, sizeof(aTimestamp));
 	char aBaseFilename[IO_MAX_PATH_LENGTH];
-	str_format(aBaseFilename, sizeof(aBaseFilename), "qmclient/chat_log/local_chat_export_%s_%lld", aTimestamp, (long long)time_get_nanoseconds().count());
+	str_format(aBaseFilename, sizeof(aBaseFilename), "%s/local_chat_export_%s_%lld", qm_storage::CONTENT_CHAT_LOG_DIR, aTimestamp, (long long)time_get_nanoseconds().count());
 	QmChatExport::SLabels Labels{Localize("QmClient chat log"), Localize("Total"), Localize("Messages")};
 	m_pChatExportJob = std::make_shared<CQmChatExportJob>(m_pGameConsole->Storage(), aBaseFilename, std::move(vLines), std::move(Labels));
 	return true;

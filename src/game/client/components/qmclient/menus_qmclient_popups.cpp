@@ -7,6 +7,7 @@
 #include <engine/http.h>
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
@@ -244,7 +245,7 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 		if(ui_widget::SecondaryButton(Ctx, &s_OpenFolderButton, Localize("Open folder"), OpenFolderRect))
 		{
 			char aFolder[IO_MAX_PATH_LENGTH];
-			Storage()->GetCompletePath(IStorage::TYPE_SAVE, "qmclient", aFolder, sizeof(aFolder));
+			Storage()->GetCompletePath(IStorage::TYPE_SAVE, qm_storage::CONFIG_DRAFTS_DIR, aFolder, sizeof(aFolder));
 			Client()->ViewFile(aFolder);
 		}
 

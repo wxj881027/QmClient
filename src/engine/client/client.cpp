@@ -61,6 +61,7 @@
 #include <engine/shared/protocolglue.h>
 #include <engine/shared/qm_default_profile.h>
 #include <engine/shared/qm_removed_config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/shared/rust_version.h>
 #include <engine/shared/snapshot.h>
 #include <engine/shared/uuid_manager.h>
@@ -201,9 +202,9 @@ static bool gs_QmTestMainThreadException = false;
 // 进程回归注入最终清理卡死，验证隐藏窗口后的强制退出。
 static bool gs_QmTestShutdownCleanupStall = false;
 static constexpr const char *gs_pQmCrashDumpDir = "dumps/QmClient_Crash";
-static constexpr const char *gs_pQmLifecycleMarkerFile = "qmclient/lifecycle_pending.marker";
+static constexpr const char *gs_pQmLifecycleMarkerFile = qm_storage::LIFECYCLE_MARKER_FILE;
 #if defined(CONF_FAMILY_WINDOWS)
-static constexpr const char *gs_pQmCrashReporterBaselineFile = "qmclient/crash_reporter_started_at.marker";
+static constexpr const char *gs_pQmCrashReporterBaselineFile = qm_storage::CRASH_REPORTER_MARKER_FILE;
 #endif
 static bool gs_aLoadedPreviousConfigPath[ConfigDomain::NUM] = {};
 
@@ -4759,10 +4760,9 @@ void CClient::QmProbeSaveDirectory()
 	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "", aSaveDir, sizeof(aSaveDir));
 	char aProcess[128];
 	QmProcessTokenDescription(aProcess, sizeof(aProcess));
-	if(!m_pStorage->FolderExists("qmclient", IStorage::TYPE_SAVE))
-		m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	qm_storage::EnsureFolder(m_pStorage, qm_storage::RUNTIME_DIR);
 	char aProbePath[IO_MAX_PATH_LENGTH];
-	str_format(aProbePath, sizeof(aProbePath), "qmclient/.save_probe_%d", pid());
+	str_format(aProbePath, sizeof(aProbePath), "%s/.save_probe_%d", qm_storage::RUNTIME_DIR, pid());
 	IOHANDLE Probe = m_pStorage->OpenFile(aProbePath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	m_QmSaveDirectoryWritable = Probe != nullptr;
 	if(Probe != nullptr)
@@ -8430,6 +8430,8 @@ int main(int argc, const char **argv)
 		}
 	}
 	pKernel->RegisterInterface(pStorage);
+	if(!qm_storage::MigrateStorageLayout(pStorage))
+		log_error("client", "QmClient storage layout migration is incomplete; conflicting files were preserved");
 
 	pFutureAssertionLogger->Set(CreateAssertionLogger(pStorage, GAME_NAME));
 

@@ -3,6 +3,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_COVER_ART_H
 
 #include <engine/image.h>
+#include <engine/shared/qm_storage_layout.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -18,7 +19,7 @@ namespace QmMapCover
 	// ddnet.org 官方地图缩略图地址前缀；只有该来源的图片会被下载和缓存。
 	inline constexpr const char *THUMBNAIL_URL_PREFIX = "https://ddnet.org/ranks/maps/";
 	// 缓存目录与文件名前缀：缓存文件名沿用 URL 末段，避开 Windows 设备名。
-	inline constexpr const char *CACHE_FOLDER = "qmclient/mapcovers";
+	inline constexpr const char *CACHE_FOLDER = qm_storage::CACHE_MAP_COVERS_DIR;
 	inline constexpr const char *CACHE_FILE_PREFIX = "cover_";
 	// 输出尺寸上限与单张缩略图解码上限。
 	inline constexpr int MAX_WIDTH = 512;
@@ -27,7 +28,7 @@ namespace QmMapCover
 
 	// 只接受 ddnet.org 官方地图缩略图：https://ddnet.org/ranks/maps/<文件名>.png
 	bool ValidThumbnailUrl(const char *pUrl);
-	// 生成缓存文件名（相对存储根）：qmclient/mapcovers/cover_<文件>.png。
+	// 生成缓存文件名（相对存储根）：qmclient/cache/maps/covers/cover_<文件>.png。
 	bool ThumbnailCacheFileName(const char *pUrl, char *pOut, size_t OutSize);
 
 	// 条目封面图的形状参数。

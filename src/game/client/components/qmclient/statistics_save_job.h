@@ -1,10 +1,12 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_STATISTICS_SAVE_JOB_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_STATISTICS_SAVE_JOB_H
 
+#include <base/str.h>
 #include <base/system.h>
 
 #include <engine/shared/jobs.h>
 #include <engine/storage.h>
+#include <engine/shared/qm_storage_layout.h>
 
 #include <mutex>
 #include <string>
@@ -37,7 +39,9 @@ public:
 		m_Attempted = true;
 		if(!m_pStorage)
 			return false;
-		m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		const char *pSlash = str_rchr(m_Filename.c_str(), '/');
+		if(pSlash != nullptr)
+			qm_storage::EnsureFolder(m_pStorage, std::string(m_Filename.c_str(), pSlash - m_Filename.c_str()).c_str());
 		char aTempFilename[IO_MAX_PATH_LENGTH];
 		IStorage::FormatTmpPath(aTempFilename, sizeof(aTempFilename), m_Filename.c_str());
 		IOHANDLE File = m_pStorage->OpenFile(aTempFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);

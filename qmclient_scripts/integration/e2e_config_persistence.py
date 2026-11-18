@@ -17,9 +17,9 @@ except ModuleNotFoundError:
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANAGED_PATHS = (
 	"qmclient/settings.cfg",
-	"qmclient/qmclient_profiles.cfg",
-	"qmclient/qmclient_chatbinds.cfg",
-	"qmclient/qmclient_warlist.cfg",
+	"qmclient/config/qmclient_profiles.cfg",
+	"qmclient/config/qmclient_chatbinds.cfg",
+	"qmclient/config/qmclient_warlist.cfg",
 )
 
 

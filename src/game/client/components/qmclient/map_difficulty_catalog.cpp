@@ -8,6 +8,7 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/sqlite.h>
 #include <engine/storage.h>
 
@@ -25,7 +26,7 @@ namespace
 {
 	constexpr const char *MAP_DIFFICULTY_SQL = "qmclient/map_difficulty.sql";
 	constexpr size_t MAX_MAP_DIFFICULTY_SQL_BYTES = 2 * 1024 * 1024;
-	constexpr const char *AXIOM_CACHE_PATH = "qmclient/axiom_map_difficulty.json";
+	constexpr const char *AXIOM_CACHE_PATH = qm_storage::MAP_DIFFICULTY_CACHE_FILE;
 	constexpr size_t MAX_AXIOM_CACHE_BYTES = 2 * 1024 * 1024;
 	constexpr size_t MAX_AXIOM_ENTRIES = 4096;
 
@@ -240,7 +241,7 @@ bool CQmMapDifficultyCatalog::SaveAxiomCache(IStorage *pStorage)
 {
 	if(pStorage == nullptr)
 		return false;
-	pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	qm_storage::EnsureFolder(pStorage, qm_storage::CACHE_MAPS_DIR);
 	char aTempPath[IO_MAX_PATH_LENGTH];
 	str_format(aTempPath, sizeof(aTempPath), "%s.%d.tmp", AXIOM_CACHE_PATH, pid());
 	IOHANDLE File = pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);

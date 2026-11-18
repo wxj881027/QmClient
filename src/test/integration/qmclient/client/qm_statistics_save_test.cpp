@@ -10,7 +10,7 @@
 
 namespace
 {
-	constexpr const char *STATISTICS_FILE = "qmclient/statistics.json";
+	constexpr const char *STATISTICS_FILE = "qmclient/state/statistics.json";
 	constexpr const char *SNAPSHOT = "{\"local\":{\"modes\":[]},\"remote\":{}}\n";
 	constexpr const char *NEW_SNAPSHOT = "{\"local\":{\"modes\":[]},\"remote\":{\"qmclient\":{\"open_seconds\":\"123\"}}}\n";
 

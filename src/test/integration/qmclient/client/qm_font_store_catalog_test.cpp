@@ -15,6 +15,8 @@ namespace
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
 			ASSERT_TRUE(qm_font_download::EnsureDirectory(*m_pStorage));
+			ASSERT_TRUE(m_pStorage->CreateFolder("fonts", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(m_pStorage->CreateFolder("fonts/fonts_store", IStorage::TYPE_SAVE));
 		}
 		void WriteFile(const char *pPath, const char *pText)
 		{
@@ -47,8 +49,8 @@ TEST_F(CQmFontStoreCatalog, AggregatesCaseInsensitiveFamiliesAndRequiresAllInsta
 		{"n":"Alpha","f":"ofl/alpha/Alpha-Regular.ttf","c":"sans-serif"},
 		{"n":"alpha","f":"ofl/alpha/Alpha-Bold.ttf","c":"sans-serif"},
 		{"n":"Beta","f":"ofl/beta/Beta.ttf","c":"serif"}]})");
-	WriteFile("fonts/fonts_store/Alpha-Regular.ttf", "font");
-	WriteFile("fonts/fonts_store/Beta.ttf", "font");
+	WriteFile("qmclient/content/fonts/Alpha-Regular.ttf", "font");
+	WriteFile("qmclient/content/fonts/Beta.ttf", "font");
 	const auto Result = Load();
 	ASSERT_EQ(Result.m_vEntries.size(), 3u);
 	ASSERT_EQ(Result.m_vFamilies.size(), 2u);

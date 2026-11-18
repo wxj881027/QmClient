@@ -6,12 +6,13 @@
 #include <engine/http.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <cstdlib>
 #include <memory>
 
-inline constexpr char QMCLIENT_CUSTOM_COMMUNITIES_INFO_FILE[] = "custom-communities-ddnet-info.json";
+inline constexpr const char *QMCLIENT_CUSTOM_COMMUNITIES_INFO_FILE = qm_storage::CUSTOM_COMMUNITIES_CACHE_FILE;
 using TQmCommunityInfo = std::unique_ptr<json_value, decltype(&json_value_free)>;
 
 // 加载时读旧缓存；刷新时只消费完成响应，避免主线程重新打开刚写入的文件。

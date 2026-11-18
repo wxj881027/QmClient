@@ -8,6 +8,7 @@
 #include <engine/engine.h>
 #include <engine/http.h>
 #include <engine/shared/jobs.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/netease/netease_lyric_timeline.h>
@@ -48,8 +49,7 @@ namespace QmMusicLyrics
 					return;
 
 				// 校验后再写同目录临时文件，失败时保留原缓存。
-				m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-				m_pStorage->CreateFolder("qmclient/lyrics", IStorage::TYPE_SAVE);
+				qm_storage::EnsureFolder(m_pStorage, qm_storage::CONTENT_LYRICS_DIR);
 				const auto Folder = m_Path.substr(0, m_Path.rfind('/'));
 				m_pStorage->CreateFolder(Folder.c_str(), IStorage::TYPE_SAVE);
 				char aTemporary[IO_MAX_PATH_LENGTH];

@@ -2819,6 +2819,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   qm_default_profile.h
   qm_legacy_config.h
   qm_legacy_config_aliases.h
+  qm_storage_layout.cpp
+  qm_storage_layout.h
   console.cpp
   console.h
   csv.cpp
@@ -4890,6 +4892,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_font_store_catalog_test.cpp
     src/test/integration/qmclient/client/qm_statistics_save_test.cpp
     src/test/integration/engine/config_migration_backup_test.cpp
+    src/test/integration/engine/qm_storage_layout_test.cpp
     src/test/integration/qmclient/client/bounded_file_reader_test.cpp
     src/test/integration/qmclient/client/custom_community_info_test.cpp
     src/test/integration/qmclient/client/qm_sponsors_draft_test.cpp

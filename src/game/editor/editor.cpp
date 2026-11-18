@@ -23,6 +23,7 @@
 #include <engine/shared/filecollection.h>
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
@@ -53,8 +54,8 @@
 using namespace FontIcons;
 
 static constexpr const char *QM_EDITOR_COLLAB_WS_URL = "wss://qmclient.icu/ws/editor";
-static constexpr const char *QM_EDITOR_COLLAB_SNAPSHOT_PATH = "qmclient/editor_collab_snapshot.map";
-static constexpr const char *QM_EDITOR_COLLAB_INCOMING_PATH = "qmclient/editor_collab_incoming.map";
+static constexpr const char *QM_EDITOR_COLLAB_SNAPSHOT_PATH = qm_storage::EDITOR_COLLAB_SNAPSHOT_FILE;
+static constexpr const char *QM_EDITOR_COLLAB_INCOMING_PATH = qm_storage::EDITOR_COLLAB_INCOMING_FILE;
 static constexpr int QM_EDITOR_COLLAB_MAX_MEMBERS = 4;
 static constexpr int QM_EDITOR_COLLAB_PUSH_DELAY_MS = 1000;
 static constexpr int QM_EDITOR_COLLAB_MAX_MAP_BYTES = 18 * 1024 * 1024;
@@ -3900,7 +3901,7 @@ void CEditor::StartCollabSnapshotSave(bool Force)
 	if(!Force && (Map()->m_LastModifiedTime < 0.0f || Map()->m_LastModifiedTime <= m_CollabLastUploadedModifiedTime))
 		return;
 
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	qm_storage::EnsureFolder(Storage(), qm_storage::RUNTIME_EDITOR_DIR);
 	m_CollabSnapshotSavePending = Save(QM_EDITOR_COLLAB_SNAPSHOT_PATH);
 	if(m_CollabSnapshotSavePending)
 	{
@@ -4175,7 +4176,7 @@ bool CEditor::ApplyCollabSnapshotBase64(const char *pMapBase64, int Revision, bo
 	}
 	vDecoded.resize(DecodedSize);
 
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	qm_storage::EnsureFolder(Storage(), qm_storage::RUNTIME_EDITOR_DIR);
 	IOHANDLE File = Storage()->OpenFile(QM_EDITOR_COLLAB_INCOMING_PATH, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)
 	{

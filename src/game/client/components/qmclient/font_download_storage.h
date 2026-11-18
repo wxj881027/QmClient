@@ -1,16 +1,17 @@
-// 字体商店只写 TYPE_SAVE 下的 fonts_store 目录；旧目录由用户手动迁移。
+// 字体商店只写 QmClient 的统一内容目录；启动迁移会把旧 fonts_store 搬入这里。
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_FONT_DOWNLOAD_STORAGE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_FONT_DOWNLOAD_STORAGE_H
 
 #include <base/str.h>
 
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <string>
 
 namespace qm_font_download
 {
-	inline constexpr const char *DIRECTORY = "fonts/fonts_store";
+	inline constexpr const char *DIRECTORY = qm_storage::CONTENT_FONTS_DIR;
 
 	inline bool ValidFilename(const std::string &File)
 	{
@@ -21,8 +22,7 @@ namespace qm_font_download
 
 	inline bool EnsureDirectory(IStorage &Storage)
 	{
-		// CreateFolder 不会递归建立父目录，因此按顺序建立两级目录。
-		return Storage.CreateFolder("fonts", IStorage::TYPE_SAVE) && Storage.CreateFolder(DIRECTORY, IStorage::TYPE_SAVE);
+		return qm_storage::EnsureFolder(&Storage, DIRECTORY);
 	}
 
 	inline bool TargetPath(const std::string &File, char *pPath, unsigned PathSize)

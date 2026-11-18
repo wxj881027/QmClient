@@ -20,6 +20,7 @@
 #include <engine/shared/config.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/shared/jsonwriter.h>
 #include <engine/storage.h>
 
@@ -61,11 +62,11 @@
 #include <windows.h>
 #endif
 
-static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.json";
+static constexpr const char *MAP_CATEGORY_CACHE_FILE = qm_storage::MAP_CATEGORIES_FILE;
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
-static constexpr const char *MAP_NOTES_FILE = "qmclient/map_notes.json";
+static constexpr const char *MAP_NOTES_FILE = qm_storage::MAP_NOTES_FILE;
 static constexpr int64_t MAP_NOTES_SAVE_DELAY_SEC = 5;
-static constexpr const char *MAP_HISTORY_FILE = "qmclient/map_history.json";
+static constexpr const char *MAP_HISTORY_FILE = qm_storage::MAP_HISTORY_FILE;
 static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
 static constexpr int LOCAL_SAVE_JOIN_HINT_MAX_ITEMS = 12;
 static constexpr int GORES_DISTANCE_FIELD_TILE_SCAN_BUDGET = 4096;
@@ -4145,8 +4146,7 @@ void CTClient::LoadMapCategoryCache()
 
 void CTClient::SaveMapCategoryCache()
 {
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-
+	qm_storage::EnsureFolder(Storage(), qm_storage::STATE_MAPS_DIR);
 	IOHANDLE File = Storage()->OpenFile(MAP_CATEGORY_CACHE_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)
 	{
@@ -4276,8 +4276,7 @@ void CTClient::LoadMapNotes()
 
 void CTClient::SaveMapNotes()
 {
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-
+	qm_storage::EnsureFolder(Storage(), qm_storage::STATE_MAPS_DIR);
 	IOHANDLE File = Storage()->OpenFile(MAP_NOTES_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)
 	{
@@ -4385,8 +4384,7 @@ void CTClient::LoadMapHistory()
 
 void CTClient::SaveMapHistory()
 {
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-
+	qm_storage::EnsureFolder(Storage(), qm_storage::STATE_MAPS_DIR);
 	char aTempFilename[IO_MAX_PATH_LENGTH];
 	IStorage::FormatTmpPath(aTempFilename, sizeof(aTempFilename), MAP_HISTORY_FILE);
 	IOHANDLE File = Storage()->OpenFile(aTempFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);

@@ -97,11 +97,12 @@ namespace
 		{
 			m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 			m_pStorage->CreateFolder("qmclient/cache", IStorage::TYPE_SAVE);
+			m_pStorage->CreateFolder("qmclient/cache/network", IStorage::TYPE_SAVE);
 			const std::string SourceKey(pSourceKey);
 			char aHash[SHA256_MAXSTRSIZE];
 			sha256_str(sha256(SourceKey.data(), SourceKey.size()), aHash, sizeof(aHash));
 			const std::string Text = "QMSL1 " + std::to_string(Received) + " " + std::to_string(Age) + " " + aHash + "\n" + pBody;
-			IOHANDLE File = m_pStorage->OpenFile("qmclient/cache/qm-serverlist.json", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			IOHANDLE File = m_pStorage->OpenFile("qmclient/cache/network/serverlist.json", IOFLAG_WRITE, IStorage::TYPE_SAVE);
 			ASSERT_NE(File, nullptr);
 			io_write(File, Text.data(), Text.size());
 			io_close(File);
@@ -633,7 +634,7 @@ TEST_F(QmServerListRecovery, ShutdownDrainsLatestCoalescedSaveAfterBrowserDestru
 	EXPECT_EQ(pWrites->m_vBodies[1].find("Intermediate"), std::string::npos);
 	void *pSaved;
 	unsigned Size;
-	ASSERT_TRUE(m_pStorage->ReadFile("qmclient/cache/qm-serverlist.json", IStorage::TYPE_SAVE, &pSaved, &Size));
+	ASSERT_TRUE(m_pStorage->ReadFile("qmclient/cache/network/serverlist.json", IStorage::TYPE_SAVE, &pSaved, &Size));
 	EXPECT_FALSE(m_pStorage->FileExists("cache/qm-serverlist.json", IStorage::TYPE_SAVE));
 	const std::string Saved(static_cast<char *>(pSaved), Size);
 	free(pSaved);

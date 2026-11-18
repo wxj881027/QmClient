@@ -4,6 +4,7 @@
 
 #include <base/system.h>
 
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <algorithm>
@@ -13,7 +14,7 @@ namespace QmMapTags
 {
 	namespace
 	{
-		const char *LOCAL_TAGS_FILE = "qm_local_map_tags.txt";
+		const char *LOCAL_TAGS_FILE = qm_storage::LOCAL_MAP_TAGS_FILE;
 		constexpr int MAX_LOCAL_TAGS_PER_MAP = 16;
 		constexpr int64_t MAX_FILE_BYTES = 256 * 1024;
 
@@ -91,6 +92,7 @@ namespace QmMapTags
 	{
 		if(pStorage == nullptr)
 			return false;
+		qm_storage::EnsureFolder(pStorage, qm_storage::STATE_MAPS_DIR);
 		IOHANDLE File = pStorage->OpenFile(LOCAL_TAGS_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 		if(!File)
 			return false;

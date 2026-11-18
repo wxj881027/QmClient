@@ -321,7 +321,7 @@ namespace
 			pStorage->RemoveFile(Path.c_str(), IStorage::TYPE_SAVE);
 	}
 
-	// ===== 旧目录迁移/清理（qmclient/rank1 启用前的一次性处理） =====
+	// ===== 旧目录迁移/清理（qmclient/content/rank1 启用前的一次性处理） =====
 
 	void RemoveGhoFilesIn(IStorage *pStorage, const char *pDir)
 	{
@@ -1122,13 +1122,11 @@ void CRankGhost::EnsureFolders(IStorage *pStorage)
 {
 	if(pStorage == nullptr)
 		return;
-	// 逐级创建（IStorage::CreateFolder 不支持一次创建多级）
-	pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-	pStorage->CreateFolder(RANK1_ROOT, IStorage::TYPE_SAVE);
-	pStorage->CreateFolder(DEMO_CACHE_DIR, IStorage::TYPE_SAVE);
-	char aDir[IO_MAX_PATH_LENGTH];
-	str_format(aDir, sizeof(aDir), "%s/%s", RANK1_ROOT, GHOST_SUBDIR);
-	pStorage->CreateFolder(aDir, IStorage::TYPE_SAVE);
+	qm_storage::EnsureFolder(pStorage, RANK1_ROOT);
+	qm_storage::EnsureFolder(pStorage, DEMO_CACHE_DIR);
+	char aGhostDir[IO_MAX_PATH_LENGTH];
+	str_format(aGhostDir, sizeof(aGhostDir), "%s/%s", RANK1_ROOT, GHOST_SUBDIR);
+	qm_storage::EnsureFolder(pStorage, aGhostDir);
 	// 顺手清理已迁移完毕的遗留目录，demo 浏览器不再显示无效入口
 	RemoveLegacyDemoDirIfEmpty(pStorage, LEGACY_DEMO_DIR);
 }
