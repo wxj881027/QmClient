@@ -37,6 +37,15 @@ inline float QmScoreboardFooterRemainingHeight(CUIRect Area, float CursorY)
 	return maximum(0.0f, Area.y + Area.h - CursorY);
 }
 
+// 提示条固定占底栏最后一段：先把它从可分配高度里扣掉，旁观者再吃剩余空间，
+// 否则旁观者排满后提示条会被推到屏幕外。
+inline CUIRect QmScoreboardFooterAreaWithHintReserved(CUIRect Area, bool HasHint, float HintHeight, float Gap)
+{
+	if(HasHint)
+		Area.h = maximum(0.0f, Area.h - maximum(0.0f, HintHeight) - maximum(0.0f, Gap));
+	return Area;
+}
+
 // 旁观者背景按实际行数收缩，避免人少时留下一大片空面板；
 // 行数超过上限时按上限截断，不越出可用高度。
 inline float QmScoreboardSpectatorPanelHeight(float AvailableHeight, int LineCount, int MaxLines, float FontSize, float VerticalPadding)

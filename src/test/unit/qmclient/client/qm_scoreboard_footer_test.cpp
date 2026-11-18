@@ -85,6 +85,19 @@ TEST(QmScoreboardFooter, RemainingHeightNeverNegative)
 	EXPECT_FLOAT_EQ(QmScoreboardFooterRemainingHeight(Area, 90.0f), 0.0f);
 }
 
+TEST(QmScoreboardFooter, HintReserveKeepsSpectatorsAboveFooterBottom)
+{
+	CUIRect Area = {0.0f, 100.0f, 400.0f, 100.0f};
+	float CursorY = Area.y;
+	const CUIRect Reserved = QmScoreboardFooterAreaWithHintReserved(Area, true, 20.0f, 5.0f);
+	EXPECT_FLOAT_EQ(Reserved.h, 75.0f);
+	const CUIRect Spectators = QmScoreboardFooterBlock(Reserved, CursorY, 400.0f, Reserved.h, 5.0f);
+	const CUIRect Hint = QmScoreboardFooterBlock(Area, CursorY, 140.0f, 20.0f, 0.0f);
+	ASSERT_GT(Spectators.w, 0.0f);
+	ASSERT_GT(Hint.w, 0.0f);
+	EXPECT_LE(Hint.y + Hint.h, Area.y + Area.h);
+}
+
 TEST(QmScoreboardFooter, SpectatorPanelShrinksToMeasuredLines)
 {
 	// 10 行的可用高度，实际只排了 1 行：背景收缩到 1 行 + 上下留白。

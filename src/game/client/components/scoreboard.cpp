@@ -1019,7 +1019,7 @@ void CScoreboard::RenderFooter(CUIRect Footer)
 		}
 	}
 	if(HasSpectators)
-		RenderSpectators(Footer, CursorY, FooterGap);
+		RenderSpectators(QmScoreboardFooterAreaWithHintReserved(Footer, ShowCursorHint, 20.0f, FooterGap), CursorY, FooterGap);
 	if(ShowCursorHint)
 	{
 		char aKey[64];
@@ -2672,7 +2672,7 @@ void CScoreboard::OnRender()
 			ScoreboardTextEntryFade(m_TextEntryElapsedSec, SCOREBOARD_TEXT_ENTRY_FOOTER_INDEX, g_Config.m_QmUiMotionLevel, NumPlayers));
 		RenderSoundMuteBar(ScoreboardContent);
 		m_MediaControls.Render(*Ui(), *TextRender(), GameClient()->m_Tooltips, GameClient()->m_SystemMediaControls, ScoreboardContent,
-			ScoreboardUiInteractive && m_MouseUnlocked && !GameClient()->m_HudEditor.IsActive(), m_AnimContentAlpha, ScoreboardUiColorSurface(BackgroundAlphaFinal));
+			ScoreboardUiInteractive && m_MouseUnlocked && !GameClient()->m_HudEditor.IsActive(), m_AnimContentAlpha, ScoreboardUiColorSurface(m_AnimContentAlpha));
 
 		CUIRect Spectators = {ScoreboardContent.x, ScoreboardContent.y + ScoreboardContent.h + 5.0f, ScoreboardContent.w, 100.0f};
 		if(pGameInfoObj && (pGameInfoObj->m_ScoreLimit || pGameInfoObj->m_TimeLimit || (pGameInfoObj->m_RoundNum && pGameInfoObj->m_RoundCurrent)))
