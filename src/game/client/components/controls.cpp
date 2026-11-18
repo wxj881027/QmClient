@@ -35,8 +35,8 @@ CControls::CControls()
 
 void CControls::OnReset()
 {
-	ResetInput(0);
-	ResetInput(1);
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		ResetInput(Dummy, EHookReset::RELEASE_HELD);
 	m_FastInputHookAction = false;
 	m_FastInputFireAction = false;
 
@@ -46,15 +46,9 @@ void CControls::OnReset()
 	m_LastSendTime = 0;
 }
 
-void CControls::ResetInput(int Dummy)
+void CControls::ResetInput(int Dummy, EHookReset HookReset)
 {
-	m_aLastData[Dummy].m_Direction = 0;
-	// simulate releasing the fire button
-	if((m_aLastData[Dummy].m_Fire & 1) != 0)
-		m_aLastData[Dummy].m_Fire++;
-	m_aLastData[Dummy].m_Fire &= INPUT_STATE_MASK;
-	m_aLastData[Dummy].m_Jump = 0;
-	m_aInputData[Dummy] = m_aLastData[Dummy];
+	ResetHeldInput(m_aLastData[Dummy], m_aInputData[Dummy], HookReset);
 
 	m_aInputDirectionLeft[Dummy] = 0;
 	m_aInputDirectionRight[Dummy] = 0;

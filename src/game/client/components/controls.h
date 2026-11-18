@@ -25,6 +25,12 @@ public:
 		AUTOMATED,
 	};
 
+	enum class EHookReset
+	{
+		KEEP_HELD,
+		RELEASE_HELD,
+	};
+
 	// 本帧子 tick 瞄准的鼠标位置是否需要在本帧采样（逐 dummy 记录）。
 	bool m_aMouseOnAction[NUM_DUMMIES];
 	vec2 m_aMousePos[NUM_DUMMIES];
@@ -59,7 +65,20 @@ public:
 
 	int SnapInput(int *pData);
 	void ClampMousePos();
-	void ResetInput(int Dummy);
+	static void ResetHeldInput(CNetObj_PlayerInput &LastInput, CNetObj_PlayerInput &Input, EHookReset HookReset)
+	{
+		LastInput.m_Direction = 0;
+		// 模拟松开开火键，保留输入计数器。
+		if((LastInput.m_Fire & 1) != 0)
+			LastInput.m_Fire++;
+		LastInput.m_Fire &= INPUT_STATE_MASK;
+		LastInput.m_Jump = 0;
+		if(HookReset == EHookReset::RELEASE_HELD)
+			LastInput.m_Hook = 0;
+		Input = LastInput;
+	}
+
+	void ResetInput(int Dummy, EHookReset HookReset = EHookReset::KEEP_HELD);
 	bool CheckNewInput();
 
 private:
