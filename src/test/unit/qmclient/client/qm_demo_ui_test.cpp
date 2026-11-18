@@ -216,10 +216,10 @@ TEST(QmDemoUi, PoseMapPopupGrowsWithRowsAndStopsAtTheCap)
 
 TEST(QmDemoUi, PoseMapRenderRowsReserveHeightForBothOutputRows)
 {
-	// 渲染模式比观看模式多三行（输出格式、分辨率倍数、锐化）：高度必须一起长，
-	// 否则列表会压到按钮上或把这两行裁掉。
+	// 渲染模式比观看模式多四行（输出格式、分辨率倍数、锐化、像素预算）：高度必须一起长，
+	// 否则列表会压到按钮上或把这几行裁掉。
 	constexpr int RenderRows = qm_demo_ui::POSE_MAP_RENDER_ROWS;
-	EXPECT_EQ(RenderRows, 3);
+	EXPECT_EQ(RenderRows, 4);
 	EXPECT_FLOAT_EQ(qm_demo_ui::PoseMapRenderRowsHeight(0), 0.0f);
 	EXPECT_FLOAT_EQ(qm_demo_ui::PoseMapRenderRowsHeight(RenderRows), RenderRows * (qm_demo_ui::POSE_MAP_ROW_HEIGHT + qm_demo_ui::POSE_MAP_GAP));
 

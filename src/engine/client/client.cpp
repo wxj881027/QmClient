@@ -4058,7 +4058,7 @@ bool CClient::BeginPoseOffscreenCapture()
 	// 像素预算可由 qm_pose_capture_max_megapixels 调整（0 = 不限）：上限取决于显存与
 	// 编码耗时，不同机器差别很大，写死一个值要么浪费高端机、要么拖死低端机。
 	// 按「百万像素」换算：这里用 1000*1000，和配置项的说明一致。
-	const int64_t MaxPixels = g_Config.m_QmPoseCaptureMaxMegapixels > 0 ? (int64_t)g_Config.m_QmPoseCaptureMaxMegapixels * 1000 * 1000 : 0;
+	const int64_t MaxPixels = qm_pose::ConfiguredPixelBudget(g_Config.m_QmPoseCaptureMaxMegapixels);
 	const qm_pose::SCaptureSize Size = qm_pose::ComputeCaptureSize(
 		m_pGraphics->ScreenWidth(), m_pGraphics->ScreenHeight(), m_PoseScreenshotScale,
 		qm_pose::MAX_CAPTURE_DIMENSION, MaxPixels);
