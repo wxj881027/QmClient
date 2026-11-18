@@ -125,6 +125,15 @@ TEST(QmPoseScene, FitZoomIncludesAllTeesAndPadding)
 	EXPECT_FLOAT_EQ(qm_pose::ComputeFitZoom(vPoses, 0.0f, 800.0f), 1.0f);
 }
 
+TEST(QmPoseScene, FitZoomIgnoresTeesOutsideTheSnapshot)
+{
+	std::vector<SPoseTee> vPoses(qm_pose::MAX_SCENE_TEES, MakePose("near", 0, 0));
+	vPoses.back() = MakePose("last visible", 1000, 200);
+	vPoses.push_back(MakePose("outside", 7000, 6000));
+
+	EXPECT_FLOAT_EQ(qm_pose::ComputeFitZoom(vPoses, 1000.0f, 800.0f), 1.4f);
+}
+
 TEST(QmPoseScene, ExplicitCenterOverridesTheBoundingBox)
 {
 	const std::vector<SPoseTee> vPoses = {MakePose("a", 1000, 1000)};

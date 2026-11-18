@@ -90,8 +90,11 @@ namespace qm_pose
 			return 1.0f;
 		int MinX = vPoses[0].m_X, MaxX = MinX;
 		int MinY = vPoses[0].m_Y, MaxY = MinY;
-		for(const SPoseTee &Pose : vPoses)
+		// 取景中心与缩放都以实际进入快照的 Tee 为准。
+		const size_t VisibleCount = std::min<size_t>(vPoses.size(), MAX_SCENE_TEES);
+		for(size_t i = 0; i < VisibleCount; ++i)
 		{
+			const SPoseTee &Pose = vPoses[i];
 			MinX = std::min(MinX, Pose.m_X);
 			MaxX = std::max(MaxX, Pose.m_X);
 			MinY = std::min(MinY, Pose.m_Y);
