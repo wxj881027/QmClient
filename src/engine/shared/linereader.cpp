@@ -8,6 +8,7 @@
 #include <base/system.h>
 
 #include <cstdlib>
+#include <limits>
 
 static bool IsValidLine(const char *pLine)
 {
@@ -32,8 +33,11 @@ static bool IsValidLine(const char *pLine)
 // UTF-16 按码点转成 UTF-8。无法配对的代理项写成替换字符，避免整份脚本被当成二进制拒绝。
 static char *DecodeUtf16(const unsigned char *pData, unsigned Length, bool BigEndian)
 {
-	// 每 2 字节最多产生 3 字节 UTF-8。
-	const unsigned Capacity = Length / 2 * 3 + 1;
+	const unsigned CodeUnits = Length / 2;
+	// 每个码元最多写 3 字节，末尾留 1 字节。行偏移使用 unsigned。
+	if(CodeUnits > (std::numeric_limits<unsigned>::max() - 1) / 3)
+		return nullptr;
+	const size_t Capacity = static_cast<size_t>(CodeUnits) * 3 + 1;
 	auto *pBuffer = static_cast<char *>(malloc(Capacity));
 	if(pBuffer == nullptr)
 		return nullptr;
