@@ -37,6 +37,7 @@
 
 static constexpr int VOICE_CLIENT_SNAPSHOT_INTERVAL_MS = 10;
 static constexpr int VOICE_MAX_CAPTURE_FRAMES_PER_UPDATE = 3;
+static constexpr size_t VOICE_MAX_RECEIVE_MESSAGES_PER_UPDATE = 64;
 static constexpr int VOICE_CONFIG_SNAPSHOT_INTERVAL_MS = 50;
 static constexpr int VOICE_OVERLAY_VISIBLE_MS = 180;
 static constexpr int VOICE_OVERLAY_MAX_SPEAKERS = 5;
@@ -873,7 +874,7 @@ void CRClientVoice::ClearPeerFrames()
 		Peer.m_LastGainLeft = 1.0f;
 		Peer.m_LastGainRight = 1.0f;
 		Peer.m_LossEwma = 0.0f;
-		Peer.m_DecoderFailed = false;
+		Peer.m_DecoderRetry.Reset();
 		if(Peer.m_pDecoder)
 			opus_decoder_ctl(Peer.m_pDecoder, OPUS_RESET_STATE);
 		Peer.m_FrameHead = 0;
@@ -916,7 +917,7 @@ void CRClientVoice::ResetPeer(SVoicePeer &Peer)
 	Peer.m_LastGainLeft = 1.0f;
 	Peer.m_LastGainRight = 1.0f;
 	Peer.m_LossEwma = 0.0f;
-	Peer.m_DecoderFailed = false;
+	Peer.m_DecoderRetry.Reset();
 	if(Peer.m_pDecoder)
 		opus_decoder_ctl(Peer.m_pDecoder, OPUS_RESET_STATE);
 	if(m_pOutputStream)
@@ -1606,11 +1607,12 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 	const bool TestServer = TestMode == 2;
 	const uint8_t ProtocolVersion = VoiceProtocolVersion(Config);
 
-	// 持续来包时也检查停止请求，避免主线程 join 一直等待队列清空。
+	// 持续来包时也检查停止请求，并为同一轮的解码和采集留出执行机会。
+	size_t RemainingMessages = VOICE_MAX_RECEIVE_MESSAGES_PER_UPDATE;
 	while(!m_Worker.StopRequested())
 	{
 		SQmWebSocketMessage WebSocketMessage;
-		if(!m_pVoiceTransport->PollPacket(WebSocketMessage, [](const void *pWorker) { return static_cast<const CVoiceWorker *>(pWorker)->StopRequested(); }, &m_Worker))
+		if(!m_pVoiceTransport->PollPacket(WebSocketMessage, RemainingMessages, [](const void *pWorker) { return static_cast<const CVoiceWorker *>(pWorker)->StopRequested(); }, &m_Worker))
 			break;
 		auto *pData = reinterpret_cast<unsigned char *>(WebSocketMessage.m_Data.data());
 		const int Bytes = static_cast<int>(WebSocketMessage.m_Data.size());
@@ -2043,11 +2045,34 @@ void CRClientVoice::DecodeJitter()
 		if(Peer.m_QueuedPackets <= 0)
 			continue;
 
-		if(!Peer.m_HasNextSeq)
+		if(!Peer.m_pDecoder)
 		{
-			if(!SeedPeerNextSeq(Peer))
+			if(Peer.m_QueuedPackets < Peer.m_TargetFrames)
+				continue;
+			const bool DecoderCreated = Peer.m_DecoderRetry.TryCreate(time_get(), time_freq(), [this, &Peer] {
+				int Error = OPUS_OK;
+				OpusDecoder *pDecoder = opus_decoder_create(VOICE_SAMPLE_RATE, VOICE_CHANNELS, &Error);
+				if(!pDecoder || Error != OPUS_OK)
+				{
+					if(pDecoder)
+						opus_decoder_destroy(pDecoder);
+					char aError[256];
+					str_format(aError, sizeof(aError), "Failed to create Opus decoder: %d", Error);
+					LogDiagnosticErrorOnce(m_aDecoderErrorLog, sizeof(m_aDecoderErrorLog), aError);
+					return false;
+				}
+				Peer.m_pDecoder = pDecoder;
+				ClearDiagnosticLogMessage(m_aDecoderErrorLog);
+				Peer.m_HasSeq = false;
+				return true;
+			});
+			if(!DecoderCreated)
 				continue;
 		}
+
+		// 解码器就绪后再从当前缓冲选起点，避免从等待重试期间已被覆盖的序号开始。
+		if(!Peer.m_HasNextSeq && !SeedPeerNextSeq(Peer))
+			continue;
 
 		int FrameCount = 0;
 		SDL_LockAudioStream(m_pOutputStream);
@@ -2064,24 +2089,6 @@ void CRClientVoice::DecodeJitter()
 		SVoicePeer::SJitterPacket *pNextPkt = nullptr;
 		if(Peer.m_aPackets[NextSlot].m_Valid && Peer.m_aPackets[NextSlot].m_Seq == (uint16_t)(Peer.m_NextSeq + 1))
 			pNextPkt = &Peer.m_aPackets[NextSlot];
-
-		if(!Peer.m_pDecoder)
-		{
-			if(Peer.m_DecoderFailed)
-				continue;
-			int Error = 0;
-			Peer.m_pDecoder = opus_decoder_create(VOICE_SAMPLE_RATE, VOICE_CHANNELS, &Error);
-			if(!Peer.m_pDecoder || Error != OPUS_OK)
-			{
-				char aError[256];
-				str_format(aError, sizeof(aError), "Failed to create Opus decoder: %d", Error);
-				LogDiagnosticErrorOnce(m_aDecoderErrorLog, sizeof(m_aDecoderErrorLog), aError);
-				Peer.m_DecoderFailed = true;
-				continue;
-			}
-			ClearDiagnosticLogMessage(m_aDecoderErrorLog);
-			Peer.m_HasSeq = false;
-		}
 
 		int16_t aPcm[VOICE_FRAME_SAMPLES];
 		int Samples = 0;

@@ -494,6 +494,38 @@ TEST(VoiceCore, ProcessIncomingRejectsKeepaliveFromDifferentGroupEvenWhenModeBit
 		EVoiceIncomingPacketDecision::DROP_KEEPALIVE_TOKEN);
 }
 
+TEST(VoiceCore, DecoderCreationRetriesForTheSamePeerAfterFailure)
+{
+	CVoiceDecoderRetry Retry;
+	int Attempts = 0;
+	bool DecoderAvailable = false;
+	const auto Create = [&] {
+		++Attempts;
+		return DecoderAvailable;
+	};
+	EXPECT_FALSE(Retry.TryCreate(100, 100, Create));
+	EXPECT_FALSE(Retry.TryCreate(199, 100, Create));
+	EXPECT_EQ(Attempts, 1);
+
+	EXPECT_FALSE(Retry.TryCreate(200, 100, Create));
+	DecoderAvailable = true;
+	EXPECT_FALSE(Retry.TryCreate(299, 100, Create));
+	EXPECT_EQ(Attempts, 2);
+
+	EXPECT_TRUE(Retry.TryCreate(300, 100, Create));
+	EXPECT_EQ(Attempts, 3);
+}
+
+TEST(VoiceCore, DecoderRetryResetAllowsImmediateCreationForANewStream)
+{
+	CVoiceDecoderRetry Retry;
+	ASSERT_FALSE(Retry.TryCreate(100, 100, [] { return false; }));
+
+	Retry.Reset();
+
+	EXPECT_TRUE(Retry.TryCreate(101, 100, [] { return true; }));
+}
+
 TEST(VoiceCore, JitterStartSeqWaitsForTargetFramesAndUsesMinLiveSequence)
 {
 	std::array<uint8_t, 32> aValid = {};

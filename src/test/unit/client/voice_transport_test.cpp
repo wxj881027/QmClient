@@ -217,6 +217,41 @@ TEST(VoiceTransport, EndedWorkerCanReconnectWithoutChangingConfig)
 	EXPECT_TRUE(Transport.Connecting());
 }
 
+TEST(VoiceTransport, ReceiveBudgetCountsFilteredMessagesAndPreservesRemainingPackets)
+{
+	auto pClient = std::make_unique<CVoiceTransportTestClient>();
+	auto *pMock = pClient.get();
+	CVoiceWebSocketTransport Transport(std::move(pClient));
+	Transport.UpdateAt("wss://voice.example/ws", true, 10, 20, VOICE_VERSION, 0);
+	pMock->m_State = EQmWebSocketState::CONNECTED;
+	++pMock->m_ConnectedTick;
+	Transport.UpdateAt("wss://voice.example/ws", true, 10, 20, VOICE_VERSION, 1);
+	const std::string First(VOICE_PACKET_HEADER_SIZE, 'a');
+	const std::string Second(VOICE_PACKET_HEADER_SIZE, 'b');
+	const std::string Third(VOICE_PACKET_HEADER_SIZE, 'c');
+	pMock->m_Incoming.push_back({EQmWebSocketMessageType::TEXT, "ignored"});
+	pMock->m_Incoming.push_back({EQmWebSocketMessageType::BINARY, First});
+	pMock->m_Incoming.push_back({EQmWebSocketMessageType::BINARY, "too short"});
+	pMock->m_Incoming.push_back({EQmWebSocketMessageType::BINARY, Second});
+	pMock->m_Incoming.push_back({EQmWebSocketMessageType::BINARY, Third});
+
+	SQmWebSocketMessage Message;
+	size_t RemainingMessages = 3;
+	ASSERT_TRUE(Transport.PollPacket(Message, RemainingMessages));
+	EXPECT_EQ(Message.m_Data, First);
+	EXPECT_FALSE(Transport.PollPacket(Message, RemainingMessages));
+	EXPECT_EQ(pMock->m_PollCalls, 3);
+	EXPECT_EQ(pMock->m_Incoming.size(), 2U);
+
+	RemainingMessages = 2;
+	ASSERT_TRUE(Transport.PollPacket(Message, RemainingMessages));
+	EXPECT_EQ(Message.m_Data, Second);
+	ASSERT_TRUE(Transport.PollPacket(Message, RemainingMessages));
+	EXPECT_EQ(Message.m_Data, Third);
+	EXPECT_FALSE(Transport.PollPacket(Message, RemainingMessages));
+	EXPECT_EQ(pMock->m_PollCalls, 5);
+}
+
 TEST(VoiceTransport, CancellationBeforePollingPreservesTheNextPacket)
 {
 	auto pClient = std::make_unique<CVoiceTransportTestClient>();
@@ -230,11 +265,13 @@ TEST(VoiceTransport, CancellationBeforePollingPreservesTheNextPacket)
 	bool Canceled = true;
 	const auto IsCanceled = [](const void *pValue) { return *static_cast<const bool *>(pValue); };
 	SQmWebSocketMessage Message;
-	EXPECT_FALSE(Transport.PollPacket(Message, IsCanceled, &Canceled));
+	size_t RemainingMessages = 128;
+	EXPECT_FALSE(Transport.PollPacket(Message, RemainingMessages, IsCanceled, &Canceled));
 	EXPECT_EQ(pMock->m_PollCalls, 0);
+	EXPECT_EQ(RemainingMessages, 128U);
 	EXPECT_EQ(pMock->m_Incoming.size(), 1U);
 	Canceled = false;
-	EXPECT_TRUE(Transport.PollPacket(Message, IsCanceled, &Canceled));
+	EXPECT_TRUE(Transport.PollPacket(Message, RemainingMessages, IsCanceled, &Canceled));
 	EXPECT_EQ(Message.m_Data.size(), VOICE_PACKET_HEADER_SIZE);
 }
 
@@ -257,10 +294,12 @@ TEST(VoiceTransport, InvalidMessageFloodObservesCancellationBeforeDrainingTheQue
 	};
 	const auto IsCanceled = [](const void *pValue) { return *static_cast<const bool *>(pValue); };
 	SQmWebSocketMessage Message;
-	EXPECT_FALSE(Transport.PollPacket(Message, IsCanceled, &Canceled));
+	size_t RemainingMessages = 128;
+	EXPECT_FALSE(Transport.PollPacket(Message, RemainingMessages, IsCanceled, &Canceled));
 	EXPECT_EQ(pMock->m_PollCalls, 3);
+	EXPECT_EQ(RemainingMessages, 125U);
 	EXPECT_EQ(pMock->m_Incoming.size(), 98U);
 	Canceled = false;
-	EXPECT_TRUE(Transport.PollPacket(Message, IsCanceled, &Canceled));
+	EXPECT_TRUE(Transport.PollPacket(Message, RemainingMessages, IsCanceled, &Canceled));
 	EXPECT_EQ(Message.m_Data.size(), VOICE_PACKET_HEADER_SIZE);
 }

@@ -61,7 +61,8 @@ namespace VoiceUtils
 		bool UrlValid() const { return m_UrlValid; }
 		const char *LastError() const;
 		bool SendPacket(const uint8_t *pData, size_t Size);
-		bool PollPacket(SQmWebSocketMessage &Out, bool (*pCanceled)(const void *) = nullptr, const void *pCancelUser = nullptr);
+		// 每条出队消息都消耗本轮额度，包括传输层过滤掉的消息。
+		bool PollPacket(SQmWebSocketMessage &Out, size_t &RemainingMessages, bool (*pCanceled)(const void *) = nullptr, const void *pCancelUser = nullptr);
 	};
 	struct SVoicePacketHeader
 	{
@@ -187,6 +188,25 @@ namespace VoiceUtils
 	bool VoiceShouldUpdatePingRtt(uint16_t Sequence, uint16_t LastPingSeq, int64_t LastPingSentTime);
 	uint32_t VoiceTokenGroupHash(uint32_t TokenHash);
 	uint32_t BuildLegacyVoiceTokenHash(const char *pToken);
+	class CVoiceDecoderRetry
+	{
+		int64_t m_NextAttempt = 0;
+
+	public:
+		void Reset() { m_NextAttempt = 0; }
+
+		template<typename TCreate>
+		bool TryCreate(int64_t Now, int64_t RetryInterval, TCreate Create)
+		{
+			if(Now < m_NextAttempt)
+				return false;
+			if(Create())
+				return true;
+			m_NextAttempt = Now + RetryInterval;
+			return false;
+		}
+	};
+
 	bool FindMinLiveVoiceSeq(const uint8_t *pValid, const uint16_t *pSeq, size_t Count, uint16_t &OutSeq);
 	bool SeedVoiceJitterStartSeq(int QueuedPackets, int TargetFrames, bool HasNextSeq, uint16_t InitialNextSeq, const uint8_t *pValid, const uint16_t *pSeq, size_t Count, bool &OutHasNextSeq, uint16_t &OutNextSeq);
 	bool VoiceShouldIgnoreDistance(bool IgnoreDistanceConfig, bool GroupGlobal, uint32_t LocalTokenHash, uint32_t SenderTokenHash);

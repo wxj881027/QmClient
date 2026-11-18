@@ -124,7 +124,7 @@ class CRClientVoice
 		};
 
 		OpusDecoder *m_pDecoder = nullptr;
-		bool m_DecoderFailed = false;
+		VoiceUtils::CVoiceDecoderRetry m_DecoderRetry;
 		uint16_t m_LastSeq = 0;
 		bool m_HasSeq = false;
 		uint16_t m_LastRecvSeq = 0;

@@ -114,11 +114,12 @@ namespace VoiceUtils
 		return m_pClient->SendBinary(reinterpret_cast<const char *>(pData), Size);
 	}
 
-	bool CVoiceWebSocketTransport::PollPacket(SQmWebSocketMessage &Out, bool (*pCanceled)(const void *), const void *pCancelUser)
+	bool CVoiceWebSocketTransport::PollPacket(SQmWebSocketMessage &Out, size_t &RemainingMessages, bool (*pCanceled)(const void *), const void *pCancelUser)
 	{
 		SQmWebSocketMessage Message;
-		while((!pCanceled || !pCanceled(pCancelUser)) && Connected() && m_pClient->PollMessage(Message))
+		while(RemainingMessages > 0 && (!pCanceled || !pCanceled(pCancelUser)) && Connected() && m_pClient->PollMessage(Message))
 		{
+			--RemainingMessages;
 			if(Message.m_Type != EQmWebSocketMessageType::BINARY || Message.m_Data.size() < VOICE_PACKET_HEADER_SIZE || Message.m_Data.size() > VOICE_MAX_PACKET)
 				continue;
 			Out = std::move(Message);
