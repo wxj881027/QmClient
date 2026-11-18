@@ -78,7 +78,7 @@ class CAutomapper : public CMapObject
 	{
 	public:
 		std::vector<CRun> m_vRuns;
-		char m_aName[128];
+		char m_aName[128] = "";
 		int m_StartX;
 		int m_StartY;
 		int m_EndX;
