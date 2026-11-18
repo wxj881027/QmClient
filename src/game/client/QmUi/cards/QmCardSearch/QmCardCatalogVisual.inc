@@ -1,6 +1,12 @@
 // 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
 namespace
 {
+	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_dummy_distance_link[] = {
+		{Localizable("Show dummy distance link"), "qm_dummy_distance_link", "本体 分身 连线"},
+		{Localizable("Link style"), "qm_dummy_distance_link_style", "简单 水滴 线条"},
+	};
+	QM_CARD_SEARCH_REGISTER("qm:dummy_distance_link", qm_dummy_distance_link);
+
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_camera_view[] = {
 		{Localizable("Aspect ratio preset"), nullptr, "纵横比预设"},
 		{Localizable("Current aspect ratio:"), nullptr, "当前宽高比："},

@@ -13,6 +13,7 @@ void CMapRenderer::Clear()
 	for(auto &pLayer : m_vpRenderLayers)
 		pLayer->Unload();
 	m_vpRenderLayers.clear();
+	m_pFirstWorldTile = nullptr;
 	m_pLoadGroup.reset();
 	m_pLoadEnvelopeManager.reset();
 	m_pLoadLayers = nullptr;
@@ -152,6 +153,8 @@ void CMapRenderer::LoadStep(int MaxLayers)
 			pRenderLayer->OnInit(Graphics(), TextRender(), RenderMap(), m_pLoadEnvelopeManager, m_pLoadLayers->Map(), m_pLoadImages);
 			if(pRenderLayer->IsValid())
 			{
+				if(!m_pFirstWorldTile && pLayer->m_Type == LAYERTYPE_TILES && pGroup->m_ParallaxX == 100 && pGroup->m_ParallaxY == 100)
+					m_pFirstWorldTile = pRenderLayer.get();
 				pRenderLayer->Init();
 				m_vpRenderLayers.push_back(std::move(pRenderLayer));
 			}
@@ -178,18 +181,33 @@ void CMapRenderer::Load(ERenderType Type, CLayers *pLayers, IMapImages *pMapImag
 		LoadStep(64);
 }
 
-void CMapRenderer::Render(const CRenderLayerParams &Params)
+void CMapRenderer::Render(const CRenderLayerParams &Params, const std::function<void()> &BeforeWorldTiles)
 {
 	float ScreenXLeft, ScreenYTop, ScreenXRight, ScreenYBottom;
 	Graphics()->GetScreen(&ScreenXLeft, &ScreenYTop, &ScreenXRight, &ScreenYBottom);
 
 	bool DoRenderGroup = true;
+	CRenderLayer *pGroup = nullptr;
+	bool DrewBeforeTiles = false;
 	for(auto &pRenderLayer : m_vpRenderLayers)
 	{
 		if(!MapRenderLayerInPass(Params.m_RenderType, pRenderLayer->GetGroup(), pRenderLayer->IsGroup() ? -1 : pRenderLayer->GetLayer(), m_GameGroupId, m_GameLayerId))
 			continue;
 		if(pRenderLayer->IsGroup())
+		{
+			pGroup = pRenderLayer.get();
 			DoRenderGroup = pRenderLayer->DoRender(Params);
+		}
+
+		if(BeforeWorldTiles && pRenderLayer.get() == m_pFirstWorldTile)
+		{
+			Graphics()->ClipDisable();
+			Graphics()->MapScreenToGameInterface(Params.m_Center.x, Params.m_Center.y, Params.m_Zoom);
+			BeforeWorldTiles();
+			DrewBeforeTiles = true;
+			if(pGroup && (DoRenderGroup = pGroup->DoRender(Params)))
+				pGroup->Render(Params);
+		}
 
 		if(!DoRenderGroup)
 			continue;
@@ -200,6 +218,12 @@ void CMapRenderer::Render(const CRenderLayerParams &Params)
 
 	// Reset clip from last group
 	Graphics()->ClipDisable();
+
+	if(BeforeWorldTiles && !DrewBeforeTiles)
+	{
+		Graphics()->MapScreenToGameInterface(Params.m_Center.x, Params.m_Center.y, Params.m_Zoom);
+		BeforeWorldTiles();
+	}
 
 	// don't reset screen on background
 	if(Params.m_RenderType != ERenderType::RENDERTYPE_BACKGROUND && Params.m_RenderType != ERenderType::RENDERTYPE_BACKGROUND_FORCE)

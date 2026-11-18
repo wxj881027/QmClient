@@ -3618,6 +3618,8 @@ if(CLIENT)
     components/qmclient/data_version.h
     components/qmclient/demo_ui.h
     components/qmclient/emoticon_commands.h
+    components/qmclient/dummy_distance_link.cpp
+    components/qmclient/dummy_distance_link.h
     components/qmclient/hammer_hit_detection.cpp
     components/qmclient/hammer_hit_detection.h
     components/qmclient/hook_countdown.h
@@ -5057,6 +5059,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_video_preset_labels_test.cpp
     src/test/unit/client/online_replay_player_test.cpp
     src/test/unit/qmclient/client/qm_jump_hint_utils_test.cpp
+    src/test/unit/qmclient/client/qm_dummy_distance_link_test.cpp
     src/test/unit/qmclient/client/qm_dummy_mini_view_layout_test.cpp
     src/test/unit/qmclient/client/qm_browser_map_preview_test.cpp
     src/test/unit/qmclient/client/qm_map_render_pass_test.cpp
