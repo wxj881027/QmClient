@@ -1,8 +1,6 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "system_media_controls.h"
 
-#include "system_media_controls_timeline.h"
-
 #include <base/time.h>
 
 #include <engine/client/client.h>
@@ -39,6 +37,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 #endif
 
@@ -102,6 +101,7 @@ struct CSystemMediaControls::SShared
 	int m_AlbumArtWidth = 0;
 	int m_AlbumArtHeight = 0;
 	bool m_AlbumArtDirty = false;
+	bool m_AlbumArtUploadFailed = false;
 };
 
 // 把后台线程发布的状态搬到主线程副本；SMTC 与 MPRIS 后端共用这段搬运逻辑。
@@ -204,6 +204,7 @@ struct CSystemMediaControls::SRuntime : public CQmMediaWorker::CState
 			pDiscarded = std::move(m_pShared->m_pAlbumArt);
 			m_pShared->m_AlbumArtWidth = m_pShared->m_AlbumArtHeight = 0;
 			m_pShared->m_AlbumArtDirty = true;
+			m_pShared->m_AlbumArtUploadFailed = false;
 		}
 		catch(...)
 		{
@@ -252,17 +253,31 @@ template<typename TAsyncOp>
 static bool WaitForAsync(const TAsyncOp &Operation, const std::atomic_bool &StopFlag)
 {
 	using winrt::Windows::Foundation::AsyncStatus;
-	while(true)
+	using SystemMediaControls::EMediaRequestStatus;
+	AsyncStatus Status = AsyncStatus::Started;
+	const auto StopRequested = [&] { return StopFlag.load(std::memory_order_relaxed); };
+	const bool Completed = SystemMediaControls::WaitForMediaRequest(
+		[&] {
+			Status = Operation.Status();
+			if(Status == AsyncStatus::Started)
+				return EMediaRequestStatus::PENDING;
+			return Status == AsyncStatus::Completed ? EMediaRequestStatus::COMPLETE : EMediaRequestStatus::FAILED;
+		},
+		StopRequested,
+		[] { return std::chrono::steady_clock::now(); },
+		[](std::chrono::steady_clock::duration Delay) { std::this_thread::sleep_for(Delay); });
+	if(!Completed && Status == AsyncStatus::Started && !StopRequested())
 	{
-		const AsyncStatus Status = Operation.Status();
-		if(Status == AsyncStatus::Completed)
-			return true;
-		if(Status == AsyncStatus::Canceled || Status == AsyncStatus::Error)
-			return false;
-		if(StopFlag.load(std::memory_order_relaxed))
-			return false;
-		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+		try
+		{
+			Operation.Cancel();
+		}
+		catch(const winrt::hresult_error &)
+		{
+			// 请求可能在超时与取消之间已经结束，继续走失败回退。
+		}
 	}
+	return Completed;
 }
 
 static void ClearSharedAlbumArt(CSystemMediaControls::SShared *pShared)
@@ -275,20 +290,25 @@ static void ClearSharedAlbumArt(CSystemMediaControls::SShared *pShared)
 		pShared->m_AlbumArtWidth = 0;
 		pShared->m_AlbumArtHeight = 0;
 		pShared->m_AlbumArtDirty = true;
+		pShared->m_AlbumArtUploadFailed = false;
 	}
 }
 
-static void SetSharedAlbumArt(CSystemMediaControls::SShared *pShared, const std::vector<uint8_t> &Pixels, const std::vector<uint8_t> &CircularPixels, int Width, int Height)
+static bool SetSharedAlbumArt(CSystemMediaControls::SShared *pShared, const std::vector<uint8_t> &Pixels, const std::vector<uint8_t> &CircularPixels, int Width, int Height)
 {
 	// 分配与像素复制在后台、锁外完成；旧封面同样在离开锁后析构。
 	auto pPrepared = std::make_unique<CQmPreparedMediaArt>(Pixels, CircularPixels, Width, Height);
+	if(!pPrepared->m_Original.m_pData || !pPrepared->m_Circular.m_pData)
+		return false;
 	{
 		std::scoped_lock Lock(pShared->m_Mutex);
 		pShared->m_pAlbumArt.swap(pPrepared);
 		pShared->m_AlbumArtWidth = Width;
 		pShared->m_AlbumArtHeight = Height;
 		pShared->m_AlbumArtDirty = true;
+		pShared->m_AlbumArtUploadFailed = false;
 	}
+	return true;
 }
 
 static void ClearMediaText(SPlainState &State)
@@ -351,47 +371,26 @@ static void ResetSharedState(CSystemMediaControls::SShared *pShared, SPlainState
 static void ApplyRoundedMask(std::vector<uint8_t> &Pixels, int Width, int Height, float Radius);
 static void ApplyCircularFeatherMask(std::vector<uint8_t> &Pixels, int Width, int Height);
 
-static void UpdateAlbumArtData(CSystemMediaControls::SShared *pShared, const winrt::Windows::Storage::Streams::IRandomAccessStreamReference &Thumbnail, const std::atomic_bool &StopFlag)
+static bool UpdateAlbumArtData(CSystemMediaControls::SShared *pShared, const winrt::Windows::Storage::Streams::IRandomAccessStreamReference &Thumbnail, const std::atomic_bool &StopFlag)
 {
-	if(!Thumbnail)
-	{
-		ClearSharedAlbumArt(pShared);
-		return;
-	}
-
 	try
 	{
 		const auto StreamOp = Thumbnail.OpenReadAsync();
 		if(!WaitForAsync(StreamOp, StopFlag))
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return false;
 		const auto Stream = StreamOp.GetResults();
 		if(!Stream)
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return false;
 
 		const auto DecoderOp = winrt::Windows::Graphics::Imaging::BitmapDecoder::CreateAsync(Stream);
 		if(!WaitForAsync(DecoderOp, StopFlag))
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return false;
 		const auto Decoder = DecoderOp.GetResults();
 		if(!Decoder)
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return false;
 		const SystemMediaControls::SAlbumArtDecodeSize DecodeSize = SystemMediaControls::CalculateAlbumArtDecodeSize(Decoder.PixelWidth(), Decoder.PixelHeight());
 		if(DecodeSize.m_Width == 0 || DecodeSize.m_Height == 0)
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return false;
 
 		winrt::Windows::Graphics::Imaging::BitmapTransform Transform;
 		Transform.ScaledWidth(DecodeSize.m_Width);
@@ -404,24 +403,15 @@ static void UpdateAlbumArtData(CSystemMediaControls::SShared *pShared, const win
 			winrt::Windows::Graphics::Imaging::ExifOrientationMode::IgnoreExifOrientation,
 			winrt::Windows::Graphics::Imaging::ColorManagementMode::DoNotColorManage);
 		if(!WaitForAsync(PixelDataOp, StopFlag))
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return false;
 		const auto PixelData = PixelDataOp.GetResults();
 		if(!PixelData)
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return false;
 
 		const auto Pixels = PixelData.DetachPixelData();
 		const size_t ExpectedSize = (size_t)DecodeSize.m_Width * (size_t)DecodeSize.m_Height * 4;
 		if(Pixels.size() < ExpectedSize)
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return false;
 
 		std::vector<uint8_t> Copy(Pixels.begin(), Pixels.begin() + ExpectedSize);
 		std::vector<uint8_t> CircularCopy = Copy;
@@ -429,11 +419,11 @@ static void UpdateAlbumArtData(CSystemMediaControls::SShared *pShared, const win
 		const float RoundingRatio = 2.0f / 14.0f;
 		const float Radius = (float)std::min(DecodeSize.m_Width, DecodeSize.m_Height) * RoundingRatio;
 		ApplyRoundedMask(Copy, (int)DecodeSize.m_Width, (int)DecodeSize.m_Height, Radius);
-		SetSharedAlbumArt(pShared, Copy, CircularCopy, (int)DecodeSize.m_Width, (int)DecodeSize.m_Height);
+		return SetSharedAlbumArt(pShared, Copy, CircularCopy, (int)DecodeSize.m_Width, (int)DecodeSize.m_Height);
 	}
 	catch(const winrt::hresult_error &)
 	{
-		ClearSharedAlbumArt(pShared);
+		return false;
 	}
 }
 
@@ -588,6 +578,13 @@ static void ApplySharedAlbumArt(CSystemMediaControls::SShared *pShared, CSystemM
 	{
 		State.m_AlbumArt = LoadAlbumArtTexture(pGraphics, pAlbumArt->m_Original, "smtc_album_art");
 		State.m_AlbumArtCircular = LoadAlbumArtTexture(pGraphics, pAlbumArt->m_Circular, "smtc_album_art_circular");
+		if(!State.m_AlbumArt.IsValid() || !State.m_AlbumArtCircular.IsValid())
+		{
+			std::scoped_lock Lock(pShared->m_Mutex);
+			// 后台若已发布下一份封面，让它先完成上传。
+			if(!pShared->m_AlbumArtDirty)
+				pShared->m_AlbumArtUploadFailed = true;
+		}
 	}
 	if(State.m_AlbumArt.IsValid())
 	{
@@ -733,9 +730,11 @@ void CSystemMediaControls::ThreadMain(SRuntime &Runtime, const std::atomic_bool 
 							const auto Timeline = Candidate.GetTimelineProperties();
 							if(Timeline)
 							{
-								const int64_t DurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(Timeline.EndTime() - Timeline.StartTime()).count();
-								const int64_t LastUpdatedUtc100ns = Timeline.LastUpdatedTime().time_since_epoch().count();
-								if(SystemMediaControls::MediaTimelineLooksStale(true, DurationMs, LastUpdatedUtc100ns, NowUtc100ns))
+								SystemMediaControls::STimelineProperties Properties;
+								Properties.m_Start100ns = Timeline.StartTime().count();
+								Properties.m_End100ns = Timeline.EndTime().count();
+								Properties.m_LastUpdatedUtc100ns = Timeline.LastUpdatedTime().time_since_epoch().count();
+								if(SystemMediaControls::MediaTimelineLooksStale(Properties, NowUtc100ns))
 									Priority = SystemMediaControls::SessionActivityPriority(Activity::PAUSED);
 							}
 						}
@@ -955,20 +954,23 @@ void CSystemMediaControls::ThreadMain(SRuntime &Runtime, const std::atomic_bool 
 								const bool HasText = !Title.empty() || !Artist.empty() || !Album.empty();
 								if(HasText)
 								{
+									bool UploadFailed;
+									{
+										std::scoped_lock Lock(pShared->m_Mutex);
+										UploadFailed = std::exchange(pShared->m_AlbumArtUploadFailed, false);
+									}
 									std::string NewKey = Title;
 									NewKey.push_back('\n');
 									NewKey.append(Artist);
 									NewKey.push_back('\n');
 									NewKey.append(Album);
-									if(NewKey != AlbumArtKey)
-									{
-										AlbumArtKey = NewKey;
+									SystemMediaControls::RefreshAlbumArt(AlbumArtKey, std::move(NewKey), UploadFailed, [&] {
 										const auto Thumbnail = MediaProps.Thumbnail();
-										if(Thumbnail)
-											UpdateAlbumArtData(pShared, Thumbnail, Stop);
-										else
-											ClearSharedAlbumArt(pShared);
-									}
+										if(Thumbnail && UpdateAlbumArtData(pShared, Thumbnail, Stop))
+											return true;
+										ClearSharedAlbumArt(pShared);
+										return !Thumbnail;
+									});
 								}
 								else
 								{

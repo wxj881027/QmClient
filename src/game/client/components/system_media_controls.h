@@ -2,6 +2,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_SYSTEM_MEDIA_CONTROLS_H
 #define GAME_CLIENT_COMPONENTS_SYSTEM_MEDIA_CONTROLS_H
 
+#include "system_media_controls_timeline.h"
+
 #include <engine/graphics.h>
 
 #include <game/client/component.h>
@@ -11,12 +13,14 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <thread>
+#include <utility>
 
 namespace SystemMediaControls
 {
@@ -71,10 +75,53 @@ namespace SystemMediaControls
 	inline bool MediaTimelineLooksStale(bool Playing, int64_t DurationMs, int64_t LastUpdatedUtc100ns, int64_t NowUtc100ns)
 	{
 		// 有的播放器根本不填 LastUpdatedTime（值为 0）：那是「没上报」，不是「很久没更新」。
-		if(!Playing || DurationMs <= 1000 || LastUpdatedUtc100ns <= 0)
+		if(!Playing || DurationMs <= 1000 || LastUpdatedUtc100ns <= 0 || NowUtc100ns <= LastUpdatedUtc100ns)
 			return false;
 		constexpr int64_t STALE_SECONDS = 5;
-		return NowUtc100ns - LastUpdatedUtc100ns > STALE_SECONDS * 10'000'000LL;
+		return NowUtc100ns - LastUpdatedUtc100ns > STALE_SECONDS * HUNDRED_NS_PER_SECOND;
+	}
+
+	inline bool MediaTimelineLooksStale(const STimelineProperties &Timeline, int64_t NowUtc100ns)
+	{
+		const int64_t DurationMs = NormalizeTimelineProperties(Timeline, 0, 0, 0).m_DurationMs;
+		return MediaTimelineLooksStale(true, DurationMs, Timeline.m_LastUpdatedUtc100ns, NowUtc100ns);
+	}
+
+	enum class EMediaRequestStatus
+	{
+		PENDING,
+		COMPLETE,
+		FAILED,
+	};
+
+	template<typename TReadStatus, typename TStopRequested, typename TNow, typename TSleep>
+	bool WaitForMediaRequest(TReadStatus ReadStatus, TStopRequested StopRequested, TNow Now, TSleep Sleep)
+	{
+		using TDuration = std::chrono::steady_clock::duration;
+		constexpr auto PollInterval = std::chrono::duration_cast<TDuration>(std::chrono::milliseconds(20));
+		const auto Deadline = Now() + std::chrono::seconds(3);
+		while(!StopRequested())
+		{
+			const auto Status = ReadStatus();
+			if(Status != EMediaRequestStatus::PENDING)
+				return Status == EMediaRequestStatus::COMPLETE;
+			const auto Remaining = Deadline - Now();
+			if(Remaining <= TDuration::zero())
+				return false;
+			Sleep(std::min(Remaining, PollInterval));
+		}
+		return false;
+	}
+
+	template<typename TPrepare>
+	void RefreshAlbumArt(std::string &PreparedKey, std::string NewKey, bool UploadFailed, TPrepare Prepare)
+	{
+		if(!UploadFailed && NewKey == PreparedKey)
+			return;
+		if(Prepare())
+			PreparedKey = std::move(NewKey);
+		else
+			PreparedKey.clear();
 	}
 
 	inline bool AnyMediaSourceEnabled(bool SmtcEnabled, bool NeteaseHookEnabled)
