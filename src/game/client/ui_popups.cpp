@@ -1330,6 +1330,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	{
 		ClosePopupMenu(&State.m_SelectionPopupContext);
 		State.m_DropDownState.Reset();
+		State.m_SelectionPopupContext.m_pCommit.reset();
 		State.m_SelectionPopupContext.m_pSelection = nullptr;
 		State.m_SelectionPopupContext.m_SelectionIndex = -1;
 		State.m_SelectionPopupContext.m_ActiveIndex = -1;
