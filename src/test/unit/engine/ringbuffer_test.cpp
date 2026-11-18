@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <test/support/ringbuffer_allocation_probe.h>
 
+#include <cstdint>
 #include <limits>
 #include <numeric>
 #include <vector>
@@ -231,6 +232,22 @@ TEST(RingBufferAllocation, PopCallbackCanReadRecordBeforeRelease)
 	EXPECT_EQ(Buffer.First(), nullptr);
 }
 
+TEST(RingBufferAllocation, ClearingPopCallbackKeepsAutomaticRecycling)
+{
+	int PopCount = 0;
+	CStaticRingBuffer<SRecord, 2 * CRingBufferBase::ITEM_SIZE, CRingBufferBase::FLAG_RECYCLE> Buffer;
+	Buffer.SetPopCallback([&](SRecord *) { ++PopCount; });
+	ASSERT_NE(Buffer.Allocate(sizeof(SRecord)), nullptr);
+	ASSERT_NE(Buffer.Allocate(sizeof(SRecord)), nullptr);
+	ASSERT_EQ(PopCount, 1);
+
+	Buffer.SetPopCallback(nullptr);
+	SRecord *pRecord = Buffer.Allocate(sizeof(SRecord));
+	ASSERT_NE(pRecord, nullptr);
+	EXPECT_EQ(Buffer.First(), pRecord);
+	EXPECT_EQ(PopCount, 1);
+}
+
 TEST(RingBufferAllocation, ReverseIterationMatchesForwardRecords)
 {
 	CBuffer Buffer(1024);
@@ -260,6 +277,21 @@ TEST(RingBufferAllocation, StaticBufferRetainsResetAndReuseBehavior)
 	ASSERT_NE(pRecord, nullptr);
 	pRecord->m_Value = 101;
 	EXPECT_EQ(Buffer.First()->m_Value, 101);
+}
+
+TEST(RingBufferAllocation, StaticStorageAlignsPayloadAfterSplitting)
+{
+	struct alignas(8) SAlignedRecord
+	{
+		std::int64_t m_Value;
+	};
+	CStaticRingBuffer<SAlignedRecord, 6 * CRingBufferBase::ITEM_SIZE> Buffer;
+	SAlignedRecord *pFirst = Buffer.Allocate(sizeof(SAlignedRecord));
+	SAlignedRecord *pSecond = Buffer.Allocate(sizeof(SAlignedRecord));
+	ASSERT_NE(pFirst, nullptr);
+	ASSERT_NE(pSecond, nullptr);
+	EXPECT_EQ(reinterpret_cast<std::uintptr_t>(pFirst) % alignof(SAlignedRecord), 0U);
+	EXPECT_EQ(reinterpret_cast<std::uintptr_t>(pSecond) % alignof(SAlignedRecord), 0U);
 }
 
 TEST(RingBufferIteration, SingleFullBlockIsBothFirstAndLast)

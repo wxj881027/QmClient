@@ -48,6 +48,10 @@ protected:
 	void SetPopCallback(std::function<void(void *pCurrent)> PopCallback);
 
 public:
+	CRingBufferBase() = default;
+	CRingBufferBase(const CRingBufferBase &) = delete;
+	CRingBufferBase &operator=(const CRingBufferBase &) = delete;
+
 	enum
 	{
 		// Will start to destroy items to try to fit the next one
@@ -61,6 +65,8 @@ public:
 template<typename T>
 class CTypedRingBuffer : public CRingBufferBase
 {
+	static_assert(CRingBufferBase::ITEM_SIZE % alignof(T) == 0, "Payload alignment must divide the ring buffer block size");
+
 public:
 	// 保留与 CRingBufferBase 一致的调用名，但返回类型收窄为 T* 作为类型安全包装。
 	// NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
@@ -69,6 +75,12 @@ public:
 	int PopFirst() { return CRingBufferBase::PopFirst(); }
 	void SetPopCallback(const std::function<void(T *pCurrent)> &PopCallback)
 	{
+		if(!PopCallback)
+		{
+			CRingBufferBase::SetPopCallback(nullptr);
+			return;
+		}
+
 		CRingBufferBase::SetPopCallback([PopCallback](void *pCurrent) {
 			PopCallback((T *)pCurrent);
 		});
@@ -85,7 +97,9 @@ public:
 template<typename T, int TSIZE, int TFLAGS = 0>
 class CStaticRingBuffer : public CTypedRingBuffer<T>
 {
-	unsigned char m_aBuffer[TSIZE];
+	static_assert(TSIZE >= CRingBufferBase::ITEM_SIZE, "Ring buffer storage must fit a block header");
+
+	alignas(CRingBufferBase) alignas(T) unsigned char m_aBuffer[TSIZE];
 
 public:
 	CStaticRingBuffer() { Init(); }
@@ -110,7 +124,8 @@ public:
 
 	bool IsInitialized() const { return m_pBuffer != nullptr; }
 
-	// 分配器须返回可由 free 释放的内存，失败返回空指针；失败不改动原记录。
+	// 分配器须返回满足块头和载荷对齐、可由 free 释放的新内存。
+	// 分配失败时返回空指针，原记录保持有效。
 	bool Init(int Size, int Flags, FAllocate pAllocate = malloc)
 	{
 		if(Size < CRingBufferBase::ITEM_SIZE || pAllocate == nullptr)
