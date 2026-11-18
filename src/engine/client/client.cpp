@@ -1312,6 +1312,11 @@ void CClient::Connect(const char *pAddress, const char *pPassword)
 	// Disconnect will not change the state if we are already quitting/restarting
 	if(m_State == IClient::STATE_QUITTING || m_State == IClient::STATE_RESTARTING)
 		return;
+	if(!m_aNetClient[CONN_MAIN].m_Socket)
+	{
+		log_error("client", "Cannot connect without a network socket.");
+		return;
+	}
 	const NETADDR *pLastAddr = m_aNetClient[CONN_MAIN].ServerAddress();
 	const NETADDR LastAddr = pLastAddr ? *pLastAddr : NETADDR{};
 	Disconnect();
@@ -1586,6 +1591,11 @@ void CClient::DummyConnect()
 	if(DummyConnectingDelayed())
 	{
 		log_info("client", "Wait before connecting dummy again.");
+		return;
+	}
+	if(!m_aNetClient[CONN_DUMMY].m_Socket)
+	{
+		log_error("client", "Cannot connect dummy without a network socket.");
 		return;
 	}
 
@@ -5474,13 +5484,14 @@ void CClient::Run()
 		{
 			const std::chrono::nanoseconds Deadline(WakeTime);
 			std::chrono::nanoseconds WaitTime = Deadline - time_get_nanoseconds();
-			if(Inactive)
+			const NETSOCKET Socket = m_aNetClient[CONN_MAIN].m_Socket;
+			if(Inactive || !Socket)
 			{
 				std::this_thread::sleep_for(WaitTime);
 			}
 			else
 			{
-				while(WaitTime > 0ns && net_socket_read_wait(m_aNetClient[CONN_MAIN].m_Socket, WaitTime > 1000us ? WaitTime / 2 : 0ns) == 0)
+				while(WaitTime > 0ns && net_socket_read_wait(Socket, WaitTime > 1000us ? WaitTime / 2 : 0ns) == 0)
 					WaitTime = Deadline - time_get_nanoseconds();
 			}
 		}
