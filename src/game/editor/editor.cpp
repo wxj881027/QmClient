@@ -2364,25 +2364,31 @@ void CEditor::DoColorPickerButton(const void *pId, const CUIRect *pRect, ColorRG
 		m_ColorPickerPopupContext.m_HslaColor = color_cast<ColorHSLA>(Color);
 		m_ColorPickerPopupContext.m_HsvaColor = color_cast<ColorHSVA>(m_ColorPickerPopupContext.m_HslaColor);
 		m_ColorPickerPopupContext.m_Alpha = true;
+		m_ColorPickerPopupContext.m_State = EEditState::NONE;
 		m_pColorPickerPopupActiveId = pId;
 		Ui()->ShowPopupColorPicker(Ui()->MouseX(), Ui()->MouseY(), &m_ColorPickerPopupContext);
 	}
 
+	if(m_pColorPickerPopupActiveId != pId)
+		return;
+
+	const ColorRGBA PickerColor = m_ColorPickerPopupContext.m_RgbaColor;
 	if(Ui()->IsPopupOpen(&m_ColorPickerPopupContext))
 	{
-		if(m_pColorPickerPopupActiveId == pId)
-			SetColor(m_ColorPickerPopupContext.m_RgbaColor);
+		SetColor(PickerColor);
+		return;
 	}
-	else
-	{
-		m_pColorPickerPopupActiveId = nullptr;
-		if(m_ColorPickerPopupContext.m_State == EEditState::EDITING)
-		{
-			m_ColorPickerPopupContext.m_State = EEditState::END;
-			SetColor(m_ColorPickerPopupContext.m_RgbaColor);
-			m_ColorPickerPopupContext.m_State = EEditState::NONE;
-		}
-	}
+
+	m_pColorPickerPopupActiveId = nullptr;
+	EEditState &State = m_ColorPickerPopupContext.m_State;
+	if(State == EEditState::EDITING)
+		State = EEditState::END;
+	else if(State == EEditState::START || (State == EEditState::NONE && PickerColor.PackAlphaLast() != Color.PackAlphaLast()))
+		State = EEditState::ONE_GO;
+
+	if(State != EEditState::NONE)
+		SetColor(PickerColor);
+	State = EEditState::NONE;
 }
 
 bool CEditor::IsAllowPlaceUnusedTiles() const
@@ -5537,6 +5543,8 @@ void CEditor::Reset(bool CreateDefault)
 	Map()->m_EnvelopeEvaluator.m_Animate = false;
 
 	m_LayerPanelState.Reset();
+	m_pColorPickerPopupActiveId = nullptr;
+	m_ColorPickerPopupContext.m_State = EEditState::NONE;
 }
 
 void CEditor::AddDefaultMap()
