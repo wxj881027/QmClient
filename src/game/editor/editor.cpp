@@ -2180,7 +2180,7 @@ void CEditor::DoQuadEnvelopes(const CLayerQuads *pLayerQuads)
 
 void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadIndex, int PointIndex)
 {
-	CEnvPoint_runtime *pPoint = &pEnvelope->m_vPoints[PointIndex];
+	CEnvelope::CPoint *pPoint = &pEnvelope->m_vPoints[PointIndex];
 	const int Channel = pPoint->m_Channel;
 	if(Channel < 0 || Channel >= CEnvPoint::MAX_CHANNELS || !(Map()->m_EnvelopeEditorState.m_ActiveChannels & (1 << Channel)))
 		return;
