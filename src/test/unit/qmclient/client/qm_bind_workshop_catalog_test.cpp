@@ -171,6 +171,25 @@ TEST(QmBindWorkshop, CompileRejectsOverlongAndDeeplyNestedCommands)
 	EXPECT_NE(std::find(Result.m_vErrors.begin(), Result.m_vErrors.end(), ECompileError::TOO_MANY_NESTING), Result.m_vErrors.end());
 }
 
+TEST(QmBindBlueprintCompile, RejectsAnActionWithNoExecutableCommand)
+{
+	CBlueprintGraph Graph;
+	SNode Event;
+	Event.m_Type = ENodeType::EVENT_PRESS;
+	const int EventId = Graph.AddNode(Event);
+	const int ActionId = Graph.AddNode(SNode{});
+	ASSERT_TRUE(Graph.Connect(EventId, ActionId));
+
+	for(const char *pCommand : {"  \t ", " ; ; ", "  # reminder"})
+	{
+		SCOPED_TRACE(pCommand);
+		ASSERT_TRUE(Graph.SetNodeCommand(ActionId, pCommand));
+		const SCompileResult Result = Graph.Compile("h");
+		EXPECT_FALSE(Result.Ok());
+		EXPECT_NE(std::find(Result.m_vErrors.begin(), Result.m_vErrors.end(), ECompileError::EMPTY_COMMAND), Result.m_vErrors.end());
+	}
+}
+
 TEST(QmBindWorkshop, VisibleNodesCullsOffscreenGraph)
 {
 	CBlueprintGraph Graph;
@@ -294,6 +313,24 @@ TEST(QmBindWorkshop, DropOnInputPortConnectsAndDropOnEmptyCanvasDoesNot)
 	EXPECT_EQ(ResolveLinkDrop(Graph, 9999, 400.0f, NODE_HEIGHT * 0.5f), ELinkOutcome::NO_SOURCE);
 	EXPECT_EQ(Graph.Edges().size(), 1u);
 	EXPECT_FALSE(std::string(LinkOutcomeLabel(ELinkOutcome::NO_TARGET)).empty());
+}
+
+TEST(QmBindBlueprintCanvas, DroppingALinkOnAGroupFrameLeavesTheGraphUnchanged)
+{
+	CBlueprintGraph Graph;
+	const int FromId = Graph.AddNode(SNode{});
+	SNode Group;
+	Group.m_Type = ENodeType::GROUP;
+	Group.m_X = 400.0f;
+	Group.m_W = GROUP_WIDTH;
+	Group.m_H = GROUP_HEIGHT;
+	const int GroupId = Graph.AddNode(Group);
+	const float X = Group.m_X + Group.m_W * 0.5f;
+	const float Y = Group.m_Y + Group.m_H * 0.5f;
+	ASSERT_EQ(HitTestCanvas(Graph, X, Y).m_NodeId, GroupId);
+
+	EXPECT_EQ(ResolveLinkDrop(Graph, FromId, X, Y), ELinkOutcome::NO_TARGET);
+	EXPECT_TRUE(Graph.Edges().empty());
 }
 
 TEST(QmBindWorkshop, DuplicateAndCyclicLinksAreRejectedBeforeCreatingTheEdge)
@@ -788,6 +825,30 @@ TEST(QmBindWorkshop, EdgeHitTestFindsOnlyThePolylineUnderThePointer)
 	EXPECT_FALSE(ResolveEdgePolyline(Graph, FromId, 9999, Missing));
 }
 
+TEST(QmBindBlueprintCanvas, EdgeHitTestIncludesTheCurveBeyondItsEndpoints)
+{
+	CBlueprintGraph Graph;
+	SNode From;
+	From.m_X = 520.0f;
+	const int FromId = Graph.AddNode(From);
+	SNode To;
+	To.m_X = 80.0f;
+	To.m_Y = 320.0f;
+	const int ToId = Graph.AddNode(To);
+	ASSERT_TRUE(Graph.Connect(FromId, ToId));
+
+	SEdgePolyline Line;
+	ASSERT_TRUE(ResolveEdgePolyline(Graph, FromId, ToId, Line));
+	const std::vector<SCanvasPoint> vCurve = SampleEdgeCurve(Line);
+	ASSERT_FALSE(vCurve.empty());
+	const auto Outermost = std::max_element(vCurve.begin(), vCurve.end(), [](const SCanvasPoint &A, const SCanvasPoint &B) { return A.m_X < B.m_X; });
+	ASSERT_GT(Outermost->m_X, std::max(Line.m_X0, Line.m_X1) + EDGE_HIT_TOLERANCE);
+
+	const SEdgeHit Hit = HitTestEdge(Graph, Outermost->m_X, Outermost->m_Y);
+	EXPECT_EQ(Hit.m_From, FromId);
+	EXPECT_EQ(Hit.m_To, ToId);
+}
+
 TEST(QmBindWorkshop, DisconnectingOneLinkKeepsNodesAndSiblingLinks)
 {
 	CBlueprintGraph Graph;
@@ -1103,6 +1164,25 @@ TEST(QmBindWorkshop, HitTestFollowsThePerNodeSizeOfAGroupFrame)
 	// 普通节点尺寸没变：同样的相对位置（超出 NODE_HEIGHT 一半）不该命中端口。
 	const SCanvasHit Tall = HitTestCanvas(Graph, Normal.m_X + NODE_WIDTH * 0.5f, Normal.m_Y + NODE_HEIGHT * 2.0f);
 	EXPECT_TRUE(Tall.Empty());
+}
+
+TEST(QmBindBlueprintCanvas, ResizingANodeKeepsItsFarCornerVisibleAndSelectable)
+{
+	CBlueprintGraph Graph;
+	SNode Node;
+	Node.m_X = -540.0f;
+	Node.m_Y = -360.0f;
+	const int Id = Graph.AddNode(Node);
+	ASSERT_TRUE(Graph.SetNodeSize(Id, 720.0f, 540.0f));
+
+	EXPECT_EQ(Graph.VisibleNodes(170.0f, 170.0f, 175.0f, 175.0f), std::vector<int>{Id});
+	EXPECT_EQ(NodesInRect(Graph, 170.0f, 170.0f, 175.0f, 175.0f), std::vector<int>{Id});
+	const SCanvasHit Hit = HitTestCanvas(Graph, 172.0f, 172.0f);
+	EXPECT_EQ(Hit.m_NodeId, Id);
+	EXPECT_EQ(Hit.m_Part, ECanvasPart::BODY);
+
+	ASSERT_TRUE(Graph.SetNodeSize(Id, NODE_WIDTH, NODE_HEIGHT));
+	EXPECT_TRUE(Graph.VisibleNodes(170.0f, 170.0f, 175.0f, 175.0f).empty());
 }
 
 TEST(QmBindWorkshop, GroupResizeClampsToTheMinimumInsteadOfCollapsing)

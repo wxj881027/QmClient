@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <cstring>
 #include <deque>
+#include <limits>
 #include <map>
 #include <set>
 #include <string>
@@ -45,9 +46,13 @@ namespace
 		return (static_cast<uint64_t>(static_cast<uint32_t>(CellX)) << 32U) | static_cast<uint32_t>(CellY);
 	}
 
-	int CellOf(float Value)
+	int CellOf(double Value)
 	{
-		return static_cast<int>(std::floor(Value / qm_bind_workshop::GRID_CELL_SIZE));
+		if(std::isnan(Value))
+			return 0;
+		const double Cell = std::floor(Value / qm_bind_workshop::GRID_CELL_SIZE);
+		return static_cast<int>(std::clamp(Cell, static_cast<double>(std::numeric_limits<int>::min()),
+			static_cast<double>(std::numeric_limits<int>::max())));
 	}
 
 	int CountNesting(std::string_view Command)
@@ -1036,7 +1041,22 @@ namespace qm_bind_workshop
 		std::vector<SEdge> m_vEdges;
 		ankerl::unordered_dense::map<int, size_t> m_IndexById;
 		ankerl::unordered_dense::map<uint64_t, std::vector<int>> m_Cells;
+		float m_MaxNodeWidth = NODE_WIDTH;
+		float m_MaxNodeHeight = NODE_HEIGHT;
 		int m_NextId = 1;
+
+		// 缩小时保留上界，避免拖动手柄时为求最大值反复扫描整张图。
+		void TrackNodeExtent(const SNode &Node)
+		{
+			m_MaxNodeWidth = std::max(m_MaxNodeWidth, Node.m_W);
+			m_MaxNodeHeight = std::max(m_MaxNodeHeight, Node.m_H);
+		}
+
+		void IndexNodeCell(const SNode &Node)
+		{
+			m_Cells[CellKey(CellOf(Node.m_X), CellOf(Node.m_Y))].push_back(Node.m_Id);
+			TrackNodeExtent(Node);
+		}
 
 		void RebuildIndex()
 		{
@@ -1049,8 +1069,10 @@ namespace qm_bind_workshop
 		void RebuildCells()
 		{
 			m_Cells.clear();
+			m_MaxNodeWidth = NODE_WIDTH;
+			m_MaxNodeHeight = NODE_HEIGHT;
 			for(const SNode &Node : m_vNodes)
-				m_Cells[CellKey(CellOf(Node.m_X), CellOf(Node.m_Y))].push_back(Node.m_Id);
+				IndexNodeCell(Node);
 		}
 
 		void UpdateNodeCell(int Id, float OldX, float OldY, float NewX, float NewY)
@@ -1086,7 +1108,7 @@ namespace qm_bind_workshop
 		m_pData->m_vNodes.clear();
 		m_pData->m_vEdges.clear();
 		m_pData->m_IndexById.clear();
-		m_pData->m_Cells.clear();
+		m_pData->RebuildCells();
 		m_pData->m_NextId = 1;
 	}
 
@@ -1105,7 +1127,7 @@ namespace qm_bind_workshop
 		m_pData->m_vNodes.push_back(std::move(Node));
 		const SNode &Inserted = m_pData->m_vNodes[Index];
 		m_pData->m_IndexById[Inserted.m_Id] = Index;
-		m_pData->m_Cells[CellKey(CellOf(Inserted.m_X), CellOf(Inserted.m_Y))].push_back(Inserted.m_Id);
+		m_pData->IndexNodeCell(Inserted);
 		return Inserted.m_Id;
 	}
 
@@ -1164,6 +1186,7 @@ namespace qm_bind_workshop
 		const float MinH = Node.m_Type == ENodeType::GROUP ? GROUP_MIN_HEIGHT : NODE_HEIGHT;
 		Node.m_W = std::max(MinW, Width);
 		Node.m_H = std::max(MinH, Height);
+		m_pData->TrackNodeExtent(Node);
 		return true;
 	}
 
@@ -1315,7 +1338,8 @@ namespace qm_bind_workshop
 			}
 			if(pNode->m_Type == ENodeType::EVENT_PRESS)
 				continue;
-			if(pNode->m_Command.empty())
+			const size_t FirstAction = pNode->m_Command.find_first_not_of(" \t\r\n;");
+			if(FirstAction == std::string::npos || pNode->m_Command[FirstAction] == '#')
 			{
 				Result.m_vErrors.push_back(ECompileError::EMPTY_COMMAND);
 				continue;
@@ -1339,28 +1363,50 @@ namespace qm_bind_workshop
 	std::vector<int> CBlueprintGraph::VisibleNodes(float MinX, float MinY, float MaxX, float MaxY) const
 	{
 		std::vector<int> vResult;
-		const int MinCellX = CellOf(MinX - NODE_WIDTH);
-		const int MaxCellX = CellOf(MaxX + NODE_WIDTH);
-		const int MinCellY = CellOf(MinY - NODE_HEIGHT);
-		const int MaxCellY = CellOf(MaxY + NODE_HEIGHT);
-		// 只遍历视口覆盖的格子，节点总数再大也与查询成本无关。
-		for(int CellX = MinCellX; CellX <= MaxCellX; ++CellX)
-		{
-			for(int CellY = MinCellY; CellY <= MaxCellY; ++CellY)
+		if(m_pData->m_Cells.empty() || !(MinX <= MaxX && MinY <= MaxY))
+			return vResult;
+
+		// 桶只存节点左上角，向左和向上按节点尺寸上界扩张查询范围。
+		const int MinCellX = CellOf(static_cast<double>(MinX) - m_pData->m_MaxNodeWidth);
+		const int MaxCellX = CellOf(MaxX);
+		const int MinCellY = CellOf(static_cast<double>(MinY) - m_pData->m_MaxNodeHeight);
+		const int MaxCellY = CellOf(MaxY);
+		const auto AppendVisible = [&](const std::vector<int> &vIds) {
+			for(const int Id : vIds)
 			{
-				const auto It = m_pData->m_Cells.find(CellKey(CellX, CellY));
-				if(It == m_pData->m_Cells.end())
-					continue;
-				for(const int Id : It->second)
-				{
-					const SNode *pNode = FindNode(Id);
-					if(pNode == nullptr)
-						continue;
-					// 分组框比普通节点大，可见性判定必须按节点自己的尺寸算。
-					if(pNode->m_X + pNode->m_W < MinX || pNode->m_X > MaxX || pNode->m_Y + pNode->m_H < MinY || pNode->m_Y > MaxY)
-						continue;
+				const SNode *pNode = FindNode(Id);
+				if(pNode != nullptr && pNode->m_X <= MaxX && pNode->m_Y <= MaxY &&
+					static_cast<double>(pNode->m_X) + pNode->m_W >= MinX && static_cast<double>(pNode->m_Y) + pNode->m_H >= MinY)
 					vResult.push_back(Id);
-				}
+			}
+		};
+
+		const uint64_t NumCellsX = static_cast<int64_t>(MaxCellX) - MinCellX + 1;
+		const uint64_t NumCellsY = static_cast<int64_t>(MaxCellY) - MinCellY + 1;
+		if(NumCellsX > m_pData->m_Cells.size() / NumCellsY)
+		{
+			// 大范围查询只遍历已有的桶，保持和逐格查询相同的绘制顺序。
+			std::vector<std::pair<std::pair<int, int>, const std::vector<int> *>> vCells;
+			for(const auto &[Key, vIds] : m_pData->m_Cells)
+			{
+				const int CellX = static_cast<int32_t>(Key >> 32U);
+				const int CellY = static_cast<int32_t>(Key);
+				if(CellX >= MinCellX && CellX <= MaxCellX && CellY >= MinCellY && CellY <= MaxCellY)
+					vCells.emplace_back(std::pair{CellX, CellY}, &vIds);
+			}
+			std::sort(vCells.begin(), vCells.end(), [](const auto &A, const auto &B) { return A.first < B.first; });
+			for(const auto &Cell : vCells)
+				AppendVisible(*Cell.second);
+			return vResult;
+		}
+
+		for(int64_t CellX = MinCellX; CellX <= MaxCellX; ++CellX)
+		{
+			for(int64_t CellY = MinCellY; CellY <= MaxCellY; ++CellY)
+			{
+				const auto It = m_pData->m_Cells.find(CellKey(static_cast<int>(CellX), static_cast<int>(CellY)));
+				if(It != m_pData->m_Cells.end())
+					AppendVisible(It->second);
 			}
 		}
 		return vResult;
@@ -1496,6 +1542,12 @@ namespace qm_bind_workshop
 
 	namespace
 	{
+		float EdgeControlOffset(const SEdgePolyline &Line)
+		{
+			// 短线也保留弧度，水平出入的控制点至少伸出 48。
+			return std::max(48.0f, std::fabs(Line.m_X1 - Line.m_X0) * 0.6f);
+		}
+
 		float DistanceToSegment(float PX, float PY, float AX, float AY, float BX, float BY)
 		{
 			const float DX = BX - AX;
@@ -1528,8 +1580,7 @@ namespace qm_bind_workshop
 	{
 		std::vector<SCanvasPoint> vPoints;
 		vPoints.reserve(EDGE_CURVE_SEGMENTS + 1);
-		// 水平出/入的控制点：dx 的六成，最少 48，太短也会有点弧度。
-		const float Control = std::max(48.0f, std::fabs(Line.m_X1 - Line.m_X0) * 0.6f);
+		const float Control = EdgeControlOffset(Line);
 		const float P1X = Line.m_X0 + Control;
 		const float P2X = Line.m_X1 - Control;
 		for(int Step = 0; Step <= EDGE_CURVE_SEGMENTS; ++Step)
@@ -1611,9 +1662,10 @@ namespace qm_bind_workshop
 			SEdgePolyline Line;
 			if(!ResolveEdgePolyline(Graph, Edge.m_From, Edge.m_To, Line))
 				continue;
-			// 包围盒先挡掉绝大多数边，省掉逐段点线距离。
-			const float MinX = std::min(Line.m_X0, Line.m_X1) - Tolerance;
-			const float MaxX = std::max(Line.m_X0, Line.m_X1) + Tolerance;
+			// 水平控制点可以伸出两端之间的范围，包围盒也要包含它们。
+			const float Control = EdgeControlOffset(Line);
+			const float MinX = std::min(Line.m_X0, Line.m_X1 - Control) - Tolerance;
+			const float MaxX = std::max(Line.m_X0 + Control, Line.m_X1) + Tolerance;
 			const float MinY = std::min(Line.m_Y0, Line.m_Y1) - Tolerance;
 			const float MaxY = std::max(Line.m_Y0, Line.m_Y1) + Tolerance;
 			if(X < MinX || X > MaxX || Y < MinY || Y > MaxY)
@@ -1882,10 +1934,12 @@ namespace qm_bind_workshop
 
 	ELinkOutcome ResolveLinkDrop(CBlueprintGraph &Graph, int FromId, float X, float Y)
 	{
-		if(FromId == 0 || Graph.FindNode(FromId) == nullptr)
+		const SNode *pSource = Graph.FindNode(FromId);
+		if(pSource == nullptr || pSource->m_Type == ENodeType::GROUP)
 			return ELinkOutcome::NO_SOURCE;
 		const SCanvasHit Target = HitTestCanvas(Graph, X, Y);
-		if(Target.m_NodeId == 0)
+		const SNode *pTarget = Graph.FindNode(Target.m_NodeId);
+		if(pTarget == nullptr || pTarget->m_Type == ENodeType::GROUP)
 			return ELinkOutcome::NO_TARGET;
 		if(Target.m_NodeId == FromId)
 			return ELinkOutcome::SELF;
