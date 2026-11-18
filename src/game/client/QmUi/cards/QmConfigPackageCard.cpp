@@ -20,7 +20,9 @@
 #include <game/version.h>
 
 #include <array>
+#include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -66,15 +68,17 @@ namespace
 		bool m_Import = false;
 		bool m_Initialized = false;
 		bool m_PreviewValid = false;
+		bool m_RestorePending = false;
+		uint64_t m_LastRestoreFrame = 0;
+		CUi::SConfirmPopupContext m_RestoreConfirm;
 		std::array<CButtonContainer, 11> m_aButtons;
 		CListBox m_CustomList;
 		CListBox m_PackageList;
 		CListBox m_PreviewList;
 		std::vector<SConfigFileItem> m_vCustomFiles;
 		std::vector<SConfigFileItem> m_vPackages;
-		std::vector<char> m_vPreviewIds;
+		std::array<char, qm_config_package::MAX_FILES> m_aPreviewIds{};
 		qm_config_package::SPackage m_Preview;
-		std::string m_PreviewPath;
 		std::string m_Status;
 		std::string m_ResultPath;
 		int m_SelectedPackage = -1;
@@ -97,23 +101,24 @@ namespace
 			State.m_Status = Error;
 			return;
 		}
-		std::vector<SConfigFileItem> vNewCustom;
-		for(const auto &Path : vCustom)
+		std::vector<SConfigFileItem> vNewCustom, vNewPackages;
+		vNewCustom.reserve(vCustom.size());
+		vNewPackages.reserve(vPackages.size());
+		for(auto &Path : vCustom)
 		{
 			bool Selected = false;
 			for(const auto &Previous : State.m_vCustomFiles)
 				if(Previous.m_Path == Path)
 					Selected = Previous.m_Selected;
-			vNewCustom.push_back({Path, Selected});
+			vNewCustom.push_back({std::move(Path), Selected});
 		}
+		for(auto &Path : vPackages)
+			vNewPackages.push_back({std::move(Path)});
 		State.m_vCustomFiles = std::move(vNewCustom);
-		State.m_vPackages.clear();
-		for(const auto &Path : vPackages)
-			State.m_vPackages.push_back({Path});
+		State.m_vPackages = std::move(vNewPackages);
 		State.m_SelectedPackage = -1;
 		State.m_CustomSelection = -1;
 		State.m_PreviewValid = false;
-		State.m_PreviewPath.clear();
 		State.m_CustomList.Reset();
 		State.m_PackageList.Reset();
 		State.m_PreviewList.Reset();
@@ -130,9 +135,36 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 	// 沿用同一 stable ID，普通页面和搜索结果共享文件选择及导入预览。
 	Out.m_Render = [pMenus, pTooltips, Metrics, ReadOnly](CUIRect Content) {
 		auto &State = PackageUi();
-		const bool Interactive = !ReadOnly && !pMenus->Ui()->RenderOnly();
-		const float RowHeight = Metrics.m_ButtonHeight;
+		CUi *pUi = pMenus->Ui();
 		CSettingsContentLayoutFlow Flow(Content);
+		const bool AcceptsInput = Flow.Input() && !ReadOnly && !pUi->RenderOnly();
+		const uint64_t Frame = pUi->PopupSourceFrame();
+		if(AcceptsInput && State.m_RestorePending)
+		{
+			// 离页后丢弃旧确认，弹窗打开时由当前卡片续期。
+			if(Frame > State.m_LastRestoreFrame + 1)
+			{
+				pUi->ClosePopupMenu(&State.m_RestoreConfirm);
+				State.m_RestorePending = false;
+			}
+			else if(pUi->IsPopupOpen(&State.m_RestoreConfirm))
+			{
+				State.m_LastRestoreFrame = Frame;
+				pUi->RefreshPopupMenuSource(&State.m_RestoreConfirm, true, Frame);
+			}
+			else
+			{
+				// 先消费弹窗结果，避免同一帧的列表按键换掉已确认的预览。
+				State.m_RestorePending = false;
+				if(State.m_RestoreConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+				{
+					pMenus->PopupConfirmRestoreConfigPackage();
+					return;
+				}
+			}
+		}
+		const bool Interactive = AcceptsInput && !State.m_RestorePending;
+		const float RowHeight = Metrics.m_ButtonHeight;
 		const auto RowAction = [&](const char *pId, float Rows, auto &&Action) {
 			CUIRect Rect;
 			if(Flow.Control(pId, Rows * RowHeight + (Rows - 1.0f) * Metrics.m_LineSpacing, Rect))
@@ -217,7 +249,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 			static CButtonContainer s_aModeButtons[2];
 			const bool Import = pMenus->DoSegmentedChoice(s_aModeButtons, apModes, 2, State.m_Import ? 1 : 0, Rect) == 1;
 			// 两张列表各自持有入场生命周期；切模式只重放即将显示的那一张。
-			if(Import != State.m_Import)
+			if(Interactive && Import != State.m_Import)
 			{
 				State.m_Import = Import;
 				(Import ? State.m_PackageList : State.m_CustomList).RestartEntryAnimation();
@@ -296,10 +328,8 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 					const int Selected = State.m_PackageList.DoEnd();
 					if(Interactive && Selected != State.m_SelectedPackage && Selected >= 0 && Selected < static_cast<int>(State.m_vPackages.size()))
 					{
+						State.m_PreviewValid = qm_config_package::Load(Files, State.m_vPackages[Selected].m_Path, State.m_Preview, State.m_Status);
 						State.m_SelectedPackage = Selected;
-						State.m_PreviewPath = State.m_vPackages[Selected].m_Path;
-						State.m_PreviewValid = qm_config_package::Load(Files, State.m_PreviewPath, State.m_Preview, State.m_Status);
-						State.m_vPreviewIds.resize(State.m_PreviewValid ? State.m_Preview.m_vFiles.size() : 0);
 						State.m_PreviewList.Reset();
 					}
 				});
@@ -318,40 +348,31 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 					for(size_t Index = 0; Index < State.m_Preview.m_vFiles.size(); ++Index)
 					{
 						const auto &File = State.m_Preview.m_vFiles[Index];
-						const auto Item = State.m_PreviewList.DoNextItem(&State.m_vPreviewIds[Index]);
+						const auto Item = State.m_PreviewList.DoNextItem(&State.m_aPreviewIds[Index]);
 						if(Item.m_Visible)
 						{
 							const std::string Text = File.m_Path + (File.m_Present ? " (" + std::to_string(File.m_Content.size()) + " B)" : std::string(" (") + Localize("Remove") + ")");
-							PathLabel(&State.m_vPreviewIds[Index], Item.m_ContentRect, Text.c_str(), File.m_Path.c_str());
+							PathLabel(&State.m_aPreviewIds[Index], Item.m_ContentRect, Text.c_str(), File.m_Path.c_str());
 						}
 					}
 					State.m_PreviewList.DoEnd();
 				});
 				Text("config-restore-help", Localize("Complete restore replaces the listed files. A backup is saved before importing. The client will restart."), 2);
 				RowAction("config-restore-action", 1, [&](CUIRect Rect) {
-					static CUi::SConfirmPopupContext s_RestoreConfirm;
-					static bool s_RestorePending = false;
 					if(Button(7, "config-package-restore", Localize("Import and restart"), Rect))
 					{
-						// 恢复会覆盖设置与 cfg 并可重启：Cancel/OK + 危险色，正文说明备份。
-						s_RestoreConfirm.Reset();
-						s_RestoreConfirm.DefaultButtons();
-						s_RestoreConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
-						str_copy(s_RestoreConfirm.m_aMessage, Localize("Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first."), sizeof(s_RestoreConfirm.m_aMessage));
-						pMenus->Ui()->ShowPopupConfirm(pMenus->Ui()->MouseX(), pMenus->Ui()->MouseY(), &s_RestoreConfirm);
-						s_RestorePending = true;
-					}
-					// 结果下一帧轮询：确认后才执行恢复，取消只清等待状态。
-					if(s_RestorePending)
-					{
-						if(s_RestoreConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+						// 等待确认时暂停底层输入，保留玩家打开弹窗时所见的预览。
+						auto &Confirm = State.m_RestoreConfirm;
+						Confirm.Reset();
+						Confirm.DefaultButtons();
+						Confirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+						str_copy(Confirm.m_aMessage, Localize("Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first."), sizeof(Confirm.m_aMessage));
+						pUi->ShowPopupConfirm(pUi->MouseX(), pUi->MouseY(), &Confirm);
+						State.m_RestorePending = pUi->IsPopupOpen(&Confirm);
+						if(State.m_RestorePending)
 						{
-							s_RestorePending = false;
-							pMenus->PopupConfirmRestoreConfigPackage();
-						}
-						else if(s_RestoreConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED)
-						{
-							s_RestorePending = false;
+							State.m_LastRestoreFrame = Frame;
+							pUi->RefreshPopupMenuSource(&Confirm, true, Frame);
 						}
 					}
 				});
@@ -383,6 +404,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 	};
 	const auto Render = Out.m_Render;
 	Out.m_RenderMeasured = [Render](CUIRect &Content) { Render(Content); };
+	Out.m_HasPendingPreLayoutInput = [ReadOnly] { return !ReadOnly && PackageUi().m_RestorePending; };
 	qm_card_catalog::UseDeclaredModuleContent(Ctx, Out);
 	return true;
 }

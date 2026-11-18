@@ -29,13 +29,21 @@ void CMenus::RenderQmSelfKillProtectionContent(CUIRect &Content, float LineHeigh
 	static const void *s_EnabledCheckboxId = &s_EnabledCheckboxId;
 	if(Flow.Control("self-kill-protection-enabled", LineHeight, Row))
 	{
-		const int ConfigValue = g_Config.m_QmSelfKillEnabled;
-		g_Config.m_QmSelfKillEnabled = GameClient()->m_QmSelfKillProtection.Enabled() ? 1 : 0;
-		if(RenderQmFunctionCheckbox(s_EnabledCheckboxId, "self-kill-protection-enabled", Localize("Enable self-kill protection"), &g_Config.m_QmSelfKillEnabled, &Row, PrewarmOnly))
-			GameClient()->SetQmSelfKillProtection(g_Config.m_QmSelfKillEnabled != 0, false);
-		else
-			// 没点就是没改：把临时值换回配置原值，自动开启的状态不会被顺手写进存档。
-			g_Config.m_QmSelfKillEnabled = ConfigValue;
+		bool Changed;
+		bool Enabled;
+		{
+			// 控件用配置地址解析提示。即使渲染提前退出，也要恢复玩家保存的默认值。
+			struct SRestoreDefault
+			{
+				int m_Value = g_Config.m_QmSelfKillEnabled;
+				~SRestoreDefault() { g_Config.m_QmSelfKillEnabled = m_Value; }
+			} RestoreDefault;
+			g_Config.m_QmSelfKillEnabled = GameClient()->m_QmSelfKillProtection.Enabled() ? 1 : 0;
+			Changed = RenderQmFunctionCheckbox(s_EnabledCheckboxId, "self-kill-protection-enabled", Localize("Enable self-kill protection"), &g_Config.m_QmSelfKillEnabled, &Row, PrewarmOnly);
+			Enabled = g_Config.m_QmSelfKillEnabled != 0;
+		}
+		if(Changed)
+			GameClient()->SetQmSelfKillProtection(Enabled, false);
 	}
 
 	static CButtonContainer s_ReaderButtonSelfKillOff, s_ClearButtonSelfKillOff;

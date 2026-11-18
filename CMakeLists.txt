@@ -5648,6 +5648,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_input_overlay_count_test.cpp
     src/test/unit/qmclient/ui/qm_ui_scale_test.cpp
     src/test/unit/qmclient/ui/qm_ui_lifetime_test.cpp
+    src/test/integration/qmclient/settings/qm_card_search_config_keys_test.cpp
     src/test/unit/qmclient/client/qm_localization_policy_test.cpp
     src/test/unit/qmclient/client/qm_storage_path_test.cpp
     src/test/unit/qmclient/client/qm_media_paths_test.cpp
