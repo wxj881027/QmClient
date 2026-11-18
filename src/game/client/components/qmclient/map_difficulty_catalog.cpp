@@ -179,8 +179,17 @@ try
 		return false;
 	return StoreAxiomEntry(std::move(Entry));
 }
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
 
 bool CQmMapDifficultyCatalog::StoreAxiomEntry(SEntry Entry)
+try
 {
 	const auto Key = std::make_pair(Entry.m_MaxStars, Entry.m_MapName);
 	const auto It = m_AxiomEntries.find(Key);
