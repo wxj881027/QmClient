@@ -234,3 +234,26 @@ TEST(Image, ColorizeWithHueRectPreservesAlphaAndAppliesHue)
 	EXPECT_EQ(aRgba[1], aRgba[2]);
 	EXPECT_EQ(aRgba[3], 77);
 }
+
+TEST(Image, ColorizeWithHueRectKeepsGrayscaleFormats)
+{
+	const CImageInfo::EImageFormat aFormats[] = {CImageInfo::FORMAT_R, CImageInfo::FORMAT_RA};
+	for(const auto Format : aFormats)
+	{
+		SCOPED_TRACE(Format);
+		uint8_t aPixels[] = {128, 77};
+		const uint8_t aExpected[] = {128, 77};
+
+		CImageInfo Image;
+		Image.m_Width = 1;
+		Image.m_Height = 1;
+		Image.m_Format = Format;
+		Image.m_pData = aPixels;
+
+		ColorizeWithHueRect(Image, 0.0f, 0.75f, 0, 0, 1, 1);
+
+		EXPECT_EQ(Image.m_Format, Format);
+		EXPECT_EQ(Image.m_pData, aPixels);
+		EXPECT_EQ(mem_comp(aPixels, aExpected, sizeof(aExpected)), 0);
+	}
+}

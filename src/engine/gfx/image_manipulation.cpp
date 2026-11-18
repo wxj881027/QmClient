@@ -174,6 +174,8 @@ void ColorizeWithHueRect(CImageInfo &Image, float Hue, float Sat, size_t StartX,
 {
 	dbg_assert(Hue >= 0.0f && Hue <= 1.0f, "Invalid hue");
 	dbg_assert(Sat >= 0.0f && Sat <= 1.0f, "Invalid saturation");
+	if(Image.m_Format == CImageInfo::FORMAT_R || Image.m_Format == CImageInfo::FORMAT_RA)
+		return;
 	dbg_assert(Image.m_Format == CImageInfo::FORMAT_RGB || Image.m_Format == CImageInfo::FORMAT_RGBA, "Invalid image format");
 	dbg_assert(StartX + Width <= Image.m_Width && StartY + Height <= Image.m_Height, "Image rect is out of range");
 
