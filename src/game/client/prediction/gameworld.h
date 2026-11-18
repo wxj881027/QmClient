@@ -103,7 +103,8 @@ public:
 	void NetCharAdd(int ObjId, CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtended, int GameTeam, bool IsLocal);
 	void NetObjAdd(int ObjId, int ObjType, const void *pObjData, const CNetObj_EntityEx *pDataEx);
 	void ResetDoorCollision();
-	void NetObjEnd();
+	// 返回本次快照是否完整重建。失败时已清理实体、索引和门碰撞。
+	bool NetObjEnd();
 	[[nodiscard]] bool CopyWorld(CGameWorld *pFrom) noexcept;
 	[[nodiscard]] bool CopyWorldClean(CGameWorld *pFrom) noexcept; // TClient
 	CEntity *FindMatch(int ObjId, int ObjType, const void *pObjData);
@@ -170,6 +171,7 @@ private:
 	void RemoveEntities();
 	bool TryCopyWorld(CGameWorld *pFrom, bool LinkCopy) noexcept;
 
+	bool m_SnapshotUpdateFailed = false;
 	CEntity *m_pNextTraverseEntity = nullptr;
 	CEntity *m_apFirstEntityTypes[NUM_ENTTYPES];
 

@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <new>
 #include <utility>
 
 //////////////////////////////////////////////////
@@ -422,6 +423,7 @@ bool CGameWorld::IsLocalTeam(int OwnerId) const
 
 void CGameWorld::NetObjBegin(CTeamsCore Teams, int LocalClientId)
 {
+	m_SnapshotUpdateFailed = false;
 	m_Teams = Teams;
 	m_LocalClientId = LocalClientId;
 
@@ -436,28 +438,36 @@ void CGameWorld::NetObjBegin(CTeamsCore Teams, int LocalClientId)
 }
 
 void CGameWorld::NetCharAdd(int ObjId, CNetObj_Character *pCharObj, CNetObj_DDNetCharacter *pExtended, int GameTeam, bool IsLocal)
+try
 {
-	if(IsLocalTeam(ObjId))
-	{
-		CCharacter *pChar;
-		if((pChar = (CCharacter *)GetEntity(ObjId, ENTTYPE_CHARACTER)))
-		{
-			pChar->Read(pCharObj, pExtended, IsLocal);
-			pChar->Keep();
-		}
-		else
-		{
-			pChar = new CCharacter(this, ObjId, pCharObj, pExtended);
-			InsertEntity(pChar);
-		}
+	if(m_SnapshotUpdateFailed || !IsLocalTeam(ObjId))
+		return;
 
-		if(pChar)
-			pChar->m_GameTeam = GameTeam;
+	if(auto *pChar = static_cast<CCharacter *>(GetEntity(ObjId, ENTTYPE_CHARACTER)))
+	{
+		pChar->Read(pCharObj, pExtended, IsLocal);
+		pChar->Keep();
+		pChar->m_GameTeam = GameTeam;
 	}
+	else
+	{
+		auto pNewChar = std::make_unique<CCharacter>(this, ObjId, pCharObj, pExtended);
+		InsertEntity(pNewChar.get());
+		pNewChar->m_GameTeam = GameTeam;
+		pNewChar.release();
+	}
+}
+catch(const std::bad_alloc &)
+{
+	m_SnapshotUpdateFailed = true;
 }
 
 void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const CNetObj_EntityEx *pDataEx)
+try
 {
+	if(m_SnapshotUpdateFailed)
+		return;
+
 	if((ObjType == NETOBJTYPE_PROJECTILE || ObjType == NETOBJTYPE_DDRACEPROJECTILE || ObjType == NETOBJTYPE_DDNETPROJECTILE) && m_WorldConfig.m_PredictWeapons)
 	{
 		CProjectileData Data = ExtractProjectileInfo(ObjType, pObjData, this, pDataEx);
@@ -622,6 +632,10 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 		}
 	}
 }
+catch(const std::bad_alloc &)
+{
+	m_SnapshotUpdateFailed = true;
+}
 
 void CGameWorld::ResetDoorCollision()
 {
@@ -679,8 +693,17 @@ void CGameWorld::ResetDoorCollision()
 	}
 }
 
-void CGameWorld::NetObjEnd()
+bool CGameWorld::NetObjEnd()
 {
+	if(m_SnapshotUpdateFailed)
+	{
+		// 角色和实体可能已经部分更新，先撤销门写入，再清空本次预测结果。
+		while(CEntity *pDoor = FindFirst(ENTTYPE_DOOR))
+			pDoor->Destroy();
+		Clear();
+		return false;
+	}
+
 	// keep predicting hooked characters, based on hook position
 	for(int i = 0; i < MAX_CLIENTS; i++)
 		if(CCharacter *pChar = GetCharacterById(i))
@@ -713,6 +736,7 @@ void CGameWorld::NetObjEnd()
 			m_Core.m_apCharacters[Id] = &pChar->m_Core;
 		}
 	}
+	return true;
 }
 
 bool CGameWorld::CopyWorldClean(CGameWorld *pFrom) noexcept

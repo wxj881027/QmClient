@@ -792,8 +792,8 @@ void CCharacter::HandleSkippableTiles(int Index)
 bool CCharacter::IsSwitchActiveCb(unsigned char Number, void *pUser)
 {
 	CCharacter *pThis = (CCharacter *)pUser;
-	auto &aSwitchers = pThis->Switchers();
-	return !aSwitchers.empty() && pThis->Team() != pThis->TeamsCore()->TeamSuper() && aSwitchers[Number].m_aStatus[pThis->Team()];
+	const auto &vSwitchers = pThis->Switchers();
+	return Number < vSwitchers.size() && pThis->Team() != pThis->TeamsCore()->TeamSuper() && vSwitchers[Number].m_aStatus[pThis->Team()];
 }
 
 void CCharacter::HandleTiles(int Index)
@@ -985,6 +985,9 @@ void CCharacter::HandleTiles(int Index)
 	const int SwitchType = Collision()->GetSwitchType(MapIndex);
 	const int SwitchNumber = Collision()->GetSwitchNumber(MapIndex);
 	const int SwitchDelay = Collision()->GetSwitchDelay(MapIndex);
+	const auto IsFreezeSwitchActive = [this, SwitchNumber] {
+		return SwitchNumber == 0 || IsSwitchActiveCb(static_cast<unsigned char>(SwitchNumber), this);
+	};
 	if((SwitchType == TILE_SWITCHOPEN || SwitchType == TILE_SWITCHCLOSE || SwitchType == TILE_SWITCHTIMEDOPEN || SwitchType == TILE_SWITCHTIMEDCLOSE) &&
 		Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
 	{
@@ -993,31 +996,31 @@ void CCharacter::HandleTiles(int Index)
 	}
 	else if(SwitchType == TILE_FREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{
-		if(SwitchNumber == 0 || Switchers()[SwitchNumber].m_aStatus[Team()])
+		if(IsFreezeSwitchActive())
 		{
 			Freeze(SwitchDelay);
 		}
 	}
 	else if(SwitchType == TILE_DFREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{
-		if(SwitchNumber == 0 || Switchers()[SwitchNumber].m_aStatus[Team()])
+		if(IsFreezeSwitchActive())
 			m_Core.m_DeepFrozen = true;
 	}
 	else if(SwitchType == TILE_DUNFREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{
-		if(SwitchNumber == 0 || Switchers()[SwitchNumber].m_aStatus[Team()])
+		if(IsFreezeSwitchActive())
 			m_Core.m_DeepFrozen = false;
 	}
 	else if(SwitchType == TILE_LFREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{
-		if(SwitchNumber == 0 || Switchers()[SwitchNumber].m_aStatus[Team()])
+		if(IsFreezeSwitchActive())
 		{
 			m_Core.m_LiveFrozen = true;
 		}
 	}
 	else if(SwitchType == TILE_LUNFREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{
-		if(SwitchNumber == 0 || Switchers()[SwitchNumber].m_aStatus[Team()])
+		if(IsFreezeSwitchActive())
 		{
 			m_Core.m_LiveFrozen = false;
 		}
