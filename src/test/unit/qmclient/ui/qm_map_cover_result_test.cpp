@@ -40,13 +40,14 @@ namespace
 	struct COutputAllocation
 	{
 		int m_Calls = 0;
+		int m_RefuseOnCall = 0;
 		bool m_Refuse = true;
 		QmMapCover::SOutputAllocation m_Allocation{Allocate, this};
 		static void *Allocate(size_t Size, void *pUser) noexcept
 		{
 			auto &Self = *static_cast<COutputAllocation *>(pUser);
 			++Self.m_Calls;
-			return Self.m_Refuse ? nullptr : std::malloc(Size);
+			return Self.m_Refuse || Self.m_Calls == Self.m_RefuseOnCall ? nullptr : std::malloc(Size);
 		}
 	};
 
@@ -150,6 +151,29 @@ TEST(QmMapCoverResult, ComposeAllocationFailureAfterRealDecodePreservesOutputAnd
 	ASSERT_EQ(QmMapCover::DecodeAndComposeChecked(Png.Data(), Png.Size(), "map_cover_result", 64, 32, Art, Output.m_Image,
 			  nullptr, &Allocation.m_Allocation),
 		EResult::SUCCESS);
+	EXPECT_TRUE(Output.m_Image.DataEquals(Expected.m_Image));
+}
+
+TEST(QmMapCoverResult, SummaryBlurAllocationRefusalPreservesOutputAndCanRetry)
+{
+	CScopedImage Source(4, 2), Output(1, 1), Expected;
+	ASSERT_NE(Source.m_Image.m_pData, nullptr);
+	ASSERT_NE(Output.m_Image.m_pData, nullptr);
+	const auto *pOriginal = Output.m_Image.m_pData;
+	Source.m_Image.m_pData[0] = 255;
+	QmMapCover::SArt Art;
+	Art.m_ImageFraction = 1.0f;
+	Art.m_SummaryBlur = true;
+	ASSERT_TRUE(QmMapCover::Compose(Source.m_Image, 64, 32, Art, Expected.m_Image));
+
+	COutputAllocation Allocation;
+	Allocation.m_Refuse = false;
+	Allocation.m_RefuseOnCall = 2;
+	EXPECT_EQ(QmMapCover::ComposeChecked(Source.m_Image, 64, 32, Art, Output.m_Image, &Allocation.m_Allocation), EResult::RESOURCE_ERROR);
+	EXPECT_EQ(Allocation.m_Calls, 2);
+	ExpectOriginalOutput(Output.m_Image, pOriginal);
+
+	ASSERT_EQ(QmMapCover::ComposeChecked(Source.m_Image, 64, 32, Art, Output.m_Image, &Allocation.m_Allocation), EResult::SUCCESS);
 	EXPECT_TRUE(Output.m_Image.DataEquals(Expected.m_Image));
 }
 

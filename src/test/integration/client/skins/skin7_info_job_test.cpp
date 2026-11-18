@@ -7,16 +7,18 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstdlib>
 #include <new>
 #include <thread>
 
 namespace
 {
-	bool DecodeThenThrow(const void *pData, size_t Size, const char *pPath, CImageInfo &Image)
+	CImageLoader::EPngLoadResult DecodeThenThrow(const void *pData, size_t Size, const char *pPath, CImageInfo &Image)
 	{
-		if(!CImageLoader::LoadPng(pData, Size, pPath, Image))
-			return false;
-		throw std::bad_alloc();
+		const auto Result = CImageLoader::LoadPngChecked(pData, Size, pPath, Image);
+		if(Result == CImageLoader::EPngLoadResult::SUCCESS)
+			throw std::bad_alloc();
+		return Result;
 	}
 
 	const CQmSkin7InfoJob::SEntry *FindEntry(const std::vector<CQmSkin7InfoJob::SEntry> &Entries, const char *pName)
@@ -64,6 +66,19 @@ namespace
 			ASSERT_TRUE(CImageLoader::SavePng(File, "test hat", Image));
 		}
 	};
+}
+
+TEST(QmSkin7DescriptionParse, ParserAllocationFailureCanRetryTheSameValidDescription)
+{
+	static constexpr char s_aJson[] = R"({"skin":{"body":{"filename":"standard"}}})";
+	const auto RefuseFields = [](size_t Bytes, bool Zero) noexcept -> void * {
+		return Zero ? std::calloc(1, Bytes) : nullptr;
+	};
+	EXPECT_THROW(QmParseSkin7Info(s_aJson, sizeof(s_aJson) - 1, RefuseFields), std::bad_alloc);
+
+	const auto Info = QmParseSkin7Info(s_aJson, sizeof(s_aJson) - 1);
+	ASSERT_NE(Info, nullptr);
+	EXPECT_STREQ((*Info)["skin"]["body"]["filename"], "standard");
 }
 
 TEST_F(CQmSkin7InfoJobTest, WorkerPublishesParsedDescriptionsWithoutTextureOrClientAccess)

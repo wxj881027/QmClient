@@ -14,20 +14,37 @@
 
 #include <cstdlib>
 #include <memory>
+#include <new>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
 using TQmSkin7Info = std::unique_ptr<json_value, decltype(&json_value_free)>;
+// 同步解析期间借用，返回的内存须与 free 兼容。
+using FQmSkin7InfoAllocate = void *(*)(size_t, bool) noexcept;
 
-inline TQmSkin7Info QmParseSkin7Info(const void *pData, size_t Size)
+inline TQmSkin7Info QmParseSkin7Info(const void *pData, size_t Size, FQmSkin7InfoAllocate pfnAllocate = nullptr)
 {
 	if(!pData || Size == 0)
 		return {nullptr, json_value_free};
+	struct SAllocation
+	{
+		FQmSkin7InfoAllocate m_pfnAllocate;
+		bool m_Failed = false;
+	} Allocation{pfnAllocate};
 	json_settings Settings{};
-	char aError[256];
-	TQmSkin7Info pInfo(JsonParseEx(&Settings, static_cast<const json_char *>(pData), Size, aError), json_value_free);
+	Settings.user_data = &Allocation;
+	Settings.mem_alloc = [](size_t Bytes, int Zero, void *pUser) noexcept {
+		auto &State = *static_cast<SAllocation *>(pUser);
+		void *pMemory = State.m_pfnAllocate ? State.m_pfnAllocate(Bytes, Zero != 0) : (Zero ? std::calloc(1, Bytes) : std::malloc(Bytes));
+		if(pMemory == nullptr)
+			State.m_Failed = true;
+		return pMemory;
+	};
+	TQmSkin7Info pInfo(JsonParseEx(&Settings, static_cast<const json_char *>(pData), Size, nullptr), json_value_free);
+	if(Allocation.m_Failed)
+		throw std::bad_alloc();
 	if(!pInfo || pInfo->type != json_object || (*pInfo)["skin"].type != json_object)
 		pInfo.reset();
 	return pInfo;
@@ -37,7 +54,7 @@ inline TQmSkin7Info QmParseSkin7Info(const void *pData, size_t Size)
 class CQmSkin7InfoJob : public IJob
 {
 public:
-	using FDecodeAccessory = bool (*)(const void *, size_t, const char *, CImageInfo &);
+	using FDecodeAccessory = CImageLoader::EPngLoadResult (*)(const void *, size_t, const char *, CImageInfo &);
 
 	struct SPart
 	{
@@ -66,7 +83,7 @@ public:
 	std::vector<SPart> TakeParts() { return std::move(m_vParts); }
 	CImageInfo TakeXmasHat() { return std::exchange(m_XmasHat, CImageInfo{}); }
 	CImageInfo TakeBot() { return std::exchange(m_Bot, CImageInfo{}); }
-	// 只表示扫描流程正常结束，文件缺失/格式无效仍跳过，实际读盘失败必须重扫。
+	// 文件缺失或格式无效时跳过单项，读盘或解析资源不足时重扫。
 	// DONE的发布同步后台结果；ABORTED不代表worker已退出，不能据此读取结果。
 	bool Succeeded() const { return State() == STATE_DONE && m_Succeeded; }
 
@@ -148,9 +165,9 @@ private:
 		~SImageOwner() { m_Image.Free(); }
 	};
 
-	static bool DecodeAccessory(const void *pData, size_t Size, const char *pPath, CImageInfo &Image)
+	static CImageLoader::EPngLoadResult DecodeAccessory(const void *pData, size_t Size, const char *pPath, CImageInfo &Image)
 	{
-		return CImageLoader::LoadPng(pData, Size, pPath, Image);
+		return CImageLoader::LoadPngChecked(pData, Size, pPath, Image);
 	}
 
 	IStorage *m_pStorage;
@@ -194,13 +211,15 @@ private:
 			return;
 		SFileData Data;
 		unsigned Size = 0;
-		if(!ReadFile(pPath, IStorage::TYPE_ALL, Data, Size))
+		if(!ReadFile(pPath, IStorage::TYPE_ALL, Data, Size) || State() == STATE_ABORTED)
 			return;
 		SImageOwner Candidate;
 		auto &Prepared = Candidate.m_Image;
-		const bool Loaded = State() != STATE_ABORTED && m_pfnDecodeAccessory(Data.m_pData, Size, pPath, Prepared);
+		const auto Result = m_pfnDecodeAccessory(Data.m_pData, Size, pPath, Prepared);
 		Data.Free();
-		if(Loaded && Prepared.m_Format == CImageInfo::FORMAT_RGBA && Prepared.m_Width != 0 && Prepared.m_Height != 0 && Prepared.m_Width % Columns == 0 && Prepared.m_Height % Rows == 0 && State() != STATE_ABORTED)
+		if(Result == CImageLoader::EPngLoadResult::RESOURCE_ERROR)
+			throw std::bad_alloc();
+		if(Result == CImageLoader::EPngLoadResult::SUCCESS && Prepared.m_Format == CImageInfo::FORMAT_RGBA && Prepared.m_Width != 0 && Prepared.m_Height != 0 && Prepared.m_Width % Columns == 0 && Prepared.m_Height % Rows == 0 && State() != STATE_ABORTED)
 			Image = std::move(Prepared);
 	}
 

@@ -9,6 +9,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <limits>
 #include <new>
 #include <set>
 #include <string>
@@ -128,19 +129,36 @@ namespace
 		const char *GetBinaryPathAbsolute(const char *pName, char *pBuffer, unsigned Size) override { return m_Storage.GetBinaryPathAbsolute(pName, pBuffer, Size); }
 	};
 
-	bool DecodeThenThrow(const void *pData, size_t Size, const char *pPath, CImageInfo &Image)
+	CImageLoader::EPngLoadResult DecodeThenThrow(const void *pData, size_t Size, const char *pPath, CImageInfo &Image)
 	{
-		if(!CImageLoader::LoadPng(pData, Size, pPath, Image))
-			return false;
-		throw std::bad_alloc();
-	}
-
-	bool DecodeBotThenThrow(const void *pData, size_t Size, const char *pPath, CImageInfo &Image)
-	{
-		const bool Result = CImageLoader::LoadPng(pData, Size, pPath, Image);
-		if(Result && str_endswith(pPath, "/bot.png"))
+		const auto Result = CImageLoader::LoadPngChecked(pData, Size, pPath, Image);
+		if(Result == CImageLoader::EPngLoadResult::SUCCESS)
 			throw std::bad_alloc();
 		return Result;
+	}
+
+	CImageLoader::EPngLoadResult DecodeBotThenThrow(const void *pData, size_t Size, const char *pPath, CImageInfo &Image)
+	{
+		const auto Result = CImageLoader::LoadPngChecked(pData, Size, pPath, Image);
+		if(Result == CImageLoader::EPngLoadResult::SUCCESS && str_endswith(pPath, "/bot.png"))
+			throw std::bad_alloc();
+		return Result;
+	}
+
+	CImageLoader::EPngLoadResult DecodeBotWithoutPixelAllocation(const void *pData, size_t Size, const char *pPath, CImageInfo &Image)
+	{
+		if(!str_endswith(pPath, "/bot.png"))
+			return CImageLoader::LoadPngChecked(pData, Size, pPath, Image);
+
+		class CRefusePixels final : public CPngReadAllocator
+		{
+		public:
+			void *Allocate(EKind Kind, size_t Bytes) noexcept override
+			{
+				return Kind == EKind::PIXELS ? nullptr : CPngReadAllocator::Allocate(Kind, Bytes);
+			}
+		} Allocator;
+		return CImageLoader::LoadPngChecked(pData, Size, pPath, Image, std::numeric_limits<size_t>::max(), &Allocator);
 	}
 
 	using TRequest = CQmSkin7RefreshRequest<CSkins7::CSkinPart>;
@@ -546,6 +564,39 @@ TEST_F(CQmSkin7ScanRetryTest, HatReadFailureCannotPublishEmptyReplacement)
 	EXPECT_FALSE(m_pJob->PublishNextAccessory(Next, [&](const CImageInfo &, bool) { ++Calls; return true; }));
 	EXPECT_EQ(Calls, 0);
 	EXPECT_EQ(Next, 0);
+}
+
+TEST_F(CQmSkin7ScanRetryTest, AccessoryPixelAllocationFailurePreventsPublicationAndRetriesBothImages)
+{
+	WriteImage("skins7/xmas_hat.png", 1, 4);
+	WriteImage("skins7/bot.png", 12, 5);
+	ASSERT_FALSE(HasFatalFailure());
+	Queue(DecodeBotWithoutPixelAllocation);
+	ASSERT_FALSE(HasFatalFailure());
+	ExpectEmptyResult();
+
+	int Next = 0;
+	EXPECT_FALSE(m_pJob->PublishNextAccessory(Next, [](const CImageInfo &, bool) {
+		ADD_FAILURE() << "Failed scan tried to replace an accessory";
+		return true;
+	}));
+	EXPECT_EQ(Next, 0);
+	ASSERT_TRUE(m_Request.RetryFailedScan(m_pJob, m_Completion, TTime(0)));
+
+	auto Plan = TryStart(TRequest::SCAN_RETRY_DELAY);
+	ASSERT_TRUE(Plan);
+	ASSERT_TRUE(WaitForJobDone(*Plan->m_pJob));
+	ASSERT_TRUE(Plan->m_pJob->Succeeded());
+	const auto Publish = [&](const CImageInfo &Image, bool Hat) {
+		EXPECT_EQ(Hat, Next == 0);
+		EXPECT_NE(Image.m_pData, nullptr);
+		EXPECT_EQ(Image.m_Width, Hat ? 1u : 12u);
+		EXPECT_EQ(Image.m_Height, Hat ? 4u : 5u);
+		return true;
+	};
+	EXPECT_TRUE(Plan->m_pJob->PublishNextAccessory(Next, Publish));
+	EXPECT_TRUE(Plan->m_pJob->PublishNextAccessory(Next, Publish));
+	EXPECT_EQ(Next, 2);
 }
 
 TEST_F(CQmSkin7ScanRetryTest, NativeAccessoryDirectoryReadFailureDiscardsPreviouslyDecodedHat)

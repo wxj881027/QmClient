@@ -11,7 +11,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include <vector>
+#include <memory>
 
 namespace
 {
@@ -53,10 +53,21 @@ namespace
 		return std::clamp(Radius - Distance + 0.5f, 0.0f, 1.0f);
 	}
 
-	// 在缓存工作线程内把原图和径向模糊图混合，文字与 HUD 不参与采样。
-	void ApplySummaryBlur(uint8_t *pPixels, int Width, int Height)
+	std::unique_ptr<uint8_t, decltype(&std::free)> AllocatePixels(size_t Size, const QmMapCover::SOutputAllocation *pAllocation)
 	{
-		const std::vector<uint8_t> vSharp(pPixels, pPixels + static_cast<size_t>(Width) * Height * 4);
+		const auto Allocate = pAllocation != nullptr ? pAllocation->m_pfnAllocate : nullptr;
+		void *pData = Allocate != nullptr ? Allocate(Size, pAllocation->m_pUser) : std::malloc(Size);
+		return {static_cast<uint8_t *>(pData), &std::free};
+	}
+
+	// 在缓存工作线程内把原图和径向模糊图混合，文字与 HUD 不参与采样。
+	bool ApplySummaryBlur(uint8_t *pPixels, int Width, int Height, const QmMapCover::SOutputAllocation *pAllocation)
+	{
+		const size_t Size = static_cast<size_t>(Width) * Height * 4;
+		const auto pSharp = AllocatePixels(Size, pAllocation);
+		if(!pSharp)
+			return false;
+		mem_copy(pSharp.get(), pPixels, Size);
 		const float CenterY = (Height - 1) * 0.5f;
 		constexpr int Samples = 24;
 		for(int Y = 0; Y < Height; ++Y)
@@ -69,7 +80,7 @@ namespace
 					const float T = 0.065f * i / (Samples - 1);
 					const int SampleX = static_cast<int>(X * (1.0f - T) + 0.5f);
 					const int SampleY = static_cast<int>(Y + (CenterY - Y) * T + 0.5f);
-					const uint8_t *pSample = &vSharp[(static_cast<size_t>(SampleY) * Width + SampleX) * 4];
+					const uint8_t *pSample = pSharp.get() + (static_cast<size_t>(SampleY) * Width + SampleX) * 4;
 					for(int c = 0; c < 3; ++c)
 						aSum[c] += pSample[c];
 				}
@@ -77,6 +88,7 @@ namespace
 				for(int c = 0; c < 3; ++c)
 					pPixel[c] = static_cast<uint8_t>(pPixel[c] + (aSum[c] / static_cast<float>(Samples) - pPixel[c]) * Mask + 0.5f);
 			}
+		return true;
 	}
 
 	float SampleChannel(const CImageInfo &Image, int ChannelCount, int X, int Y, int Channel)
@@ -228,16 +240,14 @@ QmMapCover::EPrepareResult QmMapCover::ComposeChecked(const CImageInfo &Source, 
 	const float Radius = std::clamp(Art.m_CornerRadius, 0.0f, static_cast<float>(std::min(ImageWidth, OutHeight)) * 0.5f);
 
 	const size_t OutputSize = static_cast<size_t>(OutWidth) * static_cast<size_t>(OutHeight) * 4;
-	auto *pOutput = static_cast<uint8_t *>(pAllocation != nullptr && pAllocation->m_pfnAllocate != nullptr ?
-						       pAllocation->m_pfnAllocate(OutputSize, pAllocation->m_pUser) :
-						       malloc(OutputSize));
-	if(pOutput == nullptr)
+	auto pOutput = AllocatePixels(OutputSize, pAllocation);
+	if(!pOutput)
 		return EPrepareResult::RESOURCE_ERROR;
 
 	for(int Y = 0; Y < OutHeight; ++Y)
 	{
 		const float SourceY = std::clamp(OffsetY + (static_cast<float>(Y) + 0.5f) * SourcePerPixel - 0.5f, 0.0f, MaxSourceY);
-		uint8_t *pRow = pOutput + static_cast<size_t>(Y) * static_cast<size_t>(OutWidth) * 4;
+		uint8_t *pRow = pOutput.get() + static_cast<size_t>(Y) * static_cast<size_t>(OutWidth) * 4;
 		for(int X = 0; X < OutWidth; ++X)
 		{
 			uint8_t *pPixel = pRow + static_cast<size_t>(X) * 4;
@@ -274,14 +284,14 @@ QmMapCover::EPrepareResult QmMapCover::ComposeChecked(const CImageInfo &Source, 
 		}
 	}
 
-	if(Art.m_SummaryBlur)
-		ApplySummaryBlur(pOutput, OutWidth, OutHeight);
+	if(Art.m_SummaryBlur && !ApplySummaryBlur(pOutput.get(), OutWidth, OutHeight, pAllocation))
+		return EPrepareResult::RESOURCE_ERROR;
 
 	Out.Free();
 	Out.m_Width = static_cast<size_t>(OutWidth);
 	Out.m_Height = static_cast<size_t>(OutHeight);
 	Out.m_Format = CImageInfo::FORMAT_RGBA;
-	Out.m_pData = pOutput;
+	Out.m_pData = pOutput.release();
 	return EPrepareResult::SUCCESS;
 }
 

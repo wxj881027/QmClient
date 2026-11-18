@@ -24,7 +24,7 @@ namespace QmMapCover
 		RESOURCE_ERROR,
 	};
 
-	// 仅在同步合成期间借用；成功返回的内存须能由 CImageInfo::Free 释放。
+	// 仅在同步合成期间借用，用于输出及结算模糊缓冲。返回的内存须与 free 兼容。
 	struct SOutputAllocation
 	{
 		void *(*m_pfnAllocate)(size_t Size, void *pUser) noexcept = nullptr;

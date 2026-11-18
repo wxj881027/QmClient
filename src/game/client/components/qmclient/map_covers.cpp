@@ -490,11 +490,11 @@ void CQmMapCovers::StartQueued()
 			return;
 		void *pFileData = nullptr;
 		unsigned FileSize = 0;
-		const bool Read = m_pStorage != nullptr && m_pStorage->ReadFile(Task.m_CachePath.c_str(), IStorage::TYPE_SAVE, &pFileData, &FileSize);
+		const auto Read = m_pStorage->ReadFileCheckedBounded(Task.m_CachePath.c_str(), IStorage::TYPE_SAVE, &pFileData, &FileSize, MAX_RESPONSE_BYTES);
 		const std::unique_ptr<void, decltype(&std::free)> FileData(pFileData, &std::free);
-		if(Read)
+		++Reads;
+		if(Read == IStorage::EReadFileResult::SUCCESS)
 		{
-			++Reads;
 			const bool Valid = pFileData != nullptr && FileSize >= 8 && FileSize <= static_cast<size_t>(MAX_RESPONSE_BYTES) &&
 					   PngHeaderMatches(static_cast<const unsigned char *>(pFileData), FileSize);
 			if(Valid)
@@ -515,6 +515,7 @@ void CQmMapCovers::StartQueued()
 			continue;
 		}
 
+		// 限长拒读与实际 I/O 失败共用状态，保留原路径，交给下载候选替换。
 		if(!StartDownload(Task))
 			return;
 		It = m_vQueue.erase(It);
