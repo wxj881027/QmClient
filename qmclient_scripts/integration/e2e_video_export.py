@@ -78,6 +78,7 @@ def probe_duration(video: Path) -> float:
 		capture_output=True,
 		text=True,
 		check=False,
+		timeout=30,
 	)
 	if result.returncode != 0:
 		raise AssertionError(f"ffprobe 无法读取 {video}: {result.stderr.strip()}")
@@ -100,10 +101,11 @@ def probe_streams(video: Path) -> list[dict[str, object]]:
 	if ffprobe is None:
 		raise SkipTest("ffprobe 不可用，无法校验音视频流")
 	result = subprocess.run(
-		[ffprobe, "-v", "error", "-show_entries", "stream=codec_type,duration,nb_frames,r_frame_rate,avg_frame_rate,channels", "-of", "json", str(video)],
+		[ffprobe, "-v", "error", "-show_entries", "stream=codec_type,duration,nb_frames,r_frame_rate,avg_frame_rate,channels,sample_rate", "-of", "json", str(video)],
 		capture_output=True,
 		text=True,
 		check=False,
+		timeout=30,
 	)
 	if result.returncode != 0:
 		raise AssertionError(f"ffprobe 无法读取 {video}: {result.stderr.strip()}")
@@ -123,6 +125,7 @@ def probe_stream_end(video: Path, selector: str) -> float:
 		capture_output=True,
 		text=True,
 		check=False,
+		timeout=30,
 	)
 	if result.returncode != 0:
 		raise AssertionError(f"ffprobe 无法读取 {video} 的 {selector} 包: {result.stderr.strip()}")
@@ -176,20 +179,25 @@ def scenario_video_export_range(env: ProcessEnvironment) -> None:
 
 
 def scenario_video_export_noninteger_fps_audio_sync(env: ProcessEnvironment) -> None:
-	"""144 FPS 导出仍写出音频且音画时长一致，验证非整数帧率下时间轴推进可用。
+	"""144 FPS 导出在混音与编码采样率相同和不同时都应保持音画同步。"""
+	fixture = os.environ.get("QM_E2E_DEMO")
+	if not fixture or not Path(fixture).is_file():
+		raise SkipTest("缺少隔离 demo fixture：设置 QM_E2E_DEMO")
+	demo = Path(fixture).resolve()
+	# 100 kHz 不是 AAC 支持的采样率，录制必须先降低采样率。
+	for mix_rate in (48000, 100000):
+		check_noninteger_fps_audio_sync(env, demo, mix_rate)
 
-	逐帧样本余数导致的长期漂移由 VideoAudioTimeline 单元测试覆盖；这里验证真实
-	录制链路在非整数帧率下同时产出音视频流，且不会因时间轴改动整体中断。
-	"""
-	demo = demo_path()
-	if demo is None:
-		raise SkipTest("缺少 demo：设置 QM_E2E_DEMO 或提供测试 demo")
-	name = "qme2e_noninteger_fps"
+
+def check_noninteger_fps_audio_sync(env: ProcessEnvironment, demo: Path, mix_rate: int) -> None:
+	name = f"qme2e_noninteger_fps_{mix_rate}"
 	expected_seconds = 12
 	client = start_demo_client(
 		env,
 		[
 			"snd_enable 1",
+			f"snd_rate {mix_rate}",
+			"cl_video_sound_enable 1",
 			"demo_speed 8",
 			f"cl_video_recorder_fps {NONINTEGER_FPS}",
 			"qm_video_segment_seconds 0",
@@ -198,13 +206,22 @@ def scenario_video_export_noninteger_fps_audio_sync(env: ProcessEnvironment) -> 
 			f"qm_video_width {OUTPUT_WIDTH}",
 			f"qm_video_height {OUTPUT_HEIGHT}",
 		],
+		extra_env={"SDL_AUDIO_DRIVER": "dummy"},
 	)
 	try:
 		client.command(f'play "{demo}"')
 		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
 		client.command(f"start_video {name} {RANGE_START_SECONDS} {RANGE_START_SECONDS + expected_seconds}")
-		client.wait_for(lambda line: "Audio recording enabled" in line, "音频录制已启用", 60)
-		client.wait_for(lambda line: "Concatenated" in line and f"{name}.mkv" in line, "导出完成", 300)
+		audio_start = client.wait_for(lambda line: "Audio recording enabled" in line, "音频录制已启用", 60)
+		result = client.wait_for(
+			lambda line: ("Concatenated" in line and f"{name}.mkv" in line) or "Could not convert audio frame" in line,
+			f"{mix_rate} Hz 混音导出完成",
+			300,
+		)
+		if "Concatenated" not in result:
+			raise AssertionError(f"{mix_rate} Hz 混音导出失败: {result}")
+		if f"mixer {mix_rate} Hz" not in audio_start:
+			raise AssertionError(f"客户端未使用 {mix_rate} Hz 混音: {audio_start}")
 		client.command("quit")
 		if client.wait_for_exit(30) != 0:
 			raise AssertionError("客户端未正常退出")
@@ -218,6 +235,9 @@ def scenario_video_export_noninteger_fps_audio_sync(env: ProcessEnvironment) -> 
 	audio_streams = [stream for stream in streams if stream.get("codec_type") == "audio"]
 	if len(video_streams) != 1 or len(audio_streams) != 1:
 		raise AssertionError(f"预期一条视频流和一条音频流，实际 {streams}")
+	encoded_rate = int(audio_streams[0]["sample_rate"])
+	if mix_rate == 100000 and encoded_rate >= mix_rate:
+		raise AssertionError(f"预期 AAC 采样率低于 {mix_rate} Hz，实际 {encoded_rate} Hz")
 	# avg_frame_rate 是 matroska DefaultDuration/封装器写入的权威帧率；r_frame_rate 由 FFmpeg
 	# 按包时长反推，非整除帧间隔下可能给出非记录值，因此只校验平均帧率。
 	if video_streams[0].get("avg_frame_rate") != f"{NONINTEGER_FPS}/1":

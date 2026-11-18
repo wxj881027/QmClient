@@ -16,7 +16,7 @@
 
 extern "C" {
 #include <libavutil/avutil.h>
-#include <libavutil/opt.h>
+#include <libavutil/mathematics.h>
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 };
@@ -337,6 +337,8 @@ void CVideo::Pause(bool Pause)
 		SetVideoRecorderPaused(m_Recording, Pause, [this] {
 			if(m_OffscreenCapture)
 				FlushOffscreenVideoFrames();
+			else
+				m_pGraphics->WaitForIdle(); // 让窗口读回回调在切换状态前完成。
 		});
 	}
 }
@@ -610,14 +612,41 @@ void CVideo::NextAudioFrameTimeline(ISoundMixFunc Mix)
 	}
 }
 
+// 先把连续的混音样本转换为完整的 AAC 输入块，保留余下的输出和滤波状态。
+static int FillResampledVideoAudioFrame(SwrContext *pContext, int MixRate, int EncodeRate, int16_t *pOutput, int OutputFrames, const ISoundMixFunc &Mix)
+{
+	constexpr int CHANNELS = 2;
+	constexpr int MAX_MIX_FRAMES = 1024;
+	int16_t aInput[MAX_MIX_FRAMES * CHANNELS];
+	const auto *pInputBytes = reinterpret_cast<const uint8_t *>(aInput);
+	int FramesWritten = 0;
+	while(FramesWritten < OutputFrames)
+	{
+		const int Remaining = OutputFrames - FramesWritten;
+		auto *pOutputBytes = reinterpret_cast<uint8_t *>(pOutput + FramesWritten * CHANNELS);
+
+		// 非空输入指针加零样本数只取已缓冲的输出，空指针会结束重采样。
+		int Converted = swr_convert(pContext, &pOutputBytes, Remaining, &pInputBytes, 0);
+		if(Converted < 0)
+			return Converted;
+		if(Converted == 0)
+		{
+			const int InputFrames = static_cast<int>(std::min<int64_t>(
+				av_rescale_rnd(Remaining, MixRate, EncodeRate, AV_ROUND_UP), MAX_MIX_FRAMES));
+			Mix(aInput, InputFrames);
+			Converted = swr_convert(pContext, &pOutputBytes, Remaining, &pInputBytes, InputFrames);
+			if(Converted < 0)
+				return Converted;
+		}
+		FramesWritten += Converted;
+	}
+	return 0;
+}
+
 void CVideo::NextAudioFrame(ISoundMixFunc Mix)
 {
 	if(IsRecording() && m_HasAudio)
 	{
-		m_AudioFrameIndex += 1;
-
-		m_ProcessingAudioFrame.fetch_add(1);
-
 		size_t NextAudioThreadIndex = m_CurAudioThreadIndex + 1;
 		if(NextAudioThreadIndex == m_AudioThreads)
 			NextAudioThreadIndex = 0;
@@ -645,16 +674,28 @@ void CVideo::NextAudioFrame(ISoundMixFunc Mix)
 				pAudioThread->m_Cond.wait(Lock, [&pAudioThread]() -> bool { return !pAudioThread->m_HasAudioFrame; });
 			}
 
-			Mix(m_vAudioBuffers[m_CurAudioThreadIndex].m_aBuffer, std::size(m_vAudioBuffers[m_CurAudioThreadIndex].m_aBuffer) / 2 / 2); // two channels
+			const int FrameSamples = m_AudioStream.m_vpFrames[m_CurAudioThreadIndex]->nb_samples;
+			auto &Buffer = m_vAudioBuffers[m_CurAudioThreadIndex];
+			if(SwrContext *pRateContext = m_AudioStream.m_vpSwrContexts.back())
+			{
+				const int Result = FillResampledVideoAudioFrame(pRateContext, m_pSound->MixingRate(),
+					m_AudioStream.m_pCodecContext->sample_rate, Buffer.m_aBuffer, FrameSamples, Mix);
+				if(Result < 0)
+				{
+					char aError[AV_ERROR_MAX_STRING_SIZE];
+					av_strerror(Result, aError, sizeof(aError));
+					log_error("videorecorder", "Could not resample recording audio: %s", aError);
+					m_EncodeError.store(true, std::memory_order_release);
+					return;
+				}
+			}
+			else
+				Mix(Buffer.m_aBuffer, FrameSamples);
 
-			int64_t DstNbSamples = av_rescale_rnd(
-				swr_get_delay(m_AudioStream.m_vpSwrContexts[m_CurAudioThreadIndex], m_AudioStream.m_pCodecContext->sample_rate) +
-					m_AudioStream.m_vpFrames[m_CurAudioThreadIndex]->nb_samples,
-				m_AudioStream.m_pCodecContext->sample_rate,
-				m_AudioStream.m_pCodecContext->sample_rate, AV_ROUND_UP);
-
+			++m_AudioFrameIndex;
+			m_ProcessingAudioFrame.fetch_add(1);
 			pAudioThread->m_SampleCountStart = m_AudioStream.m_SamplesCount;
-			m_AudioStream.m_SamplesCount += DstNbSamples;
+			m_AudioStream.m_SamplesCount += FrameSamples;
 
 			pAudioThread->m_HasAudioFrame = true;
 			{
@@ -956,6 +997,27 @@ bool CVideo::OpenVideo()
 	return true;
 }
 
+static bool InitVideoAudioResampler(SwrContext **ppContext, int InputRate, int OutputRate, AVSampleFormat OutputFormat)
+{
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 24, 100)
+	AVChannelLayout Stereo = AV_CHANNEL_LAYOUT_STEREO;
+	int Result = swr_alloc_set_opts2(ppContext, &Stereo, OutputFormat, OutputRate, &Stereo, AV_SAMPLE_FMT_S16, InputRate, 0, nullptr);
+#else
+	*ppContext = swr_alloc_set_opts(nullptr, AV_CH_LAYOUT_STEREO, OutputFormat, OutputRate, AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_S16, InputRate, 0, nullptr);
+	int Result = *ppContext ? 0 : AVERROR(ENOMEM);
+#endif
+	if(Result >= 0)
+		Result = swr_init(*ppContext);
+	if(Result < 0)
+	{
+		char aError[AV_ERROR_MAX_STRING_SIZE];
+		av_strerror(Result, aError, sizeof(aError));
+		log_error("videorecorder", "Could not initialize audio conversion from %d Hz to %d Hz: %s", InputRate, OutputRate, aError);
+		return false;
+	}
+	return true;
+}
+
 bool CVideo::OpenAudio()
 {
 	AVCodecContext *pContext = m_AudioStream.m_pCodecContext;
@@ -973,11 +1035,12 @@ bool CVideo::OpenAudio()
 		return false;
 	}
 
-	int NbSamples;
-	if(pContext->codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)
-		NbSamples = 10000;
-	else
-		NbSamples = pContext->frame_size;
+	const int NbSamples = pContext->frame_size;
+	if(NbSamples <= 0 || static_cast<size_t>(NbSamples) > std::size(m_vAudioBuffers.front().m_aBuffer) / 2)
+	{
+		log_error("videorecorder", "Unsupported AAC frame size: %d", NbSamples);
+		return false;
+	}
 
 	m_AudioStream.m_vpFrames.clear();
 	m_AudioStream.m_vpFrames.reserve(m_AudioThreads);
@@ -1000,7 +1063,7 @@ bool CVideo::OpenAudio()
 		}
 
 		m_AudioStream.m_vpTmpFrames.emplace_back(nullptr);
-		m_AudioStream.m_vpTmpFrames[i] = AllocAudioFrame(AV_SAMPLE_FMT_S16, AV_CH_LAYOUT_STEREO, m_pSound->MixingRate(), NbSamples);
+		m_AudioStream.m_vpTmpFrames[i] = AllocAudioFrame(AV_SAMPLE_FMT_S16, AV_CH_LAYOUT_STEREO, pContext->sample_rate, NbSamples);
 		if(!m_AudioStream.m_vpTmpFrames[i])
 		{
 			return false;
@@ -1017,49 +1080,18 @@ bool CVideo::OpenAudio()
 		return false;
 	}
 
-	/* create resampling context */
-	m_AudioStream.m_vpSwrContexts.clear();
-	m_AudioStream.m_vpSwrContexts.resize(m_AudioThreads);
+	const int MixRate = m_pSound->MixingRate();
+	const int EncodeRate = pContext->sample_rate;
+	// 前 m_AudioThreads 项分别由工作线程转换格式。最后一项由主线程连续重采样，同采样率时为空。
+	m_AudioStream.m_vpSwrContexts.resize(m_AudioThreads + 1);
 	for(size_t i = 0; i < m_AudioThreads; ++i)
 	{
-		m_AudioStream.m_vpSwrContexts[i] = swr_alloc();
-		if(!m_AudioStream.m_vpSwrContexts[i])
-		{
-			log_error("videorecorder", "Could not allocate resampling context");
+		if(!InitVideoAudioResampler(&m_AudioStream.m_vpSwrContexts[i], EncodeRate, EncodeRate, pContext->sample_fmt))
 			return false;
-		}
-
-		/* set options */
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(59, 24, 100)
-		dbg_assert(av_opt_set_chlayout(m_AudioStream.m_vpSwrContexts[i], "in_chlayout", &pContext->ch_layout, 0) == 0, "invalid option");
-#else
-		dbg_assert(av_opt_set_int(m_AudioStream.m_vpSwrContexts[i], "in_channel_count", pContext->channels, 0) == 0, "invalid option");
-#endif
-		if(av_opt_set_int(m_AudioStream.m_vpSwrContexts[i], "in_sample_rate", m_pSound->MixingRate(), 0) != 0)
-		{
-			log_error("videorecorder", "Could not set audio sample rate to %d", m_pSound->MixingRate());
-			return false;
-		}
-		dbg_assert(av_opt_set_sample_fmt(m_AudioStream.m_vpSwrContexts[i], "in_sample_fmt", AV_SAMPLE_FMT_S16, 0) == 0, "invalid option");
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(59, 24, 100)
-		dbg_assert(av_opt_set_chlayout(m_AudioStream.m_vpSwrContexts[i], "out_chlayout", &pContext->ch_layout, 0) == 0, "invalid option");
-#else
-		dbg_assert(av_opt_set_int(m_AudioStream.m_vpSwrContexts[i], "out_channel_count", pContext->channels, 0) == 0, "invalid option");
-#endif
-		dbg_assert(av_opt_set_int(m_AudioStream.m_vpSwrContexts[i], "out_sample_rate", pContext->sample_rate, 0) == 0, "invalid option");
-		dbg_assert(av_opt_set_sample_fmt(m_AudioStream.m_vpSwrContexts[i], "out_sample_fmt", pContext->sample_fmt, 0) == 0, "invalid option");
-
-		/* initialize the resampling context */
-		const int ResamplingContextInitResult = swr_init(m_AudioStream.m_vpSwrContexts[i]);
-		if(ResamplingContextInitResult < 0)
-		{
-			char aError[AV_ERROR_MAX_STRING_SIZE];
-			av_strerror(ResamplingContextInitResult, aError, sizeof(aError));
-			log_error("videorecorder", "Could not initialize resampling context: %s", aError);
-			return false;
-		}
 	}
-	log_info("videorecorder", "Audio recording enabled (AAC, %d Hz, stereo)", m_pSound->MixingRate());
+	if(MixRate != EncodeRate && !InitVideoAudioResampler(&m_AudioStream.m_vpSwrContexts.back(), MixRate, EncodeRate, AV_SAMPLE_FMT_S16))
+		return false;
+	log_info("videorecorder", "Audio recording enabled (AAC, %d Hz, stereo; mixer %d Hz)", EncodeRate, MixRate);
 
 	m_AudioFrameIndex = 0;
 	return true;
