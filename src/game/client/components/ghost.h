@@ -3,6 +3,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_GHOST_H
 #define GAME_CLIENT_COMPONENTS_GHOST_H
 
+#include "ghost_run.h"
+
 #include <generated/protocol.h>
 
 #include <game/client/component.h>
@@ -12,6 +14,8 @@
 #include <game/client/components/qmclient/ghost_render.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/render.h>
+
+#include <chrono>
 
 struct CNetObj_Character;
 
@@ -66,10 +70,10 @@ private:
 	{
 	public:
 		std::shared_ptr<CManagedTeeRenderInfo> m_pManagedTeeRenderInfo;
-		CGhostSkin m_Skin;
+		CGhostSkin m_Skin{};
 		CGhostPath m_Path;
 		int m_StartTick;
-		char m_aPlayer[MAX_NAME_LENGTH];
+		char m_aPlayer[MAX_NAME_LENGTH]{};
 		int m_PlaybackPos;
 
 		CGhostItem() { Reset(); }
@@ -91,6 +95,12 @@ private:
 
 	CGhostItem m_aActiveGhosts[MAX_ACTIVE_GHOSTS];
 	CGhostItem m_CurGhost;
+	ghost_run::CPersonalBest<CGhostItem, CMenus::CGhostItem> m_PersonalBest;
+	std::chrono::nanoseconds m_NextBestRetry{};
+	bool m_FreeSlotAvailable = false;
+
+	void PublishFinishedBest();
+	void ClearSlot(int Slot);
 
 	// QmClient: 查看模式要把所有虚影的 hook 先画完再画所有 Tee（对齐 demo 播放的玩家
 	// 渲染顺序），所以先把本帧各虚影的插值数据算出来缓存，再统一绘制。
@@ -141,7 +151,7 @@ private:
 	void StopRecord(int Time = -1);
 	void StopRender();
 
-	void UpdateTeeRenderInfo(CGhostItem &Ghost);
+	std::shared_ptr<CManagedTeeRenderInfo> CreateRenderInfo(const CGhostItem &Ghost);
 
 	static void ConGPlay(IConsole::IResult *pResult, void *pUserData);
 
@@ -208,6 +218,10 @@ public:
 
 	int FreeSlots() const;
 	int Load(const char *pFilename);
+	int Load(const CMenus::CGhostItem &Item);
+	void RestoreUnsavedBest(std::vector<CMenus::CGhostItem> &vRows) const { m_PersonalBest.RestoreRow(vRows); }
+	bool IsUnsavedBest(const CMenus::CGhostItem &Item) const;
+	void ForgetUnsavedBest(const CMenus::CGhostItem &Item);
 	void Unload(int Slot);
 	void UnloadAll();
 

@@ -3604,6 +3604,7 @@ if(CLIENT)
     components/freezebars.h
     components/ghost.cpp
     components/ghost.h
+    components/ghost_run.h
     components/qmclient/ghost_start_detection.h
     components/hud.cpp
     components/hud.h
@@ -5676,6 +5677,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_demo_camera_file_test.cpp
     src/test/unit/qmclient/client/qm_demo_camera_session_test.cpp
     src/test/unit/qmclient/client/qm_ghost_path_test.cpp
+    src/test/unit/qmclient/client/qm_ghost_run_test.cpp
     src/test/unit/qmclient/client/qm_ghost_timeline_test.cpp
     src/test/unit/qmclient/client/qm_ghost_manual_test.cpp
     src/test/integration/qmclient/client/qm_ghost_manual_path_test.cpp
