@@ -95,13 +95,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 	static CScrollRegion s_BindWheelSettingsScrollRegion;
 	static char s_aBindName[BINDWHEEL_MAX_NAME];
 	static char s_aBindCommand[BINDWHEEL_MAX_CMD];
-	static int s_SelectedBindIndex = -1;
+	static CTClientBindWheelSelection s_Selection;
 	const float PreviewContentHeight = 280.0f;
 	const auto RenderEditor = [this, &TClientBindWheelTextInputCtx, ReadOnly, SmallSize](CUIRect &Content) {
 		CPerfTimer EditorTimer;
 		CUIRect LeftView = Content, Label, Button;
 		CSettingsContentLayoutFlow Flow(LeftView);
 		static CButtonContainer s_AddButton, s_RemoveButton, s_OverrideButton;
+		auto &BindWheel = GameClient()->m_BindWheel;
+		auto &vBinds = BindWheel.m_vBinds;
+		const int SelectedBindIndex = s_Selection.Resolve(vBinds);
 
 		if(Flow.Control("tclient-bindwheel-name", LineSize, Button, RowSpacing))
 		{
@@ -125,12 +128,12 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 
 		if(Flow.Control("tclient-bindwheel-override", LineSize, Button, RowSpacing))
 		{
-			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_OverrideButton, "tclient-bindwheel-override-selected", Localize("Override Selected"), 0, &Button) && !ReadOnly && !Ui()->RenderOnly() && s_SelectedBindIndex >= 0 && s_SelectedBindIndex < static_cast<int>(GameClient()->m_BindWheel.m_vBinds.size()))
+			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_OverrideButton, "tclient-bindwheel-override-selected", Localize("Override Selected"), 0, &Button) && !ReadOnly && !Ui()->RenderOnly() && SelectedBindIndex >= 0)
 			{
-				CBindWheel::CBind TempBind;
-				str_copy(TempBind.m_aName, str_length(s_aBindName) == 0 ? "*" : s_aBindName);
-				str_copy(GameClient()->m_BindWheel.m_vBinds[s_SelectedBindIndex].m_aName, TempBind.m_aName);
-				str_copy(GameClient()->m_BindWheel.m_vBinds[s_SelectedBindIndex].m_aCommand, s_aBindCommand);
+				CBindWheel::CBind &Bind = vBinds[SelectedBindIndex];
+				str_copy(Bind.m_aName, s_aBindName[0] == '\0' ? "*" : s_aBindName);
+				str_copy(Bind.m_aCommand, s_aBindCommand);
+				s_Selection.Select(SelectedBindIndex, Bind);
 			}
 		}
 
@@ -146,13 +149,13 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 			{
 				CBindWheel::CBind TempBind;
 				str_copy(TempBind.m_aName, str_length(s_aBindName) == 0 ? "*" : s_aBindName);
-				if(GameClient()->m_BindWheel.AddBind(TempBind.m_aName, s_aBindCommand))
-					s_SelectedBindIndex = static_cast<int>(GameClient()->m_BindWheel.m_vBinds.size()) - 1;
+				if(BindWheel.AddBind(TempBind.m_aName, s_aBindCommand))
+					s_Selection.Select(static_cast<int>(vBinds.size()) - 1, vBinds.back());
 			}
-			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_RemoveButton, "tclient-bindwheel-remove-bind", Localize("Remove Bind"), 0, &ButtonRemove) && !ReadOnly && !Ui()->RenderOnly() && s_SelectedBindIndex >= 0)
+			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_RemoveButton, "tclient-bindwheel-remove-bind", Localize("Remove Bind"), 0, &ButtonRemove) && !ReadOnly && !Ui()->RenderOnly() && SelectedBindIndex >= 0)
 			{
-				GameClient()->m_BindWheel.RemoveBind(s_SelectedBindIndex);
-				s_SelectedBindIndex = -1;
+				BindWheel.RemoveBind(SelectedBindIndex);
+				s_Selection.Clear();
 			}
 		}
 
@@ -194,7 +197,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 		Graphics()->QuadsEnd();
 
 		int HoveringIndex = -1;
-		const int SegmentCount = GameClient()->m_BindWheel.m_vBinds.size();
+		auto &vBinds = GameClient()->m_BindWheel.m_vBinds;
+		const int SegmentCount = vBinds.size();
+		const int OldSelectedBindIndex = s_Selection.Resolve(vBinds);
 		const float MouseDist = distance(Center, Ui()->MousePos());
 		if(MouseDist < Radius && MouseDist > Radius * 0.25f && SegmentCount > 0)
 		{
@@ -204,30 +209,33 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 			HoveringIndex = std::clamp((int)(HoveringAngle / (2.0f * pi) * SegmentCount), 0, SegmentCount - 1);
 			if(ProcessInput && Ui()->MouseButtonClicked(0))
 			{
-				s_SelectedBindIndex = HoveringIndex;
-				str_copy(s_aBindName, GameClient()->m_BindWheel.m_vBinds[HoveringIndex].m_aName);
-				str_copy(s_aBindCommand, GameClient()->m_BindWheel.m_vBinds[HoveringIndex].m_aCommand);
+				const auto &Bind = vBinds[HoveringIndex];
+				s_Selection.Select(HoveringIndex, Bind);
+				str_copy(s_aBindName, Bind.m_aName);
+				str_copy(s_aBindCommand, Bind.m_aCommand);
 			}
-			else if(ProcessInput && Ui()->MouseButtonClicked(1) && s_SelectedBindIndex >= 0 && s_SelectedBindIndex < SegmentCount && HoveringIndex != s_SelectedBindIndex)
+			else if(ProcessInput && Ui()->MouseButtonClicked(1) && OldSelectedBindIndex >= 0 && HoveringIndex != OldSelectedBindIndex)
 			{
-				std::swap(GameClient()->m_BindWheel.m_vBinds[s_SelectedBindIndex], GameClient()->m_BindWheel.m_vBinds[HoveringIndex]);
+				std::swap(vBinds[OldSelectedBindIndex], vBinds[HoveringIndex]);
+				s_Selection.Select(OldSelectedBindIndex, vBinds[OldSelectedBindIndex]);
 			}
 			else if(ProcessInput && Ui()->MouseButtonClicked(2))
-				s_SelectedBindIndex = HoveringIndex;
+				s_Selection.Select(HoveringIndex, vBinds[HoveringIndex]);
 		}
 		else if(ProcessInput && MouseDist < Radius && Ui()->MouseButtonClicked(0))
 		{
-			s_SelectedBindIndex = -1;
+			s_Selection.Clear();
 			str_copy(s_aBindName, "");
 			str_copy(s_aBindCommand, "");
 		}
 
+		const int SelectedBindIndex = s_Selection.Resolve(vBinds);
 		const float Theta = pi * 2.0f / std::max<float>(1.0f, SegmentCount);
 		for(int Index = 0; Index < SegmentCount; ++Index)
 		{
 			TextRender()->TextColor(ui_token::color::NEUTRAL_WHITE);
 			float SegmentFontSize = FontSize * 1.1f;
-			if(Index == s_SelectedBindIndex)
+			if(Index == SelectedBindIndex)
 			{
 				SegmentFontSize = FontSize * 1.7f;
 				TextRender()->TextColor(ColorRGBA(0.5f, 1.0f, 0.75f, 1.0f));
@@ -236,7 +244,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 				SegmentFontSize = FontSize * 1.35f;
 			const vec2 Pos = direction(Theta * Index) * (Radius * 0.75f) + Center;
 			const CUIRect Rect{Pos.x - 50.0f, Pos.y - 50.0f, 100.0f, 100.0f};
-			Ui()->DoLabel(&Rect, GameClient()->m_BindWheel.m_vBinds[Index].m_aName, SegmentFontSize, TEXTALIGN_MC);
+			Ui()->DoLabel(&Rect, vBinds[Index].m_aName, SegmentFontSize, TEXTALIGN_MC);
 		}
 		TextRender()->TextColor(ui_token::color::NEUTRAL_WHITE);
 		char aExtra[96];

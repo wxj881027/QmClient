@@ -193,6 +193,13 @@ public:
 	void MoveWarType(int From, int To);
 	void RemoveWarEntryDuplicates(const char *pName, const char *pClan);
 	CWarType *FindWarType(const char *pType);
+	const CWarType *FindActiveBuiltinWarType(int BuiltinGroup) const
+	{
+		if(BuiltinGroup < 0 || static_cast<size_t>(BuiltinGroup) >= m_aBuiltinTypes.size())
+			return nullptr;
+		const CWarType *pType = &m_aBuiltinTypes[BuiltinGroup];
+		return std::find(m_WarTypes.begin(), m_WarTypes.end(), pType) != m_WarTypes.end() ? pType : nullptr;
+	}
 	CWarEntry *FindWarEntry(const char *pName, const char *pClan, const char *pType);
 	void MarkWarEntriesDirty();
 	void MarkWarTypesDirty();

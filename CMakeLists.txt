@@ -6765,6 +6765,11 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_chat_bubble_state_test.cpp
       src/test/integration/qmclient/client/qm_chat_bubble_geometry_test.cpp
       src/test/integration/client/graph_rendering_test.cpp
+      src/test/integration/qmclient/settings/qm_tclient_config_string_edit_test.cpp
+      src/test/integration/qmclient/settings/qm_warlist_card_removal_test.cpp
+      src/test/unit/qmclient/settings/qm_bindwheel_card_selection_test.cpp
+      src/test/unit/qmclient/settings/qm_sound_card_pack_selection_test.cpp
+      src/test/integration/qmclient/settings/qm_player_indicator_war_group_test.cpp
       src/test/integration/qmclient/settings/qm_bind_command_card_commit_test.cpp
       src/test/unit/qmclient/settings/qm_chat_completion_card_preview_test.cpp
       src/test/unit/qmclient/settings/qm_graphics_mode_choice_test.cpp
@@ -6878,6 +6883,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/ui_listbox.cpp
       src/game/client/ui_scrollregion.cpp
       src/game/client/lineinput.cpp
+      src/game/client/components/qmclient/warlist_model.cpp
       src/game/client/components/qmclient/bind_editor.cpp
       src/game/client/QmUi/UiTextCaret.cpp
       src/game/client/QmUi/SettingsCardGeometry.cpp

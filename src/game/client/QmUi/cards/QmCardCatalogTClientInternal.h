@@ -2,19 +2,129 @@
 #define GAME_CLIENT_QMUI_CARDS_QMCARDCATALOGTCLIENTINTERNAL_H
 #include <base/str.h>
 
+#include <engine/console.h>
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/warlist_model.h>
+#include <game/client/components/tclient/bindwheel.h>
 #include <game/client/components/tclient/trails.h>
+#include <game/client/lineinput.h>
 #include <game/client/ui_scrollregion.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
+#include <string>
 #include <vector>
+
+namespace qm_card_catalog
+{
+	struct SAudioPackEntry
+	{
+		char m_aName[sizeof(CConfig::m_SndPack)];
+		int m_FileCount;
+	};
+
+	inline int FindAudioPackIndexByName(const std::vector<SAudioPackEntry> &vPacks, const char *pConfiguredName)
+	{
+		const char *pName = pConfiguredName[0] == '\0' ? "default" : pConfiguredName;
+		const auto It = std::find_if(vPacks.begin(), vPacks.end(), [pName](const SAudioPackEntry &Pack) { return str_comp(Pack.m_aName, pName) == 0; });
+		return It == vPacks.end() ? -1 : static_cast<int>(It - vPacks.begin());
+	}
+}
+
 namespace qm_tclient_cards
 {
+	class CTClientBindWheelSelection
+	{
+		int m_Index = -1;
+		CBindWheel::CBind m_Bind;
+
+	public:
+		void Select(int Index, const CBindWheel::CBind &Bind)
+		{
+			m_Index = Index;
+			m_Bind = Bind;
+		}
+
+		void Clear() { m_Index = -1; }
+
+		int Resolve(const std::vector<CBindWheel::CBind> &vBinds) const
+		{
+			if(m_Index < 0 || static_cast<size_t>(m_Index) >= vBinds.size() || !(vBinds[m_Index] == m_Bind))
+				return -1;
+			return m_Index;
+		}
+	};
+
+	class CTClientConfigStringInput
+	{
+		std::vector<char> m_vBuffer;
+
+	public:
+		CTClientConfigStringInput(const SStringConfigVariable &Variable, const char *pValue) :
+			m_vBuffer(Variable.m_MaxSize),
+			m_Input(m_vBuffer.data(), m_vBuffer.size())
+		{
+			m_Input.Set(pValue);
+		}
+
+		CTClientConfigStringInput(const CTClientConfigStringInput &) = delete;
+		CTClientConfigStringInput &operator=(const CTClientConfigStringInput &) = delete;
+
+		CLineInput m_Input;
+	};
+
+	inline std::optional<std::string> PrepareTClientConfigStringCommand(IConsole &Console, const SStringConfigVariable &Variable, const char *pValue)
+	{
+		std::string Command(Variable.MaxSerializedSize(), '\0');
+		Variable.Serialize(Command.data(), Command.size(), pValue);
+		// 部分文本配置比控制台的单行解析容量更大。
+		if(!Console.LineIsValid(Command.c_str()))
+			return std::nullopt;
+		Command.resize(str_length(Command.c_str()));
+		return Command;
+	}
+
+	// 确认弹窗跨帧，期间条目和分组可能被控制台修改。
+	struct SWarListRemoval
+	{
+		uint64_t m_Revision;
+		size_t m_Index;
+
+		void RemoveEntry(CQmWarListModel &Model) const
+		{
+			if(Model.Revision() == m_Revision && m_Index < Model.m_vWarEntries.size())
+				Model.RemoveWarEntry(&Model.m_vWarEntries[m_Index]);
+		}
+
+		void RemoveType(CQmWarListModel &Model) const
+		{
+			if(Model.Revision() == m_Revision && m_Index < Model.m_WarTypes.size())
+				Model.RemoveWarType(Model.m_WarTypes[m_Index]->m_aWarName);
+		}
+	};
+
+	inline void RenameEditableWarType(CQmWarListModel &Model, const CWarType *pType, const char *pName, ColorRGBA Color)
+	{
+		const auto It = std::find(Model.m_WarTypes.begin(), Model.m_WarTypes.end(), pType);
+		if(It != Model.m_WarTypes.end() && (*It)->m_Removable)
+			Model.UpsertWarType(static_cast<int>(It - Model.m_WarTypes.begin()), pName, Color);
+	}
+
+	inline const CWarType *PlacePlayerIndicatorWarGroupRow(
+		CSettingsContentLayoutFlow &Flow, CUIRect &Row, const CQmWarListModel &WarList,
+		int BuiltinGroup, const char *pRowId, float RowHeight, float Spacing)
+	{
+		const CWarType *pType = WarList.FindActiveBuiltinWarType(BuiltinGroup);
+		return pType != nullptr && Flow.Control(pRowId, RowHeight, Row, Spacing) ? pType : nullptr;
+	}
+
 	inline bool PerfDebugEnabled()
 	{
 		return g_Config.m_QmPerfDebug != 0;
