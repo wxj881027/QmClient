@@ -86,6 +86,13 @@ namespace QmNeteaseCdp
 		}
 
 #if defined(_WIN32)
+		std::unique_ptr<json_value, decltype(&json_value_free)> ParseCdpMessage(std::string_view Message)
+		{
+			// JSON 解析器会把原始 NUL 当作输入结束。
+			const bool HasCompleteInput = !Message.empty() && Message.find('\0') == std::string_view::npos;
+			return {HasCompleteInput ? json_parse(Message.data(), Message.size()) : nullptr, json_value_free};
+		}
+
 		class CWinsockRuntime
 		{
 		public:
@@ -663,7 +670,7 @@ namespace QmNeteaseCdp
 			std::string Message;
 			if(!m_pImpl->m_WebSocket.ReceiveText(&Message, Budget))
 				return FailConnection();
-			const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Message.data(), Message.size()), json_value_free);
+			const auto Root = ParseCdpMessage(Message);
 			json_value *pRoot = Root.get();
 			if(pRoot == nullptr)
 				continue;
@@ -680,9 +687,9 @@ namespace QmNeteaseCdp
 			{
 				const json_value *pError = ObjectField(pRoot, "error");
 				const json_value *pResult = ObjectField(pRoot, "result");
+				const bool Success = pError == nullptr && pResult != nullptr && pResult->type == json_object;
 				if(pResultJson != nullptr)
-					*pResultJson = pError == nullptr && pResult != nullptr ? Message : "";
-				const bool Success = pError == nullptr;
+					*pResultJson = Success ? Message : "";
 				return Success;
 			}
 		}
@@ -711,18 +718,15 @@ namespace QmNeteaseCdp
 		std::string Result;
 		if(!Command("Runtime.evaluate", Params, &Result, TimeoutMs))
 			return false;
-		if(pValueJson == nullptr)
-			return true;
 		const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Result.data(), Result.size()), json_value_free);
-		json_value *pRoot = Root.get();
-		if(pRoot == nullptr)
+		const json_value *pOuter = ObjectField(Root.get(), "result");
+		if(ObjectField(pOuter, "exceptionDetails") != nullptr)
 			return false;
-		const json_value *pOuter = ObjectField(pRoot, "result");
 		const json_value *pValue = ObjectField(pOuter, "result");
 		if(pValue == nullptr || pValue->type != json_object)
-		{
 			return false;
-		}
+		if(pValueJson == nullptr)
+			return true;
 		const json_value *pValueField = ObjectField(pValue, "value");
 		if(pValueField != nullptr && pValueField->type == json_string)
 			*pValueJson = std::string(pValueField->u.string.ptr, pValueField->u.string.length);
@@ -743,7 +747,7 @@ namespace QmNeteaseCdp
 			m_pImpl->m_WebSocket.Close();
 			return false;
 		}
-		const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Message.data(), Message.size()), json_value_free);
+		const auto Root = ParseCdpMessage(Message);
 		json_value *pRoot = Root.get();
 		if(pRoot != nullptr)
 		{
@@ -927,6 +931,8 @@ namespace QmNeteaseCdp
 						m_pImpl->m_Callback(InitialValue);
 					if(Session.Evaluate("JSON.stringify(window.__QM_NCM_LAST_PROGRESS__ || null)", &InitialValue, 800) && m_pImpl->m_Callback && !InitialValue.empty())
 						m_pImpl->m_Callback(InitialValue);
+					if(!Session.IsConnected())
+						continue;
 					Connected = true;
 					m_pImpl->m_Connected = true;
 					uint64_t LastPoll = GetTickCount64();

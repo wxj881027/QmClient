@@ -1,5 +1,7 @@
 #include <base/str.h>
 
+#include <engine/external/json-parser/json.h>
+
 #include <winsock2.h>
 
 #include <windows.h>
@@ -11,8 +13,12 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <future>
+#include <memory>
 #include <string>
+#include <string_view>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace
@@ -56,9 +62,19 @@ namespace
 		return true;
 	}
 
-	// 只模拟本机 WebSocket 对端；独立的五秒上限也约束旧实现回归时的等待。
+	// 只模拟本机 HTTP 发现和 WebSocket 对端。对端的等待上限为五秒。
 	class CLoopbackPeer
 	{
+		struct CConnection
+		{
+			SOCKET m_Socket;
+			~CConnection()
+			{
+				if(m_Socket != INVALID_SOCKET)
+					closesocket(m_Socket);
+			}
+		};
+
 		SOCKET m_Listener = INVALID_SOCKET;
 		bool m_Winsock = false;
 		uint16_t m_Port = 0;
@@ -109,7 +125,7 @@ namespace
 			}
 			return Sent == Bytes.size();
 		}
-		bool ReadClientFrame(SOCKET Socket)
+		bool ReadClientFrame(SOCKET Socket, std::string *pPayload = nullptr)
 		{
 			std::array<unsigned char, 2> aHeader{};
 			if(!Read(Socket, aHeader.data(), aHeader.size()) || (aHeader[1] & 0x80) == 0)
@@ -124,8 +140,96 @@ namespace
 			}
 			else if(Size == 127)
 				return false;
-			std::vector<char> vFrame(Size + 4);
-			return Read(Socket, vFrame.data(), vFrame.size());
+			std::vector<unsigned char> vFrame(Size + 4);
+			if(!Read(Socket, vFrame.data(), vFrame.size()))
+				return false;
+			if(pPayload != nullptr)
+			{
+				pPayload->resize(Size);
+				for(size_t Index = 0; Index < Size; ++Index)
+					(*pPayload)[Index] = static_cast<char>(vFrame[Index + 4] ^ vFrame[Index % 4]);
+			}
+			return true;
+		}
+		json_int_t ReadCommandId(SOCKET Socket, std::string_view Method)
+		{
+			std::string Payload;
+			if(!ReadClientFrame(Socket, &Payload))
+				return 0;
+			const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Payload.data(), Payload.size()), json_value_free);
+			if(!Root)
+				return 0;
+			const auto &CdpMethod = (*Root)["method"];
+			const auto &Id = (*Root)["id"];
+			if(CdpMethod.type != json_string || std::string_view(CdpMethod.u.string.ptr, CdpMethod.u.string.length) != Method || Id.type != json_integer)
+				return 0;
+			return Id.u.integer;
+		}
+		bool ReplyToCommand(SOCKET Socket, std::string_view Method, std::string_view Fields)
+		{
+			const json_int_t Id = ReadCommandId(Socket, Method);
+			if(Id <= 0)
+				return false;
+			std::string Message = "{\"id\":" + std::to_string(Id);
+			Message.append(Fields);
+			Message.push_back('}');
+			std::string Frame;
+			return AppendTextFrame(Frame, Message) && Send(Socket, Frame);
+		}
+		static bool AppendTextFrame(std::string &Frame, std::string_view Message)
+		{
+			if(Message.size() > 0xffff)
+				return false;
+			Frame.push_back('\x81');
+			if(Message.size() < 126)
+				Frame.push_back(static_cast<char>(Message.size()));
+			else
+			{
+				Frame.push_back('\x7e');
+				Frame.push_back(static_cast<char>(Message.size() >> 8));
+				Frame.push_back(static_cast<char>(Message.size() & 0xff));
+			}
+			Frame.append(Message);
+			return true;
+		}
+		SOCKET AcceptConnection()
+		{
+			if(!Ready(m_Listener, false))
+				return INVALID_SOCKET;
+			const SOCKET Socket = accept(m_Listener, nullptr, nullptr);
+			if(Socket == INVALID_SOCKET)
+				return INVALID_SOCKET;
+			u_long Nonblocking = 1;
+			if(ioctlsocket(Socket, FIONBIO, &Nonblocking) == 0)
+				return Socket;
+			closesocket(Socket);
+			return INVALID_SOCKET;
+		}
+		std::string ReadRequest(SOCKET Socket)
+		{
+			std::string Request;
+			while(Request.size() < 8192)
+			{
+				char Byte;
+				if(!Read(Socket, &Byte, 1))
+					break;
+				Request.push_back(Byte);
+				if(Request.ends_with("\r\n\r\n"))
+					return Request;
+			}
+			return {};
+		}
+		static std::string UpgradeResponse(const std::string &Request)
+		{
+			const std::string Prefix = "Sec-WebSocket-Key: ";
+			const size_t Start = Request.find(Prefix);
+			if(Start == std::string::npos)
+				return {};
+			const size_t End = Request.find("\r\n", Start);
+			std::string Accept;
+			if(End == std::string::npos || !WebSocketAccept(Request.substr(Start + Prefix.size(), End - Start - Prefix.size()), Accept))
+				return {};
+			return "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + Accept + "\r\n\r\n";
 		}
 		void Hold(SOCKET Socket)
 		{
@@ -141,10 +245,13 @@ namespace
 		enum class EScenario
 		{
 			NOTIFICATION,
+			MALFORMED_NOTIFICATION,
 			IDLE,
 			PARTIAL_FRAME,
 			CONTROL_FLOOD,
-			CANCEL_COMMAND
+			CANCEL_COMMAND,
+			MISSING_COMMAND_RESULT,
+			EVALUATION_EXCEPTION
 		};
 		std::atomic_bool m_CommandSeen{false};
 		CLoopbackPeer()
@@ -181,49 +288,31 @@ namespace
 				m_Thread.join();
 		}
 		bool IsValid() const { return m_Port != 0; }
+		uint16_t Port() const { return m_Port; }
 		std::string Url() const { return "ws://127.0.0.1:" + std::to_string(m_Port) + "/devtools/page/test"; }
 		void Start(EScenario Scenario, std::atomic_bool *pSessionStop)
 		{
 			m_Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
 			m_Thread = std::thread([this, Scenario, pSessionStop] {
-				if(!Ready(m_Listener, false))
-					return;
-				struct CConnection
-				{
-					SOCKET m_Socket;
-					~CConnection()
-					{
-						if(m_Socket != INVALID_SOCKET)
-							closesocket(m_Socket);
-					}
-				} Connection{accept(m_Listener, nullptr, nullptr)};
+				const CConnection Connection{AcceptConnection()};
 				const SOCKET Socket = Connection.m_Socket;
-				u_long Nonblocking = 1;
-				if(Socket == INVALID_SOCKET || ioctlsocket(Socket, FIONBIO, &Nonblocking) != 0)
+				if(Socket == INVALID_SOCKET)
 					return;
-				std::string Request;
-				while(Request.size() < 8192 && Request.find("\r\n\r\n") == std::string::npos)
+				std::string Response = UpgradeResponse(ReadRequest(Socket));
+				if(Response.empty())
+					return;
+				if(Scenario == EScenario::MALFORMED_NOTIFICATION)
 				{
-					char Byte;
-					if(!Read(Socket, &Byte, 1))
+					std::string Malformed = R"({"method":"Runtime.incomplete"})";
+					Malformed.push_back('\0');
+					Malformed += "invalid";
+					if(!AppendTextFrame(Response, Malformed))
 						return;
-					Request.push_back(Byte);
 				}
-				const std::string Prefix = "Sec-WebSocket-Key: ";
-				const size_t Start = Request.find(Prefix);
-				if(Start == std::string::npos)
-					return;
-				const size_t End = Request.find("\r\n", Start);
-				std::string Accept;
-				if(End == std::string::npos || !WebSocketAccept(Request.substr(Start + Prefix.size(), End - Start - Prefix.size()), Accept))
-					return;
-				std::string Response = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + Accept + "\r\n\r\n";
-				if(Scenario == EScenario::NOTIFICATION)
+				if(Scenario == EScenario::NOTIFICATION || Scenario == EScenario::MALFORMED_NOTIFICATION)
 				{
-					const std::string Notification = R"({"method":"Runtime.ready"})";
-					Response.push_back(static_cast<char>(0x81));
-					Response.push_back(static_cast<char>(Notification.size()));
-					Response += Notification;
+					if(!AppendTextFrame(Response, R"({"method":"Runtime.ready"})"))
+						return;
 				}
 				else if(Scenario == EScenario::PARTIAL_FRAME)
 					Response.append("\x81\x7e\x00\x7eX", 5);
@@ -242,8 +331,62 @@ namespace
 					m_CommandSeen.store(true);
 					pSessionStop->store(true);
 				}
+				if(Scenario == EScenario::MISSING_COMMAND_RESULT)
+				{
+					if(!ReplyToCommand(Socket, "Runtime.enable", "") ||
+						!ReplyToCommand(Socket, "Runtime.enable", R"(,"result":{})"))
+						return;
+				}
+				else if(Scenario == EScenario::EVALUATION_EXCEPTION)
+				{
+					constexpr std::string_view ExceptionReply =
+						R"(,"result":{"result":{"type":"object","subtype":"error","className":"Error","description":"Error: test"},)"
+						R"("exceptionDetails":{"exceptionId":1,"text":"Uncaught","lineNumber":0,"columnNumber":0}})";
+					if(!ReplyToCommand(Socket, "Runtime.evaluate", ExceptionReply) ||
+						!ReplyToCommand(Socket, "Runtime.evaluate", R"(,"result":{"result":{"type":"string","value":"ready"}})"))
+						return;
+				}
 				Hold(Socket);
 			});
+		}
+		std::future<bool> StartFrontendFailover()
+		{
+			m_Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+			std::packaged_task<bool()> Serve([this] {
+				{
+					const CConnection Discovery{AcceptConnection()};
+					const SOCKET Socket = Discovery.m_Socket;
+					if(Socket == INVALID_SOCKET || !ReadRequest(Socket).starts_with("GET /json "))
+						return false;
+					const std::string Targets = "[{\"url\":\"orpheus://first\",\"webSocketDebuggerUrl\":\"" + Url() +
+								    "/first\"},{\"url\":\"orpheus://next\",\"webSocketDebuggerUrl\":\"" + Url() + "/next\"}]";
+					if(!Send(Socket, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: " +
+								 std::to_string(Targets.size()) + "\r\n\r\n" + Targets))
+						return false;
+				}
+				{
+					const CConnection First{AcceptConnection()};
+					const SOCKET Socket = First.m_Socket;
+					if(Socket == INVALID_SOCKET)
+						return false;
+					const std::string Request = ReadRequest(Socket);
+					const std::string Upgrade = UpgradeResponse(Request);
+					if(!Request.starts_with("GET /devtools/page/test/first ") || Upgrade.empty() || !Send(Socket, Upgrade) ||
+						!ReplyToCommand(Socket, "Runtime.enable", R"(,"result":{})") ||
+						!ReplyToCommand(Socket, "Page.enable", R"(,"result":{})") ||
+						!ReplyToCommand(Socket, "Runtime.addBinding", R"(,"result":{})") ||
+						!ReplyToCommand(Socket, "Page.addScriptToEvaluateOnNewDocument", R"(,"result":{"identifier":"test"})") ||
+						!ReplyToCommand(Socket, "Runtime.evaluate", R"(,"result":{"result":{"type":"string","value":"installed"}})") ||
+						ReadCommandId(Socket, "Runtime.evaluate") <= 0)
+						return false;
+					// 安装完成。收到首个快照请求后关闭连接。
+				}
+				const CConnection Next{AcceptConnection()};
+				return Next.m_Socket != INVALID_SOCKET && ReadRequest(Next.m_Socket).starts_with("GET /devtools/page/test/next ");
+			});
+			auto Result = Serve.get_future();
+			m_Thread = std::thread(std::move(Serve));
+			return Result;
 		}
 	};
 
@@ -312,4 +455,49 @@ TEST_F(QmNeteaseCdpSocket, StopDuringPendingCommandClosesBeforeCommandDeadline)
 	EXPECT_TRUE(m_Peer.m_CommandSeen.load());
 	EXPECT_FALSE(m_Session.IsConnected());
 	EXPECT_LT(std::chrono::duration<double>(std::chrono::steady_clock::now() - Started).count(), 2.0);
+}
+
+TEST_F(QmNeteaseCdpSocket, NotificationWithEmbeddedNullIsIgnored)
+{
+	m_Peer.Start(CLoopbackPeer::EScenario::MALFORMED_NOTIFICATION, &m_Stop);
+	ASSERT_TRUE(m_Session.Connect(m_Peer.Url()));
+	std::string Notification;
+	m_Session.SetNotificationCallback([&](std::string_view Value) { Notification = Value; });
+
+	ASSERT_TRUE(m_Session.Pump(250));
+	EXPECT_TRUE(Notification.empty());
+	ASSERT_TRUE(m_Session.Pump(250));
+	EXPECT_EQ(Notification, R"({"method":"Runtime.ready"})");
+}
+
+TEST_F(QmNeteaseCdpSocket, MatchingReplyWithoutResultFailsCommand)
+{
+	m_Peer.Start(CLoopbackPeer::EScenario::MISSING_COMMAND_RESULT, &m_Stop);
+	ASSERT_TRUE(m_Session.Connect(m_Peer.Url()));
+
+	std::string Result = "previous";
+	EXPECT_FALSE(m_Session.Command("Runtime.enable", "{}", &Result));
+	EXPECT_TRUE(Result.empty());
+	EXPECT_TRUE(m_Session.Command("Runtime.enable", "{}", &Result));
+}
+
+TEST_F(QmNeteaseCdpSocket, JavaScriptExceptionFailsEvaluationWithoutOutput)
+{
+	m_Peer.Start(CLoopbackPeer::EScenario::EVALUATION_EXCEPTION, &m_Stop);
+	ASSERT_TRUE(m_Session.Connect(m_Peer.Url()));
+
+	EXPECT_FALSE(m_Session.Evaluate("throw new Error('test')", nullptr));
+	std::string Value;
+	ASSERT_TRUE(m_Session.Evaluate("'ready'", &Value));
+	EXPECT_EQ(Value, "ready");
+}
+
+TEST_F(QmNeteaseCdpSocket, FrontendTriesNextTargetAfterInitialSnapshotDisconnects)
+{
+	auto NextTarget = m_Peer.StartFrontendFailover();
+	QmNeteaseCdp::CFrontendBridgeWorker Worker;
+	ASSERT_TRUE(Worker.Start(GetCurrentProcessId(), L"--remote-debugging-port=" + std::to_wstring(m_Peer.Port()), {}));
+
+	ASSERT_EQ(NextTarget.wait_for(std::chrono::seconds(5)), std::future_status::ready);
+	EXPECT_TRUE(NextTarget.get());
 }
