@@ -448,8 +448,20 @@ static float ClampPresentationProgress(float Value)
 	return std::clamp(Value, 0.0f, 1.0f);
 }
 
+static bool ShouldCensorChatInput(const char *pInput)
+{
+	return g_Config.m_ClStreamerMode &&
+		(str_startswith(pInput, "/login ") ||
+			str_startswith(pInput, "/register ") ||
+			str_startswith(pInput, "/code ") ||
+			str_startswith(pInput, "/timeout ") ||
+			str_startswith(pInput, "/save ") ||
+			str_startswith(pInput, "/load "));
+}
+
 CChat::CChat()
 {
+	QmTrackChatHistoryCursor(m_History, m_pHistoryEntry);
 	m_Mode = MODE_NONE;
 	m_WhisperClientId = -1;
 	m_aWhisperName[0] = '\0';
@@ -463,14 +475,7 @@ CChat::CChat()
 	m_Input.SetCalculateOffsetCallback([this]() { return m_IsInputCensored; });
 	m_Input.SetDisplayTextCallback([this](char *pStr, size_t NumChars) {
 		m_IsInputCensored = false;
-		if(
-			g_Config.m_ClStreamerMode &&
-			(str_startswith(pStr, "/login ") ||
-				str_startswith(pStr, "/register ") ||
-				str_startswith(pStr, "/code ") ||
-				str_startswith(pStr, "/timeout ") ||
-				str_startswith(pStr, "/save ") ||
-				str_startswith(pStr, "/load ")))
+		if(ShouldCensorChatInput(pStr))
 		{
 			bool Censor = false;
 			const size_t NumLetters = minimum(NumChars, sizeof(ms_aDisplayText) - 1);
@@ -560,7 +565,7 @@ bool CChat::HandleCommandHudInput(const IInput::CEvent &Event)
 	if(Event.m_Flags & IInput::FLAG_PRESS)
 	{
 		if(Event.m_Key == KEY_UP || Event.m_Key == KEY_DOWN)
-			return m_CommandHud.MoveSelection(Event.m_Key == KEY_UP ? -1 : 1, m_Input.GetString(), m_Input.GetCursorOffset(), m_pHistoryEntry != nullptr);
+			return m_CommandHud.MoveSelection(Event.m_Key == KEY_UP ? -1 : 1, m_Input.GetString(), m_Input.GetCursorOffset(), !m_EditingNewLine);
 		if((Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER) && !Input()->KeyIsPressed(KEY_LCTRL) && !Input()->KeyIsPressed(KEY_RCTRL))
 		{
 			std::string Completion;
@@ -1634,12 +1639,6 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 
 	if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_UP)
 	{
-		if(m_EditingNewLine)
-		{
-			str_copy(m_aCurrentInputText, m_Input.GetString());
-			m_EditingNewLine = false;
-		}
-
 		if(m_pHistoryEntry)
 		{
 			CHistoryEntry *pTest = m_History.Prev(m_pHistoryEntry);
@@ -1656,6 +1655,11 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 
 		if(m_pHistoryEntry)
 		{
+			if(m_EditingNewLine)
+			{
+				str_copy(m_aCurrentInputText, m_Input.GetString());
+				m_EditingNewLine = false;
+			}
 			m_Input.Set(m_pHistoryEntry->InputText());
 		}
 	}
@@ -1708,6 +1712,13 @@ void CChat::DisableMode()
 	CloseChatTargetMenu();
 	if(m_Mode != MODE_NONE)
 	{
+		if(m_Mode == MODE_WHISPER && !WhisperTargetValid())
+		{
+			// 关闭失效的私聊时，正文不能交给下次打开的全体或队伍输入框。
+			m_Input.Clear();
+			m_pHistoryEntry = nullptr;
+			m_EditingNewLine = true;
+		}
 		m_Mode = MODE_NONE;
 		m_Input.Deactivate();
 	}
@@ -1729,13 +1740,10 @@ const char *CChat::WhisperTargetName() const
 
 bool CChat::WhisperTargetValid() const
 {
-	if(WhisperTargetName()[0] == '\0')
+	if(m_WhisperClientId < 0 || m_WhisperClientId >= MAX_CLIENTS)
 		return false;
-	if(m_WhisperClientId < 0)
-		return true;
-	if(m_WhisperClientId >= MAX_CLIENTS)
-		return false;
-	return GameClient()->m_aClients[m_WhisperClientId].m_Active && !GameClient()->IsLocalClientId(m_WhisperClientId);
+	const auto &ClientData = GameClient()->m_aClients[m_WhisperClientId];
+	return ClientData.m_Active && ClientData.m_aName[0] != '\0' && !GameClient()->IsLocalClientId(m_WhisperClientId);
 }
 
 void CChat::ClearWhisperTarget()
@@ -1746,7 +1754,11 @@ void CChat::ClearWhisperTarget()
 
 void CChat::SetWhisperTarget(int ClientId, const char *pName)
 {
-	if(pName == nullptr || pName[0] == '\0')
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS || pName == nullptr || pName[0] == '\0')
+		return;
+	const auto &ClientData = GameClient()->m_aClients[ClientId];
+	// 弹层名单可能已经过期，按下时仍需核对当时显示的玩家名。
+	if(!ClientData.m_Active || GameClient()->IsLocalClientId(ClientId) || str_comp(ClientData.m_aName, pName) != 0)
 		return;
 	m_WhisperClientId = ClientId;
 	str_copy(m_aWhisperName, pName);
@@ -1959,6 +1971,13 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatTargetMenu(void *pContext, CUIRect
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
 	return CUi::POPUP_KEEP_OPEN;
+}
+
+void CChat::OnNewSnapshot()
+{
+	// 观察到目标离开后，后续进入同一槽位的玩家不能继承这次私聊。
+	if(m_Mode == MODE_WHISPER && m_WhisperClientId >= 0 && !WhisperTargetValid())
+		m_WhisperClientId = -1;
 }
 
 void CChat::OnMessage(int MsgType, void *pRawMsg)
@@ -3566,6 +3585,14 @@ void CChat::OnRender()
 		m_CommandHud.Hide();
 		return;
 	}
+	// 专注模式只隐藏聊天显示。待发消息继续按原顺序发送与重试。
+	m_PendingChatMessages.ProcessReady(m_LastChatSend, time(), time_freq(), [&](const CPendingChatMessages::SMessage &Pending) {
+		// 固定连接的译文排队期间身份变化时丢弃，不能换玩家代发。
+		if(Pending.m_Connection >= 0 && (Pending.m_ClientId < 0 || Pending.m_ClientId != GameClient()->m_aLocalIds[Pending.m_Connection]))
+			return true;
+		return SendChat(Pending.m_Team, Pending.m_Text.c_str(), Pending.m_Original.empty() ? nullptr : Pending.m_Original.c_str(), Pending.m_Connection);
+	});
+
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 	const bool FocusHideChat = Focus.m_HidePlayerMessages;
 	const bool FocusHideSystemInfoMessages = Focus.m_HideSystemInfoMessages;
@@ -3595,14 +3622,6 @@ void CChat::OnRender()
 		DeltaSeconds = 0.0f;
 	else
 		UpdatePresentationStates(Now, DeltaSeconds, ShowLargeArea, ExtraAnimations);
-
-	// 发送失败保留队首，恢复后按原顺序重试。
-	m_PendingChatMessages.ProcessReady(m_LastChatSend, time(), time_freq(), [&](const CPendingChatMessages::SMessage &Pending) {
-		// 固定连接的译文排队期间身份变化时丢弃，不能换玩家代发。
-		if(Pending.m_Connection >= 0 && (Pending.m_ClientId < 0 || Pending.m_ClientId != GameClient()->m_aLocalIds[Pending.m_Connection]))
-			return true;
-		return SendChat(Pending.m_Team, Pending.m_Text.c_str(), Pending.m_Original.empty() ? nullptr : Pending.m_Original.c_str(), Pending.m_Connection);
-	});
 
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
@@ -3638,7 +3657,9 @@ void CChat::OnRender()
 	// 翻译按钮在输入行最左侧，行宽先扣除按钮区，再扣除「全体」等前缀。
 	const float CommandPreviewMaxWidth = QmChatInputMessageWidth(InputLineWidth, ScaledFontSize, InputPrefixWidth);
 	char aCommandPreview[MAX_LINE_LENGTH];
-	const bool HasCommandPreview = m_Mode != MODE_NONE && BuildCommandUsagePreview(m_Input.GetString(), aCommandPreview, sizeof(aCommandPreview));
+	const char *pChatInput = m_Input.GetString();
+	// 用法提示从原始正文取参数，输入被遮挡时也要隐藏提示。
+	const bool HasCommandPreview = m_Mode != MODE_NONE && !ShouldCensorChatInput(pChatInput) && BuildCommandUsagePreview(pChatInput, aCommandPreview, sizeof(aCommandPreview));
 	CUIRect InputBlockRect = {};
 	bool InputBlockRectValid = false;
 	if(HasCommandPreview)
@@ -4657,21 +4678,20 @@ CChat::EChatSendResult CChat::SendChatQueued(const char *pLine, bool InvertTrans
 		// 自己输入的斜杠指令原样发送，不能再包一层 /w（否则变成 /w "名字" /w ...）。
 		if(pLine != nullptr && pLine[0] == '/')
 			return SendChatQueued(0, pLine, true, nullptr, -1, true);
+		// 私聊模式下空输入直接丢弃：否则会向服务器发一条只有目标的空 /w 命令。
+		if(pLine == nullptr || *str_utf8_skip_whitespaces(pLine) == '\0')
+			return EChatSendResult::REJECTED;
 		if(!WhisperTargetValid())
 		{
-			// 目标已离开时必须丢弃这一条：退回公开频道会把私聊内容发给所有人。
+			// 保留私聊模式和输入，等待玩家重新选择发送对象。
+			m_WhisperClientId = -1;
 			Echo(Localize("Whisper target left the game"));
-			ClearWhisperTarget();
-			m_Mode = MODE_ALL;
-			Input()->EnsureScreenKeyboardShown();
 			return EChatSendResult::REJECTED;
 		}
-		// 私聊模式下空输入直接丢弃：否则会向服务器发一条只有目标的空 /w 命令。
-		if(*str_utf8_skip_whitespaces(pLine) == '\0')
-			return EChatSendResult::REJECTED;
 		char aLine[MAX_LINE_LENGTH];
-		if(BuildWhisperCommand(aLine, sizeof(aLine), WhisperTargetName(), pLine))
-			return SendChatQueued(0, aLine, true);
+		if(!BuildWhisperCommand(aLine, sizeof(aLine), WhisperTargetName(), pLine))
+			return EChatSendResult::REJECTED;
+		return SendChatQueued(0, aLine, true);
 	}
 	const auto Options = ResolveTranslateSendOptions(g_Config.m_QmTranslateAutoOutgoing != 0, InvertTranslation);
 	return SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, Options.m_AllowTranslation, nullptr, -1, true, Options.m_TranslateOnce);

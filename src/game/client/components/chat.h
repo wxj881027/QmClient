@@ -383,7 +383,7 @@ private:
 	CQmChatCommandHud m_CommandHud;
 
 	using CHistoryEntry = SQmChatHistoryEntry;
-	CHistoryEntry *m_pHistoryEntry;
+	CHistoryEntry *m_pHistoryEntry = nullptr;
 	CStaticRingBuffer<CHistoryEntry, 64 * 1024, CRingBufferBase::FLAG_RECYCLE> m_History;
 	COutgoingChatAnnotations m_OutgoingAnnotations;
 	CPendingChatMessages m_PendingChatMessages;
@@ -653,6 +653,7 @@ public:
 	bool OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea);
 	void Reset();
 	void OnRelease() override;
+	void OnNewSnapshot() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void OnMessage(int MsgType, void *pRawMsg, int SourceConnection);
 	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;

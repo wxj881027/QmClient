@@ -73,6 +73,38 @@ TEST(QmChatHistory, RecyclingTranslatedStorageInitializesEveryNewBindOffset)
 	EXPECT_EQ(History.First(), pNew);
 }
 
+TEST(QmChatHistory, RecyclingSelectedEntryClearsCursorEvenWhenAddressIsReused)
+{
+	SQmChatHistoryEntry *pCursor = nullptr;
+	CStaticRingBuffer<SQmChatHistoryEntry, 128, CRingBufferBase::FLAG_RECYCLE> History;
+	QmTrackChatHistoryCursor(History, pCursor);
+	const std::string First(64, 'a'), Translated(64, 'b');
+	ASSERT_TRUE(QmAppendChatHistory(History, 0, First));
+	pCursor = History.Last();
+	ASSERT_NE(pCursor, nullptr);
+	const auto *pOld = pCursor;
+
+	ASSERT_TRUE(QmAppendChatHistory(History, 0, Translated, "original"));
+	ASSERT_EQ(History.Last(), pOld);
+	EXPECT_EQ(pCursor, nullptr);
+	EXPECT_STREQ(History.Last()->InputText(), "original");
+}
+
+TEST(QmChatHistory, AppendingWithoutRecyclingSelectedEntryKeepsCursor)
+{
+	SQmChatHistoryEntry *pCursor = nullptr;
+	CStaticRingBuffer<SQmChatHistoryEntry, 1024, CRingBufferBase::FLAG_RECYCLE> History;
+	QmTrackChatHistoryCursor(History, pCursor);
+	ASSERT_TRUE(QmAppendChatHistory(History, 0, "selected"));
+	pCursor = History.Last();
+	ASSERT_NE(pCursor, nullptr);
+	const auto *pSelected = pCursor;
+
+	ASSERT_TRUE(QmAppendChatHistory(History, 0, "translated", "original"));
+	ASSERT_EQ(pCursor, pSelected);
+	EXPECT_STREQ(pCursor->InputText(), "selected");
+}
+
 TEST(QmChatHistory, NavigationResolvesEachMixedRecordToItsOriginalInput)
 {
 	CStaticRingBuffer<SQmChatHistoryEntry, 1024> History;

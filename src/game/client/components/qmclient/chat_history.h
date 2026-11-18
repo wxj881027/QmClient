@@ -17,6 +17,15 @@ struct SQmChatHistoryEntry
 	const char *InputText() const { return m_aText + (m_OriginalOffset > 0 ? m_OriginalOffset : 0); }
 };
 
+// 游标和历史由同一个聊天组件持有。任意写入方回收当前条目时，先解除游标借用。
+inline void QmTrackChatHistoryCursor(CTypedRingBuffer<SQmChatHistoryEntry> &History, SQmChatHistoryEntry *&pCursor)
+{
+	History.SetPopCallback([&pCursor](const SQmChatHistoryEntry *pEntry) {
+		if(pCursor == pEntry)
+			pCursor = nullptr;
+	});
+}
+
 // 输入借用须来自历史缓冲区之外；Allocate可能回收旧条目，不能在分配后继续读取旧条目。
 inline bool QmAppendChatHistory(CTypedRingBuffer<SQmChatHistoryEntry> &History, int Team, std::string_view Text, std::string_view Original = {})
 {
