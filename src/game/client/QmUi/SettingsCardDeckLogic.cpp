@@ -279,48 +279,35 @@ void ApplySettingsCardDeckDragPlacement(std::array<std::vector<int>, 3> &aColumn
 
 void ApplySettingsCardDeckSingleColumnDragPlacement(std::array<std::vector<int>, 3> &aColumns, int ActiveStateIndex, int TargetOrder)
 {
-	int SourceColumn = -1;
-	for(int Column = 0; Column < (int)aColumns.size(); ++Column)
-	{
-		if(std::find(aColumns[Column].begin(), aColumns[Column].end(), ActiveStateIndex) != aColumns[Column].end())
-		{
-			SourceColumn = Column;
-			break;
-		}
-	}
-	if(SourceColumn < 0)
-		return;
-	if(SourceColumn == 0)
+	if(std::find(aColumns[0].begin(), aColumns[0].end(), ActiveStateIndex) != aColumns[0].end())
 	{
 		ApplySettingsCardDeckDragPlacement(aColumns, ActiveStateIndex, 0, TargetOrder);
 		return;
 	}
 
-	std::vector<int> vVisualOrder;
-	std::vector<int> vVisualColumnSlots;
-	vVisualOrder.reserve(aColumns[1].size() + aColumns[2].size());
-	vVisualColumnSlots.reserve(vVisualOrder.capacity());
-	const size_t NumLayers = std::max(aColumns[1].size(), aColumns[2].size());
-	for(size_t Layer = 0; Layer < NumLayers; ++Layer)
+	const size_t CardCount = aColumns[1].size() + aColumns[2].size();
+	const size_t SharedLayers = std::min(aColumns[1].size(), aColumns[2].size());
+	const int TailColumn = aColumns[1].size() > aColumns[2].size() ? 1 : 2;
+	// 左右列按层交替，剩余槽位来自较长的一列。拖拽预览只移动槽位内的索引，无需分配。
+	const auto VisualSlot = [&](size_t Order) -> int & {
+		const size_t Layer = Order / 2;
+		if(Layer < SharedLayers)
+			return aColumns[1 + Order % 2][Layer];
+		return aColumns[TailColumn][Order - SharedLayers];
+	};
+	for(size_t SourceOrder = 0; SourceOrder < CardCount; ++SourceOrder)
 	{
-		if(Layer < aColumns[1].size())
-		{
-			vVisualOrder.push_back(aColumns[1][Layer]);
-			vVisualColumnSlots.push_back(1);
-		}
-		if(Layer < aColumns[2].size())
-		{
-			vVisualOrder.push_back(aColumns[2][Layer]);
-			vVisualColumnSlots.push_back(2);
-		}
+		if(VisualSlot(SourceOrder) != ActiveStateIndex)
+			continue;
+
+		const size_t Target = std::min(static_cast<size_t>(std::max(0, TargetOrder)), CardCount - 1);
+		for(size_t Order = SourceOrder; Order < Target; ++Order)
+			VisualSlot(Order) = VisualSlot(Order + 1);
+		for(size_t Order = SourceOrder; Order > Target; --Order)
+			VisualSlot(Order) = VisualSlot(Order - 1);
+		VisualSlot(Target) = ActiveStateIndex;
+		return;
 	}
-	vVisualOrder.erase(std::remove(vVisualOrder.begin(), vVisualOrder.end(), ActiveStateIndex), vVisualOrder.end());
-	const int InsertAt = std::clamp(TargetOrder, 0, (int)vVisualOrder.size());
-	vVisualOrder.insert(vVisualOrder.begin() + InsertAt, ActiveStateIndex);
-	aColumns[1].clear();
-	aColumns[2].clear();
-	for(size_t i = 0; i < vVisualOrder.size(); ++i)
-		aColumns[vVisualColumnSlots[i]].push_back(vVisualOrder[i]);
 }
 
 int ResolveSettingsCardDeckDropOrder(float MouseY, int TargetColumn, const std::vector<SSettingsCardDeckItemGeometry> &vItems, int IgnoredStateIndex)

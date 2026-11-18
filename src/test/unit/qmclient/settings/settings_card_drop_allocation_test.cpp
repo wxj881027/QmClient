@@ -94,6 +94,25 @@ private:
 };
 }
 
+TEST(SettingsCardDropAllocation, SingleColumnDragPreviewReordersWithoutAllocation)
+{
+	std::array<std::vector<int>, 3> aColumns{
+		std::vector<int>{0},
+		std::vector<int>{1},
+		std::vector<int>{2, 3, 4},
+	};
+	bool AllocationAttempted;
+	{
+		CPredictionAllocationFailure Failure;
+		ApplySettingsCardDeckSingleColumnDragPlacement(aColumns, 4, 0);
+		AllocationAttempted = Failure.Triggered();
+	}
+	EXPECT_FALSE(AllocationAttempted);
+	EXPECT_EQ(aColumns[0], (std::vector<int>{0}));
+	EXPECT_EQ(aColumns[1], (std::vector<int>{4}));
+	EXPECT_EQ(aColumns[2], (std::vector<int>{1, 2, 3}));
+}
+
 TEST_F(CSettingsCardDropAllocationTest, SingleColumnDropCanRetryWithoutPublishingPartOfTheOrder)
 {
 	CheckDrop([&] {
