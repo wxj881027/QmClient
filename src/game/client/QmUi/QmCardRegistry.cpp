@@ -411,9 +411,11 @@ namespace qm_card_registry
 		{
 			if(pText == nullptr || pText[0] == '\0')
 				return 0;
-			if(str_utf8_find_nocase(pText, Token.c_str()) == nullptr)
+			const char *pMatchEnd = nullptr;
+			const char *pMatch = str_utf8_find_nocase(pText, Token.c_str(), &pMatchEnd);
+			if(pMatch == nullptr)
 				return 0;
-			return str_comp_nocase(pText, Token.c_str()) == 0 ? Weight * 2 : Weight;
+			return pMatch == pText && pMatchEnd[0] == '\0' ? Weight * 2 : Weight;
 		}
 
 		constexpr size_t SEARCH_MAX_MATCH_KEYS = 8;
@@ -612,23 +614,27 @@ namespace qm_card_registry
 			for(size_t Index = 0; Index < SettingCount; ++Index)
 			{
 				const SCardSettingSearch &Setting = pSettings[Index];
+				const char *pLocalizedLabel = Setting.m_pLabel != nullptr ? Localize(Setting.m_pLabel, Setting.m_pContext) : nullptr;
+				const char *pLabel = pLocalizedLabel != nullptr && pLocalizedLabel[0] != '\0' ? pLocalizedLabel : Setting.m_pLabel;
 				int SettingScore = 0;
 				const char *pDisplay = nullptr;
 				for(const std::string &Token : vTokens)
 				{
-					const char *pLocalizedLabel = Setting.m_pLabel != nullptr ? Localize(Setting.m_pLabel, Setting.m_pContext) : nullptr;
 					const int LabelScore = std::max(SearchMatchScore(Setting.m_pLabel, Token, SEARCH_WEIGHT_LABEL), SearchMatchScore(pLocalizedLabel, Token, SEARCH_WEIGHT_LABEL));
 					const int ConfigScore = SearchMatchScore(Setting.m_pConfigName, Token, SEARCH_WEIGHT_CONFIG);
 					SettingScore += std::max({LabelScore, ConfigScore, SearchMatchScore(Setting.m_pAliases, Token, SEARCH_WEIGHT_ALIAS)});
 					if(LabelScore > 0)
-						pDisplay = pLocalizedLabel != nullptr && pLocalizedLabel[0] != '\0' ? pLocalizedLabel : Setting.m_pLabel;
+						pDisplay = pLabel;
 					else if(ConfigScore > 0 && pDisplay == nullptr)
 						pDisplay = Setting.m_pConfigName;
 				}
-				if(SettingScore > 0 && pDisplay != nullptr && (Setting.m_pConfigName != nullptr || str_length(pDisplay) <= SEARCH_MAX_MATCH_TEXT))
-				{
+				if(SettingScore == 0)
+					continue;
+				// 只命中别名时，仍用实际标签或配置名定位。
+				if(pDisplay == nullptr)
+					pDisplay = pLabel != nullptr && pLabel[0] != '\0' ? pLabel : Setting.m_pConfigName;
+				if(pDisplay != nullptr && (Setting.m_pConfigName != nullptr || str_length(pDisplay) <= SEARCH_MAX_MATCH_TEXT))
 					vSettingMatches.push_back({SettingScore, &Setting, pDisplay});
-				}
 			}
 			std::stable_sort(vSettingMatches.begin(), vSettingMatches.end(), [](const auto &Left, const auto &Right) { return Left.m_Score > Right.m_Score; });
 			// 先按分数排序再填键：展示的前几条命中项一定拥有定位键，不会滚到声明顺序更靠前的其他行。

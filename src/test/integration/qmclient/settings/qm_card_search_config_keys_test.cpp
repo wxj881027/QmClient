@@ -40,7 +40,7 @@ TEST(QmCardSearchConfigKeys, ShowsRegisteredConfigNamesAndUsesThemAsMatchKeys)
 	}
 }
 
-TEST(QmCardSearchConfigKeys, StillFindsTheCardByItsFormerSearchTerm)
+TEST(QmCardSearchConfigKeys, FormerSearchTermsUseCurrentConfigNamesAsMatchKeys)
 {
 	qm_card_order::CModel Model;
 	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
@@ -48,8 +48,11 @@ TEST(QmCardSearchConfigKeys, StillFindsTheCardByItsFormerSearchTerm)
 	{
 		SCOPED_TRACE(Case.m_pLegacySearchTerm);
 		const auto vResults = qm_card_registry::SearchCards(Case.m_pLegacySearchTerm, Model);
-		EXPECT_TRUE(std::any_of(vResults.begin(), vResults.end(), [&Case](const auto &Candidate) {
+		const auto Result = std::find_if(vResults.begin(), vResults.end(), [&Case](const auto &Candidate) {
 			return str_comp(Candidate.m_pStableId, Case.m_pCard) == 0;
-		}));
+		});
+		ASSERT_NE(Result, vResults.end());
+		EXPECT_NE(std::find(Result->m_vMatches.begin(), Result->m_vMatches.end(), Case.m_pConfigKey), Result->m_vMatches.end());
+		EXPECT_NE(std::find(Result->m_vMatchKeys.begin(), Result->m_vMatchKeys.end(), Case.m_pConfigKey), Result->m_vMatchKeys.end());
 	}
 }
