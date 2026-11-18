@@ -394,6 +394,7 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 	// 避免“想关面板”顺手切走了镜头。
 	if(PlaybackControlsActive() && (Event.m_Flags & IInput::FLAG_PRESS) &&
 		Event.m_Key >= KEY_MOUSE_1 && Event.m_Key <= KEY_MOUSE_3 &&
+		!Ui()->IsPopupOpen() && !GameClient()->m_Menus.OnlineReplayPopupActive() &&
 		!GameClient()->m_Menus.OnlineReplayPanelContains(Ui()->MousePos()))
 	{
 		CloseReplayPanel();
