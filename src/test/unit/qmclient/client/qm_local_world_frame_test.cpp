@@ -312,6 +312,13 @@ TEST(QmWorldEventGate, PredictionPlaybackAndRecordingUseTheSameSoundGate)
 	EXPECT_TRUE(Allowed(SOUND_HAMMER_FIRE, true, true, true, true, false)); // 锤击音不受枪声开关影响
 }
 
+TEST(QmWorldEventGate, GhostViewFeedbackRequiresExplicitOptInAndGameSound)
+{
+	EXPECT_FALSE(QmShouldPlayGhostViewFeedback(false, true));
+	EXPECT_FALSE(QmShouldPlayGhostViewFeedback(true, false));
+	EXPECT_TRUE(QmShouldPlayGhostViewFeedback(true, true));
+}
+
 TEST(QmLocalWorldViewSession, RegistrationIsPureStateAndNeverTouchesTheTrack)
 {
 	CLocalWorld World;

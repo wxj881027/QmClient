@@ -144,12 +144,16 @@ namespace qm_shadow_gun
 
 		const int Delay = FireDelay();
 		const int LifeTime = (int)(SERVER_TICK_SPEED * 1.5f);
+		const auto TargetTeam = [ViewTeam](const STarget &Target) {
+			if(Target.m_Team >= 0 && Target.m_Team < NUM_DDRACE_TEAMS)
+				return Target.m_Team;
+			if(ViewTeam >= 0 && ViewTeam < NUM_DDRACE_TEAMS)
+				return ViewTeam;
+			return (int)TEAM_FLOCK;
+		};
 		for(SGun &Gun : vGuns)
 		{
 			const bool IsSwitchLayer = Gun.m_Layer == LAYER_SWITCH;
-			if(IsSwitchLayer && Gun.m_Number > 0 &&
-				!SwitchActive(vSwitchers, Gun.m_Number, ViewTeam))
-				continue;
 
 			int aMinDist[NUM_DDRACE_TEAMS] = {};
 			int aTarget[NUM_DDRACE_TEAMS];
@@ -158,7 +162,7 @@ namespace qm_shadow_gun
 			for(size_t i = 0; i < vTargets.size(); ++i)
 			{
 				const STarget &Target = vTargets[i];
-				const int Team = Target.m_Team >= 0 && Target.m_Team < NUM_DDRACE_TEAMS ? Target.m_Team : TEAM_FLOCK;
+				const int Team = TargetTeam(Target);
 				if(IsSwitchLayer && Gun.m_Number > 0 && !SwitchActive(vSwitchers, Gun.m_Number, Team))
 					continue;
 				if(Gun.m_aLastFireTeam[Team] + Delay > Tick)
@@ -183,7 +187,7 @@ namespace qm_shadow_gun
 			for(const int TargetIndex : vFireAt)
 			{
 				const STarget &Target = vTargets[TargetIndex];
-				const int Team = Target.m_Team >= 0 && Target.m_Team < NUM_DDRACE_TEAMS ? Target.m_Team : TEAM_FLOCK;
+				const int Team = TargetTeam(Target);
 				Gun.m_aLastFireTeam[Team] = Tick;
 				if((int)vPlasmas.size() >= MAX_PLASMA_PER_VIEW)
 					vPlasmas.erase(vPlasmas.begin());

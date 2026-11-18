@@ -26,4 +26,11 @@ inline bool QmShouldPlayWorldSound(int SoundId, bool SndGame, bool PlayJumpSound
 	return true;
 }
 
+// 影子回放是另一条时间线，只有玩家显式打开反馈且游戏音效未被静音时才播放。
+// 事件特效与全局音效共用这个入口，避免同一个开关只静音一半。
+inline bool QmShouldPlayGhostViewFeedback(bool GhostViewFeedback, bool SndGame)
+{
+	return GhostViewFeedback && SndGame;
+}
+
 #endif

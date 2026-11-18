@@ -500,7 +500,7 @@
 		<tr>
 			<td>B2</td>
 			<td>移动方块、机关炮影子化</td>
-			<td><span class="tag done">已实现</span>移动方块包络按播放头求值；机关炮用 <code>shadow_gun_replay</code> 对影子轨迹只读重放</td>
+			<td><span class="tag done">已实现</span>主世界移动方块继续按实时时钟绘制，影子再用播放头包络半透明叠加一遍；机关炮用 <code>shadow_gun_replay</code> 对影子轨迹只读重放</td>
 		</tr>
 		<tr>
 			<td>B3</td>
@@ -558,7 +558,7 @@
 		<tr><td>AFK 坐姿</td><td>参与者屏蔽服务器标记</td><td>不适用</td><td><code>players.cpp</code> 渲染门</td></tr>
 		<tr><td>冻结</td><td>分支 <code>CCharacterCore</code></td><td>轨迹冻结标记 + 查看模式进度条</td><td><code>gameclient.cpp</code> / <code>CFreezeBars</code></td></tr>
 		<tr><td>门 / 拖拉 / 激光</td><td>分支重建 + 分支开关</td><td>只读机关世界 + <code>.qmevt</code> 开关</td><td><code>items.cpp</code> / <code>map_mechanism_builder.cpp</code></td></tr>
-		<tr><td>移动方块</td><td>分支 tick</td><td>包络按回放播放头求值</td><td><code>moving_tiles.cpp</code> / <code>EnvelopeEvalAtTick</code></td></tr>
+		<tr><td>移动方块</td><td>分支 tick</td><td>主世界实时；影子第二遍按回放播放头求值</td><td><code>moving_tiles.cpp</code> / <code>EnvelopeEvalAtTick</code></td></tr>
 		<tr><td>机关炮</td><td>分支 <code>m_vPracticeGuns</code></td><td>影子轨迹只读重放</td><td><code>shadow_gun_replay.cpp</code></td></tr>
 		<tr><td>队伍</td><td>参与者跟随服务器，solo 本地</td><td><code>.qmevt</code> 的 <code>m_Team</code></td><td><code>SyncPracticeWorldConfig</code> / <code>UpdateViewTimeline</code></td></tr>
 		<tr><td>聊天 / 计分 / 击杀</td><td>服务器</td><td>服务器</td><td>不接管</td></tr>
@@ -594,7 +594,7 @@
 	<thead><tr><th>项目</th><th>结果</th></tr></thead>
 	<tbody>
 		<tr><td>构建 <code>game-client</code></td><td>成功（基线 fea008fed2 + B1–B4 改动）</td></tr>
-		<tr><td><code>testrunner</code></td><td>7324 / 7324 通过</td></tr>
+		<tr><td><code>testrunner</code></td><td>7325 / 7325 通过</td></tr>
 		<tr><td><code>qm-nmt-tests</code></td><td>176 / 176 通过</td></tr>
 		<tr><td><code>qm-ui-popup-tests</code></td><td>502 / 502 通过</td></tr>
 		<tr><td><code>qm-practice-predict-tests</code></td><td>40 / 40 通过</td></tr>

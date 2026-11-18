@@ -560,7 +560,7 @@ void CRankGhost::UpdateViewTimeline()
 void CRankGhost::DispatchViewEvent(const SViewEvent &Event)
 {
 	// 默认不把影子的命中/爆炸/终点特效叠到玩家正在操作的主世界。
-	if(!g_Config.m_QmGhostViewFeedback)
+	if(!QmShouldPlayGhostViewFeedback(g_Config.m_QmGhostViewFeedback, Config()->m_SndGame))
 		return;
 	CGameClient *pGameClient = GameClient();
 	const vec2 Pos(Event.m_aData[0], Event.m_aData[1]);
@@ -616,7 +616,7 @@ void CRankGhost::DispatchViewMessage(const SViewMessage &Message)
 	// 只有全局音效需要在这里派发：成绩类消息由 GetViewState 按播放头查询。
 	// 门控与 CGameClient::OnMessage 的同名消息保持一致（关闭游戏音效即静音）。
 	CGameClient *pGameClient = GameClient();
-	if(!g_Config.m_QmGhostViewFeedback || !Config()->m_SndGame)
+	if(!QmShouldPlayGhostViewFeedback(g_Config.m_QmGhostViewFeedback, Config()->m_SndGame))
 		return;
 	if(Message.m_Type == EViewMessageType::SOUND_GLOBAL)
 	{
