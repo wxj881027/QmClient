@@ -189,6 +189,33 @@ TEST(QmStreamerWordFilter, HandlesEmptyAndInvalidUtf8WithoutJoiningAcrossIt)
 	EXPECT_EQ(Text, Original);
 }
 
+TEST(QmStreamerWordFilter, InPlaceReplacementPreservesTheOriginalLatinWordBoundary)
+{
+	QmStreamerWordFilter::CFilter Filter;
+	ASSERT_TRUE(Filter.SetAdditionalWords({"øa", "qzhealthtoken"}));
+	char aText[] = "øaqzhealthtoken qzhealthtoken";
+	EXPECT_TRUE(Filter.Filter(aText, true));
+	EXPECT_STREQ(aText, "***qzhealthtoken ***");
+}
+
+TEST(QmStreamerWordFilter, InvalidUtf8SeparatesAnAdjacentLatinWord)
+{
+	QmStreamerWordFilter::CFilter Filter;
+	ASSERT_TRUE(Filter.SetAdditionalWords({"qzhealthtoken"}));
+	std::string Text = "a\x80" "qzhealthtoken";
+	EXPECT_TRUE(Filter.Filter(Text, true));
+	EXPECT_EQ(Text, "a\x80***");
+}
+
+TEST(QmStreamerWordFilter, UnclosedColorMarkerDoesNotConsumeTheNextLineMarker)
+{
+	QmStreamerWordFilter::CFilter Filter;
+	ASSERT_TRUE(Filter.SetAdditionalWords({"蓝莓"}));
+	std::string Text = "蓝[[[\n[[00ff00]]莓";
+	EXPECT_TRUE(Filter.Filter(Text, true));
+	EXPECT_EQ(Text, "***");
+}
+
 namespace
 {
 

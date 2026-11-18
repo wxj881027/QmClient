@@ -34,20 +34,24 @@ namespace
 
 TEST(QmStreamerFilterAllocation, FirstRevisionPreparationFailureReturnsUnavailableAndRetries)
 {
-	CFilter Filter;
-	uint64_t Revision;
-	bool Triggered;
+	for(size_t Position : std::array<size_t, 2>{0, 1})
 	{
-		CPredictionAllocationFailure Failure;
-		Revision = Filter.Revision();
-		Triggered = Failure.Triggered();
+		SCOPED_TRACE(Position);
+		CFilter Filter;
+		uint64_t Revision;
+		bool Triggered;
+		{
+			CPredictionAllocationFailure Failure(Position);
+			Revision = Filter.Revision();
+			Triggered = Failure.Triggered();
+		}
+		EXPECT_TRUE(Triggered);
+		EXPECT_EQ(Revision, 0u);
+		EXPECT_EQ(Filter.Revision(), 1u);
+		std::string Text = "习近平";
+		EXPECT_TRUE(Filter.Filter(Text, true));
+		EXPECT_EQ(Text, "***");
 	}
-	EXPECT_TRUE(Triggered);
-	EXPECT_EQ(Revision, 0u);
-	EXPECT_EQ(Filter.Revision(), 1u);
-	std::string Text = "习近平";
-	EXPECT_TRUE(Filter.Filter(Text, true));
-	EXPECT_EQ(Text, "***");
 }
 
 TEST(QmStreamerFilterAllocation, FirstFilteringPreparationFailurePreservesInputAndRetries)
@@ -126,7 +130,8 @@ TEST(QmStreamerFilterAllocation, ReplacementPreparationFailuresKeepTheOldRulesAn
 
 TEST(QmStreamerFilterAllocation, FailedClearKeepsExternalRulesUntilTheRetryPublishes)
 {
-	const size_t Count = CountPublicationAllocations({});
+	const std::vector<std::string> vEmptyWords;
+	const size_t Count = CountPublicationAllocations(vEmptyWords);
 	ASSERT_GT(Count, 2u);
 	for(size_t Position : FailurePositions(Count))
 	{
@@ -137,7 +142,7 @@ TEST(QmStreamerFilterAllocation, FailedClearKeepsExternalRulesUntilTheRetryPubli
 		bool Published, Triggered;
 		{
 			CPredictionAllocationFailure Failure(Position);
-			Published = Filter.SetAdditionalWords({});
+			Published = Filter.SetAdditionalWords(vEmptyWords);
 			Triggered = Failure.Triggered();
 		}
 		EXPECT_TRUE(Triggered);
@@ -146,7 +151,7 @@ TEST(QmStreamerFilterAllocation, FailedClearKeepsExternalRulesUntilTheRetryPubli
 		std::string Text = "qzhealtholdtoken 习近平";
 		EXPECT_TRUE(Filter.Filter(Text, true));
 		EXPECT_EQ(Text, "*** ***");
-		ASSERT_TRUE(Filter.SetAdditionalWords({}));
+		ASSERT_TRUE(Filter.SetAdditionalWords(vEmptyWords));
 		Text = "qzhealtholdtoken 习近平";
 		EXPECT_TRUE(Filter.Filter(Text, true));
 		EXPECT_EQ(Text, "qzhealtholdtoken ***");
