@@ -216,7 +216,9 @@ public:
 			return;
 		const float Height = HeaderHeight + VisibleRows * RowHeight;
 		const float PanelWidth = std::min(Width * UI_SCALE, ScreenRight - ScreenLeft);
-		m_Layout = {std::clamp(X, ScreenLeft, ScreenRight - PanelWidth), Bottom - Height, PanelWidth, Height, HeaderHeight, RowHeight, NameFontSize, HeaderFontSize, DetailFontSize, VisibleRows};
+		// 面板占满可用宽度时，浮点舍入可能让最右位置落到左边界左侧。
+		const float RightmostX = std::max(ScreenLeft, ScreenRight - PanelWidth);
+		m_Layout = {std::clamp(X, ScreenLeft, RightmostX), Bottom - Height, PanelWidth, Height, HeaderHeight, RowHeight, NameFontSize, HeaderFontSize, DetailFontSize, VisibleRows};
 		m_Offset = std::clamp(m_Offset, 0, (int)m_vCandidates.size() - VisibleRows);
 		KeepSelectionVisible();
 	}
