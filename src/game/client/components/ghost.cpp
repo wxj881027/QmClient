@@ -17,6 +17,7 @@
 #include <game/client/components/players.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/ghost_start_detection.h>
+#include <game/client/components/qmclient/ghost_team_metadata.h>
 #include <game/client/components/qmclient/practice_timeline.h>
 #include <game/client/components/qmclient/rank_view_timeline.h>
 #include <game/client/components/skins.h>
@@ -339,6 +340,7 @@ bool CGhost::SavePracticeTrack(const char *pName, const SLocalSegment &Segment)
 		SetGhostSkinData(&Skin, "default", 0, 0, 0);
 	}
 
+	std::vector<SGhostTeamEntry> vTeamEntries;
 	for(size_t TrackIndex = 0; TrackIndex < Segment.m_vTracks.size(); TrackIndex++)
 	{
 		const SLocalTrack &Track = Segment.m_vTracks[TrackIndex];
@@ -383,8 +385,18 @@ bool CGhost::SavePracticeTrack(const char *pName, const SLocalSegment &Segment)
 			Storage()->RemoveFile(aTmp, IStorage::TYPE_SAVE);
 			return false;
 		}
+		if(Track.m_Team >= TEAM_FLOCK && Track.m_Team < NUM_DDRACE_TEAMS)
+		{
+			char aTrackName[32];
+			str_format(aTrackName, sizeof(aTrackName), "track%d.gho", (int)TrackIndex);
+			vTeamEntries.push_back({aTrackName, Track.m_Team});
+		}
 	}
 
+	char aTeamPath[IO_MAX_PATH_LENGTH];
+	str_format(aTeamPath, sizeof(aTeamPath), "%s/%s", aGroupDir, QmGhostTeamMetadataName());
+	if(!QmWriteGhostTeamMetadata(Storage(), aTeamPath, vTeamEntries))
+		log_error("ghost", "failed to write practice ghost team metadata '%s'", aTeamPath);
 	return WritePracticeViewTimeline(Storage(), aGroupDir, Segment.m_vEvents, Segment.m_vSwitchStates);
 }
 

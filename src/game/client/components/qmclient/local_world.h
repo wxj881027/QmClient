@@ -98,6 +98,7 @@ inline SLocalSwitchState QmEncodeLocalSwitchState(int Tick, const std::vector<SS
 struct SLocalTrack
 {
 	int m_ClientId = -1;
+	int m_Team = -1;
 	char m_aName[MAX_NAME_LENGTH] = {};
 	std::vector<SLocalActorFrame> m_vFrames;
 };
@@ -141,6 +142,8 @@ public:
 
 	// 绑定轨道身份（Cid 与回放时显示的名字）。必须在 AddTrackFrame 之前调用。
 	void SetTrackIdentity(int TrackIndex, int ClientId, const char *pName);
+	// 记录该轨在录制时的队伍号，供旁观 HUD 显示；-1 表示未知。
+	void SetTrackTeam(int TrackIndex, int Team);
 	// 每 tick 追加一帧。帧的 m_Tick 必须是这条世界线的绝对 tick。
 	void AddTrackFrame(int TrackIndex, const SLocalActorFrame &Frame);
 	void AddTrackFrame(const SLocalActorFrame &Frame) { AddTrackFrame(0, Frame); }
@@ -181,6 +184,7 @@ private:
 	struct STrackBuffer
 	{
 		int m_ClientId = -1;
+		int m_Team = -1;
 		char m_aName[MAX_NAME_LENGTH] = {};
 		std::vector<SLocalActorFrame> m_vFrames;
 		std::vector<SLocalActorFrame> m_vCompleted;

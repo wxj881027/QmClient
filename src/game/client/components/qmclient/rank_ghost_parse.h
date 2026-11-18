@@ -31,6 +31,7 @@ struct STrackContext
 	std::vector<CGhostCharacter> m_vPath;
 	CGhostSkin m_Skin{};
 	char m_aOwner[MAX_NAME_LENGTH] = "";
+	int m_Cid = -1;
 	bool m_FoundClientInfo = false;
 	bool m_FoundCharacter = false;
 };

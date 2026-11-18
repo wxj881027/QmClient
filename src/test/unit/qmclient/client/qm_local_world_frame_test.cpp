@@ -166,6 +166,8 @@ TEST(QmLocalWorldTrack, BodyAndDummyAreSavedAsParallelTracks)
 	Track.BeginTrack(1000);
 	Track.SetTrackIdentity(0, 3, "self");
 	Track.SetTrackIdentity(1, 7, "dummy");
+	Track.SetTrackTeam(0, 4);
+	Track.SetTrackTeam(1, 4);
 	for(int i = 0; i < 60; i++)
 	{
 		Track.AddTrackFrame(0, MakeFrame(1000 + i));
@@ -178,6 +180,8 @@ TEST(QmLocalWorldTrack, BodyAndDummyAreSavedAsParallelTracks)
 	ASSERT_TRUE(Track.BestSegment(&Segment));
 	ASSERT_EQ(Segment.m_vTracks.size(), 2u);
 	EXPECT_EQ(Segment.m_vTracks[0].m_ClientId, 3);
+	EXPECT_EQ(Segment.m_vTracks[0].m_Team, 4);
+	EXPECT_EQ(Segment.m_vTracks[1].m_Team, 4);
 	EXPECT_STREQ(Segment.m_vTracks[1].m_aName, "dummy");
 	EXPECT_EQ(Segment.m_vTracks[1].m_vFrames.front().m_X, Segment.m_vTracks[0].m_vFrames.front().m_X + 512);
 }

@@ -25,6 +25,12 @@ void CFastPractice::BeginPracticeTrack(int StartTick)
 	const char *pLocalName = LocalId >= 0 && LocalId < MAX_CLIENTS ? GameClient()->m_aClients[LocalId].m_aName : "";
 	const char *pDummyName = DummyId >= 0 && DummyId < MAX_CLIENTS ? GameClient()->m_aClients[DummyId].m_aName : "";
 	m_Recorder.Begin(GameClient()->m_LocalWorld, StartTick, LocalId, DummyId, pLocalName, pDummyName);
+	// 练习参与者按分支世界的开关队伍记录；这里只用于旁观 HUD 的队伍标签，
+	// 不参与轨迹判定，也不改写服务器快照里的队伍。
+	const int Team = std::clamp(GameClient()->SwitchStateTeam(), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
+	GameClient()->m_LocalWorld.SetTrackTeam(0, Team);
+	if(DummyId >= 0)
+		GameClient()->m_LocalWorld.SetTrackTeam(1, Team);
 }
 
 void CFastPractice::RecordPracticeFrames(CGameWorld &World, int Tick, int LocalClientId, int DummyClientId)

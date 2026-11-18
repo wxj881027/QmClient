@@ -1,5 +1,6 @@
 #include "rank_ghost.h"
 
+#include "ghost_team_metadata.h"
 #include "media_paths.h"
 #include "rank_demo_cache.h"
 #include "rank_demo_manifest.h"
@@ -238,8 +239,12 @@ namespace
 				str_format(aPath, sizeof(aPath), "%s/%s", aGroupDir, File.m_Name.c_str());
 				pStorage->RemoveFile(aPath, IStorage::TYPE_SAVE);
 			}
+			char aTeamPath[IO_MAX_PATH_LENGTH];
+			str_format(aTeamPath, sizeof(aTeamPath), "%s/%s", aGroupDir, QmGhostTeamMetadataName());
+			pStorage->RemoveFile(aTeamPath, IStorage::TYPE_SAVE);
 		}
 		pStorage->RemoveFile(pGhostPath, IStorage::TYPE_SAVE);
+		pStorage->RemoveFile(QmGhostTeamMetadataForSingleFile(pGhostPath).c_str(), IStorage::TYPE_SAVE);
 	}
 
 } // namespace
@@ -471,6 +476,8 @@ void CRankGhost::OnReset()
 	// 避免之后误卸载别的影子。
 	m_vLoadedSlots.clear();
 	m_vLoadedGhostPaths.clear();
+	m_vLoadedGhostTeams.clear();
+	m_GhostTeamsByFile.clear();
 	m_aLoadingGroupPrefix[0] = '\0';
 	m_PendingView = KeepPendingView;
 	m_EventRebuildOnly = false;
@@ -1064,6 +1071,8 @@ void CRankGhost::OnGhostsUnloaded()
 	// 引擎侧已清空全部槽位，这里只同步本地记录
 	m_vLoadedSlots.clear();
 	m_vLoadedGhostPaths.clear();
+	m_vLoadedGhostTeams.clear();
+	m_GhostTeamsByFile.clear();
 	m_aLoadingGroupPrefix[0] = '\0';
 	// 槽位没了，查看模式的独立时钟/查看会话/开关画布也必须一起结束。
 	EndViewSessionState();
@@ -1097,6 +1106,8 @@ void CRankGhost::OnGhostUnloaded(int Slot)
 		m_ViewMembers.Remove(i);
 		m_vLoadedSlots.erase(m_vLoadedSlots.begin() + i);
 		m_vLoadedGhostPaths.erase(m_vLoadedGhostPaths.begin() + i);
+		if((int)i < (int)m_vLoadedGhostTeams.size())
+			m_vLoadedGhostTeams.erase(m_vLoadedGhostTeams.begin() + i);
 		break;
 	}
 	if(m_vLoadedSlots.empty())
@@ -1140,6 +1151,14 @@ bool CRankGhost::LoadGhostFile(const char *pStoragePath)
 {
 	UnloadGhost();
 	m_aLoadingGroupPrefix[0] = '\0';
+	m_GhostTeamsByFile.clear();
+	{
+		std::vector<SGhostTeamEntry> vEntries;
+		const std::string MetadataPath = QmGhostTeamMetadataForSingleFile(pStoragePath);
+		if(QmReadGhostTeamMetadata(Storage(), MetadataPath.c_str(), vEntries))
+			for(const SGhostTeamEntry &Entry : vEntries)
+				m_GhostTeamsByFile[Entry.m_Filename] = Entry.m_Team;
+	}
 	const int Slot = GameClient()->m_Ghost.Load(pStoragePath);
 	if(Slot < 0)
 		return false;
@@ -1152,6 +1171,15 @@ bool CRankGhost::LoadGhostGroup(const char *pDir)
 {
 	UnloadGhost();
 	str_format(m_aLoadingGroupPrefix, sizeof(m_aLoadingGroupPrefix), "%s/", pDir);
+	m_GhostTeamsByFile.clear();
+	{
+		char aMetadataPath[IO_MAX_PATH_LENGTH];
+		str_format(aMetadataPath, sizeof(aMetadataPath), "%s/%s", pDir, QmGhostTeamMetadataName());
+		std::vector<SGhostTeamEntry> vEntries;
+		if(QmReadGhostTeamMetadata(Storage(), aMetadataPath, vEntries))
+			for(const SGhostTeamEntry &Entry : vEntries)
+				m_GhostTeamsByFile[Entry.m_Filename] = Entry.m_Team;
+	}
 
 	std::vector<SCacheNameTime> vFiles = ListCacheFiles(Storage(), pDir, ".gho");
 	std::sort(vFiles.begin(), vFiles.end(), [](const SCacheNameTime &A, const SCacheNameTime &B) {
@@ -1183,6 +1211,7 @@ bool CRankGhost::LoadGhostGroup(const char *pDir)
 	if(Loaded == 0)
 	{
 		m_aLoadingGroupPrefix[0] = '\0';
+		m_GhostTeamsByFile.clear();
 		return false;
 	}
 	if(Truncated)
@@ -1202,6 +1231,8 @@ void CRankGhost::RegisterLoadedGhost(const char *pStoragePath, int Slot)
 {
 	m_vLoadedSlots.push_back(Slot);
 	m_vLoadedGhostPaths.push_back(pStoragePath);
+	const auto TeamIt = m_GhostTeamsByFile.find(QmGhostBasename(pStoragePath));
+	m_vLoadedGhostTeams.push_back(TeamIt != m_GhostTeamsByFile.end() ? TeamIt->second : -1);
 	// 新加载的影子需要在之后的帧里按玩家当前进度重新对齐
 	m_LastAlignedRaceTick = -1;
 	RefreshGhostList();
@@ -1297,6 +1328,8 @@ void CRankGhost::UnloadGhost()
 		GameClient()->m_Ghost.Unload(Slot);
 	m_vLoadedSlots.clear();
 	m_vLoadedGhostPaths.clear();
+	m_vLoadedGhostTeams.clear();
+	m_GhostTeamsByFile.clear();
 	m_aLoadingGroupPrefix[0] = '\0';
 	// 查看时间线只对应当前影子，卸载即失效
 	m_vViewEvents.clear();

@@ -392,6 +392,16 @@ bool CRankGhost::LoadViewTimeline()
 	m_vViewEvents = std::move(Timeline.m_vEvents);
 	m_vViewSwitchStates = std::move(Timeline.m_vSwitchStates);
 	m_vViewMessages = std::move(Timeline.m_vMessages);
+	// 旧缓存没有 teams.qmtm：开关时间线里的队伍是同一场回放的主队伍，
+	// 可作为同组影子的只读显示兜底；不影响任何判定或相机。
+	if(!m_vViewSwitchStates.empty())
+	{
+		const int FallbackTeam = m_vViewSwitchStates.front().m_Team;
+		if(FallbackTeam >= TEAM_FLOCK && FallbackTeam < NUM_DDRACE_TEAMS)
+			for(int &Team : m_vLoadedGhostTeams)
+				if(Team < TEAM_FLOCK)
+					Team = FallbackTeam;
+	}
 	log_info("rank_ghost", "view timeline loaded: %d events, %d switch states, %d messages ('%s')",
 		(int)m_vViewEvents.size(), (int)m_vViewSwitchStates.size(), (int)m_vViewMessages.size(), aPath);
 	return true;
@@ -673,6 +683,17 @@ bool CRankGhost::ViewMemberName(int Index, char *pBuf, size_t BufSize) const
 	if(Index < 0 || Index >= (int)m_vLoadedSlots.size())
 		return false;
 	return GameClient()->m_Ghost.GetGhostPlayer(m_vLoadedSlots[Index], pBuf, BufSize);
+}
+
+bool CRankGhost::ViewMemberTeam(int Index, int *pTeam) const
+{
+	if(pTeam == nullptr || Index < 0 || Index >= (int)m_vLoadedGhostTeams.size())
+		return false;
+	const int Team = m_vLoadedGhostTeams[Index];
+	if(Team < TEAM_FLOCK || Team >= NUM_DDRACE_TEAMS)
+		return false;
+	*pTeam = Team;
+	return true;
 }
 
 bool CRankGhost::ViewFocus(vec2 *pOut) const

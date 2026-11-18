@@ -14,6 +14,7 @@ void CLocalWorld::BeginTrack(int StartTick)
 	for(STrackBuffer &Track : m_aTracks)
 	{
 		Track.m_ClientId = -1;
+		Track.m_Team = -1;
 		Track.m_aName[0] = '\0';
 		Track.m_vFrames.clear();
 		Track.m_vCompleted.clear();
@@ -44,6 +45,13 @@ void CLocalWorld::SetTrackIdentity(int TrackIndex, int ClientId, const char *pNa
 		return;
 	m_aTracks[TrackIndex].m_ClientId = ClientId;
 	str_copy(m_aTracks[TrackIndex].m_aName, pName ? pName : "", sizeof(m_aTracks[TrackIndex].m_aName));
+}
+
+void CLocalWorld::SetTrackTeam(int TrackIndex, int Team)
+{
+	if(TrackIndex < 0 || TrackIndex >= MAX_TRACKS)
+		return;
+	m_aTracks[TrackIndex].m_Team = Team;
 }
 
 void CLocalWorld::AddTrackFrame(int TrackIndex, const SLocalActorFrame &Frame)
@@ -129,6 +137,7 @@ bool CLocalWorld::BestSegment(SLocalSegment *pOut) const
 			continue;
 		SLocalTrack Out;
 		Out.m_ClientId = Track.m_ClientId;
+		Out.m_Team = Track.m_Team;
 		str_copy(Out.m_aName, Track.m_aName, sizeof(Out.m_aName));
 		Out.m_vFrames = vFrames;
 		pOut->m_vTracks.push_back(std::move(Out));

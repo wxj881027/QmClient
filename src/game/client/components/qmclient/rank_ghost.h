@@ -24,6 +24,7 @@
 #include <game/gamecore.h>
 
 #include <deque>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -170,6 +171,8 @@ public:
 	int ViewMemberCount() const { return IsViewModeActive() ? (int)m_vLoadedSlots.size() : 0; }
 	// 成员名字（ghost 文件头的所有者）；Index 越界返回 false
 	bool ViewMemberName(int Index, char *pBuf, size_t BufSize) const;
+	// 成员录制时的队伍号；未知（旧缓存）返回 false
+	bool ViewMemberTeam(int Index, int *pTeam) const;
 	// 当前选中成员的插值位置（供镜头跟随）；false = 暂无可用焦点
 	bool ViewFocus(vec2 *pOut) const;
 	// 是否有影子处于加载激活状态（含查看模式）
@@ -262,6 +265,10 @@ private:
 	// 已加载的 ghost 槽位与对应存储路径（多轨回放为多条）
 	std::vector<int> m_vLoadedSlots;
 	std::vector<std::string> m_vLoadedGhostPaths;
+	// 与 m_vLoadedSlots 对齐的队伍号；-1 = 旧缓存没有 sidecar
+	std::vector<int> m_vLoadedGhostTeams;
+	// 当前组/单文件 sidecar 的 basename → 队伍号，RegisterLoadedGhost 时查表
+	std::map<std::string, int> m_GhostTeamsByFile;
 	// 组加载期间接受的前缀（目录内所有 .gho 都登记）
 	char m_aLoadingGroupPrefix[IO_MAX_PATH_LENGTH] = "";
 	// 影子已按哪一次跑图（LastRaceTick）对齐过；-1 表示尚未对齐

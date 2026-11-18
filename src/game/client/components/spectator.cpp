@@ -620,6 +620,7 @@ void CSpectator::OnRender()
 		int m_Id;
 		int m_DDTeam;
 		bool m_Friend;
+		bool m_HasTeam;
 	};
 	SDisplayPlayer aDisplayPlayers[CGhost::MAX_ACTIVE_GHOSTS];
 	bool aIsFriend[CGhost::MAX_ACTIVE_GHOSTS];
@@ -630,7 +631,9 @@ void CSpectator::OnRender()
 		DisplayCount = minimum(GameClient()->m_RankGhost.ViewMemberCount(), (int)CGhost::MAX_ACTIVE_GHOSTS);
 		for(int i = 0; i < DisplayCount; ++i)
 		{
-			aDisplayPlayers[i] = {i, TEAM_FLOCK, false};
+			int Team = TEAM_FLOCK;
+			const bool HasTeam = GameClient()->m_RankGhost.ViewMemberTeam(i, &Team);
+			aDisplayPlayers[i] = {i, Team, false, HasTeam};
 			aIsFriend[i] = false;
 		}
 	}
@@ -640,7 +643,7 @@ void CSpectator::OnRender()
 			if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
 				continue;
 			const int Id = pInfo->m_ClientId;
-			aDisplayPlayers[DisplayCount] = {Id, GameClient()->m_Teams.Team(Id), GameClient()->m_aClients[Id].m_Friend};
+			aDisplayPlayers[DisplayCount] = {Id, GameClient()->m_Teams.Team(Id), GameClient()->m_aClients[Id].m_Friend, true};
 			aIsFriend[DisplayCount] = aDisplayPlayers[DisplayCount].m_Friend;
 			++DisplayCount;
 		}
@@ -1060,6 +1063,20 @@ void CSpectator::OnRender()
 		}
 
 		TextRender()->TextEx(&NameCursor, aNameBuf);
+		if(ViewModeActive && pInfo->m_HasTeam)
+		{
+			char aTeamBuf[32];
+			str_format(aTeamBuf, sizeof(aTeamBuf), Localize("Team %d"), DDTeam);
+			const float TeamFontSize = maximum(7.0f, FontSize * 0.55f);
+			ColorRGBA TeamColor = DDTeam == TEAM_FLOCK ? ColorRGBA(0.85f, 0.85f, 0.85f, 1.0f) : GameClient()->GetDDTeamColor(DDTeam, 0.8f);
+			TeamColor.a *= NameAlpha;
+			// 压缩布局里两行会互相压住；这种尺寸只保留队伍底色，不硬塞小字。
+			if(LineHeight >= FontSize + TeamFontSize + 2.0f * LayoutScale)
+			{
+				TextRender()->TextColor(TeamColor);
+				TextRender()->Text(CenterX + x + NameOffsetX, CenterY + y + BoxMove + LineHeight - TeamFontSize - 2.0f * LayoutScale, TeamFontSize, aTeamBuf, -1.0f);
+			}
+		}
 		if(MultiViewActive())
 		{
 			if(ViewModeActive ? GameClient()->m_RankGhost.ViewMultiMemberSelected(pInfo->m_Id) : GameClient()->m_aMultiViewId[pInfo->m_Id])

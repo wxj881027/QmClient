@@ -100,6 +100,20 @@ TEST(OnlineReplayPlayer, ArrowTimeSeekWorksWhilePausedAndKeepsPauseState)
 	EXPECT_FALSE(Player.IsPlaying());
 }
 
+TEST(OnlineReplayPlayer, ArrowTimeSeekWorksWhilePlayingAndKeepsPlaying)
+{
+	CReplaySource Source;
+	COnlineReplayPlayer Player(Source);
+	Player.Unpause();
+	ASSERT_TRUE(Player.SeekTime(-2.0f));
+	EXPECT_EQ(Player.BaseInfo()->m_CurrentTick, 250);
+	EXPECT_FALSE(Player.BaseInfo()->m_Paused);
+	EXPECT_TRUE(Player.IsPlaying());
+	ASSERT_TRUE(Player.SeekTime(2.0f));
+	EXPECT_EQ(Player.BaseInfo()->m_CurrentTick, 350);
+	EXPECT_TRUE(Player.IsPlaying());
+}
+
 TEST(OnlineReplayPlayer, SharedSpeedStepsIncludeIntermediateAndHighRates)
 {
 	CReplaySource Source;

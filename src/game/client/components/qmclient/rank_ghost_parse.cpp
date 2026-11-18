@@ -4,6 +4,7 @@
 
 #include "rank_ghost_parse.h"
 
+#include "ghost_team_metadata.h"
 #include "rank_demo_cache.h"
 #include "rank_view_timeline.h"
 
@@ -213,6 +214,32 @@ namespace
 		Out.m_Tick = GhostTick;
 	}
 
+	// 队伍只写 sidecar，不改 .gho 二进制布局；旧缓存没有这份文件时按未知队伍处理。
+	bool WriteGhostTeamMetadataForTracks(IStorage *pStorage, const char *pPath, bool Group, const std::vector<STrackContext *> &vpTracks, const SParseContext &Parse)
+	{
+		std::vector<SGhostTeamEntry> vEntries;
+		for(size_t i = 0; i < vpTracks.size(); i++)
+		{
+			const STrackContext *pTrack = vpTracks[i];
+			const int Team = pTrack->m_Cid >= 0 && pTrack->m_Cid < MAX_CLIENTS ? Parse.m_aTeams[pTrack->m_Cid] : -1;
+			if(Team < TEAM_FLOCK || Team >= NUM_DDRACE_TEAMS)
+				continue;
+			char aFilename[IO_MAX_PATH_LENGTH];
+			if(Group)
+				str_format(aFilename, sizeof(aFilename), "%02d.gho", (int)i);
+			else
+				str_copy(aFilename, QmGhostBasename(pPath).c_str(), sizeof(aFilename));
+			vEntries.push_back({aFilename, Team});
+		}
+
+		char aMetadataPath[IO_MAX_PATH_LENGTH];
+		if(Group)
+			str_format(aMetadataPath, sizeof(aMetadataPath), "%s/%s", pPath, QmGhostTeamMetadataName());
+		else
+			str_copy(aMetadataPath, QmGhostTeamMetadataForSingleFile(pPath).c_str(), sizeof(aMetadataPath));
+		return QmWriteGhostTeamMetadata(pStorage, aMetadataPath, vEntries);
+	}
+
 	// 尝试抓取某 cid 的皮肤与名字（ClientInfo 更新频率低，遇到就记下）
 	void ExtractClientInfo(SParseContext &Parse, const CSnapshot *pSnapshot, int Cid, STrackContext &Track)
 	{
@@ -304,6 +331,7 @@ namespace
 				if(IsSpectatorCid(Parse, pSnapshot, Cid))
 					continue;
 				TrackIt = Parse.m_Tracks.emplace(Cid, STrackContext{}).first;
+				TrackIt->second.m_Cid = Cid;
 				TrackIt->second.m_vPath.reserve((size_t)std::clamp(Parse.m_RunEnd - Parse.m_RunStart, 0, 60 * 60 * 50));
 				ExtractClientInfo(Parse, pSnapshot, Cid, TrackIt->second);
 			}
@@ -372,6 +400,7 @@ void CRankGhost::StartParse()
 		m_ActiveEntry.m_Cid = Parse.m_Cid;
 	}
 	STrackContext &Primary = Parse.m_Tracks[Parse.m_Cid];
+	Primary.m_Cid = Parse.m_Cid;
 	StrToInts(Primary.m_Skin.m_aSkin, std::size(Primary.m_Skin.m_aSkin), "default");
 	Primary.m_Skin.m_UseCustomColor = 0;
 	Primary.m_Skin.m_ColorBody = 0;
@@ -593,6 +622,8 @@ void CRankGhost::FinishParse()
 			Fail(Localize("Rank ghost: failed to write the ghost file"));
 			return;
 		}
+		if(!WriteGhostTeamMetadataForTracks(Storage(), m_aGhostStoragePath, false, vpTracks, Parse))
+			log_error("rank_ghost", "failed to write ghost team metadata for '%s'", m_aGhostStoragePath);
 	}
 	else
 	{
@@ -630,6 +661,8 @@ void CRankGhost::FinishParse()
 			return;
 		}
 		log_info("rank_ghost", "multi-track ghost written: %d tracks", (int)vpTracks.size());
+		if(!WriteGhostTeamMetadataForTracks(Storage(), aGroupDir, true, vpTracks, Parse))
+			log_error("rank_ghost", "failed to write ghost team metadata for '%s'", aGroupDir);
 	}
 
 	// 查看模式时间线随影子一起缓存到 sidecar 文件
