@@ -52,24 +52,42 @@ TEST_F(CTranslateQueueTest, OutgoingQueueAllocationFailureAbortsRequestAndRetryS
 	}
 }
 
-TEST_F(CTranslateQueueTest, IncomingQueueAllocationFailureReleasesResponseAndAllowsFreshRequest)
+TEST_F(CTranslateQueueTest, IncomingRetryReplacesPreviousFailureOnlyAfterAcceptance)
 {
 	CTranslateCompletionTestMemory Memory;
 	CTranslateJobQueue Queue(&Memory);
-	auto Job = MakeJob(m_Http, false, false);
-	const std::weak_ptr<CTranslateResponse> Response = Job.m_pTranslateResponse;
+	auto pPrevious = std::make_shared<CTranslateResponse>();
+	pPrevious->m_Error = true;
+	str_copy(pPrevious->m_Text, "previous failure");
+	auto pCurrent = pPrevious;
+	std::weak_ptr<CTranslateResponse> Candidate;
+	const auto CreateJob = [&] {
+		auto Job = MakeJob(m_Http, false, false);
+		Candidate = Job.m_pTranslateResponse;
+		return Job;
+	};
+
 	Memory.m_FailAt = 1;
-	EXPECT_FALSE(Queue.Submit(std::move(Job), 1));
-	EXPECT_TRUE(Response.expired());
+	EXPECT_FALSE(Queue.CreateAndSubmitIncoming(pCurrent, CreateJob, 1));
+	ASSERT_EQ(pCurrent, pPrevious);
+	EXPECT_STREQ(pCurrent->m_Text, "previous failure");
+	EXPECT_TRUE(Candidate.expired());
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
 	EXPECT_TRUE(m_Http.m_vSubmissions.back().m_pRequest->IsAbortRequested());
+
 	Memory.AllowAllocations();
-	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, false, false), 1));
+	ASSERT_TRUE(Queue.CreateAndSubmitIncoming(pCurrent, CreateJob, 1));
+	EXPECT_NE(pCurrent, pPrevious);
+	ASSERT_NE(pCurrent, nullptr);
+	EXPECT_EQ(pCurrent, Candidate.lock());
+	EXPECT_TRUE(TranslateResponseBlocksRequest(pCurrent.get()));
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 2u);
 	m_Http.m_vSubmissions.back().m_pRequest->Finish(R"({"choices":[{"message":{"content":"translated"}}]})");
-	const auto Done = Queue.Update([](const auto &) { return true; });
+	const auto Done = Queue.Update([&](const auto &Job) { return IsTranslateResponseCurrent(true, 0, pCurrent, Job); });
 	ASSERT_EQ(Done.size(), 1u);
-	EXPECT_FALSE(Done[0].m_Job.m_Outgoing);
 	EXPECT_TRUE(Done[0].m_Success);
-	EXPECT_STREQ(Done[0].m_Job.m_pTranslateResponse->m_Text, "translated");
+	EXPECT_STREQ(pCurrent->m_Text, "translated");
+	EXPECT_TRUE(TranslateResponseBlocksRequest(pCurrent.get()));
 }
 
 TEST_F(CTranslateQueueTest, RefusedAutomaticOutgoingSendsNeitherOriginalNorServiceText)

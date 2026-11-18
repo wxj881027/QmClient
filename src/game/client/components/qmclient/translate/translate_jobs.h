@@ -62,6 +62,9 @@ struct SOutgoingTranslateText
 // 返回值借用输入，仅在调用期间创建任务时使用，不跨帧保存。
 std::optional<SOutgoingTranslateText> ParseOutgoingTranslateTarget(const char *pLine);
 
+// 等待、成功和自动重复请求都保留现有响应。只有手动请求可以替换失败响应。
+bool TranslateResponseBlocksRequest(const CTranslateResponse *pResponse, bool AutoTriggered = false);
+
 // 收发任务共用容量，完成或取消时统一释放后端。
 class CTranslateJobQueue
 {
@@ -96,6 +99,21 @@ public:
 			return false;
 		}
 	}
+	// 入队成功后才发布新响应，重试提交失败时旧响应仍属于聊天行。
+	template<typename FCreateJob>
+	bool CreateAndSubmitIncoming(std::shared_ptr<CTranslateResponse> &pCurrentResponse, FCreateJob &&CreateJob, int Limit)
+	{
+		std::shared_ptr<CTranslateResponse> pResponse;
+		const bool Accepted = CreateAndSubmit([&] {
+			auto Job = std::forward<FCreateJob>(CreateJob)();
+			pResponse = Job.m_pTranslateResponse;
+			return Job;
+		},
+			Limit);
+		if(Accepted)
+			pCurrentResponse = std::move(pResponse);
+		return Accepted;
+	}
 	size_t Size() const { return m_vJobs.size(); }
 	void Clear() { m_vJobs.clear(); }
 	// 取消入站任务时通知聊天行清除进度，回调不得重入本队列。
@@ -116,7 +134,7 @@ bool IsTranslateResponseCurrent(bool Initialized, unsigned int TranslationId, co
 // 仅解除当前响应关联，返回原响应是否有需要刷新的进度文本。
 bool ClearCanceledTranslateResponse(bool Initialized, unsigned int TranslationId, std::shared_ptr<CTranslateResponse> &pResponse, const STranslateJob &Job);
 
-bool IsTranslatePlayerCandidate(int ClientId, bool Initialized, bool HasText, bool HasResponse, const int *pLocalIds, size_t NumLocalIds);
+bool IsTranslatePlayerCandidate(int ClientId, bool Initialized, bool HasText, bool ResponseBlocks, const int *pLocalIds, size_t NumLocalIds);
 // 无效候选返回负分；相同分数保留最新消息，精确名字匹配优先于大小写兼容匹配。
 int SelectTranslateHistoryLine(int CurrentLine, int NumLines, const std::function<int(int)> &CandidateScore);
 int TranslateNameMatchScore(const char *pRequested, const char *pDisplayName, const char *pPlayerName);

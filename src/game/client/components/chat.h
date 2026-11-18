@@ -501,6 +501,8 @@ private:
 	CChatTargetPopupContext m_TargetPopupContext;
 	bool m_TargetMenuOpen = false;
 
+	void ClearInvalidWhisperDraft();
+
 public:
 	CChat();
 	int Sizeof() const override { return sizeof(*this); }

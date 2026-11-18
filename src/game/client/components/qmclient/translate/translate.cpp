@@ -158,7 +158,7 @@ void CTranslate::Translate(const char *pName, bool ShowProgress)
 		const CChat::CLine &Line = GameClient()->m_Chat.m_aLines[Index];
 		if(!Line.m_Initialized)
 			return -1;
-		if(!IsTranslatePlayerCandidate(Line.m_ClientId, Line.m_Initialized, Line.m_aText[0] != '\0', Line.m_pTranslateResponse != nullptr, GameClient()->m_aLocalIds, std::size(GameClient()->m_aLocalIds)))
+		if(!IsTranslatePlayerCandidate(Line.m_ClientId, Line.m_Initialized, Line.m_aText[0] != '\0', TranslateResponseBlocksRequest(Line.m_pTranslateResponse.get()), GameClient()->m_aLocalIds, std::size(GameClient()->m_aLocalIds)))
 			return -1;
 		if(!pName)
 			return 0;
@@ -179,13 +179,16 @@ void CTranslate::Translate(const char *pName, bool ShowProgress)
 
 void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTriggered)
 {
-	if(Line.m_pTranslateResponse || !Line.m_Initialized || Line.m_aText[0] == '\0')
+	if(!Line.m_Initialized)
 		return;
-	if(!m_Jobs.CanSubmit(GetMaxConcurrency()))
+	const int Limit = GetMaxConcurrency();
+	if(!m_Jobs.CanSubmit(Limit))
 		return;
-	if(Line.m_ClientId == CChat::SERVER_MSG)
+	const bool HasText = Line.m_aText[0] != '\0';
+	const bool ResponseBlocks = TranslateResponseBlocksRequest(Line.m_pTranslateResponse.get(), AutoTriggered);
+	if(!IsTranslatePlayerCandidate(Line.m_ClientId, Line.m_Initialized, HasText, ResponseBlocks, GameClient()->m_aLocalIds, std::size(GameClient()->m_aLocalIds)))
 	{
-		if(ShowProgress)
+		if(Line.m_ClientId == CChat::SERVER_MSG && ShowProgress && HasText && !ResponseBlocks)
 			GameClient()->m_Chat.Echo(Localize("Do not translate server messages"));
 		return;
 	}
@@ -193,9 +196,9 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 	if(LineIndex < 0)
 		return;
 
-	std::shared_ptr<CTranslateResponse> pResponse;
+	const bool HadVisibleResponse = Line.m_pTranslateResponse && Line.m_pTranslateResponse->m_Text[0] != '\0';
 	bool InvalidBackend = false;
-	const bool Accepted = m_Jobs.CreateAndSubmit([&] {
+	const bool Accepted = m_Jobs.CreateAndSubmitIncoming(Line.m_pTranslateResponse, [&] {
 		STranslateJob Job;
 		Job.m_LineIndex = LineIndex;
 		Job.m_TranslationId = Line.m_TranslationId;
@@ -215,12 +218,9 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 		}
 		if(ShowProgress)
 			str_format(Job.m_pTranslateResponse->m_Text, sizeof(Job.m_pTranslateResponse->m_Text), Localize("%s translating to %s"), Job.m_pBackend->Name(), Job.m_aTarget);
-		else
-			Job.m_pTranslateResponse->m_Text[0] = '\0';
-		pResponse = Job.m_pTranslateResponse;
 		return Job;
 	},
-		GetMaxConcurrency());
+		Limit);
 	if(!Accepted)
 	{
 		if(InvalidBackend)
@@ -229,12 +229,10 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 			dbg_msg("translate", "could not prepare incoming translation task");
 		return;
 	}
-	Line.m_pTranslateResponse = pResponse;
 	if(ShowProgress)
-	{
 		Line.m_Time = time();
+	if(ShowProgress || HadVisibleResponse)
 		GameClient()->m_Chat.RebuildChat();
-	}
 }
 
 bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText, bool TranslateOnce)
@@ -351,14 +349,12 @@ void CTranslate::OnRender()
 		else
 		{
 			char aBuf[sizeof(Response.m_Text)];
-			// 失败标记供聊天错误样式与本地化提示分支使用
-			Response.m_Error = true;
 			// 服务提示（翻译记忆样板/屏蔽说明等）按固定本地化文案展示，不透出英文原文
 			if(const char *pNotice = TranslateNoticeText(Response.m_Notice))
 				str_copy(aBuf, pNotice);
 			else
 				str_copy(aBuf, Localize(TranslateNoticeSource(ETranslateNotice::INVALID_RESPONSE)));
-			// 配额提示按连接节流；消除进度文本后也刷新聊天布局。
+			// 配额提示按连接节流，只隐藏文案，保留可手动重试的失败状态。
 			bool SuppressNotice = false;
 			if(str_comp(Job.m_pBackend->Name(), "MyMemory") == 0 && Response.m_Notice == ETranslateNotice::QUOTA_EXCEEDED)
 			{
@@ -368,10 +364,7 @@ void CTranslate::OnRender()
 					m_LastMymemoryQuotaNoticeTime = Now;
 			}
 			if(SuppressNotice)
-			{
-				Response.m_Error = false;
 				Response.m_Text[0] = '\0';
-			}
 			else
 				str_copy(Response.m_Text, aBuf);
 		}
@@ -384,17 +377,10 @@ void CTranslate::OnRender()
 
 void CTranslate::AutoTranslate(CChat::CLine &Line)
 {
-	if(!g_Config.m_QmTranslateAuto)
+	if(!g_Config.m_QmTranslateAuto || !Line.m_Initialized)
 		return;
-	if(Line.m_ClientId == CChat::CLIENT_MSG)
+	if(!IsTranslatePlayerCandidate(Line.m_ClientId, Line.m_Initialized, Line.m_aText[0] != '\0', TranslateResponseBlocksRequest(Line.m_pTranslateResponse.get(), true), GameClient()->m_aLocalIds, std::size(GameClient()->m_aLocalIds)))
 		return;
-	if(Line.m_ClientId == CChat::SERVER_MSG)
-		return;
-	for(const int Id : GameClient()->m_aLocalIds)
-	{
-		if(Id >= 0 && Id == Line.m_ClientId)
-			return;
-	}
 	if(str_comp(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 	{
 		// FTAPI 过载保护：默认禁用自动翻译，防止服务过载

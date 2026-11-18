@@ -1712,13 +1712,7 @@ void CChat::DisableMode()
 	CloseChatTargetMenu();
 	if(m_Mode != MODE_NONE)
 	{
-		if(m_Mode == MODE_WHISPER && !WhisperTargetValid())
-		{
-			// 关闭失效的私聊时，正文不能交给下次打开的全体或队伍输入框。
-			m_Input.Clear();
-			m_pHistoryEntry = nullptr;
-			m_EditingNewLine = true;
-		}
+		ClearInvalidWhisperDraft();
 		m_Mode = MODE_NONE;
 		m_Input.Deactivate();
 	}
@@ -1744,6 +1738,17 @@ bool CChat::WhisperTargetValid() const
 		return false;
 	const auto &ClientData = GameClient()->m_aClients[m_WhisperClientId];
 	return ClientData.m_Active && ClientData.m_aName[0] != '\0' && !GameClient()->IsLocalClientId(m_WhisperClientId);
+}
+
+void CChat::ClearInvalidWhisperDraft()
+{
+	if(m_Mode != MODE_WHISPER || WhisperTargetValid())
+		return;
+
+	// 关闭失效的私聊或转向全体、队伍时，清除正文和旧的历史浏览状态。
+	m_Input.Clear();
+	m_pHistoryEntry = nullptr;
+	m_EditingNewLine = true;
 }
 
 void CChat::ClearWhisperTarget()
@@ -1778,7 +1783,10 @@ void CChat::SetChatMode(int Mode, bool ShowKeyboard)
 	{
 		// 切回公开/队伍发送时丢弃私聊目标，前缀不会继续显示不再使用的玩家。
 		if(Mode != MODE_WHISPER)
+		{
+			ClearInvalidWhisperDraft();
 			ClearWhisperTarget();
+		}
 		m_Mode = Mode;
 	}
 	m_Input.Activate(EInputPriority::CHAT);

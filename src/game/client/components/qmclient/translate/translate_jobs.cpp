@@ -2,6 +2,8 @@
 
 #include <base/system.h>
 
+#include <engine/shared/protocol.h>
+
 #include <algorithm>
 #include <cctype>
 #include <new>
@@ -181,9 +183,14 @@ bool ClearCanceledTranslateResponse(bool Initialized, unsigned int TranslationId
 	return HadProgress;
 }
 
-bool IsTranslatePlayerCandidate(int ClientId, bool Initialized, bool HasText, bool HasResponse, const int *pLocalIds, size_t NumLocalIds)
+bool TranslateResponseBlocksRequest(const CTranslateResponse *pResponse, bool AutoTriggered)
 {
-	if(!Initialized || !HasText || HasResponse || ClientId < 0)
+	return pResponse && (AutoTriggered || !pResponse->m_Error);
+}
+
+bool IsTranslatePlayerCandidate(int ClientId, bool Initialized, bool HasText, bool ResponseBlocks, const int *pLocalIds, size_t NumLocalIds)
+{
+	if(!Initialized || !HasText || ResponseBlocks || ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return false;
 	for(size_t i = 0; i < NumLocalIds; ++i)
 		if(pLocalIds[i] >= 0 && ClientId == pLocalIds[i])
