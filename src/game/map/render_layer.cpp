@@ -17,9 +17,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <cstdlib>
 #include <limits>
 #include <memory>
+#include <span>
 
 namespace
 {
@@ -94,8 +96,10 @@ namespace
 			pTmpTex->m_TexCoordBottomRight.w = HasRotation;
 		}
 
-		vec2 TopLeft(x * Scale + Offset.x, y * Scale + Offset.y);
-		vec2 BottomRight(x * Scale + Scale + Offset.x, y * Scale + Scale + Offset.y);
+		const int64_t Left = static_cast<int64_t>(x) * Scale + Offset.x;
+		const int64_t Top = static_cast<int64_t>(y) * Scale + Offset.y;
+		vec2 TopLeft(static_cast<float>(Left), static_cast<float>(Top));
+		vec2 BottomRight(static_cast<float>(Left + Scale), static_cast<float>(Top + Scale));
 		pTmpTile->m_TopLeft = TopLeft;
 		pTmpTile->m_BottomLeft.x = TopLeft.x;
 		pTmpTile->m_BottomLeft.y = BottomRight.y;
@@ -166,6 +170,14 @@ namespace
 		if(TileAndQuadBuffering || Params.m_RenderType != ERenderType::RENDERTYPE_FULL_DESIGN)
 			Flags |= TILERENDERFLAG_LIMIT_IMMEDIATE_WORK;
 		return Flags;
+	}
+
+	bool BindTileNumberTexture(IGraphics &Graphics, IGraphics::CTextureHandle Texture)
+	{
+		if(!Graphics.IsTextureHandleAllocated(Texture))
+			return false;
+		Graphics.TextureSet(Texture);
+		return true;
 	}
 
 }
@@ -667,7 +679,8 @@ CMapLoadTask CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &
 	std::vector<CGraphicTile> vTmpBorderCorners;
 	std::vector<CGraphicTileTextureCoords> vTmpBorderCornersTexCoords;
 
-	const bool DoTextureCoords = GetTexture().IsValid();
+	// 数字覆盖层绘制时绑定独立图集，底层贴图失败也需要保留纹理坐标。
+	const bool DoTextureCoords = CurOverlay != 0 || GetTexture().IsValid();
 
 	// create the visual and set it in the optional, afterwards get it
 	CTileLayerVisuals v;
@@ -817,6 +830,16 @@ CMapLoadTask CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &
 		Visuals.m_BorderKillTile.SetIndexBufferByteOffset((offset_ptr32)(vTmpTiles.size()));
 		if(AddTile(vTmpTiles, vTmpTileTexCoords, TILE_DEATH, 0, 0, 0, DoTextureCoords))
 			Visuals.m_BorderKillTile.Draw(true);
+	}
+
+	// CTileVisual 的第 28 位存储绘制标记，索引的字节偏移也必须能用 offset_ptr 表示。
+	constexpr uint64_t MaxTileOffset = std::min<uint64_t>(0x0fffffff, std::numeric_limits<offset_ptr>::max() / (6 * sizeof(uint32_t)));
+	const uint64_t TotalTiles = static_cast<uint64_t>(vTmpTiles.size()) + vTmpBorderCorners.size() +
+		vTmpBorderTopTiles.size() + vTmpBorderBottomTiles.size() + vTmpBorderLeftTiles.size() + vTmpBorderRightTiles.size();
+	if(TotalTiles > MaxTileOffset)
+	{
+		log_error("map/render", "Tile layer exceeds the buffered index range.");
+		co_return;
 	}
 
 	// inserts and clears tiles and tile texture coords
@@ -1078,6 +1101,7 @@ void CRenderLayerQuads::RenderQuadLayer(float Alpha, const CRenderLayerParams &P
 	if(Visuals.m_BufferContainerIndex == -1)
 		return; // no visuals were created
 
+	std::optional<std::span<const CQuad>> Quads;
 	for(auto &QuadCluster : m_vQuadClusters)
 	{
 		if(!IsVisibleInClipRegion(QuadCluster.m_ClipRegion))
@@ -1085,10 +1109,16 @@ void CRenderLayerQuads::RenderQuadLayer(float Alpha, const CRenderLayerParams &P
 
 		if(!QuadCluster.m_Grouped)
 		{
+			// 图层上传后共享的数据块可能已经释放，绘制时按需重新借用。
+			if(!Quads)
+				Quads.emplace(MapRenderItems::QuadData(*m_pMap, *m_pLayerQuads));
+			if(Quads->empty())
+				continue;
+
 			bool AnyVisible = false;
 			for(int QuadClusterId = 0; QuadClusterId < QuadCluster.m_NumQuads; ++QuadClusterId)
 			{
-				CQuad *pQuad = &m_pQuads[QuadCluster.m_StartIndex + QuadClusterId];
+				const CQuad *pQuad = &(*Quads)[QuadCluster.m_StartIndex + QuadClusterId];
 
 				ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 				if(pQuad->m_ColorEnv >= 0)
@@ -1193,7 +1223,7 @@ CMapLoadTask CRenderLayerQuads::Init()
 	m_VisualQuad = v;
 	CQuadLayerVisuals *pQLayerVisuals = &(m_VisualQuad.value());
 
-	const bool Textured = m_pLayerQuads->m_Image >= 0 && m_pLayerQuads->m_Image < m_pMapImages->Num();
+	const bool Textured = GetTexture().IsValid();
 
 	size_t UploadDataSize = 0;
 	if(!CheckedDataSize(m_pLayerQuads->m_NumQuads, Textured ? sizeof(CTmpQuadTextured) : sizeof(CTmpQuad), UploadDataSize))
@@ -1515,7 +1545,9 @@ void CRenderLayerQuads::Render(const CRenderLayerParams &Params)
 	float Alpha = Force ? 1.f : (100 - Params.m_EntityOverlayVal) / 100.0f;
 	if(!Graphics()->IsQuadBufferingEnabled() || !m_TileAndQuadBuffering)
 	{
-		RenderMap()->ForceRenderQuads(m_pQuads, m_pLayerQuads->m_NumQuads, m_pEnvelopeManager->EnvelopeEval(), Alpha);
+		const auto Quads = MapRenderItems::QuadData(*m_pMap, *m_pLayerQuads);
+		if(!Quads.empty())
+			RenderMap()->ForceRenderQuads(Quads.data(), m_pLayerQuads->m_NumQuads, m_pEnvelopeManager->EnvelopeEval(), Alpha);
 	}
 	else
 	{
@@ -2005,18 +2037,12 @@ void CRenderLayerEntityTele::RenderTileLayerWithTileBuffer(const ColorRGBA &Colo
 		RenderTileLayer(TeleColor, Params);
 	if(CheckpointAlpha > 0.0f && m_VisualCheckpointTiles.has_value())
 		RenderTileLayer(CheckpointColor, Params, &m_VisualCheckpointTiles.value());
-	if(Params.m_RenderText)
+	if(Params.m_RenderText && BindTileNumberTexture(*Graphics(), m_pMapImages->GetOverlayCenter()))
 	{
 		if(TeleAlpha > 0.0f && m_VisualTeleNumbers.has_value())
-		{
-			Graphics()->TextureSet(m_pMapImages->GetOverlayCenter());
 			RenderTileLayer(TeleColor, Params, &m_VisualTeleNumbers.value());
-		}
 		if(CheckpointAlpha > 0.0f && m_VisualCheckpointNumbers.has_value())
-		{
-			Graphics()->TextureSet(m_pMapImages->GetOverlayCenter());
 			RenderTileLayer(CheckpointColor, Params, &m_VisualCheckpointNumbers.value());
-		}
 	}
 }
 
@@ -2125,10 +2151,10 @@ void CRenderLayerEntitySpeedup::RenderTileLayerWithTileBuffer(const ColorRGBA &C
 
 	if(Params.m_RenderText)
 	{
-		Graphics()->TextureSet(m_pMapImages->GetOverlayBottom());
-		RenderTileLayer(Color, Params, &m_VisualForce.value());
-		Graphics()->TextureSet(m_pMapImages->GetOverlayTop());
-		RenderTileLayer(Color, Params, &m_VisualMaxSpeed.value());
+		if(BindTileNumberTexture(*Graphics(), m_pMapImages->GetOverlayBottom()))
+			RenderTileLayer(Color, Params, &m_VisualForce.value());
+		if(BindTileNumberTexture(*Graphics(), m_pMapImages->GetOverlayTop()))
+			RenderTileLayer(Color, Params, &m_VisualMaxSpeed.value());
 	}
 }
 
@@ -2307,10 +2333,10 @@ void CRenderLayerEntitySwitch::RenderTileLayerWithTileBuffer(const ColorRGBA &Co
 
 	if(SwitchAlpha > 0.0f && Params.m_RenderText && m_pMapImages && m_VisualSwitchNumberTop.has_value() && m_VisualSwitchNumberBottom.has_value())
 	{
-		Graphics()->TextureSet(m_pMapImages->GetOverlayTop());
-		RenderTileLayer(SwitchColor, Params, &m_VisualSwitchNumberTop.value());
-		Graphics()->TextureSet(m_pMapImages->GetOverlayBottom());
-		RenderTileLayer(SwitchColor, Params, &m_VisualSwitchNumberBottom.value());
+		if(BindTileNumberTexture(*Graphics(), m_pMapImages->GetOverlayTop()))
+			RenderTileLayer(SwitchColor, Params, &m_VisualSwitchNumberTop.value());
+		if(BindTileNumberTexture(*Graphics(), m_pMapImages->GetOverlayBottom()))
+			RenderTileLayer(SwitchColor, Params, &m_VisualSwitchNumberBottom.value());
 	}
 }
 

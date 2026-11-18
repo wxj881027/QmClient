@@ -5476,6 +5476,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/viewport_geometry_test.cpp
     src/test/integration/client/graphics_viewport_test.cpp
     src/test/integration/client/map_render_screen_test.cpp
+    src/test/integration/client/map_layer_render_resources_test.cpp
     src/test/integration/client/map_renderer_loading_test.cpp
     src/test/unit/engine/map_load_test.cpp
     src/test/unit/engine/map_tileskip_test.cpp
