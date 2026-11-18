@@ -215,15 +215,14 @@ inline float QmChatEmojiBaselineOffset(float AlignedFontSize, float EmojiSize)
 	return std::min(0.0f, AlignedFontSize - EmojiSize);
 }
 
-inline bool QmChatEmojiInvalidateChangedLayout(bool RenderImage, bool &ImageLayout, float (&aCachedHeights)[2])
+inline bool QmChatEmojiInvalidateChangedLayout(bool RenderImage, bool &ImageLayout, float &CachedHeight)
 {
 	if(RenderImage == ImageLayout)
 		return false;
 
-	// 异步图片就绪或回退为文字时，两个聊天宽度下的行高都必须重新测量。
+	// 异步图片就绪或回退为文字时，当前消息的行高必须重新测量。
 	ImageLayout = RenderImage;
-	for(float &Height : aCachedHeights)
-		Height = -1.0f;
+	CachedHeight = -1.0f;
 	return true;
 }
 

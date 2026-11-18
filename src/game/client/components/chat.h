@@ -176,9 +176,7 @@ private:
 
 		bool m_Initialized;
 		int64_t m_Time;
-		float m_aYOffset[2];
-		bool m_aMergedMessageInline[2] = {};
-		SQmChatTextBlockLayout m_aTextBlockLayout[2];
+		SQmChatLineLayout m_Layout;
 		int m_ClientId;
 		int m_TeamNumber;
 		bool m_Team;
@@ -237,7 +235,6 @@ private:
 		std::string m_LocalOriginal;
 	};
 
-	bool m_PrevScoreBoardShowed;
 	bool m_PrevShowChat;
 	std::array<int, 5> m_aPrevTitleVisibility = {};
 	bool m_PrevSponsorChatEffects = true;
@@ -443,7 +440,7 @@ private:
 		// 从最旧一端量出的屏幕容量：滚到顶时这组消息必须完整可见。
 		int m_FittingLines = 1;
 	};
-	SQmChatHistoryExtent MeasureVisibleHistory(int BacklogLine, int OffsetType, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight = -1.0f) const;
+	SQmChatHistoryExtent MeasureVisibleHistory(int BacklogLine, bool IsScoreBoardOpen, bool ShowLargeArea, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight = -1.0f) const;
 	void UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations);
 	bool UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit, float HistoryBottom, float LineHeight, int TotalVisibleLines, int VisibleLineCapacity, bool StartAllowed);
 
@@ -657,7 +654,7 @@ public:
 	void OnConsoleInit() override;
 	void OnStateChange(int NewState, int OldState) override;
 	void OnRender() override;
-	bool OnPrepareLines(float y);
+	bool OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea);
 	void Reset();
 	void OnRelease() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;

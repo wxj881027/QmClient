@@ -2,6 +2,42 @@
 
 #include <gtest/gtest.h>
 
+TEST(QmChatTextLayout, RecalledLineCannotReuseScoreboardWrappingInExpandedHistory)
+{
+	SQmChatLineLayout Line;
+	Line.SelectView(false, true);
+	Line.m_Height = 8.0f;
+	Line.SelectView(true, true);
+	ASSERT_LT(Line.m_Height, 0.0f);
+	Line.m_Height = 24.0f;
+	Line.m_TextBlocks.m_SecondaryOffset = 16.0f;
+
+	// 计分板关闭时这条消息在可见范围之外，直到再次展开历史才轮到它。
+	EXPECT_LT(Line.HeightFor(false, true), 0.0f);
+	Line.SelectView(false, true);
+	EXPECT_LT(Line.m_Height, 0.0f);
+	EXPECT_FLOAT_EQ(Line.m_TextBlocks.m_SecondaryOffset, 0.0f);
+	Line.m_Height = 8.0f;
+	Line.SelectView(false, true);
+	EXPECT_FLOAT_EQ(Line.HeightFor(false, true), 8.0f);
+}
+
+TEST(QmChatTextLayout, OpeningInputRemeasuresCompactHistoryOnce)
+{
+	SQmChatLineLayout Line;
+	Line.SelectView(false, false);
+	Line.m_Height = 12.0f;
+	Line.m_MergedMessageInline = true;
+
+	Line.SelectView(false, true);
+	EXPECT_LT(Line.m_Height, 0.0f);
+	EXPECT_FALSE(Line.m_MergedMessageInline);
+	Line.m_Height = 18.0f;
+	Line.SelectView(false, true);
+	EXPECT_FLOAT_EQ(Line.HeightFor(false, true), 18.0f);
+	EXPECT_LT(Line.HeightFor(false, false), 0.0f);
+}
+
 TEST(QmChatTextLayout, OriginalAndTranslationKeepTheirOwnWrappedFontHeights)
 {
 	CTextCursor Original;
