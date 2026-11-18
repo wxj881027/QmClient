@@ -18,6 +18,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <ctime>
+#include <new>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -1114,6 +1115,7 @@ private:
 	char m_aBaseUrl[256] = "";
 	ELlmApiStyle m_ConfigStyle = ELlmApiStyle::AUTO; // 端点后缀显式指定的格式
 	ELlmApiStyle m_ActiveStyle = ELlmApiStyle::CHAT; // 当前实际使用的格式
+	bool m_Retried = false;
 	std::string m_ChatPayload;
 	std::string m_ResponsesPayload;
 	char m_aAuthorization[512] = "";
@@ -1269,8 +1271,18 @@ protected:
 				return;
 			}
 		}
-		if(s_vLlmApiStyleMemory.size() < 16)
-			s_vLlmApiStyleMemory.emplace_back(pBaseUrl, static_cast<int>(Style));
+		try
+		{
+			// 缓存满时淘汰最早记录的端点。先准备新条目，失败时保留旧缓存。
+			std::string BaseUrl(pBaseUrl);
+			if(s_vLlmApiStyleMemory.size() == 16)
+				s_vLlmApiStyleMemory.erase(s_vLlmApiStyleMemory.begin());
+			s_vLlmApiStyleMemory.emplace_back(std::move(BaseUrl), static_cast<int>(Style));
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 接口格式缓存写入失败时仍返回已取得的译文。
+		}
 	}
 
 	static std::optional<ELlmApiStyle> RecallApiStyle(const char *pBaseUrl)
@@ -1306,10 +1318,10 @@ protected:
 		m_ActiveStyle = Style;
 	}
 
-	// Chat 格式请求失败且可能是端点不支持时，判断是否值得回退尝试 Responses
-	bool ShouldRetryWithResponses() const
+	// 自动模式下端点可能不再支持记忆中的格式，允许本次请求改试一次。
+	bool ShouldRetryWithOtherApiStyle() const
 	{
-		if(m_aInitError[0] != '\0' || !m_pHttpRequest || m_pHttpRequest->State() != EHttpState::DONE || m_ConfigStyle != ELlmApiStyle::AUTO || m_ActiveStyle != ELlmApiStyle::CHAT)
+		if(m_Retried || m_aInitError[0] != '\0' || !m_pHttpRequest || m_pHttpRequest->State() != EHttpState::DONE || m_ConfigStyle != ELlmApiStyle::AUTO)
 			return false;
 		const int StatusCode = m_pHttpRequest->StatusCode();
 		if(StatusCode == 404 || StatusCode == 405)
@@ -1321,7 +1333,7 @@ protected:
 		}
 		if(StatusCode != 200)
 			return false;
-		// 200 但返回 HTML 页面（站点首页/错误页），同样尝试 Responses
+		// 200 但返回 HTML 页面（站点首页/错误页），同样改试另一种格式。
 		unsigned char *pResult = nullptr;
 		size_t ResultLength = 0;
 		m_pHttpRequest->Result(&pResult, &ResultLength);
@@ -1346,10 +1358,11 @@ public:
 				LearnApiStyle(m_aBaseUrl, m_ActiveStyle);
 			return Result;
 		}
-		if(Result.has_value() && ShouldRetryWithResponses())
+		if(Result.has_value() && ShouldRetryWithOtherApiStyle())
 		{
-			StartRequest(ELlmApiStyle::RESPONSES);
-			return std::nullopt; // 继续等待 Responses 请求
+			StartRequest(m_ActiveStyle == ELlmApiStyle::CHAT ? ELlmApiStyle::RESPONSES : ELlmApiStyle::CHAT);
+			m_Retried = true;
+			return std::nullopt;
 		}
 		return Result;
 	}

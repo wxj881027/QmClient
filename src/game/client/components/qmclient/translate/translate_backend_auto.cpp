@@ -46,12 +46,12 @@ namespace
 			if(!m_pRequest->Done())
 				return std::nullopt;
 			Out.m_Error = true;
-			Out.m_HttpStatus = m_pRequest->StatusCode();
 			if(m_pRequest->State() != EHttpState::DONE)
 			{
 				Out.m_Notice = ETranslateNotice::NETWORK_ERROR;
 				return false;
 			}
+			Out.m_HttpStatus = m_pRequest->StatusCode();
 			json_value *pJson = ParseTranslateResponseJson(*m_pRequest, ETranslateLanguageMetadata::AUTOMATIC);
 			Out.m_Notice = ETranslateNotice::SERVICE_UNAVAILABLE;
 			bool Success = false;
@@ -60,7 +60,7 @@ namespace
 				const json_value &Ok = *TranslateJsonObjectGet(pJson, "ok");
 				const json_value &Error = *TranslateJsonObjectGet(pJson, "error");
 				const json_value &Text = *TranslateJsonObjectGet(pJson, "text");
-				if(m_pRequest->StatusCode() == 200 && Ok.type == json_boolean && Ok.u.boolean && Error.type == json_none)
+				if(Out.m_HttpStatus == 200 && Ok.type == json_boolean && Ok.u.boolean && Error.type == json_none)
 				{
 					Success = CopyTranslateText(&Text, Out);
 					if(Success)

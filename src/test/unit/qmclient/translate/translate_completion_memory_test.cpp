@@ -75,6 +75,30 @@ TEST(TranslateCompletionMemory, ResultListFailureRetainsJobAndRetriesWithoutPoll
 	EXPECT_EQ(pState->m_Updates, 1);
 }
 
+TEST(TranslateCompletionMemory, IncomingResultPublishesOnlyAfterResultListAllocationSucceeds)
+{
+	CTranslateCompletionTestMemory Memory;
+	CTranslateJobQueue Queue;
+	auto pState = std::make_shared<SBackendState>();
+	auto Job = MakeJob(pState, false);
+	const auto pResponse = Job.m_pTranslateResponse;
+	str_copy(pResponse->m_Text, "translating");
+	ASSERT_TRUE(Queue.Submit(std::move(Job), 1));
+
+	Memory.m_FailAt = 1;
+	EXPECT_TRUE(Queue.Update(Current, &Memory).empty());
+	EXPECT_STREQ(pResponse->m_Text, "translating");
+	EXPECT_EQ(Queue.Size(), 1u);
+
+	Memory.AllowAllocations();
+	const auto Done = Queue.Update(Current, &Memory);
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_TRUE(Done[0].m_Success);
+	EXPECT_EQ(Done[0].m_Job.m_pTranslateResponse, pResponse);
+	EXPECT_STREQ(pResponse->m_Text, pState->m_Text.c_str());
+	EXPECT_EQ(pState->m_Updates, 1);
+}
+
 TEST(TranslateCompletionMemory, SendTextAllocationFailureKeepsCompletedResponseAndBackend)
 {
 	CTranslateCompletionTestMemory Memory;

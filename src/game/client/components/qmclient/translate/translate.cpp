@@ -115,7 +115,16 @@ void CTranslate::OnConsoleInit()
 
 void CTranslate::OnReset()
 {
-	m_Jobs.Clear();
+	auto &Chat = GameClient()->m_Chat;
+	bool RebuildChat = false;
+	m_Jobs.Clear([&](const STranslateJob &Job) {
+		// 切图时可能保留聊天记录，只清除当前任务仍持有的进度。
+		CChat::CLine *pLine = Chat.GetLineByIndex(Job.m_LineIndex);
+		if(pLine && ClearCanceledTranslateResponse(pLine->m_Initialized, pLine->m_TranslationId, pLine->m_pTranslateResponse, Job))
+			RebuildChat = true;
+	});
+	if(RebuildChat)
+		Chat.RebuildChat();
 	m_LastDiagnostic = {};
 	m_LastMymemoryQuotaNoticeTime = -1;
 }

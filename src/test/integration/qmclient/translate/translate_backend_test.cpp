@@ -148,6 +148,35 @@ TEST_F(CTranslateBackendTest, AutoRetriesUnsupportedChatOnceThenParsesAllRespons
 	EXPECT_EQ(m_Http.m_vSubmissions.size(), 2u);
 }
 
+TEST_F(CTranslateBackendTest, AutoRecoversWhenCachedResponsesEndpointLosesSupport)
+{
+	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://cached-responses-recovery.test/v1");
+	auto pInitial = Create();
+	ASSERT_TRUE(str_endswith(m_Http.m_vSubmissions.back().m_pRequest->Url(), "/chat/completions"));
+	m_Http.m_vSubmissions.back().m_pRequest->Finish("{}", 404);
+	CTranslateResponse Response;
+	ASSERT_EQ(pInitial->Update(Response), std::nullopt);
+	ASSERT_TRUE(str_endswith(m_Http.m_vSubmissions.back().m_pRequest->Url(), "/responses"));
+	m_Http.m_vSubmissions.back().m_pRequest->Finish(R"({"output_text":"first translation"})");
+	ASSERT_EQ(pInitial->Update(Response), std::optional<bool>(true));
+
+	auto pNext = Create();
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 3u);
+	ASSERT_TRUE(str_endswith(m_Http.m_vSubmissions.back().m_pRequest->Url(), "/responses"));
+	m_Http.m_vSubmissions.back().m_pRequest->Finish("{}", 405);
+	ASSERT_EQ(pNext->Update(Response), std::nullopt);
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 4u);
+	ASSERT_TRUE(str_endswith(m_Http.m_vSubmissions.back().m_pRequest->Url(), "/chat/completions"));
+	m_Http.m_vSubmissions.back().m_pRequest->Finish(R"({"choices":[{"message":{"content":"recovered translation"}}]})");
+	EXPECT_EQ(pNext->Update(Response), std::optional<bool>(true));
+	EXPECT_STREQ(Response.m_Text, "recovered translation");
+
+	auto pLater = Create();
+	ASSERT_NE(pLater, nullptr);
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 5u);
+	EXPECT_TRUE(str_endswith(m_Http.m_vSubmissions.back().m_pRequest->Url(), "/chat/completions"));
+}
+
 TEST_F(CTranslateBackendTest, AutoDoesNotRetryExplicitChatEndpoint)
 {
 	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://explicit.test/v1/chat/completions");

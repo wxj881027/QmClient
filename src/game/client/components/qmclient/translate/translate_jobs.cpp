@@ -85,7 +85,7 @@ bool CTranslateJobQueue::Submit(STranslateJob Job, int Limit)
 	static_assert(std::is_nothrow_move_constructible_v<SPending>);
 	try
 	{
-		m_vJobs.push_back({std::move(Job), std::nullopt});
+		m_vJobs.push_back({std::move(Job), {}});
 	}
 	catch(const std::bad_alloc &)
 	{
@@ -114,31 +114,33 @@ std::vector<STranslateCompletion, CBorrowedAllocator<STranslateCompletion>> CTra
 				It = m_vJobs.erase(It);
 				continue;
 			}
-			if(!It->m_Completion.has_value())
+			auto &Response = It->m_Response;
+			if(!It->m_Done)
 			{
-				const std::optional<bool> Done = Job.m_pBackend->Update(*Job.m_pTranslateResponse);
+				const std::optional<bool> Done = Job.m_pBackend->Update(Response);
 				if(!Done.has_value())
 				{
 					++It;
 					continue;
 				}
 				bool Success = *Done;
-				if(Job.m_Outgoing && Success && Job.m_pTranslateResponse->m_Text[0] == '\0')
+				if(Job.m_Outgoing && Success && Response.m_Text[0] == '\0')
 				{
 					Success = false;
-					str_copy(Job.m_pTranslateResponse->m_Text, "Empty translation result");
+					str_copy(Response.m_Text, "Empty translation result");
 				}
-				Job.m_pTranslateResponse->m_Error = !Success;
-				It->m_Completion = Success;
+				Response.m_Error = !Success;
+				It->m_Done = true;
 			}
-			const bool Success = *It->m_Completion;
-			// 只有出现完成结果才准备容量，等待HTTP的帧不为结果列表分配。
+			const bool Success = !Response.m_Error;
+			// 只有出现完成结果才准备容量，等待 HTTP 时无需分配结果列表。
 			if(vCompleted.capacity() == 0)
 				vCompleted.reserve(m_vJobs.size());
 			std::basic_string<char, std::char_traits<char>, CBorrowedAllocator<char>> SendText(pResultMemory);
 			if(Job.m_Outgoing && Success)
-				SendText = Job.m_pTranslateResponse->m_Text;
-			// 容量和正文均已准备；后续移动与队列擦除不抛异常。
+				SendText = Response.m_Text;
+			// 准备好列表容量和发送正文后再发布，后续移动和擦除不抛异常。
+			*Job.m_pTranslateResponse = Response;
 			vCompleted.push_back({std::move(Job), Success, std::move(SendText)});
 			It = m_vJobs.erase(It);
 		}
@@ -168,6 +170,15 @@ bool DispatchOutgoingTranslation(const STranslateCompletion &Completed, const st
 bool IsTranslateResponseCurrent(bool Initialized, unsigned int TranslationId, const std::shared_ptr<CTranslateResponse> &pResponse, const STranslateJob &Job)
 {
 	return Initialized && TranslationId == Job.m_TranslationId && pResponse == Job.m_pTranslateResponse;
+}
+
+bool ClearCanceledTranslateResponse(bool Initialized, unsigned int TranslationId, std::shared_ptr<CTranslateResponse> &pResponse, const STranslateJob &Job)
+{
+	if(!pResponse || !IsTranslateResponseCurrent(Initialized, TranslationId, pResponse, Job))
+		return false;
+	const bool HadProgress = pResponse->m_Text[0] != '\0';
+	pResponse.reset();
+	return HadProgress;
 }
 
 bool IsTranslatePlayerCandidate(int ClientId, bool Initialized, bool HasText, bool HasResponse, const int *pLocalIds, size_t NumLocalIds)

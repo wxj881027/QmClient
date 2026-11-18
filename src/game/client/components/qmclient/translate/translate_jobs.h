@@ -68,8 +68,9 @@ class CTranslateJobQueue
 	struct SPending
 	{
 		STranslateJob m_Job;
-		// 已完成后端不因结果存储失败而再次轮询。
-		std::optional<bool> m_Completion;
+		// 后端只写入任务私有响应。结果存储失败时保留结果，避免再次轮询。
+		CTranslateResponse m_Response;
+		bool m_Done = false;
 	};
 	std::vector<SPending, CBorrowedAllocator<SPending>> m_vJobs;
 
@@ -97,12 +98,23 @@ public:
 	}
 	size_t Size() const { return m_vJobs.size(); }
 	void Clear() { m_vJobs.clear(); }
+	// 取消入站任务时通知聊天行清除进度，回调不得重入本队列。
+	template<typename FCancelIncoming>
+	void Clear(FCancelIncoming &&CancelIncoming)
+	{
+		for(const auto &Pending : m_vJobs)
+			if(!Pending.m_Job.m_Outgoing)
+				CancelIncoming(Pending.m_Job);
+		Clear();
+	}
 	void CancelOutgoing(int Connection);
 	// 自定义结果内存源须存活到返回列表及其发送文本销毁；回调不得重入本队列。
 	std::vector<STranslateCompletion, CBorrowedAllocator<STranslateCompletion>> Update(const std::function<bool(const STranslateJob &)> &IncomingStillValid, IAllocationResource *pResultMemory = nullptr);
 };
 
 bool IsTranslateResponseCurrent(bool Initialized, unsigned int TranslationId, const std::shared_ptr<CTranslateResponse> &pResponse, const STranslateJob &Job);
+// 仅解除当前响应关联，返回原响应是否有需要刷新的进度文本。
+bool ClearCanceledTranslateResponse(bool Initialized, unsigned int TranslationId, std::shared_ptr<CTranslateResponse> &pResponse, const STranslateJob &Job);
 
 bool IsTranslatePlayerCandidate(int ClientId, bool Initialized, bool HasText, bool HasResponse, const int *pLocalIds, size_t NumLocalIds);
 // 无效候选返回负分；相同分数保留最新消息，精确名字匹配优先于大小写兼容匹配。
