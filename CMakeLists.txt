@@ -5228,6 +5228,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_color_gradient_test.cpp
     src/test/unit/qmclient/client/qm_chat_gradient_test.cpp
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
+    src/test/unit/qmclient/settings/settings_alpha_color_picker_external_config_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
     src/test/unit/qmclient/ui/qm_server_info_layout_test.cpp
     src/test/unit/qmclient/ui/qm_motd_layout_test.cpp
