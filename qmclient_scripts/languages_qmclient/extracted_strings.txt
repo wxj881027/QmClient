@@ -6371,6 +6371,9 @@ Zoom to current mouse target
 [Editor]	%dmin
 [Editor]	%dms
 [Editor]	%ds
+[Editor]	%s (default: %d)
+[Editor]	%s (default: %d, min: %d)
+[Editor]	%s (default: %d, min: %d, max: %d)
 [Editor]	%s i[value]
 [Editor]	%s Right click for context menu.
 [Editor]	%s value: %s (position %d, parameter "%s")
@@ -6776,6 +6779,7 @@ Zoom to current mouse target
 [Editor]	FLAG: Place where red team flag is.
 [Editor]	folder
 [Editor]	Follow remote placements
+[Editor]	Follow remote placements in the collaborative editor
 [Editor]	Font typer
 [Editor]	Force
 [Editor]	Freeze
