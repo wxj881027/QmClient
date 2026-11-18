@@ -237,6 +237,54 @@ TEST_F(QmSettingsCardDeckConsumer, EveryConsumerAllocationRejectionKeepsTheOldOw
 	}
 }
 
+TEST_F(QmSettingsCardDeckConsumer, DeferredReleaseCancelsDragBeforeTheNextClick)
+{
+	CSettingsCardDeck Deck;
+	CScrollRegion ScrollRegion;
+	m_Model.SetEntries({{CARD_A, TAB, 1, 0}, {CARD_B, TAB, 1, 1}});
+	m_Model.ClearDirty();
+	const uint64_t LayoutRevision = m_Model.LayoutRevision();
+	const auto pFirst = std::make_shared<SCardOwner>(CARD_A, 40);
+	const auto pSecond = std::make_shared<SCardOwner>(CARD_B, 40);
+	const auto Build = [&](auto &vCards) {
+		AddCard(vCards, pFirst);
+		AddCard(vCards, pSecond);
+	};
+
+	Frame();
+	Draw(Deck, 1, Build, &ScrollRegion);
+	ASSERT_EQ(m_Diagnostics.m_GeometryCount, 2u);
+	const CUIRect First = m_Diagnostics.m_aGeometry[0].m_Rect;
+	const CUIRect Second = m_Diagnostics.m_aGeometry[1].m_Rect;
+	const CUIRect Header = BuildSettingsCardFrame(First, {CARD_A, "Card", nullptr}, pFirst->m_Height, 1.0f).m_HeaderRect;
+	const CUIRect Content = BuildSettingsCardFrame(Second, {CARD_B, "Card", nullptr}, pSecond->m_Height, 1.0f).m_ContentRect;
+	const vec2 Press{Header.x + 12.0f, Header.y + Header.h * 0.5f};
+	const vec2 Click{Content.x + 12.0f, Content.y + Content.h * 0.75f};
+	ASSERT_TRUE(ScrollRegion.ClipRect()->Inside(Press));
+	ASSERT_TRUE(ScrollRegion.ClipRect()->Inside(Click));
+	ASSERT_GT(Click.y, Second.y + Second.h * 0.5f);
+
+	Frame(Press, true);
+	Draw(Deck, 1, Build, &ScrollRegion);
+	Frame(Click, true);
+	Draw(Deck, 1, Build, &ScrollRegion);
+	ASSERT_EQ(m_Diagnostics.m_GeometryCount, 2u);
+	ASSERT_STREQ(m_Diagnostics.m_aGeometry[0].m_pStableId, CARD_B);
+
+	Frame(Click);
+	const auto Reject = [](auto &) { throw std::bad_alloc(); };
+	EXPECT_FALSE(Draw(Deck, 2, Reject, &ScrollRegion).m_OrderChanged);
+	EXPECT_EQ(m_Diagnostics.m_GeometryCount, 0u);
+
+	Frame(Click, true);
+	Draw(Deck, 2, Build, &ScrollRegion);
+	Frame(Click);
+	EXPECT_FALSE(Draw(Deck, 2, Build, &ScrollRegion).m_OrderChanged);
+	EXPECT_EQ(m_Model.LayoutRevision(), LayoutRevision);
+	EXPECT_FALSE(m_Model.IsDirty());
+	ExpectGeometry(CARD_A, 40, CARD_B, 40);
+}
+
 TEST_F(QmSettingsCardDeckConsumer, UnchangedKeyAndDisplayReentryReuseMeasurements)
 {
 	CSettingsCardDeck Deck;

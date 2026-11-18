@@ -170,7 +170,12 @@ public:
 			return true;
 		});
 		if(Prepared == CSettingsCardDefinitionsCache::EPrepareResult::DEFERRED)
+		{
+			// 发布延迟时也结束已经松手的拖拽，避免下一次点击误提交。
+			if(RenderPass != ESettingsCardRenderPass::INTERACTIVE || !Input.m_MouseDown)
+				m_Drag.Reset();
 			return {};
+		}
 		if(Prepared == CSettingsCardDefinitionsCache::EPrepareResult::PREPARED)
 		{
 			m_CachedDefinitionsDirty = true;
