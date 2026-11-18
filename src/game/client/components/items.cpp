@@ -675,7 +675,9 @@ void CItems::OnRender()
 	std::vector<vec2> vPracticeLightHubs;
 	std::vector<vec2> vPracticeDoorHubs;
 	std::vector<vec2> vPracticeDraggerHubs;
-	if(UsePredicted)
+	// 机制视觉跟分支世界走，而不是跟预测开关走：旁观或服务器暂停时 Predict()
+	// 为假，但分支仍在推进碰撞，少画一束激光就会出现“看不见却被冻住”。
+	if(!RenderingMini)
 	{
 		if(CGameWorld *pPracticeWorld = GameClient()->m_FastPractice.PracticeLightWorld())
 		{

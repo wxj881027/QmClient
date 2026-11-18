@@ -731,9 +731,21 @@ void CFastPractice::SyncPracticeWorldConfig()
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictTiles = true;
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictDDRace = true;
 	m_PracticeBaseWorld.m_WorldConfig.m_PredictTeleport = true;
-	// 队伍只在 fork/重绑时由 CopyWorldClean 从服务器快照带入一次；之后分支里的
-	// 队伍与 solo 都由练习世界自己维护。每帧用服务器 m_Teams 覆盖会把 /solo、
-	// /unsolo 和队伍变化冲掉，也会让已经进入分支的机关继续看服务器世界。
+	// 队伍号以服务器为准：/team 是服务器动作，分支若只在 fork 时取一次，
+	// 换队后门、激光和拖拉仍按旧队伍计算。这里只同步参与者本人，保留分支
+	// 自己的 solo 与队伍元数据，不整份覆盖。
+	const int aParticipants[] = {m_EnableLocalClientId, m_RequireDummy ? m_EnableDummyClientId : -1};
+	for(const int ClientId : aParticipants)
+	{
+		if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+			continue;
+		const int ServerTeam = GameClient()->m_Teams.Team(ClientId);
+		// 旁观期间服务器队伍是 TEAM_SPECTATORS，不能用它覆盖分支里的可玩队伍。
+		if(ServerTeam < TEAM_FLOCK || ServerTeam >= NUM_DDRACE_TEAMS)
+			continue;
+		if(m_PracticeBaseWorld.m_Teams.Team(ClientId) != ServerTeam)
+			m_PracticeBaseWorld.m_Teams.Team(ClientId, ServerTeam);
+	}
 }
 
 void CFastPractice::ResetPracticeMapEntities(CGameWorld &World)
