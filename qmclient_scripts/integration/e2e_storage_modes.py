@@ -139,6 +139,33 @@ def scenario_unavailable_profile_does_not_fallback(moved: Path, cwd: Path, works
 		raise AssertionError("portable storage failure fell back to the working directory")
 
 
+def scenario_unreadable_executable_config_does_not_fallback(directory: Path, workspace: Path) -> None:
+	cwd = workspace / "unreadable-config-cwd"
+	save = workspace / "unreadable-config-save"
+	cwd.mkdir()
+	save.mkdir()
+	(cwd / "storage.cfg").write_text(f"add_path {save.as_posix()}\n", encoding="utf-8")
+
+	with storage_config(directory, None):
+		blocked = directory / "storage.cfg"
+		blocked.mkdir()
+		try:
+			client = start_client(directory, cwd)
+			try:
+				client.wait_for(lambda line: "Failed to initialize the storage location" in line, "unreadable executable storage configuration", 10)
+				if any("client: version" in line for line in client._lines):
+					raise AssertionError("client continued startup with an unreadable storage configuration")
+				# 初始化失败会弹窗，只结束本次启动的隔离实例。
+				client.kill()
+			finally:
+				client.stop()
+		finally:
+			blocked.rmdir()
+
+	if any(save.iterdir()):
+		raise AssertionError("client created save folders using the fallback storage configuration")
+
+
 def scenario_normal_build_rejects_test_override(build: Path, cwd: Path, workspace: Path) -> None:
 	# 用显式测试保护验证普通构建，不能让此场景接触真实玩家存档。
 	directory = workspace / "normal-client"
@@ -181,6 +208,7 @@ def main() -> int:
 	scenario_executable_config_controls_save_and_search_order(moved, workspace)
 	scenario_working_directory_config_is_used_without_executable_config(moved, workspace)
 	scenario_unavailable_profile_does_not_fallback(moved, cwd, workspace)
+	scenario_unreadable_executable_config_does_not_fallback(moved, workspace)
 	if args.normal_build is not None:
 		scenario_normal_build_rejects_test_override(args.normal_build.resolve(strict=True), cwd, workspace)
 	print("portable defaults, explicit storage paths, relocation and failure isolation: passed")
