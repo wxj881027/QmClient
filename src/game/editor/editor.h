@@ -257,6 +257,7 @@ public:
 
 		m_SwitchNumber = 1;
 		m_SwitchDelay = 0;
+		m_ViewSwitch = 0;
 		m_SpeedupForce = 50;
 		m_SpeedupMaxSpeed = 0;
 		m_SpeedupAngle = 0;
@@ -264,6 +265,15 @@ public:
 		m_PreventUnusedTilesWasWarned = false;
 		m_AllowPlaceUnusedTiles = EUnusedEntities::NOT_ALLOWED;
 		m_BrushDrawDestructive = true;
+	}
+
+	~CEditor() override
+	{
+		// 界面只借用这些消息弹窗上下文。
+		for(const auto &Entry : m_PopupMessageContexts)
+			delete Entry.second;
+		m_TileartImageInfo.Free();
+		m_QuadArtImageInfo.Free();
 	}
 
 	void Init() override;
@@ -748,6 +758,18 @@ public:
 		EAxis m_Axis; // The axis we are aligning on
 		int m_PointIndex; // The point index we are aligning
 		int m_Diff; // Store the difference
+
+		SAlignmentInfo(CPoint AlignedPoint, int OriginalCoordinate, EAxis Axis, int PointIndex, int Diff) :
+			m_AlignedPoint(AlignedPoint),
+			m_Axis(Axis),
+			m_PointIndex(PointIndex),
+			m_Diff(Diff)
+		{
+			if(Axis == EAxis::AXIS_Y)
+				m_Y = OriginalCoordinate;
+			else
+				m_X = OriginalCoordinate;
+		}
 	};
 	void ComputePointAlignments(const std::shared_ptr<CLayerQuads> &pLayer, CQuad *pQuad, int QuadIndex, int PointIndex, ivec2 Offset, std::vector<SAlignmentInfo> &vAlignments, bool Append = false) const;
 	void ComputePointsAlignments(const std::shared_ptr<CLayerQuads> &pLayer, bool Pivot, ivec2 Offset, std::vector<SAlignmentInfo> &vAlignments) const;
