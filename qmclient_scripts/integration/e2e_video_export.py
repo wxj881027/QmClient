@@ -731,6 +731,76 @@ def scenario_video_export_offscreen_fsaa(env: ProcessEnvironment) -> None:
 			raise AssertionError(f"离屏导出帧数 {nb_frames} 偏离 2s@60fps 预期（异步读回生命周期缺陷）")
 
 
+def scenario_video_export_vulkan_offscreen_fsaa(env: ProcessEnvironment) -> None:
+	"""启用窗口和导出 4x FSAA 后，从 Vulkan 离屏 resolve 图完整导出视频。"""
+	fixture = os.environ.get("QM_E2E_DEMO")
+	if not fixture or not Path(fixture).is_file():
+		raise SkipTest("缺少隔离 demo fixture，请设置 QM_E2E_DEMO")
+	demo = Path(fixture).resolve()
+	name = "qme2e_vulkan_offscreen_fsaa"
+	settings = env.path("qmclient", "settings.cfg")
+	settings.parent.mkdir(parents=True, exist_ok=True)
+	settings.write_text('qm_graphics_mode -1\ngfx_backend "Vulkan"\ngfx_fsaa_samples 4\n', encoding="utf-8")
+	client = start_demo_client(
+		env,
+		[
+			"qm_video_fsaa 4",
+			"cl_video_recorder_fps 60",
+			"demo_speed 8",
+			"qm_video_segment_seconds 0",
+			"qm_video_encoder libx264",
+			"qm_video_container mp4",
+			f"qm_video_width {OUTPUT_WIDTH}",
+			f"qm_video_height {OUTPUT_HEIGHT}",
+		],
+	)
+	try:
+		swapchain_fsaa = ""
+
+		def collect_graphics_startup(line: str) -> bool:
+			nonlocal swapchain_fsaa
+			if "swapchain fsaa requested=" in line:
+				swapchain_fsaa = line
+			return "GPU version:" in line
+
+		version = client.wait_for(collect_graphics_startup, "图形初始化完成", 30)
+		if "GPU version: Vulkan " not in version:
+			raise SkipTest(f"客户端启动时未启用 Vulkan（{version}）")
+		if not swapchain_fsaa:
+			raise AssertionError("Vulkan 启动日志缺少交换链采样数")
+		if "selected=4 multisample=1" not in swapchain_fsaa:
+			raise SkipTest(f"Vulkan 交换链未启用 4x FSAA（{swapchain_fsaa}）")
+		client.command(f'play "{demo}"')
+		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
+		client.command(f"start_video {name} {RANGE_START_SECONDS} {RANGE_END_SECONDS}")
+		plan = client.wait_for(lambda line: "Offscreen export: rendering" in line, "Vulkan 离屏导出已启动", 60)
+		if "(4x multisampling)" not in plan:
+			raise AssertionError(f"Vulkan 离屏导出未启用 4x 采样（{plan}）")
+		result = client.wait_for(
+			lambda line: ("Concatenated" in line and f"{name}.mp4" in line)
+			or "Segment 1 recording failed" in line
+			or "capturing from the window framebuffer" in line,
+			"Vulkan 离屏导出结束",
+			180,
+		)
+		if "Concatenated" not in result:
+			raise AssertionError(f"Vulkan 离屏导出失败（{result}）")
+		client.command("quit")
+		if client.wait_for_exit(30) != 0:
+			raise AssertionError("客户端未正常退出")
+	finally:
+		client.stop()
+
+	video = env.path("videos", f"{name}.mp4")
+	assert_video(video, RANGE_END_SECONDS - RANGE_START_SECONDS)
+	dimensions = probe_video_dimensions(video)
+	if dimensions != (OUTPUT_WIDTH, OUTPUT_HEIGHT):
+		raise AssertionError(f"Vulkan 离屏成片尺寸不符（{dimensions}）")
+	frames = next((stream.get("nb_frames") for stream in probe_streams(video) if stream.get("codec_type") == "video"), None)
+	if frames in (None, "N/A") or not 118 <= int(frames) <= 122:
+		raise AssertionError(f"Vulkan 离屏成片帧数偏离 2s@60fps 预期（{frames}）")
+
+
 def scenario_video_export_upscale_output(env: ProcessEnvironment) -> None:
 	"""输出大于窗口：按输出尺寸离屏渲染（真分辨率导出），成片尺寸就是输出尺寸。
 
@@ -786,6 +856,7 @@ E2E_TESTS = {
 	"video_export_resume_truncated_segment": scenario_video_export_resume_truncated_segment,
 	"video_export_range_rejection_and_restart": scenario_video_export_range_rejection_and_restart,
 	"video_export_upscale_output": scenario_video_export_upscale_output,
+	"video_export_vulkan_offscreen_fsaa": scenario_video_export_vulkan_offscreen_fsaa,
 }
 
 

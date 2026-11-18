@@ -433,11 +433,14 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Readback(const CC
 	if(m_RenderingPaused)
 		return true;
 	SRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
-	// 背景层使用交换链格式，回读像素格式不匹配；它只用于屏幕合成/模糊，不提供 CPU 回读。
-	if(Target.m_SampleCount != 1)
-		return true;
-	const VkImage ReadbackImage = Target.m_Image;
+	const bool Multisampled = Target.m_SampleCount > 1;
+	const VkImage ReadbackImage = Multisampled ? Target.m_ResolveImage : Target.m_Image;
 	if(ReadbackImage == VK_NULL_HANDLE || Target.m_Width == 0 || Target.m_Height == 0)
+		return true;
+
+	bool IsB8G8R8A8 = Target.m_Format == VK_FORMAT_B8G8R8A8_UNORM || Target.m_Format == VK_FORMAT_B8G8R8A8_SRGB;
+	const bool IsR8G8B8A8 = Target.m_Format == VK_FORMAT_R8G8B8A8_UNORM || Target.m_Format == VK_FORMAT_R8G8B8A8_SRGB;
+	if(!IsB8G8R8A8 && !IsR8G8B8A8)
 		return true;
 	if(!SubmitCurrentCommandsAndRestartSwapPass())
 		return false;
@@ -454,9 +457,8 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Readback(const CC
 	if(!ImageBarrier(CommandBuffer, m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL))
 		return false;
 
-	bool IsB8G8R8A8 = RenderTargetReadbackFormat() == VK_FORMAT_B8G8R8A8_UNORM || RenderTargetReadbackFormat() == VK_FORMAT_B8G8R8A8_SRGB;
-	const bool IsR8G8B8A8 = RenderTargetReadbackFormat() == VK_FORMAT_R8G8B8A8_UNORM || RenderTargetReadbackFormat() == VK_FORMAT_R8G8B8A8_SRGB;
-	if((IsR8G8B8A8 || IsB8G8R8A8) && m_OptimalSwapChainImageBlitting && m_OptimalRGBAImageBlitting && m_LinearRGBAImageBlitting)
+	// 多采样目标直接复制已 resolve 的 4 字节像素，保留交换链格式的 sRGB 编码。
+	if(!Multisampled && m_OptimalSwapChainImageBlitting && m_OptimalRGBAImageBlitting && m_LinearRGBAImageBlitting)
 	{
 		VkImageBlit ImageBlitRegion{};
 		ImageBlitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
