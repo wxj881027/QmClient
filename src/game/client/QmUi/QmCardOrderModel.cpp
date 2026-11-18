@@ -3,6 +3,7 @@
 #include <base/system.h>
 
 #include <algorithm>
+#include <new>
 #include <utility>
 
 namespace qm_card_order
@@ -436,7 +437,7 @@ namespace qm_card_order
 		return It->second;
 	}
 
-	bool CModel::Serialize(char *pBuf, int BufSize) const
+	bool CModel::Serialize(char *pBuf, int BufSize) const try
 	{
 		if(pBuf == nullptr || BufSize <= 0)
 			return false;
@@ -462,6 +463,10 @@ namespace qm_card_order
 			return false;
 		str_copy(pBuf, Serialized.c_str(), BufSize);
 		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
 	}
 
 	bool CModel::Parse(const char *pStr, const std::vector<const char *> &vValidIds, bool RejectDuplicateValidIds)

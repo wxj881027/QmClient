@@ -155,3 +155,30 @@ TEST(QmCardOrderModelSwap, SelfSwapKeepsPointersVersionsAndDirtyStateWithoutAllo
 	EXPECT_EQ(Model.FindByStableId("card"), 0);
 	EXPECT_FALSE(Model.IsDirty());
 }
+
+TEST(QmCardOrderModelSerialization, FailedAllocationKeepsLayoutPendingForRetry)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries({
+		{"deck:general-game", "general", 1, 0},
+		{"deck:general-client", "general", 1, 1},
+	});
+	Model.ClearDirty();
+	Model.Move("deck:general-game", 2, 0);
+
+	char aSerialized[128] = "previous";
+	bool Serialized;
+	bool AllocationFailed;
+	{
+		CPredictionAllocationFailure Failure;
+		Serialized = Model.Serialize(aSerialized, sizeof(aSerialized));
+		AllocationFailed = Failure.Triggered();
+	}
+	EXPECT_TRUE(AllocationFailed);
+	EXPECT_FALSE(Serialized);
+	EXPECT_EQ(aSerialized[0], '\0');
+	EXPECT_TRUE(Model.IsDirty());
+
+	ASSERT_TRUE(Model.Serialize(aSerialized, sizeof(aSerialized)));
+	EXPECT_STREQ(aSerialized, "deck:general-game|general|right|0;deck:general-client|general|left|0;");
+}
