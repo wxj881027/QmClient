@@ -12,8 +12,23 @@
 #include <game/client/components/qmclient/weapon_animation.h>
 #include <game/client/render.h>
 
+#include <cstddef>
 #include <memory>
 #include <vector>
+
+template<typename TCharacterInfo, std::size_t N>
+vec2 QmNinjaMuzzleMotion(const CNetObj_Character &RenderPrev, const CNetObj_Character &RenderCur, int ClientId, bool PredictLocalWeapons, const TCharacterInfo (&aCharacters)[N])
+{
+	const CNetObj_Character *pPrev = &RenderPrev;
+	const CNetObj_Character *pCur = &RenderCur;
+	// 回放幽灵没有玩家快照槽，使用回放提供的两帧。
+	if(!PredictLocalWeapons && ClientId >= 0 && static_cast<std::size_t>(ClientId) < N)
+	{
+		pPrev = &aCharacters[ClientId].m_Prev;
+		pCur = &aCharacters[ClientId].m_Cur;
+	}
+	return vec2(pCur->m_X, pCur->m_Y) - vec2(pPrev->m_X, pPrev->m_Y);
+}
 
 class CPlayers : public CComponent
 {

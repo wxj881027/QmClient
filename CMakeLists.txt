@@ -5327,6 +5327,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/editor_collab_camera_reload_test.cpp
     src/test/unit/client/editor_collab_join_test.cpp
     src/test/unit/client/editor_quad_slice_test.cpp
+    src/test/unit/client/player_ninja_muzzle_test.cpp
     src/test/unit/client/editor_quad_art_layout_test.cpp
     src/test/unit/client/editor_map_append_image_name_test.cpp
     src/test/unit/client/editor_map_group_import_test.cpp

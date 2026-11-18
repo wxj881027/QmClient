@@ -1224,11 +1224,7 @@ void CPlayers::RenderPlayer(
 					}
 					if(g_pData->m_Weapons.m_aId[CurrentWeapon].m_aSpriteMuzzles[IteX])
 					{
-						vec2 HadokenDirection;
-						if(PredictLocalWeapons)
-							HadokenDirection = vec2(pPlayerChar->m_X, pPlayerChar->m_Y) - vec2(pPrevChar->m_X, pPrevChar->m_Y);
-						else
-							HadokenDirection = vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y) - vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_Y);
+						vec2 HadokenDirection = QmNinjaMuzzleMotion(*pPrevChar, *pPlayerChar, ClientId, PredictLocalWeapons, GameClient()->m_Snap.m_aCharacters);
 						float HadOkenAngle = 0;
 						if(absolute(HadokenDirection.x) > 0.0001f || absolute(HadokenDirection.y) > 0.0001f)
 						{
@@ -1813,11 +1809,7 @@ void CPlayers::RenderPlayerGhost(
 					}
 					if(g_pData->m_Weapons.m_aId[CurrentWeapon].m_aSpriteMuzzles[IteX])
 					{
-						vec2 HadokenDirection;
-						if(PredictLocalWeapons)
-							HadokenDirection = vec2(pPlayerChar->m_X, pPlayerChar->m_Y) - vec2(pPrevChar->m_X, pPrevChar->m_Y);
-						else
-							HadokenDirection = vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y) - vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_Y);
+						vec2 HadokenDirection = QmNinjaMuzzleMotion(*pPrevChar, *pPlayerChar, ClientId, PredictLocalWeapons, GameClient()->m_Snap.m_aCharacters);
 						float HadOkenAngle = 0;
 						if(absolute(HadokenDirection.x) > 0.0001f || absolute(HadokenDirection.y) > 0.0001f)
 						{
