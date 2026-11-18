@@ -53,6 +53,14 @@ SelectTasksLabel2=勾选需要的选项，然后点击“下一步”。%n%n安�
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked
 
 [InstallDelete]
+; 3.3 及更早版本随包的是 FFmpeg 7 与 SDL2；升级后运行时会换成 FFmpeg 9 与 SDL3，
+; 旧 DLL 不删会和新运行时并排留在安装目录。只列已知旧文件名，不按通配符清目录。
+Type: files; Name: "{app}\SDL2.dll"
+Type: files; Name: "{app}\avcodec-61.dll"
+Type: files; Name: "{app}\avformat-61.dll"
+Type: files; Name: "{app}\avutil-59.dll"
+Type: files; Name: "{app}\swresample-5.dll"
+Type: files; Name: "{app}\swscale-8.dll"
 ; 迁移商店索引和无损 WebP 后，仅删除已知旧随包资源。
 Type: files; Name: "{app}\data\qmclient\font_catalog.json"
 Type: files; Name: "{app}\data\qmclient\chat_emojis\agree.png"
