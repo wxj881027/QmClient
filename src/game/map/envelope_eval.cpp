@@ -282,7 +282,8 @@ void CRenderMap::RenderEvalEnvelope(const IEnvelopePointAccess *pPoints, std::ch
 	const CEnvPoint *pCurrentPoint = pPoints->GetPoint(FoundIndex);
 	const CEnvPoint *pNextPoint = pPoints->GetPoint(FoundIndex + 1);
 
-	const int64_t Delta = static_cast<int64_t>(pNextPoint->m_Time.GetInternal()) - pCurrentPoint->m_Time.GetInternal();
+	const int StartMillis = pCurrentPoint->m_Time.GetInternal();
+	const int64_t Delta = static_cast<int64_t>(pNextPoint->m_Time.GetInternal()) - StartMillis;
 	if(Delta <= 0)
 	{
 		for(size_t c = 0; c < Channels; c++)
@@ -292,7 +293,9 @@ void CRenderMap::RenderEvalEnvelope(const IEnvelopePointAccess *pPoints, std::ch
 		return;
 	}
 
-	float a = (float)(TimeMillis - pCurrentPoint->m_Time.GetInternal()) / Delta;
+	// 按整毫秒查找会向零截断，负的亚毫秒采样可能早于所选区间。
+	const double SampleMillis = std::max(TimeMillis, static_cast<double>(StartMillis));
+	float a = (float)(SampleMillis - StartMillis) / Delta;
 
 	switch(pCurrentPoint->m_Curvetype)
 	{
@@ -336,7 +339,7 @@ void CRenderMap::RenderEvalEnvelope(const IEnvelopePointAccess *pPoints, std::ch
 			p2.x = std::clamp(p2.x, p0.x, p3.x);
 
 			// solve x(a) = time for a
-			a = std::clamp(SolveBezier(TimeMillis, p0.x, p1.x, p2.x, p3.x), 0.0f, 1.0f);
+			a = std::clamp(SolveBezier(SampleMillis, p0.x, p1.x, p2.x, p3.x), 0.0f, 1.0f);
 
 			// value = y(t)
 			Result[c] = bezier(p0.y, p1.y, p2.y, p3.y, a);

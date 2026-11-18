@@ -362,6 +362,20 @@ TEST_F(MapEnvelopeItems, WideKeyframeTimeIntervalStillInterpolates)
 	EXPECT_FLOAT_EQ(Result.r, 1.5f);
 }
 
+TEST_F(MapEnvelopeItems, NegativeSubmillisecondSampleUsesBezierSegmentStart)
+{
+	SItems Items;
+	Items.m_vPoints[0].m_Curvetype = CURVETYPE_BEZIER;
+	Items.m_vPoints[1].m_Time = CFixedTime(3000);
+	Items.m_vPoints[1].m_Bezier.m_aInTangentDeltaX[0] = CFixedTime(-2000);
+	ASSERT_NO_FATAL_FAILURE(Load(Items));
+	CMapBasedEnvelopePointAccess Points(m_pMap.get());
+	ASSERT_NE(Points.GetBezier(1), nullptr);
+	ColorRGBA Result(0, 0, 0, 0);
+	CRenderMap::RenderEvalEnvelope(&Points, std::chrono::microseconds(-500), Result, 1);
+	EXPECT_FLOAT_EQ(Result.r, 1.0f);
+}
+
 TEST_F(MapEnvelopeItems, InvalidChannelsRemainAvailableForExistingEditorFallback)
 {
 	SItems Items;
