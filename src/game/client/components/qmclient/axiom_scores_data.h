@@ -3,10 +3,22 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
+
+// 计分板和选图菜单共用开放平台的请求额度。
+class CQmAxiomRequestBudget
+{
+	std::deque<int64_t> m_RecentStarts;
+	int64_t m_RetryAfter = 0;
+
+public:
+	bool TryStart(int64_t Now, bool Authenticated);
+	void RateLimited(int64_t Now);
+};
 
 enum class EQmAxiomMode
 {

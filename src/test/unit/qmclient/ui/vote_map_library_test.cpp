@@ -8,6 +8,68 @@
 
 using namespace QmVoteMaps;
 
+TEST(VoteMapLibrary, AxiomMenuPairsMapRowsWithCreditsAndKeepsServerOptionIndices)
+{
+	const char *apRows[] = {
+		"axiom@server:/votes$ 类型选择",
+		"☐ 简单 | Easy",
+		"☒ 单人 | Solo",
+		"随机选择地图（理由可填星级）",
+		"axiom@server:/votes/maps$ 地图列表",
+		"001-solo 星级: ★☆☆ 发布于: 2026-05-20",
+		"分数: 3 作者: Krush",
+		"Two Words 星级：★★★ 发布于：2026-09-02",
+		"分数：10 作者：Lucas",
+		"上一篇",
+		"axiom@server:/menu$ 菜单",
+		"Fake 星级: ★☆☆",
+	};
+	CVoteOptionClient aOptions[std::size(apRows)]{};
+	for(size_t i = 0; i < std::size(apRows); ++i)
+	{
+		str_copy(aOptions[i].m_aDescription, apRows[i]);
+		if(i > 0)
+			aOptions[i - 1].m_pNext = &aOptions[i];
+	}
+	const auto Menu = ParseAxiomMenu(aOptions);
+	ASSERT_EQ(Menu.m_vCategories.size(), 2u);
+	EXPECT_EQ(Menu.m_SelectedCategory, 1);
+	EXPECT_EQ(Menu.m_MaxStars, 3);
+	EXPECT_EQ(Menu.m_vCategories[1].m_VoteOption, 2);
+	ASSERT_EQ(Menu.m_vMaps.size(), 2u);
+	const auto &Map = Menu.m_vMaps.front();
+	EXPECT_EQ(Map.m_Name, "001-solo");
+	EXPECT_EQ(Map.m_Stars, 1);
+	EXPECT_EQ(Map.m_MaxStars, 3);
+	EXPECT_EQ(Map.m_Category, "单人 | Solo");
+	EXPECT_EQ(Map.m_VoteOption, 5);
+	EXPECT_EQ(Map.m_Points, 3);
+	EXPECT_EQ(Map.m_Mapper, "Krush");
+	EXPECT_EQ(Map.m_Release, "2026-05-20");
+	EXPECT_EQ(Menu.m_vMaps.back().m_Name, "Two Words");
+	EXPECT_EQ(Menu.m_vMaps.back().m_Stars, 3);
+	EXPECT_EQ(Menu.m_vMaps.back().m_VoteOption, 7);
+	EXPECT_EQ(Menu.m_vMaps.back().m_Points, 10);
+}
+
+TEST(VoteMapLibrary, MissingAxiomCreditsDoNotBorrowTheNextMapsAuthor)
+{
+	CVoteOptionClient aOptions[4]{};
+	str_copy(aOptions[0].m_aDescription, "axiom@server:/votes/maps$ 地图列表");
+	str_copy(aOptions[1].m_aDescription, "First 星级: ★☆☆");
+	str_copy(aOptions[2].m_aDescription, "Second 星级: ★★☆☆☆");
+	str_copy(aOptions[3].m_aDescription, "分数: 0 作者: Author");
+	for(size_t i = 1; i < std::size(aOptions); ++i)
+		aOptions[i - 1].m_pNext = &aOptions[i];
+	const auto Menu = ParseAxiomMenu(aOptions);
+	ASSERT_EQ(Menu.m_vMaps.size(), 2u);
+	EXPECT_TRUE(Menu.m_vMaps.front().m_Mapper.empty());
+	EXPECT_EQ(Menu.m_vMaps.front().m_Points, -1);
+	EXPECT_EQ(Menu.m_vMaps.back().m_MaxStars, 5);
+	EXPECT_EQ(Menu.m_MaxStars, 5);
+	EXPECT_EQ(Menu.m_vMaps.back().m_Points, 0);
+}
+
 TEST(VoteMapLibrary, CatalogKeepsOfficialMetadataAndZeroStarMaps)
 {
 	const char *pJson = R"([{"name":"Zero","type":"Race","mapper":"作者","difficulty":0,"points":0,"release":"2026-10-01 12:00","thumbnail":"https://ddnet.org/ranks/maps/Zero.png"},{"name":"Alpha","type":"Novice","difficulty":2,"points":3}])";
@@ -55,6 +117,23 @@ TEST(VoteMapLibrary, CatalogDoesNotTruncateLongMapNamesToVoteDescriptionSize)
 	ASSERT_TRUE(ParseCatalog(Json.c_str(), Json.size(), vMaps));
 	ASSERT_EQ(vMaps.size(), 1u);
 	EXPECT_EQ(vMaps[0].m_Name, Name);
+}
+
+TEST(VoteMapLibrary, AxiomRejectsStatisticsForAnotherMap)
+{
+	const char *pJson = R"({"code":200,"data":{"map":"Beta","finisher_count":89,"median_time":42}})";
+	SDetails Details;
+	EXPECT_FALSE(ParseAxiomDetails(pJson, str_length(pJson), {"Alpha"}, Details));
+	EXPECT_EQ(Details.m_Finishers, -1);
+}
+
+TEST(VoteMapLibrary, UnfinishedAxiomMapHasNoMedianTime)
+{
+	const char *pJson = R"({"code":200,"data":{"map":"Alpha","finisher_count":0,"median_time":null}})";
+	SDetails Details;
+	ASSERT_TRUE(ParseAxiomDetails(pJson, str_length(pJson), {"Alpha"}, Details));
+	EXPECT_EQ(Details.m_Finishers, 0);
+	EXPECT_LT(Details.m_MedianSeconds, 0.0);
 }
 
 TEST(VoteMapLibrary, DetailsRejectOtherMapAndKeepMissingStatisticsUnknown)

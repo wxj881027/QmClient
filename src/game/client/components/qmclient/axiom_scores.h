@@ -9,7 +9,6 @@
 
 #include <array>
 #include <cstdint>
-#include <deque>
 #include <map>
 #include <memory>
 #include <string>
@@ -127,8 +126,7 @@ class CQmAxiomScores : public CComponent
 	std::string m_ActivePlayerName;
 	std::map<std::string, std::shared_ptr<IQmAxiomHttpRequest>> m_PointsRequests;
 	EQmAxiomMode m_Mode = EQmAxiomMode::NONE;
-	std::deque<int64_t> m_RecentPointsStarts;
-	int64_t m_PointsRetryAfter = 0;
+	CQmAxiomRequestBudget m_OpenApiBudget;
 	uint64_t m_Generation = 0;
 	IQmAxiomHttp *m_pHttpOverride = nullptr;
 	bool m_PersistentCacheDirty = false;
@@ -178,6 +176,7 @@ public:
 	void SetMode(EQmAxiomMode Mode);
 	EQmAxiomMode Mode() const { return m_Mode; }
 
+	CQmAxiomRequestBudget &OpenApiBudget() { return m_OpenApiBudget; }
 	void EnsureScoreboardQueried(const char *pPlayerName);
 	// 统计页需要完整的双模式数据和 DDStats 时长。
 	void EnsureQueried(const char *pPlayerName);

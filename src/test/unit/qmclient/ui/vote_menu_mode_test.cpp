@@ -13,7 +13,7 @@ TEST(QmVoteMenuMode, UnknownServerStartsWithOriginalOptions)
 
 TEST(QmVoteMenuMode, OtherCommunitiesCannotEnableMapLibrary)
 {
-	for(const char *pCommunity : {"", "none", "axiom", "infc", "mmotee", "kog", "ddnet-custom"})
+	for(const char *pCommunity : {"", "none", "infc", "mmotee", "kog", "ddnet-custom"})
 	{
 		SCOPED_TRACE(pCommunity);
 		CQmVoteMenuMode Mode;
@@ -23,6 +23,23 @@ TEST(QmVoteMenuMode, OtherCommunitiesCannotEnableMapLibrary)
 		EXPECT_FALSE(Mode.ToggleServerOptions());
 		EXPECT_FALSE(Mode.UseMapLibrary());
 	}
+}
+
+TEST(QmVoteMenuMode, AxiomCanSwitchToOriginalOptionsAndBack)
+{
+	CQmVoteMenuMode Mode;
+	ASSERT_TRUE(Mode.UpdateCommunity("axiom"));
+	EXPECT_TRUE(Mode.IsAxiom());
+	EXPECT_FALSE(Mode.IsOfficialDdnet());
+	EXPECT_TRUE(Mode.UseMapLibrary());
+	ASSERT_TRUE(Mode.ToggleServerOptions());
+	EXPECT_FALSE(Mode.UpdateCommunity("axiom"));
+	EXPECT_FALSE(Mode.UseMapLibrary());
+	ASSERT_TRUE(Mode.ToggleServerOptions());
+	EXPECT_TRUE(Mode.UseMapLibrary());
+	ASSERT_TRUE(Mode.UpdateCommunity("none"));
+	EXPECT_FALSE(Mode.IsAxiom());
+	EXPECT_FALSE(Mode.UseMapLibrary());
 }
 
 TEST(QmVoteMenuMode, OfficialCommunityEnablesMapLibraryWhenIdentityArrives)

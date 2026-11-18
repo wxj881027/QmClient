@@ -2,6 +2,7 @@
 
 #include <base/math.h>
 #include <base/str.h>
+#include <base/time.h>
 
 #include <engine/http.h>
 #include <engine/shared/json.h>
@@ -243,6 +244,21 @@ namespace
 
 		return EQmAxiomParseResult::SUCCESS;
 	}
+}
+
+bool CQmAxiomRequestBudget::TryStart(int64_t Now, bool Authenticated)
+{
+	while(!m_RecentStarts.empty() && Now - m_RecentStarts.front() >= time_freq())
+		m_RecentStarts.pop_front();
+	if(Now < m_RetryAfter || m_RecentStarts.size() >= (Authenticated ? 10u : 3u))
+		return false;
+	m_RecentStarts.push_back(Now);
+	return true;
+}
+
+void CQmAxiomRequestBudget::RateLimited(int64_t Now)
+{
+	m_RetryAfter = Now + time_freq();
 }
 
 const char *QmAxiomModeName(EQmAxiomMode Mode)

@@ -29,8 +29,6 @@ namespace
 	constexpr int64_t AXIOM_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 	constexpr size_t AXIOM_MAX_CACHE_ENTRIES = 128;
 	constexpr size_t AXIOM_MAX_CONCURRENT_REQUESTS = 64;
-	constexpr size_t AXIOM_ANONYMOUS_QPS = 3;
-	constexpr size_t AXIOM_AUTHENTICATED_QPS = 10;
 	constexpr size_t AXIOM_MAX_QUERY_NAME_BYTES = 256;
 	constexpr size_t AXIOM_MAX_DIFFICULTY_NAME_BYTES = 192;
 	constexpr size_t DDSTATS_MAX_GAMETYPE_NAME_BYTES = 256;
@@ -651,12 +649,10 @@ void CQmAxiomScores::EnsureScoreboardQueried(const char *pPlayerName)
 	SPointsEntry &Points = Entry.m_aPoints[ModeIndex(m_Mode)];
 	if(IsWithinWindow(Points.m_LastSuccess, Now, AXIOM_POINTS_CACHE_TTL_MS) ||
 		IsWithinWindow(Points.m_LastFailure, Now, FailureRetryWindowMs(Points.m_Failures)) ||
-		m_PointsRequests.contains(Name) || m_PointsRequests.size() >= AXIOM_MAX_CONCURRENT_REQUESTS || Now < m_PointsRetryAfter)
+		m_PointsRequests.contains(Name) || m_PointsRequests.size() >= AXIOM_MAX_CONCURRENT_REQUESTS)
 		return;
-	while(!m_RecentPointsStarts.empty() && Now - m_RecentPointsStarts.front() >= time_freq())
-		m_RecentPointsStarts.pop_front();
 	const char *pKey = g_Config.m_QmAxiomApiKey;
-	if(m_RecentPointsStarts.size() >= (pKey[0] ? AXIOM_AUTHENTICATED_QPS : AXIOM_ANONYMOUS_QPS))
+	if(!m_OpenApiBudget.TryStart(Now, pKey[0] != 0))
 		return;
 
 	const std::string Url = QmBuildAxiomPointsUrl(pPlayerName, m_Mode);
@@ -669,7 +665,6 @@ void CQmAxiomScores::EnsureScoreboardQueried(const char *pPlayerName)
 		Points.m_LastFailure = Now;
 		return;
 	}
-	m_RecentPointsStarts.push_back(Now);
 	m_PointsRequests.emplace(Name, std::move(pRequest));
 	if(Points.m_Lookup.m_Status != EQmAxiomScoreStatus::READY)
 		Points.m_Lookup.m_Status = EQmAxiomScoreStatus::FETCHING;
@@ -702,7 +697,7 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 			else if(Code == 404)
 				Status = EQmAxiomScoreStatus::NOT_FOUND;
 			else if(Code == 429)
-				m_PointsRetryAfter = Now + time_freq();
+				m_OpenApiBudget.RateLimited(Now);
 		}
 		if(Status == EQmAxiomScoreStatus::READY)
 		{
