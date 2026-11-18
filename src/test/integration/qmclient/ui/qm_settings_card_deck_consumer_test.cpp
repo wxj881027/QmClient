@@ -580,6 +580,66 @@ TEST_F(QmSettingsCardDeckConsumer, ClippedCardHeaderCannotStartDrag)
 	EXPECT_EQ(m_Model.Entry(m_Model.FindByStableId(CARD_B)).m_OrderInColumn, 0);
 }
 
+TEST_F(QmSettingsCardDeckConsumer, RejectedCardPreparationRestoresTheParentClipAndScrollRange)
+{
+	for(const bool LengthError : {false, true})
+	{
+		SCOPED_TRACE(LengthError);
+		CSettingsCardDeck Deck;
+		CScrollRegion ScrollRegion;
+		const auto pCard = std::make_shared<SCardOwner>(CARD_A, 650.0f);
+		bool RejectMeasure = false;
+		bool RejectionReached = false;
+		const auto Build = [&](auto &vCards) {
+			AddCard(vCards, pCard);
+			vCards.back().m_MeasureEachFrame = true;
+			vCards.back().m_Measure = [&](float) {
+				if(RejectMeasure)
+				{
+					RejectionReached = true;
+					EXPECT_TRUE(m_Ui.IsClipped());
+					if(m_Ui.IsClipped())
+						EXPECT_FLOAT_EQ(m_Ui.ClipArea()->w, ScrollRegion.ClipRect()->w);
+					if(LengthError)
+						throw std::length_error("card preparation");
+					throw std::bad_alloc();
+				}
+				return pCard->m_Height;
+			};
+		};
+		const auto DrawCards = [&] { return Draw(Deck, 1, Build, &ScrollRegion); };
+
+		Frame();
+		DrawCards();
+		constexpr float ScrollOffset = -40.0f;
+		const float MaxScroll = ScrollRegion.MaxScroll();
+		ASSERT_GT(MaxScroll, -ScrollOffset);
+		ScrollRegion.SetScrollOffsetY(ScrollOffset);
+		const int DrawsBeforeRejection = pCard->m_Draws;
+
+		const CUIRect ParentClip{0, 0, 1000, 700};
+		RejectMeasure = true;
+		Frame();
+		m_Ui.ClipEnable(&ParentClip);
+		EXPECT_NO_THROW(DrawCards());
+		EXPECT_TRUE(RejectionReached);
+		EXPECT_EQ(pCard->m_Draws, DrawsBeforeRejection);
+		EXPECT_TRUE(m_Ui.IsClipped());
+		if(m_Ui.IsClipped())
+			EXPECT_FLOAT_EQ(m_Ui.ClipArea()->w, ParentClip.w);
+		m_Ui.ResetClipState();
+		EXPECT_FLOAT_EQ(ScrollRegion.MaxScroll(), MaxScroll);
+		EXPECT_FLOAT_EQ(ScrollRegion.State().Offset(), -ScrollOffset);
+
+		RejectMeasure = false;
+		Frame();
+		DrawCards();
+		EXPECT_FALSE(m_Ui.IsClipped());
+		EXPECT_FLOAT_EQ(ScrollRegion.ContentScrollOffsetY(), ScrollOffset);
+		EXPECT_EQ(pCard->m_Draws, DrawsBeforeRejection + 1);
+	}
+}
+
 TEST_F(QmSettingsCardDeckConsumer, RejectedContentInputRestoresScrollClipAndContinuesWithTheNextCard)
 {
 	for(const bool LengthError : {false, true})

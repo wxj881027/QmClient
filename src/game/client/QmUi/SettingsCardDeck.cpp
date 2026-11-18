@@ -49,6 +49,28 @@ namespace
 		}
 	};
 
+	struct SScrollRegionScope
+	{
+		CScrollRegion *m_pScrollRegion;
+		float m_PreviousScrollableHeight;
+
+		~SScrollRegionScope() noexcept
+		{
+			if(m_pScrollRegion == nullptr)
+				return;
+			try
+			{
+				// Begin 已清空内容高度。中断的布局不能把已有的滚动范围当作空内容。
+				m_pScrollRegion->SetContentHeightForNextFrame(m_PreviousScrollableHeight);
+				m_pScrollRegion->End();
+			}
+			catch(...)
+			{
+				// End 先退出裁剪。滚动条绘制的二次失败不能覆盖原来的失败。
+			}
+		}
+	};
+
 	bool PointInRect(const CUIRect &Rect, float X, float Y)
 	{
 		return X >= Rect.x && X <= Rect.x + Rect.w && Y >= Rect.y && Y <= Rect.y + Rect.h;
@@ -376,10 +398,13 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	// 有真实滚动容器时由 Begin 扣除固定槽位；预热阶段没有容器，直接使用壳层提供的有效 viewport。
 	CUIRect ScrollViewport = pScrollRegion != nullptr ? Layout.m_UnreservedScrollViewport : Layout.m_ScrollViewport;
 	vec2 ScrollOffset(0.0f, 0.0f);
+	const float PreviousMaxScroll = pScrollRegion != nullptr ? pScrollRegion->MaxScroll() : 0.0f;
+	const float PreviousScrollableHeight = PreviousMaxScroll > 0.0f ? pScrollRegion->ContentAreaSize() + PreviousMaxScroll : 0.0f;
 	if(pScrollRegion != nullptr)
 		pScrollRegion->Begin(&ScrollViewport, &ScrollOffset, Input.m_pScrollParams);
 	else
 		ScrollOffset.y = ResolveSettingsCardDeckPassiveScrollOffset(Ctx.m_pUi != nullptr && Ctx.m_pUi->BackgroundRender(), m_HasScrollOffset, m_LastScrollOffsetY);
+	SScrollRegionScope ScrollRegionScope{pScrollRegion, PreviousScrollableHeight};
 	if(std::abs(m_LastViewportHeight - ScrollViewport.h) > 0.01f)
 	{
 		m_LastViewportHeight = ScrollViewport.h;
@@ -594,10 +619,32 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		}
 	};
 
+	const auto PrepareProjectedCards = [&]() -> const std::array<std::vector<int>, 3> * {
+		try
+		{
+			const auto &aColumns = m_ProjectionCache->Resolve(Model, pTab, m_vActiveStateIndices);
+			BuildPreparedCards(aColumns);
+			return &aColumns;
+		}
+		catch(const std::bad_alloc &)
+		{
+			if(pScrollRegion == nullptr)
+				throw;
+		}
+		catch(const std::length_error &)
+		{
+			if(pScrollRegion == nullptr)
+				throw;
+		}
+		m_ObservedContentChanged = true;
+		return nullptr;
+	};
+
 	RebuildActiveStateIndices();
 	bool GeometryStateChanged = m_vActiveStateIndices != m_vLastRenderedActiveStateIndices;
-	const std::array<std::vector<int>, 3> *pColumns = &m_ProjectionCache->Resolve(Model, pTab, m_vActiveStateIndices);
-	BuildPreparedCards(*pColumns);
+	const auto *pColumns = PrepareProjectedCards();
+	if(pColumns == nullptr)
+		return Result;
 	GeometryStateChanged = GeometryStateChanged || MeasuredGeometryChanged;
 
 	// 先用当前 active snapshot 的几何处理控制器输入，再为最终 active snapshot 重新计算布局。
@@ -711,8 +758,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	if(m_vActiveStateIndices != m_vPreviousActiveStateIndices || PreLayoutGeometryChanged)
 	{
 		GeometryStateChanged = true;
-		pColumns = &m_ProjectionCache->Resolve(Model, pTab, m_vActiveStateIndices);
-		BuildPreparedCards(*pColumns);
+		pColumns = PrepareProjectedCards();
+		if(pColumns == nullptr)
+			return Result;
 	}
 	GeometryStateChanged = GeometryStateChanged || MeasuredGeometryChanged;
 	for(const SPreparedCard &Card : m_vPreparedCards)
@@ -1007,6 +1055,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		m_WidthScrollFloor = std::min(m_WidthScrollFloor, std::max(0.0f, -ScrollOffset.y));
 		if(m_WidthScrollFloor > 0.0f)
 			pScrollRegion->AddRect({ScrollViewport.x, ScrollViewport.y + ScrollOffset.y, 0.0f, ScrollViewport.h + m_WidthScrollFloor});
+		ScrollRegionScope.m_pScrollRegion = nullptr;
 		pScrollRegion->End();
 	}
 	for(SRuntimeState &Runtime : m_vRuntimeStates)
