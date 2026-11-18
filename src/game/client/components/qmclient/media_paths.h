@@ -188,10 +188,17 @@ namespace qmclient::media_paths
 
 	inline bool PrepareWrite(IStorage *pStorage, const std::string &Path)
 	{
-		if(!Path.empty())
+		std::string WholePath = CompletePath(pStorage, Path);
+		size_t ParentLength = WholePath.rfind('/');
+		if(ParentLength != std::string::npos && fs_makedir_rec_for(WholePath.c_str()) == 0)
 		{
-			const std::string WholePath = CompletePath(pStorage, Path);
-			if(!WholePath.empty() && fs_makedir_rec_for(WholePath.c_str()) == 0)
+			while(ParentLength > 0 && WholePath[ParentLength - 1] == '/')
+				--ParentLength;
+			if(ParentLength == 0 || (ParentLength == 2 && WholePath[1] == ':'))
+				++ParentLength;
+			WholePath.resize(ParentLength);
+			// 已存在的普通文件也可能让建目录返回成功。
+			if(fs_is_dir(WholePath.c_str()))
 				return true;
 		}
 		log_error("media_paths", "Could not create the output directory for '%s'", Path.c_str());

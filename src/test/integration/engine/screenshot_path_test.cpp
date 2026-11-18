@@ -84,9 +84,13 @@ TEST_F(ScreenshotPath, DirectoryFailureKeepsThePendingPathAndTheNextRequestCanRe
 	IOHANDLE File = m_pStorage->OpenFile("blocked", IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	ASSERT_NE(File, nullptr);
 	ASSERT_EQ(io_close(File), 0);
-	str_copy(m_Config.m_QmScreenshotDirectory, "blocked/inside");
-	EXPECT_FALSE(Prepare("replacement"));
-	EXPECT_STREQ(m_aPath, Pending.c_str());
+	for(const char *pDirectory : {"blocked", "blocked/inside"})
+	{
+		SCOPED_TRACE(pDirectory);
+		str_copy(m_Config.m_QmScreenshotDirectory, pDirectory);
+		EXPECT_FALSE(Prepare("replacement"));
+		EXPECT_STREQ(m_aPath, Pending.c_str());
+	}
 	m_Config.m_QmScreenshotDirectory[0] = '\0';
 	ASSERT_TRUE(Prepare("retry"));
 	EXPECT_STREQ(m_aPath, "screenshots/retry_2026-11-12_12-34-56.png");
