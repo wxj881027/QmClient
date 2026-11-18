@@ -133,7 +133,7 @@ namespace
 		{
 			ASSERT_TRUE(Ensure());
 			ASSERT_EQ(m_Http.m_vRequests.size(), 1U);
-			m_Http.m_vRequests[0]->Complete("<a href=\"A_a.map\">a</a><a href=\"B_b.map\">b</a>");
+			m_Http.m_vRequests[0]->Complete("<a href=\"A_11111111.map\">a</a><a href=\"B_22222222.map\">b</a>");
 		}
 		void StartMap()
 		{
@@ -241,7 +241,7 @@ TEST_F(MapPreviewDownloadState, MapFactoryFailurePreservesThePreparedIndexForRet
 	m_State.Retry();
 	EXPECT_TRUE(Ensure());
 	ASSERT_EQ(m_Http.m_vRequests.size(), 2U);
-	EXPECT_STREQ(m_Http.m_vRequests[1]->Url(), "https://preview.test/A_a.map");
+	EXPECT_STREQ(m_Http.m_vRequests[1]->Url(), "https://preview.test/A_11111111.map");
 }
 
 TEST_F(MapPreviewDownloadState, RequestPreparationLengthFailureUsesTheSameRetryState)
@@ -283,7 +283,7 @@ TEST_F(MapPreviewDownloadState, SubmissionResourceFailureBeforeHandoffCanRetryTh
 			const auto Create = [](const char *pUrl) -> std::unique_ptr<IHttpRequest> { return std::make_unique<CPreviewDownloadRequest>(pUrl); };
 			const auto EnsureMap = [&](const char *pName) { return State.Ensure(pName, "https://preview.test", m_Http, m_pStorage.get(), Create); };
 			ASSERT_TRUE(EnsureMap("A"));
-			m_Http.m_vRequests.back()->Complete("<a href=\"A_a.map\">a</a><a href=\"B_b.map\">b</a>");
+			m_Http.m_vRequests.back()->Complete("<a href=\"A_11111111.map\">a</a><a href=\"B_22222222.map\">b</a>");
 			const size_t BeforeSubmission = m_Http.m_vRequests.size();
 			m_Http.m_SubmissionFailure = Failure;
 			EXPECT_FALSE(EnsureMap("A"));
@@ -403,9 +403,9 @@ TEST_F(MapPreviewDownloadState, CancelledIndexCompletionDoesNotReplaceTheNewInde
 	ASSERT_TRUE(Ensure());
 	ASSERT_EQ(m_Http.m_vRequests.size(), 2U);
 	pOld->Complete({}, EHttpState::ABORTED);
-	m_Http.m_vRequests[1]->Complete("<a href=\"A_a.map\">a</a>");
+	m_Http.m_vRequests[1]->Complete("<a href=\"A_11111111.map\">a</a>");
 	EXPECT_TRUE(Ensure());
 	ASSERT_EQ(m_Http.m_vRequests.size(), 3U);
-	EXPECT_STREQ(m_Http.m_vRequests[2]->Url(), "https://preview.test/A_a.map");
+	EXPECT_STREQ(m_Http.m_vRequests[2]->Url(), "https://preview.test/A_11111111.map");
 	EXPECT_FALSE(m_State.HasFailed("A"));
 }
