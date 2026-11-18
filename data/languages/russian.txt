@@ -3068,6 +3068,9 @@ Connection quality
 Connection severely abnormal
 == Соединение серьёзно нестабильно
 
+Connects your main tee and dummy with a line that fades as they move apart.
+== Соединяет основного ти и дамми линией. Чем дальше они друг от друга, тем бледнее линия.
+
 Connlimit: number of connections allowed per IP in a time period
 == Connlimit: количество разрешённых подключений с одного IP за период времени
 
@@ -4361,6 +4364,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == Перетащите на правое полотно, чтобы заменить одну часть.
 
+Droplet
+== Капля
+
 Drown deaths
 == Смерти от утопления
 
@@ -4402,6 +4408,12 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == Цвет украшения куклы
+
+Dummy distance link
+== Линия до дамми
+
+Dummy distance link style: 0 = line, 1 = droplet
+== Вид линии до дамми: 0 = линия, 1 = капля
 
 Dummy eyes color
 == Цвет глаз куклы
@@ -5086,6 +5098,9 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 
 Enable the indicators you need; each one draws on your own screen only.
 == Включите нужные индикаторы; каждый из них рисуется только на вашем экране.
+
+Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
+== Включите линию и выберите «Линия» или «Капля». Круглая часть капли показывает радиус удара молотом.
 
 Enable the message types you want and choose their colors.
 == Включите нужные типы сообщений и выберите их цвета.
@@ -6403,6 +6418,9 @@ Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the d
 
 Greek
 == Греческий
+
+Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
+== Зелёный цвет означает, что расстояние не превышает длину крюка, даже если между ти стена. Если хотя бы один ти в соло, цвет линии не меняется.
 
 Greeting text
 == Текст приветствия
@@ -7904,6 +7922,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == Порог лимитера (в процентах)
 
+Line
+== Линия
+
 Line width
 == Ширина линии
 
@@ -7915,6 +7936,9 @@ Linear gradient
 
 Lines %d - %d (%s)
 == Строки %d - %d (%s)
+
+Link style
+== Вид линии
 
 Links open in the system browser.
 == Ссылки открываются в системном браузере.
@@ -13124,6 +13148,9 @@ Shotgun laser outline color
 Show %s group
 == Показать группу %s
 
+Show a distance link between main tee and dummy
+== Соединять основного ти и дамми линией расстояния
+
 Show a ghost of your best time after crossing the start line
 == Показывать призрак лучшего времени после пересечения стартовой линии
 
@@ -13330,6 +13357,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == Показывать флаги CTF дамми на игроках (0=Выкл, 1=Красный флаг, 2=Синий флаг)
+
+Show dummy distance link
+== Показывать линию до дамми
 
 Show dummy mini view only when other tee leaves current view
 == Показывать мини-вид дамми, только когда другой ти покинул текущий обзор
@@ -14017,6 +14047,9 @@ Show the chat scrollbar on the right
 
 Show the cursor while free spectating
 == Показывать курсор при свободном наблюдении
+
+Show the distance and direction from your main tee to your dummy
+== Показывать расстояние и направление от основного ти до дамми
 
 Show the Gores team drown board
 == Показывать доску утонувших команды Gores

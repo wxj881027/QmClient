@@ -3068,6 +3068,9 @@ Connection quality
 Connection severely abnormal
 == Połączenie poważnie niestabilne
 
+Connects your main tee and dummy with a line that fades as they move apart.
+== Łączy głównego tee z dummy linią, która blednie, gdy się od siebie oddalają.
+
 Connlimit: number of connections allowed per IP in a time period
 == Connlimit: liczba dozwolonych połączeń na IP w okresie czasu
 
@@ -4361,6 +4364,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == Upuść na prawym płótnie, aby zastąpić jedną część.
 
+Droplet
+== Kropla
+
 Drown deaths
 == Zgony przez utonięcie
 
@@ -4402,6 +4408,12 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == Kolor dekoracji Dummy
+
+Dummy distance link
+== Linia do dummy
+
+Dummy distance link style: 0 = line, 1 = droplet
+== Styl linii do dummy: 0 = linia, 1 = kropla
 
 Dummy eyes color
 == Kolor oczu Dummy
@@ -5086,6 +5098,9 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 
 Enable the indicators you need; each one draws on your own screen only.
 == Włącz potrzebne wskaźniki; każdy rysuje tylko na twoim ekranie.
+
+Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
+== Włącz połączenie i wybierz opcję Linia lub Kropla. Okrągła część kropli pokazuje zasięg młotka.
 
 Enable the message types you want and choose their colors.
 == Włącz wybrane typy wiadomości i wybierz ich kolory.
@@ -6403,6 +6418,9 @@ Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the d
 
 Greek
 == Grecki
+
+Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
+== Zielony oznacza, że odległość nie przekracza długości haka, nawet przez ścianę. Jeśli którykolwiek tee jest w trybie solo, linia zachowuje zwykły kolor.
 
 Greeting text
 == Tekst powitania
@@ -7904,6 +7922,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == Próg ogranicznika (procent)
 
+Line
+== Linia
+
 Line width
 == Szerokość linii
 
@@ -7915,6 +7936,9 @@ Linear gradient
 
 Lines %d - %d (%s)
 == Linie %d - %d (%s)
+
+Link style
+== Styl linii
 
 Links open in the system browser.
 == Linki otwierają się w przeglądarce systemowej.
@@ -13124,6 +13148,9 @@ Shotgun laser outline color
 Show %s group
 == Pokaż grupę %s
 
+Show a distance link between main tee and dummy
+== Połącz głównego tee z dummy linią wskazującą odległość
+
 Show a ghost of your best time after crossing the start line
 == Pokazuje ducha twojego najlepszego czasu po przekroczeniu linii startu
 
@@ -13330,6 +13357,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == Pokaż flagi CTF kukły na graczach (0=Wyłączone, 1=Czerwona flaga, 2=Niebieska flaga)
+
+Show dummy distance link
+== Pokaż linię do dummy
 
 Show dummy mini view only when other tee leaves current view
 == Pokaż miniaturkę kukły tylko gdy druga tee opuści bieżący widok
@@ -14017,6 +14047,9 @@ Show the chat scrollbar on the right
 
 Show the cursor while free spectating
 == Pokaż kursor podczas wolnej obserwacji
+
+Show the distance and direction from your main tee to your dummy
+== Pokaż odległość i kierunek od głównego tee do dummy
 
 Show the Gores team drown board
 == Pokaż tablicę utonięć drużyny Gores

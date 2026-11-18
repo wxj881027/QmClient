@@ -3176,6 +3176,9 @@ Connection severely abnormal
 connections removed
 == 条连线被移除
 
+Connects your main tee and dummy with a line that fades as they move apart.
+== 用一条线连接本体与分身，两者距离越远，连线越淡。
+
 Connlimit: number of connections allowed per IP in a time period
 == Connlimit：一个 IP 在一段时间内允许的连接数
 
@@ -4514,6 +4517,9 @@ Drop on an input port to link
 Drop on right canvas to replace one part.
 == 拖到右侧画布可替换一个部件。
 
+Droplet
+== 水滴
+
 Drown deaths
 == 落水榜
 
@@ -4555,6 +4561,12 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == 分身装饰颜色
+
+Dummy distance link
+== 本体与分身连线
+
+Dummy distance link style: 0 = line, 1 = droplet
+== 分身连线样式：0 = 直线，1 = 水滴
 
 Dummy eyes color
 == 分身眼睛颜色
@@ -5257,6 +5269,9 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 
 Enable the indicators you need; each one draws on your own screen only.
 == 启用你需要的指示；每一项只绘制在你自己的屏幕上。
+
+Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
+== 开启连线后可选「直线」或「水滴」。水滴的圆形部分表示锤击范围。
 
 Enable the message types you want and choose their colors.
 == 启用需要的消息类型，并为其选择颜色。
@@ -6634,6 +6649,9 @@ Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the d
 
 Greek
 == 希腊文
+
+Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
+== 绿色表示距离在钩索长度以内，隔墙也会变绿。任一角色处于 Solo 状态时，连线保持常态色。
 
 Greeting text
 == 打招呼文本
@@ -8195,6 +8213,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == 限幅器阈值（百分比）
 
+Line
+== 直线
+
 Line length
 == 命令行长度
 
@@ -8221,6 +8242,9 @@ Link failed
 
 Link source is gone
 == 连线起点已消失
+
+Link style
+== 连线样式
 
 Linked
 == 已连线
@@ -13664,6 +13688,9 @@ Shotgun laser outline color
 Show %s group
 == 显示 %s 分组
 
+Show a distance link between main tee and dummy
+== 在本体与分身之间显示距离连线
+
 Show a ghost of your best time after crossing the start line
 == 越过起跑线后显示最佳成绩的残影
 
@@ -13876,6 +13903,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == 在玩家身上显示分身 CTF 旗帜（0=关闭，1=红旗，2=蓝旗）
+
+Show dummy distance link
+== 显示分身连线
 
 Show dummy mini view only when other tee leaves current view
 == 仅在另一只 tee 离开当前视角时显示分身迷你视图
@@ -14572,6 +14602,9 @@ Show the chat scrollbar on the right
 
 Show the cursor while free spectating
 == 自由观战时显示光标
+
+Show the distance and direction from your main tee to your dummy
+== 显示分身相对本体的距离和方向
 
 Show the Gores team drown board
 == 显示 Gores 队伍落水榜

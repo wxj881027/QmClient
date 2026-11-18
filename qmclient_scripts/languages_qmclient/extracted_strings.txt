@@ -1057,6 +1057,7 @@ Connection Quality
 Connection quality
 Connection severely abnormal
 connections removed
+Connects your main tee and dummy with a line that fades as they move apart.
 Connlimit: number of connections allowed per IP in a time period
 Connlimit: time window for IP connection count
 Consecutive wheel ticks carry their velocity into one continuous glide
@@ -1503,6 +1504,7 @@ Drift intensity
 Drift smoothness
 Drop on an input port to link
 Drop on right canvas to replace one part.
+Droplet
 Drown deaths
 Dual Kawase
 Dummies are not allowed on this server
@@ -1517,6 +1519,8 @@ Dummy copy
 Dummy copy: %s
 Dummy country (ISO 3166-1 numeric)
 Dummy decoration color
+Dummy distance link
+Dummy distance link style: 0 = line, 1 = droplet
 Dummy eyes color
 Dummy eyes when joining server (0=normal, 1=pain, 2=happy, 3=surprised, 4=angry, 5=blink)
 Dummy feet color
@@ -1751,6 +1755,7 @@ Enable the guide line, then set its length, style and colors.
 Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 Enable the indicators you need; each one draws on your own screen only.
+Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
 Enable the message types you want and choose their colors.
 Enable the outlines, choose color and thickness, then test on a map with many different tiles.
 Enable the pet, pick its skin and size, then move around to watch how it follows.
@@ -2210,6 +2215,7 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the debug graph toggle is on.
 Greek
+Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
 Greeting text
 Grenade
 Grenade explosion
@@ -2730,6 +2736,7 @@ Light
 Limit information in spectator mode
 Limit the title to the exact nickname below.
 Limiter threshold (percent)
+Line
 Line length
 Line length: bytes of the bind line that will be written.
 Line width
@@ -2739,6 +2746,7 @@ Lines %d - %d (%s)
 Link deleted
 Link failed
 Link source is gone
+Link style
 Linked
 Links and gestures
 Links open in the system browser.
@@ -4553,6 +4561,7 @@ Shotgun laser inner color
 Shotgun Laser Outline Color
 Shotgun laser outline color
 Show %s group
+Show a distance link between main tee and dummy
 Show a ghost of your best time after crossing the start line
 Show a MomentCap .poses file in game (no export)
 Show a per-character wave on text titles locally
@@ -4624,6 +4633,7 @@ Show dummy angle in movement info HUD
 Show dummy control status
 Show dummy copy status
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
+Show dummy distance link
 Show dummy mini view only when other tee leaves current view
 Show dummy mini view window
 Show dummy position in movement info HUD
@@ -4856,6 +4866,7 @@ Show teleporter tile outlines
 Show text entities
 Show the chat scrollbar on the right
 Show the cursor while free spectating
+Show the distance and direction from your main tee to your dummy
 Show the Gores team drown board
 Show the number of frozen tees
 Show the number of tees still alive

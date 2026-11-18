@@ -6930,3 +6930,51 @@ brazilian_portuguese = "A ondulação das letras só afeta os títulos em texto 
 portuguese = "A ondulação das letras só afeta os títulos em texto no teu ecrã."
 turkish = "Harflerin dalgalanması yalnızca kendi ekranındaki metin unvanlarını etkiler."
 polish = "Falowanie liter dotyczy tylko tytułów tekstowych na twoim ekranie."
+
+[[message]]
+key = "Connects your main tee and dummy with a line that fades as they move apart."
+[message.translations]
+simplified_chinese = "用一条线连接本体与分身，两者距离越远，连线越淡。"
+traditional_chinese = "用一條線連接本體與分身，兩者距離越遠，連線越淡。"
+japanese = "メインのティーとダミーを線で結びます。離れるほど線が薄くなります。"
+korean = "본체와 더미를 선으로 잇습니다. 둘 사이가 멀어질수록 선이 옅어집니다."
+russian = "Соединяет основного ти и дамми линией. Чем дальше они друг от друга, тем бледнее линия."
+german = "Verbindet Haupt-Tee und Dummy mit einer Linie. Je weiter sie voneinander entfernt sind, desto blasser wird die Linie."
+spanish = "Une el tee principal y el dummy con una línea que se atenúa al separarse."
+french = "Relie le tee principal au dummy par un trait qui s’estompe quand ils s’éloignent."
+brazilian_portuguese = "Liga o tee principal ao dummy com uma linha que fica mais fraca à medida que se afastam."
+portuguese = "Liga o tee principal ao dummy com uma linha que se esbate à medida que se afastam."
+turkish = "Ana tee ile kuklayı bir çizgiyle birleştirir. Birbirlerinden uzaklaştıkça çizgi soluklaşır."
+polish = "Łączy głównego tee z dummy linią, która blednie, gdy się od siebie oddalają."
+
+[[message]]
+key = "Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach."
+[message.translations]
+simplified_chinese = "开启连线后可选「直线」或「水滴」。水滴的圆形部分表示锤击范围。"
+traditional_chinese = "開啟連線後可選「直線」或「水滴」。水滴的圓形部分表示錘擊範圍。"
+japanese = "距離線を有効にして「直線」か「しずく」を選びます。しずくの丸い部分はハンマーの届く範囲です。"
+korean = "연결선을 켜고 직선 또는 물방울을 선택하세요. 물방울의 둥근 부분은 망치가 닿는 범위입니다."
+russian = "Включите линию и выберите «Линия» или «Капля». Круглая часть капли показывает радиус удара молотом."
+german = "Aktiviere die Verbindungslinie und wähle „Linie“ oder „Tropfen“. Der runde Teil des Tropfens zeigt die Hammerreichweite."
+spanish = "Activa la conexión y elige Línea o Gota. La parte redonda de la gota indica el alcance del martillo."
+french = "Activez le lien et choisissez Trait ou Goutte. La partie ronde de la goutte indique la portée du marteau."
+brazilian_portuguese = "Ative a ligação e escolha Linha ou Gota. A parte redonda da gota mostra o alcance do martelo."
+portuguese = "Ativa a ligação e escolhe Linha ou Gota. A parte redonda da gota mostra o alcance do martelo."
+turkish = "Bağlantıyı açıp Çizgi veya Damla biçimini seç. Damlanın yuvarlak kısmı çekicin menzilini gösterir."
+polish = "Włącz połączenie i wybierz opcję Linia lub Kropla. Okrągła część kropli pokazuje zasięg młotka."
+
+[[message]]
+key = "Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color."
+[message.translations]
+simplified_chinese = "绿色表示距离在钩索长度以内，隔墙也会变绿。任一角色处于 Solo 状态时，连线保持常态色。"
+traditional_chinese = "綠色表示距離在鉤索長度以內，隔牆也會變綠。任一角色處於 Solo 狀態時，連線保持原色。"
+japanese = "緑色はフックの長さ以内という意味で、壁越しでも緑になります。どちらかがソロなら線は通常の色のままです。"
+korean = "벽이 있어도 거리가 훅 길이 이내면 녹색이 됩니다. 둘 중 하나라도 솔로 상태면 연결선은 기본 색을 유지합니다."
+russian = "Зелёный цвет означает, что расстояние не превышает длину крюка, даже если между ти стена. Если хотя бы один ти в соло, цвет линии не меняется."
+german = "Grün bedeutet, dass die Entfernung innerhalb der Hakenlänge liegt, auch durch Wände. Ist einer der Tees im Solo-Modus, behält die Linie ihre normale Farbe."
+spanish = "El verde indica que la distancia no supera la longitud del gancho, incluso con una pared de por medio. Si alguno de los tees está en modo solo, la línea conserva su color normal."
+french = "Le vert indique que la distance ne dépasse pas la longueur du grappin, même à travers un mur. Si l’un des tees est en solo, le lien garde sa couleur normale."
+brazilian_portuguese = "Verde indica que a distância não passa do comprimento do gancho, mesmo através de paredes. Se um dos tees estiver em modo solo, a linha mantém a cor normal."
+portuguese = "Verde indica que a distância não ultrapassa o comprimento do gancho, mesmo através de paredes. Se um dos tees estiver em modo solo, a linha mantém a cor normal."
+turkish = "Yeşil, arada duvar olsa bile uzaklığın kanca uzunluğunu aşmadığını gösterir. Tee’lerden biri solo durumundaysa çizgi normal renginde kalır."
+polish = "Zielony oznacza, że odległość nie przekracza długości haka, nawet przez ścianę. Jeśli którykolwiek tee jest w trybie solo, linia zachowuje zwykły kolor."

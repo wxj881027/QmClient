@@ -3068,6 +3068,9 @@ Connection quality
 Connection severely abnormal
 == Verbindung stark auffällig
 
+Connects your main tee and dummy with a line that fades as they move apart.
+== Verbindet Haupt-Tee und Dummy mit einer Linie. Je weiter sie voneinander entfernt sind, desto blasser wird die Linie.
+
 Connlimit: number of connections allowed per IP in a time period
 == Connlimit: Anzahl der Verbindungen pro IP in einem Zeitraum
 
@@ -4361,6 +4364,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == Auf die rechte Leinwand ziehen, um ein Teil zu ersetzen.
 
+Droplet
+== Tropfen
+
 Drown deaths
 == Ertrunkene Todesfälle
 
@@ -4402,6 +4408,12 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == Dummy Dekorationsfarbe
+
+Dummy distance link
+== Verbindungslinie zum Dummy
+
+Dummy distance link style: 0 = line, 1 = droplet
+== Linienstil zum Dummy: 0 = Linie, 1 = Tropfen
 
 Dummy eyes color
 == Dummy Augenfarbe
@@ -5086,6 +5098,9 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 
 Enable the indicators you need; each one draws on your own screen only.
 == Aktiviere nur die Anzeigen, die du brauchst; jede erscheint nur auf deinem Bildschirm.
+
+Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
+== Aktiviere die Verbindungslinie und wähle „Linie“ oder „Tropfen“. Der runde Teil des Tropfens zeigt die Hammerreichweite.
 
 Enable the message types you want and choose their colors.
 == Aktiviere die gewünschten Meldungstypen und wähle ihre Farben.
@@ -6403,6 +6418,9 @@ Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the d
 
 Greek
 == Griechisch
+
+Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
+== Grün bedeutet, dass die Entfernung innerhalb der Hakenlänge liegt, auch durch Wände. Ist einer der Tees im Solo-Modus, behält die Linie ihre normale Farbe.
 
 Greeting text
 == Begrüßungstext
@@ -7904,6 +7922,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == Schwellwert des Limiters (Prozent)
 
+Line
+== Linie
+
 Line width
 == Linienbreite
 
@@ -7915,6 +7936,9 @@ Linear gradient
 
 Lines %d - %d (%s)
 == Zeilen %d - %d (%s)
+
+Link style
+== Linienstil
 
 Links open in the system browser.
 == Links öffnen sich im Systembrowser.
@@ -13124,6 +13148,9 @@ Shotgun laser outline color
 Show %s group
 == Zeige %s-Gruppe
 
+Show a distance link between main tee and dummy
+== Haupt-Tee und Dummy mit einer Entfernungslinie verbinden
+
 Show a ghost of your best time after crossing the start line
 == Nach der Startlinie einen Geist deiner Bestzeit anzeigen
 
@@ -13330,6 +13357,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == Dummy-CTF-Flaggen auf Spielern anzeigen (0=Aus, 1=Rote Flagge, 2=Blaue Flagge)
+
+Show dummy distance link
+== Verbindungslinie zum Dummy anzeigen
 
 Show dummy mini view only when other tee leaves current view
 == Dummy-Miniansicht nur anzeigen, wenn das andere Tee den aktuellen Blickwinkel verlässt
@@ -14017,6 +14047,9 @@ Show the chat scrollbar on the right
 
 Show the cursor while free spectating
 == Cursor beim freien Zuschauen anzeigen
+
+Show the distance and direction from your main tee to your dummy
+== Entfernung und Richtung vom Haupt-Tee zum Dummy anzeigen
 
 Show the Gores team drown board
 == Gores-Team-Ertrunkenenanzeige anzeigen

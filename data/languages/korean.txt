@@ -3068,6 +3068,9 @@ Connection quality
 Connection severely abnormal
 == 연결 심각한 비정상
 
+Connects your main tee and dummy with a line that fades as they move apart.
+== 본체와 더미를 선으로 잇습니다. 둘 사이가 멀어질수록 선이 옅어집니다.
+
 Connlimit: number of connections allowed per IP in a time period
 == Connlimit: 일정 시간 동안 IP당 허용되는 연결 수
 
@@ -4361,6 +4364,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == 오른쪽 캔버스에 드롭하여 한 부품을 교체합니다.
 
+Droplet
+== 물방울
+
 Drown deaths
 == 익사 사망
 
@@ -4402,6 +4408,12 @@ Dummy country (ISO 3166-1 numeric)
 
 Dummy decoration color
 == 더미 장식 색상
+
+Dummy distance link
+== 더미 거리 표시선
+
+Dummy distance link style: 0 = line, 1 = droplet
+== 더미 연결선 모양: 0 = 직선, 1 = 물방울
 
 Dummy eyes color
 == 더미 눈 색상
@@ -5086,6 +5098,9 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 
 Enable the indicators you need; each one draws on your own screen only.
 == 필요한 표시만 켜세요. 각 표시는 본인 화면에만 그려집니다.
+
+Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
+== 연결선을 켜고 직선 또는 물방울을 선택하세요. 물방울의 둥근 부분은 망치가 닿는 범위입니다.
 
 Enable the message types you want and choose their colors.
 == 원하는 메시지 종류를 켜고 색상을 선택하세요.
@@ -6403,6 +6418,9 @@ Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the d
 
 Greek
 == 그리스 문자
+
+Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
+== 벽이 있어도 거리가 훅 길이 이내면 녹색이 됩니다. 둘 중 하나라도 솔로 상태면 연결선은 기본 색을 유지합니다.
 
 Greeting text
 == 인사말 텍스트
@@ -7904,6 +7922,9 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 == 리미터 임계값 (백분율)
 
+Line
+== 직선
+
 Line width
 == 선 두께
 
@@ -7915,6 +7936,9 @@ Linear gradient
 
 Lines %d - %d (%s)
 == %d행 - %d행 (%s)
+
+Link style
+== 연결선 모양
 
 Links open in the system browser.
 == 링크는 시스템 브라우저에서 열립니다.
@@ -13124,6 +13148,9 @@ Shotgun laser outline color
 Show %s group
 == %s 그룹 표시
 
+Show a distance link between main tee and dummy
+== 본체와 더미 사이에 거리 표시선 그리기
+
 Show a ghost of your best time after crossing the start line
 == 시작선을 통과한 후 최고 기록의 고스트 표시
 
@@ -13330,6 +13357,9 @@ Show dummy copy status
 
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 == 플레이어에 더미 CTF 깃발 표시 (0=끄기, 1=빨간 깃발, 2=파란 깃발)
+
+Show dummy distance link
+== 더미 연결선 표시
 
 Show dummy mini view only when other tee leaves current view
 == 다른 티가 현재 시야를 벗어날 때만 더미 미니 뷰 표시
@@ -14017,6 +14047,9 @@ Show the chat scrollbar on the right
 
 Show the cursor while free spectating
 == 자유 관전 중 커서 표시
+
+Show the distance and direction from your main tee to your dummy
+== 본체에서 더미까지의 거리와 방향 표시
 
 Show the Gores team drown board
 == Gores 팀 익사 보드 표시
