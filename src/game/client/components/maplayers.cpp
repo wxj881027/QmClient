@@ -46,6 +46,16 @@ void CMapLayers::OnMapLoad()
 	m_LoadLayerSlices = 0;
 	m_MapLoaded = false;
 	m_MapLoadInProgress = false;
+
+	IMap *pMap = m_pLayers ? m_pLayers->Map() : nullptr;
+	if(!pMap)
+	{
+		// 将当前地图设为实体背景时，地图文件可能先于游戏图层就绪。
+		m_MapRenderer.Clear();
+		m_EnvEvaluator = {};
+		return;
+	}
+
 	char aCaption[64 + MAX_MAP_LENGTH];
 	str_format(aCaption, sizeof(aCaption), "%s: %s", Localize("Loading map"), Client()->GetCurrentMap());
 	const bool LiveConnection = m_OnlineOnly && Client()->State() == IClient::STATE_LOADING;
@@ -62,7 +72,7 @@ void CMapLayers::OnMapLoad()
 	// can't do that in CMapLayers::OnInit, because some of this interfaces are not available yet
 	m_MapRenderer.OnInit(Graphics(), TextRender(), RenderMap());
 
-	m_EnvEvaluator = CEnvelopeState(m_pLayers->Map(), m_OnlineOnly);
+	m_EnvEvaluator = CEnvelopeState(pMap, m_OnlineOnly);
 	m_EnvEvaluator.OnInterfacesInit(GameClient());
 	std::optional<FCallbackMapRendererInit> ProgressCallback;
 	if(RenderProgress)
