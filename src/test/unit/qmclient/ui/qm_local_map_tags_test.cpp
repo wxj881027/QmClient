@@ -1,5 +1,7 @@
 #include <game/client/components/qmclient/local_map_tags.h>
 
+#include <engine/storage.h>
+
 #include <gtest/gtest.h>
 #include <test/test.h>
 
@@ -55,4 +57,22 @@ TEST(QmLocalMapTags, MoveToLastIndexKeepsEveryTag)
 	EXPECT_EQ(Tags.Get("", "map"), (std::vector<std::string>{"two", "one"}));
 	EXPECT_TRUE(Tags.Has("", "map", "one"));
 	EXPECT_TRUE(Tags.Has("", "map", "two"));
+}
+
+TEST(QmLocalMapTags, LoadDropsTagsTheUploadEndpointWouldReject)
+{
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_TRUE(pStorage);
+	IOHANDLE File = pStorage->OpenFile("qm_local_map_tags.txt", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	ASSERT_TRUE(File);
+	const char aContent[] = "community\tmap\tvalid\n"
+				"community\tmap\tthis-tag-is-too-long\n"
+				"community\tmap\tcontrol\x01tag\n";
+	ASSERT_EQ(io_write(File, aContent, sizeof(aContent) - 1), sizeof(aContent) - 1);
+	ASSERT_EQ(io_close(File), 0);
+
+	QmMapTags::CLocalTags Tags;
+	Tags.Load(pStorage.get());
+	EXPECT_EQ(TagsOf(Tags, "map"), (std::vector<std::string>{"valid"}));
 }

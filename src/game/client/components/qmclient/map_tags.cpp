@@ -125,6 +125,7 @@ void QmMapTags::CClient::Clear()
 	m_Community.clear();
 	m_Map.clear();
 	m_Player.clear();
+	m_WriteTag.clear();
 	m_Snapshot = {};
 	m_Ready = false;
 	m_ReadFailed = false;
@@ -191,6 +192,7 @@ void QmMapTags::CClient::Poll()
 				m_pStatus = Localizable("Cannot submit this tag. Please retry later.");
 		}
 		m_pWrite.reset();
+		m_WriteTag.clear();
 	}
 }
 
@@ -224,10 +226,21 @@ bool QmMapTags::CClient::Submit(IHttp *pHttp, const char *pTag)
 	Writer.EndObject();
 	m_pWrite = m_CreateWrite(ENDPOINT, Writer.GetOutputString().c_str());
 	Prepare(*m_pWrite);
+	m_WriteTag = pTag;
 	// 先前的读请求可能返回赞同前快照，写入开始后将其丢弃。
 	if(m_pRead)
 		m_pRead->Abort();
 	m_pRead.reset();
 	pHttp->Run(m_pWrite);
+	return true;
+}
+
+bool QmMapTags::CClient::CancelSubmit(const char *pTag)
+{
+	if(!m_pWrite || pTag == nullptr || m_WriteTag != pTag)
+		return false;
+	m_pWrite->Abort();
+	m_pWrite.reset();
+	m_WriteTag.clear();
 	return true;
 }

@@ -75,9 +75,12 @@ namespace QmMapTags
 			const std::string Community = Line.substr(0, FirstTab);
 			const std::string Map = Line.substr(FirstTab + 1, SecondTab - FirstTab - 1);
 			const std::string Tag = Line.substr(SecondTab + 1);
-			if(Tag.empty() || Map.empty())
+			if(Tag.empty() || Map.empty() || !ValidTag(Tag.c_str()))
 				continue;
 			const std::string Key = MakeKey(Community.c_str(), Map.c_str());
+			const int Existing = (int)std::count_if(m_vEntries.begin(), m_vEntries.end(), [&](const auto &Entry) { return Entry.first == Key; });
+			if(Existing >= MAX_LOCAL_TAGS_PER_MAP)
+				continue;
 			if(std::find_if(m_vEntries.begin(), m_vEntries.end(), [&](const auto &Entry) { return Entry.first == Key && Entry.second == Tag; }) != m_vEntries.end())
 				continue;
 			m_vEntries.emplace_back(Key, Tag);

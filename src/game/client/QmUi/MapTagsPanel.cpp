@@ -68,6 +68,8 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 		// 下一帧仍可重试，避免静默跳过。
 		if(!m_LocalTags.Has(pCommunity, pMapName, Front.c_str()))
 			m_vUploadQueue.erase(m_vUploadQueue.begin());
+		else if(!QmMapTags::ValidTag(Front.c_str()))
+			m_vUploadQueue.erase(m_vUploadQueue.begin());
 		else if(Tags.Submit(pGameClient->Http(), Front.c_str()))
 			m_vUploadQueue.erase(m_vUploadQueue.begin());
 	}
@@ -449,6 +451,7 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 	if(ClickedRemove >= 0)
 	{
 		const std::string Removed = MyTags[ClickedRemove];
+		Tags.CancelSubmit(Removed.c_str());
 		m_LocalTags.Remove(pGameClient->Storage(), pCommunity, pMapName, Removed.c_str());
 		// 删除只改本地文件；队列里还没发出的同名标签也必须一起撤销。
 		m_vUploadQueue.erase(std::remove(m_vUploadQueue.begin(), m_vUploadQueue.end(), Removed), m_vUploadQueue.end());
