@@ -1,7 +1,6 @@
 #include "menus_tclient_internal.h"
 
 #include <base/math.h>
-#include <base/str.h>
 
 #include <engine/shared/config.h>
 
@@ -38,9 +37,11 @@ void CMenus::RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, co
 	const CSkin *pSkin;
 	try
 	{
-		pSkin = GameClient()->m_Skins.Find(pSkinName);
-		if(str_comp(pSkin->GetName(), pSkinName) != 0)
-			pSkin = GameClient()->m_Skins.Find(pBackupSkin);
+		// 皮肤系统会解析前缀和大小写。主皮肤尚不可用时才查询备用皮肤。
+		CSkins &Skins = GameClient()->m_Skins;
+		pSkin = Skins.FindOrNullptr(pSkinName);
+		if(pSkin == nullptr)
+			pSkin = Skins.Find(pBackupSkin);
 	}
 	catch(const std::bad_alloc &)
 	{
