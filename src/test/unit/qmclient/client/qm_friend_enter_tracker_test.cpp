@@ -124,12 +124,12 @@ TEST(QmFriendOnlineScan, InitialAndNewlyCompletedServersAreSilentUntilTheirNextS
 	const qm_friend_notify::CFriend Existing{"Alice\tClan", "Alice", "First", "server-1"};
 	const qm_friend_notify::CFriend Delayed{"Bob\tClan", "Bob", "Second", "server-2"};
 	const qm_friend_notify::CFriend NewFriend{"Carol\tClan", "Carol", "Second", "server-2"};
-	EXPECT_TRUE(Tracker.Update({Existing}, {"server-1"}).empty());
-	EXPECT_TRUE(Tracker.Update({Existing, Delayed}, {"server-1", "server-2"}).empty());
-	const auto vNotifications = Tracker.Update({Existing, Delayed, NewFriend}, {"server-1", "server-2"});
+	EXPECT_TRUE(QmFriendTests::UpdateOnline(Tracker, {Existing}, {"server-1"}).empty());
+	EXPECT_TRUE(QmFriendTests::UpdateOnline(Tracker, {Existing, Delayed}, {"server-1", "server-2"}).empty());
+	const auto vNotifications = QmFriendTests::UpdateOnline(Tracker, {Existing, Delayed, NewFriend}, {"server-1", "server-2"});
 	ASSERT_EQ(vNotifications.size(), 1u);
 	EXPECT_EQ(vNotifications[0].m_Name, "Carol");
-	EXPECT_TRUE(Tracker.Update({Existing, Delayed, NewFriend}, {"server-1", "server-2"}).empty());
+	EXPECT_TRUE(QmFriendTests::UpdateOnline(Tracker, {Existing, Delayed, NewFriend}, {"server-1", "server-2"}).empty());
 	Tracker.Reset();
-	EXPECT_TRUE(Tracker.Update({Existing, Delayed, NewFriend}, {"server-1", "server-2"}).empty());
+	EXPECT_TRUE(QmFriendTests::UpdateOnline(Tracker, {Existing, Delayed, NewFriend}, {"server-1", "server-2"}).empty());
 }
