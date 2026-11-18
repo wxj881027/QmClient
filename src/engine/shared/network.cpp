@@ -6,12 +6,14 @@
 #include "huffman.h"
 
 #include <base/bytes.h>
+#include <base/log.h>
 #include <base/system.h>
 #include <base/types.h>
 
 #include <engine/shared/protocolglue.h>
 
 #include <algorithm>
+#include <new>
 
 const unsigned char SECURITY_TOKEN_MAGIC[4] = {'T', 'K', 'E', 'N'};
 
@@ -591,8 +593,6 @@ void CNetTokenCache::SendPacketConnless(CNetChunk *pChunk)
 	}
 	else
 	{
-		FetchToken(&pChunk->m_Address);
-
 		CConnlessPacketInfo ConnlessPacket;
 		ConnlessPacket.m_Addr = pChunk->m_Address;
 		ConnlessPacket.m_Addr.type = pChunk->m_Address.type & ~(NETTYPE_IPV4 | NETTYPE_IPV6);
@@ -610,8 +610,21 @@ void CNetTokenCache::SendPacketConnless(CNetChunk *pChunk)
 			}
 		};
 
-		SavePacketFor(NETTYPE_IPV4);
-		SavePacketFor(NETTYPE_IPV6);
+		const size_t PreviousSize = m_ConnlessPackets.size();
+		try
+		{
+			SavePacketFor(NETTYPE_IPV4);
+			SavePacketFor(NETTYPE_IPV6);
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 双栈请求可能只入队一份，回滚本次请求的全部副本。
+			m_ConnlessPackets.resize(PreviousSize);
+			log_warn("network", "could not queue connectionless packet: out of memory");
+			return;
+		}
+
+		FetchToken(&pChunk->m_Address);
 	}
 }
 
@@ -648,7 +661,14 @@ void CNetTokenCache::AddToken(const NETADDR *pAddr, TOKEN Token)
 	Info.m_Token = Token,
 	Info.m_Expiry = time_get() + (time_freq() * NET_TOKENCACHE_ADDRESSEXPIRY);
 
-	m_TokenCache.push_back(Info);
+	try
+	{
+		m_TokenCache.push_back(Info);
+	}
+	catch(const std::bad_alloc &)
+	{
+		log_warn("network", "could not cache server token: out of memory");
+	}
 }
 
 TOKEN CNetTokenCache::GetToken(const NETADDR *pAddr)
