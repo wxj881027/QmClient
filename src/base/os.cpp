@@ -16,6 +16,14 @@
 #include <string>
 
 #if defined(CONF_FAMILY_UNIX)
+#if !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+#include "thread.h"
+
+#include <cerrno>
+#include <future>
+#include <sys/wait.h>
+#endif
+
 #include <sys/utsname.h> // uname, utsname
 #include <unistd.h> // execlp, fork
 
@@ -87,6 +95,50 @@ void cmdline_free(int argc, const char **argv)
 }
 
 #if !defined(CONF_PLATFORM_ANDROID)
+#if defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+static int os_open_link_unix(const char *opener, const char *link)
+try
+{
+	// 在 fork 前准备好回收线程，避免启动后无法接管子进程。
+	std::promise<pid_t> launch;
+	auto result = std::make_unique<std::future<pid_t>>(launch.get_future());
+	void *reaper = thread_try_init([](void *user) {
+		const std::unique_ptr<std::future<pid_t>> child_result(static_cast<std::future<pid_t> *>(user));
+		const pid_t child = child_result->get();
+		if(child <= 0)
+			return;
+
+		while(true)
+		{
+			int status;
+			const pid_t waited = waitpid(child, &status, 0);
+			if(waited == child && (WIFEXITED(status) || WIFSIGNALED(status)))
+				return;
+			if(waited < 0 && errno != EINTR)
+				return;
+		}
+	}, result.get(), "open link reaper");
+	if(!reaper)
+		return 0;
+	result.release();
+	thread_detach(reaper);
+
+	const pid_t child = fork();
+	if(child == 0)
+	{
+		execlp(opener, opener, link, nullptr);
+		// exec 失败后不能返回继承了其他线程状态的客户端调用栈。
+		_exit(1);
+	}
+	launch.set_value(child);
+	return child > 0;
+}
+catch(const std::bad_alloc &)
+{
+	return 0;
+}
+#endif
+
 int os_open_link(const char *link)
 {
 #if defined(CONF_FAMILY_WINDOWS)
@@ -124,16 +176,7 @@ int os_open_link(const char *link)
 	if(fegetenv_result == 0)
 		fesetenv(&floating_point_environment);
 	return success;
-#elif defined(CONF_PLATFORM_LINUX)
-	const int pid = fork();
-	if(pid == 0)
-	{
-		execlp("xdg-open", "xdg-open", link, nullptr);
-		// exec 失败后不能返回继承了其他线程状态的客户端调用栈。
-		_exit(1);
-	}
-	return pid > 0;
-#elif defined(CONF_FAMILY_UNIX)
+#elif defined(CONF_PLATFORM_EMSCRIPTEN)
 	const int pid = fork();
 	if(pid == 0)
 	{
@@ -141,6 +184,10 @@ int os_open_link(const char *link)
 		_exit(1);
 	}
 	return pid > 0;
+#elif defined(CONF_PLATFORM_LINUX)
+	return os_open_link_unix("xdg-open", link);
+#elif defined(CONF_FAMILY_UNIX)
+	return os_open_link_unix("open", link);
 #endif
 }
 

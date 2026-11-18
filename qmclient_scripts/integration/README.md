@@ -22,7 +22,7 @@ Unix 打开链接的失败回归通过已构建的 `testrunner` 调用生产 `op
 python qmclient_scripts/integration/open_link_failure_smoke.py <build-dir>/testrunner
 ```
 
-四个隔离场景检查启动器缺失、不可执行、恢复后原样传参，以及 Unicode 目录的 open_file 转发。PATH 只包含工作区临时启动器，不打开真实浏览器或访问网络。通过子进程退出状态检查 exec 失败后的退出路径；日志保留在 `tmp/tests/open-link-*`。测试代码已补充，是否执行须以当前任务的实际验证记录为准。
+四个隔离场景检查启动器缺失、不可执行、恢复后原样传参，以及 Unicode 目录的 open_file 转发。PATH 只包含工作区临时启动器，不打开真实浏览器或访问网络。探针观察打开器退出后是否已被回收，并用哨兵检测 exec 失败后是否回到调用栈。恢复场景让假打开器等到调用返回后才退出。日志保留在 `tmp/tests/open-link-*`。测试代码已补充，是否执行须以当前任务的实际验证记录为准。
 
 这里放 QmClient 专属的真实进程冒烟和端到端测试。根目录 `scripts/` 是 DDNet 上游同步区，不在其中增加 QmClient 场景。
 

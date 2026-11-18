@@ -258,6 +258,9 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 		co_await std::suspend_always{};
 
 	const int TextureLoadFlag = Graphics()->TextureLoadFlags();
+	const auto SubmitDecode = [this](const std::shared_ptr<CMapImageDecodeJob> &pJob) {
+		return Engine()->TryAddJob(pJob);
+	};
 
 	// load new textures
 	for(int i = 0; i < m_Count; i++)
@@ -301,7 +304,8 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 		double DecodeMs = 0.0;
 		double SubmitMs = 0.0;
 		bool CombinedReadDecode = false;
-		std::shared_ptr<CMapImageDecodeJob> pDecode;
+		SMapImageDecodeStart Decode;
+		using EDecodeStart = SMapImageDecodeStart::EResult;
 		if(ImageItem->m_External)
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
@@ -318,7 +322,11 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 			}
 			str_format(aPath, sizeof(aPath), "mapres/%s%s.png", pName, Translated ? "_0.7" : "");
 			if(Live)
-				pDecode = std::make_shared<CMapImageDecodeJob>(Storage(), aPath, Trace);
+			{
+				Decode = TryStartMapImageDecode([&] {
+					return std::make_shared<CMapImageDecodeJob>(Storage(), aPath, Trace);
+				}, SubmitDecode);
+			}
 			else
 				m_aTextures[i] = Graphics()->LoadTexture(aPath, IStorage::TYPE_ALL, LoadFlag);
 		}
@@ -341,18 +349,21 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 			str_format(aTexName, sizeof(aTexName), "embedded: %s", pName);
 			if(Live && FileDataSize > 0 && ImageInfo.DataSize(ImageDataSize) && (size_t)FileDataSize >= ImageDataSize)
 			{
-				pDecode = std::make_shared<CMapImageDecodeJob>(nullptr, aTexName, Trace);
-				CPerfTimer ReadTimer(Trace);
-				if(pMap->ReadCompressedData(ImageItem->m_ImageData, pDecode->m_vCompressed))
-				{
-					pDecode->m_Image = std::move(ImageInfo);
-					pDecode->m_UncompressedSize = FileDataSize;
-				}
-				else
-					pDecode.reset();
-				ReadMs = ReadTimer.ElapsedMs();
+				Decode = TryStartMapImageDecode([&] {
+					auto pJob = std::make_shared<CMapImageDecodeJob>(nullptr, aTexName, Trace);
+					CPerfTimer ReadTimer(Trace);
+					if(pMap->ReadCompressedData(ImageItem->m_ImageData, pJob->m_vCompressed))
+					{
+						pJob->m_Image = std::move(ImageInfo);
+						pJob->m_UncompressedSize = FileDataSize;
+					}
+					else
+						pJob.reset();
+					ReadMs = ReadTimer.ElapsedMs();
+					return pJob;
+				}, SubmitDecode);
 			}
-			if(!pDecode)
+			if(Decode.m_Result == EDecodeStart::NO_JOB)
 			{
 				CPerfTimer Timer(Trace);
 				ImageInfo.m_pData = static_cast<uint8_t *>(pMap->GetData(ImageItem->m_ImageData));
@@ -374,10 +385,9 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 			}
 		}
 
-		if(pDecode)
+		if(const auto &pDecode = Decode.m_pJob)
 		{
 			m_pMapImageDecode = pDecode;
-			Engine()->AddJob(pDecode);
 			do
 			{
 				co_await std::suspend_always{};
@@ -398,6 +408,12 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 			ShowWarning |= !m_aTextures[i].IsValid();
 			m_pMapImageDecode.reset();
 		}
+		else if(Decode.m_Result != EDecodeStart::NO_JOB)
+		{
+			const char *pReason = Decode.m_Result == EDecodeStart::REJECTED ? "decode queue unavailable" : "insufficient resources to start decoding";
+			log_error("mapimages", "Failed to prepare map image %d '%s': %s.", i, pName, pReason);
+			ShowWarning = true;
+		}
 		if(Trace)
 		{
 			char aExtra[224];
@@ -412,7 +428,17 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 	}
 	if(ShowWarning)
 	{
-		Client()->AddWarning(SWarning(Localize("Some map images could not be loaded. Check the local console for details.")));
+		// 警告队列分配失败时，保留已经完成的纹理。
+		try
+		{
+			Client()->AddWarning(SWarning(Localize("Some map images could not be loaded. Check the local console for details.")));
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
 	}
 }
 
