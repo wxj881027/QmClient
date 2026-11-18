@@ -1756,17 +1756,17 @@ void CGameClient::OnConnected()
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0);
 	LogConnectStage("loading_screen");
 	const bool Live = Client()->State() == IClient::STATE_LOADING;
-	const auto PrepareLayers = [&] {
+	const auto PrepareMapLogic = [&] {
 		m_Layers.Init(Kernel()->RequestInterface<IMap>(), false, true, Live);
 		if(Live)
 			m_DesignTileSkips = m_Layers.PrepareDesignTileSkips();
+		LogConnectStage("layers_init");
+		m_Collision.Init(Layers());
+		LogConnectStage("collision_init");
+		m_GameWorld.m_Core.InitSwitchers(m_Collision.m_HighestSwitchNumber);
 	};
-	if(!m_ConnectionResourcePreparation.TryPrepare(PrepareLayers, Live))
+	if(!m_ConnectionResourcePreparation.TryPrepare(PrepareMapLogic, Live))
 		return;
-	LogConnectStage("layers_init");
-	m_Collision.Init(Layers());
-	LogConnectStage("collision_init");
-	m_GameWorld.m_Core.InitSwitchers(m_Collision.m_HighestSwitchNumber);
 	m_GameWorld.m_PredictedEvents.clear();
 	m_RaceHelper.Init(this);
 	LogConnectStage("world_and_race_init");
