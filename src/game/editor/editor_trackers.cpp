@@ -4,7 +4,48 @@
 #include "editor_actions.h"
 
 #include <game/editor/mapitems/layer_group.h>
+#include <game/editor/mapitems/layer_sounds.h>
 #include <game/editor/mapitems/layer_tiles.h>
+
+#include <algorithm>
+#include <utility>
+
+namespace
+{
+const CLayer *FindTrackedLayer(const CEditorMap &Map, int GroupIndex, int LayerIndex)
+{
+	if(GroupIndex < 0 || (size_t)GroupIndex >= Map.m_vpGroups.size())
+		return nullptr;
+	const auto &pGroup = Map.m_vpGroups[GroupIndex];
+	if(!pGroup || LayerIndex < 0 || (size_t)LayerIndex >= pGroup->m_vpLayers.size())
+		return nullptr;
+	return pGroup->m_vpLayers[LayerIndex].get();
+}
+
+bool IsQuadTrackTargetValid(const CEditorMap &Map, const std::shared_ptr<CLayerQuads> &pLayer, int GroupIndex, int LayerIndex, const std::vector<int> &vQuads)
+{
+	if(!pLayer || FindTrackedLayer(Map, GroupIndex, LayerIndex) != pLayer.get())
+		return false;
+	return std::all_of(vQuads.begin(), vQuads.end(), [NumQuads = pLayer->m_vQuads.size()](int QuadIndex) {
+		return QuadIndex >= 0 && (size_t)QuadIndex < NumQuads;
+	});
+}
+
+const CSoundSource *FindTrackedSoundSource(const CEditorMap &Map, int GroupIndex, int LayerIndex, const CSoundSource *pTrackedSource)
+{
+	const CLayer *pLayer = FindTrackedLayer(Map, GroupIndex, LayerIndex);
+	if(!pLayer || pLayer->m_Type != LAYERTYPE_SOUNDS)
+		return nullptr;
+
+	const auto &vSources = static_cast<const CLayerSounds *>(pLayer)->m_vSources;
+	const int SourceIndex = Map.m_SelectedSoundSource;
+	if(SourceIndex < 0 || (size_t)SourceIndex >= vSources.size())
+		return nullptr;
+
+	const CSoundSource *pSource = &vSources[SourceIndex];
+	return pSource == pTrackedSource ? pSource : nullptr;
+}
+}
 
 CQuadEditTracker::CQuadEditTracker(CEditorMap *pMap) :
 	CMapObject(pMap),
@@ -32,19 +73,25 @@ bool CQuadEditTracker::QuadColorChanged(const std::vector<CColor> &vCurrentColor
 
 void CQuadEditTracker::BeginQuadTrack(const std::shared_ptr<CLayerQuads> &pLayer, const std::vector<int> &vSelectedQuads, int GroupIndex, int LayerIndex)
 {
-	if(m_Tracking)
+	GroupIndex = GroupIndex < 0 ? Map()->m_SelectedGroup : GroupIndex;
+	LayerIndex = LayerIndex < 0 ? CPropTrackerHelper::GetDefaultLayerIndex(Map()) : LayerIndex;
+	if(m_Tracking && m_pLayer == pLayer && m_GroupIndex == GroupIndex && m_LayerIndex == LayerIndex && m_vSelectedQuads == vSelectedQuads)
 		return;
+	if(!IsQuadTrackTargetValid(*Map(), pLayer, GroupIndex, LayerIndex, vSelectedQuads))
+		return;
+
 	m_Tracking = true;
-	m_vSelectedQuads.clear();
+	m_TrackedProp = EQuadProp::PROP_NONE;
+	m_vTrackedProps.clear();
+	m_InitialPoints.clear();
+	m_vSelectedQuads = vSelectedQuads;
 	m_pLayer = pLayer;
-	m_GroupIndex = GroupIndex < 0 ? Map()->m_SelectedGroup : GroupIndex;
-	m_LayerIndex = LayerIndex < 0 ? Map()->m_vSelectedLayers[0] : LayerIndex;
-	// Init all points
-	for(auto QuadIndex : vSelectedQuads)
+	m_GroupIndex = GroupIndex;
+	m_LayerIndex = LayerIndex;
+	for(int QuadIndex : vSelectedQuads)
 	{
-		auto &pQuad = pLayer->m_vQuads[QuadIndex];
-		m_InitialPoints[QuadIndex] = std::vector<CPoint>(std::begin(pQuad.m_aPoints), std::end(pQuad.m_aPoints));
-		m_vSelectedQuads.push_back(QuadIndex);
+		const auto &Quad = pLayer->m_vQuads[QuadIndex];
+		m_InitialPoints[QuadIndex] = std::vector<CPoint>(std::begin(Quad.m_aPoints), std::end(Quad.m_aPoints));
 	}
 }
 
@@ -54,28 +101,43 @@ void CQuadEditTracker::EndQuadTrack()
 		return;
 	m_Tracking = false;
 
-	// Record all moved stuff
 	std::vector<std::shared_ptr<IEditorAction>> vpActions;
-	for(auto QuadIndex : m_vSelectedQuads)
+	if(IsQuadTrackTargetValid(*Map(), m_pLayer, m_GroupIndex, m_LayerIndex, m_vSelectedQuads))
 	{
-		auto &pQuad = m_pLayer->m_vQuads[QuadIndex];
-		auto vCurrentPoints = std::vector<CPoint>(std::begin(pQuad.m_aPoints), std::end(pQuad.m_aPoints));
-		if(QuadPointChanged(vCurrentPoints, QuadIndex))
-			vpActions.push_back(std::make_shared<CEditorActionEditQuadPoint>(Map(), m_GroupIndex, m_LayerIndex, QuadIndex, m_InitialPoints[QuadIndex], vCurrentPoints));
+		for(int QuadIndex : m_vSelectedQuads)
+		{
+			const auto &Quad = m_pLayer->m_vQuads[QuadIndex];
+			const std::vector<CPoint> vCurrentPoints(std::begin(Quad.m_aPoints), std::end(Quad.m_aPoints));
+			if(QuadPointChanged(vCurrentPoints, QuadIndex))
+				vpActions.push_back(std::make_shared<CEditorActionEditQuadPoint>(Map(), m_GroupIndex, m_LayerIndex, QuadIndex, m_InitialPoints[QuadIndex], vCurrentPoints));
+		}
 	}
+	m_pLayer.reset();
+	m_vSelectedQuads.clear();
+	m_InitialPoints.clear();
 
 	if(!vpActions.empty())
+	{
 		Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionBulk>(Map(), vpActions));
+		Map()->OnModify();
+	}
 }
 
 void CQuadEditTracker::BeginQuadPropTrack(const std::shared_ptr<CLayerQuads> &pLayer, const std::vector<int> &vSelectedQuads, EQuadProp Prop, int GroupIndex, int LayerIndex)
 {
-	if(m_TrackedProp != EQuadProp::PROP_NONE)
+	if(Prop == EQuadProp::PROP_NONE)
 		return;
+	GroupIndex = GroupIndex < 0 ? Map()->m_SelectedGroup : GroupIndex;
+	LayerIndex = LayerIndex < 0 ? CPropTrackerHelper::GetDefaultLayerIndex(Map()) : LayerIndex;
+	if(!IsQuadTrackTargetValid(*Map(), pLayer, GroupIndex, LayerIndex, vSelectedQuads))
+		return;
+
+	m_Tracking = false;
+	m_vTrackedProps.clear();
 	m_TrackedProp = Prop;
 	m_pLayer = pLayer;
-	m_GroupIndex = GroupIndex < 0 ? Map()->m_SelectedGroup : GroupIndex;
-	m_LayerIndex = LayerIndex < 0 ? Map()->m_vSelectedLayers[0] : LayerIndex;
+	m_GroupIndex = GroupIndex;
+	m_LayerIndex = LayerIndex;
 	m_vSelectedQuads = vSelectedQuads;
 	m_PreviousValues.clear();
 
@@ -98,15 +160,18 @@ void CQuadEditTracker::BeginQuadPropTrack(const std::shared_ptr<CLayerQuads> &pL
 }
 void CQuadEditTracker::EndQuadPropTrack(EQuadProp Prop)
 {
-	if(m_TrackedProp != Prop)
+	if(Prop == EQuadProp::PROP_NONE || m_TrackedProp != Prop)
 		return;
 	m_TrackedProp = EQuadProp::PROP_NONE;
+	const auto pLayer = std::move(m_pLayer);
+	if(!IsQuadTrackTargetValid(*Map(), pLayer, m_GroupIndex, m_LayerIndex, m_vSelectedQuads))
+		return;
 
 	std::vector<std::shared_ptr<IEditorAction>> vpActions;
 
 	for(auto QuadIndex : m_vSelectedQuads)
 	{
-		auto &Quad = m_pLayer->m_vQuads[QuadIndex];
+		const auto &Quad = pLayer->m_vQuads[QuadIndex];
 		if(Prop == EQuadProp::PROP_POS_X || Prop == EQuadProp::PROP_POS_Y)
 		{
 			auto vCurrentPoints = std::vector<CPoint>(std::begin(Quad.m_aPoints), std::end(Quad.m_aPoints));
@@ -142,12 +207,20 @@ void CQuadEditTracker::EndQuadPropTrack(EQuadProp Prop)
 
 void CQuadEditTracker::BeginQuadPointPropTrack(const std::shared_ptr<CLayerQuads> &pLayer, const std::vector<int> &vSelectedQuads, int SelectedQuadPoints, int GroupIndex, int LayerIndex)
 {
-	if(!m_vTrackedProps.empty())
+	GroupIndex = GroupIndex < 0 ? Map()->m_SelectedGroup : GroupIndex;
+	LayerIndex = LayerIndex < 0 ? CPropTrackerHelper::GetDefaultLayerIndex(Map()) : LayerIndex;
+	if(!m_vTrackedProps.empty() && m_pLayer == pLayer && m_GroupIndex == GroupIndex && m_LayerIndex == LayerIndex &&
+		m_SelectedQuadPoints == SelectedQuadPoints && m_vSelectedQuads == vSelectedQuads)
+		return;
+	if(!IsQuadTrackTargetValid(*Map(), pLayer, GroupIndex, LayerIndex, vSelectedQuads))
 		return;
 
+	m_Tracking = false;
+	m_TrackedProp = EQuadProp::PROP_NONE;
+	m_vTrackedProps.clear();
 	m_pLayer = pLayer;
-	m_GroupIndex = GroupIndex < 0 ? Map()->m_SelectedGroup : GroupIndex;
-	m_LayerIndex = LayerIndex < 0 ? Map()->m_vSelectedLayers[0] : LayerIndex;
+	m_GroupIndex = GroupIndex;
+	m_LayerIndex = LayerIndex;
 	m_SelectedQuadPoints = SelectedQuadPoints;
 	m_vSelectedQuads = vSelectedQuads;
 	m_PreviousValuesPoint.clear();
@@ -160,7 +233,9 @@ void CQuadEditTracker::BeginQuadPointPropTrack(const std::shared_ptr<CLayerQuads
 
 void CQuadEditTracker::AddQuadPointPropTrack(EQuadPointProp Prop)
 {
-	if(std::find(m_vTrackedProps.begin(), m_vTrackedProps.end(), Prop) != m_vTrackedProps.end())
+	if(!m_pLayer || m_Tracking || m_TrackedProp != EQuadProp::PROP_NONE ||
+		std::find(m_vTrackedProps.begin(), m_vTrackedProps.end(), Prop) != m_vTrackedProps.end() ||
+		!IsQuadTrackTargetValid(*Map(), m_pLayer, m_GroupIndex, m_LayerIndex, m_vSelectedQuads))
 		return;
 
 	m_vTrackedProps.push_back(Prop);
@@ -210,6 +285,12 @@ void CQuadEditTracker::EndQuadPointPropTrack(EQuadPointProp Prop)
 		return;
 
 	m_vTrackedProps.erase(It);
+	if(!IsQuadTrackTargetValid(*Map(), m_pLayer, m_GroupIndex, m_LayerIndex, m_vSelectedQuads))
+	{
+		m_vTrackedProps.clear();
+		m_pLayer.reset();
+		return;
+	}
 
 	std::vector<std::shared_ptr<IEditorAction>> vpActions;
 
@@ -249,12 +330,23 @@ void CQuadEditTracker::EndQuadPointPropTrack(EQuadPointProp Prop)
 		}
 	}
 
+	if(m_vTrackedProps.empty())
+		m_pLayer.reset();
 	if(!vpActions.empty())
 		Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionBulk>(Map(), vpActions));
 }
 
 void CQuadEditTracker::EndQuadPointPropTrackAll()
 {
+	if(m_vTrackedProps.empty())
+		return;
+	if(!IsQuadTrackTargetValid(*Map(), m_pLayer, m_GroupIndex, m_LayerIndex, m_vSelectedQuads))
+	{
+		m_vTrackedProps.clear();
+		m_pLayer.reset();
+		return;
+	}
+
 	std::vector<std::shared_ptr<IEditorAction>> vpActions;
 	for(auto &Prop : m_vTrackedProps)
 	{
@@ -295,10 +387,13 @@ void CQuadEditTracker::EndQuadPointPropTrackAll()
 		}
 	}
 
-	if(!vpActions.empty())
-		Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionBulk>(Map(), vpActions));
-
 	m_vTrackedProps.clear();
+	m_pLayer.reset();
+	if(!vpActions.empty())
+	{
+		Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionBulk>(Map(), vpActions));
+		Map()->OnModify();
+	}
 }
 
 // -----------------------------
@@ -424,17 +519,16 @@ CSoundSourceOperationTracker::CSoundSourceOperationTracker(CEditorMap *pMap) :
 
 void CSoundSourceOperationTracker::Begin(const CSoundSource *pSource, ESoundSourceOp Operation, int LayerIndex)
 {
-	if(m_TrackedOp == Operation || m_TrackedOp != ESoundSourceOp::OP_NONE)
+	if(!pSource || Operation == ESoundSourceOp::OP_NONE ||
+		(m_TrackedOp == Operation && m_pSource == pSource && m_LayerIndex == LayerIndex))
 		return;
 
 	m_TrackedOp = Operation;
 	m_pSource = pSource;
 	m_LayerIndex = LayerIndex;
 
-	if(m_TrackedOp == ESoundSourceOp::OP_MOVE)
-	{
-		m_Data.m_OriginalPoint = m_pSource->m_Position;
-	}
+	if(Operation == ESoundSourceOp::OP_MOVE)
+		m_Data.m_OriginalPoint = pSource->m_Position;
 }
 
 void CSoundSourceOperationTracker::End()
@@ -442,16 +536,20 @@ void CSoundSourceOperationTracker::End()
 	if(m_TrackedOp == ESoundSourceOp::OP_NONE)
 		return;
 
-	if(m_TrackedOp == ESoundSourceOp::OP_MOVE)
-	{
-		if(m_Data.m_OriginalPoint != m_pSource->m_Position)
-		{
-			Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionMoveSoundSource>(
-				Map(), Map()->m_SelectedGroup, m_LayerIndex, Map()->m_SelectedSoundSource, m_Data.m_OriginalPoint, m_pSource->m_Position));
-		}
-	}
+	const bool WasMove = std::exchange(m_TrackedOp, ESoundSourceOp::OP_NONE) == ESoundSourceOp::OP_MOVE;
+	const CSoundSource *pTrackedSource = std::exchange(m_pSource, nullptr);
+	const int LayerIndex = std::exchange(m_LayerIndex, -1);
+	if(!WasMove)
+		return;
 
-	m_TrackedOp = ESoundSourceOp::OP_NONE;
+	const int GroupIndex = Map()->m_SelectedGroup;
+	const CSoundSource *pSource = FindTrackedSoundSource(*Map(), GroupIndex, LayerIndex, pTrackedSource);
+	if(!pSource || m_Data.m_OriginalPoint == pSource->m_Position)
+		return;
+
+	Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionMoveSoundSource>(
+		Map(), GroupIndex, LayerIndex, Map()->m_SelectedSoundSource, m_Data.m_OriginalPoint, pSource->m_Position));
+	Map()->OnModify();
 }
 
 // -----------------------------------------------------------------------
@@ -675,18 +773,22 @@ void CSoundSourcePropTracker::OnEnd(ESoundProp Prop, int Value)
 
 int CSoundSourcePropTracker::PropToValue(ESoundProp Prop)
 {
+	const CSoundSource *pSource = FindTrackedSoundSource(*Map(), m_OriginalGroupIndex, m_OriginalLayerIndex, m_pObject);
+	if(!pSource || m_CurrentGroupIndex != m_OriginalGroupIndex || m_CurrentLayerIndex != m_OriginalLayerIndex)
+		return m_OriginalValue;
+
 	switch(Prop)
 	{
-	case ESoundProp::PROP_POS_X: return m_pObject->m_Position.x;
-	case ESoundProp::PROP_POS_Y: return m_pObject->m_Position.y;
-	case ESoundProp::PROP_LOOP: return m_pObject->m_Loop;
-	case ESoundProp::PROP_PAN: return m_pObject->m_Pan;
-	case ESoundProp::PROP_TIME_DELAY: return m_pObject->m_TimeDelay;
-	case ESoundProp::PROP_FALLOFF: return m_pObject->m_Falloff;
-	case ESoundProp::PROP_POS_ENV: return m_pObject->m_PosEnv;
-	case ESoundProp::PROP_POS_ENV_OFFSET: return m_pObject->m_PosEnvOffset;
-	case ESoundProp::PROP_SOUND_ENV: return m_pObject->m_SoundEnv;
-	case ESoundProp::PROP_SOUND_ENV_OFFSET: return m_pObject->m_SoundEnvOffset;
+	case ESoundProp::PROP_POS_X: return pSource->m_Position.x;
+	case ESoundProp::PROP_POS_Y: return pSource->m_Position.y;
+	case ESoundProp::PROP_LOOP: return pSource->m_Loop;
+	case ESoundProp::PROP_PAN: return pSource->m_Pan;
+	case ESoundProp::PROP_TIME_DELAY: return pSource->m_TimeDelay;
+	case ESoundProp::PROP_FALLOFF: return pSource->m_Falloff;
+	case ESoundProp::PROP_POS_ENV: return pSource->m_PosEnv;
+	case ESoundProp::PROP_POS_ENV_OFFSET: return pSource->m_PosEnvOffset;
+	case ESoundProp::PROP_SOUND_ENV: return pSource->m_SoundEnv;
+	case ESoundProp::PROP_SOUND_ENV_OFFSET: return pSource->m_SoundEnvOffset;
 	default: return 0;
 	}
 }
@@ -700,10 +802,15 @@ void CSoundSourceRectShapePropTracker::OnEnd(ERectangleShapeProp Prop, int Value
 
 int CSoundSourceRectShapePropTracker::PropToValue(ERectangleShapeProp Prop)
 {
+	const CSoundSource *pSource = FindTrackedSoundSource(*Map(), m_OriginalGroupIndex, m_OriginalLayerIndex, m_pObject);
+	if(!pSource || m_CurrentGroupIndex != m_OriginalGroupIndex || m_CurrentLayerIndex != m_OriginalLayerIndex ||
+		pSource->m_Shape.m_Type != CSoundShape::SHAPE_RECTANGLE)
+		return m_OriginalValue;
+
 	switch(Prop)
 	{
-	case ERectangleShapeProp::PROP_RECTANGLE_WIDTH: return m_pObject->m_Shape.m_Rectangle.m_Width;
-	case ERectangleShapeProp::PROP_RECTANGLE_HEIGHT: return m_pObject->m_Shape.m_Rectangle.m_Height;
+	case ERectangleShapeProp::PROP_RECTANGLE_WIDTH: return pSource->m_Shape.m_Rectangle.m_Width;
+	case ERectangleShapeProp::PROP_RECTANGLE_HEIGHT: return pSource->m_Shape.m_Rectangle.m_Height;
 	default: return 0;
 	}
 }
@@ -715,9 +822,14 @@ void CSoundSourceCircleShapePropTracker::OnEnd(ECircleShapeProp Prop, int Value)
 
 int CSoundSourceCircleShapePropTracker::PropToValue(ECircleShapeProp Prop)
 {
+	const CSoundSource *pSource = FindTrackedSoundSource(*Map(), m_OriginalGroupIndex, m_OriginalLayerIndex, m_pObject);
+	if(!pSource || m_CurrentGroupIndex != m_OriginalGroupIndex || m_CurrentLayerIndex != m_OriginalLayerIndex ||
+		pSource->m_Shape.m_Type != CSoundShape::SHAPE_CIRCLE)
+		return m_OriginalValue;
+
 	switch(Prop)
 	{
-	case ECircleShapeProp::PROP_CIRCLE_RADIUS: return m_pObject->m_Shape.m_Circle.m_Radius;
+	case ECircleShapeProp::PROP_CIRCLE_RADIUS: return pSource->m_Shape.m_Circle.m_Radius;
 	default: return 0;
 	}
 }
