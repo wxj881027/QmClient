@@ -8,8 +8,11 @@
 
 #include <engine/steam.h>
 
+#include <functional>
 #include <iterator>
 #include <memory>
+#include <string>
+#include <string_view>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
@@ -20,12 +23,12 @@ namespace
 {
 	// 校验候选路径（Steam 安装目录或完整 exe 路径）：去掉注册表值可能带的首尾
 	// 引号与空白，统一斜杠后拼接/确认 steam.exe 存在，有效时写出完整路径。
-	bool SteamAcceptCandidatePath(const char *pCandidate, char *pBuffer, int BufferSize)
+	bool SteamAcceptCandidatePath(const char *pCandidate, char *pBuffer, int BufferSize, const std::function<int(const char *)> &IsFile = fs_is_file)
 	{
 		const auto Path = steam_path::WindowsCandidate(pCandidate);
 		if(!Path)
 			return false;
-		return steam_path::Accept(Path->data(), pBuffer, BufferSize, [](const char *pPath) {
+		return steam_path::Accept(Path->data(), pBuffer, BufferSize, [&IsFile](const char *pPath) {
 			// UNC 路径与断连的网络映射盘上的存在性探测会走 SMB I/O，断连时
 			// GetFileAttributesW 可能阻塞数秒以上；Steam 不支持网络安装，此类
 			// 候选直接拒绝，避免启动期一次性扫描被网络超时拖慢。
@@ -33,12 +36,13 @@ namespace
 				return false;
 			if(pPath[1] == ':' && pPath[2] == '\\')
 			{
-				// GetDriveTypeW 只查盘符映射，不触网络，断连映射盘也立即返回。
+				// 先查询盘符类型，远程或不可用的盘符跳过文件探测。
 				const wchar_t aRoot[4] = {(wchar_t)pPath[0], L':', L'\\', L'\0'};
-				if(GetDriveTypeW(aRoot) == DRIVE_REMOTE)
+				const UINT DriveType = GetDriveTypeW(aRoot);
+				if(DriveType == DRIVE_REMOTE || DriveType == DRIVE_NO_ROOT_DIR || DriveType == DRIVE_UNKNOWN)
 					return false;
 			}
-			return fs_is_file(pPath) != 0;
+			return IsFile(pPath) != 0;
 		});
 	}
 
@@ -124,18 +128,125 @@ namespace
 		return false;
 	}
 
-	// PATH 搜索兜底，覆盖把 Steam 目录加入 PATH 的自定义安装。
-	bool SteamPathFromSearchPath(char *pBuffer, int BufferSize)
+	bool SteamTryPathDirectory(std::wstring_view Directory, char *pBuffer, int BufferSize, const std::function<int(const char *)> &IsFile)
 	{
+		const size_t First = Directory.find_first_not_of(L" \t");
+		if(First == std::wstring_view::npos)
+			return false;
+		std::wstring Candidate(Directory.substr(First, Directory.find_last_not_of(L" \t") - First + 1));
+		const bool DriveRelativeRoot = Candidate.size() == 2 && Candidate[1] == L':';
+		if(!DriveRelativeRoot && Candidate.back() != L'\\' && Candidate.back() != L'/')
+			Candidate += L'\\';
+		Candidate += L"steam.exe";
+
+		// 相对目录先展开，供文件探测前的 UNC 和盘符检查使用。
 		wchar_t aResult[1024] = {};
-		wchar_t *pFilePart = nullptr;
-		const DWORD Length = SearchPathW(nullptr, L"steam.exe", nullptr, sizeof(aResult) / sizeof(aResult[0]), aResult, &pFilePart);
-		if(Length == 0 || Length >= sizeof(aResult) / sizeof(aResult[0]))
+		const DWORD Length = GetFullPathNameW(Candidate.c_str(), std::size(aResult), aResult, nullptr);
+		if(Length == 0 || Length >= std::size(aResult))
 			return false;
 		const std::optional<std::string> Utf8 = windows_wide_to_utf8(aResult);
-		return Utf8.has_value() && SteamAcceptCandidatePath(Utf8->c_str(), pBuffer, BufferSize);
+		return Utf8.has_value() && SteamAcceptCandidatePath(Utf8->c_str(), pBuffer, BufferSize, IsFile);
 	}
 } // namespace
+
+namespace steam_probe
+{
+	bool FindClientInPath(std::wstring_view Path, char *pBuffer, int BufferSize, const std::function<int(const char *)> &IsFile)
+	{
+		std::wstring Directory;
+		bool Quoted = false;
+		for(wchar_t Character : Path)
+		{
+			if(Character == L'"')
+				Quoted = !Quoted;
+			else if(Character == L';' && !Quoted)
+			{
+				if(SteamTryPathDirectory(Directory, pBuffer, BufferSize, IsFile))
+					return true;
+				Directory.clear();
+			}
+			else
+				Directory += Character;
+		}
+		return !Quoted && SteamTryPathDirectory(Directory, pBuffer, BufferSize, IsFile);
+	}
+} // namespace steam_probe
+
+namespace
+{
+	bool SteamPathFromEnvironment(char *pBuffer, int BufferSize, const std::function<int(const char *)> &IsFile)
+	{
+		const DWORD Size = GetEnvironmentVariableW(L"PATH", nullptr, 0);
+		if(Size == 0)
+			return false;
+		std::wstring Path(Size, L'\0');
+		const DWORD Length = GetEnvironmentVariableW(L"PATH", Path.data(), Size);
+		if(Length == 0 || Length >= Size)
+			return false;
+		Path.resize(Length);
+		return steam_probe::FindClientInPath(Path, pBuffer, BufferSize, IsFile);
+	}
+
+	bool SteamPathFromLegacySearchPath(char *pBuffer, int BufferSize, const std::function<int(const char *)> &IsFile)
+	{
+		// 旧系统没有目录列表接口，使用 Win32 目录查询和系统的安全搜索设置。
+		const auto Probe = [&](std::wstring_view Directory) {
+			return SteamTryPathDirectory(Directory, pBuffer, BufferSize, IsFile);
+		};
+		wchar_t aDirectory[1024];
+		const DWORD ImageLength = GetModuleFileNameW(nullptr, aDirectory, std::size(aDirectory));
+		if(ImageLength != 0 && ImageLength < std::size(aDirectory))
+		{
+			const std::wstring_view Image(aDirectory, ImageLength);
+			const size_t Separator = Image.find_last_of(L"\\/");
+			if(Separator != std::wstring_view::npos && Probe(Image.substr(0, Separator + 1)))
+				return true;
+		}
+
+		DWORD SearchMode = 0;
+		DWORD Size = sizeof(SearchMode);
+		const LONG Result = RegGetValueW(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Control\\Session Manager",
+			L"SafeProcessSearchMode", RRF_RT_REG_DWORD, nullptr, &SearchMode, &Size);
+		const bool SafeSearch = Result == ERROR_SUCCESS && SearchMode == 1;
+		if(!SafeSearch && Probe(L"."))
+			return true;
+
+		const UINT SystemLength = GetSystemDirectoryW(aDirectory, std::size(aDirectory));
+		if(SystemLength != 0 && SystemLength < std::size(aDirectory) && Probe(std::wstring_view(aDirectory, SystemLength)))
+			return true;
+		const UINT WindowsLength = GetWindowsDirectoryW(aDirectory, std::size(aDirectory));
+		if(WindowsLength != 0 && WindowsLength < std::size(aDirectory))
+		{
+			const std::wstring_view WindowsDirectory(aDirectory, WindowsLength);
+			if(Probe(std::wstring(WindowsDirectory) + L"\\System") || Probe(WindowsDirectory))
+				return true;
+		}
+		return (SafeSearch && Probe(L".")) || SteamPathFromEnvironment(pBuffer, BufferSize, IsFile);
+	}
+} // namespace
+
+namespace steam_probe
+{
+	bool FindClientInDefaultPath(char *pBuffer, int BufferSize, const std::function<int(const char *)> &IsFile)
+	{
+		// 只生成 SearchPathW 使用的目录序列，保留当前进程的搜索模式。
+		// 文件探测前先过滤网络候选，避免 SearchPathW 直接访问共享目录。
+		using TGetSearchPath = LONG(WINAPI *)(wchar_t **);
+		using TReleaseSearchPath = void(WINAPI *)(wchar_t *);
+		if(const HMODULE Module = GetModuleHandleW(L"ntdll.dll"))
+		{
+			const auto pGetSearchPath = reinterpret_cast<TGetSearchPath>(GetProcAddress(Module, "RtlGetSearchPath"));
+			const auto pReleaseSearchPath = reinterpret_cast<TReleaseSearchPath>(GetProcAddress(Module, "RtlReleasePath"));
+			wchar_t *pPath = nullptr;
+			if(pGetSearchPath && pReleaseSearchPath && pGetSearchPath(&pPath) >= 0 && pPath)
+			{
+				const std::unique_ptr<wchar_t, TReleaseSearchPath> Path(pPath, pReleaseSearchPath);
+				return FindClientInPath(Path.get(), pBuffer, BufferSize, IsFile);
+			}
+		}
+		return SteamPathFromLegacySearchPath(pBuffer, BufferSize, IsFile);
+	}
+} // namespace steam_probe
 
 bool SteamProbeFindClientWindows(char *pBuffer, int BufferSize, ESteamClientSource *pSource)
 {
@@ -176,7 +287,7 @@ bool SteamProbeFindClientWindows(char *pBuffer, int BufferSize, ESteamClientSour
 	} aFallbacks[] = {
 		{SteamPathFromRunningProcess, ESteamClientSource::RUNNING_PROCESS},
 		{SteamPathFromCommonDirectories, ESteamClientSource::COMMON_DIRECTORY},
-		{SteamPathFromSearchPath, ESteamClientSource::ENVIRONMENT_PATH},
+		{[](char *pOutput, int OutputSize) { return steam_probe::FindClientInDefaultPath(pOutput, OutputSize, fs_is_file); }, ESteamClientSource::ENVIRONMENT_PATH},
 	};
 	for(const auto &Fallback : aFallbacks)
 	{

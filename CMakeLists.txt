@@ -6550,6 +6550,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   endif()
   if(TARGET_OS STREQUAL "windows")
     target_link_libraries(${TARGET_TESTRUNNER} bcrypt winhttp ws2_32)
+    target_sources(${TARGET_TESTRUNNER} PRIVATE
+      src/engine/client/steam_probe.cpp
+      src/test/unit/engine/steam_windows_path_probe_test.cpp
+    )
     if(CLIENT)
       target_sources(${TARGET_TESTRUNNER} PRIVATE
         src/engine/client/qm_festive_message_box.cpp
