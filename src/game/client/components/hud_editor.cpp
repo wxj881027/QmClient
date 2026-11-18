@@ -151,7 +151,7 @@ void CHudEditor::UpdateVisibleRect(EHudEditorElement Element, const CUIRect &Ren
 	if(RenderedRect.w <= 0.0f || RenderedRect.h <= 0.0f)
 	{
 		// 没有内容时撤销本帧的可交互区域，避免留下预估空框。
-		m_vVisibleElements.erase(m_vVisibleElements.begin() + VisibleIndex);
+		m_VisibleFrame.RemoveAt(VisibleIndex);
 		m_aVisibleBounds[static_cast<int>(Element)] = {};
 		return;
 	}

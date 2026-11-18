@@ -12,7 +12,6 @@
 #include <game/localization.h>
 
 #include <chrono>
-#include <cstdlib>
 
 #if defined(CONF_PLATFORM_ANDROID)
 #include <android/android_main.h>
@@ -191,18 +190,12 @@ void CLocalServer::Update()
 	{
 		m_NextPortCheck = time_get_nanoseconds() + std::chrono::milliseconds(100);
 		char aPortFile[IO_MAX_PATH_LENGTH];
-		char *pPort = Storage()->ReadFileStr(PortFile(aPortFile, sizeof(aPortFile)), IStorage::TYPE_SAVE);
-		if(pPort != nullptr)
+		const int Port = ReadLocalServerReportedPort(*Storage(), PortFile(aPortFile, sizeof(aPortFile)));
+		if(Port != 0)
 		{
-			const int Port = str_toint(pPort);
-			free(pPort);
 			Storage()->RemoveFile(aPortFile, IStorage::TYPE_SAVE);
-			// 文件内容非法时保持等待，交给下面的超时分支决定。
-			if(Port > 0 && Port <= 65535)
-			{
-				m_Port = Port;
-				m_WaitingForPort = false;
-			}
+			m_Port = Port;
+			m_WaitingForPort = false;
 		}
 
 		if(m_WaitingForPort)
@@ -269,7 +262,7 @@ void CLocalServer::Update()
 	switch(m_Launch.PollBinding(IsAndroidServerRunning(), time_get_nanoseconds().count()))
 	{
 	case CLocalServerLaunch::EBindingResult::CONNECT:
-		Client()->Connect("localhost");
+		Connect();
 		break;
 	case CLocalServerLaunch::EBindingResult::FAILED:
 		StopAndroidServer();

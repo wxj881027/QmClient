@@ -3,10 +3,29 @@
 
 #include <base/borrowed_allocator.h>
 
+#include <game/client/components/qmclient/bounded_file_reader.h>
+
 #include <algorithm>
+#include <charconv>
 #include <cstdint>
 #include <string>
 #include <vector>
+
+inline int ReadLocalServerReportedPort(IStorage &Storage, const char *pFilename)
+{
+	// 服务端原子发布实际端口，只写十进制数字。
+	CQmCheckedFileData Data;
+	if(!Data.Read(Storage, pFilename, IStorage::TYPE_SAVE, sizeof("65535") - 1))
+		return 0;
+
+	const char *pBegin = static_cast<const char *>(Data.Data());
+	const char *pEnd = pBegin + Data.Size();
+	int Port = 0;
+	const auto Parsed = std::from_chars(pBegin, pEnd, Port);
+	if(Parsed.ec != std::errc{} || Parsed.ptr != pEnd || Port < 1 || Port > 65535)
+		return 0;
+	return Port;
+}
 
 // 启动请求在权限等待与异步绑定期间拥有完整参数，指针仅借用自身存储。
 class CLocalServerLaunch

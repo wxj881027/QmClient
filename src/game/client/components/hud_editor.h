@@ -398,6 +398,10 @@ namespace QmHudEditor
 		bool Complete() const noexcept { return m_Complete; }
 		std::span<SVisibleElement> Elements() noexcept { return m_vElements; }
 		std::span<const SVisibleElement> Elements() const noexcept { return m_vElements; }
+		void RemoveAt(size_t Index) noexcept
+		{
+			m_vElements.erase(m_vElements.begin() + Index);
+		}
 		bool Register(const SVisibleElement &Element) noexcept
 		{
 			if(!m_Complete)

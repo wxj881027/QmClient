@@ -5331,6 +5331,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/editor_collab_camera_reload_test.cpp
     src/test/unit/client/editor_collab_join_test.cpp
     src/test/unit/client/editor_quad_slice_test.cpp
+    src/test/integration/client/local_server_port_file_test.cpp
+    src/test/unit/client/envelope_state_time_test.cpp
+    src/test/unit/client/info_message_lifetime_test.cpp
+    src/test/unit/client/key_reader_state_test.cpp
     src/test/unit/client/player_ninja_muzzle_test.cpp
     src/test/unit/client/editor_quad_art_layout_test.cpp
     src/test/unit/client/editor_map_append_image_name_test.cpp

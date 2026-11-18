@@ -1,12 +1,9 @@
 #include "envelope_state.h"
 
 #include <game/client/gameclient.h>
-#include <game/localization.h>
 #include <game/map/map_render_items.h>
 
 #include <chrono>
-
-using namespace std::chrono_literals;
 
 CEnvelopeState::CEnvelopeState(IMap *pMap, bool OnlineOnly) :
 	m_pMap(pMap)
@@ -36,42 +33,25 @@ void CEnvelopeState::EnvelopeEval(int TimeOffsetMillis, int EnvelopeIndex, Color
 	if(m_pEnvelopePoints->NumPoints() == 0)
 		return;
 
-	nanoseconds Time;
-
-	// offline rendering (like menu background) relies on local time
+	nanoseconds Time = milliseconds(TimeOffsetMillis);
 	if(!m_OnlineOnly)
 	{
-		Time = time_get_nanoseconds();
+		// 离线渲染使用本机时钟。
+		Time += time_get_nanoseconds();
 	}
-	else
+	else if(const auto *pGameInfo = GameClient()->m_Snap.m_pGameInfoObj)
 	{
-		// online rendering
-		if(GameClient()->m_Snap.m_pGameInfoObj)
-		{
-			static const nanoseconds s_NanosPerTick = nanoseconds(1s) / static_cast<int64_t>(Client()->GameTickSpeed());
-
-			// get the lerp of the current tick and prev
-			int EnvelopeTick;
-			double TickRatio;
-			if(Client()->State() == IClient::STATE_DEMOPLAYBACK || !g_Config.m_ClPredict ||
-				(GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW))
-			{
-				EnvelopeTick = Client()->PrevGameTick(g_Config.m_ClDummy) - GameClient()->m_Snap.m_pGameInfoObj->m_RoundStartTick;
-				const int CurTick = Client()->GameTick(g_Config.m_ClDummy) - GameClient()->m_Snap.m_pGameInfoObj->m_RoundStartTick;
-				TickRatio = mix<double>(0, CurTick - EnvelopeTick, (double)Client()->IntraGameTick(g_Config.m_ClDummy));
-			}
-			else
-			{
-				EnvelopeTick = Client()->PredGameTick(g_Config.m_ClDummy) - 1 - GameClient()->m_Snap.m_pGameInfoObj->m_RoundStartTick;
-				TickRatio = (double)Client()->PredIntraGameTick(g_Config.m_ClDummy);
-			}
-			Time = duration_cast<nanoseconds>(TickRatio * s_NanosPerTick) + EnvelopeTick * s_NanosPerTick;
-		}
-		else
-		{
-			Time = nanoseconds::zero();
-		}
+		const int Conn = g_Config.m_ClDummy;
+		const bool UseSnapshot = Client()->State() == IClient::STATE_DEMOPLAYBACK || !g_Config.m_ClPredict ||
+			(GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW);
+		const int Tick = UseSnapshot ? Client()->GameTick(Conn) : Client()->PredGameTick(Conn);
+		const double IntraTick = UseSnapshot ? Client()->IntraGameTick(Conn) : Client()->PredIntraGameTick(Conn);
+		const auto SampleTime = EnvelopeStateTime::OnlineSampleTime(
+			pGameInfo->m_RoundStartTick, Tick, Client()->PrevGameTick(Conn), IntraTick, !UseSnapshot, TimeOffsetMillis);
+		if(!SampleTime)
+			return;
+		Time = *SampleTime;
 	}
 
-	CRenderMap::RenderEvalEnvelope(m_pEnvelopePoints.get(), Time + milliseconds(TimeOffsetMillis), Result, Channels);
+	CRenderMap::RenderEvalEnvelope(m_pEnvelopePoints.get(), Time, Result, Channels);
 }

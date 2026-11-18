@@ -470,7 +470,7 @@ void CInfoMessages::OnRender()
 		{
 			continue;
 		}
-		if(Client()->GameTick(g_Config.m_ClDummy) > InfoMsg.m_Tick + Client()->GameTickSpeed() * 10)
+		if(InfoMessageExpired(Client()->GameTick(g_Config.m_ClDummy), InfoMsg.m_Tick, Client()->GameTickSpeed()))
 		{
 			ResetMessage(InfoMsg);
 			continue;

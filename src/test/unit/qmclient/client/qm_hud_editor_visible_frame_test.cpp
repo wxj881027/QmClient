@@ -63,6 +63,21 @@ TEST(QmHudVisibleFrame, MutableReportsRemainVisibleThroughTheReadOnlyFrameView)
 	EXPECT_FLOAT_EQ(ReadOnly.Elements()[0].m_StateOffsetY, 7);
 }
 
+TEST(QmHudVisibleFrame, RemovingAnEmptyElementPreservesOtherElementsAndFrameCompleteness)
+{
+	QmHudEditor::CVisibleFrame Frame;
+	ASSERT_TRUE(Frame.Register({EHudEditorElement::HudMain}));
+	ASSERT_TRUE(Frame.Register({EHudEditorElement::Chat}));
+	ASSERT_TRUE(Frame.Register({EHudEditorElement::Voting}));
+
+	Frame.RemoveAt(1);
+
+	ASSERT_EQ(Frame.Elements().size(), 2u);
+	EXPECT_EQ(Frame.Elements()[0].m_Element, EHudEditorElement::HudMain);
+	EXPECT_EQ(Frame.Elements()[1].m_Element, EHudEditorElement::Voting);
+	EXPECT_TRUE(Frame.Complete());
+}
+
 TEST(QmHudVisibleFrame, NextFrameDiscardsPreviousInteractionElements)
 {
 	QmHudEditor::CVisibleFrame Frame;
