@@ -43,7 +43,7 @@ namespace qm_dummy_link
 		Fallback = {Tick, ClientId, std::nullopt};
 		const CSnapshot *pSnap = GameClient.Client()->CurrentSnapshotForConnection(Connection);
 		const auto *pChar = pSnap ? static_cast<const CNetObj_Character *>(pSnap->FindItem(NETOBJTYPE_CHARACTER, ClientId)) : nullptr;
-		if(pChar && (pChar->m_Tick == 0 || (pChar->m_Tick <= Tick && Tick - pChar->m_Tick <= 3 * GameClient.Client()->GameTickSpeed())))
+		if(pChar && CanUseFallbackSnapshot(pChar->m_Tick, Tick, GameClient.Client()->GameTickSpeed()))
 		{
 			CNetObj_Character Current = *pChar;
 			if(Current.m_Tick && Current.m_Tick < Tick)
