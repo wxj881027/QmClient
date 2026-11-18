@@ -376,6 +376,42 @@ TEST_F(MapEnvelopeItems, NegativeSubmillisecondSampleUsesBezierSegmentStart)
 	EXPECT_FLOAT_EQ(Result.r, 1.0f);
 }
 
+TEST_F(MapEnvelopeItems, BezierInterpolatesBetweenAdjacentLateKeyframes)
+{
+	SItems Items;
+	constexpr int StartMillis = 1 << 24;
+	Items.m_vPoints[0].m_Time = CFixedTime(StartMillis);
+	Items.m_vPoints[0].m_Curvetype = CURVETYPE_BEZIER;
+	Items.m_vPoints[1].m_Time = CFixedTime(StartMillis + 1);
+	ASSERT_NO_FATAL_FAILURE(Load(Items));
+	CMapBasedEnvelopePointAccess Points(m_pMap.get());
+	ASSERT_NE(Points.GetBezier(1), nullptr);
+
+	const auto SampleTime = std::chrono::milliseconds(StartMillis) + std::chrono::microseconds(500);
+	ColorRGBA Result(0, 0, 0, 0);
+	CRenderMap::RenderEvalEnvelope(&Points, SampleTime, Result, 1);
+	EXPECT_FLOAT_EQ(Result.r, 1.5f);
+}
+
+TEST_F(MapEnvelopeItems, BezierRetainsMidpointForNearlyQuadraticTimeCurve)
+{
+	SItems Items;
+	constexpr int SecondControlMillis = 1 << 29;
+	constexpr int EndMillis = 3 * SecondControlMillis + 1;
+	Items.m_vPoints[0].m_Curvetype = CURVETYPE_BEZIER;
+	Items.m_vPoints[1].m_Time = CFixedTime(EndMillis);
+	Items.m_vPoints[1].m_Bezier.m_aInTangentDeltaX[0] = CFixedTime(SecondControlMillis - EndMillis);
+	ASSERT_NO_FATAL_FAILURE(Load(Items));
+	CMapBasedEnvelopePointAccess Points(m_pMap.get());
+	ASSERT_NE(Points.GetBezier(1), nullptr);
+
+	// 这个时刻对应曲线参数 0.5，包含三次项贡献的 125 微秒。
+	const auto SampleTime = std::chrono::milliseconds(3 * SecondControlMillis / 4) + std::chrono::microseconds(125);
+	ColorRGBA Result(0, 0, 0, 0);
+	CRenderMap::RenderEvalEnvelope(&Points, SampleTime, Result, 1);
+	EXPECT_FLOAT_EQ(Result.r, 1.5f);
+}
+
 TEST_F(MapEnvelopeItems, InvalidChannelsRemainAvailableForExistingEditorFallback)
 {
 	SItems Items;
