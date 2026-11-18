@@ -19,7 +19,7 @@ namespace qm_dummy_link
 		const auto &Tuning = GameClient.m_aTuning[Connection];
 		const bool LegacySolo = !Tuning.m_PlayerHooking && !Tuning.m_PlayerCollision;
 		if(Character.m_Active)
-			return SEndpoint{GameClient.m_aClients[ClientId].m_RenderPos, Character.m_HasExtendedData ? GameClient.m_aClients[ClientId].m_Solo : LegacySolo};
+			return SEndpoint{GameClient.m_aClients[ClientId].m_RenderPos, Character.m_HasExtendedData ? GameClient.m_aClients[ClientId].m_Solo : LegacySolo, GameClient.HookCollTargetPosition(ClientId, GameClient.Client()->IntraGameTick(g_Config.m_ClDummy))};
 
 		const int Tick = GameClient.Client()->GameTick(Connection);
 		auto &Fallback = m_aFallback[Connection];
@@ -41,60 +41,103 @@ namespace qm_dummy_link
 
 	namespace
 	{
-		void DrawDroplet(IGraphics &Graphics, const SLink &Link)
+		void DrawDrops(IGraphics &Graphics, const SLink &Link, float Pixel, ColorRGBA Fill)
 		{
-			if(Link.m_Distance == 0.0f)
-			{
-				Graphics.DrawCircle(Link.m_Main.x, Link.m_Main.y, HAMMER_REACH, 32);
-				return;
-			}
-
-			static const auto s_aContour = [] {
-				std::array<vec2, 34> aContour;
-				aContour.front() = vec2(TIP_REACH, 0);
-				const float TangentAngle = std::acos(HAMMER_REACH / TIP_REACH);
-				for(size_t Index = 1; Index < aContour.size(); ++Index)
-					aContour[Index] = direction(TangentAngle + (2.0f * pi - 2.0f * TangentAngle) * (Index - 1) / (aContour.size() - 2)) * HAMMER_REACH;
-				return aContour;
+			constexpr size_t Segments = 64;
+			static const auto s_aUnit = [] {
+				std::array<vec2, Segments> aUnit;
+				for(size_t Index = 0; Index < Segments; ++Index)
+					aUnit[Index] = direction(2.0f * pi * Index / Segments);
+				return aUnit;
 			}();
-			const vec2 Normal(-Link.m_Direction.y, Link.m_Direction.x);
-			const auto World = [&](vec2 Point) { return Link.m_Main + Link.m_Direction * Point.x + Normal * Point.y; };
-			std::array<IGraphics::CFreeformItem, s_aContour.size() / 2> aFan;
-			for(size_t Index = 0; Index < aFan.size(); ++Index)
+			const vec2 Side(-Link.m_Direction.y, Link.m_Direction.x);
+			std::array<vec2, Segments> aInner, aOuter;
+			for(size_t Index = 0; Index < Segments; ++Index)
 			{
-				const size_t First = Index * 2;
-				aFan[Index] = IGraphics::CFreeformItem(Link.m_Main, World(s_aContour[First]), World(s_aContour[(First + 2) % s_aContour.size()]), World(s_aContour[First + 1]));
+				const vec2 Local = Link.m_Shape.Offset(s_aUnit[Index]);
+				aInner[Index] = Link.m_Direction * Local.x + Side * Local.y;
 			}
-			Graphics.QuadsDrawFreeform(aFan.data(), aFan.size());
+			for(size_t Index = 0; Index < Segments; ++Index)
+			{
+				const vec2 Tangent = aInner[(Index + 1) % Segments] - aInner[(Index + Segments - 1) % Segments];
+				aOuter[Index] = aInner[Index] + normalize(vec2(Tangent.y, -Tangent.x)) * Pixel;
+			}
+			for(const bool AtDummy : {false, true})
+			{
+				const vec2 Center = AtDummy ? Link.m_Dummy : Link.m_Main;
+				const auto World = [&](vec2 Offset) { return AtDummy ? Center - Offset : Center + Offset; };
+				std::array<IGraphics::CFreeformItem, Segments / 2> aFan;
+				std::array<IGraphics::CFreeformItem, Segments> aEdge;
+				for(size_t Index = 0; Index < Segments; ++Index)
+				{
+					const size_t Next = (Index + 1) % Segments;
+					aEdge[Index] = IGraphics::CFreeformItem(World(aInner[Index]), World(aInner[Next]), World(aOuter[Index]), World(aOuter[Next]));
+					if(Index % 2 == 0)
+						aFan[Index / 2] = IGraphics::CFreeformItem(Center, World(aInner[Index]), World(aInner[(Next + 1) % Segments]), World(aInner[Next]));
+				}
+				Graphics.SetColor(Fill);
+				Graphics.QuadsDrawFreeform(aFan.data(), aFan.size());
+				const ColorRGBA Clear = Fill.WithAlpha(0.0f);
+				const IGraphics::CColorVertex aColors[] = {{0, Fill}, {1, Fill}, {2, Clear}, {3, Clear}};
+				Graphics.SetColorVertex(aColors, std::size(aColors));
+				Graphics.QuadsDrawFreeform(aEdge.data(), aEdge.size());
+			}
+		}
+
+		void DrawConnector(IGraphics &Graphics, const SLink &Link, float Pixel, ColorRGBA Color)
+		{
+			const vec2 Start = Link.LineStart();
+			const vec2 End = Link.LineEnd();
+			const vec2 Side = vec2(-Link.m_Direction.y, Link.m_Direction.x) * Pixel;
+			const auto Strip = [&](float From, float To, ColorRGBA Inner, ColorRGBA Outer) {
+				const IGraphics::CFreeformItem Quad(Start + Side * From, End + Side * From, Start + Side * To, End + Side * To);
+				const IGraphics::CColorVertex aColors[] = {{0, Inner}, {1, Inner}, {2, Outer}, {3, Outer}};
+				Graphics.SetColorVertex(aColors, std::size(aColors));
+				Graphics.QuadsDrawFreeform(&Quad, 1);
+			};
+			Strip(-0.85f, 0.85f, Color, Color);
+			Strip(-0.85f, -1.85f, Color, Color.WithAlpha(0.0f));
+			Strip(0.85f, 1.85f, Color, Color.WithAlpha(0.0f));
 		}
 	}
 
 	std::optional<SLink> CView::CurrentLink(CGameClient &GameClient)
 	{
-		if(GameClient.Client()->State() != IClient::STATE_ONLINE || !GameClient.Client()->DummyConnected())
+		if(!g_Config.m_QmDummyDistanceLink || GameClient.Client()->State() != IClient::STATE_ONLINE || !GameClient.Client()->DummyConnected())
+		{
+			m_Motion = {};
 			return std::nullopt;
-		return MakeLink(CurrentEndpoint(GameClient, IClient::CONN_MAIN), CurrentEndpoint(GameClient, IClient::CONN_DUMMY), GameClient.m_aTuning[IClient::CONN_MAIN].m_HookLength);
+		}
+		const int Active = g_Config.m_ClDummy;
+		const int ActiveId = GameClient.m_aLocalIds[Active];
+		const CTuningParams &Tuning = GameClient.HookCollTuning(ActiveId);
+		auto Link = MakeLink(CurrentEndpoint(GameClient, IClient::CONN_MAIN), CurrentEndpoint(GameClient, IClient::CONN_DUMMY), Tuning.m_HookLength, Active == IClient::CONN_DUMMY);
+		if(Link && g_Config.m_QmDummyDistanceLinkStyle != 0)
+		{
+			const uint64_t Frame = GameClient.Client()->PerfFrame();
+			const float Dt = Frame != m_LastDropletFrame ? GameClient.Client()->RenderFrameTime() : 0.0f;
+			m_LastDropletFrame = Frame;
+			Link->m_Shape = m_Motion.Advance(Link->m_Distance, Dt, g_Config.m_QmUiMotionLevel);
+		}
+		else
+			m_Motion = {};
+		return Link;
 	}
 
-	void Draw(IGraphics &Graphics, const SLink &Link, bool Droplet)
+	void Draw(IGraphics &Graphics, const SLink &Link)
 	{
-		const ColorRGBA Color = Link.m_InHookRange ? ColorRGBA(0.40f, 0.95f, 0.65f, Link.m_Alpha) : ColorRGBA(0.85f, 0.90f, 1.0f, Link.m_Alpha);
+		if(Link.m_Distance <= 0.0f)
+			return;
+		float Left, Top, Right, Bottom;
+		Graphics.GetScreen(&Left, &Top, &Right, &Bottom);
+		const float Pixel = (Right - Left) / std::max(Graphics.ScreenWidth(), 1);
+		const ColorRGBA Color = Link.m_InHookRange ? ColorRGBA(0.18f, 1.0f, 0.40f, Link.m_Alpha) : ColorRGBA(0.85f, 0.90f, 1.0f, Link.m_Alpha);
 		Graphics.TextureClear();
 		Graphics.BlendNormal();
-		if(Droplet)
-		{
-			Graphics.QuadsBegin();
-			Graphics.SetColor(Color.WithAlpha(Link.m_Alpha * 0.35f));
-			DrawDroplet(Graphics, Link);
-			Graphics.QuadsEnd();
-		}
-		if(const auto Start = Link.LineStart(Droplet))
-		{
-			IGraphics::CLineItem Line(*Start, Link.m_Dummy);
-			Graphics.LinesBegin();
-			Graphics.SetColor(Color);
-			Graphics.LinesDraw(&Line, 1);
-			Graphics.LinesEnd();
-		}
+		Graphics.QuadsBegin();
+		DrawConnector(Graphics, Link, Pixel, Color);
+		if(Link.m_Shape.m_Radius > Pixel * 0.1f)
+			DrawDrops(Graphics, Link, Pixel, Color.WithAlpha(Link.m_Alpha * (Link.m_InHookRange ? 0.82f : 0.55f)));
+		Graphics.QuadsEnd();
 	}
 }

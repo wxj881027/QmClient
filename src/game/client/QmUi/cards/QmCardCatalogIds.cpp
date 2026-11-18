@@ -28,7 +28,6 @@ namespace qm_card_catalog
 			"qm:streamer",
 			"qm:collision_hitbox",
 			"qm:water_hammer",
-			"qm:dummy_distance_link",
 		};
 
 		const std::vector<const char *> s_vFunctionCards = {

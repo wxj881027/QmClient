@@ -3068,9 +3068,6 @@ Connection quality
 Connection severely abnormal
 == Conexão gravemente anormal
 
-Connects your main tee and dummy with a line that fades as they move apart.
-== Liga o tee principal ao dummy com uma linha que fica mais fraca à medida que se afastam.
-
 Connlimit: number of connections allowed per IP in a time period
 == Connlimit: número de conexões permitidas por IP em um período de tempo
 
@@ -4409,9 +4406,6 @@ Dummy country (ISO 3166-1 numeric)
 Dummy decoration color
 == Cor da decoração do boneco
 
-Dummy distance link
-== Linha até o dummy
-
 Dummy distance link style: 0 = line, 1 = droplet
 == Estilo da linha até o dummy: 0 = linha, 1 = gota
 
@@ -5098,9 +5092,6 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 
 Enable the indicators you need; each one draws on your own screen only.
 == Ative os indicadores que você precisa; cada um é desenhado só na sua tela.
-
-Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
-== Ative a ligação e escolha Linha ou Gota. A parte redonda da gota mostra o alcance do martelo.
 
 Enable the message types you want and choose their colors.
 == Ative os tipos de mensagem que quiser e escolha as cores deles.
@@ -6418,9 +6409,6 @@ Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the d
 
 Greek
 == Grego
-
-Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
-== Verde indica que a distância não passa do comprimento do gancho, mesmo através de paredes. Se um dos tees estiver em modo solo, a linha mantém a cor normal.
 
 Greeting text
 == Texto de saudação
@@ -14047,9 +14035,6 @@ Show the chat scrollbar on the right
 
 Show the cursor while free spectating
 == Mostrar o cursor enquanto espectador livre
-
-Show the distance and direction from your main tee to your dummy
-== Mostrar a distância e a direção do tee principal até o dummy
 
 Show the Gores team drown board
 == Mostrar o quadro de afogamentos da equipe Gores

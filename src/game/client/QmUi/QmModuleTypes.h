@@ -64,7 +64,6 @@ namespace qm_module
 		Console,
 		SpectatorMode,
 		ChatCompletion,
-		DummyDistanceLink,
 	};
 
 	enum class EQmModuleColumn
@@ -82,7 +81,7 @@ namespace qm_module
 		const char *m_pKey;
 	};
 
-	constexpr size_t QmModuleCount = 51;
+	constexpr size_t QmModuleCount = 50;
 } // namespace qm_module
 
 #endif // GAME_CLIENT_QMUI_QMMODULETYPES_H

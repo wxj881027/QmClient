@@ -3068,9 +3068,6 @@ Connection quality
 Connection severely abnormal
 == 接続に深刻な異常があります
 
-Connects your main tee and dummy with a line that fades as they move apart.
-== メインのティーとダミーを線で結びます。離れるほど線が薄くなります。
-
 Connlimit: number of connections allowed per IP in a time period
 == Connlimit：一定期間に IP あたり許可する接続数
 
@@ -4409,9 +4406,6 @@ Dummy country (ISO 3166-1 numeric)
 Dummy decoration color
 == ダミーの装飾色
 
-Dummy distance link
-== ダミーとの距離線
-
 Dummy distance link style: 0 = line, 1 = droplet
 == ダミーとの距離線のスタイル：0 = 直線、1 = しずく
 
@@ -5098,9 +5092,6 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 
 Enable the indicators you need; each one draws on your own screen only.
 == 必要な表示だけを有効にしてください。どれも自分の画面にしか描画されません。
-
-Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
-== 距離線を有効にして「直線」か「しずく」を選びます。しずくの丸い部分はハンマーの届く範囲です。
 
 Enable the message types you want and choose their colors.
 == 使いたいメッセージの種類を有効にし、色を選びます。
@@ -6418,9 +6409,6 @@ Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the d
 
 Greek
 == ギリシャ文字
-
-Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
-== 緑色はフックの長さ以内という意味で、壁越しでも緑になります。どちらかがソロなら線は通常の色のままです。
 
 Greeting text
 == 挨拶テキスト
@@ -14047,9 +14035,6 @@ Show the chat scrollbar on the right
 
 Show the cursor while free spectating
 == フリースペクテイト中にカーソルを表示
-
-Show the distance and direction from your main tee to your dummy
-== メインのティーからダミーまでの距離と方向を表示
 
 Show the Gores team drown board
 == Gores チーム溺死ボードを表示

@@ -108,7 +108,6 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		{EQmModuleId::Console, EQmModuleColumn::Left, 20, "console"},
 		{EQmModuleId::SpectatorMode, EQmModuleColumn::Right, 24, "spectator_mode"},
 		{EQmModuleId::ChatCompletion, EQmModuleColumn::Left, 21, "chat_completion"},
-		{EQmModuleId::DummyDistanceLink, EQmModuleColumn::Right, 6, "dummy_distance_link"},
 	};
 }
 

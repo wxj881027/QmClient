@@ -422,9 +422,9 @@ void CPlayers::RenderHookCollLine(
 
 	// When the other player isn't predicted, we don't know their tunes.
 	// Use our own tunes instead. This is wrong, but a good heuristic.
-	const CCharacterCore &PlayerCore = GameClient()->m_aClients[ClientId].m_IsPredicted ? GameClient()->m_aClients[ClientId].m_Predicted : GameClient()->m_aClients[GameClient()->m_aLocalIds[g_Config.m_ClDummy]].m_Predicted;
-	float HookLength = PlayerCore.m_Tuning.m_HookLength;
-	float HookFireSpeed = PlayerCore.m_Tuning.m_HookFireSpeed;
+	const CTuningParams &Tuning = GameClient()->HookCollTuning(ClientId);
+	float HookLength = Tuning.m_HookLength;
+	float HookFireSpeed = Tuning.m_HookFireSpeed;
 
 	// TClient: Hook collision line length follows cursor distance
 	// 有问题,暂定改回原版

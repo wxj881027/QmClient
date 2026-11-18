@@ -3068,9 +3068,6 @@ Connection quality
 Connection severely abnormal
 == Połączenie poważnie niestabilne
 
-Connects your main tee and dummy with a line that fades as they move apart.
-== Łączy głównego tee z dummy linią, która blednie, gdy się od siebie oddalają.
-
 Connlimit: number of connections allowed per IP in a time period
 == Connlimit: liczba dozwolonych połączeń na IP w okresie czasu
 
@@ -4409,9 +4406,6 @@ Dummy country (ISO 3166-1 numeric)
 Dummy decoration color
 == Kolor dekoracji Dummy
 
-Dummy distance link
-== Linia do dummy
-
 Dummy distance link style: 0 = line, 1 = droplet
 == Styl linii do dummy: 0 = linia, 1 = kropla
 
@@ -5098,9 +5092,6 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 
 Enable the indicators you need; each one draws on your own screen only.
 == Włącz potrzebne wskaźniki; każdy rysuje tylko na twoim ekranie.
-
-Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
-== Włącz połączenie i wybierz opcję Linia lub Kropla. Okrągła część kropli pokazuje zasięg młotka.
 
 Enable the message types you want and choose their colors.
 == Włącz wybrane typy wiadomości i wybierz ich kolory.
@@ -6418,9 +6409,6 @@ Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the d
 
 Greek
 == Grecki
-
-Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
-== Zielony oznacza, że odległość nie przekracza długości haka, nawet przez ścianę. Jeśli którykolwiek tee jest w trybie solo, linia zachowuje zwykły kolor.
 
 Greeting text
 == Tekst powitania
@@ -14047,9 +14035,6 @@ Show the chat scrollbar on the right
 
 Show the cursor while free spectating
 == Pokaż kursor podczas wolnej obserwacji
-
-Show the distance and direction from your main tee to your dummy
-== Pokaż odległość i kierunek od głównego tee do dummy
 
 Show the Gores team drown board
 == Pokaż tablicę utonięć drużyny Gores

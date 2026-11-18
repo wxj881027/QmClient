@@ -21,6 +21,8 @@ The card also has "Fade spectators in water": when a spectator ghost Tee falls i
 
 ## Watch out
 
+“Show dummy distance link” works independently. Line connects the two tees; Droplet adds a drop at each end pointing towards the other tee. They sharpen as the tees move apart, round off as they approach, and shrink away within hammer reach. Green means a hook from the controlled tee can reach the edge of the other tee by distance alone, even through a wall. If either tee is solo, the link keeps its normal color.
+
 - Turn on one item at a time. With everything on, it is hard to tell which action interrupted you.
 - Auto switching changes which Tee you control; while playing the dummy, this is easy to misread as stuck input.
 - Lock delay 0 locks the team the moment you join, leaving teammates no time to join; too long and the lock may land only after the situation has changed.

@@ -1080,6 +1080,8 @@ public:
 	CQmHookCollCandidates m_HookCollCandidates;
 	CQmHookCollSpatialIndex m_HookCollSpatialIndex;
 	void UpdateHookCollTargets();
+	vec2 HookCollTargetPosition(int ClientId, float Intra) const;
+	const CTuningParams &HookCollTuning(int ClientId) const;
 
 	int IntersectCharacter(vec2 HookPos, vec2 NewPos, vec2 &NewPos2, int OwnId, vec2 *pPlayerPosition = nullptr);
 

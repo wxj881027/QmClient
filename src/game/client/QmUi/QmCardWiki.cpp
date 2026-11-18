@@ -515,12 +515,6 @@ namespace
 			Localizable("Switch it off when you are done; these logs are for bug reports, not daily play."),
 		},
 		{
-			"qm:dummy_distance_link",
-			Localizable("Connects your main tee and dummy with a line that fades as they move apart."),
-			Localizable("Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach."),
-			Localizable("Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color."),
-		},
-		{
 			"qm:dummy_miniview",
 			Localizable("Draws a small second view of your other tee in the HUD, so you can watch both tees at the same time."),
 			Localizable("Turn on \"Enable dummy window\", then set \"Dummy window size\" and \"Dummy window zoom\"; \"Only show when the other Tee is not on screen\" hides it otherwise."),

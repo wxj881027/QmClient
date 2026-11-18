@@ -3068,9 +3068,6 @@ Connection quality
 Connection severely abnormal
 == Bağlantı ciddi şekilde anormal
 
-Connects your main tee and dummy with a line that fades as they move apart.
-== Ana tee ile kuklayı bir çizgiyle birleştirir. Birbirlerinden uzaklaştıkça çizgi soluklaşır.
-
 Connlimit: number of connections allowed per IP in a time period
 == Bağlantı sınırı: bir IP'nin bir zaman diliminde izin verilen bağlantı sayısı
 
@@ -4409,9 +4406,6 @@ Dummy country (ISO 3166-1 numeric)
 Dummy decoration color
 == Yapay süsleme rengi
 
-Dummy distance link
-== Kuklaya mesafe çizgisi
-
 Dummy distance link style: 0 = line, 1 = droplet
 == Kuklaya mesafe çizgisinin biçimi: 0 = çizgi, 1 = damla
 
@@ -5098,9 +5092,6 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 
 Enable the indicators you need; each one draws on your own screen only.
 == İhtiyacınız olan göstergeleri etkinleştirin; her biri yalnızca kendi ekranınızda çizilir.
-
-Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
-== Bağlantıyı açıp Çizgi veya Damla biçimini seç. Damlanın yuvarlak kısmı çekicin menzilini gösterir.
 
 Enable the message types you want and choose their colors.
 == İstediğiniz mesaj türlerini etkinleştirin ve renklerini seçin.
@@ -6418,9 +6409,6 @@ Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the d
 
 Greek
 == Yunanca
-
-Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
-== Yeşil, arada duvar olsa bile uzaklığın kanca uzunluğunu aşmadığını gösterir. Tee’lerden biri solo durumundaysa çizgi normal renginde kalır.
 
 Greeting text
 == Selamlama metni
@@ -14047,9 +14035,6 @@ Show the chat scrollbar on the right
 
 Show the cursor while free spectating
 == Serbest izlerken imleci göster
-
-Show the distance and direction from your main tee to your dummy
-== Ana tee’den kuklaya olan uzaklığı ve yönü göster
 
 Show the Gores team drown board
 == Gores takım boğulma panosunu göster

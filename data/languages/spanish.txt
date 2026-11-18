@@ -3068,9 +3068,6 @@ Connection quality
 Connection severely abnormal
 == Conexión gravemente anómala
 
-Connects your main tee and dummy with a line that fades as they move apart.
-== Une el tee principal y el dummy con una línea que se atenúa al separarse.
-
 Connlimit: number of connections allowed per IP in a time period
 == Límite de conexiones: número de conexiones permitidas por IP en un período de tiempo
 
@@ -4409,9 +4406,6 @@ Dummy country (ISO 3166-1 numeric)
 Dummy decoration color
 == Color de decoración del Dummy
 
-Dummy distance link
-== Línea al dummy
-
 Dummy distance link style: 0 = line, 1 = droplet
 == Estilo de línea al dummy: 0 = línea, 1 = gota
 
@@ -5098,9 +5092,6 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 
 Enable the indicators you need; each one draws on your own screen only.
 == Activa los indicadores que necesites; cada uno se dibuja solo en tu pantalla.
-
-Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
-== Activa la conexión y elige Línea o Gota. La parte redonda de la gota indica el alcance del martillo.
 
 Enable the message types you want and choose their colors.
 == Activa los tipos de mensaje que quieras y elige sus colores.
@@ -6418,9 +6409,6 @@ Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the d
 
 Greek
 == Griego
-
-Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
-== El verde indica que la distancia no supera la longitud del gancho, incluso con una pared de por medio. Si alguno de los tees está en modo solo, la línea conserva su color normal.
 
 Greeting text
 == Texto de saludo
@@ -14047,9 +14035,6 @@ Show the chat scrollbar on the right
 
 Show the cursor while free spectating
 == Mostrar el cursor mientras se especta libremente
-
-Show the distance and direction from your main tee to your dummy
-== Mostrar la distancia y la dirección desde el tee principal hasta el dummy
 
 Show the Gores team drown board
 == Mostrar el marcador de ahogamientos del equipo Gores

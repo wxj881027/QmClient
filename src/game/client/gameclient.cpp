@@ -6995,6 +6995,19 @@ IGameClient *CreateGameClient()
 	return new CGameClient();
 }
 
+const CTuningParams &CGameClient::HookCollTuning(int ClientId) const
+{
+	const int Active = g_Config.m_ClDummy;
+	const int SourceId = ClientId >= 0 && ClientId < MAX_CLIENTS && m_aClients[ClientId].m_IsPredicted ? ClientId : m_aLocalIds[Active];
+	return SourceId >= 0 && SourceId < MAX_CLIENTS ? m_aClients[SourceId].m_Predicted.m_Tuning : m_aTuning[Active];
+}
+
+vec2 CGameClient::HookCollTargetPosition(int ClientId, float Intra) const
+{
+	const auto &Character = m_Snap.m_aCharacters[ClientId];
+	return mix(vec2(Character.m_Prev.m_X, Character.m_Prev.m_Y), vec2(Character.m_Cur.m_X, Character.m_Cur.m_Y), Intra);
+}
+
 void CGameClient::UpdateHookCollTargets()
 {
 	m_HookCollCandidates.Reset();
@@ -7009,9 +7022,7 @@ void CGameClient::UpdateHookCollTargets()
 		Target.m_Super = Data.m_Super;
 		Target.m_Solo = Data.m_Solo;
 		Target.m_HookHitDisabled = Data.m_HookHitDisabled;
-		const CNetObj_Character &Prev = m_Snap.m_aCharacters[i].m_Prev;
-		const CNetObj_Character &Cur = m_Snap.m_aCharacters[i].m_Cur;
-		Target.m_Pos = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Cur.m_X, Cur.m_Y), Intra);
+		Target.m_Pos = HookCollTargetPosition(i, Intra);
 	}
 }
 
@@ -7027,7 +7038,7 @@ int CGameClient::IntersectCharacter(vec2 HookPos, vec2 NewPos, vec2 &NewPos2, in
 		const bool IsOneSolo = Target.m_Solo || OwnTarget.m_Solo;
 		return IsOneSuper || (m_Teams.SameTeam(Id, OwnId) && !IsOneSolo && !OwnTarget.m_HookHitDisabled);
 	});
-	const float Radius = CCharacterCore::PhysicalSize() + 2.0f;
+	const float Radius = QmHookCollTargetRadius;
 	const auto PositionOf = [&](int Id) { return m_aHookCollTargets[Id].m_Pos; };
 	const SQmHookCollSegment Segment(HookPos, NewPos, Radius);
 	const auto &vNearby = m_HookCollSpatialIndex.GetCandidates(Segment, vCandidates, PositionOf, [&](int Id) { return m_aHookCollTargets[Id].m_Valid; });

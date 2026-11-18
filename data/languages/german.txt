@@ -3068,9 +3068,6 @@ Connection quality
 Connection severely abnormal
 == Verbindung stark auffällig
 
-Connects your main tee and dummy with a line that fades as they move apart.
-== Verbindet Haupt-Tee und Dummy mit einer Linie. Je weiter sie voneinander entfernt sind, desto blasser wird die Linie.
-
 Connlimit: number of connections allowed per IP in a time period
 == Connlimit: Anzahl der Verbindungen pro IP in einem Zeitraum
 
@@ -4409,9 +4406,6 @@ Dummy country (ISO 3166-1 numeric)
 Dummy decoration color
 == Dummy Dekorationsfarbe
 
-Dummy distance link
-== Verbindungslinie zum Dummy
-
 Dummy distance link style: 0 = line, 1 = droplet
 == Linienstil zum Dummy: 0 = Linie, 1 = Tropfen
 
@@ -5098,9 +5092,6 @@ Enable the indicator; choose its distance mode and whether war-list players get 
 
 Enable the indicators you need; each one draws on your own screen only.
 == Aktiviere nur die Anzeigen, die du brauchst; jede erscheint nur auf deinem Bildschirm.
-
-Enable the link and choose Line or Droplet. The round part of the droplet shows hammer reach.
-== Aktiviere die Verbindungslinie und wähle „Linie“ oder „Tropfen“. Der runde Teil des Tropfens zeigt die Hammerreichweite.
 
 Enable the message types you want and choose their colors.
 == Aktiviere die gewünschten Meldungstypen und wähle ihre Farben.
@@ -6418,9 +6409,6 @@ Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the d
 
 Greek
 == Griechisch
-
-Green means within hook length, even through walls. If either tee is solo, the link keeps its normal color.
-== Grün bedeutet, dass die Entfernung innerhalb der Hakenlänge liegt, auch durch Wände. Ist einer der Tees im Solo-Modus, behält die Linie ihre normale Farbe.
 
 Greeting text
 == Begrüßungstext
@@ -14047,9 +14035,6 @@ Show the chat scrollbar on the right
 
 Show the cursor while free spectating
 == Cursor beim freien Zuschauen anzeigen
-
-Show the distance and direction from your main tee to your dummy
-== Entfernung und Richtung vom Haupt-Tee zum Dummy anzeigen
 
 Show the Gores team drown board
 == Gores-Team-Ertrunkenenanzeige anzeigen

@@ -147,7 +147,6 @@ namespace qm_card_catalog
 		static bool BuildConfigFilesCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 		static void RenderFriendCodeControls(CMenus *pMenus, CUIRect &Content, bool ReadOnly);
 		static bool BuildNameplateCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
-		static void RenderDummyDistanceLink(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool ReadOnly);
 		static bool BuildWaterHammerCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 		static bool BuildTitleCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		// 聊天框里「一条消息」的样子：消息底色 + 发言人名字 + 内容。

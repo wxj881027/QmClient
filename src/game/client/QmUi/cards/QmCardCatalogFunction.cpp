@@ -163,7 +163,10 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
-		{{&g_Config.m_QmPausedSpectatorFade, "Fade spectators in water", Localize("Fade spectators in water")}},
+		{
+			{&g_Config.m_QmPausedSpectatorFade, "Fade spectators in water", Localize("Fade spectators in water")},
+			{&g_Config.m_QmDummyDistanceLink, "Show dummy distance link", Localize("Show dummy distance link")},
+		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 
 	if(g_Config.m_QmAutoTeamLock)
@@ -185,6 +188,20 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-hj-assist-spectator-alpha", &LabelColumn, Localize("Spectator opacity"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			static int s_QmPausedSpectatorAlphaInputId;
 			RenderQmSettingsSliderWithValueInput(&s_QmPausedSpectatorAlphaInputId, ControlColumn, &g_Config.m_QmPausedSpectatorAlpha, 0, 100, "%", PrewarmOnly);
+		}
+		Flow.Space(LineSpacing);
+	}
+	if(g_Config.m_QmDummyDistanceLink)
+	{
+		if(Flow.Control("hj-assist-link-style", LineHeight, Row))
+		{
+			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
+			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "hj-assist-link-style", &LabelColumn, Localize("Link style"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+			static CButtonContainer s_aStyleButtons[2];
+			const char *apLabels[] = {Localize("Line"), Localize("Droplet")};
+			const int Style = DoSegmentedChoice(s_aStyleButtons, apLabels, std::size(apLabels), g_Config.m_QmDummyDistanceLinkStyle, ControlColumn, ui_token::radius::BASE, nullptr, BodySize, &g_Config.m_QmDummyDistanceLinkStyle);
+			if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly() && Style >= 0)
+				g_Config.m_QmDummyDistanceLinkStyle = Style;
 		}
 		Flow.Space(LineSpacing);
 	}

@@ -71,6 +71,9 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		const char *m_pCard;
 	};
 	const SCase aCases[] = {
+		{"qm_dummy_distance_link", "qm:hj_assist"},
+		{"qm_dummy_distance_link_style", "qm:hj_assist"},
+		{"水滴", "qm:hj_assist"},
 		{"inp_mousesens", "deck:controls-mouse"},
 		{"Maximum cursor distance", "deck:controls-mouse"},
 		{"inp_controller_tolerance", "deck:controls-controller"},

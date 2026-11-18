@@ -19,16 +19,27 @@ TEST(QmDummyDistanceLink, MissingEitherEndpointHidesLinkUntilBothArePresent)
 	EXPECT_EQ(MakeLink(MAIN, Dummy, 380)->m_Dummy, Dummy.m_Pos);
 }
 
-TEST(QmDummyDistanceLink, HookLengthBoundaryChangesOnlyTheHighlight)
+TEST(QmDummyDistanceLink, HookCanCatchTheNearEdgeOutsideCenterRange)
 {
-	const SEndpoint Dummy{vec2(-30, 40), false};
-	const auto Inside = MakeLink(MAIN, Dummy, 50);
-	const auto Outside = MakeLink(MAIN, Dummy, 49);
+	const SEndpoint Dummy{vec2(409, 0), false};
+	const auto Inside = MakeLink(MAIN, Dummy, 380);
+	const auto Outside = MakeLink(MAIN, Dummy, 379);
 	ASSERT_TRUE(Inside);
 	ASSERT_TRUE(Outside);
 	EXPECT_TRUE(Inside->m_InHookRange);
 	EXPECT_FALSE(Outside->m_InHookRange);
 	EXPECT_FLOAT_EQ(Inside->m_Alpha, Outside->m_Alpha);
+}
+
+TEST(QmDummyDistanceLink, ControlledTeeAimsAtSnapshotPositionButLineJoinsRenderedCenters)
+{
+	const SEndpoint Dummy{vec2(415, 0), false, vec2(407, 0)};
+	const auto FromMain = MakeLink(MAIN, Dummy, 380);
+	const auto FromDummy = MakeLink(MAIN, Dummy, 380, true);
+	ASSERT_TRUE(FromMain && FromDummy);
+	EXPECT_TRUE(FromMain->m_InHookRange);
+	EXPECT_FALSE(FromDummy->m_InHookRange);
+	EXPECT_EQ(FromMain->LineEnd(), Dummy.m_Pos);
 }
 
 TEST(QmDummyDistanceLink, SoloAtEitherEndSuppressesHighlightWithoutHidingLink)
@@ -41,8 +52,7 @@ TEST(QmDummyDistanceLink, SoloAtEitherEndSuppressesHighlightWithoutHidingLink)
 			const auto Link = MakeLink(SEndpoint{vec2(0, 0), MainSolo}, SEndpoint{vec2(100, 0), DummySolo}, 380);
 			ASSERT_TRUE(Link);
 			EXPECT_EQ(Link->m_InHookRange, !MainSolo && !DummySolo);
-			EXPECT_TRUE(Link->LineStart(false));
-			EXPECT_TRUE(Link->LineStart(true));
+			EXPECT_FLOAT_EQ(Link->m_Distance, 100.0f);
 		}
 	}
 }
@@ -56,33 +66,56 @@ TEST(QmDummyDistanceLink, MoreDistantTeesFadeButNeverDisappear)
 	EXPECT_GT(Near->m_Alpha, Far->m_Alpha);
 	EXPECT_GT(Far->m_Alpha, Farther->m_Alpha);
 	EXPECT_GT(Farther->m_Alpha, 0.0f);
-	EXPECT_TRUE(Farther->LineStart(false));
+	EXPECT_EQ(Farther->LineEnd(), Farther->m_Dummy);
 }
 
-TEST(QmDummyDistanceLink, DropletLineStartsAtTipFacingDummy)
+TEST(QmDummyDistanceLink, LineConnectsOpposingTipsAndLengthensAsDropsRecede)
 {
 	const SEndpoint Main{vec2(42, 10), false};
-	const auto Link = MakeLink(Main, SEndpoint{vec2(42, -200), false}, 380);
+	const SEndpoint Dummy{vec2(42, -200), false};
+	auto Link = MakeLink(Main, Dummy, 380);
 	ASSERT_TRUE(Link);
-	EXPECT_EQ(Link->LineStart(false), Main.m_Pos);
-	ASSERT_TRUE(Link->LineStart(true));
-	EXPECT_EQ(*Link->LineStart(true), vec2(42, 10 - qm_dummy_link::TIP_REACH));
+	qm_dummy_link::CDropletMotion Motion;
+	Link->m_Shape = Motion.Advance(Link->m_Distance, 1.0f, 0);
+	const vec2 Start = Link->LineStart(), End = Link->LineEnd();
+	EXPECT_LT(Start.y, Main.m_Pos.y);
+	EXPECT_GT(End.y, Dummy.m_Pos.y);
+	EXPECT_GT(Start.y, End.y);
+	EXPECT_FLOAT_EQ(Main.m_Pos.y - Start.y, End.y - Dummy.m_Pos.y);
+	Link->m_Shape = Motion.Advance(0.0f, 1.0f, 0);
+	EXPECT_EQ(Link->LineStart(), Main.m_Pos);
+	EXPECT_EQ(Link->LineEnd(), Dummy.m_Pos);
 }
 
-TEST(QmDummyDistanceLink, DummyInsideHammerReachKeepsDirectionWithoutExtension)
+TEST(QmDummyDistanceLink, DistantDropsHaveLongerNarrowerNoses)
 {
-	const auto Link = MakeLink(MAIN, SEndpoint{vec2(0, 20), false}, 380);
-	ASSERT_TRUE(Link);
-	EXPECT_EQ(Link->m_Direction, vec2(0, 1));
-	EXPECT_FALSE(Link->LineStart(true));
-	EXPECT_TRUE(Link->LineStart(false));
+	qm_dummy_link::CDropletMotion Motion;
+	const auto Near = Motion.Advance(110.0f, 0.0f, 0);
+	const auto Far = Motion.Advance(700.0f, 0.0f, 0);
+	EXPECT_GT(Far.Offset(vec2(1, 0)).x, Near.Offset(vec2(1, 0)).x);
+	EXPECT_LT(Far.Offset(vec2(0.8f, 0.6f)).y, Near.Offset(vec2(0.8f, 0.6f)).y);
 }
 
-TEST(QmDummyDistanceLink, CoincidentTeesHaveNoDirectionOrExtension)
+TEST(QmDummyDistanceLink, ReversingMidRetractionResumesFromTheVisibleSize)
 {
-	const auto Link = MakeLink(MAIN, MAIN, 380);
-	ASSERT_TRUE(Link);
-	EXPECT_EQ(Link->m_Direction, vec2(0, 0));
-	EXPECT_FALSE(Link->LineStart(true));
-	EXPECT_FALSE(Link->LineStart(false));
+	qm_dummy_link::CDropletMotion Motion;
+	const auto Open = Motion.Advance(100.0f, 1.0f, 2);
+	const auto Closing = Motion.Advance(60.0f, 0.1f, 2);
+	const auto Reversed = Motion.Advance(100.0f, 0.0f, 2);
+	EXPECT_GT(Closing.m_Radius, 0.0f);
+	EXPECT_LT(Closing.m_Radius, Open.m_Radius);
+	EXPECT_FLOAT_EQ(Closing.m_Radius, Reversed.m_Radius);
+	EXPECT_GT(Motion.Advance(250.0f, 0.7f, 2).m_Radius, Closing.m_Radius);
+}
+
+TEST(QmDummyDistanceLink, GrowFromCenterOnlyAfterLeavingHammerReach)
+{
+	qm_dummy_link::CDropletMotion Motion;
+	EXPECT_FLOAT_EQ(Motion.Advance(qm_dummy_link::HAMMER_REACH, 1.0f, 2).m_Radius, 0.0f);
+	const float First = Motion.Advance(200.0f, 0.016f, 2).m_Radius;
+	EXPECT_GT(First, 0.0f);
+	EXPECT_LT(First, Motion.Advance(200.0f, 0.2f, 2).m_Radius);
+	Motion.Advance(50.0f, 2.0f, 2);
+	EXPECT_FLOAT_EQ(Motion.Advance(50.0f, 0.016f, 2).m_Radius, 0.0f);
+	EXPECT_FLOAT_EQ(Motion.Advance(0.0f, 0.016f, 2).m_Radius, 0.0f);
 }
