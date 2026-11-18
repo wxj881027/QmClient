@@ -91,6 +91,14 @@ TEST(QmConsoleUiLayout, AnimatedCrossfadeKeepsFadingGroupsFromOverlapping)
 	EXPECT_LE(ActionRight, 490.0f);
 }
 
+TEST(QmConsoleUiLayout, AnimatedCrossfadeReservesGapWhenOnlyButtonWidthsFit)
+{
+	const auto Layout = QmConsoleUi::LayoutToolbarAnimated(500.0f, 0.0f, 320.0f, 175.0f, 300.0f);
+	EXPECT_FALSE(Layout.m_SplitRows);
+	const float FilterRight = 10.0f + 175.0f * Layout.m_FilterScale;
+	EXPECT_NEAR(Layout.m_ActionX - FilterRight, 10.0f, 0.001f);
+}
+
 TEST(QmConsoleUiLayout, ToolbarFlowKeepsOneFixedGapAcrossHiddenSlots)
 {
 	const std::array<float, 3> aWidths = {40.0f, 55.0f, 70.0f};
