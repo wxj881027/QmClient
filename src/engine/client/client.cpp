@@ -7940,7 +7940,7 @@ void CClient::HandleConnectLink(const char *pLink)
 	}
 	// Edge appends / to the URL
 	const int Length = str_length(m_aCmdConnect);
-	if(m_aCmdConnect[Length - 1] == '/')
+	if(Length > 0 && m_aCmdConnect[Length - 1] == '/')
 		m_aCmdConnect[Length - 1] = '\0';
 }
 
