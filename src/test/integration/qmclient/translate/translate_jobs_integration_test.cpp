@@ -1,8 +1,9 @@
-#include <game/client/components/chat.h>
 #include <game/client/components/qmclient/translate/translate_jobs.h>
 
 #include <test/support/translate_completion_test_memory.h>
 #include <test/support/translate_http_test_support.h>
+
+#include <memory>
 
 namespace
 {
@@ -346,35 +347,32 @@ TEST_F(CTranslateQueueTest, ResetCancelsBothDirectionsWithoutResendingOldChat)
 TEST_F(CTranslateQueueTest, ResetClearsCanceledProgressAndRetainsReplacementResponse)
 {
 	CTranslateJobQueue Queue;
-	CChat::CLine aLines[2] = {};
+	constexpr unsigned int TRANSLATION_ID = 7;
+	std::shared_ptr<CTranslateResponse> apResponses[2];
 	for(int Index = 0; Index < 2; ++Index)
 	{
 		auto Job = MakeJob(m_Http, false, false);
 		Job.m_LineIndex = Index;
-		Job.m_TranslationId = 7;
-		auto &Line = aLines[Index];
-		Line.m_Initialized = true;
-		Line.m_TranslationId = Job.m_TranslationId;
-		Line.m_pTranslateResponse = Job.m_pTranslateResponse;
-		str_copy(Line.m_pTranslateResponse->m_Text, "translating");
+		Job.m_TranslationId = TRANSLATION_ID;
+		apResponses[Index] = Job.m_pTranslateResponse;
+		str_copy(apResponses[Index]->m_Text, "translating");
 		ASSERT_TRUE(Queue.Submit(std::move(Job), 2));
 	}
 
 	// 同一聊天槽位已换用另一份响应，取消旧任务时应保留它。
 	const auto pReplacement = std::make_shared<CTranslateResponse>();
 	str_copy(pReplacement->m_Text, "replacement");
-	aLines[1].m_pTranslateResponse = pReplacement;
+	apResponses[1] = pReplacement;
 
 	int RemovedProgress = 0;
 	Queue.Clear([&](const STranslateJob &Pending) {
-		auto &Line = aLines[Pending.m_LineIndex];
-		if(ClearCanceledTranslateResponse(Line.m_Initialized, Line.m_TranslationId, Line.m_pTranslateResponse, Pending))
+		if(ClearCanceledTranslateResponse(true, TRANSLATION_ID, apResponses[Pending.m_LineIndex], Pending))
 			++RemovedProgress;
 	});
 
 	EXPECT_EQ(RemovedProgress, 1);
-	EXPECT_EQ(aLines[0].m_pTranslateResponse, nullptr);
-	EXPECT_EQ(aLines[1].m_pTranslateResponse, pReplacement);
+	EXPECT_EQ(apResponses[0], nullptr);
+	EXPECT_EQ(apResponses[1], pReplacement);
 	EXPECT_STREQ(pReplacement->m_Text, "replacement");
 	EXPECT_EQ(Queue.Size(), 0u);
 	for(const auto &Submission : m_Http.m_vSubmissions)
