@@ -433,11 +433,11 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 		else
 		{
 			// 缓存归开始菜单持有，窗口/字体重置时由 CUi 统一失效。
-			for(auto &Label : m_aButtonLabels)
-			{
-				if(!Label.IsRegistered())
-					Label.Init(Ui(), 1);
-			}
+			// 注册缓存失败时用即时标签绘制，下次渲染再试。
+			const auto ButtonLabelCache = [this](int Index) -> CUIElement * {
+				CUIElement &Label = m_aButtonLabels[Index];
+				return Label.IsRegistered() || Label.TryInit(Ui(), 1) ? &Label : nullptr;
+			};
 			static float s_aMenuButtonScale[MenuButtonCount] = {};
 			static float s_aMenuButtonTargetScale[MenuButtonCount] = {};
 			static bool s_MenuButtonScaleInit = false;
@@ -507,7 +507,7 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			CUIRect ScaledButton = ScaleButtonRect(aMenuButtons[0], s_aMenuButtonScale[0]);
 			static CButtonContainer s_QuitButton;
 			bool UsedEscape = false;
-			if(GameClient()->m_Menus.DoButton_Menu(&s_QuitButton, Localize("Quit"), 0, &ScaledButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[0], -1.0f, &aMenuButtons[0]) || (UsedEscape = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)) || CheckHotKey(KEY_Q))
+			if(GameClient()->m_Menus.DoButton_Menu(&s_QuitButton, Localize("Quit"), 0, &ScaledButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), ButtonLabelCache(0), -1.0f, &aMenuButtons[0]) || (UsedEscape = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)) || CheckHotKey(KEY_Q))
 			{
 				if(UsedEscape || EditorDirty || (GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmQuitTime && g_Config.m_ClConfirmQuitTime >= 0))
 				{
@@ -521,7 +521,7 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 			ScaledButton = ScaleButtonRect(aMenuButtons[1], s_aMenuButtonScale[1]);
 			static CButtonContainer s_SettingsButton;
-			if(GameClient()->m_Menus.DoButton_Menu(&s_SettingsButton, Localize("Settings"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "settings" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[1], -1.0f, &aMenuButtons[1]) || CheckHotKey(KEY_S))
+			if(GameClient()->m_Menus.DoButton_Menu(&s_SettingsButton, Localize("Settings"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "settings" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), ButtonLabelCache(1), -1.0f, &aMenuButtons[1]) || CheckHotKey(KEY_S))
 				NewPage = CMenus::PAGE_SETTINGS;
 
 			// 检查更新与新功能共用双操作按钮：左半显示更新状态，右半打开内置新功能弹窗。
@@ -570,7 +570,7 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			{
 				ScaledButton = ScaleButtonRect(aMenuButtons[3], s_aMenuButtonScale[3]);
 				static CButtonContainer s_MapEditorButton;
-				if(GameClient()->m_Menus.DoButton_Menu(&s_MapEditorButton, Localize("Editor"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "editor" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, EditorDirty ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[3], -1.0f, &aMenuButtons[3]) || CheckHotKey(KEY_E))
+				if(GameClient()->m_Menus.DoButton_Menu(&s_MapEditorButton, Localize("Editor"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "editor" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, EditorDirty ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), ButtonLabelCache(3), -1.0f, &aMenuButtons[3]) || CheckHotKey(KEY_E))
 				{
 					g_Config.m_ClEditor = 1;
 					Input()->MouseModeRelative();
@@ -579,14 +579,14 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 			ScaledButton = ScaleButtonRect(aMenuButtons[4], s_aMenuButtonScale[4]);
 			static CButtonContainer s_DemoButton;
-			if(GameClient()->m_Menus.DoButton_Menu(&s_DemoButton, Localize("Demos"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "demos" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[4], -1.0f, &aMenuButtons[4]) || CheckHotKey(KEY_D))
+			if(GameClient()->m_Menus.DoButton_Menu(&s_DemoButton, Localize("Demos"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "demos" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), ButtonLabelCache(4), -1.0f, &aMenuButtons[4]) || CheckHotKey(KEY_D))
 			{
 				NewPage = CMenus::PAGE_DEMOS;
 			}
 
 			ScaledButton = ScaleButtonRect(aMenuButtons[5], s_aMenuButtonScale[5]);
 			static CButtonContainer s_PlayButton;
-			if(GameClient()->m_Menus.DoButton_Menu(&s_PlayButton, Localize("Play", "Start menu"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "play_game" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[5], -1.0f, &aMenuButtons[5]) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || CheckHotKey(KEY_P))
+			if(GameClient()->m_Menus.DoButton_Menu(&s_PlayButton, Localize("Play", "Start menu"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "play_game" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), ButtonLabelCache(5), -1.0f, &aMenuButtons[5]) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || CheckHotKey(KEY_P))
 			{
 				NewPage = ((g_Config.m_UiPage >= CMenus::PAGE_INTERNET && g_Config.m_UiPage <= CMenus::PAGE_FAVORITE_COMMUNITY_5) || g_Config.m_UiPage == CMenus::PAGE_FAVORITE_MAPS) ? g_Config.m_UiPage : CMenus::PAGE_INTERNET;
 			}
@@ -647,17 +647,18 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			}
 		}
 #endif
-		static CButtonContainer s_ConsoleButton;
-		// 主页每帧登记终端按钮的真实命中区；控制台激活时（含开合动画）
-		// 由控制台自己的输入趟读取同一份几何，主页不再被背景渲染挡住点击。
+		static CButtonContainer s_ConsoleButton, s_ConsoleGestureButton;
+		// 控制台用独立 ID 处理折返手势，关闭后主页按钮不会继承这次按下。
 		const CUIRect ConsoleHitRect = QmUiSquareIconButtonRect(ConsoleButton);
-		GameClient()->m_GameConsole.RegisterStartMenuToggle(&s_ConsoleButton, ConsoleHitRect);
-		const std::optional<bool> ConsoleToggleHover = GameClient()->m_GameConsole.IsActive()
+		GameClient()->m_GameConsole.RegisterStartMenuToggle(&s_ConsoleGestureButton, ConsoleHitRect);
+		const bool ConsoleActive = GameClient()->m_GameConsole.IsActive();
+		CButtonContainer *pConsoleButton = ConsoleActive ? &s_ConsoleGestureButton : &s_ConsoleButton;
+		const std::optional<bool> ConsoleToggleHover = ConsoleActive
 			? std::optional<bool>(GameClient()->m_GameConsole.StartMenuToggleHovered())
 			: std::nullopt;
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-		if(GameClient()->m_Menus.DoButton_Menu_QmIcon(&s_ConsoleButton, EQmIcon::TERMINAL, FONT_ICON_TERMINAL, 0, &ConsoleButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.1f), nullptr, -1.0f, ConsoleToggleHover))
+		if(GameClient()->m_Menus.DoButton_Menu_QmIcon(pConsoleButton, EQmIcon::TERMINAL, FONT_ICON_TERMINAL, 0, &ConsoleButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.1f), nullptr, -1.0f, ConsoleToggleHover))
 		{
 			GameClient()->m_GameConsole.Toggle(CGameConsole::CONSOLETYPE_LOCAL);
 		}
