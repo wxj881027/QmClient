@@ -47,10 +47,7 @@ void CCommandProcessorFragment_OpenGL3_3::LoadQmPrograms(const SCommand_Init *pC
 		FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/media_island_sdf.frag", GL_FRAGMENT_SHADER);
 		ShaderCompiler.ClearDefines();
 
-		m_pMediaIslandSdfProgram->CreateProgram();
-		const bool VertexAdded = m_pMediaIslandSdfProgram->AddShader(&VertexShader);
-		const bool FragmentAdded = m_pMediaIslandSdfProgram->AddShader(&FragmentShader);
-		const bool Linked = VertexAdded && FragmentAdded && m_pMediaIslandSdfProgram->LinkProgram();
+		const bool Linked = AttachProgramStages(*m_pMediaIslandSdfProgram, VertexShader, FragmentShader) && m_pMediaIslandSdfProgram->LinkProgram();
 		if(Linked)
 		{
 			UseProgram(m_pMediaIslandSdfProgram);
@@ -71,10 +68,7 @@ void CCommandProcessorFragment_OpenGL3_3::LoadQmPrograms(const SCommand_Init *pC
 		FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/rounded_rect_sdf.frag", GL_FRAGMENT_SHADER);
 		ShaderCompiler.ClearDefines();
 
-		m_pRoundedRectSdfProgram->CreateProgram();
-		const bool VertexAdded = m_pRoundedRectSdfProgram->AddShader(&VertexShader);
-		const bool FragmentAdded = m_pRoundedRectSdfProgram->AddShader(&FragmentShader);
-		const bool Linked = VertexAdded && FragmentAdded && m_pRoundedRectSdfProgram->LinkProgram();
+		const bool Linked = AttachProgramStages(*m_pRoundedRectSdfProgram, VertexShader, FragmentShader) && m_pRoundedRectSdfProgram->LinkProgram();
 		if(Linked)
 		{
 			UseProgram(m_pRoundedRectSdfProgram);
@@ -95,10 +89,7 @@ void CCommandProcessorFragment_OpenGL3_3::LoadQmPrograms(const SCommand_Init *pC
 		FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/rounded_rect_sdf.frag", GL_FRAGMENT_SHADER);
 		ShaderCompiler.ClearDefines();
 
-		m_pRoundedRectSdfTexturedProgram->CreateProgram();
-		const bool VertexAdded = m_pRoundedRectSdfTexturedProgram->AddShader(&VertexShader);
-		const bool FragmentAdded = m_pRoundedRectSdfTexturedProgram->AddShader(&FragmentShader);
-		const bool Linked = VertexAdded && FragmentAdded && m_pRoundedRectSdfTexturedProgram->LinkProgram();
+		const bool Linked = AttachProgramStages(*m_pRoundedRectSdfTexturedProgram, VertexShader, FragmentShader) && m_pRoundedRectSdfTexturedProgram->LinkProgram();
 		if(Linked)
 		{
 			UseProgram(m_pRoundedRectSdfTexturedProgram);
@@ -123,10 +114,7 @@ void CCommandProcessorFragment_OpenGL3_3::LoadQmPrograms(const SCommand_Init *pC
 		FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/procedural_ring.frag", GL_FRAGMENT_SHADER);
 		ShaderCompiler.ClearDefines();
 
-		m_pProceduralRingProgram->CreateProgram();
-		const bool VertexAdded = m_pProceduralRingProgram->AddShader(&VertexShader);
-		const bool FragmentAdded = m_pProceduralRingProgram->AddShader(&FragmentShader);
-		const bool Linked = VertexAdded && FragmentAdded && m_pProceduralRingProgram->LinkProgram();
+		const bool Linked = AttachProgramStages(*m_pProceduralRingProgram, VertexShader, FragmentShader) && m_pProceduralRingProgram->LinkProgram();
 		if(Linked)
 		{
 			UseProgram(m_pProceduralRingProgram);
@@ -135,8 +123,8 @@ void CCommandProcessorFragment_OpenGL3_3::LoadQmPrograms(const SCommand_Init *pC
 			m_ProceduralRingProgramValid = m_pProceduralRingProgram->m_LocPos >= 0 && m_pProceduralRingProgram->m_LocParams >= 0;
 		}
 		log_info("gfx/opengl", "Procedural ring program: vertex=%d fragment=%d linked=%d uniforms=%d/%d valid=%d context=%d.%d.%d",
-			VertexAdded,
-			FragmentAdded,
+			VertexShader.IsLoaded(),
+			FragmentShader.IsLoaded(),
 			Linked,
 			m_pProceduralRingProgram->m_LocPos,
 			m_pProceduralRingProgram->m_LocParams,
@@ -152,10 +140,7 @@ void CCommandProcessorFragment_OpenGL3_3::LoadQmPrograms(const SCommand_Init *pC
 		VertexShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/gaussian_blur.vert", GL_VERTEX_SHADER);
 		FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/gaussian_blur.frag", GL_FRAGMENT_SHADER);
 
-		m_pGaussianBlurProgram->CreateProgram();
-		const bool VertexAdded = m_pGaussianBlurProgram->AddShader(&VertexShader);
-		const bool FragmentAdded = m_pGaussianBlurProgram->AddShader(&FragmentShader);
-		const bool Linked = VertexAdded && FragmentAdded && m_pGaussianBlurProgram->LinkProgram();
+		const bool Linked = AttachProgramStages(*m_pGaussianBlurProgram, VertexShader, FragmentShader) && m_pGaussianBlurProgram->LinkProgram();
 		if(Linked)
 		{
 			UseProgram(m_pGaussianBlurProgram);
@@ -219,13 +204,20 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderMediaIslandSdf(const CComman
 
 	UseProgram(m_pMediaIslandSdfProgram);
 	SetState(pCommand->m_State, m_pMediaIslandSdfProgram);
-	if(pCommand->m_BackdropTargetId >= 0 && (size_t)pCommand->m_BackdropTargetId < m_vRenderTargets.size())
+	const int BackdropId = pCommand->m_BackdropTargetId;
+	if(BackdropId >= 0 && (static_cast<size_t>(BackdropId) >= m_vRenderTargets.size() || m_vRenderTargets[BackdropId].m_Texture == 0))
 	{
-		const SOpenGLRenderTarget &Target = m_vRenderTargets[pCommand->m_BackdropTargetId];
-		if(Target.m_Texture != 0)
-			BindRenderTargetTexture(Target.m_Texture);
+		// 前端已预留目标时，设备端仍可能创建失败。此时沿用无模糊底图的绘制。
+		auto Params = pCommand->m_Params;
+		Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_BACKDROP_UV] = vec4();
+		m_pMediaIslandSdfProgram->SetUniformVec4(m_pMediaIslandSdfProgram->m_LocData, IGraphics::SMediaIslandSdfParams::DATA_COUNT, (const float *)Params.m_aData.data());
 	}
-	m_pMediaIslandSdfProgram->SetUniformVec4(m_pMediaIslandSdfProgram->m_LocData, IGraphics::SMediaIslandSdfParams::DATA_COUNT, (const float *)pCommand->m_Params.m_aData.data());
+	else
+	{
+		if(BackdropId >= 0)
+			BindRenderTargetTexture(m_vRenderTargets[BackdropId].m_Texture);
+		m_pMediaIslandSdfProgram->SetUniformVec4(m_pMediaIslandSdfProgram->m_LocData, IGraphics::SMediaIslandSdfParams::DATA_COUNT, (const float *)pCommand->m_Params.m_aData.data());
+	}
 
 	UploadStreamBufferData(pCommand->m_PrimType, pCommand->m_pVertices, sizeof(CCommandBuffer::SVertex), pCommand->m_PrimCount);
 	glBindVertexArray(m_aPrimitiveDrawVertexId[m_LastStreamBuffer]);
@@ -343,25 +335,37 @@ bool CCommandProcessorFragment_OpenGL3_3::EnsureBackbufferCaptureResolveTarget(i
 		m_BackbufferCaptureResolveWidth == Width && m_BackbufferCaptureResolveHeight == Height)
 		return true;
 
-	DestroyBackbufferCaptureResolveTarget();
-	glGenTextures(1, &m_BackbufferCaptureResolveTexture);
-	glBindTexture(GL_TEXTURE_2D, m_BackbufferCaptureResolveTexture);
+	TWGLuint Texture = 0;
+	glGenTextures(1, &Texture);
+	if(Texture == 0)
+		return false;
+	glBindTexture(GL_TEXTURE_2D, Texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Width, Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	glGenFramebuffers(1, &m_BackbufferCaptureResolveFramebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_BackbufferCaptureResolveFramebuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_BackbufferCaptureResolveTexture, 0);
+	TWGLuint Framebuffer = 0;
+	glGenFramebuffers(1, &Framebuffer);
+	if(Framebuffer == 0)
+	{
+		glDeleteTextures(1, &Texture);
+		return false;
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Texture, 0);
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 	{
 		dbg_msg("opengl", "backbuffer capture resolve framebuffer incomplete");
-		DestroyBackbufferCaptureResolveTarget();
+		glDeleteFramebuffers(1, &Framebuffer);
+		glDeleteTextures(1, &Texture);
 		return false;
 	}
 
+	DestroyBackbufferCaptureResolveTarget();
+	m_BackbufferCaptureResolveFramebuffer = Framebuffer;
+	m_BackbufferCaptureResolveTexture = Texture;
 	m_BackbufferCaptureResolveWidth = Width;
 	m_BackbufferCaptureResolveHeight = Height;
 	return true;

@@ -22,6 +22,8 @@
 #include <engine/client/graphics_upload_data.h>
 #include <engine/graphics.h>
 
+#include <cstdlib>
+#include <cstring>
 #include <limits>
 
 class CGLSLTWProgram;
@@ -87,7 +89,7 @@ protected:
 	uint32_t m_CanvasHeight = 0;
 	bool m_HasDisplayCutout = false;
 
-	TWGLint m_MaxTexSize;
+	TWGLint m_MaxTexSize = 0;
 
 	bool m_Has2DArrayTextures;
 	bool m_Has2DArrayTexturesAsExtension;
@@ -108,6 +110,7 @@ protected:
 	bool IsTexturedState(const CCommandBuffer::SState &State);
 
 	bool InitOpenGL(const SCommand_Init *pCommand);
+	static bool FailOpenGLInit(const SCommand_Init *pCommand, const char *pMessage);
 
 	void SetState(const CCommandBuffer::SState &State, bool Use2DArrayTexture = false);
 	void SetClipRect(const CCommandBuffer::SState &State);
@@ -226,8 +229,49 @@ class CCommandProcessorFragment_OpenGL2 : public CCommandProcessorFragment_OpenG
 	void UseProgram(CGLSLTWProgram *pProgram);
 
 protected:
+	template<typename TProgram, typename TShader>
+	static bool AttachProgramStages(TProgram &Program, TShader &Vertex, TShader &Fragment)
+	{
+		if(!Vertex.IsLoaded() || !Fragment.IsLoaded() || Vertex.GetShaderId() == 0 || Fragment.GetShaderId() == 0)
+			return false;
+		Program.CreateProgram();
+		return Program.GetProgramId() != 0 && Program.AddShader(&Vertex) && Program.AddShader(&Fragment);
+	}
+
+#ifndef BACKEND_GL_MODERN_API
+	static constexpr size_t TILE_PROBE_LAYER_SIDE = 64;
+	static constexpr size_t TILE_PROBE_LAYER_COUNT = 256;
+	static constexpr size_t TILE_PROBE_LAYER_BYTES = TILE_PROBE_LAYER_SIDE * TILE_PROBE_LAYER_SIDE * 4;
+	static constexpr size_t TILE_PROBE_COLOR_STEPS = 5;
+	static constexpr size_t TILE_PROBE_CHECK_COUNT = TILE_PROBE_COLOR_STEPS * TILE_PROBE_COLOR_STEPS * TILE_PROBE_COLOR_STEPS;
+
+	static CGraphicsUploadData<uint8_t> CreateTileProbePixels(void *(*pfnAllocate)(size_t) = std::malloc)
+	{
+		CGraphicsUploadData<uint8_t> pPixels(static_cast<uint8_t *>(pfnAllocate(TILE_PROBE_LAYER_COUNT * TILE_PROBE_LAYER_BYTES)));
+		if(pPixels == nullptr)
+			return nullptr;
+
+		for(size_t Layer = 0; Layer < TILE_PROBE_CHECK_COUNT; ++Layer)
+		{
+			const uint8_t aColor[] = {
+				static_cast<uint8_t>(25 + 50 * (Layer / (TILE_PROBE_COLOR_STEPS * TILE_PROBE_COLOR_STEPS))),
+				static_cast<uint8_t>(25 + 50 * (Layer / TILE_PROBE_COLOR_STEPS % TILE_PROBE_COLOR_STEPS)),
+				static_cast<uint8_t>(25 + 50 * (Layer % TILE_PROBE_COLOR_STEPS)),
+				255};
+			uint8_t *pLayer = pPixels.get() + Layer * TILE_PROBE_LAYER_BYTES;
+			for(size_t Offset = 0; Offset < TILE_PROBE_LAYER_BYTES; Offset += sizeof(aColor))
+				std::memcpy(pLayer + Offset, aColor, sizeof(aColor));
+		}
+
+		// 驱动会读取全部 256 层，即使探测只采样前 125 层。
+		std::memset(pPixels.get() + TILE_PROBE_CHECK_COUNT * TILE_PROBE_LAYER_BYTES, 0,
+			(TILE_PROBE_LAYER_COUNT - TILE_PROBE_CHECK_COUNT) * TILE_PROBE_LAYER_BYTES);
+		return pPixels;
+	}
+#endif
+
 	void SetState(const CCommandBuffer::SState &State, CGLSLTWProgram *pProgram, bool Use2DArrayTextures = false);
-	bool InitBorderTileProgram(CGLSLTileProgram *pProgram, CGLSLCompiler &Compiler, IStorage *pStorage, bool Textured);
+	bool InitTileProgram(CGLSLTileProgram *pProgram, CGLSLCompiler &Compiler, IStorage *pStorage, bool Textured, bool Border);
 
 #ifndef BACKEND_GL_MODERN_API
 	bool Cmd_Init(const SCommand_Init *pCommand) override;

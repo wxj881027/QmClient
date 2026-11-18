@@ -6530,6 +6530,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/engine/client/backend/opengl/opengl_sl.cpp
       src/engine/client/backend/opengl/opengl_sl_program.cpp
       src/test/integration/engine/opengl_shader_lifecycle_test.cpp
+      src/test/unit/engine/graphics/opengl_startup_test.cpp
       ${GLEW_DEP}
     )
     target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${GLEW_INCLUDE_DIRS})

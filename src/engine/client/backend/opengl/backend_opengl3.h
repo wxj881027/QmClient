@@ -12,6 +12,8 @@
 
 #include "backend_opengl.h"
 
+#include <algorithm>
+
 class CGLSLPrimitiveExProgram;
 class CGLSLQuadProgram;
 class CGLSLSpriteMultipleProgram;
@@ -27,8 +29,17 @@ class CGLSLGaussianBlurProgram;
 class CCommandProcessorFragment_OpenGL3_3 : public CCommandProcessorFragment_OpenGL3
 {
 protected:
-	int m_MaxQuadsAtOnce;
-	static const int ms_MaxQuadsPossible = 256;
+	int m_MaxQuadsAtOnce = 0;
+	static constexpr int ms_MaxQuadsPossible = 256;
+
+	static constexpr int QuadBatchCapacity(int VertexUniformComponents)
+	{
+		constexpr int OtherUniformComponents = 20;
+		constexpr int ComponentsPerQuad = 3 * 4;
+		if(VertexUniformComponents < OtherUniformComponents)
+			return 0;
+		return std::min((VertexUniformComponents - OtherUniformComponents) / ComponentsPerQuad, ms_MaxQuadsPossible);
+	}
 
 	CGLSLPrimitiveProgram *m_pPrimitiveProgram = nullptr;
 	CGLSLPrimitiveProgram *m_pPrimitiveProgramTextured = nullptr;
@@ -54,7 +65,7 @@ protected:
 	CGLSLGaussianBlurProgram *m_pGaussianBlurProgram = nullptr;
 	bool m_GaussianBlurProgramValid = false;
 
-	TWGLuint m_LastProgramId;
+	TWGLuint m_LastProgramId = 0;
 
 	TWGLuint m_aPrimitiveDrawVertexId[MAX_STREAM_BUFFER_COUNT] = {};
 	TWGLuint m_PrimitiveDrawVertexIdTex3D = 0;
@@ -98,7 +109,7 @@ protected:
 	void LoadQmPrograms(const SCommand_Init *pCommand, class CGLSLCompiler &ShaderCompiler, int ShaderMajor, int ShaderMinor, int ShaderPatch);
 	void FreeQmPrograms();
 
-	void InitPrimExProgram(CGLSLPrimitiveExProgram *pProgram, class CGLSLCompiler *pCompiler, class IStorage *pStorage, bool Textured, bool Rotationless);
+	bool InitPrimExProgram(CGLSLPrimitiveExProgram *pProgram, class CGLSLCompiler *pCompiler, class IStorage *pStorage, bool Textured, bool Rotationless);
 
 	bool IsNewApi() override { return true; }
 

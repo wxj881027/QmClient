@@ -353,28 +353,28 @@ bool CCommandProcessorFragment_OpenGL::GetPresentedImageData(uint32_t &Width, ui
 	}
 }
 
+bool CCommandProcessorFragment_OpenGL::FailOpenGLInit(const SCommand_Init *pCommand, const char *pMessage)
+{
+	*pCommand->m_pInitError = -1;
+	*pCommand->m_pErrStringPtr = pMessage;
+	log_error("gfx/opengl", "%s", pMessage);
+	return false;
+}
+
 bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 {
 	m_pBackendCapabilities = pCommand->m_pCapabilities;
 	m_pBackendCapabilities->m_ProceduralRing.store(false, std::memory_order_release);
 	m_IsOpenGLES = pCommand->m_RequestedBackend == BACKEND_TYPE_OPENGL_ES;
 
-	*pCommand->m_pReadPresentedImageDataFunc = [this](uint32_t &Width, uint32_t &Height, CImageInfo::EImageFormat &Format, std::vector<uint8_t> &vDstData) {
-		return GetPresentedImageData(Width, Height, Format, vDstData);
-	};
-
 	const char *pVendorString = (const char *)glGetString(GL_VENDOR);
-	dbg_assert(pVendorString != nullptr, "glGetString(GL_VENDOR) failure");
-	log_info("gfx/opengl", "Vendor string: %s", pVendorString);
-
-	// check what this context can do
 	const char *pVersionString = (const char *)glGetString(GL_VERSION);
-	dbg_assert(pVersionString != nullptr, "glGetString(GL_VERSION) failure");
-	log_info("gfx/opengl", "Version string: %s", pVersionString);
-
 	const char *pRendererString = (const char *)glGetString(GL_RENDERER);
-	dbg_assert(pRendererString != nullptr, "glGetString(GL_RENDERER) failure");
+	if(pVendorString == nullptr || pVersionString == nullptr || pRendererString == nullptr)
+		return FailOpenGLInit(pCommand, "Could not query the current OpenGL context.");
 
+	log_info("gfx/opengl", "Vendor string: %s", pVendorString);
+	log_info("gfx/opengl", "Version string: %s", pVersionString);
 	str_copy(pCommand->m_pVendorString, pVendorString, gs_GpuInfoStringSize);
 	str_copy(pCommand->m_pVersionString, pVersionString, gs_GpuInfoStringSize);
 	str_copy(pCommand->m_pRendererString, pRendererString, gs_GpuInfoStringSize);
@@ -615,7 +615,15 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 		}
 	}
 
-	pCommand->m_pCapabilities->m_RenderTargetMSAA = pCommand->m_pCapabilities->m_RenderTargets && pCommand->m_pCapabilities->m_ShaderSupport && MajorV >= 3;
+#ifndef BACKEND_AS_OPENGL_ES
+	// 兼容上下文可以渲染普通帧而不提供离屏 FBO 入口。
+	if(pCommand->m_pCapabilities->m_RenderTargets)
+	{
+		pCommand->m_pCapabilities->m_RenderTargets = glGenFramebuffers != nullptr && glBindFramebuffer != nullptr &&
+				glFramebufferTexture2D != nullptr && glCheckFramebufferStatus != nullptr && glDeleteFramebuffers != nullptr;
+	}
+#endif
+	pCommand->m_pCapabilities->m_RenderTargetMSAA = pCommand->m_pCapabilities->m_RenderTargets && IsNewApi();
 	// 离屏多采样的上限来自设备（GL_MAX_SAMPLES），与窗口 FSAA 配置无关：
 	// 视频导出要在窗口不开 AA 的机器上按 qm_video_fsaa 请求离屏 MSAA。
 	if(pCommand->m_pCapabilities->m_RenderTargetMSAA)
@@ -631,6 +639,12 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 
 	if(*pCommand->m_pInitError != -2)
 	{
+		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &m_MaxTexSize);
+		if(m_MaxTexSize <= 0)
+			return FailOpenGLInit(pCommand, "Could not query the OpenGL texture size limit.");
+		// 字形和纹理上传允许单字节对齐。
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
 		// set some default settings
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -672,6 +686,9 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 		}
 #endif
 
+		*pCommand->m_pReadPresentedImageDataFunc = [this](uint32_t &Width, uint32_t &Height, CImageInfo::EImageFormat &Format, std::vector<uint8_t> &vDstData) {
+			return GetPresentedImageData(Width, Height, Format, vDstData);
+		};
 		return true;
 	}
 	else
@@ -687,8 +704,6 @@ bool CCommandProcessorFragment_OpenGL::Cmd_Init(const SCommand_Init *pCommand)
 
 	m_pTextureMemoryUsage = pCommand->m_pTextureMemoryUsage;
 	m_pTextureMemoryUsage->store(0, std::memory_order_relaxed);
-	m_MaxTexSize = -1;
-
 	m_OpenGLTextureLodBIAS = 0;
 
 	m_Has2DArrayTextures = pCommand->m_pCapabilities->m_2DArrayTextures;
@@ -800,13 +815,6 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Destroy(const CCommandBuffer:
 void CCommandProcessorFragment_OpenGL::TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, CGraphicsUploadData<uint8_t> pTexData)
 {
 #ifndef BACKEND_GL_MODERN_API
-
-	if(m_MaxTexSize == -1)
-	{
-		// fix the alignment to allow even 1byte changes, e.g. for alpha components
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &m_MaxTexSize);
-	}
 
 	while(Slot >= (int)m_vTextures.size())
 		m_vTextures.resize(m_vTextures.size() * 2);
@@ -1408,7 +1416,7 @@ void CCommandProcessorFragment_OpenGL2::SetState(const CCommandBuffer::SState &S
 	}
 }
 
-bool CCommandProcessorFragment_OpenGL2::InitBorderTileProgram(CGLSLTileProgram *pProgram, CGLSLCompiler &Compiler, IStorage *pStorage, bool Textured)
+bool CCommandProcessorFragment_OpenGL2::InitTileProgram(CGLSLTileProgram *pProgram, CGLSLCompiler &Compiler, IStorage *pStorage, bool Textured, bool Border)
 {
 	CGLSL VertexShader;
 	CGLSL FragmentShader;
@@ -1418,15 +1426,11 @@ bool CCommandProcessorFragment_OpenGL2::InitBorderTileProgram(CGLSLTileProgram *
 		if(!m_Has2DArrayTextures)
 			Compiler.AddDefine("TW_TILE_3D_TEXTURED", "");
 	}
-	const bool VertexLoaded = VertexShader.LoadShader(&Compiler, pStorage, "shader/tile_border.vert", GL_VERTEX_SHADER);
-	const bool FragmentLoaded = FragmentShader.LoadShader(&Compiler, pStorage, "shader/tile_border.frag", GL_FRAGMENT_SHADER);
+	VertexShader.LoadShader(&Compiler, pStorage, Border ? "shader/tile_border.vert" : "shader/tile.vert", GL_VERTEX_SHADER);
+	FragmentShader.LoadShader(&Compiler, pStorage, Border ? "shader/tile_border.frag" : "shader/tile.frag", GL_FRAGMENT_SHADER);
 	Compiler.ClearDefines();
-	// 单阶段程序在兼容上下文中也可能链接成功，必须确认两个阶段都已加载。
-	if(!VertexLoaded || !FragmentLoaded)
-		return false;
-
-	pProgram->CreateProgram();
-	if(!pProgram->AddShader(&VertexShader) || !pProgram->AddShader(&FragmentShader))
+	// 单阶段程序在兼容上下文中也可能链接成功，必须先确认两个阶段都已加载。
+	if(!AttachProgramStages(*pProgram, VertexShader, FragmentShader))
 		return false;
 	glBindAttribLocation(pProgram->GetProgramId(), 0, "inVertex");
 	if(Textured)
@@ -1436,14 +1440,17 @@ bool CCommandProcessorFragment_OpenGL2::InitBorderTileProgram(CGLSLTileProgram *
 
 	pProgram->m_LocPos = pProgram->GetUniformLoc("gPos");
 	pProgram->m_LocColor = pProgram->GetUniformLoc("gVertColor");
-	pProgram->m_LocOffset = pProgram->GetUniformLoc("gOffset");
-	pProgram->m_LocScale = pProgram->GetUniformLoc("gScale");
+	if(Border)
+	{
+		pProgram->m_LocOffset = pProgram->GetUniformLoc("gOffset");
+		pProgram->m_LocScale = pProgram->GetUniformLoc("gScale");
+	}
 	if(Textured)
 		pProgram->m_LocTextureSampler = pProgram->GetUniformLoc("gTextureSampler");
 	const bool UniformsAvailable = pProgram->m_LocPos >= 0 && pProgram->m_LocColor >= 0 &&
-				       pProgram->m_LocOffset >= 0 && pProgram->m_LocScale >= 0 && (!Textured || pProgram->m_LocTextureSampler >= 0);
+			(!Border || (pProgram->m_LocOffset >= 0 && pProgram->m_LocScale >= 0)) && (!Textured || pProgram->m_LocTextureSampler >= 0);
 	if(!UniformsAvailable)
-		log_warn("gfx/opengl/shader", "Tile border shader is missing required uniforms (textured=%d).", Textured);
+		log_warn("gfx/opengl/shader", "Tile shader is missing required uniforms (border=%d, textured=%d).", Border, Textured);
 	return UniformsAvailable;
 }
 
@@ -1564,54 +1571,15 @@ bool CCommandProcessorFragment_OpenGL2::IsTileMapAnalysisSucceeded()
 {
 	glClearColor(0, 0, 0, 1);
 
-	// create fake texture 1024x1024
-	const size_t ImageWidth = 1024;
-	const size_t ImageHeight = 1024;
-	uint8_t *pFakeTexture = (uint8_t *)malloc(sizeof(uint8_t) * ImageWidth * ImageHeight * 4);
-	// fill by colors stepping by 50 => (255 / 50 ~ 5) => 5 times 3(color channels) = 5 ^ 3 = 125 possibilities to check
-	size_t CheckCount = 5 * 5 * 5;
-	// always fill 4 pixels of the texture, so the sampling is accurate
-	int aCurColor[4] = {25, 25, 25, 255};
-	const size_t SingleImageWidth = 64;
-	const size_t SingleImageHeight = 64;
-	size_t SingleImageSize = SingleImageWidth * SingleImageHeight * 4;
-	for(size_t d = 0; d < CheckCount; ++d)
-	{
-		uint8_t *pCurFakeTexture = pFakeTexture + (ptrdiff_t)(SingleImageSize * d);
-
-		uint8_t aCurColorUint8[SingleImageWidth * SingleImageHeight * 4];
-		for(size_t y = 0; y < SingleImageHeight; ++y)
-		{
-			for(size_t x = 0; x < SingleImageWidth; ++x)
-			{
-				for(size_t i = 0; i < 4; ++i)
-				{
-					aCurColorUint8[(y * SingleImageWidth * 4) + (x * 4) + i] = (uint8_t)aCurColor[i];
-				}
-			}
-		}
-		mem_copy(pCurFakeTexture, aCurColorUint8, sizeof(aCurColorUint8));
-
-		aCurColor[2] += 50;
-		if(aCurColor[2] > 225)
-		{
-			aCurColor[2] -= 250;
-			aCurColor[1] += 50;
-		}
-		if(aCurColor[1] > 225)
-		{
-			aCurColor[1] -= 250;
-			aCurColor[0] += 50;
-		}
-		if(aCurColor[0] > 225)
-		{
-			break;
-		}
-	}
+	const auto pFakeTexture = CreateTileProbePixels();
+	if(pFakeTexture == nullptr)
+		return false;
 
 	// upload the texture
-	GLuint FakeTexture;
+	GLuint FakeTexture = 0;
 	glGenTextures(1, &FakeTexture);
+	if(FakeTexture == 0)
+		return false;
 
 	GLenum Target = GL_TEXTURE_3D;
 	if(m_Has2DArrayTextures)
@@ -1635,7 +1603,7 @@ bool CCommandProcessorFragment_OpenGL2::IsTileMapAnalysisSucceeded()
 	glTexParameteri(Target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(Target, GL_TEXTURE_WRAP_R, GL_MIRRORED_REPEAT);
 
-	glTexImage3D(Target, 0, GL_RGBA, ImageWidth / 16, ImageHeight / 16, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, pFakeTexture);
+	glTexImage3D(Target, 0, GL_RGBA, TILE_PROBE_LAYER_SIDE, TILE_PROBE_LAYER_SIDE, TILE_PROBE_LAYER_COUNT, 0, GL_RGBA, GL_UNSIGNED_BYTE, pFakeTexture.get());
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1666,7 +1634,7 @@ bool CCommandProcessorFragment_OpenGL2::IsTileMapAnalysisSucceeded()
 	static_assert(sizeof(m_aStreamVertices) / sizeof(m_aStreamVertices[0]) >= 256 * 4, "Keep the number of stream vertices >= 256 * 4.");
 
 	size_t VertexCount = 0;
-	for(size_t i = 0; i < CheckCount; ++i)
+	for(size_t i = 0; i < TILE_PROBE_CHECK_COUNT; ++i)
 	{
 		float XPos = (float)(i % 16);
 		float YPos = (float)(i / 16);
@@ -1724,16 +1692,15 @@ bool CCommandProcessorFragment_OpenGL2::IsTileMapAnalysisSucceeded()
 			}
 			else
 			{
-				pVertexBefore[n].m_Tex.w = (i + 0.5f) / 256.f;
+				pVertexBefore[n].m_Tex.w = (i + 0.5f) / TILE_PROBE_LAYER_COUNT;
 			}
 		}
 	}
 
 	// everything build up, now do the analyze steps
-	bool NoError = DoAnalyzeStep(CheckCount, VertexCount, pFakeTexture, SingleImageSize);
+	const bool NoError = DoAnalyzeStep(TILE_PROBE_CHECK_COUNT, VertexCount, pFakeTexture.get(), TILE_PROBE_LAYER_BYTES);
 
 	glDeleteTextures(1, &FakeTexture);
-	free(pFakeTexture);
 
 	return NoError;
 }
@@ -1805,10 +1772,8 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 				PrimitiveVertexShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/pipeline.vert", GL_VERTEX_SHADER);
 				PrimitiveFragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/pipeline.frag", GL_FRAGMENT_SHADER);
 
-				m_pPrimitive3DProgram->CreateProgram();
-				m_pPrimitive3DProgram->AddShader(&PrimitiveVertexShader);
-				m_pPrimitive3DProgram->AddShader(&PrimitiveFragmentShader);
-				m_pPrimitive3DProgram->LinkProgram();
+				if(!AttachProgramStages(*m_pPrimitive3DProgram, PrimitiveVertexShader, PrimitiveFragmentShader) || !m_pPrimitive3DProgram->LinkProgram())
+					return FailOpenGLInit(pCommand, "Could not initialize the OpenGL tile pipeline shaders.");
 
 				UseProgram(m_pPrimitive3DProgram);
 
@@ -1825,10 +1790,8 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 				PrimitiveFragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/pipeline.frag", GL_FRAGMENT_SHADER);
 				ShaderCompiler.ClearDefines();
 
-				m_pPrimitive3DProgramTextured->CreateProgram();
-				m_pPrimitive3DProgramTextured->AddShader(&PrimitiveVertexShader);
-				m_pPrimitive3DProgramTextured->AddShader(&PrimitiveFragmentShader);
-				m_pPrimitive3DProgramTextured->LinkProgram();
+				if(!AttachProgramStages(*m_pPrimitive3DProgramTextured, PrimitiveVertexShader, PrimitiveFragmentShader) || !m_pPrimitive3DProgramTextured->LinkProgram())
+					return FailOpenGLInit(pCommand, "Could not initialize the textured OpenGL tile pipeline shaders.");
 
 				UseProgram(m_pPrimitive3DProgramTextured);
 
@@ -1836,59 +1799,15 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 				m_pPrimitive3DProgramTextured->m_LocTextureSampler = m_pPrimitive3DProgramTextured->GetUniformLoc("gTextureSampler");
 			}
 
+			const bool TileProgramReady = InitTileProgram(m_pTileProgram, ShaderCompiler, pCommand->m_pStorage, false, false);
+			const bool TexturedTileProgramReady = InitTileProgram(m_pTileProgramTextured, ShaderCompiler, pCommand->m_pStorage, true, false);
+			const bool BorderProgramReady = InitTileProgram(m_pBorderTileProgram, ShaderCompiler, pCommand->m_pStorage, false, true);
+			const bool TexturedBorderProgramReady = InitTileProgram(m_pBorderTileProgramTextured, ShaderCompiler, pCommand->m_pStorage, true, true);
+			if(!TileProgramReady || !TexturedTileProgramReady || !BorderProgramReady || !TexturedBorderProgramReady)
 			{
-				CGLSL VertexShader;
-				CGLSL FragmentShader;
-				VertexShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/tile.vert", GL_VERTEX_SHADER);
-				FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/tile.frag", GL_FRAGMENT_SHADER);
-
-				m_pTileProgram->CreateProgram();
-				m_pTileProgram->AddShader(&VertexShader);
-				m_pTileProgram->AddShader(&FragmentShader);
-
-				glBindAttribLocation(m_pTileProgram->GetProgramId(), 0, "inVertex");
-
-				m_pTileProgram->LinkProgram();
-
-				UseProgram(m_pTileProgram);
-
-				m_pTileProgram->m_LocPos = m_pTileProgram->GetUniformLoc("gPos");
-				m_pTileProgram->m_LocColor = m_pTileProgram->GetUniformLoc("gVertColor");
-			}
-
-			{
-				CGLSL VertexShader;
-				CGLSL FragmentShader;
-				ShaderCompiler.AddDefine("TW_TILE_TEXTURED", "");
-				if(!pCommand->m_pCapabilities->m_2DArrayTextures)
-					ShaderCompiler.AddDefine("TW_TILE_3D_TEXTURED", "");
-				VertexShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/tile.vert", GL_VERTEX_SHADER);
-				FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/tile.frag", GL_FRAGMENT_SHADER);
-				ShaderCompiler.ClearDefines();
-
-				m_pTileProgramTextured->CreateProgram();
-				m_pTileProgramTextured->AddShader(&VertexShader);
-				m_pTileProgramTextured->AddShader(&FragmentShader);
-
-				glBindAttribLocation(m_pTileProgramTextured->GetProgramId(), 0, "inVertex");
-				glBindAttribLocation(m_pTileProgramTextured->GetProgramId(), 1, "inVertexTexCoord");
-
-				m_pTileProgramTextured->LinkProgram();
-
-				UseProgram(m_pTileProgramTextured);
-
-				m_pTileProgramTextured->m_LocPos = m_pTileProgramTextured->GetUniformLoc("gPos");
-				m_pTileProgramTextured->m_LocTextureSampler = m_pTileProgramTextured->GetUniformLoc("gTextureSampler");
-				m_pTileProgramTextured->m_LocColor = m_pTileProgramTextured->GetUniformLoc("gVertColor");
-			}
-
-			const bool BorderProgramReady = InitBorderTileProgram(m_pBorderTileProgram, ShaderCompiler, pCommand->m_pStorage, false);
-			const bool TexturedBorderProgramReady = InitBorderTileProgram(m_pBorderTileProgramTextured, ShaderCompiler, pCommand->m_pStorage, true);
-			if(!BorderProgramReady || !TexturedBorderProgramReady)
-			{
-				// 保留 OpenGL 和纹理数组能力，地图改走已有的逐瓦片边界延伸绘制。
+				// 地图沿用已有的非缓冲绘制路径。
 				pCommand->m_pCapabilities->m_TileBuffering = false;
-				log_warn("gfx/opengl", "Tile border shader unavailable, using unbuffered tile rendering.");
+				log_warn("gfx/opengl", "Tile shader unavailable, using unbuffered tile rendering.");
 			}
 
 			glUseProgram(0);
@@ -1908,6 +1827,8 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 
 	if(!AnalysisCorrect || !HasAllFunc)
 	{
+		// 版本回退会跳过独立的 shutdown 命令，GL 资源必须在这里释放。
+		CCommandProcessorFragment_OpenGL2::Cmd_Shutdown(nullptr);
 		// downgrade to opengl 1.5
 		*pCommand->m_pInitError = -2;
 		pCommand->m_pCapabilities->m_ContextMajor = 1;
