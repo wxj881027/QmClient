@@ -7,6 +7,10 @@
 #include <windows.h>
 
 #include <cwchar>
+#else
+#include <unistd.h>
+
+#include <cerrno>
 #endif
 
 namespace QmUpdate
@@ -76,7 +80,7 @@ namespace QmUpdate
 	};
 #endif
 
-	// 精确删除会话拥有的下载附件；单个文件失败不能阻止其他附件回收。
+	// 只删除下载文件。单个附件清理失败后继续处理其余附件。
 	inline bool CleanupDownloadedFiles(const SArguments &Arguments)
 	{
 		bool Success = true;
@@ -84,9 +88,17 @@ namespace QmUpdate
 		{
 			if(pPath->empty())
 				continue;
-			std::error_code Error;
-			std::filesystem::remove(std::filesystem::path(*pPath), Error);
-			Success &= !Error;
+#if defined(_WIN32)
+			if(!DeleteFileW(pPath->c_str()))
+			{
+				const DWORD Error = GetLastError();
+				Success &= Error == ERROR_FILE_NOT_FOUND || Error == ERROR_PATH_NOT_FOUND;
+			}
+#else
+			const std::filesystem::path Path(*pPath);
+			if(unlink(Path.c_str()) != 0 && errno != ENOENT)
+				Success = false;
+#endif
 		}
 		return Success;
 	}

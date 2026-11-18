@@ -268,6 +268,28 @@ TEST(QmUpdateSetupSession, FailedLaunchRemovesDownloadedFilesAndPreservesUnrelat
 	EXPECT_TRUE(QmUpdate::CleanupDownloadedFiles(Arguments));
 }
 
+TEST(QmUpdateSetupSession, CleanupPreservesEmptyDirectoryAtAttachmentPath)
+{
+	CTestInfo Info;
+	const auto Directory = std::filesystem::absolute(Info.StoragePath());
+	const auto AttachmentDirectory = Directory / "QmClient-Setup-42.exe";
+	ASSERT_TRUE(std::filesystem::create_directories(AttachmentDirectory));
+	Info.m_HasCreatedStoragePath = true;
+	const auto Manifest = Directory / "QmClient-windows-setup-update.json.42.tmp";
+	{
+		std::ofstream File{Manifest};
+		File << "manifest";
+		ASSERT_TRUE(File.good());
+	}
+
+	QmUpdate::SArguments Arguments;
+	Arguments.m_Package = AttachmentDirectory.wstring();
+	Arguments.m_Manifest = Manifest.wstring();
+	EXPECT_FALSE(QmUpdate::CleanupDownloadedFiles(Arguments));
+	EXPECT_TRUE(std::filesystem::is_directory(AttachmentDirectory));
+	EXPECT_FALSE(std::filesystem::exists(Manifest));
+}
+
 TEST(QmUpdateSetupSession, CleanupFailurePreservesSuccessfulInstallResult)
 {
 	CTestInfo Info;
