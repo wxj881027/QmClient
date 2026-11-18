@@ -1661,6 +1661,7 @@ static int s_CurCustomTab = ASSETS_TAB_ENTITIES;
 namespace
 {
 	constexpr const char *WORKSHOP_ASSETS_URL = "https://www.ddrace.cn/data/assets.json";
+	constexpr const char *QMCLIENT_CACHE_DIR = "qmclient/cache";
 
 	const char *AssetResourceCategoryIdByTab(int Tab)
 	{
@@ -3266,8 +3267,10 @@ namespace
 		if(WorkshopState.m_vAssets.empty())
 			return false;
 
+		pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		pStorage->CreateFolder(QMCLIENT_CACHE_DIR, IStorage::TYPE_SAVE);
 		char aFullPath[IO_MAX_PATH_LENGTH];
-		str_format(aFullPath, sizeof(aFullPath), "cache/%s", pCachePath);
+		str_format(aFullPath, sizeof(aFullPath), "%s/%s", QMCLIENT_CACHE_DIR, pCachePath);
 
 		IOHANDLE File = pStorage->OpenFile(aFullPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 		if(!File)
@@ -3302,7 +3305,7 @@ namespace
 	{
 		const SAssetResourceCategory *pCategory = AssetResourceCategoryByTab(s_CurCustomTab);
 		char aFullPath[IO_MAX_PATH_LENGTH];
-		str_format(aFullPath, sizeof(aFullPath), "cache/%s", pCachePath);
+		str_format(aFullPath, sizeof(aFullPath), "%s/%s", QMCLIENT_CACHE_DIR, pCachePath);
 
 		IOHANDLE File = pStorage->OpenFile(aFullPath, IOFLAG_READ, IStorage::TYPE_SAVE);
 		if(!File)

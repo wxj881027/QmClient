@@ -30,6 +30,8 @@ namespace
 	constexpr size_t MAX_BODY = 8 * 1024 * 1024;
 	// 网络响应自报年龄与 GitHub 快照时间戳的可信上限；本地持久化列表不按年龄丢弃。
 	constexpr int MAX_CACHE_AGE = 24 * 60 * 60;
+	constexpr const char *QMCLIENT_CACHE_DIR = "qmclient/cache";
+	constexpr const char *QM_SERVERLIST_CACHE_PATH = "qmclient/cache/qm-serverlist.json";
 	constexpr const char *MIRROR_URL = "https://ddrace.cn/ddnet/15/servers.json";
 	constexpr const char *SNAPSHOT_URL = "https://raw.githubusercontent.com/wxj881027/QmClient/serverlist-snapshot/servers.json";
 
@@ -95,7 +97,10 @@ namespace
 			return false;
 		const bool Written = io_write(File, Body.data(), Body.size()) == Body.size();
 		const int Closed = io_close(File);
-		return Written && Closed == 0 && fs_rename(aTmp, Path.c_str(), false) == 0;
+		if(Written && Closed == 0 && fs_rename(aTmp, Path.c_str(), false) == 0)
+			return true;
+		(void)fs_remove(aTmp);
+		return false;
 	}
 	class CServerListSaveJob : public IJob
 	{
@@ -248,9 +253,10 @@ namespace
 		{
 			if(!m_pStorage || Body.size() > MAX_BODY)
 				return;
-			m_pStorage->CreateFolder("cache", IStorage::TYPE_SAVE);
+			m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+			m_pStorage->CreateFolder(QMCLIENT_CACHE_DIR, IStorage::TYPE_SAVE);
 			char aPath[IO_MAX_PATH_LENGTH];
-			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "cache/qm-serverlist.json", aPath, sizeof(aPath));
+			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, QM_SERVERLIST_CACHE_PATH, aPath, sizeof(aPath));
 			char aHeader[160];
 			str_format(aHeader, sizeof(aHeader), "QMSL1 %lld %d %s\n", (long long)time_timestamp(), Age, m_SourceHash.c_str());
 			bool StartWorker = false;
@@ -272,7 +278,7 @@ namespace
 		{
 			if(!m_pStorage)
 				return;
-			IOHANDLE File = m_pStorage->OpenFile("cache/qm-serverlist.json", IOFLAG_READ, IStorage::TYPE_SAVE);
+			IOHANDLE File = m_pStorage->OpenFile(QM_SERVERLIST_CACHE_PATH, IOFLAG_READ, IStorage::TYPE_SAVE);
 			if(!File)
 				return;
 			const int64_t Length = io_length(File);
