@@ -141,7 +141,19 @@ template<typename T, typename FPriority, typename FVisible, typename FVisit>
 void SettingsVisitSkinLoadRequests(const std::vector<T> &Requests, FPriority Priority, FVisible CurrentVisible, FVisit Visit)
 {
 	std::vector<int> vRanks;
-	vRanks.reserve(Requests.size());
+	// 优先级快照建立失败时保留这批请求，等后续加载轮次再处理。
+	try
+	{
+		vRanks.reserve(Requests.size());
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		return;
+	}
 	for(const auto &Request : Requests)
 	{
 		const auto RequestPriority = Priority(Request);
