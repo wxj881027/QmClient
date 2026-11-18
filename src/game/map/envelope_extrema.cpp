@@ -2,8 +2,10 @@
 
 #include <game/map/map_render_items.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <new>
 
 CEnvelopeExtrema::CEnvelopeExtrema(IMap *pMap) :
 	m_EnvelopePoints(pMap)
@@ -111,7 +113,17 @@ void CEnvelopeExtrema::CalculateExtrema()
 {
 	int EnvelopeStart, EnvelopeNum;
 	m_pMap->GetType(MAPITEMTYPE_ENVELOPE, &EnvelopeStart, &EnvelopeNum);
-	m_vEnvelopeExtrema.resize(EnvelopeNum);
+	// 裁剪表无法分配时保留空表，渲染层会跳过提前裁剪。
+	if(static_cast<std::size_t>(EnvelopeNum) > m_vEnvelopeExtrema.max_size())
+		return;
+	try
+	{
+		m_vEnvelopeExtrema.resize(EnvelopeNum);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
 	// 重叠区间会反复扫描同一批点。超出实际点数时，剩余预算不足的包络禁用提前裁剪。
 	int RemainingPoints = m_EnvelopePoints.NumPointsMax();
 	for(int EnvelopeIndex = 0; EnvelopeIndex < EnvelopeNum; ++EnvelopeIndex)
