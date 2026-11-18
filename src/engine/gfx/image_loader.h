@@ -44,7 +44,9 @@ private:
 	// 使用普通标准分配器，避免给旧系统增加PMR运行库依赖。
 	struct CByteAllocator
 	{
-		const SAllocation *m_pAllocation = nullptr;
+		const SAllocation *m_pAllocation;
+		explicit CByteAllocator(const SAllocation *pAllocation = nullptr) noexcept :
+			m_pAllocation(pAllocation) {}
 		uint8_t *allocate(size_t Count);
 		void deallocate(uint8_t *pData, size_t Count) noexcept;
 	};
