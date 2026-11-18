@@ -47,6 +47,15 @@ bool SWikiEditorState::BeginEditing(const size_t MaxDraftBytes)
 		m_ResetEditScroll = true;
 		return true;
 	}
+	if(m_Content.m_ReadFailed)
+	{
+		Reload();
+		if(m_Content.m_ReadFailed)
+		{
+			SetStatus(Localize("Cannot read the wiki file"), true);
+			return false;
+		}
+	}
 	// 文档比编辑框缓冲还长：拒绝进入编辑并说明原因，而不是截断后再让保存把文件截短。
 	if(m_Content.m_Markdown.size() > MaxDraftBytes)
 	{
@@ -94,15 +103,17 @@ bool SWikiEditorState::Save()
 
 bool SWikiEditorState::ResetToBuiltIn()
 {
-	const bool Removed = qm_wiki_store::DeleteOverride(m_Content.m_RelativePath.c_str());
+	if(!qm_wiki_store::DeleteOverride(m_Content.m_RelativePath.c_str()))
+	{
+		SetStatus(Localize("Cannot remove the wiki file"), true);
+		return false;
+	}
 	Reload();
 	m_EditDirty = false;
 	m_Draft = m_Content.m_Markdown;
 	m_ResetEditScroll = true;
-	// 重载后的覆盖状态才是真实结果：没有覆盖时 DeleteOverride 也返回 false，不能算失败。
-	const bool Restored = Removed || !m_Content.m_HasUserOverride;
-	SetStatus(Restored ? Localize("Restored the built-in content") : Localize("Cannot remove the wiki file"), !Restored);
-	return Restored;
+	SetStatus(Localize("Restored the built-in content"), false);
+	return true;
 }
 
 void SWikiEditorState::SetStatus(const char *pText, const bool Error)

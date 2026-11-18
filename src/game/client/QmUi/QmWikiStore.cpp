@@ -14,6 +14,7 @@
 
 #include <cctype>
 #include <cstdlib>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -23,6 +24,8 @@ namespace
 	IStorage *s_pStorage = nullptr;
 	char s_aLanguage[64] = "english";
 	std::unordered_map<std::string, SWikiContent> s_Content;
+	// 阅读允许超过编辑框容量的文档，仍在分配前限制单文件大小。
+	constexpr unsigned WIKI_MAX_MARKDOWN_BYTES = 1024 * 1024;
 
 	std::string TrimCopy(const std::string &Text)
 	{
@@ -56,22 +59,23 @@ namespace
 		}
 	}
 
-	bool LoadMarkdown(const std::string &RelativePath, std::string *pOut)
+	IStorage::EReadFileResult LoadMarkdown(const std::string &RelativePath, std::string *pOut)
 	{
+		using EReadResult = IStorage::EReadFileResult;
 		if(s_pStorage == nullptr)
-			return false;
+			return EReadResult::NOT_FOUND;
 		char aPath[IO_MAX_PATH_LENGTH];
 		str_format(aPath, sizeof(aPath), "wiki/%s/%s.md", s_aLanguage, RelativePath.c_str());
-		IOHANDLE File = s_pStorage->OpenFile(aPath, IOFLAG_READ, IStorage::TYPE_ALL);
-		if(File == nullptr)
-			return false;
-		char *pText = io_read_all_str(File);
-		io_close(File);
-		if(pText == nullptr)
-			return false;
-		*pOut = pText;
-		free(pText);
-		return true;
+		void *pData = nullptr;
+		unsigned Size = 0;
+		const EReadResult Result = s_pStorage->ReadFileCheckedBounded(aPath, IStorage::TYPE_ALL, &pData, &Size, WIKI_MAX_MARKDOWN_BYTES);
+		const std::unique_ptr<void, decltype(&free)> Data(pData, free);
+		if(Result != EReadResult::SUCCESS)
+			return Result;
+		if(!Data || mem_has_null(Data.get(), Size))
+			return EReadResult::IO_FAILURE;
+		pOut->assign(static_cast<const char *>(Data.get()), Size);
+		return EReadResult::SUCCESS;
 	}
 
 	std::string ContentKey(const char *pScope, const std::string &RelativePath)
@@ -96,10 +100,12 @@ namespace
 		SWikiContent Content;
 		Content.m_RelativePath = RelativePath;
 		Content.m_HasUserOverride = qm_wiki_store::HasOverride(RelativePath.c_str());
-		if(!LoadMarkdown(RelativePath, &Content.m_Markdown))
+		const auto ReadResult = LoadMarkdown(RelativePath, &Content.m_Markdown);
+		if(ReadResult != IStorage::EReadFileResult::SUCCESS)
 		{
 			// 读失败不缓存：瞬时文件锁（如杀软扫描）会把内置表回落锁死整个
 			// 会话——数据文件晚一点就位也永远看不到。下次访问直接重试。
+			Content.m_ReadFailed = ReadResult != IStorage::EReadFileResult::NOT_FOUND;
 			Content.m_Markdown = qm_wiki_store::ComposeFromDocument(Fallback);
 			return Content;
 		}
@@ -268,11 +274,19 @@ bool qm_wiki_store::SaveOverride(const char *pRelativePath, const std::string &M
 
 bool qm_wiki_store::DeleteOverride(const char *pRelativePath)
 {
-	if(s_pStorage == nullptr || pRelativePath == nullptr)
+	if(s_pStorage == nullptr || pRelativePath == nullptr || pRelativePath[0] == '\0')
 		return false;
-	char aPath[IO_MAX_PATH_LENGTH];
-	str_format(aPath, sizeof(aPath), "wiki/%s/%s.md", LanguageDir(), pRelativePath);
-	const bool Removed = s_pStorage->RemoveFile(aPath, IStorage::TYPE_SAVE);
+	const std::string Path = std::string("wiki/") + LanguageDir() + "/" + pRelativePath + ".md";
+	if(!s_pStorage->RemoveFile(Path.c_str(), IStorage::TYPE_SAVE))
+	{
+		// 只有确认文件不存在才算还原成功，磁盘或权限错误要保留草稿。
+		void *pData = nullptr;
+		unsigned Size = 0;
+		const auto Result = s_pStorage->ReadFileCheckedBounded(Path.c_str(), IStorage::TYPE_SAVE, &pData, &Size, 0);
+		free(pData);
+		if(Result != IStorage::EReadFileResult::NOT_FOUND)
+			return false;
+	}
 	s_Content.clear();
-	return Removed;
+	return true;
 }
