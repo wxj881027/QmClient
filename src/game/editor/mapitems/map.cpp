@@ -72,6 +72,9 @@ void CEditorMap::ResetModifiedState()
 void CEditorMap::PlaceBorderTiles()
 {
 	std::shared_ptr<CLayerTiles> pT = std::static_pointer_cast<CLayerTiles>(SelectedLayerType(0, LAYERTYPE_TILES));
+	// 打开确认框后，撤销或重做可能改变当前图层。
+	if(!pT || pT->m_HasTele || pT->m_HasSpeedup || pT->m_HasSwitch || pT->m_HasFront || pT->m_HasTune)
+		return;
 
 	for(int i = 0; i < pT->m_Width * pT->m_Height; ++i)
 	{
@@ -394,50 +397,61 @@ void CEditorMap::AddSelectedLayer(int LayerIndex)
 
 void CEditorMap::SelectNextLayer()
 {
-	int CurrentLayer = 0;
-	for(const auto &Selected : m_vSelectedLayers)
-		CurrentLayer = maximum(Selected, CurrentLayer);
-	SelectLayer(CurrentLayer);
-
-	if(m_vSelectedLayers[0] < (int)m_vpGroups[m_SelectedGroup]->m_vpLayers.size() - 1)
+	const auto pGroup = SelectedGroup();
+	if(!pGroup)
 	{
-		SelectLayer(m_vSelectedLayers[0] + 1);
+		SelectGameLayer();
+		return;
 	}
-	else
+
+	const int LayerCount = (int)pGroup->m_vpLayers.size();
+	int CurrentLayer = -1;
+	for(int Selected : m_vSelectedLayers)
+		CurrentLayer = maximum(Selected, CurrentLayer);
+
+	if(CurrentLayer < LayerCount - 1)
 	{
-		for(size_t Group = m_SelectedGroup + 1; Group < m_vpGroups.size(); Group++)
+		SelectLayer(CurrentLayer + 1);
+		return;
+	}
+	for(size_t Group = m_SelectedGroup + 1; Group < m_vpGroups.size(); Group++)
+	{
+		if(!m_vpGroups[Group]->m_vpLayers.empty())
 		{
-			if(!m_vpGroups[Group]->m_vpLayers.empty())
-			{
-				SelectLayer(0, Group);
-				break;
-			}
+			SelectLayer(0, Group);
+			return;
 		}
 	}
+	SelectLayer(maximum(0, LayerCount - 1));
 }
 
 void CEditorMap::SelectPreviousLayer()
 {
-	int CurrentLayer = std::numeric_limits<int>::max();
-	for(const auto &Selected : m_vSelectedLayers)
-		CurrentLayer = minimum(Selected, CurrentLayer);
-	SelectLayer(CurrentLayer);
-
-	if(m_vSelectedLayers[0] > 0)
+	const auto pGroup = SelectedGroup();
+	if(!pGroup)
 	{
-		SelectLayer(m_vSelectedLayers[0] - 1);
+		SelectGameLayer();
+		return;
 	}
-	else
+
+	int CurrentLayer = (int)pGroup->m_vpLayers.size();
+	for(int Selected : m_vSelectedLayers)
+		CurrentLayer = minimum(Selected, CurrentLayer);
+
+	if(CurrentLayer > 0)
 	{
-		for(int Group = m_SelectedGroup - 1; Group >= 0; Group--)
+		SelectLayer(CurrentLayer - 1);
+		return;
+	}
+	for(int Group = m_SelectedGroup - 1; Group >= 0; Group--)
+	{
+		if(!m_vpGroups[Group]->m_vpLayers.empty())
 		{
-			if(!m_vpGroups[Group]->m_vpLayers.empty())
-			{
-				SelectLayer(m_vpGroups[Group]->m_vpLayers.size() - 1, Group);
-				break;
-			}
+			SelectLayer(m_vpGroups[Group]->m_vpLayers.size() - 1, Group);
+			return;
 		}
 	}
+	SelectLayer(0);
 }
 
 void CEditorMap::SelectGameLayer()
@@ -494,7 +508,7 @@ std::vector<CQuad *> CEditorMap::SelectedQuads()
 	vpQuads.reserve(m_vSelectedQuads.size());
 	for(const auto &SelectedQuad : m_vSelectedQuads)
 	{
-		if(SelectedQuad >= (int)pQuadLayer->m_vQuads.size())
+		if(SelectedQuad < 0 || (size_t)SelectedQuad >= pQuadLayer->m_vQuads.size())
 			continue;
 		vpQuads.push_back(&pQuadLayer->m_vQuads[SelectedQuad]);
 	}
@@ -581,6 +595,20 @@ void CEditorMap::DeleteSelectedQuads()
 	if(!pLayer || m_vSelectedQuads.empty() || m_vSelectedLayers.size() != 1)
 		return;
 
+	// 撤销创建后，选中列表可能仍含已删除的四边形。
+	for(int Index : m_vSelectedQuads)
+	{
+		if(Index < 0 || (size_t)Index >= pLayer->m_vQuads.size())
+		{
+			DeselectQuads();
+			DeselectQuadPoints();
+			return;
+		}
+	}
+
+	// 调整顺序可能让两个选中项指向同一个索引。
+	std::sort(m_vSelectedQuads.begin(), m_vSelectedQuads.end(), std::greater<>());
+	m_vSelectedQuads.erase(std::unique(m_vSelectedQuads.begin(), m_vSelectedQuads.end()), m_vSelectedQuads.end());
 	m_EditorHistory.Execute(std::make_shared<CEditorActionDeleteQuad>(this, m_SelectedGroup, m_vSelectedLayers[0]));
 }
 
@@ -604,10 +632,16 @@ std::shared_ptr<CEnvelope> CEditorMap::NewEnvelope(CEnvelope::EType Type)
 
 void CEditorMap::InsertEnvelope(int Index, std::shared_ptr<CEnvelope> &pEnvelope)
 {
-	if(Index < 0 || Index >= (int)m_vpEnvelopes.size() + 1)
+	const int EnvelopeCount = (int)m_vpEnvelopes.size();
+	if(Index < 0 || Index > EnvelopeCount)
 		return;
 	m_vpEnvelopes.push_back(pEnvelope);
-	m_SelectedEnvelope = MoveEnvelope((int)m_vpEnvelopes.size() - 1, Index);
+	// 插入到末尾时 MoveEnvelope 会直接返回。
+	if(Index == EnvelopeCount)
+		OnModify();
+	m_SelectedEnvelope = MoveEnvelope(EnvelopeCount, Index);
+	DeselectEnvPoints();
+	m_SelectedQuadEnvelope = -1;
 }
 
 void CEditorMap::UpdateEnvelopeReferences(int Index, std::shared_ptr<CEnvelope> &pEnvelope, std::vector<std::shared_ptr<IEditorEnvelopeReference>> &vpEditorObjectReferences)
@@ -624,7 +658,7 @@ std::vector<std::shared_ptr<IEditorEnvelopeReference>> CEditorMap::DeleteEnvelop
 
 	OnModify();
 
-	std::vector<std::shared_ptr<IEditorEnvelopeReference>> vpEditorObjectReferences = VisitEnvelopeReferences([Index](int &ElementIndex) {
+	const auto RemoveReference = [Index](int &ElementIndex) {
 		if(ElementIndex == Index)
 		{
 			ElementIndex = -1;
@@ -633,9 +667,15 @@ std::vector<std::shared_ptr<IEditorEnvelopeReference>> CEditorMap::DeleteEnvelop
 		else if(ElementIndex > Index)
 			ElementIndex--;
 		return false;
-	});
+	};
+	auto vpEditorObjectReferences = VisitEnvelopeReferences(RemoveReference);
 
 	m_vpEnvelopes.erase(m_vpEnvelopes.begin() + Index);
+	RemoveReference(m_SelectedQuadEnvelope);
+	if(Index == m_SelectedEnvelope)
+		DeselectEnvPoints();
+	else if(Index < m_SelectedEnvelope)
+		--m_SelectedEnvelope;
 	return vpEditorObjectReferences;
 }
 
@@ -650,7 +690,7 @@ int CEditorMap::MoveEnvelope(int IndexFrom, int IndexTo)
 
 	OnModify();
 
-	VisitEnvelopeReferences([IndexFrom, IndexTo](int &ElementIndex) {
+	const auto MoveReference = [IndexFrom, IndexTo](int &ElementIndex) {
 		if(ElementIndex == IndexFrom)
 			ElementIndex = IndexTo;
 		else if(IndexFrom < IndexTo && ElementIndex > IndexFrom && ElementIndex <= IndexTo)
@@ -658,7 +698,9 @@ int CEditorMap::MoveEnvelope(int IndexFrom, int IndexTo)
 		else if(IndexTo < IndexFrom && ElementIndex < IndexFrom && ElementIndex >= IndexTo)
 			ElementIndex++;
 		return false;
-	});
+	};
+	VisitEnvelopeReferences(MoveReference);
+	MoveReference(m_SelectedQuadEnvelope);
 
 	auto pMovedEnvelope = m_vpEnvelopes[IndexFrom];
 	m_vpEnvelopes.erase(m_vpEnvelopes.begin() + IndexFrom);
@@ -772,7 +814,7 @@ int CEditorMap::FindEnvPointIndex(int Index, int Channel) const
 
 void CEditorMap::SelectEnvPoint(int Index)
 {
-	m_vSelectedEnvelopePoints.clear();
+	DeselectEnvPoints();
 
 	if(m_SelectedEnvelope < 0 || m_SelectedEnvelope >= (int)m_vpEnvelopes.size())
 		return;
@@ -871,29 +913,26 @@ std::pair<CFixedTime, int> CEditorMap::SelectedEnvelopeTimeAndValue() const
 	if(m_SelectedEnvelope < 0 || m_SelectedEnvelope >= (int)m_vpEnvelopes.size())
 		return {};
 
-	std::shared_ptr<CEnvelope> pEnvelope = m_vpEnvelopes[m_SelectedEnvelope];
-	CFixedTime CurrentTime;
-	int CurrentValue;
-	if(IsTangentInSelected())
-	{
-		auto [SelectedIndex, SelectedChannel] = m_SelectedTangentInPoint;
-		CurrentTime = pEnvelope->m_vPoints[SelectedIndex].m_Time + pEnvelope->m_vPoints[SelectedIndex].m_Bezier.m_aInTangentDeltaX[SelectedChannel];
-		CurrentValue = pEnvelope->m_vPoints[SelectedIndex].m_aValues[SelectedChannel] + pEnvelope->m_vPoints[SelectedIndex].m_Bezier.m_aInTangentDeltaY[SelectedChannel];
-	}
-	else if(IsTangentOutSelected())
-	{
-		auto [SelectedIndex, SelectedChannel] = m_SelectedTangentOutPoint;
-		CurrentTime = pEnvelope->m_vPoints[SelectedIndex].m_Time + pEnvelope->m_vPoints[SelectedIndex].m_Bezier.m_aOutTangentDeltaX[SelectedChannel];
-		CurrentValue = pEnvelope->m_vPoints[SelectedIndex].m_aValues[SelectedChannel] + pEnvelope->m_vPoints[SelectedIndex].m_Bezier.m_aOutTangentDeltaY[SelectedChannel];
-	}
-	else
-	{
-		auto [SelectedIndex, SelectedChannel] = m_vSelectedEnvelopePoints.front();
-		CurrentTime = pEnvelope->m_vPoints[SelectedIndex].m_Time;
-		CurrentValue = pEnvelope->m_vPoints[SelectedIndex].m_aValues[SelectedChannel];
-	}
+	const auto &Envelope = *m_vpEnvelopes[m_SelectedEnvelope];
+	const bool TangentIn = IsTangentInSelected();
+	const bool TangentOut = IsTangentOutSelected();
+	if(!TangentIn && !TangentOut && m_vSelectedEnvelopePoints.empty())
+		return {};
 
-	return std::pair<CFixedTime, int>{CurrentTime, CurrentValue};
+	const auto [Index, Channel] = TangentIn ? m_SelectedTangentInPoint : (TangentOut ? m_SelectedTangentOutPoint : m_vSelectedEnvelopePoints.front());
+	if(Index < 0 || (size_t)Index >= Envelope.m_vPoints.size() || Channel < 0 || Channel >= Envelope.GetChannels())
+		return {};
+
+	const auto &Point = Envelope.m_vPoints[Index];
+	if(!TangentIn && !TangentOut)
+		return {Point.m_Time, Point.m_aValues[Channel]};
+
+	const auto &Bezier = Point.m_Bezier;
+	const CFixedTime TimeDelta = TangentIn ? Bezier.m_aInTangentDeltaX[Channel] : Bezier.m_aOutTangentDeltaX[Channel];
+	const int ValueDelta = TangentIn ? Bezier.m_aInTangentDeltaY[Channel] : Bezier.m_aOutTangentDeltaY[Channel];
+	const CFixedTime Time(EnvelopeEditor::RoundFixedPoint(static_cast<double>(Point.m_Time.GetInternal()) + TimeDelta.GetInternal()));
+	const int Value = EnvelopeEditor::RoundFixedPoint(static_cast<double>(Point.m_aValues[Channel]) + ValueDelta);
+	return {Time, Value};
 }
 
 std::shared_ptr<CEditorImage> CEditorMap::SelectedImage() const
