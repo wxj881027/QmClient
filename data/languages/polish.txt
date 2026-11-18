@@ -596,6 +596,9 @@ Add demo timeline marker
 Add Entry
 == Dodaj wpis
 
+Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off.
+== Dodaje skórkę każdego gracza do kolejki przy wejściu na mapę. Ręczna edycja kolejki wyłącza tę opcję.
+
 Add friend
 == Dodaj znajomego
 
@@ -949,6 +952,9 @@ Angry
 
 Angular gradient
 == Gradient kątowy
+
+Animate country flags
+== Animuj flagi krajów
 
 Animated title style id
 == Identyfikator animowanego stylu tytułu
@@ -1769,6 +1775,9 @@ Best
 Best quality (all-intra 4:4:4 / MP4)
 == Najlepsza jakość (wszystkie klatki kluczowe, 4:4:4 / MP4)
 
+Best-effort DSCP marking of the game connection; may be ignored by routers
+== W miarę możliwości oznaczaj połączenie gry przez DSCP; routery mogą to ignorować
+
 Better compression, slower
 == Lepsza kompresja, wolniej
 
@@ -2119,6 +2128,9 @@ Capsule ends
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 == Końce kapsuły: 0 = zwykły łuk, 1 = gładki koniec, 2 = ciągła krzywizna Apple
+
+Capture queue
+== Kolejka przechwytywania
 
 Capture the flag
 == Zdobycie flagi (CTF)
@@ -2711,6 +2723,9 @@ Collapse
 Collapse console
 == Zwiń konsolę
 
+Collect all players' skins on map join
+== Zbieraj skórki wszystkich graczy przy wejściu na mapę
+
 Collect CP %d before teleporting
 == Aktywuj CP %d przed teleportacją
 
@@ -3269,6 +3284,9 @@ Converse
 Converse with the last person you whispered to (private message)
 == Rozmawiaj z ostatnią osobą, do której szeptałeś (prywatna wiadomość)
 
+Convert threads
+== Wątki konwersji
+
 Coordinate size on nameplate
 == Rozmiar współrzędnych na tabliczce
 
@@ -3488,20 +3506,14 @@ Current aspect ratio: Show default
 Current cut is invalid or already added
 == Bieżące przycięcie jest nieprawidłowe lub już dodane
 
-Current driver
-== Bieżący sterownik
-
 Current file
 == Bieżący plik
 
-Current GPU
-== Bieżący GPU
-
-Current graphics backend
-== Bieżący backend graficzny
-
 Current rescue mode: %s
 == Aktualny tryb ratunkowy: %s
+
+Current resolution
+== Bieżąca rozdzielczość
 
 Current status
 == Aktualny status
@@ -4574,6 +4586,60 @@ Dummy mini view zoom (percent)
 Dummy name
 == Nazwa dummy
 
+Dummy name plate clan line X offset
+== Przesunięcie X wiersza klanu tabliczki z nazwą kukły
+
+Dummy name plate clan line Y offset
+== Przesunięcie Y wiersza klanu tabliczki z nazwą kukły
+
+Dummy name plate coord line X offset
+== Przesunięcie X wiersza współrzędnych tabliczki z nazwą kukły
+
+Dummy name plate coord line Y offset
+== Przesunięcie Y wiersza współrzędnych tabliczki z nazwą kukły
+
+Dummy name plate hammer icon X offset
+== Przesunięcie X ikony młotka tabliczki z nazwą kukły
+
+Dummy name plate hammer icon Y offset
+== Przesunięcie Y ikony młotka tabliczki z nazwą kukły
+
+Dummy name plate hook icon X offset
+== Przesunięcie X ikony haka tabliczki z nazwą kukły
+
+Dummy name plate hook icon Y offset
+== Przesunięcie Y ikony haka tabliczki z nazwą kukły
+
+Dummy name plate jump key icon X offset
+== Przesunięcie X ikony klawisza skoku tabliczki z nazwą kukły
+
+Dummy name plate jump key icon Y offset
+== Przesunięcie Y ikony klawisza skoku tabliczki z nazwą kukły
+
+Dummy name plate left key icon X offset
+== Przesunięcie X ikony lewego klawisza tabliczki z nazwą kukły
+
+Dummy name plate left key icon Y offset
+== Przesunięcie Y ikony lewego klawisza tabliczki z nazwą kukły
+
+Dummy name plate name line X offset
+== Przesunięcie X wiersza pseudonimu tabliczki z nazwą kukły
+
+Dummy name plate name line Y offset
+== Przesunięcie Y wiersza pseudonimu tabliczki z nazwą kukły
+
+Dummy name plate right key icon X offset
+== Przesunięcie X ikony prawego klawisza tabliczki z nazwą kukły
+
+Dummy name plate right key icon Y offset
+== Przesunięcie Y ikony prawego klawisza tabliczki z nazwą kukły
+
+Dummy name plate strength line X offset
+== Przesunięcie X wiersza siły tabliczki z nazwą kukły
+
+Dummy name plate strength line Y offset
+== Przesunięcie Y wiersza siły tabliczki z nazwą kukły
+
 Dummy skin
 == Skóra dummy
 
@@ -5032,6 +5098,9 @@ Enable mod weapon on %d: %s
 
 Enable MySQL backend instead of SQLite (fallback to sv_sqlite_file when no MySQL server is reachable)
 == Włącz backend MySQL zamiast SQLite (powrót do sv_sqlite_file, gdy serwer MySQL jest nieosiągalny)
+
+Enable nameplate text effects (master switch)
+== Włącz efekty tekstowe tabliczki z nazwą (przełącznik główny)
 
 Enable Netease lyric integration
 == Włącz integrację tekstów piosenek Netease
@@ -6056,6 +6125,9 @@ Frame time p95
 Frame time p99
 == Czas klatki p99
 
+Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
+== Klatki buforowane między przechwytywaniem a kodowaniem. Głębsza kolejka łagodzi wolne klatki kosztem pamięci; mniejsze wartości wcześniej włączają back-pressure.
+
 Frankenstein (drop parts on right)
 == Frankenstein (upuść części po prawej)
 
@@ -6185,6 +6257,9 @@ Friends imported for this session, but saving settings failed.
 Friends only
 == Tylko znajomi
 
+Frozen color darkening
+== Przyciemnienie koloru zamrożenia
+
 Frozen fire attempt
 == Próba strzału podczas zamrożenia
 
@@ -6265,6 +6340,9 @@ Game update rate (Hz)
 
 Game update rate when window inactive (Hz)
 == Częstotliwość aktualizacji gry, gdy okno jest nieaktywne (Hz)
+
+Game window mode
+== Tryb okna gry
 
 Game/predicted tick
 == Gra/przewidziany tick
@@ -6517,6 +6595,9 @@ Graphics card
 
 Graphics display
 == Wyświetlanie grafiki
+
+Graphics hardware details
+== Szczegóły sprzętu graficznego
 
 Graphics library major version (0 = auto-detect)
 == Główna wersja biblioteki graficznej (0 = wykrywanie automatyczne)
@@ -6923,9 +7004,6 @@ Hook collision line
 Hook collision line alpha (0 invisible, 100 fully visible)
 == Alfa linii kolizji haka (0 niewidoczna, 100 w pełni widoczna)
 
-Hook collision line length follows cursor distance
-== Długość linii kolizji haka podąża za odległością kursora
-
 Hook collision line opacity
 == Nieprzezroczystość linii kolizji haka
 
@@ -7226,6 +7304,9 @@ In pie menu
 In-game controller sensitivity
 == Czułość kontrolera w grze
 
+In-game crosshair rotation speed in degrees per second (0=static, negative=reverse)
+== Prędkość obrotu celownika w grze w stopniach na sekundę (0 = statycznie, ujemna = wstecz)
+
 In-game crosshair scale percent (50=half, 200=double)
 == Skala celownika w grze w procentach (50=połowa, 200=podwójna)
 
@@ -7336,6 +7417,9 @@ Ingame controller mode
 
 Ingame controller sens.
 == Czułość kontrolera (w grze)
+
+Ingame cursor rotation
+== Obrót kursora w grze
 
 Ingame cursor scale
 == Skala kursora w grze
@@ -7673,6 +7757,9 @@ Kawase
 Keep hook when teleporting
 == Zachowaj hak podczas teleportacji
 
+Keep inside game window
+== Trzymaj w oknie gry
+
 Keep it small and in a corner; a large overlay covers the map and hides what matters.
 == Trzymaj go małym i w rogu; duża nakładka zasłania mapę i ukrywa to, co ważne.
 
@@ -7682,8 +7769,14 @@ Keep it small and near an edge: the hint draws over the map and can cover the ti
 Keep messages short so they fit in one chat line.
 == Trzymaj wiadomości krótkie, aby mieściły się w jednej linii czatu.
 
+Keep square inside game window
+== Trzymaj kwadrat w oknie gry
+
 Keep the defaults unless you play with high ping; then try one option at a time and compare.
 == Zostaw domyślne ustawienia, chyba że grasz z wysokim pingiem; wtedy próbuj po jednej opcji i porównuj.
+
+Keep the feeling of the maximum cursor distance independent of resolution
+== Utrzymaj wrażenie maksymalnego dystansu kursora niezależnie od rozdzielczości
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == Na ciemnym tle najlepiej czyta się jasny tekst; przycisk przywrócenia wyglądu dymka wraca do zalecanych ustawień.
@@ -8021,6 +8114,9 @@ Legacy realtime WebSocket URL (migrated to qm_websocket_url)
 Legacy settings card collapse states migrated
 == Przeniesiono stare stany zwinięcia kart ustawień
 
+Legacy team colors
+== Stare kolory drużyn
+
 Length
 == Długość
 
@@ -8050,6 +8146,9 @@ LibreTranslate endpoint
 
 Light
 == Lekki
+
+Limit cursor to game window
+== Ogranicz kursor do okna gry
 
 Limit information in spectator mode
 == Ogranicz informacje w trybie widza
@@ -8750,6 +8849,9 @@ Maximum number of resend requests answered per second (0 for no limit)
 Maximum number of server info responses of any size sent per second (0 = unlimited).
 == Maksymalna liczba odpowiedzi z informacjami o serwerze dowolnego rozmiaru wysyłanych na sekundę (0 = bez ograniczeń).
 
+Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting.
+== Maksymalna liczba skórek w kolejce rotacji; nadmiar jest usuwany od najstarszych. 0 czyści kolejkę i zatrzymuje zbieranie.
+
 Maximum number of skins loaded simultaneously
 == Maksymalna liczba jednocześnie załadowanych skórek
 
@@ -9062,6 +9164,9 @@ MP4 is the most compatible for sharing, MOV is the editing standard and required
 Multi-resolution blur with a stronger result and balanced GPU cost.
 == Wielorozdzielcze rozmycie o mocniejszym efekcie i zrównoważonym obciążeniu GPU.
 
+Multi-select move
+== Przesuń wielokrotny wybór
+
 Multi-View
 == Wieloosobowy widok
 
@@ -9212,17 +9317,29 @@ Name plate hook icon X offset
 Name plate hook icon Y offset
 == Przesunięcie Y ikony haka przy nazwie
 
-Name plate key line X offset
-== Przesunięcie X wiersza przycisków tabliczki z nazwą
+Name plate jump key icon X offset
+== Przesunięcie X ikony klawisza skoku tabliczki z nazwą
 
-Name plate key line Y offset
-== Przesunięcie Y wiersza przycisków tabliczki z nazwą
+Name plate jump key icon Y offset
+== Przesunięcie Y ikony klawisza skoku tabliczki z nazwą
+
+Name plate left key icon X offset
+== Przesunięcie X ikony lewego klawisza tabliczki z nazwą
+
+Name plate left key icon Y offset
+== Przesunięcie Y ikony lewego klawisza tabliczki z nazwą
 
 Name plate name line X offset
 == Przesunięcie X wiersza pseudonimu tabliczki z nazwą
 
 Name plate name line Y offset
 == Przesunięcie Y wiersza pseudonimu tabliczki z nazwą
+
+Name plate right key icon X offset
+== Przesunięcie X ikony prawego klawisza tabliczki z nazwą
+
+Name plate right key icon Y offset
+== Przesunięcie Y ikony prawego klawisza tabliczki z nazwą
 
 Name plate strength line X offset
 == Przesunięcie X wiersza siły tabliczki z nazwą
@@ -9280,6 +9397,9 @@ Nameplate text border range
 
 Nameplate text effect auto LOD (0=Off 1=On: trim outer effect layers when crowded)
 == Auto-LOD efektów tekstu tabliczek (0=Wył, 1=Wł: ogranicz zewnętrzne warstwy przy tłoku)
+
+Nameplate text effects
+== Efekty tekstowe tabliczki z nazwą
 
 Nameplate text effects (1=Border 2=Gradient 4=Rainbow 8=Glow)
 == Efekty tekstu tabliczki (1=Obramowanie 2=Gradient 4=Tęcza 8=Poświata)
@@ -9547,6 +9667,9 @@ No functions bound
 
 No input device available
 == Brak dostępnego urządzenia wejściowego
+
+No limit
+== Bez limitu
 
 No local saves file found (ddnet-saves.txt)
 == Nie znaleziono pliku lokalnych zapisów (ddnet-saves.txt)
@@ -9874,6 +9997,9 @@ Old chat style: no tee icons, no background
 
 Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else.
 == Po osiągnięciu limitu zapisu stare pliki są usuwane, więc skopiuj w inne miejsce każde demo, które chcesz zachować.
+
+Old single-segment hook collision line
+== Stara jednoodcinkowa linia kolizji haka
 
 Oldschool
 == Oldschool
@@ -10892,6 +11018,9 @@ Pose render supersampling scale (1-4)
 Pose render unsharp mask strength (0 = off)
 == Siła maski wyostrzającej renderowania poz (0 = wyłączone)
 
+Pose screenshot pixel budget (MP, 0 = unlimited)
+== Budżet pikseli zrzutu pozy (MP, 0 = bez limitu)
+
 Poses
 == Pozy
 
@@ -11192,6 +11321,9 @@ Print command executed by this name or all chat binds
 Print daily messages to console
 == Drukuj codzienne wiadomości do konsoli
 
+Prioritize game traffic (QoS, Windows only)
+== Priorytetyzuj ruch gry (QoS, tylko Windows)
+
 Prioritize outgoing game traffic on Windows (best effort)
 == Nadaj priorytet wychodzącemu ruchowi gry w systemie Windows (best effort)
 
@@ -11234,8 +11366,14 @@ Project and community websites
 Projectile / explosion range
 == Zasięg pocisku / eksplozji
 
+ProRes profile
+== Profil ProRes
+
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 == Nadpisanie profilu ProRes: -1=auto (4444 dla 4:4:4, w innym wypadku HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
+
+ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this.
+== Profil ProRes używany, gdy enkoderem jest ProRes. Automatyczny wybiera 4444 dla wejścia 4:4:4, w pozostałych przypadkach HQ; inne enkodery to ignorują.
 
 Protect names and skins while streaming
 == Chroń nazwy i skórki podczas streamowania
@@ -11443,6 +11581,9 @@ Querying...
 
 Queue is empty
 == Kolejka jest pusta
+
+Queue length
+== Długość kolejki
 
 Queue preset: %s
 == Preset kolejki: %s
@@ -12665,6 +12806,9 @@ Say in chat
 Say in team chat
 == Powiedz na czacie drużyny
 
+Scale cursor distance with resolution
+== Skaluj dystans kursora wraz z rozdzielczością
+
 Scale down other Tees as well
 == Skaluj w dół również inne Tee
 
@@ -12878,6 +13022,12 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 See you at the next checkpoint.
 == Do zobaczenia przy następnym punkcie kontrolnym.
 
+Segment length (s)
+== Długość segmentu (s)
+
+Segment warmup (ticks)
+== Rozgrzewka segmentu (ticki)
+
 Select a body part, change its sprite or color, then save the skin.
 == Wybierz część ciała, zmień jej sprite lub kolor, a potem zapisz skin.
 
@@ -12910,6 +13060,9 @@ Select map
 
 Select map for the pose file
 == Wybierz mapę dla pliku póz
+
+Select several name plate blocks in the preview and move them together
+== Zaznacz kilka bloków tabliczki w podglądzie i przesuwaj je razem
 
 Select the country flag for each player
 == Select the country flag for each player
@@ -13292,6 +13445,12 @@ Shape
 Shape, colors and text shared by the whole interface
 == Kształt, kolory i tekst wspólne dla całego interfejsu
 
+Share layout with dummy
+== Wspólny układ z kukłą
+
+Share name plate offsets between own tee and dummy (0=separate)
+== Wspólne przesunięcia tabliczki dla własnego tee i kukły (0 = osobno)
+
 Share of the server browser name/map split given to the name column (per mille)
 == Udział podziału nazwa/mapa w przeglądarce serwerów dla kolumny nazwy (na tysiąc)
 
@@ -13342,12 +13501,6 @@ Show a per-character wave on text titles locally
 
 Show a small view of the dummy
 == Pokaż mały podgląd kukły
-
-Show advanced nameplate settings without changing effect values
-== Pokaż zaawansowane ustawienia nazw bez zmiany wartości efektów
-
-Show advanced options
-== Pokaż opcje zaawansowane
 
 Show advanced translation options
 == Pokaż zaawansowane opcje tłumaczenia
@@ -13669,6 +13822,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == Pokaż ducha w nieprzewidywalnej pozycji innych graczy
+
+Show ghost direction
+== Pokaż kierunek ducha
 
 Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
 == Pokazuj świecące, unoszące się wersy na mapie. Każdy nowy wers pozostaje w miejscu pojawienia się, a poprzednie unoszą się i zanikają
@@ -14024,6 +14180,9 @@ Show pause/play indicator when changing
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == Pokazuj oczekujące raporty awarii w oknie przy starcie (0 = tylko zachowaj raport i zapisz wpis w logu)
 
+Show pending crash reports on startup
+== Pokazuj oczekujące raporty awarii przy starcie
+
 Show per-character title waves locally
 == Pokazuj falowanie liter tytułów na moim ekranie
 
@@ -14119,6 +14278,9 @@ Show scoreboard
 
 Show scoreboard after death
 == Pokaż tablicę wyników po śmierci
+
+Show seconds in local time
+== Pokazuj sekundy w czasie lokalnym
 
 Show seconds on clock
 == Pokaż sekundy na zegarze
@@ -14260,6 +14422,9 @@ Show the original text locally below translated outgoing messages
 
 Show the pet
 == Pokaż zwierzaka
+
+Show the reason in name plates
+== Pokazuj powód na tabliczce z nazwą
 
 Show the screen center line
 == Pokaż linię środka ekranu
@@ -14669,11 +14834,17 @@ Smooth free spectator camera
 Smooth other players' predicted movement
 == Wygładź przewidywany ruch innych graczy
 
+Smooth prediction margin
+== Wygładź margines predykcji
+
 Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 == Margines wygładzania przewidywania (osłabia korektę drgań pingu, przywraca stare zachowanie)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == Czas trwania płynnej animacji przewijania w menu/edytorze (ms, 0 = wył.)
+
+Smooth sudden prediction margin corrections caused by ping spikes
+== Wygładza nagłe korekty marginesu predykcji wywołane skokami pingu
 
 Smooth the mouse-driven camera in live and demo free spectating
 == Wygładź ruch kamery sterowanej myszą podczas swobodnej obserwacji w grze i demach
@@ -14902,6 +15073,9 @@ Spin pop
 
 Split main and dummy into different teams for solo-run sync
 == Rozdziela główną postać i dummy do różnych drużyn w celu synchronizacji biegów solo
+
+Split the exported video into segments of this length. 0 writes a single file. Segments disable B-frames so they can be joined without timestamp errors.
+== Dzieli eksportowane wideo na segmenty o tej długości. 0 zapisuje jeden plik. Segmenty wyłączają klatki B, aby można je było łączyć bez błędów znaczników czasu.
 
 Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
 == Szkic stylu czatu wspierającego: 0=Normalny, 1=Platynowy połysk, 2=Płyn
@@ -16058,6 +16232,9 @@ Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"
 Ticks after freeze before applying max prediction reduction
 == Liczba ticków po zamrożeniu przed zastosowaniem maksymalnej redukcji przewidywania
 
+Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
+== Liczba ticków odtwarzanych bez nagrywania przed każdym segmentem, aby efekty i czat zgadzały się z początkiem segmentu. 50 ticków to jedna sekunda.
+
 tile
 == kafelek
 
@@ -16625,14 +16802,14 @@ Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visu
 Turn on "Message merging" in Dream Features.
 == Włącz „Message merging” w „Dream Features”.
 
+Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
+== Włącz „Efekty tekstowe tabliczki z nazwą”, otwórz „Ustawienia osobiste”, a następnie włącz „Obramowanie”, „Gradient”, „Tęcza” lub „Poświata” i ustaw odpowiednie zakresy i kolory.
+
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
 == Włącz nowy IME dla nowego paska oraz automatyczne zarządzanie IME podczas pisania, by tryb wprowadzania szedł za polem czatu; kolory zmienisz w edytuj kolor.
 
 Turn on "Notify when friends come online" and "Auto refresh server list", then tune "Refresh interval"; "Auto greet friends entering map" is optional.
 == Włącz powiadomienia o znajomych online i automatyczne odświeżanie listy serwerów, ustaw interwał; automatyczne powitanie jest opcjonalne.
-
-Turn on "Show advanced options", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
-== Włącz Pokaż opcje zaawansowane, następnie włącz Obramowanie, Gradient, Tęcza lub Poświata i ustaw pasujące zakresy oraz kolory.
 
 Turn on "Show chat bubbles above players", then adjust "Duration", "Bubble opacity" and "Font size", or pick your own colors.
 == Włącz pokazywanie dymków czatu nad graczami, a potem ustaw czas, krycie dymka i rozmiar czcionki; kolory wybierasz sam.
@@ -17206,6 +17383,9 @@ Use public word filter
 
 Use server defaults
 == Użyj ustawień domyślnych serwera
+
+Use skin color for frozen feet
+== Użyj koloru skórki dla zamrożonych stóp
 
 Use skin color for frozen Tee's feet
 == Użyj koloru skórki dla stóp zamrożonego Tee
@@ -17896,6 +18076,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == Lista słów musi być tekstem UTF-8 bez znaków NUL.
+
+Worker threads that convert captured frames to the encoder pixel format. 2-4 is enough for most CPUs; more threads only help when the encoder is fast.
+== Wątki robocze konwertujące przechwycone klatki do formatu pikseli enkodera. Na większości CPU wystarczą 2-4; więcej pomaga tylko przy szybkim enkoderze.
 
 World lyrics
 == Tekst w świecie gry

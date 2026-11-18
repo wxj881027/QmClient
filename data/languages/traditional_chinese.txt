@@ -596,6 +596,9 @@ Add demo timeline marker
 Add Entry
 == 添加條目
 
+Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off.
+== 進入地圖時把所有玩家的皮膚加入佇列。手動編輯佇列會關閉此項。
+
 Add friend
 == 添加好友
 
@@ -949,6 +952,9 @@ Angry
 
 Angular gradient
 == 角度漸層
+
+Animate country flags
+== 國旗入場動畫
 
 Animated title style id
 == 頭銜動態風格 ID
@@ -1769,6 +1775,9 @@ Best
 Best quality (all-intra 4:4:4 / MP4)
 == 最高畫質 (全幀內 4:4:4 / MP4)
 
+Best-effort DSCP marking of the game connection; may be ignored by routers
+== 盡力為遊戲連線打 DSCP 標記，路由器可能忽略
+
 Better compression, slower
 == 壓縮更好，速度較慢
 
@@ -2119,6 +2128,9 @@ Capsule ends
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 == 膠囊端頭：0 = 普通圓弧，1 = 絲滑端點，2 = 蘋果連續曲率
+
+Capture queue
+== 擷取佇列
 
 Capture the flag
 == 奪旗模式 (CTF)
@@ -2711,6 +2723,9 @@ Collapse
 Collapse console
 == 收起控制台
 
+Collect all players' skins on map join
+== 進圖時收集所有玩家皮膚
+
 Collect CP %d before teleporting
 == 請先吃 CP %d，再進入回傳入口
 
@@ -3269,6 +3284,9 @@ Converse
 Converse with the last person you whispered to (private message)
 == 與上一個私聊對象繼續對話（私聊）
 
+Convert threads
+== 轉換執行緒
+
 Coordinate size on nameplate
 == 銘牌中座標的大小
 
@@ -3488,20 +3506,14 @@ Current aspect ratio: Show default
 Current cut is invalid or already added
 == 當前裁剪無效或已添加
 
-Current driver
-== 目前驅動程式
-
 Current file
 == 當前文件
 
-Current GPU
-== 目前顯示卡
-
-Current graphics backend
-== 目前圖形後端
-
 Current rescue mode: %s
 == 當前救援模式：%s
+
+Current resolution
+== 目前解析度
 
 Current status
 == 當前狀態
@@ -4574,6 +4586,60 @@ Dummy mini view zoom (percent)
 Dummy name
 == 分身名稱
 
+Dummy name plate clan line X offset
+== 分身名牌戰隊行 X 偏移
+
+Dummy name plate clan line Y offset
+== 分身名牌戰隊行 Y 偏移
+
+Dummy name plate coord line X offset
+== 分身名牌座標行 X 偏移
+
+Dummy name plate coord line Y offset
+== 分身名牌座標行 Y 偏移
+
+Dummy name plate hammer icon X offset
+== 分身名牌錘子圖示 X 偏移
+
+Dummy name plate hammer icon Y offset
+== 分身名牌錘子圖示 Y 偏移
+
+Dummy name plate hook icon X offset
+== 分身名牌鉤子圖示 X 偏移
+
+Dummy name plate hook icon Y offset
+== 分身名牌鉤子圖示 Y 偏移
+
+Dummy name plate jump key icon X offset
+== 分身名牌跳躍鍵圖示 X 偏移
+
+Dummy name plate jump key icon Y offset
+== 分身名牌跳躍鍵圖示 Y 偏移
+
+Dummy name plate left key icon X offset
+== 分身名牌左方向鍵圖示 X 偏移
+
+Dummy name plate left key icon Y offset
+== 分身名牌左方向鍵圖示 Y 偏移
+
+Dummy name plate name line X offset
+== 分身名牌名字行 X 偏移
+
+Dummy name plate name line Y offset
+== 分身名牌名字行 Y 偏移
+
+Dummy name plate right key icon X offset
+== 分身名牌右方向鍵圖示 X 偏移
+
+Dummy name plate right key icon Y offset
+== 分身名牌右方向鍵圖示 Y 偏移
+
+Dummy name plate strength line X offset
+== 分身名牌鉤子強度行 X 偏移
+
+Dummy name plate strength line Y offset
+== 分身名牌鉤子強度行 Y 偏移
+
 Dummy skin
 == 分身皮膚
 
@@ -5032,6 +5098,9 @@ Enable mod weapon on %d: %s
 
 Enable MySQL backend instead of SQLite (fallback to sv_sqlite_file when no MySQL server is reachable)
 == 啟用 MySQL 後端而不是 SQLite 後端（當沒有 MySQL 伺服器可訪問時，sv_sqlite_file 仍用作後備寫入伺服器）
+
+Enable nameplate text effects (master switch)
+== 啟用名牌文字特效（總開關）
 
 Enable Netease lyric integration
 == 啟用網易雲音樂歌詞整合
@@ -6056,6 +6125,9 @@ Frame time p95
 Frame time p99
 == 幀時間 p99
 
+Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
+== 擷取與編碼之間緩衝的影格數。佇列越深越能吸收編碼較慢的影格，但更耗記憶體；數值越低越早產生背壓。
+
 Frankenstein (drop parts on right)
 == 拼合結果（將部件拖放到右側）
 
@@ -6185,6 +6257,9 @@ Friends imported for this session, but saving settings failed.
 Friends only
 == 僅限好友
 
+Frozen color darkening
+== 凍結時顏色變暗強度
+
 Frozen fire attempt
 == 凍結時嘗試開火
 
@@ -6265,6 +6340,9 @@ Game update rate (Hz)
 
 Game update rate when window inactive (Hz)
 == 窗口不活動時遊戲更新的刷新率（單位：Hz）
+
+Game window mode
+== 遊戲視窗模式
 
 Game/predicted tick
 == 遊戲/預測 tick
@@ -6517,6 +6595,9 @@ Graphics card
 
 Graphics display
 == 圖像顯示
+
+Graphics hardware details
+== 圖形硬體詳情
 
 Graphics library major version (0 = auto-detect)
 == 圖形庫主版本（0 = 自動偵測）
@@ -6923,9 +7004,6 @@ Hook collision line
 Hook collision line alpha (0 invisible, 100 fully visible)
 == 鉤子輔助線 Alpha（0 不可見，100 完全可見）
 
-Hook collision line length follows cursor distance
-== 鉤子輔助線長度跟隨光標距離
-
 Hook collision line opacity
 == 鉤子輔助線不透明度
 
@@ -7226,6 +7304,9 @@ In pie menu
 In-game controller sensitivity
 == 遊戲內控制器靈敏度
 
+In-game crosshair rotation speed in degrees per second (0=static, negative=reverse)
+== 遊戲內游標旋轉速度（度/秒，0=靜止，負值反向）
+
 In-game crosshair scale percent (50=half, 200=double)
 == 遊戲內準星縮放百分比（50=一半，200=兩倍）
 
@@ -7336,6 +7417,9 @@ Ingame controller mode
 
 Ingame controller sens.
 == 遊戲內搖桿靈敏度
+
+Ingame cursor rotation
+== 遊戲內游標旋轉
 
 Ingame cursor scale
 == 遊戲內光標縮放
@@ -7673,6 +7757,9 @@ Kawase
 Keep hook when teleporting
 == 傳送時保持鉤子
 
+Keep inside game window
+== 跟隨視窗邊界
+
 Keep it small and in a corner; a large overlay covers the map and hides what matters.
 == 保持小巧並放在角落；過大的浮層會遮住地圖，把重要的東西擋住。
 
@@ -7682,8 +7769,14 @@ Keep it small and near an edge: the hint draws over the map and can cover the ti
 Keep messages short so they fit in one chat line.
 == 訊息盡量短，確保一行聊天就能完整顯示。
 
+Keep square inside game window
+== 視窗內保持方形
+
 Keep the defaults unless you play with high ping; then try one option at a time and compare.
 == 除非你經常在高延遲下遊戲，否則保持預設；要調整時，一次只試一個選項再比較。
+
+Keep the feeling of the maximum cursor distance independent of resolution
+== 讓最大游標距離的手感不受解析度影響
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == 深色背景配淺色文字最好讀；想恢復建議樣式就點重設提示外觀。
@@ -8021,6 +8114,9 @@ Legacy realtime WebSocket URL (migrated to qm_websocket_url)
 Legacy settings card collapse states migrated
 == 舊版設定卡片收合狀態已遷移
 
+Legacy team colors
+== 舊版隊伍配色
+
 Length
 == 時長
 
@@ -8050,6 +8146,9 @@ LibreTranslate endpoint
 
 Light
 == 輕體
+
+Limit cursor to game window
+== 限制游標在遊戲視窗內
 
 Limit information in spectator mode
 == 限制觀戰模式中的信息
@@ -8750,6 +8849,9 @@ Maximum number of resend requests answered per second (0 for no limit)
 Maximum number of server info responses of any size sent per second (0 = unlimited).
 == 每秒傳送的任意大小伺服器資訊回應最大數量（0 = 不限）。
 
+Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting.
+== 輪換佇列最多保留的皮膚數量，超出時從最早的開始捨棄。0 表示清空佇列並停止收集。
+
 Maximum number of skins loaded simultaneously
 == 最多可同時加載皮膚數量
 
@@ -9062,6 +9164,9 @@ MP4 is the most compatible for sharing, MOV is the editing standard and required
 Multi-resolution blur with a stronger result and balanced GPU cost.
 == 多解析度模糊，效果更強，並兼顧 GPU 開銷。
 
+Multi-select move
+== 多選移動
+
 Multi-View
 == 多人同框視角
 
@@ -9212,17 +9317,29 @@ Name plate hook icon X offset
 Name plate hook icon Y offset
 == 暱稱卡鉤圖示 Y 偏移
 
-Name plate key line X offset
-== 名字板按鍵行 X 偏移
+Name plate jump key icon X offset
+== 名牌跳躍鍵圖示 X 偏移
 
-Name plate key line Y offset
-== 名字板按鍵行 Y 偏移
+Name plate jump key icon Y offset
+== 名牌跳躍鍵圖示 Y 偏移
+
+Name plate left key icon X offset
+== 名牌左方向鍵圖示 X 偏移
+
+Name plate left key icon Y offset
+== 名牌左方向鍵圖示 Y 偏移
 
 Name plate name line X offset
 == 名字板暱稱行 X 偏移
 
 Name plate name line Y offset
 == 名字板暱稱行 Y 偏移
+
+Name plate right key icon X offset
+== 名牌右方向鍵圖示 X 偏移
+
+Name plate right key icon Y offset
+== 名牌右方向鍵圖示 Y 偏移
 
 Name plate strength line X offset
 == 名字板強弱行 X 偏移
@@ -9280,6 +9397,9 @@ Nameplate text border range
 
 Nameplate text effect auto LOD (0=Off 1=On: trim outer effect layers when crowded)
 == 名牌文字特效自動降級（0=關，1=開：同屏擁擠時削減外層特效）
+
+Nameplate text effects
+== 名牌文字特效
 
 Nameplate text effects (1=Border 2=Gradient 4=Rainbow 8=Glow)
 == 名牌文字效果（1=邊框 2=漸變 4=彩虹 8=發光）
@@ -9547,6 +9667,9 @@ No functions bound
 
 No input device available
 == 系統沒有可用輸入設備
+
+No limit
+== 不限制
 
 No local saves file found (ddnet-saves.txt)
 == 未找到本地存檔文件（ddnet-saves.txt）
@@ -9874,6 +9997,9 @@ Old chat style: no tee icons, no background
 
 Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else.
 == 達到儲存上限後舊檔案會被刪掉，想留的回放記得另存一份。
+
+Old single-segment hook collision line
+== 舊版單段鉤索碰撞線
 
 Oldschool
 == 傳統
@@ -10892,6 +11018,9 @@ Pose render supersampling scale (1-4)
 Pose render unsharp mask strength (0 = off)
 == 姿態渲染銳利化遮罩強度（0 = 關閉）
 
+Pose screenshot pixel budget (MP, 0 = unlimited)
+== 姿勢截圖像素預算（百萬像素，0 = 不限）
+
 Poses
 == 姿態
 
@@ -11192,6 +11321,9 @@ Print command executed by this name or all chat binds
 Print daily messages to console
 == 將每日消息打印到控制台
 
+Prioritize game traffic (QoS, Windows only)
+== 優先遊戲流量（QoS，僅 Windows）
+
 Prioritize outgoing game traffic on Windows (best effort)
 == 在 Windows 上優先處理傳出遊戲流量（盡力而為）
 
@@ -11234,8 +11366,14 @@ Project and community websites
 Projectile / explosion range
 == 投射物 / 爆炸範圍
 
+ProRes profile
+== ProRes 檔位
+
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 == ProRes 檔位覆寫：-1=自動（4:4:4 用 4444，其餘用 HQ），0=Proxy，1=LT，2=422，3=HQ，4=4444，5=4444XQ
+
+ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this.
+== 編碼器為 ProRes 時使用的檔位。自動會在 4:4:4 輸入時選 4444，其餘情況選 HQ；其他編碼器忽略此項。
 
 Protect names and skins while streaming
 == 串流時保護名稱與外觀
@@ -11443,6 +11581,9 @@ Querying...
 
 Queue is empty
 == 隊列為空
+
+Queue length
+== 佇列長度
 
 Queue preset: %s
 == 隊列預設：%s
@@ -12665,6 +12806,9 @@ Say in chat
 Say in team chat
 == 在隊伍聊天中說
 
+Scale cursor distance with resolution
+== 游標距離隨解析度縮放
+
 Scale down other Tees as well
 == 同時縮小其他 Tee
 
@@ -12878,6 +13022,12 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 See you at the next checkpoint.
 == 下個檢查點見。
 
+Segment length (s)
+== 分段時長（秒）
+
+Segment warmup (ticks)
+== 分段預熱（tick）
+
 Select a body part, change its sprite or color, then save the skin.
 == 選一個身體部位，改它的貼圖或顏色，然後儲存皮膚。
 
@@ -12910,6 +13060,9 @@ Select map
 
 Select map for the pose file
 == 為合影檔案選擇地圖
+
+Select several name plate blocks in the preview and move them together
+== 在預覽中選取多個名牌方塊後整組移動
 
 Select the country flag for each player
 == Select the country flag for each player
@@ -13292,6 +13445,12 @@ Shape
 Shape, colors and text shared by the whole interface
 == 整個介面共用的形狀、顏色與文字
 
+Share layout with dummy
+== 與分身共用佈局
+
+Share name plate offsets between own tee and dummy (0=separate)
+== 本體與分身共用同一套名牌偏移（0=分開）
+
 Share of the server browser name/map split given to the name column (per mille)
 == 伺服器瀏覽器名稱/地圖分欄中分配給名稱列的千分比
 
@@ -13342,12 +13501,6 @@ Show a per-character wave on text titles locally
 
 Show a small view of the dummy
 == 顯示分身的小視窗
-
-Show advanced nameplate settings without changing effect values
-== 顯示暱稱進階設定，不改變既有特效值
-
-Show advanced options
-== 顯示進階選項
 
 Show advanced translation options
 == 顯示進階翻譯選項
@@ -13669,6 +13822,9 @@ Show ghost
 
 Show ghost at unpredictable position of other players
 == 在其他玩家的不可預測位置顯示幽靈
+
+Show ghost direction
+== 顯示影子朝向
 
 Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
 == 在地圖中顯示發光、漂浮的歌詞。每句新歌詞固定在出現的位置，舊句向上漂浮並淡出
@@ -14024,6 +14180,9 @@ Show pause/play indicator when changing
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
 == 啟動時用視窗顯示待處理的崩潰報告（0 = 僅保留報告檔案並記錄日誌）
 
+Show pending crash reports on startup
+== 啟動時顯示待處理崩潰報告
+
 Show per-character title waves locally
 == 本機顯示頭銜逐字波動
 
@@ -14119,6 +14278,9 @@ Show scoreboard
 
 Show scoreboard after death
 == 死亡後顯示計分板
+
+Show seconds in local time
+== 本地時間顯示秒
 
 Show seconds on clock
 == 在時間處顯示秒數
@@ -14260,6 +14422,9 @@ Show the original text locally below translated outgoing messages
 
 Show the pet
 == 顯示寵物
+
+Show the reason in name plates
+== 名牌上顯示敵意原因
 
 Show the screen center line
 == 顯示屏幕中心線
@@ -14484,7 +14649,7 @@ Size of entity text data (20% to 100%)
 == 實體文本數據的大小（20% 到 100%）
 
 Size of hook strength icon and number indicator
-== 鉤索強度圖標與數值的大小
+== 鉤索強度顯示大小
 
 Size of key press icons
 == 按鍵顯示圖標大小
@@ -14669,11 +14834,17 @@ Smooth free spectator camera
 Smooth other players' predicted movement
 == 平滑其他玩家的預測移動
 
+Smooth prediction margin
+== 平滑預測餘量
+
 Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 == 平滑過渡預測邊距（會削弱 ping 抖動修正，恢復舊行為）
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == 菜單/編輯器中平滑滾動動畫的時間（單位：毫秒，0 為關閉）
+
+Smooth sudden prediction margin corrections caused by ping spikes
+== 平滑由網路抖動引起的預測餘量突變
 
 Smooth the mouse-driven camera in live and demo free spectating
 == 平滑線上觀戰和 Demo 重播中由滑鼠控制的自由視角
@@ -14902,6 +15073,9 @@ Spin pop
 
 Split main and dummy into different teams for solo-run sync
 == 本體和分身分別進隊，方便開局 solo 同步（部分地圖不好同步時使用）
+
+Split the exported video into segments of this length. 0 writes a single file. Segments disable B-frames so they can be joined without timestamp errors.
+== 把匯出影片依此時長分段。0 表示輸出單一檔案。分段會關閉 B 幀，確保拼接時不會因時間戳出錯。
 
 Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
 == 贊助者發言樣式草稿：0=普通，1=鉑金高光，2=流體
@@ -16058,6 +16232,9 @@ Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"
 Ticks after freeze before applying max prediction reduction
 == 凍結後經過多少 tick 才應用最大預測減少
 
+Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
+== 每段開始前不帶錄製地播放的 tick 數，用來讓特效與聊天狀態與該段起點一致。50 tick 等於 1 秒。
+
 tile
 == 瓦片
 
@@ -16625,14 +16802,14 @@ Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visu
 Turn on "Message merging" in Dream Features.
 == 在「夢的小功能」裡開啟「訊息合併」。
 
+Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
+== 開啟「名牌文字特效」，進入「個性調整」，再勾選「描邊」「漸層」「彩虹」或「輝光」並設定對應範圍與顏色。
+
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
 == 開啟新 IME 使用新候選列，再開啟輸入時自動管理 IME 讓輸入模式跟隨聊天框；顏色在編輯顏色裡改。
 
 Turn on "Notify when friends come online" and "Auto refresh server list", then tune "Refresh interval"; "Auto greet friends entering map" is optional.
 == 開啟好友上線提醒和自動重新整理伺服器清單，再調重新整理間隔；自動問候進圖好友是選項。
-
-Turn on "Show advanced options", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
-== 打開顯示進階選項，再啟用邊框、漸變、彩虹或發光，並設定對應的範圍和顏色。
 
 Turn on "Show chat bubbles above players", then adjust "Duration", "Bubble opacity" and "Font size", or pick your own colors.
 == 開啟在玩家頭頂顯示聊天氣泡，再調顯示時長、氣泡不透明度和字級，也可以自己選顏色。
@@ -17206,6 +17383,9 @@ Use public word filter
 
 Use server defaults
 == 使用服務預設值
+
+Use skin color for frozen feet
+== 凍結腳部使用膚色
 
 Use skin color for frozen Tee's feet
 == 凍結 Tee 的腳部也使用皮膚顏色
@@ -17896,6 +18076,9 @@ Word list file exceeds 2 MiB.
 
 Word list must be UTF-8 text without NUL characters.
 == 詞表必須是 UTF-8 文字，且不含 NUL 字元。
+
+Worker threads that convert captured frames to the encoder pixel format. 2-4 is enough for most CPUs; more threads only help when the encoder is fast.
+== 把擷取影格轉換成編碼器像素格式的工作執行緒數。多數 CPU 2-4 個就夠，編碼器很快時增加執行緒才有幫助。
 
 World lyrics
 == 世界歌詞
