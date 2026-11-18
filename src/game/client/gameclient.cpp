@@ -7566,6 +7566,16 @@ void CGameClient::UpdateRenderedCharacters()
 				}
 			}
 		}
+		if(IsPracticeParticipant)
+		{
+			// 表情同样来自服务器快照，但练习输入锁会让服务器把参与者长期判成 AFK，
+			// 快照就固定返回眨眼。渲染统一在预测/旁观数据写完之后覆盖，所有路径一致。
+			const bool ServerActive = m_Snap.m_aCharacters[i].m_Active;
+			const int ServerEmote = ServerActive ? m_Snap.m_aCharacters[i].m_Cur.m_Emote : -1;
+			const int Emote = m_FastPractice.ResolvePracticeEyeEmote(i, ServerEmote, ServerActive, m_aClients[i].m_Afk);
+			m_aClients[i].m_RenderCur.m_Emote = Emote;
+			m_aClients[i].m_RenderPrev.m_Emote = Emote;
+		}
 		m_aClients[i].m_RenderPos = Pos;
 		if(Predict() && i == m_Snap.m_LocalClientId)
 			m_LocalCharacterPos = Pos;

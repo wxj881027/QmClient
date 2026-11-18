@@ -617,6 +617,9 @@ void CFastPractice::ShiftPracticeWorldTicks(int TickDelta)
 	for(int &LastAttackTick : m_aLastAttackTick)
 		if(LastAttackTick >= 0)
 			LastAttackTick += TickDelta;
+	for(auto &State : m_aPracticeCommandState)
+		if(State.m_EyeEmote.m_EndTick >= 0)
+			State.m_EyeEmote.m_EndTick += TickDelta;
 	for(CCharacter *pChar = (CCharacter *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChar; pChar = (CCharacter *)pChar->TypeNext())
 		pChar->ShiftTickBase(TickDelta);
 	for(CProjectile *pProj = (CProjectile *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_PROJECTILE); pProj; pProj = (CProjectile *)pProj->TypeNext())
@@ -1230,6 +1233,15 @@ CCharacter *CFastPractice::ResolvePracticeCharacter(int ClientId)
 	if(!IsPracticeParticipant(ClientId) || !m_PracticeWorldInitialized)
 		return nullptr;
 	return m_PracticeBaseWorld.GetCharacterById(ClientId);
+}
+
+int CFastPractice::ResolvePracticeEyeEmote(int ClientId, int ServerEmote, bool ServerActive, bool ServerAfk) const
+{
+	if(!IsPracticeParticipant(ClientId))
+		return ServerEmote;
+	const int ConfiguredEmote = ClientId == m_EnableDummyClientId ? g_Config.m_ClDummyDefaultEyes : g_Config.m_ClPlayerDefaultEyes;
+	return QmResolvePracticeEyeEmote(ServerEmote, ServerActive, ServerAfk, ConfiguredEmote,
+		m_aPracticeCommandState[ClientId].m_EyeEmote, m_PracticeBaseWorld.GameTick());
 }
 
 std::vector<SSwitchers> *CFastPractice::PracticeSwitchers()

@@ -11,6 +11,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/local_world.h>
+#include <game/client/components/qmclient/practice_branch_state.h>
 #include <game/client/components/qmclient/practice_commands.h>
 #include <game/client/components/qmclient/practice_hook_input.h>
 #include <game/client/components/qmclient/practice_input_lock.h>
@@ -55,6 +56,9 @@ public:
 	bool ForcePredictPractice() const;
 	void InvalidateBufferedInputState();
 	bool IsPracticeParticipant(int ClientId) const;
+	// 练习参与者的表情以分支时间线为准：服务器 AFK 或快照失活时用本地默认眼睛，
+	// 手动 /emote 在有效期内覆盖；非参与者仍返回服务器快照值。
+	int ResolvePracticeEyeEmote(int ClientId, int ServerEmote, bool ServerActive, bool ServerAfk) const;
 	// 非参与者都停在服务器时间线上，练习期间只作画面参照物。影子开关和
 	// 不透明度统一管这一整组，不是只管自己的主世界影子。
 	float ServerTeeAlpha(int ClientId, float DefaultAlpha) const;
@@ -130,6 +134,7 @@ private:
 		// 用户显式设置的重生点，独立于救援点，重开世界后依然保留。
 		bool m_HasCheckpoint = false;
 		SQmPracticeSavedTee m_CheckpointTee;
+		SQmPracticeEyeEmoteState m_EyeEmote;
 	};
 
 	bool m_Enabled = false;

@@ -626,6 +626,24 @@ bool CFastPractice::ConsumePracticeChatCommand(int Team, const char *pLine)
 	if(!ParseCommandArgs(pLine, vArgs))
 		return false;
 
+	if(!vArgs.empty() && str_comp_nocase(vArgs[0].c_str(), "/emote") == 0)
+	{
+		// 命令仍发给服务器，保留正常聊天反馈与服务器默认表情；本地只记录练习时限内的
+		// 显示覆盖。服务器把锁输入的练习参与者判成 AFK 后，快照表情会一直是眨眼。
+		int ClientId = CurrentLocalPracticeId();
+		const int Emote = vArgs.size() > 1 ? QmParsePracticeEyeEmote(vArgs[1]) : -1;
+		if(ClientId >= 0 && IsPracticeParticipant(ClientId) && Emote >= 0)
+		{
+			int Duration = 1;
+			if(vArgs.size() > 2)
+				Duration = std::clamp(str_toint(vArgs[2].c_str()), 1, 86400);
+			auto &Override = m_aPracticeCommandState[ClientId].m_EyeEmote;
+			Override.m_Emote = Emote;
+			Override.m_EndTick = m_PracticeBaseWorld.GameTick() + Duration * std::max(Client()->GameTickSpeed(), 1);
+		}
+		return false;
+	}
+
 	if(!vArgs.empty() && str_comp_nocase(vArgs[0].c_str(), "/restart") == 0)
 	{
 		// 重开会替换整个世界（连同角色），不能继续使用下面缓存的 pBaseChar，

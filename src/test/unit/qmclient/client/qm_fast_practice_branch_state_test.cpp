@@ -332,6 +332,41 @@ TEST(QmFastPracticeControlledTee, OutOfRangeSlotsAreNeverParticipants)
 	EXPECT_FALSE(QmIsPracticeParticipant(MAX_CLIENTS, 3, 4));
 }
 
+TEST(QmFastPracticeEyeEmote, AfkServerBlinkFallsBackToConfiguredEyes)
+{
+	const SQmPracticeEyeEmoteState Override;
+	EXPECT_EQ(QmResolvePracticeEyeEmote(EMOTE_BLINK, true, true, EMOTE_HAPPY, Override, 100), EMOTE_HAPPY);
+}
+
+TEST(QmFastPracticeEyeEmote, ExplicitEmoteWinsUntilItsDeadline)
+{
+	SQmPracticeEyeEmoteState Override;
+	Override.m_Emote = EMOTE_ANGRY;
+	Override.m_EndTick = 120;
+	EXPECT_EQ(QmResolvePracticeEyeEmote(EMOTE_BLINK, true, true, EMOTE_HAPPY, Override, 120), EMOTE_ANGRY);
+	EXPECT_EQ(QmResolvePracticeEyeEmote(EMOTE_BLINK, true, true, EMOTE_HAPPY, Override, 121), EMOTE_HAPPY);
+}
+
+TEST(QmFastPracticeEyeEmote, InactiveSnapshotUsesConfiguredEyes)
+{
+	const SQmPracticeEyeEmoteState Override;
+	EXPECT_EQ(QmResolvePracticeEyeEmote(-1, false, false, EMOTE_SURPRISE, Override, 100), EMOTE_SURPRISE);
+}
+
+TEST(QmFastPracticeEyeEmote, ServerEmoteStillWinsForAnActiveNonAfkTee)
+{
+	const SQmPracticeEyeEmoteState Override;
+	EXPECT_EQ(QmResolvePracticeEyeEmote(EMOTE_PAIN, true, false, EMOTE_HAPPY, Override, 100), EMOTE_PAIN);
+}
+
+TEST(QmFastPracticeEyeEmote, ParsesServerNamesAndCloseAlias)
+{
+	EXPECT_EQ(QmParsePracticeEyeEmote("normal"), EMOTE_NORMAL);
+	EXPECT_EQ(QmParsePracticeEyeEmote("HAPPY"), EMOTE_HAPPY);
+	EXPECT_EQ(QmParsePracticeEyeEmote("close"), EMOTE_BLINK);
+	EXPECT_EQ(QmParsePracticeEyeEmote("unknown"), -1);
+}
+
 TEST(QmFastPracticeDeathTile, FreshDeathPlaysFeedbackAndReturnsToTheSavedPoint)
 {
 	// 与 /r 一致：踩到死亡 tile 的那一刻播一次死亡效果并回到保存点。

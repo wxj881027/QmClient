@@ -14,6 +14,7 @@
 
 #include <benchmark/benchmark.h>
 
+#include <array>
 #include <iterator>
 #include <vector>
 
@@ -79,6 +80,32 @@ static void BM_PracticePredictPublishActions(benchmark::State &State)
 	State.SetItemsProcessed(State.iterations() * Plan.StepCount());
 }
 BENCHMARK(BM_PracticePredictPublishActions)->ArgsProduct({{1, 6, 20}, {0, 1}});
+
+static void BM_PracticeEyeEmoteResolve(benchmark::State &State)
+{
+	const bool ServerAfk = State.range(0) != 0;
+	SQmPracticeEyeEmoteState Override;
+	if(State.range(1) != 0)
+	{
+		Override.m_Emote = EMOTE_ANGRY;
+		Override.m_EndTick = 120;
+	}
+	// 每帧上限一队满员：服务器表情随参与者变化，避免整段循环被折叠成常量。
+	std::array<int, MAX_CLIENTS> aServerEmotes;
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
+		aServerEmotes[ClientId] = (ClientId & 1) ? EMOTE_BLINK : EMOTE_PAIN;
+	for(auto _ : State)
+	{
+		int EmoteSum = 0;
+		for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
+			EmoteSum += QmResolvePracticeEyeEmote(aServerEmotes[ClientId], !ServerAfk, ServerAfk,
+				EMOTE_HAPPY, Override, 100);
+		benchmark::DoNotOptimize(EmoteSum);
+	}
+	State.SetItemsProcessed(State.iterations() * MAX_CLIENTS);
+}
+// 0/1：服务器是否 AFK；0/1：手动表情覆盖是否在有效期内。
+BENCHMARK(BM_PracticeEyeEmoteResolve)->ArgsProduct({{0, 1}, {0, 1}});
 
 static void BM_ReplaySessionStatusResolve(benchmark::State &State)
 {

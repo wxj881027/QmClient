@@ -11,6 +11,7 @@
 #include <game/client/prediction/gameworld.h>
 
 #include <algorithm>
+#include <string_view>
 #include <vector>
 
 // 快速练习分支世界的生命周期判定。这里只放不依赖 CUi / CGameClient 的纯策略，
@@ -94,6 +95,65 @@ inline bool QmIsPracticeParticipant(int ClientId, int EnableLocalClientId, int E
 {
 	return ClientId >= 0 && ClientId < MAX_CLIENTS &&
 	       (ClientId == EnableLocalClientId || ClientId == EnableDummyClientId);
+}
+
+struct SQmPracticeEyeEmoteState
+{
+	int m_Emote = -1;
+	int m_EndTick = -1;
+};
+
+inline bool QmPracticeEyeEmoteNameEquals(std::string_view Name, std::string_view Expected)
+{
+	if(Name.size() != Expected.size())
+		return false;
+	for(size_t Index = 0; Index < Name.size(); ++Index)
+	{
+		char Left = Name[Index];
+		char Right = Expected[Index];
+		if(Left >= 'A' && Left <= 'Z')
+			Left = (char)(Left - 'A' + 'a');
+		if(Right >= 'A' && Right <= 'Z')
+			Right = (char)(Right - 'A' + 'a');
+		if(Left != Right)
+			return false;
+	}
+	return true;
+}
+
+// 与服务器 /emote 使用同一组名字；close 是 blink 的别名。
+inline int QmParsePracticeEyeEmote(std::string_view Name)
+{
+	if(QmPracticeEyeEmoteNameEquals(Name, "normal"))
+		return EMOTE_NORMAL;
+	if(QmPracticeEyeEmoteNameEquals(Name, "pain"))
+		return EMOTE_PAIN;
+	if(QmPracticeEyeEmoteNameEquals(Name, "happy"))
+		return EMOTE_HAPPY;
+	if(QmPracticeEyeEmoteNameEquals(Name, "surprise"))
+		return EMOTE_SURPRISE;
+	if(QmPracticeEyeEmoteNameEquals(Name, "angry"))
+		return EMOTE_ANGRY;
+	if(QmPracticeEyeEmoteNameEquals(Name, "blink") || QmPracticeEyeEmoteNameEquals(Name, "close"))
+		return EMOTE_BLINK;
+	return -1;
+}
+
+inline bool QmPracticeEyeEmoteActive(const SQmPracticeEyeEmoteState &Override, int Tick)
+{
+	return Override.m_Emote >= 0 && Override.m_Emote < NUM_EMOTES && Override.m_EndTick >= Tick;
+}
+
+// 练习参与者的服务器输入被锁成中性，服务器会长期判它 AFK，并把快照表情固定成眨眼。
+// 因此 AFK 或快照失活时改用本地默认眼睛；手动 /emote 在有效期内优先。
+inline int QmResolvePracticeEyeEmote(int ServerEmote, bool ServerActive, bool ServerAfk, int ConfiguredEmote,
+	const SQmPracticeEyeEmoteState &Override, int Tick)
+{
+	if(QmPracticeEyeEmoteActive(Override, Tick))
+		return Override.m_Emote;
+	if(ServerActive && !ServerAfk && ServerEmote >= 0 && ServerEmote < NUM_EMOTES)
+		return ServerEmote;
+	return std::clamp(ConfiguredEmote, 0, NUM_EMOTES - 1);
 }
 
 // 练习命令、检查点与死亡回退都作用在“当前控制的 tee”上：cl_dummy 切换后，
