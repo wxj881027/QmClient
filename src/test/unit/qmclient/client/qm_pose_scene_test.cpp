@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include <cstring>
+#include <limits>
 #include <vector>
 
 namespace
@@ -205,6 +206,36 @@ TEST(QmPoseScene, ClientInfoCarriesNameAndSkin)
 	EXPECT_STREQ(aName, "HAI");
 }
 
+TEST(QmPoseScene, EmptySkinUsesTheDefaultSkinInTheSnapshot)
+{
+	SPoseTee WithoutSkin = MakePose("empty", 10, 20);
+	WithoutSkin.m_aSkin[0] = '\0';
+	const std::vector<SPoseTee> vPoses = {WithoutSkin, MakePose("default skin", 30, 40)};
+	CSnapshotBuffer Buffer;
+	ASSERT_GT(qm_pose::BuildSnapshot(vPoses, {}, Buffer.m_aData, sizeof(Buffer.m_aData), nullptr), 0);
+
+	const auto *pEmpty = FindClientInfo(Buffer.AsSnapshot(), 0);
+	const auto *pDefault = FindClientInfo(Buffer.AsSnapshot(), 1);
+	ASSERT_NE(pEmpty, nullptr);
+	ASSERT_NE(pDefault, nullptr);
+	EXPECT_EQ(std::memcmp(pEmpty->m_aSkin, pDefault->m_aSkin, sizeof(pEmpty->m_aSkin)), 0);
+}
+
+TEST(QmPoseScene, PackedNamesPadBytesAfterTheTerminator)
+{
+	SPoseTee Pose = MakePose("short", 10, 20);
+	std::memset(Pose.m_aName + 6, 'x', sizeof(Pose.m_aName) - 6);
+	CSnapshotBuffer Buffer;
+	ASSERT_GT(qm_pose::BuildSnapshot({Pose}, {}, Buffer.m_aData, sizeof(Buffer.m_aData), nullptr), 0);
+
+	const auto *pInfo = FindClientInfo(Buffer.AsSnapshot(), 0);
+	ASSERT_NE(pInfo, nullptr);
+	char aName[MAX_NAME_LENGTH];
+	qm_pose::ReadPackedString(pInfo->m_aName, std::size(pInfo->m_aName), aName, sizeof(aName));
+	EXPECT_STREQ(aName, "short");
+	EXPECT_EQ(static_cast<unsigned int>(pInfo->m_aName[2]), 0x80808080u);
+}
+
 TEST(QmPoseScene, VideoFrameCountCoversShortDurations)
 {
 	// 录 5 秒 @ 60fps = 300 帧。
@@ -219,6 +250,13 @@ TEST(QmPoseScene, VideoFrameCountCoversShortDurations)
 	EXPECT_EQ(qm_pose::VideoFrameCount(-1.0f, 60), 0);
 	EXPECT_EQ(qm_pose::VideoFrameCount(5.0f, 0), 0);
 	EXPECT_EQ(qm_pose::VideoFrameCount(5.0f, -60), 0);
+}
+
+TEST(QmPoseScene, VideoFrameCountRejectsUnrepresentableDurations)
+{
+	EXPECT_EQ(qm_pose::VideoFrameCount(std::numeric_limits<float>::quiet_NaN(), 60), 0);
+	EXPECT_EQ(qm_pose::VideoFrameCount(std::numeric_limits<float>::infinity(), 60), 0);
+	EXPECT_EQ(qm_pose::VideoFrameCount(1.0e9f, 60), 0);
 }
 
 TEST(QmPoseScene, EmptyInputProducesNoSnapshot)
