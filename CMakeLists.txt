@@ -6801,6 +6801,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_scaled_label_test.cpp
       src/test/integration/qmclient/ui/qm_search_answer_card_test.cpp
       src/test/integration/qmclient/ui/qm_settings_card_deck_consumer_test.cpp
+      src/test/integration/qmclient/client/qm_chat_cloud_renderer_test.cpp
+      src/test/integration/qmclient/ui/qm_chat_bubble_text_test.cpp
+      src/test/integration/qmclient/ui/qm_popconfirm_source_test.cpp
       src/test/unit/qmclient/settings/settings_card_projection_allocation_test.cpp
       src/test/unit/qmclient/ui/qm_card_registry_migration_allocation_test.cpp
       src/test/unit/qmclient/settings/settings_card_drop_allocation_test.cpp
@@ -6879,6 +6882,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/QmUi/cards/QmSearchAnswerCard.cpp
       src/game/client/components/qmclient/search_answers.cpp
       src/game/client/QmUi/QmCardWikiPanel.cpp
+      src/game/client/QmUi/QmChatBubble.cpp
+      src/game/client/QmUi/QmCloudBubble.cpp
+      src/game/client/QmUi/QmPopconfirm.cpp
       src/game/client/QmUi/QmWikiDocs.cpp
       src/game/client/QmUi/QmWikiEditor.cpp
       src/game/client/QmUi/QmWikiMarkdown.cpp
