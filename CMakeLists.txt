@@ -7008,6 +7008,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_map_progress_allocation_test.cpp
       src/test/unit/engine/net_client_allocation_test.cpp
       src/test/unit/engine/favorites_allocation_test.cpp
+      src/test/integration/qmclient/client/qm_map_tags_write_completion_allocation_test.cpp
       src/test/unit/qmclient/client/qm_rank_demo_manifest_allocation_test.cpp
       src/test/unit/qmclient/client/qm_auto_reply_allocation_test.cpp
       src/test/unit/qmclient/client/qm_chat_avatar_allocation_test.cpp
@@ -7094,6 +7095,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/client/hook_coll_prepare_test.cpp
       src/test/integration/client/weapon_trajectory_preparation_test.cpp
       src/test/unit/qmclient/client/qm_word_filter_allocation_test.cpp
+      src/game/client/components/qmclient/map_tags.cpp
       src/game/client/components/qmclient/word_filter_list.cpp
       src/engine/client/updater_data.cpp
       src/test/unit/engine/legacy_updater_allocation_test.cpp

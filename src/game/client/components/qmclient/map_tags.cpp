@@ -9,6 +9,7 @@
 
 #include <cmath>
 #include <limits>
+#include <new>
 #include <set>
 #include <utility>
 
@@ -171,10 +172,23 @@ void QmMapTags::CClient::Poll()
 	}
 	if(m_pWrite && m_pWrite->Done())
 	{
+		const auto pWrite = std::move(m_pWrite);
+		m_WriteTag.clear();
 		m_ReadFailed = false;
-		CJson Root(m_pWrite->State() == EHttpState::DONE ? m_pWrite->ResultJson() : nullptr, json_value_free);
+		CJson Root(nullptr, json_value_free);
+		if(pWrite->State() == EHttpState::DONE)
+		{
+			try
+			{
+				Root.reset(pWrite->ResultJson());
+			}
+			catch(const std::bad_alloc &)
+			{
+				// 无法解析回执时走提交失败分支，已完成的请求不会再次处理。
+			}
+		}
 		const json_value *pOk = Root ? json_object_get(Root.get(), "ok") : nullptr;
-		if(m_pWrite->State() == EHttpState::DONE && m_pWrite->StatusCode() == 200 && pOk && pOk->type == json_boolean && pOk->u.boolean)
+		if(pOk && pWrite->StatusCode() == 200 && pOk->type == json_boolean && pOk->u.boolean)
 		{
 			const json_value *pPending = json_object_get(Root.get(), "pending");
 			m_pStatus = pPending->type == json_boolean && pPending->u.boolean ? Localizable("Tag submitted for review.") : Localizable("Your support has been recorded.");
@@ -191,8 +205,6 @@ void QmMapTags::CClient::Poll()
 			else
 				m_pStatus = Localizable("Cannot submit this tag. Please retry later.");
 		}
-		m_pWrite.reset();
-		m_WriteTag.clear();
 	}
 }
 
