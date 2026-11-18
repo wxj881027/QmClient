@@ -25,20 +25,25 @@ private:
 
 public:
 	CLineReader();
+	CLineReader(const CLineReader &) = delete;
+	CLineReader &operator=(const CLineReader &) = delete;
 	~CLineReader();
 
-	// 识别 UTF-8 与 UTF-16（BOM 或 NUL 分布）并统一转成 UTF-8 后按行读取。
+	// 接管并关闭非空文件句柄。识别 UTF-8 与 UTF-16（BOM 或 NUL 分布），统一转成 UTF-8。
 	bool OpenFile(IOHANDLE File, bool RejectInvalidLines = false);
-	// 限制原始读取缓冲（含NUL），0沿用既有限制；解码另有最多1.5倍缓冲。
+	// 同样接管文件句柄。MaxBufferBytes 包含原始缓冲的末尾 NUL，0 沿用既有限制。
+	// UTF-16 的解码输出另行分配，最多为原始输入长度的 1.5 倍加一个 NUL。
 	bool OpenFileWithBudget(IOHANDLE File, unsigned MaxBufferBytes, bool RejectInvalidLines = false);
-	// 接管 malloc 分配的原始文本，RawLength 不含末尾的 NUL。打开失败时也释放缓冲。
+	// 接管 malloc 分配的可写缓冲，失败时也释放。RawLength 处须保留一个额外的 NUL 字节。
 	bool OpenTextBuffer(void *pRaw, unsigned RawLength, bool RejectInvalidLines);
-	// 最近一次打开的结果，失败原因据此区分，不改变布尔语义。
+	// 返回最近一次 OpenFile、OpenFileWithBudget 或 OpenTextBuffer 的结果。
 	EOpenResult LastOpenResult() const { return m_LastOpenResult; }
-	// 配置加载先校验整份文本，不能执行一部分后才发现被跳过的坏行。
+	// 校验解码后、以 NUL 结尾的 UTF-8 文本，供严格模式在读取任何行之前使用。
 	static bool IsValidBuffer(const char *pBuffer);
-	void OpenBuffer(char *pBuffer); // Buffer must have been allocated with malloc, will be freed by the line reader
+	// 接管 malloc 分配、以 NUL 结尾的可写 UTF-8 缓冲。
+	void OpenBuffer(char *pBuffer);
 
-	const char *Get(); // Returned string is valid until the line reader is destroyed
+	// 成功打开后可调用。返回值借用内部缓冲，有效期到下一次成功打开或析构为止。
+	const char *Get();
 };
 #endif

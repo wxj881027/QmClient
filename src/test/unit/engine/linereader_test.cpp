@@ -8,6 +8,8 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <type_traits>
+
 CLineReader::EOpenResult TestFileLineReaderRaw(const char *pWritten, unsigned WrittenLength, std::initializer_list<const char *> pExpectedLines, bool ExpectSuccess, bool WriteBom, bool RejectInvalidLines = false)
 {
 	CTestInfo Info;
@@ -62,6 +64,12 @@ CLineReader::EOpenResult TestFileLineReaderRaw(const char *pWritten, unsigned Wr
 void TestFileLineReader(const char *pWritten, std::initializer_list<const char *> pReads)
 {
 	TestFileLineReaderRaw(pWritten, str_length(pWritten), pReads, true);
+}
+
+TEST(LineReader, CannotCopyOwnedBuffer)
+{
+	EXPECT_FALSE(std::is_copy_constructible_v<CLineReader>);
+	EXPECT_FALSE(std::is_copy_assignable_v<CLineReader>);
 }
 
 TEST(LineReader, LineFeedLineEndings)
