@@ -154,23 +154,29 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Destroy(const CCommandBu
 
 void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Begin(const CCommandBuffer::SCommand_RenderTarget_Begin *pCommand)
 {
-	if(pCommand->m_TargetId < 0 || (size_t)pCommand->m_TargetId >= m_vRenderTargets.size())
+	if(pCommand->m_TargetId < 0)
 		return;
-	const SOpenGLRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
-	if(Target.m_Framebuffer == 0)
-		return;
-	if(m_RenderTargetActive)
+	if(m_ActiveRenderTargetId >= 0)
 	{
 		dbg_msg("opengl", "nested render target begin ignored");
 		return;
 	}
+
+	m_ActiveRenderTargetId = pCommand->m_TargetId;
+	const auto TargetId = static_cast<size_t>(pCommand->m_TargetId);
+	if(TargetId >= m_vRenderTargets.size() || m_vRenderTargets[TargetId].m_Framebuffer == 0)
+	{
+		// 前端已排队后续离屏绘制。保留 Begin/End 配对，屏蔽这段命令对当前帧缓冲的颜色写入。
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		return;
+	}
+	const SOpenGLRenderTarget &Target = m_vRenderTargets[TargetId];
 
 	// render target 会临时改写绘制目标和视口，结束时必须恢复，否则后续 UI 坐标会错位。
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &m_RenderTargetPreviousFramebuffer);
 	glGetIntegerv(GL_VIEWPORT, m_aRenderTargetPreviousViewport);
 	glGetFloatv(GL_COLOR_CLEAR_VALUE, m_aRenderTargetPreviousClearColor);
 	m_RenderTargetActive = true;
-	m_ActiveRenderTargetId = pCommand->m_TargetId;
 	glBindFramebuffer(GL_FRAMEBUFFER, Target.m_SampleCount > 1 && Target.m_MultisampleFramebuffer != 0 ? Target.m_MultisampleFramebuffer : Target.m_Framebuffer);
 	glViewport(0, 0, Target.m_Width, Target.m_Height);
 	glDisable(GL_SCISSOR_TEST);
@@ -181,23 +187,31 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Begin(const CCommandBuff
 
 void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_End(const CCommandBuffer::SCommand_RenderTarget_End *pCommand)
 {
-	if(!m_RenderTargetActive)
+	if(m_ActiveRenderTargetId < 0)
 		return;
-	if(m_ActiveRenderTargetId >= 0 && (size_t)m_ActiveRenderTargetId < m_vRenderTargets.size())
+	if(m_RenderTargetActive)
 	{
-		const SOpenGLRenderTarget &Target = m_vRenderTargets[m_ActiveRenderTargetId];
-		opengl_render_target::ResolveMultisample(
-			Target, m_LastClipEnable, [] { glDisable(GL_SCISSOR_TEST); },
-			[](TWGLuint ReadFramebuffer, TWGLuint DrawFramebuffer, int Width, int Height) {
-				glBindFramebuffer(GL_READ_FRAMEBUFFER, ReadFramebuffer);
-				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, DrawFramebuffer);
-				glBlitFramebuffer(0, 0, Width, Height, 0, 0, Width, Height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-			});
+		const auto TargetId = static_cast<size_t>(m_ActiveRenderTargetId);
+		if(TargetId < m_vRenderTargets.size())
+		{
+			opengl_render_target::ResolveMultisample(
+				m_vRenderTargets[TargetId], m_LastClipEnable, [] { glDisable(GL_SCISSOR_TEST); },
+				[](TWGLuint ReadFramebuffer, TWGLuint DrawFramebuffer, int Width, int Height) {
+					glBindFramebuffer(GL_READ_FRAMEBUFFER, ReadFramebuffer);
+					glBindFramebuffer(GL_DRAW_FRAMEBUFFER, DrawFramebuffer);
+					glBlitFramebuffer(0, 0, Width, Height, 0, 0, Width, Height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+				});
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, m_RenderTargetPreviousFramebuffer);
+		glViewport(m_aRenderTargetPreviousViewport[0], m_aRenderTargetPreviousViewport[1], m_aRenderTargetPreviousViewport[2], m_aRenderTargetPreviousViewport[3]);
+		m_RenderTargetActive = false;
+		glClearColor(m_aRenderTargetPreviousClearColor[0], m_aRenderTargetPreviousClearColor[1], m_aRenderTargetPreviousClearColor[2], m_aRenderTargetPreviousClearColor[3]);
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, m_RenderTargetPreviousFramebuffer);
-	glViewport(m_aRenderTargetPreviousViewport[0], m_aRenderTargetPreviousViewport[1], m_aRenderTargetPreviousViewport[2], m_aRenderTargetPreviousViewport[3]);
-	m_RenderTargetActive = false;
-	glClearColor(m_aRenderTargetPreviousClearColor[0], m_aRenderTargetPreviousClearColor[1], m_aRenderTargetPreviousClearColor[2], m_aRenderTargetPreviousClearColor[3]);
+	else
+	{
+		// OpenGL 后端的普通绘制使用默认的四通道颜色写入。
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	}
 	if(pCommand->m_State.m_ClipEnable)
 	{
 		SetClipRect(pCommand->m_State);
