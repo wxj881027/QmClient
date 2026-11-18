@@ -260,6 +260,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	// 隐藏窗口准备好首帧后只显示一次，随后在可见窗口上提交首帧。
 	bool m_WindowShown = false;
+	bool m_QuitRequestedWhileLoading = false;
 
 	int m_SnapCrcErrors = 0;
 	bool m_AutoScreenshotRecycle = false;

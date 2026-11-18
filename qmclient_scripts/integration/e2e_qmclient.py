@@ -391,6 +391,44 @@ def scenario_slow_asset_loading_no_false_hang(env: ProcessEnvironment) -> None:
 		raise AssertionError(f"hang watchdog reported while asset loading was progressing: {hang_artifacts}")
 
 
+def scenario_window_close_during_asset_loading(env: ProcessEnvironment) -> None:
+	"""关闭事件在加载帧被取走，客户端进入主循环后正常退出。"""
+	if sys.platform != "win32":
+		raise SkipTest("this scenario uses a native Windows close event")
+	try:
+		from qmclient_scripts.integration.screenshot_viewer_smoke import Windows, wait_for
+	except ModuleNotFoundError:
+		from screenshot_viewer_smoke import Windows, wait_for
+
+	client = env.start_client(
+		["cl_show_welcome 1", "qm_auto_update 0", "qm_steam_auto_launch 0", "qm_perf_debug 1"],
+		connect=False,
+		env={"QMCLIENT_TEST_ASSET_LOAD_DELAY_MS": "1000", "QMCLIENT_TEST_HIDE_DIALOG": "1"},
+		startup_timeout=None,
+	)
+	client.wait_for(lambda line: line == "test/loading: assets_begin delay_ms=1000", "asset loading start", 30)
+	windows = Windows()
+	hwnd = wait_for(lambda: windows.find(client._process, bool), "client loading window not found")
+	windows.post(hwnd, 0x0010)  # WM_CLOSE
+
+	def observed_close_during_loading(line: str) -> bool:
+		if line.startswith("test/loading: assets_complete"):
+			raise AssertionError("asset loading completed before SDL consumed the close event")
+		if not line.startswith("perf/input: "):
+			return False
+		event = json.loads(line.removeprefix("perf/input: "))
+		return event.get("stage") == "sdl_poll_events" and event.get("quit") == 1
+
+	client.wait_for(observed_close_during_loading, "SDL close during asset loading", 15)
+	exit_code = client.wait_for_exit(60)
+	if exit_code != 0:
+		raise AssertionError(f"client exited with {exit_code}")
+	wait_for(
+		lambda: any(line.endswith("client: shutdown watchdog disarmed after cleanup completed") for line in client._lines),
+		"client exited without completing shutdown",
+	)
+
+
 def scenario_asset_loading_stall_reports_hang(env: ProcessEnvironment) -> None:
 	"""启动资源加载中单次停滞超过十秒，仍然生成卡死报告。"""
 	env.start_client(
@@ -467,6 +505,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"recording_without_connection": scenario_recording_without_connection,
 	"settings_language_round_trip": scenario_settings_language_round_trip,
 	"slow_asset_loading_no_false_hang": scenario_slow_asset_loading_no_false_hang,
+	"window_close_during_asset_loading": scenario_window_close_during_asset_loading,
 	"startup_saved_favorites": scenario_startup_saved_favorites,
 	"system_font_restore_no_false_hang": scenario_system_font_restore_no_false_hang,
 	"vector_font_and_icon_resources": scenario_vector_font_and_icon_resources,

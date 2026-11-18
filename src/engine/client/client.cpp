@@ -130,6 +130,7 @@ namespace
 #include <string>
 #include <thread>
 #include <tuple>
+#include <utility>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
@@ -5068,17 +5069,17 @@ void CClient::Run()
 
 		// update input
 		{
-			bool QuitRequested;
+			bool QuitRequested = std::exchange(m_QuitRequestedWhileLoading, false);
 			if(PerfEnabled)
 			{
 				CPerfTimer StageTimer;
-				QuitRequested = Input()->Update();
+				QuitRequested |= Input()->Update() != 0;
 				char aExtra[96];
 				str_format(aExtra, sizeof(aExtra), "state=%d quit=%d", State(), QuitRequested ? 1 : 0);
 				QmPerfLogStage("perf/main_thread", "input_update", StageTimer.ElapsedMs(), QuitRequested, this, nullptr, nullptr, aExtra);
 			}
 			else
-				QuitRequested = Input()->Update();
+				QuitRequested |= Input()->Update() != 0;
 			if(QuitRequested)
 			{
 				if(!GameClient()->PrepareForShutdown(true))
@@ -7513,7 +7514,8 @@ void CClient::EnsureWindowShown()
 
 void CClient::UpdateAndSwap()
 {
-	Input()->Update();
+	// 加载帧可能在组件初始化期间处理事件，关闭请求交给主循环统一收尾。
+	m_QuitRequestedWhileLoading |= Input()->Update() != 0;
 	EnsureWindowShown();
 	Graphics()->Swap();
 	Graphics()->Clear(0, 0, 0);
