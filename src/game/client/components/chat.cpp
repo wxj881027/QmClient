@@ -373,8 +373,6 @@ CChat::CLine::CLine()
 	m_TextContainerIndex.Reset();
 	m_BodyTextContainerIndex.Reset();
 	m_QuadContainerIndex = -1;
-	m_aYOffset[0] = -1.0f;
-	m_aYOffset[1] = -1.0f;
 	m_TextYOffset = 0.0f;
 	m_ContentWidth = 0.0f;
 	m_CutOffProgress = 0.0f;
@@ -415,8 +413,7 @@ void CChat::CLine::Reset(CChat &This)
 	m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 	m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
 	m_QmTitleBobPadding = 0.0f;
-	m_aYOffset[0] = -1.0f;
-	m_aYOffset[1] = -1.0f;
+	m_Layout = {};
 	m_TextYOffset = 0.0f;
 	m_ContentWidth = 0.0f;
 	m_CutOffProgress = 0.0f;
@@ -651,8 +648,7 @@ void CChat::RebuildChat()
 		Line.DeleteTextContainers(TextRender());
 		Graphics()->DeleteQuadContainer(Line.m_QuadContainerIndex);
 		// recalculate sizes
-		Line.m_aYOffset[0] = -1.0f;
-		Line.m_aYOffset[1] = -1.0f;
+		Line.m_Layout = {};
 		Line.m_ChatEmojiRect = {};
 		Line.m_ContentWidth = 0.0f;
 		Line.m_CutOffProgress = 0.0f;
@@ -675,7 +671,6 @@ void CChat::ClearLines()
 	m_MouseIsPress = false;
 	m_MousePress = vec2(0.0f, 0.0f);
 	m_MouseRelease = vec2(0.0f, 0.0f);
-	m_PrevScoreBoardShowed = false;
 	m_PrevShowChat = false;
 	m_LastPresentationUpdateTime = 0;
 	m_LargeAreaOpenTick = 0;
@@ -2643,8 +2638,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		PreviousLine.DeleteTextContainers(TextRender());
 		Graphics()->DeleteQuadContainer(PreviousLine.m_QuadContainerIndex);
 		PreviousLine.m_Time = Now;
-		PreviousLine.m_aYOffset[0] = -1.0f;
-		PreviousLine.m_aYOffset[1] = -1.0f;
+		PreviousLine.m_Layout = {};
 		PreviousLine.m_ChatEmojiRect = {};
 		PreviousLine.m_ContentWidth = 0.0f;
 		PreviousLine.m_CutOffProgress = 0.0f;
@@ -2669,8 +2663,6 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 	CurrentLine.m_Initialized = true;
 	CurrentLine.m_Time = Now;
 	BeginLinePresentation(CurrentLine.m_Presentation, CurrentLine.m_Time, false);
-	CurrentLine.m_aYOffset[0] = -1.0f;
-	CurrentLine.m_aYOffset[1] = -1.0f;
 	CurrentLine.m_ClientId = ClientId;
 	CurrentLine.m_TeamNumber = Team;
 	CurrentLine.m_Team = Team == 1;
@@ -2831,7 +2823,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		GameClient()->m_Translate.AutoTranslate(CurrentLine);
 }
 
-bool CChat::OnPrepareLines(float y)
+bool CChat::OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea)
 {
 	bool EmojiLayoutChanged = false;
 	float x = HistoryStartX();
@@ -2852,12 +2844,8 @@ bool CChat::OnPrepareLines(float y)
 		RebuildChat();
 	}
 
-	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
-	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
 	const std::array<int, 5> aTitleVisibility = {g_Config.m_QmShowMainTitle, g_Config.m_QmShowDummyTitle, g_Config.m_QmChatSponsorBadges,
 		GameClient()->m_aLocalIds[IClient::CONN_MAIN], GameClient()->m_aLocalIds[IClient::CONN_DUMMY]};
-	const bool ForceRecreate = IsScoreBoardOpen != m_PrevScoreBoardShowed || ShowLargeArea != m_PrevShowChat;
-	m_PrevScoreBoardShowed = IsScoreBoardOpen;
 	m_PrevShowChat = ShowLargeArea;
 	if(aTitleVisibility != m_aPrevTitleVisibility)
 	{
@@ -2896,7 +2884,6 @@ bool CChat::OnPrepareLines(float y)
 
 	float Begin = x;
 	float TextBegin = Begin + RealMsgPaddingX / 2.0f;
-	int OffsetType = IsScoreBoardOpen ? 1 : 0;
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	const float PixelSize = (ScreenY1 - ScreenY0) / Graphics()->ScreenHeight();
@@ -2927,7 +2914,7 @@ bool CChat::OnPrepareLines(float y)
 		}
 
 		const bool RenderChatEmoji = GameClient()->m_QmChatEmoji.CanRender(Line.m_ChatEmoji);
-		const bool LineEmojiLayoutChanged = QmChatEmojiInvalidateChangedLayout(RenderChatEmoji, Line.m_ChatEmojiImageLayout, Line.m_aYOffset);
+		const bool LineEmojiLayoutChanged = QmChatEmojiInvalidateChangedLayout(RenderChatEmoji, Line.m_ChatEmojiImageLayout, Line.m_Layout.m_Height);
 		EmojiLayoutChanged |= LineEmojiLayoutChanged;
 		// 隐藏身份后清除旧消息的头衔，并重新计算包含头衔的布局缓存。
 		bool TitleHidden = false;
@@ -2968,22 +2955,16 @@ bool CChat::OnPrepareLines(float y)
 		{
 			Line.DeleteTextContainers(TextRender());
 			Line.m_ChatEmojiRect = {};
-			Line.m_aYOffset[0] = -1.0f;
-			Line.m_aYOffset[1] = -1.0f;
+			Line.m_Layout.m_Height = -1.0f;
 			Line.m_QmTitleBobPadding = TitleBobPadding;
 		}
+		Line.m_Layout.SelectView(IsScoreBoardOpen, ShowLargeArea);
 		const bool LinePrepared = (RenderChatEmoji ? Line.m_ChatEmojiRect.w > 0.0f : Line.m_TextContainerIndex.Valid() && Line.m_ChatEmojiRect.w <= 0.0f);
-		if(LinePrepared && !ForceRecreate)
+		if(LinePrepared && Line.m_Layout.m_Height >= 0.0f)
 		{
-			// 已有容器也必须消耗相同的垂直预算，
-			// 否则只有“首次创建”时受高度限制，后续帧又会溢出。
-			if(Line.m_aYOffset[OffsetType] >= 0.0f)
-			{
-				y = AdvanceChatLineStack(y, Line.m_aYOffset[OffsetType], ExtraLineSpacing, ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility));
-
-				if(y < HeightLimit)
-					break;
-			}
+			y = AdvanceChatLineStack(y, Line.m_Layout.m_Height, ExtraLineSpacing, ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility));
+			if(y < HeightLimit)
+				break;
 			continue;
 		}
 
@@ -3129,7 +3110,7 @@ bool CChat::OnPrepareLines(float y)
 		}
 
 		// get the y offset (calculate it if we haven't done that yet)
-		if(Line.m_aYOffset[OffsetType] < 0.0f)
+		if(Line.m_Layout.m_Height < 0.0f)
 		{
 			CTextCursor MeasureCursor;
 			MeasureCursor.SetPosition(vec2(TextBegin, 0.0f));
@@ -3168,7 +3149,7 @@ bool CChat::OnPrepareLines(float y)
 				TextRender()->TextEx(&MeasureCursor, aCount);
 
 			// 与行高共用失效时机，绘制时复用同一换行决定。
-			Line.m_aMergedMessageInline[OffsetType] = MultipleAuthors && QmChatMergedMessageFitsInline(MeasureCursor, [&](CTextCursor &InlineCursor) {
+			Line.m_Layout.m_MergedMessageInline = MultipleAuthors && QmChatMergedMessageFitsInline(MeasureCursor, [&](CTextCursor &InlineCursor) {
 				TextRender()->TextEx(&InlineCursor, ": ");
 				QmChatApplyMergedMessageIndent(InlineCursor, FirstAuthorPrefixWidth);
 				if(RenderChatEmoji)
@@ -3179,7 +3160,7 @@ bool CChat::OnPrepareLines(float y)
 
 			if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
 			{
-				TextRender()->TextEx(&MeasureCursor, MultipleAuthors && !Line.m_aMergedMessageInline[OffsetType] ? ":\n" : ": ");
+				TextRender()->TextEx(&MeasureCursor, MultipleAuthors && !Line.m_Layout.m_MergedMessageInline ? ":\n" : ": ");
 			}
 
 			CTextCursor AppendCursor = MeasureCursor;
@@ -3196,11 +3177,11 @@ bool CChat::OnPrepareLines(float y)
 			if(RenderChatEmoji)
 			{
 				const SQmChatEmojiCursorLayout EmojiLayout = LayoutQmChatEmoji(AppendCursor, QmChatEmojiChatDisplaySize(FontSize));
-				Line.m_aYOffset[OffsetType] = maximum(AppendCursor.Height(), EmojiLayout.m_RequiredHeight + 2.0f * TitleBobPadding) + RealMsgPaddingY;
+				Line.m_Layout.m_Height = maximum(AppendCursor.Height(), EmojiLayout.m_RequiredHeight + 2.0f * TitleBobPadding) + RealMsgPaddingY;
 			}
 			else if(pTranslatedText || pTranslatedError)
 			{
-				Line.m_aTextBlockLayout[OffsetType] = QmChatMeasureTextBlocks(AppendCursor, QmChatTranslationFontSize(FontSize, g_Config.m_QmChatTranslationSize), [&](CTextCursor &Cursor) { TextRender()->TextEx(&Cursor, pText); }, [&](CTextCursor &Cursor) {
+				Line.m_Layout.m_TextBlocks = QmChatMeasureTextBlocks(AppendCursor, QmChatTranslationFontSize(FontSize, g_Config.m_QmChatTranslationSize), [&](CTextCursor &Cursor) { TextRender()->TextEx(&Cursor, pText); }, [&](CTextCursor &Cursor) {
 						TextRender()->TextEx(&Cursor, pTranslatedText ? pTranslatedText : pTranslatedError);
 						if(pTranslatedLanguage)
 						{
@@ -3208,7 +3189,7 @@ bool CChat::OnPrepareLines(float y)
 							TextRender()->TextEx(&Cursor, pTranslatedLanguage);
 							TextRender()->TextEx(&Cursor, "]");
 						} });
-				Line.m_aYOffset[OffsetType] = Line.m_aTextBlockLayout[OffsetType].m_Height + RealMsgPaddingY;
+				Line.m_Layout.m_Height = Line.m_Layout.m_TextBlocks.m_Height + RealMsgPaddingY;
 			}
 			else
 			{
@@ -3216,10 +3197,10 @@ bool CChat::OnPrepareLines(float y)
 			}
 
 			if(!RenderChatEmoji && !pTranslatedText && !pTranslatedError)
-				Line.m_aYOffset[OffsetType] = AppendCursor.Height() + RealMsgPaddingY;
+				Line.m_Layout.m_Height = AppendCursor.Height() + RealMsgPaddingY;
 		}
 
-		const float LineHeight = Line.m_aYOffset[OffsetType];
+		const float LineHeight = Line.m_Layout.m_Height;
 		const float LayoutVisibility = ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility);
 		const float LayoutBottom = y;
 		y = AdvanceChatLineStack(y, LineHeight, ExtraLineSpacing, LayoutVisibility);
@@ -3239,7 +3220,7 @@ bool CChat::OnPrepareLines(float y)
 
 		// reset the cursor
 		CTextCursor LineCursor;
-		const float PrimaryVisualOffset = pTranslatedText || pTranslatedError ? Line.m_aTextBlockLayout[OffsetType].m_PrimaryOffset : 0.0f;
+		const float PrimaryVisualOffset = pTranslatedText || pTranslatedError ? Line.m_Layout.m_TextBlocks.m_PrimaryOffset : 0.0f;
 		LineCursor.SetPosition(vec2(TextBegin, Line.m_TextYOffset + TitleBobPadding + PrimaryVisualOffset));
 		LineCursor.m_FontSize = FontSize;
 		LineCursor.m_LineWidth = LineWidth;
@@ -3307,7 +3288,7 @@ bool CChat::OnPrepareLines(float y)
 		if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
 		{
 			TextRender()->TextColor(NameColor);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, MultipleAuthors && !Line.m_aMergedMessageInline[OffsetType] ? ":\n" : ": ");
+			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, MultipleAuthors && !Line.m_Layout.m_MergedMessageInline ? ":\n" : ": ");
 		}
 
 		ColorRGBA Color;
@@ -3399,7 +3380,7 @@ bool CChat::OnPrepareLines(float y)
 			AppendMessage(AppendCursor, pText, true, PrimaryIsNetworkText);
 			const float OriginalWidth = AppendCursor.m_LongestLineWidth;
 			CTextCursor SecondaryCursor = QmChatSecondaryCursor(AppendCursor,
-				QmChatTranslationFontSize(FontSize, g_Config.m_QmChatTranslationSize), Line.m_aTextBlockLayout[OffsetType].m_SecondaryOffset);
+				QmChatTranslationFontSize(FontSize, g_Config.m_QmChatTranslationSize), Line.m_Layout.m_TextBlocks.m_SecondaryOffset);
 			ColorRGBA ColorSub = Color;
 			if(pTranslatedError)
 			{
@@ -3869,7 +3850,6 @@ void CChat::OnRender()
 
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
 	const float HeightLimit = IsScoreBoardOpen ? CHAT_HEIGHT_MIN + 130.0f : (ShowLargeArea ? CHAT_HEIGHT_MIN : CHAT_HEIGHT_FULL);
-	int OffsetType = IsScoreBoardOpen ? 1 : 0;
 	const ColorRGBA ConfigBackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true));
 	const ColorRGBA BackgroundBaseColor = g_Config.m_ClChatOld ? ConfigBackgroundColor : ConfigBackgroundColor.Multiply(ColorRGBA(0.78f, 0.86f, 1.0f, 1.0f));
 	const ColorRGBA DefaultTextColor = TextRender()->DefaultTextColor();
@@ -4035,7 +4015,7 @@ void CChat::OnRender()
 		m_MouseIsPress = false;
 	}
 
-	const bool EmojiLayoutChanged = OnPrepareLines(y);
+	const bool EmojiLayoutChanged = OnPrepareLines(y, IsScoreBoardOpen, ShowLargeArea);
 
 	bool RenderedAnyLines = false;
 	bool HasVisibleSponsorMessage = false;
@@ -4058,8 +4038,9 @@ void CChat::OnRender()
 			continue;
 		}
 
-		const bool LineHeightValid = Line.m_aYOffset[OffsetType] >= 0.0f;
-		const float LineHeight = LineHeightValid ? Line.m_aYOffset[OffsetType] : FontSize() + RealMsgPaddingY;
+		const float MeasuredHeight = Line.m_Layout.HeightFor(IsScoreBoardOpen, ShowLargeArea);
+		const bool LineHeightValid = MeasuredHeight >= 0.0f;
+		const float LineHeight = LineHeightValid ? MeasuredHeight : FontSize() + RealMsgPaddingY;
 		const float LayoutVisibility = ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility);
 		const float LayoutBottom = y;
 		y = AdvanceChatLineStack(y, LineHeight, ExtraLineSpacing, LayoutVisibility);
@@ -4649,7 +4630,6 @@ bool CChat::TranslateVisibleChatLines()
 	const bool FocusHideEcho = Focus.m_HideEchoMessages;
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
 	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
-	const int OffsetType = IsScoreBoardOpen ? 1 : 0;
 
 	int aLineIndices[MAX_LINES];
 	int NumLineIndices = 0;
@@ -4666,7 +4646,7 @@ bool CChat::TranslateVisibleChatLines()
 			continue;
 		if(!ShowLargeArea && Line.m_Presentation.m_LayoutVisibility <= 0.001f && Line.m_Presentation.m_RenderAlpha <= 0.001f)
 			continue;
-		if(Line.m_aYOffset[OffsetType] < 0.0f)
+		if(Line.m_Layout.HeightFor(IsScoreBoardOpen, ShowLargeArea) < 0.0f)
 			continue;
 		if(Line.m_CutOffProgress >= 1.0f)
 			continue;

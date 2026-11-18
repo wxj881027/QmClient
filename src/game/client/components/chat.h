@@ -175,9 +175,7 @@ private:
 
 		bool m_Initialized;
 		int64_t m_Time;
-		float m_aYOffset[2];
-		bool m_aMergedMessageInline[2] = {};
-		SQmChatTextBlockLayout m_aTextBlockLayout[2];
+		SQmChatLineLayout m_Layout;
 		int m_ClientId;
 		int m_TeamNumber;
 		bool m_Team;
@@ -236,7 +234,6 @@ private:
 		std::string m_LocalOriginal;
 	};
 
-	bool m_PrevScoreBoardShowed;
 	bool m_PrevShowChat;
 	std::array<int, 5> m_aPrevTitleVisibility = {};
 	bool m_PrevSponsorChatEffects = true;
@@ -636,7 +633,7 @@ public:
 	void OnConsoleInit() override;
 	void OnStateChange(int NewState, int OldState) override;
 	void OnRender() override;
-	bool OnPrepareLines(float y);
+	bool OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea);
 	void Reset();
 	void OnRelease() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
