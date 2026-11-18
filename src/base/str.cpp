@@ -8,12 +8,14 @@
 #include "math.h"
 #include "mem.h"
 
+#include <cerrno>
 #include <cctype>
 #include <charconv> // std::to_chars
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <utility>
 
 int str_copy(char *dst, const char *src, int dst_size)
 {
@@ -886,13 +888,13 @@ int str_toint(const char *str)
 
 bool str_toint(const char *str, int *out)
 {
-	// returns true if conversion was successful
+	errno = 0;
 	char *end;
-	int value = strtol(str, &end, 10);
-	if(*end != '\0')
+	const long value = strtol(str, &end, 10);
+	if(end == str || *end != '\0' || errno == ERANGE || !std::in_range<int>(value))
 		return false;
 	if(out != nullptr)
-		*out = value;
+		*out = static_cast<int>(value);
 	return true;
 }
 
