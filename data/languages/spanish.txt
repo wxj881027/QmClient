@@ -8636,6 +8636,9 @@ Map preview shows the entity layer only (hides textures)
 Map Preview TODO
 == Vista previa del mapa pendiente
 
+Map preview unavailable
+== Vista previa del mapa no disponible
+
 Map progress
 == Progreso de mapas
 

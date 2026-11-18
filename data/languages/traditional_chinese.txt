@@ -8636,6 +8636,9 @@ Map preview shows the entity layer only (hides textures)
 Map Preview TODO
 == 地圖預覽待做
 
+Map preview unavailable
+== 地圖預覽無法使用
+
 Map progress
 == 地圖進度
 

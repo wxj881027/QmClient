@@ -8636,6 +8636,9 @@ Map preview shows the entity layer only (hides textures)
 Map Preview TODO
 == 맵 미리보기 할 일
 
+Map preview unavailable
+== 맵 미리보기를 사용할 수 없습니다
+
 Map progress
 == 맵 진행도
 

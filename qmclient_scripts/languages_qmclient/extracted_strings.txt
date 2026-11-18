@@ -2987,6 +2987,7 @@ Map preview
 Map preview rendering unavailable
 Map preview shows the entity layer only (hides textures)
 Map Preview TODO
+Map preview unavailable
 Map progress
 Map progress bar
 Map progress bar color

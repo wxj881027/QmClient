@@ -8636,6 +8636,9 @@ Map preview shows the entity layer only (hides textures)
 Map Preview TODO
 == Harita önizlemesi yapılacak
 
+Map preview unavailable
+== Harita önizlemesi kullanılamıyor
+
 Map progress
 == Harita ilerlemesi
 
