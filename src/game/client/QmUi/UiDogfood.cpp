@@ -20,6 +20,7 @@
 #include <game/localization.h>
 
 #include <array>
+#include <optional>
 
 namespace
 {
@@ -63,6 +64,9 @@ void RenderQmUiDogfood(const IUiContext &Ctx, const CUIRect &Rect)
 	ui_widget::SScrollContainerProps ScrollProps;
 	ScrollProps.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, 1.0f);
 
+	std::optional<CUiScopedBackgroundRender> ModalBackground;
+	if(s_ModalOpen)
+		ModalBackground.emplace(Ctx.m_pUi, true);
 	ui_widget::ScrollContainer(Ctx, s_DogfoodScrollState, s_DogfoodScroll, Body, ContentHeight, ScrollProps, [&](CUIRect BodyContent) {
 		Body = BodyContent;
 
@@ -130,7 +134,12 @@ void RenderQmUiDogfood(const IUiContext &Ctx, const CUIRect &Rect)
 				ui_widget::SInputFieldOptions SearchOptions;
 				SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
 				SearchOptions.m_Clearable = true;
-				SearchOptions.m_SearchHotkeyEnabled = true;
+				// 两列共用快捷键，保持右列为焦点目标。
+			if(!s_ModalOpen && Column == COLUMN_COUNT - 1 && !Ctx.m_pUi->IsPopupOpen())
+			{
+				const CUIRect VisibleSearch = Row.Intersection(*Ctx.m_pUi->ClipArea());
+				SearchOptions.m_SearchHotkeyEnabled = VisibleSearch.w > 0.0f && VisibleSearch.h > 0.0f;
+			}
 				SearchOptions.m_FontSize = ui_token::font::BODY * Scale;
 				ui_widget::InputField(Ctx, &s_aSearchField[Column], Row, SearchOptions);
 				Content.HSplitTop(Gap, nullptr, &Content);
@@ -196,12 +205,14 @@ void RenderQmUiDogfood(const IUiContext &Ctx, const CUIRect &Rect)
 		RenderColumn(ColLeft, 1.0f, 0);
 		RenderColumn(ColRight, 0.78f, 1);
 	});
+	ModalBackground.reset();
 
 	// Modal — rendered on top of everything
 	ui_widget::SModalProps ModalProps;
 	ModalProps.m_pTitle = Localize("Hello from ui_widget::Modal");
 	ModalProps.m_Width = 360.0f;
 	ModalProps.m_Height = 180.0f;
+	ModalProps.m_EscToClose = s_ModalOpen && !Ctx.m_pUi->IsPopupOpen();
 	ui_widget::Modal(Ctx, &s_ModalOpen, &s_ModalOpen, Rect, ModalProps, [&](CUIRect &Content) {
 		Ctx.m_pUi->DoLabel(&Content, Localize("Press ESC to close. Watch the scale-in spring on open."), ui_token::font::BODY, TEXTALIGN_TL);
 	});
