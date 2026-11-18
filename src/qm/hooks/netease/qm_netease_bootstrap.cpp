@@ -13,11 +13,11 @@
 
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <cstring>
 #include <limits>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #if defined(_MSC_VER)
@@ -41,43 +41,56 @@ namespace QmNeteaseBootstrap
 			return Result;
 		}
 
-		bool ReadFileBytes(const std::wstring &Path, std::string *pBytes)
+		struct SBootstrapFile
 		{
-			if(pBytes == nullptr || Path.empty())
-				return false;
-			pBytes->clear();
-			HANDLE hFile = CreateFileW(Path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
-			if(hFile == INVALID_HANDLE_VALUE)
-				return false;
-			const std::unique_ptr<void, decltype(&CloseHandle)> File(hFile, CloseHandle);
-			LARGE_INTEGER Size{};
-			bool Success = GetFileSizeEx(File.get(), &Size) != FALSE && Size.QuadPart > 0 && (uint64_t)Size.QuadPart <= MAX_BOOTSTRAP_FILE_BYTES;
-			if(Success)
-			{
-				pBytes->assign((size_t)Size.QuadPart, '\0');
-				size_t Offset = 0;
-				while(Offset < pBytes->size())
-				{
-					const DWORD Chunk = (DWORD)std::min<size_t>(pBytes->size() - Offset, 64 * 1024);
-					DWORD Read = 0;
-					if(!ReadFile(File.get(), pBytes->data() + Offset, Chunk, &Read, nullptr) || Read == 0)
-					{
-						Success = false;
-						break;
-					}
-					Offset += Read;
-				}
-				Success = Success && Offset == pBytes->size();
-			}
-			if(!Success)
-				pBytes->clear();
-			return Success;
+			EFileKind m_Kind;
+			DWORD m_Error = ERROR_SUCCESS;
+			std::string m_Bytes{};
+		};
+
+		SBootstrapFile FileReadFailure(DWORD Error)
+		{
+			const bool Missing = Error == ERROR_FILE_NOT_FOUND || Error == ERROR_PATH_NOT_FOUND;
+			return {Missing ? EFileKind::Missing : EFileKind::Unreadable, Error};
 		}
 
-		bool IsPathFile(const std::wstring &Path)
+		SBootstrapFile InspectBootstrapFile(const std::wstring &Path)
 		{
 			const DWORD Attributes = GetFileAttributesW(Path.c_str());
-			return Attributes != INVALID_FILE_ATTRIBUTES && (Attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+			if(Attributes == INVALID_FILE_ATTRIBUTES)
+				return FileReadFailure(GetLastError());
+			if((Attributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+				return {EFileKind::Unreadable};
+
+			const HANDLE hFile = CreateFileW(Path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+			if(hFile == INVALID_HANDLE_VALUE)
+				return FileReadFailure(GetLastError());
+			const std::unique_ptr<void, decltype(&CloseHandle)> File(hFile, CloseHandle);
+			LARGE_INTEGER Size{};
+			if(!GetFileSizeEx(File.get(), &Size))
+				return FileReadFailure(GetLastError());
+			if(Size.QuadPart <= 0 || (uint64_t)Size.QuadPart > MAX_BOOTSTRAP_FILE_BYTES)
+				return {EFileKind::Unreadable};
+
+			std::string Bytes((size_t)Size.QuadPart, '\0');
+			size_t Offset = 0;
+			while(Offset < Bytes.size())
+			{
+				const DWORD Chunk = (DWORD)std::min<size_t>(Bytes.size() - Offset, 64 * 1024);
+				DWORD Read = 0;
+				if(!ReadFile(File.get(), Bytes.data() + Offset, Chunk, &Read, nullptr))
+					return FileReadFailure(GetLastError());
+				if(Read == 0)
+					return FileReadFailure(ERROR_HANDLE_EOF);
+				Offset += Read;
+			}
+
+			EFileKind Kind = EFileKind::Foreign;
+			if(Bytes.find(BOOTSTRAP_MARKER) != std::string::npos)
+				Kind = EFileKind::CurrentQmClient;
+			else if(Bytes.find("QmClient.NeteaseBootstrap.") != std::string::npos)
+				Kind = EFileKind::OlderQmClient;
+			return {Kind, ERROR_SUCCESS, std::move(Bytes)};
 		}
 
 		bool IsAccessFailure(DWORD Error)
@@ -85,11 +98,17 @@ namespace QmNeteaseBootstrap
 			return Error == ERROR_ACCESS_DENIED || Error == ERROR_PRIVILEGE_NOT_HELD;
 		}
 
-		bool FilesEqual(const std::wstring &FirstPath, const std::wstring &SecondPath)
+		bool IsQmBootstrap(EFileKind Kind)
 		{
-			std::string First;
-			std::string Second;
-			return ReadFileBytes(FirstPath, &First) && ReadFileBytes(SecondPath, &Second) && First == Second;
+			return Kind == EFileKind::CurrentQmClient || Kind == EFileKind::OlderQmClient;
+		}
+
+		EInstallResult UnavailableTargetResult(const SBootstrapFile &File)
+		{
+			// 共享冲突等 I/O 失败可以随 Helper 的定期检查重试。
+			if(File.m_Kind == EFileKind::Foreign || (File.m_Kind == EFileKind::Unreadable && File.m_Error == ERROR_SUCCESS))
+				return EInstallResult::Conflict;
+			return IsAccessFailure(File.m_Error) ? EInstallResult::AccessDenied : EInstallResult::Failed;
 		}
 
 		wchar_t LowerAscii(wchar_t Character)
@@ -97,25 +116,11 @@ namespace QmNeteaseBootstrap
 			return Character >= L'A' && Character <= L'Z' ? Character - L'A' + L'a' : Character;
 		}
 
-		bool ContainsInsensitive(std::wstring_view Value, std::wstring_view Needle)
+		bool EqualsInsensitive(std::wstring_view First, std::wstring_view Second)
 		{
-			if(Needle.empty() || Value.size() < Needle.size())
-				return false;
-			for(size_t Offset = 0; Offset <= Value.size() - Needle.size(); ++Offset)
-			{
-				bool Matches = true;
-				for(size_t Index = 0; Index < Needle.size(); ++Index)
-				{
-					if(LowerAscii(Value[Offset + Index]) != LowerAscii(Needle[Index]))
-					{
-						Matches = false;
-						break;
-					}
-				}
-				if(Matches)
-					return true;
-			}
-			return false;
+			return First.size() == Second.size() && std::equal(First.begin(), First.end(), Second.begin(), [](wchar_t A, wchar_t B) {
+				return LowerAscii(A) == LowerAscii(B);
+			});
 		}
 
 		bool HasCloudMusicFileName(std::wstring_view Path)
@@ -127,15 +132,7 @@ namespace QmNeteaseBootstrap
 				if(Path[Index] == L'\\' || Path[Index] == L'/')
 					FileNameOffset = Index + 1;
 			}
-			const std::wstring_view FileName = Path.substr(FileNameOffset);
-			if(FileName.size() != FILE_NAME.size())
-				return false;
-			for(size_t Index = 0; Index < FILE_NAME.size(); ++Index)
-			{
-				if(LowerAscii(FileName[Index]) != FILE_NAME[Index])
-					return false;
-			}
-			return true;
+			return EqualsInsensitive(Path.substr(FileNameOffset), FILE_NAME);
 		}
 
 		struct SUnicodeString
@@ -182,14 +179,58 @@ namespace QmNeteaseBootstrap
 #endif
 		}
 
-		bool HasCommandLineOption(std::wstring_view CommandLine, const wchar_t *pOption)
+		std::wstring_view TakeCommandLineArgument(std::wstring_view &CommandLine)
 		{
-			return pOption != nullptr && ContainsInsensitive(CommandLine, pOption);
+			const size_t Start = CommandLine.find_first_not_of(L" \t");
+			if(Start == std::wstring_view::npos)
+			{
+				CommandLine = {};
+				return {};
+			}
+			CommandLine.remove_prefix(Start);
+			bool InQuotes = false;
+			bool OddBackslashes = false;
+			size_t Length = 0;
+			for(; Length < CommandLine.size(); ++Length)
+			{
+				const wchar_t Character = CommandLine[Length];
+				if(!InQuotes && (Character == L' ' || Character == L'\t'))
+					break;
+				if(Character == L'"' && !OddBackslashes)
+				{
+					if(InQuotes && Length + 1 < CommandLine.size() && CommandLine[Length + 1] == L'"')
+						++Length;
+					else
+						InQuotes = !InQuotes;
+				}
+				OddBackslashes = Character == L'\\' && !OddBackslashes;
+			}
+			const std::wstring_view Argument = CommandLine.substr(0, Length);
+			CommandLine.remove_prefix(Length);
+			return Argument;
+		}
+
+		bool HasCommandLineOption(std::wstring_view CommandLine, std::wstring_view Option)
+		{
+			// DLL_PROCESS_ATTACH 也会走这里，按参数边界识别开关，无需分配内存。
+			TakeCommandLineArgument(CommandLine);
+			for(std::wstring_view Argument = TakeCommandLineArgument(CommandLine); !Argument.empty(); Argument = TakeCommandLineArgument(CommandLine))
+			{
+				if(Argument.front() == L'"')
+				{
+					Argument.remove_prefix(1);
+					if(Argument.ends_with(L'"'))
+						Argument.remove_suffix(1);
+				}
+				if(EqualsInsensitive(Argument.substr(0, Argument.find(L'=')), Option))
+					return true;
+			}
+			return false;
 		}
 
 		bool IsChildCefProcess(std::wstring_view CommandLine)
 		{
-			return HasCommandLineOption(CommandLine, L"--type=") || HasCommandLineOption(CommandLine, L"--type ");
+			return HasCommandLineOption(CommandLine, L"--type");
 		}
 
 		constexpr wchar_t LOOPBACK_DEBUGGING_ARGUMENTS[] = L"--remote-debugging-address=127.0.0.1 --remote-debugging-port=";
@@ -221,7 +262,7 @@ namespace QmNeteaseBootstrap
 
 		bool HasDebuggingPort(std::wstring_view CommandLine)
 		{
-			return HasCommandLineOption(CommandLine, L"--remote-debugging-port=") || HasCommandLineOption(CommandLine, L"--remote-debugging-port ");
+			return HasCommandLineOption(CommandLine, L"--remote-debugging-port");
 		}
 
 		bool WriteCommandLine(SProcessParametersPrefix *pParameters, const std::wstring &CommandLine)
@@ -268,16 +309,7 @@ namespace QmNeteaseBootstrap
 
 	EFileKind InspectFile(const std::wstring &Path)
 	{
-		if(!IsPathFile(Path))
-			return GetFileAttributesW(Path.c_str()) == INVALID_FILE_ATTRIBUTES ? EFileKind::Missing : EFileKind::Unreadable;
-		std::string Bytes;
-		if(!ReadFileBytes(Path, &Bytes))
-			return EFileKind::Unreadable;
-		if(Bytes.find(BOOTSTRAP_MARKER) != std::string::npos)
-			return EFileKind::CurrentQmClient;
-		if(Bytes.find("QmClient.NeteaseBootstrap.") != std::string::npos)
-			return EFileKind::OlderQmClient;
-		return EFileKind::Foreign;
+		return InspectBootstrapFile(Path).m_Kind;
 	}
 
 	EInstallResult EnsureInstalled(const std::wstring &CloudMusicDirectory, const std::wstring &SourcePath, std::wstring *pInstalledPath)
@@ -286,17 +318,21 @@ namespace QmNeteaseBootstrap
 			*pInstalledPath = {};
 		if(CloudMusicDirectory.empty() || SourcePath.empty())
 			return EInstallResult::Failed;
-		const EFileKind SourceKind = InspectFile(SourcePath);
-		if(SourceKind != EFileKind::CurrentQmClient)
+		const SBootstrapFile Source = InspectBootstrapFile(SourcePath);
+		if(Source.m_Kind != EFileKind::CurrentQmClient)
 			return EInstallResult::MissingSource;
 		const std::wstring TargetPath = JoinPath(CloudMusicDirectory, BOOTSTRAP_TARGET_NAME);
 		if(pInstalledPath != nullptr)
 			*pInstalledPath = TargetPath;
-		const EFileKind TargetKind = InspectFile(TargetPath);
-		if(TargetKind == EFileKind::CurrentQmClient && FilesEqual(SourcePath, TargetPath))
-			return EInstallResult::AlreadyInstalled;
-		if(TargetKind == EFileKind::Foreign || TargetKind == EFileKind::Unreadable)
-			return EInstallResult::Conflict;
+		bool ReplacingOwnFile;
+		{
+			const SBootstrapFile Target = InspectBootstrapFile(TargetPath);
+			if(Target.m_Bytes == Source.m_Bytes)
+				return EInstallResult::AlreadyInstalled;
+			ReplacingOwnFile = IsQmBootstrap(Target.m_Kind);
+			if(!ReplacingOwnFile && Target.m_Kind != EFileKind::Missing)
+				return UnavailableTargetResult(Target);
+		}
 
 		std::wstring TemporaryPath = TargetPath;
 		TemporaryPath.append(L".qmclient-");
@@ -306,17 +342,47 @@ namespace QmNeteaseBootstrap
 		TemporaryPath.append(L".tmp");
 		if(!CopyFileW(SourcePath.c_str(), TemporaryPath.c_str(), TRUE))
 			return IsAccessFailure(GetLastError()) ? EInstallResult::AccessDenied : EInstallResult::Failed;
-		const bool ReplacingOwnFile = TargetKind == EFileKind::CurrentQmClient || TargetKind == EFileKind::OlderQmClient;
+		struct STemporaryFile
+		{
+			const std::wstring &m_Path;
+			bool m_Published = false;
+
+			~STemporaryFile()
+			{
+				if(!m_Published)
+					DeleteFileW(m_Path.c_str());
+			}
+		} TemporaryFile{TemporaryPath};
+
+		// 先确认复制的字节仍对应本次检查通过的源文件。
+		if(InspectBootstrapFile(TemporaryPath).m_Bytes != Source.m_Bytes)
+			return EInstallResult::Failed;
+		if(ReplacingOwnFile)
+		{
+			// 复制期间目标可能已变化，发布前重新判断是否允许替换。
+			const SBootstrapFile Target = InspectBootstrapFile(TargetPath);
+			if(Target.m_Bytes == Source.m_Bytes)
+				return EInstallResult::AlreadyInstalled;
+			ReplacingOwnFile = IsQmBootstrap(Target.m_Kind);
+			if(!ReplacingOwnFile && Target.m_Kind != EFileKind::Missing)
+				return UnavailableTargetResult(Target);
+		}
+
 		const DWORD MoveFlags = MOVEFILE_WRITE_THROUGH | (ReplacingOwnFile ? MOVEFILE_REPLACE_EXISTING : 0);
 		if(!MoveFileExW(TemporaryPath.c_str(), TargetPath.c_str(), MoveFlags))
 		{
 			const DWORD Error = GetLastError();
-			DeleteFileW(TemporaryPath.c_str());
 			if(Error == ERROR_FILE_EXISTS || Error == ERROR_ALREADY_EXISTS)
-				return InspectFile(TargetPath) == EFileKind::CurrentQmClient ? EInstallResult::AlreadyInstalled : EInstallResult::Conflict;
+			{
+				const SBootstrapFile Target = InspectBootstrapFile(TargetPath);
+				if(Target.m_Bytes == Source.m_Bytes)
+					return EInstallResult::AlreadyInstalled;
+				return UnavailableTargetResult(Target);
+			}
 			return IsAccessFailure(Error) ? EInstallResult::AccessDenied : EInstallResult::Failed;
 		}
-		if(InspectFile(TargetPath) != EFileKind::CurrentQmClient || !FilesEqual(SourcePath, TargetPath))
+		TemporaryFile.m_Published = true;
+		if(InspectBootstrapFile(TargetPath).m_Bytes != Source.m_Bytes)
 		{
 			// 目标文件可能在校验前被其他插件替换；失败时保留它，避免竞态删除 foreign DLL。
 			return EInstallResult::Failed;
@@ -364,8 +430,9 @@ namespace QmNeteaseBootstrap
 	{
 		if(pPatchedCommandLine == nullptr || Port == 0 || !HasCloudMusicFileName(ExecutablePath) || IsChildCefProcess(CommandLine))
 			return false;
+		const bool HasExplicitPort = HasDebuggingPort(CommandLine);
 		pPatchedCommandLine->assign(CommandLine.data(), CommandLine.size());
-		if(HasDebuggingPort(CommandLine))
+		if(HasExplicitPort)
 			return true;
 		if(!CommandLine.empty())
 			pPatchedCommandLine->push_back(L' ');
