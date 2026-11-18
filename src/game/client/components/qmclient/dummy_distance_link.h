@@ -22,6 +22,7 @@ namespace qm_dummy_link
 		vec2 m_Pos;
 		bool m_Solo;
 		vec2 m_HookTargetPos = m_Pos;
+		bool m_Frozen = false;
 	};
 
 	constexpr float HAMMER_REACH = CCharacterCore::PhysicalSize() * (0.75f + 0.5f + 1.0f);
@@ -96,7 +97,7 @@ namespace qm_dummy_link
 
 	inline std::optional<SLink> MakeLink(std::optional<SEndpoint> Main, std::optional<SEndpoint> Dummy, float HookLength, bool FromDummy = false)
 	{
-		if(!Main || !Dummy)
+		if(!Main || !Dummy || (Main->m_Frozen && Dummy->m_Frozen))
 			return std::nullopt;
 		const vec2 Delta = Dummy->m_Pos - Main->m_Pos;
 		const float Distance = length(Delta);

@@ -57,6 +57,26 @@ TEST(QmDummyDistanceLink, SoloAtEitherEndSuppressesHighlightWithoutHidingLink)
 	}
 }
 
+TEST(QmDummyDistanceLink, BothTeesFrozenHideLinkUntilEitherWakes)
+{
+	SEndpoint Main = MAIN;
+	SEndpoint Dummy{vec2(100, 0), false};
+	for(const bool ControlDummy : {false, true})
+	{
+		SCOPED_TRACE(ControlDummy);
+		Main.m_Frozen = true;
+		Dummy.m_Frozen = true;
+		EXPECT_FALSE(MakeLink(Main, Dummy, 380, ControlDummy));
+		Main.m_Frozen = false;
+		EXPECT_TRUE(MakeLink(Main, Dummy, 380, ControlDummy));
+		Main.m_Frozen = true;
+		Dummy.m_Frozen = false;
+		EXPECT_TRUE(MakeLink(Main, Dummy, 380, ControlDummy));
+		Main.m_Frozen = false;
+		EXPECT_TRUE(MakeLink(Main, Dummy, 380, ControlDummy));
+	}
+}
+
 TEST(QmDummyDistanceLink, MoreDistantTeesFadeButNeverDisappear)
 {
 	const auto Near = MakeLink(MAIN, SEndpoint{vec2(12, 0), false}, 380);

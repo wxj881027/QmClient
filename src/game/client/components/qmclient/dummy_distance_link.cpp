@@ -10,6 +10,17 @@
 
 namespace qm_dummy_link
 {
+	static SEndpoint SnapshotEndpoint(vec2 Pos, const CNetObj_DDNetCharacter *pExtended, bool LegacySolo)
+	{
+		SEndpoint Endpoint{Pos, LegacySolo};
+		if(pExtended)
+		{
+			Endpoint.m_Solo = (pExtended->m_Flags & CHARACTERFLAG_SOLO) != 0;
+			Endpoint.m_Frozen = pExtended->m_FreezeEnd != 0 || (pExtended->m_Flags & CHARACTERFLAG_MOVEMENTS_DISABLED) != 0;
+		}
+		return Endpoint;
+	}
+
 	std::optional<SEndpoint> CView::CurrentEndpoint(CGameClient &GameClient, int Connection)
 	{
 		const int ClientId = GameClient.m_aLocalIds[Connection];
@@ -19,7 +30,11 @@ namespace qm_dummy_link
 		const auto &Tuning = GameClient.m_aTuning[Connection];
 		const bool LegacySolo = !Tuning.m_PlayerHooking && !Tuning.m_PlayerCollision;
 		if(Character.m_Active)
-			return SEndpoint{GameClient.m_aClients[ClientId].m_RenderPos, Character.m_HasExtendedData ? GameClient.m_aClients[ClientId].m_Solo : LegacySolo, GameClient.HookCollTargetPosition(ClientId, GameClient.Client()->IntraGameTick(g_Config.m_ClDummy))};
+		{
+			auto Endpoint = SnapshotEndpoint(GameClient.m_aClients[ClientId].m_RenderPos, Character.m_HasExtendedData ? &Character.m_ExtendedData : nullptr, LegacySolo);
+			Endpoint.m_HookTargetPos = GameClient.HookCollTargetPosition(ClientId, GameClient.Client()->IntraGameTick(g_Config.m_ClDummy));
+			return Endpoint;
+		}
 
 		const int Tick = GameClient.Client()->GameTick(Connection);
 		auto &Fallback = m_aFallback[Connection];
@@ -34,7 +49,7 @@ namespace qm_dummy_link
 			if(Current.m_Tick && Current.m_Tick < Tick)
 				GameClient.EvolveSnapshotCharacter(&Current, Tick);
 			const auto *pExtended = static_cast<const CNetObj_DDNetCharacter *>(pSnap->FindItem(NETOBJTYPE_DDNETCHARACTER, ClientId));
-			Fallback.m_Endpoint = SEndpoint{vec2(Current.m_X, Current.m_Y), pExtended ? (pExtended->m_Flags & CHARACTERFLAG_SOLO) != 0 : LegacySolo};
+			Fallback.m_Endpoint = SnapshotEndpoint(vec2(Current.m_X, Current.m_Y), pExtended, LegacySolo);
 		}
 		return Fallback.m_Endpoint;
 	}
