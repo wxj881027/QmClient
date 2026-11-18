@@ -5327,6 +5327,11 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/editor_collab_camera_reload_test.cpp
     src/test/unit/client/editor_collab_join_test.cpp
     src/test/unit/client/editor_quad_slice_test.cpp
+    src/test/unit/client/editor_brush_dispatch_test.cpp
+    src/test/unit/client/editor_envelope_export_order_test.cpp
+    src/test/unit/client/editor_file_browser_path_test.cpp
+    src/test/unit/client/editor_font_cursor_bounds_test.cpp
+    src/test/unit/client/editor_layer_hover_test.cpp
     src/test/unit/client/character_core_test.cpp
     src/test/integration/client/character_core_switcher_test.cpp
     src/test/unit/client/editor_envelope_channels_test.cpp
@@ -6178,6 +6183,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/editor/collab_camera.cpp
     src/game/editor/mapitems/save_job.cpp
     src/game/editor/mapitems/envelope.cpp
+    src/game/editor/map_object.cpp
+    src/game/editor/mapitems/layer.cpp
     src/game/map/envelope_eval.cpp
     src/game/map/envelope_extrema.cpp
     src/game/map/render_map.cpp

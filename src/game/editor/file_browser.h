@@ -5,6 +5,7 @@
 
 #include "component.h"
 
+#include <base/str.h>
 #include <base/types.h>
 
 #include <game/client/ui.h>
@@ -31,6 +32,11 @@ public:
 		FFileDialogOpenCallback pfnOpenCallback, void *pOpenCallbackUser);
 	void Render();
 	bool IsValidSaveFilename() const;
+	static bool FormatEntryPath(char (&aPath)[IO_MAX_PATH_LENGTH], const char *pFolder, const char *pName)
+	{
+		const int Length = str_length(pFolder) + 1 + str_length(pName);
+		return Length < IO_MAX_PATH_LENGTH && str_format(aPath, sizeof(aPath), "%s/%s", pFolder, pName) == Length;
+	}
 
 	void OnEditorClose();
 	void OnDialogClose();
@@ -155,7 +161,10 @@ private:
 	const char m_ButtonDeleteId = 0;
 	const char m_ButtonNewFolderId = 0;
 
+	bool BuildCurrentEntryPath(char (&aPath)[IO_MAX_PATH_LENGTH], const char *pName, int StorageType);
+	bool FitsStoragePath(const char *pPath, int StorageType);
 	bool CanPreviewFile() const;
+	void ResetPreview();
 	void UpdateFilePreview();
 	void RenderFilePreview(CUIRect Preview);
 	// 返回图集图标，同时输出回退字形（FontIcons::FONT_ICON_*）。
