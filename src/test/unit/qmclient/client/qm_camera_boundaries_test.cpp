@@ -48,6 +48,35 @@ TEST(QmCameraViewBounds, EmptyAxisHasZeroCenterWithoutReversedBounds)
 	EXPECT_EQ(QmCameraEffects::ViewTarget(ivec2(1, 50), vec2(), false, 0, 100), vec2(0, 1600));
 }
 
+TEST(QmCameraGotoTele, MapLoadStartsTheSameNumberAtTheFirstTargetOnTheNewMap)
+{
+	QmCameraEffects::CGotoTeleCycle Cycle;
+	const ivec2 aPreviousTargets[] = {{20, 20}, {40, 40}, {60, 60}};
+	const auto Previous = Cycle.Select(4, 2, 3, [&](size_t Index) { return aPreviousTargets[Index]; });
+	ASSERT_TRUE(Previous.has_value());
+	EXPECT_EQ(*Previous, ivec2(60, 60));
+
+	Cycle.Reset();
+	const auto Current = Cycle.Select(4, -1, 1, [](size_t Index) {
+		EXPECT_EQ(Index, 0u);
+		return ivec2(55, 55);
+	});
+	ASSERT_TRUE(Current.has_value());
+	EXPECT_EQ(*Current, ivec2(55, 55));
+}
+
+TEST(QmCameraGotoTele, RepeatedSelectionOnTheSameMapSkipsNearbyTargets)
+{
+	QmCameraEffects::CGotoTeleCycle Cycle;
+	const ivec2 aTargets[] = {{20, 20}, {21, 21}, {40, 40}};
+	const auto At = [&](size_t Index) { return aTargets[Index]; };
+	ASSERT_TRUE(Cycle.Select(4, -1, 3, At).has_value());
+
+	const auto Next = Cycle.Select(4, -1, 3, At);
+	ASSERT_TRUE(Next.has_value());
+	EXPECT_EQ(*Next, ivec2(40, 40));
+}
+
 TEST(QmDemoZoomEncoding, NormalRangeKeepsFloatScalingAndTruncation)
 {
 	EXPECT_EQ(QmCameraEffects::EncodeZoom(1.0f), 1000);

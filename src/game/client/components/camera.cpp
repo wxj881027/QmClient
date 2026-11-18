@@ -83,9 +83,7 @@ CCamera::CCamera()
 	m_ZoomSmoothingIsReset = false;
 	m_ForceFreeview = false;
 	m_GotoSwitchOffset = 0;
-	m_GotoTeleOffset = 0;
 	m_GotoSwitchLastPos = ivec2(-1, -1);
-	m_GotoTeleLastPos = ivec2(-1, -1);
 
 	std::fill(std::begin(m_aLastPos), std::end(m_aLastPos), vec2(0.0f, 0.0f));
 	m_PrevCenter = vec2(0, 0);
@@ -154,12 +152,10 @@ bool CCamera::GhostMultiViewZoomActive() const
 	       GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::ALL_MEMBERS;
 }
 
-void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser, bool IsReset)
+std::optional<float> CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser, bool IsReset)
 {
 	if(!QmCameraEffects::IsValidZoom(Target, MinZoomLevel(), MaxZoomLevel()))
-	{
-		return;
-	}
+		return std::nullopt;
 	RemoveDynamicFovZoom();
 
 	float Now = Client()->LocalTime();
@@ -188,6 +184,7 @@ void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser, bool IsReset
 		m_Zoom = Target;
 		m_AutoSpecCameraZooming = false;
 	}
+	return Target;
 }
 
 void CCamera::RemoveDynamicFovZoom()
@@ -247,43 +244,33 @@ void CCamera::UpdateCamera()
 
 	bool UsingAutoSpecCamera = m_AutoSpecCamera && CanUseAutoSpecCamera();
 	float CurrentZoom = m_Zooming ? m_ZoomSmoothingTarget : m_Zoom;
-	bool ZoomChanged = false;
+	std::optional<float> AcceptedZoomTarget;
 	if(CanUseCameraInfo && UsingAutoSpecCamera && CurrentZoom != GameClient()->m_Snap.m_SpecInfo.m_Zoom)
 	{
 		// start spectating player / turn on auto spec camera
-		bool ChangeTarget = m_PrevSpecId != GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;
-		float SmoothTime = ChangeTarget ? g_Config.m_ClSmoothSpectatingTime : 250;
-		ChangeZoom(GameClient()->m_Snap.m_SpecInfo.m_Zoom, SmoothTime, false);
+		const bool ChangeTarget = m_PrevSpecId != GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;
+		const int SmoothTime = ChangeTarget ? g_Config.m_ClSmoothSpectatingTime : 250;
+		AcceptedZoomTarget = ChangeZoom(GameClient()->m_Snap.m_SpecInfo.m_Zoom, SmoothTime, false);
 
 		// it is auto spec camera zooming if only the zoom is changed during activation, not at the start of the activation
-		m_AutoSpecCameraZooming = !ChangeTarget && CanUseCameraInfo && m_UsingAutoSpecCamera;
-
-		ZoomChanged = true;
+		if(AcceptedZoomTarget)
+			m_AutoSpecCameraZooming = !ChangeTarget && m_UsingAutoSpecCamera;
 	}
 	else if((CanUseCameraInfo && !UsingAutoSpecCamera) && CurrentZoom != m_UserZoomTarget)
 	{
 		// turning off auto spec camera
-		ChangeZoom(m_UserZoomTarget, g_Config.m_ClSmoothZoomTime, false);
+		AcceptedZoomTarget = ChangeZoom(m_UserZoomTarget, g_Config.m_ClSmoothZoomTime, false);
 		m_AutoSpecCameraZooming = false;
-
-		ZoomChanged = true;
 	}
 	else if(!CanUseCameraInfo && CurrentZoom != m_UserZoomTarget)
 	{
 		// stop spectating player
 		if(!GameClient()->m_MultiViewActivated)
-			ChangeZoom(m_UserZoomTarget, g_Config.m_ClSmoothZoomTime, false);
+			AcceptedZoomTarget = ChangeZoom(m_UserZoomTarget, g_Config.m_ClSmoothZoomTime, false);
 		m_AutoSpecCameraZooming = false;
-
-		ZoomChanged = true;
 	}
 
-	// snap zoom when going in and out of spectating
-	if(ZoomChanged && m_WasSpectating != GameClient()->m_Snap.m_SpecInfo.m_Active)
-	{
-		m_Zoom = m_ZoomSmoothingTarget;
-		m_Zooming = false;
-	}
+	QmCameraEffects::SnapSpectatingZoom(m_WasSpectating != GameClient()->m_Snap.m_SpecInfo.m_Active, AcceptedZoomTarget, m_Zoom, m_Zooming);
 
 	if(m_Zooming)
 	{
@@ -654,6 +641,11 @@ void CCamera::OnStateChange(int NewState, int OldState)
 		m_FreeviewCameraSmoothing.Reset();
 }
 
+void CCamera::OnMapLoad()
+{
+	m_GotoTeleCycle.Reset();
+}
+
 void CCamera::OnReset()
 {
 	m_CameraSmoothing = false;
@@ -870,51 +862,16 @@ void CCamera::GotoTele(int Number, int Offset)
 		return;
 	Number--;
 
-	if(m_GotoTeleLastNumber != Number)
-		m_GotoTeleLastPos = ivec2(-1, -1);
-
-	ivec2 MatchPos = ivec2(-1, -1);
-	const size_t NumTeles = Collision()->TeleAllSize(Number);
-	if(!NumTeles)
+	const auto MatchPos = m_GotoTeleCycle.Select(Number, Offset, Collision()->TeleAllSize(Number), [&](size_t Index) {
+		const vec2 Tele = Collision()->TeleAllGet(Number, Index);
+		return ivec2(Tele.x / 32, Tele.y / 32);
+	});
+	if(!MatchPos)
 	{
 		log_error("camera", "No teleporter with number %d found.", Number + 1);
 		return;
 	}
-
-	if(Offset != -1 || m_GotoTeleLastPos == ivec2(-1, -1))
-	{
-		if((size_t)Offset >= NumTeles || Offset < 0)
-			Offset = 0;
-		vec2 Tele = Collision()->TeleAllGet(Number, Offset);
-		MatchPos = ivec2(Tele.x / 32, Tele.y / 32);
-		m_GotoTeleOffset = Offset;
-	}
-	else
-	{
-		bool FullRound = false;
-		do
-		{
-			vec2 Tele = Collision()->TeleAllGet(Number, m_GotoTeleOffset);
-			MatchPos = ivec2(Tele.x / 32, Tele.y / 32);
-			m_GotoTeleOffset++;
-			if((size_t)m_GotoTeleOffset >= NumTeles)
-			{
-				m_GotoTeleOffset = 0;
-				if(FullRound)
-				{
-					MatchPos = m_GotoTeleLastPos;
-					break;
-				}
-				FullRound = true;
-			}
-		} while(distance(m_GotoTeleLastPos, MatchPos) < 10.0f);
-	}
-
-	if(MatchPos == ivec2(-1, -1))
-		return;
-	m_GotoTeleLastPos = MatchPos;
-	m_GotoTeleLastNumber = Number;
-	SetView(MatchPos);
+	SetView(*MatchPos);
 }
 
 void CCamera::SpectatorTeleportToHoveredTele()

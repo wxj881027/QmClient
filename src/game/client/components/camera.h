@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <limits>
 #include <optional>
 
@@ -31,6 +32,54 @@ namespace QmCameraEffects
 		const vec2 Desired = Relative ? Current + Offset : Offset;
 		return vec2(ClampViewAxis(Desired.x, MapWidth), ClampViewAxis(Desired.y, MapHeight));
 	}
+
+	class CGotoTeleCycle
+	{
+		size_t m_Offset = 0;
+		int m_LastNumber = -1;
+		std::optional<ivec2> m_LastPos;
+
+	public:
+		void Reset() { *this = CGotoTeleCycle{}; }
+
+		template<typename TGetTilePosition>
+		std::optional<ivec2> Select(int Number, int Offset, size_t Count, TGetTilePosition GetTilePosition)
+		{
+			if(m_LastNumber != Number)
+				m_LastPos.reset();
+			if(Count == 0)
+				return std::nullopt;
+
+			ivec2 MatchPos;
+			if(Offset != -1 || !m_LastPos)
+			{
+				m_Offset = Offset >= 0 && static_cast<size_t>(Offset) < Count ? static_cast<size_t>(Offset) : 0;
+				MatchPos = GetTilePosition(m_Offset);
+			}
+			else
+			{
+				bool FullRound = false;
+				do
+				{
+					MatchPos = GetTilePosition(m_Offset);
+					if(++m_Offset >= Count)
+					{
+						m_Offset = 0;
+						if(FullRound)
+						{
+							MatchPos = *m_LastPos;
+							break;
+						}
+						FullRound = true;
+					}
+				} while(distance(*m_LastPos, MatchPos) < 10.0f);
+			}
+
+			m_LastPos = MatchPos;
+			m_LastNumber = Number;
+			return MatchPos;
+		}
+	};
 
 	inline int EncodeNonNegativeInt(float Value)
 	{
@@ -55,6 +104,14 @@ namespace QmCameraEffects
 	inline bool IsValidZoom(float Value, float MinZoom, float MaxZoom)
 	{
 		return std::isfinite(Value) && Value >= MinZoom && Value <= MaxZoom;
+	}
+
+	inline void SnapSpectatingZoom(bool SpectatingChanged, std::optional<float> AcceptedTarget, float &Zoom, bool &Zooming)
+	{
+		if(!SpectatingChanged || !AcceptedTarget)
+			return;
+		Zoom = *AcceptedTarget;
+		Zooming = false;
 	}
 
 	inline float TransitionProgress(float Now, float Start, float End)
@@ -305,7 +362,7 @@ private:
 	bool m_ZoomSmoothingIsReset;
 
 	void ScaleZoom(float Factor);
-	void ChangeZoom(float Target, int Smoothness, bool IsUser, bool IsReset = false);
+	std::optional<float> ChangeZoom(float Target, int Smoothness, bool IsUser, bool IsReset = false);
 	float ZoomProgress(float CurrentTime) const;
 
 	float MinZoomLevel();
@@ -362,6 +419,7 @@ public:
 	// DDRace
 
 	void OnConsoleInit() override;
+	void OnMapLoad() override;
 	void OnReset() override;
 	void OnStateChange(int NewState, int OldState) override;
 
@@ -402,10 +460,8 @@ private:
 	bool m_ForceFreeview;
 	vec2 m_ForceFreeviewPos;
 	int m_GotoSwitchOffset;
-	int m_GotoTeleOffset;
 	ivec2 m_GotoSwitchLastPos;
-	ivec2 m_GotoTeleLastPos;
-	int m_GotoTeleLastNumber = -1;
+	QmCameraEffects::CGotoTeleCycle m_GotoTeleCycle;
 };
 
 #endif

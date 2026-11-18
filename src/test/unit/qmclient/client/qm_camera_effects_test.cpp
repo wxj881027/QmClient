@@ -28,6 +28,28 @@ TEST(QmCameraZoomValidation, UnlimitedModeKeepsLargestFiniteTarget)
 	EXPECT_TRUE(QmCameraEffects::IsValidZoom(std::numeric_limits<float>::max(), 0.01f, std::numeric_limits<float>::max()));
 }
 
+TEST(QmCameraSpectatingZoom, RejectedTargetKeepsTheCurrentZoomAndTransition)
+{
+	float Zoom = 1.5f;
+	bool Zooming = true;
+	QmCameraEffects::SnapSpectatingZoom(true, std::nullopt, Zoom, Zooming);
+	EXPECT_FLOAT_EQ(Zoom, 1.5f);
+	EXPECT_TRUE(Zooming);
+}
+
+TEST(QmCameraSpectatingZoom, AcceptedTargetSnapsOnlyWhenSpectatingChanges)
+{
+	float Zoom = 1.5f;
+	bool Zooming = true;
+	QmCameraEffects::SnapSpectatingZoom(false, 2.0f, Zoom, Zooming);
+	EXPECT_FLOAT_EQ(Zoom, 1.5f);
+	EXPECT_TRUE(Zooming);
+
+	QmCameraEffects::SnapSpectatingZoom(true, 2.0f, Zoom, Zooming);
+	EXPECT_FLOAT_EQ(Zoom, 2.0f);
+	EXPECT_FALSE(Zooming);
+}
+
 TEST(QmCameraTransition, PreservesPositiveIntervalProgress)
 {
 	EXPECT_FLOAT_EQ(QmCameraEffects::TransitionProgress(10.0f, 10.0f, 12.0f), 0.0f);
