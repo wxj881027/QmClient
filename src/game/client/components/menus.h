@@ -1595,6 +1595,8 @@ protected:
 	// 点击菜单面板外空白：按下时只登记，等本帧绘制算出 HotItem 再判定，
 	// 避免「快速甩鼠标点击」在同一帧里因 HotItem 还是上一帧的值而误关。
 	bool m_MenuOutsideClickPending = false;
+	// 按下瞬间是否已有弹层：弹层可能在同帧绘制时先关闭，不能再用关闭后的状态判断。
+	bool m_MenuOutsideClickHadPopup = false;
 	// 本帧实际绘制出的菜单面板（已含滑动/切页偏移）：落在里面不算点外部。
 	SQmMenuHitRegions m_MenuHitRegions;
 	bool m_BrowserRefreshPending = false;

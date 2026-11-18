@@ -6431,6 +6431,7 @@ void CMenus::SetActive(bool Active)
 	{
 		m_MenuClosing = false;
 		m_MenuOutsideClickPending = false;
+		m_MenuOutsideClickHadPopup = false;
 	}
 	if(!m_MenuActive)
 	{
@@ -6477,6 +6478,7 @@ void CMenus::BeginMenuClose()
 	m_MenuClosing = true;
 	m_MenuCloseDeadline = time_get() + time_freq() * 3 / 2; // 兜底 1.5s
 	m_MenuOutsideClickPending = false;
+	m_MenuOutsideClickHadPopup = false;
 	// 收尾期间不再接受菜单交互：悬停与按下都交回游戏，避免动画区里的点击落到旧控件上。
 	Ui()->SetHotItem(nullptr);
 	Ui()->SetActiveItem(nullptr);
@@ -8599,7 +8601,10 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 	// 只在游戏内壳层启用：离线主菜单没有「打开」动作，点空白把它关掉会闪一下。
 	if(m_MenuActive && (Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK) &&
 		Event.m_Key == KEY_MOUSE_1 && (Event.m_Flags & IInput::FLAG_PRESS))
+	{
 		m_MenuOutsideClickPending = true;
+		m_MenuOutsideClickHadPopup = m_Popup != POPUP_NONE || Ui()->IsPopupOpen();
+	}
 
 	// Escape key is always handled to activate/deactivate menu
 	if((Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE) || IsActive() || QmPoseMapPopupOpen() || QmPoseHudActive())
@@ -8911,7 +8916,9 @@ void CMenus::OnRender()
 		{
 			m_MenuOutsideClickPending = false;
 			const vec2 ClickPos = Ui()->MousePos();
-			if(m_MenuActive && !m_MenuClosing && QmMenuOutsideClickShouldClose(ClickPos, Ui()->HotItem() != nullptr, m_MenuHitRegions, m_Popup != POPUP_NONE))
+			const bool HadPopup = m_MenuOutsideClickHadPopup;
+			m_MenuOutsideClickHadPopup = false;
+			if(m_MenuActive && !m_MenuClosing && QmMenuOutsideClickShouldClose(ClickPos, Ui()->HotItem() != nullptr, m_MenuHitRegions, HadPopup))
 				BeginMenuClose();
 		}
 		Ui()->FinishCheck();
