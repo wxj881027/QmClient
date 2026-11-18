@@ -6557,6 +6557,14 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     target_compile_definitions(${TARGET_TESTRUNNER} PRIVATE QM_IOS_NO_MAIN)
     target_link_libraries(${TARGET_TESTRUNNER} ${UIKIT})
   endif()
+  if(TARGET_OS STREQUAL "mac")
+    target_sources(${TARGET_TESTRUNNER} PRIVATE
+      src/macos/server.mm
+      src/test/unit/server/macos_server_output_test.mm
+    )
+    target_compile_definitions(${TARGET_TESTRUNNER} PRIVATE QM_MACOS_SERVER_LAUNCHER_NO_MAIN)
+    target_link_libraries(${TARGET_TESTRUNNER} ${COCOA})
+  endif()
   if(FFMPEG_FOUND)
     target_link_libraries(${TARGET_TESTRUNNER} ${FFMPEG_LIBRARIES})
   endif()
