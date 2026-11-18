@@ -169,6 +169,7 @@ MACRO_CONFIG_INT(QmTinyTeeSize, qm_indicator_tees_size, 100, 85, 115, CFGFLAG_CL
 MACRO_CONFIG_INT(QmTinyTeesOthers, qm_tiny_tees_others, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scale down other Tees as well")
 
 MACRO_CONFIG_INT(QmCursorScale, qm_cursor_scale, 100, 0, 500, CFGFLAG_CLIENT | CFGFLAG_SAVE, "In-game crosshair scale percent (50=half, 200=double)")
+MACRO_CONFIG_INT(QmCursorRotation, qm_cursor_rotation, 0, -720, 720, CFGFLAG_CLIENT | CFGFLAG_SAVE, "In-game crosshair rotation speed in degrees per second (0=static, negative=reverse)")
 
 // Profiles
 MACRO_CONFIG_INT(QmProfileSkin, qm_profile_skin, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Include skin when saving/loading config preset")

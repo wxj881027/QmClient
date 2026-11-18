@@ -1452,7 +1452,9 @@ SSettingsSection CMenus::BuildTClientCursorCacheSection()
 		CUIRect Button;
 		if(Flow.Control("tclient-cursor-scale", LineSize, Button))
 			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-scale", &g_Config.m_QmCursorScale, &g_Config.m_QmCursorScale, &Button, Localize("Ingame cursor scale"), 0, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+		if(Flow.Control("tclient-cursor-rotation", LineSize, Button))
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-rotation", &g_Config.m_QmCursorRotation, &g_Config.m_QmCursorRotation, &Button, Localize("Ingame cursor rotation"), -720, 720, &CUi::ms_LinearScrollbarScale, 0, "deg/s");
 		return Col.y - SavedY; }, Margin);
-	S.m_DependencyConfigInts = {&g_Config.m_QmCursorScale};
+	S.m_DependencyConfigInts = {&g_Config.m_QmCursorScale, &g_Config.m_QmCursorRotation};
 	return S;
 }
