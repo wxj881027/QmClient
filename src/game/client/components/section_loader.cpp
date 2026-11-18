@@ -519,7 +519,22 @@ namespace
 
 IOHANDLE CSectionLoader::CSessionCacheFileOperations::Open(IStorage &Storage, const char *pFilename, int Flags)
 {
-	return Storage.OpenFile(pFilename, Flags, IStorage::TYPE_SAVE);
+	if(Flags == IOFLAG_WRITE)
+		return Storage.OpenFile(pFilename, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE);
+
+	if(Flags != IOFLAG_READ || !pFilename || !pFilename[0] ||
+		pFilename[0] == '/' || pFilename[0] == '\\' || str_find(pFilename, "../") || str_find(pFilename, "..\\")
+#if defined(CONF_FAMILY_WINDOWS)
+		|| pFilename[1] == ':'
+#endif
+	)
+		return nullptr;
+
+	char aPath[IO_MAX_PATH_LENGTH + 1] = "";
+	Storage.GetCompletePath(IStorage::TYPE_SAVE, pFilename, aPath, sizeof(aPath));
+	if(str_length(aPath) >= IO_MAX_PATH_LENGTH)
+		return nullptr;
+	return io_open_read_regular_checked(aPath, nullptr);
 }
 
 bool CSectionLoader::CSessionCacheFileOperations::Publish(IStorage &Storage, const char *pTemporary, const char *pTarget)

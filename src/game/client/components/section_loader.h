@@ -429,6 +429,7 @@ public:
 	{
 	public:
 		virtual ~CSessionCacheFileOperations() = default;
+		// 读端只打开普通文件，写端独占创建候选。
 		virtual IOHANDLE Open(IStorage &Storage, const char *pFilename, int Flags);
 		virtual unsigned Read(IOHANDLE File, void *pData, unsigned Size) { return io_read(File, pData, Size); }
 		virtual unsigned Write(IOHANDLE File, const void *pData, unsigned Size) { return io_write(File, pData, Size); }
