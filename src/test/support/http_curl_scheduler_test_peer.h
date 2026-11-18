@@ -19,16 +19,27 @@ public:
 	}
 	~CHttpCurlSchedulerTestPeer()
 	{
-		m_Http.DrainRequests(true);
+		m_Http.DrainRequests();
 		curl_multi_cleanup(m_Http.m_pMultiH);
 		m_Http.m_pMultiH = nullptr;
 	}
+	static void RunWithTransportHooks(CHttpCurl &Http, decltype(&curl_multi_poll) pfnMultiPoll,
+		decltype(&curl_easy_cleanup) pfnEasyCleanup, decltype(&curl_multi_cleanup) pfnMultiCleanup, decltype(&curl_global_cleanup) pfnGlobalCleanup)
+	{
+		Http.m_pfnMultiPoll = pfnMultiPoll;
+		Http.m_pfnEasyCleanup = pfnEasyCleanup;
+		Http.m_pfnMultiCleanup = pfnMultiCleanup;
+		Http.m_pfnGlobalCleanup = pfnGlobalCleanup;
+		Http.RunLoop();
+	}
+
 	bool Ready() const { return m_Http.m_pMultiH != nullptr; }
 	IHttp &Http() { return m_Http; }
+	void SetEasyInit(decltype(&curl_easy_init) pfnEasyInit) { m_Http.m_pfnEasyInit = pfnEasyInit; }
 	void Run(const std::shared_ptr<IHttpRequest> &pRequest) { m_Http.Run(pRequest); }
 	bool Pump() { return m_Http.ProcessPendingRequests(); }
 	void RejectNewRequests() { m_Http.m_State = CHttpCurl::ERROR; }
-	void Drain() { m_Http.DrainRequests(true); }
+	void Drain() { m_Http.DrainRequests(); }
 	void Cancel() { m_Http.CancelAbortedRequests(); }
 	size_t Running() const { return m_Http.m_RunningRequests.size(); }
 	size_t RunningForHost(std::string_view Host) const { return m_Http.RunningForHost(Host); }

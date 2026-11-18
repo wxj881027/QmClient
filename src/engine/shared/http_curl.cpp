@@ -767,17 +767,15 @@ size_t CHttpCurl::RunningForHost(std::string_view Host) const
 	});
 }
 
-void CHttpCurl::CompleteRunningRequest(CURL *pHandle, CURLcode Code, bool Cleanup)
+void CHttpCurl::CompleteRunningRequest(CURL *pHandle, CURLcode Code)
 {
 	auto RequestIt = m_RunningRequests.find(pHandle);
 	dbg_assert(RequestIt != m_RunningRequests.end(), "Running handle not added to map");
 	auto pRequest = std::move(RequestIt->second);
 	m_RunningRequests.erase(RequestIt);
-	if(Cleanup)
-		curl_multi_remove_handle(m_pMultiH, pHandle);
+	curl_multi_remove_handle(m_pMultiH, pHandle);
 	pRequest->OnCompletionInternal(pHandle, Code);
-	if(Cleanup)
-		curl_easy_cleanup(pHandle);
+	m_pfnEasyCleanup(pHandle);
 }
 
 void CHttpCurl::CancelAbortedRequests()
@@ -813,11 +811,11 @@ CHttpCurl::EPrepareResult CHttpCurl::PrepareRequest(const std::shared_ptr<CHttpR
 			(!pRequest->m_HostKey.empty() && RunningForHost(pRequest->m_HostKey) >= HTTP_MAX_CONCURRENT_REQUESTS_PER_HOST))
 			return EPrepareResult::DEFERRED;
 
-		pHandle = curl_easy_init();
+		pHandle = m_pfnEasyInit();
 		if(!pHandle)
 		{
-			log_error("http", "curl_easy_init failed");
-			return EPrepareResult::SYSTEM_ERROR;
+			str_copy(pRequest->m_aErr, "curl_easy_init failed");
+			return EPrepareResult::LOCAL_ERROR;
 		}
 		// 先登记再打开文件和移交multi；后续准备异常仍有稳定的请求owner。
 		m_RunningRequests.emplace(pHandle, pRequest);
@@ -849,7 +847,7 @@ CHttpCurl::EPrepareResult CHttpCurl::PrepareRequest(const std::shared_ptr<CHttpR
 	if(Tracked)
 		m_RunningRequests.erase(pHandle);
 	if(pHandle)
-		curl_easy_cleanup(pHandle);
+		m_pfnEasyCleanup(pHandle);
 	return Result;
 }
 
@@ -891,7 +889,7 @@ bool CHttpCurl::ProcessPendingRequests()
 	return true;
 }
 
-void CHttpCurl::DrainRequests(bool Cleanup)
+void CHttpCurl::DrainRequests()
 {
 	{
 		std::unique_lock Lock(m_Lock);
@@ -910,7 +908,7 @@ void CHttpCurl::DrainRequests(bool Cleanup)
 	{
 		auto It = m_RunningRequests.begin();
 		str_copy(It->second->m_aErr, "Shutting down");
-		CompleteRunningRequest(It->first, CURLE_ABORTED_BY_CALLBACK, Cleanup);
+		CompleteRunningRequest(It->first, CURLE_ABORTED_BY_CALLBACK);
 	}
 }
 
@@ -925,9 +923,10 @@ void CHttpCurl::RunLoop()
 		return;
 	}
 
-	m_pMultiH = curl_multi_init();
+	m_pMultiH = m_pfnMultiInit();
 	if(!m_pMultiH)
 	{
+		m_pfnGlobalCleanup();
 		log_error("http", "curl_multi_init failed");
 		m_State = CHttpCurl::ERROR;
 		m_ConditionVariableInit.notify_all();
@@ -948,7 +947,7 @@ void CHttpCurl::RunLoop()
 	while(m_State == CHttpCurl::RUNNING)
 	{
 		int Events = 0;
-		const CURLMcode PollCode = curl_multi_poll(m_pMultiH, nullptr, 0, m_RunningRequests.empty() ? m_NextTimeout : std::min(m_NextTimeout, 100), &Events);
+		const CURLMcode PollCode = m_pfnMultiPoll(m_pMultiH, nullptr, 0, m_RunningRequests.empty() ? m_NextTimeout : std::min(m_NextTimeout, 100), &Events);
 
 		// We may have been woken up for a shutdown
 		if(m_Shutdown)
@@ -1003,14 +1002,11 @@ void CHttpCurl::RunLoop()
 
 	if(Lock.owns_lock())
 		Lock.unlock();
-	const bool Cleanup = m_State != CHttpCurl::ERROR;
-	DrainRequests(Cleanup);
-
-	if(Cleanup)
-	{
-		curl_multi_cleanup(m_pMultiH);
-		curl_global_cleanup();
-	}
+	// 运行失败会停止传输，已登记的句柄仍需随请求收尾逐个释放。
+	DrainRequests();
+	m_pfnMultiCleanup(m_pMultiH);
+	m_pMultiH = nullptr;
+	m_pfnGlobalCleanup();
 }
 
 IEngineHttp *CreateEngineHttp()

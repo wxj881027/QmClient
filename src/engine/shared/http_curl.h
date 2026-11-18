@@ -82,6 +82,7 @@ public:
 private:
 	friend class CHttpCurlTestPeer;
 	friend class CHttpCurlSchedulerTestPeer;
+	friend class CHttpCurlStartupTestPeer;
 	enum EState
 	{
 		UNINITIALIZED,
@@ -100,6 +101,12 @@ private:
 
 	void *m_pThread = nullptr;
 	THREAD_CREATE m_pfnCreate;
+	decltype(&curl_easy_init) m_pfnEasyInit = curl_easy_init;
+	decltype(&curl_easy_cleanup) m_pfnEasyCleanup = curl_easy_cleanup;
+	decltype(&curl_multi_init) m_pfnMultiInit = curl_multi_init;
+	decltype(&curl_multi_cleanup) m_pfnMultiCleanup = curl_multi_cleanup;
+	decltype(&curl_multi_poll) m_pfnMultiPoll = curl_multi_poll;
+	decltype(&curl_global_cleanup) m_pfnGlobalCleanup = curl_global_cleanup;
 
 	std::mutex m_Lock;
 	std::condition_variable m_ConditionVariableInit;
@@ -122,8 +129,8 @@ private:
 	size_t RunningForHost(std::string_view Host) const;
 	EPrepareResult PrepareRequest(const std::shared_ptr<CHttpRequestCurl> &pRequest);
 	bool ProcessPendingRequests();
-	void DrainRequests(bool Cleanup);
-	void CompleteRunningRequest(CURL *pHandle, CURLcode Code, bool Cleanup = true);
+	void DrainRequests();
+	void CompleteRunningRequest(CURL *pHandle, CURLcode Code);
 	void CancelAbortedRequests();
 };
 

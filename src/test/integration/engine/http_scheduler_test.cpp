@@ -15,6 +15,7 @@
 #include <memory>
 #include <new>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -133,13 +134,35 @@ TEST_F(HttpScheduler, ConfigurationExceptionFailsOneRequestAndContinuesTheBatch)
 	EXPECT_EQ(m_Http.RunningForHost("scheduler.test"), 1u);
 }
 
-TEST_F(HttpScheduler, ConfigurationFalseRetainsExistingAbortClassification)
+TEST_F(HttpScheduler, EasyHandleCreationFailureLeavesOtherRequestsRunning)
+{
+	auto pRunning = Submit();
+	ASSERT_TRUE(m_Http.Pump());
+	ASSERT_EQ(pRunning->State(), EHttpState::RUNNING);
+
+	static thread_local bool FailNext;
+	m_Http.SetEasyInit([]() -> CURL * {
+		return std::exchange(FailNext, false) ? nullptr : curl_easy_init();
+	});
+	FailNext = true;
+	auto pFailed = Submit();
+	auto pNext = Submit();
+	ASSERT_TRUE(m_Http.Pump());
+
+	EXPECT_EQ(pFailed->State(), EHttpState::ERROR);
+	EXPECT_EQ(pFailed->m_ConfigureCalls, 0);
+	EXPECT_EQ(pRunning->State(), EHttpState::RUNNING);
+	EXPECT_EQ(pNext->State(), EHttpState::RUNNING);
+	EXPECT_EQ(m_Http.Running(), 2u);
+}
+
+TEST_F(HttpScheduler, ConfigurationFalsePublishesLocalError)
 {
 	auto pRequest = std::make_shared<CPreparedRequest>();
 	pRequest->m_ConfigureFails = true;
 	m_Http.Run(pRequest);
 	ASSERT_TRUE(m_Http.Pump());
-	EXPECT_EQ(pRequest->State(), EHttpState::ABORTED);
+	EXPECT_EQ(pRequest->State(), EHttpState::ERROR);
 	EXPECT_FALSE(m_Http.Tracked(pRequest.get()));
 	EXPECT_TRUE(m_Http.Pending().empty());
 }
@@ -289,6 +312,65 @@ TEST_F(HttpScheduler, ShutdownCompletesRunningDeferredAndNewPendingRequests)
 		EXPECT_EQ(pRequest->State(), EHttpState::ABORTED);
 	EXPECT_TRUE(m_Http.Pending().empty());
 	EXPECT_EQ(m_Http.Running(), 0u);
+}
+
+TEST(HttpSchedulerFailure, PollFailureCompletesRequestsAndReleasesTransport)
+{
+	ASSERT_TRUE(WaitForAsyncIo([] {
+		struct CProbe
+		{
+			CHttpCurl m_Http;
+			std::shared_ptr<CPreparedRequest> m_pActive = std::make_shared<CPreparedRequest>();
+			std::shared_ptr<CPreparedRequest> m_pPending = std::make_shared<CPreparedRequest>();
+			int m_Polls = 0;
+			EHttpState m_ActiveAtFailure = EHttpState::QUEUED;
+			int m_CleanupOrder = 0;
+			int m_EasyCleanup = 0;
+			int m_MultiCleanup = 0;
+			int m_GlobalCleanup = 0;
+		};
+		CProbe Probe;
+		static thread_local CProbe *pProbe;
+		pProbe = &Probe;
+		auto pCompletion = std::make_shared<CCompletion>();
+		Probe.m_pActive->SetProgressCallback(pCompletion);
+
+		CHttpCurlSchedulerTestPeer::RunWithTransportHooks(Probe.m_Http, [](CURLM *, curl_waitfd *, unsigned int, int, int *pEvents) {
+			*pEvents = 0;
+			if(++pProbe->m_Polls == 1)
+			{
+				// 首轮只入队，perform 尚无活动传输。下一轮在 perform 前模拟轮询失败。
+				pProbe->m_Http.Run(pProbe->m_pActive);
+				return CURLM_OK;
+			}
+			pProbe->m_ActiveAtFailure = pProbe->m_pActive->State();
+			pProbe->m_Http.Run(pProbe->m_pPending);
+			return CURLM_INTERNAL_ERROR;
+		},
+			[](CURL *pHandle) {
+				pProbe->m_EasyCleanup = ++pProbe->m_CleanupOrder;
+				curl_easy_cleanup(pHandle);
+			},
+			[](CURLM *pHandle) {
+				pProbe->m_MultiCleanup = ++pProbe->m_CleanupOrder;
+				return curl_multi_cleanup(pHandle);
+			},
+			[] {
+				pProbe->m_GlobalCleanup = ++pProbe->m_CleanupOrder;
+				curl_global_cleanup();
+			});
+		pProbe = nullptr;
+
+		EXPECT_EQ(Probe.m_ActiveAtFailure, EHttpState::RUNNING);
+		EXPECT_EQ(Probe.m_pActive->State(), EHttpState::ABORTED);
+		EXPECT_EQ(Probe.m_pPending->State(), EHttpState::ABORTED);
+		EXPECT_EQ(Probe.m_pPending->m_ConfigureCalls, 0);
+		EXPECT_EQ(pCompletion->m_Calls, 1);
+		EXPECT_EQ(Probe.m_EasyCleanup, 1);
+		EXPECT_EQ(Probe.m_MultiCleanup, 2);
+		EXPECT_EQ(Probe.m_GlobalCleanup, 3);
+		EXPECT_EQ(Probe.m_CleanupOrder, 3);
+	}));
 }
 
 TEST_F(HttpScheduler, FailedPreparationConsumerCanSubmitAnotherRequest)
