@@ -44,4 +44,10 @@ inline bool QmMenuOutsideClickShouldClose(vec2 ClickPos, bool HasHotItem, const 
 	return !HasHotItem && !Regions.Contains(ClickPos);
 }
 
+// 全屏弹层打开时，背景点击交给弹层自身处理；ESC 菜单不能在同一帧被连带收起。
+inline bool QmMenuOutsideClickShouldClose(vec2 ClickPos, bool HasHotItem, const SQmMenuHitRegions &Regions, bool PopupOpen)
+{
+	return !PopupOpen && QmMenuOutsideClickShouldClose(ClickPos, HasHotItem, Regions);
+}
+
 #endif

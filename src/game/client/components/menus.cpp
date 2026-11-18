@@ -5095,7 +5095,10 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	}
 
 	// Background
+	CUIRect PopupBounds = Box;
 	Box.Draw(BgColor, IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	// 弹层自己的标题、正文等空白点击也属于弹层，不能落成「菜单外」。
+	AddMenuHitRegion(PopupBounds);
 	if(CompactPopup)
 		Box.Margin(12.0f, &Box);
 
@@ -8908,7 +8911,7 @@ void CMenus::OnRender()
 		{
 			m_MenuOutsideClickPending = false;
 			const vec2 ClickPos = Ui()->MousePos();
-			if(m_MenuActive && !m_MenuClosing && QmMenuOutsideClickShouldClose(ClickPos, Ui()->HotItem() != nullptr, m_MenuHitRegions))
+			if(m_MenuActive && !m_MenuClosing && QmMenuOutsideClickShouldClose(ClickPos, Ui()->HotItem() != nullptr, m_MenuHitRegions, m_Popup != POPUP_NONE))
 				BeginMenuClose();
 		}
 		Ui()->FinishCheck();

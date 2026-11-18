@@ -132,6 +132,8 @@ TEST(QmIngameMenuHitRegions, ServerInfoPageKeepsClicksInsideItsMeasuredPanel)
 	EXPECT_TRUE(QmMenuOutsideClickShouldClose({600.0f, 700.0f}, false, Regions));
 	// 命中交互控件时无论位置如何都不进入外部点击关闭路径。
 	EXPECT_FALSE(QmMenuOutsideClickShouldClose({600.0f, 360.0f}, true, Regions));
+	// 全屏弹层打开时，弹层外的遮罩点击也不能连带收起 ESC 菜单。
+	EXPECT_FALSE(QmMenuOutsideClickShouldClose({600.0f, 700.0f}, false, Regions, true));
 }
 
 TEST(QmIngameMenuHitRegions, MultipleVisiblePanelsAreMeasuredIndividually)
