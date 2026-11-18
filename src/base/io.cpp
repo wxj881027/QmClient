@@ -15,6 +15,7 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
+#include <new>
 #include <string>
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -76,14 +77,23 @@ IOHANDLE windows_io_from_handle(intptr_t Handle, const char *pMode, CWindowsFile
 static IOHANDLE io_open_impl(const char *filename, int flags, bool *pNotFound, bool RegularOnly = false)
 {
 	if(pNotFound)
-	{
 		*pNotFound = false;
-		if(!str_utf8_check(filename))
-			return nullptr;
-	}
+	if(!filename)
+		return nullptr;
 	dbg_assert(flags == IOFLAG_READ || flags == IOFLAG_WRITE || flags == IOFLAG_APPEND || flags == (IOFLAG_WRITE | IOFLAG_EXCLUSIVE), "invalid file open flags");
 #if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_filename = windows_utf8_to_wide(filename);
+	if(!str_utf8_check(filename))
+		return nullptr;
+
+	std::wstring wide_filename;
+	try
+	{
+		wide_filename = windows_utf8_to_wide(filename);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return nullptr;
+	}
 	DWORD desired_access;
 	DWORD creation_disposition;
 	const char *open_mode;
@@ -130,6 +140,9 @@ static IOHANDLE io_open_impl(const char *filename, int flags, bool *pNotFound, b
 	}
 	return windows_io_from_handle(reinterpret_cast<intptr_t>(handle), open_mode);
 #else
+	if(pNotFound && !str_utf8_check(filename))
+		return nullptr;
+
 	if(RegularOnly)
 	{
 		int OpenFlags = O_RDONLY | O_NONBLOCK | O_NOCTTY;

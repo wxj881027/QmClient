@@ -6,6 +6,10 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#if defined(CONF_FAMILY_WINDOWS)
+#include <windows.h>
+#endif
+
 TEST(Filesystem, Filename)
 {
 	EXPECT_STREQ(fs_filename(""), "");
@@ -101,6 +105,36 @@ TEST(Filesystem, ExecutablePath)
 	EXPECT_FALSE(fs_parent_dir(aExecutablePath));
 	EXPECT_FALSE(fs_is_relative_path(aExecutablePath));
 }
+
+TEST(Filesystem, CurrentDirectoryRejectsTooSmallBuffer)
+{
+	char aOutput[] = {'!', '?'};
+	EXPECT_EQ(fs_getcwd(aOutput, 1), nullptr);
+	EXPECT_EQ(aOutput[0], '\0');
+	EXPECT_EQ(aOutput[1], '?');
+}
+
+#if defined(CONF_FAMILY_WINDOWS)
+TEST(Filesystem, ExecutablePathIgnoresPreviousWindowsError)
+{
+	char aExecutablePath[IO_MAX_PATH_LENGTH];
+	const DWORD previous_error = GetLastError();
+	SetLastError(ERROR_ACCESS_DENIED);
+	const int result = fs_executable_path(aExecutablePath, sizeof(aExecutablePath));
+	SetLastError(previous_error);
+
+	ASSERT_EQ(result, 0);
+	EXPECT_TRUE(fs_is_file(aExecutablePath));
+}
+
+TEST(Filesystem, ExecutablePathRejectsTooSmallBuffer)
+{
+	char aOutput[] = {'!', '?'};
+	EXPECT_EQ(fs_executable_path(aOutput, 1), -1);
+	EXPECT_EQ(aOutput[0], '\0');
+	EXPECT_EQ(aOutput[1], '?');
+}
+#endif
 
 TEST(Filesystem, CreateCloseDelete)
 {

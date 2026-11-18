@@ -5,6 +5,7 @@
 
 #include <base/log.h>
 
+#include <engine/client/graphics_buffer_pair.h>
 #include <engine/graphics.h>
 #include <engine/map.h>
 #include <engine/shared/config.h>
@@ -919,12 +920,12 @@ CMapLoadTask CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &
 	}
 
 	// first create the buffer object
-	int BufferObjectIndex = Graphics()->CreateBufferObject(UploadDataSize, pUploadData.release(), 0, true);
+	Visuals.m_BufferObjectIndex = Graphics()->CreateBufferObject(UploadDataSize, pUploadData.release(), 0, true);
 
 	// then create the buffer container
 	SBufferContainerInfo ContainerInfo;
 	ContainerInfo.m_Stride = (DoTextureCoords ? (sizeof(float) * 2 + sizeof(ubvec4)) : 0);
-	ContainerInfo.m_VertBufferBindingIndex = BufferObjectIndex;
+	ContainerInfo.m_VertBufferBindingIndex = Visuals.m_BufferObjectIndex;
 	ContainerInfo.m_vAttributes.emplace_back();
 	SBufferContainerInfo::SAttribute *pAttr = &ContainerInfo.m_vAttributes.back();
 	pAttr->m_DataTypeCount = 2;
@@ -959,7 +960,7 @@ void CRenderLayerTile::Unload()
 
 void CRenderLayerTile::CTileLayerVisuals::Unload()
 {
-	Graphics()->DeleteBufferContainer(m_BufferContainerIndex);
+	DeleteGraphicsBufferPair(Graphics(), m_BufferContainerIndex, m_BufferObjectIndex);
 }
 
 int CRenderLayerTile::GetDataIndex() const
@@ -1310,11 +1311,11 @@ CMapLoadTask CRenderLayerQuads::Init()
 	}
 
 	// gpu upload
-	int BufferObjectIndex = Graphics()->CreateBufferObject(UploadDataSize, pUploadData.release(), 0, true);
+	pQLayerVisuals->m_BufferObjectIndex = Graphics()->CreateBufferObject(UploadDataSize, pUploadData.release(), 0, true);
 	// then create the buffer container
 	SBufferContainerInfo ContainerInfo;
 	ContainerInfo.m_Stride = (Textured ? (sizeof(CTmpQuadTextured) / 4) : (sizeof(CTmpQuad) / 4));
-	ContainerInfo.m_VertBufferBindingIndex = BufferObjectIndex;
+	ContainerInfo.m_VertBufferBindingIndex = pQLayerVisuals->m_BufferObjectIndex;
 	ContainerInfo.m_vAttributes.emplace_back();
 	SBufferContainerInfo::SAttribute *pAttr = &ContainerInfo.m_vAttributes.back();
 	pAttr->m_DataTypeCount = 4;
@@ -1356,7 +1357,7 @@ void CRenderLayerQuads::Unload()
 
 void CRenderLayerQuads::CQuadLayerVisuals::Unload()
 {
-	Graphics()->DeleteBufferContainer(m_BufferContainerIndex);
+	DeleteGraphicsBufferPair(Graphics(), m_BufferContainerIndex, m_BufferObjectIndex);
 }
 
 CMapLoadTask CRenderLayerQuads::CalculateQuadClipping(const CQuadCluster &QuadCluster, float aQuadOffsetMin[2], float aQuadOffsetMax[2], bool &Available) const

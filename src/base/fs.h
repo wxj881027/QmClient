@@ -123,6 +123,7 @@ int fs_chdir(const char *path);
  *
  * @return Pointer to the buffer on success, `nullptr` on failure.
  *
+ * @remark The output buffer must fit the complete path and its terminator.
  * @remark The strings are treated as null-terminated strings.
  */
 char *fs_getcwd(char *buffer, int buffer_size);
@@ -157,6 +158,7 @@ int fs_storage_path(const char *appname, char *path, int max);
  * @return `0` on success. Negative value on failure.
  *
  * @remark The executable name is included in the result.
+ * @remark On Windows, a buffer that cannot fit the complete path and its terminator causes failure.
  *
  * @remark The strings are treated as null-terminated strings.
  */

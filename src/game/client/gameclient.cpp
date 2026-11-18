@@ -61,6 +61,7 @@
 #include "components/tclient/fast_practice.h"
 #include "components/voting.h"
 #include "lineinput.h"
+#include "map_settings.h"
 #include "prediction/entities/character.h"
 #include "prediction/entities/projectile.h"
 #include "race.h"
@@ -8862,18 +8863,29 @@ void CGameClient::LoadMapSettings()
 		if(!(pItem->m_Settings > -1))
 			break;
 
-		int Size = pMap->GetDataSize(pItem->m_Settings);
-		char *pSettings = (char *)pMap->GetData(pItem->m_Settings);
-		char *pNext = pSettings;
-		Console()->SetUnknownCommandCallback(UnknownMapSettingCallback, nullptr);
-		while(pNext < pSettings + Size)
+		const int SettingsIndex = pItem->m_Settings;
+		const void *pSettings = pMap->GetData(SettingsIndex);
+		// 碰撞模块在本张地图的生命周期内借用这些数据块。
+		const bool BorrowedByCollision =
+			pSettings &&
+			(pSettings == m_Collision.GameLayer() ||
+				pSettings == m_Collision.TeleLayer() ||
+				pSettings == m_Collision.SpeedupLayer() ||
+				pSettings == m_Collision.FrontLayer() ||
+				pSettings == m_Collision.SwitchLayer() ||
+				pSettings == m_Collision.TuneLayer());
+		if(pSettings)
 		{
-			int StrSize = str_length(pNext) + 1;
-			Console()->ExecuteLine(pNext, IConsole::CLIENT_ID_GAME);
-			pNext += StrSize;
+			const int Size = pMap->GetDataSize(SettingsIndex);
+			IConsole *pConsole = Console();
+			pConsole->SetUnknownCommandCallback(UnknownMapSettingCallback, nullptr);
+			ForEachMapSetting(static_cast<const char *>(pSettings), Size, [pConsole](const char *pCommand) {
+				pConsole->ExecuteLine(pCommand, IConsole::CLIENT_ID_GAME);
+			});
+			pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
 		}
-		Console()->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
-		pMap->UnloadData(pItem->m_Settings);
+		if(!BorrowedByCollision)
+			pMap->UnloadData(SettingsIndex);
 		break;
 	}
 }

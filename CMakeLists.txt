@@ -4168,6 +4168,7 @@ if(CLIENT)
     laser_data.h
     lineinput.cpp
     lineinput.h
+    map_settings.h
     pickup_data.cpp
     pickup_data.h
     prediction/entities/character.cpp
@@ -5137,6 +5138,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/laser_positions_test.cpp
     src/test/unit/client/projectile_positions_test.cpp
     src/test/unit/client/collision_line_domain_test.cpp
+    src/test/unit/client/map_settings_test.cpp
     src/test/unit/client/prediction_tick_shift_test.cpp
     src/test/unit/client/pickup_positions_test.cpp
     src/test/unit/client/plasma_movement_test.cpp
@@ -6016,6 +6018,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/skin7_load_completion_test.cpp
     src/test/integration/client/map_design_tile_skips_test.cpp
     src/test/integration/client/map_image_decode_test.cpp
+    src/test/integration/client/map_layer_buffer_ownership_test.cpp
     src/test/unit/client/map_load_task_test.cpp
     src/test/unit/client/connection_resource_preparation_test.cpp
     src/test/unit/client/skins/skins_preview_layers_test.cpp
@@ -6156,6 +6159,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/map/envelope_eval.cpp
     src/game/map/envelope_extrema.cpp
     src/game/map/render_map.cpp
+    src/game/map/render_component.cpp
+    src/game/map/render_layer.cpp
     src/engine/client/backend_threaded.cpp
     src/engine/client/backend/vulkan/backend_vulkan_qm_ext.cpp
     src/engine/client/backend/graphics_backend_contract.cpp

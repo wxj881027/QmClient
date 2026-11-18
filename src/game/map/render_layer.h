@@ -213,6 +213,7 @@ protected:
 			m_Width = 0;
 			m_Height = 0;
 			m_BufferContainerIndex = -1;
+			m_BufferObjectIndex = -1;
 			m_IsTextured = false;
 		}
 
@@ -272,6 +273,8 @@ protected:
 		unsigned int m_Width;
 		unsigned int m_Height;
 		int m_BufferContainerIndex;
+		// container 创建失败时仍保留 BO，只有删除返回后才清除身份。
+		int m_BufferObjectIndex;
 		bool m_IsTextured;
 	};
 
@@ -312,11 +315,13 @@ protected:
 	{
 	public:
 		CQuadLayerVisuals() :
-			m_QuadNum(0), m_BufferContainerIndex(-1), m_IsTextured(false) {}
+			m_QuadNum(0), m_BufferContainerIndex(-1), m_BufferObjectIndex(-1), m_IsTextured(false) {}
 		void Unload();
 
 		int m_QuadNum;
 		int m_BufferContainerIndex;
+		// container 创建失败时仍保留 BO，只有删除返回后才清除身份。
+		int m_BufferObjectIndex;
 		bool m_IsTextured;
 	};
 	void RenderQuadLayer(float Alpha, const CRenderLayerParams &Params);

@@ -19,11 +19,13 @@ struct MD5_DIGEST
 };
 
 SHA256_DIGEST sha256(const void *message, size_t message_len);
+// 输出容量为零时不访问缓冲区。
 void sha256_str(SHA256_DIGEST digest, char *str, size_t max_len);
 int sha256_from_str(SHA256_DIGEST *out, const char *str);
 int sha256_comp(SHA256_DIGEST digest1, SHA256_DIGEST digest2);
 
 MD5_DIGEST md5(const void *message, size_t message_len);
+// 输出容量为零时不访问缓冲区。
 void md5_str(MD5_DIGEST digest, char *str, size_t max_len);
 int md5_from_str(MD5_DIGEST *out, const char *str);
 int md5_comp(MD5_DIGEST digest1, MD5_DIGEST digest2);

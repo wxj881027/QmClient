@@ -45,6 +45,17 @@ TEST(Hash, Sha256ToStringSmallBuffer)
 	ExpectSha256<16 + 1>(sha256(QUICK_BROWN_FOX, str_length(QUICK_BROWN_FOX)), "ef537f25c895bfa7");
 }
 
+TEST(Hash, ZeroOutputCapacityLeavesBufferUnchanged)
+{
+	char Sentinel = 'x';
+
+	sha256_str(SHA256_DIGEST{}, &Sentinel, 0);
+	EXPECT_EQ(Sentinel, 'x');
+
+	md5_str(MD5_DIGEST{}, &Sentinel, 0);
+	EXPECT_EQ(Sentinel, 'x');
+}
+
 TEST(Hash, Sha256ToStringLargeBuffer)
 {
 	char QUICK_BROWN_FOX[] = "The quick brown fox jumps over the lazy dog.";

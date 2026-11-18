@@ -28,6 +28,7 @@
 #include <shlobj.h> // SHGetKnownFolderPath
 #include <shlwapi.h>
 
+#include <new>
 #include <string>
 #else
 #error NOT IMPLEMENTED
@@ -303,17 +304,25 @@ char *fs_getcwd(char *buffer, int buffer_size)
 	if(buffer == nullptr || buffer_size <= 0)
 		return nullptr;
 #if defined(CONF_FAMILY_WINDOWS)
+	buffer[0] = '\0';
 	const DWORD size_needed = GetCurrentDirectoryW(0, nullptr);
-	std::wstring wide_current_dir(size_needed, L'0');
-	dbg_assert(GetCurrentDirectoryW(size_needed, wide_current_dir.data()) == size_needed - 1, "GetCurrentDirectoryW failure");
-	const std::optional<std::string> current_dir = windows_wide_to_utf8(wide_current_dir.c_str());
-	if(!current_dir.has_value())
-	{
-		buffer[0] = '\0';
+	if(size_needed == 0)
 		return nullptr;
-	}
-	str_copy(buffer, current_dir.value().c_str(), buffer_size);
-	fs_normalize_path(buffer);
+	const std::unique_ptr<wchar_t[]> wide_current_dir(new(std::nothrow) wchar_t[size_needed]);
+	if(!wide_current_dir)
+		return nullptr;
+
+	const DWORD length = GetCurrentDirectoryW(size_needed, wide_current_dir.get());
+	if(length == 0 || length >= size_needed)
+		return nullptr;
+	auto current_dir = windows_wide_to_utf8_bounded(wide_current_dir.get(), wide_current_dir.get() + length + 1);
+	if(!current_dir)
+		return nullptr;
+	fs_normalize_path(current_dir->data());
+	if(str_length(current_dir->c_str()) >= buffer_size)
+		return nullptr;
+
+	str_copy(buffer, current_dir->c_str(), buffer_size);
 	return buffer;
 #else
 	char *result = getcwd(buffer, buffer_size);
@@ -403,21 +412,19 @@ int fs_storage_path(const char *appname, char *path, int max)
 
 int fs_executable_path(char *buffer, int buffer_size)
 {
+	if(buffer == nullptr || buffer_size <= 0)
+		return -1;
 	// https://stackoverflow.com/a/1024937
 #if defined(CONF_FAMILY_WINDOWS)
+	buffer[0] = '\0';
 	wchar_t wide_path[IO_MAX_PATH_LENGTH];
-	if(GetModuleFileNameW(nullptr, wide_path, std::size(wide_path)) == 0 || GetLastError() != ERROR_SUCCESS)
-	{
-		buffer[0] = '\0';
+	const DWORD length = GetModuleFileNameW(nullptr, wide_path, std::size(wide_path));
+	if(length == 0 || length >= std::size(wide_path))
 		return -1;
-	}
-	const std::optional<std::string> path = windows_wide_to_utf8(wide_path);
-	if(!path.has_value())
-	{
-		buffer[0] = '\0';
+	const auto path = windows_wide_to_utf8_bounded(wide_path, wide_path + length + 1);
+	if(!path || path->size() >= static_cast<size_t>(buffer_size))
 		return -1;
-	}
-	str_copy(buffer, path.value().c_str(), buffer_size);
+	str_copy(buffer, path->c_str(), buffer_size);
 	return 0;
 #elif defined(CONF_PLATFORM_MACOS) || defined(CONF_PLATFORM_IOS)
 	// Get the size
