@@ -24,9 +24,9 @@ void CMenus::RenderServerVoteList(CUIRect MainView)
 	auto &Voting = GameClient()->m_Voting;
 
 	const ColorRGBA PanelColor = MenuPanelColor();
+	AddMenuHitRegion(MainView);
 	MainView.Draw(PanelColor, IGraphics::CORNER_ALL, 10.0f);
 	CUiScopedSurfaceText SurfaceText(TextRender(), PanelColor);
-	const ColorRGBA Ink = ResolveUiSurfaceForeground(SurfaceText.Surface());
 	MainView.Margin(12.0f, &MainView);
 	CUIRect Search, Bottom;
 	MainView.HSplitTop(28.0f, &Search, &MainView);
@@ -73,7 +73,9 @@ void CMenus::RenderServerVoteList(CUIRect MainView)
 		Ui()->DoLabel(&Rect, pText, 13.0f, Align, Props);
 	};
 	static CListBox s_Options;
-	s_Options.SetItemColors(Ink.WithAlpha(0.12f), Ink.WithAlpha(0.08f), Ink.WithAlpha(0.05f));
+	// 选中/悬浮走 CListBox 的统一默认（主题选中色 / 列表 token），行距半档，
+	// 圆角按行高推导成胶囊；不再用本页 Ink 另调一套。
+	s_Options.DoAutoSpacing(ui_token::list::ROW_SPACING);
 	s_Options.SetActive(!Ui()->IsPopupOpen() && !SearchInput.IsActive() && !m_CallvoteReasonInput.IsActive());
 	if(Searching)
 		s_Options.ScrollToSelected();
@@ -81,12 +83,12 @@ void CMenus::RenderServerVoteList(CUIRect MainView)
 	for(const int Index : List.Visible())
 	{
 		const auto &Description = List.Options()[Index];
-		const CListboxItem Item = s_Options.DoNextItem(&Description);
+		const CListboxItem Item = s_Options.DoNextItem(&Description, false, ui_token::list::RowRadius(s_Options.RowHeight()));
 		if(!Item.m_Visible)
 			continue;
 		auto Blur = Item.SuppressGaussianBlur();
-		CUIRect Text = Item.m_Rect;
-		Text.VMargin(8.0f, &Text);
+		// 行内容跟着内容区左右内退，不再手写 VMargin 补偿。
+		CUIRect Text = Item.m_ContentRect;
 		Label(Text, Description.c_str());
 		GameClient()->m_Tooltips.DoToolTip(&Description, &Text, Description.c_str());
 	}

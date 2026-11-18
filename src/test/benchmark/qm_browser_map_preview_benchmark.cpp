@@ -55,3 +55,14 @@ static void BM_BrowserMapPreviewPrepare(benchmark::State &State)
 	State.SetItemsProcessed(State.iterations());
 }
 BENCHMARK(BM_BrowserMapPreviewPrepare);
+
+// 整图适配只依赖地图尺寸与画布视野；服务器列表与投票页共用该函数。
+static void BM_BrowserMapPreviewFitZoom(benchmark::State &State)
+{
+	const vec2 World(static_cast<float>(State.range(0)), static_cast<float>(State.range(1)));
+	const vec2 BaseView(1500.0f, 844.0f);
+	for(auto _ : State)
+		benchmark::DoNotOptimize(QmBrowserMapPreviewFitZoom(World, BaseView));
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_BrowserMapPreviewFitZoom)->Args({32000, 18000})->Args({320000, 18000});

@@ -17,6 +17,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/QmUi/AntiPingPlayersSettings.h>
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmUiPerf.h>
@@ -150,16 +151,19 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 	const qm_card_registry::SCardDefault *pGameplayDefault = qm_card_registry::FindByStableId("deck:ddnet-gameplay");
 	const qm_card_registry::SCardDefault *pBackgroundDefault = qm_card_registry::FindByStableId("deck:ddnet-background");
 	const qm_card_registry::SCardDefault *pMiscellaneousDefault = qm_card_registry::FindByStableId("deck:ddnet-miscellaneous");
-	dbg_assert(pDemoDefault != nullptr && pGameplayDefault != nullptr && pBackgroundDefault != nullptr && pMiscellaneousDefault != nullptr, "DDNet settings cards must be registered");
-	if(pDemoDefault == nullptr || pGameplayDefault == nullptr || pBackgroundDefault == nullptr || pMiscellaneousDefault == nullptr)
+	// DDNet 页「网络补偿」子页签的预测主卡（与常规子页签同属 DDNet 页）。
+	const qm_card_registry::SCardDefault *pPredictionDefault = qm_card_registry::FindByStableId("deck:ddnet-prediction");
+	dbg_assert(pDemoDefault != nullptr && pGameplayDefault != nullptr && pBackgroundDefault != nullptr && pMiscellaneousDefault != nullptr && pPredictionDefault != nullptr, "DDNet settings cards must be registered");
+	if(pDemoDefault == nullptr || pGameplayDefault == nullptr || pBackgroundDefault == nullptr || pMiscellaneousDefault == nullptr || pPredictionDefault == nullptr)
 		return 0;
 	const bool RenderOnly = Ctx.m_ReadOnly;
 	const auto BuildDefinitions = [=, this](std::vector<SSettingsCardDefinition> &vCards) {
-		vCards.reserve(4);
+		vCards.reserve(5);
 		const SSettingsCardSpec DemoSpec{pDemoDefault->m_pStableId, Localize(pDemoDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pDemoDefault)};
 		const SSettingsCardSpec GameplaySpec{pGameplayDefault->m_pStableId, Localize(pGameplayDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pGameplayDefault)};
 		const SSettingsCardSpec BackgroundSpec{pBackgroundDefault->m_pStableId, Localize(pBackgroundDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pBackgroundDefault)};
 		const SSettingsCardSpec MiscellaneousSpec{pMiscellaneousDefault->m_pStableId, Localize(pMiscellaneousDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pMiscellaneousDefault)};
+		const SSettingsCardSpec PredictionSpec{pPredictionDefault->m_pStableId, Localize(pPredictionDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pPredictionDefault)};
 		const auto AddCard = [this, &vCards, RenderOnly](const SSettingsCardSpec &Spec, FSettingsCardRenderMeasured Render) {
 			SSettingsCardDefinition Definition;
 			Definition.m_Spec = Spec;
@@ -182,8 +186,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 					g_Config.m_ClAutoRaceRecord ^= 1;
 				}
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-			if(Flow.Control("replays", DDNetMetrics.m_LineHeight, Button))
+			if(Flow.Control("replays", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClReplays, "Enable replays", Localize("Enable replays"), g_Config.m_ClReplays, &Button) && CanCommit)
 				{
@@ -194,19 +197,20 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 					}
 				}
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-			if(g_Config.m_ClReplays)
+			Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
+			static CSettingsConditionalRows s_ReplayOptionsRows;
+			if(s_ReplayOptionsRows.Update(g_Config.m_ClReplays, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 			{
+				const CSettingsContentRevealScope ReplayOptionsRevealScope(Ui(), Flow, s_ReplayOptionsRows.Fade(g_Config.m_QmUiMotionLevel));
 				if(Flow.Control("replay-length", DDNetMetrics.m_LineHeight, Button))
 				{
 					DoDDNetNumericField("ddnet-replay-default-length", &g_Config.m_ClReplayLength, &g_Config.m_ClReplayLength, Button, Localize("Default length"), 10, 600, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE);
 				}
-				Flow.Space(DDNetMetrics.m_LineSpacing);
-				if(Flow.Control("esc-replay-length", DDNetMetrics.m_LineHeight, Button))
+				if(Flow.Control("esc-replay-length", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 				{
 					DoDDNetNumericField("ddnet-esc-replay-minutes", &g_Config.m_ClEscReplayLengthMinutes, &g_Config.m_ClEscReplayLengthMinutes, Button, Localize("ESC replay minutes"), 1, 60, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE);
 				}
-				Flow.Space(DDNetMetrics.m_LineSpacing);
+				Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
 			}
 
 			// 回放与幽灵选项属于同一组，沿同一列排列，避免窄列截断中文标签。
@@ -219,9 +223,11 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				}
 				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClRaceGhost, &Button, Localize("Show a ghost of your best time after crossing the start line"));
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-			if(g_Config.m_ClRaceGhost)
+			Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
+			static CSettingsConditionalRows s_RaceGhostRows;
+			if(s_RaceGhostRows.Update(g_Config.m_ClRaceGhost, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 			{
+				const CSettingsContentRevealScope RaceGhostRevealScope(Ui(), Flow, s_RaceGhostRows.Fade(g_Config.m_QmUiMotionLevel));
 				if(Flow.Control("show-ghost", DDNetMetrics.m_LineHeight, Button))
 				{
 					if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClRaceShowGhost, "Show ghost", Localize("Show ghost"), g_Config.m_ClRaceShowGhost, &Button) && CanCommit)
@@ -229,22 +235,23 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 						g_Config.m_ClRaceShowGhost ^= 1;
 					}
 				}
-				Flow.Space(DDNetMetrics.m_LineSpacing);
-				if(Flow.Control("ghost-opacity", DDNetMetrics.m_LineHeight, Button))
+				if(Flow.Control("ghost-opacity", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 				{
 					DoDDNetNumericField("ddnet-race-ghost-opacity", &g_Config.m_ClRaceGhostAlpha, &g_Config.m_ClRaceGhostAlpha, Button, Localize("Opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0u, "%");
 				}
-				Flow.Space(DDNetMetrics.m_LineSpacing);
-				if(Flow.Control("save-ghost", DDNetMetrics.m_LineHeight, Button))
+				if(Flow.Control("save-ghost", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 				{
 					if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClRaceSaveGhost, "Save ghost", Localize("Save ghost"), g_Config.m_ClRaceSaveGhost, &Button) && CanCommit)
 					{
 						g_Config.m_ClRaceSaveGhost ^= 1;
 					}
 				}
-				Flow.Space(DDNetMetrics.m_LineSpacing);
-				if(g_Config.m_ClRaceSaveGhost)
+				// 组边界这一档保持无条件声明（同文件其它开关块同写法）：收起时它照样占位，
+				// 展开那一帧不会先少一档再补回来；块内子选项关掉就整块不声明，打开时走行展开动画。
+				static CSettingsConditionalRows s_RaceSaveGhostRows;
+				if(s_RaceSaveGhostRows.Update(g_Config.m_ClRaceSaveGhost, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
 				{
+					const CSettingsContentRevealScope RaceSaveGhostRevealScope(Ui(), Flow, s_RaceSaveGhostRows.Fade(g_Config.m_QmUiMotionLevel));
 					if(Flow.Control("ghost-save-best", DDNetMetrics.m_LineHeight, Button))
 					{
 						if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClRaceGhostSaveBest, "Only save improvements", Localize("Only save improvements"), g_Config.m_ClRaceGhostSaveBest, &Button) && CanCommit)
@@ -252,7 +259,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 							g_Config.m_ClRaceGhostSaveBest ^= 1;
 						}
 					}
-					Flow.Space(DDNetMetrics.m_LineSpacing);
+					Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
 				}
 			}
 			if(CanCommit)
@@ -262,34 +269,47 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 		AddCard(GameplaySpec, [=, this](CUIRect &ContentRect) {
 			CSettingsContentLayoutFlow Flow(ContentRect);
 			const bool CanCommit = Flow.Input() && !RenderOnly && !Ui()->RenderOnly();
-			CUIRect Button, LeftLeft;
+			CUIRect Button;
 			CPerfTimer GameplaySectionTimer;
 
 			CUIRect GameplayRow;
 
+			// 显示其他玩家独占一行：它是主控行，影子不透明度是它的从属行。
 			if(Flow.Control("show-others", DDNetMetrics.m_LineHeight, GameplayRow))
 			{
-				SplitSettingsControlRow(GameplayRow, DDNetMetrics, &LeftLeft, &Button);
-
-				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClShowOthers, "Show others", Localize("Show others"), g_Config.m_ClShowOthers == SHOW_OTHERS_ON, &LeftLeft) && CanCommit)
+				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClShowOthers, "Show others", Localize("Show others"), g_Config.m_ClShowOthers == SHOW_OTHERS_ON, &GameplayRow) && CanCommit)
 					g_Config.m_ClShowOthers = g_Config.m_ClShowOthers != SHOW_OTHERS_ON ? SHOW_OTHERS_ON : SHOW_OTHERS_OFF;
-
-				DoDDNetNumericField("ddnet-show-others-opacity", &g_Config.m_ClShowOthersAlpha, &g_Config.m_ClShowOthersAlpha, Button, Localize("Opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0u, "%");
-
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClShowOthersAlpha, &Button, Localize("Opacity of other teams' tees and name plates"));
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
+			Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
+			// 约定 A：影子不透明度是「显示其他玩家」的内部配置项（从属行）。
+			// 主控关闭时整行不参与布局、不占高、不可交互；用 != OFF 覆盖「仅己方队伍」，
+			// 那条路径同样会画出半透明的其他玩家影子。
+			static SettingsDependentRows s_ShowOthersOpacityRows;
+			if(const auto ShowOthersOpacityRows = s_ShowOthersOpacityRows.Reveal(Ui(), Flow, g_Config.m_ClShowOthers != SHOW_OTHERS_OFF, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
+			{
+				if(Flow.Control("show-others-opacity", DDNetMetrics.m_LineHeight, Button))
+				{
+					DoDDNetNumericField("ddnet-show-others-opacity", &g_Config.m_ClShowOthersAlpha, &g_Config.m_ClShowOthersAlpha, Button, Localize("Other players' shadow opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0u, "%");
+					GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClShowOthersAlpha, &Button, Localize("Opacity of other teams' tees and name plates"));
+				}
+				Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
+			}
+			// 行距由上面那一档 Space 与从属行的收尾 Space 二选一给出（同回放卡写法），
+			// 这里不再声明行前间距，否则从属行隐藏/显示两个分支会各多出一档。
 			if(Flow.Control("own-team", DDNetMetrics.m_LineHeight, Button))
 			{
 				static int s_ShowOwnTeamId = 0;
-				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &s_ShowOwnTeamId, "Show others (own team only)", Localize("Show others (own team only)"), g_Config.m_ClShowOthers == SHOW_OTHERS_ONLY_TEAM, &Button) && CanCommit)
+				// 本行显式退出「标签缩略」：既不进 SettingsLabelMetadata 的缩略表，也不做括号拆分。
+				// 标签源串与上一行同源，缩略后的主标签就是同一个「Show others」→「显示其他玩家」，
+				// 同一张卡里两行同名，玩家分不清第三个开关到底管什么；整句「仅显示同队伍」才是正题。
+				// 搜索/高亮仍按 pTextId 定位，不受显示文案影响。
+				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, -1, &s_ShowOwnTeamId, "Show others (own team only)", Localize("Show others (own team only)"), g_Config.m_ClShowOthers == SHOW_OTHERS_ONLY_TEAM, &Button, SLabelProperties{}, true, -1.0f, false) && CanCommit)
 				{
 					g_Config.m_ClShowOthers = g_Config.m_ClShowOthers != SHOW_OTHERS_ONLY_TEAM ? SHOW_OTHERS_ONLY_TEAM : SHOW_OTHERS_OFF;
 				}
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
 
-			if(Flow.Control("background-quads", DDNetMetrics.m_LineHeight, Button))
+			if(Flow.Control("background-quads", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClShowQuads, "Show background quads", Localize("Show background quads"), g_Config.m_ClShowQuads, &Button) && CanCommit)
 				{
@@ -297,40 +317,36 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				}
 				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClShowQuads, &Button, Localize("Quads are used for background decoration"));
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-			if(Flow.Control("default-zoom", DDNetMetrics.m_LineHeight, Button))
+			if(Flow.Control("default-zoom", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 			{
 				if(DoDDNetNumericField("ddnet-default-zoom", &g_Config.m_ClDefaultZoom, &g_Config.m_ClDefaultZoom, Button, Localize("Default zoom"), 0, 20) && CanCommit)
 					GameClient()->m_Camera.SetZoom(CCamera::ZoomStepsToValue(g_Config.m_ClDefaultZoom - 10), g_Config.m_ClSmoothZoomTime, true);
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
+			if(CanCommit)
+				LogPerfStage(Client(), "ddnet_gameplay_section", GameplaySectionTimer.ElapsedMs(), false, "page=ddnet section=gameplay");
+		});
+
+		// 「网络补偿」子页签的客户端预测卡：预测余量 + 延迟补偿（主控）+ 预测事件 + 上行冗余。
+		// 这些行原来在「游戏玩法」卡里，按用户要求整组搬到独立卡片，语义与控件不变。
+		AddCard(PredictionSpec, [=, this](CUIRect &ContentRect) {
+			CSettingsContentLayoutFlow Flow(ContentRect);
+			const bool CanCommit = Flow.Input() && !RenderOnly && !Ui()->RenderOnly();
+			CUIRect Button;
+			CPerfTimer PredictionSectionTimer;
+			const float FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
+			const int MotionLevel = g_Config.m_QmUiMotionLevel;
+			const float AntiPingPlayersHeight = ResolveSettingsRadioRowLayout(ContentRect, 3, DDNetMetrics).m_Height;
+
+			// 预测余量：标签用新名，旧名「预测边距 / prediction margin」与配置名进 tooltip，
+			// 玩家按旧文档搜索时仍能对上号。
 			if(Flow.Control("prediction-margin", DDNetMetrics.m_LineHeight, Button))
 			{
 				DoDDNetNumericField("ddnet-prediction-margin", &g_Config.m_ClPredictionMargin, &g_Config.m_ClPredictionMargin, Button, Localize("Prediction margin"), 1, 300, &CUi::ms_LinearScrollbarScale, 0u, "");
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClPredictionMargin, &Button, Localize("Formerly \"prediction margin\" (cl_prediction_margin)"));
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-			if(Flow.Control("predict-events", DDNetMetrics.m_LineHeight, Button))
-			{
-				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClPredictEvents, "Predict events (experimental)", Localize("Predict events (experimental)"), g_Config.m_ClPredictEvents, &Button) && CanCommit)
-				{
-					g_Config.m_ClPredictEvents ^= 1;
-				}
-			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-			if(Flow.Control("upstream-redundancy", DDNetMetrics.m_LineHeight, Button))
-			{
-				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_QmUpstreamRedundancy, "Upstream redundancy (experimental)", Localize("Upstream redundancy (experimental)"), g_Config.m_QmUpstreamRedundancy, &Button) && CanCommit)
-					g_Config.m_QmUpstreamRedundancy ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUpstreamRedundancy, &Button, Localize("Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP."));
-			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-			if(g_Config.m_QmUpstreamRedundancy)
-			{
-				if(Flow.Control("upstream-redundancy-copies", DDNetMetrics.m_LineHeight, Button))
-					DoDDNetNumericField("ddnet-upstream-redundancy-copies", &g_Config.m_QmUpstreamRedundancyMaxCopies, &g_Config.m_QmUpstreamRedundancyMaxCopies, Button, Localize("Maximum packet copies"), 2, 3);
-				Flow.Space(DDNetMetrics.m_LineSpacing);
-			}
-			if(Flow.Control("anti-ping", DDNetMetrics.m_LineHeight, Button))
+
+			// 主控行：延迟补偿。关掉时三个「延迟补偿：预测…」开关整组不存在（约定 A）。
+			if(Flow.Control("anti-ping", DDNetMetrics.m_LineHeight, Button, ui_token::settings::SectionGap(DDNetMetrics.m_LineSpacing)))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClAntiPing, "AntiPing (latency compensation)", Localize("AntiPing (latency compensation)"), g_Config.m_ClAntiPing, &Button) && CanCommit)
 				{
@@ -338,36 +354,83 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				}
 				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClAntiPing, &Button, Localize("Try to predict other entities to reduce lag feeling at high latency"));
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-			if(g_Config.m_ClAntiPing)
+			Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
+			static SettingsDependentRows s_AntiPingRows;
+			if(const auto AntiPingRows = s_AntiPingRows.Reveal(Ui(), Flow, g_Config.m_ClAntiPing != 0, FrameDt, MotionLevel))
 			{
-				if(Flow.Control("anti-ping-players", DDNetMetrics.m_LineHeight, Button))
+				if(Flow.Control("anti-ping-players", AntiPingPlayersHeight, Button))
 				{
-					if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClAntiPingPlayers, "AntiPing: predict other players", Localize("AntiPing: predict other players"), g_Config.m_ClAntiPingPlayers, &Button) && CanCommit)
+					int Choice = QmAntiPingPlayersSettings::BaseChoice(g_Config.m_ClAntiPingPlayers);
+					if(DoSettingsLine_RadioMenu(SETTINGS_DDNET, -1, -1, Button, "anti-ping-players-label", Localize("AntiPing: predict other players"),
+						   m_vButtonContainersAntiPingPlayers,
+						   {"anti-ping-players-off", "anti-ping-players-all", "anti-ping-players-interact"},
+						   {Localize("Off", "AntiPing: predict other players"), Localize("All", "AntiPing: predict other players"), Localize("Interact", "AntiPing: predict other players")},
+						   {QmAntiPingPlayersSettings::OFF, QmAntiPingPlayersSettings::ALL, QmAntiPingPlayersSettings::INTERACT},
+						   Choice, DDNetMetrics, nullptr, &g_Config.m_ClAntiPingPlayers) &&
+						CanCommit)
 					{
-						g_Config.m_ClAntiPingPlayers ^= 1;
+						g_Config.m_ClAntiPingPlayers = QmAntiPingPlayersSettings::ApplyBaseChoice(g_Config.m_ClAntiPingPlayers, Choice);
 					}
 				}
-				Flow.Space(DDNetMetrics.m_LineSpacing);
-				if(Flow.Control("anti-ping-weapons", DDNetMetrics.m_LineHeight, Button))
+				// 冻结玩家是 Interact 档的从属行：选 Off / All 时不参与布局、不占高。
+				static SettingsDependentRows s_AntiPingFrozenRows;
+				if(const auto AntiPingFrozenRows = s_AntiPingFrozenRows.Reveal(Ui(), Flow, QmAntiPingPlayersSettings::ShowsFrozenOption(g_Config.m_ClAntiPingPlayers), FrameDt, MotionLevel))
+				{
+					if(Flow.Control("anti-ping-players-frozen", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
+					{
+						static CButtonContainer s_AntiPingFrozenId;
+						const bool FrozenOption = QmAntiPingPlayersSettings::FrozenOptionEnabled(g_Config.m_ClAntiPingPlayers);
+						if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &s_AntiPingFrozenId, "anti-ping-players-frozen", Localize("Always predict frozen players", "AntiPing: predict other players"), FrozenOption, &Button) && CanCommit)
+						{
+							g_Config.m_ClAntiPingPlayers = QmAntiPingPlayersSettings::ApplyFrozenOption(g_Config.m_ClAntiPingPlayers, !FrozenOption);
+						}
+					}
+				}
+				if(Flow.Control("anti-ping-weapons", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 				{
 					if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClAntiPingWeapons, "AntiPing: predict weapons", Localize("AntiPing: predict weapons"), g_Config.m_ClAntiPingWeapons, &Button) && CanCommit)
 					{
 						g_Config.m_ClAntiPingWeapons ^= 1;
 					}
 				}
-				Flow.Space(DDNetMetrics.m_LineSpacing);
-				if(Flow.Control("anti-ping-grenade", DDNetMetrics.m_LineHeight, Button))
+				if(Flow.Control("anti-ping-grenade", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 				{
 					if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClAntiPingGrenade, "AntiPing: predict grenade path", Localize("AntiPing: predict grenade path"), g_Config.m_ClAntiPingGrenade, &Button) && CanCommit)
 					{
 						g_Config.m_ClAntiPingGrenade ^= 1;
 					}
 				}
-				Flow.Space(DDNetMetrics.m_LineSpacing);
+				Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
+			}
+			// 预测事件：常显行 + 行尾说明（约定 B）。行尾说明是常显短提示，
+			// 完整解释仍走 tooltip/配置说明，不占独立行高。
+			if(Flow.Control("predict-events", DDNetMetrics.m_LineHeight, Button, ui_token::settings::SectionGap(DDNetMetrics.m_LineSpacing)))
+			{
+				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClPredictEvents, "Predict events (experimental)", Localize("Predict events (experimental)"), g_Config.m_ClPredictEvents, &Button) && CanCommit)
+				{
+					g_Config.m_ClPredictEvents ^= 1;
+				}
+				// 行尾说明贴标签列右端（开关左侧），不贴整行右缘——那正好是开关的位置。
+				if(Flow.Drawing())
+					DoSettingsInlineHint(Ui(), "predict-events", ui_widget::ResolveSwitchRowLabelColumn(Button, DDNetMetrics.m_BodySize), 0.0f, Localize("Sounds and particles"), DDNetMetrics.m_SmallSize);
+			}
+			if(Flow.Control("upstream-redundancy", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
+			{
+				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_QmUpstreamRedundancy, "Upstream redundancy (experimental)", Localize("Upstream redundancy (experimental)"), g_Config.m_QmUpstreamRedundancy, &Button) && CanCommit)
+					g_Config.m_QmUpstreamRedundancy ^= 1;
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUpstreamRedundancy, &Button, Localize("Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP."));
+			}
+			Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
+			// 约定 A：最大包份数是上行冗余发送的从属行。
+			static SettingsDependentRows s_UpstreamRedundancyRows;
+			if(const auto UpstreamRedundancyRows = s_UpstreamRedundancyRows.Reveal(Ui(), Flow, g_Config.m_QmUpstreamRedundancy != 0, FrameDt, MotionLevel))
+			{
+				if(Flow.Control("upstream-redundancy-copies", DDNetMetrics.m_LineHeight, Button))
+					DoDDNetNumericField("ddnet-upstream-redundancy-copies", &g_Config.m_QmUpstreamRedundancyMaxCopies, &g_Config.m_QmUpstreamRedundancyMaxCopies, Button, Localize("Maximum packet copies"), 2, 3);
+				Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
 			}
 			if(CanCommit)
-				LogPerfStage(Client(), "ddnet_gameplay_section", GameplaySectionTimer.ElapsedMs(), false, "page=ddnet section=gameplay");
+				LogPerfStage(Client(), "ddnet_prediction_section", PredictionSectionTimer.ElapsedMs(), false, "page=ddnet section=prediction");
 		});
 
 		AddCard(BackgroundSpec, [=, this](CUIRect &ContentRect) {
@@ -380,23 +443,19 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			const float ColorHeight = ResolveSettingsColorRowLayout(ContentRect, DDNetMetrics, false).m_ConsumedHeight;
 
 			// background
-			ColorRGBA GreyDefault(0.5f, 0.5f, 0.5f, 1);
-
 			static CButtonContainer s_ResetId1;
 			if(Flow.Control("background-color", ColorHeight, ColorRow))
-				DoLine_ColorPicker(&s_ResetId1, DDNetMetrics, &ColorRow, Localize("Regular background color"), &g_Config.m_ClBackgroundColor, GreyDefault, false);
+				DoLine_ColorPicker(&s_ResetId1, DDNetMetrics, &ColorRow, Localize("Regular background color"), &g_Config.m_ClBackgroundColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_ClBackgroundColor)), false);
 
 			static CButtonContainer s_ResetId2;
 			if(Flow.Control("background-entities-color", ColorHeight, ColorRow))
-				DoLine_ColorPicker(&s_ResetId2, DDNetMetrics, &ColorRow, Localize("Entities background color"), &g_Config.m_ClBackgroundEntitiesColor, GreyDefault, false);
+				DoLine_ColorPicker(&s_ResetId2, DDNetMetrics, &ColorRow, Localize("Entities background color"), &g_Config.m_ClBackgroundEntitiesColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_ClBackgroundEntitiesColor)), false);
 
 			CUIRect EditBox, ReloadButton, MapRowRect, CurrentMapRow, TileLayersRow;
 			const bool HasMapRow = Flow.Control("background-map", DDNetMetrics.m_LineHeight, MapRowRect);
-			Flow.Space(DDNetMetrics.m_LineSpacing + 2.0f);
-			const bool HasCurrentMapRow = Flow.Control("background-current-map", DDNetMetrics.m_LineHeight, CurrentMapRow);
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-			const bool HasTileLayersRow = Flow.Control("background-tile-layers", DDNetMetrics.m_LineHeight, TileLayersRow);
-			Flow.Space(DDNetMetrics.m_LineSpacing);
+			const bool HasCurrentMapRow = Flow.Control("background-current-map", DDNetMetrics.m_LineHeight, CurrentMapRow, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
+			const bool HasTileLayersRow = Flow.Control("background-tile-layers", DDNetMetrics.m_LineHeight, TileLayersRow, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
+			Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
 			if(Flow.Declaring())
 				return;
 			static CLineInput s_BackgroundEntitiesInput(g_Config.m_ClBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities));
@@ -488,14 +547,13 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_ButtonTimeout, "ddnet-new-random-timeout-code", Localize("New random timeout code"), 0, &Button) && CanCommit)
 					Client()->GenerateTimeoutSeed();
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing + 5.0f);
-			if(Flow.Control("run-on-join-label", DDNetMetrics.m_LineHeight, Label))
+			// 超时码按钮与「加入后执行」是两段内容：取分区分档，原来的 +5.0 是早期硬编补丁。
+			if(Flow.Control("run-on-join-label", DDNetMetrics.m_LineHeight, Label, ui_token::settings::SectionGap(DDNetMetrics.m_LineSpacing)))
 			{
 				CUIElement &Element = SettingsTextElement(SETTINGS_DDNET, -1, "ddnet-run-on-join-label");
 				DoSettingsLabelStreamed(Element, &Label, Localize("Run on join"), BodySize, TEXTALIGN_ML);
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing + 2.0f);
-			if(Flow.Control("run-on-join-input", DDNetMetrics.m_LineHeight, Button))
+			if(Flow.Control("run-on-join-input", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 			{
 				static CLineInput s_RunOnJoinInput(g_Config.m_ClRunOnJoin, sizeof(g_Config.m_ClRunOnJoin));
 				if(CanCommit)
@@ -505,16 +563,14 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				InputCtx.m_ScopeHash = MakeUiScopeHash("settings_ddnet_run_on_join_text_input");
 				ui_widget::InputField(InputCtx, &s_RunOnJoinInput, Button, nullptr, BodySize);
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
 #if defined(CONF_FAMILY_WINDOWS)
-			Flow.Space(DDNetMetrics.m_SectionGap);
-			if(Flow.Control("unregister-shell", DDNetMetrics.m_LineHeight, Button))
+			// 加入后执行区 → 文件扩展名注册：真分区，间距由这一行自己声明（原来先补 1× 再补 2×，叠成 3×）。
+			if(Flow.Control("unregister-shell", DDNetMetrics.m_LineHeight, Button, ui_token::settings::SectionGap(DDNetMetrics.m_LineSpacing)))
 			{
 				static CButtonContainer s_ButtonUnregisterShell;
 				if(DoSettingsButton_Menu(SETTINGS_DDNET, -1, -1, &s_ButtonUnregisterShell, "ddnet-unregister-protocol-file-extensions", Localize("Unregister protocol and file extensions"), 0, &Button) && CanCommit)
 					Client()->ShellUnregister();
 			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
 #endif
 		});
 	};

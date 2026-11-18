@@ -2142,6 +2142,7 @@ void CMenus::RenderAssetsEditorScreen(CUIRect MainView)
 		m_ColorPickerPopupContext.m_HsvaColor = color_cast<ColorHSVA>(m_ColorPickerPopupContext.m_HslaColor);
 		m_ColorPickerPopupContext.m_RgbaColor = SlotColor;
 		m_ColorPickerPopupContext.m_Alpha = false;
+		m_ColorPickerPopupContext.m_AlphaPercent = false;
 		m_AssetsEditorState.m_ColorPickerSlotIndex = SlotIndex;
 		m_AssetsEditorState.m_LastColorPickerValue = Slot.m_Color;
 		Ui()->ShowPopupColorPicker(Ui()->MouseX(), Ui()->MouseY(), &m_ColorPickerPopupContext);

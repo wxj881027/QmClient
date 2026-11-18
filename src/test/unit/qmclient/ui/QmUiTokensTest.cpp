@@ -3,6 +3,7 @@
 #include <game/client/QmUi/QmMotion.h>
 #include <game/client/QmUi/QmTheme.h>
 #include <game/client/QmUi/UiTokens.h>
+// qm_ime_overlay 的候选索引归一口径仍在 lineinput.h 里，IME 用例需要它。
 #include <game/client/lineinput.h>
 #include <game/client/qm_ime_candidate_popup.h>
 
@@ -136,18 +137,6 @@ TEST(QmImeOverlay, CandidateViewportKeepsStableStartWhileSelectionStaysVisible)
 	EXPECT_EQ(ShiftLeft.m_Count, 16);
 }
 
-TEST(QmLineInput, CaretBlinkUsesStableHalfSecondPhases)
-{
-	using namespace std::chrono_literals;
-
-	EXPECT_TRUE(qm_lineinput::CaretVisibleForElapsed(0ns));
-	EXPECT_TRUE(qm_lineinput::CaretVisibleForElapsed(499ms));
-	EXPECT_FALSE(qm_lineinput::CaretVisibleForElapsed(500ms));
-	EXPECT_FALSE(qm_lineinput::CaretVisibleForElapsed(999ms));
-	EXPECT_TRUE(qm_lineinput::CaretVisibleForElapsed(1000ms));
-	EXPECT_TRUE(qm_lineinput::CaretVisibleForElapsed(-1ns));
-}
-
 TEST(QmImeOverlay, CandidatePopupOnlyAppearsForCandidateText)
 {
 	SQmImePopupState State;
@@ -220,4 +209,102 @@ TEST(QmAnimationBackend, MotionPolicyIsCanonical)
 	EXPECT_FLOAT_EQ(Direct.m_Spring.m_Damping, Compatibility.m_Spring.m_Damping);
 	EXPECT_EQ(Direct.m_Driver, Compatibility.m_Driver);
 	EXPECT_EQ(Direct.m_Easing, Compatibility.m_Easing);
+}
+
+// 弹层条目的左内退必须真的落在横向：CUiRect 的 HMargin 改的是 y/h（上下），
+// 写成 HMargin 时文字会贴着胶囊左缘、纵向反而被压掉两段行高（2026-11-11 的实机现象）。
+TEST(QmUiTokensDropdownEntry, InsetFollowsFontAndIsCappedByRowHeight)
+{
+	// 设置页正文字号 10~12：档位由 max(8, 0.75×字号) 决定。
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(10.0f), 8.0f);
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f), 9.0f);
+	// 行高只当上限：20 高的行给 9，16 高的行被夹到 8。
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f, 20.0f), 9.0f);
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f, 16.0f), 8.0f);
+	// 大字号不会因为行矮而顶出胶囊端帽；行再高也不会把文字推向中间。
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(20.0f, 16.0f), 8.0f);
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f, 40.0f), 9.0f);
+	// 退化行高（0 / 负）视为没有可用空间，不做负内退。
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f, 0.0f), 0.0f);
+	EXPECT_FLOAT_EQ(ui_token::dropdown::EntryInsetX(12.0f, -5.0f), 0.0f);
+	// 列表胶囊行与弹层条目同一条公式：同一个视觉件不能有两套内退。
+	EXPECT_FLOAT_EQ(ui_token::list::RowInsetX(12.0f), ui_token::dropdown::EntryInsetX(12.0f));
+}
+
+TEST(QmUiTokensDropdownEntry, LabelRectInsetsLeftRightAndKeepsVerticalPadding)
+{
+	const CUIRect Row{100.0f, 40.0f, 200.0f, 20.0f};
+	const float InsetX = ui_token::dropdown::EntryInsetX(12.0f, Row.h);
+	const CUIRect Label = ui_token::dropdown::EntryLabelRect(Row, 2.0f, 12.0f);
+	// 横向：Padding + 内退，两侧都退。
+	EXPECT_FLOAT_EQ(Label.x, Row.x + 2.0f + InsetX);
+	EXPECT_FLOAT_EQ(Label.w, Row.w - 2.0f * (2.0f + InsetX));
+	// 纵向：只退 Padding，内退不参与——这正是轴向回归的判据。
+	EXPECT_FLOAT_EQ(Label.y, Row.y + 2.0f);
+	EXPECT_FLOAT_EQ(Label.h, Row.h - 4.0f);
+
+	// 换一个很大的内退值：纵向依旧只受 Padding 影响。
+	const CUIRect Wide = ui_token::dropdown::EntryLabelRect(Row, 2.0f, 12.0f, 40.0f);
+	EXPECT_FLOAT_EQ(Wide.x, Row.x + 42.0f);
+	EXPECT_FLOAT_EQ(Wide.w, Row.w - 84.0f);
+	EXPECT_FLOAT_EQ(Wide.y, Row.y + 2.0f);
+	EXPECT_FLOAT_EQ(Wide.h, Row.h - 4.0f);
+
+	// 调用点的显式覆盖值优先，且同样只作用于左右。
+	const CUIRect Overridden = ui_token::dropdown::EntryLabelRect(Row, 0.0f, 12.0f, 24.0f);
+	EXPECT_FLOAT_EQ(Overridden.x, Row.x + 24.0f);
+	EXPECT_FLOAT_EQ(Overridden.w, Row.w - 48.0f);
+	EXPECT_FLOAT_EQ(Overridden.y, Row.y);
+	EXPECT_FLOAT_EQ(Overridden.h, Row.h);
+}
+
+// 消息气泡圆角：单行是完整胶囊、多行是圆角矩形（比旧的「字号一半」大一档）。
+// 两档都从 ui_token::chat 派生，绘制层再按短边一半兜底。
+TEST(QmUiTokensChatBubble, SingleLineUsesFullCapsuleAndMultilineStaysRoundedRect)
+{
+	const float RowHeight = 7.0f;
+	ASSERT_TRUE(ui_token::chat::BubbleIsSingleLine(RowHeight, RowHeight));
+	// 单行：行高一半 ⇒ 完整胶囊。
+	EXPECT_FLOAT_EQ(ui_token::chat::BubbleRadius(true, RowHeight, RowHeight), RowHeight * 0.5f);
+
+	const float MultilineHeight = RowHeight * 3.0f;
+	ASSERT_FALSE(ui_token::chat::BubbleIsSingleLine(MultilineHeight, RowHeight));
+	const float MultilineRadius = ui_token::chat::BubbleRadius(false, MultilineHeight, RowHeight);
+	// 多行：圆角矩形，明显小于行高一半（否则整块被压成胶囊），
+	// 又比旧的「字号一半」大一档（默认字号 6 → 旧值 3）。
+	EXPECT_FLOAT_EQ(MultilineRadius, ui_token::chat::BubbleMultiLineRadius(RowHeight));
+	EXPECT_LT(MultilineRadius, MultilineHeight * 0.5f);
+	EXPECT_GT(MultilineRadius, RowHeight * 0.5f);
+}
+
+TEST(QmUiTokensChatBubble, MultilineRadiusFollowsFontSizeInsteadOfStayingFixed)
+{
+	// 大字号聊天不该反而更方：多行圆角随一行行高一起缩放。
+	const float SmallRow = 7.0f;
+	const float LargeRow = 14.0f;
+	const float Small = ui_token::chat::BubbleRadius(false, LargeRow * 2.0f, SmallRow);
+	const float Large = ui_token::chat::BubbleRadius(false, LargeRow * 2.0f, LargeRow);
+	EXPECT_GT(Large, Small);
+	// 极端字号下也不会自交：半径始终小于行高一半。
+	EXPECT_LT(Large, LargeRow * 2.0f * 0.5f);
+}
+
+TEST(QmUiTokensChatBubble, SingleLineToleranceAcceptsDecoratedRowsButNotWrappedText)
+{
+	const float RowHeight = 7.0f;
+	// 行内装饰/行距把行高抬高一档，仍是单行。
+	EXPECT_TRUE(ui_token::chat::BubbleIsSingleLine(RowHeight * 1.2f, RowHeight));
+	// 真换了一行文字（两行高）就按多行处理。
+	EXPECT_FALSE(ui_token::chat::BubbleIsSingleLine(RowHeight * 2.0f, RowHeight));
+	// 退化输入：负行高不产生负半径，0 行高永远不算单行。
+	EXPECT_FLOAT_EQ(ui_token::chat::BubbleRadius(true, 0.0f, RowHeight), 0.0f);
+	EXPECT_FLOAT_EQ(ui_token::chat::BubbleRadius(true, -4.0f, RowHeight), 0.0f);
+	EXPECT_FLOAT_EQ(ui_token::chat::BubbleRadius(false, RowHeight * 2.0f, -4.0f), 0.0f);
+	EXPECT_FALSE(ui_token::chat::BubbleIsSingleLine(1.0f, 0.0f));
+	// 半径永不超过行高一半：绘制层不需要再夹一次。
+	for(const float Height : {1.0f, 7.0f, 24.0f})
+	{
+		SCOPED_TRACE(Height);
+		EXPECT_LE(ui_token::chat::BubbleRadius(true, Height, Height), Height * 0.5f);
+	}
 }

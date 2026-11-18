@@ -79,7 +79,7 @@ def module_name_for_source(source: Path | None) -> str:
     if source is None:
         return "misc"
 
-    normalized = source.as_posix()
+    normalized = "/" + source.as_posix().lstrip("/")
     if normalized.endswith(("/components/qmclient/map_tags.cpp", "/QmUi/MapTagsPanel.cpp")):
         return "map_tags"
     if normalized.endswith("src/engine/shared/config_variables.h"):
@@ -101,6 +101,8 @@ def module_name_for_source(source: Path | None) -> str:
         return "chat"
     if "/gameclient.cpp" in normalized or "/menus.cpp" in normalized:
         return "loading"
+    if "/src/game/editor/" in normalized:
+        return "editor"
     if "/components/qmclient/" in normalized:
         return "qmclient"
     if "/components/tclient/" in normalized:
@@ -112,6 +114,13 @@ def module_name_for_source(source: Path | None) -> str:
         return "card_wiki"
     if normalized.endswith("src/game/client/QmUi/QmWikiDocs.cpp"):
         return "wiki_docs"
+    if normalized.endswith(
+        (
+            "/QmUi/cards/QmCardCatalogGraphics.cpp",
+            "/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+        )
+    ):
+        return "qmclient"
     return "misc"
 
 
@@ -158,6 +167,7 @@ def translation_quality_errors(
 ) -> list[str]:
     errors: list[str] = []
     for module_name, module_entries in sorted(store.items()):
+        preserve_verbatim = module_name in VERBATIM_TRANSLATION_MODULES
         for (key, context), translations in sorted(module_entries.items()):
             if (
                 active_module_identities is not None
@@ -170,7 +180,11 @@ def translation_quality_errors(
             ):
                 continue
             for language, translation in sorted(translations.items()):
-                normalized = normalize_translation(language, translation)
+                normalized = normalize_translation(
+                    language,
+                    translation,
+                    preserve_verbatim=preserve_verbatim,
+                )
                 if language == "simplified_chinese" and translation != normalized:
                     errors.append(
                         f"{module_name}: [{context}] {key}: {language} typography "
@@ -217,6 +231,17 @@ def translation_quality_errors(
                         f"{module_name}: [{context}] {key}: {language} "
                         f"{terminology_reason}"
                     )
+                # 译文会被调用点直接当 printf 格式串用（str_format(..., Localize(...))），
+                # 占位符数量或类型不一致会让参数错位，多出来的 %n 更会写坏内存。这条必须拦。
+                if not PENDING_TRANSLATION_RE.fullmatch(translation.strip()):
+                    source_placeholders = PLACEHOLDER_RE.findall(key)
+                    translation_placeholders = PLACEHOLDER_RE.findall(translation)
+                    if source_placeholders != translation_placeholders:
+                        errors.append(
+                            f"{module_name}: [{context}] {key}: {language} "
+                            f"placeholder mismatch: source {source_placeholders} "
+                            f"translation {translation_placeholders}"
+                        )
                 if limit is not None and len(errors) >= limit:
                     return errors
     return errors
@@ -266,7 +291,6 @@ def translation_quality_warnings(
                 and (key, context) not in active_identities
             ):
                 continue
-            source_placeholders = PLACEHOLDER_RE.findall(key)
             for language, translation in sorted(translations.items()):
                 pending_match = PENDING_TRANSLATION_RE.fullmatch(translation.strip())
                 if pending_match:
@@ -277,13 +301,6 @@ def translation_quality_warnings(
                     if limit is not None and len(warnings) >= limit:
                         return warnings
                     continue
-                translation_placeholders = PLACEHOLDER_RE.findall(translation)
-                if source_placeholders != translation_placeholders:
-                    warnings.append(
-                        f"{module_name}: [{context}] {key}: {language} "
-                        f"placeholder mismatch: source {source_placeholders} "
-                        f"translation {translation_placeholders}"
-                    )
                 # 中文 source 与拉丁文字译文的字符密度不同，不能用同一长度比率判定 UI 风险。
                 if (
                     not source_keys.has_cjk(key)

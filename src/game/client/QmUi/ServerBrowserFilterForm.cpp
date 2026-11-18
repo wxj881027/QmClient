@@ -128,10 +128,10 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 	{
 		static int s_aStarChipIds[6];
 		const IUiContext ChipContext = SettingsUiContext("server_browser_filter_stars");
-		const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, 6, ui_token::server_filter::CHIP_STAR_MIN_WIDTH, ui_token::server_filter::CHIP_HEIGHT, ui_token::server_filter::CHIP_GAP);
+		const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, 6, ui_token::server_filter::CHIP_STAR_MIN_WIDTH, ResolveSettingsControlHeight(Metrics.m_BodySize), ui_token::server_filter::CHIP_GAP);
 		int StarMask = g_Config.m_QmMapBrowserStarMask;
 		bool StarMaskChanged = false;
-		if(ui_widget::FilterChip(ChipContext, &s_aStarChipIds[0], Chips.m_aRects[0], Localize("All"), StarMask == 0))
+		if(ui_widget::FilterChip(ChipContext, &s_aStarChipIds[0], Chips.m_aRects[0], Localize("All"), StarMask == 0, true, Metrics.m_BodySize))
 		{
 			StarMask = 0;
 			StarMaskChanged = true;
@@ -140,7 +140,7 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 		{
 			char aLabel[16];
 			str_format(aLabel, sizeof(aLabel), "%d★", Star);
-			if(ui_widget::FilterChip(ChipContext, &s_aStarChipIds[Star], Chips.m_aRects[Star], aLabel, QmMapVotes::MapBrowserStarSelected(StarMask, Star)))
+			if(ui_widget::FilterChip(ChipContext, &s_aStarChipIds[Star], Chips.m_aRects[Star], aLabel, QmMapVotes::MapBrowserStarSelected(StarMask, Star), true, Metrics.m_BodySize))
 			{
 				StarMask = QmMapVotes::ToggleMapBrowserStar(StarMask, Star);
 				StarMaskChanged = true;
@@ -168,11 +168,13 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 		int CategoryMask = g_Config.m_QmMapBrowserCategoryMask;
 		bool CategoryMaskChanged = false;
 		const auto DrawChipGroup = [&](const char *const *ppKeys, const char *const *ppLabels, int Count, int IdOffset, bool Translate) {
-			const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, Count, ui_token::server_filter::CHIP_LABEL_MIN_WIDTH, ui_token::server_filter::CHIP_HEIGHT, ui_token::server_filter::CHIP_GAP);
+			// 分类两两成对（Novice/Moderate、Brutal/Insane…）时四格一行正好排出两对，
+			// 五格一行会把族内配对拆开，反而更难扫。
+			const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, Count, ui_token::server_filter::CHIP_LABEL_MIN_WIDTH, ResolveSettingsControlHeight(Metrics.m_BodySize), ui_token::server_filter::CHIP_GAP, ui_token::server_filter::CHIP_LABEL_PER_ROW);
 			for(int Index = 0; Index < Chips.m_Count; ++Index)
 			{
 				const int Bit = QmMapVotes::MapBrowserCategoryBit(ppKeys[Index]);
-				if(ui_widget::FilterChip(ChipContext, &s_aCategoryChipIds[IdOffset + Index], Chips.m_aRects[Index], Translate ? Localize(ppLabels[Index]) : ppLabels[Index], QmMapVotes::MapBrowserCategorySelected(CategoryMask, Bit)))
+				if(ui_widget::FilterChip(ChipContext, &s_aCategoryChipIds[IdOffset + Index], Chips.m_aRects[Index], Translate ? Localize(ppLabels[Index]) : ppLabels[Index], QmMapVotes::MapBrowserCategorySelected(CategoryMask, Bit), true, Metrics.m_BodySize))
 				{
 					CategoryMask = QmMapVotes::ToggleMapBrowserCategory(CategoryMask, Bit);
 					CategoryMaskChanged = true;

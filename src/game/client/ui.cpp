@@ -13,6 +13,7 @@
 #include "qm_icon.h"
 #include "qm_icon_font_render.h"
 #include "qm_icon_label.h"
+#include "ui_font_fit.h"
 #include "ui_scrollregion.h"
 
 #include <base/log.h>
@@ -163,6 +164,8 @@ void CUIElement::SUIElementRect::Reset()
 	m_Cursor = CTextCursor();
 	m_TextColor = ColorRGBA(-1, -1, -1, -1);
 	m_TextOutlineColor = ColorRGBA(-1, -1, -1, -1);
+	m_TextColorBaked = false;
+	m_TextColorBakedBase = ColorRGBA(-1, -1, -1, -1);
 	m_QuadColor = ColorRGBA(-1, -1, -1, -1);
 	m_ReadCursorGlyphCount = -1;
 	m_aQmIcons.fill(EQmIcon::COUNT);
@@ -276,8 +279,22 @@ CUi::~CUi()
 	m_vpOwnUIElements.clear();
 }
 
+void CUi::OnReset()
+{
+	if(m_TooltipsInitialized)
+		m_Tooltips.OnReset();
+}
+
+void CUi::OnRenderTooltip()
+{
+	if(m_TooltipsInitialized)
+		m_Tooltips.OnRender();
+}
+
 void CUi::OnShutdown()
 {
+	if(m_TooltipsInitialized)
+		m_Tooltips.OnShutdown();
 	if(m_pGraphics == nullptr || m_pTextRender == nullptr)
 		return;
 	OnElementsReset();
@@ -343,6 +360,8 @@ void CUi::OnElementsReset()
 
 void CUi::OnWindowResize()
 {
+	if(m_TooltipsInitialized)
+		m_Tooltips.OnWindowResize();
 	CancelTouchInput();
 	DestroyGaussianBlurTargets();
 	DestroyBackgroundLayerTarget();
@@ -631,9 +650,11 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 	// 调用方（模糊作用域与 HUD 背景）只看作用域，不看 qm_gaussian_blur，因此功能关闭时
 	// 每个半透明矩形仍会走到这里。关闭是用户的正常选择、不是失败，不能打 trace——
 	// 否则 qm_graphics_trace 一开，加载界面/主菜单每帧都会刷满 "prepare failed"。
-	if(m_GaussianBlurSuppressionDepth > 0 || Rect.w <= 0.0f || Rect.h <= 0.0f || Alpha <= 0.0f || !PrepareGaussianBlur())
+	// 预布局输入趟与测量趟只跑逻辑，不能提交任何外观；否则控件底色被 DrawingSuppressed
+	// 拦下后，单独提交的模糊层会留在旧位置，表现为拖拽卡片时左侧出现一条条“骨架”。
+	if(DrawingSuppressed() || m_GaussianBlurSuppressionDepth > 0 || Rect.w <= 0.0f || Rect.h <= 0.0f || Alpha <= 0.0f || !PrepareGaussianBlur())
 	{
-		if(g_Config.m_QmGaussianBlur != 0 && g_Config.m_QmGraphicsTrace >= 1 && m_GaussianBlurSuppressionDepth <= 0 && Rect.w > 0.0f && Rect.h > 0.0f && Alpha > 0.0f)
+		if(!DrawingSuppressed() && g_Config.m_QmGaussianBlur != 0 && g_Config.m_QmGraphicsTrace >= 1 && m_GaussianBlurSuppressionDepth <= 0 && Rect.w > 0.0f && Rect.h > 0.0f && Alpha > 0.0f)
 			dbg_msg("ui/blur", "blur unavailable this frame (prepare failed)");
 		return;
 	}
@@ -684,13 +705,14 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 	DrawParams.m_Corners = Corners;
 	DrawParams.m_Rounding = MaskGeometry.m_Rounding;
 	// 模糊掩码跟着面板用的是同一条圆角曲线，否则角上会漏出没模糊的边。
-	DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+	DrawParams.m_CornerSmoothing = QmEffectiveCornerSmoothing();
 	DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
-	DrawParams.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
-	DrawParams.m_U0 = (MaskRect.x - ScreenX0) / MappedWidth;
-	DrawParams.m_U1 = (MaskRect.x + MaskRect.w - ScreenX0) / MappedWidth;
-	DrawParams.m_V0 = 1.0f - (MaskRect.y - ScreenY0) / MappedHeight;
-	DrawParams.m_V1 = 1.0f - (MaskRect.y + MaskRect.h - ScreenY0) / MappedHeight;
+	DrawParams.m_CornerSeam = QmEffectiveCapsuleSeam();
+	DrawParams.SetTextureCoordinates(
+		(MaskRect.x - ScreenX0) / MappedWidth,
+		1.0f - (MaskRect.y - ScreenY0) / MappedHeight,
+		(MaskRect.x + MaskRect.w - ScreenX0) / MappedWidth,
+		1.0f - (MaskRect.y + MaskRect.h - ScreenY0) / MappedHeight);
 	Graphics()->DrawRenderTarget(m_GaussianBlurTarget, DrawParams);
 	if(IsClipped())
 		UpdateClipping();
@@ -1056,6 +1078,35 @@ bool CUi::MouseHovered(const CUIRect *pRect) const
 	// 控件外观用 VisualSurfaceHovered / VisualHotItem（内容 DRAW 回放放行），
 	// 两者不可混用。
 	return !RenderOnly() && !UnderlyingPointerInputBlocked() && MouseInside(pRect) && MouseInsideClip();
+}
+
+bool CUi::MouseInsideOpenPopupMenu() const
+{
+	const vec2 Mouse = MousePos();
+	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [Mouse](const SPopupMenu &PopupMenu) {
+		return !PopupMenu.m_Closing && PopupMenu.m_Props.m_BlockUnderlyingPointerInput && PopupMenu.m_Rect.Inside(Mouse);
+	});
+}
+
+bool CUi::TooltipSourceHovered(const CUIRect *pRect, const bool FromPopup) const
+{
+	if(RenderOnly() || pRect == nullptr || !MouseInside(pRect) || !MouseInsideClip())
+		return false;
+	if(!UnderlyingPointerInputBlocked())
+		return true;
+	// 弹窗接管指针期间，只有弹窗自己登记、且整块落在该弹窗内的来源仍算悬浮。
+	// 下层控件即使矩形恰好和弹窗重合也不会透出提示。
+	if(!FromPopup)
+		return false;
+	const vec2 Mouse = MousePos();
+	const CUIRect Source = *pRect;
+	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [Mouse, &Source](const SPopupMenu &PopupMenu) {
+		if(PopupMenu.m_Closing || !PopupMenu.m_Props.m_BlockUnderlyingPointerInput || !PopupMenu.m_Rect.Inside(Mouse))
+			return false;
+		return Source.x >= PopupMenu.m_Rect.x && Source.y >= PopupMenu.m_Rect.y &&
+		       Source.x + Source.w <= PopupMenu.m_Rect.x + PopupMenu.m_Rect.w &&
+		       Source.y + Source.h <= PopupMenu.m_Rect.y + PopupMenu.m_Rect.h;
+	});
 }
 
 void CUi::ConvertMouseMove(float *pX, float *pY, IInput::ECursorType CursorType) const
@@ -1863,19 +1914,44 @@ static SCursorAndBoundingBox CalcFontSizeCursorHeightAndBoundingBox(ITextRender 
 	TextSizeProps.m_pMaxCharacterHeightInLine = &TextBoundingHeight;
 	TextSizeProps.m_pLineCount = &LineCount;
 
-	float TextWidth;
-	do
+	const float Minimum = maximum(0.0f, LabelProps.m_MinimumFontSize);
+	Size = maximum(Size, Minimum);
+	const float StartSize = Size;
+
+	// 一次测量：宽度按候选字号算，同时把高度 / 行高 / 行数出参刷新到最新一档。
+	// 测量次数就是这个函数的全部成本，所以绝大多数标签只走下面第一次调用。
+	// 只有真正落在下限时才放开 STOP/ELLIPSIS（判据换成含省略号的真实宽度）；
+	// 二分中间档必须和起点用同一套 flags，否则宽度不再随字号单调。
+	auto Measure = [&](const float Candidate, const bool AtMinimum) {
+		Size = Candidate;
+		if((AtMinimum || !LabelProps.m_EnableWidthCheck) && Flags != FlagsWithoutStop)
+			return pTextRender->TextWidth(Candidate, pText, -1, LabelProps.m_MaxWidth, Flags, TextSizeProps);
+		return pTextRender->TextWidth(Candidate, pText, -1, MaxTextWidthWithoutStop, FlagsWithoutStop, TextSizeProps);
+	};
+
+	float TextWidth = Measure(StartSize, StartSize <= Minimum + 0.0001f);
+	// 起始字号已经贴着下限（例如「不缩字号」的元数据行）时没有可行区间，
+	// 直接交给截断/省略号，省掉一次无意义的下限测量。
+	if(LabelProps.m_EnableWidthCheck && StartSize > Minimum + 0.0001f && TextWidth > MaxTextWidth + 0.001f)
 	{
-		Size = maximum(Size, LabelProps.m_MinimumFontSize);
-		// Only consider stop-at-end and ellipsis-at-end when minimum font size reached or font scaling disabled
-		if((Size == LabelProps.m_MinimumFontSize || !LabelProps.m_EnableWidthCheck) && Flags != FlagsWithoutStop)
-			TextWidth = pTextRender->TextWidth(Size, pText, -1, LabelProps.m_MaxWidth, Flags, TextSizeProps);
+		// 需要缩字号。先探下限：连最下一档也放不下时没有可行解，
+		// 再逐档递减只是白花测量，直接交给调用方的截断 / 省略号。
+		const float MinimumWidth = Measure(Minimum, true);
+		if(MinimumWidth > MaxTextWidth + 0.001f)
+		{
+			TextWidth = MinimumWidth;
+		}
 		else
-			TextWidth = pTextRender->TextWidth(Size, pText, -1, MaxTextWidthWithoutStop, FlagsWithoutStop, TextSizeProps);
-		if(TextWidth <= MaxTextWidth + 0.001f || !LabelProps.m_EnableWidthCheck || Size == LabelProps.m_MinimumFontSize)
-			break;
-		Size--;
-	} while(true);
+		{
+			// 可行区间 [Minimum, StartSize] 上二分夹逼。档位只当精度用：
+			// 步进 0.5 时字号可以落在半档上，视觉上是连续缩放而不是一格一格跳；
+			// 步进 1 时最后量化回整数档，与历史行为逐值相同。
+			Size = ResolveFittedFontSize(StartSize, Minimum, MaxTextWidth, LabelProps.m_FontSizeStep, [&](const float Candidate) {
+				return Measure(Candidate, false);
+			});
+			TextWidth = Measure(Size, Size <= Minimum + 0.0001f);
+		}
+	}
 
 	SCursorAndBoundingBox Res{};
 	Res.m_TextSize = vec2(TextWidth, TextHeight);
@@ -1991,10 +2067,10 @@ bool CUi::DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Si
 	return true;
 }
 
-const char *CUi::PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render) const
+const char *CUi::PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render, bool AllowHintSplit) const
 {
-	return m_CardLabelHintsEnabled && m_pQmTooltips != nullptr && TextRender()->GetFontPreset() != EFontPreset::ICON_FONT ?
-		       m_pQmTooltips->PrepareCardLabel(pRect, pText, Render && !RenderOnly()) :
+	return m_TooltipsInitialized && m_CardLabelHintsEnabled && TextRender()->GetFontPreset() != EFontPreset::ICON_FONT ?
+		       m_Tooltips.PrepareCardLabel(pRect, pText, Render && !RenderOnly(), AllowHintSplit) :
 		       pText;
 }
 
@@ -2010,6 +2086,8 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 {
 	if(PreLayoutInput())
 		return {};
+	// 括号拆分提示会改写实际绘制的标签，提示气泡仍要展示调用方传入的完整文本。
+	const char *pFullText = pText;
 	pText = PrepareCardLabel(pRect, pText);
 	const SQmIconLabelGlyphs Icons = QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText);
 	const CQmIconLabelFontScope FontScope(*TextRender(), Icons);
@@ -2040,6 +2118,8 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 	}
 	else
 		TextRender()->TextEx(&Cursor, pText, -1);
+	if(Cursor.m_Truncated && LabelProps.m_pTooltipId != nullptr && !DrawingSuppressed())
+		DoButtonTooltip(LabelProps.m_pTooltipId, pRect, LabelProps.m_pTooltipText != nullptr ? LabelProps.m_pTooltipText : pFullText);
 	return CLabelResult{.m_Truncated = Cursor.m_Truncated};
 }
 
@@ -2068,6 +2148,9 @@ void CUi::DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, cons
 		Cursor.m_Flags |= Flags;
 	}
 	Cursor.m_LineWidth = LabelProps.m_MaxWidth;
+	// 与立即路径同源：色段是本次标签的权威着色。读光标自带的色段属于上一段
+	// 布局的残留，套用到本段会整体错位，所以这里总是按本次调用重新指定。
+	Cursor.m_vColorSplits = LabelProps.m_vColorSplits;
 
 	RectEl.m_FontSize = Size;
 	RectEl.m_TextAlign = Align;
@@ -2077,11 +2160,23 @@ void CUi::DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, cons
 	RectEl.m_BiggestCharacterHeight = TextBounds.m_BiggestCharacterHeight;
 	RectEl.m_TextColor = TextRender()->GetTextColor();
 	RectEl.m_TextOutlineColor = TextRender()->GetTextOutlineColor();
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+	// 有逐字色段的标签把颜色烘进容器顶点：未被色段覆盖的字符沿用调用方当前
+	// 文字颜色（与立即路径 TextEx 一致），绘制时底色回到白色，不再「白底 + 乘色」。
+	// 没有色段时保持旧模型：容器烘默认白底，绘制时乘 m_TextColor 即可换色。
+	RectEl.m_TextColorBaked = !LabelProps.m_vColorSplits.empty();
+	if(!RectEl.m_TextColorBaked)
+	{
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+		TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+	}
 	TextRender()->CreateTextContainer(RectEl.m_UITextContainer, &Cursor, pText, StrLen);
-	TextRender()->TextColor(RectEl.m_TextColor);
-	TextRender()->TextOutlineColor(RectEl.m_TextOutlineColor);
+	if(!RectEl.m_TextColorBaked)
+	{
+		TextRender()->TextColor(RectEl.m_TextColor);
+		TextRender()->TextOutlineColor(RectEl.m_TextOutlineColor);
+	}
+	// 底色只在烘色时参与重建判定（色段没覆盖全文才有字符用它）。
+	RectEl.m_TextColorBakedBase = RectEl.m_TextColorBaked ? RectEl.m_TextColor : ColorRGBA(-1, -1, -1, -1);
 	RectEl.m_Cursor = Cursor;
 }
 
@@ -2093,15 +2188,24 @@ void CUi::RenderLabelTextContainerAligned(const CUIElement::SUIElementRect &Rect
 	const float *pBiggestCharHeight = RectEl.m_LineCount == 1 ? &RectEl.m_BiggestCharacterHeight : nullptr;
 	const vec2 CursorPos = CalcAlignedCursorPos(pRect, vec2(RectEl.m_Cursor.m_LongestLineWidth, RectEl.m_Cursor.Height()), Align, pBiggestCharHeight);
 	FlushQuadBatch();
-	// 颜色在绘制时解析，彩虹和即时切换无需重建缓存文本容器。
+	// 没有逐字色段时颜色在绘制时解析，彩虹和即时切换无需重建缓存文本容器；
+	// 烘了色段的容器颜色已固定在顶点里，改色走重建（见 DoLabelStreamed 的样式判定）。
 	// 父层显隐系数（ControlAlphaScale）在此一并生效：列表行淡入、弹窗内容
 	// 淡出等层级行为对 streamed 标签与裸 TextRender 文字一视同仁。
 	const EQmIcon Icon = RectEl.m_NumQmIcons == 1 ? RectEl.m_aQmIcons[0] : EQmIcon::COUNT;
+	// 底色取 TextContainerTint()：烘了逐字色段的容器已经自带调用方要的颜色，
+	// 底色必须是白色，否则色段会被调用方颜色再乘一次（那就是本次修复前的
+	// 「SetColor() 静默失效」）。
+	// 图标预设色与表面对比色只在未烘色的容器上生效：烘色容器的顶点色已经由
+	// 色段确定，再乘一次图标预设色就是双重染色。烘色 + 单图标时图标本体和普通
+	// 文字一样由色段决定，描边继续用调用方描边色，不再另算图标对比色。
+	const bool IconTintApplies = RectEl.m_NumQmIcons > 0 && !QmSignalIconFamily(Icon) && !RectEl.m_TextColorBaked;
+	const ColorRGBA BaseTint = RectEl.TextContainerTint();
 	// 信号家族颜色由调用方决定（RectEl.m_TextColor 即调用方算好的最终色），
 	// 不叠加全局图标色；对比色也直接跟随，避免弱档琥珀被解析成黑描边。
-	const ColorRGBA Color = ScaleControlAlpha(RectEl.m_NumQmIcons > 0 && !QmSignalIconFamily(Icon) ? ConfiguredQmUiIconColor(RectEl.m_TextColor, Icon) : RectEl.m_TextColor);
+	const ColorRGBA Color = ScaleControlAlpha(IconTintApplies ? ConfiguredQmUiIconColor(BaseTint, Icon) : BaseTint);
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
-	const ColorRGBA OutlineColor = ScaleControlAlpha(RectEl.m_NumQmIcons > 0 && !QmSignalIconFamily(Icon) ? ConfiguredQmUiIconContrastColor(Color) : RectEl.m_TextOutlineColor);
+	const ColorRGBA OutlineColor = ScaleControlAlpha(IconTintApplies ? ConfiguredQmUiIconContrastColor(Color) : RectEl.m_TextOutlineColor);
 	TextRender()->RenderTextContainer(RectEl.m_UITextContainer, Color, OutlineColor, CursorPos.x, CursorPos.y);
 	CQmIconDrawDiagnostics::Record(RectEl.m_NumQmIcons);
 }
@@ -2109,6 +2213,8 @@ void CUi::RenderLabelTextContainerAligned(const CUIElement::SUIElementRect &Rect
 void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor, bool Render, bool *pTextContainerRecreated) const
 {
 	Render = Render && !DrawingSuppressed();
+	// 分段流式绘制只把当前分段交给容器，提示气泡要用调用方传入的完整文本。
+	const char *pFullText = pText;
 	if(StrLen < 0 && pReadCursor == nullptr)
 		pText = PrepareCardLabel(pRect, pText, Render);
 	const int Flags = GetFlagsForLabelProperties(LabelProps, pReadCursor);
@@ -2117,7 +2223,12 @@ void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRe
 	bool ColorChanged = RectEl.m_TextColor != TextRender()->GetTextColor() || RectEl.m_TextOutlineColor != TextRender()->GetTextOutlineColor();
 	const auto Icons = pReadCursor == nullptr ? QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText, StrLen) : SQmIconLabelGlyphs{};
 	const CQmIconLabelFontScope FontScope(*TextRender(), Icons);
-	bool StyleChanged = RectEl.m_FontPreset != TextRender()->GetFontPreset() || RectEl.m_NumQmIcons != Icons.m_Count || RectEl.m_aQmIcons != Icons.m_aIcons || RectEl.m_FontSize != Size || RectEl.m_TextAlign != Align || RectEl.m_LabelMaxWidth != LabelProps.m_MaxWidth || RectEl.m_LabelFlags != Flags;
+	// 色段必须烘进顶点，所以它属于样式而不是绘制时颜色：变了就得重建容器，
+	// 没变也必须继续复用（色段相同的标签不逐帧重建）。比较只对着缓存里烘入的
+	// 那一份做，没有逐帧文本扫描。
+	const bool BakedColorChanged = !RectEl.BakedColorMatches(LabelProps.m_vColorSplits, TextRender()->GetTextColor());
+	bool StyleChanged = BakedColorChanged || RectEl.m_FontPreset != TextRender()->GetFontPreset() || RectEl.m_NumQmIcons != Icons.m_Count || RectEl.m_aQmIcons != Icons.m_aIcons || RectEl.m_FontSize != Size || RectEl.m_TextAlign != Align || RectEl.m_LabelMaxWidth != LabelProps.m_MaxWidth || RectEl.m_LabelFlags != Flags;
+
 	if(ColorChanged)
 	{
 		RectEl.m_TextColor = TextRender()->GetTextColor();
@@ -2174,6 +2285,8 @@ void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRe
 	if(Render && RectEl.m_UITextContainer.Valid())
 	{
 		RenderLabelTextContainerAligned(RectEl, pRect, Align);
+		if(RectEl.m_Cursor.m_Truncated && LabelProps.m_pTooltipId != nullptr)
+			DoButtonTooltip(LabelProps.m_pTooltipId, pRect, LabelProps.m_pTooltipText != nullptr ? LabelProps.m_pTooltipText : pFullText);
 	}
 }
 
@@ -2508,38 +2621,38 @@ bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float
 
 void CUi::DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue)
 {
-	if(m_pQmTooltips != nullptr)
-		m_pQmTooltips->DoConfigToolTip(pId, pRect, pValue, pSecondValue);
+	if(m_TooltipsInitialized)
+		m_Tooltips.DoConfigToolTip(pId, pRect, pValue, pSecondValue);
 }
 
-void CUi::DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText)
+void CUi::DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText) const
 {
-	if(!RenderOnly() && m_pQmTooltips != nullptr && pText != nullptr)
-		m_pQmTooltips->DoToolTipForRect(pId, pRect, pText);
+	if(m_TooltipsInitialized && !RenderOnly() && pText != nullptr)
+		m_Tooltips.DoToolTipForRect(pId, pRect, pText);
 }
 
 void CUi::DoTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint)
 {
-	if(m_pQmTooltips != nullptr)
-		m_pQmTooltips->DoToolTip(pId, pNearRect, pText, WidthHint);
+	if(m_TooltipsInitialized)
+		m_Tooltips.DoToolTip(pId, pNearRect, pText, WidthHint);
 }
 
 void CUi::DoSmallTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize, float WidthHint)
 {
-	if(m_pQmTooltips != nullptr)
-		m_pQmTooltips->DoSmallToolTip(pId, pNearRect, pText, FontSize, WidthHint);
+	if(m_TooltipsInitialized)
+		m_Tooltips.DoSmallToolTip(pId, pNearRect, pText, FontSize, WidthHint);
 }
 
 const SUiTheme &CUi::QmControlTheme()
 {
-	const std::array<unsigned, 8> aConfig = {
-		g_Config.m_QmUiColor, static_cast<unsigned>(g_Config.m_QmUiOpacity), g_Config.m_QmUiFocusColor,
-		g_Config.m_QmUiAccentColor, static_cast<unsigned>(g_Config.m_QmUiAccentOpacity), g_Config.m_QmUiSelectedColor,
+	const std::array<unsigned, 6> aConfig = {
+		g_Config.m_QmUiColor, static_cast<unsigned>(g_Config.m_QmUiOpacity),
+		g_Config.m_QmUiAccentColor, static_cast<unsigned>(g_Config.m_QmUiAccentOpacity),
 		static_cast<unsigned>(g_Config.m_QmUiTextColorMode), g_Config.m_QmUiTextCustomColor};
 	// 同帧所有控件复用主题；配置变化时才重新解析颜色与前景。
 	if(!m_HasQmControlTheme || m_aQmControlThemeConfig != aConfig)
 	{
-		m_QmControlTheme = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+		m_QmControlTheme = ResolveInputFallbackTheme();
 		m_aQmControlThemeConfig = aConfig;
 		m_HasQmControlTheme = true;
 	}
@@ -2563,10 +2676,15 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 	Text.HMargin(pRect->h >= 20.0f ? 2.0f : 1.0f, &Text);
 	Text.HMargin((Text.h * Props.m_FontFactor) / 2.0f, &Text);
 	const float FontSize = Props.m_FontSize > 0.0f ? Props.m_FontSize : Text.h * CUi::ms_FontmodHeight;
+	// chevron 与标签同字号：图标 em 就是正文字号，盒子按 0.8 反推。
+	// 以前按行高反推（盒 0.75h、字形 0.8×(h−4)），行高越大箭头越大，
+	// 26–28 高的行会比文字大 1.5 倍。
+	const float IconFontSize = FontSize;
+	const float IconBox = std::clamp(IconFontSize / CUi::ms_FontmodHeight, 0.0f, pRect->h);
 	if(Props.m_ShowDropDownIcon)
 	{
 		Text.VSplitRight(pRect->h * 0.25f, &Text, nullptr);
-		Text.VSplitRight(pRect->h * 0.75f, &Text, &DropDownIcon);
+		Text.VSplitRight(IconBox, &Text, &DropDownIcon);
 	}
 
 	if(RenderOnly())
@@ -2583,7 +2701,7 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 		DoLabel(&Text, GetTextLambda(), FontSize, TEXTALIGN_MC);
 		TextRender()->SetFontPreset(PreviousPreset);
 		if(Props.m_ShowDropDownIcon)
-			DoLabel_QmIcon(&DropDownIcon, EQmIcon::CIRCLE_CHEVRON_DOWN, FONT_ICON_CIRCLE_CHEVRON_DOWN, DropDownIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MR);
+			DoLabel_QmIcon(&DropDownIcon, EQmIcon::CIRCLE_CHEVRON_DOWN, FONT_ICON_CIRCLE_CHEVRON_DOWN, IconFontSize, TEXTALIGN_MR);
 		return 0;
 	}
 
@@ -2625,7 +2743,7 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 		TextRender()->SetFontPreset(PreviousPreset);
 	}
 	if(Props.m_ShowDropDownIcon)
-		DoLabel_QmIcon(&DropDownIcon, EQmIcon::CIRCLE_CHEVRON_DOWN, FONT_ICON_CIRCLE_CHEVRON_DOWN, DropDownIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MR);
+		DoLabel_QmIcon(&DropDownIcon, EQmIcon::CIRCLE_CHEVRON_DOWN, FONT_ICON_CIRCLE_CHEVRON_DOWN, IconFontSize, TEXTALIGN_MR);
 	ColorRGBA ColorText = TextRender()->GetTextColor();
 	ColorRGBA ColorTextOutline = TextRender()->GetTextOutlineColor();
 	if(!SurfaceOptions.m_Enabled)
@@ -2737,29 +2855,34 @@ int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const
 	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw);
 }
 
-int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize)
+int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize, float TextInsetX)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
 	ui_widget::SButtonSurfaceOptions Options;
 	Options.m_Role = EUiButtonRole::LIST_ENTRY;
+	// 弹层条目、列表胶囊行现在是同一个视觉件：圆角统一由行高推导（半角 ≤ CARD），
+	// 不再一边 radius::BASE(8)、一边 list::RowRadius(24→12)。
+	Options.m_Radius = ui_token::list::RowRadius(pRect->h);
 	Options.m_Enabled = Enabled;
 	Options.m_TransparentInactive = TransparentInactive;
 	Options.m_Color = ButtonColor;
 	const ColorRGBA Fill = ui_widget::DrawButtonSurface(ui_widget::ControlContext(this), pButtonContainer, *pRect, Options);
 	CUiScopedSurfaceText SurfaceText(TextRender(), Fill);
 
-	CUIRect Label;
-	pRect->Margin(Padding, &Label);
+	// 行背景仍占满整行；只把文字从左右边缘退开，避免贴着胶囊圆角。
+	// 左右方向必须用 VMargin（HMargin 在这个仓库是上下），轴向与档位都在 token 里算好；
+	// 调用点没显式给值时按字号与行高派生——弹层条目一律带内退，不靠调用点记得传参。
+	const CUIRect EntryLabel = ui_token::dropdown::EntryLabelRect(*pRect, Padding, Size, TextInsetX);
 	if(MinimumFontSize > 0.0f)
 	{
 		SLabelProperties Props;
-		Props.m_MaxWidth = Label.w;
+		Props.m_MaxWidth = EntryLabel.w;
 		Props.m_MinimumFontSize = MinimumFontSize;
 		Props.m_EllipsisAtEnd = true;
-		DoLabel(&Label, pText, Size, Align, Props);
+		DoLabel(&EntryLabel, pText, Size, Align, Props);
 	}
 	else
-		DoLabel(&Label, pText, Size, Align);
+		DoLabel(&EntryLabel, pText, Size, Align);
 
 	return Enabled ? DoButtonLogic(pButtonContainer, 0, pRect, BUTTONFLAG_LEFT) : 0;
 }
@@ -3022,7 +3145,7 @@ void CUi::RenderScrollbarH(const void *pId, const CUIRect *pRect, float Current,
 	}
 }
 
-float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner)
+float CUi::DoScrollbarHLogic(const void *pId, const CUIRect *pRect, float Current)
 {
 	Current = std::clamp(Current, 0.0f, 1.0f);
 
@@ -3099,10 +3222,17 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 		const float Max = Rail.w - Handle.w;
 		const float Cur = MouseX() - m_ActiveScrollbarOffset;
 		ReturnValue = QmAnimationRuntime() != nullptr && Max <= 0.0f ? Current : std::clamp((Cur - Rail.x) / Max, 0.0f, 1.0f);
+		// 拖动时提示 Shift 精确拖动；按住 Shift 后 ConvertMouseMove 把指针位移压到 5%。
+		DoSmallTooltip(pId, &Handle, Localize("Hold Shift to be more precise."));
 	}
 
-	RenderScrollbarH(pId, pRect, ReturnValue, pColorInner);
+	return ReturnValue;
+}
 
+float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner)
+{
+	const float ReturnValue = DoScrollbarHLogic(pId, pRect, Current);
+	RenderScrollbarH(pId, pRect, ReturnValue, pColorInner);
 	return ReturnValue;
 }
 
@@ -3191,7 +3321,8 @@ bool CUi::DoScrollbarOption(const void *pId, int *pOption, const CUIRect *pRect,
 
 void CUi::RenderProgressBar(CUIRect ProgressBar, float Progress)
 {
-	const float Rounding = minimum(ui_token::radius::TIGHT, ProgressBar.h / 2.0f);
+	// 进度条是典型的横条，端头直接给半圆：TIGHT 的小圆角在长条上会显得方。
+	const float Rounding = minimum(ui_token::radius::PILL, ProgressBar.h / 2.0f);
 	DrawRoundedSurface(this, ProgressBar, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), ColorRGBA(), Rounding);
 	ProgressBar.w = maximum(ProgressBar.w * Progress, 2 * Rounding);
 	DrawRoundedSurface(this, ProgressBar, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), ColorRGBA(), Rounding);
@@ -3229,6 +3360,7 @@ void CCachedText::Update(ITextRender *pTextRender, const char *pText, float Font
 
 	m_BoundingBox = Cursor.BoundingBox();
 	m_MaxCharacterHeight = Cursor.m_MaxCharacterHeight;
+	m_AlignedFontSize = Cursor.m_AlignedFontSize;
 }
 
 void CCachedText::Render(ITextRender *pTextRender, vec2 Pos, ColorRGBA Color) const
@@ -3277,27 +3409,31 @@ void CUi::RenderTime(CUIRect TimeRect, float FontSize, int Seconds, bool NotFini
 	// 显示毫秒或百分秒（不足一小时时）
 	if(Millis >= 0 && Seconds < 60 * 60)
 	{
-		constexpr float GoldenRatio = 0.61803398875f;
-		const float CentisecondFontSize = FontSize * GoldenRatio;
+		constexpr float Ratio = 0.7f;
+		const float CentisecondFontSize = FontSize * Ratio;
 
-		// 2 或 3 位数字
-		char aMillis[4];
+		// 小数点加 2 或 3 位数字
+		char aMillis[5];
 		Millis %= 1000;
 		if(!TrueMilliseconds)
-			str_format(aMillis, sizeof(aMillis), "%02d", (int)std::round(Millis / 10));
+			str_format(aMillis, sizeof(aMillis), ".%02d", (int)std::round(Millis / 10));
 		else
-			str_format(aMillis, sizeof(aMillis), "%03d", Millis);
+			str_format(aMillis, sizeof(aMillis), ".%03d", Millis);
 		MillisText.Update(TextRender(), aMillis, CentisecondFontSize);
 
 		const float MillisWidth = MillisText.Width();
 
-		// 为毫秒腾出空间，但间距收紧 1/6 字符
-		Cursor.x -= MillisWidth - (TrueMilliseconds ? MillisWidth / (3 * 6) : MillisWidth / (2 * 6));
+		// 把「小数点 + 小数位」整体向秒数靠拢，但保留可读间距。
+		constexpr float FractionKern = 0.35f;
+		const float DotWidth = MillisWidth / (TrueMilliseconds ? 4 : 3);
+		const float Kern = DotWidth * FractionKern;
+		Cursor.x -= MillisWidth - Kern;
 
 		vec2 CursorMillis = TimeRect.TopLeft();
 		CursorMillis.x += TimeRect.w - MillisWidth; // 右对齐
-		CursorMillis.y += ((TimeRect.h - MillisText.MaxCharacterHeight()) / 2.0f - (CentisecondFontSize - MillisText.MaxCharacterHeight()));
-		CursorMillis.y -= (CursorMillis.y - Cursor.y) * GoldenRatio;
+
+		// 小数块底线与秒数对齐
+		CursorMillis.y = Cursor.y + (SecondsText.AlignedFontSize() - MillisText.AlignedFontSize());
 
 		SecondsText.Render(TextRender(), Cursor, Color);
 		MillisText.Render(TextRender(), CursorMillis, Color);

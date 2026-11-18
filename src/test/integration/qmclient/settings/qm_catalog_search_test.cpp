@@ -79,11 +79,14 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"gfx_screen_refresh_rate", "deck:graphics-modes"},
 		{"snd_volume", "deck:sound-volume"},
 		{"Sound volume", "deck:sound-volume"},
-		{"cl_predict_events", "deck:ddnet-gameplay"},
+		// 预测相关行已从「游戏玩法」搬到 DDNet 页「网络补偿」子页签的「客户端预测」卡：
+		// 查询必须命中新卡，而不是继续指向搬走行的旧卡。
+		{"cl_predict_events", "deck:ddnet-prediction"},
 		{"Axiom dummy password", "qm:gores"},
 		{"qm_ime_auto_manage", "qm:ime"},
 		{"cl_replay_length", "deck:ddnet-demo"},
-		{"预测余量", "deck:ddnet-gameplay"},
+		{"预测余量", "deck:ddnet-prediction"},
+		{"最大包份数", "deck:ddnet-prediction"},
 		{"cl_background_entities", "deck:ddnet-background"},
 		{"cl_chat_size", "deck:appearance-chat-settings"},
 		{"qm_custom_font_cjk", "tclient:font"},
@@ -106,6 +109,10 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"Scroll feel", "deck:graphics-interaction"},
 		{"Spring damping", "deck:graphics-interaction"},
 		{"End bounce", "deck:graphics-interaction"},
+		// 输入光标样式行落在「界面动效」卡：配置名、英文界面文案与中文检索词都要直达该卡。
+		{"qm_text_caret_style", "deck:graphics-interaction"},
+		{"Text caret style", "deck:graphics-interaction"},
+		{"输入光标样式", "deck:graphics-interaction"},
 		// 旧标签删掉后靠卡片关键词兜底，检索意图不能丢。
 		{"Config Filters", "deck:tclient-configs-actions"},
 		{"Show enemy color in spectator menu", "deck:tclient-warlist"},
@@ -202,7 +209,7 @@ TEST(QmCatalogSearch, PreviewHighlightsEveryResultCard)
 	qm_settings_reveal::Clear();
 }
 
-TEST(QmCatalogSearch, MatchingLabelUsesYellowUntilDrawingFinishes)
+TEST(QmCatalogSearch, MatchingLabelUsesSurfaceAwareHighlightUntilDrawingFinishes)
 {
 	std::unique_ptr<IEngineTextRender> pTextRender(CreateEngineTextRender());
 	const ColorRGBA Original(0.2f, 0.4f, 0.6f, 0.5f);
@@ -210,8 +217,15 @@ TEST(QmCatalogSearch, MatchingLabelUsesYellowUntilDrawingFinishes)
 	const ColorRGBA Outline = pTextRender->GetTextOutlineColor();
 	{
 		const qm_settings_highlight::CScopedLabelColor Highlight(pTextRender.get(), true);
-		EXPECT_EQ(pTextRender->GetTextColor(), ColorRGBA(1.0f, 1.0f, 0.0f, Original.a));
+		EXPECT_EQ(pTextRender->GetTextColor(), ui_token::color::SEARCH_MATCH_ON_DARK.WithAlpha(Original.a));
 		EXPECT_EQ(pTextRender->GetTextOutlineColor(), Outline);
+	}
+	EXPECT_EQ(pTextRender->GetTextColor(), Original);
+	{
+		// 浅色卡片上改用深琥珀，避免白底浅黄字读不清。
+		CUiScopedSurfaceText LightSurface(pTextRender.get(), ColorRGBA(0.96f, 0.96f, 0.96f, 1.0f));
+		const qm_settings_highlight::CScopedLabelColor Highlight(pTextRender.get(), true);
+		EXPECT_EQ(pTextRender->GetTextColor(), ui_token::color::SEARCH_MATCH_ON_LIGHT.WithAlpha(Original.a));
 	}
 	EXPECT_EQ(pTextRender->GetTextColor(), Original);
 	{

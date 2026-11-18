@@ -170,8 +170,7 @@ uint64_t CMenus::BuildPlayerSettingsCards(const qm_card_catalog::SQmCardBuildCon
 					if(ui_widget::InputField(PlayerIdentityTextInputCtx, &s_NameInput, Row, Client()->PlayerName(), BodySize))
 						SetNeedSendInfo(m_Dummy);
 				});
-			Flow.Space(PlayerMetrics.m_LineSpacing);
-			if(Flow.Control("player-clan", PlayerMetrics.m_LineHeight, ClanRow))
+			if(Flow.Control("player-clan", PlayerMetrics.m_LineHeight, ClanRow, ui_token::settings::RowGap(PlayerMetrics.m_LineSpacing)))
 				DrawAnimatedContent(ClanRow, [this, &Label, &PlayerIdentityTextInputCtx, &aBuf, PlayerMetrics, BodySize](CUIRect Row) {
 					SplitSettingsControlRow(Row, PlayerMetrics, &Label, &Row);
 					str_format(aBuf, sizeof(aBuf), "%s:", Localize("Clan"));
@@ -180,7 +179,7 @@ uint64_t CMenus::BuildPlayerSettingsCards(const qm_card_catalog::SQmCardBuildCon
 						SetNeedSendInfo();
 				});
 		});
-		AddCard(CountrySpec, [this, pCountry, PlayerFlagSearchCtx, UiScale, BodySize](CUIRect Content) {
+		AddCard(CountrySpec, [this, pCountry, PlayerFlagSearchCtx, UiScale, BodySize, PlayerMetrics](CUIRect Content) {
 			CSettingsContentLayoutFlow Flow(Content);
 			CUIRect Grid;
 			// 国旗网格保留原先的专用高度，内部行距由列表组件管理。
@@ -224,7 +223,7 @@ uint64_t CMenus::BuildPlayerSettingsCards(const qm_card_catalog::SQmCardBuildCon
 						const auto [MatchStart, MatchLength] = Entry.m_NameMatch.value();
 						Props.m_vColorSplits.emplace_back(MatchStart, MatchLength, ColorRGBA(0.4f, 0.4f, 1.0f, 1.0f));
 					}
-					Ui()->DoLabel(&Label, Entry.m_pFlag->m_aCountryCodeString, 10.0f * UiScale, TEXTALIGN_MC, Props);
+					Ui()->DoLabel(&Label, Entry.m_pFlag->m_aCountryCodeString, PlayerMetrics.m_SmallSize, TEXTALIGN_MC, Props);
 				}
 			}
 			const int NewSelected = s_ListBox.DoEnd();

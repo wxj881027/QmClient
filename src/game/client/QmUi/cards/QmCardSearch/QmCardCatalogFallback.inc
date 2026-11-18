@@ -306,6 +306,7 @@ namespace
 		{Localizable("Self-kill off"), nullptr, "关闭自杀 禁止自杀 防误触"},
 		{Localizable("Self-kill on"), nullptr, "开启自杀 允许自杀 解除"},
 		{Localizable("Auto-enable after"), nullptr, "自动开启 开局后 自动拦截 延迟 分钟"},
+		{Localizable("0 = never"), nullptr, "0 分钟 永不自动开启"},
 		{Localizable("To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected"), nullptr, "跑图 防误触 绑定按键 bind 按键开关"},
 		{nullptr, "qm_self_kill_auto_delay", nullptr},
 		{nullptr, "qm_self_kill_enabled", nullptr},

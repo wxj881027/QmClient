@@ -91,17 +91,9 @@ TEST(QmNewUiMenuSettingsTextInputContract, LineInputRendersActiveTextOnlyOnce)
 	EXPECT_NE(RenderSelection.find("Graphics()->QuadsEnd();"), std::string::npos);
 	EXPECT_NE(RenderSelection.find("Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);"), std::string::npos);
 	EXPECT_EQ(RenderSelection.find("RenderQuadContainerEx"), std::string::npos);
-	EXPECT_NE(RenderCaret.find("Graphics()->QuadsBegin();"), std::string::npos);
-	EXPECT_NE(RenderCaret.find("Graphics()->QuadsEnd();"), std::string::npos);
-	EXPECT_EQ(RenderCaret.find("RenderQuadContainerEx"), std::string::npos);
+	// 光标几何、闪烁与窄框夹取已由公共组件 qm_text_caret 承担，
+	// 行为断言在 src/test/unit/qmclient/ui/ui_text_caret_test.cpp，这里不再检查其内部绘制调用。
 	EXPECT_NE(RenderCaret.find("if(!Cursor.m_HasCursorRenderedPosition)"), std::string::npos);
-	EXPECT_EQ(RenderCaret.find("m_CursorRenderedPosition.x < 0.0f"), std::string::npos);
-	EXPECT_EQ(RenderCaret.find("m_CursorRenderedPosition.y < 0.0f"), std::string::npos);
-	const size_t TextureClear = RenderCaret.find("Graphics()->TextureClear();");
-	const size_t HiddenReturn = RenderCaret.find("if(!ForceVisible && !qm_lineinput::CaretVisibleForElapsed");
-	ASSERT_NE(TextureClear, std::string::npos);
-	ASSERT_NE(HiddenReturn, std::string::npos);
-	EXPECT_LT(TextureClear, HiddenReturn);
 }
 
 TEST(QmNewUiMenuSettingsTextInputContract, BufferedTextUploadsMissingGpuContainerWithoutUsingImmediateQuads)

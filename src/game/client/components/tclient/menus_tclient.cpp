@@ -22,7 +22,7 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 	if(!ReadOnly)
 		EnsureSettingsBindCache();
 
-	ApplyTClientContentMetrics(MainView.w);
+	const CTClientCardMetricsScope PageMetrics(ResolveSettingsContentMetrics(MainView.w));
 	CPerfTimer RenderTimer;
 	if(!ReadOnly)
 		AdvancePreviewTime(Client()->RenderFrameTime());

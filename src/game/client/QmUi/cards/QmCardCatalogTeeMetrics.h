@@ -139,7 +139,10 @@ inline SSettingsTeeOptionsLayout ResolveSettingsTeeOptionsLayout(const CUIRect &
 {
 	SSettingsTeeOptionsLayout Layout;
 	const float DownloadsHeight = ResolveSettingsRowsHeight(5, Metrics.m_LineHeight, Metrics.m_LineSpacing);
-	const float PrefixHeight = ResolveSettingsRowsHeight(3, Metrics.m_InputHeight, Metrics.m_LineSpacing);
+	// 前缀区只有一行（标签 + 输入框 + 预设胶囊同排）。这里曾按改造前的三行布局
+	// 预留 3 行高度，改成单行后测量没跟着收，卡片底部凭空多出两行的空白——
+	// 「最后一行到卡片边框的边距」因此比别的卡大得多。
+	const float PrefixHeight = Metrics.m_InputHeight;
 	if(View.w >= 540.0f * Metrics.m_UiScale)
 	{
 		View.VSplitMid(&Layout.m_Downloads, &Layout.m_Prefix, Metrics.m_SectionGap);

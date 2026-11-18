@@ -30,7 +30,7 @@ void CMenus::RenderQmChatCompletionContent(CUIRect &Content, const SSettingsCont
 		CUIRect Row;
 		if(Flow.Control(pId, Metrics.m_ButtonHeight, Row))
 			DoLine_ColorPicker(pButton, Metrics, &Row, pLabel, pValue, color_cast<ColorRGBA>(ColorHSLA(Default, Alpha)), false, nullptr, Alpha);
-		Flow.Space(Metrics.m_LineSpacing);
+		Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 	};
 	ColorRow("completion-background", &s_Controls.m_Background, Localize("Background color"), &g_Config.m_QmChatCompletionBgColor, DefaultConfig::QmChatCompletionBgColor, false);
 
@@ -46,7 +46,7 @@ void CMenus::RenderQmChatCompletionContent(CUIRect &Content, const SSettingsCont
 		ui_widget::NumericField(Ctx, &s_Controls.m_Opacity, &s_Controls.m_Opacity, &g_Config.m_QmChatCompletionOpacity, 0, 100, Row, OpacityOptions);
 		Ui()->DoConfigTooltip(&s_Controls.m_Opacity, &Row, &g_Config.m_QmChatCompletionOpacity);
 	}
-	Flow.Space(Metrics.m_LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 
 	ColorRow("completion-text", &s_Controls.m_Text, Localize("Text color"), &g_Config.m_QmChatCompletionTextColor, DefaultConfig::QmChatCompletionTextColor, true);
 	ColorRow("completion-selected-text", &s_Controls.m_SelectedText, Localize("Selected text color"), &g_Config.m_QmChatCompletionSelectedTextColor, DefaultConfig::QmChatCompletionSelectedTextColor, true);
@@ -68,9 +68,8 @@ void CMenus::RenderQmChatCompletionContent(CUIRect &Content, const SSettingsCont
 		if(Flow.Drawing() && (!ReadOnly || Ui()->BackgroundRender()))
 			QmRenderChatCommandHud(Preview, Ui(), TextRender(), Ui()->MousePos());
 	}
-	Flow.Space(Metrics.m_LineSpacing);
 
-	if(Flow.Control("completion-reset", Metrics.m_ButtonHeight, Row) && ui_widget::SecondaryButton(Ctx, &s_Controls.m_Reset, Localize("Reset chat completion appearance"), Row, ReadOnly))
+	if(Flow.Control("completion-reset", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)) && ui_widget::SecondaryButton(Ctx, &s_Controls.m_Reset, Localize("Reset chat completion appearance"), Row, ReadOnly))
 	{
 		g_Config.m_QmChatCompletionBgColor = DefaultConfig::QmChatCompletionBgColor;
 		g_Config.m_QmChatCompletionOpacity = DefaultConfig::QmChatCompletionOpacity;
@@ -78,7 +77,7 @@ void CMenus::RenderQmChatCompletionContent(CUIRect &Content, const SSettingsCont
 		g_Config.m_QmChatCompletionSelectedTextColor = DefaultConfig::QmChatCompletionSelectedTextColor;
 		g_Config.m_QmChatCompletionSelectedColor = DefaultConfig::QmChatCompletionSelectedColor;
 	}
-	Flow.Space(Metrics.m_LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 	if(StartedRenderOnly)
 		Ui()->EndRenderOnly();
 }

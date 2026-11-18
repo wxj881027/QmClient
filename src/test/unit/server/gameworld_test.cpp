@@ -16,6 +16,7 @@
 #include <generated/protocol.h>
 
 #include <game/server/entities/character.h>
+#include <game/server/entities/laser.h>
 #include <game/server/gamecontext.h>
 #include <game/server/gamecontroller.h>
 #include <game/server/gameworld.h>
@@ -156,6 +157,59 @@ TEST_F(CTestGameWorld, ClosestCharacter)
 
 	CCharacter *pClosest = GameServer()->m_World.ClosestCharacter(vec2(1, 1), 20, nullptr);
 	EXPECT_EQ(pClosest, pChr1);
+}
+
+// 找一段水平方向没有墙、传送与传送武器的空地图段，用作激光测试的固定发射位置。
+static bool FindFreeHorizontalSegment(const CCollision *pCollision, float Length, vec2 &OutFrom)
+{
+	for(int y = 2; y < pCollision->GetHeight() - 2; y++)
+	{
+		for(int x = 2; x < pCollision->GetWidth() - 2; x++)
+		{
+			const vec2 From((x + 0.5f) * 32.0f, (y + 0.5f) * 32.0f);
+			if(pCollision->IntersectLine(From, From + vec2(Length, 0.0f), nullptr, nullptr) != 0)
+				continue;
+			bool Free = true;
+			for(float Offset = 0.0f; Offset <= Length && Free; Offset += 16.0f)
+			{
+				const int Index = pCollision->GetPureMapIndex(From + vec2(Offset, 0.0f));
+				Free = pCollision->GetTileIndex(Index) == 0 && pCollision->GetFrontTileIndex(Index) == 0 &&
+				       pCollision->IsTeleport(Index) == 0 && pCollision->IsTeleportWeapon(Index) == 0;
+			}
+			if(Free)
+			{
+				OutFrom = From;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+TEST_F(CTestGameWorld, LaserOfPlayerWithoutCharacterHitsOthers)
+{
+	vec2 From;
+	ASSERT_TRUE(FindFreeHorizontalSegment(GameServer()->Collision(), 200.0f, From));
+	g_Config.m_SvHit = 1;
+
+	// 发射者先进入服务器再死亡（没有角色），激光仍应能命中其他玩家。
+	g_Config.m_DbgDummies = 1;
+	m_pServer->UpdateDebugDummies(false);
+	GameServer()->OnTick();
+	CCharacter *pTarget = GameServer()->GetPlayerChar(m_pServer->MaxClients() - 1);
+	ASSERT_NE(pTarget, nullptr);
+	pTarget->m_Pos = From + vec2(150.0f, 0.0f);
+	pTarget->Freeze(10);
+	ASSERT_NE(pTarget->m_FreezeTime, 0);
+
+	g_Config.m_DbgDummies = 2;
+	m_pServer->UpdateDebugDummies(false);
+	const int OwnerId = m_pServer->MaxClients() - 2;
+	ASSERT_EQ(GameServer()->GetPlayerChar(OwnerId), nullptr);
+
+	new CLaser(&GameServer()->m_World, From, vec2(1.0f, 0.0f), 800.0f, OwnerId, WEAPON_LASER);
+
+	EXPECT_EQ(pTarget->m_FreezeTime, 0); // NOLINT(clang-analyzer-unix.Malloc)
 }
 
 TEST_F(CTestGameWorld, IntersectEntity)

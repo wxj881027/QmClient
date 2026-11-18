@@ -6,6 +6,8 @@
 #include <base/lock.h>
 #include <base/logger.h>
 #include <base/math.h>
+#include <base/mem.h>
+#include <base/os.h>
 #include <base/str.h>
 #include <base/system.h>
 
@@ -22,11 +24,14 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmConsoleScroll.h>
 #include <game/client/QmUi/QmConsoleUi.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/console_scroll.h>
+#include <game/client/components/qmclient/console_slide.h>
 #include <game/client/components/qmclient/console_syntax.h>
 #include <game/client/components/qmclient/console_text.h>
 #include <game/client/components/qmclient/qm_chat_export.h>
@@ -46,14 +51,39 @@
 #include <utility>
 #include <vector>
 
-static constexpr float FONT_SIZE = 10.0f;
-static constexpr float LINE_SPACING = 1.0f;
+static constexpr float LINE_SPACING_BASE = 1.0f;
+// 控制台日志行距：基准 1.0 再按 qm_console_line_spacing 百分比放宽，
+// 字号、行高、光标与选区命中都读这一个函数，不会各写一份。
+static float ConsoleLineSpacing(float FontSize)
+{
+	// 配置是像素：把它折成排版层认的「行距倍率」，倍率 = 1 + 追加像素 / 单行字体高。
+	// 这样 12px 就是实打实多出 12 像素，而不是跟着字号浮动的百分比。
+	const float Extra = (float)std::clamp(g_Config.m_QmConsoleLineSpacing, 0, 24);
+	const float FontHeight = std::max(1.0f, FontSize);
+	return LINE_SPACING_BASE + Extra / FontHeight;
+}
 static constexpr float LINK_CLICK_DRAG_THRESHOLD = 3.0f;
 static constexpr float LINK_UNDERLINE_HEIGHT = 0.12f;
-static constexpr float CONSOLE_SCROLLBAR_WIDTH = 18.0f;
-static constexpr float CONSOLE_SCROLLBAR_MARGIN = 5.0f;
+// 轨道粗细与设置页列表滚动条同一档，控制台不再自带一套更粗的尺寸。
+static constexpr float CONSOLE_SCROLLBAR_WIDTH = ui_token::list::SCROLLBAR_WIDTH;
+static constexpr float CONSOLE_SCROLLBAR_MARGIN = ui_token::list::SCROLLBAR_MARGIN;
+// 滑块最短高度：日志只有几行时也要按得住，取旧实现里写死的 14。
+static constexpr float CONSOLE_SCROLLBAR_MIN_THUMB = 14.0f;
 static constexpr ColorRGBA LINK_TEXT_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 1.0f);
 static constexpr ColorRGBA LINK_UNDERLINE_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 0.9f);
+
+namespace
+{
+	// 控制台特化：一档滚轮 = QmConsoleWheelLines 折算出来的行数，不是设置页那种像素档；
+	// 手感档位、弹簧响应与阻尼、橡皮筋距离仍然全部来自公共配置 QmNativeWheelScrollConfig。
+	SQmScrollConfig ConsoleScrollConfig(float LineHeight)
+	{
+		SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, g_Config.m_UiSmoothScrollTime / 1000.0f);
+		const float SafeLine = maximum(1.0f, LineHeight);
+		Config.m_WheelScale = (float)QmConsoleWheelLines(g_Config.m_QmUiScrollStep, SafeLine) * SafeLine;
+		return Config;
+	}
+} // namespace
 
 struct SConfigHelpLookup
 {
@@ -390,6 +420,7 @@ enum class EArgumentCompletionType
 	TUNE,
 	SETTING,
 	KEY,
+	COMMAND,
 };
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
@@ -410,11 +441,12 @@ static const CArgumentCompletionEntry gs_aArgumentCompletionEntries[] = {
 	{EArgumentCompletionType::TUNE, "tune_zone", 1},
 	{EArgumentCompletionType::SETTING, "reset", 0},
 	{EArgumentCompletionType::SETTING, "toggle", 0},
-	{EArgumentCompletionType::SETTING, "access_level", 0},
 	{EArgumentCompletionType::SETTING, "+toggle", 0},
+	{EArgumentCompletionType::SETTING, "echo_config", 0},
 	{EArgumentCompletionType::KEY, "bind", 0},
 	{EArgumentCompletionType::KEY, "binds", 0},
 	{EArgumentCompletionType::KEY, "unbind", 0},
+	{EArgumentCompletionType::COMMAND, "access_level", 0},
 };
 
 static std::pair<EArgumentCompletionType, int> ArgumentCompletion(const char *pStr)
@@ -497,6 +529,19 @@ static int PossibleKeys(const char *pStr, IInput *pInput, IConsole::FPossibleCal
 static void CollectPossibleCommandsCallback(int Index, const char *pStr, void *pUser)
 {
 	((std::vector<const char *> *)pUser)->push_back(pStr);
+}
+
+struct SPossibleSettingsContext
+{
+	IConsole::FPossibleCallback m_pfnCallback;
+	void *m_pUser;
+	int m_Index;
+};
+
+static void CollectPossibleSettingsCallback(const SConfigVariable *pVariable, void *pUser)
+{
+	SPossibleSettingsContext *pContext = (SPossibleSettingsContext *)pUser;
+	pContext->m_pfnCallback(pContext->m_Index++, pVariable->m_pScriptName, pContext->m_pUser);
 }
 
 static void SortCompletions(std::vector<const char *> &vCompletions, const char *pSearch)
@@ -609,6 +654,7 @@ void CGameConsole::CInstance::ClearBacklog()
 	m_BacklogLastActiveLine = -1;
 	m_ScrollbarDragging = false;
 	m_ScrollbarDragOffset = 0.0f;
+	m_Scroll.Reset();
 	InvalidateTotalBacklogLines();
 	m_ChatExportAnchorId = -1;
 	m_ChatExportMode = false;
@@ -729,12 +775,12 @@ void CGameConsole::CInstance::UpdateCompletionSuggestions()
 	char aOldCommand[IConsole::CMDLINE_LENGTH];
 	aOldCommand[0] = '\0';
 	if(m_CompletionChosen != -1 && (size_t)m_CompletionChosen < m_vpCommandSuggestions.size())
-		str_copy(aOldCommand, m_vpCommandSuggestions[m_CompletionChosen], sizeof(aOldCommand));
+		str_copy(aOldCommand, m_vpCommandSuggestions[m_CompletionChosen]);
 
 	char aOldArgument[IConsole::CMDLINE_LENGTH];
 	aOldArgument[0] = '\0';
 	if(m_CompletionChosenArgument != -1 && (size_t)m_CompletionChosenArgument < m_vpArgumentSuggestions.size())
-		str_copy(aOldArgument, m_vpArgumentSuggestions[m_CompletionChosenArgument], sizeof(aOldArgument));
+		str_copy(aOldArgument, m_vpArgumentSuggestions[m_CompletionChosenArgument]);
 
 	m_vpCommandSuggestions.clear();
 	m_vpArgumentSuggestions.clear();
@@ -756,9 +802,11 @@ void CGameConsole::CInstance::UpdateCompletionSuggestions()
 		else if(CompletionType == EArgumentCompletionType::TUNE)
 			PossibleTunings(m_aCompletionBufferArgument, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
 		else if(CompletionType == EArgumentCompletionType::SETTING)
-			m_pGameConsole->m_pConsole->PossibleCommands(m_aCompletionBufferArgument, m_CompletionFlagmask, UseTempCommands, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
+			m_pGameConsole->PossibleSettings(m_aCompletionBufferArgument, m_CompletionFlagmask, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
 		else if(CompletionType == EArgumentCompletionType::KEY)
 			PossibleKeys(m_aCompletionBufferArgument, m_pGameConsole->Input(), CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
+		else if(CompletionType == EArgumentCompletionType::COMMAND)
+			m_pGameConsole->m_pConsole->PossibleCommands(m_aCompletionBufferArgument, m_CompletionFlagmask, UseTempCommands, CollectPossibleCommandsCallback, &m_vpArgumentSuggestions);
 		SortCompletions(m_vpArgumentSuggestions, m_aCompletionBufferArgument);
 	}
 
@@ -857,7 +905,7 @@ void CGameConsole::CInstance::GetCommand(const char *pInput, char (&aCmd)[IConso
 	}
 	m_CompletionCommandStart = str_skip_whitespaces_const(aInput + m_CompletionCommandStart) - aInput;
 
-	str_copy(aCmd, aInput + m_CompletionCommandStart, sizeof(aCmd));
+	str_copy(aCmd, aInput + m_CompletionCommandStart);
 }
 
 static void StrCopyUntilSpace(char *pDest, size_t DestSize, const char *pSrc)
@@ -1030,45 +1078,37 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		}
 		else if(Event.m_Key == KEY_PAGEUP)
 		{
-			m_BacklogCurLine += GetLinesToScroll(-1, m_LinesRendered);
+			// 翻页也走统一推进：位移交给 CQmScrollState，逐帧逼近而不是整屏瞬移。
+			m_Scroll.Page(1);
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_PAGEDOWN)
 		{
-			m_BacklogCurLine -= GetLinesToScroll(1, m_LinesRendered);
-			if(m_BacklogCurLine < 0)
-			{
-				m_BacklogCurLine = 0;
-			}
+			m_Scroll.Page(-1);
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_MOUSE_WHEEL_UP)
 		{
 			// 每档滚多行。原先上下都只走一行，控制台滚起来慢得几乎没反应；
-			// 行数按 qm_ui_scroll_step 折算，和其它列表的滚轮手感对齐。
-			m_BacklogCurLine += GetLinesToScroll(-1, GetWheelLinesToScroll());
+			// 行数按 qm_ui_scroll_step 折算，由公共滚动物理逐帧逼近（见 QmConsoleScroll.h）。
+			m_Scroll.Wheel(1, m_pGameConsole->Input()->AltIsPressed());
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_MOUSE_WHEEL_DOWN)
 		{
-			m_BacklogCurLine -= GetWheelLinesToScroll();
-			if(m_BacklogCurLine < 0)
-			{
-				m_BacklogCurLine = 0;
-			}
+			m_Scroll.Wheel(-1, m_pGameConsole->Input()->AltIsPressed());
 			Handled = true;
 		}
 		// in order not to conflict with CLineInput's handling of Home/End only
 		// react to it when the input is empty
 		else if(Event.m_Key == KEY_HOME && m_Input.IsEmpty())
 		{
-			m_BacklogCurLine += GetLinesToScroll(-1, -1);
-			m_BacklogLastActiveLine = m_BacklogCurLine;
+			m_Scroll.ScrollToOldest();
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_END && m_Input.IsEmpty())
 		{
-			m_BacklogCurLine = 0;
+			m_Scroll.ScrollToNewest();
 			Handled = true;
 		}
 		else if(Event.m_Key == KEY_ESCAPE && m_SearchInput.IsSearching())
@@ -1198,6 +1238,8 @@ void CGameConsole::CInstance::SetLogFilterMask(int Mask)
 	m_BacklogCurLine = 0;
 	m_BacklogLastActiveLine = -1;
 	m_NewLineCounter = 0;
+	// 筛选改变内容总高：滚动运行态一起归零，避免停在已经不存在的位置。
+	m_Scroll.Reset();
 	InvalidateTotalBacklogLines();
 	m_Selection.Clear();
 	m_MouseIsPress = false;
@@ -1324,7 +1366,7 @@ void CGameConsole::CInstance::SetChatExportMode(bool Enable)
 // 滚轮每档滚几行：把像素口径的 qm_ui_scroll_step 按当前行高折算成行数（见 console_scroll.h）。
 int CGameConsole::CInstance::GetWheelLinesToScroll() const
 {
-	return QmConsoleWheelLines(g_Config.m_QmUiScrollStep, FontSize() + LINE_SPACING);
+	return QmConsoleWheelLines(g_Config.m_QmUiScrollStep, FontSize() + ConsoleLineSpacing(FontSize()));
 }
 
 int CGameConsole::CInstance::GetLinesToScroll(int Direction, int LinesToScroll)
@@ -1364,19 +1406,21 @@ void CGameConsole::CInstance::ScrollToCenter(int StartLine, int EndLine)
 		return;
 
 	// Compute actual amount of lines to scroll to make sure lines fit in viewport and we don't have empty space
-	int Direction = m_BacklogCurLine - Target < 0 ? -1 : 1;
-	int LinesToScroll = absolute(Target - m_BacklogCurLine);
-	int ComputedLines = GetLinesToScroll(Direction, LinesToScroll);
+	const int Direction = m_BacklogCurLine - Target < 0 ? -1 : 1;
+	const int LinesToScroll = absolute(Target - m_BacklogCurLine);
+	const int ComputedLines = GetLinesToScroll(Direction, LinesToScroll);
 
-	if(Direction == -1)
-		m_BacklogCurLine += ComputedLines;
-	else
-		m_BacklogCurLine -= ComputedLines;
+	// 搜索跳转属于"选中项回看"：位移交给统一滚动物理，弹簧档会顺着当前方向转向新目标，
+	// 不再直接写死整型行锚（否则滚动模拟与行锚会各说一套，下一帧就被覆盖）。
+	const int ResultLine = Direction == -1 ? m_BacklogCurLine + ComputedLines : m_BacklogCurLine - ComputedLines;
+	m_Scroll.ScrollToLine(ResultLine);
 }
 
 float CGameConsole::CInstance::FontSize() const
 {
-	return m_Type == CONSOLETYPE_LOCAL ? QmConsoleAppearance::FontSize(g_Config.m_QmConsoleFontSize) : FONT_SIZE;
+	// 本地/远程共用同一档字号：远程控制台的日志、页脚和头部都跟随
+	// 「控制台字号」设置，不再固定为 10，切换 F1/F2 时文字大小保持一致。
+	return QmConsoleAppearance::FontSize(g_Config.m_QmConsoleFontSize);
 }
 
 float CGameConsole::CInstance::BacklogLineWidth() const
@@ -1420,7 +1464,7 @@ CQmConsoleSelection::CPosition CGameConsole::CInstance::SelectionPositionAt(vec2
 			Cursor.m_FontSize = FontSize();
 			Cursor.m_LineWidth = BacklogLineWidth();
 			Cursor.m_MaxLines = pEntry->m_LineCount;
-			Cursor.m_LineSpacing = LINE_SPACING;
+			Cursor.m_LineSpacing = ConsoleLineSpacing(FontSize());
 			Cursor.m_Flags = 0;
 			Cursor.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_CALCULATE;
 			Cursor.m_RenderCursor = false;
@@ -1453,7 +1497,7 @@ void CGameConsole::CInstance::UpdateEntryTextAttributes(CBacklogEntry *pEntry) c
 	Cursor.m_Flags = 0;
 	Cursor.m_LineWidth = BacklogLineWidth();
 	Cursor.m_MaxLines = 10;
-	Cursor.m_LineSpacing = LINE_SPACING;
+	Cursor.m_LineSpacing = ConsoleLineSpacing(FontSize());
 	const CColoredParts Text(pEntry->m_aText, ParseEntryColors(pEntry));
 	m_pGameConsole->TextRender()->TextEx(&Cursor, Text.Text(), -1);
 	pEntry->m_YOffset = Cursor.Height();
@@ -1754,6 +1798,8 @@ void CGameConsole::OnReset()
 	m_RemoteConsole.m_Selection.Finish();
 	m_RemoteConsole.m_ScrollbarDragging = false;
 	m_RemoteConsole.m_ScrollbarDragOffset = 0.0f;
+	m_LocalConsole.m_Scroll.Reset();
+	m_RemoteConsole.m_Scroll.Reset();
 }
 
 int CGameConsole::PossibleMaps(const char *pStr, IConsole::FPossibleCallback pfnCallback, void *pUser)
@@ -1770,10 +1816,66 @@ int CGameConsole::PossibleMaps(const char *pStr, IConsole::FPossibleCallback pfn
 	return Index;
 }
 
+void CGameConsole::PossibleSettings(const char *pStr, int FlagMask, IConsole::FPossibleCallback pfnCallback, void *pUser)
+{
+	SPossibleSettingsContext Context{pfnCallback, pUser, 0};
+	ConfigManager()->PossibleConfigVariables(pStr, FlagMask, CollectPossibleSettingsCallback, &Context);
+}
+
 // only defined for 0<=t<=1
 static float ConsoleScaleFunc(float t)
 {
 	return std::sin(std::acos(1.0f - t));
+}
+
+// ---- 控制台下拉/收回的弹簧 ----
+// 高度比例由一条 SCALE 轨道承担（0=完全收起，1=完全展开）。状态机仍按
+// GlobalTime() 的 0.1s 走，输入门控与「丢弃触发打开的那个按键」不受影响；
+// 弹簧只负责视觉高度，所以打开时输入框照常立刻可用，回弹尾巴继续在动。
+static uint64_t ConsoleSlideNodeKey()
+{
+	static const uint64_t s_NodeKey = BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash("qm_console_slide")), 0);
+	return s_NodeKey;
+}
+
+// 折返不钉起点：收回途中再按 F1 打开，从当前高度续接，不会先跳回 0 再展开。
+static void StartConsoleSlide(CUiV2AnimationRuntime &AnimRuntime, float Target, bool SnapToStart)
+{
+	const uint64_t NodeKey = ConsoleSlideNodeKey();
+	if(SnapToStart)
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::SCALE, 0.0f);
+
+	SUiAnimRequest Request;
+	Request.m_NodeKey = NodeKey;
+	Request.m_Property = EUiAnimProperty::SCALE;
+	Request.m_Target = Target;
+	Request.m_Transition.m_Driver = EUiAnimDriver::SPRING;
+	Request.m_Transition.m_Spring = QmConsoleSlideSpring(Target >= 1.0f, g_Config.m_QmConsoleSlideFeel);
+	Request.m_Transition.m_Priority = 2;
+	// 快速反复开合时后一次立刻接管，不排队。
+	Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::REPLACE;
+	AnimRuntime.RequestAnimation(Request);
+}
+
+// 控制台顶栏每颗按钮一条稳定轨道：显隐、宽度与选中底色分开取样，
+// 避免同一个 ALPHA 轨道同时承担两种语义。
+static uint64_t ConsoleToolbarNodeKey(const char *pScope, int Index)
+{
+	return BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash(pScope)), static_cast<uint64_t>(Index + 1));
+}
+
+// 本地/远程是二元混合；远程头部单独一条存在度，开关与类型切换都能从
+// 当前值续接，不把两套布局硬切在同一帧。
+static uint64_t ConsoleTypeBlendNodeKey()
+{
+	static const uint64_t s_NodeKey = BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash("qm_console_type_blend")), 0);
+	return s_NodeKey;
+}
+
+static uint64_t ConsoleHeaderNodeKey()
+{
+	static const uint64_t s_NodeKey = BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash("qm_console_header_presence")), 0);
+	return s_NodeKey;
 }
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
@@ -1877,12 +1979,23 @@ void CGameConsole::OnRender()
 	const float MaxConsoleHeight = m_ConsoleType == CONSOLETYPE_LOCAL && m_LocalConsoleFullscreen ? Screen.h : Screen.h * 3 / 5.0f;
 	float Progress = (Client()->GlobalTime() - (m_StateChangeEnd - m_StateChangeDuration)) / m_StateChangeDuration;
 
+	// 下拉/收回的高度比例改由弹簧轨道提供。状态机仍按 GlobalTime() 走：
+	// OPENING 到点就切 OPEN（输入框照常立刻激活），关闭动画期间 OnInput 已让出输入。
+	const bool SlideEnabled = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
+	const uint64_t SlideNode = ConsoleSlideNodeKey();
+	CUiV2AnimationRuntime *pAnimRuntime = SlideEnabled ? &GameClient()->UiRuntimeV2()->AnimRuntime() : nullptr;
+
 	if(Progress >= 1.0f)
 	{
 		if(m_ConsoleState == CONSOLE_CLOSING)
 		{
-			m_ConsoleState = CONSOLE_CLOSED;
-			pConsole->m_BacklogLastActiveLine = -1;
+			// 出场必须等弹簧收敛，否则高度还在回落就硬切成 0，读起来是「突然没了」。
+			const bool Settled = pAnimRuntime == nullptr || !pAnimRuntime->HasActiveAnimation(SlideNode, EUiAnimProperty::SCALE);
+			if(Settled || time_get() > m_ConsoleSlideDeadline)
+			{
+				m_ConsoleState = CONSOLE_CLOSED;
+				pConsole->m_BacklogLastActiveLine = -1;
+			}
 		}
 		else if(m_ConsoleState == CONSOLE_OPENING)
 		{
@@ -1897,17 +2010,23 @@ void CGameConsole::OnRender()
 		Toggle(CONSOLETYPE_LOCAL);
 
 	if(m_ConsoleState == CONSOLE_CLOSED)
+	{
+		// 关闭动画到点后主页按钮重新接管；清掉按下态，避免下一轮打开时
+		// 还带着上一轮未释放的手势。
+		m_StartMenuTogglePress.Reset();
+		m_StartMenuToggleHovered = false;
 		return;
+	}
 
 	Ui()->MapScreen();
 	const bool LocalConsole = m_ConsoleType == CONSOLETYPE_LOCAL;
 	const float FontSize = pConsole->FontSize();
 	const auto Palette = QmConsoleAppearance::Palette(g_Config);
 	const bool SettingsOpen = Ui()->IsPopupVisible(&m_SettingsPopupId);
-	const bool FontChanged = LocalConsole && m_LastLocalFontSize != FontSize;
+	const bool FontChanged = pConsole->m_LastFontSize != FontSize;
 	if(FontChanged)
 	{
-		m_LastLocalFontSize = FontSize;
+		pConsole->m_LastFontSize = FontSize;
 		pConsole->UpdateBacklogTextAttributes();
 		pConsole->m_Selection.Finish();
 		pConsole->m_ScrollbarDragging = false;
@@ -1923,69 +2042,126 @@ void CGameConsole::OnRender()
 	float FilterWidth = 0.0f;
 	for(int i = 0; LocalConsole && i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 		FilterWidth = maximum(FilterWidth, TextRender()->TextWidth(FontSize, apFilterLabels[i]) + FilterPadding * 2.0f);
-	const float TotalFilterWidth = LocalConsole ? FilterWidth * CInstance::LOG_FILTER_BUTTON_COUNT + FilterSpacing * (CInstance::LOG_FILTER_BUTTON_COUNT - 1) : 0.0f;
 	enum class EToolbarAction
 	{
 		SEARCH,
 		FOLLOW,
 		EXPORT,
+		OPEN_CONFIG_DIR,
 		CANCEL_EXPORT,
 		SAVE_EXPORT,
 		CLEAR_EXPORT,
 		SELECT_CHAT,
-		OPEN_CONFIG_DIR,
-		EXPAND,
 		SETTINGS,
+		EXPAND,
+		COUNT,
 	};
+	static_assert(static_cast<int>(EToolbarAction::COUNT) == TOOLBAR_ACTION_MOTION_COUNT);
 	struct SToolbarAction
 	{
 		EToolbarAction m_Action;
 		const char *m_pLabel;
 		float m_Width;
+		float m_CurrentWidth;
 		bool m_Selected;
+		bool m_Present;
+		float m_Presence;
 	};
-	std::array<SToolbarAction, 7> aActions;
-	int NumActions = 0;
-	const auto AddAction = [&](EToolbarAction Action, const char *pLabel, bool Selected = false) {
-		dbg_assert(NumActions < static_cast<int>(aActions.size()), "Too many console toolbar actions");
-		aActions[NumActions++] = {Action, pLabel, TextRender()->TextWidth(FontSize, pLabel) + FilterPadding * 2.0f, Selected};
+	std::array<SToolbarAction, TOOLBAR_ACTION_MOTION_COUNT> aActions{};
+	const auto SetAction = [&](EToolbarAction Action, const char *pLabel, bool Present, bool Selected = false) {
+		const float Width = TextRender()->TextWidth(FontSize, pLabel) + FilterPadding * 2.0f;
+		aActions[static_cast<int>(Action)] = {Action, pLabel, Width, Width, Selected, Present, 0.0f};
 	};
+
+	const bool ToolbarTargetVisible = LocalConsole && m_ConsoleState != CONSOLE_CLOSING;
+	const bool ExportMode = pConsole->m_ChatExportMode;
+	const bool ToolbarMotionEnabled = pAnimRuntime != nullptr && g_Config.m_QmUiMotionLevel > 0;
+	const bool NormalActions = ToolbarTargetVisible && !ExportMode;
+	const bool ExportActions = ToolbarTargetVisible && ExportMode;
+	const bool Searching = pConsole->m_SearchInput.IsSearching();
 	if(LocalConsole)
 	{
-		if(pConsole->m_ChatExportMode)
-		{
-			AddAction(EToolbarAction::CANCEL_EXPORT, Localize("Cancel"));
-			if(!pConsole->m_pChatExportJob)
-			{
-				AddAction(EToolbarAction::SAVE_EXPORT, Localize("Export selected"));
-				AddAction(EToolbarAction::CLEAR_EXPORT, Localize("Clear"));
-				AddAction(EToolbarAction::SELECT_CHAT, Localize("Select all chat"));
-			}
-		}
-		else
-		{
-			AddAction(EToolbarAction::SEARCH, pConsole->m_SearchInput.IsSearching() ? Localize("Cancel") : Localize("Search"), pConsole->m_SearchInput.IsSearching());
-			AddAction(EToolbarAction::FOLLOW, Localize("Following"), pConsole->m_BacklogCurLine == 0);
-			AddAction(EToolbarAction::EXPORT, Localize("Select export"));
-			// 控制台报「failed to open」时，下一步通常是去配置目录里放脚本或改 cfg，
-			// 所以把入口直接放在工具栏上，不必再翻到设置页的「通用」卡片。
-			AddAction(EToolbarAction::OPEN_CONFIG_DIR, Localize("Config directory"));
-		}
-		AddAction(EToolbarAction::SETTINGS, Localize("Console settings"), SettingsOpen);
-		AddAction(EToolbarAction::EXPAND, m_LocalConsoleFullscreen ? Localize("Collapse console") : Localize("Expand console"), m_LocalConsoleFullscreen);
+		SetAction(EToolbarAction::SEARCH, Searching ? Localize("Cancel") : Localize("Search"), NormalActions, Searching);
+		SetAction(EToolbarAction::FOLLOW, Localize("Following"), NormalActions, pConsole->m_Scroll.Following());
+		SetAction(EToolbarAction::EXPORT, Localize("Select export"), NormalActions);
+		// 控制台报「failed to open」时，下一步通常是去配置目录里放脚本或改 cfg，
+		// 所以把入口直接放在工具栏上，不必再翻到设置页的「通用」卡片。
+		SetAction(EToolbarAction::OPEN_CONFIG_DIR, Localize("Config directory"), NormalActions);
+		SetAction(EToolbarAction::CANCEL_EXPORT, Localize("Cancel"), ExportActions);
+		SetAction(EToolbarAction::SAVE_EXPORT, Localize("Export selected"), ExportActions && !pConsole->m_pChatExportJob);
+		SetAction(EToolbarAction::CLEAR_EXPORT, Localize("Clear"), ExportActions && !pConsole->m_pChatExportJob);
+		SetAction(EToolbarAction::SELECT_CHAT, Localize("Select all chat"), ExportActions && !pConsole->m_pChatExportJob);
+		SetAction(EToolbarAction::SETTINGS, Localize("Console settings"), ToolbarTargetVisible, SettingsOpen);
+		SetAction(EToolbarAction::EXPAND, m_LocalConsoleFullscreen ? Localize("Collapse console") : Localize("Expand console"), ToolbarTargetVisible, m_LocalConsoleFullscreen);
 	}
-	float TotalActionWidth = 0.0f;
-	for(int i = 0; i < NumActions; ++i)
-		TotalActionWidth += aActions[i].m_Width + FilterSpacing;
-	if(NumActions > 0)
-		TotalActionWidth -= FilterSpacing;
+
+	const bool FilterTargetPresent = ToolbarTargetVisible && !ExportMode;
+	std::array<float, CInstance::LOG_FILTER_BUTTON_COUNT> aFilterPresence{};
+	float TargetFilterWidth = 0.0f;
+	float CurrentFilterWidth = 0.0f;
+	bool HasPresentFilter = false;
+	bool HasVisibleFilter = false;
+	for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
+	{
+		aFilterPresence[i] = m_ToolbarFilterMotion.Resolve(pAnimRuntime,
+			ConsoleToolbarNodeKey("qm_console_toolbar_filter_presence", i), static_cast<size_t>(i),
+			FilterTargetPresent, ToolbarMotionEnabled, ui_token::motion::NAVIGATION_APPEAR);
+		if(aFilterPresence[i] > 0.001f)
+		{
+			CurrentFilterWidth += QmConsoleUi::ToolbarFlowGap(FilterSpacing, HasVisibleFilter, aFilterPresence[i]);
+			CurrentFilterWidth += FilterWidth * aFilterPresence[i];
+			HasVisibleFilter = true;
+		}
+		if(FilterTargetPresent)
+		{
+			if(HasPresentFilter)
+				TargetFilterWidth += FilterSpacing;
+			TargetFilterWidth += FilterWidth;
+			HasPresentFilter = true;
+		}
+	}
+
+	float TargetActionWidth = 0.0f;
+	float CurrentActionWidth = 0.0f;
+	bool HasPresentAction = false;
+	bool HasVisibleAction = false;
+	for(int i = 0; i < TOOLBAR_ACTION_MOTION_COUNT; ++i)
+	{
+		SToolbarAction &Action = aActions[i];
+		Action.m_Presence = m_ToolbarActionMotion.Resolve(pAnimRuntime,
+			ConsoleToolbarNodeKey("qm_console_toolbar_action_presence", i), static_cast<size_t>(i),
+			Action.m_Present, ToolbarMotionEnabled, ui_token::motion::NAVIGATION_APPEAR);
+		Action.m_CurrentWidth = QmConsoleUi::ResolveToolbarWidth(pAnimRuntime,
+			ConsoleToolbarNodeKey("qm_console_toolbar_action_width", i), Action.m_Width,
+			ToolbarMotionEnabled, ui_token::motion::TAB_SWITCH);
+		if(Action.m_Presence > 0.001f)
+		{
+			CurrentActionWidth += QmConsoleUi::ToolbarFlowGap(FilterSpacing, HasVisibleAction, Action.m_Presence);
+			CurrentActionWidth += Action.m_CurrentWidth * Action.m_Presence;
+			HasVisibleAction = true;
+		}
+		if(Action.m_Present)
+		{
+			if(HasPresentAction)
+				TargetActionWidth += FilterSpacing;
+			TargetActionWidth += Action.m_Width;
+			HasPresentAction = true;
+		}
+	}
+
 	float ToolbarRightMargin = 0.0f;
 #if defined(CONF_PLATFORM_IOS)
 	ToolbarRightMargin = FontSize * 2.0f + 10.0f;
 #endif
-	const auto Toolbar = QmConsoleUi::LayoutToolbar(Screen.w - ToolbarRightMargin, pConsole->m_ChatExportMode ? 0.0f : TotalFilterWidth, TotalActionWidth, FontSize + 16.0f);
-	const float RowHeight = LocalConsole ? Toolbar.m_Height : FontSize * 2.0f;
-	const float FooterHeight = LocalConsole ? FontSize + 6.0f : 0.0f;
+	const auto Toolbar = QmConsoleUi::LayoutToolbarAnimated(Screen.w - ToolbarRightMargin, TargetFilterWidth, TargetActionWidth,
+		CurrentFilterWidth, CurrentActionWidth, FontSize + 16.0f);
+	const float TypeBlend = QmConsoleUi::ResolveConsoleTypeBlend(pAnimRuntime, ConsoleTypeBlendNodeKey(),
+		m_ConsoleType == CONSOLETYPE_REMOTE, ToolbarMotionEnabled, ui_token::motion::TAB_SWITCH);
+	const float HeaderPresence = m_HeaderPresenceMotion.Resolve(pAnimRuntime, ConsoleHeaderNodeKey(), 0,
+		!LocalConsole && m_ConsoleState != CONSOLE_CLOSING, ToolbarMotionEnabled, ui_token::motion::NAVIGATION_APPEAR);
+	const float RowHeight = LocalConsole ? Toolbar.m_Height : FontSize * 2.0f + 8.0f;
+	// 页脚状态行本地/远程共用，始终保留同样的高度；远程不再把行号放在头部。
+	const float FooterHeight = FontSize + 6.0f;
 
 	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 	const ColorRGBA PreviousTextOutlineColor = TextRender()->GetTextOutlineColor();
@@ -1996,7 +2172,12 @@ void CGameConsole::OnRender()
 		TextRender()->TextOutlineColor(ResolveUiSurfaceForeground(Palette.m_aColors[QmConsoleAppearance::TEXT]).WithAlpha(PreviousTextOutlineColor.a));
 
 	float ConsoleHeightScale;
-	if(m_ConsoleState == CONSOLE_OPENING)
+	if(pAnimRuntime != nullptr)
+	{
+		// 弹簧值就是高度比例，策略见 console_slide.h：只允许 [0, 1]。
+		ConsoleHeightScale = QmConsoleSlideHeightScale(pAnimRuntime->GetValue(SlideNode, EUiAnimProperty::SCALE, 1.0f));
+	}
+	else if(m_ConsoleState == CONSOLE_OPENING)
 		ConsoleHeightScale = ConsoleScaleFunc(Progress);
 	else if(m_ConsoleState == CONSOLE_CLOSING)
 		ConsoleHeightScale = ConsoleScaleFunc(1.0f - Progress);
@@ -2005,11 +2186,17 @@ void CGameConsole::OnRender()
 
 	const float ConsoleHeight = ConsoleHeightScale * MaxConsoleHeight;
 
-	const ColorRGBA ShadowColor = LocalConsole ? Palette.m_Shadow : ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f);
+	const ColorRGBA RemoteBackground = ui_token::console_remote::BACKGROUND;
+	const ColorRGBA RemoteBorder = ui_token::console_remote::BORDER;
+	const ColorRGBA RemoteShadow = ui_token::console_remote::SHADOW;
+	const ColorRGBA ShadowColor = QmConsoleUi::MixColor(Palette.m_Shadow, RemoteShadow, TypeBlend);
 	const ColorRGBA TransparentColor = ShadowColor.WithAlpha(0.0f);
-	const ColorRGBA aBackgroundColors[NUM_CONSOLETYPES] = {ColorRGBA(0.2f, 0.2f, 0.2f, 0.9f), ColorRGBA(0.4f, 0.2f, 0.2f, 0.9f)};
-	const ColorRGBA aBorderColors[NUM_CONSOLETYPES] = {ColorRGBA(0.1f, 0.1f, 0.1f, 0.9f), ColorRGBA(0.2f, 0.1f, 0.1f, 0.9f)};
+	const ColorRGBA HeaderColor = QmConsoleUi::MixColor(Palette.m_Panel, RemoteBorder, TypeBlend);
+	const ColorRGBA BorderColor = QmConsoleUi::MixColor(Palette.m_Border, RemoteBorder, TypeBlend);
+	const CUIRect ConsoleClip = {0.0f, 0.0f, Screen.w, ConsoleHeight};
+	const CUIRect HeaderClip = {0.0f, 0.0f, Screen.w, QmConsoleUi::ClampPanelHeight(RowHeight, ConsoleHeight)};
 
+	const int ConsoleStateAtRenderStart = m_ConsoleState;
 	const bool RestoreUiEnabled = Ui()->Enabled();
 	{
 		Ui()->SetEnabled(true);
@@ -2020,6 +2207,7 @@ void CGameConsole::OnRender()
 			Ui()->SetActiveItem(nullptr);
 		}
 		Ui()->Update();
+		UpdateStartMenuToggle();
 	}
 
 	// 在日志和控制台背板之前保存底层画面，二级面板不透出清晰日志。
@@ -2028,26 +2216,37 @@ void CGameConsole::OnRender()
 
 	// 两种控制台均只模糊底层画面一次，各自背板与工具栏不重复模糊。
 	Ui()->RenderGaussianBlur({0.0f, 0.0f, Screen.w, ConsoleHeight}, ConsoleHeightScale, IGraphics::CORNER_NONE, 0.0f);
-	if(LocalConsole)
+	const float LocalBackgroundAlpha = 1.0f - TypeBlend;
+	if(LocalBackgroundAlpha > 0.001f)
 	{
-		QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, ConsoleHeight}, Palette.m_aColors[QmConsoleAppearance::BACKGROUND]);
-		QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, RowHeight}, Palette.m_Panel);
-		QmConsoleUi::DrawPanel(Ui(), {0.0f, ConsoleHeight - FooterHeight, Screen.w, FooterHeight}, Palette.m_Panel);
+		QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, ConsoleHeight},
+			Palette.m_aColors[QmConsoleAppearance::BACKGROUND].WithMultipliedAlpha(LocalBackgroundAlpha));
 	}
-	else
+	if(TypeBlend > 0.001f)
 	{
 		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BACKGROUND_NOISE].m_Id);
 		Graphics()->QuadsBegin();
-		Graphics()->SetColor(aBackgroundColors[m_ConsoleType]);
+		Graphics()->SetColor(RemoteBackground.WithMultipliedAlpha(TypeBlend));
 		Graphics()->QuadsSetSubset(0, 0, Screen.w / 80.0f, ConsoleHeight / 80.0f);
 		IGraphics::CQuadItem QuadItemBackground(0.0f, 0.0f, Screen.w, ConsoleHeight);
 		Graphics()->QuadsDrawTL(&QuadItemBackground, 1);
 		Graphics()->QuadsEnd();
 	}
+	if(HeaderClip.h > 0.5f)
+	{
+		QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, HeaderClip.h}, HeaderColor);
+	}
+	const float FooterPanelHeight = QmConsoleUi::ClampPanelHeight(FooterHeight, ConsoleHeight);
+	const float FooterPanelY = QmConsoleUi::PanelTopForBottomAligned(ConsoleHeight, FooterHeight);
+	if(FooterPanelHeight > 0.5f)
+	{
+		QmConsoleUi::DrawPanel(Ui(), {0.0f, FooterPanelY, Screen.w, FooterPanelHeight},
+			HeaderColor);
+	}
 	// bottom border
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor(LocalConsole ? Palette.m_Border : aBorderColors[m_ConsoleType]);
+	Graphics()->SetColor(BorderColor.WithMultipliedAlpha(ConsoleHeightScale));
 	IGraphics::CQuadItem QuadItemBorder(0.0f, ConsoleHeight, Screen.w, 1.0f);
 	Graphics()->QuadsDrawTL(&QuadItemBorder, 1);
 	Graphics()->QuadsEnd();
@@ -2055,20 +2254,66 @@ void CGameConsole::OnRender()
 	// bottom shadow
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor4(ShadowColor, ShadowColor, TransparentColor, TransparentColor);
-	IGraphics::CQuadItem QuadItemShadow(0.0f, ConsoleHeight + 1.0f, Screen.w, 10.0f);
-	Graphics()->QuadsDrawTL(&QuadItemShadow, 1);
+	const float ShadowHeight = 10.0f * ConsoleHeightScale;
+	if(ShadowHeight > 0.5f)
+	{
+		const ColorRGBA ShadowTopColor = ShadowColor.WithMultipliedAlpha(ConsoleHeightScale);
+		Graphics()->SetColor4(ShadowTopColor, ShadowTopColor, TransparentColor, TransparentColor);
+		IGraphics::CQuadItem QuadItemShadow(0.0f, ConsoleHeight + 1.0f, Screen.w, ShadowHeight);
+		Graphics()->QuadsDrawTL(&QuadItemShadow, 1);
+	}
 	Graphics()->QuadsEnd();
 
 	{
 		// Get height of 1 line
-		const float LineHeight = TextRender()->TextBoundingBox(FontSize, " ", -1, -1.0f, LINE_SPACING).m_H;
+		const float LineHeight = TextRender()->TextBoundingBox(FontSize, " ", -1, -1.0f, ConsoleLineSpacing(FontSize)).m_H;
 
 		float x = 3;
-		// 输入区占三部分：输入行、补全提示行、与页脚之间的留白。
-		// 原先只算了输入行，补全提示就压到下方快捷键页脚上；这里把提示行
-		// 的高度显式留出来，提示出现或消失都不会挤到别的元素。
-		const float SuggestionHeight = FontSize + 4.0f;
+		// 输入区占三部分：输入行、提示区、与页脚之间的留白。
+		// 提示区按本帧真实内容动态占位：空输入不预留，搜索匹配占一行，
+		// 命令帮助 + 用法最多占三行；没有提示时日志区一直延伸到底部。
+		const bool ShowSearchMatchInfo = pConsole->m_SearchInput.IsSearching() && !pConsole->m_Input.IsEmpty();
+		const bool ShowCompletionInfo = !pConsole->m_SearchInput.IsSearching() &&
+			(m_ConsoleType == CONSOLETYPE_LOCAL || Client()->RconAuthed()) && !pConsole->m_Input.IsEmpty();
+		char aCommandHelpText[1024] = "";
+		char aCommandUsageText[1024] = "";
+		bool HasCommandHint = false;
+		int HintLines = 0;
+		if(ShowSearchMatchInfo)
+		{
+			HintLines = 1;
+		}
+		else if(ShowCompletionInfo)
+		{
+			pConsole->UpdateCompletionSuggestions();
+			const bool HasSuggestions = !pConsole->m_vpCommandSuggestions.empty() || !pConsole->m_vpArgumentSuggestions.empty();
+			if(HasSuggestions)
+			{
+				HintLines = 1;
+			}
+			else if(pConsole->m_IsCommand)
+			{
+				HasCommandHint = true;
+				const char *pCommandHelp = pConsole->m_pCommandHelp != nullptr ? pConsole->m_pCommandHelp : "";
+				const char *pCommandParams = pConsole->m_pCommandParams != nullptr ? pConsole->m_pCommandParams : "";
+				char aLocalizedConfigHelp[1024];
+				const char *pLocalizedHelp = nullptr;
+				SConfigHelpLookup Lookup{pConsole->m_pCommandName};
+				ConfigManager()->PossibleConfigVariables(pConsole->m_pCommandName, pConsole->m_CompletionFlagmask, FindConfigHelpVariable, &Lookup);
+				if(BuildLocalizedConfigHelpText(Lookup.m_pVariable, aLocalizedConfigHelp, sizeof(aLocalizedConfigHelp)))
+					pLocalizedHelp = aLocalizedConfigHelp;
+				if(pLocalizedHelp == nullptr)
+					pLocalizedHelp = Localize(pCommandHelp);
+				const char *pLocalizedParams = Localize(pCommandParams);
+				str_format(aCommandHelpText, sizeof(aCommandHelpText), Localize("Help: %s"), pLocalizedHelp);
+				str_format(aCommandUsageText, sizeof(aCommandUsageText), Localize("Usage: %s %s"), pConsole->m_pCommandName, pLocalizedParams);
+				const float HintWidth = maximum(1.0f, Screen.w - x - 10.0f);
+				const float HelpHeight = TextRender()->TextBoundingBox(FontSize, aCommandHelpText, -1, HintWidth, ConsoleLineSpacing(FontSize)).m_H;
+				const int HelpLines = std::clamp((int)std::ceil(HelpHeight / maximum(1.0f, LineHeight)), 1, 2);
+				HintLines = HelpLines + (aCommandUsageText[0] != '\0' ? 1 : 0);
+			}
+		}
+		const float SuggestionHeight = QmConsoleUi::ResolveConsoleHintReserve(FontSize, HintLines);
 		float y = ConsoleHeight - FontSize * 2.0f - 18.0f - FooterHeight - SuggestionHeight;
 
 		const float InitialX = x;
@@ -2133,6 +2378,14 @@ void CGameConsole::OnRender()
 				LinkClickPos = ReleasePos;
 				LinkClickPress = pConsole->m_MousePress;
 			}
+#if !defined(CONF_PLATFORM_IOS) && !defined(CONF_PLATFORM_ANDROID)
+			// 桌面端：在控制台面板下方按下并松开鼠标即关闭，排除拖拽滚动条与面板边框。
+			else if(m_ConsoleState == CONSOLE_OPEN && !pConsole->m_ScrollbarDragging &&
+				pConsole->m_MousePress.y > ConsoleHeight + 1.0f && ReleasePos.y > ConsoleHeight + 1.0f)
+			{
+				Toggle(m_ConsoleType);
+			}
+#endif
 		}
 		const bool ButtonReleased = WasMousePressed && !pConsole->m_MouseIsPress;
 		const bool MousePressedThisFrame = !WasMousePressed && pConsole->m_MouseIsPress;
@@ -2153,17 +2406,18 @@ void CGameConsole::OnRender()
 		const float ScaledLineHeight = LineHeight / ScreenSize.y;
 		if(!SettingsOpen && absolute(m_TouchState.m_ScrollAmount.y) >= ScaledLineHeight)
 		{
+			// 触控拖动与滑块同一档语义：位移直接落到手指位置（跟手），越界由橡皮筋收回。
+			const int Steps = (int)(absolute(m_TouchState.m_ScrollAmount.y) / ScaledLineHeight);
+			const float DragPixels = (float)Steps * LineHeight;
 			if(m_TouchState.m_ScrollAmount.y > 0.0f)
 			{
-				pConsole->m_BacklogCurLine += pConsole->GetLinesToScroll(-1, 1);
-				m_TouchState.m_ScrollAmount.y -= ScaledLineHeight;
+				CurrentConsole()->m_Scroll.DragBy(DragPixels);
+				m_TouchState.m_ScrollAmount.y -= (float)Steps * ScaledLineHeight;
 			}
 			else
 			{
-				--pConsole->m_BacklogCurLine;
-				if(pConsole->m_BacklogCurLine < 0)
-					pConsole->m_BacklogCurLine = 0;
-				m_TouchState.m_ScrollAmount.y += ScaledLineHeight;
+				CurrentConsole()->m_Scroll.DragBy(-DragPixels);
+				m_TouchState.m_ScrollAmount.y += (float)Steps * ScaledLineHeight;
 			}
 		}
 
@@ -2214,7 +2468,7 @@ void CGameConsole::OnRender()
 				DisplayText.insert(pConsole->m_Input.GetCursorOffset(), Input()->GetComposition());
 			QmConsoleSyntax::AppendColors(DisplayText.c_str(), Palette, vInputColors);
 		}
-		pConsole->m_BoundingBox = pConsole->m_Input.Render(&InputCursorRect, FontSize, TEXTALIGN_BL, Changed, Screen.w - 10.0f - x, LINE_SPACING, vInputColors);
+		pConsole->m_BoundingBox = pConsole->m_Input.Render(&InputCursorRect, FontSize, TEXTALIGN_BL, Changed, Screen.w - 10.0f - x, ConsoleLineSpacing(FontSize), vInputColors);
 		if(pConsole->m_Input.HasSelection())
 			pConsole->m_Selection.Clear();
 
@@ -2280,25 +2534,31 @@ void CGameConsole::OnRender()
 					pConsole->m_CompletionRenderOffset = Info.m_Offset;
 				}
 
-				if(NumArguments <= 0 && pConsole->m_IsCommand)
+				if(NumArguments <= 0 && pConsole->m_IsCommand && HasCommandHint)
 				{
-					char aBuf[1024];
-					const char *pCommandHelp = pConsole->m_pCommandHelp != nullptr ? pConsole->m_pCommandHelp : "";
-					const char *pCommandParams = pConsole->m_pCommandParams != nullptr ? pConsole->m_pCommandParams : "";
-					char aLocalizedConfigHelp[1024];
-					const char *pLocalizedHelp = nullptr;
-					SConfigHelpLookup Lookup{pConsole->m_pCommandName};
-					ConfigManager()->PossibleConfigVariables(pConsole->m_pCommandName, pConsole->m_CompletionFlagmask, FindConfigHelpVariable, &Lookup);
-					if(BuildLocalizedConfigHelpText(Lookup.m_pVariable, aLocalizedConfigHelp, sizeof(aLocalizedConfigHelp)))
-						pLocalizedHelp = aLocalizedConfigHelp;
-					if(pLocalizedHelp == nullptr)
-						pLocalizedHelp = Localize(pCommandHelp);
-					const char *pLocalizedParams = Localize(pCommandParams);
-					str_format(aBuf, sizeof(aBuf), Localize("Help: %s"), pLocalizedHelp);
-					TextRender()->TextEx(&Info.m_Cursor, aBuf, -1);
+					// 帮助与用法拆成两段：帮助按可用宽度换行（最多两行），
+					// 用法固定跟在下方一行并省略超长尾部，不再把两段挤在同一行互相覆盖。
+					const float HintTop = pConsole->m_BoundingBox.m_Y + pConsole->m_BoundingBox.m_H + 4.0f;
+					const float HintWidth = maximum(1.0f, Screen.w - InitialX - 10.0f);
+					CTextCursor HelpCursor;
+					HelpCursor.SetPosition(vec2(InitialX - Info.m_Offset, HintTop));
+					HelpCursor.m_FontSize = FontSize;
+					HelpCursor.m_LineWidth = HintWidth;
+					HelpCursor.m_LineSpacing = ConsoleLineSpacing(FontSize);
+					HelpCursor.m_MaxLines = 2;
+					TextRender()->TextEx(&HelpCursor, aCommandHelpText, -1);
+					// 帮助最多画两行；测量值超过两行时按两行夹紧，
+					// 用法行才不会落到预留区之外压到页脚。
+					const float MeasuredHelpHeight = TextRender()->TextBoundingBox(FontSize, aCommandHelpText, -1, HintWidth, ConsoleLineSpacing(FontSize)).m_H;
+					const float HelpHeight = std::clamp(MeasuredHelpHeight, LineHeight, 2.0f * LineHeight);
+					CTextCursor UsageCursor;
+					UsageCursor.SetPosition(vec2(InitialX - Info.m_Offset, HintTop + HelpHeight));
+					UsageCursor.m_FontSize = FontSize;
+					UsageCursor.m_LineWidth = HintWidth;
+					UsageCursor.m_LineSpacing = ConsoleLineSpacing(FontSize);
+					UsageCursor.m_Flags = TEXTFLAG_DISALLOW_NEWLINE | TEXTFLAG_ELLIPSIS_AT_END;
 					TextRender()->TextColor(0.75f, 0.75f, 0.75f, 1);
-					str_format(aBuf, sizeof(aBuf), Localize("Usage: %s %s"), pConsole->m_pCommandName, pLocalizedParams);
-					TextRender()->TextEx(&Info.m_Cursor, aBuf, -1);
+					TextRender()->TextEx(&UsageCursor, aCommandUsageText, -1);
 				}
 			}
 
@@ -2333,13 +2593,8 @@ void CGameConsole::OnRender()
 		if(pConsole->m_NewLineCounter != 0)
 		{
 			pConsole->UpdateSearch();
-
-			// keep scroll position when new entries are printed.
-			if(pConsole->m_BacklogCurLine != 0 || pConsole->m_Selection.HasSelection() || pConsole->m_Selection.IsDragging())
-			{
-				pConsole->m_BacklogCurLine += pConsole->m_NewLineCounter;
-				pConsole->m_BacklogLastActiveLine += pConsole->m_NewLineCounter;
-			}
+			// 新日志带来的行数变化由滚动运行态核算（见 QmConsoleScroll.h）：跟随态保持贴底，
+			// 锁定态把视口停在原来那几行，这里不再自己搬整型行锚。
 			if(pConsole->m_NewLineCounter < 0)
 				pConsole->m_NewLineCounter = 0;
 		}
@@ -2351,8 +2606,17 @@ void CGameConsole::OnRender()
 		const float LogHeight = maximum(0.0f, LogBottom - LogTop);
 		const int VisibleBacklogLines = maximum(1, (int)std::floor(LogHeight / LineHeight));
 		const int TotalBacklogLines = pConsole->TotalBacklogLines();
+		// 滚动推进：滚轮、翻页、滑块与触控拖动都写进同一份 CQmScrollState（弹簧 + 橡皮筋），
+		// 每帧在这里结算一次，读回「整行 + 亚行余量」。行锚继续服务选区、状态栏与搜索跳转，
+		// 亚行余量交给绘制与命中，两边读同一份结果，不会各留一套滚动值。
+		CQmConsoleScrollRuntime &Scroll = CurrentConsole()->m_Scroll;
+		// 静止态先把偏移吸到整行，再推进：滚动停下后正文不再带亚行余量，避免闪。
+		if(!pConsole->m_ScrollbarDragging && !pConsole->m_Selection.IsDragging() && !Scroll.Animating())
+			Scroll.SnapToNearestLine();
+		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(Client()->RenderFrameTime(), LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight));
+		const float SubLine = ScrollFrame.m_SubLine;
 		const int MaxScroll = maximum(0, TotalBacklogLines - VisibleBacklogLines);
-		pConsole->m_BacklogCurLine = std::clamp(pConsole->m_BacklogCurLine, 0, MaxScroll);
+		pConsole->m_BacklogCurLine = std::clamp(ScrollFrame.m_Line, 0, MaxScroll);
 		if(pConsole->m_BacklogLastActiveLine >= 0)
 			pConsole->m_BacklogLastActiveLine = std::clamp(pConsole->m_BacklogLastActiveLine, 0, MaxScroll);
 		const bool ShowConsoleScrollbar = MaxScroll > 0 && LogHeight > 0.0f;
@@ -2363,29 +2627,37 @@ void CGameConsole::OnRender()
 		HandleLinkClick = !SettingsOpen && HandleLinkClick && LogRect.Inside(LinkClickPress) && LogRect.Inside(LinkClickPos);
 		ChatExportClickPending = !SettingsOpen && ChatExportClickPending && LogRect.Inside(pConsole->m_MousePress) && LogRect.Inside(ChatExportClickPos);
 		if(CanSelectLog && MousePressedThisFrame && LogRect.Inside(pConsole->m_MousePress))
-			pConsole->m_Selection.Begin(pConsole->SelectionPositionAt(pConsole->m_MousePress, LogBottom, LineHeight));
+			pConsole->m_Selection.Begin(pConsole->SelectionPositionAt(pConsole->m_MousePress, LogBottom + SubLine, LineHeight));
 		if(CanSelectLog && pConsole->m_MouseIsPress)
 		{
 			const int ScrollLines = pConsole->m_Selection.AutoScroll(pConsole->m_MouseRelease.y, LogTop, LogBottom, LineHeight, Client()->RenderFrameTime());
-			pConsole->m_BacklogCurLine = std::clamp(pConsole->m_BacklogCurLine + ScrollLines, 0, MaxScroll);
+			// 拖选到边缘时的自动滚动按"跟手拖动"推进：每帧把这一帧算出的行数直接落到位移上，
+			// 既不经过弹簧（拖选要贴着指针走），又和滑块拖动共用同一份越界与夹取逻辑。
+			if(ScrollLines != 0)
+				Scroll.DragBy((float)ScrollLines * LineHeight);
 		}
 		if(ShowConsoleScrollbar)
 		{
-			CUIRect ScrollbarRect = {Screen.w - CONSOLE_SCROLLBAR_WIDTH - CONSOLE_SCROLLBAR_MARGIN, LogTop, CONSOLE_SCROLLBAR_WIDTH, LogHeight};
-			const float RailMargin = 5.0f;
-			CUIRect Rail;
-			ScrollbarRect.Margin(RailMargin, &Rail);
-			if(Rail.w > 0.0f && Rail.h > Rail.w)
+			// 轨道与滑块几何来自公共覆盖式滚动条，与控制台设置面板、设置页列表完全同一条算法：
+			// 轨道两端内缩、滑块 = 视口/内容 × 轨道、夹在最小滑块与轨道之间。
+			const CUIRect Owner{0.0f, LogTop, Screen.w, LogHeight};
+			const float ConsoleContentHeight = (float)maximum(TotalBacklogLines, 1) * LineHeight;
+			const float MaxOffset = maximum(ScrollFrame.m_MaxOffset, 1.0f);
+			const float Progress = 1.0f - std::clamp(ScrollFrame.m_Offset / MaxOffset, 0.0f, 1.0f);
+			const auto ScrollbarFrame = ui_widget::ResolveOverlayScrollbarFrame(Owner, LogTop, LogHeight, ConsoleContentHeight, Progress, true,
+				CONSOLE_SCROLLBAR_WIDTH, CONSOLE_SCROLLBAR_MARGIN, CONSOLE_SCROLLBAR_MIN_THUMB);
+			if(ScrollbarFrame.m_Visible)
 			{
-				const float HandleHeight = std::clamp(Rail.h * (VisibleBacklogLines / (float)maximum(TotalBacklogLines, 1)), maximum(Rail.w, 14.0f), Rail.h);
-				const float TrackRange = maximum(1.0f, Rail.h - HandleHeight);
-				const float Current = 1.0f - (pConsole->m_BacklogCurLine / (float)maximum(MaxScroll, 1));
-				CUIRect Handle = {Rail.x, Rail.y + TrackRange * Current, Rail.w, HandleHeight};
+				const CUIRect Rail = ScrollbarFrame.m_Rail;
+				CUIRect Handle = ScrollbarFrame.m_Thumb;
 				const vec2 MousePos = GetMousePosition();
 				const bool MouseDown = !SettingsOpen && (m_TouchState.m_PrimaryPressed || Input()->NativeMousePressed(1));
 				const auto InsideRect = [&](const CUIRect &Rect) {
 					return MousePos.x >= Rect.x && MousePos.x <= Rect.x + Rect.w && MousePos.y >= Rect.y && MousePos.y <= Rect.y + Rect.h;
 				};
+				// 热项登记走公共按钮逻辑：滑块据此拿到悬浮/按下的几何反馈，
+				// 面板画出「变大」正是这一步，而不是另写一套放大常量。
+				Ui()->DoButtonLogic(&pConsole->m_ScrollbarDragOffset, 0, &Rail, BUTTONFLAG_LEFT);
 
 				if(!MouseDown)
 				{
@@ -2399,21 +2671,15 @@ void CGameConsole::OnRender()
 
 				if(pConsole->m_ScrollbarDragging)
 				{
-					const float HandleTop = std::clamp(MousePos.y - pConsole->m_ScrollbarDragOffset, Rail.y, Rail.y + TrackRange);
-					const float Relative = (HandleTop - Rail.y) / TrackRange;
-					const int NewLine = std::clamp((int)std::round((1.0f - Relative) * MaxScroll), 0, MaxScroll);
-					if(NewLine != pConsole->m_BacklogCurLine)
-					{
-						pConsole->m_BacklogCurLine = NewLine;
-						pConsole->m_BacklogLastActiveLine = NewLine;
-					}
-					Handle.y = Rail.y + TrackRange * (1.0f - (pConsole->m_BacklogCurLine / (float)maximum(MaxScroll, 1)));
+					const float HandleTop = std::clamp(MousePos.y - pConsole->m_ScrollbarDragOffset, Rail.y, Rail.y + ScrollbarFrame.m_TrackRange);
+					const float Relative = ScrollbarFrame.m_TrackRange > 0.0f ? (HandleTop - Rail.y) / ScrollbarFrame.m_TrackRange : 0.0f;
+					// 拖动跟手：位移直接落到指针位置，不经过弹簧；越界由橡皮筋收回合法范围。
+					Scroll.DragToOffset((1.0f - Relative) * ScrollFrame.m_MaxOffset);
+					Handle.y = HandleTop;
 				}
 
-				// 轨道与滑块都走公共控件：滑块带悬停/拖动反馈，颜色取主题强调色，
-				// 和控制台设置面板、设置页列表的滚动条保持同一套观感。
-				// 原先这里写死 0.62 灰，跟其它滚动条不是一种东西。
-				Rail.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, Rail.w * 0.5f);
+				// 轨道与滑块都走 Qm 表面：与列表、弹层滚动条同一条圆角曲线与模糊抑制。
+				DrawRoundedSurface(Ui(), Rail, ui_token::color::LIST_ITEM_HOVER, ColorRGBA(), Rail.w * 0.5f);
 				const ColorRGBA ScrollbarAccent = Ui()->QmControlTheme().m_Accent;
 				ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), &pConsole->m_ScrollbarDragOffset, Handle, true, nullptr, &ScrollbarAccent);
 			}
@@ -2428,7 +2694,7 @@ void CGameConsole::OnRender()
 			{
 				vec2 SelectionMouse = pConsole->m_MouseRelease;
 				SelectionMouse.y = std::clamp(SelectionMouse.y, LogTop, LogBottom);
-				pConsole->m_Selection.Extend(pConsole->SelectionPositionAt(SelectionMouse, LogBottom, LineHeight));
+				pConsole->m_Selection.Extend(pConsole->SelectionPositionAt(SelectionMouse, LogBottom + SubLine, LineHeight));
 			}
 			if(!CanSelectLog || !pConsole->m_MouseIsPress)
 				pConsole->m_Selection.Finish();
@@ -2455,10 +2721,11 @@ void CGameConsole::OnRender()
 
 		const float XScale = Graphics()->ScreenWidth() / Screen.w;
 		const float YScale = Graphics()->ScreenHeight() / Screen.h;
-		const float CalcOffsetY = LineHeight * std::floor((y - RowHeight) / LineHeight);
-		const float ClipStartY = (y - CalcOffsetY) * YScale;
-		HandleLinkClick = !SettingsOpen && HandleLinkClick && LinkClickPress.y >= y - CalcOffsetY && LinkClickPos.y >= y - CalcOffsetY;
-		Graphics()->ClipEnable(0, ClipStartY, Screen.w * XScale, (y + 2.0f) * YScale - ClipStartY);
+		const float ClipTop = RowHeight;
+		const SQmConsoleLogClipBounds LogClip = QmConsoleResolveLogClipBounds(ClipTop, y, YScale);
+		HandleLinkClick = !SettingsOpen && HandleLinkClick && LinkClickPress.y >= ClipTop && LinkClickPos.y >= ClipTop;
+		const float ClipStartX = ui_token::panel::PADDING * XScale;
+		Graphics()->ClipEnable(ClipStartX, LogClip.m_Top, std::max(0.0f, Screen.w * XScale - ClipStartX), LogClip.Height());
 
 		while(pEntry)
 		{
@@ -2483,18 +2750,17 @@ void CGameConsole::OnRender()
 
 			if(First)
 			{
-				OffsetY -= (pConsole->m_BacklogLastActiveLine - SkippedLines) * LineHeight;
+				// 整行位移之外再补上亚行余量：滚轮/弹簧停在半行时内容也要跟着走，
+				// 越界时余量承载橡皮筋距离（行号已夹在合法区间内）。
+				OffsetY -= QmConsoleLineStackOffset(pConsole->m_BacklogLastActiveLine, SkippedLines, LineHeight, SubLine);
 			}
 
-			const float LocalOffsetY = OffsetY + pEntry->m_YOffset / (float)pEntry->m_LineCount;
 			OffsetY += pEntry->m_YOffset;
 			const float EntryTop = y - OffsetY;
 			const float EntryBottom = EntryTop + pEntry->m_YOffset;
 
-			// stop rendering when lines reach the top
-			const bool Outside = y - OffsetY <= RowHeight;
-			const bool CanRenderOneLine = y - LocalOffsetY > RowHeight;
-			if(Outside && !CanRenderOneLine)
+			// 顶边只要还露出一个像素就继续画；只有整行底边也越过上沿才停止。
+			if(!QmScrollLineVisibleInViewportTop(EntryTop, EntryBottom, RowHeight))
 				break;
 
 			const bool ChatExportable = pConsole->IsChatExportableEntry(pEntry);
@@ -2519,14 +2785,15 @@ void CGameConsole::OnRender()
 				}
 			}
 
-			const float EntryTextX = pConsole->m_ChatExportMode ? 22.0f : 0.0f;
-			const float EntryLineWidth = pConsole->BacklogLineWidth();
+			// 正文左侧留一档内边距：贴屏幕左缘起排的日志读起来顶手，与其它面板同一档。
+			const float EntryTextX = (pConsole->m_ChatExportMode ? 22.0f : 0.0f) + ui_token::panel::PADDING;
+			const float EntryLineWidth = maximum(1.0f, pConsole->BacklogLineWidth() - ui_token::panel::PADDING);
 			CTextCursor EntryCursor;
 			EntryCursor.SetPosition(vec2(EntryTextX, y - OffsetY));
 			EntryCursor.m_FontSize = FontSize;
 			EntryCursor.m_LineWidth = EntryLineWidth;
 			EntryCursor.m_MaxLines = pEntry->m_LineCount;
-			EntryCursor.m_LineSpacing = LINE_SPACING;
+			EntryCursor.m_LineSpacing = ConsoleLineSpacing(FontSize);
 			const bool ParseColors = pConsole->ParseEntryColors(pEntry);
 
 			CColoredParts ColoredParts(pEntry->m_aText, ParseColors);
@@ -2592,7 +2859,7 @@ void CGameConsole::OnRender()
 				LinkCursor.m_FontSize = FontSize;
 				LinkCursor.m_LineWidth = EntryLineWidth;
 				LinkCursor.m_MaxLines = pEntry->m_LineCount;
-				LinkCursor.m_LineSpacing = LINE_SPACING;
+				LinkCursor.m_LineSpacing = ConsoleLineSpacing(FontSize);
 				LinkCursor.m_Flags = 0;
 				LinkCursor.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_SET;
 				LinkCursor.m_RenderSelection = false;
@@ -2609,7 +2876,7 @@ void CGameConsole::OnRender()
 #if defined(CONF_PLATFORM_ANDROID)
 					Opened = Client()->ViewLink(Url.c_str());
 #else
-					Opened = str_startswith(Url.c_str(), "http://") ? open_link(Url.c_str()) != 0 : Client()->ViewLink(Url.c_str());
+					Opened = str_startswith(Url.c_str(), "http://") ? os_open_link(Url.c_str()) != 0 : Client()->ViewLink(Url.c_str());
 #endif
 					if(Opened)
 						pConsole->m_Selection.Clear();
@@ -2645,13 +2912,23 @@ void CGameConsole::OnRender()
 			if(CaretCharacter && SelectionCursor.m_HasCursorRenderedPosition)
 			{
 				// 日志只显示定位光标，键盘输入仍由命令输入框接收。
-				const float CaretWidth = 2.0f / maximum(XScale, 0.001f);
+				// 几何与相位都走公共光标组件：线宽、圆角、样式来自 Token 与 qm_text_caret_style。
 				const vec2 Position = pConsole->m_LogCaretMotion.Resolve(pConsole->m_Selection.CursorPosition(), SelectionCursor.m_CursorRenderedPosition,
 					SelectionCursor.m_AlignedFontSize, time_get_nanoseconds(), g_Config.m_QmUiMotionLevel, pConsole->m_Selection.HasSelection());
 				LogCaretRendered = true;
-				const CUIRect Caret = {Position.x, Position.y, CaretWidth, SelectionCursor.m_AlignedFontSize};
+				qm_text_caret::SCaretParams CaretParams;
+				CaretParams.m_Style = qm_text_caret::StyleFromConfig(g_Config.m_QmTextCaretStyle);
+				CaretParams.m_Cell = {Position.x, Position.y, 0.0f, SelectionCursor.m_AlignedFontSize};
+				// XScale 是「屏幕像素 / 世界单位」，取倒数即一个世界单位占多少像素。
+				CaretParams.m_WorldPerPixel = 1.0f / maximum(XScale, 0.001f);
+				// 相位只由绝对时间推导：每帧现取全局时间，和聊天输入、设置页输入同一时钟源，
+				// 因此控制台光标按 ui_token::motion::CARET_BLINK_PERIOD_SEC 闪烁且与其它输入框同相位。
+				CaretParams.m_TimeSec = qm_text_caret::NowSeconds();
+				// 拖选期间恒亮（光标此刻不该闪）；动效等级关闭时同样恒亮——这是唯一的例外约定，
+				// 关掉动效不该换来一个半周期才亮一次、几乎看不见的光标。
+				CaretParams.m_Blink = qm_text_caret::ShouldBlink(!pConsole->m_Selection.HasSelection() && !pConsole->m_Selection.IsDragging(), g_Config.m_QmUiMotionLevel);
 				const ColorRGBA CaretColor = LocalConsole ? Palette.m_aColors[QmConsoleAppearance::TEXT] : TextRender()->DefaultTextColor();
-				QmConsoleUi::DrawPanel(Ui(), Caret, CaretColor.WithAlpha(CaretColor.a * ContentAlpha));
+				QmConsoleUi::DrawCaret(Ui(), CaretParams, CaretColor.WithAlpha(CaretColor.a * ContentAlpha));
 			}
 			pEntry = pConsole->m_Backlog.Prev(pEntry);
 
@@ -2688,41 +2965,56 @@ void CGameConsole::OnRender()
 		const int LineStart = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + 1 : 0;
 		const int LineEnd = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + pConsole->m_LinesRendered : 0;
 		str_format(aLinesBuf, sizeof(aLinesBuf), Localize("Lines %d - %d (%s)"), LineStart, LineEnd,
-			pConsole->m_BacklogCurLine != 0 ? Localize("Locked") : Localize("Following"));
-		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false, uint64_t AnimationKey = 0) {
+			Scroll.Following() ? Localize("Following") : Localize("Locked"));
+		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false, uint64_t AnimationKey = 0, float Presence = 1.0f) {
 			return QmConsoleUi::Button(Ui(), Rect, pLabel, maximum(1.0f, FontSize * Scale), Selected,
 				m_ButtonPressPosition, ButtonMousePosition, pConsole->m_MouseIsPress, ButtonReleased, !SettingsOpen && m_ConsoleState == CONSOLE_OPEN,
-				0.0f, LocalConsole ? &Palette : nullptr, AnimationKey);
+				0.0f, LocalConsole ? &Palette : nullptr, AnimationKey, Presence);
 		};
-		const float LinesWidth = LocalConsole ? 0.0f : TextRender()->TextWidth(FontSize, aLinesBuf);
-		float FilterX = LocalConsole ? 10.0f : LinesWidth + 20.0f;
 		const float FilterScale = Toolbar.m_FilterScale;
-		if(LocalConsole && !pConsole->m_ChatExportMode)
+		if(LocalConsole)
 		{
+			Ui()->ClipEnable(&HeaderClip);
+			float FilterX = 10.0f;
+			bool HasVisibleFilter = false;
 			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 			{
 				const int Category = CInstance::LogFilterCategoryForButton(i);
-				const CUIRect Button = {FilterX, 3.0f, FilterWidth * FilterScale, LocalConsole ? FontSize + 10.0f : 14.0f};
-				if(ToolbarButton(Button, apFilterLabels[i], FilterScale, QmConsoleLogFilterButtonActive(pConsole->m_LogFilterMask, Category),
-					   (static_cast<uint64_t>(reinterpret_cast<uintptr_t>(pConsole)) << 3) ^ static_cast<uint64_t>(i + 1)))
-					pConsole->SetLogFilterMask(QmSelectConsoleLogFilterCategory(Category));
-				FilterX += (FilterWidth + FilterSpacing) * FilterScale;
+				if(aFilterPresence[i] > 0.001f)
+					FilterX += QmConsoleUi::ToolbarFlowGap(FilterSpacing * FilterScale, HasVisibleFilter, aFilterPresence[i]);
+				const float Width = FilterWidth * FilterScale * aFilterPresence[i];
+				if(aFilterPresence[i] > 0.001f)
+				{
+					const CUIRect Button = {FilterX, 3.0f, Width, FontSize + 10.0f};
+					const bool Clicked = ToolbarButton(Button, apFilterLabels[i], FilterScale,
+						QmConsoleLogFilterButtonActive(pConsole->m_LogFilterMask, Category),
+						ConsoleToolbarNodeKey("qm_console_toolbar_filter_selected", i), aFilterPresence[i]);
+					if(Clicked && FilterTargetPresent)
+						pConsole->SetLogFilterMask(QmSelectConsoleLogFilterCategory(Category));
+					FilterX += Width;
+					HasVisibleFilter = true;
+				}
 			}
 		}
 		if(LocalConsole)
 		{
 			float ActionX = Toolbar.m_ActionX;
-			for(int i = 0; i < NumActions; ++i)
+			bool HasVisibleAction = false;
+			for(int i = 0; i < TOOLBAR_ACTION_MOTION_COUNT; ++i)
 			{
 				const auto &Action = aActions[i];
-				const CUIRect Button = {ActionX, Toolbar.m_SplitRows ? FontSize + 19.0f : 3.0f, Action.m_Width * Toolbar.m_ActionScale, FontSize + 10.0f};
-				if(ToolbarButton(Button, Action.m_pLabel, Toolbar.m_ActionScale, Action.m_Selected))
+				if(Action.m_Presence > 0.001f)
+					ActionX += QmConsoleUi::ToolbarFlowGap(FilterSpacing * Toolbar.m_ActionScale, HasVisibleAction, Action.m_Presence);
+				const float Width = Action.m_CurrentWidth * Toolbar.m_ActionScale * Action.m_Presence;
+				if(Action.m_Presence > 0.001f && ToolbarButton({ActionX, Toolbar.m_SplitRows ? FontSize + 19.0f : 3.0f, Width, FontSize + 10.0f}, Action.m_pLabel, Toolbar.m_ActionScale, Action.m_Selected, ConsoleToolbarNodeKey("qm_console_toolbar_action_selected", i), Action.m_Presence) &&
+					Action.m_Present)
 				{
 					switch(Action.m_Action)
 					{
 					case EToolbarAction::SEARCH: pConsole->SetSearching(!pConsole->m_SearchInput.IsSearching()); break;
 					case EToolbarAction::FOLLOW:
-						pConsole->m_BacklogCurLine = 0;
+						// 回到跟随态也走统一滚动：弹簧档会顺着当前方向滑回最新一行。
+						pConsole->m_Scroll.ScrollToNewest();
 						pConsole->m_Selection.Clear();
 						break;
 					case EToolbarAction::EXPORT: pConsole->SetChatExportMode(true); break;
@@ -2742,8 +3034,78 @@ void CGameConsole::OnRender()
 					case EToolbarAction::EXPAND: m_LocalConsoleFullscreen = !m_LocalConsoleFullscreen; break;
 					}
 				}
-				ActionX += (Action.m_Width + FilterSpacing) * Toolbar.m_ActionScale;
+				if(Action.m_Presence > 0.001f)
+				{
+					ActionX += Width;
+					HasVisibleAction = true;
+				}
 			}
+			Ui()->ClipDisable();
+		}
+		else
+		{
+			Ui()->ClipEnable(&HeaderClip);
+			// 远程头部与本地共用同一条顶栏高度；两行文本按行高居中，
+			// 开关与本地/远程切换都从当前存在度续接，不再整块硬切。
+			const float HeaderLineHeight = RowHeight * 0.5f;
+			const float HeaderSlide = (1.0f - HeaderPresence) * 8.0f;
+			const ColorRGBA PreviousHeaderColor = TextRender()->GetTextColor();
+			TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(HeaderPresence));
+			if(HeaderPresence > 0.001f)
+			{
+				char aVersion[128];
+				str_copy(aVersion, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
+				const float VersionWidth = TextRender()->TextWidth(FontSize, aVersion);
+				const bool ShowVersion = VersionWidth + 20.0f <= Screen.w - ToolbarRightMargin;
+				if(ShowVersion)
+				{
+					const CUIRect VersionRect = {0.0f, 0.0f, maximum(0.0f, Screen.w - ToolbarRightMargin - 10.0f - HeaderSlide), HeaderLineHeight};
+					Ui()->DoLabel(&VersionRect, aVersion, FontSize, TEXTALIGN_MR);
+				}
+
+				const float SecondRowY = HeaderLineHeight;
+				const char *pClientVersion = CLIENT_NAME " " CLIENT_RELEASE_VERSION;
+				const float ClientVersionWidth = TextRender()->TextWidth(FontSize, pClientVersion);
+				const bool ShowClientVersion = ShowVersion && ClientVersionWidth + 20.0f <= Screen.w - ToolbarRightMargin;
+				if(Client()->ReceivingRconCommands() || Client()->ReceivingMaplist())
+				{
+					const float Percentage = Client()->ReceivingRconCommands() ? Client()->GotRconCommandsPercentage() : Client()->GotMaplistPercentage();
+					char aLoading[128];
+					str_copy(aLoading, Client()->ReceivingRconCommands() ? Localize("Loading commands…") : Localize("Loading maps…"));
+					if(Percentage > 0)
+					{
+						char aPercentage[8];
+						str_format(aPercentage, sizeof(aPercentage), " %d%%", (int)(Percentage * 100));
+						str_append(aLoading, aPercentage);
+					}
+					const float LoadingX = Screen.w / 4.0f + HeaderSlide;
+					SProgressSpinnerProperties ProgressProps;
+					ProgressProps.m_Progress = Percentage;
+					ProgressProps.m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, HeaderPresence);
+					Ui()->RenderProgressSpinner(vec2(LoadingX + FontSize / 2.0f, SecondRowY + HeaderLineHeight / 2.0f), FontSize / 2.0f, ProgressProps);
+					const float LoadingRight = ShowClientVersion ? Screen.w - ToolbarRightMargin - ClientVersionWidth - 20.0f : Screen.w - 10.0f;
+					const CUIRect LoadingRect = {LoadingX + FontSize + 2.0f, SecondRowY, maximum(0.0f, LoadingRight - LoadingX - FontSize - 12.0f), HeaderLineHeight};
+					SLabelProperties LoadingProps;
+					LoadingProps.m_MaxWidth = LoadingRect.w;
+					LoadingProps.m_EllipsisAtEnd = true;
+					Ui()->DoLabel(&LoadingRect, aLoading, FontSize, TEXTALIGN_ML, LoadingProps);
+				}
+				if(ShowClientVersion)
+				{
+					const CUIRect ClientRect = {0.0f, SecondRowY, maximum(0.0f, Screen.w - ToolbarRightMargin - 10.0f - HeaderSlide), HeaderLineHeight};
+					Ui()->DoLabel(&ClientRect, pClientVersion, FontSize, TEXTALIGN_MR);
+				}
+			}
+			TextRender()->TextColor(PreviousHeaderColor);
+			Ui()->ClipDisable();
+		}
+
+		// 本地/远程共用同一条页脚状态行：行号 + 跟随状态固定在左下，
+		// 快捷键提示固定在右下。远程不再把这段信息塞进左上头部，
+		// 两种控制台切换时同一份信息只换位置、不换语义。
+		if(FooterPanelHeight > 0.5f)
+		{
+			Ui()->ClipEnable(&ConsoleClip);
 			char aStatus[256];
 			str_copy(aStatus, aLinesBuf);
 			if(pConsole->m_ChatExportMode)
@@ -2763,50 +3125,23 @@ void CGameConsole::OnRender()
 				str_append(aStatus, aExportStatus);
 			}
 			const char *pHints = pConsole->m_ChatExportMode ? "Shift+Mouse1  |  Esc" :
-									  (pConsole->m_SearchInput.IsSearching() ? "Enter / Shift+Enter  |  Esc  |  Ctrl+Mouse1" : "Ctrl+F  |  Alt+1-5  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1");
+									  (pConsole->m_SearchInput.IsSearching() ? "Enter / Shift+Enter  |  Esc  |  Ctrl+Mouse1" :
+														  (LocalConsole ? "Ctrl+F  |  Alt+1-5  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1" : "Ctrl+F  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1"));
 			const float HintWidth = TextRender()->TextWidth(FontSize * 0.8f, pHints);
 			const float StatusWidth = TextRender()->TextWidth(FontSize * 0.8f, aStatus);
 			const float HintX = Screen.w - HintWidth - 10.0f;
 			const bool ShowHints = StatusWidth + HintWidth + 30.0f <= Screen.w;
-			const CUIRect StatusRect = {10.0f, ConsoleHeight - FooterHeight, ShowHints ? HintX - 20.0f : maximum(0.0f, Screen.w - 20.0f), FooterHeight};
+			const CUIRect StatusRect = {10.0f, FooterPanelY, ShowHints ? HintX - 20.0f : maximum(0.0f, Screen.w - 20.0f), FooterPanelHeight};
 			SLabelProperties Props;
 			Props.m_MaxWidth = StatusRect.w;
 			Props.m_EllipsisAtEnd = true;
 			Ui()->DoLabel(&StatusRect, aStatus, FontSize * 0.8f, TEXTALIGN_ML, Props);
 			if(ShowHints)
 			{
-				const CUIRect HintRect = {HintX, ConsoleHeight - FooterHeight, HintWidth, FooterHeight};
+				const CUIRect HintRect = {HintX, FooterPanelY, HintWidth, FooterPanelHeight};
 				Ui()->DoLabel(&HintRect, pHints, FontSize * 0.8f, TEXTALIGN_ML);
 			}
-		}
-		else
-		{
-			TextRender()->Text(10.0f, FontSize / 2.0f, FontSize, aLinesBuf);
-			if(Client()->ReceivingRconCommands() || Client()->ReceivingMaplist())
-			{
-				const float Percentage = Client()->ReceivingRconCommands() ? Client()->GotRconCommandsPercentage() : Client()->GotMaplistPercentage();
-				SProgressSpinnerProperties ProgressProps;
-				ProgressProps.m_Progress = Percentage;
-				Ui()->RenderProgressSpinner(vec2(Screen.w / 4.0f + FontSize / 2.f, FontSize), FontSize / 2.f, ProgressProps);
-				char aLoading[128];
-				str_copy(aLoading, Client()->ReceivingRconCommands() ? Localize("Loading commands…") : Localize("Loading maps…"));
-				if(Percentage > 0)
-				{
-					char aPercentage[8];
-					str_format(aPercentage, sizeof(aPercentage), " %d%%", (int)(Percentage * 100));
-					str_append(aLoading, aPercentage);
-				}
-				TextRender()->Text(Screen.w / 4.0f + FontSize + 2.0f, FontSize / 2.f, FontSize, aLoading);
-			}
-			char aVersion[128];
-			str_copy(aVersion, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
-			const float VersionWidth = TextRender()->TextWidth(FontSize, aVersion);
-			if(FilterX + VersionWidth + 10.0f <= Screen.w - ToolbarRightMargin)
-			{
-				TextRender()->Text(Screen.w - ToolbarRightMargin - VersionWidth - 10.0f, FontSize / 2.0f, FontSize, aVersion);
-				const char *pClientVersion = CLIENT_NAME " " CLIENT_RELEASE_VERSION;
-				TextRender()->Text(Screen.w - ToolbarRightMargin - TextRender()->TextWidth(FontSize, pClientVersion) - 10.0f, FontSize * 2.0f, FontSize, pClientVersion);
-			}
+			Ui()->ClipDisable();
 		}
 	}
 
@@ -2824,7 +3159,9 @@ void CGameConsole::OnRender()
 	{
 		Ui()->FinishCheck();
 		Ui()->ClearHotkeys();
-		Ui()->SetEnabled(RestoreUiEnabled);
+		const bool UiEnabledAtFrameEnd = Ui()->Enabled();
+		Ui()->SetEnabled(QmConsoleUi::RestoreUiEnabledAtFrameEnd(
+			RestoreUiEnabled, UiEnabledAtFrameEnd, ConsoleStateAtRenderStart != m_ConsoleState));
 	}
 
 	TextRender()->SetRenderFlags(PreviousRenderFlags);
@@ -2892,6 +3229,40 @@ bool CGameConsole::OnInput(const IInput::CEvent &Event)
 	return true;
 }
 
+void CGameConsole::RegisterStartMenuToggle(const void *pButtonId, const CUIRect &Rect)
+{
+	m_StartMenuToggle.m_pButtonId = pButtonId;
+	m_StartMenuToggle.m_Rect = Rect;
+	m_StartMenuToggle.m_Frame = Client()->PerfFrame();
+	m_StartMenuToggle.m_Valid = pButtonId != nullptr && Rect.w > 0.0f && Rect.h > 0.0f;
+}
+
+void CGameConsole::UpdateStartMenuToggle()
+{
+	// 注册来自主页本帧的背景渲染趟，控制台渲染在其后，因此这里的矩形就是
+	// 当前帧画出的按钮。帧号不符说明主页本帧没有画它（例如已切到服务器列表），
+	// 旧矩形不能继续当作点击目标。
+	// 本地控制台全屏时按钮被面板盖住，不能再把面板上的点击当成按钮。
+	const CUIRect *pScreen = Ui()->Screen();
+	const bool BelowPanel = QmConsoleUi::StartMenuToggleVisibleBelowPanel(m_StartMenuToggle.m_Rect.y, pScreen->h,
+		m_ConsoleType == CONSOLETYPE_LOCAL && m_LocalConsoleFullscreen);
+	const bool Registered = m_StartMenuToggle.m_Valid && m_StartMenuToggle.m_Frame == Client()->PerfFrame() && BelowPanel;
+	const bool Blocked = ConsoleSettingsOpen();
+	const bool Inside = Registered && !Blocked && m_StartMenuToggle.m_Rect.Inside(Ui()->MousePos());
+	const bool Down = Registered && !Blocked && Ui()->MouseButton(0) != 0;
+	const bool PressedThisFrame = Registered && !Blocked && Ui()->MouseButtonClicked(0) != 0;
+	if(Inside && PressedThisFrame)
+		Ui()->SetActiveItem(m_StartMenuToggle.m_pButtonId);
+	const bool Activate = m_StartMenuTogglePress.Update(Inside, Down, PressedThisFrame);
+	m_StartMenuToggleHovered = Inside;
+	if(!Activate)
+		return;
+	if(Ui()->ActiveItem() == m_StartMenuToggle.m_pButtonId)
+		Ui()->SetActiveItem(nullptr);
+	// 与键盘 F1/F2 共用同一条状态机：OPENING 中按下会转收起，CLOSING 中按下会弹回。
+	Toggle(m_ConsoleType);
+}
+
 void CGameConsole::Toggle(int Type)
 {
 	Ui()->ClosePopupMenu(&m_SettingsPopupId, true);
@@ -2903,6 +3274,11 @@ void CGameConsole::Toggle(int Type)
 	if(m_ConsoleType != Type && (m_ConsoleState == CONSOLE_OPEN || m_ConsoleState == CONSOLE_OPENING))
 	{
 		// don't toggle console, just switch what console to use
+		// 类型切换时让新头部从 0 重新入场，并把本地工具栏的存在度归零；
+		// 否则从远程切回本地会直接看到一排已经展开的按钮。
+		m_HeaderPresenceMotion.Reset();
+		m_ToolbarFilterMotion.Reset();
+		m_ToolbarActionMotion.Reset();
 	}
 	else
 	{
@@ -2921,7 +3297,13 @@ void CGameConsole::Toggle(int Type)
 		if(m_ConsoleState == CONSOLE_CLOSED || m_ConsoleState == CONSOLE_CLOSING)
 		{
 			Ui()->SetEnabled(false);
+			// 真打开（从完全收起）才钉起点；收回途中折返从当前高度续接，不跳。
+			const bool FromClosed = m_ConsoleState == CONSOLE_CLOSED;
 			m_ConsoleState = CONSOLE_OPENING;
+			if(g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled())
+				StartConsoleSlide(GameClient()->UiRuntimeV2()->AnimRuntime(), 1.0f, FromClosed);
+			else
+				GameClient()->UiRuntimeV2()->AnimRuntime().SetValue(ConsoleSlideNodeKey(), EUiAnimProperty::SCALE, 1.0f);
 		}
 		else
 		{
@@ -2929,6 +3311,15 @@ void CGameConsole::Toggle(int Type)
 			Ui()->SetEnabled(true);
 			GameClient()->OnRelease();
 			m_ConsoleState = CONSOLE_CLOSING;
+			if(g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled())
+			{
+				StartConsoleSlide(GameClient()->UiRuntimeV2()->AnimRuntime(), 0.0f, false);
+				m_ConsoleSlideDeadline = time_get() + time_freq() * 3 / 2; // 兜底 1.5s
+			}
+			else
+			{
+				GameClient()->UiRuntimeV2()->AnimRuntime().SetValue(ConsoleSlideNodeKey(), EUiAnimProperty::SCALE, 0.0f);
+			}
 		}
 	}
 	m_ConsoleType = Type;
@@ -2979,27 +3370,25 @@ void CGameConsole::ConDumpRemoteConsole(IConsole::IResult *pResult, void *pUserD
 void CGameConsole::ConConsolePageUp(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	pConsole->m_BacklogCurLine += pConsole->GetLinesToScroll(-1, pConsole->m_LinesRendered);
+	pConsole->m_Scroll.Page(1);
 }
 
 void CGameConsole::ConConsolePageDown(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	pConsole->m_BacklogCurLine -= pConsole->GetLinesToScroll(1, pConsole->m_LinesRendered);
-	if(pConsole->m_BacklogCurLine < 0)
-		pConsole->m_BacklogCurLine = 0;
+	pConsole->m_Scroll.Page(-1);
 }
 
 void CGameConsole::ConConsolePageTop(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	pConsole->m_BacklogCurLine += pConsole->GetLinesToScroll(-1, pConsole->m_LinesRendered);
+	pConsole->m_Scroll.ScrollToOldest();
 }
 
 void CGameConsole::ConConsolePageBottom(IConsole::IResult *pResult, void *pUserData)
 {
 	CInstance *pConsole = ((CGameConsole *)pUserData)->CurrentConsole();
-	pConsole->m_BacklogCurLine = 0;
+	pConsole->m_Scroll.ScrollToNewest();
 }
 
 void CGameConsole::ConchainConsoleOutputLevel(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)

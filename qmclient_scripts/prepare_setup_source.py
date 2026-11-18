@@ -48,6 +48,17 @@ def prepare(source: Path, data: Path, output: Path, steam_appid_file: Path | Non
 	if len({name.casefold() for name in names}) != len(names):
 		raise ValueError("duplicate Setup runtime manifest entry")
 
+	dll_manifest = source / "qmclient-setup-dlls.txt"
+	if not dll_manifest.is_file():
+		raise ValueError("missing CMake Setup runtime DLL manifest; reconfigure the client build")
+	dll_names = dll_manifest.read_text(encoding="utf-8").splitlines()
+	# 运行时 DLL 同样只接受构建目录同级文件名。这里不能用 glob：构建目录
+	# 可能残留旧版本 DLL，按目录扫描会把已淘汰的运行时重新装进安装包。
+	if not dll_names or any(not name or "/" in name or "\\" in name or ":" in name or Path(name).suffix.casefold() != ".dll" for name in dll_names):
+		raise ValueError("invalid Setup runtime DLL manifest")
+	if len({name.casefold() for name in dll_names}) != len(dll_names):
+		raise ValueError("duplicate Setup runtime DLL manifest entry")
+
 	generated_manifest = source / "qmclient-setup-generated.txt"
 	if not generated_manifest.is_file():
 		raise ValueError("missing CMake Setup generated asset manifest; reconfigure the client build")
@@ -83,11 +94,11 @@ def prepare(source: Path, data: Path, output: Path, steam_appid_file: Path | Non
 			shutil.copy2(path, temporary / name)
 		if steam_appid_file is not None:
 			shutil.copy2(steam_appid_file, temporary / "steam_appid.txt")
-		dlls = sorted(source.glob("*.dll"), key=lambda path: path.name.casefold())
-		if not dlls:
-			raise ValueError("no runtime DLLs found in build directory")
-		for path in dlls:
-			shutil.copy2(path, temporary / path.name)
+		for name in dll_names:
+			path = source / name
+			if not path.is_file():
+				raise ValueError(f"missing runtime DLL: {name}")
+			shutil.copy2(path, temporary / name)
 		shutil.copy2(storage_cfg_file, temporary / "storage.cfg")
 		shutil.copytree(data, temporary / "data")
 		for name in generated_files:

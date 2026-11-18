@@ -320,24 +320,36 @@ TEST(ToggleStyle, DisabledKeepsMutedKnobAndIgnoresPointerFeedback)
 TEST(UiThemeAccent, OpacityPreservesRgbAndAllowsFullyTransparentAccent)
 {
 	const ColorHSLA Accent(0.6f, 0.7f, 0.5f, 1);
-	const auto Opaque = ResolveUiTheme(ColorHSLA(0), 1, ColorHSLA(0), Accent);
+	const auto Opaque = ResolveUiTheme(ColorHSLA(0), 1, Accent);
 	for(const float Opacity : {0.0f, 0.2f, 0.75f, 1.0f})
 	{
 		SCOPED_TRACE(Opacity);
-		const auto Theme = ResolveUiTheme(ColorHSLA(0), 1, ColorHSLA(0), Accent.WithAlpha(Opacity));
+		const auto Theme = ResolveUiTheme(ColorHSLA(0), 1, Accent.WithAlpha(Opacity));
 		EXPECT_FLOAT_EQ(Theme.m_Accent.a, Opacity);
 		EXPECT_FLOAT_EQ(Theme.m_Accent.r, Opaque.m_Accent.r);
 		EXPECT_FLOAT_EQ(Theme.m_Accent.g, Opaque.m_Accent.g);
 		EXPECT_FLOAT_EQ(Theme.m_Accent.b, Opaque.m_Accent.b);
-		EXPECT_FLOAT_EQ(Theme.m_BorderHovered.a, 0.45f * Opacity);
-		EXPECT_FLOAT_EQ(Theme.m_BorderFocused.a, 0.75f * Opacity);
+		// 白色高亮边框不再乘强调色透明度：强调色透明度只影响强调色本身，
+		// 否则强调色全透明时按钮会连"鼠标在上面"的反馈都没有。
+		EXPECT_FLOAT_EQ(Theme.m_BorderHovered.a, 0.45f);
+		EXPECT_FLOAT_EQ(Theme.m_BorderFocused.a, 0.75f);
 		EXPECT_EQ(Theme.m_FocusRing, Opaque.m_FocusRing);
 	}
 }
 
+TEST(UiThemeAccent, HighlightBordersFollowSurfaceOpacityNotAccentOpacity)
+{
+	// 表面透明度仍然作用于高亮边框（整块界面淡出时边框一起淡），强调色透明度不参与。
+	const auto Full = ResolveUiTheme(ColorHSLA(0), 1.0f, ColorHSLA(0.6f, 0.7f, 0.5f, 0.5f));
+	const auto Half = ResolveUiTheme(ColorHSLA(0), 0.5f, ColorHSLA(0.6f, 0.7f, 0.5f, 1.0f));
+	EXPECT_FLOAT_EQ(Full.m_BorderHovered.a, 0.45f);
+	EXPECT_FLOAT_EQ(Half.m_BorderHovered.a, 0.225f);
+	EXPECT_FLOAT_EQ(Half.m_BorderFocused.a, 0.375f);
+}
+
 TEST(UiThemeAccent, TransparentEnabledTrackPreservesDefaultKnobAcrossBackdrops)
 {
-	const auto Theme = ResolveUiTheme(ColorHSLA(0), 1, ColorHSLA(0), ColorHSLA(0, 0, 1, 0));
+	const auto Theme = ResolveUiTheme(ColorHSLA(0), 1, ColorHSLA(0, 0, 1, 0));
 	const auto Dark = ResolveUiToggleStyle(Theme, ColorRGBA(), ColorRGBA(0, 0, 0, 1), true, true);
 	const auto Light = ResolveUiToggleStyle(Theme, ColorRGBA(), ColorRGBA(1, 1, 1, 1), true, true);
 	EXPECT_FLOAT_EQ(Dark.m_Track.a, 0.0f);
@@ -367,12 +379,12 @@ protected:
 
 TEST_F(CUiAccentConfigTest, FallbackThemeReflectsOpacityChangesAndRestoration)
 {
-	const auto Before = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+	const auto Before = ResolveInputFallbackTheme();
 	EXPECT_FLOAT_EQ(Before.m_Accent.a, 1.0f);
 	for(const int Opacity : {20, 0, 100})
 	{
 		g_Config.m_QmUiAccentOpacity = Opacity;
-		const auto Theme = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+		const auto Theme = ResolveInputFallbackTheme();
 		EXPECT_FLOAT_EQ(Theme.m_Accent.a, Opacity / 100.0f);
 		EXPECT_FLOAT_EQ(Theme.m_Accent.r, Before.m_Accent.r);
 		EXPECT_FLOAT_EQ(Theme.m_Accent.g, Before.m_Accent.g);

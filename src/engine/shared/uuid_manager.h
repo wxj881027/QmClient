@@ -1,8 +1,18 @@
 #ifndef ENGINE_SHARED_UUID_MANAGER_H
 #define ENGINE_SHARED_UUID_MANAGER_H
 
-#include <memory>
+#include <cstdint>
 #include <vector>
+
+class CUuid
+{
+public:
+	unsigned char m_aData[16];
+
+	bool operator==(const CUuid &Other) const;
+	bool operator!=(const CUuid &Other) const;
+	bool operator<(const CUuid &Other) const;
+};
 
 enum
 {
@@ -11,16 +21,8 @@ enum
 	UUID_INVALID = -2,
 	UUID_UNKNOWN = -1,
 
+	UUID_INT_SIZE = sizeof(CUuid) / sizeof(int32_t),
 	OFFSET_UUID = 1 << 16,
-};
-
-struct CUuid
-{
-	unsigned char m_aData[16];
-
-	bool operator==(const CUuid &Other) const;
-	bool operator!=(const CUuid &Other) const;
-	bool operator<(const CUuid &Other) const;
 };
 
 extern const CUuid UUID_ZEROED;
@@ -31,15 +33,34 @@ CUuid CalculateUuid(const char *pName);
 void FormatUuid(CUuid Uuid, char *pBuffer, unsigned BufferLength);
 // Returns nonzero on failure.
 int ParseUuid(CUuid *pUuid, const char *pBuffer);
+// Converts a UUID into an array of UUID_INT_SIZE big-endian 32-bit ints.
+void UuidToInts(const CUuid &Uuid, int *pInts, size_t Size);
 
-struct CName
+template<int N>
+void UuidToInts(const CUuid &Uuid, int (&aInts)[N])
 {
+	UuidToInts(Uuid, aInts, N);
+}
+
+// Converts an array of UUID_INT_SIZE integers, each holding one big-endian 32-bit int, into a UUID.
+CUuid UuidFromInts(const int *pInts, size_t Size);
+
+template<int N>
+CUuid UuidFromInts(const int (&aInts)[N])
+{
+	return UuidFromInts(aInts, N);
+}
+
+class CName
+{
+public:
 	CUuid m_Uuid;
 	const char *m_pName;
 };
 
-struct CNameIndexed
+class CNameIndexed
 {
+public:
 	CUuid m_Uuid;
 	int m_Id;
 
@@ -67,9 +88,6 @@ public:
 	void PackUuid(int Id, CPacker *pPacker) const;
 
 	void DebugDump() const;
-
-	static std::unique_ptr<CUuidManager> New();
-	static const CUuidManager &Global();
 };
 
 extern CUuidManager g_UuidManager;

@@ -6,6 +6,7 @@
 #include "UiTokens.h"
 
 #include <base/color.h>
+#include <base/system.h>
 
 #include <engine/shared/config.h>
 
@@ -34,21 +35,55 @@ inline ColorRGBA ResolveUiSurfaceForeground(ColorRGBA Surface, ColorRGBA Backdro
 	return Luminance > 0.179f ? ui_token::color::NEUTRAL_BLACK : ui_token::color::NEUTRAL_WHITE;
 }
 
-// 手动文本模式保持用户选择；非法模式回退自动，图标策略独立。
-inline ColorRGBA ResolveUiTextColor(ColorRGBA Surface, int Mode, unsigned CustomColor, ColorRGBA Backdrop = ui_token::color::SURFACE_BACKDROP)
+// 外溢光（搜索框聚焦光晕这类"从控件边缘散出去的光"）在浅色表面上会明显更亮：
+// 同一份 alpha 压在白卡上，比压在深色卡上扎眼得多。按表面亮度线性压一档——
+// 最亮表面只留 55% 强度，深色主题几乎不变。这样同一个令牌在浅/深两套主题里
+// 都落在"看得出、但不抢描边"的区间，而不是各自换一套数值。
+inline float ResolveUiSurfaceGlowScale(ColorRGBA Surface)
+{
+	const float Luminance = std::clamp(UiSurfaceLuminance(CompositeUiSurface(Surface)), 0.0f, 1.0f);
+	return 1.0f - Luminance * ui_token::glow::LIGHT_SURFACE_DIM;
+}
+
+// 文本颜色模式：0 白 / 1 黑 / 2 彩虹 / 3 自定义。越界值按白处理——配置被手改成
+// 4 时不该让整屏文字变黑压在深色表面上。
+// 「自动对比」档已删除：同一屏里浅色胶囊上翻黑、深色卡片上翻白，并排读起来像两套
+// 主题，且用户无法从设置里判断某块文字到底是什么颜色。
+// 彩虹只换绘制色（容器不烘色段），所以色相逐帧流动也不触发文本容器重建。
+inline ColorRGBA ResolveUiRainbowTextColor(const float Phase, const float Alpha = 1.0f)
+{
+	return color_cast<ColorRGBA>(ColorHSLA(Phase - std::floor(Phase), 0.72f, 0.68f, 1.0f)).WithAlpha(Alpha);
+}
+
+inline ColorRGBA ResolveUiTextColor(const int Mode, const unsigned CustomColor, const float RainbowPhase = 0.0f)
 {
 	switch(Mode)
 	{
-	case 1: return ui_token::color::TEXT_FORCED_LIGHT;
-	case 2: return ui_token::color::TEXT_FORCED_DARK;
+	case 1: return ui_token::color::TEXT_FORCED_DARK;
+	case 2: return ResolveUiRainbowTextColor(RainbowPhase);
 	case 3: return color_cast<ColorRGBA>(ColorHSLA(CustomColor)).WithAlpha(1.0f);
-	default: return ResolveUiSurfaceForeground(Surface, Backdrop);
+	default: return ui_token::color::TEXT_FORCED_LIGHT;
 	}
 }
 
-inline ColorRGBA ResolveConfiguredTextColor(ColorRGBA Surface)
+// 全界面共用一条彩虹相位（6 秒一圈）：文字面积比卡片标题大，慢到看不出在流动，
+// 但比标题快一档，免得整屏文字长时间停在同一个颜色上。
+inline float UiRainbowTextPhase()
 {
-	return ResolveUiTextColor(Surface, g_Config.m_QmUiTextColorMode, g_Config.m_QmUiTextCustomColor);
+	const double Seconds = (double)time_get() / (double)time_freq();
+	return (float)std::fmod(Seconds / 6.0, 1.0);
+}
+
+// 强调色的 RGB（满透明）。选中项、滑块、行反馈都从这里取，避免每处各自
+// 把 qm_ui_accent_color 与 qm_ui_accent_opacity 各拼一次。
+inline ColorRGBA ResolveConfiguredAccentColor()
+{
+	return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiAccentColor)).WithAlpha(1.0f);
+}
+
+inline ColorRGBA ResolveConfiguredTextColor()
+{
+	return ResolveUiTextColor(g_Config.m_QmUiTextColorMode, g_Config.m_QmUiTextCustomColor, UiRainbowTextPhase());
 }
 
 // 反馈独立叠加，不修改基础表面的用户颜色或按钮几何。
@@ -143,13 +178,14 @@ inline SUiSliderStyle ResolveUiSliderStyle(const SUiTheme &Theme, ColorRGBA Back
 	return Style;
 }
 
-inline SUiTheme ResolveUiTheme(const ColorHSLA BaseColor, float Opacity, const ColorHSLA FocusColor = ColorHSLA(0.60f, 0.78f, 0.52f, 1.0f), const ColorHSLA AccentColor = ColorHSLA(0x8FDDAD), const ColorHSLA SelectedColor = ColorHSLA(0x8FDDAD))
+// 焦点环不再单独配置：它就是强调色。同一套界面里出现第二个「强调色」时，用户调了
+// 强调色却发现输入框焦点环还是另一种颜色，只会以为设置没生效。
+inline SUiTheme ResolveUiTheme(const ColorHSLA BaseColor, float Opacity, const ColorHSLA AccentColor = ColorHSLA(0x8FDDAD))
 {
 	Opacity = std::clamp(Opacity, 0.0f, 1.0f);
 	const ColorRGBA SurfaceBase = color_cast<ColorRGBA>(BaseColor);
 	const ColorRGBA AccentBase = color_cast<ColorRGBA>(AccentColor);
 	const float AccentAlpha = std::clamp(AccentBase.a, 0.0f, 1.0f);
-	const ColorRGBA SelectedBase = color_cast<ColorRGBA>(SelectedColor);
 	SUiTheme Theme;
 	Theme.m_Surface = SurfaceBase.WithAlpha(std::clamp(std::max(SurfaceBase.a, 0.70f) * Opacity, 0.0f, 1.0f));
 	Theme.m_SurfaceHovered = ColorRGBA(
@@ -158,18 +194,22 @@ inline SUiTheme ResolveUiTheme(const ColorHSLA BaseColor, float Opacity, const C
 		std::clamp(Theme.m_Surface.b * 1.06f, 0.0f, 1.0f), Theme.m_Surface.a);
 	Theme.m_SurfaceFocused = Theme.m_SurfaceHovered;
 	Theme.m_Border = ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f * Opacity);
-	Theme.m_BorderHovered = AccentBase.WithAlpha(0.45f * Opacity * AccentAlpha);
-	Theme.m_BorderFocused = AccentBase.WithAlpha(0.75f * Opacity * AccentAlpha);
+	// 悬停/聚焦的高亮边框固定白色：边框只表达「这里有反馈」，不参与强调色语义。
+	// 跟随强调色时，一个偏红的强调色会把每个按钮的鼠标悬停都染红，看起来像错误态。
+	Theme.m_BorderHovered = ui_token::color::NEUTRAL_WHITE.WithAlpha(0.45f * Opacity);
+	Theme.m_BorderFocused = ui_token::color::NEUTRAL_WHITE.WithAlpha(0.75f * Opacity);
 	Theme.m_InputSurface = ColorRGBA(
 		std::clamp(Theme.m_Surface.r * 0.88f, 0.0f, 1.0f),
 		std::clamp(Theme.m_Surface.g * 0.88f, 0.0f, 1.0f),
 		std::clamp(Theme.m_Surface.b * 0.88f, 0.0f, 1.0f), Theme.m_Surface.a);
 	Theme.m_InputSurfaceFocused = Theme.m_InputSurface;
-	// 焦点环是键盘与输入焦点的唯一稳定反馈，不随低表面透明度弱化到不可辨认。
-	Theme.m_FocusRing = color_cast<ColorRGBA>(FocusColor).WithAlpha(std::clamp(std::max(0.60f, 0.90f * Opacity), 0.0f, 1.0f));
+	// 焦点环是键盘与输入焦点的唯一稳定反馈，不随低表面透明度弱化到不可辨认；
+	// 颜色跟随强调色，避免同一界面出现两个强调色。
+	Theme.m_FocusRing = AccentBase.WithAlpha(std::clamp(std::max(0.60f, 0.90f * Opacity), 0.0f, 1.0f));
 	Theme.m_Accent = AccentBase.WithAlpha(AccentAlpha);
-	Theme.m_Selected = SelectedBase.WithAlpha(0.22f);
-	Theme.m_TextTitle = ResolveConfiguredTextColor(Theme.m_Surface);
+	// 选中项不再单独配置：选中就是强调色，只是压到行反馈用的 22% 透明度。
+	Theme.m_Selected = AccentBase.WithAlpha(0.22f);
+	Theme.m_TextTitle = ResolveConfiguredTextColor();
 	Theme.m_TextBody = Theme.m_TextTitle;
 	Theme.m_TextSmall = Theme.m_TextTitle;
 	return Theme;
@@ -179,11 +219,11 @@ inline SUiTheme ResolveUiTheme(const ColorHSLA BaseColor, float Opacity, const C
 // 强调色/焦点/选中跟随用户配置：弹窗内的主按钮、滚动条与设置页共享同一套强调色，不回落到硬编码默认值。
 inline SUiTheme ResolveSecondaryPanelTheme(unsigned BackgroundColor, int Opacity, unsigned BorderColor)
 {
-	SUiTheme Theme = ResolveUiTheme(ColorHSLA(BackgroundColor), 1.0f, ColorHSLA(g_Config.m_QmUiFocusColor),
-		ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f), ColorHSLA(g_Config.m_QmUiSelectedColor));
+	SUiTheme Theme = ResolveUiTheme(ColorHSLA(BackgroundColor), 1.0f,
+		ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f));
 	Theme.m_Surface = Theme.m_Surface.WithAlpha(std::clamp(Opacity / 100.0f, 0.0f, 1.0f));
 	Theme.m_Border = color_cast<ColorRGBA>(ColorHSLA(BorderColor, true));
-	Theme.m_TextTitle = ResolveConfiguredTextColor(Theme.m_Surface);
+	Theme.m_TextTitle = ResolveConfiguredTextColor();
 	Theme.m_TextBody = Theme.m_TextTitle;
 	Theme.m_TextSmall = Theme.m_TextTitle;
 	return Theme;
@@ -203,9 +243,11 @@ inline ColorRGBA ResolveUiControlSurface(unsigned BackgroundColor, int Opacity, 
 	return ResolveDropdownSurface(BackgroundColor, Opacity).WithMultipliedAlpha(Enabled ? 1.0f : 0.65f);
 }
 
+// 控件底（按钮、下拉触发器、输入框）共用一份配置：三者外观本就同档，
+// 拆成多份只会让同一页里出现两种「按钮色」。
 inline ColorRGBA ResolveConfiguredControlSurface(bool Enabled = true)
 {
-	return ResolveUiControlSurface(g_Config.m_QmUiDropdownColor, g_Config.m_QmUiDropdownOpacity, Enabled);
+	return ResolveUiControlSurface(g_Config.m_QmUiControlColor, g_Config.m_QmUiControlOpacity, Enabled);
 }
 
 // 显式状态色保留原始透明度，普通图标按钮才回退到配置表面。
@@ -216,29 +258,32 @@ inline ColorRGBA ResolveConfiguredIconButtonSurface(const std::optional<ColorRGB
 
 inline ColorRGBA ResolveConfiguredDropdownSurface()
 {
-	return ResolveDropdownSurface(g_Config.m_QmUiDropdownColor, g_Config.m_QmUiDropdownOpacity);
+	return ResolveDropdownSurface(g_Config.m_QmUiControlColor, g_Config.m_QmUiControlOpacity);
 }
 
+// 输入框与按钮同底：输入框不再单独配色，避免「按钮是深灰、输入框是蓝灰」。
 inline ColorRGBA ResolveConfiguredInputSurface(bool Enabled = true)
 {
-	return ResolveUiControlSurface(g_Config.m_QmUiInputColor, g_Config.m_QmUiInputOpacity, Enabled);
+	return ResolveUiControlSurface(g_Config.m_QmUiControlColor, g_Config.m_QmUiControlOpacity, Enabled);
 }
 
+// 展开列表（下拉浮层）与二级菜单共用一份「弹层背景」：两者都浮在内容之上，
+// 分成两份配置后同一层里的两个浮层会出现两种底色。
 inline SUiTheme ResolveConfiguredDropdownListTheme()
 {
-	return ResolveSecondaryPanelTheme(g_Config.m_QmUiDropdownListColor, g_Config.m_QmUiDropdownListOpacity, g_Config.m_QmUiCardBorderColor);
+	return ResolveSecondaryPanelTheme(g_Config.m_QmUiLayerColor, g_Config.m_QmUiLayerOpacity, g_Config.m_QmUiCardBorderColor);
 }
 
 inline SUiTheme ResolveConfiguredSecondaryPanelTheme()
 {
-	return ResolveSecondaryPanelTheme(g_Config.m_QmUiPopupColor, g_Config.m_QmUiPopupOpacity, g_Config.m_QmUiCardBorderColor);
+	return ResolveSecondaryPanelTheme(g_Config.m_QmUiLayerColor, g_Config.m_QmUiLayerOpacity, g_Config.m_QmUiCardBorderColor);
 }
 
-inline SUiTheme ResolveInputFallbackTheme(const unsigned FocusColor)
+inline SUiTheme ResolveInputFallbackTheme()
 {
 	// 某些设置页的旧调用点只提供最小 IUiContext。回退主题仍必须与
 	// SettingsUiContext 使用相同的用户颜色和透明度，避免同一输入组件出现两套外壳。
-	return ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(FocusColor), ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f), ColorHSLA(g_Config.m_QmUiSelectedColor));
+	return ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f));
 }
 
 #endif

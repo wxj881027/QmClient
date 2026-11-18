@@ -23,11 +23,27 @@ namespace QmMusicLyrics
 		int m_Count = 0;
 	};
 
+	inline bool IsBlankLyric(std::string_view Text)
+	{
+		while(!Text.empty())
+		{
+			char aPrefix[5] = {};
+			Text.copy(aPrefix, std::min<size_t>(4, Text.size()));
+			const char *pNext = aPrefix;
+			const int Code = str_utf8_decode(&pNext);
+			const size_t Length = std::min<size_t>(pNext - aPrefix, Text.size());
+			if(!str_utf8_isspace(Code))
+				return false;
+			Text.remove_prefix(Length);
+		}
+		return true;
+	}
+
 	inline SDisplayRows DisplayRows(std::string_view Original, std::string_view Translation, int Language)
 	{
-		if(Original.empty() || IsLyricCredit(Original))
+		if(Original.empty() || IsBlankLyric(Original) || IsLyricCredit(Original))
 			return {};
-		if(IsLyricCredit(Translation))
+		if(IsBlankLyric(Translation) || IsLyricCredit(Translation))
 			Translation = {};
 		if(Language == static_cast<int>(EDisplayLanguage::TRANSLATION) && !Translation.empty())
 			return {{{Translation, {}}}, 1};

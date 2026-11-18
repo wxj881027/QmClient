@@ -1,6 +1,6 @@
 ## What this controls
 
-Seven site buttons in four rows: DDNet Workshop, DDNet Website, QmClient Website, shengyan Beijing server, the TeeData resource library, the DDStats statistics site, and the Axiom community.
+Eight site buttons in four rows: DDNet Workshop, DDNet Website, QmClient Website, shengyan Beijing server, the TeeData resource library, the DDStats statistics site, the Axiom community, and DDNet save sharing.
 
 ## In game
 
@@ -19,14 +19,15 @@ Nothing to tune — click one, it opens.
 | TeeData resource library | teedata.net |
 | DDStats statistics site | ddstats.tw |
 | Axiom community | axiom.teeworlds.cn |
+| DDNet save sharing | p.ddrace.cn |
 
-The last row holds only Axiom and still takes half a row, right half empty — that is the grid, not a missing button.
+The last row holds Axiom and DDNet save sharing, each taking half a row.
 
 ## Watch out
 
 A click opens in the system default browser; the client itself sends no request and never retries. Failures live on the browser or network side.
 
-The small icons are images shipped with the client. One that fails to load falls back to a glyph icon, and the button stays clickable.
+Most small icons are images shipped with the client. One that fails to load falls back to a glyph icon, and the button stays clickable. DDNet save sharing uses the built-in bookmark icon directly.
 
 These are external sites; the client is not responsible for their content, and a moved or closed site goes unannounced.
 

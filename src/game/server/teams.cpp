@@ -1204,9 +1204,10 @@ void CGameTeams::ProcessSaveTeam()
 			}
 			for(int i = 0; i < Size; i++)
 			{
-				if(m_apSaveTeamResult[Team]->m_SavedTeam.m_pSavedTees->IsHooking())
+				const CSaveTee &SavedTee = m_apSaveTeamResult[Team]->m_SavedTeam.m_pSavedTees[i];
+				if(SavedTee.IsHooking())
 				{
-					int ClientId = m_apSaveTeamResult[Team]->m_SavedTeam.m_pSavedTees->GetClientId();
+					const int ClientId = SavedTee.GetClientId();
 					if(GameServer()->m_apPlayers[ClientId] != nullptr)
 						GameServer()->SendChatTarget(ClientId, "载入存档前先按住钩子，这样可以保留当前钩子状态");
 				}
@@ -1330,7 +1331,7 @@ void CGameTeams::OnCharacterDeath(int ClientId, int Weapon)
 				{
 					for(int ClientId1 = 0; ClientId1 < MAX_CLIENTS; ClientId1++)
 					{
-						if(m_Core.Team(ClientId1) == Team)
+						if(ClientId1 != ClientId && m_Core.Team(ClientId1) == Team)
 						{
 							CPlayer *pPlayer = GameServer()->m_apPlayers[ClientId1];
 							if(pPlayer && pPlayer->IsPaused() == -1 * CPlayer::PAUSE_SPEC)

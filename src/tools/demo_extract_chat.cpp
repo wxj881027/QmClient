@@ -1,4 +1,5 @@
 #include <base/logger.h>
+#include <base/os.h>
 #include <base/system.h>
 
 #include <engine/client.h>
@@ -39,8 +40,8 @@ public:
 	int UnpackAndValidateSnapshot(CSnapshot *pFrom, CSnapshotBuffer *pTo)
 	{
 		CUnpacker Unpacker;
-		rust::Box<CSnapshotBuilder> pBuilder = CSnapshotBuilder::New();
-		pBuilder->Init(false);
+		CSnapshotBuilder Builder;
+		Builder.Init();
 		CNetObjHandler NetObjHandler;
 
 		int Num = pFrom->NumItems();
@@ -69,13 +70,13 @@ public:
 			}
 
 			const int ItemSize = NetObjHandler.GetUnpackedObjSize(ItemType);
-			if(!pBuilder->NewItem(ItemType, pFromItem->Id(), rust::Slice((const int32_t *)pSecuredData, ItemSize / sizeof(int32_t))))
+			if(!Builder.NewItem(ItemType, pFromItem->Id(), pSecuredData, ItemSize))
 			{
 				return -4;
 			}
 		}
 
-		return pBuilder->Finish(*pTo);
+		return Builder.Finish(pTo);
 	}
 
 	int SnapNumItems(int SnapId)
@@ -150,9 +151,8 @@ public:
 
 		int Msg;
 		bool Sys;
-		CUuid Uuid;
 
-		int Result = UnpackMessageId(&Msg, &Sys, &Uuid, &Unpacker, &Packer);
+		int Result = UnpackMessageId(&Msg, &Sys, &Unpacker, &Packer);
 		if(Result == UNPACKMESSAGE_ERROR)
 			return;
 
@@ -209,7 +209,7 @@ static int ExtractDemoChat(const char *pDemoFilePath, CSnapshotDelta *pSnapshotD
 {
 	CDemoPlayer DemoPlayer(pSnapshotDelta, pSnapshotDeltaSixup, false);
 
-	if(DemoPlayer.Load(pStorage, nullptr, pDemoFilePath, IStorage::TYPE_ALL_OR_ABSOLUTE) == -1)
+	if(DemoPlayer.Load(pStorage, pDemoFilePath, IStorage::TYPE_ALL_OR_ABSOLUTE) == -1)
 	{
 		log_error(TOOL_NAME, "Demo file '%s' failed to load: %s", pDemoFilePath, DemoPlayer.ErrorMessage());
 		return -1;
@@ -237,9 +237,9 @@ static int ExtractDemoChat(const char *pDemoFilePath, CSnapshotDelta *pSnapshotD
 	return 0;
 }
 
-static rust::Box<CSnapshotDelta> CreateSnapshotDelta()
+static std::unique_ptr<CSnapshotDelta> CreateSnapshotDelta()
 {
-	rust::Box<CSnapshotDelta> pResult = CSnapshotDelta::New();
+	std::unique_ptr<CSnapshotDelta> pResult = std::make_unique<CSnapshotDelta>();
 	CNetObjHandler NetObjHandler;
 	for(int i = 0; i < NUM_NETOBJTYPES; i++)
 	{
@@ -248,9 +248,9 @@ static rust::Box<CSnapshotDelta> CreateSnapshotDelta()
 	return pResult;
 }
 
-static rust::Box<CSnapshotDelta> CreateSnapshotDeltaSixup()
+static std::unique_ptr<CSnapshotDelta> CreateSnapshotDeltaSixup()
 {
-	rust::Box<CSnapshotDelta> pResult = CSnapshotDelta::New();
+	std::unique_ptr<CSnapshotDelta> pResult = std::make_unique<CSnapshotDelta>();
 	protocol7::CNetObjHandler NetObjHandler7;
 	// HACK: only set static size for items, which were available in the first 0.7 release
 	// so new items don't break the snapshot delta
@@ -268,7 +268,9 @@ int main(int argc, const char *argv[])
 	std::unique_ptr<IStorage> pStorage = CreateLocalStorage();
 
 	CCmdlineFix CmdlineFix(&argc, &argv);
-	log_set_global_logger_default();
+	std::unique_ptr<ILogger> pDefaultLogger = log_logger_stdout();
+	pDefaultLogger->SetFilter(CLogFilter{LEVEL_WARN});
+	log_set_global_logger(pDefaultLogger.release());
 
 	if(!pStorage)
 	{
@@ -282,8 +284,8 @@ int main(int argc, const char *argv[])
 		return -1;
 	}
 
-	rust::Box<CSnapshotDelta> pSnapshotDelta = CreateSnapshotDelta();
-	rust::Box<CSnapshotDelta> pSnapshotDeltaSixup = CreateSnapshotDeltaSixup();
+	std::unique_ptr<CSnapshotDelta> pSnapshotDelta = CreateSnapshotDelta();
+	std::unique_ptr<CSnapshotDelta> pSnapshotDeltaSixup = CreateSnapshotDeltaSixup();
 
-	return ExtractDemoChat(argv[1], &*pSnapshotDelta, &*pSnapshotDeltaSixup, pStorage.get());
+	return ExtractDemoChat(argv[1], pSnapshotDelta.get(), pSnapshotDeltaSixup.get(), pStorage.get());
 }

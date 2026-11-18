@@ -18,10 +18,15 @@ namespace
 		CUi::SDropDownState m_State;
 		CScrollRegion m_ScrollRegion;
 		SPopupMenuId m_ParentId;
+		qm_ui_test::CTestUiClient m_Client;
+		qm_ui_test::CTestInput m_Input;
 		int m_PageOwner = 0;
 		CUIRect m_Anchor{-10.0f, -24.0f, 100.0f, 24.0f};
 		CUIRect m_Viewport{-100.0f, -100.0f, 400.0f, 400.0f};
 		std::array<const char *, 10> m_aEntries{"Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"};
+
+		IInput *UiInput() override { return &m_Input; }
+		IClient *UiClient() override { return &m_Client; }
 
 		static CUi::EPopupMenuFunctionResult KeepOpen(void *, CUIRect, bool)
 		{
@@ -273,6 +278,28 @@ namespace
 		Frame(KEY_MOUSE_WHEEL_DOWN);
 		EXPECT_TRUE(m_ScrollRegion.WheelConsumedThisFrame());
 		EXPECT_GT(m_ScrollRegion.State().Offset(), 0.0f);
+	}
+
+	TEST_F(QmDropdownPopupWheelEntry, TriggerSurfaceIsAPillSoEntriesAndTriggerShareOneShape)
+	{
+		auto &Graphics = *static_cast<qm_ui_test::CRealUiTestGraphics *>(m_Ui.Graphics());
+		CUi::SDropDownProperties Props;
+		Props.m_pAnchorViewport = &m_Viewport;
+		Props.m_pPopupViewport = &m_Viewport;
+		Graphics.m_vRoundedSubmissions.clear();
+		m_Ui.Update();
+		m_Ui.DoDropDown(&m_Anchor, 0, m_aEntries.data(), (int)m_aEntries.size(), m_State, Props);
+		ASSERT_FALSE(Graphics.m_vRoundedSubmissions.empty());
+		// 24 高的触发器：四角都是行高一半的胶囊端头，与弹层条目同一条派生；
+		// 固定 radius::BASE(8) 时展开前后会是「圆角矩形 + 胶囊」两套形状。
+		// 设备像素对齐会带来不足一像素的舍入，断言仍按像素容差。
+		const auto &Surface = Graphics.m_vRoundedSubmissions.front();
+		const float CapsuleRadius = QmDropdownEntryRadius(m_Anchor.h);
+		EXPECT_NEAR(Surface.m_CornerRadii.x, CapsuleRadius, 1.0f);
+		EXPECT_NEAR(Surface.m_CornerRadii.y, CapsuleRadius, 1.0f);
+		EXPECT_NEAR(Surface.m_CornerRadii.z, CapsuleRadius, 1.0f);
+		EXPECT_NEAR(Surface.m_CornerRadii.w, CapsuleRadius, 1.0f);
+		EXPECT_GT(Surface.m_CornerRadii.x, ui_token::radius::BASE);
 	}
 
 	TEST_F(QmDropdownPopupWheelEntry, InputStageCloseDismissesOnlyTheTopPopupThenTheParent)

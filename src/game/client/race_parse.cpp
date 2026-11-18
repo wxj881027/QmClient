@@ -2,23 +2,22 @@
 
 #include <base/system.h>
 
-#include <cctype>
 #include <iterator>
 
 int CRaceHelper::TimeFromSecondsStr(const char *pStr)
 {
 	while(*pStr == ' ') // skip leading spaces
 		pStr++;
-	if(!isdigit(*pStr))
+	if(!str_isnum(*pStr))
 		return -1;
 	int Time = str_toint(pStr) * 1000;
-	while(isdigit(*pStr))
+	while(str_isnum(*pStr))
 		pStr++;
 	if(*pStr == '.' || *pStr == ',')
 	{
 		pStr++;
 		static const int s_aMult[3] = {100, 10, 1};
-		for(size_t i = 0; i < std::size(s_aMult) && isdigit(pStr[i]); i++)
+		for(size_t i = 0; i < std::size(s_aMult) && str_isnum(pStr[i]); i++)
 			Time += (pStr[i] - '0') * s_aMult[i];
 	}
 	return Time;
@@ -45,7 +44,7 @@ int CRaceHelper::TimeFromStr(const char *pStr)
 			pStr++;
 		const char *pMinutesSeparator = Chinese ? MINUTES_STR_ZH : MINUTES_STR;
 		int SecondsTime = TimeFromSecondsStr(pMinutes + str_length(pMinutesSeparator));
-		if(SecondsTime == -1 || !isdigit(*pStr))
+		if(SecondsTime == -1 || !str_isnum(*pStr))
 			return -1;
 		return str_toint(pStr) * 60 * 1000 + SecondsTime;
 	}

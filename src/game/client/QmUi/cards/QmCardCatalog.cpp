@@ -1,11 +1,15 @@
 #include "QmCardCatalogInternal.h"
 
+#include <base/color.h>
+
+#include <engine/shared/config.h>
 #include <engine/textrender.h>
 
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/SettingsCardContentBridge.h>
 #include <game/client/QmUi/SettingsPersonalization.h>
 #include <game/client/components/menus.h>
+#include <game/client/gameclient.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 
@@ -18,6 +22,17 @@ namespace qm_card_catalog
 	namespace
 	{
 		CSettingsPersonalizationState s_Personalization;
+		// 展开状态第一次用到时才从配置读入：静态初始化阶段 g_Config 还没就绪。
+		bool s_PersonalizationLoaded = false;
+
+		void EnsurePersonalizationLoaded()
+		{
+			// 静态初始化阶段 g_Config 还没就绪，所以只在第一次用到时读入。
+			if(s_PersonalizationLoaded)
+				return;
+			s_Personalization.LoadExpandedSections(g_Config.m_QmExpandedSections);
+			s_PersonalizationLoaded = true;
+		}
 
 		bool ContainsStableId(const std::vector<const char *> &vStableIds, const char *pStableId)
 		{
@@ -27,13 +42,41 @@ namespace qm_card_catalog
 		}
 	} // namespace
 
-	bool QmCardRenderHook::Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly)
+	bool QmCardRenderHook::Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly, bool DrawDivider)
 	{
-		return SettingsPersonalizationSection(s_Personalization, Content, pStableId, std::max(Metrics.m_LineHeight, Metrics.m_ButtonHeight), Metrics.m_LineSpacing,
-			ReadOnly || pMenus->Ui()->RenderOnly() || pMenus->m_MenuTextPlanCollecting,
-			[&](const void *pId, const CUIRect &Row, bool Expanded) {
-				return pMenus->DoButton_CheckBox(pId, Localize("Personal adjustments"), Expanded, &Row, Metrics.m_BodySize) != 0;
+		EnsurePersonalizationLoaded();
+		// 强调色沿用卡片选中色；折叠行不画分割线，所以不再需要边框色。
+		SSettingsFoldRowStyle Style = ResolveSettingsFoldRowStyle(
+			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true)),
+			ResolveConfiguredAccentColor().WithAlpha(1.0f));
+		const bool WasExpanded = s_Personalization.Expanded(pStableId);
+		const bool Expanded = SettingsPersonalizationSectionEx(s_Personalization, Content, pStableId, Metrics,
+			ReadOnly || pMenus->Ui()->RenderOnly() || pMenus->m_MenuTextPlanCollecting, DrawDivider,
+			[pMenus, &Metrics, &Style](const void *pId, const CUIRect &Row, bool Expanded, bool) {
+				return SettingsFoldRow(pMenus->Ui(), pId, Row, Localize("Personal adjustments"), Metrics.m_SmallSize, Expanded, Style);
 			});
+		// 只在真切换时写回，避免每帧重排整串配置。
+		if(Expanded != WasExpanded)
+			s_Personalization.SaveExpandedSections(g_Config.m_QmExpandedSections, sizeof(g_Config.m_QmExpandedSections));
+		return Expanded;
+	}
+
+	bool QmCardRenderHook::PersonalizationReveal(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, float *pRevealOut, bool ReadOnly, bool DrawDivider)
+	{
+		const bool Expanded = Personalization(pMenus, Content, pStableId, Metrics, ReadOnly, DrawDivider);
+		const float FrameDt = pMenus->GameClient()->UiRuntimeV2()->FrameDt();
+		return s_Personalization.AdvanceReveal(pStableId, Expanded, FrameDt, g_Config.m_QmUiMotionLevel, pRevealOut);
+	}
+
+	bool &SettingsPersonalizationExpanded(const char *pStableId)
+	{
+		EnsurePersonalizationLoaded();
+		return s_Personalization.Section(pStableId);
+	}
+
+	void SaveSettingsPersonalizationExpanded()
+	{
+		s_Personalization.SaveExpandedSections(g_Config.m_QmExpandedSections, sizeof(g_Config.m_QmExpandedSections));
 	}
 
 	void UseDeclaredModuleContent(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out)
@@ -91,6 +134,8 @@ namespace qm_card_catalog
 
 	bool BuildCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out)
 	{
+		if(str_comp(pStableId, "qm:key_binds") == 0)
+			return BuildFunctionCard(Ctx, qm_module::EQmModuleId::KeyBinds, Out);
 		if(ContainsStableId(ControlsCardStableIds(), pStableId))
 			return QmCardRenderHook::BuildControlsCard(Ctx, pStableId, Out);
 		if(ContainsStableId(GeneralCardStableIds(), pStableId))

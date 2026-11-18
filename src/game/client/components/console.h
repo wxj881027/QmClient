@@ -8,6 +8,7 @@
 #include <engine/console.h>
 #include <engine/shared/ringbuffer.h>
 
+#include <game/client/QmUi/QmConsoleScroll.h>
 #include <game/client/QmUi/QmConsoleUi.h>
 #include <game/client/component.h>
 #include <game/client/components/qm_console_log_filter.h>
@@ -18,6 +19,7 @@
 #include <game/client/ui.h>
 #include <game/client/ui_scrollregion.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -45,6 +47,11 @@ public:
 	};
 
 private:
+	enum
+	{
+		TOOLBAR_ACTION_MOTION_COUNT = 10,
+	};
+
 	friend class CConsoleLogger;
 	class CInstance
 	{
@@ -96,6 +103,9 @@ private:
 		std::shared_ptr<CQmChatExportJob> m_pChatExportJob;
 
 		STextBoundingBox m_BoundingBox = {0.0f, 0.0f, 0.0f, 0.0f};
+		// 当前实例最近一次排版使用的字号；本地/远程各自记录，
+		// 字号设置变化或切换控制台时按需重排各自日志。
+		float m_LastFontSize = -1.0f;
 
 		bool m_MouseIsPress = false;
 		vec2 m_MousePress = vec2(0.0f, 0.0f);
@@ -109,6 +119,8 @@ private:
 		bool m_TotalBacklogLinesValid = false;
 
 		CGameConsole *m_pGameConsole;
+		// 日志滚动态跟着实例走（本地 / 远程各一份），不再用按类型索引的文件级静态数组。
+		CQmConsoleScrollRuntime m_Scroll;
 
 		char m_aCompletionBuffer[IConsole::CMDLINE_LENGTH];
 		int m_CompletionChosen;
@@ -233,10 +245,11 @@ private:
 	int m_ConsoleState;
 	float m_StateChangeEnd;
 	float m_StateChangeDuration;
+	// 下拉/收回弹簧轨道的关闭兜底截止时刻（time_get）：轨道异常不收敛时强制收起。
+	int64_t m_ConsoleSlideDeadline = 0;
 
 	bool m_WantsSelectionCopy = false;
 	bool m_LocalConsoleFullscreen = false;
-	float m_LastLocalFontSize = -1.0f;
 	SPopupMenuId m_SettingsPopupId;
 	CScrollRegion m_SettingsScrollRegion;
 	CButtonContainer m_SettingsCloseButton;
@@ -244,6 +257,23 @@ private:
 	static CUi::EPopupMenuFunctionResult PopupSettings(void *pContext, CUIRect View, bool Active);
 	CUi::CTouchState m_TouchState;
 	vec2 m_ButtonPressPosition = vec2(0.0f, 0.0f);
+	QmConsoleUi::CToolbarPresenceMotion<CInstance::LOG_FILTER_BUTTON_COUNT> m_ToolbarFilterMotion;
+	QmConsoleUi::CToolbarPresenceMotion<TOOLBAR_ACTION_MOTION_COUNT> m_ToolbarActionMotion;
+	QmConsoleUi::CToolbarPresenceMotion<1> m_HeaderPresenceMotion;
+
+	// 主页右下角终端按钮：主页每帧登记矩形，控制台在自己的输入趟用同一份几何
+	// 判定开合，因此打开/关闭动画期间也能被同一次点击折返。
+	struct SStartMenuToggleHit
+	{
+		const void *m_pButtonId = nullptr;
+		CUIRect m_Rect = {};
+		uint64_t m_Frame = 0;
+		bool m_Valid = false;
+	};
+	SStartMenuToggleHit m_StartMenuToggle;
+	QmConsoleUi::CStartMenuTogglePress m_StartMenuTogglePress;
+	bool m_StartMenuToggleHovered = false;
+	void UpdateStartMenuToggle();
 
 	bool DoButton(const CUIRect &Rect, const char *pIcon, vec2 MousePosition, bool Released);
 
@@ -251,6 +281,7 @@ private:
 	static constexpr ColorRGBA ms_SearchSelectedColor = ColorRGBA(1.0f, 1.0f, 0.0f, 1.0f);
 
 	int PossibleMaps(const char *pStr, IConsole::FPossibleCallback pfnCallback = IConsole::EmptyPossibleCommandCallback, void *pUser = nullptr);
+	void PossibleSettings(const char *pStr, int FlagMask, IConsole::FPossibleCallback pfnCallback, void *pUser);
 
 	static void PossibleCommandsRenderCallback(int Index, const char *pStr, void *pUser);
 	static void ConToggleLocalConsole(IConsole::IResult *pResult, void *pUserData);
@@ -295,6 +326,8 @@ public:
 	void Toggle(int Type);
 	bool ConsoleSettingsOpen() const { return Ui()->IsPopupOpen(&m_SettingsPopupId); }
 	bool IsActive() const { return m_ConsoleState != CONSOLE_CLOSED; }
+	void RegisterStartMenuToggle(const void *pButtonId, const CUIRect &Rect);
+	bool StartMenuToggleHovered() const { return m_StartMenuToggleHovered; }
 
 	void ForceUpdateRemoteCompletionSuggestions();
 };

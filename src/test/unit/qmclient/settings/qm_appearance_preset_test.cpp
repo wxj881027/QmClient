@@ -58,7 +58,7 @@ TEST(QmDefaultProfile, FreshConfigKeepsDeclaredDefaultsAndDoesNotApplyRecommende
 	EXPECT_EQ(pConfig->m_UiColor, 0xE4A046AFu);
 	EXPECT_EQ(pConfig->m_BrFilterLogin, 1);
 	EXPECT_STREQ(pConfig->m_QmCustomFont, "");
-	EXPECT_EQ(pConfig->m_QmDefaultsProfileVersion, 1);
+	EXPECT_EQ(pConfig->m_QmDefaultsProfileVersion, QM_DEFAULTS_PROFILE_VERSION);
 }
 
 TEST(QmDefaultProfile, OldConfigKeepsOmittedPreviousDefaultsAndMigrationIsOneShot)
@@ -73,6 +73,13 @@ TEST(QmDefaultProfile, OldConfigKeepsOmittedPreviousDefaultsAndMigrationIsOneSho
 	pConfig->m_UiColor = 123;
 	EXPECT_FALSE(QmInitializeDefaultProfile(*pConfig, true, [](const char *) { return false; }));
 	EXPECT_EQ(pConfig->m_UiColor, 123u);
+}
+
+TEST(QmDefaultProfile, ReplayPrefetchIsOnByDefault)
+{
+	// 回放列表的「时长 / 标记 / 地图」三列依赖批量预读，界面上已没有开关：
+	// 默认必须是开，否则列表整列显示 0。
+	EXPECT_EQ(DefaultConfig::BrDemoFetchInfo, 1);
 }
 
 TEST(QmDefaultProfile, ExplicitOldUserValuesAreNeverReplacedByDefaultMigration)

@@ -155,11 +155,12 @@ namespace QmMusicLyrics
 			m_LastNow = Now;
 			if(m_Previous.m_Active && Now - m_Previous.m_FadeAt >= WORLD_LYRIC_FADE_SECONDS)
 				m_Previous = {};
-			if(!Source.m_Active || Source.m_Original.empty() || IsLyricCredit(Source.m_Original))
+			if(!Source.m_Active || Source.m_Original.empty() || IsBlankLyric(Source.m_Original) || IsLyricCredit(Source.m_Original))
 			{
 				FadeCurrent(Now);
 				return;
 			}
+			const bool HasUsableTranslation = !Source.m_Translation.empty() && !IsBlankLyric(Source.m_Translation) && !IsLyricCredit(Source.m_Translation);
 			const bool NewLine = !m_Current.m_Active || m_Current.m_LineStartMs != Source.m_LineStartMs || m_Current.m_Original != Source.m_Original;
 			if(NewLine)
 			{
@@ -183,8 +184,7 @@ namespace QmMusicLyrics
 					m_Current.m_aCharacterCounts[Index] = static_cast<int>(str_utf8_offset_bytes_to_chars(Text.c_str(), Text.size()));
 				}
 			}
-			const bool TranslationOnly = Language == static_cast<int>(EDisplayLanguage::TRANSLATION) &&
-						     !Source.m_Translation.empty() && !IsLyricCredit(Source.m_Translation);
+			const bool TranslationOnly = Language == static_cast<int>(EDisplayLanguage::TRANSLATION) && HasUsableTranslation;
 			for(size_t Index = 0; Index < m_Current.m_aRows.size(); ++Index)
 			{
 				const auto &Text = m_Current.m_aRows[Index];

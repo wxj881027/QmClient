@@ -15,12 +15,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000"
 
 [[package]]
-name = "arrayvec"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
-
-[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -318,13 +312,8 @@ dependencies = [
  "ddnet-base",
  "ddnet-engine",
  "ddnet-test",
- "libtw2-common",
- "libtw2-packer",
- "libtw2-snapshot",
- "libtw2-warn",
  "qm-update",
  "tungstenite",
- "uuid",
 ]
 
 [[package]]
@@ -663,87 +652,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5b646652bf6661599e1da8901b3b9522896f01e736bad5f723fe7a3a27f899d"
 
 [[package]]
-name = "libtw2-buffer"
-version = "0.0.1"
-source = "git+https://github.com/heinrich5991/libtw2#3a7f27ff256eab81f848af5abfd6c09a706b35ef"
-dependencies = [
- "arrayvec",
- "mac",
-]
-
-[[package]]
-name = "libtw2-common"
-version = "0.0.1"
-source = "git+https://github.com/heinrich5991/libtw2#3a7f27ff256eab81f848af5abfd6c09a706b35ef"
-dependencies = [
- "arrayvec",
- "zerocopy 0.7.35",
-]
-
-[[package]]
-name = "libtw2-gamenet-common"
-version = "0.0.1"
-source = "git+https://github.com/heinrich5991/libtw2#3a7f27ff256eab81f848af5abfd6c09a706b35ef"
-dependencies = [
- "arrayvec",
- "libtw2-buffer",
- "libtw2-common",
- "libtw2-packer",
- "libtw2-warn",
- "serde",
- "serde_derive",
- "uuid",
- "zerocopy 0.7.35",
-]
-
-[[package]]
-name = "libtw2-gamenet-snap"
-version = "0.0.1"
-source = "git+https://github.com/heinrich5991/libtw2#3a7f27ff256eab81f848af5abfd6c09a706b35ef"
-dependencies = [
- "libtw2-buffer",
- "libtw2-common",
- "libtw2-gamenet-common",
- "libtw2-packer",
- "libtw2-warn",
-]
-
-[[package]]
-name = "libtw2-packer"
-version = "0.0.1"
-source = "git+https://github.com/heinrich5991/libtw2#3a7f27ff256eab81f848af5abfd6c09a706b35ef"
-dependencies = [
- "arrayvec",
- "libtw2-buffer",
- "libtw2-common",
- "libtw2-warn",
- "uuid",
-]
-
-[[package]]
-name = "libtw2-snapshot"
-version = "0.0.1"
-source = "git+https://github.com/heinrich5991/libtw2#3a7f27ff256eab81f848af5abfd6c09a706b35ef"
-dependencies = [
- "libtw2-buffer",
- "libtw2-common",
- "libtw2-gamenet-common",
- "libtw2-gamenet-snap",
- "libtw2-packer",
- "libtw2-warn",
- "uuid",
- "vec_map",
-]
-
-[[package]]
-name = "libtw2-warn"
-version = "0.0.1"
-source = "git+https://github.com/heinrich5991/libtw2#3a7f27ff256eab81f848af5abfd6c09a706b35ef"
-dependencies = [
- "log 0.3.9",
-]
-
-[[package]]
 name = "link-cplusplus"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -766,15 +674,6 @@ checksum = "47d9d19d1d6efa0109d2f65ff4c85cddd50bd572e5a00127ab10987290bcefae"
 
 [[package]]
 name = "log"
-version = "0.3.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e19e8d5c34a3e0e2223db8e060f9e8264aeeb5c5fc64a4ee9965c062211c024b"
-dependencies = [
- "log 0.4.28",
-]
-
-[[package]]
-name = "log"
 version = "0.4.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
@@ -787,12 +686,6 @@ checksum = "5baab2bbbd7d75a144d671e9ff79270e903957d92fb7386fd39034c709bd2661"
 dependencies = [
  "byteorder",
 ]
-
-[[package]]
-name = "mac"
-version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b1db08c0d0ddbb591e65f1da58d1cefccc94a2faa0c55bf979ce215a3e04d5e"
 
 [[package]]
 name = "memchr"
@@ -1358,21 +1251,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
-name = "uuid"
-version = "1.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "vec_map"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
-
-[[package]]
 name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1608,32 +1486,11 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.7.35"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b9b4fd18abc82b8136838da5d50bae7bdea537c574d8dc1a34ed098d6c166f0"
-dependencies = [
- "byteorder",
- "zerocopy-derive 0.7.35",
-]
-
-[[package]]
-name = "zerocopy"
 version = "0.8.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d35102a9f36d089ccae9e4c6802bc118be4487b80aaffc0ab4e0cf5ce92d2873"
 dependencies = [
  "zerocopy-derive 0.8.57",
-]
-
-[[package]]
-name = "zerocopy-derive"
-version = "0.7.35"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa4f8080344d4671fb4e831a13ad1e68092748387dfc4f55e356242fae12ce3e"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.106",
 ]
 
 [[package]]

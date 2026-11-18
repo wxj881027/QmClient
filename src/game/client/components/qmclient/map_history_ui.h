@@ -2,12 +2,16 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_HISTORY_UI_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_HISTORY_UI_H
 
+#include <game/client/QmUi/UiTokens.h>
+
 #include <algorithm>
 
 namespace QmMapHistoryUi
 {
 
-	inline constexpr float LIST_SCROLLBAR_WIDTH = 20.0f;
+	// 列表覆盖式滚动条的轨道宽度：直接取 CListBox 的列表档 token，
+	// 网格列数不再按另一套自算宽度预留。
+	inline constexpr float LIST_SCROLLBAR_WIDTH = ui_token::list::SCROLLBAR_WIDTH;
 	inline constexpr float MIN_CARD_ROW_HEIGHT = 54.0f;
 	inline constexpr float MAX_CARD_ROW_HEIGHT = 72.0f;
 
@@ -25,8 +29,12 @@ namespace QmMapHistoryUi
 	{
 		const float Height = std::max(AvailableHeight, 0.0f);
 		return {
-			std::clamp(Height * 0.014f, 4.0f, 8.0f),
-			std::clamp(Height * 0.050f, 22.0f, 28.0f),
+			// 外缩并入全局安全区：MainView 已按菜单统一安全区内缩过（服务器列表面板
+			// 也直接用 MainView），这里再缩一圈会让每页左右边距各不相同。
+			0.0f,
+			// 页签高度取设置页胶囊页签那一档 token：两个页面顶部是同一种页签，
+			// 不再按窗口高度算出一档 22~28 的浮动高度。
+			ui_token::settings::TAB_HEIGHT,
 			std::clamp(Height * 0.012f, 4.0f, 7.0f),
 			std::clamp(Height * 0.014f, 5.0f, 8.0f),
 			std::clamp(Height * 0.055f, 26.0f, 32.0f),

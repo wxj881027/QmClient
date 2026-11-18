@@ -13,7 +13,7 @@ doctest = false
 [dependencies]
 ddnet-base = { path = "../base" }
 
-cxx = "=1.0.194"
+cxx.workspace = true
 
 [dev-dependencies]
 ddnet-engine-shared = { path = "shared" }

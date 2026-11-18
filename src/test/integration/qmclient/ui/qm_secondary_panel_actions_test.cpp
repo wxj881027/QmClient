@@ -13,6 +13,8 @@
 #include <test/support/qm_ui_test_client.h>
 #include <test/support/qm_ui_test_input.h>
 
+#include <vector>
+
 namespace
 {
 	class QmSecondaryPanelActions : public qm_ui_test::CRealUiFixture
@@ -57,18 +59,22 @@ namespace
 			Region.End();
 		}
 
-		int Draw(bool LeftDisabled = false)
+		int Draw(bool LeftDisabled = false, float Progress = 1.0f)
 		{
-			return ui_widget::SplitActionButton(ui_widget::ControlContext(&m_Ui), &m_Left, "Check for updates", &m_Right, "New features", m_Button, LeftDisabled);
+			auto Options = ui_widget::SSplitActionOptions();
+			Options.m_Progress = Progress;
+			return ui_widget::SplitActionButton(ui_widget::ControlContext(&m_Ui), &m_Left, "Check for updates", &m_Right, "New features", m_Button, LeftDisabled, false, EUiButtonGeometry::CONTROL, nullptr, nullptr, Options);
 		}
 
-		void Key(int Code)
+		bool TryKey(int Code)
 		{
 			IInput::CEvent Event{};
 			Event.m_Key = Code;
 			Event.m_Flags = IInput::FLAG_PRESS;
-			ASSERT_TRUE(m_Ui.OnInput(Event));
+			return m_Ui.OnInput(Event);
 		}
+
+		void Key(int Code) { ASSERT_TRUE(TryKey(Code)); }
 
 		void OpenPanel(bool Animated = false)
 		{
@@ -91,8 +97,10 @@ TEST_F(QmSecondaryPanelActions, SplitSurfaceReusesOrdinaryFillAndSubmitsOneShare
 	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 1u);
 	const auto Ordinary = Graphics.m_vRoundedSubmissions.front();
 	Graphics.m_vRoundedSubmissions.clear();
+	Graphics.m_vRoundedClips.clear();
 	Draw();
 	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
+	ASSERT_EQ(Graphics.m_vRoundedClips.size(), Graphics.m_vRoundedSubmissions.size());
 	EXPECT_FALSE(m_Ui.IsClipped());
 	// 两半只提交底色：与普通按钮同色同圆角，不带边框。
 	for(size_t Index = 0; Index < 2; ++Index)
@@ -105,18 +113,22 @@ TEST_F(QmSecondaryPanelActions, SplitSurfaceReusesOrdinaryFillAndSubmitsOneShare
 	}
 	// 外框整条提交一次：没有填充，边框与普通按钮一致。
 	const auto &Border = Graphics.m_vRoundedSubmissions.back();
+	const auto &BorderClip = Graphics.m_vRoundedClips.back();
 	EXPECT_EQ(Border.m_Rect, Ordinary.m_Rect);
 	EXPECT_FLOAT_EQ(Border.m_FillColor.w, 0.0f);
 	EXPECT_EQ(Border.m_BorderColor, Ordinary.m_BorderColor);
 	EXPECT_EQ(Border.m_CornerRadii, Ordinary.m_CornerRadii);
 	EXPECT_FLOAT_EQ(Border.m_Params.x, Ordinary.m_Params.x);
+	// 静止外框不被裁剪：整条轮廓一次画完，不会在中缝断开。
+	EXPECT_GE((float)BorderClip.m_W, Border.m_Rect.z);
 }
 
-TEST_F(QmSecondaryPanelActions, HoveringOneHalfHighlightsTheWholeSharedBorder)
+TEST_F(QmSecondaryPanelActions, HoveringOneHalfHighlightsOnlyThatHalf)
 {
 	auto &Graphics = *static_cast<qm_ui_test::CRealUiTestGraphics *>(m_Ui.Graphics());
 	Frame({10, 10}, false);
 	Graphics.m_vRoundedSubmissions.clear();
+	Graphics.m_vRoundedClips.clear();
 	Draw();
 	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
 	const vec4 RestBorder = Graphics.m_vRoundedSubmissions.back().m_BorderColor;
@@ -125,15 +137,73 @@ TEST_F(QmSecondaryPanelActions, HoveringOneHalfHighlightsTheWholeSharedBorder)
 
 	Frame({80, 52}, false);
 	Graphics.m_vRoundedSubmissions.clear();
+	Graphics.m_vRoundedClips.clear();
 	Draw();
-	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
-	const auto &Border = Graphics.m_vRoundedSubmissions.back();
-	// 外框与两半底色使用同一整条矩形，整圈换色，不会只亮被悬停的半边、从中缝断开。
-	EXPECT_EQ(Border.m_Rect, Graphics.m_vRoundedSubmissions[0].m_Rect);
-	EXPECT_NE(Border.m_BorderColor, RestBorder);
+	// 静止外框恒在，悬停再叠一条按半裁剪的激活色：两半底色 + 共用外框 + 半圈高亮。
+	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 4u);
+	ASSERT_EQ(Graphics.m_vRoundedClips.size(), Graphics.m_vRoundedSubmissions.size());
+	// 不按下标找描边：任何新增的合法圆角提交都不该让这条断言失效。
+	std::vector<size_t> vBorderIndices;
+	for(size_t Index = 0; Index < Graphics.m_vRoundedSubmissions.size(); ++Index)
+	{
+		// 填充提交的边框宽度为 0；描边提交带真实边框宽度，且没有填充。
+		if(Graphics.m_vRoundedSubmissions[Index].m_Params.x > 0.0f && Graphics.m_vRoundedSubmissions[Index].m_FillColor.w == 0.0f)
+			vBorderIndices.push_back(Index);
+	}
+	ASSERT_EQ(vBorderIndices.size(), 2u);
+	const size_t SharedIndex = vBorderIndices[0];
+	const size_t HoverIndex = vBorderIndices[1];
+	const auto &SharedBorder = Graphics.m_vRoundedSubmissions[SharedIndex];
+	const auto &HoverBorder = Graphics.m_vRoundedSubmissions[HoverIndex];
+	// 共用外框不随悬停消失或换色，轮廓与普通按钮保持一致。
+	EXPECT_EQ(SharedBorder.m_BorderColor, RestBorder);
+	EXPECT_EQ(SharedBorder.m_Rect, Graphics.m_vRoundedSubmissions[0].m_Rect);
+	// 高亮仍按整条矩形提交、只靠裁剪落在被悬停的半边，所以左侧端头曲线不变。
+	EXPECT_EQ(HoverBorder.m_Rect, SharedBorder.m_Rect);
+	EXPECT_NE(HoverBorder.m_BorderColor, RestBorder);
+	// 高亮只落在被悬停的半边：裁剪宽度必须小于整条矩形（否则等于没裁剪）。
+	EXPECT_LT((float)Graphics.m_vRoundedClips[HoverIndex].m_W, HoverBorder.m_Rect.z);
+	EXPECT_GE((float)Graphics.m_vRoundedClips[SharedIndex].m_W, SharedBorder.m_Rect.z);
 	// 底色反馈仍按半边独立：被悬停的一侧变亮，另一侧保持静止。
 	EXPECT_NE(Graphics.m_vRoundedSubmissions[0].m_FillColor, RestLeftFill);
 	EXPECT_EQ(Graphics.m_vRoundedSubmissions[1].m_FillColor, RestRightFill);
+}
+
+TEST_F(QmSecondaryPanelActions, PressingOneHalfKeepsTheSharedBorderOnTheScaledSurface)
+{
+	auto &Graphics = *static_cast<qm_ui_test::CRealUiTestGraphics *>(m_Ui.Graphics());
+	Frame({10, 10}, false);
+	Graphics.m_vRoundedSubmissions.clear();
+	Graphics.m_vRoundedClips.clear();
+	Draw();
+	const vec4 RestRect = Graphics.m_vRoundedSubmissions.back().m_Rect;
+
+	// 按住左半并保持数帧，让按下弹簧进入缩放态。
+	Frame({80, 52}, false);
+	Graphics.m_vRoundedSubmissions.clear();
+	Graphics.m_vRoundedClips.clear();
+	Draw();
+	vec4 PressedRect = RestRect;
+	for(int FrameIndex = 0; FrameIndex < 8 && PressedRect.z >= RestRect.z; ++FrameIndex)
+	{
+		Frame({80, 52}, true);
+		Graphics.m_vRoundedSubmissions.clear();
+		Graphics.m_vRoundedClips.clear();
+		Draw();
+		for(const auto &Submission : Graphics.m_vRoundedSubmissions)
+		{
+			if(Submission.m_Params.x > 0.0f && Submission.m_FillColor.w == 0.0f)
+			{
+				PressedRect = Submission.m_Rect;
+				break;
+			}
+		}
+	}
+	EXPECT_LT(PressedRect.z, RestRect.z);
+	// 两半底色、共用外框和半圈高亮必须共用同一份缩放矩形；外框不能停在原始尺寸。
+	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 4u);
+	for(const auto &Submission : Graphics.m_vRoundedSubmissions)
+		EXPECT_EQ(Submission.m_Rect, PressedRect);
 }
 
 TEST_F(QmSecondaryPanelActions, MouseClickDoesNotLeaveAKeyboardFocusRing)
@@ -147,8 +217,8 @@ TEST_F(QmSecondaryPanelActions, MouseClickDoesNotLeaveAKeyboardFocusRing)
 	EXPECT_EQ(Draw(), 0);
 	Graphics.m_vRoundedSubmissions.clear();
 	Draw();
-	// 只剩两半底色和一条整条外框；没有内缩到半边的焦点环。
-	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
+	// 只剩两半底色、一条整条外框和鼠标仍悬停带来的半圈高亮；没有内缩到半边的焦点环。
+	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 4u);
 	for(const auto &Submission : Graphics.m_vRoundedSubmissions)
 		EXPECT_FLOAT_EQ(Submission.m_Rect.z, m_Button.w);
 }
@@ -306,7 +376,9 @@ TEST_F(QmSecondaryPanelActions, SplitAndRegularButtonsSubmitTheSameOuterRadius)
 	ui_widget::SecondaryButton(ui_widget::ControlContext(&m_Ui), &m_Left, "Regular", m_Button, false, EUiButtonGeometry::START_MENU);
 	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 1u);
 	const float Radius = Graphics.m_vRoundedSubmissions[0].m_CornerRadii.x;
-	EXPECT_FLOAT_EQ(Radius, 10.0f);
+	// 240x32 的长条按「宽 ≥ 1.8 倍高」就是胶囊端头，提交半径被裁到短边一半，
+	// 不再是 START_MENU 档的 10。这里只锁「已经是胶囊」这一事实，不写死像素。
+	EXPECT_GT(Radius, ui_token::radius::MENU);
 	Graphics.m_vRoundedSubmissions.clear();
 	ui_widget::SplitActionButton(ui_widget::ControlContext(&m_Ui), &m_Left, "Left", &m_Right, "Right", m_Button, false, false, EUiButtonGeometry::START_MENU);
 	ASSERT_EQ(Graphics.m_vRoundedSubmissions.size(), 3u);
@@ -493,6 +565,29 @@ TEST_F(QmSecondaryPanelActions, TabAndArrowsFocusIndependentActionsAndEnterSubmi
 	EXPECT_EQ(Draw(), -1);
 	Key(KEY_RETURN);
 	EXPECT_EQ(Draw(), 0);
+}
+
+TEST_F(QmSecondaryPanelActions, RightHalfRejectsKeyboardBeforeGrowthPassesHalf)
+{
+	Frame({10, 10}, false);
+	Key(KEY_TAB);
+	EXPECT_EQ(Draw(), -1);
+	Key(KEY_RIGHT);
+	EXPECT_EQ(Draw(), -1);
+	ASSERT_EQ(m_Ui.KeyboardFocusItem(), &m_Right);
+	// 生长不足一半时右段还不能执行；键盘与鼠标共用同一个进度门。
+	TryKey(KEY_RETURN);
+	EXPECT_EQ(Draw(false, 0.3f), -1);
+}
+
+TEST_F(QmSecondaryPanelActions, RightHalfPressBeforeGrowthCannotActivateAfterItExpands)
+{
+	Frame({10, 10}, false);
+	const vec2 RightSide{250, 52};
+	Frame(RightSide, true);
+	EXPECT_EQ(Draw(false, 0.3f), -1);
+	Frame(RightSide, false);
+	EXPECT_EQ(Draw(false, 0.7f), -1);
 }
 
 TEST_F(QmSecondaryPanelActions, BecomingDisabledMovesFocusToUsableHalf)

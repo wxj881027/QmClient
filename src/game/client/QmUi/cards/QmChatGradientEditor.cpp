@@ -24,8 +24,9 @@ bool CMenus::DoMessageGradientLine(CChat &Chat, CUIRect *pView, int Tab, const c
 
 	CSettingsContentLayoutFlow Flow(*pView);
 	CUIRect TopRow;
-	const bool HasTopRow = Flow.Control(pLabelTextId, ResolvedButtonHeight, TopRow);
-	Flow.Space(LineSpacing);
+	// 行距由本行自己声明（声明阶段记到上一行末尾）：行后不再补 Space，
+	// 下面的调色板行同样自带行距，相邻两块之间不会再叠成双倍间距。
+	const bool HasTopRow = Flow.Control(pLabelTextId, ResolvedButtonHeight, TopRow, ui_token::settings::RowGap(LineSpacing));
 	bool Changed = false;
 	if(HasTopRow)
 	{
@@ -67,11 +68,11 @@ void CMenus::RenderQmChatGradientSettings(CUIRect &Content, CChat &Chat, const S
 	const float Height = std::max(Metrics.m_LineHeight, Metrics.m_ButtonHeight);
 	CSettingsContentLayoutFlow Flow(Content);
 	CUIRect Row, Label, Control;
-	if(Flow.Control("appearance-chat-gradient-title", Height, Row))
+	// 每个可见行都在自己这一处声明行距，行后不再补 Space：
+	// 上一段的调色板行和下面的渐变几何行都是同一套规则，块与块之间只有一档行距。
+	if(Flow.Control("appearance-chat-gradient-title", Height, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 		Ui()->DoLabel(&Row, Localize("Gradient settings"), Metrics.m_BodySize, TEXTALIGN_ML);
-	Flow.Space(Metrics.m_LineSpacing);
-	const bool HasRole = Flow.Control("appearance-chat-gradient-role", Height, Row);
-	Flow.Space(Metrics.m_LineSpacing);
+	const bool HasRole = Flow.Control("appearance-chat-gradient-role", Height, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing));
 	float LabelWidth = ResolveSettingsCardLabelWidth(Content.w, Metrics);
 	if(HasRole)
 	{

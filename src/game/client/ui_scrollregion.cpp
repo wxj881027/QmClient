@@ -35,6 +35,8 @@ void CScrollRegion::Reset()
 	m_ClipRect = m_RailRect = m_LastAddedRect = CUIRect{0.0f, 0.0f, 0.0f, 0.0f};
 	m_ScrollbarReserveWidth = 0.0f;
 	m_ScrollbarReserveInitialized = false;
+	m_OverlayReveal = 1.0f;
+	m_OverlayRevealInitialized = false;
 	m_Params = CScrollRegionParams();
 }
 
@@ -92,6 +94,9 @@ void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollReg
 	// 上一帧尺寸预留滚动条空间，随后本帧再重新测量内容尺寸。
 	CUIRect ScrollbarBg = SplitContentArea();
 	DrawBackground(ScrollbarBg);
+	// 覆盖式滚动条的显隐系数在本帧布局阶段定好：轨道要压在本帧内容之上，
+	// 淡出时内容已经不溢出，也要把这一档渐隐画完（否则就是硬切）。
+	m_OverlayReveal = m_Params.m_ScrollbarOverlay ? ResolveOverlayReveal(ScrollbarShown() ? 1.0f : 0.0f) : 0.0f;
 	ClampBackgroundScrollOffset();
 	Ui()->RegisterTouchScrollRegion(this, &m_ClipRect, m_Params.m_ScrollHorizontal, m_Params.m_WheelOwnerPriority, m_Params.m_Interactive && ContentOverflows());
 	const vec2 TouchScroll = Ui()->ConsumeTouchScroll(this);
@@ -136,7 +141,7 @@ void CScrollRegion::End()
 	{
 		// 当前帧测量也可能改变内容尺寸；修正越界位置但不消费输入或推进动画。
 		ClampBackgroundScrollOffset();
-		if(ContentOverflows())
+		if(ContentOverflows() || QmScrollRegionOverlayFadingOut(m_Params.m_ScrollbarOverlay, m_OverlayReveal))
 			DoSlider();
 		return;
 	}
@@ -152,6 +157,9 @@ void CScrollRegion::End()
 	if(!ContentOverflows())
 	{
 		MaintainNoScrollSliderActive();
+		// 覆盖式滚动条淡出期间内容已经不溢出，但渐隐还要画完：消失不该是硬切。
+		if(QmScrollRegionOverlayFadingOut(m_Params.m_ScrollbarOverlay, m_OverlayReveal))
+			DoSlider();
 		return;
 	}
 
@@ -305,11 +313,50 @@ bool CScrollRegion::Active() const
 	return Ui()->ActiveItem() == &m_SliderId;
 }
 
+CUIRect CScrollRegion::SplitOverlayRail()
+{
+	// 轨道贴在内容边缘内侧：内容宽度完全不受影响，所以「有没有滚动条」不会让行宽横跳。
+	// 两侧都留 ScrollbarMargin：贴边的细轨会在圆角容器里探出圆角之外。
+	// 沿长度方向再加 TrackInset（宿主按容器圆角半径给）：滑块端头不会压到容器圆角，
+	// 首/末行的胶囊也不会被滚动条盖住端头。
+	const float Thickness = std::max(0.0f, m_Params.m_ScrollbarThickness);
+	const float Margin = std::max(0.0f, m_Params.m_ScrollbarMargin);
+	const float LengthInset = Margin + std::max(0.0f, m_Params.m_ScrollbarTrackInset);
+	CUIRect Rail;
+	if(m_Params.m_ScrollHorizontal)
+	{
+		Rail = m_ClipRect;
+		Rail.y = m_ClipRect.y + m_ClipRect.h - Thickness - Margin;
+		Rail.h = Thickness;
+		Rail.x = m_ClipRect.x + LengthInset;
+		Rail.w = std::max(0.0f, m_ClipRect.w - 2.0f * LengthInset);
+	}
+	else
+	{
+		Rail = m_ClipRect;
+		Rail.x = m_ClipRect.x + m_ClipRect.w - Thickness - Margin;
+		Rail.w = Thickness;
+		Rail.y = m_ClipRect.y + LengthInset;
+		Rail.h = std::max(0.0f, m_ClipRect.h - 2.0f * LengthInset);
+	}
+	Rail.w = std::max(0.0f, Rail.w);
+	Rail.h = std::max(0.0f, Rail.h);
+	m_RailRect = Rail;
+	return Rail;
+}
+
 CUIRect CScrollRegion::SplitContentArea()
 {
 	CUIRect ScrollbarBg;
-	const bool ReserveScrollbarSpace = QmScrollRegionShouldReserveScrollbarSpace(m_Params.m_ScrollbarAlwaysReserved, ScrollbarShown());
+	const bool Overlay = m_Params.m_ScrollbarOverlay && !m_Params.m_HideScrollbar;
+	const bool ReserveScrollbarSpace = QmScrollRegionReservesScrollbarSpace(Overlay, m_Params.m_ScrollbarAlwaysReserved, ScrollbarShown());
 	float ReserveWidth = ReserveScrollbarSpace ? m_Params.m_ScrollbarThickness : 0.0f;
+	// 覆盖式轨道完全不参与内容裁剪：占位宽度恒为 0，轨道留到内容画完再压上去。
+	if(Overlay)
+	{
+		m_ScrollbarReserveWidth = 0.0f;
+		return SplitOverlayRail();
+	}
 	// 占位宽度和内容裁剪使用同一条动画轨道，滚动条出现/消失时卡片宽度连续变化。
 	if(m_Params.m_AnimateScrollbarReserve)
 	{
@@ -363,6 +410,21 @@ CUIRect CScrollRegion::SplitContentArea()
 	}
 	m_RailRect.w = std::max(0.0f, m_RailRect.w);
 	m_RailRect.h = std::max(0.0f, m_RailRect.h);
+	// 非覆盖式轨道同样按容器圆角内缩长度方向：不然滑块下端会从容器圆角外侧探出来。
+	const float TrackInset = std::max(0.0f, m_Params.m_ScrollbarTrackInset);
+	if(TrackInset > 0.0f)
+	{
+		if(m_Params.m_ScrollHorizontal)
+		{
+			m_RailRect.x += TrackInset;
+			m_RailRect.w = std::max(0.0f, m_RailRect.w - 2.0f * TrackInset);
+		}
+		else
+		{
+			m_RailRect.y += TrackInset;
+			m_RailRect.h = std::max(0.0f, m_RailRect.h - 2.0f * TrackInset);
+		}
+	}
 
 	return ScrollbarBg;
 }
@@ -370,7 +432,8 @@ CUIRect CScrollRegion::SplitContentArea()
 void CScrollRegion::DrawBackground(const CUIRect &ScrollbarBg)
 {
 	// only show scrollbar if required
-	if(ScrollbarShown())
+	// 覆盖式滚动条把轨道和滑块留到 End 里压在内容之上，这里只画内容背板。
+	if(ScrollbarShown() && !m_Params.m_ScrollbarOverlay)
 	{
 		if(m_Params.m_ScrollbarBgColor.a > 0.0f)
 		{
@@ -389,6 +452,42 @@ void CScrollRegion::DrawBackground(const CUIRect &ScrollbarBg)
 		int CornersPartial = m_Params.m_ScrollHorizontal ? IGraphics::CORNER_T : IGraphics::CORNER_L;
 		DrawRoundedSurface(Ui(), m_ClipRect, m_Params.m_ClipBgColor, ColorRGBA(), 4.0f, 0.0f, ScrollbarShown() ? CornersPartial : IGraphics::CORNER_ALL);
 	}
+}
+
+float CScrollRegion::ResolveOverlayReveal(const float Target)
+{
+	auto *pAnimRuntime = Ui()->QmAnimationRuntime();
+	const float Duration = m_Params.m_ScrollbarRevealSec;
+	const uint64_t NodeKey = BuildUiAnimNodeKey(MakeUiScopeHash("scroll_region_overlay_reveal"), reinterpret_cast<uint64_t>(this));
+	const bool Snap = pAnimRuntime == nullptr || Duration <= 0.0f || g_Config.m_QmUiMotionLevel == 0 || Ui()->AnimationsBlocked();
+	if(Snap)
+	{
+		if(pAnimRuntime != nullptr)
+			pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::ALPHA, Target);
+		m_OverlayRevealInitialized = true;
+		return Target;
+	}
+	// 首次出现在目标值上：页面打开时列表不该从「没有滚动条」淡进来。
+	if(!m_OverlayRevealInitialized)
+	{
+		pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::ALPHA, Target);
+		m_OverlayRevealInitialized = true;
+		return Target;
+	}
+	return std::clamp(ResolveUiAnimValue(*pAnimRuntime, NodeKey, EUiAnimProperty::ALPHA, Target, Duration, ui_token::motion::HOVER_FADE.m_Easing), 0.0f, 1.0f);
+}
+
+void CScrollRegion::DrawOverlayRail(const float Alpha, const float SlideOffset)
+{
+	if(m_Params.m_RailBgColor.a <= 0.0f || m_RailRect.w <= 0.0f || m_RailRect.h <= 0.0f)
+		return;
+	CUIRect Rail = m_RailRect;
+	if(m_Params.m_ScrollHorizontal)
+		Rail.y += SlideOffset;
+	else
+		Rail.x += SlideOffset;
+	const float Rounding = m_Params.m_ScrollHorizontal ? Rail.h / 2.0f : Rail.w / 2.0f;
+	DrawRoundedSurface(Ui(), Rail, Ui()->ScaleBackgroundAlpha(m_Params.m_RailBgColor).WithMultipliedAlpha(Alpha), ColorRGBA(), Rounding);
 }
 
 // 同一次按下只允许一个滚动区域接管内容拖动：嵌套时内层先于外层 End，
@@ -565,9 +664,23 @@ void CScrollRegion::DoSlider()
 	}
 
 	// 滑块与占位宽度走同一拍：轨道还在展开时滑块淡入，不会「硬切」冒出来。
-	const float RevealAlpha = m_Params.m_ScrollbarThickness > 0.0f ?
-					  std::clamp(m_ScrollbarReserveWidth / m_Params.m_ScrollbarThickness, 0.0f, 1.0f) :
-					  1.0f;
+	// 覆盖式轨道不占位，改用独立显示系数：内容溢出时淡入、不溢出时淡出。
+	const float RevealAlpha = m_Params.m_ScrollbarOverlay ?
+					  std::clamp(m_OverlayReveal, 0.0f, 1.0f) :
+					  (m_Params.m_ScrollbarThickness > 0.0f ? std::clamp(m_ScrollbarReserveWidth / m_Params.m_ScrollbarThickness, 0.0f, 1.0f) : 1.0f);
+	if(m_Params.m_ScrollbarOverlay && RevealAlpha <= 0.001f)
+	{
+		// 完全不可见时不接受拖动，也不留下上一帧的拖动状态（回放趟不改输入状态）。
+		if(!Ui()->RenderOnly())
+			m_ScrollState.EndThumbDrag();
+		return;
+	}
+	// 覆盖式轨道除淡入外再向右滑出一小段，读起来才是「划出来」而不是「变亮」。
+	const float SlideOffset = m_Params.m_ScrollbarOverlay ? (1.0f - RevealAlpha) * m_Params.m_ScrollbarSlide : 0.0f;
+	if(m_Params.m_ScrollbarOverlay)
+		DrawOverlayRail(RevealAlpha, SlideOffset);
+	// 淡出期间内容已不溢出：轨道只负责渐隐，不再接受拖动。
+	const bool HandleInteractive = m_Params.m_Interactive && (ContentOverflows() || !m_Params.m_ScrollbarOverlay);
 	const float ClipSize = m_Params.m_ScrollHorizontal ? m_ClipRect.w : m_ClipRect.h;
 	const float RailSize = m_Params.m_ScrollHorizontal ? m_RailRect.w : m_RailRect.h;
 	const bool CanScroll = ContentOverflows() && ScrollMax > 0.0f && RailSize > 0.0f;
@@ -581,6 +694,11 @@ void CScrollRegion::DoSlider()
 		Slider.w = SliderSize;
 	else
 		Slider.h = SliderSize;
+	// 滑出方向与轨道轴垂直：纵向滚动条向右滑，横向滚动条向下滑。
+	if(m_Params.m_ScrollHorizontal)
+		Slider.y += SlideOffset;
+	else
+		Slider.x += SlideOffset;
 
 	const float MaxSlider = RailSize - SliderSize;
 	const void *pId = &m_SliderId;
@@ -597,10 +715,10 @@ void CScrollRegion::DoSlider()
 		if(Ui()->QmAnimationRuntime() != nullptr)
 		{
 			CUiScopedControlAlphaScale SliderAlpha(Ui(), m_Params.m_SliderAlpha * RevealAlpha);
-			ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, pHandleColor);
+			ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, HandleInteractive, nullptr, pHandleColor);
 		}
 		else
-			DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Active, Ui()->HotItem() == pId), ColorRGBA(), Rounding);
+			DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Active, Ui()->HotItem() == pId).WithMultipliedAlpha(RevealAlpha), ColorRGBA(), Rounding);
 		return;
 	}
 
@@ -608,11 +726,11 @@ void CScrollRegion::DoSlider()
 
 	const float MousePos = m_Params.m_ScrollHorizontal ? Ui()->MouseX() : Ui()->MouseY();
 	const bool WasActive = Ui()->ActiveItem() == pId;
-	if(m_Params.m_Interactive && !Ui()->RenderOnly())
+	if(HandleInteractive && !Ui()->RenderOnly())
 		Ui()->CaptureTouchDrag(pId, &m_RailRect);
-	if(m_Params.m_Interactive && !Ui()->RenderOnly())
+	if(HandleInteractive && !Ui()->RenderOnly())
 		Ui()->DoButtonLogic(pId, 0, &m_RailRect, BUTTONFLAG_LEFT); // Result ignored, we only care about the button becoming and being active
-	if(m_Params.m_Interactive && !Ui()->RenderOnly() && Ui()->CheckActiveItem(pId))
+	if(HandleInteractive && !Ui()->RenderOnly() && Ui()->CheckActiveItem(pId))
 	{
 		if(!WasActive)
 		{
@@ -630,8 +748,8 @@ void CScrollRegion::DoSlider()
 	if(Ui()->QmAnimationRuntime() != nullptr)
 	{
 		CUiScopedControlAlphaScale SliderAlpha(Ui(), m_Params.m_SliderAlpha * RevealAlpha);
-		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, pHandleColor);
+		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, HandleInteractive, nullptr, pHandleColor);
 	}
 	else
-		DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Ui()->CheckActiveItem(pId), Ui()->HotItem() == pId), ColorRGBA(), Rounding);
+		DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Ui()->CheckActiveItem(pId), Ui()->HotItem() == pId).WithMultipliedAlpha(RevealAlpha), ColorRGBA(), Rounding);
 }

@@ -3,6 +3,7 @@
 #include "UiSurface.h"
 
 #include "QmColorGradient.h"
+#include "UiTokens.h"
 
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -24,22 +25,24 @@ namespace
 
 	float CornerSmoothing()
 	{
-		return std::clamp((float)g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+		return QmEffectiveCornerSmoothing();
 	}
 
-	// 胶囊接缝软化：胶囊的半径贴到短边一半，没有生长空间，但半圆端头与直边的
-	// 曲率跳变可以单独缓一下。0 = 纯半圆端头（与 iOS 一致）。
+	// 胶囊端头：0 = 不启用，非 0 = 直边肩部外鼓。着色器只按是否大于 0 判断。
 	float CapsuleSeam()
 	{
-		return std::clamp((float)g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
+		return QmEffectiveCapsuleSeam();
 	}
 
 	// 无 SDF 时直接提交小数坐标网格，避免 DrawRect 再次吸附到物理像素。
 	void DrawSubpixelRoundedSurface(IGraphics *pGraphics, SRoundedSurfacePlan Plan, const ColorRGBA &Fill, const ColorRGBA &Border, int Corners)
 	{
-		const auto aBorder = ResolveRoundedSurfaceBorderMesh(Plan, Corners);
+		const int Curve = g_Config.m_QmUiCornerCurve;
+		const float Smoothing = QmEffectiveCornerSmoothing();
+		const float Seam = QmEffectiveCapsuleSeam();
+		const auto aBorder = ResolveRoundedSurfaceBorderMesh(Plan, Corners, Curve, Smoothing, Seam);
 		const vec2 Center(Plan.m_Rect.x + Plan.m_Rect.w * 0.5f, Plan.m_Rect.y + Plan.m_Rect.h * 0.5f);
-		std::array<IGraphics::CFreeformItem, 36> aFill;
+		std::array<IGraphics::CFreeformItem, ROUNDED_SURFACE_OUTLINE_POINTS> aFill;
 		for(size_t i = 0; i < aFill.size(); ++i)
 			aFill[i] = IGraphics::CFreeformItem(Center, vec2(aBorder[i].m_X2, aBorder[i].m_Y2), Center, vec2(aBorder[i].m_X3, aBorder[i].m_Y3));
 		pGraphics->TextureClear();
@@ -60,41 +63,12 @@ namespace
 		Plan.m_Rect.h += 2.0f * Plan.m_PixelSize;
 		Plan.m_Radius += Plan.m_PixelSize;
 		Plan.m_BorderWidth = Plan.m_PixelSize;
-		const auto aFringe = ResolveRoundedSurfaceBorderMesh(Plan, Corners);
+		const auto aFringe = ResolveRoundedSurfaceBorderMesh(Plan, Corners, Curve, Smoothing, Seam);
 		const IGraphics::CColorVertex aColors[] = {
 			{0, Edge.WithAlpha(0.0f)}, {1, Edge.WithAlpha(0.0f)}, {2, Edge}, {3, Edge}};
 		pGraphics->SetColorVertex(aColors, std::size(aColors));
 		pGraphics->QuadsDrawFreeform(aFringe.data(), aFringe.size());
 		pGraphics->QuadsEnd();
-	}
-
-	void DrawRoundedSurfaceBorder(IGraphics *pGraphics, const SRoundedSurfacePlan &Plan, const ColorRGBA &Border, int Corners)
-	{
-		if(Border.a <= 0.0f || Plan.m_BorderWidth <= 0.0f)
-			return;
-		if(Plan.m_UseSdf)
-		{
-			IGraphics::SRoundedRectSdfParams Params;
-			Params.m_Rect = vec4(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h);
-			Params.m_FillColor = vec4(0, 0, 0, 0);
-			Params.m_BorderColor = vec4(Border.r, Border.g, Border.b, Border.a);
-			Params.m_CornerRadii = Plan.m_CornerRadii;
-			Params.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);
-			// 边框环带必须和填充取同一套形状参数（曲线档位、连续曲率强度、胶囊接缝），
-			// 少一项就会在角上或端头差出一条线。这三项在 SDF 里是独立分量，不能只写档位。
-			Params.m_GradientParams2.w = CornerSmoothing();
-			Params.m_ShapeParams = vec4(CornerCurveType(), CapsuleSeam(), 0.0f, 0.0f);
-			pGraphics->RenderRoundedRectSdf(Params);
-			return;
-		}
-		const auto aMesh = ResolveRoundedSurfaceBorderMesh(Plan, Corners);
-		pGraphics->TextureClear();
-		pGraphics->QuadsBegin();
-		pGraphics->SetColor(Border);
-		pGraphics->QuadsDrawFreeform(aMesh.data(), aMesh.size());
-		pGraphics->QuadsEnd();
-		// 仅给环带外缘补羽化，保持透明填充内部不被边框覆盖。
-		pGraphics->DrawRoundedRectAntialias(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h, Plan.m_Radius, Corners, Border);
 	}
 
 }
@@ -119,6 +93,10 @@ bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRG
 		SdfParams.m_BorderColor = vec4(ResolvedBorder.r, ResolvedBorder.g, ResolvedBorder.b, ResolvedBorder.a);
 		SdfParams.m_CornerRadii = Plan.m_CornerRadii;
 		SdfParams.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);
+		// 单色表面同样支持「只描边」与带宽羽化：光晕不需要渐变，只靠这两项把环带
+		// 铺成向外淡出的晕。字段语义与渐变路径完全一致，调用点不另开一条绘制链。
+		SdfParams.m_GradientParams2.y = Params.m_BorderOnly ? 1.0f : 0.0f;
+		SdfParams.m_GradientParams2.z = std::max(0.0f, Params.m_BorderFalloff);
 		SdfParams.m_GradientParams2.w = CornerSmoothing();
 		SdfParams.m_ShapeParams = vec4(CornerCurveType(), CapsuleSeam(), 0.0f, 0.0f);
 		SdfParams.m_TextureParams1.w = Plan.m_Expand;
@@ -126,24 +104,9 @@ bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRG
 		return true;
 	}
 
-	if(!Params.m_AlignToPixel)
-	{
-		DrawSubpixelRoundedSurface(pGraphics, Plan, Fill, Border, Params.m_Corners);
-		return true;
-	}
-
-	if(Plan.m_BorderWidth <= 0.0f)
-	{
-		pGraphics->DrawRect(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h, Fill, Params.m_Corners, Plan.m_Radius);
-		return true;
-	}
-
-	CUIRect Inner = Plan.m_Rect;
-	Inner.Margin(Plan.m_BorderWidth, &Inner);
-	if(Inner.w > 0.0f && Inner.h > 0.0f)
-		pGraphics->DrawRect(Inner.x, Inner.y, Inner.w, Inner.h, Fill, Params.m_Corners, std::max(0.0f, Plan.m_Radius - Plan.m_BorderWidth));
-	// 边框仅覆盖环带；整块边框垫底会透过半透明填色污染输入框内部。
-	DrawRoundedSurfaceBorder(pGraphics, Plan, Border, Params.m_Corners);
+	// 无 SDF 时所有表面统一走曲线轮廓：填充扇、边框环带和外缘羽化共用同一条轮廓。
+	// 对齐像素已经在 ResolveRoundedSurfacePlan 里完成，这里只负责提交小数坐标网格。
+	DrawSubpixelRoundedSurface(pGraphics, Plan, Fill, Border, ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners));
 	return true;
 }
 
@@ -228,6 +191,64 @@ bool DrawRoundedSurface(const IUiContext &Ctx, const CUIRect &Rect, const ColorR
 	return DrawRoundedSurface(Ctx.m_pUi, Rect, Fill, Border, Params);
 }
 
+bool DrawRoundedSurfaceGlow(IGraphics *pGraphics, const CUIRect &Rect, const ColorRGBA &Color, const SRoundedGlowParams &Params)
+{
+	if(pGraphics == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f || Params.m_Spread <= 0.0f || Color.a <= 0.004f)
+		return false;
+
+	if(pGraphics->HasRoundedRectSdf())
+	{
+		// 一条连续的衰减带：形状按距离场向外偏移 m_Spread，带宽同为 m_Spread，
+		// 于是零等值线落回外壳边缘，整个环带都在外壳之外，从边缘向外淡出。
+		SRoundedSurfaceParams SurfaceParams;
+		SurfaceParams.m_Radius = Params.m_Radius;
+		SurfaceParams.m_ShapeExpand = Params.m_Spread;
+		SurfaceParams.m_BorderWidth = Params.m_Spread;
+		SurfaceParams.m_BorderOnly = true;
+		SurfaceParams.m_BorderFalloff = std::max(Params.m_Falloff, 0.05f);
+		SurfaceParams.m_Corners = Params.m_Corners;
+		SurfaceParams.m_PixelSize = Params.m_PixelSize > 0.0f ? Params.m_PixelSize : 1.0f;
+		return DrawRoundedSurface(pGraphics, Rect, ui_token::color::COLOR_TRANSPARENT, Color, SurfaceParams);
+	}
+
+	// 几何回退没有带宽内的连续羽化，只能用几道等距、逐层变淡的窄环近似「向外扩散」。
+	// 环宽压到一像素：带宽稍宽一点就会读成实心光圈，而不是晕。层序从外到内，
+	// 越靠内越亮，和 SDF 分支边缘最强、向外渐弱的方向一致。
+	bool Any = false;
+	constexpr int GLOW_FALLBACK_LAYERS = 3;
+	const float PixelSize = std::max(Params.m_PixelSize > 0.0f ? Params.m_PixelSize : 1.0f, 0.0001f);
+	for(int i = GLOW_FALLBACK_LAYERS; i >= 1; --i)
+	{
+		const float Offset = Params.m_Spread * static_cast<float>(i) / static_cast<float>(GLOW_FALLBACK_LAYERS);
+		const CUIRect LayerRect{Rect.x - Offset, Rect.y - Offset, Rect.w + Offset * 2.0f, Rect.h + Offset * 2.0f};
+		SRoundedSurfaceParams RingParams;
+		RingParams.m_Radius = Params.m_Radius + Offset;
+		RingParams.m_BorderWidth = PixelSize;
+		RingParams.m_Corners = Params.m_Corners;
+		RingParams.m_PixelSize = PixelSize;
+		const float LayerAlpha = Color.a * (1.0f - 0.4f * static_cast<float>(i - 1));
+		if(LayerAlpha <= 0.004f)
+			continue;
+		Any = DrawRoundedSurface(pGraphics, LayerRect, ui_token::color::COLOR_TRANSPARENT, Color.WithAlpha(LayerAlpha), RingParams) || Any;
+	}
+	return Any;
+}
+
+bool DrawRoundedSurfaceGlow(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Color, const SRoundedGlowParams &Params)
+{
+	if(pUi == nullptr || pUi->DrawingSuppressed())
+		return false;
+	SRoundedGlowParams Resolved = Params;
+	if(Resolved.m_PixelSize <= 0.0f)
+		Resolved.m_PixelSize = pUi->PixelSize();
+	return DrawRoundedSurfaceGlow(pUi->Graphics(), Rect, Color, Resolved);
+}
+
+bool DrawRoundedSurfaceGlow(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Color, const SRoundedGlowParams &Params)
+{
+	return DrawRoundedSurfaceGlow(Ctx.m_pUi, Rect, Color, Params);
+}
+
 // 固定网格一次提交顶点；预览和候选栏共享五种渐变，不生成每帧纹理。
 bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmColorGradient &Gradient,
 	float Alpha, const ColorRGBA &Border, const SRoundedSurfaceParams &Params)
@@ -274,42 +295,34 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 	}
 	CUIRect Inner = Plan.m_Rect;
 	if(Plan.m_BorderWidth > 0.0f)
-	{
-		DrawRoundedSurfaceBorder(pGraphics, Plan, Border, Params.m_Corners);
 		Inner.Margin(Plan.m_BorderWidth, &Inner);
+	const int Corners = ResolveRoundedSurfaceCorners(Params.m_Radius, Params.m_Corners);
+	const int Curve = g_Config.m_QmUiCornerCurve;
+	const float Smoothing = QmEffectiveCornerSmoothing();
+	const float Seam = QmEffectiveCapsuleSeam();
+	SRoundedSurfacePlan FillPlan = Plan;
+	if(Plan.m_BorderWidth > 0.0f)
+	{
+		FillPlan.m_Rect = Inner;
+		FillPlan.m_Radius = std::max(0.0f, Plan.m_Radius - Plan.m_BorderWidth);
 	}
-	if(Inner.w <= 0.0f || Inner.h <= 0.0f)
-		return true;
-	const float Radius = std::clamp(Plan.m_Radius - Plan.m_BorderWidth, 0.0f, std::min(Inner.w, Inner.h) * 0.5f);
-	constexpr int COLUMNS = 32;
-	constexpr int ROWS = 16;
-	const auto RoundedCorner = [&](float Y, bool Right) {
-		return Radius > 0.0f && ((Y < Radius && (Params.m_Corners & (Right ? IGraphics::CORNER_TR : IGraphics::CORNER_TL))) ||
-						(Y > Inner.h - Radius && (Params.m_Corners & (Right ? IGraphics::CORNER_BR : IGraphics::CORNER_BL))));
-	};
-	const auto Edge = [&](float Y, bool Right) {
-		float Inset = 0.0f;
-		if(RoundedCorner(Y, Right))
-		{
-			const float Distance = Y < Radius ? Radius - Y : std::max(0.0f, Y - (Inner.h - Radius));
-			Inset = Radius - std::sqrt(std::max(0.0f, Radius * Radius - Distance * Distance));
-		}
-		return vec2(Inner.x + (Right ? Inner.w - Inset : Inset), Inner.y + Y);
-	};
-	const auto Normal = [&](vec2 Point, bool Right) {
-		const float LocalY = Point.y - Inner.y;
-		if(!RoundedCorner(LocalY, Right))
-			return vec2(Right ? 1.0f : -1.0f, 0.0f);
-		const vec2 Center(Inner.x + (Right ? Inner.w - Radius : Radius),
-			Inner.y + (LocalY < Radius ? Radius : Inner.h - Radius));
-		return (Point - Center) / Radius;
-	};
+	const auto aFill = ResolveRoundedSurfaceOutline(FillPlan, Corners, Curve, Smoothing, Seam);
+	const auto aOuter = ResolveRoundedSurfaceOutline(Plan, Corners, Curve, Smoothing, Seam);
+	const auto aInner = ResolveRoundedSurfaceOutline(FillPlan, Corners, Curve, Smoothing, Seam);
+	SRoundedSurfacePlan FringePlan = Plan;
+	FringePlan.m_Rect.x -= Plan.m_PixelSize;
+	FringePlan.m_Rect.y -= Plan.m_PixelSize;
+	FringePlan.m_Rect.w += 2.0f * Plan.m_PixelSize;
+	FringePlan.m_Rect.h += 2.0f * Plan.m_PixelSize;
+	FringePlan.m_Radius += Plan.m_PixelSize;
+	const auto aFringe = ResolveRoundedSurfaceOutline(FringePlan, Corners, Curve, Smoothing, Seam);
+	const vec2 Center = FillPlan.m_Rect.Center();
 	const auto DrawQuad = [&](vec2 TopLeft, vec2 TopRight, vec2 BottomLeft, vec2 BottomRight, bool FadeTop = false, bool FadeBottom = false) {
 		const std::array<vec2, 4> aPoints = {TopLeft, TopRight, BottomLeft, BottomRight};
 		std::array<IGraphics::CColorVertex, 4> aColors;
 		for(int i = 0; i < 4; ++i)
 		{
-			ColorRGBA Color = Gradient.Sample((aPoints[i] - Inner.TopLeft()) / Inner.Size());
+			ColorRGBA Color = Gradient.Sample((aPoints[i] - FillPlan.m_Rect.TopLeft()) / FillPlan.m_Rect.Size());
 			Color.a *= Alpha;
 			if((FadeTop && i < 2) || (FadeBottom && i >= 2))
 				Color.a = 0.0f;
@@ -321,29 +334,35 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 	};
 	pGraphics->TextureClear();
 	pGraphics->QuadsBegin();
-	for(int Row = 0; Row < ROWS; ++Row)
+	for(size_t i = 0; i < aFill.size(); ++i)
 	{
-		const vec2 LeftTop = Edge(Inner.h * Row / ROWS, false);
-		const vec2 RightTop = Edge(Inner.h * Row / ROWS, true);
-		const vec2 LeftBottom = Edge(Inner.h * (Row + 1) / ROWS, false);
-		const vec2 RightBottom = Edge(Inner.h * (Row + 1) / ROWS, true);
-		for(int Column = 0; Column < COLUMNS; ++Column)
-		{
-			const float T0 = static_cast<float>(Column) / COLUMNS;
-			const float T1 = static_cast<float>(Column + 1) / COLUMNS;
-			DrawQuad(mix(LeftTop, RightTop, T0), mix(LeftTop, RightTop, T1),
-				mix(LeftBottom, RightBottom, T0), mix(LeftBottom, RightBottom, T1));
-		}
-		// 与填充使用同一边界节点，透明外缘不会在圆角处留下裂缝。
-		DrawQuad(LeftTop, LeftBottom,
-			LeftTop + Normal(LeftTop, false) * Plan.m_PixelSize, LeftBottom + Normal(LeftBottom, false) * Plan.m_PixelSize, false, true);
-		DrawQuad(RightTop, RightBottom, RightTop + Normal(RightTop, true) * Plan.m_PixelSize,
-			RightBottom + Normal(RightBottom, true) * Plan.m_PixelSize, false, true);
+		const size_t Next = (i + 1) % aFill.size();
+		DrawQuad(Center, Center, aFill[i], aFill[Next]);
 	}
-	const vec2 TopLeft = Edge(0.0f, false), TopRight = Edge(0.0f, true);
-	const vec2 BottomLeft = Edge(Inner.h, false), BottomRight = Edge(Inner.h, true);
-	DrawQuad(TopLeft - vec2(0.0f, Plan.m_PixelSize), TopRight - vec2(0.0f, Plan.m_PixelSize), TopLeft, TopRight, true);
-	DrawQuad(BottomLeft, BottomRight, BottomLeft + vec2(0.0f, Plan.m_PixelSize), BottomRight + vec2(0.0f, Plan.m_PixelSize), false, true);
+	if(Plan.m_BorderWidth > 0.0f)
+	{
+		pGraphics->SetColor(Border);
+		std::array<IGraphics::CFreeformItem, ROUNDED_SURFACE_OUTLINE_POINTS> aBorder{};
+		for(size_t i = 0; i < aBorder.size(); ++i)
+		{
+			const size_t Next = (i + 1) % aBorder.size();
+			aBorder[i] = IGraphics::CFreeformItem(aOuter[i], aOuter[Next], aInner[i], aInner[Next]);
+		}
+		pGraphics->QuadsDrawFreeform(aBorder.data(), aBorder.size());
+	}
+	const ColorRGBA Edge = Plan.m_BorderWidth > 0.0f ? Border : Gradient.m_aColors[0];
+	const ColorRGBA aFringeColors[] = {Edge.WithAlpha(0.0f), Edge.WithAlpha(0.0f), Edge, Edge};
+	for(size_t i = 0; i < aOuter.size(); ++i)
+	{
+		const size_t Next = (i + 1) % aOuter.size();
+		const std::array<vec2, 4> aPoints = {aFringe[i], aFringe[Next], aOuter[i], aOuter[Next]};
+		std::array<IGraphics::CColorVertex, 4> aColors;
+		for(int Corner = 0; Corner < 4; ++Corner)
+			aColors[Corner] = IGraphics::CColorVertex(Corner, aFringeColors[Corner]);
+		pGraphics->SetColorVertex(aColors.data(), aColors.size());
+		const IGraphics::CFreeformItem Quad(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
+		pGraphics->QuadsDrawFreeform(&Quad, 1);
+	}
 	pGraphics->QuadsEnd();
 	pGraphics->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	return true;

@@ -8,6 +8,7 @@
 
 #include <game/client/QmUi/QmAnimCurves.h>
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmListCard.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContainers.h>
@@ -1156,23 +1157,19 @@ void CMenus::RenderSettingsBindWorkshop(CUIRect MainView, const bool PrewarmOnly
 			for(size_t Row = 0; Row < KeyRows && Row < vKeySlots.size(); ++Row)
 				Applied = Applied || State.m_Undo.Covers(vKeySlots[Row]);
 
-			// 卡片外框直接用按钮组件的表面管线：同一个主题面、同一条描边宽度
-			// （SButtonSurfaceOptions 的默认 m_BorderWidth）、同一档悬停/选中边框。
-			// 以前自己画一条 1px 淡边，和按钮、开关摆在一起时框细得几乎看不出来。
-			ui_widget::SButtonSurfaceOptions CardSurface;
-			CardSurface.m_Role = EUiButtonRole::SECONDARY;
-			CardSurface.m_Radius = ui_token::radius::CARD * Scale;
-			CardSurface.m_Selected = Applied;
-			CardSurface.m_pHitRect = &Card;
+			// 卡片外框走列表卡片组件（qm_list_card）：同一套内边距、卡片圆角与
+			// 悬浮/选中白边，与资源贴图网格、皮肤列表的卡片同一个视觉件。
+			// 内容排版仍在本文件：组件只切出内容区，标题/说明/底栏的高度由这里算。
+			qm_list_card::SMetrics CardFrame;
+			CardFrame.m_UiScale = Scale;
+			const qm_list_card::SLayout CardLayout = qm_list_card::ResolveLayout(Card, CardFrame.Scaled(), {});
 			{
 				// 卡片整体淡入淡出也跟着表面走，否则会先亮出一整块再淡出文字。
 				CUiScopedControlAlphaScale CardFade(Ctx.m_pUi, std::clamp(Alpha, 0.0f, 1.0f));
-				ui_widget::DrawButtonSurface(Ctx, &State.m_aCardSurfaceIds[PresetIndex], Card, CardSurface);
+				qm_list_card::DrawShell(Ctx, &State.m_aCardSurfaceIds[PresetIndex], CardLayout, Applied, true, &Card);
 			}
 
-			CUIRect Inner = Card;
-			Inner.VMargin(Pad, &Inner);
-			Inner.HMargin(Pad, &Inner);
+			CUIRect Inner = CardLayout.m_Content;
 			CUIRect Title, Description;
 			Inner.HSplitTop(HeadlineSize + ui_token::spacing::XS * Scale, &Title, &Inner);
 			Inner.HSplitTop(ui_token::spacing::XS * Scale, nullptr, &Inner);

@@ -17,7 +17,7 @@ public:
 		void Reset();
 	};
 
-	void OnRender(CUIRect View) override;
+	void Render();
 
 	void SnapToGrid(vec2 &Position) const;
 	int GridLineDistance() const;

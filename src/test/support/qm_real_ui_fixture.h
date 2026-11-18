@@ -36,6 +36,16 @@ namespace qm_ui_test
 
 	public:
 		std::vector<IGraphics::SRoundedRectSdfParams> m_vRoundedSubmissions;
+		struct SClipRect
+		{
+			int m_X;
+			int m_Y;
+			int m_W;
+			int m_H;
+		};
+		// 与 m_vRoundedSubmissions 一一对应：每条圆角提交当时生效的裁剪矩形。
+		std::vector<SClipRect> m_vRoundedClips;
+		std::vector<SClipRect> m_vClipStack;
 		std::vector<CUIRect> m_vRectSubmissions;
 		// 纹理圆角是设备能力；fixture 默认按 CPU 预烘焙回退，保持既有断言不变。
 		bool m_HasSdfTexture = false;
@@ -46,6 +56,25 @@ namespace qm_ui_test
 			ColorRGBA m_OutlineColor;
 		};
 		std::vector<STextSubmission> m_vTextSubmissions;
+		// 文字缓冲默认开启，其他测试观察到的设备提交与后端行为保持不变；
+		// 关掉后引擎改走逐字符上色的回退分支（text.cpp 的逐 quad 填充），
+		// 于是每个字形的最终填充色会经 ChangeColorOfQuadVertices 暴露出来。
+		bool m_TextBuffering = true;
+		bool IsTextBufferingEnabled() override { return m_TextBuffering; }
+		struct SQuadVertexColor
+		{
+			size_t m_QuadOffset;
+			unsigned char m_r;
+			unsigned char m_g;
+			unsigned char m_b;
+			unsigned char m_a;
+		};
+		std::vector<SQuadVertexColor> m_vQuadVertexColors;
+		// 逐字填充色是「容器顶点色 × 绘制 tint」，只有关掉缓冲才能观察到。
+		void ChangeColorOfQuadVertices(size_t QuadOffset, unsigned char r, unsigned char g, unsigned char b, unsigned char a) override
+		{
+			m_vQuadVertexColors.push_back({QuadOffset, r, g, b, a});
+		}
 		void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override
 		{
 			CIconBenchmarkGraphics::RenderText(BufferContainerIndex, TextQuadNum, TextureSize, TextTexture, TextOutlineTexture, TextColor, TextOutlineColor);
@@ -81,6 +110,13 @@ namespace qm_ui_test
 			++m_Draws;
 			m_vRectSubmissions.push_back({X, Y, W, H});
 		}
+		// 禁用的图标按钮用自由四边形画“不可用”斜线，圆角面的几何回退也走这条路径；
+		// 同属 GPU 提交边界，记录次数即可，不影响任何布局或输入断言。
+		void QuadsDrawFreeform(const CFreeformItem *, int Num) override
+		{
+			++m_Draws;
+			m_Quads += Num;
+		}
 		bool HasRoundedRectSdf() override { return true; }
 		bool HasRoundedRectSdfTexture() override { return m_HasSdfTexture; }
 		void DestroyRenderTarget(CRenderTargetHandle *pTarget) override
@@ -89,10 +125,25 @@ namespace qm_ui_test
 			if(pTarget != nullptr && pTarget->IsValid())
 				throw std::logic_error("unexpected live render target in UI fixture");
 		}
-		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override { m_vRoundedSubmissions.push_back(Params); }
+		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override
+		{
+			m_vRoundedSubmissions.push_back(Params);
+			// 记录每条圆角提交生效的裁剪区，测试才能证明「按半裁剪」真的发生了，
+			// 而不是只比较颜色和矩形。没有裁剪时记整屏，语义等同不裁剪。
+			m_vRoundedClips.push_back(m_vClipStack.empty() ? SClipRect{0, 0, m_ScreenWidth, m_ScreenHeight} : m_vClipStack.back());
+		}
 		// 裁剪、光标与选区只提交 GPU 绘制，不替代真实文字布局和输入行为。
-		void ClipEnable(int, int, int, int) override {}
-		void ClipDisable() override {}
+		void ClipEnable(int x, int y, int w, int h) override { m_vClipStack.push_back({x, y, w, h}); }
+		void ClipDisable() override
+		{
+			if(!m_vClipStack.empty())
+				m_vClipStack.pop_back();
+		}
+		// 采样边界只是设备状态：色环纹理需要 clamp，由真实后端生效，测试不关心。
+		void WrapClamp() override {}
+		void WrapNormal() override {}
+		// 引擎接口新增的纹理目标标志：测试桩不加载真实纹理，统一返回 0（不启用数组/3D 目标）。
+		int TextureLoadFlags() override { return 0; }
 		void QuadsDrawTL(const CQuadItem *, int Num) override
 		{
 			++m_Draws;
@@ -106,7 +157,7 @@ namespace qm_ui_test
 			m_QuadCounts.emplace(Id, 0);
 			return Id;
 		}
-		int QuadContainerAddQuads(int ContainerIndex, CQuadItem *, int Num) override
+		int QuadContainerAddQuads(int ContainerIndex, const CQuadItem *, int Num) override
 		{
 			int &Count = m_QuadCounts.at(ContainerIndex);
 			const int Offset = Count;
@@ -233,6 +284,8 @@ namespace qm_ui_test
 			m_pUiKernel = std::make_unique<CRealUiTestKernel>(pGraphics, m_pText.get(), UiInput(), UiClient());
 			m_Ui.Init(m_pUiKernel.get());
 			m_Ui.SetQmAnimationRuntime(&m_AnimRuntime);
+			// 独立 UI 目标把提示生命周期隔离为可替换边界；启用标签解析，不创建真实 owner。
+			m_Ui.InitTooltips(nullptr);
 			if(auto *pTestClient = dynamic_cast<qm_ui_test::CTestUiClient *>(UiClient()))
 				pTestClient->AttachAnimRuntime(&m_AnimRuntime);
 			m_UiInitialized = true;

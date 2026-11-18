@@ -1054,6 +1054,7 @@ if(TARGET_OS STREQUAL "windows")
   list(APPEND PLATFORM_LIBS ws2_32.lib) # Windows sockets
   list(APPEND PLATFORM_LIBS advapi32.lib) # Reg* and Crypt* functions
   list(APPEND PLATFORM_LIBS bcrypt.lib userenv.lib) # for Rust (https://github.com/rust-lang/rust/issues/91974)
+  list(APPEND PLATFORM_LIBS synchronization.lib) # for Rust
   list(APPEND PLATFORM_LIBS ole32.lib) # CoInitialize(Ex)
   list(APPEND PLATFORM_LIBS shell32.lib)
   list(APPEND PLATFORM_LIBS ntdll.lib) # https://github.com/ddnet/ddnet/issues/6725
@@ -1286,10 +1287,6 @@ set_glob(RUST_ENGINE_SHARED GLOB_RECURSE "rs;toml" src/engine/shared
   qm_update.rs
   qm_websocket.rs
   rust_version.rs
-  snapshot/builder.rs
-  snapshot/delta.rs
-  snapshot/mod.rs
-  uuid_manager.rs
 )
 
 set_glob(RUST_QM_UPDATE GLOB_RECURSE "rs;toml" src/qm/update
@@ -1298,19 +1295,10 @@ set_glob(RUST_QM_UPDATE GLOB_RECURSE "rs;toml" src/qm/update
 )
 
 set_src(RUST_BRIDGE_SHARED GLOB_RECURSE src/rust-bridge
-  base/cxx.h
   cpp/console.cpp
   cpp/console.h
-  cpp/snapshot.cpp
-  cpp/snapshot.h
-  cpp/uuid_manager.cpp
-  cpp/uuid_manager.h
   engine/shared/rust_version.cpp
   engine/shared/rust_version.h
-  engine/shared/snapshot/builder.cpp
-  engine/shared/snapshot/builder.h
-  engine/shared/snapshot/delta.cpp
-  engine/shared/snapshot/delta.h
 )
 
 set_glob(RUST_MASTERSRV GLOB "rs;toml" src/mastersrv/src
@@ -2717,8 +2705,12 @@ add_custom_command(OUTPUT "src/generated/wordlist.h"
 
 # Sources
 set_src(BASE GLOB_RECURSE src/base
+  aio.cpp
+  aio.h
   bezier.cpp
   bezier.h
+  bytes.cpp
+  bytes.h
   color.cpp
   color.h
   crashdump.cpp
@@ -2735,6 +2727,8 @@ set_src(BASE GLOB_RECURSE src/base
   hash_ctxt.h
   hash_libtomcrypt.cpp
   hash_openssl.cpp
+  io.cpp
+  io.h
   io_read_all.h
   lock.h
   log.cpp
@@ -2744,6 +2738,8 @@ set_src(BASE GLOB_RECURSE src/base
   math.h
   mem.cpp
   mem.h
+  os.cpp
+  os.h
   perf_timer.h
   rust.h
   secure.cpp
@@ -2889,6 +2885,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   ringbuffer.h
   serverinfo.cpp
   serverinfo.h
+  sixup_translate_snapshot.cpp
   snapshot.cpp
   snapshot.h
   storage.cpp
@@ -3117,6 +3114,7 @@ if(CLIENT)
     checksum.h
     client.cpp
     client.h
+    map_download_resolver.h
     qm_hang_diagnostics.cpp
     qm_hang_diagnostics.h
     qm_graphics_diagnostics.h
@@ -3331,6 +3329,8 @@ if(CLIENT)
     QmUi/UiFormLogic.h
     QmUi/UiForms.cpp
     QmUi/UiForms.h
+    QmUi/UiTextCaret.cpp
+    QmUi/UiTextCaret.h
     QmUi/QmIconSwap.cpp
     QmUi/QmIconSwap.h
     QmUi/UiNavigation.cpp
@@ -3339,6 +3339,8 @@ if(CLIENT)
     QmUi/UiScaledLabel.h
     QmUi/UiSurface.cpp
     QmUi/UiSurface.h
+    QmUi/UiTag.cpp
+    QmUi/UiTag.h
     QmUi/UiTokens.h
     QmUi/QmCardOrderModel.cpp
     QmUi/QmCardOrderModel.h
@@ -3364,6 +3366,7 @@ if(CLIENT)
     QmUi/QmWikiStore.h
     QmUi/MapTagsPanel.cpp
     QmUi/MapTagsPanel.h
+    QmUi/QmMotdLayout.h
     QmUi/QmServerInfoGeometry.h
     QmUi/cards/QmCardCatalog.cpp
     QmUi/cards/QmCardCatalog.h
@@ -3611,6 +3614,8 @@ if(CLIENT)
     components/qmclient/streamer_word_filter.h
     components/qmclient/map_tags.cpp
     components/qmclient/map_tags.h
+    components/qmclient/local_map_tags.cpp
+    components/qmclient/local_map_tags.h
     components/qmclient/public_word_filter.cpp
     components/qmclient/public_word_filter.h
     components/qmclient/word_filter_list.cpp
@@ -3642,6 +3647,9 @@ if(CLIENT)
     components/qmclient/map_covers.h
     components/qmclient/map_difficulty_catalog.cpp
     components/qmclient/map_difficulty_catalog.h
+    components/qmclient/map_download_index.h
+    components/qmclient/map_preview_panel.cpp
+    components/qmclient/map_preview_panel.h
     components/qmclient/vote_map_library.cpp
     components/qmclient/vote_map_library.h
     components/qmclient/server_vote_list.h
@@ -3652,6 +3660,7 @@ if(CLIENT)
     components/qmclient/markdown_cache_writer.h
     components/qmclient/statistics_save_job.h
     components/qmclient/media_volume_logic.h
+    components/qmclient/media_cover_spin.h
     components/qmclient/player_volume.cpp
     components/qmclient/player_volume.h
     components/qmclient/scoreboard_media_controls.cpp
@@ -4808,6 +4817,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   set(TESTS
     src/test/unit/qmclient/settings/qm_card_wiki_test.cpp
     src/test/unit/qmclient/settings/qm_wiki_markdown_test.cpp
+    src/test/unit/qmclient/settings/qm_anti_ping_players_settings_test.cpp
     src/test/integration/qmclient/settings/qm_wiki_editor_test.cpp
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
     src/test/unit/qmclient/ui/qm_list_entry_animation_test.cpp
@@ -4837,8 +4847,18 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/ui/qm_font_icon_resource_contract_test.cpp
     src/test/unit/qmclient/ui/QmLayoutTest.cpp
     src/test/unit/qmclient/ui/QmColorPickerPaletteTest.cpp
-    src/test/unit/qmclient/ui/QmColorPickerSliderTest.cpp
+    src/test/unit/qmclient/ui/qm_input_focus_glow_test.cpp
     src/test/unit/qmclient/ui/qm_secondary_button_style_test.cpp
+    src/test/unit/qmclient/ui/qm_list_card_layout_test.cpp
+    src/test/unit/qmclient/ui/qm_font_fit_test.cpp
+    src/test/unit/qmclient/ui/qm_page_title_group_test.cpp
+    src/test/unit/qmclient/ui/qm_browser_bottom_inset_test.cpp
+    src/test/unit/qmclient/ui/qm_gallery_layout_test.cpp
+    src/test/unit/qmclient/ui/qm_ui_tag_test.cpp
+    src/test/unit/qmclient/ui/qm_local_map_tags_test.cpp
+    src/test/unit/qmclient/ui/qm_media_cover_spin_test.cpp
+    src/test/unit/qmclient/ui/qm_media_session_pick_test.cpp
+    src/test/unit/qmclient/ui/qm_button_surface_radius_test.cpp
     src/test/contract/qmclient/client/qm_afk_presentation_contract_test.cpp
     src/test/unit/qmclient/client/qm_blank_asset_fallback_test.cpp
     src/test/unit/qmclient/client/qm_spectator_selector_layout_test.cpp
@@ -4897,6 +4917,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
     src/test/unit/qmclient/ui/qm_server_info_layout_test.cpp
+    src/test/unit/qmclient/ui/qm_motd_layout_test.cpp
+    src/test/unit/qmclient/ui/qm_console_scroll_test.cpp
+    src/test/unit/qmclient/ui/qm_console_caret_test.cpp
     src/test/unit/qmclient/settings/qm_search_header_test.cpp
     src/test/unit/qmclient/settings/qm_search_answers_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp
@@ -4921,6 +4944,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/color_test.cpp
     src/test/unit/engine/compression_test.cpp
     src/test/unit/engine/console_test.cpp
+    src/test/unit/engine/console_command_test.cpp
     src/test/unit/engine/config_tags_test.cpp
     src/test/unit/engine/qm_legacy_config_test.cpp
     src/test/unit/qmclient/settings/qm_appearance_preset_test.cpp
@@ -5034,6 +5058,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_console_syntax_test.cpp
     src/test/unit/qmclient/client/qm_console_text_test.cpp
     src/test/unit/qmclient/client/qm_console_wheel_test.cpp
+    src/test/unit/qmclient/client/qm_console_slide_test.cpp
     src/test/unit/qmclient/client/qm_streamer_word_filter_test.cpp
     src/test/unit/qmclient/client/qm_map_tags_test.cpp
     src/test/integration/qmclient/client/qm_map_tags_lifecycle_test.cpp
@@ -5136,6 +5161,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/ui/qm_ui_scale_contract_test.cpp
     src/test/contract/qmclient/client/qm_camera_aspect_ratio_contract_test.cpp
     src/test/contract/qmclient/settings/settings_card_translation_contract_test.cpp
+    src/test/unit/qmclient/settings/graphics_card_split_test.cpp
     src/test/unit/qmclient/settings/settings_font_selection_test.cpp
     src/test/unit/qmclient/settings/settings_icon_options_test.cpp
     src/test/unit/qmclient/settings/settings_color_picker_test.cpp
@@ -5326,6 +5352,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_rounded_surface_geometry_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_render_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_matrix_test.cpp
+    src/test/unit/qmclient/ui/settings_search_reveal_test.cpp
+    src/test/unit/qmclient/ui/pie_option_pool_test.cpp
+    src/test/unit/qmclient/ui/qm_player_card_geometry_test.cpp
+    src/test/unit/qmclient/ui/ui_text_caret_test.cpp
     src/test/contract/qmclient/settings/settings_resource_jobs_assets_contract_test.cpp
     src/test/unit/qmclient/settings/settings_resource_jobs_assets_test.cpp
     src/test/unit/qmclient/settings/settings_resource_jobs_skin_plan_test.cpp
@@ -5528,6 +5558,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/friend_last_seen_data.cpp
     src/game/client/components/qmclient/streamer_word_filter.cpp
     src/game/client/components/qmclient/map_tags.cpp
+    src/game/client/components/qmclient/local_map_tags.cpp
     src/game/client/components/qmclient/public_word_filter.cpp
     src/game/client/components/qmclient/word_filter_list.cpp
     src/test/support/ui_test_stubs.cpp
@@ -5678,6 +5709,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     $<TARGET_OBJECTS:engine-shared>
     $<TARGET_OBJECTS:game-shared>
     $<TARGET_OBJECTS:rust-bridge-shared>
+    src/engine/client/text.cpp
     src/generated/client_data.h
     src/generated/client_data7.h
     src/generated/data_types.h
@@ -5818,9 +5850,12 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_ime_menu_input_test.cpp
       src/test/integration/qmclient/ui/qm_font_combobox_test.cpp
       src/test/integration/qmclient/ui/qm_color_picker_text_input_test.cpp
+      src/test/integration/qmclient/ui/qm_color_picker_palette_lifecycle_test.cpp
       src/test/integration/qmclient/client/qm_font_loading_test.cpp
       src/test/integration/qmclient/client/qm_text_measurement_test.cpp
       src/test/integration/qmclient/client/qm_title_badge_text_test.cpp
+      src/game/client/components/qmclient/qm_title_render.cpp
+      src/game/client/components/qmclient/qm_title_style.cpp
       src/test/integration/qmclient/client/qm_text_bitmap_test.cpp
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
@@ -5841,13 +5876,17 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_scroll_display_test.cpp
       src/test/integration/qmclient/ui/qm_direct_touch_test.cpp
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
+      src/test/integration/qmclient/ui/qm_vote_map_preview_test.cpp
+      src/test/integration/qmclient/ui/qm_input_focus_glow_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
+      src/test/integration/qmclient/ui/qm_listbox_row_spacing_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
       src/test/integration/qmclient/ui/qm_offscreen_cursor_test.cpp
       src/test/unit/qmclient/ui/qm_line_input_multiline_test.cpp
       src/test/integration/qmclient/ui/qm_multiline_edit_scroll_test.cpp
       src/test/integration/qmclient/ui/qm_wiki_panel_test.cpp
       src/test/integration/qmclient/ui/qm_confirm_popup_result_test.cpp
+      src/test/integration/qmclient/ui/qm_popup_tooltip_source_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
       src/test/integration/qmclient/ui/qm_visual_hover_visibility_test.cpp
@@ -5861,6 +5900,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_spectator_hud_text_test.cpp
       src/test/integration/qmclient/ui/qm_icon_text_test.cpp
       src/test/integration/qmclient/ui/qm_scaled_label_test.cpp
+      src/test/integration/qmclient/ui/qm_streamed_label_color_test.cpp
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
       src/test/integration/qmclient/ui/qm_theme_selection_test.cpp
       src/test/integration/qmclient/ui/qm_ui_element_lifetime_test.cpp
@@ -5871,6 +5911,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/ui_listbox.cpp
       src/game/client/ui_scrollregion.cpp
       src/game/client/lineinput.cpp
+      src/game/client/QmUi/UiTextCaret.cpp
       src/game/client/QmUi/SettingsCardGeometry.cpp
       src/game/client/QmUi/QmLineInputMotion.cpp
       src/game/client/QmUi/UiButtons.cpp
@@ -5988,6 +6029,7 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/game/client/components/qmclient/translate/translate_detect.cpp
     src/test/benchmark/qm_net_benchmark.cpp
     src/test/benchmark/qm_snapshot_benchmark.cpp
+    src/test/benchmark/qm_render_layer_batch_benchmark.cpp
     src/test/benchmark/qm_font_raster_benchmark.cpp
     src/test/benchmark/qm_font_search_benchmark.cpp
     src/game/client/QmUi/QmDropdown.cpp
@@ -6308,6 +6350,16 @@ if(TARGET_OS STREQUAL "windows" AND TARGET game-client AND TARGET game-server)
     string(APPEND QMCLIENT_SETUP_RUNTIME_FILES "$<TARGET_FILE_NAME:${qm_setup_target}>\n")
   endforeach()
   file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/qmclient-setup-runtime.txt" CONTENT "${QMCLIENT_SETUP_RUNTIME_FILES}")
+  # Setup 载荷只允许收录当前配置声明的运行时 DLL。构建目录可能留着旧版本
+  # （例如已迁到 SDL3 的 SDL2.dll），按 glob 复制会把废弃运行时重新装回。
+  set(QMCLIENT_SETUP_RUNTIME_DLLS "")
+  foreach(qm_setup_runtime_file ${COPY_FILES})
+    if(qm_setup_runtime_file)
+      get_filename_component(qm_setup_runtime_name "${qm_setup_runtime_file}" NAME)
+      string(APPEND QMCLIENT_SETUP_RUNTIME_DLLS "${qm_setup_runtime_name}\n")
+    endif()
+  endforeach()
+  file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/qmclient-setup-dlls.txt" CONTENT "${QMCLIENT_SETUP_RUNTIME_DLLS}")
 endif()
 if(TARGET_OS STREQUAL "windows")
   set(QMCLIENT_ARCHIVE_TOOL_FILES "")

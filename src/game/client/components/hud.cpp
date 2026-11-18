@@ -24,6 +24,7 @@
 #include <game/client/QmUi/QmFinishSummary.h>
 #include <game/client/QmUi/QmHookCountdownRender.h>
 #include <game/client/QmUi/QmLayout.h>
+#include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/demo_display.h>
@@ -566,6 +567,33 @@ namespace
 		return g_Config.m_ClShowLocalTimeAlways || GameClient.m_Scoreboard.IsActive() || GameClient.m_HudEditor.IsActive();
 	}
 
+	// 灵动岛状态区文字使用连续字号（字形仍按整像素光栅化，绘制尺寸取原字号）：
+	// 字号在 5.3 ↔ 4.4 之间过渡时是平滑缩放，不会在两三个整像素档之间跳。
+	// 测量与绘制必须同时开这个标志，否则宽度与居中位置对不上。
+	struct SUiScopedFloatFontSize
+	{
+		ITextRender *m_pTextRender;
+		unsigned m_PrevFlags;
+
+		explicit SUiScopedFloatFontSize(ITextRender *pTextRender) :
+			m_pTextRender(pTextRender), m_PrevFlags(pTextRender->GetRenderFlags())
+		{
+			m_pTextRender->SetRenderFlags(m_PrevFlags | TEXT_RENDER_FLAG_QM_FLOAT_FONT_SIZE);
+		}
+		~SUiScopedFloatFontSize()
+		{
+			m_pTextRender->SetRenderFlags(m_PrevFlags);
+		}
+	};
+
+	float MeasureInfoStackLineWidth(ITextRender *pTextRender, float FontSize, const char *pText)
+	{
+		if(pText == nullptr)
+			return 0.0f;
+		const SUiScopedFloatFontSize ScopedFlags(pTextRender);
+		return std::round(pTextRender->TextBoundingBox(FontSize, pText).m_W);
+	}
+
 	void DrawSmoothRoundedRect(IGraphics *pGraphics, float x, float y, float w, float h, float r, ColorRGBA Color, int Corners = IGraphics::CORNER_ALL)
 	{
 		if(pGraphics == nullptr || w <= 0.0f || h <= 0.0f)
@@ -1037,7 +1065,9 @@ namespace
 		}
 	}
 
-	void DrawTexturedQuad(IGraphics *pGraphics, IGraphics::CTextureHandle Texture, vec2 Center, float Radius, float Alpha = 1.0f)
+	// Rotation 为弧度，绕四边形中心旋转（QuadsSetRotation 的中心就是 quad 中心）；
+	// 封面是圆形贴图，转起来只是图案在转，轮廓不变。
+	void DrawTexturedQuad(IGraphics *pGraphics, IGraphics::CTextureHandle Texture, vec2 Center, float Radius, float Alpha = 1.0f, float Rotation = 0.0f)
 	{
 		if(pGraphics == nullptr || !Texture.IsValid() || Radius <= 0.0f)
 			return;
@@ -1045,10 +1075,12 @@ namespace
 		pGraphics->WrapClamp();
 		pGraphics->TextureSet(Texture);
 		pGraphics->QuadsBegin();
+		pGraphics->QuadsSetRotation(Rotation);
 		pGraphics->SetColor(1.0f, 1.0f, 1.0f, Alpha);
 		const IGraphics::CQuadItem CoverQuad(Center.x - Radius, Center.y - Radius, Radius * 2.0f, Radius * 2.0f);
 		pGraphics->QuadsDrawTL(&CoverQuad, 1);
 		pGraphics->QuadsEnd();
+		pGraphics->QuadsSetRotation(0.0f);
 		pGraphics->WrapNormal();
 		pGraphics->TextureClear();
 	}
@@ -1629,12 +1661,7 @@ void CHud::RenderScoreHud()
 						CTeeRenderInfo TeeInfo = GameClient()->m_aClients[Id].m_RenderInfo;
 						TeeInfo.m_Size = ScoreSingleBoxHeight;
 
-						const CAnimState *pIdleState = CAnimState::GetIdle();
-						vec2 OffsetToMid;
-						CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-						vec2 TeeRenderPos(m_Width - ScoreWidthMax - TeeInfo.m_Size / 2 - Split, StartY + (t * 20) + ScoreSingleBoxHeight / 2.0f + OffsetToMid.y);
-
-						RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
+						RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, vec2(m_Width - ScoreWidthMax - TeeInfo.m_Size / 2 - Split, StartY + (t * 20) + ScoreSingleBoxHeight / 2.0f));
 					}
 				}
 				StartY += 8.0f;
@@ -1815,12 +1842,7 @@ void CHud::RenderScoreHud()
 						CTeeRenderInfo TeeInfo = GameClient()->m_aClients[Id].m_RenderInfo;
 						TeeInfo.m_Size = ScoreSingleBoxHeight;
 
-						const CAnimState *pIdleState = CAnimState::GetIdle();
-						vec2 OffsetToMid;
-						CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-						vec2 TeeRenderPos(ScoreLayout.m_TeeX, StartY + (t * 20) + ScoreSingleBoxHeight / 2.0f + OffsetToMid.y);
-
-						RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
+						RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, vec2(ScoreLayout.m_TeeX, StartY + (t * 20) + ScoreSingleBoxHeight / 2.0f));
 					}
 				}
 				else
@@ -2237,10 +2259,7 @@ void CHud::RenderDummyMiniMap()
 				if(!HasSnapshotSignal)
 				{
 					CTeeRenderInfo TeeInfo = MiniClient.m_RenderInfo;
-					const CAnimState *pIdleState = CAnimState::GetIdle();
-					vec2 OffsetToMid;
-					CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-					RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), vec2(MiniPos.x, MiniPos.y + OffsetToMid.y));
+					RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, MiniPos);
 				}
 
 				GameClient()->SetRenderingDummyMiniMap(PrevMiniRender);
@@ -2255,15 +2274,12 @@ void CHud::RenderDummyMiniMap()
 				DrawParams.m_H = Frame.m_Content.h;
 				DrawParams.m_Corners = HudEditorScope.m_Corners;
 				DrawParams.m_Rounding = Frame.m_ContentRadius;
-				DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+				DrawParams.m_CornerSmoothing = QmEffectiveCornerSmoothing();
 				DrawParams.m_CornerCurve = (float)g_Config.m_QmUiCornerCurve;
-				DrawParams.m_CornerSeam = std::clamp(g_Config.m_QmUiCapsuleSeam / 100.0f, 0.0f, 1.0f);
+				DrawParams.m_CornerSeam = QmEffectiveCapsuleSeam();
 				DrawParams.m_Opaque = true;
 				if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
-				{
-					DrawParams.m_V0 = 0.0f;
-					DrawParams.m_V1 = 1.0f;
-				}
+					DrawParams.SetTextureCoordinates(0.0f, 0.0f, 1.0f, 1.0f);
 				Graphics()->DrawRenderTarget(m_DummyMiniViewRenderTarget, DrawParams);
 			}
 		}
@@ -3753,7 +3769,6 @@ float CHud::GetTopIslandAvoidanceRight() const
 	constexpr float StatusPaddingLeft = QmHudMediaIslandScaled(4.0f);
 	constexpr float StatusPaddingRight = QmHudMediaIslandScaled(5.0f);
 	constexpr float StatusDotSize = QmHudMediaIslandScaled(5.0f);
-	constexpr float StatusDotGap = QmHudMediaIslandScaled(4.0f);
 	constexpr float StatusFontSize = QmHudMediaIslandScaled(5.3f);
 	constexpr float StackedStatusFontSize = QmHudMediaIslandScaled(4.4f);
 	constexpr float WaveformSlotWidth = QmHudMediaIslandScaled(12.0f);
@@ -3773,17 +3788,21 @@ float CHud::GetTopIslandAvoidanceRight() const
 	const float SpectatorSatelliteWidth = std::max(BaseIslandHeight, SpectatorSatelliteContentWidth + SpectatorSatellitePaddingX * 2.0f);
 	const float TeamTextWidth = ShowTeam ? TextRender()->TextWidth(MetaFontSize, aTeamBuf) : 0.0f;
 	const float TeamWidth = ShowTeam ? TeamIconWidth + SpectatorGap + TeamTextWidth : 0.0f;
-	const float StatusTextWidth = ShowRecordingStatus ? std::round(TextRender()->TextBoundingBox(StatusFontSize, aRecordingBuf).m_W) : 0.0f;
 	const float RawCollapsedStatusWidth = StatusPaddingLeft + StatusDotSize + StatusPaddingRight;
-	const float RawExpandedStatusWidth = StatusPaddingLeft + StatusDotSize + StatusDotGap + StatusTextWidth + StatusPaddingRight;
-	const bool StackHasTwoRows = ShowLocalTime && ShowFrozenSummary;
+	// 状态区行内容：本地时间 > 冻结摘要 > 录像状态；多出来的退到第二行。
+	// 计分板展开时录像详情不再顶掉本地时间（与 RenderMediaIsland 同源）。
+	const SHudInfoStackLines InfoStackLines = QmHudInfoStackLines(aTimeBuf,
+		ShowFrozenSummary ? aFrozenSummaryBuf : "",
+		RecordingPresentation.m_ShowRecordingText ? aRecordingBuf : "");
+	const bool StackHasTwoRows = InfoStackLines.m_HasSecondary;
+	// 布局/测量按目标字号：单行 5.3，两行 4.4（见绘制处的分字号说明）。
 	const float InfoStackFontSize = StackHasTwoRows ? StackedStatusFontSize : StatusFontSize;
-	const float LocalTimeTextWidth = ShowLocalTime ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aTimeBuf).m_W) : 0.0f;
-	const float FrozenSummaryTextWidth = ShowFrozenSummary ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aFrozenSummaryBuf).m_W) : 0.0f;
+	const float PrimaryTextWidth = MeasureInfoStackLineWidth(TextRender(), InfoStackFontSize, InfoStackLines.m_pPrimary);
+	const float SecondaryTextWidth = StackHasTwoRows ? MeasureInfoStackLineWidth(TextRender(), InfoStackFontSize, InfoStackLines.m_aSecondary) : 0.0f;
 	// 连接质量图标（数据流量语义，常驻）：对局中按延迟分档，其余情况空信号档；
 	// 与 RenderMediaIsland 同口径。占位跟随状态区存在，不依赖信息栈。
 	const SHudConnectionSignalSlot ConnectionSlot = QmHudConnectionSignalSlot();
-	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + ConnectionSlot.m_Width + std::max(LocalTimeTextWidth, FrozenSummaryTextWidth) + StatusPaddingRight : 0.0f;
+	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + ConnectionSlot.m_Width + std::max(PrimaryTextWidth, SecondaryTextWidth) + StatusPaddingRight : 0.0f;
 	const bool ShowCover = HasMediaState;
 
 	const int MetaItemCount = (ShowTeam ? 1 : 0) + (ShowWaveform ? 1 : 0);
@@ -3812,7 +3831,7 @@ float CHud::GetTopIslandAvoidanceRight() const
 	if(ShowInfoStack)
 		RightSlotWidth = InfoStackWidth;
 	else if(ShowRecordingStatus)
-		RightSlotWidth = StatusPaddingLeft + ConnectionSlot.m_Width + (ScoreboardExpanded ? RawExpandedStatusWidth : RawCollapsedStatusWidth);
+		RightSlotWidth = StatusPaddingLeft + ConnectionSlot.m_Width + RawCollapsedStatusWidth;
 	const float RightSlotGap = RightSlotWidth > 0.0f && (TimerCapsule.m_Visible || BaseWidth > 0.0f) ? TimerToStatusGap : 0.0f;
 	const float MaxUnifiedWidth = std::max(0.0f, m_Width - ScreenPadding * 2.0f);
 	const float MaxIslandWidth = TimerCapsule.m_Visible ?
@@ -3938,6 +3957,11 @@ void CHud::RenderMediaIsland()
 		AnimState.m_WaveformSettleStartTick = 0;
 		AnimState.m_WaveformSettleSampleTime = 0.0f;
 	}
+	// 封面自转：播放时匀速转（QM_MEDIA_COVER_SPIN_PERIOD_SECONDS 一圈），暂停就定格；
+	// 动效等级 0 不转。每帧只推进一次，进出场交叉淡化的两张封面共用同一个角度。
+	// time_get() 是大整数，先折成 double 再转 float 秒，避免低 20 位被浮点吃掉。
+	const float CoverSpinAngle = AnimState.m_CoverSpin.Advance(HasMediaState && MediaState.m_Playing, g_Config.m_QmUiMotionLevel > 0,
+		static_cast<float>(static_cast<double>(Now) / static_cast<double>(time_freq())));
 	SSwapCountdownList SwapList;
 	BuildSwapCountdownList(*GameClient(), *Client(), SwapList);
 	std::array<const SSwapCountdownInfo *, NUM_DUMMIES * MAX_CLIENTS> aIncomingSwapInfos{};
@@ -4247,7 +4271,6 @@ void CHud::RenderMediaIsland()
 	constexpr float StatusPaddingLeft = QmHudMediaIslandScaled(4.0f);
 	constexpr float StatusPaddingRight = QmHudMediaIslandScaled(5.0f);
 	constexpr float StatusDotSize = QmHudMediaIslandScaled(5.0f);
-	constexpr float StatusDotGap = QmHudMediaIslandScaled(4.0f);
 	constexpr float StatusFontSize = QmHudMediaIslandScaled(5.3f);
 	constexpr float StackedStatusFontSize = QmHudMediaIslandScaled(4.4f);
 	constexpr float InfoStackGap = QmHudMediaIslandScaled(0.8f);
@@ -4272,23 +4295,31 @@ void CHud::RenderMediaIsland()
 	const float SpectatorSatelliteWidth = std::max(BaseIslandHeight, SpectatorSatelliteContentWidth + SpectatorSatellitePaddingX * 2.0f);
 	const float TeamTextWidth = ShowTeam ? TextRender()->TextWidth(MetaFontSize, aTeamBuf) : 0.0f;
 	const float TeamWidth = ShowTeam ? TeamIconWidth + SpectatorGap + TeamTextWidth : 0.0f;
-	const float StatusTextWidth = ShowRecordingStatus ? std::round(TextRender()->TextBoundingBox(StatusFontSize, aRecordingBuf).m_W) : 0.0f;
 	const float RawCollapsedStatusWidth = StatusPaddingLeft + StatusDotSize + StatusPaddingRight;
-	const float RawExpandedStatusWidth = StatusPaddingLeft + StatusDotSize + StatusDotGap + StatusTextWidth + StatusPaddingRight;
-	const bool StackHasTwoRows = ShowLocalTime && ShowFrozenSummary;
+	// 状态区行内容：本地时间 > 冻结摘要 > 录像状态；多出来的退到第二行。
+	// 计分板展开时录像详情不再顶掉本地时间（与 GetTopIslandAvoidanceRight 同源）。
+	const SHudInfoStackLines InfoStackLines = QmHudInfoStackLines(aTimeBuf,
+		ShowFrozenSummary ? aFrozenSummaryBuf : "",
+		RecordingPresentation.m_ShowRecordingText ? aRecordingBuf : "");
+	const bool StackHasTwoRows = InfoStackLines.m_HasSecondary;
+	// 次行文本留一份缓存：行数回落（录像结束/冻结解除）时靠它淡出，否则内容一消失
+	// 就只剩硬切，StackBlend 的过渡也就没有可渲染的对象了。
+	if(InfoStackLines.m_HasSecondary)
+		str_copy(m_RecordingStatusAnimState.m_aSecondaryCache, InfoStackLines.m_aSecondary, sizeof(m_RecordingStatusAnimState.m_aSecondaryCache));
+	// 布局/测量按目标字号：单行 5.3，两行 4.4（见绘制处的分字号说明）。
 	const float InfoStackFontSize = StackHasTwoRows ? StackedStatusFontSize : StatusFontSize;
-	const float LocalTimeTextWidth = ShowLocalTime ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aTimeBuf).m_W) : 0.0f;
-	const float FrozenSummaryTextWidth = ShowFrozenSummary ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aFrozenSummaryBuf).m_W) : 0.0f;
+	const float PrimaryTextWidth = MeasureInfoStackLineWidth(TextRender(), InfoStackFontSize, InfoStackLines.m_pPrimary);
+	const float SecondaryTextWidth = StackHasTwoRows ? MeasureInfoStackLineWidth(TextRender(), InfoStackFontSize, InfoStackLines.m_aSecondary) : 0.0f;
 	// 连接质量图标（数据流量语义，常驻）：对局中按延迟分档，其余情况空信号档；
 	// 与 GetTopIslandAvoidanceRight 同口径。占位跟随状态区存在，不依赖信息栈。
 	const EHudConnectionQuality ConnectionQuality = HudConnectionQuality(Client(), GameClient());
 	const SHudConnectionSignalSlot ConnectionSlot = QmHudConnectionSignalSlot();
-	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + ConnectionSlot.m_Width + std::max(LocalTimeTextWidth, FrozenSummaryTextWidth) + StatusPaddingRight : 0.0f;
+	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + ConnectionSlot.m_Width + std::max(PrimaryTextWidth, SecondaryTextWidth) + StatusPaddingRight : 0.0f;
 	float PlannedStatusWidth = 0.0f;
 	if(ShowInfoStack)
 		PlannedStatusWidth = InfoStackWidth;
 	else if(ShowRecordingStatus)
-		PlannedStatusWidth = StatusPaddingLeft + ConnectionSlot.m_Width + (ScoreboardExpanded ? RawExpandedStatusWidth : RawCollapsedStatusWidth);
+		PlannedStatusWidth = StatusPaddingLeft + ConnectionSlot.m_Width + RawCollapsedStatusWidth;
 	const QmHudMapProgress::SIslandRows ProgressRows = QmHudMapProgress::IslandRows(
 		ShowTopRow || HasSatellitePresentation, ShowMapProgress, SwapRows.m_BottomLineCount,
 		BaseIslandHeight, BottomRowLineHeight, BottomRowPaddingY);
@@ -4762,28 +4793,31 @@ void CHud::RenderMediaIsland()
 	const float StatusSectionX = StatusAnchorRight + StatusSectionGap;
 	const float TargetStatusWidth = PlannedStatusWidth;
 	const float TargetStatusAlpha = (ShowInfoStack || ShowRecordingStatus) ? 1.0f : 0.0f;
-	const float TargetTextAlpha = RecordingPresentation.m_ShowRecordingText ? 1.0f : 0.0f;
+	// 单行 ↔ 两行的混合目标：行数变化时字号、行位置、次行透明度一起过渡，
+	// 录像状态的出现与消失因此是滑入/淡出而不是一帧换版。
+	const float TargetStackBlend = StackHasTwoRows ? 1.0f : 0.0f;
 
 	const uint64_t StatusBoxNode = HudRecordingStatusNodeKey("box");
-	const uint64_t StatusTextNode = HudRecordingStatusNodeKey("text");
+	const uint64_t StackBlendNode = HudRecordingStatusNodeKey("stack");
 	if(!m_RecordingStatusAnimState.m_Initialized)
 	{
 		m_RecordingStatusAnimState.m_TargetWidth = TargetStatusWidth;
 		m_RecordingStatusAnimState.m_TargetAlpha = TargetStatusAlpha;
-		m_RecordingStatusAnimState.m_TargetTextAlpha = TargetTextAlpha;
+		m_RecordingStatusAnimState.m_TargetStackBlend = TargetStackBlend;
 		SetUiPresentationStateValue(AnimRuntime, StatusBoxNode, EUiAnimProperty::WIDTH, TargetStatusWidth);
 		SetUiPresentationStateValue(AnimRuntime, StatusBoxNode, EUiAnimProperty::ALPHA, TargetStatusAlpha);
-		SetUiPresentationStateValue(AnimRuntime, StatusTextNode, EUiAnimProperty::ALPHA, TargetTextAlpha);
+		SetUiPresentationStateValue(AnimRuntime, StackBlendNode, EUiAnimProperty::ALPHA, TargetStackBlend);
 		m_RecordingStatusAnimState.m_Initialized = true;
 	}
 
 	m_RecordingStatusAnimState.m_TargetWidth = TargetStatusWidth;
 	m_RecordingStatusAnimState.m_TargetAlpha = TargetStatusAlpha;
-	m_RecordingStatusAnimState.m_TargetTextAlpha = TargetTextAlpha;
+	m_RecordingStatusAnimState.m_TargetStackBlend = TargetStackBlend;
 	const SUiSpringConfig StatusSpring = TargetStatusAlpha > 0.0f ? ContentSpring : ContentExitSpring;
+	const SUiSpringConfig StackBlendSpring = TargetStackBlend > 0.0f ? ContentSpring : ContentExitSpring;
 	const float StatusWidth = ResolveUiPresentationStateValue(AnimRuntime, StatusBoxNode, EUiAnimProperty::WIDTH, m_RecordingStatusAnimState.m_TargetWidth, StatusSpring, 2, 0.01f);
 	const float StatusAlpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, StatusBoxNode, EUiAnimProperty::ALPHA, m_RecordingStatusAnimState.m_TargetAlpha, StatusSpring, 2, 0.004f), 0.0f, 1.0f);
-	const float StatusTextAlpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, StatusTextNode, EUiAnimProperty::ALPHA, m_RecordingStatusAnimState.m_TargetTextAlpha, StatusSpring, 2, 0.004f), 0.0f, 1.0f);
+	const float StackBlend = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, StackBlendNode, EUiAnimProperty::ALPHA, m_RecordingStatusAnimState.m_TargetStackBlend, StackBlendSpring, 2, 0.004f), 0.0f, 1.0f);
 	const bool RenderStatusSection = StatusWidth > 1.0f && StatusAlpha > 0.01f;
 	float UnifiedRight = StatusAnchorRight + (RenderStatusSection ? StatusSectionGap + StatusWidth : 0.0f);
 	float UnifiedWidth = std::max(IslandWidth, UnifiedRight - IslandX);
@@ -5019,7 +5053,7 @@ void CHud::RenderMediaIsland()
 		const float CoverDrawRadius = CoverRadius * std::max(0.01f, Scale);
 		if(Track.m_HasCover && Track.m_Cover.IsValid())
 		{
-			DrawTexturedQuad(Graphics(), Track.m_Cover, CoverCenter, CoverDrawRadius, Alpha);
+			DrawTexturedQuad(Graphics(), Track.m_Cover, CoverCenter, CoverDrawRadius, Alpha, CoverSpinAngle);
 			return;
 		}
 
@@ -5181,6 +5215,9 @@ void CHud::RenderMediaIsland()
 
 		if(ShowInfoStack)
 		{
+			// 状态区文本用连续字号绘制，与 MeasureInfoStackLineWidth 的测量口径一致：
+			// 字号过渡因此是贴图等比缩放，不会在整像素档之间跳。
+			const SUiScopedFloatFontSize ScopedFloatFontSize(TextRender());
 			// 连接质量图标（数据流量语义，常驻）：对局中按延迟分档，其余空信号档；
 			// 驻信息栈左缘，文本组整体右移让位。
 			const CUIRect SignalIconRect{StatusSectionX + StatusPaddingLeft + ConnectionSlot.m_Inset,
@@ -5189,44 +5226,42 @@ void CHud::RenderMediaIsland()
 			const ColorRGBA SignalQualityColor = HudConnectionQualityColor(ConnectionQuality).WithAlpha(0.92f * StatusAlpha * EntranceContentAlpha);
 			Ui()->DrawQmIcon(SignalIconRect, HudConnectionQualityIcon(ConnectionQuality), HudConnectionQualityFontIcon(ConnectionQuality), ConfiguredQmSignalIconColor(SignalQualityColor, SignalQualityColor));
 			const float InfoTextInset = StatusPaddingLeft + ConnectionSlot.m_Width;
-			const auto RenderInfoLine = [&](const char *pText, float CenterY, const ColorRGBA &Color) {
+			// 主行字号随 StackBlend 插值（5.3 → 4.4）：连续字号下这是一次平滑缩小。
+			// 次行字号固定 4.4：录像/冻结状态只做滑入 + 淡出，不再叠加字号变化。
+			const float PrimaryFontSize = mix(StatusFontSize, StackedStatusFontSize, StackBlend);
+			const auto RenderInfoLine = [&](const char *pText, float FontSize, float CenterY, const ColorRGBA &Color) {
 				if(pText == nullptr || pText[0] == '\0')
 					return;
-				const float TextWidth = std::round(TextRender()->TextBoundingBox(InfoStackFontSize, pText).m_W);
+				const float TextWidth = std::round(TextRender()->TextBoundingBox(FontSize, pText).m_W);
 				const float TextX = StatusSectionX + InfoTextInset + std::max(0.0f, (StatusWidth - InfoTextInset - StatusPaddingRight - TextWidth) * 0.5f);
-				const float TextY = CenterY - InfoStackFontSize * 0.5f - QmHudMediaIslandScaled(0.4f);
+				const float TextY = CenterY - FontSize * 0.5f - QmHudMediaIslandScaled(0.4f);
 				TextRender()->TextColor(Color);
-				TextRender()->Text(TextX, TextY, InfoStackFontSize, pText, -1.0f);
+				TextRender()->Text(TextX, TextY, FontSize, pText, -1.0f);
 			};
 
-			if(StackHasTwoRows)
-			{
-				const SHudMediaIslandInfoStackLayout InfoStackLayout = QmHudMediaIslandMirroredInfoStack(IslandY, BaseIslandHeight, InfoStackFontSize, InfoStackGap);
-				RenderInfoLine(aTimeBuf, InfoStackLayout.m_TopCenterY, ColorRGBA(0.98f, 0.99f, 1.0f, 0.94f * StatusAlpha * EntranceContentAlpha));
-				RenderInfoLine(aFrozenSummaryBuf, InfoStackLayout.m_BottomCenterY, ColorRGBA(0.86f, 0.90f, 0.97f, 0.86f * StatusAlpha * EntranceContentAlpha));
-			}
-			else if(ShowLocalTime)
-				RenderInfoLine(aTimeBuf, IslandY + BaseIslandHeight * 0.5f, ColorRGBA(0.98f, 0.99f, 1.0f, 0.94f * StatusAlpha * EntranceContentAlpha));
-			else
-				RenderInfoLine(aFrozenSummaryBuf, IslandY + BaseIslandHeight * 0.5f, ColorRGBA(0.97f, 0.98f, 1.0f, 0.92f * StatusAlpha * EntranceContentAlpha));
+			// 单行时主行居中；两行时主行上移、次行出现在下方。两者都按 StackBlend 插值，
+			// 次行透明度同源，所以录像/冻结状态的出现与消失都是滑动 + 淡入淡出。
+			// 两行位置按次行字号（4.4）固定计算：它是两行布局的基准，不随过渡改变。
+			const float SingleCenterY = IslandY + BaseIslandHeight * 0.5f;
+			const SHudMediaIslandInfoStackLayout InfoStackLayout = QmHudMediaIslandMirroredInfoStack(IslandY, BaseIslandHeight, StackedStatusFontSize, InfoStackGap);
+			const float PrimaryCenterY = mix(SingleCenterY, InfoStackLayout.m_TopCenterY, StackBlend);
+			const float SecondaryCenterY = mix(SingleCenterY, InfoStackLayout.m_BottomCenterY, StackBlend);
+			RenderInfoLine(InfoStackLines.m_pPrimary, PrimaryFontSize, PrimaryCenterY, ColorRGBA(0.98f, 0.99f, 1.0f, 0.94f * StatusAlpha * EntranceContentAlpha));
+			// 行数回落时内容已经不在 InfoStackLines 里，用上一帧缓存把它淡出。
+			const char *pSecondaryText = InfoStackLines.m_HasSecondary ? InfoStackLines.m_aSecondary : m_RecordingStatusAnimState.m_aSecondaryCache;
+			if(StackBlend > 0.002f)
+				RenderInfoLine(pSecondaryText, StackedStatusFontSize, SecondaryCenterY, ColorRGBA(0.86f, 0.90f, 0.97f, 0.86f * StatusAlpha * EntranceContentAlpha * StackBlend));
 		}
 		else
 		{
 			// 无信息栈时连接图标仍常驻状态区左缘（方案 A：占位跟随状态区，
-			// 不依赖信息栈）；录制红点已按用户校准移除，计分板展开的文本右移让位。
+			// 不依赖信息栈）。录制文本已并入信息栈（计分板展开时与本地时间并列），
+			// 这里不再单独绘制。
 			const CUIRect SignalIconRect{StatusSectionX + StatusPaddingLeft + ConnectionSlot.m_Inset,
 				QmHudConnectionSignalIconY(IslandY, ConnectionSlot.m_Size, (int)ConnectionQuality),
 				ConnectionSlot.m_Size, ConnectionSlot.m_Size};
 			const ColorRGBA SignalQualityColor = HudConnectionQualityColor(ConnectionQuality).WithAlpha(0.92f * StatusAlpha * EntranceContentAlpha);
 			Ui()->DrawQmIcon(SignalIconRect, HudConnectionQualityIcon(ConnectionQuality), HudConnectionQualityFontIcon(ConnectionQuality), ConfiguredQmSignalIconColor(SignalQualityColor, SignalQualityColor));
-
-			if(RecordingPresentation.RecordingTextAlpha(StatusTextAlpha) > 0.001f && StatusWidth > RawCollapsedStatusWidth + QmHudMediaIslandScaled(2.0f))
-			{
-				const float StatusTextX = StatusSectionX + StatusPaddingLeft + ConnectionSlot.m_Width + StatusDotSize + StatusDotGap;
-				const float StatusTextY = IslandY + (BaseIslandHeight - StatusFontSize) * 0.5f - QmHudMediaIslandScaled(0.5f);
-				TextRender()->TextColor(0.97f, 0.98f, 1.0f, 0.90f * StatusTextAlpha * EntranceContentAlpha);
-				TextRender()->Text(StatusTextX, StatusTextY, StatusFontSize, aRecordingBuf, -1.0f);
-			}
 		}
 	}
 
@@ -5402,7 +5437,8 @@ void CHud::RenderPlayerState(const int ClientId)
 		}
 		else
 		{
-			TotalJumpsToDisplay = AvailableJumpsToDisplay = absolute(GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_Jumps);
+			// 服务器下发的跳跃数可能越界，直接当绘制数量会越界读取 quad。
+			TotalJumpsToDisplay = AvailableJumpsToDisplay = std::clamp(absolute(GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_Jumps), 0, 10);
 		}
 
 		// render available and used jumps
@@ -6426,7 +6462,11 @@ void CHud::RenderMovementInformation()
 	m_MovementInfoBoxH = BoxHeight;
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MovementInfo, {StartX, StartY, BoxWidth, BoxHeight});
 
-	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), HudEditorScope.m_Corners, 5.0f);
+	// 右侧 DDRace HUD Pro 岛（坐标 / 速度 / 角度 / 卡键状态）此前只有一层硬边半透明底，
+	// 世界背景直接透过文字，和旁边已经模糊过的 HUD 面板不是同一种玻璃。整块先模糊再铺底：
+	// 岛内所有行共用同一个矩形，避免上半模糊、下半清晰的分缝。
+	Ui()->RenderGaussianBlur({StartX, StartY, BoxWidth, BoxHeight}, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), HudEditorScope.m_Corners, ui_token::radius::BASE);
 
 	const bool HasMovementContent = ShowMovementInfo && MovementBoxHeight > 0.0f;
 	if(HasMovementContent)

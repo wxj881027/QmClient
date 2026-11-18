@@ -311,7 +311,8 @@ void CMenus::AppendDdnetContributorCard(std::vector<SSettingsCardDefinition> &vC
 	// DDNet 署名卡：两个入口按钮同一行并列，下方是贡献者名单流式排版。
 	const float LineHeight = Metrics.m_LineHeight;
 	const float LineSpacing = Metrics.m_LineSpacing;
-	const float TipSize = Metrics.m_SmallSize;
+	const float BodySize = Metrics.m_BodySize;
+	const float ParagraphLineSpacing = ui_token::settings::RowGap(LineSpacing);
 
 	SSettingsCardDefinition DdnetCredits;
 	DdnetCredits.m_Spec = {"deck:qmclient-contributors-ddnet", Localize("DDNet"), qm_card_registry::ResolveLocalizedDescription("deck:qmclient-contributors-ddnet")};
@@ -338,11 +339,11 @@ void CMenus::AppendDdnetContributorCard(std::vector<SSettingsCardDefinition> &vC
 		}
 		return Names;
 	}();
-	DdnetCredits.m_RenderMeasured = [this, Metrics, LineHeight, LineSpacing, TipSize, ReadOnly](CUIRect &Content) {
+	DdnetCredits.m_RenderMeasured = [this, LineHeight, LineSpacing, BodySize, ParagraphLineSpacing, ReadOnly](CUIRect &Content) {
 		CUIRect Row, LeftButton, RightButton;
 		static CButtonContainer s_DdnetStaffButton;
 		static CButtonContainer s_DdnetReleasesButton;
-		const char *apLabels[] = {Localize("DDNet staff"), Localize("DDNet releases")};
+		const char *apLabels[] = {Localize("DDNet staff"), Localize("DDNet official installer")};
 
 		CSettingsContentLayoutFlow Flow(Content);
 		if(Flow.Control("ddnet-actions", LineHeight, Row))
@@ -355,8 +356,10 @@ void CMenus::AppendDdnetContributorCard(std::vector<SSettingsCardDefinition> &vC
 				Client()->ViewLink("https://ddnet.org/releases/");
 		}
 		Flow.Space(LineSpacing);
-		// 名单用小字加大行距的流式排版，间隔点分隔，降低拥挤感。
-		Flow.Text("ddnet-contributor-names", s_Contributors.c_str(), 0.0f, TipSize, 0.0f, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.75f; }, [this, TipSize](const CUIRect &Rect, const char *pText) { Ui()->DoLabel(&Rect, pText, TipSize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w, .m_EnableWidthCheck = false}); }, LineHeight);
+		// 名单是正文内容而不是辅助说明：字号走正文档，换行行距走段落组件，
+		// 测量与绘制共用同一行距，不能再靠段尾补高度假装行距。
+		static SSettingsParagraphState s_ContributorNamesParagraph;
+		Flow.Text("ddnet-contributor-names", s_Contributors.c_str(), 0.0f, BodySize, 0.0f, [this, ParagraphLineSpacing](const char *pText, float Width, float Size) { return MeasureSettingsParagraph(TextRender(), pText, Width, Size, ParagraphLineSpacing); }, [this, BodySize, ParagraphLineSpacing](const CUIRect &Rect, const char *pText) { DrawSettingsParagraph(Ui(), s_ContributorNamesParagraph, Rect, pText, BodySize, ParagraphLineSpacing); }, LineHeight);
 	};
 	qm_settings_content::UseDeclaredContent(DdnetCredits, Ui(), TextRender());
 	vCards.push_back(std::move(DdnetCredits));
@@ -384,8 +387,7 @@ void CMenus::AppendTClientDeveloperCard(std::vector<SSettingsCardDefinition> &vC
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_WebsiteButton, "tclient-links-website", Localize("Website"), 0, &RightButton) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://tclient.app/");
 		}
-		Flow.Space(LineSpacing);
-		if(Flow.Control("tclient-developer-actions-1", LineHeight, Row))
+		if(Flow.Control("tclient-developer-actions-1", LineHeight, Row, LineSpacing))
 		{
 			Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_GithubButton, "tclient-links-github", Localize("Github"), 0, &LeftButton) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
@@ -471,7 +473,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 	FriendLinks.m_Spec = {"deck:credits-friend-links", Localize("Friend links"), qm_card_registry::ResolveLocalizedDescription("deck:credits-friend-links")};
 	FriendLinks.m_RenderMeasured = [this, Metrics, LineHeight, LineSpacing, ReadOnly](CUIRect &Content) {
 		static CButtonContainer s_DdnetWorkshopButton, s_DdnetWebsiteButton, s_QmClientWebsiteButton;
-		static CButtonContainer s_ShengyanButton, s_TeeDataButton, s_DdStatsButton, s_AxiomButton;
+		static CButtonContainer s_ShengyanButton, s_TeeDataButton, s_DdStatsButton, s_AxiomButton, s_DdnetArchiveShareButton;
 		// 站点图标纹理：首次渲染时各加载一次，失败则回退到 EQmIcon 字形。
 		enum
 		{
@@ -516,8 +518,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetWebsiteButton, "credits-links-ddnet-website", Localize("DDNet Website"), 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, &s_aSiteIcons[ICON_DDNET]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://ddnet.org");
 		}
-		Flow.Space(LineSpacing);
-		if(Flow.Control("friend-link-actions-1", LineHeight, Row))
+		if(Flow.Control("friend-link-actions-1", LineHeight, Row, LineSpacing))
 		{
 			Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_QmClientWebsiteButton, "credits-links-qmclient-website", Localize("QmClient Website"), 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::HOUSE, FONT_ICON_HOUSE, &s_aSiteIcons[ICON_QMCLIENT]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
@@ -525,8 +526,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_ShengyanButton, "credits-links-shengyan", "shengyan 北京服", 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::NETWORK_WIRED, FONT_ICON_NETWORK_WIRED, &s_aSiteIcons[ICON_SHENGYAN]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://shengyan.art/");
 		}
-		Flow.Space(LineSpacing);
-		if(Flow.Control("friend-link-actions-2", LineHeight, Row))
+		if(Flow.Control("friend-link-actions-2", LineHeight, Row, LineSpacing))
 		{
 			Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_TeeDataButton, "credits-links-teedata", "TeeData 官方资源库", 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::FOLDER_OPEN, FONT_ICON_FOLDER_OPEN, &s_aSiteIcons[ICON_TEEDATA]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
@@ -534,13 +534,14 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdStatsButton, "credits-links-ddstats", "DDStats 官方统计网站", 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::LIST_UL, FONT_ICON_LIST_UL, &s_aSiteIcons[ICON_DDSTATS]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://ddstats.tw/");
 		}
-		Flow.Space(LineSpacing);
-		if(Flow.Control("friend-link-actions-3", LineHeight, Row))
+		if(Flow.Control("friend-link-actions-3", LineHeight, Row, LineSpacing))
 		{
-			// 单枚按钮同样占半行，与其余行保持同一栅格。
+			// 两枚按钮同样等分半行，与其余行保持同一栅格。
 			Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_AxiomButton, "credits-links-axiom", "Axiom 社区", 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, &s_aSiteIcons[ICON_AXIOM]) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://axiom.teeworlds.cn/");
+			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetArchiveShareButton, "credits-links-ddnet-archive-share", Localize("DDNet Archive Share"), 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
+				Client()->ViewLink("http://p.ddrace.cn/");
 		}
 	};
 	qm_settings_content::UseDeclaredContent(FriendLinks, Ui(), TextRender());
@@ -587,16 +588,14 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 				s_QQCopied = false;
 			DoSettingsMenuLabel(SETTINGS_CONTRIBUTORS, -1, -1, "qmclient-community-qq-group-copy", &Row, Flow.PublishedText("community-qq-copy", pCopyText), TipSize, TEXTALIGN_ML, {.m_MaxWidth = Row.w, .m_EnableWidthCheck = false}, (int)Row.w);
 		}
-		Flow.Space(LineSpacing);
 
-		if(Flow.Control("community-join-qq", LineHeight, Row))
+		if(Flow.Control("community-join-qq", LineHeight, Row, LineSpacing))
 		{
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_JoinQqGroupButton, "qmclient-community-join-qq-group", Localize("Join QQ group"), 0, &Row) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink(pQmClientQqGroupLink);
 		}
-		Flow.Space(LineSpacing);
 
-		if(Flow.Control("community-updates", LineHeight, Row))
+		if(Flow.Control("community-updates", LineHeight, Row, LineSpacing))
 		{
 			if(DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_RecentUpdateButton, "qmclient-community-view-latest-updates", Localize("View latest updates"), 0, &Row) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
 				Client()->ViewLink("https://qmclient.icu");
@@ -642,9 +641,8 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 			s_ShowSponsorQrCode = !s_ShowSponsorQrCode;
 		if(s_ShowSponsorQrCode)
 		{
-			Flow.Space(LineHeight * 0.5f);
 			const float QrSide = std::clamp(Content.w, LineHeight * 8.0f, LineHeight * 12.0f);
-			const bool HasQr = Flow.Control("sponsor-qr-image", QrSide, Row);
+			const bool HasQr = Flow.Control("sponsor-qr-image", QrSide, Row, LineHeight * 0.5f);
 			if(HasQr && Flow.Drawing() && !ReadOnly && EnsureSponsorQrTexture(Graphics()))
 			{
 				CUIRect QrRect = Row;
@@ -742,8 +740,7 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 
 		if(HasSponsorDeveloper)
 		{
-			Flow.Space(LineSpacing);
-			if(Flow.Control("sponsor-developer-actions", LineHeight, Row))
+			if(Flow.Control("sponsor-developer-actions", LineHeight, Row, LineSpacing))
 			{
 				static ui_widget::SSettingsActionGroupState s_DeveloperWidths;
 				const char *apActions[] = {Localize("Reload"), Localize("Publish"), Localize("Open folder")};

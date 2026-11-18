@@ -28,6 +28,13 @@ CPP_STRING_LITERAL_RE = re.compile(r'"((?:[^"\\]|\\.)*)"')
 LOCALIZE_CALL_RE = re.compile(r"\b(?:Localize|Localizable)\s*\(")
 REGISTER_CALL_RE = re.compile(r"\bRegister\s*\(")
 CONFIG_MACRO_CALL_RE = re.compile(r"\bMACRO_CONFIG_(?:INT|COL|STR)\s*\(")
+# 卡片定义表 SCardDefault 的字段顺序（见 src/game/client/QmUi/QmCardRegistry.h）：
+# 0 stableId、1 defaultTab、2 fullWidth、3 title、4 searchKeywords、5 description、
+# 6 navigationTab、7 navigationStableId。只有 title/description 面向用户，
+# 卡 id、搜索关键词、导航目标都是检索与布局元数据。
+CARD_REGISTRY_ENTRY_RE = re.compile(r'^\s*\{\s*"(?:qm|tclient|deck):', re.MULTILINE)
+CARD_REGISTRY_TITLE_FIELD = 3
+CARD_REGISTRY_DESCRIPTION_FIELD = 5
 CONFIG_MACRO_HELP_HEADERS = (
     "src/engine/shared/config_variables.h",
     "src/engine/shared/config_variables_qmclient.h",
@@ -67,6 +74,8 @@ class SourceKeySummary:
     cjk: int
     total_records: int
     total_unique: int
+    card_registry: int = 0
+    card_runtime: int = 0
 
 
 @dataclass(frozen=True)
@@ -335,28 +344,54 @@ def extract_localize_key_records(content: str) -> list[SourceKeyRecord]:
     return records
 
 
+def _locate_arg_offsets(arg_src: str, args: list[str]) -> list[int]:
+    """按顺序定位每个参数在 arg_src 里的起始偏移；定位不到时记为 -1。
+
+    只用于把卡片字段的字面量映射回源码行号，找不到时调用方退回条目行号。
+    """
+    offsets: list[int] = []
+    cursor = 0
+    for arg in args:
+        found = arg_src.find(arg, cursor) if arg else -1
+        offsets.append(found)
+        if found >= 0:
+            cursor = found + len(arg)
+    return offsets
+
+
 def extract_qm_card_registry_records(content: str) -> list[SourceKeyRecord]:
     records: list[SourceKeyRecord] = []
-    entry_re = re.compile(r'^\s*\{\s*"(?:qm|tclient|deck):', re.MULTILINE)
-    for match in entry_re.finditer(content):
+    for match in CARD_REGISTRY_ENTRY_RE.finditer(content):
         open_brace = content.find("{", match.start())
         close_brace = _find_matching_delimiter(content, open_brace, "{", "}")
         if close_brace == -1:
             continue
-        args = _split_top_level_args(content[open_brace + 1 : close_brace])
-        if len(args) < 6:
-            continue
-        line_number = _line_number(content, match.start())
-        for index in (4, 6):
+        arg_src = content[open_brace + 1 : close_brace]
+        args = _split_top_level_args(arg_src)
+        offsets = _locate_arg_offsets(arg_src, args)
+        for index in (CARD_REGISTRY_TITLE_FIELD, CARD_REGISTRY_DESCRIPTION_FIELD):
             if index >= len(args):
                 continue
-            literals = _extract_string_literals(args[index])
-            if len(literals) == 1 and literals[0]:
-                records.append(
-                    SourceKeyRecord(
-                        literals[0], "card_registry", None, "", line_number
-                    )
-                )
+            argument = args[index]
+            if LOCALIZE_CALL_RE.search(argument):
+                # 已显式包在 Localize/Localizable 里的文案由通用规则登记，
+                # 避免同一字面量被两条规则登记成互相矛盾的分类。
+                continue
+            literals = [
+                decode_language_key(literal.group(1))
+                for literal in CPP_STRING_LITERAL_RE.finditer(argument)
+            ]
+            # 相邻字符串字面量由 C++ 在编译期拼接成同一个 key，这里按同样规则合并。
+            key = "".join(literals)
+            if not key:
+                continue
+            offset = offsets[index]
+            line_number = (
+                _line_number(content, open_brace + 1 + offset)
+                if offset >= 0
+                else _line_number(content, match.start())
+            )
+            records.append(SourceKeyRecord(key, "card_registry", None, "", line_number))
     return records
 
 
@@ -751,6 +786,8 @@ def collect_source_key_records(
     ):
         records.append(SourceKeyRecord(key, "extra", None))
     for path in iter_source_files(paths):
+        if _is_test_path(path):
+            continue
         content = strip_cpp_comments(read_source_text(path))
         records.extend(
             SourceKeyRecord(
@@ -810,7 +847,7 @@ def _extra_source_key_records(
 
 
 def collect_file_source_key_records(path: Path) -> list[SourceKeyRecord]:
-    if not path.exists() or path.suffix not in SOURCE_EXTENSIONS:
+    if not path.exists() or path.suffix not in SOURCE_EXTENSIONS or _is_test_path(path):
         return []
     content = strip_cpp_comments(read_source_text(path))
     records: list[SourceKeyRecord] = []
@@ -1158,6 +1195,8 @@ def summarize_source_key_records(records: list[SourceKeyRecord]) -> SourceKeySum
         ),
         indirect=sum(1 for record in records if record.category == "indirect"),
         extra=sum(1 for record in records if record.category == "extra"),
+        card_registry=sum(1 for record in records if record.category == "card_registry"),
+        card_runtime=sum(1 for record in records if record.category == "card_runtime"),
         cjk=sum(1 for key in unique_keys if has_cjk(key)),
         total_records=len(records),
         total_unique=len(unique_identities),
@@ -1589,7 +1628,9 @@ def _business_data_records_from_path(
                     "settings card registry metadata or search keyword data",
                 )
             )
-        # Card titles that are user-visible are separately covered by Localizable/Localize.
+        # 卡片标题/描述已由 extract_qm_card_registry_records 登记为 active key，并在上面的
+        # claimed 集合里跳过；这里剩下的是卡 id、搜索关键词、导航目标、图标名和 .inc 文件名等
+        # 元数据，不要求翻译。别把这段当成「整个文件都不许翻译」。
         # Continue with generic rules for the remaining source files.
 
     if normalized.endswith("src/game/client/components/ghost.cpp"):

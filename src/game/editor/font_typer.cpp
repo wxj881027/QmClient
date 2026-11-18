@@ -310,7 +310,7 @@ void CFontTyper::SetCursor()
 	m_CursorRenderTime = time_get_nanoseconds() - 501ms;
 }
 
-void CFontTyper::OnRender(CUIRect View)
+void CFontTyper::Render()
 {
 	CFontTyper::CState &State = Map()->m_FontTyperState;
 	if(m_ConfirmActivatePopupContext.m_Result == CUi::SConfirmPopupContext::CONFIRMED)

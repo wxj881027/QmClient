@@ -1,12 +1,16 @@
 #ifndef GAME_CLIENT_QMUI_QMCONSOLEUI_H
 #define GAME_CLIENT_QMUI_QMCONSOLEUI_H
 
+#include <game/client/QmUi/QmAnimationBackend.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>
+#include <game/client/QmUi/UiTextCaret.h>
 #include <game/client/components/qmclient/console_appearance.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 
+#include <array>
+#include <cmath>
 #include <limits>
 
 namespace QmConsoleUi
@@ -30,14 +34,123 @@ namespace QmConsoleUi
 		float m_ActionX;
 	};
 
-	inline SToolbarLayout LayoutToolbar(float Width, float FilterWidth, float ActionWidth, float RowHeight = 26.0f)
+	// 显隐中的按钮宽度逐帧变化，但换行档位必须按目标集合决定：
+	// 否则窄屏下按钮收缩到一半时会短暂折成单行，顶栏高度整帧跳一下。
+	inline SToolbarLayout LayoutToolbarAnimated(float Width, float TargetFilterWidth, float TargetActionWidth, float CurrentFilterWidth, float CurrentActionWidth, float RowHeight = 26.0f)
 	{
 		const float Available = std::max(0.0f, Width - 20.0f);
-		const bool Split = FilterWidth > 0.0f && ActionWidth > 0.0f && FilterWidth + ActionWidth + 10.0f > Available;
-		const float FilterScale = FilterWidth > 0.0f ? std::min(1.0f, Available / FilterWidth) : 1.0f;
-		const float ActionScale = ActionWidth > 0.0f ? std::min(1.0f, Available / ActionWidth) : 1.0f;
+		const bool Split = TargetFilterWidth > 0.0f && TargetActionWidth > 0.0f && TargetFilterWidth + TargetActionWidth + 10.0f > Available;
+		float FilterScale = CurrentFilterWidth > 0.0f ? std::min(1.0f, Available / CurrentFilterWidth) : 1.0f;
+		float ActionScale = CurrentActionWidth > 0.0f ? std::min(1.0f, Available / CurrentActionWidth) : 1.0f;
+		// 两组交叉淡变时不能各自只按 Available 缩放：旧筛选还没退完、新动作已经
+		// 进场，两边都「单独放得下」，叠在一起却会互相覆盖。总分超宽时共用同一
+		// 比例，并给相邻两组留出固定缝；目标集合仍决定是否换行，顶栏高度不跳。
+		const float CurrentTotal = CurrentFilterWidth + CurrentActionWidth;
+		if(!Split && CurrentTotal > 0.0f)
+		{
+			const float GroupGap = CurrentFilterWidth > 0.001f && CurrentActionWidth > 0.001f ? 10.0f : 0.0f;
+			if(CurrentTotal > Available)
+			{
+				const float SharedScale = std::clamp((Available - GroupGap) / CurrentTotal, 0.0f, 1.0f);
+				FilterScale = std::min(FilterScale, SharedScale);
+				ActionScale = std::min(ActionScale, SharedScale);
+			}
+		}
 		return {Split, RowHeight * (Split ? 2.0f : 1.0f), FilterScale, ActionScale,
-			std::max(10.0f, Width - 10.0f - ActionWidth * ActionScale)};
+			std::max(10.0f, Width - 10.0f - CurrentActionWidth * ActionScale)};
+	}
+
+	inline SToolbarLayout LayoutToolbar(float Width, float FilterWidth, float ActionWidth, float RowHeight = 26.0f)
+	{
+		return LayoutToolbarAnimated(Width, FilterWidth, ActionWidth, FilterWidth, ActionWidth, RowHeight);
+	}
+
+	// 间距只存在于实际可见的相邻按钮之间：动作集合使用固定 ID 顺序，
+	// 中间隐藏的槽位不能吞掉左右两颗按钮之间的缝。
+	inline float ToolbarFlowGap(float Gap, bool HasPrevious, float Presence)
+	{
+		if(!HasPrevious || Presence <= 0.001f)
+			return 0.0f;
+		return std::max(0.0f, Gap);
+	}
+
+	template<size_t Count>
+	inline float ToolbarFlowWidth(const std::array<float, Count> &aBaseWidths, const std::array<float, Count> &aPresences, float Gap)
+	{
+		float Total = 0.0f;
+		bool HasPrevious = false;
+		for(size_t i = 0; i < Count; ++i)
+		{
+			const float Presence = std::clamp(aPresences[i], 0.0f, 1.0f);
+			if(Presence <= 0.001f)
+				continue;
+			Total += ToolbarFlowGap(Gap, HasPrevious, Presence);
+			Total += std::max(0.0f, aBaseWidths[i]) * Presence;
+			HasPrevious = true;
+		}
+		return Total;
+	}
+
+	// 同一按钮换文案时只做一次宽度过渡；反复点击从当前宽度折返，
+	// 不把按钮拆成两颗一缩一长（那会临时多占一档间距并造成顿挫）。
+	inline float ResolveToolbarWidth(CQmAnimationBackend *pRuntime, uint64_t NodeKey, float Target, bool MotionEnabled, const SUiAnimTransition &Transition)
+	{
+		Target = std::max(0.0f, Target);
+		if(pRuntime == nullptr || !MotionEnabled)
+		{
+			if(pRuntime != nullptr)
+				pRuntime->SetValue(NodeKey, EUiAnimProperty::WIDTH, Target);
+			return Target;
+		}
+		SUiAnimTransition Effective = Transition;
+		Effective.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+		Effective.m_Priority = std::max(Effective.m_Priority, 2);
+		return std::max(0.0f, pRuntime->ResolveTargetValue(NodeKey, EUiAnimProperty::WIDTH, Target, Effective));
+	}
+
+	// 控制台背景/边框/阴影的本地与远程配色只做分量混合，不各自写一套分支。
+	inline ColorRGBA MixColor(const ColorRGBA &From, const ColorRGBA &To, float Amount)
+	{
+		const float T = std::clamp(Amount, 0.0f, 1.0f);
+		return ColorRGBA(mix(From.r, To.r, T), mix(From.g, To.g, T),
+			mix(From.b, To.b, T), mix(From.a, To.a, T));
+	}
+
+	// 顶栏与页脚是固定高度件：控制台弹簧缩小时必须跟着夹紧，
+	// 否则主体已经收起，固定高度的横条还会留在屏幕上等状态切到 CLOSED。
+	inline float ClampPanelHeight(float PanelHeight, float ConsoleHeight)
+	{
+		return std::clamp(PanelHeight, 0.0f, std::max(0.0f, ConsoleHeight));
+	}
+
+	inline float PanelTopForBottomAligned(float ConsoleHeight, float PanelHeight)
+	{
+		return std::max(0.0f, ConsoleHeight - PanelHeight);
+	}
+
+	// 本地/远程是二元状态：0 = 本地，1 = 远程。切换时只改目标值，
+	// 由公共动画轨道从当前进度继续；快速 F1/F2 折返不会跳回起点。
+	inline float ResolveConsoleTypeBlend(CQmAnimationBackend *pRuntime, uint64_t NodeKey, bool Remote, bool MotionEnabled, const SUiAnimTransition &Transition)
+	{
+		const float Target = Remote ? 1.0f : 0.0f;
+		if(pRuntime == nullptr || !MotionEnabled)
+		{
+			if(pRuntime != nullptr)
+				pRuntime->SetValue(NodeKey, EUiAnimProperty::ALPHA, Target);
+			return Target;
+		}
+		SUiAnimTransition Effective = Transition;
+		Effective.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+		Effective.m_Priority = std::max(Effective.m_Priority, 2);
+		return std::clamp(pRuntime->ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, Target, Effective), 0.0f, 1.0f);
+	}
+
+	// 控制台渲染会临时启用 UI 以便自己处理输入，帧末再恢复进入本帧时的启用态。
+	// 但本帧内状态机若已切换（例如点击面板外，OPEN → CLOSING），Toggle 写入的
+	// 启用态才是正确结果；再用旧值覆盖会让下一帧主菜单一直保持禁用，按钮点不动。
+	inline bool RestoreUiEnabledAtFrameEnd(bool EnabledBeforeFrame, bool EnabledNow, bool StateChangedDuringFrame)
+	{
+		return StateChangedDuringFrame ? EnabledNow : EnabledBeforeFrame;
 	}
 
 	struct SButtonContentLayout
@@ -173,6 +286,49 @@ namespace QmConsoleUi
 		return SeparatorY - std::max(3.0f, FontSize * 0.35f);
 	}
 
+	// 输入行下方提示区只在真的有提示时占位：空输入不预留，
+	// 搜索匹配占一行，命令帮助 + 用法最多占三行。
+	// 返回 0 时日志区可以一直延伸到输入行上方，不再留下一条永久空白。
+	inline float ResolveConsoleHintReserve(float FontSize, int Lines)
+	{
+		if(FontSize <= 0.0f || Lines <= 0)
+			return 0.0f;
+		return (FontSize + 4.0f) * std::clamp(Lines, 0, 3);
+	}
+
+	// 主页右下角终端按钮在控制台开合动画期间仍要能点按：
+	// 只认「在按钮内按下、并在按钮内释放」的手势；动画中每次释放都能折返。
+	// 按下发生在控制台激活之前时不接管，避免打开动画首帧被同一次点击立刻关掉。
+	class CStartMenuTogglePress
+	{
+		bool m_Pressed = false;
+
+	public:
+		bool Update(bool Inside, bool Down, bool PressedThisFrame)
+		{
+			if(m_Pressed)
+			{
+				if(Down)
+					return false;
+				m_Pressed = false;
+				return Inside;
+			}
+			if(Inside && Down && PressedThisFrame)
+				m_Pressed = true;
+			return false;
+		}
+		bool Pressed() const { return m_Pressed; }
+		void Reset() { m_Pressed = false; }
+	};
+
+	// 全屏本地控制台会盖住主页右下角按钮：此时该位置属于面板，
+	// 不能继续把面板上的点击透传给终端按钮。
+	inline bool StartMenuToggleVisibleBelowPanel(float ToggleTop, float ScreenHeight, bool Fullscreen)
+	{
+		const float MaxPanelHeight = Fullscreen ? ScreenHeight : ScreenHeight * 3.0f / 5.0f;
+		return ToggleTop >= MaxPanelHeight;
+	}
+
 	// 使用公共可打断动画轨道，禁用标识与标签位置共用同一个进度。
 	inline float ResolveFilterDisabled(CQmAnimationBackend *pRuntime, uint64_t NodeKey, bool Selected)
 	{
@@ -186,41 +342,153 @@ namespace QmConsoleUi
 		return std::clamp(pRuntime->ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, Target, Transition), 0.0f, 1.0f);
 	}
 
+	// 工具栏按钮的存在度：0 = 不占位、不接收点击，1 = 完全展开。
+	// 宽度、表面透明度与命中都读同一条全局动画轨道；快速折返从当前值续接，
+	// 不会先缩到 0 再重新长出来。
+	template<size_t MaxItems>
+	class CToolbarPresenceMotion
+	{
+		struct SState
+		{
+			bool m_Initialized = false;
+			bool m_TargetPresent = false;
+		};
+		std::array<SState, MaxItems> m_aStates{};
+
+	public:
+		float Resolve(CQmAnimationBackend *pRuntime, uint64_t NodeKey, size_t Index, bool Present, bool MotionEnabled, const SUiAnimTransition &Transition)
+		{
+			const float Target = Present ? 1.0f : 0.0f;
+			if(Index >= MaxItems)
+				return Target;
+
+			SState &State = m_aStates[Index];
+			if(pRuntime == nullptr || !MotionEnabled)
+			{
+				State = {true, Present};
+				if(pRuntime != nullptr)
+					pRuntime->SetValue(NodeKey, EUiAnimProperty::ALPHA, Target);
+				return Target;
+			}
+
+			if(!State.m_Initialized)
+			{
+				State = {true, Present};
+				pRuntime->SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+				if(!Present)
+					return 0.0f;
+				RequestTarget(pRuntime, NodeKey, Target, Transition);
+			}
+			else if(State.m_TargetPresent != Present)
+			{
+				State.m_TargetPresent = Present;
+				RequestTarget(pRuntime, NodeKey, Target, Transition);
+			}
+			else if(!pRuntime->HasActiveAnimation(NodeKey, EUiAnimProperty::ALPHA))
+			{
+				const float Current = pRuntime->GetValue(NodeKey, EUiAnimProperty::ALPHA, Target);
+				if(std::abs(Current - Target) > 0.0001f)
+					pRuntime->SetValue(NodeKey, EUiAnimProperty::ALPHA, Target);
+			}
+
+			return std::clamp(pRuntime->GetValue(NodeKey, EUiAnimProperty::ALPHA, Target), 0.0f, 1.0f);
+		}
+
+		void Reset()
+		{
+			m_aStates = {};
+		}
+
+	private:
+		static void RequestTarget(CQmAnimationBackend *pRuntime, uint64_t NodeKey, float Target, const SUiAnimTransition &Transition)
+		{
+			SUiAnimTransition Effective = Transition;
+			Effective.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+			Effective.m_Priority = std::max(Effective.m_Priority, 2);
+			pRuntime->ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, Target, Effective);
+		}
+	};
+
+	// 选中底是全局强调色的派生档，不再取控制台命令语法色。
+	// InactiveBlend=0 表示选中，1 表示普通；中间值由公共动画轨道给出。
+	inline ColorRGBA ResolveConsoleButtonFill(const SUiTheme &Theme, const QmConsoleAppearance::SPalette &Palette, float InactiveBlend, bool Enabled)
+	{
+		const float Blend = std::clamp(InactiveBlend, 0.0f, 1.0f);
+		const ColorRGBA Selected = Theme.m_Selected.WithMultipliedAlpha(Enabled ? 1.0f : 0.65f);
+		if(Blend <= 0.0f)
+			return Selected;
+		if(Blend >= 1.0f)
+			return Palette.m_Panel;
+		return ColorRGBA(mix(Selected.r, Palette.m_Panel.r, Blend), mix(Selected.g, Palette.m_Panel.g, Blend),
+			mix(Selected.b, Palette.m_Panel.b, Blend), mix(Selected.a, Palette.m_Panel.a, Blend));
+	}
+
 	inline void DrawPanel(CUi *pUi, const CUIRect &Rect, ColorRGBA Color)
 	{
 		const CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
 		Rect.Draw(Color, IGraphics::CORNER_NONE, 0.0f);
 	}
 
+	// 控制台光标（日志定位光标）：几何与闪烁相位都由 qm_text_caret 统一解析，
+	// 这里只按解析出的圆角把整块画出来，保证控制台与聊天/设置输入同一套线宽与相位。
+	//
+	// 相位参数由调用点每帧现算：时间取 qm_text_caret::NowSeconds()（全站同一条进程单调时钟），
+	// 不允许把时间缓存成静态值或把相位钳成常量——那正是控制台光标之前常亮不闪的原因。
+	// 只有两种时刻才传 m_Blink=false：光标此刻不该闪（拖选、输入法组合），
+	// 以及 qm_ui_motion_level = 0（动效关闭 → 取亮相终点恒亮，唯一例外）。
+	inline void DrawCaret(CUi *pUi, const qm_text_caret::SCaretParams &Params, ColorRGBA Color)
+	{
+		if(pUi == nullptr)
+			return;
+		const qm_text_caret::SCaretShape Shape = qm_text_caret::ResolveShape(Params);
+		if(!Shape.m_Visible || Shape.m_Rect.w <= 0.0f || Shape.m_Rect.h <= 0.0f)
+			return;
+		const CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
+		SRoundedSurfaceParams Surface;
+		Surface.m_Radius = Shape.m_Radius;
+		Surface.m_PixelSize = std::max(Shape.m_PixelSize, 0.0001f);
+		DrawRoundedSurface(pUi, Shape.m_Rect, Color, ColorRGBA(), Surface);
+	}
+
 	// 控制台使用独立的鼠标/触摸按下位置；统一在按钮内松开时触发一次。
 	inline bool Button(CUi *pUi, const CUIRect &Rect, const char *pLabel, float FontSize, bool Selected,
-		vec2 PressPosition, vec2 MousePosition, bool MouseDown, bool Released, bool Enabled, float FilterIndicatorWidth = 0.0f, const QmConsoleAppearance::SPalette *pPalette = nullptr, uint64_t AnimationKey = 0)
+		vec2 PressPosition, vec2 MousePosition, bool MouseDown, bool Released, bool Enabled, float FilterIndicatorWidth = 0.0f,
+		const QmConsoleAppearance::SPalette *pPalette = nullptr, uint64_t AnimationKey = 0, float Presence = 1.0f)
 	{
-		const bool Hovered = Rect.Inside(MousePosition);
+		const float Opacity = std::clamp(Presence, 0.0f, 1.0f);
+		if(Opacity <= 0.001f)
+			return false;
+		const bool FullyPresent = Opacity >= 0.999f;
+		const bool Hovered = FullyPresent && Rect.Inside(MousePosition);
 		const bool PressedInside = Rect.Inside(PressPosition);
-		const bool Pressed = Enabled && MouseDown && PressedInside;
+		const bool Pressed = Enabled && FullyPresent && MouseDown && PressedInside;
 		const float Disabled = ResolveFilterDisabled(pUi->QmAnimationRuntime(), AnimationKey, Selected);
 		ColorRGBA Fill;
 		if(pPalette != nullptr)
 		{
 			const float Blend = AnimationKey != 0 ? Disabled : (Selected ? 0.0f : 1.0f);
-			const auto &From = pPalette->m_SelectedButton;
-			const auto &To = pPalette->m_Panel;
-			Fill = ColorRGBA(mix(From.r, To.r, Blend), mix(From.g, To.g, Blend), mix(From.b, To.b, Blend), mix(From.a, To.a, Blend));
+			Fill = ResolveConsoleButtonFill(pUi->QmControlTheme(), *pPalette, Blend, Enabled);
 		}
 		else
-			Fill = Selected ? color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(Enabled ? 1.0f : 0.65f) : ResolveConfiguredControlSurface(Enabled);
+			Fill = Selected ? ResolveConfiguredAccentColor().WithAlpha(Enabled ? 1.0f : 0.65f) : ResolveConfiguredControlSurface(Enabled);
+		const ColorRGBA SurfaceTextFill = Fill;
+		Fill = Fill.WithMultipliedAlpha(Opacity);
 		const CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
-		DrawRoundedSurface(pUi, Rect, Fill, ColorRGBA(), ui_token::radius::BASE);
+		// 控制台顶部动作与筛选都是胶囊：半径取半高，与控制台设置里的滑块按钮同一形制。
+		const float Radius = std::min(std::max(0.0f, Rect.w), std::max(0.0f, Rect.h)) * 0.5f;
+		DrawRoundedSurface(pUi, Rect, Fill, ColorRGBA(), Radius);
 		const ColorRGBA Feedback = ResolveUiIconButtonFeedback(CompositeUiSurface(Fill), Enabled, Hovered, Pressed);
 		if(Feedback.a > 0.0f)
-			DrawRoundedSurface(pUi, Rect, Feedback, ColorRGBA(), ui_token::radius::BASE);
-		const CUiScopedSurfaceText SurfaceText(pUi->TextRender(), Fill);
+			DrawRoundedSurface(pUi, Rect, Feedback, ColorRGBA(), Radius);
+		const CUiScopedSurfaceText SurfaceText(pUi->TextRender(), SurfaceTextFill);
 		if(pPalette != nullptr)
 		{
 			pUi->TextRender()->TextColor(pPalette->m_aColors[QmConsoleAppearance::TEXT]);
 			pUi->TextRender()->TextOutlineColor(ResolveUiSurfaceForeground(pPalette->m_aColors[QmConsoleAppearance::TEXT]).WithAlpha(pUi->TextRender()->GetTextOutlineColor().a));
 		}
+		const float TextOpacity = Opacity * Opacity * Opacity;
+		pUi->TextRender()->TextColor(pUi->TextRender()->GetTextColor().WithMultipliedAlpha(TextOpacity));
+		pUi->TextRender()->TextOutlineColor(pUi->TextRender()->GetTextOutlineColor().WithMultipliedAlpha(TextOpacity));
 		const CButtonTextStyle TextStyle(*pUi->TextRender());
 		const auto LabelLayout = MeasureButtonLabel(*pUi->TextRender(), Rect, pLabel, FontSize, FilterIndicatorWidth * Disabled);
 		const auto &Content = LabelLayout.m_Content;
@@ -231,6 +499,7 @@ namespace QmConsoleUi
 		}
 		if(Content.m_Label.w > 0.0f)
 		{
+			pUi->ClipEnable(&Rect);
 			CTextCursor Cursor;
 			Cursor.SetPosition(LabelLayout.m_Position);
 			Cursor.m_FontSize = FontSize;
@@ -238,8 +507,9 @@ namespace QmConsoleUi
 			Cursor.m_Flags |= LabelLayout.m_Flags;
 			pUi->FlushQuadBatch();
 			pUi->TextRender()->TextEx(&Cursor, pLabel);
+			pUi->ClipDisable();
 		}
-		return Enabled && Released && PressedInside && Hovered;
+		return Enabled && FullyPresent && Released && PressedInside && Hovered;
 	}
 }
 

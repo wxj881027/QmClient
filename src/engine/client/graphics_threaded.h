@@ -1172,21 +1172,16 @@ class CGraphics_Threaded : public IEngineGraphics
 	void AddVertices(int Count, CCommandBuffer::SVertexTex3DStream *pVertices);
 
 	template<typename TName>
-	void Rotate(const CCommandBuffer::SPoint &Center, TName *pPoints, int NumPoints)
+	void Rotate(const CCommandBuffer::SPoint &Center, TName *pPoints, size_t NumPoints)
 	{
 		const vec2 Direction = m_QuadRotationCache.Get(m_Rotation);
-		const float c = Direction.x;
-		const float s = Direction.y;
-		float x, y;
-		int i;
-
-		TName *pVertices = pPoints;
-		for(i = 0; i < NumPoints; i++)
+		const float Cos = Direction.x;
+		const float Sin = Direction.y;
+		for(size_t i = 0; i < NumPoints; i++)
 		{
-			x = pVertices[i].m_Pos.x - Center.x;
-			y = pVertices[i].m_Pos.y - Center.y;
-			pVertices[i].m_Pos.x = x * c - y * s + Center.x;
-			pVertices[i].m_Pos.y = x * s + y * c + Center.y;
+			const vec2 Offset = pPoints[i].m_Pos - Center;
+			pPoints[i].m_Pos.x = Offset.x * Cos - Offset.y * Sin + Center.x;
+			pPoints[i].m_Pos.y = Offset.x * Sin + Offset.y * Cos + Center.y;
 		}
 	}
 
@@ -1448,8 +1443,8 @@ public:
 	int CreateQuadContainer(bool AutomaticUpload = true) override;
 	void QuadContainerChangeAutomaticUpload(int ContainerIndex, bool AutomaticUpload) override;
 	void QuadContainerUpload(int ContainerIndex) override;
-	int QuadContainerAddQuads(int ContainerIndex, CQuadItem *pArray, int Num) override;
-	int QuadContainerAddQuads(int ContainerIndex, CFreeformItem *pArray, int Num) override;
+	int QuadContainerAddQuads(int ContainerIndex, const CQuadItem *pArray, int Num) override;
+	int QuadContainerAddQuads(int ContainerIndex, const CFreeformItem *pArray, int Num) override;
 	void QuadContainerReset(int ContainerIndex) override;
 	void DeleteQuadContainer(int &ContainerIndex) override;
 	void RenderQuadContainer(int ContainerIndex, int QuadDrawNum) override;
@@ -1652,6 +1647,7 @@ public:
 	bool IsTextBufferingEnabled() override { return m_GLTextBufferingEnabled; }
 	bool IsQuadContainerBufferingEnabled() override { return m_GLQuadContainerBufferingEnabled; }
 	bool Uses2DTextureArrays() override { return m_GLUses2DTextureArrays; }
+	int TextureLoadFlags() override { return Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE; }
 	bool HasTextureArraysSupport() const override { return m_GLHasTextureArraysSupport; }
 
 	const char *GetVendorString() override;

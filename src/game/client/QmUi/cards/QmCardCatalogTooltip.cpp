@@ -22,8 +22,7 @@ void CMenus::RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetr
 	Props.m_EllipsisAtEnd = true;
 	if(Flow.Control("tooltip-animation", Metrics.m_LineHeight, Row))
 		RenderQmFunctionCheckbox(&g_Config.m_QmTooltipAnimation, "Tooltip bounce animation", Localize("Tooltip bounce animation"), &g_Config.m_QmTooltipAnimation, &Row, ReadOnly);
-	Flow.Space(Metrics.m_LineSpacing);
-	if(Flow.Control("tooltip-preview", std::max(Metrics.m_LineHeight, g_Config.m_QmTooltipFontSize * 1.5f), Row))
+	if(Flow.Control("tooltip-preview", std::max(Metrics.m_LineHeight, g_Config.m_QmTooltipFontSize * 1.5f), Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 	{
 		Row.Draw(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipBackgroundColor, true)), IGraphics::CORNER_ALL, 5.0f);
 		const ColorRGBA PreviousColor = TextRender()->GetTextColor();
@@ -33,9 +32,11 @@ void CMenus::RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetr
 		Ui()->DoLabel(&Row, Localize("Tooltip preview"), static_cast<float>(g_Config.m_QmTooltipFontSize), TEXTALIGN_MC, Props);
 		TextRender()->TextColor(PreviousColor);
 	}
-	Flow.Space(Metrics.m_LineSpacing);
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:tooltip", Metrics, ReadOnly))
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
+	float SectionReveal = 0.0f;
+	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:tooltip", Metrics, &SectionReveal, ReadOnly))
 		return;
+	const CSettingsContentRevealScope SectionRevealScope(Ui(), Flow, SectionReveal);
 
 	static CButtonContainer s_Background, s_Text;
 	CUIRect ColorRow;
@@ -44,14 +45,12 @@ void CMenus::RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetr
 		DoLine_ColorPicker(&s_Background, Metrics, &ColorRow, Localize("Tooltip background color"), &g_Config.m_QmTooltipBackgroundColor,
 			color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmTooltipBackgroundColor, true)), false, nullptr, true);
 	}
-	Flow.Space(Metrics.m_LineSpacing);
-	if(Flow.Control("tooltip-text", Metrics.m_LineHeight, ColorRow))
+	if(Flow.Control("tooltip-text", Metrics.m_LineHeight, ColorRow, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 	{
 		DoLine_ColorPicker(&s_Text, Metrics, &ColorRow, Localize("Tooltip text color"), &g_Config.m_QmTooltipTextColor,
 			color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmTooltipTextColor, true)), false, nullptr, true);
 	}
-	Flow.Space(Metrics.m_LineSpacing);
-	if(Flow.Control("tooltip-font-size", Metrics.m_LineHeight, Row))
+	if(Flow.Control("tooltip-font-size", Metrics.m_LineHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 	{
 		Row.VSplitMid(&Label, &Control, Metrics.m_LineSpacing);
 		Props.m_MaxWidth = Label.w;
@@ -61,16 +60,15 @@ void CMenus::RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetr
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_FontSize, &Row, &g_Config.m_QmTooltipFontSize, &Label);
 		RenderQmSettingsSliderWithValueInput(&s_FontSize, Control, &g_Config.m_QmTooltipFontSize, 10, 24, "", ReadOnly);
 	}
-	Flow.Space(Metrics.m_LineSpacing);
 	static CButtonContainer s_Reset;
-	if(Flow.Control("tooltip-reset", Metrics.m_LineHeight, Row) && ui_widget::SecondaryButton(SettingsUiContext("settings_tooltip", Metrics.m_UiScale), &s_Reset, Localize("Reset tooltip appearance"), Row, PrewarmOnly) && Flow.Input() && !ReadOnly)
+	if(Flow.Control("tooltip-reset", Metrics.m_LineHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)) && ui_widget::SecondaryButton(SettingsUiContext("settings_tooltip", Metrics.m_UiScale), &s_Reset, Localize("Reset tooltip appearance"), Row, PrewarmOnly) && Flow.Input() && !ReadOnly)
 	{
 		g_Config.m_QmTooltipBackgroundColor = DefaultConfig::QmTooltipBackgroundColor;
 		g_Config.m_QmTooltipTextColor = DefaultConfig::QmTooltipTextColor;
 		g_Config.m_QmTooltipFontSize = DefaultConfig::QmTooltipFontSize;
 		g_Config.m_QmTooltipAnimation = DefaultConfig::QmTooltipAnimation;
 	}
-	Flow.Space(Metrics.m_LineSpacing);
+	Flow.Space(ui_token::settings::RowGap(Metrics.m_LineSpacing));
 }
 
 namespace qm_card_catalog

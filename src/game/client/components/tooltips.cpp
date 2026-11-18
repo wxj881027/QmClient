@@ -58,9 +58,9 @@ void CTooltips::ClearActiveTooltip()
 	ResetPresentation();
 }
 
-const char *CTooltips::PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render)
+const char *CTooltips::PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render, bool AllowHintSplit)
 {
-	if(pText == nullptr || (str_find(pText, "(") == nullptr && str_find(pText, "（") == nullptr))
+	if(pText == nullptr || !AllowHintSplit || (str_find(pText, "(") == nullptr && str_find(pText, "（") == nullptr))
 		return pText;
 	const SQmCardLabelText &Text = m_CardLabelTexts.Get(pText);
 	// 只刷新已显示的同一标签；本帧已悬浮登记的目标不被后续未悬浮绘制覆盖。
@@ -123,7 +123,10 @@ void CTooltips::DoInfoToolTipForRect(const void *pId, const CUIRect *pNearRect, 
 void CTooltips::DoSmallToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize, float WidthHint)
 {
 	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
-	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? FontSize : ui_token::tooltip::FONT_SIZE, Small, true, true);
+	// 未显式给字号时与普通气泡走同一套解析：设置页取紧凑小字，页面外取 tooltip 令牌。
+	// 以前设置页里直接吃调用点的默认值 12，比同页其它气泡明显大一号。
+	const float ResolvedFontSize = FontSize > 0.0f ? FontSize : (Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : ui_token::tooltip::FONT_SIZE);
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolvedFontSize : ui_token::tooltip::FONT_SIZE, Small, true, true);
 }
 
 void CTooltips::DoConfigToolTip(const void *pId, const CUIRect *pNearRect, const void *pValue, const void *pSecondValue)
@@ -192,6 +195,8 @@ void CTooltips::DoSettingsToolTipForConfig(const void *pId, const CUIRect *pRect
 		pKey = Variable.m_pHelpLocalizeKey != nullptr ? Variable.m_pHelpLocalizeKey : Variable.m_pHelp;
 	}
 	const float FontSize = ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale));
+	// 设置页配置说明一律「可读宽度 + 自动换行」：WidthHint 传 -1 表示随字号缩放的阅读行宽，
+	// 绝不退化成行矩形/控件宽度（长说明必须换行成多行，见 QmResolveTooltipText）。
 	DoToolTip(pId, pRect, pKey != nullptr ? Localize(pKey) : nullptr, -1.0f, FontSize, true, true, true, true, pAnchor);
 }
 
@@ -255,6 +260,7 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 	Tooltip.m_Placement = Placement;
 	Tooltip.m_RegisteredFrame = m_Frame;
 	Tooltip.m_RegisteredContext = GameClient()->m_Menus.TooltipContext();
+	Tooltip.m_FromPopup = Ui()->RenderingPopupMenus();
 	Tooltip.m_OnScreen = QmTooltipHovered(Tooltip, *Ui());
 
 	if(Tooltip.m_OnScreen)
@@ -271,7 +277,10 @@ void CTooltips::OnRender()
 		ResetPresentation();
 		m_Context = Context;
 	}
-	if(!Ui()->Enabled() || Ui()->PointerInputBlocked() || (Ui()->DirectTouchInput() && !Ui()->TouchInputActive()))
+	// 弹窗打开时指针被弹窗接管，但弹窗自己的控件提示仍要显示：
+	// 只有当指针既不在任何弹窗内、又被弹窗阻断时才清空。
+	const bool PointerBlocked = Ui()->PointerInputBlocked() && !Ui()->MouseInsideOpenPopupMenu();
+	if(!Ui()->Enabled() || PointerBlocked || (Ui()->DirectTouchInput() && !Ui()->TouchInputActive()))
 	{
 		ClearActiveTooltip();
 		return;
@@ -321,15 +330,14 @@ void CTooltips::OnRender()
 	// 尺寸唯一来源 ui_token::tooltip：设置页紧凑小字气泡是全局标准，
 	// 普通气泡不再另写一套更大的字号/内边距/外边距/宽度。
 	const float BaseFontSize = std::max(1.0f, Tooltip.m_FontSize * QmTooltipFontScale(g_Config.m_QmTooltipFontSize));
-	const float UiScale = BaseFontSize / ui_token::tooltip::FONT_SIZE;
-	const float Margin = ui_token::tooltip::MARGIN * UiScale;
-	const float BasePadding = ui_token::tooltip::PADDING * UiScale;
 	const CUIRect *pScreen = Ui()->Screen();
-	const float WidthLimit = Tooltip.m_WidthHint > 0.0f ? Tooltip.m_WidthHint : ui_token::tooltip::MAX_WIDTH * UiScale;
-	const SQmTooltipTextLayout Layout = QmTooltipMeasureText(*TextRender(), Tooltip.m_Text.c_str(), BaseFontSize, WidthLimit,
-		vec2(std::max(0.0f, pScreen->w - 2.0f * Margin), std::max(0.0f, pScreen->h - 2.0f * Margin)), BasePadding);
+	// 测量与绘制共用同一份排版事实：行宽、正文行数上限、是否画省略号都只在这里决定。
+	const SQmTooltipTextFacts Facts = QmResolveTooltipText(*TextRender(), Tooltip.m_Text.c_str(), BaseFontSize, Tooltip.m_WidthHint, *pScreen);
+	const SQmTooltipTextLayout &Layout = Facts.m_Layout;
 	if(Layout.m_VisibleLines <= 0)
 		return;
+	const float UiScale = Facts.m_UiScale;
+	const float Margin = Facts.m_Margin;
 	const CUIRect FixedRect = QmTooltipRect(Tooltip.m_Anchor, *pScreen, Layout.m_Size, Margin, Tooltip.m_Placement);
 	if(FixedRect.w <= 0.0f || FixedRect.h <= 0.0f)
 		return;
@@ -343,15 +351,22 @@ void CTooltips::OnRender()
 	const float Scale = QmTooltipTextScale(FixedRect, Rect);
 	if(Scale <= 0.0f)
 		return;
+
+	const vec2 TextPosition(Layout.m_Padding + Layout.m_TextOffsetX, Layout.m_Padding + Layout.m_TextOffsetY);
+	const CTextCursor Cursor = QmTooltipTextCursor({}, Facts.m_FontSize, Facts.m_WrapWidth, Facts.m_BodyMaxLines);
+	m_TextCache.Update(*TextRender(), Cursor, Tooltip.m_Text);
+	const int BodyGlyphCount = m_TextCache.Index().Valid() ? m_TextCache.LayoutCursor().m_GlyphCount : 0;
+	// 正文一个字形都排不出来（行宽/字形异常把所有字都丢了）时整帧不出气泡：
+	// 宁可没有提示，也不画一个只剩 … 或全空的说明框。
+	if(BodyGlyphCount <= 0)
+		return;
+
 	ColorRGBA Background = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipBackgroundColor, true));
 	Background.a *= AlphaFactor;
 	Rect.Draw(Background, IGraphics::CORNER_ALL, ui_token::tooltip::RADIUS * UiScale * Scale);
 
-	const vec2 TextPosition(Layout.m_Padding + Layout.m_TextOffsetX, Layout.m_Padding + Layout.m_TextOffsetY);
-	const CTextCursor Cursor = QmTooltipTextCursor({}, BaseFontSize, Layout.m_LineWidth, Layout.m_Truncated ? std::max(1, Layout.m_VisibleLines - 1) : 0);
-	m_TextCache.Update(*TextRender(), Cursor, Tooltip.m_Text);
 	STextContainerIndex EllipsisIndex;
-	if(Layout.m_Truncated)
+	if(QmTooltipDrawEllipsis(Facts, BodyGlyphCount))
 		QmTooltipCreateText(*TextRender(), Layout, "…", TextPosition + vec2(0.0f, (Layout.m_VisibleLines - 1) * Layout.m_LineHeight), EllipsisIndex, true);
 
 	ColorRGBA TextColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipTextColor, true));
@@ -365,8 +380,7 @@ void CTooltips::OnRender()
 	Graphics()->GetScreen(&X0, &Y0, &X1, &Y1);
 	const CUIRect Projection = QmTooltipTextProjection({X0, Y0, X1 - X0, Y1 - Y0}, FixedRect, Rect);
 	Graphics()->MapScreen(Projection.x, Projection.y, Projection.x + Projection.w, Projection.y + Projection.h);
-	if(m_TextCache.Index().Valid() && (!Layout.m_Truncated || Layout.m_VisibleLines > 1))
-		TextRender()->RenderTextContainer(m_TextCache.Index(), TextColor, OutlineColor, FixedRect.x + TextPosition.x, FixedRect.y + TextPosition.y);
+	TextRender()->RenderTextContainer(m_TextCache.Index(), TextColor, OutlineColor, FixedRect.x + TextPosition.x, FixedRect.y + TextPosition.y);
 	if(EllipsisIndex.Valid())
 		TextRender()->RenderTextContainer(EllipsisIndex, TextColor, OutlineColor, FixedRect.x, FixedRect.y);
 	Graphics()->MapScreen(X0, Y0, X1, Y1);

@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.  */
 
 #include <base/logger.h>
+#include <base/os.h>
 #include <base/system.h>
 
 #include <engine/gfx/image_loader.h>
@@ -126,7 +127,7 @@ int main(int argc, const char **argv)
 
 	if(argc == 3)
 	{
-		str_copy(aDestFilename, argv[2], sizeof(aDestFilename));
+		str_copy(aDestFilename, argv[2]);
 	}
 	else
 	{

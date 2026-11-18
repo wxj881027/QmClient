@@ -8,7 +8,6 @@
 #include <base/system.h>
 
 #include <engine/client.h>
-#include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/http.h>
 #include <engine/shared/json.h>
@@ -76,7 +75,7 @@ namespace
 void CPlayerPoints::OnInit()
 {
 	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-	m_pDb = SqliteOpen(Console(), Storage(), "qmclient/score_cache.sqlite3");
+	m_pDb = SqliteOpen(Storage(), "qmclient/score_cache.sqlite3");
 	if(!m_pDb)
 	{
 		log_warn("player_points", "failed to open qmclient/score_cache.sqlite3");
@@ -86,13 +85,13 @@ void CPlayerPoints::OnInit()
 	static const char TABLE[] =
 		"CREATE TABLE IF NOT EXISTS player_points "
 		"(name TEXT PRIMARY KEY NOT NULL, points INTEGER NOT NULL)";
-	if(SqliteHandleError(Console(), sqlite3_exec(pSqlite, TABLE, nullptr, nullptr, nullptr), pSqlite, TABLE) != SQLITE_OK)
+	if(SqliteHandleError(sqlite3_exec(pSqlite, TABLE, nullptr, nullptr, nullptr), pSqlite, TABLE) != SQLITE_OK)
 	{
 		m_pDb = nullptr;
 		return;
 	}
-	m_pLoadStmt = SqlitePrepare(Console(), pSqlite, "SELECT name, points FROM player_points");
-	m_pStoreStmt = SqlitePrepare(Console(), pSqlite, "INSERT OR REPLACE INTO player_points (name, points) VALUES (?, ?)");
+	m_pLoadStmt = SqlitePrepare(pSqlite, "SELECT name, points FROM player_points");
+	m_pStoreStmt = SqlitePrepare(pSqlite, "INSERT OR REPLACE INTO player_points (name, points) VALUES (?, ?)");
 	if(!m_pLoadStmt || !m_pStoreStmt)
 	{
 		m_pDb = nullptr;
@@ -102,7 +101,7 @@ void CPlayerPoints::OnInit()
 	// 加载全部缓存行：标记为 READY 但 LastSuccessTime=0，
 	// 使 EnsureQueried 在下次调用时立即触发后台刷新（stale-while-revalidate）。
 	bool Error = false;
-	Error = Error || SqliteHandleError(Console(), sqlite3_reset(m_pLoadStmt.get()), pSqlite, "reset load") != SQLITE_OK;
+	Error = Error || SqliteHandleError(sqlite3_reset(m_pLoadStmt.get()), pSqlite, "reset load") != SQLITE_OK;
 	while(!Error)
 	{
 		const int Step = sqlite3_step(m_pLoadStmt.get());
@@ -110,7 +109,7 @@ void CPlayerPoints::OnInit()
 			break;
 		if(Step != SQLITE_ROW)
 		{
-			SqliteHandleError(Console(), Step, pSqlite, "step load");
+			SqliteHandleError(Step, pSqlite, "step load");
 			Error = true;
 			break;
 		}
@@ -134,10 +133,10 @@ void CPlayerPoints::StoreToDb(const char *pPlayerName, int Points)
 		return;
 	sqlite3 *pSqlite = m_pDb.get();
 	bool Error = false;
-	Error = Error || SqliteHandleError(Console(), sqlite3_reset(m_pStoreStmt.get()), pSqlite, "reset store") != SQLITE_OK;
-	Error = Error || SqliteHandleError(Console(), sqlite3_bind_text(m_pStoreStmt.get(), 1, pPlayerName, -1, SQLITE_TRANSIENT), pSqlite, "bind name") != SQLITE_OK;
-	Error = Error || SqliteHandleError(Console(), sqlite3_bind_int(m_pStoreStmt.get(), 2, Points), pSqlite, "bind points") != SQLITE_OK;
-	Error = Error || SqliteHandleError(Console(), sqlite3_step(m_pStoreStmt.get()), pSqlite, "step store") != SQLITE_DONE;
+	Error = Error || SqliteHandleError(sqlite3_reset(m_pStoreStmt.get()), pSqlite, "reset store") != SQLITE_OK;
+	Error = Error || SqliteHandleError(sqlite3_bind_text(m_pStoreStmt.get(), 1, pPlayerName, -1, SQLITE_TRANSIENT), pSqlite, "bind name") != SQLITE_OK;
+	Error = Error || SqliteHandleError(sqlite3_bind_int(m_pStoreStmt.get(), 2, Points), pSqlite, "bind points") != SQLITE_OK;
+	Error = Error || SqliteHandleError(sqlite3_step(m_pStoreStmt.get()), pSqlite, "step store") != SQLITE_DONE;
 	if(Error)
 		log_warn("player_points", "failed to store points for '%s'", pPlayerName);
 }

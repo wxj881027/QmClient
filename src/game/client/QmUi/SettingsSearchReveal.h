@@ -82,6 +82,9 @@ namespace qm_settings_reveal
 		SState &S = State();
 		S.m_TargetCard = pCardStableId;
 		S.m_vKeys = vKeys;
+		// 清空预览会析构其中的键；正在渲染的卡片可能仍指向其中一个预览项，
+		// 立即改指向刚复制的目标键，避免同一帧后续内容行访问悬垂内存。
+		S.m_pActiveKeys = &S.m_vKeys;
 		S.m_vPreviews.clear();
 		S.m_PreviewExpireSeconds = 0.0;
 		S.m_Scrolled = false;
@@ -94,6 +97,8 @@ namespace qm_settings_reveal
 	inline void SetPreviews(const std::vector<SPreview> &vPreviews)
 	{
 		SState &S = State();
+		// 预览容器整体替换后，旧的键指针不再有效；本帧 BeginCard 会重新绑定。
+		S.m_pActiveKeys = nullptr;
 		S.m_vPreviews = vPreviews;
 		S.m_PreviewExpireSeconds = vPreviews.empty() ? 0.0 : NowSeconds() + 1.0;
 	}

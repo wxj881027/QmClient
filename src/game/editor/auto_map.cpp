@@ -75,12 +75,12 @@ static int HashLocation(uint32_t Seed, uint32_t Run, uint32_t Rule, uint32_t X, 
 	return Hash % HASH_MAX;
 }
 
-CAutoMapper::CAutoMapper(CEditorMap *pMap) :
+CAutomapper::CAutomapper(CEditorMap *pMap) :
 	CMapObject(pMap)
 {
 }
 
-void CAutoMapper::Load(const char *pTileName)
+void CAutomapper::Load(const char *pTileName)
 {
 	char aPath[IO_MAX_PATH_LENGTH];
 	str_format(aPath, sizeof(aPath), "editor/automap/%s.rules", pTileName);
@@ -422,13 +422,13 @@ void CAutoMapper::Load(const char *pTileName)
 	m_FileLoaded = true;
 }
 
-void CAutoMapper::Unload()
+void CAutomapper::Unload()
 {
 	m_FileLoaded = false;
 	m_vConfigs.clear();
 }
 
-int CAutoMapper::CheckIndexFlag(int Flag, const char *pFlag, bool CheckNone) const
+int CAutomapper::CheckIndexFlag(int Flag, const char *pFlag, bool CheckNone) const
 {
 	if(!str_comp(pFlag, "XFLIP"))
 		Flag |= TILEFLAG_XFLIP;
@@ -442,7 +442,7 @@ int CAutoMapper::CheckIndexFlag(int Flag, const char *pFlag, bool CheckNone) con
 	return Flag;
 }
 
-const char *CAutoMapper::GetConfigName(int Index) const
+const char *CAutomapper::GetConfigName(int Index) const
 {
 	if(Index < 0 || Index >= (int)m_vConfigs.size())
 	{
@@ -451,7 +451,7 @@ const char *CAutoMapper::GetConfigName(int Index) const
 	return m_vConfigs[Index].m_aName;
 }
 
-void CAutoMapper::ProceedLocalized(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int ReferenceId, int ConfigId, int Seed, int X, int Y, int Width, int Height)
+void CAutomapper::ProceedLocalized(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int ReferenceId, int ConfigId, int Seed, int X, int Y, int Width, int Height)
 {
 	if(!m_FileLoaded || pLayer->m_Readonly || ConfigId < 0 || ConfigId >= (int)m_vConfigs.size())
 		return;
@@ -486,6 +486,10 @@ void CAutoMapper::ProceedLocalized(CLayerTiles *pLayer, CLayerTiles *pGameLayer,
 			pOutLayer->m_Index = pInLayer->m_Index;
 			pOutLayer->m_Flags = pInLayer->m_Flags;
 
+			// 官方 12520：局部更新区域可能超出游戏层边界，越界时跳过
+			if(x >= pGameLayer->m_Width || y >= pGameLayer->m_Height)
+				continue;
+
 			const CTile *pInGame = &pGameLayer->m_pTiles[y * pGameLayer->m_Width + x];
 			CTile *pOutGame = &pUpdateGame->m_pTiles[(y - UpdateFromY) * pUpdateGame->m_Width + x - UpdateFromX];
 			pOutGame->m_Index = pInGame->m_Index;
@@ -506,6 +510,10 @@ void CAutoMapper::ProceedLocalized(CLayerTiles *pLayer, CLayerTiles *pGameLayer,
 			pOutLayer->m_Flags = pInLayer->m_Flags;
 			pLayer->RecordStateChange(x, y, PreviousLayer, *pOutLayer);
 
+			// 官方 12520：同一处越界，避免读 pUpdateGame 之外的格子
+			if(x >= pGameLayer->m_Width || y >= pGameLayer->m_Height)
+				continue;
+
 			const CTile *pInGame = &pUpdateGame->m_pTiles[(y - UpdateFromY) * pUpdateGame->m_Width + x - UpdateFromX];
 			CTile *pOutGame = &pGameLayer->m_pTiles[y * pGameLayer->m_Width + x];
 			CTile PreviousGame = *pOutGame;
@@ -519,7 +527,7 @@ void CAutoMapper::ProceedLocalized(CLayerTiles *pLayer, CLayerTiles *pGameLayer,
 	delete pUpdateGame;
 }
 
-void CAutoMapper::Proceed(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int ReferenceId, int ConfigId, int Seed, int SeedOffsetX, int SeedOffsetY)
+void CAutomapper::Proceed(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int ReferenceId, int ConfigId, int Seed, int SeedOffsetX, int SeedOffsetY)
 {
 	if(!m_FileLoaded || pLayer->m_Readonly || ConfigId < 0 || ConfigId >= (int)m_vConfigs.size())
 		return;

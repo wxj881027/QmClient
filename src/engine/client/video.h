@@ -49,7 +49,7 @@ class CVideo : public IVideo
 public:
 	// Width/Height 是渲染（readback）尺寸；OutputWidth/OutputHeight 是编码输出尺寸，
 	// 0 表示跟随渲染尺寸。输出小于渲染时 swscale 以高质量滤波下采样（超采样抗锯齿，M7）。
-	CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Width, int Height, const char *pName, int OutputWidth = 0, int OutputHeight = 0, const SVideoDisplaySnapshot *pDisplaySnapshot = nullptr);
+	CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Width, int Height, int64_t LocalStartTime, const char *pName, int OutputWidth = 0, int OutputHeight = 0, const SVideoDisplaySnapshot *pDisplaySnapshot = nullptr);
 	~CVideo() override;
 
 	bool Start() override REQUIRES(!m_WriteLock);
@@ -68,6 +68,10 @@ public:
 
 	void NextAudioFrame(ISoundMixFunc Mix) override;
 	void NextAudioFrameTimeline(ISoundMixFunc Mix) override;
+
+	int64_t Time() const override { return m_Time; }
+	float LocalTime() const override { return m_LocalTime; }
+	void SetLocalStartTime(int64_t LocalStartTime) override { m_LocalStartTime = LocalStartTime; }
 
 	static void Init();
 
@@ -123,6 +127,10 @@ private:
 	std::atomic<bool> m_EncodeError{false};
 
 	int m_FPS;
+	int64_t m_TickTime;
+	int64_t m_LocalStartTime;
+	float m_LocalTime;
+	int64_t m_Time;
 
 	bool m_Started;
 	bool m_Stopped;

@@ -206,6 +206,20 @@ enum
 int64_t time_milliseconds_from_seconds(float seconds);
 
 /**
+ * Returns the number of even centiseconds from a time float.
+ *
+ * 服务端按 50Hz 运行，一个 tick 是 0.02 秒，因此成绩的厘秒值必须是偶数。
+ * 该函数负责取整，避免向下游客户端暴露不可能存在的毫秒精度。
+ *
+ * @ingroup Timestamp
+ *
+ * @param seconds Time in seconds.
+ *
+ * @return Number of centiseconds.
+ */
+int64_t time_even_centiseconds_from_seconds(float seconds);
+
+/**
  * Formats a time string.
  *
  * @ingroup Timestamp

@@ -106,8 +106,6 @@ public:
 	int m_CanvasWidth, m_CanvasHeight;
 	int m_WindowWidth, m_WindowHeight;
 	int m_RefreshRate;
-	int m_Red, m_Green, m_Blue;
-	uint32_t m_Format;
 };
 
 typedef vec2 GL_SPoint;
@@ -709,7 +707,8 @@ public:
 		float m_TopPinch = 0.0f;
 		// 绘制表面边界的覆盖率过渡宽度，使用当前映射坐标。
 		float m_EdgeFeather = 0.0f;
-		// 整张离屏表面使用后端原生纹理方向，自定义UV仍沿用原有约定。
+		// 整张离屏表面使用后端原生纹理方向；若调用方先给出自定义 UV，
+		// 只翻转 V 轴以适配后端原点，不重置裁切范围。
 		bool m_NativeTextureCoordinates = false;
 		// 已合成背景的实时画面直接复制颜色，避免纹理 Alpha 再混合一次。
 		bool m_Opaque = false;
@@ -724,6 +723,11 @@ public:
 		float m_V0 = 1.0f;
 		float m_U1 = 1.0f;
 		float m_V1 = 0.0f;
+		bool m_HasCustomTextureCoordinates = false;
+		float m_CustomU0 = 0.0f;
+		float m_CustomV0 = 0.0f;
+		float m_CustomU1 = 1.0f;
+		float m_CustomV1 = 1.0f;
 
 		// 以表面的几何上缘为起点向下减弱黑色，独立于纹理方向与边缘覆盖率。
 		float m_TopShade = 0.0f;
@@ -754,10 +758,32 @@ public:
 			return Center + vec2(RotatedX, RotatedY) * (Distance / (Distance + Depth));
 		}
 
+		// 自定义 UV 范围必须走这个入口登记，原生方向才能只翻 V 而不覆盖裁切。
+		void SetTextureCoordinates(float U0, float V0, float U1, float V1)
+		{
+			m_U0 = U0;
+			m_V0 = V0;
+			m_U1 = U1;
+			m_V1 = V1;
+			m_CustomU0 = U0;
+			m_CustomV0 = V0;
+			m_CustomU1 = U1;
+			m_CustomV1 = V1;
+			m_HasCustomTextureCoordinates = true;
+		}
+
 		// 整幅预览按实际后端的纹理原点取样，不改变导出像素的读回方向。
 		void SetNativeTextureCoordinates(EBackendType Backend)
 		{
 			const bool TopLeftOrigin = Backend == BACKEND_TYPE_VULKAN || Backend == BACKEND_TYPE_METAL;
+			if(m_HasCustomTextureCoordinates)
+			{
+				m_U0 = m_CustomU0;
+				m_U1 = m_CustomU1;
+				m_V0 = TopLeftOrigin ? m_CustomV0 : 1.0f - m_CustomV1;
+				m_V1 = TopLeftOrigin ? m_CustomV1 : 1.0f - m_CustomV0;
+				return;
+			}
 			m_U0 = 0.0f;
 			m_U1 = 1.0f;
 			m_V0 = TopLeftOrigin ? 0.0f : 1.0f;
@@ -855,6 +881,8 @@ public:
 	virtual bool IsTextBufferingEnabled() = 0;
 	virtual bool IsQuadContainerBufferingEnabled() = 0;
 	virtual bool Uses2DTextureArrays() = 0;
+	/** 纹理加载时统一使用的目标类型标志，避免各调用点重复判断 2D 数组 / 3D 纹理。 */
+	virtual int TextureLoadFlags() = 0;
 	virtual bool HasTextureArraysSupport() const = 0;
 
 	virtual const char *GetVendorString() = 0;
@@ -950,8 +978,8 @@ public:
 	virtual int CreateQuadContainer(bool AutomaticUpload = true) = 0;
 	virtual void QuadContainerChangeAutomaticUpload(int ContainerIndex, bool AutomaticUpload) = 0;
 	virtual void QuadContainerUpload(int ContainerIndex) = 0;
-	virtual int QuadContainerAddQuads(int ContainerIndex, CQuadItem *pArray, int Num) = 0;
-	virtual int QuadContainerAddQuads(int ContainerIndex, CFreeformItem *pArray, int Num) = 0;
+	virtual int QuadContainerAddQuads(int ContainerIndex, const CQuadItem *pArray, int Num) = 0;
+	virtual int QuadContainerAddQuads(int ContainerIndex, const CFreeformItem *pArray, int Num) = 0;
 	virtual void QuadContainerReset(int ContainerIndex) = 0;
 	virtual void DeleteQuadContainer(int &ContainerIndex) = 0;
 	virtual void RenderQuadContainer(int ContainerIndex, int QuadDrawNum) = 0;

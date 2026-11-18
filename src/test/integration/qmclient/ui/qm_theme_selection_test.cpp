@@ -1,8 +1,6 @@
 // 主题名称绘制与设置卡片括号说明作用域协作；仅隔离标签提交边界。
 #include <game/client/QmUi/ThemeSelectionLayout.h>
 #include <game/client/components/theme_scan.h>
-#include <game/client/components/tooltips.h>
-
 #include <gtest/gtest.h>
 #include <test/support/qm_real_ui_fixture.h>
 
@@ -11,13 +9,7 @@ namespace
 	class QmThemeSelection : public qm_ui_test::CRealUiFixture
 	{
 	protected:
-		CTooltips m_Tooltips;
 		const CUIRect m_Row{0, 0, 200, 30};
-		void SetUp() override
-		{
-			CRealUiFixture::SetUp();
-			m_Ui.SetQmTooltips(&m_Tooltips);
-		}
 		uint64_t Draw(const char *pName, bool ThemeLabel)
 		{
 			auto *pGraphics = static_cast<qm_ui_test::CRealUiTestGraphics *>(m_Ui.Graphics());

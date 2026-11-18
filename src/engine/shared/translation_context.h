@@ -63,7 +63,7 @@ public:
 
 			m_aName[0] = '\0';
 			m_aClan[0] = '\0';
-			m_Country = 0;
+			m_Country = CountryCode::DEFAULT;
 			m_Team = 0;
 			m_PlayerFlags7 = 0;
 		}

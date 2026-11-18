@@ -1599,6 +1599,22 @@ turkish = "Ayar kartları dışındaki yardım balonlarının görünümü"
 polish = "Wygląd podpowiedzi poza kartami ustawień"
 
 [[message]]
+key = "Scoreboard row colors"
+[message.translations]
+simplified_chinese = "计分板行颜色"
+traditional_chinese = "計分板列顏色"
+japanese = "スコアボードの行の色"
+korean = "스코어보드 행 색상"
+russian = "Цвета строк таблицы счёта"
+german = "Farben der Scoreboard-Zeilen"
+spanish = "Colores de las filas de la tabla de puntuación"
+french = "Couleurs des lignes du tableau des scores"
+brazilian_portuguese = "Cores das linhas do placar"
+portuguese = "Cores das linhas da tabela de pontuação"
+turkish = "Skor tablosu satır renkleri"
+polish = "Kolory wierszy tabeli wyników"
+
+[[message]]
 key = "Apple Music media-user-token"
 [message.translations]
 simplified_chinese = "Apple Music 媒体用户令牌"
@@ -6559,20 +6575,36 @@ turkish = "DDNet contributors"
 polish = "DDNet contributors"
 
 [[message]]
-key = "DDNet releases"
+key = "DDNet Archive Share"
 [message.translations]
-simplified_chinese = "DDNet 发布包"
-traditional_chinese = "DDNet 發布包"
-japanese = "DDNet リリース"
-korean = "DDNet 릴리스"
-russian = "Релизы DDNet"
-german = "DDNet-Veröffentlichungen"
-spanish = "Versiones de DDNet"
-french = "Versions de DDNet"
-brazilian_portuguese = "Versões do DDNet"
-portuguese = "Versões do DDNet"
-turkish = "DDNet sürümleri"
-polish = "Wydania DDNet"
+simplified_chinese = "DDNet 存档分享"
+traditional_chinese = "DDNet 存檔分享"
+japanese = "DDNet アーカイブ共有"
+korean = "DDNet 아카이브 공유"
+russian = "Обмен архивами DDNet"
+german = "DDNet-Archiv teilen"
+spanish = "Compartir archivos de DDNet"
+french = "Partager les archives DDNet"
+brazilian_portuguese = "Compartilhar arquivos do DDNet"
+portuguese = "Partilhar arquivos do DDNet"
+turkish = "DDNet arşivlerini paylaş"
+polish = "Udostępnij archiwa DDNet"
+
+[[message]]
+key = "DDNet official installer"
+[message.translations]
+simplified_chinese = "DDNet 官方安装包"
+traditional_chinese = "DDNet 官方安裝包"
+japanese = "DDNet 公式インストーラー"
+korean = "DDNet 공식 설치 프로그램"
+russian = "Официальный установщик DDNet"
+german = "Offizieller DDNet-Installer"
+spanish = "Instalador oficial de DDNet"
+french = "Installateur officiel de DDNet"
+brazilian_portuguese = "Instalador oficial do DDNet"
+portuguese = "Instalador oficial do DDNet"
+turkish = "Resmî DDNet yükleyicisi"
+polish = "Oficjalny instalator DDNet"
 
 [[message]]
 key = "DDNet staff"
@@ -40080,6 +40112,22 @@ turkish = "Başlık stilini düzenle"
 polish = "Edytuj styl tytułu"
 
 [[message]]
+key = "Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring"
+[message.translations]
+simplified_chinese = "滚轮手感：0=原始（每格重新开始），1=平滑（速度延续），2=弹簧"
+traditional_chinese = "滾輪手感：0=原始（每格重新開始），1=平滑（速度延續），2=彈簧"
+japanese = "ホイールのスクロール感：0=オリジナル（1ティックごとにリセット）、1=スムーズ（速度を引き継ぐ）、2=スプリング"
+korean = "휠 스크롤 감도: 0=원본(각 틱마다 재시작), 1=부드럽게(속도 유지), 2=스프링"
+russian = "Ощущение прокрутки колесом: 0=Оригинал (сбрасывается на каждом тике), 1=Плавно (скорость сохраняется), 2=Пружина"
+german = "Scrollrad-Gefühl: 0=Original (bei jedem Tick neu), 1=Sanft (Geschwindigkeit bleibt erhalten), 2=Feder"
+spanish = "Sensación de la rueda: 0=Original (se reinicia en cada paso), 1=Suave (la velocidad continúa), 2=Resorte"
+french = "Sensation de molette : 0=Original (redémarre à chaque cran), 1=Doux (la vitesse se prolonge), 2=Ressort"
+brazilian_portuguese = "Sensação da roda: 0=Original (reinicia a cada passo), 1=Suave (a velocidade continua), 2=Mola"
+portuguese = "Sensação da roda: 0=Original (reinicia a cada passo), 1=Suave (a velocidade continua), 2=Mola"
+turkish = "Tekerlek hissi: 0=Orijinal (her adımda yeniden başlar), 1=Yumuşak (hız devam eder), 2=Yay"
+polish = "Odczucie przewijania: 0=Oryginalne (reset przy każdym kroku), 1=Gładkie (prędkość jest zachowana), 2=Sprężyna"
+
+[[message]]
 key = "Wheel scroll feel: 0=Smooth (velocity carries over), 1=Original (each tick restarts), 2=Spring"
 [message.translations]
 simplified_chinese = "滚轮手感：0=顺滑（继承速度），1=原版（每档重置），2=弹簧"
@@ -40401,6 +40449,1130 @@ turkish = "Geçerli şarkı sözü satırını genel sohbete göndermek için at
 polish = "Naciśnij dwukrotnie przypisany klawisz w ciągu 400 ms, aby wysłać bieżący wers piosenki na czat publiczny"
 
 [[message]]
+key = "Capsule ends"
+[message.translations]
+simplified_chinese = "胶囊端头"
+traditional_chinese = "膠囊端頭"
+japanese = "カプセル端"
+korean = "캡슐 끝"
+russian = "Торцы капсулы"
+german = "Kapselenden"
+spanish = "Extremos de cápsula"
+french = "Extrémités de capsule"
+brazilian_portuguese = "Extremidades da cápsula"
+portuguese = "Extremidades da cápsula"
+turkish = "Kapsül uçları"
+polish = "Końce kapsuły"
+
+[[message]]
+key = "Capsule ends: 0 = plain arc, 1 = silky shoulder"
+[message.translations]
+simplified_chinese = "胶囊端头：0 = 正圆弧，1 = 丝滑肩部"
+traditional_chinese = "膠囊端頭：0 = 正圓弧，1 = 絲滑肩部"
+japanese = "カプセル端：0 = 正円弧、1 = なめらかなショルダー"
+korean = "캡슐 끝: 0 = 원호, 1 = 부드러운 어깨"
+russian = "Торцы капсулы: 0 = дуга, 1 = плавное плечо"
+german = "Kapselenden: 0 = Kreisbogen, 1 = weiche Schulter"
+spanish = "Extremos de cápsula: 0 = arco, 1 = hombro suave"
+french = "Extrémités de capsule : 0 = arc, 1 = épaulement adouci"
+brazilian_portuguese = "Extremidades da cápsula: 0 = arco, 1 = ombro suave"
+portuguese = "Extremidades da cápsula: 0 = arco, 1 = ombro suave"
+turkish = "Kapsül uçları: 0 = yay, 1 = yumuşak omuz"
+polish = "Końce kapsuły: 0 = łuk, 1 = miękkie ramię"
+
+[[message]]
+key = "Plain capsule"
+[message.translations]
+simplified_chinese = "普通胶囊"
+traditional_chinese = "普通膠囊"
+japanese = "通常カプセル"
+korean = "일반 캡슐"
+russian = "Обычная капсула"
+german = "Einfache Kapsel"
+spanish = "Cápsula simple"
+french = "Capsule simple"
+brazilian_portuguese = "Cápsula simples"
+portuguese = "Cápsula simples"
+turkish = "Düz kapsül"
+polish = "Zwykła kapsuła"
+
+[[message]]
+key = "Silky capsule"
+[message.translations]
+simplified_chinese = "丝滑胶囊"
+traditional_chinese = "絲滑膠囊"
+japanese = "なめらかカプセル"
+korean = "부드러운 캡슐"
+russian = "Плавная капсула"
+german = "Weiche Kapsel"
+spanish = "Cápsula suave"
+french = "Capsule soyeuse"
+brazilian_portuguese = "Cápsula suave"
+portuguese = "Cápsula suave"
+turkish = "Yumuşak kapsül"
+polish = "Gładka kapsuła"
+
+[[message]]
+key = "Apple"
+[message.translations]
+simplified_chinese = "苹果"
+traditional_chinese = "蘋果"
+japanese = "Apple"
+korean = "Apple"
+russian = "Apple"
+german = "Apple"
+spanish = "Apple"
+french = "Apple"
+brazilian_portuguese = "Apple"
+portuguese = "Apple"
+turkish = "Apple"
+polish = "Apple"
+
+[[message]]
+key = "UI corner curve: 0 = classic arc, 1 = superellipse, 2 = quintic Bezier, 3 = conic Bezier, 4 = Apple continuous (Bezier + arc + Bezier)"
+[message.translations]
+simplified_chinese = "界面圆角曲线：0 = 经典圆弧，1 = 超椭圆，2 = 五次贝塞尔，3 = 圆锥贝塞尔，4 = 苹果连续圆角（贝塞尔 + 圆弧 + 贝塞尔）"
+traditional_chinese = "介面圓角曲線：0 = 經典圓弧，1 = 超橢圓，2 = 五次貝塞爾，3 = 圓錐貝塞爾，4 = 蘋果連續圓角（貝塞爾 + 圓弧 + 貝塞爾）"
+japanese = "UI 角丸曲線：0 = 円弧、1 = 超楕円、2 = 5次ベジェ、3 = 円錐ベジェ、4 = Apple 連続角丸（ベジェ + 円弧 + ベジェ）"
+korean = "UI 모서리 곡선: 0 = 원호, 1 = 초타원, 2 = 5차 베지어, 3 = 원뿔 베지어, 4 = Apple 연속 모서리(베지어 + 호 + 베지어)"
+russian = "Кривая скругления UI: 0 = дуга, 1 = суперэллипс, 2 = кривая Безье 5-го порядка, 3 = коническая Безье, 4 = непрерывное скругление Apple (Безье + дуга + Безье)"
+german = "UI-Eckenkurve: 0 = Kreisbogen, 1 = Superellipse, 2 = quintische Bézierkurve, 3 = konische Bézierkurve, 4 = kontinuierliche Apple-Ecke (Bézier + Bogen + Bézier)"
+spanish = "Curva de esquina de la UI: 0 = arco, 1 = superelipse, 2 = Bézier quíntica, 3 = Bézier cónica, 4 = esquina continua de Apple (Bézier + arco + Bézier)"
+french = "Courbe d'angle de l'interface : 0 = arc, 1 = superellipse, 2 = Bézier quintique, 3 = Bézier conique, 4 = angle continu Apple (Bézier + arc + Bézier)"
+brazilian_portuguese = "Curva de canto da interface: 0 = arco, 1 = superelipse, 2 = Bézier quíntica, 3 = Bézier cônica, 4 = canto contínuo da Apple (Bézier + arco + Bézier)"
+portuguese = "Curva de canto da interface: 0 = arco, 1 = superelipse, 2 = Bézier quíntica, 3 = Bézier cónica, 4 = canto contínuo da Apple (Bézier + arco + Bézier)"
+turkish = "Arayüz köşe eğrisi: 0 = yay, 1 = süperelips, 2 = beşinci derece Bézier, 3 = konik Bézier, 4 = Apple sürekli köşe (Bézier + yay + Bézier)"
+polish = "Krzywa narożnika UI: 0 = łuk, 1 = superelipsa, 2 = Bézier piątego stopnia, 3 = Bézier stożkowa, 4 = ciągły narożnik Apple (Bézier + łuk + Bézier)"
+
+[[message]]
+key = "Curvature strength for the superellipse corner curve"
+[message.translations]
+simplified_chinese = "超椭圆圆角的曲率强度"
+traditional_chinese = "超橢圓圓角的曲率強度"
+japanese = "超楕円角丸の曲率の強さ"
+korean = "초타원 모서리의 곡률 강도"
+russian = "Сила кривизны для суперэллипса"
+german = "Krümmungsstärke der Superellipsen-Ecke"
+spanish = "Intensidad de curvatura de la esquina de superelipse"
+french = "Intensité de courbure de l'angle en superellipse"
+brazilian_portuguese = "Intensidade de curvatura do canto de superelipse"
+portuguese = "Intensidade de curvatura do canto de superelipse"
+turkish = "Süperelips köşe eğrilik gücü"
+polish = "Siła krzywizny narożnika superelipsy"
+
+[[message]]
+key = "Curvature strength for the conic corner curve"
+[message.translations]
+simplified_chinese = "圆锥贝塞尔圆角的曲率强度"
+traditional_chinese = "圓錐貝塞爾圓角的曲率強度"
+japanese = "円錐ベジェ角丸の曲率の強さ"
+korean = "원뿔 베지어 모서리의 곡률 강도"
+russian = "Сила кривизны для конической кривой Безье"
+german = "Krümmungsstärke der konischen Ecke"
+spanish = "Intensidad de curvatura de la esquina cónica"
+french = "Intensité de courbure de l'angle conique"
+brazilian_portuguese = "Intensidade de curvatura do canto cônico"
+portuguese = "Intensidade de curvatura do canto cónico"
+turkish = "Konik köşe eğrilik gücü"
+polish = "Siła krzywizny narożnika stożkowego"
+
+[[message]]
+key = "Curvature strength for the Apple corner curve (0 = arc, 100 = strongest)"
+[message.translations]
+simplified_chinese = "苹果连续圆角的曲率强度（0 = 圆弧，100 = 最强）"
+traditional_chinese = "蘋果連續圓角的曲率強度（0 = 圓弧，100 = 最強）"
+japanese = "Apple 連続角丸の曲率の強さ（0 = 円弧、100 = 最大）"
+korean = "Apple 연속 모서리의 곡률 강도(0 = 원호, 100 = 최대)"
+russian = "Сила кривизны для скругления Apple (0 = дуга, 100 = максимум)"
+german = "Krümmungsstärke der Apple-Ecke (0 = Bogen, 100 = maximal)"
+spanish = "Intensidad de curvatura de la esquina de Apple (0 = arco, 100 = máxima)"
+french = "Intensité de courbure de l'angle Apple (0 = arc, 100 = maximum)"
+brazilian_portuguese = "Intensidade de curvatura do canto da Apple (0 = arco, 100 = máxima)"
+portuguese = "Intensidade de curvatura do canto da Apple (0 = arco, 100 = máxima)"
+turkish = "Apple köşe eğrilik gücü (0 = yay, 100 = en güçlü)"
+polish = "Siła krzywej narożnika Apple (0 = łuk, 100 = maksimum)"
+
+[[message]]
+key = "Apple capsule"
+[message.translations]
+simplified_chinese = "苹果胶囊"
+traditional_chinese = "蘋果膠囊"
+japanese = "Apple カプセル"
+korean = "Apple 캡슐"
+russian = "Капсула Apple"
+german = "Apple-Kapsel"
+spanish = "Cápsula Apple"
+french = "Capsule Apple"
+brazilian_portuguese = "Cápsula Apple"
+portuguese = "Cápsula Apple"
+turkish = "Apple kapsül"
+polish = "Kapsuła Apple"
+
+[[message]]
+key = "Capsule end strength"
+[message.translations]
+simplified_chinese = "胶囊端部强度"
+traditional_chinese = "膠囊端部強度"
+japanese = "カプセル端の強さ"
+korean = "캡슐 끝 강도"
+russian = "Сила торцов капсулы"
+german = "Stärke der Kapselenden"
+spanish = "Intensidad de los extremos de cápsula"
+french = "Intensité des extrémités de capsule"
+brazilian_portuguese = "Intensidade das extremidades da cápsula"
+portuguese = "Intensidade das extremidades da cápsula"
+turkish = "Kapsül uç gücü"
+polish = "Siła końców kapsuły"
+
+[[message]]
+key = "Client prediction"
+[message.translations]
+simplified_chinese = "客户端预测"
+traditional_chinese = "Client prediction"
+japanese = "Client prediction"
+korean = "Client prediction"
+russian = "Client prediction"
+german = "Client prediction"
+spanish = "Client prediction"
+french = "Client prediction"
+brazilian_portuguese = "Client prediction"
+portuguese = "Client prediction"
+turkish = "Client prediction"
+polish = "Client prediction"
+
+[[message]]
+key = "Client-side prediction and latency compensation"
+[message.translations]
+simplified_chinese = "客户端预测与延迟补偿"
+traditional_chinese = "Client-side prediction and latency compensation"
+japanese = "Client-side prediction and latency compensation"
+korean = "Client-side prediction and latency compensation"
+russian = "Client-side prediction and latency compensation"
+german = "Client-side prediction and latency compensation"
+spanish = "Client-side prediction and latency compensation"
+french = "Client-side prediction and latency compensation"
+brazilian_portuguese = "Client-side prediction and latency compensation"
+portuguese = "Client-side prediction and latency compensation"
+turkish = "Client-side prediction and latency compensation"
+polish = "Client-side prediction and latency compensation"
+
+[[message]]
+key = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+[message.translations]
+simplified_chinese = "客户端预测与延迟补偿：预测余量、AntiPing 与其预测实体、预测事件，以及上行数据包冗余。"
+traditional_chinese = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+japanese = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+korean = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+russian = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+german = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+spanish = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+french = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+brazilian_portuguese = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+portuguese = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+turkish = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+polish = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."
+
+[[message]]
+key = "Configure client-side prediction and latency compensation"
+[message.translations]
+simplified_chinese = "配置客户端预测与延迟补偿"
+traditional_chinese = "Configure client-side prediction and latency compensation"
+japanese = "Configure client-side prediction and latency compensation"
+korean = "Configure client-side prediction and latency compensation"
+russian = "Configure client-side prediction and latency compensation"
+german = "Configure client-side prediction and latency compensation"
+spanish = "Configure client-side prediction and latency compensation"
+french = "Configure client-side prediction and latency compensation"
+brazilian_portuguese = "Configure client-side prediction and latency compensation"
+portuguese = "Configure client-side prediction and latency compensation"
+turkish = "Configure client-side prediction and latency compensation"
+polish = "Configure client-side prediction and latency compensation"
+
+[[message]]
+key = "Network compensation"
+[message.translations]
+simplified_chinese = "网络补偿"
+traditional_chinese = "Network compensation"
+japanese = "Network compensation"
+korean = "Network compensation"
+russian = "Network compensation"
+german = "Network compensation"
+spanish = "Network compensation"
+french = "Network compensation"
+brazilian_portuguese = "Network compensation"
+portuguese = "Network compensation"
+turkish = "Network compensation"
+polish = "Network compensation"
+
+[[message]]
+key = "Other players' shadow opacity"
+[message.translations]
+simplified_chinese = "其他玩家的影子不透明度"
+traditional_chinese = "Other players' shadow opacity"
+japanese = "Other players' shadow opacity"
+korean = "Other players' shadow opacity"
+russian = "Other players' shadow opacity"
+german = "Other players' shadow opacity"
+spanish = "Other players' shadow opacity"
+french = "Other players' shadow opacity"
+brazilian_portuguese = "Other players' shadow opacity"
+portuguese = "Other players' shadow opacity"
+turkish = "Other players' shadow opacity"
+polish = "Other players' shadow opacity"
+
+[[message]]
+key = "Sounds and particles"
+[message.translations]
+simplified_chinese = "声音与粒子"
+traditional_chinese = "Sounds and particles"
+japanese = "Sounds and particles"
+korean = "Sounds and particles"
+russian = "Sounds and particles"
+german = "Sounds and particles"
+spanish = "Sounds and particles"
+french = "Sounds and particles"
+brazilian_portuguese = "Sounds and particles"
+portuguese = "Sounds and particles"
+turkish = "Sounds and particles"
+polish = "Sounds and particles"
+
+[[message]]
+key = "0 = never"
+[message.translations]
+simplified_chinese = "0 = 从不"
+traditional_chinese = "0 = never"
+japanese = "0 = never"
+korean = "0 = never"
+russian = "0 = never"
+german = "0 = never"
+spanish = "0 = never"
+french = "0 = never"
+brazilian_portuguese = "0 = never"
+portuguese = "0 = never"
+turkish = "0 = never"
+polish = "0 = never"
+
+[[message]]
+key = "Formerly \"prediction margin\" (cl_prediction_margin)"
+[message.translations]
+simplified_chinese = "旧名「预测边距」（prediction margin，cl_prediction_margin）"
+traditional_chinese = "Formerly \"prediction margin\" (cl_prediction_margin)"
+japanese = "Formerly \"prediction margin\" (cl_prediction_margin)"
+korean = "Formerly \"prediction margin\" (cl_prediction_margin)"
+russian = "Formerly \"prediction margin\" (cl_prediction_margin)"
+german = "Formerly \"prediction margin\" (cl_prediction_margin)"
+spanish = "Formerly \"prediction margin\" (cl_prediction_margin)"
+french = "Formerly \"prediction margin\" (cl_prediction_margin)"
+brazilian_portuguese = "Formerly \"prediction margin\" (cl_prediction_margin)"
+portuguese = "Formerly \"prediction margin\" (cl_prediction_margin)"
+turkish = "Formerly \"prediction margin\" (cl_prediction_margin)"
+polish = "Formerly \"prediction margin\" (cl_prediction_margin)"
+
+[[message]]
+key = "Negative stability buffer"
+[message.translations]
+simplified_chinese = "负稳定性缓冲"
+traditional_chinese = "負穩定性緩衝"
+japanese = "負の安定性バッファ"
+korean = "음수 안정성 버퍼"
+russian = "Буфер отрицательной стабильности"
+german = "Negativer Stabilitätspuffer"
+spanish = "Búfer de estabilidad negativa"
+french = "Tampon de stabilité négative"
+brazilian_portuguese = "Buffer de estabilidade negativa"
+portuguese = "Buffer de estabilidade negativa"
+turkish = "Negatif stabilite tamponu"
+polish = "Bufor ujemnej stabilności"
+
+[[message]]
+key = "for Gores"
+[message.translations]
+simplified_chinese = "用于 Gores"
+traditional_chinese = "for Gores"
+japanese = "for Gores"
+korean = "for Gores"
+russian = "for Gores"
+german = "for Gores"
+spanish = "for Gores"
+french = "for Gores"
+brazilian_portuguese = "for Gores"
+portuguese = "for Gores"
+turkish = "for Gores"
+polish = "for Gores"
+
+[[message]]
+key = "DDNet settings sub-tab: 0=general, 1=network compensation"
+[message.translations]
+simplified_chinese = "DDNet 设置子页签：0 = 常规，1 = 网络补偿"
+traditional_chinese = "DDNet 設定子頁籤：0=一般，1=網路補償"
+japanese = "DDNet 設定のサブタブ: 0=一般、1=ネットワーク補償"
+korean = "DDNet 설정 하위 탭: 0=일반, 1=네트워크 보상"
+russian = "Подвкладка настроек DDNet: 0=общие, 1=компенсация сети"
+german = "Unterreiter der DDNet-Einstellungen: 0=Allgemein, 1=Netzwerkkompensation"
+spanish = "Subpestaña de ajustes de DDNet: 0=general, 1=compensación de red"
+french = "Sous-onglet des paramètres DDNet : 0=général, 1=compensation réseau"
+brazilian_portuguese = "Subaba de configurações do DDNet: 0=geral, 1=compensação de rede"
+portuguese = "Subseparador de definições do DDNet: 0=geral, 1=compensação de rede"
+turkish = "DDNet ayarları alt sekmesi: 0=genel, 1=ağ telafisi"
+polish = "Podkarta ustawień DDNet: 0=ogólne, 1=kompensacja sieci"
+
+[[message]]
+key = "Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous"
+[message.translations]
+simplified_chinese = "胶囊端头：0 = 普通圆弧，1 = 丝滑端点，2 = 苹果连续曲率"
+traditional_chinese = "膠囊端頭：0 = 普通圓弧，1 = 絲滑端點，2 = 蘋果連續曲率"
+japanese = "カプセル端: 0 = 通常の円弧、1 = なめらかな端点、2 = Apple 連続曲率"
+korean = "캡슐 끝: 0 = 일반 원호, 1 = 부드러운 끝, 2 = Apple 연속 곡률"
+russian = "Торцы капсулы: 0 = обычная дуга, 1 = плавный торец, 2 = непрерывная кривизна Apple"
+german = "Kapselenden: 0 = normaler Bogen, 1 = weiches Ende, 2 = Apple-kontinuierliche Krümmung"
+spanish = "Extremos de cápsula: 0 = arco normal, 1 = extremo suave, 2 = curvatura continua de Apple"
+french = "Extrémités de capsule : 0 = arc simple, 1 = extrémité soyeuse, 2 = courbure continue Apple"
+brazilian_portuguese = "Extremidades da cápsula: 0 = arco simples, 1 = extremidade suave, 2 = curvatura contínua da Apple"
+portuguese = "Extremidades da cápsula: 0 = arco simples, 1 = extremidade suave, 2 = curvatura contínua da Apple"
+turkish = "Kapsül uçları: 0 = düz yay, 1 = ipeksi uç, 2 = Apple sürekli eğrilik"
+polish = "Końce kapsuły: 0 = zwykły łuk, 1 = gładki koniec, 2 = ciągła krzywizna Apple"
+
+[[message]]
+key = "Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list."
+[message.translations]
+simplified_chinese = "给计分板行上色：已认证玩家、同战队玩家、好友，以及好友列表里的战队成员。"
+
+[[message]]
+key = "Deep freeze"
+[message.translations]
+simplified_chinese = "深层冻结"
+
+[[message]]
+key = "Deep freeze tile outline width"
+[message.translations]
+simplified_chinese = "深层冻结块的描边宽度"
+
+[[message]]
+key = "Deep unfreeze"
+[message.translations]
+simplified_chinese = "深层解冻"
+
+[[message]]
+key = "Deep unfreeze tile outline width"
+[message.translations]
+simplified_chinese = "深层解冻块的描边宽度"
+
+[[message]]
+key = "Expanded personalization sections (format: stableId=1;stableId2=0;)"
+[message.translations]
+simplified_chinese = "已展开的个性调整分区（格式：stableId=1;stableId2=0;）"
+traditional_chinese = "已展開的個性調整分區（格式：stableId=1;stableId2=0;）"
+japanese = "展開済みの個別調整セクション（形式: stableId=1;stableId2=0;）"
+korean = "펼쳐진 개별 조정 구역 (형식: stableId=1;stableId2=0;)"
+russian = "Развёрнутые разделы персонализации (формат: stableId=1;stableId2=0;)"
+german = "Ausgeklappte Personalisierungsbereiche (Format: stableId=1;stableId2=0;)"
+spanish = "Secciones de personalización desplegadas (formato: stableId=1;stableId2=0;)"
+french = "Sections de personnalisation dépliées (format : stableId=1;stableId2=0;)"
+brazilian_portuguese = "Seções de personalização expandidas (formato: stableId=1;stableId2=0;)"
+portuguese = "Secções de personalização expandidas (formato: stableId=1;stableId2=0;)"
+turkish = "Genişletilmiş kişiselleştirme bölümleri (biçim: stableId=1;stableId2=0;)"
+polish = "Rozwinięte sekcje personalizacji (format: stableId=1;stableId2=0;)"
+
+[[message]]
+key = "Expose IP to servers by default when adding a favorite (last choice on the server info page)"
+[message.translations]
+simplified_chinese = "添加收藏时默认向该服务器暴露 IP（记住服务器信息页上的上次选择）"
+traditional_chinese = "加入收藏時預設向該伺服器顯示 IP（記住伺服器資訊頁上的上次選擇）"
+japanese = "お気に入り追加時に既定でサーバーへ IP を公開します（サーバー情報ページの前回の選択を記憶）"
+korean = "즐겨찾기 추가 시 기본으로 서버에 IP를 공개합니다 (서버 정보 페이지의 마지막 선택 기억)"
+russian = "По умолчанию открывать IP серверам при добавлении в избранное (запоминает последний выбор на странице сервера)"
+german = "IP beim Hinzufügen eines Favoriten standardmäßig an Server weitergeben (merkt sich die letzte Wahl auf der Serverinfoseite)"
+spanish = "Expone la IP a los servidores por defecto al añadir un favorito (recuerda la última elección de la página de información del servidor)"
+french = "Expose l'IP aux serveurs par défaut lors de l'ajout d'un favori (mémorise le dernier choix de la page d'infos du serveur)"
+brazilian_portuguese = "Expõe o IP aos servidores por padrão ao adicionar um favorito (lembra a última escolha da página de informações do servidor)"
+portuguese = "Expõe o IP aos servidores por predefinição ao adicionar um favorito (memoriza a última escolha da página de informações do servidor)"
+turkish = "Favori eklerken IP'yi varsayılan olarak sunuculara gösterir (sunucu bilgi sayfasındaki son seçimi hatırlar)"
+polish = "Domyślnie ujawniaj IP serwerom przy dodawaniu ulubionego (pamięta ostatni wybór na stronie informacji o serwerze)"
+
+[[message]]
+key = "Freeze tile outline width"
+[message.translations]
+simplified_chinese = "冻结块的描边宽度"
+
+[[message]]
+key = "General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom."
+[message.translations]
+simplified_chinese = "DDNet 通用显示：显示其他玩家及其影子不透明度、背景方块与默认缩放。"
+
+[[message]]
+key = "Hookable tile outline color"
+[message.translations]
+simplified_chinese = "可钩方块描边颜色"
+
+[[message]]
+key = "Hookable tile outline width"
+[message.translations]
+simplified_chinese = "可钩方块描边宽度"
+
+[[message]]
+key = "Hookable tiles"
+[message.translations]
+simplified_chinese = "可钩方块"
+
+[[message]]
+key = "Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read."
+[message.translations]
+simplified_chinese = "这些颜色要与队伍色区分开，否则同战队名字会融进队伍面板、难以辨认。"
+
+[[message]]
+key = "Map preview shows the entity layer only (hides textures)"
+[message.translations]
+simplified_chinese = "地图预览只显示实体层（隐藏贴图）"
+traditional_chinese = "地圖預覽只顯示實體層（隱藏貼圖）"
+japanese = "マッププレビューはエンティティ層のみ表示（テクスチャを隠す）"
+korean = "지도 미리보기가 엔티티 레이어만 표시합니다 (텍스처 숨김)"
+russian = "Предпросмотр карты показывает только слой сущностей (скрывает текстуры)"
+german = "Kartenvorschau zeigt nur die Entitätsebene (Texturen ausgeblendet)"
+spanish = "La vista previa del mapa solo muestra la capa de entidades (oculta las texturas)"
+french = "L'aperçu de la carte n'affiche que la couche d'entités (masque les textures)"
+brazilian_portuguese = "A prévia do mapa mostra apenas a camada de entidades (oculta as texturas)"
+portuguese = "A pré-visualização do mapa mostra apenas a camada de entidades (oculta as texturas)"
+turkish = "Harita önizlemesi yalnızca varlık katmanını gösterir (dokuları gizler)"
+polish = "Podgląd mapy pokazuje tylko warstwę encji (ukrywa tekstury)"
+
+[[message]]
+key = "Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list."
+[message.translations]
+simplified_chinese = "逐行选择颜色：已认证与同战队颜色作用于计分板，两个列表颜色作用于好友列表。"
+
+[[message]]
+key = "Prediction and latency compensation moved to the \"Network compensation\" sub-tab of the DDNet page."
+[message.translations]
+simplified_chinese = "预测与延迟补偿已移到 DDNet 页的「网络补偿」子页签。"
+
+[[message]]
+key = "Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic."
+[message.translations]
+simplified_chinese = "预测用精度换取响应速度：更大的余量和 AntiPing 能抹平 ping 抖动，但可能误判近处动作，上游冗余最多会让上行流量增至三倍。"
+
+[[message]]
+key = "Set \"Prediction margin\" in milliseconds, tick \"AntiPing (latency compensation)\" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections."
+[message.translations]
+simplified_chinese = "以毫秒设置「预测余量」，勾选「AntiPing（延迟补偿）」，再选择要预测什么；冗余开关是实验性的，只在丢包链路上有用。"
+
+[[message]]
+key = "Show deep freeze tile outlines"
+[message.translations]
+simplified_chinese = "显示深层冻结块描边"
+
+[[message]]
+key = "Show deep unfreeze tile outlines"
+[message.translations]
+simplified_chinese = "显示深层解冻块描边"
+
+[[message]]
+key = "Show freeze tile outlines"
+[message.translations]
+simplified_chinese = "显示冻结块描边"
+
+[[message]]
+key = "Show hookable tile outlines"
+[message.translations]
+simplified_chinese = "显示可钩方块描边"
+
+[[message]]
+key = "Show unfreeze tile outlines"
+[message.translations]
+simplified_chinese = "显示解冻块描边"
+
+[[message]]
+key = "Show unhookable tile outlines"
+[message.translations]
+simplified_chinese = "显示不可钩方块描边"
+
+[[message]]
+key = "Strength of the Apple capsule ends (0 = semicircle, 100 = strongest)"
+[message.translations]
+simplified_chinese = "苹果胶囊端头强度（0 = 半圆，100 = 最强）"
+traditional_chinese = "蘋果膠囊端頭強度（0 = 半圓，100 = 最強）"
+japanese = "Apple カプセル端の強さ (0 = 半円、100 = 最大)"
+korean = "Apple 캡슐 끝의 강도 (0 = 반원, 100 = 최대)"
+russian = "Сила торцов капсулы Apple (0 = полукруг, 100 = максимум)"
+german = "Stärke der Apple-Kapselenden (0 = Halbkreis, 100 = maximal)"
+spanish = "Intensidad de los extremos de cápsula Apple (0 = semicírculo, 100 = máxima)"
+french = "Intensité des extrémités de capsule Apple (0 = demi-cercle, 100 = maximale)"
+brazilian_portuguese = "Intensidade das extremidades da cápsula Apple (0 = semicírculo, 100 = máxima)"
+portuguese = "Intensidade das extremidades da cápsula Apple (0 = semicírculo, 100 = máxima)"
+turkish = "Apple kapsül uçlarının gücü (0 = yarım daire, 100 = en güçlü)"
+polish = "Siła końców kapsuły Apple (0 = półkole, 100 = największa)"
+
+[[message]]
+key = "Tick \"Show others\" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use \"Show background quads\" and \"Default zoom\" for the view."
+[message.translations]
+simplified_chinese = "勾选「显示其他队伍」可半透明绘制其他队伍，其影子不透明度在下方从属行设置；视野相关还有「显示背景方块」和「默认缩放」。"
+
+[[message]]
+key = "Unfreeze tile outline width"
+[message.translations]
+simplified_chinese = "解冻块描边宽度"
+
+[[message]]
+key = "Unhookable tile outline color"
+[message.translations]
+simplified_chinese = "不可钩方块描边颜色"
+
+[[message]]
+key = "Unhookable tile outline width"
+[message.translations]
+simplified_chinese = "不可钩方块描边宽度"
+
+[[message]]
+key = "Unhookable tiles"
+[message.translations]
+simplified_chinese = "不可钩方块"
+
+[[message]]
+key = "Graphics settings sub-tab: 0=display, 1=visual effects"
+[message.translations]
+simplified_chinese = "图像设置子页签：0=显示，1=视觉效果"
+traditional_chinese = "圖像設定子頁籤：0=顯示，1=視覺效果"
+japanese = "グラフィック設定のサブタブ: 0=表示、1=視覚効果"
+korean = "그래픽 설정 하위 탭: 0=표시, 1=시각 효과"
+russian = "Вкладка настроек графики: 0=отображение, 1=визуальные эффекты"
+german = "Unterreiter der Grafikeinstellungen: 0=Anzeige, 1=visuelle Effekte"
+spanish = "Subpestaña de ajustes de gráficos: 0=visualización, 1=efectos visuales"
+french = "Sous-onglet des paramètres graphiques : 0=affichage, 1=effets visuels"
+brazilian_portuguese = "Subaba de configurações gráficas: 0=exibição, 1=efeitos visuais"
+portuguese = "Subseparador de definições gráficas: 0=apresentação, 1=efeitos visuais"
+turkish = "Grafik ayarları alt sekmesi: 0=görüntü, 1=görsel efektler"
+polish = "Podkarta ustawień grafiki: 0=wyświetlanie, 1=efekty wizualne"
+
+[[message]]
+key = "Text color mode: 0 white, 1 black, 2 rainbow, 3 custom"
+[message.translations]
+simplified_chinese = "文本颜色模式：0=白色，1=黑色，2=彩虹，3=自定义"
+traditional_chinese = "文字顏色模式：0=白色，1=黑色，2=彩虹，3=自定義"
+japanese = "文字色モード: 0=白、1=黒、2=レインボー、3=カスタム"
+korean = "텍스트 색상 모드: 0=흰색, 1=검정, 2=무지개, 3=사용자 정의"
+russian = "Режим цвета текста: 0=белый, 1=чёрный, 2=радуга, 3=пользовательский"
+german = "Textfarbmodus: 0=Weiß, 1=Schwarz, 2=Regenbogen, 3=benutzerdefiniert"
+spanish = "Modo de color del texto: 0=blanco, 1=negro, 2=arcoíris, 3=personalizado"
+french = "Mode de couleur du texte : 0=blanc, 1=noir, 2=arc-en-ciel, 3=personnalisé"
+brazilian_portuguese = "Modo de cor do texto: 0=branco, 1=preto, 2=arco-íris, 3=personalizado"
+portuguese = "Modo de cor do texto: 0=branco, 1=preto, 2=arco-íris, 3=personalizado"
+turkish = "Metin rengi modu: 0=beyaz, 1=siyah, 2=gökkuşağı, 3=özel"
+polish = "Tryb koloru tekstu: 0=biały, 1=czarny, 2=tęcza, 3=niestandardowy"
+
+[[message]]
+key = "Show an accent glow around the focused input field"
+[message.translations]
+simplified_chinese = "为聚焦的输入框显示强调色光晕"
+traditional_chinese = "為聚焦的輸入框顯示強調色光暈"
+japanese = "フォーカス中の入力欄にアクセント色のグローを表示"
+korean = "포커스된 입력란에 강조색 광채를 표시"
+russian = "Показывать свечение акцентного цвета вокруг поля ввода в фокусе"
+german = "Zeigt ein Leuchten in Akzentfarbe um das fokussierte Eingabefeld"
+spanish = "Mostrar un resplandor del color de acento alrededor del campo de entrada enfocado"
+french = "Afficher une lueur de la couleur d'accent autour du champ de saisie sélectionné"
+brazilian_portuguese = "Mostrar um brilho na cor de destaque ao redor do campo de entrada em foco"
+portuguese = "Mostrar um brilho na cor de destaque à volta do campo de entrada em foco"
+turkish = "Odaklanan giriş alanının çevresinde vurgu renginde parıltı göster"
+polish = "Pokazuj poświatę w kolorze akcentu wokół aktywnego pola tekstowego"
+
+[[message]]
+key = "Add options below"
+[message.translations]
+simplified_chinese = "在下方加入选项"
+traditional_chinese = "在下方加入選項"
+japanese = "下のリストから追加してください"
+korean = "아래에서 옵션을 추가하세요"
+russian = "Добавьте пункты ниже"
+german = "Optionen unten hinzufügen"
+spanish = "Añade opciones abajo"
+french = "Ajoutez des options ci-dessous"
+brazilian_portuguese = "Adicione opções abaixo"
+portuguese = "Adicione opções abaixo"
+turkish = "Aşağıdan seçenek ekleyin"
+polish = "Dodaj opcje poniżej"
+
+[[message]]
+key = "Click a slice to set color"
+[message.translations]
+simplified_chinese = "点击扇区设置颜色"
+traditional_chinese = "點擊扇區設定顏色"
+japanese = "セクターをクリックして色を設定"
+korean = "구역을 클릭해 색상 설정"
+russian = "Нажмите на сектор, чтобы задать цвет"
+german = "Auf ein Segment klicken, um die Farbe zu setzen"
+spanish = "Haz clic en un sector para elegir el color"
+french = "Cliquez sur un secteur pour choisir la couleur"
+brazilian_portuguese = "Clique em um setor para definir a cor"
+portuguese = "Clique num setor para definir a cor"
+turkish = "Rengi ayarlamak için bir dilime tıklayın"
+polish = "Kliknij wycinek, aby ustawić kolor"
+
+[[message]]
+key = "Drag options here to hide them"
+[message.translations]
+simplified_chinese = "把选项拖到这里即可隐藏"
+traditional_chinese = "把選項拖到這裡即可隱藏"
+japanese = "ここにドラッグすると非表示になります"
+korean = "여기로 끌어 놓으면 숨겨집니다"
+russian = "Перетащите сюда, чтобы скрыть"
+german = "Hierher ziehen, um sie auszublenden"
+spanish = "Arrastra aquí para ocultarlas"
+french = "Glissez ici pour les masquer"
+brazilian_portuguese = "Arraste para cá para ocultá-las"
+portuguese = "Arraste para aqui para as ocultar"
+turkish = "Gizlemek için buraya sürükleyin"
+polish = "Przeciągnij tutaj, aby ukryć"
+
+[[message]]
+key = "Drag options here to show them"
+[message.translations]
+simplified_chinese = "把选项拖到这里即可显示"
+traditional_chinese = "把選項拖到這裡即可顯示"
+japanese = "ここにドラッグすると表示されます"
+korean = "여기로 끌어 놓으면 표시됩니다"
+russian = "Перетащите сюда, чтобы показать"
+german = "Hierher ziehen, um sie anzuzeigen"
+spanish = "Arrastra aquí para mostrarlas"
+french = "Glissez ici pour les afficher"
+brazilian_portuguese = "Arraste para cá para exibi-las"
+portuguese = "Arraste para aqui para as mostrar"
+turkish = "Göstermek için buraya sürükleyin"
+polish = "Przeciągnij tutaj, aby pokazać"
+
+[[message]]
+key = "Drag to the other list to show or hide this option"
+[message.translations]
+simplified_chinese = "拖到另一个列表即可显示或隐藏该选项"
+traditional_chinese = "拖到另一個列表即可顯示或隱藏該選項"
+japanese = "もう一方のリストへドラッグすると表示/非表示を切り替えます"
+korean = "다른 목록으로 끌어 놓으면 표시 여부가 바뀝니다"
+russian = "Перетащите в другой список, чтобы показать или скрыть этот пункт"
+german = "In die andere Liste ziehen, um diese Option ein- oder auszublenden"
+spanish = "Arrastra a la otra lista para mostrar u ocultar esta opción"
+french = "Glissez vers l'autre liste pour afficher ou masquer cette option"
+brazilian_portuguese = "Arraste para a outra lista para mostrar ou ocultar esta opção"
+portuguese = "Arraste para a outra lista para mostrar ou ocultar esta opção"
+turkish = "Bu seçeneği göstermek veya gizlemek için diğer listeye sürükleyin"
+polish = "Przeciągnij do drugiej listy, aby pokazać lub ukryć tę opcję"
+
+[[message]]
+key = "In pie menu"
+[message.translations]
+simplified_chinese = "饼菜单包含"
+traditional_chinese = "餅菜單包含"
+japanese = "パイメニュー内"
+korean = "파이 메뉴에 있음"
+russian = "В круговом меню"
+german = "Im Kreismenü"
+spanish = "En el menú radial"
+french = "Dans le menu radial"
+brazilian_portuguese = "No menu radial"
+portuguese = "No menu radial"
+turkish = "Dairesel menüde"
+polish = "W menu kołowym"
+
+[[message]]
+key = "Not in pie menu"
+[message.translations]
+simplified_chinese = "饼菜单排除"
+traditional_chinese = "餅菜單排除"
+japanese = "パイメニュー外"
+korean = "파이 메뉴에 없음"
+russian = "Не в круговом меню"
+german = "Nicht im Kreismenü"
+spanish = "Fuera del menú radial"
+french = "Hors du menu radial"
+brazilian_portuguese = "Fora do menu radial"
+portuguese = "Fora do menu radial"
+turkish = "Dairesel menüde değil"
+polish = "Poza menu kołowym"
+
+
+[[message]]
+key = "ESC menu slide"
+[message.translations]
+simplified_chinese = "ESC 菜单滑入手感"
+traditional_chinese = "ESC 選單滑入手感"
+japanese = "ESC メニューのスライド"
+korean = "ESC 메뉴 슬라이드"
+russian = "Скольжение меню ESC"
+german = "ESC-Menü-Einblendung"
+spanish = "Deslizamiento del menú ESC"
+french = "Glissement du menu Échap"
+brazilian_portuguese = "Deslizamento do menu ESC"
+portuguese = "Deslizamento do menu ESC"
+turkish = "ESC menüsü kaydırması"
+polish = "Wysuwanie menu ESC"
+
+[[message]]
+key = "Soft"
+[message.translations]
+simplified_chinese = "柔和"
+traditional_chinese = "柔和"
+japanese = "ソフト"
+korean = "부드럽게"
+russian = "Мягко"
+german = "Sanft"
+spanish = "Suave"
+french = "Doux"
+brazilian_portuguese = "Suave"
+portuguese = "Suave"
+turkish = "Yumuşak"
+polish = "Łagodnie"
+
+[[message]]
+key = "Standard"
+[message.translations]
+simplified_chinese = "标准"
+traditional_chinese = "標準"
+japanese = "標準"
+korean = "표준"
+russian = "Стандарт"
+german = "Ausgewogen"
+spanish = "Estándar"
+french = "Standard"
+brazilian_portuguese = "Padrão"
+portuguese = "Padrão"
+turkish = "Standart"
+polish = "Standardowy"
+
+[[message]]
+key = "Bouncy"
+[message.translations]
+simplified_chinese = "弹性"
+traditional_chinese = "彈性"
+japanese = "バウンス"
+korean = "탄성"
+russian = "Пружинисто"
+german = "Federnd"
+spanish = "Elástico"
+french = "Élastique"
+brazilian_portuguese = "Elástico"
+portuguese = "Elástico"
+turkish = "Yaylanmalı"
+polish = "Sprężysty"
+
+[[message]]
+key = "Scoreboard entrance"
+[message.translations]
+simplified_chinese = "计分板入场"
+traditional_chinese = "計分板入場"
+japanese = "スコアボードの登場"
+korean = "점수판 등장"
+russian = "Появление табло"
+german = "Scoreboard-Einblendung"
+spanish = "Entrada del marcador"
+french = "Apparition du tableau"
+brazilian_portuguese = "Entrada do placar"
+portuguese = "Entrada do placar"
+turkish = "Skor tablosu girişi"
+polish = "Pojawianie się tabeli"
+
+[[message]]
+key = "Entrance overshoot"
+[message.translations]
+simplified_chinese = "入场过冲"
+traditional_chinese = "入場過衝"
+japanese = "登場時のオーバーシュート"
+korean = "등장 오버슈트"
+russian = "Перелёт при появлении"
+german = "Überschwinger beim Einblenden"
+spanish = "Exceso al aparecer"
+french = "Dépassement à l'apparition"
+brazilian_portuguese = "Ultrapassagem na entrada"
+portuguese = "Ultrapassagem na entrada"
+turkish = "Girişte aşma"
+polish = "Przestrzelenie przy wejściu"
+
+[[message]]
+key = "Scoreboard text entry"
+[message.translations]
+simplified_chinese = "计分板文本入场"
+traditional_chinese = "計分板文字進場"
+japanese = "スコアボード文字の登場"
+korean = "점수판 텍스트 등장"
+russian = "Появление текста табло"
+german = "Scoreboard-Text-Einblendung"
+spanish = "Entrada del texto del marcador"
+french = "Apparition du texte du tableau"
+brazilian_portuguese = "Entrada do texto do placar"
+portuguese = "Entrada do texto do placar"
+turkish = "Skor tablosu metin girişi"
+polish = "Pojawianie się tekstu tabeli"
+
+[[message]]
+key = "Together"
+[message.translations]
+simplified_chinese = "一起"
+traditional_chinese = "一起"
+japanese = "一斉"
+korean = "함께"
+russian = "Сразу"
+german = "Gleichzeitig"
+spanish = "A la vez"
+french = "Ensemble"
+brazilian_portuguese = "Juntos"
+portuguese = "Juntos"
+turkish = "Hep birlikte"
+polish = "Naraz"
+
+[[message]]
+key = "By row"
+[message.translations]
+simplified_chinese = "逐行"
+traditional_chinese = "逐行"
+japanese = "行ごと"
+korean = "줄마다"
+russian = "По строкам"
+german = "Zeilenweise"
+spanish = "Por fila"
+french = "Ligne par ligne"
+brazilian_portuguese = "Por linha"
+portuguese = "Por linha"
+turkish = "Satır satır"
+polish = "Wiersz po wierszu"
+
+[[message]]
+key = "Cascade"
+[message.translations]
+simplified_chinese = "慢速波浪"
+traditional_chinese = "慢速波浪"
+japanese = "ゆっくり連鎖"
+korean = "느린 물결"
+russian = "Волна"
+german = "Kaskade"
+spanish = "Cascada"
+french = "Cascade lente"
+brazilian_portuguese = "Cascata"
+portuguese = "Cascata"
+turkish = "Kademeli"
+polish = "Kaskada"
+
+[[message]]
+key = "Elastic feel of the ESC menu sliding in from the top"
+[message.translations]
+simplified_chinese = "ESC 菜单从顶部滑入时的弹性手感"
+traditional_chinese = "ESC 選單從頂部滑入時的彈性手感"
+japanese = "ESC メニューが上から滑り込む際の弾性"
+korean = "ESC 메뉴가 위에서 내려올 때의 탄성"
+russian = "Упругость появления меню ESC сверху"
+german = "Federverhalten des von oben einblendenden ESC-Menüs"
+spanish = "Elasticidad del menú ESC al deslizarse desde arriba"
+french = "Élasticité du menu Échap glissant depuis le haut"
+brazilian_portuguese = "Elasticidade do menu ESC ao deslizar de cima"
+portuguese = "Elasticidade do menu ESC ao deslizar de cima"
+turkish = "ESC menüsünün üstten kayarken yaylanması"
+polish = "Sprężystość menu ESC wysuwanego z góry"
+
+
+[[message]]
+key = "ESC menu slide feel: 0=soft, 1=standard, 2=bouncy"
+[message.translations]
+simplified_chinese = "ESC 菜单滑入手感：0=柔和，1=标准，2=弹性"
+traditional_chinese = "ESC 選單滑入手感：0=柔和，1=標準，2=彈性"
+japanese = "ESC メニューのスライド感：0=ソフト、1=標準、2=バウンス"
+korean = "ESC 메뉴 슬라이드 감각: 0=부드럽게, 1=표준, 2=탄성"
+russian = "Ощущение скольжения меню ESC: 0=мягко, 1=стандарт, 2=пружинисто"
+german = "Gefühl des ESC-Menü-Slidings: 0=sanft, 1=ausgewogen, 2=federnd"
+spanish = "Sensación de deslizamiento del menú ESC: 0=suave, 1=estándar, 2=elástico"
+french = "Sensation de glissement du menu Échap : 0=doux, 1=standard, 2=élastique"
+brazilian_portuguese = "Sensação de deslizamento do menu ESC: 0=suave, 1=padrão, 2=elástico"
+portuguese = "Sensação de deslizamento do menu ESC: 0=suave, 1=padrão, 2=elástico"
+turkish = "ESC menüsü kayma hissi: 0=yumuşak, 1=standart, 2=yaylanmalı"
+polish = "Odczucie wysuwania menu ESC: 0=łagodnie, 1=standardowo, 2=sprężyście"
+
+[[message]]
+key = "Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy"
+[message.translations]
+simplified_chinese = "计分板入场手感：0=柔和，1=标准，2=弹性"
+traditional_chinese = "計分板入場手感：0=柔和，1=標準，2=彈性"
+japanese = "スコアボード登場の感触：0=ソフト、1=標準、2=バウンス"
+korean = "점수판 등장 감각: 0=부드럽게, 1=표준, 2=탄성"
+russian = "Ощущение появления табло: 0=мягко, 1=стандарт, 2=пружинисто"
+german = "Gefühl der Scoreboard-Einblendung: 0=sanft, 1=ausgewogen, 2=federnd"
+spanish = "Sensación de entrada del marcador: 0=suave, 1=estándar, 2=elástico"
+french = "Sensation d'apparition du tableau : 0=doux, 1=standard, 2=élastique"
+brazilian_portuguese = "Sensação de entrada do placar: 0=suave, 1=padrão, 2=elástico"
+portuguese = "Sensação de entrada do placar: 0=suave, 1=padrão, 2=elástico"
+turkish = "Skor tablosu giriş hissi: 0=yumuşak, 1=standart, 2=yaylanmalı"
+polish = "Odczucie pojawiania się tabeli: 0=łagodnie, 1=standardowo, 2=sprężyście"
+
+[[message]]
+key = "Scoreboard entrance overshoot in percent (10 = 110% peak)"
+[message.translations]
+simplified_chinese = "计分板入场过冲百分比（10 表示先到 110% 峰值）"
+traditional_chinese = "計分板入場過衝百分比（10 表示先到 110% 峰值）"
+japanese = "スコアボード登場時のオーバーシュート率（10 で最大 110%）"
+korean = "점수판 등장 오버슈트 비율 (10 = 최대 110%)"
+russian = "Перелёт табло при появлении в процентах (10 = пик 110%)"
+german = "Überschwinger der Scoreboard-Einblendung in Prozent (10 = Spitze 110%)"
+spanish = "Exceso de entrada del marcador en porcentaje (10 = pico del 110%)"
+french = "Dépassement d'apparition du tableau en pourcentage (10 = pic à 110%)"
+brazilian_portuguese = "Ultrapassagem de entrada do placar em porcentagem (10 = pico de 110%)"
+portuguese = "Ultrapassagem de entrada do placar em porcentagem (10 = pico de 110%)"
+turkish = "Skor tablosu giriş aşma yüzdesi (10 = %110 tepe)"
+polish = "Przestrzelenie tabeli przy wejściu w procentach (10 = szczyt 110%)"
+
+[[message]]
+key = "Scoreboard text entry: 0=together, 1=by row, 2=slow cascade"
+[message.translations]
+simplified_chinese = "计分板文本入场：0=一起，1=逐行，2=慢速波浪"
+traditional_chinese = "計分板文字進場：0=一起，1=逐行，2=慢速波浪"
+japanese = "スコアボード文字の登場：0=一斉、1=行ごと、2=ゆっくり連鎖"
+korean = "점수판 텍스트 등장: 0=함께, 1=줄마다, 2=느린 물결"
+russian = "Появление текста табло: 0=сразу, 1=по строкам, 2=медленная волна"
+german = "Scoreboard-Text-Einblendung: 0=gleichzeitig, 1=zeilenweise, 2=langsame Kaskade"
+spanish = "Entrada del texto del marcador: 0=a la vez, 1=por fila, 2=cascada lenta"
+french = "Apparition du texte du tableau : 0=ensemble, 1=ligne par ligne, 2=cascade lente"
+brazilian_portuguese = "Entrada do texto do placar: 0=juntos, 1=por linha, 2=cascata lenta"
+portuguese = "Entrada do texto do placar: 0=juntos, 1=por linha, 2=cascata lenta"
+turkish = "Skor tablosu metin girişi: 0=hep birlikte, 1=satır satır, 2=yavaş kademeli"
+polish = "Pojawianie się tekstu tabeli: 0=naraz, 1=wiersz po wierszu, 2=powolna kaskada"
+
+[[message]]
+key = "Extra console log line spacing in pixels"
+[message.translations]
+simplified_chinese = "控制台日志的额外行距（像素）"
+traditional_chinese = "主控台日誌的額外行距（像素）"
+japanese = "コンソールログの追加行間（ピクセル）"
+korean = "콘솔 로그 추가 줄 간격(픽셀)"
+russian = "Дополнительный интервал строк журнала консоли в пикселях"
+german = "Zusätzlicher Zeilenabstand der Konsolenausgabe in Pixeln"
+spanish = "Espaciado adicional entre líneas del registro de consola en píxeles"
+french = "Espacement de ligne supplémentaire des journaux de console en pixels"
+brazilian_portuguese = "Espaçamento adicional entre linhas do registro do console em pixels"
+portuguese = "Espaçamento adicional entre linhas do registo da consola em píxeis"
+turkish = "Konsol günlüğü için ek satır aralığı (piksel)"
+polish = "Dodatkowy odstęp między wierszami dziennika konsoli w pikselach"
+
+[[message]]
+key = "Hover feedback style: 0 = scale, 1 = border highlight"
+[message.translations]
+simplified_chinese = "悬停反馈样式：0 = 缩放，1 = 边框高亮"
+traditional_chinese = "懸停回饋樣式：0 = 縮放，1 = 邊框高亮"
+japanese = "ホバーフィードバックのスタイル：0 = 拡大、1 = 枠線ハイライト"
+korean = "호버 피드백 스타일: 0 = 확대, 1 = 테두리 강조"
+russian = "Стиль отклика при наведении: 0 = масштабирование, 1 = подсветка рамки"
+german = "Hover-Feedback-Stil: 0 = Skalierung, 1 = Rahmenhervorhebung"
+spanish = "Estilo de respuesta al pasar el cursor: 0 = escala, 1 = resaltado del borde"
+french = "Style de retour au survol : 0 = mise à l'échelle, 1 = surbrillance de la bordure"
+brazilian_portuguese = "Estilo de retorno ao passar o mouse: 0 = escala, 1 = destaque da borda"
+portuguese = "Estilo de resposta ao pairar: 0 = escala, 1 = realce da margem"
+turkish = "Fare üzerine gelme geri bildirimi stili: 0 = ölçekleme, 1 = kenarlık vurgusu"
+polish = "Styl reakcji na najechanie: 0 = skalowanie, 1 = podświetlenie obramowania"
+
+[[message]]
+key = "Teleport dummy to cursor"
+[message.translations]
+simplified_chinese = "将分身传送到光标"
+traditional_chinese = "將分身傳送到光標"
+japanese = "ダミーをカーソル位置にテレポート"
+korean = "더미를 커서 위치로 순간이동"
+russian = "Переместить дамми к курсору"
+german = "Dummy zum Cursor teleportieren"
+spanish = "Teletransportar al dummy al cursor"
+french = "Téléporter le dummy vers le curseur"
+brazilian_portuguese = "Teletransportar o dummy até o cursor"
+portuguese = "Teletransportar o dummy para o cursor"
+turkish = "Dummy'yi imlece ışınla"
+polish = "Przenieś dummy do kursora"
+
+[[message]]
+key = "Teleport to cursor"
+[message.translations]
+simplified_chinese = "传送到光标"
+traditional_chinese = "傳送到光標"
+japanese = "カーソル位置にテレポート"
+korean = "커서 위치로 순간이동"
+russian = "Переместить к курсору"
+german = "Zum Cursor teleportieren"
+spanish = "Teletransportar al cursor"
+french = "Téléporter vers le curseur"
+brazilian_portuguese = "Teletransportar até o cursor"
+portuguese = "Teletransportar para o cursor"
+turkish = "İmlece ışınla"
+polish = "Przenieś do kursora"
+
+[[message]]
+key = "Console slide feel: 0=soft, 1=standard, 2=bouncy"
+[message.translations]
+simplified_chinese = "控制台滑入手感：0 = 柔和，1 = 标准，2 = 弹跳"
+traditional_chinese = "主控台滑入手感：0 = 柔和，1 = 標準，2 = 彈跳"
+japanese = "コンソールのスライド感：0 = ソフト、1 = 標準、2 = 弾む"
+korean = "콘솔 슬라이드 느낌: 0 = 부드러움, 1 = 표준, 2 = 탄성"
+russian = "Ощущение выдвижения консоли: 0 = мягкое, 1 = стандартное, 2 = упругое"
+german = "Einblendgefühl der Konsole: 0 = weich, 1 = standard, 2 = federnd"
+spanish = "Sensación de deslizamiento de la consola: 0 = suave, 1 = estándar, 2 = elástica"
+french = "Sensation de glissement de la console : 0 = douce, 1 = standard, 2 = élastique"
+brazilian_portuguese = "Sensação de deslizamento do console: 0 = suave, 1 = padrão, 2 = elástica"
+portuguese = "Sensação de deslizamento da consola: 0 = suave, 1 = padrão, 2 = elástica"
+turkish = "Konsol kayma hissi: 0 = yumuşak, 1 = standart, 2 = esnek"
+polish = "Odczucie wysuwania konsoli: 0 = miękkie, 1 = standardowe, 2 = sprężyste"
+
+[[message]]
+key = "Console slide"
+[message.translations]
+simplified_chinese = "控制台滑入手感"
+traditional_chinese = "主控台滑入手感"
+japanese = "コンソールのスライド"
+korean = "콘솔 슬라이드"
+russian = "Скольжение консоли"
+german = "Konsoleneinblendung"
+spanish = "Deslizamiento de la consola"
+french = "Glissement de la console"
+brazilian_portuguese = "Deslizamento do console"
+portuguese = "Deslizamento da consola"
+turkish = "Konsol kaydırması"
+polish = "Wysuwanie konsoli"
+
+[[message]]
+key = "Menu button hover"
+[message.translations]
+simplified_chinese = "菜单按钮悬停"
+traditional_chinese = "選單按鈕懸停"
+japanese = "メニューボタンのホバー"
+korean = "메뉴 버튼 호버"
+russian = "Наведение на кнопку меню"
+german = "Hover für Menüschaltfläche"
+spanish = "Hover del botón de menú"
+french = "Survol du bouton de menu"
+brazilian_portuguese = "Passar o mouse sobre o botão do menu"
+portuguese = "Pairar sobre o botão do menu"
+turkish = "Menü düğmesi üzerine gelme"
+polish = "Najechanie na przycisk menu"
+
+[[message]]
+key = "Outline"
+[message.translations]
+simplified_chinese = "描边"
+traditional_chinese = "描邊"
+japanese = "アウトライン"
+korean = "외곽선"
+russian = "Контур"
+german = "Umriss"
+spanish = "Contorno"
+french = "Contour"
+brazilian_portuguese = "Contorno"
+portuguese = "Contorno"
+turkish = "Ana hat"
+polish = "Kontur"
+
+[[message]]
+key = "DDNet releases"
+[message.translations]
+simplified_chinese = "DDNet 发布包"
+traditional_chinese = "DDNet 發布包"
+japanese = "DDNet リリース"
+korean = "DDNet 릴리스"
+russian = "Релизы DDNet"
+german = "DDNet-Veröffentlichungen"
+spanish = "Versiones de DDNet"
+french = "Versions de DDNet"
+brazilian_portuguese = "Versões do DDNet"
+portuguese = "Versões do DDNet"
+turkish = "DDNet sürümleri"
+polish = "Wydania DDNet"
+
+[[message]]
 key = "Send three consecutive lyrics to public chat at random intervals of 360 to 1200 seconds, with 3 seconds between lines. Successfully sending a lyric with Singing cancels pending humming lines and restarts the random wait"
 [message.translations]
 simplified_chinese = "每隔随机 360 到 1200 秒向公共聊天逐句发送连续三句歌词，句间隔 3 秒。通过“唱歌”成功发送歌词后，取消尚未发送的哼歌歌词并重新随机计时"
@@ -40500,6 +41672,17 @@ polish = "Prowadź do pobliskich nieaktywowanych punktów kontrolnych teleportac
 key = "Show finish summary in Dynamic Island"
 [message.translations]
 simplified_chinese = "在灵动岛显示结算卡"
+traditional_chinese = "在靈動島顯示結算卡"
+japanese = "ダイナミックアイランドにリザルトカードを表示"
+korean = "다이내믹 아일랜드에 결과 카드 표시"
+russian = "Показывать карточку результата в Dynamic Island"
+german = "Ergebniskarte in der Dynamic Island anzeigen"
+spanish = "Mostrar tarjeta de resultado en la isla dinámica"
+french = "Afficher la carte de résultat dans l'île dynamique"
+brazilian_portuguese = "Mostrar cartão de resultado na ilha dinâmica"
+portuguese = "Mostrar cartão de resultado na ilha dinâmica"
+turkish = "Sonuç kartını dinamik adada göster"
+polish = "Pokaż kartę wyniku na dynamicznej wyspie"
 
 [[message]]
 key = "Show a per-character wave on text titles locally"
@@ -40548,3 +41731,19 @@ brazilian_portuguese = "O servidor de títulos ainda não oferece suporte a tít
 portuguese = "O servidor de títulos ainda não suporta títulos em texto"
 turkish = "Unvan sunucusu henüz metin biçimindeki unvanları desteklemiyor"
 polish = "Serwer tytułów jeszcze nie obsługuje tytułów tekstowych"
+
+[[message]]
+key = "Follow remote placements in the collaborative editor"
+[message.translations]
+simplified_chinese = "协作制图时，将视角移到其他协作者新增或替换的放置区域"
+traditional_chinese = "協作製圖時，將視角移到其他協作者新增或替換的放置區域"
+japanese = "共同編集時に、他の編集者が追加または置換した領域へ視点を移動する"
+korean = "공동 지도 편집 중 다른 편집자가 추가하거나 교체한 영역으로 시점을 이동합니다"
+russian = "При совместном редактировании перемещать вид к области, добавленной или заменённой другим участником"
+german = "Beim gemeinsamen Bearbeiten die Ansicht zu dem Bereich bewegen, in dem andere Inhalte hinzufügen oder ersetzen"
+spanish = "Al editar mapas en colaboración, mover la vista a la zona donde otros añaden o reemplazan contenido"
+french = "Lors de l’édition collaborative, déplacer la vue vers la zone où les autres ajoutent ou remplacent du contenu"
+brazilian_portuguese = "Na edição colaborativa, mover a visão para a área onde outros adicionam ou substituem conteúdo"
+portuguese = "Na edição colaborativa, mover a vista para a área onde outros adicionam ou substituem conteúdo"
+turkish = "Ortak harita düzenlemede görünümü diğer katılımcıların içerik eklediği veya değiştirdiği alana taşı"
+polish = "Podczas wspólnej edycji mapy przenoś widok do obszaru, w którym inni dodają lub zastępują elementy"
