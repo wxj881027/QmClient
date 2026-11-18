@@ -112,9 +112,13 @@ inline SRoundedSurfacePlan ResolveRoundedSurfacePlan(const CUIRect &Rect, const 
 	const auto AlignToPixel = [](const float Value, const float Size) {
 		return Size > 0.0f ? std::round(Value / Size) * Size : Value;
 	};
-	const float MaxBorderWidth = std::max(0.0f, std::min(Plan.m_Rect.w, Plan.m_Rect.h) * 0.5f);
-	Plan.m_BorderWidth = std::clamp(AlignToPixel(Params.m_BorderWidth, Plan.m_PixelSize), 0.0f, MaxBorderWidth);
 	Plan.m_Expand = std::max(Params.m_ShapeExpand, 0.0f);
+	// 外扩描边的带宽用逻辑尺寸，单独吸附带宽会让内缘偏离外壳。
+	const bool ExpandedSdfBorder = HasSdf && Params.m_BorderOnly && Plan.m_Expand > 0.0f;
+	const float BorderWidth = ExpandedSdfBorder ? Params.m_BorderWidth : AlignToPixel(Params.m_BorderWidth, Plan.m_PixelSize);
+	const float HalfShortSide = std::min(Plan.m_Rect.w, Plan.m_Rect.h) * 0.5f;
+	const float MaxBorderWidth = std::max(0.0f, HalfShortSide + (ExpandedSdfBorder ? Plan.m_Expand : 0.0f));
+	Plan.m_BorderWidth = std::clamp(BorderWidth, 0.0f, MaxBorderWidth);
 	if(Plan.m_Expand > 0.0f)
 	{
 		Plan.m_Rect.x -= Plan.m_Expand;
