@@ -312,26 +312,21 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Destroy(const CCo
 {
 	if(pCommand->m_TargetId < 0 || (size_t)pCommand->m_TargetId >= m_vRenderTargets.size())
 		return true;
-	if(m_RenderingPaused)
-	{
-		// 渲染暂停时 GPU 已空闲且无活跃录制，直接销毁即可，
-		// 避免对已结束且已提交的交换链渲染通道再次调用 vkCmdEndRenderPass
-		DestroyRenderTarget(m_vRenderTargets[pCommand->m_TargetId]);
-		return true;
-	}
-	if(m_RenderTargetActive)
+	SRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
+	if(!m_RenderingPaused && m_RenderTargetActive)
 	{
 		// 渲染目标渲染通道进行中：既不能中途提交当前命令缓冲（会打断渲染通道），
 		// 也不能在渲染通道中间结束命令缓冲，延迟到 Cmd_RenderTarget_End 后统一销毁
 		if(m_ActiveRenderTargetId == pCommand->m_TargetId)
 			return true;
-		m_vPendingRenderTargetDestroy.emplace_back(pCommand->m_TargetId, m_vRenderTargets[pCommand->m_TargetId].m_Image);
+		m_vPendingRenderTargetDestroy.emplace_back(pCommand->m_TargetId, Target.m_Image);
 		return true;
 	}
-	if(m_vRenderTargets[pCommand->m_TargetId].m_Image != VK_NULL_HANDLE && !SubmitCurrentCommandsAndRestartSwapPass())
-		return false;
-	DestroyRenderTarget(m_vRenderTargets[pCommand->m_TargetId]);
-	return true;
+	// 获取交换链图像时可能因 surface 丢失直接暂停，先前提交的帧仍可能使用此目标。
+	return DestroyQmVulkanRenderTargetAfterUse(m_RenderingPaused, Target.m_Image,
+		[this] { return CheckVulkanResult(DeviceWaitIdle(), GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Waiting for the device before destroying a paused render target failed."); },
+		[this] { return SubmitCurrentCommandsAndRestartSwapPass(); },
+		[this, &Target] { DestroyRenderTarget(Target); });
 }
 
 inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Begin(const CCommandBuffer::SCommand_RenderTarget_Begin *pCommand)
@@ -522,11 +517,7 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Readback(const CC
 		return false;
 	}
 
-	VkMappedMemoryRange MemRange{};
-	MemRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-	MemRange.memory = m_GetPresentedImgDataHelperMem.m_Mem;
-	MemRange.offset = m_GetPresentedImgDataHelperMappedLayoutOffset;
-	MemRange.size = VK_WHOLE_SIZE;
+	const VkMappedMemoryRange MemRange = QmVulkanReadbackMemoryRange(m_GetPresentedImgDataHelperMem.m_Mem);
 	VkResult InvalidateResult = InvalidateMappedMemoryRanges(1, &MemRange);
 	if(InvalidateResult != VK_SUCCESS)
 	{
@@ -538,25 +529,8 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Readback(const CC
 		return false;
 	}
 
-	const size_t PixelSize = 4;
-	const size_t ImageSize = (size_t)Target.m_Width * Target.m_Height * PixelSize;
-	auto *pPixels = static_cast<uint8_t *>(malloc(ImageSize));
-	if(pPixels == nullptr)
-		return false;
-	for(uint32_t Y = 0; Y < Target.m_Height; ++Y)
-	{
-		mem_copy(pPixels + (size_t)Y * Target.m_Width * PixelSize, pResImageData + (size_t)Y * m_GetPresentedImgDataHelperMappedLayoutPitch, (size_t)Target.m_Width * PixelSize);
-	}
-	if(IsB8G8R8A8)
-	{
-		for(size_t Pixel = 0; Pixel < (size_t)Target.m_Width * Target.m_Height; ++Pixel)
-			std::swap(pPixels[Pixel * 4], pPixels[Pixel * 4 + 2]);
-	}
-	pCommand->m_pImage->m_Width = Target.m_Width;
-	pCommand->m_pImage->m_Height = Target.m_Height;
-	pCommand->m_pImage->m_Format = CImageInfo::FORMAT_RGBA;
-	pCommand->m_pImage->m_pData = pPixels;
-	return true;
+	return CompleteQmVulkanRenderTargetReadback(*pCommand->m_pImage, pResImageData, Target.m_Width, Target.m_Height,
+		m_GetPresentedImgDataHelperMappedLayoutPitch, m_GetPresentedImgDataHelperMappedLayoutSize, IsB8G8R8A8, std::malloc);
 }
 
 inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Draw(const CCommandBuffer::SCommand_RenderTarget_Draw *pCommand)

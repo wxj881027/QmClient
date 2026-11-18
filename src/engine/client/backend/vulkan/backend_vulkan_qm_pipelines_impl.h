@@ -348,7 +348,11 @@ inline int CCommandProcessorFragment_Vulkan::InitQmPipelines()
 			m_RoundedRectSdfTexturePipeline.Destroy(m_VKDevice);
 	}
 	if(m_pBackendCapabilities != nullptr)
+	{
 		m_pBackendCapabilities->m_RoundedRectSdfTexture.store(m_QmRoundedRectSdfTexturePipelineValid, std::memory_order_release);
+		// 交换链重建也要发布纯色管线的结果，失败后前端才能改用几何绘制。
+		m_pBackendCapabilities->m_RoundedRectSdf.store(m_QmRoundedRectSdfPipelineValid, std::memory_order_release);
+	}
 	if(QmEnhancedShouldLoad())
 	{
 		// SDF 常驻：Media Island 与圆角使用同一类自定义管线，失败只回退几何，不关闭 SDF。
