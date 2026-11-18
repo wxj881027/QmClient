@@ -2425,6 +2425,7 @@ void CMenus::GhostlistPopulate()
 	}
 
 	m_vGhosts.clear();
+	GameClient()->m_Ghost.RestoreUnsavedBest(m_vGhosts);
 	m_GhostPopulateStartTime = time_get_nanoseconds();
 	const char *pGhostDir = GameClient()->m_Ghost.GetGhostDir();
 	str_copy(m_aGhostScanDir, pGhostDir);
@@ -2452,7 +2453,7 @@ void CMenus::GhostlistPopulate()
 	if(pOwnGhost)
 	{
 		pOwnGhost->m_Own = true;
-		if(pOwnGhost->m_Slot < 0)
+		if(pOwnGhost->m_Slot < 0 && pOwnGhost->HasFile())
 			pOwnGhost->m_Slot = GameClient()->m_Ghost.Load(pOwnGhost->m_aFilename);
 	}
 }
@@ -2465,38 +2466,24 @@ CMenus::CGhostItem *CMenus::GetOwnGhost()
 	return nullptr;
 }
 
-void CMenus::UpdateOwnGhost(CGhostItem Item)
+static bool GhostRowLess(const CMenus::CGhostItem &Left, const CMenus::CGhostItem &Right)
 {
-	int Own = -1;
-	for(size_t i = 0; i < m_vGhosts.size(); i++)
-		if(m_vGhosts[i].m_Own)
-			Own = i;
+	if(g_Config.m_GhSort == CMenus::GHOST_SORT_NAME)
+	{
+		const int Order = str_comp(Left.m_aPlayer, Right.m_aPlayer);
+		return g_Config.m_GhSortOrder ? Order > 0 : Order < 0;
+	}
+	if(g_Config.m_GhSort == CMenus::GHOST_SORT_DATE)
+		return g_Config.m_GhSortOrder ? Left.m_Date > Right.m_Date : Left.m_Date < Right.m_Date;
+	return g_Config.m_GhSort == CMenus::GHOST_SORT_TIME && g_Config.m_GhSortOrder ? Left.m_Time > Right.m_Time : Left.m_Time < Right.m_Time;
+}
 
-	if(Own == -1)
-	{
-		Item.m_Own = true;
-	}
-	else if(g_Config.m_ClRaceGhostSaveBest && (Item.HasFile() || !m_vGhosts[Own].HasFile()))
-	{
-		Item.m_Own = true;
-		DeleteGhostItem(Own);
-	}
-	else if(m_vGhosts[Own].m_Time > Item.m_Time)
-	{
-		Item.m_Own = true;
-		m_vGhosts[Own].m_Own = false;
-		m_vGhosts[Own].m_Slot = -1;
-	}
-	else
-	{
-		Item.m_Own = false;
-		Item.m_Slot = -1;
-	}
-
-	Item.m_Date = std::time(nullptr);
-	Item.m_Failed = false;
-	m_vGhosts.insert(std::lower_bound(m_vGhosts.begin(), m_vGhosts.end(), Item), Item);
-	SortGhostlist();
+bool CMenus::UpdateOwnGhost(CGhostItem Item)
+{
+	return ghost_run::PublishRow(m_vGhosts, Item, g_Config.m_ClRaceGhostSaveBest, GhostRowLess, [&](const CGhostItem &Old) {
+		if(str_comp(Old.m_aFilename, Item.m_aFilename) != 0)
+			Storage()->RemoveFile(Old.m_aFilename, IStorage::TYPE_SAVE);
+	});
 }
 
 void CMenus::DeleteGhostItem(int Index)
@@ -2508,18 +2495,8 @@ void CMenus::DeleteGhostItem(int Index)
 
 void CMenus::SortGhostlist()
 {
-	if(g_Config.m_GhSort == GHOST_SORT_NAME)
-		std::stable_sort(m_vGhosts.begin(), m_vGhosts.end(), [](const CGhostItem &Left, const CGhostItem &Right) {
-			return g_Config.m_GhSortOrder ? (str_comp(Left.m_aPlayer, Right.m_aPlayer) > 0) : (str_comp(Left.m_aPlayer, Right.m_aPlayer) < 0);
-		});
-	else if(g_Config.m_GhSort == GHOST_SORT_TIME)
-		std::stable_sort(m_vGhosts.begin(), m_vGhosts.end(), [](const CGhostItem &Left, const CGhostItem &Right) {
-			return g_Config.m_GhSortOrder ? (Left.m_Time > Right.m_Time) : (Left.m_Time < Right.m_Time);
-		});
-	else if(g_Config.m_GhSort == GHOST_SORT_DATE)
-		std::stable_sort(m_vGhosts.begin(), m_vGhosts.end(), [](const CGhostItem &Left, const CGhostItem &Right) {
-			return g_Config.m_GhSortOrder ? (Left.m_Date > Right.m_Date) : (Left.m_Date < Right.m_Date);
-		});
+	if(g_Config.m_GhSort != GHOST_SORT_NONE)
+		std::stable_sort(m_vGhosts.begin(), m_vGhosts.end(), GhostRowLess);
 }
 
 void CMenus::RenderGhost(CUIRect MainView)
@@ -2757,12 +2734,12 @@ void CMenus::RenderGhost(CUIRect MainView)
 				for(int i = 0; i < NumGhosts; i++)
 				{
 					CGhostItem *pGhost = &m_vGhosts[i];
-					if(pGhost->m_Failed || pGhost->m_Slot != -1)
+					if(pGhost->m_Failed || pGhost->m_Slot != -1 || (!pGhost->HasFile() && !GameClient()->m_Ghost.IsUnsavedBest(*pGhost)))
 						continue;
 					if(!GameClient()->m_Ghost.FreeSlots())
 						break;
 
-					pGhost->m_Slot = GameClient()->m_Ghost.Load(pGhost->m_aFilename);
+					pGhost->m_Slot = GameClient()->m_Ghost.Load(*pGhost);
 					if(pGhost->m_Slot == -1)
 						pGhost->m_Failed = true;
 					else
@@ -2779,7 +2756,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 
 	CGhostItem *pOwnGhost = GetOwnGhost();
 	int ReservedSlots = !pGhost->m_Own && !(pOwnGhost && pOwnGhost->Active());
-	if(!pGhost->m_Failed && pGhost->HasFile() && (pGhost->Active() || GameClient()->m_Ghost.FreeSlots() > ReservedSlots))
+	if(!pGhost->m_Failed && (pGhost->HasFile() || GameClient()->m_Ghost.IsUnsavedBest(*pGhost)) && (pGhost->Active() || GameClient()->m_Ghost.FreeSlots() > ReservedSlots))
 	{
 		Status.VSplitRight(120.0f, &Status, &Button);
 
@@ -2795,7 +2772,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 			}
 			else
 			{
-				pGhost->m_Slot = GameClient()->m_Ghost.Load(pGhost->m_aFilename);
+				pGhost->m_Slot = GameClient()->m_Ghost.Load(*pGhost);
 				if(pGhost->m_Slot == -1)
 					pGhost->m_Failed = true;
 				else
@@ -2815,6 +2792,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 			GameClient()->m_Ghost.Unload(pGhost->m_Slot);
 			GameClient()->m_RankGhost.OnGhostUnloaded(pGhost->m_Slot);
 		}
+		GameClient()->m_Ghost.ForgetUnsavedBest(*pGhost);
 		DeleteGhostItem(s_SelectedIndex);
 		s_SelectedIndex = std::min(s_SelectedIndex, (int)m_vGhosts.size() - 1);
 		return;
@@ -2823,7 +2801,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 	Status.VSplitRight(5.0f, &Status, nullptr);
 
 	bool Recording = GameClient()->m_Ghost.GhostRecorder()->IsRecording();
-	if(!pGhost->HasFile() && !Recording && pGhost->Active())
+	if(!pGhost->HasFile() && !Recording && (pGhost->Active() || GameClient()->m_Ghost.IsUnsavedBest(*pGhost)))
 	{
 		static CButtonContainer s_SaveButton;
 		Status.VSplitRight(120.0f, &Status, &Button);

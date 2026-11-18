@@ -2831,6 +2831,7 @@ public:
 		int m_Slot;
 		bool m_Own;
 		bool m_RankGhost;
+		bool m_InMemoryBest = false;
 		time_t m_Date;
 
 		CGhostItem() :
@@ -2860,7 +2861,7 @@ public:
 
 	void GhostlistPopulate();
 	CGhostItem *GetOwnGhost();
-	void UpdateOwnGhost(CGhostItem Item);
+	bool UpdateOwnGhost(CGhostItem Item);
 	void DeleteGhostItem(int Index);
 	void SortGhostlist();
 
