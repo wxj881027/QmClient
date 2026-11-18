@@ -49,9 +49,6 @@
 "None" hides all name plates including your own team, so choose "Others" if you only want a cleaner screen.
 == Вариант Нет скрывает все таблички, включая вашу команду, поэтому выбирайте Другие, если просто нужен чистый экран.
 
-"Save power by lowering update rate (higher input latency)" adds input delay, so keep it off while racing.
-== Экономия энергии за счёт снижения частоты (выше задержка ввода) добавляет задержку, поэтому во время гонки держите её выключенной.
-
 "Scoreboard filter" keeps only players whose name or clan matches, so clear it when the scoreboard looks empty.
 == Фильтр оставляет только игроков с подходящим именем или кланом; если таблица кажется пустой, очистите фильтр.
 
@@ -595,9 +592,6 @@ Add demo timeline marker
 
 Add Entry
 == Добавить запись
-
-Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off.
-== При входе на карту добавляет скины всех игроков в очередь. Ручное редактирование очереди отключает это.
 
 Add friend
 == Добавить друга
@@ -2120,6 +2114,12 @@ Cannot update public words. Previous words remain active.
 Cannot write the wiki file
 == Не удалось записать файл Wiki
 
+Cap update rate to save power
+== Ограничить частоту обновлений для экономии энергии
+
+Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
+== Ограничение частоты обновлений добавляет задержку ввода; используйте его только для экономии энергии. Если эксклюзивный полный экран не работает, сначала вернитесь к оконному или безрамочному режиму.
+
 Capsule end strength
 == Сила торцов капсулы
 
@@ -2170,9 +2170,6 @@ Center line color (requires qm_show_center)
 
 Center line width (requires qm_show_center)
 == Ширина центральной линии (требуется qm_show_center)
-
-Change "Update Rate" in Hz, tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
-== Меняйте частоту обновления в Hz, отметьте Пропустить главное меню и открывайте места через Файл настроек или Папку тем.
 
 Change colors and style options, then compare the preview.
 == Измените цвета и параметры стиля, затем сравните с предпросмотром.
@@ -2468,8 +2465,8 @@ Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == Выбирает, какие таблички с именами рисовать, и добавляет к ним клан, цвет команды, значок друга, координаты и ID клиента.
 
-Chooses windowed or fullscreen mode, the monitor and the resolution; switching recreates the swap chain, so the screen may flash briefly.
-== Выбирает оконный или полноэкранный режим, монитор и разрешение; при переключении цепочка буферов пересоздаётся, поэтому экран может коротко мигнуть.
+Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
+== Выбор оконного/полноэкранного режима, монитора и разрешения, а также двух ограничений темпа кадров: частоты отрисовки и частоты обновления клиента.
 
 Chroma sampling
 == Цветовая субдискретизация
@@ -2693,14 +2690,17 @@ Client self-kill is disabled (server commands are not affected)
 Client self-kill is enabled
 == Самоубийство со стороны клиента включено
 
+Client update rate
+== Частота обновления клиента
+
 Client uptime
 == Аптайм клиента
 
 Client-side prediction and latency compensation
 == Client-side prediction and latency compensation
 
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
-== Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
+== Клиентское предсказание и компенсация задержки: запас предсказания, AntiPing и предсказываемые объекты, предсказываемые события, избыточность исходящих пакетов и маркировка трафика DSCP.
 
 Client-side self-kill protection
 == Защита от самоубийства на стороне клиента
@@ -2725,6 +2725,9 @@ Collapse console
 
 Collect all players' skins on map join
 == Собирать скины всех игроков при входе на карту
+
+Collect all players' skins on map join; manual edits turn it off.
+== Собирать скины всех игроков при входе на карту; ручное редактирование очереди отключает это.
 
 Collect CP %d before teleporting
 == Перед телепортацией активируйте CP %d
@@ -6128,6 +6131,9 @@ Frame time p99
 Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
 == Сколько кадров буферизуется между захватом и кодированием. Больше — сглаживает медленные кадры ценой памяти; меньше — раньше включает обратное давление.
 
+Frames drawn per second when V-Sync is off; 0 = unlimited
+== Максимум кадров в секунду при выключенной вертикальной синхронизации; 0 = без ограничения
+
 Frankenstein (drop parts on right)
 == Франкенштейн (перетащите части справа)
 
@@ -7195,9 +7201,6 @@ If a device disappears after unplugging headphones, reselect it or restart the c
 
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
 == Если оценка чата превышает это значение, игрок будет заглушен на sv_spam_mute_duration секунд
-
-If exclusive fullscreen fails, switch back to windowed or borderless first.
-== Если эксклюзивный полноэкранный режим не запускается, сначала вернитесь в оконный режим или в режим без рамки.
 
 If lasers can hit you when shot and pull you to bounce origin (0 for all new maps), or lasers cannot hit you and pull others to shooter.
 == Если лазеры могут попасть в вас при выстреле и притянуть к источнику отскока (0 для всех новых карт), или лазеры не могут попасть в вас и притягивают других к стреляющему.
@@ -8429,6 +8432,9 @@ Log realtime WebSocket channel events
 Log the network
 == Логировать сеть
 
+Logic and input ticks per second; rendering follows this beat.
+== Число обработок игровой логики и ввода в секунду; рендеринг следует этому ритму.
+
 Logout of econ
 == Выйти из econ
 
@@ -8786,6 +8792,9 @@ Max Screenshots
 Max size
 == Максимальный размер
 
+Max skins in the rotation queue; 0 stops collecting.
+== Максимум скинов в очереди ротации; 0 отключает сбор.
+
 Max stroke entries to keep
 == Максимальное количество сохраняемых записей штрихов
 
@@ -8851,9 +8860,6 @@ Maximum number of resend requests answered per second (0 for no limit)
 
 Maximum number of server info responses of any size sent per second (0 = unlimited).
 == Максимальное число ответов с информацией о сервере любого размера, отправляемых в секунду (0 = без ограничений).
-
-Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting.
-== Максимум скинов в очереди ротации; лишние удаляются начиная с самых старых. 0 очищает очередь и останавливает сбор.
 
 Maximum number of skins loaded simultaneously
 == Максимальное количество одновременно загружаемых скинов
@@ -9998,8 +10004,8 @@ Ok
 Old chat style: no tee icons, no background
 == Старый стиль чата: без иконок ти, без фона
 
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else.
-== При достижении лимита старые файлы удаляются, поэтому копируйте нужные демо в другое место.
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+== При достижении лимита старые файлы удаляются, поэтому скопируйте нужные демо в другое место. Бюджет пикселей для скриншота позы находится не здесь, а в окне рендеринга файла .poses.
 
 Old single-segment hook collision line
 == Старая односегментная линия столкновения крюка
@@ -10589,8 +10595,8 @@ Pick each color row and choose a color; the authed and same-clan colors apply to
 Pick result: %s
 == Результат выбора: %s
 
-Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode.
-== Сначала выберите режим, затем монитор и разрешение; частота обновления следует текущему режиму монитора.
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
+== Сначала выберите режим, затем монитор и разрешение. «Предел частоты кадров отрисовки» ограничивает число кадров при выключенной вертикальной синхронизации; «Частота обновления клиента» ограничивает обработку логики и ввода и вместе с ней рендеринг.
 
 Pick the parts to colorize, then choose a gradient mode and colors.
 == Выберите части для раскраски, затем режим градиента и цвета.
@@ -10636,6 +10642,9 @@ Pistol
 
 Pistol guide line
 == Линия траектории пистолета
+
+Pixel budget
+== Бюджет пикселей
 
 Pixel: Layer Shift
 == Пиксели: сдвиг слоёв
@@ -11021,9 +11030,6 @@ Pose render supersampling scale (1-4)
 Pose render unsharp mask strength (0 = off)
 == Сила маски нерезкости рендера поз (0 = выкл.)
 
-Pose screenshot pixel budget (MP, 0 = unlimited)
-== Бюджет пикселей для скриншота позы (МП, 0 = без ограничения)
-
 Poses
 == Позы
 
@@ -11132,8 +11138,8 @@ Prediction margin
 Prediction margin when frozen
 == Отступ предсказания при заморозке
 
-Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== Предсказание меняет точность на отзывчивость: больший запас и AntiPing сглаживают дрожание пинга, но могут неверно предсказать близкие действия, а дублирование исходящего трафика способно утроить его объём.
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
+== Предсказание обменивает точность на отзывчивость; избыточность может утроить исходящий трафик. «Приоритет игрового трафика» лишь помечает пакеты в Windows и требует QoS-совместимый маршрутизатор.
 
 Preparing chat export: %d%%
 == Подготовка экспорта чата: %d%%
@@ -11372,11 +11378,11 @@ Projectile / explosion range
 ProRes profile
 == Профиль ProRes
 
+ProRes profile for 4:4:4 input; other encoders ignore it.
+== Профиль ProRes для входа 4:4:4; остальные кодировщики игнорируют его.
+
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 == Переопределение профиля ProRes: -1=авто (4444 для 4:4:4, иначе HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
-
-ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this.
-== Профиль ProRes для энкодера ProRes. «Авто» выбирает 4444 для входа 4:4:4 и HQ в остальных случаях; другие энкодеры игнорируют параметр.
 
 Protect names and skins while streaming
 == Защищать имена и скины во время стрима
@@ -11903,9 +11909,6 @@ Refresh interval
 Refresh isolated serverlist consumer
 == Обновить изолированный потребитель списка серверов
 
-Refresh Rate
-== Частота обновления
-
 Refresh the demo list
 == Обновить список демок
 
@@ -12193,6 +12196,9 @@ Render entity text data
 
 Render entity text data in editor
 == Рендерить текстовые данные сущностей в редакторе
+
+Render frame rate limit
+== Предел частоты кадров отрисовки
 
 Render ghosts as circles
 == Отображать призраков в виде кругов
@@ -12721,12 +12727,6 @@ Save player names in replay
 
 Save PNG copy
 == Сохранить копию PNG
-
-Save power by lowering update rate
-== Экономия энергии за счёт снижения частоты обновления
-
-Save power by lowering update rate (higher input latency)
-== Экономия энергии за счёт снижения частоты обновления (более высокая задержка ввода)
 
 Save replay of best time per game
 == Сохранять запись лучшего времени за игру
@@ -13379,8 +13379,8 @@ Sets one of the two rescue modes (auto or manual). Prints current mode if no arg
 Sets player and dummy name, clan and identity information.
 == Задаёт имя игрока и дамми, клан и сведения об идентичности.
 
-Sets the client update rate, whether the main menu is skipped, and opens the folders for settings, saves and themes.
-== Задаёт частоту обновления клиента, пропуск главного меню, а также открывает папки настроек, сохранений и тем.
+Sets the client update rate to 480 Hz (0 = unlimited)
+== Устанавливает частоту обновления клиента на 480 Гц (0 = без ограничения)
 
 Sets the position, size and text style of the status bar.
 == Задаёт положение, размер и стиль текста строки состояния.
@@ -16028,6 +16028,9 @@ The server rejected the map upload.
 The two keys that cast your vote: one for yes and one for no.
 == Две клавиши для голосования: одна за, другая против.
 
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
+== Ограничения частоты обновлений и кадров перенесены на страницу графики: они относятся к настройкам рендеринга, а не сюда.
+
 The watermarked screenshot was saved next to the original
 == Снимок с водяным знаком сохранён рядом с оригиналом
 
@@ -16222,6 +16225,9 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
 == Включите «Показывать других», чтобы рисовать другие команды полупрозрачно; прозрачность их тени задаётся в зависимой строке ниже, а вид настраивают «Показывать фоновые квадраты» и «Масштаб по умолчанию».
+
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
+== Отметьте «Пропускать главное меню» и используйте «Файл настроек» или «Папка тем», чтобы открыть эти расположения.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Отметьте нужные: показ зажатых клавиш, состояние молота, состояние управления dummy или состояние копии dummy.
@@ -17117,6 +17123,9 @@ Unknown status
 Unknown title style
 == Неизвестный стиль титула
 
+Unlimited
+== Без ограничения
+
 Unload the rank ghost
 == Выгрузить ghost ранга
 
@@ -17200,9 +17209,6 @@ Update notice
 
 Update or add a specific war group
 == Обновить или добавить конкретную вражескую группу
-
-Update Rate
-== Частота обновления
 
 Update ready to install
 == Обновление готово к установке
@@ -17932,6 +17938,9 @@ Whether players see all tees by default
 
 Whether players see others by default (own team = 2)
 == Видят ли игроки других по умолчанию (своя команда = 2)
+
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
+== Пропуск главного меню, метки карт сообщества, отчёты о сбоях при запуске и доступ к папкам настроек, сохранений и тем.
 
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 == Управлять дамми одновременно (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
