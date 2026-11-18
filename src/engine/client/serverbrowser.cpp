@@ -1846,15 +1846,15 @@ void CServerBrowser::Update()
 	const bool HttpRefreshFinished = m_RefreshingHttp && !m_pHttp->IsRefreshing();
 	if(m_ServerlistType != TYPE_LAN && (m_CommunityListDirty || m_HttpUpdateFailed || HttpRefreshFinished || HttpListChanged))
 	{
-		if(m_HttpUpdateFailed && UpdateNow() < m_HttpUpdateRetryAt)
-			return;
-		if(TryUpdateFromHttp())
+		const bool CanRebuild = !m_HttpUpdateFailed || UpdateNow() >= m_HttpUpdateRetryAt;
+		if(CanRebuild && TryUpdateFromHttp())
 		{
 			if(HttpRefreshFinished || HttpListChanged)
 				m_RefreshingHttp = false;
 			m_HttpRevision = HttpRevision;
+			return;
 		}
-		return;
+		// 重建失败或等待重试时，继续处理已发布列表的查询和排序。
 	}
 
 	{
