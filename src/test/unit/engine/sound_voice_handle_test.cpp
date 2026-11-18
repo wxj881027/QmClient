@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdlib>
+#include <limits>
 
 // 只准备内存 PCM 和混音缓冲；播放、回收、控制和混音均使用生产实现。
 class CSoundVoiceTestAccess
@@ -37,6 +38,13 @@ public:
 		pSample->m_LoopStart = 0;
 		pSample->m_PausedAt = 0;
 		return pSample->m_Index;
+	}
+
+	static int CurrentFrame(CSound &Sound, ISound::CVoiceHandle Voice)
+	{
+		// 秒数接口使用 float，无法区分长音频末端相邻的两帧。
+		const CLockScope LockScope(Sound.m_SoundLock);
+		return Sound.m_aVoices[Voice.Id()].m_Tick;
 	}
 
 	static void FreeBuffer(CSound &Sound)
@@ -311,6 +319,46 @@ TEST_F(SoundVoiceHandle, LoopingSeekToEndResumesOnTheFollowingMix)
 	EXPECT_EQ(Mix(), (std::array<short, 8>{}));
 	EXPECT_TRUE(m_Sound.IsPlaying(m_SampleId));
 	ExpectAudible();
+}
+
+TEST_F(SoundVoiceHandle, LongPreviewSeekEndsAtTheExactFrame)
+{
+	constexpr int NumFrames = (1 << 24) + 3;
+	ASSERT_NO_FATAL_FAILURE(PrepareTiming(NumFrames, 0, ISound::FLAG_PREVIEW));
+	m_Sound.SetSampleCurrentTime(m_SampleId, 1.0f);
+	EXPECT_EQ(CSoundVoiceTestAccess::CurrentFrame(m_Sound, m_Old), NumFrames);
+}
+
+TEST_F(SoundVoiceHandle, PausedLongPreviewResumesAtTheExactEnd)
+{
+	constexpr int NumFrames = (1 << 24) + 1;
+	ASSERT_NO_FATAL_FAILURE(PrepareTiming(NumFrames, 0, ISound::FLAG_PREVIEW));
+	m_Sound.Pause(m_SampleId);
+	m_Sound.SetSampleCurrentTime(m_SampleId, 1.0f);
+
+	const auto Resumed = m_Sound.Play(0, m_SampleId, ISound::FLAG_PREVIEW, 1.0f);
+	ASSERT_TRUE(Resumed.IsValid());
+	EXPECT_EQ(CSoundVoiceTestAccess::CurrentFrame(m_Sound, Resumed), NumFrames);
+}
+
+TEST_F(SoundVoiceHandle, PreviewSeekClampsFiniteFractionsToTheSample)
+{
+	ASSERT_TRUE(m_Sound.Play(0, m_SampleId, ISound::FLAG_PREVIEW, 1.0f).IsValid());
+	m_Sound.SetSampleCurrentTime(m_SampleId, -0.5f);
+	EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), 0.0f);
+	m_Sound.SetSampleCurrentTime(m_SampleId, 1.5f);
+	EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), m_Sound.GetSampleTotalTime(m_SampleId));
+}
+
+TEST_F(SoundVoiceHandle, NonFinitePreviewSeekPreservesTheCurrentPosition)
+{
+	ASSERT_TRUE(m_Sound.Play(0, m_SampleId, ISound::FLAG_PREVIEW, 1.0f).IsValid());
+	m_Sound.SetSampleCurrentTime(m_SampleId, 0.5f);
+	const float Before = m_Sound.GetSampleCurrentTime(m_SampleId);
+	m_Sound.SetSampleCurrentTime(m_SampleId, std::numeric_limits<float>::quiet_NaN());
+	EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), Before);
+	m_Sound.SetSampleCurrentTime(m_SampleId, std::numeric_limits<float>::infinity());
+	EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), Before);
 }
 
 TEST_F(SoundVoiceHandle, TimeOffsetWithinThresholdKeepsTheCurrentTick)

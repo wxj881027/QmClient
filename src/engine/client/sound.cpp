@@ -902,16 +902,21 @@ void CSound::SetSampleCurrentTime(int SampleId, float Time)
 	const CLockScope LockScope(m_SoundLock);
 	dbg_assert(m_aSamples[SampleId].IsLoaded(), "Sample not loaded: %d", SampleId);
 	CSample *pSample = &m_aSamples[SampleId];
+	if(!std::isfinite(Time))
+		return;
+
+	// 编辑器传入播放进度比例。保留总帧数的精度，拖到末尾时才能恰好停在最后一帧之后。
+	const int Tick = static_cast<int>(pSample->m_NumFrames * std::clamp(static_cast<double>(Time), 0.0, 1.0));
 	for(auto &Voice : m_aVoices)
 	{
 		if(Voice.m_pSample == pSample)
 		{
-			Voice.m_Tick = pSample->m_NumFrames * Time;
+			Voice.m_Tick = Tick;
 			return;
 		}
 	}
 
-	pSample->m_PausedAt = pSample->m_NumFrames * Time;
+	pSample->m_PausedAt = Tick;
 }
 
 void CSound::SetChannel(int ChannelId, float Vol, float Pan)
