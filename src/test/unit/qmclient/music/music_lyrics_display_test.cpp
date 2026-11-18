@@ -47,6 +47,17 @@ TEST(QmLyricsDisplay, MissingOriginalDoesNotDisplayAnUnpairedTranslation)
 	EXPECT_EQ(DisplayRows("", "old translation", 2).m_Count, 0);
 }
 
+TEST(QmLyricsDisplay, BlankLinesDoNotCreateTextContainers)
+{
+	for(const char *pText : {" ", "\t\t", "　", " \t　"})
+	{
+		SCOPED_TRACE(pText);
+		EXPECT_EQ(DisplayRows(pText, "", 0).m_Count, 0);
+		EXPECT_EQ(DisplayRows(pText, "translation", 1).m_Count, 0);
+		EXPECT_EQ(DisplayRows("normal lyric", pText, 2).m_Count, 1);
+	}
+}
+
 TEST(QmLyricsDisplay, MissingTranslationIndexReturnsEmpty)
 {
 	SLyricsData Data;

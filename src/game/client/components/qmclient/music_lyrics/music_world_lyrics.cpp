@@ -12,6 +12,7 @@ namespace QmMusicLyrics
 				TextRender.DeleteTextContainer(Row.m_Container);
 				Row.m_Text.clear();
 				Row.m_Initialized = false;
+				Row.m_CreationFailed = false;
 			}
 	}
 
@@ -42,11 +43,16 @@ namespace QmMusicLyrics
 						TextRender.DeleteTextContainer(Cache.m_Container);
 						Cache.m_Text.clear();
 						Cache.m_Initialized = false;
+						Cache.m_CreationFailed = false;
 					}
 					continue;
 				}
 				const int VisibleCharacters = WorldLyricVisibleCharacters(Line, Index);
-				if(!Cache.m_Initialized || Cache.m_Text != Line.m_aRows[Index] || Cache.m_VisibleCharacters != VisibleCharacters || Cache.m_AtlasRevision != TextRender.GlyphAtlasRevision())
+				const uint64_t AtlasRevision = TextRender.GlyphAtlasRevision();
+				const bool InputsChanged = Cache.m_Text != Line.m_aRows[Index] || Cache.m_VisibleCharacters != VisibleCharacters || Cache.m_AtlasRevision != AtlasRevision;
+				if(Cache.m_CreationFailed && !InputsChanged)
+					continue;
+				if(!Cache.m_Initialized || InputsChanged)
 				{
 					TextRender.DeleteTextContainer(Cache.m_Container);
 					// 使用固定烘焙密度，缩放镜头只改变投影，不逐帧重建文字。
@@ -63,11 +69,21 @@ namespace QmMusicLyrics
 					}
 					Cache.m_VisibleCharacters = VisibleCharacters;
 					Cache.m_Text = Line.m_aRows[Index];
-					TextRender.CreateTextContainer(Cache.m_Container, &Cursor, Cache.m_Text.c_str());
+					if(!TextRender.CreateTextContainer(Cache.m_Container, &Cursor, Cache.m_Text.c_str()))
+					{
+						// 纯空白、无可绘制字形或容器预算不足：明确跳过该行，
+						// 不把零尺寸状态标成已初始化。
+						Cache.m_Size = vec2(0.0f, 0.0f);
+						Cache.m_AtlasRevision = AtlasRevision;
+						Cache.m_Initialized = false;
+						Cache.m_CreationFailed = true;
+						continue;
+					}
 					const auto Box = TextRender.GetBoundingBoxTextContainer(Cache.m_Container);
 					Cache.m_Size = vec2(Box.m_W, Box.m_H);
-					Cache.m_AtlasRevision = TextRender.GlyphAtlasRevision();
+					Cache.m_AtlasRevision = AtlasRevision;
 					Cache.m_Initialized = true;
+					Cache.m_CreationFailed = false;
 				}
 				Height += Cache.m_Size.y + 4.0f;
 				Width = std::max(Width, Cache.m_Size.x);
@@ -89,6 +105,8 @@ namespace QmMusicLyrics
 			for(int Index = 0; Index < Line.m_RowCount; ++Index)
 			{
 				const auto &Cache = m_aaRows[Slot][Index];
+				if(!Cache.m_Initialized || Cache.m_CreationFailed)
+					continue;
 				RenderTools.RenderTextContainerWithEffects(Cache.m_Container, Style, Visual.m_Position.x - Cache.m_Size.x * 0.5f, Y);
 				Y += Cache.m_Size.y + 4.0f;
 			}
