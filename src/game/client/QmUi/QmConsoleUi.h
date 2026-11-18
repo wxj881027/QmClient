@@ -40,8 +40,22 @@ namespace QmConsoleUi
 	{
 		const float Available = std::max(0.0f, Width - 20.0f);
 		const bool Split = TargetFilterWidth > 0.0f && TargetActionWidth > 0.0f && TargetFilterWidth + TargetActionWidth + 10.0f > Available;
-		const float FilterScale = CurrentFilterWidth > 0.0f ? std::min(1.0f, Available / CurrentFilterWidth) : 1.0f;
-		const float ActionScale = CurrentActionWidth > 0.0f ? std::min(1.0f, Available / CurrentActionWidth) : 1.0f;
+		float FilterScale = CurrentFilterWidth > 0.0f ? std::min(1.0f, Available / CurrentFilterWidth) : 1.0f;
+		float ActionScale = CurrentActionWidth > 0.0f ? std::min(1.0f, Available / CurrentActionWidth) : 1.0f;
+		// 两组交叉淡变时不能各自只按 Available 缩放：旧筛选还没退完、新动作已经
+		// 进场，两边都「单独放得下」，叠在一起却会互相覆盖。总分超宽时共用同一
+		// 比例，并给相邻两组留出固定缝；目标集合仍决定是否换行，顶栏高度不跳。
+		const float CurrentTotal = CurrentFilterWidth + CurrentActionWidth;
+		if(!Split && CurrentTotal > 0.0f)
+		{
+			const float GroupGap = CurrentFilterWidth > 0.001f && CurrentActionWidth > 0.001f ? 10.0f : 0.0f;
+			if(CurrentTotal > Available)
+			{
+				const float SharedScale = std::clamp((Available - GroupGap) / CurrentTotal, 0.0f, 1.0f);
+				FilterScale = std::min(FilterScale, SharedScale);
+				ActionScale = std::min(ActionScale, SharedScale);
+			}
+		}
 		return {Split, RowHeight * (Split ? 2.0f : 1.0f), FilterScale, ActionScale,
 			std::max(10.0f, Width - 10.0f - CurrentActionWidth * ActionScale)};
 	}

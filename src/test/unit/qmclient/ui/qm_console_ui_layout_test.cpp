@@ -78,6 +78,19 @@ TEST(QmConsoleUiLayout, AnimatedToolbarDoesNotReserveAHiddenFilterRow)
 	EXPECT_FLOAT_EQ(Layout.m_Height, 26.0f);
 }
 
+TEST(QmConsoleUiLayout, AnimatedCrossfadeKeepsFadingGroupsFromOverlapping)
+{
+	// 筛选已退出目标集合但仍在淡出，导出动作同时进场：两组都单独放得下，
+	// 但按旧逻辑会叠在同一段横向空间里。
+	const auto Layout = QmConsoleUi::LayoutToolbarAnimated(500.0f, 0.0f, 320.0f, 220.0f, 300.0f);
+	EXPECT_FALSE(Layout.m_SplitRows);
+	const float FilterRight = 10.0f + 220.0f * Layout.m_FilterScale;
+	const float ActionRight = Layout.m_ActionX + 300.0f * Layout.m_ActionScale;
+	EXPECT_GE(Layout.m_ActionX, FilterRight + 10.0f - 0.001f);
+	EXPECT_LE(FilterRight, 490.0f);
+	EXPECT_LE(ActionRight, 490.0f);
+}
+
 TEST(QmConsoleUiLayout, ToolbarFlowKeepsOneFixedGapAcrossHiddenSlots)
 {
 	const std::array<float, 3> aWidths = {40.0f, 55.0f, 70.0f};
