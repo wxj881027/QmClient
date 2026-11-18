@@ -4,15 +4,29 @@
 
 #include <gtest/gtest.h>
 #include <test/support/info_download_response.h>
+#include <test/support/job_wait.h>
 #include <test/test.h>
 
 #include <chrono>
 #include <memory>
 #include <string>
 #include <thread>
+#include <utility>
 
 namespace
 {
+	class CCommunityCacheJobEngine final : public IEngine
+	{
+		CJobPool m_Pool;
+
+	public:
+		void Init() override { m_Pool.Init(1); }
+		void AddJob(std::shared_ptr<IJob> pJob) override { m_Pool.Add(std::move(pJob)); }
+		bool TryAddJob(std::shared_ptr<IJob> pJob) override { return m_Pool.TryAdd(std::move(pJob)); }
+		void ShutdownJobs() override { m_Pool.Shutdown(); }
+		void SetAdditionalLogger(std::shared_ptr<ILogger> &&) override {}
+	};
+
 	class QmCustomCommunityCacheDownload : public ::testing::Test
 	{
 	protected:
@@ -125,6 +139,26 @@ TEST_F(QmCustomCommunityCacheDownload, FailedRenameDoesNotPublishThePreparedInfo
 	EXPECT_EQ(pJob->TakeInfo(), nullptr);
 	EXPECT_EQ(pRequest->State(), EHttpState::ERROR);
 	EXPECT_EQ(Cached(), m_Old);
+}
+
+TEST_F(QmCustomCommunityCacheDownload, ClosedPoolDiscardsTheCandidateAndNextRequestCanPublish)
+{
+	CCommunityCacheJobEngine Engine;
+	auto pRequest = Request();
+	ASSERT_NO_FATAL_FAILURE(pRequest->Finish(m_New));
+	const std::string TemporaryPath = pRequest->TemporaryPath();
+	EXPECT_EQ(CQmCustomCommunityCacheJob::TryQueue(Engine, m_pStorage.get(), std::move(pRequest)), nullptr);
+	EXPECT_FALSE(fs_is_file(TemporaryPath.c_str()));
+	EXPECT_EQ(Cached(), m_Old);
+
+	Engine.Init();
+	auto pRetry = Request();
+	ASSERT_NO_FATAL_FAILURE(pRetry->Finish(m_New));
+	auto pJob = CQmCustomCommunityCacheJob::TryQueue(Engine, m_pStorage.get(), std::move(pRetry));
+	ASSERT_NE(pJob, nullptr);
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+	ASSERT_NE(pJob->TakeInfo(), nullptr);
+	EXPECT_EQ(Cached(), m_New);
 }
 
 TEST_F(QmCustomCommunityCacheDownload, CancelBeforeQueueingCannotPublishTheResponse)
