@@ -79,7 +79,7 @@ def module_name_for_source(source: Path | None) -> str:
     if source is None:
         return "misc"
 
-    normalized = source.as_posix()
+    normalized = "/" + source.as_posix().lstrip("/")
     if normalized.endswith(("/components/qmclient/map_tags.cpp", "/QmUi/MapTagsPanel.cpp")):
         return "map_tags"
     if normalized.endswith("src/engine/shared/config_variables.h"):
@@ -114,7 +114,12 @@ def module_name_for_source(source: Path | None) -> str:
         return "card_wiki"
     if normalized.endswith("src/game/client/QmUi/QmWikiDocs.cpp"):
         return "wiki_docs"
-    if normalized.endswith("src/game/client/QmUi/QmCardCatalogGraphics.cpp"):
+    if normalized.endswith(
+        (
+            "/QmUi/cards/QmCardCatalogGraphics.cpp",
+            "/QmUi/cards/QmCardSearch/QmCardCatalogGraphics.inc",
+        )
+    ):
         return "qmclient"
     return "misc"
 
