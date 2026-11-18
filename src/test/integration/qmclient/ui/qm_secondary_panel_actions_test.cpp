@@ -580,6 +580,16 @@ TEST_F(QmSecondaryPanelActions, RightHalfRejectsKeyboardBeforeGrowthPassesHalf)
 	EXPECT_EQ(Draw(false, 0.3f), -1);
 }
 
+TEST_F(QmSecondaryPanelActions, RightHalfPressBeforeGrowthCannotActivateAfterItExpands)
+{
+	Frame({10, 10}, false);
+	const vec2 RightSide{250, 52};
+	Frame(RightSide, true);
+	EXPECT_EQ(Draw(false, 0.3f), -1);
+	Frame(RightSide, false);
+	EXPECT_EQ(Draw(false, 0.7f), -1);
+}
+
 TEST_F(QmSecondaryPanelActions, BecomingDisabledMovesFocusToUsableHalf)
 {
 	Frame({10, 10}, false);

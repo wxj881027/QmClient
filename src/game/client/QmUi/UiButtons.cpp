@@ -203,7 +203,7 @@ namespace ui_widget
 
 	namespace
 	{
-		bool DoStyledButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled, EUiButtonRole Role, const int Corners = IGraphics::CORNER_ALL, const bool DrawBorder = true, const EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL, const CUIRect *pSurfaceRect = nullptr, bool Selected = false, const ColorRGBA *pSurfaceColor = nullptr, bool SuppressGeometryAnimation = false)
+		bool DoStyledButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled, EUiButtonRole Role, const int Corners = IGraphics::CORNER_ALL, const bool DrawBorder = true, const EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL, const CUIRect *pSurfaceRect = nullptr, bool Selected = false, const ColorRGBA *pSurfaceColor = nullptr, bool SuppressGeometryAnimation = false, bool Interactive = true)
 		{
 			if(Ctx.m_pUi == nullptr || pBtn == nullptr)
 				return false;
@@ -238,7 +238,7 @@ namespace ui_widget
 				Ctx.m_pUi->DoLabel(&Rect, pText, ButtonBodySize, TEXTALIGN_MC, Props);
 			if(Disabled && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->CheckActiveItem(pBtn))
 				Ctx.m_pUi->SetActiveItem(nullptr);
-			const bool Clicked = !Disabled && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pBtn, 0, &Rect, BUTTONFLAG_LEFT) != 0;
+			const bool Clicked = Interactive && !Disabled && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pBtn, 0, &Rect, BUTTONFLAG_LEFT) != 0;
 			if(Clicked)
 				Ctx.m_pUi->SetKeyboardFocus(pBtn);
 			return Clicked;
@@ -301,12 +301,18 @@ namespace ui_widget
 		if(HasRight)
 		{
 			Ctx.m_pUi->ClipEnable(&SurfaceRight);
-			RightClicked = DoStyledButton(Ctx, pRight, "", Right, RightDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &SurfaceRect, false, Options.m_RightSurface ? &*Options.m_RightSurface : nullptr, true);
+			RightClicked = DoStyledButton(Ctx, pRight, "", Right, RightDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &SurfaceRect, false, Options.m_RightSurface ? &*Options.m_RightSurface : nullptr, true, RightInteractive);
 			Ctx.m_pUi->ClipDisable();
 			// 生长前半段右段还没成形，点上去多半是想点左段；进度过半才放行点击，
 			// 避免启动服务器的瞬间误触「停止」。
 			if(!RightInteractive)
+			{
 				RightClicked = false;
+				if(Ctx.m_pUi->CheckActiveItem(pRight))
+					Ctx.m_pUi->SetActiveItem(nullptr);
+				if(Ctx.m_pUi->KeyboardFocusItem() == pRight)
+					Ctx.m_pUi->SetKeyboardFocus(nullptr);
+			}
 		}
 		// 中缝不是一上来就整条竖线：随进度从中心往上下长，配合右段的弹性扫入更像「长出来」。
 		const float GrowInset = (1.0f - std::clamp(Progress, 0.0f, 1.0f)) * SurfaceRect.h * 0.34f;
