@@ -41731,3 +41731,19 @@ brazilian_portuguese = "O servidor de títulos ainda não oferece suporte a tít
 portuguese = "O servidor de títulos ainda não suporta títulos em texto"
 turkish = "Unvan sunucusu henüz metin biçimindeki unvanları desteklemiyor"
 polish = "Serwer tytułów jeszcze nie obsługuje tytułów tekstowych"
+
+[[message]]
+key = "Follow remote placements in the collaborative editor"
+[message.translations]
+simplified_chinese = "协作制图时，将视角移到其他协作者新增或替换的放置区域"
+traditional_chinese = "協作製圖時，將視角移到其他協作者新增或替換的放置區域"
+japanese = "共同編集時に、他の編集者が追加または置換した領域へ視点を移動する"
+korean = "공동 지도 편집 중 다른 편집자가 추가하거나 교체한 영역으로 시점을 이동합니다"
+russian = "При совместном редактировании перемещать вид к области, добавленной или заменённой другим участником"
+german = "Beim gemeinsamen Bearbeiten die Ansicht zu dem Bereich bewegen, in dem andere Inhalte hinzufügen oder ersetzen"
+spanish = "Al editar mapas en colaboración, mover la vista a la zona donde otros añaden o reemplazan contenido"
+french = "Lors de l’édition collaborative, déplacer la vue vers la zone où les autres ajoutent ou remplacent du contenu"
+brazilian_portuguese = "Na edição colaborativa, mover a visão para a área onde outros adicionam ou substituem conteúdo"
+portuguese = "Na edição colaborativa, mover a vista para a área onde outros adicionam ou substituem conteúdo"
+turkish = "Ortak harita düzenlemede görünümü diğer katılımcıların içerik eklediği veya değiştirdiği alana taşı"
+polish = "Podczas wspólnej edycji mapy przenoś widok do obszaru, w którym inni dodają lub zastępują elementy"

@@ -397,7 +397,7 @@ CUi::EPopupMenuFunctionResult CEditor::PopupCollab(void *pContext, CUIRect View,
 
 	View.HSplitTop(6.0f, nullptr, &View);
 	View.HSplitTop(22.0f, &Slot, &View);
-	if(pEditor->DoButton_Editor(&g_Config.m_QmEditorCollabFollowPlacement, Localize("Follow remote placements", "Editor"), g_Config.m_QmEditorCollabFollowPlacement, &Slot, BUTTONFLAG_LEFT, Localize("Follow remote placements in the collaborative editor")))
+	if(pEditor->DoButton_Editor(&g_Config.m_QmEditorCollabFollowPlacement, Localize("Follow remote placements", "Editor"), g_Config.m_QmEditorCollabFollowPlacement, &Slot, BUTTONFLAG_LEFT, Localize("Follow remote placements in the collaborative editor", "Editor")))
 		g_Config.m_QmEditorCollabFollowPlacement ^= 1;
 
 	View.HSplitTop(8.0f, nullptr, &View);

@@ -5951,6 +5951,9 @@ Follow main island width
 Follow option color
 == 追跡の色
 
+Follow remote placements in the collaborative editor
+== 共同編集時に、他の編集者が追加または置換した領域へ視点を移動する
+
 Follow server
 == サーバー間追跡
 

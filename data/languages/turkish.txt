@@ -5951,6 +5951,9 @@ Follow main island width
 Follow option color
 == Takip rengi
 
+Follow remote placements in the collaborative editor
+== Ortak harita düzenlemede görünümü diğer katılımcıların içerik eklediği veya değiştirdiği alana taşı
+
 Follow server
 == Sunucular arası takip
 

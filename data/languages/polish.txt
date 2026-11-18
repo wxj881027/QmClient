@@ -5951,6 +5951,9 @@ Follow main island width
 Follow option color
 == Kolor podążania
 
+Follow remote placements in the collaborative editor
+== Podczas wspólnej edycji mapy przenoś widok do obszaru, w którym inni dodają lub zastępują elementy
+
 Follow server
 == Podążaj między serwerami
 

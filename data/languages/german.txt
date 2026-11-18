@@ -5951,6 +5951,9 @@ Follow main island width
 Follow option color
 == Farbe des Folgens
 
+Follow remote placements in the collaborative editor
+== Beim gemeinsamen Bearbeiten die Ansicht zu dem Bereich bewegen, in dem andere Inhalte hinzufügen oder ersetzen
+
 Follow server
 == Serverübergreifend folgen
 

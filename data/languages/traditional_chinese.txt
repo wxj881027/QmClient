@@ -5951,6 +5951,9 @@ Follow main island width
 Follow option color
 == 跟隨顏色
 
+Follow remote placements in the collaborative editor
+== 協作製圖時，將視角移到其他協作者新增或替換的放置區域
+
 Follow server
 == 跨服跟隨
 

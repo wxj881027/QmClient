@@ -19170,6 +19170,18 @@ Relative aim
 == %d秒
 
 [Editor]
+%s (default: %d)
+== %s（默认值：%d）
+
+[Editor]
+%s (default: %d, min: %d)
+== %s（默认值：%d，最小值：%d）
+
+[Editor]
+%s (default: %d, min: %d, max: %d)
+== %s（默认值：%d，最小值：%d，最大值：%d）
+
+[Editor]
 %s i[value]
 == %s i[值]
 
@@ -20788,6 +20800,10 @@ folder
 [Editor]
 Follow remote placements
 == 跟随其他协作者的放置
+
+[Editor]
+Follow remote placements in the collaborative editor
+== 协作制图时，将视角移到其他协作者新增或替换的放置区域
 
 [Editor]
 Font typer

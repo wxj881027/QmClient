@@ -6114,6 +6114,7 @@ simplified_chinese = "跟随其他协作者的放置"
 
 [[message]]
 key = "Follow remote placements in the collaborative editor"
+context = "Editor"
 [message.translations]
 simplified_chinese = "协作制图时，将视角移到其他协作者新增或替换的放置区域"
 traditional_chinese = "協作製圖時，將視角移到其他協作者新增或替換的放置區域"
@@ -6127,6 +6128,24 @@ brazilian_portuguese = "Na edição colaborativa, mover a visão para a área on
 portuguese = "Na edição colaborativa, mover a vista para a área onde outros adicionam ou substituem conteúdo"
 turkish = "Ortak harita düzenlemede görünümü diğer katılımcıların içerik eklediği veya değiştirdiği alana taşı"
 polish = "Podczas wspólnej edycji mapy przenoś widok do obszaru, w którym inni dodają lub zastępują elementy"
+
+[[message]]
+key = "%s (default: %d)"
+context = "Editor"
+[message.translations]
+simplified_chinese = "%s（默认值：%d）"
+
+[[message]]
+key = "%s (default: %d, min: %d)"
+context = "Editor"
+[message.translations]
+simplified_chinese = "%s（默认值：%d，最小值：%d）"
+
+[[message]]
+key = "%s (default: %d, min: %d, max: %d)"
+context = "Editor"
+[message.translations]
+simplified_chinese = "%s（默认值：%d，最小值：%d，最大值：%d）"
 
 [[message]]
 key = "[Ctrl+Y] Redo the last undone action."

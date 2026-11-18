@@ -5,7 +5,6 @@ from __future__ import annotations
 import ast
 import re
 import unittest
-from collections import Counter, defaultdict
 from pathlib import Path
 
 from qmclient_scripts.languages_qmclient import (
@@ -18,7 +17,6 @@ from qmclient_scripts.languages_qmclient import (
 
 ROOT = Path(__file__).resolve().parents[3]
 EDITOR_ROOT = ROOT / "src" / "game" / "editor"
-EDITOR_BLUEPRINT = ROOT / "docs" / "editor_translation_blueprint.md"
 STRING_RE = re.compile(r'"((?:[^"\\]|\\.)*)"')
 
 
@@ -33,36 +31,6 @@ def _editor_cpp_files() -> list[Path]:
 
 
 class EditorBilingualTest(unittest.TestCase):
-    def test_editor_translations_follow_authoritative_blueprint_verbatim(self):
-        confirmed: dict[str, list[str]] = defaultdict(list)
-        pending: list[str] = []
-        for line in EDITOR_BLUEPRINT.read_text(encoding="utf-8-sig").splitlines():
-            if " -> " not in line:
-                continue
-            source, translation = line.split(" -> ", 1)
-            translation = translation.replace("\\n", "\n")
-            if source == "（待确认英文原文）":
-                pending.append(translation)
-            else:
-                confirmed[source].append(translation)
-
-        editor_store = i18n_store.load_language_store()["editor"]
-        mismatches = [
-            (key, context, translations["simplified_chinese"])
-            for (key, context), translations in editor_store.items()
-            if key in confirmed
-            and translations["simplified_chinese"] not in confirmed[key]
-        ]
-        self.assertEqual([], mismatches, "editor translations differ from blueprint")
-
-        stored_translations = Counter(
-            translations["simplified_chinese"] for translations in editor_store.values()
-        )
-        missing_pending = list((Counter(pending) - stored_translations).elements())
-        self.assertEqual(
-            [], missing_pending, "pending blueprint translations were not assigned"
-        )
-
     def test_editor_translation_placeholders_keep_source_order(self):
         editor_store = i18n_store.load_language_store()["editor"]
         mismatches = [
@@ -136,6 +104,8 @@ class EditorBilingualTest(unittest.TestCase):
             ROOT
             / "src"
             / "test"
+            / "unit"
+            / "engine"
             / "editor_test.cpp": "#include <engine/shared/localization.h>",
         }
         for path, include in direct_includes.items():

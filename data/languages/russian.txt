@@ -5951,6 +5951,9 @@ Follow main island width
 Follow option color
 == Цвет следования
 
+Follow remote placements in the collaborative editor
+== При совместном редактировании перемещать вид к области, добавленной или заменённой другим участником
+
 Follow server
 == Следовать между серверами
 
