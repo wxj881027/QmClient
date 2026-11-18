@@ -101,6 +101,8 @@ namespace
 	struct SMapPreviewEntry
 	{
 		char m_aMapName[MAX_MAP_LENGTH] = {0};
+		char m_aCurrentMapPath[IO_MAX_PATH_LENGTH] = {};
+		bool m_Sixup = false;
 		std::unique_ptr<CMap> m_pMap;
 		std::unique_ptr<CLayers> m_pLayers;
 		std::unique_ptr<CMapPreviewImages> m_pImages;
@@ -187,18 +189,23 @@ public:
 	}
 
 	// 返回命中的缓存项；没有可回收槽位时返回空，由画布显示初始化占位。
-	SMapPreviewEntry *Acquire(const char *pMapName, float NowTime, IStorage *pStorage, CGameClient *pGameClient)
+	SMapPreviewEntry *Acquire(const char *pMapName, float NowTime, CGameClient *pGameClient)
 	{
+		const auto *pClient = pGameClient->Client();
+		const char *pCurrentMapPath = str_comp(pClient->GetCurrentMap(), pMapName) == 0 ? pClient->GetCurrentMapPath() : "";
+		const bool Sixup = pClient->IsSixup();
 		if(auto *pEntry = m_Entries.Find(pMapName))
 		{
-			if(pEntry->m_Retiring || pEntry->m_GraphicsResetVersion != m_pGraphics->GraphicsResourcesResetVersion())
+			// 同名地图可能对应不同文件，外部图集也随协议模式变化。
+			const bool SourceChanged = str_comp(pEntry->m_aCurrentMapPath, pCurrentMapPath) != 0 || pEntry->m_Sixup != Sixup;
+			if(pEntry->m_Retiring || SourceChanged || pEntry->m_GraphicsResetVersion != m_pGraphics->GraphicsResourcesResetVersion())
 			{
 				if(!m_Entries.Release(*pEntry))
 					return pEntry;
 				*pEntry = SMapPreviewEntry{};
 				str_copy(pEntry->m_aMapName, pMapName);
 				pEntry->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
-				LoadEntry(*pEntry, pStorage, pGameClient, NowTime);
+				LoadEntry(*pEntry, pGameClient, pCurrentMapPath, Sixup, NowTime);
 			}
 			pEntry->m_LayerPreparation.Retry(pEntry->m_pRenderer, NowTime, [&] {
 				return CreateRenderer(pGameClient, pEntry->m_pLayers.get(), pEntry->m_pImages.get());
@@ -207,7 +214,7 @@ public:
 			{
 				pEntry->m_RetryAfterTime = NowTime + MAP_PREVIEW_FAILED_RETRY_DELAY;
 				pEntry->m_LoadFailed = false;
-				LoadEntry(*pEntry, pStorage, pGameClient, NowTime);
+				LoadEntry(*pEntry, pGameClient, pCurrentMapPath, Sixup, NowTime);
 				pEntry->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
 			}
 			m_Entries.Touch(*pEntry, NowTime);
@@ -219,7 +226,7 @@ public:
 		return m_Entries.Create([&](SMapPreviewEntry &Entry) {
 			str_copy(Entry.m_aMapName, pMapName);
 			Entry.m_LastUseTime = NowTime;
-			LoadEntry(Entry, pStorage, pGameClient, NowTime);
+			LoadEntry(Entry, pGameClient, pCurrentMapPath, Sixup, NowTime);
 			Entry.m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
 		});
 	}
@@ -296,13 +303,15 @@ private:
 		return pRenderer;
 	}
 
-	void LoadEntry(SMapPreviewEntry &Entry, IStorage *pStorage, CGameClient *pGameClient, float Now) noexcept
+	void LoadEntry(SMapPreviewEntry &Entry, CGameClient *pGameClient, const char *pCurrentMapPath, bool Sixup, float Now) noexcept
 	{
+		str_copy(Entry.m_aCurrentMapPath, pCurrentMapPath);
+		Entry.m_Sixup = Sixup;
 		try
 		{
 			// 先记录下载终态，再提交 worker；不能给早已开始的旧任务补挂新下载身份。
 			const auto ValidationDownload = m_Download.ValidationRequest(Entry.m_aMapName);
-			auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(pStorage, Entry.m_aMapName, str_comp(pGameClient->Client()->GetCurrentMap(), Entry.m_aMapName) == 0 ? pGameClient->Client()->GetCurrentMapPath() : "", pGameClient->Client()->IsSixup());
+			auto pJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(pGameClient->Storage(), Entry.m_aMapName, Entry.m_aCurrentMapPath, Entry.m_Sixup);
 			if(pGameClient->Engine()->TryAddJob(pJob))
 			{
 				Entry.m_pLoadJob = std::move(pJob);
@@ -344,7 +353,7 @@ namespace
 		Preview.Margin(1.0f, &Preview);
 
 		const float Now = pGameClient->Client()->GlobalTime();
-		SMapPreviewEntry *pEntry = pCache->Acquire(pCtx->m_Target.m_aMapName, Now, pGameClient->Storage(), pGameClient);
+		SMapPreviewEntry *pEntry = pCache->Acquire(pCtx->m_Target.m_aMapName, Now, pGameClient);
 		if(CQmMapPreviewCacheEntries<SMapPreviewEntry>::IsInitializing(pEntry) || pEntry->m_LayerPreparation.HasFailed())
 		{
 			pUi->DoLabel(&Preview, Localize("Initializing map layers"), 10.0f, TEXTALIGN_MC);
