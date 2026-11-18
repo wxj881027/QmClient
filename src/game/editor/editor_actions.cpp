@@ -11,6 +11,7 @@
 #include <game/editor/mapitems/layer_quads.h>
 #include <game/editor/mapitems/layer_sounds.h>
 #include <game/editor/mapitems/map.h>
+#include <game/editor/mapitems/sound.h>
 
 static const char *LayerTypeDisplayName(const std::shared_ptr<CLayer> &pLayer)
 {
@@ -1280,6 +1281,8 @@ void CEditorActionAppendMap::Undo()
 	// Delete added sounds
 	while((int)Map()->m_vpSounds.size() > m_PrevInfo.m_Sounds)
 	{
+		if(Editor()->m_ToolbarPreviewSound == Map()->m_vpSounds.back()->m_SoundId)
+			Editor()->m_ToolbarPreviewSound = -1;
 		Map()->m_vpSounds.pop_back();
 	}
 
