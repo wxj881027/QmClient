@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdlib>
+#include <cstring>
 
 namespace
 {
@@ -28,7 +29,7 @@ namespace
 			m_Image.m_Format = Format;
 			m_Image.m_pData = static_cast<uint8_t *>(malloc(m_Image.DataSize()));
 			ASSERT_NE(m_Image.m_pData, nullptr);
-			mem_set(m_Image.m_pData, 255, m_Image.DataSize());
+			std::memset(m_Image.m_pData, 255, m_Image.DataSize());
 			m_Plan.m_Body.m_MaxWidth = 77;
 			m_Plan.m_Feet.m_MaxHeight = 88;
 		}

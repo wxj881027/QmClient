@@ -10,6 +10,7 @@
 #include <engine/storage.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <initializer_list>
 #include <memory>
 #include <new>
@@ -244,7 +245,7 @@ public:
 			throw std::bad_alloc();
 		if(m_OverlongPath && Size > IO_MAX_PATH_LENGTH)
 		{
-			mem_set(pBuffer, 'x', IO_MAX_PATH_LENGTH);
+			std::memset(pBuffer, 'x', IO_MAX_PATH_LENGTH);
 			pBuffer[IO_MAX_PATH_LENGTH] = '\0';
 			return;
 		}
