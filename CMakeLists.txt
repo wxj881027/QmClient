@@ -6921,6 +6921,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/support/prediction_allocation_main.cpp
       src/test/support/allocation_failure_new.cpp
       src/test/support/prediction_allocation_failure.h
+      src/test/unit/qmclient/ui/qm_vote_map_library_menu_failure_test.cpp
       src/test/unit/client/keyword_reply_rules_allocation_test.cpp
       src/test/unit/qmclient/client/qm_map_progress_allocation_test.cpp
       src/test/unit/engine/net_client_allocation_test.cpp
