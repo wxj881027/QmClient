@@ -670,6 +670,10 @@ namespace QmNeteaseBridge
 
 	void CFrontendLyricBridge::Publish(bool Force, bool PositionAnchored)
 	{
+		// 从采集到写入串行执行，避免旧歌曲的 Tick 覆盖新报告。
+		const std::scoped_lock PublishLock(m_PublishMutex);
+		if(m_Stop.load(std::memory_order_acquire))
+			return;
 		QmNeteaseHook::SSnapshotV5 Snapshot{};
 		bool HighPriorityTimelineActive = false;
 		{

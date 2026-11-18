@@ -844,7 +844,8 @@ namespace QmNeteaseCdp
 		if(ParseDebuggingPort(m_pImpl->m_CommandLine, &ExplicitPort))
 			Ports.push_back(ExplicitPort);
 		wchar_t aEnv[16] = {};
-		if(GetEnvironmentVariableW(L"QM_NCM_CDP_PORT", aEnv, (DWORD)std::size(aEnv)) > 0)
+		const DWORD EnvLength = GetEnvironmentVariableW(L"QM_NCM_CDP_PORT", aEnv, (DWORD)std::size(aEnv));
+		if(EnvLength > 0 && EnvLength < std::size(aEnv))
 		{
 			uint16_t EnvPort = 0;
 			if(ParseDebuggingPort(std::wstring(L"--remote-debugging-port=") + aEnv, &EnvPort))

@@ -6,6 +6,8 @@
 #include <charconv>
 #include <cwctype>
 #include <limits>
+#include <memory>
+#include <utility>
 
 namespace QmNeteaseCdp
 {
@@ -174,21 +176,20 @@ namespace QmNeteaseCdp
 				*pError = "target list too large";
 			return false;
 		}
-		json_value *pRoot = json_parse(Json.data(), Json.size());
-		if(pRoot == nullptr)
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(json_parse(Json.data(), Json.size()), json_value_free);
+		if(!pRoot)
 		{
 			if(pError)
 				*pError = "invalid JSON";
 			return false;
 		}
-		const bool IsArray = pRoot->type == json_array;
-		if(!IsArray)
+		if(pRoot->type != json_array)
 		{
-			json_value_free(pRoot);
 			if(pError)
 				*pError = "target list is not an array";
 			return false;
 		}
+		std::vector<SCdpTarget> vTargets;
 		for(unsigned int Index = 0; Index < pRoot->u.array.length; ++Index)
 		{
 			const json_value *pEntry = pRoot->u.array.values[Index];
@@ -208,9 +209,9 @@ namespace QmNeteaseCdp
 			const json_value *pProcessId = ObjectField(pEntry, "processId");
 			if(pProcessId != nullptr && pProcessId->type == json_integer && pProcessId->u.integer > 0 && pProcessId->u.integer <= std::numeric_limits<uint32_t>::max())
 				Target.m_ProcessId = (uint32_t)pProcessId->u.integer;
-			pTargets->push_back(std::move(Target));
+			vTargets.push_back(std::move(Target));
 		}
-		json_value_free(pRoot);
+		*pTargets = std::move(vTargets);
 		if(pTargets->empty() && pError)
 			*pError = "no trusted Orpheus target";
 		return !pTargets->empty();

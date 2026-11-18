@@ -1,6 +1,10 @@
 #include <gtest/gtest.h>
 #include <test/support/qm_netease_bridge_operations.h>
 
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <string>
 
 using NeteaseBridgeTest::COperations;
@@ -13,6 +17,35 @@ namespace
 		Operations.Emit(R"({"kind":"progress","songId":"42","positionMs":1500,"playing":false})");
 		Operations.Emit(R"({"kind":"lyrics","songId":"42","rawLyrics":{"lrc":"[00:01.00]hello\n[00:02.00]world"}})");
 	}
+
+	class CDelayedSongPublication : public COperations
+	{
+		std::mutex m_Mutex;
+		std::condition_variable m_Changed;
+		bool m_NewSongPublished = false;
+
+	public:
+		std::atomic_bool m_OldSongWaiting{false};
+
+		bool PublishSnapshot(QmNeteaseHook::SSnapshotV5 Snapshot) override
+		{
+			if(Snapshot.m_SongId == 42 && (Snapshot.m_Flags & QmNeteaseHook::V5_FLAG_LYRIC_VALID) != 0)
+			{
+				std::unique_lock Lock(m_Mutex);
+				m_OldSongWaiting = true;
+				// 若两次写入并发，让新歌先完成。串行时旧歌在超时后写入。
+				m_Changed.wait_for(Lock, std::chrono::seconds(1), [&] { return m_NewSongPublished; });
+			}
+			const bool Published = COperations::PublishSnapshot(Snapshot);
+			if(Snapshot.m_SongId == 99 && Published)
+			{
+				const std::lock_guard Lock(m_Mutex);
+				m_NewSongPublished = true;
+				m_Changed.notify_one();
+			}
+			return Published;
+		}
+	};
 }
 
 TEST(QmNeteaseBridgeLifecycleIntegration, StartupPublishesValidIdentityAndStopsBeforeClosingMapping)
@@ -50,6 +83,26 @@ TEST(QmNeteaseBridgeLifecycleIntegration, ReportsParserAndTickPublishTheSelected
 	EXPECT_EQ(Snapshot.m_LineStartMs, 1000);
 	EXPECT_EQ(Snapshot.m_LineEndMs, 2000);
 	EXPECT_TRUE(QmNeteaseHook::ValidateSnapshotV5(Snapshot));
+}
+
+TEST(QmNeteaseBridgeLifecycleIntegration, DelayedTickCannotOverwriteNewSong)
+{
+	CDelayedSongPublication Operations;
+	Operations.m_RealThread = true;
+	CFrontendLyricBridge Bridge(Operations);
+	ASSERT_TRUE(Bridge.Start(42, L""));
+	ASSERT_TRUE(Operations.Wait([&] { return Operations.m_Waits >= 1; }));
+	PausedSong(Operations);
+	const uint64_t OldGeneration = Operations.Latest().m_Generation;
+	Operations.Advance();
+	ASSERT_TRUE(Operations.Wait([&] { return Operations.m_OldSongWaiting.load(); }));
+
+	Operations.Emit(R"({"kind":"progress","songId":"99","positionMs":100,"playing":false})");
+	ASSERT_TRUE(Operations.Wait([&] { return Operations.m_Waits >= 2; }));
+	const auto Snapshot = Operations.Latest();
+	EXPECT_EQ(Snapshot.m_SongId, 99U);
+	EXPECT_GT(Snapshot.m_Generation, OldGeneration);
+	EXPECT_EQ(Snapshot.m_PositionMs, 100);
 }
 
 TEST(QmNeteaseBridgeLifecycleIntegration, MalformedReportKeepsThePreviouslyPublishedSong)

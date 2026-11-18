@@ -8,26 +8,27 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <utility>
 
 // 检测任务只持有采样函数和结果；组件释放后也无需回调或等待组件。
 class CQmMusicAppScanJob : public IJob
 {
-	std::function<uint64_t()> m_Scan;
-	uint64_t m_RunningMask = 0;
+	std::function<std::optional<uint64_t>()> m_Scan;
+	std::optional<uint64_t> m_RunningMask;
 
 	void Run() override { m_RunningMask = m_Scan(); }
 
 public:
-	explicit CQmMusicAppScanJob(std::function<uint64_t()> Scan) :
+	explicit CQmMusicAppScanJob(std::function<std::optional<uint64_t>()> Scan) :
 		m_Scan(std::move(Scan)) {}
 
 	bool TryGetResult(uint64_t &RunningMask) const
 	{
 		// IJob 的完成状态发布结果；不能读取仍在执行中的普通成员。
-		if(State() != STATE_DONE)
+		if(State() != STATE_DONE || !m_RunningMask)
 			return false;
-		RunningMask = m_RunningMask;
+		RunningMask = *m_RunningMask;
 		return true;
 	}
 };

@@ -101,7 +101,6 @@ namespace
 	std::string g_V5MediaKey;
 	std::mutex g_V5Mutex;
 	std::atomic_bool g_HooksInstalled{false};
-	bool g_MinHookInitializedByUs = false;
 	bool g_GdipAddPathStringHookCreated = false;
 	bool g_GdipDrawStringHookCreated = false;
 	HMODULE g_hGdiplusLoadedByUs = nullptr;
@@ -513,26 +512,6 @@ namespace
 		return g_GdipAddPathStringHookCreated || g_GdipDrawStringHookCreated;
 	}
 
-	void RemoveGdipHooks()
-	{
-		if(g_GdipAddPathStringHookCreated && g_pGdipAddPathStringTarget != nullptr)
-		{
-			MH_DisableHook(g_pGdipAddPathStringTarget);
-			MH_RemoveHook(g_pGdipAddPathStringTarget);
-		}
-		if(g_GdipDrawStringHookCreated && g_pGdipDrawStringTarget != nullptr)
-		{
-			MH_DisableHook(g_pGdipDrawStringTarget);
-			MH_RemoveHook(g_pGdipDrawStringTarget);
-		}
-		g_GdipAddPathStringHookCreated = false;
-		g_GdipDrawStringHookCreated = false;
-		g_pGdipAddPathStringTarget = nullptr;
-		g_pGdipDrawStringTarget = nullptr;
-		g_OriginalGdipAddPathString = nullptr;
-		g_OriginalGdipDrawString = nullptr;
-	}
-
 	void ReleaseGdiplus()
 	{
 		if(g_hGdiplusLoadedByUs != nullptr)
@@ -556,15 +535,19 @@ namespace
 			MH_DisableHook(pTarget);
 	}
 
-	bool EnableGdipHooks()
-	{
-		return EnableHookTarget(g_pGdipAddPathStringTarget) && EnableHookTarget(g_pGdipDrawStringTarget);
-	}
-
 	void DisableGdipHooks()
 	{
 		DisableHookTarget(g_pGdipAddPathStringTarget);
 		DisableHookTarget(g_pGdipDrawStringTarget);
+	}
+
+	bool EnableGdipHooks()
+	{
+		if(EnableHookTarget(g_pGdipAddPathStringTarget) && EnableHookTarget(g_pGdipDrawStringTarget))
+			return true;
+		// 回调可能已进入第一个钩子。停用入口后保留跳板，供回调返回和下轮重试。
+		DisableGdipHooks();
+		return false;
 	}
 
 	bool CreateWinmmHook(HMODULE hWinmm, const char *pName, void *pDetour, void **ppOriginal, void **ppTarget)
@@ -659,7 +642,6 @@ namespace
 			ReleaseGdiplus();
 			return false;
 		}
-		g_MinHookInitializedByUs = InitStatus == MH_OK;
 		if(pGdipAddPathString != nullptr)
 		{
 			g_pGdipAddPathStringTarget = reinterpret_cast<void *>(pGdipAddPathString);
@@ -676,21 +658,13 @@ namespace
 		}
 		if(!HasGdipHooks())
 		{
-			if(g_MinHookInitializedByUs)
+			if(InitStatus == MH_OK)
 				MH_Uninitialize();
-			g_MinHookInitializedByUs = false;
 			ReleaseGdiplus();
 			return false;
 		}
 		if(!EnableGdipHooks())
-		{
-			RemoveGdipHooks();
-			if(g_MinHookInitializedByUs)
-				MH_Uninitialize();
-			g_MinHookInitializedByUs = false;
-			ReleaseGdiplus();
 			return false;
-		}
 		InstallWaveOutHooks();
 		EnableWaveOutHooks();
 		g_HooksInstalled.store(true, std::memory_order_release);
@@ -819,15 +793,13 @@ namespace
 			FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 		if(hFile == INVALID_HANDLE_VALUE)
 			return false;
+		const std::unique_ptr<void, decltype(&CloseHandle)> File(hFile, CloseHandle);
 		LARGE_INTEGER FileSize;
 		FILETIME WriteTime{};
-		const bool HasSize = GetFileSizeEx(hFile, &FileSize) != FALSE;
-		const bool HasWriteTime = GetFileTime(hFile, nullptr, nullptr, &WriteTime) != FALSE;
+		const bool HasSize = GetFileSizeEx(File.get(), &FileSize) != FALSE;
+		const bool HasWriteTime = GetFileTime(File.get(), nullptr, nullptr, &WriteTime) != FALSE;
 		if(!HasSize || FileSize.QuadPart <= 0 || (uint64_t)FileSize.QuadPart > LOCAL_METADATA_MAX_BYTES || (uint64_t)FileSize.QuadPart > SIZE_MAX)
-		{
-			CloseHandle(hFile);
 			return false;
-		}
 		std::string Contents((size_t)FileSize.QuadPart, '\0');
 		size_t Offset = 0;
 		bool Success = true;
@@ -835,14 +807,13 @@ namespace
 		{
 			const DWORD Chunk = (DWORD)std::min<size_t>(Contents.size() - Offset, 1024 * 1024);
 			DWORD Read = 0;
-			if(!ReadFile(hFile, Contents.data() + Offset, Chunk, &Read, nullptr) || Read == 0)
+			if(!ReadFile(File.get(), Contents.data() + Offset, Chunk, &Read, nullptr) || Read == 0)
 			{
 				Success = false;
 				break;
 			}
 			Offset += Read;
 		}
-		CloseHandle(hFile);
 		if(!Success || Offset != Contents.size())
 			return false;
 		if(Contents.size() >= 3 && (uint8_t)Contents[0] == 0xEF && (uint8_t)Contents[1] == 0xBB && (uint8_t)Contents[2] == 0xBF)
@@ -1564,6 +1535,7 @@ namespace
 	void CALLBACK CoverFetchWorkCallback(PTP_CALLBACK_INSTANCE, void *)
 	{
 		bool ApartmentInitialized = false;
+		bool OwnsSchedule = true;
 		try
 		{
 			winrt::init_apartment(winrt::apartment_type::multi_threaded);
@@ -1572,7 +1544,11 @@ namespace
 			{
 				SCoverFetchRequest Request;
 				if(!TakeCoverFetchRequest(&Request))
+				{
+					// 队列为空时已释放标记，期间可能提交了新回调。
+					OwnsSchedule = false;
 					break;
+				}
 				if(Request.m_MediaKey.empty() || Request.m_Url.empty())
 					continue;
 				std::vector<uint8_t> PngBytes;
@@ -1585,8 +1561,11 @@ namespace
 		}
 		if(ApartmentInitialized)
 			winrt::uninit_apartment();
-		std::scoped_lock Lock(g_CoverMutex);
-		g_CoverFetchScheduled = false;
+		if(OwnsSchedule)
+		{
+			std::scoped_lock Lock(g_CoverMutex);
+			g_CoverFetchScheduled = false;
+		}
 	}
 
 	void ScheduleCoverUrlCache(const std::string &MediaKey, const std::string &SongId, const std::string &Url)

@@ -380,7 +380,8 @@ void CSpotifyIntegration::PollSongPipeline()
 	// 搜索(未开始或请求完成)。
 	if(m_pImpl->m_pSearchRequest == nullptr)
 	{
-		if(m_pImpl->m_SearchFailed || m_pImpl->m_SearchAttempt > 2)
+		// 曲目已匹配时由歌词流程接手，直到歌曲身份变化才重新搜索。
+		if(!m_pImpl->m_CatalogTrackId.empty() || m_pImpl->m_SearchFailed || m_pImpl->m_SearchAttempt > 2)
 			return;
 		const std::string Term = m_pImpl->m_IdentityTitle + " " + m_pImpl->m_IdentityArtist;
 		std::string Url;

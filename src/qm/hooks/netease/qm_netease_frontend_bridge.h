@@ -76,6 +76,7 @@ namespace QmNeteaseBridge
 		NeteaseLyrics::SRawLyrics m_PendingRawLyrics;
 		bool m_RawLyricsDirty = false;
 		mutable std::mutex m_Mutex;
+		std::mutex m_PublishMutex;
 		uint32_t m_CloudMusicPid = 0;
 		uint64_t m_SongId = 0;
 		uint64_t m_Generation = 0;

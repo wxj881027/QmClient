@@ -16,6 +16,7 @@
 #include <cctype>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -48,8 +49,9 @@ namespace QmNeteaseBootstrap
 			HANDLE hFile = CreateFileW(Path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 			if(hFile == INVALID_HANDLE_VALUE)
 				return false;
+			const std::unique_ptr<void, decltype(&CloseHandle)> File(hFile, CloseHandle);
 			LARGE_INTEGER Size{};
-			bool Success = GetFileSizeEx(hFile, &Size) != FALSE && Size.QuadPart > 0 && (uint64_t)Size.QuadPart <= MAX_BOOTSTRAP_FILE_BYTES;
+			bool Success = GetFileSizeEx(File.get(), &Size) != FALSE && Size.QuadPart > 0 && (uint64_t)Size.QuadPart <= MAX_BOOTSTRAP_FILE_BYTES;
 			if(Success)
 			{
 				pBytes->assign((size_t)Size.QuadPart, '\0');
@@ -58,7 +60,7 @@ namespace QmNeteaseBootstrap
 				{
 					const DWORD Chunk = (DWORD)std::min<size_t>(pBytes->size() - Offset, 64 * 1024);
 					DWORD Read = 0;
-					if(!ReadFile(hFile, pBytes->data() + Offset, Chunk, &Read, nullptr) || Read == 0)
+					if(!ReadFile(File.get(), pBytes->data() + Offset, Chunk, &Read, nullptr) || Read == 0)
 					{
 						Success = false;
 						break;
@@ -67,7 +69,6 @@ namespace QmNeteaseBootstrap
 				}
 				Success = Success && Offset == pBytes->size();
 			}
-			CloseHandle(hFile);
 			if(!Success)
 				pBytes->clear();
 			return Success;
