@@ -1266,13 +1266,9 @@ void CScoreboard::RenderSoundMuteBar(CUIRect ScoreboardRect)
 	const float InfoWidth = std::clamp(InfoTextWidth + Padding * 2.0f, 170.0f, 360.0f);
 	const float InfoHeight = Padding * 2.0f + TitleFontSize + InnerGap + BodyFontSize + 2.0f;
 
-	CUIRect InfoRect = {Anchor.x + Anchor.w + 8.0f, Anchor.y + (Anchor.h - InfoHeight) * 0.5f, InfoWidth, InfoHeight};
-	InfoRect.x += InfoOffsetX;
-	const float ScreenMargin = 5.0f;
-	if(InfoRect.x + InfoRect.w + ScreenMargin > pScreen->w)
-		InfoRect.x = Anchor.x - InfoRect.w - 8.0f;
-	InfoRect.x = std::clamp(InfoRect.x, ScreenMargin, pScreen->w - InfoRect.w - ScreenMargin);
-	InfoRect.y = std::clamp(InfoRect.y, ScreenMargin, pScreen->h - InfoRect.h - ScreenMargin);
+	const CUIRect InfoRect = ScoreboardSoundInfoRect(*pScreen, Anchor, InfoWidth, InfoHeight, InfoOffsetX);
+	if(InfoRect.w <= 0.0f)
+		return;
 
 	InfoRect.Draw(ScoreboardUiColorSurface(InfoAlpha * ContentAlpha, 0.18f), IGraphics::CORNER_ALL, 6.0f);
 
@@ -1743,14 +1739,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		}
 		else if(TimeScore)
 		{
-			if(pInfo->m_Score == -9999)
-			{
-				aBuf[0] = '\0';
-			}
-			else
-			{
-				str_time((int64_t)absolute(pInfo->m_Score) * 100, TIME_HOURS, aBuf, sizeof(aBuf));
-			}
+			ScoreboardFormatLegacyTimeScore(pInfo->m_Score, aBuf, sizeof(aBuf));
 		}
 		else
 		{

@@ -3,6 +3,9 @@
 #ifndef GAME_CLIENT_COMPONENTS_SCOREBOARD_H
 #define GAME_CLIENT_COMPONENTS_SCOREBOARD_H
 
+#include <base/math.h>
+#include <base/time.h>
+
 #include <engine/console.h>
 #include <engine/graphics.h>
 #include <engine/shared/protocol.h>
@@ -17,7 +20,9 @@
 #include <game/client/ui_scrollregion.h>
 #include <game/teamscore.h>
 
+#include <algorithm>
 #include <array>
+#include <cstdint>
 
 struct CNetObj_PlayerInfo;
 
@@ -116,6 +121,34 @@ constexpr bool ScoreboardScrollbarVisible(bool ScrollMode, bool Interactive, boo
 constexpr ColorRGBA ScoreboardTitleTimeColor(float ContentAlpha)
 {
 	return ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f).WithMultipliedAlpha(ContentAlpha);
+}
+
+inline void ScoreboardFormatLegacyTimeScore(int Score, char *pBuffer, int BufferSize)
+{
+	if(BufferSize <= 0)
+		return;
+	if(Score == FinishTime::NOT_FINISHED_TIMESCORE)
+		pBuffer[0] = '\0';
+	else
+		str_time(absolute(static_cast<int64_t>(Score)) * 100, TIME_HOURS, pBuffer, BufferSize);
+}
+
+inline CUIRect ScoreboardSoundInfoRect(const CUIRect &Screen, const CUIRect &Anchor, float Width, float Height, float OffsetX)
+{
+	constexpr float ScreenMargin = 5.0f;
+	constexpr float AnchorGap = 8.0f;
+	const float MinX = Screen.x + ScreenMargin;
+	const float MinY = Screen.y + ScreenMargin;
+	const float MaxX = Screen.x + Screen.w - Width - ScreenMargin;
+	const float MaxY = Screen.y + Screen.h - Height - ScreenMargin;
+	if(MaxX < MinX || MaxY < MinY)
+		return {};
+
+	float X = Anchor.x + Anchor.w + AnchorGap + OffsetX;
+	if(X > MaxX)
+		X = Anchor.x - Width - AnchorGap;
+	const float Y = Anchor.y + (Anchor.h - Height) * 0.5f;
+	return {std::clamp(X, MinX, MaxX), std::clamp(Y, MinY, MaxY), Width, Height};
 }
 
 class CScoreboard : public CComponent
