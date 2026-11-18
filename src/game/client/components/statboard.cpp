@@ -1,3 +1,5 @@
+#include <base/log.h>
+
 #include <engine/graphics.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
@@ -417,55 +419,31 @@ void CStatboard::AutoStatScreenshot()
 
 void CStatboard::AutoStatCSV()
 {
-	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
+		return;
+
+	char aDate[20], aFilename[IO_MAX_PATH_LENGTH];
+	str_timestamp(aDate, sizeof(aDate));
+	str_format(aFilename, sizeof(aFilename), "screenshots/auto/stats_%s.csv", aDate);
+	bool Saved = false;
+	try
 	{
-		char aDate[20], aFilename[IO_MAX_PATH_LENGTH];
-		str_timestamp(aDate, sizeof(aDate));
-		str_format(aFilename, sizeof(aFilename), "screenshots/auto/stats_%s.csv", aDate);
-		IOHANDLE File = Storage()->OpenFile(aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-
-		if(File)
-		{
-			char aStats[1024 * (VANILLA_MAX_CLIENTS + 1)];
-			FormatStats(aStats, sizeof(aStats));
-			io_write(File, aStats, str_length(aStats));
-			io_close(File);
-		}
-
+		Saved = FormatStats().Save(*Storage(), aFilename);
+	}
+	catch(...)
+	{
+		// 格式化失败时完整候选尚未生成。
+	}
+	if(Saved)
 		Client()->AutoCSV_Start();
-	}
+	else
+		log_warn("statboard", "could not save automatic CSV '%s'", aFilename);
 }
 
-std::string CStatboard::ReplaceCommata(const char *pStr)
+CStatboardCsv CStatboard::FormatStats()
 {
-	if(!str_find(pStr, ","))
-		return pStr;
-
-	char aOutbuf[256] = "";
-	for(int i = 0, Skip = 0; i < 64; i++)
-	{
-		if(pStr[i] == ',')
-		{
-			aOutbuf[i + Skip++] = '%';
-			aOutbuf[i + Skip++] = '2';
-			aOutbuf[i + Skip] = 'C';
-		}
-		else
-		{
-			aOutbuf[i + Skip] = pStr[i];
-		}
-	}
-	return aOutbuf;
-}
-
-void CStatboard::FormatStats(char *pDest, size_t DestSize)
-{
-	// server stats
 	const CServerInfo &CurrentServerInfo = Client()->ServerInfo();
-	char aServerStats[1024];
-	str_format(aServerStats, sizeof(aServerStats), "Servername,Game-type,Map\n%s,%s,%s", ReplaceCommata(CurrentServerInfo.m_aName).c_str(), ReplaceCommata(CurrentServerInfo.m_aGameType).c_str(), ReplaceCommata(CurrentServerInfo.m_aMap).c_str());
-
-	// player stats
+	CStatboardCsv Csv(CurrentServerInfo.m_aName, CurrentServerInfo.m_aGameType, CurrentServerInfo.m_aMap);
 
 	// sort players
 	const CNetObj_PlayerInfo *apPlayers[MAX_CLIENTS] = {nullptr};
@@ -492,57 +470,32 @@ void CStatboard::FormatStats(char *pDest, size_t DestSize)
 		}
 	}
 
-	char aPlayerStats[1024 * VANILLA_MAX_CLIENTS] = "Local-player,Team,Name,Clan,Score,Frags,Deaths,Suicides,F/D-ratio,Net,FPM,Spree,Best,Hammer-F/D,Gun-F/D,Shotgun-F/D,Grenade-F/D,Laser-F/D,Ninja-F/D,GameWithFlags,Flag-grabs,Flag-captures\n";
+	const bool GameWithFlags = GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS);
 	for(int i = 0; i < NumPlayers; i++)
 	{
 		const CNetObj_PlayerInfo *pInfo = apPlayers[i];
-		const CGameClient::CClientStats *pStats = &GameClient()->m_aStats[pInfo->m_ClientId];
-
-		// Pre-formatting
-
-		// Weapons frags/deaths
-		char aWeaponFD[64 * NUM_WEAPONS];
-		for(int j = 0; j < NUM_WEAPONS; j++)
-		{
-			if(j == 0)
-				str_format(aWeaponFD, sizeof(aWeaponFD), "%d/%d", pStats->m_aFragsWith[j], pStats->m_aDeathsFrom[j]);
-			else
-				str_format(aWeaponFD, sizeof(aWeaponFD), "%s,%d/%d", aWeaponFD, pStats->m_aFragsWith[j], pStats->m_aDeathsFrom[j]);
-		}
-
-		// Frag/Death ratio
-		float KillRatio = 0.0f;
-		if(pStats->m_Deaths != 0)
-			KillRatio = (float)(pStats->m_Frags) / pStats->m_Deaths;
-
-		// Local player
-		bool LocalPlayer = (GameClient()->m_Snap.m_LocalClientId == pInfo->m_ClientId || (GameClient()->m_Snap.m_SpecInfo.m_Active && pInfo->m_ClientId == GameClient()->m_Snap.m_SpecInfo.m_SpectatorId));
-
-		// Game with flags
-		bool GameWithFlags = (GameClient()->m_Snap.m_pGameInfoObj && GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS);
-
-		char aBuf[1024];
-		str_format(aBuf, sizeof(aBuf), "%d,%d,%s,%s,%d,%d,%d,%d,%.2f,%i,%.1f,%d,%d,%s,%d,%d,%d\n",
-			LocalPlayer ? 1 : 0, // Local player
-			GameClient()->m_aClients[pInfo->m_ClientId].m_Team, // Team
-			ReplaceCommata(GameClient()->m_aClients[pInfo->m_ClientId].m_aName).c_str(), // Name
-			ReplaceCommata(GameClient()->m_aClients[pInfo->m_ClientId].m_aClan).c_str(), // Clan
-			std::clamp(pInfo->m_Score, -999, 999), // Score
-			pStats->m_Frags, // Frags
-			pStats->m_Deaths, // Deaths
-			pStats->m_Suicides, // Suicides
-			KillRatio, // Kill ratio
-			pStats->m_Frags - pStats->m_Deaths, // Net
-			pStats->GetFPM(Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed()), // FPM
-			pStats->m_CurrentSpree, // CurSpree
-			pStats->m_BestSpree, // BestSpree
-			aWeaponFD, // WeaponFD
-			GameWithFlags ? 1 : 0, // GameWithFlags
-			pStats->m_FlagGrabs, // Flag grabs
-			pStats->m_FlagCaptures); // Flag captures
-
-		str_append(aPlayerStats, aBuf);
+		const int ClientId = pInfo->m_ClientId;
+		const auto &ClientData = GameClient()->m_aClients[ClientId];
+		const auto &Stats = GameClient()->m_aStats[ClientId];
+		Csv.AddPlayer({
+			.m_Local = GameClient()->m_Snap.m_LocalClientId == ClientId ||
+				   (GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == ClientId),
+			.m_Team = ClientData.m_Team,
+			.m_Name = ClientData.m_aName,
+			.m_Clan = ClientData.m_aClan,
+			.m_Score = std::clamp(pInfo->m_Score, -999, 999),
+			.m_Frags = Stats.m_Frags,
+			.m_Deaths = Stats.m_Deaths,
+			.m_Suicides = Stats.m_Suicides,
+			.m_Fpm = Stats.GetFPM(Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed()),
+			.m_Spree = Stats.m_CurrentSpree,
+			.m_BestSpree = Stats.m_BestSpree,
+			.m_FragsWith = Stats.m_aFragsWith,
+			.m_DeathsFrom = Stats.m_aDeathsFrom,
+			.m_GameWithFlags = GameWithFlags,
+			.m_FlagGrabs = Stats.m_FlagGrabs,
+			.m_FlagCaptures = Stats.m_FlagCaptures,
+		});
 	}
-
-	str_format(pDest, DestSize, "%s\n\n%s", aServerStats, aPlayerStats);
+	return Csv;
 }
