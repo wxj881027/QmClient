@@ -5401,6 +5401,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/skin7_resource_lifecycle_test.cpp
     src/test/integration/client/map_design_tile_skips_test.cpp
     src/test/integration/client/map_image_decode_test.cpp
+    src/test/integration/client/map_quad_culling_test.cpp
     src/test/unit/client/map_load_task_test.cpp
     src/test/unit/client/connection_resource_preparation_test.cpp
     src/test/unit/client/skins/skins_preview_layers_test.cpp
@@ -5483,6 +5484,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/editor/collab_camera.cpp
     src/game/editor/mapitems/envelope.cpp
     src/game/map/envelope_eval.cpp
+    src/game/map/envelope_extrema.cpp
+    src/game/map/render_component.cpp
+    src/game/map/render_layer.cpp
     src/game/map/render_map.cpp
     src/engine/client/backend_threaded.cpp
     src/engine/client/backend/vulkan/backend_vulkan_qm_ext.cpp
