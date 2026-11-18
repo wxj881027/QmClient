@@ -36,6 +36,16 @@ namespace qm_ui_test
 
 	public:
 		std::vector<IGraphics::SRoundedRectSdfParams> m_vRoundedSubmissions;
+		struct SClipRect
+		{
+			int m_X;
+			int m_Y;
+			int m_W;
+			int m_H;
+		};
+		// 与 m_vRoundedSubmissions 一一对应：每条圆角提交当时生效的裁剪矩形。
+		std::vector<SClipRect> m_vRoundedClips;
+		std::vector<SClipRect> m_vClipStack;
 		std::vector<CUIRect> m_vRectSubmissions;
 		// 纹理圆角是设备能力；fixture 默认按 CPU 预烘焙回退，保持既有断言不变。
 		bool m_HasSdfTexture = false;
@@ -115,10 +125,20 @@ namespace qm_ui_test
 			if(pTarget != nullptr && pTarget->IsValid())
 				throw std::logic_error("unexpected live render target in UI fixture");
 		}
-		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override { m_vRoundedSubmissions.push_back(Params); }
+		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override
+		{
+			m_vRoundedSubmissions.push_back(Params);
+			// 记录每条圆角提交生效的裁剪区，测试才能证明「按半裁剪」真的发生了，
+			// 而不是只比较颜色和矩形。没有裁剪时记整屏，语义等同不裁剪。
+			m_vRoundedClips.push_back(m_vClipStack.empty() ? SClipRect{0, 0, m_ScreenWidth, m_ScreenHeight} : m_vClipStack.back());
+		}
 		// 裁剪、光标与选区只提交 GPU 绘制，不替代真实文字布局和输入行为。
-		void ClipEnable(int, int, int, int) override {}
-		void ClipDisable() override {}
+		void ClipEnable(int x, int y, int w, int h) override { m_vClipStack.push_back({x, y, w, h}); }
+		void ClipDisable() override
+		{
+			if(!m_vClipStack.empty())
+				m_vClipStack.pop_back();
+		}
 		// 采样边界只是设备状态：色环纹理需要 clamp，由真实后端生效，测试不关心。
 		void WrapClamp() override {}
 		void WrapNormal() override {}

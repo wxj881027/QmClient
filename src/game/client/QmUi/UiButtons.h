@@ -36,6 +36,9 @@ namespace ui_widget
 		// 只对 LIST_ENTRY 生效，其余角色本来就带统一描边。
 		bool m_ListEntryBorder = false;
 		bool m_AlignToPixel = true;
+		// 分段按钮由调用方统一算出整条视觉矩形时，这里关闭逐半部分的缩放动画，
+		// 避免填充缩进而共用外框停在原始尺寸。
+		bool m_SuppressGeometryAnimation = false;
 		int m_Corners = IGraphics::CORNER_ALL;
 		float m_Radius = ui_token::radius::BASE;
 		float m_BorderWidth = ui_token::feedback::ICON_BORDER_WIDTH;
