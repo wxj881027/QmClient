@@ -9,6 +9,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <new>
 #include <string>
 #include <vector>
 
@@ -91,8 +92,16 @@ namespace qm_sponsors
 			Draft.clear();
 			return false;
 		}
-		vNames = ParseNames(Draft.c_str());
-		return true;
+		try
+		{
+			vNames = ParseNames(Draft.c_str());
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			Draft.clear();
+			return false;
+		}
 	}
 
 	class CSnapshot
@@ -119,11 +128,19 @@ namespace qm_sponsors
 			const int Version = static_cast<int>(pVersion->u.integer);
 			if(Version < m_Version)
 				return true;
-			const std::string Markdown(pMarkdown->u.string.ptr, pMarkdown->u.string.length);
-			if(Version == m_Version && Markdown == m_Markdown)
-				return true;
-			m_Markdown = Markdown;
-			m_vNames = ParseNames(m_Markdown.c_str());
+			try
+			{
+				std::string Markdown(pMarkdown->u.string.ptr, pMarkdown->u.string.length);
+				if(Version == m_Version && Markdown == m_Markdown)
+					return true;
+				auto vNames = ParseNames(Markdown.c_str());
+				m_Markdown.swap(Markdown);
+				m_vNames.swap(vNames);
+			}
+			catch(const std::bad_alloc &)
+			{
+				return false;
+			}
 			m_Version = Version;
 			++m_Revision;
 			Changed = true;

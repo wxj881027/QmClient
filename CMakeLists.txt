@@ -6774,6 +6774,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_chat_bubble_state_test.cpp
       src/test/integration/qmclient/client/qm_chat_bubble_geometry_test.cpp
       src/test/integration/client/graph_rendering_test.cpp
+      src/test/integration/qmclient/client/qm_sponsors_publication_allocation_test.cpp
       src/test/integration/engine/graphics_frontend_lifecycle_test.cpp
       src/test/integration/qmclient/settings/qm_tclient_config_string_edit_test.cpp
       src/test/integration/qmclient/settings/qm_warlist_card_removal_test.cpp
