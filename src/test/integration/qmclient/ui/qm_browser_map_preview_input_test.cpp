@@ -2,9 +2,13 @@
 
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/components/qmclient/browser_map_preview.h>
+#include <game/client/components/qmclient/map_download_index.h>
 
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_input.h>
+
+#include <string>
+#include <vector>
 
 namespace
 {
@@ -121,4 +125,17 @@ TEST(QmBrowserMapPreviewFitZoom, UsesTheLargerAxisRatio)
 	EXPECT_FLOAT_EQ(QmBrowserMapPreviewFitZoom({600, 400}, {1200, 800}), 0.5f);
 	// 空尺寸按 1 处理，避免除零；返回值仍可交给渲染器作为正缩放。
 	EXPECT_FLOAT_EQ(QmBrowserMapPreviewFitZoom({0, 0}, {0, 0}), 1.0f);
+}
+
+TEST(QmMapDownloadIndex, SelectsTheLongestHashedFileForTheExactMapName)
+{
+	const std::vector<std::string> vHrefs = {
+		"%23MegaRosenkohl_50c7e9ad.map",
+		"%23MegaRosenkohl_50c7e9ad_56c8c8d17f52d1afef22ebfb2763d70eae200f605d5927cb797b0cdc5f0991f5.map",
+		"%23MegaRosenkohlX_56c8c8d17f52d1afef22ebfb2763d70eae200f605d5927cb797b0cdc5f0991f5.map",
+		"compilations/%23MegaRosenkohl_ffffffffffff.map",
+	};
+	EXPECT_EQ(QmSelectMapDownloadHref(vHrefs, "%23MegaRosenkohl_"),
+		"%23MegaRosenkohl_50c7e9ad_56c8c8d17f52d1afef22ebfb2763d70eae200f605d5927cb797b0cdc5f0991f5.map");
+	EXPECT_TRUE(QmSelectMapDownloadHref(vHrefs, "%23Unknown_").empty());
 }

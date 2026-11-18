@@ -3646,6 +3646,7 @@ if(CLIENT)
     components/qmclient/map_covers.h
     components/qmclient/map_difficulty_catalog.cpp
     components/qmclient/map_difficulty_catalog.h
+    components/qmclient/map_download_index.h
     components/qmclient/map_preview_panel.cpp
     components/qmclient/map_preview_panel.h
     components/qmclient/vote_map_library.cpp

@@ -15,6 +15,7 @@
 #include <game/client/components/mapimages.h>
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
+#include <game/client/components/qmclient/map_download_index.h>
 #include <game/client/components/qmclient/map_preview_panel.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
@@ -27,6 +28,8 @@
 #include <cmath>
 #include <memory>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace
@@ -144,6 +147,11 @@ class CQmMapPreviewCache
 public:
 	std::shared_ptr<IHttpRequest> m_pDownloadTask;
 	char m_aDownloadName[MAX_MAP_LENGTH] = {};
+	std::shared_ptr<IHttpRequest> m_pIndexTask;
+	bool m_IndexLoaded = false;
+	bool m_IndexFailed = false;
+	std::string m_NotFoundName;
+	std::vector<std::string> m_vIndexHrefs;
 
 	explicit CQmMapPreviewCache(IGraphics *pGraphics) :
 		m_pGraphics(pGraphics) {}
@@ -159,24 +167,25 @@ public:
 		auto *pClient = static_cast<CClient *>(pGameClient->Client());
 		if(pClient == nullptr || pClient->Http() == nullptr)
 			return false;
+		if(m_NotFoundName != pMapName)
+			m_NotFoundName.clear();
+		if(!EnsureIndex(pGameClient))
+			return m_pIndexTask != nullptr;
 		char aEscaped[MAX_MAP_LENGTH * 3];
-		int Out = 0;
-		for(const char *p = pMapName; *p != '\0' && Out + 4 < (int)sizeof(aEscaped); ++p)
+		EscapeUrl(aEscaped, sizeof(aEscaped), pMapName);
+		const std::string Prefix = std::string(aEscaped) + "_";
+		const std::string Href = QmSelectMapDownloadHref(m_vIndexHrefs, Prefix);
+		if(Href.empty())
 		{
-			if(*p == ' ')
-			{
-				aEscaped[Out++] = '%';
-				aEscaped[Out++] = '2';
-				aEscaped[Out++] = '0';
-			}
-			else
-				aEscaped[Out++] = *p;
+			m_NotFoundName = pMapName;
+			return false;
 		}
-		aEscaped[Out] = '\0';
-		char aUrl[512];
-		str_format(aUrl, sizeof(aUrl), "%s/downloadedmaps/%s.map", g_Config.m_ClMapDownloadUrl, aEscaped);
+		char aUrl[2048];
+		str_format(aUrl, sizeof(aUrl), "%s/%s", g_Config.m_ClMapDownloadUrl, Href.c_str());
 		char aOutput[IO_MAX_PATH_LENGTH];
-		str_format(aOutput, sizeof(aOutput), "downloadedmaps/%s.map", pMapName);
+		// 预览加载器按 downloadedmaps/<名>_<指纹>.map 前缀查找；落盘名必须
+		// 保留索引里的哈希后缀，否则下载成功也永远命中不到。
+		str_format(aOutput, sizeof(aOutput), "downloadedmaps/%s_%s", pMapName, Href.c_str() + Prefix.size());
 		std::shared_ptr<IHttpRequest> pTask(HttpGetFile(aUrl, pGameClient->Storage(), aOutput, IStorage::TYPE_SAVE).release());
 		if(!pTask)
 			return false;
@@ -188,6 +197,8 @@ public:
 
 	int DownloadProgress(const char *pMapName) const
 	{
+		if(m_pIndexTask)
+			return m_pIndexTask->Progress();
 		if(!m_pDownloadTask || str_comp(m_aDownloadName, pMapName) != 0)
 			return -1;
 		return m_pDownloadTask->Progress();
@@ -195,6 +206,8 @@ public:
 
 	bool DownloadFailed(const char *pMapName) const
 	{
+		if(m_IndexFailed || m_NotFoundName == pMapName)
+			return true;
 		if(!m_pDownloadTask || str_comp(m_aDownloadName, pMapName) != 0)
 			return false;
 		const EHttpState State = m_pDownloadTask->State();
@@ -205,6 +218,11 @@ public:
 	{
 		m_pDownloadTask.reset();
 		m_aDownloadName[0] = '\0';
+		if(m_pIndexTask)
+			m_pIndexTask->Abort();
+		m_pIndexTask.reset();
+		m_IndexFailed = false;
+		m_NotFoundName.clear();
 	}
 
 	bool DownloadFinished(const char *pMapName) const
@@ -328,6 +346,63 @@ public:
 	}
 
 private:
+	bool EnsureIndex(CGameClient *pGameClient)
+	{
+		if(m_IndexLoaded)
+			return true;
+		if(m_pIndexTask)
+		{
+			if(!m_pIndexTask->Done())
+				return false;
+			if(m_pIndexTask->State() == EHttpState::DONE)
+			{
+				unsigned char *pData = nullptr;
+				size_t Length = 0;
+				m_pIndexTask->Result(&pData, &Length);
+				ParseIndex(pData, Length);
+				m_IndexLoaded = true;
+			}
+			else
+				m_IndexFailed = true;
+			m_pIndexTask.reset();
+			return m_IndexLoaded;
+		}
+		if(m_IndexFailed)
+			return false;
+		auto *pClient = static_cast<CClient *>(pGameClient->Client());
+		if(pClient == nullptr || pClient->Http() == nullptr)
+			return false;
+		char aIndexUrl[512];
+		str_format(aIndexUrl, sizeof(aIndexUrl), "%s/", g_Config.m_ClMapDownloadUrl);
+		auto pTask = HttpGet(aIndexUrl);
+		pTask->WriteToMemory();
+		pTask->MaxResponseSize(8 * 1024 * 1024);
+		pTask->Timeout(CTimeout{10000, 60000, 1024, 10});
+		pTask->LogProgress(HTTPLOG::FAILURE);
+		m_pIndexTask = std::shared_ptr<IHttpRequest>(pTask.release());
+		pClient->Http()->Run(m_pIndexTask);
+		return false;
+	}
+
+	void ParseIndex(const unsigned char *pData, size_t Length)
+	{
+		if(pData == nullptr || Length == 0)
+			return;
+		const std::string_view Html(reinterpret_cast<const char *>(pData), Length);
+		size_t Pos = 0;
+		while((Pos = Html.find("href=\"", Pos)) != std::string_view::npos)
+		{
+			Pos += 6;
+			const size_t End = Html.find('"', Pos);
+			if(End == std::string_view::npos)
+				break;
+			std::string Href(Html.substr(Pos, End - Pos));
+			if(Href.size() > 4 && Href.compare(Href.size() - 4, 4, ".map") == 0 && Href.find('/') == std::string::npos)
+				m_vIndexHrefs.push_back(std::move(Href));
+			Pos = End + 1;
+		}
+	}
+
 	void ReleaseEntry(SMapPreviewEntry &Entry, uint32_t CurrentResetVersion)
 	{
 		const bool HandleAlive = Entry.m_GraphicsResetVersion == CurrentResetVersion;
