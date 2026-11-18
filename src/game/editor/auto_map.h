@@ -2,8 +2,22 @@
 #define GAME_EDITOR_AUTO_MAP_H
 
 #include <game/editor/map_object.h>
+#include <game/mapitems.h>
 
+#include <cstddef>
 #include <vector>
+
+namespace EditorAutomap
+{
+	// 参考层可以小于绘制区域；缺少的格子沿用复制参考层时的空瓦片。
+	inline const CTile &ReadTile(const CTile *pTiles, int Width, int Height, int X, int Y)
+	{
+		static constexpr CTile s_Empty{};
+		if(X < 0 || Y < 0 || X >= Width || Y >= Height)
+			return s_Empty;
+		return pTiles[static_cast<std::size_t>(Y) * Width + X];
+	}
+}
 
 class CAutomapper : public CMapObject
 {

@@ -586,13 +586,13 @@ void CAutomapper::Proceed(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int Refe
 			for(int x = 0; x < LayerWidth; x++)
 			{
 				CTile *pTile = &(pLayer->m_pTiles[y * LayerWidth + x]);
-				const CTile *pReadTile = &(pReadLayer->m_pTiles[y * LayerWidth + x]);
+				const CTile &ReadTile = EditorAutomap::ReadTile(pReadLayer->m_pTiles, pReadLayer->m_Width, pReadLayer->m_Height, x, y);
 				pLayer->Map()->OnModify();
 
 				for(size_t i = 0; i < pRun->m_vIndexRules.size(); ++i)
 				{
 					CIndexRule *pIndexRule = &pRun->m_vIndexRules[i];
-					if(pReadTile->m_Index == 0)
+					if(ReadTile.m_Index == 0)
 					{
 						if(pTile->m_Index != 0 && IsFilterable) // TODO: This is a lazy workaround
 						{
@@ -606,7 +606,7 @@ void CAutomapper::Proceed(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int Refe
 						if(pIndexRule->m_SkipEmpty) // skip empty tiles
 							continue;
 					}
-					if(pIndexRule->m_SkipFull && pReadTile->m_Index != 0) // skip full tiles
+					if(pIndexRule->m_SkipFull && ReadTile.m_Index != 0) // skip full tiles
 						continue;
 
 					bool RespectRules = true;
@@ -619,9 +619,9 @@ void CAutomapper::Proceed(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int Refe
 						int CheckY = y + pRule->m_Y;
 						if(CheckX >= 0 && CheckX < LayerWidth && CheckY >= 0 && CheckY < LayerHeight)
 						{
-							int CheckTile = CheckY * LayerWidth + CheckX;
-							CheckIndex = pReadLayer->m_pTiles[CheckTile].m_Index;
-							CheckFlags = pReadLayer->m_pTiles[CheckTile].m_Flags & (TILEFLAG_ROTATE | TILEFLAG_XFLIP | TILEFLAG_YFLIP);
+							const CTile &CheckTile = EditorAutomap::ReadTile(pReadLayer->m_pTiles, pReadLayer->m_Width, pReadLayer->m_Height, CheckX, CheckY);
+							CheckIndex = CheckTile.m_Index;
+							CheckFlags = CheckTile.m_Flags & (TILEFLAG_ROTATE | TILEFLAG_XFLIP | TILEFLAG_YFLIP);
 						}
 						else
 						{

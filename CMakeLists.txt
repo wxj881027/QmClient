@@ -5353,6 +5353,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/editor_map_append_image_name_test.cpp
     src/test/unit/client/editor_history_test.cpp
     src/test/unit/client/editor_map_group_import_test.cpp
+    src/test/unit/client/editor_automapper_tile_test.cpp
     src/test/unit/client/editor_tile_selection_brush_test.cpp
     src/test/unit/client/editor_brush_dispatch_test.cpp
     src/test/unit/client/editor_envelope_export_order_test.cpp
