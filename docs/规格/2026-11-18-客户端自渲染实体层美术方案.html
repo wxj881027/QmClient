@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客户端自渲染实体层 · 美术方案（2026-11-18）</title>
+<style>
+  :root {
+    --bg: #f6f8fc;
+    --panel: #ffffff;
+    --panel-2: #f1f5fb;
+    --border: #dbe4f1;
+    --text: #1b2534;
+    --muted: #5c6b80;
+    --accent: #2f6feb;
+    --warn: #a15c00;
+    --danger: #b42318;
+    --ok: #0d7a4f;
+    --freeze: #5aa9e6;
+    --deepfreeze: #6b5bd6;
+    --unfreeze: #e08a3c;
+    --death: #d64545;
+    --start: #2f9e63;
+    --finish: #c9a227;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.78 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 44px 26px 96px; }
+  h1 { font-size: 29px; line-height: 1.32; margin: 0 0 10px; letter-spacing: -0.2px; }
+  h2 { font-size: 20px; margin: 46px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 26px 0 8px; color: var(--accent); }
+  h4 { font-size: 14px; margin: 18px 0 6px; color: var(--muted); font-weight: 600; letter-spacing: .3px; }
+  p { margin: 10px 0; }
+  ul, ol { margin: 10px 0; padding-left: 22px; }
+  li { margin: 4px 0; }
+  .meta { color: var(--muted); font-size: 13px; margin: 0 0 26px; }
+  .badge {
+    display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px;
+    border: 1px solid var(--border); background: var(--panel); color: var(--muted); margin-right: 6px;
+  }
+  .badge.draft { color: var(--warn); border-color: #e6cfae; background: #fdf8ef; }
+  .badge.scope { color: var(--accent); border-color: #c6d8f7; background: #f2f7ff; }
+  nav {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 22px; margin: 0 0 30px;
+  }
+  nav ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+  nav a { color: var(--accent); text-decoration: none; font-size: 14px; }
+  nav a:hover { text-decoration: underline; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 6px; font-size: 13.5px; }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel-2); color: var(--muted); font-weight: 600; }
+  tbody tr:nth-child(even) { background: #fbfcff; }
+  code { background: #eef3fa; border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 12.5px; font-family: "SFMono-Regular", Consolas, monospace; }
+  pre { background: #0f1724; color: #d8e2f0; border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.6; }
+  pre code { background: none; border: 0; color: inherit; padding: 0; }
+  blockquote {
+    margin: 16px 0; padding: 12px 18px; border-left: 3px solid var(--accent);
+    background: var(--panel); border-radius: 0 8px 8px 0; color: var(--muted);
+  }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin: 14px 0; }
+  .card.hi { border-color: #c6d8f7; background: #f7fbff; }
+  .grid { display: grid; gap: 12px; margin: 14px 0; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  figure { margin: 18px 0 8px; }
+  figcaption { color: var(--muted); font-size: 12.5px; margin-top: 6px; text-align: center; }
+  .swatch { height: 8px; border-radius: 4px; margin: 0 0 6px; }
+  .tag { font-size: 11.5px; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
+  .check { list-style: none; padding-left: 0; }
+  .check li { padding-left: 24px; position: relative; margin: 6px 0; }
+  .check li::before {
+    content: ""; position: absolute; left: 2px; top: 5px; width: 12px; height: 12px;
+    border: 1.5px solid #9fb0c6; border-radius: 3px; background: #fff;
+  }
+  .num { color: var(--muted); font-variant-numeric: tabular-nums; }
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
+  @media (max-width: 760px) {
+    .g2, .g3, .g4 { grid-template-columns: 1fr; }
+    nav ol { columns: 1; }
+  }
+  @media print {
+    body { background: #fff; }
+    .wrap { max-width: none; padding: 0; }
+    nav { break-inside: avoid; }
+    figure, table, .card { break-inside: avoid; }
+    pre { background: #f4f6fa; color: #111; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>客户端自渲染实体层 · 美术方案</h1>
+<p class="meta">
+  <span class="badge draft">状态：草案 · 待评审</span>
+  <span class="badge scope">范围：纯客户端视觉</span>
+  <span class="badge">2026-11-18</span>
+  <span class="badge">不涉及协议 / 物理 / 地图格式</span>
+</p>
+
+<nav>
+  <ol>
+    <li><a href="#s0">结论与定位</a></li>
+    <li><a href="#s1">对象与术语</a></li>
+    <li><a href="#s2">现状架构</a></li>
+    <li><a href="#s3">接管边界</a></li>
+    <li><a href="#s4">视觉规格</a></li>
+    <li><a href="#s5">技术契约</a></li>
+    <li><a href="#s6">配置提案</a></li>
+    <li><a href="#s7">兼容与风险</a></li>
+    <li><a href="#s8">验收清单</a></li>
+    <li><a href="#s9">分期路线</a></li>
+    <li><a href="#s10">附录：代码位置</a></li>
+    <li><a href="#s11">附录：着色器接口草案</a></li>
+  </ol>
+</nav>
+
+<h2 id="s0">0. 结论与定位</h2>
+
+<div class="card hi">
+  <p><strong>这是一份纯美术方案。</strong>性能维度已经结案：常规对局（1080p–4K、zoom ≤ 1）下实体层单层顶点带宽约 0.4–1.6&nbsp;MB/帧，几何量不是瓶颈；任何"合并网格 / 自渲染"带来的帧时间收益都在测量噪声以内。</p>
+  <p>因此本方案只定义<strong>接管哪些实体的外观、外观长什么样、美术资产如何被渲染管线消费</strong>，不承诺性能收益。</p>
+  <p>另一条前提：<strong>TClient 的墙体轮廓（<code>qm_outline_*</code>）已经把这件工作做掉了大半</strong>——类型网格、8 邻域缓存、逐边 quads（含转角收口）都在 <code>components/tclient/outlines.cpp</code> 里跑着。它缺的只是"内部填充"与"隐藏原贴图"，不是"轮廓"。因此 P0 不需要新开着色器管线，详见 2.2 与 5.4。</p>
+</div>
+
+<div class="grid g3">
+  <div class="card">
+    <div class="swatch" style="background:linear-gradient(90deg,#5aa9e6,#6b5bd6)"></div>
+    <strong>做</strong>
+    <p style="margin:6px 0 0;font-size:13.5px">Freeze / Deep Freeze / Unfreeze / Deep Unfreeze / Death / Start / Finish，共 7 类、9 个 tile 常量。</p>
+  </div>
+  <div class="card">
+    <div class="swatch" style="background:linear-gradient(90deg,#94a3b8,#cbd5e1)"></div>
+    <strong>不做</strong>
+    <p style="margin:6px 0 0;font-size:13.5px">Solid / Nohook 复用既有轮廓，并补圆角与内部填充；不替换 tileset 贴图。Through 系列不可见本身是玩法信息。</p>
+  </div>
+  <div class="card">
+    <div class="swatch" style="background:linear-gradient(90deg,#2f9e63,#c9a227)"></div>
+    <strong>二期</strong>
+    <p style="margin:6px 0 0;font-size:13.5px">编号类：计时检查点 1–25、Tele CP 编号、Switch 编号改用 SDF 数字与状态联动。</p>
+  </div>
+</div>
+
+<h2 id="s1">1. 对象与术语</h2>
+
+<p>下表是本方案涉及的全部实体。注意两个容易混的编号体系：<strong>计时检查点</strong>是地图 game 图层里的 tile 索引（35–59，对应 1–25 号），<strong>传送检查点</strong>的编号存在 Tele 图层的 <code>CTeleTile::m_Number</code> 里，两者不是一回事。</p>
+
+<table>
+  <thead>
+    <tr><th>显示名</th><th>常量</th><th>数据所在图层</th><th>现有外观来源</th><th>语义</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>冻结</td><td><code>TILE_FREEZE</code> = 9</td><td>Game / Front</td><td>实体图集第 9 层</td><td>进入后减速、无法跳跃</td></tr>
+    <tr><td>活动冻结</td><td><code>TILE_LFREEZE</code> = 144</td><td>Game / Front</td><td>实体图集（同 Freeze 分类）</td><td>可开关的冻结，按状态变色</td></tr>
+    <tr><td>深层冻结</td><td><code>TILE_DFREEZE</code> = 12</td><td>Game / Front</td><td>实体图集第 12 层</td><td>冻结不可解除</td></tr>
+    <tr><td>解冻</td><td><code>TILE_UNFREEZE</code> = 11</td><td>Game / Front</td><td>实体图集第 11 层</td><td>解除冻结</td></tr>
+    <tr><td>活动解冻</td><td><code>TILE_LUNFREEZE</code> = 145</td><td>Game / Front</td><td>实体图集（同 Unfreeze 分类）</td><td>可开关的解冻</td></tr>
+    <tr><td>深层解冻</td><td><code>TILE_DUNFREEZE</code> = 13</td><td>Game / Front</td><td>实体图集第 13 层</td><td>解除深层冻结</td></tr>
+    <tr><td>死亡区</td><td><code>TILE_DEATH</code> = 2</td><td>Game / Front</td><td>实体图集第 2 层</td><td>接触即死</td></tr>
+    <tr><td>起点</td><td><code>TILE_START</code> = 33</td><td>Game / Front</td><td>实体图集第 33 层</td><td>出生点</td></tr>
+    <tr><td>终点</td><td><code>TILE_FINISH</code> = 34</td><td>Game / Front</td><td>实体图集第 34 层</td><td>完成判定</td></tr>
+    <tr><td>计时检查点</td><td><code>TILE_TIME_CHECKPOINT_FIRST</code> = 35 … <code>LAST</code> = 59</td><td>Game / Front</td><td>实体图集数字精灵</td><td>记录/比较分段用时，1–25 号</td></tr>
+    <tr><td>传送检查点</td><td><code>TILE_TELECHECK</code> = 29 / <code>TELECHECKOUT</code> = 30</td><td>Tele 图层（编号在 <code>CTeleTile::m_Number</code>）</td><td>实体图集 + 数字精灵</td><td>记录复活点</td></tr>
+  </tbody>
+</table>
+
+<blockquote>术语约定：本文说"实体层"指 <code>CRenderLayerEntity*</code> 这一族渲染对象，视觉上叠在地图美术之上、飘在背景之下；说"墙体"指 Solid / Nohook，其观感由地图 tileset 与实体皮肤共同决定，不属于本节讨论范围。</blockquote>
+
+<h2 id="s2">2. 现状架构</h2>
+
+<p>实体层的<strong>数据</strong>与<strong>外观</strong>是分离的：地图加载时把 tile 表读进内存给碰撞与预测用；渲染侧在 <code>Init()</code> 阶段把整层实体烘焙成静态顶点缓冲，每帧只按可见行提交索引区间。替换外观只需要替换片元着色这一段，几何、剔除、层级都不用动。</p>
+
+<figure>
+<svg viewBox="0 0 900 250" width="100%" role="img" aria-label="渲染顺序示意">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  <g font-family="-apple-system,Segoe UI,Microsoft YaHei,sans-serif" font-size="12.5">
+    <rect x="8" y="40" width="150" height="76" rx="8" fill="#eef2f9" stroke="#cbd5e1"/>
+    <text x="83" y="66" text-anchor="middle" fill="#334155" font-weight="600">背景组</text>
+    <text x="83" y="84" text-anchor="middle" fill="#64748b">tiles / quads</text>
+    <text x="83" y="100" text-anchor="middle" fill="#64748b">视差、包络动画</text>
+
+    <line x1="162" y1="78" x2="190" y2="78" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
+
+    <rect x="194" y="24" width="216" height="108" rx="8" fill="#fff4e6" stroke="#e5b781"/>
+    <text x="302" y="48" text-anchor="middle" fill="#7a4a10" font-weight="600">Game 组（本方案作用域）</text>
+    <g font-size="11.5" fill="#8a5a1c">
+      <rect x="206" y="58" width="92" height="22" rx="4" fill="#ffe8cc" stroke="#e5b781"/>
+      <text x="252" y="73" text-anchor="middle">Game 实体层</text>
+      <rect x="304" y="58" width="94" height="22" rx="4" fill="#fff" stroke="#e5b781"/>
+      <text x="351" y="73" text-anchor="middle">Entities</text>
+      <rect x="206" y="86" width="64" height="22" rx="4" fill="#fff" stroke="#e5b781"/>
+      <text x="238" y="101" text-anchor="middle">Tele</text>
+      <rect x="276" y="86" width="66" height="22" rx="4" fill="#fff" stroke="#e5b781"/>
+      <text x="309" y="101" text-anchor="middle">Speedup</text>
+      <rect x="348" y="86" width="62" height="22" rx="4" fill="#fff" stroke="#e5b781"/>
+      <text x="379" y="101" text-anchor="middle">Switch</text>
+      <rect x="206" y="114" width="204" height="12" rx="4" fill="#fff" stroke="#e5b781" opacity=".0"/>
+    </g>
+    <text x="302" y="124" text-anchor="middle" fill="#8a5a1c" font-size="11.5">Tune 层（调参区，无视觉）</text>
+
+    <line x1="414" y1="78" x2="442" y2="78" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
+
+    <rect x="446" y="40" width="120" height="76" rx="8" fill="#e9f7ef" stroke="#a9d8bd"/>
+    <text x="506" y="68" text-anchor="middle" fill="#1f6b45" font-weight="600">Tee / 投射物</text>
+    <text x="506" y="88" text-anchor="middle" fill="#4b7f63" font-size="11.5">玩家、钩子、激光</text>
+
+    <line x1="570" y1="78" x2="598" y2="78" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
+
+    <rect x="602" y="40" width="130" height="76" rx="8" fill="#fff4e6" stroke="#e5b781"/>
+    <text x="667" y="68" text-anchor="middle" fill="#7a4a10" font-weight="600">Front 实体层</text>
+    <text x="667" y="88" text-anchor="middle" fill="#8a5a1c" font-size="11.5">遮挡 Tee 的前景</text>
+
+    <line x1="736" y1="78" x2="764" y2="78" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar)"/>
+
+    <rect x="768" y="40" width="118" height="76" rx="8" fill="#f2eefb" stroke="#cfc3ea"/>
+    <text x="827" y="68" text-anchor="middle" fill="#5b4a86" font-weight="600">HUD / 菜单</text>
+    <text x="827" y="88" text-anchor="middle" fill="#6f5f97" font-size="11.5">不参与本方案</text>
+
+    <text x="8" y="176" fill="#64748b" font-size="12">橙框 = 本方案可作用的两层；两层各自独立提交，顺序固定，新增 pass 或调换顺序都会改变遮挡关系。</text>
+    <rect x="8" y="192" width="14" height="14" rx="3" fill="#fff4e6" stroke="#e5b781"/>
+    <text x="30" y="204" fill="#64748b" font-size="12">作用域</text>
+    <rect x="96" y="192" width="14" height="14" rx="3" fill="#eef2f9" stroke="#cbd5e1"/>
+    <text x="118" y="204" fill="#64748b" font-size="12">不可改动</text>
+  </g>
+</svg>
+<figcaption>图 1　渲染顺序与作用域：实体层夹在背景组与 Tee 之间，Front 层在其后</figcaption>
+</figure>
+
+<h3>2.1 当前实体层的四个事实</h3>
+<ol>
+  <li><strong>几何是静态的。</strong><code>UploadTileData</code> 在载入期把每层每一格展开成 4 顶点 / 6 索引，写进一条容器缓冲。</li>
+  <li><strong>剔除是每帧现算的。</strong>渲染时按视口算出可见行列，拼成索引区间列表一次提交；CPU 成本只与可见行数有关。</li>
+  <li><strong>分类是分子层的。</strong>Game 层实际建了 6 份缓冲：基础一份 + Death / Freeze / Unfreeze / DeepFreeze / DeepUnfreeze 各一份，以便分别应用透明度。</li>
+  <li><strong>外观只有一种来源。</strong>片元取 <code>CMapImages::GetEntities()</code>，也就是用户选定的实体皮肤图集（默认 <code>editor/entities_clear/&lt;mod&gt;.png</code>），tile 索引即纹理数组层号。</li>
+</ol>
+
+<blockquote>第 4 条决定了本方案的性质：我们要替换的是"实体长什么样"，而不是"实体在哪里、什么时候画"。也正因如此，它与现有的实体皮肤系统天然冲突，必须在配置层显式二选一（见第 6、7 节）。</blockquote>
+
+<h3>2.2 既有实现：TClient 墙体轮廓</h3>
+
+<p>仓库里已经有一套和本方案高度重合的东西：<code>src/game/client/components/tclient/outlines.cpp</code>（配置前缀 <code>qm_outline_*</code>）。它在 <code>OnMapLoad</code> 时把 Tele / Game / Front 三层压成一张类型网格，在 <code>OnRender</code> 时逐可见格画边。轮廓、连通性、转角收口都是现成的。</p>
+
+<figure>
+<svg viewBox="0 0 900 210" width="100%" role="img" aria-label="TClient 轮廓实现数据流">
+  <defs>
+    <marker id="ar3" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  <g font-family="-apple-system,Segoe UI,Microsoft YaHei,sans-serif" font-size="12">
+    <rect x="8" y="46" width="150" height="66" rx="8" fill="#eef2f9" stroke="#cbd5e1"/>
+    <text x="83" y="70" text-anchor="middle" fill="#334155" font-weight="600">三层 tile 数据</text>
+    <text x="83" y="88" text-anchor="middle" fill="#64748b" font-size="11.5">Tele / Game / Front</text>
+    <text x="83" y="104" text-anchor="middle" fill="#64748b" font-size="11.5">按优先级合并</text>
+
+    <line x1="162" y1="79" x2="186" y2="79" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar3)"/>
+
+    <rect x="190" y="34" width="210" height="90" rx="8" fill="#fff4e6" stroke="#e5b781"/>
+    <text x="295" y="58" text-anchor="middle" fill="#7a4a10" font-weight="600">类型网格（每格 1 个 int）</text>
+    <text x="295" y="80" text-anchor="middle" fill="#8a5a1c" font-size="11.5">低 4 位：类型 0–8</text>
+    <text x="295" y="98" text-anchor="middle" fill="#8a5a1c" font-size="11.5">bit 4–11：8 邻域位（懒缓存）</text>
+    <text x="295" y="116" text-anchor="middle" fill="#8a5a1c" font-size="11.5">bit 12：缓存有效</text>
+
+    <line x1="404" y1="79" x2="428" y2="79" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar3)"/>
+
+    <rect x="432" y="46" width="140" height="66" rx="8" fill="#eef2f9" stroke="#cbd5e1"/>
+    <text x="502" y="70" text-anchor="middle" fill="#334155" font-weight="600">视口遍历</text>
+    <text x="502" y="88" text-anchor="middle" fill="#64748b" font-size="11.5">上下左右各扩 1 格</text>
+    <text x="502" y="104" text-anchor="middle" fill="#64748b" font-size="11.5">每帧现算，不缓存几何</text>
+
+    <line x1="576" y1="79" x2="600" y2="79" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar3)"/>
+
+    <rect x="604" y="46" width="150" height="66" rx="8" fill="#fff4e6" stroke="#e5b781"/>
+    <text x="679" y="70" text-anchor="middle" fill="#7a4a10" font-weight="600">每格 ≤ 8 个边 quad</text>
+    <text x="679" y="88" text-anchor="middle" fill="#8a5a1c" font-size="11.5">上/下/左/右 + 独立角块</text>
+    <text x="679" y="104" text-anchor="middle" fill="#8a5a1c" font-size="11.5">两端按邻居收口</text>
+
+    <line x1="758" y1="79" x2="782" y2="79" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ar3)"/>
+
+    <rect x="786" y="46" width="106" height="66" rx="8" fill="#e9f7ef" stroke="#a9d8bd"/>
+    <text x="839" y="72" text-anchor="middle" fill="#1f6b45" font-weight="600">QuadsDrawTL</text>
+    <text x="839" y="92" text-anchor="middle" fill="#4b7f63" font-size="11.5">即时模式</text>
+
+    <text x="8" y="160" fill="#64748b" font-size="12">关键细节：邻域位只缓存一次；比较用 <tspan font-family="monospace" fill="#334155">邻居类型 ≥ 自身类型</tspan>，从而让高优先级类型（Tele、Kill）不会被低优先级轮廓盖住。</text>
+    <text x="8" y="182" fill="#b45309" font-size="12">它只画"边"，不填充内部，也不负责隐藏原贴图——这两件事才是本方案要补的。</text>
+  </g>
+</svg>
+<figcaption>图 2　TClient 轮廓的数据流：类型网格 + 邻域缓存 + 逐边 quads</figcaption>
+</figure>
+
+<table>
+  <thead><tr><th>能力</th><th>轮廓实现已有</th><th>本方案还需补</th></tr></thead>
+  <tbody>
+    <tr><td>连通域判断（8 邻域）</td><td>有，懒缓存进 tile 高位</td><td>—</td></tr>
+    <tr><td>连续外轮廓 / 转角收口</td><td>有，含"独立角块"处理</td><td>圆角过渡（当前是直角）</td></tr>
+    <tr><td>类型区分与优先级</td><td>有，Solid / Nohook / Freeze / DeepFreeze / Unfreeze / DeepUnfreeze / Tele / Kill</td><td>DeepUnfreeze 的配色分层</td></tr>
+    <tr><td>按类型配颜色与线宽</td><td>有，<code>qm_outline_*_color / _width</code></td><td>与实体透明度滑杆统一</td></tr>
+    <tr><td>内部填充</td><td><span style="color:var(--danger)">无</span></td><td>逐格或逐区域半透明填充</td></tr>
+    <tr><td>隐藏原实体贴图</td><td><span style="color:var(--danger)">无</span></td><td>样式开关里跳过 atlas 绘制</td></tr>
+    <tr><td>内部质感（噪点 / 流光）</td><td><span style="color:var(--danger)">无</span></td><td>P1 用可滚动贴图，P2 再考虑着色器</td></tr>
+  </tbody>
+</table>
+
+<blockquote>这条既有实现改变了成本结构：轮廓、连通性、优先级都不用重写；P0 的增量是"填充 + 皮肤旁路 + 两个开关"，不是一条跨三后端的渲染管线。</blockquote>
+
+<h2 id="s3">3. 接管边界</h2>
+
+<table>
+  <thead>
+    <tr><th>对象</th><th>是否接管</th><th>判断依据</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Freeze / LFREEZE / DeepFreeze</td><td><span style="color:var(--ok)">是，第一批</span></td><td>占据屏幕面积最大、语义最重要，且现有 32px 贴图拉远后边缘会糊、细节丢失，程序化收益最直观</td></tr>
+    <tr><td>Unfreeze / LUNFREEZE / DeepUnfreeze</td><td><span style="color:var(--ok)">是，第一批</span></td><td>与 Freeze 必须成对设计，否则边界处冷暖对比失衡</td></tr>
+    <tr><td>Death</td><td><span style="color:var(--ok)">是，第一批</span></td><td>危险提示的主要载体，需要随距离变化的强度</td></tr>
+    <tr><td>Start / Finish</td><td><span style="color:var(--ok)">是，第一批</span></td><td>高速通过时需要一眼读到判定线；贴图在运动中糊成一团</td></tr>
+    <tr><td>Solid / Nohook</td><td><span style="color:var(--warn)">只复用轮廓</span></td><td>不替换 tileset 贴图（那是地图美术本体），但轮廓已由 <code>qm_outline_solid / _nohook</code> 提供；本方案只把它的线宽/颜色纳入统一风格，不新增另一套墙体绘制</td></tr>
+    <tr><td>Through / ThroughCut / ThroughAll / ThroughDir</td><td><span style="color:var(--danger)">否</span></td><td>原版刻意不可见。可见化等于给出可穿行位置信息，属于玩法信息优势</td></tr>
+    <tr><td>Tele / Speedup / Switch / Tune</td><td><span style="color:var(--warn)">二期，仅编号</span></td><td>只做数字与延迟的矢量表达，底色仍走皮肤；它们的开关状态是服务端同步的，动效必须跟状态而非动画循环</td></tr>
+    <tr><td>计时检查点 1–25</td><td><span style="color:var(--warn)">二期</span></td><td>编号在 tile 索引里，可直接映射；但"是否已过"只有传送检查点的最高编号可用，不能逐点精确</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4">4. 视觉规格</h2>
+
+<h3>4.1 三条设计原则</h3>
+<div class="grid g3">
+  <div class="card"><strong>边缘优先</strong><p style="margin:6px 0 0;font-size:13.5px">可通行 / 不可通行、安全 / 致命的判断发生在边界。内部质感永远服务于边缘，不得压过边缘的对比度。</p></div>
+  <div class="card"><strong>动效克制</strong><p style="margin:6px 0 0;font-size:13.5px">任何循环动画的亮度变化不超过 ±18%，周期不短于 2.4&nbsp;s。高速跑图时闪烁会直接损害可读性。</p></div>
+  <div class="card"><strong>形状先于颜色</strong><p style="margin:6px 0 0;font-size:13.5px">红绿色盲下 Freeze 与 Unfreeze 必须靠纹理方向/边缘形态区分，不能只靠冷暖色。</p></div>
+</div>
+
+<h3>4.2 颜色与语义层级</h3>
+<p>七类实体归入四级语义，层级决定饱和度与亮度上限：<strong>危险 &gt; 冻结 &gt; 解冻 &gt; 目标</strong>。同级之间只允许色相区分，不允许亮度竞争。</p>
+
+<div class="grid g4">
+  <div class="card">
+    <div class="swatch" style="background:#d64545"></div>
+    <div style="font-size:13px"><strong>Death</strong><br><span class="num">#D64545</span></div>
+    <p style="margin:6px 0 0;font-size:12.5px;color:var(--muted)">唯一允许高饱和红。靠近时提亮，但底色透明度不随之上升。</p>
+  </div>
+  <div class="card">
+    <div class="swatch" style="background:#5aa9e6"></div>
+    <div style="font-size:13px"><strong>Freeze</strong><br><span class="num">#5AA9E6</span></div>
+    <p style="margin:6px 0 0;font-size:12.5px;color:var(--muted)">冷蓝、低饱和。深层冻结转向紫（<span class="num">#6B5BD6</span>）并提高边缘对比。</p>
+  </div>
+  <div class="card">
+    <div class="swatch" style="background:#e08a3c"></div>
+    <div style="font-size:13px"><strong>Unfreeze</strong><br><span class="num">#E08A3C</span></div>
+    <p style="margin:6px 0 0;font-size:12.5px;color:var(--muted)">暖橙。与冻结相邻时，两侧边缘都要比内部亮，形成一道"冷暖缝"。</p>
+  </div>
+  <div class="card">
+    <div class="swatch" style="background:linear-gradient(90deg,#2f9e63,#c9a227)"></div>
+    <div style="font-size:13px"><strong>Start / Finish</strong><br><span class="num">#2F9E63 / #C9A227</span></div>
+    <p style="margin:6px 0 0;font-size:12.5px;color:var(--muted)">起点偏绿、终点偏金。二者形态必须不同：起点短横线，终点整面光幕。</p>
+  </div>
+</div>
+
+<h3>4.3 单格的构造层次</h3>
+<p>所有实体共用同一套"四层"结构，只是参数不同。层次从上到下叠加，越往下越贵，允许按画质档位裁剪后两层。</p>
+
+<figure>
+<svg viewBox="0 0 900 260" width="100%" role="img" aria-label="单格视觉分层爆炸图">
+  <defs>
+    <radialGradient id="innerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="45%" stop-color="#5aa9e6" stop-opacity="0"/>
+      <stop offset="82%" stop-color="#5aa9e6" stop-opacity=".45"/>
+      <stop offset="100%" stop-color="#2f6feb" stop-opacity=".85"/>
+    </radialGradient>
+  </defs>
+  <g font-family="-apple-system,Segoe UI,Microsoft YaHei,sans-serif" font-size="12.5">
+    <g transform="translate(40,50)">
+      <rect x="0" y="0" width="150" height="150" rx="10" fill="#5aa9e6" opacity=".22" stroke="#5aa9e6" stroke-dasharray="5 4"/>
+      <text x="75" y="176" text-anchor="middle" fill="#475569">① 底色填充</text>
+      <text x="75" y="194" text-anchor="middle" fill="#94a3b8" font-size="11.5">alpha 18–30%</text>
+    </g>
+    <g transform="translate(230,34)">
+      <rect x="0" y="0" width="150" height="150" rx="10" fill="#5aa9e6" opacity=".24" stroke="#5aa9e6"/>
+      <g fill="none" stroke="#ffffff" stroke-width="1.6" opacity=".85">
+        <path d="M10,60 C40,40 70,80 100,60 S130,50 145,62"/>
+        <path d="M8,92 C38,72 68,112 98,92 S128,82 146,94"/>
+        <path d="M10,124 C40,104 70,144 100,124 S130,114 145,126"/>
+      </g>
+      <text x="75" y="176" text-anchor="middle" fill="#475569">② 内部纹理</text>
+      <text x="75" y="194" text-anchor="middle" fill="#94a3b8" font-size="11.5">噪声 / 流光，≤ 2 层</text>
+    </g>
+    <g transform="translate(420,18)">
+      <rect x="0" y="0" width="150" height="150" rx="10" fill="#ffffff" stroke="#5aa9e6"/>
+      <rect x="0" y="0" width="150" height="150" rx="10" fill="url(#innerGlow)"/>
+      <text x="75" y="176" text-anchor="middle" fill="#475569">③ 内发光</text>
+      <text x="75" y="194" text-anchor="middle" fill="#94a3b8" font-size="11.5">向内的 8–12px 衰减</text>
+    </g>
+    <g transform="translate(610,6)">
+      <rect x="0" y="0" width="150" height="150" rx="10" fill="#5aa9e6" opacity=".28"/>
+      <rect x="1.5" y="1.5" width="147" height="147" rx="9" fill="none" stroke="#3f8fd0" stroke-width="3.5" opacity=".85"/>
+      <text x="75" y="176" text-anchor="middle" fill="#475569">④ 边缘描边</text>
+      <text x="75" y="194" text-anchor="middle" fill="#94a3b8" font-size="11.5">2px @ zoom 1，仅外沿</text>
+    </g>
+
+    <g transform="translate(800,60)" fill="#64748b" font-size="11.5">
+      <text x="0" y="0" font-weight="600" fill="#334155">裁剪策略</text>
+      <text x="0" y="20">低配：①②</text>
+      <text x="0" y="38">标准：①②③</text>
+      <text x="0" y="56">完整：①②③④</text>
+    </g>
+  </g>
+</svg>
+<figcaption>图 3　单格的四层结构：同一套参数化模板，不同实体只换色相、纹理方向与动效</figcaption>
+</figure>
+
+<h3>4.4 逐类定义</h3>
+
+<div class="grid g2">
+  <div class="card">
+    <h4 style="margin-top:0">Freeze / LFREEZE</h4>
+    <ul style="margin:6px 0 0;font-size:13.5px">
+      <li>底色：冷蓝 22% alpha；内部两层缓慢滚动噪声（周期 6&nbsp;s 与 9&nbsp;s，反向）</li>
+      <li>边缘：1px 亮边 + 向内 8px 衰减，边界只在真正的外部边绘制</li>
+      <li>四角：内凹处做 6px 圆角过渡，避免"马赛克台阶"</li>
+      <li>动效：整体亮度呼吸 ±10%，周期 3.2&nbsp;s</li>
+      <li>LFREEZE：叠加一层随开关状态改变的低频脉冲，周期 1.6&nbsp;s</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">DFREEZE</h4>
+    <ul style="margin:6px 0 0;font-size:13.5px">
+      <li>底色：深紫 26% alpha，色相向 <span class="num">#6B5BD6</span> 偏移</li>
+      <li>纹理：棱角化的晶格条纹（方向 45°），频率高于普通冻结 1.8 倍</li>
+      <li>边缘：对比度比普通冻结高 30%，与普通冻结紧邻时形成可见分界</li>
+      <li>不得使用与普通冻结相同的噪声相位，否则相邻区域会看起来"同一块"</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">Unfreeze / DUNFREEZE</h4>
+    <ul style="margin:6px 0 0;font-size:13.5px">
+      <li>底色：暖橙 18% alpha，内部为向上漂移的横向波纹（周期 4&nbsp;s）</li>
+      <li>边缘：虚线框（dash 6 / gap 4），与冻结的实线形成形态差异，保证色盲可读</li>
+      <li>DUNFREEZE：虚线更密、色相偏琥珀，与 DFREEZE 的紫形成互补对照</li>
+      <li>边缘亮度必须低于相邻 Freeze 的亮边，避免抢走"危险/安全"的判断顺序</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">Death</h4>
+    <ul style="margin:6px 0 0;font-size:13.5px">
+      <li>底色：红 16% alpha；内部斜向警示条纹，周期 7&nbsp;s 缓慢移动</li>
+      <li>边缘：2px 实线，是全套里唯一允许"常亮"的边缘</li>
+      <li>距离响应：本地 Tee 距边界 3 格内，边缘亮度与呼吸频率提升（周期 3&nbsp;s → 1.4&nbsp;s），底色不变</li>
+      <li>不做全屏闪烁、不做屏幕外提示，避免干扰视野中心</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">Start</h4>
+    <ul style="margin:6px 0 0;font-size:13.5px">
+      <li>形态：格内一条竖直光带（宽度 40% 格宽），两侧羽化</li>
+      <li>动效：向上流动的扫描线，周期 0.8&nbsp;s；亮度恒定，不呼吸</li>
+      <li>方向由 tile flags 决定，旋转后光带方向必须跟着转</li>
+      <li>不做数字、不做文字，编号信息交给 HUD</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">Finish</h4>
+    <ul style="margin:6px 0 0;font-size:13.5px">
+      <li>形态：整面半透明金色光幕，中心亮、上下衰减（与起点"线"明确区分）</li>
+      <li>动效：横向扫过的光带，周期 2.2&nbsp;s，相位沿着光幕方向推进</li>
+      <li>与起点相邻时，两者亮度差不超过 15%，靠形态而非亮度区分</li>
+    </ul>
+  </div>
+</div>
+
+<h3>4.5 状态与动效时间轴</h3>
+
+<figure>
+<svg viewBox="0 0 900 230" width="100%" role="img" aria-label="动效时间轴">
+  <g font-family="-apple-system,Segoe UI,Microsoft YaHei,sans-serif" font-size="12">
+    <line x1="150" y1="24" x2="150" y2="196" stroke="#e2e8f0"/>
+    <line x1="150" y1="196" x2="860" y2="196" stroke="#cbd5e1"/>
+    <g fill="#94a3b8" font-size="11">
+      <text x="150" y="214" text-anchor="middle">0s</text>
+      <text x="327" y="214" text-anchor="middle">1s</text>
+      <text x="504" y="214" text-anchor="middle">2s</text>
+      <text x="681" y="214" text-anchor="middle">3s</text>
+      <text x="858" y="214" text-anchor="middle">4s</text>
+    </g>
+
+    <text x="0" y="44" fill="#334155" font-weight="600">Freeze 呼吸</text>
+    <path d="M150,44 C 238,24 327,24 415,44 S 592,64 681,44 S 770,24 860,44" fill="none" stroke="#5aa9e6" stroke-width="2"/>
+    <text x="0" y="88" fill="#334155" font-weight="600">Death 近距脉冲</text>
+    <path d="M150,88 C 194,70 238,70 282,88 S 370,106 415,88 S 459,70 504,88 S 548,106 592,88 S 636,70 681,88 S 725,106 770,88 S 814,70 860,88"
+          fill="none" stroke="#d64545" stroke-width="2"/>
+    <text x="0" y="132" fill="#334155" font-weight="600">Start 流光</text>
+    <path d="M150,132 L 230,120 L 240,132 L 320,120 L 330,132 L 410,120 L 420,132 L 500,120 L 510,132 L 590,120 L 600,132 L 680,120 L 690,132 L 770,120 L 780,132 L 860,120"
+          fill="none" stroke="#2f9e63" stroke-width="2"/>
+    <text x="0" y="172" fill="#334155" font-weight="600">CP 状态切换</text>
+    <rect x="150" y="160" width="240" height="16" rx="8" fill="#c9a227" opacity=".35"/>
+    <rect x="390" y="160" width="470" height="16" rx="8" fill="#2f9e63" opacity=".3"/>
+    <text x="270" y="172" text-anchor="middle" fill="#7a5f14" font-size="10.5">未触发</text>
+    <text x="625" y="172" text-anchor="middle" fill="#1f6b45" font-size="10.5">已触发（一次性 400ms 过渡后转低饱和）</text>
+  </g>
+</svg>
+<figcaption>图 4　三类循环动效与一类一次性过渡；周期下限与幅度上限见 4.1</figcaption>
+</figure>
+
+<h3>4.6 缩放与像素密度</h3>
+<ul>
+  <li>所有边缘过渡必须由 <code>fwidth</code> 推导，不写死像素阈值；zoom 从 0.5 到 2.0 变化时描边视觉宽度保持一致。</li>
+  <li>描边在最终画面上不得低于 <strong>1 个物理像素</strong>；4K + 高 DPR 下允许 1.5–2 个物理像素。</li>
+  <li>内部纹理的空间频率按屏幕导数钳制，远端（小 zoom）自动降频，避免贴图缩小后常见的糊边与高频闪烁——这正是 32px 图集在拉远时的主要短板。</li>
+  <li>实体层透明度滑杆（<code>qm_entity_overlay_*_alpha</code>）必须仍然作用于新外观，且乘在最终 alpha 上，不改变颜色。</li>
+</ul>
+
+<h3>4.7 墙体作为整体：结构 → 转角 → 填充</h3>
+
+<p>目标不是"每格画一个圆角方块"，而是让一片墙体读起来是一个整体。整体感由三件事构成，缺一不可：</p>
+
+<table>
+  <thead><tr><th>层次</th><th>要解决的问题</th><th>视觉判据</th></tr></thead>
+  <tbody>
+    <tr><td><strong>结构</strong></td><td>边界是"区域的外轮廓"，不是"每格的边框"</td><td>直边连续、没有逐格台阶；同一条边只出现一次</td></tr>
+    <tr><td><strong>转角</strong></td><td>只在真正的转角收弧，且内外角规则不同</td><td>外角圆、内角补料、端头收口；1 格通道不被画窄</td></tr>
+    <tr><td><strong>填充</strong></td><td>内部是一块材质，不是 N 个格子</td><td>材质跨格连续，看不出 32px 的接缝</td></tr>
+  </tbody>
+</table>
+
+<p>关键判断：<strong>整体感来自"结构连续 + 材质连续"，不来自"合并成一个 mesh"</strong>。材质按世界坐标采样时，逐格填充与合并后填充在视觉上等价；是否真的合并三角形，是性能与实现的选择，不该成为美术的前置条件。反过来，如果材质按格内 UV 采样，即使真的合并了几何，也会在每 32px 处露出重复的花纹——那才是最伤整体感的。</p>
+
+<h4>半径、线宽与收口</h4>
+
+<table>
+  <thead><tr><th>参数</th><th>建议值（32px 格）</th><th>规则</th></tr></thead>
+  <tbody>
+    <tr><td>凸角半径 R</td><td>6px（0.19 格），可用 4–10</td><td>只作用于区域的外凸角；直段不产生弧</td></tr>
+    <tr><td>凹角补料半径 R<sub>in</sub></td><td>4px，约为 R 的 2/3</td><td>只在两侧都有材料时生效，向空角补料，不切料</td></tr>
+    <tr><td>边界带宽 W</td><td>2–3px</td><td>画在区域<strong>内侧</strong>，不外扩；与碰撞边界对齐</td></tr>
+    <tr><td>端头（1 格宽的死胡同）</td><td>方头 + 向内 2px 收口</td><td>不做圆头，避免"看起来能穿过去"</td></tr>
+    <tr><td>1 格通道</td><td>R<sub>eff</sub> = min(R, 通道宽/2 − 1px)</td><td>半径必须让位给可通行宽度，不能把通道画窄</td></tr>
+    <tr><td>对角接触</td><td>不合并，保持 3–4px 收口</td><td>碰撞上不可斜穿，视觉上就不该连成一片</td></tr>
+    <tr><td>孔洞</td><td>内圈按 R<sub>in</sub> 处理；孔径小于 2R 时退化为整圆</td><td>孔洞也是"区域轮廓"，与外墙同一套规则</td></tr>
+  </tbody>
+</table>
+
+<figure>
+<svg viewBox="0 0 900 380" width="100%" role="img" aria-label="墙体拓扑与圆角规则">
+  <g font-family="-apple-system,Segoe UI,Microsoft YaHei,sans-serif" font-size="12">
+    <!-- 1 单格 -->
+    <g transform="translate(20,12)">
+      <path d="M8,0 H24 Q32,0 32,8 V24 Q32,32 24,32 H8 Q0,32 0,24 V8 Q0,0 8,0 Z" fill="#dbeafe" stroke="#2f6feb" stroke-width="3"/>
+      <text x="112" y="22" fill="#334155" font-weight="600">单格 / 端头</text>
+      <text x="112" y="42" fill="#64748b" font-size="11.5">四角 R；端头方头内收</text>
+      <text x="112" y="60" fill="#94a3b8" font-size="11">不做圆头，避免误判可穿</text>
+    </g>
+    <!-- 2 直道 -->
+    <g transform="translate(320,12)">
+      <path d="M8,0 H88 Q96,0 96,8 V24 Q96,32 88,32 H8 Q0,32 0,24 V8 Q0,0 8,0 Z" fill="#dbeafe" stroke="#2f6feb" stroke-width="3"/>
+      <text x="112" y="22" fill="#334155" font-weight="600">直道</text>
+      <text x="112" y="42" fill="#64748b" font-size="11.5">两侧边带平行、等宽</text>
+      <text x="112" y="60" fill="#94a3b8" font-size="11">不出现逐格台阶</text>
+    </g>
+    <!-- 3 L -->
+    <g transform="translate(620,12)">
+      <path d="M8,0 H24 Q32,0 32,8 V56 Q40,56 40,64 H56 Q64,64 64,72 V88 Q64,96 56,96 H8 Q0,96 0,88 V8 Q0,0 8,0 Z" fill="#dbeafe" stroke="#2f6feb" stroke-width="3"/>
+      <text x="112" y="22" fill="#334155" font-weight="600">拐角（L 形）</text>
+      <text x="112" y="42" fill="#64748b" font-size="11.5">外角 R，内角补料 R_in</text>
+      <text x="112" y="60" fill="#94a3b8" font-size="11">补料不切料，内角不变尖</text>
+    </g>
+    <!-- 4 T -->
+    <g transform="translate(20,210)">
+      <path d="M8,0 H88 Q96,0 96,8 V24 Q96,32 88,32 H72 Q64,32 64,40 V88 Q64,96 56,96 H40 Q32,96 32,88 V40 Q32,32 24,32 H8 Q0,32 0,24 V8 Q0,0 8,0 Z" fill="#dbeafe" stroke="#2f6feb" stroke-width="3"/>
+      <text x="112" y="22" fill="#334155" font-weight="600">T 形交汇</text>
+      <text x="112" y="42" fill="#64748b" font-size="11.5">三向汇聚，两处内角各自补料</text>
+      <text x="112" y="60" fill="#94a3b8" font-size="11">交汇处不得出现三角空隙</text>
+    </g>
+    <!-- 5 对角 -->
+    <g transform="translate(320,210)">
+      <path d="M8,0 H24 Q32,0 32,8 V24 Q32,32 24,32 H8 Q0,32 0,24 V8 Q0,0 8,0 Z" fill="#dbeafe" stroke="#2f6feb" stroke-width="3"/>
+      <path d="M40,32 H56 Q64,32 64,40 V56 Q64,64 56,64 H40 Q32,64 32,56 V40 Q32,32 40,32 Z" fill="#dbeafe" stroke="#2f6feb" stroke-width="3"/>
+      <text x="112" y="34" fill="#334155" font-weight="600">对角接触</text>
+      <text x="112" y="54" fill="#64748b" font-size="11.5">不合并，保留 3–4px 收口</text>
+      <text x="112" y="72" fill="#94a3b8" font-size="11">碰撞不可斜穿，视觉不连片</text>
+    </g>
+    <!-- 6 孔洞 -->
+    <g transform="translate(620,210)">
+      <path d="M8,0 H88 Q96,0 96,8 V88 Q96,96 88,96 H8 Q0,96 0,88 V8 Q0,0 8,0 Z M38,32 H58 Q64,32 64,38 V58 Q64,64 58,64 H38 Q32,64 32,58 V38 Q32,32 38,32 Z" fill="#dbeafe" stroke="#2f6feb" stroke-width="3" fill-rule="evenodd"/>
+      <text x="112" y="34" fill="#334155" font-weight="600">孔洞 / 环形</text>
+      <text x="112" y="54" fill="#64748b" font-size="11.5">内圈同规则，孔径小于 2R 退化为圆</text>
+      <text x="112" y="72" fill="#94a3b8" font-size="11">内圈与外墙不共享边带</text>
+    </g>
+  </g>
+</svg>
+<figcaption>图 7　六种典型拓扑：同一套半径规则在不同形状上的表现</figcaption>
+</figure>
+
+<h4>为什么不能"每格各自圆角"</h4>
+
+<figure>
+<svg viewBox="0 0 900 190" width="100%" role="img" aria-label="逐格圆角与区域圆角对比">
+  <g font-family="-apple-system,Segoe UI,Microsoft YaHei,sans-serif" font-size="12">
+    <g transform="translate(30,20)">
+      <g fill="#dbeafe" stroke="#2f6feb" stroke-width="3">
+        <rect x="0" y="0" width="40" height="40" rx="8"/>
+        <rect x="44" y="0" width="40" height="40" rx="8"/>
+        <rect x="88" y="0" width="40" height="40" rx="8"/>
+      </g>
+      <g stroke="#b42318" stroke-width="1.5">
+        <path d="M42,6 L42,34" stroke-dasharray="3 3"/>
+        <path d="M86,6 L86,34" stroke-dasharray="3 3"/>
+      </g>
+      <text x="0" y="72" fill="#b42318" font-weight="600">逐格圆角（错误）</text>
+      <text x="0" y="92" fill="#64748b" font-size="11.5">相邻格之间被切出两道凹槽，墙体像一摞方糖；</text>
+      <text x="0" y="110" fill="#64748b" font-size="11.5">直边被打断成 3 段，拉远看是一条虚线。</text>
+    </g>
+
+    <g transform="translate(500,20)">
+      <rect x="0" y="0" width="132" height="40" rx="8" fill="#dbeafe" stroke="#2f6feb" stroke-width="3"/>
+      <text x="0" y="72" fill="#0d7a4f" font-weight="600">区域圆角（正确）</text>
+      <text x="0" y="92" fill="#64748b" font-size="11.5">只在区域的两个外角收弧，直段是一条连续边带；</text>
+      <text x="0" y="110" fill="#64748b" font-size="11.5">格与格之间不产生任何横向接缝。</text>
+    </g>
+
+    <text x="30" y="160" fill="#475569" font-size="12">判据：把图缩小到 25% 看，左边应仍然是一条干净的直线，而不是断续的点线。</text>
+  </g>
+</svg>
+<figcaption>图 8　逐格圆角 vs 区域圆角：差别在直段是否被切断，不在转角本身</figcaption>
+</figure>
+
+<h4>与碰撞的一致性</h4>
+<p>所有视觉外扩不得超过 1px。圆角是向内收的装饰：不能把可通行区域画小，也不能把墙体画大。1 格通道的半径钳制、端头的方头收口都是为此存在——玩家在高速通过时依赖的是轮廓，任何一像素的偏差都会被读成"能过 / 不能过"。</p>
+
+<h2 id="s5">5. 技术契约</h2>
+
+<h3>5.1 单格的四边掩码</h3>
+<p>外观的"连续外轮廓"不靠合并几何，而靠每格的 8 邻域判断：只有当某个方向没有同类相邻格时，才在那个方向画描边。<strong>这套判断在 2.2 的实现里已经存在</strong>——<code>qm_outline_neighbors.h</code> 把邻域位懒缓存进类型网格的高位；P0 直接复用，P2 若走着色器路径再把它改写成顶点属性。</p>
+<p>两种承载方式的取舍：复用缓存 → 每帧逐格判断，零新缓冲；写进顶点属性 → 每帧零判断，但要么新开顶点布局，要么重建整层缓冲。以当前可见格数量（1080p 约 2&nbsp;000 格、4K 约 8&nbsp;000 格）计，前者足够，后者属于 P2 的优化空间。</p>
+
+<figure>
+<svg viewBox="0 0 900 300" width="100%" role="img" aria-label="八邻域掩码示意">
+  <g font-family="-apple-system,Segoe UI,Microsoft YaHei,sans-serif" font-size="12">
+    <g transform="translate(30,30)">
+      <g fill="#dbeafe">
+        <rect x="0" y="0" width="48" height="48"/>
+        <rect x="48" y="0" width="48" height="48"/>
+        <rect x="0" y="48" width="48" height="48"/>
+        <rect x="0" y="96" width="48" height="48"/>
+      </g>
+      <line x1="48" y1="6" x2="48" y2="42" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <path d="M0,0 H96 V48 H62 Q48,48 48,62 V144 H0 Z" fill="none" stroke="#2f6feb" stroke-width="3"/>
+      <text x="104" y="30" fill="#1e3a8a" font-size="11.5">外沿</text>
+      <text x="104" y="70" fill="#b91c1c" font-size="11.5">内凹圆角</text>
+      <path d="M100,64 L74,56" stroke="#b91c1c" stroke-width="1" fill="none"/>
+
+      <g font-size="11.5" fill="#475569">
+        <line x1="0" y1="176" x2="34" y2="176" stroke="#2f6feb" stroke-width="3"/>
+        <text x="44" y="180">外沿：画描边（2–3px）</text>
+        <line x1="0" y1="202" x2="34" y2="202" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <text x="44" y="206">共边：不描边（虚线仅为示意）</text>
+      </g>
+    </g>
+
+    <g transform="translate(430,34)">
+      <text x="0" y="0" fill="#334155" font-weight="600">位定义（每格 1 字节）</text>
+      <g font-size="11.5" fill="#475569">
+        <text x="0" y="24">bit0  左  (-1, 0)</text>
+        <text x="0" y="44">bit1  右  (+1, 0)</text>
+        <text x="0" y="64">bit2  上  ( 0,-1)</text>
+        <text x="0" y="84">bit3  下  ( 0,+1)</text>
+        <text x="0" y="104">bit4  左上(-1,-1)</text>
+        <text x="0" y="124">bit5  右上(+1,-1)</text>
+        <text x="0" y="144">bit6  左下(-1,+1)</text>
+        <text x="0" y="164">bit7  右下(+1,+1)</text>
+      </g>
+      <rect x="0" y="182" width="430" height="46" rx="6" fill="#f1f5fb" stroke="#dbe4f1"/>
+      <text x="14" y="202" fill="#475569" font-size="11.5">地图外沿视为同类，避免整张地图最外圈出现一圈多余发光线；</text>
+      <text x="14" y="220" fill="#475569" font-size="11.5">四角位只用于圆角过渡判断，不直接产生描边。</text>
+    </g>
+  </g>
+</svg>
+<figcaption>图 5　8 邻域掩码：边的描边靠四邻域，拐角的圆滑靠对角位</figcaption>
+</figure>
+
+<h3>5.2 顶点与属性（路径 B）</h3>
+<p>以下属性布局只在走路径 B（P2）时成立；路径 A 复用现有 quad 与类型网格，<strong>不新增顶点格式</strong>。两种路径共用同一套视觉参数（颜色、线宽、填充 alpha），只是承载方式不同。</p>
+<p>沿用现有"4 顶点 / 格"的拓扑与剔除结构，另外定义一套顶点属性（不是复用现有的纹理坐标布局）。全部使用浮点属性传递，<strong>不引入整数顶点属性、不引入整数纹理</strong>——这样 OpenGL 2 回退路径也能原样走通。</p>
+
+<table>
+  <thead><tr><th>属性</th><th>类型</th><th>含义</th><th>来源</th></tr></thead>
+  <tbody>
+    <tr><td>位置</td><td>vec2 float</td><td>世界坐标，1 格 = 32.0</td><td>现有缓冲</td></tr>
+    <tr><td>格内 UV</td><td>vec2 float</td><td>0..1，格内归一化坐标</td><td>由位置推导，或现有 texcoord 复用</td></tr>
+    <tr><td>邻域掩码</td><td>float（0..255）</td><td>8 位掩码，见 5.1</td><td>载入期计算，随顶点上传</td></tr>
+    <tr><td>实体类型</td><td>float（0..15）</td><td>Freeze / DeepFreeze / Unfreeze / …</td><td>载入期分类</td></tr>
+    <tr><td>方向</td><td>float（0..3）</td><td>tile flags 旋转量，用于起点/终点光带方向</td><td>现有 flags</td></tr>
+    <tr><td>局部偏移</td><td>vec2 float</td><td>本格在本层内的网格坐标，供噪声去重</td><td>载入期写入</td></tr>
+  </tbody>
+</table>
+
+<p>每格新增约 20 字节，相对现有每格约 220 字节的缓冲占用可以忽略；换来的好处是片元完全不需要纹理采样，也不需要邻接纹理。</p>
+
+<h3>5.3 Uniform（路径 B）</h3>
+<table>
+  <thead><tr><th>名称</th><th>类型</th><th>更新频率</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td><code>u_Time</code></td><td>float</td><td>每帧</td><td>动效相位。取<strong>游戏时间</strong>，保证 demo 回放与录像一致</td></tr>
+    <tr><td><code>u_Zoom</code></td><td>float</td><td>每帧</td><td>描边与纹理频率的屏幕空间归一</td></tr>
+    <tr><td><code>u_PlayerPos</code></td><td>vec2</td><td>每帧</td><td>Death 的距离响应；无本地角色时取相机中心</td></tr>
+    <tr><td><code>u_CategoryAlpha</code></td><td>float</td><td>每次提交</td><td>复用现有 <code>qm_entity_overlay_*_alpha</code></td></tr>
+    <tr><td><code>u_CpMask</code></td><td>vec2 float（25 位拆两段）</td><td>每帧</td><td>二期：已通过的检查点集合，按最高编号推导；25 位超过 float32 精确整数范围，必须拆分</td></tr>
+  </tbody>
+</table>
+
+<h3>5.4 落地路径</h3>
+<p>因为有 2.2 的既有轮廓实现，落地分成两条路径。<strong>P0 只走 A</strong>：不新增图形命令、不碰三个后端，靠现有 quad 批量接口就能得到"填充 + 连续轮廓"的效果；B 是 P2 的可选升级，用来换取渐变、噪点与逐像素抗锯齿。</p>
+
+<figure>
+<svg viewBox="0 0 900 320" width="100%" role="img" aria-label="两条落地路径">
+  <g font-family="-apple-system,Segoe UI,Microsoft YaHei,sans-serif" font-size="12.5">
+    <rect x="286" y="4" width="328" height="36" rx="7" fill="#eef2f9" stroke="#cbd5e1"/>
+    <text x="450" y="27" text-anchor="middle" fill="#334155">CRenderLayerEntity* + COutlines</text>
+
+    <defs><marker id="ar2" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#94a3b8"/></marker></defs>
+    <line x1="450" y1="40" x2="450" y2="62" stroke="#94a3b8" marker-end="url(#ar2)"/>
+
+    <rect x="308" y="64" width="284" height="32" rx="6" fill="#fff" stroke="#cbd5e1"/>
+    <text x="450" y="85" text-anchor="middle" fill="#475569">样式判定（qm_entity_render_style）</text>
+
+    <line x1="372" y1="96" x2="212" y2="124" stroke="#94a3b8" marker-end="url(#ar2)"/>
+    <line x1="528" y1="96" x2="688" y2="124" stroke="#94a3b8" marker-end="url(#ar2)"/>
+
+    <rect x="36" y="128" width="352" height="96" rx="8" fill="#fff4e6" stroke="#e5b781"/>
+    <text x="212" y="152" text-anchor="middle" fill="#7a4a10" font-weight="600">路径 A（P0，推荐）</text>
+    <text x="212" y="174" text-anchor="middle" fill="#8a5a1c" font-size="11.5">每格一个填充 quad（按类型取色与 alpha）</text>
+    <text x="212" y="192" text-anchor="middle" fill="#8a5a1c" font-size="11.5">+ 复用既有轮廓 quads</text>
+    <text x="212" y="210" text-anchor="middle" fill="#8a5a1c" font-size="11.5">QuadsDrawTL 提交，零引擎改动</text>
+
+    <rect x="512" y="128" width="352" height="96" rx="8" fill="#f1f5fb" stroke="#cbd5e1"/>
+    <text x="688" y="152" text-anchor="middle" fill="#334155" font-weight="600">路径 B（P2，可选）</text>
+    <text x="688" y="174" text-anchor="middle" fill="#475569" font-size="11.5">新增 RenderProceduralEntities 命令</text>
+    <text x="688" y="192" text-anchor="middle" fill="#475569" font-size="11.5">+ 程序化片元（渐变 / 噪点 / fwidth 抗锯齿）</text>
+    <text x="688" y="210" text-anchor="middle" fill="#475569" font-size="11.5">需要三后端各写一份</text>
+
+    <line x1="212" y1="224" x2="212" y2="256" stroke="#94a3b8" marker-end="url(#ar2)"/>
+    <line x1="688" y1="224" x2="688" y2="256" stroke="#94a3b8" marker-end="url(#ar2)"/>
+
+    <rect x="36" y="260" width="828" height="34" rx="7" fill="#e9f7ef" stroke="#a9d8bd"/>
+    <text x="450" y="282" text-anchor="middle" fill="#1f6b45">OpenGL3 / Vulkan / Metal / OpenGL2 走同一条既有四边形管线，无需能力位与回退分支</text>
+
+    <text x="36" y="314" fill="#64748b" font-size="11.5">P0 用 A 拿到"填充 + 轮廓 + 圆角"：圆角由三种小 decal（凸角 / 凹角补料 / 端头）承担，仍走 quad 与贴图；填充可贴一张载入期生成的可平铺噪声图，用 QuadsSetSubsetFree 逐格滚动，同样不需要着色器。</text>
+  </g>
+</svg>
+<figcaption>图 6　两条落地路径：P0 复用既有 quad 管线，P2 才考虑新增着色器命令</figcaption>
+</figure>
+
+<h3>5.5 混合与顺序</h3>
+<ul>
+  <li>样式 0（跟随皮肤）保持现有六次提交不变；样式 1/2 下，被接管的类别跳过 atlas 提交，改由填充 + 轮廓两次提交承接，总提交次数不增加。</li>
+  <li>混合模式保持 <code>BlendNormal</code>，实体层不得改写深度。</li>
+  <li>Front 层在 Tee 之后绘制这一顺序不变；半透明光幕遮挡玩家是既有行为，不修正。</li>
+</ul>
+
+<h2 id="s6">6. 配置提案</h2>
+<p>新增一个风格开关，其余沿用现有滑杆。已存在的外观设置卡片（个人化 → 实体透明度）不拆不合并，只在卡片顶部插入风格选择。</p>
+
+<table>
+  <thead><tr><th>配置</th><th>类型 / 范围</th><th>默认</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>qm_entity_render_style</code></td><td>int 0–2</td><td>0</td><td>0 = 跟随实体皮肤，1 = 程序化，2 = 程序化（轻量，仅底色 + 描边）</td></tr>
+    <tr><td><code>qm_entity_motion_level</code></td><td>int 0–2</td><td>1</td><td>0 = 关闭循环动效，1 = 标准，2 = 强化（仅供录制/展示）</td></tr>
+    <tr><td><code>qm_entity_overlay_*_alpha</code></td><td>沿用</td><td>100</td><td>不变，乘在最终 alpha 上</td></tr>
+    <tr><td><code>qm_outline_*</code></td><td>沿用</td><td>现有值</td><td>线宽与颜色继续由轮廓自己的配置决定，填充只读取它，不复制一套</td></tr>
+  </tbody>
+</table>
+
+<blockquote>不建议给每一类实体再各加一个开关。现有八个透明度滑杆已经让这张卡片偏长；风格选择 + 动效等级两个维度足够覆盖"低配 / 竞技 / 展示"三种诉求。</blockquote>
+
+<h2 id="s7">7. 兼容与风险</h2>
+
+<table>
+  <thead><tr><th>风险</th><th>影响</th><th>处置</th></tr></thead>
+  <tbody>
+    <tr><td>与实体皮肤系统冲突</td><td>用户挑选的实体图集被绕开，Assets 页的预览与实际不一致</td><td>默认 0（跟随皮肤）；切到程序化时在设置页给出一次性说明；切回即恢复皮肤</td></tr>
+    <tr><td>地图作者的表达被覆盖</td><td>地图内嵌的实体图（配色随地图定制）失去意义</td><td>P2 增加"继承地图主色"：从实体图取中位色作为基色，形状仍程序化</td></tr>
+    <tr><td>demo 回放与录像</td><td>动效相位不一致会看出"回放和录制不同"</td><td>时间源统一取游戏时间，禁止使用墙钟</td></tr>
+    <tr><td>OpenGL 2 / GLES 回退</td><td>整数属性与 <code>texelFetch</code> 不可用</td><td>本方案不使用整数属性与纹理，纯浮点即可，回退路径与主线共用同一着色器源</td></tr>
+    <tr><td>低端核显</td><td>内部噪声层带来每像素 ALU 成本</td><td>提供轻量档（仅底色 + 描边），并把噪声层数作为画质档位的一部分</td></tr>
+    <tr><td>轮廓与填充各算一套邻域</td><td>同一条边上出现双线或 1px 错位</td><td>填充必须调用同一份邻域缓存（<code>QmOutlineCachedNeighbors</code>），禁止另写一套判定</td></tr>
+    <tr><td>Through 系可见化</td><td>玩法信息优势</td><td>明确不实现，写入边界</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s8">8. 验收清单</h2>
+
+<h3>视觉</h3>
+<ul class="check">
+  <li>1080p / 1440p / 4K × zoom 0.5 / 1.0 / 2.0 六组截图，Freeze 与 Unfreeze 相邻处无接缝、无 1px 亮线</li>
+  <li>整块冻结区域的四个内凹角为圆角过渡，不外溢到相邻格</li>
+  <li>拉远到 0.5 时边缘与内部纹理仍可辨识，无高频闪烁；拉近到 2.0 时描边不糊、不出现锯齿</li>
+  <li>起点光带方向随 tile flags 旋转正确；终点光幕与起点在灰度图下可区分</li>
+  <li>死亡区在玩家 3 格内出现脉冲，离开后 400&nbsp;ms 内回到静息</li>
+  <li>八个透明度滑杆从 100 拖到 0 时外观线性淡出，无颜色偏移</li>
+  <li>填充边缘与既有轮廓线对齐，开启 <code>qm_outline_*</code> 时不出现双线、错位或 1px 缝隙</li>
+  <li>关闭实体层（<code>cl_overlay_entities</code> 归零）时，填充与轮廓同时消失，不残留</li>
+</ul>
+
+<h3>行为</h3>
+<ul class="check">
+  <li>切换风格后不需要重进地图，当前地图立即重绘</li>
+  <li>demo 录制的成品与回放画面在动效相位上一致</li>
+  <li>实体层总开关关闭时，新路径同样整层跳过</li>
+  <li>地图内嵌实体图 / 用户自定义皮肤下，风格 0 的表现与改动前逐像素一致</li>
+</ul>
+
+<h3>后端与性能</h3>
+<ul class="check">
+  <li>OpenGL3 / Vulkan / Metal 三后端截图一致（允许 ±1 色阶）</li>
+  <li>OpenGL2 回退路径可运行、外观降级符合轻量档定义</li>
+  <li>同图同视角下，帧时间不回退超过 3%；轻量档不回退</li>
+  <li>不新增每帧绘制提交次数</li>
+</ul>
+
+<h2 id="s9">9. 分期路线</h2>
+
+<table>
+  <thead><tr><th>阶段</th><th>内容</th><th>产出</th></tr></thead>
+  <tbody>
+    <tr><td>P0</td><td>复用既有轮廓：样式开关、内部填充、接管类别跳过 atlas；先做 Death 与 Freeze 两类打样</td><td>零引擎改动的对比截图 + 开关组合矩阵</td></tr>
+    <tr><td>P1</td><td>Freeze / DeepFreeze / Unfreeze / DeepUnfreeze / Start / Finish 六类外观参数化，打通透明度滑杆；补齐 4.7 的圆角 decal 与区域填充</td><td>完整第一批视觉规格落地</td></tr>
+    <tr><td>P2</td><td>着色器路径（渐变 / 噪点 / 圆角 SDF）、编号类 SDF 数字、CP 状态联动、地图主色继承</td><td>二期视觉 + 与地图的兼容策略</td></tr>
+  </tbody>
+</table>
+
+<p>P0 的验收标准不是"好看"，而是<strong>与既有 <code>qm_outline_*</code> 不打架、开关组合可预期、所有后端表现一致</strong>。因为 P0 不新增图形命令，后端一致性是结构上保证的；真正要盯的是"轮廓与填充同源"——两边若各算一套邻域，必然出现双线或 1px 错位。</p>
+
+<h2 id="s10">10. 附录：代码位置</h2>
+
+<table>
+  <thead><tr><th>主题</th><th>位置</th></tr></thead>
+  <tbody>
+    <tr><td>图层工厂与实体层类型分派</td><td><code>src/game/map/map_renderer.cpp</code>（<code>LAYER_GAME</code> 分支）</td></tr>
+    <tr><td>实体层基类与分类缓冲</td><td><code>src/game/map/render_layer.cpp</code>（<code>CRenderLayerEntityGame::Init</code> 起）</td></tr>
+    <tr><td>静态缓冲烘焙与可见区间提交</td><td><code>src/game/map/render_layer.cpp</code>（<code>UploadTileData</code> / <code>RenderTileLayer</code>）、<code>render_layer.h</code>（<code>QmBuildTileLayerDrawRanges</code>）</td></tr>
+    <tr><td>实体分类枚举</td><td><code>src/game/map/qm_entity_overlay_build_plan.h</code></td></tr>
+    <tr><td>实体皮肤加载</td><td><code>src/game/client/components/mapimages.cpp</code>（<code>GetEntities</code>）</td></tr>
+    <tr><td>现有透明度设置卡片</td><td><code>src/game/client/QmUi/cards/QmCardCatalogVisualContent.cpp</code>（<code>qm:entity_overlay</code>）</td></tr>
+    <tr><td>自定义管线先例</td><td><code>src/engine/graphics.h</code>（<code>RenderProceduralRing</code> / <code>HasProceduralRing</code>）、三后端 <code>*_qm_pipelines*</code></td></tr>
+    <tr><td>着色器源与构建</td><td><code>data/shader/</code>、<code>data/shader/metal/qmclient.metal</code>、<code>cmake/BuildVulkanShaders.cmake</code></td></tr>
+    <tr><td>碰撞描边（既有近似功能）</td><td><code>src/game/client/components/qmclient/collision_hitbox.cpp</code></td></tr>
+    <tr><td>TClient 墙体轮廓（P0 复用对象）</td><td><code>src/game/client/components/tclient/outlines.cpp</code></td></tr>
+    <tr><td>轮廓邻域缓存</td><td><code>src/game/client/components/tclient/qm_outline_neighbors.h</code></td></tr>
+    <tr><td>轮廓配置项</td><td><code>src/engine/shared/config_variables_tclient.h</code>（<code>qm_outline_*</code>）</td></tr>
+    <tr><td>轮廓设置卡片</td><td><code>src/game/client/QmUi/cards/QmCardCatalogTClientVisual.cpp</code></td></tr>
+  </tbody>
+</table>
+
+<h2 id="s11">11. 附录：着色器接口草案</h2>
+<p>以下是契约级别的片段，用于对齐美术与实现的预期，不是最终代码。所有参数来自 5.2 与 5.3。</p>
+
+<pre><code>// 顶点：把 8 位掩码与类型原样传到片元
+in vec2 a_Pos;
+in vec2 a_LocalUV;
+in float a_Mask;      // 0..255
+in float a_Type;      // 0..15
+in float a_Rotate;    // 0..3
+out vec2 v_LocalUV;
+flat out int v_Mask;
+flat out int v_Type;
+
+// 片元：先算到外沿的距离（世界单位），再按类型叠加内部质感
+float EdgeDistance(vec2 uv, int m)
+{
+    float d = 1e9;
+    if ((m &amp; 1) == 0) d = min(d, uv.x * 32.0);          // 左
+    if ((m &amp; 2) == 0) d = min(d, (1.0 - uv.x) * 32.0);  // 右
+    if ((m &amp; 4) == 0) d = min(d, uv.y * 32.0);          // 上
+    if ((m &amp; 8) == 0) d = min(d, (1.0 - uv.y) * 32.0);  // 下
+    // 对角位（bit4..7）用于内凹圆角修正，本草案不展开具体 SDF
+    return d;
+}
+
+void main()
+{
+    float Edge = EdgeDistance(v_LocalUV, v_Mask);
+    float AA = max(fwidth(Edge), 1e-4);
+    float Stroke = 1.0 - smoothstep(2.0 - AA, 2.0 + AA, Edge);   // 2px 外沿
+    float Glow = exp(-Edge / 8.0);                               // 向内 8px 衰减
+    vec3 Base = CategoryColor(v_Type);
+    vec3 Color = Base * (0.22 + 0.55 * Glow) + vec3(Stroke) * 0.35;
+    FragColor = vec4(Color, CategoryAlpha(v_Type) * (0.22 + 0.6 * Stroke + 0.18 * Glow));
+}</code></pre>
+
+<blockquote>实现注意：<code>bit()</code>、<code>flat</code>、<code>fwidth</code> 在 GLSL 1.20 下并非全部可用，实际实现需要按后端提供等价写法；这也是 P0 必须在 OpenGL2 上先跑通一遍的原因。</blockquote>
+
+<footer>
+  <p>本文为视觉与渲染契约草案，不含实现排期与工时评估；实现前需按 <code>docs/规格/</code> 流程评审，并按 <code>AGENTS.md</code> 的验证要求补三后端截图与回退证据。</p>
+  <p>相关文档：<code>docs/规格/UI全局术语与组件规范.md</code>（若涉及设置页控件）、<code>docs/规格/2026-11-14-UI视觉分组与自定义边界.md</code>（若新增配置项）。</p>
+</footer>
+
+</div>
+</body>
+</html>
