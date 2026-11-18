@@ -22,6 +22,11 @@ try:
 		scenario_menu_background_pending_switch_shutdown,
 		scenario_menu_background_switch_shutdown,
 	)
+	from qmclient_scripts.integration.e2e_gameclient_recovery import (
+		scenario_missing_language_preserves_previous_selection,
+		scenario_invalid_hud_atlas_loads_default,
+		scenario_invalid_emoticons_atlas_loads_default,
+	)
 	from qmclient_scripts.integration.e2e_map_loading import scenario_map_change_during_resource_preparation
 	from qmclient_scripts.integration.e2e_settings_language import scenario_settings_language_round_trip
 	from qmclient_scripts.integration.process_harness import ProcessEnvironment
@@ -31,6 +36,11 @@ except ModuleNotFoundError:
 		scenario_menu_background_failed_switch_shutdown,
 		scenario_menu_background_pending_switch_shutdown,
 		scenario_menu_background_switch_shutdown,
+	)
+	from e2e_gameclient_recovery import (  # type: ignore[no-redef]
+		scenario_missing_language_preserves_previous_selection,
+		scenario_invalid_hud_atlas_loads_default,
+		scenario_invalid_emoticons_atlas_loads_default,
 	)
 	from e2e_map_loading import scenario_map_change_during_resource_preparation  # type: ignore[no-redef]
 	from e2e_settings_language import scenario_settings_language_round_trip  # type: ignore[no-redef]
@@ -393,6 +403,9 @@ def scenario_system_font_restore_no_false_hang(env: ProcessEnvironment) -> None:
 
 
 E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
+	"missing_language_preserves_previous_selection": scenario_missing_language_preserves_previous_selection,
+	"invalid_hud_atlas_loads_default": scenario_invalid_hud_atlas_loads_default,
+	"invalid_emoticons_atlas_loads_default": scenario_invalid_emoticons_atlas_loads_default,
 	"assert_dialog_no_false_hang": scenario_assert_dialog_no_false_hang,
 	"asset_loading_stall_reports_hang": scenario_asset_loading_stall_reports_hang,
 	"hang_watchdog_reports_stall": scenario_hang_watchdog_reports_stall,

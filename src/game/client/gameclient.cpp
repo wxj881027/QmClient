@@ -900,13 +900,19 @@ static void GenerateTimeoutCode(char *pTimeoutCode)
 	}
 }
 
+static char gs_aLoadedLanguageFile[sizeof(g_Config.m_ClLanguagefile)] = {};
+
 void CGameClient::InitializeLanguage()
 {
 	// set the language
 	g_Localization.LoadIndexfile(Storage(), Console());
 	if(g_Config.m_ClShowWelcome)
 		g_Localization.SelectDefaultLanguage(Console(), g_Config.m_ClLanguagefile, sizeof(g_Config.m_ClLanguagefile));
-	g_Localization.Load(g_Config.m_ClLanguagefile, Storage(), Console());
+	const bool Loaded = g_Localization.Load(g_Config.m_ClLanguagefile, Storage(), Console());
+	if(Loaded)
+		str_copy(gs_aLoadedLanguageFile, g_Config.m_ClLanguagefile);
+	else
+		str_copy(g_Config.m_ClLanguagefile, gs_aLoadedLanguageFile);
 }
 
 void CGameClient::ForceUpdateConsoleRemoteCompletionSuggestions()
@@ -1817,6 +1823,33 @@ void CGameClient::FinishConnectionResourcePreparation()
 	m_LocalServer.RconAuthIfPossible();
 }
 
+// 快照预测源准备失败后，等下一次完整预测发布再使用预测坐标。
+static constexpr int PREDICTION_SNAPSHOT_UNAVAILABLE = -2;
+
+static void DiscardPredictionWorld(CGameWorld &World)
+{
+	World.m_IsValidCopy = false;
+	World.OnModified();
+	World.Clear();
+	World.m_PredictedEvents.clear();
+	World.m_Core.m_vSwitchers.clear();
+	World.m_GameTick = 0;
+}
+
+static void ResetPredictionSamples(CGameClient::CClientData &Client, vec2 SnapshotPos)
+{
+	Client.m_IsPredicted = false;
+	Client.m_IsPredictedLocal = false;
+	Client.m_ValidAntipingSmooth = false;
+	Client.m_Uncertainty = 0.0f;
+	Client.m_ImprovedPredPos = SnapshotPos;
+	Client.m_PrevImprovedPredPos = SnapshotPos;
+	std::fill(std::begin(Client.m_aSmoothStart), std::end(Client.m_aSmoothStart), 0);
+	std::fill(std::begin(Client.m_aSmoothLen), std::end(Client.m_aSmoothLen), 0);
+	std::fill(std::begin(Client.m_aPredPos), std::end(Client.m_aPredPos), SnapshotPos);
+	std::fill(std::begin(Client.m_aPredTick), std::end(Client.m_aPredTick), 0);
+}
+
 void CGameClient::OnReset()
 {
 	// 离开对局：自杀保护回到配置默认值，本局自动开启的拦截不会漏到下一局。
@@ -1910,33 +1943,15 @@ void CGameClient::OnReset()
 	m_GameWorld.m_PredictedEvents.clear();
 	m_GameWorld.m_WorldConfig.m_InfiniteAmmo = true;
 	if(!m_PredictedWorld.CopyWorld(&m_GameWorld))
-	{
-		m_PredictedWorld.Clear();
-		m_PredictedWorld.m_PredictedEvents.clear();
-		m_PredictedWorld.m_IsValidCopy = false;
-		m_PredictedWorld.OnModified();
-	}
+		DiscardPredictionWorld(m_PredictedWorld);
 	if(!m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld))
-	{
-		m_PrevPredictedWorld.Clear();
-		m_PrevPredictedWorld.m_PredictedEvents.clear();
-		m_PrevPredictedWorld.m_IsValidCopy = false;
-		m_PrevPredictedWorld.OnModified();
-	}
+		DiscardPredictionWorld(m_PrevPredictedWorld);
 	if(!m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld))
-	{
-		m_RegularPredictedWorld.Clear();
-		m_RegularPredictedWorld.m_PredictedEvents.clear();
-		m_RegularPredictedWorld.m_IsValidCopy = false;
-		m_RegularPredictedWorld.OnModified();
-	}
+		DiscardPredictionWorld(m_RegularPredictedWorld);
 	if(!m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld))
-	{
-		m_PrevRegularPredictedWorld.Clear();
-		m_PrevRegularPredictedWorld.m_PredictedEvents.clear();
-		m_PrevRegularPredictedWorld.m_IsValidCopy = false;
-		m_PrevRegularPredictedWorld.OnModified();
-	}
+		DiscardPredictionWorld(m_PrevRegularPredictedWorld);
+	DiscardPredictionWorld(m_ExtraPredictedWorld);
+	DiscardPredictionWorld(m_PredSmoothingWorld);
 
 	m_vSnapEntities.clear();
 
@@ -2016,7 +2031,7 @@ void CGameClient::OnReset()
 void CGameClient::UpdatePositions()
 {
 	// local character position
-	if(g_Config.m_ClPredict && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	if(m_PredictedTick != PREDICTION_SNAPSHOT_UNAVAILABLE && g_Config.m_ClPredict && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		if(!AntiPingPlayers())
 		{
@@ -2460,7 +2475,7 @@ float CGameClient::GetAnimationPlaybackSpeed() const
 
 bool CGameClient::Predict() const
 {
-	if(!g_Config.m_ClPredict && !m_FastPractice.Enabled())
+	if(m_PredictedTick == PREDICTION_SNAPSHOT_UNAVAILABLE || (!g_Config.m_ClPredict && !m_FastPractice.Enabled()))
 		return false;
 
 	if(m_Snap.m_pGameInfoObj)
@@ -2654,6 +2669,22 @@ namespace
 		int m_Consumed = 0;
 	};
 
+	bool ParseVoteClientId(const char *&pCursor, int &ClientId)
+	{
+		if(!IsAsciiDigit(*pCursor))
+			return false;
+
+		ClientId = 0;
+		do
+		{
+			ClientId = ClientId * 10 + (*pCursor - '0');
+			if(ClientId >= MAX_CLIENTS)
+				return false;
+			++pCursor;
+		} while(IsAsciiDigit(*pCursor));
+		return true;
+	}
+
 	bool ParseQuotedVoteClientLabel(const char *pText, SVoteClientLabel &Out)
 	{
 		if(!pText || *pText != '\'')
@@ -2663,15 +2694,9 @@ namespace
 		while(*pCursor == ' ')
 			++pCursor;
 
-		if(!IsAsciiDigit(*pCursor))
+		int ClientId;
+		if(!ParseVoteClientId(pCursor, ClientId))
 			return false;
-
-		int ClientId = 0;
-		do
-		{
-			ClientId = ClientId * 10 + (*pCursor - '0');
-			++pCursor;
-		} while(IsAsciiDigit(*pCursor));
 
 		if(*pCursor != ':' || pCursor[1] != ' ')
 			return false;
@@ -2697,15 +2722,9 @@ namespace
 		while(*pCursor == ' ')
 			++pCursor;
 
-		if(!IsAsciiDigit(*pCursor))
+		int ClientId;
+		if(!ParseVoteClientId(pCursor, ClientId))
 			return false;
-
-		int ClientId = 0;
-		do
-		{
-			ClientId = ClientId * 10 + (*pCursor - '0');
-			++pCursor;
-		} while(IsAsciiDigit(*pCursor));
 
 		if(*pCursor != ':' || pCursor[1] != ' ')
 			return false;
@@ -2738,7 +2757,7 @@ void CGameClient::FormatStreamerVoteText(const char *pText, char *pBuf, int BufS
 	}
 
 	SVoteClientLabel Label;
-	if(ParseFullVoteClientLabel(pText, Label) && Label.m_ClientId >= 0 && Label.m_ClientId < MAX_CLIENTS &&
+	if(ParseFullVoteClientLabel(pText, Label) &&
 		ShouldHideStreamerIdentity(Label.m_ClientId) &&
 		str_comp_num(m_aClients[Label.m_ClientId].m_aName, Label.m_pName, Label.m_NameLen) == 0 &&
 		m_aClients[Label.m_ClientId].m_aName[Label.m_NameLen] == '\0')
@@ -2753,7 +2772,6 @@ void CGameClient::FormatStreamerVoteText(const char *pText, char *pBuf, int BufS
 		bool Replaced = false;
 		SVoteClientLabel QuotedLabel;
 		if(ParseQuotedVoteClientLabel(pCursor, QuotedLabel) &&
-			QuotedLabel.m_ClientId >= 0 && QuotedLabel.m_ClientId < MAX_CLIENTS &&
 			ShouldHideStreamerIdentity(QuotedLabel.m_ClientId) &&
 			str_comp_num(m_aClients[QuotedLabel.m_ClientId].m_aName, QuotedLabel.m_pName, QuotedLabel.m_NameLen) == 0 &&
 			m_aClients[QuotedLabel.m_ClientId].m_aName[QuotedLabel.m_NameLen] == '\0')
@@ -3352,7 +3370,13 @@ void CGameClient::HandleLanguageChanged()
 		return;
 	m_LanguageChanged = false;
 
-	g_Localization.Load(g_Config.m_ClLanguagefile, Storage(), Console());
+	const bool Loaded = g_Localization.Load(g_Config.m_ClLanguagefile, Storage(), Console());
+	if(!Loaded)
+	{
+		str_copy(g_Config.m_ClLanguagefile, gs_aLoadedLanguageFile);
+		return;
+	}
+	str_copy(gs_aLoadedLanguageFile, g_Config.m_ClLanguagefile);
 
 	TextRender()->SetFontLanguageVariant(g_Config.m_ClLanguagefile);
 	m_Menus.InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::LANGUAGE_CHANGED);
@@ -4071,9 +4095,10 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 						m_Snap.m_aCharacters[Item.m_Id].m_Active = true;
 						m_Snap.m_aCharacters[Item.m_Id].m_Prev = *((const CNetObj_Character *)pOld);
 
-						// limit evolving to 3 seconds
-						bool EvolvePrev = Client()->PrevGameTick(g_Config.m_ClDummy) - m_Snap.m_aCharacters[Item.m_Id].m_Prev.m_Tick <= 3 * Client()->GameTickSpeed();
-						bool EvolveCur = Client()->GameTick(g_Config.m_ClDummy) - m_Snap.m_aCharacters[Item.m_Id].m_Cur.m_Tick <= 3 * Client()->GameTickSpeed();
+						// 快照中的角色 tick 可以取任意 int，用宽类型计算三秒追帧上限。
+						const int64_t MaxEvolveTicks = 3LL * Client()->GameTickSpeed();
+						const bool EvolvePrev = static_cast<int64_t>(Client()->PrevGameTick(g_Config.m_ClDummy)) - m_Snap.m_aCharacters[Item.m_Id].m_Prev.m_Tick <= MaxEvolveTicks;
+						const bool EvolveCur = static_cast<int64_t>(Client()->GameTick(g_Config.m_ClDummy)) - m_Snap.m_aCharacters[Item.m_Id].m_Cur.m_Tick <= MaxEvolveTicks;
 
 						// reuse the result from the previous evolve if the snapped character didn't change since the previous snapshot
 						if(EvolveCur && m_aClients[Item.m_Id].m_Evolved.m_Tick == Client()->PrevGameTick(g_Config.m_ClDummy))
@@ -4753,26 +4778,29 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 
 	if(g_Config.m_ClFreezeStars && !m_SuppressEvents)
 	{
-		for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+		// CDamageInd 最多容纳 1024 个指示器，且本轮快照处理期间不会移除它们。
+		int RemainingStars = 1024;
+		for(int ClientId = 0; ClientId < MAX_CLIENTS && RemainingStars > 0; ++ClientId)
 		{
 			auto &Character = m_Snap.m_aCharacters[ClientId];
 			if(Character.m_Active && Character.m_HasExtendedData && Character.m_pPrevExtendedData)
 			{
-				int FreezeTimeNow = Character.m_ExtendedData.m_FreezeEnd - Client()->GameTick(g_Config.m_ClDummy);
-				int FreezeTimePrev = Character.m_pPrevExtendedData->m_FreezeEnd - Client()->PrevGameTick(g_Config.m_ClDummy);
-				vec2 Pos = vec2(Character.m_Cur.m_X, Character.m_Cur.m_Y);
-				int StarsNow = (FreezeTimeNow + 1) / Client()->GameTickSpeed();
-				int StarsPrev = (FreezeTimePrev + 1) / Client()->GameTickSpeed();
+				const int64_t FreezeTimeNow = static_cast<int64_t>(Character.m_ExtendedData.m_FreezeEnd) - Client()->GameTick(g_Config.m_ClDummy);
+				const int64_t FreezeTimePrev = static_cast<int64_t>(Character.m_pPrevExtendedData->m_FreezeEnd) - Client()->PrevGameTick(g_Config.m_ClDummy);
+				const vec2 Pos(Character.m_Cur.m_X, Character.m_Cur.m_Y);
+				const int64_t StarsNow = (FreezeTimeNow + 1) / Client()->GameTickSpeed();
+				const int64_t StarsPrev = (FreezeTimePrev + 1) / Client()->GameTickSpeed();
 				if(StarsNow < StarsPrev || (StarsPrev == 0 && StarsNow > 0))
 				{
-					int Amount = StarsNow + 1;
+					const int64_t Amount = StarsNow + 1;
 					float Mid = 3 * pi / 2;
 					float Min = Mid - pi / 3;
 					float Max = Mid + pi / 3;
-					for(int j = 0; j < Amount; j++)
+					for(int j = 0; j < Amount && RemainingStars > 0; ++j)
 					{
 						float Angle = mix(Min, Max, (j + 1) / (float)(Amount + 2));
 						m_Effects.DamageIndicator(Pos, direction(Angle), 1.0f);
+						--RemainingStars;
 					}
 				}
 			}
@@ -5158,6 +5186,9 @@ void CGameClient::ApplyPreInputs(int Tick, bool Direct, CGameWorld &GameWorld)
 
 void CGameClient::OnPredict()
 {
+	if(m_PredictedTick == PREDICTION_SNAPSHOT_UNAVAILABLE && !m_GameWorld.GetCharacterById(m_Snap.m_LocalClientId))
+		return;
+
 	UpdateQmAxiomPrediction();
 	CQmAxiomQuadTimeScope QuadTime(m_Collision, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 	// store the previous values so we can detect prediction errors
@@ -6452,12 +6483,7 @@ void CGameClient::CClientData::Reset()
 	m_RenderCur.m_Tick = -1;
 	m_RenderPrev.m_Tick = -1;
 	m_RenderPos = vec2(0.0f, 0.0f);
-	m_IsPredicted = false;
-	m_IsPredictedLocal = false;
-	std::fill(std::begin(m_aSmoothStart), std::end(m_aSmoothStart), 0);
-	std::fill(std::begin(m_aSmoothLen), std::end(m_aSmoothLen), 0);
-	std::fill(std::begin(m_aPredPos), std::end(m_aPredPos), vec2(0.0f, 0.0f));
-	std::fill(std::begin(m_aPredTick), std::end(m_aPredTick), 0);
+	ResetPredictionSamples(*this, m_RenderPos);
 	m_SpecCharPresent = false;
 	m_SpecChar = vec2(0.0f, 0.0f);
 
@@ -6988,10 +7014,12 @@ void CGameClient::UpdateLocalTuning()
 	// update the tuning at the local position with the latest tunings received before the new snapshot
 	if(m_GameWorld.m_WorldConfig.m_UseTuneZones)
 	{
-		const bool HasTuneZoneOverride = m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_HasExtendedData &&
-						 m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_ExtendedData.m_TuneZoneOverride != TuneZone::OVERRIDE_NONE;
+		const int LocalClientId = m_Snap.m_LocalClientId;
+		const bool HasTuneZoneOverride = LocalClientId >= 0 && LocalClientId < MAX_CLIENTS &&
+						 m_Snap.m_aCharacters[LocalClientId].m_HasExtendedData &&
+						 m_Snap.m_aCharacters[LocalClientId].m_ExtendedData.m_TuneZoneOverride != TuneZone::OVERRIDE_NONE;
 		int TuneZone = HasTuneZoneOverride ?
-				       m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_ExtendedData.m_TuneZoneOverride :
+				       m_Snap.m_aCharacters[LocalClientId].m_ExtendedData.m_TuneZoneOverride :
 				       Collision()->IsTune(Collision()->GetMapIndex(LocalPos));
 		if(!HasTuneZoneOverride && TuneZone == 0)
 			TuneZone = Collision()->GetQmAxiomQuadTuneZone(LocalPos);
@@ -7184,7 +7212,30 @@ void CGameClient::UpdatePrediction()
 	for(const CSnapEntities &EntData : SnapEntities())
 		m_GameWorld.NetObjAdd(EntData.m_Item.m_Id, EntData.m_Item.m_Type, EntData.m_Item.m_pData, EntData.m_pDataEx);
 
-	m_GameWorld.NetObjEnd();
+	if(m_GameWorld.NetObjEnd())
+		return;
+
+	// 源世界已清理。撤销旧预测和本轮写入的平滑采样，镜头和绘制回退到服务器快照。
+	m_PredictedTick = PREDICTION_SNAPSHOT_UNAVAILABLE;
+	m_NewPredictedTick = false;
+	m_PredictedDummyId = -1;
+	Client()->m_IsLocalFrozen = false;
+	m_GameWorld.m_PredictedEvents.clear();
+	DiscardPredictionWorld(m_PredictedWorld);
+	DiscardPredictionWorld(m_PrevPredictedWorld);
+	DiscardPredictionWorld(m_RegularPredictedWorld);
+	DiscardPredictionWorld(m_PrevRegularPredictedWorld);
+	DiscardPredictionWorld(m_ExtraPredictedWorld);
+	DiscardPredictionWorld(m_PredSmoothingWorld);
+	m_PredictedChar.Reset();
+	m_PredictedPrevChar.Reset();
+	std::fill(std::begin(m_aLastActive), std::end(m_aLastActive), false);
+	for(int i = 0; i < MAX_CLIENTS; ++i)
+	{
+		const auto &Character = m_Snap.m_aCharacters[i];
+		const vec2 SnapshotPos = Character.m_Active ? vec2(Character.m_Cur.m_X, Character.m_Cur.m_Y) : vec2(0.0f, 0.0f);
+		ResetPredictionSamples(m_aClients[i], SnapshotPos);
+	}
 }
 
 void CGameClient::UpdateSpectatorCursor()
@@ -7900,7 +7951,29 @@ CGameClient::CImageAsset CGameClient::LoadAssetFromPath(const char *pPath, bool 
 
 void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 {
-	if(m_GameSkinLoaded)
+	CImageAsset LoadedAsset = LoadAssetFromPath(pPath, AsDir, IMAGE_GAME, "game");
+	CImageInfo &ImgInfo = LoadedAsset.m_ImageInfo;
+	const bool PngLoaded = LoadedAsset.IsLoaded();
+	const bool IsDefault = LoadedAsset.m_IsDefault;
+	const bool IsBlankAsset = LoadedAsset.m_IsBlank;
+	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
+	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
+		ClearImageToTransparent(ImgInfo);
+
+	const bool ImageValid = PngLoaded &&
+				Graphics()->CheckImageDivisibility(LoadedAsset.m_aPath, ImgInfo, g_pData->m_aSprites[SPRITE_HEALTH_FULL].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_HEALTH_FULL].m_pSet->m_Gridy, true) &&
+				Graphics()->IsImageFormatRgba(LoadedAsset.m_aPath, ImgInfo);
+	if(!ImageValid && !IsDefault)
+	{
+		ImgInfo.Free();
+		if(PngLoaded || AsDir)
+			LoadGameSkin("default");
+		else
+			LoadGameSkin(pPath, true);
+		return;
+	}
+
+	if(ImageValid && m_GameSkinLoaded)
 	{
 		Graphics()->UnloadTexture(&m_GameSkin.m_SpriteHealthFull);
 		Graphics()->UnloadTexture(&m_GameSkin.m_SpriteHealthEmpty);
@@ -8005,41 +8078,17 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 		m_GameSkinLoaded = false;
 	}
 
-	CImageAsset LoadedAsset = LoadAssetFromPath(pPath, AsDir, IMAGE_GAME, "game");
-	CImageInfo &ImgInfo = LoadedAsset.m_ImageInfo;
-	const bool PngLoaded = LoadedAsset.IsLoaded();
-	const bool IsDefault = LoadedAsset.m_IsDefault;
-	const bool IsBlankAsset = LoadedAsset.m_IsBlank;
-	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
-	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
-		ClearImageToTransparent(ImgInfo);
-
 	// 为不可见资源准备默认图回退
 	std::optional<CImageInfo> FallbackImgInfo;
 	// 只有开关打开时才需要回退来源；关闭时（默认）不解码这张默认图集，省下它的内存与解码时间。
-	if(g_Config.m_QmBlankAssetFallback != 0 && PngLoaded && !IsDefault)
+	if(g_Config.m_QmBlankAssetFallback != 0 && ImageValid && !IsDefault)
 	{
 		CImageInfo ImgDefaultInfo;
 		if(Graphics()->LoadPng(ImgDefaultInfo, g_pData->m_aImages[IMAGE_GAME].m_pFilename, IStorage::TYPE_ALL))
 			FallbackImgInfo = std::move(ImgDefaultInfo);
 	}
 
-	const bool ImageValid = PngLoaded &&
-				Graphics()->CheckImageDivisibility(LoadedAsset.m_aPath, ImgInfo, g_pData->m_aSprites[SPRITE_HEALTH_FULL].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_HEALTH_FULL].m_pSet->m_Gridy, true) &&
-				Graphics()->IsImageFormatRgba(LoadedAsset.m_aPath, ImgInfo);
-	if(!PngLoaded && !IsDefault)
-	{
-		if(AsDir)
-			LoadGameSkin("default");
-		else
-			LoadGameSkin(pPath, true);
-	}
-	else if(!ImageValid && !IsDefault)
-	{
-		// Avoid leaving the game skin in an unloaded state when a custom file is invalid.
-		LoadGameSkin("default");
-	}
-	else if(ImageValid)
+	if(ImageValid)
 	{
 		m_GameSkin.m_SpriteHealthFull = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HEALTH_FULL]);
 		m_GameSkin.m_SpriteHealthEmpty = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HEALTH_EMPTY]);
@@ -8171,14 +8220,6 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 
 void CGameClient::LoadEmoticonsSkin(const char *pPath, bool AsDir)
 {
-	if(m_EmoticonsSkinLoaded)
-	{
-		for(auto &SpriteEmoticon : m_EmoticonsSkin.m_aSpriteEmoticons)
-			Graphics()->UnloadTexture(&SpriteEmoticon);
-
-		m_EmoticonsSkinLoaded = false;
-	}
-
 	CImageAsset LoadedAsset = LoadAssetFromPath(pPath, AsDir, IMAGE_EMOTICONS, "emoticons");
 	CImageInfo &ImgInfo = LoadedAsset.m_ImageInfo;
 	const bool PngLoaded = LoadedAsset.IsLoaded();
@@ -8188,37 +8229,39 @@ void CGameClient::LoadEmoticonsSkin(const char *pPath, bool AsDir)
 	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
 		ClearImageToTransparent(ImgInfo);
 
-	// 为不可见资源准备默认图回退。回退图必须是**同一图集**的默认文件：
-	// sprite 的格坐标按各自 set 的网格换算，换成别的图集（列数不同）会取到完全不相干的区域。
-	std::optional<CImageInfo> FallbackImgInfo;
-	// 只有开关打开时才需要回退来源；关闭时（默认）不解码这张默认图集，省下它的内存与解码时间。
-	if(g_Config.m_QmBlankAssetFallback != 0 && PngLoaded && !IsDefault)
-	{
-		CImageInfo ImgDefaultInfo;
-		if(Graphics()->LoadPng(ImgDefaultInfo, g_pData->m_aImages[IMAGE_EMOTICONS].m_pFilename, IStorage::TYPE_ALL))
-			FallbackImgInfo = std::move(ImgDefaultInfo);
-	}
-	// 回退图是手动管理的 CImageInfo（没有析构函数），而本函数有多条提前返回路径，
-	// 统一用这个幂等的 lambda 释放，避免漏掉某条路径造成整张解码图集泄漏。
-	auto &&FreeFallback = [&FallbackImgInfo]() {
-		if(FallbackImgInfo.has_value())
-		{
-			FallbackImgInfo.value().Free();
-			FallbackImgInfo.reset();
-		}
-	};
-
-	if(!PngLoaded && !IsDefault)
+	const bool ImageValid = PngLoaded &&
+				Graphics()->CheckImageDivisibility(LoadedAsset.m_aPath, ImgInfo, g_pData->m_aSprites[SPRITE_OOP].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_OOP].m_pSet->m_Gridy, true) &&
+				Graphics()->IsImageFormatRgba(LoadedAsset.m_aPath, ImgInfo);
+	if(!ImageValid && !IsDefault)
 	{
 		ImgInfo.Free();
-		FreeFallback();
-		if(AsDir)
+		if(PngLoaded || AsDir)
 			LoadEmoticonsSkin("default");
 		else
 			LoadEmoticonsSkin(pPath, true);
 		return;
 	}
-	else if(PngLoaded && Graphics()->CheckImageDivisibility(LoadedAsset.m_aPath, ImgInfo, g_pData->m_aSprites[SPRITE_OOP].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_OOP].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(LoadedAsset.m_aPath, ImgInfo))
+
+	if(ImageValid && m_EmoticonsSkinLoaded)
+	{
+		for(auto &SpriteEmoticon : m_EmoticonsSkin.m_aSpriteEmoticons)
+			Graphics()->UnloadTexture(&SpriteEmoticon);
+
+		m_EmoticonsSkinLoaded = false;
+	}
+
+	// 为不可见资源准备默认图回退。回退图必须是**同一图集**的默认文件：
+	// sprite 的格坐标按各自 set 的网格换算，换成别的图集（列数不同）会取到完全不相干的区域。
+	std::optional<CImageInfo> FallbackImgInfo;
+	// 只有开关打开时才需要回退来源；关闭时（默认）不解码这张默认图集，省下它的内存与解码时间。
+	if(g_Config.m_QmBlankAssetFallback != 0 && ImageValid && !IsDefault)
+	{
+		CImageInfo ImgDefaultInfo;
+		if(Graphics()->LoadPng(ImgDefaultInfo, g_pData->m_aImages[IMAGE_EMOTICONS].m_pFilename, IStorage::TYPE_ALL))
+			FallbackImgInfo = std::move(ImgDefaultInfo);
+	}
+
+	if(ImageValid)
 	{
 		// 表情属装饰性资源：默认（qm_blank_asset_fallback 关闭）时皮肤作者有意留空的格子保持空白；
 		// 打开开关才按官方行为用同图集默认图的同位置贴图补齐。回退成功的那条日志由引擎打印。
@@ -8236,7 +8279,8 @@ void CGameClient::LoadEmoticonsSkin(const char *pPath, bool AsDir)
 		m_EmoticonsSkinLoaded = true;
 	}
 	ImgInfo.Free();
-	FreeFallback();
+	if(FallbackImgInfo.has_value())
+		FallbackImgInfo.value().Free();
 }
 
 void CGameClient::LoadParticlesSkin(const char *pPath, bool AsDir)
@@ -8327,7 +8371,29 @@ void CGameClient::LoadParticlesSkin(const char *pPath, bool AsDir)
 
 void CGameClient::LoadHudSkin(const char *pPath, bool AsDir)
 {
-	if(m_HudSkinLoaded)
+	CImageAsset LoadedAsset = LoadAssetFromPath(pPath, AsDir, IMAGE_HUD, "hud");
+	CImageInfo &ImgInfo = LoadedAsset.m_ImageInfo;
+	const bool PngLoaded = LoadedAsset.IsLoaded();
+	const bool IsDefault = LoadedAsset.m_IsDefault;
+	const bool IsBlankAsset = LoadedAsset.m_IsBlank;
+	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
+	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
+		ClearImageToTransparent(ImgInfo);
+
+	const bool ImageValid = PngLoaded &&
+				Graphics()->CheckImageDivisibility(LoadedAsset.m_aPath, ImgInfo, g_pData->m_aSprites[SPRITE_HUD_AIRJUMP].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_HUD_AIRJUMP].m_pSet->m_Gridy, true) &&
+				Graphics()->IsImageFormatRgba(LoadedAsset.m_aPath, ImgInfo);
+	if(!ImageValid && !IsDefault)
+	{
+		ImgInfo.Free();
+		if(PngLoaded || AsDir)
+			LoadHudSkin("default");
+		else
+			LoadHudSkin(pPath, true);
+		return;
+	}
+
+	if(ImageValid && m_HudSkinLoaded)
 	{
 		Graphics()->UnloadTexture(&m_HudSkin.m_SpriteHudAirjump);
 		Graphics()->UnloadTexture(&m_HudSkin.m_SpriteHudAirjumpEmpty);
@@ -8363,46 +8429,18 @@ void CGameClient::LoadHudSkin(const char *pPath, bool AsDir)
 		m_HudSkinLoaded = false;
 	}
 
-	CImageAsset LoadedAsset = LoadAssetFromPath(pPath, AsDir, IMAGE_HUD, "hud");
-	CImageInfo &ImgInfo = LoadedAsset.m_ImageInfo;
-	const bool PngLoaded = LoadedAsset.IsLoaded();
-	const bool IsDefault = LoadedAsset.m_IsDefault;
-	const bool IsBlankAsset = LoadedAsset.m_IsBlank;
-	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
-	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
-		ClearImageToTransparent(ImgInfo);
-
 	// 为不可见资源准备默认图回退。回退图必须是**同一图集**的默认文件：
 	// sprite 的格坐标按各自 set 的网格换算，换成别的图集（列数不同）会取到完全不相干的区域。
 	std::optional<CImageInfo> FallbackImgInfo;
 	// 只有开关打开时才需要回退来源；关闭时（默认）不解码这张默认图集，省下它的内存与解码时间。
-	if(g_Config.m_QmBlankAssetFallback != 0 && PngLoaded && !IsDefault)
+	if(g_Config.m_QmBlankAssetFallback != 0 && ImageValid && !IsDefault)
 	{
 		CImageInfo ImgDefaultInfo;
 		if(Graphics()->LoadPng(ImgDefaultInfo, g_pData->m_aImages[IMAGE_HUD].m_pFilename, IStorage::TYPE_ALL))
 			FallbackImgInfo = std::move(ImgDefaultInfo);
 	}
-	// 回退图是手动管理的 CImageInfo（没有析构函数），而本函数有多条提前返回路径，
-	// 统一用这个幂等的 lambda 释放，避免漏掉某条路径造成整张解码图集泄漏。
-	auto &&FreeFallback = [&FallbackImgInfo]() {
-		if(FallbackImgInfo.has_value())
-		{
-			FallbackImgInfo.value().Free();
-			FallbackImgInfo.reset();
-		}
-	};
 
-	if(!PngLoaded && !IsDefault)
-	{
-		ImgInfo.Free();
-		FreeFallback();
-		if(AsDir)
-			LoadHudSkin("default");
-		else
-			LoadHudSkin(pPath, true);
-		return;
-	}
-	else if(PngLoaded && Graphics()->CheckImageDivisibility(LoadedAsset.m_aPath, ImgInfo, g_pData->m_aSprites[SPRITE_HUD_AIRJUMP].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_HUD_AIRJUMP].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(LoadedAsset.m_aPath, ImgInfo))
+	if(ImageValid)
 	{
 		// HUD 图标是装饰性状态提示，且 set_hud 一直在新增 sprite（lock / team0 / practice /
 		// dummy 等都是后加的），旧皮肤这些格子空白属常态，不是资源损坏。皮肤是"完整替换"
@@ -8455,7 +8493,8 @@ void CGameClient::LoadHudSkin(const char *pPath, bool AsDir)
 		m_HudSkinLoaded = true;
 	}
 	ImgInfo.Free();
-	FreeFallback();
+	if(FallbackImgInfo.has_value())
+		FallbackImgInfo.value().Free();
 }
 
 void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
@@ -9442,7 +9481,10 @@ void CGameClient::StoreSave(const char *pTeamMembers, const char *pGeneratedCode
 		CsvWrite(File, std::size(SAVES_HEADER), SAVES_HEADER);
 	}
 	CsvWrite(File, std::size(SAVES_HEADER), apColumns);
-	io_close(File);
+	const bool Written = io_flush(File) == 0 && io_error(File) == 0;
+	const int CloseResult = io_close(File);
+	if(!Written || CloseResult != 0)
+		log_error("saves", "Failed to write the saves file '%s'", SAVES_FILE);
 }
 
 // TClient
