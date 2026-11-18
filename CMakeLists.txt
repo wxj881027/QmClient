@@ -4365,6 +4365,17 @@ if(CLIENT)
       XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${IOS_BUNDLE_IDENTIFIER}"
       XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
     )
+    if(SDL3_COPY_DIRS)
+      if(CMAKE_VERSION VERSION_LESS 3.20)
+        message(FATAL_ERROR "iOS SDL3 framework embedding requires CMake 3.20 or newer")
+      endif()
+      set_target_properties(game-client PROPERTIES
+        XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/Frameworks"
+        XCODE_EMBED_FRAMEWORKS "${SDL3_COPY_DIRS}"
+        XCODE_EMBED_FRAMEWORKS_CODE_SIGN_ON_COPY ON
+        XCODE_EMBED_FRAMEWORKS_REMOVE_HEADERS_ON_COPY ON
+      )
+    endif()
     if(IOS_USE_ASSET_CATALOG)
       target_sources(game-client PRIVATE "${PROJECT_SOURCE_DIR}/scripts/ios/files/Assets.xcassets")
       set_source_files_properties("${PROJECT_SOURCE_DIR}/scripts/ios/files/Assets.xcassets" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
