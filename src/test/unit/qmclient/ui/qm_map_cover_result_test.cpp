@@ -202,6 +202,33 @@ TEST(QmMapCoverResult, InvalidSourceAndOutputSizesRemainInvalidWithoutOutputAllo
 	ExpectOriginalOutput(Output.m_Image, pOriginal);
 }
 
+TEST(QmMapCoverResult, GrayscalePngIsAcceptedAndExpandsToRgb)
+{
+	for(const auto Format : {CImageInfo::FORMAT_R, CImageInfo::FORMAT_RA})
+	{
+		SCOPED_TRACE(static_cast<int>(Format));
+		CScopedImage Source(1, 1), Output;
+		ASSERT_NE(Source.m_Image.m_pData, nullptr);
+		Source.m_Image.m_Format = Format;
+		Source.m_Image.m_pData[0] = 160;
+		Source.m_Image.m_pData[1] = 128;
+		CByteBufferWriter Png;
+		ASSERT_TRUE(CImageLoader::SavePng(Png, Source.m_Image));
+
+		QmMapCover::SArt Art;
+		Art.m_ImageFraction = 1.0f;
+		Art.m_Shade = 1.0f;
+		Art.m_CornerRadius = 0.0f;
+		ASSERT_EQ(QmMapCover::DecodeAndComposeChecked(Png.Data(), Png.Size(), "map_cover_result", 2, 1, Art, Output.m_Image), EResult::SUCCESS);
+		ASSERT_NE(Output.m_Image.m_pData, nullptr);
+		ASSERT_EQ(Output.m_Image.m_Format, CImageInfo::FORMAT_RGBA);
+		const uint8_t Gray = Format == CImageInfo::FORMAT_RA ? 80 : 160;
+		const uint8_t aExpected[] = {Gray, Gray, Gray, 255, Gray, Gray, Gray, 255};
+		ASSERT_EQ(Output.m_Image.DataSize(), sizeof(aExpected));
+		EXPECT_EQ(mem_comp(Output.m_Image.m_pData, aExpected, sizeof(aExpected)), 0);
+	}
+}
+
 TEST(QmMapCoverResult, PngDecodedByteLimitIsInvalidAndKeepsThePreviousOutput)
 {
 	// RGB 文件可编码，按真实解码器的 RGBA 最坏情况预算仍超过封面的 8 MiB 上限。

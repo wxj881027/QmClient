@@ -44,8 +44,6 @@ namespace
 	// 左侧两个圆角；右侧拖尾渐隐到 0，不需要额外遮罩。
 	float CornerCoverage(float LocalX, float LocalY, float Radius)
 	{
-		if(Radius <= 0.0f)
-			return 1.0f;
 		const float DeltaX = LocalX - Radius;
 		const float DeltaY = LocalY - Radius;
 		const float Distance = std::sqrt(DeltaX * DeltaX + DeltaY * DeltaY);
@@ -91,13 +89,14 @@ namespace
 		return true;
 	}
 
-	float SampleChannel(const CImageInfo &Image, int ChannelCount, int X, int Y, int Channel)
+	float SampleChannel(const CImageInfo &Image, int ChannelCount, int X, int Y, int Channel, bool FlattenAlpha)
 	{
-		const size_t Index = (static_cast<size_t>(Y) * Image.m_Width + X) * ChannelCount + Channel;
-		return static_cast<float>(Image.m_pData[Index]) / 255.0f;
+		const uint8_t *pPixel = Image.m_pData + (static_cast<size_t>(Y) * Image.m_Width + X) * ChannelCount;
+		const float Value = static_cast<float>(pPixel[Channel]) / 255.0f;
+		return FlattenAlpha ? Value * (static_cast<float>(pPixel[ChannelCount - 1]) / 255.0f) : Value;
 	}
 
-	float BilinearChannel(const CImageInfo &Image, int ChannelCount, float X, float Y, int Channel)
+	float BilinearChannel(const CImageInfo &Image, int ChannelCount, float X, float Y, int Channel, bool FlattenAlpha)
 	{
 		const int X0 = std::clamp(static_cast<int>(X), 0, static_cast<int>(Image.m_Width) - 1);
 		const int Y0 = std::clamp(static_cast<int>(Y), 0, static_cast<int>(Image.m_Height) - 1);
@@ -105,8 +104,12 @@ namespace
 		const int Y1 = std::min(Y0 + 1, static_cast<int>(Image.m_Height) - 1);
 		const float FractionX = std::clamp(X - static_cast<float>(X0), 0.0f, 1.0f);
 		const float FractionY = std::clamp(Y - static_cast<float>(Y0), 0.0f, 1.0f);
-		const float Top = SampleChannel(Image, ChannelCount, X0, Y0, Channel) + (SampleChannel(Image, ChannelCount, X1, Y0, Channel) - SampleChannel(Image, ChannelCount, X0, Y0, Channel)) * FractionX;
-		const float Bottom = SampleChannel(Image, ChannelCount, X0, Y1, Channel) + (SampleChannel(Image, ChannelCount, X1, Y1, Channel) - SampleChannel(Image, ChannelCount, X0, Y1, Channel)) * FractionX;
+		const float TopLeft = SampleChannel(Image, ChannelCount, X0, Y0, Channel, FlattenAlpha);
+		const float TopRight = SampleChannel(Image, ChannelCount, X1, Y0, Channel, FlattenAlpha);
+		const float BottomLeft = SampleChannel(Image, ChannelCount, X0, Y1, Channel, FlattenAlpha);
+		const float BottomRight = SampleChannel(Image, ChannelCount, X1, Y1, Channel, FlattenAlpha);
+		const float Top = TopLeft + (TopRight - TopLeft) * FractionX;
+		const float Bottom = BottomLeft + (BottomRight - BottomLeft) * FractionX;
 		return Top + (Bottom - Top) * FractionY;
 	}
 } // namespace
@@ -219,14 +222,19 @@ QmMapCover::EPrepareResult QmMapCover::ComposeChecked(const CImageInfo &Source, 
 {
 	if(Source.m_pData == nullptr || Source.m_Width == 0 || Source.m_Height == 0)
 		return EPrepareResult::INVALID;
-	if(Source.m_Format != CImageInfo::FORMAT_RGB && Source.m_Format != CImageInfo::FORMAT_RGBA)
+	const bool Grayscale = Source.m_Format == CImageInfo::FORMAT_R || Source.m_Format == CImageInfo::FORMAT_RA;
+	if(!Grayscale && Source.m_Format != CImageInfo::FORMAT_RGB && Source.m_Format != CImageInfo::FORMAT_RGBA)
 		return EPrepareResult::INVALID;
 	if(OutWidth <= 0 || OutHeight <= 0 || OutWidth > MAX_WIDTH || OutHeight > MAX_HEIGHT || OutWidth < 2)
 		return EPrepareResult::INVALID;
 
 	const bool FullImage = Art.m_ImageFraction >= 1.0f;
 	const int ImageWidth = FullImage ? OutWidth : std::clamp(static_cast<int>(std::lround(static_cast<float>(OutWidth) * std::clamp(Art.m_ImageFraction, 0.3f, 0.95f))), 1, OutWidth - 1);
-	const int ChannelCount = Source.m_Format == CImageInfo::FORMAT_RGBA ? 4 : 3;
+	const int TailWidth = OutWidth - ImageWidth;
+	const int ChannelCount = static_cast<int>(CImageInfo::PixelSize(Source.m_Format));
+	const int ColorChannelCount = Grayscale ? 1 : 3;
+	// 完整封面在插值前将原始像素合成到黑底，避免透明像素的颜色渗入可见区域。
+	const bool FlattenAlpha = FullImage && (Source.m_Format == CImageInfo::FORMAT_RA || Source.m_Format == CImageInfo::FORMAT_RGBA);
 	const float Shade = std::clamp(Art.m_Shade, 0.0f, 1.0f);
 
 	// 缩略图区域按目标高度等比缩放并居中裁切。
@@ -237,6 +245,11 @@ QmMapCover::EPrepareResult QmMapCover::ComposeChecked(const CImageInfo &Source, 
 	const float OffsetY = (static_cast<float>(Source.m_Height) - static_cast<float>(OutHeight) * SourcePerPixel) * 0.5f;
 	const float MaxSourceX = static_cast<float>(Source.m_Width) - 1.0f;
 	const float MaxSourceY = static_cast<float>(Source.m_Height) - 1.0f;
+	const auto SourceXAt = [&](float PixelX) {
+		return std::clamp(OffsetX + PixelX * SourcePerPixel - 0.5f, 0.0f, MaxSourceX);
+	};
+	const float ThumbnailLeftX = SourceXAt(0.5f);
+	const float ThumbnailRightX = SourceXAt(static_cast<float>(ImageWidth) - 0.5f);
 	const float Radius = std::clamp(Art.m_CornerRadius, 0.0f, static_cast<float>(std::min(ImageWidth, OutHeight)) * 0.5f);
 
 	const size_t OutputSize = static_cast<size_t>(OutWidth) * static_cast<size_t>(OutHeight) * 4;
@@ -247,6 +260,7 @@ QmMapCover::EPrepareResult QmMapCover::ComposeChecked(const CImageInfo &Source, 
 	for(int Y = 0; Y < OutHeight; ++Y)
 	{
 		const float SourceY = std::clamp(OffsetY + (static_cast<float>(Y) + 0.5f) * SourcePerPixel - 0.5f, 0.0f, MaxSourceY);
+		const float CornerY = static_cast<float>(std::min(Y, OutHeight - 1 - Y)) + 0.5f;
 		uint8_t *pRow = pOutput.get() + static_cast<size_t>(Y) * static_cast<size_t>(OutWidth) * 4;
 		for(int X = 0; X < OutWidth; ++X)
 		{
@@ -255,31 +269,25 @@ QmMapCover::EPrepareResult QmMapCover::ComposeChecked(const CImageInfo &Source, 
 			float SourceX;
 			if(X < ImageWidth)
 			{
-				SourceX = std::clamp(OffsetX + (static_cast<float>(X) + 0.5f) * SourcePerPixel - 0.5f, 0.0f, MaxSourceX);
-				if(Radius > 0.0f)
-				{
-					const float PixelX = static_cast<float>(X) + 0.5f;
-					const float PixelY = static_cast<float>(Y) + 0.5f;
-					const float TopCoverage = PixelY < Radius ? CornerCoverage(PixelX, PixelY, Radius) : 1.0f;
-					const float BottomCoverage = PixelY > static_cast<float>(OutHeight) - Radius ? CornerCoverage(PixelX, static_cast<float>(OutHeight) - PixelY, Radius) : 1.0f;
-					Alpha = std::min(TopCoverage, BottomCoverage);
-				}
+				const float PixelX = static_cast<float>(X) + 0.5f;
+				SourceX = SourceXAt(PixelX);
+				if(PixelX < Radius && CornerY < Radius)
+					Alpha = CornerCoverage(PixelX, CornerY, Radius);
 			}
 			else
 			{
-				// 拖尾采样缩略图右边缘的列：T=0 从最右列开始，越往右缓慢向内扩，
-				// 这样拖尾和缩略图边缘严格连续，看起来像画面被拉出的残影。
-				const float T = (static_cast<float>(X - ImageWidth) + 0.5f) / static_cast<float>(OutWidth - ImageWidth);
-				SourceX = (1.0f - 0.10f * T * T) * MaxSourceX;
+				// 首列与裁切后的缩略图共用同一采样位置，之后在裁切范围内往左拖出残影。
+				const float T = static_cast<float>(X - ImageWidth) / static_cast<float>(TailWidth);
+				SourceX = ThumbnailRightX - (ThumbnailRightX - ThumbnailLeftX) * (0.10f * T * T);
 				Alpha = TailAlpha(Art, X, Y, OutWidth, OutHeight, ImageWidth);
 			}
-			// 将完整封面的透明像素合成到黑色底，上层只需处理卡片渐隐。
-			const float SourceCoverage = FullImage && ChannelCount == 4 ? BilinearChannel(Source, ChannelCount, SourceX, SourceY, 3) : 1.0f;
-			for(int Channel = 0; Channel < 3; ++Channel)
+			for(int Channel = 0; Channel < ColorChannelCount; ++Channel)
 			{
-				const float Value = BilinearChannel(Source, ChannelCount, SourceX, SourceY, Channel) * Shade * SourceCoverage;
+				const float Value = BilinearChannel(Source, ChannelCount, SourceX, SourceY, Channel, FlattenAlpha) * Shade;
 				pPixel[Channel] = static_cast<uint8_t>(std::clamp(Value, 0.0f, 1.0f) * 255.0f + 0.5f);
 			}
+			if(Grayscale)
+				pPixel[1] = pPixel[2] = pPixel[0];
 			pPixel[3] = static_cast<uint8_t>(std::clamp(Alpha, 0.0f, 1.0f) * 255.0f + 0.5f);
 		}
 	}
