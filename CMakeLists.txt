@@ -5333,6 +5333,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/editor_collab_camera_reload_test.cpp
     src/test/unit/client/editor_collab_join_test.cpp
     src/test/unit/client/editor_quad_slice_test.cpp
+    src/test/unit/client/editor_envelope_values_test.cpp
+    src/test/unit/client/editor_server_settings_validation_test.cpp
+    src/test/unit/client/editor_value_selector_test.cpp
     src/test/unit/client/binds_deepfly_mode_test.cpp
     src/test/integration/qmclient/client/qm_bind_workshop_cfg_save_test.cpp
     src/test/integration/client/statboard_csv_test.cpp

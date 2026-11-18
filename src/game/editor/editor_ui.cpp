@@ -262,19 +262,16 @@ SEditResult<int> CEditor::UiDoValueSelector(const void *pId, CUIRect *pRect, con
 			{
 				s_ScrollValue += Ui()->MouseDeltaX() * (Input()->ShiftIsPressed() ? 0.05f : 1.0f);
 
-				if(absolute(s_ScrollValue) >= Scale)
+				if(!std::isfinite(s_ScrollValue))
 				{
-					int Count = (int)(s_ScrollValue / Scale);
+					s_ScrollValue = 0.0f;
+				}
+				else if(absolute(s_ScrollValue) >= Scale)
+				{
+					const double Count = std::trunc(static_cast<double>(s_ScrollValue) / Scale);
 					s_ScrollValue = std::fmod(s_ScrollValue, Scale);
-					Current += Step * Count;
-					Current = std::clamp(Current, Min, Max);
+					Current = EditorValueSelector::Adjust(Current, Min, Max, Step, Count);
 					s_DidScroll = true;
-
-					// Constrain to discrete steps
-					if(Count > 0)
-						Current = Current / Step * Step;
-					else
-						Current = std::ceil(Current / (float)Step) * Step;
 				}
 			}
 

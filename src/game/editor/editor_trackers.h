@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 
+class CEnvelope;
 class CLayer;
 class CLayerGroup;
 class CLayerQuads;
@@ -81,7 +82,9 @@ public:
 
 	void Begin(EEnvelopeEditorOp Operation);
 	void Stop(bool Switch = true);
-	void Reset() { m_TrackedOp = EEnvelopeEditorOp::OP_NONE; }
+	void Cancel();
+	void Reset();
+	bool TargetChanged() const;
 
 private:
 	EEnvelopeEditorOp m_TrackedOp = EEnvelopeEditorOp::OP_NONE;
@@ -89,15 +92,19 @@ private:
 	class CPointData
 	{
 	public:
-		bool m_Used;
 		CFixedTime m_Time;
 		std::map<int, int> m_Values;
 	};
 
+	std::weak_ptr<CEnvelope> m_pEnvelope;
+	const void *m_pPointData = nullptr;
+	size_t m_PointCount = 0;
+	std::vector<std::pair<int, int>> m_vSelectedPoints;
 	std::map<int, CPointData> m_SavedValues;
 
-	void HandlePointDragStart();
-	void HandlePointDragEnd(bool Switch);
+	bool PointsMatch(const CEnvelope &Envelope) const;
+	CEnvelope *CurrentTarget() const;
+	void RecordChanges(const CEnvelope &Envelope);
 };
 
 class CSoundSourceOperationTracker : public CMapObject

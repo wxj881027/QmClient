@@ -3,6 +3,20 @@
 
 #include <game/client/ui_listbox.h>
 
+#include <algorithm>
+#include <cstdint>
+
+namespace EditorValueSelector
+{
+inline int Adjust(int Current, int Min, int Max, int Step, double Count)
+{
+	const auto Shifted = static_cast<int64_t>(std::clamp(Current + Count * Step, (double)Min, (double)Max));
+	const int64_t Remainder = Shifted % Step;
+	const int64_t Aligned = Shifted - Remainder + (Count < 0 && Remainder > 0 ? Step : 0);
+	return static_cast<int>(Aligned >= Min && Aligned <= Max ? Aligned : Shifted);
+}
+}
+
 struct SEditBoxDropdownContext
 {
 	bool m_Visible = false;

@@ -305,20 +305,49 @@ void CQuadEditTracker::EndQuadPointPropTrackAll()
 
 void CEnvelopeEditorOperationTracker::Begin(EEnvelopeEditorOp Operation)
 {
-	if(m_TrackedOp == Operation)
+	if(m_TrackedOp != EEnvelopeEditorOp::OP_NONE)
 		return;
 
-	if(m_TrackedOp != EEnvelopeEditorOp::OP_NONE)
-	{
-		Stop(true);
-	}
+	const int Index = Map()->m_SelectedEnvelope;
+	if(Index < 0 || Index >= (int)Map()->m_vpEnvelopes.size())
+		return;
 
+	const auto &pEnvelope = Map()->m_vpEnvelopes[Index];
 	m_TrackedOp = Operation;
-
-	if(Operation == EEnvelopeEditorOp::OP_DRAG_POINT || Operation == EEnvelopeEditorOp::OP_DRAG_POINT_X || Operation == EEnvelopeEditorOp::OP_DRAG_POINT_Y || Operation == EEnvelopeEditorOp::OP_SCALE)
+	m_pEnvelope = pEnvelope;
+	m_pPointData = pEnvelope->m_vPoints.data();
+	m_PointCount = pEnvelope->m_vPoints.size();
+	m_vSelectedPoints = Map()->m_vSelectedEnvelopePoints;
+	for(auto [PointIndex, Channel] : m_vSelectedPoints)
 	{
-		HandlePointDragStart();
+		const auto &Point = pEnvelope->m_vPoints[PointIndex];
+		auto &Data = m_SavedValues[PointIndex];
+		Data.m_Time = Point.m_Time;
+		Data.m_Values[Channel] = Point.m_aValues[Channel];
 	}
+}
+
+CEnvelope *CEnvelopeEditorOperationTracker::CurrentTarget() const
+{
+	const int Index = Map()->m_SelectedEnvelope;
+	if(Index < 0 || Index >= (int)Map()->m_vpEnvelopes.size())
+		return nullptr;
+
+	const auto &pEnvelope = Map()->m_vpEnvelopes[Index];
+	if(m_pEnvelope.lock() != pEnvelope || !PointsMatch(*pEnvelope))
+		return nullptr;
+	return pEnvelope.get();
+}
+
+bool CEnvelopeEditorOperationTracker::PointsMatch(const CEnvelope &Envelope) const
+{
+	return m_PointCount == Envelope.m_vPoints.size() && m_pPointData == Envelope.m_vPoints.data();
+}
+
+bool CEnvelopeEditorOperationTracker::TargetChanged() const
+{
+	return m_TrackedOp != EEnvelopeEditorOp::OP_NONE &&
+	       (CurrentTarget() == nullptr || m_vSelectedPoints != Map()->m_vSelectedEnvelopePoints);
 }
 
 void CEnvelopeEditorOperationTracker::Stop(bool Switch)
@@ -326,69 +355,62 @@ void CEnvelopeEditorOperationTracker::Stop(bool Switch)
 	if(m_TrackedOp == EEnvelopeEditorOp::OP_NONE)
 		return;
 
-	if(m_TrackedOp == EEnvelopeEditorOp::OP_DRAG_POINT || m_TrackedOp == EEnvelopeEditorOp::OP_DRAG_POINT_X || m_TrackedOp == EEnvelopeEditorOp::OP_DRAG_POINT_Y || m_TrackedOp == EEnvelopeEditorOp::OP_SCALE)
+	if(!Switch || m_TrackedOp == EEnvelopeEditorOp::OP_SCALE)
 	{
-		HandlePointDragEnd(Switch);
+		if(const CEnvelope *pEnvelope = CurrentTarget())
+			RecordChanges(*pEnvelope);
 	}
+	Reset();
+}
 
+void CEnvelopeEditorOperationTracker::Cancel()
+{
+	if(auto pEnvelope = m_pEnvelope.lock(); pEnvelope && PointsMatch(*pEnvelope))
+	{
+		for(const auto &[PointIndex, Data] : m_SavedValues)
+		{
+			auto &Point = pEnvelope->m_vPoints[PointIndex];
+			Point.m_Time = Data.m_Time;
+			for(const auto &[Channel, Value] : Data.m_Values)
+				Point.m_aValues[Channel] = Value;
+		}
+	}
+	Reset();
+}
+
+void CEnvelopeEditorOperationTracker::Reset()
+{
 	m_TrackedOp = EEnvelopeEditorOp::OP_NONE;
+	m_pEnvelope.reset();
+	m_pPointData = nullptr;
+	m_PointCount = 0;
+	m_vSelectedPoints.clear();
+	m_SavedValues.clear();
 }
 
-void CEnvelopeEditorOperationTracker::HandlePointDragStart()
+void CEnvelopeEditorOperationTracker::RecordChanges(const CEnvelope &Envelope)
 {
-	// Figure out which points are selected and which channels
-	// Save their X and Y position (time and value)
-	auto pEnvelope = Map()->m_vpEnvelopes[Editor()->Map()->m_SelectedEnvelope];
-
-	for(auto [PointIndex, Channel] : Map()->m_vSelectedEnvelopePoints)
-	{
-		auto &Point = pEnvelope->m_vPoints[PointIndex];
-		auto &Data = m_SavedValues[PointIndex];
-		Data.m_Values[Channel] = Point.m_aValues[Channel];
-		if(Data.m_Used)
-			continue;
-		Data.m_Time = Point.m_Time;
-		Data.m_Used = true;
-	}
-}
-
-void CEnvelopeEditorOperationTracker::HandlePointDragEnd(bool Switch)
-{
-	if(Switch && m_TrackedOp != EEnvelopeEditorOp::OP_SCALE)
-		return;
-
-	int EnvelopeIndex = Editor()->Map()->m_SelectedEnvelope;
-	auto pEnvelope = Map()->m_vpEnvelopes[EnvelopeIndex];
+	const int EnvelopeIndex = Map()->m_SelectedEnvelope;
 	std::vector<std::shared_ptr<IEditorAction>> vpActions;
 
-	for(auto const &Entry : m_SavedValues)
+	for(const auto &[PointIndex, Data] : m_SavedValues)
 	{
-		int PointIndex = Entry.first;
-		auto &Point = pEnvelope->m_vPoints[PointIndex];
-		const auto &Data = Entry.second;
-
+		const auto &Point = Envelope.m_vPoints[PointIndex];
 		if(Data.m_Time != Point.m_Time)
-		{ // Save time
 			vpActions.push_back(std::make_shared<CEditorActionEnvelopeEditPointTime>(Map(), EnvelopeIndex, PointIndex, Data.m_Time, Point.m_Time));
-		}
 
-		for(auto Value : Data.m_Values)
+		for(const auto &[Channel, Value] : Data.m_Values)
 		{
-			// Value.second is the saved value, Value.first is the channel
-			int Channel = Value.first;
-			if(Value.second != Point.m_aValues[Channel])
-			{ // Save value
-				vpActions.push_back(std::make_shared<CEditorActionEnvelopeEditPoint>(Map(), EnvelopeIndex, PointIndex, Channel, CEditorActionEnvelopeEditPoint::EEditType::VALUE, Value.second, Point.m_aValues[Channel]));
-			}
+			if(Value != Point.m_aValues[Channel])
+				vpActions.push_back(std::make_shared<CEditorActionEnvelopeEditPoint>(Map(), EnvelopeIndex, PointIndex, Channel, CEditorActionEnvelopeEditPoint::EEditType::VALUE, Value, Point.m_aValues[Channel]));
 		}
 	}
 
 	if(!vpActions.empty())
 	{
 		Map()->m_EnvelopeEditorHistory.RecordAction(std::make_shared<CEditorActionBulk>(Map(), vpActions, Localize("Envelope point drag", "Editor")));
+		Map()->OnModify();
 	}
-
-	m_SavedValues.clear();
 }
 
 // -----------------------------------------------------------------------
@@ -441,7 +463,7 @@ int CPropTrackerHelper::GetDefaultGroupIndex(CEditorMap *pMap)
 
 int CPropTrackerHelper::GetDefaultLayerIndex(CEditorMap *pMap)
 {
-	return pMap->m_vSelectedLayers[0];
+	return pMap->m_vSelectedLayers.empty() ? -1 : pMap->m_vSelectedLayers.front();
 }
 
 // -----------------------------------------------------------------------
@@ -473,7 +495,10 @@ int CLayerPropTracker::PropToValue(ELayerProp Prop)
 
 bool CLayerTilesPropTracker::EndChecker(ETilesProp Prop, int Value)
 {
-	return Value != m_OriginalValue || Prop == ETilesProp::PROP_SHIFT;
+	const bool Changed = Value != m_OriginalValue || Prop == ETilesProp::PROP_SHIFT;
+	if(!Changed)
+		m_SavedLayers.clear();
+	return Changed;
 }
 
 void CLayerTilesPropTracker::OnStart(ETilesProp Prop)
@@ -535,13 +560,9 @@ int CLayerTilesPropTracker::PropToValue(ETilesProp Prop)
 
 void CLayerTilesCommonPropTracker::OnStart(ETilesCommonProp Prop)
 {
-	for(auto &pLayer : m_vpLayers)
-	{
-		if(Prop == ETilesCommonProp::PROP_SHIFT)
-		{
+	if(Prop == ETilesCommonProp::PROP_SHIFT)
+		for(const auto &pLayer : m_vpLayers)
 			m_SavedLayers[pLayer][LAYERTYPE_TILES] = pLayer->Duplicate();
-		}
-	}
 }
 
 void CLayerTilesCommonPropTracker::OnEnd(ETilesCommonProp Prop, int Value)
@@ -558,9 +579,12 @@ void CLayerTilesCommonPropTracker::OnEnd(ETilesCommonProp Prop, int Value)
 	{
 		int LayerIndex = m_vLayerIndices[j++];
 		auto pAction = std::make_shared<CEditorActionEditLayerTilesProp>(Map(), m_OriginalGroupIndex, LayerIndex, s_PropMap[Prop], m_OriginalValue, Value);
-		pAction->SetSavedLayers(m_SavedLayers[pLayer]);
+		const auto Saved = m_SavedLayers.find(pLayer);
+		if(Saved != m_SavedLayers.end())
+			pAction->SetSavedLayers(Saved->second);
 		vpActions.push_back(pAction);
 	}
+	m_SavedLayers.clear();
 
 	char aDisplay[256];
 	const char *s_apNames[] = {

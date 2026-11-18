@@ -63,7 +63,6 @@ void CEditor::RenderServerSettingsEditor(CUIRect View, bool ShowServerSettingsEd
 	s_ListBox.SetActive(!m_MapSettingsCommandContext.m_DropdownContext.m_ListBox.Active() && m_Dialog == DIALOG_NONE && !Ui()->IsPopupOpen());
 
 	bool GotSelection = s_ListBox.Active() && s_CommandSelectedIndex >= 0 && (size_t)s_CommandSelectedIndex < Map()->m_vSettings.size();
-	const bool CurrentInputValid = m_MapSettingsCommandContext.Valid(); // Use the context to validate the input
 
 	CUIRect ToolBar, Button, Label, List, DragBar;
 	View.HSplitTop(22.0f, &DragBar, nullptr);
@@ -143,10 +142,14 @@ void CEditor::RenderServerSettingsEditor(CUIRect View, bool ShowServerSettingsEd
 
 	GotSelection = s_ListBox.Active() && s_CommandSelectedIndex >= 0 && (size_t)s_CommandSelectedIndex < Map()->m_vSettings.size();
 
+	// 文本修改和提交按键可能在同一帧到达，先解析实际会保存的内容。
+	if(m_SettingsCommandInput.HasPendingChanges())
+		m_MapSettingsCommandContext.UpdateFromString(m_SettingsCommandInput.GetString());
+	const bool CurrentInputValid = !Input()->HasComposition() && m_MapSettingsCommandContext.Valid();
 	int CollidingCommandIndex = -1;
 	ECollisionCheckResult CheckResult = ECollisionCheckResult::ERROR;
 	if(CurrentInputValid)
-		CollidingCommandIndex = m_MapSettingsCommandContext.CheckCollision(CheckResult);
+		CollidingCommandIndex = m_MapSettingsCommandContext.CheckCollision(m_SettingsCommandInput.GetString(), Map()->m_vSettings, CheckResult);
 
 	// update button
 	ToolBar.VSplitRight(25.0f, &ToolBar, &Button);
@@ -276,7 +279,7 @@ void CEditor::RenderServerSettingsEditor(CUIRect View, bool ShowServerSettingsEd
 	if(s_CommandSelectedIndex != NewSelected || s_ListBox.WasItemSelected())
 	{
 		s_CommandSelectedIndex = NewSelected;
-		if(m_SettingsCommandInput.IsEmpty() || !Input()->ModifierIsPressed()) // Allow ctrl+click to only change selection
+		if(NewSelected >= 0 && (size_t)NewSelected < Map()->m_vSettings.size() && (m_SettingsCommandInput.IsEmpty() || !Input()->ModifierIsPressed())) // Allow ctrl+click to only change selection
 		{
 			m_SettingsCommandInput.Set(Map()->m_vSettings[s_CommandSelectedIndex].m_aCommand);
 			m_MapSettingsCommandContext.Update();
@@ -375,7 +378,8 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 	Context.ColorArguments(vColorSplits);
 
 	// Do and render clearable edit box with the colors
-	if(DoClearableEditBox(pLineInput, &ToolBar, FontSize, IGraphics::CORNER_L, pCompletionTooltip, vColorSplits))
+	const bool InputChanged = DoClearableEditBox(pLineInput, &ToolBar, FontSize, IGraphics::CORNER_L, pCompletionTooltip, vColorSplits);
+	if(InputChanged)
 	{
 		if(!CompletionClicked)
 			Context.m_CommandBrowser.Close();
@@ -388,12 +392,14 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 		m_MapSettingsBackend.m_pCompletionInput = pLineInput;
 
 	// Update/track the cursor
-	if(Context.UpdateCursor())
+	const bool RefreshMatches = InputChanged && (Context.m_CurrentCompletionIndex < 0 || Context.CurrentArg() >= Context.ArgCount());
+	if(Context.UpdateCursor(RefreshMatches))
 		Context.m_DropdownContext.m_ShouldHide = false;
 
 	// Calculate x position of the dropdown and the floating part
 	float x = ToolBar.x + Context.CurrentArgPos() - pLineInput->GetScrollOffset();
-	x = std::clamp(x, ToolBar.x + PartMargin, ToolBar.x + ToolBar.w);
+	const float ToolBarWidth = maximum(ToolBar.w, 0.0f);
+	x = std::clamp(x, ToolBar.x + minimum(PartMargin, ToolBarWidth), ToolBar.x + ToolBarWidth);
 
 	if(pLineInput->IsActive())
 	{
@@ -419,6 +425,9 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 		Context.Update();
 		Context.UpdateCursor(true);
 	}
+	if(Selected >= (int)vPossibleCommands.size() ||
+		(!BrowsingCommands && Context.CurrentArg() >= Context.ArgCount()))
+		Selected = -1;
 
 	if(!vPossibleCommands.empty())
 	{
@@ -615,6 +624,17 @@ void CEditor::RenderMapSettingsErrorDialog()
 	auto &vSettingsInvalid = LoadedMapSettings.m_vSettingsInvalid;
 	auto &vSettingsValid = LoadedMapSettings.m_vSettingsValid;
 	auto &SettingsDuplicate = LoadedMapSettings.m_SettingsDuplicate;
+	static CLineInputBuffered<256> s_Input;
+	static CMapSettingsBackend::CContext s_Context = m_MapSettingsBackend.NewContext(&s_Input);
+	static int s_FixingCommandIndex = -1;
+	if(s_Input.HasPendingChanges())
+		s_Context.UpdateFromString(s_Input.GetString());
+	const auto ResetFixInput = [&]() {
+		Ui()->ReleaseActiveTextInput(&s_Input);
+		s_Input.Clear();
+		s_Context.Reset();
+		s_FixingCommandIndex = -1;
+	};
 
 	Ui()->MapScreen();
 	CUIRect Overlay = *Ui()->Screen();
@@ -641,9 +661,6 @@ void CEditor::RenderMapSettingsErrorDialog()
 
 	// Render body
 	{
-		static CLineInputBuffered<256> s_Input;
-		static CMapSettingsBackend::CContext s_Context = m_MapSettingsBackend.NewContext(&s_Input);
-
 		// Some text
 		SLabelProperties Props;
 		CUIRect Text;
@@ -665,8 +682,6 @@ void CEditor::RenderMapSettingsErrorDialog()
 		List.y += ScrollOffset.y;
 
 		List.HSplitTop(20.0f, nullptr, &List);
-
-		static int s_FixingCommandIndex = -1;
 
 		auto &&SetInput = [&](const char *pString) {
 			s_Input.Set(pString);
@@ -736,16 +751,15 @@ void CEditor::RenderMapSettingsErrorDialog()
 						static int s_Cancel = 0, s_Ok = 0;
 						if(DoButton_Editor(&s_Cancel, Localize("Cancel", "Editor"), 0, &CancelBtn, BUTTONFLAG_LEFT, Localize("Cancel fixing this command.", "Editor")) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 						{
-							s_FixingCommandIndex = -1;
-							s_Input.Clear();
+							ResetFixInput();
 						}
 
 						// "Done" button only enabled if the fixed setting is valid
 						// For that we use a local CContext s_Context and use it to check
 						// that the setting is valid and that it is not a duplicate
 						ECollisionCheckResult Res = ECollisionCheckResult::ERROR;
-						s_Context.CheckCollision(vSettingsValid, Res);
-						bool Valid = s_Context.Valid() && Res == ECollisionCheckResult::ADD;
+						s_Context.CheckCollision(s_Input.GetString(), vSettingsValid, Res);
+						const bool Valid = s_FixingCommandIndex == i && !Input()->HasComposition() && s_Context.Valid() && Res == ECollisionCheckResult::ADD;
 
 						if(DoButton_Editor(&s_Ok, Localize("Done", "Editor"), Valid ? 0 : -1, &OkBtn, BUTTONFLAG_LEFT, Localize("Confirm editing of this command.", "Editor")) || (s_Input.IsActive() && Valid && Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER)))
 						{
@@ -756,8 +770,7 @@ void CEditor::RenderMapSettingsErrorDialog()
 							vSettingsValid.emplace_back(s_Input.GetString());
 
 							// Clear the input & fixing command index
-							s_FixingCommandIndex = -1;
-							s_Input.Clear();
+							ResetFixInput();
 						}
 					}
 
@@ -765,7 +778,7 @@ void CEditor::RenderMapSettingsErrorDialog()
 					Props.m_EllipsisAtEnd = true;
 					Props.m_MaxWidth = Label.w;
 
-					if(IsFixing)
+					if(s_FixingCommandIndex == i)
 					{
 						// Setup input rect, which will be used to draw the map settings input later
 						Label.HMargin(1.0, &FixInput);
@@ -912,8 +925,7 @@ void CEditor::RenderMapSettingsErrorDialog()
 						static int s_Cancel = 0, s_Ok = 0;
 						if(DoButton_Editor(&s_Cancel, Localize("Cancel", "Editor"), 0, &CancelBtn, BUTTONFLAG_LEFT, Localize("Cancel fixing this command.", "Editor")) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 						{
-							s_FixingCommandIndex = -1;
-							s_Input.Clear();
+							ResetFixInput();
 						}
 
 						// Use the local CContext s_Context to validate the input
@@ -924,27 +936,21 @@ void CEditor::RenderMapSettingsErrorDialog()
 						//                       If we write any other setting, like "sv_hit 1", it won't work as it does not match "sv_deepfly".
 						// To do that, we use the context and we check for collision with the current map setting
 						ECollisionCheckResult Res = ECollisionCheckResult::ERROR;
-						s_Context.CheckCollision({Map()->m_vSettings[i]}, Res);
-						bool Valid = s_Context.Valid() && Res == ECollisionCheckResult::REPLACE;
+						s_Context.CheckCollision(s_Input.GetString(), {Map()->m_vSettings[i]}, Res);
+						const bool Valid = s_FixingCommandIndex == Duplicate.m_Index && !Input()->HasComposition() && s_Context.Valid() && Res == ECollisionCheckResult::REPLACE;
 
 						if(DoButton_Editor(&s_Ok, Localize("Done", "Editor"), Valid ? 0 : -1, &OkBtn, BUTTONFLAG_LEFT, Localize("Confirm editing of this command.", "Editor")) || (s_Input.IsActive() && Valid && Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER)))
 						{
-							if(Valid) // Just to make sure
-							{
-								// Mark the setting as fixed
-								Duplicate.m_Context.m_Fixed = true;
-								str_copy(Duplicate.m_aSetting, s_Input.GetString());
-
-								s_FixingCommandIndex = -1;
-								s_Input.Clear();
-							}
+							Duplicate.m_Context.m_Fixed = true;
+							str_copy(Duplicate.m_aSetting, s_Input.GetString());
+							ResetFixInput();
 						}
 					}
 
 					Label = SubSlot;
 					Props.m_MaxWidth = Label.w;
 
-					if(IsFixing)
+					if(s_FixingCommandIndex == Duplicate.m_Index)
 					{
 						// Setup input rect in case we are fixing the setting
 						Label.HMargin(1.0, &FixInput);
@@ -961,8 +967,9 @@ void CEditor::RenderMapSettingsErrorDialog()
 				}
 			}
 
-			// Finally, add the slot to the scroll region
-			s_ScrollRegion.AddRect(Slot);
+			// 重复项已经计入其所属有效指令的分组高度。
+			if(pInvalidSetting == vSettingsInvalid.end() || !(pInvalidSetting->m_Type & SInvalidSetting::TYPE_DUPLICATE))
+				s_ScrollRegion.AddRect(Slot);
 		}
 
 		// Add some padding to the bottom so the dropdown can actually display some values in case we
@@ -1000,59 +1007,6 @@ void CEditor::RenderMapSettingsErrorDialog()
 		}
 	}
 
-	auto &&Execute = [&]() {
-		// Execute will modify the actual map settings according to the fixes that were just made within the dialog.
-
-		// Fix fixed settings, erase deleted settings
-		for(auto &FixedSetting : vSettingsInvalid)
-		{
-			if(FixedSetting.m_Context.m_Fixed)
-			{
-				str_copy(Map()->m_vSettings[FixedSetting.m_Index].m_aCommand, FixedSetting.m_aSetting);
-			}
-		}
-
-		// Choose chosen settings
-		// => Erase settings that don't match
-		// => Erase settings that were not chosen
-		std::vector<CEditorMapSetting> vSettingsToErase;
-		for(auto &Setting : vSettingsInvalid)
-		{
-			if(Setting.m_Type & SInvalidSetting::TYPE_DUPLICATE)
-			{
-				if(!Setting.m_Context.m_Chosen)
-					vSettingsToErase.emplace_back(Setting.m_aSetting);
-				else
-					vSettingsToErase.emplace_back(Map()->m_vSettings[Setting.m_CollidingIndex].m_aCommand);
-			}
-		}
-
-		// Erase deleted settings
-		for(auto &DeletedSetting : vSettingsInvalid)
-		{
-			if(DeletedSetting.m_Context.m_Deleted)
-			{
-				Map()->m_vSettings.erase(
-					std::remove_if(Map()->m_vSettings.begin(), Map()->m_vSettings.end(), [&](const CEditorMapSetting &MapSetting) {
-						return str_comp_nocase(MapSetting.m_aCommand, DeletedSetting.m_aSetting) == 0;
-					}),
-					Map()->m_vSettings.end());
-			}
-		}
-
-		// Erase settings to erase
-		for(auto &Setting : vSettingsToErase)
-		{
-			Map()->m_vSettings.erase(
-				std::remove_if(Map()->m_vSettings.begin(), Map()->m_vSettings.end(), [&](const CEditorMapSetting &MapSetting) {
-					return str_comp_nocase(MapSetting.m_aCommand, Setting.m_aCommand) == 0;
-				}),
-				Map()->m_vSettings.end());
-		}
-
-		Map()->OnModify();
-	};
-
 	auto &&FixAllUnknown = [&] {
 		// Mark unknown settings as fixed
 		for(auto &InvalidSetting : vSettingsInvalid)
@@ -1067,15 +1021,20 @@ void CEditor::RenderMapSettingsErrorDialog()
 	}
 
 	// Confirm - execute the fixes
-	if(DoButton_Editor(&s_ConfirmButton, Localize("Confirm", "Editor"), CanConfirm ? 0 : -1, &ConfirmButton, BUTTONFLAG_LEFT, nullptr) || (CanConfirm && Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER)))
+	if(DoButton_Editor(&s_ConfirmButton, Localize("Confirm", "Editor"), CanConfirm ? 0 : -1, &ConfirmButton, BUTTONFLAG_LEFT, nullptr) || (CanConfirm && s_FixingCommandIndex == -1 && Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER)))
 	{
-		Execute();
+		EditorServerSettings::ApplyLoadedSettingFixes(Map()->m_vSettings, vSettingsInvalid);
+		Map()->OnModify();
+		ResetFixInput();
+		s_Context.m_AllowUnknownCommands = false;
 		OnDialogClose();
 	}
 
 	// Cancel - we load a new empty map
 	if(DoButton_Editor(&s_CancelButton, Localize("Cancel", "Editor"), 0, &CancelButton, BUTTONFLAG_LEFT, nullptr) || (Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)))
 	{
+		ResetFixInput();
+		s_Context.m_AllowUnknownCommands = false;
 		Reset();
 		OnDialogClose();
 	}
@@ -1267,9 +1226,11 @@ void CMapSettingsBackend::CContext::Reset()
 	m_vCurrentArgs.clear();
 	m_aCommand[0] = '\0';
 	m_DropdownContext.m_Selected = -1;
+	m_vPossibleMatches.clear();
 	m_CurrentCompletionIndex = -1;
 	m_CommandBrowser.Close();
 	m_DropdownContext.m_ShortcutUsed = false;
+	m_DropdownContext.m_DidBecomeVisible = false;
 	m_DropdownContext.m_MousePressedInside = false;
 	m_DropdownContext.m_Visible = false;
 	m_DropdownContext.m_ShouldHide = false;
@@ -1299,45 +1260,19 @@ void CMapSettingsBackend::CContext::UpdateFromString(const char *pStr)
 
 	m_pCurrentSetting = nullptr;
 	m_vCurrentArgs.clear();
-	m_CommentOffset = -1;
+	m_aCommand[0] = '\0';
+	ClearError();
 
-	// Check for comment
-	const char *pEnd = pStr;
-	int InString = 0;
-
-	while(*pEnd)
-	{
-		if(*pEnd == '"')
-		{
-			InString ^= 1;
-		}
-		else if(*pEnd == '\\') // Escape sequences
-		{
-			if(pEnd[1] == '"')
-				pEnd++;
-		}
-		else if(!InString)
-		{
-			if(*pEnd == '#') // Found comment
-			{
-				m_CommentOffset = pEnd - pStr;
-				break;
-			}
-		}
-
-		pEnd++;
-	}
-
+	m_CommentOffset = EditorServerSettings::FindComment(pStr);
 	if(m_CommentOffset == 0)
 		return;
 
 	// End command at start of comment, if any
 	char aInputString[256];
-	str_copy(aInputString, pStr, m_CommentOffset != -1 ? m_CommentOffset + 1 : sizeof(aInputString));
+	str_copy(aInputString, pStr, m_CommentOffset != -1 ? minimum(m_CommentOffset + 1, (int)sizeof(aInputString)) : sizeof(aInputString));
 	const char *pIterator = aInputString;
 
 	// Get the command/setting
-	m_aCommand[0] = '\0';
 	while(*pIterator != ' ' && *pIterator != '\0')
 		pIterator++;
 
@@ -1361,59 +1296,10 @@ void CMapSettingsBackend::CContext::ParseArgs(const char *pLineInputStr, const c
 {
 	// This method parses the arguments of the current command, starting at pStr
 
-	ClearError();
-
 	const char *pIterator = pStr;
 
 	if(!pStr || *pStr == '\0')
 		return; // No arguments
-
-	// NextArg is used to get the contents of the current argument and go to the next argument position
-	// It outputs the length of the argument in pLength and returns a boolean indicating if the parsing
-	// of that argument is valid or not (only the case when using strings with quotes ("))
-	auto &&NextArg = [&](const char *pArg, int *pLength) {
-		if(*pIterator == '"')
-		{
-			pIterator++;
-			bool Valid = true;
-			bool IsEscape = false;
-
-			while(true)
-			{
-				if(pIterator[0] == '"' && !IsEscape)
-				{
-					break;
-				}
-				else if(pIterator[0] == 0)
-				{
-					Valid = false;
-					break;
-				}
-
-				if(pIterator[0] == '\\' && !IsEscape)
-					IsEscape = true;
-				else if(IsEscape)
-					IsEscape = false;
-
-				pIterator++;
-			}
-			const char *pEnd = ++pIterator;
-			pIterator = str_skip_to_whitespace_const(pIterator);
-
-			// Make sure there are no other characters at the end, otherwise the string is invalid.
-			// E.g. "abcd"ef is invalid
-			Valid = Valid && pIterator == pEnd;
-			*pLength = pEnd - pArg;
-
-			return Valid;
-		}
-		else
-		{
-			pIterator = str_skip_to_whitespace_const(pIterator);
-			*pLength = pIterator - pArg;
-			return true;
-		}
-	};
 
 	// Simple validation of string. Checks that it does not contain unescaped " in the middle of it.
 	auto &&ValidateStr = [](const char *pString) -> bool {
@@ -1454,7 +1340,7 @@ void CMapSettingsBackend::CContext::ParseArgs(const char *pLineInputStr, const c
 		char Char = *pIterator;
 		const char *pArgStart = pIterator;
 		int Length;
-		bool Valid = NextArg(pArgStart, &Length); // Get contents and go to next argument position
+		bool Valid = EditorServerSettings::ReadArgument(pIterator, Length);
 		size_t Offset = pArgStart - pLineInputStr; // Compute offset from the start of the input
 
 		// Add new argument, copy the argument contents
@@ -1616,6 +1502,7 @@ void CMapSettingsBackend::CContext::ClearError()
 {
 	m_Error.m_aMessage[0] = '\0';
 	m_Error.m_Type = SCommandParseError::ERROR_NONE;
+	m_Error.m_ArgIndex = -1;
 }
 
 bool CMapSettingsBackend::CContext::UpdateCursor(bool Force)
@@ -1943,31 +1830,6 @@ int CMapSettingsBackend::CContext::CheckCollision(const char *pInputString, cons
 		return -1;
 	}
 
-	struct SArgument
-	{
-		char m_aValue[128];
-		SArgument(const char *pStr)
-		{
-			str_copy(m_aValue, pStr);
-		}
-	};
-
-	struct SLineArgs
-	{
-		int m_Index;
-		std::vector<SArgument> m_vArgs;
-	};
-
-	// For now we split each map setting corresponding to the setting we want to add by spaces
-	auto &&SplitSetting = [](const char *pStr) {
-		std::vector<SArgument> vaArgs;
-		const char *pIt = pStr;
-		char aBuffer[128];
-		while((pIt = str_next_token(pIt, " ", aBuffer, sizeof(aBuffer))))
-			vaArgs.emplace_back(aBuffer);
-		return vaArgs;
-	};
-
 	// Define the result of the check
 	Result = ECollisionCheckResult::ERROR;
 
@@ -2037,72 +1899,17 @@ int CMapSettingsBackend::CContext::CheckCollision(const char *pInputString, cons
 	}
 	else if(pSetting->m_Type == IMapSetting::SETTING_COMMAND)
 	{
-		// For "command" settings, this is a bit more complex as we have to use argument constraints.
-		// The general idea is to split every map setting in their arguments separated by spaces.
-		// Then, for each argument, we check if it collides with any of the map settings. When that's the case,
-		//   we need to check the constraint of the argument. If set to UNIQUE, then that's a collision and we can only
-		//   replace the command in the list.
-		// If set to anything else, we consider that it is not a collision and we move to the next argument.
-		// This system is simple and somewhat flexible as we only need to declare the constraints, the rest should be
-		//   handled automatically.
-
-		std::shared_ptr<SMapSettingCommand> pSettingCommand = std::static_pointer_cast<SMapSettingCommand>(pSetting);
-		// Get matching lines for that command
-		std::vector<SLineArgs> vLineArgs;
-		for(int i = 0; i < (int)vSettings.size(); i++)
+		// 所有前置参数相同，并且唯一参数也相同，才算同一条设置。
+		for(int Arg = 0; Arg < ArgCount(); ++Arg)
 		{
-			const auto &Setting = vSettings.at(i);
+			if(m_pBackend->ArgConstraint(pSetting->m_pName, Arg) != CMapSettingsBackend::EArgConstraint::UNIQUE)
+				continue;
 
-			// Split this setting into its arguments
-			std::vector<SArgument> vArgs = SplitSetting(Setting.m_aCommand);
-			// Only keep settings that match with the current input setting name
-			if(!vArgs.empty() && str_comp_nocase(vArgs[0].m_aValue, pSettingCommand->m_pName) == 0)
-			{
-				// When that's the case, we save them
-				vArgs.erase(vArgs.begin());
-				vLineArgs.push_back(SLineArgs{
-					i,
-					vArgs,
-				});
-			}
+			const int Index = EditorServerSettings::FindCommandCollision(pSetting->m_pName, m_vCurrentArgs, Arg, vSettings);
+			Result = Index >= 0 ? ECollisionCheckResult::REPLACE : ECollisionCheckResult::ADD;
+			return Index;
 		}
-
-		// Here is the simple algorithm to check for collisions according to argument constraints
-		bool Error = false;
-		int CollidingLineIndex = -1;
-		for(int ArgIndex = 0; ArgIndex < ArgCount(); ArgIndex++)
-		{
-			bool Collide = false;
-			const char *pValue = Arg(ArgIndex).m_aValue;
-			for(auto &Line : vLineArgs)
-			{
-				// Check first colliding line
-				if(str_comp_nocase(pValue, Line.m_vArgs[ArgIndex].m_aValue) == 0)
-				{
-					Collide = true;
-					CollidingLineIndex = Line.m_Index;
-					Error = m_pBackend->ArgConstraint(pSetting->m_pName, ArgIndex) == CMapSettingsBackend::EArgConstraint::UNIQUE;
-				}
-				if(Error)
-					break;
-			}
-
-			// If we did not collide with any of the lines for that argument, we're good to go
-			// (or if we had an error)
-			if(!Collide || Error)
-				break;
-
-			// Otherwise, remove non-colliding args from the list
-			vLineArgs.erase(
-				std::remove_if(vLineArgs.begin(), vLineArgs.end(), [&](const SLineArgs &Line) {
-					return str_comp_nocase(pValue, Line.m_vArgs[ArgIndex].m_aValue) != 0;
-				}),
-				vLineArgs.end());
-		}
-
-		// The result is either REPLACE when we found a collision, or ADD
-		Result = Error ? ECollisionCheckResult::REPLACE : ECollisionCheckResult::ADD;
-		return CollidingLineIndex;
+		Result = ECollisionCheckResult::ADD;
 	}
 
 	return -1;
@@ -2201,6 +2008,7 @@ void CMapSettingsBackend::OnMapLoad()
 	// 2. Check for duplicates
 
 	std::vector<std::tuple<int, bool, CEditorMapSetting>> vSettingsInvalid;
+	std::vector<int> vValidIndices;
 
 	for(int i = 0; i < (int)vLoadedMapSettings.size(); i++)
 	{
@@ -2213,7 +2021,10 @@ void CMapSettingsBackend::OnMapLoad()
 		LocalContext.CheckCollision(Setting.m_aCommand, m_LoadedMapSettings.m_vSettingsValid, Result);
 
 		if(Valid && Result == ECollisionCheckResult::ADD)
+		{
 			m_LoadedMapSettings.m_vSettingsValid.emplace_back(Setting);
+			vValidIndices.push_back(i);
+		}
 		else
 			vSettingsInvalid.emplace_back(i, Valid, Setting);
 
@@ -2228,13 +2039,8 @@ void CMapSettingsBackend::OnMapLoad()
 		LocalContext.UpdateFromString(Setting.m_aCommand);
 
 		ECollisionCheckResult Result = ECollisionCheckResult::ERROR;
-		int CollidingLineIndex = LocalContext.CheckCollision(Setting.m_aCommand, m_LoadedMapSettings.m_vSettingsValid, Result);
-		int RealCollidingLineIndex = CollidingLineIndex;
-
-		if(CollidingLineIndex != -1)
-			RealCollidingLineIndex = std::find_if(vLoadedMapSettings.begin(), vLoadedMapSettings.end(), [&](const CEditorMapSetting &MapSetting) {
-				return str_comp_nocase(MapSetting.m_aCommand, m_LoadedMapSettings.m_vSettingsValid.at(CollidingLineIndex).m_aCommand) == 0;
-			}) - vLoadedMapSettings.begin();
+		const int CollidingLineIndex = LocalContext.CheckCollision(Setting.m_aCommand, m_LoadedMapSettings.m_vSettingsValid, Result);
+		const int RealCollidingLineIndex = CollidingLineIndex >= 0 ? vValidIndices[CollidingLineIndex] : -1;
 
 		int Type = 0;
 		if(!Valid)
