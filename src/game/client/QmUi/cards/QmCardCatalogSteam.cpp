@@ -32,19 +32,21 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 	CSettingsContentLayoutFlow Flow(Content);
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly() || Flow.Declaring();
 	static CSteamProbeState s_Probe;
-	// 自动回填只做一次，避免用户清空输入框后又被检测结果填回去。
-	static bool s_AutoPathFilled = false;
+	// 已有路径或自动回填一次后，清空路径会保留自动探测模式。
+	static bool s_AllowAutoFill = true;
 	static CLineInputBuffered<1024> s_ManualPathInput;
 	static CButtonContainer s_DetectButton;
 	if(Flow.Input() && !s_ManualPathInput.IsActive() && str_comp(s_ManualPathInput.GetString(), g_Config.m_QmSteamClientPath) != 0)
 		s_ManualPathInput.Set(g_Config.m_QmSteamClientPath);
-	const bool AutoFillPath = !s_AutoPathFilled && g_Config.m_QmSteamClientPath[0] == '\0' && !s_ManualPathInput.IsActive();
+	if(!ReadOnly && s_AllowAutoFill && g_Config.m_QmSteamClientPath[0] != '\0')
+		s_AllowAutoFill = false;
+	const bool AutoFillPath = s_AllowAutoFill && !s_ManualPathInput.IsActive();
 	if(!ReadOnly && s_Probe.Finish(g_Config.m_QmSteamClientPath, AutoFillPath, NormalizeSteamDriveLetter) && AutoFillPath && s_Probe.Info().m_aPath[0] != '\0')
 	{
 		// 完整检查键已与本次结果一起发布，回填只复制固定缓冲，不再分配。
 		str_copy(g_Config.m_QmSteamClientPath, s_Probe.Info().m_aPath);
 		s_ManualPathInput.Set(s_Probe.Info().m_aPath);
-		s_AutoPathFilled = true;
+		s_AllowAutoFill = false;
 	}
 	IUiContext Ctx = SettingsUiContext("settings_steam", Metrics.m_UiScale);
 	CUIRect Row;
