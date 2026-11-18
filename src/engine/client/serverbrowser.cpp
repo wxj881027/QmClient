@@ -1347,6 +1347,10 @@ void CServerBrowser::OnServerInfoUpdate(const NETADDR &Addr, int Token, const CS
 
 	if(m_ServerlistType == IServerBrowser::TYPE_LAN)
 	{
+		// 其他客户端 socket 仍可能收到无连接回复。
+		if(!m_pNetClient || !m_pNetClient->m_Socket)
+			return;
+
 		// 先校验广播令牌，再允许替换已有的 0.7 地址或新增条目。
 		NETADDR Broadcast = NETADDR_ZEROED;
 		Broadcast.type = (m_pNetClient->NetType() & ~(NETTYPE_WEBSOCKET_IPV4 | NETTYPE_WEBSOCKET_IPV6)) | NETTYPE_LINK_BROADCAST;

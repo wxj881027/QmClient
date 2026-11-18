@@ -78,6 +78,24 @@ TEST_F(ServerBrowserLanResponse, RefreshAfterClosingContactSocketClearsPreviousR
 	EXPECT_EQ(m_Browser.NumServers(), 0);
 }
 
+TEST_F(ServerBrowserLanResponse, ReplyAfterClosingContactSocketKeepsExistingLanResults)
+{
+	const auto Old = Bridge();
+	Publish({Old});
+	auto *pEntry = m_Browser.Find(Old.m_aAddresses[0]);
+	ASSERT_NE(pEntry, nullptr);
+	BeginLan();
+	m_NetClient.Close();
+
+	auto Reply = Server("Late reply", 8302);
+	Reply.m_Type = SERVERINFO_VANILLA;
+	m_Browser.OnServerInfoUpdate(Reply.m_aAddresses[0], m_BasicToken, &Reply);
+
+	EXPECT_EQ(m_Browser.NumServers(), 1);
+	EXPECT_EQ(m_Browser.Find(Old.m_aAddresses[0]), pEntry);
+	EXPECT_EQ(m_Browser.Find(Reply.m_aAddresses[0]), nullptr);
+}
+
 TEST_F(ServerBrowserLanResponse, WrongBasicTokenCannotReplaceExistingBridgeOrConsumeItsRequest)
 {
 	const auto Old = Bridge();
