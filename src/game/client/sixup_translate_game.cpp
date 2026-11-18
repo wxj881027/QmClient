@@ -380,19 +380,17 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_VOTEOPTIONLISTADD)
 	{
-		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_VoteOptionListAdd>();
-		int NumOptions = pUnpacker->GetInt();
+		const int NumOptions = pUnpacker->GetInt();
 		if(NumOptions > 14)
 		{
-			ReadQmVoteOptions(*pUnpacker, NumOptions, [this](int, const char *pDescription) {
+			const bool IsActiveConnection = Conn == g_Config.m_ClDummy;
+			const bool IsDemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
+			CVoting::ReadSixupOptionList(*pUnpacker, NumOptions, IsActiveConnection, IsDemoPlayback, [this](int, const char *pDescription) {
 				m_Voting.AddOption(pDescription);
 			});
-			// 0.7 can send more vote options than
-			// the 0.6 protocol fit
-			// in that case we do not translate it but just
-			// reimplement what 0.6 would do
 			return nullptr;
 		}
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_VoteOptionListAdd>();
 		pMsg->m_NumOptions = ReadQmVoteOptions(*pUnpacker, NumOptions, [pMsg](int i, const char *pDescription) {
 			switch(i)
 			{
@@ -421,10 +419,20 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 		protocol7::CNetMsg_Sv_VoteSet *pMsg7 = (protocol7::CNetMsg_Sv_VoteSet *)pRawMsg;
 		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_VoteSet>();
 
-		m_TClient.SetVoteCallerId(pMsg7->m_Timeout ? pMsg7->m_ClientId : -1);
+		const bool ApplyVoteState = CVoting::CanApplySixupVoteState(Conn == g_Config.m_ClDummy, Client()->State() == IClient::STATE_DEMOPLAYBACK);
+		if(ApplyVoteState)
+			m_TClient.SetVoteCallerId(pMsg7->m_Timeout ? pMsg7->m_ClientId : -1);
 		pMsg->m_Timeout = pMsg7->m_Timeout;
 		pMsg->m_pDescription = pMsg7->m_pDescription;
 		pMsg->m_pReason = pMsg7->m_pReason;
+
+		const auto EndVote = [this, ApplyVoteState](CVoting::EVoteResult Result, const char *pText) {
+			if(ApplyVoteState)
+				m_Voting.OnReset();
+			m_Chat.AddLine(-1, 0, pText);
+			if(ApplyVoteState)
+				m_Voting.OnVoteResult(Result);
+		};
 
 		char aBuf[128];
 		char aDisplayBuf[128];
@@ -471,19 +479,13 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 				m_Chat.AddLine(-1, 0, aDisplayBuf);
 				break;
 			case protocol7::VOTE_END_ABORT:
-				m_Voting.OnReset();
-				m_Chat.AddLine(-1, 0, "Vote aborted");
-				m_Voting.OnVoteResult(CVoting::EVoteResult::ABORT);
+				EndVote(CVoting::EVoteResult::ABORT, "Vote aborted");
 				break;
 			case protocol7::VOTE_END_PASS:
-				m_Voting.OnReset();
-				m_Chat.AddLine(-1, 0, pMsg7->m_ClientId == -1 ? "Admin forced vote yes" : "Vote passed");
-				m_Voting.OnVoteResult(CVoting::EVoteResult::PASS);
+				EndVote(CVoting::EVoteResult::PASS, pMsg7->m_ClientId == -1 ? "Admin forced vote yes" : "Vote passed");
 				break;
 			case protocol7::VOTE_END_FAIL:
-				m_Voting.OnReset();
-				m_Chat.AddLine(-1, 0, pMsg7->m_ClientId == -1 ? "Admin forced vote no" : "Vote failed");
-				m_Voting.OnVoteResult(CVoting::EVoteResult::FAIL);
+				EndVote(CVoting::EVoteResult::FAIL, pMsg7->m_ClientId == -1 ? "Admin forced vote no" : "Vote failed");
 			}
 		}
 

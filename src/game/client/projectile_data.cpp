@@ -37,15 +37,23 @@ static bool UseProjectileExtraInfo(const CNetObj_Projectile *pProj)
 
 CProjectileData ExtractProjectileInfo(int NetObjType, const void *pData, CGameWorld *pGameWorld, const CNetObj_EntityEx *pEntEx)
 {
-	CNetObj_Projectile *pProj = (CNetObj_Projectile *)pData;
-
 	if(NetObjType == NETOBJTYPE_DDNETPROJECTILE)
+		return ExtractProjectileInfoDDNet(static_cast<const CNetObj_DDNetProjectile *>(pData));
+	if(NetObjType == NETOBJTYPE_DDRACEPROJECTILE)
+		return ExtractProjectileInfoDDRace(static_cast<const CNetObj_DDRaceProjectile *>(pData), pGameWorld, pEntEx);
+
+	const auto *pProj = static_cast<const CNetObj_Projectile *>(pData);
+	if(NetObjType == NETOBJTYPE_PROJECTILE && UseProjectileExtraInfo(pProj))
 	{
-		return ExtractProjectileInfoDDNet((CNetObj_DDNetProjectile *)pData);
-	}
-	else if(NetObjType == NETOBJTYPE_DDRACEPROJECTILE || (NetObjType == NETOBJTYPE_PROJECTILE && UseProjectileExtraInfo(pProj)))
-	{
-		return ExtractProjectileInfoDDRace((CNetObj_DDRaceProjectile *)pData, pGameWorld, pEntEx);
+		// 旧投射物把角度和标志放在速度字段中。
+		CNetObj_DDRaceProjectile Legacy{};
+		Legacy.m_X = pProj->m_X;
+		Legacy.m_Y = pProj->m_Y;
+		Legacy.m_Angle = pProj->m_VelX;
+		Legacy.m_Data = pProj->m_VelY;
+		Legacy.m_Type = pProj->m_Type;
+		Legacy.m_StartTick = pProj->m_StartTick;
+		return ExtractProjectileInfoDDRace(&Legacy, pGameWorld, pEntEx);
 	}
 
 	CProjectileData Result = {vec2(0, 0)};

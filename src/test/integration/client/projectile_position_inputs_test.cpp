@@ -105,14 +105,15 @@ TEST(ProjectilePositionInputs, DemoExtraRemovalKeepsCompatibleBaseFields)
 	CNetObj_Projectile Demo{};
 	Demo.m_X = 10000;
 	Demo.m_Y = -2500;
+	Demo.m_VelX = 1000000;
 	Demo.m_VelY = LEGACYPROJECTILEFLAG_IS_DDNET | LEGACYPROJECTILEFLAG_NO_OWNER | LEGACYPROJECTILEFLAG_EXPLOSIVE;
 	Demo.m_Type = WEAPON_GRENADE;
 	Demo.m_StartTick = 123;
 	DemoObjectRemoveExtraProjectileInfo(&Demo);
 	EXPECT_EQ(Demo.m_X, 100);
 	EXPECT_EQ(Demo.m_Y, -25);
-	EXPECT_EQ(Demo.m_VelX, 0);
-	EXPECT_EQ(Demo.m_VelY, 100);
+	EXPECT_EQ(Demo.m_VelX, -84);
+	EXPECT_EQ(Demo.m_VelY, 54);
 	EXPECT_EQ(Demo.m_Type, WEAPON_GRENADE);
 	EXPECT_EQ(Demo.m_StartTick, 123);
 }

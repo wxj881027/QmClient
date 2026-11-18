@@ -11,6 +11,26 @@
 #include <game/client/components/qmclient/sixup_damage_display.h>
 #include <game/client/gameclient.h>
 
+#include <cstdint>
+#include <limits>
+#include <optional>
+#include <utility>
+
+static constexpr std::optional<int> SixupTickDifference(int EndTick, int StartTick)
+{
+	const int64_t Difference = static_cast<int64_t>(EndTick) - StartTick;
+	if(!std::in_range<int>(Difference))
+		return std::nullopt;
+	return static_cast<int>(Difference);
+}
+
+static_assert(SixupTickDifference(150, 100) == 50);
+static_assert(SixupTickDifference(0, 100) == -100);
+static_assert(SixupTickDifference(0, std::numeric_limits<int>::max()) == -std::numeric_limits<int>::max());
+static_assert(!SixupTickDifference(0, std::numeric_limits<int>::min()));
+static_assert(!SixupTickDifference(std::numeric_limits<int>::max(), -1));
+static_assert(!SixupTickDifference(std::numeric_limits<int>::min(), 1));
+
 int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy)
 {
 	CSnapshotBuilder Builder;
@@ -117,19 +137,18 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 		Info6.m_GameStateFlags = GameStateFlagsSix;
 		Info6.m_RoundStartTick = TranslationContext.m_GameStartTick7;
 		Info6.m_WarmupTimer = 0; // removed in 0.7
-		if(TranslationContext.m_GameStateFlags7 & protocol7::GAMESTATEFLAG_WARMUP)
-			Info6.m_WarmupTimer = TranslationContext.m_GameStateEndTick7 - GameTick;
-		if(TranslationContext.m_GameStateFlags7 & protocol7::GAMESTATEFLAG_STARTCOUNTDOWN)
-			Info6.m_WarmupTimer = TranslationContext.m_GameStateEndTick7 - GameTick;
+		if(TranslationContext.m_GameStateFlags7 & (protocol7::GAMESTATEFLAG_WARMUP | protocol7::GAMESTATEFLAG_STARTCOUNTDOWN))
+			Info6.m_WarmupTimer = SixupTickDifference(TranslationContext.m_GameStateEndTick7, GameTick).value_or(0);
 
 		// hack to port 0.7 race timer to ddnet warmup gametimer hack
 		int TimerClientId = TranslationContext.m_aLocalClientId[Conn];
 		if(SpectatorId >= 0)
 			TimerClientId = SpectatorId;
 		const protocol7::CNetObj_PlayerInfoRace *pRaceInfo = TimerClientId == -1 ? nullptr : TranslationContext.m_apPlayerInfosRace[TimerClientId];
-		if(pRaceInfo)
+		const auto RaceTimer = pRaceInfo ? SixupTickDifference(0, pRaceInfo->m_RaceStartTick) : std::nullopt;
+		if(RaceTimer)
 		{
-			Info6.m_WarmupTimer = -pRaceInfo->m_RaceStartTick;
+			Info6.m_WarmupTimer = *RaceTimer;
 			Info6.m_GameStateFlags |= GAMESTATEFLAG_RACETIME;
 		}
 

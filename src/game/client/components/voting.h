@@ -8,6 +8,7 @@
 #include <engine/shared/memheap.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/vote_option_packet.h>
 #include <game/client/ui_rect.h>
 #include <game/voting.h>
 
@@ -94,6 +95,19 @@ public:
 	void RemovevoteOption(int OptionId);
 	void AddvoteOption(const char *pDescription, const char *pCommand);
 	void AddOption(const char *pDescription);
+
+	// 翻译层直接处理的投票状态也只接受当前连接的实时消息。
+	static constexpr bool CanApplySixupVoteState(bool IsActiveConnection, bool IsDemoPlayback)
+	{
+		return IsActiveConnection && !IsDemoPlayback;
+	}
+
+	template<typename TConsume>
+	static void ReadSixupOptionList(CUnpacker &Unpacker, int NumOptions, bool IsActiveConnection, bool IsDemoPlayback, TConsume &&Consume)
+	{
+		if(CanApplySixupVoteState(IsActiveConnection, IsDemoPlayback))
+			ReadQmVoteOptions(Unpacker, NumOptions, Consume);
+	}
 
 	void Vote(int v); // -1 = no, 1 = yes
 

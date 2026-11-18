@@ -3,6 +3,7 @@
 #include <generated/protocol7.h>
 
 #include <game/client/components/qmclient/vote_option_packet.h>
+#include <game/client/components/voting.h>
 
 #include <gtest/gtest.h>
 
@@ -33,6 +34,46 @@ namespace
 		}
 		bool Error() const { return m_Unpacker.Error(); }
 	};
+}
+
+class CSixupVoteOptionListTest : public ::testing::Test
+{
+protected:
+	static constexpr int NUM_OPTIONS = 15;
+
+	std::vector<std::string> ReadOptions(bool IsActiveConnection, bool IsDemoPlayback)
+	{
+		CPacker Packet;
+		Packet.Reset();
+		for(int i = 0; i < NUM_OPTIONS; ++i)
+			Packet.AddString(std::to_string(i).c_str());
+		EXPECT_FALSE(Packet.Error());
+		CUnpacker Unpacker;
+		Unpacker.Reset(Packet.Data(), Packet.Size());
+		std::vector<std::string> vOptions;
+		CVoting::ReadSixupOptionList(Unpacker, NUM_OPTIONS, IsActiveConnection, IsDemoPlayback,
+			[&](int, const char *pText) { vOptions.emplace_back(pText); });
+		EXPECT_FALSE(Unpacker.Error());
+		return vOptions;
+	}
+};
+
+TEST_F(CSixupVoteOptionListTest, ActiveConnectionPublishesAllOptionsInPacketOrder)
+{
+	const auto vOptions = ReadOptions(true, false);
+	ASSERT_EQ(vOptions.size(), NUM_OPTIONS);
+	for(int i = 0; i < NUM_OPTIONS; ++i)
+		EXPECT_EQ(vOptions[i], std::to_string(i));
+}
+
+TEST_F(CSixupVoteOptionListTest, InactiveConnectionDoesNotPublishOptions)
+{
+	EXPECT_TRUE(ReadOptions(false, false).empty());
+}
+
+TEST_F(CSixupVoteOptionListTest, DemoPlaybackDoesNotPublishOptions)
+{
+	EXPECT_TRUE(ReadOptions(true, true).empty());
 }
 
 TEST(VoteOptionPacket, SixupSecuredHugeCountWithNoDescriptionsStopsAtFirstReadError)
