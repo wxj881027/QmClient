@@ -76,6 +76,20 @@ TEST_F(CQmWarListModelTest, GroupRenameInvalidatesFilterAndKeepsEntryAssociation
 	EXPECT_EQ(m_Model.m_vWarEntries.front().m_pWarType, pType);
 }
 
+TEST_F(CQmWarListModelTest, LoadingAGroupAtIndexZeroKeepsTheFallbackGroup)
+{
+	const CWarType *pNone = m_Model.m_pWarTypeNone;
+	const ColorRGBA NoneColor = pNone->m_Color;
+	const uint64_t Before = m_Model.Revision();
+
+	ASSERT_TRUE(m_Model.LoadWarType(WARLIST_BUILTIN_GROUP_NONE, "custom", ColorRGBA(1, 0, 0, 1)));
+
+	EXPECT_STREQ(pNone->m_aWarName, "none");
+	EXPECT_EQ(pNone->m_Color, NoneColor);
+	EXPECT_EQ(m_Model.Revision(), Before);
+	EXPECT_FALSE(m_Model.ConfigIncomplete());
+}
+
 TEST_F(CQmWarListModelTest, RemovingGroupMovesEntriesToNone)
 {
 	m_Model.AddWarEntry("Alice", "", "", "custom");
@@ -97,6 +111,36 @@ TEST_F(CQmWarListModelTest, DuplicateReplacementRefreshesLookup)
 	ASSERT_EQ(m_Model.m_vWarEntries.size(), 1u);
 	ASSERT_EQ(m_Model.m_WarEntriesByName.at("Alice").size(), 1u);
 	EXPECT_STREQ(m_Model.m_WarEntriesByName.at("Alice").front()->m_aReason, "new");
+}
+
+TEST_F(CQmWarListModelTest, AddingAPlayerWithAClanReplacesTheExistingClanEntry)
+{
+	g_Config.m_QmWarListAllowDuplicates = 0;
+	ASSERT_TRUE(m_Model.AddWarEntry("", "Clan", "old", "enemy"));
+	ASSERT_TRUE(m_Model.MatchesEnemy("Bob", "Clan"));
+
+	ASSERT_TRUE(m_Model.AddWarEntry("Alice", "Clan", "new", "team"));
+
+	EXPECT_FALSE(m_Model.MatchesEnemy("Bob", "Clan"));
+	ASSERT_EQ(m_Model.m_vWarEntries.size(), 1u);
+	const auto *pEntry = m_Model.FindWarEntry("", "Clan", "team");
+	ASSERT_NE(pEntry, nullptr);
+	EXPECT_STREQ(pEntry->m_aReason, "new");
+}
+
+TEST_F(CQmWarListModelTest, DuplicateReplacementUsesTheStoredNameAfterTruncation)
+{
+	g_Config.m_QmWarListAllowDuplicates = 0;
+	constexpr char aName[] = "LongPlayerNameFromConsole";
+	static_assert(sizeof(aName) > MAX_NAME_LENGTH);
+	ASSERT_TRUE(m_Model.AddWarEntry(aName, "", "old", "enemy"));
+
+	ASSERT_TRUE(m_Model.AddWarEntry(aName, "", "new", "team"));
+
+	ASSERT_EQ(m_Model.m_vWarEntries.size(), 1u);
+	const auto *pEntry = m_Model.FindWarEntry(aName, "", "team");
+	ASSERT_NE(pEntry, nullptr);
+	EXPECT_STREQ(pEntry->m_aReason, "new");
 }
 
 TEST_F(CQmWarListModelTest, InvalidEntryIndexDoesNotMutateModel)

@@ -52,7 +52,7 @@ void CQmWarListModel::UpdateWarEntry(int Index, const char *pName, const char *p
 
 bool CQmWarListModel::UpsertWarType(int Index, const char *pType, ColorRGBA Color) noexcept
 {
-	if(str_comp(pType, "none") == 0)
+	if(Index == WARLIST_BUILTIN_GROUP_NONE || str_comp(pType, "none") == 0)
 		return true;
 
 	if(Index >= 0 && Index < static_cast<int>(m_WarTypes.size()))
@@ -60,7 +60,8 @@ bool CQmWarListModel::UpsertWarType(int Index, const char *pType, ColorRGBA Colo
 		CWarType *pExisting = FindWarType(pType);
 		if(pExisting != m_pWarTypeNone && pExisting != m_WarTypes[Index])
 			return true;
-		str_copy(m_WarTypes[Index]->m_aWarName, pType);
+		const CWarType TypeName(pType);
+		str_copy(m_WarTypes[Index]->m_aWarName, TypeName.m_aWarName);
 		m_WarTypes[Index]->m_Color = Color;
 		MarkWarEntriesDirty();
 	}
@@ -73,26 +74,19 @@ bool CQmWarListModel::UpsertWarType(int Index, const char *pType, ColorRGBA Colo
 
 bool CQmWarListModel::AddWarEntry(const char *pName, const char *pClan, const char *pReason, const char *pType) noexcept
 {
-	if(pName[0] == '\0' && pClan[0] == '\0')
-		return true;
 	// 输入可能借用现有条目，先复制固定值，再准备任何可重分配的容器。
 	CWarEntry Entry(nullptr);
-	str_copy(Entry.m_aReason, pReason);
 	if(pClan[0] != '\0')
 		str_copy(Entry.m_aClan, pClan);
 	else
 		str_copy(Entry.m_aName, pName);
+	if(Entry.m_aName[0] == '\0' && Entry.m_aClan[0] == '\0')
+		return true;
+	str_copy(Entry.m_aReason, pReason);
 	CWarType TypeName(pType);
 	const bool HasDuplicates = !g_Config.m_QmWarListAllowDuplicates && std::any_of(m_vWarEntries.begin(), m_vWarEntries.end(), [&](const CWarEntry &Old) {
-		return str_comp(Old.m_aName, pName) == 0 && str_comp(Old.m_aClan, pClan) == 0;
+		return str_comp(Old.m_aName, Entry.m_aName) == 0 && str_comp(Old.m_aClan, Entry.m_aClan) == 0;
 	});
-	char aDuplicateName[MAX_NAME_LENGTH] = "";
-	char aDuplicateClan[MAX_CLAN_LENGTH] = "";
-	if(HasDuplicates)
-	{
-		str_copy(aDuplicateName, pName);
-		str_copy(aDuplicateClan, pClan);
-	}
 	try
 	{
 		CWarType *pWarType = FindWarType(TypeName.m_aWarName);
@@ -109,7 +103,7 @@ bool CQmWarListModel::AddWarEntry(const char *pName, const char *pClan, const ch
 		}
 		Entry.m_pWarType = pWarType;
 		if(HasDuplicates)
-			RemoveWarEntryDuplicates(aDuplicateName, aDuplicateClan);
+			RemoveWarEntryDuplicates(Entry.m_aName, Entry.m_aClan);
 		m_vWarEntries.push_back(Entry);
 		MarkWarEntriesDirty();
 		return true;
