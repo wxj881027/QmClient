@@ -118,23 +118,30 @@ inline uint64_t QmPerfFrameId(const IClient *pClient)
 
 inline bool QmPerfTokenLooksNumeric(const char *pValue)
 {
-	if(pValue == nullptr || pValue[0] == '\0')
+	if(pValue == nullptr)
 		return false;
-	int Pos = (pValue[0] == '-' || pValue[0] == '+') ? 1 : 0;
-	bool HasDigit = false;
-	for(; pValue[Pos] != '\0'; ++Pos)
+	const auto IsDigit = [](char c) { return c >= '0' && c <= '9'; };
+	if(*pValue == '-')
+		++pValue;
+	if(!IsDigit(*pValue))
+		return false;
+	// 诊断数值使用十进制整数或小数，带多个点的版本号和皮肤名仍是字符串。
+	if(*pValue == '0')
+		++pValue;
+	else
 	{
-		const char c = pValue[Pos];
-		if(c >= '0' && c <= '9')
-		{
-			HasDigit = true;
-			continue;
-		}
-		if(c == '.')
-			continue;
-		return false;
+		while(IsDigit(*pValue))
+			++pValue;
 	}
-	return HasDigit;
+	if(*pValue == '.')
+	{
+		++pValue;
+		if(!IsDigit(*pValue))
+			return false;
+		while(IsDigit(*pValue))
+			++pValue;
+	}
+	return *pValue == '\0';
 }
 
 inline void QmPerfAppendCommonKeyValue(char *pBuf, int BufSize, const IClient *pClient, const char *pPage = nullptr, const char *pTab = nullptr)

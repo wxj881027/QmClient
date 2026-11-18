@@ -1,6 +1,9 @@
 #ifndef QM_HOOKS_SODA_QM_SODA_PROBE_H
 #define QM_HOOKS_SODA_QM_SODA_PROBE_H
 
+#include <cstdint>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -22,13 +25,16 @@ namespace QmSodaProbe
 	// executeJavaScript(innerProbe) 并把节流状态带回。
 	std::string BuildBridgeExpression();
 
+	// 优先选 Node target，只接受同一发现端口上的回环 WebSocket。
+	std::string PickNodeTarget(std::string_view Json, uint16_t Port);
+
 	// 解析提取结果 JSON(ExtractionData 归一化格式)为播放态快照。
 	struct SPlaybackSnapshot
 	{
 		bool m_Ok = false;
 		bool m_IsPlaying = false;
 		bool m_IsLoading = false;
-		double m_ProgressSeconds = 0;
+		double m_ProgressSeconds = -1;
 		double m_DurationSeconds = 0;
 		std::string m_MediaId;
 		std::string m_Name;
@@ -40,10 +46,58 @@ namespace QmSodaProbe
 		std::string m_TranslationLrc; // 中文翻译轨(独立 LRC),可为空
 		bool m_Throttled = false;
 		std::string m_Error;
+
+		// 无有效进度返回 -1。未知时长以协议已有的 0 表示。
+		int64_t PositionMs() const;
+		int64_t DurationMs() const;
 	};
 
 	// 解析提取结果 JSON。失败时 m_Ok=false 且 m_Error 有原因。
 	bool ParseExtractionJson(std::string_view Json, SPlaybackSnapshot *pOut);
+
+	class CLyricFilePublication
+	{
+		static constexpr uint64_t WRITE_RETRY_MS = 1000;
+		std::string m_MediaId;
+		std::string m_Path;
+		uint64_t m_Generation = 0;
+		uint64_t m_NextWriteTick = 0;
+
+	public:
+		void Reset() noexcept { *this = {}; }
+		uint64_t Generation() const { return m_Generation; }
+		const std::string &Path() const { return m_Path; }
+
+		template<typename FWrite>
+		void Update(const SPlaybackSnapshot &Snapshot, uint64_t Now, const FWrite &Write)
+		{
+			if(Snapshot.m_MediaId.empty())
+				return;
+			if(Snapshot.m_MediaId != m_MediaId)
+			{
+				m_MediaId = Snapshot.m_MediaId;
+				if(++m_Generation == 0)
+					m_Generation = 1;
+				m_Path.clear();
+				m_NextWriteTick = 0;
+			}
+			if(Snapshot.m_LyricContent.empty() || !m_Path.empty() || Now < m_NextWriteTick)
+				return;
+
+			// 歌曲身份可以先发布。歌词到齐后，只有写盘成功才记住路径。
+			m_NextWriteTick = Now + WRITE_RETRY_MS;
+			try
+			{
+				m_Path = Write(Snapshot);
+			}
+			catch(const std::bad_alloc &)
+			{
+			}
+			catch(const std::length_error &)
+			{
+			}
+		}
+	};
 } // namespace QmSodaProbe
 
 #endif

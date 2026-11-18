@@ -9,31 +9,33 @@
 #include "qm_soda_watchdog.h"
 #include "qm_soda_writer.h"
 
-#include <engine/external/json-parser/json.h>
-
 #include <windows.h>
 
+#include <qm/hooks/netease/qm_netease_cdp.h>
 #include <qm/hooks/netease/qm_netease_cdp_client.h>
+#include <qm/hooks/netease/qm_netease_cdp_io.h>
 #include <winhttp.h>
 
 #include <algorithm>
-#include <array>
-#include <atomic>
 #include <chrono>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include <cwchar>
 #include <filesystem>
+#include <iterator>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <thread>
-#include <vector>
 
 namespace
 {
 	constexpr wchar_t HELPER_MUTEX_NAME[] = L"Local\\QmClient.SodaHook.Helper.v1";
 	constexpr int EXTRACT_INTERVAL_MS = 300;
 	constexpr int EXTRACT_TIMEOUT_MS = 8000;
+	using THandle = std::unique_ptr<void, decltype(&CloseHandle)>;
+	using TInternetHandle = std::unique_ptr<void, decltype(&WinHttpCloseHandle)>;
 
 	// 简单文件日志:stdout 重定向在 Windows 上缓冲不可靠,真机诊断写文件。
 	// 路径: %LOCALAPPDATA%\QmClient\soda-hook\helper.log
@@ -190,13 +192,17 @@ namespace
 	// 把播放态快照序列化为 JSON 歌词数据文件,返回文件路径(UTF-8)。
 	// 结构: {"mediaId","title","artist","album","coverUrl","durationMs","positionMs",
 	//         "isPlaying","lyricType","lyricContent","translationLrc"}
-	std::wstring WriteLyricDataFile(const QmSodaProbe::SPlaybackSnapshot &Snapshot)
+	std::string WriteLyricDataFile(const QmSodaProbe::SPlaybackSnapshot &Snapshot)
 	{
 		const std::wstring Directory = LyricDataDirectory();
 		if(Directory.empty())
 			return {};
 		const std::string Token = LyricFileToken(Snapshot.m_MediaId, Snapshot.m_Name);
 		const std::wstring Path = (std::filesystem::path(Directory) / (L"lyrics-" + std::wstring(Token.begin(), Token.end()) + L".json")).wstring();
+		std::string Utf8Path = WideStringToUtf8(Path);
+		// 客户端必须收到可打开的完整路径。
+		if(Utf8Path.empty() || Utf8Path.size() >= QmSodaHook::MAX_LYRIC_FILE_PATH_BYTES)
+			return {};
 		// 字符串字段统一带引号;JsonEscape 只处理内容转义。
 		const auto Str = [](std::string_view Value) { return "\"" + JsonEscape(Value) + "\""; };
 		std::string Json = "{\"mediaId\":" + Str(Snapshot.m_MediaId) +
@@ -204,8 +210,8 @@ namespace
 				   ",\"artist\":" + Str(Snapshot.m_Artist) +
 				   ",\"album\":" + Str(Snapshot.m_Album) +
 				   ",\"coverUrl\":" + Str(Snapshot.m_CoverUrl) +
-				   ",\"durationMs\":" + std::to_string((long long)(Snapshot.m_DurationSeconds * 1000)) +
-				   ",\"positionMs\":" + std::to_string((long long)(Snapshot.m_ProgressSeconds * 1000)) +
+				   ",\"durationMs\":" + std::to_string(Snapshot.DurationMs()) +
+				   ",\"positionMs\":" + std::to_string(Snapshot.PositionMs()) +
 				   ",\"isPlaying\":" + (Snapshot.m_IsPlaying ? "true" : "false") +
 				   ",\"lyricType\":" + Str(Snapshot.m_LyricType) +
 				   ",\"lyricContent\":" + Str(Snapshot.m_LyricContent) +
@@ -213,107 +219,39 @@ namespace
 				   "}";
 		if(!WriteFileAtomically(Path, Json))
 			return {};
-		return Path;
+		return Utf8Path;
 	}
 
-	bool HttpGetJsonList(std::string *pBody)
+	bool HttpGetJsonList(std::string &Body)
 	{
-		if(pBody == nullptr)
+		using namespace QmNeteaseCdp;
+		const CIoBudget Budget(GetTickCount64(), 1500, nullptr);
+		const auto Allowed = [&] { return Budget.Remaining(GetTickCount64()) > 0; };
+		const TInternetHandle Session(WinHttpOpen(L"QmClient-Soda/1", WINHTTP_ACCESS_TYPE_NO_PROXY, nullptr, nullptr, 0), WinHttpCloseHandle);
+		if(!Session)
 			return false;
-		pBody->clear();
-		HINTERNET hSession = WinHttpOpen(L"QmClient-Soda/1", WINHTTP_ACCESS_TYPE_NO_PROXY, nullptr, nullptr, 0);
-		if(hSession == nullptr)
+		const TInternetHandle Connect(WinHttpConnect(Session.get(), L"127.0.0.1", QmSodaWatchdog::INSPECTOR_PORT, 0), WinHttpCloseHandle);
+		const TInternetHandle Request(Connect ? WinHttpOpenRequest(Connect.get(), L"GET", L"/json/list", nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0) : nullptr, WinHttpCloseHandle);
+		if(!Request)
 			return false;
-		WinHttpSetTimeouts(hSession, 250, 250, 500, 500);
-		HINTERNET hConnect = WinHttpConnect(hSession, L"127.0.0.1", QmSodaWatchdog::INSPECTOR_PORT, 0);
-		HINTERNET hRequest = hConnect != nullptr ? WinHttpOpenRequest(hConnect, L"GET", L"/json/list", nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0) : nullptr;
-		bool Success = false;
-		if(hRequest != nullptr && WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) && WinHttpReceiveResponse(hRequest, nullptr))
-		{
-			DWORD Status = 0;
-			DWORD StatusSize = sizeof(Status);
-			if(WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX, &Status, &StatusSize, WINHTTP_NO_HEADER_INDEX) && Status == 200)
-			{
-				std::array<char, 8192> Buffer{};
-				for(;;)
-				{
-					DWORD Available = 0;
-					if(!WinHttpQueryDataAvailable(hRequest, &Available) || Available == 0)
-						break;
-					if(pBody->size() + Available > 4 * 1024 * 1024)
-						break;
-					DWORD Read = 0;
-					const DWORD Chunk = std::min<DWORD>(Available, (DWORD)Buffer.size());
-					if(!WinHttpReadData(hRequest, Buffer.data(), Chunk, &Read) || Read == 0)
-						break;
-					pBody->append(Buffer.data(), Read);
-				}
-				Success = !pBody->empty();
-			}
-		}
-		if(hRequest != nullptr)
-			WinHttpCloseHandle(hRequest);
-		if(hConnect != nullptr)
-			WinHttpCloseHandle(hConnect);
-		WinHttpCloseHandle(hSession);
-		return Success;
-	}
-
-	const json_value *ArrayField(const json_value *pObject, const char *pName)
-	{
-		if(pObject == nullptr || pObject->type != json_object || pName == nullptr)
-			return nullptr;
-		for(unsigned int Index = 0; Index < pObject->u.object.length; ++Index)
-		{
-			const auto &Entry = pObject->u.object.values[Index];
-			if(Entry.name != nullptr && std::string_view(Entry.name, Entry.name_length) == pName)
-				return Entry.value;
-		}
-		return nullptr;
-	}
-
-	// 从 /json/list 响应中选 node 型目标(兜底第 0 个),返回 WebSocket URL。
-	std::string PickNodeTarget(std::string_view Json)
-	{
-		json_value *pRoot = json_parse(Json.data(), Json.size());
-		if(pRoot == nullptr || pRoot->type != json_array)
-		{
-			if(pRoot != nullptr)
-				json_value_free(pRoot);
-			return {};
-		}
-		std::string Fallback;
-		for(unsigned int Index = 0; Index < pRoot->u.array.length; ++Index)
-		{
-			const json_value *pEntry = pRoot->u.array.values[Index];
-			if(pEntry == nullptr || pEntry->type != json_object)
-				continue;
-			std::string WsUrl;
-			for(unsigned int FieldIndex = 0; FieldIndex < pEntry->u.object.length; ++FieldIndex)
-			{
-				const auto &Entry = pEntry->u.object.values[FieldIndex];
-				if(Entry.name != nullptr && std::string_view(Entry.name, Entry.name_length) == "webSocketDebuggerUrl" && Entry.value != nullptr && Entry.value->type == json_string)
-					WsUrl = std::string(Entry.value->u.string.ptr, Entry.value->u.string.length);
-			}
-			if(WsUrl.empty())
-				continue;
-			std::string Type;
-			for(unsigned int FieldIndex = 0; FieldIndex < pEntry->u.object.length; ++FieldIndex)
-			{
-				const auto &Entry = pEntry->u.object.values[FieldIndex];
-				if(Entry.name != nullptr && std::string_view(Entry.name, Entry.name_length) == "type" && Entry.value != nullptr && Entry.value->type == json_string)
-					Type = std::string(Entry.value->u.string.ptr, Entry.value->u.string.length);
-			}
-			if(Fallback.empty())
-				Fallback = WsUrl;
-			if(Type == "node")
-			{
-				json_value_free(pRoot);
-				return WsUrl;
-			}
-		}
-		json_value_free(pRoot);
-		return Fallback;
+		const auto PrepareWait = [&] {
+			const int Remaining = Budget.Remaining(GetTickCount64());
+			return Remaining > 0 && WinHttpSetTimeouts(Request.get(), std::min(250, Remaining), std::min(250, Remaining), std::min(500, Remaining), std::min(500, Remaining));
+		};
+		DWORD RedirectPolicy = WINHTTP_OPTION_REDIRECT_POLICY_NEVER;
+		if(!WinHttpSetOption(Request.get(), WINHTTP_OPTION_REDIRECT_POLICY, &RedirectPolicy, sizeof(RedirectPolicy)) ||
+			!PrepareWait() || !WinHttpSendRequest(Request.get(), WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
+			!PrepareWait() || !WinHttpReceiveResponse(Request.get(), nullptr))
+			return false;
+		DWORD Status = 0, StatusSize = sizeof(Status);
+		if(!Allowed() || !WinHttpQueryHeaders(Request.get(), WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX, &Status, &StatusSize, WINHTTP_NO_HEADER_INDEX) || Status != 200)
+			return false;
+		return ReadCdpHttpBody(Body, MAX_TARGET_JSON_BYTES, Allowed, [&](void *pOutput, size_t Capacity) -> SIoChunk {
+			DWORD Read = 0;
+			if(!PrepareWait() || !WinHttpReadData(Request.get(), pOutput, static_cast<DWORD>(Capacity), &Read))
+				return {EChunkStatus::FAILED, 0};
+			return {Read == 0 ? EChunkStatus::END : EChunkStatus::DATA, Read};
+		});
 	}
 
 	void PrintSnapshot(const QmSodaProbe::SPlaybackSnapshot &Snapshot)
@@ -330,199 +268,215 @@ namespace
 			Snapshot.m_TranslationLrc.size());
 	}
 
+	bool ParentRunning(HANDLE hParent)
+	{
+		return hParent == nullptr || WaitForSingleObject(hParent, 0) == WAIT_TIMEOUT;
+	}
+
+	void PublishPlayback(const QmSodaProbe::SPlaybackSnapshot &Snapshot, uint32_t Pid, QmSodaHook::CSodaWriter &Writer, QmSodaProbe::CLyricFilePublication &Lyrics)
+	{
+		using namespace QmSodaHook;
+		SSnapshot Shared{};
+		Shared.m_SodaMusicPid = Pid;
+		if(Snapshot.m_IsPlaying)
+			Shared.m_Flags |= FLAG_PLAYING;
+		if(Snapshot.m_IsLoading)
+			Shared.m_Flags |= FLAG_LOADING;
+		if(Snapshot.m_Throttled)
+			Shared.m_Flags |= FLAG_THROTTLED;
+		const int64_t PositionMs = Snapshot.PositionMs();
+		if(PositionMs >= 0)
+		{
+			Shared.m_PositionMs = PositionMs;
+			Shared.m_Flags |= FLAG_POSITION_VALID;
+		}
+		Shared.m_DurationMs = Snapshot.DurationMs();
+		CopyUtf8Truncated(Shared.m_aMediaId, sizeof(Shared.m_aMediaId), Snapshot.m_MediaId.data(), Snapshot.m_MediaId.size());
+		CopyUtf8Truncated(Shared.m_aTitle, sizeof(Shared.m_aTitle), Snapshot.m_Name.data(), Snapshot.m_Name.size());
+		CopyUtf8Truncated(Shared.m_aAlbum, sizeof(Shared.m_aAlbum), Snapshot.m_Album.data(), Snapshot.m_Album.size());
+		CopyUtf8Truncated(Shared.m_aCoverUrl, sizeof(Shared.m_aCoverUrl), Snapshot.m_CoverUrl.data(), Snapshot.m_CoverUrl.size());
+		if(Shared.m_aMediaId[0] != '\0')
+		{
+			Shared.m_Flags |= FLAG_HAS_SONG;
+			Lyrics.Update(Snapshot, GetTickCount64(), WriteLyricDataFile);
+			const auto &Path = Lyrics.Path();
+			if(!Path.empty())
+			{
+				CopyUtf8Truncated(Shared.m_aLyricFilePath, sizeof(Shared.m_aLyricFilePath), Path.data(), Path.size());
+				Shared.m_Flags |= FLAG_HAS_LYRIC_FILE;
+			}
+		}
+		Shared.m_Generation = Lyrics.Generation();
+		if(Shared.m_Flags != 0 && (Writer.IsOpen() || Writer.Open(true)))
+		{
+			Shared.m_UpdatedAtTick = GetTickCount64();
+			Writer.Publish(Shared);
+		}
+	}
+
 	int Watch(DWORD ParentPid)
 	{
-		HANDLE hParent = nullptr;
-		if(ParentPid != 0)
-		{
-			hParent = OpenProcess(SYNCHRONIZE, FALSE, ParentPid);
-			if(hParent == nullptr)
-				return 4;
-		}
+		const THandle Parent(ParentPid != 0 ? OpenProcess(SYNCHRONIZE, FALSE, ParentPid) : nullptr, CloseHandle);
+		if(ParentPid != 0 && !Parent)
+			return 4;
 		QmSodaHook::CSodaWriter Writer;
 		if(!Writer.Open(true))
 			Log("[soda] shared memory writer unavailable\n");
-		int Result = 0;
 		uint32_t ActivePid = 0;
-		uint64_t LastPublishedGeneration = 0;
-		std::string LastPublishedMediaId;
-		std::string LastPublishedLyricPath;
+		QmSodaProbe::CLyricFilePublication Lyrics;
 		bool LoggedNoProcess = false;
-		for(;;)
+		while(ParentRunning(Parent.get()))
 		{
-			if(hParent != nullptr && WaitForSingleObject(hParent, 0) == WAIT_OBJECT_0)
-				break;
-			const uint32_t Pid = QmSodaWatchdog::FindMainPid();
-			if(Pid == 0)
+			try
 			{
-				if(ActivePid != 0)
+				const uint32_t Pid = QmSodaWatchdog::FindMainPid();
+				if(Pid == 0)
 				{
-					Log("[soda] SodaMusic exited\n");
-					ActivePid = 0;
-					LastPublishedGeneration = 0;
-					LastPublishedMediaId.clear();
-					LastPublishedLyricPath.clear();
-				}
-				else if(!LoggedNoProcess)
-				{
-					Log("[soda] no SodaMusic main process found\n");
-					LoggedNoProcess = true;
-				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-				continue;
-			}
-			LoggedNoProcess = false;
-			if(ActivePid != Pid)
-			{
-				Log("[soda] found SodaMusic pid=%u\n", Pid);
-				ActivePid = Pid;
-				LastPublishedGeneration = 0;
-				LastPublishedMediaId.clear();
-				LastPublishedLyricPath.clear();
-			}
-			if(!QmSodaWatchdog::IsInspectorUp())
-			{
-				if(!QmSodaWatchdog::EnsureInspector(Pid))
-				{
-					// OpenProcess/CreateRemoteThread 在目标以更高权限(如管理员)运行时
-					// 会失败。提示用户,不要无限静默重试。
-					Log("[soda] inspector activation failed for pid=%u (SodaMusic 以管理员权限运行? 请用普通权限启动)\n", Pid);
+					if(ActivePid != 0)
+					{
+						Log("[soda] SodaMusic exited\n");
+						ActivePid = 0;
+						Lyrics.Reset();
+					}
+					else if(!LoggedNoProcess)
+					{
+						Log("[soda] no SodaMusic main process found\n");
+						LoggedNoProcess = true;
+					}
 					std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 					continue;
 				}
-				// 激活是异步的,轮询等 9229 就绪。
-				const uint64_t Deadline = GetTickCount64() + 3000;
-				while(!QmSodaWatchdog::IsInspectorUp() && GetTickCount64() < Deadline)
-					std::this_thread::sleep_for(std::chrono::milliseconds(150));
-				if(!QmSodaWatchdog::IsInspectorUp())
+				LoggedNoProcess = false;
+				if(ActivePid != Pid)
 				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					Log("[soda] found SodaMusic pid=%u\n", Pid);
+					ActivePid = Pid;
+					Lyrics.Reset();
+				}
+				uint32_t ListenerPid = QmSodaWatchdog::InspectorListenerPid();
+				if(ListenerPid == 0)
+				{
+					if(!QmSodaWatchdog::EnsureInspector(Pid))
+					{
+						Log("[soda] inspector activation failed for pid=%u (SodaMusic 以管理员权限运行? 请用普通权限启动)\n", Pid);
+						std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+						continue;
+					}
+					const uint64_t Deadline = GetTickCount64() + 3000;
+					do
+					{
+						std::this_thread::sleep_for(std::chrono::milliseconds(150));
+						ListenerPid = QmSodaWatchdog::InspectorListenerPid();
+					} while(ListenerPid == 0 && GetTickCount64() < Deadline && ParentRunning(Parent.get()));
+					if(ListenerPid == Pid)
+						Log("[soda] inspector ready on port %u\n", (unsigned)QmSodaWatchdog::INSPECTOR_PORT);
+				}
+				if(ListenerPid != Pid)
+				{
+					// 同端口上的其它 Node 进程不属于汽水。
+					std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 					continue;
 				}
-				Log("[soda] inspector ready on port %u\n", (unsigned)QmSodaWatchdog::INSPECTOR_PORT);
-			}
-			std::string ListJson;
-			if(!HttpGetJsonList(&ListJson))
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(500));
-				continue;
-			}
-			const std::string WsUrl = PickNodeTarget(ListJson);
-			if(WsUrl.empty())
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(500));
-				continue;
-			}
-			QmNeteaseCdp::CCdpSession Session;
-			if(!Session.Connect(WsUrl))
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(500));
-				continue;
-			}
-			Log("[soda] CDP connected\n");
-			// 会话期内持续提取;连接断开后重连。
-			while(hParent == nullptr || WaitForSingleObject(hParent, 0) != WAIT_OBJECT_0)
-			{
-				std::string Value;
-				if(!Session.EvaluateAwaitPromise(QmSodaProbe::BuildBridgeExpression(), &Value, EXTRACT_TIMEOUT_MS))
+				if(!ParentRunning(Parent.get()))
 					break;
-				QmSodaProbe::SPlaybackSnapshot Snapshot;
-				if(QmSodaProbe::ParseExtractionJson(Value, &Snapshot))
+				std::string ListJson;
+				if(!HttpGetJsonList(ListJson))
 				{
-					PrintSnapshot(Snapshot);
-					// 构建共享内存快照。
-					QmSodaHook::SSnapshot Shared{};
-					Shared.m_SodaMusicPid = Pid;
-					Shared.m_UpdatedAtTick = GetTickCount64();
-					Shared.m_Flags = 0;
-					if(Snapshot.m_IsPlaying)
-						Shared.m_Flags |= QmSodaHook::FLAG_PLAYING;
-					if(Snapshot.m_IsLoading)
-						Shared.m_Flags |= QmSodaHook::FLAG_LOADING;
-					if(Snapshot.m_Throttled)
-						Shared.m_Flags |= QmSodaHook::FLAG_THROTTLED;
-					if(Snapshot.m_ProgressSeconds >= 0)
-					{
-						Shared.m_PositionMs = (int64_t)(Snapshot.m_ProgressSeconds * 1000);
-						Shared.m_Flags |= QmSodaHook::FLAG_POSITION_VALID;
-					}
-					Shared.m_DurationMs = (int64_t)(Snapshot.m_DurationSeconds * 1000);
-					QmSodaHook::CopyUtf8Truncated(Shared.m_aMediaId, sizeof(Shared.m_aMediaId), Snapshot.m_MediaId.data(), Snapshot.m_MediaId.size());
-					QmSodaHook::CopyUtf8Truncated(Shared.m_aTitle, sizeof(Shared.m_aTitle), Snapshot.m_Name.data(), Snapshot.m_Name.size());
-					QmSodaHook::CopyUtf8Truncated(Shared.m_aAlbum, sizeof(Shared.m_aAlbum), Snapshot.m_Album.data(), Snapshot.m_Album.size());
-					QmSodaHook::CopyUtf8Truncated(Shared.m_aCoverUrl, sizeof(Shared.m_aCoverUrl), Snapshot.m_CoverUrl.data(), Snapshot.m_CoverUrl.size());
-					if(!Snapshot.m_MediaId.empty())
-					{
-						Shared.m_Flags |= QmSodaHook::FLAG_HAS_SONG;
-						// 歌曲变化时推进 generation 并重写歌词文件;同一首歌持续
-						// 播放时复用已写好的路径。歌词路径必须每次发布都带上:
-						// 客户端可能在任何时刻首次读快照,若快照里没有路径就永远
-						// 不会加载歌词(它只在歌曲变化时读路径)。
-						if(Snapshot.m_MediaId != LastPublishedMediaId)
-						{
-							++LastPublishedGeneration;
-							if(LastPublishedGeneration == 0)
-								LastPublishedGeneration = 1;
-							LastPublishedMediaId = Snapshot.m_MediaId;
-							LastPublishedLyricPath.clear();
-							const std::wstring LyricPath = WriteLyricDataFile(Snapshot);
-							if(!LyricPath.empty())
-								LastPublishedLyricPath = WideStringToUtf8(LyricPath);
-						}
-						if(!LastPublishedLyricPath.empty())
-						{
-							QmSodaHook::CopyUtf8Truncated(Shared.m_aLyricFilePath, sizeof(Shared.m_aLyricFilePath), LastPublishedLyricPath.data(), LastPublishedLyricPath.size());
-							Shared.m_Flags |= QmSodaHook::FLAG_HAS_LYRIC_FILE;
-						}
-					}
-					Shared.m_Generation = LastPublishedGeneration;
-					if(Shared.m_Flags != 0)
-						Writer.Publish(Shared);
+					std::this_thread::sleep_for(std::chrono::milliseconds(500));
+					continue;
 				}
-				else if(!Snapshot.m_Error.empty() && Snapshot.m_Error != "no-port")
-					Log("[soda] extract: %s\n", Snapshot.m_Error.c_str());
-				std::this_thread::sleep_for(std::chrono::milliseconds(EXTRACT_INTERVAL_MS));
+				const std::string WsUrl = QmSodaProbe::PickNodeTarget(ListJson, QmSodaWatchdog::INSPECTOR_PORT);
+				if(WsUrl.empty() || QmSodaWatchdog::InspectorListenerPid() != Pid)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(500));
+					continue;
+				}
+				if(!ParentRunning(Parent.get()))
+					break;
+				QmNeteaseCdp::CCdpSession Session;
+				if(!Session.Connect(WsUrl) || QmSodaWatchdog::InspectorListenerPid() != Pid)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(500));
+					continue;
+				}
+				Log("[soda] CDP connected\n");
+				// 会话期内持续提取;连接断开后重连。
+				while(ParentRunning(Parent.get()))
+				{
+					std::string Value;
+					if(!Session.EvaluateAwaitPromise(QmSodaProbe::BuildBridgeExpression(), &Value, EXTRACT_TIMEOUT_MS))
+						break;
+					QmSodaProbe::SPlaybackSnapshot Snapshot;
+					if(QmSodaProbe::ParseExtractionJson(Value, &Snapshot))
+					{
+						PrintSnapshot(Snapshot);
+						PublishPlayback(Snapshot, Pid, Writer, Lyrics);
+					}
+					else if(!Snapshot.m_Error.empty() && Snapshot.m_Error != "no-port")
+						Log("[soda] extract: %s\n", Snapshot.m_Error.c_str());
+					std::this_thread::sleep_for(std::chrono::milliseconds(EXTRACT_INTERVAL_MS));
+				}
+				Session.Close();
+				Writer.Close();
+				if(ParentRunning(Parent.get()) && !Writer.Open(true))
+					Log("[soda] shared memory writer unavailable (reopen)\n");
 			}
-			Session.Close();
-			Writer.Close();
-			if(!Writer.Open(true))
-				Log("[soda] shared memory writer unavailable (reopen)\n");
+			catch(const std::bad_alloc &)
+			{
+				// 会话与系统句柄已释放，保留曲目缓存并重新发现本地目标。
+				std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			}
+			catch(const std::length_error &)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			}
 		}
-		if(hParent != nullptr)
-			CloseHandle(hParent);
-		return Result;
+		return 0;
 	}
 }
 
 int wmain(int argc, wchar_t **argv)
+try
 {
 	// 重定向到文件/管道时 printf 默认全缓冲,真机诊断看不到进度;改无缓冲。
 	setvbuf(stdout, nullptr, _IONBF, 0);
 	setvbuf(stderr, nullptr, _IONBF, 0);
 	Log("[soda] helper start argc=%d\n", argc);
-	HANDLE hMutex = CreateMutexW(nullptr, TRUE, HELPER_MUTEX_NAME);
-	Log("[soda] mutex handle=%p lastError=%lu\n", (void *)hMutex, (unsigned long)GetLastError());
-	if(hMutex == nullptr)
+	const THandle Mutex(CreateMutexW(nullptr, FALSE, HELPER_MUTEX_NAME), CloseHandle);
+	Log("[soda] mutex handle=%p lastError=%lu\n", Mutex.get(), (unsigned long)GetLastError());
+	if(!Mutex)
 		return 2;
 	// 命名 mutex 在持有者崩溃后会变成 abandoned,但对象仍存在:此时
 	// GetLastError 是 ERROR_ALREADY_EXISTS,句柄却可正常获取。因此用
 	// WaitForSingleObject 判断是否有活跃实例,而不是只看 ERROR_ALREADY_EXISTS。
-	const DWORD MutexWait = WaitForSingleObject(hMutex, 0);
+	const DWORD MutexWait = WaitForSingleObject(Mutex.get(), 0);
 	if(MutexWait == WAIT_TIMEOUT)
 	{
 		Log("[soda] another helper instance is running\n");
-		CloseHandle(hMutex);
 		return 0;
 	}
+	if(MutexWait != WAIT_OBJECT_0 && MutexWait != WAIT_ABANDONED)
+		return 2;
+	struct SReleaseMutex
+	{
+		HANDLE m_Handle;
+		~SReleaseMutex() { ReleaseMutex(m_Handle); }
+	};
+	const SReleaseMutex Release{Mutex.get()};
 	DWORD ParentPid = 0;
 	for(int i = 1; i + 1 < argc; ++i)
 	{
-		if(std::wstring(argv[i]) == L"--parent-pid")
+		if(std::wcscmp(argv[i], L"--parent-pid") == 0)
 			ParentPid = (DWORD)_wtoi(argv[i + 1]);
 	}
 	Log("[soda] parent-pid=%lu\n", (unsigned long)ParentPid);
-	const int Result = Watch(ParentPid);
-	ReleaseMutex(hMutex);
-	CloseHandle(hMutex);
-	return Result;
+	return Watch(ParentPid);
+}
+catch(const std::bad_alloc &)
+{
+	return 3;
+}
+catch(const std::length_error &)
+{
+	return 3;
 }

@@ -2,7 +2,6 @@
 #define QM_HOOKS_SODA_QM_SODA_WATCHDOG_H
 
 #include <cstdint>
-#include <string>
 
 // 汽水音乐(SodaMusic.exe)主进程发现与 Node inspector(9229)激活。
 // 汽水音乐是 Electron,有原生反调试:启动 argv 带 --remote-debugging-port 会 ~2s 自杀,
@@ -24,8 +23,8 @@ namespace QmSodaWatchdog
 	// 激活指定 PID 的 Node inspector。返回 true 表示已激活(或已就绪)。
 	bool EnsureInspector(uint32_t Pid);
 
-	// 检查 9229 是否已监听(HTTP /json/list 可达)。
-	bool IsInspectorUp();
+	// 返回 IPv4 回环 9229 的监听进程，未找到时返回 0。
+	uint32_t InspectorListenerPid();
 } // namespace QmSodaWatchdog
 
 #endif
