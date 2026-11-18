@@ -28,6 +28,7 @@
 #include <game/client/components/chat.h>
 #include <game/client/components/hud_editor.h>
 #include <game/client/components/qmclient/auto_vote.h>
+#include <game/client/components/qmclient/chat_message_filter.h>
 #include <game/client/components/qmclient/data_version.h>
 #include <game/client/components/qmclient/gores_drown_observation.h>
 #include <game/client/components/qmclient/keyword_reply_rules.h>
@@ -48,6 +49,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cinttypes>
 #include <cmath>
 #include <cstdlib>
 #include <limits>
@@ -55,6 +57,7 @@
 #include <mutex>
 #include <new>
 #include <queue>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -406,18 +409,6 @@ void CTClient::OnWindowResize()
 	UnloadTextPopupCaches();
 }
 
-static bool LineShouldHighlight(const char *pLine, const char *pName)
-{
-	const char *pHL = str_utf8_find_nocase(pLine, pName);
-	if(pHL)
-	{
-		int Length = str_length(pName);
-		if(Length > 0 && (pLine == pHL || pHL[-1] == ' ') && (pHL[Length] == 0 || pHL[Length] == ' ' || pHL[Length] == '.' || pHL[Length] == '!' || pHL[Length] == ',' || pHL[Length] == '?' || pHL[Length] == ':'))
-			return true;
-	}
-	return false;
-}
-
 bool CTClient::SendNonDuplicateMessage(int Team, const char *pLine)
 {
 	if(str_comp(pLine, m_PreviousOwnMessage) == 0 || !GameClient()->m_Chat.SendChat(Team, pLine))
@@ -544,7 +535,7 @@ void CTClient::OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection) try
 	{
 		const int LocalId = GameClient()->m_aLocalIds[LocalConnection];
 		if(LocalId >= 0 && LocalId < MAX_CLIENTS && (LocalConnection == 0 || Client()->DummyConnected()))
-			Ping |= LineShouldHighlight(pMsg->m_pMessage, GameClient()->m_aClients[LocalId].m_aName);
+			Ping |= QmChatMessageFilter::MentionsName(pMsg->m_pMessage, GameClient()->m_aClients[LocalId].m_aName);
 	}
 	if(!Ping)
 		return;
@@ -650,9 +641,9 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 			const int AutoMapVote = std::clamp(g_Config.m_QmAutoVoteWhenFar, 0, 2);
 			if(AutoMapVote != 0 && (MapVote || RandomMapVote))
 			{
-				int RaceTime = 0;
+				int64_t RaceTime = 0;
 				if(GameClient()->m_Snap.m_pGameInfoObj && GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME)
-					RaceTime = (Client()->GameTick(g_Config.m_ClDummy) + GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer) / Client()->GameTickSpeed();
+					RaceTime = ((int64_t)Client()->GameTick(g_Config.m_ClDummy) + GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer) / Client()->GameTickSpeed();
 
 				if(RaceTime / 60 >= g_Config.m_QmAutoVoteWhenFarTime)
 				{
@@ -1164,7 +1155,8 @@ void CTClient::DoFinishCheck()
 	static constexpr int FinishTileRadius = 10;
 	static const std::array<float, FinishTileRadius * 2 + 1> s_aFinishArcHeights = []() {
 		std::array<float, FinishTileRadius * 2 + 1> aHeights{};
-		for(int i = 0; i <= FinishTileRadius * 2; ++i)
+		// 两端的高度为零，避免浮点 sin(pi) 略小于零。
+		for(int i = 1; i < FinishTileRadius * 2; ++i)
 		{
 			aHeights[i] = std::ceil(std::pow(std::sin((float)i * pi / 2.0f / (float)FinishTileRadius), 0.5f) * pi / 2.0f * (float)FinishTileRadius);
 		}
@@ -1205,12 +1197,12 @@ void CTClient::DoFinishCheck()
 		Msg.m_UseCustomColor = Conn == 0 ? g_Config.m_ClPlayerUseCustomColor : g_Config.m_ClDummyUseCustomColor;
 		Msg.m_ColorBody = Conn == 0 ? g_Config.m_ClPlayerColorBody : g_Config.m_ClDummyColorBody;
 		Msg.m_ColorFeet = Conn == 0 ? g_Config.m_ClPlayerColorFeet : g_Config.m_ClDummyColorFeet;
-		CMsgPacker Packer(&Msg);
-		Msg.Pack(&Packer);
-		Client()->SendMsg(Conn, &Packer, MSGFLAG_VITAL);
+		if(Client()->SendPackMsg(Conn, &Msg, MSGFLAG_VITAL) != 0)
+			return false;
 		// 终点临时改名由本组件自己的 pending/超时状态管理，不能进入通用
 		// SendInfo 重发路径，否则会被配置名字覆盖并重复弹通知。
 		GameClient()->m_aCheckInfo[Conn] = -1;
+		return true;
 	};
 
 	const int Dummy = std::clamp(g_Config.m_ClDummy, 0, NUM_DUMMIES - 1);
@@ -1256,12 +1248,11 @@ void CTClient::DoFinishCheck()
 			return;
 		m_aFinishRenamePending[Dummy] = false;
 	}
-	if(m_aFinishRenameAttempts[Dummy] >= 3)
+	if(m_aFinishRenameAttempts[Dummy] >= 3 || !SendUrgentRename(Dummy, pNewName))
 		return;
 	char aBuf[64];
 	str_format(aBuf, sizeof(aBuf), Localize("Changing name to %s near finish"), pNewName);
 	GameClient()->Echo(aBuf);
-	SendUrgentRename(Dummy, pNewName);
 	m_aFinishRenamePending[Dummy] = true;
 	m_aFinishRenamePendingSince[Dummy] = time_get();
 	m_aFinishRenameAttempts[Dummy]++;
@@ -2516,10 +2507,9 @@ void CTClient::TrackHookDirection(int Dummy)
 	if(IsHooking && !Stats.m_WasHooking)
 	{
 		// 使用钩子位置相对于玩家位置来判断方向
-		float HookX = (float)(Char.m_Cur.m_HookX - Char.m_Cur.m_X);
-		if(HookX < 0)
+		if(Char.m_Cur.m_HookX < Char.m_Cur.m_X)
 			Stats.m_HookLeftCount++;
-		else if(HookX > 0)
+		else if(Char.m_Cur.m_HookX > Char.m_Cur.m_X)
 			Stats.m_HookRightCount++;
 	}
 
@@ -2807,12 +2797,23 @@ void CTClient::EnsureGoresDistanceField()
 	if(m_GoresDistanceFieldBuildStage == EGoresDistanceFieldBuildStage::IDLE && m_GoresDistanceFieldAttempted && Now < m_GoresDistanceFieldNextBuildTryTick)
 		return;
 
-	if(m_GoresDistanceFieldBuildStage == EGoresDistanceFieldBuildStage::IDLE)
+	try
 	{
-		m_GoresDistanceFieldAttempted = true;
-		StartGoresDistanceFieldBuild();
+		if(m_GoresDistanceFieldBuildStage == EGoresDistanceFieldBuildStage::IDLE)
+		{
+			m_GoresDistanceFieldAttempted = true;
+			StartGoresDistanceFieldBuild();
+		}
+		ContinueGoresDistanceFieldBuild();
 	}
-	ContinueGoresDistanceFieldBuild();
+	catch(const std::bad_alloc &)
+	{
+		FailGoresDistanceFieldBuild();
+	}
+	catch(const std::length_error &)
+	{
+		FailGoresDistanceFieldBuild();
+	}
 	if(m_GoresDistanceFieldValid || m_GoresDistanceFieldBuildStage != EGoresDistanceFieldBuildStage::IDLE)
 		m_GoresDistanceFieldNextBuildTryTick = 0;
 	else
@@ -3071,10 +3072,22 @@ void CTClient::StepGoresDistanceFieldVisualLayers(int Budget)
 				int ImageCount = 0;
 				pMap->GetType(MAPITEMTYPE_IMAGE, &ImageStart, &ImageCount);
 				m_vGoresDistanceFieldBuildWaterImages.assign((size_t)maximum(ImageCount, 0), 0);
+				const auto DataIndex = [](const CMapItemLayerTilemap *pLayer, auto pIndex) {
+					return pLayer ? pLayer->*pIndex : -1;
+				};
+				const std::array aCollisionDataIndices{
+					DataIndex(pLayers->GameLayer(), &CMapItemLayerTilemap::m_Data),
+					DataIndex(pLayers->FrontLayer(), &CMapItemLayerTilemap::m_Front),
+					DataIndex(pLayers->TeleLayer(), &CMapItemLayerTilemap::m_Tele),
+					DataIndex(pLayers->SpeedupLayer(), &CMapItemLayerTilemap::m_Speedup),
+					DataIndex(pLayers->SwitchLayer(), &CMapItemLayerTilemap::m_Switch),
+					DataIndex(pLayers->TuneLayer(), &CMapItemLayerTilemap::m_Tune),
+				};
 				for(int ImageIndex = 0; ImageIndex < ImageCount; ++ImageIndex)
 				{
 					const auto ImageItem = MapRenderItems::ReadImage(*pMap, ImageStart + ImageIndex);
-					if(!ImageItem)
+					// 碰撞层在整张地图的使用期间借用这些数据。
+					if(!ImageItem || std::find(aCollisionDataIndices.begin(), aCollisionDataIndices.end(), ImageItem->m_ImageName) != aCollisionDataIndices.end())
 						continue;
 
 					const char *pImageName = pMap->GetDataString(ImageItem->m_ImageName);
@@ -3622,15 +3635,22 @@ void CTClient::RenderGoresDebugRoute()
 	constexpr float DotSize = 6.0f;
 	constexpr float StartDotSize = 8.0f;
 	const float Margin = 48.0f;
+	auto &vRouteDots = m_vGoresDebugRouteDots;
+	vRouteDots.clear();
+	try
+	{
+		vRouteDots.reserve(512);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
 
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(0.15f, 1.0f, 0.45f, 0.95f);
 	bool HasStartDot = false;
 	IGraphics::CQuadItem StartDot(0.0f, 0.0f, StartDotSize, StartDotSize);
-	auto &vRouteDots = m_vGoresDebugRouteDots;
-	vRouteDots.clear();
-	vRouteDots.reserve(512);
 
 	const auto &vVisible = m_GoresDebugRouteCache.QueryVisible({ScreenX0 - Margin, ScreenY0 - Margin, ScreenX1 + Margin, ScreenY1 + Margin});
 	for(const size_t i : vVisible)
@@ -3707,14 +3727,32 @@ void CTClient::UpdateDDraceMapProgress()
 	const CTile *pGame = pCollision->GameLayer();
 	const CTile *pFront = pCollision->FrontLayer();
 	const CTeleTile *pTele = pCollision->TeleLayer();
-	const char *pMapName = Client()->GetCurrentMap();
-	if(str_comp(m_aGoresDistanceFieldMap, pMapName ? pMapName : "") != 0 ||
+	const char *pCurrentMap = Client()->GetCurrentMap();
+	const char *pMapName = pCurrentMap ? pCurrentMap : "";
+	const bool MapChanged = str_comp(m_aGoresDistanceFieldMap, pMapName) != 0;
+	if(MapChanged ||
 		m_pQmDDraceProgressGame != pGame || m_pQmDDraceProgressFront != pFront || m_pQmDDraceProgressTele != pTele ||
 		m_QmDDraceProgressWidth != Width || m_QmDDraceProgressMap.Size() != Size)
 	{
+		const int64_t Now = time_get();
+		if(!MapChanged && Now < m_GoresDistanceFieldNextBuildTryTick)
+			return;
 		InvalidateGoresDistanceField();
-		str_copy(m_aGoresDistanceFieldMap, pMapName ? pMapName : "");
-		m_QmDDraceProgressMap = QmMapProgress::CMap(Width, Height);
+		str_copy(m_aGoresDistanceFieldMap, pMapName);
+		try
+		{
+			m_QmDDraceProgressMap = QmMapProgress::CMap(Width, Height);
+		}
+		catch(const std::bad_alloc &)
+		{
+			m_GoresDistanceFieldNextBuildTryTick = Now + time_freq();
+			return;
+		}
+		catch(const std::length_error &)
+		{
+			m_GoresDistanceFieldNextBuildTryTick = Now + time_freq();
+			return;
+		}
 		m_pQmDDraceProgressGame = pGame;
 		m_pQmDDraceProgressFront = pFront;
 		m_pQmDDraceProgressTele = pTele;
@@ -4497,23 +4535,24 @@ bool CTClient::RemoveLocalSaveByCode(const char *pMap, const char *pCode)
 			return false;
 
 		// 先完整写入临时文件，再替换存档列表，避免写入中断损坏其他记录。
-		constexpr const char *pTempFile = "ddnet-saves.txt.tmp";
-		File = Storage()->OpenFile(pTempFile, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		char aTempFile[IO_MAX_PATH_LENGTH];
+		str_format(aTempFile, sizeof(aTempFile), "%s.%d.%" PRId64 ".tmp", SAVES_FILE, pid(), time_get_impl());
+		File = Storage()->OpenFile(aTempFile, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE);
 		if(!File)
 			return false;
 		const bool Written = io_write(File, Updated.data(), (unsigned)Updated.size()) == Updated.size() && io_flush(File) == 0 && io_error(File) == 0;
 		const int CloseResult = io_close(File);
 		if(!Written || CloseResult != 0)
 		{
-			Storage()->RemoveFile(pTempFile, IStorage::TYPE_SAVE);
+			Storage()->RemoveFile(aTempFile, IStorage::TYPE_SAVE);
 			return false;
 		}
 		char aBackupFile[IO_MAX_PATH_LENGTH];
-		if(IStorage::ReplaceFileSafely(Storage(), pTempFile, SAVES_FILE, aBackupFile, sizeof(aBackupFile)))
+		if(IStorage::ReplaceFileSafely(Storage(), aTempFile, SAVES_FILE, aBackupFile, sizeof(aBackupFile)))
 			return true;
 
 		// 替换失败时保留临时文件与备份，便于恢复其他存档记录。
-		log_error("saves", "Failed to replace saves file; remaining records are in %s, backup %s", pTempFile, aBackupFile);
+		log_error("saves", "Failed to replace saves file; remaining records are in %s, backup %s", aTempFile, aBackupFile);
 		return false;
 	}
 	catch(...)
