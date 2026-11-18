@@ -115,6 +115,40 @@ TEST(QmKugouLyricRequest, OldRequestFailureDoesNotDelayOrReplaceTheNewSong)
 	EXPECT_EQ(Playback.m_LyricContent, "second song");
 }
 
+TEST(QmKugouLyricRequest, ReturningToTheSameSongDoesNotAcceptItsPreviousRequest)
+{
+	for(const bool OldSucceededWithoutLyrics : {false, true})
+	{
+		SCOPED_TRACE(OldSucceededWithoutLyrics);
+		CKugouLyricRequest Request;
+		std::promise<SKugouLyricResult> OldRequest;
+		int Calls = 0;
+		const auto Start = [&](const std::string &MediaId, int64_t) {
+			EXPECT_EQ(MediaId, "song-a");
+			if(++Calls == 1)
+				return OldRequest.get_future();
+			return Ready({"lrc", "current lyrics", true});
+		};
+		auto Playback = Song("song-a");
+		Request.Update(Playback, START, Start);
+		Playback = Song("song-b");
+		Request.Update(Playback, START + 200ms, Start);
+		Playback = Song("song-a");
+		Request.Update(Playback, START + 400ms, Start);
+		ASSERT_EQ(Calls, 1);
+
+		OldRequest.set_value(SKugouLyricResult{"", "", OldSucceededWithoutLyrics});
+		Request.Update(Playback, START + 600ms, Start);
+		EXPECT_EQ(Calls, 2);
+		EXPECT_TRUE(Playback.m_Loading);
+		EXPECT_TRUE(Playback.m_Error.empty());
+
+		Request.Update(Playback, START + 800ms, Start);
+		EXPECT_FALSE(Playback.m_Loading);
+		EXPECT_EQ(Playback.m_LyricContent, "current lyrics");
+	}
+}
+
 TEST(QmKugouLyricRequest, ResourceFailureBeforeSubmissionCanRetryOnTheNextSample)
 {
 	for(const auto &Error : {std::make_exception_ptr(std::bad_alloc()), std::make_exception_ptr(std::length_error("request identity")),

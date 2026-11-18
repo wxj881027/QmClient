@@ -31,6 +31,8 @@ namespace QmMusicHook
 			if(m_CurrentId != Playback.m_MediaId)
 			{
 				m_CurrentId = Playback.m_MediaId;
+				// 即使稍后切回同一首歌，之前的请求也已失效。
+				m_PendingIsCurrent = false;
 				m_Lyrics = {};
 				m_RequestFailed = false;
 				m_RetryAt = {};
@@ -50,8 +52,8 @@ namespace QmMusicHook
 
 	private:
 		std::string m_CurrentId;
-		std::string m_PendingId;
 		std::future<SKugouLyricResult> m_Pending;
+		bool m_PendingIsCurrent = false;
 		SKugouLyricResult m_Lyrics;
 		TClock::time_point m_RetryAt{};
 		bool m_RequestFailed = false;
@@ -61,6 +63,12 @@ namespace QmMusicHook
 			if(!m_Pending.valid() || m_Pending.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
 				return;
 
+			if(!m_PendingIsCurrent)
+			{
+				m_Pending = {};
+				return;
+			}
+
 			SKugouLyricResult Result;
 			try
 			{
@@ -68,28 +76,23 @@ namespace QmMusicHook
 			}
 			catch(const std::bad_alloc &)
 			{
-				// get 已消费 future。仍用提交时的身份决定失败属于哪首歌。
 			}
 			catch(const std::length_error &)
 			{
 			}
-			if(m_PendingId == m_CurrentId)
-			{
-				m_Lyrics = std::move(Result);
-				m_RequestFailed = !m_Lyrics.m_Success;
-				if(m_RequestFailed)
-					m_RetryAt = Now + std::chrono::seconds(10);
-			}
-			m_PendingId.clear();
+			m_PendingIsCurrent = false;
+			m_Lyrics = std::move(Result);
+			m_RequestFailed = !m_Lyrics.m_Success;
+			if(m_RequestFailed)
+				m_RetryAt = Now + std::chrono::seconds(10);
 		}
 
 		template<typename TStart>
 		bool TryStart(int64_t DurationMs, TStart &Start)
 		try
 		{
-			std::string PendingId = m_CurrentId;
-			m_Pending = Start(PendingId, DurationMs);
-			m_PendingId.swap(PendingId);
+			m_Pending = Start(m_CurrentId, DurationMs);
+			m_PendingIsCurrent = true;
 			return true;
 		}
 		catch(const std::bad_alloc &)

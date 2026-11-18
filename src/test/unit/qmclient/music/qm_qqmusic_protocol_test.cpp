@@ -14,6 +14,40 @@ TEST(QQMusicProtocol, UnknownVersionsNeverBorrowOffsets)
 	EXPECT_EQ(FindOffsets(0, 0), nullptr);
 }
 
+TEST(QQMusicProtocol, UnavailableAttachProbeCanRetryWhenTheVersionBecomesReadable)
+{
+	constexpr uint32_t ModuleSize = 32 * 1024 * 1024;
+	EXPECT_FALSE(ResolveAttachment(EAttachProbe::UNAVAILABLE, ModuleSize, 0, 0).has_value());
+
+	const auto Attachment = ResolveAttachment(EAttachProbe::IDENTIFIED, ModuleSize, 22, 60);
+	ASSERT_TRUE(Attachment.has_value());
+	ASSERT_NE(Attachment->m_pOffsets, nullptr);
+	EXPECT_EQ(Attachment->m_pOffsets->m_Minor, 60);
+	EXPECT_TRUE(Attachment->m_Error.empty());
+}
+
+TEST(QQMusicProtocol, DefinitiveAttachMismatchRetainsAnUnsupportedDiagnostic)
+{
+	constexpr uint32_t ModuleSize = 32 * 1024 * 1024;
+	const auto UnsupportedImage = ResolveAttachment(EAttachProbe::UNSUPPORTED, ModuleSize, 0, 0);
+	ASSERT_TRUE(UnsupportedImage.has_value());
+	EXPECT_EQ(UnsupportedImage->m_pOffsets, nullptr);
+	EXPECT_EQ(UnsupportedImage->m_Error, "QQ Music version is unsupported");
+
+	const auto UnknownVersion = ResolveAttachment(EAttachProbe::IDENTIFIED, ModuleSize, 22, 61);
+	ASSERT_TRUE(UnknownVersion.has_value());
+	EXPECT_EQ(UnknownVersion->m_pOffsets, nullptr);
+	EXPECT_EQ(UnknownVersion->m_Error, "QQ Music version is unsupported (22.61)");
+}
+
+TEST(QQMusicProtocol, KnownVersionWithOffsetsOutsideTheModuleIsUnsupported)
+{
+	const auto Attachment = ResolveAttachment(EAttachProbe::IDENTIFIED, 2 * 1024 * 1024, 22, 60);
+	ASSERT_TRUE(Attachment.has_value());
+	EXPECT_EQ(Attachment->m_pOffsets, nullptr);
+	EXPECT_EQ(Attachment->m_Error, "QQ Music version is unsupported");
+}
+
 TEST(QQMusicProtocol, MidMustComeFromAnExactPlayerField)
 {
 	EXPECT_EQ(ExtractSongMid("https://stream.qqmusic.qq.com/00281PXu4DHKNp.wma", ""), "00281PXu4DHKNp");
