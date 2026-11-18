@@ -13,6 +13,7 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/components/controls.h>
 #include <game/client/components/qmclient/mobile_touch_rules.h>
+#include <game/client/components/qmclient/snap_guides.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -971,11 +972,12 @@ void CHudEditor::OnRender()
 
 	if(m_DraggingElement >= 0 && (ShowDragGuideX || ShowDragGuideY))
 	{
-		const ColorRGBA GuideColor(1.0f, 0.82f, 0.20f, 0.70f);
+		// 虚线淡色辅助线走公共绘制，和设置页名牌预览保持同一套线型与颜色。
+		const ColorRGBA GuideColor = QmDragGuideColor();
 		if(ShowDragGuideX)
-			Graphics()->DrawRect(DragGuideX - 0.5f, pUiScreen->y, 1.0f, pUiScreen->h, GuideColor, IGraphics::CORNER_NONE, 0.0f);
+			QmDrawDragGuideLine(Graphics(), DragGuideX, pUiScreen->y, DragGuideX, pUiScreen->y + pUiScreen->h, GuideColor);
 		if(ShowDragGuideY)
-			Graphics()->DrawRect(pUiScreen->x, DragGuideY - 0.5f, pUiScreen->w, 1.0f, GuideColor, IGraphics::CORNER_NONE, 0.0f);
+			QmDrawDragGuideLine(Graphics(), pUiScreen->x, DragGuideY, pUiScreen->x + pUiScreen->w, DragGuideY, GuideColor);
 	}
 
 	for(size_t i = 0; i < m_vVisibleElements.size(); ++i)

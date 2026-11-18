@@ -174,8 +174,31 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			g_Config.m_QmNameplateHookOffsetY,
 			g_Config.m_QmNameplateCoordsOffsetX,
 			g_Config.m_QmNameplateCoordsOffsetY,
-			g_Config.m_QmNameplateKeysOffsetX,
-			g_Config.m_QmNameplateKeysOffsetY,
+			g_Config.m_QmNameplateKeysLeftOffsetX,
+			g_Config.m_QmNameplateKeysLeftOffsetY,
+			g_Config.m_QmNameplateKeysUpOffsetX,
+			g_Config.m_QmNameplateKeysUpOffsetY,
+			g_Config.m_QmNameplateKeysRightOffsetX,
+			g_Config.m_QmNameplateKeysRightOffsetY,
+			g_Config.m_QmNameplateOffsetsLinked,
+			g_Config.m_QmNameplateDummyNameOffsetX,
+			g_Config.m_QmNameplateDummyNameOffsetY,
+			g_Config.m_QmNameplateDummyClanOffsetX,
+			g_Config.m_QmNameplateDummyClanOffsetY,
+			g_Config.m_QmNameplateDummyHookOffsetX,
+			g_Config.m_QmNameplateDummyHookOffsetY,
+			g_Config.m_QmNameplateDummyCoordsOffsetX,
+			g_Config.m_QmNameplateDummyCoordsOffsetY,
+			g_Config.m_QmNameplateDummyKeysLeftOffsetX,
+			g_Config.m_QmNameplateDummyKeysLeftOffsetY,
+			g_Config.m_QmNameplateDummyKeysUpOffsetX,
+			g_Config.m_QmNameplateDummyKeysUpOffsetY,
+			g_Config.m_QmNameplateDummyKeysRightOffsetX,
+			g_Config.m_QmNameplateDummyKeysRightOffsetY,
+			g_Config.m_QmNameplateDummyWaterHammerOffsetX,
+			g_Config.m_QmNameplateDummyWaterHammerOffsetY,
+			g_Config.m_QmNameplateDummyWaterHookOffsetX,
+			g_Config.m_QmNameplateDummyWaterHookOffsetY,
 			g_Config.m_QmNameplateWaterHammerOffsetX,
 			g_Config.m_QmNameplateWaterHammerOffsetY,
 			g_Config.m_QmNameplateWaterHookOffsetX,
@@ -290,6 +313,8 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				CheckboxRow(&g_Config.m_ClShowhudPlayerPosition, "appearance-show-player-position", Localize("Show player position"), &g_Config.m_ClShowhudPlayerPosition);
 				CheckboxRow(&g_Config.m_ClShowhudPlayerSpeed, "appearance-show-player-speed", Localize("Show player speed"), &g_Config.m_ClShowhudPlayerSpeed);
 				CheckboxRow(&g_Config.m_ClShowhudPlayerAngle, "appearance-show-player-target-angle", Localize("Show player target angle"), &g_Config.m_ClShowhudPlayerAngle);
+				CheckboxRow(&g_Config.m_QmShowLocalTimeSeconds, "appearance-show-local-time-seconds", Localize("Show seconds in local time"), &g_Config.m_QmShowLocalTimeSeconds);
+				CheckboxRow(&g_Config.m_QmCountryFlagAnim, "appearance-animate-country-flags", Localize("Animate country flags"), &g_Config.m_QmCountryFlagAnim);
 				LogPerfStage(Client(), "appearance_hud_ddrace_section", HudDdraceTimer.ElapsedMs(), false, "page=appearance tab=hud section=ddrace");
 				CPerfTimer HudFreezeBarsTimer;
 				CheckboxRow(&g_Config.m_ClShowFreezeBars, "appearance-show-freeze-bars", Localize("Show freeze bars"), &g_Config.m_ClShowFreezeBars);
@@ -887,7 +912,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			CardBuild.m_UiContext = AppearanceCardCtx;
 			qm_card_catalog::BuildCards(CardBuild, qm_card_catalog::NameplateCardStableIds(), vCards);
 			const float NamePlatePreviewMinAreaHeight = std::clamp(190.0f * AppearanceUiScale, 160.0f, 210.0f);
-			const float NamePlatePreviewControlsHeight = ResolveSettingsRowsHeight(2, LineSize, RowSpacing) + RowSpacing + AppearanceMetrics.m_ButtonHeight;
+			const float NamePlatePreviewControlsHeight = ResolveSettingsRowsHeight(4, LineSize, RowSpacing) + RowSpacing + AppearanceMetrics.m_ButtonHeight;
 			const auto ResolveNamePlatePreviewCardHeight = [this, NamePlatePreviewMinAreaHeight, NamePlatePreviewControlsHeight, RowSpacing](float) {
 				return maximum(NamePlatePreviewMinAreaHeight, GameClient()->m_NamePlates.MeasurePreviewAreaHeight()) + RowSpacing + NamePlatePreviewControlsHeight;
 			};
@@ -918,14 +943,44 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					g_Config.m_QmNameplateFreeMoveY = 0;
 				}
 
+				NextPreviewControl(Button);
+				if(DoSettingsButton_CheckBox(SETTINGS_APPEARANCE, APPEARANCE_TAB_NAME_PLATE, &g_Config.m_QmNameplateMultiSelect, "appearance-nameplate-multi-select", Localize("Multi-select move"), g_Config.m_QmNameplateMultiSelect, &Button))
+					g_Config.m_QmNameplateMultiSelect = g_Config.m_QmNameplateMultiSelect ? 0 : 1;
+
+				NextPreviewControl(Button);
+				if(DoSettingsButton_CheckBox(SETTINGS_APPEARANCE, APPEARANCE_TAB_NAME_PLATE, &g_Config.m_QmNameplateOffsetsLinked, "appearance-nameplate-offsets-linked", Localize("Share layout with dummy"), g_Config.m_QmNameplateOffsetsLinked, &Button))
+					g_Config.m_QmNameplateOffsetsLinked = g_Config.m_QmNameplateOffsetsLinked ? 0 : 1;
+
 				Controls.HSplitTop(AppearanceMetrics.m_ButtonHeight, &Button, &Controls);
 				if(Controls.h > 0.0f)
 					Controls.HSplitTop(RowSpacing, nullptr, &Controls);
 				static CButtonContainer s_NameplateResetLayoutButton;
 				if(DoSettingsButton_Menu(SETTINGS_APPEARANCE, APPEARANCE_TAB_NAME_PLATE, APPEARANCE_TAB_NAME_PLATE, &s_NameplateResetLayoutButton, "appearance-nameplate-reset-layout", Localize("Reset layout"), 0, &Button))
 				{
-					g_Config.m_QmNameplateKeysOffsetX = CConfig::ms_QmNameplateKeysOffsetX;
-					g_Config.m_QmNameplateKeysOffsetY = CConfig::ms_QmNameplateKeysOffsetY;
+					g_Config.m_QmNameplateKeysLeftOffsetX = CConfig::ms_QmNameplateKeysLeftOffsetX;
+					g_Config.m_QmNameplateKeysLeftOffsetY = CConfig::ms_QmNameplateKeysLeftOffsetY;
+					g_Config.m_QmNameplateKeysUpOffsetX = CConfig::ms_QmNameplateKeysUpOffsetX;
+					g_Config.m_QmNameplateKeysUpOffsetY = CConfig::ms_QmNameplateKeysUpOffsetY;
+					g_Config.m_QmNameplateKeysRightOffsetX = CConfig::ms_QmNameplateKeysRightOffsetX;
+					g_Config.m_QmNameplateKeysRightOffsetY = CConfig::ms_QmNameplateKeysRightOffsetY;
+					g_Config.m_QmNameplateDummyNameOffsetX = CConfig::ms_QmNameplateDummyNameOffsetX;
+					g_Config.m_QmNameplateDummyNameOffsetY = CConfig::ms_QmNameplateDummyNameOffsetY;
+					g_Config.m_QmNameplateDummyClanOffsetX = CConfig::ms_QmNameplateDummyClanOffsetX;
+					g_Config.m_QmNameplateDummyClanOffsetY = CConfig::ms_QmNameplateDummyClanOffsetY;
+					g_Config.m_QmNameplateDummyHookOffsetX = CConfig::ms_QmNameplateDummyHookOffsetX;
+					g_Config.m_QmNameplateDummyHookOffsetY = CConfig::ms_QmNameplateDummyHookOffsetY;
+					g_Config.m_QmNameplateDummyCoordsOffsetX = CConfig::ms_QmNameplateDummyCoordsOffsetX;
+					g_Config.m_QmNameplateDummyCoordsOffsetY = CConfig::ms_QmNameplateDummyCoordsOffsetY;
+					g_Config.m_QmNameplateDummyKeysLeftOffsetX = CConfig::ms_QmNameplateDummyKeysLeftOffsetX;
+					g_Config.m_QmNameplateDummyKeysLeftOffsetY = CConfig::ms_QmNameplateDummyKeysLeftOffsetY;
+					g_Config.m_QmNameplateDummyKeysUpOffsetX = CConfig::ms_QmNameplateDummyKeysUpOffsetX;
+					g_Config.m_QmNameplateDummyKeysUpOffsetY = CConfig::ms_QmNameplateDummyKeysUpOffsetY;
+					g_Config.m_QmNameplateDummyKeysRightOffsetX = CConfig::ms_QmNameplateDummyKeysRightOffsetX;
+					g_Config.m_QmNameplateDummyKeysRightOffsetY = CConfig::ms_QmNameplateDummyKeysRightOffsetY;
+					g_Config.m_QmNameplateDummyWaterHammerOffsetX = CConfig::ms_QmNameplateDummyWaterHammerOffsetX;
+					g_Config.m_QmNameplateDummyWaterHammerOffsetY = CConfig::ms_QmNameplateDummyWaterHammerOffsetY;
+					g_Config.m_QmNameplateDummyWaterHookOffsetX = CConfig::ms_QmNameplateDummyWaterHookOffsetX;
+					g_Config.m_QmNameplateDummyWaterHookOffsetY = CConfig::ms_QmNameplateDummyWaterHookOffsetY;
 					g_Config.m_QmNameplateWaterHammerOffsetX = CConfig::ms_QmNameplateWaterHammerOffsetX;
 					g_Config.m_QmNameplateWaterHammerOffsetY = CConfig::ms_QmNameplateWaterHammerOffsetY;
 					g_Config.m_QmNameplateWaterHookOffsetX = CConfig::ms_QmNameplateWaterHookOffsetX;
@@ -1004,6 +1059,13 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				if(Flow.Control("appearance-hook-collision-opacity", LineSize, Button, RowSpacing))
 				{
 					DoAppearanceNumericField(APPEARANCE_TAB_HOOK_COLLISION, "appearance-hook-collision-opacity", &g_Config.m_ClHookCollAlpha, &g_Config.m_ClHookCollAlpha, Button, Localize("Hook collision line opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+				}
+
+				// 旧版单段线：把分段提示线并回一条，恢复原版 DDNet 的观感。
+				if(Flow.Control("appearance-revert-hook-line", LineSize, Button, RowSpacing))
+				{
+					if(DoSettingsButton_CheckBox(SETTINGS_APPEARANCE, APPEARANCE_TAB_HOOK_COLLISION, &g_Config.m_QmRevertHookLine, "appearance-revert-hook-line", Localize("Old single-segment hook collision line"), g_Config.m_QmRevertHookLine, &Button))
+						g_Config.m_QmRevertHookLine ^= 1;
 				}
 
 				static CButtonContainer s_HookCollNoCollResetId, s_HookCollHookableCollResetId, s_HookCollTeeCollResetId, s_HookCollTipColorResetId, s_HookCollPressedNoCollResetId, s_HookCollPressedHookableResetId, s_HookCollPressedTeeResetId, s_HookCollPressedTipResetId;
