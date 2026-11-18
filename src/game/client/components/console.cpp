@@ -686,9 +686,11 @@ void CGameConsole::CInstance::PumpBacklogPending()
 		m_PendingChatMetadataByExportId.clear();
 	}
 
-	// Update text attributes and count number of added lines
+	// 启动配置可以在图形初始化前触发 Dump，此时只整理日志正文。
+	const bool LayoutReady = m_pGameConsole->GameClient()->Graphics() != nullptr;
+	if(LayoutReady)
+		m_pGameConsole->Ui()->MapScreen();
 	bool StreamerTextChanged = false;
-	m_pGameConsole->Ui()->MapScreen();
 	for(CBacklogEntry *pEntry = m_Backlog.First(); pEntry; pEntry = m_Backlog.Next(pEntry))
 	{
 		const int PreviousLineCount = pEntry->m_LineCount;
@@ -716,7 +718,7 @@ void CGameConsole::CInstance::PumpBacklogPending()
 					MetadataIt->second = std::move(pMetadata);
 			}
 		}
-		if(pEntry->m_LineCount == -1 || pEntry->m_ColorPreparationPending)
+		if(LayoutReady && (pEntry->m_LineCount == -1 || pEntry->m_ColorPreparationPending))
 		{
 			UpdateEntryTextAttributes(pEntry);
 			if(MatchesLogFilter(pEntry))
@@ -730,8 +732,9 @@ void CGameConsole::CInstance::PumpBacklogPending()
 	{
 		// 遮蔽会改变字符位置，旧选区与搜索结果必须按显示文本重建。
 		m_Selection.Clear();
+		m_SearchResults.Invalidate();
 	}
-	if(StreamerTextChanged || m_SearchResults.Pending())
+	if(LayoutReady && m_SearchResults.Pending())
 		UpdateSearch();
 }
 
@@ -1608,26 +1611,38 @@ void CGameConsole::CInstance::UpdateSearch()
 
 void CGameConsole::CInstance::Dump()
 {
+	PumpBacklogPending();
+
+	static unsigned s_DumpSequence = 0;
 	char aTimestamp[20];
 	str_timestamp(aTimestamp, sizeof(aTimestamp));
 	char aFilename[IO_MAX_PATH_LENGTH];
-	str_format(aFilename, sizeof(aFilename), "dumps/%s_dump_%s.txt", m_pName, aTimestamp);
-	IOHANDLE File = m_pGameConsole->Storage()->OpenFile(aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(File)
+	str_format(aFilename, sizeof(aFilename), "dumps/%s_dump_%s_%d_%lld_%u.txt", m_pName, aTimestamp, pid(), (long long)time_get_nanoseconds().count(), ++s_DumpSequence);
+	char aTemporary[IO_MAX_PATH_LENGTH];
+	IStorage::FormatTmpPath(aTemporary, sizeof(aTemporary), aFilename);
+
+	IStorage *pStorage = m_pGameConsole->Storage();
+	IOHANDLE File = pStorage->OpenFile(aTemporary, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE);
+	if(!File)
 	{
-		PumpBacklogPending();
-		for(CInstance::CBacklogEntry *pEntry = m_Backlog.First(); pEntry; pEntry = m_Backlog.Next(pEntry))
-		{
-			io_write(File, pEntry->m_aText, pEntry->m_Length);
-			io_write_newline(File);
-		}
-		io_close(File);
+		log_error("console", "Failed to open '%s'", aTemporary);
+		return;
+	}
+
+	bool Written = true;
+	for(CBacklogEntry *pEntry = m_Backlog.First(); Written && pEntry; pEntry = m_Backlog.Next(pEntry))
+		Written = io_write(File, pEntry->m_aText, pEntry->m_Length) == pEntry->m_Length && io_write_newline(File);
+
+	const bool Closed = io_close(File) == 0;
+	if(Written && Closed && !pStorage->FileExists(aFilename, IStorage::TYPE_SAVE) &&
+		pStorage->RenameFile(aTemporary, aFilename, IStorage::TYPE_SAVE, false))
+	{
 		log_info("console", "%s contents were written to '%s'", m_pName, aFilename);
+		return;
 	}
-	else
-	{
-		log_error("console", "Failed to open '%s'", aFilename);
-	}
+
+	pStorage->RemoveFile(aTemporary, IStorage::TYPE_SAVE);
+	log_error("console", "Failed to write '%s'", aFilename);
 }
 
 bool CGameConsole::CInstance::ExportSelectedChat()
