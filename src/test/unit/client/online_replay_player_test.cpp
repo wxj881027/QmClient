@@ -1,3 +1,4 @@
+#include <game/client/components/qmclient/demo_ui.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 
 #include <gtest/gtest.h>
@@ -165,6 +166,30 @@ TEST(OnlineReplayUi, InputOwnerChangeAndSessionResetCancelDoubleTap)
 	Ui.Reset();
 	EXPECT_FALSE(Ui.PanelOpen());
 	EXPECT_EQ(Ui.PressEscape(1.2f), COnlineReplayUiState::EAction::TOGGLE_PANEL);
+}
+
+TEST(OnlineReplayUi, ClosePanelHidesWithoutEndingSessionAndDisarmsDoubleTap)
+{
+	COnlineReplayUiState Ui;
+	Ui.PressEscape(1.0f);
+	Ui.ReleaseEscape();
+	ASSERT_TRUE(Ui.PanelOpen());
+	Ui.ClosePanel();
+	EXPECT_FALSE(Ui.PanelOpen());
+	// 关闭面板不应留下“刚按过 Esc”的连击状态：下一次按 Esc 只重新打开面板。
+	EXPECT_EQ(Ui.PressEscape(1.1f), COnlineReplayUiState::EAction::TOGGLE_PANEL);
+	EXPECT_TRUE(Ui.PanelOpen());
+}
+
+TEST(DemoUiLayout, HidingCutControlsRemovesOnlyTheCutSection)
+{
+	const CUIRect Screen{0.0f, 0.0f, 1920.0f, 1080.0f};
+	const CUIRect WithCut = qm_demo_ui::PlayerRect(Screen, false, false, true);
+	const CUIRect WithoutCut = qm_demo_ui::PlayerRect(Screen, false, false, false);
+	EXPECT_FLOAT_EQ(WithCut.h - WithoutCut.h, qm_demo_ui::CUT_SECTION_HEIGHT);
+	EXPECT_FLOAT_EQ(WithCut.w, WithoutCut.w);
+	// 控制卡始终贴底：少掉切片行后底边留白保持一致。
+	EXPECT_FLOAT_EQ(WithCut.y + WithCut.h, WithoutCut.y + WithoutCut.h);
 }
 
 TEST(OnlineReplayPlayer, ExistingInfoPointerReflectsControlChanges)

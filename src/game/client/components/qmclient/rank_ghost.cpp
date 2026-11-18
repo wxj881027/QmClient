@@ -637,6 +637,14 @@ void CRankGhost::RequestGhostViewForDemo(const char *pDemoName)
 				EnterViewMode();
 			return;
 		}
+		char aDemoPath[IO_MAX_PATH_LENGTH];
+		if(!IsEntryDemoCached(Entry, aDemoPath, sizeof(aDemoPath)))
+		{
+			// 新行为：先只下载回放，下载完成后由玩家再点一次进入查看模式。
+			// 下载结束自动切画面会让“下载”变成不可预期的整屏跳转。
+			StartPendingLookup(pDemoName, EPendingMode::DEMO_ONLY);
+			return;
+		}
 		break;
 	}
 	if(m_Stage != EStage::IDLE || m_StartPending)

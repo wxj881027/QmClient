@@ -133,8 +133,8 @@ enum
 
 // 导航胶囊行高与内容缩放：主菜单导航栏（离线/在线）与游戏内浏览页服务器导航栏
 // 共用同一组尺寸，保证上下两排胶囊导航观感一致。
-	// 与页签胶囊同高同号：ui_token::settings::TAB_HEIGHT(26)，导航选中滑块与页签滑块上下对齐。
-	inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 26.0f;
+// 与页签胶囊同高同号：ui_token::settings::TAB_HEIGHT(26)，导航选中滑块与页签滑块上下对齐。
+inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 26.0f;
 inline constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
 
 class CUIRect;
@@ -2242,6 +2242,8 @@ protected:
 	IDemoPlayer *PlaybackPlayer() const;
 	uint64_t m_OnlineReplayControlsGeneration = 0;
 	bool m_DemoControlsWereOnline = false;
+	// 查看模式控制卡最近一帧的实际矩形（含拖动偏移），供“点外部关闭”判定。
+	CUIRect m_OnlineReplayPanelRect = {};
 	void HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickToSeek = -1);
 	void RenderDemoCard(const CUIRect &Rect);
 	void RenderDemoPlayer(CUIRect MainView);
@@ -2426,10 +2428,12 @@ protected:
 	void DrainIngameUiSnapshotTextRuntime();
 	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
 	void RenderServerControl(CUIRect MainView);
+
 public:
 	// 按地图名渲染预览（投票页复用服务器列表那套缓存与渲染目标）。
 	// 返回 false 表示本地没有这张地图，调用点回退到静态封面。
 	bool RenderMapPreviewForVote(const CUIRect &Preview, const char *pMapName);
+
 private:
 	void RenderServerVoteList(CUIRect MainView);
 	void RenderVoteMapLibrary(CUIRect MainView);
@@ -2627,6 +2631,7 @@ public:
 	bool IsInit() const { return m_IsInit; }
 
 	bool OnlineReplayPopupActive() const { return m_DemoPlayerState != DEMOPLAYER_NONE; }
+	bool OnlineReplayPanelContains(vec2 Pos) const { return m_OnlineReplayPanelRect.Inside(Pos); }
 	bool PlaybackShortcutsActive() const;
 	bool ClaimOnlineReplaySpectatorBind(int Key);
 	bool IsActive() const { return m_MenuActive; }

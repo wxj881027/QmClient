@@ -277,6 +277,13 @@ public:
 	};
 	bool PanelOpen() const { return m_PanelOpen; }
 	void Reset() { *this = {}; }
+	// 隐藏控制卡但不结束回放；点击卡外或按隐藏按钮走这里。
+	void ClosePanel()
+	{
+		m_PanelOpen = false;
+		m_Armed = false;
+		m_PanelBeforeEscape = false;
+	}
 	void ReleaseEscape() { m_EscapeDown = false; }
 	void CancelEscape()
 	{

@@ -168,6 +168,26 @@ namespace ui_token::color
 	}
 } // namespace ui_token::color
 
+// 回放控制卡（demo 播放与 Rank 1 / 练习组查看模式共用）的组件内部角色色。
+// 强调色不在这里：它跟随 UiTheme.m_Accent，也就是 qm_ui_accent_color。
+namespace ui_token::replay
+{
+	// 控制卡外壳：投影、描边、内底；模糊不可用时不透明档兜底。
+	inline constexpr ColorRGBA CARD_SHADOW = color::SURFACE_SHADOW;
+	inline constexpr ColorRGBA CARD_BORDER{0.65f, 0.69f, 0.77f, 0.12f};
+	inline constexpr ColorRGBA CARD_FILL_BLURRED{0.07f, 0.08f, 0.11f, 0.56f};
+	inline constexpr ColorRGBA CARD_FILL_OPAQUE{0.07f, 0.08f, 0.11f, 0.92f};
+	// 传输按钮条、进度槽与标记阴影。
+	inline constexpr ColorRGBA TRANSPORT_BAR{1.0f, 1.0f, 1.0f, 0.045f};
+	inline constexpr ColorRGBA SEEK_TRACK{0.0f, 0.0f, 0.0f, 0.28f};
+	inline constexpr ColorRGBA MARKER_SHADOW{0.15f, 0.10f, 0.0f, 0.75f};
+	// Live 指示：直播红点与不可回直播的灰点。
+	inline constexpr ColorRGBA LIVE_ON{1.0f, 0.0f, 0.0f, 1.0f};
+	inline constexpr ColorRGBA LIVE_OFF{0.6f, 0.6f, 0.6f, 1.0f};
+	// 导出弹窗的压暗层；比 SURFACE_OVERLAY 深一档，保证弹窗文字压得住地图。
+	inline constexpr ColorRGBA POPUP_BACKDROP{0.0f, 0.0f, 0.0f, 0.5f};
+} // namespace ui_token::replay
+
 // 离散滑块档位色板与满档渐变：UiDiscreteSliderStyle.h 与 UiDiscreteSliderLogic.cpp
 // 共享的唯一来源，禁止在调用文件复制。
 namespace ui_token::discrete_slider
@@ -610,11 +630,11 @@ namespace ui_token::chat
 		// 按钮描边宽度占直径的比例：圆形图标按钮只需要一圈勾边。
 		// 固定 1 单位在 8 单位直径的小圆上就是八分之一，读起来是「粗框」而不是「描边」。
 		inline constexpr float BUTTON_BORDER_RATIO = 0.05f;
-	// 图标相对内径的内缩比例：图标与圆边之间必须有边距，
-	// 否则大图标顶到描边上，看起来像「图标和圆一样高」。
-	inline constexpr float ICON_INSET_RATIO = 0.14f;
-	// 翻译按钮直径相对输入行行高的比例：外圈比行高小一档，文字行不被按钮撑高。
-	inline constexpr float BUTTON_ROW_RATIO = 0.82f;
+		// 图标相对内径的内缩比例：图标与圆边之间必须有边距，
+		// 否则大图标顶到描边上，看起来像「图标和圆一样高」。
+		inline constexpr float ICON_INSET_RATIO = 0.14f;
+		// 翻译按钮直径相对输入行行高的比例：外圈比行高小一档，文字行不被按钮撑高。
+		inline constexpr float BUTTON_ROW_RATIO = 0.82f;
 
 		// 输入行行高：按钮直径与「全体」前缀块高度都只从这里取。
 		inline float RowHeight(const float FontSize)

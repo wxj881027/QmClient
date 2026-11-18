@@ -6,6 +6,7 @@
 #include "camera.h"
 
 #include <base/log.h>
+
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
@@ -388,6 +389,16 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 	}
 	else
 		m_ReplayUi.CancelEscape();
+
+	// 控制卡显示时，点击卡外只负责收起卡；下一次点击才恢复成员点选，
+	// 避免“想关面板”顺手切走了镜头。
+	if(PlaybackControlsActive() && (Event.m_Flags & IInput::FLAG_PRESS) &&
+		Event.m_Key >= KEY_MOUSE_1 && Event.m_Key <= KEY_MOUSE_3 &&
+		!GameClient()->m_Menus.OnlineReplayPanelContains(Ui()->MousePos()))
+	{
+		CloseReplayPanel();
+		return true;
+	}
 
 	if(!GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_ClSpectatorMouseclicks)
 	{

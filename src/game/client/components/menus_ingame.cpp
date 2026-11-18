@@ -1333,8 +1333,8 @@ namespace
 	void MeasureIngameMotdBoxMetrics(ITextRender *pTextRender, float FontSize, float &CellAdvance, float &LineHeight)
 	{
 		// 行距在这里放宽一次：公告正文是多行长文，行贴行读起来吃力；
-	// 框线格宽仍取字体自然推进，所以方框笔画不会被拉长。
-	LineHeight = pTextRender->TextBoundingBox(FontSize, "─").m_H * ui_token::motd::LINE_SPACING_RATIO;
+		// 框线格宽仍取字体自然推进，所以方框笔画不会被拉长。
+		LineHeight = pTextRender->TextBoundingBox(FontSize, "─").m_H * ui_token::motd::LINE_SPACING_RATIO;
 		// 两个字形与一个字形的最长行宽之差就是一个字形的推进，抵消首尾字形的处理差异。
 		const float MeasuredAdvance = pTextRender->TextWidth(FontSize, "──") - pTextRender->TextWidth(FontSize, "─");
 		// 格宽向下取整：文本容器会把每个字形起点对齐到一个假屏幕像素上，
@@ -2856,8 +2856,8 @@ void CMenus::RenderGhost(CUIRect MainView)
 		// 练习线路组：点 View（或双击条目）加载组内所有轨，进入 Rank 1 同款
 		// demo 式查看模式——独立时间线、交互特效、虚影成员，且不会退出服务器。
 		static CButtonContainer s_ViewButton;
-		const CUIRect Button = NextIngameActionButton(Status, Localize("View"));
-		if(Button.w > 0.0f && (DoIngameMenuButton(PAGE_GHOST, "ingame-ghost-view", &s_ViewButton, Localize("View"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL) || s_ListBox.WasItemActivated()))
+		const CUIRect Button = NextIngameActionButton(Status, Localize("View replay"));
+		if(Button.w > 0.0f && (DoIngameMenuButton(PAGE_GHOST, "ingame-ghost-view", &s_ViewButton, Localize("View replay"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL) || s_ListBox.WasItemActivated()))
 			GameClient()->m_RankGhost.ViewPracticeGroup(pGhost->m_aFilename);
 	}
 	else if(!pGhost->m_Failed && pGhost->HasFile() && (pGhost->Active() || GameClient()->m_Ghost.FreeSlots() > ReservedSlots))
