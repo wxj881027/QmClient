@@ -5277,6 +5277,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/memheap_allocation_test.cpp
     src/test/integration/engine/console_temp_command_allocation_test.cpp
     src/test/integration/engine/localization_storage_transaction_test.cpp
+    src/test/integration/client/sqlite_open_failure_test.cpp
     src/test/integration/engine/config_allocation_failure_test.cpp
     src/test/unit/engine/console_command_test.cpp
     src/test/unit/engine/config_tags_test.cpp
@@ -6494,6 +6495,13 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   endif()
   if(TARGET_OS STREQUAL "windows")
     target_link_libraries(${TARGET_TESTRUNNER} bcrypt winhttp ws2_32)
+    if(CLIENT)
+      target_sources(${TARGET_TESTRUNNER} PRIVATE
+        src/engine/client/qm_festive_message_box.cpp
+        src/test/integration/client/qm_festive_message_box_test.cpp
+      )
+      target_link_libraries(${TARGET_TESTRUNNER} gdi32 user32 winmm)
+    endif()
     if(MSVC)
       target_link_libraries(${TARGET_TESTRUNNER} oleaut32)
     endif()

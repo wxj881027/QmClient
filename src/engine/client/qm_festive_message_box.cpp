@@ -15,6 +15,7 @@
 
 #include <mmsystem.h>
 #include <opusfile.h>
+#include <process.h>
 #include <wingdi.h>
 
 #if !defined(WM_DPICHANGED)
@@ -27,12 +28,19 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <new>
 #include <string>
-#include <thread>
+#include <utility>
 #include <vector>
+
+namespace QmFestiveMessageBox
+{
+	using FPlayback = std::function<void(const std::atomic_bool &)>;
+	std::optional<int> ShowWithPlayback(const IGraphics::CMessageBox &MessageBox, FPlayback Playback, bool HiddenForTest);
+}
 
 namespace
 {
@@ -44,6 +52,7 @@ namespace
 	constexpr int gs_FireworksParticleCount = 192;
 	constexpr int gs_FireworksParticlesPerBurst = 24;
 	constexpr int gs_FireworksBurstDuration = 62;
+	constexpr DWORD gs_MusicStopWaitMs = 50;
 
 	COLORREF Rgb(int Red, int Green, int Blue)
 	{
@@ -428,13 +437,75 @@ namespace
 	// 崩溃窗口不能复用可能已损坏的 SDL/游戏音频状态；独立解码并交给 WinMM。
 	class CFestiveMusicPlayer
 	{
-		std::atomic<bool> m_Stop{false};
-		std::thread m_Worker;
-
-		void Play(const std::wstring &Path)
+		struct SPlayback
 		{
-			FILE *pFile = _wfopen(Path.c_str(), L"rb");
-			if(pFile == nullptr)
+			std::shared_ptr<std::atomic_bool> m_pStop;
+			QmFestiveMessageBox::FPlayback m_Play;
+		};
+
+		std::shared_ptr<std::atomic_bool> m_pStop;
+		HANDLE m_Worker = nullptr;
+
+		static unsigned __stdcall Run(void *pUser) noexcept
+		{
+			std::unique_ptr<SPlayback> pPlayback(static_cast<SPlayback *>(pUser));
+			try
+			{
+				if(!pPlayback->m_pStop->load())
+					pPlayback->m_Play(*pPlayback->m_pStop);
+			}
+			catch(...)
+			{
+				// 可选音乐路径或播放准备失败时，报告窗口继续工作。
+			}
+			return 0;
+		}
+
+	public:
+		explicit CFestiveMusicPlayer(QmFestiveMessageBox::FPlayback Playback) noexcept
+		{
+			if(!Playback)
+				return;
+			try
+			{
+				auto pStop = std::make_shared<std::atomic_bool>(false);
+				auto pPlayback = std::make_unique<SPlayback>(SPlayback{pStop, std::move(Playback)});
+				// 线程可能先于创建调用返回，成功后由它独立持有播放参数。
+				auto *pRaw = pPlayback.release();
+				m_Worker = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, Run, pRaw, 0, nullptr));
+				if(m_Worker == nullptr)
+				{
+					delete pRaw;
+					return;
+				}
+				m_pStop = std::move(pStop);
+			}
+			catch(...)
+			{
+				// 无法准备音频线程时以静音显示报告。
+			}
+		}
+
+		CFestiveMusicPlayer(const CFestiveMusicPlayer &) = delete;
+		CFestiveMusicPlayer &operator=(const CFestiveMusicPlayer &) = delete;
+
+		~CFestiveMusicPlayer()
+		{
+			if(m_Worker == nullptr)
+				return;
+			m_pStop->store(true);
+			// 文件或驱动调用可能阻塞。超时后由线程继续持有解码器和缓冲区。
+			WaitForSingleObject(m_Worker, gs_MusicStopWaitMs);
+			CloseHandle(m_Worker);
+		}
+
+		static void Play(const std::atomic_bool &Stop)
+		{
+			const std::wstring Path = FindFestiveMusicPath();
+			if(Path.empty() || Stop.load())
+				return;
+			std::unique_ptr<FILE, decltype(&fclose)> pFile(_wfopen(Path.c_str(), L"rb"), fclose);
+			if(!pFile || Stop.load())
 				return;
 			const OpusFileCallbacks Callbacks{
 				[](void *pStream, unsigned char *pData, int Size) {
@@ -445,12 +516,10 @@ namespace
 				[](void *pStream, opus_int64 Offset, int Whence) { return _fseeki64(static_cast<FILE *>(pStream), Offset, Whence); },
 				[](void *pStream) -> opus_int64 { return _ftelli64(static_cast<FILE *>(pStream)); },
 				[](void *pStream) { return fclose(static_cast<FILE *>(pStream)); }};
-			OggOpusFile *pDecoder = op_open_callbacks(pFile, &Callbacks, nullptr, 0, nullptr);
+			OggOpusFile *pDecoder = op_open_callbacks(pFile.get(), &Callbacks, nullptr, 0, nullptr);
 			if(pDecoder == nullptr)
-			{
-				fclose(pFile);
 				return;
-			}
+			pFile.release();
 			// 驱动异常未归还缓冲时需要保留其内存，不能让栈析构造成驱动悬垂访问。
 			struct SAudioBuffers
 			{
@@ -458,7 +527,7 @@ namespace
 				std::array<WAVEHDR, 4> m_aHeaders{};
 			};
 			std::unique_ptr<SAudioBuffers> pBuffers(new(std::nothrow) SAudioBuffers);
-			if(!pBuffers || m_Stop.load())
+			if(!pBuffers || Stop.load())
 			{
 				op_free(pDecoder);
 				return;
@@ -480,10 +549,10 @@ namespace
 			auto &aHeaders = pBuffers->m_aHeaders;
 			bool Failed = false;
 			int EmptyReads = 0;
-			while(!m_Stop.load() && !Failed)
+			while(!Stop.load() && !Failed)
 			{
 				bool Submitted = false;
-				for(size_t Index = 0; Index < aHeaders.size() && !m_Stop.load(); ++Index)
+				for(size_t Index = 0; Index < aHeaders.size() && !Stop.load(); ++Index)
 				{
 					WAVEHDR &Header = aHeaders[Index];
 					if((Header.dwFlags & WHDR_PREPARED) != 0)
@@ -497,6 +566,8 @@ namespace
 						}
 					}
 					const int Frames = op_read_stereo(pDecoder, aSamples[Index].data(), static_cast<int>(aSamples[Index].size()));
+					if(Stop.load())
+						break;
 					if(Frames <= 0)
 					{
 						// 空文件、损坏流或无法回绕时停止，避免后台忙循环。
@@ -509,7 +580,7 @@ namespace
 					Header.lpData = reinterpret_cast<char *>(aSamples[Index].data());
 					Header.dwBufferLength = Frames * Format.nBlockAlign;
 					if(waveOutPrepareHeader(Output, &Header, sizeof(Header)) != MMSYSERR_NOERROR ||
-						waveOutWrite(Output, &Header, sizeof(Header)) != MMSYSERR_NOERROR)
+						(!Stop.load() && waveOutWrite(Output, &Header, sizeof(Header)) != MMSYSERR_NOERROR))
 					{
 						Failed = true;
 						break;
@@ -538,50 +609,7 @@ namespace
 			}
 			op_free(pDecoder);
 		}
-
-	public:
-		~CFestiveMusicPlayer() { Stop(); }
-		void Start(const std::wstring &Path)
-		{
-			Stop();
-			if(Path.empty())
-				return;
-			m_Stop.store(false);
-			try
-			{
-				m_Worker = std::thread([this, Path] { Play(Path); });
-			}
-			catch(...)
-			{
-				// 线程资源不足时仍允许用户操作崩溃报告窗口。
-			}
-		}
-		void Stop()
-		{
-			m_Stop.store(true);
-			if(m_Worker.joinable())
-				m_Worker.join();
-		}
 	};
-
-	CFestiveMusicPlayer gs_MusicPlayer;
-
-	void StartFestiveMusic() noexcept
-	{
-		try
-		{
-			gs_MusicPlayer.Start(FindFestiveMusicPath());
-		}
-		catch(...)
-		{
-			// 可选音乐路径准备失败时保留已经显示的报告窗口。
-		}
-	}
-
-	void StopFestiveMusic()
-	{
-		gs_MusicPlayer.Stop();
-	}
 
 	// 只让边框环带进入重绘区域，正文 EDIT 和按钮不会随动画反复重画。
 	void InvalidateFireworksRegion(HWND Window, const SFestiveDialogState &State, int Width, int Height)
@@ -863,7 +891,6 @@ namespace
 			return DefWindowProcW(Window, Message, WParam, LParam);
 		case WM_DESTROY:
 			KillTimer(Window, gs_FireworksTimerId);
-			StopFestiveMusic();
 			pState->m_Running = false;
 			return 0;
 		default:
@@ -887,7 +914,7 @@ namespace
 	}
 }
 
-std::optional<int> ShowQmFestiveMessageBox(const IGraphics::CMessageBox &MessageBox)
+std::optional<int> QmFestiveMessageBox::ShowWithPlayback(const IGraphics::CMessageBox &MessageBox, FPlayback Playback, bool HiddenForTest)
 {
 	try
 	{
@@ -970,7 +997,6 @@ std::optional<int> ShowQmFestiveMessageBox(const IGraphics::CMessageBox &Message
 		PrepareFireworkParticles(State);
 		State.m_FireworksFrame = 0;
 		SetTimer(State.m_Window, gs_FireworksTimerId, gs_FireworksTimerPeriodMs, nullptr);
-		const bool HiddenForTest = FestiveDialogHiddenForTest();
 		ShowWindow(State.m_Window, HiddenForTest ? SW_HIDE : SW_SHOWNORMAL);
 		// 首次显示后再应用一次，确保 WM_SIZE/工作区裁剪已经给出最终客户区尺寸。
 		UpdateWindowCornerRegion(State.m_Window, State.m_Dpi);
@@ -984,7 +1010,7 @@ std::optional<int> ShowQmFestiveMessageBox(const IGraphics::CMessageBox &Message
 			SetActiveWindow(State.m_Window);
 		}
 		UpdateWindow(State.m_Window);
-		StartFestiveMusic();
+		CFestiveMusicPlayer Music(State.m_Running ? std::move(Playback) : FPlayback{});
 		if(State.m_ConfirmButtonId >= gs_ButtonIdBase)
 			SetFocus(State.m_vButtons[State.m_ConfirmButtonId - gs_ButtonIdBase]);
 
@@ -1018,6 +1044,11 @@ std::optional<int> ShowQmFestiveMessageBox(const IGraphics::CMessageBox &Message
 		// 准备失败由状态owner先清理窗口，再交调用方沿原SDL消息框回退。
 		return std::nullopt;
 	}
+}
+
+std::optional<int> ShowQmFestiveMessageBox(const IGraphics::CMessageBox &MessageBox)
+{
+	return QmFestiveMessageBox::ShowWithPlayback(MessageBox, CFestiveMusicPlayer::Play, FestiveDialogHiddenForTest());
 }
 
 #else
