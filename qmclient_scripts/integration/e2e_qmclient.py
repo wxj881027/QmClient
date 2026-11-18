@@ -10,6 +10,7 @@ import argparse
 import json
 from pathlib import Path
 import shutil
+import struct
 import sys
 import time
 from unittest import SkipTest
@@ -125,7 +126,7 @@ def scenario_online_replay_without_source(env: ProcessEnvironment) -> None:
 
 
 def scenario_demo_recording(env: ProcessEnvironment) -> None:
-	"""连接、切图、录制、加 marker、停止并校验 demo 文件。"""
+	"""录制 demo，并验证从合影返回后仍可继续播放原录像。"""
 	env.start_server()
 	env.connect_client(["cl_auto_demo_record 1"])
 	# Tutorial 是当前构建的默认地图，先切到另一张内置地图，确保后续
@@ -143,12 +144,38 @@ def scenario_demo_recording(env: ProcessEnvironment) -> None:
 	time.sleep(1.2)
 	env.client.command("add_demomarker")
 	env.client.wait_for(lambda line: line.endswith(": Added timeline marker"), "demo timeline marker", 10)
+	playback_message = "pose_demo_playback_resumed"
+
+	def is_recorded_chat(line: str) -> bool:
+		return line.startswith("chat/all:") and playback_message in line
+
+	env.client.command(f"say {playback_message}")
+	env.client.wait_for(is_recorded_chat, "chat recorded in demo", 10)
 	env.client.command("stoprecord")
 	env.client.wait_for(lambda line: "Stopped recording to 'demos/e2e_demo.demo'" in line, "demo recording stop", 10)
 
 	demo_path = _wait_for_file(env.path("demos", "e2e_demo.demo"), "demo output")
 	if demo_path.stat().st_size <= 0:
 		raise RuntimeError(f"demo output is empty: {demo_path}")
+
+	# 一条普通的 MomentCap 记录，使用默认皮肤、固定取景坐标。
+	pose_record = bytearray(248)
+	for offset, field_size, text in ((0, 16, b"Pose"), (16, 12, b""), (32, 24, b"default")):
+		encoded = bytes((value + 128) & 0xFF for value in text.ljust(field_size, b"\0"))
+		for index in range(0, field_size, 4):
+			pose_record[offset + index:offset + index + 4] = encoded[index:index + 4][::-1]
+	struct.pack_into("<ii", pose_record, 72, 160, 160)
+	env.path("demos", "e2e_demo_view.poses").write_bytes(struct.pack("<q", 1) + pose_record)
+
+	env.client.command("play demos/e2e_demo.demo; poses_open demos/e2e_demo_view.poses")
+	env.client.wait_for(lambda line: "viewing 1 poses;" in line, "pose preview opened over demo", 15)
+	output_start = len(env.client._lines)
+	env.client.command("poses_close; demo_play")
+	env.client.wait_for(
+		lambda line: is_recorded_chat(line) and any(playback_message in entry for entry in env.client._lines[output_start:]),
+		"recorded chat replayed after leaving pose preview",
+		15,
+	)
 	_quit_client(env)
 
 

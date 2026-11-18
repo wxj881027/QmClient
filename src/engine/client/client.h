@@ -384,6 +384,9 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	CSnapshotStorage::CHolder m_aDemorecSnapshotHolders[NUM_SNAPSHOT_TYPES];
 	CSnapshotBuffer m_aaDemorecSnapshotData[NUM_SNAPSHOT_TYPES][2];
 
+	const CSnapshot *SnapshotForGame(int SnapId) const;
+	void PublishSourceSnapshot(bool DummySwapped);
+
 	CSnapshotDelta m_SnapshotDelta;
 	CSnapshotDelta m_SnapshotDeltaSixup;
 	CSnapshotDelta *SnapshotDelta();
@@ -721,7 +724,7 @@ public:
 	bool EnterPoseSession(const char *pPosesPath, int &TeeCountOut, const char *pMapPath = nullptr);
 	bool EnsurePosePlaybackContext(const char *pMapPath);
 	// 退出合影会话：清空合成快照，让普通渲染恢复。
-	void LeavePoseSession();
+	void LeavePoseSession(bool RestorePlaybackSnapshot = true);
 
 #if defined(CONF_VIDEORECORDER)
 	void StartVideo(const char *pFilename, bool WithTimestamp);
@@ -827,6 +830,9 @@ public:
 
 	// 合影会话是否进行中。进行中时 demo 播放器被暂停，合成快照不会被覆盖。
 	bool m_PoseSessionActive = false;
+	CSnapshotBuffer m_aPosePresentationSnapshots[NUM_SNAPSHOT_TYPES];
+	int m_PoseCurrentSnapshot = -1;
+	int m_PosePreviousSnapshot = -1;
 	// 合影取景：进入会话时按所有 Tee 的包围盒算一次，之后由预览 HUD 缩放/平移。
 	vec2 m_PoseCameraCenter = vec2(0.0f, 0.0f);
 	float m_PoseCameraZoom = 1.0f;

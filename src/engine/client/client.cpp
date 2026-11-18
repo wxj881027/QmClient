@@ -1143,6 +1143,8 @@ void CClient::OnEnterGame(bool Dummy)
 	m_aCurrentInput[Dummy] = 0;
 
 	// reset snapshots
+	if(!Dummy)
+		m_PoseCurrentSnapshot = -1;
 	m_aapSnapshots[Dummy][SNAP_CURRENT] = nullptr;
 	m_aapSnapshots[Dummy][SNAP_PREV] = nullptr;
 	m_aSnapshotStorage[Dummy].PurgeAll();
@@ -1427,10 +1429,11 @@ void CClient::DisconnectWithReason(const char *pReason)
 {
 	if(pReason != nullptr && pReason[0] == '\0')
 		pReason = nullptr;
-	// 合影会话复用了 demo snapshot 槽位。断开或退出时先撤掉合成快照，
+	// 断开或退出时先撤掉合成快照，
 	// 再卸载地图，避免离线渲染帧继续访问已关闭的 datafile。
 	if(m_PoseSessionActive)
-		LeavePoseSession();
+		LeavePoseSession(false);
+	m_PoseCurrentSnapshot = -1;
 
 	DummyDisconnect(pReason);
 
@@ -1668,10 +1671,24 @@ void CClient::LoadDebugFont()
 
 // ---
 
-IClient::CSnapItem CClient::SnapGetItem(int SnapId, int Index) const
+const CSnapshot *CClient::SnapshotForGame(int SnapId) const
 {
 	dbg_assert(SnapId >= 0 && SnapId < NUM_SNAPSHOT_TYPES, "invalid SnapId");
-	const CSnapshot *pSnapshot = m_aapSnapshots[g_Config.m_ClDummy][SnapId]->m_pAltSnap;
+	if(g_Config.m_ClDummy == CONN_MAIN && m_PoseCurrentSnapshot >= 0)
+	{
+		const int PoseSnapshot = SnapId == SNAP_CURRENT ? m_PoseCurrentSnapshot : m_PosePreviousSnapshot;
+		if(PoseSnapshot >= 0)
+			return m_aPosePresentationSnapshots[PoseSnapshot].AsSnapshot();
+		// 首次应用时，上一帧仍来自当前的在线或回放快照。
+		SnapId = SNAP_CURRENT;
+	}
+	const auto *pHolder = m_aapSnapshots[g_Config.m_ClDummy][SnapId];
+	return pHolder ? pHolder->m_pAltSnap : nullptr;
+}
+
+IClient::CSnapItem CClient::SnapGetItem(int SnapId, int Index) const
+{
+	const CSnapshot *pSnapshot = SnapshotForGame(SnapId);
 	const CSnapshotItem *pSnapshotItem = pSnapshot->GetItem(Index);
 	CSnapItem Item;
 	Item.m_Type = pSnapshot->GetItemType(Index);
@@ -1683,10 +1700,8 @@ IClient::CSnapItem CClient::SnapGetItem(int SnapId, int Index) const
 
 const void *CClient::SnapFindItem(int SnapId, int Type, int Id) const
 {
-	if(!m_aapSnapshots[g_Config.m_ClDummy][SnapId])
-		return nullptr;
-
-	return m_aapSnapshots[g_Config.m_ClDummy][SnapId]->m_pAltSnap->FindItem(Type, Id);
+	const CSnapshot *pSnapshot = SnapshotForGame(SnapId);
+	return pSnapshot ? pSnapshot->FindItem(Type, Id) : nullptr;
 }
 
 const CSnapshot *CClient::CurrentSnapshotForConnection(int Conn) const
@@ -1699,10 +1714,8 @@ const CSnapshot *CClient::CurrentSnapshotForConnection(int Conn) const
 
 int CClient::SnapNumItems(int SnapId) const
 {
-	dbg_assert(SnapId >= 0 && SnapId < NUM_SNAPSHOT_TYPES, "invalid SnapId");
-	if(!m_aapSnapshots[g_Config.m_ClDummy][SnapId])
-		return 0;
-	return m_aapSnapshots[g_Config.m_ClDummy][SnapId]->m_pAltSnap->NumItems();
+	const CSnapshot *pSnapshot = SnapshotForGame(SnapId);
+	return pSnapshot ? pSnapshot->NumItems() : 0;
 }
 
 void CClient::SnapSetStaticsize(int ItemType, int Size)
@@ -2052,6 +2065,7 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 	}
 
 	// 加载新地图前卸载当前地图并重置所有快照，因为快照只对旧地图有效。
+	m_PoseCurrentSnapshot = -1;
 	m_pMap->Unload();
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; Dummy++)
 	{
@@ -3339,7 +3353,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 						}
 						if(!Dummy)
 						{
-							GameClient()->OnNewSnapshot(false);
+							PublishSourceSnapshot(false);
 						}
 						SetState(IClient::STATE_ONLINE);
 						if(Conn == CONN_MAIN)
@@ -3899,14 +3913,20 @@ void CClient::OnDemoPlayerSnapshot(void *pData, int Size)
 	mem_copy(m_aapSnapshots[0][SNAP_CURRENT]->m_pSnap, pData, Size);
 	mem_copy(m_aapSnapshots[0][SNAP_CURRENT]->m_pAltSnap, &AltSnapBuffer, AltSnapSize);
 
-	GameClient()->OnNewSnapshot(false);
+	PublishSourceSnapshot(false);
+}
+
+void CClient::PublishSourceSnapshot(bool DummySwapped)
+{
+	m_PoseCurrentSnapshot = -1;
+	GameClient()->OnNewSnapshot(DummySwapped);
 }
 
 bool CClient::ApplySyntheticSnapshot(const void *pData, int Size, int Tick)
 {
-	// 合影渲染路径：外部把一份完整快照交进来（由 qm_pose::BuildSnapshot 合成），
-	// 这里只负责「像收到一份演示快照那样」把它装进当前槽，之后所有解析与绘制
-	// 都走既有管线——皮肤、表情、武器、钩子、名字牌全部复用，不另写渲染。
+	// 合影只替换游戏侧看到的快照。网络与回放继续持有各自的原始帧和游标。
+	if(State() != IClient::STATE_ONLINE && State() != IClient::STATE_DEMOPLAYBACK)
+		return false;
 	if(!pData || Size <= 0 || (size_t)Size > sizeof(CSnapshotBuffer))
 		return false;
 	if(!m_aapSnapshots[0][SNAP_CURRENT] || !m_aapSnapshots[0][SNAP_PREV])
@@ -3917,19 +3937,19 @@ bool CClient::ApplySyntheticSnapshot(const void *pData, int Size, int Tick)
 	// alt 快照按原样展开：合成快照本身就是完整快照，没有 delta 需要叠加。
 	CSnapshotBuffer AltSnapBuffer;
 	const int AltSnapSize = UnpackAndValidateSnapshot((CSnapshot *)pData, &AltSnapBuffer);
-	if(AltSnapSize < 0)
+	if(AltSnapSize <= 0 || (size_t)AltSnapSize > sizeof(AltSnapBuffer))
 		return false;
 
-	m_aCurGameTick[0] = Tick;
-	// 前一 tick 留出间隔：角色需要 SNAP_PREV 里也存在同一 id 才会被标记为 Active，
-	// 由调用方连续应用两次来满足；Prev 用 Tick-1 保证插值不会反向。
-	m_aPrevGameTick[0] = Tick - 1;
-
-	std::swap(m_aapSnapshots[0][SNAP_PREV], m_aapSnapshots[0][SNAP_CURRENT]);
-	mem_copy(m_aapSnapshots[0][SNAP_CURRENT]->m_pSnap, pData, (size_t)Size);
-	mem_copy(m_aapSnapshots[0][SNAP_CURRENT]->m_pAltSnap, &AltSnapBuffer, (size_t)AltSnapSize);
-	m_aapSnapshots[0][SNAP_CURRENT]->m_Tick = Tick;
-	m_aapSnapshots[0][SNAP_PREV]->m_Tick = Tick - 1;
+	const int NextSnapshot = m_PoseCurrentSnapshot == SNAP_CURRENT ? SNAP_PREV : SNAP_CURRENT;
+	mem_copy(m_aPosePresentationSnapshots[NextSnapshot].m_aData, AltSnapBuffer.m_aData, (size_t)AltSnapSize);
+	m_PosePreviousSnapshot = m_PoseCurrentSnapshot;
+	m_PoseCurrentSnapshot = NextSnapshot;
+	if(State() == IClient::STATE_DEMOPLAYBACK)
+	{
+		// 回放中的合影沿用合影时钟。在线输入继续使用真实快照的时钟。
+		m_aCurGameTick[0] = Tick;
+		m_aPrevGameTick[0] = Tick - 1;
+	}
 
 	GameClient()->OnNewSnapshot(false);
 	log_info("poses", "applied synthetic snapshot tick=%d size=%d", Tick, Size);
@@ -3947,10 +3967,21 @@ void CClient::ClearSyntheticSnapshot()
 		Discarded.Free();
 		m_PoseOffscreenActive = false;
 	}
-	// 清空两个槽：之后普通渲染不会再看到合影里的假角色。
-	m_aapSnapshots[0][SNAP_CURRENT] = nullptr;
-	m_aapSnapshots[0][SNAP_PREV] = nullptr;
-	m_aReceivedSnapshots[0] = 0;
+	m_PoseCurrentSnapshot = -1;
+	if(State() == IClient::STATE_DEMOPLAYBACK)
+	{
+		if(m_DemoPlayer.IsPlaying())
+		{
+			UpdateDemoIntraTimers();
+		}
+		else
+		{
+			// 只有未播放录像的合影会话才清空回放槽位。
+			m_aapSnapshots[0][SNAP_CURRENT] = nullptr;
+			m_aapSnapshots[0][SNAP_PREV] = nullptr;
+			m_aReceivedSnapshots[0] = 0;
+		}
+	}
 	// GameClient caches pointers into the current snapshot while rendering.
 	// Invalidate those pointers before the map or snapshot storage is reused.
 	GameClient()->InvalidateSnapshot();
@@ -4394,7 +4425,7 @@ void CClient::Update()
 			if(m_LastDummy != (bool)g_Config.m_ClDummy && m_aapSnapshots[g_Config.m_ClDummy][SNAP_PREV])
 			{
 				// Load snapshot for m_ClDummy
-				GameClient()->OnNewSnapshot(true);
+				PublishSourceSnapshot(true);
 				Repredict = true;
 			}
 
@@ -4413,7 +4444,7 @@ void CClient::Update()
 				m_aCurGameTick[g_Config.m_ClDummy] = m_aapSnapshots[g_Config.m_ClDummy][SNAP_CURRENT]->m_Tick;
 				m_aPrevGameTick[g_Config.m_ClDummy] = m_aapSnapshots[g_Config.m_ClDummy][SNAP_PREV]->m_Tick;
 
-				GameClient()->OnNewSnapshot(false);
+				PublishSourceSnapshot(false);
 				Repredict = true;
 			}
 
@@ -5369,11 +5400,11 @@ void CClient::Run()
 							g_Config.m_ClOverlayEntities = m_PoseEntityOverlayPrevious;
 							m_PoseEntityOverlayPrevious = -1;
 						}
-						ClearSyntheticSnapshot();
-						// 静帧已经落盘：把合影会话一起收掉，别留下一个没有合影的回放态。
-						// 退出后回放态会被上游收尾逻辑判为结束，玩家回到回放列表，照片残影停在屏幕中间。
+						// 静帧已经落盘，停止显示合影。仍在录制时保留合影会话。
 						if(!IVideo::Current())
 							LeavePoseSession();
+						else
+							ClearSyntheticSnapshot();
 					}
 				}
 				// 逐帧阶段日志按「容量或耗时」攒批落盘：帧统计不参与明细限流，
@@ -5903,8 +5934,13 @@ bool CClient::EnterPoseSession(const char *pPosesPath, int &TeeCountOut, const c
 
 bool CClient::EnsurePosePlaybackContext(const char *pMapPath)
 {
-	// 已经在 demo/合影上下文中时直接复用地图和 snapshot 槽位。
-	if(m_aapSnapshots[0][SNAP_CURRENT] && m_aapSnapshots[0][SNAP_PREV])
+	if(State() == IClient::STATE_QUITTING || State() == IClient::STATE_RESTARTING)
+		return false;
+	// 在线合影沿用当前地图及连接。现有回放也保留自己的两个快照。
+	const bool HasSnapshots = m_aapSnapshots[0][SNAP_CURRENT] && m_aapSnapshots[0][SNAP_PREV];
+	if(State() == IClient::STATE_ONLINE)
+		return HasSnapshots;
+	if(State() == IClient::STATE_DEMOPLAYBACK && HasSnapshots)
 		return true;
 
 	// .poses 本身没有地图字段。只有显式给出地图路径时才加载地图，
@@ -5949,15 +5985,19 @@ bool CClient::EnsurePosePlaybackContext(const char *pMapPath)
 	return true;
 }
 
-void CClient::LeavePoseSession()
+void CClient::LeavePoseSession(bool RestorePlaybackSnapshot)
 {
 	if(!m_PoseSessionActive)
 		return;
+	const bool RestorePlayback = RestorePlaybackSnapshot && m_PoseCurrentSnapshot >= 0 &&
+		State() == IClient::STATE_DEMOPLAYBACK && m_DemoPlayer.IsPlaying();
 	m_PoseSessionActive = false;
 	m_PoseSnapshotSize = 0;
 	m_PoseCaptureKeepSession = false;
 	m_aPoseSource[0] = '\0';
 	ClearSyntheticSnapshot();
+	if(RestorePlayback)
+		PublishSourceSnapshot(false);
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "left the pose session");
 }
 
