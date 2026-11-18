@@ -10496,6 +10496,9 @@ Play back a demo
 Play background music
 == 배경 음악 재생
 
+Play rank ghost replay sounds and hit effects locally
+== Rank 1 고스트 리플레이의 효과음과 피격 효과를 로컬에서 재생
+
 Play replay
 == 리플레이 재생
 
@@ -11591,6 +11594,9 @@ Rank ghost: the replay has an invalid run range
 Rank ghost: the replay list is empty or malformed
 == Rank 고스트: 리플레이 목록이 비어 있거나 손상되었습니다
 
+Rank ghost: this replay has no playable tee
+== Rank 1 고스트: 이 리플레이에는 재생 가능한 Tee가 없습니다
+
 Rank ghost: timed out waiting for the map to load
 == Rank 고스트: 맵 로드 대기 시간 초과
 
@@ -12106,6 +12112,9 @@ Replay downloaded
 
 Replay feature is disabled!
 == 리플레이 기능이 비활성화되었습니다!
+
+Replay ghost sounds and effects
+== 고스트 리플레이 효과음 및 피격 효과 재생
 
 Replay list: failed to load, press Refresh to retry
 == 리플레이 목록: 불러오기 실패, 새로 고침으로 재시도
@@ -17317,9 +17326,6 @@ Video was saved to '%s'
 
 Videos directory
 == 비디오 디렉토리
-
-View
-== 보기
 
 View details
 == 설명 보기

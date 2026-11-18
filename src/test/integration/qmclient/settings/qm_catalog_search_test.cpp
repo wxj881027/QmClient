@@ -93,6 +93,9 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"中日韩字体字重", "tclient:font"},
 		{"qm_statusbar_height", "deck:tclient-status-bar-settings"},
 		{"qm_cycle_tee_hue_dummy", "deck:tee7-editor"},
+		{"Replay ghost sounds and effects", "tclient:ghost-tools"},
+		{"qm_ghost_view_feedback", "tclient:ghost-tools"},
+		{"影子回放音效", "tclient:ghost-tools"},
 		{"地图点状调试路径", "qm:player_stats"},
 		{"qm_player_stats_map_progress_dbg_route", "qm:player_stats"},
 		// 四张曾缺索引/索引措辞过期的卡片：界面上的原文必须能直接命中。

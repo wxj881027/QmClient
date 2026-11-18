@@ -10496,6 +10496,9 @@ Play back a demo
 Play background music
 == Odtwarzaj muzykę w tle
 
+Play rank ghost replay sounds and hit effects locally
+== Odtwarzaj lokalnie dźwięki i efekty trafień ducha Rank 1
+
 Play replay
 == Odtwórz nagranie
 
@@ -11591,6 +11594,9 @@ Rank ghost: the replay has an invalid run range
 Rank ghost: the replay list is empty or malformed
 == Duch rangi: lista nagrań jest pusta lub uszkodzona
 
+Rank ghost: this replay has no playable tee
+== Duch Rank 1: ta powtórka nie zawiera odtwarzalnego Tee
+
 Rank ghost: timed out waiting for the map to load
 == Duch rangi: przekroczono czas oczekiwania na wczytanie mapy
 
@@ -12106,6 +12112,9 @@ Replay downloaded
 
 Replay feature is disabled!
 == Funkcja powtórki jest wyłączona!
+
+Replay ghost sounds and effects
+== Odtwarzaj dźwięki i efekty trafień powtórki ducha
 
 Replay list: failed to load, press Refresh to retry
 == Lista nagrań: błąd wczytywania, naciśnij Odśwież, aby ponowić
@@ -17317,9 +17326,6 @@ Video was saved to '%s'
 
 Videos directory
 == Katalog wideo
-
-View
-== Podgląd
 
 View details
 == Zobacz szczegóły

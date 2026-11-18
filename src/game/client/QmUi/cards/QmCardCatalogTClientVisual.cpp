@@ -541,6 +541,10 @@ float CMenus::LayoutTClientGhostToolsCard(const qm_card_catalog::SQmCardBuildCon
 	{
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmHideFrozenGhosts, "tclient-hide-frozen-ghosts", Localize("Hide ghosts of frozen players"), &g_Config.m_QmHideFrozenGhosts, &Row, LineSize);
 	}
+	if(Flow.Control("ghost-replay-feedback", LineSize, Row, RowSpacing))
+	{
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGhostViewFeedback, "tclient-ghost-replay-feedback", Localize("Replay ghost sounds and effects"), &g_Config.m_QmGhostViewFeedback, &Row, LineSize);
+	}
 	if(Flow.Control("render-ghost-as-circle", LineSize, Row, RowSpacing))
 	{
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRenderGhostAsCircle, "tclient-render-ghost-as-circle", Localize("Render ghosts as circles"), &g_Config.m_QmRenderGhostAsCircle, &Row, LineSize);

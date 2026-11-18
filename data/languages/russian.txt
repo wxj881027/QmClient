@@ -10496,6 +10496,9 @@ Play back a demo
 Play background music
 == Играть фоновую музыку
 
+Play rank ghost replay sounds and hit effects locally
+== Локально воспроизводить звуки и эффекты попаданий повтора призрака Rank 1
+
 Play replay
 == Воспроизвести реплей
 
@@ -11591,6 +11594,9 @@ Rank ghost: the replay has an invalid run range
 Rank ghost: the replay list is empty or malformed
 == Ghost ранга: список реплеев пуст или повреждён
 
+Rank ghost: this replay has no playable tee
+== Призрак Rank 1: в этом повторе нет воспроизводимого Tee
+
 Rank ghost: timed out waiting for the map to load
 == Ghost ранга: время ожидания загрузки карты истекло
 
@@ -12106,6 +12112,9 @@ Replay downloaded
 
 Replay feature is disabled!
 == Функция повтора отключена!
+
+Replay ghost sounds and effects
+== Воспроизводить звуки и эффекты попаданий в повторе призрака
 
 Replay list: failed to load, press Refresh to retry
 == Список реплеев: ошибка загрузки, нажмите «Обновить»
@@ -17317,9 +17326,6 @@ Video was saved to '%s'
 
 Videos directory
 == Каталог видео
-
-View
-== Просмотр
 
 View details
 == Подробнее

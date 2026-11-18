@@ -3642,6 +3642,7 @@ Play a flip animation while reloading weapons
 Play a slide-in rotation animation when switching weapons
 Play back a demo
 Play background music
+Play rank ghost replay sounds and hit effects locally
 Play replay
 Play slide-in rotation animation when switching weapon
 Play the current demo
@@ -4013,6 +4014,7 @@ Rank ghost: specify a map name when not in a game
 Rank ghost: the downloaded replay is not a valid demo
 Rank ghost: the replay has an invalid run range
 Rank ghost: the replay list is empty or malformed
+Rank ghost: this replay has no playable tee
 Rank ghost: timed out waiting for the map to load
 Ratio
 Ratio threshold for local target language detection
@@ -4186,6 +4188,7 @@ Replay
 Replay a saved practice ghost group in demo-style view mode
 Replay downloaded
 Replay feature is disabled!
+Replay ghost sounds and effects
 Replay list: failed to load, press Refresh to retry
 Replay list: loading ...
 Replay list: not loaded yet
@@ -5979,7 +5982,6 @@ Video quality CRF
 Video rendering is unavailable during online replay.
 Video was saved to '%s'
 Videos directory
-View
 View details
 View latest updates
 View margin

@@ -176,7 +176,7 @@
 	<span class="chip">规格日期 <b>2026-11-18</b></span>
 	<span class="chip">基线提交 <b>fea008fed2</b></span>
 	<span class="chip ok">快速练习平行化 已落地</span>
-	<span class="chip warn">影子机关世界 B1/B2 已接入，实机验收待</span>
+	<span class="chip warn">影子机关世界 B1–B4 已接入，实机验收待</span>
 </div>
 
 <div class="panel note">
@@ -500,7 +500,7 @@
 		<tr>
 			<td>B2</td>
 			<td>移动方块、机关炮影子化</td>
-			<td><span class="tag done">已实现</span>主世界移动方块继续按实时时钟绘制，影子再用播放头包络半透明叠加一遍；机关炮用 <code>shadow_gun_replay</code> 对影子轨迹只读重放</td>
+			<td><span class="tag done">已实现</span>主世界移动方块继续按实时时钟绘制，影子再用播放头包络半透明叠加一遍；机关炮用 <code>shadow_gun_replay</code> 对影子轨迹只读重放；练习入口同时保存独立炮位与开火计时，<code>/restart</code> 一并恢复</td>
 		</tr>
 		<tr>
 			<td>B3</td>
@@ -510,7 +510,7 @@
 		<tr>
 			<td>B4</td>
 			<td>音效/特效本地播放开关</td>
-			<td><span class="tag done">已实现</span><code>qm_ghost_view_feedback</code> 默认关闭；开启后事件与音效仍走既有 <code>QmShouldPlayWorldSound</code> 门控</td>
+			<td><span class="tag done">已实现</span><code>qm_ghost_view_feedback</code> 默认关闭；设置页的“影子工具”卡提供“播放影子回放的音效和命中特效”开关；开启后事件与音效仍走既有 <code>QmShouldPlayWorldSound</code> 门控</td>
 		</tr>
 	</tbody>
 </table>
@@ -539,7 +539,7 @@
 
 <p>快捷键沿用 <code>PlaybackShortcutsActive()</code>：暂停/播放、前进/后退、倍速、上一/下一标记、Home/End、P/K/J/L 等与原版 demo 一致。控制卡矩形每帧记录在 <code>m_OnlineReplayPanelRect</code>，供 <code>OnlineReplayPanelContains()</code> 做“点外关闭”判定。</p>
 
-<p>影子回放的音效与命中特效默认不播放，避免盖住玩家正在操作的本地世界；需要时用控制台 <code>qm_ghost_view_feedback 1</code> 打开。开启后仍受 <code>snd_game</code>、专注模式与地图音效门控约束。</p>
+<p>影子回放的音效与命中特效默认不播放，避免盖住玩家正在操作的本地世界；可在设置页的“影子工具”卡打开“播放影子回放的音效和命中特效”，也可用控制台 <code>qm_ghost_view_feedback 1</code>。开启后仍受 <code>snd_game</code>、专注模式与地图音效门控约束。</p>
 
 <div class="panel note">
 	<p><b>仍可继续 token 化的部分：</b>卡片圆角 12/11.4、按钮圆角 6、Live 图标 24 等还是尺寸字面量。建议下一轮并入 <code>ui_token::radius</code> 与 <code>ui_token::replay</code> 尺寸组，但不要和本轮交互修复混在一起。</p>
@@ -593,11 +593,12 @@
 <table>
 	<thead><tr><th>项目</th><th>结果</th></tr></thead>
 	<tbody>
-		<tr><td>构建 <code>game-client</code></td><td>成功（基线 fea008fed2 + B1–B4 改动）</td></tr>
+		<tr><td>构建 <code>game-client</code></td><td>成功（基线 fea008fed2 + B1–B4 与设置入口）</td></tr>
 		<tr><td><code>testrunner</code></td><td>7325 / 7325 通过</td></tr>
 		<tr><td><code>qm-nmt-tests</code></td><td>176 / 176 通过</td></tr>
 		<tr><td><code>qm-ui-popup-tests</code></td><td>502 / 502 通过</td></tr>
 		<tr><td><code>qm-practice-predict-tests</code></td><td>40 / 40 通过</td></tr>
+		<tr><td>语言校验</td><td><code>extracted_strings.txt</code> 7418 项；12 个生成语言文件全部通过</td></tr>
 		<tr><td><code>BM_GhostPathAppend/1000</code></td><td>CPU 中位数约 4.71µs（0.2s × 5 次聚合）</td></tr>
 		<tr><td><code>BM_GhostExtraDataDecode</code></td><td>CPU 中位数约 1.26ns</td></tr>
 		<tr><td><code>BM_OnlineReplayClock</code></td><td>CPU 中位数约 4.97ns</td></tr>

@@ -10496,6 +10496,9 @@ Play back a demo
 Play background music
 == Arka plan müziğini çal
 
+Play rank ghost replay sounds and hit effects locally
+== Rank 1 hayalet tekrarının seslerini ve vuruş efektlerini yerel olarak oynat
+
 Play replay
 == Tekrarı oynat
 
@@ -11591,6 +11594,9 @@ Rank ghost: the replay has an invalid run range
 Rank ghost: the replay list is empty or malformed
 == Rank hayaleti: tekrar listesi boş veya bozuk
 
+Rank ghost: this replay has no playable tee
+== Rank 1 hayaleti: bu tekrarda oynatılabilir Tee yok
+
 Rank ghost: timed out waiting for the map to load
 == Rank hayaleti: harita yüklemesi beklenirken zaman aşımı
 
@@ -12106,6 +12112,9 @@ Replay downloaded
 
 Replay feature is disabled!
 == Tekrar oynatma özelliği devre dışı!
+
+Replay ghost sounds and effects
+== Hayalet tekrarının seslerini ve vuruş efektlerini oynat
 
 Replay list: failed to load, press Refresh to retry
 == Tekrar listesi: yükleme başarısız, yeniden denemek için Yenile'ye basın
@@ -17317,9 +17326,6 @@ Video was saved to '%s'
 
 Videos directory
 == Videolar dizini
-
-View
-== İzle
 
 View details
 == Ayrıntıları gör

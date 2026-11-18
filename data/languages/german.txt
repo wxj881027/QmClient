@@ -10496,6 +10496,9 @@ Play back a demo
 Play background music
 == Hintergrundmusik abspielen
 
+Play rank ghost replay sounds and hit effects locally
+== Sound und Treffereffekte der Rank-1-Geisterwiederholung lokal abspielen
+
 Play replay
 == Wiederholung abspielen
 
@@ -11591,6 +11594,9 @@ Rank ghost: the replay has an invalid run range
 Rank ghost: the replay list is empty or malformed
 == Rang-Geist: Die Wiederholungsliste ist leer oder fehlerhaft
 
+Rank ghost: this replay has no playable tee
+== Rank-1-Geist: Diese Wiederholung enthält kein abspielbares Tee
+
 Rank ghost: timed out waiting for the map to load
 == Rang-Geist: Zeitüberschreitung beim Warten auf das Laden der Karte
 
@@ -12106,6 +12112,9 @@ Replay downloaded
 
 Replay feature is disabled!
 == Wiederholungsfunktion ist deaktiviert!
+
+Replay ghost sounds and effects
+== Sound und Treffereffekte der Geister-Wiederholung abspielen
 
 Replay list: failed to load, press Refresh to retry
 == Wiederholungsliste: Laden fehlgeschlagen, zum Wiederholen aktualisieren
@@ -17317,9 +17326,6 @@ Video was saved to '%s'
 
 Videos directory
 == Video-Verzeichnis
-
-View
-== Ansehen
 
 View details
 == Details ansehen

@@ -290,6 +290,7 @@ void CFastPractice::ResetPracticeState()
 	// 按旧坐标开火，录制轨迹也会跨会话继续累计。
 	m_PracticeGunsLoaded = false;
 	m_vPracticeGuns.clear();
+	m_PracticeStartGuns.clear();
 	m_Recorder.End(GameClient()->m_LocalWorld);
 	m_SuppressFireOnNextPredictTick = false;
 	m_InputSuppressTicks = 0;
@@ -1071,6 +1072,11 @@ bool CFastPractice::InitPracticeWorld()
 		// 重开快照只取第一次 fork 的结果。主世界一直在推进，之后的 InitPracticeWorld
 		// 重新 fork 出来的是“现在”；练习里 /setswitch 的改动按 tick 差接回，
 		// 与这份“进入练习那一刻”的重开快照互不影响。
+		// 机关炮不在世界树里。入口快照必须同时保存它们的炮位、移动速度与开火
+		// 计时，否则 /restart 只还原地图与世界实体，炮仍停在重开前的位置。
+		if(!m_PracticeGunsLoaded)
+			LoadPracticeGuns();
+		m_PracticeStartGuns = m_vPracticeGuns;
 		m_PracticeStartWorld.CopyWorldClean(&m_PracticeBaseWorld);
 		m_HasPracticeStartSnapshot = true;
 	}
@@ -1695,6 +1701,10 @@ bool CFastPractice::RestartPracticeFromStart()
 	const int TargetTick = PracticeClockTarget();
 	ShiftPracticeWorldEntityTicks(m_PracticeBaseWorld, TargetTick - m_PracticeBaseWorld.GameTick());
 	m_PracticeBaseWorld.m_GameTick = TargetTick;
+	// 机关炮独立于世界树，按入口快照整体恢复。开火计时回到入口值，
+	// 移动炮位也从入口位置重新跟随平台，而不是沿用重开前的坐标。
+	m_vPracticeGuns = m_PracticeStartGuns;
+	m_PracticeGunsLoaded = true;
 	PublishPracticeWorldState();
 
 	// 重开是一次瞬移。轨迹历史保留，只切段，避免回放里连出一条穿墙直线。

@@ -3409,6 +3409,54 @@ turkish = "Donmuş oyuncuların hayaletlerini gizle"
 polish = "Ukryj duchy zamrożonych graczy"
 
 [[message]]
+key = "Replay ghost sounds and effects"
+[message.translations]
+simplified_chinese = "播放影子回放的音效和命中特效"
+traditional_chinese = "播放影子回放的音效和命中特效"
+japanese = "ゴーストリプレイの効果音とヒットエフェクトを再生"
+korean = "고스트 리플레이 효과음 및 피격 효과 재생"
+russian = "Воспроизводить звуки и эффекты попаданий в повторе призрака"
+german = "Sound und Treffereffekte der Geister-Wiederholung abspielen"
+spanish = "Reproducir sonidos y efectos de impacto de la repetición del fantasma"
+french = "Jouer les sons et effets d'impact de la rediffusion du fantôme"
+brazilian_portuguese = "Reproduzir sons e efeitos de impacto da repetição do fantasma"
+portuguese = "Reproduzir sons e efeitos de impacto da repetição do fantasma"
+turkish = "Hayalet tekrarının seslerini ve vuruş efektlerini oynat"
+polish = "Odtwarzaj dźwięki i efekty trafień powtórki ducha"
+
+[[message]]
+key = "Play rank ghost replay sounds and hit effects locally"
+[message.translations]
+simplified_chinese = "在本地播放 Rank 1 影子的回放音效和命中特效"
+traditional_chinese = "在本機播放 Rank 1 影子的回放音效和命中特效"
+japanese = "Rank 1 ゴーストリプレイの効果音とヒットエフェクトをローカルで再生"
+korean = "Rank 1 고스트 리플레이의 효과음과 피격 효과를 로컬에서 재생"
+russian = "Локально воспроизводить звуки и эффекты попаданий повтора призрака Rank 1"
+german = "Sound und Treffereffekte der Rank-1-Geisterwiederholung lokal abspielen"
+spanish = "Reproducir localmente los sonidos y efectos de impacto del fantasma Rank 1"
+french = "Lire localement les sons et effets d'impact du fantôme Rank 1"
+brazilian_portuguese = "Reproduzir localmente sons e efeitos de impacto do fantasma Rank 1"
+portuguese = "Reproduzir localmente sons e efeitos de impacto do fantasma Rank 1"
+turkish = "Rank 1 hayalet tekrarının seslerini ve vuruş efektlerini yerel olarak oynat"
+polish = "Odtwarzaj lokalnie dźwięki i efekty trafień ducha Rank 1"
+
+[[message]]
+key = "Rank ghost: this replay has no playable tee"
+[message.translations]
+simplified_chinese = "Rank 1 影子：该回放没有可播放的 Tee"
+traditional_chinese = "Rank 1 影子：此回放沒有可播放的 Tee"
+japanese = "Rank 1 ゴースト: このリプレイには再生可能な Tee がありません"
+korean = "Rank 1 고스트: 이 리플레이에는 재생 가능한 Tee가 없습니다"
+russian = "Призрак Rank 1: в этом повторе нет воспроизводимого Tee"
+german = "Rank-1-Geist: Diese Wiederholung enthält kein abspielbares Tee"
+spanish = "Fantasma Rank 1: esta repetición no tiene ningún Tee reproducible"
+french = "Fantôme Rank 1 : cette rediffusion ne contient aucun Tee lisible"
+brazilian_portuguese = "Fantasma Rank 1: esta repetição não tem nenhum Tee reproduzível"
+portuguese = "Fantasma Rank 1: esta repetição não tem nenhum Tee reproduzível"
+turkish = "Rank 1 hayaleti: bu tekrarda oynatılabilir Tee yok"
+polish = "Duch Rank 1: ta powtórka nie zawiera odtwarzalnego Tee"
+
+[[message]]
 key = "Hide indicator for tees on your screen"
 [message.translations]
 simplified_chinese = "其他玩家在屏幕内时隐藏指示器"

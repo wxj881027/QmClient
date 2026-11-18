@@ -10496,6 +10496,9 @@ Play back a demo
 Play background music
 == 背景音楽を再生
 
+Play rank ghost replay sounds and hit effects locally
+== Rank 1 ゴーストリプレイの効果音とヒットエフェクトをローカルで再生
+
 Play replay
 == リプレイを再生
 
@@ -11591,6 +11594,9 @@ Rank ghost: the replay has an invalid run range
 Rank ghost: the replay list is empty or malformed
 == Rankゴースト：リプレイ一覧が空か壊れています
 
+Rank ghost: this replay has no playable tee
+== Rank 1 ゴースト: このリプレイには再生可能な Tee がありません
+
 Rank ghost: timed out waiting for the map to load
 == Rankゴースト：マップの読み込み待機がタイムアウトしました
 
@@ -12106,6 +12112,9 @@ Replay downloaded
 
 Replay feature is disabled!
 == リプレイ機能は無効です！
+
+Replay ghost sounds and effects
+== ゴーストリプレイの効果音とヒットエフェクトを再生
 
 Replay list: failed to load, press Refresh to retry
 == リプレイ一覧：読み込み失敗。更新で再試行
@@ -17317,9 +17326,6 @@ Video was saved to '%s'
 
 Videos directory
 == ビデオディレクトリ
-
-View
-== 表示
 
 View details
 == 説明を見る

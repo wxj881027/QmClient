@@ -10496,6 +10496,9 @@ Play back a demo
 Play background music
 == Reproducir música de fondo
 
+Play rank ghost replay sounds and hit effects locally
+== Reproducir localmente los sonidos y efectos de impacto del fantasma Rank 1
+
 Play replay
 == Reproducir repetición
 
@@ -11591,6 +11594,9 @@ Rank ghost: the replay has an invalid run range
 Rank ghost: the replay list is empty or malformed
 == Fantasma de rank: la lista de repeticiones está vacía o mal formada
 
+Rank ghost: this replay has no playable tee
+== Fantasma Rank 1: esta repetición no tiene ningún Tee reproducible
+
 Rank ghost: timed out waiting for the map to load
 == Fantasma de rank: se agotó el tiempo de espera del mapa
 
@@ -12106,6 +12112,9 @@ Replay downloaded
 
 Replay feature is disabled!
 == ¡La función de repetición está deshabilitada!
+
+Replay ghost sounds and effects
+== Reproducir sonidos y efectos de impacto de la repetición del fantasma
 
 Replay list: failed to load, press Refresh to retry
 == Lista de repeticiones: error al cargar, pulsa Actualizar para reintentar
@@ -17317,9 +17326,6 @@ Video was saved to '%s'
 
 Videos directory
 == Directorio de videos
-
-View
-== Ver
 
 View details
 == Ver detalles

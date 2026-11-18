@@ -203,6 +203,9 @@ private:
 	};
 
 	std::vector<SPracticeGun> m_vPracticeGuns;
+	// 入口快照中的机关炮状态。世界树不含机关炮，/restart 必须单独恢复，
+	// 否则移动炮位会停在重开前的位置继续开火。
+	std::vector<SPracticeGun> m_PracticeStartGuns;
 	bool m_PracticeGunsLoaded = false;
 	int m_NextPracticePlasmaId = 100000;
 	void LoadPracticeGuns();

@@ -10931,6 +10931,9 @@ Play back a demo
 Play background music
 == 播放背景音乐
 
+Play rank ghost replay sounds and hit effects locally
+== 在本地播放 Rank 1 影子的回放音效和命中特效
+
 Play replay
 == 播放回放
 
@@ -12044,6 +12047,9 @@ Rank ghost: the replay has an invalid run range
 Rank ghost: the replay list is empty or malformed
 == Rank 影子：回放列表为空或格式有误
 
+Rank ghost: this replay has no playable tee
+== Rank 1 影子：该回放没有可播放的 Tee
+
 Rank ghost: timed out waiting for the map to load
 == Rank 影子：等待地图加载超时
 
@@ -12562,6 +12568,9 @@ Replay downloaded
 
 Replay feature is disabled!
 == 短时回放功能未启用！
+
+Replay ghost sounds and effects
+== 播放影子回放的音效和命中特效
 
 Replay list: failed to load, press Refresh to retry
 == 回放列表：加载失败，按刷新重试
@@ -17941,9 +17950,6 @@ Video was saved to '%s'
 
 Videos directory
 == 视频目录
-
-View
-== 查看
 
 View details
 == 查看说明

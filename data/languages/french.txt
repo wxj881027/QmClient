@@ -10496,6 +10496,9 @@ Play back a demo
 Play background music
 == Jouer la musique de fond
 
+Play rank ghost replay sounds and hit effects locally
+== Lire localement les sons et effets d'impact du fantôme Rank 1
+
 Play replay
 == Lire la rediffusion
 
@@ -11591,6 +11594,9 @@ Rank ghost: the replay has an invalid run range
 Rank ghost: the replay list is empty or malformed
 == Fantôme de rang : la liste des rediffusions est vide ou incorrecte
 
+Rank ghost: this replay has no playable tee
+== Fantôme Rank 1 : cette rediffusion ne contient aucun Tee lisible
+
 Rank ghost: timed out waiting for the map to load
 == Fantôme de rang : délai d'attente du chargement de la carte dépassé
 
@@ -12106,6 +12112,9 @@ Replay downloaded
 
 Replay feature is disabled!
 == La fonction de rediffusion est désactivée !
+
+Replay ghost sounds and effects
+== Jouer les sons et effets d'impact de la rediffusion du fantôme
 
 Replay list: failed to load, press Refresh to retry
 == Liste des rediffusions : échec du chargement, appuyez sur Actualiser pour réessayer
@@ -17317,9 +17326,6 @@ Video was saved to '%s'
 
 Videos directory
 == Répertoire des vidéos
-
-View
-== Voir
 
 View details
 == Voir les détails
