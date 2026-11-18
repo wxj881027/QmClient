@@ -346,7 +346,7 @@ namespace
 	static CSettingsResourcePreviewUploadScheduler gs_SettingsAssetsResourcePreviewUploadScheduler;
 	static std::unordered_map<SResourcePreviewKey, std::shared_ptr<CSettingsResourcePreviewJob>, SResourcePreviewKeyHash> m_vEntityBgPreviewJobs;
 	// 内容硬失效独立于层级/筛选的本地 epoch；每个类别分别跟踪本地和商店。
-	static uint64_t gs_aAssetsPreviewGenerations[CMenus::NUMBER_OF_ASSETS_TABS * 2] = {};
+	static uint64_t gs_aAssetsPreviewGenerations[NUMBER_OF_ASSETS_TABS * 2] = {};
 
 	static uint64_t AssetsCardLocaleHash()
 	{
@@ -562,7 +562,7 @@ namespace
 
 	static void InvalidateAssetsResourcePreviewScope(int Tab, IGraphics *pGraphics, std::optional<bool> Workshop = std::nullopt, const char *pId = nullptr)
 	{
-		if(Tab < CMenus::ASSETS_TAB_ENTITIES || Tab >= CMenus::NUMBER_OF_ASSETS_TABS)
+		if(Tab < ASSETS_TAB_ENTITIES || Tab >= NUMBER_OF_ASSETS_TABS)
 			return;
 		char aType[64];
 		str_format(aType, sizeof(aType), "assets:%s", AssetsSettingsTabName(Tab));
@@ -582,7 +582,7 @@ namespace
 		Key.m_LocaleHash = AssetsCardLocaleHash();
 		Key.m_UiScale = AssetsUiScaleBucket(UiScale);
 		Key.m_CardWidth = AssetsCardWidthBucket(CardWidth);
-		if(Tab >= CMenus::ASSETS_TAB_ENTITIES && Tab < CMenus::NUMBER_OF_ASSETS_TABS)
+		if(Tab >= ASSETS_TAB_ENTITIES && Tab < NUMBER_OF_ASSETS_TABS)
 			Key.m_ResourceGeneration = gs_aAssetsPreviewGenerations[Tab * 2 + (Workshop ? 1 : 0)];
 		Key.m_Type += ":";
 		Key.m_Type += AssetsSettingsTabName(Tab);
@@ -629,7 +629,7 @@ namespace
 		for(auto It = m_vEntityBgPreviewJobs.begin(); It != m_vEntityBgPreviewJobs.end();)
 		{
 			const std::shared_ptr<CSettingsResourcePreviewJob> &pJob = It->second;
-			const uint64_t CurrentGeneration = gs_aAssetsPreviewGenerations[CMenus::ASSETS_TAB_ENTITY_BG * 2 + (It->first.m_Workshop ? 1 : 0)];
+			const uint64_t CurrentGeneration = gs_aAssetsPreviewGenerations[ASSETS_TAB_ENTITY_BG * 2 + (It->first.m_Workshop ? 1 : 0)];
 			if(It->first.m_ResourceGeneration != CurrentGeneration)
 			{
 				if(pJob)
