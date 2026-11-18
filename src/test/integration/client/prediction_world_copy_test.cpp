@@ -5,6 +5,7 @@
 #include <game/mapitems.h>
 
 #include <gtest/gtest.h>
+#include <test/support/prediction_allocation_failure.h>
 #include <test/support/prediction_world.h>
 
 #include <memory>
@@ -243,6 +244,56 @@ TEST(PredictionWorldCharacters, RemovingOldSameIdCharacterKeepsReplacementRegist
 	EXPECT_EQ(World.GetCharacterById(0), pCurrent);
 	EXPECT_EQ(World.m_Core.m_apCharacters[0], pCurrent->Core());
 	EXPECT_EQ(World.FindFirst(CGameWorld::ENTTYPE_CHARACTER), pCurrent);
+}
+
+TEST(PredictionWorldCharacters, HookBacklinkAllocationFailureRetractsAndAllowsAnotherLaunch)
+{
+	CCollision Collision;
+	CPredictionTestWorld World;
+	World.Init(&Collision, World.TuningList(), nullptr);
+	World.Teams()->Team(0, TEAM_FLOCK);
+	World.Teams()->Team(1, TEAM_FLOCK);
+	World.Teams()->Team(2, TEAM_FLOCK);
+
+	auto Idle = CharacterInput();
+	auto *pHooker = new CCharacter(&World, 0, &Idle);
+	World.InsertEntity(pHooker);
+	auto Target = CharacterInput();
+	Target.m_X = 112;
+	auto *pFarTarget = new CCharacter(&World, 1, &Target);
+	World.InsertEntity(pFarTarget);
+	Target.m_X = 80;
+	auto *pNearTarget = new CCharacter(&World, 2, &Target);
+	World.InsertEntity(pNearTarget);
+
+	auto &Hooker = *World.m_Core.m_apCharacters[0];
+	Hooker.m_Input = {};
+	Hooker.m_Input.m_TargetX = 1;
+	Hooker.m_Input.m_Hook = 1;
+	bool Triggered;
+	{
+		CPredictionAllocationFailure Failure(1);
+		Hooker.Tick(true);
+		Triggered = Failure.Triggered();
+	}
+
+	EXPECT_TRUE(Triggered);
+	EXPECT_EQ(Hooker.m_HookState, HOOK_RETRACTED);
+	EXPECT_EQ(Hooker.HookedPlayer(), -1);
+	EXPECT_EQ(Hooker.m_HookPos, Hooker.m_Pos);
+	EXPECT_EQ(Hooker.m_TriggeredEvents & COREEVENT_HOOK_ATTACH_PLAYER, 0);
+	EXPECT_TRUE(pFarTarget->Core()->m_AttachedPlayers.empty());
+	EXPECT_TRUE(pNearTarget->Core()->m_AttachedPlayers.empty());
+
+	Hooker.m_Input.m_Hook = 0;
+	Hooker.Tick(true);
+	Hooker.m_Input.m_Hook = 1;
+	Hooker.Tick(true);
+
+	EXPECT_EQ(Hooker.m_HookState, HOOK_GRABBED);
+	EXPECT_EQ(Hooker.HookedPlayer(), 2);
+	EXPECT_TRUE(pFarTarget->Core()->m_AttachedPlayers.empty());
+	EXPECT_TRUE(pNearTarget->Core()->m_AttachedPlayers.contains(0));
 }
 
 TEST(PredictionWorldCharacters, RemovingCurrentCharacterClearsBothIndexes)

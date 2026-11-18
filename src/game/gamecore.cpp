@@ -11,7 +11,9 @@
 #include <engine/shared/config.h>
 
 #include <cmath>
+#include <iterator>
 #include <limits>
+#include <new>
 
 const char *CTuningParams::ms_apNames[] =
 	{
@@ -20,11 +22,19 @@ const char *CTuningParams::ms_apNames[] =
 #undef MACRO_TUNING_PARAM
 };
 
+static constexpr CTuneParam CTuningParams::* TUNING_PARAM_MEMBERS[] =
+	{
+#define MACRO_TUNING_PARAM(Name, ScriptName, Value, Description) &CTuningParams::m_##Name,
+#include "tuning.h"
+#undef MACRO_TUNING_PARAM
+};
+static_assert(std::size(TUNING_PARAM_MEMBERS) * sizeof(int) == sizeof(CTuningParams));
+
 bool CTuningParams::Set(int Index, float Value)
 {
 	if(Index < 0 || Index >= Num())
 		return false;
-	((CTuneParam *)this)[Index] = Value;
+	this->*TUNING_PARAM_MEMBERS[Index] = Value;
 	return true;
 }
 
@@ -32,7 +42,7 @@ bool CTuningParams::Get(int Index, float *pValue) const
 {
 	if(Index < 0 || Index >= Num())
 		return false;
-	*pValue = (float)((CTuneParam *)this)[Index];
+	*pValue = static_cast<float>(this->*TUNING_PARAM_MEMBERS[Index]);
 	return true;
 }
 
@@ -365,9 +375,14 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 					{
 						if(m_HookedPlayer == -1 || distance(m_HookPos, pCharCore->m_Pos) < Distance)
 						{
+							SetHookedPlayer(i);
+							if(m_HookedPlayer != i)
+							{
+								m_TriggeredEvents &= ~COREEVENT_HOOK_ATTACH_PLAYER;
+								break;
+							}
 							m_TriggeredEvents |= COREEVENT_HOOK_ATTACH_PLAYER;
 							m_HookState = HOOK_GRABBED;
-							SetHookedPlayer(i);
 							Distance = distance(m_HookPos, pCharCore->m_Pos);
 							m_AntiPingInterfereCallback(i, false);
 						}
@@ -744,7 +759,18 @@ void CCharacterCore::SetHookedPlayer(int HookedPlayer)
 			CCharacterCore *pCharCore = m_pWorld->m_apCharacters[HookedPlayer];
 			if(pCharCore)
 			{
-				pCharCore->m_AttachedPlayers.insert(m_Id);
+				try
+				{
+					pCharCore->m_AttachedPlayers.insert(m_Id);
+				}
+				catch(const std::bad_alloc &)
+				{
+					// 回链创建失败时收回钩索，避免留下单向挂接。
+					HookedPlayer = -1;
+					m_HookState = HOOK_RETRACTED;
+					m_HookPos = m_Pos;
+					m_Reset = true;
+				}
 			}
 		}
 		m_HookedPlayer = HookedPlayer;
