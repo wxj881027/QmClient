@@ -9,6 +9,7 @@
 #include <engine/keys.h>
 
 #include <game/client/lineinput.h>
+#include <game/editor/mapitems.h>
 #include <game/editor/mapitems/layer_front.h>
 #include <game/editor/mapitems/layer_game.h>
 #include <game/editor/mapitems/layer_speedup.h>
@@ -20,10 +21,18 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <iterator>
+#include <optional>
 
 namespace
 {
+	constexpr size_t MAX_PREVIEW_CELLS = 4096;
+	constexpr int64_t MAX_PREVIEW_WORK = 32 * 1024;
+	constexpr int64_t MAX_DRAW_WORK = 1024 * 1024;
+	// 给镜像、线段误差和平滑取整留出整数和浮点精度余量。
+	constexpr float MAX_DRAW_WORLD_COORDINATE = (1 << 20) * 32.0f;
+
 	struct SButtonId
 	{
 		const void *m_pOwner;
@@ -39,24 +48,81 @@ namespace
 		return (Value & 0x00ffffff) / (float)0x01000000;
 	}
 
-	ivec2 MouseTile(CEditor *pEditor, const std::shared_ptr<CLayerTiles> &pLayer)
+	std::optional<vec2> DrawingMouseWorld(CEditor *pEditor, const CLayerGroup &Group, float (&aPoints)[4])
 	{
-		std::shared_ptr<CLayerGroup> pGroup = pEditor->Map()->SelectedGroup();
-		if(!pGroup || !pLayer)
-			return ivec2(0, 0);
+		const int WindowWidth = pEditor->Graphics()->WindowWidth();
+		const int WindowHeight = pEditor->Graphics()->WindowHeight();
+		if(WindowWidth <= 0 || WindowHeight <= 0)
+			return std::nullopt;
 
-		float aPoints[4];
-		pGroup->Mapping(aPoints);
-
+		Group.Mapping(aPoints);
 		const vec2 MousePos = pEditor->Ui()->UpdatedMousePos();
 		const float WorldWidth = aPoints[2] - aPoints[0];
 		const float WorldHeight = aPoints[3] - aPoints[1];
-		const float LayerX = aPoints[0] + WorldWidth * (MousePos.x / pEditor->Graphics()->WindowWidth());
-		const float LayerY = aPoints[1] + WorldHeight * (MousePos.y / pEditor->Graphics()->WindowHeight());
+		const float LayerX = aPoints[0] + WorldWidth * (MousePos.x / WindowWidth);
+		const float LayerY = aPoints[1] + WorldHeight * (MousePos.y / WindowHeight);
+		if(!(std::abs(LayerX) <= MAX_DRAW_WORLD_COORDINATE && std::abs(LayerY) <= MAX_DRAW_WORLD_COORDINATE))
+			return std::nullopt;
 
-		return ivec2(pLayer->ConvertX(LayerX), pLayer->ConvertY(LayerY));
+		return vec2(LayerX, LayerY);
 	}
 
+	ivec2 LinePoint(const std::vector<ivec2> &vPath, size_t Index, bool Smooth)
+	{
+		const ivec2 Point = vPath[Index];
+		if(!Smooth || Index == 0 || Index + 1 == vPath.size())
+			return Point;
+
+		const ivec2 Previous = vPath[Index - 1];
+		const ivec2 Next = vPath[Index + 1];
+		return ivec2(round_to_int((Previous.x + Point.x * 2.0f + Next.x) / 4.0f),
+			round_to_int((Previous.y + Point.y * 2.0f + Next.y) / 4.0f));
+	}
+
+	int64_t LineRasterWork(const std::vector<ivec2> &vPath, bool Smooth, int Thickness, int64_t Budget)
+	{
+		const int64_t WorkPerPoint = Thickness * Thickness;
+		if(vPath.size() > static_cast<size_t>(Budget / WorkPerPoint))
+			return Budget + 1;
+		if(vPath.size() <= 1)
+			return vPath.empty() ? 0 : WorkPerPoint;
+
+		int64_t Work = 0;
+		ivec2 From = vPath.front();
+		for(size_t i = 1; i < vPath.size(); ++i)
+		{
+			const ivec2 To = LinePoint(vPath, i, Smooth);
+			const int Steps = maximum(absolute(To.x - From.x), absolute(To.y - From.y)) + 1;
+			Work += Steps * WorkPerPoint;
+			if(Work > Budget)
+				break;
+			From = To;
+		}
+		return Work;
+	}
+
+	ELayerKind TileLayerKind(const CLayerTiles &Layer)
+	{
+		return LayerKindFromFlags(Layer.m_HasGame, Layer.m_HasFront, Layer.m_HasTele, Layer.m_HasSpeedup, Layer.m_HasSwitch, Layer.m_HasTune);
+	}
+
+	const CLayerTiles *UsableTileBrush(const std::shared_ptr<CLayer> &pLayer)
+	{
+		if(!pLayer || pLayer->m_Type != LAYERTYPE_TILES)
+			return nullptr;
+		const auto *pTiles = static_cast<const CLayerTiles *>(pLayer.get());
+		return pTiles->m_Width > 0 && pTiles->m_Height > 0 ? pTiles : nullptr;
+	}
+
+	bool IsCurrentDrawingTarget(const CEditorMap &Map, const CLayerTiles &Layer)
+	{
+		return (!Layer.m_HasGame || &Layer == Map.m_pGameLayer.get()) &&
+		       (!Layer.m_HasFront || &Layer == Map.m_pFrontLayer.get()) &&
+		       (!Layer.m_HasTele || &Layer == Map.m_pTeleLayer.get()) &&
+		       (!Layer.m_HasSpeedup || &Layer == Map.m_pSpeedupLayer.get()) &&
+		       (!Layer.m_HasSwitch || &Layer == Map.m_pSwitchLayer.get()) &&
+		       (!Layer.m_HasTune || &Layer == Map.m_pTuneLayer.get());
+	}
 }
 
 CEditorDrawingTools::CEditorDrawingTools()
@@ -89,7 +155,9 @@ void CEditorDrawingTools::CancelDrawing()
 {
 	m_Drawing = false;
 	m_Drag.m_vPath.clear();
-	m_Drag.m_vPreviewCells.clear();
+	if(m_Drag.m_vPath.capacity() > static_cast<size_t>(MAX_PREVIEW_WORK))
+		m_Drag.m_vPath = std::vector<ivec2>();
+	m_Drag.m_vPreviewCells = std::vector<SCell>();
 	m_Drag.m_PreviewCellsClipped = false;
 }
 
@@ -295,9 +363,10 @@ void CEditorDrawingTools::UpdateDrag(CEditor *pEditor, int TileX, int TileY)
 		return;
 
 	const ivec2 Current(TileX, TileY);
-	if(Current == m_Drag.m_Current && m_Drag.m_Tool != ETool::LINE)
+	if(Current == m_Drag.m_Current)
 		return;
-	if(m_Drag.m_Tool == ETool::LINE && (m_Drag.m_vPath.empty() || m_Drag.m_vPath.back() != Current))
+	// 保留一个超限位置，让松手时拒绝整笔。
+	if(m_Drag.m_Tool == ETool::LINE && m_Drag.m_vPath.size() <= static_cast<size_t>(MAX_DRAW_WORK))
 		m_Drag.m_vPath.push_back(Current);
 
 	m_Drag.m_Current = Current;
@@ -310,8 +379,7 @@ void CEditorDrawingTools::FinishDrag(CEditor *pEditor, const std::pair<int, std:
 		return;
 
 	RebuildPreview(pEditor, true);
-	std::vector<SCell> vCells = m_Drag.m_vPreviewCells;
-	const bool Submitted = SubmitCells(pEditor, pEditLayers, NumEditLayers, vCells);
+	const bool Submitted = SubmitCells(pEditor, pEditLayers, NumEditLayers, m_Drag.m_vPreviewCells);
 	const char *pActionName = ActionName();
 	CancelDrawing();
 
@@ -325,25 +393,44 @@ void CEditorDrawingTools::FinishDrag(CEditor *pEditor, const std::pair<int, std:
 
 bool CEditorDrawingTools::HandleMapEditorInput(CEditor *pEditor, const std::pair<int, std::shared_ptr<CLayer>> *pEditLayers, size_t NumEditLayers, bool Inside)
 {
+	CUi *pUi = pEditor->Ui();
 	const ETool ActiveTool = m_Drawing ? m_Drag.m_Tool : (WantsQuickFill(pEditor, pEditLayers, NumEditLayers) ? ETool::FILL : m_Tool);
-	const bool CanUseTool = ActiveTool != ETool::NONE && IsTileToolTarget(pEditor, pEditLayers, NumEditLayers) && pEditor->m_Dialog == DIALOG_NONE && CLineInput::GetActiveInput() == nullptr && !pEditor->Ui()->IsPopupOpen() && (!pEditor->Input()->ModifierIsPressed() || ActiveTool == ETool::FILL);
-	if(!CanUseTool)
+	const bool CanUseTool = ActiveTool != ETool::NONE && IsTileToolTarget(pEditor, pEditLayers, NumEditLayers) && pEditor->m_Dialog == DIALOG_NONE && CLineInput::GetActiveInput() == nullptr && !pUi->IsPopupOpen() && (!pEditor->Input()->ModifierIsPressed() || ActiveTool == ETool::FILL);
+	if(!CanUseTool || (m_Drawing && !pUi->CheckActiveItem(this)))
 	{
+		const bool CancelledDrag = m_Drawing;
 		CancelDrawing();
-		return false;
+		if(pUi->IsActiveItem(this))
+			pUi->SetActiveItem(nullptr);
+		return CancelledDrag;
 	}
 
 	if(!Inside && !m_Drawing)
 		return false;
 
-	std::shared_ptr<CLayerTiles> pLayer = std::static_pointer_cast<CLayerTiles>(pEditLayers[0].second);
-	const ivec2 Tile = MouseTile(pEditor, pLayer);
+	const auto pGroup = pEditor->Map()->SelectedGroup();
+	float aPoints[4];
+	const auto World = pGroup ? DrawingMouseWorld(pEditor, *pGroup, aPoints) : std::nullopt;
+	if(!World)
+	{
+		if(m_Drawing && !pUi->MouseButton(0))
+		{
+			CancelDrawing();
+			pUi->SetActiveItem(nullptr);
+		}
+		return true;
+	}
 
+	const auto &Layer = static_cast<const CLayerTiles &>(*pEditLayers[0].second);
+	const ivec2 Tile(Layer.ConvertX(World->x), Layer.ConvertY(World->y));
 	if(m_Drawing)
 	{
 		UpdateDrag(pEditor, Tile.x, Tile.y);
-		if(!pEditor->Ui()->MouseButton(0))
+		if(!pUi->MouseButton(0))
+		{
+			pUi->SetActiveItem(nullptr);
 			FinishDrag(pEditor, pEditLayers, NumEditLayers);
+		}
 		return true;
 	}
 
@@ -354,9 +441,9 @@ bool CEditorDrawingTools::HandleMapEditorInput(CEditor *pEditor, const std::pair
 		str_copy(pEditor->m_aTooltip, aTooltip);
 	}
 
-	if(Inside && pEditor->Ui()->CheckActiveItem(nullptr) && pEditor->Ui()->MouseButton(0) && !pEditor->QuadKnife()->IsActive())
+	if(Inside && pUi->CheckActiveItem(nullptr) && pUi->MouseButton(0) && !pEditor->QuadKnife()->IsActive())
 	{
-		pEditor->Ui()->SetActiveItem(this);
+		pUi->SetActiveItem(this);
 		BeginDrag(pEditor, Tile.x, Tile.y, ActiveTool);
 		return true;
 	}
@@ -452,15 +539,21 @@ void CEditorDrawingTools::BuildShapeCells(std::vector<SCell> &vCells) const
 		{
 			for(int Thickness = 0; Thickness < m_ShapeThickness; ++Thickness)
 			{
-				for(int x = MinX + Thickness; x <= MaxX - Thickness; ++x)
+				const int Left = MinX + Thickness;
+				const int Right = MaxX - Thickness;
+				const int Top = MinY + Thickness;
+				const int Bottom = MaxY - Thickness;
+				if(Left > Right || Top > Bottom)
+					break;
+				for(int x = Left; x <= Right; ++x)
 				{
-					AddCell(vCells, x, MinY + Thickness);
-					AddCell(vCells, x, MaxY - Thickness);
+					AddCell(vCells, x, Top);
+					AddCell(vCells, x, Bottom);
 				}
-				for(int y = MinY + Thickness; y <= MaxY - Thickness; ++y)
+				for(int y = Top; y <= Bottom; ++y)
 				{
-					AddCell(vCells, MinX + Thickness, y);
-					AddCell(vCells, MaxX - Thickness, y);
+					AddCell(vCells, Left, y);
+					AddCell(vCells, Right, y);
 				}
 			}
 		}
@@ -535,7 +628,7 @@ void CEditorDrawingTools::BuildShapeCells(std::vector<SCell> &vCells) const
 				{
 					const ivec2 &Pi = vPoints[i];
 					const ivec2 &Pj = vPoints[j];
-					if(((Pi.y > y) != (Pj.y > y)) && (x < (Pj.x - Pi.x) * (y - Pi.y) / (float)(Pj.y - Pi.y) + Pi.x))
+					if(((Pi.y > y) != (Pj.y > y)) && (x < static_cast<float>(Pj.x - Pi.x) * (y - Pi.y) / (Pj.y - Pi.y) + Pi.x))
 						Inside = !Inside;
 				}
 				if(Inside)
@@ -550,19 +643,17 @@ void CEditorDrawingTools::BuildLineCells(std::vector<SCell> &vCells) const
 	if(m_Drag.m_vPath.empty())
 		return;
 
-	std::vector<ivec2> vPath = m_Drag.m_vPath;
-	if(m_LineMode == ELineMode::SMOOTH && vPath.size() >= 3)
-	{
-		std::vector<ivec2> vSmoothed = vPath;
-		for(size_t i = 1; i + 1 < vPath.size(); ++i)
-			vSmoothed[i] = ivec2(round_to_int((vPath[i - 1].x + vPath[i].x * 2.0f + vPath[i + 1].x) / 4.0f), round_to_int((vPath[i - 1].y + vPath[i].y * 2.0f + vPath[i + 1].y) / 4.0f));
-		vPath = vSmoothed;
-	}
+	const bool Smooth = m_LineMode == ELineMode::SMOOTH;
+	ivec2 From = m_Drag.m_vPath.front();
+	if(m_Drag.m_vPath.size() == 1)
+		AddThickCell(vCells, From.x, From.y, m_LineThickness);
 
-	for(size_t i = 1; i < vPath.size(); ++i)
-		AddLine(vCells, vPath[i - 1], vPath[i], m_LineThickness);
-	if(vPath.size() == 1)
-		AddThickCell(vCells, vPath[0].x, vPath[0].y, m_LineThickness);
+	for(size_t i = 1; i < m_Drag.m_vPath.size(); ++i)
+	{
+		const ivec2 To = LinePoint(m_Drag.m_vPath, i, Smooth);
+		AddLine(vCells, From, To, m_LineThickness);
+		From = To;
+	}
 }
 
 void CEditorDrawingTools::BuildFadeCells(std::vector<SCell> &vCells) const
@@ -600,7 +691,7 @@ void CEditorDrawingTools::BuildFadeCells(std::vector<SCell> &vCells) const
 			if(m_FadeRandomness > 0)
 				Probability += (StableUnitRandom(x, y, m_FadeAngle) * 2.0f - 1.0f) * (m_FadeRandomness / 100.0f);
 			Probability = std::clamp(Probability, 0.0f, 1.0f);
-			if(StableUnitRandom(x, y, m_FadeStart * 257 + m_FadeEnd) <= Probability)
+			if(StableUnitRandom(x, y, m_FadeStart * 257 + m_FadeEnd) < Probability)
 				AddCell(vCells, x, y);
 		}
 	}
@@ -611,9 +702,10 @@ void CEditorDrawingTools::ApplySymmetry(std::vector<SCell> &vCells) const
 	if(m_Symmetry == ESymmetry::OFF)
 		return;
 
-	const std::vector<SCell> vOriginal = vCells;
-	for(const SCell &Cell : vOriginal)
+	const size_t NumOriginal = vCells.size();
+	for(size_t i = 0; i < NumOriginal; ++i)
 	{
+		const SCell Cell = vCells[i];
 		if(m_Symmetry == ESymmetry::X || m_Symmetry == ESymmetry::XY)
 			AddCell(vCells, m_Drag.m_Start.x - (Cell.m_X - m_Drag.m_Start.x), Cell.m_Y);
 		if(m_Symmetry == ESymmetry::Y || m_Symmetry == ESymmetry::XY)
@@ -635,38 +727,107 @@ void CEditorDrawingTools::SortUniqueCells(std::vector<SCell> &vCells) const
 
 void CEditorDrawingTools::RebuildPreview(CEditor *pEditor, bool Commit)
 {
-	std::vector<SCell> vCells;
-	const ETool BuildTool = m_Drawing ? m_Drag.m_Tool : m_Tool;
+	const ETool BuildTool = m_Drag.m_Tool;
+	const int64_t Width = absolute(m_Drag.m_Start.x - m_Drag.m_Current.x) + 1;
+	const int64_t Height = absolute(m_Drag.m_Start.y - m_Drag.m_Current.y) + 1;
+	const int64_t Area = Width * Height;
+	const bool SolidRectangle = BuildTool == ETool::FILL || (BuildTool == ETool::SHAPE && m_Shape == EShape::RECT && !m_ShapeOutline);
+	if(!Commit && SolidRectangle && Area > static_cast<int64_t>(MAX_PREVIEW_CELLS))
+	{
+		m_Drag.m_vPreviewCells.clear();
+		m_Drag.m_PreviewCellsClipped = true;
+		return;
+	}
+
+	// 按最坏迭代次数检查，连同跳过的点、线宽和还没去重的镜像一起计入。
+	const int Copies = m_Symmetry == ESymmetry::XY ? 4 : (m_Symmetry == ESymmetry::OFF ? 1 : 2);
+	const int64_t Budget = (Commit ? MAX_DRAW_WORK : MAX_PREVIEW_WORK) / Copies;
+	int64_t Work = Area;
+	void (CEditorDrawingTools::*pBuild)(std::vector<SCell> &) const = nullptr;
 	switch(BuildTool)
 	{
 	case ETool::FILL:
-		BuildFillCells(vCells);
+		pBuild = &CEditorDrawingTools::BuildFillCells;
 		break;
 	case ETool::SHAPE:
-		BuildShapeCells(vCells);
+		pBuild = &CEditorDrawingTools::BuildShapeCells;
+		if(m_Shape == EShape::RECT && m_ShapeOutline)
+		{
+			const int64_t Rings = std::min<int64_t>(m_ShapeThickness, (minimum(Width, Height) + 1) / 2);
+			Work = 2 * Rings * (Width + Height);
+		}
+		else if(m_Shape == EShape::TRIANGLE || m_Shape == EShape::NGON)
+		{
+			const int Sides = m_Shape == EShape::TRIANGLE ? 3 : std::clamp(m_ShapeNgonSides, 3, 16);
+			const int Thickness = m_ShapeOutline ? m_ShapeThickness : 1;
+			const int64_t EdgeWork = Sides * (maximum(Width, Height) + 2) * Thickness * Thickness;
+			Work = m_ShapeOutline ? EdgeWork : Area + EdgeWork;
+		}
 		break;
 	case ETool::LINE:
-		BuildLineCells(vCells);
+		pBuild = &CEditorDrawingTools::BuildLineCells;
+		Work = LineRasterWork(m_Drag.m_vPath, m_LineMode == ELineMode::SMOOTH, m_LineThickness, Budget);
 		break;
 	case ETool::FADE:
-		BuildFadeCells(vCells);
+		pBuild = &CEditorDrawingTools::BuildFadeCells;
+		if(m_FadeStart == 0 && m_FadeEnd == 0 && m_FadeRandomness == 0)
+		{
+			m_Drag.m_vPreviewCells.clear();
+			m_Drag.m_PreviewCellsClipped = false;
+			return;
+		}
 		break;
 	case ETool::NONE:
 		break;
 	}
+	if(Work > Budget)
+	{
+		m_Drag.m_vPreviewCells.clear();
+		m_Drag.m_PreviewCellsClipped = !Commit;
+		if(Commit)
+			pEditor->ShowFileDialogError("%s", Localize("The drawing is too large. Split it into smaller strokes.", "Editor"));
+		return;
+	}
+
+	std::vector<SCell> vCells;
+	if(pBuild)
+		(this->*pBuild)(vCells);
 	ApplySymmetry(vCells);
 	SortUniqueCells(vCells);
-	m_Drag.m_PreviewCellsClipped = !Commit && vCells.size() > 4096;
+	m_Drag.m_PreviewCellsClipped = !Commit && vCells.size() > MAX_PREVIEW_CELLS;
 	if(m_Drag.m_PreviewCellsClipped)
-		vCells.resize(4096);
-	m_Drag.m_vPreviewCells = vCells;
-	(void)pEditor;
+		vCells.resize(MAX_PREVIEW_CELLS);
+	m_Drag.m_vPreviewCells = std::move(vCells);
 }
 
 std::shared_ptr<CLayerTiles> CEditorDrawingTools::MakeTileBrush(CEditor *pEditor, const std::shared_ptr<CLayerTiles> &pTargetLayer, int BrushTileX, int BrushTileY, bool Empty, bool *pSourceAir) const
 {
 	if(pSourceAir)
 		*pSourceAir = Empty;
+
+	const CLayerTiles *pBrushLayer = nullptr;
+	if(!Empty)
+	{
+		if(!pEditor->m_pBrush)
+			return nullptr;
+
+		const ELayerKind TargetKind = TileLayerKind(*pTargetLayer);
+		for(const auto &pLayer : pEditor->m_pBrush->m_vpLayers)
+		{
+			const CLayerTiles *pTiles = UsableTileBrush(pLayer);
+			if(!pTiles)
+				continue;
+			if(TileLayerKind(*pTiles) == TargetKind)
+			{
+				pBrushLayer = pTiles;
+				break;
+			}
+			if(!pBrushLayer)
+				pBrushLayer = pTiles;
+		}
+		if(!pBrushLayer)
+			return nullptr;
+	}
 
 	std::shared_ptr<CLayerTiles> pBrush;
 	if(pTargetLayer == pEditor->Map()->m_pGameLayer)
@@ -730,55 +891,36 @@ std::shared_ptr<CLayerTiles> CEditorDrawingTools::MakeTileBrush(CEditor *pEditor
 		return pBrush;
 	}
 
-	if(pEditor->m_pBrush && !pEditor->m_pBrush->IsEmpty())
-	{
-		for(const auto &pLayer : pEditor->m_pBrush->m_vpLayers)
-		{
-			if(pLayer && pLayer->m_Type == LAYERTYPE_TILES)
-			{
-				std::shared_ptr<CLayerTiles> pBrushLayer = std::static_pointer_cast<CLayerTiles>(pLayer);
-				if(pBrushLayer->m_Width > 0 && pBrushLayer->m_Height > 0)
-				{
-					const int SrcX = ((BrushTileX % pBrushLayer->m_Width) + pBrushLayer->m_Width) % pBrushLayer->m_Width;
-					const int SrcY = ((BrushTileY % pBrushLayer->m_Height) + pBrushLayer->m_Height) % pBrushLayer->m_Height;
-					const int SrcIndex = SrcY * pBrushLayer->m_Width + SrcX;
-					pBrush->m_pTiles[0] = pBrushLayer->m_pTiles[SrcIndex];
-					if(pSourceAir)
-						*pSourceAir = pBrush->m_pTiles[0].m_Index == TILE_AIR;
+	const auto Wrap = [](int Coordinate, int Extent) {
+		const int Offset = Coordinate % Extent;
+		return Offset < 0 ? Offset + Extent : Offset;
+	};
+	const int SrcX = Wrap(BrushTileX, pBrushLayer->m_Width);
+	const int SrcY = Wrap(BrushTileY, pBrushLayer->m_Height);
+	const size_t SrcIndex = static_cast<size_t>(SrcY) * pBrushLayer->m_Width + SrcX;
+	pBrush->m_pTiles[0] = pBrushLayer->m_pTiles[SrcIndex];
+	if(pSourceAir)
+		*pSourceAir = pBrush->m_pTiles[0].m_Index == TILE_AIR;
 
-					if(auto pTeleTarget = std::dynamic_pointer_cast<CLayerTele>(pBrush))
-					{
-						if(auto pTeleSource = std::dynamic_pointer_cast<CLayerTele>(pBrushLayer))
-							pTeleTarget->m_pTeleTile[0] = pTeleSource->m_pTeleTile[SrcIndex];
-					}
-					else if(auto pSpeedupTarget = std::dynamic_pointer_cast<CLayerSpeedup>(pBrush))
-					{
-						if(auto pSpeedupSource = std::dynamic_pointer_cast<CLayerSpeedup>(pBrushLayer))
-							pSpeedupTarget->m_pSpeedupTile[0] = pSpeedupSource->m_pSpeedupTile[SrcIndex];
-					}
-					else if(auto pSwitchTarget = std::dynamic_pointer_cast<CLayerSwitch>(pBrush))
-					{
-						if(auto pSwitchSource = std::dynamic_pointer_cast<CLayerSwitch>(pBrushLayer))
-							pSwitchTarget->m_pSwitchTile[0] = pSwitchSource->m_pSwitchTile[SrcIndex];
-					}
-					else if(auto pTuneTarget = std::dynamic_pointer_cast<CLayerTune>(pBrush))
-					{
-						if(auto pTuneSource = std::dynamic_pointer_cast<CLayerTune>(pBrushLayer))
-							pTuneTarget->m_pTuneTile[0] = pTuneSource->m_pTuneTile[SrcIndex];
-					}
-					return pBrush;
-				}
-			}
-		}
+	if(auto *pTeleTarget = dynamic_cast<CLayerTele *>(pBrush.get()))
+	{
+		if(const auto *pTeleSource = dynamic_cast<const CLayerTele *>(pBrushLayer))
+			pTeleTarget->m_pTeleTile[0] = pTeleSource->m_pTeleTile[SrcIndex];
 	}
-
-	if(pTargetLayer->m_Width > 0 && pTargetLayer->m_Height > 0)
+	else if(auto *pSpeedupTarget = dynamic_cast<CLayerSpeedup *>(pBrush.get()))
 	{
-		const int SrcX = std::clamp(BrushTileX, 0, pTargetLayer->m_Width - 1);
-		const int SrcY = std::clamp(BrushTileY, 0, pTargetLayer->m_Height - 1);
-		pBrush->m_pTiles[0] = pTargetLayer->m_pTiles[SrcY * pTargetLayer->m_Width + SrcX];
-		if(pSourceAir)
-			*pSourceAir = pBrush->m_pTiles[0].m_Index == TILE_AIR;
+		if(const auto *pSpeedupSource = dynamic_cast<const CLayerSpeedup *>(pBrushLayer))
+			pSpeedupTarget->m_pSpeedupTile[0] = pSpeedupSource->m_pSpeedupTile[SrcIndex];
+	}
+	else if(auto *pSwitchTarget = dynamic_cast<CLayerSwitch *>(pBrush.get()))
+	{
+		if(const auto *pSwitchSource = dynamic_cast<const CLayerSwitch *>(pBrushLayer))
+			pSwitchTarget->m_pSwitchTile[0] = pSwitchSource->m_pSwitchTile[SrcIndex];
+	}
+	else if(auto *pTuneTarget = dynamic_cast<CLayerTune *>(pBrush.get()))
+	{
+		if(const auto *pTuneSource = dynamic_cast<const CLayerTune *>(pBrushLayer))
+			pTuneTarget->m_pTuneTile[0] = pTuneSource->m_pTuneTile[SrcIndex];
 	}
 
 	return pBrush;
@@ -820,7 +962,34 @@ bool CEditorDrawingTools::SubmitCells(CEditor *pEditor, const std::pair<int, std
 	if(vCells.empty())
 		return false;
 
-	const ETool SubmitTool = m_Drawing ? m_Drag.m_Tool : m_Tool;
+	const bool EmptyBrush = !pEditor->m_pBrush || pEditor->m_pBrush->IsEmpty();
+	if(!EmptyBrush && std::none_of(pEditor->m_pBrush->m_vpLayers.begin(), pEditor->m_pBrush->m_vpLayers.end(), [](const auto &pLayer) { return UsableTileBrush(pLayer) != nullptr; }))
+		return false;
+
+	size_t NumWritableLayers = 0;
+	for(size_t i = 0; i < NumEditLayers; ++i)
+	{
+		const auto &pLayer = pEditLayers[i].second;
+		if(!pLayer || pLayer->m_Readonly)
+			continue;
+
+		// 专用画笔和物理层撤销都依赖地图登记。
+		if(!IsCurrentDrawingTarget(*pEditor->Map(), static_cast<const CLayerTiles &>(*pLayer)))
+		{
+			pEditor->ShowFileDialogError("%s", Localize("Drawing tools require the active physics layers.", "Editor"));
+			return false;
+		}
+		++NumWritableLayers;
+	}
+	if(NumWritableLayers == 0)
+		return false;
+	if(vCells.size() > static_cast<size_t>(MAX_DRAW_WORK) / NumWritableLayers)
+	{
+		pEditor->ShowFileDialogError("%s", Localize("The drawing is too large. Split it into smaller strokes.", "Editor"));
+		return false;
+	}
+
+	const ETool SubmitTool = m_Drag.m_Tool;
 	bool Submitted = false;
 	for(size_t i = 0; i < NumEditLayers; ++i)
 	{
@@ -833,7 +1002,6 @@ bool CEditorDrawingTools::SubmitCells(CEditor *pEditor, const std::pair<int, std
 			if(Cell.m_X < 0 || Cell.m_X >= pLayer->m_Width || Cell.m_Y < 0 || Cell.m_Y >= pLayer->m_Height)
 				continue;
 
-			const bool EmptyBrush = !pEditor->m_pBrush || pEditor->m_pBrush->IsEmpty();
 			bool Empty = EmptyBrush;
 			if(SubmitTool == ETool::FADE && m_FadeAir && !EmptyBrush)
 				Empty = StableUnitRandom(Cell.m_X, Cell.m_Y, m_FadeAngle + 17) < 0.5f;
@@ -849,15 +1017,25 @@ void CEditorDrawingTools::RenderPreview(CEditor *pEditor)
 	if(!m_Drawing || pEditor->m_ShowPicker)
 		return;
 
-	std::shared_ptr<CLayerGroup> pGroup = pEditor->Map()->SelectedGroup();
-	if(pGroup)
-		pGroup->MapScreen();
+	const ETool PreviewTool = m_Drag.m_Tool;
+	const bool DrawBounds = m_Drag.m_PreviewCellsClipped && (PreviewTool == ETool::FILL || PreviewTool == ETool::FADE || (PreviewTool == ETool::SHAPE && m_Shape == EShape::RECT && !m_ShapeOutline));
+	if(!DrawBounds && m_Drag.m_vPreviewCells.empty())
+	{
+		if(m_Drag.m_PreviewCellsClipped)
+			str_copy(pEditor->m_aTooltip, Localize("The drawing preview is too large to display.", "Editor"));
+		return;
+	}
 
+	const auto pGroup = pEditor->Map()->SelectedGroup();
+	float aPoints[4];
+	if(!pGroup || !DrawingMouseWorld(pEditor, *pGroup, aPoints))
+		return;
+
+	pEditor->Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
 	pEditor->Graphics()->TextureClear();
 	pEditor->Graphics()->QuadsBegin();
 	pEditor->Graphics()->SetColor(ColorRGBA(0.2f, 0.75f, 1.0f, 0.35f));
-	const ETool PreviewTool = m_Drawing ? m_Drag.m_Tool : m_Tool;
-	if(m_Drag.m_PreviewCellsClipped && (PreviewTool == ETool::FILL || PreviewTool == ETool::FADE || (PreviewTool == ETool::SHAPE && m_Shape == EShape::RECT && !m_ShapeOutline)))
+	if(DrawBounds)
 	{
 		const int MinX = minimum(m_Drag.m_Start.x, m_Drag.m_Current.x);
 		const int MaxX = maximum(m_Drag.m_Start.x, m_Drag.m_Current.x);
