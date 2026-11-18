@@ -54,7 +54,9 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <functional>
+#include <memory>
 #include <new>
 #include <optional>
 #include <stdexcept>
@@ -1355,6 +1357,7 @@ namespace
 		std::unordered_map<std::string, std::string> m_vContentHashByKey;
 		bool m_Loaded = false;
 		bool m_Dirty = false;
+		std::chrono::nanoseconds m_LoadRetryAt{};
 	};
 
 	static SPersistedLocalAssetAuthorCache gs_PersistedLocalAssetAuthors;
@@ -1479,42 +1482,45 @@ namespace
 		return true;
 	}
 
-	constexpr long MAX_LOCAL_ASSET_AUTHOR_CACHE_BYTES = 512 * 1024 - 1;
+	constexpr int64_t MAX_LOCAL_ASSET_AUTHOR_CACHE_BYTES = 512 * 1024 - 1;
 
-	static SPersistedLocalAssetAuthorCache &PersistedLocalAssetAuthorCache(IStorage *pStorage)
+	static bool ResolveSettingsAssetSavePath(IStorage *pStorage, const char *pRelativePath, char (&aPath)[2 * IO_MAX_PATH_LENGTH]);
+
+	static bool ReadPersistedLocalAssetAuthors(IStorage *pStorage, decltype(SPersistedLocalAssetAuthorCache::m_vAuthorsByKey) &vAuthors)
 	{
-		SPersistedLocalAssetAuthorCache &Cache = gs_PersistedLocalAssetAuthors;
-		if(Cache.m_Loaded)
-			return Cache;
+		char aPath[2 * IO_MAX_PATH_LENGTH];
+		if(!ResolveSettingsAssetSavePath(pStorage, LOCAL_ASSET_AUTHOR_CACHE_FILENAME, aPath))
+			return false;
 
-		Cache.m_Loaded = true;
-		if(pStorage == nullptr)
-			return Cache;
+		bool NotFound = false;
+		std::unique_ptr<void, decltype(&io_close)> pFile(io_open_read_regular_checked(aPath, &NotFound), io_close);
+		if(!pFile)
+			return NotFound;
 
-		IOHANDLE File = pStorage->OpenFile(LOCAL_ASSET_AUTHOR_CACHE_FILENAME, IOFLAG_READ, IStorage::TYPE_SAVE);
-		if(!File)
-			return Cache;
+		const int64_t FileSize = io_length(pFile.get());
+		if(FileSize < 0)
+			return false;
+		if(FileSize == 0 || FileSize > MAX_LOCAL_ASSET_AUTHOR_CACHE_BYTES)
+			return io_close(pFile.release()) == 0;
 
-		const long FileSize = io_length(File);
-		if(FileSize <= 0 || FileSize > MAX_LOCAL_ASSET_AUTHOR_CACHE_BYTES)
-		{
-			io_close(File);
-			return Cache;
-		}
+		std::string Json;
+		if(!QmReadFileBounded(pFile.release(), MAX_LOCAL_ASSET_AUTHOR_CACHE_BYTES, Json))
+			return false;
 
-		std::vector<char> vBuffer(FileSize + 1, '\0');
-		io_read(File, vBuffer.data(), FileSize);
-		io_close(File);
-
+		bool AllocationFailed = false;
 		json_settings JsonSettings = {};
-		char aJsonError[1024];
-		json_value *pJson = JsonParseEx(&JsonSettings, vBuffer.data(), FileSize, aJsonError);
+		JsonSettings.user_data = &AllocationFailed;
+		JsonSettings.mem_alloc = [](size_t Size, int Zero, void *pUser) noexcept {
+			void *pMemory = Zero ? std::calloc(1, Size) : std::malloc(Size);
+			if(!pMemory)
+				*static_cast<bool *>(pUser) = true;
+			return pMemory;
+		};
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(JsonParseEx(&JsonSettings, Json.data(), Json.size(), nullptr), json_value_free);
+		if(AllocationFailed)
+			return false;
 		if(!pJson || pJson->type != json_array)
-		{
-			if(pJson)
-				json_value_free(pJson);
-			return Cache;
-		}
+			return true;
 
 		for(unsigned i = 0; i < pJson->u.array.length; ++i)
 		{
@@ -1546,11 +1552,42 @@ namespace
 			Entry.m_LocalName = pLocalName;
 			Entry.m_Author = pAuthorValue;
 			Entry.m_ContentHash = pContentHashValue;
-			Cache.m_vAuthorsByKey[BuildPersistedLocalAssetAuthorKeyByTab(Entry.m_Tab, pLocalName)] = std::move(Entry);
+			vAuthors.insert_or_assign(BuildPersistedLocalAssetAuthorKeyByTab(Entry.m_Tab, pLocalName), std::move(Entry));
 		}
 
-		json_value_free(pJson);
-		return Cache;
+		return true;
+	}
+
+	static SPersistedLocalAssetAuthorCache *PersistedLocalAssetAuthorCache(IStorage *pStorage)
+	{
+		if(pStorage == nullptr)
+			return nullptr;
+		SPersistedLocalAssetAuthorCache &Cache = gs_PersistedLocalAssetAuthors;
+		if(Cache.m_Loaded)
+			return &Cache;
+		if(time_get_nanoseconds() < Cache.m_LoadRetryAt)
+			return nullptr;
+
+		try
+		{
+			decltype(Cache.m_vAuthorsByKey) vCandidate;
+			if(ReadPersistedLocalAssetAuthors(pStorage, vCandidate))
+			{
+				Cache.m_vAuthorsByKey.swap(vCandidate);
+				Cache.m_Loaded = true;
+				return &Cache;
+			}
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
+
+		// 一次列表刷新可能连续查询多条作者记录，读失败时稍后重试。
+		Cache.m_LoadRetryAt = time_get_nanoseconds() + std::chrono::seconds(1);
+		return nullptr;
 	}
 
 	static bool WriteLocalAssetAuthorCache(IStorage &Storage, std::string_view Json)
@@ -1579,13 +1616,14 @@ namespace
 	}
 
 	static bool FlushPersistedLocalAssetAuthors(IStorage *pStorage)
+	try
 	{
-		SPersistedLocalAssetAuthorCache &Cache = PersistedLocalAssetAuthorCache(pStorage);
+		SPersistedLocalAssetAuthorCache *pCache = PersistedLocalAssetAuthorCache(pStorage);
+		if(!pCache)
+			return false;
+		SPersistedLocalAssetAuthorCache &Cache = *pCache;
 		if(!Cache.m_Dirty)
 			return true;
-
-		if(pStorage == nullptr)
-			return false;
 
 		std::vector<std::pair<std::string, SPersistedLocalAssetAuthor>> vSortedAuthors(Cache.m_vAuthorsByKey.begin(), Cache.m_vAuthorsByKey.end());
 		std::sort(vSortedAuthors.begin(), vSortedAuthors.end(), [](const auto &Left, const auto &Right) {
@@ -1615,15 +1653,27 @@ namespace
 			Cache.m_Dirty = false;
 		return Saved;
 	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
 
 	static const char *FindPersistedLocalAssetAuthor(IStorage *pStorage, int Tab, const char *pLocalName)
+	try
 	{
 		if(pStorage == nullptr || pLocalName == nullptr || pLocalName[0] == '\0')
 			return nullptr;
 		if(!SupportsPersistedLocalAssetAuthor(Tab))
 			return nullptr;
 
-		SPersistedLocalAssetAuthorCache &Cache = PersistedLocalAssetAuthorCache(pStorage);
+		SPersistedLocalAssetAuthorCache *pCache = PersistedLocalAssetAuthorCache(pStorage);
+		if(!pCache)
+			return nullptr;
+		SPersistedLocalAssetAuthorCache &Cache = *pCache;
 		const std::string Key = BuildPersistedLocalAssetAuthorKeyByTab(Tab, pLocalName);
 		auto AuthorIt = Cache.m_vAuthorsByKey.find(Key);
 		if(AuthorIt == Cache.m_vAuthorsByKey.end())
@@ -1641,8 +1691,17 @@ namespace
 
 		return AuthorIt->second.m_Author.c_str();
 	}
+	catch(const std::bad_alloc &)
+	{
+		return nullptr;
+	}
+	catch(const std::length_error &)
+	{
+		return nullptr;
+	}
 
 	static bool PersistLocalAssetAuthor(int Tab, const char *pLocalName, const char *pAuthor, IStorage *pStorage, bool FlushImmediately = false)
+	try
 	{
 		if(pStorage == nullptr || pLocalName == nullptr || pLocalName[0] == '\0' || pAuthor == nullptr || pAuthor[0] == '\0')
 			return false;
@@ -1650,34 +1709,50 @@ namespace
 			return false;
 
 		std::string ContentHash;
-		SPersistedLocalAssetAuthorCache &Cache = PersistedLocalAssetAuthorCache(pStorage);
+		SPersistedLocalAssetAuthorCache *pCache = PersistedLocalAssetAuthorCache(pStorage);
+		if(!pCache)
+			return false;
+		SPersistedLocalAssetAuthorCache &Cache = *pCache;
 		const std::string Key = BuildPersistedLocalAssetAuthorKeyByTab(Tab, pLocalName);
 		if(auto HashIt = Cache.m_vContentHashByKey.find(Key); HashIt != Cache.m_vContentHashByKey.end())
 			ContentHash = HashIt->second;
 		else if(TryGetLocalAssetContentHash(pStorage, Tab, pLocalName, ContentHash))
-			Cache.m_vContentHashByKey[Key] = ContentHash;
+			Cache.m_vContentHashByKey.emplace(Key, ContentHash);
 		if(ContentHash.empty())
 			return false;
 
-		SPersistedLocalAssetAuthor &Entry = Cache.m_vAuthorsByKey[Key];
-		const std::string NormalizedAuthor = NormalizeWorkshopAuthorName(pAuthor);
-		if(Entry.m_Tab == Tab && Entry.m_LocalName == pLocalName && Entry.m_Author == NormalizedAuthor && Entry.m_ContentHash == ContentHash)
-			return true;
+		std::string NormalizedAuthor = NormalizeWorkshopAuthorName(pAuthor);
+		if(const auto It = Cache.m_vAuthorsByKey.find(Key); It != Cache.m_vAuthorsByKey.end())
+		{
+			const SPersistedLocalAssetAuthor &Entry = It->second;
+			if(Entry.m_Tab == Tab && Entry.m_LocalName == pLocalName && Entry.m_Author == NormalizedAuthor && Entry.m_ContentHash == ContentHash)
+				return true;
+		}
 
-		Entry.m_Tab = Tab;
-		Entry.m_LocalName = pLocalName;
-		Entry.m_Author = NormalizedAuthor;
-		Entry.m_ContentHash = std::move(ContentHash);
+		SPersistedLocalAssetAuthor Entry{Tab, pLocalName, std::move(NormalizedAuthor), std::move(ContentHash)};
+		Cache.m_vAuthorsByKey.insert_or_assign(Key, std::move(Entry));
 		Cache.m_Dirty = true;
 		return !FlushImmediately || FlushPersistedLocalAssetAuthors(pStorage);
 	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
 
 	static bool RemovePersistedLocalAssetAuthor(int Tab, const char *pLocalName, IStorage *pStorage)
+	try
 	{
 		if(pStorage == nullptr || pLocalName == nullptr || pLocalName[0] == '\0')
 			return false;
 
-		SPersistedLocalAssetAuthorCache &Cache = PersistedLocalAssetAuthorCache(pStorage);
+		SPersistedLocalAssetAuthorCache *pCache = PersistedLocalAssetAuthorCache(pStorage);
+		if(!pCache)
+			return false;
+		SPersistedLocalAssetAuthorCache &Cache = *pCache;
 		const std::string Key = BuildPersistedLocalAssetAuthorKeyByTab(Tab, pLocalName);
 		Cache.m_vContentHashByKey.erase(Key);
 		const size_t Erased = Cache.m_vAuthorsByKey.erase(Key);
@@ -1685,6 +1760,14 @@ namespace
 			return false;
 		Cache.m_Dirty = true;
 		return FlushPersistedLocalAssetAuthors(pStorage);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
 	}
 
 	static bool PersistLocalAssetAuthorForWorkshopAsset(int Tab, const SWorkshopHudAsset &Asset, IStorage *pStorage)
