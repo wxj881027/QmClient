@@ -592,6 +592,8 @@ namespace qm_storage
 		Success &= RemoveStaleFiles(pStorage, "qmclient", ".save_probe_", "");
 		Success &= RemoveStaleFiles(pStorage, "", "custom-communities-ddnet-info.json.", ".tmp");
 		Success &= RemoveStaleFiles(pStorage, "", "qm_friend_last_seen.json.", ".tmp");
+		// 强退或崩溃会留下 HTTP 原子写临时文件；本轮启动时进程尚未发起新请求，可安全清理。
+		Success &= RemoveStaleFiles(pStorage, "", "ddnet-info.json.", ".tmp");
 
 		// 只移除已搬空的旧容器，未知文件仍保留，函数失败时不写完成标记。
 		for(const char *pDirectory : {"qmclient/workshop", "qmclient/mapcovers"})

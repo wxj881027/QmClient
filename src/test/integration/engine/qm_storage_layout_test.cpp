@@ -95,6 +95,8 @@ TEST_F(CQmStorageLayout, MigratesKnownFilesAndTreesOnce)
 	Write("cache/qm-serverlist.json", "servers");
 	Write("cache/qm-serverlist.json.47756.tmp", "stale-server-cache");
 	Write("qmclient/cache/qm-serverlist.json.82956.tmp", "stale-qm-server-cache");
+	Write("ddnet-info.json.57800.tmp", "stale-ddnet-info");
+	Write("other-info.json.57800.tmp", "unrelated-temp");
 	Write("custom-communities-ddnet-info.json", "communities");
 	Write("qm_friend_last_seen.json", "friends");
 	Write("qm_local_map_tags.txt", "tags");
@@ -123,6 +125,8 @@ TEST_F(CQmStorageLayout, MigratesKnownFilesAndTreesOnce)
 	EXPECT_FALSE(m_pStorage->FileExists("qmclient/qmclient_profiles.cfg", IStorage::TYPE_SAVE));
 	EXPECT_FALSE(m_pStorage->FileExists("cache/qm-serverlist.json.47756.tmp", IStorage::TYPE_SAVE));
 	EXPECT_FALSE(m_pStorage->FileExists("qmclient/cache/qm-serverlist.json.82956.tmp", IStorage::TYPE_SAVE));
+	EXPECT_FALSE(m_pStorage->FileExists("ddnet-info.json.57800.tmp", IStorage::TYPE_SAVE));
+	EXPECT_EQ(Read("other-info.json.57800.tmp"), "unrelated-temp");
 	EXPECT_FALSE(m_pStorage->FolderExists("qmclient/rank1", IStorage::TYPE_SAVE));
 	EXPECT_FALSE(m_pStorage->FolderExists("qmclient/workshop/thumbs", IStorage::TYPE_SAVE));
 
