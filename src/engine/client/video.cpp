@@ -161,26 +161,17 @@ bool CVideo::Start()
 	m_AudioStream = {};
 	m_VideoStream = {};
 
-	char aWholePath[IO_MAX_PATH_LENGTH];
-	char aTemporaryPath[IO_MAX_PATH_LENGTH];
-	const std::string TemporaryName = std::string(m_aName) + ".recording";
-	// 先完成可能分配的输出 owner；打开句柄后只标记拥有并立即关闭。
-	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, m_aName, aWholePath, sizeof(aWholePath));
-	m_pOutput = std::make_unique<CVideoExportOutput>(aWholePath, ".recording");
-	// 仍经 Storage 校验路径；前置可写检查只打开临时文件，绝不截断旧成片。
-	IOHANDLE File = m_pStorage->OpenFile(TemporaryName.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE, aTemporaryPath, sizeof(aTemporaryPath));
-	if(!File)
+	m_pOutput = CVideoExportOutput::PrepareRecording(*m_pStorage, m_aName);
+	if(!m_pOutput)
 	{
 		log_error("videorecorder", "Could not open temporary file for '%s'", m_aName);
 		return false;
 	}
-	m_pOutput->Opened();
-	if(io_close(File) != 0)
-		return false;
+	const char *pWholePath = m_pOutput->TargetPath();
 
 	// 容器格式按输出文件名后缀推断（M6）：.mp4/.mov/.mkv 由 qm_video_container 决定，
 	// format_name 传 nullptr 让 libavformat 自行匹配，避免容器与后缀不一致。
-	const int FormatAllocResult = avformat_alloc_output_context2(&m_pFormatContext, nullptr, nullptr, aWholePath);
+	const int FormatAllocResult = avformat_alloc_output_context2(&m_pFormatContext, nullptr, nullptr, pWholePath);
 	if(FormatAllocResult < 0 || !m_pFormatContext)
 	{
 		char aError[AV_ERROR_MAX_STRING_SIZE];
@@ -282,7 +273,7 @@ bool CVideo::Start()
 		{
 			char aError[AV_ERROR_MAX_STRING_SIZE];
 			av_strerror(OpenResult, aError, sizeof(aError));
-			log_error("videorecorder", "Could not open file '%s': %s", aWholePath, aError);
+			log_error("videorecorder", "Could not open file '%s': %s", pWholePath, aError);
 			return false;
 		}
 	}
@@ -342,7 +333,30 @@ bool CVideo::Start()
 void CVideo::Pause(bool Pause)
 {
 	if(ms_pCurrentVideo)
-		m_Recording = !Pause;
+	{
+		SetVideoRecorderPaused(m_Recording, Pause, [this] {
+			if(m_OffscreenCapture)
+				FlushOffscreenVideoFrames();
+		});
+	}
+}
+
+void CVideo::FlushOffscreenVideoFrames()
+{
+	CImageInfo aFinalFrames[2];
+	const int FinalCount = m_pGraphics->FlushVideoFrameReadbacks(aFinalFrames, 2);
+	if(FinalCount < 0)
+	{
+		log_error("videorecorder", "Could not complete offscreen video frame readbacks");
+		FailCapture();
+	}
+	for(CImageInfo &Frame : aFinalFrames)
+	{
+		if(Frame.m_pData != nullptr && IsRecording())
+			SubmitOffscreenFrame(std::move(Frame));
+		else
+			Frame.Free();
+	}
 }
 
 void CVideo::Stop()
@@ -360,22 +374,7 @@ void CVideo::Stop()
 	// 离屏导出的读回是异步的：有完成信号的后端稳态两笔在途（上上帧与本帧结算节奏），
 	// 必须在置停止标志并排空转换线程之前按序结算并补交，否则成片缺帧。
 	if(m_OffscreenCapture)
-	{
-		CImageInfo aFinalFrames[2];
-		const int FinalCount = m_pGraphics->FlushVideoFrameReadbacks(aFinalFrames, 2);
-		if(FinalCount < 0)
-		{
-			log_error("videorecorder", "Could not complete offscreen video frame readbacks");
-			FailCapture();
-		}
-		for(int i = 0; i < 2; ++i)
-		{
-			if(aFinalFrames[i].m_pData != nullptr && IsRecording())
-				SubmitOffscreenFrame(std::move(aFinalFrames[i]));
-			else
-				aFinalFrames[i].Free();
-		}
-	}
+		FlushOffscreenVideoFrames();
 
 	// 视频转换管线：置停止标志并唤醒全部等待者，join 即代表队列已排空且
 	// 所有在途帧按序提交完成（线程退出前完成各自帧的提交）。
@@ -532,6 +531,13 @@ void CVideo::NextVideoFrameThread()
 
 void CVideo::SetOffscreenCapture(bool Offscreen)
 {
+	if(m_OffscreenCapture == Offscreen)
+		return;
+
+	// 用旧捕获模式结算在途像素，再等旧批次的图形回调退出，避免抢占帧号。
+	if(m_OffscreenCapture)
+		FlushOffscreenVideoFrames();
+	m_pGraphics->WaitForIdle();
 	m_OffscreenCapture = Offscreen;
 }
 

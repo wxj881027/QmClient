@@ -207,6 +207,44 @@ TEST_F(VideoRecorderLifecycle, ANewRecordingCanStartAfterThePreviousStartupFaile
 	EXPECT_EQ(m_State.m_Destructions, 2);
 }
 
+TEST(VideoRecorderPause, DrainsCapturedFramesBeforePausing)
+{
+	std::atomic<bool> Recording{true};
+	int Drains = 0;
+
+	SetVideoRecorderPaused(Recording, true, [&] {
+		++Drains;
+		EXPECT_TRUE(Recording.load());
+	});
+
+	EXPECT_FALSE(Recording.load());
+	EXPECT_EQ(Drains, 1);
+}
+
+TEST(VideoRecorderPause, DrainsPausedReadbacksBeforeResuming)
+{
+	std::atomic<bool> Recording{false};
+	int Drains = 0;
+
+	SetVideoRecorderPaused(Recording, false, [&] {
+		++Drains;
+		EXPECT_FALSE(Recording.load());
+	});
+
+	EXPECT_TRUE(Recording.load());
+	EXPECT_EQ(Drains, 1);
+}
+
+TEST(VideoRecorderPause, RepeatedStateDoesNotDrainReadbacks)
+{
+	std::atomic<bool> Recording{true};
+	SetVideoRecorderPaused(Recording, false, [] { ADD_FAILURE() << "unexpected readback drain"; });
+	EXPECT_TRUE(Recording.load());
+	Recording = false;
+	SetVideoRecorderPaused(Recording, true, [] { ADD_FAILURE() << "unexpected readback drain"; });
+	EXPECT_FALSE(Recording.load());
+}
+
 TEST(VideoRecorderWorkers, EmptyAndMissingWorkersCanBeReleasedRepeatedly)
 {
 	std::vector<std::unique_ptr<CVideoRecorderWorker>> vpWorkers(3);

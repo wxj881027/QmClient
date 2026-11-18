@@ -81,6 +81,7 @@ private:
 	void RunVideoConvertThread(size_t ThreadIndex) REQUIRES(!m_WriteLock);
 	bool FillVideoFrame(size_t ThreadIndex, size_t SlotIndex) REQUIRES(!m_WriteLock);
 	bool UpdateVideoBufferFromGraphics(size_t SlotIndex);
+	void FlushOffscreenVideoFrames();
 	// 捕获槽的公共收尾：反压等待空闲槽、失败归还、就绪发布。
 	// 窗口路径（NextVideoFrameThread）与离屏路径（SubmitOffscreenFrame）共用，
 	// 保证两条路径的帧号推进与队列语义一致。

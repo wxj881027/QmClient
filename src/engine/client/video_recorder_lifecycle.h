@@ -52,6 +52,16 @@ bool StartVideoRecorder(TSound &Sound, TCreate Create)
 	return false;
 }
 
+// 在原录制状态下结算读回：暂停前提交已接收帧，恢复前丢弃暂停期间的帧。
+template<typename TDrain>
+void SetVideoRecorderPaused(std::atomic<bool> &Recording, bool Pause, TDrain Drain)
+{
+	if(Recording.load() != Pause)
+		return;
+	Drain();
+	Recording.store(!Pause);
+}
+
 class CVideoRecorderWorker
 {
 public:
