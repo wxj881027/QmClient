@@ -6549,6 +6549,14 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     )
     target_link_libraries(${TARGET_TESTRUNNER} steam_api)
   endif()
+  if(CLIENT AND TARGET_OS STREQUAL "ios")
+    target_sources(${TARGET_TESTRUNNER} PRIVATE
+      src/ios/ios_main.mm
+      src/test/unit/engine/ios_cutout_insets_test.cpp
+    )
+    target_compile_definitions(${TARGET_TESTRUNNER} PRIVATE QM_IOS_NO_MAIN)
+    target_link_libraries(${TARGET_TESTRUNNER} ${UIKIT})
+  endif()
   if(FFMPEG_FOUND)
     target_link_libraries(${TARGET_TESTRUNNER} ${FFMPEG_LIBRARIES})
   endif()
