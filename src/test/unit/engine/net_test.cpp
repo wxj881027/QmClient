@@ -416,6 +416,25 @@ TEST(Net, SuccessfulUdpSendCountsAsSentTraffic)
 	net_udp_close(Socket);
 }
 
+TEST(NetClient, DestructionReleasesUdpSocket)
+{
+	NETADDR BindAddr = {};
+	ASSERT_EQ(net_addr_from_str(&BindAddr, "127.0.0.1"), 0);
+	{
+		CNetClient Client;
+		bool Opened = false;
+		for(int Attempt = 0; Attempt < 100 && !Opened; ++Attempt)
+		{
+			BindAddr.port = secure_rand_below(65535 - 1024 + 1) + 1024;
+			Opened = Client.Open(BindAddr);
+		}
+		ASSERT_TRUE(Opened);
+	}
+
+	const std::unique_ptr<NETSOCKET_INTERNAL, decltype(&net_udp_close)> pSocket(net_udp_create(BindAddr), net_udp_close);
+	EXPECT_NE(pSocket, nullptr);
+}
+
 TEST(NetClient, QosCanBeDisabledAndReenabledWithoutAConnection)
 {
 	CNetClient Client;

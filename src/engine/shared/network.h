@@ -802,7 +802,12 @@ class CNetClient
 	void ResetQos();
 	void TryConfigureQos();
 
+	// Open 关闭当前资源后用空实例重置成员。
+	CNetClient &operator=(CNetClient &&) = default;
+
 public:
+	~CNetClient() { Close(); }
+
 	NETSOCKET m_Socket = nullptr;
 	// openness
 	bool Open(NETADDR BindAddr, bool LowLatency = false);
