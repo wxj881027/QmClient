@@ -1,4 +1,5 @@
 // 更新检查、下载、验签和退出安装的 CTClient 适配层；策略由独立更新模块负责。
+#include <base/fs.h>
 #include <base/hash.h>
 #include <base/log.h>
 #include <base/system.h>
@@ -30,8 +31,8 @@
 
 static constexpr int64_t QMCLIENT_UPDATE_RETRY_INTERVAL = 15 * 60;
 static constexpr int64_t QMCLIENT_UPDATE_CHECK_INTERVAL = 6 * 60 * 60;
-static constexpr int64_t QMCLIENT_UPDATE_MAX_PACKAGE_SIZE = 5LL * 1024 * 1024 * 1024;
 #if defined(CONF_FAMILY_WINDOWS)
+static constexpr int64_t QMCLIENT_UPDATE_MAX_PACKAGE_SIZE = 5LL * 1024 * 1024 * 1024;
 static constexpr const char *QMCLIENT_INFO_URL = "https://api.github.com/repos/wxj881027/QmClient/releases/latest";
 static constexpr const char *QMCLIENT_PREVIEW_INFO_URL = "https://api.github.com/repos/wxj881027/QmClient/releases?per_page=100";
 static constexpr int64_t QMCLIENT_UPDATE_MAX_MANIFEST_SIZE = 32 * 1024 * 1024;
@@ -50,8 +51,7 @@ void CTClient::InitUpdateLifecycle()
 void CTClient::ShutdownUpdateLifecycle()
 {
 	ResetUpdateTasks();
-	if(!m_UpdateInstallerStarted)
-		RemoveUpdateTempFiles();
+	RemoveUpdateTempFiles();
 }
 
 void CTClient::RegisterUpdateCommands()
@@ -157,6 +157,7 @@ void CTClient::TickUpdateLifecycle()
 				m_UpdateFailureExitAt = time_get() + 2 * time_freq();
 				RemoveUpdateTempFiles();
 				m_UpdatePopupRequested = true;
+				log_error("qm-update", "Failed to launch the update installer");
 			}
 		}
 		if((!m_UpdateReady || m_UpdateInstallerStarted || m_UpdateCheckFailed) &&
@@ -233,10 +234,12 @@ void CTClient::RequestQmClientUpdateCheck(const bool UpdateAfterCheck)
 void CTClient::StartUpdateSourceSurvey()
 try
 {
+#if defined(CONF_FAMILY_WINDOWS)
 	char aSetupMarker[IO_MAX_PATH_LENGTH];
 	Storage()->GetBinaryPath("QmClient-Setup.ini", aSetupMarker, sizeof(aSetupMarker));
-	m_UpdateUseSetup = UseQmClientSetupUpdate(fs_is_file(aSetupMarker), m_UpdateRelease, IsQmClientPortableBuild());
-	if(!CanDownloadQmClientRelease(m_UpdateRelease, fs_is_file(aSetupMarker), IsQmClientPortableBuild()))
+	const bool SetupInstalled = fs_is_file(aSetupMarker);
+	m_UpdateUseSetup = UseQmClientSetupUpdate(SetupInstalled, m_UpdateRelease, IsQmClientPortableBuild());
+	if(!CanDownloadQmClientRelease(m_UpdateRelease, SetupInstalled, IsQmClientPortableBuild()))
 		return;
 	const char *pSignatureUrl = m_UpdateUseSetup ? m_UpdateRelease.m_aSetupSignatureUrl : m_UpdateRelease.m_aPackageSignatureUrl;
 	const double Now = time_get() / static_cast<double>(time_freq());
@@ -271,6 +274,7 @@ try
 		FailUpdateDownloadPreparation();
 	else if(!m_UpdateSurvey.Running())
 		StartUpdateDownload();
+#endif
 }
 catch(...)
 {
@@ -278,6 +282,36 @@ catch(...)
 	m_UpdateSurvey.Cancel();
 	FailUpdateDownloadPreparation();
 }
+
+#if defined(CONF_FAMILY_WINDOWS)
+static bool CreateUpdateAssetDirectory(IStorage &Storage, uint64_t &Session, char (&aDirectory)[IO_MAX_PATH_LENGTH])
+{
+	if(!Storage.CreateFolder("qmclient", IStorage::TYPE_SAVE))
+		return false;
+
+	char aRoot[IO_MAX_PATH_LENGTH];
+	Storage.GetCompletePath(IStorage::TYPE_SAVE, "qmclient", aRoot, sizeof(aRoot));
+	const auto Root = std::filesystem::u8path(aRoot);
+	// PID 可能被新客户端复用。只接管本次新建的目录，避开仍归旧安装会话的附件。
+	constexpr int MAX_ATTEMPTS = 16;
+	for(int Attempt = 0; Attempt < MAX_ATTEMPTS; ++Attempt)
+	{
+		char aName[64];
+		str_format(aName, sizeof(aName), "update-%d-%llu", pid(), static_cast<unsigned long long>(++Session));
+		if(str_length(aRoot) + 1 + str_length(aName) >= IO_MAX_PATH_LENGTH)
+			return false;
+		std::error_code Error;
+		if(std::filesystem::create_directory(Root / aName, Error))
+		{
+			str_format(aDirectory, sizeof(aDirectory), "qmclient/%s", aName);
+			return true;
+		}
+		if(Error && Error != std::errc::file_exists)
+			return false;
+	}
+	return false;
+}
+#endif
 
 void CTClient::StartUpdateDownload(bool NextSource)
 try
@@ -288,6 +322,11 @@ try
 	if(!m_UpdateDownloadTasks.CanStart(m_UpdateSurvey.Running(), NextSource))
 		return;
 
+	const auto Fail = [this](const char *pMessage, bool NetworkError = false) {
+		FailUpdateDownloadPreparation();
+		m_UpdateNetworkError = NetworkError;
+		str_copy(m_aUpdateError, pMessage);
+	};
 	if(!NextSource)
 	{
 		m_UpdateDownloadDirect = false;
@@ -295,9 +334,7 @@ try
 	}
 	if(!m_UpdateDownloadAttempt.Current())
 	{
-		m_UpdateCheckFailed = true;
-		m_UpdateNetworkError = true;
-		str_copy(m_aUpdateError, Localizable("Update sources are temporarily unavailable"));
+		Fail(Localizable("Update sources are temporarily unavailable"), true);
 		return;
 	}
 	if(!NextSource)
@@ -310,16 +347,10 @@ try
 	m_UpdateCheckFailed = false;
 	m_UpdateFailureNoticeShown = false;
 	m_UpdateFailureExitAt = 0;
-	// 安装版使用 Setup 更新卸载记录；便携版和旧 Release 保留 ZIP 流程。
-	char aSetupMarker[IO_MAX_PATH_LENGTH];
-	Storage()->GetBinaryPath("QmClient-Setup.ini", aSetupMarker, sizeof(aSetupMarker));
-	m_UpdateUseSetup = UseQmClientSetupUpdate(fs_is_file(aSetupMarker), m_UpdateRelease, IsQmClientPortableBuild());
-	// 每次换源使用独立目录，旧请求异步关闭时不会覆盖新请求的文件。
-	str_format(m_aUpdateAssetDirectory, sizeof(m_aUpdateAssetDirectory), "qmclient/update-%d-%llu", pid(), static_cast<unsigned long long>(++m_UpdateDownloadSession));
-	if(!Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE) || !Storage()->CreateFolder(m_aUpdateAssetDirectory, IStorage::TYPE_SAVE))
+	// 下载和换源沿用探测选定的附件类型，每次换源使用独立目录。
+	if(!CreateUpdateAssetDirectory(*Storage(), m_UpdateDownloadSession, m_aUpdateAssetDirectory))
 	{
-		m_UpdateCheckFailed = true;
-		str_copy(m_aUpdateError, Localizable("Failed to create the update working directory"));
+		Fail(Localizable("Failed to create the update working directory"));
 		return;
 	}
 	const auto TempPath = [&](char *pDestination, size_t Size, const char *pUrl) {
@@ -399,14 +430,7 @@ void CTClient::FailUpdateDownloadPreparation() noexcept
 	str_copy(m_aUpdateError, "Failed to prepare or assemble the downloaded update package");
 	m_UpdateDownloadTasks.Reset(true);
 	m_pUpdatePackageDownload.reset();
-	try
-	{
-		RemoveUpdateTempFiles();
-	}
-	catch(...)
-	{
-		// 保留既有临时路径，后续取消或退出仍可重试回收；本次失败状态已经发布。
-	}
+	RemoveUpdateTempFiles();
 }
 
 void CTClient::ResetUpdateDownloadTasks()
@@ -417,24 +441,27 @@ void CTClient::ResetUpdateDownloadTasks()
 
 void CTClient::RemoveUpdateTempFiles()
 {
-	if(m_aUpdatePackageTmp[0] != '\0')
-		Storage()->RemoveFile(m_aUpdatePackageTmp, IStorage::TYPE_SAVE);
-	if(m_aUpdatePackageSignatureTmp[0] != '\0')
-		Storage()->RemoveFile(m_aUpdatePackageSignatureTmp, IStorage::TYPE_SAVE);
-	if(m_aUpdateManifestTmp[0] != '\0')
-		Storage()->RemoveFile(m_aUpdateManifestTmp, IStorage::TYPE_SAVE);
-	if(m_aUpdateManifestSignatureTmp[0] != '\0')
-		Storage()->RemoveFile(m_aUpdateManifestSignatureTmp, IStorage::TYPE_SAVE);
-	if(m_aUpdateInstallerTmp[0] != '\0' && !m_UpdateInstallerStarted)
-	{
-		Storage()->RemoveFile(m_aUpdateInstallerTmp, IStorage::TYPE_ABSOLUTE);
-	}
-	if(!m_UpdateInstallerStarted)
-		m_aUpdateInstallerTmp[0] = '\0';
-	m_aUpdatePackageTmp[0] = '\0';
-	m_aUpdatePackageSignatureTmp[0] = '\0';
-	m_aUpdateManifestTmp[0] = '\0';
-	m_aUpdateManifestSignatureTmp[0] = '\0';
+	if(m_UpdateInstallerStarted)
+		return;
+
+	const auto Remove = [this](char *pPath, int Type) {
+		if(pPath[0] == '\0')
+			return;
+		try
+		{
+			if(Storage()->RemoveFile(pPath, Type))
+				pPath[0] = '\0';
+		}
+		catch(...)
+		{
+			// 保留此路径供后续重试，继续回收其余附件。
+		}
+	};
+	Remove(m_aUpdatePackageTmp, IStorage::TYPE_SAVE);
+	Remove(m_aUpdatePackageSignatureTmp, IStorage::TYPE_SAVE);
+	Remove(m_aUpdateManifestTmp, IStorage::TYPE_SAVE);
+	Remove(m_aUpdateManifestSignatureTmp, IStorage::TYPE_SAVE);
+	Remove(m_aUpdateInstallerTmp, IStorage::TYPE_ABSOLUTE);
 }
 
 void CTClient::ResetUpdateTasks()
@@ -756,21 +783,21 @@ void CTClient::FinishUpdateDownloads()
 	void *pRawData = nullptr;
 	if(!Storage()->ReadFile(m_aUpdateManifestTmp, IStorage::TYPE_SAVE, &pRawData, &ManifestSize))
 	{
-		Fail("Failed to read the downloaded update manifest");
+		Fail("Failed to read the downloaded update manifest", false);
 		return;
 	}
 	ManifestData.reset(static_cast<unsigned char *>(pRawData));
 	pRawData = nullptr;
 	if(!Storage()->ReadFile(m_aUpdateManifestSignatureTmp, IStorage::TYPE_SAVE, &pRawData, &ManifestSignatureSize))
 	{
-		Fail("Failed to read the downloaded manifest signature");
+		Fail("Failed to read the downloaded manifest signature", false);
 		return;
 	}
 	ManifestSignatureData.reset(static_cast<unsigned char *>(pRawData));
 	pRawData = nullptr;
 	if(!Storage()->ReadFile(m_aUpdatePackageSignatureTmp, IStorage::TYPE_SAVE, &pRawData, &PackageSignatureSize))
 	{
-		Fail("Failed to read the downloaded package signature");
+		Fail("Failed to read the downloaded package signature", false);
 		return;
 	}
 	PackageSignatureData.reset(static_cast<unsigned char *>(pRawData));
@@ -802,7 +829,7 @@ void CTClient::FinishUpdateDownloads()
 		io_close(PackageFile);
 	if(ActualSize < 0 || static_cast<uint64_t>(ActualSize) != SignedPackageSize || ActualDigest != Manifest.m_PackageSha256)
 	{
-		Fail("Downloaded update package size or SHA-256 is invalid");
+		Fail("Downloaded update package size or SHA-256 is invalid", ActualSize >= 0);
 		return;
 	}
 	if(!qm_update_verify_package_digest(ActualDigest.data, sizeof(ActualDigest.data), PackageSignatureData.get(), PackageSignatureSize, aError, sizeof(aError)))
@@ -887,61 +914,70 @@ void CTClient::FinishUpdateDownloads()
 }
 
 bool CTClient::LaunchUpdateInstaller()
+try
 {
 #if !defined(CONF_FAMILY_WINDOWS)
 	return false;
 #else
 	if(!m_UpdateReady || m_UpdateInstallerStarted)
 		return m_UpdateInstallerStarted;
-
-	char aPackagePath[IO_MAX_PATH_LENGTH] = "";
-	char aPackageSignaturePath[IO_MAX_PATH_LENGTH] = "";
-	char aManifestPath[IO_MAX_PATH_LENGTH] = "";
-	char aManifestSignaturePath[IO_MAX_PATH_LENGTH] = "";
-	char aInstallPath[IO_MAX_PATH_LENGTH] = "";
-	if(!fs_is_file(m_aUpdateInstallerTmp))
+	if(!str_endswith(m_aUpdateInstallerTmp, ".exe") || !fs_is_file(m_aUpdateInstallerTmp))
 		return false;
 
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageTmp, aPackagePath, sizeof(aPackagePath));
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageSignatureTmp, aPackageSignaturePath, sizeof(aPackageSignaturePath));
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdateManifestTmp, aManifestPath, sizeof(aManifestPath));
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdateManifestSignatureTmp, aManifestSignaturePath, sizeof(aManifestSignaturePath));
-	Storage()->GetBinaryPathAbsolute(PLAT_CLIENT_EXEC, aInstallPath, sizeof(aInstallPath));
-	if(fs_parent_dir(aInstallPath) != 0)
-	{
-		RemoveUpdateTempFiles();
+	char aExecutable[IO_MAX_PATH_LENGTH];
+	if(fs_executable_path(aExecutable, sizeof(aExecutable)) != 0)
 		return false;
-	}
+	const auto InstallDirectory = std::filesystem::u8path(aExecutable).parent_path();
+	if(!InstallDirectory.is_absolute())
+		return false;
+
+	const auto ToUtf8 = [](const std::filesystem::path &Path) {
+		const auto Text = Path.u8string();
+		return std::string(reinterpret_cast<const char *>(Text.data()), Text.size());
+	};
+	// 存储配置允许相对路径，安装助手只接受绝对路径。
+	const auto AssetPath = [this, &ToUtf8](const char *pRelative) {
+		char aPath[IO_MAX_PATH_LENGTH];
+		Storage()->GetCompletePath(IStorage::TYPE_SAVE, pRelative, aPath, sizeof(aPath));
+		return ToUtf8(std::filesystem::absolute(std::filesystem::u8path(aPath)));
+	};
+	const auto PackagePath = AssetPath(m_aUpdatePackageTmp);
+	const auto PackageSignaturePath = AssetPath(m_aUpdatePackageSignatureTmp);
+	const auto ManifestPath = AssetPath(m_aUpdateManifestTmp);
+	const auto ManifestSignaturePath = AssetPath(m_aUpdateManifestSignatureTmp);
+	const auto InstallPath = ToUtf8(InstallDirectory);
+	const auto InstallerPath = ToUtf8(std::filesystem::absolute(std::filesystem::u8path(m_aUpdateInstallerTmp)));
 
 	char aPid[32];
 	str_format(aPid, sizeof(aPid), "%d", pid());
-	std::vector<const char *> vArguments = {
+	const char *apArguments[] = {
 		"--parent-pid",
 		aPid,
 		"--package",
-		aPackagePath,
+		PackagePath.c_str(),
 		"--package-signature",
-		aPackageSignaturePath,
+		PackageSignaturePath.c_str(),
 		"--manifest",
-		aManifestPath,
+		ManifestPath.c_str(),
 		"--manifest-signature",
-		aManifestSignaturePath,
+		ManifestSignaturePath.c_str(),
 		"--install",
-		aInstallPath,
+		InstallPath.c_str(),
+		"--setup",
 	};
-	// 两种安装路径共用会话 owner；Setup 的退出后复验、等待与清理由 helper 负责。
-	if(m_UpdateUseSetup)
-		vArguments.push_back("--setup");
-	const PROCESS Process = shell_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, vArguments.data(), vArguments.size());
+	// 安装助手接管父进程退出后的复验、等待与文件清理。
+	const size_t NumArguments = std::size(apArguments) - (m_UpdateUseSetup ? 0 : 1);
+	const PROCESS Process = shell_execute(InstallerPath.c_str(), EShellExecuteWindowState::FOREGROUND, apArguments, NumArguments);
 	if(Process == INVALID_PROCESS)
-	{
-		RemoveUpdateTempFiles();
 		return false;
-	}
 	CloseHandle(static_cast<HANDLE>(Process));
 	m_UpdateInstallerStarted = true;
 	return true;
 #endif
+}
+catch(...)
+{
+	return false;
 }
 
 bool CTClient::PrepareForShutdown(bool Force)
@@ -951,8 +987,7 @@ bool CTClient::PrepareForShutdown(bool Force)
 		return false;
 	if(Force && m_UpdateShutdownRequested && (m_UpdateReady || IsUpdateChecking() || IsUpdateDownloading()))
 	{
-		ResetUpdateTasks();
-		RemoveUpdateTempFiles();
+		ShutdownUpdateLifecycle();
 		return false;
 	}
 	if(m_UpdateReady)
@@ -961,7 +996,12 @@ bool CTClient::PrepareForShutdown(bool Force)
 		return true;
 	}
 	if(!g_Config.m_QmAutoUpdate || m_UpdateCheckFailed)
+	{
+		// 手动下载仍可能在后台合包。先取消，再让引擎等待作业池收尾。
+		if(IsUpdateChecking() || IsUpdateDownloading())
+			ShutdownUpdateLifecycle();
 		return false;
+	}
 	if(IsUpdateChecking() || IsUpdateDownloading())
 	{
 		m_UpdateShutdownRequested = true;
