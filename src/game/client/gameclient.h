@@ -930,11 +930,12 @@ public:
 	void OnConsoleInit() override;
 	void OnStateChange(int NewState, int OldState) override;
 	template<typename T>
-	void ApplySkin7InfoFromGameMsg(const T *pMsg, int ClientId, int Conn);
-	void ApplySkin7InfoFromSnapObj(const protocol7::CNetObj_De_ClientInfo *pObj, int ClientId) override;
+	void ApplySkin7InfoFromGameMsg(const T *pMsg, int ClientId, int Conn, int GameFlags);
+	void ApplySkin7InfoFromSnapObj(const protocol7::CNetObj_De_ClientInfo *pObj, int ClientId, int GameFlags);
 	int OnDemoRecSnap7(CSnapshot *pFrom, CSnapshotBuffer *pTo, int Conn) override;
 	void *TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn);
-	int TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy) override;
+	int TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy, SSixupSnapshotTranslation *pTranslation) override;
+	void CommitSnapshotTranslation(const SSixupSnapshotTranslation &Translation) override;
 	void OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dummy) override;
 	void OnClientBrandsMessage(CUnpacker *pUnpacker) override;
 	bool OnDemoPlaybackMessage(int MsgId, CUnpacker *pUnpacker) override;

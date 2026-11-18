@@ -17,6 +17,7 @@
 
 #include <cstdlib>
 #include <limits>
+#include <memory>
 
 // CSnapshot
 
@@ -704,39 +705,44 @@ void CSnapshotStorage::Add(int Tick, int64_t Tagtime, size_t DataSize, const voi
 	dbg_assert(DataSize <= (size_t)CSnapshot::MAX_SIZE, "Snapshot data size invalid");
 	dbg_assert(AltDataSize <= (size_t)CSnapshot::MAX_SIZE, "Alt snapshot data size invalid");
 
-	CHolder *pHolder = static_cast<CHolder *>(malloc(sizeof(CHolder)));
+	// 所有分配和复制完成后才更新链表，失败时保留已有快照。
+	std::unique_ptr<CHolder, decltype(&std::free)> pHolder(static_cast<CHolder *>(std::malloc(sizeof(CHolder))), &std::free);
+	if(!pHolder)
+		return;
+
+	std::unique_ptr<CSnapshot, decltype(&std::free)> pSnap(static_cast<CSnapshot *>(std::malloc(DataSize)), &std::free);
+	if(!pSnap)
+		return;
+
+	std::unique_ptr<CSnapshot, decltype(&std::free)> pAltSnap(nullptr, &std::free);
+	if(AltDataSize)
+	{
+		pAltSnap.reset(static_cast<CSnapshot *>(std::malloc(AltDataSize)));
+		if(!pAltSnap)
+			return;
+		mem_copy(pAltSnap.get(), pAltData, AltDataSize);
+	}
+	mem_copy(pSnap.get(), pData, DataSize);
+
 	pHolder->m_Tick = Tick;
 	pHolder->m_Tagtime = Tagtime;
-
-	pHolder->m_pSnap = static_cast<CSnapshot *>(malloc(DataSize));
-	mem_copy(pHolder->m_pSnap, pData, DataSize);
+	pHolder->m_pSnap = pSnap.release();
 	pHolder->m_SnapSize = DataSize;
+	pHolder->m_pAltSnap = pAltSnap.release();
+	pHolder->m_AltSnapSize = AltDataSize;
 
-	if(AltDataSize) // create alternative if wanted
-	{
-		pHolder->m_pAltSnap = static_cast<CSnapshot *>(malloc(AltDataSize));
-		mem_copy(pHolder->m_pAltSnap, pAltData, AltDataSize);
-		pHolder->m_AltSnapSize = AltDataSize;
-	}
-	else
-	{
-		pHolder->m_pAltSnap = nullptr;
-		pHolder->m_AltSnapSize = 0;
-	}
-
-	// link
 	pHolder->m_pNext = nullptr;
 	pHolder->m_pPrev = m_pLast;
 	if(m_pLast)
 	{
 		dbg_assert(m_pLast->m_Tick < Tick, "snapshots inserted into CSnapshotStorage with non-increasing tick %d >= %d", m_pLast->m_Tick, Tick);
-		m_pLast->m_pNext = pHolder;
+		m_pLast->m_pNext = pHolder.get();
 	}
 	else
 	{
-		m_pFirst = pHolder;
+		m_pFirst = pHolder.get();
 	}
-	m_pLast = pHolder;
+	m_pLast = pHolder.release();
 }
 
 int CSnapshotStorage::Get(int Tick, int64_t *pTagtime, const CSnapshot **ppData, const CSnapshot **ppAltData) const

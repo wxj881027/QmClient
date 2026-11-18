@@ -564,9 +564,22 @@ public:
 
 	virtual int ClientVersion7() const = 0;
 
-	virtual void ApplySkin7InfoFromSnapObj(const protocol7::CNetObj_De_ClientInfo *pObj, int ClientId) = 0;
+	struct SSixupSnapshotTranslation
+	{
+		struct SSkinUpdate
+		{
+			const protocol7::CNetObj_De_ClientInfo *m_pObj = nullptr;
+			int m_GameFlags = 0;
+		};
+
+		CTranslationContext m_Context;
+		SSkinUpdate m_aSkinUpdates[MAX_CLIENTS];
+	};
+
 	virtual int OnDemoRecSnap7(CSnapshot *pFrom, CSnapshotBuffer *pTo, int Conn) = 0;
-	virtual int TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy) = 0;
+	// 在线候选的皮肤对象借用输入快照，必须在输入缓冲释放前提交。
+	virtual int TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy, SSixupSnapshotTranslation *pTranslation = nullptr) = 0;
+	virtual void CommitSnapshotTranslation(const SSixupSnapshotTranslation &Translation) = 0;
 	virtual void ProcessDemoSnapshot(CSnapshot *pSnap) = 0;
 
 	virtual void InitializeLanguage() = 0;

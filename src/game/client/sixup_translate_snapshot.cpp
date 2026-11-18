@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <type_traits>
 #include <utility>
 
 static constexpr std::optional<int> SixupTickDifference(int EndTick, int StartTick)
@@ -31,17 +32,21 @@ static_assert(!SixupTickDifference(0, std::numeric_limits<int>::min()));
 static_assert(!SixupTickDifference(std::numeric_limits<int>::max(), -1));
 static_assert(!SixupTickDifference(std::numeric_limits<int>::min(), 1));
 
-int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy)
+static_assert(std::is_trivially_copyable_v<CTranslationContext>);
+
+int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy, SSixupSnapshotTranslation *pTranslation)
 {
 	CSnapshotBuilder Builder;
 	Builder.Init();
 
 	float LocalTime = Client()->LocalTime();
 	int GameTick = Client()->GameTick(g_Config.m_ClDummy);
-	CTranslationContext &TranslationContext = Client()->m_TranslationContext;
+	CTranslationContext &LiveContext = Client()->m_TranslationContext;
+	if(pTranslation)
+		mem_copy(&pTranslation->m_Context, &LiveContext, sizeof(LiveContext));
+	CTranslationContext &TranslationContext = pTranslation ? pTranslation->m_Context : LiveContext;
 
-	for(auto &PlayerInfosRace : TranslationContext.m_apPlayerInfosRace)
-		PlayerInfosRace = nullptr;
+	const protocol7::CNetObj_PlayerInfoRace *apPlayerInfosRace[MAX_CLIENTS] = {};
 
 	int SpectatorId = -3;
 
@@ -99,7 +104,7 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 			int ClientId = pItem7->Id();
 			if(ClientId < MAX_CLIENTS && TranslationContext.m_aClients[ClientId].m_Active)
 			{
-				TranslationContext.m_apPlayerInfosRace[ClientId] = pInfo;
+				apPlayerInfosRace[ClientId] = pInfo;
 			}
 		}
 		else if(ItemType == protocol7::NETOBJTYPE_SPECTATORINFO)
@@ -144,7 +149,7 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 		int TimerClientId = TranslationContext.m_aLocalClientId[Conn];
 		if(SpectatorId >= 0)
 			TimerClientId = SpectatorId;
-		const protocol7::CNetObj_PlayerInfoRace *pRaceInfo = TimerClientId == -1 ? nullptr : TranslationContext.m_apPlayerInfosRace[TimerClientId];
+		const protocol7::CNetObj_PlayerInfoRace *pRaceInfo = TimerClientId == -1 ? nullptr : apPlayerInfosRace[TimerClientId];
 		const auto RaceTimer = pRaceInfo ? SixupTickDifference(0, pRaceInfo->m_RaceStartTick) : std::nullopt;
 		if(RaceTimer)
 		{
@@ -412,7 +417,10 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 			IntsToStr(pInfo->m_aClan, std::size(pInfo->m_aClan), Client.m_aClan, std::size(Client.m_aClan));
 			Client.m_Country = QmNormalizeCountryCode(pInfo->m_Country);
 
-			ApplySkin7InfoFromSnapObj(pInfo, ClientId);
+			if(pTranslation)
+				pTranslation->m_aSkinUpdates[ClientId] = {pInfo, TranslationContext.m_GameFlags};
+			else
+				ApplySkin7InfoFromSnapObj(pInfo, ClientId, TranslationContext.m_GameFlags);
 		}
 		else if(ItemType == protocol7::NETOBJTYPE_DE_GAMEINFO)
 		{
@@ -438,6 +446,17 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 	}
 
 	return Builder.FinishIfNoDroppedItems(pSnapDstSix);
+}
+
+void CGameClient::CommitSnapshotTranslation(const SSixupSnapshotTranslation &Translation)
+{
+	mem_copy(&Client()->m_TranslationContext, &Translation.m_Context, sizeof(Translation.m_Context));
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+	{
+		const auto &Update = Translation.m_aSkinUpdates[ClientId];
+		if(Update.m_pObj)
+			ApplySkin7InfoFromSnapObj(Update.m_pObj, ClientId, Update.m_GameFlags);
+	}
 }
 
 int CGameClient::OnDemoRecSnap7(CSnapshot *pFrom, CSnapshotBuffer *pTo, int Conn)

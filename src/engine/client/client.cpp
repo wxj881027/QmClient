@@ -3240,38 +3240,50 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 							m_SnapCrcErrors--;
 					}
 
-					// purge old snapshots
+					int64_t SnapshotTime;
+					{
+						// 先验证并保存完整快照，失败时保留此前的快照和翻译状态。
+						int AltSnapSize = -1;
+						CSnapshotBuffer AltSnapBuffer;
+						CSnapshotBuffer TmpTransSnapBuffer;
+						std::optional<IGameClient::SSixupSnapshotTranslation> Translation;
+
+						if(IsSixup())
+						{
+							mem_copy(TmpTransSnapBuffer.m_aData, TmpBuffer3.m_aData, SnapSize);
+							AltSnapSize = GameClient()->TranslateSnap(&AltSnapBuffer, TmpTransSnapBuffer.AsSnapshot(), Conn, Dummy, &Translation.emplace());
+						}
+						else
+						{
+							AltSnapSize = UnpackAndValidateSnapshot(TmpBuffer3.AsSnapshot(), &AltSnapBuffer);
+						}
+
+						if(AltSnapSize < 0)
+						{
+							dbg_msg("client", "unpack snapshot and validate failed. error=%d", AltSnapSize);
+							return;
+						}
+
+						const auto *pPreviousLast = m_aSnapshotStorage[Conn].m_pLast;
+						SnapshotTime = time_get();
+						m_aSnapshotStorage[Conn].Add(GameTick, SnapshotTime, SnapSize, TmpBuffer3.AsSnapshot(), AltSnapSize, AltSnapBuffer.AsSnapshot());
+						if(m_aSnapshotStorage[Conn].m_pLast == pPreviousLast)
+						{
+							dbg_msg("client", "couldn't store snapshot. tick=%d", GameTick);
+							return;
+						}
+
+						if(Translation)
+							GameClient()->CommitSnapshotTranslation(*Translation);
+					}
+
+					// 入库后清理旧快照，保留当前借用的槽位。
 					int PurgeTick = DeltaTick;
 					if(m_aapSnapshots[Conn][SNAP_PREV] && m_aapSnapshots[Conn][SNAP_PREV]->m_Tick < PurgeTick)
 						PurgeTick = m_aapSnapshots[Conn][SNAP_PREV]->m_Tick;
 					if(m_aapSnapshots[Conn][SNAP_CURRENT] && m_aapSnapshots[Conn][SNAP_CURRENT]->m_Tick < PurgeTick)
 						PurgeTick = m_aapSnapshots[Conn][SNAP_CURRENT]->m_Tick;
 					m_aSnapshotStorage[Conn].PurgeUntil(PurgeTick);
-
-					// create a verified and unpacked snapshot
-					int AltSnapSize = -1;
-					CSnapshotBuffer AltSnapBuffer;
-
-					if(IsSixup())
-					{
-						CSnapshotBuffer TmpTransSnapBuffer;
-						mem_copy(&TmpTransSnapBuffer, &TmpBuffer3, sizeof(TmpTransSnapBuffer));
-						AltSnapSize = GameClient()->TranslateSnap(&AltSnapBuffer, TmpTransSnapBuffer.AsSnapshot(), Conn, Dummy);
-					}
-					else
-					{
-						AltSnapSize = UnpackAndValidateSnapshot(TmpBuffer3.AsSnapshot(), &AltSnapBuffer);
-					}
-
-					if(AltSnapSize < 0)
-					{
-						dbg_msg("client", "unpack snapshot and validate failed. error=%d", AltSnapSize);
-						return;
-					}
-
-					// add new
-					const int64_t SnapshotTime = time_get();
-					m_aSnapshotStorage[Conn].Add(GameTick, SnapshotTime, SnapSize, TmpBuffer3.AsSnapshot(), AltSnapSize, AltSnapBuffer.AsSnapshot());
 
 					SClientSnapshotStats &SnapshotStats = m_aSnapshotStats[Conn];
 					if(SnapshotStats.m_SnapshotCount > 0)

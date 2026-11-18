@@ -95,7 +95,7 @@ void CGameClient::DoTeamChangeMessage7(const char *pName, int ClientId, int Team
 }
 
 template<typename T>
-void CGameClient::ApplySkin7InfoFromGameMsg(const T *pMsg, int ClientId, int Conn)
+void CGameClient::ApplySkin7InfoFromGameMsg(const T *pMsg, int ClientId, int Conn, int GameFlags)
 {
 	CClientData::CSixup &SixupData = m_aClients[ClientId].m_aSixup[Conn];
 
@@ -107,10 +107,10 @@ void CGameClient::ApplySkin7InfoFromGameMsg(const T *pMsg, int ClientId, int Con
 		SixupData.m_aUseCustomColors[Part] = pMsg->m_aUseCustomColors[Part];
 		SixupData.m_aSkinPartColors[Part] = pMsg->m_aSkinPartColors[Part];
 	}
-	m_Skins7.ValidateSkinParts(apSkinPartsPtr, SixupData.m_aUseCustomColors, SixupData.m_aSkinPartColors, m_pClient->m_TranslationContext.m_GameFlags);
+	m_Skins7.ValidateSkinParts(apSkinPartsPtr, SixupData.m_aUseCustomColors, SixupData.m_aSkinPartColors, GameFlags);
 }
 
-void CGameClient::ApplySkin7InfoFromSnapObj(const protocol7::CNetObj_De_ClientInfo *pObj, int ClientId)
+void CGameClient::ApplySkin7InfoFromSnapObj(const protocol7::CNetObj_De_ClientInfo *pObj, int ClientId, int GameFlags)
 {
 	char aSkinPartNames[protocol7::NUM_SKINPARTS][protocol7::MAX_SKIN_ARRAY_SIZE];
 	protocol7::CNetMsg_Sv_SkinChange Msg;
@@ -126,7 +126,7 @@ void CGameClient::ApplySkin7InfoFromSnapObj(const protocol7::CNetObj_De_ClientIn
 		Msg.m_aUseCustomColors[Part] = pObj->m_aUseCustomColors[Part];
 		Msg.m_aSkinPartColors[Part] = pObj->m_aSkinPartColors[Part];
 	}
-	ApplySkin7InfoFromGameMsg(&Msg, ClientId, 0);
+	ApplySkin7InfoFromGameMsg(&Msg, ClientId, 0, GameFlags);
 }
 
 void CGameClient::CClientData::UpdateSkin7HatSprite(int Dummy)
@@ -352,7 +352,7 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 
 		CTranslationContext::CClientData &Client = m_pClient->m_TranslationContext.m_aClients[pMsg7->m_ClientId];
 		Client.m_Active = true;
-		ApplySkin7InfoFromGameMsg(pMsg7, pMsg7->m_ClientId, Conn);
+		ApplySkin7InfoFromGameMsg(pMsg7, pMsg7->m_ClientId, Conn, m_pClient->m_TranslationContext.m_GameFlags);
 		// skin will be moved to the 0.6 snap by the translation context
 		// and we drop the game message
 		return nullptr;
@@ -555,7 +555,7 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 		str_copy(Client.m_aName, pMsg7->m_pName);
 		str_copy(Client.m_aClan, pMsg7->m_pClan);
 		Client.m_Country = QmNormalizeCountryCode(pMsg7->m_Country);
-		ApplySkin7InfoFromGameMsg(pMsg7, pMsg7->m_ClientId, Conn);
+		ApplySkin7InfoFromGameMsg(pMsg7, pMsg7->m_ClientId, Conn, m_pClient->m_TranslationContext.m_GameFlags);
 		if(m_pClient->m_TranslationContext.m_aLocalClientId[Conn] == -1)
 			return nullptr;
 		if(pMsg7->m_Silent || pMsg7->m_Local)

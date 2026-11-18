@@ -77,7 +77,6 @@ public:
 		int m_PlayerFlags7;
 	};
 
-	const protocol7::CNetObj_PlayerInfoRace *m_apPlayerInfosRace[MAX_CLIENTS];
 	CClientData m_aClients[MAX_CLIENTS];
 	int m_aDamageTaken[MAX_CLIENTS];
 	float m_aDamageTakenTick[MAX_CLIENTS];

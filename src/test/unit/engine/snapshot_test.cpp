@@ -264,3 +264,36 @@ TEST(Snapshot, StorageGet)
 	EXPECT_EQ(Storage.Get(5, nullptr, nullptr, nullptr), -1);
 	EXPECT_EQ(Storage.Get(25, nullptr, nullptr, nullptr), -1);
 }
+
+TEST(Snapshot, StorageOwnsOriginalAndAlternateSnapshots)
+{
+	CSnapshotStorage Storage;
+	CSnapshotBuilder Builder;
+	CSnapshotBuffer Original;
+	CSnapshotBuffer Alternate;
+	CNetObj_Flag Flag{};
+
+	Builder.Init();
+	Flag.m_X = 7;
+	ASSERT_TRUE(Builder.NewItem(NETOBJTYPE_FLAG, 0, &Flag, sizeof(Flag)));
+	const int OriginalSize = Builder.Finish(&Original);
+
+	Builder.Init();
+	Flag.m_X = 13;
+	ASSERT_TRUE(Builder.NewItem(NETOBJTYPE_FLAG, 0, &Flag, sizeof(Flag)));
+	const int AlternateSize = Builder.Finish(&Alternate);
+
+	Storage.Add(10, 1000, OriginalSize, Original.AsSnapshot(), AlternateSize, Alternate.AsSnapshot());
+	mem_zero(Original.m_aData, OriginalSize);
+	mem_zero(Alternate.m_aData, AlternateSize);
+
+	const CSnapshot *pOriginal = nullptr;
+	const CSnapshot *pAlternate = nullptr;
+	ASSERT_EQ(Storage.Get(10, nullptr, &pOriginal, &pAlternate), OriginalSize);
+	ASSERT_NE(pOriginal, nullptr);
+	ASSERT_NE(pAlternate, nullptr);
+	ASSERT_TRUE(pOriginal->IsValid(OriginalSize));
+	ASSERT_TRUE(pAlternate->IsValid(AlternateSize));
+	EXPECT_EQ(pOriginal->Crc(), 7u);
+	EXPECT_EQ(pAlternate->Crc(), 13u);
+}
