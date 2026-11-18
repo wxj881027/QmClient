@@ -34964,6 +34964,22 @@ turkish = "Bir takımda olmalısınız (1-63 arası)"
 polish = "Musisz być w drużynie (od 1 do 63)"
 
 [[message]]
+key = "You have to be in a team (from 1-127)"
+[message.translations]
+simplified_chinese = "必须处于 1–127 号队伍中"
+traditional_chinese = "必須處於 1–127 號隊伍中"
+japanese = "チーム（1～127）に所属している必要があります"
+korean = "팀에 속해 있어야 합니다 (1-127)"
+russian = "Вы должны быть в команде (от 1 до 127)"
+german = "Du musst in einem Team sein (von 1-127)"
+spanish = "Tienes que estar en un equipo (del 1 al 127)"
+french = "Vous devez être dans une équipe (de 1 à 127)"
+brazilian_portuguese = "Você precisa estar em um time (de 1 a 127)"
+portuguese = "Tens de estar numa equipa (de 1 a 127)"
+turkish = "Bir takımda olmalısınız (1-127 arası)"
+polish = "Musisz być w drużynie (od 1 do 127)"
+
+[[message]]
 key = "You have to be in a team to play on this server; if the team is locked, any team member dying will kill the whole team"
 [message.translations]
 simplified_chinese = "必须组队才能游玩；队伍上锁后任一人死亡则全队死亡"

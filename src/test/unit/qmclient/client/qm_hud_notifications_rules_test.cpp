@@ -1,6 +1,7 @@
 #include <game/client/components/qmclient/hud_notifications/hud_notification_catalog.h>
 #include <game/client/components/qmclient/hud_notifications/hud_notification_rules.h>
 #include <game/client/components/qmclient/hud_notifications/hud_notification_static_rules.h>
+#include <game/localization.h>
 
 #ifdef QM_HUD_NOTIFICATION_STATIC_RULES
 #error Old mixed static rule table should not be exposed through hud_notification_rules.h
@@ -83,6 +84,20 @@ TEST(QmHudNotificationRules, AnalyzesUpdatedChineseTeamValidationMessages)
 	EXPECT_EQ(Analysis.m_Domain, QmHudNotifications::EServerMessageDomain::Team);
 	EXPECT_STREQ(Analysis.m_aLocalizedText, "This team is currently saving");
 	EXPECT_FALSE(Analysis.m_UseFallbackLocalization);
+}
+
+TEST(QmHudNotificationRules, KeepsTeamRangeReportedByServer)
+{
+	const auto Legacy = QmHudNotifications::AnalyzeServerMessage("You have to be in a team (from 1-63)", QmHudNotifications::ESoloPrompt::None);
+	EXPECT_STREQ(Legacy.m_aLocalizedText, Localize("You have to be in a team (from 1-63)"));
+
+	for(const char *pMessage : {"You have to be in a team (from 1-127)", "必须处于 1–127 号队伍中"})
+	{
+		SCOPED_TRACE(pMessage);
+		const auto Analysis = QmHudNotifications::AnalyzeServerMessage(pMessage, QmHudNotifications::ESoloPrompt::None);
+		EXPECT_EQ(Analysis.m_Domain, QmHudNotifications::EServerMessageDomain::Team);
+		EXPECT_STREQ(Analysis.m_aLocalizedText, Localize("You have to be in a team (from 1-127)"));
+	}
 }
 
 TEST(QmHudNotificationRules, AnalyzesUpdatedChineseSettingsMessages)
