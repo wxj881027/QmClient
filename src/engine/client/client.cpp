@@ -656,6 +656,10 @@ CClient::CClient() :
 
 CClient::~CClient()
 {
+	// Run 初始化中途返回时也要关闭已经打开的 socket。
+	for(CNetClient &NetClient : m_aNetClient)
+		NetClient.Close();
+
 #if defined(CONF_VIDEORECORDER)
 	// 等待拼接线程写完文件尾部，再销毁客户端成员。
 	m_SegmentConcat.Join();
@@ -7811,8 +7815,8 @@ void CClient::RegisterCommands()
 	m_pFavorites = Kernel()->RequestInterface<IFavorites>();
 
 	m_pConsole->Register("dummy_connect", "", CFGFLAG_CLIENT, Con_DummyConnect, this, "Connect dummy");
-	m_pConsole->Register("dummy_disconnect", "", CFGFLAG_CLIENT, Con_DummyDisconnect, this, "Disconnect dummy");
-	m_pConsole->Register("dummy_reset", "", CFGFLAG_CLIENT, Con_DummyResetInput, this, "Reset dummy");
+	m_pConsole->Register("dummy_disconnect", "", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_DummyDisconnect, this, "Disconnect dummy");
+	m_pConsole->Register("dummy_reset", "", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_DummyResetInput, this, "Reset dummy");
 
 	m_pConsole->Register("quit", "", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_Quit, this, "Quit the client");
 	m_pConsole->Register("exit", "", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_Quit, this, "Quit the client");
@@ -7824,24 +7828,24 @@ void CClient::RegisterCommands()
 	m_pConsole->Register("qm_net_qos_status", "", CFGFLAG_CLIENT, Con_QmNetQosStatus, this, "Show outgoing game traffic QoS status");
 	m_pConsole->Register("ping", "", CFGFLAG_CLIENT, Con_Ping, this, "Ping the current server");
 	m_pConsole->Register("screenshot", "", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_Screenshot, this, "Take a screenshot");
-	m_pConsole->Register("poses_render", "s[poses] ?s[output] ?s[map] ?i[scale] ?i[entities] ?i[sharpen]", CFGFLAG_CLIENT, Con_RenderPoses, this, "Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)");
+	m_pConsole->Register("poses_render", "s[poses] ?s[output] ?s[map] ?i[scale] ?i[entities] ?i[sharpen]", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_RenderPoses, this, "Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)");
 	// 无下划线别名：部分键盘布局/输入注入方式打不出下划线，留一个同样可用的短名。
-	m_pConsole->Register("posesrender", "s[poses] ?s[output] ?s[map] ?i[scale]", CFGFLAG_CLIENT, Con_RenderPoses, this, "Alias of poses_render");
+	m_pConsole->Register("posesrender", "s[poses] ?s[output] ?s[map] ?i[scale]", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_RenderPoses, this, "Alias of poses_render");
 	// 与 demo 一致的两条路径：游戏内观看 / 导出。poses_render 是第三种（静态截图）。
-	m_pConsole->Register("poses_open", "s[poses] ?s[map]", CFGFLAG_CLIENT, Con_PosesOpen, this, "Show a MomentCap .poses file in game (no export)");
-	m_pConsole->Register("poses_close", "", CFGFLAG_CLIENT, &CClient::Con_PosesClose, this, "Leave the pose session");
+	m_pConsole->Register("poses_open", "s[poses] ?s[map]", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_PosesOpen, this, "Show a MomentCap .poses file in game (no export)");
+	m_pConsole->Register("poses_close", "", CFGFLAG_CLIENT | CFGFLAG_STORE, &CClient::Con_PosesClose, this, "Leave the pose session");
 	// 无下划线别名，与 posesrender 一致。
-	m_pConsole->Register("posesopen", "s[poses] ?s[map]", CFGFLAG_CLIENT, Con_PosesOpen, this, "Alias of poses_open");
-	m_pConsole->Register("posesclose", "", CFGFLAG_CLIENT, &CClient::Con_PosesClose, this, "Alias of poses_close");
+	m_pConsole->Register("posesopen", "s[poses] ?s[map]", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_PosesOpen, this, "Alias of poses_open");
+	m_pConsole->Register("posesclose", "", CFGFLAG_CLIENT | CFGFLAG_STORE, &CClient::Con_PosesClose, this, "Alias of poses_close");
 	m_pConsole->Register("net_reset", "", CFGFLAG_CLIENT, ConNetReset, this, "Rebinds the client's listening address and port");
 
 #if defined(CONF_VIDEORECORDER)
-	m_pConsole->Register("poses_video", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Record a MomentCap .poses scene to a video");
-	m_pConsole->Register("posesvideo", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Alias of poses_video");
+	m_pConsole->Register("poses_video", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_PosesVideo, this, "Record a MomentCap .poses scene to a video");
+	m_pConsole->Register("posesvideo", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_PosesVideo, this, "Alias of poses_video");
 	// 第一个参数必须是 s 而不是 r：r 会吞掉整行剩余内容，后面的 start/end 永远收不到。
 	// 文件名含空格时用引号包裹（"my demo"）。
 	m_pConsole->Register("start_video", "?s[file] ?f[start_sec] ?f[end_sec]", CFGFLAG_CLIENT, Con_StartVideo, this, "Start recording a video");
-	m_pConsole->Register("stop_video", "", CFGFLAG_CLIENT, Con_StopVideo, this, "Stop recording a video");
+	m_pConsole->Register("stop_video", "", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_StopVideo, this, "Stop recording a video");
 #endif
 
 	m_pConsole->Register("rcon", "r[rcon-command]", CFGFLAG_CLIENT, Con_Rcon, this, "Send specified command to rcon");
@@ -7860,7 +7864,7 @@ void CClient::RegisterCommands()
 	m_pConsole->Register("demo_play", "", CFGFLAG_CLIENT, Con_DemoPlay, this, "Play/pause the current demo");
 	m_pConsole->Register("demo_speed", "f[speed]", CFGFLAG_CLIENT, Con_DemoSpeed, this, "Set current demo speed");
 
-	m_pConsole->Register("save_replay", "?i[length] ?r[filename]", CFGFLAG_CLIENT, Con_SaveReplay, this, "Save a replay of the last defined amount of seconds");
+	m_pConsole->Register("save_replay", "?i[length] ?r[filename]", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_SaveReplay, this, "Save a replay of the last defined amount of seconds");
 	m_pConsole->Register("benchmark_quit", "i[seconds] r[file]", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_BenchmarkQuit, this, "Benchmark frame times for number of seconds to file, then quit");
 
 	RustVersionRegister(*m_pConsole);

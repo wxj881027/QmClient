@@ -59,6 +59,34 @@ def smoke_custom_media_directory_startup(env: SmokeEnvironment) -> None:
 	_smoke_media_directory_startup(env, "自定义 媒体")
 
 
+def smoke_startup_console_commands(env: SmokeEnvironment) -> None:
+	"""启动脚本和命令行可执行依赖游戏接口的命令。"""
+	env.path("autoexec_client.cfg").write_text(
+		"dummy_disconnect\ndummy_reset\ncl_replays 0\nsave_replay\n",
+		encoding="utf-8",
+	)
+	client = env.start_client([
+		"cl_show_welcome 1",
+		"qm_auto_update 0",
+		"qm_steam_auto_launch 0",
+		"poses_open qmclient-startup-missing.poses",
+	], connect=False)
+	client.wait_for(
+		lambda line: line == "replay: Feature is disabled. Please enable it via configuration.",
+		"disabled replay reported during startup",
+		15,
+	)
+	client.wait_for(
+		lambda line: line == "poses: could not open the .poses file",
+		"missing pose file reported during startup",
+		15,
+	)
+	client.command("quit")
+	code = client.wait_for_exit(15)
+	if code != 0:
+		raise RuntimeError(f"client exited with {_format_exit_code(code)}")
+
+
 def smoke_saved_custom_communities_startup(env: SmokeEnvironment) -> None:
 	"""加载保存的社区 URL 后启动，使用最终值发出首次请求。"""
 	http = Loopback()
@@ -157,6 +185,7 @@ def smoke_connection_shutdown(env: SmokeEnvironment) -> None:
 SMOKE_TESTS: dict[str, Callable[[SmokeEnvironment], None]] = {
 	"default_media_directory_startup": smoke_default_media_directory_startup,
 	"custom_media_directory_startup": smoke_custom_media_directory_startup,
+	"startup_console_commands": smoke_startup_console_commands,
 	"saved_custom_communities_startup": smoke_saved_custom_communities_startup,
 	"plain_connection": smoke_plain_connection,
 	"focus_configuration": smoke_focus_configuration,
