@@ -9,10 +9,12 @@
 #include <engine/shared/protocol.h>
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <limits>
 #include <memory>
 #include <set>
+#include <string_view>
 #include <utility>
 
 namespace
@@ -238,6 +240,147 @@ bool QmVoteMaps::ParseDetails(const char *pJson, size_t Length, const SMap &Map,
 	}
 	Details = Parsed;
 	return true;
+}
+
+bool QmVoteMaps::ParseAxiomDetails(const char *pJson, size_t Length, const SMap &Map, SDetails &Details)
+{
+	if(!pJson || !Length || Length > 2 * 1024 * 1024)
+		return false;
+	CJson pRoot(JsonParse(pJson, Length), json_value_free);
+	if(!pRoot || pRoot->type != json_object || IntField(pRoot.get(), "code", 200) != 200)
+		return false;
+	const json_value *pData = json_object_get(pRoot.get(), "data");
+	if(pData->type != json_object || StringField(pData, "map", MAX_MAP_LENGTH - 1) != Map.m_Name)
+		return false;
+	SDetails Parsed;
+	Parsed.m_Finishers = IntField(pData, "finisher_count", std::numeric_limits<int>::max());
+	if(Parsed.m_Finishers < 0)
+		return false;
+	const json_value *pTime = json_object_get(pData, "median_time");
+	if(pTime->type == json_integer || pTime->type == json_double)
+	{
+		const double Seconds = pTime->type == json_integer ? (double)pTime->u.integer : pTime->u.dbl;
+		if(std::isfinite(Seconds) && Seconds >= 0 && Seconds <= 365.0 * 86400.0)
+			Parsed.m_MedianSeconds = Seconds;
+	}
+	Details = Parsed;
+	return true;
+}
+
+namespace
+{
+	std::string_view TrimVoteText(std::string_view Text)
+	{
+		const auto Start = Text.find_first_not_of(" \t");
+		return Start == Text.npos ? std::string_view{} : Text.substr(Start, Text.find_last_not_of(" \t") + 1 - Start);
+	}
+
+	bool TakeVoteField(std::string_view &Line, std::string_view Field)
+	{
+		if(!Line.starts_with(Field))
+			return false;
+		Line.remove_prefix(Field.size());
+		if(Line.starts_with(":"))
+			Line.remove_prefix(1);
+		else if(Line.starts_with("："))
+			Line.remove_prefix(std::string_view("：").size());
+		else
+			return false;
+		Line = TrimVoteText(Line);
+		return true;
+	}
+
+	bool ParseAxiomMapRow(std::string_view Line, QmVoteMaps::SMap &Map)
+	{
+		const auto Split = Line.rfind(" 星级");
+		if(Split == Line.npos || Split == 0)
+			return false;
+		const auto Name = TrimVoteText(Line.substr(0, Split));
+		Line.remove_prefix(Split + 1);
+		if(Name.empty() || Name.size() >= MAX_MAP_LENGTH || !TakeVoteField(Line, "星级"))
+			return false;
+		int Filled = 0;
+		int Total = 0;
+		while(Line.starts_with("★") || Line.starts_with("☆"))
+		{
+			Filled += Line.starts_with("★");
+			++Total;
+			Line.remove_prefix(std::string_view("★").size());
+		}
+		if(Total == 0 || Total > 5)
+			return false;
+		Map.m_Name = Name;
+		Map.m_Stars = Filled;
+		Map.m_MaxStars = Total;
+		Line = TrimVoteText(Line);
+		if(TakeVoteField(Line, "发布于") && Line.size() == 10)
+			Map.m_Release = Line;
+		return true;
+	}
+
+	void ReadAxiomMapCredits(std::string_view Line, QmVoteMaps::SMap &Map)
+	{
+		if(!TakeVoteField(Line, "分数") || Line.empty())
+			return;
+		int Points = 0;
+		const auto [pAfter, Error] = std::from_chars(Line.data(), Line.data() + Line.size(), Points);
+		if(Error != std::errc{} || Points < 0)
+			return;
+		Line.remove_prefix(pAfter - Line.data());
+		Line = TrimVoteText(Line);
+		if(TakeVoteField(Line, "作者"))
+		{
+			Map.m_Points = Points;
+			Map.m_Mapper = Line;
+		}
+	}
+}
+
+QmVoteMaps::SAxiomMenu QmVoteMaps::ParseAxiomMenu(const CVoteOptionClient *pFirst)
+{
+	SAxiomMenu Menu;
+	bool InTypes = false;
+	bool InMaps = false;
+	std::string Category;
+	int Index = 0;
+	for(const auto *pOption = pFirst; pOption; pOption = pOption->m_pNext, ++Index)
+	{
+		auto Line = TrimVoteText(pOption->m_aDescription);
+		if(Line.starts_with("axiom@server:"))
+		{
+			InTypes = Line.starts_with("axiom@server:/votes$");
+			InMaps = Line.starts_with("axiom@server:/votes/maps$");
+			continue;
+		}
+		if(InTypes)
+		{
+			const bool Selected = Line.starts_with("☒") || Line.starts_with("☑");
+			if(!Selected && !Line.starts_with("☐") && !Line.starts_with("□"))
+				continue;
+			Line = TrimVoteText(Line.substr(std::string_view("☐").size()));
+			if(Line.empty())
+				continue;
+			if(Selected)
+			{
+				Menu.m_SelectedCategory = (int)Menu.m_vCategories.size();
+				Category = Line;
+			}
+			Menu.m_vCategories.push_back({std::string(Line), Index});
+		}
+		else if(InMaps)
+		{
+			SMap Map;
+			if(!ParseAxiomMapRow(Line, Map))
+				continue;
+			Menu.m_MaxStars = std::max(Menu.m_MaxStars, Map.m_MaxStars);
+			Map.m_Category = Category;
+			Map.m_VoteOption = Index;
+			if(pOption->m_pNext)
+				ReadAxiomMapCredits(TrimVoteText(pOption->m_pNext->m_aDescription), Map);
+			Menu.m_vMaps.push_back(std::move(Map));
+		}
+	}
+	return Menu;
 }
 
 bool QmVoteMaps::ParseVoteMap(const char *pDescription, SMap &Map)

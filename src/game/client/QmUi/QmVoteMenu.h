@@ -37,6 +37,9 @@ inline bool QmVotePlayerEligible(EQmVoteMenuPage Page, int Id, int LocalId, bool
 struct SQmVoteMenuState
 {
 	CQmVoteMapLoader m_Loader;
+	QmVoteMaps::SAxiomMenu m_AxiomMenu;
+	uint64_t m_AxiomRevision = std::numeric_limits<uint64_t>::max();
+	std::vector<const char *> m_vpAxiomCategoryLabels;
 	std::vector<QmVoteMaps::SMap> m_vMaps;
 	std::vector<int> m_vVisible;
 	QmVoteMaps::SFilter m_Filter;
