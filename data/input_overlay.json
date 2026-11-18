@@ -1,4 +1,7 @@
   {
+    "obs_color": "#ffffff80",
+    "obs_active_color": "#ffffff80",
+    "obs_inactive_alpha": 1.0,
     "layouts": [
       {
         "layout": "input overlay-Zac/wasd.json",
