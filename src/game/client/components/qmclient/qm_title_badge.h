@@ -6,10 +6,13 @@
 #include <engine/textrender.h>
 
 #include <game/client/QmUi/QmBadgeGeometry.h>
+#include <game/client/QmUi/UiTextRenderState.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/ui_rect.h>
 
 #include <cstdint>
+#include <new>
+#include <stdexcept>
 
 inline constexpr float QM_TITLE_TEXT_WAVE_AMPLITUDE = 0.08f;
 inline constexpr float QM_TITLE_TEXT_WAVE_FPS = 30.0f;
@@ -72,21 +75,29 @@ struct SQmTitleBadgePlacement
 	// 用实际生成的独立容器取得边界，聊天正文的基线和像素取整不再改变胶囊内的对齐。
 	void PrepareText(ITextRender *pTextRender, const char *pText, bool Wave = false, float Time = 0.0f)
 	{
-		CTextCursor Cursor;
-		const bool TextOnly = m_Appearance.m_TextStyle != 0;
-		Cursor.m_FontSize = TextOnly ? m_Rect.h : QmTitleBadgeLabelFontSize(m_Rect.h);
-		Cursor.m_CalculateVisualBoundingBox = !TextOnly;
-		if(TextOnly)
-			QmPrepareTitleTextCursor(Cursor, pText, m_Appearance.m_TextStyle, Wave, Time);
-		const unsigned PreviousFlags = pTextRender->GetRenderFlags();
-		const ColorRGBA PreviousColor = pTextRender->GetTextColor();
-		pTextRender->SetRenderFlags((PreviousFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) & ~TEXT_RENDER_FLAG_NO_AUTOMATIC_QUAD_UPLOAD);
-		pTextRender->TextColor(ui_token::color::NEUTRAL_WHITE);
-		pTextRender->RecreateTextContainerSoft(m_TextContainerIndex, &Cursor, pText);
-		if(!TextOnly)
-			m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
-		pTextRender->TextColor(PreviousColor);
-		pTextRender->SetRenderFlags(PreviousFlags);
+		const CUiScopedTextRenderState TextState(*pTextRender);
+		try
+		{
+			CTextCursor Cursor;
+			const bool TextOnly = m_Appearance.m_TextStyle != 0;
+			Cursor.m_FontSize = TextOnly ? m_Rect.h : QmTitleBadgeLabelFontSize(m_Rect.h);
+			Cursor.m_CalculateVisualBoundingBox = !TextOnly;
+			if(TextOnly)
+				QmPrepareTitleTextCursor(Cursor, pText, m_Appearance.m_TextStyle, Wave, Time);
+			pTextRender->SetRenderFlags((pTextRender->GetRenderFlags() | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) & ~TEXT_RENDER_FLAG_NO_AUTOMATIC_QUAD_UPLOAD);
+			pTextRender->TextColor(ui_token::color::NEUTRAL_WHITE);
+			pTextRender->RecreateTextContainerSoft(m_TextContainerIndex, &Cursor, pText);
+			if(!TextOnly)
+				m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
+		}
+		catch(const std::bad_alloc &)
+		{
+			pTextRender->ReleaseTemporaryTextContainer(m_TextContainerIndex);
+		}
+		catch(const std::length_error &)
+		{
+			pTextRender->ReleaseTemporaryTextContainer(m_TextContainerIndex);
+		}
 	}
 
 	void UpdateTextStyle(ITextRender *pTextRender, bool Wave, float Time)

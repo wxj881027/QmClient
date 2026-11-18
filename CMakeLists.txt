@@ -7002,6 +7002,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_map_progress_allocation_test.cpp
       src/test/unit/engine/net_client_allocation_test.cpp
       src/test/unit/engine/favorites_allocation_test.cpp
+      src/test/unit/qmclient/client/qm_chat_avatar_allocation_test.cpp
       src/test/support/prediction_collision_map.h
       src/test/integration/client/prediction_world_copy_failure_test.cpp
       src/test/integration/client/prediction_entity_numeric_test.cpp
