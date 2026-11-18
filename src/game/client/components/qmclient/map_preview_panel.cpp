@@ -3,6 +3,7 @@
 #include <base/perf_timer.h>
 
 #include <engine/client/client.h>
+#include <engine/client/map_download_resolver.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/http.h>
 #include <engine/shared/config.h>
@@ -16,7 +17,6 @@
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/map_download_index.h>
-#include <game/client/components/qmclient/map_download_resolver.h>
 #include <game/client/components/qmclient/map_preview_panel.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>

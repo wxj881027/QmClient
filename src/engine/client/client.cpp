@@ -5,6 +5,7 @@
 
 #include "demoedit.h"
 #include "friends.h"
+#include "map_download_resolver.h"
 #include "perf_file_logger.h"
 #include "qm_graphics_diagnostics.h"
 #include "qm_storage_mode.h"
@@ -2161,20 +2162,38 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 
 static void FormatMapDownloadFilename(const char *pName, const std::optional<SHA256_DIGEST> &Sha256, int Crc, bool Temp, char *pBuffer, int BufferSize)
 {
-	char aSuffix[32];
-	if(Temp)
-	{
-		IStorage::FormatTmpPath(aSuffix, sizeof(aSuffix), "");
-	}
-	else
-	{
-		str_copy(aSuffix, ".map");
-	}
-
+	char aSha256[SHA256_MAXSTRSIZE];
+	const char *pSha256 = nullptr;
 	if(Sha256.has_value())
 	{
-		char aSha256[SHA256_MAXSTRSIZE];
 		sha256_str(Sha256.value(), aSha256, sizeof(aSha256));
+		pSha256 = aSha256;
+	}
+	const std::string FileName = QmMapDownloadFileName(pName, pSha256, Crc);
+	if(!FileName.empty())
+	{
+		if(!Temp)
+		{
+			str_copy(pBuffer, FileName.c_str(), BufferSize);
+			return;
+		}
+		char aTmpSuffix[32];
+		IStorage::FormatTmpPath(aTmpSuffix, sizeof(aTmpSuffix), "");
+		std::string Base = FileName;
+		if(Base.size() > 4 && Base.compare(Base.size() - 4, 4, ".map") == 0)
+			Base.resize(Base.size() - 4);
+		str_format(pBuffer, BufferSize, "%s%s", Base.c_str(), aTmpSuffix);
+		return;
+	}
+
+	// 兜底保留旧行为：无效地图名或未知 CRC 时仍按旧格式落盘。
+	char aSuffix[32];
+	if(Temp)
+		IStorage::FormatTmpPath(aSuffix, sizeof(aSuffix), "");
+	else
+		str_copy(aSuffix, ".map");
+	if(Sha256.has_value())
+	{
 		str_format(pBuffer, BufferSize, "downloadedmaps/%s_%s%s", pName, aSha256, aSuffix);
 	}
 	else
@@ -2718,17 +2737,30 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 
 				if(MapSha256.has_value())
 				{
-					char aUrl[256];
-					char aEscaped[256];
-					EscapeUrl(aEscaped, str_startswith(m_aMapdownloadFilename, "downloadedmaps/"));
 					bool UseConfigUrl = str_comp(g_Config.m_ClMapDownloadUrl, "https://maps.ddnet.org") != 0 || m_aMapDownloadUrl[0] == '\0';
-					str_format(aUrl, sizeof(aUrl), "%s/%s", UseConfigUrl ? g_Config.m_ClMapDownloadUrl : m_aMapDownloadUrl, aEscaped);
-
-					m_pMapdownloadTask = HttpGetFile(pMapUrl ? pMapUrl : aUrl, Storage(), m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE);
-					m_pMapdownloadTask->Timeout(CTimeout{g_Config.m_ClMapDownloadConnectTimeoutMs, 0, g_Config.m_ClMapDownloadLowSpeedLimit, g_Config.m_ClMapDownloadLowSpeedTime});
-					m_pMapdownloadTask->MaxResponseSize(MapSize);
-					m_pMapdownloadTask->ExpectSha256(MapSha256.value());
-					Http()->Run(m_pMapdownloadTask);
+					char aSha256[SHA256_MAXSTRSIZE];
+					sha256_str(MapSha256.value(), aSha256, sizeof(aSha256));
+					SQmMapDownloadRequest Request;
+					Request.m_pMapName = pMap;
+					Request.m_pSha256Hex = aSha256;
+					Request.m_Crc = MapCrc;
+					Request.m_pServerUrl = pMapUrl;
+					Request.m_pBaseUrl = UseConfigUrl ? g_Config.m_ClMapDownloadUrl : m_aMapDownloadUrl;
+					SQmMapDownloadPlan Plan;
+					if(!QmBuildMapDownloadPlan(Request, &Plan) || Plan.m_Url.empty())
+					{
+						log_error("client/network", "failed to resolve map download URL for '%s'", pMap);
+						SendMapRequest();
+					}
+					else
+					{
+						str_copy(m_aMapdownloadFilename, Plan.m_FileName.c_str(), sizeof(m_aMapdownloadFilename));
+						m_pMapdownloadTask = HttpGetFile(Plan.m_Url.c_str(), Storage(), m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE);
+						m_pMapdownloadTask->Timeout(CTimeout{g_Config.m_ClMapDownloadConnectTimeoutMs, 0, g_Config.m_ClMapDownloadLowSpeedLimit, g_Config.m_ClMapDownloadLowSpeedTime});
+						m_pMapdownloadTask->MaxResponseSize(MapSize);
+						m_pMapdownloadTask->ExpectSha256(MapSha256.value());
+						Http()->Run(m_pMapdownloadTask);
+					}
 				}
 				else
 				{

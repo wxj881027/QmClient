@@ -81,24 +81,31 @@ inline std::string QmMapDownloadBaseUrl(const char *pBaseUrl)
 	return Base;
 }
 
+inline std::string QmMapDownloadFileName(const char *pMapName, const char *pSha256Hex, int Crc)
+{
+	if(!QmMapNameIsSafe(pMapName))
+		return {};
+	char aSuffix[96];
+	if(QmMapSha256IsHex(pSha256Hex))
+		str_copy(aSuffix, pSha256Hex);
+	else if(Crc >= 0)
+		str_format(aSuffix, sizeof(aSuffix), "%08x", Crc);
+	else
+		return {};
+	return std::string("downloadedmaps/") + pMapName + "_" + aSuffix + ".map";
+}
+
 // 官方进服下载的解析规则。服务器 URL > SHA256 CDN > 服务器传输。
 inline bool QmBuildMapDownloadPlan(const SQmMapDownloadRequest &Request, SQmMapDownloadPlan *pPlan)
 {
-	if(pPlan == nullptr || !QmMapNameIsSafe(Request.m_pMapName))
+	if(pPlan == nullptr)
 		return false;
-	const bool HasSha256 = QmMapSha256IsHex(Request.m_pSha256Hex);
-	const bool HasCrc = Request.m_Crc >= 0;
-	if(!HasSha256 && !HasCrc)
+	const std::string FileName = QmMapDownloadFileName(Request.m_pMapName, Request.m_pSha256Hex, Request.m_Crc);
+	if(FileName.empty())
 		return false;
-
-	char aSuffix[96];
-	if(HasSha256)
-		str_copy(aSuffix, Request.m_pSha256Hex);
-	else
-		str_format(aSuffix, sizeof(aSuffix), "%08x", Request.m_Crc);
 
 	*pPlan = SQmMapDownloadPlan{};
-	pPlan->m_FileName = std::string("downloadedmaps/") + Request.m_pMapName + "_" + aSuffix + ".map";
+	pPlan->m_FileName = FileName;
 	pPlan->m_Valid = true;
 	if(Request.m_pServerUrl != nullptr && Request.m_pServerUrl[0] != '\0')
 	{
@@ -106,7 +113,7 @@ inline bool QmBuildMapDownloadPlan(const SQmMapDownloadRequest &Request, SQmMapD
 		pPlan->m_Url = Request.m_pServerUrl;
 		return true;
 	}
-	if(HasSha256)
+	if(QmMapSha256IsHex(Request.m_pSha256Hex))
 	{
 		pPlan->m_Source = EQmMapDownloadSource::CDN_HASH;
 		pPlan->m_Url = QmMapDownloadBaseUrl(Request.m_pBaseUrl) + "/" + QmMapDownloadUrlEncode(pPlan->m_FileName.c_str() + std::strlen("downloadedmaps/"));
