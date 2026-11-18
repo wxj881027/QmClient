@@ -58,7 +58,12 @@ namespace QmHangDiagnostics
 	std::optional<SSnapshot> CSnapshotStore::TryClaimReport(int64_t Now, int64_t TimeoutNanoseconds)
 	{
 		const std::lock_guard<std::mutex> Lock(m_Mutex);
-		if(!m_WatchdogActive || !m_HaveHeartbeat || m_ReportClaimed || Now < m_Snapshot.m_LastHeartbeat || Now - m_Snapshot.m_LastHeartbeat < TimeoutNanoseconds)
+		const int64_t LastHeartbeat = m_Snapshot.m_LastHeartbeat;
+		if(!m_WatchdogActive || !m_HaveHeartbeat || m_ReportClaimed || Now < LastHeartbeat)
+			return std::nullopt;
+		// 已确认 Now 不早于心跳，无符号差值可表示两个有符号时间戳的完整间隔。
+		const uint64_t ElapsedNanoseconds = static_cast<uint64_t>(Now) - static_cast<uint64_t>(LastHeartbeat);
+		if(std::cmp_less(ElapsedNanoseconds, TimeoutNanoseconds))
 			return std::nullopt;
 		m_ReportClaimed = true;
 		return m_Snapshot;
@@ -174,8 +179,6 @@ namespace QmHangDiagnostics
 #if defined(CONF_FAMILY_WINDOWS)
 	SDumpResult WriteDump(const char *pFilename, FEncodeFilename pfnEncode, const crash_output::SWindowsFileOperations *pOperations) noexcept
 	{
-		using MiniDumpWriteDumpFunc = BOOL(WINAPI *)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE,
-			const MINIDUMP_EXCEPTION_INFORMATION *, const MINIDUMP_USER_STREAM_INFORMATION *, const MINIDUMP_CALLBACK_INFORMATION *);
 		if(!pFilename || !pFilename[0] || !str_utf8_check(pFilename))
 			return {EDumpStage::OPEN_FILE, ERROR_INVALID_PARAMETER};
 
@@ -190,7 +193,7 @@ namespace QmHangDiagnostics
 			if(!Module)
 				return {Stage, GetLastError()};
 			Stage = EDumpStage::FIND_WRITER;
-			auto pMiniDumpWriteDump = (MiniDumpWriteDumpFunc)GetProcAddress(Module.get(), "MiniDumpWriteDump");
+			auto pMiniDumpWriteDump = reinterpret_cast<decltype(&::MiniDumpWriteDump)>(GetProcAddress(Module.get(), "MiniDumpWriteDump"));
 			if(pMiniDumpWriteDump == nullptr)
 				return {Stage, GetLastError()};
 			Stage = EDumpStage::OPEN_FILE;
