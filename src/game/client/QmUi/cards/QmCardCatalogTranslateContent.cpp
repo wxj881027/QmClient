@@ -287,22 +287,14 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		if(!PrewarmOnly && !Ui()->RenderOnly())
 			NTranslateUi::CommitSelection(pConfigValue, ConfigValueSize, apCodes, Count, SelectedIndex, NewSel);
 
-		if(!LineInput.IsActive() && str_comp(LineInput.GetString(), pConfigValue) != 0)
-			LineInput.Set(pConfigValue);
+		// 输入框直接绑定配置缓冲区，编辑时已经写入。
 		LineInput.SetEmptyText(pEmptyText);
-		const bool WasActive = LineInput.IsActive();
-		const bool SubmitPressed = !PrewarmOnly && !Ui()->RenderOnly() && (Input()->KeyPress(KEY_RETURN) || Input()->KeyPress(KEY_KP_ENTER) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
-		const bool ClickedOutside = !PrewarmOnly && !Ui()->RenderOnly() && (Ui()->MouseButtonClicked(0) || Ui()->MouseButtonClicked(1)) && !Ui()->MouseHovered(&EditRect);
 		ui_widget::STextFieldOptions LanguageInputOptions;
 		LanguageInputOptions.m_pPlaceholder = pEmptyText;
 		LanguageInputOptions.m_FontSize = BodySize;
 		LanguageInputOptions.m_Corners = IGraphics::CORNER_ALL;
 		LanguageInputOptions.m_TextAlign = TEXTALIGN_MC;
 		RenderTextInput(&LineInput, EditRect, LanguageInputOptions);
-		if(WasActive && (SubmitPressed || ClickedOutside))
-		{
-			str_copy(pConfigValue, LineInput.GetString(), ConfigValueSize);
-		}
 	};
 	auto RenderSliderWithNumberInput = [&RenderSliderWithValueInput](const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
 		RenderSliderWithValueInput(pId, ControlColumn, pValue, MinValue, MaxValue, pSuffix);
@@ -610,20 +602,13 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 				if(!PrewarmOnly && !Ui()->RenderOnly() && ModelNewSel >= 0 && ModelNewSel != ModelOldSel && ModelNewSel != CustomIndex)
 					str_copy(pModelConfigValue, vModelPresets[ModelNewSel], ModelConfigSize);
 
-				if(!pActiveModelInput->IsActive() && str_comp(pActiveModelInput->GetString(), pModelConfigValue) != 0)
-					pActiveModelInput->Set(pModelConfigValue);
 				pActiveModelInput->SetEmptyText(pModelEmptyText);
-				const bool ModelWasActive = pActiveModelInput->IsActive();
-				const bool ModelSubmitPressed = !PrewarmOnly && !Ui()->RenderOnly() && (Input()->KeyPress(KEY_RETURN) || Input()->KeyPress(KEY_KP_ENTER) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
-				const bool ModelClickedOutside = !PrewarmOnly && !Ui()->RenderOnly() && (Ui()->MouseButtonClicked(0) || Ui()->MouseButtonClicked(1)) && !Ui()->MouseHovered(&ModelEditRect);
 				ui_widget::STextFieldOptions ModelInputOptions;
 				ModelInputOptions.m_pPlaceholder = pModelEmptyText;
 				ModelInputOptions.m_FontSize = BodySize;
 				ModelInputOptions.m_Corners = IGraphics::CORNER_ALL;
 				ModelInputOptions.m_TextAlign = TEXTALIGN_MC;
 				RenderTextInput(pActiveModelInput, ModelEditRect, ModelInputOptions);
-				if(ModelWasActive && (ModelSubmitPressed || ModelClickedOutside))
-					str_copy(pModelConfigValue, pActiveModelInput->GetString(), ModelConfigSize);
 			}
 		}
 		Flow.Space(ui_token::settings::RowGap(LineSpacing));
