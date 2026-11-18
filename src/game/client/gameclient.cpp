@@ -2773,7 +2773,7 @@ void CGameClient::RenderQmMonitoringHud(float GraphX, float GraphSpacing)
 		Graphics()->ScreenHeight(),
 		GraphX,
 		GraphSpacing);
-	m_QmMonitoring.RenderHud(Layout.m_PanelRect);
+	m_QmMonitoring.RenderHud(Layout);
 }
 
 void CGameClient::FormatStreamerClan(int ClientId, char *pBuf, int BufSize) const

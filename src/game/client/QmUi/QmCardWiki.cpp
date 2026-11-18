@@ -522,7 +522,7 @@ namespace
 		},
 		{
 			"qm:debug_graph",
-			Localizable("Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the debug graph toggle is on."),
+			Localizable("Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget."),
 			Localizable("Bind \"Global toggle key\" to show or hide the panel, and raise \"Panel opacity\" if the graphs are hard to read."),
 			Localizable("It is a diagnostic overlay, not gameplay data; lower the opacity when it covers the map."),
 		},
