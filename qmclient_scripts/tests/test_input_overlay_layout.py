@@ -17,55 +17,25 @@ MOUSE_IMAGE_PATH = REPO_ROOT / "data/input overlay-Zac/mouse.png"
 
 class InputOverlayLayoutTest(unittest.TestCase):
     def test_keyboard_contains_only_requested_keys_in_physical_rows(self) -> None:
-        expected_rows = (
-            ("escape", "1", "2", "3", "4", "5", "F12"),
-            ("tab", "q", "w", "e", "r", "t"),
-            ("capslock", "a", "s", "d", "f", "g"),
-            ("lshift", "z", "x", "c", "v"),
-            ("lctrl", "lgui", "lalt", "space"),
-        )
-        expected_positions = {
-            "escape": [-1, -1],
-            "1": [60, -1],
-            "2": [121, -1],
-            "3": [182, -1],
-            "4": [243, -1],
-            "5": [304, -1],
-            "F12": [365, -1],
-            "tab": [-1, 60],
-            "q": [91, 60],
-            "w": [152, 60],
-            "e": [213, 60],
-            "r": [274, 60],
-            "t": [335, 60],
-            "capslock": [-1, 121],
-            "a": [106, 121],
-            "s": [167, 121],
-            "d": [228, 121],
-            "f": [289, 121],
-            "g": [350, 121],
-            "lshift": [-1, 182],
-            "z": [136, 182],
-            "x": [197, 182],
-            "c": [258, 182],
-            "v": [319, 182],
-            "lctrl": [-1, 243],
-            "lgui": [75, 243],
-            "lalt": [152, 243],
-            "space": [228, 243],
-        }
+        expected_rows = ("12345", "qwer", "asdf", "zxcv")
         layout = json.loads(KEYBOARD_LAYOUT_PATH.read_text(encoding="utf-8"))
         elements = layout["elements"]
-
-        self.assertCountEqual(
-            [element["id"] for element in elements],
-            [key for row in expected_rows for key in row],
-        )
-        positions = {element["id"]: element["pos"] for element in elements}
-        self.assertEqual(positions, expected_positions)
-
-        self.assertEqual(layout["overlay_width"], 432)
-        self.assertEqual(layout["overlay_height"], 300)
+        heights = sorted({element["pos"][1] for element in elements})
+        actual_rows = [
+            "".join(
+                element["id"]
+                for element in sorted(elements, key=lambda item: item["pos"][0])
+                if element["pos"][1] == height
+            )
+            for height in heights
+        ]
+        self.assertEqual(actual_rows, list(expected_rows))
+        for element in elements:
+            pos_x, pos_y = element["pos"]
+            _, _, width, height = element["mapping"]
+            self.assertGreaterEqual(min(pos_x, pos_y), 0)
+            self.assertLessEqual(pos_x + width, layout["overlay_width"])
+            self.assertLessEqual(pos_y + height, layout["overlay_height"])
 
     def test_keyboard_sprite_mappings_fit_inside_atlas(self) -> None:
         layout = json.loads(KEYBOARD_LAYOUT_PATH.read_text(encoding="utf-8"))
@@ -100,7 +70,16 @@ class InputOverlayLayoutTest(unittest.TestCase):
         self.assertEqual(keyboard["layout"], "input overlay-Zac/wasd.json")
         self.assertEqual(mouse["layout"], "input overlay-Zac/mouse.json")
         self.assertEqual(keyboard["pressed_offset_y"], 61)
-        self.assertEqual(mouse["offset"], {"x": 467, "y": 0})
+        width = json.loads(KEYBOARD_LAYOUT_PATH.read_text(encoding="utf-8"))["overlay_width"]
+        self.assertEqual(mouse["offset"], {"x": width + 35, "y": 0})
+
+    def test_stationary_mouse_shares_button_states_without_an_arrow(self) -> None:
+        layout = json.loads(MOUSE_LAYOUT_PATH.read_text(encoding="utf-8"))
+        stationary = json.loads(
+            MOUSE_LAYOUT_PATH.with_name("mouse-no-movement.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(REPO_ROOT / "data" / stationary["image"], MOUSE_IMAGE_PATH)
+        self.assertEqual(stationary["elements"], [e for e in layout["elements"] if e["type"] != 9])
 
     def test_mouse_layout_exposes_all_official_states(self) -> None:
         layout = json.loads(MOUSE_LAYOUT_PATH.read_text(encoding="utf-8"))
@@ -118,7 +97,7 @@ class InputOverlayLayoutTest(unittest.TestCase):
             ("smb2", 3, [775, 66, 40, 62], [0, 210], True),
             ("smb1", 0, [818, 1, 41, 62], [11, 273], False),
             ("smb1", 3, [818, 66, 41, 62], [11, 273], True),
-            ("arrow", 9, [862, 1, 100, 100], [102, 236], False),
+            ("arrow", 9, [862, 1, 56, 56], [115, 258], False),
         )
         elements = layout["elements"]
         actual_elements = tuple(

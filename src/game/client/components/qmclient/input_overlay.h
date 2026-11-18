@@ -3,6 +3,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_INPUT_OVERLAY_H
 
 #include <base/color.h>
+#include <base/vmath.h>
 
 #include <engine/graphics.h>
 #include <engine/input.h>
@@ -79,6 +80,14 @@ namespace QmInputOverlay
 	inline float LayoutScale(bool IsMouseLayout, float KeyboardScale, float MouseScale)
 	{
 		return IsMouseLayout ? MouseScale : KeyboardScale;
+	}
+
+	inline vec2 MouseArrowOffset(vec2 Aim, float MaxAimDistance, vec2 SpriteSize, float PalmRadius)
+	{
+		if(PalmRadius <= 0.0f || MaxAimDistance <= 0.0f)
+			return vec2(0.0f, 0.0f);
+		const float Travel = std::max(0.0f, PalmRadius - length(SpriteSize) * 0.5f);
+		return Aim * (Travel / std::max(MaxAimDistance, length(Aim)));
 	}
 
 	inline SScaledBounds ScaledLayoutBounds(float OffsetX, float OffsetY, float Width, float Height, float OffsetScale, float ContentScale)
@@ -212,6 +221,7 @@ private:
 		int m_Type = 0;
 		int m_ZLevel = 0;
 		int m_MouseType = 0;
+		float m_MovementRadius = 0.0f;
 		int m_WheelDir = 0;
 		bool m_ActiveOnly = false;
 		EObsInputKind m_InputKind = EObsInputKind::NONE;
