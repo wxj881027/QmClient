@@ -6620,10 +6620,10 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 
 	// wait for idle, so there is no data race
 	Graphics()->WaitForIdle();
+	// 分段导出使用任务启动时冻结的显示配置，整段直录在开始时捕获一份。
+	const SVideoDisplaySnapshot DisplaySnapshot = m_pVideoExportTask ? m_pVideoExportTask->DisplaySnapshot() : qm_demo_display::Capture(g_Config);
 	if(!StartVideoRecorder(*Sound(), [&] {
 		   // 输出分辨率（M7 超采样）：qm_video_width/height 为 0 时跟随渲染分辨率；
-		   // 分段导出使用任务启动时冻结的显示配置；整段直录在开始时捕获一份。
-		   const SVideoDisplaySnapshot DisplaySnapshot = m_pVideoExportTask ? m_pVideoExportTask->DisplaySnapshot() : qm_demo_display::Capture(g_Config);
 		   // 离屏导出计划（导出 FSAA / 输出大于窗口）：离屏时 CVideo 的读回尺寸按目标尺寸
 		   // 建立（输出可大于窗口，M7 的"防上采样回退"由目标尺寸天然满足）；
 		   // 降级回窗口路径时按窗口读回，行为与旧实现一致。
