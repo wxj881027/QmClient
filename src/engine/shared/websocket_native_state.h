@@ -4,6 +4,7 @@
 #include <base/borrowed_allocator.h>
 
 #include <engine/shared/network.h>
+#include <engine/shared/protocol.h>
 #include <engine/shared/ringbuffer.h>
 
 #include <limits>
