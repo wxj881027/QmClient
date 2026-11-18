@@ -7,6 +7,7 @@
 #include <engine/graphics.h>
 
 #include <memory>
+#include <new>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -84,12 +85,19 @@ void QmPopulateOpenGLGpuList(STWGraphicGpu &List, const char *pRenderer, TReadAd
 	List.m_AutoGpu = {};
 	List.m_AutoGpu.m_GpuType = STWGraphicGpu::GRAPHICS_GPU_TYPE_INVALID;
 	str_copy(List.m_AutoGpu.m_aName, pRenderer ? pRenderer : "");
-	for(const std::string &Name : ReadAdapters())
+	try
 	{
-		STWGraphicGpu::STWGraphicGpuItem Item{};
-		str_copy(Item.m_aName, Name.c_str());
-		Item.m_GpuType = STWGraphicGpu::GRAPHICS_GPU_TYPE_INVALID;
-		List.m_vGpus.push_back(Item);
+		for(const std::string &Name : ReadAdapters())
+		{
+			STWGraphicGpu::STWGraphicGpuItem Item{};
+			str_copy(Item.m_aName, Name.c_str());
+			Item.m_GpuType = STWGraphicGpu::GRAPHICS_GPU_TYPE_INVALID;
+			List.m_vGpus.push_back(Item);
+		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		List.m_vGpus.clear();
 	}
 }
 

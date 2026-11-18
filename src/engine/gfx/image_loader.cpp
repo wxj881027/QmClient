@@ -20,7 +20,6 @@
 #include <limits>
 #include <memory>
 #include <new>
-#include <vector>
 
 bool CByteBufferReader::Read(void *pData, size_t Size)
 {
@@ -540,18 +539,28 @@ bool CImageLoader::ReadPngComment(IOHANDLE File, const char *pFilename, std::str
 	png_read_info(pPngStruct, pPngInfo);
 	png_textp pText = nullptr;
 	const int Count = png_get_text(pPngStruct, pPngInfo, &pText, nullptr);
+	bool CommentRead = true;
 	for(int Index = 0; Index < Count; ++Index)
 	{
 		if(pText[Index].key == nullptr || str_comp(pText[Index].key, "Comment") != 0 || pText[Index].text == nullptr)
 			continue;
 		const size_t Length = pText[Index].compression == PNG_ITXT_COMPRESSION_NONE || pText[Index].compression == PNG_ITXT_COMPRESSION_zTXt ? pText[Index].itxt_length : pText[Index].text_length;
 		if(Length <= 4096)
-			Comment.assign(pText[Index].text, Length);
+		{
+			try
+			{
+				Comment.assign(pText[Index].text, Length);
+			}
+			catch(const std::bad_alloc &)
+			{
+				CommentRead = false;
+			}
+		}
 		break;
 	}
 	png_destroy_read_struct(&pPngStruct, &pPngInfo, nullptr);
 	io_close(File);
-	return true;
+	return CommentRead;
 }
 
 bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, const char *pComment)
@@ -687,29 +696,17 @@ bool CImageLoader::SaveWebP(IOHANDLE File, const char *pFilename, const CImageIn
 	return SaveImageFile(File, pFilename, "webp", Operations, [&](CByteBufferWriter &Writer) { return SaveWebP(Writer, Image); });
 }
 
-bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes)
-{
 #if defined(CONF_WEBP)
-	// Read all data from reader
-	const size_t DataSize = Reader.Size();
-	if(DataSize == 0)
+static bool LoadWebPData(const uint8_t *pData, size_t DataSize, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes)
+{
+	if(pData == nullptr || DataSize == 0)
 	{
 		log_error("webp", "empty data for '%s'", pContextName);
 		return false;
 	}
 
-	std::vector<uint8_t> vData(DataSize);
-	if(!Reader.Read(vData.data(), DataSize))
-	{
-		log_error("webp", "failed to read data for '%s'", pContextName);
-		return false;
-	}
-
-	// Use libwebp to decode WebP
 	int Width = 0, Height = 0;
-
-	// First check if it's a valid WebP file and get dimensions
-	if(!WebPGetInfo(vData.data(), vData.size(), &Width, &Height))
+	if(!WebPGetInfo(pData, DataSize, &Width, &Height))
 	{
 		log_error("webp", "invalid WebP data for '%s'", pContextName);
 		return false;
@@ -735,7 +732,7 @@ bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName,
 		log_error("webp", "failed to allocate output buffer for '%s'", pContextName);
 		return false;
 	}
-	if(!WebPDecodeRGBAInto(vData.data(), vData.size(), pDestData, DataSizeOut, Width * 4))
+	if(!WebPDecodeRGBAInto(pData, DataSize, pDestData, DataSizeOut, Width * 4))
 	{
 		free(pDestData);
 		log_error("webp", "failed to decode WebP for '%s'", pContextName);
@@ -749,6 +746,28 @@ bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName,
 	Image.m_pData = pDestData;
 
 	return true;
+}
+#endif
+
+bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes)
+{
+#if defined(CONF_WEBP)
+	const size_t DataSize = Reader.Size();
+	if(DataSize == 0)
+		return LoadWebPData(nullptr, 0, pContextName, Image, MaxDecodedBytes);
+
+	const std::unique_ptr<uint8_t, decltype(&free)> Data(static_cast<uint8_t *>(malloc(DataSize)), free);
+	if(!Data)
+	{
+		log_error("webp", "failed to allocate input buffer for '%s'", pContextName);
+		return false;
+	}
+	if(!Reader.Read(Data.get(), DataSize))
+	{
+		log_error("webp", "failed to read data for '%s'", pContextName);
+		return false;
+	}
+	return LoadWebPData(Data.get(), DataSize, pContextName, Image, MaxDecodedBytes);
 #else
 	(void)Image;
 	(void)MaxDecodedBytes;
@@ -796,11 +815,8 @@ bool CImageLoader::LoadWebP(IOHANDLE File, const char *pFilename, CImageInfo &Im
 		return false;
 	}
 
-	CByteBufferReader ImageReader(static_cast<const uint8_t *>(pFileData), FileDataSize);
-
-	const bool LoadResult = CImageLoader::LoadWebP(ImageReader, pFilename, Image);
-	free(pFileData);
-	if(!LoadResult)
+	const std::unique_ptr<void, decltype(&free)> FileData(pFileData, free);
+	if(!LoadWebP(FileData.get(), FileDataSize, pFilename, Image))
 	{
 		log_error("webp", "failed to load image from file. filename='%s'", pFilename);
 		return false;
@@ -836,6 +852,10 @@ CImageLoader::EPngLoadResult CImageLoader::LoadPngChecked(const void *pData, siz
 
 bool CImageLoader::LoadWebP(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes)
 {
+#if defined(CONF_WEBP)
+	return LoadWebPData(static_cast<const uint8_t *>(pData), Size, pContextName, Image, MaxDecodedBytes);
+#else
 	CByteBufferReader Reader(static_cast<const uint8_t *>(pData), Size);
 	return LoadWebP(Reader, pContextName, Image, MaxDecodedBytes);
+#endif
 }

@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <new>
+
 TEST(QmGraphicsAdapters, VirtualDisplayCopyOfPhysicalGpuDoesNotCountAsSecondAdapter)
 {
 	STWGraphicGpu List;
@@ -102,5 +104,15 @@ TEST(QmGraphicsAdapters, MissingRendererResetsPreviousAutomaticDevice)
 	QmPopulateOpenGLGpuList(List, "Previous renderer", [] { return std::vector<std::string>{}; });
 	QmPopulateOpenGLGpuList(List, nullptr, [] { return std::vector<std::string>{}; });
 	EXPECT_STREQ(List.m_AutoGpu.m_aName, "");
+	EXPECT_FALSE(List.m_CanSelect);
+}
+
+TEST(QmGraphicsAdapters, HardwareEnumerationAllocationFailurePreservesCurrentRenderer)
+{
+	STWGraphicGpu List;
+	QmPopulateOpenGLGpuList(List, "Previous renderer", [] { return std::vector<std::string>{"Previous GPU"}; });
+	QmPopulateOpenGLGpuList(List, "Current renderer", []() -> std::vector<std::string> { throw std::bad_alloc(); });
+	EXPECT_STREQ(List.m_AutoGpu.m_aName, "Current renderer");
+	EXPECT_TRUE(List.m_vGpus.empty());
 	EXPECT_FALSE(List.m_CanSelect);
 }

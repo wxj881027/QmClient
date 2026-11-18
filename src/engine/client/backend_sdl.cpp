@@ -59,6 +59,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <vector>
 
 class IStorage;
@@ -66,10 +67,15 @@ class IStorage;
 // ------------ CCommandProcessorFragment_SDL
 void CCommandProcessorFragment_SDL::Cmd_Init(const SCommand_Init *pCommand)
 {
+	if(pCommand->m_GLContext != nullptr && !SDL_GL_MakeCurrent(pCommand->m_pWindow, pCommand->m_GLContext))
+	{
+		log_error("gfx", "Unable to bind graphics context on the render thread: %s", SDL_GetError());
+		return;
+	}
 	m_GLContext = pCommand->m_GLContext;
 	m_pWindow = pCommand->m_pWindow;
-	if(m_GLContext)
-		SDL_GL_MakeCurrent(m_pWindow, m_GLContext);
+	if(pCommand->m_pContextBound != nullptr)
+		*pCommand->m_pContextBound = true;
 }
 
 void CCommandProcessorFragment_SDL::Cmd_Shutdown(const SCommand_Shutdown *pCommand)
@@ -787,23 +793,19 @@ static int RoundRefreshRate(float RefreshRate)
 	return (int)std::lround(RefreshRate);
 }
 
-static std::vector<SDL_DisplayID> DisplayIds()
+static std::unique_ptr<SDL_DisplayID, decltype(&SDL_free)> DisplayIds(int &Count)
 {
-	int DisplayNum = 0;
-	SDL_DisplayID *pDisplayIds = SDL_GetDisplays(&DisplayNum);
-	if(pDisplayIds == nullptr)
-		return {};
-	const std::vector<SDL_DisplayID> vDisplayIds(pDisplayIds, pDisplayIds + DisplayNum);
-	SDL_free(pDisplayIds);
-	return vDisplayIds;
+	Count = 0;
+	return {SDL_GetDisplays(&Count), SDL_free};
 }
 
 SDL_DisplayID CGraphicsBackend_SDL_GL::DisplayIdFromIndex(int Index)
 {
-	const std::vector<SDL_DisplayID> vDisplayIds = DisplayIds();
-	if(Index < 0 || Index >= (int)vDisplayIds.size())
+	int Count;
+	const auto pDisplayIds = DisplayIds(Count);
+	if(!pDisplayIds || Index < 0 || Index >= Count)
 		return 0; // 0 is invalid
-	return vDisplayIds[Index];
+	return pDisplayIds.get()[Index];
 }
 
 bool CGraphicsBackend_SDL_GL::IsModernAPI(EBackendType BackendType)
@@ -933,7 +935,9 @@ bool CGraphicsBackend_SDL_GL::GetDetectedContextVersion(int &Major, int &Minor, 
 
 int CGraphicsBackend_SDL_GL::GetNumScreens() const
 {
-	return DisplayIds().size();
+	int Count;
+	const auto pDisplayIds = DisplayIds(Count);
+	return pDisplayIds ? Count : 0;
 }
 
 const char *CGraphicsBackend_SDL_GL::GetScreenName(int Index) const
@@ -1355,7 +1359,16 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		// emscripten_set_main_loop function before.
 		SDL_GL_SetSwapInterval(Flags & IGraphicsBackend::INITFLAG_VSYNC ? 1 : 0);
 #endif
-		SDL_GL_MakeCurrent(nullptr, nullptr);
+		if(!SDL_GL_MakeCurrent(nullptr, nullptr) && InitError == 0)
+		{
+			log_error("gfx", "Unable to release graphics context on the main thread: %s", SDL_GetError());
+			str_copy(m_aErrorString, "Unable to release the OpenGL context on the main thread.");
+			SDL_GL_DestroyContext(m_GLContext);
+			m_GLContext = nullptr;
+			SDL_DestroyWindow(m_pWindow);
+			m_pWindow = nullptr;
+			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_CONTEXT_FAILED;
+		}
 	}
 
 	if(InitError != 0)
@@ -1427,18 +1440,26 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	CmdBuffer.Reset();
 
 	// run sdl first to have the context in the thread
+	bool ContextBound = false;
 	CCommandProcessorFragment_SDL::SCommand_Init CmdSDL;
 	CmdSDL.m_pWindow = m_pWindow;
 	CmdSDL.m_GLContext = m_GLContext;
+	CmdSDL.m_pContextBound = &ContextBound;
 	CmdBuffer.AddCommandUnsafe(CmdSDL);
 	RunBuffer(&CmdBuffer);
 	WaitForIdle();
 	CmdBuffer.Reset();
 
+	const bool ContextBindFailed = m_GLContext != nullptr && !ContextBound;
 	if(HasFatalError())
 	{
 		InitError = -1;
 		pErrorStr = "Unexpected graphics failure during initialization.";
+	}
+	else if(ContextBindFailed)
+	{
+		InitError = -1;
+		pErrorStr = "Unable to bind the OpenGL context on the render thread.";
 	}
 
 	if(InitError == 0)
@@ -1476,7 +1497,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 
 	if(InitError != 0)
 	{
-		if(InitError != -2)
+		if(InitError != -2 && !ContextBindFailed)
 		{
 			// shutdown the context, as it might have been initialized
 			CCommandProcessorFragment_GLBase::SCommand_Shutdown CmdGL;
@@ -1523,6 +1544,8 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 			str_copy(m_aErrorString, pErrorStr);
 		}
 
+		if(ContextBindFailed)
+			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_CONTEXT_FAILED;
 		return m_BackendType == BACKEND_TYPE_METAL ? EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_METAL_INIT_FAILED : EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_VERSION_FAILED;
 	}
 
@@ -1755,9 +1778,14 @@ bool CGraphicsBackend_SDL_GL::UpdateDisplayMode(int Index, ivec2 *pDesktopSize)
 
 int CGraphicsBackend_SDL_GL::IndexFromDisplayId(SDL_DisplayID DisplayId)
 {
-	const std::vector<SDL_DisplayID> vDisplayIds = DisplayIds();
-	const auto It = std::find(vDisplayIds.begin(), vDisplayIds.end(), DisplayId);
-	return It == vDisplayIds.end() ? -1 : It - vDisplayIds.begin();
+	int Count;
+	const auto pDisplayIds = DisplayIds(Count);
+	if(!pDisplayIds)
+		return -1;
+	const SDL_DisplayID *pBegin = pDisplayIds.get();
+	const SDL_DisplayID *pEnd = pBegin + Count;
+	const SDL_DisplayID *pFound = std::find(pBegin, pEnd, DisplayId);
+	return pFound == pEnd ? -1 : static_cast<int>(pFound - pBegin);
 }
 
 bool CGraphicsBackend_SDL_GL::SetExclusiveFullscreenMode(int Index, int Width, int Height, int RefreshRate)

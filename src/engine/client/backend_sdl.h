@@ -266,6 +266,7 @@ public:
 			SCommand(CMD_INIT) {}
 		SDL_Window *m_pWindow;
 		SDL_GLContext m_GLContext;
+		bool *m_pContextBound = nullptr;
 	};
 
 	struct SCommand_Shutdown : public CCommandBuffer::SCommand

@@ -181,6 +181,19 @@ TEST(Image, ConvertToRgbaRejectsMissingSourceData)
 	EXPECT_EQ(pRgba, nullptr);
 }
 
+TEST(Image, DilatingSubimageAtBottomRightPreservesOtherPixelsAndAlpha)
+{
+	uint8_t aPixels[] = {
+		1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0,
+		10, 11, 12, 0, 17, 23, 42, 255, 0, 0, 0, 0};
+	const uint8_t aExpected[] = {
+		1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0,
+		10, 11, 12, 0, 17, 23, 42, 255, 17, 23, 42, 0};
+
+	DilateImageSub(aPixels, 3, 2, 1, 1, 2, 1);
+	EXPECT_EQ(mem_comp(aPixels, aExpected, sizeof(aExpected)), 0);
+}
+
 TEST(Image, ResizeRejectsInvalidDimensions)
 {
 	uint8_t aRgba[] = {1, 2, 3, 4};
