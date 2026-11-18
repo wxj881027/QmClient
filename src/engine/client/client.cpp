@@ -654,14 +654,15 @@ CClient::CClient() :
 	m_Sixup = false;
 }
 
-#if defined(CONF_VIDEORECORDER)
-// 等待拼接线程完成：防止静态对象销毁撕裂正在写的输出文件（缺 trailer）
 CClient::~CClient()
 {
-	if(m_ConcatThread.joinable())
-		m_ConcatThread.join();
-}
+#if defined(CONF_VIDEORECORDER)
+	// 等待拼接线程写完文件尾部，再销毁客户端成员。
+	m_SegmentConcat.Join();
 #endif
+	if(m_OwnExecutable != nullptr)
+		io_close(m_OwnExecutable);
+}
 
 // ----- send functions -----
 int CClient::SendMsg(int Conn, CMsgPacker *pMsg, int Flags)
@@ -3269,7 +3270,10 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 
 					if(!Dummy)
 					{
-						GameClient()->ProcessDemoSnapshot(TmpBuffer3.AsSnapshot());
+						{
+							const CDemoSnapshotWriteGuard Guard(*TmpBuffer3.AsSnapshot());
+							GameClient()->ProcessDemoSnapshot(TmpBuffer3.AsSnapshot());
+						}
 
 						CSnapshotBuffer SnapSeven;
 						int DemoSnapSize = SnapSize;
@@ -4654,11 +4658,16 @@ void CClient::RegisterInterfaces()
 	Kernel()->ReregisterInterface(static_cast<IFriends *>(&m_Foes));
 }
 
+void CClient::RegisterEditor()
+{
+	m_pEditor.reset(CreateEditor());
+	Kernel()->RegisterInterface(m_pEditor.get(), false);
+}
+
 void CClient::InitInterfaces()
 {
 	// fetch interfaces
 	m_pEngine = Kernel()->RequestInterface<IEngine>();
-	m_pEditor = Kernel()->RequestInterface<IEditor>();
 	m_pFavorites = Kernel()->RequestInterface<IFavorites>();
 	m_pSound = Kernel()->RequestInterface<IEngineSound>();
 	m_pGameClient = Kernel()->RequestInterface<IGameClient>();
@@ -5164,15 +5173,14 @@ void CClient::Run()
 				m_RenderFrameTime = (Now - m_LastRenderTime) / (float)time_freq();
 				m_FpsGraph.Add(1.0f / m_RenderFrameTime);
 
-				if(m_BenchmarkFile)
+				if(m_pBenchmarkFile)
 				{
 					char aBuf[64];
 					str_format(aBuf, sizeof(aBuf), "Frametime %d us\n", (int)(m_RenderFrameTime * 1000000));
-					io_write(m_BenchmarkFile, aBuf, str_length(aBuf));
+					io_write(m_pBenchmarkFile.get(), aBuf, str_length(aBuf));
 					if(time_get() > m_BenchmarkStopTime)
 					{
-						io_close(m_BenchmarkFile);
-						m_BenchmarkFile = nullptr;
+						m_pBenchmarkFile.reset();
 						Quit();
 					}
 				}
@@ -5495,7 +5503,7 @@ void CClient::Run()
 		FinishQmPerfSession(true);
 	GameClient()->OnShutdown();
 	dbg_msg("perf/client", "event=shutdown_step step=game_client");
-	delete m_pEditor;
+	DestroyEditor();
 	dbg_msg("perf/client", "event=shutdown_step step=editor");
 
 	// close sockets
@@ -6271,8 +6279,7 @@ CClient::EVideoExportStartResult CClient::StartSegmentedVideoExport(const char *
 	}
 
 	// 新一轮导出：重置上一次的拼接结果，避免 UI 沿用旧的"完成/失败"状态。
-	m_ConcatAttempted.store(false);
-	m_ConcatLastSucceeded.store(false);
+	m_SegmentConcat.ResetResult();
 
 	char aName[IO_MAX_PATH_LENGTH];
 	str_copy(aName, pName);
@@ -6414,8 +6421,7 @@ void CClient::FinishSegmentedExport()
 	{
 		log_error("video_export", "Segment %d recording failed; keeping it pending for the next run.", SegmentIndex + 1);
 		// 本次导出失败：让 UI 不弹"渲染完成"。
-		m_ConcatAttempted.store(true);
-		m_ConcatLastSucceeded.store(false);
+		m_SegmentConcat.MarkFailed();
 		pTask->ResetToIdle();
 		m_pVideoExportTask.reset();
 		return;
@@ -6432,8 +6438,7 @@ void CClient::FinishSegmentedExport()
 	{
 		// 段文件不完整：终止任务（进度文件保留，续渲时将重渲该段），避免状态滞留被误判为外部停录
 		log_error("video_export", "Segment file '%s' is incomplete; segmented export cancelled (will re-render on resume).", aSegmentName);
-		m_ConcatAttempted.store(true);
-		m_ConcatLastSucceeded.store(false);
+		m_SegmentConcat.MarkFailed();
 		pTask->ResetToIdle();
 		m_pVideoExportTask.reset();
 		return;
@@ -6467,17 +6472,13 @@ void CClient::FinishSegmentedExport()
 }
 
 // 收尾拼接：检查全部段文件在位后在后台线程流复制拼接（libavformat 裸 IO，用绝对路径）。
-void CClient::StartSegmentConcat(const CVideoExportTask *pTask)
+void CClient::StartSegmentConcat(const CVideoExportTask *pTask) try
 {
-	// 上一次拼接仍在进行：拒绝新请求（同输出文件并发写会撕裂）；已跑完则回收线程句柄后继续。
-	if(m_ConcatThread.joinable())
+	// 仍在拼接时拒绝新请求，避免并发访问同名的段文件和输出文件。
+	if(m_SegmentConcat.Pending())
 	{
-		if(!m_ConcatThreadFinished.load())
-		{
-			log_info("video_export", "A previous concat is still running; skipping the new concat request.");
-			return;
-		}
-		m_ConcatThread.join();
+		log_info("video_export", "A previous concat is still running; skipping the new concat request.");
+		return;
 	}
 
 	std::vector<std::string> vFiles;
@@ -6493,9 +6494,7 @@ void CClient::StartSegmentConcat(const CVideoExportTask *pTask)
 		if(WholePath.empty() || !CVideoExportTask::VerifySegmentFile(WholePath.c_str()))
 		{
 			log_error("video_export", "Segment '%s' missing or unreadable; skipping concat.", aSegLogical);
-			// 记下"已尝试但失败"，让 UI 不把本次导出当成已完成。
-			m_ConcatAttempted.store(true);
-			m_ConcatLastSucceeded.store(false);
+			m_SegmentConcat.MarkFailed();
 			return;
 		}
 		vFiles.push_back(std::move(WholePath));
@@ -6505,19 +6504,19 @@ void CClient::StartSegmentConcat(const CVideoExportTask *pTask)
 	pTask->FinalOutputName(aOutName, sizeof(aOutName));
 	char aOutFull[IO_MAX_PATH_LENGTH];
 	str_format(aOutFull, sizeof(aOutFull), "videos/%s.%s", aOutName, ContainerName());
-	const std::string OutputPath = qmclient::media_paths::CompletePath(Storage(),
+	std::string OutputPath = qmclient::media_paths::CompletePath(Storage(),
 		qmclient::media_paths::Resolve(Storage(), g_Config, aOutFull));
 
 	// muxer 格式名跟随容器（mkv → "matroska"），避免容器与后缀不一致
-	const std::string FormatName = ConcatFormatName();
-	m_ConcatAttempted.store(true);
-	m_ConcatLastSucceeded.store(false);
-	m_ConcatThreadFinished.store(false);
-	m_ConcatThread = std::thread([this, vFiles = std::move(vFiles), OutputPath, FormatName]() {
-		m_ConcatLastSucceeded.store(ConcatVideoFiles(vFiles, OutputPath.c_str(), FormatName.c_str()));
-		// 无论成功失败都要复位，保证下一次导出的拼接请求不会被永久拒绝。
-		m_ConcatThreadFinished.store(true);
+	std::string FormatName = ConcatFormatName();
+	m_SegmentConcat.Start([vFiles = std::move(vFiles), OutputPath = std::move(OutputPath), FormatName = std::move(FormatName)] {
+		return ConcatVideoFiles(vFiles, OutputPath.c_str(), FormatName.c_str());
 	});
+}
+catch(...)
+{
+	m_SegmentConcat.MarkFailed();
+	log_error("video_export", "Could not prepare the segment files for video concat.");
 }
 
 void CClient::DriveSegmentedExport(int CurrentTick)
@@ -7211,7 +7210,9 @@ void CClient::Con_BenchmarkQuit(IConsole::IResult *pResult, void *pUserData)
 
 void CClient::BenchmarkQuit(int Seconds, const char *pFilename)
 {
-	m_BenchmarkFile = Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_ABSOLUTE);
+	// 同名文件会被截断，先关闭上一次的输出并写完缓冲。
+	m_pBenchmarkFile.reset();
+	m_pBenchmarkFile.reset(Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_ABSOLUTE));
 	m_BenchmarkStopTime = time_get() + time_freq() * Seconds;
 }
 
@@ -7538,7 +7539,7 @@ int CClient::HandleChecksum(int Conn, CUuid Uuid, CUnpacker *pUnpacker)
 	}
 	if(End > (int)sizeof(m_Checksum.m_aBytes))
 	{
-		if(m_OwnExecutableSize == 0)
+		if(m_OwnExecutableSize == 0 && m_OwnExecutable == nullptr)
 		{
 			m_OwnExecutable = io_current_exe();
 			// io_length returns -1 on error.
@@ -7566,18 +7567,10 @@ int CClient::HandleChecksum(int Conn, CUuid Uuid, CUnpacker *pUnpacker)
 	{
 		sha256_update(&Sha256Ctxt, m_Checksum.m_aBytes + Start, ChecksumBytesEnd - Start);
 	}
-	if(End > (int)sizeof(m_Checksum.m_aBytes))
+	if(End > (int)sizeof(m_Checksum.m_aBytes) &&
+		!ChecksumAppendFileRange(Sha256Ctxt, m_OwnExecutable, FileStart - (int)sizeof(m_Checksum.m_aBytes), End - FileStart))
 	{
-		unsigned char aBuf[2048];
-		if(io_seek(m_OwnExecutable, FileStart - sizeof(m_Checksum.m_aBytes), IOSEEK_START))
-		{
-			return 5;
-		}
-		for(int i = FileStart; i < End; i += sizeof(aBuf))
-		{
-			int Read = io_read(m_OwnExecutable, aBuf, minimum((int)sizeof(aBuf), End - i));
-			sha256_update(&Sha256Ctxt, aBuf, Read);
-		}
+		return 5;
 	}
 	SHA256_DIGEST Sha256 = sha256_finish(&Sha256Ctxt);
 
@@ -7663,7 +7656,8 @@ void CClient::OnWindowResize()
 {
 	TextRender()->OnPreWindowResize();
 	GameClient()->OnWindowResize();
-	m_pEditor->OnWindowResize();
+	if(m_pEditor)
+		m_pEditor->OnWindowResize();
 	TextRender()->OnWindowResize();
 }
 
@@ -8258,6 +8252,7 @@ int main(int argc, const char **argv)
 			log_info("client", "qm test final cleanup stalled");
 			std::this_thread::sleep_for(std::chrono::seconds(30));
 		}
+		pClient->DestroyEditor();
 		pKernel->Shutdown();
 		delete pKernel;
 		delete pClient;
@@ -8474,7 +8469,7 @@ int main(int argc, const char **argv)
 	INotifications *pNotifications = CreateNotifications();
 	pKernel->RegisterInterface(pNotifications);
 
-	pKernel->RegisterInterface(CreateEditor(), false);
+	pClient->RegisterEditor();
 	pKernel->RegisterInterface(CreateFavorites().release());
 	pKernel->RegisterInterface(CreateGameClient());
 

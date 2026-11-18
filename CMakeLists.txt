@@ -5677,6 +5677,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_demo_camera_file_test.cpp
     src/test/unit/qmclient/client/qm_demo_camera_session_test.cpp
     src/test/unit/qmclient/client/qm_ghost_path_test.cpp
+    src/test/integration/client/demo_snapshot_write_guard_test.cpp
+    src/test/integration/engine/checksum_file_test.cpp
+    src/test/integration/engine/foes_config_persistence_test.cpp
     src/test/unit/qmclient/client/qm_ghost_run_test.cpp
     src/test/unit/qmclient/client/qm_ghost_timeline_test.cpp
     src/test/unit/qmclient/client/qm_ghost_manual_test.cpp
@@ -6431,6 +6434,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/engine/video_export_test.cpp
       src/test/unit/engine/video_offscreen_plan_test.cpp
       src/test/integration/engine/video_export_storage_test.cpp
+      src/test/integration/client/video_export_concat_worker_test.cpp
       src/test/integration/engine/video_audio_test.cpp
       src/test/integration/engine/video_frame_conversion_test.cpp
       src/test/unit/engine/video_encoder_test.cpp
@@ -6968,6 +6972,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/client/keyword_reply_rules_allocation_test.cpp
       src/test/unit/qmclient/client/qm_map_progress_allocation_test.cpp
       src/test/unit/engine/net_client_allocation_test.cpp
+      src/test/unit/engine/favorites_allocation_test.cpp
       src/test/support/prediction_collision_map.h
       src/test/integration/client/prediction_world_copy_failure_test.cpp
       src/test/integration/client/prediction_entity_numeric_test.cpp
@@ -7004,6 +7009,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/components/qmclient/friend_last_seen_service.cpp
       src/game/client/components/qmclient/friend_code.cpp
       src/engine/client/friends.cpp
+      src/engine/client/favorites.cpp
       src/game/client/components/assets_resource_registry.cpp
       src/test/unit/qmclient/client/qm_console_selection_copy_test.cpp
       src/test/unit/qmclient/ui/qm_line_input_motion_allocation_test.cpp

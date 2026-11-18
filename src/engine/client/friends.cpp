@@ -639,8 +639,9 @@ void CFriends::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserDat
 		}
 	}
 
-	// 恢复时按完整身份添加，避免忽略战队选项吞掉同名记录或改错备注与置顶。
-	if(!pSelf->m_Foes && g_Config.m_ClFriendsIgnoreClan)
+	// 好友和敌人都按完整身份恢复，避免合并同名记录或改错备注与置顶。
+	const bool IgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
+	if(IgnoreClan && pSelf->m_NumFriends != 0)
 		pConfigManager->WriteLine("cl_friends_ignore_clan 0");
 	for(int i = 0; i < pSelf->m_NumFriends; ++i)
 	{
@@ -692,6 +693,6 @@ void CFriends::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserDat
 			pConfigManager->WriteLine(aBuf);
 		}
 	}
-	if(!pSelf->m_Foes && g_Config.m_ClFriendsIgnoreClan)
+	if(IgnoreClan && pSelf->m_NumFriends != 0)
 		pConfigManager->WriteLine("cl_friends_ignore_clan 1");
 }

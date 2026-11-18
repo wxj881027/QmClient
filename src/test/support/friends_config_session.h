@@ -19,7 +19,7 @@ class CFriendsConfigSession
 	std::unique_ptr<CFriends> m_pFriends = std::make_unique<CFriends>();
 
 public:
-	explicit CFriendsConfigSession(IStorage *pStorage)
+	explicit CFriendsConfigSession(IStorage *pStorage, bool Foes = false)
 	{
 		m_pKernel->RegisterInterface(pStorage, false);
 		m_pKernel->RegisterInterface(m_pConsole.get(), false);
@@ -27,7 +27,7 @@ public:
 		m_pKernel->RegisterInterface(m_pFriends.get(), false);
 		m_pConsole->Init();
 		m_pConfig->Init();
-		m_pFriends->Init();
+		m_pFriends->Init(Foes);
 		m_pConsole->StoreCommands(false);
 		g_Config.m_ClSaveSettings = 1;
 		g_Config.m_ClFriendsIgnoreClan = 0;
