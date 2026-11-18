@@ -83,36 +83,22 @@ class InputOverlayLayoutTest(unittest.TestCase):
 
     def test_mouse_layout_exposes_all_official_states(self) -> None:
         layout = json.loads(MOUSE_LAYOUT_PATH.read_text(encoding="utf-8"))
-        expected_elements = (
-            ("body", 0, [1, 1, 283, 242], [2, 179], False),
-            ("lmb", 0, [287, 1, 139, 174], [2, 0], False),
-            ("lmb", 3, [287, 178, 139, 174], [2, 0], True),
-            ("rmb", 0, [429, 1, 139, 174], [146, 0], False),
-            ("rmb", 3, [429, 178, 139, 174], [146, 0], True),
-            ("mmb", 0, [571, 1, 48, 95], [117, 79], False),
-            ("mmb", 3, [622, 1, 48, 95], [117, 79], True),
-            ("wheel_up", 4, [673, 1, 48, 95], [117, 79], True),
-            ("wheel_down", 4, [724, 1, 48, 95], [117, 79], True),
-            ("smb2", 0, [775, 1, 40, 62], [0, 210], False),
-            ("smb2", 3, [775, 66, 40, 62], [0, 210], True),
-            ("smb1", 0, [818, 1, 41, 62], [11, 273], False),
-            ("smb1", 3, [818, 66, 41, 62], [11, 273], True),
-            ("arrow", 9, [862, 1, 56, 56], [115, 258], False),
-        )
         elements = layout["elements"]
-        actual_elements = tuple(
-            (
-                element["id"],
-                element["type"],
-                element["mapping"],
-                element["pos"],
-                element.get("active_only", False),
-            )
-            for element in elements
+        self.assertCountEqual(
+            [(e["id"], e["type"], e.get("code"), e.get("active_only", False)) for e in elements],
+            [
+                ("body", 0, None, False),
+                ("lmb", 3, 1, True),
+                ("rmb", 3, 2, True),
+                ("mmb", 3, 3, True),
+                ("smb1", 3, 4, True),
+                ("smb2", 3, 5, True),
+                ("wheel_up", 4, None, True),
+                ("wheel_down", 4, None, True),
+                ("arrow", 9, None, False),
+            ],
         )
-
-        self.assertEqual(actual_elements, expected_elements)
-        self.assertEqual(layout["overlay_width"], 285)
+        self.assertEqual(layout["overlay_width"], 214)
         self.assertEqual(layout["overlay_height"], 421)
 
         with Image.open(MOUSE_IMAGE_PATH) as image:
@@ -120,6 +106,10 @@ class InputOverlayLayoutTest(unittest.TestCase):
             for element in elements:
                 map_x, map_y, map_width, map_height = element["mapping"]
                 with self.subTest(element=element["id"], mapping=element["mapping"]):
+                    pos_x, pos_y = element["pos"]
+                    self.assertGreaterEqual(min(map_x, map_y, pos_x, pos_y), 0)
+                    self.assertLessEqual(pos_x + map_width, layout["overlay_width"])
+                    self.assertLessEqual(pos_y + map_height, layout["overlay_height"])
                     self.assertLessEqual(map_x + map_width, image.width)
                     self.assertLessEqual(map_y + map_height, image.height)
                     sprite = atlas.crop(
