@@ -81,7 +81,7 @@ namespace
 
 	int64_t LineRasterWork(const std::vector<ivec2> &vPath, bool Smooth, int Thickness, int64_t Budget)
 	{
-		const int64_t WorkPerPoint = Thickness * Thickness;
+		const int64_t WorkPerPoint = static_cast<int64_t>(Thickness) * Thickness;
 		if(vPath.size() > static_cast<size_t>(Budget / WorkPerPoint))
 			return Budget + 1;
 		if(vPath.size() <= 1)
