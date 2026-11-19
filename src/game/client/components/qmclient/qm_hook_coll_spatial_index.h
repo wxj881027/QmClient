@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <vector>
 
 // 提示线在同一轮绘制内共享位置索引；只缩小几何候选，不改变队伍/solo/super 资格。
@@ -53,6 +54,8 @@ public:
 				if(!Valid(Id))
 					continue;
 				m_aPositions[Id] = PositionOf(Id);
+				if(!std::isfinite(m_aPositions[Id].x) || !std::isfinite(m_aPositions[Id].y))
+					continue;
 				m_aaSorted[0][m_Count] = {m_aPositions[Id].x, Id};
 				m_aaSorted[1][m_Count] = {m_aPositions[Id].y, Id};
 				++m_Count;

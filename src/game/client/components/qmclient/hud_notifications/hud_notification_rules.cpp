@@ -125,20 +125,18 @@ namespace
 
 	bool ExtractTwoWrappedValues(const char *pMessage, const char *pPrefix, const char *pMiddle, const char *pSuffix, char *pValueA, size_t ValueASize, char *pValueB, size_t ValueBSize)
 	{
-		const int PrefixLen = str_length(pPrefix);
-		const int SuffixLen = str_length(pSuffix);
-		if(str_comp_num(pMessage, pPrefix, PrefixLen) != 0)
+		const char *pValueAStart = str_startswith(pMessage, pPrefix);
+		if(pValueAStart == nullptr)
 			return false;
-		const char *pMiddlePos = str_find(pMessage + PrefixLen, pMiddle);
+		const char *pMiddlePos = str_find(pValueAStart, pMiddle);
 		if(pMiddlePos == nullptr)
 			return false;
-		if(str_comp(pMiddlePos + str_length(pMiddle), pSuffix) == 0)
-			return false;
-		if(!str_endswith(pMessage, pSuffix))
-			return false;
-		str_truncate(pValueA, (int)ValueASize, pMessage + PrefixLen, pMiddlePos - (pMessage + PrefixLen));
 		const char *pValueBStart = pMiddlePos + str_length(pMiddle);
-		str_truncate(pValueB, (int)ValueBSize, pValueBStart, pMessage + str_length(pMessage) - SuffixLen - pValueBStart);
+		const char *pSuffixPos = str_endswith(pValueBStart, pSuffix);
+		if(pSuffixPos == nullptr || pSuffixPos == pValueBStart)
+			return false;
+		str_truncate(pValueA, (int)ValueASize, pValueAStart, pMiddlePos - pValueAStart);
+		str_truncate(pValueB, (int)ValueBSize, pValueBStart, pSuffixPos - pValueBStart);
 		return true;
 	}
 
@@ -248,13 +246,14 @@ namespace
 			{
 				const char *pCodeStart = pMiddlePos + str_length(pMiddle);
 				const char *pMiddle2Pos = str_find(pCodeStart, pMiddle2);
-				if(pMiddle2Pos != nullptr && str_endswith(pMessage, pSuffix))
+				const char *pServerStart = pMiddle2Pos == nullptr ? nullptr : pMiddle2Pos + str_length(pMiddle2);
+				const char *pSuffixPos = pServerStart == nullptr ? nullptr : str_endswith(pServerStart, pSuffix);
+				if(pSuffixPos != nullptr)
 				{
 					str_truncate(aValueA, sizeof(aValueA), pNameStart, pMiddlePos - pNameStart);
 					str_truncate(aValueB, sizeof(aValueB), pCodeStart, pMiddle2Pos - pCodeStart);
-					const char *pServerStart = pMiddle2Pos + str_length(pMiddle2);
-					str_truncate(aValueC, sizeof(aValueC), pServerStart, pMessage + str_length(pMessage) - str_length(pSuffix) - pServerStart);
-					str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' on %s to continue"), aValueA, aValueC, aValueB);
+					str_truncate(aValueC, sizeof(aValueC), pServerStart, pSuffixPos - pServerStart);
+					str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' on %s to continue"), aValueA, aValueB, aValueC);
 					SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::Team, Analysis.m_aLocalizedText);
 					return true;
 				}
@@ -359,37 +358,17 @@ namespace
 				return true;
 			}
 		}
-		if(pMessage[0] == '\'' && str_find(pMessage + 1, "' joined team ") != nullptr)
+		if(ExtractTwoWrappedValues(pMessage, "'", "' joined team ", "", aValueA, sizeof(aValueA), aValueB, sizeof(aValueB)) ||
+			ExtractTwoWrappedValues(pMessage, "'", "' 加入了 ", " 队", aValueA, sizeof(aValueA), aValueB, sizeof(aValueB)))
 		{
-			const char *pTeamPos = str_find(pMessage, "' joined team ");
-			if(pTeamPos != nullptr)
-			{
-				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pTeamPos - (pMessage + 1));
-				const char *pTeamStart = pTeamPos + str_length("' joined team ");
-				str_truncate(aValueB, sizeof(aValueB), pTeamStart, str_length(pTeamStart));
-				SetDynamicSemantic(Analysis, QmHudNotifications::EDynamicMessageKey::TeamJoined, aValueA, aValueB);
-				FormatDynamicLocalizedText(Analysis.m_DynamicSemantic, Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText));
-				SetSemanticLocalizedAnalysis(Analysis);
-				return true;
-			}
-		}
-		if(pMessage[0] == '\'' && str_find(pMessage + 1, "' 加入了 ") != nullptr && str_endswith(pMessage, " 队"))
-		{
-			const char *pTeamPos = str_find(pMessage, "' 加入了 ");
-			if(pTeamPos != nullptr)
-			{
-				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pTeamPos - (pMessage + 1));
-				const char *pTeamStart = pTeamPos + str_length("' 加入了 ");
-				str_truncate(aValueB, sizeof(aValueB), pTeamStart, pMessage + str_length(pMessage) - str_length(" 队") - pTeamStart);
-				SetDynamicSemantic(Analysis, QmHudNotifications::EDynamicMessageKey::TeamJoined, aValueA, aValueB);
-				FormatDynamicLocalizedText(Analysis.m_DynamicSemantic, Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText));
-				SetSemanticLocalizedAnalysis(Analysis);
-				return true;
-			}
+			SetDynamicSemantic(Analysis, QmHudNotifications::EDynamicMessageKey::TeamJoined, aValueA, aValueB);
+			FormatDynamicLocalizedText(Analysis.m_DynamicSemantic, Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText));
+			SetSemanticLocalizedAnalysis(Analysis);
+			return true;
 		}
 		if(pMessage[0] == '\'' && str_find(pMessage + 1, "' invited you to team ") != nullptr)
 		{
-			const char *pTeamPos = str_find(pMessage, "' invited you to team ");
+			const char *pTeamPos = str_find(pMessage + 1, "' invited you to team ");
 			const char *pUsePos = pTeamPos == nullptr ? nullptr : str_find(pTeamPos + str_length("' invited you to team "), ". Use /team ");
 			if(pTeamPos != nullptr && pUsePos != nullptr)
 			{
@@ -402,7 +381,7 @@ namespace
 		}
 		if(pMessage[0] == '\'' && str_find(pMessage + 1, "' 邀请你加入 ") != nullptr && str_find(pMessage, "。输入 /team ") != nullptr)
 		{
-			const char *pTeamPos = str_find(pMessage, "' 邀请你加入 ");
+			const char *pTeamPos = str_find(pMessage + 1, "' 邀请你加入 ");
 			const char *pUsePos = pTeamPos == nullptr ? nullptr : str_find(pTeamPos + str_length("' 邀请你加入 "), "。输入 /team ");
 			if(pTeamPos != nullptr && pUsePos != nullptr)
 			{
@@ -415,33 +394,12 @@ namespace
 				return true;
 			}
 		}
-		if(str_startswith(pMessage, "'") && str_find(pMessage, "' invited '") != nullptr && str_endswith(pMessage, "' to your team."))
+		if(ExtractTwoWrappedValues(pMessage, "'", "' invited '", "' to your team.", aValueA, sizeof(aValueA), aValueB, sizeof(aValueB)) ||
+			ExtractTwoWrappedValues(pMessage, "'", "' 邀请了 '", "' 加入你们的队伍。", aValueA, sizeof(aValueA), aValueB, sizeof(aValueB)))
 		{
-			const char *pMiddle = "' invited '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
-			if(pMiddlePos != nullptr)
-			{
-				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
-				const char *pTargetStart = pMiddlePos + str_length(pMiddle);
-				str_truncate(aValueB, sizeof(aValueB), pTargetStart, pMessage + str_length(pMessage) - str_length("' to your team.") - pTargetStart);
-				str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("'%s' invited '%s' to your team."), aValueA, aValueB);
-				SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::Team, Analysis.m_aLocalizedText);
-				return true;
-			}
-		}
-		if(str_startswith(pMessage, "'") && str_find(pMessage, "' 邀请了 '") != nullptr && str_endswith(pMessage, "' 加入你们的队伍。"))
-		{
-			const char *pMiddle = "' 邀请了 '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
-			if(pMiddlePos != nullptr)
-			{
-				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
-				const char *pTargetStart = pMiddlePos + str_length(pMiddle);
-				str_truncate(aValueB, sizeof(aValueB), pTargetStart, pMessage + str_length(pMessage) - str_length("' 加入你们的队伍。") - pTargetStart);
-				str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("'%s' invited '%s' to your team."), aValueA, aValueB);
-				SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::Team, Analysis.m_aLocalizedText);
-				return true;
-			}
+			str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("'%s' invited '%s' to your team."), aValueA, aValueB);
+			SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::Team, Analysis.m_aLocalizedText);
+			return true;
 		}
 		if(ExtractWrappedValue(pMessage, "This team cannot finish anymore because '", "' left the team before hitting the start", aValueA, sizeof(aValueA)))
 		{
@@ -608,11 +566,11 @@ namespace
 		char aValueC[128];
 		char aValueD[64];
 
-		if(str_find(pMessage, "' voted to ") != nullptr && str_endswith(pMessage, " required votes)"))
+		if(pMessage[0] == '\'' && str_endswith(pMessage, " required votes)"))
 		{
 			const char *pMiddle = "' voted to ";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
-			if(pMiddlePos != nullptr && pMessage[0] == '\'')
+			const char *pMiddlePos = str_find(pMessage + 1, pMiddle);
+			if(pMiddlePos != nullptr)
 			{
 				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
 				const char *pModeStart = pMiddlePos + str_length(pMiddle);
@@ -622,8 +580,8 @@ namespace
 					str_truncate(aValueB, sizeof(aValueB), pModeStart, pModeEnd - pModeStart);
 					const char *pVoteStart = pModeEnd + str_length(" /practice mode for your team, which means you can use practice commands, but you can't earn a rank. Type /practice to vote (");
 					const char *pSlashPos = str_find(pVoteStart, "/");
-					const char *pSuffixPos = str_find(pVoteStart, " required votes)");
-					if(pSlashPos != nullptr && pSuffixPos != nullptr)
+					const char *pSuffixPos = pSlashPos == nullptr ? nullptr : str_endswith(pSlashPos + 1, " required votes)");
+					if(pSuffixPos != nullptr)
 					{
 						str_truncate(aValueC, sizeof(aValueC), pVoteStart, pSlashPos - pVoteStart);
 						str_truncate(aValueD, sizeof(aValueD), pSlashPos + 1, pSuffixPos - (pSlashPos + 1));
@@ -649,7 +607,7 @@ namespace
 		if(str_startswith(pMessage, "'") && str_find(pMessage, "' called vote to change server option '") != nullptr)
 		{
 			const char *pMiddle = "' called vote to change server option '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
+			const char *pMiddlePos = str_find(pMessage + 1, pMiddle);
 			if(pMiddlePos != nullptr)
 			{
 				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
@@ -677,7 +635,7 @@ namespace
 		if(str_startswith(pMessage, "'") && str_find(pMessage, "' 发起了修改服务器选项 '") != nullptr)
 		{
 			const char *pMiddle = "' 发起了修改服务器选项 '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
+			const char *pMiddlePos = str_find(pMessage + 1, pMiddle);
 			if(pMiddlePos != nullptr)
 			{
 				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
@@ -706,7 +664,7 @@ namespace
 		if(str_startswith(pMessage, "'") && str_find(pMessage, "' called vote to kick '") != nullptr && str_endswith(pMessage, ")"))
 		{
 			const char *pMiddle = "' called vote to kick '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
+			const char *pMiddlePos = str_find(pMessage + 1, pMiddle);
 			if(pMiddlePos != nullptr)
 			{
 				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
@@ -725,7 +683,7 @@ namespace
 		if(str_startswith(pMessage, "'") && str_find(pMessage, "' 发起了踢出 '") != nullptr && str_endswith(pMessage, "）"))
 		{
 			const char *pMiddle = "' 发起了踢出 '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
+			const char *pMiddlePos = str_find(pMessage + 1, pMiddle);
 			if(pMiddlePos != nullptr)
 			{
 				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
@@ -745,7 +703,7 @@ namespace
 		if(str_startswith(pMessage, "'") && str_find(pMessage, "' called for vote to mute '") != nullptr && str_endswith(pMessage, ")"))
 		{
 			const char *pMiddle = "' called for vote to mute '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
+			const char *pMiddlePos = str_find(pMessage + 1, pMiddle);
 			if(pMiddlePos != nullptr)
 			{
 				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
@@ -764,7 +722,7 @@ namespace
 		if(str_startswith(pMessage, "'") && str_find(pMessage, "' 发起了禁言 '") != nullptr && str_endswith(pMessage, "）"))
 		{
 			const char *pMiddle = "' 发起了禁言 '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
+			const char *pMiddlePos = str_find(pMessage + 1, pMiddle);
 			if(pMiddlePos != nullptr)
 			{
 				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
@@ -784,7 +742,7 @@ namespace
 		if(str_startswith(pMessage, "'") && str_find(pMessage, "' called for vote to pause '") != nullptr && str_endswith(pMessage, ")"))
 		{
 			const char *pMiddle = "' called for vote to pause '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
+			const char *pMiddlePos = str_find(pMessage + 1, pMiddle);
 			if(pMiddlePos != nullptr)
 			{
 				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
@@ -805,7 +763,7 @@ namespace
 		if(str_startswith(pMessage, "'") && str_find(pMessage, "' 发起了暂停 '") != nullptr && str_endswith(pMessage, "）"))
 		{
 			const char *pMiddle = "' 发起了暂停 '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
+			const char *pMiddlePos = str_find(pMessage + 1, pMiddle);
 			if(pMiddlePos != nullptr)
 			{
 				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
@@ -827,7 +785,7 @@ namespace
 		if(str_startswith(pMessage, "'") && str_find(pMessage, "' called for vote to move '") != nullptr && str_find(pMessage, "' to spectators (") != nullptr && str_endswith(pMessage, ")"))
 		{
 			const char *pMiddle = "' called for vote to move '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
+			const char *pMiddlePos = str_find(pMessage + 1, pMiddle);
 			if(pMiddlePos != nullptr)
 			{
 				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
@@ -846,7 +804,7 @@ namespace
 		if(str_startswith(pMessage, "'") && str_find(pMessage, "' 发起了把 '") != nullptr && str_find(pMessage, "' 移到旁观的投票（") != nullptr && str_endswith(pMessage, "）"))
 		{
 			const char *pMiddle = "' 发起了把 '";
-			const char *pMiddlePos = str_find(pMessage, pMiddle);
+			const char *pMiddlePos = str_find(pMessage + 1, pMiddle);
 			if(pMiddlePos != nullptr)
 			{
 				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
@@ -863,35 +821,12 @@ namespace
 				}
 			}
 		}
-		if(str_startswith(pMessage, "There's a ") && str_find(pMessage, " second wait time between kick votes for each player please wait ") != nullptr && str_endswith(pMessage, " second(s)"))
+		if(ExtractTwoWrappedValues(pMessage, "There's a ", " second wait time between kick votes for each player please wait ", " second(s)", aValueA, sizeof(aValueA), aValueB, sizeof(aValueB)) ||
+			ExtractTwoWrappedValues(pMessage, "每位玩家的踢人投票之间有 ", " 秒冷却，请等待 ", " 秒", aValueA, sizeof(aValueA), aValueB, sizeof(aValueB)))
 		{
-			const char *pPrefixEnd = pMessage + str_length("There's a ");
-			const char *pMiddlePos = str_find(pPrefixEnd, " second wait time between kick votes for each player please wait ");
-			const char *pWaitStart = str_find(pMessage, "please wait ");
-			const char *pWaitPos = str_find(pMessage, " second(s)");
-			if(pMiddlePos != nullptr && pWaitStart != nullptr && pWaitPos != nullptr)
-			{
-				str_truncate(aValueA, sizeof(aValueA), pPrefixEnd, pMiddlePos - pPrefixEnd);
-				str_truncate(aValueB, sizeof(aValueB), pWaitStart + str_length("please wait "), pWaitPos - (pWaitStart + str_length("please wait ")));
-				str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("There's a %s second wait time between kick votes for each player please wait %s second(s)"), aValueA, aValueB);
-				SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::VoteModeration, Analysis.m_aLocalizedText);
-				return true;
-			}
-		}
-		if(str_startswith(pMessage, "每位玩家的踢人投票之间有 ") && str_find(pMessage, " 秒冷却，请等待 ") != nullptr && str_endswith(pMessage, " 秒"))
-		{
-			const char *pPrefixEnd = pMessage + str_length("每位玩家的踢人投票之间有 ");
-			const char *pMiddlePos = str_find(pPrefixEnd, " 秒冷却，请等待 ");
-			const char *pWaitStart = str_find(pMessage, "请等待 ");
-			const char *pWaitPos = str_find(pMessage, " 秒");
-			if(pMiddlePos != nullptr && pWaitStart != nullptr && pWaitPos != nullptr)
-			{
-				str_truncate(aValueA, sizeof(aValueA), pPrefixEnd, pMiddlePos - pPrefixEnd);
-				str_truncate(aValueB, sizeof(aValueB), pWaitStart + str_length("请等待 "), pWaitPos - (pWaitStart + str_length("请等待 ")));
-				str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("There's a %s second wait time between kick votes for each player please wait %s second(s)"), aValueA, aValueB);
-				SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::VoteModeration, Analysis.m_aLocalizedText);
-				return true;
-			}
+			str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("There's a %s second wait time between kick votes for each player please wait %s second(s)"), aValueA, aValueB);
+			SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::VoteModeration, Analysis.m_aLocalizedText);
+			return true;
 		}
 		if(ExtractWrappedValue(pMessage, "Kick voting requires ", " players", aValueA, sizeof(aValueA)))
 		{
@@ -917,35 +852,12 @@ namespace
 			SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::VoteModeration, Analysis.m_aLocalizedText);
 			return true;
 		}
-		if(str_startswith(pMessage, "There's a ") && str_find(pMessage, " second delay between map-votes, please wait ") != nullptr && str_endswith(pMessage, " seconds."))
+		if(ExtractTwoWrappedValues(pMessage, "There's a ", " second delay between map-votes, please wait ", " seconds.", aValueA, sizeof(aValueA), aValueB, sizeof(aValueB)) ||
+			ExtractTwoWrappedValues(pMessage, "换图投票之间有 ", " 秒冷却，请等待 ", " 秒。", aValueA, sizeof(aValueA), aValueB, sizeof(aValueB)))
 		{
-			const char *pPrefixEnd = pMessage + str_length("There's a ");
-			const char *pMiddlePos = str_find(pPrefixEnd, " second delay between map-votes, please wait ");
-			const char *pWaitStart = str_find(pMessage, "please wait ");
-			const char *pWaitPos = str_find(pMessage, " seconds.");
-			if(pMiddlePos != nullptr && pWaitStart != nullptr && pWaitPos != nullptr)
-			{
-				str_truncate(aValueA, sizeof(aValueA), pPrefixEnd, pMiddlePos - pPrefixEnd);
-				str_truncate(aValueB, sizeof(aValueB), pWaitStart + str_length("please wait "), pWaitPos - (pWaitStart + str_length("please wait ")));
-				str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("There's a %s second delay between map-votes, please wait %s seconds."), aValueA, aValueB);
-				SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::VoteModeration, Analysis.m_aLocalizedText);
-				return true;
-			}
-		}
-		if(str_startswith(pMessage, "换图投票之间有 ") && str_find(pMessage, " 秒冷却，请等待 ") != nullptr && str_endswith(pMessage, " 秒。"))
-		{
-			const char *pPrefixEnd = pMessage + str_length("换图投票之间有 ");
-			const char *pMiddlePos = str_find(pPrefixEnd, " 秒冷却，请等待 ");
-			const char *pWaitStart = str_find(pMessage, "请等待 ");
-			const char *pWaitPos = str_find(pMessage, " 秒。");
-			if(pMiddlePos != nullptr && pWaitStart != nullptr && pWaitPos != nullptr)
-			{
-				str_truncate(aValueA, sizeof(aValueA), pPrefixEnd, pMiddlePos - pPrefixEnd);
-				str_truncate(aValueB, sizeof(aValueB), pWaitStart + str_length("请等待 "), pWaitPos - (pWaitStart + str_length("请等待 ")));
-				str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("There's a %s second delay between map-votes, please wait %s seconds."), aValueA, aValueB);
-				SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::VoteModeration, Analysis.m_aLocalizedText);
-				return true;
-			}
+			str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("There's a %s second delay between map-votes, please wait %s seconds."), aValueA, aValueB);
+			SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::VoteModeration, Analysis.m_aLocalizedText);
+			return true;
 		}
 		if(ExtractWrappedValue(pMessage, "'", "' called for vote to kick you", aValueA, sizeof(aValueA)))
 		{
@@ -1146,32 +1058,12 @@ namespace
 			SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::Status, Analysis.m_aLocalizedText);
 			return true;
 		}
-		if(pMessage[0] == '\'' && str_find(pMessage + 1, "' was force-paused for ") != nullptr && str_endswith(pMessage, "s"))
+		if(ExtractTwoWrappedValues(pMessage, "'", "' was force-paused for ", "s", aValueA, sizeof(aValueA), aValueB, sizeof(aValueB)) ||
+			ExtractTwoWrappedValues(pMessage, "'", "' 被强制暂停 ", " 秒", aValueA, sizeof(aValueA), aValueB, sizeof(aValueB)))
 		{
-			const char *pMiddlePos = str_find(pMessage + 1, "' was force-paused for ");
-			if(pMiddlePos != nullptr)
-			{
-				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePos - (pMessage + 1));
-				const char *pSecondsStart = pMiddlePos + str_length("' was force-paused for ");
-				const char *pSuffixPos = pMessage + str_length(pMessage) - 1;
-				str_truncate(aValueB, sizeof(aValueB), pSecondsStart, pSuffixPos - pSecondsStart);
-				str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("'%s' was force-paused for %s seconds"), aValueA, aValueB);
-				SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::Status, Analysis.m_aLocalizedText);
-				return true;
-			}
-		}
-		if(pMessage[0] == '\'' && str_find(pMessage + 1, "' 被强制暂停 ") != nullptr && str_endswith(pMessage, " 秒"))
-		{
-			const char *pMiddlePosZh = str_find(pMessage + 1, "' 被强制暂停 ");
-			if(pMiddlePosZh != nullptr)
-			{
-				str_truncate(aValueA, sizeof(aValueA), pMessage + 1, pMiddlePosZh - (pMessage + 1));
-				const char *pSecondsStartZh = pMiddlePosZh + str_length("' 被强制暂停 ");
-				str_truncate(aValueB, sizeof(aValueB), pSecondsStartZh, pMessage + str_length(pMessage) - str_length(" 秒") - pSecondsStartZh);
-				str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("'%s' was force-paused for %s seconds"), aValueA, aValueB);
-				SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::Status, Analysis.m_aLocalizedText);
-				return true;
-			}
+			str_format(Analysis.m_aLocalizedText, sizeof(Analysis.m_aLocalizedText), Localize("'%s' was force-paused for %s seconds"), aValueA, aValueB);
+			SetLocalizedAnalysis(Analysis, QmHudNotifications::EServerMessageRoute::System, QmHudNotifications::EServerMessageClass::Prompt, QmHudNotifications::EServerMessageDomain::Status, Analysis.m_aLocalizedText);
+			return true;
 		}
 		return false;
 	}

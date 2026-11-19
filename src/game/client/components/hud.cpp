@@ -24,6 +24,7 @@
 #include <game/client/QmUi/QmFinishSummary.h>
 #include <game/client/QmUi/QmHookCountdownRender.h>
 #include <game/client/QmUi/QmLayout.h>
+#include <game/client/QmUi/UiTextRenderState.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
@@ -34,6 +35,7 @@
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/player_state_hud_bounds.h>
+#include <game/client/components/qmclient/race_timing.h>
 #include <game/client/components/qmclient/rank_ghost.h>
 #include <game/client/components/qmclient/score_hud_layout.h>
 #include <game/client/components/qmclient/spectator_hud_layout.h>
@@ -49,8 +51,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cinttypes>
 #include <cmath>
 #include <cstdint>
+#include <new>
+#include <stdexcept>
 #include <vector>
 
 namespace
@@ -461,10 +466,7 @@ namespace
 			static float s_TextWidth0D = pTextRender->TextWidth(Result.m_FontSize, "0d 00:00:00", -1, -1.0f);
 			static float s_TextWidth00D = pTextRender->TextWidth(Result.m_FontSize, "00d 00:00:00", -1, -1.0f);
 			static float s_TextWidth000D = pTextRender->TextWidth(Result.m_FontSize, "000d 00:00:00", -1, -1.0f);
-			Result.m_W = TimeCentiseconds >= 3600 * 24 * 100 ? s_TextWidth000D :
-									   (TimeCentiseconds >= 3600 * 24 * 10 ? s_TextWidth00D :
-														 (TimeCentiseconds >= 3600 * 24 ? s_TextWidth0D :
-																		  (TimeCentiseconds >= 3600 ? s_TextWidthH : s_TextWidthM)));
+			Result.m_W = qm_race_timing::GameTimerTextWidth(TimeCentiseconds, s_TextWidthM, s_TextWidthH, s_TextWidth0D, s_TextWidth00D, s_TextWidth000D);
 			Result.m_X = HudWidth * 0.5f - Result.m_W * 0.5f;
 			Result.m_Left = Result.m_X;
 			Result.m_Visible = true;
@@ -475,25 +477,12 @@ namespace
 		if(pGameInfoObj == nullptr || (pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_SUDDENDEATH) != 0)
 			return Result;
 
-		int Time = 0;
-		if(pGameInfoObj->m_TimeLimit && pGameInfoObj->m_WarmupTimer <= 0)
-		{
-			Time = pGameInfoObj->m_TimeLimit * 60 - ((Client.GameTick(g_Config.m_ClDummy) - pGameInfoObj->m_RoundStartTick) / Client.GameTickSpeed());
-
-			if(pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER)
-				Time = 0;
-		}
-		else if(pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME)
-		{
-			// The Warmup timer is negative in this case to make sure that incompatible clients will not see a warmup timer
-			Time = (Client.GameTick(g_Config.m_ClDummy) + pGameInfoObj->m_WarmupTimer) / Client.GameTickSpeed();
-		}
-		else
-		{
-			Time = (Client.GameTick(g_Config.m_ClDummy) - pGameInfoObj->m_RoundStartTick) / Client.GameTickSpeed();
-		}
-
-		str_time((int64_t)Time * 100, TIME_DAYS, Result.m_aText, sizeof(Result.m_aText));
+		const int64_t Time = qm_race_timing::GameTimerSeconds(Client.GameTick(g_Config.m_ClDummy), pGameInfoObj->m_RoundStartTick,
+			pGameInfoObj->m_WarmupTimer, pGameInfoObj->m_TimeLimit, Client.GameTickSpeed(),
+			(pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME) != 0,
+			(pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER) != 0);
+		const int64_t TimeCentiseconds = Time * 100;
+		str_time(TimeCentiseconds, TIME_DAYS, Result.m_aText, sizeof(Result.m_aText));
 
 		static float s_TextWidthM = pTextRender->TextWidth(Result.m_FontSize, "00:00", -1, -1.0f);
 		static float s_TextWidthH = pTextRender->TextWidth(Result.m_FontSize, "00:00:00", -1, -1.0f);
@@ -501,10 +490,7 @@ namespace
 		static float s_TextWidth00D = pTextRender->TextWidth(Result.m_FontSize, "00d 00:00:00", -1, -1.0f);
 		static float s_TextWidth000D = pTextRender->TextWidth(Result.m_FontSize, "000d 00:00:00", -1, -1.0f);
 
-		Result.m_W = Time >= 3600 * 24 * 100 ? s_TextWidth000D :
-						       (Time >= 3600 * 24 * 10 ? s_TextWidth00D :
-										 (Time >= 3600 * 24 ? s_TextWidth0D :
-												      (Time >= 3600 ? s_TextWidthH : s_TextWidthM)));
+		Result.m_W = qm_race_timing::GameTimerTextWidth(TimeCentiseconds, s_TextWidthM, s_TextWidthH, s_TextWidth0D, s_TextWidth00D, s_TextWidth000D);
 
 		Result.m_X = HudWidth * 0.5f - Result.m_W * 0.5f;
 		Result.m_Left = Result.m_X;
@@ -1091,6 +1077,10 @@ namespace
 		if(Dummy < 0 || Dummy >= NUM_DUMMIES)
 			return false;
 
+		const auto InstanceId = QmSwapCountdownDisplayId(State.m_InstanceId, Dummy);
+		if(!InstanceId)
+			return false;
+
 		const int StartTick = State.m_StartTick;
 		if(StartTick <= 0)
 			return false;
@@ -1110,7 +1100,7 @@ namespace
 					     (Dummy == 0 ? Client.PlayerName() : Client.DummyName());
 		const int SecondsLeft = Lifecycle.m_SecondsLeft;
 		Out.m_Dummy = Dummy;
-		Out.m_InstanceId = State.m_InstanceId * NUM_DUMMIES + Dummy;
+		Out.m_InstanceId = *InstanceId;
 		Out.m_StartTick = StartTick;
 		Out.m_Outgoing = State.m_Outgoing;
 		Out.m_Lifecycle = Lifecycle;
@@ -1559,7 +1549,7 @@ void CHud::RenderScoreHud()
 			str_format(aScoreTeam[TEAM_RED], sizeof(aScoreTeam[TEAM_RED]), "%d", GameClient()->m_Snap.m_pGameDataObj->m_TeamscoreRed);
 			str_format(aScoreTeam[TEAM_BLUE], sizeof(aScoreTeam[TEAM_BLUE]), "%d", GameClient()->m_Snap.m_pGameDataObj->m_TeamscoreBlue);
 
-			bool aRecreateTeamScore[2] = {str_comp(aScoreTeam[0], m_aScoreInfo[0].m_aScoreText) != 0, str_comp(aScoreTeam[1], m_aScoreInfo[1].m_aScoreText) != 0};
+			bool aRecreateTeamScore[2];
 
 			const int aFlagCarrier[2] = {
 				GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierRed,
@@ -1570,10 +1560,12 @@ void CHud::RenderScoreHud()
 			{
 				if(m_aScoreInfo[t].m_RoundRectCorners != ScoreHudCorners)
 					RecreateRect = true;
+				aRecreateTeamScore[t] = str_comp(aScoreTeam[t], m_aScoreInfo[t].m_aScoreText) != 0 ||
+						       SScoreInfo::NeedsTextContainer(m_aScoreInfo[t].m_TextScoreContainerIndex, aScoreTeam[t]);
 				if(aRecreateTeamScore[t])
 				{
-					m_aScoreInfo[t].m_ScoreTextWidth = TextRender()->TextWidth(14.0f, aScoreTeam[t == 0 ? TEAM_RED : TEAM_BLUE], -1, -1.0f);
-					str_copy(m_aScoreInfo[t].m_aScoreText, aScoreTeam[t == 0 ? TEAM_RED : TEAM_BLUE]);
+					m_aScoreInfo[t].m_ScoreTextWidth = TextRender()->TextWidth(14.0f, aScoreTeam[t], -1, -1.0f);
+					str_copy(m_aScoreInfo[t].m_aScoreText, aScoreTeam[t]);
 					RecreateRect = true;
 				}
 			}
@@ -1639,7 +1631,8 @@ void CHud::RenderScoreHud()
 						char aNameBuf[MAX_NAME_LENGTH];
 						GameClient()->FormatStreamerName(Id, aNameBuf, sizeof(aNameBuf));
 						const char *pName = aNameBuf;
-						if(str_comp(pName, m_aScoreInfo[t].m_aPlayerNameText) != 0 || RecreateRect)
+						if(str_comp(pName, m_aScoreInfo[t].m_aPlayerNameText) != 0 || RecreateRect ||
+							SScoreInfo::NeedsTextContainer(m_aScoreInfo[t].m_OptionalNameTextContainerIndex, pName))
 						{
 							str_copy(m_aScoreInfo[t].m_aPlayerNameText, pName);
 
@@ -1729,7 +1722,11 @@ void CHud::RenderScoreHud()
 					aScore[t][0] = 0;
 			}
 
-			bool RecreateScores = str_comp(aScore[0], m_aScoreInfo[0].m_aScoreText) != 0 || str_comp(aScore[1], m_aScoreInfo[1].m_aScoreText) != 0 || m_LastLocalClientId != GameClient()->m_Snap.m_LocalClientId;
+			const bool RecreateScores = str_comp(aScore[0], m_aScoreInfo[0].m_aScoreText) != 0 ||
+						    str_comp(aScore[1], m_aScoreInfo[1].m_aScoreText) != 0 ||
+						    SScoreInfo::NeedsTextContainer(m_aScoreInfo[0].m_TextScoreContainerIndex, aScore[0]) ||
+						    SScoreInfo::NeedsTextContainer(m_aScoreInfo[1].m_TextScoreContainerIndex, aScore[1]) ||
+						    m_LastLocalClientId != GameClient()->m_Snap.m_LocalClientId;
 			m_LastLocalClientId = GameClient()->m_Snap.m_LocalClientId;
 
 			bool RecreateRect = ForceScoreInfoInit;
@@ -1752,7 +1749,8 @@ void CHud::RenderScoreHud()
 						char aNameBuf[MAX_NAME_LENGTH];
 						GameClient()->FormatStreamerName(Id, aNameBuf, sizeof(aNameBuf));
 						const char *pName = aNameBuf;
-						if(str_comp(pName, m_aScoreInfo[t].m_aPlayerNameText) != 0)
+						if(str_comp(pName, m_aScoreInfo[t].m_aPlayerNameText) != 0 ||
+							SScoreInfo::NeedsTextContainer(m_aScoreInfo[t].m_OptionalNameTextContainerIndex, pName))
 							RecreateRect = true;
 					}
 				}
@@ -1764,7 +1762,8 @@ void CHud::RenderScoreHud()
 
 				char aBuf[16];
 				str_format(aBuf, sizeof(aBuf), "%d.", aPos[t]);
-				if(str_comp(aBuf, m_aScoreInfo[t].m_aRankText) != 0)
+				if(str_comp(aBuf, m_aScoreInfo[t].m_aRankText) != 0 ||
+					SScoreInfo::NeedsTextContainer(m_aScoreInfo[t].m_TextRankContainerIndex, aBuf))
 				{
 					m_aScoreInfo[t].m_RankTextWidth = TextRender()->TextWidth(10.0f, aBuf, -1, -1.0f);
 					RecreateRect = true;
@@ -2506,27 +2505,25 @@ void CHud::RenderTextInfo()
 		TextRender()->Text(Line2X, 45.0f, Line2Size, Localize(pLine2), -1.0f);
 	}
 
-	if(g_Config.m_QmMiniDebug)
+	const auto &Snap = GameClient()->m_Snap;
+	const auto MiniDebugTarget = g_Config.m_QmMiniDebug ?
+				     QmHudMiniDebugTarget(Snap.m_SpecInfo.m_Active, Snap.m_LocalClientId, Snap.m_SpecInfo.m_SpectatorId) :
+				     std::nullopt;
+	if(MiniDebugTarget.has_value())
 	{
+		const int PlayerId = *MiniDebugTarget;
+		const bool FreeView = PlayerId == SPEC_FREEVIEW;
 		float FontSize = 8.0f;
 		float TextHeight = 11.0f;
 		char aBuf[64];
 		float OffsetY = 3.0f;
 
-		int PlayerId = GameClient()->m_Snap.m_LocalClientId;
-		if(GameClient()->m_Snap.m_SpecInfo.m_Active)
-			PlayerId = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;
-
-		if(g_Config.m_ClShowhudDDRace && GameClient()->m_Snap.m_aCharacters[PlayerId].m_HasExtendedData && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW)
+		if(!FreeView && g_Config.m_ClShowhudDDRace && Snap.m_aCharacters[PlayerId].m_HasExtendedData)
 			OffsetY += 50.0f;
-		else if(g_Config.m_ClShowhudHealthAmmo && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW)
+		else if(!FreeView && g_Config.m_ClShowhudHealthAmmo)
 			OffsetY += 27.0f;
 
-		vec2 Pos;
-		if(GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
-			Pos = vec2(GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy].x, GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy].y);
-		else
-			Pos = GameClient()->m_aClients[PlayerId].m_RenderPos;
+		const vec2 Pos = FreeView ? GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy] : GameClient()->m_aClients[PlayerId].m_RenderPos;
 
 		str_format(aBuf, sizeof(aBuf), "X: %.2f", Pos.x / 32.0f);
 		TextRender()->Text(4, OffsetY, FontSize, aBuf, -1.0f);
@@ -2534,19 +2531,19 @@ void CHud::RenderTextInfo()
 		OffsetY += TextHeight;
 		str_format(aBuf, sizeof(aBuf), "Y: %.2f", Pos.y / 32.0f);
 		TextRender()->Text(4, OffsetY, FontSize, aBuf, -1.0f);
-		if(GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW)
+		if(!FreeView)
 		{
 			OffsetY += TextHeight;
 			str_format(aBuf, sizeof(aBuf), "Angle: %d", GameClient()->m_aClients[PlayerId].m_RenderCur.m_Angle);
 			TextRender()->Text(4.0f, OffsetY, FontSize, aBuf, -1.0f);
 
 			OffsetY += TextHeight;
-			str_format(aBuf, sizeof(aBuf), "VelY: %.2f", GameClient()->m_Snap.m_aCharacters[PlayerId].m_Cur.m_VelY / 256.0f * 50.0f / 32.0f);
+			str_format(aBuf, sizeof(aBuf), "VelY: %.2f", Snap.m_aCharacters[PlayerId].m_Cur.m_VelY / 256.0f * 50.0f / 32.0f);
 			TextRender()->Text(4.0f, OffsetY, FontSize, aBuf, -1.0f);
 
 			OffsetY += TextHeight;
 
-			str_format(aBuf, sizeof(aBuf), "VelX: %.2f", GameClient()->m_Snap.m_aCharacters[PlayerId].m_Cur.m_VelX / 256.0f * 50.0f / 32.0f);
+			str_format(aBuf, sizeof(aBuf), "VelX: %.2f", Snap.m_aCharacters[PlayerId].m_Cur.m_VelX / 256.0f * 50.0f / 32.0f);
 			TextRender()->Text(4.0f, OffsetY, FontSize, aBuf, -1.0f);
 		}
 	}
@@ -2754,7 +2751,7 @@ void CHud::UpdateSwitchCountdownTracker()
 		if(Team < 0 || Team >= NUM_DDRACE_TEAMS)
 			return;
 
-		const int MapIndex = Collision()->GetPureMapIndex(Pos);
+		const int MapIndex = QmHudSwitchCountdownMapIndex(*Collision(), Pos);
 		if(MapIndex < 0)
 			return;
 
@@ -2768,10 +2765,7 @@ void CHud::UpdateSwitchCountdownTracker()
 
 		const int CurTick = Client()->GameTick(Connection);
 		const int Delay = Collision()->GetSwitchDelay(MapIndex);
-		m_SwitchCountdownTracker.m_aaEndTick[Team][SwitchNumber] = CurTick + 1 + Delay * TickSpeed;
-		m_SwitchCountdownTracker.m_aaTouchTick[Team][SwitchNumber] = CurTick;
-		m_SwitchCountdownTracker.m_aaClientId[Team][SwitchNumber] = ClientId;
-		m_SwitchCountdownTracker.m_aaConnection[Team][SwitchNumber] = Connection;
+		m_SwitchCountdownTracker.Track(Team, SwitchNumber, CurTick, Delay, TickSpeed, ClientId, Connection);
 	};
 
 	UpdateSwitchCountdownFromClient(GameClient()->m_aLocalIds[0], 0, GameClient()->Predict());
@@ -2830,7 +2824,7 @@ bool CHud::BuildSwitchCountdownSummary(char *pBuf, const size_t BufSize) const
 	struct SSwitchCountdownEntry
 	{
 		int m_Number = 0;
-		int m_EndTick = 0;
+		int64_t m_EndTick = 0;
 		int m_LastTouchTick = 0;
 	};
 
@@ -2840,7 +2834,7 @@ bool CHud::BuildSwitchCountdownSummary(char *pBuf, const size_t BufSize) const
 
 	for(int i = 1; i < 256; ++i)
 	{
-		const int EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][i];
+		const int64_t EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][i];
 		const int TouchTick = m_SwitchCountdownTracker.m_aaTouchTick[Team][i];
 		if(EndTick <= CurTick || TouchTick <= 0)
 			continue;
@@ -2864,13 +2858,11 @@ bool CHud::BuildSwitchCountdownSummary(char *pBuf, const size_t BufSize) const
 	const int RenderCount = minimum(EntryCount, SWITCH_COUNTDOWN_MAX_LINES);
 	for(int i = 0; i < RenderCount; ++i)
 	{
-		const int RemainingTicks = aEntries[i].m_EndTick - CurTick;
-		if(RemainingTicks <= 0)
+		const uint64_t SecondsLeft = QmHudSwitchCountdownSecondsLeft(aEntries[i].m_EndTick, CurTick, TickSpeed);
+		if(SecondsLeft == 0)
 			continue;
-
-		const int SecondsLeft = (RemainingTicks + TickSpeed - 1) / TickSpeed;
 		char aItemBuf[64];
-		str_format(aItemBuf, sizeof(aItemBuf), "开关#%d:%d秒", aEntries[i].m_Number, SecondsLeft);
+		str_format(aItemBuf, sizeof(aItemBuf), "开关#%d:%" PRIu64 "秒", aEntries[i].m_Number, SecondsLeft);
 		if(pBuf[0] != '\0')
 			str_append(pBuf, "  ", BufSize);
 		str_append(pBuf, aItemBuf, BufSize);
@@ -2892,7 +2884,7 @@ void CHud::RenderSwitchCountdowns()
 	struct SSwitchCountdownEntry
 	{
 		int m_Number;
-		int m_EndTick;
+		int64_t m_EndTick;
 		int m_LastTouchTick;
 	};
 
@@ -2905,7 +2897,7 @@ void CHud::RenderSwitchCountdowns()
 
 	for(int i = 1; i < 256; ++i)
 	{
-		const int EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][i];
+		const int64_t EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][i];
 		if(EndTick <= CurTick)
 		{
 			m_SwitchCountdownTracker.m_aaEndTick[Team][i] = 0;
@@ -2961,13 +2953,10 @@ void CHud::RenderSwitchCountdowns()
 
 	for(int i = 0; i < RenderCount; ++i)
 	{
-		const int EndTick = aEntries[i].m_EndTick;
-		const int RemainingTicks = EndTick - CurTick;
-		if(RemainingTicks <= 0)
+		const uint64_t SecondsLeft = QmHudSwitchCountdownSecondsLeft(aEntries[i].m_EndTick, CurTick, TickSpeed);
+		if(SecondsLeft == 0)
 			continue;
-
-		const int SecondsLeft = (RemainingTicks + TickSpeed - 1) / TickSpeed;
-		str_format(aCurrentText[i], sizeof(aCurrentText[i]), "开关#%d:%d秒", aEntries[i].m_Number, SecondsLeft);
+		str_format(aCurrentText[i], sizeof(aCurrentText[i]), "开关#%d:%" PRIu64 "秒", aEntries[i].m_Number, SecondsLeft);
 		aCurrentWidth[i] = TextRender()->TextWidth(FontSize, aCurrentText[i], -1, -1.0f);
 		aCurrentNumber[i] = aEntries[i].m_Number;
 		aShouldShow[i] = true;
@@ -3121,7 +3110,7 @@ void CHud::RenderFollowSwitchCountdowns()
 		const int CurTick = Client()->GameTick(Connection);
 		for(int Number = 1; Number < 256; ++Number)
 		{
-			const int EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][Number];
+			const int64_t EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][Number];
 			const int TriggerTick = m_SwitchCountdownTracker.m_aaTouchTick[Team][Number];
 			if(EndTick <= CurTick || TriggerTick <= 0 ||
 				m_SwitchCountdownTracker.m_aaClientId[Team][Number] != ClientId ||
@@ -3241,7 +3230,7 @@ void CHud::RenderFollowSwitchCountdowns()
 			continue;
 
 		const int CurTick = Client()->GameTick(std::clamp(Ring.m_Connection, 0, NUM_DUMMIES - 1));
-		const int DurationTicks = Ring.m_EndTick - Ring.m_TriggerTick;
+		const int64_t DurationTicks = Ring.m_EndTick - Ring.m_TriggerTick;
 		const float Progress = DurationTicks > 0 ? std::clamp((Ring.m_EndTick - CurTick) / static_cast<float>(DurationTicks), 0.0f, 1.0f) : 0.0f;
 		DrawMediaIslandCountdownSatellite(
 			Graphics(),
@@ -3508,8 +3497,8 @@ void CHud::RenderAmmoHealthAndArmor(const CNetObj_Character *pCharacter)
 		{
 			if(!GameClient()->m_GameInfo.m_HudDDRace && Client()->IsSixup())
 			{
-				const int Max = g_pData->m_Weapons.m_Ninja.m_Duration * Client()->GameTickSpeed() / 1000;
-				float NinjaProgress = std::clamp(pCharacter->m_AmmoCount - Client()->GameTick(g_Config.m_ClDummy), 0, Max) / (float)Max;
+				const int DurationTicks = g_pData->m_Weapons.m_Ninja.m_Duration * Client()->GameTickSpeed() / 1000;
+				const float NinjaProgress = QmHudNinjaProgress(pCharacter->m_AmmoCount, Client()->GameTick(g_Config.m_ClDummy), DurationTicks);
 				RenderNinjaBarPos(5 + 10 * 12, 5, 6.f, 24.f, NinjaProgress);
 			}
 		}
@@ -3942,8 +3931,10 @@ void CHud::RenderMediaIsland()
 		else
 		{
 			const auto &Character = GameClient()->m_Snap.m_aCharacters[FinishClientId];
-			const int Ticks = std::max(1, Client()->GameTick(g_Config.m_ClDummy) - Client()->PrevGameTick(g_Config.m_ClDummy));
-			FinishVelocity = vec2(Character.m_Cur.m_X - Character.m_Prev.m_X, Character.m_Cur.m_Y - Character.m_Prev.m_Y) / static_cast<float>(Ticks);
+			const int64_t Ticks = std::max<int64_t>(1, qm_race_timing::TickDifference(Client()->GameTick(g_Config.m_ClDummy), Client()->PrevGameTick(g_Config.m_ClDummy)));
+			const float DeltaX = static_cast<float>(static_cast<int64_t>(Character.m_Cur.m_X) - Character.m_Prev.m_X);
+			const float DeltaY = static_cast<float>(static_cast<int64_t>(Character.m_Cur.m_Y) - Character.m_Prev.m_Y);
+			FinishVelocity = vec2(DeltaX, DeltaY) / static_cast<float>(Ticks);
 		}
 	}
 	AnimState.m_FinishSummaryMotion.Update(RenderFinish ? pFinishSnapshot->m_Id : 0,
@@ -4000,7 +3991,7 @@ void CHud::RenderMediaIsland()
 		int SwitchInputCount = 0;
 		for(int Number = 1; Number < 256; ++Number)
 		{
-			const int EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][Number];
+			const int64_t EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][Number];
 			const int TouchTick = m_SwitchCountdownTracker.m_aaTouchTick[Team][Number];
 			if(EndTick <= SwitchNow || TouchTick <= 0)
 				continue;
@@ -4996,7 +4987,7 @@ void CHud::RenderMediaIsland()
 		const auto RenderTextEye = [&](const char *pGlyph, const CUIRect &Rect, float Alpha) {
 			if(Alpha <= 0.001f)
 				return;
-			const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
+			const CUiScopedTextRenderState TextState(*TextRender());
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			const float GlyphSize = Rect.h;
 			const float GlyphWidth = TextRender()->TextWidth(GlyphSize, pGlyph);
@@ -5006,7 +4997,6 @@ void CHud::RenderMediaIsland()
 			Cursor.m_FontSize = GlyphSize;
 			Cursor.m_LineWidth = -1.0f;
 			QmRenderImmediateFontIcon(*TextRender(), &Cursor, pGlyph, -1, IconColor, ConfiguredQmUiIconContrastColor(IconColor));
-			TextRender()->SetFontPreset(PreviousPreset);
 		};
 		const CUIRect ClosedRect = IconRect(SpectatorIconPose.m_ClosedScale, SpectatorIconPose.m_ClosedScale);
 		const CUIRect OpenRect = IconRect(SpectatorIconPose.m_OpenScaleX, SpectatorIconPose.m_OpenScaleY);
@@ -5515,8 +5505,9 @@ void CHud::RenderPlayerState(const int ClientId)
 
 		if(pCharacter->m_aWeapons[WEAPON_NINJA].m_Got)
 		{
-			const int Max = g_pData->m_Weapons.m_Ninja.m_Duration * Client()->GameTickSpeed() / 1000;
-			float NinjaProgress = std::clamp(pCharacter->m_Ninja.m_ActivationTick + g_pData->m_Weapons.m_Ninja.m_Duration * Client()->GameTickSpeed() / 1000 - Client()->GameTick(g_Config.m_ClDummy), 0, Max) / (float)Max;
+			const int DurationTicks = g_pData->m_Weapons.m_Ninja.m_Duration * Client()->GameTickSpeed() / 1000;
+			const int64_t EndTick = static_cast<int64_t>(pCharacter->m_Ninja.m_ActivationTick) + DurationTicks;
+			const float NinjaProgress = QmHudNinjaProgress(EndTick, Client()->GameTick(g_Config.m_ClDummy), DurationTicks);
 			if(NinjaProgress > 0.0f && GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo)
 			{
 				RenderNinjaBarPos(x, y - 12, 6.f, 24.f, NinjaProgress);
@@ -5878,7 +5869,7 @@ void CHud::RenderSpectatorCount()
 		Count = 8;
 
 	// 1 second delay
-	if(Client()->GameTick(g_Config.m_ClDummy) < m_LastSpectatorCountTick + Client()->GameTickSpeed())
+	if(qm_race_timing::TickDifference(Client()->GameTick(g_Config.m_ClDummy), m_LastSpectatorCountTick) < Client()->GameTickSpeed())
 		return;
 
 	char aBuf[16];
@@ -7172,17 +7163,15 @@ void CHud::OnNewSnapshot()
 	const CNetObj_Character *pPrevChar = &GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev;
 	const CNetObj_Character *pCurChar = &GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur;
 	const float IntraTick = Client()->IntraGameTick(g_Config.m_ClDummy);
-	ivec2 Vel = mix(ivec2(pPrevChar->m_VelX, pPrevChar->m_VelY), ivec2(pCurChar->m_VelX, pCurChar->m_VelY), IntraTick);
-
 	CCharacter *pChar = GameClient()->m_PredictedWorld.GetCharacterById(ClientId);
-	if(pChar && pChar->IsGrounded())
-		Vel.y = 0;
-
-	int aVels[2] = {Vel.x, Vel.y};
+	const uint32_t aSpeeds[] = {
+		QmHudSnapshotSpeed(pPrevChar->m_VelX, pCurChar->m_VelX, IntraTick),
+		pChar && pChar->IsGrounded() ? 0u : QmHudSnapshotSpeed(pPrevChar->m_VelY, pCurChar->m_VelY, IntraTick),
+	};
 
 	for(int i = 0; i < 2; i++)
 	{
-		int AbsVel = abs(aVels[i]);
+		const uint32_t AbsVel = aSpeeds[i];
 		if(AbsVel > m_aPlayerSpeed[i])
 		{
 			m_aLastPlayerSpeedChange[i] = ESpeedChange::INCREASE;
@@ -7497,20 +7486,15 @@ void CHud::RenderDDRaceEffects()
 	{
 		char aBuf[64];
 		char aTime[32];
-		if(m_ShowFinishTime && m_FinishTimeLastReceivedTick + Client()->GameTickSpeed() * 6 > Client()->GameTick(g_Config.m_ClDummy))
+		const int CurrentTick = Client()->GameTick(g_Config.m_ClDummy);
+		const int ReceivedTick = m_ShowFinishTime ? m_FinishTimeLastReceivedTick : m_TimeCpLastReceivedTick;
+		const float Alpha = QmHudRaceEffectAlpha(CurrentTick, ReceivedTick, Client()->GameTickSpeed());
+		if(m_ShowFinishTime && Alpha > 0.0f)
 		{
 			if(!g_Config.m_QmHudIslandUseOriginalStyle && (GameClient()->m_FinishSummary.Visible() || m_MediaIslandAnimState.m_FinishSummaryProgress > 0.001f))
 				return;
 			str_time(m_DDRaceTime, TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
 			str_format(aBuf, sizeof(aBuf), "Finish time: %s", aTime);
-
-			// calculate alpha (4 sec 1 than get lower the next 2 sec)
-			float Alpha = 1.0f;
-			if(m_FinishTimeLastReceivedTick + Client()->GameTickSpeed() * 4 < Client()->GameTick(g_Config.m_ClDummy) && m_FinishTimeLastReceivedTick + Client()->GameTickSpeed() * 6 > Client()->GameTick(g_Config.m_ClDummy))
-			{
-				// lower the alpha slowly to blend text out
-				Alpha = ((float)(m_FinishTimeLastReceivedTick + Client()->GameTickSpeed() * 6) - (float)Client()->GameTick(g_Config.m_ClDummy)) / (float)(Client()->GameTickSpeed() * 2);
-			}
 
 			TextRender()->TextColor(1, 1, 1, Alpha);
 			const float EffectWidth = TextRender()->TextWidth(12, aBuf);
@@ -7548,7 +7532,7 @@ void CHud::RenderDDRaceEffects()
 			}
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 		}
-		else if(g_Config.m_ClShowhudTimeCpDiff && !m_ShowFinishTime && m_TimeCpLastReceivedTick + Client()->GameTickSpeed() * 6 > Client()->GameTick(g_Config.m_ClDummy))
+		else if(g_Config.m_ClShowhudTimeCpDiff && !m_ShowFinishTime && Alpha > 0.0f)
 		{
 			if(m_TimeCpDiff < 0)
 			{
@@ -7559,14 +7543,6 @@ void CHud::RenderDDRaceEffects()
 			{
 				str_time_float(m_TimeCpDiff, TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
 				str_format(aBuf, sizeof(aBuf), "+%s", aTime);
-			}
-
-			// calculate alpha (4 sec 1 than get lower the next 2 sec)
-			float Alpha = 1.0f;
-			if(m_TimeCpLastReceivedTick + Client()->GameTickSpeed() * 4 < Client()->GameTick(g_Config.m_ClDummy) && m_TimeCpLastReceivedTick + Client()->GameTickSpeed() * 6 > Client()->GameTick(g_Config.m_ClDummy))
-			{
-				// lower the alpha slowly to blend text out
-				Alpha = ((float)(m_TimeCpLastReceivedTick + Client()->GameTickSpeed() * 6) - (float)Client()->GameTick(g_Config.m_ClDummy)) / (float)(Client()->GameTickSpeed() * 2);
 			}
 
 			if(m_TimeCpDiff > 0)
@@ -7596,6 +7572,7 @@ void CHud::RenderDDRaceEffects()
 }
 
 void CHud::RenderGoresDrownBoard()
+try
 {
 	if(!g_Config.m_QmGoresDrownBoard || !GameClient()->m_TClient.IsGoresDrownBoardMode())
 		return;
@@ -7620,29 +7597,30 @@ void CHud::RenderGoresDrownBoard()
 		int m_ClientId;
 		int m_Count;
 	};
-	std::vector<SEntry> vEntries;
+	std::array<SEntry, MAX_CLIENTS> aEntries{};
+	int EntriesCount = 0;
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 	{
 		if(!GameClient()->m_aClients[ClientId].m_Active ||
 			!GameClient()->m_Snap.m_apPlayerInfos[ClientId] ||
 			!CQmGoresDrownTracker::IsSameTrackedTeam(LocalTeam, GameClient()->m_Teams.Team(ClientId), IncludeTeamZero))
 			continue;
-		vEntries.push_back({ClientId, GameClient()->m_TClient.GetGoresDrownCount(ClientId)});
+		aEntries[EntriesCount++] = {ClientId, GameClient()->m_TClient.GetGoresDrownCount(ClientId)};
 	}
-	if(vEntries.empty() && Preview)
-		vEntries.push_back({-1, 0});
-	if(vEntries.empty())
+	if(EntriesCount == 0 && Preview)
+		aEntries[EntriesCount++] = {-1, 0};
+	if(EntriesCount == 0)
 		return;
 
-	std::stable_sort(vEntries.begin(), vEntries.end(), [](const SEntry &Left, const SEntry &Right) {
+	std::sort(aEntries.begin(), aEntries.begin() + EntriesCount, [](const SEntry &Left, const SEntry &Right) {
 		if(Left.m_Count != Right.m_Count)
 			return Left.m_Count > Right.m_Count;
 		return Left.m_ClientId < Right.m_ClientId;
 	});
 
 	const int MaxRows = std::clamp(g_Config.m_QmGoresDrownBoardMaxPlayers, 1, 16);
-	const int RowCount = minimum((int)vEntries.size(), MaxRows);
-	const bool HasMoreRows = (int)vEntries.size() > RowCount;
+	const int RowCount = minimum(EntriesCount, MaxRows);
+	const bool HasMoreRows = EntriesCount > RowCount;
 	const bool ShowTee = g_Config.m_QmGoresDrownBoardShowTee != 0;
 	const char *pTitle = Localize("Drown deaths");
 	constexpr float TitleFontSize = ui_token::hud::font::BODY;
@@ -7662,8 +7640,8 @@ void CHud::RenderGoresDrownBoard()
 	for(int Index = 0; Index < RowCount; ++Index)
 	{
 		char aCount[16];
-		const char *pName = vEntries[Index].m_ClientId >= 0 ? GameClient()->m_aClients[vEntries[Index].m_ClientId].m_aName : Localize("Teammate");
-		str_format(aCount, sizeof(aCount), "%d", vEntries[Index].m_Count);
+		const char *pName = aEntries[Index].m_ClientId >= 0 ? GameClient()->m_aClients[aEntries[Index].m_ClientId].m_aName : Localize("Teammate");
+		str_format(aCount, sizeof(aCount), "%d", aEntries[Index].m_Count);
 		BoardWidth = maximum(BoardWidth, TeeColumnWidth + TextRender()->TextWidth(RowFontSize, pName) + CountGap + TextRender()->TextWidth(RowFontSize, aCount));
 	}
 	if(HasMoreRows)
@@ -7675,6 +7653,13 @@ void CHud::RenderGoresDrownBoard()
 	const float BoardY = QmHudTopEffectY(35.0f, BoardHeight, BoardX, BoardX + BoardWidth, m_MediaIslandLastVisibleRect, m_MediaIslandLastVisibleRectValid);
 	const CUIRect BoardRect{BoardX, BoardY, BoardWidth, BoardHeight};
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::GoresDrownBoard, BoardRect);
+	struct SRestoreHudTransform
+	{
+		CHudEditor &m_Editor;
+		const CHudEditor::STransformScope &m_Scope;
+		~SRestoreHudTransform() { m_Editor.EndTransform(m_Scope); }
+	};
+	const SRestoreHudTransform RestoreTransform{GameClient()->m_HudEditor, HudEditorScope};
 
 	Ui()->RenderGaussianBlur(BoardRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
 	ColorRGBA BackgroundColor = ui_token::color::SURFACE_GLASS;
@@ -7686,8 +7671,7 @@ void CHud::RenderGoresDrownBoard()
 		DrawRoundedSurface(Ui(), BoardRect, BackgroundColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), BoardSurface);
 	}
 
-	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
-	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
+	const CUiScopedTextRenderState TextState(*TextRender());
 	// 榜内文字保持可读性：透明度只作用于榜面和 Tee，不能把排名信息一起淡掉。
 	const ColorRGBA BoardTextColor = TextRender()->DefaultTextColor();
 	const ColorRGBA BoardOutlineColor = TextRender()->DefaultTextOutlineColor();
@@ -7701,9 +7685,9 @@ void CHud::RenderGoresDrownBoard()
 	for(int Index = 0; Index < RowCount; ++Index)
 	{
 		char aCount[16];
-		const int ClientId = vEntries[Index].m_ClientId;
+		const int ClientId = aEntries[Index].m_ClientId;
 		const char *pName = ClientId >= 0 ? GameClient()->m_aClients[ClientId].m_aName : Localize("Teammate");
-		str_format(aCount, sizeof(aCount), "%d", vEntries[Index].m_Count);
+		str_format(aCount, sizeof(aCount), "%d", aEntries[Index].m_Count);
 		const float Y = BoardY + PaddingY + TitleHeight + Index * RowHeight;
 		const float CountWidth = TextRender()->TextWidth(RowFontSize, aCount);
 		CTextCursor NameCursor;
@@ -7747,10 +7731,15 @@ void CHud::RenderGoresDrownBoard()
 		TextRender()->TextColor(BoardTextColor.WithMultipliedAlpha(0.65f));
 		TextRender()->Text(ContentCenterX - TextRender()->TextWidth(MoreFontSize, pMore) / 2.0f, BoardY + PaddingY + TitleHeight + RowCount * RowHeight, MoreFontSize, pMore);
 	}
-
-	TextRender()->TextColor(PreviousTextColor);
-	TextRender()->TextOutlineColor(PreviousOutlineColor);
-	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
+}
+catch(const std::bad_alloc &)
+{
+	// 资源失败只跳过本榜当前帧，作用域已恢复文字与投影，下帧重新准备。
+	return;
+}
+catch(const std::length_error &)
+{
+	return;
 }
 
 void CHud::RenderRecord()
@@ -7768,13 +7757,18 @@ void CHud::RenderRecord()
 
 	if(GameClient()->m_ReceivedDDNetPlayerFinishTimes)
 	{
-		const int PlayerTimeSeconds = GameClient()->m_aClients[GameClient()->m_aLocalIds[g_Config.m_ClDummy]].m_FinishTimeSeconds;
+		const int LocalId = GameClient()->m_aLocalIds[g_Config.m_ClDummy];
+		if(!QmHudHasClientTarget(LocalId))
+			return;
+
+		const auto &LocalClient = GameClient()->m_aClients[LocalId];
+		const int PlayerTimeSeconds = LocalClient.m_FinishTimeSeconds;
 		if(PlayerTimeSeconds != FinishTime::NOT_FINISHED_MILLIS)
 		{
 			char aBuf[64];
 			TextRender()->Text(5, 82, 6, Localize("Personal best:"), -1.0f);
 			char aTime[32];
-			const int PlayerTimeMillis = GameClient()->m_aClients[GameClient()->m_aLocalIds[g_Config.m_ClDummy]].m_FinishTimeMillis;
+			const int PlayerTimeMillis = LocalClient.m_FinishTimeMillis;
 			int64_t TimeCentiseconds = static_cast<int64_t>(PlayerTimeSeconds) * 100 + static_cast<int64_t>(PlayerTimeMillis) / 10;
 			str_time(TimeCentiseconds, TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
 			str_format(aBuf, sizeof(aBuf), "%s%s", PlayerTimeSeconds > 3600 ? "" : "   ", aTime);

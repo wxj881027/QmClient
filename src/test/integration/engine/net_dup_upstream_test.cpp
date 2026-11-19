@@ -1,6 +1,7 @@
 #include <base/system.h>
 
 #include <engine/shared/network.h>
+#include <engine/shared/protocol7.h>
 
 #include <gtest/gtest.h>
 
@@ -164,6 +165,58 @@ TEST_P(CQmUpstreamRedundancyLoopback, ControlPacketsStaySingle)
 	Packet.m_aChunkData[0] = NET_CTRLMSG_KEEPALIVE;
 	Packet.m_DataSize = 1;
 	EXPECT_EQ(SendPacket(Packet, 3).size(), 1u);
+}
+
+TEST_P(CQmUpstreamRedundancyLoopback, SixupHandshakeWaitsForCompleteTokenReply)
+{
+	if(!GetParam().m_Sixup)
+		GTEST_SKIP() << "Token replies are part of the 0.7 handshake";
+
+	CNetConnection Connection;
+	Connection.Init(m_Sender, false);
+	ASSERT_EQ(Connection.Connect7(&m_Target, 1), 0);
+
+	CNetPacketConstruct Reply = {};
+	Reply.m_Flags = NET_PACKETFLAG_CONTROL;
+	Reply.m_DataSize = 1;
+	Reply.m_aChunkData[0] = protocol7::NET_CTRLMSG_TOKEN;
+	EXPECT_EQ(Connection.Feed(&Reply, &m_Target, Connection.m_Token, NET_SECURITY_TOKEN_UNKNOWN), 0);
+	EXPECT_EQ(Connection.State(), CNetConnection::EState::WANT_TOKEN);
+}
+
+TEST_P(CQmUpstreamRedundancyLoopback, ConnectRetrySendsTheSameControlRequest)
+{
+	CNetConnection Connection;
+	Connection.Init(m_Sender, false);
+	if(GetParam().m_Sixup)
+	{
+		ASSERT_EQ(Connection.Connect7(&m_Target, 1), 0);
+		ASSERT_EQ(ReceivePackets().size(), 1u);
+
+		CNetPacketConstruct Reply = {};
+		Reply.m_Flags = NET_PACKETFLAG_CONTROL;
+		Reply.m_DataSize = 1 + sizeof(TOKEN);
+		Reply.m_aChunkData[0] = protocol7::NET_CTRLMSG_TOKEN;
+		WriteSecurityToken(Reply.m_aChunkData + 1, TOKEN);
+		ASSERT_EQ(Connection.Feed(&Reply, &m_Target, Connection.m_Token, TOKEN), 1);
+	}
+	else
+	{
+		ASSERT_EQ(Connection.Connect(&m_Target, 1), 0);
+	}
+	ASSERT_EQ(Connection.State(), CNetConnection::EState::CONNECT);
+
+	const auto First = ReceivePackets();
+	ASSERT_EQ(First.size(), 1u);
+
+	TPackets Retry;
+	const auto Deadline = std::chrono::steady_clock::now() + 2s;
+	while(Retry.empty() && std::chrono::steady_clock::now() < Deadline)
+	{
+		Connection.Update();
+		Retry = ReceivePackets();
+	}
+	EXPECT_EQ(Retry, First);
 }
 
 TEST_P(CQmUpstreamRedundancyLoopback, EmptyResendRequestsStaySingle)

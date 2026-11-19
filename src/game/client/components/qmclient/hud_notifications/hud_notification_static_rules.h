@@ -12,8 +12,8 @@
 	X("Team load already in progress", "Team load already in progress") \
 	X("队伍读档尚未完成", "Team load already in progress") \
 	X("You have to be in a team (from 1-63)", "You have to be in a team (from 1-63)") \
-	X("You have to be in a team (from 1-127)", "You have to be in a team (from 1-63)") \
-	X("必须处于 1–127 号队伍中", "You have to be in a team (from 1-63)") \
+	X("You have to be in a team (from 1-127)", "You have to be in a team (from 1-127)") \
+	X("必须处于 1–127 号队伍中", "You have to be in a team (from 1-127)") \
 	X("Team can't be loaded while racing", "Team can't be loaded while racing") \
 	X("比赛中不能读档", "Team can't be loaded while racing") \
 	X("Team can't be loaded while in team 0 mode", "Team can't be loaded while in team 0 mode") \

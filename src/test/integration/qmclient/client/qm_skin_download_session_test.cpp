@@ -1,4 +1,5 @@
 // 下载会话与真实作业池、隔离存储协作；fake 只替换 HTTP 传输和图片解码边界。
+#include <base/borrowed_allocator.h>
 #include <base/system.h>
 
 #include <engine/storage.h>
@@ -11,12 +12,26 @@
 #include <chrono>
 #include <cstdlib>
 #include <functional>
+#include <new>
 #include <string>
 #include <thread>
 #include <vector>
 
 namespace
 {
+	class CTrackingMemory : public IAllocationResource
+	{
+		void *Allocate(size_t Bytes, size_t Alignment) override
+		{
+			if(m_Fail)
+				throw std::bad_alloc();
+			return IAllocationResource::AllocateDefault(Bytes, Alignment);
+		}
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override { IAllocationResource::DeallocateDefault(pData, Bytes, Alignment); }
+
+	public:
+		bool m_Fail = false;
+	};
 	class CTestSkinDataJob : public IQmSkinDataJob
 	{
 		bool m_SourceValid;
@@ -24,14 +39,16 @@ namespace
 		void Run() override { m_Valid = m_SourceValid; }
 
 	public:
-		explicit CTestSkinDataJob(bool Valid) : m_SourceValid(Valid) { Abortable(true); }
+		explicit CTestSkinDataJob(bool Valid) :
+			m_SourceValid(Valid) { Abortable(true); }
 		bool HasData() const override { return m_Valid; }
 	};
 
 	class CTestSkinRequest : public IHttpRequest
 	{
 	public:
-		CTestSkinRequest(const char *pUrl, IStorage *pStorage, bool Unconditional) : IHttpRequest(pUrl)
+		CTestSkinRequest(const char *pUrl, IStorage *pStorage, bool Unconditional) :
+			IHttpRequest(pUrl)
 		{
 			WriteToFileAndMemory(pStorage, "downloadedskins/test.png", IStorage::TYPE_SAVE);
 			m_IfModifiedSince = Unconditional ? -1 : 1;
@@ -54,12 +71,23 @@ namespace
 		bool Unconditional() const { return m_IfModifiedSince < 0; }
 		HTTPLOG LogSetting() const { return m_LogProgress; }
 		const CTimeout &TimeoutSetting() const { return m_Timeout; }
+		const char *TemporaryPath() const { return m_aDestAbsoluteTmp; }
 	};
 	class CTestSkinHttp : public IHttp
 	{
 	public:
 		std::vector<std::shared_ptr<CTestSkinRequest>> m_vRequests;
-		void Run(std::shared_ptr<IHttpRequest> pRequest) override { m_vRequests.push_back(std::static_pointer_cast<CTestSkinRequest>(pRequest)); }
+		bool m_ThrowBeforeAccept = false;
+		std::shared_ptr<CTestSkinRequest> m_pRejected;
+		void Run(std::shared_ptr<IHttpRequest> pRequest) override
+		{
+			if(m_ThrowBeforeAccept)
+			{
+				m_pRejected = std::static_pointer_cast<CTestSkinRequest>(pRequest);
+				throw std::bad_alloc();
+			}
+			m_vRequests.push_back(std::static_pointer_cast<CTestSkinRequest>(pRequest));
+		}
 		bool HasIpresolveBug() const override { return false; }
 	};
 
@@ -73,6 +101,11 @@ namespace
 		CTestSkinHttp m_Http;
 		std::vector<std::shared_ptr<IJob>> m_vJobs;
 		bool m_DecodeValid = true;
+		bool m_DecodeThrows = false;
+		int m_RequestCalls = 0, m_RequestThrowAt = 0;
+		int m_SubmitCalls = 0, m_SubmitThrowAt = 0;
+		std::shared_ptr<IJob> m_pLastSubmitted;
+		bool m_PoolStopped = false;
 		void SetUp() override
 		{
 			m_pStorage = m_Info.CreateTestStorage();
@@ -80,7 +113,15 @@ namespace
 			ASSERT_TRUE(m_pStorage->CreateFolder("downloadedskins", IStorage::TYPE_SAVE));
 			m_Pool.Init(1);
 		}
-		void TearDown() override { m_Pool.Shutdown(); }
+		void StopPool()
+		{
+			if(!m_PoolStopped)
+			{
+				m_Pool.Shutdown();
+				m_PoolStopped = true;
+			}
+		}
+		void TearDown() override { StopPool(); }
 		void WaitJobs()
 		{
 			const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
@@ -93,7 +134,18 @@ namespace
 		}
 		std::unique_ptr<CQmSkinDownloadSession> Create(bool CacheValid, bool Community = true, bool SameUrl = false)
 		{
-			return std::make_unique<CQmSkinDownloadSession>(m_Http, "https://official.test/test.png", Community ? (SameUrl ? "https://official.test/test.png" : "https://community.test/test.png") : "", std::make_shared<CTestSkinDataJob>(CacheValid), [this](const char *pUrl, bool Unconditional) { return std::make_shared<CTestSkinRequest>(pUrl, m_pStorage.get(), Unconditional); }, [this](std::shared_ptr<IHttpRequest>) { return std::make_shared<CTestSkinDataJob>(m_DecodeValid); }, [this](std::shared_ptr<IJob> pJob) { m_vJobs.push_back(pJob); m_Pool.Add(std::move(pJob)); });
+			return std::make_unique<CQmSkinDownloadSession>(m_Http, "https://official.test/test.png", Community ? (SameUrl ? "https://official.test/test.png" : "https://community.test/test.png") : "", std::make_shared<CTestSkinDataJob>(CacheValid), [this](const char *pUrl, bool Unconditional) {
+					if(++m_RequestCalls == m_RequestThrowAt)
+						throw std::bad_alloc();
+					return std::make_shared<CTestSkinRequest>(pUrl, m_pStorage.get(), Unconditional); }, [this](std::shared_ptr<IHttpRequest>) {
+					if(m_DecodeThrows)
+						throw std::bad_alloc();
+					return std::make_shared<CTestSkinDataJob>(m_DecodeValid); }, [this](std::shared_ptr<IJob> pJob) {
+					m_pLastSubmitted = pJob;
+					if(++m_SubmitCalls == m_SubmitThrowAt)
+						throw std::bad_alloc();
+					m_vJobs.push_back(pJob);
+					m_Pool.Add(std::move(pJob)); });
 		}
 		void WriteCache(const char *pBody)
 		{
@@ -391,4 +443,232 @@ TEST_F(QmSkinDownloadSession, NewSessionAfterCancellationCanDeliverReplacement)
 	EXPECT_EQ(ReadCache(), "current-image");
 	EXPECT_EQ(pOld->Poll(), EResult::DONE);
 	pNew->TakeReadyJob();
+}
+
+TEST_F(QmSkinDownloadSession, InitialSubmissionAllocationFailureTerminatesAndAbortsCacheJob)
+{
+	m_SubmitThrowAt = 1;
+	auto pSession = Create(false);
+	ASSERT_NE(m_pLastSubmitted, nullptr);
+	EXPECT_EQ(m_pLastSubmitted->State(), IJob::STATE_ABORTED);
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(pSession->TakeReadyJob(), nullptr);
+	EXPECT_TRUE(m_Http.m_vRequests.empty());
+}
+
+TEST_F(QmSkinDownloadSession, RequestFactoryAllocationFailureIsTerminalWithoutCache)
+{
+	m_RequestThrowAt = 1;
+	auto pSession = Create(false);
+	WaitJobs();
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(m_RequestCalls, 1);
+	EXPECT_TRUE(m_Http.m_vRequests.empty());
+}
+
+TEST_F(QmSkinDownloadSession, RequestAllocationFailureStillDeliversPreparedCacheOnce)
+{
+	WriteCache("old-valid-image");
+	m_RequestThrowAt = 1;
+	auto pSession = Create(true);
+	WaitJobs();
+	EXPECT_EQ(pSession->Poll(), EResult::READY);
+	EXPECT_EQ(pSession->Poll(), EResult::READY);
+	auto pReady = pSession->TakeReadyJob();
+	ASSERT_NE(pReady, nullptr);
+	EXPECT_TRUE(pReady->HasData());
+	EXPECT_EQ(pSession->Poll(), EResult::DONE);
+	EXPECT_EQ(pSession->TakeReadyJob(), nullptr);
+	EXPECT_EQ(m_RequestCalls, 1);
+	EXPECT_EQ(ReadCache(), "old-valid-image");
+}
+
+TEST_F(QmSkinDownloadSession, DecodeAllocationFailureRejectsTemporaryFileAndPreservesDiskCache)
+{
+	WriteCache("old-valid-image");
+	auto pSession = Create(false);
+	BeginWithoutCache(*pSession);
+	m_Http.m_vRequests[0]->Finish(200, "candidate-image");
+	ASSERT_TRUE(fs_is_file(m_Http.m_vRequests[0]->TemporaryPath()));
+	m_DecodeThrows = true;
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(pSession->TakeReadyJob(), nullptr);
+	EXPECT_EQ(ReadCache(), "old-valid-image");
+	EXPECT_FALSE(fs_is_file(m_Http.m_vRequests[0]->TemporaryPath()));
+}
+
+TEST_F(QmSkinDownloadSession, DecodeSubmissionAllocationFailureAbortsCandidateInsteadOfWaiting)
+{
+	WriteCache("old-valid-image");
+	auto pSession = Create(false);
+	BeginWithoutCache(*pSession);
+	m_Http.m_vRequests[0]->Finish(200, "candidate-image");
+	m_SubmitThrowAt = 2;
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	ASSERT_NE(m_pLastSubmitted, nullptr);
+	EXPECT_EQ(m_pLastSubmitted->State(), IJob::STATE_ABORTED);
+	EXPECT_EQ(m_vJobs.size(), 1u);
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(ReadCache(), "old-valid-image");
+}
+
+TEST_F(QmSkinDownloadSession, CommunityFallbackAllocationFailureDoesNotRetryOrLeavePendingRequest)
+{
+	auto pSession = Create(false);
+	BeginWithoutCache(*pSession);
+	m_RequestThrowAt = 2;
+	m_Http.m_vRequests[0]->Finish(404);
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
+	EXPECT_EQ(m_RequestCalls, 2);
+}
+
+TEST_F(QmSkinDownloadSession, UnconditionalRetryAllocationFailureEndsInvalidCacheUpdate)
+{
+	auto pSession = Create(false);
+	BeginWithoutCache(*pSession);
+	m_RequestThrowAt = 2;
+	m_Http.m_vRequests[0]->Finish(304);
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
+	EXPECT_EQ(m_RequestCalls, 2);
+}
+
+TEST_F(QmSkinDownloadSession, DecodeAllocationFailureKeepsAlreadyDeliveredCache)
+{
+	WriteCache("old-valid-image");
+	auto pSession = Create(true);
+	WaitJobs();
+	ASSERT_EQ(pSession->Poll(), EResult::READY);
+	auto pReady = pSession->TakeReadyJob();
+	m_Http.m_vRequests[0]->Finish(200, "candidate-image");
+	m_DecodeThrows = true;
+	EXPECT_EQ(pSession->Poll(), EResult::DONE);
+	ASSERT_NE(pReady, nullptr);
+	EXPECT_TRUE(pReady->HasData());
+	EXPECT_EQ(pSession->TakeReadyJob(), nullptr);
+	EXPECT_EQ(ReadCache(), "old-valid-image");
+}
+
+TEST_F(QmSkinDownloadSession, NewSessionCanRecoverAfterAllocationFailureAndOldCancelIsIdempotent)
+{
+	m_RequestThrowAt = 1;
+	auto pOld = Create(false);
+	WaitJobs();
+	ASSERT_EQ(pOld->Poll(), EResult::ERROR);
+	pOld->Cancel();
+	pOld->Cancel();
+	EXPECT_EQ(pOld->Poll(), EResult::DONE);
+	m_RequestThrowAt = 0;
+	auto pNew = Create(false);
+	BeginWithoutCache(*pNew);
+	m_Http.m_vRequests[0]->Finish(200, "recovered-image");
+	ASSERT_EQ(pNew->Poll(), EResult::WAITING);
+	WaitJobs();
+	EXPECT_EQ(pNew->Poll(), EResult::READY);
+	EXPECT_EQ(ReadCache(), "recovered-image");
+	pNew->TakeReadyJob();
+	EXPECT_EQ(pNew->Poll(), EResult::DONE);
+	EXPECT_EQ(m_RequestCalls, 2);
+}
+
+TEST_F(QmSkinDownloadSession, ClosedRealJobPoolAbortsRejectedDecodeAndSessionDoesNotHang)
+{
+	StopPool();
+	auto pSession = Create(false);
+	BeginWithoutCache(*pSession);
+	m_Http.m_vRequests[0]->Finish(200);
+	ASSERT_EQ(pSession->Poll(), EResult::WAITING);
+	ASSERT_NE(m_pLastSubmitted, nullptr);
+	EXPECT_EQ(m_pLastSubmitted->State(), IJob::STATE_ABORTED);
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+}
+
+TEST_F(QmSkinDownloadSession, ExternalHttpSubmissionAllocationFailureAbortsPreparedRequest)
+{
+	// 只验证外部提交边界；现行native Run已自行处理内部pending分配失败。
+	m_Http.m_ThrowBeforeAccept = true;
+	auto pSession = Create(false);
+	WaitJobs();
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+	ASSERT_NE(m_Http.m_pRejected, nullptr);
+	EXPECT_TRUE(m_Http.m_pRejected->IsAbortRequested());
+	EXPECT_TRUE(m_Http.m_vRequests.empty());
+	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+}
+
+TEST_F(QmSkinDownloadSession, TrackedCreationRegistersOwnerBeforeNormalPolling)
+{
+	std::vector<std::string> Names;
+	auto pSession = QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); });
+	ASSERT_NE(pSession, nullptr);
+	ASSERT_EQ(Names.size(), 1u);
+	EXPECT_EQ(Names[0], "test");
+	BeginWithoutCache(*pSession);
+	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
+}
+
+TEST_F(QmSkinDownloadSession, ExistingTrackingNameDoesNotAllocateRegistryStorageOrDuplicateEntry)
+{
+	CTrackingMemory Memory;
+	std::vector<std::string, CBorrowedAllocator<std::string>> Names(&Memory);
+	Names.emplace_back("test");
+	Memory.m_Fail = true;
+	auto pSession = QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); });
+	ASSERT_NE(pSession, nullptr);
+	EXPECT_EQ(Names.size(), 1u);
+	BeginWithoutCache(*pSession);
+}
+
+TEST_F(QmSkinDownloadSession, TrackingAllocationFailureCancelsCandidateAndPreservesRegistry)
+{
+	CTrackingMemory Memory;
+	std::vector<std::string, CBorrowedAllocator<std::string>> Names(&Memory);
+	Names.reserve(1);
+	const auto Capacity = Names.capacity();
+	while(Names.size() < Capacity)
+		Names.emplace_back("kept");
+	Memory.m_Fail = true;
+	auto pSession = QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); });
+	EXPECT_EQ(pSession, nullptr);
+	EXPECT_EQ(Names.size(), Capacity);
+	EXPECT_EQ(Names[0], "kept");
+	WaitJobs();
+	ASSERT_NE(m_pLastSubmitted, nullptr);
+	EXPECT_EQ(m_pLastSubmitted->State(), IJob::STATE_ABORTED);
+	EXPECT_TRUE(m_Http.m_vRequests.empty());
+}
+
+TEST_F(QmSkinDownloadSession, TrackingFailureCanRetryWithANewCandidate)
+{
+	CTrackingMemory Memory;
+	std::vector<std::string, CBorrowedAllocator<std::string>> Names(&Memory);
+	Memory.m_Fail = true;
+	EXPECT_EQ(QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); }), nullptr);
+	Memory.m_Fail = false;
+	auto pSession = QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); });
+	ASSERT_NE(pSession, nullptr);
+	ASSERT_EQ(Names.size(), 1u);
+	EXPECT_EQ(Names[0], "test");
+	EXPECT_EQ(m_SubmitCalls, 2);
+	BeginWithoutCache(*pSession);
+}
+
+TEST_F(QmSkinDownloadSession, FailedNewTrackingDoesNotCancelExistingSession)
+{
+	auto pExisting = Create(false);
+	CTrackingMemory Memory;
+	std::vector<std::string, CBorrowedAllocator<std::string>> Names(&Memory);
+	Memory.m_Fail = true;
+	auto pRejected = QmCreateTrackedSkinDownloadSession(Names, "new", [&] { return Create(false); });
+	EXPECT_EQ(pRejected, nullptr);
+	EXPECT_TRUE(Names.empty());
+	BeginWithoutCache(*pExisting);
+	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
 }

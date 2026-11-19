@@ -146,7 +146,10 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 			Ui()->DoLabel(&LabelRow, Localize("Console color scheme"), Metrics.m_BodySize, TEXTALIGN_ML);
 			ButtonRect.HMargin(std::max(0.0f, (ButtonRect.h - Metrics.m_ListRowHeight) * 0.5f), &ButtonRect);
 			if(ui_widget::SecondaryButton(Ctx, &Controls.m_Reset, Localize("Reset console appearance"), ButtonRect, PrewarmOnly) && Flow.Input() && !Ui()->RenderOnly())
+			{
 				QmConsoleAppearance::Reset(g_Config);
+				g_Config.m_QmConsoleLineSpacing = DefaultConfig::QmConsoleLineSpacing;
+			}
 		}
 		if(TakeRow("console-scheme-list", QmConsoleSettingsLayout::SchemeListHeight(Metrics)))
 		{
@@ -240,12 +243,14 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 		Cursor.m_LineWidth = Row.w;
 		Cursor.m_MaxLines = 2;
 		const char *pPreview = "> echo \"QmClient\"; player_color 42\nhttps://ddnet.org";
-		std::vector<STextColorSplit> vColors;
-		if(g_Config.m_QmConsoleHighlightCommands)
-			QmConsoleSyntax::AppendColors(pPreview + 2, Palette, vColors, 2);
-		const char *pLink = str_find(pPreview, "https://");
-		vColors.emplace_back(static_cast<int>(pLink - pPreview), str_length(pLink), Palette.m_aColors[QmConsoleAppearance::LINK]);
-		QmConsoleText::ComposeColorSplits(pPreview, vColors, Cursor.m_vColorSplits);
+		QmConsoleText::CColorPreparation Colors;
+		Colors.Prepare(pPreview, Cursor.m_vColorSplits, [&](auto &vColors, const auto &vLinks) {
+			if(g_Config.m_QmConsoleHighlightCommands)
+				QmConsoleSyntax::AppendColors(pPreview + 2, Palette, vColors, 2);
+			for(const auto &Link : vLinks)
+				vColors.emplace_back(Link.m_StartByte, Link.m_EndByte - Link.m_StartByte, Palette.m_aColors[QmConsoleAppearance::LINK]);
+			return true;
+		});
 		TextRender()->TextEx(&Cursor, pPreview);
 		TextRender()->TextColor(Previous);
 	}
@@ -255,21 +260,31 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 
 void CGameConsole::OpenSettings()
 {
+	// 启动配置和参数可能先于界面初始化执行。弹层输入归展开中的本地控制台接管。
+	if(Graphics() == nullptr || (m_ConsoleState != CONSOLE_OPEN && m_ConsoleState != CONSOLE_OPENING))
+		return;
+
 	const CUIRect Panel = QmConsoleSettingsLayout::PanelRect(*Ui()->Screen(), QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme), g_Config.m_QmConsoleFontSize);
+	// 入场与退场均由公共弹层栈驱动，控制台绘制入口保留退场帧。
+	const auto Props = ui_widget::SecondaryPanelProperties();
+	Ui()->DoPopupMenu(&m_SettingsPopupId, Panel.x, Panel.y, Panel.w, Panel.h, this, PopupSettings, Props);
+	if(!ConsoleSettingsOpen())
+		return;
+
 	m_SettingsScrollRegion.Reset();
 	m_LocalConsole.m_Selection.Finish();
 	m_LocalConsole.m_MouseIsPress = false;
 	m_LocalConsole.m_ScrollbarDragging = false;
 	m_LocalConsole.m_Input.GetMouseSelection()->m_Selecting = false;
 	m_TouchState.m_ScrollAmount = vec2(0.0f, 0.0f);
-	auto Props = ui_widget::SecondaryPanelProperties();
-	// 入场与退场均由公共弹层栈驱动，控制台绘制入口保留退场帧。
-	Ui()->DoPopupMenu(&m_SettingsPopupId, Panel.x, Panel.y, Panel.w, Panel.h, this, PopupSettings, Props);
 }
 
 CUi::EPopupMenuFunctionResult CGameConsole::PopupSettings(void *pContext, CUIRect View, bool Active)
 {
 	auto *pThis = static_cast<CGameConsole *>(pContext);
+	// 控制台展开完成时会重新激活命令输入框，此时焦点仍由弹层接管。
+	if(!pThis->Ui()->RenderOnly())
+		pThis->m_LocalConsole.m_Input.Deactivate();
 	const auto HeaderMetrics = ui_widget::ResolveSecondaryPanelMetrics(View.w);
 	static ui_widget::SSecondaryPanelLabel s_Title;
 	ui_widget::CSecondaryPanel Panel(ui_widget::ControlContext(pThis->Ui()), View, Active, HeaderMetrics, {});
@@ -293,11 +308,8 @@ CUi::EPopupMenuFunctionResult CGameConsole::PopupSettings(void *pContext, CUIRec
 	Params.m_ScrollbarTrackInset = ui_token::radius::CARD;
 	Params.m_Interactive = Active;
 	Params.m_WheelOwnerPriority = EUiWheelOwnerPriority::POPUP;
-	// 弹层显式登记滚轮所有权，不依赖底层控制台的热滚动区。
+	// 外层在 End() 根据实际占高登记滚轮，先让内层控件处理命中的事件。
 	Params.m_pWheelOwnerId = &pThis->m_SettingsPopupId;
-	Params.m_WheelOwnerPreRegistered = true;
-	pThis->Ui()->RegisterWheelOwner(Params.m_pWheelOwnerId, Params.m_WheelOwnerPriority, View,
-		Active && QmConsoleSettingsLayout::ContentHeight(Metrics, QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme), g_Config.m_QmConsoleFontSize) > View.h);
 	pThis->m_SettingsScrollRegion.SetContentHeightForNextFrame(QmConsoleSettingsLayout::ContentHeight(Metrics, QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme), g_Config.m_QmConsoleFontSize));
 	pThis->m_SettingsScrollRegion.Begin(&View, &Offset, &Params);
 	// 覆盖式不占内容宽度，让位必须显式扣一次：厚度 + 外边距 + 缝。

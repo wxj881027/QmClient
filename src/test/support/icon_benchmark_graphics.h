@@ -93,6 +93,15 @@ public:
 		Image.Free();
 		return Handle;
 	}
+	bool TryLoadTextureRawMoveOwned(CImageInfo &Image, int Flags, const char *pTexName, SGraphicsUploadRelease &Release, CTextureHandle &Texture) override
+	{
+		Texture = LoadTextureRawMove(Image, Flags, pTexName);
+		const auto Owned = Release;
+		Release = {};
+		if(Owned.m_pfnRelease != nullptr)
+			Owned.m_pfnRelease(Owned.m_pContext);
+		return true;
+	}
 	CTextureHandle LoadTexture(const char *pFilename, int StorageType, int Flags = 0) override
 	{
 		CImageInfo Image;

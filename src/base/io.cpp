@@ -8,24 +8,92 @@
 #include "fs.h"
 #include "io_read_all.h"
 #include "mem.h"
+#include "str.h"
 #include "windows.h"
+#include "windows_io.h"
 
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
+#include <new>
 #include <string>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <io.h> // _get_osfhandle
 #include <windows.h> // FlushFileBuffers
 #else
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h> // fsync
 #endif
 
-IOHANDLE io_open(const char *filename, int flags)
-{
-	dbg_assert(flags == IOFLAG_READ || flags == IOFLAG_WRITE || flags == IOFLAG_APPEND, "flags must be read, write or append");
 #if defined(CONF_FAMILY_WINDOWS)
-	const std::wstring wide_filename = windows_utf8_to_wide(filename);
+int CWindowsFileOperations::OpenDescriptor(intptr_t Handle, int OpenFlags) noexcept
+{
+	return _open_osfhandle(Handle, OpenFlags);
+}
+
+FILE *CWindowsFileOperations::OpenStream(int Descriptor, const char *pMode) noexcept
+{
+	return _fdopen(Descriptor, pMode);
+}
+
+void CWindowsFileOperations::CloseNativeHandle(intptr_t Handle) noexcept
+{
+	CloseHandle(reinterpret_cast<HANDLE>(Handle));
+}
+
+void CWindowsFileOperations::CloseDescriptor(int Descriptor) noexcept
+{
+	_close(Descriptor);
+}
+
+IOHANDLE windows_io_from_handle(intptr_t Handle, const char *pMode, CWindowsFileOperations *pOperations, int OpenFlags) noexcept
+{
+	CWindowsFileOperations DefaultOperations;
+	CWindowsFileOperations &Operations = pOperations ? *pOperations : DefaultOperations;
+	const int Descriptor = Operations.OpenDescriptor(Handle, OpenFlags);
+	if(Descriptor == -1)
+	{
+		const int Error = errno;
+		Operations.CloseNativeHandle(Handle);
+		errno = Error;
+		return nullptr;
+	}
+
+	FILE *pStream = Operations.OpenStream(Descriptor, pMode);
+	if(!pStream)
+	{
+		const int Error = errno;
+		// 句柄已交给 CRT，关闭描述符会同时关闭原生句柄，不能再次 CloseHandle。
+		Operations.CloseDescriptor(Descriptor);
+		errno = Error;
+	}
+	return pStream;
+}
+
+#endif
+
+static IOHANDLE io_open_impl(const char *filename, int flags, bool *pNotFound, bool RegularOnly = false)
+{
+	if(pNotFound)
+		*pNotFound = false;
+	if(!filename)
+		return nullptr;
+	dbg_assert(flags == IOFLAG_READ || flags == IOFLAG_WRITE || flags == IOFLAG_APPEND || flags == (IOFLAG_WRITE | IOFLAG_EXCLUSIVE), "invalid file open flags");
+#if defined(CONF_FAMILY_WINDOWS)
+	if(!str_utf8_check(filename))
+		return nullptr;
+
+	std::wstring wide_filename;
+	try
+	{
+		wide_filename = windows_utf8_to_wide(filename);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return nullptr;
+	}
 	DWORD desired_access;
 	DWORD creation_disposition;
 	const char *open_mode;
@@ -35,10 +103,10 @@ IOHANDLE io_open(const char *filename, int flags)
 		creation_disposition = OPEN_EXISTING;
 		open_mode = "rb";
 	}
-	else if(flags == IOFLAG_WRITE)
+	else if((flags & IOFLAG_WRITE) != 0)
 	{
 		desired_access = FILE_WRITE_DATA;
-		creation_disposition = CREATE_ALWAYS;
+		creation_disposition = (flags & IOFLAG_EXCLUSIVE) != 0 ? CREATE_NEW : CREATE_ALWAYS;
 		open_mode = "wb";
 	}
 	else if(flags == IOFLAG_APPEND)
@@ -53,21 +121,88 @@ IOHANDLE io_open(const char *filename, int flags)
 	}
 	HANDLE handle = CreateFileW(wide_filename.c_str(), desired_access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, creation_disposition, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if(handle == INVALID_HANDLE_VALUE)
+	{
+		if(pNotFound)
+		{
+			const DWORD Error = GetLastError();
+			*pNotFound = Error == ERROR_FILE_NOT_FOUND || Error == ERROR_PATH_NOT_FOUND;
+		}
 		return nullptr;
-	const int file_descriptor = _open_osfhandle((intptr_t)handle, 0);
-	dbg_assert(file_descriptor != -1, "_open_osfhandle failure");
-	FILE *file_stream = _fdopen(file_descriptor, open_mode);
-	dbg_assert(file_stream != nullptr, "_fdopen failure");
-	return file_stream;
+	}
+	if(RegularOnly)
+	{
+		BY_HANDLE_FILE_INFORMATION Information{};
+		if(GetFileType(handle) != FILE_TYPE_DISK || !GetFileInformationByHandle(handle, &Information) || (Information.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+		{
+			CloseHandle(handle);
+			return nullptr;
+		}
+	}
+	return windows_io_from_handle(reinterpret_cast<intptr_t>(handle), open_mode);
 #else
+	if(pNotFound && !str_utf8_check(filename))
+		return nullptr;
+
+	if(RegularOnly)
+	{
+		int OpenFlags = O_RDONLY | O_NONBLOCK | O_NOCTTY;
+#if defined(O_CLOEXEC)
+		OpenFlags |= O_CLOEXEC;
+#endif
+		int Descriptor;
+		do
+		{
+			Descriptor = open(filename, OpenFlags);
+		} while(Descriptor == -1 && errno == EINTR);
+		if(Descriptor == -1)
+		{
+			if(pNotFound)
+				*pNotFound = errno == ENOENT;
+			return nullptr;
+		}
+		struct SDescriptor
+		{
+			int m_Value;
+			~SDescriptor()
+			{
+				if(m_Value != -1)
+				{
+					const int Error = errno;
+					close(m_Value);
+					errno = Error;
+				}
+			}
+		} Owner{Descriptor};
+		struct stat Information;
+		if(fstat(Descriptor, &Information) != 0)
+			return nullptr;
+		if(!S_ISREG(Information.st_mode))
+		{
+			errno = EINVAL;
+			return nullptr;
+		}
+#if !defined(O_CLOEXEC)
+		const int DescriptorFlags = fcntl(Descriptor, F_GETFD);
+		if(DescriptorFlags == -1 || fcntl(Descriptor, F_SETFD, DescriptorFlags | FD_CLOEXEC) == -1)
+			return nullptr;
+#endif
+		// 类型固定在已打开描述符上，恢复普通文件原有的阻塞读取行为。
+		const int StatusFlags = fcntl(Descriptor, F_GETFL);
+		if(StatusFlags == -1 || fcntl(Descriptor, F_SETFL, StatusFlags & ~O_NONBLOCK) == -1)
+			return nullptr;
+		FILE *pStream = fdopen(Descriptor, "rb");
+		if(pStream)
+			Owner.m_Value = -1;
+		return pStream;
+	}
 	const char *open_mode;
 	if((flags & IOFLAG_READ) != 0)
 	{
 		open_mode = "rb";
 	}
-	else if(flags == IOFLAG_WRITE)
+	else if((flags & IOFLAG_WRITE) != 0)
 	{
-		open_mode = "wb";
+		open_mode = (flags & IOFLAG_EXCLUSIVE) != 0 ? "wbx" : "wb";
 	}
 	else if(flags == IOFLAG_APPEND)
 	{
@@ -77,8 +212,35 @@ IOHANDLE io_open(const char *filename, int flags)
 	{
 		dbg_assert_failed("Invalid flags: %d", flags);
 	}
-	return fopen(filename, open_mode);
+	FILE *pFile = fopen(filename, open_mode);
+	if(!pFile && pNotFound)
+		*pNotFound = errno == ENOENT;
+	return pFile;
 #endif
+}
+
+IOHANDLE io_open(const char *filename, int flags)
+{
+	return io_open_impl(filename, flags, nullptr);
+}
+
+IOHANDLE io_open_read_checked(const char *pFilename, bool *pNotFound)
+{
+	return io_open_impl(pFilename, IOFLAG_READ, pNotFound);
+}
+
+IOHANDLE io_open_read_regular_checked(const char *pFilename, bool *pNotFound)
+{
+	bool NotFound = false;
+	if(!pNotFound)
+		pNotFound = &NotFound;
+	*pNotFound = false;
+	if(!pFilename || pFilename[0] == '\0')
+	{
+		errno = EINVAL;
+		return nullptr;
+	}
+	return io_open_impl(pFilename, IOFLAG_READ, pNotFound, true);
 }
 
 unsigned io_read(IOHANDLE io, void *buffer, unsigned size)

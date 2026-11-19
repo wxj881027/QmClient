@@ -20,9 +20,9 @@ public:
 	void OnInit(CRenderComponent *pRenderComponent);
 
 private:
-	IGraphics *m_pGraphics;
-	ITextRender *m_pTextRender;
-	CRenderMap *m_pRenderMap;
+	IGraphics *m_pGraphics = nullptr;
+	ITextRender *m_pTextRender = nullptr;
+	CRenderMap *m_pRenderMap = nullptr;
 };
 
 #endif

@@ -1,0 +1,339 @@
+#include <base/system.h>
+
+#include <engine/storage.h>
+
+#include <gtest/gtest.h>
+#include <test/support/regular_file_open_timeout.h>
+#include <test/test.h>
+
+#include <cstdlib>
+#include <string>
+
+#if defined(CONF_FAMILY_UNIX)
+#include <sys/stat.h>
+#endif
+
+namespace
+{
+	using EResult = IStorage::EReadFileResult;
+	class CCheckedStorageReadTest : public ::testing::Test
+	{
+	protected:
+		CTestInfo m_Info;
+		std::unique_ptr<IStorage> m_pStorage;
+		void *m_pData = nullptr;
+		unsigned m_Size = 0;
+
+		void SetUp() override
+		{
+			m_pStorage = m_Info.CreateTestStorage();
+			ASSERT_NE(m_pStorage, nullptr);
+		}
+		void TearDown() override { free(m_pData); }
+		std::string Path(const char *pName)
+		{
+			char aPath[IO_MAX_PATH_LENGTH];
+			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, pName, aPath, sizeof(aPath));
+			return aPath;
+		}
+		void Write(const char *pName, const std::string &Data)
+		{
+			IOHANDLE File = m_pStorage->OpenFile(pName, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			ASSERT_NE(File, nullptr);
+			EXPECT_EQ(io_write(File, Data.data(), static_cast<unsigned>(Data.size())), Data.size());
+			EXPECT_EQ(io_close(File), 0);
+		}
+		EResult Read(const char *pName, int Type = IStorage::TYPE_SAVE, IStorage *pStorage = nullptr)
+		{
+			free(m_pData);
+			m_pData = nullptr;
+			m_Size = 999;
+			return (pStorage ? pStorage : m_pStorage.get())->ReadFileChecked(pName, Type, &m_pData, &m_Size);
+		}
+		EResult ReadBounded(const char *pName, unsigned MaxBytes, int Type = IStorage::TYPE_SAVE, IStorage *pStorage = nullptr)
+		{
+			free(m_pData);
+			m_pData = nullptr;
+			m_Size = 999;
+			return (pStorage ? pStorage : m_pStorage.get())->ReadFileCheckedBounded(pName, Type, &m_pData, &m_Size, MaxBytes);
+		}
+		void ExpectFailure(EResult Result, EResult Expected)
+		{
+			EXPECT_EQ(Result, Expected);
+			EXPECT_EQ(m_pData, nullptr);
+			EXPECT_EQ(m_Size, 0u);
+		}
+		std::string Contents() const { return std::string(static_cast<const char *>(m_pData), m_Size); }
+	};
+
+	class CLayeredCheckedStorageReadTest : public CCheckedStorageReadTest
+	{
+	protected:
+		std::unique_ptr<IStorage> m_pLayered;
+		std::string m_Save;
+		std::string m_Data;
+		std::string m_Relative;
+		void SetUp() override
+		{
+			CCheckedStorageReadTest::SetUp();
+			ASSERT_FALSE(HasFatalFailure());
+			for(const char *pDir : {"read_save", "read_app", "read_app/data", "read_app/data/mapres"})
+				ASSERT_TRUE(m_pStorage->CreateFolder(pDir, IStorage::TYPE_SAVE));
+			m_Save = Path("read_save");
+			m_Data = Path("read_app/data");
+			const auto Executable = Path("read_app/client.exe");
+			const char *apArgs[] = {Executable.c_str()};
+			m_pLayered = CreateTempStorage(m_Save.c_str(), 1, apArgs);
+			ASSERT_NE(m_pLayered, nullptr);
+			m_Relative = std::string("read_") + m_Info.m_aFilename;
+			ASSERT_EQ(fs_makedir((m_Save + "/" + m_Relative).c_str()), 0);
+			ASSERT_EQ(fs_makedir((m_Data + "/" + m_Relative).c_str()), 0);
+		}
+		void WriteLayer(const char *pPrefix, const char *pValue)
+		{
+			Write((std::string(pPrefix) + "/" + m_Relative + "/skin.json").c_str(), pValue);
+		}
+		EResult ReadLayers() { return Read((m_Relative + "/skin.json").c_str(), IStorage::TYPE_ALL, m_pLayered.get()); }
+	};
+	class CLayeredCheckedStorageReadDeathTest : public CLayeredCheckedStorageReadTest
+	{
+	};
+}
+
+TEST_F(CCheckedStorageReadTest, CheckedOpenMarksMissingAndClearsFlagOnLaterSuccess)
+{
+	bool NotFound = false;
+	EXPECT_EQ(io_open_read_checked(Path("skin.json").c_str(), &NotFound), nullptr);
+	EXPECT_TRUE(NotFound);
+	Write("skin.json", "ready");
+	ASSERT_FALSE(HasFatalFailure());
+	IOHANDLE File = io_open_read_checked(Path("skin.json").c_str(), &NotFound);
+	ASSERT_NE(File, nullptr);
+	EXPECT_FALSE(NotFound);
+	char aBuffer[5];
+	EXPECT_EQ(io_read(File, aBuffer, sizeof(aBuffer)), sizeof(aBuffer));
+	EXPECT_EQ(std::string(aBuffer, sizeof(aBuffer)), "ready");
+	EXPECT_EQ(io_close(File), 0);
+}
+
+TEST_F(CCheckedStorageReadTest, InvalidUtf8OpenDoesNotMasqueradeAsMissing)
+{
+	bool NotFound = true;
+	EXPECT_EQ(io_open_read_checked("invalid_\xff", &NotFound), nullptr);
+	EXPECT_FALSE(NotFound);
+}
+
+TEST_F(CCheckedStorageReadTest, MissingFileClearsPreviousOutputValues)
+{
+	int Old = 0;
+	m_pData = &Old;
+	m_Size = 123;
+	const auto Result = m_pStorage->ReadFileChecked("missing.json", IStorage::TYPE_SAVE, &m_pData, &m_Size);
+	ExpectFailure(Result, EResult::NOT_FOUND);
+	// 输出必须已清空，不能让测试清理意外释放借用地址。
+	if(m_pData == &Old)
+		m_pData = nullptr;
+}
+
+TEST_F(CCheckedStorageReadTest, EmptyExistingFileSucceedsWithOwnedTerminatedBuffer)
+{
+	Write("empty.json", "");
+	ASSERT_FALSE(HasFatalFailure());
+	ASSERT_EQ(Read("empty.json"), EResult::SUCCESS);
+	ASSERT_NE(m_pData, nullptr);
+	EXPECT_EQ(m_Size, 0u);
+	EXPECT_EQ(*static_cast<const char *>(m_pData), '\0');
+}
+
+TEST_F(CCheckedStorageReadTest, BinaryContentsKeepInteriorZerosAndExtraTerminator)
+{
+	const std::string Data("a\0b", 3);
+	Write("皮肤.json", Data);
+	ASSERT_FALSE(HasFatalFailure());
+	ASSERT_EQ(Read("皮肤.json"), EResult::SUCCESS);
+	ASSERT_NE(m_pData, nullptr);
+	EXPECT_EQ(Contents(), Data);
+	EXPECT_EQ(static_cast<const char *>(m_pData)[m_Size], '\0');
+}
+
+TEST_F(CCheckedStorageReadTest, DirectoryReadIsFailureAndReplacementFileCanRecover)
+{
+	ASSERT_TRUE(m_pStorage->CreateFolder("skin.json", IStorage::TYPE_SAVE));
+	ExpectFailure(Read("skin.json"), EResult::IO_FAILURE);
+	ASSERT_TRUE(m_pStorage->RemoveFolder("skin.json", IStorage::TYPE_SAVE));
+	Write("skin.json", "recovered");
+	ASSERT_FALSE(HasFatalFailure());
+	ASSERT_EQ(Read("skin.json"), EResult::SUCCESS);
+	EXPECT_EQ(Contents(), "recovered");
+}
+
+TEST_F(CCheckedStorageReadTest, OversizedJoinedPathIsRejectedBeforeTruncation)
+{
+	const std::string Name(IO_MAX_PATH_LENGTH, 'a');
+	ExpectFailure(Read(Name.c_str()), EResult::IO_FAILURE);
+}
+
+TEST_F(CCheckedStorageReadTest, InvalidUtf8StoragePathReportsFailure)
+{
+	ExpectFailure(Read("invalid_\xff"), EResult::IO_FAILURE);
+}
+
+TEST_F(CCheckedStorageReadTest, RelativeTraversalIsRejectedAsFailure)
+{
+	ExpectFailure(Read("../skin.json"), EResult::IO_FAILURE);
+}
+
+TEST_F(CCheckedStorageReadTest, AbsoluteAndTranslatedTypesReadTheSameNativeFile)
+{
+	Write("skin.json", "absolute");
+	ASSERT_FALSE(HasFatalFailure());
+	auto Absolute = Path("skin.json");
+	if(fs_is_relative_path(Absolute.c_str()))
+	{
+		char aCwd[IO_MAX_PATH_LENGTH];
+		ASSERT_NE(fs_getcwd(aCwd, sizeof(aCwd)), nullptr);
+		Absolute = std::string(aCwd) + "/" + Absolute;
+	}
+	for(int Type : {IStorage::TYPE_ABSOLUTE, IStorage::TYPE_SAVE_OR_ABSOLUTE, IStorage::TYPE_ALL_OR_ABSOLUTE})
+	{
+		ASSERT_EQ(Read(Absolute.c_str(), Type), EResult::SUCCESS);
+		EXPECT_EQ(Contents(), "absolute");
+	}
+	ASSERT_EQ(Read("skin.json", IStorage::TYPE_SAVE_OR_ABSOLUTE), EResult::SUCCESS);
+	EXPECT_EQ(Contents(), "absolute");
+}
+
+TEST_F(CLayeredCheckedStorageReadTest, EarlierRootContentsTakePriority)
+{
+	WriteLayer("read_save", "save");
+	WriteLayer("read_app/data", "data");
+	ASSERT_FALSE(HasFatalFailure());
+	ASSERT_EQ(ReadLayers(), EResult::SUCCESS);
+	EXPECT_EQ(Contents(), "save");
+}
+
+TEST_F(CLayeredCheckedStorageReadTest, MissingEarlierRootFallsBackToData)
+{
+	WriteLayer("read_app/data", "data");
+	ASSERT_FALSE(HasFatalFailure());
+	ASSERT_EQ(ReadLayers(), EResult::SUCCESS);
+	EXPECT_EQ(Contents(), "data");
+}
+
+TEST_F(CLayeredCheckedStorageReadTest, EarlierReadErrorIsNotHiddenByLaterSuccess)
+{
+	ASSERT_EQ(fs_makedir((m_Save + "/" + m_Relative + "/skin.json").c_str()), 0);
+	WriteLayer("read_app/data", "data");
+	ASSERT_FALSE(HasFatalFailure());
+	ExpectFailure(ReadLayers(), EResult::IO_FAILURE);
+}
+
+TEST_F(CCheckedStorageReadTest, DefaultBackendReportsUnsupportedAndClearsOutputs)
+{
+	m_Size = 123;
+	ExpectFailure(m_pStorage->IStorage::ReadFileChecked("unused", IStorage::TYPE_SAVE, &m_pData, &m_Size), EResult::UNSUPPORTED);
+}
+
+TEST_F(CCheckedStorageReadTest, BoundedReadAcceptsExactLimitWithBinaryAndTerminator)
+{
+	const std::string Data("a\0bc", 4);
+	ASSERT_NO_FATAL_FAILURE(Write("bounded.bin", Data));
+	ASSERT_EQ(ReadBounded("bounded.bin", 4), EResult::SUCCESS);
+	EXPECT_EQ(Contents(), Data);
+	EXPECT_EQ(static_cast<const char *>(m_pData)[m_Size], '\0');
+}
+
+TEST_F(CCheckedStorageReadTest, BoundedOverflowKeepsFileAndLegacyReadStillSucceeds)
+{
+	ASSERT_NO_FATAL_FAILURE(Write("bounded.bin", "12345"));
+	ExpectFailure(ReadBounded("bounded.bin", 4), EResult::IO_FAILURE);
+	ASSERT_EQ(Read("bounded.bin"), EResult::SUCCESS);
+	EXPECT_EQ(Contents(), "12345");
+	ASSERT_EQ(ReadBounded("bounded.bin", 5), EResult::SUCCESS);
+	EXPECT_EQ(Contents(), "12345");
+}
+
+TEST_F(CCheckedStorageReadTest, ZeroBudgetAcceptsOnlyEmptyFile)
+{
+	ASSERT_NO_FATAL_FAILURE(Write("bounded.bin", ""));
+	ASSERT_EQ(ReadBounded("bounded.bin", 0), EResult::SUCCESS);
+	ASSERT_NE(m_pData, nullptr);
+	EXPECT_EQ(m_Size, 0u);
+	EXPECT_EQ(*static_cast<const char *>(m_pData), '\0');
+	ASSERT_NO_FATAL_FAILURE(Write("bounded.bin", "a"));
+	ExpectFailure(ReadBounded("bounded.bin", 0), EResult::IO_FAILURE);
+}
+
+TEST_F(CCheckedStorageReadTest, MissingBoundedFileKeepsMissingStatus)
+{
+	ExpectFailure(ReadBounded("missing.bin", 4), EResult::NOT_FOUND);
+}
+
+TEST_F(CCheckedStorageReadTest, DirectoryIsBoundedReadFailure)
+{
+	ASSERT_TRUE(m_pStorage->CreateFolder("bounded.bin", IStorage::TYPE_SAVE));
+	ExpectFailure(ReadBounded("bounded.bin", 4), EResult::IO_FAILURE);
+	EXPECT_TRUE(m_pStorage->FolderExists("bounded.bin", IStorage::TYPE_SAVE));
+}
+
+TEST_F(CCheckedStorageReadTest, BoundedReadRejectsInvalidArgumentsWithoutPublishing)
+{
+	for(const char *pName : {static_cast<const char *>(nullptr), ""})
+		ExpectFailure(ReadBounded(pName, 4), EResult::IO_FAILURE);
+	m_Size = 99;
+	EXPECT_EQ(m_pStorage->ReadFileCheckedBounded("file", IStorage::TYPE_SAVE, nullptr, &m_Size, 4), EResult::IO_FAILURE);
+	EXPECT_EQ(m_Size, 0u);
+	EXPECT_EQ(m_pStorage->ReadFileCheckedBounded("file", IStorage::TYPE_SAVE, &m_pData, nullptr, 4), EResult::IO_FAILURE);
+	EXPECT_EQ(m_pData, nullptr);
+}
+
+TEST_F(CCheckedStorageReadTest, DefaultBoundedBackendCannotFallBackToUnlimitedRead)
+{
+	m_Size = 99;
+	ExpectFailure(m_pStorage->IStorage::ReadFileCheckedBounded("unused", IStorage::TYPE_SAVE, &m_pData, &m_Size, 4), EResult::UNSUPPORTED);
+}
+
+TEST_F(CLayeredCheckedStorageReadTest, EarlierOversizedRootCannotBeHiddenByLaterSmallFile)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteLayer("read_save", "large"));
+	ASSERT_NO_FATAL_FAILURE(WriteLayer("read_app/data", "ok"));
+	ExpectFailure(ReadBounded((m_Relative + "/skin.json").c_str(), 2, IStorage::TYPE_ALL, m_pLayered.get()), EResult::IO_FAILURE);
+}
+
+TEST_F(CCheckedStorageReadTest, BoundedReadKeepsAbsoluteTypeTranslation)
+{
+	ASSERT_NO_FATAL_FAILURE(Write("bounded.bin", "ok"));
+	std::string Absolute = Path("bounded.bin");
+	if(fs_is_relative_path(Absolute.c_str()))
+	{
+		char aCwd[IO_MAX_PATH_LENGTH];
+		ASSERT_NE(fs_getcwd(aCwd, sizeof(aCwd)), nullptr);
+		Absolute = std::string(aCwd) + "/" + Absolute;
+	}
+	for(int Type : {IStorage::TYPE_ABSOLUTE, IStorage::TYPE_SAVE_OR_ABSOLUTE, IStorage::TYPE_ALL_OR_ABSOLUTE})
+	{
+		ASSERT_EQ(ReadBounded(Absolute.c_str(), 2, Type), EResult::SUCCESS);
+		EXPECT_EQ(Contents(), "ok");
+	}
+}
+
+#if defined(CONF_FAMILY_UNIX) && GTEST_HAS_DEATH_TEST && !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+TEST_F(CLayeredCheckedStorageReadDeathTest, EarlierFifoIsFailureAndCannotBeHiddenByLaterFile)
+{
+	const std::string Fifo = m_Save + "/" + m_Relative + "/skin.json";
+	ASSERT_EQ(mkfifo(Fifo.c_str(), 0600), 0);
+	ASSERT_NO_FATAL_FAILURE(WriteLayer("read_app/data", "ok"));
+	const std::string Relative = m_Relative + "/skin.json";
+	ASSERT_EXIT(
+		{
+			ArmRegularFileOpenChildTimeout();
+			void *pData = nullptr;
+			unsigned Size = 0;
+			const auto Result = m_pLayered->ReadFileCheckedBounded(Relative.c_str(), IStorage::TYPE_ALL, &pData, &Size, 1024);
+			const bool Failed = Result == EResult::IO_FAILURE && pData == nullptr && Size == 0;
+			free(pData);
+			_exit(Failed ? 0 : 1);
+		},
+		testing::ExitedWithCode(0), "");
+}
+#endif

@@ -43,14 +43,23 @@ TEST(QmNameplateEffectLod, IdealDrawsKeepsFullQualityUntilThreshold)
 	// 未超过阈值：一个绘制都不少。
 	EXPECT_EQ(QmNameplateEffectLodIdealDraws(Threshold, FullDraws, Threshold), FullDraws);
 	EXPECT_EQ(QmNameplateEffectLodIdealDraws(1, FullDraws, Threshold), FullDraws);
-	// 超过阈值：按人数比例摊薄，且向上取整。
+	// 超过阈值：按人数比例均摊。
 	EXPECT_EQ(QmNameplateEffectLodIdealDraws(2 * Threshold, FullDraws, Threshold), FullDraws / 2);
 	EXPECT_EQ(QmNameplateEffectLodIdealDraws(3 * Threshold, FullDraws, Threshold), FullDraws / 3);
-	// 人数再多也至少保留一次绘制。
-	EXPECT_EQ(QmNameplateEffectLodIdealDraws(1000000, FullDraws, Threshold), 1);
+	// 均摊预算不足一次绘制时返回零。
+	EXPECT_EQ(QmNameplateEffectLodIdealDraws(21, 4, 4), 0);
 	// 无效输入退回满档，不做除零或负预算。
 	EXPECT_EQ(QmNameplateEffectLodIdealDraws(100, 0, Threshold), 0);
 	EXPECT_EQ(QmNameplateEffectLodIdealDraws(100, FullDraws, 0), FullDraws);
+}
+
+TEST(QmNameplateEffectLod, IdealDrawsDoesNotRoundUpToAnExtraGlowPass)
+{
+	constexpr int GlowRange = 4;
+	const int FullDraws = QmNameplateEffectFullDraws(QM_TEXT_EFFECT_GLOW, 1, GlowRange);
+	const int DrawBudget = QmNameplateEffectLodIdealDraws(21, FullDraws, 20);
+	const SQmNameplateEffectPasses Passes = QmNameplateEffectResolvePasses(DrawBudget, 0, GlowRange);
+	EXPECT_EQ(Passes.m_GlowPasses, 3);
 }
 
 TEST(QmNameplateEffectLod, ResolvePassesTrimsOuterLayersAndKeepsBody)

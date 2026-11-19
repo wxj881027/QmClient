@@ -46,7 +46,8 @@ namespace qm_demo_ui
 
 	inline int MatchResolutionPreset(int Width, int Height)
 	{
-		if(Width <= 0 || Height <= 0)
+		// 宽高各自支持跟随窗口，两边都未指定才匹配该预设。
+		if(Width <= 0 && Height <= 0)
 			return 0;
 		for(int i = 1; i < RESOLUTION_PRESET_CUSTOM; ++i)
 		{
@@ -113,15 +114,21 @@ namespace qm_demo_ui
 			return Layout;
 		}
 
-		const float DropDownWidth = std::min(Control.w, std::clamp(Control.w * 0.38f, RESOLUTION_DROPDOWN_MIN_WIDTH, RESOLUTION_DROPDOWN_MAX_WIDTH));
-		CUIRect Inputs;
-		Control.VSplitRight(DropDownWidth, &Inputs, &Layout.m_DropDown);
-		Inputs.VSplitRight(RESOLUTION_INPUT_GAP, &Inputs, nullptr);
-		const float Available = std::max(0.0f, Inputs.w - RESOLUTION_SEPARATOR_WIDTH - 2.0f * RESOLUTION_INPUT_GAP);
-		const float InputWidth = Available * 0.5f;
-		Layout.m_WidthInput = {Inputs.x, Inputs.y, InputWidth, Inputs.h};
-		Layout.m_Separator = {Inputs.x + InputWidth + RESOLUTION_INPUT_GAP, Inputs.y, RESOLUTION_SEPARATOR_WIDTH, Inputs.h};
-		Layout.m_HeightInput = {Layout.m_Separator.x + RESOLUTION_SEPARATOR_WIDTH + RESOLUTION_INPUT_GAP, Inputs.y, InputWidth, Inputs.h};
+		const float Width = std::max(0.0f, Control.w);
+		constexpr float Spacing = 3.0f * RESOLUTION_INPUT_GAP + RESOLUTION_SEPARATOR_WIDTH;
+		const float SpacingScale = std::min(1.0f, Width / (2.0f * Spacing));
+		const float Gap = RESOLUTION_INPUT_GAP * SpacingScale;
+		const float SeparatorWidth = RESOLUTION_SEPARATOR_WIDTH * SpacingScale;
+		const float FieldWidth = Width - Spacing * SpacingScale;
+		// 给数字和输入框内边距留出空间，窄行先缩短下拉框。
+		const float InputsReserve = std::min(4.0f * Control.h, FieldWidth * 0.5f);
+		const float PreferredDropDownWidth = std::clamp(Width * 0.38f, RESOLUTION_DROPDOWN_MIN_WIDTH, RESOLUTION_DROPDOWN_MAX_WIDTH);
+		const float DropDownWidth = std::min(PreferredDropDownWidth, FieldWidth - InputsReserve);
+		const float InputWidth = (FieldWidth - DropDownWidth) * 0.5f;
+		Layout.m_WidthInput = {Control.x, Control.y, InputWidth, Control.h};
+		Layout.m_Separator = {Control.x + InputWidth + Gap, Control.y, SeparatorWidth, Control.h};
+		Layout.m_HeightInput = {Layout.m_Separator.x + SeparatorWidth + Gap, Control.y, InputWidth, Control.h};
+		Layout.m_DropDown = {Control.x + Width - DropDownWidth, Control.y, DropDownWidth, Control.h};
 		return Layout;
 	}
 

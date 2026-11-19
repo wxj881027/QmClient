@@ -36,6 +36,10 @@ struct SSettingsAlphaColorPickerState
 
 	bool ApplyToConfig(unsigned int &ColorValue, int &Opacity)
 	{
+		// 弹窗颜色没有变化时，保留控制台等入口对配置的修改。
+		if(m_PackedColor == m_SyncedPackedColor)
+			return false;
+
 		const bool Changed = m_PackedColor != PackSettingsAlphaColor(ColorValue, Opacity);
 		if(Changed)
 			UnpackSettingsAlphaColor(m_PackedColor, ColorValue, Opacity);

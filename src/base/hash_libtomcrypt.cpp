@@ -5,6 +5,7 @@
 
 #include "hash_ctxt.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 
@@ -27,11 +28,6 @@ static const u32 K[64] =
 		0x2748774cUL, 0x34b0bcb5UL, 0x391c0cb3UL, 0x4ed8aa4aUL, 0x5b9cca4fUL,
 		0x682e6ff3UL, 0x748f82eeUL, 0x78a5636fUL, 0x84c87814UL, 0x8cc70208UL,
 		0x90befffaUL, 0xa4506cebUL, 0xbef9a3f7UL, 0xc67178f2UL};
-
-static u32 minimum(u32 x, u32 y)
-{
-	return x < y ? x : y;
-}
 
 static u32 load32(const unsigned char *y)
 {
@@ -123,7 +119,7 @@ static void sha_init(sha256_state *md)
 	md->state[7] = 0x5BE0CD19UL;
 }
 
-static void sha_process(sha256_state *md, const void *src, u32 inlen)
+static void sha_process(sha256_state *md, const void *src, size_t inlen)
 {
 	const u32 block_size = 64;
 	const unsigned char *in = (const unsigned char *)src;
@@ -139,7 +135,7 @@ static void sha_process(sha256_state *md, const void *src, u32 inlen)
 		}
 		else
 		{
-			u32 n = minimum(inlen, (block_size - md->curlen));
+			const u32 n = static_cast<u32>(std::min<size_t>(inlen, block_size - md->curlen));
 			memcpy(md->buf + md->curlen, in, n);
 			md->curlen += n;
 			in += n;

@@ -245,6 +245,44 @@ TEST_F(QmCardSummaryLayout, ClosingSourceDiscardsCommittedSelectionBeforeSourceR
 	EXPECT_FALSE(Popup.m_pCommit);
 }
 
+TEST_F(QmCardSummaryLayout, ChangedDropdownEntriesReleasePendingInputBeforeNextSelection)
+{
+	int Owner;
+	CUiScopedInteractionOwner Source(&m_Ui, &Owner, "mode-card");
+	CUi::SDropDownState Dropdown;
+	const char *apOldEntries[] = {"Basic", "Advanced"};
+	const char *apNewEntries[] = {"Basic", "Custom"};
+	CUIRect Row{40, 40, 240, 24};
+	Frame({10, 10});
+	ASSERT_EQ(m_Ui.DoDropDown(&Row, 0, apOldEntries, 2, Dropdown), 0);
+
+	auto &Popup = Dropdown.m_SelectionPopupContext;
+	const auto ConfirmSecondEntry = [&](const char *const *ppEntries) {
+		Frame({10, 10});
+		Popup.m_vEntries = {ppEntries[0], ppEntries[1]};
+		Popup.m_ActiveIndex = 1;
+		Popup.m_Width = 180;
+		Popup.m_Props.m_Animate = false;
+		Popup.m_Props.m_RequireSourceRefresh = false;
+		m_Ui.ShowPopupSelection(40, 40, &Popup);
+		ASSERT_TRUE(m_Ui.IsPopupOpen(&Popup));
+		Key(KEY_RETURN);
+		m_Ui.RenderPopupMenus();
+		ASSERT_EQ(Popup.m_SelectionIndex, 1);
+		ASSERT_FALSE(m_Ui.IsPopupOpen(&Popup));
+		ASSERT_TRUE(m_Ui.HasPendingInteractionSelection());
+	};
+
+	ASSERT_NO_FATAL_FAILURE(ConfirmSecondEntry(apOldEntries));
+	EXPECT_EQ(m_Ui.DoDropDown(&Row, 0, apNewEntries, 2, Dropdown), 0);
+	EXPECT_EQ(Popup.m_SelectionIndex, -1);
+	EXPECT_FALSE(m_Ui.HasPendingInteractionSelection());
+
+	ASSERT_NO_FATAL_FAILURE(ConfirmSecondEntry(apNewEntries));
+	EXPECT_EQ(m_Ui.DoDropDown(&Row, 0, apNewEntries, 2, Dropdown), 1);
+	EXPECT_FALSE(m_Ui.HasPendingInteractionSelection());
+}
+
 TEST_F(QmCardSummaryLayout, CanceledDropdownDoesNotCommitAfterOffscreenSourceReturns)
 {
 	CUi::SDropDownState Dropdown;

@@ -1,6 +1,7 @@
 #include "map_difficulty_catalog.h"
 
 #include "axiom_scores_data.h"
+#include "bounded_file_reader.h"
 
 #include <base/log.h>
 #include <base/str.h>
@@ -19,7 +20,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
+#include <limits>
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -28,8 +32,64 @@ namespace
 {
 	constexpr const char *MAP_DIFFICULTY_SQL = "qmclient/map_difficulty.sql";
 	constexpr size_t MAX_MAP_DIFFICULTY_SQL_BYTES = 2 * 1024 * 1024;
+	class CScopedFile
+	{
+		IOHANDLE m_File;
+
+	public:
+		explicit CScopedFile(IOHANDLE File) :
+			m_File(File) {}
+		CScopedFile(const CScopedFile &) = delete;
+		CScopedFile &operator=(const CScopedFile &) = delete;
+		~CScopedFile() { Close(); }
+		IOHANDLE Get() const { return m_File; }
+		bool Close() { return !m_File || io_close(std::exchange(m_File, nullptr)) == 0; }
+	};
+
+	struct SAxiomCacheCandidate
+	{
+		IStorage &m_Storage;
+		const char *m_pPath;
+		bool m_Owned = false;
+
+		~SAxiomCacheCandidate()
+		{
+			if(!m_Owned)
+				return;
+			try
+			{
+				m_Storage.RemoveFile(m_pPath, IStorage::TYPE_SAVE);
+			}
+			catch(...)
+			{
+				// 清理失败不能让原保存失败变成进程退出。
+			}
+		}
+	};
+
+	void ReportLoadFailure(IConsole *pConsole) noexcept
+	{
+		try
+		{
+			log_warn("map_difficulty", "failed to load '%s'", MAP_DIFFICULTY_SQL);
+		}
+		catch(...)
+		{
+		}
+		if(pConsole != nullptr)
+		{
+			try
+			{
+				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_difficulty", "map difficulty SQL is unavailable or invalid");
+			}
+			catch(...)
+			{
+			}
+		}
+	}
+
 	constexpr const char *AXIOM_CACHE_PATH = "qmclient/axiom_map_difficulty.json";
-	constexpr size_t MAX_AXIOM_CACHE_BYTES = 2 * 1024 * 1024;
+	constexpr unsigned MAX_AXIOM_CACHE_BYTES = 2 * 1024 * 1024;
 	constexpr size_t MAX_AXIOM_ENTRIES = 4096;
 
 	int AxiomMaxStars(const CServerInfo &Server)
@@ -106,6 +166,7 @@ const char *CQmMapDifficultyCatalog::SEntry::StarLabel() const
 }
 
 bool CQmMapDifficultyCatalog::RecordAxiomMotd(const CServerInfo &Server, const char *pMotd)
+try
 {
 	const int MaxStars = AxiomMaxStars(Server);
 	if(MaxStars == 0 || pMotd == nullptr || str_length(pMotd) > 4096 || !str_utf8_check(pMotd))
@@ -140,8 +201,17 @@ bool CQmMapDifficultyCatalog::RecordAxiomMotd(const CServerInfo &Server, const c
 		return false;
 	return StoreAxiomEntry(std::move(Entry));
 }
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
 
 bool CQmMapDifficultyCatalog::StoreAxiomEntry(SEntry Entry)
+try
 {
 	const auto Key = std::make_pair(Entry.m_MaxStars, Entry.m_MapName);
 	const auto It = m_AxiomEntries.find(Key);
@@ -152,6 +222,14 @@ bool CQmMapDifficultyCatalog::StoreAxiomEntry(SEntry Entry)
 	m_AxiomEntries.insert_or_assign(Key, std::move(Entry));
 	m_AxiomCacheDirty = true;
 	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }
 
 CQmMapDifficultyCatalog::CQmMapDifficultyCatalog(TRequestFactory CreateRequest) :
@@ -169,25 +247,57 @@ void CQmMapDifficultyCatalog::RequestAxiomDifficulty(const CServerInfo &Server, 
 	const auto Key = std::make_pair(MaxStars, std::string_view(Server.m_aMap));
 	if(m_AxiomEntries.contains(Key) || m_AxiomRequests.contains(Key))
 		return;
-	const auto Retry = m_AxiomRetryAfter.find(Key);
+	auto Retry = m_AxiomRetryAfter.find(Key);
 	if(Retry != m_AxiomRetryAfter.end() && Now < Retry->second)
 		return;
-	if(!Budget.TryStart(Now, pApiKey[0] != '\0'))
+
+	std::shared_ptr<IHttpRequest> pRequest;
+	try
+	{
+		if(!Budget.TryStart(Now, pApiKey[0] != '\0'))
+			return;
+
+		// 先备好退避节点，收到失败结果后可以直接归还原表。
+		if(Retry == m_AxiomRetryAfter.end())
+			Retry = m_AxiomRetryAfter.try_emplace(TAxiomKey{MaxStars, Server.m_aMap}, 0).first;
+		auto RetryNode = m_AxiomRetryAfter.extract(Retry);
+		const auto Url = QmBuildAxiomMapInfoUrl(RetryNode.key().second.c_str(), MaxStars == 3 ? EQmAxiomMode::GORES : EQmAxiomMode::AXRACE);
+		pRequest = m_CreateRequest(Url.c_str());
+		if(!pRequest)
+			return;
+		pRequest->Timeout({3000, 8000, 0, 0});
+		pRequest->MaxResponseSize(16 * 1024);
+		pRequest->LogProgress(HTTPLOG::NONE);
+		if(pApiKey[0])
+			pRequest->Header((std::string("Authorization: Bearer ") + pApiKey).c_str());
+
+		const auto [Pending, Inserted] = m_AxiomRequests.try_emplace(RetryNode.key());
+		if(!Inserted)
+			return;
+		Pending->second = {pRequest, std::move(RetryNode)};
+		Http.Run(pRequest);
 		return;
-	if(Retry != m_AxiomRetryAfter.end())
-		m_AxiomRetryAfter.erase(Retry);
-	const auto Url = QmBuildAxiomMapInfoUrl(Server.m_aMap, MaxStars == 3 ? EQmAxiomMode::GORES : EQmAxiomMode::AXRACE);
-	std::shared_ptr<IHttpRequest> pRequest = m_CreateRequest(Url.c_str());
-	pRequest->Timeout({3000, 8000, 0, 0});
-	pRequest->MaxResponseSize(16 * 1024);
-	pRequest->LogProgress(HTTPLOG::NONE);
-	if(pApiKey[0])
-		pRequest->Header((std::string("Authorization: Bearer ") + pApiKey).c_str());
-	m_AxiomRequests.emplace(TAxiomKey{MaxStars, Server.m_aMap}, pRequest);
-	Http.Run(std::move(pRequest));
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
+
+	// 提交过程中可能同步处理其他请求，只回收这一次登记。
+	if(pRequest)
+	{
+		const auto Pending = std::find_if(m_AxiomRequests.begin(), m_AxiomRequests.end(), [&](const auto &Entry) {
+			return Entry.second.m_pRequest == pRequest;
+		});
+		if(Pending != m_AxiomRequests.end())
+			m_AxiomRequests.erase(Pending);
+	}
 }
 
 bool CQmMapDifficultyCatalog::RecordAxiomResponse(const TAxiomKey &Key, const IHttpRequest &Request)
+try
 {
 	std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(Request.ResultJson(), json_value_free);
 	if(!pRoot || pRoot->type != json_object)
@@ -207,24 +317,33 @@ bool CQmMapDifficultyCatalog::RecordAxiomResponse(const TAxiomKey &Key, const IH
 		return false;
 	return StoreAxiomEntry({Key.second, std::move(Category), (int)pStars->u.integer, Key.first});
 }
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
 
 bool CQmMapDifficultyCatalog::PollAxiomRequests(CQmAxiomRequestBudget &Budget, int64_t Now)
 {
 	bool Changed = false;
 	for(auto It = m_AxiomRequests.begin(); It != m_AxiomRequests.end();)
 	{
-		const auto &Request = *It->second;
-		if(!Request.Done())
+		if(!It->second.m_pRequest->Done())
 		{
 			++It;
 			continue;
 		}
+		auto Completed = m_AxiomRequests.extract(It++);
+		const auto &Request = *Completed.mapped().m_pRequest;
 		const int Code = Request.CompletedStatusCode();
 		if(Code == 429)
 			Budget.RateLimited(Now);
-		if(Code == 200 && Request.State() == EHttpState::DONE && RecordAxiomResponse(It->first, Request))
+		if(Code == 200 && Request.State() == EHttpState::DONE && RecordAxiomResponse(Completed.key(), Request))
 			Changed = true;
-		else if(!m_AxiomEntries.contains(It->first))
+		else if(!m_AxiomEntries.contains(Completed.key()))
 		{
 			if(m_AxiomRetryAfter.size() >= MAX_AXIOM_ENTRIES)
 				m_AxiomRetryAfter.erase(m_AxiomRetryAfter.begin());
@@ -233,21 +352,23 @@ bool CQmMapDifficultyCatalog::PollAxiomRequests(CQmAxiomRequestBudget &Budget, i
 				DelaySeconds = 600;
 			else if(Code == 429)
 				DelaySeconds = 1;
-			m_AxiomRetryAfter[It->first] = Now + DelaySeconds * time_freq();
+			auto &RetryNode = Completed.mapped().m_RetryNode;
+			RetryNode.mapped() = Now + DelaySeconds * time_freq();
+			m_AxiomRetryAfter.insert(std::move(RetryNode));
 		}
-		It = m_AxiomRequests.erase(It);
 	}
 	return Changed;
 }
 
 void CQmMapDifficultyCatalog::CancelAxiomRequests()
 {
-	for(const auto &[Key, pRequest] : m_AxiomRequests)
-		pRequest->Abort();
+	for(const auto &[Key, Request] : m_AxiomRequests)
+		Request.m_pRequest->Abort();
 	m_AxiomRequests.clear();
 }
 
 bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Length)
+try
 {
 	if(pJson == nullptr || Length == 0 || Length > MAX_AXIOM_CACHE_BYTES)
 		return false;
@@ -288,6 +409,14 @@ bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Lengt
 	m_AxiomCacheDirty = false;
 	return true;
 }
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
 
 std::string CQmMapDifficultyCatalog::SerializeAxiomCache() const
 {
@@ -316,128 +445,148 @@ std::string CQmMapDifficultyCatalog::SerializeAxiomCache() const
 }
 
 void CQmMapDifficultyCatalog::LoadAxiomCache(IStorage *pStorage)
+try
 {
-	m_AxiomEntries.clear();
-	m_AxiomCacheDirty = false;
 	if(pStorage == nullptr)
 		return;
-	IOHANDLE File = pStorage->OpenFile(AXIOM_CACHE_PATH, IOFLAG_READ, IStorage::TYPE_SAVE);
-	if(!File)
+	void *pRawData = nullptr;
+	unsigned Size = 0;
+	const auto Result = pStorage->ReadFileCheckedBounded(AXIOM_CACHE_PATH, IStorage::TYPE_SAVE, &pRawData, &Size, MAX_AXIOM_CACHE_BYTES);
+	const std::unique_ptr<void, decltype(&free)> pData(pRawData, free);
+	if(Result == IStorage::EReadFileResult::NOT_FOUND)
 		return;
-	const int64_t Length = io_length(File);
-	bool Loaded = false;
-	if(Length > 0 && Length <= (int64_t)MAX_AXIOM_CACHE_BYTES)
-	{
-		std::string Json((size_t)Length, '\0');
-		if(io_read(File, Json.data(), (unsigned)Json.size()) == Json.size())
-			Loaded = LoadAxiomCacheJson(Json.data(), Json.size());
-	}
-	io_close(File);
-	if(!Loaded)
+	if(Result != IStorage::EReadFileResult::SUCCESS || !LoadAxiomCacheJson(static_cast<const char *>(pData.get()), Size))
 		log_warn("map_difficulty", "ignoring invalid Axiom map cache");
+}
+catch(const std::bad_alloc &)
+{
+}
+catch(const std::length_error &)
+{
 }
 
 bool CQmMapDifficultyCatalog::SaveAxiomCache(IStorage *pStorage)
+try
 {
 	if(pStorage == nullptr)
 		return false;
+	// 候选内容先准备，资源失败不能截断候选文件或留下未关闭的句柄。
+	const std::string Json = SerializeAxiomCache();
 	pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 	char aTempPath[IO_MAX_PATH_LENGTH];
 	str_format(aTempPath, sizeof(aTempPath), "%s.%d.tmp", AXIOM_CACHE_PATH, pid());
-	IOHANDLE File = pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
+	SAxiomCacheCandidate Candidate{*pStorage, aTempPath};
+	CScopedFile File(pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE));
+	if(!File.Get())
 		return false;
-	const std::string Json = SerializeAxiomCache();
-	const bool Written = io_write(File, Json.data(), (unsigned)Json.size()) == Json.size();
-	const bool Closed = io_close(File) == 0;
+	Candidate.m_Owned = true;
+	const bool Written = io_write(File.Get(), Json.data(), (unsigned)Json.size()) == Json.size();
+	const bool Closed = File.Close();
 	if(!Written || !Closed || !pStorage->RenameFile(aTempPath, AXIOM_CACHE_PATH, IStorage::TYPE_SAVE, false))
 		return false;
+	Candidate.m_Owned = false;
 	m_AxiomCacheDirty = false;
 	return true;
 }
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
 
 bool CQmMapDifficultyCatalog::LoadSqlText(const char *pSql, size_t Length)
+try
 {
-	m_vEntries.clear();
-	if(pSql == nullptr || Length == 0 || Length > MAX_MAP_DIFFICULTY_SQL_BYTES)
+	if(pSql == nullptr || Length == 0 || Length > MAX_MAP_DIFFICULTY_SQL_BYTES || std::char_traits<char>::find(pSql, Length, '\0') != nullptr)
 		return false;
 
 	sqlite3 *pRawDb = nullptr;
-	if(sqlite3_open(":memory:", &pRawDb) != SQLITE_OK || pRawDb == nullptr)
-	{
-		if(pRawDb != nullptr)
-			sqlite3_close(pRawDb);
-		return false;
-	}
+	const int OpenResult = sqlite3_open(":memory:", &pRawDb);
 	CSqlite pDb{pRawDb};
+	if(OpenResult != SQLITE_OK || !pDb)
+		return false;
 	const std::string SqlText(pSql, Length);
 
 	char *pError = nullptr;
 	const int ExecResult = sqlite3_exec(pDb.get(), SqlText.c_str(), nullptr, nullptr, &pError);
+	const std::unique_ptr<char, decltype(&sqlite3_free)> Error(pError, sqlite3_free);
 	if(ExecResult != SQLITE_OK)
 	{
 		if(pError != nullptr)
 		{
 			log_warn("map_difficulty", "failed to load SQL: %s", pError);
-			sqlite3_free(pError);
 		}
 		return false;
 	}
 
-	CSqliteStmt pStatement{nullptr};
 	const char *pQuery = "SELECT map_name, category, stars FROM map_difficulty ORDER BY map_name COLLATE NOCASE, category COLLATE NOCASE";
 	sqlite3_stmt *pRawStatement = nullptr;
-	if(sqlite3_prepare_v2(pDb.get(), pQuery, -1, &pRawStatement, nullptr) != SQLITE_OK || pRawStatement == nullptr)
+	const int PrepareResult = sqlite3_prepare_v2(pDb.get(), pQuery, -1, &pRawStatement, nullptr);
+	CSqliteStmt pStatement{pRawStatement};
+	if(PrepareResult != SQLITE_OK || !pStatement)
 		return false;
-	pStatement.reset(pRawStatement);
 
+	std::vector<SEntry> vEntries;
 	while(true)
 	{
 		const int StepResult = sqlite3_step(pStatement.get());
 		if(StepResult == SQLITE_DONE)
 			break;
 		if(StepResult != SQLITE_ROW)
-		{
-			m_vEntries.clear();
 			return false;
-		}
 
 		const char *pMapName = reinterpret_cast<const char *>(sqlite3_column_text(pStatement.get(), 0));
+		if(pMapName == nullptr && sqlite3_errcode(pDb.get()) == SQLITE_NOMEM)
+			return false;
 		const char *pCategory = reinterpret_cast<const char *>(sqlite3_column_text(pStatement.get(), 1));
-		const int Stars = sqlite3_column_int(pStatement.get(), 2);
-		if(pMapName == nullptr || pMapName[0] == '\0' || pCategory == nullptr || pCategory[0] == '\0' || Stars < 0 || Stars > 5)
+		if(pCategory == nullptr && sqlite3_errcode(pDb.get()) == SQLITE_NOMEM)
+			return false;
+		const int StarType = sqlite3_column_type(pStatement.get(), 2);
+		const sqlite3_int64 Stars = StarType == SQLITE_INTEGER ? sqlite3_column_int64(pStatement.get(), 2) : -1;
+		if(pMapName == nullptr || pMapName[0] == '\0' || pCategory == nullptr || pCategory[0] == '\0' ||
+			Stars < 0 || Stars > 5 ||
+			str_length(pMapName) != sqlite3_column_bytes(pStatement.get(), 0) ||
+			str_length(pCategory) != sqlite3_column_bytes(pStatement.get(), 1) || !str_utf8_check(pMapName) || !str_utf8_check(pCategory))
 			continue;
+		if(vEntries.size() >= static_cast<size_t>(std::numeric_limits<int>::max()))
+			return false;
 
 		SEntry Entry;
 		Entry.m_MapName = pMapName;
 		Entry.m_Category = pCategory;
-		Entry.m_Stars = Stars;
-		m_vEntries.push_back(std::move(Entry));
+		Entry.m_Stars = static_cast<int>(Stars);
+		vEntries.push_back(std::move(Entry));
 	}
 
-	std::sort(m_vEntries.begin(), m_vEntries.end(), EntryLess);
-	return !m_vEntries.empty();
+	if(vEntries.empty())
+		return false;
+	std::sort(vEntries.begin(), vEntries.end(), EntryLess);
+	m_vEntries.swap(vEntries);
+	return true;
+}
+catch(...)
+{
+	return false;
 }
 
 bool CQmMapDifficultyCatalog::Load(IStorage *pStorage, IConsole *pConsole)
 {
-	LoadAxiomCache(pStorage);
-	m_vEntries.clear();
-	if(pStorage == nullptr)
-		return false;
-
-	void *pData = nullptr;
-	unsigned DataSize = 0;
-	if(!pStorage->ReadFile(MAP_DIFFICULTY_SQL, IStorage::TYPE_ALL, &pData, &DataSize))
+	try
 	{
-		log_warn("map_difficulty", "failed to read '%s'", MAP_DIFFICULTY_SQL);
-		return false;
+		LoadAxiomCache(pStorage);
+		CQmCheckedFileData Sql;
+		if(pStorage && Sql.Read(*pStorage, MAP_DIFFICULTY_SQL, IStorage::TYPE_ALL, MAX_MAP_DIFFICULTY_SQL_BYTES) &&
+			LoadSqlText(static_cast<const char *>(Sql.Data()), Sql.Size()))
+			return true;
 	}
-	const bool Loaded = LoadSqlText(static_cast<const char *>(pData), DataSize);
-	free(pData);
-	if(!Loaded && pConsole != nullptr)
-		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_difficulty", "map difficulty SQL is unavailable or invalid");
-	return Loaded;
+	catch(...)
+	{
+	}
+	ReportLoadFailure(pConsole);
+	return false;
 }
 
 const CQmMapDifficultyCatalog::SEntry *CQmMapDifficultyCatalog::FindForServer(const CServerInfo &Server, const char *pCategoryHint) const

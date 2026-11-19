@@ -1,3 +1,5 @@
+#include <engine/friends.h>
+
 #include <game/client/components/qmclient/friend_last_seen_data.h>
 
 #include <gtest/gtest.h>
@@ -234,4 +236,90 @@ TEST(QmFriendLastSeenCache, InvalidCacheDoesNotReplaceExistingHistory)
 		EXPECT_FALSE(Cache.Load(pBody, NOW));
 		EXPECT_EQ(Cache.Find("Alice")->m_Date, "2026-10-23");
 	}
+}
+
+TEST(QmFriendLastSeenParser, EmbeddedNullMemberNamesCannotSupplyRequiredFields)
+{
+	for(const char *pBody : {
+		    R"({"recent_player_info\u0000ignored":[]})",
+		    R"({"recent_player_info":[{"name\u0000ignored":"Alice","last_seen":"2026-10-23"}]})",
+		    R"({"recent_player_info":[{"name":"Alice","last_seen\u0000ignored":"2026-10-23"}]})"})
+	{
+		SCOPED_TRACE(pBody);
+		EXPECT_FALSE(QmParseDdStatsLastSeen(pBody, "Alice"));
+	}
+}
+
+TEST(QmFriendLastSeenParser, ExactMemberNamesRemainUsableBesideUnknownNullPrefixedFields)
+{
+	const auto Date = QmParseDdStatsLastSeen(R"({"recent_player_info\u0000ignored":{},"recent_player_info":[{"name\u0000ignored":"Bob","name":"Alice","last_seen":"2026-10-23"}]})", "Alice");
+	ASSERT_TRUE(Date);
+	EXPECT_EQ(*Date, "2026-10-23");
+}
+
+TEST(QmFriendLastSeenParser, DenseUnknownJsonCannotExceedNativeParseMemoryBudget)
+{
+	std::string Body = R"({"recent_player_info":[{"name":"Alice","last_seen":"2026-10-23"}],"unknown":[)";
+	Body.reserve(3 * 1024 * 1024);
+	for(size_t Index = 0; Index < 1500000; ++Index)
+		Body += "0,";
+	Body += "0]}";
+	ASSERT_LT(Body.size(), 8u * 1024 * 1024);
+	EXPECT_FALSE(QmParseDdStatsLastSeen(Body, "Alice"));
+}
+
+TEST(QmFriendLastSeenCache, EmbeddedNullMemberAndValueFieldsDoNotReplaceOldHistory)
+{
+	CQmFriendLastSeenCache Cache;
+	ASSERT_TRUE(Cache.Load(R"({"version":1,"players":[{"name":"Alice","date":"2026-10-23","checked_at":"100"}]})", NOW));
+	const auto *pOld = Cache.Find("Alice");
+	for(const char *pBody : {
+		    R"({"version\u0000x":1,"players":[]})",
+		    R"({"version":1,"players\u0000x":[]})",
+		    R"({"version":1,"players":[{"name\u0000x":"Bob","date":"","checked_at":"100"}]})",
+		    R"({"version":1,"players":[{"name":"Bob","date\u0000x":"","checked_at":"100"}]})",
+		    R"({"version":1,"players":[{"name":"Bob","date":"","checked_at\u0000x":"100"}]})",
+		    R"({"version":1,"players":[{"name":"Bob\u0000x","date":"","checked_at":"100"}]})",
+		    R"({"version":1,"players":[{"name":"Bob","date":"2026-10-23\u0000","checked_at":"100"}]})",
+		    R"({"version":1,"players":[{"name":"Bob","date":"","checked_at":"100\u0000"}]})"})
+	{
+		SCOPED_TRACE(pBody);
+		EXPECT_FALSE(Cache.Load(pBody, NOW));
+		EXPECT_EQ(Cache.Find("Alice"), pOld);
+		EXPECT_EQ(pOld->m_Date, "2026-10-23");
+		EXPECT_EQ(Cache.Find("Bob"), nullptr);
+	}
+}
+
+TEST(QmFriendLastSeenCache, OversizedDateDoesNotReplaceOldHistory)
+{
+	CQmFriendLastSeenCache Cache;
+	ASSERT_TRUE(Cache.Load(R"({"version":1,"players":[{"name":"Alice","date":"2026-10-23","checked_at":"100"}]})", NOW));
+	const auto *pOld = Cache.Find("Alice");
+	const std::string Body = R"({"version":1,"players":[{"name":"Bob","date":")" + std::string(512 * 1024, 'x') + R"(","checked_at":"100"}]})";
+	EXPECT_FALSE(Cache.Load(Body, NOW));
+	EXPECT_EQ(Cache.Find("Alice"), pOld);
+	EXPECT_EQ(pOld->m_Date, "2026-10-23");
+}
+
+TEST(QmFriendLastSeenCache, MaximumValidPlayerCountFitsTheJsonMemoryBudget)
+{
+	std::string Body = R"({"version":1,"players":[)";
+	for(int Index = 0; Index < IFriends::MAX_FRIENDS; ++Index)
+	{
+		if(Index != 0)
+			Body += ',';
+		Body += R"({"name":"P)" + std::to_string(Index) + R"(","date":"2026-10-23","checked_at":"100"})";
+	}
+	Body += "]}";
+	CQmFriendLastSeenCache Cache;
+	ASSERT_TRUE(Cache.Load(Body, NOW));
+	for(int Index = 0; Index < IFriends::MAX_FRIENDS; ++Index)
+	{
+		const auto Name = "P" + std::to_string(Index);
+		const auto *pEntry = Cache.Find(Name.c_str());
+		ASSERT_NE(pEntry, nullptr) << Index;
+		EXPECT_EQ(pEntry->m_Date, "2026-10-23");
+	}
+	EXPECT_FALSE(Cache.Dirty());
 }

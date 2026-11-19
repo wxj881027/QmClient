@@ -8,6 +8,8 @@
 #include <engine/serverbrowser.h>
 
 #include <algorithm>
+#include <memory>
+#include <utility>
 #include <vector>
 
 // 好友面板只在源数据变化时重建。在线条目保存服务器值快照，避免列表刷新后引用失效。
@@ -19,8 +21,7 @@ public:
 		char m_aName[MAX_NAME_LENGTH];
 		char m_aClan[MAX_CLAN_LENGTH];
 		char m_aCategory[IFriends::MAX_FRIEND_CATEGORY_LENGTH];
-		CServerInfo m_ServerInfo;
-		bool m_HasServerInfo;
+		std::shared_ptr<const CServerInfo> m_pServerInfo;
 		bool m_IsPinned;
 		int m_FriendState;
 		bool m_IsPlayer;
@@ -35,7 +36,7 @@ public:
 
 	public:
 		CItem(const CFriendInfo *pFriendInfo) :
-			m_HasServerInfo(false), m_IsPinned(pFriendInfo->m_Pinned), m_FriendState(IFriends::FRIEND_PLAYER), m_IsPlayer(false), m_IsAfk(false), m_CustomSkinColors(false), m_CustomSkinColorBody(0), m_CustomSkinColorFeet(0)
+			m_IsPinned(pFriendInfo->m_Pinned), m_FriendState(IFriends::FRIEND_PLAYER), m_IsPlayer(false), m_IsAfk(false), m_CustomSkinColors(false), m_CustomSkinColorBody(0), m_CustomSkinColorFeet(0)
 		{
 			str_copy(m_aName, pFriendInfo->m_aName);
 			str_copy(m_aClan, pFriendInfo->m_aClan);
@@ -50,8 +51,8 @@ public:
 			}
 		}
 
-		CItem(const CServerInfo::CClient &Client, const CServerInfo &ServerInfo, const char *pCategory, bool Pinned) :
-			m_ServerInfo(ServerInfo), m_HasServerInfo(true), m_IsPinned(Pinned), m_FriendState(Client.m_FriendState), m_IsPlayer(Client.m_Player), m_IsAfk(Client.m_Afk), m_CustomSkinColors(Client.m_CustomSkinColors), m_CustomSkinColorBody(Client.m_CustomSkinColorBody), m_CustomSkinColorFeet(Client.m_CustomSkinColorFeet)
+		CItem(const CServerInfo::CClient &Client, std::shared_ptr<const CServerInfo> pServerInfo, const char *pCategory, bool Pinned) :
+			m_pServerInfo(std::move(pServerInfo)), m_IsPinned(Pinned), m_FriendState(Client.m_FriendState), m_IsPlayer(Client.m_Player), m_IsAfk(Client.m_Afk), m_CustomSkinColors(Client.m_CustomSkinColors), m_CustomSkinColorBody(Client.m_CustomSkinColorBody), m_CustomSkinColorFeet(Client.m_CustomSkinColorFeet)
 		{
 			str_copy(m_aName, Client.m_aName);
 			str_copy(m_aClan, Client.m_aClan);
@@ -69,7 +70,7 @@ public:
 		const char *Clan() const { return m_aClan; }
 		const char *Category() const { return m_aCategory; }
 		bool IsPinned() const { return m_IsPinned; }
-		const CServerInfo *ServerInfo() const { return m_HasServerInfo ? &m_ServerInfo : nullptr; }
+		const CServerInfo *ServerInfo() const { return m_pServerInfo.get(); }
 		int FriendState() const { return m_FriendState; }
 		bool IsPlayer() const { return m_IsPlayer; }
 		bool IsAfk() const { return m_IsAfk; }
@@ -99,59 +100,82 @@ private:
 public:
 	const std::vector<std::vector<CItem>> &Groups() const { return m_vvFriends; }
 
-	void Update(const IFriends &Friends, const IServerBrowser &Browser, bool IgnoreClan)
+	template<typename TCopyServer>
+	bool Update(const IFriends &Friends, const IServerBrowser &Browser, bool IgnoreClan, TCopyServer &&CopyServer) noexcept
 	{
-		const uint64_t FriendsRevision = Friends.Revision();
-		const uint64_t BrowserRevision = Browser.FriendListRevision();
-		if(m_pFriends == &Friends && m_pBrowser == &Browser && m_FriendsRevision == FriendsRevision && m_BrowserRevision == BrowserRevision && m_IgnoreClan == IgnoreClan)
-			return;
-		const int NumCategories = maximum(1, Friends.NumCategories());
-		m_vvFriends.assign(NumCategories, {});
-		const int OfflineCategoryIndex = maximum(0, Friends.FindCategory(IFriends::OFFLINE_CATEGORY));
-		for(int FriendIndex = 0; FriendIndex < Friends.NumFriends(); ++FriendIndex)
+		try
 		{
-			const CFriendInfo *pFriendInfo = Friends.GetFriend(FriendIndex);
-			if(pFriendInfo->m_aName[0] != '\0')
-				m_vvFriends[OfflineCategoryIndex].emplace_back(pFriendInfo);
-		}
-		for(int ServerIndex = 0; ServerIndex < Browser.NumServers(); ++ServerIndex)
-		{
-			const CServerInfo *pServer = Browser.Get(ServerIndex);
-			if(pServer == nullptr || pServer->m_FriendState == IFriends::FRIEND_NO)
-				continue;
-			for(const CServerInfo::CClient &Client : pServer->m_vClients)
+			const uint64_t FriendsRevision = Friends.Revision();
+			const uint64_t BrowserRevision = Browser.FriendListRevision();
+			if(m_pFriends == &Friends && m_pBrowser == &Browser && m_FriendsRevision == FriendsRevision && m_BrowserRevision == BrowserRevision && m_IgnoreClan == IgnoreClan)
+				return true;
+			const int NumCategories = maximum(1, Friends.NumCategories());
+			std::vector<std::vector<CItem>> vvFriends(NumCategories);
+			const int OfflineCategoryIndex = maximum(0, Friends.FindCategory(IFriends::OFFLINE_CATEGORY));
+			for(int FriendIndex = 0; FriendIndex < Friends.NumFriends(); ++FriendIndex)
 			{
-				if(Client.m_FriendState == IFriends::FRIEND_NO)
+				const CFriendInfo *pFriendInfo = Friends.GetFriend(FriendIndex);
+				if(pFriendInfo->m_aName[0] != '\0')
+					vvFriends[OfflineCategoryIndex].emplace_back(pFriendInfo);
+			}
+			for(int ServerIndex = 0; ServerIndex < Browser.NumServers(); ++ServerIndex)
+			{
+				const CServerInfo *pServer = Browser.Get(ServerIndex);
+				if(pServer == nullptr || pServer->m_FriendState == IFriends::FRIEND_NO)
 					continue;
-				const bool ClanOnly = Client.m_FriendState == IFriends::FRIEND_CLAN;
-				const char *pCategory = ClanOnly ? IFriends::CLAN_MEMBERS_CATEGORY : Friends.GetFriendCategory(Client.m_aName, Client.m_aClan);
-				if(!ClanOnly && pCategory != nullptr && str_comp_nocase(pCategory, IFriends::OFFLINE_CATEGORY) == 0)
-					pCategory = Friends.DefaultCategory();
-				int CategoryIndex = Friends.FindCategory(pCategory);
-				if(CategoryIndex < 0 || CategoryIndex >= NumCategories)
-					CategoryIndex = 0;
-				m_vvFriends[CategoryIndex].emplace_back(Client, *pServer, pCategory, !ClanOnly && Friends.IsFriendPinned(Client.m_aName, Client.m_aClan));
-				if(!ClanOnly)
+				std::shared_ptr<const CServerInfo> pSnapshot;
+				for(const CServerInfo::CClient &Client : pServer->m_vClients)
 				{
-					auto &vOffline = m_vvFriends[OfflineCategoryIndex];
-					vOffline.erase(std::remove_if(vOffline.begin(), vOffline.end(), [&](const CItem &Friend) {
-						return Friend.ServerInfo() == nullptr && str_comp(Friend.Name(), Client.m_aName) == 0 && (IgnoreClan || str_comp(Friend.Clan(), Client.m_aClan) == 0);
-					}),
-						vOffline.end());
+					if(Client.m_FriendState == IFriends::FRIEND_NO)
+						continue;
+					if(!pSnapshot)
+					{
+						// 同服条目共用自有只读快照，不为每个玩家重复复制整份名单。
+						pSnapshot = CopyServer(*pServer);
+						if(!pSnapshot)
+							return false;
+					}
+					const bool ClanOnly = Client.m_FriendState == IFriends::FRIEND_CLAN;
+					const char *pCategory = ClanOnly ? IFriends::CLAN_MEMBERS_CATEGORY : Friends.GetFriendCategory(Client.m_aName, Client.m_aClan);
+					if(!ClanOnly && pCategory != nullptr && str_comp_nocase(pCategory, IFriends::OFFLINE_CATEGORY) == 0)
+						pCategory = Friends.DefaultCategory();
+					int CategoryIndex = Friends.FindCategory(pCategory);
+					if(CategoryIndex < 0 || CategoryIndex >= NumCategories)
+						CategoryIndex = 0;
+					vvFriends[CategoryIndex].emplace_back(Client, pSnapshot, pCategory, !ClanOnly && Friends.IsFriendPinned(Client.m_aName, Client.m_aClan));
+					if(!ClanOnly)
+					{
+						auto &vOffline = vvFriends[OfflineCategoryIndex];
+						vOffline.erase(std::remove_if(vOffline.begin(), vOffline.end(), [&](const CItem &Friend) {
+							return Friend.ServerInfo() == nullptr && str_comp(Friend.Name(), Client.m_aName) == 0 && (IgnoreClan || str_comp(Friend.Clan(), Client.m_aClan) == 0);
+						}),
+							vOffline.end());
+					}
 				}
 			}
+			for(auto &vFriends : vvFriends)
+				std::sort(vFriends.begin(), vFriends.end(), [](const CItem &Left, const CItem &Right) {
+					if(Left.IsPinned() != Right.IsPinned())
+						return Left.IsPinned();
+					return (Left.ServerInfo() != nullptr) != (Right.ServerInfo() != nullptr) ? Left.ServerInfo() != nullptr : Left < Right;
+				});
+			m_vvFriends.swap(vvFriends);
+			m_pFriends = &Friends;
+			m_pBrowser = &Browser;
+			m_FriendsRevision = FriendsRevision;
+			m_BrowserRevision = BrowserRevision;
+			m_IgnoreClan = IgnoreClan;
+			return true;
 		}
-		for(auto &vFriends : m_vvFriends)
-			std::sort(vFriends.begin(), vFriends.end(), [](const CItem &Left, const CItem &Right) {
-				if(Left.IsPinned() != Right.IsPinned())
-					return Left.IsPinned();
-				return (Left.ServerInfo() != nullptr) != (Right.ServerInfo() != nullptr) ? Left.ServerInfo() != nullptr : Left < Right;
-			});
-		m_pFriends = &Friends;
-		m_pBrowser = &Browser;
-		m_FriendsRevision = FriendsRevision;
-		m_BrowserRevision = BrowserRevision;
-		m_IgnoreClan = IgnoreClan;
+		catch(...)
+		{
+			return false;
+		}
+	}
+
+	bool Update(const IFriends &Friends, const IServerBrowser &Browser, bool IgnoreClan) noexcept
+	{
+		return Update(Friends, Browser, IgnoreClan, [](const CServerInfo &Info) { return std::make_shared<CServerInfo>(Info); });
 	}
 };
 

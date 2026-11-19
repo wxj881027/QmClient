@@ -1,7 +1,6 @@
 #include "menus_tclient_internal.h"
 
 #include <base/math.h>
-#include <base/str.h>
 
 #include <engine/shared/config.h>
 
@@ -14,6 +13,8 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <new>
+#include <stdexcept>
 
 namespace
 {
@@ -33,15 +34,27 @@ void qm_tclient_menu::AdvancePreviewTime(float FrameTime)
 
 void CMenus::RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, const char *pBackupSkin, bool CustomColors, int FeetColor, int BodyColor, int Emote, bool Rainbow, bool Cute, ColorRGBA ColorFeet, ColorRGBA ColorBody, const QmSponsorAuthors::STeePresentation *pGlitch)
 {
-	bool WhiteFeetTemp = g_Config.m_QmWhiteFeet;
-	g_Config.m_QmWhiteFeet = false;
+	const CSkin *pSkin;
+	try
+	{
+		// 皮肤系统会解析前缀和大小写。主皮肤尚不可用时才查询备用皮肤。
+		CSkins &Skins = GameClient()->m_Skins;
+		pSkin = Skins.FindOrNullptr(pSkinName);
+		if(pSkin == nullptr)
+			pSkin = Skins.Find(pBackupSkin);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		return;
+	}
 
 	float DefTick = std::fmod(s_Time, 1.0f);
 
 	CTeeRenderInfo SkinInfo;
-	const CSkin *pSkin = GameClient()->m_Skins.Find(pSkinName);
-	if(str_comp(pSkin->GetName(), pSkinName) != 0)
-		pSkin = GameClient()->m_Skins.Find(pBackupSkin);
 
 	SkinInfo.m_OriginalRenderSkin = pSkin->m_OriginalSkin;
 	SkinInfo.m_ColorableRenderSkin = pSkin->m_ColorableSkin;
@@ -73,6 +86,13 @@ void CMenus::RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, co
 	vec2 OffsetToMid;
 	CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &SkinInfo, OffsetToMid);
 	vec2 TeeRenderPos(RenderPos.x, RenderPos.y + OffsetToMid.y);
+	struct SRestoreWhiteFeet
+	{
+		int m_Previous;
+		~SRestoreWhiteFeet() { g_Config.m_QmWhiteFeet = m_Previous; }
+	};
+	const SRestoreWhiteFeet RestoreWhiteFeet{g_Config.m_QmWhiteFeet};
+	g_Config.m_QmWhiteFeet = 0;
 	if(pGlitch != nullptr)
 	{
 		const CUIRect Bounds{RenderPos.x - Size * 0.75f, RenderPos.y - Size * 0.5f, Size * 1.5f, Size};
@@ -82,7 +102,6 @@ void CMenus::RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, co
 		RenderTeeCute(pIdleState, &SkinInfo, Emote, vec2(1.0f, 0.0f), TeeRenderPos, true);
 	else
 		RenderTools()->RenderTee(pIdleState, &SkinInfo, Emote, vec2(1.0f, 0.0f), TeeRenderPos);
-	g_Config.m_QmWhiteFeet = WhiteFeetTemp;
 }
 
 void CMenus::RenderTeeCute(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, bool CuteEyes, float Alpha)

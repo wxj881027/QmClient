@@ -1,4 +1,7 @@
+#include <generated/protocol.h>
+
 #include <game/client/components/qmclient/statusbar_items.h>
+#include <game/client/components/tclient/statusbar.h>
 
 #include <gtest/gtest.h>
 
@@ -41,4 +44,15 @@ TEST(QmStatusBarItems, SchemeCannotExceedEditorCapacity)
 	CStatusItem Score([] {}, [] { return 1.0f; }, "s", "Points", "", "");
 	const std::string Scheme(STATUSBAR_MAX_SIZE + 50, 's');
 	EXPECT_EQ(QmParseStatusBarScheme(Scheme.c_str(), {&Score}).size(), STATUSBAR_MAX_SIZE);
+}
+
+TEST(QmStatusBarItems, UnusableFrameDurationProducesZeroFps)
+{
+	EXPECT_EQ(tclient_statusbar::FramesPerSecond(0.0f), 0);
+	EXPECT_EQ(tclient_statusbar::FramesPerSecond(1.0e-10f), 0);
+}
+
+TEST(QmStatusBarItems, FrameDurationRoundsToTheNearestFps)
+{
+	EXPECT_EQ(tclient_statusbar::FramesPerSecond(0.0159f), 63);
 }

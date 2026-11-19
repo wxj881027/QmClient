@@ -8,19 +8,45 @@
 #include <generated/protocol7.h>
 
 #include <game/client/components/countryflags.h>
+#include <game/client/components/qmclient/sixup_damage_display.h>
 #include <game/client/gameclient.h>
 
-int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy)
+#include <cstdint>
+#include <limits>
+#include <optional>
+#include <type_traits>
+#include <utility>
+
+static constexpr std::optional<int> SixupTickDifference(int EndTick, int StartTick)
+{
+	const int64_t Difference = static_cast<int64_t>(EndTick) - StartTick;
+	if(!std::in_range<int>(Difference))
+		return std::nullopt;
+	return static_cast<int>(Difference);
+}
+
+static_assert(SixupTickDifference(150, 100) == 50);
+static_assert(SixupTickDifference(0, 100) == -100);
+static_assert(SixupTickDifference(0, std::numeric_limits<int>::max()) == -std::numeric_limits<int>::max());
+static_assert(!SixupTickDifference(0, std::numeric_limits<int>::min()));
+static_assert(!SixupTickDifference(std::numeric_limits<int>::max(), -1));
+static_assert(!SixupTickDifference(std::numeric_limits<int>::min(), 1));
+
+static_assert(std::is_trivially_copyable_v<CTranslationContext>);
+
+int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy, SSixupSnapshotTranslation *pTranslation)
 {
 	CSnapshotBuilder Builder;
 	Builder.Init();
 
 	float LocalTime = Client()->LocalTime();
 	int GameTick = Client()->GameTick(g_Config.m_ClDummy);
-	CTranslationContext &TranslationContext = Client()->m_TranslationContext;
+	CTranslationContext &LiveContext = Client()->m_TranslationContext;
+	if(pTranslation)
+		mem_copy(&pTranslation->m_Context, &LiveContext, sizeof(LiveContext));
+	CTranslationContext &TranslationContext = pTranslation ? pTranslation->m_Context : LiveContext;
 
-	for(auto &PlayerInfosRace : TranslationContext.m_apPlayerInfosRace)
-		PlayerInfosRace = nullptr;
+	const protocol7::CNetObj_PlayerInfoRace *apPlayerInfosRace[MAX_CLIENTS] = {};
 
 	int SpectatorId = -3;
 
@@ -78,7 +104,7 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 			int ClientId = pItem7->Id();
 			if(ClientId < MAX_CLIENTS && TranslationContext.m_aClients[ClientId].m_Active)
 			{
-				TranslationContext.m_apPlayerInfosRace[ClientId] = pInfo;
+				apPlayerInfosRace[ClientId] = pInfo;
 			}
 		}
 		else if(ItemType == protocol7::NETOBJTYPE_SPECTATORINFO)
@@ -116,19 +142,18 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 		Info6.m_GameStateFlags = GameStateFlagsSix;
 		Info6.m_RoundStartTick = TranslationContext.m_GameStartTick7;
 		Info6.m_WarmupTimer = 0; // removed in 0.7
-		if(TranslationContext.m_GameStateFlags7 & protocol7::GAMESTATEFLAG_WARMUP)
-			Info6.m_WarmupTimer = TranslationContext.m_GameStateEndTick7 - GameTick;
-		if(TranslationContext.m_GameStateFlags7 & protocol7::GAMESTATEFLAG_STARTCOUNTDOWN)
-			Info6.m_WarmupTimer = TranslationContext.m_GameStateEndTick7 - GameTick;
+		if(TranslationContext.m_GameStateFlags7 & (protocol7::GAMESTATEFLAG_WARMUP | protocol7::GAMESTATEFLAG_STARTCOUNTDOWN))
+			Info6.m_WarmupTimer = SixupTickDifference(TranslationContext.m_GameStateEndTick7, GameTick).value_or(0);
 
 		// hack to port 0.7 race timer to ddnet warmup gametimer hack
 		int TimerClientId = TranslationContext.m_aLocalClientId[Conn];
 		if(SpectatorId >= 0)
 			TimerClientId = SpectatorId;
-		const protocol7::CNetObj_PlayerInfoRace *pRaceInfo = TimerClientId == -1 ? nullptr : TranslationContext.m_apPlayerInfosRace[TimerClientId];
-		if(pRaceInfo)
+		const protocol7::CNetObj_PlayerInfoRace *pRaceInfo = TimerClientId == -1 ? nullptr : apPlayerInfosRace[TimerClientId];
+		const auto RaceTimer = pRaceInfo ? SixupTickDifference(0, pRaceInfo->m_RaceStartTick) : std::nullopt;
+		if(RaceTimer)
 		{
-			Info6.m_WarmupTimer = -pRaceInfo->m_RaceStartTick;
+			Info6.m_WarmupTimer = *RaceTimer;
 			Info6.m_GameStateFlags |= GAMESTATEFLAG_RACETIME;
 		}
 
@@ -358,38 +383,16 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 				continue;
 
 			int ClientId = pDmg7->m_ClientId;
-			TranslationContext.m_aDamageTaken[ClientId]++;
-
-			float Angle;
-			// create healthmod indicator
-			if(LocalTime < TranslationContext.m_aDamageTakenTick[ClientId] + 0.5f)
-			{
-				// make sure that the damage indicators don't group together
-				Angle = TranslationContext.m_aDamageTaken[ClientId] * 0.25f;
-			}
-			else
-			{
-				TranslationContext.m_aDamageTaken[ClientId] = 0;
-				Angle = 0;
-			}
-
-			TranslationContext.m_aDamageTakenTick[ClientId] = LocalTime;
-
-			float a = 3 * pi / 2 + Angle;
-			float s = a - pi / 3;
-			float e = a + pi / 3;
-			for(int k = 0; k < Amount; k++)
-			{
+			QmForEachSixupDamageAngle(Amount, TranslationContext.m_aDamageTaken[ClientId], TranslationContext.m_aDamageTakenTick[ClientId], LocalTime, [&](int Angle) {
 				CNetEvent_DamageInd Dmg6 = {};
 				Dmg6.m_X = pDmg7->m_X;
 				Dmg6.m_Y = pDmg7->m_Y;
-				float f = mix(s, e, float(k + 1) / float(Amount + 2));
-				Dmg6.m_Angle = (int)(f * 256.0f);
+				Dmg6.m_Angle = Angle;
 				// pItem7->Id() is reused that is technically wrong
 				// but the client implementation does not look at the ids
 				// and renders the damage indicators just fine
 				Builder.NewItem(NETEVENTTYPE_DAMAGEIND, pItem7->Id(), &Dmg6, sizeof(Dmg6));
-			}
+			});
 		}
 		else if(ItemType == protocol7::NETOBJTYPE_DE_CLIENTINFO)
 		{
@@ -414,7 +417,10 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 			IntsToStr(pInfo->m_aClan, std::size(pInfo->m_aClan), Client.m_aClan, std::size(Client.m_aClan));
 			Client.m_Country = QmNormalizeCountryCode(pInfo->m_Country);
 
-			ApplySkin7InfoFromSnapObj(pInfo, ClientId);
+			if(pTranslation)
+				pTranslation->m_aSkinUpdates[ClientId] = {pInfo, TranslationContext.m_GameFlags};
+			else
+				ApplySkin7InfoFromSnapObj(pInfo, ClientId, TranslationContext.m_GameFlags);
 		}
 		else if(ItemType == protocol7::NETOBJTYPE_DE_GAMEINFO)
 		{
@@ -440,6 +446,17 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 	}
 
 	return Builder.FinishIfNoDroppedItems(pSnapDstSix);
+}
+
+void CGameClient::CommitSnapshotTranslation(const SSixupSnapshotTranslation &Translation)
+{
+	mem_copy(&Client()->m_TranslationContext, &Translation.m_Context, sizeof(Translation.m_Context));
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+	{
+		const auto &Update = Translation.m_aSkinUpdates[ClientId];
+		if(Update.m_pObj)
+			ApplySkin7InfoFromSnapObj(Update.m_pObj, ClientId, Update.m_GameFlags);
+	}
 }
 
 int CGameClient::OnDemoRecSnap7(CSnapshot *pFrom, CSnapshotBuffer *pTo, int Conn)

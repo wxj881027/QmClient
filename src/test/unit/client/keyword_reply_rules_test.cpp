@@ -1,3 +1,4 @@
+#include <game/client/QmUi/cards/QmKeywordReplyCardPersistence.h>
 #include <game/client/components/qmclient/keyword_reply_rules.h>
 
 #include <gtest/gtest.h>
@@ -192,10 +193,10 @@ TEST(KeywordReplyRules, FailedRuleSaveCanBeShortenedAndSavedWithoutLosingOtherRu
 {
 	char aConfig[32] = "old=>reply";
 	std::vector<QmKeywordReplyRules::SRule> vRules = {{"first", "reply"}, {"second", std::string(50, 'X')}};
-	EXPECT_FALSE(QmKeywordReplyRules::EncodeRules(vRules, aConfig, sizeof(aConfig)));
+	EXPECT_EQ(qm_keyword_reply_card::SaveRules(vRules, aConfig), qm_keyword_reply_card::ESaveResult::TOO_LONG);
 	EXPECT_STREQ(aConfig, "old=>reply");
 	vRules[1].m_Reply = "ok";
-	EXPECT_TRUE(QmKeywordReplyRules::EncodeRules(vRules, aConfig, sizeof(aConfig)));
+	ASSERT_EQ(qm_keyword_reply_card::SaveRules(vRules, aConfig), qm_keyword_reply_card::ESaveResult::SAVED);
 	char aDecoded[32];
 	QmKeywordReplyRules::DecodeFromConfig(aConfig, aDecoded, sizeof(aDecoded));
 	const auto vParsed = QmKeywordReplyRules::ParseDecoded(aDecoded);
@@ -204,10 +205,32 @@ TEST(KeywordReplyRules, FailedRuleSaveCanBeShortenedAndSavedWithoutLosingOtherRu
 	EXPECT_EQ(vParsed[1].m_Reply, "ok");
 }
 
+TEST(KeywordReplyRules, CardSaveRejectsTriggersThatTheParserWouldChange)
+{
+	for(const char *pTrigger : {"#hello", "join=>leave", "[Re]hello"})
+	{
+		SCOPED_TRACE(pTrigger);
+		char aConfig[128] = "old=>reply";
+		const std::vector<QmKeywordReplyRules::SRule> vRules = {{"first", "reply"}, {pTrigger, "second reply"}};
+
+		EXPECT_EQ(qm_keyword_reply_card::SaveRules(vRules, aConfig), qm_keyword_reply_card::ESaveResult::UNREPRESENTABLE);
+		EXPECT_STREQ(aConfig, "old=>reply");
+	}
+}
+
+TEST(KeywordReplyRules, CardSaveKeepsRepresentableRulesAndSkipsIncompleteRows)
+{
+	char aConfig[128] = "old=>reply";
+	const std::vector<QmKeywordReplyRules::SRule> vRules = {{"first", "reply"}, {"draft", ""}, {"#hello", "status=>ready", true}};
+
+	ASSERT_EQ(qm_keyword_reply_card::SaveRules(vRules, aConfig), qm_keyword_reply_card::ESaveResult::SAVED);
+	EXPECT_STREQ(aConfig, "first=>reply\\n[rename] #hello=>status=>ready");
+}
+
 TEST(KeywordReplyRules, EditorAndMatcherShareFlagsAndEscaping)
 {
 	char aConfig[128];
-	ASSERT_TRUE(QmKeywordReplyRules::EncodeRules({{"^hello$", "C:\\new|你好", true, true}}, aConfig, sizeof(aConfig)));
+	ASSERT_EQ(qm_keyword_reply_card::SaveRules({{"^hello$", "C:\\new|你好", true, true}}, aConfig), qm_keyword_reply_card::ESaveResult::SAVED);
 	QmKeywordReplyRules::CRuleSet Rules;
 	Rules.SetConfig(aConfig);
 	char aReply[64];

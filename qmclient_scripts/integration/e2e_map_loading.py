@@ -100,3 +100,40 @@ def scenario_map_change_during_resource_preparation(env: ProcessEnvironment) -> 
 	reports = [path for path in env.path("dumps", "QmClient_Crash").glob("*") if path.is_file()]
 	if reports:
 		raise AssertionError(f"client produced crash diagnostics: {reports}")
+
+
+def scenario_current_map_entity_background_during_loading(env: ProcessEnvironment) -> None:
+	"""切图握手等待时选择当前地图作实体背景，恢复接收后正常进服。"""
+	env.start_server()
+	env.server.command("stdout_output_level 2")
+	env.server.command("sv_map Tutorial")
+	env.server.wait_for(lambda line: "Tutorial.map sha256 is " in line, "server selected the initial map", 15)
+	client = env.start_client(
+		[
+			"stdout_output_level 2",
+			"cl_show_welcome 0",
+			"qm_steam_auto_launch 0",
+			"qm_auto_update 0",
+			"qm_websocket_url disabled",
+			"cl_auto_demo_record 1",
+			'cl_background_entities ""',
+			"minimize",
+		],
+		env={"QMCLIENT_TEST_HIDE_DIALOG": "1"},
+		startup_timeout=60,
+	)
+	client.wait_for(lambda line: "Recording to 'demos/auto/Tutorial_" in line, "initial client connection", 30)
+
+	# 丢包只作用于本地服务端的接收方向，切图通知仍会发出，握手会等到恢复接收。
+	env.server.command("sv_net_fake_loss 100")
+	env.server.command("sv_map ctf1")
+	client.wait_for(lambda line: line == "client/map: loaded map 'ctf1'", "replacement map opened", 30)
+	marker = "qm_e2e_current_background_selected"
+	client.command(f'cl_background_entities "%current%"; echo {marker}')
+	client.wait_for(lambda line: line == f"console: {marker}", "current map background command completed", 10)
+
+	env.server.command("sv_net_fake_loss 0")
+	client.wait_for(lambda line: "Recording to 'demos/auto/ctf1_" in line, "client entered the replacement map", 30)
+	client.command("quit")
+	if (code := client.wait_for_exit(15)) != 0:
+		raise AssertionError(f"client exited with {code} after selecting the current map background")

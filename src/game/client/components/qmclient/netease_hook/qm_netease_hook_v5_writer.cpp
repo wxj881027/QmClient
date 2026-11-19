@@ -23,6 +23,24 @@ namespace QmNeteaseHook
 			// still valid; the next writer must be allowed to repair its sequence.
 			return Result == WAIT_OBJECT_0 || Result == WAIT_ABANDONED;
 		}
+
+		// 只拥有本次取得的锁，不关闭 writer 持有的原生句柄。
+		class CWriterMutexLock
+		{
+			HANDLE m_hMutex;
+
+		public:
+			explicit CWriterMutexLock(HANDLE hMutex) :
+				m_hMutex(AcquireWriterMutex(hMutex) ? hMutex : nullptr) {}
+			~CWriterMutexLock()
+			{
+				if(m_hMutex)
+					ReleaseMutex(m_hMutex);
+			}
+			explicit operator bool() const { return m_hMutex != nullptr; }
+			CWriterMutexLock(const CWriterMutexLock &) = delete;
+			CWriterMutexLock &operator=(const CWriterMutexLock &) = delete;
+		};
 #endif
 	}
 
@@ -88,8 +106,7 @@ namespace QmNeteaseHook
 			return false;
 		}
 		m_pImpl->m_MappingOwner = CreatedMapping;
-		if(m_pImpl->m_MappingOwner)
-			std::memset(m_pImpl->m_pBlock, 0, sizeof(*m_pImpl->m_pBlock));
+		// 新建页面文件映射已由系统清零，不能再覆盖其他 writer 可能已发布的载荷。
 		const uint64_t ExistingSequence = m_pImpl->m_pBlock->m_Sequence;
 		m_pImpl->m_NextSequence = ExistingSequence >= 2 && (ExistingSequence % 2) == 0 ? ExistingSequence + 2 : 2;
 		return true;
@@ -143,7 +160,8 @@ namespace QmNeteaseHook
 		if(!m_pImpl || !IsOpen())
 			return false;
 #if defined(_WIN32)
-		if(!AcquireWriterMutex(m_pImpl->m_hWriterMutex))
+		const CWriterMutexLock Lock(m_pImpl->m_hWriterMutex);
+		if(!Lock)
 			return false;
 		const uint64_t CurrentSequence = m_pImpl->m_pBlock->m_Sequence;
 		const uint64_t Sequence = CurrentSequence >= 2 && (CurrentSequence & 1) == 0 && CurrentSequence < UINT64_MAX - 2 ? CurrentSequence + 2 : 2;
@@ -155,7 +173,6 @@ namespace QmNeteaseHook
 		std::memcpy(&m_pImpl->m_pBlock->m_Snapshot, &Snapshot, sizeof(Snapshot));
 		MemoryBarrier();
 		InterlockedExchange64(reinterpret_cast<volatile LONG64 *>(&m_pImpl->m_pBlock->m_Sequence), (LONG64)Sequence);
-		ReleaseMutex(m_pImpl->m_hWriterMutex);
 		return true;
 #else
 		(void)Snapshot;
@@ -168,7 +185,8 @@ namespace QmNeteaseHook
 		if(!m_pImpl || !IsOpen())
 			return false;
 #if defined(_WIN32)
-		if(!AcquireWriterMutex(m_pImpl->m_hWriterMutex))
+		const CWriterMutexLock Lock(m_pImpl->m_hWriterMutex);
+		if(!Lock)
 			return false;
 
 		// Keep the source check and the write under one mutex. Seqlock protects
@@ -185,7 +203,6 @@ namespace QmNeteaseHook
 		const bool ExistingFresh = ExistingStable && Existing.m_Sequence == ExistingSequence && ValidateSnapshotV5(Existing) && !IsStaleV5(Existing, NowTick, TimeoutMs);
 		if(ExistingFresh && !CanPublishDesktopFallbackV5(Existing, Snapshot, NowTick, TimeoutMs))
 		{
-			ReleaseMutex(m_pImpl->m_hWriterMutex);
 			return false;
 		}
 
@@ -199,7 +216,6 @@ namespace QmNeteaseHook
 		std::memcpy(&m_pImpl->m_pBlock->m_Snapshot, &Snapshot, sizeof(Snapshot));
 		MemoryBarrier();
 		InterlockedExchange64(reinterpret_cast<volatile LONG64 *>(&m_pImpl->m_pBlock->m_Sequence), (LONG64)Sequence);
-		ReleaseMutex(m_pImpl->m_hWriterMutex);
 		return true;
 #else
 		(void)Snapshot;
@@ -214,7 +230,8 @@ namespace QmNeteaseHook
 		if(!m_pImpl || pSnapshot == nullptr || !IsOpen())
 			return false;
 #if defined(_WIN32)
-		if(!AcquireWriterMutex(m_pImpl->m_hWriterMutex))
+		const CWriterMutexLock Lock(m_pImpl->m_hWriterMutex);
+		if(!Lock)
 			return false;
 		for(int Attempt = 0; Attempt < 3; ++Attempt)
 		{
@@ -229,10 +246,8 @@ namespace QmNeteaseHook
 			if(!IsStableSequenceV5(Begin, End) || Candidate.m_Sequence != End || !ValidateSnapshotV5(Candidate))
 				continue;
 			*pSnapshot = Candidate;
-			ReleaseMutex(m_pImpl->m_hWriterMutex);
 			return true;
 		}
-		ReleaseMutex(m_pImpl->m_hWriterMutex);
 		return false;
 #else
 		return false;

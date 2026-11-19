@@ -1,6 +1,8 @@
 #ifndef ENGINE_CLIENT_SERVERBROWSER_HTTP_PARSE_H
 #define ENGINE_CLIENT_SERVERBROWSER_HTTP_PARSE_H
 
+#include "serverbrowser_addresses.h"
+
 #include <base/system.h>
 
 #include <engine/shared/json.h>
@@ -37,24 +39,29 @@ inline bool ServerBrowserParseHttpList(json_value *pJson, std::vector<CServerInf
 		bool HasSix = false;
 		for(unsigned AddressIndex = 0; AddressIndex < Addresses.u.array.length; ++AddressIndex)
 		{
-			if(Addresses[AddressIndex].type != json_string)
+			const json_value &Address = Addresses[AddressIndex];
+			if(Address.type != json_string)
 				return true;
-			if(str_startswith(Addresses[AddressIndex], "tw-0.6+udp://"))
-				HasSix = true;
-		}
-		for(unsigned AddressIndex = 0; AddressIndex < Addresses.u.array.length; ++AddressIndex)
-		{
-			const char *pAddress = Addresses[AddressIndex].u.string.ptr;
-			if(HasSix && str_startswith(pAddress, "tw-0.7+udp://"))
-				continue;
 			NETADDR ParsedAddress;
-			if(net_addr_from_url(&ParsedAddress, pAddress, nullptr, 0) || ParsedAddress.port == 0)
+			if(net_addr_from_url(&ParsedAddress, Address.u.string.ptr, nullptr, 0) || ParsedAddress.port == 0)
 				continue;
+			const bool IsSix = (ParsedAddress.type & NETTYPE_TW7) == 0;
+			if(HasSix && !IsSix)
+				continue;
+			if(IsSix && !HasSix)
+			{
+				// 找到可连接的 0.6 地址后，丢弃先前收集的 0.7 地址。
+				Parsed.m_NumAddresses = 0;
+				HasSix = true;
+			}
 			if(Parsed.m_NumAddresses < (int)std::size(Parsed.m_aAddresses))
 				Parsed.m_aAddresses[Parsed.m_NumAddresses++] = ParsedAddress;
 		}
 		if(Parsed.m_NumAddresses > 0)
+		{
+			ServerBrowserFormatAddresses(Parsed.m_aAddress, sizeof(Parsed.m_aAddress), Parsed.m_aAddresses, Parsed.m_NumAddresses);
 			vServers.push_back(Parsed);
+		}
 	}
 	*pvServers = std::move(vServers);
 	return false;

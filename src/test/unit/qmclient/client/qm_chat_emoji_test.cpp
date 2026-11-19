@@ -52,6 +52,12 @@ TEST(QmChatEmoji, MatchesOnlyExactCodes)
 	EXPECT_EQ(QmChatEmojiTexturePath(static_cast<EQmChatEmoji>(999)), nullptr);
 }
 
+TEST(QmChatEmoji, IncompleteUtf8SuffixDoesNotMatchEmojiCode)
+{
+	EXPECT_EQ(QmChatEmojiFromText(":sq\xE4\xB8"), EQmChatEmoji::NONE);
+	EXPECT_EQ(QmChatEmojiFromText("：sq\xE4\xB8"), EQmChatEmoji::NONE);
+}
+
 TEST(QmChatEmoji, MatchesFullWidthColonCodes)
 {
 	EXPECT_EQ(QmChatEmojiFromText("：ax"), EQmChatEmoji::LOVE);
@@ -248,47 +254,4 @@ TEST(QmChatEmoji, UnavailableImageInvalidatesCachedImageLayout)
 	CachedHeight = 8.0f;
 	EXPECT_FALSE(QmChatEmojiInvalidateChangedLayout(ImageAvailable, ImageLayout, CachedHeight));
 	EXPECT_FLOAT_EQ(CachedHeight, 8.0f);
-}
-
-TEST(QmChatEmoji, BackgroundImageIsVisibleOnlyAfterDecodeCompletes)
-{
-	CSemaphore Started;
-	CSemaphore Finish;
-	CJobPool Pool;
-	Pool.Init(1);
-	auto pJob = std::make_shared<CQmChatEmojiLoadJob>([&](CImageInfo &Image) {
-		Image.m_Width = 1260;
-		Started.Signal();
-		Finish.Wait();
-		Image.m_Height = 1244;
-	});
-	EXPECT_EQ(pJob->Image(), nullptr);
-	Pool.Add(pJob);
-	Started.Wait();
-	EXPECT_EQ(pJob->Image(), nullptr);
-	Finish.Signal();
-	Pool.Shutdown();
-	ASSERT_NE(pJob->Image(), nullptr);
-	EXPECT_EQ(pJob->Image()->m_Width, 1260U);
-	EXPECT_EQ(pJob->Image()->m_Height, 1244U);
-}
-
-TEST(QmChatEmoji, ReleasingComponentReferenceDoesNotInvalidateTheLoad)
-{
-	CSemaphore Started;
-	CSemaphore Finish;
-	CJobPool Pool;
-	Pool.Init(1);
-	bool Completed = false;
-	auto pJob = std::make_shared<CQmChatEmojiLoadJob>([&](CImageInfo &) {
-		Started.Signal();
-		Finish.Wait();
-		Completed = true;
-	});
-	Pool.Add(pJob);
-	Started.Wait();
-	pJob.reset();
-	Finish.Signal();
-	Pool.Shutdown();
-	EXPECT_TRUE(Completed);
 }

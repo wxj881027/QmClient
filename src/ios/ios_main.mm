@@ -1,6 +1,5 @@
 #include "ios_main.h"
 
-#include <base/dbg.h>
 #include <base/fs.h>
 #include <base/log.h>
 
@@ -12,12 +11,14 @@
 
 #include <cmath>
 
+#if !defined(QM_IOS_NO_MAIN)
 extern "C" int SDL_main(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
 	return SDL_RunApp(argc, argv, SDL_main, nullptr);
 }
+#endif
 
 void IosDisplayCutoutInsets(SDL_Window *pWindow, int *pLeft, int *pRight)
 {
@@ -25,11 +26,13 @@ void IosDisplayCutoutInsets(SDL_Window *pWindow, int *pLeft, int *pRight)
 	*pRight = 0;
 
 	UIWindow *pUiWindow = (UIWindow *)SDL_GetPointerProperty(SDL_GetWindowProperties(pWindow), SDL_PROP_WINDOW_UIKIT_WINDOW_POINTER, nullptr);
-	dbg_assert(pUiWindow != nil, "Failed to determine window information: %s", SDL_GetError());
+	UIView *pView = pUiWindow.rootViewController.view;
+	// SDL 可能未能写入 UIKit 窗口属性，此时保留零边距，下一帧再读取。
+	if(pView == nil)
+		return;
 
 	// SDL uses the root view controller's view to render to, so its scale factor
 	// converts the insets from points to the pixels of the drawable area.
-	UIView *pView = pUiWindow.rootViewController.view;
 	const UIEdgeInsets Insets = pView.safeAreaInsets;
 	const CGFloat Scale = pView.contentScaleFactor;
 

@@ -80,16 +80,32 @@ namespace qm_chat_bubble
 
 	void RenderText(ITextRender *pTextRender, CTextCursor &Cursor, const char *pText, ColorRGBA Color, ColorRGBA Outline)
 	{
-		const unsigned PreviousFlags = pTextRender->GetRenderFlags();
-		const ColorRGBA PreviousColor = pTextRender->GetTextColor();
-		pTextRender->SetRenderFlags(PreviousFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
-		pTextRender->TextColor(ui_token::color::NEUTRAL_WHITE);
 		STextContainerIndex Container;
-		// TextEx 会在最终绘制时使用默认黑描边；气泡显式提交自己的文字与描边颜色。
-		if(pTextRender->CreateTextContainer(Container, &Cursor, pText))
-			pTextRender->RenderTextContainer(Container, Color, Outline);
-		pTextRender->DeleteTextContainer(Container);
-		pTextRender->TextColor(PreviousColor);
-		pTextRender->SetRenderFlags(PreviousFlags);
+		struct SRestoreTextState
+		{
+			ITextRender &m_TextRender;
+			unsigned m_RenderFlags;
+			ColorRGBA m_TextColor;
+			~SRestoreTextState()
+			{
+				m_TextRender.TextColor(m_TextColor);
+				m_TextRender.SetRenderFlags(m_RenderFlags);
+			}
+		};
+		const SRestoreTextState Restore{*pTextRender, pTextRender->GetRenderFlags(), pTextRender->GetTextColor()};
+		pTextRender->SetRenderFlags(Restore.m_RenderFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
+		pTextRender->TextColor(ui_token::color::NEUTRAL_WHITE);
+		try
+		{
+			// 气泡显式提交自己的文字与描边颜色。
+			if(pTextRender->CreateTextContainer(Container, &Cursor, pText))
+				pTextRender->RenderTextContainer(Container, Color, Outline);
+			pTextRender->DeleteTextContainer(Container);
+		}
+		catch(...)
+		{
+			pTextRender->ReleaseTemporaryTextContainer(Container);
+			throw;
+		}
 	}
 }

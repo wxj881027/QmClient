@@ -4,12 +4,16 @@
 #include <engine/shared/datafile.h>
 #include <engine/storage.h>
 
+#include <game/client/components/mapimages.h>
 #include <game/client/components/qmclient/map_image_decode_job.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
 
 #include <array>
+#include <memory>
+#include <new>
+#include <stdexcept>
 
 TEST(MapImageDecode, CompressedPixelsOutliveTheSourceMap)
 {
@@ -92,4 +96,73 @@ TEST(MapImageDecode, ExternalRgbPngIsReadyForAMoveOnlyRgbaUpload)
 	ASSERT_NE(Job.m_Image.m_pData, nullptr);
 	EXPECT_EQ(mem_comp(Job.m_Image.m_pData, aPixel.data(), aPixel.size()), 0);
 	EXPECT_EQ(Job.m_Image.m_pData[3], 255);
+}
+
+TEST(MapImageDecode, UnavailableCompressedDataKeepsSynchronousFallback)
+{
+	const auto Start = TryStartMapImageDecode(
+		[] { return std::shared_ptr<CMapImageDecodeJob>{}; },
+		[](const auto &) {
+			ADD_FAILURE() << "No job should be submitted for synchronous fallback";
+			return false;
+		});
+	EXPECT_EQ(Start.m_Result, SMapImageDecodeStart::EResult::NO_JOB);
+	EXPECT_FALSE(Start.m_pJob);
+}
+
+TEST(MapImageDecode, AllocationFailureBeforeSubmissionLeavesNoJobToWaitFor)
+{
+	const auto Start = TryStartMapImageDecode(
+		[]() -> std::shared_ptr<CMapImageDecodeJob> { throw std::bad_alloc(); },
+		[](const auto &) {
+			ADD_FAILURE() << "No job should be submitted when preparation fails";
+			return false;
+		});
+	EXPECT_EQ(Start.m_Result, SMapImageDecodeStart::EResult::RESOURCE_FAILED);
+	EXPECT_FALSE(Start.m_pJob);
+}
+
+TEST(MapImageDecode, ClosedPoolRejectsAndReleasesDecodeJob)
+{
+	CJobPool Pool;
+	std::weak_ptr<CMapImageDecodeJob> pCandidate;
+	const auto Start = TryStartMapImageDecode(
+		[&] {
+			auto pJob = std::make_shared<CMapImageDecodeJob>(nullptr, "map image", false);
+			pCandidate = pJob;
+			return pJob;
+		},
+		[&](const auto &pJob) { return Pool.TryAdd(pJob); });
+	EXPECT_EQ(Start.m_Result, SMapImageDecodeStart::EResult::REJECTED);
+	EXPECT_FALSE(Start.m_pJob);
+	EXPECT_TRUE(pCandidate.expired());
+}
+
+TEST(MapImageDecode, SubmissionCapacityFailureReleasesDecodeJob)
+{
+	std::weak_ptr<CMapImageDecodeJob> pCandidate;
+	const auto Start = TryStartMapImageDecode(
+		[&] {
+			auto pJob = std::make_shared<CMapImageDecodeJob>(nullptr, "map image", false);
+			pCandidate = pJob;
+			return pJob;
+		},
+		[](const auto &) -> bool { throw std::length_error("decode queue"); });
+	EXPECT_EQ(Start.m_Result, SMapImageDecodeStart::EResult::RESOURCE_FAILED);
+	EXPECT_FALSE(Start.m_pJob);
+	EXPECT_TRUE(pCandidate.expired());
+}
+
+TEST(MapImageDecode, AcceptedJobIsReturnedToTheCaller)
+{
+	std::shared_ptr<CMapImageDecodeJob> pAccepted;
+	const auto Start = TryStartMapImageDecode(
+		[] { return std::make_shared<CMapImageDecodeJob>(nullptr, "map image", false); },
+		[&](const auto &pJob) {
+			pAccepted = pJob;
+			return true;
+		});
+	EXPECT_EQ(Start.m_Result, SMapImageDecodeStart::EResult::STARTED);
+	ASSERT_TRUE(Start.m_pJob);
+	EXPECT_EQ(Start.m_pJob, pAccepted);
 }

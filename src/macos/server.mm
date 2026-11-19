@@ -1,64 +1,101 @@
 #import <Cocoa/Cocoa.h>
 
-@interface ServerView : NSTextView
+@interface ServerView : NSTextView <NSApplicationDelegate, NSWindowDelegate>
 {
 	NSTask *pTask;
 	NSFileHandle *pFile;
 }
-- (void)listenTo: (NSTask *)t;
+- (void)listenToTask:(NSTask *)pServerTask output:(NSFileHandle *)pOutput;
+- (void)stopServer;
 @end
 
 @implementation ServerView
-- (void)listenTo: (NSTask *)t
+- (void)listenToTask:(NSTask *)pServerTask output:(NSFileHandle *)pOutput
 {
-	NSPipe *pPipe;
-	pTask = t;
-	pPipe = [NSPipe pipe];
-	[pTask setStandardOutput: pPipe];
-	pFile = [pPipe fileHandleForReading];
+	pTask = [pServerTask retain];
+	pFile = [pOutput retain];
 
 	[[NSNotificationCenter defaultCenter] addObserver: self selector: @selector(outputNotification:) name: NSFileHandleReadCompletionNotification object: pFile];
 
 	[pFile readInBackgroundAndNotify];
 }
 
-- (void) outputNotification: (NSNotification *) notification
+- (void)stopListening
 {
-	NSData *pData = [[[notification userInfo] objectForKey: NSFileHandleNotificationDataItem] retain];
-	NSString *pString = [[NSString alloc] initWithData: pData encoding: NSASCIIStringEncoding];
-	NSDictionary *pAttributes = @{
-		NSForegroundColorAttributeName: [NSColor whiteColor],
-		NSFontAttributeName: [NSFont monospacedSystemFontOfSize: [NSFont systemFontSize] weight: NSFontWeightRegular],
-	};
-	NSAttributedString *pAttrStr = [[NSAttributedString alloc] initWithString: pString attributes: pAttributes];
+	if(pFile == nil)
+		return;
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:NSFileHandleReadCompletionNotification object:pFile];
+	[pFile release];
+	pFile = nil;
+}
 
-	[[self textStorage] appendAttributedString: pAttrStr];
-	int length = [[self textStorage] length];
-	NSRange range = NSMakeRange(length, 0);
-	[self scrollRangeToVisible: range];
+- (void)dealloc
+{
+	[self stopListening];
+	[pTask release];
+	[super dealloc];
+}
 
-	[pAttrStr release];
+- (void)outputNotification:(NSNotification *)notification
+{
+	NSData *pData = [[notification userInfo] objectForKey:NSFileHandleNotificationDataItem];
+	if([pData length] == 0)
+	{
+		// 管道已经结束，继续调度读取会反复收到空通知。
+		[pFile closeAndReturnError:nullptr];
+		[self stopListening];
+		return;
+	}
+
+	NSString *pString = [[NSString alloc] initWithData:pData encoding:NSUTF8StringEncoding];
+	if(pString == nil)
+		pString = [[NSString alloc] initWithData:pData encoding:NSISOLatin1StringEncoding];
+	if(pString != nil)
+	{
+		NSDictionary *pAttributes = @{
+			NSForegroundColorAttributeName: [NSColor whiteColor],
+			NSFontAttributeName: [NSFont monospacedSystemFontOfSize:[NSFont systemFontSize] weight:NSFontWeightRegular],
+		};
+		NSAttributedString *pAttrStr = [[NSAttributedString alloc] initWithString:pString attributes:pAttributes];
+		NSTextStorage *pTextStorage = [self textStorage];
+		[pTextStorage appendAttributedString:pAttrStr];
+		[self scrollRangeToVisible:NSMakeRange([pTextStorage length], 0)];
+		[pAttrStr release];
+	}
 	[pString release];
 	[pFile readInBackgroundAndNotify];
 }
 
--(void)windowWillClose:(NSNotification *)notification
+- (void)windowWillClose:(NSNotification *)notification
 {
-	[pTask terminate];
 	[NSApp terminate:self];
+}
+
+- (void)applicationWillTerminate:(NSNotification *)notification
+{
+	[self stopServer];
+}
+
+- (void)stopServer
+{
+	if([pTask isRunning])
+		[pTask terminate];
+	[self stopListening];
 }
 @end
 
-void runServer()
+static void ShowServerLaunchError(NSString *pReason)
 {
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-	NSApp = [NSApplication sharedApplication];
-	NSBundle *pMainBundle = [NSBundle mainBundle];
-	NSTask *pTask;
-	pTask = [[NSTask alloc] init];
-	[pTask setCurrentDirectoryPath: [pMainBundle resourcePath]]; // NOLINT(clang-analyzer-nullability.NullablePassedToNonnull)
+	NSAlert *pAlert = [[[NSAlert alloc] init] autorelease];
+	[pAlert setMessageText:@"Could not start DDNet Server"];
+	[pAlert setInformativeText:pReason];
+	[pAlert runModal];
+}
 
-	NSArray *pArguments = [NSArray new];
+int runServer()
+{
+	[NSApplication sharedApplication];
+	NSArray *pArguments = [NSArray array];
 
 	NSAlert *pAlert = [[[NSAlert alloc] init] autorelease];
 	[pAlert setMessageText: @"Run DDNet Server"];
@@ -70,16 +107,38 @@ void runServer()
 		case NSAlertFirstButtonReturn:
 			break;
 		case NSAlertThirdButtonReturn:
-			return;
+			return 0;
 		case NSAlertSecondButtonReturn:
 			// get a server config
 			NSOpenPanel *pOpenDlg = [NSOpenPanel openPanel];
 			[pOpenDlg setCanChooseFiles:YES];
 			if([pOpenDlg runModal] != NSModalResponseOK)
-				return;
+				return 0;
 			NSString *pFilename = [[pOpenDlg URL] path];
 			pArguments = [NSArray arrayWithObjects: @"-f", pFilename, nil];
 			break;
+	}
+
+	NSBundle *pMainBundle = [NSBundle mainBundle];
+	NSURL *pExecutable = [pMainBundle URLForAuxiliaryExecutable:@"DDNet-Server"];
+	NSURL *pResources = [pMainBundle resourceURL];
+	if(pExecutable == nil || pResources == nil)
+	{
+		ShowServerLaunchError(@"The server executable or resource directory is missing from the app bundle.");
+		return 1;
+	}
+
+	NSTask *pTask = [[[NSTask alloc] init] autorelease];
+	NSPipe *pPipe = [NSPipe pipe];
+	[pTask setExecutableURL:pExecutable];
+	[pTask setCurrentDirectoryURL:pResources];
+	[pTask setArguments:pArguments];
+	[pTask setStandardOutput:pPipe];
+	NSError *pLaunchError = nil;
+	if(![pTask launchAndReturnError:&pLaunchError])
+	{
+		ShowServerLaunchError(pLaunchError != nil ? [pLaunchError localizedDescription] : @"The server process could not be launched.");
+		return 1;
 	}
 
 	// run server
@@ -97,6 +156,7 @@ void runServer()
 		backing: NSBackingStoreBuffered
 		defer: NO];
 
+	[pWindow setReleasedWhenClosed:NO];
 	[pWindow setTitle: @"DDNet Server"];
 
 	pView = [[[ServerView alloc] initWithFrame: GraphicsRect] autorelease];
@@ -105,23 +165,24 @@ void runServer()
 	[pView setRulerVisible: YES];
 
 	[pWindow setContentView: pView];
-	[pWindow setDelegate: (id<NSWindowDelegate>)pView];
+	[pWindow setDelegate:pView];
+	[NSApp setDelegate:pView];
+	[pView listenToTask:pTask output:[pPipe fileHandleForReading]];
 	[pWindow makeKeyAndOrderFront: nil];
 
-	[pView listenTo: pTask];
-	[pTask setLaunchPath: [pMainBundle pathForAuxiliaryExecutable: @"DDNet-Server"]];
-	[pTask setArguments: pArguments];
-	[pTask launch];
 	[NSApp run];
-	[pTask terminate];
-
-	[NSApp release];
-	[pPool release];
-}
-
-int main(int argc, char **argv)
-{
-	runServer();
-
+	[NSApp setDelegate:nil];
+	[pView stopServer];
+	[pWindow release];
 	return 0;
 }
+
+#if !defined(QM_MACOS_SERVER_LAUNCHER_NO_MAIN)
+int main(int argc, char **argv)
+{
+	@autoreleasepool
+	{
+		return runServer();
+	}
+}
+#endif

@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 namespace
 {
@@ -163,6 +164,36 @@ TEST_F(MapCovers, PendingCoverCompletesWithoutFurtherVisibleRequests)
 	}
 	EXPECT_EQ(m_Graphics.m_Uploads, 1u);
 	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
+}
+
+TEST_F(MapCovers, OversizedDiskCacheWaitsForReplacementWithoutSubmittingCompose)
+{
+	char aPath[IO_MAX_PATH_LENGTH];
+	ASSERT_TRUE(QmMapCover::ThumbnailCacheFileName(COVER_URL, aPath, sizeof(aPath)));
+	ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(m_pStorage->CreateFolder(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE));
+	const std::vector<uint8_t> vOversized(512 * 1024 + 1, 0);
+	IOHANDLE File = m_pStorage->OpenFile(aPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	ASSERT_NE(File, nullptr);
+	EXPECT_EQ(io_write(File, vOversized.data(), vOversized.size()), vOversized.size());
+	EXPECT_EQ(io_close(File), 0);
+
+	CQmMapCovers::SImage Image;
+	EXPECT_FALSE(Get(Image));
+	Update();
+	EXPECT_TRUE(m_Engine.m_vJobs.empty());
+	EXPECT_TRUE(m_pStorage->FileExists(aPath, IStorage::TYPE_SAVE));
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+
+	ASSERT_NO_FATAL_FAILURE(m_Http.m_vRequests.front()->Finish(m_Png));
+	Update();
+	m_Engine.CompleteJobs();
+	Update();
+	EXPECT_TRUE(Get(Image));
+	File = m_pStorage->OpenFile(aPath, IOFLAG_READ, IStorage::TYPE_SAVE);
+	ASSERT_NE(File, nullptr);
+	EXPECT_EQ(io_length(File), static_cast<int64_t>(m_Png.Size()));
+	EXPECT_EQ(io_close(File), 0);
 }
 
 TEST_F(MapCovers, ShutdownReleasesTextureAndNewCacheRestoresFromDisk)

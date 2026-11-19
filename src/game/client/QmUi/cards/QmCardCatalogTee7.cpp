@@ -24,6 +24,7 @@
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
+#include <game/client/QmUi/cards/QmCardCatalogTeeSkinListState.h>
 #include <game/client/animstate.h>
 #include <game/client/components/chat.h>
 #include <game/client/components/menu_background.h>
@@ -45,6 +46,11 @@
 
 using namespace FontIcons;
 
+namespace
+{
+	CUi::SConfirmPopupContext gs_Tee7DeleteSkinConfirm;
+}
+
 uint64_t CMenus::BuildTee7SettingsCards(const qm_card_catalog::SQmCardBuildContext &Ctx, std::vector<SSettingsCardDefinition> *pCards)
 {
 	const auto *pDefault = qm_card_registry::FindByStableId("deck:tee7-editor");
@@ -55,6 +61,7 @@ uint64_t CMenus::BuildTee7SettingsCards(const qm_card_catalog::SQmCardBuildConte
 		SSettingsCardDefinition Card;
 		Card.m_Spec = {pDefault->m_pStableId, Localize(pDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pDefault)};
 		Card.m_Render = [this, Metrics = Ctx.m_Metrics](CUIRect Content) { RenderSettingsTee7Content(Content, Metrics); };
+		Card.m_HasPendingPreLayoutInput = [] { return gs_Tee7DeleteSkinConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED; };
 		qm_settings_content::UseDeclaredBlockContent(Card, Ui(), TextRender(), [ContentHeight](float) { return ContentHeight; });
 		pCards->push_back(std::move(Card));
 	}
@@ -127,9 +134,6 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 		m_TeeEntranceStartTime = time_get();
 	DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &LeftTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true);
 	DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &RightTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true);
-	const CSkins7::CSkin *pSelectedSkin = GameClient()->m_Skins7.FindSkin(CSkins7::ms_apSkinNameVariables[m_Dummy], false);
-	m_SelectedSkin7Name = pSelectedSkin != nullptr ? pSelectedSkin->m_aName : "";
-
 	TabBar = ModeTabs.m_TabBarRect;
 	TabBar.VSplitMid(&LeftTab, &RightTab);
 
@@ -141,9 +145,9 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 	m_CustomSkinMenu = ui_widget::CapsuleTabBar(TabBarUiContext(), MakeUiScopeHash("settings_tee7_mode_tabs_capsule"), aModeTabSlots, std::size(aModeTabSlots), m_CustomSkinMenu ? 1 : 0, SettingsCapsuleTabBarStyle()) == 1;
 	DoButton_MenuTab(&s_BasicTabButton, Localize("Basic"), !m_CustomSkinMenu, &LeftTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true);
 	DoButton_MenuTab(&s_CustomTabButton, Localize("Custom"), m_CustomSkinMenu, &RightTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true);
-	if(PressedModeTab == 1)
+	if(PressedModeTab == 1 && m_CustomSkinMenu)
 	{
-		if(m_CustomSkinMenu && pSelectedSkin)
+		if(const CSkins7::CSkin *pSelectedSkin = GameClient()->m_Skins7.FindSkin(CSkins7::ms_apSkinNameVariables[m_Dummy], false))
 		{
 			if(pSelectedSkin->m_Flags & CSkins7::SKINFLAG_STANDARD)
 			{
@@ -289,12 +293,11 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 	RenderTools()->RenderTee(CAnimState::GetIdle(), &TeamSkinInfo, 0, vec2(-1, 0), BlueTeamSkinPreview.Center() + OffsetToMid);
 
 	if(m_CustomSkinMenu)
-		RenderSettingsTeeCustom7(MainView, Metrics);
-	else
-		RenderSkinSelection7(MainView, BodySize);
-
-	if(m_CustomSkinMenu)
 	{
+		RenderSettingsTeeCustom7(MainView, Metrics);
+		if(!Ui()->RenderOnly() && !m_SelectedSkin7Name.empty())
+			PopupConfirmDeleteSkin7();
+
 		static CButtonContainer s_CustomSkinSaveButton;
 		if(DoButton_Menu(&s_CustomSkinSaveButton, Localize("Save"), 0, &SaveDeleteButton))
 		{
@@ -303,34 +306,24 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 			Ui()->SetActiveItem(&m_SkinNameInput);
 		}
 	}
-	else if(pSelectedSkin && (pSelectedSkin->m_Flags & CSkins7::SKINFLAG_STANDARD) == 0)
+	else
 	{
+		RenderSkinSelection7(MainView, BodySize);
+		const CSkins7::CSkin *pSelectedSkin = GameClient()->m_Skins7.FindSkin(CSkins7::ms_apSkinNameVariables[m_Dummy], false);
 		static CButtonContainer s_CustomSkinDeleteButton;
-		static CUi::SConfirmPopupContext s_DeleteSkinConfirm;
-		static bool s_DeleteSkinPending = false;
-		if(DoButton_Menu(&s_CustomSkinDeleteButton, Localize("Delete"), 0, &SaveDeleteButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE))
+		const bool CanDelete = pSelectedSkin && (pSelectedSkin->m_Flags & CSkins7::SKINFLAG_STANDARD) == 0;
+		const bool DeleteClicked = CanDelete && DoButton_Menu(&s_CustomSkinDeleteButton, Localize("Delete"), 0, &SaveDeleteButton);
+		if(CanDelete && !Ui()->RenderOnly() && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() &&
+			(DeleteClicked || Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE)))
 		{
-			// 删除皮肤不可恢复：Cancel/OK 按钮 + 危险色，正文带皮肤名。
-			s_DeleteSkinConfirm.Reset();
-			s_DeleteSkinConfirm.DefaultButtons();
-			s_DeleteSkinConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
-			str_format(s_DeleteSkinConfirm.m_aMessage, sizeof(s_DeleteSkinConfirm.m_aMessage),
-				Localize("Are you sure that you want to delete '%s'?"), pSelectedSkin->m_aName);
-			Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_DeleteSkinConfirm);
-			s_DeleteSkinPending = true;
-		}
-		// 结果下一帧轮询：确认后才真正删，取消只清掉等待状态。
-		if(s_DeleteSkinPending)
-		{
-			if(s_DeleteSkinConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
-			{
-				s_DeleteSkinPending = false;
-				PopupConfirmDeleteSkin7();
-			}
-			else if(s_DeleteSkinConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED)
-			{
-				s_DeleteSkinPending = false;
-			}
+			// 筛选、刷新和切换编辑对象都可能改变列表选中项，弹窗持有打开时的名字。
+			m_SelectedSkin7Name = pSelectedSkin->m_aName;
+			gs_Tee7DeleteSkinConfirm.Reset();
+			gs_Tee7DeleteSkinConfirm.DefaultButtons();
+			gs_Tee7DeleteSkinConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+			str_format(gs_Tee7DeleteSkinConfirm.m_aMessage, sizeof(gs_Tee7DeleteSkinConfirm.m_aMessage),
+				Localize("Are you sure that you want to delete '%s'?"), m_SelectedSkin7Name.c_str());
+			Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &gs_Tee7DeleteSkinConfirm);
 		}
 	}
 
@@ -371,7 +364,6 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 		TextRender()->SetRenderFlags(0);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		GameClient()->RefreshSkins(CSkinDescriptor::FLAG_SEVEN);
-		m_SelectedSkin7Name.clear();
 		m_SkinList7LastRefreshTime = std::nullopt;
 		m_SkinPartsList7LastRefreshTime = std::nullopt;
 	}
@@ -386,16 +378,21 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 
 void CMenus::PopupConfirmDeleteSkin7()
 {
-	dbg_assert(!m_SelectedSkin7Name.empty(), "no skin selected for deletion");
+	const auto Target = TakeSettingsTee7SkinDeletion(m_SelectedSkin7Name, gs_Tee7DeleteSkinConfirm.m_Result, Ui()->IsPopupOpen(&gs_Tee7DeleteSkinConfirm),
+		CSkins7::ms_apSkinNameVariables[m_Dummy], m_CustomSkinMenu ? -1 : m_SelectedSkinIndex7);
+	if(!Target)
+		return;
+	gs_Tee7DeleteSkinConfirm.m_Result = CUi::SConfirmPopupContext::UNSET;
 
-	if(!GameClient()->m_Skins7.RemoveSkin(m_SelectedSkin7Name.c_str()))
+	CSkins7 &Skins = GameClient()->m_Skins7;
+	const CSkins7::CSkin *pSkin = Skins.FindSkin(Target->m_Name.c_str(), false);
+	if(!pSkin || (pSkin->m_Flags & CSkins7::SKINFLAG_STANDARD) != 0 || !Skins.RemoveSkin(Target->m_Name.c_str()))
 	{
 		// 删除失败只需要知道结果、再点一次就是重试：非阻断提示，不弹模态。
 		qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to delete skin"));
 		return;
 	}
-	m_DeletedSkinIndex7 = m_SelectedSkinIndex7;
-	m_SelectedSkin7Name.clear();
+	m_DeletedSkinIndex7 = Target->m_ReplacementIndex;
 }
 
 void CMenus::RenderSettingsTeeCustom7(CUIRect MainView, const SSettingsContentMetrics &Metrics)
@@ -524,14 +521,12 @@ void CMenus::RenderSkinSelection7(CUIRect MainView, float BodySize)
 		m_SkinList7LastRefreshTime = RefreshTime;
 	}
 
-	m_SelectedSkin7Name.clear();
 	m_SelectedSkinIndex7 = -1;
 	int OldSelected = -1;
 	for(int i = 0; i < (int)s_vSkinNames.size(); ++i)
 	{
 		if(!str_comp(s_vSkinNames[i].c_str(), CSkins7::ms_apSkinNameVariables[m_Dummy]))
 		{
-			m_SelectedSkin7Name = s_vSkinNames[i];
 			m_SelectedSkinIndex7 = i;
 			OldSelected = i;
 			break;
@@ -573,9 +568,12 @@ void CMenus::RenderSkinSelection7(CUIRect MainView, float BodySize)
 	}
 
 	int NewSelected = s_ListBox.DoEnd();
-	if(m_DeletedSkinIndex7 >= 0)
+	if(!Ui()->RenderOnly() && !m_SelectedSkin7Name.empty())
 	{
-		NewSelected = std::min(m_DeletedSkinIndex7, (int)s_vSkinNames.size() - 1);
+		PopupConfirmDeleteSkin7();
+		// 本帧的列表仍含已删除的行，从相邻行补选，避免下一帧切换编辑对象后仍补选。
+		if(m_DeletedSkinIndex7 >= 0 && NewSelected == OldSelected && s_vSkinNames.size() > 1)
+			NewSelected = m_DeletedSkinIndex7 + (m_DeletedSkinIndex7 + 1 < (int)s_vSkinNames.size() ? 1 : -1);
 		m_DeletedSkinIndex7 = -1;
 	}
 	if(NewSelected != -1 && NewSelected != OldSelected)
@@ -584,7 +582,6 @@ void CMenus::RenderSkinSelection7(CUIRect MainView, float BodySize)
 		const CSkins7::CSkin *pNewSkin = GameClient()->m_Skins7.FindSkin(s_vSkinNames[NewSelected].c_str(), false);
 		if(pNewSkin == nullptr)
 			return;
-		m_SelectedSkin7Name = pNewSkin->m_aName;
 		str_copy(CSkins7::ms_apSkinNameVariables[m_Dummy], pNewSkin->m_aName, protocol7::MAX_SKIN_ARRAY_SIZE);
 		for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
 		{

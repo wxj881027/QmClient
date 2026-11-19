@@ -16,6 +16,22 @@ TEST(QmMonitoringHelpers, PerfJsonFieldPreservesNumbersEscapesAndExistingPrefix)
 	EXPECT_STREQ(aJson, "{\"existing\":1,\"duration_ms\":12.345,\"text\":\"line\\npath\\\\name\\t\",\"empty\":\"\"}");
 }
 
+TEST(QmMonitoringHelpers, PerfPayloadKeepsNumericLookingSkinNamesAsStrings)
+{
+	for(const char *pSkin : {"2.3.1", "007", "+12", ".5", "5."})
+	{
+		char aPayload[128];
+		str_format(aPayload, sizeof(aPayload), "first_visible_skin=%s first_visible_index=0 duration_ms=-0.5", pSkin);
+		char aJson[256] = "{";
+		bool First = true;
+		QmPerfAppendPayloadJsonFields(aJson, sizeof(aJson), First, aPayload);
+		str_append(aJson, "}", sizeof(aJson));
+		char aExpected[256];
+		str_format(aExpected, sizeof(aExpected), "{\"first_visible_skin\":\"%s\",\"first_visible_index\":0,\"duration_ms\":-0.5}", pSkin);
+		EXPECT_STREQ(aJson, aExpected);
+	}
+}
+
 TEST(QmMonitoringHelpers, PerfJsonFieldTruncatesAtEveryCapacityWithoutOverwritingTail)
 {
 	char aFull[256] = "{";

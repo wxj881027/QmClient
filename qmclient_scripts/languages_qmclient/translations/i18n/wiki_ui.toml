@@ -193,4 +193,3 @@ brazilian_portuguese = "Documento grande demais para o editor (%d de %d bytes)"
 portuguese = "Documento demasiado grande para o editor (%d de %d bytes)"
 turkish = "Belge istemci düzenleyicisi için çok büyük (%d / %d bayt)"
 polish = "Dokument jest za duży dla edytora (%d z %d bajtów)"
-

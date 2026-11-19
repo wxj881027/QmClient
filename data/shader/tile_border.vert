@@ -9,7 +9,7 @@ uniform vec2 gOffset;
 uniform vec2 gScale;
 
 #ifdef TW_TILE_TEXTURED
-noperspective out vec3 TexCoord;
+noperspective centroid out vec3 TexCoord;
 #endif
 
 void main()

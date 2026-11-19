@@ -149,9 +149,7 @@ void CMenus::RenderDemoScreenshotDetails(CUIRect Contents, const CDemoItem &Item
 	MetadataCard.HSplitTop(22.0f, &Row, &MetadataCard);
 	Row.VSplitMid(&Left, &Right);
 	char aValue[256];
-	if(Item.m_DateLoaded && Item.m_DateValid)
-		str_timestamp_ex(Item.m_Date, aValue, sizeof(aValue), FORMAT_SPACE);
-	else
+	if(!Item.m_DateLoaded || !Item.m_DateValid || !str_timestamp_ex_try(Item.m_Date, aValue, sizeof(aValue), FORMAT_SPACE))
 		str_copy(aValue, "-");
 	SLabelProperties ValueProperties;
 	ValueProperties.m_MaxWidth = Left.w;

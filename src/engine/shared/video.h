@@ -33,6 +33,8 @@ public:
 	virtual void Pause(bool Pause) = 0;
 	virtual bool IsRecording() const = 0;
 	virtual bool HasError() const = 0;
+	// 当前录像是否接管音频；录制期间保持创建时的选择。
+	virtual bool HasAudio() const = 0;
 	// 当前录制实例持有的显示配置快照；未录制或实现不支持时为空。
 	virtual const SVideoDisplaySnapshot *DisplaySnapshot() const { return nullptr; }
 

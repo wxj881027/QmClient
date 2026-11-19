@@ -14,9 +14,9 @@
 #pragma comment(lib, "ws2_32.lib")
 
 #include <algorithm>
-#include <cctype>
 #include <cstring>
 #include <cwctype>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -24,6 +24,8 @@ namespace QmSodaWatchdog
 {
 	namespace
 	{
+		using THandle = std::unique_ptr<void, decltype(&CloseHandle)>;
+
 		std::wstring Lower(std::wstring Value)
 		{
 			std::transform(Value.begin(), Value.end(), Value.begin(), [](wchar_t C) { return (wchar_t)towlower(C); });
@@ -86,7 +88,9 @@ namespace QmSodaWatchdog
 				return {};
 			SProcessParametersPrefix Parameters;
 			if(!ReadProcessMemory(hProcess, Peb.m_ProcessParameters, &Parameters, sizeof(Parameters), &Read) || Read != sizeof(Parameters) ||
-				Parameters.m_CommandLine.m_Buffer == nullptr || Parameters.m_CommandLine.m_Length == 0)
+				Parameters.m_CommandLine.m_Buffer == nullptr || Parameters.m_CommandLine.m_Length == 0 ||
+				Parameters.m_CommandLine.m_Length > Parameters.m_CommandLine.m_MaximumLength ||
+				Parameters.m_CommandLine.m_Length % sizeof(wchar_t) != 0)
 				return {};
 			const size_t CharCount = Parameters.m_CommandLine.m_Length / sizeof(wchar_t);
 			std::wstring Result(CharCount, L'\0');
@@ -108,6 +112,7 @@ namespace QmSodaWatchdog
 			HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 			if(hSnapshot == INVALID_HANDLE_VALUE)
 				return Result;
+			const THandle Snapshot(hSnapshot, CloseHandle);
 			PROCESSENTRY32W Entry{};
 			Entry.dwSize = sizeof(Entry);
 			// 进程名比较必须两侧都小写;TARGET_EXE 是原样大写。
@@ -122,16 +127,12 @@ namespace QmSodaWatchdog
 					Candidate.m_Pid = Entry.th32ProcessID;
 					// 目标进程可能以更高权限运行(如管理员),OpenProcess 会失败。
 					// 此时命令行留空,由 FindMainPid 的 Fallback 兜底返回该 PID。
-					HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, FALSE, Entry.th32ProcessID);
-					if(hProcess != nullptr)
-					{
-						Candidate.m_CommandLine = QueryCommandLine(hProcess);
-						CloseHandle(hProcess);
-					}
+					const THandle Process(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, FALSE, Entry.th32ProcessID), CloseHandle);
+					if(Process)
+						Candidate.m_CommandLine = QueryCommandLine(Process.get());
 					Result.push_back(std::move(Candidate));
 				} while(Process32NextW(hSnapshot, &Entry));
 			}
-			CloseHandle(hSnapshot);
 			return Result;
 		}
 	}
@@ -183,33 +184,33 @@ namespace QmSodaWatchdog
 		return FallbackPid;
 	}
 
-	bool IsInspectorUp()
+	uint32_t InspectorListenerPid()
 	{
-		// 不真正请求 HTTP:检查 9229 是否有 loopback 监听者即可。
+		// 只把明确绑定 IPv4 回环地址的监听纳入发现。
 		DWORD BufferSize = 0;
 		const DWORD ProbeResult = GetExtendedTcpTable(nullptr, &BufferSize, FALSE, AF_INET, TCP_TABLE_OWNER_PID_LISTENER, 0);
 		if(ProbeResult != ERROR_INSUFFICIENT_BUFFER || BufferSize < sizeof(MIB_TCPTABLE_OWNER_PID))
-			return false;
+			return 0;
 		std::vector<uint8_t> Buffer(BufferSize);
 		auto *pTable = reinterpret_cast<MIB_TCPTABLE_OWNER_PID *>(Buffer.data());
 		if(GetExtendedTcpTable(pTable, &BufferSize, FALSE, AF_INET, TCP_TABLE_OWNER_PID_LISTENER, 0) != NO_ERROR)
-			return false;
+			return 0;
 		const DWORD LoopbackAddress = htonl(INADDR_LOOPBACK);
 		for(DWORD Index = 0; Index < pTable->dwNumEntries; ++Index)
 		{
 			const MIB_TCPROW_OWNER_PID &Row = pTable->table[Index];
 			if(Row.dwState == MIB_TCP_STATE_LISTEN && Row.dwLocalAddr == LoopbackAddress && ntohs((u_short)Row.dwLocalPort) == INSPECTOR_PORT)
-				return true;
+				return Row.dwOwningPid;
 		}
-		return false;
+		return 0;
 	}
 
 	bool EnsureInspector(uint32_t Pid)
 	{
 		if(Pid == 0)
 			return false;
-		if(IsInspectorUp())
-			return true;
+		if(const uint32_t ListenerPid = InspectorListenerPid(); ListenerPid != 0)
+			return ListenerPid == Pid;
 		// 命名映射 "node-debug-handler-<pid>" 由 Node/Electron 主进程启动时创建。
 		const std::wstring MappingName = L"node-debug-handler-" + std::to_wstring(Pid);
 		HANDLE hMapping = OpenFileMappingW(FILE_MAP_READ, FALSE, MappingName.c_str());

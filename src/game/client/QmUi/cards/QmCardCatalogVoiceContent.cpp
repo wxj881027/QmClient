@@ -46,11 +46,10 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using namespace FontIcons;
-
-extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
 
 namespace
 {
@@ -62,6 +61,32 @@ namespace
 	{
 		if(g_Config.m_QmPerfDebug)
 			QmPerfLogStage("perf/qmclient", pStage, DurationMs, Force, pClient, nullptr, nullptr, pExtra);
+	}
+
+	struct SVoiceDeviceDropdownList
+	{
+		std::vector<VoiceUtils::SVoiceDeviceDropdownEntry> m_vEntries;
+		std::vector<const char *> m_vLabels;
+	};
+
+	void RefreshVoiceDeviceList(IClient *pClient, bool Recording, const char *pCurrentDevice, SVoiceDeviceDropdownList &List)
+	{
+		CPerfTimer StageTimer;
+		std::vector<std::string> vDetectedNames;
+		for(const auto &Device : SdlAudioDevices(Recording))
+			vDetectedNames.emplace_back(Device.m_Name);
+
+		SVoiceDeviceDropdownList NewList;
+		VoiceUtils::BuildVoiceDeviceDropdownEntries(vDetectedNames, pCurrentDevice, Localize("Default"), Localize("Disconnected"), NewList.m_vEntries);
+		NewList.m_vLabels.reserve(NewList.m_vEntries.size());
+		for(const auto &Entry : NewList.m_vEntries)
+			NewList.m_vLabels.push_back(Entry.m_DisplayName.c_str());
+
+		// 列表与标签一起替换，分配失败时继续使用上次完整的设备列表。
+		List = std::move(NewList);
+		char aExtra[96];
+		str_format(aExtra, sizeof(aExtra), "devices=%d", (int)List.m_vEntries.size());
+		LogQmPerfStage(pClient, Recording ? "voice_device_enum" : "voice_output_device_enum", StageTimer.ElapsedMs(), false, aExtra);
 	}
 }
 
@@ -444,67 +469,30 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 			{
 				SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelCol, &ControlCol);
 				DoQmSettingsLabel("qmclient-voice-input-device", &LabelCol, Localize("Input device"), BodySize);
-				static std::vector<std::string> s_VoiceInputDeviceDisplayNames;
-				static std::vector<std::string> s_VoiceInputDeviceConfigValues;
-				static std::vector<const char *> s_VoiceInputDeviceDropDownNames;
-				static std::vector<VoiceUtils::SVoiceDeviceDropdownEntry> s_VoiceInputDeviceEntries;
+				static SVoiceDeviceDropdownList s_InputDevices;
 				static CScrollRegion s_VoiceInputDeviceDropDownScrollRegion;
-				static bool s_VoiceInputDevicesInitialized = false;
 				s_VoiceInputDeviceDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_VoiceInputDeviceDropDownScrollRegion;
-				auto RefreshVoiceInputDeviceList = [&]() {
-					CPerfTimer StageTimer;
-					s_VoiceInputDeviceDisplayNames.clear();
-					s_VoiceInputDeviceConfigValues.clear();
-					s_VoiceInputDeviceDropDownNames.clear();
-					std::vector<std::string> vDetectedDeviceNames;
-					for(const auto &Device : SdlAudioDevices(true))
-						vDetectedDeviceNames.emplace_back(Device.m_Name);
-
-					VoiceUtils::BuildVoiceDeviceDropdownEntries(
-						vDetectedDeviceNames,
-						g_Config.m_QmVoiceInputDevice,
-						Localize("Default"),
-						Localize("Disconnected"),
-						s_VoiceInputDeviceEntries);
-
-					s_VoiceInputDeviceDisplayNames.reserve(s_VoiceInputDeviceEntries.size());
-					s_VoiceInputDeviceConfigValues.reserve(s_VoiceInputDeviceEntries.size());
-					s_VoiceInputDeviceDropDownNames.reserve(s_VoiceInputDeviceDisplayNames.size());
-					for(const auto &Entry : s_VoiceInputDeviceEntries)
-					{
-						s_VoiceInputDeviceDisplayNames.push_back(Entry.m_DisplayName);
-						s_VoiceInputDeviceConfigValues.push_back(Entry.m_ConfigValue);
-						s_VoiceInputDeviceDropDownNames.push_back(s_VoiceInputDeviceDisplayNames.back().c_str());
-					}
-
-					char aVoiceExtra[96];
-					str_format(aVoiceExtra, sizeof(aVoiceExtra), "devices=%d", (int)s_VoiceInputDeviceDisplayNames.size());
-					LogQmPerfStage(Client(), "voice_device_enum", StageTimer.ElapsedMs(), false, aVoiceExtra);
-				};
-				if(Flow.Input() && !ReadOnly && !s_VoiceInputDevicesInitialized)
-				{
-					RefreshVoiceInputDeviceList();
-					s_VoiceInputDevicesInitialized = true;
-				}
+				if(Flow.Input() && !ReadOnly && s_InputDevices.m_vEntries.empty())
+					RefreshVoiceDeviceList(Client(), true, g_Config.m_QmVoiceInputDevice, s_InputDevices);
 
 				CUIRect VoiceInputDropDownRect;
 				CUIRect VoiceInputRefreshButton;
 				ControlCol.VSplitRight(LineHeight, &VoiceInputDropDownRect, &VoiceInputRefreshButton);
 
 				static CButtonContainer s_VoiceInputRefreshButton;
-				if(s_VoiceInputDeviceEntries.empty())
+				if(s_InputDevices.m_vEntries.empty())
 				{
 					DoQmSettingsLabel("qmclient-voice-input-default", &VoiceInputDropDownRect, Localize("Default"), BodySize);
 					DoQmSettingsIconButton(&s_VoiceInputRefreshButton, "qmclient-voice-input-refresh", EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Localize("Refresh"), &VoiceInputRefreshButton);
 				}
 				else
 				{
-					const int VoiceInputSelectedOld = VoiceUtils::VoiceFindSelectedDeviceIndex(s_VoiceInputDeviceEntries, g_Config.m_QmVoiceInputDevice);
-					const int VoiceInputSelectedNew = DoSettingsDropDown(&VoiceInputDropDownRect, VoiceInputSelectedOld, s_VoiceInputDeviceDropDownNames.data(), s_VoiceInputDeviceDropDownNames.size(), s_VoiceInputDeviceDropDownState, {}, g_Config.m_QmVoiceInputDevice, nullptr, &Row);
-					if(Flow.Input() && !ReadOnly && VoiceInputSelectedNew >= 0 && VoiceInputSelectedNew != VoiceInputSelectedOld && (size_t)VoiceInputSelectedNew < s_VoiceInputDeviceConfigValues.size())
-						str_copy(g_Config.m_QmVoiceInputDevice, s_VoiceInputDeviceConfigValues[VoiceInputSelectedNew].c_str(), sizeof(g_Config.m_QmVoiceInputDevice));
+					const int VoiceInputSelectedOld = VoiceUtils::VoiceFindSelectedDeviceIndex(s_InputDevices.m_vEntries, g_Config.m_QmVoiceInputDevice);
+					const int VoiceInputSelectedNew = DoSettingsDropDown(&VoiceInputDropDownRect, VoiceInputSelectedOld, s_InputDevices.m_vLabels.data(), s_InputDevices.m_vLabels.size(), s_VoiceInputDeviceDropDownState, {}, g_Config.m_QmVoiceInputDevice, nullptr, &Row);
+					if(Flow.Input() && !ReadOnly && VoiceInputSelectedNew >= 0 && VoiceInputSelectedNew != VoiceInputSelectedOld && (size_t)VoiceInputSelectedNew < s_InputDevices.m_vEntries.size())
+						str_copy(g_Config.m_QmVoiceInputDevice, s_InputDevices.m_vEntries[VoiceInputSelectedNew].m_ConfigValue.c_str(), sizeof(g_Config.m_QmVoiceInputDevice));
 					if(DoQmSettingsIconButton(&s_VoiceInputRefreshButton, "qmclient-voice-input-refresh", EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Localize("Refresh"), &VoiceInputRefreshButton) && Flow.Input() && !ReadOnly)
-						RefreshVoiceInputDeviceList();
+						RefreshVoiceDeviceList(Client(), true, g_Config.m_QmVoiceInputDevice, s_InputDevices);
 				}
 			}
 
@@ -512,67 +500,30 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 			{
 				SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelCol, &ControlCol);
 				DoQmSettingsLabel("qmclient-voice-output-device", &LabelCol, Localize("Output device"), BodySize);
-				static std::vector<std::string> s_VoiceOutputDeviceDisplayNames;
-				static std::vector<std::string> s_VoiceOutputDeviceConfigValues;
-				static std::vector<const char *> s_VoiceOutputDeviceDropDownNames;
-				static std::vector<VoiceUtils::SVoiceDeviceDropdownEntry> s_VoiceOutputDeviceEntries;
+				static SVoiceDeviceDropdownList s_OutputDevices;
 				static CScrollRegion s_VoiceOutputDeviceDropDownScrollRegion;
-				static bool s_VoiceOutputDevicesInitialized = false;
 				s_VoiceOutputDeviceDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_VoiceOutputDeviceDropDownScrollRegion;
-				auto RefreshVoiceOutputDeviceList = [&]() {
-					CPerfTimer StageTimer;
-					s_VoiceOutputDeviceDisplayNames.clear();
-					s_VoiceOutputDeviceConfigValues.clear();
-					s_VoiceOutputDeviceDropDownNames.clear();
-					std::vector<std::string> vDetectedDeviceNames;
-					for(const auto &Device : SdlAudioDevices(false))
-						vDetectedDeviceNames.emplace_back(Device.m_Name);
-
-					VoiceUtils::BuildVoiceDeviceDropdownEntries(
-						vDetectedDeviceNames,
-						g_Config.m_QmVoiceOutputDevice,
-						Localize("Default"),
-						Localize("Disconnected"),
-						s_VoiceOutputDeviceEntries);
-
-					s_VoiceOutputDeviceDisplayNames.reserve(s_VoiceOutputDeviceEntries.size());
-					s_VoiceOutputDeviceConfigValues.reserve(s_VoiceOutputDeviceEntries.size());
-					s_VoiceOutputDeviceDropDownNames.reserve(s_VoiceOutputDeviceDisplayNames.size());
-					for(const auto &Entry : s_VoiceOutputDeviceEntries)
-					{
-						s_VoiceOutputDeviceDisplayNames.push_back(Entry.m_DisplayName);
-						s_VoiceOutputDeviceConfigValues.push_back(Entry.m_ConfigValue);
-						s_VoiceOutputDeviceDropDownNames.push_back(s_VoiceOutputDeviceDisplayNames.back().c_str());
-					}
-
-					char aVoiceExtra[96];
-					str_format(aVoiceExtra, sizeof(aVoiceExtra), "devices=%d", (int)s_VoiceOutputDeviceDisplayNames.size());
-					LogQmPerfStage(Client(), "voice_output_device_enum", StageTimer.ElapsedMs(), false, aVoiceExtra);
-				};
-				if(Flow.Input() && !ReadOnly && !s_VoiceOutputDevicesInitialized)
-				{
-					RefreshVoiceOutputDeviceList();
-					s_VoiceOutputDevicesInitialized = true;
-				}
+				if(Flow.Input() && !ReadOnly && s_OutputDevices.m_vEntries.empty())
+					RefreshVoiceDeviceList(Client(), false, g_Config.m_QmVoiceOutputDevice, s_OutputDevices);
 
 				CUIRect VoiceOutputDropDownRect;
 				CUIRect VoiceOutputRefreshButton;
 				ControlCol.VSplitRight(LineHeight, &VoiceOutputDropDownRect, &VoiceOutputRefreshButton);
 
 				static CButtonContainer s_VoiceOutputRefreshButton;
-				if(s_VoiceOutputDeviceEntries.empty())
+				if(s_OutputDevices.m_vEntries.empty())
 				{
 					DoQmSettingsLabel("qmclient-voice-output-default", &VoiceOutputDropDownRect, Localize("Default"), BodySize);
 					DoQmSettingsIconButton(&s_VoiceOutputRefreshButton, "qmclient-voice-output-refresh", EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Localize("Refresh"), &VoiceOutputRefreshButton);
 				}
 				else
 				{
-					const int VoiceOutputSelectedOld = VoiceUtils::VoiceFindSelectedDeviceIndex(s_VoiceOutputDeviceEntries, g_Config.m_QmVoiceOutputDevice);
-					const int VoiceOutputSelectedNew = DoSettingsDropDown(&VoiceOutputDropDownRect, VoiceOutputSelectedOld, s_VoiceOutputDeviceDropDownNames.data(), s_VoiceOutputDeviceDropDownNames.size(), s_VoiceOutputDeviceDropDownState, {}, g_Config.m_QmVoiceOutputDevice, nullptr, &Row);
-					if(Flow.Input() && !ReadOnly && VoiceOutputSelectedNew >= 0 && VoiceOutputSelectedNew != VoiceOutputSelectedOld && (size_t)VoiceOutputSelectedNew < s_VoiceOutputDeviceConfigValues.size())
-						str_copy(g_Config.m_QmVoiceOutputDevice, s_VoiceOutputDeviceConfigValues[VoiceOutputSelectedNew].c_str(), sizeof(g_Config.m_QmVoiceOutputDevice));
+					const int VoiceOutputSelectedOld = VoiceUtils::VoiceFindSelectedDeviceIndex(s_OutputDevices.m_vEntries, g_Config.m_QmVoiceOutputDevice);
+					const int VoiceOutputSelectedNew = DoSettingsDropDown(&VoiceOutputDropDownRect, VoiceOutputSelectedOld, s_OutputDevices.m_vLabels.data(), s_OutputDevices.m_vLabels.size(), s_VoiceOutputDeviceDropDownState, {}, g_Config.m_QmVoiceOutputDevice, nullptr, &Row);
+					if(Flow.Input() && !ReadOnly && VoiceOutputSelectedNew >= 0 && VoiceOutputSelectedNew != VoiceOutputSelectedOld && (size_t)VoiceOutputSelectedNew < s_OutputDevices.m_vEntries.size())
+						str_copy(g_Config.m_QmVoiceOutputDevice, s_OutputDevices.m_vEntries[VoiceOutputSelectedNew].m_ConfigValue.c_str(), sizeof(g_Config.m_QmVoiceOutputDevice));
 					if(DoQmSettingsIconButton(&s_VoiceOutputRefreshButton, "qmclient-voice-output-refresh", EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, Localize("Refresh"), &VoiceOutputRefreshButton) && Flow.Input() && !ReadOnly)
-						RefreshVoiceOutputDeviceList();
+						RefreshVoiceDeviceList(Client(), false, g_Config.m_QmVoiceOutputDevice, s_OutputDevices);
 				}
 			}
 

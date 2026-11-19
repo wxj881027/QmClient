@@ -18,7 +18,9 @@
 #include <cctype>
 #include <cstdlib>
 #include <ctime>
+#include <new>
 #include <string>
+#include <string_view>
 #include <utility>
 
 const char *NormalizeTranslateSource(const char *pSource)
@@ -47,16 +49,19 @@ namespace
 	{
 		if(!pObj || pObj->type != json_object)
 			return ETranslateNotice::NONE;
-		const json_value *pError = json_object_get(pObj, "error");
-		const json_value *pCode = pError->type == json_object ? json_object_get(pError, "code") : json_object_get(pObj, "code");
-		const char *pErrorCode = pCode->type == json_string ? pCode->u.string.ptr : "";
-		if(str_comp(pErrorCode, "model_not_found") == 0)
+		const json_value *pError = TranslateJsonObjectGet(pObj, "error");
+		const json_value *pCode = pError->type == json_object ? TranslateJsonObjectGet(pError, "code") : TranslateJsonObjectGet(pObj, "code");
+		if(pCode->type == json_string && (pCode->u.string.length != static_cast<unsigned int>(str_length(pCode->u.string.ptr)) || !str_utf8_check(pCode->u.string.ptr)))
+			return ETranslateNotice::INVALID_RESPONSE;
+		if(TranslateJsonStringIs(pCode, "model_not_found"))
 			return ETranslateNotice::MODEL_NOT_FOUND;
-		if(str_comp(pErrorCode, "insufficient_quota") == 0)
+		if(TranslateJsonStringIs(pCode, "insufficient_quota"))
 			return ETranslateNotice::QUOTA_EXCEEDED;
 		if(!Zhipu)
 			return ETranslateNotice::NONE;
-		const int Code = pCode->type == json_integer ? static_cast<int>(pCode->u.integer) : str_toint(pErrorCode);
+		int Code = 0;
+		if((pCode->type != json_integer && pCode->type != json_string) || !TryParseTranslateServiceCode(pCode, Code))
+			return ETranslateNotice::NONE;
 		switch(Code)
 		{
 		case 1000:
@@ -319,6 +324,12 @@ namespace
 			pWithoutScheme = Url.c_str();
 		}
 
+		if(Url.find_first_of("?#") != std::string::npos)
+		{
+			str_copy(pError, "TencentCloud endpoint must not contain query parameters or fragments", ErrorSize);
+			return false;
+		}
+
 		const char *pPath = str_find(pWithoutScheme, "/");
 		if(pPath)
 		{
@@ -334,13 +345,6 @@ namespace
 		if(Host.empty())
 		{
 			str_copy(pError, "TencentCloud endpoint host is empty", ErrorSize);
-			return false;
-		}
-		if(Path.empty())
-			Path = "/";
-		if(Path.find('?') != std::string::npos)
-		{
-			str_copy(pError, "TencentCloud endpoint must not contain query parameters", ErrorSize);
 			return false;
 		}
 		return true;
@@ -421,7 +425,7 @@ private:
 			return false;
 		}
 
-		const json_value *pError = json_object_get(pObj, "error");
+		const json_value *pError = TranslateJsonObjectGet(pObj, "error");
 		if(pError != &json_value_none)
 		{
 			if(pError->type != json_string)
@@ -431,7 +435,7 @@ private:
 			return false;
 		}
 
-		const json_value *pTranslatedText = json_object_get(pObj, "translatedText");
+		const json_value *pTranslatedText = TranslateJsonObjectGet(pObj, "translatedText");
 		if(pTranslatedText == &json_value_none)
 		{
 			str_copy(Out.m_Text, "No translatedText");
@@ -443,33 +447,9 @@ private:
 			return false;
 		}
 
-		const json_value *pDetectedLanguage = json_object_get(pObj, "detectedLanguage");
-		if(pDetectedLanguage == &json_value_none)
-		{
-			Out.m_Language[0] = '\0';
-			return CopyTranslateText(pTranslatedText, Out);
-		}
-		if(pDetectedLanguage->type != json_object)
-		{
-			str_copy(Out.m_Text, "detectedLanguage is not object");
-			return false;
-		}
-
-		const json_value *pLanguage = json_object_get(pDetectedLanguage, "language");
-		if(pLanguage == &json_value_none)
-		{
-			str_copy(Out.m_Text, "No language");
-			return false;
-		}
-		if(pLanguage->type != json_string)
-		{
-			str_copy(Out.m_Text, "language is not string");
-			return false;
-		}
-
 		if(!CopyTranslateText(pTranslatedText, Out))
 			return false;
-		str_copy(Out.m_Language, pLanguage->u.string.ptr);
+		CopyTranslateLanguage(TranslateResponseLanguage(pObj, ETranslateLanguageMetadata::LIBRE), Out);
 
 		return true;
 	}
@@ -477,7 +457,7 @@ private:
 protected:
 	bool ParseResponse(CTranslateResponse &Out) override
 	{
-		json_value *pObj = m_pHttpRequest->ResultJson();
+		json_value *pObj = ParseTranslateResponseJson(*m_pHttpRequest, ETranslateLanguageMetadata::LIBRE);
 		bool Res = ParseResponseJson(pObj, Out);
 		if(m_pHttpRequest->StatusCode() != 200)
 			Res = false;
@@ -535,18 +515,18 @@ private:
 			return false;
 		}
 
-		const json_value *pResponse = json_object_get(pObj, "Response");
+		const json_value *pResponse = TranslateJsonObjectGet(pObj, "Response");
 		if(pResponse == &json_value_none || pResponse->type != json_object)
 		{
 			str_copy(Out.m_Text, "No Response object");
 			return false;
 		}
 
-		const json_value *pError = json_object_get(pResponse, "Error");
+		const json_value *pError = TranslateJsonObjectGet(pResponse, "Error");
 		if(pError != &json_value_none)
 		{
-			const json_value *pCode = json_object_get(pError, "Code");
-			const json_value *pMessage = json_object_get(pError, "Message");
+			const json_value *pCode = TranslateJsonObjectGet(pError, "Code");
+			const json_value *pMessage = TranslateJsonObjectGet(pError, "Message");
 			const char *pCodeStr = pCode != &json_value_none && pCode->type == json_string ? pCode->u.string.ptr : "UnknownError";
 			const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "TencentCloud request failed";
 			if(str_startswith(pCodeStr, "AuthFailure"))
@@ -561,7 +541,7 @@ private:
 			return false;
 		}
 
-		const json_value *pTranslatedText = json_object_get(pResponse, "TargetText");
+		const json_value *pTranslatedText = TranslateJsonObjectGet(pResponse, "TargetText");
 		if(pTranslatedText == &json_value_none)
 		{
 			str_copy(Out.m_Text, "No TargetText");
@@ -573,11 +553,7 @@ private:
 			return false;
 		}
 
-		const json_value *pSource = json_object_get(pResponse, "Source");
-		if(pSource != &json_value_none && pSource->type == json_string)
-			str_copy(Out.m_Language, pSource->u.string.ptr);
-		else
-			Out.m_Language[0] = '\0';
+		CopyTranslateLanguage(TranslateResponseLanguage(pObj, ETranslateLanguageMetadata::TENCENT), Out);
 
 		if(!CopyTranslateText(pTranslatedText, Out))
 			return false;
@@ -587,7 +563,7 @@ private:
 protected:
 	bool ParseResponse(CTranslateResponse &Out) override
 	{
-		json_value *pObj = m_pHttpRequest->ResultJson();
+		json_value *pObj = ParseTranslateResponseJson(*m_pHttpRequest, ETranslateLanguageMetadata::TENCENT);
 		const bool Result = ParseResponseJson(pObj, Out);
 		json_value_free(pObj);
 		return Result;
@@ -675,8 +651,8 @@ public:
 		const std::string Signature = HmacSha256Hex(
 			reinterpret_cast<const unsigned char *>(SecretSigning.data()), SecretSigning.size(), StringToSign);
 
-		const std::string Authorization =
-			"TC3-HMAC-SHA256 Credential=" + std::string(pSecretId) + "/" + CredentialScope +
+		const std::string AuthorizationHeader =
+			"Authorization: TC3-HMAC-SHA256 Credential=" + std::string(pSecretId) + "/" + CredentialScope +
 			", SignedHeaders=" + SignedHeaders +
 			", Signature=" + Signature;
 
@@ -686,8 +662,8 @@ public:
 		m_pHttpRequest->MaxResponseSize(64 * 1024);
 		m_pHttpRequest->Timeout(CTimeout{10000, 30000, 500, 10});
 		m_pHttpRequest->HeaderString("Content-Type", CONTENT_TYPE);
-		m_pHttpRequest->HeaderString("Authorization", Authorization.c_str());
-		m_pHttpRequest->HeaderString("Host", Host.c_str());
+		m_pHttpRequest->Header(AuthorizationHeader.c_str());
+		m_pHttpRequest->Header(("Host: " + Host).c_str());
 		m_pHttpRequest->HeaderString("X-TC-Action", TENCENTCLOUD_TMT_ACTION);
 		m_pHttpRequest->HeaderString("X-TC-Version", TENCENTCLOUD_TMT_VERSION);
 		m_pHttpRequest->HeaderString("X-TC-Region", g_Config.m_QmTranslateTcRegion);
@@ -715,7 +691,7 @@ private:
 			return false;
 		}
 
-		const json_value *pTranslatedText = json_object_get(pObj, "destination-text");
+		const json_value *pTranslatedText = TranslateJsonObjectGet(pObj, "destination-text");
 		if(pTranslatedText == &json_value_none)
 		{
 			str_copy(Out.m_Text, "No destination-text");
@@ -727,21 +703,9 @@ private:
 			return false;
 		}
 
-		const json_value *pDetectedLanguage = json_object_get(pObj, "source-language");
-		if(pDetectedLanguage == &json_value_none)
-		{
-			str_copy(Out.m_Text, "No source-language");
-			return false;
-		}
-		if(pDetectedLanguage->type != json_string)
-		{
-			str_copy(Out.m_Text, "source-language is not string");
-			return false;
-		}
-
 		if(!CopyTranslateText(pTranslatedText, Out))
 			return false;
-		str_copy(Out.m_Language, pDetectedLanguage->u.string.ptr);
+		CopyTranslateLanguage(TranslateResponseLanguage(pObj, ETranslateLanguageMetadata::FTAPI), Out);
 
 		return true;
 	}
@@ -749,7 +713,7 @@ private:
 protected:
 	bool ParseResponse(CTranslateResponse &Out) override
 	{
-		json_value *pObj = m_pHttpRequest->ResultJson();
+		json_value *pObj = ParseTranslateResponseJson(*m_pHttpRequest, ETranslateLanguageMetadata::FTAPI);
 		bool Res = ParseResponseJson(pObj, Out);
 		json_value_free(pObj);
 		return Res;
@@ -839,26 +803,24 @@ private:
 		}
 
 		int Status = 200;
-		const json_value *pStatus = json_object_get(pObj, "responseStatus");
+		const json_value *pStatus = TranslateJsonObjectGet(pObj, "responseStatus");
 		if(pStatus != &json_value_none)
 		{
-			if(pStatus->type == json_integer)
-				Status = (int)pStatus->u.integer;
-			else if(pStatus->type == json_double)
-				Status = (int)pStatus->u.dbl;
-			else if(pStatus->type == json_string)
-				// 服务把状态码按字符串返回（如 "403"），不解析就会被当成 200 并把错误文案当译文
-				Status = str_toint(pStatus->u.string.ptr);
+			if((pStatus->type != json_integer && pStatus->type != json_double && pStatus->type != json_string) || !TryParseTranslateServiceCode(pStatus, Status))
+			{
+				str_copy(Out.m_Text, "Invalid MyMemory response status");
+				return false;
+			}
 		}
 
-		const json_value *pData = json_object_get(pObj, "responseData");
+		const json_value *pData = TranslateJsonObjectGet(pObj, "responseData");
 		if(pData == &json_value_none || pData->type != json_object)
 		{
 			str_copy(Out.m_Text, "No responseData");
 			return false;
 		}
 
-		const json_value *pTranslatedText = json_object_get(pData, "translatedText");
+		const json_value *pTranslatedText = TranslateJsonObjectGet(pData, "translatedText");
 		if(pTranslatedText == &json_value_none || pTranslatedText->type != json_string)
 		{
 			str_copy(Out.m_Text, "No translatedText");
@@ -878,8 +840,10 @@ private:
 			return false;
 		}
 
-		// 语言对相同时服务以 200 + 固定英文提示代替译文，按服务提示处理，不能直出到聊天
-		if(str_find_nocase(pTranslatedText->u.string.ptr, "SELECT TWO DISTINCT LANGUAGES"))
+		// 只识别完整的语言对提示，正常译文也可能包含相同短语。
+		static constexpr char s_aLanguagePairNotice[] = "PLEASE SELECT TWO DISTINCT LANGUAGES";
+		if(pTranslatedText->u.string.length == sizeof(s_aLanguagePairNotice) - 1 &&
+			str_comp_nocase(pTranslatedText->u.string.ptr, s_aLanguagePairNotice) == 0)
 		{
 			Out.m_Notice = ETranslateNotice::SERVICE_NOTICE;
 			str_copy(Out.m_Text, "MyMemory rejected the language pair instead of translating");
@@ -981,7 +945,7 @@ private:
 			return false;
 		}
 
-		const json_value *pTranslations = json_object_get(pObj, "translations");
+		const json_value *pTranslations = TranslateJsonObjectGet(pObj, "translations");
 		if(pTranslations == &json_value_none || pTranslations->type != json_array)
 		{
 			str_copy(Out.m_Text, "No translations");
@@ -1000,7 +964,7 @@ private:
 			return false;
 		}
 
-		const json_value *pText = json_object_get(pTranslation, "text");
+		const json_value *pText = TranslateJsonObjectGet(pTranslation, "text");
 		if(pText == &json_value_none || pText->type != json_string)
 		{
 			str_copy(Out.m_Text, "No translation text");
@@ -1010,11 +974,7 @@ private:
 		if(!CopyTranslateText(pText, Out))
 			return false;
 
-		const json_value *pDetected = json_object_get(pTranslation, "detected_source_language");
-		if(pDetected != &json_value_none && pDetected->type == json_string)
-			str_copy(Out.m_Language, pDetected->u.string.ptr);
-		else
-			Out.m_Language[0] = '\0';
+		CopyTranslateLanguage(TranslateResponseLanguage(pObj, ETranslateLanguageMetadata::DEEPL), Out);
 
 		return true;
 	}
@@ -1051,7 +1011,7 @@ protected:
 			json_value *pObj = m_pHttpRequest->ResultJson();
 			if(pObj && pObj->type == json_object)
 			{
-				const json_value *pMessage = json_object_get(pObj, "message");
+				const json_value *pMessage = TranslateJsonObjectGet(pObj, "message");
 				if(pMessage != &json_value_none && pMessage->type == json_string)
 					str_format(Out.m_Text, sizeof(Out.m_Text), "DeepL HTTP %d: %.200s", StatusCode, pMessage->u.string.ptr);
 			}
@@ -1059,7 +1019,7 @@ protected:
 			return false;
 		}
 
-		json_value *pObj = m_pHttpRequest->ResultJson();
+		json_value *pObj = ParseTranslateResponseJson(*m_pHttpRequest, ETranslateLanguageMetadata::DEEPL);
 		const bool Result = ParseResponseJson(pObj, Out);
 		json_value_free(pObj);
 		return Result;
@@ -1137,9 +1097,8 @@ public:
 		m_pHttpRequest->MaxResponseSize(64 * 1024);
 		m_pHttpRequest->Timeout(CTimeout{10000, 30000, 500, 10});
 		m_pHttpRequest->HeaderString("Content-Type", "application/json");
-		char aAuthorization[512];
-		str_format(aAuthorization, sizeof(aAuthorization), "DeepL-Auth-Key %s", pApiKey);
-		m_pHttpRequest->HeaderString("Authorization", aAuthorization);
+		const std::string AuthorizationHeader = std::string("Authorization: DeepL-Auth-Key ") + pApiKey;
+		m_pHttpRequest->Header(AuthorizationHeader.c_str());
 		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(Payload.data()), Payload.size());
 		Http.Run(m_pHttpRequest);
 	}
@@ -1156,14 +1115,20 @@ private:
 	char m_aBaseUrl[256] = "";
 	ELlmApiStyle m_ConfigStyle = ELlmApiStyle::AUTO; // 端点后缀显式指定的格式
 	ELlmApiStyle m_ActiveStyle = ELlmApiStyle::CHAT; // 当前实际使用的格式
+	bool m_Retried = false;
 	std::string m_ChatPayload;
 	std::string m_ResponsesPayload;
-	char m_aAuthorization[512] = "";
+	std::string m_AuthorizationHeader;
+
+	bool ParseLlmJson(const json_value *pObj, SLlmParseResult &Parsed) const
+	{
+		return m_ActiveStyle == ELlmApiStyle::RESPONSES ? ParseLlmResponsesJson(pObj, Parsed) : ParseLlmResponseJson(pObj, Parsed);
+	}
 
 	bool ParseResponseJson(const json_value *pObj, CTranslateResponse &Out)
 	{
 		SLlmParseResult Parsed;
-		const bool Success = m_ActiveStyle == ELlmApiStyle::RESPONSES ? ParseLlmResponsesJson(pObj, Parsed) : ParseLlmResponseJson(pObj, Parsed);
+		const bool Success = ParseLlmJson(pObj, Parsed);
 		Out.m_Language[0] = '\0';
 		if(!Success)
 		{
@@ -1208,7 +1173,7 @@ protected:
 				if(const ETranslateNotice Notice = LlmErrorNotice(pObj, m_Provider == ELlmProvider::ZHIPU_AI); Notice != ETranslateNotice::NONE)
 					Out.m_Notice = Notice;
 				SLlmParseResult Parsed;
-				ParseLlmResponseJson(pObj, Parsed);
+				ParseLlmJson(pObj, Parsed);
 				if(Parsed.m_Refused)
 				{
 					Out.m_Notice = ETranslateNotice::CONTENT_REFUSED;
@@ -1216,10 +1181,10 @@ protected:
 					json_value_free(pObj);
 					return false;
 				}
-				const json_value *pError = json_object_get(pObj, "error");
+				const json_value *pError = TranslateJsonObjectGet(pObj, "error");
 				if(pError != &json_value_none && pError->type == json_object)
 				{
-					const json_value *pMessage = json_object_get(pError, "message");
+					const json_value *pMessage = TranslateJsonObjectGet(pError, "message");
 					if(pMessage != &json_value_none && pMessage->type == json_string)
 					{
 						str_format(Out.m_Text, sizeof(Out.m_Text), "HTTP %d: %.200s", StatusCode, pMessage->u.string.ptr);
@@ -1228,7 +1193,7 @@ protected:
 				else
 				{
 					// 智谱AI格式: code/msg
-					const json_value *pMsg = json_object_get(pObj, "msg");
+					const json_value *pMsg = TranslateJsonObjectGet(pObj, "msg");
 					if(pMsg != &json_value_none && pMsg->type == json_string)
 					{
 						str_format(Out.m_Text, sizeof(Out.m_Text), "HTTP %d: %.200s", StatusCode, pMsg->u.string.ptr);
@@ -1311,8 +1276,18 @@ protected:
 				return;
 			}
 		}
-		if(s_vLlmApiStyleMemory.size() < 16)
-			s_vLlmApiStyleMemory.emplace_back(pBaseUrl, static_cast<int>(Style));
+		try
+		{
+			// 缓存满时淘汰最早记录的端点。先准备新条目，失败时保留旧缓存。
+			std::string BaseUrl(pBaseUrl);
+			if(s_vLlmApiStyleMemory.size() == 16)
+				s_vLlmApiStyleMemory.erase(s_vLlmApiStyleMemory.begin());
+			s_vLlmApiStyleMemory.emplace_back(std::move(BaseUrl), static_cast<int>(Style));
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 接口格式缓存写入失败时仍返回已取得的译文。
+		}
 	}
 
 	static std::optional<ELlmApiStyle> RecallApiStyle(const char *pBaseUrl)
@@ -1327,29 +1302,31 @@ protected:
 
 	void StartRequest(ELlmApiStyle Style)
 	{
-		m_ActiveStyle = Style;
 		const char *pPath = Style == ELlmApiStyle::RESPONSES ? "/responses" : "/chat/completions";
 		char aUrl[512];
 		str_format(aUrl, sizeof(aUrl), "%s%s", m_aBaseUrl, pPath);
 		const char *pPayload = Style == ELlmApiStyle::RESPONSES ? m_ResponsesPayload.c_str() : m_ChatPayload.c_str();
 
-		m_pHttpRequest = m_pCreateRequest(aUrl);
-		m_pHttpRequest->LogProgress(HTTPLOG::NONE);
-		m_pHttpRequest->FailOnErrorStatus(false);
-		m_pHttpRequest->MaxResponseSize(64 * 1024);
+		// 配置完成、Run未抛出前保留原请求及其解析格式，分配失败后仍可重试。
+		std::shared_ptr<IHttpRequest> pRequest = m_pCreateRequest(aUrl);
+		pRequest->LogProgress(HTTPLOG::NONE);
+		pRequest->FailOnErrorStatus(false);
+		pRequest->MaxResponseSize(64 * 1024);
 		// 连接最多 10 秒，完整请求最多 60 秒；低速限制独立于总时限。
-		m_pHttpRequest->Timeout(IsLocalTranslateEndpoint(m_aBaseUrl) ? CTimeout{2000, 30000, 100, 15} : CTimeout{10000, 60000, 100, 30});
-		m_pHttpRequest->HeaderString("Content-Type", "application/json");
-		if(m_aAuthorization[0])
-			m_pHttpRequest->HeaderString("Authorization", m_aAuthorization);
-		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(pPayload), str_length(pPayload));
-		m_pHttp->Run(m_pHttpRequest);
+		pRequest->Timeout(IsLocalTranslateEndpoint(m_aBaseUrl) ? CTimeout{2000, 30000, 100, 15} : CTimeout{10000, 60000, 100, 30});
+		pRequest->HeaderString("Content-Type", "application/json");
+		if(!m_AuthorizationHeader.empty())
+			pRequest->Header(m_AuthorizationHeader.c_str());
+		pRequest->Post(reinterpret_cast<const unsigned char *>(pPayload), str_length(pPayload));
+		m_pHttp->Run(pRequest);
+		m_pHttpRequest = std::move(pRequest);
+		m_ActiveStyle = Style;
 	}
 
-	// Chat 格式请求失败且可能是端点不支持时，判断是否值得回退尝试 Responses
-	bool ShouldRetryWithResponses() const
+	// 自动模式下端点可能不再支持记忆中的格式，允许本次请求改试一次。
+	bool ShouldRetryWithOtherApiStyle() const
 	{
-		if(m_aInitError[0] != '\0' || !m_pHttpRequest || m_pHttpRequest->State() != EHttpState::DONE || m_ConfigStyle != ELlmApiStyle::AUTO || m_ActiveStyle != ELlmApiStyle::CHAT)
+		if(m_Retried || m_aInitError[0] != '\0' || !m_pHttpRequest || m_pHttpRequest->State() != EHttpState::DONE || m_ConfigStyle != ELlmApiStyle::AUTO)
 			return false;
 		const int StatusCode = m_pHttpRequest->StatusCode();
 		if(StatusCode == 404 || StatusCode == 405)
@@ -1361,7 +1338,7 @@ protected:
 		}
 		if(StatusCode != 200)
 			return false;
-		// 200 但返回 HTML 页面（站点首页/错误页），同样尝试 Responses
+		// 200 但返回 HTML 页面（站点首页/错误页），同样改试另一种格式。
 		unsigned char *pResult = nullptr;
 		size_t ResultLength = 0;
 		m_pHttpRequest->Result(&pResult, &ResultLength);
@@ -1386,10 +1363,11 @@ public:
 				LearnApiStyle(m_aBaseUrl, m_ActiveStyle);
 			return Result;
 		}
-		if(Result.has_value() && ShouldRetryWithResponses())
+		if(Result.has_value() && Out.m_Notice != ETranslateNotice::CONTENT_REFUSED && ShouldRetryWithOtherApiStyle())
 		{
-			StartRequest(ELlmApiStyle::RESPONSES);
-			return std::nullopt; // 继续等待 Responses 请求
+			StartRequest(m_ActiveStyle == ELlmApiStyle::CHAT ? ELlmApiStyle::RESPONSES : ELlmApiStyle::CHAT);
+			m_Retried = true;
+			return std::nullopt;
 		}
 		return Result;
 	}
@@ -1501,7 +1479,7 @@ public:
 			m_ResponsesPayload += ",\"max_output_tokens\":1024";
 		m_ResponsesPayload += "}";
 		if(!NoAuth)
-			str_format(m_aAuthorization, sizeof(m_aAuthorization), "Bearer %s", pApiKey);
+			m_AuthorizationHeader = std::string("Authorization: Bearer ") + pApiKey;
 
 		// 确定初始接口格式：显式后缀 > 会话记忆 > 默认 Chat
 		std::optional<ELlmApiStyle> Remembered;
@@ -1654,7 +1632,7 @@ const char *TranslateNoticeSource(ETranslateNotice Notice)
 	return nullptr;
 }
 
-bool IsLocalTranslateEndpoint(const char *pEndpoint)
+bool IsLocalTranslateEndpoint(const char *pEndpoint) noexcept
 {
 	if(!pEndpoint)
 		return false;
@@ -1663,21 +1641,22 @@ bool IsLocalTranslateEndpoint(const char *pEndpoint)
 		pHost = str_startswith_nocase(pEndpoint, "https://");
 	if(!pHost)
 		return false;
-	const std::string Authority(pHost, strcspn(pHost, "/?#"));
-	if(Authority.empty() || Authority.find('@') != std::string::npos)
+	// 渲染警告也调用本判断，仅借用主机片段，不为配置检查分配字符串。
+	const std::string_view Authority(pHost, strcspn(pHost, "/?#"));
+	if(Authority.empty() || Authority.find('@') != std::string_view::npos)
 		return false;
-	std::string Host = Authority;
+	std::string_view Host = Authority;
 	const size_t Port = Host[0] == '[' ? Host.find(']', 1) : Host.find(':');
-	if(Port != std::string::npos)
+	if(Port != std::string_view::npos)
 	{
 		if(Host[0] == '[')
 		{
 			if(Port + 1 < Host.size() && Host[Port + 1] != ':')
 				return false;
-			Host.resize(Port + 1);
+			Host = Host.substr(0, Port + 1);
 		}
 		else
-			Host.resize(Port);
+			Host = Host.substr(0, Port);
 	}
-	return str_comp_nocase(Host.c_str(), "localhost") == 0 || Host == "127.0.0.1" || Host == "[::1]";
+	return (Host.size() == 9 && str_comp_nocase_num(Host.data(), "localhost", 9) == 0) || Host == "127.0.0.1" || Host == "[::1]";
 }

@@ -10,6 +10,7 @@
 #include <engine/storage.h>
 
 #include <algorithm>
+#include <new>
 #include <utility>
 
 namespace
@@ -33,7 +34,10 @@ namespace
 		const bool Written = io_write(File, Content.data(), static_cast<unsigned>(Content.size())) == Content.size();
 		const bool Closed = io_close(File) == 0;
 		if(!Written || !Closed || !pStorage->RenameFile(aTempPath, CACHE_PATH, IStorage::TYPE_SAVE, false))
+		{
+			pStorage->RemoveFile(aTempPath, IStorage::TYPE_SAVE);
 			log_warn("public-word-filter", "Cannot save public word cache; current words remain active");
+		}
 	}
 }
 
@@ -91,50 +95,65 @@ bool QmPublicWordFilter::CState::Filter(std::string &Text, const char *pReplacem
 {
 	if(!m_Enabled || m_List.Words().empty())
 		return false;
-	std::vector<std::pair<size_t, size_t>> vMatches;
-	for(const std::string &Word : m_List.Words())
+	const size_t PreviousMatchCount = pMatched ? pMatched->size() : 0;
+	try
 	{
-		const char *pCursor = Text.c_str();
-		const char *pEnd = nullptr;
-		bool Matched = false;
-		while(const char *pStart = str_utf8_find_nocase(pCursor, Word.c_str(), &pEnd))
+		std::vector<std::pair<size_t, size_t>> vMatches;
+		for(const std::string &Word : m_List.Words())
 		{
-			vMatches.emplace_back(pStart - Text.c_str(), pEnd - Text.c_str());
-			pCursor = pEnd;
-			Matched = true;
+			const char *pCursor = Text.c_str();
+			const char *pEnd = nullptr;
+			bool Matched = false;
+			while(const char *pStart = str_utf8_find_nocase(pCursor, Word.c_str(), &pEnd))
+			{
+				vMatches.emplace_back(pStart - Text.c_str(), pEnd - Text.c_str());
+				pCursor = pEnd;
+				Matched = true;
+			}
+			if(Matched && pMatched && std::find(pMatched->begin(), pMatched->end(), Word) == pMatched->end())
+				pMatched->push_back(Word);
 		}
-		if(Matched && pMatched && std::find(pMatched->begin(), pMatched->end(), Word) == pMatched->end())
-			pMatched->push_back(Word);
+		if(vMatches.empty())
+			return false;
+		std::sort(vMatches.begin(), vMatches.end());
+		// 先在原文收集区间，合并重叠词，避免替换字符再次参与匹配。
+		std::string Result;
+		const char *pMask = pReplacement && pReplacement[0] ? pReplacement : "*";
+		size_t Cursor = 0;
+		for(size_t Index = 0; Index < vMatches.size(); ++Index)
+		{
+			const size_t Start = vMatches[Index].first;
+			size_t End = vMatches[Index].second;
+			while(Index + 1 < vMatches.size() && vMatches[Index + 1].first < End)
+				End = std::max(End, vMatches[++Index].second);
+			Result.append(Text, Cursor, Start - Cursor);
+			size_t Count = 1;
+			if(MultiReplace)
+			{
+				Count = 0;
+				for(size_t Position = Start; Position < End; ++Position)
+					if((static_cast<unsigned char>(Text[Position]) & 0xc0) != 0x80)
+						++Count;
+			}
+			for(size_t Position = 0; Position < Count; ++Position)
+				Result += pMask;
+			Cursor = End;
+		}
+		Result.append(Text, Cursor, std::string::npos);
+		Text.swap(Result);
+		return true;
 	}
-	if(vMatches.empty())
+	catch(const std::bad_alloc &)
+	{
+		if(pMatched)
+			pMatched->resize(PreviousMatchCount);
 		return false;
-	std::sort(vMatches.begin(), vMatches.end());
-	// 先在原文收集区间，合并重叠词，避免替换字符再次参与匹配。
-	std::string Result;
-	const char *pMask = pReplacement && pReplacement[0] ? pReplacement : "*";
-	size_t Cursor = 0;
-	for(size_t Index = 0; Index < vMatches.size(); ++Index)
-	{
-		const size_t Start = vMatches[Index].first;
-		size_t End = vMatches[Index].second;
-		while(Index + 1 < vMatches.size() && vMatches[Index + 1].first < End)
-			End = std::max(End, vMatches[++Index].second);
-		Result.append(Text, Cursor, Start - Cursor);
-		size_t Count = 1;
-		if(MultiReplace)
-		{
-			Count = 0;
-			for(size_t Position = Start; Position < End; ++Position)
-				if((static_cast<unsigned char>(Text[Position]) & 0xc0) != 0x80)
-					++Count;
-		}
-		for(size_t Position = 0; Position < Count; ++Position)
-			Result += pMask;
-		Cursor = End;
 	}
-	Result.append(Text, Cursor, std::string::npos);
-	Text.swap(Result);
-	return true;
+}
+
+QmPublicWordFilter::CClient::CClient(TRequestFactory RequestFactory) :
+	m_CreateRequest(RequestFactory ? RequestFactory : HttpGet)
+{
 }
 
 QmPublicWordFilter::CClient::~CClient()
@@ -192,7 +211,12 @@ void QmPublicWordFilter::CClient::Update(IHttp *pHttp, IStorage *pStorage, bool 
 	m_RequestGeneration = m_State.StartRefresh(Now);
 	if(m_RequestGeneration == 0)
 		return;
-	m_pRequest = HttpGet(PUBLIC_WORDS_URL);
+	m_pRequest = m_CreateRequest(PUBLIC_WORDS_URL);
+	if(!m_pRequest)
+	{
+		m_State.CompleteRefresh(m_RequestGeneration, std::nullopt, Now);
+		return;
+	}
 	m_pRequest->Timeout(CTimeout{4000, 10000, 256, 5});
 	m_pRequest->MaxResponseSize(QmWordFilterList::MAX_FILE_BYTES);
 	m_pRequest->LogProgress(HTTPLOG::NONE);

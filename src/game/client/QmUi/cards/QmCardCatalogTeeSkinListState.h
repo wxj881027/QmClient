@@ -4,11 +4,13 @@
 #include <game/client/QmUi/UiIconActionStrip.h>
 #include <game/client/components/qmclient/recent_tee_skins.h>
 #include <game/client/components/settings_resource_jobs.h>
+#include <game/client/ui.h>
 
 #include <map>
 #include <optional>
 #include <string>
 #include <tuple>
+#include <utility>
 
 inline bool SettingsTeeSkinEntryMatches(const char *pName, const std::optional<SSettingsSkinListColorKey> &Color, const SQmRecentTeeSkin &Selected)
 {
@@ -20,6 +22,26 @@ inline bool SettingsTeeSkinEntryMatches(const char *pName, const std::optional<S
 		return false;
 	return !Color->m_UseCustomColor ||
 	       (static_cast<unsigned>(Color->m_ColorBody) == Selected.m_ColorBody && static_cast<unsigned>(Color->m_ColorFeet) == Selected.m_ColorFeet);
+}
+
+struct SSettingsTee7SkinDeletion
+{
+	std::string m_Name;
+	int m_ReplacementIndex;
+};
+
+inline std::optional<SSettingsTee7SkinDeletion> TakeSettingsTee7SkinDeletion(std::string &PendingName, CUi::SConfirmPopupContext::EConfirmationResult Result, bool PopupOpen, const char *pSelectedName, int SelectedIndex)
+{
+	if(PendingName.empty())
+		return std::nullopt;
+	if(Result == CUi::SConfirmPopupContext::CONFIRMED)
+	{
+		const int ReplacementIndex = PendingName == pSelectedName ? SelectedIndex : -1;
+		return SSettingsTee7SkinDeletion{std::exchange(PendingName, std::string{}), ReplacementIndex};
+	}
+	if(Result == CUi::SConfirmPopupContext::CANCELED || !PopupOpen)
+		PendingName.clear();
+	return std::nullopt;
 }
 
 // 列表异步重建和切换编辑对象时，交互与动画标识仍属于同一款皮肤/配色条目。

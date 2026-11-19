@@ -12,6 +12,8 @@
 #include <engine/shared/linereader.h>
 #include <engine/storage.h>
 
+#include <algorithm>
+
 const char *Localize(const char *pStr, const char *pContext)
 {
 	const bool AllowDefaultContextFallback = !std::string_view(pContext).starts_with("Editor");
@@ -20,17 +22,20 @@ const char *Localize(const char *pStr, const char *pContext)
 }
 
 void CLocalizationDatabase::LoadIndexfile(IStorage *pStorage, IConsole *pConsole)
+try
 {
-	m_vLanguages.clear();
+	std::vector<CLanguage> vLanguages;
 
 	const std::vector<std::string> vEnglishLanguageCodes = {"en"};
-	m_vLanguages.emplace_back("English", "", 826, vEnglishLanguageCodes);
+	vLanguages.emplace_back("English", "", 826, vEnglishLanguageCodes);
 
 	const char *pFilename = "languages/index.txt";
 	CLineReader LineReader;
 	if(!LineReader.OpenFile(pStorage->OpenFile(pFilename, IOFLAG_READ, IStorage::TYPE_ALL)))
 	{
 		log_error("localization", "Couldn't open index file '%s'", pFilename);
+		if(m_vLanguages.empty())
+			m_vLanguages.swap(vLanguages);
 		return;
 	}
 
@@ -102,10 +107,15 @@ void CLocalizationDatabase::LoadIndexfile(IStorage *pStorage, IConsole *pConsole
 
 		char aFilename[IO_MAX_PATH_LENGTH];
 		str_format(aFilename, sizeof(aFilename), "languages/%s.txt", aEnglishName);
-		m_vLanguages.emplace_back(aNativeName, aFilename, str_toint(aCountryCode), vLanguageCodes);
+		vLanguages.emplace_back(aNativeName, aFilename, str_toint(aCountryCode), vLanguageCodes);
 	}
 
-	std::sort(m_vLanguages.begin(), m_vLanguages.end());
+	std::sort(vLanguages.begin(), vLanguages.end());
+	m_vLanguages.swap(vLanguages);
+}
+catch(...)
+{
+	// 候选目录未完成时保留已有目录；首次失败允许沿现有空目录回退。
 }
 
 void CLocalizationDatabase::SelectDefaultLanguage(IConsole *pConsole, char *pFilename, size_t Length) const
@@ -168,6 +178,7 @@ void CLocalizationDatabase::SelectDefaultLanguage(IConsole *pConsole, char *pFil
 }
 
 bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, IConsole *pConsole, bool Clear)
+try
 {
 	// empty string means unload
 	if(pFilename[0] == 0)
@@ -184,15 +195,13 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 		return false;
 	}
 
-	log_info("localization", "loaded '%s'", pFilename);
-	if(Clear)
-	{
-		m_vStrings.clear();
-		m_StringsHeap.Reset();
-	}
-	char aContext[512];
-	char aOrigin[512];
-	char aReplacement[512];
+	CLocalizationDatabase Candidate(m_pfnStringsAllocate);
+	if(!Clear)
+		Candidate.m_vStrings = m_vStrings;
+	bool HasReplacements = false;
+	std::string Context;
+	std::string Origin;
+	std::string Replacement;
 	int Line = 0;
 	while(const char *pLine = LineReader.Get())
 	{
@@ -205,47 +214,64 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 
 		if(LocalizationIsContextLine(pLine)) // context
 		{
-			size_t Len = str_length(pLine);
-			str_truncate(aContext, sizeof(aContext), pLine + 1, Len - 2);
+			const size_t Length = str_length(pLine);
+			Context.assign(pLine + 1, Length - 2);
 			pLine = LineReader.Get();
 			if(!pLine)
 			{
-				log_error("localization", "unexpected end of file after context line '%s' on line %d", aContext, Line);
+				log_error("localization", "unexpected end of file after context line '%s' on line %d", Context.c_str(), Line);
 				break;
 			}
 			Line++;
 		}
 		else
 		{
-			aContext[0] = '\0';
+			Context.clear();
 		}
 
-		str_copy(aOrigin, pLine);
+		Origin.assign(pLine);
 		// 语言文件里的 \n 是转义写法，入库前还原成真实换行，否则含换行的文案不可翻译。
-		str_unescape_newlines(aOrigin);
+		str_unescape_newlines(Origin.data());
 		const char *pReplacement = LineReader.Get();
 		if(!pReplacement)
 		{
-			log_error("localization", "unexpected end of file after original '%s' on line %d", aOrigin, Line);
+			log_error("localization", "unexpected end of file after original '%s' on line %d", Origin.c_str(), Line);
 			break;
 		}
 		Line++;
 
 		if(pReplacement[0] != '=' || pReplacement[1] != '=' || pReplacement[2] != ' ')
 		{
-			log_error("localization", "malformed replacement '%s' for original '%s' on line %d", pReplacement, aOrigin, Line);
+			log_error("localization", "malformed replacement '%s' for original '%s' on line %d", pReplacement, Origin.c_str(), Line);
 			continue;
 		}
 
-		if(str_comp(pReplacement, "== ") == 0)
+		if(pReplacement[3] == '\0')
 			continue;
 
-		str_copy(aReplacement, pReplacement + 3);
-		str_unescape_newlines(aReplacement);
-		AddString(aOrigin, aReplacement, aContext);
+		Replacement.assign(pReplacement + 3);
+		str_unescape_newlines(Replacement.data());
+		const char *pStored = Candidate.m_StringsHeap.StoreString(Replacement.c_str());
+		Candidate.m_vStrings.emplace_back(str_quickhash(Origin.c_str()), str_quickhash(Context.c_str()), pStored);
+		HasReplacements = true;
 	}
-	std::sort(m_vStrings.begin(), m_vStrings.end());
+	// 逆序后稳定排序，让同一键排在最前的是最后读到的译文，包括覆盖追加前的条目。
+	auto &vStrings = Candidate.m_vStrings;
+	std::reverse(vStrings.begin(), vStrings.end());
+	std::stable_sort(vStrings.begin(), vStrings.end());
+	vStrings.erase(std::unique(vStrings.begin(), vStrings.end()), vStrings.end());
+	log_info("localization", "loaded '%s'", pFilename);
+	if(Clear)
+		m_StringsHeap.SwapStorage(Candidate.m_StringsHeap);
+	else if(HasReplacements)
+		m_StringsHeap.Absorb(Candidate.m_StringsHeap);
+	m_vStrings.swap(Candidate.m_vStrings);
 	return true;
+}
+catch(...)
+{
+	// 新译文准备失败不使旧指针失效；追加加载提交时接管新块并保留旧块。
+	return false;
 }
 
 void CLocalizationDatabase::AddString(const char *pOrgStr, const char *pNewStr, const char *pContext)

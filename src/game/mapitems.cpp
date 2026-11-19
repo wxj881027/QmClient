@@ -1,6 +1,9 @@
 #include <game/mapitems.h>
 
+#include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <limits>
 
 ColorRGBA CEnvPoint::ColorValue() const
 {
@@ -203,13 +206,19 @@ CColor UnpackColor(int PackedColor)
 
 void RotatePoints(const ivec2 &Center, ivec2 *pPoints, size_t NumPoints, float Rotation)
 {
+	if(Rotation == 0.0f || !std::isfinite(Rotation))
+		return;
+
 	const float Cos = std::cos(Rotation);
 	const float Sin = std::sin(Rotation);
 	for(size_t i = 0; i < NumPoints; i++)
 	{
 		ivec2 &Point = pPoints[i];
-		const ivec2 Offset = Point - Center;
-		Point.x = (int)(Offset.x * Cos - Offset.y * Sin + Center.x);
-		Point.y = (int)(Offset.x * Sin + Offset.y * Cos + Center.y);
+		const float OffsetX = static_cast<float>(static_cast<int64_t>(Point.x) - Center.x);
+		const float OffsetY = static_cast<float>(static_cast<int64_t>(Point.y) - Center.y);
+		const float X = OffsetX * Cos - OffsetY * Sin + Center.x;
+		const float Y = OffsetX * Sin + OffsetY * Cos + Center.y;
+		Point.x = static_cast<int>(std::clamp<double>(X, std::numeric_limits<int>::min(), std::numeric_limits<int>::max()));
+		Point.y = static_cast<int>(std::clamp<double>(Y, std::numeric_limits<int>::min(), std::numeric_limits<int>::max()));
 	}
 }

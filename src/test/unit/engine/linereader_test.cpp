@@ -8,6 +8,8 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <type_traits>
+
 CLineReader::EOpenResult TestFileLineReaderRaw(const char *pWritten, unsigned WrittenLength, std::initializer_list<const char *> pExpectedLines, bool ExpectSuccess, bool WriteBom, bool RejectInvalidLines = false)
 {
 	CTestInfo Info;
@@ -64,6 +66,12 @@ void TestFileLineReader(const char *pWritten, std::initializer_list<const char *
 	TestFileLineReaderRaw(pWritten, str_length(pWritten), pReads, true);
 }
 
+TEST(LineReader, CannotCopyOwnedBuffer)
+{
+	EXPECT_FALSE(std::is_copy_constructible_v<CLineReader>);
+	EXPECT_FALSE(std::is_copy_assignable_v<CLineReader>);
+}
+
 TEST(LineReader, LineFeedLineEndings)
 {
 	TestFileLineReader("foo\nbar\nbaz", {"foo", "bar", "baz"});
@@ -89,6 +97,13 @@ TEST(LineReader, MixedLineEndings)
 	TestFileLineReader("1\n2\r\n3\n4\n5\r\n6\n", {"1", "2", "3", "4", "5", "6"});
 	TestFileLineReader("1\n2\r\n3\n4\n5\r\n6\r\n", {"1", "2", "3", "4", "5", "6"});
 	TestFileLineReader("1\n2\r\n3\n4\n5\r\n6\r", {"1", "2", "3", "4", "5"}); // Line with trailing `\r` is skipped
+}
+
+TEST(LineReader, ShortUtf8WithoutBomKeepsItsText)
+{
+	TestFileLineReaderRaw("x\n", 2, {"x"}, true, false);
+	const char aCharacter[] = "\xe4\xbd\xa0";
+	TestFileLineReaderRaw(aCharacter, sizeof(aCharacter) - 1, {aCharacter}, true, false);
 }
 
 TEST(LineReader, EmptyLines)

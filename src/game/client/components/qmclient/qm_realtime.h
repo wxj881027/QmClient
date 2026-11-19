@@ -3,10 +3,17 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <memory>
+#include <new>
 #include <string>
+#include <utility>
 
 typedef struct _json_value json_value;
+
+// 与账号通道接收上限一致；JSON 节点、成员、数组和字符串共用分配预算。
+inline constexpr size_t QMCLIENT_REALTIME_MAX_BYTES = 8 * 1024 * 1024;
+inline constexpr size_t QMCLIENT_REALTIME_JSON_MEMORY_BUDGET = 16 * 1024 * 1024;
 
 enum class EQmRealtimeEvent
 {
@@ -77,7 +84,27 @@ struct SQmRealtimeMessage
 	std::string m_EmoticonServerAddress;
 };
 
+// 输入/JSON分配超限或准备失败返回false并清空输出；payload共享整棵JSON树的所有权。
 bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &OutMessage);
+
+// 保持最近 MaxEvents 条（默认128）；上限为0或准备失败时保留原队列和输入。
+template<typename TAllocator>
+bool TryQueueQmRealtimeMessage(std::deque<SQmRealtimeMessage, TAllocator> &Events, SQmRealtimeMessage &&Message, size_t MaxEvents = 128)
+{
+	if(MaxEvents == 0)
+		return false;
+	try
+	{
+		Events.push_back(std::move(Message));
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	while(Events.size() > MaxEvents)
+		Events.pop_front();
+	return true;
+}
 
 // 空配置使用中心服；只有固定加密入口允许发送认证凭据。
 const char *QmRealtimeEffectiveUrl(const char *pConfiguredUrl);

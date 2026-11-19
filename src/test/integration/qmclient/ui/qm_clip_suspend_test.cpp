@@ -1,5 +1,6 @@
 // 通过真实 CUi 和 GPU 边界记录验证加载界面重入时的裁剪恢复。
 #include <test/support/qm_real_ui_fixture.h>
+#include <test/support/rejectable_allocation_resource.h>
 
 #include <array>
 #include <vector>
@@ -34,7 +35,8 @@ namespace
 	protected:
 		CClipGraphics m_Graphics;
 		qm_ui_test::CRealUiTestKernel m_Kernel{&m_Graphics, nullptr, nullptr};
-		CUi m_Ui;
+		CRejectableAllocationResource m_ClipMemory;
+		CUi m_Ui{nullptr, &m_ClipMemory};
 		const CUIRect m_Outer{10, 20, 200, 160};
 		const CUIRect m_Inner{30, 40, 80, 60};
 
@@ -185,4 +187,24 @@ TEST_F(QmClipSuspend, PendingBatchesUseTheClipOfTheirOwnScope)
 		ExpectClip(m_Outer);
 	}
 	m_Ui.ClipDisable();
+}
+
+TEST_F(QmClipSuspend, SuspendedStackKeepsItsAllocationDomainAndRestoresAfterRejectedGrowth)
+{
+	m_Ui.ClipEnable(&m_Outer);
+	m_Ui.ClipEnable(&m_Inner);
+	{
+		CUiScopedClipSuspend LoadingScope(&m_Ui);
+		m_ClipMemory.m_Reject = true;
+		EXPECT_THROW(m_Ui.ClipEnable(&m_Inner), std::bad_alloc);
+		EXPECT_FALSE(m_Ui.IsClipped());
+		EXPECT_FALSE(m_Graphics.m_Clipped);
+	}
+	// 关闭作用域只交换同域存储，内存域仍拒收时也必须恢复原来的两层裁剪。
+	ExpectClip(m_Inner);
+	m_ClipMemory.m_Reject = false;
+	m_Ui.ClipDisable();
+	ExpectClip(m_Outer);
+	m_Ui.ClipDisable();
+	EXPECT_FALSE(m_Ui.IsClipped());
 }

@@ -243,7 +243,8 @@ void CLayerSwitch::BrushRotate(float Amount)
 
 void CLayerSwitch::FillSelection(bool Empty, CLayer *pBrush, CUIRect Rect)
 {
-	if(m_Readonly || (!Empty && pBrush->m_Type != LAYERTYPE_TILES))
+	const CLayerSwitch *pLt;
+	if(m_Readonly || !ResolveFillBrush(Empty, pBrush, pLt))
 		return;
 
 	Snap(&Rect);
@@ -252,8 +253,6 @@ void CLayerSwitch::FillSelection(bool Empty, CLayer *pBrush, CUIRect Rect)
 	int sy = ConvertY(Rect.y);
 	int w = ConvertX(Rect.w);
 	int h = ConvertY(Rect.h);
-
-	CLayerSwitch *pLt = static_cast<CLayerSwitch *>(pBrush);
 
 	bool Destructive = Editor()->m_BrushDrawDestructive || Empty || pLt->IsEmpty();
 

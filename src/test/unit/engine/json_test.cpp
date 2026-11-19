@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdlib>
+#include <memory>
 #include <string>
 
 static void TestParseValidation(const char *pJson, bool ExpectedSuccess)
@@ -42,6 +43,80 @@ TEST(Json, ParseValidation)
 	TestParseValidation("{\"a\": [{\"a\": \"\xff\"}]}", false);
 }
 
+TEST(Json, ParseValidationChecksUtf8AfterDecodedNull)
+{
+	TestParseValidation(R"({"left\u0000right":"left\u0000right"})", true);
+	TestParseValidation("\"left\\u0000\xff\"", false);
+	TestParseValidation("{\"left\\u0000\xff\":0}", false);
+}
+
+TEST(Json, ParseRejectsRawNullWithinInput)
+{
+	const char aJson[] = "[0]\0 ";
+	json_value *pParsed = JsonParse(aJson, sizeof(aJson) - 1);
+	EXPECT_EQ(pParsed, nullptr);
+	json_value_free(pParsed);
+
+	json_settings Settings{};
+	char aError[json_error_max] = {};
+	pParsed = JsonParseEx(&Settings, aJson, sizeof(aJson) - 1, aError);
+	EXPECT_EQ(pParsed, nullptr);
+	EXPECT_STREQ(aError, "unexpected NUL in JSON input");
+	json_value_free(pParsed);
+}
+
+TEST(Json, ParseExUsesCustomDeallocatorForInvalidUtf8)
+{
+	struct SAllocationCounts
+	{
+		int m_Allocated = 0;
+		int m_Freed = 0;
+	} Counts;
+	json_settings Settings{};
+	Settings.user_data = &Counts;
+	Settings.mem_alloc = [](size_t Size, int Zero, void *pUser) {
+		void *pMemory = Zero ? std::calloc(1, Size) : std::malloc(Size);
+		if(pMemory)
+			++static_cast<SAllocationCounts *>(pUser)->m_Allocated;
+		return pMemory;
+	};
+	Settings.mem_free = [](void *pMemory, void *pUser) {
+		if(pMemory)
+			++static_cast<SAllocationCounts *>(pUser)->m_Freed;
+		std::free(pMemory);
+	};
+	const char aJson[] = "\"\xff\"";
+	json_value *pParsed = JsonParseEx(&Settings, aJson, sizeof(aJson) - 1, nullptr);
+	EXPECT_EQ(pParsed, nullptr);
+	json_value_free_ex(&Settings, pParsed);
+	EXPECT_GT(Counts.m_Allocated, 0);
+	EXPECT_EQ(Counts.m_Freed, Counts.m_Allocated);
+}
+
+TEST(Json, ObjectLookupUsesFullMemberName)
+{
+	const char aJson[] = R"({"label\u0000suffix":1,"label":2})";
+	const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(JsonParse(aJson, sizeof(aJson) - 1), json_value_free);
+	ASSERT_NE(pRoot, nullptr);
+	EXPECT_EQ(json_int_get(json_object_get(pRoot.get(), "label")), 2);
+}
+
+TEST(Json, ArrayLookupReturnsNoneForOutOfBoundsIndex)
+{
+	const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(JsonParse("[7]", 3), json_value_free);
+	ASSERT_NE(pRoot, nullptr);
+	EXPECT_EQ(json_array_get(pRoot.get(), -1), &json_value_none);
+	EXPECT_EQ(json_array_get(pRoot.get(), 1), &json_value_none);
+	EXPECT_EQ(json_int_get(json_array_get(pRoot.get(), 0)), 7);
+}
+
+TEST(Json, IntegerGetReturnsZeroForString)
+{
+	const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(JsonParse("\"123\"", 5), json_value_free);
+	ASSERT_NE(pRoot, nullptr);
+	EXPECT_EQ(json_int_get(pRoot.get()), 0);
+}
+
 TEST(Json, Escape)
 {
 	char aBuf[128];
@@ -68,6 +143,13 @@ TEST(Json, Escape)
 	EXPECT_STREQ(EscapeJson(aBuf, 5, "aaaaaa"), "aaaa");
 	EXPECT_STREQ(EscapeJson(aBuf, 6, "aaaaaa"), "aaaaa");
 	EXPECT_STREQ(EscapeJson(aBuf, 7, "aaaaaa"), "aaaaaa");
+}
+
+TEST(Json, EscapeTruncatesAtUtf8CharacterBoundary)
+{
+	char aBuffer[7];
+	EXPECT_STREQ(EscapeJson(aBuffer, sizeof(aBuffer) - 1, "a\n愛"), "a\\n");
+	EXPECT_STREQ(EscapeJson(aBuffer, sizeof(aBuffer), "a\n愛"), "a\\n愛");
 }
 
 TEST(JsonDeathTest, DeepNestingDoesNotOverflowValidationStack)

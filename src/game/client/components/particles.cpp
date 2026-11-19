@@ -4,14 +4,17 @@
 
 #include <base/dbg.h>
 #include <base/math.h>
-#include <base/mem.h>
 
 #include <engine/demo.h>
 #include <engine/graphics.h>
 
 #include <generated/client_data.h>
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/gameclient.h>
+
+#include <cstring>
+#include <type_traits>
 
 CParticles::CParticles()
 {
@@ -43,6 +46,9 @@ void CParticles::OnReset()
 
 bool CParticles::Add(int Group, CParticle *pPart, float TimePassed)
 {
+	if(!std::isfinite(TimePassed) || !pPart->CanMove(vec2(0.0f, 0.0f)))
+		return false;
+
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
 		const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
@@ -64,8 +70,10 @@ bool CParticles::Add(int Group, CParticle *pPart, float TimePassed)
 	if(m_FirstFree != -1)
 		m_aParticles[m_FirstFree].m_PrevPart = -1;
 
-	// copy data
-	m_aParticles[Id] = *pPart;
+	// 调用方只填写粒子参数，链表索引和当前寿命由这里初始化。
+	static_assert(std::is_trivially_copyable_v<CParticle>);
+	std::memcpy(&m_aParticles[Id], pPart, sizeof(*pPart));
+	m_aParticles[Id].m_Life = TimePassed;
 
 	// insert to the group list
 	m_aParticles[Id].m_PrevPart = -1;
@@ -73,15 +81,12 @@ bool CParticles::Add(int Group, CParticle *pPart, float TimePassed)
 	if(m_aFirstPart[Group] != -1)
 		m_aParticles[m_aFirstPart[Group]].m_PrevPart = Id;
 	m_aFirstPart[Group] = Id;
-
-	// set some parameters
-	m_aParticles[Id].m_Life = TimePassed;
 	return true;
 }
 
 void CParticles::Update(float TimePassed)
 {
-	if(TimePassed <= 0.0f)
+	if(!std::isfinite(TimePassed) || TimePassed <= 0.0f)
 		return;
 
 	m_FrictionFraction += TimePassed;
@@ -96,6 +101,8 @@ void CParticles::Update(float TimePassed)
 		m_FrictionFraction -= 0.05f;
 	}
 
+	const CCollision *pCollision = Collision();
+	const bool QuadCollisionEnabled = pCollision->QmAxiomQuadCollisionEnabled();
 	for(int &FirstPart : m_aFirstPart)
 	{
 		int i = FirstPart;
@@ -108,22 +115,30 @@ void CParticles::Update(float TimePassed)
 				m_aParticles[i].m_Vel *= m_aParticles[i].m_Friction;
 
 			// move the point
-			vec2 Vel = m_aParticles[i].m_Vel * TimePassed;
-			if(m_aParticles[i].m_Collides)
+			CParticle &Particle = m_aParticles[i];
+			vec2 Vel = Particle.m_Vel * TimePassed;
+			const bool CanMove = Particle.CanMove(Vel);
+			const float NextLife = Particle.m_Life + TimePassed;
+			const bool Expired = NextLife > Particle.m_LifeSpan;
+			// 过期粒子跳过碰撞查询，保留同帧其余粒子的随机数顺序。
+			const float Elasticity = CanMove && Particle.m_Collides ? random_float(0.1f, 1.0f) : 0.0f;
+			// Axiom 四边形命中后，MovePoint 还会沿线段逐点查询图块。
+			if(CanMove && !Expired &&
+				(!Particle.m_Collides || !QuadCollisionEnabled || QmCollision::CanQueryLine(Particle.m_Pos, Particle.m_Pos + Vel)))
 			{
-				Collision()->MovePoint(&m_aParticles[i].m_Pos, &Vel, random_float(0.1f, 1.0f), nullptr);
+				if(Particle.m_Collides)
+				{
+					pCollision->MovePoint(&Particle.m_Pos, &Vel, Elasticity, nullptr);
+				}
+				else
+				{
+					Particle.m_Pos += Vel;
+				}
+				Particle.m_Vel = Vel * (1.0f / TimePassed);
+				Particle.m_Life = NextLife;
+				Particle.m_Rot += TimePassed * Particle.m_Rotspeed;
 			}
 			else
-			{
-				m_aParticles[i].m_Pos += Vel;
-			}
-			m_aParticles[i].m_Vel = Vel * (1.0f / TimePassed);
-
-			m_aParticles[i].m_Life += TimePassed;
-			m_aParticles[i].m_Rot += TimePassed * m_aParticles[i].m_Rotspeed;
-
-			// check particle death
-			if(m_aParticles[i].m_Life > m_aParticles[i].m_LifeSpan)
 			{
 				// remove it from the group list
 				if(m_aParticles[i].m_PrevPart != -1)

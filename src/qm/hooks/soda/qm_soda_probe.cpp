@@ -1,11 +1,11 @@
 #include "qm_soda_probe.h"
 
 #include <engine/external/json-parser/json.h>
+#include <qm/hooks/netease/qm_netease_cdp.h>
 
 #include <algorithm>
-#include <cctype>
 #include <cmath>
-#include <cstring>
+#include <memory>
 #include <string>
 #include <string_view>
 
@@ -45,11 +45,11 @@ namespace QmSodaProbe
 			return nullptr;
 		}
 
-		std::string StringValue(const json_value *pValue)
+		std::string_view StringValue(const json_value *pValue)
 		{
 			if(pValue == nullptr || pValue->type != json_string || pValue->u.string.ptr == nullptr)
 				return {};
-			return std::string(pValue->u.string.ptr, pValue->u.string.length);
+			return {pValue->u.string.ptr, pValue->u.string.length};
 		}
 
 		double NumberValue(const json_value *pValue, double Default = 0)
@@ -70,6 +70,14 @@ namespace QmSodaProbe
 			if(pValue->type == json_boolean)
 				return pValue->u.boolean != 0;
 			return Default;
+		}
+
+		int64_t SecondsToMilliseconds(double Seconds, int64_t Unavailable)
+		{
+			const double Milliseconds = Seconds * 1000.0;
+			if(!std::isfinite(Milliseconds) || Milliseconds < 0.0 || Milliseconds >= 0x1p63)
+				return Unavailable;
+			return static_cast<int64_t>(Milliseconds);
 		}
 	}
 
@@ -137,6 +145,40 @@ catch(e){cleanup();resolve({err:'send:'+String(e&&e.message||e)});return;}
 		return Bridge;
 	}
 
+	std::string PickNodeTarget(std::string_view Json, uint16_t Port)
+	{
+		if(Port == 0 || Json.empty() || Json.size() > QmNeteaseCdp::MAX_TARGET_JSON_BYTES)
+			return {};
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(json_parse(Json.data(), Json.size()), json_value_free);
+		if(!pRoot || pRoot->type != json_array)
+			return {};
+
+		std::string_view Fallback;
+		for(unsigned int Index = 0; Index < pRoot->u.array.length; ++Index)
+		{
+			const json_value *pEntry = pRoot->u.array.values[Index];
+			const std::string_view Url = StringValue(Field(pEntry, "webSocketDebuggerUrl"));
+			uint16_t TargetPort = 0;
+			if(!QmNeteaseCdp::ParseLoopbackWebSocketUrl(Url, &TargetPort) || TargetPort != Port)
+				continue;
+			if(StringValue(Field(pEntry, "type")) == "node")
+				return std::string(Url);
+			if(Fallback.empty())
+				Fallback = Url;
+		}
+		return std::string(Fallback);
+	}
+
+	int64_t SPlaybackSnapshot::PositionMs() const
+	{
+		return SecondsToMilliseconds(m_ProgressSeconds, -1);
+	}
+
+	int64_t SPlaybackSnapshot::DurationMs() const
+	{
+		return SecondsToMilliseconds(m_DurationSeconds, 0);
+	}
+
 	bool ParseExtractionJson(std::string_view Json, SPlaybackSnapshot *pOut)
 	{
 		if(pOut == nullptr)
@@ -147,11 +189,10 @@ catch(e){cleanup();resolve({err:'send:'+String(e&&e.message||e)});return;}
 			pOut->m_Error = "empty extraction";
 			return false;
 		}
-		json_value *pRoot = json_parse(Json.data(), Json.size());
+		const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Json.data(), Json.size()), json_value_free);
+		const json_value *pRoot = Root.get();
 		if(pRoot == nullptr || pRoot->type != json_object)
 		{
-			if(pRoot != nullptr)
-				json_value_free(pRoot);
 			pOut->m_Error = "invalid json";
 			return false;
 		}
@@ -161,7 +202,7 @@ catch(e){cleanup();resolve({err:'send:'+String(e&&e.message||e)});return;}
 		{
 			pOut->m_IsPlaying = BooleanValue(Field(pRoot, "isPlaying"));
 			pOut->m_IsLoading = BooleanValue(Field(pRoot, "isLoading"));
-			pOut->m_ProgressSeconds = NumberValue(Field(pRoot, "progressSeconds"));
+			pOut->m_ProgressSeconds = NumberValue(Field(pRoot, "progressSeconds"), -1);
 			pOut->m_DurationSeconds = NumberValue(Field(pRoot, "durationSeconds"));
 			pOut->m_MediaId = StringValue(Field(pRoot, "mediaId"));
 			pOut->m_Name = StringValue(Field(pRoot, "name"));
@@ -173,7 +214,7 @@ catch(e){cleanup();resolve({err:'send:'+String(e&&e.message||e)});return;}
 			{
 				for(unsigned int Index = 0; Index < pArtists->u.array.length; ++Index)
 				{
-					const std::string Name = StringValue(pArtists->u.array.values[Index]);
+					const std::string_view Name = StringValue(pArtists->u.array.values[Index]);
 					if(Name.empty())
 						continue;
 					if(!pOut->m_Artist.empty())
@@ -193,7 +234,6 @@ catch(e){cleanup();resolve({err:'send:'+String(e&&e.message||e)});return;}
 		}
 		else if(pOut->m_Error.empty())
 			pOut->m_Error = "extraction not ok";
-		json_value_free(pRoot);
 		return pOut->m_Ok;
 	}
 } // namespace QmSodaProbe

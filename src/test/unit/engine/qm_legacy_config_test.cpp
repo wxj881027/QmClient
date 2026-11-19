@@ -56,6 +56,13 @@ TEST(QmLegacyBind, NestedBindMigratesCommandWithoutChangingEscapedChatMessage)
 	EXPECT_EQ(QmLegacyConfig::MigrateBindCommand("bind x tc_show_chat_client 0"), "bind x qm_show_chat_client 0");
 }
 
+TEST(QmLegacyBind, EscapedBackslashBeforeClosingQuoteKeepsChatTextLiteral)
+{
+	const char *pOld = R"(echo "C:\\maps\\"; say "note; tc_jump_hint stays literal"; toggle tc_jump_hint 0 1)";
+	const char *pNew = R"(echo "C:\\maps\\"; say "note; tc_jump_hint stays literal"; toggle qm_jump_hint 0 1)";
+	EXPECT_EQ(QmLegacyConfig::MigrateBindCommand(pOld), pNew);
+}
+
 TEST(QmLegacyBind, IncompleteNestedQuoteIsPreservedForConsoleErrorHandling)
 {
 	const char *pCommand = "bind x \"toggle tc_jump_hint 0 1";

@@ -1,28 +1,18 @@
 #include "bytes.h"
 
+#include <algorithm>
+
 void swap_endian(void *data, unsigned elem_size, unsigned num)
 {
-	char *src = (char *)data;
-	char *dst = src + (elem_size - 1);
+	if(elem_size <= 1 || num == 0)
+		return;
 
-	while(num)
+	auto *pBegin = static_cast<char *>(data);
+	for(unsigned i = 0; i < num; ++i)
 	{
-		unsigned n = elem_size >> 1;
-		char tmp;
-		while(n)
-		{
-			tmp = *src;
-			*src = *dst;
-			*dst = tmp;
-
-			src++;
-			dst--;
-			n--;
-		}
-
-		src = src + (elem_size >> 1);
-		dst = src + (elem_size - 1);
-		num--;
+		auto *pEnd = pBegin + elem_size;
+		std::reverse(pBegin, pEnd);
+		pBegin = pEnd;
 	}
 }
 

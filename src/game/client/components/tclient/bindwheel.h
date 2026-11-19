@@ -62,7 +62,7 @@ public:
 	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
 	bool OnInput(const IInput::CEvent &Event) override;
 
-	void AddBind(const char *Name, const char *Command);
+	bool AddBind(const char *Name, const char *Command);
 	bool SetBind(int Index, const char *pName, const char *pCommand);
 	void RemoveBind(const char *Name, const char *Command);
 	void RemoveBind(int Index);

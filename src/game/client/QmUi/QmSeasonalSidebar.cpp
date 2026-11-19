@@ -157,14 +157,18 @@ void CQmSeasonalSidebar::Render(CUi *pUi, IGraphics *pGraphics, const CUIRect &R
 {
 	if(pUi->DrawingSuppressed() || Rect.w < 24.0f || Rect.h < 40.0f)
 		return;
-	const int64_t Minute = time_timestamp() / 60;
+	const int64_t Timestamp = time_timestamp();
+	const int64_t Minute = Timestamp / 60;
 	if(Minute != m_LastMinute)
 	{
 		m_LastMinute = Minute;
 		char aDate[32];
-		str_timestamp_format(aDate, sizeof(aDate), "%Y-%m-%d");
 		int Year, Month, Day;
-		m_Holiday = std::sscanf(aDate, "%d-%d-%d", &Year, &Month, &Day) == 3 ? QmSidebarHoliday(Year, Month, Day) : EQmSidebarHoliday::NONE;
+		if(str_timestamp_ex_try(Timestamp, aDate, sizeof(aDate), "%Y-%m-%d") &&
+			std::sscanf(aDate, "%d-%d-%d", &Year, &Month, &Day) == 3)
+			m_Holiday = QmSidebarHoliday(Year, Month, Day);
+		else
+			m_Holiday = EQmSidebarHoliday::NONE;
 	}
 	if(m_Holiday == EQmSidebarHoliday::NONE)
 		return;

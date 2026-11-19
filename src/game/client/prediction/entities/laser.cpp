@@ -8,14 +8,19 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/laser_data.h>
 #include <game/collision.h>
 #include <game/mapitems.h>
+
+#include <new>
 
 CLaser::CLaser(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, float StartEnergy, int Owner, int Type) :
 	CEntity(pGameWorld, CGameWorld::ENTTYPE_LASER)
 {
 	m_Pos = Pos;
+	m_Number = 0;
+	m_Layer = LAYER_GAME;
 	m_Owner = Owner;
 	m_Energy = StartEnergy;
 	if(pGameWorld->m_WorldConfig.m_IsFNG && m_Energy < 10.f)
@@ -94,6 +99,7 @@ bool CLaser::HitCharacter(vec2 From, vec2 To)
 }
 
 void CLaser::DoBounce()
+try
 {
 	m_EvalTick = GameWorld()->GameTick();
 
@@ -105,33 +111,43 @@ void CLaser::DoBounce()
 	m_PrevPos = m_Pos;
 	vec2 Coltile;
 
-	int Res;
 	vec2 To = m_Pos + m_Dir * m_Energy;
+	if(!QmCollision::CanQueryLine(m_Pos, To))
+	{
+		m_MarkedForDestroy = true;
+		return;
+	}
 
-	Res = Collision()->IntersectLineTeleWeapon(m_Pos, To, &Coltile, &To);
+	CCollision *const pCollision = Collision();
+	const int Res = pCollision->IntersectLineTeleWeapon(m_Pos, To, &Coltile, &To);
 
 	if(Res)
 	{
 		if(!HitCharacter(m_Pos, To))
 		{
-			// intersected
-			m_From = m_Pos;
-			m_Pos = To;
-
-			vec2 TempPos = m_Pos;
+			vec2 TempPos = To;
 			vec2 TempDir = m_Dir * 4.0f;
 
-			int f = 0;
 			if(Res == -1)
 			{
-				f = Collision()->GetTile(round_to_int(Coltile.x), round_to_int(Coltile.y));
-				Collision()->SetCollisionAt(round_to_int(Coltile.x), round_to_int(Coltile.y), TILE_SOLID);
+				struct SRestoreTile
+				{
+					CCollision &m_Collision;
+					int m_X;
+					int m_Y;
+					int m_Index;
+					~SRestoreTile() { m_Collision.SetCollisionAt(m_X, m_Y, m_Index); }
+				};
+				const int X = round_to_int(Coltile.x);
+				const int Y = round_to_int(Coltile.y);
+				const SRestoreTile Restore{*pCollision, X, Y, pCollision->GetTile(X, Y)};
+				pCollision->SetCollisionAt(X, Y, TILE_SOLID);
+				pCollision->MovePoint(&TempPos, &TempDir, 1.0f, nullptr);
 			}
-			Collision()->MovePoint(&TempPos, &TempDir, 1.0f, nullptr);
-			if(Res == -1)
-			{
-				Collision()->SetCollisionAt(round_to_int(Coltile.x), round_to_int(Coltile.y), f);
-			}
+			else
+				pCollision->MovePoint(&TempPos, &TempDir, 1.0f, nullptr);
+
+			m_From = m_Pos;
 			m_Pos = TempPos;
 			m_Dir = normalize(TempDir);
 
@@ -167,6 +183,12 @@ void CLaser::DoBounce()
 		}
 	}
 }
+catch(const std::bad_alloc &)
+{
+	// 查询失败后停止这枚激光，避免回收前再次尝试反弹。
+	m_Energy = -1;
+	m_MarkedForDestroy = true;
+}
 
 void CLaser::Tick()
 {
@@ -179,7 +201,7 @@ void CLaser::Tick()
 	}
 	else
 	{
-		if((GameWorld()->GameTick() - m_EvalTick) > (GameWorld()->GameTickSpeed() * Delay / 1000.0f))
+		if((static_cast<int64_t>(GameWorld()->GameTick()) - m_EvalTick) > (GameWorld()->GameTickSpeed() * Delay / 1000.0f))
 			DoBounce();
 	}
 }

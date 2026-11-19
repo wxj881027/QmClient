@@ -7,6 +7,7 @@
 #include <test/test.h>
 
 #include <memory>
+#include <new>
 #include <set>
 #include <vector>
 
@@ -19,14 +20,26 @@ namespace
 	public:
 		std::vector<const CCommunityCountry *> m_vpSelectableCountries;
 		const char *m_pCountryTypeFilterKey = IServerBrowser::COMMUNITY_DDNET;
+		bool m_FailKeyRead = false;
+		bool m_FailCountriesRead = false;
 
 		void Update(bool Force) override {}
 		const std::vector<const CCommunity *> &SelectedCommunities() const override { return m_vpSelectedCommunities; }
-		const std::vector<const CCommunityCountry *> &SelectableCountries() const override { return m_vpSelectableCountries; }
+		const std::vector<const CCommunityCountry *> &SelectableCountries() const override
+		{
+			if(m_FailCountriesRead)
+				throw std::bad_alloc();
+			return m_vpSelectableCountries;
+		}
 		const std::vector<const CCommunityType *> &SelectableTypes() const override { return m_vpSelectableTypes; }
 		bool AnyRanksAvailable() const override { return false; }
 		bool CountriesTypesFilterAvailable() const override { return true; }
-		const char *CountryTypeFilterKey() const override { return m_pCountryTypeFilterKey; }
+		const char *CountryTypeFilterKey() const override
+		{
+			if(m_FailKeyRead)
+				throw std::bad_alloc();
+			return m_pCountryTypeFilterKey;
+		}
 
 	private:
 		std::vector<const CCommunity *> m_vpSelectedCommunities;
@@ -216,4 +229,170 @@ TEST(ServerBrowserCountryFilter, CleanDropsEntriesOfRemovedCommunities)
 
 	Cache.m_pCountryTypeFilterKey = IServerBrowser::COMMUNITY_ALL;
 	EXPECT_TRUE(Filter.Filtered("GER"));
+}
+
+TEST(ServerBrowserCountryFilter, FailedAutomaticCountryReadRetainsTheFilterAndCanRetry)
+{
+	CTestCountries Countries;
+	CTestCommunityCache Cache;
+	Cache.m_vpSelectableCountries = {Countries.Add("CHN"), Countries.Add("GER")};
+	CExcludedCommunityCountryFilterList Filter(&Cache);
+	Filter.Add("GER");
+	Filter.AddAllowed("CHN");
+	Cache.m_vpSelectableCountries.push_back(Countries.Add("TUR"));
+	Cache.m_FailCountriesRead = true;
+	EXPECT_FALSE(Filter.AutoExcludeNewCountries());
+	Cache.m_FailCountriesRead = false;
+	EXPECT_TRUE(Filter.Filtered("GER"));
+	EXPECT_FALSE(Filter.Filtered("TUR"));
+	EXPECT_TRUE(Filter.AutoExcludeNewCountries());
+	EXPECT_TRUE(Filter.Filtered("TUR"));
+	EXPECT_FALSE(Filter.Filtered("CHN"));
+}
+
+TEST(ServerBrowserCountryFilter, FailedAutomaticKeyReadIsContainedAndCanRetry)
+{
+	CTestCountries Countries;
+	CTestCommunityCache Cache;
+	Cache.m_vpSelectableCountries = {Countries.Add("CHN"), Countries.Add("GER")};
+	CExcludedCommunityCountryFilterList Filter(&Cache);
+	Filter.Add("GER");
+	Filter.AddAllowed("CHN");
+	Cache.m_vpSelectableCountries.push_back(Countries.Add("TUR"));
+	Cache.m_FailKeyRead = true;
+	EXPECT_FALSE(Filter.AutoExcludeNewCountries());
+	Cache.m_FailKeyRead = false;
+	EXPECT_TRUE(Filter.Filtered("GER"));
+	EXPECT_FALSE(Filter.Filtered("TUR"));
+	EXPECT_TRUE(Filter.AutoExcludeNewCountries());
+	EXPECT_FALSE(Filter.Filtered("CHN"));
+}
+
+TEST(ServerBrowserCountryFilter, FailedInitialBaselineDoesNotPublishAnEmptyBaseline)
+{
+	CTestCountries Countries;
+	CTestCommunityCache Cache;
+	Cache.m_vpSelectableCountries = {Countries.Add("CHN"), Countries.Add("GER"), Countries.Add("USA")};
+	CExcludedCommunityCountryFilterList Filter(&Cache);
+	Filter.Add("GER");
+	// 来源查询边界注入分配异常，不修改标准容器分配器或真实耗尽内存。
+	Cache.m_FailCountriesRead = true;
+	EXPECT_THROW(Filter.AddAllowed("CHN"), std::bad_alloc);
+	Cache.m_FailCountriesRead = false;
+	EXPECT_FALSE(Filter.AutoExcludeNewCountries());
+	EXPECT_TRUE(Filter.Filtered("GER"));
+	EXPECT_FALSE(Filter.Filtered("CHN"));
+	EXPECT_FALSE(Filter.Filtered("USA"));
+	Cache.m_vpSelectableCountries.push_back(Countries.Add("TUR"));
+	EXPECT_TRUE(Filter.AutoExcludeNewCountries());
+	EXPECT_TRUE(Filter.Filtered("TUR"));
+	EXPECT_FALSE(Filter.Filtered("CHN"));
+	EXPECT_FALSE(Filter.Filtered("USA"));
+}
+
+TEST(ServerBrowserCountryFilter, MultipleNewCountriesArePublishedInOneUpdate)
+{
+	CTestCountries Countries;
+	CTestCommunityCache Cache;
+	Cache.m_vpSelectableCountries = {Countries.Add("CHN"), Countries.Add("GER")};
+	CExcludedCommunityCountryFilterList Filter(&Cache);
+	Filter.Add("GER");
+	Filter.AddAllowed("CHN");
+	Cache.m_vpSelectableCountries.push_back(Countries.Add("TUR"));
+	Cache.m_vpSelectableCountries.push_back(Countries.Add("USA"));
+	EXPECT_TRUE(Filter.AutoExcludeNewCountries());
+	EXPECT_TRUE(Filter.Filtered("TUR"));
+	EXPECT_TRUE(Filter.Filtered("USA"));
+	EXPECT_TRUE(Filter.Filtered("GER"));
+	EXPECT_FALSE(Filter.Filtered("CHN"));
+	EXPECT_FALSE(Filter.AutoExcludeNewCountries());
+}
+
+TEST(ServerBrowserCountryFilter, FullyExcludedSelectionRetainsItsUnfilteredMeaning)
+{
+	CTestCountries Countries;
+	CTestCommunityCache Cache;
+	Cache.m_vpSelectableCountries = {Countries.Add("CHN"), Countries.Add("GER")};
+	CExcludedCommunityCountryFilterList Filter(&Cache);
+	Filter.Add(IServerBrowser::COMMUNITY_DDNET, "CHN");
+	Filter.Add(IServerBrowser::COMMUNITY_DDNET, "GER");
+	EXPECT_FALSE(Filter.AutoExcludeNewCountries());
+	EXPECT_TRUE(Filter.Empty());
+	Cache.m_vpSelectableCountries.push_back(Countries.Add("USA"));
+	EXPECT_FALSE(Filter.AutoExcludeNewCountries());
+	EXPECT_FALSE(Filter.Filtered("USA"));
+	EXPECT_TRUE(Filter.Filtered("CHN"));
+	EXPECT_TRUE(Filter.Filtered("GER"));
+	Cache.m_vpSelectableCountries.push_back(Countries.Add("TUR"));
+	EXPECT_TRUE(Filter.AutoExcludeNewCountries());
+	EXPECT_TRUE(Filter.Filtered("TUR"));
+	EXPECT_FALSE(Filter.Filtered("USA"));
+}
+
+TEST(ServerBrowserCountryFilter, CommunityKeysKeepIndependentAllowedBaselines)
+{
+	CTestCountries Countries;
+	CTestCommunityCache Cache;
+	Cache.m_vpSelectableCountries = {Countries.Add("CHN"), Countries.Add("GER"), Countries.Add("TUR")};
+	CExcludedCommunityCountryFilterList Filter(&Cache);
+	Filter.Add(IServerBrowser::COMMUNITY_DDNET, "GER");
+	Filter.AddAllowed(IServerBrowser::COMMUNITY_DDNET, "CHN");
+	Filter.Add("other", "CHN");
+	Filter.AddAllowed("other", "GER");
+	EXPECT_TRUE(Filter.AutoExcludeNewCountries());
+	EXPECT_FALSE(Filter.Filtered("CHN"));
+	EXPECT_TRUE(Filter.Filtered("GER"));
+	Cache.m_pCountryTypeFilterKey = "other";
+	EXPECT_TRUE(Filter.AutoExcludeNewCountries());
+	EXPECT_TRUE(Filter.Filtered("CHN"));
+	EXPECT_FALSE(Filter.Filtered("GER"));
+	EXPECT_TRUE(Filter.Filtered("TUR"));
+	Cache.m_pCountryTypeFilterKey = IServerBrowser::COMMUNITY_DDNET;
+	EXPECT_FALSE(Filter.AutoExcludeNewCountries());
+	EXPECT_FALSE(Filter.Filtered("CHN"));
+	EXPECT_TRUE(Filter.Filtered("GER"));
+}
+
+TEST(ServerBrowserCountryFilter, ManualEnableAfterAFailedUpdateStaysAllowed)
+{
+	CTestCountries Countries;
+	CTestCommunityCache Cache;
+	Cache.m_vpSelectableCountries = {Countries.Add("CHN"), Countries.Add("GER")};
+	CExcludedCommunityCountryFilterList Filter(&Cache);
+	Filter.Add("GER");
+	Filter.AddAllowed("CHN");
+	Cache.m_vpSelectableCountries.push_back(Countries.Add("TUR"));
+	Cache.m_FailCountriesRead = true;
+	EXPECT_FALSE(Filter.AutoExcludeNewCountries());
+	Cache.m_FailCountriesRead = false;
+	Filter.Remove("TUR");
+	EXPECT_FALSE(Filter.AutoExcludeNewCountries());
+	Cache.m_vpSelectableCountries.push_back(Countries.Add("USA"));
+	EXPECT_TRUE(Filter.AutoExcludeNewCountries());
+	EXPECT_FALSE(Filter.Filtered("CHN"));
+	EXPECT_FALSE(Filter.Filtered("TUR"));
+	EXPECT_TRUE(Filter.Filtered("USA"));
+}
+
+TEST(ServerBrowserCountryFilter, ClearAfterAFailedUpdateDiscardsThePreviousBaseline)
+{
+	CTestCountries Countries;
+	CTestCommunityCache Cache;
+	Cache.m_vpSelectableCountries = {Countries.Add("CHN"), Countries.Add("GER")};
+	CExcludedCommunityCountryFilterList Filter(&Cache);
+	Filter.Add("GER");
+	Filter.AddAllowed("CHN");
+	Cache.m_vpSelectableCountries.push_back(Countries.Add("TUR"));
+	Cache.m_FailCountriesRead = true;
+	EXPECT_FALSE(Filter.AutoExcludeNewCountries());
+	Cache.m_FailCountriesRead = false;
+	Filter.Clear();
+	Filter.Add("GER");
+	EXPECT_FALSE(Filter.AutoExcludeNewCountries());
+	EXPECT_FALSE(Filter.Filtered("TUR"));
+	Cache.m_vpSelectableCountries.push_back(Countries.Add("USA"));
+	EXPECT_TRUE(Filter.AutoExcludeNewCountries());
+	EXPECT_FALSE(Filter.Filtered("CHN"));
+	EXPECT_FALSE(Filter.Filtered("TUR"));
+	EXPECT_TRUE(Filter.Filtered("USA"));
 }

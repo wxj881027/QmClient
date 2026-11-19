@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <unordered_set>
+#include <utility>
 
 namespace qm_animation
 {
@@ -338,6 +339,7 @@ bool CQmAnimationBackend::StartTrackInterrupt(const STrackKey &Key, const SUiAni
 		const uint32_t TrackId = Request.m_TrackId != 0 ? Request.m_TrackId : Active.m_TrackId;
 		StoreValue(Key, Request.m_Target);
 		m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, TrackId});
+		CompleteAwaitedTrack(TrackId);
 		if(TrackId != ActiveTrackId)
 			CancelAwaitedTrack(ActiveTrackId);
 		m_ActiveTracks.erase(Key);
@@ -345,13 +347,10 @@ bool CQmAnimationBackend::StartTrackInterrupt(const STrackKey &Key, const SUiAni
 		return true;
 	}
 
-	// 统一打断语义（可中断 + 速度继承）：任何打断都以 (当前值, 当前速度) 为初值
-	// 落到弹簧继续运动——请求本身是弹簧就用它的参数，是 tween 就按时长映射接管弹簧，
-	// 不再“从当前值重放曲线”。
+	// 保留接管请求的延迟。等待结束后，弹簧从打断时的值和速度接续。
 	SUiAnimRequest Takeover = Request;
 	Takeover.m_Transition.m_Driver = EUiAnimDriver::SPRING;
 	Takeover.m_Transition.m_DurationSec = 0.0f;
-	Takeover.m_Transition.m_DelaySec = 0.0f;
 	if(Request.m_Transition.m_Driver != EUiAnimDriver::SPRING)
 		Takeover.m_Transition.m_Spring = InterruptSpringFromTween(Request.m_Transition);
 	if(Takeover.m_TrackId != ActiveTrackId)
@@ -379,7 +378,7 @@ void CQmAnimationBackend::CompleteAwaitedTrack(uint32_t TrackId)
 	auto ItTrackGroup = m_TrackAwaitGroups.find(TrackId);
 	if(ItTrackGroup != m_TrackAwaitGroups.end())
 	{
-		const std::vector<uint32_t> vGroupIds = ItTrackGroup->second;
+		const std::vector<uint32_t> vGroupIds = std::move(ItTrackGroup->second);
 		m_TrackAwaitGroups.erase(ItTrackGroup);
 		for(const uint32_t GroupId : vGroupIds)
 		{
@@ -402,7 +401,9 @@ void CQmAnimationBackend::CancelAwaitedTrack(uint32_t TrackId)
 	auto ItTrackGroup = m_TrackAwaitGroups.find(TrackId);
 	if(ItTrackGroup == m_TrackAwaitGroups.end())
 		return;
-	const std::vector<uint32_t> vGroupIds = ItTrackGroup->second;
+	// 接管已有列表，取消本身不再为成员快照申请内存。
+	const std::vector<uint32_t> vGroupIds = std::move(ItTrackGroup->second);
+	m_TrackAwaitGroups.erase(ItTrackGroup);
 	for(const uint32_t GroupId : vGroupIds)
 		CancelAwaitGroup(GroupId);
 }
@@ -499,10 +500,13 @@ void CQmAnimationBackend::PruneValueCache()
 		}
 		It = m_Values.erase(It);
 	}
-	// 兜底：长期只增不减说明窗口外仍有大量键被反复触碰，直接清空——值缓存丢了
-	// 只影响下一帧的一次"首见同步"，不会产生可见动画。
+	// 超过硬上限时释放其余缓存值，避免 HasValue 把仍在播放或排队的轨道报成首见。
 	if(m_Values.size() > MAX_VALUES_HARD)
-		m_Values.clear();
+	{
+		std::erase_if(m_Values, [this](const auto &Pair) {
+			return !m_ActiveTracks.contains(Pair.first) && !m_QueuedTracks.contains(Pair.first);
+		});
+	}
 }
 
 void CQmAnimationBackend::SetValue(uint64_t NodeKey, EUiAnimProperty Property, float Value)
@@ -630,6 +634,12 @@ void CQmAnimationBackend::Advance(float Dt)
 	constexpr float KSpringRestHoldSec = 0.033f;
 	const auto AdvanceTrack = [&](const STrackKey &Key, SActiveTrack &Track, float Elapsed, float &Remaining) {
 		Remaining = 0.0f;
+		// 关闭动效后结算已有轨道和队列；显式忽略全局等级的轨道保持时间推进。
+		if(Track.m_Transition.m_RespectMotionLevel && qm_animation::NormalizeMotionLevel(g_Config.m_QmUiMotionLevel) == 0)
+		{
+			Remaining = Elapsed;
+			return true;
+		}
 		Track.m_ElapsedSec += Elapsed;
 		const float Delay = std::max(0.0f, Track.m_Transition.m_DelaySec);
 		if(Track.m_Transition.m_Driver == EUiAnimDriver::SPRING)
@@ -716,8 +726,23 @@ void CQmAnimationBackend::PruneResolveTargetCache(uint64_t CurrentUseCounter)
 
 float CQmAnimationBackend::ResolveTargetValue(uint64_t NodeKey, EUiAnimProperty Property, float Target, const SUiAnimTransition &Transition)
 {
-	constexpr float ANIM_EPSILON = 0.0001f;
+	return ResolveTargetValue(NodeKey, Property, Target, Transition, 0.0001f);
+}
+
+float CQmAnimationBackend::ResolveTargetValue(uint64_t NodeKey, EUiAnimProperty Property, float Target, const SUiAnimTransition &Transition, float Epsilon)
+{
+	const float Threshold = std::max(Epsilon, 0.0001f);
 	const STrackKey Key{NodeKey, Property};
+	if(Transition.m_RespectMotionLevel && qm_animation::NormalizeMotionLevel(g_Config.m_QmUiMotionLevel) == 0)
+	{
+		// 目标未变也须结算旧轨道；沿正常完成出口通知等待组，并保留显式例外队列。
+		auto ItActive = m_ActiveTracks.find(Key);
+		while(ItActive != m_ActiveTracks.end() && ItActive->second.m_Transition.m_RespectMotionLevel)
+		{
+			CompleteTrack(Key, ItActive->second);
+			ItActive = m_ActiveTracks.find(Key);
+		}
+	}
 	const float CurrentValue = GetValue(NodeKey, Property, Target);
 	const uint64_t CurrentUseCounter = ++m_ResolveUseCounter;
 
@@ -725,9 +750,10 @@ float CQmAnimationBackend::ResolveTargetValue(uint64_t NodeKey, EUiAnimProperty 
 
 	auto [ItLastTarget, Inserted] = m_LastTargets.try_emplace(Key, SResolveTargetState{Target, Transition.m_Driver, CurrentUseCounter});
 	const bool HasLastTarget = !Inserted;
-	const bool TargetChanged = !HasLastTarget || std::abs(Target - ItLastTarget->second.m_Target) > ANIM_EPSILON;
+	const bool TargetChanged = !HasLastTarget || std::abs(Target - ItLastTarget->second.m_Target) > Threshold;
 	const bool DriverChanged = !HasLastTarget || ItLastTarget->second.m_Driver != Transition.m_Driver;
-	const bool NeedsSync = !HasActiveAnimation(NodeKey, Property) && std::abs(Target - CurrentValue) > ANIM_EPSILON;
+	const bool Active = HasActiveAnimation(NodeKey, Property);
+	const bool NeedsSync = !Active && std::abs(Target - CurrentValue) > Threshold;
 	if(TargetChanged || DriverChanged || NeedsSync)
 	{
 		SUiAnimRequest Request;

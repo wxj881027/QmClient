@@ -31,6 +31,7 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
 #include <game/client/animstate.h>
@@ -73,6 +74,22 @@
 using namespace FontIcons;
 using namespace qm_tclient_cards;
 
+namespace
+{
+	void DoBoundedTClientNumericField(CMenus &Menus, const IUiContext &InputCtx, int Tab, const char *pTextId, int &Value, const CUIRect &Rect, int Min, int Max, ui_widget::SNumericFieldOptions Options)
+	{
+		Options.m_Flags = CUi::SCROLLBAR_OPTION_NOCLAMPVALUE;
+		// 保留超出滑条范围的合法配置值，提交时最多放宽到配置项本身的边界。
+		if(Value >= ui_widget::SliderInputStoredMinimum(Min, Options.m_ValueMultiplier))
+			Options.m_InputMin = -1;
+		if(Value <= ui_widget::SliderInputStoredMaximum(Max, Options.m_ValueMultiplier))
+			Options.m_InputMax = -1;
+		if(Menus.PrepareSettingsNumericFieldLabel(CMenus::SETTINGS_TCLIENT, Tab, Tab, pTextId, Rect, Options.m_pLabel, Options.m_Flags, Options))
+			return;
+		ui_widget::NumericField(InputCtx, Menus.GetSettingsNumericFieldState(&Value), &Value, &Value, Min, Max, Rect, Options);
+	}
+}
+
 float CMenus::LayoutTClientInputCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render)
 {
 	const CTClientCardMetricsScope CardMetrics(Ctx.m_Metrics);
@@ -89,7 +106,12 @@ float CMenus::LayoutTClientInputCard(const qm_card_catalog::SQmCardBuildContext 
 	if(Flow.Control("auto-margin", LineSize, Row, RowSpacing))
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoMargin, "qm-auto-margin", Localize("Auto margin"), &g_Config.m_QmAutoMargin, &Row, LineSize);
 	if(Flow.Control("input-amount", LineSize, Button, RowSpacing))
-		DoSliderWithScaledValue(&g_Config.m_QmFastInputAmount, &g_Config.m_QmFastInputAmount, &Button, Localize("Amount"), 1, 40, 1, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
+	{
+		const float BodySize = CurrentSettingsContentMetrics().m_BodySize;
+		const IUiContext InputCtx = SettingsUiContext("tclient_slider_input", BodySize / ui_token::font::BODY);
+		DoBoundedTClientNumericField(*this, InputCtx, m_TClientSettingsTab, nullptr, g_Config.m_QmFastInputAmount, Button, 1, 40,
+			{.m_pLabel = Localize("Amount"), .m_pSuffix = "ms", .m_FontSize = BodySize, .m_InputMin = 1, .m_InputMax = 100});
+	}
 	if(Flow.Control("fast-input-others", LineSize, Row, RowSpacing))
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFastInputOthers, "tclient-fast-input-others", Localize("Fast input others"), &g_Config.m_QmFastInputOthers, &Row, LineSize);
 	if(Flow.Control("sub-tick", LineSize, Row, RowSpacing))
@@ -113,7 +135,12 @@ float CMenus::LayoutTClientAntiLatencyToolsCard(const qm_card_catalog::SQmCardBu
 	CSettingsContentLayoutFlow Flow(Content);
 	CUIRect Button, Label;
 	if(Flow.Control("prediction-margin", LineSize, Button, RowSpacing))
-		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-prediction-margin", &g_Config.m_ClPredictionMargin, &g_Config.m_ClPredictionMargin, &Button, Localize("Base prediction margin"), 10, 75, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
+	{
+		const float BodySize = CurrentSettingsContentMetrics().m_BodySize;
+		const IUiContext InputCtx = SettingsUiContext("settings_slider_input", BodySize / ui_token::font::BODY);
+		DoBoundedTClientNumericField(*this, InputCtx, m_TClientSettingsTab, "tclient-prediction-margin", g_Config.m_ClPredictionMargin, Button, 10, 75,
+			{.m_pLabel = Localize("Base prediction margin"), .m_pSuffix = "ms", .m_FontSize = BodySize, .m_InputMin = 1, .m_InputMax = 300});
+	}
 	CUIRect Row;
 	if(Flow.Control("remove-anti", LineSize, Row, RowSpacing))
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRemoveAnti, "tclient-remove-anti-freeze", Localize("Reduce prediction while frozen"), &g_Config.m_QmRemoveAnti, &Row, LineSize);
@@ -125,9 +152,14 @@ float CMenus::LayoutTClientAntiLatencyToolsCard(const qm_card_catalog::SQmCardBu
 		if(Flow.Input() && !Ui()->RenderOnly() && g_Config.m_QmUnfreezeLagDelayTicks < g_Config.m_QmUnfreezeLagTicks)
 			g_Config.m_QmUnfreezeLagDelayTicks = g_Config.m_QmUnfreezeLagTicks;
 		if(Flow.Control("maximum-reduction", LineSize, AmountButton, RowSpacing))
-			DoSliderWithScaledValue(&g_Config.m_QmUnfreezeLagTicks, &g_Config.m_QmUnfreezeLagTicks, &AmountButton, Localize("Maximum reduction"), 100, 300, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
+		{
+			const float BodySize = CurrentSettingsContentMetrics().m_BodySize;
+			const IUiContext InputCtx = SettingsUiContext("tclient_slider_input", BodySize / ui_token::font::BODY);
+			DoBoundedTClientNumericField(*this, InputCtx, m_TClientSettingsTab, nullptr, g_Config.m_QmUnfreezeLagTicks, AmountButton, 100, 300,
+				{.m_pLabel = Localize("Maximum reduction"), .m_pSuffix = "ms", .m_FontSize = BodySize, .m_ValueMultiplier = 20, .m_InputMin = 0, .m_InputMax = 20});
+		}
 		if(Flow.Control("reduction-delay", LineSize, DelayButton, RowSpacing))
-			DoSliderWithScaledValue(&g_Config.m_QmUnfreezeLagDelayTicks, &g_Config.m_QmUnfreezeLagDelayTicks, &DelayButton, Localize("Delay before reduction"), 100, 3000, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
+			DoSliderWithScaledValue(&g_Config.m_QmUnfreezeLagDelayTicks, &g_Config.m_QmUnfreezeLagDelayTicks, &DelayButton, Localize("Delay before reduction"), 100, 3000, 20, &CUi::ms_LinearScrollbarScale, 0, "ms");
 	}
 	if(Flow.Control("unpred-others", LineSize, Row, RowSpacing))
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmUnpredOthersInFreeze, "tclient-unpred-others-in-freeze", Localize("Dont predict other players if you are frozen"), &g_Config.m_QmUnpredOthersInFreeze, &Row, LineSize);
@@ -175,7 +207,12 @@ float CMenus::LayoutTClientAntiPingSmoothingCard(const qm_card_catalog::SQmCardB
 			DoSettingsInlineHint(Ui(), "negative-buffer", HintColumn, 0.0f, Localize("for Gores"), Ctx.m_Metrics.m_SmallSize);
 	}
 	if(Flow.Control("uncertainty", LineSize, Button, RowSpacing))
-		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-antiping-uncertainty-scale", &g_Config.m_QmAntiPingUncertaintyScale, &g_Config.m_QmAntiPingUncertaintyScale, &Button, Localize("Uncertainty duration"), 50, 400, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "%");
+	{
+		const float BodySize = CurrentSettingsContentMetrics().m_BodySize;
+		const IUiContext InputCtx = SettingsUiContext("settings_slider_input", BodySize / ui_token::font::BODY);
+		DoBoundedTClientNumericField(*this, InputCtx, m_TClientSettingsTab, "tclient-antiping-uncertainty-scale", g_Config.m_QmAntiPingUncertaintyScale, Button, 50, 400,
+			{.m_pLabel = Localize("Uncertainty duration"), .m_pSuffix = "%", .m_FontSize = BodySize, .m_InputMin = 25, .m_InputMax = 400});
+	}
 	if(MeasureScope)
 	{
 		CSettingsContentLayoutCache Cache;
@@ -216,7 +253,12 @@ float CMenus::LayoutTClientAutoExecuteCard(const qm_card_catalog::SQmCardBuildCo
 		ui_widget::InputField(TClientAutoExecuteTextInputCtx, &s_LineInput, Button, nullptr, EditBoxFontSize);
 	}
 	if(Flow.Control("join-delay", LineSize, Button, RowSpacing))
-		DoSliderWithScaledValue(&g_Config.m_QmExecuteOnJoinDelay, &g_Config.m_QmExecuteOnJoinDelay, &Button, Localize("Delay"), 140, 2000, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
+	{
+		const float BodySize = CurrentSettingsContentMetrics().m_BodySize;
+		const IUiContext InputCtx = SettingsUiContext("tclient_slider_input", BodySize / ui_token::font::BODY);
+		DoBoundedTClientNumericField(*this, InputCtx, m_TClientSettingsTab, nullptr, g_Config.m_QmExecuteOnJoinDelay, Button, 140, 2000,
+			{.m_pLabel = Localize("Delay"), .m_pSuffix = "ms", .m_FontSize = BodySize, .m_ValueMultiplier = 20, .m_InputMin = 7, .m_InputMax = 50000});
+	}
 	if(MeasureScope)
 	{
 		CSettingsContentLayoutCache Cache;
@@ -253,15 +295,19 @@ float CMenus::LayoutTClientVotingCard(const qm_card_catalog::SQmCardBuildContext
 			g_Config.m_QmAutoVoteWhenFar = AutoMapVote;
 	}
 	if(Flow.Control("min-time", LineSize, Button, RowSpacing))
-		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-auto-vote-minimum-time", &g_Config.m_QmAutoVoteWhenFarTime, &g_Config.m_QmAutoVoteWhenFarTime, &Button, Localize("Minimum time"), 1, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, Localize(" min"));
+	{
+		const float BodySize = CurrentSettingsContentMetrics().m_BodySize;
+		const IUiContext InputCtx = SettingsUiContext("settings_slider_input", BodySize / ui_token::font::BODY);
+		DoBoundedTClientNumericField(*this, InputCtx, m_TClientSettingsTab, "tclient-auto-vote-minimum-time", g_Config.m_QmAutoVoteWhenFarTime, Button, 1, 20,
+			{.m_pLabel = Localize("Minimum time"), .m_pSuffix = Localize(" min"), .m_FontSize = BodySize, .m_InputMin = 0, .m_InputMax = 20});
+	}
 
 	if(Flow.Control("vote-message", LineSize, VoteMessage, RowSpacing))
 	{
 		VoteMessage.VSplitMid(&Label, &VoteMessage);
 		DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Message to send in chat:"), FontSize, TEXTALIGN_ML);
 		static CLineInput s_VoteMessage(g_Config.m_QmAutoVoteWhenFarMessage, sizeof(g_Config.m_QmAutoVoteWhenFarMessage));
-		s_VoteMessage.SetEmptyText(Localize("Leave empty to disable"));
-		ui_widget::InputField(TClientVotingTextInputCtx, &s_VoteMessage, VoteMessage, nullptr, EditBoxFontSize);
+		ui_widget::InputField(TClientVotingTextInputCtx, &s_VoteMessage, VoteMessage, Localize("Leave empty to disable"), EditBoxFontSize);
 	}
 	if(MeasureScope)
 	{

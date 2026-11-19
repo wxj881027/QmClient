@@ -2,6 +2,8 @@
 
 #include <cstring>
 #include <limits>
+#include <new>
+#include <stdexcept>
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -153,10 +155,26 @@ namespace QmNeteaseHook
 				     Block.m_Pid == Pid && Block.m_SongId == SongId && Block.m_Generation == Generation && Total <= MAX_BYTES;
 		if(Changed)
 		{
-			Raw.m_Lrc.assign(Block.m_aData, Block.m_LrcBytes);
-			Raw.m_Yrc.assign(Block.m_aData + Block.m_LrcBytes, Block.m_YrcBytes);
-			Raw.m_TranslationLrc.assign(Block.m_aData + Block.m_LrcBytes + Block.m_YrcBytes, Block.m_TranslationBytes);
-			Revision = Block.m_Revision;
+			try
+			{
+				NeteaseLyrics::SRawLyrics Prepared;
+				Prepared.m_Lrc.assign(Block.m_aData, Block.m_LrcBytes);
+				Prepared.m_Yrc.assign(Block.m_aData + Block.m_LrcBytes, Block.m_YrcBytes);
+				Prepared.m_TranslationLrc.assign(Block.m_aData + Block.m_LrcBytes + Block.m_YrcBytes, Block.m_TranslationBytes);
+				// 三段完整后再发布；分配失败保留旧输出及修订号，原读取周期可重试。
+				Raw.m_Lrc.swap(Prepared.m_Lrc);
+				Raw.m_Yrc.swap(Prepared.m_Yrc);
+				Raw.m_TranslationLrc.swap(Prepared.m_TranslationLrc);
+				Revision = Block.m_Revision;
+			}
+			catch(const std::bad_alloc &)
+			{
+				return false;
+			}
+			catch(const std::length_error &)
+			{
+				return false;
+			}
 		}
 		return Changed;
 #else

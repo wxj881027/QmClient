@@ -39,7 +39,7 @@ namespace qm_wheel_presets
 			if(Field == CUSTOM_COLORS)
 				return Number == 0 || Number == 1;
 			if(Field == COUNTRY)
-				return Number >= -999 && Number <= 1000;
+				return Number >= -999 && Number <= 999;
 			if(Field == EYES)
 				return Number >= 0 && Number <= 5;
 			return Number >= 0 && Number <= 0xffffff;

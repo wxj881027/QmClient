@@ -9,6 +9,7 @@
 struct SQmPopconfirmContext : public SPopupMenuId
 {
 	CUi *m_pUI = nullptr;
+	uint64_t m_SourceFrame = 0;
 	char m_aMessage[256] = "";
 	char m_aConfirm[64] = "";
 	char m_aCancel[64] = "";

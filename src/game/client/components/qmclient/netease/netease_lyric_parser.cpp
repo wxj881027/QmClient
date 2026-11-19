@@ -9,14 +9,6 @@ namespace NeteaseLyrics
 {
 	namespace
 	{
-		struct SParsedLine
-		{
-			int64_t m_StartMs = 0;
-			int64_t m_EndMs = -1;
-			std::string m_Text;
-			std::vector<SWord> m_vWords;
-		};
-
 		std::string_view Trim(std::string_view Value)
 		{
 			while(!Value.empty() && std::isspace((unsigned char)Value.front()) != 0)
@@ -164,25 +156,7 @@ namespace NeteaseLyrics
 			return Width;
 		}
 
-		void SetDerivedEnds(std::vector<SParsedLine> &vLines)
-		{
-			std::stable_sort(vLines.begin(), vLines.end(), [](const SParsedLine &A, const SParsedLine &B) { return A.m_StartMs < B.m_StartMs; });
-			for(size_t Index = 0; Index < vLines.size(); ++Index)
-			{
-				if(vLines[Index].m_EndMs > vLines[Index].m_StartMs)
-					continue;
-				for(size_t Next = Index + 1; Next < vLines.size(); ++Next)
-				{
-					if(vLines[Next].m_StartMs > vLines[Index].m_StartMs)
-					{
-						vLines[Index].m_EndMs = vLines[Next].m_StartMs;
-						break;
-					}
-				}
-			}
-		}
-
-		bool FinishTimeline(std::vector<SParsedLine> &&vParsed, STimeline *pOut, std::string *pError)
+		bool FinishTimeline(std::vector<SLine> &&vParsed, STimeline *pOut, std::string *pError)
 		{
 			if(pOut == nullptr)
 				return false;
@@ -193,9 +167,9 @@ namespace NeteaseLyrics
 					*pError = "no valid timed lyric lines";
 				return false;
 			}
-			SetDerivedEnds(vParsed);
+			FinalizeTimelineLines(vParsed);
 			pOut->m_vLines.reserve(vParsed.size());
-			for(SParsedLine &Parsed : vParsed)
+			for(SLine &Parsed : vParsed)
 			{
 				if(Parsed.m_Text.empty())
 					continue;
@@ -211,6 +185,11 @@ namespace NeteaseLyrics
 				*pError = "timed lines have no text";
 			return pOut->m_HasTiming;
 		}
+	}
+
+	void FinalizeTimelineLines(std::vector<SLine> &vLines)
+	{
+		FinalizeTimelineLines(vLines, [](auto &Line) -> auto & { return Line; });
 	}
 
 	bool IsValidUtf8(std::string_view Text)
@@ -252,7 +231,7 @@ namespace NeteaseLyrics
 				*pError = "invalid UTF-8";
 			return false;
 		}
-		std::vector<SParsedLine> vParsed;
+		std::vector<SLine> vParsed;
 		size_t Offset = 0;
 		while(Offset <= Text.size())
 		{
@@ -299,7 +278,7 @@ namespace NeteaseLyrics
 				*pError = "invalid UTF-8";
 			return false;
 		}
-		std::vector<SParsedLine> vParsed;
+		std::vector<SLine> vParsed;
 		size_t Offset = 0;
 		while(Offset <= Text.size())
 		{
@@ -316,7 +295,7 @@ namespace NeteaseLyrics
 				int64_t DurationMs = 0;
 				if(Close != std::string_view::npos && ParseYrcPair(Line.substr(1, Close - 1), &StartMs, &DurationMs))
 				{
-					SParsedLine Parsed;
+					SLine Parsed;
 					Parsed.m_StartMs = StartMs;
 					Parsed.m_EndMs = DurationMs > 0 && StartMs <= std::numeric_limits<int64_t>::max() - DurationMs ? StartMs + DurationMs : -1;
 					std::string_view Body = Line.substr(Close + 1);

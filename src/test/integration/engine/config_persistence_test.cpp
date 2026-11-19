@@ -14,9 +14,11 @@
 #include <cstdlib>
 #include <iterator>
 #include <memory>
+#include <new>
 #include <string>
 #include <string_view>
 #include <thread>
+#include <vector>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
@@ -25,6 +27,53 @@
 namespace
 {
 	constexpr const char *SETTINGS_PATH = "qmclient/settings.cfg";
+
+	std::string EncodeUtf16(std::u16string_view Text, bool BigEndian)
+	{
+		std::string Encoded;
+		for(const char16_t Unit : Text)
+		{
+			const char LowByte = static_cast<char>(Unit & 0xff);
+			const char HighByte = static_cast<char>(Unit >> 8);
+			Encoded.push_back(BigEndian ? HighByte : LowByte);
+			Encoded.push_back(BigEndian ? LowByte : HighByte);
+		}
+		return Encoded;
+	}
+
+	struct SWarListSaveState
+	{
+		bool m_Failed = false;
+		const char *m_pLine = "# original warlist";
+		static void Save(IConfigManager *pConfig, void *pUser)
+		{
+			const auto &State = *static_cast<SWarListSaveState *>(pUser);
+			if(State.m_Failed)
+				pConfig->MarkSaveFailed(ConfigDomain::TCLIENTWARLIST);
+			else
+				pConfig->WriteLine(State.m_pLine, ConfigDomain::TCLIENTWARLIST);
+		}
+	};
+
+	struct SThrowingSaveState
+	{
+		bool m_Throw = false;
+		bool m_WritePrefix = true;
+		bool m_StandardException = true;
+		static void Save(IConfigManager *pConfig, void *pUser)
+		{
+			const auto &State = *static_cast<SThrowingSaveState *>(pUser);
+			if(State.m_WritePrefix)
+				pConfig->WriteLine("# callback prefix");
+			if(State.m_Throw)
+			{
+				if(State.m_StandardException)
+					throw std::bad_alloc();
+				throw 1;
+			}
+			pConfig->WriteLine("# callback complete");
+		}
+	};
 
 	class CConfigSession
 	{
@@ -85,6 +134,40 @@ namespace
 			return Success ? std::string(static_cast<const char *>(pData), Length) : std::string();
 		}
 	};
+}
+
+TEST_F(CConfigPersistence, CallbackReportedFailurePreservesSettingsAndWarListEvenWithForce)
+{
+	CConfigSession Session(m_pStorage.get());
+	SWarListSaveState State;
+	Session.Config()->RegisterCallback(SWarListSaveState::Save, &State, ConfigDomain::TCLIENTWARLIST);
+	ASSERT_TRUE(Session.Config()->Save());
+	const char *pWarPath = s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath;
+	const std::string OldSettings = Read();
+	const std::string OldWarList = Read(pWarPath);
+	g_Config.m_ClShowhud = !g_Config.m_ClShowhud;
+	State.m_Failed = true;
+	State.m_pLine = "# new warlist";
+	EXPECT_FALSE(Session.Config()->Save());
+	EXPECT_EQ(Read(), OldSettings);
+	EXPECT_EQ(Read(pWarPath), OldWarList);
+	EXPECT_FALSE(Session.Config()->Save(true));
+	EXPECT_EQ(Read(), OldSettings);
+	EXPECT_EQ(Read(pWarPath), OldWarList);
+}
+
+TEST_F(CConfigPersistence, CallbackFailureIsScopedToTheAttemptAndASuccessfulRetryCanPublish)
+{
+	CConfigSession Session(m_pStorage.get());
+	SWarListSaveState State;
+	State.m_Failed = true;
+	Session.Config()->RegisterCallback(SWarListSaveState::Save, &State, ConfigDomain::TCLIENTWARLIST);
+	EXPECT_FALSE(Session.Config()->Save());
+	State.m_Failed = false;
+	State.m_pLine = "# retry warlist";
+	ASSERT_TRUE(Session.Config()->Save());
+	const char *pWarPath = s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath;
+	EXPECT_NE(Read(pWarPath).find("# retry warlist"), std::string::npos);
 }
 
 TEST_F(CConfigPersistence, RepeatedSaveUpdatesOwnBaselineAndReloadsSettings)
@@ -278,6 +361,34 @@ TEST_F(CConfigPersistence, ValidBomCrLfAndChineseTextLoadAndSave)
 	EXPECT_NE(Read().find("中文名字"), std::string::npos);
 }
 
+TEST_F(CConfigPersistence, StrictlyLoadedUtf16SettingsCanBeSavedAndReloaded)
+{
+	Write(SETTINGS_PATH, EncodeUtf16(u"\ufeffcl_showhud 1\r\nplayer_name \"中文名字\"\r\n", true));
+	CConfigSession Session(m_pStorage.get());
+	ASSERT_TRUE(Session.Load());
+	ASSERT_EQ(g_Config.m_ClShowhud, 1);
+	ASSERT_STREQ(g_Config.m_PlayerName, "中文名字");
+	g_Config.m_ClShowhud = 0;
+
+	ASSERT_TRUE(Session.Config()->Save());
+	EXPECT_EQ(Read().find('\0'), std::string::npos);
+	CConfigSession Reloaded(m_pStorage.get());
+	ASSERT_TRUE(Reloaded.Load());
+	EXPECT_EQ(g_Config.m_ClShowhud, 0);
+	EXPECT_STREQ(g_Config.m_PlayerName, "中文名字");
+}
+
+TEST_F(CConfigPersistence, InvalidUtf16TextIsNotOverwritten)
+{
+	const std::string Invalid = EncodeUtf16(u"\ufeffcl_showhud 0\necho bad\x01\n", false);
+	Write(SETTINGS_PATH, Invalid);
+	CConfigSession Session(m_pStorage.get());
+
+	EXPECT_FALSE(Session.Load());
+	EXPECT_FALSE(Session.Config()->Save(true));
+	EXPECT_EQ(Read(), Invalid);
+}
+
 TEST_F(CConfigPersistence, LegacyConfigCanBeLoadedAndSavedToMergedFile)
 {
 	Write("settings_qmclient.cfg", "tc_show_chat_client 0\n");
@@ -287,6 +398,53 @@ TEST_F(CConfigPersistence, LegacyConfigCanBeLoadedAndSavedToMergedFile)
 	EXPECT_NE(Read().find("qm_show_chat_client 0"), std::string::npos);
 	EXPECT_EQ(Read().find("tc_show_chat_client"), std::string::npos);
 }
+
+TEST_F(CConfigPersistence, PartialV2MigrationPreservesPreviousQmSettings)
+{
+	constexpr const char *pLegacyPath = "settings_qmclient.cfg";
+	Write("qmclient/settings_ddnet.cfg", "cl_showhud 0\n");
+	Write(pLegacyPath, "tc_jump_hint_text \"legacy jump hint\"\n");
+
+	CConfigSession Session(m_pStorage.get());
+	std::vector<const char *> vPaths;
+	QmGetVariableConfigLoadPaths(m_pStorage.get(), vPaths);
+	for(const char *pPath : vPaths)
+		ASSERT_TRUE(Session.Load(pPath));
+	ASSERT_TRUE(Session.Config()->Save(true));
+	ASSERT_TRUE(QmFinalizeConfigMigration(m_pStorage.get()));
+	EXPECT_FALSE(m_pStorage->FileExists(pLegacyPath, IStorage::TYPE_SAVE));
+
+	CConfigSession Reloaded(m_pStorage.get());
+	ASSERT_TRUE(Reloaded.Load());
+	EXPECT_EQ(g_Config.m_ClShowhud, 0);
+	EXPECT_STREQ(g_Config.m_QmJumpHintText, "legacy jump hint");
+}
+
+#if defined(CONF_FAMILY_UNIX)
+TEST_F(CConfigPersistence, SaveRejectsPathThatWouldAliasTheMainConfig)
+{
+	// 正式路径刚好能容纳，追加临时后缀后则会被旧的拼接逻辑截成正式路径。
+	constexpr size_t ROOT_LENGTH = IO_MAX_PATH_LENGTH - 2 - std::string_view(SETTINGS_PATH).size();
+	const std::string FirstLevel = std::string(m_Info.StoragePath()) + "/" + std::string(220, 'a');
+	ASSERT_LT(FirstLevel.size() + 1, ROOT_LENGTH);
+	const std::string Root = FirstLevel + "/" + std::string(ROOT_LENGTH - FirstLevel.size() - 1, 'b');
+	ASSERT_EQ(fs_makedir(FirstLevel.c_str()), 0);
+	ASSERT_EQ(fs_makedir(Root.c_str()), 0);
+	const std::string ExecutablePath = testing::internal::GetArgvs().front();
+	const char *apArgs[] = {ExecutablePath.c_str()};
+	m_pStorage = CreateTempStorage(Root.c_str(), std::size(apArgs), apArgs);
+	ASSERT_NE(m_pStorage, nullptr);
+	ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+	Write(SETTINGS_PATH, "cl_showhud 0\n");
+
+	CConfigSession Session(m_pStorage.get());
+	ASSERT_TRUE(Session.Load());
+	g_Config.m_ClShowhud = 1;
+	EXPECT_FALSE(Session.Config()->Save());
+	EXPECT_STREQ(Session.Config()->LastSaveError(), "stage=path path=qmclient/settings.cfg");
+	EXPECT_EQ(Read(), "cl_showhud 0\n");
+}
+#endif
 
 TEST_F(CConfigPersistence, StagingFailureKeepsAllExistingConfigFiles)
 {
@@ -304,6 +462,31 @@ TEST_F(CConfigPersistence, StagingFailureKeepsAllExistingConfigFiles)
 	EXPECT_TRUE(Session.Config()->Save());
 }
 
+#if defined(CONF_FAMILY_UNIX)
+TEST_F(CConfigPersistence, MissingCandidateAtValidationKeepsExistingSettings)
+{
+	const char *pWarList = s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath;
+	Write(SETTINGS_PATH, "cl_showhud 0\n");
+	Write(pWarList, "# existing war list\n");
+	CConfigSession Session(m_pStorage.get());
+	ASSERT_TRUE(Session.Load());
+
+	Session.Config()->RegisterCallback([](IConfigManager *, void *pUser) {
+		auto *pStorage = static_cast<IStorage *>(pUser);
+		char aCandidate[IO_MAX_PATH_LENGTH];
+		IStorage::FormatTmpPath(aCandidate, sizeof(aCandidate), s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath);
+		EXPECT_TRUE(pStorage->RemoveFile(aCandidate, IStorage::TYPE_SAVE));
+	},
+		m_pStorage.get(), ConfigDomain::TCLIENTWARLIST);
+	g_Config.m_ClShowhud = 1;
+
+	EXPECT_FALSE(Session.Config()->Save());
+	EXPECT_TRUE(std::string_view(Session.Config()->LastSaveError()).starts_with("stage=read_tmp "));
+	EXPECT_EQ(Read(), "cl_showhud 0\n");
+	EXPECT_EQ(Read(pWarList), "# existing war list\n");
+}
+#endif
+
 TEST_F(CConfigPersistence, ChangeDuringSerializationKeepsExternalSettings)
 {
 	Write(SETTINGS_PATH, "cl_showhud 0\n");
@@ -319,6 +502,27 @@ TEST_F(CConfigPersistence, ChangeDuringSerializationKeepsExternalSettings)
 		m_pStorage.get());
 	EXPECT_FALSE(Session.Config()->Save());
 	EXPECT_EQ(Read(), "cl_showhud 1\n");
+}
+
+TEST_F(CConfigPersistence, ReencodingDuringSerializationKeepsExternalSettings)
+{
+	Write(SETTINGS_PATH, EncodeUtf16(u"\ufeffcl_showhud 0\n", false));
+	CConfigSession Session(m_pStorage.get());
+	ASSERT_TRUE(Session.Load());
+	g_Config.m_ClShowhud = 1;
+	Session.Config()->RegisterCallback([](IConfigManager *, void *pUser) {
+		auto *pStorage = static_cast<IStorage *>(pUser);
+		IOHANDLE File = pStorage->OpenFile(SETTINGS_PATH, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		ASSERT_NE(File, nullptr);
+		constexpr std::string_view CONTENT = "cl_showhud 0\n";
+		EXPECT_EQ(io_write(File, CONTENT.data(), CONTENT.size()), CONTENT.size());
+		EXPECT_EQ(io_close(File), 0);
+	},
+		m_pStorage.get());
+
+	EXPECT_FALSE(Session.Config()->Save(true));
+	EXPECT_STREQ(Session.Config()->LastSaveError(), "stage=read path=qmclient/settings.cfg");
+	EXPECT_EQ(Read(), "cl_showhud 0\n");
 }
 
 TEST_F(CConfigPersistence, ConcurrentWriterIsRejectedAndLockIsReleasedAfterSave)
@@ -484,3 +688,83 @@ TEST_F(CConfigPersistence, ExclusiveExternalReaderCausesLoadAndSaveFailureWithou
 	EXPECT_TRUE(Reloaded.Config()->Save());
 }
 #endif
+
+TEST_F(CConfigPersistence, CallbackAllocationExceptionPreservesBothFilesAndAllowsSameSessionRetry)
+{
+	CConfigSession Session(m_pStorage.get());
+	SThrowingSaveState State;
+	SWarListSaveState WarList;
+	Session.Config()->RegisterCallback(SThrowingSaveState::Save, &State);
+	Session.Config()->RegisterCallback(SWarListSaveState::Save, &WarList, ConfigDomain::TCLIENTWARLIST);
+	ASSERT_TRUE(Session.Config()->Save());
+	const char *pWarPath = s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath;
+	const std::string OldSettings = Read();
+	const std::string OldWarList = Read(pWarPath);
+	char aSettingsCandidate[IO_MAX_PATH_LENGTH], aWarListCandidate[IO_MAX_PATH_LENGTH];
+	IStorage::FormatTmpPath(aSettingsCandidate, sizeof(aSettingsCandidate), SETTINGS_PATH);
+	IStorage::FormatTmpPath(aWarListCandidate, sizeof(aWarListCandidate), pWarPath);
+	g_Config.m_ClShowhud = !g_Config.m_ClShowhud;
+	WarList.m_pLine = "# changed warlist";
+	State.m_Throw = true;
+	for(bool Prefix : {false, true})
+	{
+		State.m_WritePrefix = Prefix;
+		EXPECT_FALSE(Session.Config()->Save(true));
+		EXPECT_EQ(Read(), OldSettings);
+		EXPECT_EQ(Read(pWarPath), OldWarList);
+		EXPECT_FALSE(m_pStorage->FileExists(aSettingsCandidate, IStorage::TYPE_SAVE));
+		EXPECT_FALSE(m_pStorage->FileExists(aWarListCandidate, IStorage::TYPE_SAVE));
+	}
+	State.m_Throw = false;
+	ASSERT_TRUE(Session.Config()->Save());
+	EXPECT_NE(Read().find("# callback complete"), std::string::npos);
+	EXPECT_NE(Read(pWarPath).find("# changed warlist"), std::string::npos);
+}
+
+TEST_F(CConfigPersistence, NonStandardCallbackExceptionDoesNotPublishItsPrefix)
+{
+	CConfigSession Session(m_pStorage.get());
+	SThrowingSaveState State;
+	Session.Config()->RegisterCallback(SThrowingSaveState::Save, &State);
+	ASSERT_TRUE(Session.Config()->Save());
+	const std::string Before = Read();
+	State.m_Throw = true;
+	State.m_StandardException = false;
+	EXPECT_FALSE(Session.Config()->Save());
+	EXPECT_EQ(Read(), Before);
+	State.m_Throw = false;
+	ASSERT_TRUE(Session.Config()->Save());
+}
+
+TEST_F(CConfigPersistence, CallbackExceptionReleasesTheSaveLockForAnotherSession)
+{
+	CConfigSession First(m_pStorage.get());
+	SThrowingSaveState State;
+	State.m_Throw = true;
+	First.Config()->RegisterCallback(SThrowingSaveState::Save, &State);
+	EXPECT_FALSE(First.Config()->Save());
+	CConfigSession Second(m_pStorage.get());
+	g_Config.m_ClShowhud = 0;
+	ASSERT_TRUE(Second.Config()->Save());
+	EXPECT_NE(Read().find("cl_showhud 0"), std::string::npos);
+	State.m_Throw = false;
+	ASSERT_TRUE(First.Config()->Save());
+}
+
+TEST_F(CConfigPersistence, NestedSaveIsRejectedWithoutDisturbingTheOuterCandidate)
+{
+	CConfigSession Session(m_pStorage.get());
+	bool NestedResult = true;
+	Session.Config()->RegisterCallback([](IConfigManager *pConfig, void *pUser) {
+		pConfig->WriteLine("# before nested save");
+		*static_cast<bool *>(pUser) = pConfig->Save(true);
+		pConfig->WriteLine("# after nested save");
+	},
+		&NestedResult);
+	ASSERT_TRUE(Session.Config()->Save());
+	EXPECT_FALSE(NestedResult);
+	const std::string Content = Read();
+	EXPECT_NE(Content.find("# before nested save"), std::string::npos);
+	EXPECT_NE(Content.find("# after nested save"), std::string::npos);
+	EXPECT_TRUE(Session.Config()->Save());
+}

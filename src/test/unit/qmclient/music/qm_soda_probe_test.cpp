@@ -42,6 +42,8 @@ TEST(QmSodaProbe, ParsesFullPlaybackSnapshot)
 	EXPECT_EQ(Snapshot.m_Album, "叶惠美");
 	EXPECT_DOUBLE_EQ(Snapshot.m_ProgressSeconds, 42.5);
 	EXPECT_DOUBLE_EQ(Snapshot.m_DurationSeconds, 250);
+	EXPECT_EQ(Snapshot.PositionMs(), 42500);
+	EXPECT_EQ(Snapshot.DurationMs(), 250000);
 	EXPECT_EQ(Snapshot.m_LyricType, "krc");
 	EXPECT_EQ(Snapshot.m_LyricContent, "[0,4390]<0,274,0>雨");
 	EXPECT_EQ(Snapshot.m_TranslationLrc, "[00:00.00]雨");
@@ -70,4 +72,120 @@ TEST(QmSodaProbe, RejectsSnapshotWithoutUsableFields)
 	SPlaybackSnapshot Snapshot;
 	EXPECT_FALSE(ParseExtractionJson(Json, &Snapshot));
 	EXPECT_EQ(Snapshot.m_Error, "extraction has no usable fields");
+}
+
+TEST(QmSodaProbe, UnavailableAndOutOfRangeTimesDoNotDiscardTheSong)
+{
+	SPlaybackSnapshot Snapshot;
+	ASSERT_TRUE(ParseExtractionJson(R"({"ok":true,"mediaId":"42","progressSeconds":1e16,"durationSeconds":1e16})", &Snapshot));
+	EXPECT_EQ(Snapshot.PositionMs(), -1);
+	EXPECT_EQ(Snapshot.DurationMs(), 0);
+	EXPECT_EQ(Snapshot.m_MediaId, "42");
+
+	ASSERT_TRUE(ParseExtractionJson(R"({"ok":true,"mediaId":"42","durationSeconds":-1})", &Snapshot));
+	EXPECT_EQ(Snapshot.PositionMs(), -1);
+	EXPECT_EQ(Snapshot.DurationMs(), 0);
+
+	ASSERT_TRUE(ParseExtractionJson(R"({"ok":true,"mediaId":"42","progressSeconds":0})", &Snapshot));
+	EXPECT_EQ(Snapshot.PositionMs(), 0);
+}
+
+TEST(QmSodaProbe, SelectsOnlyTargetsOnTheDiscoveredLoopbackPort)
+{
+	const char *pTargets = R"([
+		{"type":"node","webSocketDebuggerUrl":"ws://127.0.0.1:11200/other"},
+		{"type":"node","webSocketDebuggerUrl":"ws://example.invalid:11201/remote"},
+		{"type":"page","webSocketDebuggerUrl":"ws://127.0.0.1:11201/fallback"},
+		{"type":"node","webSocketDebuggerUrl":"ws://127.0.0.1:11201/player"}])";
+	EXPECT_EQ(PickNodeTarget(pTargets, 11201), "ws://127.0.0.1:11201/player");
+	EXPECT_TRUE(PickNodeTarget(pTargets, 11202).empty());
+}
+
+TEST(QmSodaProbe, UsesFirstEligibleTargetWhenTypeIsUnavailable)
+{
+	const char *pTargets = R"([
+		{"webSocketDebuggerUrl":"ws://127.0.0.1:11200/wrong"},
+		{"webSocketDebuggerUrl":"ws://127.0.0.1:11201/first"},
+		{"webSocketDebuggerUrl":"ws://127.0.0.1:11201/second"}])";
+	EXPECT_EQ(PickNodeTarget(pTargets, 11201), "ws://127.0.0.1:11201/first");
+}
+
+TEST(QmSodaLyricPublication, LateLyricsPublishWithoutChangingTheSongGeneration)
+{
+	CLyricFilePublication Lyrics;
+	SPlaybackSnapshot Snapshot;
+	Snapshot.m_MediaId = "42";
+	int Writes = 0;
+	const auto Write = [&](const SPlaybackSnapshot &) {
+		++Writes;
+		return std::string("lyrics-42.json");
+	};
+	Lyrics.Update(Snapshot, 100, Write);
+	const uint64_t Generation = Lyrics.Generation();
+	EXPECT_GT(Generation, 0u);
+	EXPECT_TRUE(Lyrics.Path().empty());
+	EXPECT_EQ(Writes, 0);
+
+	Snapshot.m_LyricContent = "[00:01.00]lyric";
+	Lyrics.Update(Snapshot, 400, Write);
+	EXPECT_EQ(Lyrics.Generation(), Generation);
+	EXPECT_EQ(Lyrics.Path(), "lyrics-42.json");
+	Lyrics.Update(Snapshot, 2000, Write);
+	EXPECT_EQ(Writes, 1);
+}
+
+TEST(QmSodaLyricPublication, RetainsSameSongForRetryAfterFailedFileReplacement)
+{
+	CLyricFilePublication Lyrics;
+	SPlaybackSnapshot Snapshot;
+	Snapshot.m_MediaId = "42";
+	Snapshot.m_LyricContent = "[00:01.00]lyric";
+	int Writes = 0;
+	const auto Write = [&](const SPlaybackSnapshot &) -> std::string {
+		if(++Writes == 1)
+			return {};
+		return "lyrics-42.json";
+	};
+	Lyrics.Update(Snapshot, 100, Write);
+	const uint64_t Generation = Lyrics.Generation();
+	EXPECT_TRUE(Lyrics.Path().empty());
+	Lyrics.Update(Snapshot, 1099, Write);
+	EXPECT_EQ(Writes, 1);
+	Lyrics.Update(Snapshot, 1100, Write);
+	EXPECT_EQ(Writes, 2);
+	EXPECT_EQ(Lyrics.Path(), "lyrics-42.json");
+	EXPECT_EQ(Lyrics.Generation(), Generation);
+}
+
+TEST(QmSodaLyricPublication, SongChangeClearsPreviousPathAndRetryDelay)
+{
+	CLyricFilePublication Lyrics;
+	SPlaybackSnapshot Snapshot;
+	Snapshot.m_MediaId = "42";
+	Snapshot.m_LyricContent = "[00:01.00]lyric";
+	Lyrics.Update(Snapshot, 100, [](const SPlaybackSnapshot &) { return std::string("lyrics-42.json"); });
+	ASSERT_EQ(Lyrics.Path(), "lyrics-42.json");
+	const uint64_t Generation = Lyrics.Generation();
+
+	Snapshot.m_MediaId = "73";
+	Snapshot.m_LyricContent.clear();
+	Lyrics.Update(Snapshot, 400, [](const SPlaybackSnapshot &) { return std::string("unreachable.json"); });
+	EXPECT_GT(Lyrics.Generation(), Generation);
+	EXPECT_TRUE(Lyrics.Path().empty());
+
+	Snapshot.m_LyricContent = "[00:02.00]next";
+	Lyrics.Update(Snapshot, 700, [](const SPlaybackSnapshot &) { return std::string("lyrics-73.json"); });
+	EXPECT_EQ(Lyrics.Path(), "lyrics-73.json");
+}
+
+TEST(QmSodaLyricPublication, FilePreparationExceptionLeavesAnEmptyPathAndRetries)
+{
+	CLyricFilePublication Lyrics;
+	SPlaybackSnapshot Snapshot;
+	Snapshot.m_MediaId = "42";
+	Snapshot.m_LyricContent = "[00:01.00]lyric";
+	EXPECT_NO_THROW(Lyrics.Update(Snapshot, 100, [](const SPlaybackSnapshot &) -> std::string { throw std::bad_alloc(); }));
+	EXPECT_TRUE(Lyrics.Path().empty());
+	Lyrics.Update(Snapshot, 1100, [](const SPlaybackSnapshot &) { return std::string("lyrics-42.json"); });
+	EXPECT_EQ(Lyrics.Path(), "lyrics-42.json");
 }

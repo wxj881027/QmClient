@@ -2,19 +2,25 @@
 #ifndef GAME_CLIENT_COMPONENTS_SYSTEM_MEDIA_CONTROLS_H
 #define GAME_CLIENT_COMPONENTS_SYSTEM_MEDIA_CONTROLS_H
 
+#include "system_media_controls_timeline.h"
+
 #include <engine/graphics.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/media_command_queue.h>
+#include <game/client/components/qmclient/media_worker.h>
 #include <game/client/components/qmclient/netease_hook/qm_netease_hook_provider.h>
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <thread>
+#include <utility>
 
 namespace SystemMediaControls
 {
@@ -69,10 +75,53 @@ namespace SystemMediaControls
 	inline bool MediaTimelineLooksStale(bool Playing, int64_t DurationMs, int64_t LastUpdatedUtc100ns, int64_t NowUtc100ns)
 	{
 		// 有的播放器根本不填 LastUpdatedTime（值为 0）：那是「没上报」，不是「很久没更新」。
-		if(!Playing || DurationMs <= 1000 || LastUpdatedUtc100ns <= 0)
+		if(!Playing || DurationMs <= 1000 || LastUpdatedUtc100ns <= 0 || NowUtc100ns <= LastUpdatedUtc100ns)
 			return false;
 		constexpr int64_t STALE_SECONDS = 5;
-		return NowUtc100ns - LastUpdatedUtc100ns > STALE_SECONDS * 10'000'000LL;
+		return NowUtc100ns - LastUpdatedUtc100ns > STALE_SECONDS * HUNDRED_NS_PER_SECOND;
+	}
+
+	inline bool MediaTimelineLooksStale(const STimelineProperties &Timeline, int64_t NowUtc100ns)
+	{
+		const int64_t DurationMs = NormalizeTimelineProperties(Timeline, 0, 0, 0).m_DurationMs;
+		return MediaTimelineLooksStale(true, DurationMs, Timeline.m_LastUpdatedUtc100ns, NowUtc100ns);
+	}
+
+	enum class EMediaRequestStatus
+	{
+		PENDING,
+		COMPLETE,
+		FAILED,
+	};
+
+	template<typename TReadStatus, typename TStopRequested, typename TNow, typename TSleep>
+	bool WaitForMediaRequest(TReadStatus ReadStatus, TStopRequested StopRequested, TNow Now, TSleep Sleep)
+	{
+		using TDuration = std::chrono::steady_clock::duration;
+		constexpr auto PollInterval = std::chrono::duration_cast<TDuration>(std::chrono::milliseconds(20));
+		const auto Deadline = Now() + std::chrono::seconds(3);
+		while(!StopRequested())
+		{
+			const auto Status = ReadStatus();
+			if(Status != EMediaRequestStatus::PENDING)
+				return Status == EMediaRequestStatus::COMPLETE;
+			const auto Remaining = Deadline - Now();
+			if(Remaining <= TDuration::zero())
+				return false;
+			Sleep(std::min(Remaining, PollInterval));
+		}
+		return false;
+	}
+
+	template<typename TPrepare>
+	void RefreshAlbumArt(std::string &PreparedKey, std::string NewKey, bool UploadFailed, TPrepare Prepare)
+	{
+		if(!UploadFailed && NewKey == PreparedKey)
+			return;
+		if(Prepare())
+			PreparedKey = std::move(NewKey);
+		else
+			PreparedKey.clear();
 	}
 
 	inline bool AnyMediaSourceEnabled(bool SmtcEnabled, bool NeteaseHookEnabled)
@@ -197,6 +246,7 @@ public:
 
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
 	struct SShared;
+	struct SRuntime;
 #endif
 
 	CSystemMediaControls();
@@ -209,13 +259,16 @@ public:
 	bool GetStateSnapshot(SState &State) const;
 	// 读取网易云私有 v5 快照；不会把其字段合并到标准 SMTC 状态。
 	bool GetNeteaseSnapshot(QmNeteaseHook::SSnapshotV5 &Snapshot) const;
-	void Previous();
-	void PlayPause();
-	void Next();
+	void Previous() noexcept;
+	void PlayPause() noexcept;
+	void Next() noexcept;
 	void SetVolume(uint64_t Generation, float Volume);
 
 private:
-	void SyncNeteaseHookConfiguration();
+	void SubmitCommand(CQmMediaCommandQueue::ECommand Command) noexcept;
+	bool SyncNeteaseHookConfiguration() noexcept;
+	bool m_Initialized = false;
+	CQmMediaRetryClock m_HookRetry;
 
 	std::unique_ptr<CQmNeteaseHookProvider> m_pNeteaseHook;
 	bool m_NeteaseHookConfigInitialized = false;
@@ -225,18 +278,14 @@ private:
 	bool m_HasNeteaseSnapshot = false;
 	uint64_t m_LastNeteaseHookReadFrame = 0;
 	bool m_NeteaseHookReadFrameInitialized = false;
-#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-	std::unique_ptr<SWinrt> m_pWinrt;
-#endif
-#if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
-	std::unique_ptr<SMpris> m_pMpris;
-#endif
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
-	std::unique_ptr<SShared> m_pShared;
-	std::thread m_Thread;
-	std::atomic_bool m_StopThread{false};
+	// 主线程发布开关快照；先析构 worker，再结束后台读取的原子值寿命。
+	std::atomic_bool m_BackendEnabled{false};
+	CQmMediaWorker m_Worker;
 
-	void ThreadMain();
+	void EnsureBackendStarted() noexcept;
+	SRuntime *Runtime() const;
+	void ThreadMain(SRuntime &Runtime, const std::atomic_bool &Stop);
 
 	// 主线程持有的后端状态；同一时间只有一个后端存在，因此这里无需再加后端分支。
 	SState *MainState();

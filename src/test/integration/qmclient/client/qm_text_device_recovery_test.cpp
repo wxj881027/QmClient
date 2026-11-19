@@ -1,3 +1,4 @@
+#include <engine/client/graphics_vertex_budget.h>
 #include <engine/kernel.h>
 #include <engine/shared/config.h>
 #include <engine/shared/console.h>
@@ -16,6 +17,7 @@
 #include <memory>
 #include <new>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -58,6 +60,8 @@ namespace
 		int m_QuadContainerDeletes = 0;
 		int m_QuadBegins = 0;
 		int m_FreeformQuads = 0;
+		bool m_CaptureDrawBufferSizes = false;
+		std::vector<size_t> m_vDrawBufferSizes;
 		std::vector<ColorRGBA> m_vVertexColors;
 		std::unordered_map<int, int> m_QuadCounts;
 		std::vector<uint8_t> m_vLastFill;
@@ -126,6 +130,8 @@ namespace
 			RequireCurrent(Fill);
 			RequireCurrent(Outline);
 			CIconBenchmarkGraphics::RenderText(Container, Quads, Size, Fill, Outline, Color, OutlineColor);
+			if(m_CaptureDrawBufferSizes)
+				m_vDrawBufferSizes.push_back(m_Buffers.at(m_Containers.at(Container)));
 		}
 		void DeleteBufferContainer(int &Container, bool DestroyAll = true) override
 		{
@@ -667,6 +673,22 @@ TEST_F(QmTextDeviceRecovery, SweepWaitsForFailedIncrementalUpdatesToRecover)
 	DrawSweep();
 	EXPECT_GT(m_Graphics.m_Draws, 0u);
 	EXPECT_EQ(m_Graphics.m_vUpdates.size(), 4u);
+}
+
+TEST_F(QmTextDeviceRecovery, BufferedFillDrawsTheCompleteMeshInUploadSizedBatches)
+{
+	constexpr size_t MaxUploadBytes = GRAPHICS_VERTEX_CAPACITY * std::max(sizeof(GL_SVertexTex3DStream), sizeof(GL_SVertexTex3D));
+	const std::string Text(1024, 'A');
+	ASSERT_TRUE(Create(Text.c_str()));
+	m_Graphics.ResetCounters();
+	m_Graphics.m_CaptureDrawBufferSizes = true;
+
+	DrawFill();
+
+	EXPECT_GT(m_Graphics.m_vDrawBufferSizes.size(), 1u);
+	for(const size_t BufferSize : m_Graphics.m_vDrawBufferSizes)
+		EXPECT_LE(BufferSize, MaxUploadBytes);
+	EXPECT_EQ(m_Graphics.m_Quads, Text.size() * 16);
 }
 
 TEST_F(QmTextDeviceRecovery, FillReusesLayoutAndBuffersAcrossFramesAndDrawOffsets)

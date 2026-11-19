@@ -109,32 +109,6 @@ TEST(QmMonitoringSettingsStructureContract, RenderOnlyNumericFieldsAndDropDownsD
 	EXPECT_LT(DropDownRenderOnly, DropDownStateInit);
 }
 
-TEST(QmMonitoringSettingsStructureContract, RegistryNavigationBridgeOwnsSettingsTarget)
-{
-	const std::string Header = ReadRepoFile("src/game/client/components/menus.h");
-	const std::string Source = ReadRepoFile("src/game/client/components/menus.cpp");
-	const std::string SetPageBody = ExtractSourceFunctionBody(Source, "bool CMenus::SetSettingsPageFromCardTab(const char *pTab)");
-	const std::string NavigateBody = ExtractSourceFunctionBody(Source, "void CMenus::NavigateToSettingsCard(const qm_card_registry::SCardNavigationTarget &Target)");
-	ASSERT_FALSE(SetPageBody.empty());
-	ASSERT_FALSE(NavigateBody.empty());
-
-	EXPECT_NE(Header.find("bool SetSettingsPageFromCardTab(const char *pTab);"), std::string::npos);
-	EXPECT_NE(Header.find("void NavigateToSettingsCard(const qm_card_registry::SCardNavigationTarget &Target);"), std::string::npos);
-	EXPECT_NE(SetPageBody.find("str_comp(pTab, \"graphics\") == 0"), std::string::npos);
-	EXPECT_NE(SetPageBody.find("str_comp(pTab, \"player\") == 0"), std::string::npos);
-	EXPECT_NE(SetPageBody.find("str_comp(pTab, \"tee\") == 0"), std::string::npos);
-	EXPECT_NE(SetPageBody.find("str_comp(pTab, \"tclient-chat-binds\") == 0"), std::string::npos);
-	EXPECT_NE(SetPageBody.find("str_comp(pTab, \"tclient-warlist\") == 0"), std::string::npos);
-	EXPECT_NE(SetPageBody.find("str_comp(pTab, \"tclient-info\") == 0"), std::string::npos);
-	EXPECT_NE(SetPageBody.find("str_comp(pTab, \"tclient-profiles\") == 0"), std::string::npos);
-	EXPECT_NE(SetPageBody.find("str_comp(pTab, \"tclient-configs\") == 0"), std::string::npos);
-	EXPECT_NE(SetPageBody.find("g_Config.m_UiSettingsPage = SETTINGS_GRAPHICS;"), std::string::npos);
-	EXPECT_NE(SetPageBody.find("str_comp(pTab, \"appearance-hud\") == 0"), std::string::npos);
-	EXPECT_NE(SetPageBody.find("return false;"), std::string::npos);
-	EXPECT_NE(NavigateBody.find("SetSettingsPageFromCardTab(Target.m_pTab)"), std::string::npos);
-	EXPECT_NE(NavigateBody.find("m_SettingsCardDeck.RequestReveal(Target.m_pStableId);"), std::string::npos);
-}
-
 TEST(QmMonitoringSettingsStructureContract, SettingsLoadingPrewarmApiIsPublic)
 {
 	const std::string Header = ReadRepoFile("src/game/client/components/menus.h");

@@ -1,7 +1,9 @@
-#include <game/client/components/chat.h>
 #include <game/client/components/qmclient/translate/translate_jobs.h>
 
+#include <test/support/translate_completion_test_memory.h>
 #include <test/support/translate_http_test_support.h>
+
+#include <memory>
 
 namespace
 {
@@ -21,6 +23,73 @@ namespace
 class CTranslateQueueTest : public CTranslateBackendTest
 {
 };
+
+TEST_F(CTranslateQueueTest, OutgoingQueueAllocationFailureAbortsRequestAndRetrySendsOnlyTranslation)
+{
+	for(bool Automatic : {false, true})
+	{
+		SCOPED_TRACE(Automatic);
+		CTranslateCompletionTestMemory Memory;
+		CTranslateJobQueue Queue(&Memory);
+		Memory.m_FailAt = 1;
+		EXPECT_FALSE(Queue.Submit(MakeJob(m_Http, true, Automatic, "original"), 1));
+		EXPECT_TRUE(m_Http.m_vSubmissions.back().m_pRequest->IsAbortRequested());
+		EXPECT_TRUE(Queue.Update([](const auto &) { return true; }).empty());
+		EXPECT_EQ(Queue.Size(), 0u);
+		Memory.AllowAllocations();
+		ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, Automatic, "retry original"), 1));
+		m_Http.m_vSubmissions.back().m_pRequest->Finish(R"({"choices":[{"message":{"content":"translated"}}]})");
+		const auto Done = Queue.Update([](const auto &) { return true; });
+		ASSERT_EQ(Done.size(), 1u);
+		int Sends = 0;
+		EXPECT_TRUE(DispatchOutgoingTranslation(Done[0], [&](int, const char *pText, const char *pOriginal, int) {
+			++Sends;
+			EXPECT_STREQ(pText, "translated");
+			EXPECT_STREQ(pOriginal, "retry original");
+			return true;
+		}));
+		EXPECT_EQ(Sends, 1);
+		EXPECT_TRUE(Queue.Update([](const auto &) { return true; }).empty());
+	}
+}
+
+TEST_F(CTranslateQueueTest, IncomingRetryReplacesPreviousFailureOnlyAfterAcceptance)
+{
+	CTranslateCompletionTestMemory Memory;
+	CTranslateJobQueue Queue(&Memory);
+	auto pPrevious = std::make_shared<CTranslateResponse>();
+	pPrevious->m_Error = true;
+	str_copy(pPrevious->m_Text, "previous failure");
+	auto pCurrent = pPrevious;
+	std::weak_ptr<CTranslateResponse> Candidate;
+	const auto CreateJob = [&] {
+		auto Job = MakeJob(m_Http, false, false);
+		Candidate = Job.m_pTranslateResponse;
+		return Job;
+	};
+
+	Memory.m_FailAt = 1;
+	EXPECT_FALSE(Queue.CreateAndSubmitIncoming(pCurrent, CreateJob, 1));
+	ASSERT_EQ(pCurrent, pPrevious);
+	EXPECT_STREQ(pCurrent->m_Text, "previous failure");
+	EXPECT_TRUE(Candidate.expired());
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	EXPECT_TRUE(m_Http.m_vSubmissions.back().m_pRequest->IsAbortRequested());
+
+	Memory.AllowAllocations();
+	ASSERT_TRUE(Queue.CreateAndSubmitIncoming(pCurrent, CreateJob, 1));
+	EXPECT_NE(pCurrent, pPrevious);
+	ASSERT_NE(pCurrent, nullptr);
+	EXPECT_EQ(pCurrent, Candidate.lock());
+	EXPECT_TRUE(TranslateResponseBlocksRequest(pCurrent.get()));
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 2u);
+	m_Http.m_vSubmissions.back().m_pRequest->Finish(R"({"choices":[{"message":{"content":"translated"}}]})");
+	const auto Done = Queue.Update([&](const auto &Job) { return IsTranslateResponseCurrent(true, 0, pCurrent, Job); });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_TRUE(Done[0].m_Success);
+	EXPECT_STREQ(pCurrent->m_Text, "translated");
+	EXPECT_TRUE(TranslateResponseBlocksRequest(pCurrent.get()));
+}
 
 TEST_F(CTranslateQueueTest, RefusedAutomaticOutgoingSendsNeitherOriginalNorServiceText)
 {
@@ -198,6 +267,55 @@ TEST_F(CTranslateQueueTest, IncomingResponsePublishesToOriginalSharedResponse)
 	EXPECT_TRUE(Done[0].m_SendText.empty());
 }
 
+TEST_F(CTranslateQueueTest, PendingAutomaticRequestKeepsIncomingProgress)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "auto");
+	CTranslateJobQueue Queue;
+	auto Job = MakeJob(m_Http, false, false);
+	const auto pResponse = Job.m_pTranslateResponse;
+	str_copy(pResponse->m_Text, "translating");
+	ASSERT_TRUE(Queue.Submit(std::move(Job), 1));
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+
+	const auto Current = [](const auto &) { return true; };
+	EXPECT_TRUE(Queue.Update(Current).empty());
+	EXPECT_STREQ(pResponse->m_Text, "translating");
+
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"ok":true,"text":"translated","language":"en"})");
+	const auto Done = Queue.Update(Current);
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_TRUE(Done[0].m_Success);
+	EXPECT_STREQ(pResponse->m_Text, "translated");
+	EXPECT_STREQ(pResponse->m_Language, "en");
+}
+
+TEST_F(CTranslateQueueTest, IncomingLlmFallbackKeepsProgressUntilTerminalResponse)
+{
+	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://incoming-fallback-progress.test/v1");
+	CTranslateJobQueue Queue;
+	auto Job = MakeJob(m_Http, false, false);
+	const auto pResponse = Job.m_pTranslateResponse;
+	str_copy(pResponse->m_Text, "translating");
+	ASSERT_TRUE(Queue.Submit(std::move(Job), 1));
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"error":{"message":"initial adapter failure"}})", 404);
+
+	const auto Current = [](const auto &) { return true; };
+	EXPECT_TRUE(Queue.Update(Current).empty());
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 2u);
+	EXPECT_STREQ(pResponse->m_Text, "translating");
+	EXPECT_EQ(pResponse->m_HttpStatus, 0);
+	EXPECT_EQ(pResponse->m_Notice, ETranslateNotice::NONE);
+
+	m_Http.m_vSubmissions[1].m_pRequest->Finish("{}", 503);
+	const auto Done = Queue.Update(Current);
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Success);
+	EXPECT_TRUE(pResponse->m_Error);
+	EXPECT_EQ(pResponse->m_HttpStatus, 503);
+	EXPECT_EQ(pResponse->m_Notice, ETranslateNotice::SERVICE_UNAVAILABLE);
+}
+
 TEST_F(CTranslateQueueTest, InvalidatedIncomingTaskAbortsWithoutPublishing)
 {
 	CTranslateJobQueue Queue;
@@ -224,6 +342,41 @@ TEST_F(CTranslateQueueTest, ResetCancelsBothDirectionsWithoutResendingOldChat)
 		EXPECT_TRUE(Submission.m_pRequest->IsAbortRequested());
 	EXPECT_TRUE(Queue.Update([](const auto &) { return true; }).empty());
 	EXPECT_TRUE(Queue.CanSubmit(1));
+}
+
+TEST_F(CTranslateQueueTest, ResetClearsCanceledProgressAndRetainsReplacementResponse)
+{
+	CTranslateJobQueue Queue;
+	constexpr unsigned int TRANSLATION_ID = 7;
+	std::shared_ptr<CTranslateResponse> apResponses[2];
+	for(int Index = 0; Index < 2; ++Index)
+	{
+		auto Job = MakeJob(m_Http, false, false);
+		Job.m_LineIndex = Index;
+		Job.m_TranslationId = TRANSLATION_ID;
+		apResponses[Index] = Job.m_pTranslateResponse;
+		str_copy(apResponses[Index]->m_Text, "translating");
+		ASSERT_TRUE(Queue.Submit(std::move(Job), 2));
+	}
+
+	// 同一聊天槽位已换用另一份响应，取消旧任务时应保留它。
+	const auto pReplacement = std::make_shared<CTranslateResponse>();
+	str_copy(pReplacement->m_Text, "replacement");
+	apResponses[1] = pReplacement;
+
+	int RemovedProgress = 0;
+	Queue.Clear([&](const STranslateJob &Pending) {
+		if(ClearCanceledTranslateResponse(true, TRANSLATION_ID, apResponses[Pending.m_LineIndex], Pending))
+			++RemovedProgress;
+	});
+
+	EXPECT_EQ(RemovedProgress, 1);
+	EXPECT_EQ(apResponses[0], nullptr);
+	EXPECT_EQ(apResponses[1], pReplacement);
+	EXPECT_STREQ(pReplacement->m_Text, "replacement");
+	EXPECT_EQ(Queue.Size(), 0u);
+	for(const auto &Submission : m_Http.m_vSubmissions)
+		EXPECT_TRUE(Submission.m_pRequest->IsAbortRequested());
 }
 
 TEST_F(CTranslateQueueTest, RetryKeepsCapacityAndSuccessDoesNotRecoverOriginal)
@@ -420,4 +573,68 @@ TEST_F(CTranslateQueueTest, LongOutgoingTranslationUsesOneUtf8SafeNetworkTextFor
 		return true;
 	}));
 	EXPECT_EQ(Sends, 1);
+}
+
+TEST_F(CTranslateQueueTest, OutgoingPayloadFailureRetainsHttpOwnerAndDispatchesOnceAfterRecovery)
+{
+	CTranslateCompletionTestMemory Memory;
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "原文"), 1));
+	const std::string Text(160, 'z');
+	const std::string Json = "{\"choices\":[{\"message\":{\"content\":\"" + Text + "\"}}]}";
+	const auto pRequest = m_Http.m_vSubmissions.back().m_pRequest;
+	pRequest->Finish(Json.c_str());
+	Memory.m_FailAt = 2;
+	EXPECT_TRUE(Queue.Update([](const auto &) { return true; }, &Memory).empty());
+	EXPECT_EQ(Queue.Size(), 1u);
+	EXPECT_FALSE(pRequest->IsAbortRequested());
+	Memory.AllowAllocations();
+	const auto Done = Queue.Update([](const auto &) { return true; }, &Memory);
+	ASSERT_EQ(Done.size(), 1u);
+	std::vector<std::string> Sent;
+	EXPECT_TRUE(DispatchOutgoingTranslation(Done[0], [&](int Team, const char *pText, const char *pOriginal, int Connection) {
+		EXPECT_EQ(Team, 1);
+		EXPECT_EQ(Connection, 0);
+		EXPECT_STREQ(pOriginal, "原文");
+		Sent.emplace_back(pText);
+		return true;
+	}));
+	ASSERT_EQ(Sent.size(), 1u);
+	EXPECT_EQ(Sent[0], Text);
+	EXPECT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	EXPECT_TRUE(Queue.Update([](const auto &) { return true; }, &Memory).empty());
+}
+
+TEST_F(CTranslateQueueTest, CancellationAfterDeferredCompletionAbortsHttpAndPublishesNothing)
+{
+	CTranslateCompletionTestMemory Memory;
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "原文"), 1));
+	const auto pRequest = m_Http.m_vSubmissions.back().m_pRequest;
+	pRequest->Finish(R"({"choices":[{"message":{"content":"translated"}}]})");
+	Memory.m_FailAt = 1;
+	EXPECT_TRUE(Queue.Update([](const auto &) { return true; }, &Memory).empty());
+	Queue.CancelOutgoing(0);
+	EXPECT_TRUE(pRequest->IsAbortRequested());
+	Memory.AllowAllocations();
+	EXPECT_TRUE(Queue.Update([](const auto &) { return true; }, &Memory).empty());
+	EXPECT_EQ(Queue.Size(), 0u);
+}
+
+TEST_F(CTranslateQueueTest, FailedHttpResultRemainsUnsendableAfterCompletionStorageRecovery)
+{
+	CTranslateCompletionTestMemory Memory;
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "原文"), 1));
+	m_Http.m_vSubmissions.back().m_pRequest->SetState(EHttpState::ERROR);
+	Memory.m_FailAt = 1;
+	EXPECT_TRUE(Queue.Update([](const auto &) { return true; }, &Memory).empty());
+	Memory.AllowAllocations();
+	const auto Done = Queue.Update([](const auto &) { return true; }, &Memory);
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Success);
+	EXPECT_TRUE(Done[0].m_SendText.empty());
+	int Sends = 0;
+	EXPECT_FALSE(DispatchOutgoingTranslation(Done[0], [&](int, const char *, const char *, int) { ++Sends; return true; }));
+	EXPECT_EQ(Sends, 0);
 }

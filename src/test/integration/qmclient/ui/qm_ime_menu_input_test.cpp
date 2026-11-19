@@ -178,6 +178,47 @@ namespace
 		EXPECT_EQ(m_Input.m_TextInputStarts, 2);
 	}
 
+	TEST_F(QmImeMenuInput, FullyClippedFieldReleasesFocusAndStopsRoutingText)
+	{
+		for(const auto Mode : {ui_widget::EInputFieldMode::SEARCH, ui_widget::EInputFieldMode::MULTILINE})
+		{
+			SCOPED_TRACE(static_cast<int>(Mode));
+			BeginFrame();
+			m_Search.Clear();
+			Focus(m_Search, Mode);
+			m_Session.UpdateFocus(m_Input, CLineInput::GetActiveInput());
+			Text("Keep");
+			m_Input.m_Composing = true;
+			m_Input.m_CandidateCount = 3;
+			const int StopsBeforeClipping = m_Input.m_TextInputStops;
+
+			BeginFrame();
+			const CUIRect PartialClip{m_Rect.x, m_Rect.y + m_Rect.h / 2.0f, m_Rect.w, m_Rect.h};
+			m_Ui.ClipEnable(&PartialClip);
+			Draw(m_Search, Mode);
+			m_Ui.ClipDisable();
+			EXPECT_TRUE(m_Search.IsActive());
+
+			BeginFrame();
+			const CUIRect FullClip{m_Rect.x, m_Rect.y + m_Rect.h, m_Rect.w, m_Rect.h};
+			m_Ui.ClipEnable(&FullClip);
+			m_Ui.BeginPreLayoutInput();
+			EXPECT_TRUE(Draw(m_Search, Mode).m_Deactivated);
+			m_Ui.EndPreLayoutInput();
+			m_Ui.ClipDisable();
+			m_Session.UpdateFocus(m_Input, CLineInput::GetActiveInput());
+			EXPECT_EQ(m_Input.m_TextInputStops, StopsBeforeClipping + 1);
+			EXPECT_FALSE(m_Input.HasComposition());
+			EXPECT_EQ(CLineInput::GetActiveInput(), nullptr);
+
+			BeginFrame();
+			Draw(m_Search, Mode);
+			Text(" hidden");
+			EXPECT_FALSE(m_Search.IsActive());
+			EXPECT_STREQ(m_Search.GetString(), "Keep");
+		}
+	}
+
 	TEST_F(QmImeMenuInput, ClickingFocusedFieldCancelsCompositionOnceAndKeepsEditing)
 	{
 		for(const auto Mode : {ui_widget::EInputFieldMode::SEARCH, ui_widget::EInputFieldMode::MULTILINE})

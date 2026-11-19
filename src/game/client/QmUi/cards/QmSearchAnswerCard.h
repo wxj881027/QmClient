@@ -2,6 +2,7 @@
 #define GAME_CLIENT_QMUI_CARDS_QMSEARCHANSWERCARD_H
 
 #include <functional>
+#include <memory>
 
 class CUi;
 class ITextRender;
@@ -17,6 +18,9 @@ namespace qm_search_answers
 
 namespace qm_card_catalog
 {
+	struct SSearchAnswerCardState;
+	std::shared_ptr<SSearchAnswerCardState> CreateSearchAnswerCardState();
+
 	struct SSearchAnswerContext
 	{
 		CUi *m_pUi;
@@ -27,7 +31,7 @@ namespace qm_card_catalog
 	};
 
 	inline constexpr const char *SEARCH_ANSWER_CARD_ID = "deck:global-search-answers";
-	void BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, const qm_search_answers::SResult &Result, bool ReadOnly, const SSettingsContentMetrics &Metrics, const std::function<void(const char *)> &SelectQuestion, SSettingsCardDefinition &Out);
+	void BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, const qm_search_answers::SResult &Result, bool ReadOnly, const SSettingsContentMetrics &Metrics, const std::function<void(const char *)> &SelectQuestion, SSettingsCardDefinition &Out, const std::shared_ptr<SSearchAnswerCardState> &State = {});
 }
 
 #endif

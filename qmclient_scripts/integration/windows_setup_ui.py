@@ -1,7 +1,8 @@
-"""通过真实 Windows 安装向导检查目录页，不操作正式安装。"""
+"""通过真实 Windows 安装向导检查目录页、完成页和启动失败回退。"""
 from __future__ import annotations
 
 import ctypes
+import os
 from ctypes import wintypes
 import subprocess
 import threading
@@ -17,7 +18,15 @@ def assert_setup_completion_page(setup: Path, install: Path) -> None:
 	_inspect_setup_wizard(setup, install, override=True, completion=True)
 
 
-def _inspect_setup_wizard(setup: Path, expected: Path, *, override: bool, completion: bool) -> None:
+def assert_setup_launch_failure(setup: Path, workspace: Path) -> None:
+	temporary = workspace / "launch-failure-temp"
+	temporary.mkdir()
+	_inspect_setup_wizard(setup, workspace / "unused-install", override=True, completion=False, launch_failure_temp=temporary)
+
+
+def _inspect_setup_wizard(
+	setup: Path, expected: Path, *, override: bool, completion: bool, launch_failure_temp: Path | None = None
+) -> None:
 	# Setup 的加载器会产生子进程，窗口和清理范围均限定在本次进程树。
 	kernel = ctypes.WinDLL("kernel32", use_last_error=True)
 	user = ctypes.WinDLL("user32", use_last_error=True)
@@ -54,7 +63,11 @@ def _inspect_setup_wizard(setup: Path, expected: Path, *, override: bool, comple
 	arguments = [str(setup), "/LANG=zh_cn", "/NORESTART", "/NOICONS"]
 	if override:
 		arguments.append(f"/DIR={expected}")
-	process = subprocess.Popen(arguments, startupinfo=startup)
+	env = None
+	if launch_failure_temp is not None:
+		env = os.environ.copy()
+		env.update(TMP=str(launch_failure_temp), TEMP=str(launch_failure_temp))
+	process = subprocess.Popen(arguments, startupinfo=startup, env=env)
 	known = {process.pid}
 
 	def descendants() -> set[int]:
@@ -86,7 +99,8 @@ def _inspect_setup_wizard(setup: Path, expected: Path, *, override: bool, comple
 			user.SendMessageTimeoutW(handle, 0x000D, len(buffer), ctypes.addressof(buffer), 2, 2000, ctypes.byref(result))
 		return buffer.value
 
-	deadline = time.monotonic() + (180 if completion else 30)
+	start_install = completion or launch_failure_temp is not None
+	deadline = time.monotonic() + (180 if start_install else 30)
 	last_next = None
 	observed = []
 	install_clicked = False
@@ -98,8 +112,10 @@ def _inspect_setup_wizard(setup: Path, expected: Path, *, override: bool, comple
 			def collect_window(handle, _):
 				pid = wintypes.DWORD()
 				user.GetWindowThreadProcessId(handle, ctypes.byref(pid))
-				if pid.value in pids and text(handle, class_name=True) in {"TWizardForm", "QmClientSetupWindow"}:
-					windows.append(handle)
+				if pid.value in pids:
+					class_name = text(handle, class_name=True)
+					if class_name == "QmClientSetupWindow" or (launch_failure_temp is None and class_name == "TWizardForm"):
+						windows.append(handle)
 				return True
 			user.EnumWindows(collect_window, 0)
 			for window in windows:
@@ -112,11 +128,21 @@ def _inspect_setup_wizard(setup: Path, expected: Path, *, override: bool, comple
 				user.EnumChildWindows(window, collect_control, 0)
 				observed = [(kind, value) for _, kind, value in controls]
 				for handle, kind, value in controls:
-					if not completion and kind.casefold().endswith("edit") and value and Path(value) == expected:
+					if not start_install and kind.casefold().endswith("edit") and value and Path(value) == expected:
 						if not user.IsWindowEnabled(handle):
 							raise AssertionError("installation directory cannot be edited")
 						return
 				buttons = [(handle, value) for handle, kind, value in controls if kind.casefold() in {"tnewbutton", "button"} and user.IsWindowEnabled(handle)]
+				if (
+					launch_failure_temp is not None
+					and any(value == "返回安装选项" for _, value in buttons)
+					and any(kind.casefold() == "static" and "无法启动安装任务" in value for _, kind, value in controls)
+				):
+					if any(value == "查看安装日志" for _, _, value in controls):
+						raise AssertionError("Setup offered a log before the engine could create it")
+					if list(launch_failure_temp.glob("QmClient-Setup-*")):
+						raise AssertionError("Setup left its staging directory while the failure page was open")
+					return
 				if completion and any(value.replace("&", "").strip() in {"完成", "Finish"} for _, value in buttons):
 					labels = [value for _, kind, value in controls if kind.casefold() in {"tnewstatictext", "static"}]
 					if text(window, class_name=True) == "QmClientSetupWindow":
@@ -132,11 +158,21 @@ def _inspect_setup_wizard(setup: Path, expected: Path, *, override: bool, comple
 					return
 				for handle, value in buttons:
 					if value.replace("&", "").strip() in {"安装", "Install", "开始安装", "更新安装"}:
-						if not completion:
+						if not start_install:
 							raise AssertionError(f"Setup skipped the editable directory page: {observed}")
 						if not install_clicked:
 							install_clicked = True
 							result = ctypes.c_size_t()
+							if launch_failure_temp is not None:
+								# 编辑框允许 32760 个字符，附加内核参数后命令行超过 CreateProcessW 上限。
+								edit = next(control for control, kind, _ in controls if kind.casefold() == "edit")
+								directory_length = 32760
+								prefix = str(expected) + "\\"
+								path = ctypes.create_unicode_buffer(prefix.ljust(directory_length, "x"))
+								if not user.SendMessageTimeoutW(edit, 0x000C, 0, ctypes.addressof(path), 2, 2000, ctypes.byref(result)) or not result.value:
+									raise AssertionError("could not set the overlong installation directory")
+								if not user.SendMessageTimeoutW(edit, 0x000E, 0, 0, 2, 2000, ctypes.byref(result)) or result.value < directory_length:
+									raise AssertionError("the installation directory was truncated before the launch attempt")
 							user.SendMessageTimeoutW(handle, 0x00F5, 0, 0, 2, 2000, ctypes.byref(result))
 				for handle, value in buttons:
 					if value.replace("&", "").strip() in {"下一步", "Next >", "Next"} and last_next != observed:

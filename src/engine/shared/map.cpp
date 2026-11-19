@@ -11,6 +11,9 @@
 #include <game/gamecore.h>
 #include <game/mapitems.h>
 
+#include <cstdlib>
+#include <limits>
+
 CMap::CMap(IStorage *pStorage) :
 	m_pStorage(pStorage)
 {
@@ -78,6 +81,17 @@ int CMap::NumItems() const
 
 bool CMap::Load(const char *pMapName, int StorageType)
 {
+	return Load(pMapName, StorageType, nullptr);
+}
+
+bool CMap::Load(const char *pMapName, int StorageType, IAllocationResource *pPreparationMemory)
+{
+	return Load(pMapName, StorageType, pPreparationMemory, nullptr);
+}
+
+bool CMap::Load(const char *pMapName, int StorageType, IAllocationResource *pPreparationMemory, CDataFileReader::IOperations *pOperations)
+try
+{
 	IStorage *pStorage = m_pStorage;
 	if(pStorage == nullptr && Kernel() != nullptr)
 		pStorage = Kernel()->RequestInterface<IStorage>();
@@ -86,7 +100,7 @@ bool CMap::Load(const char *pMapName, int StorageType)
 
 	// 避免加载失败时留下不一致的 datafile，先单独加载新 datafile
 	CDataFileReader NewDataFile;
-	if(!NewDataFile.Open(pStorage, pMapName, StorageType))
+	if(!NewDataFile.Open(pStorage, pMapName, StorageType, nullptr, pOperations))
 		return false;
 
 	if(!ValidateMapVersion(NewDataFile))
@@ -102,7 +116,7 @@ bool CMap::Load(const char *pMapName, int StorageType)
 	// 将旧版本的地图条目替换为与最新版本兼容的条目，避免使用地图条目时做版本检查。
 	// 确保存在 game 层与 game group。
 	const CMapItemLayerTilemap *pGameLayer = nullptr;
-	std::set<int> UsedLayerItemIndices;
+	CPreparationIndices UsedLayerItemIndices{CBorrowedAllocator<int>{pPreparationMemory}};
 	for(int GroupIndex = 0; GroupIndex < GroupsNum; GroupIndex++)
 	{
 		const size_t GroupItemSize = NewDataFile.GetItemSize(GroupsStart + GroupIndex);
@@ -112,11 +126,23 @@ bool CMap::Load(const char *pMapName, int StorageType)
 			return false;
 		}
 		const CMapItemGroup *pGroup = static_cast<CMapItemGroup *>(NewDataFile.GetItem(GroupsStart + GroupIndex));
+		// 声明了新版字段就必须包含完整尾部，不能让图层初始化越过条目写入裁剪字段。
+		size_t RequiredGroupSize = sizeof(CMapItemGroup_v1);
+		if(pGroup->m_Version >= 3)
+			RequiredGroupSize = sizeof(CMapItemGroup);
+		else if(pGroup->m_Version >= 2)
+			RequiredGroupSize = sizeof(CMapItemGroup) - sizeof(pGroup->m_aName);
+		if(GroupItemSize < RequiredGroupSize)
+		{
+			log_error("map/load", "Group %d is truncated (version %d, size %" PRIzu ", expected at least %" PRIzu ").",
+				GroupIndex, pGroup->m_Version, GroupItemSize, RequiredGroupSize);
+			return false;
+		}
 		if(pGroup->m_StartLayer < 0 || pGroup->m_NumLayers < 0 ||
 			(int64_t)pGroup->m_StartLayer + pGroup->m_NumLayers > LayersNum)
 		{
-			log_error("map/load", "Group %d uses invalid layers %d to %d (the map contains %d layers).",
-				GroupIndex, pGroup->m_StartLayer, pGroup->m_StartLayer + pGroup->m_NumLayers - 1, LayersNum);
+			log_error("map/load", "Group %d uses an invalid layer range (start %d, count %d, map contains %d layers).",
+				GroupIndex, pGroup->m_StartLayer, pGroup->m_NumLayers, LayersNum);
 			return false;
 		}
 		for(int LayerIndex = 0; LayerIndex < pGroup->m_NumLayers; LayerIndex++)
@@ -144,7 +170,7 @@ bool CMap::Load(const char *pMapName, int StorageType)
 
 			if(pLayer->m_Type == LAYERTYPE_TILES)
 			{
-				if(!UpgradeAndValidateTilesLayerItem(NewDataFile, GroupIndex, LayerIndex, reinterpret_cast<CMapItemLayerTilemap *>(pLayer), LayerItemIndex, LayerItemSize))
+				if(!UpgradeAndValidateTilesLayerItem(NewDataFile, GroupIndex, LayerIndex, reinterpret_cast<CMapItemLayerTilemap_v2 *>(pLayer), LayerItemIndex, LayerItemSize))
 				{
 					return false;
 				}
@@ -164,7 +190,7 @@ bool CMap::Load(const char *pMapName, int StorageType)
 	}
 
 	// 惰性校验数据并把压缩的 tile 层替换为未压缩版本。
-	std::set<int> UsedDataIndices;
+	CPreparationIndices UsedDataIndices{CBorrowedAllocator<int>{pPreparationMemory}};
 	for(int GroupIndex = 0; GroupIndex < GroupsNum; GroupIndex++)
 	{
 		const CMapItemGroup *pGroup = static_cast<CMapItemGroup *>(NewDataFile.GetItem(GroupsStart + GroupIndex));
@@ -193,6 +219,11 @@ bool CMap::Load(const char *pMapName, int StorageType)
 	m_DataFile.Close();
 	m_DataFile = std::move(NewDataFile);
 	return true;
+}
+catch(...)
+{
+	log_error("map/load", "Could not prepare map '%s'.", pMapName);
+	return false;
 }
 
 void CMap::Adopt(CMap &&Other)
@@ -238,18 +269,38 @@ int CMap::Size() const
 	return m_DataFile.Size();
 }
 
-bool CMap::ExtractTiles(CTile *pDest, size_t DestSize, const CTile *pSrc, size_t SrcSize)
+bool CMap::ValidateTileskip(size_t DestSize, const CTile *pSrc, size_t SrcSize)
 {
 	size_t DestIndex = 0;
-	size_t SrcIndex = 0;
-	while(DestIndex < DestSize && SrcIndex < SrcSize)
+	for(size_t SrcIndex = 0; SrcIndex < SrcSize; ++SrcIndex)
 	{
+		if(DestIndex == DestSize)
+		{
+			log_error("map/load", "Too much tile layer data (read %" PRIzu ", total %" PRIzu ").", SrcIndex, SrcSize);
+			return false;
+		}
 		if(pSrc[SrcIndex].m_MustBe0 != 0)
 		{
 			log_error("map/load", "Tile layer data contains non-zero padding value %d at index %" PRIzu ".",
 				pSrc[SrcIndex].m_MustBe0, SrcIndex);
 			return false;
 		}
+		// 保留旧解码器对最后一段的截断行为，计数不会超过目标范围。
+		DestIndex += minimum(static_cast<size_t>(pSrc[SrcIndex].m_Skip) + 1, DestSize - DestIndex);
+	}
+	if(DestIndex != DestSize)
+	{
+		log_error("map/load", "Tile layer data is truncated (got %" PRIzu ", wanted %" PRIzu ").", DestIndex, DestSize);
+		return false;
+	}
+	return true;
+}
+
+void CMap::ExtractValidatedTiles(CTile *pDest, size_t DestSize, const CTile *pSrc, size_t SrcSize)
+{
+	size_t DestIndex = 0;
+	for(size_t SrcIndex = 0; SrcIndex < SrcSize; ++SrcIndex)
+	{
 		for(unsigned Counter = 0; Counter <= pSrc[SrcIndex].m_Skip && DestIndex < DestSize; Counter++)
 		{
 			pDest[DestIndex].m_Index = pSrc[SrcIndex].m_Index;
@@ -258,21 +309,34 @@ bool CMap::ExtractTiles(CTile *pDest, size_t DestSize, const CTile *pSrc, size_t
 			pDest[DestIndex].m_MustBe0 = 0;
 			DestIndex++;
 		}
-		SrcIndex++;
 	}
-	if(DestIndex != DestSize)
-	{
-		log_error("map/load", "Tile layer data is truncated (got %" PRIzu ", wanted %" PRIzu ").",
-			DestIndex, DestSize);
+}
+
+bool CMap::ExtractTiles(CTile *pDest, size_t DestSize, const CTile *pSrc, size_t SrcSize)
+{
+	if(!ValidateTileskip(DestSize, pSrc, SrcSize))
 		return false;
-	}
-	if(SrcIndex != SrcSize)
-	{
-		log_error("map/load", "Too much tile layer data (read %" PRIzu ", total %" PRIzu ").",
-			SrcIndex, SrcSize);
-		return false;
-	}
+	ExtractValidatedTiles(pDest, DestSize, pSrc, SrcSize);
 	return true;
+}
+
+CTile *CMap::DecodeTileskip(size_t DestSize, const CTile *pSrc, size_t SrcSize, const std::function<void *(size_t)> &Allocate)
+{
+	return DecodeTileskip(DestSize, pSrc, SrcSize, Allocate, std::numeric_limits<size_t>::max());
+}
+
+CTile *CMap::DecodeTileskip(size_t DestSize, const CTile *pSrc, size_t SrcSize, const std::function<void *(size_t)> &Allocate, size_t MaxBytes)
+{
+	if(DestSize == 0 || DestSize > MaxBytes / sizeof(CTile) || !ValidateTileskip(DestSize, pSrc, SrcSize))
+		return nullptr;
+	CTile *pTiles = static_cast<CTile *>(Allocate ? Allocate(DestSize * sizeof(CTile)) : malloc(DestSize * sizeof(CTile)));
+	if(pTiles == nullptr)
+	{
+		log_error("map/load", "Failed to allocate memory for tile layer data (tiles %" PRIzu ").", DestSize);
+		return nullptr;
+	}
+	ExtractValidatedTiles(pTiles, DestSize, pSrc, SrcSize);
+	return pTiles;
 }
 
 bool CMap::ValidateMapVersion(CDataFileReader &NewDataFile)
@@ -476,93 +540,61 @@ bool CMap::UpgradeAndValidateTilesLayerItem(
 		return false;
 	}
 
-	const auto &&UnpackPhysicsLayerDataIndex = [&](int TilesLayerFlag, int *pTargetDataIndex, const int *pSourceDataIndex, const CMapItemLayerTilemap_v2 *pSourceTileLayer, const char *pName) {
-		// 旧地图可能只包含物理 tile 数据索引的前缀而不递增版本，因此必须逐个检查每个数据索引的大小。
-		if(LayerItemSize < reinterpret_cast<const uint8_t *>(pSourceDataIndex) - reinterpret_cast<const uint8_t *>(pSourceTileLayer) + sizeof(*pSourceDataIndex))
-		{
-			if(pSourceTileLayer->m_Flags & TilesLayerFlag)
-			{
-				log_error("map/load", "%s layer %d in group %d is truncated (version %d, size %" PRIzu ").",
-					pName, LayerIndex, GroupIndex, pSourceTileLayer->m_Version, LayerItemSize);
-				return false;
-			}
-			*pTargetDataIndex = -1;
-		}
-		else
-		{
-			*pTargetDataIndex = *pSourceDataIndex;
-		}
-		return true;
-	};
+	const bool LegacyVersion = pLayerTilemapBase->m_Version == 2;
+	if(!LegacyVersion && LayerItemSize >= sizeof(CMapItemLayerTilemap))
+		return EnsureTileLayerProperties(GroupIndex, LayerIndex, *static_cast<CMapItemLayerTilemap *>(pLayerTilemapBase));
 
-	if(pLayerTilemapBase->m_Version == 2)
+	const size_t PrefixSize = LegacyVersion ? sizeof(CMapItemLayerTilemap_v2) : sizeof(CMapItemLayerTilemap_v3Teeworlds);
+	if(LayerItemSize < PrefixSize)
 	{
-		const CMapItemLayerTilemap_v2Legacy *pLayerTilemapLegacy = static_cast<const CMapItemLayerTilemap_v2Legacy *>(pLayerTilemapBase);
-		CMapItemLayerTilemap OverriddenLayerTilemap;
-		mem_copy(&OverriddenLayerTilemap, pLayerTilemapLegacy, sizeof(CMapItemLayerTilemap_v2));
-
-		// 版本 2 条目没有图层名，默认为空字符串。物理层名称稍后统一修正。
-		StrToInts(OverriddenLayerTilemap.m_aName, std::size(OverriddenLayerTilemap.m_aName), "");
-
-		if(!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_TELE, &OverriddenLayerTilemap.m_Tele, &pLayerTilemapLegacy->m_Tele, pLayerTilemapBase, "Tele") ||
-			!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_SPEEDUP, &OverriddenLayerTilemap.m_Speedup, &pLayerTilemapLegacy->m_Speedup, pLayerTilemapBase, "Speedup") ||
-			!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_FRONT, &OverriddenLayerTilemap.m_Front, &pLayerTilemapLegacy->m_Front, pLayerTilemapBase, "Front") ||
-			!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_SWITCH, &OverriddenLayerTilemap.m_Switch, &pLayerTilemapLegacy->m_Switch, pLayerTilemapBase, "Switch") ||
-			!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_TUNE, &OverriddenLayerTilemap.m_Tune, &pLayerTilemapLegacy->m_Tune, pLayerTilemapBase, "Tune"))
-		{
-			return false;
-		}
-		if(!EnsureTileLayerProperties(GroupIndex, LayerIndex, OverriddenLayerTilemap))
-		{
-			return false;
-		}
-		if(!NewDataFile.OverrideItemData(LayerItemIndex, &OverriddenLayerTilemap, sizeof(OverriddenLayerTilemap)))
-		{
-			return false;
-		}
-	}
-	else if(LayerItemSize < sizeof(CMapItemLayerTilemap_v3Teeworlds))
-	{
-		// 版本 3 与 4 条目只允许截断 DDRace 追加的物理层数据索引，图层名必须完整。
+		// 版本 3 和 4 的图层名必须完整，只有 DDRace 物理索引可以只存前缀。
 		log_error("map/load", "Tile layer %d in group %d is truncated (version %d, size %" PRIzu ").",
 			LayerIndex, GroupIndex, pLayerTilemapBase->m_Version, LayerItemSize);
 		return false;
 	}
-	else if(LayerItemSize < sizeof(CMapItemLayerTilemap))
-	{
-		const CMapItemLayerTilemap *pLayerTilemapLegacy = static_cast<const CMapItemLayerTilemap *>(pLayerTilemapBase);
-		CMapItemLayerTilemap OverriddenLayerTilemap;
-		mem_copy(&OverriddenLayerTilemap, pLayerTilemapLegacy, sizeof(CMapItemLayerTilemap_v3Teeworlds));
 
-		if(!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_TELE, &OverriddenLayerTilemap.m_Tele, &pLayerTilemapLegacy->m_Tele, pLayerTilemapBase, "Tele") ||
-			!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_SPEEDUP, &OverriddenLayerTilemap.m_Speedup, &pLayerTilemapLegacy->m_Speedup, pLayerTilemapBase, "Speedup") ||
-			!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_FRONT, &OverriddenLayerTilemap.m_Front, &pLayerTilemapLegacy->m_Front, pLayerTilemapBase, "Front") ||
-			!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_SWITCH, &OverriddenLayerTilemap.m_Switch, &pLayerTilemapLegacy->m_Switch, pLayerTilemapBase, "Switch") ||
-			!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_TUNE, &OverriddenLayerTilemap.m_Tune, &pLayerTilemapLegacy->m_Tune, pLayerTilemapBase, "Tune"))
-		{
-			return false;
-		}
-		if(!EnsureTileLayerProperties(GroupIndex, LayerIndex, OverriddenLayerTilemap))
-		{
-			return false;
-		}
-		if(!NewDataFile.OverrideItemData(LayerItemIndex, &OverriddenLayerTilemap, sizeof(OverriddenLayerTilemap)))
-		{
-			return false;
-		}
-	}
-	else // 最新版本，整个 CMapItemLayerTilemap 可用
+	CMapItemLayerTilemap OverriddenLayerTilemap;
+	mem_copy(&OverriddenLayerTilemap, pLayerTilemapBase, PrefixSize);
+	if(LegacyVersion)
 	{
-		if(!EnsureTileLayerProperties(GroupIndex, LayerIndex, *static_cast<CMapItemLayerTilemap *>(pLayerTilemapBase)))
-		{
-			return false;
-		}
+		// 版本 2 没有图层名，物理层名称稍后统一修正。
+		StrToInts(OverriddenLayerTilemap.m_aName, std::size(OverriddenLayerTilemap.m_aName), "");
 	}
 
-	return true;
+	// 扩展字段按相同顺序存储，确认当前字段完整后再从条目读取。
+	const auto *pItemBytes = reinterpret_cast<const unsigned char *>(pLayerTilemapBase);
+	size_t Offset = PrefixSize;
+	const auto UnpackPhysicsLayerDataIndex = [&](int TilesLayerFlag, int &DataIndex, const char *pName) {
+		const size_t IndexOffset = Offset;
+		Offset += sizeof(DataIndex);
+		if(Offset <= LayerItemSize)
+		{
+			mem_copy(&DataIndex, pItemBytes + IndexOffset, sizeof(DataIndex));
+			return true;
+		}
+		if(OverriddenLayerTilemap.m_Flags & TilesLayerFlag)
+		{
+			log_error("map/load", "%s layer %d in group %d is truncated (version %d, size %" PRIzu ").",
+				pName, LayerIndex, GroupIndex, OverriddenLayerTilemap.m_Version, LayerItemSize);
+			return false;
+		}
+		DataIndex = -1;
+		return true;
+	};
+
+	if(!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_TELE, OverriddenLayerTilemap.m_Tele, "Tele") ||
+		!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_SPEEDUP, OverriddenLayerTilemap.m_Speedup, "Speedup") ||
+		!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_FRONT, OverriddenLayerTilemap.m_Front, "Front") ||
+		!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_SWITCH, OverriddenLayerTilemap.m_Switch, "Switch") ||
+		!UnpackPhysicsLayerDataIndex(TILESLAYERFLAG_TUNE, OverriddenLayerTilemap.m_Tune, "Tune") ||
+		!EnsureTileLayerProperties(GroupIndex, LayerIndex, OverriddenLayerTilemap))
+	{
+		return false;
+	}
+	return NewDataFile.OverrideItemData(LayerItemIndex, &OverriddenLayerTilemap, sizeof(OverriddenLayerTilemap));
 }
 
-bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int GroupIndex, int LayerIndex, const CMapItemLayerTilemap *pLayerTilemap, const CMapItemLayerTilemap &GameLayer, std::set<int> &UsedDataIndices)
+bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int GroupIndex, int LayerIndex, const CMapItemLayerTilemap *pLayerTilemap, const CMapItemLayerTilemap &GameLayer, CPreparationIndices &UsedDataIndices)
 {
 	size_t TileSize;
 	int DataIndex;
@@ -623,29 +655,46 @@ bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int Gro
 		return false;
 	}
 
-	const size_t TilemapCount = (size_t)pLayerTilemap->m_Width * pLayerTilemap->m_Height;
-	const size_t TilemapSize = TilemapCount * TileSize;
-
-	if(((int)TilemapCount / pLayerTilemap->m_Width != pLayerTilemap->m_Height) || (TilemapSize / TileSize != TilemapCount))
+	// datafile 用 int 存储数据块长度，先检查字节数再计算瓦片数量和大小。
+	constexpr size_t MAX_DATA_SIZE = std::numeric_limits<int>::max();
+	const size_t Width = pLayerTilemap->m_Width;
+	const size_t Height = pLayerTilemap->m_Height;
+	if(Width > MAX_DATA_SIZE / TileSize / Height)
 	{
-		log_error("map/load", "Tile layer %d in group %d is too big (%d * %d * %" PRIzu " causes an integer overflow).",
+		log_error("map/load", "Tile layer %d in group %d is too big (%d * %d * %" PRIzu " exceeds the supported data size).",
 			LayerIndex, GroupIndex, pLayerTilemap->m_Width, pLayerTilemap->m_Height, TileSize);
 		return false;
 	}
+	const size_t TilemapCount = Width * Height;
+	const size_t TilemapSize = TilemapCount * TileSize;
 
 	// 碰撞检测使用 game 层的大小来访问所有物理层数据，
 	// 因此物理层必须包含至少与 game 层一样多的 tile。
 	if(LayerType != LAYERTYPE_TILES && LayerType != LAYERTYPE_GAME &&
-		TilemapCount < (size_t)GameLayer.m_Width * GameLayer.m_Height)
+		TilemapCount < static_cast<uint64_t>(GameLayer.m_Width) * GameLayer.m_Height)
 	{
 		log_error("map/load", "Physics layer %d in group %d is smaller than the game layer (%d * %d < %d * %d).",
 			LayerIndex, GroupIndex, pLayerTilemap->m_Width, pLayerTilemap->m_Height, GameLayer.m_Width, GameLayer.m_Height);
 		return false;
 	}
 
-	NewDataFile.AddDataProcessor(DataIndex, [pLayerTilemap, TileSize, LayerType, GroupIndex, LayerIndex, TilemapCount, TilemapSize](void *pData, size_t Size) -> std::pair<void *, size_t> {
+	const int LayerVersion = pLayerTilemap->m_Version;
+	size_t MinInputSize = TilemapSize;
+	size_t MaxInputSize = std::numeric_limits<size_t>::max();
+	if(LayerVersion >= 4)
+	{
+		constexpr size_t MAX_TILES_PER_RECORD = static_cast<size_t>(std::numeric_limits<decltype(CTile::m_Skip)>::max()) + 1;
+		MinInputSize = ((TilemapCount + MAX_TILES_PER_RECORD - 1) / MAX_TILES_PER_RECORD) * sizeof(CTile);
+		// 每条记录至少展开一个 tile，读取时仍可忽略不足一个 tile 的尾字节。
+		MaxInputSize = LayerType == LAYERTYPE_TILES || LayerType == LAYERTYPE_GAME ? TilemapSize + sizeof(CTile) - 1 : 0;
+	}
+
+	// 保留可选层的惰性失败，声明长度不足的块无需分配或解压。
+	if(static_cast<size_t>(NewDataFile.GetDataSize(DataIndex)) < MinInputSize)
+		MaxInputSize = 0;
+	NewDataFile.AddDataProcessor(DataIndex, MaxInputSize, [LayerVersion, TileSize, LayerType, GroupIndex, LayerIndex, TilemapCount, TilemapSize](void *pData, size_t Size) -> std::pair<void *, size_t> {
 		const size_t SavedTilesSize = Size / TileSize;
-		if(pLayerTilemap->m_Version >= 4)
+		if(LayerVersion >= 4)
 		{
 			// 该版本的 CMapItemLayerTilemap 只会被上游 Teeworlds 写入地图。
 			// 此版本 tile 层的数据必须按 CTile::m_Skip 值重复 tile 来解包。
@@ -656,23 +705,13 @@ bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int Gro
 				free(pData);
 				return std::make_pair(nullptr, 0);
 			}
-			CTile *pTiles = static_cast<CTile *>(malloc(TilemapSize));
+			CTile *pTiles = DecodeTileskip(TilemapCount, static_cast<const CTile *>(pData), SavedTilesSize, {}, MAX_DATA_SIZE);
+			free(pData);
 			if(pTiles == nullptr)
 			{
-				log_error("map/load", "Failed to allocate memory for layer %d in group %d (size %d * %d).",
-					LayerIndex, GroupIndex, pLayerTilemap->m_Width, pLayerTilemap->m_Height);
-				free(pData);
+				log_error("map/load", "Failed to extract tiles of layer %d in group %d.", LayerIndex, GroupIndex);
 				return std::make_pair(nullptr, 0);
 			}
-			else if(!ExtractTiles(pTiles, (size_t)pLayerTilemap->m_Width * pLayerTilemap->m_Height, static_cast<const CTile *>(pData), SavedTilesSize))
-			{
-				log_error("map/load", "Failed to extract tiles of layer %d in group %d.",
-					LayerIndex, GroupIndex);
-				free(pTiles);
-				free(pData);
-				return std::make_pair(nullptr, 0);
-			}
-			free(pData);
 			return std::make_pair(pTiles, TilemapSize);
 		}
 		else if(SavedTilesSize < TilemapCount)
@@ -690,7 +729,7 @@ bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int Gro
 				if(pTileData[TileIndex].m_Skip != 0)
 				{
 					log_error("map/load", "Tile data of layer %d in group %d contains non-zero skip value %d at index %" PRIzu " but version %d does not use tileskip.",
-						LayerIndex, GroupIndex, pTileData[TileIndex].m_Skip, TileIndex, pLayerTilemap->m_Version);
+						LayerIndex, GroupIndex, pTileData[TileIndex].m_Skip, TileIndex, LayerVersion);
 					free(pData);
 					return std::make_pair(nullptr, 0);
 				}

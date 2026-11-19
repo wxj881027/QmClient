@@ -88,7 +88,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 {
 	const SSettingsPageLayoutFrame AppearancePage = Ctx.m_Page;
 	const CUIRect MainView = AppearancePage.m_ContentViewport;
-	CUIRect LeftView, RightView, Button;
+	CUIRect Button{};
 	const SSettingsContentMetrics AppearanceMetrics = Ctx.m_Metrics;
 	const float AppearanceUiScale = AppearanceMetrics.m_UiScale;
 	const float AppearanceBodySize = AppearanceMetrics.m_BodySize;
@@ -443,7 +443,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 
 				if(Flow.Control("appearance-chat-width", LineSize, Button, RowSpacing))
 				{
-					if(DoAppearanceNumericField(APPEARANCE_TAB_CHAT, "appearance-chat-width", &g_Config.m_ClChatWidth, &g_Config.m_ClChatWidth, Button, Localize("Chat width"), 120, 400))
+					if(DoAppearanceNumericField(APPEARANCE_TAB_CHAT, "appearance-chat-width", &g_Config.m_ClChatWidth, &g_Config.m_ClChatWidth, Button, Localize("Chat width"), 140, 400))
 					{
 						pChat->EnsureCoherentFontSize();
 						pChat->RebuildChat();
@@ -1103,10 +1103,10 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 						{
 							g_Config.m_QmHookCollPressedCustom = g_Config.m_QmHookCollPressedCustom ? 0 : 1;
 						}
+						static int s_HookCollPressedCustomToolTip;
+						Ui()->RegisterPassiveHotItem(&s_HookCollPressedCustomToolTip, &Button);
+						GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedCustomToolTip, &Button, Localize("Use the custom colors below while the hook key is held"));
 					}
-					static int s_HookCollPressedCustomToolTip;
-					Ui()->RegisterPassiveHotItem(&s_HookCollPressedCustomToolTip, &Button);
-					GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedCustomToolTip, &Button, Localize("Use the custom colors below while the hook key is held"));
 				}
 				// 按下后四行取色器仅在"自定义按下后颜色"开启时渲染；关闭时不占用布局，
 				// 高度过渡由设置卡片外壳按测量变化自动承载。
@@ -1116,37 +1116,45 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 						// 按下后颜色（未瞄准可钩物体）：开关开启时始终生效，默认为原色的高亮变体
 						CUIRect ColorRow;
 						if(Flow.Control("appearance-color-QmHookCollPressedNoColl", AppearanceMetrics.m_ButtonHeight, ColorRow, ui_token::settings::RowGap(AppearanceMetrics.m_LineSpacing)))
+						{
 							DoLine_ColorPicker(&s_HookCollPressedNoCollResetId, AppearanceMetrics, &ColorRow, Localize("Pressed: Nothing hookable"), &g_Config.m_QmHookCollPressedNoColl, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmHookCollPressedNoColl, true)), false, nullptr, true);
-						static int s_HookCollPressedToolTip;
-						Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
-						GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+							static int s_HookCollPressedToolTip;
+							Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
+							GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+						}
 					}
 					{
 						// 按下后颜色（可钩物体）
 						CUIRect ColorRow;
 						if(Flow.Control("appearance-color-QmHookCollPressedHookable", AppearanceMetrics.m_ButtonHeight, ColorRow, ui_token::settings::RowGap(AppearanceMetrics.m_LineSpacing)))
+						{
 							DoLine_ColorPicker(&s_HookCollPressedHookableResetId, AppearanceMetrics, &ColorRow, Localize("Pressed: Something hookable"), &g_Config.m_QmHookCollPressedHookable, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmHookCollPressedHookable, true)), false, nullptr, true);
-						static int s_HookCollPressedToolTip;
-						Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
-						GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+							static int s_HookCollPressedToolTip;
+							Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
+							GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+						}
 					}
 					{
 						// 按下后颜色（其他玩家）
 						CUIRect ColorRow;
 						if(Flow.Control("appearance-color-QmHookCollPressedTee", AppearanceMetrics.m_ButtonHeight, ColorRow, ui_token::settings::RowGap(AppearanceMetrics.m_LineSpacing)))
+						{
 							DoLine_ColorPicker(&s_HookCollPressedTeeResetId, AppearanceMetrics, &ColorRow, Localize("Pressed: A Tee"), &g_Config.m_QmHookCollPressedTee, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmHookCollPressedTee, true)), false, nullptr, true);
-						static int s_HookCollPressedToolTip;
-						Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
-						GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+							static int s_HookCollPressedToolTip;
+							Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
+							GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+						}
 					}
 					{
 						// 按下后颜色（辅助线提示）
 						CUIRect ColorRow;
 						if(Flow.Control("appearance-color-QmHookCollPressedTip", AppearanceMetrics.m_ButtonHeight, ColorRow, ui_token::settings::RowGap(AppearanceMetrics.m_LineSpacing)))
+						{
 							DoLine_ColorPicker(&s_HookCollPressedTipResetId, AppearanceMetrics, &ColorRow, Localize("Pressed: Hook line tip"), &g_Config.m_QmHookCollPressedTip, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmHookCollPressedTip, true)), false, nullptr, true);
-						static int s_HookCollPressedToolTip;
-						Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
-						GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+							static int s_HookCollPressedToolTip;
+							Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
+							GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+						}
 					}
 				}
 			});

@@ -10,10 +10,23 @@
 #include <game/editor/smooth_value.h>
 #include <game/mapitems.h>
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <memory>
 #include <vector>
 
 class CEnvelope;
+
+namespace EnvelopeEditor
+{
+inline int RoundFixedPoint(double Value)
+{
+	if(std::isnan(Value))
+		return 0;
+	return static_cast<int>(std::clamp(std::round(Value), (double)std::numeric_limits<int>::min(), (double)std::numeric_limits<int>::max()));
+}
+}
 
 class CEnvelopeEditor : public CEditorComponent
 {
@@ -34,6 +47,8 @@ public:
 	void Render(CUIRect View);
 
 private:
+	std::shared_ptr<CEnvelope> RefreshSelectedEnvelope(bool FromToolbar = false);
+	void ResetOperation();
 	void RenderColorBar(CUIRect ColorBar, const std::shared_ptr<CEnvelope> &pEnvelope);
 
 	void UpdateHotEnvelopeObject(const CUIRect &View, const CEnvelope *pEnvelope, int ActiveChannels);
@@ -69,16 +84,18 @@ private:
 	const char m_NextEnvelopeButtonId = 0;
 	const char m_aChannelButtonIds[CEnvPoint::MAX_CHANNELS] = {0};
 	const char m_EnvelopeEditorId = 0;
+	const char m_ScaleId = 0;
+	std::shared_ptr<CEnvelope> m_pDisplayedEnvelope;
 	CLineInput m_NameInput;
 	int m_EnvelopeEditorButtonUsed;
 	EEnvelopeEditorOp m_Operation;
-	std::vector<float> m_vAccurateDragValuesX;
-	std::vector<float> m_vAccurateDragValuesY;
+	std::vector<double> m_vAccurateDragValuesX;
+	std::vector<double> m_vAccurateDragValuesY;
 	vec2 m_MouseStart;
-	vec2 m_ScaleFactor;
-	vec2 m_Midpoint;
-	std::vector<float> m_vInitialPositionsX;
-	std::vector<float> m_vInitialPositionsY;
+	vector2_base<double> m_ScaleFactor;
+	vector2_base<double> m_Midpoint;
+	std::vector<double> m_vInitialPositionsX;
+	std::vector<double> m_vInitialPositionsY;
 
 	// Popup 函数保留在 CEditor（popups.cpp），这里只提供稳定的菜单 id 成员
 	SPopupMenuId m_PopupEnvPointId;

@@ -10,29 +10,50 @@ import argparse
 import json
 from pathlib import Path
 import shutil
+import struct
 import sys
 import time
 from unittest import SkipTest
 from collections.abc import Callable
 
 try:
+	from qmclient_scripts.integration.e2e_console_settings import scenario_console_settings_startup
 	from qmclient_scripts.integration.e2e_crash_reporting import scenario_fatal_exception_exits_without_hang
+	from qmclient_scripts.integration.e2e_demo_browser import scenario_demo_browser_pre_epoch_date
 	from qmclient_scripts.integration.e2e_menu_background import (
 		scenario_menu_background_failed_switch_shutdown,
 		scenario_menu_background_pending_switch_shutdown,
 		scenario_menu_background_switch_shutdown,
 	)
-	from qmclient_scripts.integration.e2e_map_loading import scenario_map_change_during_resource_preparation
+	from qmclient_scripts.integration.e2e_gameclient_recovery import (
+		scenario_missing_language_preserves_previous_selection,
+		scenario_invalid_hud_atlas_loads_default,
+		scenario_invalid_emoticons_atlas_loads_default,
+	)
+	from qmclient_scripts.integration.e2e_map_loading import (
+		scenario_current_map_entity_background_during_loading,
+		scenario_map_change_during_resource_preparation,
+	)
 	from qmclient_scripts.integration.e2e_settings_language import scenario_settings_language_round_trip
 	from qmclient_scripts.integration.process_harness import ProcessEnvironment
 except ModuleNotFoundError:
+	from e2e_console_settings import scenario_console_settings_startup  # type: ignore[no-redef]
 	from e2e_crash_reporting import scenario_fatal_exception_exits_without_hang  # type: ignore[no-redef]
+	from e2e_demo_browser import scenario_demo_browser_pre_epoch_date  # type: ignore[no-redef]
 	from e2e_menu_background import (  # type: ignore[no-redef]
 		scenario_menu_background_failed_switch_shutdown,
 		scenario_menu_background_pending_switch_shutdown,
 		scenario_menu_background_switch_shutdown,
 	)
-	from e2e_map_loading import scenario_map_change_during_resource_preparation  # type: ignore[no-redef]
+	from e2e_gameclient_recovery import (  # type: ignore[no-redef]
+		scenario_missing_language_preserves_previous_selection,
+		scenario_invalid_hud_atlas_loads_default,
+		scenario_invalid_emoticons_atlas_loads_default,
+	)
+	from e2e_map_loading import (  # type: ignore[no-redef]
+		scenario_current_map_entity_background_during_loading,
+		scenario_map_change_during_resource_preparation,
+	)
 	from e2e_settings_language import scenario_settings_language_round_trip  # type: ignore[no-redef]
 	from process_harness import ProcessEnvironment  # type: ignore[no-redef]
 
@@ -115,7 +136,7 @@ def scenario_online_replay_without_source(env: ProcessEnvironment) -> None:
 
 
 def scenario_demo_recording(env: ProcessEnvironment) -> None:
-	"""连接、切图、录制、加 marker、停止并校验 demo 文件。"""
+	"""录制 demo，并验证从合影返回后仍可继续播放原录像。"""
 	env.start_server()
 	env.connect_client(["cl_auto_demo_record 1"])
 	# Tutorial 是当前构建的默认地图，先切到另一张内置地图，确保后续
@@ -133,12 +154,38 @@ def scenario_demo_recording(env: ProcessEnvironment) -> None:
 	time.sleep(1.2)
 	env.client.command("add_demomarker")
 	env.client.wait_for(lambda line: line.endswith(": Added timeline marker"), "demo timeline marker", 10)
+	playback_message = "pose_demo_playback_resumed"
+
+	def is_recorded_chat(line: str) -> bool:
+		return line.startswith("chat/all:") and playback_message in line
+
+	env.client.command(f"say {playback_message}")
+	env.client.wait_for(is_recorded_chat, "chat recorded in demo", 10)
 	env.client.command("stoprecord")
 	env.client.wait_for(lambda line: "Stopped recording to 'demos/e2e_demo.demo'" in line, "demo recording stop", 10)
 
 	demo_path = _wait_for_file(env.path("demos", "e2e_demo.demo"), "demo output")
 	if demo_path.stat().st_size <= 0:
 		raise RuntimeError(f"demo output is empty: {demo_path}")
+
+	# 一条普通的 MomentCap 记录，使用默认皮肤、固定取景坐标。
+	pose_record = bytearray(248)
+	for offset, field_size, text in ((0, 16, b"Pose"), (16, 12, b""), (32, 24, b"default")):
+		encoded = bytes((value + 128) & 0xFF for value in text.ljust(field_size, b"\0"))
+		for index in range(0, field_size, 4):
+			pose_record[offset + index:offset + index + 4] = encoded[index:index + 4][::-1]
+	struct.pack_into("<ii", pose_record, 72, 160, 160)
+	env.path("demos", "e2e_demo_view.poses").write_bytes(struct.pack("<q", 1) + pose_record)
+
+	env.client.command("play demos/e2e_demo.demo; poses_open demos/e2e_demo_view.poses")
+	env.client.wait_for(lambda line: "viewing 1 poses;" in line, "pose preview opened over demo", 15)
+	output_start = len(env.client._lines)
+	env.client.command("poses_close; demo_play")
+	env.client.wait_for(
+		lambda line: is_recorded_chat(line) and any(playback_message in entry for entry in env.client._lines[output_start:]),
+		"recorded chat replayed after leaving pose preview",
+		15,
+	)
 	_quit_client(env)
 
 
@@ -263,7 +310,11 @@ def scenario_legacy_icon_font_residual_ignored(env: ProcessEnvironment) -> None:
 def scenario_connection_failure_recovery(env: ProcessEnvironment) -> None:
 	"""验证服务端断开后客户端报告离线并可正常退出。"""
 	port = env.start_server()
-	env.start_client([], connect=True, connect_address=f"localhost:{port}")
+	address = f"tw-0.6+udp://127.0.0.1:{port}"
+	# 候选都指向同一台本地服务端，列表长度超过旧的命令缓冲容量。
+	addresses = ",".join([address] * 12)
+	client = env.start_client([], connect=True, connect_address=addresses)
+	client.wait_for(lambda line: line == f"client: connecting to '{addresses}'", "complete connection address list", 15)
 	env.server.wait_for(lambda line: line.startswith("server: player has entered the game"), "client connection", 15)
 	env.server.command("shutdown")
 	env.client.wait_for(lambda line: "offline error='" in line, "connection failure fallback", 15)
@@ -340,6 +391,44 @@ def scenario_slow_asset_loading_no_false_hang(env: ProcessEnvironment) -> None:
 		raise AssertionError(f"hang watchdog reported while asset loading was progressing: {hang_artifacts}")
 
 
+def scenario_window_close_during_asset_loading(env: ProcessEnvironment) -> None:
+	"""关闭事件在加载帧被取走，客户端进入主循环后正常退出。"""
+	if sys.platform != "win32":
+		raise SkipTest("this scenario uses a native Windows close event")
+	try:
+		from qmclient_scripts.integration.screenshot_viewer_smoke import Windows, wait_for
+	except ModuleNotFoundError:
+		from screenshot_viewer_smoke import Windows, wait_for
+
+	client = env.start_client(
+		["cl_show_welcome 1", "qm_auto_update 0", "qm_steam_auto_launch 0", "qm_perf_debug 1"],
+		connect=False,
+		env={"QMCLIENT_TEST_ASSET_LOAD_DELAY_MS": "1000", "QMCLIENT_TEST_HIDE_DIALOG": "1"},
+		startup_timeout=None,
+	)
+	client.wait_for(lambda line: line == "test/loading: assets_begin delay_ms=1000", "asset loading start", 30)
+	windows = Windows()
+	hwnd = wait_for(lambda: windows.find(client._process, bool), "client loading window not found")
+	windows.post(hwnd, 0x0010)  # WM_CLOSE
+
+	def observed_close_during_loading(line: str) -> bool:
+		if line.startswith("test/loading: assets_complete"):
+			raise AssertionError("asset loading completed before SDL consumed the close event")
+		if not line.startswith("perf/input: "):
+			return False
+		event = json.loads(line.removeprefix("perf/input: "))
+		return event.get("stage") == "sdl_poll_events" and event.get("quit") == 1
+
+	client.wait_for(observed_close_during_loading, "SDL close during asset loading", 15)
+	exit_code = client.wait_for_exit(60)
+	if exit_code != 0:
+		raise AssertionError(f"client exited with {exit_code}")
+	wait_for(
+		lambda: any(line.endswith("client: shutdown watchdog disarmed after cleanup completed") for line in client._lines),
+		"client exited without completing shutdown",
+	)
+
+
 def scenario_asset_loading_stall_reports_hang(env: ProcessEnvironment) -> None:
 	"""启动资源加载中单次停滞超过十秒，仍然生成卡死报告。"""
 	env.start_client(
@@ -393,15 +482,21 @@ def scenario_system_font_restore_no_false_hang(env: ProcessEnvironment) -> None:
 
 
 E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
+	"missing_language_preserves_previous_selection": scenario_missing_language_preserves_previous_selection,
+	"invalid_hud_atlas_loads_default": scenario_invalid_hud_atlas_loads_default,
+	"invalid_emoticons_atlas_loads_default": scenario_invalid_emoticons_atlas_loads_default,
 	"assert_dialog_no_false_hang": scenario_assert_dialog_no_false_hang,
 	"asset_loading_stall_reports_hang": scenario_asset_loading_stall_reports_hang,
 	"hang_watchdog_reports_stall": scenario_hang_watchdog_reports_stall,
 	"connection_failure_recovery": scenario_connection_failure_recovery,
+	"console_settings_startup": scenario_console_settings_startup,
 	"fatal_exception_exits_without_hang": scenario_fatal_exception_exits_without_hang,
+	"demo_browser_pre_epoch_date": scenario_demo_browser_pre_epoch_date,
 	"demo_recording": scenario_demo_recording,
 	"online_replay_without_source": scenario_online_replay_without_source,
 	"invalid_statistics_preserved": scenario_invalid_statistics_preserved,
 	"map_change_during_resource_preparation": scenario_map_change_during_resource_preparation,
+	"current_map_entity_background_during_loading": scenario_current_map_entity_background_during_loading,
 	"menu_background_failed_switch_shutdown": scenario_menu_background_failed_switch_shutdown,
 	"menu_background_pending_switch_shutdown": scenario_menu_background_pending_switch_shutdown,
 	"menu_background_switch_shutdown": scenario_menu_background_switch_shutdown,
@@ -410,6 +505,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"recording_without_connection": scenario_recording_without_connection,
 	"settings_language_round_trip": scenario_settings_language_round_trip,
 	"slow_asset_loading_no_false_hang": scenario_slow_asset_loading_no_false_hang,
+	"window_close_during_asset_loading": scenario_window_close_during_asset_loading,
 	"startup_saved_favorites": scenario_startup_saved_favorites,
 	"system_font_restore_no_false_hang": scenario_system_font_restore_no_false_hang,
 	"vector_font_and_icon_resources": scenario_vector_font_and_icon_resources,

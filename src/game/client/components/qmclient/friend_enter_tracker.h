@@ -7,6 +7,7 @@
 #include <chrono>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace qm_friend_notify
@@ -76,7 +77,8 @@ namespace qm_friend_notify
 		std::vector<std::string> m_vPresentNames;
 
 	public:
-		void Reset() { m_vPresentNames.clear(); }
+		void Reset() noexcept { m_vPresentNames.clear(); }
+		void Swap(CEnterTracker &Other) noexcept { m_vPresentNames.swap(Other.m_vPresentNames); }
 
 		CPresenceMessage OnMessage(int Sender, int Team, std::string_view Text, const IFriends &Friends,
 			std::string_view MainName, std::string_view DummyName)
@@ -119,7 +121,8 @@ namespace qm_friend_notify
 		std::vector<SPending> m_vPending;
 
 	public:
-		void Reset() { m_vPending.clear(); }
+		void Reset() noexcept { m_vPending.clear(); }
+		void Swap(CGreetQueue &Other) noexcept { m_vPending.swap(Other.m_vPending); }
 		bool Empty() const { return m_vPending.empty(); }
 
 		void Add(const std::string &Name, CClock::time_point Now)

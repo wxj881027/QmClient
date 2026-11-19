@@ -305,16 +305,17 @@ float CMenus::LayoutTClientPlayerIndicatorCard(const qm_card_catalog::SQmCardBui
 			{
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWarListIndicatorAll, "tclient-warlist-indicator-all", Localize("Show all warlist groups"), &g_Config.m_QmWarListIndicatorAll, &Row, LineSize);
 			}
-			if(Flow.Control("warlist-enemy", LineSize, Row, RowSpacing))
+			const auto &WarList = GameClient()->m_WarList;
+			if(const auto *pEnemy = PlacePlayerIndicatorWarGroupRow(Flow, Row, WarList, WARLIST_BUILTIN_GROUP_ENEMY, "warlist-enemy", LineSize, RowSpacing))
 			{
 				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), Localize("Show %s group"), GameClient()->m_WarList.m_WarTypes.at(1)->m_aWarName);
+				str_format(aBuf, sizeof(aBuf), Localize("Show %s group"), pEnemy->m_aWarName);
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWarListIndicatorEnemy, "tclient-warlist-indicator-enemy", aBuf, &g_Config.m_QmWarListIndicatorEnemy, &Row, LineSize);
 			}
-			if(Flow.Control("warlist-team", LineSize, Row, RowSpacing))
+			if(const auto *pTeam = PlacePlayerIndicatorWarGroupRow(Flow, Row, WarList, WARLIST_BUILTIN_GROUP_TEAM, "warlist-team", LineSize, RowSpacing))
 			{
 				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), Localize("Show %s group"), GameClient()->m_WarList.m_WarTypes.at(2)->m_aWarName);
+				str_format(aBuf, sizeof(aBuf), Localize("Show %s group"), pTeam->m_aWarName);
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWarListIndicatorTeam, "tclient-warlist-indicator-team", aBuf, &g_Config.m_QmWarListIndicatorTeam, &Row, LineSize);
 			}
 		}

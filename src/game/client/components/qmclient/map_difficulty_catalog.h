@@ -36,11 +36,11 @@ public:
 	bool PollAxiomRequests(CQmAxiomRequestBudget &Budget, int64_t Now);
 	void CancelAxiomRequests();
 
-	// 读取随客户端发布的 DDNet 分类 SQL 和本地 Axiom 公告缓存，不访问网络。
+	// 沿现有存储路径读取 DDNet 分类 SQL 和本地 Axiom 公告缓存；失败保留可用目录。
 	bool Load(IStorage *pStorage, IConsole *pConsole);
 	// 供行为测试和生成数据校验使用的 SQL 加载入口。
 	bool LoadSqlText(const char *pSql, size_t Length);
-	// 只记录已确认属于 Axiom 的当前地图公告，返回是否产生变化。
+	// 只记录已确认属于 Axiom 的当前地图公告；资源失败返回 false 并保留旧记录。
 	bool RecordAxiomMotd(const CServerInfo &Server, const char *pMotd);
 	bool LoadAxiomCacheJson(const char *pJson, size_t Length);
 	std::string SerializeAxiomCache() const;
@@ -62,11 +62,17 @@ private:
 	};
 	// 星级上限区分 Gores（3）与 AXRace（5），同名地图不跨玩法共用。
 	using TAxiomKey = std::pair<int, std::string>;
+	using TAxiomRetryMap = std::map<TAxiomKey, int64_t, SAxiomKeyLess>;
+	struct SAxiomRequest
+	{
+		std::shared_ptr<IHttpRequest> m_pRequest;
+		TAxiomRetryMap::node_type m_RetryNode;
+	};
 	bool StoreAxiomEntry(SEntry Entry);
 	bool RecordAxiomResponse(const TAxiomKey &Key, const IHttpRequest &Request);
 	TRequestFactory m_CreateRequest;
-	std::map<TAxiomKey, std::shared_ptr<IHttpRequest>, SAxiomKeyLess> m_AxiomRequests;
-	std::map<TAxiomKey, int64_t, SAxiomKeyLess> m_AxiomRetryAfter;
+	std::map<TAxiomKey, SAxiomRequest, SAxiomKeyLess> m_AxiomRequests;
+	TAxiomRetryMap m_AxiomRetryAfter;
 	std::map<TAxiomKey, SEntry, SAxiomKeyLess> m_AxiomEntries;
 	bool m_AxiomCacheDirty = false;
 	std::vector<SEntry> m_vEntries;

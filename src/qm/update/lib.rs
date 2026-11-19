@@ -6,7 +6,7 @@ use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 use std::ffi::{c_char, CStr};
 use std::fs::{self, File};
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Seek, Write};
 use std::path::{Component, Path, PathBuf};
 use std::slice;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -17,6 +17,7 @@ const PUBLIC_KEY: [u8; 32] = [
     246, 220, 67, 117, 92, 49, 2, 211, 109, 81, 45, 156,
 ];
 const PACKAGE_SIGNATURE_CONTEXT: &[u8] = b"QmClient update package SHA-256\0";
+const SIGNATURE_SIZE: usize = 64;
 const MAX_MANIFEST_SIZE: usize = 32 * 1024 * 1024;
 const MAX_PACKAGE_SIZE: u64 = 5 * 1024 * 1024 * 1024;
 const MAX_FILE_SIZE: u64 = 2 * 1024 * 1024 * 1024;
@@ -54,6 +55,9 @@ fn validate_version(version: &str) -> Result<(), String> {
 }
 
 fn version_parts(version: &str) -> Result<([i32; 4], bool, i32), String> {
+    if version.len() >= 32 {
+        return Err("the update version is invalid".into());
+    }
     let (base, preview) = match version.split_once("-preview.") {
         Some((base, number)) => {
             if number.is_empty()
@@ -70,8 +74,7 @@ fn version_parts(version: &str) -> Result<([i32; 4], bool, i32), String> {
         None => (version, None),
     };
     let parts: Vec<_> = base.split('.').collect();
-    if version.len() >= 32
-        || !(1..=4).contains(&parts.len())
+    if !(1..=4).contains(&parts.len())
         || (preview.is_some() && parts.len() != 2)
         || parts
             .iter()
@@ -123,19 +126,29 @@ fn validate_relative_path(value: &str) -> Result<PathBuf, String> {
         return Err(format!("unsafe update path: {value:?}"));
     }
     for segment in value.split('/') {
-        if segment.is_empty() || segment.ends_with(['.', ' ']) {
+        if segment.is_empty()
+            || segment.ends_with(['.', ' '])
+            || segment
+                .bytes()
+                .any(|byte| byte < b' ' || matches!(byte, b'<' | b'>' | b'"' | b'|' | b'?' | b'*'))
+        {
             return Err(format!("unsafe update path: {value:?}"));
         }
         let stem = segment
             .split('.')
             .next()
             .unwrap_or(segment)
+            .trim_end_matches(' ')
             .to_ascii_uppercase();
-        if matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
-            || (stem.len() == 4
-                && (stem.starts_with("COM") || stem.starts_with("LPT"))
-                && matches!(stem.as_bytes()[3], b'1'..=b'9'))
-        {
+        let port = stem
+            .strip_prefix("COM")
+            .or_else(|| stem.strip_prefix("LPT"));
+        if matches!(
+            stem.as_str(),
+            "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$"
+        ) || port.is_some_and(|number| {
+            matches!(number.as_bytes(), [b'1'..=b'9']) || matches!(number, "¹" | "²" | "³")
+        }) {
             return Err(format!("reserved Windows update path: {value:?}"));
         }
     }
@@ -261,13 +274,37 @@ fn path_metadata(path: &Path, context: &str) -> Result<Option<fs::Metadata>, Str
     }
 }
 
-fn validate_regular_file(path: &Path, context: &str) -> Result<(), String> {
+fn open_regular_file(path: &Path, context: &str) -> Result<(File, u64), String> {
     let metadata =
         path_metadata(path, context)?.ok_or_else(|| format!("{context}: file does not exist"))?;
     if !metadata.is_file() || is_reparse_point(&metadata) {
         return Err(format!("{context}: file is not a regular file"));
     }
-    Ok(())
+
+    let mut options = File::options();
+    options.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+
+        const FILE_SHARE_READ: u32 = 0x00000001;
+        const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x00200000;
+        // 文件验证和消费共用此句柄。持有期间允许读取，拒绝其他句柄写入或删除。
+        options
+            .share_mode(FILE_SHARE_READ)
+            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+    }
+
+    let file = options
+        .open(path)
+        .map_err(|error| format_io_error(context, &error))?;
+    let metadata = file
+        .metadata()
+        .map_err(|error| format_io_error(context, &error))?;
+    if !metadata.is_file() || is_reparse_point(&metadata) {
+        return Err(format!("{context}: file is not a regular file"));
+    }
+    Ok((file, metadata.len()))
 }
 
 fn validate_install_root(install: &Path) -> Result<(), String> {
@@ -276,25 +313,24 @@ fn validate_install_root(install: &Path) -> Result<(), String> {
     if !metadata.is_dir() || is_reparse_point(&metadata) {
         return Err("the QmClient install directory is not a regular directory".into());
     }
-    validate_regular_file(
-        &install.join("DDNet.exe"),
-        "the QmClient install directory is missing DDNet.exe",
-    )?;
-    validate_regular_file(
-        &install.join("data/qmclient/gui_logo.png"),
-        "the QmClient install directory is missing data/qmclient/gui_logo.png",
-    )?;
+    for marker in ["DDNet.exe", "data/qmclient/gui_logo.png"] {
+        if validate_install_target(install, Path::new(marker))?.is_some() {
+            return Err(format!(
+                "the QmClient install directory is missing {marker}"
+            ));
+        }
+    }
     Ok(())
 }
 
-fn validate_install_target(install: &Path, relative: &Path) -> Result<(), String> {
-    let components: Vec<_> = relative.components().collect();
+// 返回通过校验的路径中第一段缺失的位置。目标文件已存在时返回 None。
+fn validate_install_target(install: &Path, relative: &Path) -> Result<Option<PathBuf>, String> {
+    let mut components = relative.components().peekable();
     let mut current = install.to_path_buf();
-    for (index, component) in components.iter().enumerate() {
+    while let Some(component) = components.next() {
         current.push(component.as_os_str());
-        let metadata = match path_metadata(&current, "failed inspecting an update target")? {
-            Some(metadata) => metadata,
-            None => continue,
+        let Some(metadata) = path_metadata(&current, "failed inspecting an update target")? else {
+            return Ok(Some(current));
         };
         if is_reparse_point(&metadata) {
             return Err(format!(
@@ -302,7 +338,7 @@ fn validate_install_target(install: &Path, relative: &Path) -> Result<(), String
                 current.display()
             ));
         }
-        if index + 1 == components.len() {
+        if components.peek().is_none() {
             if !metadata.is_file() {
                 return Err(format!(
                     "update target is not a regular file: {}",
@@ -315,6 +351,24 @@ fn validate_install_target(install: &Path, relative: &Path) -> Result<(), String
                 current.display()
             ));
         }
+    }
+    Ok(None)
+}
+
+fn create_install_parents(
+    target: &Path,
+    first_missing: &Path,
+    created: &mut Vec<PathBuf>,
+) -> Result<(), String> {
+    let parents: Vec<_> = target
+        .ancestors()
+        .skip(1)
+        .take_while(|parent| parent.starts_with(first_missing))
+        .collect();
+    for parent in parents.into_iter().rev() {
+        fs::create_dir(parent)
+            .map_err(|error| format_io_error("failed creating install directory", &error))?;
+        created.push(parent.to_path_buf());
     }
     Ok(())
 }
@@ -338,39 +392,55 @@ fn hash_reader(mut reader: impl Read) -> Result<([u8; 32], u64), String> {
     Ok((hasher.finalize().into(), size))
 }
 
-fn read_limited(path: &Path, limit: usize) -> Result<Vec<u8>, String> {
-    validate_regular_file(path, &format!("failed reading {}", path.display()))?;
-    let metadata = fs::metadata(path)
-        .map_err(|error| format_io_error(&format!("failed reading {}", path.display()), &error))?;
-    if metadata.len() > limit as u64 {
-        return Err(format!("{} is too large", path.display()));
+fn read_limited_contents(
+    reader: impl Read,
+    limit: usize,
+    context: &str,
+) -> Result<Vec<u8>, String> {
+    let mut bytes = Vec::new();
+    reader
+        .take(limit as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format_io_error(context, &error))?;
+    if bytes.len() > limit {
+        return Err(format!("{context}: file is too large"));
     }
-    fs::read(path)
-        .map_err(|error| format_io_error(&format!("failed reading {}", path.display()), &error))
+    Ok(bytes)
 }
 
-fn validate_package(
-    package_path: &Path,
-    package_signature: &[u8],
-    manifest: &Manifest,
-) -> Result<(), String> {
-    validate_package_with_key(package_path, package_signature, manifest, &PUBLIC_KEY)
+fn read_limited(path: &Path, limit: usize) -> Result<Vec<u8>, String> {
+    let context = format!("failed reading {}", path.display());
+    let (file, size) = open_regular_file(path, &context)?;
+    if size > limit as u64 {
+        return Err(format!("{context}: file is too large"));
+    }
+    read_limited_contents(file, limit, &context)
 }
 
-fn validate_package_with_key(
+fn open_package(package_path: &Path, expected_size: u64) -> Result<File, String> {
+    let (package, size) = open_regular_file(package_path, "failed opening update package")?;
+    if size != expected_size {
+        return Err("update package size does not match the signed manifest".into());
+    }
+    Ok(package)
+}
+
+fn open_verified_package(
     package_path: &Path,
     package_signature: &[u8],
     manifest: &Manifest,
     key: &[u8; 32],
-) -> Result<(), String> {
-    validate_regular_file(package_path, "failed opening update package")?;
-    let package = File::open(package_path)
-        .map_err(|error| format_io_error("failed opening update package", &error))?;
-    let (digest, size) = hash_reader(package)?;
+) -> Result<File, String> {
+    let mut package = open_package(package_path, manifest.package.size)?;
+    let (digest, size) = hash_reader((&mut package).take(manifest.package.size + 1))?;
     if size != manifest.package.size || digest != parse_hash(&manifest.package.sha256)? {
         return Err("update package size or SHA-256 does not match the signed manifest".into());
     }
-    verify_signature_with_key(&package_signature_message(&digest), package_signature, key)
+    verify_signature_with_key(&package_signature_message(&digest), package_signature, key)?;
+    package
+        .rewind()
+        .map_err(|error| format_io_error("failed rewinding update package", &error))?;
+    Ok(package)
 }
 
 fn copy_exact(
@@ -429,6 +499,15 @@ fn unique_child(root: &Path, prefix: &str) -> Result<PathBuf, String> {
     Err("failed creating a unique update working directory".into())
 }
 
+fn format_sevenzip_error(context: &str, error: sevenz_rust::Error) -> String {
+    match error {
+        // 解包库会给 Other 的 Display 结果加前缀，需保留回调自己的权限错误标记。
+        sevenz_rust::Error::Other(message) => message.into_owned(),
+        sevenz_rust::Error::Io(error, _) => format_io_error(context, &error),
+        error => format!("{context}: {error}"),
+    }
+}
+
 // 7z 的启动器提取和完整解包共用同一条签名路径与属性规则。
 fn validate_sevenzip_entry<'a>(
     entry: &sevenz_rust::SevenZArchiveEntry,
@@ -457,18 +536,13 @@ fn validate_sevenzip_entry<'a>(
 }
 
 // 不使用库的默认落盘回调，所有落盘内容必须在签名清单中。
-fn extract_sevenzip(
-    package_path: &Path,
-    staging: &Path,
-    manifest: &Manifest,
-) -> Result<(), String> {
-    validate_regular_file(package_path, "failed opening update package")?;
-    let package =
-        File::open(package_path).map_err(|e| format_io_error("failed opening 7z package", &e))?;
-    let length = package.metadata().map_err(|e| e.to_string())?.len();
-    let mut archive =
-        sevenz_rust::SevenZReader::new(package, length, sevenz_rust::Password::empty())
-            .map_err(|e| format!("invalid 7z update package: {e}"))?;
+fn extract_sevenzip(package: File, staging: &Path, manifest: &Manifest) -> Result<(), String> {
+    let mut archive = sevenz_rust::SevenZReader::new(
+        package,
+        manifest.package.size,
+        sevenz_rust::Password::empty(),
+    )
+    .map_err(|error| format_sevenzip_error("invalid 7z update package", error))?;
     let expected: HashMap<_, _> = manifest
         .files
         .iter()
@@ -488,10 +562,15 @@ fn extract_sevenzip(
                     fs::create_dir_all(parent)
                         .map_err(|e| format_io_error("failed creating staging directory", &e))?;
                 }
-                let mut output = File::create(path)
+                let mut output = File::options()
+                    .write(true)
+                    .create_new(true)
+                    .open(path)
                     .map_err(|e| format_io_error("failed creating 7z output", &e))?;
                 let digest = copy_exact(reader, &mut output, signed.size)?;
-                output.flush().map_err(|e| e.to_string())?;
+                output
+                    .flush()
+                    .map_err(|e| format_io_error("failed flushing 7z output", &e))?;
                 if digest != parse_hash(&signed.sha256)? {
                     return Err(format!("staged file hash mismatch: {}", signed.path));
                 }
@@ -499,20 +578,17 @@ fn extract_sevenzip(
             })();
             action.map(|_| true).map_err(sevenz_rust::Error::other)
         })
-        .map_err(|e| e.to_string())?;
+        .map_err(|error| format_sevenzip_error("failed extracting 7z update package", error))?;
     if extracted.len() != expected.len() {
         return Err("7z does not contain every file in the signed manifest".into());
     }
     Ok(())
 }
 
-fn extract_package(package_path: &Path, staging: &Path, manifest: &Manifest) -> Result<(), String> {
+fn extract_package(package: File, staging: &Path, manifest: &Manifest) -> Result<(), String> {
     if manifest.package.name.ends_with(".7z") {
-        return extract_sevenzip(package_path, staging, manifest);
+        return extract_sevenzip(package, staging, manifest);
     }
-    validate_regular_file(package_path, "failed opening update package")?;
-    let package = File::open(package_path)
-        .map_err(|error| format_io_error("failed opening update package", &error))?;
     let mut archive =
         ZipArchive::new(package).map_err(|error| format!("invalid ZIP update package: {error}"))?;
     let expected: HashMap<_, _> = manifest
@@ -556,7 +632,10 @@ fn extract_package(package_path: &Path, staging: &Path, manifest: &Manifest) -> 
             fs::create_dir_all(parent)
                 .map_err(|error| format_io_error("failed creating staging directory", &error))?;
         }
-        let mut output = File::create(&output_path)
+        let mut output = File::options()
+            .write(true)
+            .create_new(true)
+            .open(&output_path)
             .map_err(|error| format_io_error("failed creating staged update file", &error))?;
         let extracted_digest = copy_exact(&mut entry, &mut output, signed.size)?;
         output
@@ -572,14 +651,43 @@ fn extract_package(package_path: &Path, staging: &Path, manifest: &Manifest) -> 
     Ok(())
 }
 
+fn write_bootstrap_updater(
+    reader: impl Read,
+    destination: &Path,
+    signed: &ManifestFile,
+) -> Result<(), String> {
+    let mut output = File::options()
+        .write(true)
+        .create_new(true)
+        .open(destination)
+        .map_err(|error| format_io_error("failed creating bootstrap updater", &error))?;
+    let result = (|| {
+        let digest = copy_exact(reader, &mut output, signed.size)?;
+        output
+            .flush()
+            .map_err(|error| format_io_error("failed flushing bootstrap updater", &error))?;
+        if digest != parse_hash(&signed.sha256)? {
+            return Err("bootstrap updater hash mismatch".into());
+        }
+        Ok(())
+    })();
+    drop(output);
+    // 只清理本次成功创建的文件。
+    if result.is_err() {
+        let _ = fs::remove_file(destination);
+    }
+    result
+}
+
 // 启动阶段只解码 updater 所在的压缩块，完整逐文件校验由独立安装器执行。
 fn extract_sevenzip_bootstrap(
-    package_path: &Path,
+    mut source: File,
     destination: &Path,
     manifest: &Manifest,
+    signed: &ManifestFile,
 ) -> Result<(), String> {
-    validate_regular_file(package_path, "failed opening update package")?;
-    let archive = sevenz_rust::Archive::open(package_path).map_err(|e| e.to_string())?;
+    let archive = sevenz_rust::Archive::read(&mut source, manifest.package.size, &[])
+        .map_err(|error| format_sevenzip_error("invalid 7z update package", error))?;
     let expected: HashMap<_, _> = manifest
         .files
         .iter()
@@ -589,7 +697,7 @@ fn extract_sevenzip_bootstrap(
     let mut updater_index = None;
     for (index, entry) in archive.files.iter().enumerate() {
         if validate_sevenzip_entry(entry, &expected, &mut seen)?.is_some()
-            && entry.name == "QmClient-Updater.exe"
+            && entry.name == signed.path
         {
             updater_index = Some(index);
         }
@@ -598,36 +706,25 @@ fn extract_sevenzip_bootstrap(
         return Err("7z does not contain every file in the signed manifest".into());
     }
     let index = updater_index.ok_or("7z is missing QmClient-Updater.exe")?;
-    let folder =
-        archive.stream_map.file_folder_index[index].ok_or("updater has no executable content")?;
-    let mut source = File::open(package_path).map_err(|e| e.to_string())?;
+    let folder = archive
+        .stream_map
+        .file_folder_index
+        .get(index)
+        .and_then(|entry| *entry)
+        .ok_or("updater has no executable content")?;
     let decoder = sevenz_rust::BlockDecoder::new(folder, &archive, &[], &mut source);
-    let mut written = false;
-    let result = decoder.for_each_entries(&mut |entry, reader| {
-        if entry.name != "QmClient-Updater.exe" {
-            io::copy(reader, &mut io::sink())
-                .map_err(|e| sevenz_rust::Error::other(e.to_string()))?;
-            return Ok(true);
-        }
-        let signed = expected.get(&entry.name.to_lowercase()).unwrap();
-        let result = (|| -> Result<(), String> {
-            let mut output = File::create(destination).map_err(|e| e.to_string())?;
-            let digest = copy_exact(reader, &mut output, signed.size)?;
-            output.flush().map_err(|e| e.to_string())?;
-            if digest != parse_hash(&signed.sha256)? {
-                return Err("bootstrap updater hash mismatch".into());
+    let exhausted = decoder
+        .for_each_entries(&mut |entry, reader| {
+            if entry.name != signed.path {
+                io::copy(reader, &mut io::sink()).map_err(sevenz_rust::Error::io)?;
+                return Ok(true);
             }
-            Ok(())
-        })();
-        result.map_err(sevenz_rust::Error::other)?;
-        written = true;
-        Ok(false)
-    });
-    if let Err(error) = result {
-        let _ = fs::remove_file(destination);
-        return Err(error.to_string());
-    }
-    if !written {
+            write_bootstrap_updater(reader, destination, signed)
+                .map_err(sevenz_rust::Error::other)?;
+            Ok(false)
+        })
+        .map_err(|error| format_sevenzip_error("failed extracting bootstrap updater", error))?;
+    if exhausted {
         return Err("7z is missing updater content".into());
     }
     Ok(())
@@ -644,12 +741,10 @@ fn extract_bootstrap_updater(
         .iter()
         .find(|file| file.path == UPDATER_NAME)
         .ok_or_else(|| format!("update package is missing {UPDATER_NAME}"))?;
+    let package = open_package(package_path, manifest.package.size)?;
     if manifest.package.name.ends_with(".7z") {
-        return extract_sevenzip_bootstrap(package_path, destination, manifest);
+        return extract_sevenzip_bootstrap(package, destination, manifest, signed);
     }
-    validate_regular_file(package_path, "failed opening update package")?;
-    let package = File::open(package_path)
-        .map_err(|error| format_io_error("failed opening update package", &error))?;
     let mut archive =
         ZipArchive::new(package).map_err(|error| format!("invalid ZIP update package: {error}"))?;
     let mut updater_index = None;
@@ -664,7 +759,7 @@ fn extract_bootstrap_updater(
         }
     }
     let index = updater_index.ok_or_else(|| format!("ZIP is missing {UPDATER_NAME}"))?;
-    let mut entry = archive
+    let entry = archive
         .by_index(index)
         .map_err(|error| format!("failed reading updater from ZIP: {error}"))?;
     if entry.is_dir()
@@ -675,22 +770,7 @@ fn extract_bootstrap_updater(
     {
         return Err("invalid updater entry in ZIP".into());
     }
-    let result = (|| {
-        let mut output = File::create(destination)
-            .map_err(|error| format_io_error("failed creating bootstrap updater", &error))?;
-        let digest = copy_exact(&mut entry, &mut output, signed.size)?;
-        output
-            .flush()
-            .map_err(|error| format_io_error("failed flushing bootstrap updater", &error))?;
-        if digest != parse_hash(&signed.sha256)? {
-            return Err("bootstrap updater hash does not match signed manifest".into());
-        }
-        Ok(())
-    })();
-    if result.is_err() {
-        let _ = fs::remove_file(destination);
-    }
-    result
+    write_bootstrap_updater(entry, destination, signed)
 }
 
 struct AppliedFile {
@@ -698,18 +778,17 @@ struct AppliedFile {
     backup: Option<PathBuf>,
 }
 
-fn rollback(applied: &[AppliedFile]) -> Result<(), String> {
+#[derive(Default)]
+struct InstallChanges {
+    files: Vec<AppliedFile>,
+    directories: Vec<PathBuf>,
+}
+
+fn rollback(changes: &InstallChanges) -> Result<(), String> {
     let mut errors = Vec::new();
-    for file in applied.iter().rev() {
-        if let Err(error) = fs::remove_file(&file.target) {
-            if error.kind() != io::ErrorKind::NotFound {
-                errors.push(format_io_error(
-                    &format!("failed removing {} during rollback", file.target.display()),
-                    &error,
-                ));
-            }
-        }
+    for file in changes.files.iter().rev() {
         if let Some(backup) = &file.backup {
+            // 直接替换当前文件。备份恢复失败时保留仍在安装目录中的文件。
             if let Err(error) = fs::rename(backup, &file.target) {
                 errors.push(format_io_error(
                     &format!(
@@ -717,6 +796,23 @@ fn rollback(applied: &[AppliedFile]) -> Result<(), String> {
                         file.target.display(),
                         backup.display()
                     ),
+                    &error,
+                ));
+            }
+        } else if let Err(error) = fs::remove_file(&file.target) {
+            if error.kind() != io::ErrorKind::NotFound {
+                errors.push(format_io_error(
+                    &format!("failed removing {} during rollback", file.target.display()),
+                    &error,
+                ));
+            }
+        }
+    }
+    for directory in changes.directories.iter().rev() {
+        if let Err(error) = fs::remove_dir(directory) {
+            if error.kind() != io::ErrorKind::NotFound {
+                errors.push(format_io_error(
+                    &format!("failed removing {} during rollback", directory.display()),
                     &error,
                 ));
             }
@@ -734,8 +830,8 @@ struct InstallFailure {
     message: String,
 }
 
-fn rollback_install(message: String, applied: &[AppliedFile], backup: &Path) -> InstallFailure {
-    match rollback(applied) {
+fn rollback_install(message: String, changes: &InstallChanges, backup: &Path) -> InstallFailure {
+    match rollback(changes) {
         Ok(()) => match fs::remove_dir_all(backup) {
             Ok(()) => InstallFailure { message },
             Err(error) if error.kind() == io::ErrorKind::NotFound => InstallFailure { message },
@@ -748,8 +844,9 @@ fn rollback_install(message: String, applied: &[AppliedFile], backup: &Path) -> 
             },
         },
         Err(error) => InstallFailure {
+            // 恢复未完成时提示人工恢复，避免权限错误标记触发自动提权重试。
             message: format!(
-                "{message}; rollback failed: {error}; recovery files remain in {}",
+                "update rollback failed. Recovery files remain in {}\n{message}\n{error}",
                 backup.display()
             ),
         },
@@ -762,34 +859,29 @@ fn install_staged(
     install: &Path,
     manifest: &Manifest,
 ) -> Result<(), InstallFailure> {
-    let mut applied = Vec::new();
+    let mut changes = InstallChanges::default();
     for signed in &manifest.files {
         let relative = validate_relative_path(&signed.path)
-            .map_err(|error| rollback_install(error, &applied, backup))?;
-        validate_install_target(install, &relative)
-            .map_err(|error| rollback_install(error, &applied, backup))?;
+            .map_err(|error| rollback_install(error, &changes, backup))?;
+        let first_missing = validate_install_target(install, &relative)
+            .map_err(|error| rollback_install(error, &changes, backup))?;
         let source = staging.join(&relative);
         let target = install.join(&relative);
         // storage.cfg 仍供服务端使用，更新保留既有文件；客户端存储由构建决定。
-        if signed.path.eq_ignore_ascii_case("storage.cfg") && target.exists() {
+        if signed.path.eq_ignore_ascii_case("storage.cfg") && first_missing.is_none() {
             continue;
         }
-        if let Some(parent) = target.parent() {
-            if let Err(error) = fs::create_dir_all(parent) {
-                return Err(rollback_install(
-                    format_io_error("failed creating install directory", &error),
-                    &applied,
-                    backup,
-                ));
-            }
-        }
-        let backup_path = if target.exists() {
+        let backup_path = if let Some(first_missing) = first_missing {
+            create_install_parents(&target, &first_missing, &mut changes.directories)
+                .map_err(|error| rollback_install(error, &changes, backup))?;
+            None
+        } else {
             let path = backup.join(&relative);
             if let Some(parent) = path.parent() {
                 if let Err(error) = fs::create_dir_all(parent) {
                     return Err(rollback_install(
                         format_io_error("failed creating backup directory", &error),
-                        &applied,
+                        &changes,
                         backup,
                     ));
                 }
@@ -803,25 +895,28 @@ fn install_staged(
                         ),
                         &error,
                     ),
-                    &applied,
+                    &changes,
                     backup,
                 ));
             }
             Some(path)
-        } else {
-            None
         };
-        applied.push(AppliedFile {
-            target: target.clone(),
+        let file = AppliedFile {
+            target,
             backup: backup_path,
-        });
-        if let Err(error) = fs::rename(&source, &target) {
+        };
+        if let Err(error) = fs::rename(&source, &file.target) {
+            // 安装失败时，只在本次已经移动旧文件的情况下登记该目标。
+            if file.backup.is_some() {
+                changes.files.push(file);
+            }
             return Err(rollback_install(
                 format_io_error(&format!("failed installing {}", signed.path), &error),
-                &applied,
+                &changes,
                 backup,
             ));
         }
+        changes.files.push(file);
     }
     // 全部文件安装成功后，清理旧更新器遗留的客户端备份，不触碰本次回滚目录。
     // 清理失败不能把已经完成的更新变成失败，也不能递归删除同名目录。
@@ -868,12 +963,12 @@ fn apply_update_with_key(
     key: &[u8; 32],
 ) -> Result<(), String> {
     let manifest_bytes = read_limited(manifest_path, MAX_MANIFEST_SIZE)?;
-    let manifest_signature = read_limited(manifest_signature_path, 64)?;
+    let manifest_signature = read_limited(manifest_signature_path, SIGNATURE_SIZE)?;
     verify_signature_with_key(&manifest_bytes, &manifest_signature, key)?;
     let manifest = parse_manifest(&manifest_bytes)?;
     validate_not_downgrade(&manifest.version, current_version)?;
-    let package_signature = read_limited(package_signature_path, 64)?;
-    validate_package_with_key(package_path, &package_signature, &manifest, key)?;
+    let package_signature = read_limited(package_signature_path, SIGNATURE_SIZE)?;
+    let package = open_verified_package(package_path, &package_signature, &manifest, key)?;
     validate_install_root(install_path)?;
     let staging = unique_child(install_path, "qm-update-staging")?;
     let backup = match unique_child(install_path, "qm-update-backup") {
@@ -883,21 +978,35 @@ fn apply_update_with_key(
             return Err(error);
         }
     };
-    if let Err(error) = extract_package(package_path, &staging, &manifest) {
+    if let Err(error) = extract_package(package, &staging, &manifest) {
         let _ = fs::remove_dir_all(&staging);
         let _ = fs::remove_dir_all(&backup);
         return Err(error);
     }
     let result = install_staged(&staging, &backup, install_path, &manifest);
     let _ = fs::remove_dir_all(&staging);
-    match result {
-        Ok(()) => fs::remove_dir_all(&backup)
-            .map_err(|error| format_io_error("failed removing completed update backup", &error)),
-        Err(error) => Err(error.message),
-    }
+    finish_install(result, &backup)
 }
 
-unsafe fn input_bytes<'a>(data: *const u8, size: usize) -> Result<&'a [u8], String> {
+fn finish_install(result: Result<(), InstallFailure>, backup: &Path) -> Result<(), String> {
+    result.map_err(|error| error.message)?;
+    // 替换已完成，清理失败仍返回成功，未删掉的备份留在原处。
+    if let Err(error) = fs::remove_dir_all(backup) {
+        if error.kind() != io::ErrorKind::NotFound {
+            let _ = writeln!(
+                io::stderr(),
+                "failed removing completed update backup {}: {error}",
+                backup.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+unsafe fn input_bytes<'a>(data: *const u8, size: usize, limit: usize) -> Result<&'a [u8], String> {
+    if size > limit.min(isize::MAX as usize) {
+        return Err("update input exceeds the supported size".into());
+    }
     if size == 0 {
         return Ok(&[]);
     }
@@ -931,7 +1040,10 @@ unsafe fn write_error(error: &str, output: *mut c_char, output_size: usize) {
         return;
     }
     let bytes = error.as_bytes();
-    let copy_size = bytes.len().min(output_size - 1);
+    let mut copy_size = bytes.len().min(output_size - 1);
+    while !error.is_char_boundary(copy_size) {
+        copy_size -= 1;
+    }
     std::ptr::copy_nonoverlapping(bytes.as_ptr(), output.cast(), copy_size);
     *output.add(copy_size) = 0;
 }
@@ -945,8 +1057,10 @@ pub unsafe fn ffi_verify_manifest(
     error: *mut c_char,
     error_size: usize,
 ) -> bool {
-    let result = input_bytes(manifest, manifest_size)
-        .and_then(|bytes| input_bytes(signature, signature_size).map(|sig| (bytes, sig)))
+    let result = input_bytes(manifest, manifest_size, MAX_MANIFEST_SIZE)
+        .and_then(|bytes| {
+            input_bytes(signature, signature_size, SIGNATURE_SIZE).map(|sig| (bytes, sig))
+        })
         .and_then(|(bytes, sig)| verify_manifest(bytes, sig).map(|_| ()));
     if let Err(message) = &result {
         write_error(message, error, error_size);
@@ -966,8 +1080,10 @@ pub unsafe fn ffi_verify_manifest_package(
     error: *mut c_char,
     error_size: usize,
 ) -> bool {
-    let result = input_bytes(manifest, manifest_size)
-        .and_then(|bytes| input_bytes(signature, signature_size).map(|sig| (bytes, sig)))
+    let result = input_bytes(manifest, manifest_size, MAX_MANIFEST_SIZE)
+        .and_then(|bytes| {
+            input_bytes(signature, signature_size, SIGNATURE_SIZE).map(|sig| (bytes, sig))
+        })
         .and_then(|(bytes, sig)| verify_manifest(bytes, sig))
         .and_then(|manifest| {
             if package_size.is_null() || package_digest.is_null() || package_digest_size != 32 {
@@ -1025,8 +1141,10 @@ pub unsafe fn ffi_verify_setup_manifest(
     error: *mut c_char,
     error_size: usize,
 ) -> bool {
-    let result = input_bytes(manifest, manifest_size)
-        .and_then(|bytes| input_bytes(signature, signature_size).map(|sig| (bytes, sig)))
+    let result = input_bytes(manifest, manifest_size, MAX_MANIFEST_SIZE)
+        .and_then(|bytes| {
+            input_bytes(signature, signature_size, SIGNATURE_SIZE).map(|sig| (bytes, sig))
+        })
         .and_then(|(bytes, sig)| verify_setup_manifest(bytes, sig, &PUBLIC_KEY))
         .and_then(|manifest| {
             if package_size.is_null() || package_digest.is_null() || package_digest_size != 32 {
@@ -1055,12 +1173,12 @@ pub unsafe fn ffi_verify_setup_files(
 ) -> bool {
     let result = (|| {
         let package = input_path(package_path)?;
-        let package_sig = read_limited(input_path(package_signature_path)?, 64)?;
+        let package_sig = read_limited(input_path(package_signature_path)?, SIGNATURE_SIZE)?;
         let bytes = read_limited(input_path(manifest_path)?, MAX_MANIFEST_SIZE)?;
-        let sig = read_limited(input_path(manifest_signature_path)?, 64)?;
+        let sig = read_limited(input_path(manifest_signature_path)?, SIGNATURE_SIZE)?;
         let manifest = verify_setup_manifest(&bytes, &sig, &PUBLIC_KEY)?;
         validate_not_downgrade(&manifest.version, input_string(current_version)?)?;
-        validate_package(package, &package_sig, &manifest)
+        open_verified_package(package, &package_sig, &manifest, &PUBLIC_KEY).map(|_| ())
     })();
     if let Err(message) = &result {
         write_error(message, error, error_size);
@@ -1099,11 +1217,11 @@ pub unsafe fn ffi_verify_package_digest(
     error: *mut c_char,
     error_size: usize,
 ) -> bool {
-    let result = input_bytes(digest, digest_size).and_then(|digest| {
+    let result = input_bytes(digest, digest_size, 32).and_then(|digest| {
         let digest: &[u8; 32] = digest
             .try_into()
             .map_err(|_| "invalid update package SHA-256 length")?;
-        let signature = input_bytes(signature, signature_size)?;
+        let signature = input_bytes(signature, signature_size, SIGNATURE_SIZE)?;
         verify_signature_with_key(&package_signature_message(digest), signature, &PUBLIC_KEY)
     });
     if let Err(message) = &result {
@@ -1124,8 +1242,8 @@ pub unsafe fn ffi_extract_bootstrap_updater(
     error_size: usize,
 ) -> bool {
     let result = input_path(package_path).and_then(|package| {
-        input_bytes(manifest, manifest_size).and_then(|bytes| {
-            input_bytes(signature, signature_size).and_then(|signature| {
+        input_bytes(manifest, manifest_size, MAX_MANIFEST_SIZE).and_then(|bytes| {
+            input_bytes(signature, signature_size, SIGNATURE_SIZE).and_then(|signature| {
                 verify_manifest(bytes, signature).and_then(|manifest| {
                     input_path(destination).and_then(|destination| {
                         extract_bootstrap_updater(package, destination, &manifest)
@@ -1322,6 +1440,25 @@ mod tests {
         let message = format_io_error("failed replacing update file", &error);
         assert!(message.starts_with(PERMISSION_DENIED_MARKER));
         assert!(message.contains("拒绝访问"));
+        assert_eq!(
+            format_sevenzip_error(
+                "failed extracting 7z package",
+                sevenz_rust::Error::other(message.clone())
+            ),
+            message
+        );
+    }
+
+    #[test]
+    fn metadata_read_stops_after_one_byte_past_the_limit() {
+        let mut input = Cursor::new(b"metadata");
+        let error = read_limited_contents(&mut input, 4, "manifest").unwrap_err();
+        assert!(error.contains("too large"));
+        assert_eq!(input.position(), 5);
+        assert_eq!(
+            read_limited_contents(Cursor::new(b"test"), 4, "manifest").unwrap(),
+            b"test"
+        );
     }
 
     #[test]
@@ -1363,10 +1500,30 @@ mod tests {
 
     #[test]
     fn ffi_input_accepts_empty_slice_without_dereferencing_null() {
-        assert!(unsafe { input_bytes(std::ptr::null(), 0) }
+        assert!(unsafe { input_bytes(std::ptr::null(), 0, 64) }
             .unwrap()
             .is_empty());
-        assert!(unsafe { input_bytes(std::ptr::null(), 1) }.is_err());
+        assert!(unsafe { input_bytes(std::ptr::null(), 1, 64) }.is_err());
+    }
+
+    #[test]
+    fn ffi_input_checks_the_limit_for_a_valid_buffer() {
+        let data = [1, 2];
+        assert!(unsafe { input_bytes(data.as_ptr(), data.len(), 1) }.is_err());
+        assert_eq!(
+            unsafe { input_bytes(data.as_ptr(), data.len(), 2) }.unwrap(),
+            &data
+        );
+    }
+
+    #[test]
+    fn ffi_error_buffer_keeps_complete_utf8_characters() {
+        let mut output = [0 as c_char; 5];
+        unsafe { write_error("已安装", output.as_mut_ptr(), output.len()) };
+        assert_eq!(
+            unsafe { CStr::from_ptr(output.as_ptr()) }.to_str().unwrap(),
+            "已"
+        );
     }
 
     #[test]
@@ -1399,6 +1556,8 @@ mod tests {
             "data//file.txt",
             "data/file.",
             "data/file ",
+            "data/invalid?.txt",
+            "data/tab\tfile.txt",
             "profile/settings.cfg",
             "PROFILE/qmclient/settings.cfg",
         ] {
@@ -1430,7 +1589,7 @@ mod tests {
         let root = tempdir().unwrap();
         let package = root.path().join("package.zip");
         fs::write(&package, zip_bytes.into_inner()).unwrap();
-        assert!(extract_package(&package, root.path(), &manifest).is_err());
+        assert!(extract_package(File::open(&package).unwrap(), root.path(), &manifest).is_err());
     }
 
     #[test]
@@ -1440,7 +1599,7 @@ mod tests {
             ("DDNet-Server.exe", &b"server"[..]),
             ("QmClient-Updater.exe", &b"updater"[..]),
         ];
-        let manifest = parse_manifest(&test_manifest(&required)).unwrap();
+        let mut manifest = parse_manifest(&test_manifest(&required)).unwrap();
         let mut zip_bytes = Cursor::new(Vec::new());
         {
             let mut writer = zip::ZipWriter::new(&mut zip_bytes);
@@ -1453,6 +1612,7 @@ mod tests {
         let root = tempdir().unwrap();
         let package = root.path().join("package.zip");
         let updater = root.path().join("bootstrap.exe");
+        manifest.package.size = zip_bytes.get_ref().len() as u64;
         fs::write(&package, zip_bytes.into_inner()).unwrap();
         extract_bootstrap_updater(&package, &updater, &manifest).unwrap();
         assert_eq!(fs::read(updater).unwrap(), b"updater");
@@ -1471,6 +1631,7 @@ mod tests {
         writer.finish().unwrap();
         let mut value: serde_json::Value = serde_json::from_slice(&test_manifest(files)).unwrap();
         value["package"]["name"] = serde_json::json!("QmClient-windows.7z");
+        value["package"]["size"] = serde_json::json!(fs::metadata(&package).unwrap().len());
         let manifest = parse_manifest(&serde_json::to_vec(&value).unwrap()).unwrap();
         (package, manifest)
     }
@@ -1593,6 +1754,25 @@ mod tests {
         }
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn verified_package_blocks_writers_until_the_open_file_is_dropped() {
+        let fixture = SignedInstallFixture::new(false);
+        let signature = fs::read(&fixture.signature).unwrap();
+        let manifest = parse_manifest(&fs::read(&fixture.manifest).unwrap()).unwrap();
+        let package = open_verified_package(
+            &fixture.package,
+            &signature,
+            &manifest,
+            fixture.key.verifying_key().as_bytes(),
+        )
+        .unwrap();
+
+        assert!(File::options().write(true).open(&fixture.package).is_err());
+        drop(package);
+        assert!(File::options().write(true).open(&fixture.package).is_ok());
+    }
+
     #[test]
     fn tampered_sevenzip_package_does_not_change_installation() {
         let fixture = SignedInstallFixture::new(false);
@@ -1647,7 +1827,7 @@ mod tests {
         let (package, manifest) = sevenzip_fixture(root.path(), files);
         let staging = root.path().join("staging");
         fs::create_dir(&staging).unwrap();
-        extract_package(&package, &staging, &manifest).unwrap();
+        extract_package(File::open(&package).unwrap(), &staging, &manifest).unwrap();
         assert_eq!(
             fs::read(staging.join("data/example.txt")).unwrap(),
             b"asset"
@@ -1655,6 +1835,39 @@ mod tests {
         let bootstrap = root.path().join("bootstrap.exe");
         extract_bootstrap_updater(&package, &bootstrap, &manifest).unwrap();
         assert_eq!(fs::read(bootstrap).unwrap(), b"updater");
+    }
+
+    #[test]
+    fn bootstrap_keeps_an_existing_updater_file() {
+        let root = tempdir().unwrap();
+        let files: &[(&str, &[u8])] = &[
+            ("DDNet.exe", b"client"),
+            ("DDNet-Server.exe", b"server"),
+            ("QmClient-Updater.exe", b"updater"),
+        ];
+        let (package, manifest) = sevenzip_fixture(root.path(), files);
+        let bootstrap = root.path().join("bootstrap.exe");
+        fs::write(&bootstrap, b"existing file").unwrap();
+
+        assert!(extract_bootstrap_updater(&package, &bootstrap, &manifest).is_err());
+        assert_eq!(fs::read(&bootstrap).unwrap(), b"existing file");
+    }
+
+    #[test]
+    fn bootstrap_rejects_a_package_with_the_wrong_length() {
+        let fixture = SignedInstallFixture::new(false);
+        let manifest = parse_manifest(&fs::read(&fixture.manifest).unwrap()).unwrap();
+        let bootstrap = fixture.root.path().join("bootstrap.exe");
+        File::options()
+            .append(true)
+            .open(&fixture.package)
+            .unwrap()
+            .write_all(b"\n")
+            .unwrap();
+
+        let error = extract_bootstrap_updater(&fixture.package, &bootstrap, &manifest).unwrap_err();
+        assert!(error.contains("size does not match"));
+        assert!(!bootstrap.exists());
     }
 
     #[test]
@@ -1701,9 +1914,11 @@ mod tests {
         });
         let staging = root.path().join("staging");
         fs::create_dir(&staging).unwrap();
-        assert!(extract_package(&package, &staging, &manifest)
-            .unwrap_err()
-            .contains("every file"));
+        assert!(
+            extract_package(File::open(&package).unwrap(), &staging, &manifest)
+                .unwrap_err()
+                .contains("every file")
+        );
     }
 
     #[test]
@@ -1776,6 +1991,8 @@ mod tests {
         fs::create_dir_all(install.join("data/qmclient")).unwrap();
         fs::write(install.join("data/qmclient/gui_logo.png"), b"logo").unwrap();
         fs::write(staging.join("DDNet.exe"), b"new client").unwrap();
+        fs::create_dir_all(staging.join("data/new/assets")).unwrap();
+        fs::write(staging.join("data/new/assets/extra.txt"), b"asset").unwrap();
         fs::write(install.join("DDNet.exe"), b"old client").unwrap();
         fs::write(install.join("DDNet.old"), b"legacy backup").unwrap();
         fs::create_dir(install.join("blocked")).unwrap();
@@ -1794,6 +2011,11 @@ mod tests {
                     sha256: "00".repeat(32),
                 },
                 ManifestFile {
+                    path: "data/new/assets/extra.txt".into(),
+                    size: 5,
+                    sha256: "00".repeat(32),
+                },
+                ManifestFile {
                     path: "blocked".into(),
                     size: 1,
                     sha256: "00".repeat(32),
@@ -1803,6 +2025,11 @@ mod tests {
         assert!(install_staged(&staging, &backup, &install, &manifest).is_err());
         assert_eq!(fs::read(install.join("DDNet.exe")).unwrap(), b"old client");
         assert_eq!(fs::read(install.join("DDNet.old")).unwrap(), b"legacy backup");
+        assert_eq!(
+            fs::read(install.join("data/qmclient/gui_logo.png")).unwrap(),
+            b"logo"
+        );
+        assert!(!install.join("data/new").exists());
         assert!(!backup.exists());
     }
 
@@ -1878,6 +2105,53 @@ mod tests {
         assert!(error.contains("symbolic link or reparse point"));
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn install_root_rejects_a_linked_layout_directory() {
+        use std::os::unix::fs::symlink;
+
+        let root = tempdir().unwrap();
+        let install = root.path().join("install");
+        let shared = root.path().join("shared");
+        fs::create_dir(&install).unwrap();
+        fs::create_dir_all(shared.join("qmclient")).unwrap();
+        fs::write(install.join("DDNet.exe"), b"client").unwrap();
+        fs::write(shared.join("qmclient/gui_logo.png"), b"logo").unwrap();
+        symlink(&shared, install.join("data")).unwrap();
+
+        let error = validate_install_root(&install).unwrap_err();
+        assert!(error.contains("symbolic link or reparse point"));
+    }
+
+    #[test]
+    fn rollback_keeps_current_file_when_backup_cannot_be_restored() {
+        let root = tempdir().unwrap();
+        let target = root.path().join("DDNet.exe");
+        fs::write(&target, b"installed update").unwrap();
+        let missing_backup = root.path().join("missing/DDNet.exe");
+
+        let result = rollback(&InstallChanges {
+            files: vec![AppliedFile {
+                target: target.clone(),
+                backup: Some(missing_backup),
+            }],
+            ..InstallChanges::default()
+        });
+
+        assert!(result.is_err());
+        assert_eq!(fs::read(target).unwrap(), b"installed update");
+    }
+
+    #[test]
+    fn completed_install_remains_successful_when_backup_cleanup_fails() {
+        let root = tempdir().unwrap();
+        let backup = root.path().join("backup");
+        fs::write(&backup, b"obstructed backup path").unwrap();
+
+        assert!(finish_install(Ok(()), &backup).is_ok());
+        assert_eq!(fs::read(backup).unwrap(), b"obstructed backup path");
+    }
+
     #[test]
     fn failed_rollback_preserves_backup_for_manual_recovery() {
         let root = tempdir().unwrap();
@@ -1886,15 +2160,22 @@ mod tests {
         fs::create_dir(&backup).unwrap();
         fs::create_dir(&target).unwrap();
         let failure = rollback_install(
-            "installation failed".into(),
-            &[AppliedFile {
-                target,
-                backup: None,
-            }],
+            format_io_error(
+                "installation failed",
+                &io::Error::from(io::ErrorKind::PermissionDenied),
+            ),
+            &InstallChanges {
+                files: vec![AppliedFile {
+                    target,
+                    backup: None,
+                }],
+                ..InstallChanges::default()
+            },
             &backup,
         );
         assert!(failure.message.contains("rollback failed"));
         assert!(failure.message.contains(&backup.display().to_string()));
+        assert!(!failure.message.starts_with(PERMISSION_DENIED_MARKER));
         assert!(backup.exists());
     }
 
@@ -1906,7 +2187,7 @@ mod tests {
             ("QmClient-Updater.exe", &b"new updater"[..]),
             ("data/languages/test.txt", &b"translated"[..]),
         ];
-        let manifest = parse_manifest(&test_manifest(&required)).unwrap();
+        let mut manifest = parse_manifest(&test_manifest(&required)).unwrap();
         let mut zip_bytes = Cursor::new(Vec::new());
         {
             let mut writer = zip::ZipWriter::new(&mut zip_bytes);
@@ -1921,13 +2202,14 @@ mod tests {
         let staging = root.path().join("staging");
         let backup = root.path().join("backup");
         let install = root.path().join("install");
+        manifest.package.size = zip_bytes.get_ref().len() as u64;
         fs::write(&package, zip_bytes.into_inner()).unwrap();
         fs::create_dir_all(&staging).unwrap();
         fs::create_dir_all(&backup).unwrap();
         fs::create_dir_all(&install).unwrap();
         fs::write(install.join("DDNet.exe"), b"old client").unwrap();
 
-        extract_package(&package, &staging, &manifest).unwrap();
+        extract_package(File::open(&package).unwrap(), &staging, &manifest).unwrap();
         install_staged(&staging, &backup, &install, &manifest).unwrap();
 
         for (path, content) in required {

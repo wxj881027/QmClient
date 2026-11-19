@@ -2,6 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "motd.h"
 
+#include "motd_message.h"
+
 #include <base/log_color.h>
 
 #include <engine/client/serverbrowser.h>
@@ -19,6 +21,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <new>
+#include <stdexcept>
 
 CMotd::CMotd()
 {
@@ -117,58 +121,44 @@ void CMotd::OnMessage(int MsgType, void *pRawMsg)
 	{
 		const CNetMsg_Sv_Motd *pMsg = static_cast<CNetMsg_Sv_Motd *>(pRawMsg);
 
-		// copy it manually to process all \n
-		const char *pMsgStr = pMsg->m_pMessage;
-		const size_t MotdLen = str_length(pMsgStr) + 1;
-		const char *pLast = m_aServerMotd; // for console printing
+		const std::string_view Message = DecodeMotdMessage(pMsg->m_pMessage, m_aServerMotd, sizeof(m_aServerMotd));
 		const LOG_COLOR LogColor = color_cast<LOG_COLOR>(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageHighlightColor)));
-		for(size_t i = 0, k = 0; i < MotdLen && k < sizeof(m_aServerMotd); i++, k++)
+		if(g_Config.m_ClPrintMotd)
 		{
-			// handle incoming "\\n"
-			if(pMsgStr[i] == '\\' && pMsgStr[i + 1] == 'n')
-			{
-				m_aServerMotd[k] = '\n';
-				i++; // skip the 'n'
-			}
-			else
-			{
-				m_aServerMotd[k] = pMsgStr[i];
-			}
+			ForEachMotdLine(Message, [&](std::string_view Line) {
+				log_info_color(LogColor, "motd", "%.*s", static_cast<int>(Line.size()), Line.data());
+			});
+		}
 
-			// print the line to the console when receiving the newline character
-			if(g_Config.m_ClPrintMotd && m_aServerMotd[k] == '\n')
+		try
+		{
+			// 公告在地图加载期间也可能到达；以当前连接的社区和实际地图核对来源。
+			CServerInfo Server = Client()->ServerInfo();
+			if(const NETADDR *pAddress = Client()->ServerAddress())
 			{
-				m_aServerMotd[k] = '\0';
-				log_info_color(LogColor, "motd", "%s", pLast);
-				m_aServerMotd[k] = '\n';
-				pLast = m_aServerMotd + k + 1;
+				if(const auto *pEntry = ServerBrowser()->Find(*pAddress))
+				{
+					str_copy(Server.m_aCommunityId, pEntry->m_Info.m_aCommunityId);
+					str_copy(Server.m_aCommunityType, pEntry->m_Info.m_aCommunityType);
+					if(Server.m_aGameType[0] == '\0')
+						str_copy(Server.m_aGameType, pEntry->m_Info.m_aGameType);
+				}
 			}
-		}
-		m_aServerMotd[sizeof(m_aServerMotd) - 1] = '\0';
-		// 公告在地图加载期间也可能到达；以当前连接的社区和实际地图核对来源。
-		CServerInfo Server = Client()->ServerInfo();
-		if(const NETADDR *pAddress = Client()->ServerAddress())
-		{
-			if(const auto *pEntry = ServerBrowser()->Find(*pAddress))
+			str_copy(Server.m_aMap, Client()->GetCurrentMap());
+			auto &DifficultyCatalog = GameClient()->m_Menus.MapDifficultyCatalog();
+			if(DifficultyCatalog.RecordAxiomMotd(Server, m_aServerMotd))
 			{
-				str_copy(Server.m_aCommunityId, pEntry->m_Info.m_aCommunityId);
-				str_copy(Server.m_aCommunityType, pEntry->m_Info.m_aCommunityType);
-				if(Server.m_aGameType[0] == '\0')
-					str_copy(Server.m_aGameType, pEntry->m_Info.m_aGameType);
+				if(auto *pServerBrowserImpl = dynamic_cast<CServerBrowser *>(ServerBrowser()))
+					pServerBrowserImpl->RequestResort();
 			}
+			if(DifficultyCatalog.AxiomCacheDirty() && !DifficultyCatalog.SaveAxiomCache(Storage()))
+				log_warn("map_difficulty", "could not save Axiom map stars; current session data remains available");
 		}
-		str_copy(Server.m_aMap, Client()->GetCurrentMap());
-		auto &DifficultyCatalog = GameClient()->m_Menus.MapDifficultyCatalog();
-		if(DifficultyCatalog.RecordAxiomMotd(Server, m_aServerMotd))
+		catch(const std::bad_alloc &)
 		{
-			if(auto *pServerBrowserImpl = dynamic_cast<CServerBrowser *>(ServerBrowser()))
-				pServerBrowserImpl->RequestResort();
 		}
-		if(DifficultyCatalog.AxiomCacheDirty() && !DifficultyCatalog.SaveAxiomCache(Storage()))
-			log_warn("map_difficulty", "could not save Axiom map stars; current session data remains available");
-		if(g_Config.m_ClPrintMotd && *pLast != '\0')
+		catch(const std::length_error &)
 		{
-			log_info_color(LogColor, "motd", "%s", pLast);
 		}
 
 		if(!IsActive())

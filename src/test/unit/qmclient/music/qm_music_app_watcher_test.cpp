@@ -2,10 +2,12 @@
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
 
 #include <gtest/gtest.h>
+#include <test/support/job_wait.h>
 
 #include <atomic>
 #include <cstddef>
 #include <memory>
+#include <optional>
 
 TEST(QmMusicAppWatcher, SingleProcessSnapshotCombinesAllRegisteredApplications)
 {
@@ -47,6 +49,26 @@ TEST(QmMusicAppWatcher, PendingProcessScanDoesNotWaitOrExposePartialResult)
 	Pool.Shutdown();
 	ASSERT_TRUE(pScan->TryGetResult(Mask));
 	EXPECT_EQ(Mask, uint64_t(5));
+}
+
+TEST(QmMusicAppWatcher, FailedProcessScanLeavesMaskUntouchedAndEmptySnapshotIsValid)
+{
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	auto pFailedScan = std::make_shared<CQmMusicAppScanJob>([] { return std::nullopt; });
+	auto pEmptyScan = std::make_shared<CQmMusicAppScanJob>([] { return uint64_t(0); });
+	ASSERT_TRUE(Pool.TryAdd(pFailedScan));
+	ASSERT_TRUE(Pool.TryAdd(pEmptyScan));
+	ASSERT_TRUE(WaitForJobDone(*pFailedScan));
+	ASSERT_TRUE(WaitForJobDone(*pEmptyScan));
+	Pool.Shutdown();
+
+	uint64_t Mask = 5;
+	EXPECT_TRUE(pFailedScan->Done());
+	EXPECT_FALSE(pFailedScan->TryGetResult(Mask));
+	EXPECT_EQ(Mask, uint64_t(5));
+	ASSERT_TRUE(pEmptyScan->TryGetResult(Mask));
+	EXPECT_EQ(Mask, uint64_t(0));
 }
 
 TEST(QmMusicAppWatcher, ProcessScanOutlivesWatcherReferenceWithoutCallback)

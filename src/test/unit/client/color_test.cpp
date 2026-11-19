@@ -9,6 +9,38 @@
 #include <test/test.h>
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
+
+TEST(Color, SubscriptReadsAndUpdatesFourChannels)
+{
+	constexpr unsigned Packed = [] {
+		ColorHSLA Color(0.0f, 0.25f, 0.5f, 1.0f);
+		Color[0] = Color[1];
+		Color[1] = Color[2];
+		Color[2] = Color[3];
+		Color[3] = 0.0f;
+		return Color.Pack();
+	}();
+	EXPECT_EQ(Packed, 0x004080FFu);
+}
+
+TEST(Color, PackClampsChannelsBeforeCombiningBytes)
+{
+	const ColorRGBA Color(-0.25f, 0.5f, 1.25f, 0.25f);
+	EXPECT_EQ(Color.Pack(), 0x400080FFu);
+	EXPECT_EQ(Color.PackAlphaLast(), 0x0080FF40u);
+	EXPECT_EQ(Color.Pack(false), 0x0080FFu);
+	EXPECT_EQ(Color.PackAlphaLast(false), 0x0080FFu);
+}
+
+TEST(Color, PackUsesZeroForNanChannels)
+{
+	const float Nan = std::numeric_limits<float>::quiet_NaN();
+	const ColorRGBA Color(0.25f, 0.5f, Nan, Nan);
+	EXPECT_EQ(Color.Pack(), 0x00408000u);
+	EXPECT_EQ(Color.PackAlphaLast(), 0x40800000u);
+}
 
 TEST(Color, HslToRgbToHslConv)
 {
@@ -47,6 +79,25 @@ TEST(Color, RgbToHslToRgbConv)
 		ASSERT_NEAR(OldRgb.g, NewRgb.g, 0.000001f);
 		ASSERT_NEAR(OldRgb.b, NewRgb.b, 0.000001f);
 	}
+}
+
+TEST(Color, RgbToHslKeepsSaturationNearWhite)
+{
+	const float NearWhite = std::nextafter(1.0f, 0.0f);
+	const ColorHSLA Hsl = color_cast<ColorHSLA>(ColorRGBA(1.0f, NearWhite, NearWhite));
+	EXPECT_FLOAT_EQ(Hsl.s, 1.0f);
+}
+
+TEST(Color, RgbHslRoundtripPreservesNearBlackChroma)
+{
+	const ColorRGBA Original(1.0e-9f, 0.0f, 0.0f);
+	const ColorHSLA Hsl = color_cast<ColorHSLA>(Original);
+	ASSERT_FLOAT_EQ(Hsl.s, 1.0f);
+
+	const ColorRGBA Roundtrip = color_cast<ColorRGBA>(Hsl);
+	EXPECT_FLOAT_EQ(Roundtrip.r, Original.r);
+	EXPECT_FLOAT_EQ(Roundtrip.g, 0.0f);
+	EXPECT_FLOAT_EQ(Roundtrip.b, 0.0f);
 }
 
 TEST(Color, HslToHsvToHslConv)

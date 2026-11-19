@@ -1,6 +1,7 @@
 #ifndef GAME_MAP_RENDER_LAYER_H
 #define GAME_MAP_RENDER_LAYER_H
 
+#include <array>
 #include <cstdint>
 
 using offset_ptr_size = char *;
@@ -164,6 +165,7 @@ public:
 protected:
 	IGraphics::CTextureHandle GetTexture() const override { return IGraphics::CTextureHandle(); }
 
+	std::optional<std::array<float, 4>> ScreenForGroup(const CRenderLayerParams &Params) const;
 	CMapItemGroup *m_pGroup;
 };
 
@@ -183,8 +185,7 @@ public:
 	{
 		// 设计层上传 GPU 后会释放原始 tile 数据，有效性不能只看 map 数据。
 		return m_pLayerTilemap != nullptr && m_pLayerTilemap->m_Width > 0 && m_pLayerTilemap->m_Height > 0 &&
-		       (m_pTiles != nullptr || (m_VisualTiles.has_value() && m_VisualTiles->m_BufferContainerIndex != -1) ||
-			       (m_pMap != nullptr && m_pMap->GetDataSize(GetDataIndex()) > 0));
+		       (m_TileDataLoaded || (m_VisualTiles.has_value() && m_VisualTiles->m_BufferContainerIndex != -1));
 	}
 	void Unload() override;
 
@@ -194,13 +195,14 @@ protected:
 	T *GetData() const;
 
 	virtual ColorRGBA GetRenderColor(const CRenderLayerParams &Params) const;
-	virtual void InitTileData();
+	virtual bool InitTileData();
 	virtual void GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const;
 	IGraphics::CTextureHandle GetTexture() const override { return m_TextureHandle; }
 	CTile *m_pTiles;
 
 private:
 	IGraphics::CTextureHandle m_TextureHandle;
+	bool m_TileDataLoaded = false;
 
 protected:
 	class CTileLayerVisuals : public CRenderComponent
@@ -211,6 +213,7 @@ protected:
 			m_Width = 0;
 			m_Height = 0;
 			m_BufferContainerIndex = -1;
+			m_BufferObjectIndex = -1;
 			m_IsTextured = false;
 		}
 
@@ -221,35 +224,38 @@ protected:
 		{
 		public:
 			CTileVisual() :
-				m_IndexBufferByteOffset(0) {}
+				m_QuadOffsetAndDrawFlag(0) {}
 
 		private:
-			offset_ptr32 m_IndexBufferByteOffset;
+			// 偏移按四边形计数，最高位保留给绘制状态。
+			static constexpr offset_ptr32 DRAW_FLAG = 0x80000000u;
+			static constexpr offset_ptr32 QUAD_OFFSET_MASK = ~DRAW_FLAG;
+			offset_ptr32 m_QuadOffsetAndDrawFlag;
 
 		public:
 			bool DoDraw() const
 			{
-				return (m_IndexBufferByteOffset & 0x10000000) != 0;
+				return (m_QuadOffsetAndDrawFlag & DRAW_FLAG) != 0;
 			}
 
 			void Draw(bool SetDraw)
 			{
-				m_IndexBufferByteOffset = (SetDraw ? 0x10000000 : (offset_ptr32)0) | (m_IndexBufferByteOffset & 0xEFFFFFFF);
+				m_QuadOffsetAndDrawFlag = (SetDraw ? DRAW_FLAG : 0u) | (m_QuadOffsetAndDrawFlag & QUAD_OFFSET_MASK);
 			}
 
 			offset_ptr IndexBufferByteOffset() const
 			{
-				return ((offset_ptr)(m_IndexBufferByteOffset & 0xEFFFFFFF) * 6 * sizeof(uint32_t));
+				return static_cast<offset_ptr>(m_QuadOffsetAndDrawFlag & QUAD_OFFSET_MASK) * 6 * sizeof(uint32_t);
 			}
 
-			void SetIndexBufferByteOffset(offset_ptr32 IndexBufferByteOff)
+			void SetIndexBufferByteOffset(offset_ptr32 QuadOffset)
 			{
-				m_IndexBufferByteOffset = IndexBufferByteOff | (m_IndexBufferByteOffset & 0x10000000);
+				m_QuadOffsetAndDrawFlag = QuadOffset | (m_QuadOffsetAndDrawFlag & DRAW_FLAG);
 			}
 
-			void AddIndexBufferByteOffset(offset_ptr32 IndexBufferByteOff)
+			void AddIndexBufferByteOffset(offset_ptr32 QuadOffset)
 			{
-				m_IndexBufferByteOffset = ((m_IndexBufferByteOffset & 0xEFFFFFFF) + IndexBufferByteOff) | (m_IndexBufferByteOffset & 0x10000000);
+				m_QuadOffsetAndDrawFlag = ((m_QuadOffsetAndDrawFlag & QUAD_OFFSET_MASK) + QuadOffset) | (m_QuadOffsetAndDrawFlag & DRAW_FLAG);
 			}
 		};
 
@@ -270,6 +276,8 @@ protected:
 		unsigned int m_Width;
 		unsigned int m_Height;
 		int m_BufferContainerIndex;
+		// container 创建失败时仍保留 BO，只有删除返回后才清除身份。
+		int m_BufferObjectIndex;
 		bool m_IsTextured;
 	};
 
@@ -310,11 +318,13 @@ protected:
 	{
 	public:
 		CQuadLayerVisuals() :
-			m_QuadNum(0), m_BufferContainerIndex(-1), m_IsTextured(false) {}
+			m_QuadNum(0), m_BufferContainerIndex(-1), m_BufferObjectIndex(-1), m_IsTextured(false) {}
 		void Unload();
 
 		int m_QuadNum;
 		int m_BufferContainerIndex;
+		// container 创建失败时仍保留 BO，只有删除返回后才清除身份。
+		int m_BufferObjectIndex;
 		bool m_IsTextured;
 	};
 	void RenderQuadLayer(float Alpha, const CRenderLayerParams &Params);
@@ -330,9 +340,9 @@ protected:
 		int m_NumQuads;
 
 		int m_PosEnv;
-		float m_PosEnvOffset;
+		int m_PosEnvOffset;
 		int m_ColorEnv;
-		float m_ColorEnvOffset;
+		int m_ColorEnvOffset;
 
 		std::vector<SQuadRenderInfo> m_vQuadRenderInfo;
 		std::optional<CClipRegion> m_ClipRegion;
@@ -410,7 +420,7 @@ public:
 	void Unload() override;
 
 protected:
-	void InitTileData() override;
+	bool InitTileData() override;
 	void RenderTileLayerWithTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const override;
@@ -431,7 +441,7 @@ public:
 	void Unload() override;
 
 protected:
-	void InitTileData() override;
+	bool InitTileData() override;
 	void RenderTileLayerWithTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const override;
@@ -452,7 +462,7 @@ public:
 	void Unload() override;
 
 protected:
-	void InitTileData() override;
+	bool InitTileData() override;
 	void RenderTileLayerWithTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const override;
@@ -476,7 +486,7 @@ public:
 	CMapLoadTask Init() override;
 
 protected:
-	void InitTileData() override;
+	bool InitTileData() override;
 	void RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params) override;
 	void GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const override;
 	IGraphics::CTextureHandle GetTexture() const override;

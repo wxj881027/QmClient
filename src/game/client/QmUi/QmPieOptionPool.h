@@ -2,6 +2,7 @@
 #define GAME_CLIENT_QMUI_QMPIEOPTIONPOOL_H
 
 #include "UiSurface.h"
+#include "UiTextRenderState.h"
 #include "UiTokens.h"
 
 #include <engine/textrender.h>
@@ -9,6 +10,8 @@
 #include <game/client/ui.h>
 
 #include <algorithm>
+#include <new>
+#include <stdexcept>
 
 // 饼菜单选项池：一条圆角容器里排一批选项胶囊，宽度不够时自动换行。
 // 池只表达「这些选项现在在不在饼菜单里」；颜色在预览扇区上改，池里不放色块控件。
@@ -120,50 +123,115 @@ struct SQmPieOptionPoolDrag
 
 // 一个选项胶囊：色点 + 图标 + 名字。悬浮与拖动都用同一档白色描边，不跟随选项颜色，
 // 否则一堆红/紫胶囊会把「可拖动」读成「错误」或「已选中」。
-inline void QmDrawPieOptionChip(const IUiContext &Ctx, const CUIRect &Rect, const char *pLabel, const char *pIcon,
+inline bool QmDrawPieOptionChip(const IUiContext &Ctx, const CUIRect &Rect, const char *pLabel, const char *pIcon,
 	ColorRGBA OptionColor, float BodySize, bool Hovered, bool Dragging)
 {
 	if(Ctx.m_pUi == nullptr)
-		return;
-	const bool Active = Hovered || Dragging;
-	const ColorRGBA Fill = Active ? ui_token::color::TINT_ROW_ACTIVE : ui_token::color::TINT_PART;
-	const ColorRGBA Border = Active ? ui_token::feedback::ACTIVE_BORDER : ui_token::color::BORDER_SUBTLE;
-	DrawRoundedSurface(Ctx, Rect, Fill, Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
-
-	const float PadX = ui_token::control::PadX(BodySize);
-	const float Dot = ui_token::control::IconBox(BodySize) * 0.5f;
-	const float Icon = ui_token::control::IconBox(BodySize);
-	CUIRect Cursor = Rect;
-	Cursor.x += PadX;
-	Cursor.w = std::max(0.0f, Cursor.w - PadX);
-
-	CUIRect DotRect{Cursor.x, Rect.y + (Rect.h - Dot) * 0.5f, Dot, Dot};
-	DrawRoundedSurface(Ctx, DotRect, OptionColor, ui_token::color::COLOR_TRANSPARENT, ui_token::radius::PILL);
-	Cursor.x += Dot + ui_token::spacing::XS;
-	Cursor.w = std::max(0.0f, Cursor.w - Dot - ui_token::spacing::XS);
-
-	// 图标沿用预览里的画法：临时切到图标字体，量出真实宽高后居中，再切回正文。
-	ITextRender *pText = Ctx.m_pUi->TextRender();
-	if(pIcon != nullptr && pIcon[0] != '\0')
+		return false;
+	const CUiScopedTextRenderState TextState(*Ctx.m_pUi->TextRender());
+	try
 	{
-		const EFontPreset PreviousPreset = pText->GetFontPreset();
-		const ColorRGBA PreviousColor = pText->GetTextColor();
-		pText->SetFontPreset(EFontPreset::ICON_FONT);
-		pText->TextColor(ui_token::color::TEXT_PRIMARY);
-		const float IconWidth = pText->TextWidth(Icon, pIcon);
-		CUIRect IconRect{Cursor.x + (Icon - IconWidth) * 0.5f, Rect.y + (Rect.h - Icon) * 0.5f, IconWidth, Icon};
-		Ctx.m_pUi->DoLabel(&IconRect, pIcon, Icon, TEXTALIGN_MC);
-		pText->SetFontPreset(PreviousPreset);
-		pText->TextColor(PreviousColor);
-	}
-	Cursor.x += Icon + ui_token::control::IconTextGap(BodySize);
-	Cursor.w = std::max(0.0f, Cursor.w - Icon - ui_token::control::IconTextGap(BodySize));
+		const bool Active = Hovered || Dragging;
+		const ColorRGBA Fill = Active ? ui_token::color::TINT_ROW_ACTIVE : ui_token::color::TINT_PART;
+		const ColorRGBA Border = Active ? ui_token::feedback::ACTIVE_BORDER : ui_token::color::BORDER_SUBTLE;
+		DrawRoundedSurface(Ctx, Rect, Fill, Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
 
-	SLabelProperties Props;
-	Props.m_MaxWidth = Cursor.w;
-	Props.m_EllipsisAtEnd = true;
-	Props.SetColor(ui_token::color::TEXT_PRIMARY);
-	Ctx.m_pUi->DoLabel(&Cursor, pLabel, BodySize, TEXTALIGN_ML, Props);
+		const float PadX = ui_token::control::PadX(BodySize);
+		const float Dot = ui_token::control::IconBox(BodySize) * 0.5f;
+		const float Icon = ui_token::control::IconBox(BodySize);
+		CUIRect Cursor = Rect;
+		Cursor.x += PadX;
+		Cursor.w = std::max(0.0f, Cursor.w - PadX);
+
+		CUIRect DotRect{Cursor.x, Rect.y + (Rect.h - Dot) * 0.5f, Dot, Dot};
+		DrawRoundedSurface(Ctx, DotRect, OptionColor, ui_token::color::COLOR_TRANSPARENT, ui_token::radius::PILL);
+		Cursor.x += Dot + ui_token::spacing::XS;
+		Cursor.w = std::max(0.0f, Cursor.w - Dot - ui_token::spacing::XS);
+
+		// 图标沿用预览里的画法：临时切到图标字体，量出真实宽高后居中，再切回正文。
+		ITextRender *pText = Ctx.m_pUi->TextRender();
+		if(pIcon != nullptr && pIcon[0] != '\0')
+		{
+			const EFontPreset PreviousPreset = pText->GetFontPreset();
+			const ColorRGBA PreviousColor = pText->GetTextColor();
+			pText->SetFontPreset(EFontPreset::ICON_FONT);
+			pText->TextColor(ui_token::color::TEXT_PRIMARY);
+			const float IconWidth = pText->TextWidth(Icon, pIcon);
+			CUIRect IconRect{Cursor.x + (Icon - IconWidth) * 0.5f, Rect.y + (Rect.h - Icon) * 0.5f, IconWidth, Icon};
+			Ctx.m_pUi->DoLabel(&IconRect, pIcon, Icon, TEXTALIGN_MC);
+			pText->SetFontPreset(PreviousPreset);
+			pText->TextColor(PreviousColor);
+		}
+		Cursor.x += Icon + ui_token::control::IconTextGap(BodySize);
+		Cursor.w = std::max(0.0f, Cursor.w - Icon - ui_token::control::IconTextGap(BodySize));
+
+		SLabelProperties Props;
+		Props.m_MaxWidth = Cursor.w;
+		Props.m_EllipsisAtEnd = true;
+		Props.SetColor(ui_token::color::TEXT_PRIMARY);
+		Ctx.m_pUi->DoLabel(&Cursor, pLabel, BodySize, TEXTALIGN_ML, Props);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+}
+
+// 设置预览与选项池共用文字状态边界，资源失败只跳过当前文字。
+inline bool QmDrawPieSettingsPreviewIcon(CUi &Ui, const vec2 &Position, float IconSize, const char *pIcon, float Alpha)
+{
+	auto &TextRender = *Ui.TextRender();
+	const CUiScopedTextRenderState TextState(TextRender);
+	try
+	{
+		TextRender.TextColor(ui_token::color::TEXT_PRIMARY.WithAlpha(Alpha));
+		TextRender.SetFontPreset(EFontPreset::ICON_FONT);
+		const float Width = TextRender.TextWidth(IconSize, pIcon);
+		const CUIRect Rect{Position.x - Width * 0.5f, Position.y - IconSize * 0.5f, Width, IconSize};
+		Ui.DoLabel(&Rect, pIcon, IconSize, TEXTALIGN_MC);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+}
+
+inline bool QmDrawPieSettingsPreviewTitle(ITextRender &TextRender, const vec2 &Center, float FontSize, float CenterRadius, const char *pTitle)
+{
+	CUiScopedTextRenderState TextState(TextRender);
+	try
+	{
+		TextRender.TextColor(ui_token::color::TEXT_PRIMARY.WithAlpha(0.98f));
+		float Width = TextRender.TextWidth(FontSize, pTitle);
+		if(Width > CenterRadius * 1.65f)
+		{
+			FontSize *= CenterRadius * 1.65f / Width;
+			Width = TextRender.TextWidth(FontSize, pTitle);
+		}
+		TextRender.Text(Center.x - Width * 0.5f, Center.y - FontSize * 0.5f, FontSize, pTitle);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+	TextState.Restore();
+	// 正常绘制继续沿用预览末尾恢复默认文字色的行为。
+	TextRender.TextColor(TextRender.DefaultTextColor());
+	return true;
 }
 
 #endif

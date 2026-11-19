@@ -28,12 +28,12 @@ public:
 	/**
 	 * Move assignment.
 	 */
-	CImageInfo &operator=(CImageInfo &&Other);
+	CImageInfo &operator=(CImageInfo &&Other) noexcept;
 
 	/**
 	 * Move constructor.
 	 */
-	CImageInfo(CImageInfo &&Other);
+	CImageInfo(CImageInfo &&Other) noexcept;
 
 	/**
 	 * Width of the image.
@@ -60,7 +60,7 @@ public:
 	/**
 	 * Frees the image data and clears all info.
 	 */
-	void Free();
+	void Free() noexcept;
 
 	/**
 	 * Returns the pixel size in bytes for the given image format.

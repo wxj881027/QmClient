@@ -55,6 +55,19 @@ TEST(GraphicsRenderTargetGaussianBlur, DualKawasePyramidUsesHalfAndQuarterResolu
 	EXPECT_EQ(IGraphics::DualKawasePyramidDimension(1920, -1), 0);
 }
 
+TEST(GraphicsRenderTargetGaussianBlur, DualKawasePyramidRoundsMaximumDimensionWithoutOverflow)
+{
+	constexpr int MaxDimension = std::numeric_limits<int>::max();
+	constexpr int HalfDimension = IGraphics::DualKawasePyramidDimension(MaxDimension, 0);
+	EXPECT_EQ(HalfDimension, MaxDimension / 2 + 1);
+}
+
+TEST(GraphicsRenderTargetGaussianBlur, DualKawasePyramidStaysAtOnePixelForDeeperLevels)
+{
+	constexpr int Dimension = IGraphics::DualKawasePyramidDimension(1920, std::numeric_limits<int>::max());
+	EXPECT_EQ(Dimension, 1);
+}
+
 TEST(GraphicsRenderTarget, ReadbackHandleStartsInvalid)
 {
 	IGraphics::CRenderTargetReadbackHandle Handle;

@@ -344,3 +344,33 @@ TEST(VideoEncoder, PixelPreferenceNegotiatesRealEncoderSupport)
 		<< "libx264 accepts 10-bit 4:4:4 and must be preferred over 8-bit";
 	avcodec_free_context(&pContext);
 }
+
+TEST(VideoEncoder, Av1AliasFallsBackToAvailableSoftwareEncoder)
+{
+	std::vector<video_encoder::SProbeResult> vProbes(2);
+	str_copy(vProbes[0].m_aName, "av1_nvenc");
+	vProbes[0].m_Available = false;
+	str_copy(vProbes[1].m_aName, "libsvtav1");
+	vProbes[1].m_Available = true;
+	EXPECT_STREQ(video_encoder::PreferredEncoderForFamily("av1", vProbes), "libsvtav1");
+}
+
+TEST(VideoEncoder, FamilyPriorityIsIndependentOfProbeListOrder)
+{
+	std::vector<video_encoder::SProbeResult> vProbes(3);
+	str_copy(vProbes[0].m_aName, "libsvtav1");
+	str_copy(vProbes[1].m_aName, "av1_qsv");
+	str_copy(vProbes[2].m_aName, "av1_nvenc");
+	for(auto &Probe : vProbes)
+		Probe.m_Available = true;
+	EXPECT_STREQ(video_encoder::PreferredEncoderForFamily("av1", vProbes), "av1_nvenc");
+}
+
+TEST(VideoEncoder, FamilyWithoutAvailableImplementationReturnsEmptyName)
+{
+	std::vector<video_encoder::SProbeResult> vProbes(1);
+	str_copy(vProbes[0].m_aName, "libsvtav1");
+	vProbes[0].m_Available = false;
+	EXPECT_STREQ(video_encoder::PreferredEncoderForFamily("av1", vProbes), "");
+	EXPECT_STREQ(video_encoder::PreferredEncoderForFamily("unknown", vProbes), "");
+}

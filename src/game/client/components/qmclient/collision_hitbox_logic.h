@@ -5,10 +5,31 @@
 #include <base/dbg.h>
 #include <base/vmath.h>
 
+#include <game/client/components/qmclient/tile_viewport_range.h>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <optional>
 #include <vector>
+
+struct SQmHitboxTileRange
+{
+	ivec2 m_Begin;
+	ivec2 m_End;
+};
+
+inline std::optional<SQmHitboxTileRange> QmCalcHitboxTileRange(vec2 ScreenMin, vec2 ScreenMax, ivec2 Pixels, ivec2 MapSize)
+{
+	if(MapSize.x <= 0 || MapSize.y <= 0)
+		return std::nullopt;
+	const auto Range = QmCalcTileViewportRange(ScreenMin, ScreenMax, Pixels);
+	if(!Range)
+		return std::nullopt;
+	return SQmHitboxTileRange{
+		{static_cast<int>(std::clamp(Range->m_StartX, 0.0, static_cast<double>(MapSize.x))), static_cast<int>(std::clamp(Range->m_StartY, 0.0, static_cast<double>(MapSize.y)))},
+		{static_cast<int>(std::clamp(Range->m_EndX, 0.0, static_cast<double>(MapSize.x))), static_cast<int>(std::clamp(Range->m_EndY, 0.0, static_cast<double>(MapSize.y)))}};
+}
 
 // 分段数只决定单位圆方向；中心、半径和颜色仍由每次绘制决定。
 class CQmHitboxCircleDirections

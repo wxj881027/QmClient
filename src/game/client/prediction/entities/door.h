@@ -4,20 +4,34 @@
 
 #include <game/client/prediction/entity.h>
 
+#include <optional>
+
 class CLaserData;
 
 class CDoor : public CEntity
 {
+	friend class CGameWorld;
+	// 重建时临时借用，不参与实体主链，复制时重新清空。
+	CDoor *m_pCollisionNext = nullptr;
 	vec2 m_To;
 	vec2 m_Direction;
 	int m_Length;
 	bool m_Active;
 
-	int MapSide() const;
+	static int MapSide(vec2 Direction);
 	int MapLength(int Side);
 
 public:
+	struct SCollisionGeometry
+	{
+		vec2 m_Direction{0.0f, 0.0f};
+		int m_Length = 0;
+	};
+	// 仅准备数值合法的写入几何，不执行逐像素遍历或证明帧预算。
+	static std::optional<SCollisionGeometry> CalcCollisionGeometry(vec2 Pos, vec2 To, int Side, int ConfiguredLength, ivec2 MapSize);
+
 	CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData);
+	CDoor(const CDoor &Other);
 	void ResetCollision();
 	bool Match(const CDoor *pDoor) const;
 	void Read(const CLaserData *pData);

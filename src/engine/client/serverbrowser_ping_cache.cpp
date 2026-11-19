@@ -1,5 +1,6 @@
 #include "serverbrowser_ping_cache.h"
 
+#include <base/log.h>
 #include <base/system.h>
 
 #include <engine/console.h>
@@ -8,11 +9,38 @@
 
 #include <sqlite3.h>
 
+#include <limits>
+#include <new>
 #include <unordered_map>
-#include <vector>
 
 namespace
 {
+	constexpr char LOAD_PINGS[] = "SELECT ip_address, ping, strftime('%s', utc_timestamp) FROM server_pings";
+	constexpr char STORE_PING[] = "INSERT OR REPLACE INTO server_pings (ip_address, ping, utc_timestamp) VALUES (?, ?, datetime('now'))";
+
+	class CStatementReset
+	{
+		sqlite3_stmt *m_pStatement;
+
+	public:
+		explicit CStatementReset(sqlite3_stmt *pStatement) :
+			m_pStatement(pStatement)
+		{
+			// reset 的返回码属于上次执行，不能因此跳过本次重试。
+			if(m_pStatement)
+				sqlite3_reset(m_pStatement);
+		}
+		CStatementReset(const CStatementReset &) = delete;
+		CStatementReset &operator=(const CStatementReset &) = delete;
+		~CStatementReset()
+		{
+			if(m_pStatement)
+			{
+				sqlite3_reset(m_pStatement);
+				sqlite3_clear_bindings(m_pStatement);
+			}
+		}
+	};
 
 	class CServerBrowserPingCache : public IServerBrowserPingCache
 	{
@@ -20,10 +48,10 @@ namespace
 		class CEntry
 		{
 		public:
-			NETADDR m_Addr;
 			int m_Ping;
 			// 缓存写入时间（UTC 秒），0 表示时间未知。用于丢弃过期的历史测量。
 			int64_t m_UtcTimestamp;
+			bool m_Unpersisted;
 		};
 
 		CServerBrowserPingCache(IConsole *pConsole, IStorage *pStorage);
@@ -62,22 +90,30 @@ namespace
 			pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverbrowse_ping_cache", "failed to create server_pings table");
 			return;
 		}
-		m_pLoadStmt = SqlitePrepare(pSqlite, "SELECT ip_address, ping, strftime('%s', utc_timestamp) FROM server_pings");
-		m_pStoreStmt = SqlitePrepare(pSqlite, "INSERT OR REPLACE INTO server_pings (ip_address, ping, utc_timestamp) VALUES (?, ?, datetime('now'))");
+		m_pLoadStmt = SqlitePrepare(pSqlite, LOAD_PINGS);
+		m_pStoreStmt = SqlitePrepare(pSqlite, STORE_PING);
 	}
 
 	void CServerBrowserPingCache::Load()
+	try
 	{
 		if(m_pDisk)
 		{
-			std::vector<CEntry> vNewEntries;
-
 			sqlite3 *pSqlite = m_pDisk.get();
 			IConsole *pConsole = m_pConsole;
+			if(!m_pLoadStmt)
+			{
+				m_pLoadStmt = SqlitePrepare(pSqlite, LOAD_PINGS);
+				if(!m_pLoadStmt)
+					return;
+			}
+
+			std::unordered_map<NETADDR, CEntry> Entries;
+			Entries.reserve(m_Entries.size());
+
+			CStatementReset Reset(m_pLoadStmt.get());
 			bool Error = false;
-			bool WarnedForBadAddress = false;
-			Error = Error || !m_pLoadStmt;
-			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_reset(m_pLoadStmt.get())) != SQLITE_OK;
+			bool WarnedForInvalidRow = false;
 			while(!Error)
 			{
 				const int StepResult = sqlite3_step(m_pLoadStmt.get());
@@ -88,23 +124,44 @@ namespace
 				else if(StepResult == SQLITE_ROW)
 				{
 					const char *pIpAddress = (const char *)sqlite3_column_text(m_pLoadStmt.get(), 0);
-					const int Ping = sqlite3_column_int(m_pLoadStmt.get(), 1);
-					// strftime 在时间戳格式异常时返回 NULL，这种记录按"时间未知"处理。
-					const bool HasUtcTimestamp = sqlite3_column_type(m_pLoadStmt.get(), 2) != SQLITE_NULL;
-					const int64_t UtcTimestamp = HasUtcTimestamp ? sqlite3_column_int64(m_pLoadStmt.get(), 2) : 0;
-					NETADDR Addr;
-					if(net_addr_from_str(&Addr, pIpAddress))
+					const int AddressLength = pIpAddress ? sqlite3_column_bytes(m_pLoadStmt.get(), 0) : 0;
+					// 列转换分配失败时 SQLite 同样返回空指针，整次读取失败并保留旧缓存。
+					if(AddressLength == 0 && sqlite3_errcode(pSqlite) == SQLITE_NOMEM)
 					{
-						if(!WarnedForBadAddress)
+						SqliteHandleError(SQLITE_NOMEM, pSqlite, "reading server_pings.ip_address");
+						Error = true;
+						break;
+					}
+					NETADDR Addr;
+					if(AddressLength == 0 || AddressLength >= NETADDR_MAXSTRSIZE || str_length(pIpAddress) != AddressLength ||
+						net_addr_from_str(&Addr, pIpAddress) || Addr.port != 0)
+					{
+						if(!WarnedForInvalidRow)
 						{
 							char aBuf[64];
-							str_format(aBuf, sizeof(aBuf), "invalid address: %s", pIpAddress);
+							str_format(aBuf, sizeof(aBuf), "invalid address: %.*s", NETADDR_MAXSTRSIZE - 1, pIpAddress ? pIpAddress : "NULL");
 							pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverbrowse_ping_cache", aBuf);
-							WarnedForBadAddress = true;
+							WarnedForInvalidRow = true;
 						}
 						continue;
 					}
-					vNewEntries.push_back(CEntry{Addr, Ping, UtcTimestamp});
+					const int64_t Ping = sqlite3_column_type(m_pLoadStmt.get(), 1) == SQLITE_INTEGER ? sqlite3_column_int64(m_pLoadStmt.get(), 1) : -1;
+					if(Ping < 0 || Ping > std::numeric_limits<int>::max())
+					{
+						if(!WarnedForInvalidRow)
+						{
+							pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverbrowse_ping_cache", "invalid ping in server_pings");
+							WarnedForInvalidRow = true;
+						}
+						continue;
+					}
+					// strftime 在时间戳格式异常时返回 NULL，这种记录按"时间未知"处理。
+					const bool HasUtcTimestamp = sqlite3_column_type(m_pLoadStmt.get(), 2) != SQLITE_NULL;
+					const int64_t UtcTimestamp = HasUtcTimestamp ? sqlite3_column_int64(m_pLoadStmt.get(), 2) : 0;
+					const CEntry Entry{static_cast<int>(Ping), UtcTimestamp, false};
+					const auto [It, Inserted] = Entries.try_emplace(Addr, Entry);
+					if(!Inserted && UtcTimestamp >= It->second.m_UtcTimestamp)
+						It->second = Entry;
 				}
 				else
 				{
@@ -117,11 +174,20 @@ namespace
 				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverbrowse_ping_cache", "failed to load ping cache");
 				return;
 			}
-			for(const CEntry &Entry : vNewEntries)
+			for(const auto &[Address, Entry] : m_Entries)
 			{
-				m_Entries[Entry.m_Addr] = Entry;
+				const auto [It, Inserted] = Entries.try_emplace(Address, Entry);
+				// 秒级时间相同时，未写入磁盘的本次测量仍比磁盘记录更新。
+				if(!Inserted && (Entry.m_UtcTimestamp > It->second.m_UtcTimestamp ||
+							(Entry.m_UtcTimestamp == It->second.m_UtcTimestamp && Entry.m_Unpersisted)))
+					It->second = Entry;
 			}
+			m_Entries.swap(Entries);
 		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		log_error("serverbrowse_ping_cache", "failed to allocate ping cache; retaining previous measurements");
 	}
 
 	int CServerBrowserPingCache::NumEntries() const
@@ -130,11 +196,12 @@ namespace
 	}
 
 	void CServerBrowserPingCache::CachePing(const NETADDR &Addr, int Ping)
+	try
 	{
 		NETADDR StoredAddr = Addr;
 		StoredAddr.type &= ~NETTYPE_TW7;
 		StoredAddr.port = 0;
-		m_Entries[StoredAddr] = CEntry{StoredAddr, Ping, time_timestamp()};
+		auto Entry = m_Entries.insert_or_assign(StoredAddr, CEntry{Ping, time_timestamp(), true}).first;
 		if(m_pDisk)
 		{
 			sqlite3 *pSqlite = m_pDisk.get();
@@ -142,17 +209,26 @@ namespace
 			char aAddr[NETADDR_MAXSTRSIZE];
 			net_addr_str(&StoredAddr, aAddr, sizeof(aAddr), false);
 
-			bool Error = false;
-			Error = Error || !m_pStoreStmt;
-			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_reset(m_pStoreStmt.get())) != SQLITE_OK;
-			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_bind_text(m_pStoreStmt.get(), 1, aAddr, -1, SQLITE_STATIC)) != SQLITE_OK;
+			if(!m_pStoreStmt)
+				m_pStoreStmt = SqlitePrepare(pSqlite, STORE_PING);
+			CStatementReset Reset(m_pStoreStmt.get());
+			bool Error = !m_pStoreStmt;
+			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_bind_text(m_pStoreStmt.get(), 1, aAddr, -1, SQLITE_TRANSIENT)) != SQLITE_OK;
 			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_bind_int(m_pStoreStmt.get(), 2, Ping)) != SQLITE_OK;
 			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_step(m_pStoreStmt.get())) != SQLITE_DONE;
 			if(Error)
 			{
 				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverbrowse_ping_cache", "failed to store ping");
 			}
+			else
+			{
+				Entry->second.m_Unpersisted = false;
+			}
 		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		log_error("serverbrowse_ping_cache", "failed to allocate ping cache entry");
 	}
 
 	int CServerBrowserPingCache::GetPing(const NETADDR *pAddrs, int NumAddrs) const

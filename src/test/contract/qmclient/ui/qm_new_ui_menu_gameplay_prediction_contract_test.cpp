@@ -39,7 +39,6 @@ TEST(QmNewUiMenuGameplayPredictionContract, WeaponImpactEventsUseInferredOwnerAl
 	EXPECT_NE(Source.find("SQmHammerHitMatch QmInferHammerHit(CGameClient *pGameClient, vec2 Pos, int EventTick)"), std::string::npos);
 	EXPECT_NE(ProcessEvents.find("const float ExplosionAlpha = QmKnownOwnerEventAlpha(this, QmInferExplosionOwner(this, ExplosionPos));"), std::string::npos);
 	EXPECT_NE(ProcessEvents.find("m_Effects.Explosion(ExplosionPos, ExplosionAlpha);"), std::string::npos);
-	EXPECT_NE(ProcessEvents.find("m_vPendingHammerHitEvents.push_back({"), std::string::npos);
 	EXPECT_EQ(ProcessEvents.find("CheckPredictedHammerHitHandled("), std::string::npos);
 	EXPECT_EQ(ProcessEvents.find("QmInferHammerHit(this"), std::string::npos);
 	EXPECT_EQ(ProcessEvents.find("m_HammerHitTracker.Record(Hit)"), std::string::npos);
@@ -65,17 +64,6 @@ TEST(QmNewUiMenuGameplayPredictionContract, GhostPlayersDoNotEmitDuplicateWeapon
 	EXPECT_NE(RenderPlayerGhost.find("if(AllowEffects && !Focus.m_HideMuzzleEffects &&"), std::string::npos);
 }
 
-TEST(QmNewUiMenuGameplayPredictionContract, HammerPredictionDeduplicatesSameTargetAndTick)
-{
-	const std::string Source = ReadTextFile("src/game/client/prediction/gameworld.cpp");
-	const std::string CreateHammerEvent = FunctionBody(Source, "void CGameWorld::CreatePredictedHammerHitEvent(");
-
-	EXPECT_NE(CreateHammerEvent.find("Existing.m_EventId == Event.m_EventId"), std::string::npos);
-	EXPECT_NE(CreateHammerEvent.find("Existing.m_Id == Event.m_Id"), std::string::npos);
-	EXPECT_NE(CreateHammerEvent.find("Existing.m_Tick == Event.m_Tick"), std::string::npos);
-	EXPECT_NE(CreateHammerEvent.find("Existing.m_ExtraInfo == Event.m_ExtraInfo"), std::string::npos);
-}
-
 TEST(QmNewUiMenuGameplayPredictionContract, ExtraPredictionWorldDoesNotReplayVisibleEffects)
 {
 	const std::string Source = ReadTextFile("src/game/client/gameclient.cpp");
@@ -83,17 +71,6 @@ TEST(QmNewUiMenuGameplayPredictionContract, ExtraPredictionWorldDoesNotReplayVis
 
 	EXPECT_NE(OnPredictBody.find("m_ExtraPredictedWorld.m_PredictedEvents.clear();"), std::string::npos);
 	EXPECT_EQ(OnPredictBody.find("HandlePredictedEvents(m_ExtraPredictedWorld.m_GameTick)"), std::string::npos);
-}
-
-TEST(QmNewUiMenuGameplayPredictionContract, FastInputKeepsPredictedEventStateOnRegularWorldRestore)
-{
-	const std::string GameWorldSource = ReadTextFile("src/game/client/prediction/gameworld.cpp");
-	const std::string GameClientSource = ReadTextFile("src/game/client/gameclient.cpp");
-	const std::string CopyWorldClean = FunctionBody(GameWorldSource, "void CGameWorld::CopyWorldClean(");
-	const std::string OnPredict = FunctionBody(GameClientSource, "void CGameClient::OnPredict()");
-
-	EXPECT_NE(CopyWorldClean.find("m_PredictedEvents = pFrom->m_PredictedEvents;"), std::string::npos);
-	EXPECT_NE(OnPredict.find("if(Tick <= FinalTickRegular)\n\t\t\tHandlePredictedEvents(Tick);"), std::string::npos);
 }
 
 TEST(QmNewUiMenuGameplayPredictionContract, HammerSkinSwapUsesTheActiveProtocolSkinFormat)

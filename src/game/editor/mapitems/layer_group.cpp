@@ -5,6 +5,9 @@
 #include <engine/shared/config.h>
 
 #include <game/editor/editor.h>
+#include <game/map/render_screen.h>
+
+#include <array>
 
 CLayerGroup::CLayerGroup(CEditorMap *pMap) :
 	CMapObject(pMap)
@@ -70,23 +73,13 @@ void CLayerGroup::Render(const CEditorMap *pRenderMap)
 
 	if(m_UseClipping)
 	{
-		float aPoints[4];
-		Map()->m_pGameGroup->Mapping(aPoints);
-		float ScreenWidth = aPoints[2] - aPoints[0];
-		float ScreenHeight = aPoints[3] - aPoints[1];
-		float Left = m_ClipX - aPoints[0];
-		float Top = m_ClipY - aPoints[1];
-		float Right = (m_ClipX + m_ClipW) - aPoints[0];
-		float Bottom = (m_ClipY + m_ClipH) - aPoints[1];
-
-		int ClipX = (int)std::round(Left * Graphics()->ScreenWidth() / ScreenWidth);
-		int ClipY = (int)std::round(Top * Graphics()->ScreenHeight() / ScreenHeight);
-
-		Graphics()->ClipEnable(
-			ClipX,
-			ClipY,
-			(int)std::round(Right * Graphics()->ScreenWidth() / ScreenWidth) - ClipX,
-			(int)std::round(Bottom * Graphics()->ScreenHeight() / ScreenHeight) - ClipY);
+		std::array<float, 4> aPoints;
+		Map()->m_pGameGroup->Mapping(aPoints.data());
+		const auto Clip = MapRenderScreen::GroupClip(aPoints, Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
+			{m_ClipX, m_ClipY, m_ClipW, m_ClipH});
+		if(!Clip)
+			return;
+		Graphics()->ClipEnable(Clip->m_X, Clip->m_Y, Clip->m_Width, Clip->m_Height);
 	}
 
 	for(auto &pLayer : m_vpLayers)

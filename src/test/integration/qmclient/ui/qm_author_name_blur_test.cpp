@@ -25,6 +25,7 @@ namespace
 		std::vector<SRenderTargetDrawParams> m_vTargetsDrawn;
 		std::vector<float> m_vBlurSigma;
 		int m_TargetsCreated = 0;
+		bool m_TargetActive = false;
 		bool m_BlurSupported = true;
 		bool m_BlurSucceeds = true;
 
@@ -66,11 +67,15 @@ namespace
 		bool BeginRenderTarget(CRenderTargetHandle Target, ColorRGBA) override
 		{
 			EXPECT_TRUE(Target.IsValid());
+			EXPECT_FALSE(m_TargetActive);
+			m_TargetActive = true;
 			m_SavedProjection = Projection();
 			return true;
 		}
 		void EndRenderTarget() override
 		{
+			EXPECT_TRUE(m_TargetActive);
+			m_TargetActive = false;
 			MapScreen(m_SavedProjection.x, m_SavedProjection.y, m_SavedProjection.x + m_SavedProjection.w, m_SavedProjection.y + m_SavedProjection.h);
 		}
 		bool GaussianBlurRenderTarget(CRenderTargetHandle, const std::array<CRenderTargetHandle, DUAL_KAWASE_PYRAMID_LEVELS> &, CRenderTargetHandle, const SGaussianBlurParams &Params) override
@@ -199,4 +204,56 @@ TEST_F(QmAuthorNameBlur, FailedBlurReusesTheSameGlyphsAndRestoresTheProjection)
 		EXPECT_EQ(Sample.m_vVertices, vExpected);
 	EXPECT_TRUE(m_Graphics.m_vTargetsDrawn.empty());
 	ExpectSameRect(m_Graphics.Projection(), Original);
+}
+
+TEST_F(QmAuthorNameBlur, PartialTextUploadPreservesColorsAndReleasesTheBuffer)
+{
+	ITextRender &TextRender = *m_Ui.TextRender();
+	const ColorRGBA Color(0.3f, 0.4f, 0.6f, 1.0f);
+	const ColorRGBA Outline(0.2f, 0.3f, 0.4f, 0.5f);
+	TextRender.TextColor(Color);
+	TextRender.TextOutlineColor(Outline);
+	const size_t Buffers = m_Graphics.m_Buffers.size();
+	const size_t Containers = m_Graphics.m_Containers.size();
+
+	m_Graphics.m_FailBufferContainerCreate = true;
+	EXPECT_NO_THROW(RenderName(false));
+	EXPECT_FALSE(m_Graphics.m_FailBufferContainerCreate);
+	EXPECT_EQ(TextRender.GetTextColor(), Color);
+	EXPECT_EQ(TextRender.GetTextOutlineColor(), Outline);
+	EXPECT_TRUE(m_Graphics.m_vTargetsDrawn.empty());
+	EXPECT_NO_THROW(TextRender.QmTextFrameEnd());
+	EXPECT_EQ(m_Graphics.m_Buffers.size(), Buffers);
+	EXPECT_EQ(m_Graphics.m_Containers.size(), Containers);
+
+	EXPECT_NO_THROW(RenderName(false));
+	EXPECT_EQ(m_Graphics.m_vTargetsDrawn.size(), 1u);
+}
+
+TEST_F(QmAuthorNameBlur, TextDrawAllocationFailureRestoresProjectionAndReleasesTheContainer)
+{
+	const CUIRect Original = m_Graphics.Projection();
+	const size_t Buffers = m_Graphics.m_Buffers.size();
+	const size_t Containers = m_Graphics.m_Containers.size();
+	for(const bool BlurSupported : {true, false})
+	{
+		SCOPED_TRACE(BlurSupported);
+		m_Graphics.m_BlurSupported = BlurSupported;
+		m_Graphics.m_vTargetsDrawn.clear();
+		m_Graphics.m_vTextSubmissions.clear();
+		m_Graphics.m_FailTextDraw = true;
+
+		EXPECT_NO_THROW(RenderName(false));
+		EXPECT_FALSE(m_Graphics.m_FailTextDraw);
+		EXPECT_FALSE(m_Graphics.m_TargetActive);
+		EXPECT_TRUE(m_Graphics.m_vTargetsDrawn.empty());
+		ExpectSameRect(m_Graphics.Projection(), Original);
+		EXPECT_NO_THROW(m_Ui.TextRender()->QmTextFrameEnd());
+		EXPECT_EQ(m_Graphics.m_Buffers.size(), Buffers);
+		EXPECT_EQ(m_Graphics.m_Containers.size(), Containers);
+
+		EXPECT_NO_THROW(RenderName(false));
+		EXPECT_EQ(m_Graphics.m_vTextSubmissions.size(), BlurSupported ? 1u : 9u);
+		EXPECT_EQ(m_Graphics.m_vTargetsDrawn.size(), BlurSupported ? 1u : 0u);
+	}
 }

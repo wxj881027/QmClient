@@ -1,7 +1,14 @@
+#include <base/borrowed_allocator.h>
+
 #include <game/client/components/qmclient/font_store_catalog.h>
 
 #include <gtest/gtest.h>
+#include <test/support/job_wait.h>
 #include <test/test.h>
+
+#include <new>
+#include <string>
+#include <string_view>
 
 namespace
 {
@@ -16,11 +23,12 @@ namespace
 			ASSERT_NE(m_pStorage, nullptr);
 			ASSERT_TRUE(qm_font_download::EnsureDirectory(*m_pStorage));
 		}
-		void WriteFile(const char *pPath, const char *pText)
+		void WriteFile(const char *pPath, std::string_view Text)
 		{
 			IOHANDLE File = m_pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 			ASSERT_NE(File, nullptr);
-			io_write(File, pText, str_length(pText));
+			const auto Length = static_cast<unsigned>(Text.size());
+			EXPECT_EQ(io_write(File, Text.data(), Length), Length);
 			io_close(File);
 		}
 		fontstore::SCatalog Load()
@@ -86,4 +94,332 @@ TEST_F(CQmFontStoreCatalog, MalformedCatalogCompletesWithEmptyResult)
 	const auto Result = Load();
 	EXPECT_TRUE(Result.m_vEntries.empty());
 	EXPECT_TRUE(Result.m_vFamilies.empty());
+}
+
+TEST_F(CQmFontStoreCatalog, InvalidUtf8CatalogCompletesWithEmptyResult)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json",
+		R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf","c":")" "\xE9" R"("}]})"));
+	const auto Result = Load();
+	EXPECT_TRUE(Result.m_vEntries.empty());
+	EXPECT_TRUE(Result.m_vFamilies.empty());
+}
+
+TEST_F(CQmFontStoreCatalog, RawNullRejectsCatalogWithValidPrefix)
+{
+	const char aCatalog[] = R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf"}]})" "\0padding";
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", std::string_view(aCatalog, sizeof(aCatalog) - 1)));
+	const auto Result = Load();
+	EXPECT_TRUE(Result.m_vEntries.empty());
+	EXPECT_TRUE(Result.m_vFamilies.empty());
+}
+
+TEST_F(CQmFontStoreCatalog, EscapedNullDoesNotMatchCatalogFieldNames)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[
+		{"n\u0000note":"Extra metadata","n":"Alpha","f":"ofl/alpha/Alpha.ttf"}]})"));
+	const auto Result = Load();
+	ASSERT_EQ(Result.m_vFamilies.size(), 1u);
+	EXPECT_EQ(Result.m_vFamilies[0].m_Name, "Alpha");
+}
+
+TEST_F(CQmFontStoreCatalog, EscapedNullRejectsRequiredTextAndIgnoresOptionalText)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[
+		{"n":"Broken\u0000 name","f":"ofl/broken/Broken.ttf"},
+		{"n":"Broken path","f":"ofl/broken/Broken.ttf\u0000 note"},
+		{"n":"Alpha","f":"ofl/alpha/Alpha.ttf","c":"serif\u0000 note","s":["latin\u0000 note","greek"],
+		 "u":"https://fonts.gstatic.cn/font.ttf\u0000 note"}]})"));
+	const auto Result = Load();
+	ASSERT_EQ(Result.m_vEntries.size(), 1u);
+	ASSERT_EQ(Result.m_vFamilies.size(), 1u);
+	EXPECT_EQ(Result.m_vEntries[0].m_Family, "Alpha");
+	EXPECT_TRUE(Result.m_vEntries[0].m_Category.empty());
+	EXPECT_EQ(Result.m_vEntries[0].m_vSubsets, (std::vector<std::string>{"greek"}));
+	EXPECT_TRUE(Result.m_vEntries[0].m_DirectUrl.empty());
+}
+
+TEST_F(CQmFontStoreCatalog, SkipsReservedTargetNameAndKeepsRegularFilename)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[
+		{"n":"Reserved","f":"ofl/reserved/AUX.ttf"},
+		{"n":"Regular","f":"ofl/regular/Regular[wght].otf"}]})"));
+	std::vector<fontstore::SEntry> vEntries;
+	std::vector<fontstore::SFamily> vFamilies;
+	fontstore::LoadCatalog(m_pStorage.get(), vEntries, vFamilies);
+	ASSERT_EQ(vEntries.size(), 1u);
+	ASSERT_EQ(vFamilies.size(), 1u);
+	EXPECT_EQ(vEntries[0].m_File, "Regular[wght].otf");
+}
+
+TEST_F(CQmFontStoreCatalog, DuplicateTargetsKeepFirstOwnerAndOtherFamilyFiles)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[
+		{"n":"Alpha","f":"ofl/alpha/Shared.ttf"},
+		{"n":"Beta","f":"ofl/beta/Shared.ttf"},
+		{"n":"Gamma","f":"ofl/gamma/shared.TTF"},
+		{"n":"Beta","f":"ofl/beta/Beta.ttf"}]})"));
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/Shared.ttf", "font"));
+	const auto Result = Load();
+	ASSERT_EQ(Result.m_vEntries.size(), 2u);
+	ASSERT_EQ(Result.m_vFamilies.size(), 2u);
+	EXPECT_EQ(Result.m_vEntries[0].m_RepoPath, "ofl/alpha/Shared.ttf");
+	EXPECT_EQ(Result.m_vEntries[1].m_File, "Beta.ttf");
+	EXPECT_EQ(Result.m_vFamilies[0].m_vEntryIndices, (std::vector<size_t>{0}));
+	EXPECT_EQ(Result.m_vFamilies[1].m_vEntryIndices, (std::vector<size_t>{1}));
+	EXPECT_TRUE(Result.m_vFamilies[0].m_Installed);
+	EXPECT_FALSE(Result.m_vFamilies[1].m_Installed);
+}
+
+TEST_F(CQmFontStoreCatalog, RejectsCatalogAboveReadLimitAndLoadsAtTheLimit)
+{
+	const char *pPath = "fonts/fonts_store/font_catalog.json";
+	const char aCatalog[] = R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf"}]})";
+	std::string PaddedCatalog(fontstore::MAX_CATALOG_FILE_BYTES + 1, ' ');
+	PaddedCatalog.replace(0, sizeof(aCatalog) - 1, aCatalog);
+
+	std::vector<fontstore::SEntry> vEntries;
+	std::vector<fontstore::SFamily> vFamilies;
+	ASSERT_NO_FATAL_FAILURE(WriteFile(pPath, PaddedCatalog.c_str()));
+	fontstore::LoadCatalog(m_pStorage.get(), vEntries, vFamilies);
+	EXPECT_TRUE(vEntries.empty());
+	EXPECT_TRUE(vFamilies.empty());
+
+	PaddedCatalog.pop_back();
+	ASSERT_NO_FATAL_FAILURE(WriteFile(pPath, PaddedCatalog.c_str()));
+	fontstore::LoadCatalog(m_pStorage.get(), vEntries, vFamilies);
+	ASSERT_EQ(vEntries.size(), 1u);
+	ASSERT_EQ(vFamilies.size(), 1u);
+	EXPECT_EQ(vEntries[0].m_File, "Alpha.ttf");
+	EXPECT_EQ(vFamilies[0].m_vEntryIndices, (std::vector<size_t>{0}));
+}
+
+namespace
+{
+	class CFontCatalogMemory : public IAllocationResource
+	{
+		void *Allocate(size_t Bytes, size_t Alignment) override
+		{
+			if(m_AllowedAllocations == 0)
+				throw std::bad_alloc();
+			if(m_AllowedAllocations > 0)
+				--m_AllowedAllocations;
+			void *pData = IAllocationResource::AllocateDefault(Bytes, Alignment);
+			++m_Allocations;
+			return pData;
+		}
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override
+		{
+			IAllocationResource::DeallocateDefault(pData, Bytes, Alignment);
+		}
+
+	public:
+		int m_AllowedAllocations = -1;
+		int m_Allocations = 0;
+	};
+}
+
+TEST_F(CQmFontStoreCatalog, EachOuterVectorAllocationFailurePreservesBothCatalogHalvesAndCanRetry)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[
+		{"n":"Alpha","f":"ofl/alpha/Alpha-Regular.ttf"},
+		{"n":"alpha","f":"ofl/alpha/Alpha-Bold.ttf"},
+		{"n":"Beta","f":"ofl/beta/Beta.ttf"}]})"));
+	const auto Seed = [](auto &Entries, auto &Families) {
+		Entries.emplace_back().m_Family = "Old";
+		auto &Family = Families.emplace_back();
+		Family.m_Name = "Old";
+		Family.m_PreviewReady = true;
+		Family.m_vEntryIndices.push_back(0);
+	};
+	CFontCatalogMemory BaselineMemory;
+	std::vector<fontstore::SEntry, CBorrowedAllocator<fontstore::SEntry>> BaselineEntries(&BaselineMemory);
+	std::vector<fontstore::SFamily, CBorrowedAllocator<fontstore::SFamily>> BaselineFamilies(&BaselineMemory);
+	Seed(BaselineEntries, BaselineFamilies);
+	const int Before = BaselineMemory.m_Allocations;
+	fontstore::LoadCatalog(m_pStorage.get(), BaselineEntries, BaselineFamilies);
+	const int Allocations = BaselineMemory.m_Allocations - Before;
+	ASSERT_GT(Allocations, 0);
+	for(int Allowed = 0; Allowed < Allocations; ++Allowed)
+	{
+		SCOPED_TRACE(Allowed);
+		CFontCatalogMemory Memory;
+		std::vector<fontstore::SEntry, CBorrowedAllocator<fontstore::SEntry>> Entries(&Memory);
+		std::vector<fontstore::SFamily, CBorrowedAllocator<fontstore::SFamily>> Families(&Memory);
+		Seed(Entries, Families);
+		const auto *pEntries = Entries.data();
+		const auto *pFamilies = Families.data();
+		Memory.m_AllowedAllocations = Allowed;
+		EXPECT_THROW(fontstore::LoadCatalog(m_pStorage.get(), Entries, Families), std::bad_alloc);
+		EXPECT_EQ(Entries.data(), pEntries);
+		EXPECT_EQ(Families.data(), pFamilies);
+		ASSERT_EQ(Entries.size(), 1u);
+		ASSERT_EQ(Families.size(), 1u);
+		EXPECT_EQ(Entries[0].m_Family, "Old");
+		EXPECT_TRUE(Families[0].m_PreviewReady);
+		ASSERT_EQ(Families[0].m_vEntryIndices.size(), 1u);
+		EXPECT_EQ(Families[0].m_vEntryIndices[0], 0u);
+		Memory.m_AllowedAllocations = -1;
+		fontstore::LoadCatalog(m_pStorage.get(), Entries, Families);
+		ASSERT_EQ(Entries.size(), 4u);
+		ASSERT_EQ(Families.size(), 3u);
+		for(const auto &Family : Families)
+			for(size_t Index : Family.m_vEntryIndices)
+				EXPECT_LT(Index, Entries.size());
+	}
+}
+
+TEST_F(CQmFontStoreCatalog, AppendingCatalogRetainsExistingStateAndUsesCurrentEntryOffsets)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[
+		{"n":"Alpha","f":"ofl/alpha/Alpha-Regular.ttf"},
+		{"n":"alpha","f":"ofl/alpha/Alpha-Bold.ttf"}]})"));
+	std::vector<fontstore::SEntry> Entries(1);
+	Entries[0].m_Family = "Old";
+	std::vector<fontstore::SFamily> Families(1);
+	Families[0].m_Name = "Old";
+	Families[0].m_PreviewReady = true;
+	Families[0].m_vEntryIndices = {0};
+	fontstore::LoadCatalog(m_pStorage.get(), Entries, Families);
+	ASSERT_EQ(Entries.size(), 3u);
+	ASSERT_EQ(Families.size(), 2u);
+	EXPECT_EQ(Families[0].m_Name, "Old");
+	EXPECT_TRUE(Families[0].m_PreviewReady);
+	EXPECT_EQ(Families[1].m_vEntryIndices, (std::vector<size_t>{1, 2}));
+	EXPECT_EQ(Entries[1].m_File, "Alpha-Regular.ttf");
+	EXPECT_EQ(Entries[2].m_File, "Alpha-Bold.ttf");
+}
+
+TEST_F(CQmFontStoreCatalog, ObjectWithoutFontArrayKeepsTheExistingPair)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf"}]})"));
+	std::vector<fontstore::SEntry> Entries;
+	std::vector<fontstore::SFamily> Families;
+	fontstore::LoadCatalog(m_pStorage.get(), Entries, Families);
+	ASSERT_EQ(Entries.size(), 1u);
+	ASSERT_EQ(Families.size(), 1u);
+	// 保持首个存储根中的覆盖文件，避免TYPE_ALL回退到工作区随包目录。
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"other":[]})"));
+	fontstore::LoadCatalog(m_pStorage.get(), Entries, Families);
+	ASSERT_EQ(Entries.size(), 1u);
+	ASSERT_EQ(Families.size(), 1u);
+	EXPECT_EQ(Entries[0].m_File, "Alpha.ttf");
+	EXPECT_EQ(Families[0].m_vEntryIndices, (std::vector<size_t>{0}));
+}
+
+TEST_F(CQmFontStoreCatalog, MalformedReplacementDoesNotChangeExistingMetadata)
+{
+	std::vector<fontstore::SEntry> Entries(1);
+	Entries[0].m_File = "Old.ttf";
+	std::vector<fontstore::SFamily> Families(1);
+	Families[0].m_Name = "Old";
+	Families[0].m_vEntryIndices = {0};
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", "{broken"));
+	fontstore::LoadCatalog(m_pStorage.get(), Entries, Families);
+	ASSERT_EQ(Entries.size(), 1u);
+	ASSERT_EQ(Families.size(), 1u);
+	EXPECT_EQ(Entries[0].m_File, "Old.ttf");
+	EXPECT_EQ(Families[0].m_Name, "Old");
+	EXPECT_EQ(Families[0].m_vEntryIndices, (std::vector<size_t>{0}));
+}
+
+namespace
+{
+	class CFontCatalogEngine : public IEngine
+	{
+	public:
+		bool m_Accept = true;
+		bool m_Throw = false;
+		int m_Attempts = 0;
+		CJobPool *m_pPool = nullptr;
+		IJob::EJobState m_LastNativeState = IJob::STATE_DONE;
+		std::weak_ptr<IJob> m_LastAttempt;
+		std::vector<std::shared_ptr<IJob>> m_vAccepted;
+		void Init() override {}
+		void AddJob(std::shared_ptr<IJob> pJob) override { (void)TryAddJob(std::move(pJob)); }
+		bool TryAddJob(std::shared_ptr<IJob> pJob) override
+		{
+			++m_Attempts;
+			m_LastAttempt = pJob;
+			if(m_Throw)
+				throw std::bad_alloc();
+			if(!m_Accept)
+				return false;
+			if(m_pPool != nullptr)
+			{
+				const bool Accepted = m_pPool->TryAdd(pJob);
+				m_LastNativeState = pJob->State();
+				return Accepted;
+			}
+			m_vAccepted.push_back(std::move(pJob));
+			return true;
+		}
+		void ShutdownJobs() override {}
+		void SetAdditionalLogger(std::shared_ptr<ILogger> &&) override {}
+	};
+}
+
+TEST_F(CQmFontStoreCatalog, RejectedCatalogAdmissionLeavesNoPendingJobAndCanRetry)
+{
+	CFontCatalogEngine Engine;
+	std::shared_ptr<fontstore::CCatalogLoadJob> pPending;
+	Engine.m_Accept = false;
+	EXPECT_FALSE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	EXPECT_EQ(pPending, nullptr);
+	EXPECT_TRUE(Engine.m_LastAttempt.expired());
+	Engine.m_Accept = true;
+	ASSERT_TRUE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	ASSERT_NE(pPending, nullptr);
+	ASSERT_EQ(Engine.m_vAccepted.size(), 1u);
+	EXPECT_EQ(Engine.m_vAccepted[0].get(), pPending.get());
+}
+
+TEST_F(CQmFontStoreCatalog, AdmissionAllocationExceptionDoesNotPublishWaitingIdentity)
+{
+	CFontCatalogEngine Engine;
+	std::shared_ptr<fontstore::CCatalogLoadJob> pPending;
+	Engine.m_Throw = true;
+	EXPECT_FALSE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	EXPECT_EQ(pPending, nullptr);
+	EXPECT_TRUE(Engine.m_LastAttempt.expired());
+	Engine.m_Throw = false;
+	ASSERT_TRUE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	EXPECT_EQ(Engine.m_Attempts, 2);
+}
+
+TEST_F(CQmFontStoreCatalog, RepeatedAdmissionKeepsTheAlreadyAcceptedJob)
+{
+	CFontCatalogEngine Engine;
+	std::shared_ptr<fontstore::CCatalogLoadJob> pPending;
+	ASSERT_TRUE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	const auto pAccepted = pPending;
+	EXPECT_FALSE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	EXPECT_EQ(pPending, pAccepted);
+	EXPECT_EQ(Engine.m_Attempts, 1);
+}
+
+TEST_F(CQmFontStoreCatalog, ClosedNativePoolRejectsTrackingAndReopenedPoolLoadsCatalog)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf"}]})"));
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	Pool.Shutdown();
+	CFontCatalogEngine Engine;
+	Engine.m_pPool = &Pool;
+	std::shared_ptr<fontstore::CCatalogLoadJob> pPending;
+	EXPECT_FALSE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	EXPECT_EQ(pPending, nullptr);
+	EXPECT_EQ(Engine.m_LastNativeState, IJob::STATE_QUEUED);
+	EXPECT_TRUE(Engine.m_LastAttempt.expired());
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	ASSERT_NE(pPending, nullptr);
+	ASSERT_TRUE(WaitForJobDone(*pPending));
+	Pool.Shutdown();
+	fontstore::SCatalog Result;
+	ASSERT_TRUE(pPending->TakeResult(Result));
+	EXPECT_TRUE(Result.m_Loaded);
+	ASSERT_EQ(Result.m_vEntries.size(), 1u);
+	EXPECT_EQ(Result.m_vEntries[0].m_File, "Alpha.ttf");
+	EXPECT_FALSE(pPending->TakeResult(Result));
 }

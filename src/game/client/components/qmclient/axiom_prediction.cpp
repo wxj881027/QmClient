@@ -2,6 +2,7 @@
 
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
+#include <game/qm_axiom_quad_collision.h>
 
 // 仅在线客户端启用；公共碰撞类和服务端不读取客户端配置。
 void CGameClient::UpdateQmAxiomPrediction()
@@ -70,19 +71,18 @@ void CCharacter::HandleQmAxiomQuads()
 		}
 		else if(Tile == TILE_TELECHECKINEVIL && !m_Core.m_Super && !m_Core.m_Invincible)
 		{
-			for(int Checkpoint = m_TeleCheckpoint - 1; Checkpoint >= 0; --Checkpoint)
+			const auto *pvOuts = qm_axiom::FindTeleCheckpointOuts(m_TeleCheckpoint, [this](int Index) -> const std::vector<vec2> & {
+				return Collision()->TeleCheckOuts(Index);
+			});
+			if(pvOuts)
 			{
-				const auto &vOuts = Collision()->TeleCheckOuts(Checkpoint);
-				if(vOuts.empty())
-					continue;
-				m_Core.m_Pos = vOuts[GameWorld()->m_Core.RandomOr0(vOuts.size())];
+				m_Core.m_Pos = (*pvOuts)[GameWorld()->m_Core.RandomOr0(pvOuts->size())];
 				m_Core.m_Vel = vec2(0, 0);
 				if(!g_Config.m_SvTeleportHoldHook)
 				{
 					ResetHook();
 					GameWorld()->ReleaseHooked(GetCid());
 				}
-				break;
 			}
 		}
 		// QKill 与 QFinish 可供碰撞查询，死亡和过关仍由服务端确认。

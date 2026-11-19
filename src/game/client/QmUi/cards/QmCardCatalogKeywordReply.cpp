@@ -1,5 +1,7 @@
 #include "QmCardCatalog.h"
 
+#include "QmKeywordReplyCardPersistence.h"
+
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
@@ -10,38 +12,36 @@
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/components/menus.h>
-#include <game/client/components/qmclient/keyword_reply_rules.h>
 #include <game/client/qm_icon.h>
 #include <game/localization.h>
 
 #include <algorithm>
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace FontIcons;
+
+using qm_keyword_reply_card::ESaveResult;
 
 using SAutoReplyRulePlain = QmKeywordReplyRules::SRule;
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 struct SAutoReplyRuleInputRow
 {
-	char m_aTrigger[512] = "";
-	char m_aReply[256] = "";
+	std::unique_ptr<char[]> m_pExtendedTrigger;
+	std::unique_ptr<char[]> m_pExtendedReply;
 	int m_AutoRename = 0;
 	int m_Regex = 0;
 	std::string m_TriggerId;
 	std::string m_OptionsId;
 	std::string m_ReplyId;
 	CButtonContainer m_RemoveButton;
-	CLineInput m_TriggerInput;
-	CLineInput m_ReplyInput;
-
-	SAutoReplyRuleInputRow()
-	{
-		m_TriggerInput.SetBuffer(m_aTrigger, sizeof(m_aTrigger));
-		m_ReplyInput.SetBuffer(m_aReply, sizeof(m_aReply));
-	}
+	CLineInputBuffered<512> m_TriggerInput;
+	CLineInputBuffered<256> m_ReplyInput;
 };
 
 static std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> s_vKeywordRuleRows;
@@ -55,13 +55,18 @@ namespace qm_card_catalog
 {
 	bool KeywordReplyHasPendingInput()
 	{
-		return s_pKeywordTabDropDown && s_pKeywordTabDropDown->m_SelectionPopupContext.m_SelectionIndex >= 0;
+		if(s_pKeywordTabDropDown == nullptr)
+			return false;
+		const auto &Popup = s_pKeywordTabDropDown->m_SelectionPopupContext;
+		return Popup.m_SelectionIndex >= 0 && Popup.m_pCommit && !Popup.m_pCommit->m_Cancelled;
 	}
 }
 static uint64_t s_KeywordRulesLayoutRevision = 1;
 static size_t s_KeywordRulesLayoutCount = 0;
 static bool s_KeywordRulesLayoutHalfFilled = false;
 static char s_aKeywordRulesConfigCache[sizeof(g_Config.m_QmKeywordReplyRules)] = {};
+// 每条完整规则至少需要 a=>b 和两字节的换行转义，末行结尾只占一个 NUL。
+static constexpr size_t MAX_KEYWORD_RULE_ROWS = (sizeof(g_Config.m_QmKeywordReplyRules) + 1) / (sizeof("a=>b\\n") - 1);
 
 static void UpdateKeywordRulesLayoutState(size_t RuleCount, bool HalfFilled)
 {
@@ -72,18 +77,22 @@ static void UpdateKeywordRulesLayoutState(size_t RuleCount, bool HalfFilled)
 	++s_KeywordRulesLayoutRevision;
 }
 
-static bool CopyTrimmedString(const char *pSrc, char *pOut, size_t OutSize)
+static void SetRuleInput(CLineInput &Input, std::unique_ptr<char[]> &pExtendedBuffer, const char *pText)
 {
-	pOut[0] = '\0';
-	if(!pSrc)
-		return false;
+	const size_t RequiredSize = static_cast<size_t>(str_length(pText)) + 1;
+	if(RequiredSize > Input.GetMaxSize())
+	{
+		// 外部配置可包含较长字段。只为需要的字段扩容，短字段仍使用行内缓冲区。
+		pExtendedBuffer = std::make_unique<char[]>(RequiredSize);
+		Input.SetBuffer(pExtendedBuffer.get(), RequiredSize);
+	}
+	Input.Set(pText);
+}
 
-	char aBuf[1024];
-	str_copy(aBuf, pSrc, sizeof(aBuf));
-	char *pTrimmed = (char *)str_utf8_skip_whitespaces(aBuf);
-	str_utf8_trim_right(pTrimmed);
-	str_copy(pOut, pTrimmed, OutSize);
-	return pOut[0] != '\0';
+static void ReleaseRuleInputs(CUi &Ui, SAutoReplyRuleInputRow &Rule)
+{
+	Ui.ReleaseActiveTextInput(&Rule.m_TriggerInput);
+	Ui.ReleaseActiveTextInput(&Rule.m_ReplyInput);
 }
 
 static std::unique_ptr<SAutoReplyRuleInputRow> CreateAutoReplyRuleInputRow(const char *pTrigger = "", const char *pReply = "", bool AutoRename = false, bool Regex = false)
@@ -93,102 +102,84 @@ static std::unique_ptr<SAutoReplyRuleInputRow> CreateAutoReplyRuleInputRow(const
 	pRow->m_TriggerId = Prefix + "-trigger";
 	pRow->m_OptionsId = Prefix + "-options";
 	pRow->m_ReplyId = Prefix + "-reply";
-	pRow->m_TriggerInput.Set(pTrigger);
-	pRow->m_ReplyInput.Set(pReply);
+	SetRuleInput(pRow->m_TriggerInput, pRow->m_pExtendedTrigger, pTrigger);
+	SetRuleInput(pRow->m_ReplyInput, pRow->m_pExtendedReply, pReply);
 	pRow->m_AutoRename = AutoRename ? 1 : 0;
 	pRow->m_Regex = Regex ? 1 : 0;
 	return pRow;
 }
 
-static bool AutoReplyRowsMatchRules(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, const std::vector<SAutoReplyRulePlain> &vRules)
+static std::vector<SAutoReplyRulePlain> CollectCompleteAutoReplyRules(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows)
 {
-	std::vector<SAutoReplyRulePlain> vCompleteRows;
-	vCompleteRows.reserve(vRows.size());
+	std::vector<SAutoReplyRulePlain> vRules;
+	vRules.reserve(vRows.size());
 	for(const auto &pRow : vRows)
 	{
-		char aTrigger[512];
-		char aReply[256];
-		const bool HasTrigger = CopyTrimmedString(pRow->m_TriggerInput.GetString(), aTrigger, sizeof(aTrigger));
-		const bool HasReply = CopyTrimmedString(pRow->m_ReplyInput.GetString(), aReply, sizeof(aReply));
-		if(!(HasTrigger && HasReply))
-			continue;
-		vCompleteRows.push_back({aTrigger, aReply, pRow->m_AutoRename != 0, pRow->m_Regex != 0});
+		SAutoReplyRulePlain Rule{QmKeywordReplyRules::Trim(pRow->m_TriggerInput.GetString()), QmKeywordReplyRules::Trim(pRow->m_ReplyInput.GetString()), pRow->m_AutoRename != 0, pRow->m_Regex != 0};
+		if(!Rule.m_Keywords.empty() && !Rule.m_Reply.empty())
+			vRules.push_back(std::move(Rule));
 	}
-
-	if(vCompleteRows.size() != vRules.size())
-		return false;
-
-	for(size_t i = 0; i < vCompleteRows.size(); ++i)
-	{
-		if(str_comp(vCompleteRows[i].m_Keywords.c_str(), vRules[i].m_Keywords.c_str()) != 0 ||
-			str_comp(vCompleteRows[i].m_Reply.c_str(), vRules[i].m_Reply.c_str()) != 0 ||
-			vCompleteRows[i].m_AutoRename != vRules[i].m_AutoRename ||
-			vCompleteRows[i].m_Regex != vRules[i].m_Regex)
-			return false;
-	}
-	return true;
+	return vRules;
 }
 
 static bool IsAutoReplyRuleRowHalfFilled(const SAutoReplyRuleInputRow &Row)
 {
-	char aTrigger[512];
-	char aReply[256];
-	const bool HasTrigger = CopyTrimmedString(Row.m_TriggerInput.GetString(), aTrigger, sizeof(aTrigger));
-	const bool HasReply = CopyTrimmedString(Row.m_ReplyInput.GetString(), aReply, sizeof(aReply));
+	const bool HasTrigger = *str_utf8_skip_whitespaces(Row.m_TriggerInput.GetString()) != '\0';
+	const bool HasReply = *str_utf8_skip_whitespaces(Row.m_ReplyInput.GetString()) != '\0';
 	return HasTrigger != HasReply;
 }
 
-static bool BuildAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, char *pOutRules, size_t OutRulesSize)
+static ESaveResult SaveAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows) try
 {
-	std::vector<QmKeywordReplyRules::SRule> vRules;
-	for(const auto &pRow : vRows)
-		vRules.push_back({QmKeywordReplyRules::Trim(pRow->m_TriggerInput.GetString()), QmKeywordReplyRules::Trim(pRow->m_ReplyInput.GetString()), pRow->m_AutoRename != 0, pRow->m_Regex != 0});
-	return QmKeywordReplyRules::EncodeRules(vRules, pOutRules, OutRulesSize);
+	return qm_keyword_reply_card::SaveRules(CollectCompleteAutoReplyRules(vRows), g_Config.m_QmKeywordReplyRules);
+}
+catch(const std::bad_alloc &)
+{
+	return ESaveResult::UNAVAILABLE;
+}
+catch(const std::length_error &)
+{
+	return ESaveResult::UNAVAILABLE;
 }
 
-static bool s_KeywordRulesSaveFailed = false;
+static ESaveResult s_KeywordRulesSaveResult = ESaveResult::SAVED;
 
 static int s_KeywordReplyTab = 0;
 
-static void SyncKeywordRuleRows()
+static bool SyncKeywordRuleRows(CUi &Ui)
 {
-	auto SyncRuleRowsFromConfig = [](std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, bool &Inited, const char *pConfigRules) {
-		const auto vParsedRules = QmKeywordReplyRules::ParseDecoded(pConfigRules);
-		const auto RebuildRows = [&]() {
-			vRows.clear();
-			if(s_KeywordRulesSaveFailed)
-				++s_KeywordRulesLayoutRevision;
-			s_KeywordRulesSaveFailed = false;
-			for(const auto &Rule : vParsedRules)
-				vRows.push_back(CreateAutoReplyRuleInputRow(Rule.m_Keywords.c_str(), Rule.m_Reply.c_str(), Rule.m_AutoRename, Rule.m_Regex));
-		};
-		bool HasActiveInput = false;
-		for(const auto &pRule : vRows)
-		{
-			if(pRule->m_TriggerInput.IsActive() || pRule->m_ReplyInput.IsActive())
-			{
-				HasActiveInput = true;
-				break;
-			}
-		}
-		const bool RowsMatch = Inited && AutoReplyRowsMatchRules(vRows, vParsedRules);
-		if(!Inited || (!HasActiveInput && !RowsMatch))
-		{
-			RebuildRows();
-			Inited = true;
-			const bool HalfFilled = std::any_of(vRows.begin(), vRows.end(), [](const auto &pRule) { return IsAutoReplyRuleRowHalfFilled(*pRule); });
-			UpdateKeywordRulesLayoutState(vRows.size(), HalfFilled);
-			return true;
-		}
-		return RowsMatch;
-	};
-	if(QmKeywordReplyRules::EditorConfigChanged(s_KeywordRuleRowsInited, s_aKeywordRulesConfigCache, g_Config.m_QmKeywordReplyRules))
+	if(!QmKeywordReplyRules::EditorConfigChanged(s_KeywordRuleRowsInited, s_aKeywordRulesConfigCache, g_Config.m_QmKeywordReplyRules))
+		return true;
+
+	char aDecodedRules[sizeof(g_Config.m_QmKeywordReplyRules)];
+	QmKeywordReplyRules::DecodeFromConfig(g_Config.m_QmKeywordReplyRules, aDecodedRules, sizeof(aDecodedRules));
+	const auto vParsedRules = QmKeywordReplyRules::ParseDecoded(aDecodedRules);
+	if(!s_KeywordRuleRowsInited || !qm_keyword_reply_card::CompleteRulesMatch(CollectCompleteAutoReplyRules(s_vKeywordRuleRows), vParsedRules))
 	{
-		char aDecodedRules[sizeof(g_Config.m_QmKeywordReplyRules)];
-		QmKeywordReplyRules::DecodeFromConfig(g_Config.m_QmKeywordReplyRules, aDecodedRules, sizeof(aDecodedRules));
-		if(SyncRuleRowsFromConfig(s_vKeywordRuleRows, s_KeywordRuleRowsInited, aDecodedRules))
-			str_copy(s_aKeywordRulesConfigCache, g_Config.m_QmKeywordReplyRules, sizeof(s_aKeywordRulesConfigCache));
+		const bool HasActiveInput = std::any_of(s_vKeywordRuleRows.begin(), s_vKeywordRuleRows.end(), [](const auto &pRule) {
+			return pRule->m_TriggerInput.IsActive() || pRule->m_ReplyInput.IsActive();
+		});
+		// 等焦点释放后载入外部配置，这期间旧表单不能写回。
+		if(HasActiveInput)
+			return false;
+
+		std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> vReplacement;
+		vReplacement.reserve(vParsedRules.size());
+		for(const auto &Rule : vParsedRules)
+			vReplacement.push_back(CreateAutoReplyRuleInputRow(Rule.m_Keywords.c_str(), Rule.m_Reply.c_str(), Rule.m_AutoRename, Rule.m_Regex));
+		for(const auto &pRule : s_vKeywordRuleRows)
+			ReleaseRuleInputs(Ui, *pRule);
+		s_vKeywordRuleRows.swap(vReplacement);
+		s_KeywordRuleRowsInited = true;
+		if(s_KeywordRulesSaveResult != ESaveResult::SAVED)
+			++s_KeywordRulesLayoutRevision;
+		s_KeywordRulesSaveResult = ESaveResult::SAVED;
+		const bool HalfFilled = std::any_of(s_vKeywordRuleRows.begin(), s_vKeywordRuleRows.end(), [](const auto &pRule) { return IsAutoReplyRuleRowHalfFilled(*pRule); });
+		UpdateKeywordRulesLayoutState(s_vKeywordRuleRows.size(), HalfFilled);
 	}
+
+	str_copy(s_aKeywordRulesConfigCache, g_Config.m_QmKeywordReplyRules, sizeof(s_aKeywordRulesConfigCache));
+	return true;
 }
 
 void qm_card_catalog::FillKeywordReplyLayoutState(SQmFunctionCardLayoutState &State)
@@ -205,8 +196,7 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 	const float SmallSize = CurrentSettingsContentMetrics().m_SmallSize;
 	IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_keyword_reply_text_inputs", UiScale);
 	CUIRect Row, LabelColumn, ControlColumn;
-	if(CanCommit)
-		SyncKeywordRuleRows();
+	const bool CanSaveRules = CanCommit && SyncKeywordRuleRows(*Ui());
 	const char *apTabs[] = {Localize("Rule list"), Localize("Reply content"), Localize("Trigger limits")};
 	if(Flow.Control("keyword-tabs", LineHeight, Row))
 	{
@@ -217,10 +207,7 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 			if(NewTab != s_KeywordReplyTab)
 			{
 				for(const auto &pRule : s_vKeywordRuleRows)
-				{
-					pRule->m_TriggerInput.Deactivate();
-					pRule->m_ReplyInput.Deactivate();
-				}
+					ReleaseRuleInputs(*Ui(), *pRule);
 				s_KeywordReplyTab = NewTab;
 			}
 		}
@@ -254,11 +241,14 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 		CUIRect Add;
 		ControlColumn.VSplitRight(std::min(ControlColumn.w, maximum(LineHeight, 24.0f * UiScale)), nullptr, &Add);
 		Add.VMargin(std::max(0.0f, (Add.w - Add.h) * 0.5f), &Add);
-		if(s_KeywordReplyTab == 0 && DoButton_Menu_QmIcon(&s_KeywordAddRuleButton, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &Add, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL) && CanCommit)
+		const bool CanAddRule = s_vKeywordRuleRows.size() < MAX_KEYWORD_RULE_ROWS;
+		if(s_KeywordReplyTab == 0 && DoButton_Menu_QmIcon(&s_KeywordAddRuleButton, EQmIcon::PLUS, FONT_ICON_PLUS, CanAddRule ? 0 : -1, &Add, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL) && CanCommit)
 		{
-			auto pNewRule = CreateAutoReplyRuleInputRow();
-			pNewRule->m_TriggerInput.Activate(EInputPriority::UI);
-			s_vKeywordRuleRows.push_back(std::move(pNewRule));
+			s_vKeywordRuleRows.push_back(CreateAutoReplyRuleInputRow());
+			// 容器接收规则后，同时登记 UI 焦点和文本输入。
+			CLineInput &TriggerInput = s_vKeywordRuleRows.back()->m_TriggerInput;
+			Ui()->SetActiveItem(&TriggerInput);
+			TriggerInput.Activate(EInputPriority::UI);
 			Changes.m_Added = true;
 		}
 	}
@@ -315,22 +305,20 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 		if(RemoveClicked)
 		{
-			// 输入 owner 随规则释放前先退出，邻卡的按钮与行标识保持稳定。
-			pRule->m_TriggerInput.Deactivate();
-			pRule->m_ReplyInput.Deactivate();
+			ReleaseRuleInputs(*Ui(), *pRule);
 			s_vKeywordRuleRows.erase(s_vKeywordRuleRows.begin() + Index);
 			Changes.m_Removed = true;
 		}
 		else
 			++Index;
 	}
-	if(CanCommit && Changes.ShouldCommit(false))
+	if(CanSaveRules && Changes.ShouldCommit(false))
 	{
-		const bool SaveFailed = !BuildAutoReplyRulesFromRows(s_vKeywordRuleRows, g_Config.m_QmKeywordReplyRules, sizeof(g_Config.m_QmKeywordReplyRules));
-		if(s_KeywordRulesSaveFailed != SaveFailed)
+		const ESaveResult SaveResult = SaveAutoReplyRulesFromRows(s_vKeywordRuleRows);
+		if(s_KeywordRulesSaveResult != SaveResult)
 			++s_KeywordRulesLayoutRevision;
-		s_KeywordRulesSaveFailed = SaveFailed;
-		if(!SaveFailed)
+		s_KeywordRulesSaveResult = SaveResult;
+		if(SaveResult == ESaveResult::SAVED)
 			str_copy(s_aKeywordRulesConfigCache, g_Config.m_QmKeywordReplyRules, sizeof(s_aKeywordRulesConfigCache));
 	}
 	if(CanCommit && Changes.Any())
@@ -338,8 +326,25 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 		const bool HalfFilled = std::any_of(s_vKeywordRuleRows.begin(), s_vKeywordRuleRows.end(), [](const auto &pRule) { return IsAutoReplyRuleRowHalfFilled(*pRule); });
 		UpdateKeywordRulesLayoutState(s_vKeywordRuleRows.size(), HalfFilled);
 	}
-	if(s_KeywordRulesLayoutHalfFilled || s_KeywordRulesSaveFailed)
-		Flow.Text("keyword-validation", s_KeywordRulesSaveFailed ? Localize("Keyword rules are too long. Changes were not saved; shorten or remove a rule.") : Localize("Both sides of keyword rules must be filled"), 0.0f, SmallSize, ui_token::settings::RowGap(LineSpacing), [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, SmallSize](const CUIRect &Rect, const char *pText) {
+	const char *pValidation = nullptr;
+	switch(s_KeywordRulesSaveResult)
+	{
+	case ESaveResult::SAVED:
+		if(s_KeywordRulesLayoutHalfFilled)
+			pValidation = Localize("Both sides of keyword rules must be filled");
+		break;
+	case ESaveResult::TOO_LONG:
+		pValidation = Localize("Keyword rules are too long. Changes were not saved; shorten or remove a rule.");
+		break;
+	case ESaveResult::UNREPRESENTABLE:
+		pValidation = Localize("A keyword rule could not be saved. Check the trigger for => or a reserved prefix.");
+		break;
+	case ESaveResult::UNAVAILABLE:
+		pValidation = Localize("Could not save keyword rules. Edit a rule to retry.");
+		break;
+	}
+	if(pValidation)
+		Flow.Text("keyword-validation", pValidation, 0.0f, SmallSize, ui_token::settings::RowGap(LineSpacing), [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [this, SmallSize](const CUIRect &Rect, const char *pText) {
 				TextRender()->TextColor(1.0f, 0.2f, 0.2f, 1.0f);
 				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-keyword-reply-rule-validation", &Rect, pText, SmallSize, TEXTALIGN_ML, {}, (int)Rect.w);
 				TextRender()->TextColor(TextRender()->DefaultTextColor()); }, LineHeight);

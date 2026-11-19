@@ -5,12 +5,18 @@
 
 #include <engine/external/json-parser/json.h>
 
+#include <game/client/components/qmclient/bounded_file_reader.h>
 #include <game/client/components/qmclient/netease/netease_lyric_parser.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <memory>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace QmSodaLyricFile
@@ -42,11 +48,36 @@ namespace QmSodaLyricFile
 			if(pValue == nullptr)
 				return 0;
 			if(pValue->type == json_integer)
-				return (int64_t)pValue->u.integer;
-			if(pValue->type == json_double)
-				return (int64_t)pValue->u.dbl;
+				return static_cast<int64_t>(pValue->u.integer);
+			// INT64_MAX转double会舍入到2^63，转换前须排除这个上界。
+			if(pValue->type == json_double && std::isfinite(pValue->u.dbl) &&
+				pValue->u.dbl >= -0x1p63 && pValue->u.dbl < 0x1p63)
+				return static_cast<int64_t>(pValue->u.dbl);
 			return 0;
 		}
+	}
+
+	bool LoadLyricFile(const char *pPath, QmMusicLyrics::SLyricsData *pOut)
+	try
+	{
+		if(pOut == nullptr)
+			return false;
+		std::string Json;
+		if(!QmReadFileBounded(io_open_read_regular_checked(pPath, nullptr), MAX_FILE_BYTES, Json))
+			return false;
+		QmMusicLyrics::SLyricsData Candidate;
+		if(!ParseLyricFileJson(Json, &Candidate))
+			return false;
+		*pOut = std::move(Candidate);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
 	}
 
 	bool ParseLyricFileJson(std::string_view Json, QmMusicLyrics::SLyricsData *pOut, std::string *pError)
@@ -54,29 +85,41 @@ namespace QmSodaLyricFile
 		if(pOut == nullptr)
 			return false;
 		*pOut = {};
-		json_value *pRoot = json_parse(Json.data(), Json.size());
-		if(pRoot == nullptr || pRoot->type != json_object)
+		std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(json_parse(Json.data(), Json.size()), json_value_free);
+		if(!pRoot || pRoot->type != json_object)
 		{
-			if(pRoot != nullptr)
-				json_value_free(pRoot);
+			pRoot.reset();
 			if(pError)
 				*pError = "invalid json";
 			return false;
 		}
-		pOut->m_Song.m_Title = StringValue(Field(pRoot, "title"));
-		pOut->m_Song.m_Artist = StringValue(Field(pRoot, "artist"));
-		pOut->m_Song.m_Album = StringValue(Field(pRoot, "album"));
-		pOut->m_Song.m_CoverPath = StringValue(Field(pRoot, "coverUrl"));
-		pOut->m_Song.m_DurationMs = Int64Value(Field(pRoot, "durationMs"));
-		const std::string LyricType = StringValue(Field(pRoot, "lyricType"));
-		const std::string LyricContent = StringValue(Field(pRoot, "lyricContent"));
-		const std::string TranslationLrc = StringValue(Field(pRoot, "translationLrc"));
-		json_value_free(pRoot);
+		pOut->m_Song.m_Title = StringValue(Field(pRoot.get(), "title"));
+		pOut->m_Song.m_Artist = StringValue(Field(pRoot.get(), "artist"));
+		pOut->m_Song.m_Album = StringValue(Field(pRoot.get(), "album"));
+		pOut->m_Song.m_CoverPath = StringValue(Field(pRoot.get(), "coverUrl"));
+		pOut->m_Song.m_DurationMs = Int64Value(Field(pRoot.get(), "durationMs"));
+		const std::string LyricType = StringValue(Field(pRoot.get(), "lyricType"));
+		const std::string LyricContent = StringValue(Field(pRoot.get(), "lyricContent"));
+		const std::string TranslationLrc = StringValue(Field(pRoot.get(), "translationLrc"));
+		pRoot.reset();
 
 		bool Parsed = false;
 		std::string Error;
 		if(LyricType == "krc")
-			Parsed = QmMusicLyrics::ParseKrcText(LyricContent, &pOut->m_Timeline, &Error);
+		{
+			if(!TranslationLrc.empty())
+				Parsed = QmMusicLyrics::ParseKrcText(LyricContent, &pOut->m_Timeline, &Error);
+			else
+			{
+				QmMusicLyrics::SLyricsData Lyrics;
+				Parsed = QmMusicLyrics::ParseKrcTextData(LyricContent, &Lyrics, &Error);
+				if(Parsed)
+				{
+					pOut->m_Timeline = std::move(Lyrics.m_Timeline);
+					pOut->m_vTranslations = std::move(Lyrics.m_vTranslations);
+				}
+			}
+		}
 		else if(LyricType == "qrc")
 		{
 			std::string Content;
@@ -98,12 +141,6 @@ namespace QmSodaLyricFile
 		}
 		if(!TranslationLrc.empty())
 			QmMusicLyrics::AlignTranslations(pOut->m_Timeline, TranslationLrc, &pOut->m_vTranslations);
-		else if(LyricType == "krc")
-		{
-			pOut->m_vTranslations = QmMusicLyrics::ExtractKrcTranslation(LyricContent);
-			if(!pOut->m_vTranslations.empty())
-				pOut->m_vTranslations.resize(pOut->m_Timeline.m_vLines.size());
-		}
 		return true;
 	}
 } // namespace QmSodaLyricFile

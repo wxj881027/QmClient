@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 
 #define MAX_LINE_LENGTH 256
 #define MAX_PARTS_PER_ITEM 4096
@@ -34,9 +35,18 @@ bool BgDrawFile::Write(const std::function<bool(const char *)> &WriteLine, const
 	char aBuf[MAX_LINE_LENGTH];
 	for(const CBgDrawItemDataPoint &Point : Data)
 	{
-		std::snprintf(aBuf, sizeof(aBuf), "%f,%f,%f,%f,%f,%f,%f",
+		// 预留换行空间，保证读取时一行对应一个完整的点。
+		const int MaxLength = sizeof(aBuf) - 3;
+		int Length = std::snprintf(aBuf, sizeof(aBuf), "%f,%f,%f,%f,%f,%f,%f",
 			Point.x, Point.y, Point.w, Point.r, Point.g, Point.b, Point.a);
-		if(!WriteLine(aBuf))
+		if(Length > MaxLength)
+		{
+			constexpr int Precision = std::numeric_limits<float>::max_digits10;
+			Length = std::snprintf(aBuf, sizeof(aBuf), "%.*g,%.*g,%.*g,%.*g,%.*g,%.*g,%.*g",
+				Precision, Point.x, Precision, Point.y, Precision, Point.w,
+				Precision, Point.r, Precision, Point.g, Precision, Point.b, Precision, Point.a);
+		}
+		if(Length < 0 || Length > MaxLength || !WriteLine(aBuf))
 			return false;
 	}
 	if(!WriteLine(","))

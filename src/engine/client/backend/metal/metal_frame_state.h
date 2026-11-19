@@ -39,6 +39,7 @@ public:
 	bool ConsumeReadbackPresented();
 	void ClearReadbackPresented();
 	bool CompleteFrame(const SFrameCapture &Capture, bool Success);
+	bool DiscardCurrentFrame();
 	size_t DrainFrames();
 	bool ReadLastPresentedFrame(SFrameCapture &Capture) const;
 

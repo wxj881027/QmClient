@@ -10,8 +10,10 @@
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <new>
 #include <optional>
 #include <queue>
+#include <stdexcept>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -156,34 +158,51 @@ namespace QmMapProgress
 		{
 			if(m_Finalized)
 				return;
-			while(Budget-- > 0 && m_ScanCursor < Size())
+			for(; Budget > 0 && m_ScanCursor < Size(); --Budget, ++m_ScanCursor)
 			{
-				const int Index = m_ScanCursor++;
+				const int Index = m_ScanCursor;
 				STile &Cell = m_vTiles[(size_t)Index];
 				if(Cell.Blocked())
 					continue;
 				Cell.m_NearDeath = NearDeathTile(Index, m_Width, Size(), [&](int Neighbor) { return Tile(Neighbor).m_Death; });
 				const bool SolidBelow = Index < Size() - m_Width && Tile(Index + m_Width).m_Solid;
 				Cell.m_Grounded = IsSupportedGround(Cell.m_Water, SolidBelow, Cell.m_Restrictions);
-				if(Cell.m_Start)
-					m_vStarts.push_back(Index);
-				if(Cell.m_Finish)
-					m_vFinishes.push_back(Index);
-				if(Cell.m_Spawn)
-					m_vSpawns.push_back(Index);
-				if(Cell.m_TimeCheckpoint >= 0)
-					m_avTimeCheckpoints[(size_t)Cell.m_TimeCheckpoint].push_back(Index);
+				std::vector<int> *pTeleportIndices = nullptr;
 				const int Number = Cell.m_TeleNumber;
 				if(Cell.m_TeleType == TILE_TELECHECKIN || Cell.m_TeleType == TILE_TELECHECKINEVIL)
-					m_vCheckInputs.push_back(Index);
-				if(Number <= 0 || Number >= 256)
-					continue;
-				if(Cell.m_TeleType == TILE_TELEIN || Cell.m_TeleType == TILE_TELEINEVIL)
-					m_avTeleInputs[(size_t)Number].push_back(Index);
-				else if(Cell.m_TeleType == TILE_TELEOUT)
-					m_avTeleOutputs[(size_t)Number].push_back(Index);
-				else if(Cell.m_TeleType == TILE_TELECHECKOUT)
-					m_avCheckOutputs[(size_t)Number].push_back(Index);
+					pTeleportIndices = &m_vCheckInputs;
+				else if(Number > 0 && Number < 256)
+				{
+					if(Cell.m_TeleType == TILE_TELEIN || Cell.m_TeleType == TILE_TELEINEVIL)
+						pTeleportIndices = &m_avTeleInputs[(size_t)Number];
+					else if(Cell.m_TeleType == TILE_TELEOUT)
+						pTeleportIndices = &m_avTeleOutputs[(size_t)Number];
+					else if(Cell.m_TeleType == TILE_TELECHECKOUT)
+						pTeleportIndices = &m_avCheckOutputs[(size_t)Number];
+				}
+				const std::array apIndices{
+					Cell.m_Start ? &m_vStarts : nullptr,
+					Cell.m_Finish ? &m_vFinishes : nullptr,
+					Cell.m_Spawn ? &m_vSpawns : nullptr,
+					Cell.m_TimeCheckpoint >= 0 ? &m_avTimeCheckpoints[(size_t)Cell.m_TimeCheckpoint] : nullptr,
+					pTeleportIndices};
+				size_t Appended = 0;
+				try
+				{
+					for(; Appended < apIndices.size(); ++Appended)
+						if(apIndices[Appended])
+							apIndices[Appended]->push_back(Index);
+				}
+				catch(...)
+				{
+					// 回退本格已登记的索引，保留扫描位置供下一次重试。
+					while(Appended > 0)
+					{
+						if(auto *pIndices = apIndices[--Appended])
+							pIndices->pop_back();
+					}
+					return;
+				}
 			}
 			if(m_ScanCursor != Size())
 				return;
@@ -206,7 +225,12 @@ namespace QmMapProgress
 		void Finalize()
 		{
 			while(!Finalized())
+			{
+				const int PreviousCursor = m_ScanCursor;
 				FinalizeStep(4096);
+				if(m_ScanCursor == PreviousCursor)
+					return;
+			}
 		}
 
 		const std::vector<int> &Sources(int Stage) const
@@ -273,6 +297,13 @@ namespace QmMapProgress
 		}
 
 	public:
+		void Discard()
+		{
+			const uint64_t Revision = m_Revision + 1;
+			*this = CField();
+			m_Revision = Revision;
+		}
+
 		uint64_t Revision() const { return m_Revision; }
 		bool Matches(int TeleCheckpoint, int Stage) const { return m_TeleCheckpoint == TeleCheckpoint && m_Stage == Stage; }
 		bool Complete() const { return m_Queue.empty() && m_apPending[0] == nullptr && m_apPending[1] == nullptr; }
@@ -439,6 +470,16 @@ namespace QmMapProgress
 		bool m_SegmentsRejected = false;
 		bool m_UseSegmentForRoute = false;
 
+		void DiscardFields()
+		{
+			// 路线缓存使用修订号。丢弃半成品后仍保留观测到的起点与检查点。
+			m_Global.Discard();
+			m_Segment.Discard();
+			m_Estimate = {};
+			m_CurrentIndex = -1;
+			m_UseSegmentForRoute = false;
+		}
+
 	public:
 		void Reset() { *this = CPlayer(); }
 		const SEstimate &Estimate() const { return m_Estimate; }
@@ -466,6 +507,7 @@ namespace QmMapProgress
 		}
 
 		void Update(const CMap &Map, int Index, int TeleCheckpoint, int Budget, bool UseTimeCheckpoints = true)
+		try
 		{
 			m_CurrentIndex = Index;
 			if(!Map.Ready() || Index < 0 || Index >= Map.Size())
@@ -528,14 +570,34 @@ namespace QmMapProgress
 			else
 				m_Estimate = {};
 		}
+		catch(const std::bad_alloc &)
+		{
+			DiscardFields();
+		}
+		catch(const std::length_error &)
+		{
+			DiscardFields();
+		}
 
 		int RouteIndex() const { return m_CurrentIndex; }
 		bool UsesSegmentRoute() const { return m_UseSegmentForRoute; }
 		uint64_t RouteRevision() const { return (m_UseSegmentForRoute ? m_Segment : m_Global).Revision(); }
 
 		bool BuildRoute(std::vector<int> &vRoute) const
+		try
 		{
 			return (m_UseSegmentForRoute ? m_Segment : m_Global).BuildRoute(m_CurrentIndex, vRoute);
+		}
+		catch(const std::bad_alloc &)
+		{
+			vRoute.clear();
+			// 资源失败交给路线缓存处理，不能发布成同一键下的无路线结果。
+			throw;
+		}
+		catch(const std::length_error &)
+		{
+			vRoute.clear();
+			throw std::bad_alloc();
 		}
 	};
 }

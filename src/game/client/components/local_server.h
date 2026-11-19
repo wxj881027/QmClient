@@ -1,13 +1,14 @@
 #ifndef GAME_CLIENT_COMPONENTS_LOCAL_SERVER_H
 #define GAME_CLIENT_COMPONENTS_LOCAL_SERVER_H
 
+#include "local_server_launch.h"
+
 #include <base/types.h>
 
 #include <engine/shared/config.h>
 
 #include <game/client/component.h>
 
-#include <string>
 #include <chrono>
 #include <vector>
 
@@ -25,6 +26,7 @@ public:
 
 private:
 	char m_aRconPassword[sizeof(g_Config.m_SvRconPassword)] = "";
+	void ReportStartFailure(bool ExecutableMissing = false) noexcept;
 	// 服务端启动后把自己实际监听的端口写进这个文件，客户端据此直连本机服务器。
 	int m_Port = 0;
 	bool m_WaitingForPort = false;
@@ -36,9 +38,7 @@ private:
 	void WaitForPort();
 
 #if defined(CONF_PLATFORM_ANDROID)
-	std::vector<std::string> m_vPendingArguments;
-	bool m_StartPending = false;
-	bool m_ConnectWhenReady = false;
+	CLocalServerLaunch m_Launch;
 #else
 	PROCESS m_Process = INVALID_PROCESS;
 #endif

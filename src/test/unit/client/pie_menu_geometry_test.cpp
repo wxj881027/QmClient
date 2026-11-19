@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
+
 namespace
 {
 	using namespace qm_pie_menu_ui;
@@ -210,6 +212,44 @@ namespace
 		EXPECT_EQ(BuildDisc(0.0f, 1.0f).m_PointCount, 0);
 		EXPECT_EQ(BuildDisc(99.0f, 0.0f).m_PointCount, 0);
 		EXPECT_FLOAT_EQ(UnitsPerPixel(vec2(600.0f, 600.0f), vec2(0.0f, 0.0f)), 0.0f);
+	}
+
+	TEST(PieMenuGeometry, TinyPositivePixelSizeUsesTheArcSegmentLimit)
+	{
+		const float PixelSize = std::numeric_limits<float>::min();
+		const auto Ring = BuildSector(108.0f, 288.0f, 0.0f, 360.0f, 0.0f, PixelSize);
+		const auto Disc = BuildDisc(99.0f, PixelSize);
+		EXPECT_EQ(Ring.m_ArcSegments, MAX_ARC_SEGMENTS);
+		EXPECT_EQ(Disc.m_ArcSegments, MAX_ARC_SEGMENTS);
+	}
+
+	TEST(PieMenuGeometry, NonFinitePixelSizeLeavesNoShape)
+	{
+		for(const float PixelSize : {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity()})
+		{
+			SCOPED_TRACE(PixelSize);
+			EXPECT_EQ(BuildSector(108.0f, 288.0f, 0.0f, 36.0f, 3.6f, PixelSize).m_PointCount, 0);
+			EXPECT_EQ(BuildDisc(99.0f, PixelSize).m_PointCount, 0);
+		}
+	}
+
+	TEST(PieMenuGeometry, NonFiniteAnglesLeaveNoSector)
+	{
+		const float Nan = std::numeric_limits<float>::quiet_NaN();
+		const float Inf = std::numeric_limits<float>::infinity();
+		EXPECT_EQ(BuildSector(108.0f, 288.0f, 0.0f, Nan, 3.6f, 1.0f).m_PointCount, 0);
+		EXPECT_EQ(BuildSector(108.0f, 288.0f, -Inf, 36.0f, 3.6f, 1.0f).m_PointCount, 0);
+	}
+
+	TEST(PieMenuGeometry, NonFinitePointerDoesNotSelectASector)
+	{
+		const float Nan = std::numeric_limits<float>::quiet_NaN();
+		const float Inf = std::numeric_limits<float>::infinity();
+		for(const vec2 Pointer : {vec2(Nan, 150.0f), vec2(150.0f, Nan), vec2(-Inf, 150.0f)})
+		{
+			SCOPED_TRACE(::testing::Message() << Pointer.x << ", " << Pointer.y);
+			EXPECT_EQ(HoveredSector(Pointer, 100.0f, 200.0f, 0.0f, 8, 3.6f, 1.0f), -1);
+		}
 	}
 
 	TEST(PieMenuAppearance, HoverKeepsTransparentUserColorsAndGlobalOpacity)

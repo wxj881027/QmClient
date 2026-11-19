@@ -3,6 +3,7 @@ package org.ddnet.client;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ClipData;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.media.MediaScannerConnection;
@@ -11,7 +12,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.provider.DocumentsContract;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,12 +36,12 @@ import java.util.concurrent.Executors;
 public final class QmMediaExporter {
 	private static final int REQUEST_EXPORT = 0x514d;
 	private final Activity activity;
-	private final ExecutorService worker = Executors.newSingleThreadExecutor();
+	private ExecutorService worker;
 	private final Set<String> excludedPaths = new HashSet<>();
 	private File root;
 	private boolean videos;
 	private String pendingPath;
-	private boolean busy;
+	private volatile boolean busy;
 	private AlertDialog dialog;
 	private volatile boolean closed;
 
@@ -59,18 +60,45 @@ public final class QmMediaExporter {
 
 	public void close() {
 		closed = true;
-		worker.shutdownNow();
-		if(dialog != null)
-			dialog.dismiss();
+		try {
+			if(worker != null)
+				worker.shutdownNow();
+		} catch(RuntimeException | OutOfMemoryError ignored) {
+		} finally {
+			clearDialog();
+		}
 	}
 
 	private void notifyUser(int message) {
-		if(!closed && !activity.isFinishing() && !activity.isDestroyed())
-			Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+		try {
+			if(!closed && !activity.isFinishing() && !activity.isDestroyed())
+				Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+		} catch(RuntimeException | OutOfMemoryError ignored) {
+			// 失败提示不能覆盖已经清理的操作状态。
+		}
+	}
+
+	// 创建、提交和关闭均由Activity主线程调用；构造异常交给提交方的失败出口。
+	private ExecutorService getWorker() {
+		if(closed)
+			throw new IllegalStateException("Media exporter is closed");
+		if(worker == null)
+			worker = Executors.newSingleThreadExecutor();
+		return worker;
+	}
+
+	private void clearDialog() {
+		AlertDialog current = dialog;
+		dialog = null;
+		try {
+			if(current != null)
+				current.dismiss();
+		} catch(RuntimeException | OutOfMemoryError ignored) {
+		}
 	}
 
 	public void browse(String directory, boolean videos, String[] excluded) {
-		if(busy || dialog != null || closed)
+		if(busy || dialog != null || closed || activity.isFinishing() || activity.isDestroyed())
 			return;
 		try {
 			root = new File(directory).getCanonicalFile();
@@ -79,7 +107,8 @@ public final class QmMediaExporter {
 			for(String path : excluded)
 				excludedPaths.add(new File(path).getCanonicalPath());
 			showDirectory(root);
-		} catch(IOException | SecurityException error) {
+		} catch(IOException | RuntimeException | OutOfMemoryError error) {
+			clearDialog();
 			notifyUser(R.string.qm_media_failed);
 		}
 	}
@@ -121,6 +150,8 @@ public final class QmMediaExporter {
 			.setTitle(videos ? R.string.qm_media_videos : R.string.qm_media_demos)
 			.setItems(names.toArray(new String[0]), (sender, index) -> {
 				dialog = null;
+				if(closed)
+					return;
 				try {
 					File selected = entries.get(index);
 					if(!allowed(selected))
@@ -129,7 +160,8 @@ public final class QmMediaExporter {
 						showDirectory(selected);
 					else
 						showActions(selected);
-				} catch(IOException | SecurityException error) {
+				} catch(IOException | RuntimeException | OutOfMemoryError error) {
+					clearDialog();
 					notifyUser(R.string.qm_media_failed);
 				}
 			})
@@ -146,6 +178,8 @@ public final class QmMediaExporter {
 			.setTitle(file.getName())
 			.setItems(actions, (sender, index) -> {
 				dialog = null;
+				if(closed)
+					return;
 				if(index == 0)
 					export(file);
 				else
@@ -170,63 +204,107 @@ public final class QmMediaExporter {
 		final String displayName = source.getName();
 		final String mime = displayName.toLowerCase(Locale.ROOT).endsWith(".txt") ? "text/plain" : "application/octet-stream";
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-			ContentValues values = new ContentValues();
-			values.put(MediaStore.MediaColumns.DISPLAY_NAME, displayName);
-			values.put(MediaStore.MediaColumns.MIME_TYPE, mime);
-			values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/QmClient");
-			values.put(MediaStore.MediaColumns.IS_PENDING, 1);
-			Uri uri = activity.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-			if(uri == null)
-				throw new IOException("insert failed");
-			boolean ok = false;
-			try(OutputStream out = activity.getContentResolver().openOutputStream(uri); FileInputStream in = new FileInputStream(source)) {
-				if(out == null)
-					throw new IOException("open failed");
-				byte[] buffer = new byte[64 * 1024];
-				int read;
-				while((read = in.read(buffer)) > 0)
-					out.write(buffer, 0, read);
-				ok = true;
-			} finally {
-				if(!ok)
-					activity.getContentResolver().delete(uri, null, null);
-			}
-			ContentValues done = new ContentValues();
-			done.put(MediaStore.MediaColumns.IS_PENDING, 0);
-			activity.getContentResolver().update(uri, done, null, null);
+			final ContentResolver resolver = activity.getContentResolver();
+			copyDownload(source, new DownloadTarget() {
+				private Uri uri;
+
+				@Override
+				public OutputStream open() throws IOException {
+					ContentValues values = new ContentValues();
+					values.put(MediaStore.MediaColumns.DISPLAY_NAME, displayName);
+					values.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+					values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/QmClient");
+					values.put(MediaStore.MediaColumns.IS_PENDING, 1);
+					uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+					if(uri == null)
+						throw new IOException("insert failed");
+					return resolver.openOutputStream(uri);
+				}
+
+				@Override
+				public boolean publish() {
+					ContentValues values = new ContentValues();
+					values.put(MediaStore.MediaColumns.IS_PENDING, 0);
+					return resolver.update(uri, values, null, null) > 0;
+				}
+
+				@Override
+				public void discard() {
+					if(uri != null)
+						resolver.delete(uri, null, null);
+				}
+			});
 			return displayName;
 		}
 		File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "QmClient");
-		if(!dir.exists() && !dir.mkdirs())
+		return copyToLegacyDownloads(dir, source);
+	}
+
+	interface DownloadTarget {
+		OutputStream open() throws IOException;
+		boolean publish();
+		void discard();
+	}
+
+	static void copyDownload(File source, DownloadTarget target) throws IOException {
+		boolean published = false;
+		try {
+			try(FileInputStream input = new FileInputStream(source); OutputStream output = target.open()) {
+				if(output == null)
+					throw new IOException("open failed");
+				QmMediaFiles.copy(input, output);
+			}
+			if(!target.publish())
+				throw new IOException("publish failed");
+			published = true;
+		} finally {
+			if(!published) {
+				try { target.discard(); }
+				catch(RuntimeException | OutOfMemoryError error) { logFailure("Download cleanup failed", error); }
+			}
+		}
+	}
+
+	static String copyToLegacyDownloads(File dir, File source) throws IOException {
+		if(!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory())
 			throw new IOException("mkdir failed");
+		final String displayName = source.getName();
+		final int dot = displayName.lastIndexOf('.');
+		final String base = dot > 0 ? displayName.substring(0, dot) : displayName;
+		final String ext = dot > 0 ? displayName.substring(dot) : "";
 		File target = new File(dir, displayName);
 		int index = 1;
-		while(target.exists()) {
-			final int dot = displayName.lastIndexOf('.');
-			final String base = dot > 0 ? displayName.substring(0, dot) : displayName;
-			final String ext = dot > 0 ? displayName.substring(dot) : "";
+		while(!target.createNewFile()) {
 			target = new File(dir, base + "_" + index + ext);
 			index++;
 		}
-		try(OutputStream out = new FileOutputStream(target); FileInputStream in = new FileInputStream(source)) {
-			byte[] buffer = new byte[64 * 1024];
-			int read;
-			while((read = in.read(buffer)) > 0)
-				out.write(buffer, 0, read);
+		boolean complete = false;
+		try {
+			try(FileInputStream input = new FileInputStream(source); OutputStream output = new FileOutputStream(target)) {
+				QmMediaFiles.copy(input, output);
+			}
+			complete = true;
+			return target.getName();
+		} finally {
+			if(!complete) {
+				try { target.delete(); }
+				catch(RuntimeException | OutOfMemoryError error) { logFailure("Download cleanup failed", error); }
+			}
 		}
-		return target.getName();
 	}
 
 	private void export(File file) {
-		pendingPath = file.getAbsolutePath();
-		busy = true;
-		Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
-			.addCategory(Intent.CATEGORY_OPENABLE)
-			.setType(mimeType(file))
-			.putExtra(Intent.EXTRA_TITLE, file.getName());
+		if(closed || busy)
+			return;
 		try {
+			pendingPath = file.getAbsolutePath();
+			busy = true;
+			Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
+				.addCategory(Intent.CATEGORY_OPENABLE)
+				.setType(mimeType(file))
+				.putExtra(Intent.EXTRA_TITLE, file.getName());
 			activity.startActivityForResult(intent, REQUEST_EXPORT);
-		} catch(RuntimeException error) {
+		} catch(RuntimeException | OutOfMemoryError error) {
 			pendingPath = null;
 			busy = false;
 			notifyUser(R.string.qm_media_failed);
@@ -246,64 +324,125 @@ public final class QmMediaExporter {
 		}
 		Uri target = data.getData();
 		notifyUser(R.string.qm_media_copying);
-		worker.execute(() -> {
-			boolean success = false;
-			try {
-				try(FileInputStream input = new FileInputStream(source);
-					OutputStream output = activity.getContentResolver().openOutputStream(target, "w")) {
-					if(output == null)
-						throw new IOException("No output stream");
-					QmMediaFiles.copy(input, output);
+		try {
+			getWorker().execute(() -> {
+				boolean success = false;
+				try {
+					checkWorkerOpen();
+					try(FileInputStream input = new FileInputStream(source);
+						OutputStream output = activity.getContentResolver().openOutputStream(target, "w")) {
+						if(output == null)
+							throw new IOException("No output stream");
+						QmMediaFiles.copy(input, output);
+					}
+					checkWorkerOpen();
+					success = true;
+				} catch(IOException | RuntimeException | OutOfMemoryError error) {
+					// 选择器也会返回用户确认覆盖的原文档。写入失败后保留该文档。
+					logFailure("Export failed", error);
 				}
-				success = true;
-			} catch(IOException | RuntimeException error) {
-				Log.w("QmMediaExporter", "Export failed", error);
-			}
-			if(!success) {
-				// 仅清理由本次 CREATE_DOCUMENT 新建的未完成文件。
-				try { DocumentsContract.deleteDocument(activity.getContentResolver(), target); }
-				catch(Exception ignored) { }
-			}
-			final boolean completed = success;
-			activity.runOnUiThread(() -> {
-				busy = false;
-				notifyUser(completed ? R.string.qm_media_exported : R.string.qm_media_failed);
+				finishWorker(success, null, null);
 			});
-		});
+		} catch(RuntimeException | OutOfMemoryError error) {
+			busy = false;
+			logFailure("Export submission failed", error);
+			notifyUser(R.string.qm_media_failed);
+		}
 		return true;
 	}
 
 	private void share(File source) {
+		if(closed || busy)
+			return;
 		busy = true;
 		notifyUser(R.string.qm_media_copying);
-		worker.execute(() -> {
-			File staged = null;
-			try {
-				File directory = new File(activity.getCacheDir(), "qm-media/" + UUID.randomUUID());
-				if(!directory.mkdirs())
-					throw new IOException("Could not prepare share directory");
-				staged = new File(directory, source.getName());
-				try(FileInputStream input = new FileInputStream(source); FileOutputStream output = new FileOutputStream(staged)) {
-					QmMediaFiles.copy(input, output);
+		try {
+			getWorker().execute(() -> {
+				File shareDirectory = null;
+				File staged = null;
+				boolean success = false;
+				Uri uri = null;
+				try {
+					checkWorkerOpen();
+					File directory = new File(activity.getCacheDir(), "qm-media/" + UUID.randomUUID());
+					if(!directory.mkdirs())
+						throw new IOException("Could not prepare share directory");
+					shareDirectory = directory;
+					staged = new File(directory, source.getName());
+					try(FileInputStream input = new FileInputStream(source); FileOutputStream output = new FileOutputStream(staged)) {
+						QmMediaFiles.copy(input, output);
+					}
+					uri = FileProvider.getUriForFile(activity, activity.getPackageName() + ".qm.media", staged);
+					checkWorkerOpen();
+					success = true;
+				} catch(IOException | RuntimeException | OutOfMemoryError error) {
+					discardShare(staged, shareDirectory);
+					logFailure("Share failed", error);
 				}
-				final Uri uri = FileProvider.getUriForFile(activity, activity.getPackageName() + ".qm.media", staged);
-				activity.runOnUiThread(() -> {
-					busy = false;
-					if(closed)
-						return;
-					Intent intent = new Intent(Intent.ACTION_SEND).setType(mimeType(source))
-						.putExtra(Intent.EXTRA_STREAM, uri);
-					intent.setClipData(ClipData.newRawUri("media", uri));
-					intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-					try { activity.startActivity(Intent.createChooser(intent, activity.getText(R.string.qm_media_share))); }
-					catch(RuntimeException error) { notifyUser(R.string.qm_media_failed); }
-				});
-			} catch(IOException | RuntimeException error) {
-				if(staged != null)
-					staged.delete();
-				Log.w("QmMediaExporter", "Share failed", error);
-				activity.runOnUiThread(() -> { busy = false; notifyUser(R.string.qm_media_failed); });
+				finishWorker(success, success ? staged : null, uri);
+			});
+		} catch(RuntimeException | OutOfMemoryError error) {
+			busy = false;
+			logFailure("Share submission failed", error);
+			notifyUser(R.string.qm_media_failed);
+		}
+	}
+
+	private void checkWorkerOpen() throws InterruptedIOException {
+		if(closed || Thread.currentThread().isInterrupted())
+			throw new InterruptedIOException();
+	}
+
+	private static void logFailure(String message, Throwable error) {
+		try { Log.w("QmMediaExporter", message, error); }
+		catch(RuntimeException | OutOfMemoryError ignored) { }
+	}
+
+	private static void discardShare(File staged, File directory) {
+		try {
+			if(staged != null) {
+				staged.delete();
+				if(directory == null)
+					directory = staged.getParentFile();
 			}
-		});
+			if(directory != null)
+				directory.delete();
+		} catch(RuntimeException | OutOfMemoryError error) {
+			logFailure("Share cleanup failed", error);
+		}
+	}
+
+	private void finishWorker(boolean completed, File staged, Uri uri) {
+		try {
+			activity.runOnUiThread(() -> {
+				busy = false;
+				boolean shared = false;
+				try {
+					if(closed || activity.isFinishing() || activity.isDestroyed())
+						return;
+					if(!completed) {
+						notifyUser(R.string.qm_media_failed);
+					} else if(uri == null) {
+						notifyUser(R.string.qm_media_exported);
+					} else {
+						Intent intent = new Intent(Intent.ACTION_SEND).setType(mimeType(staged))
+							.putExtra(Intent.EXTRA_STREAM, uri);
+						intent.setClipData(ClipData.newRawUri("media", uri));
+						intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+						activity.startActivity(Intent.createChooser(intent, activity.getText(R.string.qm_media_share)));
+						shared = true;
+					}
+				} catch(RuntimeException | OutOfMemoryError error) {
+					notifyUser(R.string.qm_media_failed);
+				} finally {
+					if(!shared)
+						discardShare(staged, null);
+				}
+			});
+		} catch(RuntimeException | OutOfMemoryError error) {
+			// 回投失败时释放 busy 和未交付的分享文件。
+			busy = false;
+			discardShare(staged, null);
+		}
 	}
 }

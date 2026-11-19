@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <mutex>
+#include <new>
 
 struct CQmScreenshotEditor::SLogoDialog
 {
@@ -26,20 +27,36 @@ void CQmScreenshotEditor::ChooseLogo()
 {
 	if(m_pDialog)
 		return;
-	m_pDialog = std::make_shared<SLogoDialog>();
+	std::unique_ptr<std::shared_ptr<SLogoDialog>> pOwner;
+	try
+	{
+		pOwner = std::make_unique<std::shared_ptr<SLogoDialog>>(std::make_shared<SLogoDialog>());
+	}
+	catch(const std::bad_alloc &)
+	{
+		qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to open the file picker"));
+		return;
+	}
+	m_pDialog = *pOwner;
 	// 回调可能在其他线程发生，也可能晚于编辑器关闭；不捕获菜单或图形对象。
-	auto *pOwner = new std::shared_ptr<SLogoDialog>(m_pDialog);
 	static const SDL_DialogFileFilter s_aFilters[] = {{"PNG/WEBP", "png;webp"}};
 	SDL_ShowOpenFileDialog([](void *pData, const char *const *ppFiles, int) {
 		std::unique_ptr<std::shared_ptr<SLogoDialog>> pLifetime(static_cast<std::shared_ptr<SLogoDialog> *>(pData));
 		auto &Result = **pLifetime;
 		const std::lock_guard<std::mutex> Lock(Result.m_Mutex);
 		Result.m_Failed = ppFiles == nullptr;
-		if(ppFiles && ppFiles[0])
-			Result.m_Path = ppFiles[0];
+		try
+		{
+			if(ppFiles && ppFiles[0])
+				Result.m_Path = ppFiles[0];
+		}
+		catch(...)
+		{
+			Result.m_Failed = true;
+		}
 		Result.m_Done = true;
 	},
-		pOwner, nullptr, s_aFilters, 1, nullptr, false);
+		pOwner.release(), nullptr, s_aFilters, 1, nullptr, false);
 }
 
 void CQmScreenshotEditor::Open(CMenus *pMenus, const char *pPath, int StorageType)
@@ -83,44 +100,58 @@ void CQmScreenshotEditor::Close(CMenus *pMenus)
 
 void CQmScreenshotEditor::Pump(CMenus *pMenus)
 {
+	auto *pGraphics = pMenus->Graphics();
+	if(m_Texture.IsValid() && !pGraphics->IsTextureHandleAllocated(m_Texture))
+	{
+		m_Texture.Invalidate();
+		m_Width = m_Height = 0;
+		m_aBounds = {};
+		m_Dirty |= !m_pPreview;
+		m_Failed = false;
+		if(pMenus->Ui()->ActiveItem() == &m_DragStart)
+			pMenus->Ui()->SetActiveItem(nullptr);
+	}
 	if(m_pDialog)
 	{
 		bool Done;
+		bool Failed = false;
 		{
 			const std::lock_guard<std::mutex> Lock(m_pDialog->m_Mutex);
 			Done = m_pDialog->m_Done;
-			if(Done && m_pDialog->m_Failed)
-				qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to open the file picker"));
-			if(Done && !m_pDialog->m_Path.empty())
+			Failed = Done && m_pDialog->m_Failed;
+			if(Done && !Failed && !m_pDialog->m_Path.empty())
 			{
-				m_Options.m_LogoPath = m_pDialog->m_Path;
+				m_Options.m_LogoPath.swap(m_pDialog->m_Path);
 				m_Dirty = true;
 			}
 		}
 		if(Done)
 			m_pDialog.reset();
+		if(Failed)
+			qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to open the file picker"));
 	}
-	if(m_pExport && m_pExport->State() == IJob::STATE_DONE)
+	if(m_pExport && m_pExport->Finished())
 	{
+		const bool Saved = m_pExport->State() == IJob::STATE_DONE && m_pExport->Saved();
 		if(!m_pExport->Canceled())
-			qm_ui::Toast(m_pExport->Saved() ? EQmToastKind::SUCCESS : EQmToastKind::FAILED,
-				m_pExport->Saved() ? Localize("The watermarked screenshot was saved next to the original") : Localize("Unable to save the watermarked screenshot"));
+			qm_ui::Toast(Saved ? EQmToastKind::SUCCESS : EQmToastKind::FAILED,
+				Saved ? Localize("The watermarked screenshot was saved next to the original") : Localize("Unable to save the watermarked screenshot"));
 		m_pExport.reset();
 	}
-	if(m_pPreview && m_pPreview->State() == IJob::STATE_DONE)
+	if(m_pPreview && m_pPreview->Finished())
 	{
 		// 同时只保留一个预览任务。连续拖动时也发布已完成帧，再请求最新参数。
 		if(!m_pPreview->Canceled())
 		{
-			const auto *pImage = m_pPreview->Preview();
+			const auto *pImage = m_pPreview->State() == IJob::STATE_DONE ? m_pPreview->Preview() : nullptr;
 			m_Failed = !pImage;
 			if(pImage)
 			{
-				auto Texture = pMenus->Graphics()->LoadTextureRaw(*pImage, 0, "watermark-preview");
+				auto Texture = pGraphics->LoadTextureRaw(*pImage, 0, "watermark-preview");
 				if(Texture.IsValid())
 				{
 					if(m_Texture.IsValid())
-						pMenus->Graphics()->UnloadTexture(&m_Texture);
+						pGraphics->UnloadTexture(&m_Texture);
 					m_Texture = Texture;
 					m_Width = pImage->m_Width;
 					m_Height = pImage->m_Height;

@@ -13,11 +13,22 @@
 IJob::IJob() :
 	m_pNext(nullptr),
 	m_State(STATE_QUEUED),
-	m_Abortable(false)
+	m_Abortable(false),
+	m_Finished(false)
 {
 }
 
 IJob::~IJob() = default;
+
+static void ReportJobException(const char *pError) noexcept
+try
+{
+	log_error("jobs", "Job raised an exception: %s", pError);
+}
+catch(...)
+{
+	// 失败诊断不能阻断作业终态发布或后续作业。
+}
 
 IJob::EJobState IJob::State() const
 {
@@ -28,6 +39,11 @@ bool IJob::Done() const
 {
 	EJobState State = m_State;
 	return State != STATE_QUEUED && State != STATE_RUNNING;
+}
+
+bool IJob::Finished() const
+{
+	return m_Finished.load(std::memory_order_acquire);
 }
 
 bool IJob::Abort()
@@ -98,6 +114,7 @@ void CJobPool::RunLoop()
 				{
 					// job was aborted before it was started
 					pJob->m_State = IJob::STATE_ABORTED;
+					pJob->m_Finished.store(true, std::memory_order_release);
 					continue;
 				}
 				dbg_assert_failed("Job state invalid. Job was reused or uninitialized.");
@@ -114,17 +131,20 @@ void CJobPool::RunLoop()
 			// 作业异常不得逃逸到线程入口：线程入口没有调用者可以接收异常，逃出
 			// 即 std::terminate。单次作业失败只让该作业进入失败语义，池与后续
 			// 作业继续运行；各作业仍应自行处理预期内的失败。
+			bool Failed = false;
 			try
 			{
 				pJob->Run();
 			}
 			catch(const std::exception &Error)
 			{
-				log_error("jobs", "Job raised an exception: %s", Error.what());
+				Failed = true;
+				ReportJobException(Error.what());
 			}
 			catch(...)
 			{
-				log_error("jobs", "Job raised an unknown exception.");
+				Failed = true;
+				ReportJobException("unknown exception");
 			}
 			{
 				const CLockScope LockScope(m_LockRunning);
@@ -133,13 +153,14 @@ void CJobPool::RunLoop()
 
 			// do not change state to done if job was not completed successfully
 			IJob::EJobState OldStateRunning = IJob::STATE_RUNNING;
-			if(!pJob->m_State.compare_exchange_strong(OldStateRunning, IJob::STATE_DONE))
+			if(!pJob->m_State.compare_exchange_strong(OldStateRunning, Failed ? IJob::STATE_FAILED : IJob::STATE_DONE))
 			{
 				if(OldStateRunning != IJob::STATE_ABORTED)
 				{
 					dbg_assert_failed("Job state invalid, must be either running or aborted");
 				}
 			}
+			pJob->m_Finished.store(true, std::memory_order_release);
 		}
 		else if(m_Shutdown)
 		{
@@ -151,22 +172,47 @@ void CJobPool::RunLoop()
 
 void CJobPool::Init(int NumThreads)
 {
+	dbg_assert(TryInit(NumThreads), "Job pool initialization failed");
+}
+
+bool CJobPool::TryInit(int NumThreads, THREAD_CREATE pfnCreate)
+{
 	dbg_assert(m_Shutdown, "Job pool already running");
-	m_Shutdown = false;
-
-	const CLockScope LockScope(m_Lock);
-	sphore_init(&m_Semaphore);
-	m_pFirstJob = nullptr;
-	m_pLastJob = nullptr;
-
-	// start worker threads
-	char aName[16]; // unix kernel length limit
-	m_vpThreads.reserve(NumThreads);
-	for(int i = 0; i < NumThreads; i++)
+	if(NumThreads <= 0)
+		return false;
+	try
 	{
-		str_format(aName, sizeof(aName), "CJobPool W%d", i);
-		m_vpThreads.push_back(thread_init(WorkerThread, this, aName));
+		m_vpThreads.reserve(NumThreads);
+		// 每个线程最多登记一个运行作业，在线程启动前准备完整容量。
+		const CLockScope RunningLockScope(m_LockRunning);
+		m_RunningJobs.reserve(NumThreads);
 	}
+	catch(...)
+	{
+		return false;
+	}
+	{
+		const CLockScope LockScope(m_Lock);
+		if(!sphore_try_init(&m_Semaphore))
+			return false;
+		m_pFirstJob = nullptr;
+		m_pLastJob = nullptr;
+		m_Shutdown = false;
+		char aName[16];
+		for(int i = 0; i < NumThreads; i++)
+		{
+			str_format(aName, sizeof(aName), "CJobPool W%d", i);
+			void *pThread = pfnCreate(WorkerThread, this, aName);
+			if(!pThread)
+				break;
+			m_vpThreads.push_back(pThread);
+		}
+	}
+	if(m_vpThreads.size() == static_cast<size_t>(NumThreads))
+		return true;
+	// 先释放队列锁，再唤醒并等待部分启动的线程，避免启动回收互相等待。
+	Shutdown();
+	return false;
 }
 
 void CJobPool::Shutdown()
@@ -184,6 +230,7 @@ void CJobPool::Shutdown()
 			std::shared_ptr<IJob> pNext = pJob->m_pNext;
 			if(pJob->Abort())
 			{
+				pJob->m_Finished.store(true, std::memory_order_release);
 				// only remove abortable jobs from queue
 				pJob->m_pNext = nullptr;
 				if(pPrev)
@@ -232,12 +279,18 @@ void CJobPool::Shutdown()
 
 void CJobPool::Add(std::shared_ptr<IJob> pJob)
 {
+	(void)TryAdd(std::move(pJob));
+}
+
+bool CJobPool::TryAdd(std::shared_ptr<IJob> pJob)
+{
 	// 与关闭同步检查和发信号，避免向已销毁的信号量提交作业。
 	const CLockScope LockScope(m_Lock);
 	if(m_Shutdown)
 	{
-		pJob->Abort();
-		return;
+		if(pJob->Abort())
+			pJob->m_Finished.store(true, std::memory_order_release);
+		return false;
 	}
 	if(m_pLastJob)
 		m_pLastJob->m_pNext = pJob;
@@ -245,4 +298,5 @@ void CJobPool::Add(std::shared_ptr<IJob> pJob)
 	if(!m_pFirstJob)
 		m_pFirstJob = m_pLastJob;
 	sphore_signal(&m_Semaphore);
+	return true;
 }

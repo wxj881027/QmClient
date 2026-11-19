@@ -11,6 +11,21 @@
 
 namespace qm_settings_content
 {
+	// 只读绘制的状态随栈退出；仅在内容完整返回后发布消费高度。
+	template<typename TDraw>
+	inline void RenderLayoutContent(const CSettingsContentLayout &Layout, CUIRect &Content, CUi *pUi, const TDraw &Draw)
+	{
+		const CUIRect Origin = Content;
+		{
+			std::optional<CUiScopedBackgroundRender> Guard;
+			if(pUi != nullptr)
+				Guard.emplace(pUi, true);
+			Draw(Layout, Origin);
+		}
+		Content.y = Origin.y + Layout.Height();
+		Content.h = Origin.h - Layout.Height();
+	}
+
 	class CContentDeclarationUiGuard
 	{
 		CUi *m_pUi;

@@ -20,7 +20,11 @@ void main()
 	vec3 realTexCoords = vec3(fract(TexCoord.xy), TexCoord.z);
 	vec2 dx = dFdx(TexCoord.xy);
 	vec2 dy = dFdy(TexCoord.xy);
+#ifdef TW_TILE_3D_TEXTURED
+	vec4 tex = textureGrad(gTextureSampler, realTexCoords, vec3(dx, 0.0), vec3(dy, 0.0));
+#else
 	vec4 tex = textureGrad(gTextureSampler, realTexCoords, dx, dy);
+#endif
 	FragClr = tex * gVertColor;
 #else
 	FragClr = gVertColor;

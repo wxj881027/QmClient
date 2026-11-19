@@ -1,8 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_TCLIENT_QM_OUTLINE_NEIGHBORS_H
 #define GAME_CLIENT_COMPONENTS_TCLIENT_QM_OUTLINE_NEIGHBORS_H
 
-// 低四位保留地图类型（可钩/不可钩墙体拆分后类型编号超过 8 个，三位放不下），
-// 高位缓存静态邻接关系；新地图写入类型时自然失效。
+// 低四位保留地图类型（含可钩与不可钩墙体），高位缓存静态邻接关系。
+// 地图尺寸须为正，X/Y 及其相邻坐标须可表示，回调返回未带缓存的类型。
 template<typename F>
 int QmOutlineCachedNeighbors(int &Tile, int X, int Y, int Width, int Height, F &&GetTile)
 {

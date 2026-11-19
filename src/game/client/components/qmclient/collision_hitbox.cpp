@@ -2,6 +2,8 @@
 #include "collision_hitbox.h"
 
 #include "collision_hitbox_projectile_logic.h"
+#include "collision_position.h"
+#include "item_render_math.h"
 
 #include <base/log.h>
 #include <base/math.h>
@@ -22,97 +24,28 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <vector>
 
-// 地图层类型
-enum class HitboxLayer
-{
-	GAME,
-	FRONT
-};
-
-class CHitboxLayer
-{
-private:
-	CMapItemLayerTilemap *GetLayer(CGameClient *pThis) const
-	{
-		if(m_Type == HitboxLayer::GAME)
-			return pThis->Layers()->GameLayer();
-		if(m_Type == HitboxLayer::FRONT)
-			return pThis->Layers()->FrontLayer();
-		return nullptr;
-	}
-	int GetLayerData(CGameClient *pThis) const
-	{
-		if(m_Type == HitboxLayer::GAME)
-			return pThis->Layers()->GameLayer()->m_Data;
-		if(m_Type == HitboxLayer::FRONT)
-			return pThis->Layers()->FrontLayer()->m_Front;
-		return -1;
-	}
-
-public:
-	const HitboxLayer m_Type;
-
-	void GetMeta(CGameClient *pThis, ivec2 &Size) const
-	{
-		Size = {0, 0};
-		const auto *pLayer = GetLayer(pThis);
-		if(!pLayer)
-			return;
-		const int DataSize = pThis->Layers()->Map()->GetDataSize(GetLayerData(pThis));
-		if(DataSize <= 0 || (size_t)DataSize < (size_t)pLayer->m_Width * (size_t)pLayer->m_Height * sizeof(CTile))
-			return;
-		Size = {pLayer->m_Width, pLayer->m_Height};
-	}
-
-	void SetData(CGameClient *pThis, int *pData, const ivec2 &Size) const
-	{
-		const auto *pLayer = GetLayer(pThis);
-		if(!pLayer)
-			return;
-		const auto *pTiles = (CTile *)pThis->Layers()->Map()->GetData(GetLayerData(pThis));
-		if(!pTiles)
-			return;
-
-		for(int y = 0; y < pLayer->m_Height; ++y)
-		{
-			for(int x = 0; x < pLayer->m_Width; ++x)
-			{
-				const int Index = y * pLayer->m_Width + x;
-				const int IndexOut = y * Size.x + x;
-				const auto Tile = pTiles[Index].m_Index;
-
-				// 按优先级设置碰撞类型
-				if(Tile == TILE_SOLID || Tile == TILE_NOHOOK)
-				{
-					if(pData[IndexOut] < HITBOX_SOLID)
-						pData[IndexOut] = HITBOX_SOLID;
-				}
-				else if(Tile == TILE_FREEZE || Tile == TILE_LFREEZE)
-				{
-					if(pData[IndexOut] < HITBOX_FREEZE)
-						pData[IndexOut] = HITBOX_FREEZE;
-				}
-				else if(Tile == TILE_DFREEZE)
-				{
-					if(pData[IndexOut] < HITBOX_DFREEZE)
-						pData[IndexOut] = HITBOX_DFREEZE;
-				}
-				else if(Tile == TILE_DEATH)
-				{
-					if(pData[IndexOut] < HITBOX_DEATH)
-						pData[IndexOut] = HITBOX_DEATH;
-				}
-			}
-		}
-	}
-};
-
-// 地图层顺序
-static constexpr CHitboxLayer HITBOX_LAYERS[] = {{HitboxLayer::GAME}, {HitboxLayer::FRONT}};
 static constexpr size_t MAX_HITBOX_MAP_TILES = 4096 * 4096;
+
+static ECollisionHitboxType HitboxTileType(int Tile)
+{
+	switch(Tile)
+	{
+	case TILE_SOLID:
+	case TILE_NOHOOK:
+		return HITBOX_SOLID;
+	case TILE_FREEZE:
+	case TILE_LFREEZE:
+		return HITBOX_FREEZE;
+	case TILE_DFREEZE:
+		return HITBOX_DFREEZE;
+	case TILE_DEATH:
+		return HITBOX_DEATH;
+	default:
+		return HITBOX_NONE;
+	}
+}
 
 float CCollisionHitbox::HitboxAlpha() const
 {
@@ -265,6 +198,8 @@ void CCollisionHitbox::DrawCapsuleOutline(vec2 From, vec2 To, float Radius, Colo
 
 bool CCollisionHitbox::GetProjectileRenderPosition(const CProjectileData &Projectile, vec2 &Position, vec2 &PreviousPosition) const
 {
+	if(!Projectile.HasValidStart())
+		return false;
 	const int Weapon = std::clamp(Projectile.m_Type, 0, NUM_WEAPONS - 1);
 	float Curvature = 0.0f;
 	float Speed = 0.0f;
@@ -303,9 +238,9 @@ bool CCollisionHitbox::GetProjectileRenderPosition(const CProjectileData &Projec
 
 	float CurrentTime;
 	if(GameClient()->Predict() && GameClient()->AntiPingGrenade() && LocalPlayerInGame && !IsOtherTeam)
-		CurrentTime = ((float)(PredictionTick - 1 - Projectile.m_StartTick) + Client()->PredIntraGameTick(g_Config.m_ClDummy)) / (float)Client()->GameTickSpeed();
+		CurrentTime = (QmItemTickDelta(PredictionTick, Projectile.m_StartTick, -1) + Client()->PredIntraGameTick(g_Config.m_ClDummy)) / (float)Client()->GameTickSpeed();
 	else
-		CurrentTime = (Client()->PrevGameTick(g_Config.m_ClDummy) - Projectile.m_StartTick) / (float)Client()->GameTickSpeed() + s_LastGameTickTime;
+		CurrentTime = QmItemTickDelta(Client()->PrevGameTick(g_Config.m_ClDummy), Projectile.m_StartTick) / (float)Client()->GameTickSpeed() + s_LastGameTickTime;
 
 	if(CurrentTime < 0.0f)
 	{
@@ -315,54 +250,49 @@ bool CCollisionHitbox::GetProjectileRenderPosition(const CProjectileData &Projec
 			return false;
 	}
 
-	Position = CalcPos(Projectile.m_StartPos, Projectile.m_StartVel, Curvature, Speed, CurrentTime);
-	PreviousPosition = CalcPos(Projectile.m_StartPos, Projectile.m_StartVel, Curvature, Speed, CurrentTime - 0.001f);
-	return true;
+	return Projectile.TryCalcPositions(Curvature, Speed, CurrentTime, CurrentTime - 0.001f, Position, PreviousPosition);
 }
 
 void CCollisionHitbox::OnMapLoad()
 {
-	m_vMapData.clear();
-
-	// 查找有效的图层并计算尺寸
-	std::vector<const CHitboxLayer *> vValidLayers;
 	m_MapDataSize = {0, 0};
-	for(const auto &Layer : HITBOX_LAYERS)
+	try
 	{
-		ivec2 LayerSize;
-		Layer.GetMeta(GameClient(), LayerSize);
-		if(LayerSize.x <= 0 || LayerSize.y <= 0)
-			continue;
-		m_MapDataSize.x = std::max(m_MapDataSize.x, LayerSize.x);
-		m_MapDataSize.y = std::max(m_MapDataSize.y, LayerSize.y);
-		vValidLayers.push_back(&Layer);
+		const CCollision *pCollision = Collision();
+		const CTile *pGameTiles = pCollision->GameLayer();
+		const ivec2 MapSize(pCollision->GetWidth(), pCollision->GetHeight());
+
+		size_t NumTiles = 0;
+		if(pGameTiles && MapSize.x > 0 && MapSize.y > 0)
+		{
+			const size_t MapWidth = static_cast<size_t>(MapSize.x);
+			const size_t MapHeight = static_cast<size_t>(MapSize.y);
+			if(MapWidth <= MAX_HITBOX_MAP_TILES / MapHeight)
+				NumTiles = MapWidth * MapHeight;
+			else
+				log_warn("collision_hitbox", "Map too large for hitbox cache: %dx%d", MapSize.x, MapSize.y);
+		}
+
+		// 容量随当前地图调整，换大图时也先释放旧缓冲，避免同时持有两份缓存。
+		if(NumTiles != m_vMapData.size())
+			std::vector<int>().swap(m_vMapData);
+		if(NumTiles == 0)
+			return;
+		m_vMapData.resize(NumTiles);
+
+		// 碰撞系统按游戏层宽高索引两层，前景层加载失败时只使用游戏层。
+		const CTile *pFrontTiles = pCollision->FrontLayer();
+		for(size_t Index = 0; Index < NumTiles; ++Index)
+		{
+			const auto GameType = HitboxTileType(pGameTiles[Index].m_Index);
+			m_vMapData[Index] = pFrontTiles ? std::max(GameType, HitboxTileType(pFrontTiles[Index].m_Index)) : GameType;
+		}
+		m_MapDataSize = MapSize;
 	}
-
-	if(m_MapDataSize.x <= 0 || m_MapDataSize.y <= 0)
-		return;
-
-	const size_t MapWidth = (size_t)m_MapDataSize.x;
-	const size_t MapHeight = (size_t)m_MapDataSize.y;
-	if(MapWidth > std::numeric_limits<size_t>::max() / MapHeight)
+	catch(...)
 	{
-		log_warn("collision_hitbox", "Map size overflow for hitbox cache: %dx%d", m_MapDataSize.x, m_MapDataSize.y);
-		m_MapDataSize = {0, 0};
-		return;
-	}
-	const size_t NumTiles = MapWidth * MapHeight;
-	if(NumTiles > MAX_HITBOX_MAP_TILES)
-	{
-		log_warn("collision_hitbox", "Map too large for hitbox cache: %dx%d", m_MapDataSize.x, m_MapDataSize.y);
-		m_MapDataSize = {0, 0};
-		return;
-	}
-
-	m_vMapData.assign(NumTiles, HITBOX_NONE);
-
-	// 填充碰撞数据
-	for(const auto *pLayer : vValidLayers)
-	{
-		pLayer->SetData(GameClient(), m_vMapData.data(), m_MapDataSize);
+		// 可选缓存准备失败时释放存储，连接继续初始化。
+		std::vector<int>().swap(m_vMapData);
 	}
 }
 
@@ -379,22 +309,13 @@ void CCollisionHitbox::RenderTileHitboxes()
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
-	int StartY = (int)(ScreenY0 / Scale) - 1;
-	int StartX = (int)(ScreenX0 / Scale) - 1;
-	int EndY = (int)(ScreenY1 / Scale) + 1;
-	int EndX = (int)(ScreenX1 / Scale) + 1;
-
-	// 限制渲染范围避免性能问题
-	int MaxScale = 12;
-	if(EndX - StartX > Graphics()->ScreenWidth() / MaxScale || EndY - StartY > Graphics()->ScreenHeight() / MaxScale)
-	{
-		int EdgeX = (EndX - StartX) - (Graphics()->ScreenWidth() / MaxScale);
-		StartX += EdgeX / 2;
-		EndX -= EdgeX / 2;
-		int EdgeY = (EndY - StartY) - (Graphics()->ScreenHeight() / MaxScale);
-		StartY += EdgeY / 2;
-		EndY -= EdgeY / 2;
-	}
+	const auto Range = QmCalcHitboxTileRange(vec2(ScreenX0, ScreenY0), vec2(ScreenX1, ScreenY1), ivec2(Graphics()->ScreenWidth(), Graphics()->ScreenHeight()), m_MapDataSize);
+	if(!Range)
+		return;
+	const int StartY = Range->m_Begin.y;
+	const int StartX = Range->m_Begin.x;
+	const int EndY = Range->m_End.y;
+	const int EndX = Range->m_End.x;
 
 	auto GetTile = [&](int x, int y) -> int {
 		if(x < 0 || x >= m_MapDataSize.x || y < 0 || y >= m_MapDataSize.y)
@@ -519,6 +440,8 @@ void CCollisionHitbox::RenderTeeHitboxes()
 			continue;
 
 		vec2 Position = Player.m_RenderPos;
+		if(!QmCollision::CanRoundPosition(Position))
+			continue;
 		if(ShowTeeCollision && HitboxModeEnabled())
 			DrawCircleOutline(Position, CCharacterCore::PhysicalSize(), TeeColor(ClientId, PlayerAlpha), 36);
 
@@ -584,6 +507,8 @@ void CCollisionHitbox::RenderPickupHitboxes()
 			continue;
 
 		const CPickupData Data = ExtractPickupInfo(Item.m_Type, Item.m_pData, Ent.m_pDataEx);
+		if(!Data.HasValidPosition())
+			continue;
 		if(Data.m_Type != POWERUP_ARMOR)
 			continue;
 
@@ -731,6 +656,8 @@ void CCollisionHitbox::RenderLaserHitboxes()
 			continue;
 
 		const CLaserData Data = ExtractLaserInfo(Item.m_Type, Item.m_pData, &GameClient()->m_GameWorld, Ent.m_pDataEx);
+		if(!Data.HasValidPositions())
+			continue;
 		if(Data.m_ExtraInfo && Data.m_Owner >= 0 && !ShouldRenderClient(Data.m_Owner))
 			continue;
 
@@ -841,12 +768,21 @@ void CCollisionHitbox::RenderWeaponHitboxes()
 
 void CCollisionHitbox::OnRender()
 {
-	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	const auto State = Client()->State();
+	if(State != IClient::STATE_ONLINE && State != IClient::STATE_DEMOPLAYBACK)
+	{
+		// 进服资源准备期间仍处于加载状态，保留已生成的缓存。
+		if(State == IClient::STATE_OFFLINE && !m_vMapData.empty())
+		{
+			m_MapDataSize = {0, 0};
+			std::vector<int>().swap(m_vMapData);
+		}
 		return;
+	}
 
 #if defined(CONF_VIDEORECORDER)
 	// 回放/导出跟随回放显示配置，普通录制跟随 cl_video_showhud，避免碰撞箱被一起录进视频。
-	if(IVideo::Current() && !qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), true).m_Hud)
+	if(IVideo::Current() && !qm_demo_display::Resolve(g_Config, State == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), true).m_Hud)
 		return;
 #endif
 

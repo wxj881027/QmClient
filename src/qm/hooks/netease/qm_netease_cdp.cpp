@@ -2,10 +2,11 @@
 
 #include <engine/external/json-parser/json.h>
 
-#include <algorithm>
 #include <charconv>
 #include <cwctype>
 #include <limits>
+#include <memory>
+#include <utility>
 
 namespace QmNeteaseCdp
 {
@@ -43,6 +44,8 @@ namespace QmNeteaseCdp
 			return true;
 		}
 
+		constexpr std::wstring_view DEBUGGING_PORT_OPTION = L"--remote-debugging-port";
+
 		bool EqualNoCase(std::wstring_view A, std::wstring_view B)
 		{
 			if(A.size() != B.size())
@@ -53,55 +56,45 @@ namespace QmNeteaseCdp
 			return true;
 		}
 
-		bool IsOptionBoundary(wchar_t Character)
+		bool ReadCommandLineArgument(std::wstring_view &CommandLine, std::wstring &Argument)
 		{
-			return std::iswspace(Character) != 0 || Character == L'"' || Character == L'\'';
-		}
+			size_t Position = 0;
+			while(Position < CommandLine.size() && std::iswspace(CommandLine[Position]) != 0)
+				++Position;
+			if(Position == CommandLine.size())
+				return false;
 
-		size_t FindOption(std::wstring_view CommandLine, std::wstring_view Option, size_t SearchFrom)
-		{
-			for(size_t Position = CommandLine.find(Option, SearchFrom); Position != std::wstring_view::npos; Position = CommandLine.find(Option, Position + 1))
+			Argument.clear();
+			bool Quoted = false;
+			while(Position < CommandLine.size())
 			{
-				if((Position == 0 || IsOptionBoundary(CommandLine[Position - 1])) &&
-					(Position + Option.size() == CommandLine.size() || CommandLine[Position + Option.size()] == L'=' || IsOptionBoundary(CommandLine[Position + Option.size()])))
-					return Position;
-			}
-			return std::wstring_view::npos;
-		}
+				const size_t Start = Position;
+				while(Position < CommandLine.size() && CommandLine[Position] == L'\\')
+					++Position;
+				const size_t Backslashes = Position - Start;
+				if(Position == CommandLine.size() || CommandLine[Position] != L'"')
+				{
+					Argument.append(Backslashes, L'\\');
+					if(Position == CommandLine.size() || (!Quoted && std::iswspace(CommandLine[Position]) != 0))
+						break;
+					Argument.push_back(CommandLine[Position++]);
+					continue;
+				}
 
-		bool ReadOptionValue(std::wstring_view CommandLine, std::wstring_view Option, size_t SearchFrom, std::wstring_view *pValue, size_t *pNext)
-		{
-			if(pValue == nullptr)
-				return false;
-			const size_t Position = FindOption(CommandLine, Option, SearchFrom);
-			if(Position == std::wstring_view::npos)
-				return false;
-			size_t ValueStart = Position + Option.size();
-			if(ValueStart < CommandLine.size() && CommandLine[ValueStart] == L'=')
-				++ValueStart;
-			else
-			{
-				while(ValueStart < CommandLine.size() && std::iswspace(CommandLine[ValueStart]) != 0)
-					++ValueStart;
+				// 引号前成对的反斜杠保留一半，剩余的一个反斜杠转义引号。
+				Argument.append(Backslashes / 2, L'\\');
+				++Position;
+				if(Backslashes % 2 != 0)
+					Argument.push_back(L'"');
+				else if(Quoted && Position < CommandLine.size() && CommandLine[Position] == L'"')
+				{
+					Argument.push_back(L'"');
+					++Position;
+				}
+				else
+					Quoted = !Quoted;
 			}
-			if(ValueStart >= CommandLine.size())
-				return false;
-			const bool Quoted = CommandLine[ValueStart] == L'"';
-			if(Quoted)
-				++ValueStart;
-			else if(CommandLine.substr(ValueStart, 2) == L"--")
-				return false;
-			const size_t ValueEnd = Quoted ? CommandLine.find(L'"', ValueStart) : [&] {
-				size_t End = ValueStart;
-				while(End < CommandLine.size() && !std::iswspace(CommandLine[End]) && CommandLine[End] != L'"')
-					++End;
-				return End;
-			}();
-			if(ValueEnd == std::wstring_view::npos || ValueEnd == ValueStart)
-				return false;
-			*pValue = CommandLine.substr(ValueStart, ValueEnd - ValueStart);
-			if(pNext != nullptr)
-				*pNext = ValueEnd + (Quoted && ValueEnd < CommandLine.size() ? 1 : 0);
+			CommandLine.remove_prefix(Position);
 			return true;
 		}
 
@@ -124,9 +117,9 @@ namespace QmNeteaseCdp
 			return true;
 		}
 
-		bool HasAnyOption(std::wstring_view CommandLine, std::wstring_view Option)
+		std::wstring_view OptionName(std::wstring_view Argument)
 		{
-			return FindOption(CommandLine, Option, 0) != std::wstring_view::npos;
+			return Argument.substr(0, Argument.find(L'='));
 		}
 	}
 
@@ -141,7 +134,7 @@ namespace QmNeteaseCdp
 		if(Url.size() > 4096 || Url.substr(0, 5) != "ws://")
 			return false;
 		for(const unsigned char Character : Url)
-			if(Character < 0x20 || Character == 0x7F)
+			if(Character <= 0x20 || Character == 0x7F)
 				return false;
 		Url.remove_prefix(5);
 		constexpr std::string_view Host = "127.0.0.1";
@@ -174,21 +167,22 @@ namespace QmNeteaseCdp
 				*pError = "target list too large";
 			return false;
 		}
-		json_value *pRoot = json_parse(Json.data(), Json.size());
-		if(pRoot == nullptr)
+		// 解析器会把原始 NUL 当作输入结束，先检查整个响应。
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(
+			Json.empty() || Json.find('\0') != std::string_view::npos ? nullptr : json_parse(Json.data(), Json.size()), json_value_free);
+		if(!pRoot)
 		{
 			if(pError)
 				*pError = "invalid JSON";
 			return false;
 		}
-		const bool IsArray = pRoot->type == json_array;
-		if(!IsArray)
+		if(pRoot->type != json_array)
 		{
-			json_value_free(pRoot);
 			if(pError)
 				*pError = "target list is not an array";
 			return false;
 		}
+		std::vector<SCdpTarget> vTargets;
 		for(unsigned int Index = 0; Index < pRoot->u.array.length; ++Index)
 		{
 			const json_value *pEntry = pRoot->u.array.values[Index];
@@ -208,9 +202,9 @@ namespace QmNeteaseCdp
 			const json_value *pProcessId = ObjectField(pEntry, "processId");
 			if(pProcessId != nullptr && pProcessId->type == json_integer && pProcessId->u.integer > 0 && pProcessId->u.integer <= std::numeric_limits<uint32_t>::max())
 				Target.m_ProcessId = (uint32_t)pProcessId->u.integer;
-			pTargets->push_back(std::move(Target));
+			vTargets.push_back(std::move(Target));
 		}
-		json_value_free(pRoot);
+		*pTargets = std::move(vTargets);
 		if(pTargets->empty() && pError)
 			*pError = "no trusted Orpheus target";
 		return !pTargets->empty();
@@ -232,65 +226,52 @@ namespace QmNeteaseCdp
 	{
 		if(pPort == nullptr)
 			return false;
-		const std::wstring LowerCommandLine = [&] {
-			std::wstring Value(CommandLine);
-			std::transform(Value.begin(), Value.end(), Value.begin(), [](wchar_t C) { return (wchar_t)std::towlower(C); });
-			return Value;
-		}();
-		// Chromium 默认只绑定 loopback；一旦命令行显式指定其它地址，
-		// 不把该调试端口当作可信来源，也不尝试连接它。
-		for(size_t SearchFrom = 0;;)
+		uint16_t Port = 0;
+		std::wstring Argument;
+		std::wstring ValueArgument;
+		while(ReadCommandLineArgument(CommandLine, Argument))
 		{
-			const size_t Position = FindOption(LowerCommandLine, L"--remote-debugging-address", SearchFrom);
-			if(Position == std::wstring_view::npos)
-				break;
-			std::wstring_view Address;
-			size_t Next = 0;
-			if(ReadOptionValue(LowerCommandLine, L"--remote-debugging-address", Position, &Address, &Next))
-			{
-				if(!EqualNoCase(Address, L"127.0.0.1") && !EqualNoCase(Address, L"localhost"))
-					return false;
-				SearchFrom = std::max(Next, Position + 1);
-			}
-			else
-				return false;
-		}
+			const std::wstring_view Name = OptionName(Argument);
+			const bool IsAddress = EqualNoCase(Name, L"--remote-debugging-address");
+			if(!IsAddress && (Port != 0 || !EqualNoCase(Name, DEBUGGING_PORT_OPTION)))
+				continue;
 
-		for(size_t SearchFrom = 0;;)
-		{
-			const size_t Position = FindOption(LowerCommandLine, L"--remote-debugging-port", SearchFrom);
-			if(Position == std::wstring_view::npos)
-				break;
 			std::wstring_view Value;
-			size_t Next = 0;
-			if(ReadOptionValue(LowerCommandLine, L"--remote-debugging-port", Position, &Value, &Next))
+			if(Name.size() < Argument.size())
+				Value = std::wstring_view(Argument).substr(Name.size() + 1);
+			else
 			{
-				uint16_t Port = 0;
-				if(ParsePortValue(Value, &Port))
+				std::wstring_view Remaining = CommandLine;
+				if(ReadCommandLineArgument(Remaining, ValueArgument) && !std::wstring_view(ValueArgument).starts_with(L"--"))
 				{
-					*pPort = Port;
-					return true;
+					CommandLine = Remaining;
+					Value = ValueArgument;
 				}
-				SearchFrom = std::max(Next, Position + 1);
+			}
+
+			// 任一显式绑定地址无效时，都不能采用命令行端口。
+			if(IsAddress)
+			{
+				if(!EqualNoCase(Value, L"127.0.0.1") && !EqualNoCase(Value, L"localhost"))
+					return false;
 			}
 			else
-				SearchFrom = Position + 1;
+				ParsePortValue(Value, &Port);
 		}
-		return false;
+		if(Port == 0)
+			return false;
+		*pPort = Port;
+		return true;
 	}
 
 	std::wstring AddLoopbackDebuggingPort(std::wstring_view CommandLine, uint16_t Port)
 	{
 		if(Port == 0)
 			return std::wstring(CommandLine);
-		uint16_t ExistingPort = 0;
-		const std::wstring LowerCommandLine = [&] {
-			std::wstring Value(CommandLine);
-			std::transform(Value.begin(), Value.end(), Value.begin(), [](wchar_t C) { return (wchar_t)std::towlower(C); });
-			return Value;
-		}();
-		if(ParseDebuggingPort(CommandLine, &ExistingPort) || HasAnyOption(LowerCommandLine, L"--remote-debugging-port"))
-			return std::wstring(CommandLine);
+		std::wstring Argument;
+		for(std::wstring_view Remaining = CommandLine; ReadCommandLineArgument(Remaining, Argument);)
+			if(EqualNoCase(OptionName(Argument), DEBUGGING_PORT_OPTION))
+				return std::wstring(CommandLine);
 		std::wstring Result(CommandLine);
 		if(!Result.empty())
 			Result.push_back(L' ');

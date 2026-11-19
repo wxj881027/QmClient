@@ -14,10 +14,16 @@
 #include <base/system.h>
 
 #include <engine/client/backend/backend_base.h>
+#include <engine/client/backend/opengl/buffer_data.h>
+#include <engine/client/backend/opengl/render_target_create.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_defines.h>
+#include <engine/client/graphics_readback_completion.h>
+#include <engine/client/graphics_upload_data.h>
 #include <engine/graphics.h>
 
+#include <cstdlib>
+#include <cstring>
 #include <limits>
 
 class CGLSLTWProgram;
@@ -55,23 +61,12 @@ protected:
 		float m_ResizeHeight;
 	};
 	std::vector<CTexture> m_vTextures;
-	std::atomic<uint64_t> *m_pTextureMemoryUsage;
+	std::atomic<uint64_t> *m_pTextureMemoryUsage = nullptr;
 	// OpenGL viewport 原点在 drawable 左下角，记录转换后的实际原点。
 	int m_ViewportX = 0;
 	int m_ViewportY = 0;
 
-	struct SOpenGLRenderTarget
-	{
-		// 多采样目标把绘制写入 MSAA renderbuffer，End 时 blit 到 m_Texture；
-		// 因此采样、回读和模糊都只接触单采样 m_Texture。
-		TWGLuint m_Framebuffer = 0;
-		TWGLuint m_Texture = 0;
-		TWGLuint m_MultisampleFramebuffer = 0;
-		TWGLuint m_MultisampleRenderbuffer = 0;
-		int m_Width = 0;
-		int m_Height = 0;
-		int m_SampleCount = 1;
-	};
+	using SOpenGLRenderTarget = opengl_render_target::STarget;
 	std::vector<SOpenGLRenderTarget> m_vRenderTargets;
 	TWGLint m_aRenderTargetPreviousViewport[4] = {0, 0, 0, 0};
 	TWGLint m_RenderTargetPreviousFramebuffer = 0;
@@ -85,17 +80,16 @@ protected:
 	TWGLuint m_aReadbackPbos[2] = {0, 0};
 	size_t m_aReadbackPboSizes[2] = {0, 0};
 	int m_ReadbackPboFlip = 0;
-	bool m_ReadbackPboPending = false;
 	size_t m_ReadbackPboPendingSize = 0;
-	CImageInfo *m_pPendingReadbackImage = nullptr;
-	CSemaphore *m_pPendingReadbackCompletion = nullptr;
+	CGraphicsReadbackCompletion m_PendingReadback;
 	void FinishPendingReadbackPbo();
+	void AbortReadbacks() noexcept override;
 
 	uint32_t m_CanvasWidth = 0;
 	uint32_t m_CanvasHeight = 0;
 	bool m_HasDisplayCutout = false;
 
-	TWGLint m_MaxTexSize;
+	TWGLint m_MaxTexSize = 0;
 
 	bool m_Has2DArrayTextures;
 	bool m_Has2DArrayTexturesAsExtension;
@@ -116,6 +110,7 @@ protected:
 	bool IsTexturedState(const CCommandBuffer::SState &State);
 
 	bool InitOpenGL(const SCommand_Init *pCommand);
+	static bool FailOpenGLInit(const SCommand_Init *pCommand, const char *pMessage);
 
 	void SetState(const CCommandBuffer::SState &State, bool Use2DArrayTexture = false);
 	void SetClipRect(const CCommandBuffer::SState &State);
@@ -147,8 +142,8 @@ protected:
 		return true;
 	}
 
-	void TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, uint8_t *pTexData);
-	void TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, uint8_t *pTexData);
+	void TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, CGraphicsUploadData<uint8_t> pTexData);
+	void TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, CGraphicsUploadData<uint8_t> pTexData);
 
 	virtual bool Cmd_Init(const SCommand_Init *pCommand);
 	virtual void Cmd_Shutdown(const SCommand_Shutdown *pCommand) {}
@@ -199,6 +194,7 @@ protected:
 
 public:
 	CCommandProcessorFragment_OpenGL();
+	~CCommandProcessorFragment_OpenGL() override { AbortReadbacks(); }
 
 	ERunCommandReturnTypes RunCommand(const CCommandBuffer::SCommand *pBaseCommand) override;
 };
@@ -217,15 +213,8 @@ class CCommandProcessorFragment_OpenGL2 : public CCommandProcessorFragment_OpenG
 
 	struct SBufferObject
 	{
-		SBufferObject(TWGLuint BufferObjectId) :
-			m_BufferObjectId(BufferObjectId)
-		{
-			m_pData = NULL;
-			m_DataSize = 0;
-		}
-		TWGLuint m_BufferObjectId;
-		uint8_t *m_pData;
-		size_t m_DataSize;
+		TWGLuint m_BufferObjectId = 0;
+		COpenGLBufferData m_Data;
 	};
 
 	std::vector<SBufferObject> m_vBufferObjectIndices;
@@ -233,13 +222,56 @@ class CCommandProcessorFragment_OpenGL2 : public CCommandProcessorFragment_OpenG
 #ifndef BACKEND_GL_MODERN_API
 	bool DoAnalyzeStep(size_t CheckCount, size_t VerticesCount, uint8_t aFakeTexture[], size_t SingleImageSize);
 	bool IsTileMapAnalysisSucceeded();
+	void BufferObjectError(const char *pReason);
+	void DeleteBufferObject(int Index);
 #endif
 
 	void UseProgram(CGLSLTWProgram *pProgram);
 
 protected:
+	template<typename TProgram, typename TShader>
+	static bool AttachProgramStages(TProgram &Program, TShader &Vertex, TShader &Fragment)
+	{
+		if(!Vertex.IsLoaded() || !Fragment.IsLoaded() || Vertex.GetShaderId() == 0 || Fragment.GetShaderId() == 0)
+			return false;
+		Program.CreateProgram();
+		return Program.GetProgramId() != 0 && Program.AddShader(&Vertex) && Program.AddShader(&Fragment);
+	}
+
+#ifndef BACKEND_GL_MODERN_API
+	static constexpr size_t TILE_PROBE_LAYER_SIDE = 64;
+	static constexpr size_t TILE_PROBE_LAYER_COUNT = 256;
+	static constexpr size_t TILE_PROBE_LAYER_BYTES = TILE_PROBE_LAYER_SIDE * TILE_PROBE_LAYER_SIDE * 4;
+	static constexpr size_t TILE_PROBE_COLOR_STEPS = 5;
+	static constexpr size_t TILE_PROBE_CHECK_COUNT = TILE_PROBE_COLOR_STEPS * TILE_PROBE_COLOR_STEPS * TILE_PROBE_COLOR_STEPS;
+
+	static CGraphicsUploadData<uint8_t> CreateTileProbePixels(void *(*pfnAllocate)(size_t) = std::malloc)
+	{
+		CGraphicsUploadData<uint8_t> pPixels(static_cast<uint8_t *>(pfnAllocate(TILE_PROBE_LAYER_COUNT * TILE_PROBE_LAYER_BYTES)));
+		if(pPixels == nullptr)
+			return nullptr;
+
+		for(size_t Layer = 0; Layer < TILE_PROBE_CHECK_COUNT; ++Layer)
+		{
+			const uint8_t aColor[] = {
+				static_cast<uint8_t>(25 + 50 * (Layer / (TILE_PROBE_COLOR_STEPS * TILE_PROBE_COLOR_STEPS))),
+				static_cast<uint8_t>(25 + 50 * (Layer / TILE_PROBE_COLOR_STEPS % TILE_PROBE_COLOR_STEPS)),
+				static_cast<uint8_t>(25 + 50 * (Layer % TILE_PROBE_COLOR_STEPS)),
+				255};
+			uint8_t *pLayer = pPixels.get() + Layer * TILE_PROBE_LAYER_BYTES;
+			for(size_t Offset = 0; Offset < TILE_PROBE_LAYER_BYTES; Offset += sizeof(aColor))
+				std::memcpy(pLayer + Offset, aColor, sizeof(aColor));
+		}
+
+		// 驱动会读取全部 256 层，即使探测只采样前 125 层。
+		std::memset(pPixels.get() + TILE_PROBE_CHECK_COUNT * TILE_PROBE_LAYER_BYTES, 0,
+			(TILE_PROBE_LAYER_COUNT - TILE_PROBE_CHECK_COUNT) * TILE_PROBE_LAYER_BYTES);
+		return pPixels;
+	}
+#endif
+
 	void SetState(const CCommandBuffer::SState &State, CGLSLTWProgram *pProgram, bool Use2DArrayTextures = false);
-	bool InitBorderTileProgram(CGLSLTileProgram *pProgram, CGLSLCompiler &Compiler, IStorage *pStorage, bool Textured);
+	bool InitTileProgram(CGLSLTileProgram *pProgram, CGLSLCompiler &Compiler, IStorage *pStorage, bool Textured, bool Border);
 
 #ifndef BACKEND_GL_MODERN_API
 	bool Cmd_Init(const SCommand_Init *pCommand) override;
@@ -262,12 +294,12 @@ protected:
 	void Cmd_RenderBorderTile(const CCommandBuffer::SCommand_RenderBorderTile *pCommand) override;
 #endif
 
-	CGLSLTileProgram *m_pTileProgram;
-	CGLSLTileProgram *m_pTileProgramTextured;
-	CGLSLTileProgram *m_pBorderTileProgram;
-	CGLSLTileProgram *m_pBorderTileProgramTextured;
-	CGLSLPrimitiveProgram *m_pPrimitive3DProgram;
-	CGLSLPrimitiveProgram *m_pPrimitive3DProgramTextured;
+	CGLSLTileProgram *m_pTileProgram = nullptr;
+	CGLSLTileProgram *m_pTileProgramTextured = nullptr;
+	CGLSLTileProgram *m_pBorderTileProgram = nullptr;
+	CGLSLTileProgram *m_pBorderTileProgramTextured = nullptr;
+	CGLSLPrimitiveProgram *m_pPrimitive3DProgram = nullptr;
+	CGLSLPrimitiveProgram *m_pPrimitive3DProgramTextured = nullptr;
 };
 
 class CCommandProcessorFragment_OpenGL3 : public CCommandProcessorFragment_OpenGL2

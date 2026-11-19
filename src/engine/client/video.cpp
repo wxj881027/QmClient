@@ -5,6 +5,7 @@
 #include "video_audio.h"
 #include "video_encoder.h"
 #include "video_export.h"
+#include "video_frame_convert.h"
 
 #include <base/log.h>
 
@@ -15,7 +16,7 @@
 
 extern "C" {
 #include <libavutil/avutil.h>
-#include <libavutil/opt.h>
+#include <libavutil/mathematics.h>
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 };
@@ -35,6 +36,15 @@ using namespace std::chrono_literals;
 static bool QmVideoTestAudioFailureRequested()
 {
 	static const bool s_Requested = std::getenv("QMCLIENT_TEST_VIDEO_AUDIO_FAIL") != nullptr;
+	return s_Requested;
+}
+#endif
+
+#if defined(CONF_QMCLIENT_TEST_STORAGE)
+// 只在隔离测试构建里拒绝真实工作线程的可写申请，验证错误扩散和退出。
+static bool QmVideoTestFrameFailureRequested()
+{
+	static const bool s_Requested = std::getenv("QMCLIENT_TEST_VIDEO_CONVERSION_FAIL") != nullptr;
 	return s_Requested;
 }
 #endif
@@ -96,7 +106,8 @@ CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Wid
 	m_pGraphics(pGraphics),
 	m_pStorage(pStorage),
 	m_pSound(pSound),
-	m_FrameCapture(Width, Height)
+	m_FrameCapture(Width, Height),
+	m_HasAudio(pSound->IsSoundEnabled() && g_Config.m_ClVideoSndEnable)
 {
 	if(pDisplaySnapshot)
 		m_DisplaySnapshot = *pDisplaySnapshot;
@@ -130,8 +141,6 @@ CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Wid
 	m_Stopped = false;
 	m_ProcessingAudioFrame = 0;
 
-	m_HasAudio = m_pSound->IsSoundEnabled() && g_Config.m_ClVideoSndEnable;
-
 	dbg_assert(ms_pCurrentVideo == nullptr, "ms_pCurrentVideo is NOT set to nullptr while creating a new Video.");
 
 	ms_pCurrentVideo = this;
@@ -152,25 +161,17 @@ bool CVideo::Start()
 	m_AudioStream = {};
 	m_VideoStream = {};
 
-	char aWholePath[IO_MAX_PATH_LENGTH];
-	char aTemporaryPath[IO_MAX_PATH_LENGTH];
-	const std::string TemporaryName = std::string(m_aName) + ".recording";
-	// 仍经 Storage 校验路径；前置可写检查只打开临时文件，绝不截断旧成片。
-	IOHANDLE File = m_pStorage->OpenFile(TemporaryName.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE, aTemporaryPath, sizeof(aTemporaryPath));
-	if(!File)
+	m_pOutput = CVideoExportOutput::PrepareRecording(*m_pStorage, m_aName);
+	if(!m_pOutput)
 	{
 		log_error("videorecorder", "Could not open temporary file for '%s'", m_aName);
 		return false;
 	}
-	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, m_aName, aWholePath, sizeof(aWholePath));
-	m_pOutput = std::make_unique<CVideoExportOutput>(aWholePath, ".recording");
-	m_pOutput->Opened();
-	if(io_close(File) != 0)
-		return false;
+	const char *pWholePath = m_pOutput->TargetPath();
 
 	// 容器格式按输出文件名后缀推断（M6）：.mp4/.mov/.mkv 由 qm_video_container 决定，
 	// format_name 传 nullptr 让 libavformat 自行匹配，避免容器与后缀不一致。
-	const int FormatAllocResult = avformat_alloc_output_context2(&m_pFormatContext, nullptr, nullptr, aWholePath);
+	const int FormatAllocResult = avformat_alloc_output_context2(&m_pFormatContext, nullptr, nullptr, pWholePath);
 	if(FormatAllocResult < 0 || !m_pFormatContext)
 	{
 		char aError[AV_ERROR_MAX_STRING_SIZE];
@@ -207,7 +208,8 @@ bool CVideo::Start()
 	{
 		m_vFreeSlots[i] = QueueFrames - 1 - i; // 栈：先归还后复用，降低读写冲突
 	}
-	m_vPendingSlots.clear();
+	if(!m_PendingSlots.TryInit(QueueFrames))
+		return false;
 	m_NextVideoFrameToCapture = 0;
 	m_NextVideoFrameToSubmit = 0;
 	m_VideoStop = false;
@@ -271,7 +273,7 @@ bool CVideo::Start()
 		{
 			char aError[AV_ERROR_MAX_STRING_SIZE];
 			av_strerror(OpenResult, aError, sizeof(aError));
-			log_error("videorecorder", "Could not open file '%s': %s", aWholePath, aError);
+			log_error("videorecorder", "Could not open file '%s': %s", pWholePath, aError);
 			return false;
 		}
 	}
@@ -331,7 +333,32 @@ bool CVideo::Start()
 void CVideo::Pause(bool Pause)
 {
 	if(ms_pCurrentVideo)
-		m_Recording = !Pause;
+	{
+		SetVideoRecorderPaused(m_Recording, Pause, [this] {
+			if(m_OffscreenCapture)
+				FlushOffscreenVideoFrames();
+			else
+				m_pGraphics->WaitForIdle(); // 让窗口读回回调在切换状态前完成。
+		});
+	}
+}
+
+void CVideo::FlushOffscreenVideoFrames()
+{
+	CImageInfo aFinalFrames[2];
+	const int FinalCount = m_pGraphics->FlushVideoFrameReadbacks(aFinalFrames, 2);
+	if(FinalCount < 0)
+	{
+		log_error("videorecorder", "Could not complete offscreen video frame readbacks");
+		FailCapture();
+	}
+	for(CImageInfo &Frame : aFinalFrames)
+	{
+		if(Frame.m_pData != nullptr && IsRecording())
+			SubmitOffscreenFrame(std::move(Frame));
+		else
+			Frame.Free();
+	}
 }
 
 void CVideo::Stop()
@@ -349,17 +376,7 @@ void CVideo::Stop()
 	// 离屏导出的读回是异步的：有完成信号的后端稳态两笔在途（上上帧与本帧结算节奏），
 	// 必须在置停止标志并排空转换线程之前按序结算并补交，否则成片缺帧。
 	if(m_OffscreenCapture)
-	{
-		CImageInfo aFinalFrames[2];
-		const int FinalCount = m_pGraphics->FlushVideoFrameReadbacks(aFinalFrames, 2);
-		for(int i = 0; i < FinalCount; ++i)
-		{
-			if(aFinalFrames[i].m_pData != nullptr && IsRecording())
-				SubmitOffscreenFrame(std::move(aFinalFrames[i]));
-			else
-				aFinalFrames[i].Free();
-		}
-	}
+		FlushOffscreenVideoFrames();
 
 	// 视频转换管线：置停止标志并唤醒全部等待者，join 即代表队列已排空且
 	// 所有在途帧按序提交完成（线程退出前完成各自帧的提交）。
@@ -372,31 +389,19 @@ void CVideo::Stop()
 	m_VideoSubmitCond.notify_all();
 
 	for(auto &pThread : m_vpConvertThreads)
-		pThread->join();
+		if(pThread && pThread->joinable())
+			pThread->join();
 	m_vpConvertThreads.clear();
 
-	// 先给所有音频线程置停止标志再逐个 join：线程间存在「子线程等父线程清空
-	// m_AudioFrameToFill」的依赖，逐个置位再 join 会让先 join 的线程永远等不到
-	// 尚未收到停止信号的父线程（实测段间切换偶发整段静默无输出）。
-	for(auto &pAudioThread : m_vpAudioThreads)
-	{
-		std::unique_lock<std::mutex> Lock(pAudioThread->m_Mutex);
-		pAudioThread->m_Finished = true;
-		pAudioThread->m_Cond.notify_all();
-	}
-	for(auto &pAudioThread : m_vpAudioThreads)
-	{
-		// 父线程等待在 m_AudioFillMutex 上，只通知 m_Cond 无法唤醒它。
-		{
-			std::unique_lock<std::mutex> LockAudio(pAudioThread->m_AudioFillMutex);
-			pAudioThread->m_AudioFillCond.notify_all();
-		}
-		pAudioThread->m_Thread.join();
-	}
-	m_vpAudioThreads.clear();
-
+	// 主线程已停止接收音频帧；先让在途帧沿原父子顺序写完。
+	// 停止标志会解除父帧等待，提前置位可能把后面的 PTS 先提交给编码器。
 	while(m_ProcessingAudioFrame > 0)
 		std::this_thread::sleep_for(10us);
+
+	StopVideoRecorderThreads(m_vpAudioThreads, [](CAudioRecorderThread &Worker) {
+		std::unique_lock<std::mutex> Lock(Worker.m_AudioFillMutex);
+		Worker.m_AudioFillCond.notify_all();
+	});
 
 	m_Recording = false;
 
@@ -474,12 +479,28 @@ void CVideo::ReturnCaptureSlot(size_t SlotIndex)
 
 void CVideo::PublishCaptureSlot(size_t SlotIndex)
 {
+	bool Published;
 	{
 		std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
-		m_vVideoSlots[SlotIndex].m_FrameNumber = m_NextVideoFrameToCapture++;
-		m_vPendingSlots.push_back(SlotIndex);
+		Published = m_PendingSlots.Push(SlotIndex);
+		if(!Published)
+		{
+			// 槽位数量与队列容量应一致；异常状态不发布缺帧序号，也不遗留等待者。
+			m_vFreeSlots.push_back(SlotIndex);
+			m_EncodeError.store(true, std::memory_order_release);
+			m_VideoPipelineError = true;
+		}
+		else
+			m_vVideoSlots[SlotIndex].m_FrameNumber = m_NextVideoFrameToCapture++;
 	}
-	m_VideoSlotReadyCond.notify_one();
+	if(Published)
+		m_VideoSlotReadyCond.notify_one();
+	else
+	{
+		m_VideoSlotReadyCond.notify_all();
+		m_VideoSlotFreeCond.notify_all();
+		m_VideoSubmitCond.notify_all();
+	}
 }
 
 void CVideo::NextVideoFrameThread()
@@ -512,6 +533,13 @@ void CVideo::NextVideoFrameThread()
 
 void CVideo::SetOffscreenCapture(bool Offscreen)
 {
+	if(m_OffscreenCapture == Offscreen)
+		return;
+
+	// 用旧捕获模式结算在途像素，再等旧批次的图形回调退出，避免抢占帧号。
+	if(m_OffscreenCapture)
+		FlushOffscreenVideoFrames();
+	m_pGraphics->WaitForIdle();
 	m_OffscreenCapture = Offscreen;
 }
 
@@ -584,14 +612,41 @@ void CVideo::NextAudioFrameTimeline(ISoundMixFunc Mix)
 	}
 }
 
+// 先把连续的混音样本转换为完整的 AAC 输入块，保留余下的输出和滤波状态。
+static int FillResampledVideoAudioFrame(SwrContext *pContext, int MixRate, int EncodeRate, int16_t *pOutput, int OutputFrames, const ISoundMixFunc &Mix)
+{
+	constexpr int CHANNELS = 2;
+	constexpr int MAX_MIX_FRAMES = 1024;
+	int16_t aInput[MAX_MIX_FRAMES * CHANNELS];
+	const auto *pInputBytes = reinterpret_cast<const uint8_t *>(aInput);
+	int FramesWritten = 0;
+	while(FramesWritten < OutputFrames)
+	{
+		const int Remaining = OutputFrames - FramesWritten;
+		auto *pOutputBytes = reinterpret_cast<uint8_t *>(pOutput + FramesWritten * CHANNELS);
+
+		// 非空输入指针加零样本数只取已缓冲的输出，空指针会结束重采样。
+		int Converted = swr_convert(pContext, &pOutputBytes, Remaining, &pInputBytes, 0);
+		if(Converted < 0)
+			return Converted;
+		if(Converted == 0)
+		{
+			const int InputFrames = static_cast<int>(std::min<int64_t>(
+				av_rescale_rnd(Remaining, MixRate, EncodeRate, AV_ROUND_UP), MAX_MIX_FRAMES));
+			Mix(aInput, InputFrames);
+			Converted = swr_convert(pContext, &pOutputBytes, Remaining, &pInputBytes, InputFrames);
+			if(Converted < 0)
+				return Converted;
+		}
+		FramesWritten += Converted;
+	}
+	return 0;
+}
+
 void CVideo::NextAudioFrame(ISoundMixFunc Mix)
 {
 	if(IsRecording() && m_HasAudio)
 	{
-		m_AudioFrameIndex += 1;
-
-		m_ProcessingAudioFrame.fetch_add(1);
-
 		size_t NextAudioThreadIndex = m_CurAudioThreadIndex + 1;
 		if(NextAudioThreadIndex == m_AudioThreads)
 			NextAudioThreadIndex = 0;
@@ -619,16 +674,28 @@ void CVideo::NextAudioFrame(ISoundMixFunc Mix)
 				pAudioThread->m_Cond.wait(Lock, [&pAudioThread]() -> bool { return !pAudioThread->m_HasAudioFrame; });
 			}
 
-			Mix(m_vAudioBuffers[m_CurAudioThreadIndex].m_aBuffer, std::size(m_vAudioBuffers[m_CurAudioThreadIndex].m_aBuffer) / 2 / 2); // two channels
+			const int FrameSamples = m_AudioStream.m_vpFrames[m_CurAudioThreadIndex]->nb_samples;
+			auto &Buffer = m_vAudioBuffers[m_CurAudioThreadIndex];
+			if(SwrContext *pRateContext = m_AudioStream.m_vpSwrContexts.back())
+			{
+				const int Result = FillResampledVideoAudioFrame(pRateContext, m_pSound->MixingRate(),
+					m_AudioStream.m_pCodecContext->sample_rate, Buffer.m_aBuffer, FrameSamples, Mix);
+				if(Result < 0)
+				{
+					char aError[AV_ERROR_MAX_STRING_SIZE];
+					av_strerror(Result, aError, sizeof(aError));
+					log_error("videorecorder", "Could not resample recording audio: %s", aError);
+					m_EncodeError.store(true, std::memory_order_release);
+					return;
+				}
+			}
+			else
+				Mix(Buffer.m_aBuffer, FrameSamples);
 
-			int64_t DstNbSamples = av_rescale_rnd(
-				swr_get_delay(m_AudioStream.m_vpSwrContexts[m_CurAudioThreadIndex], m_AudioStream.m_pCodecContext->sample_rate) +
-					m_AudioStream.m_vpFrames[m_CurAudioThreadIndex]->nb_samples,
-				m_AudioStream.m_pCodecContext->sample_rate,
-				m_AudioStream.m_pCodecContext->sample_rate, AV_ROUND_UP);
-
+			++m_AudioFrameIndex;
+			m_ProcessingAudioFrame.fetch_add(1);
 			pAudioThread->m_SampleCountStart = m_AudioStream.m_SamplesCount;
-			m_AudioStream.m_SamplesCount += DstNbSamples;
+			m_AudioStream.m_SamplesCount += FrameSamples;
 
 			pAudioThread->m_HasAudioFrame = true;
 			{
@@ -724,22 +791,26 @@ void CVideo::RunVideoConvertThread(size_t ThreadIndex)
 		uint64_t FrameNumber;
 		{
 			std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
-			m_VideoSlotReadyCond.wait(Lock, [this]() -> bool { return !m_vPendingSlots.empty() || m_VideoStop || m_VideoPipelineError; });
+			m_VideoSlotReadyCond.wait(Lock, [this]() -> bool { return !m_PendingSlots.Empty() || m_VideoStop || m_VideoPipelineError; });
 
-			if(m_vPendingSlots.empty())
+			if(!m_PendingSlots.Pop(SlotIndex))
 			{
 				if(m_VideoStop || m_VideoPipelineError)
 					return;
 				continue; // 虚假唤醒
 			}
 
-			SlotIndex = m_vPendingSlots.front();
-			m_vPendingSlots.pop_front();
+			if(m_VideoPipelineError)
+			{
+				m_vFreeSlots.push_back(SlotIndex);
+				m_VideoSlotFreeCond.notify_one();
+				continue;
+			}
 			FrameNumber = m_vVideoSlots[SlotIndex].m_FrameNumber;
 		}
 
 		// 像素转换在队列锁外执行（sws 上下文与编码目标帧均为线程私有）
-		FillVideoFrame(ThreadIndex, SlotIndex);
+		const bool Converted = FillVideoFrame(ThreadIndex, SlotIndex);
 
 		{
 			std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
@@ -747,6 +818,14 @@ void CVideo::RunVideoConvertThread(size_t ThreadIndex)
 			// 转换完成，槽内 RGBA 数据已消费，归还空闲栈供渲染端复用
 			m_vFreeSlots.push_back(SlotIndex);
 			m_VideoSlotFreeCond.notify_one();
+			if(!Converted)
+			{
+				m_VideoPipelineError = true;
+				m_VideoSubmitCond.notify_all();
+				m_VideoSlotFreeCond.notify_all();
+				m_VideoSlotReadyCond.notify_all();
+				continue;
+			}
 
 			// 按帧号严格按序提交；编码错误置位后全部等待者丢弃退出（Stop 亦兜底唤醒）
 			m_VideoSubmitCond.wait(Lock, [this, FrameNumber]() -> bool { return m_NextVideoFrameToSubmit == FrameNumber || m_VideoPipelineError; });
@@ -778,13 +857,24 @@ void CVideo::RunVideoConvertThread(size_t ThreadIndex)
 	}
 }
 
-void CVideo::FillVideoFrame(size_t ThreadIndex, size_t SlotIndex)
+bool CVideo::FillVideoFrame(size_t ThreadIndex, size_t SlotIndex)
 {
-	// 输入行长与行数来自渲染（readback）尺寸（M7 超采样下大于编码输出尺寸，由 swscale 缩小）。
-	const int InLineSize = 4 * m_Width;
-	auto *pRGBAData = m_vVideoSlots[SlotIndex].m_vRGBA.data();
-	sws_scale(m_VideoStream.m_vpSwsContexts[ThreadIndex], (const uint8_t *const *)&pRGBAData, &InLineSize, 0,
-		m_Height, m_VideoStream.m_vpFrames[ThreadIndex]->data, m_VideoStream.m_vpFrames[ThreadIndex]->linesize);
+	SVideoFrameConversionApi Api;
+#if defined(CONF_QMCLIENT_TEST_STORAGE)
+	if(QmVideoTestFrameFailureRequested())
+		Api.m_pMakeWritable = [](AVFrame *) { return AVERROR(ENOMEM); };
+#endif
+	const int Result = ConvertVideoFrame(m_VideoStream.m_vpSwsContexts[ThreadIndex], m_VideoStream.m_vpFrames[ThreadIndex],
+		m_vVideoSlots[SlotIndex].m_vRGBA, m_Width, m_Height, Api);
+	if(Result < 0)
+	{
+		m_EncodeError.store(true, std::memory_order_release);
+		char aError[AV_ERROR_MAX_STRING_SIZE];
+		av_strerror(Result, aError, sizeof(aError));
+		log_error("videorecorder", "Could not convert video frame: %s", aError);
+		return false;
+	}
+	return true;
 }
 
 bool CVideo::UpdateVideoBufferFromGraphics(size_t SlotIndex)
@@ -907,6 +997,27 @@ bool CVideo::OpenVideo()
 	return true;
 }
 
+static bool InitVideoAudioResampler(SwrContext **ppContext, int InputRate, int OutputRate, AVSampleFormat OutputFormat)
+{
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 24, 100)
+	AVChannelLayout Stereo = AV_CHANNEL_LAYOUT_STEREO;
+	int Result = swr_alloc_set_opts2(ppContext, &Stereo, OutputFormat, OutputRate, &Stereo, AV_SAMPLE_FMT_S16, InputRate, 0, nullptr);
+#else
+	*ppContext = swr_alloc_set_opts(nullptr, AV_CH_LAYOUT_STEREO, OutputFormat, OutputRate, AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_S16, InputRate, 0, nullptr);
+	int Result = *ppContext ? 0 : AVERROR(ENOMEM);
+#endif
+	if(Result >= 0)
+		Result = swr_init(*ppContext);
+	if(Result < 0)
+	{
+		char aError[AV_ERROR_MAX_STRING_SIZE];
+		av_strerror(Result, aError, sizeof(aError));
+		log_error("videorecorder", "Could not initialize audio conversion from %d Hz to %d Hz: %s", InputRate, OutputRate, aError);
+		return false;
+	}
+	return true;
+}
+
 bool CVideo::OpenAudio()
 {
 	AVCodecContext *pContext = m_AudioStream.m_pCodecContext;
@@ -924,11 +1035,12 @@ bool CVideo::OpenAudio()
 		return false;
 	}
 
-	int NbSamples;
-	if(pContext->codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)
-		NbSamples = 10000;
-	else
-		NbSamples = pContext->frame_size;
+	const int NbSamples = pContext->frame_size;
+	if(NbSamples <= 0 || static_cast<size_t>(NbSamples) > std::size(m_vAudioBuffers.front().m_aBuffer) / 2)
+	{
+		log_error("videorecorder", "Unsupported AAC frame size: %d", NbSamples);
+		return false;
+	}
 
 	m_AudioStream.m_vpFrames.clear();
 	m_AudioStream.m_vpFrames.reserve(m_AudioThreads);
@@ -951,7 +1063,7 @@ bool CVideo::OpenAudio()
 		}
 
 		m_AudioStream.m_vpTmpFrames.emplace_back(nullptr);
-		m_AudioStream.m_vpTmpFrames[i] = AllocAudioFrame(AV_SAMPLE_FMT_S16, AV_CH_LAYOUT_STEREO, m_pSound->MixingRate(), NbSamples);
+		m_AudioStream.m_vpTmpFrames[i] = AllocAudioFrame(AV_SAMPLE_FMT_S16, AV_CH_LAYOUT_STEREO, pContext->sample_rate, NbSamples);
 		if(!m_AudioStream.m_vpTmpFrames[i])
 		{
 			return false;
@@ -968,49 +1080,18 @@ bool CVideo::OpenAudio()
 		return false;
 	}
 
-	/* create resampling context */
-	m_AudioStream.m_vpSwrContexts.clear();
-	m_AudioStream.m_vpSwrContexts.resize(m_AudioThreads);
+	const int MixRate = m_pSound->MixingRate();
+	const int EncodeRate = pContext->sample_rate;
+	// 前 m_AudioThreads 项分别由工作线程转换格式。最后一项由主线程连续重采样，同采样率时为空。
+	m_AudioStream.m_vpSwrContexts.resize(m_AudioThreads + 1);
 	for(size_t i = 0; i < m_AudioThreads; ++i)
 	{
-		m_AudioStream.m_vpSwrContexts[i] = swr_alloc();
-		if(!m_AudioStream.m_vpSwrContexts[i])
-		{
-			log_error("videorecorder", "Could not allocate resampling context");
+		if(!InitVideoAudioResampler(&m_AudioStream.m_vpSwrContexts[i], EncodeRate, EncodeRate, pContext->sample_fmt))
 			return false;
-		}
-
-		/* set options */
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(59, 24, 100)
-		dbg_assert(av_opt_set_chlayout(m_AudioStream.m_vpSwrContexts[i], "in_chlayout", &pContext->ch_layout, 0) == 0, "invalid option");
-#else
-		dbg_assert(av_opt_set_int(m_AudioStream.m_vpSwrContexts[i], "in_channel_count", pContext->channels, 0) == 0, "invalid option");
-#endif
-		if(av_opt_set_int(m_AudioStream.m_vpSwrContexts[i], "in_sample_rate", m_pSound->MixingRate(), 0) != 0)
-		{
-			log_error("videorecorder", "Could not set audio sample rate to %d", m_pSound->MixingRate());
-			return false;
-		}
-		dbg_assert(av_opt_set_sample_fmt(m_AudioStream.m_vpSwrContexts[i], "in_sample_fmt", AV_SAMPLE_FMT_S16, 0) == 0, "invalid option");
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(59, 24, 100)
-		dbg_assert(av_opt_set_chlayout(m_AudioStream.m_vpSwrContexts[i], "out_chlayout", &pContext->ch_layout, 0) == 0, "invalid option");
-#else
-		dbg_assert(av_opt_set_int(m_AudioStream.m_vpSwrContexts[i], "out_channel_count", pContext->channels, 0) == 0, "invalid option");
-#endif
-		dbg_assert(av_opt_set_int(m_AudioStream.m_vpSwrContexts[i], "out_sample_rate", pContext->sample_rate, 0) == 0, "invalid option");
-		dbg_assert(av_opt_set_sample_fmt(m_AudioStream.m_vpSwrContexts[i], "out_sample_fmt", pContext->sample_fmt, 0) == 0, "invalid option");
-
-		/* initialize the resampling context */
-		const int ResamplingContextInitResult = swr_init(m_AudioStream.m_vpSwrContexts[i]);
-		if(ResamplingContextInitResult < 0)
-		{
-			char aError[AV_ERROR_MAX_STRING_SIZE];
-			av_strerror(ResamplingContextInitResult, aError, sizeof(aError));
-			log_error("videorecorder", "Could not initialize resampling context: %s", aError);
-			return false;
-		}
 	}
-	log_info("videorecorder", "Audio recording enabled (AAC, %d Hz, stereo)", m_pSound->MixingRate());
+	if(MixRate != EncodeRate && !InitVideoAudioResampler(&m_AudioStream.m_vpSwrContexts.back(), MixRate, EncodeRate, AV_SAMPLE_FMT_S16))
+		return false;
+	log_info("videorecorder", "Audio recording enabled (AAC, %d Hz, stereo; mixer %d Hz)", EncodeRate, MixRate);
 
 	m_AudioFrameIndex = 0;
 	return true;

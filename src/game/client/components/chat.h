@@ -15,6 +15,7 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/chat_command_hud.h>
 #include <game/client/components/qmclient/chat_emoji.h>
+#include <game/client/components/qmclient/chat_history.h>
 #include <game/client/components/qmclient/chat_translate_button.h>
 #include <game/client/components/qmclient/chat_translation_notes.h>
 #include <game/client/components/qmclient/hud_notifications/hud_notifications.h>
@@ -201,6 +202,7 @@ private:
 		std::optional<ColorRGBA> m_CustomColor;
 		EQmSponsorChatStyle m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 		EQmSponsorChatStyle m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
+		bool m_ColorPreparationPending = false;
 
 		STextContainerIndex m_TextContainerIndex;
 		STextContainerIndex m_BodyTextContainerIndex;
@@ -380,14 +382,8 @@ private:
 	uint64_t m_ServerCommandsRevision = 0;
 	CQmChatCommandHud m_CommandHud;
 
-	struct CHistoryEntry
-	{
-		int m_Team;
-		int m_OriginalOffset;
-		char m_aText[1];
-		const char *InputText() const { return m_aText + (m_OriginalOffset > 0 ? m_OriginalOffset : 0); }
-	};
-	CHistoryEntry *m_pHistoryEntry;
+	using CHistoryEntry = SQmChatHistoryEntry;
+	CHistoryEntry *m_pHistoryEntry = nullptr;
 	CStaticRingBuffer<CHistoryEntry, 64 * 1024, CRingBufferBase::FLAG_RECYCLE> m_History;
 	COutgoingChatAnnotations m_OutgoingAnnotations;
 	CPendingChatMessages m_PendingChatMessages;
@@ -504,6 +500,8 @@ private:
 	};
 	CChatTargetPopupContext m_TargetPopupContext;
 	bool m_TargetMenuOpen = false;
+
+	void ClearInvalidWhisperDraft();
 
 public:
 	CChat();
@@ -657,6 +655,7 @@ public:
 	bool OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea);
 	void Reset();
 	void OnRelease() override;
+	void OnNewSnapshot() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void OnMessage(int MsgType, void *pRawMsg, int SourceConnection);
 	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;

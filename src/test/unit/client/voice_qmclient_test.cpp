@@ -274,3 +274,33 @@ TEST(QmClient, ParseQmDeveloperPresencesRejectsMalformedRoot)
 	EXPECT_EQ(Result.m_ServerTime, 0);
 	json_value_free(pJson);
 }
+
+TEST(QmClient, DeveloperLookupRejectsNullSuffixedStoredPlayerName)
+{
+	SQmDeveloperPresence Presence;
+	Presence.m_DeveloperId = "dev";
+	Presence.m_ServerAddress = "one";
+	Presence.m_PlayerId = 3;
+	Presence.m_PlayerName = "Name";
+	Presence.m_IssuedAt = 900;
+	Presence.m_ExpiresAt = 1100;
+	std::vector<SQmDeveloperPresence> Presences{Presence};
+	ASSERT_NE(FindQmDeveloperPresence(Presences, "one", 3, "Name", 1000), nullptr);
+	Presences.front().m_PlayerName.append("\0extra", 6);
+	EXPECT_EQ(FindQmDeveloperPresence(Presences, "one", 3, "Name", 1000), nullptr);
+}
+
+TEST(QmClient, DeveloperLookupRejectsNullSuffixedStoredServerAddress)
+{
+	SQmDeveloperPresence Presence;
+	Presence.m_DeveloperId = "dev";
+	Presence.m_ServerAddress = "one";
+	Presence.m_PlayerId = 3;
+	Presence.m_PlayerName = "Name";
+	Presence.m_IssuedAt = 900;
+	Presence.m_ExpiresAt = 1100;
+	std::vector<SQmDeveloperPresence> Presences{Presence};
+	ASSERT_NE(FindQmDeveloperPresence(Presences, "one", 3, "Name", 1000), nullptr);
+	Presences.front().m_ServerAddress.append("\0extra", 6);
+	EXPECT_EQ(FindQmDeveloperPresence(Presences, "one", 3, "Name", 1000), nullptr);
+}

@@ -30,22 +30,27 @@ private:
 	float m_MinAxis, m_MaxAxis;
 	float m_MinValue, m_MaxValue;
 	float m_MinRange, m_MaxRange;
+	int m_EntryBufferSize;
+	CDynamicRingBuffer<CEntry>::FAllocate m_pAllocate;
 	CDynamicRingBuffer<CEntry> m_Entries;
 	int m_Precision;
 	bool m_SummaryStats;
 
+	static int BufferSize(int MaxEntries);
 	void RenderDataLines(IGraphics *pGraphics, float x, float y, float w, float h);
 
 public:
-	CGraph(int MaxEntries, int Precision, bool SummaryStats);
+	using FAllocate = CDynamicRingBuffer<CEntry>::FAllocate;
+
+	CGraph(int MaxEntries, int Precision, bool SummaryStats, FAllocate pAllocate = malloc);
 
 	void Init(float Min, float Max);
 	void SetMin(float Min);
 	void SetMax(float Max);
 
 	void Scale(int64_t WantedTotalTime);
-	void Add(float Value, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.75f));
-	void InsertAt(int64_t Time, float Value, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.75f));
+	bool Add(float Value, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.75f));
+	bool InsertAt(int64_t Time, float Value, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.75f));
 	void Render(IGraphics *pGraphics, ITextRender *pTextRender, float x, float y, float w, float h, const char *pDescription);
 };
 

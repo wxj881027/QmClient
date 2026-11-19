@@ -3,7 +3,9 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <new>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -124,4 +126,40 @@ TEST_F(CQmPlayerPointsRequestTest, NewRequestWaitsForItsOwnProxyAfterCancellatio
 	ASSERT_EQ(m_Http.m_vCalls.size(), 2u);
 	EXPECT_EQ(m_Http.m_vCalls[1].m_pRequest, pNext);
 	EXPECT_EQ(m_Http.m_vCalls[1].m_Proxy, "http://new.test:7890");
+}
+
+TEST_F(CQmPlayerPointsRequestTest, ExceptionAfterHttpAcceptanceDoesNotReplayTheSubmission)
+{
+	std::shared_ptr<IHttpRequest> Accepted;
+	int Calls = 0;
+	EXPECT_THROW(m_Request.PollWithSubmit([&](const auto &pRequest) {
+		++Calls;
+		Accepted = pRequest;
+		throw std::bad_alloc();
+	},
+			     101.0, true, "http://first.test:7890"),
+		std::bad_alloc);
+	ASSERT_EQ(Accepted, m_pRequest);
+	EXPECT_TRUE(m_Request.Submitted());
+	const auto Submit = [&](const auto &) { ++Calls; };
+	EXPECT_TRUE(m_Request.PollWithSubmit(Submit, 102.0, true, "http://late.test:7890"));
+	m_Request.CancelWithSubmit(Submit);
+	EXPECT_EQ(Calls, 1);
+	EXPECT_TRUE(Accepted->IsAbortRequested());
+	EXPECT_STREQ(Accepted->ProxyUrl(), "http://first.test:7890");
+}
+
+TEST_F(CQmPlayerPointsRequestTest, MovedFromRequestCannotSubmitOrCancelTheTransferredHttpObject)
+{
+	CQmPlayerPointsRequest Moved(std::move(m_Request));
+	EXPECT_EQ(m_Request.Request(), nullptr);
+	EXPECT_TRUE(m_Request.Poll(m_Http, 200.0, true, "http://old.test:7890"));
+	m_Request.Cancel(m_Http);
+	EXPECT_TRUE(m_Http.m_vCalls.empty());
+	EXPECT_FALSE(m_pRequest->IsAbortRequested());
+	EXPECT_FALSE(Moved.Poll(m_Http, 107.0, false, nullptr));
+	ASSERT_TRUE(Moved.Poll(m_Http, 108.0, true, "http://new.test:7890"));
+	ASSERT_EQ(m_Http.m_vCalls.size(), 1u);
+	EXPECT_EQ(m_Http.m_vCalls[0].m_pRequest, m_pRequest);
+	EXPECT_EQ(m_Http.m_vCalls[0].m_Proxy, "http://new.test:7890");
 }

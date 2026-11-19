@@ -9,11 +9,13 @@
 #include <engine/sound.h>
 
 #include <game/client/component.h>
+#include <game/client/sound_pack.h>
 
 class CSoundLoading : public IJob
 {
 	CGameClient *m_pGameClient;
 	bool m_Render;
+	const CSoundPack m_SoundPack;
 
 public:
 	CSoundLoading(CGameClient *pGameClient, bool Render);

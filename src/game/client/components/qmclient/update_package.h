@@ -11,6 +11,7 @@
 #include <engine/storage.h>
 
 #include <functional>
+#include <stdexcept>
 
 namespace qm_update
 {
@@ -92,42 +93,22 @@ namespace qm_update
 	public:
 		CPackageMergeJob(std::vector<std::pair<std::string, int64_t>> vFiles, std::string Destination) :
 			m_vFiles(std::move(vFiles)), m_Destination(std::move(Destination)) {}
-		void Cancel()
+		void Cancel() noexcept
 		{
 			m_Cancelled = true;
-			fs_remove(m_Destination.c_str());
+			RemoveCancelledPackageFile(m_Destination);
 		}
 		bool Success() const { return m_Success; }
 		const SHA256_DIGEST &Digest() const { return m_Digest; }
 	};
 
 	// 聚合请求不交给 HTTP 引擎；子请求完成并合并后才发布 DONE，兼容现有验签路径。
-	class CPackageFileCleanup : public IHttpRequest::IProgressCallback
-	{
-		std::string m_Path;
-		std::atomic<bool> m_Cancelled = false;
-
-	public:
-		explicit CPackageFileCleanup(std::string Path) : m_Path(std::move(Path)) {}
-		void OnProgress() override {}
-		void OnCompletion(EHttpState) override
-		{
-			if(m_Cancelled)
-				fs_remove(m_Path.c_str());
-		}
-		void Cancel()
-		{
-			m_Cancelled = true;
-			// 回调发生在关闭/重命名之后；两边都尝试，覆盖完成状态发布前的取消竞态。
-			fs_remove(m_Path.c_str());
-		}
-	};
-
 	class CPackageDownload : public IHttpRequest
 	{
 	public:
 		using TStart = std::function<void(const std::shared_ptr<IHttpRequest> &)>;
-		using TAddJob = std::function<void(std::shared_ptr<IJob>)>;
+		// false/异常表示没有接管作业，调用方可取消候选并发布本地失败。
+		using TAddJob = std::function<bool(std::shared_ptr<IJob>)>;
 		using TCreate = std::function<std::shared_ptr<IHttpRequest>(const std::string &)>;
 
 	private:
@@ -164,6 +145,8 @@ namespace qm_update
 		void StartPart(CPart &Part)
 		{
 			Part.m_pRequest = m_Create(Url());
+			if(!Part.m_pRequest)
+				throw std::runtime_error("Update request factory returned null");
 			Part.m_pRequest->Timeout(CTimeout{5000, 0, 1, 20});
 			Part.m_pRequest->LogProgress(HTTPLOG::FAILURE);
 			Part.m_pRequest->MaxResponseSize(m_MaxSize);
@@ -191,6 +174,31 @@ namespace qm_update
 				m_State = State;
 			}
 			m_WaitCondition.notify_all();
+		}
+		void CancelWork() noexcept
+		{
+			for(auto &Part : m_vParts)
+			{
+				if(Part.m_pCleanup)
+					Part.m_pCleanup->Cancel();
+				try
+				{
+					if(Part.m_pRequest && !Part.m_pRequest->Done())
+						Part.m_pRequest->Abort();
+				}
+				catch(...)
+				{
+					// 外部取消失败也继续处理其他已启动分段，清理回调仍拥有取消标记。
+				}
+			}
+			if(m_pMerge)
+				m_pMerge->Cancel();
+		}
+		void FailLocal()
+		{
+			m_LocalError = true;
+			CancelWork();
+			Complete(EHttpState::ERROR);
 		}
 		// 只读取已经发布完成的响应；保留探测、重试前和其他分段的批次结果。
 		void CollectResult(const std::shared_ptr<IHttpRequest> &Request)
@@ -268,8 +276,15 @@ namespace qm_update
 		{
 			m_WriteToMemory = false;
 			m_State = EHttpState::RUNNING;
-			m_vParts.push_back({nullptr, CHttpByteRange{0, 0, 0}, {}, {}, false, 0});
-			StartPart(m_vParts.front());
+			try
+			{
+				m_vParts.push_back({nullptr, CHttpByteRange{0, 0, 0}, {}, {}, false, 0});
+				StartPart(m_vParts.front());
+			}
+			catch(...)
+			{
+				FailLocal();
+			}
 		}
 		~CPackageDownload() override { Abort(); }
 		void Header(const char *) override {}
@@ -278,15 +293,7 @@ namespace qm_update
 			if(Done())
 				return;
 			IHttpRequest::Abort();
-			for(auto &Part : m_vParts)
-			{
-				if(Part.m_pCleanup)
-					Part.m_pCleanup->Cancel();
-				if(!Part.m_pRequest->Done())
-					Part.m_pRequest->Abort();
-			}
-			if(m_pMerge)
-				m_pMerge->Cancel();
+			CancelWork();
 			Complete(EHttpState::ABORTED);
 		}
 		bool Downloading() const { return !Done() && m_Phase == EPhase::DOWNLOAD && m_TransferStarted; }
@@ -301,15 +308,29 @@ namespace qm_update
 		{
 			if(Done())
 				return;
+			try
+			{
+				PollPending(Now);
+			}
+			catch(...)
+			{
+				// 只终止本次更新包；部分准备的请求同样可取消，不把异常交给游戏主循环。
+				FailLocal();
+			}
+		}
+
+	private:
+		void PollPending(double Now)
+		{
 			if(m_Phase == EPhase::MERGE)
 			{
-				if(m_pMerge->State() == IJob::STATE_DONE)
+				if(m_pMerge->Finished())
 				{
-					m_LocalError = !m_pMerge->Success();
+					m_LocalError = m_pMerge->State() != IJob::STATE_DONE || !m_pMerge->Success();
 					if(m_LocalError)
 						for(auto &Part : m_vParts)
 							Part.m_pCleanup->Cancel();
-					Complete(m_LocalError ? EHttpState::ERROR : EHttpState::DONE, m_LocalError ? 0 : 200, m_pMerge->Digest());
+					Complete(m_LocalError ? EHttpState::ERROR : EHttpState::DONE, m_LocalError ? 0 : 200, m_LocalError ? std::nullopt : std::make_optional(m_pMerge->Digest()));
 				}
 				return;
 			}
@@ -424,8 +445,12 @@ namespace qm_update
 			}
 			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, m_Destination.c_str(), aAbsolute, sizeof(aAbsolute));
 			m_pMerge = std::make_shared<CPackageMergeJob>(std::move(vFiles), aAbsolute);
+			if(!m_AddJob(m_pMerge))
+			{
+				FailLocal();
+				return;
+			}
 			m_Phase = EPhase::MERGE;
-			m_AddJob(m_pMerge);
 		}
 	};
 }

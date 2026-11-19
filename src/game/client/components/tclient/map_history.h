@@ -54,8 +54,6 @@ namespace QmMapHistory
 		bool FromJson(std::string_view Json, char *pErr = nullptr, size_t ErrSize = 0);
 
 	private:
-		void MergeLoadedRecord(const SMapHistoryRecord &Record);
-
 		std::vector<SMapHistoryRecord> m_vEntries;
 	};
 

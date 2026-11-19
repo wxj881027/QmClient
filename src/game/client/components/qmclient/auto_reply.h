@@ -7,7 +7,9 @@
 
 #include <array>
 #include <cstdint>
+#include <new>
 #include <string>
+#include <utility>
 
 namespace qm_auto_reply
 {
@@ -84,11 +86,23 @@ namespace qm_auto_reply
 			auto &Previous = m_aReplies[Connection][Sender];
 			if(Kind != EKind::KEYWORD && Previous.m_Kind == Kind && Previous.m_Identity == Identity && Previous.m_Text == Text)
 				return false;
+			SReply Candidate;
+			if(Kind != EKind::KEYWORD)
+			{
+				try
+				{
+					Candidate = {Kind, Identity, Text};
+				}
+				catch(const std::bad_alloc &)
+				{
+					return false;
+				}
+			}
 			if(!Send())
 				return false;
 			m_LastSent = Now;
 			if(Kind != EKind::KEYWORD)
-				Previous = {Kind, Identity, Text};
+				Previous = std::move(Candidate);
 			return true;
 		}
 	};

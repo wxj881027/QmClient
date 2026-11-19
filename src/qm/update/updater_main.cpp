@@ -14,19 +14,26 @@
 
 #include <atomic>
 #include <cstdio>
+#include <exception>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 namespace
 {
 	constexpr wchar_t WINDOW_CLASS[] = L"QmClientUpdateWindow";
 	constexpr wchar_t WINDOW_TITLE[] = L"QmClient 更新";
+	constexpr ULONGLONG PARENT_EXIT_TIMEOUT_MS = 60'000;
+
+	using THandle = std::unique_ptr<void, decltype(&CloseHandle)>;
 
 	HWND g_hStatus = nullptr;
 	HWND g_hProgress = nullptr;
-	bool g_AllowClose = false;
+	bool g_WaitingForParent = false;
+	bool g_ParentWaitCancelled = false;
 
 	void SetStatus(const wchar_t *pText, bool Indeterminate)
 	{
@@ -46,39 +53,47 @@ namespace
 		}
 	}
 
-	void PumpMessages()
+	bool PumpMessages()
 	{
 		MSG Message;
 		while(PeekMessageW(&Message, nullptr, 0, 0, PM_REMOVE))
 		{
 			if(Message.message == WM_QUIT)
-				return;
+				return false;
 			TranslateMessage(&Message);
 			DispatchMessageW(&Message);
 		}
+		return true;
 	}
 
-	bool WaitForParent(DWORD ParentPid)
+	enum class EParentWaitResult
+	{
+		EXITED,
+		CANCELLED,
+		TIMED_OUT,
+		FAILED,
+	};
+
+	EParentWaitResult WaitForParent(DWORD ParentPid)
 	{
 		if(ParentPid == 0)
-			return true;
-		HANDLE Parent = OpenProcess(SYNCHRONIZE, FALSE, ParentPid);
+			return EParentWaitResult::EXITED;
+		const THandle Parent(OpenProcess(SYNCHRONIZE, FALSE, ParentPid), CloseHandle);
 		if(!Parent)
-			return GetLastError() == ERROR_INVALID_PARAMETER;
+			return GetLastError() == ERROR_INVALID_PARAMETER ? EParentWaitResult::EXITED : EParentWaitResult::FAILED;
+		const ULONGLONG Start = GetTickCount64();
 		while(true)
 		{
-			PumpMessages();
-			const DWORD Result = WaitForSingleObject(Parent, 50);
+			if(!PumpMessages() || g_ParentWaitCancelled)
+				return EParentWaitResult::CANCELLED;
+			const DWORD Result = WaitForSingleObject(Parent.get(), 50);
 			if(Result == WAIT_OBJECT_0)
-				break;
-			if(Result == WAIT_FAILED)
-			{
-				CloseHandle(Parent);
-				return false;
-			}
+				return EParentWaitResult::EXITED;
+			if(Result != WAIT_TIMEOUT)
+				return EParentWaitResult::FAILED;
+			if(GetTickCount64() - Start >= PARENT_EXIT_TIMEOUT_MS)
+				return EParentWaitResult::TIMED_OUT;
 		}
-		CloseHandle(Parent);
-		return true;
 	}
 
 	std::wstring CurrentExecutablePath()
@@ -91,11 +106,10 @@ namespace
 	bool ParseArguments(QmUpdate::SArguments &Arguments)
 	{
 		int Argc = 0;
-		wchar_t **ppArgv = CommandLineToArgvW(GetCommandLineW(), &Argc);
-		if(!ppArgv)
+		const std::unique_ptr<wchar_t *, decltype(&LocalFree)> pArgv(CommandLineToArgvW(GetCommandLineW(), &Argc), LocalFree);
+		if(!pArgv)
 			return false;
-		std::vector<std::wstring> ArgumentsList(ppArgv, ppArgv + Argc);
-		LocalFree(ppArgv);
+		const std::vector<std::wstring> ArgumentsList(pArgv.get(), pArgv.get() + Argc);
 		return QmUpdate::ParseArguments(ArgumentsList, Arguments);
 	}
 
@@ -122,11 +136,8 @@ namespace
 		return Result;
 	}
 
-	bool RelaunchElevated(const QmUpdate::SArguments &Arguments)
+	bool RelaunchElevated(const QmUpdate::SArguments &Arguments, const std::wstring &ExecutablePath)
 	{
-		const std::wstring Executable = CurrentExecutablePath();
-		if(Executable.empty())
-			return false;
 		std::wstring Parameters = L"--parent-pid 0";
 		const auto AppendPath = [&](const wchar_t *pName, const std::wstring &Value) {
 			Parameters.push_back(L' ');
@@ -144,9 +155,9 @@ namespace
 		Parameters += L" --qm-elevated";
 		SHELLEXECUTEINFOW Info{};
 		Info.cbSize = sizeof(Info);
-		Info.fMask = SEE_MASK_NOCLOSEPROCESS;
+		Info.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
 		Info.lpVerb = L"runas";
-		Info.lpFile = Executable.c_str();
+		Info.lpFile = ExecutablePath.c_str();
 		Info.lpParameters = Parameters.c_str();
 		Info.nShow = SW_SHOWNORMAL;
 		if(!ShellExecuteExW(&Info))
@@ -160,13 +171,14 @@ namespace
 	{
 		if(Message == WM_CLOSE)
 		{
-			if(!g_AllowClose)
-				return 0;
-			DestroyWindow(hWnd);
+			if(g_WaitingForParent)
+				g_ParentWaitCancelled = true;
 			return 0;
 		}
 		if(Message == WM_DESTROY)
 		{
+			g_hStatus = nullptr;
+			g_hProgress = nullptr;
 			PostQuitMessage(0);
 			return 0;
 		}
@@ -208,6 +220,13 @@ namespace
 		return true;
 	}
 
+	void ShowUpdateError(HWND Window, const char *pError, const wchar_t *pFallback)
+	{
+		wchar_t aMessage[1024];
+		const bool Converted = *pError && MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, pError, -1, aMessage, static_cast<int>(std::size(aMessage))) > 0;
+		MessageBoxW(Window, Converted ? aMessage : pFallback, WINDOW_TITLE, MB_OK | MB_ICONERROR);
+	}
+
 	bool ReadInstalledVersion(const std::wstring &InstallPath, std::string &Version)
 	{
 		const std::wstring ClientPath = std::filesystem::path(InstallPath) / L"DDNet.exe";
@@ -238,18 +257,56 @@ namespace
 		return ToUtf8(std::wstring(pValue, ValueSize - 1), Version);
 	}
 
-	void CleanupPath(const std::wstring &Path, bool DelayIfLocked)
+	class CTemporaryFiles
 	{
-		if(Path.empty())
-			return;
-		if(DeleteFileW(Path.c_str()) == 0 && DelayIfLocked)
-			MoveFileExW(Path.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT);
-	}
+		const QmUpdate::SArguments &m_Arguments;
+		const std::wstring &m_ExecutablePath;
+		bool m_OwnsFiles = true;
 
-	void CleanupTemporaryFiles(const QmUpdate::SArguments &Arguments)
+	public:
+		CTemporaryFiles(const QmUpdate::SArguments &Arguments, const std::wstring &ExecutablePath) :
+			m_Arguments(Arguments),
+			m_ExecutablePath(ExecutablePath) {}
+		CTemporaryFiles(const CTemporaryFiles &) = delete;
+		CTemporaryFiles &operator=(const CTemporaryFiles &) = delete;
+		~CTemporaryFiles() { Cleanup(); }
+
+		void Release() noexcept { m_OwnsFiles = false; }
+
+		void Cleanup() noexcept
+		{
+			if(!m_OwnsFiles)
+				return;
+			Release();
+			try
+			{
+				QmUpdate::CleanupDownloadedFiles(m_Arguments);
+			}
+			catch(const std::exception &)
+			{
+				// 路径构造失败时仍可用已有宽字符串回收会话附件。
+				for(const auto *pPath : {&m_Arguments.m_Package, &m_Arguments.m_PackageSignature, &m_Arguments.m_Manifest, &m_Arguments.m_ManifestSignature})
+					DeleteFileW(pPath->c_str());
+			}
+			if(!DeleteFileW(m_ExecutablePath.c_str()))
+			{
+				const DWORD Error = GetLastError();
+				if(Error != ERROR_FILE_NOT_FOUND && Error != ERROR_PATH_NOT_FOUND)
+					MoveFileExW(m_ExecutablePath.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT);
+			}
+		}
+	};
+
+	THandle OpenSetupPackage(const std::wstring &Path, char *pError, size_t ErrorSize)
 	{
-		QmUpdate::CleanupDownloadedFiles(Arguments);
-		CleanupPath(CurrentExecutablePath(), true);
+		// 复验和运行 Setup 期间，拒绝对同一个安装包文件的写入和删除。
+		const HANDLE File = CreateFileW(Path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+		if(File != INVALID_HANDLE_VALUE)
+			return THandle(File, CloseHandle);
+		const DWORD Error = GetLastError();
+		const char *pPermissionMarker = Error == ERROR_ACCESS_DENIED ? QmUpdate::PERMISSION_DENIED_MARKER : "";
+		std::snprintf(pError, ErrorSize, "%s%sFailed to open Setup for verification (Windows error %lu)", pPermissionMarker, *pPermissionMarker ? " " : "", Error);
+		return THandle(nullptr, CloseHandle);
 	}
 
 	QmUpdate::ESetupResult RunSetup(const QmUpdate::SArguments &Arguments, char *pError, size_t ErrorSize)
@@ -262,28 +319,36 @@ namespace
 		Info.lpParameters = Parameters.c_str();
 		Info.lpDirectory = Arguments.m_Install.c_str();
 		Info.nShow = SW_SHOWNORMAL;
-		if(!ShellExecuteExW(&Info) || !Info.hProcess)
+		if(!ShellExecuteExW(&Info))
 		{
 			std::snprintf(pError, ErrorSize, "Failed to start Setup (Windows error %lu)", GetLastError());
 			return QmUpdate::ESetupResult::FAILED;
 		}
-		DWORD ExitCode = 1;
+		const THandle Process(Info.hProcess, CloseHandle);
+		if(!Process)
+		{
+			std::snprintf(pError, ErrorSize, "Setup launch returned no process handle. Update files were retained.");
+			return QmUpdate::ESetupResult::STILL_RUNNING;
+		}
 		while(true)
 		{
 			PumpMessages();
-			const DWORD WaitResult = WaitForSingleObject(Info.hProcess, 50);
+			const DWORD WaitResult = WaitForSingleObject(Process.get(), 50);
 			if(WaitResult == WAIT_OBJECT_0)
 				break;
 			if(WaitResult == WAIT_FAILED)
 			{
-				std::snprintf(pError, ErrorSize, "Failed to wait for Setup (Windows error %lu); update files were retained", GetLastError());
-				CloseHandle(Info.hProcess);
+				std::snprintf(pError, ErrorSize, "Failed to wait for Setup (Windows error %lu). Update files were retained.", GetLastError());
 				return QmUpdate::ESetupResult::STILL_RUNNING;
 			}
 		}
-		const bool ReadExitCode = GetExitCodeProcess(Info.hProcess, &ExitCode) != 0;
-		CloseHandle(Info.hProcess);
-		if(!ReadExitCode || ExitCode != 0)
+		DWORD ExitCode = 0;
+		if(!GetExitCodeProcess(Process.get(), &ExitCode))
+		{
+			std::snprintf(pError, ErrorSize, "Failed to read Setup exit code (Windows error %lu)", GetLastError());
+			return QmUpdate::ESetupResult::FAILED;
+		}
+		if(ExitCode != 0)
 		{
 			std::snprintf(pError, ErrorSize, "Setup failed or was cancelled (exit code %lu)", ExitCode);
 			return QmUpdate::ESetupResult::FAILED;
@@ -293,6 +358,7 @@ namespace
 }
 
 int WINAPI wWinMain(HINSTANCE Instance, HINSTANCE, PWSTR, int)
+try
 {
 	INITCOMMONCONTROLSEX CommonControls{sizeof(CommonControls), ICC_PROGRESS_CLASS};
 	InitCommonControlsEx(&CommonControls);
@@ -303,19 +369,25 @@ int WINAPI wWinMain(HINSTANCE Instance, HINSTANCE, PWSTR, int)
 		MessageBoxW(nullptr, L"更新参数无效。", WINDOW_TITLE, MB_OK | MB_ICONERROR);
 		return 2;
 	}
-	HWND Window = CreateStatusWindow(Instance);
+	CTemporaryFiles TemporaryFiles(Arguments, ExecutablePath);
+	g_WaitingForParent = Arguments.m_ParentPid != 0;
+	const std::unique_ptr<std::remove_pointer_t<HWND>, decltype(&DestroyWindow)> WindowOwner(CreateStatusWindow(Instance), DestroyWindow);
+	const HWND Window = WindowOwner.get();
 	if(!Window)
-	{
-		CleanupTemporaryFiles(Arguments);
 		return 3;
-	}
-	if(!WaitForParent(Arguments.m_ParentPid))
+	const EParentWaitResult ParentResult = WaitForParent(Arguments.m_ParentPid);
+	g_WaitingForParent = false;
+	if(ParentResult != EParentWaitResult::EXITED)
 	{
-		SetStatus(L"无法等待客户端退出。", false);
-		MessageBoxW(Window, L"无法确认客户端已退出，更新已取消。", WINDOW_TITLE, MB_OK | MB_ICONERROR);
-		CleanupTemporaryFiles(Arguments);
-		g_AllowClose = true;
-		DestroyWindow(Window);
+		TemporaryFiles.Cleanup();
+		if(ParentResult != EParentWaitResult::CANCELLED)
+		{
+			SetStatus(L"无法等待客户端退出。", false);
+			const wchar_t *pMessage = ParentResult == EParentWaitResult::TIMED_OUT ?
+						      L"等待客户端退出超时，更新已取消。" :
+						      L"无法确认客户端已退出，更新已取消。";
+			MessageBoxW(Window, pMessage, WINDOW_TITLE, MB_OK | MB_ICONERROR);
+		}
 		return 1;
 	}
 	SetStatus(L"正在验证并安装更新…", true);
@@ -332,50 +404,66 @@ int WINAPI wWinMain(HINSTANCE Instance, HINSTANCE, PWSTR, int)
 	{
 		SetStatus(L"更新路径无效。", false);
 		MessageBoxW(Window, L"更新路径不是有效的 UTF-8。", WINDOW_TITLE, MB_OK | MB_ICONERROR);
-		CleanupTemporaryFiles(Arguments);
-		g_AllowClose = true;
-		DestroyWindow(Window);
+		return 1;
+	}
+	QmUpdate::CInstallLock InstallLock(Arguments.m_Install);
+	using ELockResult = QmUpdate::CInstallLock::EResult;
+	if(InstallLock.Result() != ELockResult::ACQUIRED)
+	{
+		SetStatus(L"暂时无法开始更新。", false);
+		MessageBoxW(Window, InstallLock.Result() == ELockResult::BUSY ? L"已有更新任务正在处理此安装目录。" : L"无法锁定安装目录，更新已取消。", WINDOW_TITLE, MB_OK | MB_ICONERROR);
 		return 1;
 	}
 	if(!ReadInstalledVersion(Arguments.m_Install, CurrentVersion))
 	{
 		SetStatus(L"无法验证已安装的客户端。", false);
 		MessageBoxW(Window, L"安装目录中没有可验证的 QmClient 客户端，更新已取消。", WINDOW_TITLE, MB_OK | MB_ICONERROR);
-		CleanupTemporaryFiles(Arguments);
-		g_AllowClose = true;
-		DestroyWindow(Window);
+		TemporaryFiles.Cleanup();
 		return 1;
 	}
-	std::atomic<bool> Finished = false;
+	THandle SetupPackage = Arguments.m_Setup ? OpenSetupPackage(Arguments.m_Package, aError, sizeof(aError)) : THandle(nullptr, CloseHandle);
 	bool Success = false;
-	std::thread Worker([&] {
-		if(Arguments.m_Setup)
-			Success = qm_update_verify_setup_files(Package.c_str(), PackageSignature.c_str(), Manifest.c_str(), ManifestSignature.c_str(), CurrentVersion.c_str(), aError, sizeof(aError));
-		else
-			Success = qm_update_apply(Package.c_str(), PackageSignature.c_str(), Manifest.c_str(), ManifestSignature.c_str(), Install.c_str(), CurrentVersion.c_str(), aError, sizeof(aError));
-		Finished.store(true, std::memory_order_release);
-	});
-	while(!Finished.load(std::memory_order_acquire))
+	if(!Arguments.m_Setup || SetupPackage)
 	{
-		PumpMessages();
-		Sleep(20);
+		std::atomic<bool> Finished = false;
+		std::thread Worker([&] {
+			if(Arguments.m_Setup)
+				Success = qm_update_verify_setup_files(Package.c_str(), PackageSignature.c_str(), Manifest.c_str(), ManifestSignature.c_str(), CurrentVersion.c_str(), aError, sizeof(aError));
+			else
+				Success = qm_update_apply(Package.c_str(), PackageSignature.c_str(), Manifest.c_str(), ManifestSignature.c_str(), Install.c_str(), CurrentVersion.c_str(), aError, sizeof(aError));
+			Finished.store(true, std::memory_order_release);
+		});
+		while(!Finished.load(std::memory_order_acquire))
+		{
+			PumpMessages();
+			Sleep(20);
+		}
+		Worker.join();
 	}
-	Worker.join();
-	if(!Success && !Arguments.m_Elevated && QmUpdate::IsPermissionError(aError) && RelaunchElevated(Arguments))
+	if(!Success && !Arguments.m_Elevated && QmUpdate::IsPermissionError(aError))
 	{
-		DestroyWindow(Window);
-		return 0;
+		// 提权后的助手会重新获取锁并读取磁盘上的版本。
+		SetupPackage.reset();
+		InstallLock.Release();
+		if(RelaunchElevated(Arguments, ExecutablePath))
+		{
+			TemporaryFiles.Release();
+			return 0;
+		}
 	}
 	if(Arguments.m_Setup)
 	{
 		const auto Result = QmUpdate::RunSetupSession(
 			[&] { return Success; },
 			[&] { return RunSetup(Arguments, aError, sizeof(aError)); },
-			[&] { CleanupTemporaryFiles(Arguments); });
+			[&] {
+				SetupPackage.reset();
+				TemporaryFiles.Cleanup();
+			});
+		if(Result == QmUpdate::ESetupResult::STILL_RUNNING)
+			TemporaryFiles.Release();
 		if(Result != QmUpdate::ESetupResult::SUCCEEDED)
-			MessageBoxA(Window, aError[0] ? aError : "Setup failed", "QmClient update", MB_OK | MB_ICONERROR);
-		g_AllowClose = true;
-		DestroyWindow(Window);
+			ShowUpdateError(Window, aError, L"安装程序未能完成更新。");
 		return Result == QmUpdate::ESetupResult::SUCCEEDED ? 0 : 1;
 	}
 	if(Success)
@@ -386,10 +474,13 @@ int WINAPI wWinMain(HINSTANCE Instance, HINSTANCE, PWSTR, int)
 	else
 	{
 		SetStatus(L"更新失败。", false);
-		MessageBoxA(Window, aError[0] ? aError : "Update failed", "QmClient update", MB_OK | MB_ICONERROR);
+		ShowUpdateError(Window, aError, L"更新失败。");
 	}
-	CleanupTemporaryFiles(Arguments);
-	g_AllowClose = true;
-	DestroyWindow(Window);
+	TemporaryFiles.Cleanup();
 	return Success ? 0 : 1;
+}
+catch(const std::exception &)
+{
+	MessageBoxW(nullptr, L"无法准备更新。请重新启动客户端后重试。", WINDOW_TITLE, MB_OK | MB_ICONERROR);
+	return 1;
 }

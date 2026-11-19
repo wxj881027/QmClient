@@ -4,12 +4,15 @@
 #include <base/color.h>
 #include <base/vmath.h>
 
+#include <game/client/components/qmclient/bg_draw_geometry.h>
 #include <game/client/components/tclient/bg_draw_file.h>
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <list>
+#include <stdexcept>
+#include <utility>
 
 class CQmBgDrawStroke
 {
@@ -48,7 +51,7 @@ public:
 	void PenUp() { m_Drawing = false; }
 	bool MoveTo(const CBgDrawItemDataPoint &Point)
 	{
-		if(!m_Drawing)
+		if(!m_Drawing || !QmBgDrawPointIsFinite(Point))
 			return false;
 		const auto &Last = m_vData.back();
 		if(Point.x == Last.x && Point.y == Last.y && Point.w == Last.w &&
@@ -89,6 +92,39 @@ bool QmBgDrawMakeSpace(std::list<T> &Items, std::array<T *, N> &apActiveItems, i
 		Removed = true;
 	}
 	return Removed;
+}
+
+// 先构造新项，失败不淘汰旧项；成功后只修剪容量，不移动保留项的地址。
+template<typename T, size_t N, typename... TArgs>
+T *QmBgDrawAddItem(std::list<T> &Items, std::array<T *, N> &apActiveItems, int Capacity, bool &Dirty, TArgs &&...Args)
+{
+	if(Capacity <= 0)
+	{
+		Dirty |= QmBgDrawMakeSpace(Items, apActiveItems, Capacity, 1);
+		return nullptr;
+	}
+	Items.emplace_back(std::forward<TArgs>(Args)...);
+	Dirty = true;
+	QmBgDrawMakeSpace(Items, apActiveItems, Capacity, 0);
+	return &Items.back();
+}
+
+// Build只向候选列表追加，不得修改旧Items/借用；元素析构须遵循原列表合同。
+template<typename T, size_t N, typename TInputs, typename TBuild>
+bool QmBgDrawAppendLoaded(std::list<T> &Items, std::array<T *, N> &apActiveItems, int Capacity, const TInputs &Inputs, TBuild &&Build)
+{
+	std::list<T> Candidate;
+	for(const auto &Input : Inputs)
+		Build(Candidate, Input);
+	if(Capacity < 0 || Candidate.size() > static_cast<size_t>(Capacity))
+		throw std::length_error("Background stroke batch exceeds configured capacity");
+	const size_t Retained = std::min(Items.size(), static_cast<size_t>(Capacity) - Candidate.size());
+	if(Candidate.size() > Items.max_size() - Retained)
+		throw std::length_error("Background stroke list capacity exceeded");
+	const bool Added = !Candidate.empty();
+	const bool Removed = QmBgDrawMakeSpace(Items, apActiveItems, Capacity, static_cast<int>(Candidate.size()));
+	Items.splice(Items.end(), Candidate);
+	return Removed || Added;
 }
 
 #endif

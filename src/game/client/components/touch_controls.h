@@ -2,24 +2,93 @@
 #define GAME_CLIENT_COMPONENTS_TOUCH_CONTROLS_H
 
 #include <base/color.h>
+#include <base/system.h>
 #include <base/vmath.h>
 
 #include <engine/input.h>
+#include <engine/shared/jsonwriter.h>
+#include <engine/storage.h>
 
 #include <game/client/component.h>
 #include <game/client/ui_rect.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <functional>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
-class CJsonWriter;
 struct SLabelProperties;
 typedef struct _json_value json_value;
+
+namespace qm_touch_controls
+{
+	inline constexpr char CONFIGURATION_FILENAME[] = "touch_controls.json";
+
+	template<typename TStorage, typename TWrite>
+	bool SaveConfiguration(TStorage &Storage, TWrite &&Write) noexcept
+	{
+		char aTemporary[128];
+		const auto Now = std::chrono::steady_clock::now().time_since_epoch().count();
+		str_format(aTemporary, sizeof(aTemporary), "%s.%d.%lld.tmp", CONFIGURATION_FILENAME, pid(), static_cast<long long>(Now));
+		bool OwnsTemporary = false;
+		try
+		{
+			std::unique_ptr<void, decltype(&io_close)> pFile(Storage.OpenFile(aTemporary, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE), io_close);
+			if(!pFile)
+				return false;
+
+			OwnsTemporary = true;
+			CJsonFileWriter Writer(pFile.get());
+			pFile.release();
+			Write(Writer);
+			// 写入、同步和关闭全部成功后才替换，禁止删除目标后重试。
+			if(Writer.Finish() && Storage.RenameFile(aTemporary, CONFIGURATION_FILENAME, IStorage::TYPE_SAVE, false))
+				return true;
+		}
+		catch(...)
+		{
+			// 写入或发布失败后只清理这次创建的临时文件。
+		}
+		if(OwnsTemporary)
+		{
+			try
+			{
+				Storage.RemoveFile(aTemporary, IStorage::TYPE_SAVE);
+			}
+			catch(...)
+			{
+			}
+		}
+		return false;
+	}
+
+	inline bool SamePress(const IInput::CTouchFingerState &Left, const IInput::CTouchFingerState &Right)
+	{
+		// 手指 ID 可以在松开后复用，按下时间用于区分新旧手势。
+		return Left.m_Finger == Right.m_Finger && Left.m_PressTime == Right.m_PressTime;
+	}
+
+	inline bool UpdateLongPressExclusions(std::vector<IInput::CTouchFingerState> &vExcluded, std::span<const IInput::CTouchFingerState> vCurrent)
+	{
+		std::erase_if(vExcluded, [&](const auto &Excluded) {
+			return std::none_of(vCurrent.begin(), vCurrent.end(), [&](const auto &Current) { return SamePress(Excluded, Current); });
+		});
+		const auto IsExcluded = [&](const auto &Finger) {
+			return std::any_of(vExcluded.begin(), vExcluded.end(), [&](const auto &Excluded) { return SamePress(Excluded, Finger); });
+		};
+		for(size_t i = 1; i < vCurrent.size(); ++i)
+		{
+			if(!IsExcluded(vCurrent[i]))
+				vExcluded.push_back(vCurrent[i]);
+		}
+		return !vCurrent.empty() && !IsExcluded(vCurrent.front());
+	}
+}
 
 class CTouchControls : public CComponent
 {
@@ -225,22 +294,33 @@ public:
 	class CTouchButtonBehavior
 	{
 	public:
-		CTouchButton *m_pTouchButton;
-		CTouchControls *m_pTouchControls;
+		CTouchButton *m_pTouchButton = nullptr;
+		CTouchControls *m_pTouchControls = nullptr;
 
-		bool m_Active; // variables below must only be used when active
-		IInput::CTouchFinger m_Finger;
-		vec2 m_ActivePosition;
-		vec2 m_AccumulatedDelta;
-		std::chrono::nanoseconds m_ActivationStartTime;
+		bool m_Active = false; // variables below must only be used when active
+		IInput::CTouchFinger m_Finger{};
+		vec2 m_ActivePosition{};
+		vec2 m_AccumulatedDelta{};
+		std::chrono::nanoseconds m_ActivationStartTime{};
 
 		virtual ~CTouchButtonBehavior() = default;
-		virtual void Init(CTouchButton *pTouchButton);
+		virtual void Init(CTouchButton *pTouchButton)
+		{
+			m_pTouchButton = pTouchButton;
+			m_pTouchControls = pTouchButton->m_pTouchControls;
+		}
 
-		void Reset();
+		void Reset() { SetInactive(false); }
 		void SetActive(const IInput::CTouchFingerState &FingerState);
-		void SetInactive(bool ByFinger);
-		bool IsActive() const;
+		void SetInactive(bool ByFinger)
+		{
+			if(m_Active)
+			{
+				m_Active = false;
+				OnDeactivate(ByFinger);
+			}
+		}
+		bool IsActive() const { return m_Active; }
 		bool IsActive(const IInput::CTouchFinger &Finger) const;
 
 		virtual CButtonLabel GetLabel() const = 0;
@@ -560,6 +640,7 @@ private:
 	 * be used to update the mouse position from direct touch input.
 	 */
 	int m_DirectTouchLastAction = ACTION_FIRE;
+	bool m_GameTouchInputActive = false;
 
 	class CActionState
 	{
@@ -607,7 +688,7 @@ private:
 	void RenderButtonsGame();
 	vec2 CalculateScreenSize() const;
 
-	bool ParseConfiguration(const void *pFileData, unsigned FileLength);
+	bool ParseConfiguration(const void *pFileData, size_t FileLength);
 	std::optional<EDirectTouchIngameMode> ParseDirectTouchIngameMode(const json_value *pModeValue);
 	std::optional<EDirectTouchSpectateMode> ParseDirectTouchSpectateMode(const json_value *pModeValue);
 	std::optional<ColorRGBA> ParseColor(const json_value *pColorValue, const char *pAttributeName, std::optional<ColorRGBA> DefaultColor) const;
@@ -633,6 +714,7 @@ private:
 	void RenderButtonsEditor();
 	// This is how editor deal with touch inputs.
 	void UpdateButtonsEditor(const std::vector<IInput::CTouchFingerState> &vTouchFingerStates);
+	void ShowNoSpacePopup();
 	void UpdateSampleButton(const CTouchButton &SrcButton);
 
 	// For process fingerstates in button editor.
@@ -642,13 +724,14 @@ private:
 	std::optional<IInput::CTouchFingerState> m_LongPressFingerState;
 	vec2 m_ZoomStartPos = vec2(0.0f, 0.0f);
 	vec2 m_AccumulatedDelta = vec2(0.0f, 0.0f);
-	std::vector<IInput::CTouchFingerState> m_vDeletedFingerState;
+	std::vector<IInput::CTouchFingerState> m_vLongPressExclusions;
 	std::array<bool, (size_t)EButtonVisibility::NUM_VISIBILITIES> m_aVirtualVisibilities;
 
 	// Partially copied so it looks the same as m_pSelectedButton. Follows along the fingers while sliding.
 	std::unique_ptr<CTouchButton> m_pSampleButton = nullptr;
 	// For rendering. Calculated from m_pSampleButton's m_UnitRect, will not overlapping with any rect.
 	std::optional<CUnitRect> m_ShownRect;
+	bool m_SamplePlacementBlocked = false;
 	CTouchButton *m_pSelectedButton = nullptr;
 
 	bool m_UnsavedChanges = false;
@@ -670,10 +753,14 @@ public:
 	std::array<bool, (size_t)EButtonVisibility::NUM_VISIBILITIES> VirtualVisibilities() const { return m_aVirtualVisibilities; }
 	void ReverseVirtualVisibilities(int Number) { m_aVirtualVisibilities[Number] = !m_aVirtualVisibilities[Number]; }
 	std::optional<CUnitRect> ShownRect() const { return m_ShownRect; }
-	void SetShownRect(std::optional<CUnitRect> Rect) { m_ShownRect = Rect; }
+	void SetShownRect(std::optional<CUnitRect> Rect)
+	{
+		m_ShownRect = Rect;
+		m_SamplePlacementBlocked = false;
+	}
 	CTouchButton *SelectedButton() const { return m_pSelectedButton; }
 	void SetSelectedButton(CTouchButton *TargetButton) { m_pSelectedButton = TargetButton; }
-	void RemakeSampleButton() { m_pSampleButton = std::make_unique<CTouchButton>(this); }
+	void RemakeSampleButton();
 	CTouchButton *SampleButton() const { return m_pSampleButton.get(); }
 	bool IsButtonEditing() const { return m_pSelectedButton != nullptr || m_pSampleButton != nullptr; }
 	ColorRGBA DefaultBackgroundColorInactive() const { return ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f); }

@@ -59,6 +59,9 @@ void RestartAndroidApp();
  */
 bool StartAndroidServer(const char **ppArguments, size_t NumArguments);
 
+// 取消待绑定启动，或停止已启动的本地服务；无需等待Messenger可用。
+void StopAndroidServer();
+
 /**
  * Adds a command to the execution queue of the local server.
  *
@@ -80,7 +83,7 @@ bool IsAndroidServerRunning();
 // 打开应用内媒体列表，导出与分享由系统 UI 完成；排除仍在录制的文件。
 bool ShowAndroidMediaFiles(const char *pDirectory, bool Videos, const char *const *ppExcluded, size_t NumExcluded);
 
-// 把单个文件导出到系统「下载/QmClient」（Android 10+ 走 MediaStore，无需存储权限）。
+// 把单个文件异步导出到系统「下载/QmClient」。返回 true 表示 Java 后台线程已接手。
 bool ExportAndroidMediaFile(const char *pPath);
 
 // 用系统文件管理器（DocumentsUI）打开下载目录，替代自绘的文件列表对话框。

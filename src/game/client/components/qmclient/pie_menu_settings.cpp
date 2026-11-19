@@ -254,27 +254,12 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 					const float MidAngle = (StartAngle + EndAngle) * 0.5f * pi / 180.0f;
 					const vec2 ItemPos = PreviewCenter + vec2(cos(MidAngle), sin(MidAngle)) * ((InnerRadius + BaseOuterRadius) * 0.5f);
 					const float IconSize = BaseOuterRadius * 0.19f;
-					TextRender()->TextColor(1.0f, 1.0f, 1.0f, PreviewAlpha);
-					const EFontPreset PreviousFont = TextRender()->GetFontPreset();
-					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-					const float IconWidth = TextRender()->TextWidth(IconSize, Entry.m_pIcon);
-					const CUIRect IconRect{ItemPos.x - IconWidth * 0.5f, ItemPos.y - IconSize * 0.5f, IconWidth, IconSize};
-					Ui()->DoLabel(&IconRect, Entry.m_pIcon, IconSize, TEXTALIGN_MC);
-					TextRender()->SetFontPreset(PreviousFont);
+					QmDrawPieSettingsPreviewIcon(*Ui(), ItemPos, IconSize, Entry.m_pIcon, PreviewAlpha);
 				}
 				const int FocusedSector = HoveredSector >= 0 ? HoveredSector : PopupSectorIndex;
-				// 没有选项时中间给一句「先加选项」的提示，否则空饼看起来像画坏了。
 				const char *pCenterTitle = FocusedSector >= 0 ? aOptions[aEnabledOptions[FocusedSector]].m_pName : (VisibleCount > 0 ? Localize("Click a slice to set color") : Localize("Add options below"));
-				float CenterTitleSize = maximum(BodySize, BaseOuterRadius * 0.095f);
-				TextRender()->TextColor(ui_token::color::TEXT_PRIMARY.WithAlpha(0.98f));
-				float CenterTitleWidth = TextRender()->TextWidth(CenterTitleSize, pCenterTitle);
-				if(CenterTitleWidth > CenterRadius * 1.65f)
-				{
-					CenterTitleSize *= CenterRadius * 1.65f / CenterTitleWidth;
-					CenterTitleWidth = TextRender()->TextWidth(CenterTitleSize, pCenterTitle);
-				}
-				TextRender()->Text(PreviewCenter.x - CenterTitleWidth * 0.5f, PreviewCenter.y - CenterTitleSize * 0.5f, CenterTitleSize, pCenterTitle);
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
+				const float CenterTitleSize = maximum(BodySize, BaseOuterRadius * 0.095f);
+				QmDrawPieSettingsPreviewTitle(*TextRender(), PreviewCenter, CenterTitleSize, CenterRadius, pCenterTitle);
 			}
 		}
 	}
@@ -305,7 +290,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 			for(int Slot = 0; Slot < OutLayout.m_Count; ++Slot)
 			{
 				const SPieMenuOptionEntry &Entry = aOptions[Order[Slot]];
-				const bool Dragged = s_PieOptionPoolDrag.Active() && s_PieOptionPoolDrag.m_Option == Order[Slot];
+				const bool Dragged = Ui()->IsActiveItem(&s_PieOptionPoolDrag) && s_PieOptionPoolDrag.m_Option == Order[Slot];
 				if(Flow.Drawing())
 					QmDrawPieOptionChip(SettingsUiContext("settings_qmclient_pie_option_pool"), OutLayout.m_aChips[Slot].m_Rect, Entry.m_pName, Entry.m_pIcon,
 						color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha)), BodySize,
@@ -322,7 +307,16 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 
 	// 池间拖动：起手记录池与项，指针离开一档间距后才算拖动，松手按落点池切换配置项。
 	// 只有交互趟推进状态；测量趟与只读趟保持原样，避免后台绘制把拖动「走」一遍。
-	if(CanCommit && EnabledPoolLayout.m_Container.w > 0.0f && DisabledPoolLayout.m_Container.w > 0.0f)
+	const bool HasOptionPools = EnabledPoolLayout.m_Container.w > 0.0f && DisabledPoolLayout.m_Container.w > 0.0f;
+	if(CanCommit && s_PieOptionPoolDrag.Active() &&
+		(!HasOptionPools || !Ui()->CheckActiveItem(&s_PieOptionPoolDrag) || Ui()->MouseButtonClicked(0)))
+	{
+		// 页面、弹窗或新的按下中断旧操作时，放弃旧选项。
+		if(Ui()->IsActiveItem(&s_PieOptionPoolDrag))
+			Ui()->SetActiveItem(nullptr);
+		s_PieOptionPoolDrag.Reset();
+	}
+	if(CanCommit && HasOptionPools)
 	{
 		const auto HitTestPool = [&](const SQmPieOptionPoolLayout &Pool, const std::array<int, qm_pie_menu::OPTION_COUNT> &Order, int &Option) {
 			for(int Slot = 0; Slot < Pool.m_Count; ++Slot)
@@ -351,6 +345,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		}
 		if(!s_PieOptionPoolDrag.Active() && Ui()->MouseButtonClicked(0) && HoverPool >= 0 && HoverOption >= 0)
 		{
+			Ui()->SetActiveItem(&s_PieOptionPoolDrag);
 			s_PieOptionPoolDrag.m_Pool = HoverPool;
 			s_PieOptionPoolDrag.m_Option = HoverOption;
 			s_PieOptionPoolDrag.m_Start = Ui()->MousePos();
@@ -387,12 +382,13 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 				int *pEnabled = aOptions[s_PieOptionPoolDrag.m_Option].m_pEnabled;
 				*pEnabled = *pEnabled ? 0 : 1;
 			}
+			Ui()->SetActiveItem(nullptr);
 			s_PieOptionPoolDrag.Reset();
 		}
 	}
 
 	// 拖动中的幽灵胶囊与落点池高亮：画在最后，压在两池之上。
-	if(Flow.Drawing() && s_PieOptionPoolDrag.m_Dragging)
+	if(Flow.Drawing() && Ui()->IsActiveItem(&s_PieOptionPoolDrag) && s_PieOptionPoolDrag.m_Dragging)
 	{
 		int TargetPool = -1;
 		if(Ui()->MouseHovered(&EnabledPoolLayout.m_Container))

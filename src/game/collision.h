@@ -171,6 +171,7 @@ private:
 	bool TestTileBox(vec2 Pos, vec2 Size) const;
 	void PushBoxOutsideQmAxiomQuads(vec2 *pPos, vec2 *pVel, vec2 Size, vec2 Elasticity, bool *pGrounded) const;
 	std::unique_ptr<CQmAxiomQuadCollision> m_pQmAxiomQuads;
+	bool m_QmAxiomQuadFailed = false;
 	int m_QmAxiomRoundStartTick = 0;
 	double m_QmAxiomQuadTime = 0;
 

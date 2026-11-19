@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <limits>
 
 using namespace FontIcons;
@@ -1402,7 +1403,8 @@ CUi::EPopupMenuFunctionResult CEditor::PopupSource(void *pContext, CUIRect View,
 		Localize("Rectangle", "Editor"),
 		Localize("Circle", "Editor")};
 
-	pSource->m_Shape.m_Type = pSource->m_Shape.m_Type % CSoundShape::NUM_SHAPES; // prevent out of array errors
+	constexpr int NumShapes = CSoundShape::NUM_SHAPES;
+	pSource->m_Shape.m_Type = (pSource->m_Shape.m_Type % NumShapes + NumShapes) % NumShapes;
 
 	static int s_ShapeTypeButton = 0;
 	if(pEditor->DoButton_Editor(&s_ShapeTypeButton, s_apShapeNames[pSource->m_Shape.m_Type], 0, &ShapeButton, BUTTONFLAG_LEFT, Localize("Change sound source shape.", "Editor")))
@@ -1718,32 +1720,41 @@ CUi::EPopupMenuFunctionResult CEditor::PopupEnvPoint(void *pContext, CUIRect Vie
 		float CurrentValue = s_CurValueInput.GetFloat();
 		if(!(absolute(CurrentTime - s_CurrentTime) < 0.0001f && absolute(CurrentValue - s_CurrentValue) < 0.0001f))
 		{
+			const auto CanRoundToInt = [](float Value) {
+				const double Rounded = std::round(Value);
+				return Rounded >= std::numeric_limits<int>::min() && Rounded <= std::numeric_limits<int>::max();
+			};
+			if(!CanRoundToInt(CurrentTime * 1000.0f) || !CanRoundToInt(CurrentValue * fxpscale))
+				return CUi::POPUP_KEEP_OPEN;
+
+			const CFixedTime NewTime = CFixedTime::FromSeconds(CurrentTime);
+			const int NewValue = f2fx(CurrentValue);
 			const auto &[OldTime, OldValue] = pEditor->Map()->SelectedEnvelopeTimeAndValue();
 
 			if(pEditor->Map()->IsTangentInSelected())
 			{
 				auto [SelectedIndex, SelectedChannel] = pEditor->Map()->m_SelectedTangentInPoint;
 
-				pEditor->Map()->m_EnvelopeEditorHistory.Execute(std::make_shared<CEditorActionEditEnvelopePointValue>(pEditor->Map(), pEditor->Map()->m_SelectedEnvelope, SelectedIndex, SelectedChannel, CEditorActionEditEnvelopePointValue::EType::TANGENT_IN, OldTime, OldValue, CFixedTime::FromSeconds(CurrentTime), f2fx(CurrentValue)));
+				pEditor->Map()->m_EnvelopeEditorHistory.Execute(std::make_shared<CEditorActionEditEnvelopePointValue>(pEditor->Map(), pEditor->Map()->m_SelectedEnvelope, SelectedIndex, SelectedChannel, CEditorActionEditEnvelopePointValue::EType::TANGENT_IN, OldTime, OldValue, NewTime, NewValue));
 				CurrentTime = (pEnvelope->m_vPoints[SelectedIndex].m_Time + pEnvelope->m_vPoints[SelectedIndex].m_Bezier.m_aInTangentDeltaX[SelectedChannel]).AsSeconds();
 			}
 			else if(pEditor->Map()->IsTangentOutSelected())
 			{
 				auto [SelectedIndex, SelectedChannel] = pEditor->Map()->m_SelectedTangentOutPoint;
 
-				pEditor->Map()->m_EnvelopeEditorHistory.Execute(std::make_shared<CEditorActionEditEnvelopePointValue>(pEditor->Map(), pEditor->Map()->m_SelectedEnvelope, SelectedIndex, SelectedChannel, CEditorActionEditEnvelopePointValue::EType::TANGENT_OUT, OldTime, OldValue, CFixedTime::FromSeconds(CurrentTime), f2fx(CurrentValue)));
+				pEditor->Map()->m_EnvelopeEditorHistory.Execute(std::make_shared<CEditorActionEditEnvelopePointValue>(pEditor->Map(), pEditor->Map()->m_SelectedEnvelope, SelectedIndex, SelectedChannel, CEditorActionEditEnvelopePointValue::EType::TANGENT_OUT, OldTime, OldValue, NewTime, NewValue));
 				CurrentTime = (pEnvelope->m_vPoints[SelectedIndex].m_Time + pEnvelope->m_vPoints[SelectedIndex].m_Bezier.m_aOutTangentDeltaX[SelectedChannel]).AsSeconds();
 			}
 			else
 			{
 				auto [SelectedIndex, SelectedChannel] = pEditor->Map()->m_vSelectedEnvelopePoints.front();
-				pEditor->Map()->m_EnvelopeEditorHistory.Execute(std::make_shared<CEditorActionEditEnvelopePointValue>(pEditor->Map(), pEditor->Map()->m_SelectedEnvelope, SelectedIndex, SelectedChannel, CEditorActionEditEnvelopePointValue::EType::POINT, OldTime, OldValue, CFixedTime::FromSeconds(CurrentTime), f2fx(CurrentValue)));
+				pEditor->Map()->m_EnvelopeEditorHistory.Execute(std::make_shared<CEditorActionEditEnvelopePointValue>(pEditor->Map(), pEditor->Map()->m_SelectedEnvelope, SelectedIndex, SelectedChannel, CEditorActionEditEnvelopePointValue::EType::POINT, OldTime, OldValue, NewTime, NewValue));
 
 				CurrentTime = pEnvelope->m_vPoints[SelectedIndex].m_Time.AsSeconds();
 			}
 
-			s_CurTimeInput.SetFloat(CFixedTime::FromSeconds(CurrentTime).AsSeconds());
-			s_CurValueInput.SetFloat(fx2f(f2fx(CurrentValue)));
+			s_CurTimeInput.SetFloat(CurrentTime);
+			s_CurValueInput.SetFloat(fx2f(NewValue));
 
 			s_CurrentTime = s_CurTimeInput.GetFloat();
 			s_CurrentValue = s_CurValueInput.GetFloat();
@@ -1950,6 +1961,7 @@ CUi::EPopupMenuFunctionResult CEditor::PopupImage(void *pContext, CUIRect View, 
 				return CUi::POPUP_KEEP_OPEN;
 			}
 			pImg->m_External = 0;
+			pEditor->Map()->OnModify();
 			return CUi::POPUP_CLOSE_CURRENT;
 		}
 		View.HSplitTop(5.0f, nullptr, &View);
@@ -1960,6 +1972,7 @@ CUi::EPopupMenuFunctionResult CEditor::PopupImage(void *pContext, CUIRect View, 
 		if(pEditor->DoButton_MenuItem(&s_ExternalButton, Localize("Make external", "Editor"), 0, &Slot, BUTTONFLAG_LEFT, Localize("Remove the image from the map file.", "Editor")))
 		{
 			pImg->m_External = 1;
+			pEditor->Map()->OnModify();
 			return CUi::POPUP_CLOSE_CURRENT;
 		}
 		View.HSplitTop(5.0f, nullptr, &View);
@@ -2470,7 +2483,8 @@ CUi::EPopupMenuFunctionResult CEditor::PopupEvent(void *pContext, CUIRect View, 
 		ButtonBar.VMargin((ButtonBar.w - 110.0f) / 2.0f, &Button);
 		if(pEditor->DoButton_Editor(&s_DiscardButton, Localize("Discard changes", "Editor"), EditorButtonChecked::DANGEROUS_ACTION, &Button, BUTTONFLAG_LEFT, nullptr))
 		{
-			pEditor->CloseMap(pEditor->m_PopupCloseMapIndex, false);
+			// 其他标签保存后可能自动关闭，此时当前地图的索引已经更新。
+			pEditor->CloseMap(pEditor->m_SelectedMap, false);
 			pEditor->m_PopupEventWasActivated = false;
 			return CUi::POPUP_CLOSE_CURRENT;
 		}
@@ -3343,7 +3357,9 @@ CUi::EPopupMenuFunctionResult CEditor::PopupAnimateSettings(void *pContext, CUIR
 
 	if(pEditor->DoEditBox(&s_SpeedInput, &EditBox, 10.0f, IGraphics::CORNER_NONE, Localize("The animation speed.", "Editor")))
 	{
-		EnvelopeEvaluator.m_AnimateSpeed = std::clamp(s_SpeedInput.GetFloat(), MIN_ANIM_SPEED, MAX_ANIM_SPEED);
+		const float Speed = s_SpeedInput.GetFloat();
+		if(std::isfinite(Speed))
+			EnvelopeEvaluator.m_AnimateSpeed = std::clamp(Speed, MIN_ANIM_SPEED, MAX_ANIM_SPEED);
 	}
 
 	// 调整起始时间，避免动画速度变化时跳变。
@@ -3465,9 +3481,13 @@ CUi::EPopupMenuFunctionResult CEditor::PopupQuadArt(void *pContext, CUIRect View
 	constexpr int MaximumQuadThreshold = 100'000;
 	if(pEditor->DoButton_Editor(&s_Confirm, Localize("Confirm", "Editor"), 0, &Right, BUTTONFLAG_LEFT, nullptr))
 	{
-		size_t MaximumQuadNumber = (pEditor->m_QuadArtImageInfo.m_Width / pEditor->m_QuadArtParameters.m_ImagePixelSize) *
-					   (pEditor->m_QuadArtImageInfo.m_Height / pEditor->m_QuadArtParameters.m_ImagePixelSize);
-		if(MaximumQuadNumber > MaximumQuadThreshold)
+		const auto MaximumQuadNumber = pEditor->m_QuadArtParameters.MaximumQuadCount(pEditor->m_QuadArtImageInfo);
+		if(!MaximumQuadNumber)
+		{
+			pEditor->ShowFileDialogError(Localize("The quad art is too large. Increase the image pixel size or decrease the quad pixel size.", "Editor"));
+			return CUi::POPUP_KEEP_OPEN;
+		}
+		if(*MaximumQuadNumber > MaximumQuadThreshold)
 		{
 			pEditor->m_PopupEventType = CEditor::POPEVENT_QUADART_BIG_IMAGE;
 			pEditor->m_PopupEventActivated = true;

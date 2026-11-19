@@ -76,12 +76,6 @@ void CUiRuntimeV2::OnRender()
 
 	{
 		CPerfTimer StageTimer(TimingEnabled);
-		m_Tree.BeginFrame();
-		TreeBeginMs = StageTimer.ElapsedMs();
-		LogPerfStage(m_pGameClient->Client(), m_aPerfPage[0] != '\0' ? m_aPerfPage : nullptr, "tree_begin_frame", TreeBeginMs);
-	}
-	{
-		CPerfTimer StageTimer(TimingEnabled);
 		m_AnimRuntime.Advance(Dt);
 		AnimAdvanceMs = StageTimer.ElapsedMs();
 		LogPerfStage(m_pGameClient->Client(), m_aPerfPage[0] != '\0' ? m_aPerfPage : nullptr, "anim_advance", AnimAdvanceMs);
@@ -93,15 +87,23 @@ void CUiRuntimeV2::OnRender()
 		LogPerfStage(m_pGameClient->Client(), m_aPerfPage[0] != '\0' ? m_aPerfPage : nullptr, "render_bridge_begin_frame", RenderBridgeBeginMs);
 	}
 	{
+		// 组件在本函数返回后才登记本帧节点，先用现有集合结算上一帧。
 		CPerfTimer StageTimer(TimingEnabled);
 		m_Tree.EndFrame(m_AnimRuntime);
 		TreeEndMs = StageTimer.ElapsedMs();
-		if(PerfEnabled)
-		{
-			char aExtra[96];
-			str_format(aExtra, sizeof(aExtra), "dt_ms=%.3f", Dt * 1000.0f);
-			LogPerfStage(m_pGameClient->Client(), m_aPerfPage[0] != '\0' ? m_aPerfPage : nullptr, "tree_end_frame", TreeEndMs, false, aExtra);
-		}
+	}
+	{
+		CPerfTimer StageTimer(TimingEnabled);
+		m_Tree.BeginFrame();
+		TreeBeginMs = StageTimer.ElapsedMs();
+	}
+	if(PerfEnabled)
+	{
+		const char *pPerfPage = m_aPerfPage[0] != '\0' ? m_aPerfPage : nullptr;
+		char aExtra[96];
+		str_format(aExtra, sizeof(aExtra), "dt_ms=%.3f", Dt * 1000.0f);
+		LogPerfStage(m_pGameClient->Client(), pPerfPage, "tree_end_frame", TreeEndMs, false, aExtra);
+		LogPerfStage(m_pGameClient->Client(), pPerfPage, "tree_begin_frame", TreeBeginMs);
 	}
 
 	m_LastStats.m_BuildTreeMs = TreeBeginMs + TreeEndMs;

@@ -4,9 +4,17 @@
 
 #include <engine/external/json-parser/json.h>
 
+#include <game/client/components/qmclient/qm_json_fields.h>
+
 #include <algorithm>
 #include <cinttypes>
+#include <cmath>
 #include <limits>
+#include <map>
+#include <memory>
+#include <new>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 namespace QmMapHistory
@@ -52,7 +60,7 @@ namespace QmMapHistory
 
 		const char *JsonString(const json_value *pVal, const char *pDefault = "")
 		{
-			if(pVal == nullptr || pVal->type != json_string)
+			if(!qm_json::Text(pVal))
 				return pDefault;
 			return pVal->u.string.ptr;
 		}
@@ -64,7 +72,14 @@ namespace QmMapHistory
 			if(pVal->type == json_integer)
 				return pVal->u.integer;
 			if(pVal->type == json_double)
-				return (int64_t)pVal->u.dbl;
+			{
+				const double Value = pVal->u.dbl;
+				// INT64_MAX转double会舍入到2^63，正边界必须排除等号。
+				constexpr double LIMIT = 9223372036854775808.0;
+				if(!std::isfinite(Value) || Value < -LIMIT || Value >= LIMIT)
+					return Default;
+				return static_cast<int64_t>(Value);
+			}
 			return Default;
 		}
 
@@ -113,9 +128,12 @@ namespace QmMapHistory
 		const std::string StableId = MapId.empty() ? std::string(MapName) : std::string(MapId);
 		if(SMapHistoryRecord *pRecord = Find(StableId))
 		{
-			pRecord->m_MapName = std::string(MapName);
+			// 字符串都准备成功后再发布，也允许输入借用旧记录自身。
+			std::string NewName(MapName);
+			std::string NewDate(Date);
+			pRecord->m_MapName.swap(NewName);
+			pRecord->m_LastPlayedDate.swap(NewDate);
 			pRecord->m_LastEnteredAt = NowUnix;
-			pRecord->m_LastPlayedDate = std::string(Date);
 			pRecord->m_Finished = false;
 			pRecord->m_FinishTimeMs = 0;
 			pRecord->m_PlayTimeMs = 0;
@@ -287,81 +305,90 @@ namespace QmMapHistory
 
 	bool CMapHistory::FromJson(std::string_view Json, char *pErr, size_t ErrSize)
 	{
-		json_settings Settings{};
-		char aJsonErr[json_error_max];
-		json_value *pRoot = json_parse_ex(&Settings, Json.data(), Json.size(), aJsonErr);
-		if(pRoot == nullptr)
+		try
 		{
-			SetError(pErr, ErrSize, aJsonErr);
-			return false;
-		}
-		if(pRoot->type != json_object)
-		{
-			json_value_free(pRoot);
-			SetError(pErr, ErrSize, "root is not an object");
-			return false;
-		}
+			json_settings Settings{};
+			char aJsonErr[json_error_max];
+			const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(json_parse_ex(&Settings, Json.data(), Json.size(), aJsonErr), json_value_free);
+			if(pRoot == nullptr)
+			{
+				SetError(pErr, ErrSize, aJsonErr);
+				return false;
+			}
+			if(pRoot->type != json_object)
+			{
+				SetError(pErr, ErrSize, "root is not an object");
+				return false;
+			}
 
-		std::vector<SMapHistoryRecord> vOldEntries;
-		vOldEntries.swap(m_vEntries);
+			const json_value &Entries = *qm_json::Field(pRoot.get(), "entries");
+			if(Entries.type != json_none && Entries.type != json_array)
+			{
+				SetError(pErr, ErrSize, "entries is not an array");
+				return false;
+			}
 
-		const json_value &Entries = (*pRoot)["entries"];
-		if(Entries.type == json_none)
-		{
-			json_value_free(pRoot);
+			// 全部记录和重复项合并完成后才发布；失败保留原名单及其借用。
+			CMapHistory Loaded;
+			if(Entries.type == json_array)
+			{
+				// 键只借用解析树；索引先于pRoot销毁，不借用临时记录或vector中的字符串。
+				std::map<std::string_view, size_t> Indices;
+				for(unsigned i = 0; i < Entries.u.array.length; ++i)
+				{
+					const json_value *pItem = Entries.u.array.values[i];
+					if(pItem == nullptr || pItem->type != json_object)
+						continue;
+					SMapHistoryRecord Record;
+					const json_value *pMapName = qm_json::Field(pItem, "map_name");
+					const json_value *pMapId = qm_json::Field(pItem, "map_id");
+					// 异常ID不能截断或回退成名称，否则会与正常记录错误合并。
+					if(pMapId->type == json_string && !qm_json::Text(pMapId))
+						continue;
+					Record.m_MapName = JsonString(pMapName);
+					Record.m_MapId = JsonString(pMapId);
+					if(Record.m_MapId.empty())
+						Record.m_MapId = Record.m_MapName;
+					if(Record.m_MapName.empty() || Record.m_MapId.empty())
+						continue;
+					Record.m_LastEnteredAt = std::max<int64_t>(0, JsonInt(qm_json::Field(pItem, "last_entered")));
+					Record.m_LastPlayedDate = JsonString(qm_json::Field(pItem, "last_played_date"));
+					Record.m_DeathCount = (int)std::clamp<int64_t>(JsonInt(qm_json::Field(pItem, "deaths")), 0, std::numeric_limits<int>::max());
+					Record.m_Finished = JsonBool(qm_json::Field(pItem, "finished"));
+					Record.m_FinishTimeMs = std::max<int64_t>(0, JsonInt(qm_json::Field(pItem, "finish_time_ms")));
+					Record.m_PlayTimeMs = std::max<int64_t>(0, JsonInt(qm_json::Field(pItem, "play_time_ms")));
+					if(!Record.m_Finished)
+						Record.m_FinishTimeMs = 0;
+					const json_value *pIdentity = pMapId->type == json_string && pMapId->u.string.length ? pMapId : pMapName;
+					const std::string_view Identity(pIdentity->u.string.ptr, pIdentity->u.string.length);
+					const auto [It, Inserted] = Indices.try_emplace(Identity, Loaded.m_vEntries.size());
+					if(Inserted)
+						Loaded.m_vEntries.push_back(std::move(Record));
+					else
+					{
+						auto &Existing = Loaded.m_vEntries[It->second];
+						const int DeathCount = std::max(Existing.m_DeathCount, Record.m_DeathCount);
+						if(Record.m_LastEnteredAt >= Existing.m_LastEnteredAt)
+						{
+							static_assert(std::is_nothrow_move_assignable_v<SMapHistoryRecord>);
+							Existing = std::move(Record);
+						}
+						Existing.m_DeathCount = DeathCount;
+					}
+				}
+			}
+			m_vEntries.swap(Loaded.m_vEntries);
 			return true;
 		}
-		if(Entries.type != json_array)
+		catch(const std::bad_alloc &)
 		{
-			m_vEntries.swap(vOldEntries);
-			json_value_free(pRoot);
-			SetError(pErr, ErrSize, "entries is not an array");
+			SetError(pErr, ErrSize, "map history memory allocation failed");
 			return false;
 		}
-
-		for(unsigned i = 0; i < Entries.u.array.length; ++i)
+		catch(const std::length_error &)
 		{
-			const json_value *pItem = Entries.u.array.values[i];
-			if(pItem == nullptr || pItem->type != json_object)
-				continue;
-			SMapHistoryRecord Record;
-			Record.m_MapName = JsonString(&(*pItem)["map_name"]);
-			Record.m_MapId = JsonString(&(*pItem)["map_id"]);
-			if(Record.m_MapId.empty())
-				Record.m_MapId = Record.m_MapName;
-			if(Record.m_MapName.empty() || Record.m_MapId.empty())
-				continue;
-			Record.m_LastEnteredAt = std::max<int64_t>(0, JsonInt(&(*pItem)["last_entered"]));
-			Record.m_LastPlayedDate = JsonString(&(*pItem)["last_played_date"]);
-			Record.m_DeathCount = (int)std::clamp<int64_t>(JsonInt(&(*pItem)["deaths"]), 0, std::numeric_limits<int>::max());
-			Record.m_Finished = JsonBool(&(*pItem)["finished"]);
-			Record.m_FinishTimeMs = std::max<int64_t>(0, JsonInt(&(*pItem)["finish_time_ms"]));
-			Record.m_PlayTimeMs = std::max<int64_t>(0, JsonInt(&(*pItem)["play_time_ms"]));
-			if(!Record.m_Finished)
-				Record.m_FinishTimeMs = 0;
-			MergeLoadedRecord(Record);
-		}
-
-		json_value_free(pRoot);
-		return true;
-	}
-
-	void CMapHistory::MergeLoadedRecord(const SMapHistoryRecord &Record)
-	{
-		SMapHistoryRecord *pExisting = Find(Record.m_MapId);
-		if(pExisting == nullptr)
-		{
-			m_vEntries.push_back(Record);
-			return;
-		}
-
-		pExisting->m_DeathCount = std::max(pExisting->m_DeathCount, Record.m_DeathCount);
-		if(Record.m_LastEnteredAt >= pExisting->m_LastEnteredAt)
-		{
-			const int DeathCount = pExisting->m_DeathCount;
-			*pExisting = Record;
-			pExisting->m_DeathCount = std::max(DeathCount, Record.m_DeathCount);
+			SetError(pErr, ErrSize, "map history entry capacity exceeded");
+			return false;
 		}
 	}
-
 } // namespace QmMapHistory

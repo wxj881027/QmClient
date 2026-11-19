@@ -62,13 +62,41 @@ TEST(QmListRowFeedback, MovingBetweenRowsCrossfadesBothSides)
 	g_Config.m_QmUiMotionLevel = PreviousMotionLevel;
 }
 
-TEST(QmListRowFeedback, SnapWhileScrollingSkipsStaleCrossfade)
+TEST(QmListRowFeedback, LosingHoveredRowFadesOut)
 {
 	const int PreviousMotionLevel = g_Config.m_QmUiMotionLevel;
 	g_Config.m_QmUiMotionLevel = 2;
 	CUiV2AnimationRuntime Runtime;
 	CQmListRowFeedback Feedback;
 	constexpr uint64_t Key = 13;
+
+	Feedback.BeginFrame(&Runtime, Key, false, true);
+	Feedback.Observe(3);
+	Feedback.EndFrame();
+
+	Feedback.BeginFrame(&Runtime, Key, false, true);
+	Feedback.EndFrame();
+
+	Runtime.Advance(1.0f / 60.0f);
+	Feedback.BeginFrame(&Runtime, Key, false, true);
+	EXPECT_GT(Feedback.Alpha(3), 0.0f);
+	EXPECT_LT(Feedback.Alpha(3), 1.0f);
+	Feedback.EndFrame();
+
+	Runtime.Advance(1.0f);
+	Feedback.BeginFrame(&Runtime, Key, false, true);
+	EXPECT_FLOAT_EQ(Feedback.Alpha(3), 0.0f);
+	Feedback.EndFrame();
+	g_Config.m_QmUiMotionLevel = PreviousMotionLevel;
+}
+
+TEST(QmListRowFeedback, SnapWhileScrollingSkipsStaleCrossfade)
+{
+	const int PreviousMotionLevel = g_Config.m_QmUiMotionLevel;
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Runtime;
+	CQmListRowFeedback Feedback;
+	constexpr uint64_t Key = 14;
 
 	Feedback.BeginFrame(&Runtime, Key, false, true);
 	Feedback.Observe(0);
@@ -83,5 +111,21 @@ TEST(QmListRowFeedback, SnapWhileScrollingSkipsStaleCrossfade)
 
 	EXPECT_FLOAT_EQ(Feedback.Alpha(0), 0.0f);
 	EXPECT_FLOAT_EQ(Feedback.Alpha(4), 1.0f);
+
+	Feedback.BeginFrame(&Runtime, Key, false, true);
+	Feedback.Observe(5);
+	Feedback.EndFrame();
+	Runtime.Advance(1.0f / 60.0f);
+
+	// 滚动开始前已切到第 5 行。即使候选未变，也要结束旧过渡。
+	Feedback.BeginFrame(&Runtime, Key, true, true);
+	Feedback.Observe(5);
+	Feedback.EndFrame();
+
+	Feedback.BeginFrame(&Runtime, Key, false, true);
+	Feedback.Observe(5);
+	EXPECT_FLOAT_EQ(Feedback.Alpha(4), 0.0f);
+	EXPECT_FLOAT_EQ(Feedback.Alpha(5), 1.0f);
+	Feedback.EndFrame();
 	g_Config.m_QmUiMotionLevel = PreviousMotionLevel;
 }

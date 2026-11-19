@@ -6,8 +6,6 @@ void CTranslationContext::Reset()
 {
 	m_ServerSettings.Reset();
 
-	std::fill(std::begin(m_apPlayerInfosRace), std::end(m_apPlayerInfosRace), nullptr);
-
 	for(CClientData &Client : m_aClients)
 		Client.Reset();
 

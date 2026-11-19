@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <limits>
 #include <map>
+#include <string_view>
 #include <tuple>
-#include <unordered_map>
 
 // 本文件只承载不依赖编辑器图层派生类的核心逻辑；依赖 CLayerTiles 等派生类
 // 的 Capture 在 collab_camera_map_capture.cpp，仅编入 CLIENT 目标，行为测试
@@ -98,19 +98,25 @@ std::optional<SEditorCollabPlacementTarget> CEditorCollabPlacementSnapshot::Find
 		return std::nullopt;
 
 	// 先消去内容相同的图层，改名、属性变化与重排不会被误判为新放置。
-	std::unordered_multimap<uint64_t, size_t> OldByContent;
+	using TContentKey = std::tuple<uint64_t, std::string_view, std::string_view>;
+	const auto ContentKey = [](const SLayer &Layer, bool SameIdentity) {
+		const std::string_view GroupName = SameIdentity ? std::string_view(Layer.m_GroupName) : std::string_view{};
+		const std::string_view LayerName = SameIdentity ? std::string_view(Layer.m_LayerName) : std::string_view{};
+		return TContentKey(ContentHash(Layer), GroupName, LayerName);
+	};
+	std::multimap<TContentKey, size_t> OldByContent;
 	for(size_t i = 0; i < Previous.m_vLayers.size(); ++i)
-		OldByContent.emplace(ContentHash(Previous.m_vLayers[i]), i);
+		OldByContent.emplace(ContentKey(Previous.m_vLayers[i], true), i);
 	std::vector<bool> vOldUsed(Previous.m_vLayers.size(), false);
 	std::vector<bool> vUnchanged(m_vLayers.size(), false);
 	const auto MatchUnchanged = [&](size_t i, bool SameIdentity) {
-		const auto Range = OldByContent.equal_range(ContentHash(m_vLayers[i]));
-		for(auto It = Range.first; It != Range.second; ++It)
+		const SLayer &Layer = m_vLayers[i];
+		const auto SearchKey = ContentKey(Layer, SameIdentity);
+		for(auto It = OldByContent.lower_bound(SearchKey); It != OldByContent.end(); ++It)
 		{
-			const SLayer &Old = Previous.m_vLayers[It->second];
-			if(SameIdentity && (m_vLayers[i].m_GroupName != Old.m_GroupName || m_vLayers[i].m_LayerName != Old.m_LayerName))
-				continue;
-			if(SameContent(m_vLayers[i], Old))
+			if(SameIdentity ? It->first != SearchKey : std::get<0>(It->first) != std::get<0>(SearchKey))
+				break;
+			if(SameContent(Layer, Previous.m_vLayers[It->second]))
 			{
 				vOldUsed[It->second] = true;
 				vUnchanged[i] = true;

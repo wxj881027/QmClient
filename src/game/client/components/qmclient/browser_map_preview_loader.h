@@ -4,20 +4,24 @@
 #include <base/mem.h>
 #include <base/system.h>
 
+#include <engine/client/map_download_resolver.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/map.h>
 #include <engine/storage.h>
 
 #include <game/layers.h>
+#include <game/map/map_render_items.h>
 #include <game/mapitems.h>
 
 #include <algorithm>
 #include <atomic>
+#include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <vector>
 
 // 优先普通出生点，其次队伍出生点和计时起点；不取全图平均，避免落在远处空白。
@@ -53,12 +57,10 @@ inline int ProbeDownloadedMap(const CFsFileInfo *pInfo, int IsDir, int DirType, 
 	SMapDownloadProbeContext *pProbe = static_cast<SMapDownloadProbeContext *>(pUser);
 	if(IsDir || pInfo->m_TimeModified <= pProbe->m_BestTime)
 		return 0;
-	const int PrefixLen = str_length(pProbe->m_pPrefix);
-	const int NameLen = str_length(pInfo->m_pName);
-	// 严格 <前缀>_<哈希>.map：前缀后必须紧跟 '_'，防止 "Sunny" 误配 "SunnyLand_…"。
-	if(NameLen < PrefixLen + 2 || str_startswith(pInfo->m_pName, pProbe->m_pPrefix) == nullptr || pInfo->m_pName[PrefixLen] != '_')
-		return 0;
-	if(str_comp(pInfo->m_pName + NameLen - 4, ".map") != 0)
+	const std::string_view Name = pInfo->m_pName;
+	const std::string_view Prefix = pProbe->m_pPrefix;
+	if(Name.size() <= Prefix.size() || !Name.starts_with(Prefix) || Name[Prefix.size()] != '_' ||
+		!QmMapDownloadSuffixIsHashed(Name.substr(Prefix.size() + 1)))
 		return 0;
 	pProbe->m_BestTime = pInfo->m_TimeModified;
 	str_format(pProbe->m_aBest, sizeof(pProbe->m_aBest), "downloadedmaps/%s", pInfo->m_pName);
@@ -112,19 +114,23 @@ class CQmBrowserMapPreviewLoadJob : public IJob
 	char m_aCurrentPath[IO_MAX_PATH_LENGTH];
 	bool m_Sixup;
 
+	bool Cancelled() const { return m_Cancelled.load() || State() == STATE_ABORTED; }
+
 public:
 	void Run() override
 	{
 		char aPath[IO_MAX_PATH_LENGTH];
-		if(m_Cancelled.load() || !ResolveLocalPreviewMapPath(m_pStorage, m_aCurrentPath, m_aName, aPath, sizeof(aPath)) || m_Cancelled.load())
+		if(Cancelled() || !ResolveLocalPreviewMapPath(m_pStorage, m_aCurrentPath, m_aName, aPath, sizeof(aPath)) || Cancelled())
 			return;
 		m_pMap = std::make_unique<CMap>(m_pStorage);
-		if(!m_pMap->Load(aPath, IStorage::TYPE_ALL_OR_ABSOLUTE) || m_Cancelled.load())
+		if(!m_pMap->Load(aPath, IStorage::TYPE_ALL_OR_ABSOLUTE) || Cancelled())
 			return;
 		m_pLayers = std::make_unique<CLayers>();
 		m_pLayers->Init(m_pMap.get(), false);
 		for(const auto *pLayer : {m_pLayers->GameLayer(), m_pLayers->FrontLayer()})
 		{
+			if(Cancelled())
+				return;
 			if(m_Start || !pLayer)
 				continue;
 			const int DataIndex = pLayer == m_pLayers->GameLayer() ? pLayer->m_Data : pLayer->m_Front;
@@ -138,11 +144,15 @@ public:
 		Count = std::clamp<int>(Count, 0, MAX_MAPIMAGES);
 		m_vImages.resize(Count);
 		m_vUsage.resize(Count);
+		int LayersStart, LayersCount;
+		m_pMap->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersCount);
 		for(int Group = 0; Group < m_pLayers->NumGroups(); ++Group)
 		{
 			const auto *pGroup = m_pLayers->GetGroup(Group);
 			for(int Layer = 0; Layer < pGroup->m_NumLayers; ++Layer)
 			{
+				if(Cancelled())
+					return;
 				const auto *pLayer = m_pLayers->GetLayer(pGroup->m_StartLayer + Layer);
 				int Image = -1, Usage = 0;
 				if(pLayer->m_Type == LAYERTYPE_TILES)
@@ -152,7 +162,9 @@ public:
 				}
 				else if(pLayer->m_Type == LAYERTYPE_QUADS)
 				{
-					const auto *pQuads = reinterpret_cast<const CMapItemLayerQuads *>(pLayer);
+					const auto *pQuads = MapRenderItems::QuadLayer(*m_pMap, LayersStart + pGroup->m_StartLayer + Layer);
+					if(pQuads == nullptr)
+						return;
 					Image = pQuads->m_Image;
 					Usage = 2;
 					// 四边形压缩数据也在 worker 预解压，GPU 初始化只读取准备好的数据。
@@ -162,15 +174,17 @@ public:
 					m_vUsage[Image] |= Usage;
 			}
 		}
-		for(int Index = 0; Index < Count && !m_Cancelled.load(); ++Index)
+		for(int Index = 0; Index < Count && !Cancelled(); ++Index)
 		{
 			if(m_vUsage[Index] == 0)
 				continue;
-			const auto *pImage = static_cast<const CMapItemImage_v2 *>(m_pMap->GetItem(Start + Index));
-			if(pImage->m_Version > 1 && pImage->m_MustBe1 != 1)
+			const auto ImageItem = MapRenderItems::ReadImage(*m_pMap, Start + Index);
+			if(!ImageItem)
+				return;
+			if(ImageItem->m_Version > 1 && ImageItem->m_MustBe1 != 1)
 				continue;
-			const char *pName = m_pMap->GetDataString(pImage->m_ImageName);
-			if(pImage->m_External)
+			const char *pName = m_pMap->GetDataString(ImageItem->m_ImageName);
+			if(ImageItem->m_External)
 			{
 				if(pName == nullptr || pName[0] == '\0')
 					continue;
@@ -178,30 +192,33 @@ public:
 				str_format(aPath, sizeof(aPath), "mapres/%s%s.png", pName, Translate ? "_0.7" : "");
 				void *pData = nullptr;
 				unsigned Size = 0;
-				if(m_pStorage->ReadFile(aPath, IStorage::TYPE_ALL, &pData, &Size))
-				{
-					CImageLoader::LoadPng(pData, Size, aPath, m_vImages[Index]);
-					free(pData);
-				}
+				const bool Read = m_pStorage->ReadFile(aPath, IStorage::TYPE_ALL, &pData, &Size);
+				const std::unique_ptr<void, decltype(&free)> pFile(pData, free);
+				if(Cancelled())
+					return;
+				if(Read)
+					CImageLoader::LoadPng(pFile.get(), Size, aPath, m_vImages[Index]);
 			}
-			else if(pImage->m_Width > 0 && pImage->m_Height > 0)
+			else if(ImageItem->m_Width > 0 && ImageItem->m_Height > 0)
 			{
 				CImageInfo &Image = m_vImages[Index];
-				Image.m_Width = pImage->m_Width;
-				Image.m_Height = pImage->m_Height;
+				Image.m_Width = ImageItem->m_Width;
+				Image.m_Height = ImageItem->m_Height;
 				Image.m_Format = CImageInfo::FORMAT_RGBA;
-				const void *pData = m_pMap->GetData(pImage->m_ImageData);
+				const void *pData = m_pMap->GetData(ImageItem->m_ImageData);
+				if(Cancelled())
+					return;
 				size_t Size;
-				if(pData && Image.DataSize(Size) && m_pMap->GetDataSize(pImage->m_ImageData) >= 0 && Size <= static_cast<size_t>(m_pMap->GetDataSize(pImage->m_ImageData)))
+				if(pData && Image.DataSize(Size) && m_pMap->GetDataSize(ImageItem->m_ImageData) >= 0 && Size <= static_cast<size_t>(m_pMap->GetDataSize(ImageItem->m_ImageData)))
 				{
 					Image.m_pData = static_cast<uint8_t *>(malloc(Size));
 					if(Image.m_pData)
 						mem_copy(Image.m_pData, pData, Size);
 				}
-				m_pMap->UnloadData(pImage->m_ImageData);
+				m_pMap->UnloadData(ImageItem->m_ImageData);
 			}
 		}
-		m_Success = !m_Cancelled.load();
+		m_Success = !Cancelled();
 	}
 
 public:
@@ -216,6 +233,7 @@ public:
 	{
 		str_copy(m_aName, pName);
 		str_copy(m_aCurrentPath, pCurrentPath);
+		Abortable(true);
 	}
 	~CQmBrowserMapPreviewLoadJob() override
 	{

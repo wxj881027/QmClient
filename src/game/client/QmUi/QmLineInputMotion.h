@@ -9,6 +9,7 @@
 
 #include <array>
 #include <chrono>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -19,7 +20,9 @@ public:
 	static constexpr int MAX_ANIMATED_GLYPHS = 32;
 
 	void Reset();
+	// 资源准备失败清空动效状态，后续帧按当前文字重新建立。
 	void Update(const char *pText, std::chrono::nanoseconds Now, int MotionLevel, bool AnimateGlyphs = true);
+	// 输出准备失败只清空偏移，本帧沿原文字排版绘制。
 	void FillCharOffsets(std::vector<STextCharOffset> &vOffsets) const;
 	vec2 ResolveCaret(vec2 Target, float FontHeight, bool Snap = false, bool AnimateAcrossLines = false);
 
@@ -31,7 +34,8 @@ private:
 		uint64_t m_NodeKey = 0;
 	};
 
-	CQmAnimationBackend m_Runtime;
+	// 首次准备时构造，Runtime 初始化分配也留在入口恢复边界内。
+	std::optional<CQmAnimationBackend> m_Runtime;
 	std::string m_Text;
 	std::vector<SCharacter> m_vCharacters;
 	std::vector<SCharacter> m_vNextCharacters;

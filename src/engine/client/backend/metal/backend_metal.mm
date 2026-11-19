@@ -1,5 +1,6 @@
 #include "backend_metal.h"
 #include "metal_frame_state.h"
+#include "metal_gpu_completion.h"
 #include "metal_render_target_state.h"
 #include "metal_types.h"
 
@@ -32,6 +33,7 @@
 #include <cstring>
 #include <limits>
 #include <mutex>
+#include <new>
 #include <string>
 #include <utility>
 #include <vector>
@@ -181,13 +183,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 	uint32_t m_LastPresentedReadbackWidth = 0;
 	uint32_t m_LastPresentedReadbackHeight = 0;
 	size_t m_LastPresentedReadbackRowBytes = 0;
-	std::atomic_bool m_GpuFailure = false;
-	std::atomic<uint64_t> m_GpuFailureFrameId = 0;
-	std::atomic<int> m_GpuFailureCommandId = -1;
-	std::atomic<int> m_GpuFailureStatus = 0;
+	CMetalGpuCompletion m_GpuCompletion;
 	std::atomic<int> m_LastCommandId = -1;
-	std::mutex m_GpuFailureMutex;
-	std::string m_GpuFailureDescription;
 	SBackendCapabilities *m_pCapabilities = nullptr;
 	IStorage *m_pStorage = nullptr;
 	bool m_CommandBufferCommitted = false;
@@ -517,9 +514,16 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			return;
 		if(Buffer.m_DataBytes <= gs_TransientBufferPoolByteLimit - m_aTransientBufferPoolBytes[Slot])
 		{
-			m_aTransientBuffers[Slot].push_back(Buffer);
-			m_aTransientBufferPoolBytes[Slot] += Buffer.m_DataBytes;
-			return;
+			try
+			{
+				m_aTransientBuffers[Slot].push_back(Buffer);
+				m_aTransientBufferPoolBytes[Slot] += Buffer.m_DataBytes;
+				return;
+			}
+			catch(const std::bad_alloc &)
+			{
+				// 缓存扩容失败时直接释放，完成槽位的回收。
+			}
 		}
 		SubBufferMemory(Buffer.m_DataBytes);
 		ReleaseMetalObject(Buffer.m_Buffer);
@@ -775,51 +779,15 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		m_FrameState.DrainFrames();
 	}
 
-	void RecordGpuFailure(id<MTLCommandBuffer> Buffer, uint64_t FrameId)
+	bool SetGpuFailureError() noexcept
 	{
-		std::string Description = "Metal command buffer failed";
-		NSError *pError = Buffer.error;
-		if(pError != nil)
-		{
-			const char *pDomain = pError.domain.UTF8String;
-			const char *pLocalizedDescription = pError.localizedDescription.UTF8String;
-			Description += " (domain=";
-			Description += pDomain != nullptr ? pDomain : "unknown";
-			Description += ", code=" + std::to_string(static_cast<long long>(pError.code));
-			if(pLocalizedDescription != nullptr)
-			{
-				Description += ", description=";
-				Description += pLocalizedDescription;
-			}
-			Description += ")";
-		}
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			m_GpuFailureDescription = std::move(Description);
-		}
-		m_GpuFailureFrameId.store(FrameId, std::memory_order_relaxed);
-		m_GpuFailureCommandId.store(m_LastCommandId.load(std::memory_order_relaxed), std::memory_order_relaxed);
-		m_GpuFailureStatus.store(static_cast<int>(Buffer.status), std::memory_order_relaxed);
-		m_GpuFailure.store(true, std::memory_order_release);
-	}
-
-	bool SetGpuFailureError()
-	{
-		if(!m_GpuFailure.load(std::memory_order_acquire))
-			return false;
-		const uint64_t FrameId = m_GpuFailureFrameId.load(std::memory_order_relaxed);
-		const int CommandId = m_GpuFailureCommandId.load(std::memory_order_relaxed);
-		const int Status = m_GpuFailureStatus.load(std::memory_order_relaxed);
-		std::string Description;
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			Description = m_GpuFailureDescription;
-		}
-		m_Error.m_ErrorType = GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED;
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{
-			false,
-			"Metal GPU command buffer failure (stage=completion, frame_id=" + std::to_string(FrameId) + ", command_id=" + std::to_string(CommandId) + ", status=" + std::to_string(Status) + "): " + Description});
-		return true;
+		return m_GpuCompletion.Publish(m_Error, [](SGfxErrorContainer &Error, const CMetalGpuCompletion::SFailure &Failure) {
+			char aMessage[1280];
+			str_format(aMessage, sizeof(aMessage), "Metal GPU command buffer failure (stage=completion, frame_id=%llu, command_id=%d, status=%d): %s",
+				static_cast<unsigned long long>(Failure.m_FrameId), Failure.m_CommandId, Failure.m_Status,
+				Failure.m_aDescription[0] != '\0' ? Failure.m_aDescription : "Metal command buffer failed");
+			Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{false, aMessage});
+		});
 	}
 
 	void AddTextureMemory(size_t Bytes)
@@ -870,11 +838,6 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			Mask |= static_cast<uint8_t>(1u << Slot);
 		}
 		return Mask;
-	}
-
-	bool IsBufferInFlight(const SBufferSlot &Buffer) const
-	{
-		return BufferInFlightMask(Buffer, false) != 0;
 	}
 
 	size_t PreferredBufferSlot(const SBufferSlot &Buffer) const
@@ -1124,7 +1087,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		m_vRenderTargets.clear();
 	}
 
-	// 小于该尺寸的持久 buffer 使用 Shared 存储：CPU 直写 + didModifyRange 更新，
+	// 小于该尺寸的持久 buffer 使用 Shared 存储，空闲时可以直接写入，
 	// 避免每次更新都结束 render encoder 并插入 blit encoder，消除服务器列表等
 	// UI 场景每帧数百次 encoder 打断。Apple Silicon 统一内存下 Shared 读性能接近 Private。
 	static constexpr size_t QM_METAL_MAX_SHARED_BUFFER_BYTES = 256 * 1024;
@@ -1135,14 +1098,10 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			return false;
 		if(Destination.storageMode == MTLStorageModeShared)
 		{
-			// Shared buffer 直接写内存并通知 GPU，不需要 blit，不打断 render encoder。
 			if(pData != nullptr)
 				mem_copy(static_cast<uint8_t *>(Destination.contents) + DestinationOffset, pData, DataBytes);
 			else
 				std::memset(static_cast<uint8_t *>(Destination.contents) + DestinationOffset, 0, DataBytes);
-	#if defined(CONF_PLATFORM_MACOS)
-			[Destination didModifyRange:NSMakeRange(DestinationOffset, DataBytes)];
-	#endif
 			if(m_MetalPerfEnabled)
 				m_MetalPerfUploadBytes += DataBytes;
 			return true;
@@ -1276,7 +1235,9 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		if(Slot >= 0 && static_cast<size_t>(Slot) < m_vBufferSlots.size())
 		{
 			SBufferSlot &Existing = m_vBufferSlots[Slot];
-			if(Existing.m_Allocated && !OneTimeUse && !Existing.m_OneTimeUse && Existing.m_DataBytes == DataBytes && !IsBufferInFlight(Existing))
+			// Shared buffer 由 CPU 直接写入，同一批次中已编码的绘制也必须保留旧内容。
+			if(Existing.m_Allocated && !OneTimeUse && !Existing.m_OneTimeUse && Existing.m_DataBytes == DataBytes &&
+				BufferInFlightMask(Existing, Existing.m_Buffer.storageMode == MTLStorageModeShared) == 0)
 			{
 				const bool Success = UpdateBuffer(Slot, 0, DataBytes, pData);
 				if(Success && m_MetalPerfEnabled)
@@ -1357,7 +1318,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		});
 		NSError *pError = nil;
 		m_ShaderLibrary = [m_Device newLibraryWithData:Data error:&pError];
-#if !OS_OBJECT_USE_OBJC
+#if !__has_feature(objc_arc) || !OS_OBJECT_USE_OBJC
 		dispatch_release(Data);
 #endif
 		if(m_ShaderLibrary == nil && pError != nil)
@@ -1942,9 +1903,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 
 		const MTLPixelFormat PixelFormat = Format == EMetalTextureFormat::R8 ? MTLPixelFormatR8Unorm : MTLPixelFormatRGBA8Unorm;
 		// 创建即上传且无 mipmap 的纹理（UI 图标、旗帜、头像等）在统一内存设备上
-		// 使用 Shared 存储，首次上传走 CPU 直写（replaceRegion）：不打断活跃的
-		// render encoder、无需 staging buffer、内容即时可见。有 mipmap 或动态
-		// 更新的纹理保持 Private + blit（成本低且不改变既有语义）。
+		// 统一内存设备上的单级纹理可用 Shared，首次上传无需 staging buffer。
+		// 已存在纹理的更新统一在命令队列中提交。
 		const bool UseSharedStorage = pData != nullptr && [m_Device hasUnifiedMemory] &&
 			(!Wants2D || Layout.m_MipLevels <= 1) && (!Wants2DArray || ArrayLayout.m_MipLevels <= 1);
 		id<MTLTexture> pTexture = nil;
@@ -2010,15 +1970,15 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 
 		bool Uploaded = pData == nullptr || pTexture == nil;
 		if(pData != nullptr && pTexture != nil)
-			Uploaded = UploadTextureRegion(Texture, 0, 0, Width, Height, pData);
+			Uploaded = UploadTextureRegion(Texture, 0, 0, Width, Height, pData, true);
 		if(Uploaded && pTextureArray != nil && pData != nullptr)
 		{
 			const uint8_t *pArraySourceData = pData;
-			uint8_t *pResizedArrayData = nullptr;
+			CGraphicsUploadData<uint8_t> pResizedArrayData;
 			if(ArraySourceWidth != Width || ArraySourceHeight != Height)
 			{
-				pResizedArrayData = ResizeImage(pData, static_cast<int>(Width), static_cast<int>(Height), static_cast<int>(ArraySourceWidth), static_cast<int>(ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format)));
-				pArraySourceData = pResizedArrayData;
+				pResizedArrayData.reset(ResizeImage(pData, static_cast<int>(Width), static_cast<int>(Height), static_cast<int>(ArraySourceWidth), static_cast<int>(ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format))));
+				pArraySourceData = pResizedArrayData.get();
 			}
 			size_t SourceBytes = 0;
 			if(pArraySourceData == nullptr || !MetalCheckedMul(ArraySourceWidth, ArraySourceHeight, SourceBytes) || !MetalCheckedMul(SourceBytes, MetalTextureBytesPerPixel(Format), SourceBytes))
@@ -2029,9 +1989,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 				int ConvertedWidth = 0;
 				int ConvertedHeight = 0;
 				Texture2DTo3D(const_cast<uint8_t *>(pArraySourceData), static_cast<int>(ArraySourceWidth), static_cast<int>(ArraySourceHeight), MetalTextureBytesPerPixel(Format), 16, 16, vArrayData.data(), ConvertedWidth, ConvertedHeight);
-				Uploaded = ConvertedWidth == static_cast<int>(ArrayWidth) && ConvertedHeight == static_cast<int>(ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), ArrayWidth, ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS);
+				Uploaded = ConvertedWidth == static_cast<int>(ArrayWidth) && ConvertedHeight == static_cast<int>(ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), ArrayWidth, ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS, true);
 			}
-			free(pResizedArrayData);
 		}
 		if(!Uploaded)
 		{
@@ -2059,28 +2018,26 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			return false;
 		if(pData == nullptr)
 			return true;
-		bool Uploaded = Texture.m_Texture == nil || UploadTextureRegion(Texture, X, Y, Width, Height, pData);
+		bool Uploaded = Texture.m_Texture == nil || UploadTextureRegion(Texture, X, Y, Width, Height, pData, false);
 		if(Uploaded && Texture.m_Is2DArray)
 		{
 			const uint8_t *pArraySourceData = pData;
-			uint8_t *pResizedArrayData = nullptr;
+			CGraphicsUploadData<uint8_t> pResizedArrayData;
 			if(Texture.m_ArraySourceWidth != Texture.m_Width || Texture.m_ArraySourceHeight != Texture.m_Height)
 			{
-				pResizedArrayData = ResizeImage(pData, static_cast<int>(Texture.m_Width), static_cast<int>(Texture.m_Height), static_cast<int>(Texture.m_ArraySourceWidth), static_cast<int>(Texture.m_ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format)));
-				pArraySourceData = pResizedArrayData;
+				pResizedArrayData.reset(ResizeImage(pData, static_cast<int>(Texture.m_Width), static_cast<int>(Texture.m_Height), static_cast<int>(Texture.m_ArraySourceWidth), static_cast<int>(Texture.m_ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format))));
+				pArraySourceData = pResizedArrayData.get();
 			}
 			size_t SourceBytes = 0;
 			if(pArraySourceData == nullptr || !MetalCheckedMul(Texture.m_ArraySourceWidth, Texture.m_ArraySourceHeight, SourceBytes) || !MetalCheckedMul(SourceBytes, MetalTextureBytesPerPixel(Format), SourceBytes) || Texture.m_ArraySourceWidth > static_cast<size_t>(std::numeric_limits<int>::max()) || Texture.m_ArraySourceHeight > static_cast<size_t>(std::numeric_limits<int>::max()))
 			{
-				free(pResizedArrayData);
 				return false;
 			}
 			std::vector<uint8_t> vArrayData(SourceBytes);
 			int ConvertedWidth = 0;
 			int ConvertedHeight = 0;
 			Texture2DTo3D(const_cast<uint8_t *>(pArraySourceData), static_cast<int>(Texture.m_ArraySourceWidth), static_cast<int>(Texture.m_ArraySourceHeight), MetalTextureBytesPerPixel(Format), 16, 16, vArrayData.data(), ConvertedWidth, ConvertedHeight);
-			Uploaded = ConvertedWidth == static_cast<int>(Texture.m_ArrayWidth) && ConvertedHeight == static_cast<int>(Texture.m_ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), Texture.m_ArrayWidth, Texture.m_ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS);
-			free(pResizedArrayData);
+			Uploaded = ConvertedWidth == static_cast<int>(Texture.m_ArrayWidth) && ConvertedHeight == static_cast<int>(Texture.m_ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), Texture.m_ArrayWidth, Texture.m_ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS, false);
 		}
 		if(Uploaded && m_CurrentBlitEncoder != nil)
 		{
@@ -2139,9 +2096,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		// therefore the drawable must remain usable outside a render pass.
 		pLayer.framebufferOnly = NO;
 		pLayer.presentsWithTransaction = NO;
-		// 仅在关闭 VSync 时允许 drawable 获取超时。开启 VSync 时必须保留
-		// 系统背压，否则 nextDrawable 返回 nil 会直接丢掉本帧呈现。
-		pLayer.allowsNextDrawableTimeout = !m_VSync;
+		// 窗口暂时无法呈现时，允许 nextDrawable 超时，让图形线程继续处理后续命令。
+		pLayer.allowsNextDrawableTimeout = YES;
 		// displaySyncEnabled 仅在 macOS 上可用；iOS 的 CAMetalLayer 始终由系统
 		// 管理显示同步，不能访问该属性，否则 iOS deployment target 会产生不可用 API。
 #if defined(CONF_PLATFORM_MACOS)
@@ -2453,15 +2409,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		m_FrameState.DrainFrames();
 		m_CurrentFrameSlot = 0;
 		m_FrameId = 0;
-		m_GpuFailure.store(false, std::memory_order_relaxed);
-		m_GpuFailureFrameId.store(0, std::memory_order_relaxed);
-		m_GpuFailureCommandId.store(-1, std::memory_order_relaxed);
-		m_GpuFailureStatus.store(0, std::memory_order_relaxed);
+		m_GpuCompletion.Reset();
 		m_LastCommandId.store(-1, std::memory_order_relaxed);
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			m_GpuFailureDescription.clear();
-		}
 		m_State = EMetalBackendState::INITIALIZED;
 		if(m_pCapabilities != nullptr)
 		{
@@ -2508,15 +2457,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		DestroyAllBuffers();
 		ReleaseGpuObjects();
 		m_FrameState.DrainFrames();
-		m_GpuFailure.store(false, std::memory_order_relaxed);
-		m_GpuFailureFrameId.store(0, std::memory_order_relaxed);
-		m_GpuFailureCommandId.store(-1, std::memory_order_relaxed);
-		m_GpuFailureStatus.store(0, std::memory_order_relaxed);
+		m_GpuCompletion.Reset();
 		m_LastCommandId.store(-1, std::memory_order_relaxed);
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			m_GpuFailureDescription.clear();
-		}
 		if(m_MetalView != nullptr)
 			SDL_Metal_DestroyView(m_MetalView);
 		m_MetalView = nullptr;
@@ -2618,7 +2560,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		return true;
 	}
 
-	bool UploadTextureRegion(STextureSlot &Texture, size_t X, size_t Y, size_t Width, size_t Height, const uint8_t *pData)
+	bool UploadTextureRegion(STextureSlot &Texture, size_t X, size_t Y, size_t Width, size_t Height, const uint8_t *pData, bool InitialUpload)
 	{
 		if(pData == nullptr || m_CurrentCommandBuffer == nil || Texture.m_Texture == nil)
 			return false;
@@ -2629,9 +2571,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		if(Height > std::numeric_limits<size_t>::max() / RowBytes)
 			return false;
 		const size_t TightBytes = RowBytes * Height;
-		// Shared 纹理由 CPU 直接写入，源数据本身是紧凑行布局，不需要为
-		// replaceRegion 额外构造 256 字节对齐的 staging 副本。
-		if(Texture.m_Texture.storageMode == MTLStorageModeShared)
+		// 新建 Shared 纹理可以直接写入。后续更新通过 GPU 拷贝排在先前绘制之后。
+		if(InitialUpload && Texture.m_Texture.storageMode == MTLStorageModeShared)
 		{
 			[Texture.m_Texture replaceRegion:MTLRegionMake2D((NSUInteger)X, (NSUInteger)Y, (NSUInteger)Width, (NSUInteger)Height) mipmapLevel:0 withBytes:pData bytesPerRow:RowBytes];
 			if(m_MetalPerfEnabled)
@@ -2688,7 +2629,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		return true;
 	}
 
-	bool UploadTextureArray(STextureSlot &Texture, const uint8_t *pData, size_t Width, size_t Height, size_t LayerStart, size_t LayerCount)
+	bool UploadTextureArray(STextureSlot &Texture, const uint8_t *pData, size_t Width, size_t Height, size_t LayerStart, size_t LayerCount, bool InitialUpload)
 	{
 		if(pData == nullptr || m_CurrentCommandBuffer == nil || Texture.m_TextureArray == nil || LayerCount == 0 || LayerStart > METAL_TEXTURE_ARRAY_LAYERS - 1 || LayerCount > METAL_TEXTURE_ARRAY_LAYERS - LayerStart || Width == 0 || Height == 0)
 			return false;
@@ -2701,7 +2642,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		const size_t TightSliceBytes = RowBytes * Height;
 		if(LayerCount > std::numeric_limits<size_t>::max() / TightSliceBytes)
 			return false;
-		if(Texture.m_TextureArray.storageMode == MTLStorageModeShared)
+		if(InitialUpload && Texture.m_TextureArray.storageMode == MTLStorageModeShared)
 		{
 			for(size_t Layer = 0; Layer < LayerCount; ++Layer)
 				[Texture.m_TextureArray replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)Width, (NSUInteger)Height) mipmapLevel:0 slice:(NSUInteger)(LayerStart + Layer) withBytes:pData + Layer * TightSliceBytes bytesPerRow:RowBytes bytesPerImage:TightSliceBytes];
@@ -3754,7 +3695,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		// 周期性锁帧卡顿。无 VSync 时按刷新周期主动节流 present：逻辑帧照常渲染
 		// 提交，呈现均匀且不阻塞（录像/截图路径独立，不受节流影响）。
 		bool EffectivePresent = Present;
-		bool ThrottledPresent = false;
+		bool SkippedPresent = false;
 		// 刷新率优先级：显式配置 > 显示器实际刷新率 > 不节流。
 		// 配置为 0（未设置）时用缓存的实际刷新率，仍无法获取则不节流，
 		// 避免 120/144Hz 显示器被错误地限制到 60Hz 呈现。
@@ -3768,7 +3709,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			if(m_LastPresentTimeNs.count() != 0 && Now - m_LastPresentTimeNs < PresentInterval)
 			{
 				EffectivePresent = false;
-				ThrottledPresent = true;
+				SkippedPresent = true;
 			}
 		}
 		// The drawable pool is finite. Keep presentation late and do not add an
@@ -3791,28 +3732,34 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 				m_MetalPerfDrawableAcquireOver33MsCount += DrawableAcquireMs > 33.333;
 				m_MetalPerfDrawableAcquireOver100MsCount += DrawableAcquireMs > 100.0;
 			}
-			if(m_CurrentDrawable != nil)
+			id<MTLTexture> DrawableTexture = m_CurrentDrawable.texture;
+			// SDL 可能已调整图层尺寸，渲染线程仍在使用上一帧的尺寸。
+			if(DrawableTexture == nil || DrawableTexture.width != m_DrawableWidth || DrawableTexture.height != m_DrawableHeight)
+			{
+				SkippedPresent = true;
+				if(m_MetalPerfEnabled)
+					++m_MetalPerfDrawableUnavailableCount;
+			}
+			else
 			{
 				m_CurrentBlitEncoder = RetainMetalObject([m_CurrentCommandBuffer blitCommandEncoder]);
 				if(m_MetalPerfEnabled && m_CurrentBlitEncoder != nil)
 					++m_MetalPerfBlitEncoderCount;
 				if(m_CurrentBlitEncoder != nil)
 				{
-					[m_CurrentBlitEncoder copyFromTexture:CurrentBackbufferTexture() sourceSlice:0 sourceLevel:0 sourceOrigin:MTLOriginMake(0, 0, 0) sourceSize:MTLSizeMake(m_DrawableWidth, m_DrawableHeight, 1) toTexture:m_CurrentDrawable.texture destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(0, 0, 0)];
+					[m_CurrentBlitEncoder copyFromTexture:CurrentBackbufferTexture() sourceSlice:0 sourceLevel:0 sourceOrigin:MTLOriginMake(0, 0, 0) sourceSize:MTLSizeMake(m_DrawableWidth, m_DrawableHeight, 1) toTexture:DrawableTexture destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(0, 0, 0)];
 					[m_CurrentBlitEncoder endEncoding];
 					ReleaseMetalObject(m_CurrentBlitEncoder);
 					m_CurrentBlitEncoder = nil;
 					CanPresent = true;
 				}
 			}
-			if(m_CurrentDrawable == nil && m_MetalPerfEnabled)
-				++m_MetalPerfDrawableUnavailableCount;
 		}
 		const bool FrameFinalized = CanPresent ?
 			m_FrameState.FinalizeFrameForPresent(true) == CMetalFrameState::EFinalizeResult::PRESENTED :
 			m_FrameState.FinalizeFrameWithoutPresent();
 		const bool BackbufferPresented = CanPresent && FrameFinalized;
-		const bool PresentationSucceeded = !PresentationRequested || BackbufferPresented;
+		const bool PresentationSucceeded = !PresentationRequested || SkippedPresent || BackbufferPresented;
 		if(BackbufferPresented)
 		{
 			m_LastPresentTimeNs = time_get_nanoseconds();
@@ -3834,10 +3781,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		}
 		[m_CurrentCommandBuffer commit];
 		m_CommandBufferCommitted = true;
-		// 只有命令缓冲区容量切片才需要沿用当前私有 backbuffer。present
-		// 失败时当前内容没有进入屏幕，丢弃这次未呈现的 slot，避免下一帧
-		// 复用同一 slot 并等待仍在 GPU 队列中的 command buffer。节流跳过的
-		// present 同样视为已消费，下一帧正常轮转清屏。
+		// 只有同一逻辑帧的命令缓冲区分片需要沿用当前 backbuffer。
+		// 节流或 drawable 不可用时也结束逻辑帧，下一帧按正常顺序轮转。
 		m_BackbufferContinuationPending = CurrentBackbufferHasContents() && !Present;
 		// 非 present 提交可能只是同一逻辑帧的 buffer slice；保留 drawable 和
 		// backbuffer 内容供下一段继续 load。真正 present 或无 backbuffer 时再释放。
@@ -3846,9 +3791,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			ReleaseMetalObject(m_CurrentDrawable);
 			m_CurrentDrawable = nil;
 		}
-		if(BackbufferPresented)
-			SetCurrentBackbufferHasContents(false);
-		if(ThrottledPresent)
+		if(BackbufferPresented || SkippedPresent)
 			SetCurrentBackbufferHasContents(false);
 		if(!WaitForCompletion)
 			return PresentationSucceeded;
@@ -4282,6 +4225,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		m_CurrentCommandBuffer = Frame.m_CommandBuffer;
 		m_CommandBufferCommitted = false;
 		m_BackbufferContinuationPending = false;
+		// 编码器按命令片重开，活动离屏目标继续沿用，直到收到结束命令。
 		m_RenderEncoderStarted = false;
 		if(!ContinueBackbufferFrame)
 		{
@@ -4289,7 +4233,6 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			Frame.m_BackbufferHasContents = false;
 		}
 		m_SkipCurrentFrame = false;
-		m_RenderTargetState.Reset();
 		Frame.m_VertexOffset = 0;
 		Frame.m_FrameId = m_FrameState.CurrentFrameId();
 		m_FrameId = Frame.m_FrameId;
@@ -4300,10 +4243,44 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			if(RecordGpuTiming)
 				RecordMetalGpuExecutionTiming(Buffer, GpuTimingGeneration);
 			const bool Success = Buffer.status == MTLCommandBufferStatusCompleted;
-			if(!Success)
-				RecordGpuFailure(Buffer, Capture.m_FrameId);
-			m_FrameState.CompleteFrame(Capture, Success);
+			m_GpuCompletion.CompleteFrame(m_FrameState, Capture, Success, m_LastCommandId.load(std::memory_order_relaxed), static_cast<int>(Buffer.status),
+				[Buffer](char *pDescription, size_t DescriptionSize) {
+					NSError *pError = Buffer.error;
+					if(pError == nil)
+					{
+						str_copy(pDescription, "Metal command buffer failed", DescriptionSize);
+						return;
+					}
+					const char *pDomain = pError.domain.UTF8String;
+					const char *pLocalizedDescription = pError.localizedDescription.UTF8String;
+					str_format(pDescription, DescriptionSize, "Metal command buffer failed (domain=%s, code=%lld, description=%s)",
+						pDomain != nullptr ? pDomain : "unknown", static_cast<long long>(pError.code),
+						pLocalizedDescription != nullptr ? pLocalizedDescription : "unknown");
+				});
 		}];
+	}
+
+	void AbortCommands(bool Initialization) noexcept override
+	{
+		(void)Initialization;
+		// 后续 POST_SHUTDOWN 不再通过 StartCommands 创建新帧。
+		m_State = EMetalBackendState::SHUTDOWN;
+		EndActiveEncoders();
+		m_RenderTargetState.Reset();
+		if(!m_CommandBufferCommitted)
+		{
+			// 释放未提交的录制，避免 WaitForGpuIdle 再提交残缺帧或等待它完成。
+			m_FrameState.DiscardCurrentFrame();
+			SFrameSlot &Frame = m_aFrameSlots[m_CurrentFrameSlot];
+			ReleaseMetalObject(Frame.m_CommandBuffer);
+			Frame.m_CommandBuffer = nil;
+			Frame.m_BackbufferHasContents = false;
+			m_CurrentCommandBuffer = nil;
+		}
+		m_BackbufferContinuationPending = false;
+		ReleaseMetalObject(m_CurrentDrawable);
+		m_CurrentDrawable = nil;
+		m_SkipCurrentFrame = true;
 	}
 
 	void EndCommands() override
@@ -4422,9 +4399,9 @@ public:
 			case CCommandBuffer::CMD_CREATE_BUFFER_OBJECT:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_CreateBufferObject *>(pBaseCommand);
-				const bool Success = CreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pCommand->m_pUploadData, pCommand->m_Flags);
-				if(pCommand->m_DeletePointer && pCommand->m_pUploadData != nullptr)
-					free(pCommand->m_pUploadData);
+				void *pUploadData = pCommand->m_pUploadData;
+				auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
+				const bool Success = CreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pUploadData, pCommand->m_Flags);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4432,9 +4409,9 @@ public:
 			case CCommandBuffer::CMD_RECREATE_BUFFER_OBJECT:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_RecreateBufferObject *>(pBaseCommand);
-				const bool Success = RecreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pCommand->m_pUploadData, pCommand->m_Flags);
-				if(pCommand->m_DeletePointer && pCommand->m_pUploadData != nullptr)
-					free(pCommand->m_pUploadData);
+				void *pUploadData = pCommand->m_pUploadData;
+				auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
+				const bool Success = RecreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pUploadData, pCommand->m_Flags);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4442,10 +4419,10 @@ public:
 			case CCommandBuffer::CMD_UPDATE_BUFFER_OBJECT:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_UpdateBufferObject *>(pBaseCommand);
+				void *pUploadData = pCommand->m_pUploadData;
+				auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 				const size_t Offset = reinterpret_cast<uintptr_t>(pCommand->m_pOffset);
-				const bool Success = UpdateBuffer(pCommand->m_BufferIndex, Offset, pCommand->m_DataSize, pCommand->m_pUploadData);
-				if(pCommand->m_DeletePointer && pCommand->m_pUploadData != nullptr)
-					free(pCommand->m_pUploadData);
+				const bool Success = UpdateBuffer(pCommand->m_BufferIndex, Offset, pCommand->m_DataSize, pUploadData);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4497,9 +4474,9 @@ public:
 			case CCommandBuffer::CMD_TEXTURE_CREATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_Texture_Create *>(pBaseCommand);
-				const bool Success = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pCommand->m_Flags, pCommand->m_pData);
-				if(pCommand->m_pData != nullptr)
-					free(pCommand->m_pData);
+				auto Release = TakeGraphicsUploadRelease(pCommand->m_Release);
+				auto pData = TakeGraphicsUpload(pCommand->m_pData);
+				const bool Success = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pCommand->m_Flags, pData.get());
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4507,9 +4484,8 @@ public:
 			case CCommandBuffer::CMD_TEXTURE_UPDATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_Texture_Update *>(pBaseCommand);
-				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pCommand->m_pData);
-				if(pCommand->m_pData != nullptr)
-					free(pCommand->m_pData);
+				auto pData = TakeGraphicsUpload(pCommand->m_pData);
+				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pData.get());
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4520,8 +4496,10 @@ public:
 			case CCommandBuffer::CMD_TEXT_TEXTURES_CREATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_TextTextures_Create *>(pBaseCommand);
-				const bool TextSuccess = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pCommand->m_pTextData);
-				const bool OutlineSuccess = CreateTexture(pCommand->m_SlotOutline, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pCommand->m_pTextOutlineData);
+				auto pTextData = TakeGraphicsUpload(pCommand->m_pTextData);
+				auto pOutlineData = TakeGraphicsUpload(pCommand->m_pTextOutlineData);
+				const bool TextSuccess = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pTextData.get());
+				const bool OutlineSuccess = CreateTexture(pCommand->m_SlotOutline, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pOutlineData.get());
 				const bool Success = TextSuccess && OutlineSuccess;
 				if(!Success)
 				{
@@ -4530,10 +4508,6 @@ public:
 					if(OutlineSuccess)
 						DestroyTexture(pCommand->m_SlotOutline);
 				}
-				if(pCommand->m_pTextData != nullptr)
-					free(pCommand->m_pTextData);
-				if(pCommand->m_pTextOutlineData != nullptr)
-					free(pCommand->m_pTextOutlineData);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4541,9 +4515,8 @@ public:
 			case CCommandBuffer::CMD_TEXT_TEXTURE_UPDATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_TextTexture_Update *>(pBaseCommand);
-				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, pCommand->m_pData);
-				if(pCommand->m_pData != nullptr)
-					free(pCommand->m_pData);
+				auto pData = TakeGraphicsUpload(pCommand->m_pData);
+				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, pData.get());
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;

@@ -8,20 +8,35 @@
 #include "dbg.h"
 #include "str.h"
 
+#include <algorithm>
+#include <cwchar>
+#include <memory>
+#include <new>
+#include <stdexcept>
+#include <utility>
+
 #include <windows.h>
 
 #include <shlobj.h> // SHChangeNotify
 
-std::string windows_format_system_message(unsigned long error)
+std::string windows_format_system_message(unsigned long error) noexcept
+try
 {
-	WCHAR *wide_message;
+	WCHAR *wide_message = nullptr;
 	const DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_MAX_WIDTH_MASK;
-	if(FormatMessageW(flags, nullptr, error, 0, (LPWSTR)&wide_message, 0, nullptr) == 0)
+	const DWORD length = FormatMessageW(flags, nullptr, error, 0, reinterpret_cast<LPWSTR>(&wide_message), 0, nullptr);
+	const std::unique_ptr<WCHAR, decltype(&LocalFree)> message_owner(wide_message, LocalFree);
+	if(length == 0 || !message_owner)
 		return "unknown error";
 
-	std::optional<std::string> message = windows_wide_to_utf8(wide_message);
-	LocalFree(wide_message);
-	return message.value_or("(invalid UTF-16 in error message)");
+	auto message = windows_wide_to_utf8_bounded(wide_message, wide_message + length + 1);
+	if(message)
+		return std::move(*message);
+	return "(Windows error text unavailable)";
+}
+catch(const std::bad_alloc &)
+{
+	return {};
 }
 
 std::wstring windows_args_to_wide(const char **arguments, size_t num_arguments)
@@ -83,20 +98,41 @@ std::wstring windows_utf8_to_wide(const char *str)
 	return wide_string;
 }
 
-std::optional<std::string> windows_wide_to_utf8(const wchar_t *wide_str)
+static std::optional<std::string> windows_wide_to_utf8_length(const wchar_t *wide_str, size_t length) noexcept
 {
-	const int orig_length = wcslen(wide_str);
-	if(orig_length == 0)
-		return "";
-	const int size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide_str, orig_length, nullptr, 0, nullptr, nullptr);
-	if(size_needed == 0)
+	if(length == 0)
+		return std::string();
+	if(!std::in_range<int>(length))
 		return {};
-	std::string string(size_needed, '\0');
-	dbg_assert(WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide_str, orig_length, string.data(), size_needed, nullptr, nullptr) == size_needed, "WideCharToMultiByte failure");
-	return string;
+	const int orig_length = static_cast<int>(length);
+	const int size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide_str, orig_length, nullptr, 0, nullptr, nullptr);
+	if(size_needed <= 0)
+		return {};
+	try
+	{
+		std::string string(size_needed, '\0');
+		if(WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide_str, orig_length, string.data(), size_needed, nullptr, nullptr) != size_needed)
+			return {};
+		return string;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return {};
+	}
+	catch(const std::length_error &)
+	{
+		return {};
+	}
 }
 
-std::optional<std::string> windows_wide_to_utf8_bounded(const wchar_t *wide_str, const wchar_t *wide_end)
+std::optional<std::string> windows_wide_to_utf8(const wchar_t *wide_str) noexcept
+{
+	if(!wide_str)
+		return {};
+	return windows_wide_to_utf8_length(wide_str, std::wcslen(wide_str));
+}
+
+std::optional<std::string> windows_wide_to_utf8_bounded(const wchar_t *wide_str, const wchar_t *wide_end) noexcept
 {
 	if(wide_str == nullptr || wide_end == nullptr || wide_str >= wide_end)
 		return {};
@@ -104,28 +140,28 @@ std::optional<std::string> windows_wide_to_utf8_bounded(const wchar_t *wide_str,
 	const wchar_t *pTerminator = std::find(wide_str, wide_end, L'\0');
 	if(pTerminator == wide_end)
 		return {};
-
-	const int Length = (int)(pTerminator - wide_str);
-	if(Length == 0)
-		return "";
-	const int SizeNeeded = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide_str, Length, nullptr, 0, nullptr, nullptr);
-	if(SizeNeeded == 0)
-		return {};
-	std::string String(SizeNeeded, '\0');
-	if(WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide_str, Length, String.data(), SizeNeeded, nullptr, nullptr) != SizeNeeded)
-		return {};
-	return String;
+	return windows_wide_to_utf8_length(wide_str, pTerminator - wide_str);
 }
-// See https://learn.microsoft.com/en-us/windows/win32/learnwin32/initializing-the-com-library
-CWindowsComLifecycle::CWindowsComLifecycle(bool HasWindow)
+
+std::optional<std::string> windows_registry_string_to_utf8(const wchar_t *wide_str, size_t capacity, size_t bytes) noexcept
 {
-	HRESULT result = CoInitializeEx(nullptr, (HasWindow ? COINIT_APARTMENTTHREADED : COINIT_MULTITHREADED) | COINIT_DISABLE_OLE1DDE);
-	dbg_assert(result != S_FALSE, "COM library already initialized on this thread");
-	dbg_assert(result == S_OK, "COM library initialization failed");
+	if(!wide_str || bytes == 0 || bytes % sizeof(wchar_t) != 0 || bytes / sizeof(wchar_t) > capacity)
+		return std::nullopt;
+	return windows_wide_to_utf8_bounded(wide_str, wide_str + bytes / sizeof(wchar_t));
+}
+
+// See https://learn.microsoft.com/en-us/windows/win32/learnwin32/initializing-the-com-library
+CWindowsComLifecycle::CWindowsComLifecycle(bool HasWindow, EInitMode InitMode)
+{
+	const HRESULT Result = CoInitializeEx(nullptr, (HasWindow ? COINIT_APARTMENTTHREADED : COINIT_MULTITHREADED) | COINIT_DISABLE_OLE1DDE);
+	m_Initialized = SUCCEEDED(Result);
+	if(InitMode == EInitMode::REQUIRED)
+		dbg_assert(m_Initialized, "COM library initialization failed");
 }
 CWindowsComLifecycle::~CWindowsComLifecycle()
 {
-	CoUninitialize();
+	if(m_Initialized)
+		CoUninitialize();
 }
 
 static void windows_print_error(const char *system, const char *prefix, HRESULT error)

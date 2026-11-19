@@ -58,7 +58,11 @@ namespace qm_md
 		size_t m_MaxBytes = 64 * 1024;
 	};
 
-	// 解析失败不抛异常：越界内容被截断，未知语法按普通文字保留。
+	// 最多读取 m_MaxBytes 字节（或此前的 NUL）；未知语法按普通文字保留。
+	// 资源准备失败返回 false，保留 vOutput，调用方可保留版本标记并重试。
+	bool TryParse(const char *pMarkdown, std::vector<SBlock> &vOutput, const SParseLimits &Limits = {});
+
+	// 资源准备失败返回空结果；需要区分失败和空内容时使用 TryParse。
 	std::vector<SBlock> Parse(const char *pMarkdown, const SParseLimits &Limits = {});
 
 	// 逐个 UTF-8 字符（码点）拆分，供渲染层按字符宽度换行使用。

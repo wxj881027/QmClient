@@ -272,6 +272,19 @@ TEST_F(CQmRoundedSurfaceRender, GradientFallbackRendersEveryCornerCurve)
 	}
 }
 
+TEST_F(CQmRoundedSurfaceRender, GradientFallbackFeatherFollowsEdgeColorAndOpacity)
+{
+	SQmColorGradient Gradient;
+	Gradient.m_NumColors = 2;
+	Gradient.m_aColors[0] = ColorRGBA(1, 0, 0, 1);
+	Gradient.m_aColors[1] = ColorRGBA(0, 0, 1, 0.5f);
+	m_Params.m_BorderWidth = 0.0f;
+
+	ASSERT_TRUE(DrawRoundedGradientSurface(&m_Graphics, m_Rect, Gradient, 0.25f, ColorRGBA(), m_Params));
+	ExpectColor(m_Graphics.Sample(vec2(-0.5f, 9.0f)), ColorRGBA(1, 0, 0, 0.125f));
+	ExpectColor(m_Graphics.Sample(vec2(30.5f, 9.0f)), ColorRGBA(0, 0, 1, 0.0625f));
+}
+
 TEST_F(CQmRoundedSurfaceRender, SdfReceivesIndependentFillAndBorderAlpha)
 {
 	m_Graphics.m_HasSdf = true;
@@ -310,6 +323,35 @@ TEST_F(CQmRoundedSurfaceRender, SdfGlowIsBorderOnlyAndBandExpandsOutsideTheShell
 	EXPECT_FLOAT_EQ(Sdf.m_Rect.w, m_Rect.h + 12.0f);
 	EXPECT_FLOAT_EQ(Sdf.m_Params.x, 6.0f);
 	EXPECT_FLOAT_EQ(Sdf.m_TextureParams1.w, 6.0f);
+}
+
+TEST_F(CQmRoundedSurfaceRender, SdfGlowKeepsSubpixelBand)
+{
+	m_Graphics.m_HasSdf = true;
+	SRoundedGlowParams Glow;
+	Glow.m_Radius = 10.0f;
+	Glow.m_Spread = 2.0f;
+	Glow.m_PixelSize = 5.0f;
+	ASSERT_TRUE(DrawRoundedSurfaceGlow(&m_Graphics, m_Rect, ColorRGBA(1, 1, 1, 0.3f), Glow));
+	ASSERT_EQ(m_Graphics.m_vSdf.size(), 1u);
+	const auto &Sdf = m_Graphics.m_vSdf[0];
+	EXPECT_FLOAT_EQ(Sdf.m_Params.x, 2.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_Params.y, 5.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_TextureParams1.w, 2.0f);
+}
+
+TEST_F(CQmRoundedSurfaceRender, SdfGlowKeepsFullBandAroundNarrowShell)
+{
+	m_Graphics.m_HasSdf = true;
+	SRoundedGlowParams Glow;
+	Glow.m_Radius = 2.0f;
+	Glow.m_Spread = 4.0f;
+	Glow.m_PixelSize = 1.0f;
+	ASSERT_TRUE(DrawRoundedSurfaceGlow(&m_Graphics, {0, 0, 4, 20}, ColorRGBA(1, 1, 1, 0.3f), Glow));
+	ASSERT_EQ(m_Graphics.m_vSdf.size(), 1u);
+	const auto &Sdf = m_Graphics.m_vSdf[0];
+	EXPECT_FLOAT_EQ(Sdf.m_Rect.z, 12.0f);
+	EXPECT_FLOAT_EQ(Sdf.m_Params.x, 4.0f);
 }
 
 TEST_F(CQmRoundedSurfaceRender, GlowWithoutSdfFallsBackToOutwardFadingRings)

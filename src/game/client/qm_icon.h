@@ -50,7 +50,9 @@ inline int NormalizeQmIconWeight(const int Weight)
 // 与文字渲染器 ActualSize 的 round_truncate 及 GetGlyph 的范围钳制一致。
 inline int QmIconRasterPixelSize(float FontSize, float PixelScale)
 {
-	return round_truncate(std::clamp(FontSize * PixelScale, 6.0f, 128.0f));
+	const float PixelSize = FontSize * PixelScale;
+	// NaN 不会被 clamp 夹住；无定义的乘积回退到最小像素档后再转整数。
+	return std::isnan(PixelSize) ? 6 : round_truncate(std::clamp(PixelSize, 6.0f, 128.0f));
 }
 
 // 字体图标在目标方框中保留一致的内边距。

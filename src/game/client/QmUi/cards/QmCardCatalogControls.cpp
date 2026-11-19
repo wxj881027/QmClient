@@ -188,16 +188,11 @@ void CMenusSettingsControls::RenderSettingsBinds(EBindOptionGroup Group, CUIRect
 			}
 			else if(KeyReaderResult.m_Bind != CurrentBind.m_Bind)
 			{
-				BindOption.m_AddNewBind = false;
-				if(CurrentBind.m_Bind.m_Key != KEY_UNKNOWN || KeyReaderResult.m_Bind.m_Key == KEY_UNKNOWN)
+				if(GameClient()->m_Binds.Rebind(CurrentBind.m_Bind, KeyReaderResult.m_Bind, BindOption.m_Command.c_str()))
 				{
-					GameClient()->m_Binds.Bind(CurrentBind.m_Bind.m_Key, "", false, CurrentBind.m_Bind.m_ModifierMask);
+					BindOption.m_AddNewBind = false;
+					m_BindOptionsDirty = true;
 				}
-				if(KeyReaderResult.m_Bind.m_Key != KEY_UNKNOWN)
-				{
-					GameClient()->m_Binds.Bind(KeyReaderResult.m_Bind.m_Key, BindOption.m_Command.c_str(), false, KeyReaderResult.m_Bind.m_ModifierMask);
-				}
-				m_BindOptionsDirty = true;
 			}
 		}
 	}
@@ -434,6 +429,15 @@ void CMenusSettingsControls::PrepareSettingsCards(const SSettingsContentMetrics 
 	m_CardMetrics = Metrics;
 	m_pCardScrollRegion = pScrollRegion;
 	SyncBindGroupExpanded(m_aBindGroupExpanded);
+	// 卡片仍会刷新交互来源，设备选择器消失时要单独撤销旧选择。
+	auto &DropDown = m_JoystickDropDownState;
+	if(!ReadOnly && (DropDown.m_DropDownState.IsOpen() || DropDown.m_SelectionPopupContext.m_SelectionIndex >= 0) &&
+		(!g_Config.m_InpControllerEnable || Input()->NumJoysticks() < 2 || Input()->GetActiveJoystick() == nullptr))
+	{
+		Ui()->ClosePopupMenu(&DropDown.m_SelectionPopupContext, false, false);
+		DropDown.m_DropDownState.Reset();
+		DropDown.m_SelectionPopupContext.Reset();
+	}
 	if(!ReadOnly && (m_BindOptionsDirty || GameClient()->m_KeyBinder.IsActive() || m_BindOptionsRevision != GameClient()->m_Binds.Revision()))
 	{
 		UpdateBindOptions();

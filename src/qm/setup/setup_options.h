@@ -14,6 +14,13 @@ namespace QmSetup
 		return ExitCode == 2 || (ExitCode == 5 && CancellationRequested);
 	}
 
+	template<typename TCanCancel, typename TConfirm>
+	bool ConfirmCancellation(TCanCancel CanCancel, TConfirm Confirm)
+	{
+		// 模态确认期间会处理安装完成消息，返回时需要重新检查。
+		return CanCancel() && Confirm() && CanCancel();
+	}
+
 	inline std::wstring Lower(std::wstring Value)
 	{
 		std::transform(Value.begin(), Value.end(), Value.begin(), [](wchar_t Character) { return static_cast<wchar_t>(std::towlower(Character)); });
@@ -40,6 +47,9 @@ namespace QmSetup
 				// 静默更新、帮助与高级安装参数完整交给原有内核处理。
 				Options.m_UseNativeUi = false;
 		}
+		// 由 Inno 展开最终目录，安装完成后也从实际目录启动。
+		if(Options.m_Directory.rfind(L"expand:", 0) == 0)
+			Options.m_UseNativeUi = false;
 		return Options;
 	}
 
@@ -58,7 +68,8 @@ namespace QmSetup
 			Result += Character;
 			Slashes = 0;
 		}
-		Result.append(Slashes * 2, L'\\');
+		// Inno 把结束引号前的反斜杠按普通字符读取。
+		Result.append(Slashes, L'\\');
 		Result += L'"';
 		return Result;
 	}

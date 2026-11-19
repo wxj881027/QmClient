@@ -63,3 +63,25 @@ TEST(QmBgDrawFile, SavedStrokeRetainsEveryPointOnRead)
 	EXPECT_FLOAT_EQ(Loaded.back().x, Original.back().x);
 	EXPECT_FLOAT_EQ(Loaded.back().a, Original.back().a);
 }
+
+TEST(QmBgDrawFile, LongFinitePointKeepsEveryFieldWhenSavedAndRead)
+{
+	const CBgDrawItemData Original{{1.5e37f, -2.5e36f, 3.5e36f, 4.5e35f, -5.5e35f, 6.5e34f, 0.25f}};
+	std::vector<std::string> vLines;
+	ASSERT_TRUE(BgDrawFile::Write([&](const char *pLine) {
+		vLines.emplace_back(pLine);
+		return true;
+	},
+		Original));
+
+	CBgDrawItemData Loaded;
+	ASSERT_TRUE(ReadLines(vLines, Loaded));
+	ASSERT_EQ(Loaded.size(), 1u);
+	EXPECT_FLOAT_EQ(Loaded.front().x, Original.front().x);
+	EXPECT_FLOAT_EQ(Loaded.front().y, Original.front().y);
+	EXPECT_FLOAT_EQ(Loaded.front().w, Original.front().w);
+	EXPECT_FLOAT_EQ(Loaded.front().r, Original.front().r);
+	EXPECT_FLOAT_EQ(Loaded.front().g, Original.front().g);
+	EXPECT_FLOAT_EQ(Loaded.front().b, Original.front().b);
+	EXPECT_FLOAT_EQ(Loaded.front().a, Original.front().a);
+}

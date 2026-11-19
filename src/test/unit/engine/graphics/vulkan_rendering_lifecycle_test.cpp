@@ -2,7 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -248,6 +251,96 @@ TEST(VulkanRenderingRecovery, UnchangedImageCountPreservesFrameResources)
 	int Calls = 0;
 	EXPECT_EQ(ReinitializeQmVulkanFrameResources(0, false, [&] { ++Calls; }, [&] { ++Calls; return -1; }), 0);
 	EXPECT_EQ(Calls, 0);
+}
+
+TEST(VulkanRenderTargetLifetime, ATargetDestroyedWhilePausedWaitsForEarlierGpuWork)
+{
+	bool Idle = false;
+	bool Destroyed = false;
+	EXPECT_TRUE(DestroyQmVulkanRenderTargetAfterUse(true, Handle<VkImage>(1),
+		[&] { Idle = true; return true; },
+		[] { ADD_FAILURE() << "paused rendering cannot submit a frame"; return false; },
+		[&] {
+			EXPECT_TRUE(Idle);
+			Destroyed = true;
+		}));
+	EXPECT_TRUE(Destroyed);
+}
+
+TEST(VulkanRenderTargetLifetime, FailedIdleWaitKeepsThePausedTargetOwned)
+{
+	bool Waited = false;
+	EXPECT_FALSE(DestroyQmVulkanRenderTargetAfterUse(true, Handle<VkImage>(1),
+		[&] { Waited = true; return false; },
+		[] { ADD_FAILURE() << "paused rendering cannot submit a frame"; return false; },
+		[] { ADD_FAILURE() << "the GPU may still reference the target"; }));
+	EXPECT_TRUE(Waited);
+}
+
+TEST(VulkanRenderTargetLifetime, ActiveFrameSubmitsBeforeDestroyingATarget)
+{
+	bool Submitted = false;
+	bool Destroyed = false;
+	EXPECT_TRUE(DestroyQmVulkanRenderTargetAfterUse(false, Handle<VkImage>(1),
+		[] { ADD_FAILURE() << "the current frame must be submitted before waiting"; return false; },
+		[&] { Submitted = true; return true; },
+		[&] {
+			EXPECT_TRUE(Submitted);
+			Destroyed = true;
+		}));
+	EXPECT_TRUE(Destroyed);
+}
+
+TEST(VulkanRenderingReadback, OffscreenReadbackInvalidatesTheWholeAllocationFromZero)
+{
+	const VkDeviceMemory Memory = Handle<VkDeviceMemory>(1);
+	const VkMappedMemoryRange Range = QmVulkanReadbackMemoryRange(Memory);
+	EXPECT_EQ(Range.sType, VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE);
+	EXPECT_EQ(Range.memory, Memory);
+	EXPECT_EQ(Range.offset, 0u);
+	EXPECT_EQ(Range.size, VK_WHOLE_SIZE);
+}
+
+TEST(VulkanRenderingReadback, OffscreenPixelAllocationFailureLeavesTheRequestEmptyAndAllowsRetry)
+{
+	const std::array<uint8_t, 4> aPixels{1, 2, 3, 4};
+	CImageInfo Image;
+	int AllocationAttempts = 0;
+	EXPECT_TRUE(CompleteQmVulkanRenderTargetReadback(Image, aPixels.data(), 1, 1, aPixels.size(), aPixels.size(), false,
+		[&](size_t Bytes) -> void * {
+			++AllocationAttempts;
+			EXPECT_EQ(Bytes, aPixels.size());
+			return nullptr;
+		}));
+	EXPECT_EQ(AllocationAttempts, 1);
+	EXPECT_EQ(Image.m_pData, nullptr);
+	EXPECT_EQ(Image.m_Format, CImageInfo::FORMAT_UNDEFINED);
+	Image.Free();
+
+	EXPECT_TRUE(CompleteQmVulkanRenderTargetReadback(Image, aPixels.data(), 1, 1, aPixels.size(), aPixels.size(), false, std::malloc));
+	if(Image.m_pData != nullptr)
+		EXPECT_EQ(std::memcmp(Image.m_pData, aPixels.data(), aPixels.size()), 0);
+	EXPECT_NE(Image.m_pData, nullptr);
+	Image.Free();
+}
+
+TEST(VulkanRenderingReadback, OffscreenBgraReadbackDropsRowPaddingAndPreservesAlpha)
+{
+	const std::array<uint8_t, 12> aMappedPixels{3, 2, 1, 41, 255, 255, 255, 255, 7, 6, 5, 42};
+	const std::array<uint8_t, 8> aExpected{1, 2, 3, 41, 5, 6, 7, 42};
+	CImageInfo Image;
+	EXPECT_TRUE(CompleteQmVulkanRenderTargetReadback(Image, aMappedPixels.data(), 1, 2, 8, aMappedPixels.size(), true, std::malloc));
+	EXPECT_EQ(Image.m_Width, 1u);
+	EXPECT_EQ(Image.m_Height, 2u);
+	EXPECT_EQ(Image.m_Format, CImageInfo::FORMAT_RGBA);
+	EXPECT_NE(Image.m_pData, nullptr);
+
+	size_t DataBytes = 0;
+	EXPECT_TRUE(Image.DataSize(DataBytes));
+	EXPECT_EQ(DataBytes, aExpected.size());
+	if(Image.m_pData != nullptr && DataBytes == aExpected.size())
+		EXPECT_EQ(std::memcmp(Image.m_pData, aExpected.data(), aExpected.size()), 0);
+	Image.Free();
 }
 
 TEST(VulkanRenderingReadback, SnapshotCopyPublishesOwnedImageAndRestoresSwapForPresentation)

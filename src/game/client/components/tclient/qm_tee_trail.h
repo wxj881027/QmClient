@@ -7,6 +7,11 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
+#include <new>
+#include <optional>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
 // 保留旧几何接口的输入类型；时间和弧长使用双精度，避免长时间游戏后丢失帧内精度。
@@ -16,7 +21,7 @@ public:
 	vec2 m_Pos = vec2(0.0f, 0.0f);
 	ColorRGBA m_Col = ColorRGBA(1, 1, 1, 1);
 	float m_Width = 0.0f;
-	int m_Tick = -1;
+	int64_t m_Tick = -1;
 	double m_Time = -1.0;
 	double m_Distance = 0.0;
 	float m_Speed = -1.0f;
@@ -49,6 +54,9 @@ namespace qm_tee_trail
 	constexpr size_t MAX_QUADS = MAX_RENDER_POINTS * 12 + 96;
 	constexpr float SAMPLE_SPACING = 6.0f;
 	constexpr float MIN_SPEED = 0.15f; // 世界单位 / 游戏 tick
+
+	std::optional<int64_t> TickFromTime(double Time);
+	float LegacySpeed(float Segment, int64_t TickA, int64_t TickB);
 
 	// 连接切换只重对齐时钟来源，不改已有采样的出生时间。
 	class CTrailClock
@@ -95,6 +103,34 @@ namespace qm_tee_trail
 		ColorRGBA m_aColor[4];
 		bool m_Additive = false;
 	};
+
+	// 完整准备本帧后才绘制；资源不足丢弃部分输出，设备异常仍由绘制层处理。
+	template<typename TPrepare, typename TDraw>
+	bool RenderFrame(std::vector<SQuad> &vFrame, TPrepare &&Prepare, TDraw &&Draw)
+	{
+		vFrame.clear();
+		try
+		{
+			std::forward<TPrepare>(Prepare)(vFrame);
+		}
+		catch(const std::bad_alloc &)
+		{
+			vFrame.clear();
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			vFrame.clear();
+			return false;
+		}
+		catch(...)
+		{
+			vFrame.clear();
+			throw;
+		}
+		std::forward<TDraw>(Draw)(std::as_const(vFrame));
+		return true;
+	}
 
 	// 一段轨迹的切线只准备一次，细分采样保留原三次公式与浮点运算顺序。
 	struct SPreparedCurve

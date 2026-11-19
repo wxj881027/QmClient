@@ -2,12 +2,28 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
+
 namespace
 {
 	using qm_dummy_link::MakeLink;
 	using qm_dummy_link::SEndpoint;
 
 	const SEndpoint MAIN{vec2(0, 0), false};
+}
+
+TEST(QmDummyDistanceLink, FallbackSnapshotAllowsZeroOrATickWithinThreeSeconds)
+{
+	EXPECT_TRUE(qm_dummy_link::CanUseFallbackSnapshot(0, 500, 50));
+	EXPECT_TRUE(qm_dummy_link::CanUseFallbackSnapshot(500, 500, 50));
+	EXPECT_TRUE(qm_dummy_link::CanUseFallbackSnapshot(350, 500, 50));
+	EXPECT_FALSE(qm_dummy_link::CanUseFallbackSnapshot(349, 500, 50));
+	EXPECT_FALSE(qm_dummy_link::CanUseFallbackSnapshot(501, 500, 50));
+}
+
+TEST(QmDummyDistanceLink, FallbackSnapshotRejectsAgeOutsideSignedTickRange)
+{
+	EXPECT_FALSE(qm_dummy_link::CanUseFallbackSnapshot(std::numeric_limits<int>::min(), 500, 50));
 }
 
 TEST(QmDummyDistanceLink, MissingEitherEndpointHidesLinkUntilBothArePresent)

@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
+
 namespace
 {
 	class CPartLayout : public CQmNameplatePartLayout
@@ -101,6 +103,43 @@ TEST(QmNameplatePartLayout, HookPlaceholderReservesOnlyVerticalSpace)
 	EXPECT_TRUE(Part.HasLayout());
 	EXPECT_FALSE(Part.ShiftOnInvis());
 	EXPECT_EQ(Part.LayoutSize(), vec2(0.0f, 33.0f));
+}
+
+TEST(QmNameplateCoreLayout, DirectionBaselineDoesNotFollowHookHeightChanges)
+{
+	std::array<float, kNameplateCoreRowCount> Heights{24, 16, 43, 12, 57, 57, 57};
+	const size_t Hook = static_cast<size_t>(ENameplateCoreRow::HOOK);
+	const auto aOriginalBaselines = QmNameplateCoreRowBaselines(Heights);
+	for(float HookHeight : {0.0f, 24.0f, 43.0f, 100.0f})
+	{
+		SCOPED_TRACE(HookHeight);
+		Heights[Hook] = HookHeight;
+		const auto aBaselines = QmNameplateCoreRowBaselines(Heights);
+		for(const auto Row : {ENameplateCoreRow::KEYS_LEFT, ENameplateCoreRow::KEYS_UP, ENameplateCoreRow::KEYS_RIGHT})
+		{
+			const size_t Index = static_cast<size_t>(Row);
+			SCOPED_TRACE(Index);
+			EXPECT_FLOAT_EQ(aBaselines[Index], aOriginalBaselines[Index]);
+		}
+	}
+}
+
+TEST(QmNameplateCoreLayout, PreviewReservationIsStableAcrossHookAndDirectionSizeChanges)
+{
+	std::array<float, kNameplateCoreRowCount> Heights{24, 16, 43, 12, 57, 57, 57};
+	const float Reserved = QmNameplatePreviewContentSpan(Heights);
+	for(float HookHeight : {0.0f, 24.0f, 43.0f, 100.0f})
+		for(float DirectionHeight : {0.0f, 38.0f, 57.0f, 150.0f})
+		{
+			SCOPED_TRACE(HookHeight);
+			SCOPED_TRACE(DirectionHeight);
+			Heights[static_cast<size_t>(ENameplateCoreRow::HOOK)] = HookHeight;
+			for(const auto Row : {ENameplateCoreRow::KEYS_LEFT, ENameplateCoreRow::KEYS_UP, ENameplateCoreRow::KEYS_RIGHT})
+				Heights[static_cast<size_t>(Row)] = DirectionHeight;
+			EXPECT_FLOAT_EQ(QmNameplatePreviewContentSpan(Heights), Reserved);
+		}
+	Heights[static_cast<size_t>(ENameplateCoreRow::NAME)] += 20.0f;
+	EXPECT_GT(QmNameplatePreviewContentSpan(Heights), Reserved);
 }
 
 TEST(QmNameplatePartLayout, VisibleTopFollowsTheRenderedLineCenter)

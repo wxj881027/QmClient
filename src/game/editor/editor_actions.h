@@ -342,7 +342,8 @@ public:
 	CEditorActionAppendMap(CEditorMap *pMap, const char *pMapName, const SPrevInfo &PrevInfo, std::vector<int> &vImageIndexMap);
 
 	void Undo() override;
-	void Redo() override;
+	void Redo() override { TryRedo(); }
+	bool TryRedo() override;
 
 private:
 	char m_aMapName[IO_MAX_PATH_LENGTH];
@@ -358,7 +359,8 @@ public:
 	CEditorActionTileArt(CEditorMap *pMap, int PreviousImageCount, const char *pFilename, std::vector<int> &vImageIndexMap);
 
 	void Undo() override;
-	void Redo() override;
+	void Redo() override { TryRedo(); }
+	bool TryRedo() override;
 
 private:
 	int m_PreviousImageCount;

@@ -3,6 +3,7 @@
 
 #include <game/client/components/qmclient/netease/netease_lyric_parser.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -50,21 +51,29 @@ namespace QmMusicLyrics
 		NeteaseLyrics::STimeline Translation;
 		if(TranslationLrc.empty() || !NeteaseLyrics::ParseLrc(TranslationLrc, &Translation))
 			return;
+		const auto StartsBefore = [](const NeteaseLyrics::SLine &Line, int64_t Start) { return Line.m_StartMs < Start; };
 		for(const auto &Line : Main.m_vLines)
 		{
-			std::string Matched;
-			int64_t BestDelta = INT64_MAX;
-			for(const auto &TransLine : Translation.m_vLines)
+			const auto Next = std::lower_bound(Translation.m_vLines.begin(), Translation.m_vLines.end(), Line.m_StartMs, StartsBefore);
+			const NeteaseLyrics::SLine *pMatched = Next != Translation.m_vLines.end() ? &*Next : nullptr;
+			// 有序值转为无符号数后相减，跨越 int64 全域也不会发生有符号溢出。
+			uint64_t BestDelta = pMatched ? static_cast<uint64_t>(pMatched->m_StartMs) - static_cast<uint64_t>(Line.m_StartMs) : UINT64_MAX;
+			if(Next != Translation.m_vLines.begin())
 			{
-				const int64_t Delta = TransLine.m_StartMs >= Line.m_StartMs ? TransLine.m_StartMs - Line.m_StartMs : Line.m_StartMs - TransLine.m_StartMs;
-				if(Delta < BestDelta)
+				// 同一时间组取稳定排序的首行；同距时保留较早时间组。
+				const auto Previous = std::lower_bound(Translation.m_vLines.begin(), Next, (Next - 1)->m_StartMs, StartsBefore);
+				const uint64_t Delta = static_cast<uint64_t>(Line.m_StartMs) - static_cast<uint64_t>(Previous->m_StartMs);
+				if(Delta <= BestDelta)
 				{
 					BestDelta = Delta;
-					Matched = TransLine.m_Text;
+					pMatched = &*Previous;
 				}
 			}
 			// 各来源的原文与翻译时间戳允许有 150 毫秒误差。
-			pOut->push_back(BestDelta <= 150 ? Matched : std::string());
+			if(pMatched != nullptr && BestDelta <= 150)
+				pOut->push_back(pMatched->m_Text);
+			else
+				pOut->emplace_back();
 		}
 	}
 } // namespace QmMusicLyrics

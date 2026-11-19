@@ -8,8 +8,11 @@
 
 #include <engine/client/backend/graphics_backend_contract.h>
 #include <engine/client/backend/vulkan/backend_vulkan.h>
+#include <engine/client/graphics_buffer_pair.h>
 #include <engine/client/plausible_sizes.h>
+#include <engine/client/quad_container_render.h>
 #include <engine/client/rounded_rect_geometry.h>
+#include <engine/client/screenshot_path.h>
 #include <engine/client/screenshot_save.h>
 #include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
@@ -30,6 +33,8 @@
 
 #include <cinttypes>
 #include <limits>
+#include <new>
+#include <stdexcept>
 #include <thread>
 
 #if defined(CONF_PLATFORM_MACOS)
@@ -182,9 +187,7 @@ void CGraphics_Threaded::FlushVerticesTex3D()
 
 void CGraphics_Threaded::AddVertices(int Count)
 {
-	m_NumVertices += Count;
-	if((m_NumVertices + Count) >= CCommandBuffer::MAX_VERTICES)
-		FlushVertices();
+	CommitGraphicsVertices(Count, m_NumVertices, [&] { FlushVertices(); });
 }
 
 void CGraphics_Threaded::AddVertices(int Count, CCommandBuffer::SVertex *pVertices)
@@ -194,9 +197,7 @@ void CGraphics_Threaded::AddVertices(int Count, CCommandBuffer::SVertex *pVertic
 
 void CGraphics_Threaded::AddVertices(int Count, CCommandBuffer::SVertexTex3DStream *pVertices)
 {
-	m_NumVertices += Count;
-	if((m_NumVertices + Count) >= CCommandBuffer::MAX_VERTICES)
-		FlushVerticesTex3D();
+	CommitGraphicsVertices(Count, m_NumVertices, [&] { FlushVerticesTex3D(); });
 }
 
 CGraphics_Threaded::CGraphics_Threaded()
@@ -362,23 +363,29 @@ void CGraphics_Threaded::LinesDraw(const CLineItem *pArray, size_t Num)
 {
 	dbg_assert(m_Drawing == EDrawing::LINES, "called Graphics()->LinesDraw without begin");
 
-	size_t VertexIndex = m_NumVertices;
-	for(size_t i = 0; i < Num; ++i)
-	{
-		m_aVertices[VertexIndex].m_Pos.x = pArray[i].m_X0;
-		m_aVertices[VertexIndex].m_Pos.y = pArray[i].m_Y0;
-		m_aVertices[VertexIndex].m_Tex = m_aTexture[0];
-		m_aVertices[VertexIndex].m_Color = m_aColor[0];
-		++VertexIndex;
+	if(Num == 0 || pArray == nullptr)
+		return;
+	const auto Write = [&](size_t Offset, int Batch) {
+		const CLineItem *pItems = pArray + Offset;
+		size_t VertexIndex = m_NumVertices;
+		for(int i = 0; i < Batch; ++i)
+		{
+			m_aVertices[VertexIndex].m_Pos.x = pItems[i].m_X0;
+			m_aVertices[VertexIndex].m_Pos.y = pItems[i].m_Y0;
+			m_aVertices[VertexIndex].m_Tex = m_aTexture[0];
+			m_aVertices[VertexIndex].m_Color = m_aColor[0];
+			++VertexIndex;
 
-		m_aVertices[VertexIndex].m_Pos.x = pArray[i].m_X1;
-		m_aVertices[VertexIndex].m_Pos.y = pArray[i].m_Y1;
-		m_aVertices[VertexIndex].m_Tex = m_aTexture[1];
-		m_aVertices[VertexIndex].m_Color = m_aColor[1];
-		++VertexIndex;
-	}
+			m_aVertices[VertexIndex].m_Pos.x = pItems[i].m_X1;
+			m_aVertices[VertexIndex].m_Pos.y = pItems[i].m_Y1;
+			m_aVertices[VertexIndex].m_Tex = m_aTexture[1];
+			m_aVertices[VertexIndex].m_Color = m_aColor[1];
+			++VertexIndex;
+		}
 
-	AddVertices(2 * Num);
+		AddVertices(2 * Batch);
+	};
+	WriteGraphicsVertexBatches(Num, 2, m_NumVertices, Write, [&] { FlushVertices(); });
 }
 
 void CGraphics_Threaded::LinesBatchBegin(CLineItemBatch *pBatch)
@@ -399,7 +406,9 @@ void CGraphics_Threaded::LinesBatchEnd(CLineItemBatch *pBatch)
 
 void CGraphics_Threaded::LinesBatchDraw(CLineItemBatch *pBatch, const CLineItem *pArray, size_t Num)
 {
-	if(pBatch->m_NumItems + Num >= std::size(pBatch->m_aItems))
+	if(Num == 0 || pArray == nullptr || pBatch == nullptr || pBatch->m_NumItems > std::size(pBatch->m_aItems))
+		return;
+	if(Num >= std::size(pBatch->m_aItems) - pBatch->m_NumItems)
 	{
 		LinesDraw(pBatch->m_aItems, pBatch->m_NumItems);
 		pBatch->m_NumItems = 0;
@@ -450,6 +459,13 @@ void CGraphics_Threaded::UnloadTexture(CTextureHandle *pIndex)
 {
 	if(pIndex->IsNullTexture() || !pIndex->IsValid())
 		return;
+
+	// 越界的精灵共用透明占位纹理，单个素材只放弃自己的句柄。
+	if(pIndex->Id() == m_BlankTexture.Id() && pIndex->Generation() == m_BlankTexture.Generation())
+	{
+		pIndex->Invalidate();
+		return;
+	}
 
 	if(!IsTextureHandleAllocated(*pIndex))
 	{
@@ -567,31 +583,18 @@ static CCommandBuffer::SCommand_Texture_Create LoadTextureCreateCommand(int Text
 	return Cmd;
 }
 
-static bool TextureDataSizeRgba(size_t Width, size_t Height, size_t &DataSize)
+static bool TextureDimensionsFitBackend(size_t Width, size_t Height)
 {
-	if(Width == 0 || Height == 0 || Width > std::numeric_limits<size_t>::max() / Height)
-	{
-		DataSize = 0;
-		return false;
-	}
-	const size_t PixelCount = Width * Height;
-	if(PixelCount > std::numeric_limits<size_t>::max() / 4)
-	{
-		DataSize = 0;
-		return false;
-	}
-	DataSize = PixelCount * 4;
-	return true;
+	// 渲染后端以 int 接收纹理尺寸。
+	constexpr size_t MaxDimension = std::numeric_limits<int>::max();
+	return Width > 0 && Width <= MaxDimension && Height > 0 && Height <= MaxDimension;
 }
 
-static bool TextureDataSizeGrayscale(size_t Width, size_t Height, size_t &DataSize)
+static bool TextureUploadDataSize(size_t Width, size_t Height, size_t PixelSize, size_t &DataSize)
 {
-	if(Width == 0 || Height == 0 || Width > std::numeric_limits<size_t>::max() / Height)
-	{
-		DataSize = 0;
+	if(!TextureDimensionsFitBackend(Width, Height) || Width > std::numeric_limits<size_t>::max() / Height / PixelSize)
 		return false;
-	}
-	DataSize = Width * Height;
+	DataSize = Width * Height * PixelSize;
 	return true;
 }
 
@@ -610,10 +613,12 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(const CImageInfo &I
 {
 	dbg_assert(IsMainThread(), "GPU texture upload must be called from main thread");
 
+	if(!m_pCommandBuffer)
+		return {};
 	LoadTextureAddWarning(Image.m_Width, Image.m_Height, Flags, pTexName);
 
-	if(Image.m_Width == 0 || Image.m_Height == 0)
-		return IGraphics::CTextureHandle();
+	if(!TextureDimensionsFitBackend(Image.m_Width, Image.m_Height))
+		return {};
 	if(Image.m_pData == nullptr)
 	{
 		log_error("graphics", "Texture '%s' has no image data.", pTexName ? pTexName : "(no name)");
@@ -657,32 +662,24 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRawMove(CImageInfo &Ima
 {
 	dbg_assert(IsMainThread(), "GPU texture upload must be called from main thread");
 
-	if(Image.m_Format != CImageInfo::FORMAT_RGBA)
-	{
-		// Moving not possible, texture needs to be converted
-		IGraphics::CTextureHandle TextureHandle = LoadTextureRaw(Image, Flags, pTexName);
-		Image.Free();
-		return TextureHandle;
-	}
+	CImageInfo Source = std::move(Image);
+	CGraphicsUploadData<uint8_t> pData(Source.m_pData);
+	if(!m_pCommandBuffer)
+		return {};
+	if(Source.m_Format != CImageInfo::FORMAT_RGBA)
+		return LoadTextureRaw(Source, Flags, pTexName);
 
-	LoadTextureAddWarning(Image.m_Width, Image.m_Height, Flags, pTexName);
-
-	if(Image.m_Width == 0 || Image.m_Height == 0)
-	{
-		Image.Free();
-		return IGraphics::CTextureHandle();
-	}
-	if(Image.m_pData == nullptr)
+	const size_t Width = Source.m_Width, Height = Source.m_Height;
+	LoadTextureAddWarning(Width, Height, Flags, pTexName);
+	size_t DataSize = 0;
+	if(!TextureUploadDataSize(Width, Height, 4, DataSize))
+		return {};
+	if(pData == nullptr)
 	{
 		log_error("graphics", "Texture '%s' has no image data.", pTexName ? pTexName : "(no name)");
-		Image.Free();
-		return IGraphics::CTextureHandle();
+		return {};
 	}
 
-	std::unique_ptr<uint8_t, decltype(&free)> pData(Image.m_pData, free);
-	const size_t Width = Image.m_Width, Height = Image.m_Height;
-	Image.m_pData = nullptr;
-	Image.Free();
 	auto Slots = m_TextureSlots.Reserve<1>();
 	if(!Slots.IsValid())
 		return {};
@@ -700,6 +697,42 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRawMove(CImageInfo &Ima
 	pData.release();
 	Slots.Commit();
 	return CreateTextureHandle(Slots.Id(), Slots.Generation());
+}
+
+bool CGraphics_Threaded::TryLoadTextureRawMoveOwned(CImageInfo &Image, int Flags, const char *pTexName, SGraphicsUploadRelease &Release, IGraphics::CTextureHandle &Texture)
+{
+	dbg_assert(IsMainThread(), "GPU texture upload must be called from main thread");
+	Texture.Invalidate();
+	if(!m_pCommandBuffer)
+		return false;
+
+	int TextureId = -1;
+	uint32_t TextureGeneration = 0;
+	try
+	{
+		LoadTextureAddWarning(Image.m_Width, Image.m_Height, Flags, pTexName);
+		if(!TryQueueGraphicsTextureUploadOwned(Image, Release, m_TextureSlots, [&](int Slot, size_t Width, size_t Height, uint8_t *pData, const SGraphicsUploadRelease &OwnedRelease) {
+				   auto Cmd = LoadTextureCreateCommand(Slot, Width, Height, Flags);
+				   Cmd.m_pData = pData;
+				   Cmd.m_Release = OwnedRelease;
+				   if(m_pCommandBuffer->AddCommandUnsafe(Cmd))
+					   return true;
+				   // 只提交旧缓冲；当前命令仍由调用方持有，不使用断言式接收。
+				   KickCommandBuffer();
+				   return m_pCommandBuffer->AddCommandUnsafe(Cmd); }, TextureId, TextureGeneration))
+			return false;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+	if(TextureId >= 0)
+		Texture = CreateTextureHandle(TextureId, TextureGeneration);
+	return true;
 }
 
 IGraphics::CTextureHandle CGraphics_Threaded::LoadTexture(const char *pFilename, int StorageType, int Flags)
@@ -772,7 +805,7 @@ IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width,
 
 IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width, int Height, int SampleCount)
 {
-	if(!IsRenderTargetSupported() || Width <= 0 || Height <= 0)
+	if(!m_pCommandBuffer || !IsRenderTargetSupported() || Width <= 0 || Height <= 0)
 		return CRenderTargetHandle();
 
 	const int Samples = std::clamp(SampleCount, 1, m_RenderTargetMaxSamples);
@@ -788,7 +821,19 @@ IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width,
 	Cmd.m_Width = Width;
 	Cmd.m_Height = Height;
 	Cmd.m_SampleCount = Samples;
-	AddCmd(Cmd);
+
+	bool Queued = m_pCommandBuffer->AddCommandUnsafe(Cmd);
+	if(!Queued)
+	{
+		KickCommandBuffer();
+		Queued = m_pCommandBuffer->AddCommandUnsafe(Cmd);
+	}
+	if(!Queued)
+	{
+		// 创建命令没有入队，直接归还仅在前端预留的槽位。
+		m_RenderTargets.Release(TargetId, false, [](int) {});
+		return CRenderTargetHandle();
+	}
 
 	return CreateRenderTargetHandle(TargetId);
 }
@@ -856,15 +901,15 @@ void CGraphics_Threaded::EndRenderTarget()
 
 void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRenderTargetDrawParams &InputParams)
 {
-	SRenderTargetDrawParams Params = InputParams;
-	if(Params.m_NativeTextureCoordinates)
-		Params.SetNativeTextureCoordinates(m_pBackend->GetBackendType());
-	if(!IsRenderTargetSupported() || !Target.IsValid() || Params.m_W <= 0.0f || Params.m_H <= 0.0f)
+	if(!IsRenderTargetSupported() || !Target.IsValid() || InputParams.m_W <= 0.0f || InputParams.m_H <= 0.0f)
 		return;
 	const size_t TargetId = Target.Id();
 	if(!m_RenderTargets.IsLive(TargetId))
 		return;
 
+	SRenderTargetDrawParams Params = InputParams;
+	if(Params.m_NativeTextureCoordinates)
+		Params.SetNativeTextureCoordinates(m_pBackend->GetBackendType());
 	FlushVertices();
 	CCommandBuffer::SCommand_RenderTarget_Draw Cmd;
 	Cmd.m_TargetId = TargetId;
@@ -1253,13 +1298,21 @@ IGraphics::CRenderTargetReadbackHandle CGraphics_Threaded::BeginRenderTargetRead
 		KickCommandBuffer();
 
 	const auto Allocation = m_RenderTargetReadbacks.Allocate();
+	if(Allocation.m_Index < 0)
+		return CRenderTargetReadbackHandle();
 	const auto Handle = CreateRenderTargetReadbackHandle(Allocation.m_Index, Allocation.m_Generation);
 
 	CCommandBuffer::SCommand_RenderTarget_Readback Cmd;
 	Cmd.m_TargetId = (int)TargetId;
 	Cmd.m_pImage = Allocation.m_pImage;
 	Cmd.m_pCompletion = Allocation.m_pCompletion;
-	AddCmd(Cmd);
+	if(!m_pCommandBuffer->AddCommandUnsafe(Cmd))
+	{
+		CGraphicsReadbackCompletion Failure(Allocation.m_pImage, Allocation.m_pCompletion);
+		Failure.Abort();
+		m_RenderTargetReadbacks.Cancel(Allocation.m_Index, Allocation.m_Generation);
+		return CRenderTargetReadbackHandle();
+	}
 
 	KickCommandBuffer();
 	return Handle;
@@ -1272,7 +1325,8 @@ bool CGraphics_Threaded::FlushPendingRenderTargetReadback()
 	if(!CommandBufferCanFitCommands(*m_pCommandBuffer, sizeof(CCommandBuffer::SCommand_RenderTarget_ReadbackFlush), 0))
 		KickCommandBuffer();
 	CCommandBuffer::SCommand_RenderTarget_ReadbackFlush Cmd;
-	AddCmd(Cmd);
+	if(!m_pCommandBuffer->AddCommandUnsafe(Cmd))
+		return false;
 	KickCommandBuffer();
 	return true;
 }
@@ -1320,23 +1374,9 @@ bool CGraphics_Threaded::ReadRenderTarget(CRenderTargetHandle Target, CImageInfo
 		WaitForIdle();
 	}
 
-	const ERenderTargetReadbackState State = PollRenderTargetReadback(Readback);
-	if(State == ERenderTargetReadbackState::READY)
-	{
-		const bool Resolved = ResolveRenderTargetReadback(&Readback, Image);
-		if(!Resolved)
-			CancelRenderTargetReadback(&Readback);
-		return Resolved;
-	}
-	// 后端没有完成信号（Vulkan 命令表无 CMD_SIGNAL）：空闲后按像素归属判定。
-	if(State == ERenderTargetReadbackState::PENDING)
-	{
-		const bool Resolved = m_RenderTargetReadbacks.ResolveAfterIdle(Readback.Id(), Readback.Generation(), Image);
-		Readback.Invalidate();
-		return Resolved;
-	}
-	CancelRenderTargetReadback(&Readback);
-	return false;
+	const bool Resolved = m_RenderTargetReadbacks.ResolveAfterIdle(Readback.Id(), Readback.Generation(), Image, m_ReadbackCompletionSignal);
+	Readback.Invalidate();
+	return Resolved;
 }
 
 bool CGraphics_Threaded::BeginOffscreenFrame(int Width, int Height)
@@ -1390,10 +1430,7 @@ bool CGraphics_Threaded::EndOffscreenFrame(CImageInfo &Image)
 
 	// 先结束离屏目标（后端在这里 resolve 并恢复视口）：读回接口要求当前没有活动目标。
 	EndRenderTarget();
-	// 读回分两步：先排队读回命令，再等渲染线程空闲后结算。
-	// PBO 双缓冲下排队命令只启动 DMA，需要补一个 Flush 命令把像素拷出；
-	// Vulkan 的命令表没有 CMD_SIGNAL 回调，完成信号永远不会点亮，此时唯一可靠的
-	// 定序手段是先 WaitForIdle（渲染线程已执行完全部已提交命令），再按像素归属判定。
+	// 同步后端命令结束后即可取像素。PBO 仍在途时需要 Flush 结算并发出完成信号。
 	bool Read = false;
 	CRenderTargetReadbackHandle Readback = BeginRenderTargetReadback(m_OffscreenFrameTarget);
 	if(!Readback.IsValid())
@@ -1405,14 +1442,16 @@ bool CGraphics_Threaded::EndOffscreenFrame(CImageInfo &Image)
 		WaitForIdle();
 		if(PollRenderTargetReadback(Readback) == ERenderTargetReadbackState::PENDING)
 		{
-			FlushPendingRenderTargetReadback();
-			WaitForIdle();
+			if(FlushPendingRenderTargetReadback() || !m_ReadbackCompletionSignal)
+				WaitForIdle();
+			else
+				CancelRenderTargetReadback(&Readback);
 		}
-		if(PollRenderTargetReadback(Readback) == ERenderTargetReadbackState::READY)
-			Read = m_RenderTargetReadbacks.Resolve(Readback.Id(), Readback.Generation(), Image);
-		else
-			Read = m_RenderTargetReadbacks.ResolveAfterIdle(Readback.Id(), Readback.Generation(), Image);
-		Readback.Invalidate();
+		if(Readback.IsValid())
+		{
+			Read = m_RenderTargetReadbacks.ResolveAfterIdle(Readback.Id(), Readback.Generation(), Image, m_ReadbackCompletionSignal);
+			Readback.Invalidate();
+		}
 		if(!Read)
 			log_error("graphics", "offscreen frame readback produced no pixels (%dx%d)", m_OffscreenFrameWidth, m_OffscreenFrameHeight);
 	}
@@ -1465,10 +1504,10 @@ bool CGraphics_Threaded::BeginVideoFrame(int Width, int Height, int SampleCount)
 	return true;
 }
 
-void CGraphics_Threaded::EndVideoFrame(CImageInfo &Image)
+bool CGraphics_Threaded::EndVideoFrame(CImageInfo &Image)
 {
 	if(!m_VideoFrameTarget.IsValid() || !m_VideoFrameActive)
-		return;
+		return false;
 	m_VideoFrameActive = false;
 	// 先结束渲染目标（后端在这里 resolve 多采样并恢复视口）：读回接口要求当前没有活动目标。
 	EndRenderTarget();
@@ -1499,72 +1538,29 @@ void CGraphics_Threaded::EndVideoFrame(CImageInfo &Image)
 	{
 		log_error("graphics", "video frame readback could not be started (%dx%d)", m_VideoFrameWidth, m_VideoFrameHeight);
 	}
-	if(m_ReadbackCompletionSignal)
-	{
-		if(m_VideoFramePendingReadbackCount == 2)
-		{
-			CRenderTargetReadbackHandle &Oldest = m_aVideoFramePendingReadbacks[0];
-			m_RenderTargetReadbacks.ResolveBlocking(Oldest.Id(), Oldest.Generation(), Image);
-			m_aVideoFramePendingReadbacks[0] = m_aVideoFramePendingReadbacks[1];
-			m_aVideoFramePendingReadbacks[1] = Readback;
-		}
-		else
-		{
-			m_aVideoFramePendingReadbacks[m_VideoFramePendingReadbackCount++] = Readback;
-		}
-	}
-	else
-	{
-		// 无完成信号：唯一可靠的定序是整体等待；稳态在途一笔（上一帧）。
-		WaitForIdle();
-		for(int i = 0; i < m_VideoFramePendingReadbackCount; ++i)
-		{
-			CRenderTargetReadbackHandle &Pending = m_aVideoFramePendingReadbacks[i];
-			if(i == 0)
-				m_RenderTargetReadbacks.ResolveAfterIdle(Pending.Id(), Pending.Generation(), Image);
-			else
-			{
-				// 防御：正常不会走到第二笔，异常序列下丢弃多余像素。
-				CImageInfo Discard;
-				m_RenderTargetReadbacks.ResolveAfterIdle(Pending.Id(), Pending.Generation(), Discard);
-				Discard.Free();
-			}
-			Pending.Invalidate();
-		}
-		m_VideoFramePendingReadbackCount = 0;
-		m_aVideoFramePendingReadbacks[m_VideoFramePendingReadbackCount++] = Readback;
-	}
+	return m_VideoFrameReadbacks.Enqueue(m_RenderTargetReadbacks, Readback.Id(), Readback.Generation(),
+		m_ReadbackCompletionSignal, Image, [this] { WaitForIdle(); });
 }
 
 int CGraphics_Threaded::FlushVideoFrameReadbacks(CImageInfo *pOutImages, int MaxImages)
 {
-	if(m_VideoFramePendingReadbackCount == 0)
-		return 0;
-	// 最后一笔 DMA 仍在途：FLUSH 命令让渲染线程立即结算它并点亮完成信号；
-	// 随后的整体等待对无信号后端也是定序前提（其读回在命令内同步完成）。
-	FlushPendingRenderTargetReadback();
-	WaitForIdle();
-	int Written = 0;
-	for(int i = 0; i < m_VideoFramePendingReadbackCount && Written < MaxImages; ++i)
-	{
-		CRenderTargetReadbackHandle &Pending = m_aVideoFramePendingReadbacks[i];
-		const bool Resolved = m_ReadbackCompletionSignal ?
-					      m_RenderTargetReadbacks.ResolveBlocking(Pending.Id(), Pending.Generation(), pOutImages[Written]) :
-					      m_RenderTargetReadbacks.ResolveAfterIdle(Pending.Id(), Pending.Generation(), pOutImages[Written]);
-		if(Resolved)
-			++Written;
-		Pending.Invalidate();
-	}
-	m_VideoFramePendingReadbackCount = 0;
-	return Written;
+	return m_VideoFrameReadbacks.Flush(m_RenderTargetReadbacks, m_ReadbackCompletionSignal, pOutImages, MaxImages, [this] {
+		// 最后一笔 DMA 需要显式结算；无信号后端也要先等渲染线程空闲。
+		const bool Queued = FlushPendingRenderTargetReadback();
+		WaitForIdle();
+		return Queued;
+	});
 }
 
 void CGraphics_Threaded::StopVideoFrame()
 {
 	if(m_VideoFrameActive)
+	{
+		EndRenderTarget();
 		SetRenderScreenSize(0, 0);
-	m_VideoFrameActive = false;
-	if(m_VideoFramePendingReadbackCount > 0)
+		m_VideoFrameActive = false;
+	}
+	if(!m_VideoFrameReadbacks.Empty())
 	{
 		// 正常收尾在 CVideo::Stop 里经 FlushVideoFrameReadbacks 结算过；走到这里说明
 		// 录制以异常顺序结束——补一次结算并丢弃像素，不能带着在途请求销毁目标。
@@ -1575,10 +1571,7 @@ void CGraphics_Threaded::StopVideoFrame()
 	}
 	if(!m_VideoFrameTarget.IsValid())
 		return;
-	// 活动目标属于未收尾的错误状态（EndVideoFrame 未配对调用）；此时不销毁，
-	// 交由设备重建时的清理兜底，这里只复位簿记，避免下次录制复用悬挂句柄。
-	if(!m_RenderTargetActive)
-		DestroyRenderTarget(&m_VideoFrameTarget);
+	DestroyRenderTarget(&m_VideoFrameTarget);
 	m_VideoFrameWidth = 0;
 	m_VideoFrameHeight = 0;
 	m_VideoFrameSampleCount = 1;
@@ -1588,8 +1581,11 @@ bool CGraphics_Threaded::LoadTextTextures(size_t Width, size_t Height, CTextureH
 {
 	std::unique_ptr<uint8_t, decltype(&free)> pFill(pTextData, free);
 	std::unique_ptr<uint8_t, decltype(&free)> pOutline(pTextOutlineData, free);
+	if(!m_pCommandBuffer)
+		return false;
+
 	size_t MemSize = 0;
-	if(pTextData == nullptr || pTextOutlineData == nullptr || !TextureDataSizeGrayscale(Width, Height, MemSize))
+	if(pTextData == nullptr || pTextOutlineData == nullptr || !TextureUploadDataSize(Width, Height, 1, MemSize))
 	{
 		log_error("graphics/texture", "Ignoring text texture create with invalid data or size.");
 		return false;
@@ -1633,7 +1629,7 @@ bool CGraphics_Threaded::UpdateTextTexture(CTextureHandle TextureId, int x, int 
 {
 	std::unique_ptr<uint8_t, decltype(&free)> pUpload(IsMovedPointer ? pData : nullptr, free);
 	size_t MemSize = 0;
-	if(pData == nullptr || !TextureDataSizeGrayscale(Width, Height, MemSize))
+	if(pData == nullptr || !TextureUploadDataSize(Width, Height, 1, MemSize))
 	{
 		log_error("graphics/texture", "Ignoring text texture update with invalid data or size.");
 		return false;
@@ -1680,19 +1676,16 @@ bool CGraphics_Threaded::UpdateTextTexture(CTextureHandle TextureId, int x, int 
 
 bool CGraphics_Threaded::UpdateTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, uint8_t *pData, bool IsMovedPointer)
 {
+	CGraphicsUploadData<uint8_t> pUpload(IsMovedPointer ? pData : nullptr);
 	size_t MemSize = 0;
-	if(pData == nullptr || !TextureDataSizeRgba(Width, Height, MemSize))
+	if(pData == nullptr || !TextureUploadDataSize(Width, Height, 4, MemSize))
 	{
-		if(IsMovedPointer)
-			free(pData);
 		log_error("graphics/texture", "Ignoring texture update with invalid data or size.");
 		return false;
 	}
 
 	if(!IsTextureHandleAllocated(TextureId))
 	{
-		if(IsMovedPointer)
-			free(pData);
 		if(g_Config.m_Debug && TextureId.IsValid())
 			log_trace("graphics/texture", "Ignoring update of stale texture handle %d.", TextureId.Id());
 		return false;
@@ -1705,22 +1698,27 @@ bool CGraphics_Threaded::UpdateTexture(CTextureHandle TextureId, int x, int y, s
 	Cmd.m_Width = Width;
 	Cmd.m_Height = Height;
 
-	if(IsMovedPointer)
+	if(!IsMovedPointer)
 	{
-		Cmd.m_pData = pData;
-	}
-	else
-	{
-		uint8_t *pTmpData = static_cast<uint8_t *>(malloc(MemSize));
-		if(pTmpData == nullptr)
+		pUpload.reset(static_cast<uint8_t *>(malloc(MemSize)));
+		if(pUpload == nullptr)
 		{
 			log_error("graphics/texture", "Failed to allocate texture update buffer.");
 			return false;
 		}
-		mem_copy(pTmpData, pData, MemSize);
-		Cmd.m_pData = pTmpData;
+		mem_copy(pUpload.get(), pData, MemSize);
 	}
-	AddCmd(Cmd);
+	Cmd.m_pData = pUpload.get();
+	try
+	{
+		AddCmd(Cmd);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics/texture", "Failed to queue texture update: %s", Error.what());
+		return false;
+	}
+	pUpload.release();
 
 	return true;
 }
@@ -1890,88 +1888,6 @@ void CGraphics_Threaded::KickCommandBuffer()
 	}
 }
 
-namespace
-{
-	// 后台编码完成后的交接：照片卡贴图与界面回调都必须在渲染线程执行，
-	// 所以任务只把「图像 + 真实路径」塞进队列，由 Swap 开头统一回放。
-	struct SScreenshotCompletion
-	{
-		CImageInfo m_Image;
-		char m_aPath[IO_MAX_PATH_LENGTH] = "";
-		IGraphics::FScreenshotCallback m_pfnCallback;
-	};
-
-	std::mutex g_ScreenshotCompletionMutex;
-	std::vector<SScreenshotCompletion> g_vScreenshotCompletions;
-
-	void QueueScreenshotCompletion(CImageInfo &&Image, const char *pPath, IGraphics::FScreenshotCallback pfnCallback)
-	{
-		SScreenshotCompletion Completion;
-		Completion.m_Image = std::move(Image);
-		str_copy(Completion.m_aPath, pPath);
-		Completion.m_pfnCallback = std::move(pfnCallback);
-		std::lock_guard<std::mutex> Lock(g_ScreenshotCompletionMutex);
-		g_vScreenshotCompletions.push_back(std::move(Completion));
-	}
-
-	void FlushScreenshotCompletions()
-	{
-		std::vector<SScreenshotCompletion> Completions;
-		{
-			std::lock_guard<std::mutex> Lock(g_ScreenshotCompletionMutex);
-			Completions.swap(g_vScreenshotCompletions);
-		}
-		for(SScreenshotCompletion &Completion : Completions)
-		{
-			if(Completion.m_pfnCallback)
-				Completion.m_pfnCallback(std::move(Completion.m_Image), Completion.m_aPath);
-			else
-				Completion.m_Image.Free();
-		}
-	}
-
-	class CScreenshotSaveJob : public IJob
-	{
-		IStorage *m_pStorage;
-		std::function<void()> m_pfnFailure;
-		char m_aName[IO_MAX_PATH_LENGTH];
-		CImageInfo m_Image;
-		IGraphics::FScreenshotProcessor m_pfnProcessor;
-		// 需要「落盘之后再回调」的调用方（合影超采样静帧）把回调挂在这里。
-		IGraphics::FScreenshotCallback m_pfnCallback;
-
-	protected:
-		void Run() override
-		{
-			// 与离屏静帧的同步保存共用同一套后处理/编码/落盘规则。
-			char aWholePath[IO_MAX_PATH_LENGTH];
-			if(!screenshot_save::Save(m_pStorage, m_aName, m_Image, m_pfnProcessor, aWholePath, sizeof(aWholePath)))
-			{
-				m_pfnFailure();
-				return;
-			}
-			if(m_pfnCallback)
-				QueueScreenshotCompletion(std::move(m_Image), aWholePath, std::move(m_pfnCallback));
-		}
-
-	public:
-		CScreenshotSaveJob(IStorage *pStorage, const char *pName, CImageInfo &&Image, IGraphics::FScreenshotProcessor pfnProcessor, std::function<void()> pfnFailure, IGraphics::FScreenshotCallback pfnCallback = nullptr) :
-			m_pStorage(pStorage),
-			m_pfnFailure(std::move(pfnFailure)),
-			m_Image(std::move(Image)),
-			m_pfnProcessor(std::move(pfnProcessor)),
-			m_pfnCallback(std::move(pfnCallback))
-		{
-			str_copy(m_aName, pName);
-		}
-
-		~CScreenshotSaveJob() override
-		{
-			m_Image.Free();
-		}
-	};
-} // namespace
-
 // 等待窗口激活的上限（帧）。60 fps 下约 5 秒；超时说明窗口确实长时间不在前台，
 // 继续挂着只会让请求永远悬空，不如报错让调用方知道这次没出图。
 static constexpr int SCREENSHOT_MAX_WAIT_FRAMES = 300;
@@ -1998,6 +1914,13 @@ void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 	}
 	m_DoScreenshot = false;
 	m_ScreenshotWaitFrames = 0;
+	// 先取走本次回调，异常或回调中发起下一次截图都不会复用旧请求。
+	auto Preview = std::move(m_pfnScreenshotCallback);
+	m_pfnScreenshotCallback = nullptr;
+	auto Processor = std::move(m_pfnScreenshotProcessor);
+	m_pfnScreenshotProcessor = nullptr;
+	char aScreenshotName[sizeof(m_aScreenshotName)];
+	str_copy(aScreenshotName, m_aScreenshotName);
 
 	CImageInfo Image;
 
@@ -2011,16 +1934,19 @@ void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 
 	if(Image.m_pData)
 	{
-		if(m_pfnScreenshotCallback)
-			m_pfnScreenshotCallback(Image.DeepCopy(), m_aScreenshotName);
-		QueueScreenshotSave(std::move(Image), std::move(m_pfnScreenshotProcessor));
+		screenshot_save::Finish(Image, Preview, Processor, [&](CImageInfo &&Captured, IGraphics::FScreenshotProcessor &&SaveProcessor) {
+			SWarning FailureWarning;
+			str_copy(FailureWarning.m_aWarningMsg, Localize("Failed to save screenshot"));
+			// 本地化在主线程完成，后台只通过已有同步入口发布提示。
+			return std::make_shared<screenshot_save::CSaveJob>(m_pStorage, aScreenshotName, std::move(Captured), std::move(SaveProcessor), [this, FailureWarning]() { AddWarning(FailureWarning); }); }, [this](const auto &pJob) { return m_pEngine->TryAddJob(pJob); }, [this]() {
+			SWarning FailureWarning;
+			str_copy(FailureWarning.m_aWarningMsg, Localize("Failed to save screenshot"));
+			AddWarning(FailureWarning); }, aScreenshotName);
 	}
 	else
 	{
 		log_error("graphics", "Failed to create screenshot");
 	}
-	m_pfnScreenshotCallback = nullptr;
-	m_pfnScreenshotProcessor = nullptr;
 }
 
 void CGraphics_Threaded::TextureSet(CTextureHandle TextureId)
@@ -2177,6 +2103,8 @@ void CGraphics_Threaded::ChangeColorOfQuadVertices(size_t QuadOffset, unsigned c
 {
 	const CCommandBuffer::SColor Color(r, g, b, a);
 	const size_t VertNum = g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad ? 6 : 4;
+	if(!GraphicsCanRecolorQuad(QuadOffset, m_NumVertices, VertNum))
+		return;
 	for(size_t i = 0; i < VertNum; ++i)
 	{
 		m_aVertices[QuadOffset * VertNum + i].m_Color = Color;
@@ -2213,6 +2141,8 @@ void CGraphics_Threaded::QuadsSetSubsetFree(
 
 void CGraphics_Threaded::QuadsDraw(CQuadItem *pArray, int Num)
 {
+	if(Num <= 0 || pArray == nullptr)
+		return;
 	for(int i = 0; i < Num; ++i)
 	{
 		pArray[i].m_X -= pArray[i].m_Width / 2;
@@ -2229,17 +2159,6 @@ void CGraphics_Threaded::QuadsDrawTL(const CQuadItem *pArray, int Num)
 
 void CGraphics_Threaded::QuadsTex3DDrawTL(const CQuadItem *pArray, int Num)
 {
-	const int VertNum = g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad ? 6 : 4;
-	const float CurIndex = Uses2DTextureArrays() ? m_CurIndex : (m_CurIndex + 0.5f) / 256.0f;
-
-	for(int i = 0; i < Num; ++i)
-	{
-		for(int n = 0; n < VertNum; ++n)
-		{
-			m_aVerticesTex3D[m_NumVertices + VertNum * i + n].m_Tex.w = CurIndex;
-		}
-	}
-
 	QuadsDrawTLImpl(m_aVerticesTex3D, pArray, Num);
 }
 
@@ -2247,70 +2166,77 @@ void CGraphics_Threaded::QuadsDrawFreeform(const CFreeformItem *pArray, int Num)
 {
 	dbg_assert(m_Drawing == EDrawing::QUADS || m_Drawing == EDrawing::TRIANGLES, "called Graphics()->QuadsDrawFreeform without begin");
 
-	if((g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad) || m_Drawing == EDrawing::TRIANGLES)
-	{
-		for(int i = 0; i < Num; ++i)
+	if(Num <= 0 || pArray == nullptr)
+		return;
+	const int VerticesPerItem = ((g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad) || m_Drawing == EDrawing::TRIANGLES) ? 6 : 4;
+	const auto Write = [&](size_t Offset, int Batch) {
+		const CFreeformItem *pItems = pArray + Offset;
+		if((g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad) || m_Drawing == EDrawing::TRIANGLES)
 		{
-			m_aVertices[m_NumVertices + 6 * i].m_Pos.x = pArray[i].m_X0;
-			m_aVertices[m_NumVertices + 6 * i].m_Pos.y = pArray[i].m_Y0;
-			m_aVertices[m_NumVertices + 6 * i].m_Tex = m_aTexture[0];
-			m_aVertices[m_NumVertices + 6 * i].m_Color = m_aColor[0];
+			for(int i = 0; i < Batch; ++i)
+			{
+				m_aVertices[m_NumVertices + 6 * i].m_Pos.x = pItems[i].m_X0;
+				m_aVertices[m_NumVertices + 6 * i].m_Pos.y = pItems[i].m_Y0;
+				m_aVertices[m_NumVertices + 6 * i].m_Tex = m_aTexture[0];
+				m_aVertices[m_NumVertices + 6 * i].m_Color = m_aColor[0];
 
-			m_aVertices[m_NumVertices + 6 * i + 1].m_Pos.x = pArray[i].m_X1;
-			m_aVertices[m_NumVertices + 6 * i + 1].m_Pos.y = pArray[i].m_Y1;
-			m_aVertices[m_NumVertices + 6 * i + 1].m_Tex = m_aTexture[1];
-			m_aVertices[m_NumVertices + 6 * i + 1].m_Color = m_aColor[1];
+				m_aVertices[m_NumVertices + 6 * i + 1].m_Pos.x = pItems[i].m_X1;
+				m_aVertices[m_NumVertices + 6 * i + 1].m_Pos.y = pItems[i].m_Y1;
+				m_aVertices[m_NumVertices + 6 * i + 1].m_Tex = m_aTexture[1];
+				m_aVertices[m_NumVertices + 6 * i + 1].m_Color = m_aColor[1];
 
-			m_aVertices[m_NumVertices + 6 * i + 2].m_Pos.x = pArray[i].m_X3;
-			m_aVertices[m_NumVertices + 6 * i + 2].m_Pos.y = pArray[i].m_Y3;
-			m_aVertices[m_NumVertices + 6 * i + 2].m_Tex = m_aTexture[3];
-			m_aVertices[m_NumVertices + 6 * i + 2].m_Color = m_aColor[3];
+				m_aVertices[m_NumVertices + 6 * i + 2].m_Pos.x = pItems[i].m_X3;
+				m_aVertices[m_NumVertices + 6 * i + 2].m_Pos.y = pItems[i].m_Y3;
+				m_aVertices[m_NumVertices + 6 * i + 2].m_Tex = m_aTexture[3];
+				m_aVertices[m_NumVertices + 6 * i + 2].m_Color = m_aColor[3];
 
-			m_aVertices[m_NumVertices + 6 * i + 3].m_Pos.x = pArray[i].m_X0;
-			m_aVertices[m_NumVertices + 6 * i + 3].m_Pos.y = pArray[i].m_Y0;
-			m_aVertices[m_NumVertices + 6 * i + 3].m_Tex = m_aTexture[0];
-			m_aVertices[m_NumVertices + 6 * i + 3].m_Color = m_aColor[0];
+				m_aVertices[m_NumVertices + 6 * i + 3].m_Pos.x = pItems[i].m_X0;
+				m_aVertices[m_NumVertices + 6 * i + 3].m_Pos.y = pItems[i].m_Y0;
+				m_aVertices[m_NumVertices + 6 * i + 3].m_Tex = m_aTexture[0];
+				m_aVertices[m_NumVertices + 6 * i + 3].m_Color = m_aColor[0];
 
-			m_aVertices[m_NumVertices + 6 * i + 4].m_Pos.x = pArray[i].m_X3;
-			m_aVertices[m_NumVertices + 6 * i + 4].m_Pos.y = pArray[i].m_Y3;
-			m_aVertices[m_NumVertices + 6 * i + 4].m_Tex = m_aTexture[3];
-			m_aVertices[m_NumVertices + 6 * i + 4].m_Color = m_aColor[3];
+				m_aVertices[m_NumVertices + 6 * i + 4].m_Pos.x = pItems[i].m_X3;
+				m_aVertices[m_NumVertices + 6 * i + 4].m_Pos.y = pItems[i].m_Y3;
+				m_aVertices[m_NumVertices + 6 * i + 4].m_Tex = m_aTexture[3];
+				m_aVertices[m_NumVertices + 6 * i + 4].m_Color = m_aColor[3];
 
-			m_aVertices[m_NumVertices + 6 * i + 5].m_Pos.x = pArray[i].m_X2;
-			m_aVertices[m_NumVertices + 6 * i + 5].m_Pos.y = pArray[i].m_Y2;
-			m_aVertices[m_NumVertices + 6 * i + 5].m_Tex = m_aTexture[2];
-			m_aVertices[m_NumVertices + 6 * i + 5].m_Color = m_aColor[2];
+				m_aVertices[m_NumVertices + 6 * i + 5].m_Pos.x = pItems[i].m_X2;
+				m_aVertices[m_NumVertices + 6 * i + 5].m_Pos.y = pItems[i].m_Y2;
+				m_aVertices[m_NumVertices + 6 * i + 5].m_Tex = m_aTexture[2];
+				m_aVertices[m_NumVertices + 6 * i + 5].m_Color = m_aColor[2];
+			}
+
+			AddVertices(3 * 2 * Batch);
 		}
-
-		AddVertices(3 * 2 * Num);
-	}
-	else
-	{
-		for(int i = 0; i < Num; ++i)
+		else
 		{
-			m_aVertices[m_NumVertices + 4 * i].m_Pos.x = pArray[i].m_X0;
-			m_aVertices[m_NumVertices + 4 * i].m_Pos.y = pArray[i].m_Y0;
-			m_aVertices[m_NumVertices + 4 * i].m_Tex = m_aTexture[0];
-			m_aVertices[m_NumVertices + 4 * i].m_Color = m_aColor[0];
+			for(int i = 0; i < Batch; ++i)
+			{
+				m_aVertices[m_NumVertices + 4 * i].m_Pos.x = pItems[i].m_X0;
+				m_aVertices[m_NumVertices + 4 * i].m_Pos.y = pItems[i].m_Y0;
+				m_aVertices[m_NumVertices + 4 * i].m_Tex = m_aTexture[0];
+				m_aVertices[m_NumVertices + 4 * i].m_Color = m_aColor[0];
 
-			m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.x = pArray[i].m_X1;
-			m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.y = pArray[i].m_Y1;
-			m_aVertices[m_NumVertices + 4 * i + 1].m_Tex = m_aTexture[1];
-			m_aVertices[m_NumVertices + 4 * i + 1].m_Color = m_aColor[1];
+				m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.x = pItems[i].m_X1;
+				m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.y = pItems[i].m_Y1;
+				m_aVertices[m_NumVertices + 4 * i + 1].m_Tex = m_aTexture[1];
+				m_aVertices[m_NumVertices + 4 * i + 1].m_Color = m_aColor[1];
 
-			m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.x = pArray[i].m_X3;
-			m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.y = pArray[i].m_Y3;
-			m_aVertices[m_NumVertices + 4 * i + 2].m_Tex = m_aTexture[3];
-			m_aVertices[m_NumVertices + 4 * i + 2].m_Color = m_aColor[3];
+				m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.x = pItems[i].m_X3;
+				m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.y = pItems[i].m_Y3;
+				m_aVertices[m_NumVertices + 4 * i + 2].m_Tex = m_aTexture[3];
+				m_aVertices[m_NumVertices + 4 * i + 2].m_Color = m_aColor[3];
 
-			m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.x = pArray[i].m_X2;
-			m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.y = pArray[i].m_Y2;
-			m_aVertices[m_NumVertices + 4 * i + 3].m_Tex = m_aTexture[2];
-			m_aVertices[m_NumVertices + 4 * i + 3].m_Color = m_aColor[2];
+				m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.x = pItems[i].m_X2;
+				m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.y = pItems[i].m_Y2;
+				m_aVertices[m_NumVertices + 4 * i + 3].m_Tex = m_aTexture[2];
+				m_aVertices[m_NumVertices + 4 * i + 3].m_Color = m_aColor[2];
+			}
+
+			AddVertices(4 * Batch);
 		}
-
-		AddVertices(4 * Num);
-	}
+	};
+	WriteGraphicsVertexBatches(static_cast<size_t>(Num), VerticesPerItem, m_NumVertices, Write, [&] { FlushVertices(); });
 }
 
 void CGraphics_Threaded::QuadsText(float x, float y, float Size, const char *pText)
@@ -3072,13 +2998,14 @@ void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, i
 			m_BufferedTextZeroQuadCount++;
 	}
 #endif
-	if(BufferContainerIndex == -1 || !IsTextureHandleAllocated(TextTexture) || !IsTextureHandleAllocated(TextOutlineTexture))
+	if(!m_BufferContainers.IsAllocated(BufferContainerIndex) || TextQuadNum <= 0 || TextureSize <= 0 ||
+		!GraphicsCanAppendQuads(0, TextQuadNum) || !IsTextureHandleAllocated(TextTexture) || !IsTextureHandleAllocated(TextOutlineTexture))
 		return;
 
 	CCommandBuffer::SCommand_RenderText Cmd;
 	Cmd.m_State = m_State;
 	Cmd.m_BufferContainerIndex = BufferContainerIndex;
-	Cmd.m_DrawNum = TextQuadNum * 6;
+	Cmd.m_DrawNum = static_cast<unsigned int>(TextQuadNum) * 6;
 	Cmd.m_TextureSize = TextureSize;
 	Cmd.m_TextTextureIndex = TextTexture.Id();
 	Cmd.m_TextOutlineTextureIndex = TextOutlineTexture.Id();
@@ -3276,7 +3203,8 @@ void CGraphics_Threaded::RenderProceduralRing(const IGraphics::SProceduralRingPa
 
 bool CGraphics_Threaded::IsQuadContainerIndexValid(int ContainerIndex) const
 {
-	return ContainerIndex >= 0 && (size_t)ContainerIndex < m_vQuadContainers.size();
+	return ContainerIndex >= 0 && (size_t)ContainerIndex < m_vQuadContainers.size() &&
+	       m_vQuadContainers[ContainerIndex].m_FreeIndex == ContainerIndex;
 }
 
 int CGraphics_Threaded::CreateQuadContainer(bool AutomaticUpload)
@@ -3284,15 +3212,18 @@ int CGraphics_Threaded::CreateQuadContainer(bool AutomaticUpload)
 	int Index = -1;
 	if(m_FirstFreeQuadContainer == -1)
 	{
-		Index = m_vQuadContainers.size();
+		if(m_vQuadContainers.size() >= static_cast<size_t>(std::numeric_limits<int>::max()))
+			throw std::length_error("Quad container index capacity exceeded");
+		Index = static_cast<int>(m_vQuadContainers.size());
 		m_vQuadContainers.emplace_back(AutomaticUpload);
 	}
 	else
 	{
 		Index = m_FirstFreeQuadContainer;
 		m_FirstFreeQuadContainer = m_vQuadContainers[Index].m_FreeIndex;
-		m_vQuadContainers[Index].m_FreeIndex = Index;
 	}
+	m_vQuadContainers[Index].m_FreeIndex = Index;
+	m_vQuadContainers[Index].m_AutomaticUpload = AutomaticUpload;
 
 	return Index;
 }
@@ -3368,16 +3299,10 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, const CQuadIte
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if((int)Container.m_vQuads.size() > Num + CCommandBuffer::CCommandBuffer::MAX_VERTICES)
+	if(Num > 0 && pArray == nullptr)
 		return -1;
 
-	int RetOff = (int)Container.m_vQuads.size();
-
-	for(int i = 0; i < Num; ++i)
-	{
-		Container.m_vQuads.emplace_back();
-		SQuadContainer::SQuad &Quad = Container.m_vQuads.back();
-
+	const int RetOff = AppendGraphicsQuads(Container.m_vQuads, Num, [&](SQuadContainer::SQuad &Quad, int i) {
 		Quad.m_aVertices[0].m_Pos.x = pArray[i].m_X;
 		Quad.m_aVertices[0].m_Pos.y = pArray[i].m_Y;
 		Quad.m_aVertices[0].m_Tex = m_aTexture[0];
@@ -3406,7 +3331,9 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, const CQuadIte
 
 			Rotate(Center, Quad.m_aVertices, 4);
 		}
-	}
+	});
+	if(RetOff < 0)
+		return -1;
 
 	if(Container.m_AutomaticUpload)
 		QuadContainerUpload(ContainerIndex);
@@ -3421,16 +3348,10 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, const CFreefor
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if((int)Container.m_vQuads.size() > Num + CCommandBuffer::CCommandBuffer::MAX_VERTICES)
+	if(Num > 0 && pArray == nullptr)
 		return -1;
 
-	int RetOff = (int)Container.m_vQuads.size();
-
-	for(int i = 0; i < Num; ++i)
-	{
-		Container.m_vQuads.emplace_back();
-		SQuadContainer::SQuad &Quad = Container.m_vQuads.back();
-
+	const int RetOff = AppendGraphicsQuads(Container.m_vQuads, Num, [&](SQuadContainer::SQuad &Quad, int i) {
 		Quad.m_aVertices[0].m_Pos.x = pArray[i].m_X0;
 		Quad.m_aVertices[0].m_Pos.y = pArray[i].m_Y0;
 		Quad.m_aVertices[0].m_Tex = m_aTexture[0];
@@ -3450,7 +3371,9 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, const CFreefor
 		Quad.m_aVertices[3].m_Pos.y = pArray[i].m_Y2;
 		Quad.m_aVertices[3].m_Tex = m_aTexture[2];
 		Quad.m_aVertices[3].m_Color = m_aColor[2];
-	}
+	});
+	if(RetOff < 0)
+		return -1;
 
 	if(Container.m_AutomaticUpload)
 		QuadContainerUpload(ContainerIndex);
@@ -3468,7 +3391,7 @@ void CGraphics_Threaded::QuadContainerReset(int ContainerIndex)
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 	if(IsQuadContainerBufferingEnabled())
-		DeleteBufferContainer(Container.m_QuadBufferContainerIndex, true);
+		DeleteGraphicsBufferPair(this, Container.m_QuadBufferContainerIndex, Container.m_QuadBufferObjectIndex);
 	Container.m_vQuads.clear();
 	Container.m_QuadBufferObjectIndex = -1;
 }
@@ -3478,7 +3401,7 @@ void CGraphics_Threaded::DeleteQuadContainer(int &ContainerIndex)
 	if(ContainerIndex == -1)
 		return;
 
-	// 设备重建后旧索引会失效，不能把越界索引塞进空闲链表。
+	// 未领取或已经归还的槽位不能重复接入空闲链。
 	if(!IsQuadContainerIndexValid(ContainerIndex))
 	{
 		ContainerIndex = -1;
@@ -3500,17 +3423,12 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadDrawNum
 
 void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset, int QuadDrawNum, bool ChangeWrapMode)
 {
-	// 设备重建后旧索引会失效：容器已被清空时不能再按索引取用。
-	if(ContainerIndex < 0 || (size_t)ContainerIndex >= m_vQuadContainers.size())
+	if(!IsQuadContainerIndexValid(ContainerIndex))
 		return;
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if(QuadDrawNum == -1)
-		QuadDrawNum = (int)Container.m_vQuads.size() - QuadOffset;
-
-	// 用减法比较，避免 QuadOffset + QuadDrawNum 在异常输入下溢出。
-	if(QuadDrawNum <= 0 || QuadOffset < 0 || (int)Container.m_vQuads.size() - QuadOffset < QuadDrawNum)
+	if(!GraphicsResolveQuadRange(Container.m_vQuads.size(), QuadOffset, QuadDrawNum))
 		return;
 
 	if(IsQuadContainerBufferingEnabled())
@@ -3518,13 +3436,17 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset,
 		if(Container.m_QuadBufferContainerIndex == -1)
 			return;
 
+		const unsigned int RequiredIndices = GraphicsQuadIndicesToNotify(static_cast<size_t>(QuadOffset) + QuadDrawNum, CCommandBuffer::MAX_VERTICES / 4);
+		if(RequiredIndices != 0)
+			IndicesNumRequiredNotify(RequiredIndices);
+
 		if(ChangeWrapMode)
 			WrapClamp();
 
 		CCommandBuffer::SCommand_RenderQuadContainer Cmd;
 		Cmd.m_State = m_State;
 		Cmd.m_DrawNum = (unsigned int)QuadDrawNum * 6;
-		Cmd.m_pOffset = (void *)(QuadOffset * 6 * sizeof(unsigned int));
+		Cmd.m_pOffset = reinterpret_cast<void *>(static_cast<size_t>(QuadOffset) * 6 * sizeof(unsigned int));
 		Cmd.m_BufferContainerIndex = Container.m_QuadBufferContainerIndex;
 
 		AddCmd(Cmd);
@@ -3532,30 +3454,16 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset,
 	}
 	else
 	{
-		if(g_Config.m_GfxQuadAsTriangle)
-		{
-			for(int i = 0; i < QuadDrawNum; ++i)
-			{
-				SQuadContainer::SQuad &Quad = Container.m_vQuads[QuadOffset + i];
-				m_aVertices[i * 6] = Quad.m_aVertices[0];
-				m_aVertices[i * 6 + 1] = Quad.m_aVertices[1];
-				m_aVertices[i * 6 + 2] = Quad.m_aVertices[2];
-				m_aVertices[i * 6 + 3] = Quad.m_aVertices[0];
-				m_aVertices[i * 6 + 4] = Quad.m_aVertices[2];
-				m_aVertices[i * 6 + 5] = Quad.m_aVertices[3];
-				m_NumVertices += 6;
-			}
-		}
-		else
-		{
-			mem_copy(m_aVertices, &Container.m_vQuads[QuadOffset], sizeof(CCommandBuffer::SVertex) * 4 * QuadDrawNum);
-			m_NumVertices += 4 * QuadDrawNum;
-		}
-		m_Drawing = EDrawing::QUADS;
-		if(ChangeWrapMode)
-			WrapClamp();
 		FlushVertices(false);
-		m_Drawing = EDrawing::NONE;
+		const auto Submit = [&](int VertexCount) {
+			m_NumVertices = VertexCount;
+			m_Drawing = EDrawing::QUADS;
+			if(ChangeWrapMode)
+				WrapClamp();
+			FlushVertices(false);
+			m_Drawing = EDrawing::NONE;
+		};
+		StreamGraphicsQuads(Container.m_vQuads, QuadOffset, QuadDrawNum, g_Config.m_GfxQuadAsTriangle, m_aVertices, [](auto *, int) {}, Submit);
 	}
 	WrapNormal();
 }
@@ -3567,17 +3475,17 @@ void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffse
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if(QuadDrawNum == -1)
-		QuadDrawNum = (int)Container.m_vQuads.size() - QuadOffset;
-
-	// 用减法比较，避免 QuadOffset + QuadDrawNum 在异常输入下溢出。
-	if(QuadDrawNum <= 0 || QuadOffset < 0 || (int)Container.m_vQuads.size() - QuadOffset < QuadDrawNum)
+	if(!GraphicsResolveQuadRange(Container.m_vQuads.size(), QuadOffset, QuadDrawNum))
 		return;
 
 	if(IsQuadContainerBufferingEnabled())
 	{
 		if(Container.m_QuadBufferContainerIndex == -1)
 			return;
+
+		const unsigned int RequiredIndices = GraphicsQuadIndicesToNotify(static_cast<size_t>(QuadOffset) + QuadDrawNum, CCommandBuffer::MAX_VERTICES / 4);
+		if(RequiredIndices != 0)
+			IndicesNumRequiredNotify(RequiredIndices);
 
 		SQuadContainer::SQuad &Quad = Container.m_vQuads[QuadOffset];
 		CCommandBuffer::SCommand_RenderQuadContainerEx Cmd;
@@ -3590,8 +3498,8 @@ void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffse
 		Cmd.m_State = m_State;
 		MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 
-		Cmd.m_DrawNum = QuadDrawNum * 6;
-		Cmd.m_pOffset = (void *)(QuadOffset * 6 * sizeof(unsigned int));
+		Cmd.m_DrawNum = static_cast<unsigned int>(QuadDrawNum) * 6;
+		Cmd.m_pOffset = reinterpret_cast<void *>(static_cast<size_t>(QuadOffset) * 6 * sizeof(unsigned int));
 		Cmd.m_BufferContainerIndex = Container.m_QuadBufferContainerIndex;
 
 		Cmd.m_VertexColor.r = (float)m_aColor[0].r / 255.f;
@@ -3610,75 +3518,35 @@ void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffse
 	}
 	else
 	{
-		if(g_Config.m_GfxQuadAsTriangle)
-		{
-			for(int i = 0; i < QuadDrawNum; ++i)
-			{
-				SQuadContainer::SQuad &Quad = Container.m_vQuads[QuadOffset + i];
-				m_aVertices[i * 6 + 0] = Quad.m_aVertices[0];
-				m_aVertices[i * 6 + 1] = Quad.m_aVertices[1];
-				m_aVertices[i * 6 + 2] = Quad.m_aVertices[2];
-				m_aVertices[i * 6 + 3] = Quad.m_aVertices[0];
-				m_aVertices[i * 6 + 4] = Quad.m_aVertices[2];
-				m_aVertices[i * 6 + 5] = Quad.m_aVertices[3];
-
-				for(int n = 0; n < 6; ++n)
-				{
-					m_aVertices[i * 6 + n].m_Pos.x *= ScaleX;
-					m_aVertices[i * 6 + n].m_Pos.y *= ScaleY;
-					m_aVertices[i * 6 + n].m_Color = m_aColor[0];
-				}
-
-				if(m_Rotation != 0)
-				{
-					CCommandBuffer::SPoint Center;
-					Center.x = m_aVertices[i * 6 + 0].m_Pos.x + (m_aVertices[i * 6 + 1].m_Pos.x - m_aVertices[i * 6 + 0].m_Pos.x) / 2.f;
-					Center.y = m_aVertices[i * 6 + 0].m_Pos.y + (m_aVertices[i * 6 + 2].m_Pos.y - m_aVertices[i * 6 + 0].m_Pos.y) / 2.f;
-
-					Rotate(Center, &m_aVertices[i * 6 + 0], 6);
-				}
-
-				for(int n = 0; n < 6; ++n)
-				{
-					m_aVertices[i * 6 + n].m_Pos.x += X;
-					m_aVertices[i * 6 + n].m_Pos.y += Y;
-				}
-				m_NumVertices += 6;
-			}
-		}
-		else
-		{
-			mem_copy(m_aVertices, &Container.m_vQuads[QuadOffset], sizeof(CCommandBuffer::SVertex) * 4 * QuadDrawNum);
-			for(int i = 0; i < QuadDrawNum; ++i)
-			{
-				for(int n = 0; n < 4; ++n)
-				{
-					m_aVertices[i * 4 + n].m_Pos.x *= ScaleX;
-					m_aVertices[i * 4 + n].m_Pos.y *= ScaleY;
-					m_aVertices[i * 4 + n].m_Color = m_aColor[0];
-				}
-
-				if(m_Rotation != 0)
-				{
-					CCommandBuffer::SPoint Center;
-					Center.x = m_aVertices[i * 4 + 0].m_Pos.x + (m_aVertices[i * 4 + 1].m_Pos.x - m_aVertices[i * 4 + 0].m_Pos.x) / 2.f;
-					Center.y = m_aVertices[i * 4 + 0].m_Pos.y + (m_aVertices[i * 4 + 2].m_Pos.y - m_aVertices[i * 4 + 0].m_Pos.y) / 2.f;
-
-					Rotate(Center, &m_aVertices[i * 4 + 0], 4);
-				}
-
-				for(int n = 0; n < 4; ++n)
-				{
-					m_aVertices[i * 4 + n].m_Pos.x += X;
-					m_aVertices[i * 4 + n].m_Pos.y += Y;
-				}
-				m_NumVertices += 4;
-			}
-		}
-		m_Drawing = EDrawing::QUADS;
-		WrapClamp();
 		FlushVertices(false);
-		m_Drawing = EDrawing::NONE;
+		const auto Transform = [&](auto *pVertices, int VertexCount) {
+			for(int n = 0; n < VertexCount; ++n)
+			{
+				pVertices[n].m_Pos.x *= ScaleX;
+				pVertices[n].m_Pos.y *= ScaleY;
+				pVertices[n].m_Color = m_aColor[0];
+			}
+			if(m_Rotation != 0)
+			{
+				CCommandBuffer::SPoint Center;
+				Center.x = pVertices[0].m_Pos.x + (pVertices[1].m_Pos.x - pVertices[0].m_Pos.x) / 2.f;
+				Center.y = pVertices[0].m_Pos.y + (pVertices[2].m_Pos.y - pVertices[0].m_Pos.y) / 2.f;
+				Rotate(Center, pVertices, VertexCount);
+			}
+			for(int n = 0; n < VertexCount; ++n)
+			{
+				pVertices[n].m_Pos.x += X;
+				pVertices[n].m_Pos.y += Y;
+			}
+		};
+		const auto Submit = [&](int VertexCount) {
+			m_NumVertices = VertexCount;
+			m_Drawing = EDrawing::QUADS;
+			WrapClamp();
+			FlushVertices(false);
+			m_Drawing = EDrawing::NONE;
+		};
+		StreamGraphicsQuads(Container.m_vQuads, QuadOffset, QuadDrawNum, g_Config.m_GfxQuadAsTriangle, m_aVertices, Transform, Submit);
 	}
 	WrapNormal();
 }
@@ -3695,13 +3563,20 @@ void CGraphics_Threaded::RenderQuadContainerAsSpriteMultiple(int ContainerIndex,
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if(DrawCount == 0)
+	int QuadCount = 1;
+	if(DrawCount <= 0 || pRenderInfo == nullptr ||
+		static_cast<size_t>(DrawCount) > std::numeric_limits<size_t>::max() / sizeof(SRenderSpriteInfo) ||
+		!GraphicsResolveQuadRange(Container.m_vQuads.size(), QuadOffset, QuadCount))
 		return;
 
 	if(IsQuadContainerBufferingEnabled())
 	{
 		if(Container.m_QuadBufferContainerIndex == -1)
 			return;
+
+		const unsigned int RequiredIndices = GraphicsQuadIndicesToNotify(static_cast<size_t>(QuadOffset) + 1, CCommandBuffer::MAX_VERTICES / 4);
+		if(RequiredIndices != 0)
+			IndicesNumRequiredNotify(RequiredIndices);
 
 		WrapClamp();
 		SQuadContainer::SQuad &Quad = Container.m_vQuads[0];
@@ -3711,7 +3586,7 @@ void CGraphics_Threaded::RenderQuadContainerAsSpriteMultiple(int ContainerIndex,
 
 		Cmd.m_DrawNum = 1 * 6;
 		Cmd.m_DrawCount = DrawCount;
-		Cmd.m_pOffset = (void *)(QuadOffset * 6 * sizeof(unsigned int));
+		Cmd.m_pOffset = reinterpret_cast<void *>(static_cast<size_t>(QuadOffset) * 6 * sizeof(unsigned int));
 		Cmd.m_BufferContainerIndex = Container.m_QuadBufferContainerIndex;
 
 		Cmd.m_VertexColor.r = (float)m_aColor[0].r / 255.f;
@@ -3774,69 +3649,68 @@ void *CGraphics_Threaded::AllocCommandBufferData(size_t AllocSize)
 
 int CGraphics_Threaded::CreateBufferObject(size_t UploadDataSize, void *pUploadData, int CreateFlags, bool IsMovedPointer)
 {
-	int Index = -1;
-	if(m_FirstFreeBufferObjectIndex == -1)
-	{
-		Index = m_vBufferObjectIndices.size();
-		m_vBufferObjectIndices.push_back(Index);
-	}
-	else
-	{
-		Index = m_FirstFreeBufferObjectIndex;
-		m_FirstFreeBufferObjectIndex = m_vBufferObjectIndices[Index];
-		m_vBufferObjectIndices[Index] = Index;
-	}
-
+	CGraphicsUploadData<void> OwnedUpload(IsMovedPointer ? pUploadData : nullptr);
 	dbg_assert((CreateFlags & EBufferObjectCreateFlags::BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT) == 0 || (UploadDataSize <= CCommandBuffer::MAX_VERTICES * maximum(sizeof(CCommandBuffer::SVertexTex3DStream), sizeof(CCommandBuffer::SVertexTex3D))),
 		"If BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT is used, then the buffer size must not exceed max(sizeof(CCommandBuffer::SVertexTex3DStream), sizeof(CCommandBuffer::SVertexTex3D)) * CCommandBuffer::MAX_VERTICES");
 
-	CCommandBuffer::SCommand_CreateBufferObject Cmd;
-	Cmd.m_BufferIndex = Index;
-	Cmd.m_DataSize = UploadDataSize;
-	Cmd.m_DeletePointer = IsMovedPointer;
-	Cmd.m_Flags = CreateFlags;
+	return m_BufferObjects.Create([&](auto &Creation) {
+		const int Index = Creation.Index();
+		CCommandBuffer::SCommand_CreateBufferObject Cmd;
+		Cmd.m_BufferIndex = Index;
+		Cmd.m_DataSize = UploadDataSize;
+		Cmd.m_DeletePointer = IsMovedPointer;
+		Cmd.m_Flags = CreateFlags;
 
-	if(IsMovedPointer)
-	{
-		Cmd.m_pUploadData = pUploadData;
-		AddCmd(Cmd);
-	}
-	else
-	{
-		if(UploadDataSize <= CMD_BUFFER_DATA_BUFFER_SIZE)
+		if(IsMovedPointer)
 		{
-			Cmd.m_pUploadData = AllocCommandBufferData(UploadDataSize);
-
-			AddCmd(Cmd, [&] {
-				Cmd.m_pUploadData = m_pCommandBuffer->AllocData(UploadDataSize);
-				return Cmd.m_pUploadData != nullptr;
-			});
-			mem_copy(Cmd.m_pUploadData, pUploadData, UploadDataSize);
+			Cmd.m_pUploadData = pUploadData;
+			AddCmd(Cmd);
+			Creation.Accepted();
+			OwnedUpload.release();
 		}
 		else
 		{
-			Cmd.m_pUploadData = nullptr;
-			AddCmd(Cmd);
-
-			// update the buffer instead
-			size_t UploadDataOffset = 0;
-			while(UploadDataSize > 0)
+			if(UploadDataSize <= CMD_BUFFER_DATA_BUFFER_SIZE)
 			{
-				size_t UpdateSize = (UploadDataSize > CMD_BUFFER_DATA_BUFFER_SIZE ? CMD_BUFFER_DATA_BUFFER_SIZE : UploadDataSize);
+				Cmd.m_pUploadData = AllocCommandBufferData(UploadDataSize);
 
-				UpdateBufferObjectInternal(Index, UpdateSize, (((char *)pUploadData) + UploadDataOffset), (void *)UploadDataOffset);
+				AddCmd(Cmd, [&] {
+					Cmd.m_pUploadData = m_pCommandBuffer->AllocData(UploadDataSize);
+					return Cmd.m_pUploadData != nullptr;
+				});
+				Creation.Accepted();
+				mem_copy(Cmd.m_pUploadData, pUploadData, UploadDataSize);
+			}
+			else
+			{
+				Cmd.m_pUploadData = nullptr;
+				AddCmd(Cmd);
+				Creation.Accepted();
 
-				UploadDataOffset += UpdateSize;
-				UploadDataSize -= UpdateSize;
+				// update the buffer instead
+				size_t UploadDataOffset = 0;
+				while(UploadDataSize > 0)
+				{
+					size_t UpdateSize = (UploadDataSize > CMD_BUFFER_DATA_BUFFER_SIZE ? CMD_BUFFER_DATA_BUFFER_SIZE : UploadDataSize);
+
+					UpdateBufferObjectInternal(Index, UpdateSize, (((char *)pUploadData) + UploadDataOffset), (void *)UploadDataOffset);
+
+					UploadDataOffset += UpdateSize;
+					UploadDataSize -= UpdateSize;
+				}
 			}
 		}
-	}
-
-	return Index;
+	});
 }
 
 void CGraphics_Threaded::RecreateBufferObject(int BufferIndex, size_t UploadDataSize, void *pUploadData, int CreateFlags, bool IsMovedPointer)
 {
+	CGraphicsUploadData<void> OwnedUpload(IsMovedPointer ? pUploadData : nullptr);
+	if(!m_BufferObjects.IsLive(BufferIndex))
+	{
+		log_error("graphics/buffer", "Ignoring stale buffer object index %d during recreate.", BufferIndex);
+		return;
+	}
 	CCommandBuffer::SCommand_RecreateBufferObject Cmd;
 	Cmd.m_BufferIndex = BufferIndex;
 	Cmd.m_DataSize = UploadDataSize;
@@ -3850,6 +3724,7 @@ void CGraphics_Threaded::RecreateBufferObject(int BufferIndex, size_t UploadData
 	{
 		Cmd.m_pUploadData = pUploadData;
 		AddCmd(Cmd);
+		OwnedUpload.release();
 	}
 	else
 	{
@@ -3886,6 +3761,12 @@ void CGraphics_Threaded::RecreateBufferObject(int BufferIndex, size_t UploadData
 
 void CGraphics_Threaded::UpdateBufferObjectInternal(int BufferIndex, size_t UploadDataSize, void *pUploadData, void *pOffset, bool IsMovedPointer)
 {
+	CGraphicsUploadData<void> OwnedUpload(IsMovedPointer ? pUploadData : nullptr);
+	if(!m_BufferObjects.IsLive(BufferIndex))
+	{
+		log_error("graphics/buffer", "Ignoring stale buffer object index %d during update.", BufferIndex);
+		return;
+	}
 	CCommandBuffer::SCommand_UpdateBufferObject Cmd;
 	Cmd.m_BufferIndex = BufferIndex;
 	Cmd.m_DataSize = UploadDataSize;
@@ -3896,6 +3777,7 @@ void CGraphics_Threaded::UpdateBufferObjectInternal(int BufferIndex, size_t Uplo
 	{
 		Cmd.m_pUploadData = pUploadData;
 		AddCmd(Cmd);
+		OwnedUpload.release();
 	}
 	else
 	{
@@ -3912,6 +3794,11 @@ void CGraphics_Threaded::UpdateBufferObjectInternal(int BufferIndex, size_t Uplo
 
 void CGraphics_Threaded::CopyBufferObjectInternal(int WriteBufferIndex, int ReadBufferIndex, size_t WriteOffset, size_t ReadOffset, size_t CopyDataSize)
 {
+	if(!m_BufferObjects.IsLive(WriteBufferIndex) || !m_BufferObjects.IsLive(ReadBufferIndex))
+	{
+		log_error("graphics/buffer", "Ignoring stale buffer object during copy.");
+		return;
+	}
 	CCommandBuffer::SCommand_CopyBufferObject Cmd;
 	Cmd.m_WriteBufferIndex = WriteBufferIndex;
 	Cmd.m_ReadBufferIndex = ReadBufferIndex;
@@ -3925,48 +3812,55 @@ void CGraphics_Threaded::DeleteBufferObject(int BufferIndex)
 {
 	if(BufferIndex == -1)
 		return;
+	if(!m_BufferObjects.IsLive(BufferIndex))
+	{
+		log_error("graphics/buffer", "Ignoring stale buffer object index %d during delete.", BufferIndex);
+		return;
+	}
 
 	CCommandBuffer::SCommand_DeleteBufferObject Cmd;
 	Cmd.m_BufferIndex = BufferIndex;
 	AddCmd(Cmd);
 
 	// also clear the buffer object index
-	m_vBufferObjectIndices[BufferIndex] = m_FirstFreeBufferObjectIndex;
-	m_FirstFreeBufferObjectIndex = BufferIndex;
+	m_BufferObjects.Release(BufferIndex);
+}
+
+void CGraphics_Threaded::FlushPendingBufferObjectDeletes()
+{
+	try
+	{
+		m_BufferObjects.FlushPending([&](int Index) {
+			CCommandBuffer::SCommand_DeleteBufferObject Cmd;
+			Cmd.m_BufferIndex = Index;
+			AddCmd(Cmd);
+		});
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
 }
 
 int CGraphics_Threaded::CreateBufferContainer(SBufferContainerInfo *pContainerInfo)
 {
-	int Index = -1;
-	if(m_FirstFreeVertexArrayInfo == -1)
-	{
-		Index = m_vVertexArrayInfo.size();
-		m_vVertexArrayInfo.emplace_back();
-	}
-	else
-	{
-		Index = m_FirstFreeVertexArrayInfo;
-		m_FirstFreeVertexArrayInfo = m_vVertexArrayInfo[Index].m_FreeIndex;
-		m_vVertexArrayInfo[Index].m_FreeIndex = Index;
-	}
+	return m_BufferContainers.Create(pContainerInfo->m_VertBufferBindingIndex, [&](int Index) {
+		CCommandBuffer::SCommand_CreateBufferContainer Cmd;
+		Cmd.m_BufferContainerIndex = Index;
+		Cmd.m_AttrCount = pContainerInfo->m_vAttributes.size();
+		Cmd.m_Stride = pContainerInfo->m_Stride;
+		Cmd.m_VertBufferBindingIndex = pContainerInfo->m_VertBufferBindingIndex;
+		Cmd.m_pAttributes = (SBufferContainerInfo::SAttribute *)AllocCommandBufferData(Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
 
-	CCommandBuffer::SCommand_CreateBufferContainer Cmd;
-	Cmd.m_BufferContainerIndex = Index;
-	Cmd.m_AttrCount = pContainerInfo->m_vAttributes.size();
-	Cmd.m_Stride = pContainerInfo->m_Stride;
-	Cmd.m_VertBufferBindingIndex = pContainerInfo->m_VertBufferBindingIndex;
-	Cmd.m_pAttributes = (SBufferContainerInfo::SAttribute *)AllocCommandBufferData(Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
+		AddCmd(Cmd, [&] {
+			Cmd.m_pAttributes = (SBufferContainerInfo::SAttribute *)m_pCommandBuffer->AllocData(Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
+			return Cmd.m_pAttributes != nullptr;
+		});
 
-	AddCmd(Cmd, [&] {
-		Cmd.m_pAttributes = (SBufferContainerInfo::SAttribute *)m_pCommandBuffer->AllocData(Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
-		return Cmd.m_pAttributes != nullptr;
+		mem_copy(Cmd.m_pAttributes, pContainerInfo->m_vAttributes.data(), Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
 	});
-
-	mem_copy(Cmd.m_pAttributes, pContainerInfo->m_vAttributes.data(), Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
-
-	m_vVertexArrayInfo[Index].m_AssociatedBufferObjectIndex = pContainerInfo->m_VertBufferBindingIndex;
-
-	return Index;
 }
 
 void CGraphics_Threaded::DeleteBufferContainer(int &ContainerIndex, bool DestroyAllBO)
@@ -3974,8 +3868,8 @@ void CGraphics_Threaded::DeleteBufferContainer(int &ContainerIndex, bool Destroy
 	if(ContainerIndex == -1)
 		return;
 
-	// 设备重建后旧索引会失效：这里的容器可能已被清空，越界索引必须直接丢弃。
-	if(ContainerIndex < 0 || (size_t)ContainerIndex >= m_vVertexArrayInfo.size())
+	// 尚未分配或已归还的容器不能再次接入空闲链。
+	if(!m_BufferContainers.IsAllocated(ContainerIndex))
 	{
 		log_error("graphics/buffer", "Ignoring stale buffer container index %d during delete.", ContainerIndex);
 		ContainerIndex = -1;
@@ -3990,26 +3884,22 @@ void CGraphics_Threaded::DeleteBufferContainer(int &ContainerIndex, bool Destroy
 	if(DestroyAllBO)
 	{
 		// delete all associated references
-		int BufferObjectIndex = m_vVertexArrayInfo[ContainerIndex].m_AssociatedBufferObjectIndex;
+		int BufferObjectIndex = m_BufferContainers.AssociatedBufferObject(ContainerIndex);
 		if(BufferObjectIndex != -1)
 		{
 			// clear the buffer object index
-			m_vBufferObjectIndices[BufferObjectIndex] = m_FirstFreeBufferObjectIndex;
-			m_FirstFreeBufferObjectIndex = BufferObjectIndex;
+			m_BufferObjects.Release(BufferObjectIndex);
 		}
 	}
-	m_vVertexArrayInfo[ContainerIndex].m_AssociatedBufferObjectIndex = -1;
-
 	// also clear the buffer object index
-	m_vVertexArrayInfo[ContainerIndex].m_FreeIndex = m_FirstFreeVertexArrayInfo;
-	m_FirstFreeVertexArrayInfo = ContainerIndex;
+	m_BufferContainers.Release(ContainerIndex);
 	ContainerIndex = -1;
 }
 
 void CGraphics_Threaded::UpdateBufferContainerInternal(int ContainerIndex, SBufferContainerInfo *pContainerInfo)
 {
-	// 设备重建后旧索引会失效，越界索引必须直接丢弃。
-	if(ContainerIndex < 0 || (size_t)ContainerIndex >= m_vVertexArrayInfo.size())
+	// 未分配的容器不能再修改关联对象。
+	if(!m_BufferContainers.IsAllocated(ContainerIndex))
 	{
 		log_error("graphics/buffer", "Ignoring stale buffer container index %d during update.", ContainerIndex);
 		return;
@@ -4029,7 +3919,7 @@ void CGraphics_Threaded::UpdateBufferContainerInternal(int ContainerIndex, SBuff
 
 	mem_copy(Cmd.m_pAttributes, pContainerInfo->m_vAttributes.data(), Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
 
-	m_vVertexArrayInfo[ContainerIndex].m_AssociatedBufferObjectIndex = pContainerInfo->m_VertBufferBindingIndex;
+	m_BufferContainers.Bind(ContainerIndex, pContainerInfo->m_VertBufferBindingIndex);
 }
 
 void CGraphics_Threaded::IndicesNumRequiredNotify(unsigned int RequiredIndicesCount)
@@ -4178,11 +4068,18 @@ void CGraphics_Threaded::UpdateViewport(int X, int Y, int W, int H, bool ByResiz
 void CGraphics_Threaded::AddBackEndWarningIfExists()
 {
 	const char *pErrStr = m_pBackend->GetErrorString();
-	if(pErrStr != nullptr)
+	if(pErrStr == nullptr)
+		return;
+
+	try
 	{
 		SWarning NewWarning;
 		str_copy(NewWarning.m_aWarningMsg, Localize(pErrStr));
 		AddWarning(NewWarning);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics", "Failed to collect graphics warning: %s", Error.what());
 	}
 }
 
@@ -4298,6 +4195,15 @@ int CGraphics_Threaded::InitWindow()
 
 	if(VulkanRequested)
 	{
+		// 环境变量优先于配置，回退时必须显式覆盖它选择的 Vulkan。
+		if(VulkanForcedByEnvironment)
+		{
+#if defined(CONF_BACKEND_OPENGL_ES)
+			m_pBackend->SetBackendOverride(BACKEND_TYPE_OPENGL_ES);
+#else
+			m_pBackend->SetBackendOverride(BACKEND_TYPE_OPENGL);
+#endif
+		}
 		str_copy(g_Config.m_GfxBackend, "OpenGL");
 		g_Config.m_GfxGLMajor = 0;
 		g_Config.m_GfxGLMinor = 0;
@@ -4440,32 +4346,23 @@ int CGraphics_Threaded::Init()
 		return -1;
 	}
 
-	m_RenderTargets.Clear();
-	m_RenderTargetActive = false;
-	m_RenderTargetReadbacks.Clear();
-	SetRenderScreenSize(0, 0);
-	// 视频离屏目标同样随设备销毁：句柄、簿记与「本帧进行中」一起复位，
-	// 否则重建后第一帧会拿到悬挂句柄（后端槽位已全部回收）。
-	m_VideoFrameTarget = CRenderTargetHandle();
-	m_VideoFrameActive = false;
-	for(CRenderTargetReadbackHandle &Pending : m_aVideoFramePendingReadbacks)
-		Pending.Invalidate();
-	m_VideoFramePendingReadbackCount = 0;
-	m_VideoFrameWidth = 0;
-	m_VideoFrameHeight = 0;
-	m_VideoFrameSampleCount = 1;
-
 	// 这三类资源由 vector 自身保存对象，没有独立的代数校验，因此必须连容器一起清空。
 	// 只把空闲链表头置 -1 会把旧条目留成「看起来仍然已分配」的孤儿：
 	// 旧的 GPU 对象已经随设备消失，但索引仍会被当作有效值返回。
 	m_vQuadContainers.clear();
 	m_FirstFreeQuadContainer = -1;
-	m_vBufferObjectIndices.clear();
-	m_FirstFreeBufferObjectIndex = -1;
-	m_vVertexArrayInfo.clear();
-	m_FirstFreeVertexArrayInfo = -1;
+	m_BufferObjects.Clear();
+	m_BufferContainers.Clear();
 
-	m_pBackend = CreateGraphicsBackend(Localize);
+	try
+	{
+		m_pBackend = CreateGraphicsBackend(Localize);
+	}
+	catch(const std::bad_alloc &)
+	{
+		log_error("graphics", "Failed to allocate graphics backend.");
+		return -1;
+	}
 	if(InitWindow() != 0)
 	{
 		Shutdown();
@@ -4479,12 +4376,28 @@ int CGraphics_Threaded::Init()
 		FakeMode.m_RefreshRate = g_Config.m_GfxScreenRefreshRate;
 	}
 
-	// create command buffers
-	for(auto &pCommandBuffer : m_apCommandBuffers)
-		pCommandBuffer = new CCommandBuffer(CMD_BUFFER_CMD_BUFFER_SIZE, CMD_BUFFER_DATA_BUFFER_SIZE);
-	m_pCommandBuffer = m_apCommandBuffers[0];
+	try
+	{
+		for(auto &pCommandBuffer : m_apCommandBuffers)
+			pCommandBuffer = new CCommandBuffer(CMD_BUFFER_CMD_BUFFER_SIZE, CMD_BUFFER_DATA_BUFFER_SIZE);
+	}
+	catch(const std::bad_alloc &)
+	{
+		log_error("graphics", "Failed to allocate frame command buffers.");
+		Shutdown();
+		return -1;
+	}
+	m_CurrentCommandBuffer = 0;
+	m_pCommandBuffer = m_apCommandBuffers[m_CurrentCommandBuffer];
 
-	CreateNullTexture();
+	if(!CreateNullTexture())
+	{
+		log_error("graphics", "Failed to queue placeholder textures.");
+		// 已排队的占位纹理上传尚未提交，直接释放它们。
+		m_pCommandBuffer->Reset();
+		Shutdown();
+		return -1;
+	}
 	if(WasInitialized)
 		NotifyGraphicsResourcesReset();
 
@@ -4500,9 +4413,12 @@ int CGraphics_Threaded::Init()
 
 void CGraphics_Threaded::Shutdown()
 {
+	m_pScreenshotCompletions.reset();
 	// 关闭流程可能由错误恢复和正常退出分别触发。backend 已释放后必须成为无操作。
 	if(m_pBackend == nullptr)
 		return;
+	if(m_pCommandBuffer != nullptr)
+		FlushPendingBufferObjectDeletes();
 
 	// 游戏与文本模块在关闭时会追加资源销毁命令。先提交并等候，保证命令在 backend
 	// 仍然存活时执行，不能直接丢弃当前 command buffer。
@@ -4514,11 +4430,41 @@ void CGraphics_Threaded::Shutdown()
 
 	// shutdown the backend
 	m_pBackend->Shutdown();
+	// 后端已结束所有借用；命令里的未接管信号必须先于请求存储完成清理。
+	for(auto *pCommandBuffer : m_apCommandBuffers)
+		if(pCommandBuffer != nullptr)
+			pCommandBuffer->CompleteReadbacks();
 
 	m_RenderTargetReadbacks.Clear();
+	m_VideoFrameReadbacks.Reset();
+	m_RenderTargets.Clear();
+	if(m_RenderTargetActive)
+		m_State = m_RenderTargetSavedState;
+	m_RenderTargetActive = false;
+	m_GLRenderTargetsSupported = false;
+	m_GLRenderTargetGaussianBlurSupported = false;
+	m_GLBackbufferCaptureSupported = false;
+	m_GLRenderTargetMSAASupported = false;
+	m_ReadbackCompletionSignal = false;
+	m_OffscreenFrameTarget.Invalidate();
+	m_OffscreenFrameWidth = 0;
+	m_OffscreenFrameHeight = 0;
+	m_VideoFrameTarget.Invalidate();
+	m_VideoFrameActive = false;
+	m_VideoFrameWidth = 0;
+	m_VideoFrameHeight = 0;
+	m_VideoFrameSampleCount = 1;
+	SetRenderScreenSize(0, 0);
+
 	delete m_pBackend;
 	m_pBackend = nullptr;
 	m_pCommandBuffer = nullptr;
+	m_NullTexture.Invalidate();
+	m_BlankTexture.Invalidate();
+	m_TextureSlots.Reset(0);
+	m_State.m_Texture = -1;
+	m_BufferObjects.Clear();
+	m_BufferContainers.Clear();
 
 	// delete the command buffers
 	for(auto &pCommandBuffer : m_apCommandBuffers)
@@ -4790,7 +4736,7 @@ void CGraphics_Threaded::AddGraphicsResourcesResetListener(GRAPHICS_RESOURCES_RE
 	m_vGraphicsResourcesResetListeners.emplace_back(pFunc);
 }
 
-void CGraphics_Threaded::CreateNullTexture()
+bool CGraphics_Threaded::CreateNullTexture()
 {
 	// create null texture, will get id=0
 	const size_t PixelSize = 4;
@@ -4821,10 +4767,9 @@ void CGraphics_Threaded::CreateNullTexture()
 	NullTextureInfo.m_Height = NullTextureDimension;
 	NullTextureInfo.m_Format = CImageInfo::FORMAT_RGBA;
 	NullTextureInfo.m_pData = aNullTextureData;
-	const int NullTextureLoadFlags = TextureLoadFlags();
-	m_NullTexture.Invalidate();
-	m_NullTexture = LoadTextureRaw(NullTextureInfo, NullTextureLoadFlags, "null-texture");
-	dbg_assert(m_NullTexture.IsNullTexture(), "Null texture invalid");
+	const CTextureHandle NullTexture = LoadTextureRaw(NullTextureInfo, TextureLoadFlags(), "null-texture");
+	if(!NullTexture.IsNullTexture())
+		return false;
 
 	// 全透明占位纹理（16x16，与空纹理同尺寸以满足整除校验，避免触发警告弹窗）：
 	// sprite 超出自定义图集范围时按「不可见」处理用。
@@ -4835,18 +4780,17 @@ void CGraphics_Threaded::CreateNullTexture()
 	BlankTextureInfo.m_Height = BlankTextureDimension;
 	BlankTextureInfo.m_Format = CImageInfo::FORMAT_RGBA;
 	BlankTextureInfo.m_pData = aBlankData;
-	m_BlankTexture.Invalidate();
-	m_BlankTexture = LoadTextureRaw(BlankTextureInfo, TextureLoadFlags(), "blank-texture");
-	dbg_assert(m_BlankTexture.IsValid(), "Blank texture invalid");
+	const CTextureHandle BlankTexture = LoadTextureRaw(BlankTextureInfo, TextureLoadFlags(), "blank-texture");
+	if(!BlankTexture.IsValid())
+		return false;
+
+	m_NullTexture = NullTexture;
+	m_BlankTexture = BlankTexture;
+	return true;
 }
 
 void CGraphics_Threaded::NotifyGraphicsResourcesReset()
 {
-	// 引擎自己持有的 GPU 资源（空纹理）已经随设备一起丢失，先重建，
-	// 否则监听者在重建期间拿到的空纹理句柄也是失效的。
-	if(!m_NullTexture.IsValid() || !m_BlankTexture.IsValid())
-		CreateNullTexture();
-
 	++m_GraphicsResourcesResetVersion;
 	for(const GRAPHICS_RESOURCES_RESET_FUNC &Listener : m_vGraphicsResourcesResetListeners)
 	{
@@ -4946,49 +4890,54 @@ void CGraphics_Threaded::TakeScreenshot(const char *pFilename)
 	TakeScreenshot(pFilename, nullptr);
 }
 
-bool CGraphics_Threaded::PrepareScreenshotPath(const char *pFilename)
+bool CGraphics_Threaded::PrepareScreenshotPath(const char *pFilename, char (&aScreenshotName)[IO_MAX_PATH_LENGTH])
 {
 	char aDate[20];
 	str_timestamp(aDate, sizeof(aDate));
-	// 扩展名由调用方决定（png / webp）。名字里带了就沿用，没带按 png。
-	const char *pExtension = ".png";
-	char aBaseName[IO_MAX_PATH_LENGTH];
-	str_copy(aBaseName, pFilename != nullptr && pFilename[0] != '\0' ? pFilename : "screenshot");
-	if(str_endswith_nocase(aBaseName, ".webp") != nullptr)
-	{
-		aBaseName[str_length(aBaseName) - str_length(".webp")] = '\0';
-		pExtension = ".webp";
-	}
-	else if(str_endswith_nocase(aBaseName, ".png") != nullptr)
-	{
-		aBaseName[str_length(aBaseName) - str_length(".png")] = '\0';
-	}
-	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s%s", aBaseName, aDate, pExtension);
-	// 目录抽象只有一份：便携包与自定义截图目录都走 media_paths。
-	const std::string Path = qmclient::media_paths::Resolve(m_pStorage, g_Config, m_aScreenshotName);
-	if(!qmclient::media_paths::PrepareWrite(m_pStorage, Path))
+	if(screenshot_path::Prepare(m_pStorage, g_Config, pFilename, aDate, aScreenshotName))
+		return true;
+	try
 	{
 		SWarning Warning;
 		str_copy(Warning.m_aWarningMsg, Localize("Failed to save screenshot"));
 		AddWarning(Warning);
-		return false;
 	}
-	str_copy(m_aScreenshotName, Path.c_str());
-	return true;
+	catch(const std::bad_alloc &)
+	{
+		// 失败提示本身申请失败时保留旧请求，避免再次退出截图入口。
+	}
+	catch(const std::length_error &)
+	{
+	}
+	return false;
 }
 
-void CGraphics_Threaded::QueueScreenshotSave(CImageInfo &&Image, FScreenshotProcessor pfnProcessor, FScreenshotCallback pfnCallback)
+bool CGraphics_Threaded::QueueScreenshotSave(CImageInfo &&Image, const char *pScreenshotName, FScreenshotProcessor Processor, FScreenshotCallback Callback)
 {
-	SWarning FailureWarning;
-	str_copy(FailureWarning.m_aWarningMsg, Localize("Failed to save screenshot"));
-	// AddWarning 自带互斥保护；本地化在主线程完成，后台任务只发布提示。
-	m_pEngine->AddJob(std::make_shared<CScreenshotSaveJob>(m_pStorage, m_aScreenshotName, std::move(Image), std::move(pfnProcessor), [this, FailureWarning]() { AddWarning(FailureWarning); }, std::move(pfnCallback)));
+	FScreenshotCallback NoPreview;
+	return screenshot_save::Finish(Image, NoPreview, Processor, [&](CImageInfo &&Captured, FScreenshotProcessor &&SaveProcessor) {
+		FScreenshotCallback Completion;
+		if(Callback)
+		{
+			if(!m_pScreenshotCompletions)
+				m_pScreenshotCompletions = std::make_shared<screenshot_save::CCompletionQueue>();
+			std::weak_ptr<screenshot_save::CCompletionQueue> Queue = m_pScreenshotCompletions;
+			Completion = [Queue, Callback = std::move(Callback)](CImageInfo &&Result, const char *pPath) mutable {
+				if(auto pQueue = Queue.lock())
+					pQueue->Enqueue(std::move(Result), pPath, std::move(Callback));
+			};
+		}
+		SWarning Warning;
+		str_copy(Warning.m_aWarningMsg, Localize("Failed to save screenshot"));
+		return std::make_shared<screenshot_save::CSaveJob>(m_pStorage, pScreenshotName, std::move(Captured), std::move(SaveProcessor), [this, Warning] { AddWarning(Warning); }, std::move(Completion)); }, [this](const auto &pJob) { return m_pEngine->TryAddJob(pJob); }, [this] {
+		SWarning Warning;
+		str_copy(Warning.m_aWarningMsg, Localize("Failed to save screenshot"));
+		AddWarning(Warning); });
 }
 
 void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor)
 {
-	// TODO: screenshot support
-	if(!PrepareScreenshotPath(pFilename))
+	if(!PrepareScreenshotPath(pFilename, m_aScreenshotName))
 		return;
 	m_pfnScreenshotCallback = std::move(pfnCallback);
 	m_pfnScreenshotProcessor = std::move(pfnProcessor);
@@ -4999,13 +4948,11 @@ bool CGraphics_Threaded::TakeScreenshotFromImage(CImageInfo &&Image, const char 
 {
 	if(Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0)
 		return false;
-	if(!PrepareScreenshotPath(pFilename))
+	char aScreenshotName[IO_MAX_PATH_LENGTH];
+	if(!PrepareScreenshotPath(pFilename, aScreenshotName))
 		return false;
-	// 大图（2 倍 4K 约 3300 万像素）的 PNG 编码在主线程要好几秒，4 倍更是几十秒，
-	// 实测会直接触发「客户端卡死」看门狗。这里改成后台编码，写完之后再由渲染线程
-	// 把「图像 + 最终路径」交给回调：照片卡拿到的仍然是已经落盘的文件。
-	QueueScreenshotSave(std::move(Image), std::move(pfnProcessor), std::move(pfnCallback));
-	return true;
+	// 大图在后台编码，保存完成后在 Swap 中从主线程交付图像和路径。
+	return QueueScreenshotSave(std::move(Image), aScreenshotName, std::move(pfnProcessor), std::move(pfnCallback));
 }
 
 void CGraphics_Threaded::TakeCustomScreenshot(const char *pFilename)
@@ -5029,9 +4976,13 @@ void CGraphics_Threaded::ReadFramebuffer(CImageInfo &Image)
 
 void CGraphics_Threaded::Swap()
 {
-	// 后台截图任务编完码后把结果交回这里：贴图上传与界面回调都只能在渲染线程执行。
-	// 放在 Swap 开头，是因为这一帧的世界和界面已经画完，下一帧照片卡就能用上新贴图。
-	FlushScreenshotCompletions();
+	// 回放菜单可以在渲染中停录。交换窗口前结束被放弃的离屏帧。
+	if(m_VideoFrameActive)
+		StopVideoFrame();
+
+	FlushPendingBufferObjectDeletes();
+	if(m_pScreenshotCompletions)
+		m_pScreenshotCompletions->Flush();
 #if defined(CONF_PLATFORM_IOS)
 	int InsetLeft = 0;
 	int InsetRight = 0;
@@ -5143,7 +5094,7 @@ bool CGraphics_Threaded::SetVSync(bool State)
 	// 等于把整条渲染管线在当前帧掐住——正好掐在开关动画中间，必卡。
 	// 改成照常下发命令、配置乐观更新：重建发生在渲染线程自己的帧边界上，
 	// 界面线程继续跑动画；真失败了下一帧的能力查询会把配置纠正回来。
-	m_QmVSyncAck = false;
+	// 回执只由图形线程写入；界面不消费结果，重复提交前不重置旧命令仍可能写入的值。
 	CCommandBuffer::SCommand_VSync Cmd;
 	Cmd.m_VSync = State ? 1 : 0;
 	Cmd.m_pRetOk = &m_QmVSyncAck;

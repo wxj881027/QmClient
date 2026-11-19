@@ -120,6 +120,23 @@ namespace QmMusicHook::QQMusic
 		return nullptr;
 	}
 
+	std::optional<SAttachment> ResolveAttachment(EAttachProbe Probe, uint32_t ModuleSize, int Major, int Minor)
+	{
+		if(Probe == EAttachProbe::UNAVAILABLE)
+			return std::nullopt;
+		constexpr const char *pUnsupported = "QQ Music version is unsupported";
+		if(Probe == EAttachProbe::UNSUPPORTED)
+			return SAttachment{nullptr, pUnsupported};
+
+		const SOffsets *pOffsets = FindOffsets(Major, Minor);
+		if(!pOffsets)
+			return SAttachment{nullptr, std::string(pUnsupported) + " (" + std::to_string(Major) + "." + std::to_string(Minor) + ")"};
+		const uint32_t LargestField = std::max({pOffsets->m_SongId, pOffsets->m_Duration, pOffsets->m_SessionDuration, pOffsets->m_Progress});
+		if(pOffsets->m_Struct + LargestField + 4 >= ModuleSize || pOffsets->m_TimerPointer >= ModuleSize || pOffsets->m_AbsoluteProgress >= ModuleSize)
+			return SAttachment{nullptr, pUnsupported};
+		return SAttachment{pOffsets, {}};
+	}
+
 	std::string ExtractSongMid(std::string_view StreamUrl, std::string_view Parameters)
 	{
 		const size_t Scheme = StreamUrl.find("://");

@@ -189,20 +189,47 @@ TEST(QmStreamerWordFilter, HandlesEmptyAndInvalidUtf8WithoutJoiningAcrossIt)
 	EXPECT_EQ(Text, Original);
 }
 
+TEST(QmStreamerWordFilter, InPlaceReplacementPreservesTheOriginalLatinWordBoundary)
+{
+	QmStreamerWordFilter::CFilter Filter;
+	ASSERT_TRUE(Filter.SetAdditionalWords({"øa", "qzhealthtoken"}));
+	char aText[] = "øaqzhealthtoken qzhealthtoken";
+	EXPECT_TRUE(Filter.Filter(aText, true));
+	EXPECT_STREQ(aText, "***qzhealthtoken ***");
+}
+
+TEST(QmStreamerWordFilter, InvalidUtf8SeparatesAnAdjacentLatinWord)
+{
+	QmStreamerWordFilter::CFilter Filter;
+	ASSERT_TRUE(Filter.SetAdditionalWords({"qzhealthtoken"}));
+	std::string Text = "a\x80" "qzhealthtoken";
+	EXPECT_TRUE(Filter.Filter(Text, true));
+	EXPECT_EQ(Text, "a\x80***");
+}
+
+TEST(QmStreamerWordFilter, UnclosedColorMarkerDoesNotConsumeTheNextLineMarker)
+{
+	QmStreamerWordFilter::CFilter Filter;
+	ASSERT_TRUE(Filter.SetAdditionalWords({"蓝莓"}));
+	std::string Text = "蓝[[[\n[[00ff00]]莓";
+	EXPECT_TRUE(Filter.Filter(Text, true));
+	EXPECT_EQ(Text, "***");
+}
+
 namespace
 {
 
 	class QmStreamerExternalWords : public testing::Test
 	{
-		void SetUp() override { QmStreamerWordFilter::SetAdditionalWords({}); }
-		void TearDown() override { QmStreamerWordFilter::SetAdditionalWords({}); }
+		void SetUp() override { ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({})); }
+		void TearDown() override { ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({})); }
 	};
 
 }
 
 TEST_F(QmStreamerExternalWords, AddsWordsWithoutRemovingBuiltInRules)
 {
-	QmStreamerWordFilter::SetAdditionalWords({"测试词"});
+	ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({"测试词"}));
 	std::string Text = "测试词、习近平、电话窃听";
 	EXPECT_TRUE(QmStreamerWordFilter::Filter(Text, true));
 	EXPECT_EQ(Text, "***、***、***");
@@ -210,7 +237,7 @@ TEST_F(QmStreamerExternalWords, AddsWordsWithoutRemovingBuiltInRules)
 
 TEST_F(QmStreamerExternalWords, NormalizesDisguisedExternalWords)
 {
-	QmStreamerWordFilter::SetAdditionalWords({"測試詞"});
+	ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({"測試詞"}));
 	std::string Text = "測.試\u200b詞";
 	EXPECT_TRUE(QmStreamerWordFilter::Filter(Text, true));
 	EXPECT_EQ(Text, "***");
@@ -218,7 +245,7 @@ TEST_F(QmStreamerExternalWords, NormalizesDisguisedExternalWords)
 
 TEST_F(QmStreamerExternalWords, ShortAsciiWordsDoNotGrowNameBuffers)
 {
-	QmStreamerWordFilter::SetAdditionalWords({"q", "xy"});
+	ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({"q", "xy"}));
 	char aText[] = "q xy";
 	EXPECT_TRUE(QmStreamerWordFilter::Filter(aText, true));
 	EXPECT_STREQ(aText, "* **");
@@ -226,24 +253,24 @@ TEST_F(QmStreamerExternalWords, ShortAsciiWordsDoNotGrowNameBuffers)
 
 TEST_F(QmStreamerExternalWords, ReplacingAndClearingTheFileRulesAdvancesRevision)
 {
-	QmStreamerWordFilter::SetAdditionalWords({"测试词"});
+	ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({"测试词"}));
 	const uint64_t FirstRevision = QmStreamerWordFilter::Revision();
-	QmStreamerWordFilter::SetAdditionalWords({"测试词"});
+	ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({"测试词"}));
 	EXPECT_EQ(QmStreamerWordFilter::Revision(), FirstRevision);
-	QmStreamerWordFilter::SetAdditionalWords({"其他词"});
+	ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({"其他词"}));
 	EXPECT_GT(QmStreamerWordFilter::Revision(), FirstRevision);
 	std::string Text = "测试词、其他词";
 	EXPECT_TRUE(QmStreamerWordFilter::Filter(Text, true));
 	EXPECT_EQ(Text, "测试词、***");
-	QmStreamerWordFilter::SetAdditionalWords({});
+	ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({}));
 	Text = "其他词";
 	EXPECT_FALSE(QmStreamerWordFilter::Filter(Text, true));
 }
 
 TEST_F(QmStreamerExternalWords, ClearingExternalWordsKeepsImportedBuiltInWords)
 {
-	QmStreamerWordFilter::SetAdditionalWords({"测试词"});
-	QmStreamerWordFilter::SetAdditionalWords({});
+	ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({"测试词"}));
+	ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({}));
 	std::string Text = "测试词、电话窃听、习近平";
 	EXPECT_TRUE(QmStreamerWordFilter::Filter(Text, true));
 	EXPECT_EQ(Text, "测试词、***、***");
@@ -251,7 +278,7 @@ TEST_F(QmStreamerExternalWords, ClearingExternalWordsKeepsImportedBuiltInWords)
 
 TEST_F(QmStreamerExternalWords, DisablingAlsoPreservesExternalWords)
 {
-	QmStreamerWordFilter::SetAdditionalWords({"测试词"});
+	ASSERT_TRUE(QmStreamerWordFilter::SetAdditionalWords({"测试词"}));
 	std::string Text = "测试词";
 	EXPECT_FALSE(QmStreamerWordFilter::Filter(Text, false));
 	EXPECT_EQ(Text, "测试词");

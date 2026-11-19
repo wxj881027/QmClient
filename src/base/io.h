@@ -37,6 +37,8 @@ enum
 	 * @see io_open
 	 */
 	IOFLAG_APPEND = 4,
+	// 与 IOFLAG_WRITE 组合，只创建新文件，已有路径不得被截断。
+	IOFLAG_EXCLUSIVE = 8,
 };
 
 /**
@@ -72,11 +74,19 @@ enum ESeekOrigin
  * @param filename File to open.
  * @param flags A set of IOFLAG flags.
  *
- * @see IOFLAG_READ, IOFLAG_WRITE, IOFLAG_APPEND.
+ * @see IOFLAG_READ, IOFLAG_WRITE, IOFLAG_APPEND, IOFLAG_EXCLUSIVE.
  *
  * @return A handle to the file on success, or `nullptr` on failure.
  */
 IOHANDLE io_open(const char *filename, int flags);
+
+// 只读打开，只有原生路径不存在才设置NotFound；其他错误不能冒充缺失。
+// 严格校验UTF-8，返回句柄由调用方关闭；旧io_open保持原有语义。
+IOHANDLE io_open_read_checked(const char *pFilename, bool *pNotFound);
+
+// 只接受打开后确认的普通文件，符号链接按其目标判断；Unix打开FIFO时不等待写端。
+// 非普通类型和校验失败不冒充缺失，返回流仍由调用方关闭。
+IOHANDLE io_open_read_regular_checked(const char *pFilename, bool *pNotFound);
 
 /**
  * Reads data into a buffer from a file.

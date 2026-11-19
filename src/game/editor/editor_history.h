@@ -28,9 +28,25 @@ public:
 	void Execute(const std::shared_ptr<IEditorAction> &pAction, const char *pDisplay = nullptr);
 
 	bool Undo();
-	bool Redo();
+	bool Redo()
+	{
+		if(m_vpRedoActions.empty())
+			return false;
 
-	void Clear();
+		const auto pLastAction = m_vpRedoActions.back();
+		if(!pLastAction->TryRedo())
+			return false;
+
+		m_vpUndoActions.emplace_back(pLastAction);
+		m_vpRedoActions.pop_back();
+		return true;
+	}
+
+	void Clear()
+	{
+		m_vpUndoActions.clear();
+		m_vpRedoActions.clear();
+	}
 	bool CanUndo() const { return !m_vpUndoActions.empty(); }
 	bool CanRedo() const { return !m_vpRedoActions.empty(); }
 

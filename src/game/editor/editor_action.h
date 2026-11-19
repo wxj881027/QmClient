@@ -11,6 +11,11 @@ public:
 
 	virtual void Undo() = 0;
 	virtual void Redo() = 0;
+	virtual bool TryRedo()
+	{
+		Redo();
+		return true;
+	}
 
 	virtual bool IsEmpty() { return false; }
 

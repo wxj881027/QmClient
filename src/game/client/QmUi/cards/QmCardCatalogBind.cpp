@@ -46,13 +46,8 @@ namespace
 		Localizable("Console"),
 	};
 
-	struct SArgumentInput
-	{
-		qm_bind_editor::SParameter m_Parameter;
-		CLineInputBuffered<qm_bind_editor::INPUT_CAPACITY> m_Input;
-		CButtonContainer m_IncludeButton;
-		bool m_Included = true;
-	};
+	using qm_card_catalog::SBindCommandArgumentInput;
+	using qm_card_catalog::TryPrepareCardData;
 
 	struct SBindCommandEditorState
 	{
@@ -69,7 +64,7 @@ namespace
 		CListBox m_ListBox;
 		std::vector<SCommandOption> m_vOptions;
 		std::vector<size_t> m_vFiltered;
-		std::vector<std::unique_ptr<SArgumentInput>> m_vArguments;
+		qm_card_catalog::TBindCommandArgumentInputs m_vArguments;
 		std::optional<qm_bind_editor::SRegisteredCommand> m_Command;
 		std::string m_SelectedLabel;
 		std::string m_LastFilter;
@@ -99,15 +94,15 @@ namespace
 	{
 		if(!State.m_Command.has_value())
 			return;
-		std::vector<qm_bind_editor::SParameter> vParameters;
-		std::vector<std::optional<std::string>> vArguments;
-		for(const auto &pArgument : State.m_vArguments)
-		{
-			vParameters.push_back(pArgument->m_Parameter);
-			vArguments.emplace_back(pArgument->m_Included ? std::make_optional<std::string>(pArgument->m_Input.GetString()) : std::nullopt);
-		}
 		std::string Command;
-		State.m_ArgumentsValid = qm_bind_editor::ComposeCommand(State.m_Command->m_Name, vParameters, vArguments, Command);
+		if(!TryPrepareCardData([&] {
+			   State.m_ArgumentsValid = qm_card_catalog::ComposeBindCommandInput(*State.m_Command, State.m_vArguments, Command);
+		   }))
+		{
+			State.m_ArgumentsValid = false;
+			State.m_pError = Localizable("Failed");
+			return;
+		}
 		if(State.m_ArgumentsValid)
 			State.m_CommandInput.Set(Command.c_str());
 		State.m_pError = State.m_ArgumentsValid ? nullptr : Localizable("Invalid command or parameters.");
@@ -208,11 +203,22 @@ CUi::EPopupMenuFunctionResult CMenus::PopupQmBindCommands(void *pContext, CUIRec
 	SearchOptions.m_ProcessInput = Active;
 	SearchOptions.m_FontSize = Metrics.m_BodySize;
 	const auto SearchResult = ui_widget::InputField(Ctx, &State.m_Filter, Search, SearchOptions);
+	const auto ClosePicker = [&](bool Prepared) {
+		if(!Prepared)
+			State.m_pError = Localizable("Failed");
+		pUi->ReleaseActiveTextInput(&State.m_Filter);
+		return CUi::POPUP_CLOSE_CURRENT;
+	};
 	if(State.m_LastCategory != State.m_Category || State.m_LastFilter != State.m_Filter.GetString())
 	{
+		if(!TryPrepareCardData([&] {
+			   std::string Filter = State.m_Filter.GetString();
+			   auto vFiltered = qm_bind_editor::FilterCommandOptions(State.m_vOptions, State.m_Category, Filter, [](const char *pText) { return Localize(pText); });
+			   State.m_LastFilter.swap(Filter);
+			   State.m_vFiltered.swap(vFiltered);
+		   }))
+			return ClosePicker(false);
 		State.m_LastCategory = State.m_Category;
-		State.m_LastFilter = State.m_Filter.GetString();
-		State.m_vFiltered = qm_bind_editor::FilterCommandOptions(State.m_vOptions, State.m_Category, State.m_LastFilter, [](const char *pText) { return Localize(pText); });
 		State.m_Selection = State.m_vFiltered.empty() ? -1 : 0;
 		State.m_ListBox.ResetScroll();
 	}
@@ -248,25 +254,17 @@ CUi::EPopupMenuFunctionResult CMenus::PopupQmBindCommands(void *pContext, CUIRec
 		State.m_Selection >= 0 && State.m_Selection < (int)State.m_vFiltered.size())
 	{
 		const SCommandOption &Option = State.m_vOptions[State.m_vFiltered[State.m_Selection]];
-		ClearArguments(pUi, State);
-		State.m_SelectedLabel = Option.m_Label;
-		if(!Option.m_Command.m_Name.empty())
-			State.m_CommandInput.Set(Option.m_Command.m_Name.c_str());
-		State.m_pError = nullptr;
-		if(!Option.m_Preset)
-		{
-			State.m_Command = Option.m_Command;
-			for(auto &Parameter : qm_bind_editor::ParseParameters(Option.m_Command.m_Parameters))
-			{
-				auto pArgument = std::make_unique<SArgumentInput>();
-				pArgument->m_Included = !Parameter.m_Optional;
-				pArgument->m_Parameter = std::move(Parameter);
-				State.m_vArguments.push_back(std::move(pArgument));
-			}
-			UpdateCommand(State);
-		}
-		pUi->ReleaseActiveTextInput(&State.m_Filter);
-		return CUi::POPUP_CLOSE_CURRENT;
+		const bool Selected = qm_card_catalog::SelectBindCommandOption(Option, [&](qm_card_catalog::SBindCommandPickerSelection &&Selection) {
+			ClearArguments(pUi, State);
+			State.m_SelectedLabel.swap(Selection.m_Label);
+			if(!Option.m_Command.m_Name.empty())
+				State.m_CommandInput.Set(Selection.m_Text.c_str());
+			State.m_Command.swap(Selection.m_Command);
+			State.m_vArguments.swap(Selection.m_vArguments);
+			State.m_ArgumentsValid = Selection.m_ArgumentsValid;
+			State.m_pError = State.m_ArgumentsValid ? nullptr : Localizable("Invalid command or parameters.");
+		});
+		return ClosePicker(Selected);
 	}
 	return CUi::POPUP_KEEP_OPEN;
 }
@@ -311,8 +309,11 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 		OpenPicker = Enabled && (Pick || Drop);
 		if(OpenPicker)
 		{
-			State.m_pMenus = this;
-			PopulateOptions(*Console(), State);
+			OpenPicker = TryPrepareCardData([&] { PopulateOptions(*Console(), State); });
+			if(OpenPicker)
+				State.m_pMenus = this;
+			else
+				State.m_pError = Localizable("Failed");
 		}
 		if(!ReadOnly && (OpenPicker || Ui()->IsPopupOpen(&State.m_PopupId)))
 		{
@@ -352,7 +353,7 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 	bool ArgumentsChanged = false;
 	for(size_t Index = 0; Index < State.m_vArguments.size(); ++Index)
 	{
-		SArgumentInput &Argument = *State.m_vArguments[Index];
+		SBindCommandArgumentInput &Argument = *State.m_vArguments[Index];
 		char aLabelId[64];
 		str_format(aLabelId, sizeof(aLabelId), "bind-argument-%d-label", (int)Index);
 		CUIRect Label;
@@ -417,20 +418,29 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 		const bool Add = DoButton_Menu(&State.m_AddButton, Localize("Add"), CanAdd ? 0 : -1, &AddRow);
 		if(CanAdd && (Add || CommandResult.m_Submitted))
 		{
+			using qm_card_catalog::EBindCommandCommitResult;
+			CBinds &Binds = GameClient()->m_Binds;
 			char aKeyName[128];
-			GameClient()->m_Binds.GetKeyBindName(Slot.m_Key, Slot.m_ModifierMask, aKeyName, sizeof(aKeyName));
-			std::string Updated;
-			if(!Console()->LineIsValid(State.m_CommandInput.GetString()))
-				State.m_pError = Localizable("Invalid command or parameters.");
-			else if(!qm_bind_editor::AppendCommand(aKeyName, GameClient()->m_Binds.Get(Slot), State.m_CommandInput.GetString(), Updated))
-				State.m_pError = Localizable("The command is empty, incomplete, or exceeds the local config line limit.");
-			else
+			Binds.GetKeyBindName(Slot.m_Key, Slot.m_ModifierMask, aKeyName, sizeof(aKeyName));
+			const auto Result = qm_card_catalog::CommitBindCommandDraft(*Console(), State.m_CommandInput, aKeyName, Binds.Get(Slot), [&](const char *pUpdated) {
+				return Binds.Rebind(EMPTY_BIND_SLOT, Slot, pUpdated);
+			});
+			switch(Result)
 			{
-				GameClient()->m_Binds.Bind(Slot.m_Key, Updated.c_str(), false, Slot.m_ModifierMask);
+			case EBindCommandCommitResult::INVALID_COMMAND:
+				State.m_pError = Localizable("Invalid command or parameters.");
+				break;
+			case EBindCommandCommitResult::INVALID_CONFIG_LINE:
+				State.m_pError = Localizable("The command is empty, incomplete, or exceeds the local config line limit.");
+				break;
+			case EBindCommandCommitResult::FAILED:
+				State.m_pError = Localizable("Failed");
+				break;
+			case EBindCommandCommitResult::COMMITTED:
 				ClearArguments(Ui(), State);
-				State.m_CommandInput.Clear();
 				State.m_SelectedLabel.clear();
 				State.m_pError = nullptr;
+				break;
 			}
 		}
 	}

@@ -91,6 +91,7 @@ struct SSettingsRuntimeCacheKey
 	int m_WindowHeight = 0;
 	int m_UiScale = 100;
 	uint64_t m_ConfigHash = 0;
+	uint64_t m_WindowHash = 0;
 };
 
 int SettingsCanonicalPage(int Page);

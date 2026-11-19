@@ -10,8 +10,16 @@
 #include <game/editor/mapitems/map.h>
 #include <game/mapitems.h>
 
-#include <cinttypes>
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <cstdlib>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <new>
+#include <stdexcept>
+#include <utility>
 
 // Based on triple32inc from https://github.com/skeeto/hash-prospector/tree/79a6074062a84907df6e45b756134b74e2956760
 static uint32_t HashUInt32(uint32_t Num)
@@ -38,7 +46,7 @@ static const char *NextInt(const char *pCursor, int &Value)
 {
 	char aBuf[128] = "";
 	const char *pNext = NextWord(pCursor, aBuf, sizeof(aBuf));
-	if(!pNext || !str_toint(aBuf, &Value))
+	if(!pNext || (*pNext != '\0' && !str_isspace(*pNext)) || !str_toint(aBuf, &Value))
 		return nullptr;
 	return pNext;
 }
@@ -81,7 +89,10 @@ CAutomapper::CAutomapper(CEditorMap *pMap) :
 }
 
 void CAutomapper::Load(const char *pTileName)
+try
 {
+	Unload();
+
 	char aPath[IO_MAX_PATH_LENGTH];
 	str_format(aPath, sizeof(aPath), "editor/automap/%s.rules", pTileName);
 	if(!Storage()->FileExists(aPath, IStorage::TYPE_ALL))
@@ -96,6 +107,7 @@ void CAutomapper::Load(const char *pTileName)
 		return;
 	}
 
+	std::vector<CConfiguration> vConfigs;
 	CConfiguration *pCurrentConf = nullptr;
 	CRun *pCurrentRun = nullptr;
 	CIndexRule *pCurrentIndex = nullptr;
@@ -108,39 +120,25 @@ void CAutomapper::Load(const char *pTileName)
 		{
 			if(pLine[0] == '[')
 			{
-				// new configuration, get the name
+				pCurrentIndex = nullptr;
 				pLine++;
-				CConfiguration NewConf;
-				NewConf.m_aName[0] = '\0';
-				NewConf.m_StartX = 0;
-				NewConf.m_StartY = 0;
-				NewConf.m_EndX = 0;
-				NewConf.m_EndY = 0;
-				m_vConfigs.push_back(NewConf);
-				int ConfigurationId = m_vConfigs.size() - 1;
-				pCurrentConf = &m_vConfigs[ConfigurationId];
-				str_copy(pCurrentConf->m_aName, pLine, minimum<int>(sizeof(pCurrentConf->m_aName), str_length(pLine)));
+				pCurrentConf = &vConfigs.emplace_back();
+				str_truncate(pCurrentConf->m_aName, sizeof(pCurrentConf->m_aName), pLine, maximum(0, str_length(pLine) - 1));
 
-				// add start run
-				CRun NewRun;
-				NewRun.m_AutomapCopy = true;
-				pCurrentConf->m_vRuns.push_back(NewRun);
-				int RunId = pCurrentConf->m_vRuns.size() - 1;
-				pCurrentRun = &pCurrentConf->m_vRuns[RunId];
+				pCurrentRun = &pCurrentConf->m_vRuns.emplace_back();
+				pCurrentRun->m_AutomapCopy = true;
 			}
 			else if(str_startswith(pLine, "NewRun") && pCurrentConf)
 			{
-				// add new run
-				CRun NewRun;
-				NewRun.m_AutomapCopy = true;
-				pCurrentConf->m_vRuns.push_back(NewRun);
-				int RunId = pCurrentConf->m_vRuns.size() - 1;
-				pCurrentRun = &pCurrentConf->m_vRuns[RunId];
+				pCurrentIndex = nullptr;
+				pCurrentRun = &pCurrentConf->m_vRuns.emplace_back();
+				pCurrentRun->m_AutomapCopy = true;
 			}
 			else if(str_startswith(pLine, "Index") && pCurrentRun)
 			{
 				// new index
-				CIndexRule NewIndexRule;
+				pCurrentIndex = nullptr;
+				CIndexRule NewIndexRule{};
 
 				char aOrientation1[128] = "";
 				char aOrientation2[128] = "";
@@ -148,8 +146,9 @@ void CAutomapper::Load(const char *pTileName)
 
 				const char *pIndexCursor = str_trim_words(pLine, 1);
 				pIndexCursor = NextInt(pIndexCursor, NewIndexRule.m_Id);
-				if(pIndexCursor)
-					pIndexCursor = NextWord(pIndexCursor, aOrientation1, sizeof(aOrientation1));
+				if(!pIndexCursor)
+					continue;
+				pIndexCursor = NextWord(pIndexCursor, aOrientation1, sizeof(aOrientation1));
 				if(pIndexCursor)
 					pIndexCursor = NextWord(pIndexCursor, aOrientation2, sizeof(aOrientation2));
 				if(pIndexCursor)
@@ -171,9 +170,8 @@ void CAutomapper::Load(const char *pTileName)
 					NewIndexRule.m_Flag = CheckIndexFlag(NewIndexRule.m_Flag, aOrientation3, false);
 
 				// add the index rule object and make it current
-				pCurrentRun->m_vIndexRules.push_back(NewIndexRule);
-				int IndexRuleId = pCurrentRun->m_vIndexRules.size() - 1;
-				pCurrentIndex = &pCurrentRun->m_vIndexRules[IndexRuleId];
+				pCurrentRun->m_vIndexRules.push_back(std::move(NewIndexRule));
+				pCurrentIndex = &pCurrentRun->m_vIndexRules.back();
 			}
 			else if(str_startswith(pLine, "Pos") && pCurrentIndex)
 			{
@@ -186,8 +184,9 @@ void CAutomapper::Load(const char *pTileName)
 				pPosCursor = NextInt(pPosCursor, x);
 				if(pPosCursor)
 					pPosCursor = NextInt(pPosCursor, y);
-				if(pPosCursor)
-					NextWord(pPosCursor, aValue, sizeof(aValue));
+				if(!pPosCursor)
+					continue;
+				NextWord(pPosCursor, aValue, sizeof(aValue));
 
 				if(!str_comp(aValue, "EMPTY"))
 				{
@@ -210,96 +209,48 @@ void CAutomapper::Load(const char *pTileName)
 					else
 						Value = CPosRule::NOTINDEX;
 
-					int pWord = 4;
-					while(true)
+					const char *pIndexStart = str_trim_words(pLine, 4);
+					while(pIndexStart)
 					{
-						CIndexInfo NewIndexInfo;
-
-						char aOrientation1[128] = "";
-						char aOrientation2[128] = "";
-						char aOrientation3[128] = "";
-						char aOrientation4[128] = "";
-						const char *pIndexInfoCursor = str_trim_words(pLine, pWord);
-						pIndexInfoCursor = NextInt(pIndexInfoCursor, NewIndexInfo.m_Id);
-						if(pIndexInfoCursor)
-							pIndexInfoCursor = NextWord(pIndexInfoCursor, aOrientation1, sizeof(aOrientation1));
-						if(pIndexInfoCursor)
-							pIndexInfoCursor = NextWord(pIndexInfoCursor, aOrientation2, sizeof(aOrientation2));
-						if(pIndexInfoCursor)
-							pIndexInfoCursor = NextWord(pIndexInfoCursor, aOrientation3, sizeof(aOrientation3));
-						if(pIndexInfoCursor)
-							NextWord(pIndexInfoCursor, aOrientation4, sizeof(aOrientation4));
-
-						NewIndexInfo.m_Flag = 0;
-						NewIndexInfo.m_TestFlag = false;
-
-						if(!str_comp(aOrientation1, "OR"))
-						{
-							vNewIndexList.push_back(NewIndexInfo);
-							pWord += 2;
-							continue;
-						}
-						else if(str_length(aOrientation1) > 0)
-						{
-							NewIndexInfo.m_Flag = CheckIndexFlag(NewIndexInfo.m_Flag, aOrientation1, true);
-							NewIndexInfo.m_TestFlag = !(NewIndexInfo.m_Flag == 0 && str_comp(aOrientation1, "NONE"));
-						}
-						else
-						{
-							vNewIndexList.push_back(NewIndexInfo);
+						CIndexInfo NewIndexInfo{};
+						const char *pOrientation = NextInt(pIndexStart, NewIndexInfo.m_Id);
+						if(!pOrientation)
 							break;
+
+						const char *pNextIndex = nullptr;
+						for(int Orientation = 0; Orientation < 4; ++Orientation)
+						{
+							char aOrientation[128];
+							pOrientation = NextWord(pOrientation, aOrientation, sizeof(aOrientation));
+							if(!pOrientation || aOrientation[0] == '\0')
+								break;
+
+							if(!str_comp(aOrientation, "OR"))
+							{
+								// 从当前索引继续扫描，避免每个 OR 都从行首计数。
+								pNextIndex = str_trim_words(pIndexStart, Orientation + 2);
+								break;
+							}
+
+							if(Orientation == 3 || (Orientation > 0 && NewIndexInfo.m_Flag == 0))
+								break;
+
+							NewIndexInfo.m_Flag = CheckIndexFlag(NewIndexInfo.m_Flag, aOrientation, Orientation == 0);
+							if(Orientation == 0)
+								NewIndexInfo.m_TestFlag = NewIndexInfo.m_Flag != 0 || !str_comp(aOrientation, "NONE");
 						}
 
-						if(!str_comp(aOrientation2, "OR"))
-						{
-							vNewIndexList.push_back(NewIndexInfo);
-							pWord += 3;
-							continue;
-						}
-						else if(str_length(aOrientation2) > 0 && NewIndexInfo.m_Flag != 0)
-						{
-							NewIndexInfo.m_Flag = CheckIndexFlag(NewIndexInfo.m_Flag, aOrientation2, false);
-						}
-						else
-						{
-							vNewIndexList.push_back(NewIndexInfo);
-							break;
-						}
-
-						if(!str_comp(aOrientation3, "OR"))
-						{
-							vNewIndexList.push_back(NewIndexInfo);
-							pWord += 4;
-							continue;
-						}
-						else if(str_length(aOrientation3) > 0 && NewIndexInfo.m_Flag != 0)
-						{
-							NewIndexInfo.m_Flag = CheckIndexFlag(NewIndexInfo.m_Flag, aOrientation3, false);
-						}
-						else
-						{
-							vNewIndexList.push_back(NewIndexInfo);
-							break;
-						}
-
-						if(!str_comp(aOrientation4, "OR"))
-						{
-							vNewIndexList.push_back(NewIndexInfo);
-							pWord += 5;
-							continue;
-						}
-						else
-						{
-							vNewIndexList.push_back(NewIndexInfo);
-							break;
-						}
+						vNewIndexList.push_back(NewIndexInfo);
+						pIndexStart = pNextIndex;
 					}
+					if(vNewIndexList.empty())
+						continue;
 				}
 
 				if(Value != CPosRule::NORULE)
 				{
-					CPosRule NewPosRule = {x, y, Value, vNewIndexList};
-					pCurrentIndex->m_vRules.push_back(NewPosRule);
+					pCurrentIndex->m_vRules.push_back({x, y, Value, std::move(vNewIndexList)});
+					const CPosRule &NewPosRule = pCurrentIndex->m_vRules.back();
 
 					pCurrentConf->m_StartX = minimum(pCurrentConf->m_StartX, NewPosRule.m_X);
 					pCurrentConf->m_StartY = minimum(pCurrentConf->m_StartY, NewPosRule.m_Y);
@@ -308,7 +259,7 @@ void CAutomapper::Load(const char *pTileName)
 
 					if(x == 0 && y == 0)
 					{
-						for(const auto &Index : vNewIndexList)
+						for(const auto &Index : NewPosRule.m_vIndexList)
 						{
 							if(Index.m_Id == 0 && Value == CPosRule::INDEX)
 							{
@@ -332,15 +283,15 @@ void CAutomapper::Load(const char *pTileName)
 				char Specifier = ' ';
 				char aValue[128] = "";
 				NextWord(str_trim_words(pLine, 1), aValue, sizeof(aValue));
-				ParseFloatWithPercentSuffix(aValue, Value, Specifier);
+				if(!ParseFloatWithPercentSuffix(aValue, Value, Specifier))
+					continue;
+
 				if(Specifier == '%')
-				{
 					pCurrentIndex->m_RandomProbability = Value / 100.0f;
-				}
+				else if(Value == 0.0f)
+					pCurrentIndex->m_RandomProbability = std::signbit(Value) ? 0.0f : 1.0f;
 				else
-				{
 					pCurrentIndex->m_RandomProbability = 1.0f / Value;
-				}
 			}
 			else if(str_startswith(pLine, "Modulo") && pCurrentIndex)
 			{
@@ -371,7 +322,7 @@ void CAutomapper::Load(const char *pTileName)
 	}
 
 	// add default rule for Pos 0 0 if there is none
-	for(auto &Config : m_vConfigs)
+	for(auto &Config : vConfigs)
 	{
 		for(auto &Run : Config.m_vRuns)
 		{
@@ -418,8 +369,18 @@ void CAutomapper::Load(const char *pTileName)
 		}
 	}
 
-	log_trace("editor/automap", "Loaded '%s'", aPath);
-	m_FileLoaded = true;
+	m_vConfigs = std::move(vConfigs);
+	m_FileLoaded = !m_vConfigs.empty();
+	if(m_FileLoaded)
+		log_trace("editor/automap", "Loaded '%s'", aPath);
+}
+catch(const std::bad_alloc &)
+{
+	log_error("editor/automap", "Not enough memory to load rules for '%s'", pTileName);
+}
+catch(const std::length_error &)
+{
+	log_error("editor/automap", "Too many automapper rules for '%s'", pTileName);
 }
 
 void CAutomapper::Unload()
@@ -451,122 +412,201 @@ const char *CAutomapper::GetConfigName(int Index) const
 	return m_vConfigs[Index].m_aName;
 }
 
-void CAutomapper::ProceedLocalized(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int ReferenceId, int ConfigId, int Seed, int X, int Y, int Width, int Height)
+static bool CanIndexTileLayer(const CLayerTiles &Layer)
 {
-	if(!m_FileLoaded || pLayer->m_Readonly || ConfigId < 0 || ConfigId >= (int)m_vConfigs.size())
+	return Layer.m_Width > 0 && Layer.m_Height > 0 && Layer.m_Width <= std::numeric_limits<int>::max() / Layer.m_Height;
+}
+
+static bool CanReadAutomapperReference(const CLayerTiles *pGameLayer, int ReferenceId)
+{
+	return ReferenceId < 0 || (ReferenceId < static_cast<int>(std::size(AUTOMAP_REFERENCE_NAMES)) && pGameLayer && CanIndexTileLayer(*pGameLayer));
+}
+
+static int ClampAutomapperCoordinate(int64_t Position, int LayerSize)
+{
+	return static_cast<int>(std::clamp<int64_t>(Position, 0, LayerSize));
+}
+
+void CAutomapper::ProceedLocalized(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int ReferenceId, int ConfigId, int Seed, int X, int Y, int Width, int Height)
+try
+{
+	if(!m_FileLoaded || pLayer->m_Readonly || pLayer == pGameLayer || ConfigId < 0 || ConfigId >= (int)m_vConfigs.size() ||
+		!CanIndexTileLayer(*pLayer) || !CanReadAutomapperReference(pGameLayer, ReferenceId))
 		return;
 
-	if(Width < 0)
-		Width = pLayer->m_Width;
+	const CConfiguration &Conf = m_vConfigs[ConfigId];
+	const int64_t FromX = X;
+	const int64_t FromY = Y;
+	const int64_t ToX = FromX + (Width < 0 ? pLayer->m_Width : Width);
+	const int64_t ToY = FromY + (Height < 0 ? pLayer->m_Height : Height);
 
-	if(Height < 0)
-		Height = pLayer->m_Height;
+	const int CommitFromX = ClampAutomapperCoordinate(FromX + Conf.m_StartX, pLayer->m_Width);
+	const int CommitFromY = ClampAutomapperCoordinate(FromY + Conf.m_StartY, pLayer->m_Height);
+	const int CommitToX = ClampAutomapperCoordinate(ToX + Conf.m_EndX, pLayer->m_Width);
+	const int CommitToY = ClampAutomapperCoordinate(ToY + Conf.m_EndY, pLayer->m_Height);
+	if(CommitFromX >= CommitToX || CommitFromY >= CommitToY)
+		return;
 
-	CConfiguration *pConf = &m_vConfigs[ConfigId];
+	const int UpdateFromX = ClampAutomapperCoordinate(FromX + 3LL * Conf.m_StartX, pLayer->m_Width);
+	const int UpdateFromY = ClampAutomapperCoordinate(FromY + 3LL * Conf.m_StartY, pLayer->m_Height);
+	const int UpdateToX = ClampAutomapperCoordinate(ToX + 3LL * Conf.m_EndX, pLayer->m_Width);
+	const int UpdateToY = ClampAutomapperCoordinate(ToY + 3LL * Conf.m_EndY, pLayer->m_Height);
 
-	int CommitFromX = std::clamp(X + pConf->m_StartX, 0, pLayer->m_Width);
-	int CommitFromY = std::clamp(Y + pConf->m_StartY, 0, pLayer->m_Height);
-	int CommitToX = std::clamp(X + Width + pConf->m_EndX, 0, pLayer->m_Width);
-	int CommitToY = std::clamp(Y + Height + pConf->m_EndY, 0, pLayer->m_Height);
-
-	int UpdateFromX = std::clamp(X + 3 * pConf->m_StartX, 0, pLayer->m_Width);
-	int UpdateFromY = std::clamp(Y + 3 * pConf->m_StartY, 0, pLayer->m_Height);
-	int UpdateToX = std::clamp(X + Width + 3 * pConf->m_EndX, 0, pLayer->m_Width);
-	int UpdateToY = std::clamp(Y + Height + 3 * pConf->m_EndY, 0, pLayer->m_Height);
-
-	CLayerTiles *pUpdateLayer = new CLayerTiles(pLayer->Map(), UpdateToX - UpdateFromX, UpdateToY - UpdateFromY);
-	CLayerTiles *pUpdateGame = new CLayerTiles(pLayer->Map(), UpdateToX - UpdateFromX, UpdateToY - UpdateFromY);
+	const int UpdateWidth = UpdateToX - UpdateFromX;
+	const int UpdateHeight = UpdateToY - UpdateFromY;
+	CLayerTiles UpdateLayer(pLayer->Map(), UpdateWidth, UpdateHeight);
+	std::unique_ptr<CLayerTiles> pUpdateGame;
+	if(ReferenceId >= 0)
+		pUpdateGame = std::make_unique<CLayerTiles>(pLayer->Map(), UpdateWidth, UpdateHeight);
 
 	for(int y = UpdateFromY; y < UpdateToY; y++)
 	{
 		for(int x = UpdateFromX; x < UpdateToX; x++)
 		{
-			const CTile *pInLayer = &pLayer->m_pTiles[y * pLayer->m_Width + x];
-			CTile *pOutLayer = &pUpdateLayer->m_pTiles[(y - UpdateFromY) * pUpdateLayer->m_Width + x - UpdateFromX];
-			pOutLayer->m_Index = pInLayer->m_Index;
-			pOutLayer->m_Flags = pInLayer->m_Flags;
+			const int UpdateIndex = (y - UpdateFromY) * UpdateWidth + (x - UpdateFromX);
+			const CTile &InLayer = pLayer->m_pTiles[y * pLayer->m_Width + x];
+			CTile &OutLayer = UpdateLayer.m_pTiles[UpdateIndex];
+			OutLayer.m_Index = InLayer.m_Index;
+			OutLayer.m_Flags = InLayer.m_Flags;
 
-			// 官方 12520：局部更新区域可能超出游戏层边界，越界时跳过
-			if(x >= pGameLayer->m_Width || y >= pGameLayer->m_Height)
+			if(!pUpdateGame || x >= pGameLayer->m_Width || y >= pGameLayer->m_Height)
 				continue;
 
-			const CTile *pInGame = &pGameLayer->m_pTiles[y * pGameLayer->m_Width + x];
-			CTile *pOutGame = &pUpdateGame->m_pTiles[(y - UpdateFromY) * pUpdateGame->m_Width + x - UpdateFromX];
-			pOutGame->m_Index = pInGame->m_Index;
-			pOutGame->m_Flags = pInGame->m_Flags;
+			const CTile &InGame = pGameLayer->m_pTiles[y * pGameLayer->m_Width + x];
+			CTile &OutGame = pUpdateGame->m_pTiles[UpdateIndex];
+			OutGame.m_Index = InGame.m_Index;
+			OutGame.m_Flags = InGame.m_Flags;
 		}
 	}
 
-	Proceed(pUpdateLayer, pUpdateGame, ReferenceId, ConfigId, Seed, UpdateFromX, UpdateFromY);
+	Proceed(&UpdateLayer, pUpdateGame.get(), ReferenceId, ConfigId, Seed, UpdateFromX, UpdateFromY);
+	if(UpdateLayer.m_TilesHistory.empty())
+		return;
 
-	for(int y = CommitFromY; y < CommitToY; y++)
+	EditorTileStateChangeHistory<STileStateChange> Changes;
+	for(const auto &[LocalY, Row] : UpdateLayer.m_TilesHistory)
 	{
-		for(int x = CommitFromX; x < CommitToX; x++)
-		{
-			const CTile *pInLayer = &pUpdateLayer->m_pTiles[(y - UpdateFromY) * pUpdateLayer->m_Width + x - UpdateFromX];
-			CTile *pOutLayer = &pLayer->m_pTiles[y * pLayer->m_Width + x];
-			CTile PreviousLayer = *pOutLayer;
-			pOutLayer->m_Index = pInLayer->m_Index;
-			pOutLayer->m_Flags = pInLayer->m_Flags;
-			pLayer->RecordStateChange(x, y, PreviousLayer, *pOutLayer);
+		const int y = LocalY + UpdateFromY;
+		if(y < CommitFromY || y >= CommitToY)
+			continue;
 
-			// 官方 12520：同一处越界，避免读 pUpdateGame 之外的格子
-			if(x >= pGameLayer->m_Width || y >= pGameLayer->m_Height)
+		for(const auto &[LocalX, Change] : Row)
+		{
+			const int x = LocalX + UpdateFromX;
+			if(x < CommitFromX || x >= CommitToX)
 				continue;
 
-			const CTile *pInGame = &pUpdateGame->m_pTiles[(y - UpdateFromY) * pUpdateGame->m_Width + x - UpdateFromX];
-			CTile *pOutGame = &pGameLayer->m_pTiles[y * pGameLayer->m_Width + x];
-			CTile PreviousGame = *pOutGame;
-			pOutGame->m_Index = pInGame->m_Index;
-			pOutGame->m_Flags = pInGame->m_Flags;
-			pGameLayer->RecordStateChange(x, y, PreviousGame, *pOutGame);
+			const CTile &Previous = pLayer->m_pTiles[y * pLayer->m_Width + x];
+			if(Previous.m_Index == Change.m_Current.m_Index && Previous.m_Flags == Change.m_Current.m_Flags)
+				continue;
+
+			CTile Updated = Previous;
+			Updated.m_Index = Change.m_Current.m_Index;
+			Updated.m_Flags = Change.m_Current.m_Flags;
+			Changes[y].emplace(x, STileStateChange{true, Previous, Updated});
 		}
 	}
 
-	delete pUpdateLayer;
-	delete pUpdateGame;
+	// 提前分配撤销记录，提交时沿用本次笔画已有的初始瓦片。
+	for(auto &[y, Row] : Changes)
+	{
+		for(const auto &[x, Change] : Row)
+			pLayer->m_pTiles[y * pLayer->m_Width + x] = Change.m_Current;
+
+		const auto ExistingRow = pLayer->m_TilesHistory.find(y);
+		if(ExistingRow == pLayer->m_TilesHistory.end())
+			continue;
+
+		ExistingRow->second.merge(Row);
+		for(const auto &[x, Change] : Row)
+			pLayer->RecordStateChange(x, y, Change.m_Previous, Change.m_Current);
+	}
+	pLayer->m_TilesHistory.merge(Changes);
+}
+catch(const std::bad_alloc &)
+{
+	log_error("editor/automap", "Not enough memory for a localized automapping update");
 }
 
-void CAutomapper::Proceed(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int ReferenceId, int ConfigId, int Seed, int SeedOffsetX, int SeedOffsetY)
+class CAutomapperHistoryRollback
 {
-	if(!m_FileLoaded || pLayer->m_Readonly || ConfigId < 0 || ConfigId >= (int)m_vConfigs.size())
+	CLayerTiles &m_Layer;
+	EditorTileStateChangeHistory<STileStateChange> m_PreviousHistory;
+	bool m_Committed = false;
+
+public:
+	explicit CAutomapperHistoryRollback(CLayerTiles &Layer) :
+		m_Layer(Layer)
+	{
+		m_Layer.m_TilesHistory.swap(m_PreviousHistory);
+	}
+
+	CAutomapperHistoryRollback(const CAutomapperHistoryRollback &) = delete;
+	CAutomapperHistoryRollback &operator=(const CAutomapperHistoryRollback &) = delete;
+
+	~CAutomapperHistoryRollback()
+	{
+		if(m_Committed)
+			return;
+
+		for(const auto &[y, Row] : m_Layer.m_TilesHistory)
+		{
+			for(const auto &[x, Change] : Row)
+				m_Layer.m_pTiles[y * m_Layer.m_Width + x] = Change.m_Previous;
+		}
+		m_Layer.m_TilesHistory.swap(m_PreviousHistory);
+	}
+
+	void Commit() { m_Committed = true; }
+};
+
+void CAutomapper::Proceed(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int ReferenceId, int ConfigId, int Seed, int SeedOffsetX, int SeedOffsetY)
+try
+{
+	if(!m_FileLoaded || pLayer->m_Readonly || ConfigId < 0 || ConfigId >= (int)m_vConfigs.size() ||
+		!CanIndexTileLayer(*pLayer) || !CanReadAutomapperReference(pGameLayer, ReferenceId))
 		return;
+
+	const CConfiguration &Conf = m_vConfigs[ConfigId];
+	const int LayerWidth = pLayer->m_Width;
+	const int LayerHeight = pLayer->m_Height;
+
+	std::unique_ptr<CLayerTiles> pReadCopy;
+	if(std::any_of(Conf.m_vRuns.begin(), Conf.m_vRuns.end(), [](const CRun &Run) { return Run.m_AutomapCopy; }))
+		pReadCopy = std::make_unique<CLayerTiles>(pLayer->Map(), LayerWidth, LayerHeight);
+
+	CAutomapperHistoryRollback HistoryRollback(*pLayer);
+	pLayer->ClearHistory();
 
 	if(Seed == 0)
 		Seed = rand();
-
-	CConfiguration *pConf = &m_vConfigs[ConfigId];
-	pLayer->ClearHistory();
-
-	const int LayerWidth = pLayer->m_Width;
-	const int LayerHeight = pLayer->m_Height;
 
 	static const int s_aTileIndex[] = {TILE_SOLID, TILE_DEATH, TILE_NOHOOK, TILE_FREEZE, TILE_UNFREEZE, TILE_DFREEZE, TILE_DUNFREEZE, TILE_LFREEZE, TILE_LUNFREEZE};
 
 	static_assert(std::size(AUTOMAP_REFERENCE_NAMES) == std::size(s_aTileIndex) + 1, "AUTOMAP_REFERENCE_NAMES and s_aTileIndex must include the same items");
 
 	// for every run: copy tiles, automap, overwrite tiles
-	for(size_t h = 0; h < pConf->m_vRuns.size(); ++h)
+	for(size_t h = 0; h < Conf.m_vRuns.size(); ++h)
 	{
-		CRun *pRun = &pConf->m_vRuns[h];
-		bool IsFilterable = h == 0 && ReferenceId >= 0;
+		const CRun &Run = Conf.m_vRuns[h];
+		const bool IsFilterable = h == 0 && ReferenceId >= 0;
 
 		// don't make copy if it's requested
-		CLayerTiles *pReadLayer;
-		CLayerTiles *pBuffer = IsFilterable ? pGameLayer : pLayer;
-		if(pRun->m_AutomapCopy)
+		const CLayerTiles *pBuffer = IsFilterable ? pGameLayer : pLayer;
+		const CLayerTiles *pReadLayer = pBuffer;
+		if(Run.m_AutomapCopy)
 		{
-			pReadLayer = new CLayerTiles(pLayer->Map(), LayerWidth, LayerHeight);
+			pReadLayer = pReadCopy.get();
 
-			int LoopWidth = IsFilterable ? std::min(pGameLayer->m_Width, LayerWidth) : LayerWidth;
-			int LoopHeight = IsFilterable ? std::min(pGameLayer->m_Height, LayerHeight) : LayerHeight;
+			const int LoopWidth = std::min(pBuffer->m_Width, LayerWidth);
+			const int LoopHeight = std::min(pBuffer->m_Height, LayerHeight);
 
 			for(int y = 0; y < LoopHeight; y++)
 			{
 				for(int x = 0; x < LoopWidth; x++)
 				{
 					const CTile *pIn = &pBuffer->m_pTiles[y * pBuffer->m_Width + x];
-					CTile *pOut = &pReadLayer->m_pTiles[y * LayerWidth + x];
+					CTile *pOut = &pReadCopy->m_pTiles[y * LayerWidth + x];
 					if(h == 0 && ReferenceId >= 1 && pIn->m_Index != s_aTileIndex[ReferenceId - 1])
 						pOut->m_Index = 0;
 					else
@@ -575,53 +615,58 @@ void CAutomapper::Proceed(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int Refe
 				}
 			}
 		}
-		else
-		{
-			pReadLayer = pBuffer;
-		}
 
 		// auto map
 		for(int y = 0; y < LayerHeight; y++)
 		{
+			const int64_t AbsoluteY = static_cast<int64_t>(y) + SeedOffsetY;
 			for(int x = 0; x < LayerWidth; x++)
 			{
-				CTile *pTile = &(pLayer->m_pTiles[y * LayerWidth + x]);
-				const CTile *pReadTile = &(pReadLayer->m_pTiles[y * LayerWidth + x]);
-				pLayer->Map()->OnModify();
+				const int64_t AbsoluteX = static_cast<int64_t>(x) + SeedOffsetX;
+				CTile &Tile = pLayer->m_pTiles[y * LayerWidth + x];
+				const CTile &ReadTile = EditorAutomap::ReadTile(pReadLayer->m_pTiles, pReadLayer->m_Width, pReadLayer->m_Height, x, y);
+				const auto ApplyTile = [&](unsigned char Index, unsigned char Flags) {
+					if(Tile.m_Index == Index && Tile.m_Flags == Flags)
+						return;
 
-				for(size_t i = 0; i < pRun->m_vIndexRules.size(); ++i)
+					CTile Updated = Tile;
+					Updated.m_Index = Index;
+					Updated.m_Flags = Flags;
+					pLayer->RecordStateChange(x, y, Tile, Updated);
+					Tile = Updated;
+				};
+
+				for(size_t i = 0; i < Run.m_vIndexRules.size(); ++i)
 				{
-					CIndexRule *pIndexRule = &pRun->m_vIndexRules[i];
-					if(pReadTile->m_Index == 0)
+					const CIndexRule *pIndexRule = &Run.m_vIndexRules[i];
+					if(ReadTile.m_Index == 0)
 					{
-						if(pTile->m_Index != 0 && IsFilterable) // TODO: This is a lazy workaround
+						if(Tile.m_Index != 0 && IsFilterable) // TODO: This is a lazy workaround
 						{
-							CTile Previous = *pTile;
-							pTile->m_Index = 0;
-							pTile->m_Flags = pIndexRule->m_Flag;
-							pLayer->RecordStateChange(x, y, Previous, *pTile);
+							ApplyTile(0, pIndexRule->m_Flag);
 							continue;
 						}
 
 						if(pIndexRule->m_SkipEmpty) // skip empty tiles
 							continue;
 					}
-					if(pIndexRule->m_SkipFull && pReadTile->m_Index != 0) // skip full tiles
+					if(pIndexRule->m_SkipFull && ReadTile.m_Index != 0) // skip full tiles
 						continue;
 
 					bool RespectRules = true;
 					for(size_t j = 0; j < pIndexRule->m_vRules.size() && RespectRules; ++j)
 					{
-						CPosRule *pRule = &pIndexRule->m_vRules[j];
+						const CPosRule *pRule = &pIndexRule->m_vRules[j];
 
 						int CheckIndex, CheckFlags;
-						int CheckX = x + pRule->m_X;
-						int CheckY = y + pRule->m_Y;
+						const int64_t CheckX = static_cast<int64_t>(x) + pRule->m_X;
+						const int64_t CheckY = static_cast<int64_t>(y) + pRule->m_Y;
 						if(CheckX >= 0 && CheckX < LayerWidth && CheckY >= 0 && CheckY < LayerHeight)
 						{
-							int CheckTile = CheckY * LayerWidth + CheckX;
-							CheckIndex = pReadLayer->m_pTiles[CheckTile].m_Index;
-							CheckFlags = pReadLayer->m_pTiles[CheckTile].m_Flags & (TILEFLAG_ROTATE | TILEFLAG_XFLIP | TILEFLAG_YFLIP);
+							const CTile &CheckTile = EditorAutomap::ReadTile(pReadLayer->m_pTiles, pReadLayer->m_Width, pReadLayer->m_Height,
+								static_cast<int>(CheckX), static_cast<int>(CheckY));
+							CheckIndex = CheckTile.m_Index;
+							CheckFlags = CheckTile.m_Flags & (TILEFLAG_ROTATE | TILEFLAG_XFLIP | TILEFLAG_YFLIP);
 						}
 						else
 						{
@@ -659,23 +704,24 @@ void CAutomapper::Proceed(CLayerTiles *pLayer, CLayerTiles *pGameLayer, int Refe
 						PassesModuloCheck = true;
 					else
 						PassesModuloCheck = std::any_of(pIndexRule->m_vModuloRules.cbegin(), pIndexRule->m_vModuloRules.cend(), [&](const CModuloRule &ModuloRule) {
-							return (x + SeedOffsetX + ModuloRule.m_OffsetX) % ModuloRule.m_ModX == 0 && (y + SeedOffsetY + ModuloRule.m_OffsetY) % ModuloRule.m_ModY == 0;
+							return (AbsoluteX + ModuloRule.m_OffsetX) % ModuloRule.m_ModX == 0 && (AbsoluteY + ModuloRule.m_OffsetY) % ModuloRule.m_ModY == 0;
 						});
 
 					if(RespectRules && PassesModuloCheck &&
-						(pIndexRule->m_RandomProbability >= 1.0f || HashLocation(Seed, h, i, x + SeedOffsetX, y + SeedOffsetY) < HASH_MAX * pIndexRule->m_RandomProbability))
+						(pIndexRule->m_RandomProbability >= 1.0f ||
+							HashLocation(Seed, h, i, static_cast<uint32_t>(AbsoluteX), static_cast<uint32_t>(AbsoluteY)) < HASH_MAX * pIndexRule->m_RandomProbability))
 					{
-						CTile Previous = *pTile;
-						pTile->m_Index = pIndexRule->m_Id;
-						pTile->m_Flags = pIndexRule->m_Flag;
-						pLayer->RecordStateChange(x, y, Previous, *pTile);
+						ApplyTile(pIndexRule->m_Id, pIndexRule->m_Flag);
 					}
 				}
 			}
 		}
-
-		// clean-up
-		if(pRun->m_AutomapCopy && pReadLayer != pLayer)
-			delete pReadLayer;
 	}
+
+	HistoryRollback.Commit();
+	pLayer->Map()->OnModify();
+}
+catch(const std::bad_alloc &)
+{
+	log_error("editor/automap", "Not enough memory to run the automapper");
 }

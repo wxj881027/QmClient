@@ -13,6 +13,8 @@
 #include <cmath>
 #include <limits>
 #include <map>
+#include <new>
+#include <stdexcept>
 #include <tuple>
 
 namespace
@@ -20,6 +22,11 @@ namespace
 	constexpr float EPSILON = 0.00001f;
 	constexpr int GRID_SIZE = 256;
 	constexpr int MAX_GRID_CELLS = 4096;
+
+	bool FinitePoint(vec2 Point)
+	{
+		return std::isfinite(Point.x) && std::isfinite(Point.y);
+	}
 
 	uint64_t GridKey(int X, int Y)
 	{
@@ -431,23 +438,30 @@ bool CQmAxiomQuadCollision::BoundsOverlap(const CCollisionQuad &Quad, vec2 Min, 
 }
 
 void CQmAxiomQuadCollision::QueryBox(vec2 Min, vec2 Max, std::vector<int> &vIndices) const
+try
 {
 	vIndices.clear();
+	if(!FinitePoint(Min) || !FinitePoint(Max) || Min.x > Max.x || Min.y > Max.y)
+		return;
+
+	// 先检查网格跨度再转为 int，范围过大则按图层顺序直接收集相交四边形。
+	const double Left = std::floor(Min.x / GRID_SIZE), Top = std::floor(Min.y / GRID_SIZE);
+	const double Right = std::floor(Max.x / GRID_SIZE), Bottom = std::floor(Max.y / GRID_SIZE);
+	if(Left < std::numeric_limits<int>::min() || Top < std::numeric_limits<int>::min() ||
+		Right >= std::numeric_limits<int>::max() || Bottom >= std::numeric_limits<int>::max() ||
+		(Right - Left + 1) * (Bottom - Top + 1) > MAX_GRID_CELLS)
+	{
+		for(size_t i = 0; i < m_vQuads.size(); ++i)
+			if(BoundsOverlap(m_vQuads[i], Min, Max))
+				vIndices.push_back(static_cast<int>(i));
+		return;
+	}
+
 	for(int Index : m_vLargeQuads)
 		if(BoundsOverlap(m_vQuads[Index], Min, Max))
 			vIndices.push_back(Index);
-	const int MinX = std::floor(Min.x / GRID_SIZE), MinY = std::floor(Min.y / GRID_SIZE);
-	const int MaxX = std::floor(Max.x / GRID_SIZE), MaxY = std::floor(Max.y / GRID_SIZE);
-	if((int64_t(MaxX) - MinX + 1) * (int64_t(MaxY) - MinY + 1) > MAX_GRID_CELLS)
-	{
-		vIndices.clear();
-		for(size_t i = 0; i < m_vQuads.size(); ++i)
-			if(BoundsOverlap(m_vQuads[i], Min, Max))
-				vIndices.push_back(i);
-		return;
-	}
-	for(int y = MinY; y <= MaxY; ++y)
-		for(int x = MinX; x <= MaxX; ++x)
+	for(int y = static_cast<int>(Top); y <= static_cast<int>(Bottom); ++y)
+		for(int x = static_cast<int>(Left); x <= static_cast<int>(Right); ++x)
 		{
 			const auto Cell = m_Grid.find(GridKey(x, y));
 			if(Cell != m_Grid.end())
@@ -458,6 +472,15 @@ void CQmAxiomQuadCollision::QueryBox(vec2 Min, vec2 Max, std::vector<int> &vIndi
 	std::sort(vIndices.begin(), vIndices.end());
 	vIndices.erase(std::unique(vIndices.begin(), vIndices.end()), vIndices.end());
 }
+catch(const std::bad_alloc &)
+{
+	// 分配失败时丢弃本次不完整的命中，常规瓦片碰撞仍由 CCollision 处理。
+	vIndices.clear();
+}
+catch(const std::length_error &)
+{
+	vIndices.clear();
+}
 
 const std::vector<int> &CQmAxiomQuadCollision::QueryPoint(vec2 Pos, std::vector<int> &vFallback) const
 {
@@ -466,7 +489,11 @@ const std::vector<int> &CQmAxiomQuadCollision::QueryPoint(vec2 Pos, std::vector<
 		QueryBox(Pos, Pos, vFallback);
 		return vFallback;
 	}
-	const auto Cell = m_Grid.find(GridKey(std::floor(Pos.x / GRID_SIZE), std::floor(Pos.y / GRID_SIZE)));
+	const double X = std::floor(Pos.x / GRID_SIZE), Y = std::floor(Pos.y / GRID_SIZE);
+	if(!(X >= std::numeric_limits<int>::min() && X <= std::numeric_limits<int>::max() &&
+		Y >= std::numeric_limits<int>::min() && Y <= std::numeric_limits<int>::max()))
+		return vFallback;
+	const auto Cell = m_Grid.find(GridKey(static_cast<int>(X), static_cast<int>(Y)));
 	// 网格索引保持图层顺序，点查询直接借用索引。
 	return Cell != m_Grid.end() ? Cell->second : vFallback;
 }
@@ -508,12 +535,21 @@ bool CQmAxiomQuadCollision::HasTile(vec2 Pos, int Tile) const
 }
 
 std::vector<int> CQmAxiomQuadCollision::TilesAt(vec2 Pos) const
+try
 {
 	std::vector<int> vIndices, vTiles;
 	for(int Index : QueryPoint(Pos, vIndices))
 		if(BoundsOverlap(m_vQuads[Index], Pos, Pos) && PointInside(Pos, m_vQuads[Index].m_vPolygon))
 			vTiles.push_back(m_vQuads[Index].m_Tile);
 	return vTiles;
+}
+catch(const std::bad_alloc &)
+{
+	return {};
+}
+catch(const std::length_error &)
+{
+	return {};
 }
 
 int CQmAxiomQuadCollision::TuneZoneAt(vec2 Pos) const
@@ -606,6 +642,8 @@ bool CQmAxiomQuadCollision::Pushout(vec2 Pos, vec2 HalfSize, vec2 *pPush, vec2 *
 
 int CQmAxiomQuadCollision::IntersectLine(vec2 From, vec2 To, float *pFraction, vec2 *pNormal) const
 {
+	if(!FinitePoint(From) || !FinitePoint(To))
+		return 0;
 	std::vector<int> vIndices;
 	QueryBox(vec2(std::min(From.x, To.x), std::min(From.y, To.y)), vec2(std::max(From.x, To.x), std::max(From.y, To.y)), vIndices);
 	float Best = 2;

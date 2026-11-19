@@ -101,37 +101,52 @@ public:
 	CSettingsFontSelection &operator=(const CSettingsFontSelection &) = delete;
 	CSettingsFontSelection(CSettingsFontSelection &&) = delete;
 	CSettingsFontSelection &operator=(CSettingsFontSelection &&) = delete;
-	bool Update(const std::vector<std::string> &vFamilies, const char *pConfig, const char *pPrefix, const char *pEmptyLabel)
+	bool Update(const std::vector<std::string> &vFamilies, const char *pConfig, const char *pPrefix, const char *pEmptyLabel) noexcept
 	{
 		const char *pConfigValue = pConfig != nullptr ? pConfig : "";
 		const char *pPrefixValue = pPrefix != nullptr ? pPrefix : "";
 		const char *pEmptyValue = pEmptyLabel != nullptr ? pEmptyLabel : "";
 		if(m_Initialized && m_vFamilies == vFamilies && m_Config == pConfigValue && m_Prefix == pPrefixValue && m_EmptyLabel == pEmptyValue && m_HasPrefix == (pPrefix != nullptr))
 			return false;
-		m_Initialized = true;
-		m_vFamilies = vFamilies;
-		m_Config = pConfigValue;
-		m_Prefix = pPrefixValue;
-		m_EmptyLabel = pEmptyValue;
-		m_HasPrefix = pPrefix != nullptr;
-		m_vNamesOwned.clear();
-		if(pPrefix != nullptr)
-			m_vNamesOwned.push_back(m_Prefix);
-		m_vNamesOwned.insert(m_vNamesOwned.end(), vFamilies.begin(), vFamilies.end());
-		const int Family = QmFontFamilySelection(m_Config.c_str(), vFamilies);
-		m_Selected = Family >= 0 ? Family + (pPrefix != nullptr ? 1 : 0) : -1;
-		if(m_Config.empty() && pPrefix != nullptr)
-			m_Selected = 0;
-		if(m_Selected < 0)
+		try
 		{
-			m_Selected = static_cast<int>(m_vNamesOwned.size());
-			m_vNamesOwned.push_back(m_Config.empty() ? m_EmptyLabel : m_Config);
+			// 名称、借用指针和缓存键一起发布；准备失败保留旧列表，下一帧重试。
+			CSettingsFontSelection Candidate;
+			Candidate.m_vFamilies = vFamilies;
+			Candidate.m_Config = pConfigValue;
+			Candidate.m_Prefix = pPrefixValue;
+			Candidate.m_EmptyLabel = pEmptyValue;
+			Candidate.m_HasPrefix = pPrefix != nullptr;
+			if(pPrefix != nullptr)
+				Candidate.m_vNamesOwned.push_back(Candidate.m_Prefix);
+			Candidate.m_vNamesOwned.insert(Candidate.m_vNamesOwned.end(), vFamilies.begin(), vFamilies.end());
+			const int Family = QmFontFamilySelection(Candidate.m_Config.c_str(), vFamilies);
+			Candidate.m_Selected = Family >= 0 ? Family + (pPrefix != nullptr ? 1 : 0) : -1;
+			if(Candidate.m_Config.empty() && pPrefix != nullptr)
+				Candidate.m_Selected = 0;
+			if(Candidate.m_Selected < 0)
+			{
+				Candidate.m_Selected = static_cast<int>(Candidate.m_vNamesOwned.size());
+				Candidate.m_vNamesOwned.push_back(Candidate.m_Config.empty() ? Candidate.m_EmptyLabel : Candidate.m_Config);
+			}
+			Candidate.m_vNames.reserve(Candidate.m_vNamesOwned.size());
+			for(const auto &Name : Candidate.m_vNamesOwned)
+				Candidate.m_vNames.push_back(Name.c_str());
+			m_vFamilies.swap(Candidate.m_vFamilies);
+			m_Config.swap(Candidate.m_Config);
+			m_Prefix.swap(Candidate.m_Prefix);
+			m_EmptyLabel.swap(Candidate.m_EmptyLabel);
+			m_vNamesOwned.swap(Candidate.m_vNamesOwned);
+			m_vNames.swap(Candidate.m_vNames);
+			m_HasPrefix = Candidate.m_HasPrefix;
+			m_Selected = Candidate.m_Selected;
+			m_Initialized = true;
+			return true;
 		}
-		m_vNames.clear();
-		m_vNames.reserve(m_vNamesOwned.size());
-		for(const auto &Name : m_vNamesOwned)
-			m_vNames.push_back(Name.c_str());
-		return true;
+		catch(...)
+		{
+			return false;
+		}
 	}
 	int Selected() const { return m_Selected; }
 	const std::vector<const char *> &Names() const { return m_vNames; }

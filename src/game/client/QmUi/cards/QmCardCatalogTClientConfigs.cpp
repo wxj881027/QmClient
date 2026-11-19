@@ -123,11 +123,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 		int m_LastValue = 0;
 		bool m_Inited = false;
 	};
-	struct SStrState
-	{
-		CLineInputBuffered<512> m_Input;
-		bool m_Inited = false;
-	};
 	struct SColState
 	{
 		unsigned m_LastValue = 0;
@@ -135,10 +130,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 		bool m_Inited = false;
 	};
 	static std::unordered_map<const SConfigVariable *, SIntState> s_IntInputs;
-	static std::unordered_map<const SConfigVariable *, SStrState> s_StrInputs;
+	static std::unordered_map<const SConfigVariable *, CTClientConfigStringInput> s_StrInputs;
 	static std::unordered_map<const SConfigVariable *, SColState> s_ColInputs;
 	static std::unordered_map<const SConfigVariable *, SIntState> s_ReadOnlyIntInputs;
-	static std::unordered_map<const SConfigVariable *, SStrState> s_ReadOnlyStrInputs;
+	static std::unordered_map<const SConfigVariable *, CTClientConfigStringInput> s_ReadOnlyStrInputs;
 	static std::unordered_map<const SConfigVariable *, SColState> s_ReadOnlyColInputs;
 	auto &IntInputs = ReadOnly ? s_ReadOnlyIntInputs : s_IntInputs;
 	auto &StrInputs = ReadOnly ? s_ReadOnlyStrInputs : s_StrInputs;
@@ -208,6 +203,21 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 		const bool ApplyClicked = DoTClientSettingsButton_Menu(&s_ApplyBtn, "tclient-config-apply-changes", apConfigActionLabels[0], DisabledStyle, &ApplyBtn);
 		if(ChangesCount > 0 && ApplyClicked)
 		{
+			std::vector<std::string> vStringCommands;
+			vStringCommands.reserve(s_StagedStrs.size());
+			for(const SConfigVariable *pVar : SortStagedKeys(s_StagedStrs))
+			{
+				const auto &Variable = *static_cast<const SStringConfigVariable *>(pVar);
+				auto Command = PrepareTClientConfigStringCommand(*Console(), Variable, s_StagedStrs.at(pVar).m_Value.c_str());
+				if(!Command)
+				{
+					char aWarning[256];
+					str_format(aWarning, sizeof(aWarning), Localize("Could not apply %s. The console could not parse the value."), Variable.m_pScriptName);
+					Client()->AddWarning(SWarning(aWarning));
+					return;
+				}
+				vStringCommands.push_back(std::move(*Command));
+			}
 			for(const SConfigVariable *pVar : SortStagedKeys(s_StagedInts))
 			{
 				const auto Entry = s_StagedInts.find(pVar);
@@ -216,18 +226,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 				str_format(aCmd, sizeof(aCmd), "%s %d", pVar->m_pScriptName, Entry->second.m_Value);
 				Console()->ExecuteLine(aCmd);
 			}
-			for(const SConfigVariable *pVar : SortStagedKeys(s_StagedStrs))
-			{
-				const auto Entry = s_StagedStrs.find(pVar);
-				dbg_assert(Entry != s_StagedStrs.end(), "missing staged string");
-				char aEsc[1024];
-				aEsc[0] = '\0';
-				char *pDst = aEsc;
-				str_escape(&pDst, Entry->second.m_Value.c_str(), aEsc + sizeof(aEsc));
-				char aCmd[1200];
-				str_format(aCmd, sizeof(aCmd), "%s \"%s\"", pVar->m_pScriptName, aEsc);
-				Console()->ExecuteLine(aCmd);
-			}
+			for(const std::string &Command : vStringCommands)
+				Console()->ExecuteLine(Command.c_str());
 			for(const SConfigVariable *pVar : SortStagedKeys(s_StagedCols))
 			{
 				const auto Entry = s_StagedCols.find(pVar);
@@ -707,25 +707,17 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 			else if(pVar->m_Type == SConfigVariable::VAR_STRING)
 			{
 				const SStringConfigVariable *pStr = static_cast<const SStringConfigVariable *>(pVar);
-				SStrState &State = StrInputs[pVar];
 				Ui()->DoConfigTooltip(pVar, &Right, pStr->m_pStr);
 				GameClient()->m_Tooltips.DoToolTipForRect(pVar, &Right, BuildLocalizedConfigHelpText(pVar).c_str());
 				const auto StagedStr = s_StagedStrs.find(pVar);
 				const char *Effective = StagedStr != s_StagedStrs.end() ? StagedStr->second.m_Value.c_str() : pStr->m_pStr;
-				if(!State.m_Inited)
-				{
-					State.m_Input.Set(Effective);
-					State.m_Inited = true;
-				}
-				else if(!State.m_Input.IsActive())
-				{
-					if(str_comp(State.m_Input.GetString(), Effective) != 0)
-						State.m_Input.Set(Effective);
-				}
+				CLineInput &Input = StrInputs.try_emplace(pVar, *pStr, Effective).first->second.m_Input;
+				if(!Input.IsActive() && str_comp(Input.GetString(), Effective) != 0)
+					Input.Set(Effective);
 
-				if(ui_widget::InputField(TClientConfigTextInputCtx, &State.m_Input, Controls, nullptr, EditBoxFontSize))
+				if(ui_widget::InputField(TClientConfigTextInputCtx, &Input, Controls, nullptr, EditBoxFontSize))
 				{
-					const char *NewVal = State.m_Input.GetString();
+					const char *NewVal = Input.GetString();
 					if(str_comp(NewVal, pStr->m_pStr) == 0)
 						s_StagedStrs.erase(pVar);
 					else

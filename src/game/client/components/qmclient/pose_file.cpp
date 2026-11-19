@@ -8,8 +8,8 @@ namespace qm_pose
 {
 	namespace
 	{
-		// 名字/clan/skin 都是「4 个 int32 打包一串字符」：每个字节是 ASCII + 128，
-		// 遇到 0 即结束。与 gamecore 的 StrToInts / IntsToStr 同构，但这里不依赖那些
+		// 名字/clan/skin 按 int32 每组打包四个字节：每个字节加 128 后按模 256 保存，
+		// 解包后遇到 0 即结束。字节布局与 gamecore 的 StrToInts / IntsToStr 一致，但不依赖那些
 		// 只在 game 模块可见的函数，解析层保持独立、可单测。
 		void UnpackChars(const int32_t *pInts, size_t NumInts, char *pOut, size_t OutSize)
 		{
@@ -25,9 +25,8 @@ namespace qm_pose
 						pOut[Written] = '\0';
 						return;
 					}
-					// 按原样保留字节：该格式用「字节 + 128」打包，非 ASCII 字符（中文名）
-					// 会在写入端就溢出丢位，读回来必然不是原文。这里不做二次加工，
-					// 交给渲染层的 UTF-8 解码按替换字符显示——伪造一个"正确"的名字更糟。
+					// 按模 256 还原原始字节，UTF-8 的多字节字符也能保留；
+					// 这里不改写非法编码，交给渲染层的 UTF-8 解码处理。
 					pOut[Written++] = (char)(Value & 0xff);
 				}
 			}

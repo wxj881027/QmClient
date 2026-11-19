@@ -229,7 +229,7 @@ void CFileBrowser::Render()
 			str_copy(m_aSelectedFileDisplayName, m_SelectedFileIndex >= 0 ? m_vpFilteredFileList[m_SelectedFileIndex]->m_aDisplayName : "");
 			UpdateFilenameInput();
 			m_ListBox.ScrollToSelected();
-			m_PreviewState = EPreviewState::UNLOADED;
+			ResetPreview();
 		}
 	}
 
@@ -289,7 +289,7 @@ void CFileBrowser::Render()
 				m_FilenameInput.WasChanged(); // this clears the changed flag
 			}
 		}
-		m_PreviewState = EPreviewState::UNLOADED;
+		ResetPreview();
 	}
 
 	// Buttons
@@ -305,9 +305,16 @@ void CFileBrowser::Render()
 	{
 		if(IsDir)
 		{
+			const CFilelistItem &Item = *m_vpFilteredFileList[m_SelectedFileIndex];
+			const bool ParentFolder = str_comp(Item.m_aFilename, "..") == 0;
+			char aChildPath[IO_MAX_PATH_LENGTH];
+			if(!ParentFolder && !Item.m_IsLink && !BuildCurrentEntryPath(aChildPath, Item.m_aFilename, Item.m_StorageType))
+			{
+				Editor()->ShowFileDialogError(Localize("The file path is too long.", "Editor"));
+				return;
+			}
 			m_FilterInput.Clear();
 			Ui()->SetActiveItem(&m_FilterInput);
-			const bool ParentFolder = str_comp(m_vpFilteredFileList[m_SelectedFileIndex]->m_aFilename, "..") == 0;
 			if(ParentFolder)
 			{
 				str_copy(m_aSelectedFileDisplayName, fs_filename(m_pCurrentPath));
@@ -337,15 +344,14 @@ void CFileBrowser::Render()
 			}
 			else // sub folder
 			{
-				if(m_vpFilteredFileList[m_SelectedFileIndex]->m_IsLink)
+				if(Item.m_IsLink)
 				{
 					m_pCurrentPath = m_aCurrentLink; // follow the link
-					str_copy(m_aCurrentLink, m_vpFilteredFileList[m_SelectedFileIndex]->m_aFilename);
+					str_copy(m_aCurrentLink, Item.m_aFilename);
 				}
 				else
 				{
-					str_append(m_pCurrentPath, "/", IO_MAX_PATH_LENGTH);
-					str_append(m_pCurrentPath, m_vpFilteredFileList[m_SelectedFileIndex]->m_aFilename, IO_MAX_PATH_LENGTH);
+					str_copy(m_pCurrentPath, aChildPath, IO_MAX_PATH_LENGTH);
 				}
 				if(m_ShowingRoot)
 				{
@@ -356,25 +362,52 @@ void CFileBrowser::Render()
 			FilelistPopulate(m_StorageType, ParentFolder);
 			UpdateFilenameInput();
 		}
-		else // file
+		else if(m_SaveAction || m_SelectedFileIndex >= 0)
 		{
 			const int StorageType = m_SelectedFileIndex >= 0 ? m_vpFilteredFileList[m_SelectedFileIndex]->m_StorageType : m_StorageType;
 
 			char aFilename[IO_MAX_PATH_LENGTH];
-			str_copy(aFilename, m_FilenameInput.GetString());
-			if(!str_endswith(aFilename, FILETYPE_EXTENSIONS[(int)m_FileType]))
+			const char *pFilename;
+			if(m_SaveAction)
 			{
-				str_append(aFilename, FILETYPE_EXTENSIONS[(int)m_FileType]);
+				const char *pTypedName = m_FilenameInput.GetString();
+				const char *pExtension = FILETYPE_EXTENSIONS[(int)m_FileType];
+				const char *pSuffix = str_endswith(pTypedName, pExtension) ? "" : pExtension;
+				if(str_length(pTypedName) + str_length(pSuffix) >= IO_MAX_PATH_LENGTH)
+				{
+					Editor()->ShowFileDialogError(Localize("The file path is too long.", "Editor"));
+					return;
+				}
+				str_format(aFilename, sizeof(aFilename), "%s%s", pTypedName, pSuffix);
+				if(!str_valid_filename(aFilename))
+				{
+					Editor()->ShowFileDialogError(Localize("This name cannot be used for files and folders.", "Editor"));
+					return;
+				}
+				pFilename = aFilename;
+			}
+			else
+			{
+				pFilename = m_vpFilteredFileList[m_SelectedFileIndex]->m_aFilename;
 			}
 
 			char aSaveFilePath[IO_MAX_PATH_LENGTH];
-			str_format(aSaveFilePath, sizeof(aSaveFilePath), "%s/%s", m_pCurrentPath, aFilename);
-
-			if(m_SaveAction && !str_valid_filename(aFilename))
+			if(!BuildCurrentEntryPath(aSaveFilePath, pFilename, StorageType))
 			{
-				Editor()->ShowFileDialogError(Localize("This name cannot be used for files and folders.", "Editor"));
+				Editor()->ShowFileDialogError(Localize("The file path is too long.", "Editor"));
+				return;
 			}
-			else if(m_SaveAction && Storage()->FileExists(aSaveFilePath, StorageType))
+			if(m_SaveAction && m_FileType == EFileType::MAP)
+			{
+				char aTempPath[2 * IO_MAX_PATH_LENGTH];
+				IStorage::FormatTmpPath(aTempPath, sizeof(aTempPath), aSaveFilePath);
+				if(str_length(aTempPath) >= IO_MAX_PATH_LENGTH || !FitsStoragePath(aTempPath, StorageType))
+				{
+					Editor()->ShowFileDialogError(Localize("The file path is too long.", "Editor"));
+					return;
+				}
+			}
+			if(m_SaveAction && Storage()->FileExists(aSaveFilePath, StorageType))
 			{
 				m_PopupConfirmOverwrite.m_pFileBrowser = this;
 				str_copy(m_PopupConfirmOverwrite.m_aOverwritePath, aSaveFilePath);
@@ -384,9 +417,11 @@ void CFileBrowser::Render()
 					OriginalWidth / 2.0f - PopupWidth / 2.0f, OriginalHeight / 2.0f - PopupHeight / 2.0f, PopupWidth, PopupHeight,
 					&m_PopupConfirmOverwrite, CPopupConfirmOverwrite::Render);
 			}
-			else if(m_pfnOpenCallback && (m_SaveAction || m_SelectedFileIndex >= 0))
+			else if(m_pfnOpenCallback)
 			{
 				m_pfnOpenCallback(aSaveFilePath, StorageType, m_pOpenCallbackUser);
+				if(Editor()->m_Dialog != DIALOG_FILE)
+					return;
 			}
 		}
 	}
@@ -397,6 +432,7 @@ void CFileBrowser::Render()
 		(m_ListBox.Active() && Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)))
 	{
 		Editor()->OnDialogClose();
+		return;
 	}
 
 	ButtonBar.VSplitRight(ButtonSpacing, &ButtonBar, nullptr);
@@ -413,9 +449,13 @@ void CFileBrowser::Render()
 		ButtonBar.VSplitRight(90.0f, &ButtonBar, &Button);
 		if(Editor()->DoButton_Editor(&m_ButtonShowDirectoryId, Localize("Show Directory", "Editor"), 0, &Button, BUTTONFLAG_LEFT, Localize("Open the current directory in the file browser.", "Editor")))
 		{
-			char aOpenPath[IO_MAX_PATH_LENGTH];
+			char aOpenPath[2 * IO_MAX_PATH_LENGTH];
 			Storage()->GetCompletePath(m_vpFilteredFileList[m_SelectedFileIndex]->m_StorageType, m_pCurrentPath, aOpenPath, sizeof(aOpenPath));
-			if(!Client()->ViewFile(aOpenPath))
+			if(str_length(aOpenPath) >= IO_MAX_PATH_LENGTH)
+			{
+				Editor()->ShowFileDialogError(Localize("The file path is too long.", "Editor"));
+			}
+			else if(!Client()->ViewFile(aOpenPath))
 			{
 				Editor()->ShowFileDialogError(Localize("Failed to open the directory '%s'.", "Editor"), aOpenPath);
 			}
@@ -429,12 +469,17 @@ void CFileBrowser::Render()
 		!m_vpFilteredFileList[m_SelectedFileIndex]->m_IsLink &&
 		str_comp(m_vpFilteredFileList[m_SelectedFileIndex]->m_aFilename, "..") != 0)
 	{
-		if(Editor()->DoButton_Editor(&m_ButtonDeleteId, Localize("Delete", "Editor"), 0, &Button, BUTTONFLAG_LEFT, IsDir ? Localize("Delete the selected folder.", "Editor") : Localize("Delete the selected file.", "Editor")) ||
+		const CFilelistItem &Item = *m_vpFilteredFileList[m_SelectedFileIndex];
+		if(Editor()->DoButton_Editor(&m_ButtonDeleteId, Localize("Delete", "Editor"), 0, &Button, BUTTONFLAG_LEFT, Item.m_IsDir ? Localize("Delete the selected folder.", "Editor") : Localize("Delete the selected file.", "Editor")) ||
 			(m_ListBox.Active() && Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE)))
 		{
+			if(!BuildCurrentEntryPath(m_PopupConfirmDelete.m_aDeletePath, Item.m_aFilename, Item.m_StorageType))
+			{
+				Editor()->ShowFileDialogError(Localize("The file path is too long.", "Editor"));
+				return;
+			}
 			m_PopupConfirmDelete.m_pFileBrowser = this;
-			m_PopupConfirmDelete.m_IsDirectory = IsDir;
-			str_format(m_PopupConfirmDelete.m_aDeletePath, sizeof(m_PopupConfirmDelete.m_aDeletePath), "%s/%s", m_pCurrentPath, m_vpFilteredFileList[m_SelectedFileIndex]->m_aFilename);
+			m_PopupConfirmDelete.m_IsDirectory = Item.m_IsDir;
 			constexpr float PopupWidth = 400.0f;
 			constexpr float PopupHeight = 150.0f;
 			Ui()->DoPopupMenu(&m_PopupConfirmDelete,
@@ -476,11 +521,30 @@ void CFileBrowser::OnEditorClose()
 
 void CFileBrowser::OnDialogClose()
 {
+	ResetPreview();
+}
+
+bool CFileBrowser::BuildCurrentEntryPath(char (&aPath)[IO_MAX_PATH_LENGTH], const char *pName, int StorageType)
+{
+	return FormatEntryPath(aPath, m_pCurrentPath, pName) && FitsStoragePath(aPath, StorageType);
+}
+
+bool CFileBrowser::FitsStoragePath(const char *pPath, int StorageType)
+{
+	// 存储操作会把存储根目录也拼进同样大小的缓冲区。
+	char aCompletePath[2 * IO_MAX_PATH_LENGTH];
+	Storage()->GetCompletePath(StorageType, pPath, aCompletePath, sizeof(aCompletePath));
+	return str_length(aCompletePath) < IO_MAX_PATH_LENGTH;
+}
+
+void CFileBrowser::ResetPreview()
+{
 	m_PreviewState = EPreviewState::UNLOADED;
 	Graphics()->UnloadTexture(&m_PreviewImage);
 	m_PreviewImageWidth = -1;
 	m_PreviewImageHeight = -1;
-	Sound()->UnloadSample(m_PreviewSound);
+	if(m_PreviewSound >= 0)
+		Sound()->UnloadSample(m_PreviewSound);
 	m_PreviewSound = -1;
 }
 
@@ -492,37 +556,35 @@ bool CFileBrowser::CanPreviewFile() const
 
 void CFileBrowser::UpdateFilePreview()
 {
-	if(m_PreviewState != EPreviewState::UNLOADED ||
-		!str_endswith(m_vpFilteredFileList[m_SelectedFileIndex]->m_aFilename, FILETYPE_EXTENSIONS[(int)m_FileType]))
+	const CFilelistItem &Item = *m_vpFilteredFileList[m_SelectedFileIndex];
+	if(m_PreviewState != EPreviewState::UNLOADED || Item.m_IsDir ||
+		!str_endswith(Item.m_aFilename, FILETYPE_EXTENSIONS[(int)m_FileType]))
 	{
 		return;
 	}
 
+	char aPath[IO_MAX_PATH_LENGTH];
+	m_PreviewState = EPreviewState::ERROR;
+	if(!BuildCurrentEntryPath(aPath, Item.m_aFilename, Item.m_StorageType))
+		return;
+
 	if(m_FileType == CFileBrowser::EFileType::IMAGE)
 	{
-		char aImagePath[IO_MAX_PATH_LENGTH];
-		str_format(aImagePath, sizeof(aImagePath), "%s/%s", m_pCurrentPath, m_vpFilteredFileList[m_SelectedFileIndex]->m_aFilename);
 		CImageInfo PreviewImageInfo;
-		if(Graphics()->LoadPng(PreviewImageInfo, aImagePath, m_vpFilteredFileList[m_SelectedFileIndex]->m_StorageType))
+		if(Graphics()->LoadPng(PreviewImageInfo, aPath, Item.m_StorageType))
 		{
-			Graphics()->UnloadTexture(&m_PreviewImage);
 			m_PreviewImageWidth = PreviewImageInfo.m_Width;
 			m_PreviewImageHeight = PreviewImageInfo.m_Height;
-			m_PreviewImage = Graphics()->LoadTextureRawMove(PreviewImageInfo, 0, aImagePath);
-			m_PreviewState = EPreviewState::LOADED;
-		}
-		else
-		{
-			m_PreviewState = EPreviewState::ERROR;
+			m_PreviewImage = Graphics()->LoadTextureRawMove(PreviewImageInfo, 0, aPath);
+			if(m_PreviewImage.IsValid() && !m_PreviewImage.IsNullTexture())
+				m_PreviewState = EPreviewState::LOADED;
 		}
 	}
 	else if(m_FileType == CFileBrowser::EFileType::SOUND)
 	{
-		char aSoundPath[IO_MAX_PATH_LENGTH];
-		str_format(aSoundPath, sizeof(aSoundPath), "%s/%s", m_pCurrentPath, m_vpFilteredFileList[m_SelectedFileIndex]->m_aFilename);
-		Sound()->UnloadSample(m_PreviewSound);
-		m_PreviewSound = Sound()->LoadOpus(aSoundPath, m_vpFilteredFileList[m_SelectedFileIndex]->m_StorageType);
-		m_PreviewState = m_PreviewSound == -1 ? EPreviewState::ERROR : EPreviewState::LOADED;
+		m_PreviewSound = Sound()->LoadOpus(aPath, Item.m_StorageType);
+		if(m_PreviewSound >= 0)
+			m_PreviewState = EPreviewState::LOADED;
 	}
 }
 
@@ -615,9 +677,10 @@ void CFileBrowser::UpdateFilenameInput()
 {
 	if(m_SelectedFileIndex >= 0 && !m_vpFilteredFileList[m_SelectedFileIndex]->m_IsDir)
 	{
+		const char *pFilename = m_vpFilteredFileList[m_SelectedFileIndex]->m_aFilename;
 		char aNameWithoutExt[IO_MAX_PATH_LENGTH];
-		fs_split_file_extension(m_vpFilteredFileList[m_SelectedFileIndex]->m_aFilename, aNameWithoutExt, sizeof(aNameWithoutExt));
-		m_FilenameInput.Set(aNameWithoutExt);
+		fs_split_file_extension(pFilename, aNameWithoutExt, sizeof(aNameWithoutExt));
+		m_FilenameInput.Set(m_SaveAction && str_endswith(aNameWithoutExt, FILETYPE_EXTENSIONS[(int)m_FileType]) ? pFilename : aNameWithoutExt);
 	}
 	else
 	{
@@ -627,6 +690,7 @@ void CFileBrowser::UpdateFilenameInput()
 
 void CFileBrowser::UpdateSelectedIndex(const char *pDisplayName)
 {
+	const int OldIndex = m_SelectedFileIndex;
 	m_SelectedFileIndex = -1;
 	m_aSelectedFileDisplayName[0] = '\0';
 	for(size_t i = 0; i < m_vpFilteredFileList.size(); i++)
@@ -642,6 +706,8 @@ void CFileBrowser::UpdateSelectedIndex(const char *pDisplayName)
 	{
 		m_ListBox.ScrollToSelected();
 	}
+	if(OldIndex != m_SelectedFileIndex)
+		ResetPreview();
 }
 
 void CFileBrowser::SortFilteredFileList()
@@ -704,6 +770,7 @@ void CFileBrowser::RefreshFilteredFileList()
 
 void CFileBrowser::FilelistPopulate(int StorageType, bool KeepSelection)
 {
+	m_vpFilteredFileList.clear();
 	m_vCompleteFileList.clear();
 	if(m_ShowingRoot)
 	{
@@ -771,7 +838,7 @@ void CFileBrowser::FilelistPopulate(int StorageType, bool KeepSelection)
 		m_SelectedFileIndex = m_vpFilteredFileList.empty() ? -1 : 0;
 		str_copy(m_aSelectedFileDisplayName, m_SelectedFileIndex >= 0 ? m_vpFilteredFileList[m_SelectedFileIndex]->m_aDisplayName : "");
 	}
-	m_PreviewState = EPreviewState::UNLOADED;
+	ResetPreview();
 }
 
 int CFileBrowser::DirectoryListingCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
@@ -889,10 +956,14 @@ CUi::EPopupMenuFunctionResult CFileBrowser::CPopupNewFolder::Render(void *pConte
 		(Active && pFileBrowser->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER)))
 	{
 		char aFolderPath[IO_MAX_PATH_LENGTH];
-		str_format(aFolderPath, sizeof(aFolderPath), "%s/%s", pFileBrowser->m_pCurrentPath, pNewFolderContext->m_NewFolderNameInput.GetString());
-		if(!str_valid_filename(pNewFolderContext->m_NewFolderNameInput.GetString()))
+		const char *pFolderName = pNewFolderContext->m_NewFolderNameInput.GetString();
+		if(!str_valid_filename(pFolderName))
 		{
 			pEditor->ShowFileDialogError(Localize("This name cannot be used for files and folders.", "Editor"));
+		}
+		else if(!pFileBrowser->BuildCurrentEntryPath(aFolderPath, pFolderName, pFileBrowser->m_StorageType))
+		{
+			pEditor->ShowFileDialogError(Localize("The file path is too long.", "Editor"));
 		}
 		else if(!pFileBrowser->Storage()->CreateFolder(aFolderPath, pFileBrowser->m_StorageType))
 		{
@@ -943,7 +1014,7 @@ CUi::EPopupMenuFunctionResult CFileBrowser::CPopupConfirmDelete::Render(void *pC
 		{
 			if(pFileBrowser->Storage()->RemoveFolder(pConfirmDeleteContext->m_aDeletePath, IStorage::TYPE_SAVE))
 			{
-				pFileBrowser->FilelistPopulate(IStorage::TYPE_SAVE, true);
+				pFileBrowser->FilelistPopulate(pFileBrowser->m_StorageType, true);
 			}
 			else
 			{
@@ -954,7 +1025,7 @@ CUi::EPopupMenuFunctionResult CFileBrowser::CPopupConfirmDelete::Render(void *pC
 		{
 			if(pFileBrowser->Storage()->RemoveFile(pConfirmDeleteContext->m_aDeletePath, IStorage::TYPE_SAVE))
 			{
-				pFileBrowser->FilelistPopulate(IStorage::TYPE_SAVE, true);
+				pFileBrowser->FilelistPopulate(pFileBrowser->m_StorageType, true);
 			}
 			else
 			{

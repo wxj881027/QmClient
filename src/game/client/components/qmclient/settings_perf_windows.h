@@ -6,7 +6,8 @@
 
 #include <algorithm>
 #include <cmath>
-#include <functional>
+#include <new>
+#include <stdexcept>
 #include <vector>
 
 struct SQmSettingsPerfWindowSummary
@@ -95,13 +96,15 @@ public:
 		if(ValidFrameTime)
 		{
 			const float FrameMs = RenderFrameTimeSeconds * 1000.0f;
+			if(!TryAppendFrameMs(FrameMs))
+				return {m_Summary.m_SampleFrames > 0, FinishActiveWindow()};
+
 			const float Fps = 1.0f / RenderFrameTimeSeconds;
 			m_Summary.m_SampleFrames++;
 			m_Summary.m_SampleSeconds += RenderFrameTimeSeconds;
 			if(m_Summary.m_WindowStartFrame == 0)
 				m_Summary.m_WindowStartFrame = FrameId;
 			m_Summary.m_WindowEndFrame = FrameId != 0 ? FrameId : m_Summary.m_WindowEndFrame;
-			m_vFrameMs.push_back(FrameMs);
 			m_Summary.m_FrameMsMax = maximum(m_Summary.m_FrameMsMax, FrameMs);
 			m_Summary.m_MenuMsMax = maximum(m_Summary.m_MenuMsMax, (float)MenuDurationMs);
 			m_Summary.m_FpsMin = m_Summary.m_FpsMin <= 0.0f ? Fps : minimum(m_Summary.m_FpsMin, Fps);
@@ -138,6 +141,23 @@ public:
 	}
 
 private:
+	bool TryAppendFrameMs(float FrameMs)
+	{
+		try
+		{
+			m_vFrameMs.push_back(FrameMs);
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+	}
+
 	SQmSettingsPerfWindowFrameResult FlushInterruptedWindow()
 	{
 		SQmSettingsPerfWindowFrameResult Result;
@@ -149,24 +169,18 @@ private:
 		return Result;
 	}
 
-	static float Percentile(std::vector<float> Values, int Percent)
+	float PercentileOfSortedFrames(int Percent) const
 	{
-		if(Values.empty())
-			return 0.0f;
-		std::sort(Values.begin(), Values.end());
-		const int Index = minimum((int)Values.size() - 1, maximum(0, (int)std::ceil((Percent / 100.0f) * Values.size()) - 1));
-		return Values[Index];
+		const int Index = minimum((int)m_vFrameMs.size() - 1, maximum(0, (int)std::ceil((Percent / 100.0f) * m_vFrameMs.size()) - 1));
+		return m_vFrameMs[Index];
 	}
 
-	static float OnePercentLowFpsFromFrameMs(std::vector<float> Values)
+	float OnePercentLowFpsOfSortedFrames() const
 	{
-		if(Values.empty())
-			return 0.0f;
-		std::sort(Values.begin(), Values.end(), std::greater<float>());
-		const int SlowFrameCount = minimum((int)Values.size(), maximum(1, (int)std::ceil((float)Values.size() * 0.01f)));
+		const int SlowFrameCount = minimum((int)m_vFrameMs.size(), maximum(1, (int)std::ceil((float)m_vFrameMs.size() * 0.01f)));
 		float SlowFrameMsTotal = 0.0f;
 		for(int i = 0; i < SlowFrameCount; ++i)
-			SlowFrameMsTotal += Values[i];
+			SlowFrameMsTotal += m_vFrameMs[m_vFrameMs.size() - 1 - i];
 		const float SlowFrameMsAvg = SlowFrameMsTotal / (float)SlowFrameCount;
 		return SlowFrameMsAvg > 0.0f ? 1000.0f / SlowFrameMsAvg : 0.0f;
 	}
@@ -175,11 +189,12 @@ private:
 	{
 		if(m_Summary.m_SampleFrames <= 0)
 			return;
+		std::sort(m_vFrameMs.begin(), m_vFrameMs.end());
 		m_Summary.m_FpsAvg = m_Summary.m_SampleSeconds > 0.0f ? (float)m_Summary.m_SampleFrames / m_Summary.m_SampleSeconds : 0.0f;
 		m_Summary.m_FrameMsAvg = m_Summary.m_SampleSeconds > 0.0f ? (m_Summary.m_SampleSeconds * 1000.0f) / (float)m_Summary.m_SampleFrames : 0.0f;
-		m_Summary.m_FrameMsP95 = Percentile(m_vFrameMs, 95);
-		m_Summary.m_FrameMsP99 = Percentile(m_vFrameMs, 99);
-		m_Summary.m_FpsOnePctLow = OnePercentLowFpsFromFrameMs(m_vFrameMs);
+		m_Summary.m_FrameMsP95 = PercentileOfSortedFrames(95);
+		m_Summary.m_FrameMsP99 = PercentileOfSortedFrames(99);
+		m_Summary.m_FpsOnePctLow = OnePercentLowFpsOfSortedFrames();
 	}
 
 	void Reset()

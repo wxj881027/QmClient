@@ -19,8 +19,16 @@ void CSmoothValue::SetValue(float Target)
 	float Derivative = 0.0f;
 	if(m_Smoothing)
 	{
-		Current = m_ValueSmoothing.Evaluate(Progress(Now));
-		Derivative = m_ValueSmoothing.Derivative(Progress(Now));
+		if(Now >= m_ValueSmoothingEnd)
+		{
+			Current = m_ValueSmoothingTarget;
+		}
+		else
+		{
+			const float CurrentProgress = Progress(Now);
+			Current = m_ValueSmoothing.Evaluate(CurrentProgress);
+			Derivative = m_ValueSmoothing.Derivative(CurrentProgress);
+		}
 	}
 
 	m_ValueSmoothingTarget = Target;

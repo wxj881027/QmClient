@@ -12,6 +12,8 @@
 #include <test/support/qm_ui_test_client.h>
 #include <test/support/qm_ui_test_input.h>
 
+#include <limits>
+
 namespace
 {
 	// 数值框路径的 GPU 提交静音：基座对 Blend/Wrap/DrawRect4/quad 容器等抛边界异常。
@@ -148,19 +150,38 @@ namespace
 			return Opt;
 		}
 
-		// 输入框在整行右缘（VSplitRight 出 ValueWidth）；点右缘内 6px 必中。
-		void ClickInputField()
+		void MovePointer(vec2 Position)
 		{
-			const vec2 Position(m_Rect.x + m_Rect.w - 6.0f, m_Rect.y + m_Rect.h * 0.5f);
 			const vec2 Pixels = Position * vec2(m_SilentGraphics.WindowWidth(), m_SilentGraphics.WindowHeight()) / m_Ui.Screen()->Size();
 			const vec2 Delta = Pixels - m_Ui.UpdatedMousePos();
 			m_Ui.OnCursorMove(Delta.x, Delta.y);
+		}
+
+		bool RenderField(const ui_widget::SNumericFieldOptions &Opt)
+		{
+			return ui_widget::NumericField(ui_widget::ControlContext(&m_Ui), &m_State, &m_Id, &m_Value, 2, 100, m_Rect, Opt);
+		}
+
+		// 输入框在整行右缘（VSplitRight 出 ValueWidth）；点右缘内 6px 必中。
+		void ClickInputField()
+		{
+			MovePointer(vec2(m_Rect.x + m_Rect.w - 6.0f, m_Rect.y + m_Rect.h * 0.5f));
 			m_Input.m_HeldKey = KEY_MOUSE_1;
 			BeginFrame();
-			ui_widget::NumericField(ui_widget::ControlContext(&m_Ui), &m_State, &m_Id, &m_Value, 2, 100, m_Rect, Options());
+			RenderField(Options());
 			m_Input.m_HeldKey = 0;
 			BeginFrame();
-			ui_widget::NumericField(ui_widget::ControlContext(&m_Ui), &m_State, &m_Id, &m_Value, 2, 100, m_Rect, Options());
+			RenderField(Options());
+		}
+
+		void StartSliderDrag(const ui_widget::SNumericFieldOptions &Opt)
+		{
+			MovePointer(vec2(m_Rect.x + 110.0f, m_Rect.y + m_Rect.h * 0.5f));
+			BeginFrame();
+			RenderField(Opt);
+			m_Input.m_HeldKey = KEY_MOUSE_1;
+			BeginFrame();
+			RenderField(Opt);
 		}
 	};
 
@@ -224,5 +245,122 @@ namespace
 		BeginFrame();
 		ui_widget::NumericField(ui_widget::ControlContext(&m_Ui), &m_State, &m_Id, &m_Value, 2, 100, m_Rect, Options());
 		EXPECT_FALSE(m_State.m_Input.IsActive()) << "小键盘回车后下一帧输入框复活";
+	}
+
+	TEST_F(QmNumericFieldEnter, SubmittingLargestIntegerClampsToUpperBound)
+	{
+		BeginFrame();
+		RenderField(Options());
+		ClickInputField();
+		ASSERT_TRUE(m_State.m_Input.IsActive());
+		m_State.m_Input.SetInteger(std::numeric_limits<int>::max());
+
+		PressKey(KEY_RETURN);
+		BeginFrame();
+		RenderField(Options());
+
+		EXPECT_EQ(m_Value, 100);
+		EXPECT_EQ(m_State.m_Input.GetInteger(), 100);
+	}
+
+	TEST_F(QmNumericFieldEnter, DelayedSliderDiscardsPendingValueAfterLosingCapture)
+	{
+		auto Opt = Options();
+		Opt.m_CommitPolicy = ui_widget::EInputCommitPolicy::ON_RELEASE_OR_SUBMIT;
+		StartSliderDrag(Opt);
+		ASSERT_TRUE(m_Ui.IsActiveItem(&m_Id));
+		ASSERT_TRUE(m_State.m_HasPendingValue);
+		ASSERT_EQ(m_Value, 25);
+
+		m_Input.m_HeldKey = 0;
+		BeginFrame();
+		m_Ui.StartCheck();
+		m_Ui.FinishCheck();
+		ASSERT_FALSE(m_Ui.IsActiveItem(&m_Id));
+		m_Value = 18;
+		ASSERT_NE(m_State.m_PendingStoredValue, m_Value);
+
+		BeginFrame();
+		EXPECT_FALSE(RenderField(Opt));
+		EXPECT_EQ(m_Value, 18);
+		EXPECT_EQ(m_State.m_Input.GetInteger(), 18);
+	}
+
+	TEST_F(QmNumericFieldEnter, DelayedSliderCommitsWhileItStillOwnsTheRelease)
+	{
+		auto Opt = Options();
+		Opt.m_CommitPolicy = ui_widget::EInputCommitPolicy::ON_RELEASE_OR_SUBMIT;
+		StartSliderDrag(Opt);
+		ASSERT_TRUE(m_Ui.IsActiveItem(&m_Id));
+		ASSERT_TRUE(m_State.m_HasPendingValue);
+		ASSERT_EQ(m_Value, 25);
+		const int Selected = m_State.m_PendingStoredValue;
+
+		m_Input.m_HeldKey = 0;
+		BeginFrame();
+
+		EXPECT_TRUE(RenderField(Opt));
+		EXPECT_EQ(m_Value, Selected);
+	}
+
+	TEST_F(QmNumericFieldEnter, ReturningToSliderEndpointKeepsStoredValueOutsideSliderRange)
+	{
+		auto Opt = Options();
+		Opt.m_CommitPolicy = ui_widget::EInputCommitPolicy::ON_RELEASE_OR_SUBMIT;
+		Opt.m_Flags = CUi::SCROLLBAR_OPTION_NOCLAMPVALUE | CUi::SCROLLBAR_OPTION_INFINITE;
+		Opt.m_InputMin = 0;
+		m_Value = 1;
+		StartSliderDrag(Opt);
+		ASSERT_TRUE(m_State.m_HasPendingValue);
+		ASSERT_EQ(m_Value, 1);
+
+		MovePointer(vec2(m_Rect.x + 1.0f, m_Rect.y + m_Rect.h * 0.5f));
+		BeginFrame();
+		RenderField(Opt);
+		m_Input.m_HeldKey = 0;
+		BeginFrame();
+
+		EXPECT_FALSE(RenderField(Opt));
+		EXPECT_EQ(m_Value, 1);
+	}
+
+	TEST_F(QmNumericFieldEnter, DelayedSliderCanSelectInfinityFromBelowFiniteRange)
+	{
+		auto Opt = Options();
+		Opt.m_CommitPolicy = ui_widget::EInputCommitPolicy::ON_RELEASE_OR_SUBMIT;
+		Opt.m_Flags = CUi::SCROLLBAR_OPTION_NOCLAMPVALUE | CUi::SCROLLBAR_OPTION_INFINITE;
+		Opt.m_InputMin = 0;
+		m_Value = 1;
+		StartSliderDrag(Opt);
+		ASSERT_TRUE(m_Ui.IsActiveItem(&m_Id));
+
+		MovePointer(vec2(m_Rect.x + m_Rect.w - 1.0f, m_Rect.y + m_Rect.h * 0.5f));
+		BeginFrame();
+		RenderField(Opt);
+		m_Input.m_HeldKey = 0;
+		BeginFrame();
+
+		EXPECT_TRUE(RenderField(Opt));
+		EXPECT_EQ(m_Value, 0);
+	}
+
+	TEST_F(QmNumericFieldEnter, DelayedSliderCanSelectFiniteMinimumFromInfinity)
+	{
+		auto Opt = Options();
+		Opt.m_CommitPolicy = ui_widget::EInputCommitPolicy::ON_RELEASE_OR_SUBMIT;
+		Opt.m_Flags = CUi::SCROLLBAR_OPTION_NOCLAMPVALUE | CUi::SCROLLBAR_OPTION_INFINITE;
+		Opt.m_InputMin = 0;
+		m_Value = 0;
+		StartSliderDrag(Opt);
+		ASSERT_TRUE(m_Ui.IsActiveItem(&m_Id));
+
+		MovePointer(vec2(m_Rect.x + 1.0f, m_Rect.y + m_Rect.h * 0.5f));
+		BeginFrame();
+		RenderField(Opt);
+		m_Input.m_HeldKey = 0;
+		BeginFrame();
+
+		EXPECT_TRUE(RenderField(Opt));
+		EXPECT_EQ(m_Value, 2);
 	}
 } // namespace

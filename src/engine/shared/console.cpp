@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <iterator> // std::size
+#include <memory>
 #include <new>
 
 // todo: rework this
@@ -491,6 +492,12 @@ bool CConsole::LineIsValid(const char *pStr)
 
 void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bool InterpretSemicolons)
 {
+	std::optional<CResult> ResultStorage;
+	ExecuteLineStroked(Stroke, pStr, ClientId, InterpretSemicolons, ResultStorage);
+}
+
+void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bool InterpretSemicolons, std::optional<CResult> &ResultStorage)
+{
 	const char *pWithoutPrefix = str_startswith(pStr, "mc;");
 	if(pWithoutPrefix)
 	{
@@ -499,7 +506,7 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bo
 	}
 	while(pStr && *pStr)
 	{
-		CResult Result(ClientId);
+		CResult &Result = ResultStorage.emplace(ClientId);
 		const char *pEnd = pStr;
 		const char *pNextPart = nullptr;
 		int InString = 0;
@@ -761,13 +768,18 @@ void CConsole::ExecuteLine(const char *pStr, int ClientId, bool InterpretSemicol
 
 void CConsole::ExecuteLineFlag(const char *pStr, int FlagMask, int ClientId, bool InterpretSemicolons)
 {
-	int Temp = m_FlagMask;
+	struct CRestoreFlagMask
+	{
+		int &m_FlagMask;
+		const int m_Previous;
+		~CRestoreFlagMask() { m_FlagMask = m_Previous; }
+	} Restore{m_FlagMask, m_FlagMask};
 	m_FlagMask = FlagMask;
 	ExecuteLine(pStr, ClientId, InterpretSemicolons);
-	m_FlagMask = Temp;
 }
 
 bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure, int StorageType, bool RejectInvalidLines)
+try
 {
 	int Count = 0;
 	// make sure that this isn't being executed already and that recursion limit isn't met
@@ -785,10 +797,13 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 	}
 
 	// push this one to the stack
-	CExecFile ThisFile;
-	CExecFile *pPrev = m_pFirstExec;
-	ThisFile.m_pFilename = pFilename;
-	ThisFile.m_pPrev = m_pFirstExec;
+	CExecFile ThisFile{pFilename, m_pFirstExec};
+	struct CRestoreExecStack
+	{
+		CExecFile *&m_pCurrent;
+		CExecFile *m_pPrevious;
+		~CRestoreExecStack() { m_pCurrent = m_pPrevious; }
+	} Restore{m_pFirstExec, ThisFile.m_pPrev};
 	m_pFirstExec = &ThisFile;
 
 	// exec the file
@@ -796,14 +811,22 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 	bool Success = false;
 	if(LineReader.OpenFile(m_pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType), RejectInvalidLines))
 	{
-		log_info("console", "executing '%s'", pFilename);
-
-		while(const char *pLine = LineReader.Get())
+		// 每层脚本独占解析缓冲，避免嵌套 exec 把大参数数组逐层留在调用栈上。
+		const std::unique_ptr<std::optional<CResult>> pResultStorage(new(std::nothrow) std::optional<CResult>);
+		if(pResultStorage)
 		{
-			ExecuteLine(pLine, ClientId);
+			log_info("console", "executing '%s'", pFilename);
+			while(const char *pLine = LineReader.Get())
+			{
+				ExecuteLineStroked(1, pLine, ClientId, true, *pResultStorage);
+				ExecuteLineStroked(0, pLine, ClientId, true, *pResultStorage);
+			}
+			Success = true;
 		}
-
-		Success = true;
+		else if(LogFailure)
+		{
+			log_error("console", "could not allocate command parser for '%s'", pFilename);
+		}
 	}
 	else if(LogFailure)
 	{
@@ -817,8 +840,12 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 			log_error("console", "failed to open '%s'", pFilename);
 	}
 
-	m_pFirstExec = pPrev;
 	return Success;
+}
+catch(...)
+{
+	log_error("console", "failed while executing '%s'", pFilename);
+	return false;
 }
 
 void CConsole::Con_Echo(IResult *pResult, void *pUserData)
@@ -955,11 +982,11 @@ void CConsole::TraverseChain(FCommandCallback *ppfnCallback, void **ppUserData)
 	}
 }
 
-CConsole::CConsole(int FlagMask)
+CConsole::CConsole(int FlagMask, CHeap::FAllocate TempAllocate) :
+	m_TempCommands(TempAllocate)
 {
 	m_FlagMask = FlagMask;
 	m_pRecycleList = nullptr;
-	m_TempCommands.Reset();
 	m_StoreCommands = true;
 	m_apStrokeStr[0] = "0";
 	m_apStrokeStr[1] = "1";
@@ -1104,16 +1131,24 @@ void CConsole::RegisterTemp(const char *pName, const char *pParams, int Flags, c
 	}
 	else
 	{
-		pCommand = new(m_TempCommands.Allocate(sizeof(CCommand))) CCommand;
-		char *pMem = static_cast<char *>(m_TempCommands.Allocate(TEMPCMD_NAME_LENGTH));
-		str_copy(pMem, pName, TEMPCMD_NAME_LENGTH);
-		pCommand->m_pName = pMem;
-		pMem = static_cast<char *>(m_TempCommands.Allocate(TEMPCMD_HELP_LENGTH));
-		str_copy(pMem, pHelp, TEMPCMD_HELP_LENGTH);
-		pCommand->m_pHelp = pMem;
-		pMem = static_cast<char *>(m_TempCommands.Allocate(TEMPCMD_PARAMS_LENGTH));
-		str_copy(pMem, pParams, TEMPCMD_PARAMS_LENGTH);
-		pCommand->m_pParams = pMem;
+		struct CTempCommand
+		{
+			CCommand m_Command;
+			char m_aName[TEMPCMD_NAME_LENGTH];
+			char m_aHelp[TEMPCMD_HELP_LENGTH];
+			char m_aParams[TEMPCMD_PARAMS_LENGTH];
+		};
+		void *pMemory = m_TempCommands.Allocate(sizeof(CTempCommand), alignof(CTempCommand));
+		if(!pMemory)
+			return;
+		auto *pEntry = new(pMemory) CTempCommand;
+		str_copy(pEntry->m_aName, pName);
+		str_copy(pEntry->m_aHelp, pHelp);
+		str_copy(pEntry->m_aParams, pParams);
+		pCommand = &pEntry->m_Command;
+		pCommand->m_pName = pEntry->m_aName;
+		pCommand->m_pHelp = pEntry->m_aHelp;
+		pCommand->m_pParams = pEntry->m_aParams;
 	}
 
 	pCommand->m_pfnCallback = nullptr;

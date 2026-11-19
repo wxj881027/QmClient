@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdint>
 #include <memory>
+#include <new>
 #include <string>
 #include <vector>
 
@@ -111,7 +112,15 @@ namespace QmChatAvatar
 		const auto &pSix = (Info.m_CustomColoredSkin ? Info.m_ColorableRenderSkin : Info.m_OriginalRenderSkin).m_QmChatAvatar;
 		if(!pSixupBody && !pSix)
 			return nullptr;
-		auto pSnapshot = std::make_shared<SSnapshot>();
+		std::shared_ptr<SSnapshot> pSnapshot;
+		try
+		{
+			pSnapshot = std::make_shared<SSnapshot>();
+		}
+		catch(const std::bad_alloc &)
+		{
+			return nullptr;
+		}
 		pSnapshot->m_aColors.fill(ui_token::color::NEUTRAL_WHITE);
 		if(pSixupBody)
 		{

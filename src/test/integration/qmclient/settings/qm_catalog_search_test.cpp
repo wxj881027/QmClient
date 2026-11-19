@@ -327,6 +327,22 @@ TEST(QmCatalogSearch, TitleMatchesRankAheadOfSettingText)
 	EXPECT_STREQ(Results.front().m_pStableId, "qm:voice");
 }
 
+TEST(QmCatalogSearch, UnicodeCaseInsensitiveExactTitleRanksAheadOfPartialTitle)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	const auto Results = qm_card_registry::SearchCards("SKIN", Model);
+	const auto Exact = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+		return str_comp(Result.m_pStableId, "deck:tee7-editor") == 0;
+	});
+	const auto Partial = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+		return str_comp(Result.m_pStableId, "deck:tee-skin-options") == 0;
+	});
+	ASSERT_NE(Exact, Results.end());
+	ASSERT_NE(Partial, Results.end());
+	EXPECT_LT(std::distance(Results.begin(), Exact), std::distance(Results.begin(), Partial));
+}
+
 TEST(QmCatalogSearch, ResultCarriesMatchedSettingText)
 {
 	qm_card_order::CModel Model;

@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cmath>
 #include <iterator>
+#include <new>
+#include <stdexcept>
 
 namespace
 {
@@ -15,7 +17,8 @@ namespace
 
 void CQmLineInputMotion::Reset()
 {
-	m_Runtime.Reset();
+	if(m_Runtime)
+		m_Runtime->Reset();
 	m_Text.clear();
 	m_vCharacters.clear();
 	m_vNextCharacters.clear();
@@ -53,13 +56,16 @@ void CQmLineInputMotion::ClearGlyph(SCharacter &Character)
 {
 	if(Character.m_NodeKey == 0)
 		return;
-	m_Runtime.SetValue(Character.m_NodeKey, EUiAnimProperty::SCALE, 0.0f);
+	m_Runtime->SetValue(Character.m_NodeKey, EUiAnimProperty::SCALE, 0.0f);
 	m_aUsedSlots[static_cast<size_t>(Character.m_NodeKey - 1)] = false;
 	Character.m_NodeKey = 0;
 }
 
 void CQmLineInputMotion::Update(const char *pText, std::chrono::nanoseconds Now, int MotionLevel, bool AnimateGlyphs)
+try
 {
+	if(!m_Runtime)
+		m_Runtime.emplace();
 	if(pText == nullptr)
 		pText = "";
 	if(m_TextInitialized)
@@ -69,7 +75,7 @@ void CQmLineInputMotion::Update(const char *pText, std::chrono::nanoseconds Now,
 		if(Elapsed < std::chrono::nanoseconds::zero() || Elapsed > std::chrono::milliseconds(250))
 			Reset();
 		else
-			m_Runtime.Advance(std::chrono::duration<float>(Elapsed).count());
+			m_Runtime->Advance(std::chrono::duration<float>(Elapsed).count());
 	}
 	m_LastUpdate = Now;
 	const int NewMotionLevel = qm_animation::NormalizeMotionLevel(MotionLevel);
@@ -79,24 +85,24 @@ void CQmLineInputMotion::Update(const char *pText, std::chrono::nanoseconds Now,
 	{
 		if(Character.m_NodeKey == 0)
 			continue;
-		if(!AnimateGlyphs || m_MotionLevel == 0 || !m_Runtime.HasActiveAnimation(Character.m_NodeKey, EUiAnimProperty::SCALE))
+		if(!AnimateGlyphs || m_MotionLevel == 0 || !m_Runtime->HasActiveAnimation(Character.m_NodeKey, EUiAnimProperty::SCALE))
 			ClearGlyph(Character);
 		else if(MotionChanged)
-			m_Runtime.RequestAnimation({Character.m_NodeKey, EUiAnimProperty::SCALE, 0.0f, Transition(qm_input_motion::GLYPH)});
+			m_Runtime->RequestAnimation({Character.m_NodeKey, EUiAnimProperty::SCALE, 0.0f, Transition(qm_input_motion::GLYPH)});
 	}
 	if(MotionChanged && m_CaretInitialized)
 	{
 		for(const auto Property : {EUiAnimProperty::POS_X, EUiAnimProperty::POS_Y})
 		{
 			const float Target = Property == EUiAnimProperty::POS_X ? m_CaretTarget.x : m_CaretTarget.y;
-			const float Current = m_Runtime.GetValue(CARET_NODE, Property, Target);
-			m_Runtime.SetValue(CARET_NODE, Property, Current);
-			m_Runtime.RequestAnimation({CARET_NODE, Property, Target, CaretTransition()});
+			const float Current = m_Runtime->GetValue(CARET_NODE, Property, Target);
+			m_Runtime->SetValue(CARET_NODE, Property, Current);
+			m_Runtime->RequestAnimation({CARET_NODE, Property, Target, CaretTransition()});
 		}
 	}
 	SUiAnimCompleteEvent Completed;
 	// 输入框没有完成回调，及时消费事件，避免长时间打字积累。
-	while(m_Runtime.PollCompletedEvent(Completed))
+	while(m_Runtime->PollCompletedEvent(Completed))
 	{
 	}
 	if(m_TextInitialized && m_Text == pText)
@@ -139,16 +145,25 @@ void CQmLineInputMotion::Update(const char *pText, std::chrono::nanoseconds Now,
 			const uint64_t NodeKey = static_cast<uint64_t>(std::distance(m_aUsedSlots.begin(), Free)) + 1;
 			*Free = true;
 			m_vNextCharacters[i].m_NodeKey = NodeKey;
-			m_Runtime.SetValue(NodeKey, EUiAnimProperty::SCALE, 1.0f);
-			m_Runtime.RequestAnimation({NodeKey, EUiAnimProperty::SCALE, 0.0f, Transition(qm_input_motion::GLYPH)});
+			m_Runtime->SetValue(NodeKey, EUiAnimProperty::SCALE, 1.0f);
+			m_Runtime->RequestAnimation({NodeKey, EUiAnimProperty::SCALE, 0.0f, Transition(qm_input_motion::GLYPH)});
 		}
 	}
 	m_vCharacters.swap(m_vNextCharacters);
 	m_Text = pText;
 	m_TextInitialized = true;
 }
+catch(const std::bad_alloc &)
+{
+	Reset();
+}
+catch(const std::length_error &)
+{
+	Reset();
+}
 
 void CQmLineInputMotion::FillCharOffsets(std::vector<STextCharOffset> &vOffsets) const
+try
 {
 	vOffsets.clear();
 	if(m_MotionLevel == 0 || std::none_of(m_aUsedSlots.begin(), m_aUsedSlots.end(), [](bool Used) { return Used; }))
@@ -159,13 +174,24 @@ void CQmLineInputMotion::FillCharOffsets(std::vector<STextCharOffset> &vOffsets)
 	for(const auto &Character : m_vCharacters)
 	{
 		const float Shrink = Character.m_NodeKey == 0 ? 0.0f :
-								std::clamp(m_Runtime.GetValue(Character.m_NodeKey, EUiAnimProperty::SCALE), -0.2f, 1.0f) * Amplitude;
+								std::clamp(m_Runtime->GetValue(Character.m_NodeKey, EUiAnimProperty::SCALE), -0.2f, 1.0f) * Amplitude;
 		vOffsets.emplace_back(Character.m_ByteOffset, 0.0f, 0.0f, 1.0f - Shrink);
 	}
 }
+catch(const std::bad_alloc &)
+{
+	vOffsets.clear();
+}
+catch(const std::length_error &)
+{
+	vOffsets.clear();
+}
 
 vec2 CQmLineInputMotion::ResolveCaret(vec2 Target, float FontHeight, bool Snap, bool AnimateAcrossLines)
+try
 {
+	if(!m_Runtime)
+		m_Runtime.emplace();
 	const vec2 PreviousTarget = m_CaretTarget;
 	// 跨行、布局缩放和鼠标选区立即对齐，避免光标扫过无关文字。
 	Snap |= !m_CaretInitialized || m_MotionLevel == 0 ||
@@ -177,22 +203,32 @@ vec2 CQmLineInputMotion::ResolveCaret(vec2 Target, float FontHeight, bool Snap, 
 	m_CaretInitialized = true;
 	if(Snap)
 	{
-		m_Runtime.SetValue(CARET_NODE, EUiAnimProperty::POS_X, Target.x);
-		m_Runtime.SetValue(CARET_NODE, EUiAnimProperty::POS_Y, Target.y);
+		m_Runtime->SetValue(CARET_NODE, EUiAnimProperty::POS_X, Target.x);
+		m_Runtime->SetValue(CARET_NODE, EUiAnimProperty::POS_Y, Target.y);
 		return Target;
 	}
 	const auto Transition = CaretTransition();
 	// 输入框已经保存目标，无需为两个光标属性再分配通用目标缓存。
 	const auto ResolveAxis = [&](EUiAnimProperty Property, float Value, float Previous) {
-		const float Current = m_Runtime.GetValue(CARET_NODE, Property, Value);
-		if(Value != Previous || (!m_Runtime.HasActiveAnimation(CARET_NODE, Property) && std::abs(Current - Value) > 0.01f))
+		const float Current = m_Runtime->GetValue(CARET_NODE, Property, Value);
+		if(Value != Previous || (!m_Runtime->HasActiveAnimation(CARET_NODE, Property) && std::abs(Current - Value) > 0.01f))
 		{
 			// 光标从当前画面重放短补间，不继承通用打断弹簧的旧速度。
-			m_Runtime.SetValue(CARET_NODE, Property, Current);
-			m_Runtime.RequestAnimation({CARET_NODE, Property, Value, Transition});
+			m_Runtime->SetValue(CARET_NODE, Property, Current);
+			m_Runtime->RequestAnimation({CARET_NODE, Property, Value, Transition});
 		}
-		return m_Runtime.GetValue(CARET_NODE, Property, Value);
+		return m_Runtime->GetValue(CARET_NODE, Property, Value);
 	};
 	return vec2(ResolveAxis(EUiAnimProperty::POS_X, Target.x, PreviousTarget.x),
 		ResolveAxis(EUiAnimProperty::POS_Y, Target.y, PreviousTarget.y));
+}
+catch(const std::bad_alloc &)
+{
+	Reset();
+	return Target;
+}
+catch(const std::length_error &)
+{
+	Reset();
+	return Target;
 }

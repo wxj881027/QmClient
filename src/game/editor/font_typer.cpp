@@ -45,6 +45,7 @@ void CFontTyper::SetTile(ivec2 Pos, unsigned char Index, const std::shared_ptr<C
 		0, // reserved
 	};
 	pLayer->SetTile(Pos.x, Pos.y, Tile);
+	Map()->OnModify();
 	State.m_TilesPlacedSinceActivate++;
 }
 
@@ -78,21 +79,19 @@ void CFontTyper::PlaceTile(unsigned char Index, const std::shared_ptr<CLayerTile
 bool CFontTyper::OnInput(const IInput::CEvent &Event)
 {
 	CFontTyper::CState &State = Map()->m_FontTyperState;
-	std::shared_ptr<CLayerTiles> pLayer = std::static_pointer_cast<CLayerTiles>(Map()->SelectedLayerType(0, LAYERTYPE_TILES));
-	if(!pLayer)
+	const std::shared_ptr<CLayerTiles> pLayer = SelectedTextLayer();
+	if(!pLayer || (State.m_Active && State.m_pLastLayer != pLayer))
 	{
 		if(IsActive())
 			TextModeOff();
 		return false;
 	}
-	if(pLayer->m_Image == -1)
-		return false;
 
 	if(!IsActive())
 	{
 		if(Event.m_Key == KEY_T && Input()->ModifierIsPressed() && !Ui()->IsPopupOpen() && Editor()->m_Dialog == DIALOG_NONE)
 		{
-			if(pLayer && pLayer->m_KnownTextModeLayer)
+			if(pLayer->m_KnownTextModeLayer)
 			{
 				TextModeOn();
 			}
@@ -111,8 +110,7 @@ bool CFontTyper::OnInput(const IInput::CEvent &Event)
 	if(!(Event.m_Flags & IInput::FLAG_PRESS))
 		return false;
 
-	if(State.m_LineStart.has_value())
-		State.m_LineStart = std::clamp(State.m_LineStart.value(), 0, pLayer->m_Width - 1);
+	State.ClampCursor(pLayer->m_Width, pLayer->m_Height);
 
 	// 官方 39c675977：Ctrl+S 交给编辑器保存，不要写成字母 S
 	if(Input()->ModifierIsPressed() && Input()->KeyIsPressed(KEY_S))
@@ -259,8 +257,7 @@ bool CFontTyper::OnInput(const IInput::CEvent &Event)
 		State.m_TextIndex.y--;
 	if(Event.m_Key == KEY_DOWN)
 		State.m_TextIndex.y++;
-	State.m_TextIndex.x = std::clamp(State.m_TextIndex.x, 0, pLayer->m_Width);
-	State.m_TextIndex.y = std::clamp(State.m_TextIndex.y, 0, pLayer->m_Height - 1);
+	State.ClampCursor(pLayer->m_Width, pLayer->m_Height);
 	m_CursorRenderTime = time_get_nanoseconds() - 501ms;
 	float Dist = distance(
 		vec2(State.m_TextIndex.x, State.m_TextIndex.y),
@@ -277,14 +274,14 @@ bool CFontTyper::OnInput(const IInput::CEvent &Event)
 void CFontTyper::TextModeOn()
 {
 	CFontTyper::CState &State = Map()->m_FontTyperState;
-	std::shared_ptr<CLayerTiles> pLayer = std::static_pointer_cast<CLayerTiles>(Map()->SelectedLayerType(0, LAYERTYPE_TILES));
+	const std::shared_ptr<CLayerTiles> pLayer = SelectedTextLayer();
 	if(!pLayer)
 		return;
-	if(pLayer->m_Image == -1)
-		return;
 
-	SetCursor();
+	State.SetCursorFromWorld(Editor()->MapView()->MouseWorldPos(), pLayer->m_Width, pLayer->m_Height);
+	m_CursorRenderTime = time_get_nanoseconds() - 501ms;
 	State.m_TilesPlacedSinceActivate = 0;
+	State.m_pLastLayer = pLayer;
 	State.m_Active = true;
 	pLayer->m_KnownTextModeLayer = true;
 
@@ -298,16 +295,23 @@ void CFontTyper::TextModeOff()
 	if(Editor()->m_Dialog == DIALOG_PSEUDO_FONT_TYPER)
 		Editor()->m_Dialog = DIALOG_NONE;
 	if(State.m_TilesPlacedSinceActivate)
-		Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorBrushDrawAction>(Map(), Map()->m_SelectedGroup), Localize("Font typer", "Editor"));
-	Map()->m_FontTyperState.Reset();
+	{
+		const auto &vpGroups = Map()->m_vpGroups;
+		const auto It = std::find_if(vpGroups.begin(), vpGroups.end(), [&](const auto &pGroup) {
+			return std::find(pGroup->m_vpLayers.begin(), pGroup->m_vpLayers.end(), State.m_pLastLayer) != pGroup->m_vpLayers.end();
+		});
+		if(It != vpGroups.end())
+			Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorBrushDrawAction>(Map(), It - vpGroups.begin()), Localize("Font typer", "Editor"));
+	}
+	State.Reset();
 }
 
-void CFontTyper::SetCursor()
+std::shared_ptr<CLayerTiles> CFontTyper::SelectedTextLayer() const
 {
-	CFontTyper::CState &State = Map()->m_FontTyperState;
-	State.m_TextIndex.x = (int)(Editor()->MapView()->MouseWorldPos().x / 32);
-	State.m_TextIndex.y = (int)(Editor()->MapView()->MouseWorldPos().y / 32);
-	m_CursorRenderTime = time_get_nanoseconds() - 501ms;
+	auto pLayer = std::static_pointer_cast<CLayerTiles>(Map()->SelectedLayerType(0, LAYERTYPE_TILES));
+	if(!pLayer || pLayer->m_Image == -1 || pLayer->m_Width <= 0 || pLayer->m_Height <= 0)
+		return nullptr;
+	return pLayer;
 }
 
 void CFontTyper::Render()
@@ -324,30 +328,16 @@ void CFontTyper::Render()
 	if(!IsActive())
 		return;
 
-	if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
+	const std::shared_ptr<CLayerTiles> pLayer = SelectedTextLayer();
+	if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE) || !pLayer || State.m_pLastLayer != pLayer ||
+		Editor()->m_Dialog != DIALOG_PSEUDO_FONT_TYPER || CLineInput::GetActiveInput())
+	{
 		TextModeOff();
+		return;
+	}
+
 	str_copy(Editor()->m_aTooltip, Localize("Type on your keyboard to insert letters and numbers. Press Escape to end text mode.", "Editor"));
-
-	std::shared_ptr<CLayerTiles> pLayer = std::static_pointer_cast<CLayerTiles>(Map()->SelectedLayerType(0, LAYERTYPE_TILES));
-	if(!pLayer)
-		return;
-
-	// exit if selected layer changes
-	if(State.m_pLastLayer && State.m_pLastLayer != pLayer)
-	{
-		TextModeOff();
-		State.m_pLastLayer = pLayer;
-		return;
-	}
-	// exit if dialog or edit box pops up
-	if(Editor()->m_Dialog != DIALOG_PSEUDO_FONT_TYPER || CLineInput::GetActiveInput())
-	{
-		TextModeOff();
-		return;
-	}
-	State.m_pLastLayer = pLayer;
-	State.m_TextIndex.x = std::clamp(State.m_TextIndex.x, 0, pLayer->m_Width);
-	State.m_TextIndex.y = std::clamp(State.m_TextIndex.y, 0, pLayer->m_Height - 1);
+	State.ClampCursor(pLayer->m_Width, pLayer->m_Height);
 
 	const auto CurTime = time_get_nanoseconds();
 	if((CurTime - m_CursorRenderTime) > 1s)

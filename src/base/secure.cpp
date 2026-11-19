@@ -4,8 +4,8 @@
 #include "secure.h"
 
 #include "dbg.h"
-#include "system.h"
-#include "types.h"
+#include "detect.h"
+#include "io.h"
 #include "windows.h"
 
 #include <cstddef> // size_t
@@ -15,6 +15,11 @@
 #include <wtypes.h>
 // Need to include wtypes.h before wincrypt.h because the latter is missing the former include
 #include <wincrypt.h>
+#else
+#include <cerrno>
+#include <cstdio>
+#include <fcntl.h>
+#include <unistd.h>
 #endif
 
 struct SECURE_RANDOM_DATA
@@ -29,6 +34,36 @@ struct SECURE_RANDOM_DATA
 
 static struct SECURE_RANDOM_DATA secure_random_data = {};
 
+#if !defined(CONF_FAMILY_WINDOWS)
+static IOHANDLE open_secure_random_source()
+{
+	int flags = O_RDONLY;
+#if defined(O_CLOEXEC)
+	flags |= O_CLOEXEC;
+#endif
+	// 客户端重启或启动外部程序时不传递随机源的描述符。
+	int fd;
+	do
+	{
+		fd = open("/dev/urandom", flags);
+	} while(fd == -1 && errno == EINTR);
+	if(fd == -1)
+		return nullptr;
+#if !defined(O_CLOEXEC)
+	const int descriptor_flags = fcntl(fd, F_GETFD);
+	if(descriptor_flags == -1 || fcntl(fd, F_SETFD, descriptor_flags | FD_CLOEXEC) == -1)
+	{
+		close(fd);
+		return nullptr;
+	}
+#endif
+	FILE *file = fdopen(fd, "rb");
+	if(!file)
+		close(fd);
+	return file;
+}
+#endif
+
 static void ensure_secure_random_init()
 {
 	std::call_once(secure_random_data.initialized_once_flag, []() {
@@ -39,7 +74,7 @@ static void ensure_secure_random_init()
 			dbg_assert_failed("Failed to initialize secure random: CryptAcquireContext failure (%ld '%s')", LastError, windows_format_system_message(LastError).c_str());
 		}
 #else
-		secure_random_data.urandom = io_open("/dev/urandom", IOFLAG_READ);
+		secure_random_data.urandom = open_secure_random_source();
 		dbg_assert(secure_random_data.urandom != nullptr, "Failed to initialize secure random: failed to open /dev/urandom");
 #endif
 	});

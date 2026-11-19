@@ -18,7 +18,9 @@ public:
 	CQmSodaHookProvider(const CQmSodaHookProvider &) = delete;
 	CQmSodaHookProvider &operator=(const CQmSodaHookProvider &) = delete;
 
-	void Start(const char *pHelperPath, const char *pSource = "soda");
+	// true 表示来源已接纳（包括存活、节流或正常启动失败），不保证进程启动成功。
+	// 资源准备失败返回 false，调用方应跳过本帧读取，避免沿旧来源打开映射。
+	bool Start(const char *pHelperPath, const char *pSource = "soda");
 	bool RunKugouSetup(bool Restore);
 	bool GetStatus(char *pBuffer, size_t BufferSize) const;
 	void Stop();

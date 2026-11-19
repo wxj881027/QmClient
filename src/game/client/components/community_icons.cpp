@@ -1,29 +1,33 @@
 #include "community_icons.h"
 
 #include <base/log.h>
+#include <base/str.h>
 
 #include <engine/engine.h>
-#include <engine/gfx/image_loader.h>
-#include <engine/gfx/image_manipulation.h>
 #include <engine/http.h>
 #include <engine/storage.h>
 
+#include <game/client/components/qmclient/community_icon_image.h>
+
 static constexpr size_t MAX_CONCURRENT_ICON_DOWNLOADS = 4;
+static constexpr char COMMUNITY_ICON_EXTENSION[] = ".png";
 
 CCommunityIcons::CAbstractCommunityIconJob::CAbstractCommunityIconJob(CCommunityIcons *pCommunityIcons, const char *pCommunityId, int StorageType) :
 	m_pCommunityIcons(pCommunityIcons),
 	m_StorageType(StorageType)
 {
 	str_copy(m_aCommunityId, pCommunityId);
-	str_format(m_aPath, sizeof(m_aPath), "communityicons/%s.png", pCommunityId);
+	str_format(m_aPath, sizeof(m_aPath), "communityicons/%s%s", m_aCommunityId, COMMUNITY_ICON_EXTENSION);
 }
 
 CCommunityIcons::CCommunityIconDownloadJob::CCommunityIconDownloadJob(CCommunityIcons *pCommunityIcons, const char *pCommunityId, const char *pUrl, const SHA256_DIGEST &Sha256) :
 	CAbstractCommunityIconJob(pCommunityIcons, pCommunityId, IStorage::TYPE_SAVE)
 {
+	m_Sha256 = Sha256;
 	m_pHttpRequest = std::shared_ptr<IHttpRequest>(CreateHttpRequest(pUrl));
 	m_pHttpRequest->WriteToFile(pCommunityIcons->Storage(), m_aPath, IStorage::TYPE_SAVE);
 	m_pHttpRequest->ExpectSha256(Sha256);
+	m_pHttpRequest->MaxResponseSize(qm_community_icons::MAX_FILE_BYTES);
 	// Keep icon downloads bounded so broken remote endpoints can't hang forever.
 	m_pHttpRequest->Timeout(CTimeout{10000, 30000, 500, 10});
 	// 哈希变化时也要重新下载，不能只比较本地文件时间。
@@ -44,13 +48,12 @@ CCommunityIcons::CCommunityIconLoadJob::CCommunityIconLoadJob(CCommunityIcons *p
 
 CCommunityIcons::CCommunityIconLoadJob::~CCommunityIconLoadJob()
 {
-	m_ImageInfo.Free();
-	m_ImageInfoGrayscale.Free();
+	DiscardImages();
 }
 
 int CCommunityIcons::FileScan(const char *pName, int IsDir, int DirType, void *pUser)
 {
-	const char *pExtension = ".png";
+	const char *pExtension = COMMUNITY_ICON_EXTENSION;
 	CCommunityIcons *pSelf = static_cast<CCommunityIcons *>(pUser);
 	if(IsDir || !str_endswith(pName, pExtension) || str_length(pName) - str_length(pExtension) >= (int)CServerInfo::MAX_COMMUNITY_ID_LENGTH)
 		return 0;
@@ -58,84 +61,52 @@ int CCommunityIcons::FileScan(const char *pName, int IsDir, int DirType, void *p
 	char aCommunityId[CServerInfo::MAX_COMMUNITY_ID_LENGTH];
 	str_truncate(aCommunityId, sizeof(aCommunityId), pName, str_length(pName) - str_length(pExtension));
 
-	std::shared_ptr<CCommunityIconLoadJob> pJob = std::make_shared<CCommunityIconLoadJob>(pSelf, aCommunityId, DirType);
-	pSelf->Engine()->AddJob(pJob);
-	pSelf->m_CommunityIconLoadJobs.push_back(pJob);
+	if(!pSelf->QueueLoadJob(aCommunityId, DirType))
+		log_warn("menus/browser", "Could not queue cached community icon '%s'", aCommunityId);
 	return 0;
+}
+
+bool CCommunityIcons::QueueLoadJob(const char *pCommunityId, int StorageType)
+{
+	return m_CommunityIconLoadJobs.Enqueue([&] { return std::make_shared<CCommunityIconLoadJob>(this, pCommunityId, StorageType); });
 }
 
 const CCommunityIcon *CCommunityIcons::Find(const char *pCommunityId)
 {
-	auto Icon = std::find_if(m_vCommunityIcons.begin(), m_vCommunityIcons.end(), [pCommunityId](const CCommunityIcon &Element) {
-		return str_comp(Element.m_aCommunityId, pCommunityId) == 0;
-	});
-	return Icon == m_vCommunityIcons.end() ? nullptr : &(*Icon);
+	return m_Icons.Find(pCommunityId);
 }
 
 bool CCommunityIcons::LoadFile(const char *pPath, int DirType, CImageInfo &Info, CImageInfo &InfoGrayscale, SHA256_DIGEST &Sha256)
 {
-	void *pFileData = nullptr;
-	unsigned FileSize = 0;
-	if(!Storage()->ReadFile(pPath, DirType, &pFileData, &FileSize))
+	qm_community_icons::CBoundedFileReader Reader(*Storage());
+	const auto Result = qm_community_icons::LoadImage(Reader, pPath, DirType, Info, InfoGrayscale, Sha256);
+	if(Result == qm_community_icons::ELoadResult::LOADED)
+		return true;
+	const char *pReason;
+	switch(Result)
 	{
-		log_error("menus/browser", "Failed to read community icon from '%s'", pPath);
-		return false;
+	case qm_community_icons::ELoadResult::READ_FAILED: pReason = Reader.TooLarge() ? "file exceeds icon byte limit" : "could not read file"; break;
+	case qm_community_icons::ELoadResult::DECODE_FAILED: pReason = "could not decode PNG"; break;
+	case qm_community_icons::ELoadResult::FORMAT_UNSUPPORTED: pReason = "must be an RGBA image"; break;
+	case qm_community_icons::ELoadResult::COPY_FAILED: pReason = "could not copy image data"; break;
+	default: pReason = "image processing failed"; break;
 	}
-
-	if(!CImageLoader::LoadPng(pFileData, FileSize, pPath, Info))
-	{
-		free(pFileData);
-		log_error("menus/browser", "Failed to decode community icon from '%s'", pPath);
-		return false;
-	}
-	free(pFileData);
-
-	if(Info.m_Format != CImageInfo::FORMAT_RGBA)
-	{
-		Info.Free();
-		log_error("menus/browser", "Failed to load community icon from '%s': must be an RGBA image", pPath);
-		return false;
-	}
-	if(!Storage()->CalculateHashes(pPath, DirType, &Sha256))
-	{
-		Info.Free();
-		log_error("menus/browser", "Failed to load community icon from '%s': could not calculate hash", pPath);
-		return false;
-	}
-	InfoGrayscale = Info.DeepCopy();
-	if(InfoGrayscale.m_pData == nullptr)
-	{
-		Info.Free();
-		log_error("menus/browser", "Failed to load community icon from '%s': could not copy image data", pPath);
-		return false;
-	}
-	ConvertToGrayscale(InfoGrayscale);
-	return true;
+	log_error("menus/browser", "Failed to load community icon from '%s': %s", pPath, pReason);
+	return false;
 }
 
-void CCommunityIcons::LoadFinish(const char *pCommunityId, CImageInfo &Info, CImageInfo &InfoGrayscale, const SHA256_DIGEST &Sha256)
+bool CCommunityIcons::LoadFinish(const char *pCommunityId, CImageInfo &Info, CImageInfo &InfoGrayscale, const SHA256_DIGEST &Sha256)
 {
-	CCommunityIcon CommunityIcon;
-	str_copy(CommunityIcon.m_aCommunityId, pCommunityId);
-	CommunityIcon.m_Sha256 = Sha256;
-	CommunityIcon.m_OrgTexture = Graphics()->LoadTextureRawMove(Info, 0, pCommunityId);
-	CommunityIcon.m_GreyTexture = Graphics()->LoadTextureRawMove(InfoGrayscale, 0, pCommunityId);
-
-	auto ExistingIcon = std::find_if(m_vCommunityIcons.begin(), m_vCommunityIcons.end(), [pCommunityId](const CCommunityIcon &Element) {
-		return str_comp(Element.m_aCommunityId, pCommunityId) == 0;
-	});
-	if(ExistingIcon == m_vCommunityIcons.end())
-	{
-		m_vCommunityIcons.push_back(CommunityIcon);
-	}
+	const auto Result = m_Icons.Publish(Graphics(), pCommunityId, Sha256, Info, InfoGrayscale);
+	if(Result == qm_community_icons::EPublishResult::DEFERRED)
+		return false;
+	if(Result == qm_community_icons::EPublishResult::BUDGET_EXCEEDED)
+		log_warn("menus/browser", "Community icon '%s' exceeds texture pixel budget; keeping previous icon", pCommunityId);
+	else if(Result == qm_community_icons::EPublishResult::FAILED)
+		log_warn("menus/browser", "Could not upload community icon '%s'; keeping previous icon", pCommunityId);
 	else
-	{
-		Graphics()->UnloadTexture(&ExistingIcon->m_OrgTexture);
-		Graphics()->UnloadTexture(&ExistingIcon->m_GreyTexture);
-		*ExistingIcon = CommunityIcon;
-	}
-
-	log_trace("menus/browser", "Loaded community icon '%s'", pCommunityId);
+		log_trace("menus/browser", "Loaded community icon '%s'", pCommunityId);
+	return true;
 }
 
 void CCommunityIcons::Render(const CCommunityIcon *pIcon, CUIRect Rect, bool Active, float AlphaMul)
@@ -143,7 +114,7 @@ void CCommunityIcons::Render(const CCommunityIcon *pIcon, CUIRect Rect, bool Act
 	Rect.VMargin(Rect.w / 2.0f - Rect.h, &Rect);
 
 	Graphics()->WrapClamp();
-	Graphics()->TextureSet(Active ? pIcon->m_OrgTexture : pIcon->m_GreyTexture);
+	Graphics()->TextureSet(pIcon->Texture(Active));
 	Graphics()->QuadsBegin();
 	// AlphaMul 供列表行淡入使用（裸纹理 quad 不经过 CUi 的显隐系数）。
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, (Active ? 1.0f : 0.5f) * std::clamp(AlphaMul, 0.0f, 1.0f));
@@ -155,33 +126,53 @@ void CCommunityIcons::Render(const CCommunityIcon *pIcon, CUIRect Rect, bool Act
 
 void CCommunityIcons::Load()
 {
-	m_vCommunityIcons.clear();
+	m_IconScan.Reset();
+	m_ScanPreparationFailed = false;
+	if(!m_Icons.Clear(Graphics()))
+		log_warn("menus/browser", "Could not release community icon textures; retaining handles");
 	Storage()->ListDirectory(IStorage::TYPE_ALL, "communityicons", FileScan, this);
 }
 
 void CCommunityIcons::Shutdown()
 {
-	m_CommunityIconLoadJobs.clear();
+	m_IconScan.Reset();
+	m_ScanPreparationFailed = false;
+	m_CommunityIconLoadJobs.Clear();
 	m_CommunityIconDownloadJobs.clear();
+	if(!m_Icons.Clear(Graphics()))
+		log_warn("menus/browser", "Could not release community icon textures at shutdown");
 }
 
 void CCommunityIcons::Update()
 {
-	// Update load jobs (icon is loaded from existing file)
-	if(!m_CommunityIconLoadJobs.empty())
+	if(!m_Icons.Drain(Graphics()))
 	{
-		std::shared_ptr<CCommunityIconLoadJob> pJob = m_CommunityIconLoadJobs.front();
+		if(!m_CleanupFailed)
+			log_warn("menus/browser", "Could not release retired community icon textures; retrying later");
+		m_CleanupFailed = true;
+		return;
+	}
+	m_CleanupFailed = false;
+	m_CommunityIconLoadJobs.SubmitPending(qm_community_icons::MAX_PREPARED_LOADS, [this](const auto &pJob) { return Engine()->TryAddJob(pJob); });
+	// Update load jobs (icon is loaded from existing file)
+	if(!m_CommunityIconLoadJobs.Empty())
+	{
+		std::shared_ptr<CCommunityIconLoadJob> pJob = m_CommunityIconLoadJobs.Front();
 		if(pJob->Done())
 		{
-			if(pJob->State() == IJob::STATE_DONE && pJob->Success())
+			if(pJob->State() == IJob::STATE_DONE && pJob->Success() &&
+				qm_community_icons::AcceptsResult(ServerBrowser()->DDNetInfoAvailable(), ServerBrowser()->Community(pJob->CommunityId()), pJob->Sha256()))
 			{
-				LoadFinish(pJob->CommunityId(), pJob->ImageInfo(), pJob->ImageInfoGrayscale(), pJob->Sha256());
+				if(!LoadFinish(pJob->CommunityId(), pJob->ImageInfo(), pJob->ImageInfoGrayscale(), pJob->Sha256()))
+					return;
 			}
-			m_CommunityIconLoadJobs.pop_front();
+			if(pJob->State() == IJob::STATE_DONE)
+				pJob->DiscardImages();
+			m_CommunityIconLoadJobs.PopFront();
 		}
 
 		// Don't start download jobs until all load jobs are done
-		if(!m_CommunityIconLoadJobs.empty())
+		if(!m_CommunityIconLoadJobs.Empty())
 			return;
 	}
 
@@ -193,54 +184,57 @@ void CCommunityIcons::Update()
 		{
 			if(pJob->HttpRequest()->State() == EHttpState::DONE)
 			{
-				std::shared_ptr<CCommunityIconLoadJob> pLoadJob = std::make_shared<CCommunityIconLoadJob>(this, pJob->CommunityId(), IStorage::TYPE_SAVE);
-				Engine()->AddJob(pLoadJob);
-				m_CommunityIconLoadJobs.push_back(pLoadJob);
+				if(!QueueLoadJob(pJob->CommunityId(), IStorage::TYPE_SAVE))
+					return;
 			}
 			m_CommunityIconDownloadJobs.pop_front();
 		}
 	}
 
-	// Rescan for changed communities only when necessary
-	if(!ServerBrowser()->DDNetInfoAvailable() || m_CommunityIconsInfoSha256 == ServerBrowser()->DDNetInfoSha256().value())
+	// 新增的解码任务也先完成，避免同一ID的新下载覆盖正在读取的缓存文件。
+	if(!m_CommunityIconLoadJobs.Empty() || !ServerBrowser()->DDNetInfoAvailable())
 		return;
-	m_CommunityIconsInfoSha256 = ServerBrowser()->DDNetInfoSha256();
-
-	// Remove icons for removed communities
-	auto RemovalIterator = m_vCommunityIcons.begin();
-	while(RemovalIterator != m_vCommunityIcons.end())
+	const auto InfoSha256 = ServerBrowser()->DDNetInfoSha256();
+	if(!InfoSha256.has_value())
+		return;
+	const bool Changed = !m_IconScan.Matches(InfoSha256.value());
+	if(!m_IconScan.Prepare(InfoSha256.value(), ServerBrowser()->Communities()))
 	{
-		if(ServerBrowser()->Community(RemovalIterator->m_aCommunityId) == nullptr)
-		{
-			Graphics()->UnloadTexture(&RemovalIterator->m_OrgTexture);
-			Graphics()->UnloadTexture(&RemovalIterator->m_GreyTexture);
-			RemovalIterator = m_vCommunityIcons.erase(RemovalIterator);
-		}
-		else
-		{
-			++RemovalIterator;
-		}
+		if(!m_ScanPreparationFailed)
+			log_warn("menus/browser", "Could not prepare community icon scan; retrying later");
+		m_ScanPreparationFailed = true;
+		return;
 	}
+	m_ScanPreparationFailed = false;
 
-	// Find added and updated community icons
-	for(const auto &Community : ServerBrowser()->Communities())
-	{
-		if(m_CommunityIconDownloadJobs.size() >= MAX_CONCURRENT_ICON_DOWNLOADS)
-			break;
+	if(Changed && !m_Icons.Prune(ServerBrowser()->Communities(), Graphics()))
+		return;
 
-		if(!Community.IconSha256().has_value())
-			continue;
-		auto ExistingIcon = std::find_if(m_vCommunityIcons.begin(), m_vCommunityIcons.end(), [Community](const auto &Element) {
-			return str_comp(Element.m_aCommunityId, Community.Id()) == 0;
+	const auto SkipDownload = [&](const qm_community_icons::SRequest &Request) {
+		if(m_Icons.IsCurrent(Request.m_aId, Request.m_Sha256))
+			return true;
+
+		char aFilename[CServerInfo::MAX_COMMUNITY_ID_LENGTH + sizeof(COMMUNITY_ICON_EXTENSION) - 1];
+		str_format(aFilename, sizeof(aFilename), "%s%s", Request.m_aId, COMMUNITY_ICON_EXTENSION);
+		if(Request.m_aId[0] && str_valid_filename(aFilename))
+			return false;
+
+		// 仅跳过当前项，不占用并发下载名额。
+		log_warn("menus/browser", "Skipping community icon download: invalid cache filename");
+		return true;
+	};
+	const auto FindActive = [&](const qm_community_icons::SRequest &Request) {
+		const auto Existing = std::find_if(m_CommunityIconDownloadJobs.begin(), m_CommunityIconDownloadJobs.end(), [&](const auto &pJob) {
+			return str_comp(pJob->CommunityId(), Request.m_aId) == 0;
 		});
-		auto ExistingDownload = std::find_if(m_CommunityIconDownloadJobs.begin(), m_CommunityIconDownloadJobs.end(), [Community](const auto &Element) {
-			return str_comp(Element->CommunityId(), Community.Id()) == 0;
-		});
-		if(ExistingDownload == m_CommunityIconDownloadJobs.end() && (ExistingIcon == m_vCommunityIcons.end() || ExistingIcon->m_Sha256 != Community.IconSha256().value()))
-		{
-			std::shared_ptr<CCommunityIconDownloadJob> pJob = std::make_shared<CCommunityIconDownloadJob>(this, Community.Id(), Community.IconUrl(), Community.IconSha256().value());
-			Http()->Run(pJob->HttpRequest());
-			m_CommunityIconDownloadJobs.push_back(pJob);
-		}
-	}
+		if(Existing == m_CommunityIconDownloadJobs.end())
+			return qm_community_icons::EActive::NONE;
+		return Request.Matches((*Existing)->CommunityId(), (*Existing)->HttpRequest()->Url(), (*Existing)->Sha256()) ? qm_community_icons::EActive::SAME : qm_community_icons::EActive::OTHER;
+	};
+	const auto Start = [&](const qm_community_icons::SRequest &Request) {
+		return qm_community_icons::ObserveAndSubmit(m_CommunityIconDownloadJobs, [&] { return std::make_shared<CCommunityIconDownloadJob>(this, Request.m_aId, Request.m_aUrl, Request.m_Sha256); }, [this](const auto &pJob) {
+				Http()->Run(pJob->HttpRequest());
+				return true; });
+	};
+	m_IconScan.Pump(m_CommunityIconDownloadJobs.size(), MAX_CONCURRENT_ICON_DOWNLOADS, SkipDownload, FindActive, Start);
 }

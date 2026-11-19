@@ -91,7 +91,7 @@ void CBroadcast::OnMessage(int MsgType, void *pRawMsg)
 void CBroadcast::DoBroadcast(const char *pText)
 {
 	str_copy(m_aBroadcastText, pText);
-	m_BroadcastTick = Client()->GameTick(g_Config.m_ClDummy) + Client()->GameTickSpeed() * 10;
+	m_BroadcastTick = static_cast<int64_t>(Client()->GameTick(g_Config.m_ClDummy)) + static_cast<int64_t>(Client()->GameTickSpeed()) * 10;
 	m_BroadcastRenderOffset = -1.0f;
 	TextRender()->DeleteTextContainer(m_TextContainerIndex);
 

@@ -6,6 +6,11 @@
 
 #if defined(CONF_FAMILY_WINDOWS)
 
+TEST(WindowsWideToUtf8, MissingInputReturnsNoString)
+{
+	EXPECT_FALSE(windows_wide_to_utf8(nullptr).has_value());
+}
+
 TEST(ArgumentsToWide, SingleArgumentNoQuotes)
 {
 	const char *apArguments[] = {"change_map ctf5"};

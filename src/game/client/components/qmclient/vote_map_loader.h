@@ -33,7 +33,7 @@ class CQmVoteMapLoader
 	uint64_t m_Revision = 0;
 	bool m_DetailsReady = false;
 
-	static void Cancel(SRequest &Request);
+	static void Cancel(SRequest &Request) noexcept;
 	void Start(SRequest &Request, IHttp *pHttp, const char *pUrl, int MaxBytes, const char *pApiKey = "");
 	bool Poll(SRequest &Request, IEngine *pEngine, bool Catalog);
 

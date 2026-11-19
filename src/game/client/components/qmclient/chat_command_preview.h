@@ -49,7 +49,7 @@ namespace QmChatCommandPreview
 			pCursor++;
 			while(*pCursor != '\0' && *pCursor != '"')
 			{
-				if(*pCursor == '\\' && pCursor[1] != '\0')
+				if(*pCursor == '\\' && (pCursor[1] == '\\' || pCursor[1] == '"'))
 					pCursor++;
 				if(pDst + 1 < pEnd)
 					*pDst++ = *pCursor;
@@ -69,21 +69,23 @@ namespace QmChatCommandPreview
 		}
 
 		*pDst = '\0';
+		if(pDst + 1 == pEnd)
+			str_utf8_fix_truncation(pToken);
 		return pCursor;
 	}
 
 	// 读取 /命令 后的命令名；输入不是斜杠指令时返回 false
 	inline bool ReadCommandName(const char *pInput, char *pName, size_t NameSize)
 	{
-		if(pInput == nullptr || pInput[0] != '/' || pInput[1] == '\0')
+		if(NameSize == 0 || pInput == nullptr || pInput[0] != '/' || pInput[1] == '\0')
 			return false;
 
 		ReadToken(pInput + 1, pName, NameSize);
 		return pName[0] != '\0';
 	}
 
-	// 读取 token 之后的全部内容；整体被引号包裹时去掉外层引号
-	inline void CopyRest(const char *pText, char *pBuf, size_t BufSize)
+	// 读取 token 之后的全部内容；默认在整段被引号包裹时去掉外层引号
+	inline void CopyRest(const char *pText, char *pBuf, size_t BufSize, bool Unquote = true)
 	{
 		if(BufSize == 0)
 			return;
@@ -96,15 +98,11 @@ namespace QmChatCommandPreview
 		if(pRest[0] == '\0')
 			return;
 
-		if(pRest[0] == '"')
+		if(Unquote && pRest[0] == '"')
 		{
-			char aQuoted[TOKEN_LENGTH];
-			const char *pAfterQuoted = ReadToken(pRest, aQuoted, sizeof(aQuoted));
+			const char *pAfterQuoted = ReadToken(pRest, pBuf, BufSize);
 			if(*str_skip_whitespaces_const(pAfterQuoted) == '\0')
-			{
-				str_copy(pBuf, aQuoted, BufSize);
 				return;
-			}
 		}
 
 		str_copy(pBuf, pRest, BufSize);
@@ -140,11 +138,9 @@ namespace QmChatCommandPreview
 		char aFirstArg[TOKEN_LENGTH];
 		const char *pAfterFirstArg = ReadToken(pAfterCommand, aFirstArg, sizeof(aFirstArg));
 
+		const bool IsConverse = NameIs(aCommand, "c") || NameIs(aCommand, "converse");
 		char aRestArg[REST_LENGTH];
-		CopyRest(pAfterCommand, aRestArg, sizeof(aRestArg));
-
-		char aRestAfterFirstArg[REST_LENGTH];
-		CopyRest(pAfterFirstArg, aRestAfterFirstArg, sizeof(aRestAfterFirstArg));
+		CopyRest(pAfterCommand, aRestArg, sizeof(aRestArg), !IsConverse);
 
 		if(NameIs(aCommand, "points"))
 		{
@@ -181,8 +177,10 @@ namespace QmChatCommandPreview
 
 		if(NameIs(aCommand, "w") || NameIs(aCommand, "whisper"))
 		{
-			if(aFirstArg[0] != '\0' && aRestAfterFirstArg[0] != '\0')
-				str_format(pBuf, PreviewBufSize, Localize("Whisper to %s: %s"), aFirstArg, aRestAfterFirstArg);
+			char aMessage[REST_LENGTH];
+			CopyRest(pAfterFirstArg, aMessage, sizeof(aMessage), false);
+			if(aFirstArg[0] != '\0' && aMessage[0] != '\0')
+				str_format(pBuf, PreviewBufSize, Localize("Whisper to %s: %s"), aFirstArg, aMessage);
 			else if(aFirstArg[0] != '\0')
 				str_format(pBuf, PreviewBufSize, Localize("Whisper to %s"), aFirstArg);
 			else
@@ -190,7 +188,7 @@ namespace QmChatCommandPreview
 			return true;
 		}
 
-		if(NameIs(aCommand, "c") || NameIs(aCommand, "converse"))
+		if(IsConverse)
 		{
 			if(aRestArg[0] != '\0')
 				str_format(pBuf, PreviewBufSize, Localize("Reply to the last whisper target: %s"), aRestArg);
@@ -219,7 +217,10 @@ namespace QmChatCommandPreview
 
 		if(NameIs(aCommand, "lock"))
 		{
-			if(str_comp(aFirstArg, "0") == 0)
+			int Lock = 0;
+			if(*str_skip_whitespaces_const(pAfterCommand) == '\0' || !str_toint(aFirstArg, &Lock))
+				str_copy(pBuf, Localize("Toggle team lock so no one else can join and so the team restarts when a player dies. /lock 0 to unlock, /lock 1 to lock"), BufSize);
+			else if(Lock == 0)
 				str_copy(pBuf, Localize("Unlock the team"), BufSize);
 			else
 				str_copy(pBuf, Localize("Lock the team so other players cannot join directly"), BufSize);

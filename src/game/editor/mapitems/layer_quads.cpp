@@ -115,7 +115,7 @@ int CLayerQuads::BrushGrab(CLayerGroup *pBrush, CUIRect Rect)
 	return pGrabbed->m_vQuads.empty() ? 0 : 1;
 }
 
-void CLayerQuads::BrushPlace(CLayer *pBrush, vec2 WorldPos)
+void CLayerQuads::BrushPlace(const CLayer *pBrush, vec2 WorldPos, int LayerIndex)
 {
 	if(m_Readonly)
 		return;
@@ -135,7 +135,7 @@ void CLayerQuads::BrushPlace(CLayer *pBrush, vec2 WorldPos)
 		vAddedQuads.push_back(NewQuad);
 	}
 	m_vQuads.insert(m_vQuads.end(), vAddedQuads.begin(), vAddedQuads.end());
-	Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionQuadPlace>(Map(), Map()->m_SelectedGroup, Map()->m_vSelectedLayers[0], vAddedQuads));
+	Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionQuadPlace>(Map(), Map()->m_SelectedGroup, LayerIndex, vAddedQuads));
 	Map()->OnModify();
 }
 

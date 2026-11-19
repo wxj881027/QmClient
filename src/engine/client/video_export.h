@@ -15,11 +15,13 @@
 
 #include <algorithm>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
 struct AVIOContext;
 class CConfig;
+class IStorage;
 
 // 「导出离屏帧」计划：导出是否改画离屏渲染目标、目标尺寸与多采样数。
 struct SVideoOffscreenPlan
@@ -85,9 +87,11 @@ public:
 	~CVideoExportOutput();
 	CVideoExportOutput(const CVideoExportOutput &) = delete;
 	CVideoExportOutput &operator=(const CVideoExportOutput &) = delete;
+	static std::unique_ptr<CVideoExportOutput> PrepareRecording(IStorage &Storage, const char *pName);
+	const char *TargetPath() const { return m_Target.c_str(); }
 	const char *TemporaryPath() const { return m_Temporary.c_str(); }
 	void Opened() { m_OwnsTemporary = true; }
-	bool Commit();
+	bool Commit() noexcept;
 };
 
 // 在任务启动时记录实际编码与 demo 显示配置，用于续渲一致性校验。
@@ -100,6 +104,7 @@ struct SVideoExportIo
 	int (*m_pSync)(IOHANDLE) = io_sync;
 	int (*m_pClose)(IOHANDLE) = io_close;
 	int (*m_pCloseVideo)(AVIOContext **) = nullptr; // 空值使用 avio_closep
+	char *(*m_pReadText)(IOHANDLE) = io_read_all_str;
 };
 
 class CVideoExportTask
@@ -160,7 +165,7 @@ public:
 	void FinalOutputName(char *pBuffer, size_t BufferSize) const;
 
 	// 进度持久化：videos/<name>.progress。损坏或不匹配时返回 false 并重置全部段状态。
-	bool LoadProgress(const char *pProgressPath);
+	bool LoadProgress(const char *pProgressPath, const SVideoExportIo *pIo = nullptr);
 	bool SaveProgress(const char *pProgressPath, const SVideoExportIo *pIo = nullptr) const;
 
 	void MarkSegmentDone(int SegmentIndex)

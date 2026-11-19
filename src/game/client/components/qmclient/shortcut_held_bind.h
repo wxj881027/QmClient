@@ -39,14 +39,16 @@ public:
 			       str_comp_nocase(pCommand, "+spectate") == 0 ||
 			       str_comp_nocase(pCommand, "+statboard") == 0;
 		};
+		std::string HeldPanelCommands;
 		ForEachTopLevelBindCommand(Original.c_str(), [&](const char *pCommand) {
 			if(IsHeldPanel(pCommand))
 			{
-				if(!m_HeldPanelCommands.empty())
-					m_HeldPanelCommands += ';';
-				m_HeldPanelCommands += pCommand;
+				if(!HeldPanelCommands.empty())
+					HeldPanelCommands += ';';
+				HeldPanelCommands += pCommand;
 			}
 		});
+		m_HeldPanelCommands.swap(HeldPanelCommands);
 		m_Restricted = true;
 		ForEachTopLevelBindCommand(Original.c_str(), [&](const char *pCommand) {
 			if(pCommand[0] == '+' && !IsHeldPanel(pCommand))

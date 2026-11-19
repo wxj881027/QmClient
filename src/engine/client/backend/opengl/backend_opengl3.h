@@ -12,6 +12,8 @@
 
 #include "backend_opengl.h"
 
+#include <algorithm>
+
 class CGLSLPrimitiveExProgram;
 class CGLSLQuadProgram;
 class CGLSLSpriteMultipleProgram;
@@ -27,45 +29,54 @@ class CGLSLGaussianBlurProgram;
 class CCommandProcessorFragment_OpenGL3_3 : public CCommandProcessorFragment_OpenGL3
 {
 protected:
-	int m_MaxQuadsAtOnce;
-	static const int ms_MaxQuadsPossible = 256;
+	int m_MaxQuadsAtOnce = 0;
+	static constexpr int ms_MaxQuadsPossible = 256;
 
-	CGLSLPrimitiveProgram *m_pPrimitiveProgram;
-	CGLSLPrimitiveProgram *m_pPrimitiveProgramTextured;
-	CGLSLQuadProgram *m_pQuadProgram;
-	CGLSLQuadProgram *m_pQuadProgramTextured;
-	CGLSLQuadProgram *m_pQuadProgramGrouped;
-	CGLSLQuadProgram *m_pQuadProgramTexturedGrouped;
-	CGLSLTextProgram *m_pTextProgram;
-	CGLSLPrimitiveExProgram *m_pPrimitiveExProgram;
-	CGLSLPrimitiveExProgram *m_pPrimitiveExProgramTextured;
-	CGLSLPrimitiveExProgram *m_pPrimitiveExProgramRotationless;
-	CGLSLPrimitiveExProgram *m_pPrimitiveExProgramTexturedRotationless;
-	CGLSLSpriteMultipleProgram *m_pSpriteProgramMultiple;
-	CGLSLMediaIslandSdfProgram *m_pMediaIslandSdfProgram;
-	bool m_MediaIslandSdfProgramValid;
-	CGLSLRoundedRectSdfProgram *m_pRoundedRectSdfProgram;
-	bool m_RoundedRectSdfProgramValid;
+	static constexpr int QuadBatchCapacity(int VertexUniformComponents)
+	{
+		constexpr int OtherUniformComponents = 20;
+		constexpr int ComponentsPerQuad = 3 * 4;
+		if(VertexUniformComponents < OtherUniformComponents)
+			return 0;
+		return std::min((VertexUniformComponents - OtherUniformComponents) / ComponentsPerQuad, ms_MaxQuadsPossible);
+	}
+
+	CGLSLPrimitiveProgram *m_pPrimitiveProgram = nullptr;
+	CGLSLPrimitiveProgram *m_pPrimitiveProgramTextured = nullptr;
+	CGLSLQuadProgram *m_pQuadProgram = nullptr;
+	CGLSLQuadProgram *m_pQuadProgramTextured = nullptr;
+	CGLSLQuadProgram *m_pQuadProgramGrouped = nullptr;
+	CGLSLQuadProgram *m_pQuadProgramTexturedGrouped = nullptr;
+	CGLSLTextProgram *m_pTextProgram = nullptr;
+	CGLSLPrimitiveExProgram *m_pPrimitiveExProgram = nullptr;
+	CGLSLPrimitiveExProgram *m_pPrimitiveExProgramTextured = nullptr;
+	CGLSLPrimitiveExProgram *m_pPrimitiveExProgramRotationless = nullptr;
+	CGLSLPrimitiveExProgram *m_pPrimitiveExProgramTexturedRotationless = nullptr;
+	CGLSLSpriteMultipleProgram *m_pSpriteProgramMultiple = nullptr;
+	CGLSLMediaIslandSdfProgram *m_pMediaIslandSdfProgram = nullptr;
+	bool m_MediaIslandSdfProgramValid = false;
+	CGLSLRoundedRectSdfProgram *m_pRoundedRectSdfProgram = nullptr;
+	bool m_RoundedRectSdfProgramValid = false;
 	// 圆角容器放图专用变体：唯一区别是片段着色器额外采样一张图片。
-	CGLSLRoundedRectSdfProgram *m_pRoundedRectSdfTexturedProgram;
-	bool m_RoundedRectSdfTexturedProgramValid;
-	CGLSLProceduralRingProgram *m_pProceduralRingProgram;
-	bool m_ProceduralRingProgramValid;
-	CGLSLGaussianBlurProgram *m_pGaussianBlurProgram;
-	bool m_GaussianBlurProgramValid;
+	CGLSLRoundedRectSdfProgram *m_pRoundedRectSdfTexturedProgram = nullptr;
+	bool m_RoundedRectSdfTexturedProgramValid = false;
+	CGLSLProceduralRingProgram *m_pProceduralRingProgram = nullptr;
+	bool m_ProceduralRingProgramValid = false;
+	CGLSLGaussianBlurProgram *m_pGaussianBlurProgram = nullptr;
+	bool m_GaussianBlurProgramValid = false;
 
-	TWGLuint m_LastProgramId;
+	TWGLuint m_LastProgramId = 0;
 
-	TWGLuint m_aPrimitiveDrawVertexId[MAX_STREAM_BUFFER_COUNT];
-	TWGLuint m_PrimitiveDrawVertexIdTex3D;
-	TWGLuint m_aPrimitiveDrawBufferId[MAX_STREAM_BUFFER_COUNT];
-	TWGLuint m_PrimitiveDrawBufferIdTex3D;
+	TWGLuint m_aPrimitiveDrawVertexId[MAX_STREAM_BUFFER_COUNT] = {};
+	TWGLuint m_PrimitiveDrawVertexIdTex3D = 0;
+	TWGLuint m_aPrimitiveDrawBufferId[MAX_STREAM_BUFFER_COUNT] = {};
+	TWGLuint m_PrimitiveDrawBufferIdTex3D = 0;
 
 	TWGLuint m_aLastIndexBufferBound[MAX_STREAM_BUFFER_COUNT];
 
 	int m_LastStreamBuffer;
 
-	TWGLuint m_QuadDrawIndexBufferId;
+	TWGLuint m_QuadDrawIndexBufferId = 0;
 	unsigned int m_CurrentIndicesInBuffer;
 	TWGLuint m_BackbufferCaptureResolveFramebuffer = 0;
 	TWGLuint m_BackbufferCaptureResolveTexture = 0;
@@ -96,10 +107,9 @@ protected:
 
 	void AllocateQmPrograms();
 	void LoadQmPrograms(const SCommand_Init *pCommand, class CGLSLCompiler &ShaderCompiler, int ShaderMajor, int ShaderMinor, int ShaderPatch);
-	void UnloadQmPrograms();
 	void FreeQmPrograms();
 
-	void InitPrimExProgram(CGLSLPrimitiveExProgram *pProgram, class CGLSLCompiler *pCompiler, class IStorage *pStorage, bool Textured, bool Rotationless);
+	bool InitPrimExProgram(CGLSLPrimitiveExProgram *pProgram, class CGLSLCompiler *pCompiler, class IStorage *pStorage, bool Textured, bool Rotationless);
 
 	bool IsNewApi() override { return true; }
 
@@ -109,8 +119,8 @@ protected:
 	void RenderText(const CCommandBuffer::SState &State, int DrawNum, int TextTextureIndex, int TextOutlineTextureIndex, int TextureSize, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor);
 
 	// These names intentionally match the base API so the OpenGL 3 backend can override the call sites without broader renaming.
-	void TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, uint8_t *pTexData); // NOLINT(bugprone-derived-method-shadowing-base-method)
-	void TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, uint8_t *pTexData); // NOLINT(bugprone-derived-method-shadowing-base-method)
+	void TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, CGraphicsUploadData<uint8_t> pTexData); // NOLINT(bugprone-derived-method-shadowing-base-method)
+	void TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, CGraphicsUploadData<uint8_t> pTexData); // NOLINT(bugprone-derived-method-shadowing-base-method)
 
 	bool Cmd_Init(const SCommand_Init *pCommand) override;
 	void Cmd_Shutdown(const SCommand_Shutdown *pCommand) override;

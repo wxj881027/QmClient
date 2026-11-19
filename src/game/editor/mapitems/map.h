@@ -3,10 +3,8 @@
 #ifndef GAME_EDITOR_MAPITEMS_MAP_H
 #define GAME_EDITOR_MAPITEMS_MAP_H
 
+#include <base/str.h>
 #include <base/types.h>
-
-#include <engine/shared/datafile.h>
-#include <engine/shared/jobs.h>
 
 #include <game/editor/editor_history.h>
 #include <game/editor/editor_server_settings.h>
@@ -19,6 +17,7 @@
 #include <game/editor/mapitems/envelope.h>
 #include <game/editor/mapitems/envelope_evaluator.h>
 #include <game/editor/mapitems/layer.h>
+#include <game/editor/mapitems/save_job.h>
 #include <game/editor/proof_mode.h>
 #include <game/editor/quad_knife.h>
 #include <game/editor/quadart.h>
@@ -44,24 +43,6 @@ class CLayerTele;
 class CLayerTune;
 class CQuad;
 class IEditorEnvelopeReference;
-
-class CDataFileWriterFinishJob : public IJob
-{
-	IStorage *m_pStorage;
-	CEditorMap *m_pMap;
-	char m_aRealFilename[IO_MAX_PATH_LENGTH];
-	char m_aTempFilename[IO_MAX_PATH_LENGTH];
-	char m_aErrorMessage[2 * IO_MAX_PATH_LENGTH + 128];
-	CDataFileWriter m_Writer;
-
-	void Run() override;
-
-public:
-	CDataFileWriterFinishJob(IStorage *pStorage, CEditorMap *pMap, const char *pRealFilename, const char *pTempFilename, CDataFileWriter &&Writer);
-	CEditorMap *Map() const { return m_pMap; }
-	const char *RealFilename() const { return m_aRealFilename; }
-	const char *ErrorMessage() const { return m_aErrorMessage; }
-};
 
 using FErrorHandler = std::function<void(const char *pErrorMessage)>;
 
@@ -182,6 +163,13 @@ public:
 	void ModifySoundIndex(const FIndexModifyFunction &IndexModifyFunction);
 
 	// I/O
+	static void FormatAppendedImageName(char (&aName)[IO_MAX_PATH_LENGTH], const char *pOriginalName, size_t Number)
+	{
+		char aSuffix[32];
+		const int SuffixLength = str_format(aSuffix, sizeof(aSuffix), " (%zu)", Number);
+		str_copy(aName, pOriginalName, sizeof(aName) - SuffixLength);
+		str_append(aName, aSuffix);
+	}
 	bool Save(const char *pFilename, const FErrorHandler &ErrorHandler);
 	bool PerformPreSaveSanityChecks(const FErrorHandler &ErrorHandler);
 	bool Load(const char *pFilename, int StorageType, const FErrorHandler &ErrorHandler);
@@ -271,11 +259,12 @@ public:
 
 	void PlaceBorderTiles();
 
-	void AddTileArt(CImageInfo &&Image, const char *pFilename, bool IgnoreHistory);
+	bool AddTileArt(CImageInfo &&Image, const char *pFilename, bool IgnoreHistory);
 
 	void AddQuadArt(CImageInfo &&Image, const CQuadArtParameters &Parameters, bool IgnoreHistory);
 
 private:
+	std::shared_ptr<CDataFileWriterFinishJob> PrepareSave(const char *pFilename, const FErrorHandler &ErrorHandler);
 	CEditor *m_pEditor;
 };
 

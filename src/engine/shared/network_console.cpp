@@ -117,7 +117,7 @@ void CNetConsole::Update()
 {
 	NETSOCKET Socket;
 	NETADDR Addr;
-	if(net_tcp_accept(m_Socket, &Socket, &Addr) > 0)
+	if(net_tcp_accept(m_Socket, &Socket, &Addr) >= 0)
 	{
 		AcceptClient(Socket, &Addr);
 	}

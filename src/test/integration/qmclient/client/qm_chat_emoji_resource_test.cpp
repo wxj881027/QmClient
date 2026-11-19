@@ -1,7 +1,6 @@
-// 随包聊天表情经真实存储及生产 WebP 解码后，必须与迁移前 PNG 的 RGBA 完全一致。
+// 随包聊天表情经生产加载入口、真实存储及WebP解码后，保持原RGBA。
 #include <base/hash.h>
 
-#include <engine/gfx/image_loader.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/chat_emoji.h>
@@ -10,7 +9,6 @@
 #include <test/test.h>
 
 #include <array>
-#include <cstdlib>
 
 namespace
 {
@@ -49,13 +47,9 @@ TEST_P(CQmChatEmojiResource, LosslessWebPDecodesToOriginalPixelsIncludingTranspa
 	ASSERT_NE(pStorage, nullptr);
 	const auto &Reference = GetParam();
 	const char *pPath = QmChatEmojiTexturePath(Reference.m_Emoji);
-	void *pFileData = nullptr;
-	unsigned FileSize = 0;
-	ASSERT_TRUE(pStorage->ReadFile(pPath, IStorage::TYPE_ALL, &pFileData, &FileSize));
 	CImageInfo Image;
-	const bool Loaded = CImageLoader::LoadWebP(pFileData, FileSize, pPath, Image);
-	free(pFileData);
-	ASSERT_TRUE(Loaded);
+	QmLoadChatEmojiImage(pStorage.get(), pPath, Image);
+	ASSERT_NE(Image.m_pData, nullptr);
 	EXPECT_EQ(Image.m_Width, 1260u);
 	EXPECT_EQ(Image.m_Height, 1244u);
 	EXPECT_EQ(Image.m_Format, CImageInfo::FORMAT_RGBA);

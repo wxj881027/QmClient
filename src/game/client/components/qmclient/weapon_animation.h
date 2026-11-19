@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_WEAPON_ANIMATION_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_WEAPON_ANIMATION_H
 
+#include "collision_position.h"
+
 #include <base/math.h>
 
 #include <game/gamecore.h>
@@ -35,6 +37,17 @@ struct SQmWeaponReloadAnimationState
 		return m_PlayReloadAnimation && AttackTick > 0 && AttackTick == m_ObservedAttackTick && Weapon == m_AttackWeapon;
 	}
 };
+
+template<typename F>
+inline int QmResolveWeaponAnimationTuneZone(bool HasExtendedData, int TuneZoneOverride, vec2 Position, F &&QueryTuneZone)
+{
+	if(HasExtendedData && TuneZoneOverride >= 0)
+		return std::clamp(TuneZoneOverride, 0, NUM_TUNEZONES - 1);
+	// 无法安全查图时用默认区，服务器显式覆盖仍有优先权。
+	if(!QmCollision::CanRoundPosition(Position))
+		return 0;
+	return std::clamp(QueryTuneZone(Position), 0, NUM_TUNEZONES - 1);
+}
 
 inline bool QmWeaponReloadAnimationSelected(int Probability, float RandomValue)
 {

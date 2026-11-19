@@ -16,6 +16,7 @@ namespace QmMusicHook
 	public:
 		explicit CPublication(uint64_t InitialGeneration = 0) :
 			m_Generation(InitialGeneration) {}
+		// 文字准备异常保留全部旧字段和版本，异常继续交给调用方处理。
 		bool Update(const SPlayback &Playback);
 		uint64_t Generation() const { return m_Generation; }
 		bool HasLyrics() const;

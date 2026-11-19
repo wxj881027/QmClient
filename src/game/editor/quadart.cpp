@@ -3,16 +3,18 @@
 #include "editor.h"
 #include "editor_actions.h"
 
+#include <base/log.h>
+
 #include <game/editor/mapitems/image.h>
 
 #include <algorithm>
 #include <array>
+#include <exception>
 #include <vector>
 
 CQuadArt::CQuadArt(CQuadArtParameters Parameters, CImageInfo &&Img) :
 	m_Parameters(Parameters), m_Img(std::move(Img))
 {
-	m_vVisitedPixels.resize(m_Img.m_Height * m_Img.m_Width, false);
 }
 
 CQuadArt::~CQuadArt()
@@ -39,7 +41,7 @@ ivec2 CQuadArt::GetOptimizedQuadSize(const ColorRGBA &Pixel, const ivec2 &Pos)
 		OptimizedSize.x = Size.x;
 	}
 
-	MarkPixelAsVisited(Pos, OptimizedSize);
+	quad_art::MarkVisitedPixels(m_vVisitedPixels, m_Img, Pos, OptimizedSize);
 	Size = OptimizedSize / ImgPixelSize;
 	return Size;
 }
@@ -49,7 +51,7 @@ size_t CQuadArt::FindSuperPixelSize(const ColorRGBA &Pixel, const ivec2 &Pos, co
 	ivec2 Size(CurrentSize, CurrentSize);
 	if(Pos.x + CurrentSize >= m_Img.m_Width || Pos.y + CurrentSize >= m_Img.m_Height)
 	{
-		MarkPixelAsVisited(Pos, Size);
+		quad_art::MarkVisitedPixels(m_vVisitedPixels, m_Img, Pos, Size);
 		return CurrentSize;
 	}
 
@@ -64,7 +66,7 @@ size_t CQuadArt::FindSuperPixelSize(const ColorRGBA &Pixel, const ivec2 &Pos, co
 			ColorRGBA CheckPixel = GetPixelClamped(CurrentPos);
 			if(CurrentPos.x >= (int)m_Img.m_Width || CurrentPos.y >= (int)m_Img.m_Height || Pixel != CheckPixel)
 			{
-				MarkPixelAsVisited(Pos, Size);
+				quad_art::MarkVisitedPixels(m_vVisitedPixels, m_Img, Pos, Size);
 				return CurrentSize;
 			}
 		}
@@ -88,32 +90,22 @@ bool CQuadArt::IsPixelOptimizable(const ivec2 &Pos, const ColorRGBA &Pixel) cons
 	return !m_vVisitedPixels[Pos.x + Pos.y * m_Img.m_Width] && CheckPixel.a > 0 && Pixel == CheckPixel;
 }
 
-void CQuadArt::MarkPixelAsVisited(const ivec2 &Pos, const ivec2 &Size)
-{
-	for(int y = Pos.y; y < Pos.y + Size.y; y++)
-	{
-		for(int x = Pos.x; x < Pos.x + Size.x; x++)
-		{
-			size_t Index = (size_t)(x + y * m_Img.m_Width);
-			if(Index < m_vVisitedPixels.size())
-				m_vVisitedPixels[Index] = true;
-		}
-	}
-}
-
-CQuad CQuadArt::CreateNewQuad(const vec2 &Pos, const ivec2 &Size, const ColorRGBA &Color) const
+CQuad CQuadArt::CreateNewQuad(const ivec2 &Pos, const ivec2 &Size, const ColorRGBA &Color) const
 {
 	CQuad Quad;
 	Quad.m_PosEnv = Quad.m_ColorEnv = -1;
 	Quad.m_PosEnvOffset = Quad.m_ColorEnvOffset = 0;
-	int x = f2fx(Pos.x), y = f2fx(Pos.y), w = f2fx(Size.x / 2.f), h = f2fx(Size.y / 2.f);
+	const int X = i2fx(Pos.x);
+	const int Y = i2fx(Pos.y);
+	const int Width = i2fx(Size.x);
+	const int Height = i2fx(Size.y);
 
 	for(int i = 0; i < 2; ++i)
 	{
-		Quad.m_aPoints[i].y = y - h;
-		Quad.m_aPoints[i + 2].y = y + h;
-		Quad.m_aPoints[i * 2].x = x - w;
-		Quad.m_aPoints[i * 2 + 1].x = x + w;
+		Quad.m_aPoints[i].y = Y;
+		Quad.m_aPoints[i + 2].y = Y + Height;
+		Quad.m_aPoints[i * 2].x = X;
+		Quad.m_aPoints[i * 2 + 1].x = X + Width;
 	}
 
 	for(auto &QuadColor : Quad.m_aColors)
@@ -124,8 +116,8 @@ CQuad CQuadArt::CreateNewQuad(const vec2 &Pos, const ivec2 &Size, const ColorRGB
 		QuadColor.a = (int)(Color.a * 255);
 	}
 
-	Quad.m_aPoints[4].x = m_Parameters.m_Centralize ? i2fx(-1) : x;
-	Quad.m_aPoints[4].y = m_Parameters.m_Centralize ? i2fx(-1) : y;
+	Quad.m_aPoints[4].x = m_Parameters.m_Centralize ? i2fx(-1) : X + Width / 2;
+	Quad.m_aPoints[4].y = m_Parameters.m_Centralize ? i2fx(-1) : Y + Height / 2;
 
 	for(int i = 0; i < 4; ++i)
 	{
@@ -137,9 +129,12 @@ CQuad CQuadArt::CreateNewQuad(const vec2 &Pos, const ivec2 &Size, const ColorRGB
 
 bool CQuadArt::Create(std::shared_ptr<CLayerQuads> &pQuadLayer)
 {
-	size_t MaxNewQuads = std::ceil((float)(m_Img.m_Width * m_Img.m_Height) / m_Parameters.m_ImagePixelSize);
+	size_t ImageBytes;
+	if(m_Img.m_pData == nullptr || !m_Parameters.MaximumQuadCount(m_Img) || !m_Img.DataSize(ImageBytes))
+		return false;
+	if(m_Parameters.m_Optimize)
+		m_vVisitedPixels.assign(m_Img.m_Height * m_Img.m_Width, false);
 	pQuadLayer->m_vQuads.clear();
-	pQuadLayer->m_vQuads.reserve(MaxNewQuads);
 
 	size_t ImgPixelSize = m_Parameters.m_ImagePixelSize;
 	ivec2 Scale(1, 1);
@@ -150,15 +145,15 @@ bool CQuadArt::Create(std::shared_ptr<CLayerQuads> &pQuadLayer)
 		{
 			ivec2 ImgPos(x, y);
 			ColorRGBA Pixel = GetPixelClamped(ImgPos);
-			if(m_vVisitedPixels[x + y * m_Img.m_Width] || Pixel.a == 0.f)
+			if(Pixel.a == 0.f || (m_Parameters.m_Optimize && m_vVisitedPixels[x + y * m_Img.m_Width]))
 				continue;
 
 			if(m_Parameters.m_Optimize)
 				Scale = GetOptimizedQuadSize(Pixel, ImgPos);
 
 			ivec2 Size = Scale * m_Parameters.m_QuadPixelSize;
-			vec2 Pos(((x / (float)ImgPixelSize) + (Scale.x / 2.f)) * m_Parameters.m_QuadPixelSize,
-				((y / (float)ImgPixelSize) + (Scale.y / 2.f)) * m_Parameters.m_QuadPixelSize);
+			ivec2 Pos(x / ImgPixelSize * m_Parameters.m_QuadPixelSize,
+				y / ImgPixelSize * m_Parameters.m_QuadPixelSize);
 
 			CQuad Quad = CreateNewQuad(Pos, Size, Pixel);
 			pQuadLayer->m_vQuads.emplace_back(Quad);
@@ -172,27 +167,43 @@ void CEditorMap::AddQuadArt(CImageInfo &&Image, const CQuadArtParameters &Parame
 {
 	char aQuadArtName[IO_MAX_PATH_LENGTH];
 	IStorage::StripPathAndExtension(Parameters.m_aFilename, aQuadArtName, sizeof(aQuadArtName));
+	const size_t Width = Image.m_Width;
+	const size_t Height = Image.m_Height;
 
-	std::shared_ptr<CLayerGroup> pGroup = NewGroup();
-	str_copy(pGroup->m_aName, aQuadArtName);
-	pGroup->m_UseClipping = true;
-	pGroup->m_ClipX = -1;
-	pGroup->m_ClipY = -1;
-	pGroup->m_ClipH = std::ceil(Image.m_Height * 1.f * Parameters.m_QuadPixelSize / Parameters.m_ImagePixelSize) + 2;
-	pGroup->m_ClipW = std::ceil(Image.m_Width * 1.f * Parameters.m_QuadPixelSize / Parameters.m_ImagePixelSize) + 2;
+	try
+	{
+		CQuadArt QuadArt(Parameters, std::move(Image));
+		auto pLayer = std::make_shared<CLayerQuads>(this);
+		if(QuadArt.Create(pLayer))
+		{
+			auto pGroup = std::make_shared<CLayerGroup>(this);
+			str_copy(pGroup->m_aName, aQuadArtName);
+			pGroup->m_UseClipping = true;
+			pGroup->m_ClipX = -1;
+			pGroup->m_ClipY = -1;
+			pGroup->m_ClipH = std::ceil(Height * 1.f * Parameters.m_QuadPixelSize / Parameters.m_ImagePixelSize) + 2;
+			pGroup->m_ClipW = std::ceil(Width * 1.f * Parameters.m_QuadPixelSize / Parameters.m_ImagePixelSize) + 2;
+			str_copy(pLayer->m_aName, aQuadArtName);
+			pLayer->m_Flags |= LAYERFLAG_DETAIL;
+			pGroup->m_vpLayers.push_back(pLayer);
 
-	std::shared_ptr<CLayerQuads> pLayer = std::make_shared<CLayerQuads>(this);
-	str_copy(pLayer->m_aName, aQuadArtName);
-	pGroup->AddLayer(pLayer);
-	pLayer->m_Flags |= LAYERFLAG_DETAIL;
+			// 历史记录成功后，把已经生成的图层组交给地图。
+			m_vpGroups.reserve(m_vpGroups.size() + 1);
+			if(!IgnoreHistory)
+				m_EditorHistory.RecordAction(std::make_shared<CEditorActionQuadArt>(this, pGroup));
+			m_vpGroups.push_back(std::move(pGroup));
+			OnModify();
+			return;
+		}
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("editor/quadart", "Generation failed: %s", Error.what());
+	}
 
-	CQuadArt QuadArt(Parameters, std::move(Image));
-	QuadArt.Create(pLayer);
-
-	if(!IgnoreHistory)
-		m_EditorHistory.RecordAction(std::make_shared<CEditorActionQuadArt>(this, pGroup));
-
-	OnModify();
+	// 调用方会关闭当前确认弹层，先关闭它才能保留接下来打开的错误提示。
+	Editor()->Ui()->ClosePopupMenus();
+	Editor()->ShowFileDialogError(Localize("Could not generate the quad art image.", "Editor"));
 }
 
 bool CEditor::CallbackAddQuadArt(const char *pFilepath, int StorageType, void *pUser)
@@ -204,6 +215,7 @@ bool CEditor::CallbackAddQuadArt(const char *pFilepath, int StorageType, void *p
 	pEditor->m_QuadArtParameters.m_Optimize = true;
 	pEditor->m_QuadArtParameters.m_Centralize = false;
 
+	pEditor->m_QuadArtImageInfo.Free();
 	if(!pEditor->Graphics()->LoadPng(pEditor->m_QuadArtImageInfo, pFilepath, StorageType))
 	{
 		pEditor->ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilepath);
@@ -217,6 +229,12 @@ bool CEditor::CallbackAddQuadArt(const char *pFilepath, int StorageType, void *p
 	static SPopupMenuId s_PopupQuadArtId;
 	constexpr float PopupWidth = 400.0f;
 	constexpr float PopupHeight = 120.0f;
-	pEditor->Ui()->DoPopupMenu(&s_PopupQuadArtId, View.w / 2.0f - PopupWidth / 2.0f, View.h / 2.0f - PopupHeight / 2.0f, PopupWidth, PopupHeight, pEditor, PopupQuadArt);
+	SPopupMenuProperties Props;
+	Props.m_OnClosed = [pEditor] {
+		// 大图确认弹层接管已读取的像素。
+		if(!pEditor->m_PopupEventActivated || pEditor->m_PopupEventType != POPEVENT_QUADART_BIG_IMAGE)
+			pEditor->m_QuadArtImageInfo.Free();
+	};
+	pEditor->Ui()->DoPopupMenu(&s_PopupQuadArtId, View.w / 2.0f - PopupWidth / 2.0f, View.h / 2.0f - PopupHeight / 2.0f, PopupWidth, PopupHeight, pEditor, PopupQuadArt, Props);
 	return false;
 }

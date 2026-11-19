@@ -40,7 +40,7 @@ public:
 	bool RunKugouSetup(bool Restore);
 
 private:
-	void SyncHookConfiguration();
+	bool SyncHookConfiguration();
 	void ClearForStaleMedia();
 	void ProcessLyricLoadJob();
 	void LoadLyricFile(const char *pPath);

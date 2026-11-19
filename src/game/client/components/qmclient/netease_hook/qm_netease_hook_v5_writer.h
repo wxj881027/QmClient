@@ -8,8 +8,8 @@
 
 namespace QmNeteaseHook
 {
-	// v5 共享内存 writer。只有拥有 mapping 的进程负责发布；客户端 reader
-	// 永远不会写入 payload。该类仅用于 Windows helper/DLL，其他平台为空实现。
+	// Helper 与 DLL 可以共同持有 v5 映射，按同一 writer mutex 串行发布；
+	// 客户端 reader 不写入 payload，其他平台使用空实现。
 	class CV5Writer
 	{
 	public:

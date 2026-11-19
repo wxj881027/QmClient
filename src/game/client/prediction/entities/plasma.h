@@ -2,7 +2,9 @@
 #ifndef GAME_CLIENT_PREDICTION_ENTITIES_PLASMA_H
 #define GAME_CLIENT_PREDICTION_ENTITIES_PLASMA_H
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/prediction/entity.h>
+#include <game/client/prediction/tick_shift.h>
 
 class CLaserData;
 
@@ -15,16 +17,30 @@ class CPlasma : public CEntity
 	int m_EvalTick;
 	int m_LifeTime;
 
-	void Move();
 	bool HitCharacter(CCharacter *pTarget);
 	bool HitObstacle(CCharacter *pTarget);
 
 public:
+	// 下一位置与下一次查询线段均准备完整后再提交，失败不改变当前位置和速度。
+	static bool TryAdvance(vec2 &Position, vec2 &Velocity)
+	{
+		const vec2 NextPosition = Position + Velocity;
+		const vec2 NextVelocity = Velocity * 1.1f;
+		if(!QmCollision::CanRoundPosition(Position) || !QmCollision::CanRoundPosition(NextPosition) || !QmCollision::CanRoundPosition(NextPosition + NextVelocity))
+			return false;
+		Position = NextPosition;
+		Velocity = NextVelocity;
+		return true;
+	}
+
 	CPlasma(CGameWorld *pGameWorld, int Id, const CLaserData *pData);
 
 	bool Match(const CPlasma *pPlasma) const;
 	void Read(const CLaserData *pData);
-	void ShiftEvalTick(int TickDelta) { m_EvalTick += TickDelta; }
+	[[nodiscard]] bool ShiftEvalTick(int64_t TickDelta, QmTickShift::EMode Mode = QmTickShift::EMode::COMMIT)
+	{
+		return QmTickShift::TryShiftFields(TickDelta, Mode, {&m_EvalTick});
+	}
 
 	void Reset();
 	void Tick() override;

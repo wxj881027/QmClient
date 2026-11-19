@@ -171,6 +171,25 @@ TEST(QmBindWorkshop, CompileRejectsOverlongAndDeeplyNestedCommands)
 	EXPECT_NE(std::find(Result.m_vErrors.begin(), Result.m_vErrors.end(), ECompileError::TOO_MANY_NESTING), Result.m_vErrors.end());
 }
 
+TEST(QmBindBlueprintCompile, RejectsAnActionWithNoExecutableCommand)
+{
+	CBlueprintGraph Graph;
+	SNode Event;
+	Event.m_Type = ENodeType::EVENT_PRESS;
+	const int EventId = Graph.AddNode(Event);
+	const int ActionId = Graph.AddNode(SNode{});
+	ASSERT_TRUE(Graph.Connect(EventId, ActionId));
+
+	for(const char *pCommand : {"  \t ", " ; ; ", "  # reminder"})
+	{
+		SCOPED_TRACE(pCommand);
+		ASSERT_TRUE(Graph.SetNodeCommand(ActionId, pCommand));
+		const SCompileResult Result = Graph.Compile("h");
+		EXPECT_FALSE(Result.Ok());
+		EXPECT_NE(std::find(Result.m_vErrors.begin(), Result.m_vErrors.end(), ECompileError::EMPTY_COMMAND), Result.m_vErrors.end());
+	}
+}
+
 TEST(QmBindWorkshop, VisibleNodesCullsOffscreenGraph)
 {
 	CBlueprintGraph Graph;
@@ -294,6 +313,24 @@ TEST(QmBindWorkshop, DropOnInputPortConnectsAndDropOnEmptyCanvasDoesNot)
 	EXPECT_EQ(ResolveLinkDrop(Graph, 9999, 400.0f, NODE_HEIGHT * 0.5f), ELinkOutcome::NO_SOURCE);
 	EXPECT_EQ(Graph.Edges().size(), 1u);
 	EXPECT_FALSE(std::string(LinkOutcomeLabel(ELinkOutcome::NO_TARGET)).empty());
+}
+
+TEST(QmBindBlueprintCanvas, DroppingALinkOnAGroupFrameLeavesTheGraphUnchanged)
+{
+	CBlueprintGraph Graph;
+	const int FromId = Graph.AddNode(SNode{});
+	SNode Group;
+	Group.m_Type = ENodeType::GROUP;
+	Group.m_X = 400.0f;
+	Group.m_W = GROUP_WIDTH;
+	Group.m_H = GROUP_HEIGHT;
+	const int GroupId = Graph.AddNode(Group);
+	const float X = Group.m_X + Group.m_W * 0.5f;
+	const float Y = Group.m_Y + Group.m_H * 0.5f;
+	ASSERT_EQ(HitTestCanvas(Graph, X, Y).m_NodeId, GroupId);
+
+	EXPECT_EQ(ResolveLinkDrop(Graph, FromId, X, Y), ELinkOutcome::NO_TARGET);
+	EXPECT_TRUE(Graph.Edges().empty());
 }
 
 TEST(QmBindWorkshop, DuplicateAndCyclicLinksAreRejectedBeforeCreatingTheEdge)
@@ -534,6 +571,32 @@ TEST(QmBindWorkshop, ExportedCfgCarriesHeaderAndBindLine)
 	EXPECT_EQ(vAll.front().m_Content, Bundle.m_Content);
 }
 
+TEST(QmBindWorkshop, DuplicateSuffixCannotShareAnExportPathWithAnotherTitle)
+{
+	CFlowCollection Flows;
+	ASSERT_TRUE(Flows.RenameFlow(0, "Hammer"));
+	Flows.AddFlow("Hammer");
+	Flows.AddFlow("Hammer 2");
+
+	const std::vector<SCfgBundle> vBundles = Flows.BuildAllCfg("h");
+	ASSERT_EQ(vBundles.size(), 3u);
+	EXPECT_EQ(vBundles[0].m_FileName, "qm_bind_blueprint_hammer.cfg");
+	EXPECT_EQ(vBundles[1].m_FileName, "qm_bind_blueprint_hammer_2.cfg");
+	EXPECT_NE(vBundles[2].m_FileName, vBundles[1].m_FileName);
+	EXPECT_NE(vBundles[2].m_FileName, vBundles[0].m_FileName);
+}
+
+TEST(QmBindWorkshop, ClosingAnotherFlowPreservesTheRemainingExportPath)
+{
+	CFlowCollection Flows;
+	ASSERT_TRUE(Flows.RenameFlow(0, "Hammer"));
+	const size_t Kept = Flows.AddFlow("Hammer");
+	const std::string FileName = Flows.FileName(Kept);
+	ASSERT_NE(FileName, Flows.FileName(0));
+	ASSERT_TRUE(Flows.RemoveFlow(0));
+	EXPECT_EQ(Flows.FileName(0), FileName);
+}
+
 TEST(QmBindWorkshop, InvalidFlowExportsAHeaderWithoutBindLine)
 {
 	CFlowCollection Flows;
@@ -762,6 +825,30 @@ TEST(QmBindWorkshop, EdgeHitTestFindsOnlyThePolylineUnderThePointer)
 	EXPECT_FALSE(ResolveEdgePolyline(Graph, FromId, 9999, Missing));
 }
 
+TEST(QmBindBlueprintCanvas, EdgeHitTestIncludesTheCurveBeyondItsEndpoints)
+{
+	CBlueprintGraph Graph;
+	SNode From;
+	From.m_X = 520.0f;
+	const int FromId = Graph.AddNode(From);
+	SNode To;
+	To.m_X = 80.0f;
+	To.m_Y = 320.0f;
+	const int ToId = Graph.AddNode(To);
+	ASSERT_TRUE(Graph.Connect(FromId, ToId));
+
+	SEdgePolyline Line;
+	ASSERT_TRUE(ResolveEdgePolyline(Graph, FromId, ToId, Line));
+	const std::vector<SCanvasPoint> vCurve = SampleEdgeCurve(Line);
+	ASSERT_FALSE(vCurve.empty());
+	const auto Outermost = std::max_element(vCurve.begin(), vCurve.end(), [](const SCanvasPoint &A, const SCanvasPoint &B) { return A.m_X < B.m_X; });
+	ASSERT_GT(Outermost->m_X, std::max(Line.m_X0, Line.m_X1) + EDGE_HIT_TOLERANCE);
+
+	const SEdgeHit Hit = HitTestEdge(Graph, Outermost->m_X, Outermost->m_Y);
+	EXPECT_EQ(Hit.m_From, FromId);
+	EXPECT_EQ(Hit.m_To, ToId);
+}
+
 TEST(QmBindWorkshop, DisconnectingOneLinkKeepsNodesAndSiblingLinks)
 {
 	CBlueprintGraph Graph;
@@ -854,65 +941,97 @@ TEST(QmBindWorkshop, GraphBoundsCoverEveryNodeForTheMinimap)
 	EXPECT_NEAR(Bounds.Width(), Bounds.m_MaxX - Bounds.m_MinX, 0.01f);
 }
 
-TEST(QmBindWorkshop, HistoryUndoRestoresTheSnapshotAndRedoBringsItBack)
+TEST(QmBindWorkshop, UndoAndRedoRestoreTheEditedFlowAfterSwitchingTabs)
 {
-	CBlueprintGraph Graph;
+	CFlowCollection Flows;
+	const size_t Edited = Flows.AddFlow("Edited flow");
+	CBlueprintGraph &Graph = Flows.Graph(Edited);
 	SNode First;
 	First.m_Command = "+jump";
 	const int FirstId = Graph.AddNode(First);
-	CBlueprintHistory History;
-	EXPECT_FALSE(History.CanUndo());
-	EXPECT_FALSE(History.CanRedo());
-
-	// 改动前记一笔，再真的改：撤销回到记录点。
-	History.Record(0, Graph);
+	ASSERT_TRUE(Flows.SetActive(Edited));
+	Flows.RecordEdit();
 	SNode Second;
 	Second.m_X = 300.0f;
 	Second.m_Command = "+fire";
-	Graph.AddNode(Second);
+	const int SecondId = Graph.AddNode(Second);
 	ASSERT_EQ(Graph.Nodes().size(), 2u);
-	EXPECT_EQ(History.UndoDepth(), 1u);
 
-	size_t Flow = 99;
-	CBlueprintGraph Restored;
-	ASSERT_TRUE(History.PopUndo(Flow, Restored));
-	EXPECT_EQ(Flow, 0u);
-	EXPECT_EQ(Restored.Nodes().size(), 1u) << "undo must return the graph as it was before the edit";
-	EXPECT_EQ(Restored.Nodes().front().m_Command, "+jump");
-	EXPECT_NE(Restored.FindNode(FirstId), nullptr) << "snapshot must keep node IDs stable";
-	EXPECT_FALSE(History.CanUndo());
+	ASSERT_TRUE(Flows.SetActive(0));
+	ASSERT_TRUE(Flows.Undo());
+	EXPECT_EQ(Flows.ActiveIndex(), Edited);
+	ASSERT_NE(Graph.FindNode(FirstId), nullptr);
+	EXPECT_EQ(Graph.FindNode(SecondId), nullptr);
+	EXPECT_FALSE(Flows.Undo());
 
-	// 撤销时的现场进重做栈，重做再拿回来。
-	History.PushRedo(0, Graph.Clone());
-	ASSERT_TRUE(History.CanRedo());
-	size_t RedoFlow = 0;
-	CBlueprintGraph Redone;
-	ASSERT_TRUE(History.PopRedo(RedoFlow, Redone));
-	EXPECT_EQ(Redone.Nodes().size(), 2u);
-	EXPECT_FALSE(History.CanRedo());
+	ASSERT_TRUE(Flows.SetActive(0));
+	ASSERT_TRUE(Flows.Redo());
+	EXPECT_EQ(Flows.ActiveIndex(), Edited);
+	ASSERT_NE(Graph.FindNode(SecondId), nullptr);
+	EXPECT_EQ(Graph.FindNode(SecondId)->m_Command, "+fire");
+	EXPECT_TRUE(Flows.Graph(0).Nodes().empty());
+	EXPECT_FALSE(Flows.Redo());
 }
 
 TEST(QmBindWorkshop, NewEditDropsTheRedoBranchAndDepthIsBounded)
 {
-	CBlueprintGraph Graph;
-	CBlueprintHistory History;
-	History.Record(0, Graph);
-	History.Record(0, Graph);
-	ASSERT_EQ(History.UndoDepth(), 2u);
-	size_t Flow = 0;
-	CBlueprintGraph Snapshot;
-	ASSERT_TRUE(History.PopUndo(Flow, Snapshot));
-	History.PushRedo(Flow, std::move(Snapshot));
-	ASSERT_TRUE(History.CanRedo());
-	// 下一次编辑把「未来」清掉：不能重做到一条已不存在的分支。
-	History.Record(0, Graph);
-	EXPECT_FALSE(History.CanRedo());
-	EXPECT_EQ(History.UndoDepth(), 2u);
+	CFlowCollection Flows;
+	Flows.RecordEdit();
+	Flows.Graph(0).AddNode(SNode{});
+	ASSERT_TRUE(Flows.Undo());
+	Flows.RecordEdit();
+	EXPECT_FALSE(Flows.Redo());
 
-	// 深度上限：连续记录不会无限涨，最老的一条被挤掉。
-	for(size_t Step = 0; Step < CBlueprintHistory::MAX_DEPTH + 5; ++Step)
-		History.Record(0, Graph);
-	EXPECT_EQ(History.UndoDepth(), CBlueprintHistory::MAX_DEPTH);
+	for(size_t Step = 0; Step < 37; ++Step)
+	{
+		Flows.RecordEdit();
+		Flows.Graph(0).AddNode(SNode{});
+	}
+	for(size_t Step = 0; Step < 32; ++Step)
+		ASSERT_TRUE(Flows.Undo());
+	EXPECT_FALSE(Flows.Undo());
+	EXPECT_EQ(Flows.Graph(0).Nodes().size(), 5u);
+}
+
+TEST(QmBindWorkshop, ClosingATabDropsItsHistoryWithoutLosingOtherEdits)
+{
+	CFlowCollection Flows;
+	const size_t Closed = Flows.AddFlow("Closed flow");
+	const size_t Kept = Flows.AddFlow("Kept flow");
+	ASSERT_TRUE(Flows.SetActive(Kept));
+	Flows.RecordEdit();
+	const int KeptNode = Flows.Graph(Kept).AddNode(SNode{});
+
+	ASSERT_TRUE(Flows.SetActive(Closed));
+	Flows.RecordEdit();
+	Flows.Graph(Closed).AddNode(SNode{});
+	ASSERT_TRUE(Flows.Undo());
+	// 被关标签的重做需要丢弃，右侧流程的撤销仍要指向它自己。
+	ASSERT_TRUE(Flows.SetActive(Kept));
+	ASSERT_TRUE(Flows.RemoveFlow(Closed));
+	EXPECT_EQ(Flows.Title(Flows.ActiveIndex()), "Kept flow");
+	EXPECT_FALSE(Flows.Redo());
+	ASSERT_TRUE(Flows.Undo());
+	EXPECT_EQ(Flows.Title(Flows.ActiveIndex()), "Kept flow");
+	EXPECT_EQ(Flows.Graph(Flows.ActiveIndex()).FindNode(KeptNode), nullptr);
+	ASSERT_TRUE(Flows.Redo());
+	EXPECT_NE(Flows.Graph(Flows.ActiveIndex()).FindNode(KeptNode), nullptr);
+	EXPECT_TRUE(Flows.Graph(0).Nodes().empty());
+}
+
+TEST(QmBindWorkshop, UndoCannotRestoreAClosedFlowIntoAnotherTab)
+{
+	CFlowCollection Flows;
+	const size_t Closed = Flows.AddFlow("Closed flow");
+	const int Original = Flows.Graph(0).AddNode(SNode{});
+	ASSERT_TRUE(Flows.SetActive(Closed));
+	Flows.RecordEdit();
+	Flows.Graph(Closed).AddNode(SNode{});
+
+	ASSERT_TRUE(Flows.RemoveFlow(Closed));
+	EXPECT_FALSE(Flows.Undo());
+	EXPECT_EQ(Flows.Count(), 1u);
+	EXPECT_NE(Flows.Graph(0).FindNode(Original), nullptr);
 }
 
 TEST(QmBindWorkshop, GroupFrameOwnsTheNodesCenteredInsideItAndStaysOutOfTheOutput)
@@ -1045,6 +1164,25 @@ TEST(QmBindWorkshop, HitTestFollowsThePerNodeSizeOfAGroupFrame)
 	// 普通节点尺寸没变：同样的相对位置（超出 NODE_HEIGHT 一半）不该命中端口。
 	const SCanvasHit Tall = HitTestCanvas(Graph, Normal.m_X + NODE_WIDTH * 0.5f, Normal.m_Y + NODE_HEIGHT * 2.0f);
 	EXPECT_TRUE(Tall.Empty());
+}
+
+TEST(QmBindBlueprintCanvas, ResizingANodeKeepsItsFarCornerVisibleAndSelectable)
+{
+	CBlueprintGraph Graph;
+	SNode Node;
+	Node.m_X = -540.0f;
+	Node.m_Y = -360.0f;
+	const int Id = Graph.AddNode(Node);
+	ASSERT_TRUE(Graph.SetNodeSize(Id, 720.0f, 540.0f));
+
+	EXPECT_EQ(Graph.VisibleNodes(170.0f, 170.0f, 175.0f, 175.0f), std::vector<int>{Id});
+	EXPECT_EQ(NodesInRect(Graph, 170.0f, 170.0f, 175.0f, 175.0f), std::vector<int>{Id});
+	const SCanvasHit Hit = HitTestCanvas(Graph, 172.0f, 172.0f);
+	EXPECT_EQ(Hit.m_NodeId, Id);
+	EXPECT_EQ(Hit.m_Part, ECanvasPart::BODY);
+
+	ASSERT_TRUE(Graph.SetNodeSize(Id, NODE_WIDTH, NODE_HEIGHT));
+	EXPECT_TRUE(Graph.VisibleNodes(170.0f, 170.0f, 175.0f, 175.0f).empty());
 }
 
 TEST(QmBindWorkshop, GroupResizeClampsToTheMinimumInsteadOfCollapsing)

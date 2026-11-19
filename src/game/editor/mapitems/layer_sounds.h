@@ -15,7 +15,7 @@ public:
 
 	void BrushSelecting(CUIRect Rect) override;
 	int BrushGrab(CLayerGroup *pBrush, CUIRect Rect) override;
-	void BrushPlace(CLayer *pBrush, vec2 WorldPos) override;
+	void BrushPlace(const CLayer *pBrush, vec2 WorldPos, int LayerIndex) override;
 
 	CUi::EPopupMenuFunctionResult RenderProperties(CUIRect *pToolbox) override;
 

@@ -7,7 +7,24 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/collision.h>
+
+bool CPickupData::HasValidPosition() const
+{
+	return QmCollision::CanRoundPosition(m_Pos);
+}
+
+bool CPickupData::TryFillNetObj(CNetObj_Pickup &Out) const
+{
+	if(!HasValidPosition())
+		return false;
+	Out.m_X = static_cast<int>(m_Pos.x);
+	Out.m_Y = static_cast<int>(m_Pos.y);
+	Out.m_Type = m_Type;
+	Out.m_Subtype = m_Subtype;
+	return true;
+}
 
 CPickupData ExtractPickupInfo(int NetObjType, const void *pData, const CNetObj_EntityEx *pEntEx)
 {

@@ -144,6 +144,17 @@ TEST(AudioPackEditor, ExportSourcePathPrefersManualImportOverSelectedCandidate)
 	EXPECT_TRUE(CMenus::ResolveAudioPackExportSourcePath("", "").empty());
 }
 
+TEST(AudioPackCatalog, UnloadedVariantsHaveNoEngineSample)
+{
+	const auto vSlots = CMenus::BuildAudioPackSlots();
+	ASSERT_FALSE(vSlots.empty());
+	for(const auto &Slot : vSlots)
+	{
+		const auto &Sample = g_pData->m_aSounds[Slot.m_SetId].m_aSounds[Slot.m_VariantIndex];
+		EXPECT_EQ(Sample.m_Id, -1) << Slot.m_pRelativePath;
+	}
+}
+
 TEST(AudioPackCatalog, EveryGeneratedSoundGroupHasUsageAndKeepsEveryVariant)
 {
 	const auto vSlots = CMenus::BuildAudioPackSlots();

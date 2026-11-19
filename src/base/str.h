@@ -698,6 +698,7 @@ void str_escape(char **dst, const char *src, const char *end);
 void str_unescape_newlines(char *str);
 
 int str_toint(const char *str);
+// 十进制转换须读完输入且结果能由 int 表示。失败时保留输出，out 可为空。
 bool str_toint(const char *str, int *out);
 int str_toint_base(const char *str, int base);
 unsigned long str_toulong_base(const char *str, int base);

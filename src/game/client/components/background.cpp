@@ -1581,21 +1581,49 @@ void CBackground::OnInit()
 
 void CBackground::OnShutdown()
 {
+	if(m_OnlineOnly && m_pBackgroundMap)
+		ResetMapBackground();
 	ClearImageBackground();
 	ClearVideoBackground();
 }
 
-void CBackground::LoadBackground()
+bool CBackground::ResetMapBackground()
 {
-	if(m_Loaded && !m_ImageBackground && !m_VideoBackground && m_pMap == m_pBackgroundMap)
-		m_pMap->Unload();
-
-	ClearImageBackground();
-	ClearVideoBackground();
 	m_Loaded = false;
+	if(!EntityBackgroundMap::ReleaseResources(static_cast<CMapLayers &>(*this), *m_pBackgroundImages, *m_pBackgroundLayers, *m_pBackgroundMap))
+	{
+		log_error("background", "Could not release entity background map resources.");
+		return false;
+	}
+
 	m_pMap = m_pBackgroundMap;
 	m_pLayers = m_pBackgroundLayers;
 	m_pImages = m_pBackgroundImages;
+	return true;
+}
+
+bool CBackground::HandleMapBackgroundLoadResult(EntityBackgroundMap::ELoadResult Result)
+{
+	if(Result == EntityBackgroundMap::ELoadResult::FAILED)
+	{
+		log_error("background", "Could not prepare entity background map resources.");
+		ResetMapBackground();
+	}
+	return Result == EntityBackgroundMap::ELoadResult::READY;
+}
+
+bool CBackground::TryAdvanceMapBackground()
+{
+	return HandleMapBackgroundLoadResult(EntityBackgroundMap::TryLoadStep([this] { return AdvanceMapLoad(); }));
+}
+
+void CBackground::LoadBackground()
+{
+	if(!m_pBackgroundMap || !ResetMapBackground())
+		return;
+
+	ClearImageBackground();
+	ClearVideoBackground();
 
 	char aBackgroundEntities[IO_MAX_PATH_LENGTH];
 	NormalizeBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities, aBackgroundEntities, sizeof(aBackgroundEntities));
@@ -1603,52 +1631,44 @@ void CBackground::LoadBackground()
 		str_copy(g_Config.m_ClBackgroundEntities, aBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities));
 
 	str_copy(m_aMapName, aBackgroundEntities);
-	const char *pBackgroundEntities = aBackgroundEntities;
-	if(pBackgroundEntities[0] != '\0')
-	{
-		bool NeedImageLoading = false;
+	if(aBackgroundEntities[0] == '\0')
+		return;
 
-		char aBuf[IO_MAX_PATH_LENGTH];
-		if(str_comp(pBackgroundEntities, CURRENT_MAP) == 0)
+	char aBuf[IO_MAX_PATH_LENGTH];
+	if(IsBackgroundImageExtension(aBackgroundEntities))
+	{
+		ResolveBackgroundEntitiesStoragePath(Storage(), aBackgroundEntities, ".png", aBuf, sizeof(aBuf));
+		LoadImageBackground(aBuf);
+		return;
+	}
+	if(IsBackgroundVideoExtension(aBackgroundEntities))
+	{
+		ResolveBackgroundEntitiesStoragePath(Storage(), aBackgroundEntities, ".mp4", aBuf, sizeof(aBuf));
+		LoadVideoBackground(aBuf);
+		return;
+	}
+
+	m_Loaded = HandleMapBackgroundLoadResult(EntityBackgroundMap::TryLoadStep([&] {
+		if(str_comp(aBackgroundEntities, CURRENT_MAP) == 0)
 		{
 			m_pMap = Kernel()->RequestInterface<IEngineMap>();
-			if(m_pMap->IsLoaded())
-			{
-				m_pLayers = GameClient()->Layers();
-				m_pImages = &GameClient()->m_MapImages;
-				m_Loaded = true;
-			}
-		}
-		else if(IsBackgroundImageExtension(pBackgroundEntities))
-		{
-			ResolveBackgroundEntitiesStoragePath(Storage(), pBackgroundEntities, ".png", aBuf, sizeof(aBuf));
-			LoadImageBackground(aBuf);
-		}
-		else if(IsBackgroundVideoExtension(pBackgroundEntities))
-		{
-			ResolveBackgroundEntitiesStoragePath(Storage(), pBackgroundEntities, ".mp4", aBuf, sizeof(aBuf));
-			LoadVideoBackground(aBuf);
+			if(!m_pMap || !m_pMap->IsLoaded())
+				return false;
+			m_pLayers = GameClient()->Layers();
+			m_pImages = &GameClient()->m_MapImages;
 		}
 		else
 		{
-			ResolveBackgroundEntitiesStoragePath(Storage(), pBackgroundEntities, ".map", aBuf, sizeof(aBuf));
-			if(m_pMap->Load(aBuf, IStorage::TYPE_ALL))
-			{
-				m_pLayers->Init(m_pMap, true);
-				NeedImageLoading = true;
-				m_Loaded = true;
-			}
+			ResolveBackgroundEntitiesStoragePath(Storage(), aBackgroundEntities, ".map", aBuf, sizeof(aBuf));
+			if(!m_pMap->Load(aBuf, IStorage::TYPE_ALL))
+				return false;
+			m_pLayers->Init(m_pMap, true);
+			m_pImages->LoadBackground(m_pLayers, m_pMap);
 		}
 
-		if(m_Loaded && !m_ImageBackground && !m_VideoBackground)
-		{
-			if(NeedImageLoading)
-			{
-				m_pImages->LoadBackground(m_pLayers, m_pMap);
-			}
-			CMapLayers::OnMapLoad();
-		}
-	}
+		CMapLayers::OnMapLoad();
+		return true;
+	}));
 }
 
 void CBackground::OnMapLoad()
@@ -1677,7 +1697,8 @@ void CBackground::OnRender()
 	if(RenderBackgroundTexture())
 		return;
 
-	CMapLayers::OnRender();
+	if(TryAdvanceMapBackground())
+		CMapLayers::OnRender();
 }
 
 bool CBackground::RenderCustom(const vec2 &Center, float Zoom)
@@ -1712,6 +1733,6 @@ void CBackground::RenderPreview(const vec2 &Center, float Zoom, CMapLayers &Prev
 		return;
 	if(RenderBackgroundTexture())
 		return;
-	if(AdvanceMapLoad())
+	if(TryAdvanceMapBackground())
 		RenderWithCamera(Center, Zoom);
 }

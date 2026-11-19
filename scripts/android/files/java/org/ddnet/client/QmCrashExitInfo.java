@@ -9,11 +9,13 @@ import android.util.Log;
 import androidx.annotation.RequiresApi;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -27,13 +29,12 @@ import java.util.Locale;
 final class QmCrashExitInfo {
 	private static final String TAG = "QmCrashExitInfo";
 	private static final String SEEN_FILE = "qm_exit_info_seen.txt";
+	private static final String TEMP_FILE = "qm_exit_info.tmp";
 	private static final String REPORT_SUFFIX = "_exit_report.txt";
 
-	// ApplicationExitInfo.REASON_* 的取值，硬编码避免 API 30 以下的类引用。
-	private static final int REASON_CRASH = 4;
-	private static final int REASON_CRASH_NATIVE = 5;
-	private static final int REASON_ANR = 6;
-	private static final int REASON_INITIALIZATION_FAILURE = 8;
+	interface ReportWriter {
+		void write(OutputStream out, String stamp, String reasonName) throws IOException;
+	}
 
 	private QmCrashExitInfo() {
 	}
@@ -53,70 +54,102 @@ final class QmCrashExitInfo {
 
 	@RequiresApi(Build.VERSION_CODES.R)
 	private static void collectFromSystem(Context context) throws IOException {
+		final File externalFiles = context.getExternalFilesDir(null);
+		if(externalFiles == null)
+			return;
 		final ActivityManager manager = (ActivityManager)context.getSystemService(Context.ACTIVITY_SERVICE);
 		if(manager == null)
 			return;
-		// API 30 只有带参数的重载；API 31 才加了无参的 getHistoricalProcessExitInfos()。
 		final List<ApplicationExitInfo> infos = manager.getHistoricalProcessExitReasons(context.getPackageName(), 0, 5);
 		if(infos == null)
 			return;
 
-		final File directory = new File(context.getExternalFilesDir(null), "dumps/QmClient_Crash");
+		final File directory = new File(externalFiles, "dumps/QmClient_Crash");
 		final long seen = readSeen(directory);
 		for(ApplicationExitInfo info : infos) {
 			final long timestamp = info.getTimestamp();
 			if(timestamp <= seen)
 				continue;
-			final int reason = info.getReason();
-			if(reason != REASON_CRASH && reason != REASON_CRASH_NATIVE && reason != REASON_ANR && reason != REASON_INITIALIZATION_FAILURE)
-				continue;
 			// 每次启动只取最近一条，避免把历史退出记录成批刷进下载目录。
-			writeReport(directory, info, reason, timestamp);
-			writeSeen(directory, timestamp);
-			return;
+			if(recordExit(directory, info.getReason(), timestamp, (out, stamp, reasonName) -> writeReport(out, info, stamp, reasonName)))
+				return;
 		}
 	}
 
 	@RequiresApi(Build.VERSION_CODES.R)
-	private static void writeReport(File directory, ApplicationExitInfo info, int reason, long timestamp) throws IOException {
-		if(!directory.exists() && !directory.mkdirs())
-			return;
+	static boolean recordExit(File directory, int reason, long timestamp, ReportWriter writer) throws IOException {
+		final String label = reasonName(reason);
+		if(label == null)
+			return false;
+		if(!directory.isDirectory() && !directory.mkdirs() && !directory.isDirectory())
+			throw new IOException("failed to create report directory " + directory);
 
 		final String stamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.ROOT).format(new Date(timestamp));
-		final File report = new File(directory, "QmClient_android_" + stamp + REPORT_SUFFIX);
-		try(FileOutputStream out = new FileOutputStream(report)) {
-			final StringBuilder header = new StringBuilder();
-			header.append("QmClient system exit report\n");
-			header.append("===========================\n");
-			header.append("Platform: android\n");
-			header.append("Recorded at: ").append(stamp).append('\n');
-			header.append("Reason: ").append(reasonName(reason)).append(" (").append(reason).append(")\n");
-			header.append("Description: ").append(safe(info.getDescription())).append('\n');
-			header.append("Importance: ").append(info.getImportance()).append('\n');
-			header.append("RSS: ").append(info.getRss()).append(" kB\n");
-			header.append("PSS: ").append(info.getPss()).append(" kB\n");
-			header.append("\nThis file was produced by the system, not by QmClient's own signal handler.\n\n");
-			out.write(header.toString().getBytes(StandardCharsets.UTF_8));
+		final File report = new File(directory, "QmClient_android_" + stamp + "_" + timestamp + REPORT_SUFFIX);
+		final boolean alreadyWritten = report.isFile();
+		if(!alreadyWritten)
+			writeAtomically(report, out -> writer.write(out, stamp, label));
 
-			try(InputStream trace = info.getTraceInputStream()) {
-				if(trace != null)
-					copy(trace, out);
-			}
+		// 报告完整落盘后才发布搬运标记，再更新已读时间。重试沿用已写好的报告。
+		final File exported = new File(directory, report.getName() + ".exported");
+		if(!alreadyWritten || !exported.isFile()) {
+			final File pending = new File(directory, report.getName() + ".pending");
+			if(!pending.isFile() && !pending.createNewFile() && !pending.isFile())
+				throw new IOException("failed to create pending marker for " + report.getName());
 		}
-
-		// 与原生处理器一致的空标记，启动时据此判断哪些报告还没导出过。
-		final File pending = new File(directory, report.getName() + ".pending");
-		if(!pending.exists() && !pending.createNewFile())
-			Log.w(TAG, "failed to create pending marker for " + report.getName());
+		writeAtomically(new File(directory, SEEN_FILE), out -> out.write(Long.toString(timestamp).getBytes(StandardCharsets.UTF_8)));
+		return true;
 	}
 
+	@RequiresApi(Build.VERSION_CODES.R)
+	private static void writeReport(OutputStream out, ApplicationExitInfo info, String stamp, String reasonName) throws IOException {
+		final StringBuilder header = new StringBuilder();
+		header.append("QmClient system exit report\n");
+		header.append("===========================\n");
+		header.append("Platform: android\n");
+		header.append("Recorded at: ").append(stamp).append('\n');
+		header.append("Reason: ").append(reasonName).append(" (").append(info.getReason()).append(")\n");
+		header.append("Description: ").append(safe(info.getDescription())).append('\n');
+		header.append("Importance: ").append(info.getImportance()).append('\n');
+		header.append("RSS: ").append(info.getRss()).append(" kB\n");
+		header.append("PSS: ").append(info.getPss()).append(" kB\n");
+		header.append("\nThis file was produced by the system, not by QmClient's own signal handler.\n\n");
+		out.write(header.toString().getBytes(StandardCharsets.UTF_8));
+
+		try(InputStream trace = info.getTraceInputStream()) {
+			if(trace != null)
+				copy(trace, out);
+		}
+	}
+
+	@FunctionalInterface
+	private interface FileWriter {
+		void write(OutputStream out) throws IOException;
+	}
+
+	@RequiresApi(Build.VERSION_CODES.O)
+	private static void writeAtomically(File target, FileWriter writer) throws IOException {
+		// onCreate 串行写入。复用临时文件，避免进程中途退出时逐次遗留文件。
+		final File temp = new File(target.getParentFile(), TEMP_FILE);
+		final Path tempPath = temp.toPath();
+		try {
+			try(OutputStream out = Files.newOutputStream(tempPath)) {
+				writer.write(out);
+			}
+			Files.move(tempPath, target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+		} finally {
+			temp.delete();
+		}
+	}
+
+	@RequiresApi(Build.VERSION_CODES.R)
 	private static String reasonName(int reason) {
 		switch(reason) {
-		case REASON_CRASH: return "CRASH";
-		case REASON_CRASH_NATIVE: return "CRASH_NATIVE";
-		case REASON_ANR: return "ANR";
-		case REASON_INITIALIZATION_FAILURE: return "INITIALIZATION_FAILURE";
-		default: return "OTHER";
+		case ApplicationExitInfo.REASON_CRASH: return "CRASH";
+		case ApplicationExitInfo.REASON_CRASH_NATIVE: return "CRASH_NATIVE";
+		case ApplicationExitInfo.REASON_ANR: return "ANR";
+		case ApplicationExitInfo.REASON_INITIALIZATION_FAILURE: return "INITIALIZATION_FAILURE";
+		default: return null;
 		}
 	}
 
@@ -143,14 +176,6 @@ final class QmCrashExitInfo {
 			return Long.parseLong(new String(buffer, 0, read, StandardCharsets.UTF_8).trim());
 		} catch(IOException | NumberFormatException error) {
 			return 0;
-		}
-	}
-
-	private static void writeSeen(File directory, long timestamp) {
-		try(FileOutputStream out = new FileOutputStream(new File(directory, SEEN_FILE))) {
-			out.write(Long.toString(timestamp).getBytes(StandardCharsets.UTF_8));
-		} catch(IOException error) {
-			Log.w(TAG, "failed to persist seen timestamp", error);
 		}
 	}
 }

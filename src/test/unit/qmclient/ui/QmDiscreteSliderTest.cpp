@@ -5,6 +5,9 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <limits>
+
 namespace
 {
 	class CDiscreteSliderTest : public ::testing::Test
@@ -401,4 +404,82 @@ TEST(DiscreteSliderStyle, CollapsedFillDoesNotProduceParticles)
 {
 	EXPECT_EQ(ui_widget::ResolveDiscreteSliderParticle({0.0f, 0.0f, 5.0f, 16.0f}, 0, 0.0f).m_Alpha, 0.0f);
 	EXPECT_EQ(ui_widget::ResolveDiscreteSliderParticle({0.0f, 0.0f, 200.0f, 0.0f}, 0, 0.0f).m_Alpha, 0.0f);
+}
+
+TEST(DiscreteSliderNormalization, AdjacentValuesNearIntMaximumKeepDistinctPositions)
+{
+	constexpr int Max = std::numeric_limits<int>::max();
+	EXPECT_FLOAT_EQ(ui_widget::DiscreteSliderNormalizedValue(Max - 2, Max - 2, Max), 0.0f);
+	EXPECT_FLOAT_EQ(ui_widget::DiscreteSliderNormalizedValue(Max - 1, Max - 2, Max), 0.5f);
+	EXPECT_FLOAT_EQ(ui_widget::DiscreteSliderNormalizedValue(Max, Max - 2, Max), 1.0f);
+}
+
+TEST(DiscreteSliderNormalization, AdjacentValuesNearIntMinimumKeepDistinctPositions)
+{
+	constexpr int Min = std::numeric_limits<int>::min();
+	EXPECT_FLOAT_EQ(ui_widget::DiscreteSliderNormalizedValue(Min, Min, Min + 2), 0.0f);
+	EXPECT_FLOAT_EQ(ui_widget::DiscreteSliderNormalizedValue(Min + 1, Min, Min + 2), 0.5f);
+	EXPECT_FLOAT_EQ(ui_widget::DiscreteSliderNormalizedValue(Min + 2, Min, Min + 2), 1.0f);
+}
+
+TEST(DiscreteSliderNormalization, FullIntegerRangeKeepsFiniteEndpointsAndMidpoint)
+{
+	constexpr int Min = std::numeric_limits<int>::min();
+	constexpr int Max = std::numeric_limits<int>::max();
+	EXPECT_FLOAT_EQ(ui_widget::DiscreteSliderNormalizedValue(Min, Min, Max), 0.0f);
+	EXPECT_FLOAT_EQ(ui_widget::DiscreteSliderNormalizedValue(0, Min, Max), 0.5f);
+	EXPECT_FLOAT_EQ(ui_widget::DiscreteSliderNormalizedValue(Max, Min, Max), 1.0f);
+	EXPECT_FLOAT_EQ(ui_widget::DiscreteSliderNormalizedValue(Min, Max - 2, Max), 0.0f);
+	EXPECT_FLOAT_EQ(ui_widget::DiscreteSliderNormalizedValue(Max, Min, Min + 2), 1.0f);
+}
+
+TEST(DiscreteSliderStyle, SmallRangesAtIntegerLimitsSelectFiniteEndpointColors)
+{
+	for(int Min : {std::numeric_limits<int>::min(), std::numeric_limits<int>::max() - 2})
+	{
+		SCOPED_TRACE(Min);
+		const int Max = Min + 2;
+		const auto Low = ui_widget::ResolveDiscreteSliderStyle(Min, Min, Max);
+		const auto High = ui_widget::ResolveDiscreteSliderStyle(Max, Min, Max);
+		for(const auto &Color : {Low.m_Color, High.m_Color})
+		{
+			EXPECT_TRUE(std::isfinite(Color.r));
+			EXPECT_TRUE(std::isfinite(Color.g));
+			EXPECT_TRUE(std::isfinite(Color.b));
+			EXPECT_FLOAT_EQ(Color.a, 1.0f);
+		}
+		EXPECT_FALSE(Low.m_Gradient);
+		EXPECT_TRUE(High.m_Gradient);
+		EXPECT_NE(Low.m_Color, High.m_Color);
+	}
+}
+
+TEST(DiscreteSliderGeometry, GrabAtIntegerLimitKeepsOffsetAndCanReturnToFirstStop)
+{
+	constexpr int Max = std::numeric_limits<int>::max();
+	constexpr int Min = Max - 2;
+	const auto Geometry = ui_widget::ResolveDiscreteSliderGeometry({0.0f, 0.0f, 240.0f, 20.0f});
+	const float Grab = Geometry.m_KnobSize * 0.4f;
+	ui_widget::SDiscreteSliderState State;
+	ui_widget::SDiscreteSliderInput Input;
+	Input.m_MouseX = Geometry.Position(0.5f) + Grab;
+	Input.m_Hovered = Input.m_Pressed = Input.m_Down = true;
+	const auto Press = ui_widget::UpdateDiscreteSlider(State, Geometry, Input, Max - 1, Min, Max);
+	EXPECT_FALSE(Press.m_Changed);
+	EXPECT_TRUE(Press.m_Active);
+	EXPECT_NEAR(State.m_GrabOffset, Grab, 0.00001f);
+
+	Input.m_Pressed = false;
+	Input.m_Active = true;
+	Input.m_MouseX = Geometry.Position(0.0f) + Grab;
+	const auto Drag = ui_widget::UpdateDiscreteSlider(State, Geometry, Input, Press.m_Value, Min, Max);
+	EXPECT_EQ(Drag.m_Value, Min);
+	EXPECT_TRUE(Drag.m_Changed);
+	EXPECT_TRUE(Drag.m_Active);
+
+	Input.m_Down = false;
+	const auto Release = ui_widget::UpdateDiscreteSlider(State, Geometry, Input, Drag.m_Value, Min, Max);
+	EXPECT_EQ(Release.m_Value, Min);
+	EXPECT_FALSE(Release.m_Active);
+	EXPECT_FLOAT_EQ(State.m_GrabOffset, 0.0f);
 }

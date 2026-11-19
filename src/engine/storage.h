@@ -5,6 +5,7 @@
 
 #include "kernel.h"
 
+#include <base/fs.h>
 #include <base/hash.h>
 #include <base/types.h>
 
@@ -29,17 +30,25 @@ public:
 		/**
 		 * Translates to TYPE_SAVE if a path is relative
 		 * and to TYPE_ABSOLUTE if a path is absolute.
-		 * Only usable with OpenFile, ReadFile, ReadFileStr,
+		 * Only usable with OpenFile, ReadFile, ReadFileStr, ReadFileChecked,
 		 * GetCompletePath, FileExists and FolderExists.
 		 */
 		TYPE_SAVE_OR_ABSOLUTE = -3,
 		/**
 		 * Translates to TYPE_ALL if a path is relative
 		 * and to TYPE_ABSOLUTE if a path is absolute.
-		 * Only usable with OpenFile, ReadFile, ReadFileStr,
+		 * Only usable with OpenFile, ReadFile, ReadFileStr, ReadFileChecked,
 		 * GetCompletePath, FileExists and FolderExists.
 		 */
 		TYPE_ALL_OR_ABSOLUTE = -4,
+	};
+
+	enum class EReadFileResult
+	{
+		SUCCESS,
+		NOT_FOUND,
+		IO_FAILURE,
+		UNSUPPORTED,
 	};
 
 	enum class EInitializationType
@@ -58,11 +67,29 @@ public:
 	virtual bool GetExecutablePath(const char *pFilename, char *pBuffer, unsigned BufferSize) const = 0;
 
 	virtual void ListDirectory(int Type, const char *pPath, FS_LISTDIR_CALLBACK pfnCallback, void *pUser) = 0;
+	// 旧后端不能默认为完整扫描成功，接入后显式返回枚举结果。
+	virtual EFsListDirectoryResult ListDirectoryChecked(int, const char *, FS_LISTDIR_CALLBACK, void *) { return EFsListDirectoryResult::UNSUPPORTED; }
 	virtual void ListDirectoryInfo(int Type, const char *pPath, FS_LISTDIR_CALLBACK_FILEINFO pfnCallback, void *pUser) = 0;
 	virtual IOHANDLE OpenFile(const char *pFilename, int Flags, int Type, char *pBuffer = nullptr, int BufferSize = 0) = 0;
 	virtual bool FileExists(const char *pFilename, int Type) = 0;
 	virtual bool FolderExists(const char *pFilename, int Type) = 0;
 	virtual bool ReadFile(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen) = 0;
+	// 成功返回malloc缓冲（包含额外终止零），其他结果清空输出；旧后端不冒充成功。
+	virtual EReadFileResult ReadFileChecked(const char *, int, void **ppResult, unsigned *pResultLen)
+	{
+		*ppResult = nullptr;
+		*pResultLen = 0;
+		return EReadFileResult::UNSUPPORTED;
+	}
+	// 只读打开后确认的普通文件，分配前限长；读出长度不符时失败，不降级成无限读取。
+	virtual EReadFileResult ReadFileCheckedBounded(const char *, int, void **ppResult, unsigned *pResultLen, unsigned)
+	{
+		if(ppResult)
+			*ppResult = nullptr;
+		if(pResultLen)
+			*pResultLen = 0;
+		return EReadFileResult::UNSUPPORTED;
+	}
 	virtual char *ReadFileStr(const char *pFilename, int Type) = 0;
 	virtual bool RetrieveTimes(const char *pFilename, int Type, time_t *pCreated, time_t *pModified) = 0;
 	virtual bool CalculateHashes(const char *pFilename, int Type, SHA256_DIGEST *pSha256, unsigned *pCrc = nullptr) = 0;
@@ -83,8 +110,9 @@ public:
 	static void StripPathAndExtension(const char *pFilename, char *pBuffer, int BufferSize);
 	static const char *FormatTmpPath(char *aBuf, unsigned BufSize, const char *pPath);
 
-	// Replaces a save file through a same-directory backup. If the replacement fails, the old file is restored when possible.
-	static bool ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, const char *pRealFilename, char *pBackupFilename, unsigned BackupFilenameSize);
+	// 同目录备份替换；异常按失败返回并尽力恢复缺失目标，恢复失败时保留备份路径。
+	// 发布成功后的备份清理失败不改变成功；输出缓冲须与输入路径分离。
+	static bool ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, const char *pRealFilename, char *pBackupFilename, unsigned BackupFilenameSize) noexcept;
 };
 
 extern IStorage *CreateStorage(IStorage::EInitializationType InitializationType, int NumArgs, const char **ppArguments);

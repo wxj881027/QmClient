@@ -98,6 +98,16 @@ TEST(QmFinishSummaryData, PlayerDataCountsDistinctMapsAndFindsLatestMatchingFini
 	EXPECT_FALSE(ParseDdnetPlayer(pJson, std::strlen(pJson), "alpha", "Map A", Data));
 }
 
+TEST(QmFinishSummaryData, DdnetPlayerRejectsAnEmbeddedNullInTheCategory)
+{
+	constexpr const char *pJson = R"({"player":"Alpha","types":{"Solo\u0000Other":{"maps":{"Map A":{"finishes":0}}}}})";
+	SRemoteData Data;
+	Data.m_Category = "previous category";
+
+	EXPECT_FALSE(ParseDdnetPlayer(pJson, std::strlen(pJson), "Alpha", "Map A", Data));
+	EXPECT_EQ(Data.m_Category, "previous category");
+}
+
 TEST(QmFinishSummaryData, IndividualRankPointsDistinguishUnrankedFromAnUnknownBaseline)
 {
 	SRemoteData Data;
@@ -299,6 +309,20 @@ TEST(QmFinishSummaryData, OutOfRangeIntegerTimestampCannotConfirmDdnetFinish)
 	SRemoteData Data;
 	ASSERT_TRUE(ParseDdnetPlayer(pJson, std::strlen(pJson), "Alpha", "Map A", Data));
 	EXPECT_FALSE(Data.m_LatestTimestamp);
+}
+
+TEST(QmFinishSummaryData, BestPreviewKeepsTheTimeWhenTheDateCannotBeFormatted)
+{
+	auto Snapshot = Finish();
+	Snapshot.m_FinishedAt = "previous date";
+	SRemoteData Data;
+	Data.m_LatestTimeMs = Snapshot.m_TimeMs;
+	Data.m_LatestTimestamp = std::numeric_limits<int64_t>::max();
+
+	ApplyBestPreviewDate(Snapshot, Data);
+
+	EXPECT_EQ(Snapshot.m_TimeMs, 100000);
+	EXPECT_TRUE(Snapshot.m_FinishedAt.empty());
 }
 
 TEST(QmFinishSummaryComparison, KnownFirstFinishHasNoArtificialDifference)

@@ -222,7 +222,7 @@ bool CJsonFileWriter::Finish()
 		return m_Success;
 	// Ensure newline at the end
 	WriteInternal("\n");
-	if(io_sync(m_IO) != 0)
+	if(io_sync(m_IO) != 0 || io_error(m_IO) != 0)
 		m_Success = false;
 	if(io_close(m_IO) != 0)
 		m_Success = false;

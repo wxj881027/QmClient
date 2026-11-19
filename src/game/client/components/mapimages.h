@@ -12,10 +12,52 @@
 #include <game/mapitems.h>
 
 #include <memory>
+#include <new>
+#include <stdexcept>
+#include <utility>
 
+class CMapImageDecodeJob;
 class IJob;
 class CLayers;
 class IMap;
+
+struct SMapImageDecodeStart
+{
+	enum class EResult
+	{
+		NO_JOB,
+		RESOURCE_FAILED,
+		REJECTED,
+		STARTED,
+	};
+
+	EResult m_Result = EResult::NO_JOB;
+	std::shared_ptr<CMapImageDecodeJob> m_pJob;
+};
+
+// 空候选沿用内嵌图片的同步读取。只有队列接纳后才交出在途作业。
+template<typename TPrepare, typename TSubmit>
+SMapImageDecodeStart TryStartMapImageDecode(TPrepare &&Prepare, TSubmit &&Submit)
+{
+	using EResult = SMapImageDecodeStart::EResult;
+	try
+	{
+		auto pJob = std::forward<TPrepare>(Prepare)();
+		if(!pJob)
+			return {};
+		if(!std::forward<TSubmit>(Submit)(pJob))
+			return {EResult::REJECTED, nullptr};
+		return {EResult::STARTED, std::move(pJob)};
+	}
+	catch(const std::bad_alloc &)
+	{
+		return {EResult::RESOURCE_FAILED, nullptr};
+	}
+	catch(const std::length_error &)
+	{
+		return {EResult::RESOURCE_FAILED, nullptr};
+	}
+}
 
 enum EMapImageModType
 {

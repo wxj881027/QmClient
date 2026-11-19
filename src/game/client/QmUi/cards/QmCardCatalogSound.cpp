@@ -32,6 +32,7 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
+#include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
 #include <game/client/QmUi/cards/QmCardCatalogTeeMetrics.h>
 #include <game/client/animstate.h>
 #include <game/client/components/chat.h>
@@ -83,11 +84,7 @@ namespace
 
 namespace
 {
-	struct SAudioPackEntry
-	{
-		char m_aName[64];
-		int m_FileCount;
-	};
+	using qm_card_catalog::SAudioPackEntry;
 
 	struct SAudioPackScanUser
 	{
@@ -166,16 +163,6 @@ static void EnsureSharedAudioPacks(IStorage *pStorage)
 {
 	if(!gs_AudioPacksInit)
 		RefreshSharedAudioPacks(pStorage);
-}
-
-static int FindAudioPackIndexByName(const std::vector<SAudioPackEntry> &vPacks, const char *pPackName)
-{
-	for(size_t i = 0; i < vPacks.size(); ++i)
-	{
-		if(str_comp(vPacks[i].m_aName, pPackName) == 0)
-			return (int)i;
-	}
-	return -1;
 }
 
 void CMenus::RefreshAudioPackList()
@@ -362,21 +349,8 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			if(CanCommit && g_Config.m_SndPack[0] == '\0')
 				str_copy(g_Config.m_SndPack, "default", sizeof(g_Config.m_SndPack));
 
-			auto FindSelectedPackIndex = [&]() {
-				int Result = FindAudioPackIndexByName(gs_vAudioPacks, g_Config.m_SndPack);
-				if(CanCommit && Result < 0)
-				{
-					RefreshSharedAudioPacks(Storage());
-					Result = FindAudioPackIndexByName(gs_vAudioPacks, g_Config.m_SndPack);
-				}
-				if(CanCommit && Result < 0)
-				{
-					str_copy(g_Config.m_SndPack, "default", sizeof(g_Config.m_SndPack));
-					Result = 0;
-				}
-				return std::max(0, Result);
-			};
-			int SelectedPack = FindSelectedPackIndex();
+			// 扫描未列出已配置的包时，保留配置。玩家可以刷新列表或明确选择另一个包。
+			int SelectedPack = qm_card_catalog::FindAudioPackIndexByName(gs_vAudioPacks, g_Config.m_SndPack);
 
 			const auto Geometry = ResolveSettingsSoundAudioPackGeometry(gs_vAudioPacks.size(), SoundMetrics);
 			CUIRect HeaderRow, ListRow;
@@ -398,7 +372,7 @@ uint64_t CMenus::BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				if(Ui()->DoButton_QmIcon(&s_AudioPackRefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton, BUTTONFLAG_LEFT) && CanCommit)
 				{
 					RefreshAudioPackState();
-					SelectedPack = FindSelectedPackIndex();
+					SelectedPack = qm_card_catalog::FindAudioPackIndexByName(gs_vAudioPacks, g_Config.m_SndPack);
 				}
 				if(DoSettingsButton_Menu(SETTINGS_SOUND, -1, -1, &s_AudioPackEditorButton, "sound-edit-audio-pack", apActionLabels[0], 0, &EditButton, SoundMetrics) && CanCommit)
 					AudioPackEditorOpen(g_Config.m_SndPack);

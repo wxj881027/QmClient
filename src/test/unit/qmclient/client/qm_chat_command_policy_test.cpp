@@ -225,6 +225,17 @@ TEST(QmChatCommandPreview, BuildsWhisperPreviewFromTypedArguments)
 	EXPECT_STREQ(aPreview, "Whisper: /w player message");
 }
 
+TEST(QmChatCommandPreview, KeepsQuotesAndBackslashesInWhisperBodies)
+{
+	char aPreview[256];
+
+	ASSERT_TRUE(QmChatCommandPreview::Build(R"(/w "Alice West" "Take \route")", nullptr, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, R"(Whisper to Alice West: "Take \route")");
+
+	ASSERT_TRUE(QmChatCommandPreview::Build(R"(/c "Take \route")", nullptr, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, R"(Reply to the last whisper target: "Take \route")");
+}
+
 TEST(QmChatCommandPreview, UsesServerCommandHelpTextWithParameterFormat)
 {
 	char aPreview[256];
@@ -269,6 +280,43 @@ TEST(QmChatCommandPreview, UnquotesWholeQuotedArgument)
 	EXPECT_STREQ(aPreview, "Unlock the team");
 }
 
+TEST(QmChatCommandPreview, OnlyUnescapesQuotesAndBackslashesInAQuotedArgument)
+{
+	char aPreview[256];
+
+	ASSERT_TRUE(QmChatCommandPreview::Build(R"(/save "Route\West \"checkpoint\" \\ team")", nullptr, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, R"(Save the team as Route\West "checkpoint" \ team)");
+}
+
+TEST(QmChatCommandPreview, KeepsLongQuotedArgumentsWithinTheRestBuffer)
+{
+	const std::string Argument = std::string(140, 'a') + " tail";
+	const std::string Input = "\"" + Argument + "\"";
+	char aRest[QmChatCommandPreview::REST_LENGTH];
+
+	QmChatCommandPreview::CopyRest(Input.c_str(), aRest, sizeof(aRest));
+	EXPECT_STREQ(aRest, Argument.c_str());
+}
+
+TEST(QmChatCommandPreview, DistinguishesLockToggleFromExplicitUnlock)
+{
+	char aPreview[256];
+
+	ASSERT_TRUE(QmChatCommandPreview::Build("/lock", nullptr, aPreview, sizeof(aPreview)));
+	EXPECT_TRUE(str_startswith(aPreview, "Toggle team lock"));
+
+	ASSERT_TRUE(QmChatCommandPreview::Build("/lock 00", nullptr, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, "Unlock the team");
+}
+
+TEST(QmChatCommandPreview, TruncatesCommandNamesAtUtf8CharacterBoundaries)
+{
+	char aName[4];
+
+	ASSERT_TRUE(QmChatCommandPreview::ReadCommandName("/ab\xe4\xb8\xad", aName, sizeof(aName)));
+	EXPECT_STREQ(aName, "ab");
+}
+
 TEST(QmChatCommandPreview, ReadsCommandNameForServerCommandLookup)
 {
 	char aName[QmChatCommandPreview::TOKEN_LENGTH];
@@ -279,6 +327,7 @@ TEST(QmChatCommandPreview, ReadsCommandNameForServerCommandLookup)
 	ASSERT_TRUE(QmChatCommandPreview::ReadCommandName("/say \"hi there\"", aName, sizeof(aName)));
 	EXPECT_STREQ(aName, "say");
 
+	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName("/pause", aName, 0));
 	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName("pause", aName, sizeof(aName)));
 	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName("/", aName, sizeof(aName)));
 	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName(nullptr, aName, sizeof(aName)));

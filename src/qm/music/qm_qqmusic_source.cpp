@@ -1,5 +1,6 @@
 #include "qm_qqmusic_source.h"
 
+#include "qm_qqmusic_lyric_request.h"
 #include "qm_qqmusic_protocol.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -19,7 +20,10 @@
 #include <chrono>
 #include <cstring>
 #include <future>
+#include <new>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace QmMusicHook
@@ -54,22 +58,61 @@ namespace QmMusicHook
 			}
 		};
 
+		bool ReadProcessBytes(HANDLE Process, uintptr_t Address, void *pOut, size_t Size)
+		{
+			SIZE_T ReadSize = 0;
+			return Address >= 0x10000 && ReadProcessMemory(Process, reinterpret_cast<const void *>(Address), pOut, Size, &ReadSize) && ReadSize == Size;
+		}
+
+		QQMusic::EAttachProbe ProbeImage(HANDLE Process, uintptr_t Module, DWORD ModuleSize)
+		{
+			using QQMusic::EAttachProbe;
+			IMAGE_DOS_HEADER Dos{};
+			IMAGE_NT_HEADERS32 Pe{};
+			if(ModuleSize < sizeof(Pe))
+				return EAttachProbe::UNSUPPORTED;
+			if(!ReadProcessBytes(Process, Module, &Dos, sizeof(Dos)))
+				return EAttachProbe::UNAVAILABLE;
+			if(Dos.e_magic != IMAGE_DOS_SIGNATURE || Dos.e_lfanew <= 0 || static_cast<uint32_t>(Dos.e_lfanew) > ModuleSize - sizeof(Pe))
+				return EAttachProbe::UNSUPPORTED;
+			if(!ReadProcessBytes(Process, Module + Dos.e_lfanew, &Pe, sizeof(Pe)))
+				return EAttachProbe::UNAVAILABLE;
+			return Pe.Signature == IMAGE_NT_SIGNATURE && Pe.FileHeader.Machine == IMAGE_FILE_MACHINE_I386 ? EAttachProbe::IDENTIFIED : EAttachProbe::UNSUPPORTED;
+		}
+
+		QQMusic::EAttachProbe ProbeVersion(HANDLE Process, int &Major, int &Minor)
+		{
+			using QQMusic::EAttachProbe;
+			std::array<wchar_t, 32768> aPath{};
+			DWORD PathSize = static_cast<DWORD>(aPath.size());
+			if(!QueryFullProcessImageNameW(Process, 0, aPath.data(), &PathSize))
+				return EAttachProbe::UNAVAILABLE;
+			DWORD Ignored;
+			const DWORD VersionSize = GetFileVersionInfoSizeW(aPath.data(), &Ignored);
+			if(VersionSize == 0)
+				return EAttachProbe::UNAVAILABLE;
+			if(VersionSize > 1024 * 1024)
+				return EAttachProbe::UNSUPPORTED;
+			std::vector<unsigned char> Version(VersionSize);
+			if(!GetFileVersionInfoW(aPath.data(), 0, VersionSize, Version.data()))
+				return EAttachProbe::UNAVAILABLE;
+			VS_FIXEDFILEINFO *pInfo = nullptr;
+			UINT InfoSize = 0;
+			if(!VerQueryValueW(Version.data(), L"\\", reinterpret_cast<void **>(&pInfo), &InfoSize) || !pInfo || InfoSize < sizeof(*pInfo) || pInfo->dwSignature != 0xFEEF04BD)
+				return EAttachProbe::UNSUPPORTED;
+			Major = HIWORD(pInfo->dwProductVersionMS);
+			Minor = LOWORD(pInfo->dwProductVersionMS);
+			return EAttachProbe::IDENTIFIED;
+		}
+
 		int64_t NowMs()
 		{
 			return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 		}
 
-		struct SFetchResult
+		QQMusic::SLyricFetchResult FetchLyrics(uint32_t SongId, const std::string &SongMid)
 		{
-			uint64_t m_Generation = 0;
-			bool m_Success = false;
-			QQMusic::SLyrics m_Lyrics;
-		};
-
-		SFetchResult FetchLyrics(uint64_t Generation, uint32_t SongId, const std::string &SongMid)
-		{
-			SFetchResult Result;
-			Result.m_Generation = Generation;
+			QQMusic::SLyricFetchResult Result;
 			const bool MidRequest = !SongMid.empty();
 			const wchar_t *pHost = MidRequest ? L"c.y.qq.com" : L"u.y.qq.com";
 			std::wstring Path = L"/cgi-bin/musicu.fcg";
@@ -148,25 +191,18 @@ namespace QmMusicHook
 		CHandle m_Process;
 		DWORD m_ProcessId = 0;
 		uintptr_t m_Module = 0;
-		DWORD m_ModuleSize = 0;
 		const QQMusic::SOffsets *m_pOffsets = nullptr;
 		std::string m_AttachError;
 		int64_t m_NextAttach = 0;
 		QQMusic::CPlaybackClock m_Clock;
 		QQMusic::CSongIdentity m_Identity;
 		std::string m_CurrentIdentity;
-		uint64_t m_Generation = 0;
-		QQMusic::SLyrics m_Lyrics;
-		std::future<SFetchResult> m_Fetch;
-		int m_Attempts = 0;
-		int64_t m_NextFetch = 0;
+		QQMusic::CLyricRequest m_LyricRequest;
 		int64_t m_SongSince = 0;
-		bool m_Fetched = false;
 
 		bool Read(uintptr_t Address, void *pOut, size_t Size) const
 		{
-			SIZE_T ReadSize = 0;
-			return Address >= 0x10000 && ReadProcessMemory(m_Process.m_Value, reinterpret_cast<const void *>(Address), pOut, Size, &ReadSize) && ReadSize == Size;
+			return ReadProcessBytes(m_Process.m_Value, Address, pOut, Size);
 		}
 
 		bool Read32(uintptr_t Address, uint32_t &Out) const
@@ -217,22 +253,21 @@ namespace QmMusicHook
 			return Result;
 		}
 
-		void Disconnect()
+		void Disconnect(int64_t Now)
 		{
 			m_Process.Reset();
 			m_ProcessId = 0;
 			m_Module = 0;
 			m_pOffsets = nullptr;
+			m_AttachError.clear();
 			m_CurrentIdentity.clear();
-			m_Lyrics = {};
 			m_Identity = {};
 			m_Clock = {};
-			m_Attempts = 0;
-			m_Fetched = false;
-			++m_Generation;
+			m_LyricRequest.Reset(Now);
 		}
 
-		void Attach()
+		void Attach(int64_t Now)
+		try
 		{
 			CHandle Snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
 			if(Snapshot.m_Value == INVALID_HANDLE_VALUE)
@@ -243,9 +278,11 @@ namespace QmMusicHook
 			{
 				if(_wcsicmp(Entry.szExeFile, L"QQMusic.exe") != 0)
 					continue;
-				m_Process.Reset(OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, Entry.th32ProcessID));
-				if(!m_Process.m_Value)
+				CHandle Process(OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, Entry.th32ProcessID));
+				if(!Process.m_Value)
 					continue;
+				uintptr_t ModuleAddress = 0;
+				DWORD ModuleSize = 0;
 				CHandle Modules(CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, Entry.th32ProcessID));
 				MODULEENTRY32W Module{};
 				Module.dwSize = sizeof(Module);
@@ -255,49 +292,40 @@ namespace QmMusicHook
 					{
 						if(_wcsicmp(Module.szModule, L"QQMusic.dll") == 0)
 						{
-							m_Module = reinterpret_cast<uintptr_t>(Module.modBaseAddr);
-							m_ModuleSize = Module.modBaseSize;
+							ModuleAddress = reinterpret_cast<uintptr_t>(Module.modBaseAddr);
+							ModuleSize = Module.modBaseSize;
 							break;
 						}
 					}
 				}
-				if(!m_Module)
-				{
-					m_Process.Reset();
+				if(!ModuleAddress)
 					continue;
-				}
+
+				auto Probe = ProbeImage(Process.m_Value, ModuleAddress, ModuleSize);
+				int Major = 0, Minor = 0;
+				if(Probe == QQMusic::EAttachProbe::IDENTIFIED)
+					Probe = ProbeVersion(Process.m_Value, Major, Minor);
+				auto Attachment = QQMusic::ResolveAttachment(Probe, ModuleSize, Major, Minor);
+				if(!Attachment)
+					continue;
+
+				// 进程和版本状态全部备齐后才接管句柄。读取失败由原轮询间隔重试。
+				m_AttachError.swap(Attachment->m_Error);
+				m_Module = ModuleAddress;
+				m_pOffsets = Attachment->m_pOffsets;
 				m_ProcessId = Entry.th32ProcessID;
-				m_AttachError = "QQ Music version is unsupported";
-				IMAGE_DOS_HEADER Dos{};
-				IMAGE_NT_HEADERS32 Pe{};
-				if(m_ModuleSize < sizeof(Pe) || !Read(m_Module, &Dos, sizeof(Dos)) || Dos.e_magic != IMAGE_DOS_SIGNATURE || Dos.e_lfanew <= 0 || static_cast<uint32_t>(Dos.e_lfanew) > m_ModuleSize - sizeof(Pe) || !Read(m_Module + Dos.e_lfanew, &Pe, sizeof(Pe)) || Pe.Signature != IMAGE_NT_SIGNATURE || Pe.FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
-					return;
-				std::array<wchar_t, 32768> aPath{};
-				DWORD PathSize = static_cast<DWORD>(aPath.size());
-				if(!QueryFullProcessImageNameW(m_Process.m_Value, 0, aPath.data(), &PathSize))
-					return;
-				DWORD Ignored;
-				const DWORD VersionSize = GetFileVersionInfoSizeW(aPath.data(), &Ignored);
-				if(VersionSize == 0 || VersionSize > 1024 * 1024)
-					return;
-				std::vector<unsigned char> Version(VersionSize);
-				VS_FIXEDFILEINFO *pInfo = nullptr;
-				UINT InfoSize = 0;
-				if(!GetFileVersionInfoW(aPath.data(), 0, VersionSize, Version.data()) || !VerQueryValueW(Version.data(), L"\\", reinterpret_cast<void **>(&pInfo), &InfoSize) || InfoSize < sizeof(VS_FIXEDFILEINFO) || pInfo->dwSignature != 0xFEEF04BD)
-					return;
-				const int Major = HIWORD(pInfo->dwProductVersionMS);
-				const int Minor = LOWORD(pInfo->dwProductVersionMS);
-				m_pOffsets = QQMusic::FindOffsets(Major, Minor);
-				if(!m_pOffsets)
-				{
-					m_AttachError += " (" + std::to_string(Major) + "." + std::to_string(Minor) + ")";
-					return;
-				}
-				const uint32_t LargestField = std::max({m_pOffsets->m_SongId, m_pOffsets->m_Duration, m_pOffsets->m_SessionDuration, m_pOffsets->m_Progress});
-				if(m_pOffsets->m_Struct + LargestField + 4 >= m_ModuleSize || m_pOffsets->m_TimerPointer >= m_ModuleSize || m_pOffsets->m_AbsoluteProgress >= m_ModuleSize)
-					m_pOffsets = nullptr;
+				std::swap(m_Process.m_Value, Process.m_Value);
 				return;
 			}
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 版本准备失败时丢弃临时接入，下次按原间隔重试。
+			Disconnect(Now);
+		}
+		catch(const std::length_error &)
+		{
+			Disconnect(Now);
 		}
 
 		bool ReadSample(SSample &Out) const
@@ -353,21 +381,23 @@ namespace QmMusicHook
 			{
 				DWORD ExitCode = 0;
 				if(!GetExitCodeProcess(m_Process.m_Value, &ExitCode) || ExitCode != STILL_ACTIVE)
-					Disconnect();
+					Disconnect(Now);
 			}
 			if(!m_Process.m_Value && Now >= m_NextAttach)
 			{
 				m_NextAttach = Now + 2000;
-				Attach();
+				Attach(Now);
 			}
 			if(!m_Process.m_Value)
 			{
+				m_LyricRequest.ConsumeReady(Now);
 				Out.m_Error = "Waiting for QQ Music";
 				return false;
 			}
 			Out.m_ProcessId = m_ProcessId;
 			if(!m_pOffsets)
 			{
+				m_LyricRequest.ConsumeReady(Now);
 				Out.m_Error = m_AttachError;
 				return true;
 			}
@@ -377,11 +407,11 @@ namespace QmMusicHook
 				if(!m_CurrentIdentity.empty())
 				{
 					m_CurrentIdentity.clear();
-					m_Lyrics = {};
 					m_Identity.Suspend();
 					m_Clock = {};
-					++m_Generation;
+					m_LyricRequest.Reset(Now);
 				}
+				m_LyricRequest.ConsumeReady(Now);
 				Out.m_Error = "Waiting for QQ Music playback";
 				return true;
 			}
@@ -391,30 +421,12 @@ namespace QmMusicHook
 			if(m_CurrentIdentity != Identity)
 			{
 				m_CurrentIdentity = Identity;
-				m_Lyrics = {};
-				m_Attempts = 0;
-				m_NextFetch = Now;
 				m_SongSince = Now;
-				m_Fetched = false;
-				++m_Generation;
+				m_LyricRequest.Reset(Now);
 			}
-			if(m_Fetch.valid() && m_Fetch.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
-			{
-				SFetchResult Result = m_Fetch.get();
-				if(Result.m_Generation == m_Generation)
-				{
-					m_Fetched = Result.m_Success;
-					if(Result.m_Success)
-						m_Lyrics = std::move(Result.m_Lyrics);
-					else
-						m_NextFetch = Now + 2000 * m_Attempts;
-				}
-			}
-			if(!Key.empty() && !m_Fetch.valid() && !m_Fetched && m_Attempts < 3 && Now >= m_NextFetch)
-			{
-				++m_Attempts;
-				m_Fetch = std::async(std::launch::async, FetchLyrics, m_Generation, Sample.m_SongId, Sample.m_Mid);
-			}
+			m_LyricRequest.Update(Now, !Key.empty(), [&Sample] {
+				return std::async(std::launch::async, FetchLyrics, Sample.m_SongId, Sample.m_Mid);
+			});
 			Out.m_HasSong = true;
 			Out.m_MediaId = "qqmusic:" + (Key.empty() ? "pending:" + Sample.Metadata() : Key);
 			Out.m_Title = Sample.m_Title;
@@ -424,13 +436,14 @@ namespace QmMusicHook
 			Out.m_PositionMs = std::min(Sample.m_Progress, Sample.m_Duration);
 			Out.m_PositionValid = true;
 			Out.m_Playing = m_Clock.Update(Identity, Out.m_PositionMs, Now);
-			Out.m_Loading = !m_Fetched && (Key.empty() ? Now - m_SongSince < 8000 : m_Attempts < 3 || m_Fetch.valid());
-			Out.m_LyricType = m_Lyrics.m_Type;
-			Out.m_LyricContent = m_Lyrics.m_Content;
-			Out.m_TranslationLrc = m_Lyrics.m_Translation;
+			Out.m_Loading = Key.empty() ? Now - m_SongSince < 8000 : m_LyricRequest.Loading();
+			const auto &Lyrics = m_LyricRequest.Lyrics();
+			Out.m_LyricType = Lyrics.m_Type;
+			Out.m_LyricContent = Lyrics.m_Content;
+			Out.m_TranslationLrc = Lyrics.m_Translation;
 			if(Key.empty())
 				Out.m_Error = "Waiting for QQ Music song identity";
-			else if(!m_Fetched && m_Attempts >= 3 && !m_Fetch.valid())
+			else if(m_LyricRequest.Exhausted())
 				Out.m_Error = "QQ Music lyrics are unavailable";
 			return true;
 		}

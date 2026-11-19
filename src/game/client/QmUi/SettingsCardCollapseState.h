@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <string>
 
@@ -21,7 +22,7 @@ namespace qm_card_collapse
 		bool Serialize(char *pOut, size_t OutSize) const;
 
 	private:
-		std::map<std::string, bool> m_States;
+		std::map<std::string, bool, std::less<>> m_States;
 	};
 
 	// 连接 CFGFLAG_SAVE 配置的全局状态。所有设置页面和搜索页共用该实例。

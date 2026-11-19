@@ -5,11 +5,11 @@
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
 
 #include <engine/http.h>
+#include <engine/shared/http_request_completion.h>
 
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
-#include <deque>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -34,7 +34,9 @@ public:
 	void Abort() override;
 
 private:
-	CHttpEmscripten *m_pHttp;
+	std::atomic<CHttpEmscripten *> m_pHttp = nullptr;
+	bool m_Submitted = false;
+	CHttpRequestCompletion m_Completion;
 
 	std::vector<std::pair<std::string, std::string>> m_vRequestHeaders;
 
@@ -42,9 +44,9 @@ private:
 	bool m_CallbackFinished = false;
 
 	bool ConfigureAndRun();
-	void OnSuccess();
-	void OnFailure();
-	void OnProgress();
+	void OnSuccess(emscripten_fetch_t *pFetch);
+	void OnFailure(emscripten_fetch_t *pFetch);
+	void OnProgress(emscripten_fetch_t *pFetch);
 	void OnHeader(const char *pName, const char *pValue);
 	void OnCompletionInternal(EHttpState State, const char *pErrorDetail);
 
@@ -74,9 +76,9 @@ private:
 	std::condition_variable m_ConditionVariableInit;
 	std::condition_variable m_ConditionVariableLoop;
 	std::atomic<bool> m_Initialized = false;
-	std::deque<std::shared_ptr<CHttpRequestEmscripten>> m_PendingRequests;
-	std::unordered_map<emscripten_fetch_t *, EHttpState> m_PendingFetchChanges;
-	std::unordered_map<emscripten_fetch_t *, std::shared_ptr<CHttpRequestEmscripten>> m_RunningRequests;
+	std::vector<std::shared_ptr<CHttpRequestEmscripten>> m_PendingRequests;
+	bool m_HasPendingStateChanges = false;
+	std::unordered_map<CHttpRequestEmscripten *, std::shared_ptr<CHttpRequestEmscripten>> m_RunningRequests;
 	std::chrono::milliseconds m_ShutdownDelay{};
 	std::optional<std::chrono::time_point<std::chrono::steady_clock>> m_ShutdownTime;
 	std::atomic<bool> m_Shutdown = false;
@@ -84,7 +86,7 @@ private:
 
 	static void ThreadMain(void *pUser);
 	void RunLoop();
-	void AddPendingStateChange(emscripten_fetch_t *pFetch, EHttpState State);
+	void AddPendingStateChange(CHttpRequestEmscripten &Request, EHttpState State);
 };
 
 #endif // CONF_PLATFORM_EMSCRIPTEN

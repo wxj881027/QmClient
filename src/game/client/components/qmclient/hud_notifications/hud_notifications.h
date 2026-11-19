@@ -2,6 +2,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_HUD_NOTIFICATIONS_HUD_NOTIFICATIONS_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_HUD_NOTIFICATIONS_HUD_NOTIFICATIONS_H
 
+#include "hud_notification_queue.h"
 #include "hud_notification_rules.h"
 
 #include <base/color.h>
@@ -18,7 +19,6 @@
 #include <game/localization.h>
 
 #include <algorithm>
-#include <deque>
 
 namespace QmHudNotifications
 {
@@ -63,7 +63,7 @@ namespace QmHudNotifications
 
 	inline int ClampVisibleCount(int Value)
 	{
-		return std::clamp(Value, 1, 8);
+		return std::clamp(Value, 1, MAX_NOTIFICATIONS);
 	}
 
 	inline int ClampHoldMs(int Value)
@@ -204,33 +204,39 @@ public:
 	bool QueueEcho(const char *pMessage, unsigned EchoColor);
 	bool HandleServerChat(const char *pMessage, const QmHudNotifications::SServerMessageRouteConfig &RouteConfig, QmHudNotifications::SServerMessageAnalysis *pAnalysisResult = nullptr)
 	{
-		QmHudNotifications::SServerMessageAnalysis Analysis;
-		QmHudNotifications::SServerMessageEntryDecision Decision;
-		if(!HandleServerChatCoreForTests(m_PendingCompatPrompt, m_PendingCompatUntil, g_Config.m_QmHudNotificationsCompatSolo != 0, pMessage, RouteConfig, &Analysis, &Decision))
-		{
+		if(pAnalysisResult != nullptr)
+			*pAnalysisResult = {};
+		return QmHudNotifications::TryDelivery([&] {
+			// 入队失败不能消费兼容提示；未接管的普通分析仍保留原来的清理规则。
+			auto PendingPrompt = m_PendingCompatPrompt;
+			auto PendingUntil = m_PendingCompatUntil;
+			QmHudNotifications::SServerMessageAnalysis Analysis;
+			QmHudNotifications::SServerMessageEntryDecision Decision;
+			const bool ShouldQueue = HandleServerChatCoreForTests(PendingPrompt, PendingUntil, g_Config.m_QmHudNotificationsCompatSolo != 0, pMessage, RouteConfig, &Analysis, &Decision);
 			if(pAnalysisResult != nullptr)
 				*pAnalysisResult = Analysis;
-			return false;
-		}
-		if(pAnalysisResult != nullptr)
-			*pAnalysisResult = Analysis;
-		if(Analysis.m_Route == QmHudNotifications::EServerMessageRoute::Solo)
-		{
-			QueueSolo(Analysis.m_SoloPrompt);
-			return true;
-		}
-		if(Decision.m_UseFallbackNotification)
-		{
-			Queue(EKind::System, Localize(pMessage));
-			return true;
-		}
-		if(Analysis.m_aLocalizedText[0] != '\0')
-		{
-			Queue(EKind::System, Analysis.m_aLocalizedText);
-			return true;
-		}
-		return false;
+			if(!ShouldQueue)
+			{
+				m_PendingCompatPrompt = PendingPrompt;
+				m_PendingCompatUntil = PendingUntil;
+				return false;
+			}
+			bool Queued = false;
+			if(Analysis.m_Route == QmHudNotifications::EServerMessageRoute::Solo)
+				Queued = QueueSolo(Analysis.m_SoloPrompt);
+			else if(Decision.m_UseFallbackNotification)
+				Queued = Queue(EKind::System, Localize(pMessage));
+			else if(Analysis.m_aLocalizedText[0] != '\0')
+				Queued = Queue(EKind::System, Analysis.m_aLocalizedText);
+			if(Queued)
+			{
+				m_PendingCompatPrompt = PendingPrompt;
+				m_PendingCompatUntil = PendingUntil;
+			}
+			return Queued;
+		});
 	}
+
 	bool HandleServerChat(const char *pMessage, bool RouteSystemMessages, QmHudNotifications::SServerMessageAnalysis *pAnalysisResult = nullptr)
 	{
 		QmHudNotifications::SServerMessageRouteConfig RouteConfig;
@@ -266,27 +272,8 @@ public:
 	bool ShouldSuppressServerChat(const char *pMessage);
 
 private:
-	enum class EKind
-	{
-		SoloEnter,
-		SoloLeave,
-		System,
-		Echo,
-	};
-
-	struct SNotification
-	{
-		EKind m_Kind = EKind::Echo;
-		char m_aText[256] = {};
-		char m_aCollapseText[256] = {};
-		char m_aRepeatText[32] = {};
-		int64_t m_StartTime = 0;
-		int64_t m_RepeatAnimTime = 0;
-		unsigned m_EchoColor = 0;
-		bool m_HasEchoColor = false;
-		int m_RepeatCount = 1;
-		float m_VisualY = -1.0f;
-	};
+	using EKind = QmHudNotifications::ENotificationKind;
+	using SNotification = QmHudNotifications::SNotification;
 
 	struct SEditorPreviewMetrics
 	{
@@ -297,7 +284,7 @@ private:
 		bool m_Valid = false;
 	};
 
-	std::deque<SNotification> m_vNotifications;
+	QmHudNotifications::CNotificationQueue m_vNotifications;
 	bool m_HasLastSolo = false;
 	bool m_LastSolo = false;
 	QmHudNotifications::ESoloPrompt m_PendingCompatPrompt = QmHudNotifications::ESoloPrompt::None;
@@ -321,47 +308,22 @@ private:
 	CUIRect MeasureEditorPreviewRect(const CUIRect &BaseRect, QmHudNotifications::EHorizontalFlow Flow);
 	CUIRect MeasureEditorPreviewDragRect(const CUIRect &BaseRect);
 
-	void Queue(EKind Kind, const char *pText, unsigned EchoColor = 0, bool HasEchoColor = false)
+	bool Queue(EKind Kind, const char *pText, unsigned EchoColor = 0, bool HasEchoColor = false)
 	{
-		if(pText == nullptr || pText[0] == '\0')
-			return;
-
-		if(!m_vNotifications.empty())
-		{
-			SNotification &Last = m_vNotifications.back();
-			if(Last.m_Kind == Kind &&
-				Last.m_HasEchoColor == HasEchoColor &&
-				Last.m_EchoColor == EchoColor &&
-				str_comp(Last.m_aCollapseText, pText) == 0)
-			{
-				Last.m_RepeatCount += 1;
-				Last.m_RepeatAnimTime = time_get();
-				str_format(Last.m_aRepeatText, sizeof(Last.m_aRepeatText), "x%d", Last.m_RepeatCount);
-				return;
-			}
-		}
-
-		SNotification Notification;
-		Notification.m_Kind = Kind;
-		str_copy(Notification.m_aText, pText);
-		QmStreamerWordFilter::Filter(Notification.m_aText, g_Config.m_QmStreamerFilterWords != 0);
-		str_copy(Notification.m_aCollapseText, pText);
-		Notification.m_StartTime = time_get();
-		Notification.m_RepeatAnimTime = 0;
-		Notification.m_EchoColor = EchoColor;
-		Notification.m_HasEchoColor = HasEchoColor;
-		m_vNotifications.push_back(Notification);
-		while((int)m_vNotifications.size() > QmHudNotifications::ClampVisibleCount(g_Config.m_QmHudNotificationsMaxVisible))
-			m_vNotifications.pop_front();
+		return m_vNotifications.Queue(Kind, pText, EchoColor, HasEchoColor, g_Config.m_QmHudNotificationsMaxVisible, time_get(), [](char *pCandidate) {
+			QmStreamerWordFilter::Filter(pCandidate, g_Config.m_QmStreamerFilterWords != 0);
+		});
 	}
 
-	void QueueSolo(QmHudNotifications::ESoloPrompt Prompt)
+	bool QueueSolo(QmHudNotifications::ESoloPrompt Prompt)
 	{
 		if(Prompt == QmHudNotifications::ESoloPrompt::Enter)
-			Queue(EKind::SoloEnter, Localize("You are now in a solo part"));
-		else if(Prompt == QmHudNotifications::ESoloPrompt::Leave)
-			Queue(EKind::SoloLeave, Localize("You are now out of the solo part"));
+			return Queue(EKind::SoloEnter, Localize("You are now in a solo part"));
+		if(Prompt == QmHudNotifications::ESoloPrompt::Leave)
+			return Queue(EKind::SoloLeave, Localize("You are now out of the solo part"));
+		return false;
 	}
+
 	bool LocalSoloState(bool &Solo) const;
 	void RenderNotifications(const CUIRect &BaseRect, const CUIRect &VisibleRect, bool Preview, bool StableEditorGeometry, QmHudNotifications::EHorizontalFlow Flow);
 };

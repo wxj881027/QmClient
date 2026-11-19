@@ -144,6 +144,23 @@ TEST_F(CQmScreenshotWatermarkRender, InvalidChineseCollectionFallsBackToBundledL
 	EXPECT_NE(vFirst, Export("XYZ", "latin-second.png"));
 }
 
+TEST_F(CQmScreenshotWatermarkRender, ReplacingCorruptFontAllowsLaterExportWithoutRefreshingManager)
+{
+	IOHANDLE File = m_pStorage->OpenFile("data/fonts/SourceHanSans.ttc", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	ASSERT_NE(File, nullptr);
+	const char aInvalidFont[] = "invalid font";
+	io_write(File, aInvalidFont, sizeof(aInvalidFont));
+	io_close(File);
+	const auto Fallback = Export("中文", "before-font-repair.png");
+	ASSERT_FALSE(Fallback.empty());
+
+	InstallFont("SourceHanSans.ttc");
+	const auto Recovered = Export("中文", "after-font-repair.png");
+	ASSERT_FALSE(Recovered.empty());
+	EXPECT_NE(Recovered, Fallback);
+	EXPECT_EQ(Recovered, Export("中文", "after-font-repair-repeat.png"));
+}
+
 TEST_F(CQmScreenshotWatermarkRender, MissingFontsKeepBuiltInDigitsExportable)
 {
 	const auto vFirst = Export("123", "digits-first.png");

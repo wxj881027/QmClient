@@ -39,13 +39,17 @@
 #include <game/client/components/chat.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/browser_column_layout.h>
+#include <game/client/components/qmclient/browser_friend_ui_id.h>
 #include <game/client/components/qmclient/browser_map_preview.h>
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
+#include <game/client/components/qmclient/browser_score.h>
+#include <game/client/components/qmclient/browser_selection.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/favorite_map_vote.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
 #include <game/client/components/qmclient/local_save_display.h>
+#include <game/client/components/qmclient/map_history_rows.h>
 #include <game/client/components/qmclient/map_history_ui.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
@@ -1891,6 +1895,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		}
 	}
 
+	m_SelectedServerIndex = QmBrowserSelectedSortedIndex(vVisibleServerIndices, NewSelected);
 	WasListboxItemActivated = s_ListBox.WasItemActivated();
 }
 
@@ -2974,7 +2979,7 @@ struct SLocalEasedProgress
 
 void CMenus::RenderServerbrowserInfo(CUIRect View)
 {
-	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedIndex);
+	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedServerIndex);
 
 	// 本页不再另造一套尺寸：信息行、开关行和复制按钮统一吃设置卡片那份内容度量
 	// （行高、正文字号、行距、分区间距都从本面板的实际内容宽推导，窄面板自动落到
@@ -3229,40 +3234,7 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 
 		// score
 		char aTemp[16];
-		if(!CurrentClient.m_Player)
-		{
-			str_copy(aTemp, "SPEC");
-		}
-		else if(pSelectedServer->m_ClientScoreKind == CServerInfo::CLIENT_SCORE_KIND_POINTS)
-		{
-			str_format(aTemp, sizeof(aTemp), "%d", CurrentClient.m_Score);
-		}
-		else
-		{
-			std::optional<int> Time = {};
-
-			if(pSelectedServer->m_ClientScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME_BACKCOMPAT)
-			{
-				const int TempTime = absolute(CurrentClient.m_Score);
-				if(TempTime != 0 && TempTime != 9999)
-					Time = TempTime;
-			}
-			else
-			{
-				// CServerInfo::CLIENT_SCORE_KIND_POINTS
-				if(CurrentClient.m_Score >= 0)
-					Time = CurrentClient.m_Score;
-			}
-
-			if(Time.has_value())
-			{
-				str_time((int64_t)Time.value() * 100, TIME_HOURS, aTemp, sizeof(aTemp));
-			}
-			else
-			{
-				aTemp[0] = '\0';
-			}
-		}
+		QmFormatBrowserScore(aTemp, CurrentClient, pSelectedServer->m_ClientScoreKind);
 
 		Ui()->DoLabel(&Score, aTemp, FontSize, TEXTALIGN_ML);
 
@@ -3375,7 +3347,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	FriendlistOnUpdate();
 	const int NumCategories = maximum(1, GameClient()->Friends()->NumCategories());
 
-	m_BrowserFriendList.Update(*GameClient()->Friends(), *ServerBrowser(), g_Config.m_ClFriendsIgnoreClan != 0);
+	if(!m_BrowserFriendList.Update(*GameClient()->Friends(), *ServerBrowser(), g_Config.m_ClFriendsIgnoreClan != 0))
+		return;
 	const auto &vvFriends = m_BrowserFriendList.Groups();
 
 	bool OpenRemovePopup = false;
@@ -3408,6 +3381,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		Connect(g_Config.m_UiServerAddress, EConnectIntent::AutoFollow);
 	}
 
+	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedServerIndex);
 	int TotalFriendItems = 0;
 	for(const auto &vFriends : vvFriends)
 		TotalFriendItems += (int)vFriends.size();
@@ -3685,10 +3659,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				const unsigned NameHash = str_quickhash(Friend.Name());
 				const unsigned ClanHash = str_quickhash(Friend.Clan());
 				const unsigned AddrHash = Friend.ServerInfo() != nullptr ? str_quickhash(Friend.ServerInfo()->m_aAddress) : 0;
-				uintptr_t FriendUiIdBase = ((uintptr_t)NameHash << 32) ^ (uintptr_t)ClanHash ^ ((uintptr_t)AddrHash << 1) ^ (uintptr_t)(Friend.FriendState() << 2);
-				if(FriendUiIdBase == 0)
-					FriendUiIdBase = 1;
-				FriendUiIdBase <<= 4;
+				const uintptr_t FriendUiIdBase = QmBrowserFriendUiIdBase(NameHash, ClanHash, AddrHash, Friend.FriendState());
 				const void *pListItemId = reinterpret_cast<const void *>(FriendUiIdBase | 0x1);
 				const void *pRemoveButtonId = reinterpret_cast<const void *>(FriendUiIdBase | 0x3);
 				const void *pCopyButtonId = reinterpret_cast<const void *>(FriendUiIdBase | 0x9);
@@ -3747,7 +3718,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				const bool IsOffline = Friend.ServerInfo() == nullptr;
 				const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
 								 (m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
-				const bool InSelectedServer = m_SelectedIndex >= 0 && Friend.ServerInfo() && Friend.ServerInfo()->m_ServerIndex == ServerBrowser()->SortedGet(m_SelectedIndex)->m_ServerIndex;
+				const bool InSelectedServer = pSelectedServer != nullptr && Friend.ServerInfo() && Friend.ServerInfo()->m_ServerIndex == pSelectedServer->m_ServerIndex;
 				const ColorRGBA Color = PlayerBackgroundColor(Friend.FriendState() == IFriends::FRIEND_PLAYER, Friend.FriendState() == IFriends::FRIEND_CLAN, IsOffline ? true : Friend.IsAfk(), InSelectedServer, Inside);
 				// 只看动效档位：该面板在部分渲染通道里 AnimationsBlocked 为真，
 				// 带上它会让进场动画整个失效（表现为卡片「闪一下」）。
@@ -4820,8 +4791,8 @@ int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int Curr
 	// 本地存档列表的计数与收藏地图页共用同一份缓存，这里沿用同样的节流刷新。
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));
-	if(auto pJob = m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2))
-		Engine()->AddJob(std::move(pJob));
+	m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2,
+		[this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
 
 	char aaTabLabels[4][128];
 	str_format(aaTabLabels[0], sizeof(aaTabLabels[0]), "%s (%d)", Localize("Favorite map"), (int)GameClient()->m_TClient.GetFavoriteMaps().size());
@@ -4852,8 +4823,8 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));
-	if(auto pJob = m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2))
-		Engine()->AddJob(std::move(pJob));
+	m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2,
+		[this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
 	const auto &vSaveEntries = m_LocalSaveDisplay.Entries();
 	const bool SaveFileExists = m_LocalSaveDisplay.FileExists();
 	const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
@@ -5204,18 +5175,21 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 		else if(s_MapHistoryFilter == 2)
 			Filter = QmMapHistory::EMapHistoryFilter::RECENT;
 		static std::vector<size_t> s_vHistoryRecordIndices;
-		GameClient()->m_TClient.GetMapHistory().SortedIndices(Filter, s_vHistoryRecordIndices);
-		if(s_vHistoryRecordIndices.empty())
+		static std::vector<int> s_vMapHistoryItemIds;
+		static std::vector<CButtonContainer> s_vMapHistoryRemoveButtons;
+		const bool RowsReady = QmMapHistoryUi::PrepareRows(GameClient()->m_TClient.GetMapHistory(), Filter,
+			s_vHistoryRecordIndices, s_vMapHistoryItemIds, s_vMapHistoryRemoveButtons);
+		if(!RowsReady)
+		{
+			Ui()->DoLabel(&HistoryPanel, Localize("Loading"), 13.0f, TEXTALIGN_MC);
+		}
+		else if(s_vHistoryRecordIndices.empty())
 		{
 			Ui()->DoLabel(&HistoryPanel, HistoryEntries.empty() ? Localize("No map play history yet") : Localize("No results"), 13.0f, TEXTALIGN_MC);
 		}
 		else
 		{
 			static CListBox s_MapHistoryListBox;
-			static std::vector<int> s_vMapHistoryItemIds;
-			static std::vector<CButtonContainer> s_vMapHistoryRemoveButtons;
-			s_vMapHistoryItemIds.resize(s_vHistoryRecordIndices.size());
-			s_vMapHistoryRemoveButtons.resize(s_vHistoryRecordIndices.size());
 			const float CardRowHeight = QmMapHistoryUi::CardRowHeight(HistoryPanel.h);
 			const int HistoryGridColumns = QmMapHistoryUi::GridColumns(HistoryPanel.w - QmMapHistoryUi::LIST_SCROLLBAR_WIDTH, CardRowHeight);
 			s_MapHistoryListBox.SetScrollbarAlwaysReserved(true);
@@ -5229,7 +5203,8 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 				Ui()->DoLabel(&Rect, pText, FontSize, Align, Props);
 			};
 
-			std::string RemoveMapId;
+			// 仅借用到列表结束后的同步删除；删除入口已保证erase后不再读取目标ID。
+			const std::string *pRemoveMapId = nullptr;
 			for(size_t HistoryIndex = 0; HistoryIndex < s_vHistoryRecordIndices.size(); ++HistoryIndex)
 			{
 				const QmMapHistory::SMapHistoryRecord &Record = HistoryEntries[s_vHistoryRecordIndices[HistoryIndex]];
@@ -5241,12 +5216,14 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 				char aDeaths[32];
 				str_format(aDeaths, sizeof(aDeaths), "%d", Record.m_DeathCount);
 				char aLastEntered[64];
-				if(Record.m_LastEnteredAt > 0)
-					str_timestamp_ex((time_t)Record.m_LastEnteredAt, aLastEntered, sizeof(aLastEntered), FORMAT_SPACE);
-				else if(!Record.m_LastPlayedDate.empty())
-					str_copy(aLastEntered, Record.m_LastPlayedDate.c_str(), sizeof(aLastEntered));
-				else
-					str_copy(aLastEntered, Localize("Unknown"), sizeof(aLastEntered));
+				const bool LastEnteredFormatted = Record.m_LastEnteredAt > 0 && str_timestamp_ex_try(Record.m_LastEnteredAt, aLastEntered, sizeof(aLastEntered), FORMAT_SPACE);
+				if(!LastEnteredFormatted)
+				{
+					if(!Record.m_LastPlayedDate.empty())
+						str_copy(aLastEntered, Record.m_LastPlayedDate.c_str(), sizeof(aLastEntered));
+					else
+						str_copy(aLastEntered, Localize("Unknown"), sizeof(aLastEntered));
+				}
 
 				char aTime[64];
 				const int64_t TimeMs = Record.m_Finished ? Record.m_FinishTimeMs : Record.m_PlayTimeMs;
@@ -5297,13 +5274,13 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 				RenderMetric(LastEnteredMetric, Localize("Last entered"), aLastEntered, TEXTALIGN_MR);
 
 				if(Ui()->DoButton_QmIcon(&s_vMapHistoryRemoveButtons[HistoryIndex], EQmIcon::CLOSE, FONT_ICON_XMARK, 0, &RemoveButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL))
-					RemoveMapId = Record.m_MapId;
+					pRemoveMapId = &Record.m_MapId;
 				if(Ui()->HotItem() == &s_vMapHistoryRemoveButtons[HistoryIndex])
 					GameClient()->m_Tooltips.DoToolTip(&s_vMapHistoryRemoveButtons[HistoryIndex], &RemoveButton, Localize("Remove from history"));
 			}
 			s_MapHistoryListBox.DoEnd();
-			if(!RemoveMapId.empty())
-				GameClient()->m_TClient.RemoveMapHistoryRecord(RemoveMapId.c_str());
+			if(pRemoveMapId && !pRemoveMapId->empty())
+				GameClient()->m_TClient.RemoveMapHistoryRecord(pRemoveMapId->c_str());
 		}
 		return;
 	}
@@ -5476,6 +5453,7 @@ void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 
 void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 {
+	m_SelectedServerIndex = -1;
 	// 切换服务器确认的结果：确认后按 Connect() 记下的地址连过去；
 	// 取消、或被页面切换收掉时只清状态，不动当前连接。
 	if(s_SwitchServerPending)

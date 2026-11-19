@@ -660,7 +660,8 @@ int CListBox::DoEnd()
 	m_ScrollbarShown = m_ScrollRegion.ScrollbarShown();
 	if(m_ListBoxItemSelected || m_ScrollRegion.WheelConsumedThisFrame() || m_ScrollRegion.Active())
 		m_InitialScrollPending = false;
-	if(m_ListBoxNewSelOffset != 0 && m_ListBoxNumItems > 0 && m_ListBoxSelectedIndex == m_ListBoxNewSelected)
+	// 调用方会按返回的索引执行激活动作，须保留本帧实际激活的行。
+	if(!m_ListBoxItemActivated && m_ListBoxNewSelOffset != 0 && m_ListBoxNumItems > 0 && m_ListBoxSelectedIndex == m_ListBoxNewSelected)
 	{
 		if(m_ListBoxNewSelected == -1)
 			m_ListBoxNewSelected = 0;

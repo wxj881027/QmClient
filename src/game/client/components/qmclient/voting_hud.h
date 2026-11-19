@@ -42,9 +42,11 @@ inline SQmScoreboardVoteLayout QmScoreboardVoteLayout(const CUIRect &Screen, con
 		return Layout;
 
 	// 只使用计分板上方的临时区域，不写入玩家保存的 HUD 编辑器布局。
-	const float Width = PanelWidth * Layout.m_Scale;
-	const float Height = PanelHeight * Layout.m_Scale;
-	const float Left = std::clamp(Scoreboard.x, Screen.x + ScreenMargin, Screen.x + Screen.w - ScreenMargin - Width);
+	const float Width = std::min(PanelWidth * Layout.m_Scale, AvailableWidth);
+	const float Height = std::min(PanelHeight * Layout.m_Scale, AvailableHeight);
+	const float MinLeft = Screen.x + ScreenMargin;
+	const float MaxLeft = std::max(MinLeft, Screen.x + Screen.w - ScreenMargin - Width);
+	const float Left = std::clamp(Scoreboard.x, MinLeft, MaxLeft);
 	const float Bottom = std::min(Scoreboard.y - PanelGap, Screen.y + Screen.h - ScreenMargin);
 	Layout.m_Panel = {Left, Bottom - Height, Width, Height};
 

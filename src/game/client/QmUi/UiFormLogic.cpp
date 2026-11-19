@@ -23,7 +23,7 @@ namespace ui_widget
 
 	bool ParseNumericFieldValue(const char *pText, const SNumericValueFormat &Format, int StoredMin, int StoredMax, int *pStoredValue)
 	{
-		if(pText == nullptr || pStoredValue == nullptr)
+		if(pText == nullptr || pStoredValue == nullptr || StoredMin > StoredMax)
 			return false;
 		if(Format.m_AllowInfinite && (str_comp(pText, "∞") == 0 || str_comp_nocase(pText, "inf") == 0))
 		{
@@ -33,16 +33,16 @@ namespace ui_widget
 
 		char *pEnd = nullptr;
 		const double Parsed = std::strtod(pText, &pEnd);
-		if(pEnd == pText)
+		if(pEnd == pText || !std::isfinite(Parsed))
 			return false;
 		while(pEnd != nullptr && *pEnd == ' ')
 			++pEnd;
 		if(pEnd != nullptr && *pEnd != '\0')
 			return false;
 
-		const int Divisor = std::max(1, Format.m_DisplayDivisor);
-		const int Stored = (int)std::llround(Parsed * (double)Divisor);
-		*pStoredValue = std::clamp(Stored, StoredMin, StoredMax);
+		const double Divisor = std::max(1, Format.m_DisplayDivisor);
+		const double ClampedDisplayValue = std::clamp(Parsed, StoredMin / Divisor, StoredMax / Divisor);
+		*pStoredValue = static_cast<int>(std::round(ClampedDisplayValue * Divisor));
 		return true;
 	}
 
@@ -87,7 +87,7 @@ namespace ui_widget
 
 	SNumericFieldLayout ResolveNumericFieldLayout(const CUIRect &Rect, bool HasLabel, bool HasUnit, float UiScale)
 	{
-		SNumericFieldLayout Layout;
+		SNumericFieldLayout Layout{};
 		const float Scale = std::max(UiScale, 0.1f);
 		const float Gap = 8.0f * Scale;
 		const float MinSliderWidth = 96.0f * Scale;

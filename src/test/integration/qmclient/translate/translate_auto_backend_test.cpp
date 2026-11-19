@@ -41,6 +41,23 @@ TEST_F(CTranslateBackendTest, AutomaticRefusalDiscardsPartialTextAndDetails)
 	EXPECT_EQ(m_Http.m_vSubmissions.size(), 1u);
 }
 
+TEST_F(CTranslateBackendTest, AutomaticTransportFailureCompletesWithNetworkNotice)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "auto");
+	for(EHttpState State : {EHttpState::ERROR, EHttpState::ABORTED})
+	{
+		SCOPED_TRACE(static_cast<int>(State));
+		auto pBackend = Create();
+		m_Http.m_vSubmissions.back().m_pRequest->SetState(State);
+		CTranslateResponse Response;
+		EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+		EXPECT_TRUE(Response.m_Error);
+		EXPECT_EQ(Response.m_HttpStatus, 0);
+		EXPECT_EQ(Response.m_Notice, ETranslateNotice::NETWORK_ERROR);
+		EXPECT_STREQ(Response.m_Text, "");
+	}
+}
+
 TEST_F(CTranslateBackendTest, AutomaticBackendDestructionCancelsTheRequest)
 {
 	str_copy(g_Config.m_QmTranslateBackend, "auto");

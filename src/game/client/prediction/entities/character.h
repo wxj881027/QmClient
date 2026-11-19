@@ -6,8 +6,11 @@
 #include <generated/protocol.h>
 
 #include <game/client/prediction/entity.h>
+#include <game/client/prediction/tick_shift.h>
 #include <game/gamecore.h>
 #include <game/race_state.h>
+
+#include <utility>
 
 enum
 {
@@ -74,7 +77,7 @@ public:
 	bool CanCollide(int ClientId) override;
 	bool SameTeam(int ClientId);
 	bool m_NinjaJetpack;
-	int m_FreezeTime;
+	int64_t m_FreezeTime;
 	bool m_FrozenLastTick;
 	vec2 m_PrevPos;
 	vec2 m_PrevPrevPos;
@@ -90,11 +93,20 @@ public:
 	void SetLastWeapon(int LastWeap) { m_LastWeapon = LastWeap; }
 	int GetActiveWeapon() const { return m_Core.m_ActiveWeapon; }
 	void SetActiveWeapon(int ActiveWeapon);
-	CCharacterCore GetCore() { return m_Core; }
-	void SetCore(const CCharacterCore &Core)
+	CCharacterCore GetCore()
 	{
-		m_Core = Core;
-		BindAntiPingInterferenceCallback();
+		// 角色核心副本可能在预测世界释放后继续使用。
+		CCharacterCore Core = m_Core;
+		Core.SetCoreWorld(nullptr, nullptr, nullptr);
+		Core.SetAntiPingInterfereCallback(+[](int, bool) {});
+		return Core;
+	}
+	void SetCore(CCharacterCore Core)
+	{
+		// 快练编辑副本中的钩子，写回时同步实际世界的挂接关系。
+		m_Core.SetHookedPlayer(Core.HookedPlayer());
+		m_Core = std::move(Core);
+		SetCoreWorld(GameWorld());
 	}
 	const CCharacterCore *Core() const { return &m_Core; }
 	bool GetWeaponGot(int Type) { return m_Core.m_aWeapons[Type].m_Got; }
@@ -151,7 +163,7 @@ public:
 
 	// TClient
 	CNetObj_PlayerInput *LatestInput() { return &m_LatestInput; }
-	void ShiftTickBase(int TickDelta);
+	[[nodiscard]] bool ShiftTickBase(int64_t TickDelta, QmTickShift::EMode Mode = QmTickShift::EMode::COMMIT);
 
 private:
 	void UpdateQmAxiomHook();
@@ -169,7 +181,7 @@ private:
 	int m_LastWeapon;
 	int m_QueuedWeapon;
 
-	int m_ReloadTimer;
+	int64_t m_ReloadTimer;
 	int m_AttackTick;
 	int m_LastDamageTick;
 	int m_LastDamageFrom;

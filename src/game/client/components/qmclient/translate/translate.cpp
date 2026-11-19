@@ -9,7 +9,6 @@
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
-#include <algorithm>
 #include <array>
 #include <string>
 #include <utility>
@@ -87,6 +86,7 @@ namespace
 		}
 		return true;
 	}
+
 }
 
 void CTranslate::ConTranslate(IConsole::IResult *pResult, void *pUserData)
@@ -115,7 +115,16 @@ void CTranslate::OnConsoleInit()
 
 void CTranslate::OnReset()
 {
-	m_Jobs.Clear();
+	auto &Chat = GameClient()->m_Chat;
+	bool RebuildChat = false;
+	m_Jobs.Clear([&](const STranslateJob &Job) {
+		// 切图时可能保留聊天记录，只清除当前任务仍持有的进度。
+		CChat::CLine *pLine = Chat.GetLineByIndex(Job.m_LineIndex);
+		if(pLine && ClearCanceledTranslateResponse(pLine->m_Initialized, pLine->m_TranslationId, pLine->m_pTranslateResponse, Job))
+			RebuildChat = true;
+	});
+	if(RebuildChat)
+		Chat.RebuildChat();
 	m_LastDiagnostic = {};
 	m_LastMymemoryQuotaNoticeTime = -1;
 }
@@ -149,7 +158,7 @@ void CTranslate::Translate(const char *pName, bool ShowProgress)
 		const CChat::CLine &Line = GameClient()->m_Chat.m_aLines[Index];
 		if(!Line.m_Initialized)
 			return -1;
-		if(!IsTranslatePlayerCandidate(Line.m_ClientId, Line.m_Initialized, Line.m_aText[0] != '\0', Line.m_pTranslateResponse != nullptr, GameClient()->m_aLocalIds, std::size(GameClient()->m_aLocalIds)))
+		if(!IsTranslatePlayerCandidate(Line.m_ClientId, Line.m_Initialized, Line.m_aText[0] != '\0', TranslateResponseBlocksRequest(Line.m_pTranslateResponse.get()), GameClient()->m_aLocalIds, std::size(GameClient()->m_aLocalIds)))
 			return -1;
 		if(!pName)
 			return 0;
@@ -170,56 +179,59 @@ void CTranslate::Translate(const char *pName, bool ShowProgress)
 
 void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTriggered)
 {
-	if(Line.m_pTranslateResponse || !Line.m_Initialized || Line.m_aText[0] == '\0')
+	if(!Line.m_Initialized)
 		return;
-	if(!m_Jobs.CanSubmit(GetMaxConcurrency()))
-	{
+	const int Limit = GetMaxConcurrency();
+	if(!m_Jobs.CanSubmit(Limit))
 		return;
-	}
-	if(Line.m_ClientId == CChat::SERVER_MSG)
+	const bool HasText = Line.m_aText[0] != '\0';
+	const bool ResponseBlocks = TranslateResponseBlocksRequest(Line.m_pTranslateResponse.get(), AutoTriggered);
+	if(!IsTranslatePlayerCandidate(Line.m_ClientId, Line.m_Initialized, HasText, ResponseBlocks, GameClient()->m_aLocalIds, std::size(GameClient()->m_aLocalIds)))
 	{
-		if(ShowProgress)
+		if(Line.m_ClientId == CChat::SERVER_MSG && ShowProgress && HasText && !ResponseBlocks)
 			GameClient()->m_Chat.Echo(Localize("Do not translate server messages"));
 		return;
 	}
-
-	STranslateJob Job;
-	Job.m_LineIndex = GameClient()->m_Chat.GetLineIndex(&Line);
-	if(Job.m_LineIndex < 0)
+	const int LineIndex = GameClient()->m_Chat.GetLineIndex(&Line);
+	if(LineIndex < 0)
 		return;
-	Job.m_TranslationId = Line.m_TranslationId;
-	Job.m_AutoTriggered = AutoTriggered;
-	const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateTarget);
-	if(!IsValidLanguageCode(pTarget))
+
+	const bool HadVisibleResponse = Line.m_pTranslateResponse && Line.m_pTranslateResponse->m_Text[0] != '\0';
+	bool InvalidBackend = false;
+	const bool Accepted = m_Jobs.CreateAndSubmitIncoming(Line.m_pTranslateResponse, [&] {
+		STranslateJob Job;
+		Job.m_LineIndex = LineIndex;
+		Job.m_TranslationId = Line.m_TranslationId;
+		Job.m_AutoTriggered = AutoTriggered;
+		const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateTarget);
+		if(!IsValidLanguageCode(pTarget))
+			pTarget = "en";
+		str_copy(Job.m_aTarget, pTarget, sizeof(Job.m_aTarget));
+		const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
+		if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
+			pSource = "auto";
+		Job.m_pBackend = CreateTranslateBackend(*Http(), Line.m_aText, Job.m_aTarget, pSource);
+		if(!Job.m_pBackend)
+		{
+			InvalidBackend = true;
+			return Job;
+		}
+		if(ShowProgress)
+			str_format(Job.m_pTranslateResponse->m_Text, sizeof(Job.m_pTranslateResponse->m_Text), Localize("%s translating to %s"), Job.m_pBackend->Name(), Job.m_aTarget);
+		return Job;
+	},
+		Limit);
+	if(!Accepted)
 	{
-		// 使用默认语言代码
-		pTarget = "en";
-	}
-	str_copy(Job.m_aTarget, pTarget, sizeof(Job.m_aTarget));
-	const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
-	if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
-		pSource = "auto";
-	Job.m_pBackend = CreateTranslateBackend(*Http(), Line.m_aText, Job.m_aTarget, pSource);
-	if(!Job.m_pBackend)
-	{
-		GameClient()->m_Chat.Echo(Localize("Invalid translation backend"));
+		if(InvalidBackend)
+			GameClient()->m_Chat.Echo(Localize("Invalid translation backend"));
+		else
+			dbg_msg("translate", "could not prepare incoming translation task");
 		return;
 	}
-
-	Line.m_pTranslateResponse = Job.m_pTranslateResponse;
 	if(ShowProgress)
-	{
-		str_format(Job.m_pTranslateResponse->m_Text, sizeof(Job.m_pTranslateResponse->m_Text), Localize("%s translating to %s"), Job.m_pBackend->Name(), Job.m_aTarget);
 		Line.m_Time = time();
-	}
-	else
-	{
-		Job.m_pTranslateResponse->m_Text[0] = '\0';
-	}
-
-	m_Jobs.Submit(std::move(Job), GetMaxConcurrency());
-
-	if(ShowProgress)
+	if(ShowProgress || HadVisibleResponse)
 		GameClient()->m_Chat.RebuildChat();
 }
 
@@ -230,41 +242,53 @@ bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText, bool Tran
 	const char *pFallbackTarget = TranslateOnce ? g_Config.m_QmTranslateOutgoingTarget : nullptr;
 	if(pFallbackTarget && !IsValidLanguageCode(pFallbackTarget))
 		pFallbackTarget = DefaultConfig::QmTranslateOutgoingTarget;
-	if(!PrepareOutgoingTranslateRequest(pText, pFallbackTarget, Text, Target))
-		return false;
-
+	try
+	{
+		if(!PrepareOutgoingTranslateRequest(pText, pFallbackTarget, Text, Target))
+			return false;
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 已识别的翻译请求不能在准备失败后回退发送原文。
+		dbg_msg("translate", "could not prepare outgoing translation request");
+		return true;
+	}
 	if(!m_Jobs.CanSubmit(GetMaxConcurrency()))
 	{
 		GameClient()->m_Chat.Echo(Localize("Too many translation tasks"));
 		return true;
 	}
-
-	const auto StartTranslation = [&] {
+	char aProgress[128];
+	bool InvalidBackend = false;
+	const bool Accepted = m_Jobs.CreateAndSubmit([&] {
 		STranslateJob Job;
 		Job.m_Outgoing = true;
 		Job.m_DisplayOriginal = g_Config.m_QmTranslateOutgoingShowOriginal != 0;
 		Job.m_Connection = g_Config.m_ClDummy;
 		Job.m_LocalClientId = GameClient()->m_aLocalIds[Job.m_Connection];
 		Job.m_Team = Team;
-		Job.m_OriginalText = Text;
+		Job.m_OriginalText = std::move(Text);
 		str_copy(Job.m_aTarget, Target.c_str(), sizeof(Job.m_aTarget));
 		const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
 		if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
 			pSource = "auto";
-		Job.m_pBackend = CreateTranslateBackend(*Http(), Text.c_str(), Job.m_aTarget, pSource);
+		Job.m_pBackend = CreateTranslateBackend(*Http(), Job.m_OriginalText.c_str(), Job.m_aTarget, pSource);
 		if(!Job.m_pBackend)
 		{
-			GameClient()->m_Chat.Echo(Localize("Invalid translation backend"));
-			return false;
+			InvalidBackend = true;
+			return Job;
 		}
-
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), Localize("%s translating to %s before send"), Job.m_pBackend->Name(), Job.m_aTarget);
-		GameClient()->m_Chat.Echo(aBuf);
-		return m_Jobs.Submit(std::move(Job), GetMaxConcurrency());
-	};
-	StartTranslation();
-	// 显式请求已处理，拒绝时也不能让下游再次发送或翻译。
+		str_format(aProgress, sizeof(aProgress), Localize("%s translating to %s before send"), Job.m_pBackend->Name(), Job.m_aTarget);
+		return Job;
+	},
+		GetMaxConcurrency());
+	if(Accepted)
+		GameClient()->m_Chat.Echo(aProgress);
+	else if(InvalidBackend)
+		GameClient()->m_Chat.Echo(Localize("Invalid translation backend"));
+	else
+		dbg_msg("translate", "could not prepare explicit outgoing translation task");
+	// 显式请求已处理，创建或入队失败也不能回退发送原文。
 	return true;
 }
 
@@ -306,6 +330,9 @@ void CTranslate::OnRender()
 					continue;
 				}
 				if(!DispatchOutgoingTranslation(Completed, [&](int Team, const char *pTranslated, const char *pLocalOriginal, int Connection) {
+					   // 译文只作为聊天正文，不能触发本地或服务端命令。
+					   if(*str_utf8_skip_whitespaces(pTranslated) == '/')
+						   return false;
 					   const auto Result = GameClient()->m_Chat.SendChatQueued(Team, pTranslated, false, pLocalOriginal, Connection);
 					   return Result == CChat::EChatSendResult::SENT || Result == CChat::EChatSendResult::QUEUED;
 				   }))
@@ -325,14 +352,12 @@ void CTranslate::OnRender()
 		else
 		{
 			char aBuf[sizeof(Response.m_Text)];
-			// 失败标记供聊天错误样式与本地化提示分支使用
-			Response.m_Error = true;
 			// 服务提示（翻译记忆样板/屏蔽说明等）按固定本地化文案展示，不透出英文原文
 			if(const char *pNotice = TranslateNoticeText(Response.m_Notice))
 				str_copy(aBuf, pNotice);
 			else
 				str_copy(aBuf, Localize(TranslateNoticeSource(ETranslateNotice::INVALID_RESPONSE)));
-			// 配额提示按连接节流；消除进度文本后也刷新聊天布局。
+			// 配额提示按连接节流，只隐藏文案，保留可手动重试的失败状态。
 			bool SuppressNotice = false;
 			if(str_comp(Job.m_pBackend->Name(), "MyMemory") == 0 && Response.m_Notice == ETranslateNotice::QUOTA_EXCEEDED)
 			{
@@ -342,10 +367,7 @@ void CTranslate::OnRender()
 					m_LastMymemoryQuotaNoticeTime = Now;
 			}
 			if(SuppressNotice)
-			{
-				Response.m_Error = false;
 				Response.m_Text[0] = '\0';
-			}
 			else
 				str_copy(Response.m_Text, aBuf);
 		}
@@ -358,17 +380,10 @@ void CTranslate::OnRender()
 
 void CTranslate::AutoTranslate(CChat::CLine &Line)
 {
-	if(!g_Config.m_QmTranslateAuto)
+	if(!g_Config.m_QmTranslateAuto || !Line.m_Initialized)
 		return;
-	if(Line.m_ClientId == CChat::CLIENT_MSG)
+	if(!IsTranslatePlayerCandidate(Line.m_ClientId, Line.m_Initialized, Line.m_aText[0] != '\0', TranslateResponseBlocksRequest(Line.m_pTranslateResponse.get(), true), GameClient()->m_aLocalIds, std::size(GameClient()->m_aLocalIds)))
 		return;
-	if(Line.m_ClientId == CChat::SERVER_MSG)
-		return;
-	for(const int Id : GameClient()->m_aLocalIds)
-	{
-		if(Id >= 0 && Id == Line.m_ClientId)
-			return;
-	}
 	if(str_comp(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 	{
 		// FTAPI 过载保护：默认禁用自动翻译，防止服务过载
@@ -414,8 +429,9 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 		GameClient()->m_Chat.Echo(Localize("Too many translation tasks"));
 		return;
 	}
-
-	const auto StartTranslation = [&] {
+	char aProgress[128];
+	bool InvalidBackend = false;
+	const bool Accepted = m_Jobs.CreateAndSubmit([&] {
 		STranslateJob Job;
 		Job.m_Outgoing = true;
 		Job.m_AutoTriggered = true;
@@ -426,27 +442,27 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 		Job.m_Team = Team;
 		const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateOutgoingTarget);
 		if(!IsValidLanguageCode(pTarget))
-		{
 			pTarget = "en";
-		}
 		str_copy(Job.m_aTarget, pTarget, sizeof(Job.m_aTarget));
 		const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
 		if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
 			pSource = "auto";
-		Job.m_pBackend = CreateTranslateBackend(*Http(), pText, Job.m_aTarget, pSource);
-
+		Job.m_pBackend = CreateTranslateBackend(*Http(), Job.m_OriginalText.c_str(), Job.m_aTarget, pSource);
 		if(!Job.m_pBackend)
 		{
-			GameClient()->m_Chat.Echo(Localize("Invalid translation backend"));
-			return false;
+			InvalidBackend = true;
+			return Job;
 		}
-
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), Localize("Translating to %s..."), Job.m_aTarget);
-		GameClient()->m_Chat.Echo(aBuf);
-		return m_Jobs.Submit(std::move(Job), GetMaxConcurrency());
-	};
-	StartTranslation();
+		str_format(aProgress, sizeof(aProgress), Localize("Translating to %s..."), Job.m_aTarget);
+		return Job;
+	},
+		GetMaxConcurrency());
+	if(Accepted)
+		GameClient()->m_Chat.Echo(aProgress);
+	else if(InvalidBackend)
+		GameClient()->m_Chat.Echo(Localize("Invalid translation backend"));
+	else
+		dbg_msg("translate", "could not prepare automatic outgoing translation task");
 }
 
 int CTranslate::GetMaxConcurrency() const

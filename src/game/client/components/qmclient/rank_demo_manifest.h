@@ -10,7 +10,10 @@
 #include <cstring>
 #include <limits>
 #include <map>
+#include <memory>
+#include <new>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace qmclient::rank_demo
@@ -166,7 +169,7 @@ namespace qmclient::rank_demo
 		return true;
 	}
 
-	inline bool ParseManifest(const unsigned char *pData, size_t DataSize, std::vector<SEntry> &Entries)
+	inline bool ParseManifest(const unsigned char *pData, size_t DataSize, std::vector<SEntry> &Entries) try
 	{
 		Entries.clear();
 		if(pData == nullptr || DataSize == 0)
@@ -190,13 +193,12 @@ namespace qmclient::rank_demo
 			const size_t LineSize = static_cast<size_t>(pTrimmedEnd - pLineBegin);
 			if(LineSize > 1 && pLineBegin[0] == '{')
 			{
-				json_value *pRoot = JsonParse(pLineBegin, LineSize);
-				if(pRoot != nullptr)
+				const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(JsonParse(pLineBegin, LineSize), json_value_free);
+				if(pRoot)
 				{
 					SEntry Entry;
-					if(ParseEntry(pRoot, Entry))
+					if(ParseEntry(pRoot.get(), Entry))
 						Entries.push_back(std::move(Entry));
-					json_value_free(pRoot);
 				}
 			}
 			if(pLineEnd == pEnd)
@@ -204,6 +206,11 @@ namespace qmclient::rank_demo
 			pCurrent = pLineEnd + 1;
 		}
 		return !Entries.empty();
+	}
+	catch(const std::bad_alloc &)
+	{
+		Entries.clear();
+		return false;
 	}
 
 	inline const SEntry *FindLatest(const std::vector<SEntry> &Entries, const char *pMap, int Rank)
@@ -224,18 +231,20 @@ namespace qmclient::rank_demo
 	{
 		if(Name.empty())
 			return;
-		if(!Names.empty())
+		if(Names == Name)
+			return;
+		for(size_t Start = 0; Start < Names.size();)
 		{
-			if(Names == Name)
+			const size_t End = Names.find(", ", Start);
+			const size_t Length = End == std::string::npos ? Names.size() - Start : End - Start;
+			if(Names.compare(Start, Length, Name) == 0)
 				return;
-			// 已作为整项或列表中间项出现时跳过
-			if(Names.size() >= Name.size() &&
-				(Names.compare(0, Name.size(), Name) == 0 ||
-					Names.compare(Names.size() - Name.size(), Name.size(), Name) == 0 ||
-					Names.find(", " + Name + ", ") != std::string::npos))
-				return;
-			Names += ", ";
+			if(End == std::string::npos)
+				break;
+			Start = End + 2;
 		}
+		if(!Names.empty())
+			Names += ", ";
 		Names += Name;
 	}
 
@@ -243,7 +252,7 @@ namespace qmclient::rank_demo
 	// （成员名并集、时间取最新），solo 在前、team 在后，各自按时间倒序。
 	// 同一地图经常同时存在 solo rank1 与 team rank1，且 team 成绩的每个
 	// 成员各有一条指向同一 demo 的记录。
-	inline void CollectRankEntries(const std::vector<SEntry> &Entries, const char *pMap, int Rank, std::vector<SEntry> &Out)
+	inline void CollectRankEntries(const std::vector<SEntry> &Entries, const char *pMap, int Rank, std::vector<SEntry> &Out) try
 	{
 		Out.clear();
 		if(pMap == nullptr || pMap[0] == '\0')
@@ -292,6 +301,10 @@ namespace qmclient::rank_demo
 				return !LeftTeam; // solo 在前
 			return Right.m_Ts < Left.m_Ts;
 		});
+	}
+	catch(const std::bad_alloc &)
+	{
+		Out.clear();
 	}
 } // namespace qmclient::rank_demo
 

@@ -14,6 +14,8 @@
 #include <string_view>
 #include <vector>
 
+class IStorage;
+
 // 指令工坊 / 蓝图的纯逻辑层。这里不依赖 CUi、IGraphics 或 CMenus，
 // 所有函数都能在 testrunner 里直接调用。
 //
@@ -203,13 +205,14 @@ namespace qm_bind_workshop
 		const FBoundCommand &GetBoundCommand, const int *pParamValues = nullptr, size_t NumParamValues = 0,
 		bool CfgInstalled = false);
 
-	// ---- 应用撤销：一次应用可能写好几条，撤销必须整批还原 ----
+	// ---- 应用撤销：批量还原仍保留本次应用值的键槽 ----
 	// 记的是「每条写下去的新值 + 写之前的原值」：原值非空的键还原成原值，
 	// 原来没绑的键撤销时解绑（写空串）。
 	struct SRestoreEntry
 	{
 		CBindSlot m_Slot = CBindSlot(KEY_UNKNOWN, KeyModifier::NONE);
 		std::string m_Command;
+		std::string m_AppliedCommand;
 		bool m_HadBind = false;
 	};
 
@@ -229,11 +232,12 @@ namespace qm_bind_workshop
 		std::vector<SRestoreEntry> m_vEntries;
 	};
 
-	// 撤销的执行：原值非空的键写回原值，原来没绑的键写空串（空命令 = 解绑该槽位，
-	// 见 CBindStorage::Bind）。绑定器用回调注入：UI 传 CBinds，测试传假绑定器验写入序列。
+	// 空命令用于解绑该槽位。
 	using FBinder = std::function<void(const CBindSlot &Slot, const char *pCommand)>;
-	// 返回实际写入的条数；没有可撤销记录或没给绑定器时返回 0、不调回调。
-	size_t RestoreUndo(const CApplyUndo &Undo, const FBinder &Binder);
+	// 确认期间槽位有变化时，更新计划并返回 false，等待用户确认新差异。
+	bool ApplyPresetPlan(SApplyPlan &Plan, CApplyUndo &Undo, const FBoundCommand &GetBoundCommand, const FBinder &Binder);
+	// 跳过后续已改绑的槽位，返回实际请求还原的条数。
+	size_t RestoreUndo(const CApplyUndo &Undo, const FBoundCommand &GetBoundCommand, const FBinder &Binder);
 
 	// ---- 参数校验与命令生成（纯逻辑，UI 只调用） ----
 	inline constexpr int PARAM_USE_DEFAULT = std::numeric_limits<int>::min();
@@ -261,8 +265,10 @@ namespace qm_bind_workshop
 	// 写进 bind 的命令：exec <相对路径>，与 CfgFileName 逐字一致。
 	std::string CfgExecCommand(const SPreset &Preset, size_t VariantIndex);
 	bool HasBuiltinCfg(const SPreset &Preset, size_t VariantIndex);
+	bool HasCompleteBuiltinCfgSet(IStorage &Storage, const SPreset &Preset);
 	// 内置 cfg 正文（纯数据，不读网络）。无内置内容时返回空串。
 	std::string BuildCfgContent(const SPreset &Preset, size_t VariantIndex);
+	bool SaveCfgFile(IStorage &Storage, const char *pFileName, std::string_view Content, char *pFullPath = nullptr, unsigned FullPathSize = 0) noexcept;
 	// cfg 行约束：单行 <= 255 字节、单条命令里的 bind 嵌套 <= 5 层。
 	// 返回第一条越界行号（1 起）；0 表示全部通过。
 	size_t FindCfgViolation(std::string_view Content);
@@ -524,37 +530,6 @@ namespace qm_bind_workshop
 	// 从内置预设造一个最小流程，用于「从预设导入」入口。
 	CBlueprintGraph GraphFromPreset(const SPreset &Preset, size_t VariantIndex);
 
-	// ---- 撤销栈：记录「改动前」的整图快照 ----
-	// 粒度是一次可感知的编辑（新建/删除/连线/剪线/拖动/改命令/换类型）。
-	// 图最多几十个节点，整图快照比逐操作补丁简单，也不会漏字段。
-	struct SBlueprintSnapshot
-	{
-		size_t m_Flow = 0;
-		CBlueprintGraph m_Graph;
-	};
-
-	class CBlueprintHistory
-	{
-	public:
-		static constexpr size_t MAX_DEPTH = 32;
-		// 改动发生之前调用：把当前图存进撤销栈，并清空重做栈。
-		void Record(size_t Flow, const CBlueprintGraph &Graph);
-		bool CanUndo() const { return !m_vUndo.empty(); }
-		bool CanRedo() const { return !m_vRedo.empty(); }
-		// 弹出一侧快照；调用方负责把当前现场压回另一侧。
-		bool PopUndo(size_t &rFlow, CBlueprintGraph &rGraph);
-		bool PopRedo(size_t &rFlow, CBlueprintGraph &rGraph);
-		void PushUndo(size_t Flow, CBlueprintGraph Graph);
-		void PushRedo(size_t Flow, CBlueprintGraph Graph);
-		void Clear();
-		size_t UndoDepth() const { return m_vUndo.size(); }
-		size_t RedoDepth() const { return m_vRedo.size(); }
-
-	private:
-		std::vector<SBlueprintSnapshot> m_vUndo;
-		std::vector<SBlueprintSnapshot> m_vRedo;
-	};
-
 	// ---- 画布交互：命中测试与连线落点 ----
 	// 端口是节点左右边线中点的圆形接点；命中半径按画布坐标算，缩小时不放大手感。
 	inline constexpr float PORT_HIT_RADIUS = 12.0f;
@@ -756,6 +731,7 @@ namespace qm_bind_workshop
 		size_t m_BindLines = 0;
 		bool m_Ok = false;
 	};
+	bool SaveBlueprintCfg(IStorage &Storage, const SCfgBundle &Bundle, char *pFullPath = nullptr, unsigned FullPathSize = 0) noexcept;
 
 	// 标题 → 文件名词干：只保留 ASCII 字母数字，其余折叠成单个下划线。
 	std::string SlugifyTitle(std::string_view Title);
@@ -777,14 +753,28 @@ namespace qm_bind_workshop
 		size_t AddFlow(std::string_view Title);
 		bool RemoveFlow(size_t Index);
 		bool RenameFlow(size_t Index, std::string_view Title);
+		// 改动前记录当前图。撤销和重做会切回快照对应的流程。
+		void RecordEdit();
+		bool Undo();
+		bool Redo();
 		// 头部注释 + 全部 bind 行；校验不过的图不写 bind 行，只写被拒原因。
 		SCfgBundle BuildCfg(size_t Index, std::string_view KeyName) const;
 		std::vector<SCfgBundle> BuildAllCfg(std::string_view KeyName) const;
 
 	private:
+		struct SBlueprintSnapshot
+		{
+			size_t m_Flow;
+			CBlueprintGraph m_Graph;
+		};
+
 		std::vector<SFlowFile> m_vFlows;
 		size_t m_Active = 0;
-		void RefreshFileNames();
+		std::vector<SBlueprintSnapshot> m_vUndo;
+		std::vector<SBlueprintSnapshot> m_vRedo;
+		static void PushSnapshot(std::vector<SBlueprintSnapshot> &vHistory, size_t Flow, CBlueprintGraph &&Graph);
+		bool RestoreSnapshot(std::vector<SBlueprintSnapshot> &vFrom, std::vector<SBlueprintSnapshot> &vTo);
+		std::string UniqueFileName(std::string_view Title, const SFlowFile *pCurrent = nullptr) const;
 	};
 }
 

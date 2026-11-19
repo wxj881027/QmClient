@@ -158,3 +158,33 @@ TEST(RecentTeeSkins, ClearingHistoryDiscardsAnUncommittedEdit)
 	History.CommitPending();
 	EXPECT_TRUE(History.Entries().empty());
 }
+
+TEST(RecentTeeSkins, NoOpPendingCommitDoesNotReapplyAnOlderAppearanceLater)
+{
+	CQmRecentTeeSkins History;
+	ASSERT_TRUE(History.Record({"default"}));
+	const uint64_t Revision = History.Revision();
+	History.Stage({"default"});
+	History.CommitPending();
+	EXPECT_EQ(History.Revision(), Revision);
+	ASSERT_TRUE(History.Record({"bluekitty"}));
+	const uint64_t LaterRevision = History.Revision();
+	History.CommitPending();
+	EXPECT_EQ(History.Revision(), LaterRevision);
+	EXPECT_EQ(History.Entries().front().m_Name, "bluekitty");
+}
+
+TEST(RecentTeeSkins, CommittedStageAppearsOnceInSavedReplay)
+{
+	CQmRecentTeeSkins History;
+	ASSERT_TRUE(History.Record({"default"}));
+	History.Stage({"bluekitty", true, 0x123456, 0xabcdef});
+	History.CommitPending();
+	History.CommitPending();
+	CQmRecentTeeSkins Restored;
+	History.ForEachSavedEntry([&](const SQmRecentTeeSkin &Entry) { Restored.Record(Entry); });
+	EXPECT_EQ(Restored.Entries(), History.Entries());
+	ASSERT_EQ(Restored.Entries().size(), 2u);
+	EXPECT_EQ(Restored.Entries().front().m_Name, "bluekitty");
+	EXPECT_EQ(Restored.Entries().front().m_ColorFeet, 0xabcdefu);
+}

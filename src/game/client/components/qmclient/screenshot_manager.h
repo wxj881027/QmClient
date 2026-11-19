@@ -17,6 +17,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 class IEngine;
@@ -34,6 +35,21 @@ public:
 	void Cancel();
 	bool Canceled() const;
 	bool Commit(const std::string &TempPath, const std::string &TargetPath);
+	// 删除及其诊断可能分配内存；失败返回 false，不能让异常逃出候选析构。
+	static bool TryRemoveCandidate(const std::string &Path) noexcept;
+	// 回调按 fs_remove 约定返回 0 表示成功，仅在本次调用期间借用，不重试部分删除。
+	template<typename TRemove>
+	static bool TryRemoveCandidate(const std::string &Path, TRemove &&Remove) noexcept
+	{
+		try
+		{
+			return std::forward<TRemove>(Remove)(Path.c_str()) == 0;
+		}
+		catch(...)
+		{
+			return false;
+		}
+	}
 };
 
 // 截图页只负责选择文件，水印处理放在这个独立模块中，便于其它卡片复用。
@@ -109,6 +125,7 @@ public:
 	const SThumbnail *LoadThumbnail(const char *pPath, int StorageType);
 	// 每帧渲染完可见项后调用一次：回收后台结果、按 GPU 上传预算上传纹理并淘汰超限条目。
 	void PumpThumbnails(IGraphics *pGraphics, IStorage *pStorage, IEngine *pEngine, CGpuUploadLimiter *pLimiter);
+	// 卸载失败或缺少图形接口时保留句柄，后续 Pump 重试；清理完成前不复用旧缓存。
 	void ClearThumbnails(IGraphics *pGraphics);
 
 	// 请求时保存时间、地图及配置的值快照；后台处理不访问菜单或当前连接状态。
@@ -156,6 +173,7 @@ private:
 	static void DrawBitmapText(CImageInfo &Image, const std::string &Text, int X, int Y, int Scale, ColorRGBA Color);
 	static int TextWidth(const std::string &Text, int Scale);
 	static std::string ThumbnailKey(const char *pPath, int StorageType);
+	void PumpThumbnailWork(IGraphics *pGraphics, IStorage *pStorage, IEngine *pEngine, CGpuUploadLimiter *pLimiter);
 
 	std::vector<SEntry> m_vEntries;
 	mutable std::unordered_map<std::string, SCaptureMetadata> m_CaptureMetadata;
@@ -163,6 +181,7 @@ private:
 	// 本帧按可见顺序排队的缩略图键：只在当前可见项上启动后台任务，滚动过快不会堆积陈旧请求。
 	std::vector<std::string> m_vThumbnailRequests;
 	uint64_t m_ThumbnailFrame = 0;
+	bool m_ThumbnailClearPending = false;
 };
 
 // 后台任务只持有路径和内容快照，不借用菜单、配置或其 Storage。

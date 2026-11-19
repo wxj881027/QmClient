@@ -14,7 +14,7 @@ inline bool QmPredictedEventExpired(const CGameWorld::CPredictedEvent &Event, in
 inline void QmPruneHandledPredictedEvents(std::vector<CGameWorld::CPredictedEvent> &vEvents, int Tick, int TickSpeed)
 {
 	std::erase_if(vEvents, [Tick, TickSpeed](const CGameWorld::CPredictedEvent &Event) {
-		return Event.m_Handled && QmPredictedEventExpired(Event, Tick, TickSpeed);
+		return !Event.HasValidPosition() || (Event.m_Handled && QmPredictedEventExpired(Event, Tick, TickSpeed));
 	});
 }
 
@@ -25,6 +25,8 @@ void QmProcessPredictedEvents(std::vector<CGameWorld::CPredictedEvent> &vEvents,
 	auto Write = vEvents.begin();
 	for(auto Read = vEvents.begin(); Read != vEvents.end(); ++Read)
 	{
+		if(!Read->HasValidPosition())
+			continue;
 		if(!Read->m_Handled && Read->m_Tick <= Tick)
 		{
 			if(!HandleEvent(*Read))

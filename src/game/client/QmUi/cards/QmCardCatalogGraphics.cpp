@@ -101,41 +101,6 @@ namespace
 	}
 }
 
-namespace
-{
-	void FormatQmGraphicsBackendDisplayName(char *pBuf, int BufSize, const char *pBackendName, int Major, int Minor, int Patch, bool IsDefault)
-	{
-		const char *pSafeBackendName = pBackendName != nullptr ? pBackendName : "";
-		char aBackendDisplayName[128];
-		if(str_comp_nocase(pSafeBackendName, "OpenGL") == 0)
-		{
-			if(Major == 0)
-				str_format(aBackendDisplayName, sizeof(aBackendDisplayName), "OpenGL (%s)", Localize("auto"));
-			else
-				str_format(aBackendDisplayName, sizeof(aBackendDisplayName), "OpenGL %d.%d", Major, Minor);
-		}
-		else if(str_comp_nocase(pSafeBackendName, "Vulkan") == 0)
-			str_copy(aBackendDisplayName, "Vulkan");
-		else if(str_comp_nocase(pSafeBackendName, "GLES") == 0)
-		{
-			if(Major == 0)
-				str_format(aBackendDisplayName, sizeof(aBackendDisplayName), "GLES (%s)", Localize("auto"));
-			else
-				str_format(aBackendDisplayName, sizeof(aBackendDisplayName), "GLES %d.%d", Major, Minor);
-		}
-		else if(str_comp_nocase(pSafeBackendName, "Metal") == 0)
-		{
-			str_copy(aBackendDisplayName, "Metal");
-		}
-		else
-		{
-			str_format(aBackendDisplayName, sizeof(aBackendDisplayName), "%s (%d.%d.%d)", pSafeBackendName, Major, Minor, Patch);
-		}
-
-		str_format(pBuf, BufSize, "%s%s%s", aBackendDisplayName, IsDefault ? " - " : "", IsDefault ? Localize("default") : "");
-	}
-}
-
 uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildContext &Ctx, std::vector<SSettingsCardDefinition> *pCards)
 {
 	// 冷启动时这个函数一次要 600ms，先拆开看是静态初始化（枚举显示模式）
@@ -194,96 +159,18 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			return false;
 		return ui_widget::NumericField(GraphicsCardCtx, GetSettingsNumericFieldState(pId), pId, pOption, Min, Max, Rect, Options);
 	};
-	struct SMenuBackendInfo
+	static int s_GraphicsModeDriverBlocked = -1;
+	static bool s_ShowGraphicsMode = false;
+	if(s_GraphicsModeDriverBlocked != g_Config.m_GfxDriverIsBlocked)
 	{
-		EBackendType m_BackendType = BACKEND_TYPE_AUTO;
-		int m_Major = 0;
-		int m_Minor = 0;
-		int m_Patch = 0;
-		const char *m_pBackendName = "";
-		bool m_Found = false;
-	};
-	static std::vector<SMenuBackendInfo> s_vSupportedBackendInfos;
-	static std::vector<std::string> s_vSupportedBackendNames;
-	static bool s_BackendListCacheValid = false;
-	static int s_BackendListCacheDriverBlocked = -1;
-	static char s_aBackendListCacheLanguage[sizeof(g_Config.m_ClLanguagefile)] = {};
-	if(!s_BackendListCacheValid ||
-		s_BackendListCacheDriverBlocked != g_Config.m_GfxDriverIsBlocked ||
-		str_comp(s_aBackendListCacheLanguage, g_Config.m_ClLanguagefile) != 0)
-	{
-		s_vSupportedBackendInfos.clear();
-		s_vSupportedBackendNames.clear();
-		for(uint32_t i = 0; i < BACKEND_TYPE_COUNT; ++i)
-		{
-			if(EBackendType(i) == BACKEND_TYPE_AUTO)
-				continue;
-			const size_t BackendStartIndex = s_vSupportedBackendInfos.size();
-			for(uint32_t n = 0; n < GRAPHICS_DRIVER_AGE_TYPE_COUNT; ++n)
-			{
-				SMenuBackendInfo Info;
-				Info.m_BackendType = EBackendType(i);
-				if(Graphics()->GetDriverVersion(EGraphicsDriverAgeType(n), Info.m_Major, Info.m_Minor, Info.m_Patch, Info.m_pBackendName, EBackendType(i)))
-				{
-					// 被屏蔽的 OpenGL 驱动仅保留 legacy 选项。
-					if(EBackendType(i) != BACKEND_TYPE_OPENGL || EGraphicsDriverAgeType(n) == GRAPHICS_DRIVER_AGE_TYPE_LEGACY || g_Config.m_GfxDriverIsBlocked == 0)
-					{
-						Info.m_Found = true;
-						char aTmpBackendName[256];
-						const bool IsDefault = str_comp_nocase(Info.m_pBackendName, DefaultConfig::GfxBackend) == 0 && Info.m_Major == DefaultConfig::GfxGLMajor && Info.m_Minor == DefaultConfig::GfxGLMinor && Info.m_Patch == DefaultConfig::GfxGLPatch;
-						FormatQmGraphicsBackendDisplayName(aTmpBackendName, sizeof(aTmpBackendName), Info.m_pBackendName, Info.m_Major, Info.m_Minor, Info.m_Patch, IsDefault);
-						s_vSupportedBackendInfos.push_back(Info);
-						s_vSupportedBackendNames.emplace_back(aTmpBackendName);
-					}
-				}
-			}
-			const bool SupportsAutomaticVersion =
-				(EBackendType(i) == BACKEND_TYPE_OPENGL && g_Config.m_GfxDriverIsBlocked == 0) ||
-				EBackendType(i) == BACKEND_TYPE_OPENGL_ES;
-			if(SupportsAutomaticVersion && s_vSupportedBackendInfos.size() > BackendStartIndex)
-			{
-				SMenuBackendInfo AutoInfo;
-				AutoInfo.m_BackendType = EBackendType(i);
-				AutoInfo.m_pBackendName = EBackendType(i) == BACKEND_TYPE_OPENGL ? "OpenGL" : "GLES";
-				AutoInfo.m_Found = true;
-				char aAutoBackendName[256];
-				const bool IsAutoDefault = str_comp_nocase(AutoInfo.m_pBackendName, DefaultConfig::GfxBackend) == 0 && DefaultConfig::GfxGLMajor == 0;
-				FormatQmGraphicsBackendDisplayName(aAutoBackendName, sizeof(aAutoBackendName), AutoInfo.m_pBackendName, 0, 0, 0, IsAutoDefault);
-				s_vSupportedBackendInfos.insert(s_vSupportedBackendInfos.begin() + BackendStartIndex, AutoInfo);
-				s_vSupportedBackendNames.insert(s_vSupportedBackendNames.begin() + BackendStartIndex, aAutoBackendName);
-
-				const SOpenGLVersion PreferredVersion = AutoOpenGLProbeVersion(EBackendType(i));
-				bool PreferredVersionExists = false;
-				for(size_t BackendIndex = BackendStartIndex + 1; BackendIndex < s_vSupportedBackendInfos.size(); ++BackendIndex)
-				{
-					const auto &Candidate = s_vSupportedBackendInfos[BackendIndex];
-					if(str_comp_nocase(Candidate.m_pBackendName, AutoInfo.m_pBackendName) == 0 && Candidate.m_Major == PreferredVersion.m_Major && Candidate.m_Minor == PreferredVersion.m_Minor && Candidate.m_Patch == PreferredVersion.m_Patch)
-					{
-						PreferredVersionExists = true;
-						break;
-					}
-				}
-				if(!PreferredVersionExists)
-				{
-					SMenuBackendInfo PreferredInfo;
-					PreferredInfo.m_BackendType = EBackendType(i);
-					PreferredInfo.m_pBackendName = AutoInfo.m_pBackendName;
-					PreferredInfo.m_Major = PreferredVersion.m_Major;
-					PreferredInfo.m_Minor = PreferredVersion.m_Minor;
-					PreferredInfo.m_Patch = PreferredVersion.m_Patch;
-					PreferredInfo.m_Found = true;
-					char aPreferredBackendName[256];
-					FormatQmGraphicsBackendDisplayName(aPreferredBackendName, sizeof(aPreferredBackendName), PreferredInfo.m_pBackendName, PreferredInfo.m_Major, PreferredInfo.m_Minor, PreferredInfo.m_Patch, false);
-					s_vSupportedBackendInfos.insert(s_vSupportedBackendInfos.begin() + BackendStartIndex + 1, PreferredInfo);
-					s_vSupportedBackendNames.insert(s_vSupportedBackendNames.begin() + BackendStartIndex + 1, aPreferredBackendName);
-				}
-			}
-		}
-		s_BackendListCacheValid = true;
-		s_BackendListCacheDriverBlocked = g_Config.m_GfxDriverIsBlocked;
-		str_copy(s_aBackendListCacheLanguage, g_Config.m_ClLanguagefile);
+		s_ShowGraphicsMode = qm_card_catalog::HasGraphicsModeChoice(g_Config.m_GfxDriverIsBlocked != 0, [this](EBackendType Backend, EGraphicsDriverAgeType Age) {
+			int Major = 0, Minor = 0, Patch = 0;
+			const char *pBackendName = "";
+			return Graphics()->GetDriverVersion(Age, Major, Minor, Patch, pBackendName, Backend);
+		});
+		s_GraphicsModeDriverBlocked = g_Config.m_GfxDriverIsBlocked;
 	}
-	const uint32_t FoundBackendCount = (uint32_t)s_vSupportedBackendInfos.size();
+	const bool ShowGraphicsMode = s_ShowGraphicsMode;
 	const auto &GpuList = Graphics()->GetGpus();
 	const int OldWindowMode = g_Config.m_GfxFullscreen ? (g_Config.m_GfxFullscreen == 1 ? 4 : (g_Config.m_GfxFullscreen == 2 ? 3 : 2)) : (g_Config.m_GfxBorderless ? 1 : 0);
 #if defined(CONF_FAMILY_WINDOWS)
@@ -293,7 +180,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 #endif
 	const auto GpuControl = ResolveSettingsGpuControl(GpuList.m_vGpus.size(), GpuList.m_CanSelect, HasSystemGpuSettings);
 	const int GpuRowCount = GpuControl.RowCount();
-	const int GraphicsBackendRowCount = (FoundBackendCount > 1 ? 1 : 0) + GpuRowCount + 3;
+	const int GraphicsBackendRowCount = (ShowGraphicsMode ? 1 : 0) + GpuRowCount + 3;
 	const qm_card_registry::SCardDefault *pDisplayDefault = qm_card_registry::FindByStableId("deck:graphics-display");
 	const qm_card_registry::SCardDefault *pCardEffectsDefault = qm_card_registry::FindByStableId("deck:graphics-card-effects");
 	const qm_card_registry::SCardDefault *pThemeDefault = qm_card_registry::FindByStableId("deck:graphics-theme");
@@ -332,7 +219,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	static CButtonContainer s_GraphicsSignalIconColorResetId;
 
 	const bool RenderOnly = Ui()->RenderOnly();
-	const auto BuildDefinitions = [this, Ctx, pModesDefault, pDisplayDefault, pCardEffectsDefault, pThemeDefault, pIconsDefault, pInteractionDefault, GraphicsPage, GraphicsModesTargetContentHeight, GraphicsVisualMeasureRevision, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, FoundBackendCount, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
+	const auto BuildDefinitions = [this, Ctx, pModesDefault, pDisplayDefault, pCardEffectsDefault, pThemeDefault, pIconsDefault, pInteractionDefault, GraphicsPage, GraphicsModesTargetContentHeight, GraphicsVisualMeasureRevision, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, ShowGraphicsMode, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(6);
 		const SSettingsCardSpec ModesSpec{pModesDefault->m_pStableId, Localize(pModesDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pModesDefault)};
 		// 副标题以注册表描述为唯一来源，与其他卡片一致；不再对本卡单独关闭副标题。
@@ -447,7 +334,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				Graphics()->ResizeToScreen();
 			}
 		} });
-		const FSettingsCardRenderMeasured RenderDisplay = [this, GraphicsMetrics, GraphicsPage, FoundBackendCount, BodySize, DoGraphicsNumericField, OldWindowMode](CUIRect &ContentRect) {
+		const FSettingsCardRenderMeasured RenderDisplay = [this, GraphicsMetrics, GraphicsPage, ShowGraphicsMode, BodySize, DoGraphicsNumericField, OldWindowMode](CUIRect &ContentRect) {
 			char aBuf[128];
 			CSettingsContentLayoutFlow Flow(ContentRect);
 			const auto RowAction = [&](const char *pId, float Height, auto &&Action) {
@@ -589,76 +476,17 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				GameClient()->m_Tooltips.DoToolTip(&s_LowerUpdateRate, &Button, Localize("Sets the client update rate to 480 Hz (0 = unlimited)"));
 			});
 
-			if(FoundBackendCount > 1)
+			if(ShowGraphicsMode)
 			{
 				RowAction("graphics-backend", GraphicsMetrics.m_LineHeight, [&](CUIRect Row) {
 					static CUi::SDropDownState s_BackendDropDownState;
 					static CScrollRegion s_BackendDropDownScrollRegion;
-					static std::vector<const char *> s_vpGraphicsBackendNames;
-					static std::vector<SMenuBackendInfo> s_vGraphicsBackendInfos;
-					static std::string s_CustomBackendId;
-					static std::string s_CustomBackendDisplayName;
-					static std::string s_ActiveBackendDisplayName;
-					s_vpGraphicsBackendNames.clear();
-					s_vGraphicsBackendInfos.clear();
-					for(size_t i = 0; i < s_vSupportedBackendNames.size(); ++i)
+					if(!Ui()->RenderOnly() && graphics_backend::IsKnownUnavailableBackendName(g_Config.m_GfxBackend))
 					{
-						s_vpGraphicsBackendNames.push_back(s_vSupportedBackendNames[i].c_str());
-						s_vGraphicsBackendInfos.push_back(s_vSupportedBackendInfos[i]);
-					}
-					int Selected = -1;
-					for(size_t i = 0; i < s_vSupportedBackendInfos.size(); ++i)
-					{
-						if(graphics_backend::MatchesConfiguredBackend(s_vSupportedBackendInfos[i].m_BackendType, s_vSupportedBackendInfos[i].m_pBackendName, s_vSupportedBackendInfos[i].m_Major, s_vSupportedBackendInfos[i].m_Minor, s_vSupportedBackendInfos[i].m_Patch, g_Config.m_GfxBackend, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch))
-							Selected = (int)i;
-					}
-					if(Selected < 0)
-					{
-						if(!Ui()->RenderOnly() && graphics_backend::IsKnownUnavailableBackendName(g_Config.m_GfxBackend))
-						{
-							str_copy(g_Config.m_GfxBackend, "OpenGL");
-							g_Config.m_GfxGLMajor = 0;
-							g_Config.m_GfxGLMinor = 0;
-							g_Config.m_GfxGLPatch = 0;
-							for(size_t i = 0; i < s_vSupportedBackendInfos.size(); ++i)
-							{
-								if(graphics_backend::MatchesConfiguredBackend(s_vSupportedBackendInfos[i].m_BackendType, s_vSupportedBackendInfos[i].m_pBackendName, s_vSupportedBackendInfos[i].m_Major, s_vSupportedBackendInfos[i].m_Minor, s_vSupportedBackendInfos[i].m_Patch, g_Config.m_GfxBackend, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch))
-								{
-									Selected = (int)i;
-									break;
-								}
-							}
-						}
-					}
-					if(Selected < 0)
-					{
-						Selected = ResolveSettingsSelectionWithCustomFallback(Selected, (int)s_vGraphicsBackendInfos.size());
-						char aBackendDisplayName[128];
-						char aCustomDisplayName[192];
-						FormatQmGraphicsBackendDisplayName(aBackendDisplayName, sizeof(aBackendDisplayName), g_Config.m_GfxBackend, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch, false);
-						str_format(aCustomDisplayName, sizeof(aCustomDisplayName), "%s (%s)", Localize("custom"), aBackendDisplayName);
-						s_CustomBackendId = g_Config.m_GfxBackend;
-						s_CustomBackendDisplayName = aCustomDisplayName;
-						SMenuBackendInfo CustomInfo;
-						CustomInfo.m_BackendType = graphics_backend::ParseBackendName(g_Config.m_GfxBackend, BACKEND_TYPE_AUTO);
-						CustomInfo.m_pBackendName = s_CustomBackendId.c_str();
-						CustomInfo.m_Major = g_Config.m_GfxGLMajor;
-						CustomInfo.m_Minor = g_Config.m_GfxGLMinor;
-						CustomInfo.m_Patch = g_Config.m_GfxGLPatch;
-						s_vGraphicsBackendInfos.push_back(CustomInfo);
-						s_vpGraphicsBackendNames.push_back(s_CustomBackendDisplayName.c_str());
-					}
-					int DetectedMajor = 0;
-					int DetectedMinor = 0;
-					int DetectedPatch = 0;
-					const char *pDetectedBackendName = "";
-					const bool HasDetectedContextVersion = Graphics()->GetDetectedContextVersion(DetectedMajor, DetectedMinor, DetectedPatch, pDetectedBackendName);
-					if(Selected >= 0 && s_vGraphicsBackendInfos[Selected].m_Major == 0 && HasDetectedContextVersion && str_comp_nocase(s_vGraphicsBackendInfos[Selected].m_pBackendName, pDetectedBackendName) == 0)
-					{
-						char aBackendDisplayName[128];
-						str_format(aBackendDisplayName, sizeof(aBackendDisplayName), "%s (%s: %d.%d)", pDetectedBackendName, Localize("auto"), DetectedMajor, DetectedMinor);
-						s_ActiveBackendDisplayName = aBackendDisplayName;
-						s_vpGraphicsBackendNames[Selected] = s_ActiveBackendDisplayName.c_str();
+						str_copy(g_Config.m_GfxBackend, "OpenGL");
+						g_Config.m_GfxGLMajor = 0;
+						g_Config.m_GfxGLMinor = 0;
+						g_Config.m_GfxGLPatch = 0;
 					}
 					const char *apGraphicsModes[] = {Localize("Compatibility mode"), Localize("Performance mode")};
 					int CurrentGraphicsMode = g_Config.m_QmGraphicsMode;
@@ -1275,7 +1103,6 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	uint64_t GraphicsLayoutRevision = GraphicsModesMeasureRevision;
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(GraphicsDisplayRowCount);
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(GraphicsBackendRowCount);
-	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(FoundBackendCount);
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(OldWindowMode);
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(RenderOnly ? 1 : 0);
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ GraphicsVisualMeasureRevision;

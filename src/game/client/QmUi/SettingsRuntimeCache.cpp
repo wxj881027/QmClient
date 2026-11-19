@@ -77,6 +77,7 @@ namespace
 		Key.m_WindowHeight = RuntimeKey.m_ViewportHeight;
 		Key.m_UiScale = RuntimeKey.m_UiScale;
 		Key.m_ConfigHash = RuntimeKey.m_ConfigHash;
+		Key.m_WindowHash = RuntimeKey.m_WindowHash;
 		return Key;
 	}
 

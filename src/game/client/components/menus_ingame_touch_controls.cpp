@@ -26,16 +26,31 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <string>
 
 namespace
 {
+	constexpr char TOUCH_CONTROLS_POPUP_SOURCE[] = "touch-controls-editor";
+
+	bool EditTouchControlsText(const IUiContext &Context, CLineInput *pInput, const CUIRect &Rect, const ui_widget::SInputFieldOptions &Options)
+	{
+		const CUiScopedInteractionOwner InputOwner(Context.m_pUi, pInput, "touch-controls-input");
+		return ui_widget::InputField(Context, pInput, Rect, Options).m_Changed;
+	}
+
+	bool TouchButtonAxisFits(int Offset, int Extent)
+	{
+		return Offset >= 0 && Offset <= CTouchControls::BUTTON_SIZE_SCALE &&
+		       static_cast<int64_t>(Offset) + Extent <= CTouchControls::BUTTON_SIZE_SCALE;
+	}
+
 	// 触摸控件编辑器里的说明/错误统一走居中单按钮 Alert：
 	// 内容是用户点「?」或操作失败后要读的，不是结果通知，不降级成 Toast。
 	void ShowTouchControlsMessage(CUi *pUi, const char *pMessage, bool Error = false)
 	{
-		if(pUi == nullptr || pMessage == nullptr || pMessage[0] == '\0')
+		if(pUi == nullptr || pUi->RenderOnly() || pMessage == nullptr || pMessage[0] == '\0')
 			return;
 		static CUi::SMessagePopupContext s_Context;
 		// 弹窗已经开着时再点「?」不叠加，避免堆一摞同样的说明。
@@ -46,6 +61,7 @@ namespace
 			s_Context.ErrorColor();
 		else
 			s_Context.DefaultColor(pUi->TextRender());
+		const CUiScopedInteractionOwner PopupOwner(pUi, pUi, TOUCH_CONTROLS_POPUP_SOURCE);
 		pUi->ShowPopupMessage(0.0f, 0.0f, &s_Context);
 	}
 
@@ -66,12 +82,13 @@ namespace
 	};
 	ETouchConfirm gs_TouchConfirmAction = ETouchConfirm::NONE;
 	CUi::SConfirmPopupContext gs_TouchConfirm;
+	uint64_t gs_TouchConfirmSourceFrame = 0;
 
 	void ShowTouchConfirm(CUi *pUi, ETouchConfirm Action, const char *pMessage, const char *pPositive, const char *pNegative, bool Danger)
 	{
-		if(pUi == nullptr || pMessage == nullptr || pMessage[0] == '\0')
+		if(pUi == nullptr || pUi->RenderOnly() || pMessage == nullptr || pMessage[0] == '\0')
 			return;
-		// 弹窗还开着（DoPopupType 每帧都会重复请求）时不重开，否则会把结果重置掉。
+		// 上一条确认仍在等待结果时保留原来的动作。
 		if(gs_TouchConfirmAction != ETouchConfirm::NONE || pUi->IsPopupOpen(&gs_TouchConfirm))
 			return;
 		gs_TouchConfirm.Reset();
@@ -86,8 +103,12 @@ namespace
 		}
 		gs_TouchConfirm.m_Tone = Danger ? CUi::SConfirmPopupContext::ETone::DANGER : CUi::SConfirmPopupContext::ETone::NEUTRAL;
 		str_copy(gs_TouchConfirm.m_aMessage, pMessage, sizeof(gs_TouchConfirm.m_aMessage));
+		const CUiScopedInteractionOwner PopupOwner(pUi, pUi, TOUCH_CONTROLS_POPUP_SOURCE);
 		pUi->ShowPopupConfirm(pUi->MouseX(), pUi->MouseY(), &gs_TouchConfirm);
+		if(!pUi->IsPopupOpen(&gs_TouchConfirm))
+			return;
 		gs_TouchConfirmAction = Action;
+		gs_TouchConfirmSourceFrame = pUi->PopupSourceFrame();
 	}
 
 } // namespace
@@ -303,7 +324,7 @@ bool CMenusIngameTouchControls::RenderLayoutSettingBlock(CUIRect Block)
 	Block.HSplitTop(ROWSIZE, &EditBox, &Block);
 	Block.HSplitTop(ROWGAP, nullptr, &Block);
 	EditBox.VSplitMid(&PosX, &EditBox);
-	if(ui_widget::InputField(TouchControlsLayoutTextInputCtx, &m_InputX, EditBox, LayoutInputOptions).m_Changed)
+	if(EditTouchControlsText(TouchControlsLayoutTextInputCtx, &m_InputX, EditBox, LayoutInputOptions))
 	{
 		InputPosFunction(&m_InputX);
 		Changed = true;
@@ -313,7 +334,7 @@ bool CMenusIngameTouchControls::RenderLayoutSettingBlock(CUIRect Block)
 	Block.HSplitTop(ROWSIZE, &EditBox, &Block);
 	Block.HSplitTop(ROWGAP, nullptr, &Block);
 	EditBox.VSplitMid(&PosY, &EditBox);
-	if(ui_widget::InputField(TouchControlsLayoutTextInputCtx, &m_InputY, EditBox, LayoutInputOptions).m_Changed)
+	if(EditTouchControlsText(TouchControlsLayoutTextInputCtx, &m_InputY, EditBox, LayoutInputOptions))
 	{
 		InputPosFunction(&m_InputY);
 		Changed = true;
@@ -322,7 +343,7 @@ bool CMenusIngameTouchControls::RenderLayoutSettingBlock(CUIRect Block)
 	Block.HSplitTop(ROWSIZE, &EditBox, &Block);
 	Block.HSplitTop(ROWGAP, nullptr, &Block);
 	EditBox.VSplitMid(&PosW, &EditBox);
-	if(ui_widget::InputField(TouchControlsLayoutTextInputCtx, &m_InputW, EditBox, LayoutInputOptions).m_Changed)
+	if(EditTouchControlsText(TouchControlsLayoutTextInputCtx, &m_InputW, EditBox, LayoutInputOptions))
 	{
 		InputPosFunction(&m_InputW);
 		Changed = true;
@@ -331,7 +352,7 @@ bool CMenusIngameTouchControls::RenderLayoutSettingBlock(CUIRect Block)
 	Block.HSplitTop(ROWSIZE, &EditBox, &Block);
 	Block.HSplitTop(ROWGAP, nullptr, &Block);
 	EditBox.VSplitMid(&PosH, &EditBox);
-	if(ui_widget::InputField(TouchControlsLayoutTextInputCtx, &m_InputH, EditBox, LayoutInputOptions).m_Changed)
+	if(EditTouchControlsText(TouchControlsLayoutTextInputCtx, &m_InputH, EditBox, LayoutInputOptions))
 	{
 		InputPosFunction(&m_InputH);
 		Changed = true;
@@ -347,8 +368,8 @@ bool CMenusIngameTouchControls::RenderLayoutSettingBlock(CUIRect Block)
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 	};
 
-	DoValidatedLabel(PosX, "X:", FONTSIZE, 0 <= X && X + W <= CTouchControls::BUTTON_SIZE_SCALE);
-	DoValidatedLabel(PosY, "Y:", FONTSIZE, 0 <= Y && Y + H <= CTouchControls::BUTTON_SIZE_SCALE);
+	DoValidatedLabel(PosX, "X:", FONTSIZE, TouchButtonAxisFits(X, W));
+	DoValidatedLabel(PosY, "Y:", FONTSIZE, TouchButtonAxisFits(Y, H));
 	// There're strings without ":" below, so don't localize these with ":" together.
 	char aBuf[64];
 	str_format(aBuf, sizeof(aBuf), "%s:", Localize("Width"));
@@ -427,7 +448,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 		EditBox.VSplitMid(&LeftButton, &MiddleButton);
 		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Command"));
 		Ui()->DoLabel(&LeftButton, aBuf, FONTSIZE, TEXTALIGN_ML);
-		if(ui_widget::InputField(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[0]->m_InputCommand, MiddleButton, BehaviorInputOptions).m_Changed)
+		if(EditTouchControlsText(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[0]->m_InputCommand, MiddleButton, BehaviorInputOptions))
 		{
 			m_vBehaviorElements[0]->UpdateCommand();
 			SetUnsavedChanges(true);
@@ -439,7 +460,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 		EditBox.VSplitMid(&LeftButton, &MiddleButton);
 		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Label"));
 		Ui()->DoLabel(&LeftButton, aBuf, FONTSIZE, TEXTALIGN_ML);
-		if(ui_widget::InputField(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[0]->m_InputLabel, MiddleButton, BehaviorInputOptions).m_Changed)
+		if(EditTouchControlsText(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[0]->m_InputLabel, MiddleButton, BehaviorInputOptions))
 		{
 			m_vBehaviorElements[0]->UpdateLabel();
 			SetUnsavedChanges(true);
@@ -560,19 +581,16 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 				Ui()->DoLabel(&LeftButton, Localize("Delete command"), FONTSIZE, TEXTALIGN_ML);
 				if(Ui()->DoButton_QmIcon(&m_vBehaviorElements[CommandIndex]->m_BindToggleDeleteButtons, EQmIcon::TRASH, FontIcons::FONT_ICON_TRASH, 0, &MiddleButton, BUTTONFLAG_LEFT))
 				{
+					SetUnsavedChanges(true);
+					Changed = true;
 					if(m_vBehaviorElements.size() > 2)
 					{
-						if(Ui()->CheckActiveItem(&m_vBehaviorElements[CommandIndex]->m_InputCommand) || Ui()->CheckActiveItem(&m_vBehaviorElements[CommandIndex]->m_InputLabel))
-							Ui()->SetActiveItem(nullptr);
+						Ui()->ReleaseActiveTextInput(&m_vBehaviorElements[CommandIndex]->m_InputCommand);
+						Ui()->ReleaseActiveTextInput(&m_vBehaviorElements[CommandIndex]->m_InputLabel);
 						m_vBehaviorElements.erase(m_vBehaviorElements.begin() + CommandIndex);
 						continue;
 					}
-					else
-					{
-						m_vBehaviorElements[CommandIndex]->Reset();
-					}
-					SetUnsavedChanges(true);
-					Changed = true;
+					m_vBehaviorElements[CommandIndex]->Reset();
 				}
 			}
 			Block.HSplitTop(ROWGAP, &EditBox, &Block);
@@ -587,7 +605,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 				EditBox.VSplitMid(&LeftButton, &MiddleButton);
 				str_format(aBuf, sizeof(aBuf), "%s:", Localize("Command"));
 				Ui()->DoLabel(&LeftButton, aBuf, FONTSIZE, TEXTALIGN_ML);
-				if(ui_widget::InputField(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[CommandIndex]->m_InputCommand, MiddleButton, BehaviorInputOptions).m_Changed)
+				if(EditTouchControlsText(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[CommandIndex]->m_InputCommand, MiddleButton, BehaviorInputOptions))
 				{
 					m_vBehaviorElements[CommandIndex]->UpdateCommand();
 					SetUnsavedChanges(true);
@@ -606,7 +624,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 				EditBox.VSplitMid(&LeftButton, &MiddleButton);
 				str_format(aBuf, sizeof(aBuf), "%s:", Localize("Label"));
 				Ui()->DoLabel(&LeftButton, aBuf, FONTSIZE, TEXTALIGN_ML);
-				if(ui_widget::InputField(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[CommandIndex]->m_InputLabel, MiddleButton, BehaviorInputOptions).m_Changed)
+				if(EditTouchControlsText(TouchControlsBehaviorTextInputCtx, &m_vBehaviorElements[CommandIndex]->m_InputLabel, MiddleButton, BehaviorInputOptions))
 				{
 					m_vBehaviorElements[CommandIndex]->UpdateLabel();
 					SetUnsavedChanges(true);
@@ -797,7 +815,7 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 	str_format(aBufSearch, sizeof(aBufSearch), "%s:", Localize("Search"));
 	Ui()->DoLabel(&LeftButton, aBufSearch, FONTSIZE, TEXTALIGN_ML);
 
-	if(ui_widget::InputField(TouchControlsBrowserSearchCtx, &m_FilterInput, EditBox, BrowserSearchOptions).m_Changed)
+	if(EditTouchControlsText(TouchControlsBrowserSearchCtx, &m_FilterInput, EditBox, BrowserSearchOptions))
 		m_NeedFilter = true;
 
 	MainView.HSplitTop(ROWGAP, nullptr, &MainView);
@@ -1028,19 +1046,29 @@ void CMenusIngameTouchControls::RenderConfigSettings(CUIRect MainView)
 	MainView.VMargin(MAINMARGIN, &MainView);
 	MainView.HSplitTop(MAINMARGIN, nullptr, &MainView);
 	MainView.HSplitTop(ROWSIZE, &EditBox, &MainView);
+	CTouchControls &TouchControls = GameClient()->m_TouchControls;
 	static CButtonContainer s_ActiveColorPicker;
-	ColorHSLA ColorTest = GameClient()->m_Menus.DoLine_ColorPicker(&s_ActiveColorPicker, ROWSIZE, FONTSIZE, 5.0f, &EditBox, Localize("Active color"), &m_ColorActive, GameClient()->m_TouchControls.DefaultBackgroundColorActive(), false, nullptr, true);
-	GameClient()->m_TouchControls.SetBackgroundColorActive(color_cast<ColorRGBA>(ColorHSLA(m_ColorActive, true)));
-	if(color_cast<ColorRGBA>(ColorTest) != GameClient()->m_TouchControls.BackgroundColorActive())
-		GameClient()->m_TouchControls.SetEditingChanges(true);
+	GameClient()->m_Menus.DoLine_ColorPicker(&s_ActiveColorPicker, ROWSIZE, FONTSIZE, 5.0f, &EditBox, Localize("Active color"), &m_ColorActive, TouchControls.DefaultBackgroundColorActive(), false, nullptr, true);
+	const ColorRGBA PreviousActiveColor = TouchControls.BackgroundColorActive();
+	const ColorRGBA ActiveColor = color_cast<ColorRGBA>(ColorHSLA(m_ColorActive, true));
+	// 颜色控件用压缩的 HSLA，打开页面时保留原来的 RGBA 精度。
+	if(!Ui()->RenderOnly() && m_ColorActive != color_cast<ColorHSLA>(PreviousActiveColor).Pack(true) && ActiveColor != PreviousActiveColor)
+	{
+		TouchControls.SetBackgroundColorActive(ActiveColor);
+		TouchControls.SetEditingChanges(true);
+	}
 
 	MainView.HSplitTop(ROWGAP, nullptr, &MainView);
 	MainView.HSplitTop(ROWSIZE, &EditBox, &MainView);
 	static CButtonContainer s_InactiveColorPicker;
-	ColorTest = GameClient()->m_Menus.DoLine_ColorPicker(&s_InactiveColorPicker, ROWSIZE, FONTSIZE, 5.0f, &EditBox, Localize("Inactive color"), &m_ColorInactive, GameClient()->m_TouchControls.DefaultBackgroundColorInactive(), false, nullptr, true);
-	GameClient()->m_TouchControls.SetBackgroundColorInactive(color_cast<ColorRGBA>(ColorHSLA(m_ColorInactive, true)));
-	if(color_cast<ColorRGBA>(ColorTest) != GameClient()->m_TouchControls.BackgroundColorInactive())
-		GameClient()->m_TouchControls.SetEditingChanges(true);
+	GameClient()->m_Menus.DoLine_ColorPicker(&s_InactiveColorPicker, ROWSIZE, FONTSIZE, 5.0f, &EditBox, Localize("Inactive color"), &m_ColorInactive, TouchControls.DefaultBackgroundColorInactive(), false, nullptr, true);
+	const ColorRGBA PreviousInactiveColor = TouchControls.BackgroundColorInactive();
+	const ColorRGBA InactiveColor = color_cast<ColorRGBA>(ColorHSLA(m_ColorInactive, true));
+	if(!Ui()->RenderOnly() && m_ColorInactive != color_cast<ColorHSLA>(PreviousInactiveColor).Pack(true) && InactiveColor != PreviousInactiveColor)
+	{
+		TouchControls.SetBackgroundColorInactive(InactiveColor);
+		TouchControls.SetEditingChanges(true);
+	}
 
 	MainView.HSplitTop(ROWGAP, nullptr, &MainView);
 	MainView.HSplitTop(ROWSIZE, &Row, &MainView);
@@ -1223,12 +1251,20 @@ void CMenusIngameTouchControls::RenderTouchControlsEditor(CUIRect MainView)
 // Check if CTouchControls need CMenus to open any popups.
 void CMenusIngameTouchControls::DoPopupType(CTouchControls::CPopupParam PopupParam)
 {
-	m_pOldSelectedButton = PopupParam.m_pOldSelectedButton;
-	m_pNewSelectedButton = PopupParam.m_pNewSelectedButton;
-	m_CloseMenu = !PopupParam.m_KeepMenuOpen;
+	if(Ui()->RenderOnly() || gs_TouchConfirmAction != ETouchConfirm::NONE)
+		return;
+
 	switch(PopupParam.m_PopupType)
 	{
-	case CTouchControls::EPopupType::BUTTON_CHANGED: ChangeSelectedButtonWhileHavingUnsavedChanges(); break;
+	case CTouchControls::EPopupType::BUTTON_CHANGED:
+		ChangeSelectedButtonWhileHavingUnsavedChanges();
+		if(gs_TouchConfirmAction == ETouchConfirm::SWITCH_SELECTED)
+		{
+			m_pOldSelectedButton = PopupParam.m_pOldSelectedButton;
+			m_pNewSelectedButton = PopupParam.m_pNewSelectedButton;
+			m_CloseMenu = !PopupParam.m_KeepMenuOpen;
+		}
+		break;
 	case CTouchControls::EPopupType::NO_SPACE: NoSpaceForOverlappingButton(); break;
 	case CTouchControls::EPopupType::BUTTON_INVISIBLE: SelectedButtonNotVisible(); break;
 	// The NUM_POPUPS will not call the function.
@@ -1238,15 +1274,27 @@ void CMenusIngameTouchControls::DoPopupType(CTouchControls::CPopupParam PopupPar
 
 void CMenusIngameTouchControls::PollConfirm()
 {
+	CUi *pUi = Ui();
+	if(pUi->RenderOnly())
+		return;
+	pUi->RefreshInteractionSource(pUi, TOUCH_CONTROLS_POPUP_SOURCE);
 	if(gs_TouchConfirmAction == ETouchConfirm::NONE)
 		return;
-	CUi *pUi = GameClient()->m_Menus.Ui();
-	const CUi::SConfirmPopupContext::EConfirmationResult Result = gs_TouchConfirm.m_Result;
-	if(Result == CUi::SConfirmPopupContext::UNSET)
+
+	const uint64_t Frame = pUi->PopupSourceFrame();
+	if(!QmDropdownSourceAlive(Frame, gs_TouchConfirmSourceFrame, true))
 	{
-		// 弹窗还在等按钮：什么都没发生。已经被 Esc 或切页收掉时按取消处理。
-		if(pUi != nullptr && pUi->IsPopupOpen(&gs_TouchConfirm))
-			return;
+		// 离开编辑器后丢弃上次会话的确认结果。
+		gs_TouchConfirmAction = ETouchConfirm::NONE;
+		pUi->ClosePopupMenu(&gs_TouchConfirm, true, false);
+		return;
+	}
+
+	const CUi::SConfirmPopupContext::EConfirmationResult Result = gs_TouchConfirm.m_Result;
+	if(Result == CUi::SConfirmPopupContext::UNSET && pUi->IsPopupOpen(&gs_TouchConfirm))
+	{
+		gs_TouchConfirmSourceFrame = Frame;
+		return;
 	}
 	const ETouchConfirm Action = gs_TouchConfirmAction;
 	gs_TouchConfirmAction = ETouchConfirm::NONE;
@@ -1330,17 +1378,19 @@ bool CMenusIngameTouchControls::CheckCachedSettings() const
 	std::vector<const char *> vpErrors;
 	char aBuf[256];
 	auto [X, Y, W, H] = GetPosInputs();
-	// Illegal size settings.
-	if(W < CTouchControls::BUTTON_SIZE_MINIMUM || W > CTouchControls::BUTTON_SIZE_MAXIMUM || H < CTouchControls::BUTTON_SIZE_MINIMUM || H > CTouchControls::BUTTON_SIZE_MAXIMUM)
+	const bool ValidSize = CTouchControls::BUTTON_SIZE_MINIMUM <= W && W <= CTouchControls::BUTTON_SIZE_MAXIMUM &&
+			       CTouchControls::BUTTON_SIZE_MINIMUM <= H && H <= CTouchControls::BUTTON_SIZE_MAXIMUM;
+	const bool ValidPosition = TouchButtonAxisFits(X, W) && TouchButtonAxisFits(Y, H);
+	if(!ValidSize)
 	{
 		str_format(aBuf, sizeof(aBuf), Localize("Width and height are required to be within the range from %d to %d."), CTouchControls::BUTTON_SIZE_MINIMUM, CTouchControls::BUTTON_SIZE_MAXIMUM);
 		vpErrors.emplace_back(aBuf);
 	}
-	if(X < 0 || Y < 0 || X + W > CTouchControls::BUTTON_SIZE_SCALE || Y + H > CTouchControls::BUTTON_SIZE_SCALE)
+	if(!ValidPosition)
 	{
 		vpErrors.emplace_back(Localize("Button position is outside of the screen."));
 	}
-	if(GameClient()->m_TouchControls.IsRectOverlapping({X, Y, W, H}, m_CachedShape))
+	if(ValidSize && ValidPosition && GameClient()->m_TouchControls.IsRectOverlapping({X, Y, W, H}, m_CachedShape))
 	{
 		vpErrors.emplace_back(Localize("The selected button is overlapping with other buttons."));
 	}
@@ -1369,6 +1419,11 @@ void CMenusIngameTouchControls::ResetCachedSettings()
 	m_EditBehaviorType = EBehaviorType::BIND;
 	m_PredefinedBehaviorType = EPredefinedType::EXTRA_MENU;
 	m_CachedExtraMenuNumber = 0;
+	for(const auto &pElement : m_vBehaviorElements)
+	{
+		Ui()->ReleaseActiveTextInput(&pElement->m_InputCommand);
+		Ui()->ReleaseActiveTextInput(&pElement->m_InputLabel);
+	}
 	m_vBehaviorElements.clear();
 	m_vBehaviorElements.emplace_back(std::make_unique<CBehaviorElements>());
 	m_vBehaviorElements.emplace_back(std::make_unique<CBehaviorElements>());
@@ -1390,6 +1445,7 @@ void CMenusIngameTouchControls::CacheAllSettingsFromTarget(CTouchControls::CTouc
 	// These values can't be null. The constructor has been updated. Default:{0,0,CTouchControls::BUTTON_SIZE_MINIMUM,CTouchControls::BUTTON_SIZE_MINIMUM}, shape = rect.
 	SetPosInputs(pTargetButton->m_UnitRect);
 	m_CachedShape = pTargetButton->m_Shape;
+	m_aCachedVisibilities.fill(EVisibilityType::IGNORE);
 	for(const auto &Visibility : pTargetButton->m_vVisibilities)
 	{
 		dbg_assert((int)Visibility.m_Type < (int)CTouchControls::EButtonVisibility::NUM_VISIBILITIES, "Target button has out of bound visibility type: %d", (int)Visibility.m_Type);

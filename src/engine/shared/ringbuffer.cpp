@@ -52,24 +52,24 @@ void CRingBufferBase::Init(void *pMemory, int Size, int Flags)
 
 void CRingBufferBase::Clear()
 {
-	m_pFirst = m_pBuffer;
+	m_pFirst = m_pLast = m_pProduce = m_pConsume = m_pBuffer;
+	if(m_pFirst == nullptr)
+		return;
 	m_pFirst->m_pPrev = nullptr;
 	m_pFirst->m_pNext = nullptr;
 	m_pFirst->m_Free = 1;
 	m_pFirst->m_Size = m_Size;
-	m_pLast = m_pFirst;
-	m_pProduce = m_pFirst;
-	m_pConsume = m_pFirst;
 }
 
 void *CRingBufferBase::Allocate(int Size)
 {
-	int WantedSize = (Size + sizeof(CItem) + sizeof(CItem) - 1) / sizeof(CItem) * sizeof(CItem);
-	CItem *pBlock = nullptr;
-
-	// check if we even can fit this block
-	if(WantedSize > m_Size)
+	if(m_pBuffer == nullptr || Size < 0)
 		return nullptr;
+	const size_t RequiredSize = (static_cast<size_t>(Size) + 2 * sizeof(CItem) - 1) / sizeof(CItem) * sizeof(CItem);
+	if(RequiredSize > static_cast<size_t>(m_Size))
+		return nullptr;
+	const int WantedSize = static_cast<int>(RequiredSize);
+	CItem *pBlock = nullptr;
 
 	while(true)
 	{
@@ -110,7 +110,7 @@ void *CRingBufferBase::Allocate(int Size)
 	// okey, we have our block
 
 	// split the block if needed
-	if(pBlock->m_Size > WantedSize + (int)sizeof(CItem))
+	if(pBlock->m_Size - WantedSize > (int)sizeof(CItem))
 	{
 		CItem *pNewItem = (CItem *)((char *)pBlock + WantedSize);
 		pNewItem->m_pPrev = pBlock;
@@ -142,7 +142,7 @@ void CRingBufferBase::SetPopCallback(std::function<void(void *pCurrent)> PopCall
 
 int CRingBufferBase::PopFirst()
 {
-	if(m_pConsume->m_Free)
+	if(m_pConsume == nullptr || m_pConsume->m_Free)
 		return 0;
 
 	if(m_PopCallback)
@@ -172,20 +172,25 @@ int CRingBufferBase::PopFirst()
 
 void *CRingBufferBase::Prev(void *pCurrent)
 {
+	if(m_pBuffer == nullptr || pCurrent == nullptr)
+		return nullptr;
 	CItem *pItem = ((CItem *)pCurrent) - 1;
+	if(pItem == m_pConsume)
+		return nullptr;
 
-	while(true)
+	do
 	{
 		pItem = PrevBlock(pItem);
-		if(pItem == m_pProduce)
-			return nullptr;
 		if(!pItem->m_Free)
 			return pItem + 1;
-	}
+	} while(pItem != m_pConsume);
+	return nullptr;
 }
 
 void *CRingBufferBase::Next(void *pCurrent)
 {
+	if(m_pBuffer == nullptr || pCurrent == nullptr)
+		return nullptr;
 	CItem *pItem = ((CItem *)pCurrent) - 1;
 
 	while(true)
@@ -200,12 +205,22 @@ void *CRingBufferBase::Next(void *pCurrent)
 
 void *CRingBufferBase::First()
 {
-	if(m_pConsume->m_Free)
+	if(m_pConsume == nullptr || m_pConsume->m_Free)
 		return nullptr;
 	return (void *)(m_pConsume + 1);
 }
 
 void *CRingBufferBase::Last()
 {
-	return Prev(m_pProduce + 1);
+	if(m_pConsume == nullptr || m_pConsume->m_Free)
+		return nullptr;
+	// 满缓冲的生产游标可能仍指向有效记录，不能将其当作反向遍历的终点。
+	CItem *pItem = m_pProduce;
+	do
+	{
+		pItem = PrevBlock(pItem);
+		if(!pItem->m_Free)
+			return pItem + 1;
+	} while(pItem != m_pProduce);
+	return nullptr;
 }

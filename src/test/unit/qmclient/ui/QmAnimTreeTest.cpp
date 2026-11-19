@@ -22,6 +22,7 @@
 #include <game/client/ui_scrollregion.h>
 
 #include <gtest/gtest.h>
+#include <test/support/qm_anim_test_helpers.h>
 #include <test/test.h>
 
 #include <array>
@@ -320,7 +321,7 @@ TEST(UiV2TreePresence, MissingNodeExitsBeforeRemoval)
 }
 TEST(UiV2TreePresence, RetouchingExitingNodeCancelsRemoval)
 {
-	g_Config.m_QmUiMotionLevel = 2;
+	CScopedQmFullMotion FullMotion;
 	CUiV2Tree Tree;
 	CUiV2AnimationRuntime Runtime;
 	const uint64_t NodeKey = 1003;
@@ -342,9 +343,44 @@ TEST(UiV2TreePresence, RetouchingExitingNodeCancelsRemoval)
 	Tree.EndFrame(Runtime);
 	EXPECT_EQ(Tree.NodeCount(), 1);
 
+	Runtime.Advance(0.05f);
+	EXPECT_GT(Runtime.GetValue(NodeKey, EUiAnimProperty::ALPHA), RetouchedAlpha);
+
 	AdvanceFor(Runtime, 1.0f);
 	Tree.BeginFrame();
 	const float FinalAlpha = Tree.ResolvePresenceAlpha(Runtime, NodeKey, ui_token::motion::HOVER_FADE);
 	EXPECT_NEAR(FinalAlpha, 1.0f, 0.001f);
 	Tree.EndFrame(Runtime);
+}
+
+TEST(UiV2TreePresence, ShowingDuringExplicitExitReversesTheFade)
+{
+	CScopedQmFullMotion FullMotion;
+	CUiV2Tree Tree;
+	CUiV2AnimationRuntime Runtime;
+	constexpr uint64_t NodeKey = 1004;
+	const SUiAnimTransition Transition{.m_DurationSec = 0.12f, .m_Easing = EEasing::EASE_OUT};
+
+	Tree.BeginFrame();
+	Tree.ResolvePresence(Runtime, NodeKey, true, Transition);
+	Tree.EndFrame(Runtime);
+	Runtime.Advance(0.2f);
+
+	Tree.BeginFrame();
+	Tree.ResolvePresence(Runtime, NodeKey, false, Transition);
+	Tree.EndFrame(Runtime);
+	Runtime.Advance(0.04f);
+	const float ExitingAlpha = Runtime.GetValue(NodeKey, EUiAnimProperty::ALPHA);
+	ASSERT_GT(ExitingAlpha, 0.0f);
+	ASSERT_LT(ExitingAlpha, 1.0f);
+
+	Tree.BeginFrame();
+	const SUiPresenceResult Reentered = Tree.ResolvePresence(Runtime, NodeKey, true, Transition);
+	EXPECT_TRUE(Reentered.m_Render);
+	EXPECT_FALSE(Reentered.m_FreshEnter);
+	EXPECT_FLOAT_EQ(Reentered.m_Alpha, ExitingAlpha);
+	Tree.EndFrame(Runtime);
+
+	Runtime.Advance(0.04f);
+	EXPECT_GT(Runtime.GetValue(NodeKey, EUiAnimProperty::ALPHA), ExitingAlpha);
 }

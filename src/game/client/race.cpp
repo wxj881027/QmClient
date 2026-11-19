@@ -1,10 +1,9 @@
 #include "race.h"
 
+#include <game/client/components/qmclient/race_start_detection.h>
 #include <game/client/gameclient.h>
 #include <game/collision.h>
 #include <game/mapitems.h>
-
-#include <vector>
 
 void CRaceHelper::Init(const CGameClient *pGameClient)
 {
@@ -43,25 +42,6 @@ bool CRaceHelper::IsStart(vec2 Prev, vec2 Pos) const
 	}
 	else
 	{
-		std::vector<int> vIndices = m_pGameClient->Collision()->GetMapIndices(Prev, Pos);
-		if(!vIndices.empty())
-		{
-			for(const int Index : vIndices)
-			{
-				if(m_pGameClient->Collision()->GetTileIndex(Index) == TILE_START)
-					return true;
-				if(m_pGameClient->Collision()->GetFrontTileIndex(Index) == TILE_START)
-					return true;
-			}
-		}
-		else
-		{
-			const int Index = m_pGameClient->Collision()->GetPureMapIndex(Pos);
-			if(m_pGameClient->Collision()->GetTileIndex(Index) == TILE_START)
-				return true;
-			if(m_pGameClient->Collision()->GetFrontTileIndex(Index) == TILE_START)
-				return true;
-		}
+		return qm_race_start::IsTileStart(*m_pGameClient->Collision(), Prev, Pos);
 	}
-	return false;
 }

@@ -6,6 +6,9 @@
 #include <engine/textrender.h>
 
 #include <algorithm>
+#include <cstdint>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -20,22 +23,34 @@ namespace QmConsoleText
 		int m_EndChar;
 	};
 
-	inline SRange Range(const char *pText, const char *pStart, const char *pEnd)
+	class CRangeCursor
 	{
-		int StartChar = 0, EndChar = 0;
-		for(const char *pScan = pText; pScan < pEnd;)
+		const char *m_pText;
+		const char *m_pScan;
+		int m_CharIndex = 0;
+
+		int AdvanceTo(const char *pEnd)
 		{
-			const char *pBefore = pScan;
-			if(str_utf8_decode(&pScan) != '\n')
-			{
-				++EndChar;
-				if(pBefore < pStart)
-					++StartChar;
-			}
+			while(m_pScan < pEnd)
+				m_CharIndex += str_utf8_decode(&m_pScan) != '\n';
+			return m_CharIndex;
 		}
-		return {static_cast<int>(pStart - pText), static_cast<int>(pEnd - pText),
-			StartChar, EndChar};
-	}
+
+	public:
+		explicit CRangeCursor(const char *pText) :
+			m_pText(pText),
+			m_pScan(pText)
+		{
+		}
+
+		// 区间按字节顺序且不重叠，字形计数从上一段末尾继续。
+		SRange Next(const char *pStart, const char *pEnd)
+		{
+			const int StartChar = AdvanceTo(pStart);
+			const int EndChar = AdvanceTo(pEnd);
+			return {static_cast<int>(pStart - m_pText), static_cast<int>(pEnd - m_pText), StartChar, EndChar};
+		}
+	};
 
 	inline bool IsLinkDelimiter(int Character)
 	{
@@ -120,6 +135,7 @@ namespace QmConsoleText
 			return;
 		if(!str_find_nocase(pText, "https://") && !str_find_nocase(pText, "http://") && !str_find_nocase(pText, "www."))
 			return;
+		CRangeCursor RangeCursor(pText);
 		const char *pScan = pText;
 		while(*pScan)
 		{
@@ -151,7 +167,7 @@ namespace QmConsoleText
 			pScan = pEnd;
 			pEnd = TrimLinkEnd(pStart, pEnd);
 			if(pEnd > pStart + PrefixLength && HasLinkHost(pStart, pEnd, PrefixLength, Www))
-				vLinks.push_back(Range(pText, pStart, pEnd));
+				vLinks.push_back(RangeCursor.Next(pStart, pEnd));
 		}
 	}
 
@@ -165,16 +181,36 @@ namespace QmConsoleText
 		return Url;
 	}
 
+	inline bool TryLinkUrl(const char *pText, const SRange &Link, std::string &Url)
+	{
+		try
+		{
+			Url = LinkUrl(pText, Link);
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			Url.clear();
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			Url.clear();
+			return false;
+		}
+	}
+
 	inline void CollectSearchMatches(const char *pText, const char *pNeedle, std::vector<SRange> &vMatches)
 	{
 		vMatches.clear();
 		if(pText == nullptr || pNeedle == nullptr || *pNeedle == '\0')
 			return;
+		CRangeCursor RangeCursor(pText);
 		const char *pSearch = pText;
 		const char *pEnd;
 		while(const char *pStart = str_utf8_find_nocase(pSearch, pNeedle, &pEnd))
 		{
-			vMatches.push_back(Range(pText, pStart, pEnd));
+			vMatches.push_back(RangeCursor.Next(pStart, pEnd));
 			pSearch = pEnd;
 		}
 	}
@@ -189,8 +225,10 @@ namespace QmConsoleText
 
 	inline STextColorSplit ColorSplitForCharacters(const char *pText, int Start, int Length, ColorRGBA Color)
 	{
-		const int StartByte = static_cast<int>(str_utf8_offset_chars_to_bytes(pText, std::max(0, Start)));
-		const int EndByte = static_cast<int>(str_utf8_offset_chars_to_bytes(pText, std::max(0, Start) + std::max(0, Length)));
+		const size_t StartChar = static_cast<size_t>(std::max(0, Start));
+		const size_t EndChar = StartChar + static_cast<size_t>(std::max(0, Length));
+		const int StartByte = static_cast<int>(str_utf8_offset_chars_to_bytes(pText, StartChar));
+		const int EndByte = static_cast<int>(str_utf8_offset_chars_to_bytes(pText, EndChar));
 		return {StartByte, EndByte - StartByte, Color};
 	}
 
@@ -207,11 +245,13 @@ namespace QmConsoleText
 			return;
 		}
 		std::vector<int> vBoundaries{0, TextLength};
+		if(vLayers.size() > (vBoundaries.max_size() - 2) / 2)
+			throw std::length_error("Console color boundary count is not representable");
 		vBoundaries.reserve(2 + vLayers.size() * 2);
 		for(const auto &Layer : vLayers)
 		{
 			vBoundaries.push_back(std::clamp(Layer.m_CharIndex, 0, TextLength));
-			vBoundaries.push_back(Layer.m_Length < 0 ? TextLength : std::clamp(Layer.m_CharIndex + Layer.m_Length, 0, TextLength));
+			vBoundaries.push_back(Layer.m_Length < 0 ? TextLength : static_cast<int>(std::clamp<int64_t>(static_cast<int64_t>(Layer.m_CharIndex) + Layer.m_Length, 0, TextLength)));
 		}
 		std::sort(vBoundaries.begin(), vBoundaries.end());
 		vBoundaries.erase(std::unique(vBoundaries.begin(), vBoundaries.end()), vBoundaries.end());
@@ -224,13 +264,48 @@ namespace QmConsoleText
 				continue;
 			for(auto Layer = vLayers.rbegin(); Layer != vLayers.rend(); ++Layer)
 			{
-				if(Start < Layer->m_CharIndex || (Layer->m_Length >= 0 && Start >= Layer->m_CharIndex + Layer->m_Length))
+				if(Start < Layer->m_CharIndex || (Layer->m_Length >= 0 && Start >= static_cast<int64_t>(Layer->m_CharIndex) + Layer->m_Length))
 					continue;
 				vResult.emplace_back(Start, End - Start, Layer->m_Color, Layer->m_ColorEnd);
 				break;
 			}
 		}
 	}
+
+	// 只准备纯文本数据；失败清空本条装饰，不能保留上一条的链接目标。
+	class CColorPreparation
+	{
+		std::vector<STextColorSplit> m_vLayers;
+		std::vector<SRange> m_vLinks;
+
+	public:
+		const auto &Links() const noexcept { return m_vLinks; }
+		template<typename TBuild>
+		bool Prepare(const char *pText, std::vector<STextColorSplit> &vResult, TBuild &&Build)
+		{
+			m_vLayers.clear();
+			m_vLinks.clear();
+			try
+			{
+				CollectLinks(pText, m_vLinks);
+				if(Build(m_vLayers, m_vLinks))
+				{
+					ComposeColorSplits(pText, m_vLayers, vResult);
+					return true;
+				}
+			}
+			catch(const std::bad_alloc &)
+			{
+			}
+			catch(const std::length_error &)
+			{
+			}
+			m_vLayers.clear();
+			m_vLinks.clear();
+			vResult.clear();
+			return false;
+		}
+	};
 }
 
 #endif

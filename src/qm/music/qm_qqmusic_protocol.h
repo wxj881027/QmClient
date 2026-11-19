@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -27,6 +28,23 @@ namespace QmMusicHook::QQMusic
 		bool m_DurationSeconds;
 	};
 	const SOffsets *FindOffsets(int Major, int Minor);
+
+	enum class EAttachProbe
+	{
+		UNAVAILABLE,
+		UNSUPPORTED,
+		IDENTIFIED,
+	};
+
+	struct SAttachment
+	{
+		const SOffsets *m_pOffsets;
+		std::string m_Error;
+	};
+
+	// 仅返回可接纳的状态。读取失败时不保留进程，等下一次轮询重新接入。
+	std::optional<SAttachment> ResolveAttachment(EAttachProbe Probe, uint32_t ModuleSize, int Major, int Minor);
+
 	std::string ExtractSongMid(std::string_view StreamUrl, std::string_view Parameters);
 
 	struct SSsoLayout

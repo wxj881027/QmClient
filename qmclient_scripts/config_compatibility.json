@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "saved_client_configs": {
+    "qmclient": {
+      "QmTitleAdvanced": {
+        "script_name": "qm_title_advanced",
+        "kind": "INT",
+        "reason": "#478 已移除旧高级折叠控件；保留旧客户端配置的读写。"
+      },
+      "QmTitleColor": {
+        "script_name": "qm_title_color",
+        "kind": "COL",
+        "reason": "#478 已由 qm_title_badge_color 控制胶囊配色；旧单色值仅保留读写。"
+      },
+      "QmTitleBloom": {
+        "script_name": "qm_title_bloom",
+        "kind": "INT",
+        "reason": "#478 已替换旧光晕渲染；保留旧客户端配置的读写。"
+      }
+    }
+  }
+}

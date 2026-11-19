@@ -8,13 +8,44 @@
 #include <gtest/gtest.h>
 #include <test/support/map_http_recorder.h>
 
+#include <functional>
+#include <memory>
+#include <new>
+#include <stdexcept>
+#include <utility>
+
 namespace
 {
+	class CInterruptibleHttp : public MapHttpTest::CHttpRecorder
+	{
+	public:
+		std::function<void()> m_OnNextRun;
+
+		void Run(std::shared_ptr<IHttpRequest> pRequest) override
+		{
+			if(auto OnRun = std::exchange(m_OnNextRun, {}))
+				OnRun();
+			CHttpRecorder::Run(std::move(pRequest));
+		}
+	};
+
+	class CHeaderFailureResponse : public MapHttpTest::CResponse
+	{
+	public:
+		using CResponse::CResponse;
+		void Header(const char *) override { throw std::bad_alloc(); }
+	};
+
+	std::unique_ptr<IHttpRequest> CreateHeaderFailureResponse(const char *pUrl)
+	{
+		return std::make_unique<CHeaderFailureResponse>(pUrl);
+	}
+
 	class AxiomBrowserDifficulty : public ::testing::Test
 	{
 	protected:
 		CServerInfo m_Server{};
-		MapHttpTest::CHttpRecorder m_Http;
+		CInterruptibleHttp m_Http;
 		CQmMapDifficultyCatalog m_Catalog{MapHttpTest::CreateResponse};
 		CQmAxiomRequestBudget m_Budget;
 		int64_t m_Now = time_freq();
@@ -121,4 +152,62 @@ TEST_F(AxiomBrowserDifficulty, CancelledLookupCannotPublishItsLateResponse)
 	m_Http.m_vRequests[0]->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Easy"}})");
 	EXPECT_FALSE(Poll());
 	EXPECT_EQ(m_Catalog.FindForServer(m_Server), nullptr);
+}
+
+TEST_F(AxiomBrowserDifficulty, HeaderAllocationFailureKeepsExistingRequestAndConsumesBudget)
+{
+	CQmMapDifficultyCatalog Catalog(CreateHeaderFailureResponse);
+	Catalog.RequestAxiomDifficulty(m_Server, m_Http, m_Budget, "", m_Now);
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	const CServerInfo ExistingServer = m_Server;
+	str_copy(m_Server.m_aMap, "Other Map");
+	EXPECT_NO_THROW(Catalog.RequestAxiomDifficulty(m_Server, m_Http, m_Budget, "example", m_Now));
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	EXPECT_TRUE(m_Budget.TryStart(m_Now, false));
+	EXPECT_FALSE(m_Budget.TryStart(m_Now, false));
+	m_Http.m_vRequests[0]->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Easy"}})");
+	EXPECT_TRUE(Catalog.PollAxiomRequests(m_Budget, m_Now));
+	EXPECT_NE(Catalog.FindForServer(ExistingServer), nullptr);
+	EXPECT_EQ(Catalog.FindForServer(m_Server), nullptr);
+}
+
+TEST_F(AxiomBrowserDifficulty, SubmissionResourceFailureReleasesLookupSlot)
+{
+	m_Http.m_OnNextRun = [] { throw std::length_error("test queue capacity"); };
+	EXPECT_NO_THROW(Request());
+	EXPECT_TRUE(m_Http.m_vRequests.empty());
+	Request();
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	m_Http.m_vRequests[0]->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Easy"}})");
+	EXPECT_TRUE(Poll());
+}
+
+TEST_F(AxiomBrowserDifficulty, FailedSubmissionKeepsReplacementFromReentrantRequest)
+{
+	m_Http.m_OnNextRun = [this] {
+		m_Catalog.CancelAxiomRequests();
+		Request();
+		throw std::bad_alloc();
+	};
+	EXPECT_NO_THROW(Request());
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	m_Http.m_vRequests[0]->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Easy"}})");
+	EXPECT_TRUE(Poll());
+	EXPECT_NE(m_Catalog.FindForServer(m_Server), nullptr);
+}
+
+TEST_F(AxiomBrowserDifficulty, NotFoundRetryDelayBeginsAtResponseCompletion)
+{
+	Request();
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	m_Now += 10 * time_freq();
+	m_Http.m_vRequests[0]->Finish("{}", 404);
+	EXPECT_FALSE(Poll());
+
+	m_Now += 600 * time_freq() - 1;
+	Request();
+	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
+	++m_Now;
+	Request();
+	EXPECT_EQ(m_Http.m_vRequests.size(), 2u);
 }
