@@ -285,11 +285,13 @@ Alive: %.1fs/%.1fs
 All
 All categories
 All combined
+All items
 All maps
 All my tags are already on the server.
 All players
 All remaining binds: scoreboard, spectating, console, screenshots, emoticon and practice tools.
 All sounds
+All typefaces
 Allow /map.
 Allow /rescue command to teleport out of freeze (only applies in initial config)
 Allow arbitrary game resolution when scaling (may cause issues on Windows)
@@ -3543,7 +3545,7 @@ Opt-in protection for client-initiated self-kill, with optional auto-enable afte
 Optimistic prediction along stable direction
 Optional
 Optional authentication key for the DNSBL provider
-Optional Axiom API key for scoreboard points and vote map details (leave empty for anonymous queries)
+Optional Axiom API key for scoreboard points and map queries (leave empty for anonymous queries)
 Optional export range in seconds. Leave empty to export the whole demo.
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 Options here affect networking or identity; test on a server before using them in matches.

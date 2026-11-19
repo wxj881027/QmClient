@@ -429,7 +429,7 @@ TEST(SettingsCardDeck, ProductionPageProjectionsCoverEveryActiveCardOnce)
 		{
 			const int Index = Model.StateIndexForStableId(pStableId);
 			ASSERT_GE(Index, 0) << pStableId;
-			// 目录页可以把卡片"呈现"在别的页（例如字体卡），deck 投影只认模型 tab。
+			// 目录页可以把卡片"呈现"在别的页，deck 投影只认模型 tab。
 			const char *pModelTab = Model.Entry(Index).m_pDefaultTab;
 			if(pModelTab == nullptr || std::string(pModelTab) != Page.m_pTab)
 				continue;

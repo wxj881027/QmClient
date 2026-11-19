@@ -333,6 +333,7 @@ namespace ui_widget
 		CUi::SEditBoxRenderOptions RenderOptions;
 		RenderOptions.m_DrawBackground = false;
 		RenderOptions.m_ProcessInput = ProcessInput;
+		RenderOptions.m_ReleaseFocusOnEnter = Options.m_ReleaseFocusOnEnter;
 		CUIRect InputHitRect = Layout.m_ShellRect;
 		if(Clearable && ShowClear && Layout.m_ClearRect.w > 0.0f)
 			InputHitRect.VSplitRight(Layout.m_ClearRect.w, &InputHitRect, nullptr);

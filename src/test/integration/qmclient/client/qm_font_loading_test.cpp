@@ -83,3 +83,14 @@ TEST_F(QmFontLoading, ReloadSkipsAnOverlongFontPathAndKeepsTheBundledFallback)
 	EXPECT_GT(pText->TextWidth(16.0f, "Bundled fallback"), 0.0f);
 }
 #endif
+
+TEST_F(QmFontLoading, CommonHanCoverageFiltersLatinFamiliesAndKeepsChineseFamilies)
+{
+	auto *pText = m_Ui.TextRender();
+	ASSERT_TRUE(pText->QmHasCustomFace("DejaVu Sans"));
+	ASSERT_TRUE(pText->QmHasCustomFace("Source Han Sans"));
+	EXPECT_FALSE(pText->QmFaceHasHan("DejaVu Sans"));
+	EXPECT_TRUE(pText->QmFaceHasHan("Source Han Sans"));
+	EXPECT_FALSE(pText->QmFaceHasHan("Missing Font"));
+	EXPECT_FALSE(pText->QmFaceHasHan(nullptr));
+}

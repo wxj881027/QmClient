@@ -561,6 +561,38 @@ turkish = "Canlı bildirimi dikey konumu (ekran yüksekliğinin yüzdesi)"
 polish = "Pionowa pozycja powiadomienia o życiu (procent wysokości ekranu)"
 
 [[message]]
+key = "All items"
+[message.translations]
+simplified_chinese = "全部项目"
+traditional_chinese = "全部項目"
+japanese = "すべての項目"
+korean = "모든 항목"
+russian = "Все элементы"
+german = "Alle Einträge"
+spanish = "Todos los elementos"
+french = "Tous les éléments"
+brazilian_portuguese = "Todos os itens"
+portuguese = "Todos os itens"
+turkish = "Tüm öğeler"
+polish = "Wszystkie elementy"
+
+[[message]]
+key = "All typefaces"
+[message.translations]
+simplified_chinese = "全部书体"
+traditional_chinese = "全部書體"
+japanese = "すべての書体"
+korean = "모든 서체"
+russian = "Все начертания"
+german = "Alle Schriftschnitte"
+spanish = "Todos los tipos"
+french = "Toutes les polices"
+brazilian_portuguese = "Todas as fontes"
+portuguese = "Todos os tipos de letra"
+turkish = "Tüm yazı tipleri"
+polish = "Wszystkie kroje"
+
+[[message]]
 key = "Allow arbitrary game resolution when scaling (may cause issues on Windows)"
 [message.translations]
 simplified_chinese = "允许缩放时使用任意游戏分辨率（Windows 上可能有问题）"

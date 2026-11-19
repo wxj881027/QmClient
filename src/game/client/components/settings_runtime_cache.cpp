@@ -55,7 +55,7 @@ bool SettingsPageHiddenForMobile(int Page, bool MobilePlatform)
 	{
 	// 手机端是观战/回放端。绑键页要保留（手机没有键盘，绑定是独立入口），
 	// 资源页要保留（游戏内录制与观战片段都在那里取），DDNet 页也要保留（官方设置）。
-	// 只有 TClient 的兼容页在手机端整体不呈现；其中的字体卡片移到画面页。
+	// 只有 TClient 的兼容页在手机端整体不呈现（含其中的字体卡片）。
 	case CMenus::SETTINGS_TCLIENT:
 		return true;
 	default:

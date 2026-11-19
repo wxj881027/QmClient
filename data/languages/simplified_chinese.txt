@@ -860,6 +860,9 @@ All categories
 All combined
 == 全部文件
 
+All items
+== 全部项目
+
 All maps
 == 全部地图
 
@@ -874,6 +877,9 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 
 All sounds
 == 全部音效
+
+All typefaces
+== 全部书体
 
 Allow /map.
 == 是否允许 /map

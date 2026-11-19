@@ -41,6 +41,44 @@ TEST(QmFontNames, MalformedUtf16AndUnsafeLegacyNamesAreRejected)
 	EXPECT_TRUE(QmDecodeSfntName(Name).empty());
 }
 
+TEST(QmFontNames, TextFontCandidatesRequireAUnicodeCharmap)
+{
+	FT_CharMapRec aCharmaps[2]{};
+	aCharmaps[0].encoding = FT_ENCODING_MS_SYMBOL;
+	aCharmaps[1].encoding = FT_ENCODING_UNICODE;
+	FT_CharMap apCharmaps[2] = {&aCharmaps[0], &aCharmaps[1]};
+	FT_FaceRec Face{};
+	Face.charmaps = apCharmaps;
+
+	EXPECT_FALSE(QmFontFaceHasUnicodeCharmap(nullptr));
+	Face.num_charmaps = 0;
+	EXPECT_FALSE(QmFontFaceHasUnicodeCharmap(&Face));
+	Face.num_charmaps = 1;
+	EXPECT_FALSE(QmFontFaceHasUnicodeCharmap(&Face));
+	Face.num_charmaps = 2;
+	EXPECT_TRUE(QmFontFaceHasUnicodeCharmap(&Face));
+	aCharmaps[1].encoding = FT_ENCODING_MS_SYMBOL;
+	EXPECT_FALSE(QmFontFaceHasUnicodeCharmap(&Face));
+}
+
+TEST(QmFontNames, TextFontCandidatesRequireCommonHanGlyphs)
+{
+	const auto HasPunctuationOrKana = [](int Codepoint) {
+		return Codepoint == 0x3001 || Codepoint == 0x3042 || Codepoint == 0x30A2 || Codepoint == 0xAC00;
+	};
+	EXPECT_FALSE(QmHasCommonHanGlyphs(HasPunctuationOrKana));
+
+	const auto HasAllCommonHan = [](int Codepoint) {
+		return Codepoint == 0x4E2D || Codepoint == 0x6C38 || Codepoint == 0x4E00;
+	};
+	EXPECT_TRUE(QmHasCommonHanGlyphs(HasAllCommonHan));
+
+	const auto MissingYong = [](int Codepoint) {
+		return Codepoint != 0x6C38;
+	};
+	EXPECT_FALSE(QmHasCommonHanGlyphs(MissingYong));
+}
+
 TEST(QmFontNames, MissingUnicodeRecordsUseOnlyValidUtf8Fallback)
 {
 	FT_Library Library = nullptr;

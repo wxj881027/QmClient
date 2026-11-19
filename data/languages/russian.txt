@@ -836,6 +836,9 @@ All categories
 All combined
 == Все вместе
 
+All items
+== Все элементы
+
 All maps
 == Все карты
 
@@ -847,6 +850,9 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 
 All sounds
 == Все звуки
+
+All typefaces
+== Все начертания
 
 Allow /map.
 == Разрешить /map.
