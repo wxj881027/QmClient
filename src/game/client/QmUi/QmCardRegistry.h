@@ -155,11 +155,9 @@ namespace qm_card_registry
 	bool RepairLegacyKeyBindsTab(qm_card_order::CModel &Model);
 	// 旧贡献者页已删除，加载时先修复归属，避免其它布局迁移提前返回后留下不可见卡片。
 	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model);
-	bool RepairLegacyTitleLayout(qm_card_order::CModel &Model);
 	// 图像页分组调整：图标与界面动效两张卡搬到「视觉效果」子页签后，
 	// 把持久化顺序里仍记着旧 tab 的这两张搬回注册表默认归属（追加到该页首列末尾）。
 	bool RepairLegacyGraphicsVisualCards(qm_card_order::CModel &Model);
-	bool RepairLegacyNameplateTitleLayout(qm_card_order::CModel &Model);
 	bool RepairLegacyTeeLayout(qm_card_order::CModel &Model);
 	// 聊天气泡已移入游戏界面的聊天页，恢复仍保存为视觉页的卡片。
 	bool RepairLegacyChatBubbleTab(qm_card_order::CModel &Model);

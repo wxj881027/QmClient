@@ -1943,6 +1943,9 @@ Bouncy
 Bound functions
 == 已綁定功能
 
+Bound nickname (leave empty for any name)
+== 綁定暱稱（留空則不限暱稱）
+
 Bounded capture frame queue depth for demo export (higher values use more memory)
 == demo 匯出擷取影格佇列深度上限（數值越大占用記憶體越多）
 
@@ -2419,9 +2422,6 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == 選擇螢幕位置和字型大小，再確認預覽卡中的換行情況。
-
-Choose a sponsor title style for your nameplate and chat messages.
-== 選擇名牌和聊天中顯示的贊助頭銜樣式。
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == 先選一個目標，再設定它的顏色；實體的雷射可以跟隨隊伍顏色。
@@ -4811,9 +4811,6 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == 請至 Bind 輪盤頁面編輯這條自訂命令。
 
-Edit title style
-== 編輯頭銜樣式
-
 Edit touch controls
 == 編輯觸控設置
 
@@ -5515,9 +5512,6 @@ Every click applies the skin at once, so star the ones you like before you start
 
 Every wheel tick restarts from rest, matching the original client
 == 每檔滾輪都從靜止重新起步，與原版客戶端一致
-
-Exact bound nickname
-== 要綁定的完整暱稱
 
 Example /help settings will display the help about /settings
 == 例如 /help settings 會顯示 /settings 的說明
@@ -8150,9 +8144,6 @@ Limit cursor to game window
 Limit information in spectator mode
 == 限制觀戰模式中的信息
 
-Limit the title to the exact nickname below.
-== 僅在使用下方暱稱時顯示頭銜。
-
 Limiter threshold (percent)
 == 限幅器閾值（百分比）
 
@@ -10061,9 +10052,6 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == 僅當另一個 Tee 不在屏幕上時顯示
 
-Only show with this nickname
-== 僅在使用此暱稱時顯示
-
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == 改動只作用於選中的 Tee，想改 dummy 的顏色要先切到 Dummy。
 
@@ -10892,6 +10880,9 @@ Player stats
 Player stats and info display
 == 玩家統計與信息顯示
 
+Player titles
+== 玩家頭銜
+
 Player to follow across servers until cancelled; empty disables following
 == 持續跨服跟隨的玩家，主動取消後停止；留空關閉
 
@@ -11155,9 +11146,6 @@ Preset type
 
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == 使用 libx264 編碼視頻時的預設，默認 5（medium），0 為 ultrafast，9 為 placebo（最慢，不推薦）
-
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
-== 任何改動之後都要點保存：頭銜和發言樣式存在你的帳號上，點刷新可以重新載入。
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == 按選擇地圖挑檔案，核對上傳顯示的目標伺服器與玩家，再按上傳地圖；取消可中止。
@@ -14054,6 +14042,9 @@ Show moving tiles in entities
 Show moving tiles in entity layer
 == 在實體層顯示移動圖塊
 
+Show my titles locally
+== 在本機顯示自己的頭銜
+
 Show name
 == 顯示暱稱
 
@@ -15983,9 +15974,6 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 The name "default" is reserved.
 == “default” 是保留名稱。
 
-The per-character wave setting affects text titles on your screen only.
-== 逐字波動只影響你畫面上的文字頭銜。
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 你正在私聊的玩家尚未重連或已離開。請稍等，或改與他人私聊
 
@@ -16381,9 +16369,6 @@ Title style
 
 Title too long or contains unsupported characters
 == 頭銜過長或包含不支援的字符
-
-Title visibility and appearance
-== 頭銜可見性與外觀
 
 Title wave strength (0-3, 0 = off)
 == 頭銜波浪強度（0-3，0 = 關閉）

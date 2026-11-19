@@ -1943,6 +1943,9 @@ Bouncy
 Bound functions
 == Назначенные действия
 
+Bound nickname (leave empty for any name)
+== Привязка к нику (пустое поле — любой ник)
+
 Bounded capture frame queue depth for demo export (higher values use more memory)
 == Ограничение глубины очереди захвата кадров для экспорта демо (большие значения используют больше памяти)
 
@@ -2419,9 +2422,6 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == Выберите положение на экране и размер шрифта, затем проверьте переносы в карточке предпросмотра.
-
-Choose a sponsor title style for your nameplate and chat messages.
-== Выберите стиль титула спонсора для таблички с именем и сообщений в чате.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == Выберите цель и задайте её цвет; лазеры объектов могут следовать цветам команды.
@@ -4811,9 +4811,6 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Измените эту пользовательскую команду на странице колеса команд.
 
-Edit title style
-== Изменить стиль титула
-
 Edit touch controls
 == Редактировать сенсорное управление
 
@@ -5515,9 +5512,6 @@ Every click applies the skin at once, so star the ones you like before you start
 
 Every wheel tick restarts from rest, matching the original client
 == Каждый щелчок колеса начинается с покоя, как в оригинальном клиенте
-
-Exact bound nickname
-== Точный ник для привязки
 
 Example /help settings will display the help about /settings
 == Например, /help settings покажет справку о /settings
@@ -8150,9 +8144,6 @@ Limit cursor to game window
 Limit information in spectator mode
 == Ограничить информацию в режиме наблюдателя
 
-Limit the title to the exact nickname below.
-== Показывать титул только при точном совпадении с указанным ниже ником.
-
 Limiter threshold (percent)
 == Порог лимитера (в процентах)
 
@@ -10061,9 +10052,6 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == Показывать только тогда, когда другой ти не на экране
 
-Only show with this nickname
-== Показывать только с этим ником
-
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == Меняется только выбранный Tee, поэтому перед правкой цветов dummy переключитесь на Dummy.
 
@@ -10892,6 +10880,9 @@ Player stats
 Player stats and info display
 == Отображение статистики и информации об игроке
 
+Player titles
+== Титулы игроков
+
 Player to follow across servers until cancelled; empty disables following
 == Игрок для перехода между серверами до отмены; пустое поле отключает следование
 
@@ -11155,9 +11146,6 @@ Preset type
 
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == Пресет при кодировании видео с libx264, по умолчанию 5 (medium), 0 = ultrafast, 9 = placebo (самый медленный, не рекомендуется)
-
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
-== После любого изменения нажимайте сохранить: титул и стиль чата хранятся в аккаунте, а обновить подтягивает их заново.
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == Нажмите выбрать карту, проверьте целевой сервер и игрока для загрузки, затем нажмите загрузить карту; отмена остановит её.
@@ -14054,6 +14042,9 @@ Show moving tiles in entities
 Show moving tiles in entity layer
 == Показывать движущиеся тайлы в слое сущностей
 
+Show my titles locally
+== Мои титулы на этом устройстве
+
 Show name
 == Показывать имя
 
@@ -15983,9 +15974,6 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 The name "default" is reserved.
 == Имя "default" зарезервировано.
 
-The per-character wave setting affects text titles on your screen only.
-== Волнообразное движение букв применяется только к текстовым титулам на вашем экране.
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Игрок, с которым вы шептались, ещё не переподключился или вышел. Подождите или напишите другому
 
@@ -16381,9 +16369,6 @@ Title style
 
 Title too long or contains unsupported characters
 == Титул слишком длинный или содержит недопустимые символы
-
-Title visibility and appearance
-== Видимость и оформление титулов
 
 Title wave strength (0-3, 0 = off)
 == Сила волны титула (0-3, 0 = выкл.)

@@ -314,13 +314,7 @@ namespace
 			"deck:qmclient-contributors-title",
 			Localizable("Redeems a sponsor code, sets the custom title it unlocks and picks how that title looks in chat."),
 			Localizable("Type your code into \"Sponsor code\" and press \"Redeem\", then edit \"Custom title\", choose a \"Chat message style\" and press \"Save\"."),
-			Localizable("Press \"Save\" after any change: the title and chat style are stored on your account, and \"Refresh\" reloads them."),
-		},
-		{
-			"deck:qmclient-contributors-title-display",
-			Localizable("Choose a sponsor title style for your nameplate and chat messages."),
 			Localizable("Pick a text style or a moon or sun badge, check the preview, then press \"Save\" to share the style with other players."),
-			Localizable("The per-character wave setting affects text titles on your screen only."),
 		},
 		{
 			"deck:sound-audio-pack",

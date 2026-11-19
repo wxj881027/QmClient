@@ -29,5 +29,5 @@
 
 ## 相关
 
-- [赞助头衔](deck:qmclient-contributors-title)
+- [玩家头衔](deck:qmclient-contributors-title)
 - [栖梦社区](deck:qmclient-contributors-community)

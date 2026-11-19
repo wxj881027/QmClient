@@ -77,7 +77,6 @@ namespace qm_card_catalog
 			"deck:appearance-name-plate-text",
 			"deck:appearance-name-plate-hook-strength",
 			"deck:appearance-name-plate-key-presses",
-			"deck:qmclient-contributors-title-display",
 		};
 
 		const std::vector<const char *> s_vTeeCards = {
@@ -91,7 +90,6 @@ namespace qm_card_catalog
 
 		const std::vector<const char *> s_vTitleCards = {
 			"deck:qmclient-contributors-title",
-			"deck:qmclient-contributors-title-display",
 		};
 
 		const std::vector<const char *> s_vControlsCards = {

@@ -98,12 +98,6 @@ TEST(QmCreditsLayout, UnifiedLegacyPageSplitsIntoCurrentTabs)
 		for(int Column = 0; Column < 3; ++Column)
 			EXPECT_EQ(Model.StableIdOrder("deck:", pTab, Column), DefaultModel.StableIdOrder("deck:", pTab, Column)) << pTab;
 	}
-	const int DisplayIndex = Model.FindByStableId("deck:qmclient-contributors-title-display");
-	ASSERT_GE(DisplayIndex, 0);
-	EXPECT_STREQ(Model.Entry(DisplayIndex).m_pDefaultTab, "appearance-name-plate");
-	const qm_card_order::SEntry *pDisplayPlacement = qm_card_registry::FindDefaultPlacement("deck:qmclient-contributors-title-display");
-	ASSERT_NE(pDisplayPlacement, nullptr);
-	EXPECT_EQ(Model.Entry(DisplayIndex).m_Column, pDisplayPlacement->m_Column);
 	const int FilesIndex = Model.FindByStableId("deck:tclient-info-files");
 	ASSERT_GE(FilesIndex, 0);
 	EXPECT_STREQ(Model.Entry(FilesIndex).m_pDefaultTab, "general");
