@@ -1,5 +1,7 @@
 #include <engine/shared/packer.h>
 
+#include <generated/protocol.h>
+
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/collision.h>
 #include <game/layers.h>
