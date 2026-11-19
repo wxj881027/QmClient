@@ -16,6 +16,8 @@
 #include <memory>
 #include <thread>
 
+#include <windows.h>
+
 namespace QmFestiveMessageBox
 {
 	// 只替换可选音乐，窗口消息和退出仍走正式实现。
