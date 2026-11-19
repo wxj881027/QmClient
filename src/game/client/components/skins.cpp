@@ -1598,7 +1598,7 @@ void CSkins::OnUpdate()
 	{
 		CSkinLoadingStats Stats;
 		Stats.m_NumLoading = m_NumLoadingSkins;
-		UpdateFinishLoading(Stats, Now, 1ms);
+		UpdateFinishLoading(Stats, Now, m_SettingsFinalizeTimeBudget);
 		LogStage("finish_loading");
 		return;
 	}
@@ -1624,7 +1624,7 @@ void CSkins::OnUpdate()
 	FlushSkinSourcesSave(time_get_nanoseconds());
 	LogStage("skin_sources_save");
 	// 检查间隔不是主线程预算：终局上传使用独立的 1 ms 预算，首个皮肤始终取得进展。
-	UpdateFinishLoading(Stats, time_get_nanoseconds(), 1ms);
+	UpdateFinishLoading(Stats, time_get_nanoseconds(), m_SettingsFinalizeTimeBudget);
 	LogStage("finish_loading");
 	ProcessSkinListPlanJob();
 	LogStage("list_plan_results");
@@ -1646,6 +1646,8 @@ void CSkins::OnRender()
 	const int UploadBudgetMs = SettingsSkinUploadTimeBudgetMs(
 		SettingsFrameContextOrDefault(GameClient()), TeeSettingsActive, Client()->RenderFrameTime() * 1000.0f);
 	m_SkinUploadFrameBudget.Reset(std::chrono::milliseconds(UploadBudgetMs));
+	// 终局接管与元数据收尾和上传共用同一份帧余量预算。
+	m_SettingsFinalizeTimeBudget = std::chrono::milliseconds(UploadBudgetMs);
 }
 
 void CSkins::UpdateForSettingsWarmup()
@@ -1654,6 +1656,7 @@ void CSkins::UpdateForSettingsWarmup()
 	// throttle so the blocking preload actually advances before the menu appears.
 	m_ContainerUpdateTime.reset();
 	m_SkinUploadFrameBudget.Reset();
+	m_SettingsFinalizeTimeBudget = std::chrono::milliseconds(1);
 	OnUpdate();
 }
 
@@ -2116,12 +2119,7 @@ void CSkins::UpdateUnloadSkins(CSkinLoadingStats &Stats)
 		pSkinContainer->SetState(CSkinContainer::EState::UNLOADED);
 		return true;
 	};
-	std::vector<std::string> vBackgroundSnapshot;
-	vBackgroundSnapshot.reserve(m_SkinsBackgroundList.size());
-	for(const std::string &SkinName : m_SkinsBackgroundList)
-	{
-		vBackgroundSnapshot.push_back(SkinName);
-	}
+	const std::vector<std::string> &vBackgroundSnapshot = SettingsSkinNameSnapshot(m_SkinsBackgroundList);
 	for(const std::string &SkinName : vBackgroundSnapshot)
 	{
 		if(NumToUnload == 0)
@@ -2146,12 +2144,7 @@ void CSkins::UpdateUnloadSkins(CSkinLoadingStats &Stats)
 	}
 	const size_t MaxSkipped = m_SkinsUsageList.size() / 8;
 	size_t NumSkipped = 0;
-	std::vector<std::string> vUsageSnapshot;
-	vUsageSnapshot.reserve(m_SkinsUsageList.size());
-	for(auto It = m_SkinsUsageList.rbegin(); It != m_SkinsUsageList.rend(); ++It)
-	{
-		vUsageSnapshot.push_back(*It);
-	}
+	const std::vector<std::string> &vUsageSnapshot = SettingsSkinNameSnapshot(m_SkinsUsageList, true);
 	for(const std::string &SkinName : vUsageSnapshot)
 	{
 		if(NumToUnload == 0 || NumSkipped >= MaxSkipped)
@@ -2443,12 +2436,7 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 		return true;
 	};
 
-	std::vector<std::string> vPrioritizedSkinNames;
-	vPrioritizedSkinNames.reserve(m_SkinsUsageList.size());
-	for(const std::string &SkinName : m_SkinsUsageList)
-	{
-		vPrioritizedSkinNames.push_back(SkinName);
-	}
+	const std::vector<std::string> &vPrioritizedSkinNames = SettingsSkinNameSnapshot(m_SkinsUsageList);
 	SettingsVisitSkinLoadRequests(vPrioritizedSkinNames, [this](const std::string &Name) {
 			const auto It = m_Skins.find(Name);
 			return It != m_Skins.end() ? It->second->m_LoadPriority : ESettingsResourcePriority::BACKGROUND; }, [this, TeeSettingsActive](const std::string &Name) { return TeeSettingsActive && m_SettingsLoadViewport.Contains(Name); }, [&](const std::string &SkinName) {
@@ -2473,12 +2461,7 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 		}
 		StartLoadJob(It->second.get(), It->second->m_LoadPriority); });
 
-	std::vector<std::string> vBackgroundSkinNames;
-	vBackgroundSkinNames.reserve(m_SkinsBackgroundList.size());
-	for(const std::string &SkinName : m_SkinsBackgroundList)
-	{
-		vBackgroundSkinNames.push_back(SkinName);
-	}
+	const std::vector<std::string> &vBackgroundSkinNames = SettingsSkinNameSnapshot(m_SkinsBackgroundList);
 	for(const std::string &SkinName : vBackgroundSkinNames)
 	{
 		auto It = m_Skins.find(SkinName);
@@ -2611,6 +2594,17 @@ void CSkins::FlushSkinSourcesSave(std::chrono::nanoseconds Now)
 	m_SkinSourcesSaveLast = Now;
 }
 
+const std::vector<std::string> &CSkins::SettingsSkinNameSnapshot(const std::list<std::string> &Names, bool Reverse)
+{
+	m_vSettingsSkinNameSnapshot.clear();
+	m_vSettingsSkinNameSnapshot.reserve(Names.size());
+	if(Reverse)
+		m_vSettingsSkinNameSnapshot.insert(m_vSettingsSkinNameSnapshot.end(), Names.rbegin(), Names.rend());
+	else
+		m_vSettingsSkinNameSnapshot.insert(m_vSettingsSkinNameSnapshot.end(), Names.begin(), Names.end());
+	return m_vSettingsSkinNameSnapshot;
+}
+
 CSkins::ESkinProcessResult CSkins::ProcessSkinContainer(CSkinContainer *pSkinContainer, CSkinLoadingStats &Stats,
 	int &SkinsProcessedThisFrame, std::chrono::nanoseconds StartTime,
 	std::chrono::nanoseconds MaxTime)
@@ -2733,12 +2727,7 @@ void CSkins::UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseco
 	const int MaxSkinsPerFrame = SettingsSkinMaxPerFrame(GameClient());
 	LogSettingsSkinFrameCapEvent(GameClient());
 	bool ProcessedHighPrioritySkin = false;
-	std::vector<std::string> vUsageSnapshot;
-	vUsageSnapshot.reserve(m_SkinsUsageList.size());
-	for(const std::string &SkinName : m_SkinsUsageList)
-	{
-		vUsageSnapshot.push_back(SkinName);
-	}
+	const std::vector<std::string> &vUsageSnapshot = SettingsSkinNameSnapshot(m_SkinsUsageList);
 
 	// First, try to process skins from the usage list (most recently used first)
 	// This prioritizes visible/commonly used skins for better perceived performance

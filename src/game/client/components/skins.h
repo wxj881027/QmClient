@@ -1080,6 +1080,7 @@ private:
 	void ReleaseSettingsSkinLoadRequests();
 	bool SkinNameInActiveUse(const char *pSkinName) const;
 	void FlushSkinSourcesSave(std::chrono::nanoseconds Now);
+	const std::vector<std::string> &SettingsSkinNameSnapshot(const std::list<std::string> &Names, bool Reverse = false);
 	void UpdateStartLoading(CSkinLoadingStats &Stats);
 	void UpdateSkinDownloads(CSkinLoadingStats &Stats);
 	std::unique_ptr<CQmSkinDownloadSession> CreateSkinDownloadSession(const CSkinContainer *pSkinContainer);
@@ -1203,6 +1204,8 @@ private:
 	bool m_SettingsTeePageActiveLastUpdate = false;
 	bool m_SkinSourcesSavePending = false;
 	std::optional<std::chrono::nanoseconds> m_SkinSourcesSaveLast;
+	std::chrono::nanoseconds m_SettingsFinalizeTimeBudget = std::chrono::milliseconds(1);
+	std::vector<std::string> m_vSettingsSkinNameSnapshot;
 
 	/**
 	 * Maximum number of skins to process per frame in UpdateFinishLoading.
