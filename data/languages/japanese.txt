@@ -836,6 +836,9 @@ All categories
 All combined
 == すべて結合
 
+All items
+== すべての項目
+
 All maps
 == すべてのマップ
 
@@ -847,6 +850,9 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 
 All sounds
 == すべてのサウンド
+
+All typefaces
+== すべての書体
 
 Allow /map.
 == /map を許可

@@ -63,15 +63,15 @@ TEST(SettingsMobilePages, OutOfRangePagesAreNotVisible)
 	EXPECT_FALSE(SettingsPageVisibleForPlatform(-1, false));
 	EXPECT_FALSE(SettingsPageVisibleForPlatform(CMenus::SETTINGS_LENGTH, false));
 }
-// 字体卡片从 TClient 挪到画面页：实现仍由 tclient 分支渲染，但不再出现在 TClient 页。
-TEST(SettingsMobilePages, FontCardBelongsToGraphicsPage)
+// 字体卡片是 TClient 的实现，也归属 TClient 页：玩家在该页调整菜单字体。
+TEST(SettingsMobilePages, FontCardBelongsToTClientPage)
 {
 	const auto &vGraphics = qm_card_catalog::CatalogPageStableIds("graphics");
 	const auto &vTClient = qm_card_catalog::CatalogPageStableIds("tclient");
 	const bool InGraphics = std::any_of(vGraphics.begin(), vGraphics.end(), [](const char *pId) { return str_comp(pId, "tclient:font") == 0; });
 	const bool InTClient = std::any_of(vTClient.begin(), vTClient.end(), [](const char *pId) { return str_comp(pId, "tclient:font") == 0; });
-	EXPECT_TRUE(InGraphics);
-	EXPECT_FALSE(InTClient);
+	EXPECT_FALSE(InGraphics);
+	EXPECT_TRUE(InTClient);
 }
 // 当前移动端只改单列排版，字号与行高保持桌面基线；等排版允许再整体放大。
 TEST(SettingsMobilePages, MobileTextScaleMatchesDesktopBaseline)

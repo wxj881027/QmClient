@@ -553,9 +553,9 @@ public:
 	virtual bool CustomFontHasVariableWeight(const char *pFace) const = 0; // TClient
 	// 该名字是否可解析为已加载的字体面（含预览面），供弹层按条目安全切换预览字体。
 	virtual bool QmHasCustomFace(const char *pFace) = 0; // QmClient
-	// 该 face 是否覆盖任一 CJK 字形（代表性码点采样：汉字/假名/谚文/CJK 标点），
-	// 供 CJK 字体下拉过滤纯拉丁字体。
-	virtual bool QmFaceHasCjk(const char *pFace) = 0; // QmClient
+	// 该 face 是否覆盖常用汉字；只含 CJK 标点或假名/谚文的字体不算中文字体。
+	// 供中文字体下拉过滤纯拉丁字体及误映射标点的符号字体。
+	virtual bool QmFaceHasHan(const char *pFace) = 0; // QmClient
 	// 预览面：把未安装的字体文件临时加载进 face 池（不进字体族列表），供商店
 	// 弹层按条目渲染预览；已加载（含已安装）时直接返回 true。路径重复调用安全。
 	virtual bool QmEnsurePreviewFace(const char *pFamily, const char *pFilePath) = 0; // QmClient

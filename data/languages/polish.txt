@@ -836,6 +836,9 @@ All categories
 All combined
 == Wszystkie połączone
 
+All items
+== Wszystkie elementy
+
 All maps
 == Wszystkie mapy
 
@@ -847,6 +850,9 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 
 All sounds
 == Wszystkie dźwięki
+
+All typefaces
+== Wszystkie kroje
 
 Allow /map.
 == Zezwól na /map.

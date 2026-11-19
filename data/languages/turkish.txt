@@ -836,6 +836,9 @@ All categories
 All combined
 == Tümü birleştirilmiş
 
+All items
+== Tüm öğeler
+
 All maps
 == Tüm haritalar
 
@@ -847,6 +850,9 @@ All remaining binds: scoreboard, spectating, console, screenshots, emoticon and 
 
 All sounds
 == Tüm sesler
+
+All typefaces
+== Tüm yazı tipleri
 
 Allow /map.
 == /map komutuna izin ver.

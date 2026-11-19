@@ -22,6 +22,33 @@ inline bool QmFontNameUsable(const std::string &Name)
 	return Name.find_first_not_of("? \t\r\n") != std::string::npos;
 }
 
+// 正文字体候选必须带 Unicode 字符表。Marlett、Wingdings 等系统符号字体只有
+// MS Symbol 编码，字体名套用其预览面时会被画成一排方框，也不能作为正文使用。
+inline bool QmFontFaceHasUnicodeCharmap(FT_Face Face)
+{
+	if(Face == nullptr || Face->charmaps == nullptr)
+		return false;
+	for(FT_Int Index = 0; Index < Face->num_charmaps; ++Index)
+	{
+		const FT_CharMap pCharmap = Face->charmaps[Index];
+		if(pCharmap != nullptr && pCharmap->encoding == FT_ENCODING_UNICODE)
+			return true;
+	}
+	return false;
+}
+
+// 中文字体候选必须覆盖常用汉字。只含 CJK 标点（例如 Mongolian Baiti 的顿号）
+// 或假名/谚文的字体不能作为中文字体，否则名称预览会落到方框字形。
+template<typename THasGlyph>
+inline bool QmHasCommonHanGlyphs(THasGlyph &&HasGlyph)
+{
+	static constexpr int aSampleCodepoints[] = {0x4E2D, 0x6C38, 0x4E00};
+	for(const int Codepoint : aSampleCodepoints)
+		if(!HasGlyph(Codepoint))
+			return false;
+	return true;
+}
+
 inline std::string QmDecodeSfntName(const FT_SfntName &Name)
 {
 	if(Name.string == nullptr || Name.string_len == 0 || Name.string_len > 65536)

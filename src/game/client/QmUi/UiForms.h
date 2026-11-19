@@ -391,6 +391,9 @@ namespace ui_widget
 		bool m_Clearable = false;
 		bool m_SearchHotkeyEnabled = false;
 		bool m_InlineTrailingText = false;
+		// 回车默认释放输入焦点；嵌入弹层搜索框时由调用方保留焦点，
+		// 让外层继续处理候选提交或空结果提示。
+		bool m_ReleaseFocusOnEnter = true;
 		// 复合控件拖拽期间可保留外层的鼠标捕获，同时显示输入框。
 		bool m_ProcessInput = true;
 		int m_Corners = IGraphics::CORNER_ALL;
