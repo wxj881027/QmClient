@@ -451,8 +451,8 @@ bool CSound::RateConvert(CSample &Sample) const
 	const double LastFrame = Sample.m_NumFrames - 1;
 	for(int i = 0; i < NumFrames; i++)
 	{
-		// 保留原有采样取整。长音频的 float 结果可能越过 int 上限，先限制再转换。
-		const float Fraction = i / static_cast<float>(NumFrames);
+		// 保留原有采样取整。长音频的结果可能越过 int 上限，先限制再转换。
+		const double Fraction = i / static_cast<double>(NumFrames);
 		const double SourceFrame = Fraction * Sample.m_NumFrames;
 		const int SourceIndex = static_cast<int>(std::min(SourceFrame, LastFrame));
 
