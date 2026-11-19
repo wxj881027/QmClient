@@ -9,6 +9,7 @@
 
 #include <game/client/QmUi/QmImageView.h>
 #include <game/client/component.h>
+#include <game/client/components/qmclient/screenshot_preview_timing.h>
 
 // UI Effects component for smooth transitions and animations
 class CUiEffects : public CComponent
@@ -43,9 +44,10 @@ private:
 		IGraphics::CTextureHandle m_Texture;
 		int m_ImageWidth = 0;
 		int m_ImageHeight = 0;
-		float m_Time = 0.0f;
-		// <0 表示还没开始收尾：照片会一直留在屏幕上，等玩家关掉它。
-		float m_DismissTime = -1.0f;
+		CQmScreenshotPreviewTiming m_Timing;
+		bool m_WasMouseDown = false;
+		vec2 m_LastMousePos{0.0f, 0.0f};
+		int m_PressedControl = 0; // 0=无 1=关闭 2=查看截图 3=拖动
 		// 卡片内的看图视口：1x 贴合卡片，滚轮放大到 8 倍，超出部分按卡片裁剪。
 		CQmImageView m_View;
 		// 已落盘的路径：给「查看截图」按钮直接打开看图窗口。
