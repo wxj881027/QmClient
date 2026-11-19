@@ -30,6 +30,13 @@ constexpr bool QmScrollRegionOverlayFadingOut(bool Overlay, float Reveal)
 	return Overlay && Reveal > 0.001f;
 }
 
+constexpr bool QmScrollRegionShouldRevealSelection(bool ReScrollSelection, bool IsSelection)
+{
+	// 只认本帧真正标记为选中的矩形。不能拿上一帧的矩形序号来猜，
+	// 否则列表在长帧后重绘时会把视窗滚到一条无关的行。
+	return ReScrollSelection && IsSelection;
+}
+
 // 内容区拖动滚动是手机上的主操作：手指按住列表直接带动内容，而不是去够右侧滚动条。
 // 桌面仍以滚轮和滚动条为准，避免和列表内的拖拽交互（卡片排序、滑块）抢同一次按住。
 constexpr bool QmScrollRegionContentDragEnabled()
@@ -324,8 +331,6 @@ private:
 	void DoSlider();
 
 	// 列表重新出现时把选中项滚进视野：记录本帧条目序号与「选中项」序号。
-	int m_AddRectIndex = 0;
-	int m_SelectionRectIndex = -1;
 	bool m_ReScrollSelection = false;
 	int64_t m_LastDrawTime = 0;
 };

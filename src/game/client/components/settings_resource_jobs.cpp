@@ -562,11 +562,19 @@ SSettingsSkinSourceAdmissionOutput SettingsSkinSourceAdmissionDecision(const SSe
 	}
 
 	const bool HighPriority = Input.m_Priority == ESettingsResourcePriority::VISIBLE;
-	if(!SettingsResourceCanUseHighPriorityBudget(
-		   maximum(0, Input.m_Loading),
-		   maximum(0, Input.m_NormalLoadingWindow),
-		   maximum(0, Input.m_VisibleLoadingWindow),
-		   HighPriority))
+	const int Loading = maximum(0, Input.m_Loading);
+	const int VisibleWindow = maximum(0, Input.m_VisibleLoadingWindow);
+	int HighPriorityLimit = VisibleWindow;
+	if(Input.m_CountFuseLimit > 0)
+	{
+		// 当前视窗等待 N 项时允许临时占用到 loading+N，但绝不超过硬上限。
+		// 这样后台预热已占满加载窗时，可见项仍能先完成；平时仍按可见窗限流。
+		HighPriorityLimit = minimum(Input.m_CountFuseLimit, maximum(VisibleWindow, Loading + maximum(0, Input.m_VisibleWaiting)));
+	}
+	const bool CanUseWindow = HighPriority ?
+					  Loading < HighPriorityLimit :
+					  Loading < maximum(0, Input.m_NormalLoadingWindow);
+	if(!CanUseWindow)
 	{
 		Output.m_PromoteAllowed = false;
 		Output.m_BlockReason = HighPriority ?

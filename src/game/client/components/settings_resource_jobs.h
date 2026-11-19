@@ -200,6 +200,8 @@ struct SSettingsSkinSourceAdmissionInput
 	int m_Loading = 0;
 	int m_NormalLoadingWindow = 0;
 	int m_VisibleLoadingWindow = 0;
+	int m_VisibleWaiting = 0;
+	int m_CountFuseLimit = 0;
 };
 
 struct SSettingsSkinSourceAdmissionOutput
@@ -505,6 +507,12 @@ const char *SettingsAdaptiveBudgetReasonName(ESettingsAdaptiveBudgetReason Reaso
 const char *SettingsSkinEffectiveFrameContextName(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 size_t SettingsSkinSourceBytesEstimate(int Width, int Height, int PixelCopies);
 bool SettingsSkinResidencyShouldReclaim(bool BytesBudgetExceeded, bool CountFuseExceeded);
+constexpr bool SettingsSkinFallbackSweepShouldRun(bool HasUsageRequests, bool HasBackgroundRequests)
+{
+	// fallback 只是显式队列为空时的兜底；显式队列存在时每帧再扫固定 64 项
+	// 既不会推进加载，也会制造虚假的 started 统计。
+	return !HasUsageRequests && !HasBackgroundRequests;
+}
 const char *SettingsWorkshopCatalogSourceName(ESettingsWorkshopCatalogSource Source);
 const char *SettingsWorkshopBytesSourceName(ESettingsWorkshopBytesSource Source);
 void SettingsApplyActiveTeeSkinFrameBudget(SSettingsWarmupFrameBudget &Budget, bool TeeSettingsActive);

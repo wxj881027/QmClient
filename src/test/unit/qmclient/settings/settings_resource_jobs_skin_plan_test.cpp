@@ -220,6 +220,51 @@ TEST(SettingsResourceJobsSkinPlan, SourceAdmissionUsesVisibleReserveForVisibleRe
 	EXPECT_FALSE(Decision.m_CountFuseApplies);
 }
 
+TEST(SettingsResourceJobsSkinPlan, VisibleRequestsCanUseBoundedOverflowAboveBackgroundWindow)
+{
+	const auto Decision = SettingsSkinSourceAdmissionDecision({
+		true,
+		ESettingsResourcePriority::VISIBLE,
+		false,
+		249,
+		64,
+		128,
+		35,
+		512,
+	});
+
+	EXPECT_TRUE(Decision.m_PromoteAllowed);
+	EXPECT_EQ(Decision.m_PromotePriority, ESettingsResourcePriority::VISIBLE);
+	EXPECT_EQ(Decision.m_BlockReason, ESettingsSkinSourceAdmissionBlockReason::NONE);
+	EXPECT_FALSE(Decision.m_CountFuseApplies);
+}
+
+TEST(SettingsResourceJobsSkinPlan, VisibleRequestsRemainBoundedByCountFuse)
+{
+	const auto Decision = SettingsSkinSourceAdmissionDecision({
+		true,
+		ESettingsResourcePriority::VISIBLE,
+		false,
+		512,
+		64,
+		128,
+		35,
+		512,
+	});
+
+	EXPECT_FALSE(Decision.m_PromoteAllowed);
+	EXPECT_EQ(Decision.m_BlockReason, ESettingsSkinSourceAdmissionBlockReason::VISIBLE_RESERVE);
+	EXPECT_FALSE(Decision.m_CountFuseApplies);
+}
+
+TEST(SettingsResourceJobsSkinPlan, FallbackSweepOnlyRunsWithoutExplicitQueues)
+{
+	EXPECT_TRUE(SettingsSkinFallbackSweepShouldRun(false, false));
+	EXPECT_FALSE(SettingsSkinFallbackSweepShouldRun(true, false));
+	EXPECT_FALSE(SettingsSkinFallbackSweepShouldRun(false, true));
+	EXPECT_FALSE(SettingsSkinFallbackSweepShouldRun(true, true));
+}
+
 TEST(SettingsResourceJobsSkinPlan, AllVisibleReadyLoggingRequiresVisibleRows)
 {
 	EXPECT_FALSE(SettingsSkinListShouldLogAllVisibleReady(true, false, 0));

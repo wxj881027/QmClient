@@ -1132,6 +1132,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	const CUIRect RefreshButton = Toolbar.m_aTools[3];
 	// Skin selector
 	static CListBox s_ListBox;
+	s_ListBox.SetAutoScrollSelectionOnReentry(false);
 	static CLineInput s_SkinFilterInput(g_Config.m_ClSkinFilterString, sizeof(g_Config.m_ClSkinFilterString));
 	static CButtonContainer s_aCollectionButtons[3];
 	const char *apCollectionLabels[] = {Localize("All"), Localize("Favorites"), Localize("Recent")};

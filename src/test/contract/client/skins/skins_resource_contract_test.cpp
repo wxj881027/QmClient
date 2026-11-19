@@ -127,7 +127,7 @@ TEST(SkinsContract, TeeSkinListSortModeKeepsFavoritesPinnedThenUsesOfficialDate)
 	EXPECT_NE(CompareBody.find("if(m_Favorite && !Other.m_Favorite)"), std::string::npos);
 }
 
-TEST(SkinsContract, TeeStartLoadingFallbackSweepIsBoundedAndLogged)
+TEST(SkinsContract, TeeStartLoadingFallbackSweepIsGatedAndCountsRealStarts)
 {
 	std::ifstream HeaderFile(TestSourcePath("src/game/client/components/skins.h"));
 	ASSERT_TRUE(HeaderFile.good());
@@ -152,7 +152,9 @@ TEST(SkinsContract, TeeStartLoadingFallbackSweepIsBoundedAndLogged)
 	EXPECT_NE(Source.find("event=skin_start_loading_fallback_sweep"), std::string::npos);
 	EXPECT_NE(Source.find("items_total=%d items_scanned=%d items_started=%d items_skipped=%d invoked=%d dur_ms=%.3f reason=%s"), std::string::npos);
 	EXPECT_NE(StartLoading.find("LogSettingsSkinStartLoadingFallbackSweepEvent("), std::string::npos);
-	EXPECT_NE(StartLoading.find("disabled_explicit_queues"), std::string::npos);
+	EXPECT_NE(StartLoading.find("SettingsSkinFallbackSweepShouldRun("), std::string::npos);
+	EXPECT_NE(StartLoading.find("pSkinContainer->IsAlwaysLoaded()"), std::string::npos);
+	EXPECT_NE(StartLoading.find("StateBefore != pSkinContainer->m_State"), std::string::npos);
 	EXPECT_EQ(StartLoading.find("std::advance("), std::string::npos);
 	EXPECT_EQ(StartLoading.find("for(auto &[_, pSkinContainer] : m_Skins)\n\t{"), std::string::npos);
 }

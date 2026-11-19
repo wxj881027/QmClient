@@ -420,6 +420,15 @@ TEST(UiV2ScrollPolicy, ScrollbarOverflowIgnoresSubpixelLayoutRemainder)
 	EXPECT_TRUE(QmScrollRegionContentOverflows(100.126f, 100.0f, 0.5f));
 	EXPECT_FALSE(QmScrollRegionContentOverflows(100.0625f, 100.0f, 0.25f));
 	EXPECT_TRUE(QmScrollRegionContentOverflows(100.0626f, 100.0f, 0.25f));
+	// 长帧/重新出现时只能滚动本帧真正标记为选中的行，不能复用上一帧序号。
+	EXPECT_TRUE(QmScrollRegionShouldRevealSelection(true, true));
+	EXPECT_FALSE(QmScrollRegionShouldRevealSelection(true, false));
+	EXPECT_FALSE(QmScrollRegionShouldRevealSelection(false, true));
+	EXPECT_FALSE(QmListBoxShouldScrollToSelectionAfterRenderGap(false, true, 500, 1000, 7));
+	EXPECT_FALSE(QmListBoxShouldScrollToSelectionAfterRenderGap(true, false, 500, 1000, 7));
+	EXPECT_FALSE(QmListBoxShouldScrollToSelectionAfterRenderGap(true, true, 250, 1000, 7));
+	EXPECT_FALSE(QmListBoxShouldScrollToSelectionAfterRenderGap(true, true, 500, 1000, -1));
+	EXPECT_TRUE(QmListBoxShouldScrollToSelectionAfterRenderGap(true, true, 251, 1000, 7));
 }
 TEST(UiV2ScrollPolicy, ListBoxInitialSelectionRequestsOneAnimatedReveal)
 {

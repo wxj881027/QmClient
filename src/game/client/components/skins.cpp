@@ -2219,6 +2219,8 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 				(int)Stats.m_NumLoading,
 				EffectiveNormalLoadingWindow,
 				VisibleLoadingWindow,
+				m_SettingsTeeVisibleSnapshot.m_VisibleNonterminalWaiting,
+				CountFuseLimit,
 			});
 			Admission.m_PromoteAllowed = SourceAdmission.m_PromoteAllowed;
 			Admission.m_PromotePriority = SourceAdmission.m_PromotePriority;
@@ -2236,6 +2238,8 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 				(int)Stats.m_NumLoading,
 				EffectiveNormalLoadingWindow,
 				VisibleLoadingWindow,
+				m_SettingsTeeVisibleSnapshot.m_VisibleNonterminalWaiting,
+				CountFuseLimit,
 			});
 			Admission.m_PromoteAllowed = SourceAdmission.m_PromoteAllowed;
 			Admission.m_PromotePriority = SourceAdmission.m_PromotePriority;
@@ -2253,7 +2257,15 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 		{
 			return true;
 		}
-		const auto Admission = DetermineAdmission(pSkinContainer, Priority);
+		auto Admission = DetermineAdmission(pSkinContainer, Priority);
+		if(!Admission.m_PromoteAllowed &&
+			Priority == ESettingsResourcePriority::VISIBLE &&
+			Admission.m_pBlockReason == SettingsSkinSourceAdmissionBlockReasonName(ESettingsSkinSourceAdmissionBlockReason::VISIBLE_RESERVE) &&
+			ReclaimBackgroundSkinForPriorityRequest(pSkinContainer->Name(), CountFuseLimit))
+		{
+			Stats = LoadingStats();
+			Admission = DetermineAdmission(pSkinContainer, Priority);
+		}
 		if(!Admission.m_PromoteAllowed)
 		{
 			str_copy(m_SettingsSourceAdmissionTelemetry.m_aLastWaitReason, Admission.m_pBlockReason, sizeof(m_SettingsSourceAdmissionTelemetry.m_aLastWaitReason));
@@ -2371,52 +2383,35 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 	int FallbackStarted = 0;
 	int FallbackSkipped = 0;
 	const auto FallbackStartTime = time_get_nanoseconds();
-	const char *pFallbackReason = m_SkinsUsageList.empty() && m_SkinsBackgroundList.empty() ? "disabled_explicit_queues" : "fallback_sweep";
-	static constexpr int MaxFallbackSweepItems = 64;
-	std::vector<std::string> vFallbackSkinNames;
-	vFallbackSkinNames.reserve(minimum(MaxFallbackSweepItems, (int)m_Skins.size()));
-	// Always-loaded (built-in/vanilla) skins never join the request queues and follow no
-	// list, so they have no load entry left if they miss this fallback batch. Collect them
-	// unconditionally first (there are very few), then fill the remaining budget in
-	// iteration order, so unordered_map iteration order no longer decides who gets swept.
-	for(const auto &[SkinName, pSkinContainer] : m_Skins)
+	const char *pFallbackReason = "fallback_sweep";
+	if(SettingsSkinFallbackSweepShouldRun(!m_SkinsUsageList.empty(), !m_SkinsBackgroundList.empty()))
 	{
-		if(pSkinContainer->IsAlwaysLoaded())
-			vFallbackSkinNames.push_back(SkinName);
+		// Always-loaded (built-in/vanilla) skins never join the request queues and follow no
+		// list. They are the only entries this implicit sweep can still help; ordinary
+		// unloaded/catalog-only containers must go through explicit priority requests.
+		for(const auto &[SkinName, pSkinContainer] : m_Skins)
+		{
+			if(!pSkinContainer->IsAlwaysLoaded())
+				continue;
+			if(pSkinContainer->m_State != CSkinContainer::EState::PENDING &&
+				pSkinContainer->m_State != CSkinContainer::EState::BACKGROUND_REQUESTED)
+				continue;
+			++FallbackScanned;
+			const CSkinContainer::EState StateBefore = pSkinContainer->m_State;
+			if(pSkinContainer->m_UsageEntryIterator.has_value() || pSkinContainer->m_BackgroundEntryIterator.has_value())
+			{
+				++FallbackSkipped;
+				continue;
+			}
+			if(!StartLoadJob(pSkinContainer.get(), ESettingsResourcePriority::BACKGROUND))
+				break;
+			if(StateBefore != pSkinContainer->m_State && pSkinContainer->m_State == CSkinContainer::EState::LOADING)
+				++FallbackStarted;
+		}
 	}
-	for(const auto &[SkinName, pSkinContainer] : m_Skins)
+	else
 	{
-		if((int)vFallbackSkinNames.size() >= MaxFallbackSweepItems)
-			break;
-		if(pSkinContainer->IsAlwaysLoaded())
-			continue; // already collected unconditionally above
-		vFallbackSkinNames.push_back(SkinName);
-	}
-	for(const std::string &SkinName : vFallbackSkinNames)
-	{
-		auto It = m_Skins.find(SkinName);
-		if(It == m_Skins.end())
-			continue;
-		CSkinContainer *pSkinContainer = It->second.get();
-		++FallbackScanned;
-		if(pSkinContainer->m_UsageEntryIterator.has_value() || pSkinContainer->m_BackgroundEntryIterator.has_value())
-		{
-			++FallbackSkipped;
-			continue;
-		}
-		// 目录条目可能成千上万。fallback sweep 是隐式后台路径，不能绕过
-		// RequestLoad(BACKGROUND) 对纯目录条目的保护；只有列表可见项或显式
-		// 引用才会通过优先级请求进入加载队列。
-		if(pSkinContainer->IsCatalogOnly())
-		{
-			++FallbackSkipped;
-			continue;
-		}
-		if(!StartLoadJob(pSkinContainer, ESettingsResourcePriority::BACKGROUND))
-		{
-			break;
-		}
-		++FallbackStarted;
+		pFallbackReason = "explicit_queues";
 	}
 	m_SettingsSourceAdmissionTelemetry.m_FallbackSweepScanned = FallbackScanned;
 	m_SettingsSourceAdmissionTelemetry.m_FallbackSweepStarted = FallbackStarted;
