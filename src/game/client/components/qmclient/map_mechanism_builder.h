@@ -3,10 +3,21 @@
 
 #include <game/client/prediction/gameworld.h>
 
+#include <vector>
+
 class CCollision;
 
 namespace qm_map_mechanisms
 {
+	struct SSnapshotLaser
+	{
+		vec2 m_Hub;
+		vec2 m_From;
+		int m_StartTick;
+		int m_Type;
+		int m_SwitchNumber;
+	};
+
 	// 从地图图层重建门、拖拉、静态激光等机关实体。
 	//
 	// 快速练习需要这些实体进入可玩分支世界，并注册门碰撞；影子回放只需要
@@ -19,6 +30,7 @@ namespace qm_map_mechanisms
 		bool m_RegisterDoorCollision = true;
 		// 练习分支可继承快照里同位置的激光相位；影子世界没有源世界，默认关闭。
 		bool m_InheritSnapshotLights = true;
+		const std::vector<SSnapshotLaser> *m_pSnapshots = nullptr;
 	};
 
 	struct SBuildCounts

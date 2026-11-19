@@ -13,13 +13,14 @@
 #include <game/client/components/binds.h>
 #include <game/client/components/ghost.h>
 #include <game/client/components/particles.h>
-#include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/map_mechanism_builder.h>
+#include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/practice_branch_state.h>
 #include <game/client/components/qmclient/practice_cursor.h>
 #include <game/client/components/qmclient/practice_predict_publish.h>
 #include <game/client/components/qmclient/practice_rescue.h>
 #include <game/client/components/qmclient/predicted_event_queue.h>
+#include <game/client/components/qmclient/snapshot_entities.h>
 #include <game/client/components/qmclient/world_event_gate.h>
 #include <game/client/gameclient.h>
 #include <game/client/laser_data.h>
@@ -623,6 +624,7 @@ void CFastPractice::ShiftPracticeWorldTicks(int TickDelta)
 	if(m_EventBarrierTick >= 0)
 		m_EventBarrierTick += TickDelta;
 	ShiftPracticeWorldEntityTicks(m_PracticeBaseWorld, TickDelta);
+	ShiftPracticeGunTicks(TickDelta);
 	for(int &LastAttackTick : m_aLastAttackTick)
 		if(LastAttackTick >= 0)
 			LastAttackTick += TickDelta;
@@ -662,6 +664,20 @@ void CFastPractice::ShiftPracticeWorldEntityTicks(CGameWorld &World, int TickDel
 	for(CEntity *pEnt = World.FindFirst(CGameWorld::ENTTYPE_LIGHT); pEnt; pEnt = pEnt->TypeNext())
 		if(auto *pLight = dynamic_cast<CPracticeLight *>(pEnt))
 			pLight->ShiftEvalTick(TickDelta);
+}
+
+void CFastPractice::ShiftPracticeGunTicks(int TickDelta)
+{
+	if(TickDelta <= 0)
+		return;
+	for(SPracticeGun &Gun : m_vPracticeGuns)
+	{
+		Gun.m_EvalTick += TickDelta;
+		for(int &LastFire : Gun.m_aLastFireTeam)
+			LastFire += TickDelta;
+		for(int &LastFire : Gun.m_aLastFireSolo)
+			LastFire += TickDelta;
+	}
 }
 
 void CFastPractice::FreezePracticeWorldForServerPause()
@@ -768,7 +784,19 @@ void CFastPractice::LoadPracticeMapMechanisms(CGameWorld &World)
 	// 网络裁剪范围，武器、门与拖拉就会凭空消失。地图图层是整张地图的
 	// 静态数据源，直接按服务端 IGameController::OnEntity 的规则重建这些
 	// 机制，机关炮仍由 m_vPracticeGuns 模拟（它们不是地图实体）。
-	const qm_map_mechanisms::SBuildCounts Counts = qm_map_mechanisms::Build(World, Collision(), m_NextPracticeMapEntityId);
+	std::vector<qm_map_mechanisms::SSnapshotLaser> vSnapshots;
+	for(const CSnapEntities &Ent : GameClient()->SnapEntities())
+	{
+		if(Ent.m_Item.m_Type != NETOBJTYPE_LASER && Ent.m_Item.m_Type != NETOBJTYPE_DDNETLASER)
+			continue;
+		const CLaserData Data = ExtractLaserInfo(Ent.m_Item.m_Type, Ent.m_Item.m_pData, &GameClient()->m_GameWorld, Ent.m_pDataEx);
+		if(Data.m_Type != LASERTYPE_FREEZE && Data.m_Type != LASERTYPE_DRAGGER && Data.m_Type != LASERTYPE_GUN)
+			continue;
+		vSnapshots.push_back({Data.m_To, Data.m_From, Data.m_StartTick, Data.m_Type, Data.m_SwitchNumber});
+	}
+	qm_map_mechanisms::SBuildOptions Options;
+	Options.m_pSnapshots = &vSnapshots;
+	const qm_map_mechanisms::SBuildCounts Counts = qm_map_mechanisms::Build(World, Collision(), m_NextPracticeMapEntityId, Options);
 	dbg_msg("fast_practice", "map mechanisms: pickups=%d doors=%d draggers=%d lights=%d",
 		Counts.m_Pickups, Counts.m_Doors, Counts.m_Draggers, Counts.m_Lights);
 }
@@ -777,6 +805,17 @@ void CFastPractice::LoadPracticeGuns()
 {
 	m_vPracticeGuns.clear();
 	m_PracticeGunsLoaded = true;
+
+	std::vector<qm_map_mechanisms::SSnapshotLaser> vGunSnapshots;
+	for(const CSnapEntities &Ent : GameClient()->SnapEntities())
+	{
+		if(Ent.m_Item.m_Type != NETOBJTYPE_LASER && Ent.m_Item.m_Type != NETOBJTYPE_DDNETLASER)
+			continue;
+		const CLaserData Data = ExtractLaserInfo(Ent.m_Item.m_Type, Ent.m_Item.m_pData, &GameClient()->m_GameWorld, Ent.m_pDataEx);
+		if(Data.m_Type == LASERTYPE_GUN)
+			vGunSnapshots.push_back({Data.m_To, Data.m_From, Data.m_StartTick, Data.m_Type, Data.m_SwitchNumber});
+	}
+	std::vector<bool> vUsedGunSnapshots(vGunSnapshots.size(), false);
 
 	const CTile *pGame = Collision()->GameLayer();
 	const CTile *pFront = Collision()->FrontLayer();
@@ -821,6 +860,29 @@ void CFastPractice::LoadPracticeGuns()
 				Gun.m_Layer = Layer;
 				Gun.m_Number = Number;
 				Gun.m_EvalTick = m_PracticeBaseWorld.GameTick();
+				float BestDistance = 512.0f;
+				size_t BestSnapshot = vGunSnapshots.size();
+				for(size_t SnapshotIndex = 0; SnapshotIndex < vGunSnapshots.size(); ++SnapshotIndex)
+				{
+					if(vUsedGunSnapshots[SnapshotIndex])
+						continue;
+					const qm_map_mechanisms::SSnapshotLaser &Snapshot = vGunSnapshots[SnapshotIndex];
+					if(Snapshot.m_SwitchNumber != Number)
+						continue;
+					const float Distance = distance(Snapshot.m_Hub, Pos);
+					if(Distance > BestDistance)
+						continue;
+					BestDistance = Distance;
+					BestSnapshot = SnapshotIndex;
+				}
+				if(BestSnapshot < vGunSnapshots.size())
+				{
+					vUsedGunSnapshots[BestSnapshot] = true;
+					Gun.m_Pos = vGunSnapshots[BestSnapshot].m_Hub;
+				}
+				const int InitialCooldown = -(Client()->GameTickSpeed() / PRACTICE_PLASMA_PER_SEC);
+				std::fill(std::begin(Gun.m_aLastFireTeam), std::end(Gun.m_aLastFireTeam), InitialCooldown);
+				std::fill(std::begin(Gun.m_aLastFireSolo), std::end(Gun.m_aLastFireSolo), InitialCooldown);
 				m_vPracticeGuns.push_back(Gun);
 			};
 
@@ -876,7 +938,8 @@ void CFastPractice::FirePracticeGun(CGameWorld &World, SPracticeGun &Gun, int Ti
 		if(TargetTeam == TEAM_SUPER)
 			continue;
 		if(Gun.m_Layer == LAYER_SWITCH && Gun.m_Number > 0 &&
-			!World.Switchers()[Gun.m_Number].m_aStatus[TargetTeam])
+			(Gun.m_Number >= (int)World.Switchers().size() ||
+				!World.Switchers()[Gun.m_Number].m_aStatus[TargetTeam]))
 			continue;
 
 		const bool TargetIsSolo = World.m_Teams.GetSolo(TargetClientId);
@@ -1674,6 +1737,10 @@ bool CFastPractice::RestartPracticeFromStart()
 	for(CCharacter *pChar = (CCharacter *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChar; pChar = (CCharacter *)pChar->TypeNext())
 		if(const int ClientId = pChar->GetCid(); ClientId >= 0 && ClientId < MAX_CLIENTS)
 			pChar->SetSolo(BranchTeams.GetSolo(ClientId));
+	// 入口快照可能仍包含已经断开的分身，或缺少刚接入的分身。重开后必须
+	// 按当前参与者集合重新裁剪/补建，不能把旧 client id 作为隐形容器留下。
+	PrunePracticeWorld(m_PracticeBaseWorld);
+	EnsurePracticeParticipants();
 	// 门副本不接管碰撞，重开后必须重新装回共享 CCollision 的端点。
 	m_PracticeBaseWorld.ResetDoorCollision();
 	// 快照初刻留下的事件 tick 早已被屏障盖过，留着会在下一帧集中播放。
@@ -1699,11 +1766,13 @@ bool CFastPractice::RestartPracticeFromStart()
 	// 会让投射物、定时开关与激光/等离子相位全部过期；先按时间差平移实体，
 	// 再落世界时钟，重开后机关仍从入口相位继续。
 	const int TargetTick = PracticeClockTarget();
-	ShiftPracticeWorldEntityTicks(m_PracticeBaseWorld, TargetTick - m_PracticeBaseWorld.GameTick());
+	const int TickDelta = TargetTick - m_PracticeBaseWorld.GameTick();
+	ShiftPracticeWorldEntityTicks(m_PracticeBaseWorld, TickDelta);
 	m_PracticeBaseWorld.m_GameTick = TargetTick;
 	// 机关炮独立于世界树，按入口快照整体恢复。开火计时回到入口值，
 	// 移动炮位也从入口位置重新跟随平台，而不是沿用重开前的坐标。
 	m_vPracticeGuns = m_PracticeStartGuns;
+	ShiftPracticeGunTicks(TickDelta);
 	m_PracticeGunsLoaded = true;
 	PublishPracticeWorldState();
 

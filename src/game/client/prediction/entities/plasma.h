@@ -2,9 +2,8 @@
 #ifndef GAME_CLIENT_PREDICTION_ENTITIES_PLASMA_H
 #define GAME_CLIENT_PREDICTION_ENTITIES_PLASMA_H
 
+#include <game/client/laser_data.h>
 #include <game/client/prediction/entity.h>
-
-class CLaserData;
 
 class CPlasma : public CEntity
 {
@@ -25,6 +24,9 @@ public:
 	bool Match(const CPlasma *pPlasma) const;
 	void Read(const CLaserData *pData);
 	void ShiftEvalTick(int TickDelta) { m_EvalTick += TickDelta; }
+	// 分支机关炮的等离子只存在于预测世界；渲染层沿用服务器等离子同一种
+	// LASERTYPE_PLASMA 数据，避免“实际冻结/爆炸，画面没有弹体”。
+	CLaserData RenderData();
 
 	void Reset();
 	void Tick() override;

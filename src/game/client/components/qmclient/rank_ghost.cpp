@@ -402,6 +402,8 @@ void CRankGhost::OnUpdate()
 			{
 				m_RetryLoadPending = false;
 				NotifyLoaded(m_ActiveEntry.m_Names.c_str(), m_ActiveEntry.m_Time.c_str());
+				if(!ViewTimelineCached())
+					KickViewTimelineRebuild();
 			}
 			else
 			{
@@ -1169,6 +1171,33 @@ bool CRankGhost::LoadGhostFile(const char *pStoragePath)
 
 bool CRankGhost::LoadGhostGroup(const char *pDir)
 {
+	std::vector<SCacheNameTime> vFiles = ListCacheFiles(Storage(), pDir, ".gho");
+	std::sort(vFiles.begin(), vFiles.end(), [](const SCacheNameTime &A, const SCacheNameTime &B) {
+		return str_comp(A.m_Name.c_str(), B.m_Name.c_str()) < 0;
+	});
+
+	std::vector<std::string> vValidFiles;
+	int Failed = 0;
+	for(const SCacheNameTime &File : vFiles)
+	{
+		char aPath[IO_MAX_PATH_LENGTH];
+		str_format(aPath, sizeof(aPath), "%s/%s", pDir, File.m_Name.c_str());
+		if(GameClient()->m_Ghost.CanLoad(aPath))
+			vValidFiles.emplace_back(aPath);
+		else
+			Failed++;
+	}
+	if(vValidFiles.empty())
+	{
+		if(Failed > 0)
+		{
+			char aBuf[128];
+			str_format(aBuf, sizeof(aBuf), Localize("Rank ghost: %d tees could not be loaded"), Failed);
+			Echo(aBuf);
+		}
+		return false;
+	}
+
 	UnloadGhost();
 	str_format(m_aLoadingGroupPrefix, sizeof(m_aLoadingGroupPrefix), "%s/", pDir);
 	m_GhostTeamsByFile.clear();
@@ -1181,31 +1210,20 @@ bool CRankGhost::LoadGhostGroup(const char *pDir)
 				m_GhostTeamsByFile[Entry.m_Filename] = Entry.m_Team;
 	}
 
-	std::vector<SCacheNameTime> vFiles = ListCacheFiles(Storage(), pDir, ".gho");
-	std::sort(vFiles.begin(), vFiles.end(), [](const SCacheNameTime &A, const SCacheNameTime &B) {
-		return str_comp(A.m_Name.c_str(), B.m_Name.c_str()) < 0;
-	});
-
 	const int FreeSlots = GameClient()->m_Ghost.FreeSlots();
 	int Loaded = 0;
-	int Failed = 0;
-	bool Truncated = false;
-	for(const SCacheNameTime &File : vFiles)
+	const bool Truncated = (int)vValidFiles.size() > FreeSlots;
+	for(const std::string &Path : vValidFiles)
 	{
 		if(Loaded >= FreeSlots)
-		{
-			Truncated = true;
 			break;
-		}
-		char aPath[IO_MAX_PATH_LENGTH];
-		str_format(aPath, sizeof(aPath), "%s/%s", pDir, File.m_Name.c_str());
-		const int Slot = GameClient()->m_Ghost.Load(aPath);
+		const int Slot = GameClient()->m_Ghost.Load(Path.c_str());
 		if(Slot < 0)
 		{
 			Failed++;
 			continue;
 		}
-		RegisterLoadedGhost(aPath, Slot);
+		RegisterLoadedGhost(Path.c_str(), Slot);
 		Loaded++;
 	}
 	if(Loaded == 0)

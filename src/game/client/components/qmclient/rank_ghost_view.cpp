@@ -114,6 +114,12 @@ void CRankGhost::EnterViewMode()
 	m_ViewMembers.Reset(m_vLoadedSlots.size());
 	++m_ViewGeneration;
 	m_ViewMode = true;
+	// 同一影子退出后再次进入时，播放头会从 0 重新开始；游标必须同步归零，
+	// 否则在 tick 0 退出的边界场景会漏掉首帧的事件和全局消息。
+	m_ViewLastTick = -1;
+	m_ViewEventCursor = 0;
+	m_ViewMessageCursor = 0;
+	m_ViewAppliedSwitch = -1;
 	// 回放开关只画在自己的画布上：服务器世界和练习分支世界是两条可玩时间线的
 	// 权威状态，回放期间不允许改写它们，退出回放也就不需要还原。
 	m_vViewSwitchers = GameClient()->m_GameWorld.m_Core.m_vSwitchers;
@@ -664,7 +670,7 @@ CGameWorld *CRankGhost::ViewMechanismWorld() const
 	return IsViewModeActive() ? m_pViewMechanismWorld.get() : nullptr;
 }
 
-bool CRankGhost::ViewDraggerTarget(vec2 Pos, vec2 *pTarget) const
+bool CRankGhost::ViewDraggerTarget(vec2 Pos, vec2 *pTarget, bool IgnoreWalls) const
 {
 	if(pTarget == nullptr || !IsViewModeActive())
 		return false;
@@ -681,7 +687,10 @@ bool CRankGhost::ViewDraggerTarget(vec2 Pos, vec2 *pTarget) const
 		if(Distance > BestDistance)
 			continue;
 		// 机关按服务器同一规则检查视线；影子世界只读，不会因此改变任何实体。
-		if(GameClient()->Collision()->IntersectLine(Pos, MemberPos, nullptr, nullptr))
+		const bool Blocked = IgnoreWalls ?
+					     GameClient()->Collision()->IntersectNoLaserNoWalls(Pos, MemberPos, nullptr, nullptr) :
+					     GameClient()->Collision()->IntersectNoLaser(Pos, MemberPos, nullptr, nullptr);
+		if(Blocked)
 			continue;
 		BestDistance = Distance;
 		*pTarget = MemberPos;

@@ -74,7 +74,7 @@ namespace qm_shadow_gun
 					Gun.m_Pos = Pos;
 					Gun.m_Layer = Layer;
 					Gun.m_Number = Number;
-					std::fill(std::begin(Gun.m_aLastFireTeam), std::end(Gun.m_aLastFireTeam), -FireDelay());
+					std::fill(std::begin(Gun.m_aLastFireTeam), std::end(Gun.m_aLastFireTeam), 0);
 					vGuns.push_back(Gun);
 				};
 
@@ -95,7 +95,7 @@ namespace qm_shadow_gun
 		{
 			Gun.m_Pos = Gun.m_StartPos;
 			Gun.m_Core = vec2(0.0f, 0.0f);
-			std::fill(std::begin(Gun.m_aLastFireTeam), std::end(Gun.m_aLastFireTeam), -FireDelay());
+			std::fill(std::begin(Gun.m_aLastFireTeam), std::end(Gun.m_aLastFireTeam), 0);
 		}
 	}
 

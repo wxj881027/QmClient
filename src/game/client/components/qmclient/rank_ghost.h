@@ -136,7 +136,7 @@ public:
 	// 回放当前开关状态所属的录制队伍；无记录时返回 -1。
 	int ViewSwitchTeam() const { return IsViewModeActive() ? m_ViewSwitchTeam : -1; }
 	// 影子里最近的可被机关拖拽命中的 Tee；用于补全只读世界的拖拉光束。
-	bool ViewDraggerTarget(vec2 Pos, vec2 *pTarget) const;
+	bool ViewDraggerTarget(vec2 Pos, vec2 *pTarget, bool IgnoreWalls) const;
 	// 影子机关炮的只读等离子球，仅供渲染。
 	const std::vector<qm_shadow_gun::SPlasma> &ViewPlasmas() const { return m_vViewPlasmas; }
 	uint64_t ViewGeneration() const { return m_ViewGeneration; }

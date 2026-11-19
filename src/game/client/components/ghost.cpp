@@ -1188,6 +1188,15 @@ int CGhost::Load(const char *pFilename)
 	return Slot;
 }
 
+bool CGhost::CanLoad(const char *pFilename)
+{
+	auto *pMap = GameClient()->Map();
+	if(pFilename == nullptr || pMap == nullptr)
+		return false;
+	CGhostInfo Info{};
+	return GhostLoader()->GetGhostInfo(pFilename, &Info, Client()->GetCurrentMap(), pMap->Sha256(), pMap->Crc());
+}
+
 void CGhost::Unload(int Slot)
 {
 	m_aManualSlots[Slot] = false;

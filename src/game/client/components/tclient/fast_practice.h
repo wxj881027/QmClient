@@ -242,6 +242,7 @@ private:
 	bool ResolvePracticeRoles(int &LocalClientId, int &DummyClientId) const;
 	bool IsPracticeServerPauseActive() const;
 	void ShiftPracticeWorldTicks(int TickDelta);
+	void ShiftPracticeGunTicks(int TickDelta);
 	// 只平移世界实体与开关的绝对 tick；/restart 从入口快照恢复时使用，
 	// 不碰 LocalWorld 轨迹、事件屏障和当前练习会话的命令状态。
 	void ShiftPracticeWorldEntityTicks(CGameWorld &World, int TickDelta);

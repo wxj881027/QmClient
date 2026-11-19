@@ -264,6 +264,8 @@ public:
 	bool IsSlotActive(int Slot) const;
 	// 槽位里装的必须仍是同一个文件，不能只看“槽位非空”。
 	bool IsSlotLoadedWith(int Slot, const char *pFilename) const;
+	// 只校验文件头、地图和 CRC，不占用槽位，也不改动当前已加载影子。
+	bool CanLoad(const char *pFilename);
 	int Load(const char *pFilename);
 	void Unload(int Slot);
 	void UnloadAll();

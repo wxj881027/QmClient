@@ -1,14 +1,13 @@
 #include <engine/map.h>
 
-#include <game/collision.h>
-#include <game/gamecore.h>
-#include <game/layers.h>
-#include <game/mapitems.h>
-
 #include <game/client/components/qmclient/shadow_gun_replay.h>
 #include <game/client/laser_data.h>
 #include <game/client/prediction/entities/door.h>
 #include <game/client/prediction/gameworld.h>
+#include <game/collision.h>
+#include <game/gamecore.h>
+#include <game/layers.h>
+#include <game/mapitems.h>
 
 #include <gtest/gtest.h>
 
@@ -195,9 +194,11 @@ TEST(ShadowMechanism, GunReplayFiresAtShadowTargetWithoutCharacters)
 	};
 	const std::vector<SSwitchers> vSwitchers;
 	qm_shadow_gun::Tick(vGuns, vPlasmas, 0, vSwitchers, TEAM_FLOCK, &F.m_Collision, Targets);
+	EXPECT_TRUE(vPlasmas.empty());
+	qm_shadow_gun::Tick(vGuns, vPlasmas, 50, vSwitchers, TEAM_FLOCK, &F.m_Collision, Targets);
 	ASSERT_EQ(vPlasmas.size(), 1u);
 	const vec2 Start = vPlasmas[0].m_Pos;
-	qm_shadow_gun::Tick(vGuns, vPlasmas, 1, vSwitchers, TEAM_FLOCK, &F.m_Collision, Targets);
+	qm_shadow_gun::Tick(vGuns, vPlasmas, 51, vSwitchers, TEAM_FLOCK, &F.m_Collision, Targets);
 	ASSERT_EQ(vPlasmas.size(), 1u);
 	EXPECT_GT(vPlasmas[0].m_Pos.x, Start.x);
 }

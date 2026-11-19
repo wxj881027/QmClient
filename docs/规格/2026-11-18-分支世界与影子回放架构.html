@@ -174,13 +174,13 @@
 
 <div class="meta">
 	<span class="chip">规格日期 <b>2026-11-18</b></span>
-	<span class="chip">基线提交 <b>fea008fed2</b></span>
+	<span class="chip">基线提交 <b>61b6cff70b</b></span>
 	<span class="chip ok">快速练习平行化 已落地</span>
-	<span class="chip warn">影子机关世界 B1–B4 已接入，实机验收待</span>
+	<span class="chip warn">影子机关世界 B1–B4 已实现，实机视觉验收待</span>
 </div>
 
 <div class="panel note">
-	<p><b>一句话结论：</b>QmClient 现在有三条明确分开的时间线——服务器世界、快速练习分支世界、影子回放轨道。分支世界已经是“可独立推进的沙盒”，影子回放仍然是“只看不碰的轨迹层”。把两者接成 demo 式影子世界，下一步缺的不是物理，而是一个只读机关世界和更宽的轨迹数据模型。</p>
+	<p><b>一句话结论：</b>QmClient 现在有三条明确分开的时间线——服务器世界、快速练习分支世界、影子回放轨道。分支世界是可独立推进的沙盒；影子回放由独立只读机关世界提供门、拖拉、静态激光、移动方块、机关炮与等离子视觉，但不写入共享碰撞，也不会影响主世界和练习分支。</p>
 </div>
 
 <div class="toc">
@@ -219,7 +219,7 @@
 	<tbody>
 		<tr><td>推进时钟</td><td>服务器 tick + 客户端预测</td><td>自己按预测 tick 追赶</td><td>播放头（可暂停/拖动）</td></tr>
 		<tr><td>参与者碰撞</td><td>是</td><td>是</td><td>否</td></tr>
-		<tr><td>门 / 拖拉 / 激光</td><td>快照 + 预测</td><td>整图重建 + 分支开关</td><td>目前只读快照；规划为只读机关世界</td></tr>
+		<tr><td>门 / 拖拉 / 激光</td><td>快照 + 预测</td><td>整图重建 + 分支开关</td><td>只读机关世界 + 录制队伍；不写共享碰撞</td></tr>
 		<tr><td>聊天 / 计分 / 击杀</td><td>权威</td><td>不参与（仍显示服务器）</td><td>不参与</td></tr>
 		<tr><td>能否影响主世界</td><td>—</td><td>只通过最终回到服务器时同步位置</td><td>绝对不能</td></tr>
 	</tbody>
@@ -260,6 +260,11 @@
 			<td>服务器暂停恢复、旁观进入前对齐、超过两秒的断崖追赶</td>
 		</tr>
 		<tr>
+			<td><code>ShiftPracticeGunTicks()</code><br><span class="small">fast_practice.cpp:669</span></td>
+			<td>机关炮 <code>m_EvalTick</code>、队伍与 solo 开火 tick</td>
+			<td>与分支时钟同步平移；<code>/restart</code> 恢复入口炮位后使用</td>
+		</tr>
+		<tr>
 			<td><code>ShiftPracticeWorldEntityTicks()</code><br><span class="small">fast_practice.cpp:637</span></td>
 			<td>角色、投射物、激光、等离子、练习灯、开关 <code>m_aEndTick</code>/<code>m_aLastUpdateTick</code></td>
 			<td><code>/restart</code> 从入口快照恢复；不碰轨迹与事件屏障</td>
@@ -292,17 +297,19 @@
 
 <h3>2.4 机关重建与渲染</h3>
 
-<p>分支世界不能依赖快照范围，否则走出镜头就会“看不见但还在挡”。<code>LoadPracticeMapMechanisms()</code>（<code>fast_practice.cpp:784</code>）直接读地图三层的实体 tile，按服务端创建规则重建：</p>
+<p>分支世界不能依赖快照范围，否则走出镜头就会“看不见但还在挡”。<code>LoadPracticeMapMechanisms()</code>（<code>fast_practice.cpp:784</code>）直接读地图三层的实体 tile，按服务端创建规则重建，并在快照仍可见时继承当前相位：</p>
 
 <div class="grid">
 	<div class="card"><h4>拾取物</h4><p>护甲、武器、生命、忍者，按 <code>ENTITY_*</code> 还原类型与子类型。</p></div>
 	<div class="card"><h4>门</h4><p><code>CDoor</code>，记录 hub、方向、长度；<code>ResetCollision()</code> 把门碰撞端点写进当前碰撞缓存。</p></div>
 	<div class="card"><h4>拖拉</h4><p><code>CDragger</code>，记录强度、穿墙、开关编号与目标。</p></div>
-	<div class="card"><h4>静态激光</h4><p><code>CPracticeLight</code>，复用快照端点与服务器 eval tick，保留生长相位。</p></div>
-	<div class="card"><h4>机关炮</h4><p><code>m_vPracticeGuns</code> 单独模拟，按 <code>MoverSpeed</code> 跟随移动平台，按队伍/solo 选择目标。</p></div>
+	<div class="card"><h4>静态激光</h4><p><code>CPracticeLight</code>，按 hub、方向和开关编号匹配当前 snapshot；继承 hub、头部端点与 eval tick，保留生长相位。</p></div>
+	<div class="card"><h4>机关炮</h4><p><code>m_vPracticeGuns</code> 单独模拟，按 <code>MoverSpeed</code> 跟随移动平台，按队伍/solo 选择目标；入口快照中的炮位与开火计时单独保存，重开时一起恢复。</p></div>
 </div>
 
-<p>渲染在 <code>CItems::OnRender()</code>（<code>src/game/client/components/items.cpp:598</code>）内完成。练习机关段从 <code>items.cpp:678</code> 开始，按 <code>ENTTYPE_LIGHT</code>、<code>ENTTYPE_DOOR</code>、<code>ENTTYPE_DRAGGER</code> 遍历分支世界，并把 hub 收集到去重表；随后快照激光如果与分支 hub 重合就跳过，避免双重曝光。</p>
+<p>渲染在 <code>CItems::OnRender()</code>（<code>src/game/client/components/items.cpp:689</code>）内完成。练习机关段按 <code>ENTTYPE_LIGHT</code>、<code>ENTTYPE_DOOR</code>、<code>ENTTYPE_DRAGGER</code>、<code>ENTTYPE_PLASMA</code> 遍历分支世界；练习队伍取 <code>PracticeSwitchTeam()</code>，查看世界队伍取 <code>ViewSwitchTeam()</code>。查看世界是半透明叠加，不把 hub 写进主世界去重表，避免回放关闭机关时压掉仍在碰撞的实时机关。</p>
+
+<p>分支里的等离子球使用 <code>CPlasma::RenderData()</code> 生成 <code>LASERTYPE_PLASMA</code> 渲染数据，因此机关炮实际冻结/爆炸时不会出现“判定有弹体、画面没有弹体”。查看世界的机关炮则由 <code>shadow_gun_replay</code> 按播放头和影子目标只读重放，等离子球不参与主世界物理。</p>
 
 <div class="panel note">
 	<p><b>渲染门控不跟 <code>Predict()</code> 走：</b>旁观和服务器暂停时 <code>Predict()</code> 为假，但分支仍在推进碰撞。机制段只要求“非小地图渲染且分支世界存在”，因此不会出现“看不见的激光把人冻住”。<span class="small">（<code>items.cpp:678</code>，提交 104ff23b9a）</span></p>
@@ -345,7 +352,7 @@
 <ul>
 	<li><b>队伍号</b>：<code>SyncPracticeWorldConfig()</code>（<code>fast_practice.cpp:722</code>）只同步参与者本人；服务器是 <code>TEAM_SPECTATORS</code> 时跳过，避免旁观期间把可玩队伍覆盖掉。</li>
 	<li><b>solo</b>：分支本地状态，<code>/solo</code>、<code>/unsolo</code> 直接写分支 <code>m_Teams</code>；fork/重绑时按旧角色迁移。</li>
-	<li><b>Rank 1</b>：<code>.qmevt</code> 记录 <code>m_Team</code>，回放时按录制队伍还原开关，不套用查看者当前队伍。这是队伍字段真正有跨时间线意义的地方。</li>
+	<li><b>Rank 1</b>：<code>.qmevt</code> 记录 <code>m_Team</code>，查看世界和影子机关炮按录制队伍还原开关，不套用查看者当前队伍。该队伍只属于只读影子世界，不通过 <code>SwitchStateTeam()</code> 改写主世界或练习分支。</li>
 </ul>
 
 <h3>2.6 旁观：时间继续走</h3>
@@ -389,8 +396,8 @@
 		</tr>
 		<tr>
 			<td>机关炮重开</td>
-			<td><code>/restart</code> 不回退炮位与冷却</td>
-			<td>炮位跟随移动平台增量移动，倒回入口坐标反而会和当前平台位置错开；正确做法是从入口 tick 重放到当前 tick</td>
+			<td><code>/restart</code> 恢复入口炮位与开火计时，再按当前 tick 平移</td>
+			<td>炮位跟随移动平台增量移动；直接倒回入口坐标会与当前平台位置错开，因此只恢复入口状态并补上时间差</td>
 		</tr>
 	</tbody>
 </table>
@@ -427,6 +434,8 @@
 </ol>
 
 <p>实现入口：<code>CRankGhost::RequestGhostViewForDemo()</code>（<code>src/game/client/components/qmclient/rank_ghost.cpp:624</code>）。双击行等同“下载回放”，不会直接进查看模式。</p>
+
+<p>加载一个多轨组前，<code>LoadGhostGroup()</code> 先用 <code>CGhost::CanLoad()</code> 逐文件校验地图、SHA、CRC 和文件头；只要组里还有至少一条有效轨迹，就不因坏轨提前卸载当前回放。全部无效时保留旧会话并提示，避免“点一次坏文件就把正在看的影子清空”。</p>
 
 <p>下载任务共用一套 demo 请求状态机，因此多个回放按 FIFO 排队：当前条目结束后自动开始下一条，排队中的行显示任务状态。Rank 1 条目左侧另有官网按钮，优先打开 <code>https://ddnet.org/watch/?uuid=&lt;uuid&gt;&amp;time=&lt;time&gt;</code>；缺少 uuid 时回退到 demo 路径。</p>
 
@@ -472,7 +481,7 @@
 
 <h3>4.3 影子为什么不参与物理</h3>
 
-<p><code>CLocalWorld</code>（<code>src/game/client/components/qmclient/local_world.h:131</code>）只保存轨迹会话，不持有 <code>CGameWorld</code>。查看模式另有一棵只读机关世界（<code>CRankGhost::m_pViewMechanismWorld</code>），只重建门、拖拉、静态激光，并按播放头推进激光相位；它不进入主世界 tick、不写共享 <code>CCollision</code>。CGhost 手动渲染仍把轨迹插值成虚影，没有可碰撞角色，也没有勾人、挡人查询。这是设计底线：Rank 1 和 Ghost 都来自“另一个平行时空”，只允许看。</p>
+<p><code>CLocalWorld</code>（<code>src/game/client/components/qmclient/local_world.h:131</code>）只保存轨迹会话，不持有可玩 <code>CGameWorld</code>。查看模式另有一棵只读机关世界（<code>CRankGhost::m_pViewMechanismWorld</code>），重建门、拖拉、静态激光并运行影子机关炮；机关按 <code>.qmevt</code> 的录制队伍和播放头开合，拖拉目标从影子 Tee 位置解析。它不进入主世界 tick、不写共享 <code>CCollision</code>。CGhost 手动渲染仍把轨迹插值成虚影，没有可碰撞角色，也没有勾人、挡人查询。这是设计底线：Rank 1 和 Ghost 都来自“另一个平行时空”，只允许看。</p>
 
 <h3>4.4 双模式路线图</h3>
 
@@ -495,12 +504,12 @@
 		<tr>
 			<td>B1</td>
 			<td>门、拖拉、静态激光影子化：只读机关世界 + <code>.qmevt</code> 开关驱动</td>
-			<td><span class="tag done">已实现</span><code>map_mechanism_builder</code> 共用地图扫描；门不注册共享碰撞，激光按播放头重算相位，拖拉指向影子 Tee</td>
+			<td><span class="tag done">已实现</span><code>map_mechanism_builder</code> 共用地图扫描；门不注册共享碰撞，激光按播放头重算相位，拖拉指向影子 Tee；查看世界使用录制队伍，不污染主世界去重表</td>
 		</tr>
 		<tr>
 			<td>B2</td>
 			<td>移动方块、机关炮影子化</td>
-			<td><span class="tag done">已实现</span>主世界移动方块继续按实时时钟绘制，影子再用播放头包络半透明叠加一遍；机关炮用 <code>shadow_gun_replay</code> 对影子轨迹只读重放；练习入口同时保存独立炮位与开火计时，<code>/restart</code> 一并恢复</td>
+			<td><span class="tag done">已实现</span>主世界移动方块继续按实时时钟绘制，影子再用播放头包络半透明叠加一遍；机关炮用 <code>shadow_gun_replay</code> 对影子轨迹只读重放并支持初始冷却；练习分支继承快照炮位、保存入口开火计时，<code>/restart</code> 按 tick 差恢复；分支等离子球进入渲染路径</td>
 		</tr>
 		<tr>
 			<td>B3</td>
@@ -557,10 +566,10 @@
 		<tr><td>表情</td><td>分支练习状态</td><td>轨迹/成员数据</td><td><code>ResolvePracticeEyeEmote</code></td></tr>
 		<tr><td>AFK 坐姿</td><td>参与者屏蔽服务器标记</td><td>不适用</td><td><code>players.cpp</code> 渲染门</td></tr>
 		<tr><td>冻结</td><td>分支 <code>CCharacterCore</code></td><td>轨迹冻结标记 + 查看模式进度条</td><td><code>gameclient.cpp</code> / <code>CFreezeBars</code></td></tr>
-		<tr><td>门 / 拖拉 / 激光</td><td>分支重建 + 分支开关</td><td>只读机关世界 + <code>.qmevt</code> 开关</td><td><code>items.cpp</code> / <code>map_mechanism_builder.cpp</code></td></tr>
+		<tr><td>门 / 拖拉 / 激光</td><td>分支重建 + 分支开关</td><td>只读机关世界 + <code>.qmevt</code> 录制队伍开关</td><td><code>items.cpp</code> / <code>map_mechanism_builder.cpp</code></td></tr>
 		<tr><td>移动方块</td><td>分支 tick</td><td>主世界实时；影子第二遍按回放播放头求值</td><td><code>moving_tiles.cpp</code> / <code>EnvelopeEvalAtTick</code></td></tr>
 		<tr><td>机关炮</td><td>分支 <code>m_vPracticeGuns</code></td><td>影子轨迹只读重放</td><td><code>shadow_gun_replay.cpp</code></td></tr>
-		<tr><td>队伍</td><td>参与者跟随服务器，solo 本地</td><td><code>.qmevt</code> 的 <code>m_Team</code></td><td><code>SyncPracticeWorldConfig</code> / <code>UpdateViewTimeline</code></td></tr>
+		<tr><td>队伍</td><td>参与者跟随服务器，solo 本地</td><td><code>.qmevt</code> 的 <code>m_Team</code>，仅用于影子机关</td><td><code>SyncPracticeWorldConfig</code> / <code>UpdateViewTimeline</code></td></tr>
 		<tr><td>聊天 / 计分 / 击杀</td><td>服务器</td><td>服务器</td><td>不接管</td></tr>
 	</tbody>
 </table>
@@ -582,6 +591,8 @@
 		<tr><td>旁观回来武器变手枪</td><td><code>AntiPingGunfire()</code> 为假时，<code>UpdateRenderedCharacters</code> 的参与者分支是否执行</td></tr>
 		<tr><td>按 DF 后分身消失但碰撞还在</td><td>快照失活时 <code>ResolvePracticeCharacter</code> 是否仍返回角色</td></tr>
 		<tr><td>走出镜头后门/激光消失</td><td><code>LoadPracticeMapMechanisms</code> 是否重建；<code>PracticeLightWorld()</code> 是否非空</td></tr>
+		<tr><td>回放中机关与录制队伍不一致</td><td><code>ViewSwitchTeam()</code> 是否已从 <code>.qmevt</code> 解析；查看世界是否仍误用主世界去重表</td></tr>
+		<tr><td>加载 Rank 1 组后旧影子消失</td><td><code>CanLoad()</code> 预检是否通过；是否在所有轨迹都无效前调用了 <code>UnloadGhost()</code></td></tr>
 		<tr><td>旁观时被看不见的激光冻住</td><td><code>items.cpp</code> 机制渲染是否仍被 <code>UsePredicted</code> 包住（旧缺陷）</td></tr>
 		<tr><td>换队后门状态不对</td><td><code>SyncPracticeWorldConfig</code> 是否同步参与者队伍；分支 solo 是否保留</td></tr>
 		<tr><td>查看模式缺终点成绩</td><td><code>.qmevt</code> 是否为当前 <code>QMGHEVT3</code>；旧 sidecar 是否触发重建</td></tr>
@@ -593,16 +604,17 @@
 <table>
 	<thead><tr><th>项目</th><th>结果</th></tr></thead>
 	<tbody>
-		<tr><td>构建 <code>game-client</code></td><td>成功（基线 fea008fed2 + B1–B4 与设置入口）</td></tr>
+		<tr><td>构建 <code>game-client</code></td><td>成功（当前工作树 <code>61b6cff70b</code> + 本轮修复）</td></tr>
 		<tr><td><code>testrunner</code></td><td>7325 / 7325 通过</td></tr>
 		<tr><td><code>qm-nmt-tests</code></td><td>176 / 176 通过</td></tr>
 		<tr><td><code>qm-ui-popup-tests</code></td><td>502 / 502 通过</td></tr>
 		<tr><td><code>qm-practice-predict-tests</code></td><td>40 / 40 通过</td></tr>
+		<tr><td>quick gate</td><td>14 通过 / 2 失败；失败均为既有格式债（<code>config_variables_qmclient.h</code>、<code>uuid_manager.cpp</code>、<code>QmConsoleUi.h</code>、<code>QmListToolbar.h</code>、<code>UiForms.cpp</code>、<code>generate_rust_bridge.py</code>）；本轮代码文件 <code>clang-format</code> 通过</td></tr>
 		<tr><td>语言校验</td><td><code>extracted_strings.txt</code> 7418 项；12 个生成语言文件全部通过</td></tr>
-		<tr><td><code>BM_GhostPathAppend/1000</code></td><td>CPU 中位数约 4.71µs（0.2s × 5 次聚合）</td></tr>
-		<tr><td><code>BM_GhostExtraDataDecode</code></td><td>CPU 中位数约 1.26ns</td></tr>
-		<tr><td><code>BM_OnlineReplayClock</code></td><td>CPU 中位数约 4.97ns</td></tr>
-		<tr><td><code>BM_PracticeLightPhase/12000</code></td><td>CPU 中位数约 3.97µs（12000 tick 从零点重算）</td></tr>
+		<tr><td><code>BM_GhostPathAppend/1000</code></td><td>CPU 中位数约 6.28µs（0.2s × 5 次聚合）</td></tr>
+		<tr><td><code>BM_GhostExtraDataDecode</code></td><td>CPU 中位数约 0.85ns</td></tr>
+		<tr><td><code>BM_OnlineReplayClock</code></td><td>CPU 中位数约 5.58ns</td></tr>
+		<tr><td><code>BM_PracticeLightPhase/12000</code></td><td>CPU 中位数约 4.36µs（12000 tick 从零点重算）</td></tr>
 	</tbody>
 </table>
 
@@ -621,7 +633,7 @@
 		<tr>
 			<td>P1</td>
 			<td>影子世界 B1：门、拖拉、静态激光只读机关世界</td>
-			<td>已实现；待窗口化实机确认主世界碰撞、聊天、计分不受影响</td>
+			<td>已实现；代码测试覆盖机关、等离子与影子机关炮；待窗口化实机确认主世界碰撞、聊天、计分不受影响</td>
 		</tr>
 		<tr>
 			<td>P2</td>
@@ -631,7 +643,7 @@
 		<tr>
 			<td>P2</td>
 			<td>移动方块/机关炮影子化</td>
-			<td>已实现；待确认长回放跳转的追赶耗时</td>
+			<td>已实现并加入标记平移、快照继承与只读队伍；待确认长回放跳转的追赶耗时</td>
 		</tr>
 		<tr>
 			<td>P3</td>
@@ -668,7 +680,7 @@
 
 <hr>
 
-<p class="small">本文是现行架构规格，记录 2026-11-18 基线 <code>fea008fed2</code> 与 B1–B4 机关世界实现后的实际代码行为与后续路线。实现变化时优先更新本文，不为每轮验证另建报告。</p>
+<p class="small">本文是现行架构规格，记录 2026-11-18 基线 <code>61b6cff70b</code> 与本轮 B1–B4 修复后的实际代码行为与后续路线。实现变化时优先更新本文，不为每轮验证另建报告。</p>
 
 </main>
 </body>

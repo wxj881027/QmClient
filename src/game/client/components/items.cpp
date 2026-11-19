@@ -22,6 +22,7 @@
 #include <game/client/prediction/entities/dragger.h>
 #include <game/client/prediction/entities/laser.h>
 #include <game/client/prediction/entities/pickup.h>
+#include <game/client/prediction/entities/plasma.h>
 #include <game/client/prediction/entities/practice_light.h>
 #include <game/client/prediction/entities/projectile.h>
 #include <game/client/projectile_data.h>
@@ -688,7 +689,7 @@ void CItems::OnRender()
 	// 为假，但分支仍在推进碰撞，少画一束激光就会出现“看不见却被冻住”。
 	if(!RenderingMini)
 	{
-		const auto DrawMechanismWorld = [&](CGameWorld *pWorld, bool IsViewWorld) {
+		const auto DrawMechanismWorld = [&](CGameWorld *pWorld, bool IsViewWorld, int Team) {
 			if(pWorld == nullptr)
 				return;
 			const int ViewTick = IsViewWorld ? GameClient()->m_Ghost.ManualPlaybackTick() : -1;
@@ -701,8 +702,11 @@ void CItems::OnRender()
 				auto *pLight = dynamic_cast<CPracticeLight *>(pEnt);
 				if(pLight == nullptr)
 					continue;
-				vPracticeLightHubs.push_back(pLight->m_Pos);
-				const std::optional<CLaserData> Data = pLight->RenderData(SwitcherTeam);
+				// 查看世界是半透明叠加，不能登记到主世界/练习机关的去重表；
+				// 否则回放中关闭的机关会把仍在碰撞的实时机关一并从画面压掉。
+				if(!IsViewWorld)
+					vPracticeLightHubs.push_back(pLight->m_Pos);
+				const std::optional<CLaserData> Data = pLight->RenderData(Team);
 				if(!Data.has_value() || !IsLaserInside(*Data))
 					continue;
 				RenderLaser(&*Data, true, Alpha, ViewTick);
@@ -712,8 +716,9 @@ void CItems::OnRender()
 				auto *pDoor = dynamic_cast<CDoor *>(pEnt);
 				if(pDoor == nullptr)
 					continue;
-				vPracticeDoorHubs.push_back(pDoor->m_Pos);
-				const CLaserData Data = pDoor->RenderData(SwitcherTeam);
+				if(!IsViewWorld)
+					vPracticeDoorHubs.push_back(pDoor->m_Pos);
+				const CLaserData Data = pDoor->RenderData(Team);
 				if(!IsLaserInside(Data))
 					continue;
 				RenderLaser(&Data, true, Alpha, ViewTick);
@@ -723,17 +728,30 @@ void CItems::OnRender()
 				auto *pDragger = dynamic_cast<CDragger *>(pEnt);
 				if(pDragger == nullptr)
 					continue;
-				vPracticeDraggerHubs.push_back(pDragger->m_Pos);
-				std::optional<CLaserData> Data = pDragger->RenderData(SwitcherTeam);
+				if(!IsViewWorld)
+					vPracticeDraggerHubs.push_back(pDragger->m_Pos);
+				std::optional<CLaserData> Data = pDragger->RenderData(Team);
 				if(!Data.has_value() || !IsLaserInside(*Data))
 					continue;
 				if(IsViewWorld && Data->m_To == Data->m_From)
 				{
 					vec2 Target;
-					if(GameClient()->m_RankGhost.ViewDraggerTarget(Data->m_From, &Target))
+					if(GameClient()->m_RankGhost.ViewDraggerTarget(Data->m_From, &Target, (Data->m_Subtype & 1) != 0))
 						Data->m_To = Target;
 				}
 				RenderLaser(&*Data, true, Alpha, ViewTick);
+			}
+			if(!IsViewWorld)
+			{
+				for(CEntity *pEnt = pWorld->FindFirst(CGameWorld::ENTTYPE_PLASMA); pEnt; pEnt = pEnt->TypeNext())
+				{
+					auto *pPlasma = dynamic_cast<CPlasma *>(pEnt);
+					if(pPlasma == nullptr)
+						continue;
+					const CLaserData Data = pPlasma->RenderData();
+					if(IsLaserInside(Data))
+						RenderLaser(&Data, true, Alpha, ViewTick);
+				}
 			}
 			// 影子机关炮只存在于查看模式；等离子球按回放播放头推进，不进入主世界物理。
 			if(IsViewWorld)
@@ -759,9 +777,19 @@ void CItems::OnRender()
 		// 查看模式与练习分支可能同时存在：影子机关半透明叠加，但绝不能因为
 		// 打开回放就把正在游玩的练习机关从画面里挤掉。
 		if(CGameWorld *pViewWorld = GameClient()->m_RankGhost.ViewMechanismWorld())
-			DrawMechanismWorld(pViewWorld, true);
+		{
+			const int ViewTeam = GameClient()->m_RankGhost.ViewSwitchTeam() >= 0 ?
+						     GameClient()->m_RankGhost.ViewSwitchTeam() :
+						     SwitcherTeam;
+			DrawMechanismWorld(pViewWorld, true, ViewTeam);
+		}
 		if(CGameWorld *pPracticeWorld = GameClient()->m_FastPractice.PracticeLightWorld())
-			DrawMechanismWorld(pPracticeWorld, false);
+		{
+			const int PracticeTeam = GameClient()->m_FastPractice.PracticeSwitchTeam() >= 0 ?
+							 GameClient()->m_FastPractice.PracticeSwitchTeam() :
+							 SwitcherTeam;
+			DrawMechanismWorld(pPracticeWorld, false, PracticeTeam);
+		}
 	}
 
 	for(const CSnapEntities &Ent : GameClient()->SnapEntities())

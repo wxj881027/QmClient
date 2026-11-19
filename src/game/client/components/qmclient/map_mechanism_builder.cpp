@@ -1,8 +1,5 @@
 #include "map_mechanism_builder.h"
 
-#include <game/collision.h>
-#include <game/mapitems.h>
-
 #include <game/client/laser_data.h>
 #include <game/client/pickup_data.h>
 #include <game/client/prediction/entities/door.h>
@@ -10,6 +7,8 @@
 #include <game/client/prediction/entities/laser.h>
 #include <game/client/prediction/entities/pickup.h>
 #include <game/client/prediction/entities/practice_light.h>
+#include <game/collision.h>
+#include <game/mapitems.h>
 
 #include <cmath>
 
@@ -19,18 +18,45 @@ namespace
 	constexpr int s_aSideOffsetX[8] = {0, 1, 1, 1, 0, -1, -1, -1};
 	constexpr int s_aSideOffsetY[8] = {1, 1, 0, -1, -1, -1, 0, 1};
 
-	const CLaser *FindInheritedLight(CGameWorld &World, vec2 Pos, int Number)
+	const qm_map_mechanisms::SSnapshotLaser *FindNearestSnapshotLaser(
+		const std::vector<qm_map_mechanisms::SSnapshotLaser> &vSnapshots,
+		int Type, vec2 Hub, int Number, float MaxDistance)
 	{
-		for(CEntity *pEnt = World.FindFirst(CGameWorld::ENTTYPE_LASER); pEnt; pEnt = pEnt->TypeNext())
+		const qm_map_mechanisms::SSnapshotLaser *pBest = nullptr;
+		float BestDistance = MaxDistance;
+		for(const qm_map_mechanisms::SSnapshotLaser &Snapshot : vSnapshots)
 		{
-			const auto *pLaser = dynamic_cast<const CLaser *>(pEnt);
-			if(pLaser == nullptr || distance(pLaser->m_Pos, Pos) > 2.0f)
+			if(Snapshot.m_Type != Type || Snapshot.m_SwitchNumber != Number)
 				continue;
-			if(pLaser->GetData().m_SwitchNumber != Number)
+			const float Distance = distance(Snapshot.m_Hub, Hub);
+			if(Distance > BestDistance)
 				continue;
-			return pLaser;
+			BestDistance = Distance;
+			pBest = &Snapshot;
 		}
-		return nullptr;
+		return pBest;
+	}
+
+	const qm_map_mechanisms::SSnapshotLaser *FindSnapshotLight(
+		const std::vector<qm_map_mechanisms::SSnapshotLaser> &vSnapshots,
+		vec2 Hub, int Number, vec2 Direction)
+	{
+		const qm_map_mechanisms::SSnapshotLaser *pBest = nullptr;
+		float BestDirection = -2.0f;
+		for(const qm_map_mechanisms::SSnapshotLaser &Snapshot : vSnapshots)
+		{
+			if(Snapshot.m_Type != LASERTYPE_FREEZE || Snapshot.m_SwitchNumber != Number || distance(Snapshot.m_Hub, Hub) > 512.0f)
+				continue;
+			const vec2 SnapshotDirection = Snapshot.m_From - Snapshot.m_Hub;
+			if(length(SnapshotDirection) < 0.5f)
+				continue;
+			const float DirectionScore = dot(normalize(SnapshotDirection), Direction);
+			if(DirectionScore <= BestDirection)
+				continue;
+			BestDirection = DirectionScore;
+			pBest = &Snapshot;
+		}
+		return pBest;
 	}
 }
 
@@ -173,10 +199,15 @@ namespace qm_map_mechanisms
 							if(aSides[Side] < ENTITY_LASER_SHORT || aSides[Side] > ENTITY_LASER_LONG)
 								continue;
 							const int Length = 32 * 3 + 32 * (aSides[Side] - ENTITY_LASER_SHORT) * 3;
-							auto *pLight = new CPracticeLight(&World, Pos, pi / 4 * Side, Length, Layer, Number);
+							const SSnapshotLaser *pSnapshot = nullptr;
+							if(Options.m_InheritSnapshotLights && Options.m_pSnapshots != nullptr)
+								pSnapshot = FindSnapshotLight(*Options.m_pSnapshots, Pos, Number,
+									vec2(std::sin(pi / 4 * Side), std::cos(pi / 4 * Side)));
+							const vec2 LightPos = pSnapshot != nullptr ? pSnapshot->m_Hub : Pos;
+							auto *pLight = new CPracticeLight(&World, LightPos, pi / 4 * Side, Length, Layer, Number);
 							bool FromSnapshot = false;
-							if(const CLaser *pInherited = Options.m_InheritSnapshotLights ? FindInheritedLight(World, Pos, Number) : nullptr)
-								FromSnapshot = pLight->InitFromSnapshot(pInherited->m_Pos, pInherited->GetFrom(), pInherited->GetEvalTick());
+							if(pSnapshot != nullptr)
+								FromSnapshot = pLight->InitFromSnapshot(pSnapshot->m_Hub, pSnapshot->m_From, pSnapshot->m_StartTick);
 							pLight->m_AngularSpeed = AngularSpeed;
 							if(aModifiers[Side] >= ENTITY_LASER_C_SLOW && aModifiers[Side] <= ENTITY_LASER_C_FAST)
 							{
@@ -214,6 +245,12 @@ namespace qm_map_mechanisms
 
 					CLaserData Data = {};
 					Data.m_From = Pos;
+					if(Options.m_pSnapshots != nullptr)
+					{
+						if(const SSnapshotLaser *pSnapshot = FindNearestSnapshotLaser(
+							   *Options.m_pSnapshots, LASERTYPE_DRAGGER, Pos, Number, 512.0f))
+							Data.m_From = pSnapshot->m_Hub;
+					}
 					Data.m_To = Pos;
 					Data.m_StartTick = -1;
 					Data.m_ExtraInfo = true;

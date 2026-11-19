@@ -106,7 +106,7 @@ void CPracticeLight::SetPhaseTick(int Tick)
 
 bool CPracticeLight::InitFromSnapshot(vec2 SnapshotHub, vec2 SnapshotFrom, int SnapshotEvalTick)
 {
-	const vec2 Delta = SnapshotHub - SnapshotFrom;
+	const vec2 Delta = SnapshotFrom - SnapshotHub;
 	const float Length = length(Delta);
 	// 快照端点重合说明服务器这束激光当前不可见（开关关闭或长度为零），
 	// 没有相位可继承，保留地图初始角度等下一帧自行恢复。
