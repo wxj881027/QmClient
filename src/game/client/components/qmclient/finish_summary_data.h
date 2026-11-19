@@ -93,6 +93,7 @@ namespace QmFinishSummary
 		SValue m_TotalMaps;
 		SValue m_Points;
 		SValue m_PointsGained;
+		std::optional<int64_t> m_FirstFinishBasePoints;
 		std::optional<int> m_ConfirmedAward;
 		int64_t m_RankPointsGained = 0;
 	};

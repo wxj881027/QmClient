@@ -577,7 +577,7 @@ void CQmFinishSummary::Finish(int64_t TimeMs, std::optional<int64_t> Difference,
 				pSnapshot->m_TimeMs = TimeMs;
 				ResolveComparison(*pSnapshot, m_Before.m_BestTimeMs, m_Before.m_HistoryKnown, Difference, PersonalRecord);
 				ResolveLocalRank(*pSnapshot, m_vFinishOnlineTimes, m_Before.m_BestTimeMs, m_FinishOnlineTimesKnown);
-				++pSnapshot->m_Revision;
+				RefreshSnapshot();
 			}
 		}
 		return;

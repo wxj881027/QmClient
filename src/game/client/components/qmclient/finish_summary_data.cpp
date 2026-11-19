@@ -612,10 +612,13 @@ namespace QmFinishSummary
 			Snapshot.m_RankPointsGained = *After.m_RankPoints - *Before.m_RankPoints;
 
 		const bool HadFinish = HistoryKnown && PreviousBest.has_value();
-		const bool FirstFinish = HistoryKnown && !PreviousBest;
+		const bool FirstFinish = HistoryKnown && !PreviousBest &&
+					 (Axiom || Snapshot.m_Comparison == EComparison::FIRST || Snapshot.m_Comparison == EComparison::UNKNOWN);
 		const bool NewFinishVisible = ConfirmedFinish && CurrentHistory && CurrentBest.has_value();
 		const int MapPoints = After.m_MapPoints >= 0 ? After.m_MapPoints : Before.m_MapPoints;
-		if(!Snapshot.m_ConfirmedAward && FirstFinish && NewFinishVisible && MapPoints >= 0)
+		const bool ShowMapAward = FirstFinish && MapPoints >= 0;
+		Snapshot.m_FirstFinishBasePoints = ShowMapAward ? Before.m_Points : std::nullopt;
+		if(!Snapshot.m_ConfirmedAward && ShowMapAward && NewFinishVisible)
 			Snapshot.m_ConfirmedAward = MapPoints;
 		bool PointsCurrent = HadFinish || NewFinishVisible;
 		bool ProgressCurrent = HadFinish || NewFinishVisible;
@@ -627,7 +630,15 @@ namespace QmFinishSummary
 				ProgressCurrent &= *After.m_CompletedMaps > *Before.m_CompletedMaps;
 		}
 		Snapshot.m_Points = RemoteValue(After.m_Points, Before.m_Points, PointsCurrent);
-		ApplyGain(Snapshot, Before.m_Points, Snapshot.m_ConfirmedAward.value_or(0));
+		if(Snapshot.m_ConfirmedAward)
+			ApplyGain(Snapshot, Before.m_Points, *Snapshot.m_ConfirmedAward);
+		else
+		{
+			// 首通先列出地图分值，实际奖励确认后才计入总分。
+			Snapshot.m_PointsGained = {ShowMapAward ? MapPoints : 0, EStatus::READY};
+			if(Snapshot.m_FirstFinishBasePoints)
+				Snapshot.m_Points = {*Snapshot.m_FirstFinishBasePoints, EStatus::STALE};
+		}
 		Snapshot.m_CompletedMaps = RemoteValue(After.m_CompletedMaps, Before.m_CompletedMaps, ProgressCurrent);
 		Snapshot.m_TotalMaps = RemoteValue(After.m_TotalMaps, Before.m_TotalMaps, After.m_TotalMaps.has_value());
 	}

@@ -241,7 +241,7 @@ void qm_finish_summary::CContentCache::Update(const QmFinishSummary::SSnapshot &
 		static_cast<double>((Snapshot.m_TimeMs + 5) / 10), static_cast<double>((std::abs(Snapshot.m_DifferenceMs) + 5) / 10),
 		Target(Snapshot.m_LocalRank), Target(Snapshot.m_LocalRankTotal), Target(Snapshot.m_ChinaRank), Target(Snapshot.m_Rank),
 		Target(Snapshot.m_CompletedMaps), Target(Snapshot.m_TotalMaps), Target(Snapshot.m_Points), Target(Snapshot.m_PointsGained), Progress};
-	m_Presentation.Update(Snapshot.m_Id, NowSeconds, FullyExpanded, MotionLevel, Targets, Snapshot.m_Stars, Snapshot.m_RankPointsGained > 0);
+	m_Presentation.Update(Snapshot.m_Id, NowSeconds, FullyExpanded, MotionLevel, Targets, Snapshot.m_Stars, Snapshot.m_RankPointsGained > 0, Snapshot.m_FirstFinishBasePoints);
 	const bool Changed = !m_Valid || m_Id != Snapshot.m_Id || m_Revision != Snapshot.m_Revision || m_Language != g_Config.m_ClLanguagefile;
 	// 文案分配失败时整份缓存失效，下帧会重建所有字段。
 	m_Valid = false;

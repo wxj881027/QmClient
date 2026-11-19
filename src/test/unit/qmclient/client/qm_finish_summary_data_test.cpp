@@ -584,13 +584,47 @@ TEST(QmFinishSummaryRemote, ConfirmedFirstFinishAwardsOnlyThisMapsPoints)
 	After.m_Points = 112;
 	After.m_CompletedMaps = 12;
 	ApplyRemote(Snapshot, Before, After, false);
-	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 0);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 5);
+	EXPECT_EQ(Snapshot.m_Points.m_Value, 100);
+	EXPECT_FALSE(Snapshot.m_ConfirmedAward);
 	ApplyRemote(Snapshot, Before, After, true);
 	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 5);
 	EXPECT_EQ(Snapshot.m_Points.m_Value, 112);
 	EXPECT_EQ(Snapshot.m_Points.m_Status, EStatus::READY);
 	ApplyRemote(Snapshot, Before, Before, false);
 	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 5);
+}
+
+TEST(QmFinishSummaryRemote, FirstFinishShowsTheMapValueUntilTheServerReportsTheActualAward)
+{
+	auto Snapshot = Finish();
+	SRemoteData Before;
+	Before.m_Points = 5366;
+	Before.m_HistoryKnown = true;
+	Before.m_MapPoints = 5;
+	ResolveComparison(Snapshot, std::nullopt, true, 0, true);
+	ApplyRemote(Snapshot, Before, Before, false);
+	EXPECT_EQ(Snapshot.m_Points.m_Value, 5366);
+	EXPECT_EQ(Snapshot.m_FirstFinishBasePoints, 5366);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 5);
+	ApplyServerAward(Snapshot, Before.m_Points, 3);
+	ApplyRemote(Snapshot, Before, Before, false);
+	EXPECT_EQ(Snapshot.m_Points.m_Value, 5369);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 3);
+}
+
+TEST(QmFinishSummaryRemote, EarlierBestReportedByServerRulesOutMapAward)
+{
+	auto Snapshot = Finish();
+	SRemoteData Before;
+	Before.m_HistoryKnown = true;
+	Before.m_MapPoints = 5;
+	Before.m_Points = 5366;
+	ResolveComparison(Snapshot, std::nullopt, true, 1200, false);
+	ApplyRemote(Snapshot, Before, Before, false);
+	EXPECT_EQ(Snapshot.m_Points.m_Value, 5366);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 0);
+	EXPECT_FALSE(Snapshot.m_FirstFinishBasePoints);
 }
 
 TEST(QmFinishSummaryRemote, AxiomPreviouslyCompletedAccountDoesNotAwardRoleFirstFinish)
