@@ -12,6 +12,7 @@
 #include <memory>
 #include <new>
 #include <stdexcept>
+#include <thread>
 #include <utility>
 
 namespace
@@ -24,6 +25,8 @@ namespace
 	public:
 		explicit CFunctionJob(std::function<void()> Function, bool CanAbort = false) :
 			m_Function(std::move(Function)) { Abortable(CanAbort); }
+
+		using IJob::Abortable;
 	};
 
 	class JobPoolFailure : public ::testing::Test
@@ -180,6 +183,40 @@ TEST_F(JobPoolFailure, QueuedCancellationNeverRunsAndFinishesBookkeeping)
 	EXPECT_FALSE(pRan->load());
 	EXPECT_EQ(pCancelled->State(), IJob::STATE_ABORTED);
 	EXPECT_TRUE(pCancelled->Finished());
+}
+
+TEST_F(JobPoolFailure, ShutdownCancellationAfterQueueScanSkipsRun)
+{
+	auto pGate = std::make_shared<SJobGate>();
+	auto pRunning = std::make_shared<CFunctionJob>([pGate] {
+		pGate->m_Started.set_value();
+		pGate->m_TimedOut = pGate->m_Released.wait_for(std::chrono::seconds(5)) != std::future_status::ready;
+	}, true);
+	ASSERT_TRUE(m_Pool.TryAdd(pRunning));
+	ASSERT_EQ(pGate->m_Started.get_future().wait_for(std::chrono::seconds(2)), std::future_status::ready);
+	auto pRan = std::make_shared<std::atomic<bool>>(false);
+	auto pNext = std::make_shared<CFunctionJob>([pRan] { *pRan = true; });
+	ASSERT_TRUE(m_Pool.TryAdd(pNext));
+
+	auto Release = std::async(std::launch::async, [pGate, pRunning, pNext] {
+		const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+		while(pRunning->State() != IJob::STATE_ABORTED && std::chrono::steady_clock::now() < Deadline)
+			std::this_thread::yield();
+		const bool Cancelled = pRunning->State() == IJob::STATE_ABORTED;
+		// 关停在取消运行作业之前已扫过队列，下一项由 worker 补发取消。
+		if(Cancelled)
+			pNext->Abortable(true);
+		pGate->m_Release.set_value();
+		return Cancelled;
+	});
+	m_Pool.Shutdown();
+	m_Started = false;
+
+	EXPECT_TRUE(Release.get());
+	EXPECT_FALSE(pGate->m_TimedOut.load());
+	EXPECT_FALSE(pRan->load());
+	EXPECT_EQ(pNext->State(), IJob::STATE_ABORTED);
+	EXPECT_TRUE(pNext->Finished());
 }
 
 TEST_F(JobPoolFailure, RejectedNonAbortablePreparationCanBeRetriedOnReopenedPool)

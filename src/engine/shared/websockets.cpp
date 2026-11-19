@@ -206,6 +206,16 @@ void websocket_init()
 	lws_set_log_level(LLL_ERR | LLL_WARN | LLL_NOTICE | LLL_INFO, websocket_log_callback);
 }
 
+static const char *websocket_numeric_host(const NETADDR *addr, char (&host)[NETADDR_MAXSTRSIZE])
+{
+	net_addr_str(addr, host, sizeof(host), false);
+	if(host[0] != '[')
+		return host;
+	// LWS 的监听地址和连接地址都使用无方括号的 IPv6 字面量。
+	host[str_length(host) - 1] = '\0';
+	return host + 1;
+}
+
 int websocket_create(const NETADDR *bindaddr)
 {
 	// find free context
@@ -239,14 +249,7 @@ int websocket_create(const NETADDR *bindaddr)
 		// Set IPv6-only mode and socket option for IPv6 Websockets.
 		ctx_data->creation_info.options |= LWS_SERVER_OPTION_IPV6_V6ONLY_VALUE | LWS_SERVER_OPTION_IPV6_V6ONLY_MODIFY;
 	}
-	net_addr_str(bindaddr, ctx_data->bindaddr_str, sizeof(ctx_data->bindaddr_str), false);
-	if(ctx_data->bindaddr_str[0] == '[' && ctx_data->bindaddr_str[str_length(ctx_data->bindaddr_str) - 1] == ']')
-	{
-		// Bindaddr must not be enclosed in brackets for IPv6 Websockets.
-		ctx_data->bindaddr_str[str_length(ctx_data->bindaddr_str) - 1] = '\0';
-		mem_move(&ctx_data->bindaddr_str[0], &ctx_data->bindaddr_str[1], str_length(ctx_data->bindaddr_str) + 1);
-	}
-	ctx_data->creation_info.iface = ctx_data->bindaddr_str;
+	ctx_data->creation_info.iface = websocket_numeric_host(bindaddr, ctx_data->bindaddr_str);
 	ctx_data->creation_info.port = bindaddr->port;
 	ctx_data->creation_info.protocols = protocols;
 	ctx_data->creation_info.gid = -1;
@@ -313,10 +316,12 @@ int websocket_send(int socket, const unsigned char *data, size_t size, const NET
 	if(pss == nullptr)
 	{
 		char addr_str[NETADDR_MAXSTRSIZE];
-		net_addr_str(addr, addr_str, sizeof(addr_str), false);
+		char host[NETADDR_MAXSTRSIZE];
+		net_addr_str(addr, host, sizeof(host), true);
 		lws_client_connect_info ccinfo = {};
 		ccinfo.context = context;
-		ccinfo.address = addr_str;
+		ccinfo.address = websocket_numeric_host(addr, addr_str);
+		ccinfo.host = host;
 		ccinfo.port = addr->port;
 		ccinfo.protocol = protocols[0].name;
 		lws *wsi = lws_client_connect_via_info(&ccinfo);

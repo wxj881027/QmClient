@@ -7,6 +7,15 @@
 #include <memory>
 #include <string>
 
+#if defined(CONF_WEBSOCKETS)
+#include <base/system.h>
+#include <libwebsockets.h>
+
+#include <chrono>
+#include <cstdlib>
+#include <thread>
+#endif
+
 namespace
 {
 	class CWebsocketNativeBuffersTest : public ::testing::Test
@@ -137,3 +146,74 @@ TEST_F(CWebsocketNativeBuffersTest, ContextResetDiscardsReceiveDataAndOldSession
 	ASSERT_NE(pNew, nullptr);
 	EXPECT_EQ(std::string(reinterpret_cast<const char *>(pNew->m_aData), pNew->m_Size), "new");
 }
+
+#if defined(CONF_WEBSOCKETS) && defined(LWS_WITH_IPV6)
+namespace
+{
+	struct SWebsocketHandshake
+	{
+		char m_aHost[NETADDR_MAXSTRSIZE] = {};
+		bool m_Established = false;
+
+		static int Callback(lws *pWsi, lws_callback_reasons Reason, void *, void *, size_t)
+		{
+			if(Reason != LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION && Reason != LWS_CALLBACK_ESTABLISHED)
+				return 0;
+			auto *pHandshake = static_cast<SWebsocketHandshake *>(lws_context_user(lws_get_context(pWsi)));
+			if(Reason == LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION)
+				return lws_hdr_copy(pWsi, pHandshake->m_aHost, sizeof(pHandshake->m_aHost), WSI_TOKEN_HOST) < 0 ? 1 : 0;
+			pHandshake->m_Established = true;
+			return 0;
+		}
+	};
+}
+
+TEST(WebsocketNativeHandshake, Ipv6LoopbackUsesBracketedHostWithPort)
+{
+	if(std::getenv("http_proxy") || std::getenv("socks_proxy"))
+		GTEST_SKIP() << "libwebsockets would pick up a proxy from the environment";
+
+	SWebsocketHandshake Handshake;
+	static const lws_protocols s_aProtocols[] = {{"binary", SWebsocketHandshake::Callback, 0}, {}};
+	lws_context_creation_info Info{};
+	Info.iface = "::1";
+	Info.port = 0;
+	Info.options = LWS_SERVER_OPTION_FAIL_UPON_UNABLE_TO_BIND | LWS_SERVER_OPTION_IPV6_V6ONLY_VALUE | LWS_SERVER_OPTION_IPV6_V6ONLY_MODIFY;
+	Info.vhost_name = "qm-native-ws-test";
+	Info.gid = -1;
+	Info.uid = -1;
+	Info.protocols = s_aProtocols;
+	Info.user = &Handshake;
+	const std::unique_ptr<lws_context, decltype(&lws_context_destroy)> pServer(lws_create_context(&Info), lws_context_destroy);
+	if(!pServer)
+		GTEST_SKIP() << "could not open an IPv6 loopback listener";
+	auto *pVhost = lws_get_vhost_by_name(pServer.get(), Info.vhost_name);
+	ASSERT_NE(pVhost, nullptr);
+	const int Port = lws_get_vhost_listen_port(pVhost);
+	ASSERT_GT(Port, 0);
+	ASSERT_LE(Port, 65535);
+
+	NETADDR BindAddr;
+	ASSERT_EQ(net_addr_from_str(&BindAddr, "[::1]"), 0);
+	BindAddr.type = NETTYPE_WEBSOCKET_IPV6;
+	const std::unique_ptr<NETSOCKET_INTERNAL, decltype(&net_udp_close)> pClient(net_udp_create(BindAddr), net_udp_close);
+	ASSERT_NE(pClient, nullptr);
+	NETADDR Peer = BindAddr;
+	Peer.port = static_cast<unsigned short>(Port);
+	const unsigned char Payload = 1;
+	// 首次发送发起连接，握手完成前可以返回失败。
+	net_udp_send(pClient.get(), &Peer, &Payload, sizeof(Payload));
+
+	const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while(!Handshake.m_Established && std::chrono::steady_clock::now() < Deadline)
+	{
+		ASSERT_GE(lws_service(pServer.get(), -1), 0);
+		NETADDR Sender;
+		unsigned char *pData = nullptr;
+		net_udp_recv(pClient.get(), &Sender, &pData);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	ASSERT_TRUE(Handshake.m_Established);
+	EXPECT_EQ(std::string(Handshake.m_aHost), "[::1]:" + std::to_string(Port));
+}
+#endif
