@@ -569,8 +569,8 @@ void CCollisionHitbox::RenderPickupHitboxes()
 	const ColorRGBA ShieldColor(1.0f, 1.0f, 0.0f, Alpha);
 
 	const bool IsSuper = GameClient()->IsLocalCharSuper();
-	const int SwitcherTeam = GameClient()->SwitchStateTeam();
-	auto &aSwitchers = GameClient()->Switchers();
+	const int PlayableSwitcherTeam = GameClient()->SwitchStateTeam();
+	auto &aSwitchers = GameClient()->PlayableSwitchers();
 	const int Ticks = Client()->GameTick(g_Config.m_ClDummy) % Client()->GameTickSpeed();
 	const bool BlinkingPickup = (Ticks % 22) < 4;
 
@@ -588,7 +588,7 @@ void CCollisionHitbox::RenderPickupHitboxes()
 			continue;
 
 		const bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() &&
-				      !aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
+				      !aSwitchers[Data.m_SwitchNumber].m_aStatus[PlayableSwitcherTeam];
 		if(Inactive && BlinkingPickup)
 			continue;
 
@@ -656,8 +656,8 @@ void CCollisionHitbox::RenderProjectileHitboxes()
 	const float Alpha = HitboxAlpha();
 	static constexpr float ExplosionRadius = 135.0f;
 	static constexpr float ExplosionInnerRadius = 48.0f;
-	const auto &aSwitchers = GameClient()->Switchers();
-	const int SwitcherTeam = std::clamp(GameClient()->SwitchStateTeam(), 0, NUM_DDRACE_TEAMS - 1);
+	const auto &aSwitchers = GameClient()->PlayableSwitchers();
+	const int PlayableSwitcherTeam = std::clamp(GameClient()->SwitchStateTeam(), 0, NUM_DDRACE_TEAMS - 1);
 	const bool IsSuper = GameClient()->IsLocalCharSuper();
 
 	for(const CSnapEntities &Ent : GameClient()->SnapEntities())
@@ -667,7 +667,7 @@ void CCollisionHitbox::RenderProjectileHitboxes()
 			continue;
 
 		const CProjectileData Data = ExtractProjectileInfo(Item.m_Type, Item.m_pData, &GameClient()->m_GameWorld, Ent.m_pDataEx);
-		const bool FreezeActive = IsSuper || Data.m_SwitchNumber <= 0 || Data.m_SwitchNumber >= (int)aSwitchers.size() || aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
+		const bool FreezeActive = IsSuper || Data.m_SwitchNumber <= 0 || Data.m_SwitchNumber >= (int)aSwitchers.size() || aSwitchers[Data.m_SwitchNumber].m_aStatus[PlayableSwitcherTeam];
 		const SQmProjectileHitboxDisplay Display = ResolveQmProjectileHitboxDisplay(Data, g_Config.m_QmHitboxShowProjectiles != 0, g_Config.m_QmHitboxShowFreezeProjectiles != 0, FreezeActive);
 		if(!Display.m_ShowTrail && Display.m_FreezeRadius <= 0.0f)
 			continue;
@@ -715,8 +715,8 @@ void CCollisionHitbox::RenderLaserHitboxes()
 	if(Alpha <= 0.0f)
 		return;
 
-	const auto &aSwitchers = GameClient()->Switchers();
-	const int SwitcherTeam = std::clamp(GameClient()->SwitchStateTeam(), 0, NUM_DDRACE_TEAMS - 1);
+	const auto &aSwitchers = GameClient()->PlayableSwitchers();
+	const int PlayableSwitcherTeam = std::clamp(GameClient()->SwitchStateTeam(), 0, NUM_DDRACE_TEAMS - 1);
 	const bool IsSuper = GameClient()->IsLocalCharSuper();
 	const auto IsFreezeLaser = [](const CLaserData &Data) {
 		return Data.m_Type == LASERTYPE_FREEZE ||
@@ -737,7 +737,7 @@ void CCollisionHitbox::RenderLaserHitboxes()
 		const bool FreezeLaser = IsFreezeLaser(Data);
 		if((FreezeLaser && !g_Config.m_QmHitboxShowFreezeLasers) || (!FreezeLaser && !g_Config.m_QmHitboxShowLasers))
 			continue;
-		if(Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !IsSuper && !aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam])
+		if(Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !IsSuper && !aSwitchers[Data.m_SwitchNumber].m_aStatus[PlayableSwitcherTeam])
 			continue;
 
 		const float ScreenMargin = FreezeLaser ? CCharacterCore::PhysicalSize() : 16.0f;

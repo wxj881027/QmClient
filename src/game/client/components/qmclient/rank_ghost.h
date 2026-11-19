@@ -305,7 +305,8 @@ private:
 	IDemoPlayer *PlaybackMetadataReader() const override;
 	bool m_ViewMode = false;
 	// 回放的开关状态独立存放：服务器世界与练习分支世界都是可玩时间线的权威状态，
-	// 回放时间线只允许改画面（items/命中盒读 GameClient()->Switchers()）。
+	// 回放时间线只改自己的只读画布；主世界与练习机关、命中盒读取
+	// GameClient()->PlayableSwitchers()，两边不能共用同一个 vector。
 	std::vector<SSwitchers> m_vViewSwitchers;
 	bool m_ViewSwitchersActive = false;
 	// 影子机关世界与回放开关共用同一条只读时间线。

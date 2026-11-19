@@ -311,6 +311,8 @@
 
 <p>分支里的等离子球使用 <code>CPlasma::RenderData()</code> 生成 <code>LASERTYPE_PLASMA</code> 渲染数据，因此机关炮实际冻结/爆炸时不会出现“判定有弹体、画面没有弹体”。查看世界的机关炮则由 <code>shadow_gun_replay</code> 按播放头和影子目标只读重放，等离子球不参与主世界物理。</p>
 
+<p><b>开关双轨：</b><code>CGameClient::PlayableSwitchers()</code> 只返回服务器世界或快速练习分支的权威开关；主世界快照、命中盒和普通机关读取这一份。Rank 1 / 练习组的回放开关只存在于 <code>CRankGhost::ViewSwitchers()</code> 和 <code>ViewMechanismWorld()</code>，由查看机关渲染单独叠加，不能替换主世界开关画布。</p>
+
 <div class="panel note">
 	<p><b>渲染门控不跟 <code>Predict()</code> 走：</b>旁观和服务器暂停时 <code>Predict()</code> 为假，但分支仍在推进碰撞。机制段只要求“非小地图渲染且分支世界存在”，因此不会出现“看不见的激光把人冻住”。<span class="small">（<code>items.cpp:678</code>，提交 104ff23b9a）</span></p>
 </div>
@@ -481,7 +483,7 @@
 
 <h3>4.3 影子为什么不参与物理</h3>
 
-<p><code>CLocalWorld</code>（<code>src/game/client/components/qmclient/local_world.h:131</code>）只保存轨迹会话，不持有可玩 <code>CGameWorld</code>。查看模式另有一棵只读机关世界（<code>CRankGhost::m_pViewMechanismWorld</code>），重建门、拖拉、静态激光并运行影子机关炮；机关按 <code>.qmevt</code> 的录制队伍和播放头开合，拖拉目标从影子 Tee 位置解析。它不进入主世界 tick、不写共享 <code>CCollision</code>。CGhost 手动渲染仍把轨迹插值成虚影，没有可碰撞角色，也没有勾人、挡人查询。这是设计底线：Rank 1 和 Ghost 都来自“另一个平行时空”，只允许看。</p>
+<p><code>CLocalWorld</code>（<code>src/game/client/components/qmclient/local_world.h:131</code>）只保存轨迹会话，不持有可玩 <code>CGameWorld</code>。查看模式另有一棵只读机关世界（<code>CRankGhost::m_pViewMechanismWorld</code>），重建门、拖拉、静态激光并运行影子机关炮；机关按 <code>.qmevt</code> 的录制队伍和播放头开合，拖拉目标从影子 Tee 位置解析。它不进入主世界 tick、不写共享 <code>CCollision</code>，也不替换 <code>PlayableSwitchers()</code>。主世界与影子机关因此各用一套开关画布，画面可以同时存在两层。CGhost 手动渲染仍把轨迹插值成虚影，没有可碰撞角色，也没有勾人、挡人查询。这是设计底线：Rank 1 和 Ghost 都来自“另一个平行时空”，只允许看。</p>
 
 <h3>4.4 双模式路线图</h3>
 

@@ -4370,7 +4370,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 				}
 
 				// 服务器快照只写服务器世界。练习分支有自己的开关状态，
-				// CGameClient::Switchers() 在练习时返回分支那一份，不能被这里覆盖。
+				// CGameClient::PlayableSwitchers() 在练习时返回分支那一份，不能被这里覆盖。
 				auto &vServerSwitchers = m_GameWorld.m_Core.m_vSwitchers;
 				for(int j = 0; j < (int)vServerSwitchers.size(); j++)
 				{

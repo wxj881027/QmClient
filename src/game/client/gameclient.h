@@ -1149,12 +1149,11 @@ public:
 	CGameWorld m_ExtraPredictedWorld;
 	CGameWorld m_PredSmoothingWorld;
 
-	std::vector<SSwitchers> &Switchers()
+	// 可玩时间线的开关画布：服务器世界或快速练习分支。
+	// 影子查看只读画布不从这里返回，调用方需要影子状态时显式使用
+	// CRankGhost::ViewSwitchers() 或查看机关世界。
+	std::vector<SSwitchers> &PlayableSwitchers()
 	{
-		// 查看模式（Rank 1 / 练习组回放）是一段只读时间线：它自己的开关画布优先，
-		// 否则回放的开关会被写进可玩时间线（练习分支世界或服务器世界）。
-		if(auto *pViewSwitchers = m_RankGhost.ViewSwitchers())
-			return *pViewSwitchers;
 		// 练习分支世界是当前客户端侧的权威时间线：开关状态读分支那一份，
 		// 服务器快照只写 m_GameWorld，不会把 /setswitch 的结果冲掉。
 		if(auto *pPracticeSwitchers = m_FastPractice.PracticeSwitchers())

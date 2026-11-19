@@ -642,8 +642,8 @@ void CRankGhost::DispatchViewMessage(const SViewMessage &Message)
 
 void CRankGhost::ApplyViewSwitchState(const SViewSwitchState &State)
 {
-	// 只改回放自己的开关画布。写 GameClient()->Switchers() 会在练习开启时落到
-	// 分支世界的权威开关上，退出回放后 /setswitch 与地图开关会被回放状态顶掉。
+	// 只改回放自己的开关画布。写 GameClient()->PlayableSwitchers() 会在练习开启时
+	// 落到分支世界的权威开关上，退出回放后 /setswitch 与地图开关会被回放状态顶掉。
 	std::vector<SSwitchers> *pViewSwitchers = ViewSwitchers();
 	if(pViewSwitchers == nullptr || pViewSwitchers->empty())
 		return;
