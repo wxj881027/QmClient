@@ -536,7 +536,6 @@ public:
 		       m_pUpdateManifestSignatureTask != nullptr;
 	}
 
-	void RenderMiniVoteHud(bool HudEditorPreview = false);
 	void RenderCenterLines();
 	void RenderCtfFlag(vec2 Pos, float Alpha);
 

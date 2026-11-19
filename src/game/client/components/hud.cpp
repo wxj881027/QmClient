@@ -567,30 +567,11 @@ namespace
 		return g_Config.m_ClShowLocalTimeAlways || GameClient.m_Scoreboard.IsActive() || GameClient.m_HudEditor.IsActive();
 	}
 
-	// 灵动岛状态区文字使用连续字号（字形仍按整像素光栅化，绘制尺寸取原字号）：
-	// 字号在 5.3 ↔ 4.4 之间过渡时是平滑缩放，不会在两三个整像素档之间跳。
-	// 测量与绘制必须同时开这个标志，否则宽度与居中位置对不上。
-	struct SUiScopedFloatFontSize
-	{
-		ITextRender *m_pTextRender;
-		unsigned m_PrevFlags;
-
-		explicit SUiScopedFloatFontSize(ITextRender *pTextRender) :
-			m_pTextRender(pTextRender), m_PrevFlags(pTextRender->GetRenderFlags())
-		{
-			m_pTextRender->SetRenderFlags(m_PrevFlags | TEXT_RENDER_FLAG_QM_FLOAT_FONT_SIZE);
-		}
-		~SUiScopedFloatFontSize()
-		{
-			m_pTextRender->SetRenderFlags(m_PrevFlags);
-		}
-	};
-
 	float MeasureInfoStackLineWidth(ITextRender *pTextRender, float FontSize, const char *pText)
 	{
 		if(pText == nullptr)
 			return 0.0f;
-		const SUiScopedFloatFontSize ScopedFlags(pTextRender);
+		const CUiScopedFloatFontSize ScopedFlags(pTextRender);
 		return std::round(pTextRender->TextBoundingBox(FontSize, pText).m_W);
 	}
 
@@ -5217,7 +5198,7 @@ void CHud::RenderMediaIsland()
 		{
 			// 状态区文本用连续字号绘制，与 MeasureInfoStackLineWidth 的测量口径一致：
 			// 字号过渡因此是贴图等比缩放，不会在整像素档之间跳。
-			const SUiScopedFloatFontSize ScopedFloatFontSize(TextRender());
+			const CUiScopedFloatFontSize ScopedFloatFontSize(TextRender());
 			// 连接质量图标（数据流量语义，常驻）：对局中按延迟分档，其余空信号档；
 			// 驻信息栈左缘，文本组整体右移让位。
 			const CUIRect SignalIconRect{StatusSectionX + StatusPaddingLeft + ConnectionSlot.m_Inset,

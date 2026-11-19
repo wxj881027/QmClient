@@ -17,6 +17,7 @@
 #include <game/client/ui_scrollregion.h>
 #include <game/teamscore.h>
 
+#include <algorithm>
 #include <array>
 
 struct CNetObj_PlayerInfo;
@@ -118,6 +119,70 @@ constexpr ColorRGBA ScoreboardTitleTimeColor(float ContentAlpha)
 	return ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f).WithMultipliedAlpha(ContentAlpha);
 }
 
+struct SScoreboardTitleFit
+{
+	float m_FontSize;
+	bool m_EllipsisAtEnd;
+};
+
+struct SScoreboardTitleLabelStyle
+{
+	bool m_DisallowNewline;
+	bool m_StopAtEnd;
+	bool m_EllipsisAtEnd;
+};
+
+// 标题先等比缩字号，缩到下限仍放不下时才启用省略号；调用方必须同时禁止软折行
+// （STOP_AT_END），否则动画中的逐帧宽度变化会在“刚好放得下 / 需要折行”之间反复切换。
+inline SScoreboardTitleFit ResolveScoreboardTitleFit(float PreferredFontSize, float MinimumFontSize, float TextWidth, float AvailableWidth)
+{
+	const float FontSize = QmFitSingleLineFontSize(PreferredFontSize, MinimumFontSize, TextWidth, AvailableWidth);
+	const bool Ellipsis = PreferredFontSize > 0.0f && TextWidth > 0.0f && AvailableWidth > 0.0f &&
+			      TextWidth * (FontSize / PreferredFontSize) > AvailableWidth + 0.01f;
+	return {FontSize, Ellipsis};
+}
+
+// 只有真正禁止软折行才能保证单行：DISALLOW_NEWLINE 只拦显式 '\n'，
+// 文本渲染器仍会按词宽调用 StartNewLine，所以必须同时打开 STOP_AT_END。
+inline SScoreboardTitleLabelStyle ResolveScoreboardTitleLabelStyle(const SScoreboardTitleFit &Fit)
+{
+	return {true, true, Fit.m_EllipsisAtEnd};
+}
+
+enum class EScoreboardEntranceAction
+{
+	NONE,
+	INTERRUPT,
+	REPLAY,
+};
+
+// 关闭途中重开时面板仍可见：给弹跳轨道一次轻量打断脉冲，但不重播文字错峰
+// 与国旗入场，避免整块“关闭又打开”；只有上一轮完全收干净才重播完整入场。
+inline constexpr EScoreboardEntranceAction ResolveScoreboardEntranceAction(bool FreshOpen, bool PanelStillOnScreen)
+{
+	if(!FreshOpen)
+		return EScoreboardEntranceAction::NONE;
+	return PanelStillOnScreen ? EScoreboardEntranceAction::INTERRUPT : EScoreboardEntranceAction::REPLAY;
+}
+
+// 完整重播从 0.88 起步；打断回弹只压到 0.95，并且取 min 而不是乘系数，
+// 连续快速按 Tab 不会把面板越缩越深。
+inline constexpr float SCOREBOARD_POP_START_SCALE = 0.88f;
+inline constexpr float SCOREBOARD_POP_INTERRUPT_SCALE = 0.95f;
+inline float ResolveScoreboardPopStartScale(EScoreboardEntranceAction Action, float CurrentScale)
+{
+	switch(Action)
+	{
+	case EScoreboardEntranceAction::REPLAY:
+		return SCOREBOARD_POP_START_SCALE;
+	case EScoreboardEntranceAction::INTERRUPT:
+		return std::min(CurrentScale, SCOREBOARD_POP_INTERRUPT_SCALE);
+	case EScoreboardEntranceAction::NONE:
+		break;
+	}
+	return CurrentScale;
+}
+
 class CScoreboard : public CComponent
 {
 	struct CScoreboardRenderState
@@ -144,8 +209,8 @@ class CScoreboard : public CComponent
 	};
 
 	void RenderTitleScore(CUIRect ScoreLabel, int Team, float TitleFontSize);
-	void RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, float TitleFontSize);
-	void RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle);
+	void RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, float TitleFontSize, bool Subpixel);
+	void RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle, bool Subpixel);
 	void RenderServerPlayerCount(CUIRect Rect, const char *pText);
 	void RenderGoals(CUIRect Goals);
 	void RenderFooter(CUIRect Footer);

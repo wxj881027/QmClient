@@ -18,6 +18,7 @@
 #include <game/client/QmUi/QmListEntryAnimation.h>
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/QmLegacy.h>
+#include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/countryflags.h>
@@ -119,14 +120,9 @@ namespace
 		return Spring;
 	}
 
-	// 「真正打开」把缩放轨道钉回 0 再请求一次 REPLACE 弹簧；SetValue 会清掉旧轨道，
-	// 所以反复按 Tab 不会留下排队动画或速度残留。
-	// 每次打开都重播，不做「从当前值续接」：关闭阶段只做淡出，面板尺寸全程是 1.0，
-	// 续接等于从 1.0 走到 1.0——快速连按时就完全没有弹跳，只有等关闭动画彻底结束
-	// 才会重新弹。弹一下本身只有一帧的尺寸变化，比「看起来没反应」更容易接受。
-	void StartScoreboardPop(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey)
+	void StartScoreboardPop(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, float StartScale)
 	{
-		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::SCALE, 0.0f);
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::SCALE, StartScale);
 		SUiAnimRequest Request;
 		Request.m_NodeKey = NodeKey;
 		Request.m_Property = EUiAnimProperty::SCALE;
@@ -270,23 +266,14 @@ namespace
 		return ColorRGBA(1.0f, 1.0f, 1.0f, Alpha);
 	}
 
-	// 计分板表面不再单独配置：直接取界面表面色与界面透明度，和菜单、面板同一份颜色。
-	// 分开配置时两块面板会各调各的，同一局里出现两种底色。
-	ColorRGBA ScoreboardUiColor()
-	{
-		return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor)).WithAlpha(1.0f);
-	}
-
 	float ScoreboardUiAlpha(float AlphaScale)
 	{
-		return ui_token::color::UiColorAccent(ScoreboardUiColor(), AlphaScale * (g_Config.m_QmUiOpacity / 100.0f)).a;
+		return ResolveConfiguredInterfaceSurface(AlphaScale).a;
 	}
 
-	ColorRGBA ScoreboardUiColorSurface(float AlphaScale, float ColorScale = 0.16f)
+	ColorRGBA ScoreboardUiColorSurface(float AlphaScale, float ColorScale = ui_token::panel::SURFACE_COLOR_SCALE)
 	{
-		ColorRGBA Color = ui_token::color::UiColorSurface(ScoreboardUiColor(), 1.0f, ColorScale);
-		Color.a = ScoreboardUiAlpha(AlphaScale);
-		return Color;
+		return ResolveConfiguredInterfaceSurface(AlphaScale, ColorScale);
 	}
 
 	ColorRGBA ScoreboardWithUiAlpha(ColorRGBA Color, float AlphaScale)
@@ -597,7 +584,7 @@ bool CScoreboard::OnInput(const IInput::CEvent &Event)
 	return QmScoreboardUiInput(*Ui(), IsActive() && m_MouseUnlocked, Event, CBinds::IsReservedShortcutChord(CBinds::GetModifierMask(Input())));
 }
 
-void CScoreboard::RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, float TitleFontSize)
+void CScoreboard::RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, float TitleFontSize, bool Subpixel)
 {
 	const bool IsMapTitle = Team == TEAM_GAME && !GameClient()->IsTeamPlay();
 	if(IsMapTitle && m_MouseUnlocked && GameClient()->m_aMapDescription[0] != '\0')
@@ -621,23 +608,35 @@ void CScoreboard::RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, 
 		}
 		if(Ui()->HotItem() == &m_MapTitleButtonId)
 		{
-			TitleLabel.Draw(ColorRGBA(0.7f, 0.7f, 0.7f, 0.3f), IGraphics::CORNER_ALL, 5.0f);
+			TitleLabel.Draw(ColorRGBA(0.7f, 0.7f, 0.7f, 0.3f), IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
 		}
 	}
 
-	// 地图名不省略：宽度不够就等比缩字号（最小 10），标题保持单行。
-	float FontSize = TitleFontSize;
+	// 地图名始终单行：宽度不够先等比缩字号，缩到下限再省略。
+	// 计分板缩放动画会逐帧改变可用宽度，DISALLOW_NEWLINE 只拦显式换行，
+	// 词级软折行仍会触发，所以这里同时走 STOP_AT_END，彻底不产生第二行。
+	// 连续字号（与灵动岛状态区同一机制）：字体光栅化仍是整像素，但绘制尺寸
+	// 使用原始浮点字号，弹簧末端不会在相邻字号档之间来回跳；面板缩放期间
+	// 同时关闭整像素对齐，避免慢速收尾把亚像素位移攒成逐像素跳动。
+	const CUiScopedFloatFontSize FloatFontSize(TextRender());
+	const CUiScopedSubpixelText SubpixelText(TextRender(), Subpixel);
+	// 拟合宽度留 1 个 UI 单位余量：字体光栅化按整像素取整，贴着边界算时
+	// 实际宽度偶尔会多出不到一个字，STOP_AT_END 就会切掉最后一笔。
+	constexpr float SCOREBOARD_TITLE_FIT_MARGIN = 1.0f;
+	const float FitWidth = maximum(0.0f, TitleLabel.w - SCOREBOARD_TITLE_FIT_MARGIN);
+	const SScoreboardTitleFit Fit = ResolveScoreboardTitleFit(TitleFontSize, 10.0f,
+		TextRender()->TextWidth(TitleFontSize, pTitle), FitWidth);
+	const SScoreboardTitleLabelStyle Style = ResolveScoreboardTitleLabelStyle(Fit);
 	SLabelProperties Props;
 	Props.m_MaxWidth = TitleLabel.w;
-	Props.m_EllipsisAtEnd = true;
-	const float TextWidth = TextRender()->TextWidth(FontSize, pTitle);
-	if(TextWidth > TitleLabel.w && TextWidth > 0.0f)
-	{
-		// 先缩字号；缩到下限还放不下就退回省略号，绝不越过自己的框去压右侧时间。
-		FontSize = maximum(10.0f, FontSize * TitleLabel.w / TextWidth);
-		Props.m_EllipsisAtEnd = TextRender()->TextWidth(FontSize, pTitle) > TitleLabel.w;
-	}
-	Ui()->DoLabel(&TitleLabel, pTitle, FontSize, Team == TEAM_RED ? TEXTALIGN_ML : TEXTALIGN_MR, Props);
+	Props.m_DisallowNewline = Style.m_DisallowNewline;
+	Props.m_StopAtEnd = Style.m_StopAtEnd;
+	Props.m_EllipsisAtEnd = Style.m_EllipsisAtEnd;
+	// 字号已由 ResolveScoreboardTitleFit 收敛，关闭 DoLabel 的二次缩放：
+	// 否则“下限字号仍放不下”时会在测量路径里再缩一档，省略号位置继续跳。
+	Props.m_EnableWidthCheck = false;
+	Props.m_MinimumFontSize = Fit.m_FontSize;
+	Ui()->DoLabel(&TitleLabel, pTitle, Fit.m_FontSize, Team == TEAM_RED ? TEXTALIGN_ML : TEXTALIGN_MR, Props);
 }
 
 void CScoreboard::RenderTitleScore(CUIRect ScoreLabel, int Team, float TitleFontSize)
@@ -690,7 +689,7 @@ void CScoreboard::RenderTitleScore(CUIRect ScoreLabel, int Team, float TitleFont
 	}
 }
 
-void CScoreboard::RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle)
+void CScoreboard::RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle, bool Subpixel)
 {
 	dbg_assert(Team == TEAM_RED || Team == TEAM_BLUE || Team == TEAM_GAME, "Team invalid");
 
@@ -729,7 +728,7 @@ void CScoreboard::RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle)
 		}
 	}
 
-	RenderTitle(TitleLabel, Team, pTitle, TitleFontSize);
+	RenderTitle(TitleLabel, Team, pTitle, TitleFontSize, Subpixel);
 	RenderTitleScore(ScoreLabel, Team, TitleFontSize);
 }
 
@@ -2158,17 +2157,20 @@ void CScoreboard::OnRender()
 		m_MouseUnlocked = true;
 		m_LastMousePos = std::nullopt;
 	}
-	// 显示状态转换检测：每次由隐藏转为显示（Tab 开合、死亡自动弹出、游戏结束）都重置
-	// 行内国旗的入场动画起点与面板弹性缩放轨道，保证每次打开都重放入场动画。
+	// 显示状态转换检测：记录本次是否由隐藏转为显示（Tab 开合、死亡自动弹出、
+	// 游戏结束）；具体是完整重播还是只做打断回弹，由下面的三态动作决定。
 	const bool FreshOpen = WantActive && !m_WasActive;
-	// 每次打开都重置入场基准（面板、文本、国旗同一套）：快速连按时三者一起重播，
-	// 不会出现「框不动、文本却在淡入」的错位。
-	if(FreshOpen)
+	// 关闭途中重开时，面板和旧文字仍在屏幕上；此刻重播弹出/错峰会先缩没再长出，
+	// 读作“关闭又打开”。只有上一轮已经收干净才重置入场基准。
+	const bool PanelStillOnScreen = m_Visibility > 0.02f;
+	const EScoreboardEntranceAction EntranceAction = ResolveScoreboardEntranceAction(FreshOpen, PanelStillOnScreen);
+	if(EntranceAction == EScoreboardEntranceAction::REPLAY)
 		m_ActiveStartTime = time_get();
 	m_WasActive = WantActive;
 	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 	float PanelOffsetY = 0.0f;
 	float PanelScale = 1.0f;
+	bool TitleSubpixel = false;
 	if(!ExtraAnimations)
 	{
 		if(!WantActive)
@@ -2205,13 +2207,20 @@ void CScoreboard::OnRender()
 		m_AnimContentAlpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, PanelNode, EUiAnimProperty::COLOR_A, TargetVisibility, ScoreboardContentSpring(WantActive), 3, 0.004f), 0.0f, 1.0f);
 		PanelOffsetY = ResolveUiPresentationStateValue(AnimRuntime, PanelNode, EUiAnimProperty::POS_Y, TargetOffsetY, Spring, 3, 0.01f);
 		const float BaseScale = std::max(0.01f, ResolveUiPresentationStateValue(AnimRuntime, PanelNode, EUiAnimProperty::SCALE, TargetScale, Spring, 3, 0.002f));
-		// 0 → 过冲 → 100% 的弹性入场单独占一条轨道：不与上面 1.0/0.985 的收起缩放
-		// 共用，否则 ResolveUiPresentationStateValue 的目标缓存会把「重开时钉回 0」
-		// 当成目标没变而吞掉，第二次按 Tab 就没有弹一下了。
+		// 略小于 100% → 过冲 → 100% 的弹性入场单独占一条轨道：不与上面
+		// 1.0/0.985 的收起缩放共用，否则 ResolveUiPresentationStateValue 的目标缓存
+		// 会把重开时的起点当成目标没变而吞掉，第二次按 Tab 就没有弹一下了。
 		const uint64_t PopNode = ScoreboardPresentationNodeKey("pop");
-		if(FreshOpen)
-			StartScoreboardPop(AnimRuntime, PopNode);
+		if(EntranceAction != EScoreboardEntranceAction::NONE)
+		{
+			const float CurrentPop = AnimRuntime.GetValue(PopNode, EUiAnimProperty::SCALE, 1.0f);
+			const float PopStartScale = ResolveScoreboardPopStartScale(EntranceAction, CurrentPop);
+			StartScoreboardPop(AnimRuntime, PopNode, PopStartScale);
+		}
 		PanelScale = BaseScale * std::max(0.01f, AnimRuntime.GetValue(PopNode, EUiAnimProperty::SCALE, 1.0f));
+		// 只有几何仍在变化时才放弃整像素对齐；停稳后回到对齐路径，保持字形清晰。
+		TitleSubpixel = AnimRuntime.HasActiveAnimation(PanelNode, EUiAnimProperty::SCALE) ||
+				AnimRuntime.HasActiveAnimation(PopNode, EUiAnimProperty::SCALE);
 		m_OpenTime = m_Visibility;
 
 		if(!WantActive && m_Visibility <= 0.01f && !AnimRuntime.HasActiveAnimation(PanelNode, EUiAnimProperty::ALPHA))
@@ -2241,8 +2250,15 @@ void CScoreboard::OnRender()
 	}
 	else
 	{
+		// 只有完整重播才重新等待面板就位；打断重开时保留进行中的错峰，
+		// 若上一轮还没开始错峰则直接推到已结束，避免行短暂消失又淡入。
 		if(FreshOpen)
-			m_TextEntryStartTime = 0;
+		{
+			if(EntranceAction == EScoreboardEntranceAction::REPLAY)
+				m_TextEntryStartTime = 0;
+			else if(m_TextEntryStartTime == 0)
+				m_TextEntryStartTime = time_get() - time_freq();
+		}
 		// 面板过冲/收敛期间 PanelScale 会短暂超过 1；0.95 表示「基本就位」。
 		// 兜底：面板因任何原因久未到位时，最多等 0.6s 就开始，绝不让列表一直透明。
 		const bool EntryReady = PanelScale >= 0.95f ||
@@ -2501,8 +2517,8 @@ void CScoreboard::OnRender()
 
 		CUIRect StatisticsButton;
 		RedTitleContent.VSplitRight(StatisticsButtonWidth, &RedTitleContent, &StatisticsButton);
-		RenderTitleBar(RedTitleContent, TEAM_RED, pRedTeamName == nullptr ? Localize("Red team") : pRedTeamName);
-		RenderTitleBar(BlueTitleContent, TEAM_BLUE, pBlueTeamName == nullptr ? Localize("Blue team") : pBlueTeamName);
+		RenderTitleBar(RedTitleContent, TEAM_RED, pRedTeamName == nullptr ? Localize("Red team") : pRedTeamName, TitleSubpixel);
+		RenderTitleBar(BlueTitleContent, TEAM_BLUE, pBlueTeamName == nullptr ? Localize("Blue team") : pBlueTeamName, TitleSubpixel);
 		DoStatisticsButton(StatisticsButton);
 		DoServerPlayers(ServerPlayers);
 		DoSortButton(SortButton);
@@ -2585,7 +2601,7 @@ void CScoreboard::OnRender()
 			StatisticsButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[StatisticsButtonIndex].m_Box);
 			SortButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[SortButtonIndex].m_Box);
 		}
-		RenderTitleBar(Title, TEAM_GAME, pTitle);
+		RenderTitleBar(Title, TEAM_GAME, pTitle, TitleSubpixel);
 		DoServerPlayers(ServerPlayers);
 		if(ShowScrollButton)
 		{

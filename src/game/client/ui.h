@@ -1886,4 +1886,51 @@ public:
 	CUiScopedControlAlphaScale &operator=(const CUiScopedControlAlphaScale &) = delete;
 };
 
+// 连续字号作用域：字形仍按整像素光栅化，但绘制尺寸使用原始浮点字号，
+// 字号随动画连续变化时靠贴图等比缩放平滑过渡，不会在整数档之间跳。
+// 测量与绘制必须同时处于作用域内，否则宽度与居中位置对不上。
+class CUiScopedFloatFontSize
+{
+	ITextRender *m_pTextRender;
+	unsigned m_PreviousFlags;
+
+public:
+	explicit CUiScopedFloatFontSize(ITextRender *pTextRender) :
+		m_pTextRender(pTextRender), m_PreviousFlags(pTextRender != nullptr ? pTextRender->GetRenderFlags() : 0)
+	{
+		if(m_pTextRender != nullptr)
+			m_pTextRender->SetRenderFlags(m_PreviousFlags | TEXT_RENDER_FLAG_QM_FLOAT_FONT_SIZE);
+	}
+	~CUiScopedFloatFontSize()
+	{
+		if(m_pTextRender != nullptr)
+			m_pTextRender->SetRenderFlags(m_PreviousFlags);
+	}
+	CUiScopedFloatFontSize(const CUiScopedFloatFontSize &) = delete;
+	CUiScopedFloatFontSize &operator=(const CUiScopedFloatFontSize &) = delete;
+};
+
+// 关闭整像素对齐：只给随动画连续移动/缩放的文本用。静止文本保持像素对齐，
+// 字形最清晰；动画中若继续对齐，慢速收尾会把亚像素位移攒成逐像素跳变。
+class CUiScopedSubpixelText
+{
+	ITextRender *m_pTextRender;
+	unsigned m_PreviousFlags;
+
+public:
+	CUiScopedSubpixelText(ITextRender *pTextRender, bool Enabled) :
+		m_pTextRender(pTextRender), m_PreviousFlags(pTextRender != nullptr ? pTextRender->GetRenderFlags() : 0)
+	{
+		if(m_pTextRender != nullptr && Enabled)
+			m_pTextRender->SetRenderFlags(m_PreviousFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+	}
+	~CUiScopedSubpixelText()
+	{
+		if(m_pTextRender != nullptr)
+			m_pTextRender->SetRenderFlags(m_PreviousFlags);
+	}
+	CUiScopedSubpixelText(const CUiScopedSubpixelText &) = delete;
+	CUiScopedSubpixelText &operator=(const CUiScopedSubpixelText &) = delete;
+};
+
 #endif

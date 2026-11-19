@@ -1157,6 +1157,55 @@ namespace ui_token::hud::font
 	inline constexpr float EMPHASIS = 12.0f;
 } // namespace ui_token::hud::font
 
+// 投票 HUD 与计分板内投票共用同一套排版：常规与计分板内只改变锚点，不改变行序、
+// 字号、圆角或底色来源；旧版小 HUD 只缩小面板和信息密度，不改变配色族。底色统一
+// 由 ResolveConfiguredInterfaceSurface() 从界面表面配置解析，与计分板保持同一份。
+namespace ui_token::vote_hud
+{
+	// 常规面板宽度。计分板内投票始终使用这一档，不受 qm_mini_vote_hud 影响。
+	inline constexpr float PANEL_WIDTH = 320.0f;
+	inline constexpr float PANEL_HEIGHT = 60.0f;
+	// 旧小投票 HUD 的紧凑几何：保留原来的信息密度，不再套用完整面板的 320×60。
+	inline constexpr float MINI_PANEL_WIDTH = 70.0f;
+	inline constexpr float MINI_PANEL_HEIGHT = 35.0f;
+	inline constexpr float MINI_PADDING = 3.0f;
+	inline constexpr float MINI_DESCRIPTION_HEIGHT = 6.0f;
+	inline constexpr float MINI_DESCRIPTION_GAP = 2.0f;
+	inline constexpr float MINI_REASON_HEIGHT = 5.0f;
+	inline constexpr float MINI_REASON_GAP = 2.0f;
+	inline constexpr float MINI_TIME_HEIGHT = 4.0f;
+	inline constexpr float MINI_TIME_GAP = 2.0f;
+	inline constexpr float MINI_SPINNER_SIZE = 3.0f;
+	inline constexpr float MINI_SPINNER_GAP = 1.0f;
+	inline constexpr float MINI_BARS_HEIGHT = 2.0f;
+	inline constexpr float MINI_BARS_GAP = 1.0f;
+	inline constexpr float MINI_ACTION_GAP = 4.0f;
+	inline constexpr float MINI_DESCRIPTION_FONT_SIZE = 6.0f;
+	inline constexpr float MINI_REASON_FONT_SIZE = 4.5f;
+	inline constexpr float MINI_TIME_FONT_SIZE = 3.5f;
+	inline constexpr float MINI_ACTION_FONT_SIZE = 4.5f;
+	// 面板与屏幕边缘、计分板之间的安全距离。
+	inline constexpr float SCREEN_MARGIN = 6.0f;
+	inline constexpr float PANEL_GAP = 6.0f;
+	// 面板内边距与四行内容的高度。剩余高度全部留给两颗投票按钮。
+	inline constexpr float PADDING = 5.0f;
+	inline constexpr float HEADER_HEIGHT = 10.0f;
+	inline constexpr float HEADER_GAP = 2.0f;
+	inline constexpr float REASON_HEIGHT = 9.0f;
+	inline constexpr float REASON_GAP = 3.0f;
+	inline constexpr float BARS_HEIGHT = 4.0f;
+	inline constexpr float BARS_GAP = 3.0f;
+	inline constexpr float BUTTON_GAP = 5.0f;
+	// 标题（投票内容）与说明行的字号；按钮沿用标题字号。
+	inline constexpr float TITLE_FONT_SIZE = 9.0f;
+	inline constexpr float REASON_FONT_SIZE = 8.0f;
+	inline constexpr float TIME_WIDTH_RATIO = 0.4f;
+	inline constexpr float TIME_GAP = 5.0f;
+	inline constexpr float BUTTON_TEXT_INSET = 3.0f;
+	// 与计分板主面板同一档圆角。
+	inline constexpr float RADIUS = radius::CARD;
+} // namespace ui_token::vote_hud
+
 // 输入法（IME）候选面板：跟随系统输入法浮在光标下方的小面板。
 // 全部尺寸都是「基准值 × SCALE」，改整体大小只动 SCALE，不要逐项改数字。
 // 面板有明暗两套配色：跟随界面（浅色界面用 LIGHT 族），无 _LIGHT/_DARK 后缀的别名
