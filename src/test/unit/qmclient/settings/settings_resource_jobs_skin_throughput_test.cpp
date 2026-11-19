@@ -41,6 +41,35 @@ TEST(SettingsResourceJobsSkinThroughput, TeeSkinSourceLoadWindowCapsActiveDecode
 	EXPECT_EQ(SettingsSkinSourceLoadVisibleWindow(Idle, true, 32), 32);
 }
 
+TEST(SettingsResourceJobsSkinThroughput, UploadTimeBudgetRaisesThroughputOnlyWithFrameHeadroom)
+{
+	const SSettingsResourceFrameContext Idle = SettingsBuildFrameContext(false, false, 0);
+	SSettingsResourceFrameContext Drain = Idle;
+	Drain.m_HighPrioritySettled = true;
+	const SSettingsResourceFrameContext Scroll = SettingsBuildFrameContext(true, false, 0);
+	const SSettingsResourceFrameContext Recovery = SettingsBuildFrameContext(false, false, 2);
+
+	// 设置页空闲时允许比 1ms 更高的上传预算，后台 drain 最高。
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Idle, true, 4.0f), 2);
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Drain, true, 4.0f), 3);
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Scroll, true, 4.0f), 1);
+	EXPECT_GE(SettingsSkinUploadTimeBudgetMs(Recovery, true, 4.0f), 1);
+	// 帧耗时接近 144Hz 预算时不再加码，避免吞吐换卡顿。
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Drain, true, 6.5f), 2);
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Drain, true, 8.5f), 1);
+	// 离开设置页仍保持 1ms，不把预览吞吐成本带进对局。
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Drain, false, 4.0f), 1);
+}
+
+TEST(SettingsResourceJobsSkinThroughput, LoadingAdmissionRespectsBacklogCap)
+{
+	EXPECT_TRUE(SettingsSkinShouldAdmitLoading(0, SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT));
+	EXPECT_TRUE(SettingsSkinShouldAdmitLoading(SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT - 1, SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT));
+	EXPECT_FALSE(SettingsSkinShouldAdmitLoading(SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT, SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT));
+	EXPECT_FALSE(SettingsSkinShouldAdmitLoading(512, SETTINGS_SKIN_VISIBLE_LOADING_LIMIT));
+	EXPECT_TRUE(SettingsSkinShouldAdmitLoading(512, 0));
+}
+
 TEST(SettingsResourceJobsSkinThroughput, VisibleSkinFinalizeDefersBackgroundSweepsAfterPriorityWork)
 {
 	EXPECT_TRUE(SettingsSkinFinalizeShouldDeferBackgroundSweep(true, 1, 2));

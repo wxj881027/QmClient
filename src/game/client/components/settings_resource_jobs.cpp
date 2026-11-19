@@ -485,6 +485,26 @@ bool SettingsSkinBackgroundDrainActive(const SSettingsResourceFrameContext &Cont
 	       Context.m_HighPrioritySettled;
 }
 
+int SettingsSkinUploadTimeBudgetMs(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive, float RenderFrameTimeMs)
+{
+	if(!TeeSettingsActive)
+		return 1;
+	int BudgetMs = 2;
+	if(Context.m_ScrollActive)
+		BudgetMs = 1;
+	else if(Context.m_PostScrollRecoveryFrames > 0)
+		BudgetMs = SettingsRecoveryBudget(Context, 1, 3);
+	else if(SettingsSkinBackgroundDrainActive(Context, TeeSettingsActive))
+		BudgetMs = 3;
+	// 上传预算只能在帧余量内加码：帧耗时已接近刷新间隔时退回 1ms，
+	// 否则提高吞吐只会把长帧变成可见卡顿。
+	if(RenderFrameTimeMs >= 8.0f)
+		return 1;
+	if(RenderFrameTimeMs >= 6.0f)
+		return minimum(BudgetMs, 2);
+	return BudgetMs;
+}
+
 int SettingsSkinBackgroundRequestFrameBudget(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive)
 {
 	if(!TeeSettingsActive)

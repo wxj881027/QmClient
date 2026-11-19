@@ -826,7 +826,7 @@ TEST(Skins, PartialUploadIsDiscardedOnCancellationOrFailure)
 	EXPECT_FALSE(CSkins::CSkinContainer::ShouldDiscardPendingUpload(EState::PENDING, EState::UNLOADED));
 }
 
-TEST(Skins, UploadFrameBudgetAllowsMultipleSpritesUntilTimeIsExhausted)
+TEST(SkinUploadBudget, AllowsMultipleSpritesUntilTimeIsExhausted)
 {
 	using namespace std::chrono_literals;
 	CQmSkinUploadFrameBudget Budget;
@@ -839,13 +839,27 @@ TEST(Skins, UploadFrameBudgetAllowsMultipleSpritesUntilTimeIsExhausted)
 	EXPECT_FALSE(Budget.CanUpload());
 }
 
-TEST(Skins, UploadFrameBudgetSharesTimeAcrossUpdatesAndResetsForNextFrame)
+TEST(SkinUploadBudget, SharesTimeAcrossUpdatesAndResetsForNextFrame)
 {
 	using namespace std::chrono_literals;
 	CQmSkinUploadFrameBudget Budget;
 	Budget.RecordUpload(2ms);
 	EXPECT_FALSE(Budget.CanUpload());
 	Budget.Reset();
+	EXPECT_TRUE(Budget.CanUpload());
+}
+
+TEST(SkinUploadBudget, HonorsConfiguredLimit)
+{
+	using namespace std::chrono_literals;
+	CQmSkinUploadFrameBudget Budget;
+	Budget.Reset(2ms);
+	Budget.RecordUpload(1500us);
+	EXPECT_TRUE(Budget.CanUpload());
+	Budget.RecordUpload(600us);
+	EXPECT_FALSE(Budget.CanUpload());
+	Budget.Reset(3ms);
+	Budget.RecordUpload(2500us);
 	EXPECT_TRUE(Budget.CanUpload());
 }
 

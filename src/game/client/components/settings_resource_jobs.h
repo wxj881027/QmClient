@@ -488,6 +488,7 @@ int SettingsSkinGpuUploadUnits(bool TeeSettingsActive);
 int SettingsSkinFinalizeFrameBudget(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinGpuUploadFrameUnits(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinGpuUploadLimiterUnits(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
+int SettingsSkinUploadTimeBudgetMs(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive, float RenderFrameTimeMs);
 bool SettingsSkinBackgroundDrainActive(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinBackgroundRequestFrameBudget(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 SSettingsSkinBackgroundRequestBudgetOutput SettingsSkinBackgroundRequestBudgetDecision(const SSettingsSkinBackgroundRequestBudgetInput &Input);
@@ -525,6 +526,13 @@ constexpr bool SettingsSkinShouldReleaseViewportRequest(bool StillVisible, bool 
 constexpr bool SettingsSkinCanStartDownloadSession(int ActiveSessions, int Limit)
 {
 	return Limit <= 0 || ActiveSessions < Limit;
+}
+// 解码/待上传驻留上限：后台预热不能把全部槽位占满。
+constexpr int SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT = 48;
+constexpr int SETTINGS_SKIN_VISIBLE_LOADING_LIMIT = 96;
+constexpr bool SettingsSkinShouldAdmitLoading(int LoadingCount, int Limit)
+{
+	return Limit <= 0 || LoadingCount < Limit;
 }
 constexpr bool SettingsSkinWaitLogShouldEmit(int64_t Now, int64_t Last, int64_t Interval, bool SameReason)
 {

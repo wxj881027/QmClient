@@ -1642,7 +1642,10 @@ void CSkins::OnRender()
 {
 	// 未被本帧真实列表重新发布的视窗失效；折叠和离页不能保留最高优先级。
 	m_SettingsLoadViewport.BeginFrame();
-	m_SkinUploadFrameBudget.Reset();
+	const bool TeeSettingsActive = ActiveSettingsTeePage(GameClient());
+	const int UploadBudgetMs = SettingsSkinUploadTimeBudgetMs(
+		SettingsFrameContextOrDefault(GameClient()), TeeSettingsActive, Client()->RenderFrameTime() * 1000.0f);
+	m_SkinUploadFrameBudget.Reset(std::chrono::milliseconds(UploadBudgetMs));
 }
 
 void CSkins::UpdateForSettingsWarmup()
@@ -2340,6 +2343,24 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 		if(Stats.m_NumPending == 0 && pSkinContainer->m_State != CSkinContainer::EState::BACKGROUND_REQUESTED)
 		{
 			return true;
+		}
+		// 解码并发必须与上传吞吐匹配：设置页浏览目录时曾出现 512 张同时 LOADING，
+		// 而已解码等待上传的纹理实际只以约 7 张/秒被消费，既占内存又拉长可见项延迟。
+		if(TeeSettingsActive)
+		{
+			const ESettingsResourcePriority EffectivePriority =
+				pSkinContainer->m_State == CSkinContainer::EState::BACKGROUND_REQUESTED ? pSkinContainer->m_LoadPriority : Priority;
+			const int LoadingLimit = EffectivePriority == ESettingsResourcePriority::VISIBLE ?
+							 SETTINGS_SKIN_VISIBLE_LOADING_LIMIT :
+							 SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT;
+			if(!SettingsSkinShouldAdmitLoading((int)Stats.m_NumLoading, LoadingLimit))
+			{
+				str_copy(m_SettingsSourceAdmissionTelemetry.m_aLastWaitReason, "loading_backlog", sizeof(m_SettingsSourceAdmissionTelemetry.m_aLastWaitReason));
+				LogSettingsSkinSourceWaitEvent(pSkinContainer->Name(), "loading_backlog",
+					GameClient()->GpuUploadLimiter()->RemainingUploads(),
+					GameClient()->GpuUploadLimiter()->MaxUploadsPerFrame());
+				return false;
+			}
 		}
 		auto Admission = DetermineAdmission(pSkinContainer, Priority);
 		if(!Admission.m_PromoteAllowed &&
