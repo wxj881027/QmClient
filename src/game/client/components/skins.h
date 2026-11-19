@@ -758,6 +758,34 @@ public:
 		}
 		return CSkinContainer::EType::DOWNLOAD;
 	}
+
+	/**
+	 * 扫描到同名皮肤时的来源选择：本地资源高于下载缓存，用户目录高于随包数据。
+	 * 只有来源相同时才用混合大小写名称改善显示，避免随包文件因大小写覆盖用户文件。
+	 */
+	static bool PreferScannedSkin(const char *pExistingName, int ExistingStorageType, int ExistingPriority,
+		const char *pNewName, int NewStorageType, int NewPriority)
+	{
+		if(NewPriority != ExistingPriority)
+			return NewPriority > ExistingPriority;
+		const bool ExistingFromSave = ExistingStorageType == IStorage::TYPE_SAVE;
+		const bool NewFromSave = NewStorageType == IStorage::TYPE_SAVE;
+		if(ExistingFromSave != NewFromSave)
+			return NewFromSave;
+		return !SkinNameHasUpperCase(pExistingName) && SkinNameHasUpperCase(pNewName);
+	}
+
+	/**
+	 * 本地皮肤按磁盘上的 canonical 名称读取；下载容器仍使用请求名生成缓存身份。
+	 */
+	static const char *ResolveLoadName(CSkinContainer::EType Type, const char *pName, const CSkinNameIndex &Index)
+	{
+		if(Type != CSkinContainer::EType::LOCAL)
+			return pName;
+		const char *pCanonical = Index.Find(pName);
+		return pCanonical != nullptr ? pCanonical : pName;
+	}
+
 	static int ParseOfficialSkinReleaseDateKey(const char *pDate)
 	{
 		if(pDate == nullptr)

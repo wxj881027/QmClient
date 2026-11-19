@@ -1,5 +1,6 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include <engine/gfx/image_loader.h>
+#include <engine/storage.h>
 
 #include <generated/client_data.h>
 
@@ -146,6 +147,30 @@ TEST(Skins, BuiltInSkinsUseLocalContainerSource)
 
 	// 非内建名字仍按下载来源建容器。
 	EXPECT_EQ(CSkins::PreferredContainerType("some_community_skin"), EType::DOWNLOAD);
+}
+
+TEST(SkinSources, ScanPrefersUserSkinOverPackagedCaseVariant)
+{
+	const int Save = IStorage::TYPE_SAVE;
+	const int Data = IStorage::TYPE_SAVE + 1;
+
+	EXPECT_FALSE(CSkins::PreferScannedSkin("paladin", Save, 1, "PaladiN", Data, 1));
+	EXPECT_TRUE(CSkins::PreferScannedSkin("PaladiN", Data, 1, "paladin", Save, 1));
+	EXPECT_TRUE(CSkins::PreferScannedSkin("paladin", Save, 1, "PaladiN", Save, 1));
+	EXPECT_FALSE(CSkins::PreferScannedSkin("PaladiN", Save, 1, "paladin", Save, 1));
+	EXPECT_TRUE(CSkins::PreferScannedSkin("paladin", Save, 0, "PaladiN", Save, 1));
+	EXPECT_FALSE(CSkins::PreferScannedSkin("PaladiN", Save, 1, "paladin", Save, 0));
+}
+
+TEST(SkinSources, LocalLoadUsesCanonicalDiskName)
+{
+	using EType = CSkins::CSkinContainer::EType;
+	CSkinNameIndex Index;
+	ASSERT_TRUE(Index.Add("PaladiN", 1));
+
+	EXPECT_STREQ(CSkins::ResolveLoadName(EType::LOCAL, "paladin", Index), "PaladiN");
+	EXPECT_STREQ(CSkins::ResolveLoadName(EType::LOCAL, "unknown", Index), "unknown");
+	EXPECT_STREQ(CSkins::ResolveLoadName(EType::DOWNLOAD, "paladin", Index), "paladin");
 }
 
 TEST(Skins, UsageListEntriesThatCannotBeUnloadedAreDiscarded)

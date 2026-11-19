@@ -578,12 +578,12 @@ namespace qm_storage
 		Success &= MigrateNewestCacheFile(pStorage, SERVERLIST_CACHE_SOURCES, std::size(SERVERLIST_CACHE_SOURCES), SERVERLIST_CACHE_FILE);
 		for(const SPathMove &Move : DIRECTORY_MOVES)
 			Success &= MoveDirectory(pStorage, Move.m_pFrom, Move.m_pTo);
-		// 6bf2 曾把 qmclient/fonts 暂存到 legacy；先迁回，再合并仍在旧路径的字体。
-		Success &= MoveDirectoryPreservingConflicts(pStorage, "qmclient/state/legacy/old_fonts", qm_storage::FONT_DIR, "qmclient/state/legacy/font_conflicts");
+		// 实时目录优先于历史归档；同时存在时不能让旧归档覆盖较新的用户字体。
 		Success &= MoveDirectoryPreservingConflicts(pStorage, "qmclient/fonts", qm_storage::FONT_DIR, "qmclient/state/legacy/font_conflicts");
-		// 6bf2 的短暂中间布局也并入原字体商店目录。
-		Success &= MoveDirectoryPreservingConflicts(pStorage, "qmclient/state/legacy/old_content_fonts", qm_storage::FONT_STORE_DIR, "qmclient/state/legacy/content_font_conflicts");
 		Success &= MoveDirectoryPreservingConflicts(pStorage, "qmclient/content/fonts", qm_storage::FONT_STORE_DIR, "qmclient/state/legacy/content_font_conflicts");
+		// 6bf2 曾把 qmclient/fonts 暂存到 legacy；最后回迁历史归档，冲突文件保留在 legacy。
+		Success &= MoveDirectoryPreservingConflicts(pStorage, "qmclient/state/legacy/old_fonts", qm_storage::FONT_DIR, "qmclient/state/legacy/font_conflicts");
+		Success &= MoveDirectoryPreservingConflicts(pStorage, "qmclient/state/legacy/old_content_fonts", qm_storage::FONT_STORE_DIR, "qmclient/state/legacy/content_font_conflicts");
 		Success &= MigrateWorkshopCatalogs(pStorage);
 
 		// 这些文件是本项目旧版原子写的残留，只删除明确前缀的临时文件。

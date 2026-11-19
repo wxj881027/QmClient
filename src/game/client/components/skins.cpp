@@ -480,8 +480,7 @@ int CSkins::CSkinDirectoryScanJob::ScanCallback(const CFsFileInfo *pInfo, int Is
 	{
 		CSkinDirectoryScanJob::SResult::SEntry &Entry = pSelf->m_Result.m_vEntries[Existing->second];
 		const int ExistingPriority = Entry.m_Type == CSkinContainer::EType::LOCAL ? 1 : 0;
-		if(Priority > ExistingPriority ||
-			(Priority == ExistingPriority && !SkinNameHasUpperCase(Entry.m_Name.c_str()) && SkinNameHasUpperCase(aSkinName)))
+		if(PreferScannedSkin(Entry.m_Name.c_str(), Entry.m_StorageType, ExistingPriority, aSkinName, StorageType, Priority))
 			Entry = {aSkinName, pSelf->m_CurrentScanType, StorageType, pInfo->m_TimeModified};
 		return 0;
 	}
@@ -2196,7 +2195,8 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 		switch(pSkinContainer->Type())
 		{
 		case CSkinContainer::EType::LOCAL:
-			pSkinContainer->m_pLoadJob = std::make_shared<CSkinLoadJob>(this, pSkinContainer->Name(), pSkinContainer->StorageType());
+			pSkinContainer->m_pLoadJob = std::make_shared<CSkinLoadJob>(
+				this, ResolveLoadName(pSkinContainer->Type(), pSkinContainer->Name(), m_SkinNameIndex), pSkinContainer->StorageType());
 			break;
 		case CSkinContainer::EType::DOWNLOAD:
 			// 初次目录扫描完成前先使用磁盘上的 canonical 名称，避免用服务器下发的小写名发出 404 请求。
@@ -2356,7 +2356,7 @@ void CSkins::UpdateSkinDownloads(CSkinLoadingStats &Stats)
 			{
 				const auto State = Stats.FinishLoadingFailure(pContainer->m_State, pContainer->m_pSkin != nullptr, Result == CQmSkinDownloadSession::EResult::NOT_FOUND);
 				pContainer->SetState(State, pContainer->m_LoadPriority);
-				if(Result == CQmSkinDownloadSession::EResult::NOT_FOUND)
+				if(State == CSkinContainer::EState::NOT_FOUND)
 					m_SkinNotFoundKeys.insert(CSkinNameIndex::Key(pContainer->Name()));
 				log_error("skins", "Skin '%s' download ended: %s", pContainer->Name(), Result == CQmSkinDownloadSession::EResult::NOT_FOUND ? "not found in enabled sources" : "request or image validation failed");
 			}
@@ -2653,6 +2653,7 @@ void CSkins::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 	m_vPendingSkinDirectoryEntries.clear();
 	m_SkinDirectoryMergeCursor = 0;
 	m_SkinNameIndex.Clear();
+	m_SkinNotFoundKeys.clear();
 	m_HasInitialSkinDirectoryScan = false;
 
 	for(auto &[_, pSkinContainer] : m_Skins)

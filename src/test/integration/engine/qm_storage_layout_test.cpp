@@ -163,6 +163,20 @@ TEST_F(CQmStorageLayout, FontConflictsArePreservedWithoutBlockingMigration)
 	EXPECT_TRUE(m_pStorage->FileExists(qm_storage::LAYOUT_MIGRATION_MARKER_FILE, IStorage::TYPE_SAVE));
 }
 
+TEST_F(CQmStorageLayout, LiveFontDirectoriesWinOverArchivedCopies)
+{
+	Write("qmclient/fonts/Live.ttf", "live-font");
+	Write("qmclient/state/legacy/old_fonts/Live.ttf", "archived-font");
+	Write("qmclient/content/fonts/Store.ttf", "live-store-font");
+	Write("qmclient/state/legacy/old_content_fonts/Store.ttf", "archived-store-font");
+
+	ASSERT_TRUE(qm_storage::MigrateStorageLayout(m_pStorage.get()));
+	EXPECT_EQ(Read("fonts/Live.ttf"), "live-font");
+	EXPECT_EQ(Read("fonts/fonts_store/Store.ttf"), "live-store-font");
+	EXPECT_EQ(Read("qmclient/state/legacy/font_conflicts/Live.ttf"), "archived-font");
+	EXPECT_EQ(Read("qmclient/state/legacy/content_font_conflicts/Store.ttf"), "archived-store-font");
+}
+
 TEST_F(CQmStorageLayout, PreviousLayoutMarkerDoesNotSkipFontRestore)
 {
 	Write("qmclient/runtime/storage_layout_v1.done", "old-layout");
