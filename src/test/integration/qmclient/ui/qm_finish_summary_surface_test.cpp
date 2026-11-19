@@ -125,6 +125,33 @@ TEST_F(QmFinishSummarySurface, MaximumPointsRemainInRangeAfterPresentation)
 	EXPECT_TRUE(m_Content.m_Points.ends_with(" 9,223,372,036,854,775,807"));
 }
 
+TEST_F(QmFinishSummarySurface, UpdatedFinishShowsSignedChangesOnTheSameCard)
+{
+	using QmFinishSummary::EStatus;
+	m_Snapshot.m_Id = 1;
+	m_Snapshot.m_LocalRank = {2, EStatus::READY};
+	m_Snapshot.m_LocalRankTotal = {4, EStatus::READY};
+	m_Snapshot.m_LocalRankChange = 0;
+	m_Snapshot.m_Rank = {20, EStatus::STALE};
+	m_Snapshot.m_RankChange = 0;
+	m_Snapshot.m_PointsGained = {0, EStatus::READY};
+	ASSERT_TRUE(Render(0.0f));
+	EXPECT_EQ(m_Content.m_LocalRank, "#2/4 +0");
+	EXPECT_EQ(m_Content.m_Rank, "#20 +0");
+	EXPECT_EQ(m_Content.m_Gain, "+0");
+
+	++m_Snapshot.m_Revision;
+	m_Snapshot.m_Rank = {18, EStatus::READY};
+	m_Snapshot.m_RankChange = 2;
+	m_Snapshot.m_ChinaRank = {7, EStatus::READY};
+	m_Snapshot.m_ChinaRankChange = -1;
+	m_Snapshot.m_PointsGained = {5, EStatus::READY};
+	ASSERT_TRUE(Render(0.0f));
+	EXPECT_EQ(m_Content.m_Rank, "#18 +2");
+	EXPECT_EQ(m_Content.m_ChinaRank, "#7 -1");
+	EXPECT_EQ(m_Content.m_Gain, "+5");
+}
+
 TEST_F(QmFinishSummarySurface, FailedTextUploadRestoresCallerAndClosingRedrawsTheCard)
 {
 	m_Snapshot.m_Id = 1;

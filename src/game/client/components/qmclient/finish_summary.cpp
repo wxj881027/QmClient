@@ -119,6 +119,7 @@ void CQmFinishSummary::OnReset()
 	m_FinishGameTick = -1;
 	m_FinishTimestamp = 0;
 	m_PreviousBest.reset();
+	m_AwardedTotal.reset();
 	m_PreviousHistoryKnown = false;
 	m_vFinishOnlineTimes.clear();
 	m_FinishOnlineTimesKnown = false;
@@ -191,19 +192,7 @@ void CQmFinishSummary::PrepareRequests(bool AfterFinish)
 {
 	CancelRequests();
 	m_QueriesEnabled = true;
-	// 刷新成绩时只保留地图资料与账号身份，旧成绩由 Before 单独标注。
-	if(AfterFinish)
-	{
-		SRemoteData Metadata;
-		Metadata.m_Map = m_Data.m_Map;
-		Metadata.m_Mapper = m_Data.m_Mapper;
-		Metadata.m_Thumbnail = m_Data.m_Thumbnail;
-		Metadata.m_Category = m_Data.m_Category;
-		Metadata.m_Stars = m_Data.m_Stars;
-		Metadata.m_MapPoints = m_Data.m_MapPoints;
-		Metadata.m_UserId = m_Data.m_UserId;
-		m_Data = std::move(Metadata);
-	}
+	// 等待新回包时沿用已取得的数据，连续通关也能取得最近的排名和总分。
 	for(size_t i = 0; i < m_aRequests.size(); ++i)
 	{
 		const EQuery Query = static_cast<EQuery>(i);
@@ -274,7 +263,7 @@ void CQmFinishSummary::MergeResult(EQuery Query, const SRemoteData &Result)
 		m_Data.m_BestTimeMs = Result.m_BestTimeMs;
 		m_Data.m_HistoryKnown = Result.m_HistoryKnown;
 		m_Data.m_Rank = Result.m_Rank;
-		m_Data.m_Points = Result.m_Points;
+		m_Data.m_Points = std::max(Result.m_Points, m_AwardedTotal);
 		m_Data.m_RankPoints = Result.m_RankPoints;
 		m_Data.m_CompletedMaps = Result.m_CompletedMaps;
 		m_Data.m_TotalMaps = Result.m_TotalMaps;
@@ -357,8 +346,9 @@ void CQmFinishSummary::UpdateRequests(double CurrentTime)
 				MergeResult(Query, Request.m_pJob->m_Result);
 				Request.m_Succeeded = true;
 				Request.m_Done = true;
-				// 通关后的动态资料最多再查一次，让成绩数据库有机会完成更新。
-				if(m_FinishTimestamp > 0 && Query != EQuery::MAP && Query != EQuery::IDENTITY && Request.m_Attempts < 2)
+				// 展示期间给延迟入榜的成绩留出刷新机会，沿用同一请求间隔与限流退避。
+				const bool RankQuery = Query == EQuery::PLAYER || Query == EQuery::CHINA || Query == EQuery::RANK;
+				if(m_FinishTimestamp > 0 && m_State.Visible() && Query != EQuery::MAP && Query != EQuery::IDENTITY && Request.m_Attempts < (RankQuery ? 5 : 2))
 					Request.m_Done = false;
 			}
 			else
@@ -412,27 +402,26 @@ void CQmFinishSummary::RefreshSnapshot()
 	if(BestPreview)
 	{
 		pSnapshot->m_PointsGained = {-1, EStatus::UNAVAILABLE};
+		pSnapshot->m_RankChange.reset();
+		pSnapshot->m_ChinaRankChange.reset();
 		ApplyBestPreviewDate(*pSnapshot, m_Data);
 	}
 	++pSnapshot->m_Revision;
-	const auto Finalize = [&](SValue &Value, EQuery Query, bool AwaitingSync = false) {
+	const auto Finalize = [&](SValue &Value, EQuery Query) {
 		if(Value.m_Value >= 0 || Value.m_Status == EStatus::UNAVAILABLE)
 			return;
 		const auto &Request = m_aRequests[static_cast<size_t>(Query)];
 		if(!Request.m_Succeeded && !Request.m_Done)
 			Value.m_Status = EStatus::LOADING;
-		else if(!Request.m_Succeeded || !AwaitingSync)
+		else
 			Value.m_Status = EStatus::UNAVAILABLE;
 	};
 	const bool Ddnet = m_Community == ECommunity::DDNET;
-	Finalize(pSnapshot->m_Rank, Ddnet ? EQuery::PLAYER : EQuery::RANK, Ddnet && m_Data.m_HistoryKnown && !m_Data.m_BestTimeMs);
+	Finalize(pSnapshot->m_Rank, Ddnet ? EQuery::PLAYER : EQuery::RANK);
 	Finalize(pSnapshot->m_ChinaRank, EQuery::CHINA);
 	Finalize(pSnapshot->m_Points, Ddnet ? EQuery::PLAYER : EQuery::POINTS);
 	Finalize(pSnapshot->m_CompletedMaps, Ddnet ? EQuery::PLAYER : EQuery::PROGRESS);
 	Finalize(pSnapshot->m_TotalMaps, Ddnet ? EQuery::PLAYER : EQuery::PROGRESS);
-	const bool FirstFinish = Ddnet ? m_Before.m_HistoryKnown && !m_Before.m_BestTimeMs : m_Before.m_AccountHistoryKnown && !m_Before.m_AccountBestTimeMs;
-	Finalize(pSnapshot->m_PointsGained, Ddnet ? EQuery::PLAYER : EQuery::TIMES,
-		FirstFinish && (m_Data.m_MapPoints >= 0 || m_Before.m_MapPoints >= 0));
 }
 
 void CQmFinishSummary::StartRun(int StartTick)
@@ -554,7 +543,7 @@ void CQmFinishSummary::UpdatePreview()
 			Best.m_Comparison = EComparison::BEST;
 			std::vector<SOnlineTime> vTimes;
 			CollectOnlineTimes(vTimes);
-			ResolveLocalRank(Best, vTimes, Best.m_TimeMs, GameClient()->m_ReceivedDDNetPlayerFinishTimes);
+			ResolveLocalRank(Best, vTimes, std::nullopt, GameClient()->m_ReceivedDDNetPlayerFinishTimes);
 			m_pManagedTeeRenderInfo = GameClient()->CreateManagedTeeRenderInfo(GameClient()->m_aClients[m_ClientId]);
 		}
 	}
@@ -660,6 +649,22 @@ void CQmFinishSummary::OnMessage(int MsgType, void *pRawMsg)
 		const auto *pMsg = static_cast<const CNetMsg_Sv_Chat *>(pRawMsg);
 		if(pMsg->m_ClientId != -1 || !pMsg->m_pMessage)
 			return;
+		if(const auto Award = ParseFinishAward(pMsg->m_pMessage))
+		{
+			if(!UpdateContext() || m_Community != ECommunity::DDNET || m_AwardedTotal)
+				return;
+			if(auto *pSnapshot = m_State.MutableSnapshot())
+			{
+				ApplyServerAward(*pSnapshot, m_Before.m_Points, *Award);
+				if(m_Before.m_Points && pSnapshot->m_Points.m_Value >= 0)
+				{
+					m_AwardedTotal = pSnapshot->m_Points.m_Value;
+					m_Data.m_Points = m_AwardedTotal;
+				}
+				++pSnapshot->m_Revision;
+			}
+			return;
+		}
 		char aName[MAX_NAME_LENGTH];
 		const int TimeMs = CRaceHelper::TimeFromFinishMessage(pMsg->m_pMessage, aName, sizeof(aName));
 		if(TimeMs > 0 && str_comp(aName, GameClient()->m_aClients[LocalId].m_aName) == 0)

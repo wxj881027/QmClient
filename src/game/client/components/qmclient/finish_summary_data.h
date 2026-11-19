@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace QmFinishSummary
@@ -20,7 +21,6 @@ namespace QmFinishSummary
 	{
 		LOADING,
 		READY,
-		PENDING,
 		UNAVAILABLE,
 		STALE
 	};
@@ -86,10 +86,14 @@ namespace QmFinishSummary
 		SValue m_LocalRankTotal;
 		SValue m_Rank;
 		SValue m_ChinaRank;
+		std::optional<int64_t> m_LocalRankChange;
+		std::optional<int64_t> m_ChinaRankChange;
+		std::optional<int64_t> m_RankChange;
 		SValue m_CompletedMaps;
 		SValue m_TotalMaps;
 		SValue m_Points;
 		SValue m_PointsGained;
+		std::optional<int> m_ConfirmedAward;
 		int64_t m_RankPointsGained = 0;
 	};
 
@@ -102,6 +106,8 @@ namespace QmFinishSummary
 
 	// 返回成功表示已核对响应身份和结构，缺少可选字段仍保留未知状态。
 	bool ParseDdnetMap(const char *pJson, size_t Length, const std::string &Map, SRemoteData &Out);
+	std::optional<int> ParseFinishAward(std::string_view Message);
+	void ApplyServerAward(SSnapshot &Snapshot, std::optional<int64_t> PreviousPoints, int Award);
 	bool ParseDdnetPlayer(const char *pJson, size_t Length, const std::string &Player, const std::string &Map, SRemoteData &Out);
 	bool ParseDdnetChinaRank(const char *pJson, size_t Length, const std::string &Player, const std::string &Map, SRemoteData &Out);
 	bool ParseAxiomSearch(const char *pJson, size_t Length, const std::string &Player, SRemoteData &Out);
