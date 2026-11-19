@@ -21,7 +21,9 @@
 #include <game/client/components/qmclient/skin_name_index.h>
 #include <game/client/components/qmclient/skin_prepared_textures.h>
 #include <game/client/components/qmclient/skin_prepared_visuals.h>
+#include <game/client/components/qmclient/skin_source.h>
 #include <game/client/components/qmclient/skin_source_job.h>
+#include <game/client/components/qmclient/skin_source_registry.h>
 #include <game/client/components/settings_resource_jobs.h>
 #include <game/client/skin.h>
 
@@ -155,6 +157,8 @@ public:
 		bool IsVanilla() const { return m_Vanilla; }
 		bool IsSpecial() const { return m_Special; }
 		bool IsAlwaysLoaded() const { return m_AlwaysLoaded; }
+		ESkinSource EffectiveSkinSource() const;
+		void SetSkinSource(ESkinSource Source) { m_SkinSource = Source; }
 		EState State() const { return m_State; }
 		const std::unique_ptr<CSkin> &Skin() const { return m_pSkin; }
 		size_t SettingsSourceApproxBytes() const { return m_SettingsSourceApproxBytes; }
@@ -200,20 +204,40 @@ public:
 		{
 			return OldState == EState::LOADING && NewState != EState::LOADING && NewState != EState::LOADED;
 		}
-		static EState InitialStateForSource(EType Type, bool AlwaysLoaded, bool VanillaAllowed, bool DownloadSkins)
+		static bool SourceDownloadAllowed(ESkinSource Source)
+		{
+			switch(Source)
+			{
+			case ESkinSource::OFFICIAL:
+			case ESkinSource::CUSTOM_OFFICIAL:
+				return g_Config.m_ClDownloadSkins != 0;
+			case ESkinSource::COMMUNITY:
+			case ESkinSource::CUSTOM_COMMUNITY:
+				return g_Config.m_ClDownloadCommunitySkins != 0;
+			case ESkinSource::DDSTATS:
+				return g_Config.m_QmDownloadDdStatsSkins != 0;
+			case ESkinSource::LOCAL:
+				return true;
+			case ESkinSource::UNKNOWN:
+				return g_Config.m_ClDownloadSkins != 0 || g_Config.m_ClDownloadCommunitySkins != 0 ||
+				       g_Config.m_QmDownloadDdStatsSkins != 0;
+			}
+			return true;
+		}
+		static EState InitialStateForSource(EType Type, bool AlwaysLoaded, bool VanillaAllowed, bool DownloadAllowed)
 		{
 			if(AlwaysLoaded)
 				return EState::PENDING;
-			if(!VanillaAllowed || (Type == EType::DOWNLOAD && !DownloadSkins))
+			if(!VanillaAllowed || (Type == EType::DOWNLOAD && !DownloadAllowed))
 				return EState::NOT_FOUND;
 			return EState::UNLOADED;
 		}
-		static std::optional<EState> SourceRefreshState(const SQmSkinSourceIdentity &Current, const SQmSkinSourceIdentity &Scanned, EState State, bool AlwaysLoaded, bool VanillaAllowed, bool DownloadSkins)
+		static std::optional<EState> SourceRefreshState(const SQmSkinSourceIdentity &Current, const SQmSkinSourceIdentity &Scanned, EState State, bool AlwaysLoaded, bool VanillaAllowed, bool DownloadAllowed)
 		{
 			if(Current == Scanned)
 				return std::nullopt;
 			// 准入按扫描到的新来源判断，旧 DOWNLOAD 的禁用状态不能阻止本地替换。
-			const EState InitialState = InitialStateForSource(Scanned.m_Download ? EType::DOWNLOAD : EType::LOCAL, AlwaysLoaded, VanillaAllowed, DownloadSkins);
+			const EState InitialState = InitialStateForSource(Scanned.m_Download ? EType::DOWNLOAD : EType::LOCAL, AlwaysLoaded, VanillaAllowed, DownloadAllowed);
 			if(InitialState == EState::NOT_FOUND)
 				return InitialState;
 			if(State == EState::LOADED || State == EState::LOADING || State == EState::PENDING)
@@ -268,6 +292,7 @@ public:
 		std::optional<SQmSkinSourceIdentity> m_LoadedSource;
 		int m_OfficialReleaseDate = 0;
 		char m_aOfficialCreator[MAX_NAME_LENGTH] = {};
+		ESkinSource m_SkinSource = ESkinSource::UNKNOWN;
 		bool m_Vanilla;
 		bool m_Special;
 		bool m_AlwaysLoaded;
@@ -1026,6 +1051,7 @@ private:
 	void ProcessOfficialSkinIndexRequest();
 	void LoadOfficialSkinIndexCache();
 	bool ApplyOfficialSkinIndexJson(const char *pJson, size_t JsonSize);
+	void RecordSkinSource(CSkinContainer *pSkinContainer, ESkinSource Source);
 	void QueueSkinListPlanJob(int Dummy);
 	void ProcessSkinListPlanJob();
 	CSkinListEntry MakeSkinListEntry(const CSkinContainer *pSkinContainer, std::optional<CSkinListEntry::SColorKey> ColorKey) const;
@@ -1065,6 +1091,7 @@ private:
 
 	std::unordered_map<std::string, std::unique_ptr<CSkinContainer>, SSkinNameHash, SSkinNameEqual> m_Skins;
 	CSkinNameIndex m_SkinNameIndex;
+	CSkinSourceRegistry m_SkinSources;
 	std::unordered_set<std::string> m_SkinNotFoundKeys;
 	bool m_HasInitialSkinDirectoryScan = false;
 	std::optional<std::chrono::nanoseconds> m_ContainerUpdateTime;

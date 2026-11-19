@@ -3820,6 +3820,9 @@ if(CLIENT)
     components/qmclient/skin_name_index.h
     components/qmclient/skin_prepared_textures.h
     components/qmclient/skin_prepared_visuals.h
+    components/qmclient/skin_source.h
+    components/qmclient/skin_source_registry.cpp
+    components/qmclient/skin_source_registry.h
     components/qmclient/snapshot_entities.h
     components/qmclient/spectator_selector_layout.h
     components/qmclient/shortcut_held_bind.h
@@ -5272,6 +5275,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_chat_bubble_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp
     src/test/unit/qmclient/client/qm_skin_name_index_test.cpp
+    src/test/unit/qmclient/client/qm_skin_source_registry_test.cpp
     src/test/unit/qmclient/client/qm_skin_outline_test.cpp
     src/test/unit/qmclient/client/qm_scoreboard_skin_test.cpp
     src/test/unit/qmclient/client/qm_scoreboard_media_test.cpp
@@ -5505,6 +5509,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/screenshot_image_job.cpp
     src/game/client/components/qmclient/watermark_compositor.cpp
     src/game/client/components/qmclient/skin_source_job.cpp
+    src/game/client/components/qmclient/skin_source_registry.cpp
     src/game/client/components/qmclient/config_package.cpp
     src/game/client/components/qmclient/friend_code.cpp
     src/game/client/components/qmclient/search_answers.cpp

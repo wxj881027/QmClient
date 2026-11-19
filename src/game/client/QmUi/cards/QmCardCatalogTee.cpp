@@ -563,6 +563,21 @@ void CMenus::RenderSettingsTeeOptions(CUIRect Content, const SSettingsContentMet
 		};
 		ShouldRefresh = Checkbox("tee-download-skins", Localize("Download skins"), &g_Config.m_ClDownloadSkins, 0.0f);
 		ShouldRefresh = Checkbox("tee-download-community-skins", Localize("Download community skins"), &g_Config.m_ClDownloadCommunitySkins, TeeMetrics.m_LineSpacing) || ShouldRefresh;
+		CUIRect DdStatsRow;
+		if(Column.Control("tee-download-ddstats-skins", TeeMetrics.m_LineHeight, DdStatsRow, TeeMetrics.m_LineSpacing))
+		{
+			SLabelProperties DdStatsLabelProps;
+			DdStatsLabelProps.m_DisallowNewline = true;
+			DdStatsLabelProps.m_StopAtEnd = true;
+			DdStatsLabelProps.m_MinimumFontSize = 6.0f;
+			const bool Changed = DoSettingsButton_CheckBox(SETTINGS_TEE, -1, -1, &g_Config.m_QmDownloadDdStatsSkins, "tee-download-ddstats-skins",
+				Localize("Download DDStats skins (including unapproved skins)"), g_Config.m_QmDownloadDdStatsSkins, &DdStatsRow, DdStatsLabelProps, true, TeeMetrics.m_SmallSize);
+			if(Changed && Column.Input() && !Ui()->RenderOnly())
+			{
+				g_Config.m_QmDownloadDdStatsSkins ^= 1;
+				ShouldRefresh = true;
+			}
+		}
 		ShouldRefresh = Checkbox("tee-vanilla-skins-only", Localize("Vanilla skins only"), &g_Config.m_ClVanillaSkinsOnly, TeeMetrics.m_LineSpacing) || ShouldRefresh;
 		Checkbox("tee-fat-skins", Localize("Fat skins (DDFat)"), &g_Config.m_ClFatSkins, TeeMetrics.m_LineSpacing);
 		Checkbox("tee-show-skin-metadata", Localize("Show skin date and author"), &g_Config.m_QmSkinShowMetadata, TeeMetrics.m_LineSpacing);

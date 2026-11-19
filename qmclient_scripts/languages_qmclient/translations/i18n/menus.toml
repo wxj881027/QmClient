@@ -4063,6 +4063,22 @@ turkish = "Topluluk görünümlerini indir"
 polish = "Pobierz skórki społeczności"
 
 [[message]]
+key = "Download DDStats skins (including unapproved skins)"
+[message.translations]
+simplified_chinese = "下载 DDStats 皮肤（含未审批皮肤）"
+traditional_chinese = "下載 DDStats 皮膚（含未審批皮膚）"
+japanese = "DDStats スキンをダウンロード（未承認スキンを含む）"
+korean = "DDStats 스킨 다운로드 (미승인 스킨 포함)"
+russian = "Скачивать скины DDStats (включая неодобренные)"
+german = "DDStats-Skins herunterladen (inkl. nicht freigegebener Skins)"
+spanish = "Descargar skins de DDStats (incluidas las no aprobadas)"
+french = "Télécharger les skins DDStats (y compris les skins non approuvés)"
+brazilian_portuguese = "Baixar skins do DDStats (incluindo skins não aprovadas)"
+portuguese = "Transferir skins do DDStats (incluindo skins não aprovadas)"
+turkish = "DDStats skinlerini indir (onaylanmamış skinler dahil)"
+polish = "Pobieraj skórki DDStats (w tym niezatwierdzone)"
+
+[[message]]
 key = "Download failed"
 [message.translations]
 simplified_chinese = "下载失败"

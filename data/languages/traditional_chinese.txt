@@ -18791,3 +18791,6 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == 簡體中文翻譯由 DDNet 團隊和 QmClient 貢獻者維護
+
+Download DDStats skins (including unapproved skins)
+== 下載 DDStats 皮膚（含未審批皮膚）

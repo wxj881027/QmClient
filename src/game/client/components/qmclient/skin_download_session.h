@@ -6,10 +6,15 @@
 #include <engine/http.h>
 #include <engine/shared/jobs.h>
 
+#include <game/client/components/qmclient/skin_source.h>
+
+#include <algorithm>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 // CPU 作业只读取或解码图片；网络等待由主线程轮询，不占通用作业线程。
 class IQmSkinDataJob : public IJob
@@ -33,10 +38,26 @@ public:
 	using FDecode = std::function<std::shared_ptr<IQmSkinDataJob>(std::shared_ptr<IHttpRequest>)>;
 	using FSubmit = std::function<void(std::shared_ptr<IJob>)>;
 
-	CQmSkinDownloadSession(IHttp &Http, std::string OfficialUrl, std::string CommunityUrl,
-		std::shared_ptr<IQmSkinDataJob> pCacheJob, FRequest Request, FDecode Decode, FSubmit Submit) :
-		m_Http(Http), m_OfficialUrl(std::move(OfficialUrl)), m_CommunityUrl(std::move(CommunityUrl)), m_pJob(std::move(pCacheJob)), m_Request(std::move(Request)), m_Decode(std::move(Decode)), m_Submit(std::move(Submit))
+	struct SSource
 	{
+		std::string m_Url;
+		ESkinSource m_Source;
+	};
+
+	CQmSkinDownloadSession(IHttp &Http, std::vector<SSource> vSources,
+		std::shared_ptr<IQmSkinDataJob> pCacheJob, FRequest Request, FDecode Decode, FSubmit Submit) :
+		m_Http(Http), m_vSources(std::move(vSources)), m_pJob(std::move(pCacheJob)), m_Request(std::move(Request)), m_Decode(std::move(Decode)), m_Submit(std::move(Submit))
+	{
+		std::vector<SSource> vFilteredSources;
+		for(const SSource &Source : m_vSources)
+		{
+			if(Source.m_Url.empty())
+				continue;
+			if(std::any_of(vFilteredSources.begin(), vFilteredSources.end(), [&](const SSource &Existing) { return Existing.m_Url == Source.m_Url; }))
+				continue;
+			vFilteredSources.push_back(Source);
+		}
+		m_vSources = std::move(vFilteredSources);
 		m_Submit(m_pJob);
 	}
 	~CQmSkinDownloadSession() { Cancel(); }
@@ -60,6 +81,11 @@ public:
 					m_pReadyJob = std::move(m_pJob);
 				else
 					m_pJob.reset();
+				if(m_vSources.empty())
+				{
+					m_Result = Valid ? EResult::DONE : EResult::NOT_FOUND;
+					return Valid ? EResult::READY : m_Result;
+				}
 				StartRequest(false);
 				return Valid ? EResult::READY : EResult::WAITING;
 			}
@@ -68,6 +94,7 @@ public:
 			m_NeedsValidation = false;
 			if(Valid)
 			{
+				m_DownloadedSource = m_vSources[m_SourceIndex].m_Source;
 				m_pReadyJob = std::move(m_pJob);
 				m_Result = EResult::DONE;
 				m_pRequest.reset();
@@ -75,6 +102,8 @@ public:
 			}
 			return Finish(EResult::ERROR);
 		}
+		if(m_vSources.empty())
+			return Finish(m_HasCache ? EResult::DONE : EResult::NOT_FOUND);
 		if(!m_pRequest->Done())
 			return EResult::WAITING;
 		if(m_pRequest->State() != EHttpState::DONE)
@@ -83,11 +112,11 @@ public:
 			return Finish(EResult::ERROR);
 		}
 		const int Status = m_pRequest->StatusCode();
-		if(Status == 404 && !m_Community && !m_CommunityUrl.empty() && m_CommunityUrl != m_OfficialUrl)
+		if(Status == 404 && m_SourceIndex + 1 < m_vSources.size())
 		{
 			ValidateRequest(false);
-			m_Community = true;
-			// 两个来源的修改时间不能互相充当条件请求的验证器。
+			++m_SourceIndex;
+			// 不同来源的修改时间不能互相充当条件请求的验证器。
 			StartRequest(true);
 			return EResult::WAITING;
 		}
@@ -95,7 +124,10 @@ public:
 		{
 			ValidateRequest(m_HasCache);
 			if(m_HasCache)
+			{
+				m_DownloadedSource = m_vSources[m_SourceIndex].m_Source;
 				return Finish(EResult::DONE);
+			}
 			if(!m_RetriedUnconditional)
 			{
 				m_RetriedUnconditional = true;
@@ -115,6 +147,7 @@ public:
 	}
 
 	std::shared_ptr<IQmSkinDataJob> TakeReadyJob() { return std::exchange(m_pReadyJob, nullptr); }
+	const std::optional<ESkinSource> &DownloadedSource() const { return m_DownloadedSource; }
 	void Cancel()
 	{
 		if(m_pJob)
@@ -137,7 +170,7 @@ public:
 private:
 	void StartRequest(bool Unconditional)
 	{
-		m_pRequest = m_Request((m_Community ? m_CommunityUrl : m_OfficialUrl).c_str(), Unconditional);
+		m_pRequest = m_Request(m_vSources[m_SourceIndex].m_Url.c_str(), Unconditional);
 		m_pRequest->Timeout(CTimeout{10000, 30000, 8192, 10});
 		m_pRequest->MaxResponseSize(10 * 1024 * 1024);
 		m_pRequest->ValidateBeforeOverwrite(true);
@@ -162,8 +195,7 @@ private:
 		return m_Result;
 	}
 	IHttp &m_Http;
-	std::string m_OfficialUrl;
-	std::string m_CommunityUrl;
+	std::vector<SSource> m_vSources;
 	std::shared_ptr<IQmSkinDataJob> m_pJob;
 	std::shared_ptr<IQmSkinDataJob> m_pReadyJob;
 	std::shared_ptr<IHttpRequest> m_pRequest;
@@ -173,7 +205,8 @@ private:
 	EResult m_Result = EResult::WAITING;
 	bool m_CachePhase = true;
 	bool m_HasCache = false;
-	bool m_Community = false;
+	size_t m_SourceIndex = 0;
+	std::optional<ESkinSource> m_DownloadedSource;
 	bool m_RetriedUnconditional = false;
 	bool m_NeedsValidation = false;
 };

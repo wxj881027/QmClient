@@ -102,6 +102,7 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_tee_skin_options[] = {
 		{Localizable("Download community skins"), nullptr, "下载社区皮肤"},
+		{Localizable("Download DDStats skins (including unapproved skins)"), nullptr, "下载 DDStats 皮肤 含未审批皮肤"},
 		{Localizable("Download skins"), nullptr, "下载官方皮肤"},
 		{Localizable("Fat skins (DDFat)"), nullptr, "胖胖的皮肤（DDFat）"},
 		{Localizable("Show skin date and author"), nullptr, "显示皮肤日期和作者"},
@@ -109,6 +110,8 @@ namespace
 		{Localizable("Vanilla skins only"), nullptr, "只显示原生皮肤"},
 		{nullptr, "cl_download_community_skins", nullptr},
 		{nullptr, "cl_download_skins", nullptr},
+		{nullptr, "qm_ddstats_skin_download_url", nullptr},
+		{nullptr, "qm_download_ddstats_skins", nullptr},
 		{nullptr, "cl_fat_skins", nullptr},
 		{nullptr, "cl_skin_prefix", nullptr},
 		{nullptr, "cl_vanilla_skins_only", nullptr},

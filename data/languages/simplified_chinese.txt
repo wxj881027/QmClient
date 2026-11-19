@@ -23436,3 +23436,6 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == 简体中文翻译由 DDNet 队伍和 QmClient 贡献者维护
+
+Download DDStats skins (including unapproved skins)
+== 下载 DDStats 皮肤（含未审批皮肤）

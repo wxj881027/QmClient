@@ -173,6 +173,51 @@ TEST(SkinSources, LocalLoadUsesCanonicalDiskName)
 	EXPECT_STREQ(CSkins::ResolveLoadName(EType::DOWNLOAD, "paladin", Index), "paladin");
 }
 
+TEST(SkinSources, ListVisibilityFollowsSelectedDownloadTiers)
+{
+	EXPECT_TRUE(SkinSourceVisible(ESkinSource::LOCAL, false, false, false));
+	EXPECT_TRUE(SkinSourceVisible(ESkinSource::UNKNOWN, false, false, false));
+
+	EXPECT_FALSE(SkinSourceVisible(ESkinSource::OFFICIAL, false, true, true));
+	EXPECT_TRUE(SkinSourceVisible(ESkinSource::OFFICIAL, true, false, false));
+	EXPECT_FALSE(SkinSourceVisible(ESkinSource::COMMUNITY, true, false, true));
+	EXPECT_TRUE(SkinSourceVisible(ESkinSource::COMMUNITY, false, true, false));
+	EXPECT_FALSE(SkinSourceVisible(ESkinSource::DDSTATS, true, true, false));
+	EXPECT_TRUE(SkinSourceVisible(ESkinSource::DDSTATS, false, false, true));
+
+	EXPECT_TRUE(SkinSourceVisible(ESkinSource::CUSTOM_OFFICIAL, true, false, false));
+	EXPECT_FALSE(SkinSourceVisible(ESkinSource::CUSTOM_OFFICIAL, false, true, true));
+	EXPECT_TRUE(SkinSourceVisible(ESkinSource::CUSTOM_COMMUNITY, false, true, false));
+	EXPECT_FALSE(SkinSourceVisible(ESkinSource::CUSTOM_COMMUNITY, true, false, true));
+}
+
+TEST(SkinSources, DownloadGateFollowsSourceToggles)
+{
+	const int Official = g_Config.m_ClDownloadSkins;
+	const int Community = g_Config.m_ClDownloadCommunitySkins;
+	const int DdStats = g_Config.m_QmDownloadDdStatsSkins;
+	g_Config.m_ClDownloadSkins = 0;
+	g_Config.m_ClDownloadCommunitySkins = 1;
+	g_Config.m_QmDownloadDdStatsSkins = 0;
+
+	EXPECT_FALSE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSource::OFFICIAL));
+	EXPECT_FALSE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSource::CUSTOM_OFFICIAL));
+	EXPECT_TRUE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSource::COMMUNITY));
+	EXPECT_TRUE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSource::CUSTOM_COMMUNITY));
+	EXPECT_FALSE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSource::DDSTATS));
+	EXPECT_TRUE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSource::UNKNOWN));
+
+	g_Config.m_ClDownloadSkins = 0;
+	g_Config.m_ClDownloadCommunitySkins = 0;
+	g_Config.m_QmDownloadDdStatsSkins = 1;
+	EXPECT_TRUE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSource::DDSTATS));
+	EXPECT_TRUE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSource::UNKNOWN));
+
+	g_Config.m_ClDownloadSkins = Official;
+	g_Config.m_ClDownloadCommunitySkins = Community;
+	g_Config.m_QmDownloadDdStatsSkins = DdStats;
+}
+
 TEST(Skins, UsageListEntriesThatCannotBeUnloadedAreDiscarded)
 {
 	using EState = CSkins::CSkinContainer::EState;

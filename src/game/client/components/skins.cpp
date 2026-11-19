@@ -45,6 +45,29 @@ using namespace std::chrono_literals;
 static constexpr int SKIN_QUEUE_INTERVAL_UNITS_PER_SECOND = 1000;
 static constexpr const char *OFFICIAL_SKIN_INDEX_URL = "https://ddnet.org/skins/skin/skins.json";
 static constexpr const char *OFFICIAL_SKIN_INDEX_CACHE_PATH = "downloadedskins/official_skins.json";
+static constexpr const char *DEFAULT_OFFICIAL_SKIN_URL = "https://skins.ddnet.org/skin/";
+static constexpr const char *DEFAULT_COMMUNITY_SKIN_URL = "https://skins.ddnet.org/skin/community/";
+static constexpr const char *DEFAULT_DDSTATS_SKIN_URL = "https://skins.ddstats.tw/";
+
+static ESkinSource ClassifyDownloadSource(ESkinSource Tier, const char *pUrl)
+{
+	if(pUrl == nullptr || pUrl[0] == '\0')
+		return Tier;
+	if(str_startswith_nocase(pUrl, DEFAULT_DDSTATS_SKIN_URL) != nullptr)
+		return ESkinSource::DDSTATS;
+	if(str_comp_nocase(pUrl, DEFAULT_OFFICIAL_SKIN_URL) == 0)
+		return ESkinSource::OFFICIAL;
+	if(str_comp_nocase(pUrl, DEFAULT_COMMUNITY_SKIN_URL) == 0)
+		return ESkinSource::COMMUNITY;
+	return Tier == ESkinSource::OFFICIAL ? ESkinSource::CUSTOM_OFFICIAL : ESkinSource::CUSTOM_COMMUNITY;
+}
+
+static ESkinSource SkinSourceForScanEntry(const CSkinSourceRegistry &Registry, bool Local, const char *pName)
+{
+	if(Local)
+		return ESkinSource::LOCAL;
+	return Registry.Find(pName).value_or(ESkinSource::UNKNOWN);
+}
 
 static int &SkinQueueEnabledVar(int Dummy)
 {
@@ -680,7 +703,18 @@ void CSkins::CSkinContainer::EnsureAlwaysLoaded()
 
 CSkins::CSkinContainer::EState CSkins::CSkinContainer::DetermineInitialState() const
 {
-	return InitialStateForSource(m_Type, m_AlwaysLoaded, !g_Config.m_ClVanillaSkinsOnly || m_Vanilla, g_Config.m_ClDownloadSkins);
+	return InitialStateForSource(m_Type, m_AlwaysLoaded, !g_Config.m_ClVanillaSkinsOnly || m_Vanilla, SourceDownloadAllowed(EffectiveSkinSource()));
+}
+
+ESkinSource CSkins::CSkinContainer::EffectiveSkinSource() const
+{
+	if(m_Type == EType::LOCAL)
+		return ESkinSource::LOCAL;
+	// 官方索引一旦确认发布日期，就以官方来源为准；其他来源只用于未审批皮肤。
+	if(m_OfficialReleaseDate != 0)
+		return ESkinSource::OFFICIAL;
+	// 没有持久化来源的旧缓存继续显示，等待下一次条件请求补齐来源，避免升级后列表突然清空。
+	return m_SkinSource;
 }
 
 void CSkins::CSkinContainer::SetState(EState State, ESettingsResourcePriority Priority)
@@ -1406,6 +1440,7 @@ void CSkins::OnConsoleInit()
 void CSkins::OnInit()
 {
 	RefreshEventSkins();
+	m_SkinSources.Load(Storage());
 
 	// load skins
 	Refresh([]() {});
@@ -1413,6 +1448,7 @@ void CSkins::OnInit()
 
 void CSkins::OnShutdown()
 {
+	m_SkinSources.Save(Storage());
 	if(m_pSkinDirectoryScanJob)
 	{
 		m_pSkinDirectoryScanJob->Abort();
@@ -2342,6 +2378,9 @@ void CSkins::UpdateSkinDownloads(CSkinLoadingStats &Stats)
 			continue;
 		}
 		const auto Result = pContainer->m_pDownloadSession->Poll();
+		const std::optional<ESkinSource> &DownloadedSource = pContainer->m_pDownloadSession->DownloadedSource();
+		if(DownloadedSource.has_value())
+			RecordSkinSource(pContainer, DownloadedSource.value());
 		if(Result == CQmSkinDownloadSession::EResult::READY)
 		{
 			pContainer->m_pLoadJob = std::static_pointer_cast<CAbstractSkinLoadJob>(pContainer->m_pDownloadSession->TakeReadyJob());
@@ -2365,6 +2404,18 @@ void CSkins::UpdateSkinDownloads(CSkinLoadingStats &Stats)
 			continue;
 		}
 		++It;
+	}
+}
+
+void CSkins::RecordSkinSource(CSkinContainer *pSkinContainer, ESkinSource Source)
+{
+	if(pSkinContainer == nullptr || Source == ESkinSource::UNKNOWN || Source == ESkinSource::LOCAL)
+		return;
+	pSkinContainer->SetSkinSource(Source);
+	if(m_SkinSources.Set(pSkinContainer->Name(), Source))
+	{
+		m_SkinSources.Save(Storage());
+		m_SkinList.ForceRefresh();
 	}
 }
 
@@ -2936,6 +2987,14 @@ void CSkins::QueueSkinListPlanJob(int Dummy)
 		{
 			return;
 		}
+		if(!SkinSourceVisible(pSkinContainer->EffectiveSkinSource(), g_Config.m_ClDownloadSkins != 0, g_Config.m_ClDownloadCommunitySkins != 0, g_Config.m_QmDownloadDdStatsSkins != 0) &&
+			!SelectedMainColor &&
+			!SelectedDummyColor &&
+			!Favorite &&
+			!ForceShowNotFound)
+		{
+			return;
+		}
 
 		if(HasListEntry(pSkinContainer, EffectiveColorKey))
 			return;
@@ -3029,7 +3088,9 @@ void CSkins::ProcessSkinDirectoryScanJob()
 			// 加载失败时仍保留旧预览；下次刷新与已发布版本比较，允许重新尝试。
 			const SQmSkinSourceIdentity OldSource = pSkinContainer->m_State == CSkinContainer::EState::LOADED ? pSkinContainer->m_LoadedSource.value_or(RequestedSource) : RequestedSource;
 			const SQmSkinSourceIdentity NewSource{Entry.m_Type == CSkinContainer::EType::DOWNLOAD, Entry.m_StorageType, Entry.m_LastModified};
-			const auto RefreshState = CSkinContainer::SourceRefreshState(OldSource, NewSource, pSkinContainer->m_State, pSkinContainer->m_AlwaysLoaded, !g_Config.m_ClVanillaSkinsOnly || pSkinContainer->m_Vanilla, g_Config.m_ClDownloadSkins);
+			const ESkinSource ScannedSource = SkinSourceForScanEntry(m_SkinSources, Entry.m_Type == CSkinContainer::EType::LOCAL, Entry.m_Name.c_str());
+			const bool DownloadAllowed = Entry.m_Type == CSkinContainer::EType::LOCAL || CSkinContainer::SourceDownloadAllowed(ScannedSource);
+			const auto RefreshState = CSkinContainer::SourceRefreshState(OldSource, NewSource, pSkinContainer->m_State, pSkinContainer->m_AlwaysLoaded, !g_Config.m_ClVanillaSkinsOnly || pSkinContainer->m_Vanilla, DownloadAllowed);
 			if(RefreshState.has_value())
 			{
 				pSkinContainer->m_pDownloadSession.reset();
@@ -3041,6 +3102,7 @@ void CSkins::ProcessSkinDirectoryScanJob()
 				}
 				pSkinContainer->m_Type = Entry.m_Type;
 				pSkinContainer->m_StorageType = Entry.m_StorageType;
+				pSkinContainer->SetSkinSource(ScannedSource);
 				pSkinContainer->SetLastModified(Entry.m_LastModified);
 				// 更新期间继续显示旧纹理，新数据上传完成后统一替换并通知所有预览。
 				pSkinContainer->SetState(RefreshState.value(), Priority);
@@ -3051,6 +3113,7 @@ void CSkins::ProcessSkinDirectoryScanJob()
 
 		CSkinContainer SkinContainer(this, Entry.m_Name.c_str(), Entry.m_Type, Entry.m_StorageType);
 		auto &&pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
+		pSkinContainer->SetSkinSource(SkinSourceForScanEntry(m_SkinSources, Entry.m_Type == CSkinContainer::EType::LOCAL, Entry.m_Name.c_str()));
 		pSkinContainer->SetLastModified(Entry.m_LastModified);
 		pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
 		m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)});
@@ -3822,10 +3885,23 @@ std::unique_ptr<CQmSkinDownloadSession> CSkins::CreateSkinDownloadSession(const 
 	const std::string Name = CanonicalSkinName(pName);
 	char aEscapedName[256];
 	EscapeUrl(aEscapedName, Name.c_str());
-	const std::string OfficialUrl = std::string(g_Config.m_ClSkinDownloadUrl) + aEscapedName + ".png";
-	const std::string CommunityUrl = g_Config.m_ClDownloadCommunitySkins ? std::string(g_Config.m_ClSkinCommunityDownloadUrl) + aEscapedName + ".png" : "";
+	std::vector<CQmSkinDownloadSession::SSource> vSources;
+	const auto AddSource = [&](const char *pBaseUrl, ESkinSource Tier) {
+		if(pBaseUrl == nullptr || pBaseUrl[0] == '\0')
+			return;
+		const ESkinSource Source = Tier == ESkinSource::DDSTATS ? ESkinSource::DDSTATS : ClassifyDownloadSource(Tier, pBaseUrl);
+		if(Source == ESkinSource::DDSTATS && g_Config.m_QmDownloadDdStatsSkins == 0)
+			return;
+		vSources.push_back({std::string(pBaseUrl) + aEscapedName + ".png", Source});
+	};
+	if(g_Config.m_ClDownloadSkins)
+		AddSource(g_Config.m_ClSkinDownloadUrl, ESkinSource::OFFICIAL);
+	if(g_Config.m_ClDownloadCommunitySkins)
+		AddSource(g_Config.m_ClSkinCommunityDownloadUrl, ESkinSource::COMMUNITY);
+	if(g_Config.m_QmDownloadDdStatsSkins)
+		AddSource(g_Config.m_QmDdStatsSkinDownloadUrl, ESkinSource::DDSTATS);
 	const std::string Path = "downloadedskins/" + Name + ".png";
-	return std::make_unique<CQmSkinDownloadSession>(*Http(), OfficialUrl, CommunityUrl, std::make_shared<CQmSkinDownloadJob>(Storage(), Name.c_str(), PrepareSkinData), [this, Path](const char *pUrl, bool Unconditional) -> std::shared_ptr<IHttpRequest> {
+	return std::make_unique<CQmSkinDownloadSession>(*Http(), std::move(vSources), std::make_shared<CQmSkinDownloadJob>(Storage(), Name.c_str(), PrepareSkinData), [this, Path](const char *pUrl, bool Unconditional) -> std::shared_ptr<IHttpRequest> {
 			auto pRequest = HttpGetBoth(pUrl, Storage(), Path.c_str(), IStorage::TYPE_SAVE);
 			pRequest->SkipByFileTime(!Unconditional);
 			return pRequest; }, [this, Name](std::shared_ptr<IHttpRequest> pResponse) -> std::shared_ptr<IQmSkinDataJob> { return std::make_shared<CQmSkinDownloadJob>(Storage(), Name.c_str(), PrepareSkinData, std::move(pResponse)); }, [this](std::shared_ptr<IJob> pJob) { Engine()->AddJob(std::move(pJob)); });

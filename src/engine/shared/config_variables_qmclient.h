@@ -231,6 +231,8 @@ MACRO_CONFIG_INT(QmShortServerNames, qm_short_server_names, 1, 0, 1, CFGFLAG_CLI
 MACRO_CONFIG_INT(QmPingCacheMaxAgeHours, qm_ping_cache_max_age_hours, 72, 0, 8760, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discard cached server pings older than this many hours (0 = never expire)")
 MACRO_CONFIG_INT(QmSkinSortMode, qm_skin_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin list sort mode (0=Name, 1=Release date)")
 MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show skin release date and author")
+MACRO_CONFIG_STR(QmDdStatsSkinDownloadUrl, qm_ddstats_skin_download_url, 100, "https://skins.ddstats.tw/", CFGFLAG_CLIENT | CFGFLAG_SAVE, "URL for downloading DDStats skins")
+MACRO_CONFIG_INT(QmDownloadDdStatsSkins, qm_download_ddstats_skins, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Download DDStats skins (including unapproved skins)")
 MACRO_CONFIG_INT(QmSkinOutlineLocal, qm_skin_outline_local, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show generated skin outline for local tees")
 MACRO_CONFIG_INT(QmSkinOutlineOthers, qm_skin_outline_others, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show generated skin outline for other tees")
 MACRO_CONFIG_COL(QmSkinOutlineColor, qm_skin_outline_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Generated skin outline color")

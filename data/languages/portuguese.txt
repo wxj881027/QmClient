@@ -18791,3 +18791,6 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == Tradução portuguesa pela equipa DDNet e contribuidores QmClient
+
+Download DDStats skins (including unapproved skins)
+== Transferir skins do DDStats (incluindo skins não aprovadas)

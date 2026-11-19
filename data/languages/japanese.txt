@@ -18791,3 +18791,6 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == 日本語翻訳は DDNet チームと QmClient コントリビューターによるものです
+
+Download DDStats skins (including unapproved skins)
+== DDStats スキンをダウンロード（未承認スキンを含む）

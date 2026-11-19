@@ -18791,3 +18791,6 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == 한국어 번역은 DDNet 팀과 QmClient 기여자가 유지 관리합니다
+
+Download DDStats skins (including unapproved skins)
+== DDStats 스킨 다운로드 (미승인 스킨 포함)

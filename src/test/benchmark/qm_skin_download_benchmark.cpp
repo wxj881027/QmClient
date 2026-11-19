@@ -42,7 +42,7 @@ namespace
 		std::vector<std::unique_ptr<CQmSkinDownloadSession>> vSessions;
 		for(int i = 0; i < State.range(0); ++i)
 		{
-			auto pSession = std::make_unique<CQmSkinDownloadSession>(Http, "https://benchmark.test/skin.png", "", std::make_shared<CUnavailableSkinJob>(), [](const char *, bool) { return std::make_shared<CPendingSkinRequest>(); }, [](std::shared_ptr<IHttpRequest>) -> std::shared_ptr<IQmSkinDataJob> { return nullptr; }, [](std::shared_ptr<IJob>) {});
+			auto pSession = std::make_unique<CQmSkinDownloadSession>(Http, std::vector<CQmSkinDownloadSession::SSource>{{"https://benchmark.test/skin.png", ESkinSource::OFFICIAL}}, std::make_shared<CUnavailableSkinJob>(), [](const char *, bool) { return std::make_shared<CPendingSkinRequest>(); }, [](std::shared_ptr<IHttpRequest>) -> std::shared_ptr<IQmSkinDataJob> { return nullptr; }, [](std::shared_ptr<IJob>) {});
 			if(pSession->Poll() != CQmSkinDownloadSession::EResult::WAITING)
 			{
 				State.SkipWithError("pending session setup failed");

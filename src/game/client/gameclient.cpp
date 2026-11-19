@@ -834,6 +834,8 @@ void CGameClient::OnConsoleInit()
 	pConsole->Chain("cl_skin_prefix", ConchainRefreshSkins, this);
 	pConsole->Chain("cl_download_skins", ConchainRefreshSkins, this);
 	pConsole->Chain("cl_download_community_skins", ConchainRefreshSkins, this);
+	pConsole->Chain("qm_download_ddstats_skins", ConchainRefreshSkins, this);
+	pConsole->Chain("qm_ddstats_skin_download_url", ConchainRefreshSkins, this);
 	pConsole->Chain("cl_vanilla_skins_only", ConchainRefreshSkins, this);
 	pConsole->Chain("events", ConchainRefreshEventSkins, this);
 
