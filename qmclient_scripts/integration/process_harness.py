@@ -177,9 +177,13 @@ class Process:
 		user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
 		user32.BringWindowToTop.argtypes = [wintypes.HWND]
 		user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+		user32.SetActiveWindow.argtypes = [wintypes.HWND]
+		user32.SetActiveWindow.restype = wintypes.HWND
 		user32.GetForegroundWindow.restype = wintypes.HWND
 		user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
 		user32.SetFocus.argtypes = [wintypes.HWND]
+		user32.SendMessageTimeoutW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM, wintypes.UINT, wintypes.UINT, ctypes.POINTER(ctypes.c_size_t)]
+		user32.SendMessageTimeoutW.restype = wintypes.LPARAM
 		kernel32.GetCurrentThreadId.restype = wintypes.DWORD
 		windows: list[tuple[int, int]] = []
 
@@ -212,12 +216,56 @@ class Process:
 			user32.ShowWindow(window, 9)
 			user32.BringWindowToTop(window)
 			user32.SetForegroundWindow(window)
+			user32.SetActiveWindow(window)
 			user32.SetFocus(window)
+			# SetForegroundWindow 只改变窗口站的前台归属；SDL 的 WindowActive()
+			# 读的是 SDL_WINDOW_INPUT_FOCUS。后台进程受前台锁定影响时，后者可能
+			# 仍为假，因此把焦点消息直接投递给目标窗口线程，避免截图请求空等。
+			message_result = ctypes.c_size_t()
+			focus_messages_sent = True
+			for message, wparam, lparam in ((0x001C, True, 0), (0x0006, 1, 0), (0x0007, 0, 0)):  # WM_ACTIVATEAPP / WM_ACTIVATE / WM_SETFOCUS
+				if not user32.SendMessageTimeoutW(window, message, wparam, lparam, 0x0002, 1000, ctypes.byref(message_result)):
+					focus_messages_sent = False
+					break
 			for thread in reversed(attached_threads):
 				user32.AttachThreadInput(current_thread, thread, False)
-			if user32.GetForegroundWindow() == window:
+			if focus_messages_sent and user32.GetForegroundWindow() == window:
 				return True
 		return False
+
+	def take_screenshot(self, name: str, timeout: float = 20.0, focus_timeout: float = 5.0) -> str:
+		"""聚焦一次真实窗口并只提交一次截图，等待本次请求明确成功或失败。
+
+		截图命令不能在未聚焦时反复提交：客户端会保留未完成的请求，轮询重发只会
+		持续覆盖同一个请求，既无法提高成功率，也会让失败现场看起来像无限截图。
+		"""
+		focus_deadline = time.monotonic() + focus_timeout
+		while not self.focus_window():
+			if not self.is_alive():
+				raise RuntimeError(f"{self.name}: exited before the client window could be focused")
+			if time.monotonic() >= focus_deadline:
+				raise TimeoutError(f"{self.name}: could not focus the client window for screenshot '{name}'")
+			time.sleep(0.05)
+
+		offset = len(self._lines)
+		# 控制台的 screenshot 命令没有文件名参数，落盘名始终由引擎生成。
+		self.command("screenshot")
+		deadline = time.monotonic() + timeout
+		while time.monotonic() < deadline:
+			if not self.is_alive():
+				raise RuntimeError(f"{self.name}: exited while saving screenshot '{name}'")
+			for raw_line in self._lines[offset:]:
+				line = log_message(raw_line)
+				if line.startswith("client: Saved screenshot to '"):
+					return line
+				if "dropping the screenshot request" in line:
+					raise RuntimeError(f"{self.name}: screenshot '{name}' was dropped because the window lost foreground focus")
+				if "Failed to process screenshot" in line:
+					raise RuntimeError(f"{self.name}: screenshot '{name}' failed during processing")
+				if "Failed to save screenshot" in line:
+					raise RuntimeError(f"{self.name}: screenshot '{name}' failed while writing the image")
+			time.sleep(0.05)
+		raise TimeoutError(f"{self.name}: timed out waiting for screenshot '{name}'")
 
 	def stop(self) -> None:
 		if self._fifo is not None:
