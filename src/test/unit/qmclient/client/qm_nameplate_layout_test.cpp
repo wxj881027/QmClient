@@ -107,21 +107,26 @@ TEST(QmNameplatePartLayout, HookPlaceholderReservesOnlyVerticalSpace)
 
 TEST(QmNameplateCoreLayout, DirectionBaselineDoesNotFollowHookHeightChanges)
 {
-	std::array<float, kNameplateCoreRowCount> Heights{24, 16, 43, 12, 57};
+	std::array<float, kNameplateCoreRowCount> Heights{24, 16, 43, 12, 57, 57, 57};
 	const size_t Hook = static_cast<size_t>(ENameplateCoreRow::HOOK);
-	const size_t Keys = static_cast<size_t>(ENameplateCoreRow::KEYS);
-	const float OriginalDirectionBaseline = QmNameplateCoreRowBaselines(Heights)[Keys];
+	const auto aOriginalBaselines = QmNameplateCoreRowBaselines(Heights);
 	for(float HookHeight : {0.0f, 24.0f, 43.0f, 100.0f})
 	{
 		SCOPED_TRACE(HookHeight);
 		Heights[Hook] = HookHeight;
-		EXPECT_FLOAT_EQ(QmNameplateCoreRowBaselines(Heights)[Keys], OriginalDirectionBaseline);
+		const auto aBaselines = QmNameplateCoreRowBaselines(Heights);
+		for(const auto Row : {ENameplateCoreRow::KEYS_LEFT, ENameplateCoreRow::KEYS_UP, ENameplateCoreRow::KEYS_RIGHT})
+		{
+			const size_t Index = static_cast<size_t>(Row);
+			SCOPED_TRACE(Index);
+			EXPECT_FLOAT_EQ(aBaselines[Index], aOriginalBaselines[Index]);
+		}
 	}
 }
 
 TEST(QmNameplateCoreLayout, PreviewReservationIsStableAcrossHookAndDirectionSizeChanges)
 {
-	std::array<float, kNameplateCoreRowCount> Heights{24, 16, 43, 12, 57};
+	std::array<float, kNameplateCoreRowCount> Heights{24, 16, 43, 12, 57, 57, 57};
 	const float Reserved = QmNameplatePreviewContentSpan(Heights);
 	for(float HookHeight : {0.0f, 24.0f, 43.0f, 100.0f})
 		for(float DirectionHeight : {0.0f, 38.0f, 57.0f, 150.0f})
@@ -129,7 +134,8 @@ TEST(QmNameplateCoreLayout, PreviewReservationIsStableAcrossHookAndDirectionSize
 			SCOPED_TRACE(HookHeight);
 			SCOPED_TRACE(DirectionHeight);
 			Heights[static_cast<size_t>(ENameplateCoreRow::HOOK)] = HookHeight;
-			Heights[static_cast<size_t>(ENameplateCoreRow::KEYS)] = DirectionHeight;
+			for(const auto Row : {ENameplateCoreRow::KEYS_LEFT, ENameplateCoreRow::KEYS_UP, ENameplateCoreRow::KEYS_RIGHT})
+				Heights[static_cast<size_t>(Row)] = DirectionHeight;
 			EXPECT_FLOAT_EQ(QmNameplatePreviewContentSpan(Heights), Reserved);
 		}
 	Heights[static_cast<size_t>(ENameplateCoreRow::NAME)] += 20.0f;
