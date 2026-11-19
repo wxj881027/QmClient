@@ -199,9 +199,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.8c 覆盖式滚动条（overlay scrollbar）
 
-- 定义：铺在内容上层、不占内容宽度的滚动条。轨道长度等于宿主视口，两端各内缩一档；滑块长度按「视口高 / 内容总高 × 轨道」求，夹在最小滑块与轨道之间；位置由进度决定（0 = 顶部/最旧）。内容装得下时不出现。
-- 唯一实现：`ui_widget::ResolveOverlayScrollbarFrame`（`src/game/client/QmUi/UiForms.h`，几何本体委托 `CQmScrollController::PreviewFrame`），绘制走 `ui_widget::DrawScrollbarHandle`；滑块悬浮/按下放大的热项必须由 `CUi::DoButtonLogic` 登记，控件才会画大。
-- 禁止的反面写法：各页面自己算轨道与滑块；用固定像素上限截断滑块长度；只画滑块、不登记热项导致悬浮不变大；另写一套放大像素。
+- 定义：铺在内容上层、不占内容宽度的滚动条。轨道长度等于宿主视口，两端各内缩一档；常规滚动面滑块长度按「视口高 / 内容总高 × 轨道」求，夹在最小滑块与轨道之间；目录型网格（`SETTINGS_GRID` / `GRID`）用平方根压缩长度比例，使 1k 与 7k 项仍产生可见的滑块长度差，而不是一起坍缩到最小值；位置由进度决定（0 = 顶部/最旧）。内容装得下时不出现。
+- 唯一实现：滑块长度统一走 `QmResolveScrollThumbSize`（`src/game/client/QmUi/QmScroll.h`），实机 `CScrollRegion::DoSlider` 与预览/覆盖式滚动条 `CQmScrollController::PreviewFrame` 都不得另写比例；`ui_widget::ResolveOverlayScrollbarFrame`（`src/game/client/QmUi/UiForms.h`）委托后者，绘制走 `ui_widget::DrawScrollbarHandle`；滑块悬浮/按下放大的热项必须由 `CUi::DoButtonLogic` 登记，控件才会画大。
+- 禁止的反面写法：各页面自己算轨道与滑块；目录网格继续套固定 36px 最小高度或另写一套线性比例；用固定像素上限截断滑块长度；只画滑块、不登记热项导致悬浮不变大；另写一套放大像素。
 
 ### 2.8d 控制台顶栏按钮（console toolbar button）
 

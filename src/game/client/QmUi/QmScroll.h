@@ -112,6 +112,9 @@ struct SQmScrollContainerStyle
 	float m_ScrollbarWidth = 10.0f;
 	float m_ScrollbarMargin = 2.0f;
 	float m_MinThumbHeight = 24.0f;
+	// 1.0 = 线性“视口 / 内容”比例；目录型网格用小于 1 的指数压缩超大内容高度，
+	// 避免几千项的长目录全部坍缩到最小滑块，玩家看不出 1k 与 7k 的规模差异。
+	float m_ThumbSizeExponent = 1.0f;
 	float m_ContentDragThreshold = 6.0f;
 	bool m_ReserveScrollbarSpace = false;
 };
@@ -161,6 +164,9 @@ struct SQmResolvedScrollPolicy
 };
 
 SQmScrollContainerStyle QmScrollContainerStyleForSize(EQmScrollSize Size, float UiScale = 1.0f);
+// 滑块长度的唯一入口：CQmScrollController 与 CScrollRegion 都走这里，避免实机滚动条
+// 和预览/测试使用两套逐渐分叉的夹取规则。
+float QmResolveScrollThumbSize(float ViewportSize, float ContentSize, float TrackSize, float MinThumbSize, float SizeExponent = 1.0f);
 SQmScrollConfig QmNativeWheelScrollConfig(float UiScale, float SmoothScrollTimeSec);
 SQmScrollConfig QmSettingsScrollConfig(float UiScale, float SmoothScrollTimeSec);
 SQmResolvedScrollPolicy QmResolveScrollPolicy(const SQmScrollRequest &Request, float UiScale = 1.0f, float SmoothScrollTimeSec = 0.0f);

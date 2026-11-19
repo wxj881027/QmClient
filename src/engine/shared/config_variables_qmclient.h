@@ -230,6 +230,7 @@ MACRO_CONFIG_INT(QmAutoSaveHistoryCount, qm_auto_save_history_count, 100, 0, 100
 MACRO_CONFIG_INT(QmShortServerNames, qm_short_server_names, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show short server names in browser (applies to China community servers)")
 MACRO_CONFIG_INT(QmPingCacheMaxAgeHours, qm_ping_cache_max_age_hours, 72, 0, 8760, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discard cached server pings older than this many hours (0 = never expire)")
 MACRO_CONFIG_INT(QmSkinSortMode, qm_skin_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin list sort mode (0=Name, 1=Release date)")
+MACRO_CONFIG_INT(QmSkinListFilter, qm_skin_list_filter, 0, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)")
 MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show skin release date and author")
 MACRO_CONFIG_STR(QmDdStatsSkinDownloadUrl, qm_ddstats_skin_download_url, 100, "https://skins.ddstats.tw/", CFGFLAG_CLIENT | CFGFLAG_SAVE, "URL for downloading DDStats skins")
 MACRO_CONFIG_INT(QmDownloadDdStatsSkins, qm_download_ddstats_skins, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Download DDStats skins (including unapproved skins)")

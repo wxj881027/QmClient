@@ -578,7 +578,6 @@ void CMenus::RenderSettingsTeeOptions(CUIRect Content, const SSettingsContentMet
 				ShouldRefresh = true;
 			}
 		}
-		ShouldRefresh = Checkbox("tee-vanilla-skins-only", Localize("Vanilla skins only"), &g_Config.m_ClVanillaSkinsOnly, TeeMetrics.m_LineSpacing) || ShouldRefresh;
 		Checkbox("tee-fat-skins", Localize("Fat skins (DDFat)"), &g_Config.m_ClFatSkins, TeeMetrics.m_LineSpacing);
 		Checkbox("tee-show-skin-metadata", Localize("Show skin date and author"), &g_Config.m_QmSkinShowMetadata, TeeMetrics.m_LineSpacing);
 	};
@@ -1147,6 +1146,33 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		s_ListBox.ResetScroll();
 		m_SkinListScrollToSelected = false;
 	}
+	DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee_skin_source_filter_label", &Toolbar.m_FilterLabel, Localize("Data source"), BodySize, TEXTALIGN_ML);
+	static CUi::SDropDownState s_SourceFilterState;
+	const char *apSourceFilters[] = {
+		Localize("All"),
+		Localize("Official"),
+		Localize("Community"),
+		Localize("DDStats"),
+		Localize("Custom"),
+		Localize("Vanilla skins only"),
+	};
+	const int CurrentSourceFilter = static_cast<int>(ResolveSkinListFilter(g_Config.m_QmSkinListFilter, g_Config.m_ClVanillaSkinsOnly != 0));
+	CUIRect SourceFilter = Toolbar.m_Filter;
+	const int NewSourceFilter = DoSettingsDropDown(&SourceFilter, CurrentSourceFilter, apSourceFilters, std::size(apSourceFilters), s_SourceFilterState, {}, &g_Config.m_QmSkinListFilter);
+	if(NewSourceFilter >= 0 && NewSourceFilter < (int)std::size(apSourceFilters) && NewSourceFilter != CurrentSourceFilter)
+	{
+		CommitSettingsTeeSkinEdits();
+		g_Config.m_QmSkinListFilter = NewSourceFilter;
+		const int VanillaOnly = NewSourceFilter == (int)ESkinListFilter::VANILLA ? 1 : 0;
+		if(g_Config.m_ClVanillaSkinsOnly != VanillaOnly)
+		{
+			g_Config.m_ClVanillaSkinsOnly = VanillaOnly;
+			ShouldRefresh = true;
+		}
+		GameClient()->m_Skins.RebuildSkinListPlan();
+		s_ListBox.ResetScroll();
+		m_SkinListScrollToSelected = false;
+	}
 	if(gs_TeeSkinCollection.m_Collection == ETeeSkinCollection::RECENT)
 	{
 		DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee-recent-label", &Toolbar.m_SortLabel, Localize("Recent"), BodySize, TEXTALIGN_ML);
@@ -1184,6 +1210,12 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		m_SettingsHighPrioritySettled = false;
 	}
 	std::vector<CSkins::CSkinListEntry> &vSkinList = gs_TeeSkinCollection.Resolve(GameClient()->m_Skins, SkinList);
+	char aSkinCount[96];
+	if(GameClient()->m_Skins.SkinListSourceDataReady())
+		str_format(aSkinCount, sizeof(aSkinCount), "%s: %d", Localize("Skin"), (int)vSkinList.size());
+	else
+		str_format(aSkinCount, sizeof(aSkinCount), "%s: %s", Localize("Skin"), Localize("Loading…"));
+	DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee_skin_list_count_label", &Toolbar.m_Count, aSkinCount, TeeMetrics.m_SmallSize, TEXTALIGN_ML);
 	const uint64_t ListRevision = gs_TeeSkinCollection.m_Revision;
 	static std::vector<size_t> s_vVisibleSkinIndices;
 	gs_TeeListPreviewCache.BeginFrame();
@@ -2083,8 +2115,11 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		{
 			s_SkinFilterInput.Clear();
 			gs_TeeSkinCollection.m_Collection = ETeeSkinCollection::ALL;
+			g_Config.m_QmSkinListFilter = (int)ESkinListFilter::ALL;
+			g_Config.m_ClVanillaSkinsOnly = 0;
 			s_ListBox.ResetScroll();
-			SkinList.ForceRefresh();
+			GameClient()->m_Skins.RebuildSkinListPlan();
+			ShouldRefresh = true;
 		}
 	}
 

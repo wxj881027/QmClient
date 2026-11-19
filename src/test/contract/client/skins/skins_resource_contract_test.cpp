@@ -85,11 +85,8 @@ TEST(SkinsContract, TeeSkinListSortModeKeepsFavoritesPinnedThenUsesOfficialDate)
 	const std::string ConfigSource = ReadTestSourceFile("src/engine/shared/config_variables_qmclient.h");
 	const std::string MenusI18nSource = ReadTestSourceFile("qmclient_scripts/languages_qmclient/translations/i18n/menus.toml");
 	const size_t ComparePos = Source.find("bool CSkins::CSkinListEntry::operator<");
-	const size_t ScanJobPos = Source.find("int CSkins::CSkinDirectoryScanJob::ScanCallback");
 	ASSERT_NE(ComparePos, std::string::npos);
-	ASSERT_NE(ScanJobPos, std::string::npos);
 	const std::string CompareBody = Source.substr(ComparePos, 1200);
-	const std::string ScanJobBody = Source.substr(ScanJobPos, 900);
 
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmSkinSortMode, qm_skin_sort_mode, 0, 0, 1"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1"), std::string::npos);
@@ -104,11 +101,9 @@ TEST(SkinsContract, TeeSkinListSortModeKeepsFavoritesPinnedThenUsesOfficialDate)
 	EXPECT_NE(Source.find("ScanDirectory(\"downloadedskins\", CSkinContainer::EType::DOWNLOAD);"), std::string::npos);
 	EXPECT_NE(Source.find("OFFICIAL_SKIN_INDEX_URL = \"https://ddnet.org/skins/skin/skins.json\""), std::string::npos);
 	EXPECT_NE(Source.find("OFFICIAL_SKIN_INDEX_CACHE_PATH = \"downloadedskins/official_skins.json\""), std::string::npos);
-	EXPECT_NE(Source.find("QueueOfficialSkinIndexRequest();"), std::string::npos);
-	EXPECT_NE(Source.find("LoadOfficialSkinIndexCache();"), std::string::npos);
-	EXPECT_NE(Source.find("json_string_get(json_object_get(pEntry, \"date\"))"), std::string::npos);
-	EXPECT_NE(Source.find("json_string_get(json_object_get(pEntry, \"creator\"))"), std::string::npos);
-	EXPECT_NE(ScanJobBody.find("pInfo->m_TimeModified"), std::string::npos);
+	EXPECT_NE(Source.find("QueueSkinCatalogRequests();"), std::string::npos);
+	EXPECT_NE(Source.find("LoadSkinCatalogCaches();"), std::string::npos);
+	EXPECT_NE(Source.find("pInfo->m_TimeModified"), std::string::npos);
 	EXPECT_NE(CompareBody.find("g_Config.m_QmSkinSortMode"), std::string::npos);
 	EXPECT_NE(CompareBody.find("OfficialReleaseDate()"), std::string::npos);
 	EXPECT_NE(CompareBody.find("LastModified()"), std::string::npos);

@@ -432,9 +432,9 @@ namespace
 		},
 		{
 			"deck:tee-skin-options",
-			Localizable("Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants."),
-			Localizable("Tick \"Download skins\", \"Download community skins\" or \"Vanilla skins only\", then type a \"Skin prefix\" or use a preset such as \"kitty\"."),
-			Localizable("\"Vanilla skins only\" hides every custom skin, so turn it off if your skin suddenly turns default."),
+			Localizable("Decides which skins the client downloads and can add a prefix to load prefixed skin variants."),
+			Localizable("Tick the download toggles, then use \"Data source\" in \"Skin search\" to choose which source catalog is shown."),
+			Localizable("\"Data source\" filters catalog membership and stays independent of downloads; the same skin can match several catalogs."),
 		},
 		{
 			"deck:tee-skin-queue",

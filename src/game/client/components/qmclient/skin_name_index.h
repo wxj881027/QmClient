@@ -63,6 +63,11 @@ public:
 		return Entry == m_Entries.end() ? nullptr : Entry->second.m_Name.c_str();
 	}
 
+	bool Contains(const char *pName) const
+	{
+		return Find(pName) != nullptr;
+	}
+
 private:
 	struct SEntry
 	{

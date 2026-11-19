@@ -686,7 +686,7 @@ void CScrollRegion::DoSlider()
 	const bool CanScroll = ContentOverflows() && ScrollMax > 0.0f && RailSize > 0.0f;
 	const float SliderMaxSize = maximum(0.0f, RailSize);
 	const float SliderMinSize = minimum(m_Params.m_SliderMinSize, SliderMaxSize);
-	const float SliderSize = CanScroll ? std::clamp(ClipSize / m_ContentSize * RailSize, SliderMinSize, SliderMaxSize) : SliderMaxSize;
+	const float SliderSize = CanScroll ? QmResolveScrollThumbSize(ClipSize, m_ContentSize, RailSize, SliderMinSize, m_Params.m_SliderSizeExponent) : SliderMaxSize;
 
 	CUIRect Slider = m_RailRect;
 	float &SliderPos = m_Params.m_ScrollHorizontal ? Slider.x : Slider.y;

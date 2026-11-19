@@ -1,6 +1,6 @@
 ## What this controls
 
-Where skins are downloaded from and which ones the list allows: download switches, the vanilla-skin filter, fat skins, metadata, and the name prefix.
+Where skins are downloaded from, plus fat skins, metadata, and the name prefix. The skin list's source filter lives in Skin search.
 
 ## In game
 
@@ -8,7 +8,7 @@ The most direct one is the prefix: with `santa` set, any skin named `cammo` is f
 
 Fat skins stretch the body to 1.3x horizontally and vertically; feet and hitbox unchanged.
 
-With "Vanilla skins only" on, non-vanilla skins disappear from the list, and players wearing them appear in default looks.
+The "Data source" dropdown in Skin search filters by catalog membership and does not require a skin to be cached. Official, community, DDStats and custom-URL catalogs are unions, so a shared name can match several filters at once. The download switches only decide whether missing skins may be fetched.
 
 ## How to tune it
 
@@ -16,7 +16,6 @@ With "Vanilla skins only" on, non-vanilla skins disappear from the list, and pla
 | --- | --- | --- | --- |
 | Download skins | Missing skins are fetched from the official source and stored in downloadedskins | On | On a limited connection |
 | Download community skins | Falls back to the community source when the official one returns 404 | Off | You don't want third-party fetches |
-| Vanilla skins only | Non-vanilla skins don't load and don't enter the list | Off | You want to see others' fancy skins |
 | Fat skins (DDFat) | Body scaled to 1.3x | Off | The proportions look wrong |
 | Show skin date and author | Adds a line with author and release date to list rows | Off | The list is too crowded |
 
@@ -24,13 +23,13 @@ With "Vanilla skins only" on, non-vanilla skins disappear from the list, and pla
 
 ## Watch out
 
-With "Vanilla skins only" on, the prefix is dead: the input stays but nothing you type does anything.
+With "Data source" set to "Vanilla skins only", the prefix is inactive: the input stays but nothing you type does anything.
 
 "Download community skins" only matters while "Download skins" is on; both off means skins are never fetched online.
 
 Each download caps at 10 MB; a failed download doesn't overwrite the local cache, and while offline your old skins keep working.
 
-With "Vanilla skins only" on, the skin in use and favorites stay listed, just marked as not found.
+With "Vanilla skins only" selected, non-vanilla skins are hidden from the list and other players wearing them appear in default looks.
 
 ## Related
 

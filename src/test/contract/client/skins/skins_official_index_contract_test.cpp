@@ -1,23 +1,18 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
-#include <game/client/components/skins.h>
+#include <game/client/components/qmclient/skin_catalog_parse.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
 
 #include <string>
 
-TEST(SkinsOfficialIndexContract, CreatesMissingDownloadEntries)
+TEST(SkinsOfficialIndexContract, OfficialCatalogUsesTypedJsonParser)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/skins.cpp");
-	const size_t ApplyIndexPos = Source.find("bool CSkins::ApplyOfficialSkinIndexJson(const char *pJson, size_t JsonSize)");
-	ASSERT_NE(ApplyIndexPos, std::string::npos);
-	const size_t ApplyIndexEnd = Source.find("void CSkins::ProcessSkinListPlanJob()", ApplyIndexPos);
-	ASSERT_NE(ApplyIndexEnd, std::string::npos);
-	const std::string ApplyIndexBody = Source.substr(ApplyIndexPos, ApplyIndexEnd - ApplyIndexPos);
+	const std::string CatalogSource = ReadTestSourceFile("src/game/client/components/qmclient/skin_catalog_parse.h");
 
-	EXPECT_NE(ApplyIndexBody.find("const CSkinContainer::EType Type = PreferredContainerType(pName);"), std::string::npos);
-	EXPECT_NE(ApplyIndexBody.find("pSkinContainer->SetState(pSkinContainer->DetermineInitialState());"), std::string::npos);
-	EXPECT_NE(ApplyIndexBody.find("ExistingSkin = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;"), std::string::npos);
-	EXPECT_NE(ApplyIndexBody.find("SetOfficialReleaseDate(ReleaseDate)"), std::string::npos);
-	EXPECT_EQ(ApplyIndexBody.find("if(ExistingSkin == m_Skins.end())\n\t\t\t\tcontinue;"), std::string::npos);
+	EXPECT_NE(Source.find("OFFICIAL_SKIN_INDEX_URL = \"https://ddnet.org/skins/skin/skins.json\""), std::string::npos);
+	EXPECT_NE(Source.find("OFFICIAL_SKIN_INDEX_CACHE_PATH = \"downloadedskins/official_skins.json\""), std::string::npos);
+	EXPECT_NE(Source.find("qm_skin_catalog::EFormat::DDNET_JSON"), std::string::npos);
+	EXPECT_NE(CatalogSource.find("DDNET_JSON"), std::string::npos);
 }

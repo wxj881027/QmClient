@@ -15,7 +15,6 @@
 #include <engine/graphics.h>
 #include <engine/http.h>
 #include <engine/shared/config.h>
-#include <engine/shared/json.h>
 #include <engine/storage.h>
 
 #include <generated/client_data.h>
@@ -48,6 +47,44 @@ static constexpr const char *OFFICIAL_SKIN_INDEX_CACHE_PATH = "downloadedskins/o
 static constexpr const char *DEFAULT_OFFICIAL_SKIN_URL = "https://skins.ddnet.org/skin/";
 static constexpr const char *DEFAULT_COMMUNITY_SKIN_URL = "https://skins.ddnet.org/skin/community/";
 static constexpr const char *DEFAULT_DDSTATS_SKIN_URL = "https://skins.ddstats.tw/";
+static constexpr int SKIN_CATALOG_MERGE_BUDGET = 256;
+
+static std::string SkinUrlIdentity(const char *pUrl)
+{
+	if(pUrl == nullptr)
+		return {};
+	std::string Url(pUrl);
+	while(!Url.empty() && (Url.back() == ' ' || Url.back() == '\t' || Url.back() == '\r' || Url.back() == '\n'))
+		Url.pop_back();
+	while(!Url.empty() && Url.front() == ' ')
+		Url.erase(Url.begin());
+	while(Url.size() > 1 && Url.back() == '/')
+		Url.pop_back();
+	return Url;
+}
+
+static bool SameSkinUrl(const char *pLeft, const char *pRight)
+{
+	return str_comp_nocase(SkinUrlIdentity(pLeft).c_str(), SkinUrlIdentity(pRight).c_str()) == 0;
+}
+
+static std::string SkinCatalogCachePath(const char *pKind, const char *pUrl)
+{
+	const std::string Identity = SkinUrlIdentity(pUrl);
+	const SHA256_DIGEST Digest = sha256(Identity.data(), Identity.size());
+	char aDigest[SHA256_MAXSTRSIZE];
+	sha256_str(Digest, aDigest, sizeof(aDigest));
+	char aPath[IO_MAX_PATH_LENGTH];
+	str_format(aPath, sizeof(aPath), "downloadedskins/%s_%s.html", pKind, aDigest);
+	return aPath;
+}
+
+static qm_skin_catalog::EFormat DetectDirectoryCatalogFormat(const char *pUrl)
+{
+	if(pUrl != nullptr && str_startswith_nocase(pUrl, DEFAULT_DDSTATS_SKIN_URL) != nullptr)
+		return qm_skin_catalog::EFormat::DDSTATS_HTML;
+	return qm_skin_catalog::EFormat::DIRECTORY_HTML;
+}
 
 static ESkinSource ClassifyDownloadSource(ESkinSource Tier, const char *pUrl)
 {
@@ -637,6 +674,10 @@ void CSkins::CSkinContainer::RequestLoad(ESettingsResourcePriority Priority)
 		EnsureAlwaysLoaded();
 		return;
 	}
+	// 目录条目可能有数千个；后台预热只处理实际下载过和明确引用的皮肤，
+	// 不能让一次设置页预热把整个远端目录全部抓下来。
+	if(Priority == ESettingsResourcePriority::BACKGROUND && m_CatalogOnly)
+		return;
 	const bool TeeSettingsActive = ActiveSettingsTeePage(m_pSkins->GameClient());
 
 	if(Priority == ESettingsResourcePriority::BACKGROUND)
@@ -703,18 +744,30 @@ void CSkins::CSkinContainer::EnsureAlwaysLoaded()
 
 CSkins::CSkinContainer::EState CSkins::CSkinContainer::DetermineInitialState() const
 {
-	return InitialStateForSource(m_Type, m_AlwaysLoaded, !g_Config.m_ClVanillaSkinsOnly || m_Vanilla, SourceDownloadAllowed(EffectiveSkinSource()));
+	const bool VanillaSkinsOnly = VanillaSkinsOnlyActive(g_Config.m_QmSkinListFilter, g_Config.m_ClVanillaSkinsOnly != 0);
+	return InitialStateForSource(m_Type, m_AlwaysLoaded, !VanillaSkinsOnly || m_Vanilla,
+		SourceDownloadAllowed(EffectiveRequestSources()), m_LastModified != 0, m_CatalogOnly);
 }
 
-ESkinSource CSkins::CSkinContainer::EffectiveSkinSource() const
+ESkinSourceMask CSkins::CSkinContainer::EffectiveSkinSources() const
 {
+	ESkinSourceMask Sources = m_CatalogSources;
 	if(m_Type == EType::LOCAL)
-		return ESkinSource::LOCAL;
-	// 官方索引一旦确认发布日期，就以官方来源为准；其他来源只用于未审批皮肤。
-	if(m_OfficialReleaseDate != 0)
-		return ESkinSource::OFFICIAL;
-	// 没有持久化来源的旧缓存继续显示，等待下一次条件请求补齐来源，避免升级后列表突然清空。
-	return m_SkinSource;
+	{
+		if(m_Vanilla)
+			Sources |= ESkinSourceMask::OFFICIAL | ESkinSourceMask::VANILLA;
+	}
+	Sources |= SkinSourceMaskFromSource(m_SkinSource);
+	return Sources;
+}
+
+ESkinSourceMask CSkins::CSkinContainer::EffectiveRequestSources() const
+{
+	ESkinSourceMask Sources = m_CatalogRequestSources;
+	if(m_Type == EType::LOCAL && m_Vanilla)
+		Sources |= ESkinSourceMask::OFFICIAL;
+	Sources |= SkinSourceMaskFromSource(m_SkinSource);
+	return Sources;
 }
 
 void CSkins::CSkinContainer::SetState(EState State, ESettingsResourcePriority Priority)
@@ -740,6 +793,8 @@ void CSkins::CSkinContainer::SetState(EState State, ESettingsResourcePriority Pr
 	if(ShouldDiscardPendingUpload(OldState, State) || (m_pPendingSkin && State != EState::LOADED && State != EState::LOADING))
 		m_pSkins->DiscardSkinPreviewUpload(this);
 	m_State = State;
+	if(State == EState::LOADED)
+		m_CatalogOnly = false;
 	m_pSkins->m_UnresolvedSkinScanState.OnStateChange(OldState, State);
 	if(OldState != State)
 		m_UnresolvedNotified = false;
@@ -1459,10 +1514,11 @@ void CSkins::OnShutdown()
 		m_pSkinListPlanJob->Abort();
 		m_pSkinListPlanJob = nullptr;
 	}
-	if(m_pOfficialSkinIndexRequest)
+	for(SSkinCatalogRuntime &Catalog : m_vSkinCatalogs)
 	{
-		m_pOfficialSkinIndexRequest->Abort();
-		m_pOfficialSkinIndexRequest = nullptr;
+		if(Catalog.m_pRequest)
+			Catalog.m_pRequest->Abort();
+		Catalog.m_pRequest.reset();
 	}
 	for(auto &[_, pSkinContainer] : m_Skins)
 	{
@@ -1484,6 +1540,7 @@ void CSkins::OnShutdown()
 	m_SkinNameIndex.Clear();
 	m_SkinNotFoundKeys.clear();
 	m_HasInitialSkinDirectoryScan = false;
+	m_SkinListSourceDataInitialized = false;
 }
 
 void CSkins::OnUpdate()
@@ -1503,6 +1560,16 @@ void CSkins::OnUpdate()
 		UpdateSkinQueue(Now, Dummy);
 	}
 	LogStage("skin_queue");
+
+	// 目录/缓存合并是列表的输入，不属于低频皮肤纹理更新。把它们留在下面的
+	// 25–500ms 节流之后，会把 9k 条目录的合并拖到十几秒，并让数量标签长期停在
+	// Loading；这里仍由各自的条目预算限制每帧工作量。
+	ProcessSkinCatalogRequests();
+	LogStage("skin_catalogs");
+	ProcessPendingSkinCatalogEntries();
+	LogStage("skin_catalog_entries");
+	ProcessSkinDirectoryScanJob();
+	LogStage("directory_results");
 
 	// Only update skins periodically to reduce FPS impact
 	const std::chrono::nanoseconds MaxTime = std::chrono::milliseconds(std::clamp(round_to_int(Client()->RenderFrameTime() * 50000.0f), 25, 500));
@@ -1526,10 +1593,6 @@ void CSkins::OnUpdate()
 	FindContainerOrNullptr(g_Config.m_ClDummySkin);
 	LogStage("managed_skins");
 
-	ProcessOfficialSkinIndexRequest();
-	LogStage("official_index");
-	ProcessSkinDirectoryScanJob();
-	LogStage("directory_results");
 	CSkinLoadingStats Stats = LoadingStats();
 	UpdateUnloadSkins(Stats);
 	LogStage("unload_skins");
@@ -2238,7 +2301,7 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 			// 初次目录扫描完成前先使用磁盘上的 canonical 名称，避免用服务器下发的小写名发出 404 请求。
 			if(!m_HasInitialSkinDirectoryScan)
 				return false;
-			pSkinContainer->m_pDownloadSession = CreateSkinDownloadSession(pSkinContainer->Name());
+			pSkinContainer->m_pDownloadSession = CreateSkinDownloadSession(pSkinContainer);
 			if(std::find(m_vSkinDownloadNames.begin(), m_vSkinDownloadNames.end(), pSkinContainer->Name()) == m_vSkinDownloadNames.end())
 				m_vSkinDownloadNames.emplace_back(pSkinContainer->Name());
 			break;
@@ -2337,6 +2400,14 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 		CSkinContainer *pSkinContainer = It->second.get();
 		++FallbackScanned;
 		if(pSkinContainer->m_UsageEntryIterator.has_value() || pSkinContainer->m_BackgroundEntryIterator.has_value())
+		{
+			++FallbackSkipped;
+			continue;
+		}
+		// 目录条目可能成千上万。fallback sweep 是隐式后台路径，不能绕过
+		// RequestLoad(BACKGROUND) 对纯目录条目的保护；只有列表可见项或显式
+		// 引用才会通过优先级请求进入加载队列。
+		if(pSkinContainer->IsCatalogOnly())
 		{
 			++FallbackSkipped;
 			continue;
@@ -2701,11 +2772,20 @@ void CSkins::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 	m_HasPendingSkinListMergePlan = false;
 	m_SkinListMergeCursor = 0;
 	m_PendingSkinListUnfilteredCount = 0;
+	for(SSkinCatalogRuntime &Catalog : m_vSkinCatalogs)
+	{
+		if(Catalog.m_pRequest)
+			Catalog.m_pRequest->Abort();
+		Catalog.m_pRequest.reset();
+	}
+	m_vPendingSkinCatalogEntries.clear();
+	m_SkinCatalogMergeCursor = 0;
 	m_vPendingSkinDirectoryEntries.clear();
 	m_SkinDirectoryMergeCursor = 0;
 	m_SkinNameIndex.Clear();
 	m_SkinNotFoundKeys.clear();
 	m_HasInitialSkinDirectoryScan = false;
+	m_SkinListSourceDataInitialized = false;
 
 	for(auto &[_, pSkinContainer] : m_Skins)
 	{
@@ -2739,9 +2819,10 @@ void CSkins::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 	};
 
 	LoadSkinDirect("default");
-	LoadOfficialSkinIndexCache();
+	BuildSkinCatalogSources();
+	LoadSkinCatalogCaches();
 	SkinLoadedCallback();
-	QueueOfficialSkinIndexRequest();
+	QueueSkinCatalogRequests();
 	LoadSpecialSkinDirect("x_ninja");
 	LoadSpecialSkinDirect("x_spec");
 	QueueSkinDirectoryScanJob();
@@ -2772,6 +2853,12 @@ CSkins::CSkinList &CSkins::SkinList(int Dummy)
 {
 	const CSkinListEntry::SColorKey MainColorKey = MakeSkinListColorKey(0);
 	const CSkinListEntry::SColorKey DummyColorKey = MakeSkinListColorKey(1);
+	const int ListFilter = static_cast<int>(ResolveSkinListFilter(g_Config.m_QmSkinListFilter, g_Config.m_ClVanillaSkinsOnly != 0));
+	if(!m_SkinList.m_NeedsUpdate &&
+		m_SkinList.m_ListFilter != ListFilter)
+	{
+		m_SkinList.ForceRefresh();
+	}
 	if(!m_SkinList.m_NeedsUpdate &&
 		m_SkinList.m_Dummy != Dummy)
 	{
@@ -2785,7 +2872,7 @@ CSkins::CSkinList &CSkins::SkinList(int Dummy)
 	}
 
 	ProcessSkinListPlanJob();
-	if(m_SkinList.m_NeedsUpdate && m_pSkinListPlanJob == nullptr && m_vPendingSkinListMergeEntries.empty())
+	if(m_SkinList.m_NeedsUpdate && m_pSkinListPlanJob == nullptr && m_vPendingSkinListMergeEntries.empty() && !SkinListSourcesPending())
 	{
 		QueueSkinListPlanJob(Dummy);
 		m_SkinList.m_NeedsUpdate = false;
@@ -2812,6 +2899,28 @@ bool CSkins::SkinListReady() const
 	       !m_HasPendingSkinListMergePlan &&
 	       m_vPendingSkinListMergeEntries.empty() &&
 	       m_vPendingSkinListEntries.empty();
+}
+
+bool CSkins::SkinListSourcesPending() const
+{
+	SSkinListSourceSettleState State;
+	State.m_HasInitialDirectoryScan = m_HasInitialSkinDirectoryScan;
+	State.m_DirectoryScanPending = m_pSkinDirectoryScanJob != nullptr || !m_vPendingSkinDirectoryEntries.empty();
+	State.m_CatalogMergePending = !m_vPendingSkinCatalogEntries.empty();
+	State.m_CatalogRequestPending = std::any_of(m_vSkinCatalogs.begin(), m_vSkinCatalogs.end(), [](const SSkinCatalogRuntime &Catalog) {
+		return Catalog.m_pRequest != nullptr && !Catalog.m_Snapshot.m_Loaded;
+	});
+	return !SkinListSourcesSettled(State);
+}
+
+bool CSkins::SkinListSourceDataReady()
+{
+	if(m_SkinListSourceDataInitialized)
+		return true;
+	if(!SkinListReady() || SkinListSourcesPending())
+		return false;
+	m_SkinListSourceDataInitialized = true;
+	return true;
 }
 
 bool CSkins::SkinListSkeletonReady() const
@@ -2958,16 +3067,17 @@ void CSkins::QueueSkinListPlanJob(int Dummy)
 	const CSkinListEntry::SColorKey CurrentColorKey = MakeSkinListColorKey(Dummy);
 	const CSkinListEntry::SColorKey MainColorKey = MakeSkinListColorKey(0);
 	const CSkinListEntry::SColorKey DummyColorKey = MakeSkinListColorKey(1);
+	const int ListFilterValue = static_cast<int>(ResolveSkinListFilter(g_Config.m_QmSkinListFilter, g_Config.m_ClVanillaSkinsOnly != 0));
+	const ESkinListFilter ListFilter = SkinListFilterFromInt(ListFilterValue);
 
 	std::vector<SSkinListSnapshotEntry> vEntries;
 	vEntries.reserve(m_Skins.size() + m_aSkinQueue[Dummy].size());
-	const auto EntryColorKey = [&](const SSkinListSnapshotEntry &Entry) {
-		return Entry.m_ColorKey.value_or(CurrentColorKey);
-	};
-	const auto HasListEntry = [&](const CSkinContainer *pSkinContainer, const CSkinListEntry::SColorKey &ColorKey) {
-		return std::any_of(vEntries.begin(), vEntries.end(), [&](const SSkinListSnapshotEntry &Entry) {
-			return Entry.m_Name == pSkinContainer->Name() && SkinListColorKeyEquals(EntryColorKey(Entry), ColorKey);
-		});
+	std::unordered_set<std::string> SeenListEntries;
+	SeenListEntries.reserve(m_Skins.size() + m_aSkinQueue[Dummy].size());
+	const auto SkinListEntryKey = [](const char *pName, const CSkinListEntry::SColorKey &ColorKey) {
+		char aKey[MAX_SKIN_LENGTH + 64];
+		str_format(aKey, sizeof(aKey), "%s|%d|%d|%d", pName, ColorKey.m_UseCustomColor ? 1 : 0, ColorKey.m_ColorBody, ColorKey.m_ColorFeet);
+		return std::string(aKey);
 	};
 	const auto AddSkinListSnapshotEntry = [&](CSkinContainer *pSkinContainer, std::optional<CSkinListEntry::SColorKey> ColorKey, bool ForceShowNotFound) {
 		if(pSkinContainer->IsSpecial())
@@ -2979,7 +3089,10 @@ void CSkins::QueueSkinListPlanJob(int Dummy)
 		const bool SelectedMainColor = SelectedMain && SkinListColorKeyEquals(EffectiveColorKey, MainColorKey);
 		const bool SelectedDummyColor = SelectedDummy && SkinListColorKeyEquals(EffectiveColorKey, DummyColorKey);
 		const bool Favorite = IsFavorite(pSkinContainer->Name());
+		if(!SkinListFilterMatches(pSkinContainer->EffectiveSkinSources(), ListFilter))
+			return;
 		if(pSkinContainer->m_State == CSkinContainer::EState::NOT_FOUND &&
+			!pSkinContainer->IsCatalogOnly() &&
 			!SelectedMainColor &&
 			!SelectedDummyColor &&
 			!Favorite &&
@@ -2987,16 +3100,7 @@ void CSkins::QueueSkinListPlanJob(int Dummy)
 		{
 			return;
 		}
-		if(!SkinSourceVisible(pSkinContainer->EffectiveSkinSource(), g_Config.m_ClDownloadSkins != 0, g_Config.m_ClDownloadCommunitySkins != 0, g_Config.m_QmDownloadDdStatsSkins != 0) &&
-			!SelectedMainColor &&
-			!SelectedDummyColor &&
-			!Favorite &&
-			!ForceShowNotFound)
-		{
-			return;
-		}
-
-		if(HasListEntry(pSkinContainer, EffectiveColorKey))
+		if(!SeenListEntries.insert(SkinListEntryKey(pSkinContainer->Name(), EffectiveColorKey)).second)
 			return;
 
 		SSkinListSnapshotEntry Entry;
@@ -3027,6 +3131,8 @@ void CSkins::QueueSkinListPlanJob(int Dummy)
 			const CSkinContainer::EType Type = PreferredContainerType(QueueEntry.m_SkinName.c_str());
 			CSkinContainer SkinContainer(this, QueueEntry.m_SkinName.c_str(), Type, ContainerStorageTypeFor(Type));
 			auto &&pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
+			pSkinContainer->SetCatalogOnly(false);
+			ApplyCatalogSources(pSkinContainer.get());
 			pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
 			SkinIt = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;
 		}
@@ -3034,6 +3140,7 @@ void CSkins::QueueSkinListPlanJob(int Dummy)
 		AddSkinListSnapshotEntry(SkinIt->second.get(), QueueColorKey, true);
 	}
 
+	m_SkinList.m_ListFilter = ListFilterValue;
 	m_pSkinListPlanJob = std::make_shared<CSkinListPlanJob>(std::move(vEntries), g_Config.m_ClSkinFilterString, ++m_SkinListPlanGeneration, std::clamp(g_Config.m_QmSkinSortMode, 0, 1));
 	m_SkinList.m_Dummy = Dummy;
 	m_SkinList.m_MainColorKey = MainColorKey;
@@ -3058,6 +3165,13 @@ void CSkins::ProcessSkinDirectoryScanJob()
 		{
 			m_SkinNameIndex.Add(Entry.m_Name.c_str(), Entry.m_Type == CSkinContainer::EType::LOCAL ? 1 : 0);
 			m_SkinNotFoundKeys.erase(CSkinNameIndex::Key(Entry.m_Name.c_str()));
+		}
+		for(const SSkinCatalogRuntime &Catalog : m_vSkinCatalogs)
+		{
+			if(!Catalog.m_Snapshot.m_Loaded)
+				continue;
+			for(const auto &[_, Entry] : Catalog.m_Snapshot.m_Entries)
+				m_SkinNameIndex.Add(Entry.m_Name.c_str(), 0);
 		}
 		m_HasInitialSkinDirectoryScan = true;
 		m_SkinDirectoryMergeCursor = 0;
@@ -3089,8 +3203,10 @@ void CSkins::ProcessSkinDirectoryScanJob()
 			const SQmSkinSourceIdentity OldSource = pSkinContainer->m_State == CSkinContainer::EState::LOADED ? pSkinContainer->m_LoadedSource.value_or(RequestedSource) : RequestedSource;
 			const SQmSkinSourceIdentity NewSource{Entry.m_Type == CSkinContainer::EType::DOWNLOAD, Entry.m_StorageType, Entry.m_LastModified};
 			const ESkinSource ScannedSource = SkinSourceForScanEntry(m_SkinSources, Entry.m_Type == CSkinContainer::EType::LOCAL, Entry.m_Name.c_str());
-			const bool DownloadAllowed = Entry.m_Type == CSkinContainer::EType::LOCAL || CSkinContainer::SourceDownloadAllowed(ScannedSource);
-			const auto RefreshState = CSkinContainer::SourceRefreshState(OldSource, NewSource, pSkinContainer->m_State, pSkinContainer->m_AlwaysLoaded, !g_Config.m_ClVanillaSkinsOnly || pSkinContainer->m_Vanilla, DownloadAllowed);
+			// 扫描结果来自磁盘，缓存已存在；下载开关只限制后续网络请求，不能把可用缓存重新标成未找到。
+			const bool DownloadAllowed = true;
+			const bool VanillaSkinsOnly = VanillaSkinsOnlyActive(g_Config.m_QmSkinListFilter, g_Config.m_ClVanillaSkinsOnly != 0);
+			const auto RefreshState = CSkinContainer::SourceRefreshState(OldSource, NewSource, pSkinContainer->m_State, pSkinContainer->m_AlwaysLoaded, !VanillaSkinsOnly || pSkinContainer->m_Vanilla, DownloadAllowed);
 			if(RefreshState.has_value())
 			{
 				pSkinContainer->m_pDownloadSession.reset();
@@ -3102,7 +3218,9 @@ void CSkins::ProcessSkinDirectoryScanJob()
 				}
 				pSkinContainer->m_Type = Entry.m_Type;
 				pSkinContainer->m_StorageType = Entry.m_StorageType;
+				pSkinContainer->SetCatalogOnly(false);
 				pSkinContainer->SetSkinSource(ScannedSource);
+				ApplyCatalogSources(pSkinContainer);
 				pSkinContainer->SetLastModified(Entry.m_LastModified);
 				// 更新期间继续显示旧纹理，新数据上传完成后统一替换并通知所有预览。
 				pSkinContainer->SetState(RefreshState.value(), Priority);
@@ -3113,7 +3231,9 @@ void CSkins::ProcessSkinDirectoryScanJob()
 
 		CSkinContainer SkinContainer(this, Entry.m_Name.c_str(), Entry.m_Type, Entry.m_StorageType);
 		auto &&pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
+		pSkinContainer->SetCatalogOnly(false);
 		pSkinContainer->SetSkinSource(SkinSourceForScanEntry(m_SkinSources, Entry.m_Type == CSkinContainer::EType::LOCAL, Entry.m_Name.c_str()));
+		ApplyCatalogSources(pSkinContainer.get());
 		pSkinContainer->SetLastModified(Entry.m_LastModified);
 		pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
 		m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)});
@@ -3129,90 +3249,247 @@ void CSkins::ProcessSkinDirectoryScanJob()
 	}
 }
 
-void CSkins::QueueOfficialSkinIndexRequest()
+void CSkins::BuildSkinCatalogSources()
 {
-	if(m_pOfficialSkinIndexRequest && !m_pOfficialSkinIndexRequest->Done())
-		return;
-	m_pOfficialSkinIndexRequest = HttpGetFile(OFFICIAL_SKIN_INDEX_URL, Storage(), OFFICIAL_SKIN_INDEX_CACHE_PATH, IStorage::TYPE_SAVE);
-	m_pOfficialSkinIndexRequest->Timeout(CTimeout{10000, 0, 8192, 10});
-	m_pOfficialSkinIndexRequest->SkipByFileTime(true);
-	m_pOfficialSkinIndexRequest->LogProgress(HTTPLOG::NONE);
-	m_pOfficialSkinIndexRequest->FailOnErrorStatus(false);
-	Http()->Run(m_pOfficialSkinIndexRequest);
-}
+	m_vSkinCatalogs.clear();
+	const auto AddCatalog = [&](const char *pUrl, const char *pCachePath, qm_skin_catalog::EFormat Format, ESkinSourceMask DisplaySources, ESkinSourceMask RequestSources) {
+		const std::string UrlIdentity = SkinUrlIdentity(pUrl);
+		if(UrlIdentity.empty())
+			return;
+		const auto Existing = std::find_if(m_vSkinCatalogs.begin(), m_vSkinCatalogs.end(), [&](const SSkinCatalogRuntime &Catalog) {
+			return str_comp_nocase(SkinUrlIdentity(Catalog.m_Source.m_Url.c_str()).c_str(), UrlIdentity.c_str()) == 0;
+		});
+		if(Existing != m_vSkinCatalogs.end())
+		{
+			Existing->m_Source.m_DisplaySources |= DisplaySources;
+			Existing->m_Source.m_RequestSources |= RequestSources;
+			if(Format == qm_skin_catalog::EFormat::DDSTATS_HTML)
+				Existing->m_Source.m_Format = Format;
+			return;
+		}
 
-void CSkins::ProcessOfficialSkinIndexRequest()
-{
-	if(m_pOfficialSkinIndexRequest == nullptr || !m_pOfficialSkinIndexRequest->Done())
-		return;
-	const bool Success = m_pOfficialSkinIndexRequest->State() == EHttpState::DONE && m_pOfficialSkinIndexRequest->StatusCode() < 400;
-	m_pOfficialSkinIndexRequest.reset();
-	if(Success)
+		SSkinCatalogRuntime Catalog;
+		Catalog.m_Source.m_Url = pUrl;
+		Catalog.m_Source.m_CachePath = pCachePath;
+		Catalog.m_Source.m_Format = Format;
+		Catalog.m_Source.m_DisplaySources = DisplaySources;
+		Catalog.m_Source.m_RequestSources = RequestSources;
+		m_vSkinCatalogs.push_back(std::move(Catalog));
+	};
+
+	AddCatalog(OFFICIAL_SKIN_INDEX_URL, OFFICIAL_SKIN_INDEX_CACHE_PATH, qm_skin_catalog::EFormat::DDNET_JSON,
+		ESkinSourceMask::NONE, ESkinSourceMask::NONE);
+	const std::string DdStatsCachePath = SkinCatalogCachePath("ddstats_skins", g_Config.m_QmDdStatsSkinDownloadUrl);
+	AddCatalog(g_Config.m_QmDdStatsSkinDownloadUrl, DdStatsCachePath.c_str(), DetectDirectoryCatalogFormat(g_Config.m_QmDdStatsSkinDownloadUrl),
+		ESkinSourceMask::DDSTATS, ESkinSourceMask::DDSTATS);
+	if(!SameSkinUrl(g_Config.m_ClSkinDownloadUrl, DEFAULT_OFFICIAL_SKIN_URL))
 	{
-		LoadOfficialSkinIndexCache();
+		const std::string CustomOfficialCachePath = SkinCatalogCachePath("custom_official_skins", g_Config.m_ClSkinDownloadUrl);
+		const qm_skin_catalog::EFormat Format = DetectDirectoryCatalogFormat(g_Config.m_ClSkinDownloadUrl);
+		const ESkinSourceMask KnownDisplaySources = Format == qm_skin_catalog::EFormat::DDSTATS_HTML ? ESkinSourceMask::DDSTATS : ESkinSourceMask::NONE;
+		AddCatalog(g_Config.m_ClSkinDownloadUrl, CustomOfficialCachePath.c_str(), Format,
+			ESkinSourceMask::CUSTOM | KnownDisplaySources, ESkinSourceMask::OFFICIAL | KnownDisplaySources);
+	}
+	if(!SameSkinUrl(g_Config.m_ClSkinCommunityDownloadUrl, DEFAULT_COMMUNITY_SKIN_URL))
+	{
+		const std::string CustomCommunityCachePath = SkinCatalogCachePath("custom_community_skins", g_Config.m_ClSkinCommunityDownloadUrl);
+		const qm_skin_catalog::EFormat Format = DetectDirectoryCatalogFormat(g_Config.m_ClSkinCommunityDownloadUrl);
+		const ESkinSourceMask KnownDisplaySources = Format == qm_skin_catalog::EFormat::DDSTATS_HTML ? ESkinSourceMask::DDSTATS : ESkinSourceMask::NONE;
+		AddCatalog(g_Config.m_ClSkinCommunityDownloadUrl, CustomCommunityCachePath.c_str(), Format,
+			ESkinSourceMask::CUSTOM | KnownDisplaySources, ESkinSourceMask::COMMUNITY | KnownDisplaySources);
 	}
 }
 
-void CSkins::LoadOfficialSkinIndexCache()
+void CSkins::LoadSkinCatalogCaches()
+{
+	for(SSkinCatalogRuntime &Catalog : m_vSkinCatalogs)
+		LoadSkinCatalogCache(Catalog);
+}
+
+bool CSkins::LoadSkinCatalogCache(SSkinCatalogRuntime &Catalog)
 {
 	void *pFileData = nullptr;
 	unsigned FileSize = 0;
-	if(!Storage()->ReadFile(OFFICIAL_SKIN_INDEX_CACHE_PATH, IStorage::TYPE_SAVE, &pFileData, &FileSize))
-		return;
-	const bool Dirty = ApplyOfficialSkinIndexJson(static_cast<const char *>(pFileData), FileSize);
-	free(pFileData);
-	if(Dirty)
+	if(!Storage()->ReadFile(Catalog.m_Source.m_CachePath.c_str(), IStorage::TYPE_SAVE, &pFileData, &FileSize))
+		return false;
+	const SHA256_DIGEST ContentHash = sha256(pFileData, FileSize);
+	if(Catalog.m_Snapshot.m_ContentHash.has_value() && Catalog.m_Snapshot.m_ContentHash.value() == ContentHash)
 	{
-		m_SkinList.ForceRefresh();
+		free(pFileData);
+		return true;
+	}
+
+	std::vector<qm_skin_catalog::SEntry> vEntries;
+	const char *pData = static_cast<const char *>(pFileData);
+	switch(Catalog.m_Source.m_Format)
+	{
+	case qm_skin_catalog::EFormat::DDNET_JSON:
+		vEntries = qm_skin_catalog::ParseDdnetJson(pData, FileSize);
+		break;
+	case qm_skin_catalog::EFormat::DDSTATS_HTML:
+		vEntries = qm_skin_catalog::MakeCatalogEntries(
+			qm_skin_catalog::ParseDdStatsCatalogNames(std::string_view(pData, FileSize)),
+			Catalog.m_Source.m_DisplaySources, Catalog.m_Source.m_RequestSources);
+		break;
+	case qm_skin_catalog::EFormat::DIRECTORY_HTML:
+		vEntries = qm_skin_catalog::MakeCatalogEntries(
+			qm_skin_catalog::ParseDirectoryCatalogNames(std::string_view(pData, FileSize)),
+			Catalog.m_Source.m_DisplaySources, Catalog.m_Source.m_RequestSources);
+		break;
+	}
+	free(pFileData);
+	if(vEntries.empty())
+		return false;
+	ApplySkinCatalogEntries(std::move(vEntries), Catalog.m_Snapshot, ContentHash);
+	log_info("skins", "Loaded skin catalog %s: %" PRIzu " names", Catalog.m_Source.m_Url.c_str(), Catalog.m_Snapshot.m_Entries.size());
+	return true;
+}
+
+void CSkins::QueueSkinCatalogRequests()
+{
+	for(SSkinCatalogRuntime &Catalog : m_vSkinCatalogs)
+	{
+		if(Catalog.m_RequestIssued)
+			continue;
+		Catalog.m_pRequest = HttpGetFile(
+			Catalog.m_Source.m_Url.c_str(), Storage(), Catalog.m_Source.m_CachePath.c_str(), IStorage::TYPE_SAVE);
+		Catalog.m_pRequest->Timeout(CTimeout{15000, 0, 8192, 10});
+		Catalog.m_pRequest->SkipByFileTime(true);
+		Catalog.m_pRequest->LogProgress(HTTPLOG::NONE);
+		Catalog.m_pRequest->FailOnErrorStatus(false);
+		Http()->Run(Catalog.m_pRequest);
+		Catalog.m_RequestIssued = true;
 	}
 }
 
-bool CSkins::ApplyOfficialSkinIndexJson(const char *pJson, size_t JsonSize)
+void CSkins::ProcessSkinCatalogRequests()
 {
-	json_value *pRoot = JsonParse(static_cast<const json_char *>(pJson), JsonSize);
-	if(pRoot == nullptr)
-		return false;
-
-	bool Dirty = false;
-	const json_value &Skins = (*pRoot)["skins"];
-	if(Skins.type == json_array)
+	for(SSkinCatalogRuntime &Catalog : m_vSkinCatalogs)
 	{
-		for(int i = 0; i < json_array_length(&Skins); ++i)
+		if(Catalog.m_pRequest == nullptr || !Catalog.m_pRequest->Done())
+			continue;
+		const bool Success = Catalog.m_pRequest->State() == EHttpState::DONE && Catalog.m_pRequest->StatusCode() < 400;
+		const EHttpState RequestState = Catalog.m_pRequest->State();
+		const int StatusCode = Catalog.m_pRequest->StatusCode();
+		Catalog.m_pRequest.reset();
+		if(Success)
 		{
-			const json_value *pEntry = json_array_get(&Skins, i);
-			if(pEntry == nullptr || pEntry->type != json_object)
-				continue;
-			const char *pName = json_string_get(json_object_get(pEntry, "name"));
-			const char *pDate = json_string_get(json_object_get(pEntry, "date"));
-			const char *pCreator = json_string_get(json_object_get(pEntry, "creator"));
-			const int ReleaseDate = ParseOfficialSkinReleaseDateKey(pDate);
-			if(pName == nullptr || ReleaseDate == 0 || !CSkin::IsValidName(pName))
-				continue;
-			auto ExistingSkin = m_Skins.find(pName);
-			if(ExistingSkin == m_Skins.end())
-			{
-				const CSkinContainer::EType Type = PreferredContainerType(pName);
-				CSkinContainer SkinContainer(this, pName, Type, ContainerStorageTypeFor(Type));
-				auto &&pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
-				pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
-				ExistingSkin = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;
-				Dirty = true;
-			}
-			CSkinContainer *pSkinContainer = ExistingSkin->second.get();
-			if(pSkinContainer->OfficialReleaseDate() != ReleaseDate)
-			{
-				pSkinContainer->SetOfficialReleaseDate(ReleaseDate);
-				Dirty = true;
-			}
-			if(pCreator != nullptr && str_comp(pSkinContainer->OfficialCreator(), pCreator) != 0)
-			{
-				pSkinContainer->SetOfficialCreator(pCreator);
-				Dirty = true;
-			}
+			// 304 的语义就是磁盘缓存仍有效；启动时已经解析过就不要把同一份
+			// 目录再次追加到合并队列。
+			if(StatusCode != 304 || !Catalog.m_Snapshot.m_Loaded)
+				LoadSkinCatalogCache(Catalog);
+		}
+		else
+		{
+			log_warn("skins", "Failed to load skin catalog %s (state=%d, HTTP %d); keeping cached entries",
+				Catalog.m_Source.m_Url.c_str(), (int)RequestState, StatusCode);
 		}
 	}
-	json_value_free(pRoot);
-	return Dirty;
+}
+
+void CSkins::ApplySkinCatalogEntries(std::vector<qm_skin_catalog::SEntry> vEntries, SSkinCatalogSnapshot &Snapshot, SHA256_DIGEST ContentHash)
+{
+	SSkinCatalogSnapshot NewSnapshot;
+	NewSnapshot.m_Loaded = true;
+	NewSnapshot.m_ContentHash = ContentHash;
+	NewSnapshot.m_Entries.reserve(vEntries.size());
+	for(qm_skin_catalog::SEntry &Entry : vEntries)
+	{
+		if(Entry.m_Name.empty() || !CSkin::IsValidName(Entry.m_Name.c_str()))
+			continue;
+		qm_skin_catalog::MergeEntry(NewSnapshot.m_Entries, std::move(Entry));
+	}
+
+	if(NewSnapshot.m_Entries.empty())
+		return;
+	Snapshot = std::move(NewSnapshot);
+	RefreshSkinCatalogSourceMasks();
+	for(const auto &[_, Entry] : Snapshot.m_Entries)
+		m_vPendingSkinCatalogEntries.push_back(Entry);
+	m_SkinList.ForceRefresh();
+}
+
+ESkinSourceMask CSkins::CatalogSourcesForName(const char *pName, bool RequestSources) const
+{
+	ESkinSourceMask Sources = ESkinSourceMask::NONE;
+	if(pName == nullptr)
+		return Sources;
+	const std::string Key = CSkinNameIndex::Key(pName);
+	for(const SSkinCatalogRuntime &Catalog : m_vSkinCatalogs)
+	{
+		const auto Entry = Catalog.m_Snapshot.m_Entries.find(Key);
+		if(Entry == Catalog.m_Snapshot.m_Entries.end())
+			continue;
+		Sources |= RequestSources ? Entry->second.m_RequestSources : Entry->second.m_DisplaySources;
+	}
+	return Sources;
+}
+
+void CSkins::ApplyCatalogSources(CSkinContainer *pSkinContainer) const
+{
+	if(pSkinContainer == nullptr)
+		return;
+	pSkinContainer->SetCatalogSources(
+		CatalogSourcesForName(pSkinContainer->Name(), false),
+		CatalogSourcesForName(pSkinContainer->Name(), true));
+}
+
+void CSkins::RefreshSkinCatalogSourceMasks()
+{
+	for(auto &[_, pSkinContainer] : m_Skins)
+	{
+		ApplyCatalogSources(pSkinContainer.get());
+		if(pSkinContainer->IsCatalogOnly() && pSkinContainer->State() == CSkinContainer::EState::NOT_FOUND)
+			pSkinContainer->SetState(CSkinContainer::EState::UNLOADED);
+	}
+}
+
+void CSkins::ProcessPendingSkinCatalogEntries()
+{
+	if(m_SkinCatalogMergeCursor >= m_vPendingSkinCatalogEntries.size())
+		return;
+
+	bool Dirty = false;
+	SSettingsResourceMergeBudget MergeBudget;
+	MergeBudget.m_MaxListEntries = SKIN_CATALOG_MERGE_BUDGET;
+	while(m_SkinCatalogMergeCursor < m_vPendingSkinCatalogEntries.size() &&
+		SettingsResourceConsumeMergeEntry(MergeBudget, SettingsFrameBudgetOrNull(GameClient())))
+	{
+		const qm_skin_catalog::SEntry &Entry = m_vPendingSkinCatalogEntries[m_SkinCatalogMergeCursor++];
+		m_SkinNameIndex.Add(Entry.m_Name.c_str(), 0);
+		m_SkinNotFoundKeys.erase(CSkinNameIndex::Key(Entry.m_Name.c_str()));
+
+		auto ExistingSkin = m_Skins.find(Entry.m_Name);
+		if(ExistingSkin == m_Skins.end())
+		{
+			const CSkinContainer::EType Type = PreferredContainerType(Entry.m_Name.c_str());
+			CSkinContainer SkinContainer(this, Entry.m_Name.c_str(), Type, ContainerStorageTypeFor(Type));
+			auto pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
+			pSkinContainer->SetCatalogOnly(Type == CSkinContainer::EType::DOWNLOAD);
+			ApplyCatalogSources(pSkinContainer.get());
+			pSkinContainer->SetOfficialReleaseDate(Entry.m_OfficialReleaseDate);
+			pSkinContainer->SetOfficialCreator(Entry.m_OfficialCreator.c_str());
+			pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
+			ExistingSkin = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;
+		}
+		else
+		{
+			CSkinContainer *pSkinContainer = ExistingSkin->second.get();
+			ApplyCatalogSources(pSkinContainer);
+			if(Entry.m_OfficialReleaseDate != 0)
+				pSkinContainer->SetOfficialReleaseDate(Entry.m_OfficialReleaseDate);
+			if(!Entry.m_OfficialCreator.empty())
+				pSkinContainer->SetOfficialCreator(Entry.m_OfficialCreator.c_str());
+		}
+		Dirty = true;
+	}
+	if(Dirty)
+		m_SkinList.ForceRefresh();
+	if(m_SkinCatalogMergeCursor >= m_vPendingSkinCatalogEntries.size())
+	{
+		m_vPendingSkinCatalogEntries.clear();
+		m_SkinCatalogMergeCursor = 0;
+	}
 }
 
 void CSkins::ProcessSkinListPlanJob()
@@ -3235,7 +3512,7 @@ void CSkins::ProcessSkinListPlanJob()
 		m_pSkinListPlanJob.reset();
 	}
 
-	if(m_SkinList.m_NeedsUpdate && m_pSkinListPlanJob == nullptr && m_vPendingSkinListMergeEntries.empty())
+	if(m_SkinList.m_NeedsUpdate && m_pSkinListPlanJob == nullptr && m_vPendingSkinListMergeEntries.empty() && !SkinListSourcesPending())
 	{
 		m_vPendingSkinListEntries.clear();
 		m_HasPendingSkinListMergePlan = false;
@@ -3349,8 +3626,13 @@ const CSkins::CSkinContainer *CSkins::FindContainerImpl(const char *pName, bool 
 		const CSkinContainer::EType Type = PreferredContainerType(pCanonicalName);
 		CSkinContainer SkinContainer(this, pCanonicalName, Type, ContainerStorageTypeFor(Type));
 		auto &&pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
+		ApplyCatalogSources(pSkinContainer.get());
 		pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
 		ExistingSkin = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;
+	}
+	else
+	{
+		ApplyCatalogSources(ExistingSkin->second.get());
 	}
 	if(RequestLoad && m_SkinNotFoundKeys.find(CSkinNameIndex::Key(pName)) == m_SkinNotFoundKeys.end())
 		ExistingSkin->second->RequestLoad(true);
@@ -3824,7 +4106,7 @@ void CSkins::RandomizeSkin(int Dummy)
 
 const char *CSkins::SkinPrefix() const
 {
-	if(g_Config.m_ClVanillaSkinsOnly)
+	if(VanillaSkinsOnlyActive(g_Config.m_QmSkinListFilter, g_Config.m_ClVanillaSkinsOnly != 0))
 	{
 		return "";
 	}
@@ -3880,18 +4162,23 @@ void CSkins::CSkinLoadJob::Run()
 	}
 }
 
-std::unique_ptr<CQmSkinDownloadSession> CSkins::CreateSkinDownloadSession(const char *pName)
+std::unique_ptr<CQmSkinDownloadSession> CSkins::CreateSkinDownloadSession(const CSkinContainer *pSkinContainer)
 {
+	dbg_assert(pSkinContainer != nullptr, "Download session requires a skin container");
+	const char *pName = pSkinContainer->Name();
 	const std::string Name = CanonicalSkinName(pName);
 	char aEscapedName[256];
 	EscapeUrl(aEscapedName, Name.c_str());
+	const ESkinSourceMask RequestSources = pSkinContainer->EffectiveRequestSources();
 	std::vector<CQmSkinDownloadSession::SSource> vSources;
-	const auto AddSource = [&](const char *pBaseUrl, ESkinSource Tier) {
+	const auto AddSource = [&](const char *pBaseUrl, ESkinSource Slot) {
 		if(pBaseUrl == nullptr || pBaseUrl[0] == '\0')
 			return;
-		const ESkinSource Source = Tier == ESkinSource::DDSTATS ? ESkinSource::DDSTATS : ClassifyDownloadSource(Tier, pBaseUrl);
-		if(Source == ESkinSource::DDSTATS && g_Config.m_QmDownloadDdStatsSkins == 0)
+		// 开关授权按配置槽位判断，来源身份只用于记录和列表归属。这样同一
+		// DDStats URL 同时作为社区槽时，社区开关开启仍能发起请求。
+		if(!CSkinContainer::RequestSourcesAllowDownloadSlot(RequestSources, Slot))
 			return;
+		const ESkinSource Source = Slot == ESkinSource::DDSTATS ? ESkinSource::DDSTATS : ClassifyDownloadSource(Slot, pBaseUrl);
 		vSources.push_back({std::string(pBaseUrl) + aEscapedName + ".png", Source});
 	};
 	if(g_Config.m_ClDownloadSkins)

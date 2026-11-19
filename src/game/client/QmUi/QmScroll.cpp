@@ -86,8 +86,7 @@ namespace
 			Frame.m_ScrollbarTrackRect.h = std::max(0.0f, ScrollbarRect.h - ScrollbarMargin * 2.0f);
 			const float TrackSize = std::max(0.0f, Horizontal ? Frame.m_ScrollbarTrackRect.w : Frame.m_ScrollbarTrackRect.h);
 			const float ViewportSize = std::max(0.0f, Horizontal ? ClipRect.w : ClipRect.h);
-			const float RawThumbSize = ContentSize > 0.0f ? ViewportSize / ContentSize * TrackSize : TrackSize;
-			const float ThumbSize = std::min(TrackSize, std::max(0.0f, std::max(Style.m_MinThumbHeight, RawThumbSize)));
+			const float ThumbSize = QmResolveScrollThumbSize(ViewportSize, ContentSize, TrackSize, Style.m_MinThumbHeight, Style.m_ThumbSizeExponent);
 			const float MaxThumbTravel = std::max(0.0f, TrackSize - ThumbSize);
 			const float ScrollbarOffset = std::clamp(Frame.m_Offset, 0.0f, Metrics.MaxOffset());
 			const float ThumbOffset = Metrics.MaxOffset() > 0.0f ? ScrollbarOffset / Metrics.MaxOffset() * MaxThumbTravel : 0.0f;
@@ -110,6 +109,22 @@ namespace
 float SQmScrollMetrics::MaxOffset() const
 {
 	return std::max(0.0f, m_ContentSize - m_ViewportSize);
+}
+
+float QmResolveScrollThumbSize(float ViewportSize, float ContentSize, float TrackSize, float MinThumbSize, float SizeExponent)
+{
+	const float Track = std::max(0.0f, TrackSize);
+	if(Track <= 0.0f)
+		return 0.0f;
+	const float Viewport = std::max(0.0f, ViewportSize);
+	const float Content = std::max(0.0f, ContentSize);
+	if(Viewport <= 0.0f || Content <= Viewport)
+		return Track;
+	const float VisibleFraction = std::clamp(Viewport / Content, 0.0f, 1.0f);
+	const float Exponent = std::clamp(SizeExponent, 0.1f, 4.0f);
+	const float RawThumbSize = Track * std::pow(VisibleFraction, Exponent);
+	const float MinThumb = std::clamp(MinThumbSize, 0.0f, Track);
+	return std::min(Track, std::max(MinThumb, RawThumbSize));
 }
 
 SQmScrollContainerStyle QmScrollContainerStyleForSize(EQmScrollSize Size, float UiScale)
@@ -262,6 +277,10 @@ SQmResolvedScrollPolicy QmResolveScrollPolicy(const SQmScrollRequest &Request, f
 	case EQmScrollProfile::SETTINGS_GRID:
 	case EQmScrollProfile::GRID:
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, UiScale);
+		// 目录型网格可能有数千项。纯线性比例加 36px 最小滑块会把 1k 与 7k 内容
+		// 都压成同一长度；平方根压缩仍保持“越短内容越长”的顺序，同时保留可抓取尺寸。
+		Policy.m_Style.m_MinThumbHeight = Policy.m_Style.m_ScrollbarWidth;
+		Policy.m_Style.m_ThumbSizeExponent = 0.5f;
 		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * RowsPerStep * StepScale : Policy.m_Config.m_WheelScale;
 		Policy.m_ContentDragAllowed = false;
 		break;

@@ -173,22 +173,83 @@ TEST(SkinSources, LocalLoadUsesCanonicalDiskName)
 	EXPECT_STREQ(CSkins::ResolveLoadName(EType::DOWNLOAD, "paladin", Index), "paladin");
 }
 
-TEST(SkinSources, ListVisibilityFollowsSelectedDownloadTiers)
+TEST(SkinSources, ListFilterMatchesSourcesIndependentlyOfDownloadToggles)
 {
-	EXPECT_TRUE(SkinSourceVisible(ESkinSource::LOCAL, false, false, false));
-	EXPECT_TRUE(SkinSourceVisible(ESkinSource::UNKNOWN, false, false, false));
+	EXPECT_TRUE(SkinListFilterMatches(ESkinSourceMask::NONE, ESkinListFilter::ALL));
+	EXPECT_FALSE(SkinListFilterMatches(ESkinSourceMask::NONE, ESkinListFilter::OFFICIAL));
 
-	EXPECT_FALSE(SkinSourceVisible(ESkinSource::OFFICIAL, false, true, true));
-	EXPECT_TRUE(SkinSourceVisible(ESkinSource::OFFICIAL, true, false, false));
-	EXPECT_FALSE(SkinSourceVisible(ESkinSource::COMMUNITY, true, false, true));
-	EXPECT_TRUE(SkinSourceVisible(ESkinSource::COMMUNITY, false, true, false));
-	EXPECT_FALSE(SkinSourceVisible(ESkinSource::DDSTATS, true, true, false));
-	EXPECT_TRUE(SkinSourceVisible(ESkinSource::DDSTATS, false, false, true));
+	EXPECT_TRUE(SkinListFilterMatches(ESkinSourceMask::OFFICIAL, ESkinListFilter::OFFICIAL));
+	EXPECT_FALSE(SkinListFilterMatches(ESkinSourceMask::COMMUNITY, ESkinListFilter::OFFICIAL));
+	EXPECT_FALSE(SkinListFilterMatches(ESkinSourceMask::DDSTATS, ESkinListFilter::OFFICIAL));
+	EXPECT_FALSE(SkinListFilterMatches(ESkinSourceMask::CUSTOM, ESkinListFilter::OFFICIAL));
 
-	EXPECT_TRUE(SkinSourceVisible(ESkinSource::CUSTOM_OFFICIAL, true, false, false));
-	EXPECT_FALSE(SkinSourceVisible(ESkinSource::CUSTOM_OFFICIAL, false, true, true));
-	EXPECT_TRUE(SkinSourceVisible(ESkinSource::CUSTOM_COMMUNITY, false, true, false));
-	EXPECT_FALSE(SkinSourceVisible(ESkinSource::CUSTOM_COMMUNITY, true, false, true));
+	EXPECT_TRUE(SkinListFilterMatches(ESkinSourceMask::COMMUNITY, ESkinListFilter::COMMUNITY));
+	EXPECT_TRUE(SkinListFilterMatches(ESkinSourceMask::DDSTATS, ESkinListFilter::DDSTATS));
+	EXPECT_TRUE(SkinListFilterMatches(ESkinSourceMask::CUSTOM, ESkinListFilter::CUSTOM));
+	EXPECT_TRUE(SkinListFilterMatches(ESkinSourceMask::VANILLA, ESkinListFilter::VANILLA));
+
+	// 来源目录是并集：重名皮肤同时属于多个目录时，每个筛选都必须保留它。
+	const ESkinSourceMask Shared = ESkinSourceMask::OFFICIAL | ESkinSourceMask::COMMUNITY |
+				       ESkinSourceMask::DDSTATS | ESkinSourceMask::CUSTOM | ESkinSourceMask::VANILLA;
+	EXPECT_TRUE(SkinListFilterMatches(Shared, ESkinListFilter::OFFICIAL));
+	EXPECT_TRUE(SkinListFilterMatches(Shared, ESkinListFilter::COMMUNITY));
+	EXPECT_TRUE(SkinListFilterMatches(Shared, ESkinListFilter::DDSTATS));
+	EXPECT_TRUE(SkinListFilterMatches(Shared, ESkinListFilter::CUSTOM));
+	EXPECT_TRUE(SkinListFilterMatches(Shared, ESkinListFilter::VANILLA));
+}
+
+TEST(SkinSources, SourceMasksKeepCustomAndIntrinsicRoleTogether)
+{
+	EXPECT_EQ(SkinSourceMaskFromSource(ESkinSource::CUSTOM_OFFICIAL), ESkinSourceMask::OFFICIAL | ESkinSourceMask::CUSTOM);
+	EXPECT_EQ(SkinSourceMaskFromSource(ESkinSource::CUSTOM_COMMUNITY), ESkinSourceMask::COMMUNITY | ESkinSourceMask::CUSTOM);
+	EXPECT_EQ(SkinSourceMaskFromSource(ESkinSource::DDSTATS), ESkinSourceMask::DDSTATS);
+
+	const ESkinSourceMask DdStatsCustom = ESkinSourceMask::DDSTATS | ESkinSourceMask::CUSTOM;
+	EXPECT_TRUE(SkinListFilterMatches(DdStatsCustom, ESkinListFilter::DDSTATS));
+	EXPECT_TRUE(SkinListFilterMatches(DdStatsCustom, ESkinListFilter::CUSTOM));
+	EXPECT_FALSE(SkinListFilterMatches(DdStatsCustom, ESkinListFilter::OFFICIAL));
+}
+
+TEST(SkinSources, ListFilterFallsBackToAllForUnknownConfigurationValues)
+{
+	EXPECT_EQ(SkinListFilterFromInt(-1), ESkinListFilter::ALL);
+	EXPECT_EQ(SkinListFilterFromInt((int)ESkinListFilter::COUNT), ESkinListFilter::ALL);
+	EXPECT_EQ(SkinListFilterFromInt(1), ESkinListFilter::OFFICIAL);
+	EXPECT_EQ(SkinListFilterFromInt(5), ESkinListFilter::VANILLA);
+}
+
+TEST(SkinSources, LegacyVanillaOnlyMapsToVisibleVanillaFilter)
+{
+	EXPECT_EQ(ResolveSkinListFilter((int)ESkinListFilter::ALL, true), ESkinListFilter::VANILLA);
+	EXPECT_EQ(ResolveSkinListFilter((int)ESkinListFilter::ALL, false), ESkinListFilter::ALL);
+	EXPECT_EQ(ResolveSkinListFilter((int)ESkinListFilter::COMMUNITY, true), ESkinListFilter::COMMUNITY);
+	EXPECT_EQ(ResolveSkinListFilter(-1, true), ESkinListFilter::VANILLA);
+
+	EXPECT_TRUE(VanillaSkinsOnlyActive((int)ESkinListFilter::VANILLA, false));
+	EXPECT_TRUE(VanillaSkinsOnlyActive((int)ESkinListFilter::ALL, true));
+	EXPECT_FALSE(VanillaSkinsOnlyActive((int)ESkinListFilter::COMMUNITY, true));
+}
+
+TEST(SkinSources, ListPlanWaitsForEveryInitialCatalogSource)
+{
+	SSkinListSourceSettleState State;
+	State.m_HasInitialDirectoryScan = true;
+	EXPECT_TRUE(SkinListSourcesSettled(State));
+
+	State.m_DirectoryScanPending = true;
+	EXPECT_FALSE(SkinListSourcesSettled(State));
+	State.m_DirectoryScanPending = false;
+
+	State.m_CatalogMergePending = true;
+	EXPECT_FALSE(SkinListSourcesSettled(State));
+	State.m_CatalogMergePending = false;
+
+	State.m_CatalogRequestPending = true;
+	EXPECT_FALSE(SkinListSourcesSettled(State));
+	State.m_CatalogRequestPending = false;
+
+	State.m_HasInitialDirectoryScan = false;
+	EXPECT_FALSE(SkinListSourcesSettled(State));
 }
 
 TEST(SkinSources, DownloadGateFollowsSourceToggles)
@@ -216,6 +277,33 @@ TEST(SkinSources, DownloadGateFollowsSourceToggles)
 	g_Config.m_ClDownloadSkins = Official;
 	g_Config.m_ClDownloadCommunitySkins = Community;
 	g_Config.m_QmDownloadDdStatsSkins = DdStats;
+}
+
+TEST(SkinSources, RequestSourceMaskRestrictsDownloadSlots)
+{
+	using Mask = ESkinSourceMask;
+
+	EXPECT_TRUE(CSkins::CSkinContainer::RequestSourcesAllowDownloadSlot(Mask::NONE, ESkinSource::OFFICIAL));
+	EXPECT_TRUE(CSkins::CSkinContainer::RequestSourcesAllowDownloadSlot(Mask::NONE, ESkinSource::COMMUNITY));
+	EXPECT_TRUE(CSkins::CSkinContainer::RequestSourcesAllowDownloadSlot(Mask::NONE, ESkinSource::DDSTATS));
+
+	const Mask SharedDdStats = Mask::DDSTATS | Mask::COMMUNITY;
+	EXPECT_TRUE(CSkins::CSkinContainer::RequestSourcesAllowDownloadSlot(SharedDdStats, ESkinSource::DDSTATS));
+	EXPECT_TRUE(CSkins::CSkinContainer::RequestSourcesAllowDownloadSlot(SharedDdStats, ESkinSource::COMMUNITY));
+	EXPECT_FALSE(CSkins::CSkinContainer::RequestSourcesAllowDownloadSlot(SharedDdStats, ESkinSource::OFFICIAL));
+
+	EXPECT_TRUE(CSkins::CSkinContainer::RequestSourcesAllowDownloadSlot(Mask::OFFICIAL, ESkinSource::OFFICIAL));
+	EXPECT_FALSE(CSkins::CSkinContainer::RequestSourcesAllowDownloadSlot(Mask::OFFICIAL, ESkinSource::COMMUNITY));
+	EXPECT_FALSE(CSkins::CSkinContainer::RequestSourcesAllowDownloadSlot(Mask::OFFICIAL, ESkinSource::DDSTATS));
+}
+
+TEST(Skins, CachedDownloadRemainsVisibleWhenNetworkDownloadIsDisabled)
+{
+	using EType = CSkins::CSkinContainer::EType;
+	using EState = CSkins::CSkinContainer::EState;
+
+	EXPECT_EQ(CSkins::CSkinContainer::InitialStateForSource(EType::DOWNLOAD, false, true, false, true), EState::UNLOADED);
+	EXPECT_EQ(CSkins::CSkinContainer::InitialStateForSource(EType::DOWNLOAD, false, true, false, false), EState::NOT_FOUND);
 }
 
 TEST(Skins, UsageListEntriesThatCannotBeUnloadedAreDiscarded)
@@ -338,6 +426,74 @@ TEST(Skins, OfficialSkinReleaseDateParserAcceptsIsoDateOnly)
 	EXPECT_EQ(CSkins::ParseOfficialSkinReleaseDateKey("2026/06/14"), 0);
 	EXPECT_EQ(CSkins::ParseOfficialSkinReleaseDateKey("2026-6-14"), 0);
 	EXPECT_EQ(CSkins::ParseOfficialSkinReleaseDateKey("2026-0x-14"), 0);
+}
+
+TEST(SkinCatalog, OfficialJsonKeepsNormalAndCommunityMembershipIndependent)
+{
+	const char aJson[] =
+		R"({"skins":[)"
+		R"({"name":"NormalSkin","type":"normal","date":"2025-01-02","creator":"Alice"},)"
+		R"({"name":"CommunitySkin","type":"community","date":"2026-03-04","creator":"Bob"},)"
+		R"({"name":"Unmanaged","type":"unknown","date":"2026-03-04","creator":"Nobody"}]})";
+	const auto vEntries = qm_skin_catalog::ParseDdnetJson(aJson, sizeof(aJson) - 1);
+	ASSERT_EQ(vEntries.size(), 2u);
+
+	EXPECT_EQ(vEntries[0].m_Name, "NormalSkin");
+	EXPECT_TRUE(SkinSourceMaskHas(vEntries[0].m_DisplaySources, ESkinSourceMask::OFFICIAL));
+	EXPECT_FALSE(SkinSourceMaskHas(vEntries[0].m_DisplaySources, ESkinSourceMask::COMMUNITY));
+	EXPECT_EQ(vEntries[0].m_OfficialReleaseDate, 20250102);
+	EXPECT_EQ(vEntries[0].m_OfficialCreator, "Alice");
+
+	EXPECT_EQ(vEntries[1].m_Name, "CommunitySkin");
+	EXPECT_TRUE(SkinSourceMaskHas(vEntries[1].m_DisplaySources, ESkinSourceMask::COMMUNITY));
+	EXPECT_FALSE(SkinSourceMaskHas(vEntries[1].m_DisplaySources, ESkinSourceMask::OFFICIAL));
+	EXPECT_EQ(vEntries[1].m_OfficialReleaseDate, 20260304);
+	EXPECT_EQ(vEntries[1].m_OfficialCreator, "Bob");
+}
+
+TEST(SkinCatalog, DdStatsHtmlDecodesEntityAndQuotedNames)
+{
+	const char aHtml[] =
+		R"(<div skin_name="Gold&#43;Muster"></div>)"
+		R"(<div skin_name="GunFun&#39;s Skin"></div>)"
+		R"(<div skin_name="m&amp;mred"></div>)";
+	const auto vNames = qm_skin_catalog::ParseDdStatsCatalogNames(aHtml);
+	ASSERT_EQ(vNames.size(), 3u);
+	EXPECT_EQ(vNames[0], "Gold+Muster");
+	EXPECT_EQ(vNames[1], "GunFun's Skin");
+	EXPECT_EQ(vNames[2], "m&mred");
+}
+
+TEST(SkinCatalog, DirectoryHtmlDecodesUrlNamesAndRejectsNonPngLinks)
+{
+	const char aHtml[] =
+		R"(<a href="Gold%2BMuster.png">x</a>)"
+		R"(<a href='GunFun%27s%20Skin.png?cache=1'>x</a>)"
+		R"(<a href="notes.png.txt">x</a>)";
+	const auto vNames = qm_skin_catalog::ParseDirectoryCatalogNames(aHtml);
+	ASSERT_EQ(vNames.size(), 2u);
+	EXPECT_EQ(vNames[0], "Gold+Muster");
+	EXPECT_EQ(vNames[1], "GunFun's Skin");
+}
+
+TEST(SkinCatalog, SameNameKeepsEveryCatalogMembership)
+{
+	qm_skin_catalog::TEntryMap Entries;
+	qm_skin_catalog::MergeEntry(Entries, {"SharedSkin", ESkinSourceMask::OFFICIAL, ESkinSourceMask::OFFICIAL, 20250101, "Alice"});
+	qm_skin_catalog::MergeEntry(Entries, {"sharedskin", ESkinSourceMask::COMMUNITY, ESkinSourceMask::COMMUNITY, 20260202, "Bob"});
+	qm_skin_catalog::MergeEntry(Entries, {"SharedSkin", ESkinSourceMask::DDSTATS | ESkinSourceMask::CUSTOM,
+						     ESkinSourceMask::DDSTATS, 0, ""});
+
+	ASSERT_EQ(Entries.size(), 1u);
+	const auto &Entry = Entries.begin()->second;
+	EXPECT_EQ(Entry.m_Name, "SharedSkin");
+	EXPECT_TRUE(SkinListFilterMatches(Entry.m_DisplaySources, ESkinListFilter::OFFICIAL));
+	EXPECT_TRUE(SkinListFilterMatches(Entry.m_DisplaySources, ESkinListFilter::COMMUNITY));
+	EXPECT_TRUE(SkinListFilterMatches(Entry.m_DisplaySources, ESkinListFilter::DDSTATS));
+	EXPECT_TRUE(SkinListFilterMatches(Entry.m_DisplaySources, ESkinListFilter::CUSTOM));
+	EXPECT_TRUE(SkinSourceMaskHas(Entry.m_RequestSources, ESkinSourceMask::DDSTATS));
+	EXPECT_EQ(Entry.m_OfficialReleaseDate, 20260202);
+	EXPECT_EQ(Entry.m_OfficialCreator, "Bob");
 }
 
 TEST(Skins, SettingsResourcePriorityOnlyUpgradesTowardVisible)

@@ -1306,6 +1306,40 @@ TEST(UiV2ScrollContainer, ComputesScrollbarTrackAndThumbGeometry)
 	EXPECT_GE(Frame.m_ScrollbarThumbRect.y, Frame.m_ScrollbarTrackRect.y);
 	EXPECT_LE(Frame.m_ScrollbarThumbRect.y + Frame.m_ScrollbarThumbRect.h, Frame.m_ScrollbarTrackRect.y + Frame.m_ScrollbarTrackRect.h);
 }
+
+TEST(UiV2ScrollContainer, GridScrollbarThumbLengthReflectsCatalogScale)
+{
+	SQmScrollRequest Request;
+	Request.m_Profile = EQmScrollProfile::SETTINGS_GRID;
+	Request.m_RowExtent = 50.0f;
+	Request.m_RowsPerStep = 2;
+	const SQmResolvedScrollPolicy Policy = QmResolveScrollPolicy(Request, 1.0f, 0.0f);
+	EXPECT_FLOAT_EQ(Policy.m_Style.m_MinThumbHeight, Policy.m_Style.m_ScrollbarWidth);
+	EXPECT_FLOAT_EQ(Policy.m_Style.m_ThumbSizeExponent, 0.5f);
+	const CScrollRegionParams Params = QmScrollRegionParamsFromPolicy(Policy);
+	EXPECT_FLOAT_EQ(Params.m_SliderSizeExponent, 0.5f);
+
+	CQmScrollState State;
+	CQmScrollController Controller;
+	const CUIRect View{0.0f, 0.0f, 800.0f, 300.0f};
+	constexpr float ViewportHeight = 300.0f;
+	constexpr float TrackHeight = ViewportHeight - 2.0f * 2.0f;
+	const auto ThumbHeight = [&](int Items, int Columns) {
+		const int Rows = (Items + Columns - 1) / Columns;
+		const float ContentHeight = ui_token::list::RowsHeight(Rows, Request.m_RowExtent, 0.0f);
+		const SQmScrollContainerFrame Frame = Controller.PreviewFrame(State, View, ContentHeight, Policy.m_Style);
+		EXPECT_TRUE(Frame.m_ScrollbarVisible);
+		const float Resolved = QmResolveScrollThumbSize(ViewportHeight, ContentHeight, TrackHeight, Params.m_SliderMinSize, Params.m_SliderSizeExponent);
+		EXPECT_NEAR(Frame.m_ScrollbarThumbRect.h, Resolved, 0.01f);
+		EXPECT_NEAR(QmResolveScrollThumbSize(ViewportHeight, ContentHeight, TrackHeight, Params.m_SliderMinSize, 1.0f), Params.m_SliderMinSize, 0.01f);
+		return Resolved;
+	};
+
+	const float CommunityThumb = ThumbHeight(1171, 5);
+	const float DdStatsThumb = ThumbHeight(7046, 5);
+	EXPECT_GT(CommunityThumb, DdStatsThumb + 10.0f);
+}
+
 TEST(UiV2ScrollContainer, ComputesHorizontalContentRectAndScrollbarGeometry)
 {
 	CQmScrollState State;
