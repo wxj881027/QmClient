@@ -153,7 +153,7 @@ public:
 	};
 
 	virtual ~CPngReadAllocator() = default;
-	// STATE、ROWS 的默认分配分别与 operator delete、operator delete[] 配对。
+	// 默认分配使用 malloc，各类别共用 free 释放。
 	virtual void *Allocate(EKind Kind, size_t Size) noexcept;
 	// 接受空指针；STATE、ROWS、LIBPNG 由解码器配对释放，PIXELS 使用 CImageInfo::Free。
 	virtual void Deallocate(EKind Kind, void *pData) noexcept;

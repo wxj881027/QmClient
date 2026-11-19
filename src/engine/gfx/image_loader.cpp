@@ -125,8 +125,7 @@ namespace
 			m_Allocator(Allocator) {}
 		~SPngReadState()
 		{
-			std::free(m_pRows);
-			m_pRows = nullptr;
+			m_Allocator.Deallocate(CPngReadAllocator::EKind::ROWS, m_pRows);
 			if(m_pPng != nullptr)
 				png_destroy_read_struct(&m_pPng, &m_pInfo, nullptr);
 		}
@@ -162,27 +161,14 @@ namespace
 
 } // namespace
 
-void *CPngReadAllocator::Allocate(EKind Kind, size_t Size) noexcept
+void *CPngReadAllocator::Allocate(EKind, size_t Size) noexcept
 {
-	switch(Kind)
-	{
-	case EKind::STATE: return ::operator new(Size, std::nothrow);
-	case EKind::ROWS: return ::operator new[](Size, std::nothrow);
-	case EKind::PIXELS:
-	case EKind::LIBPNG: return malloc(Size);
-	}
-	return nullptr;
+	return std::malloc(Size);
 }
 
-void CPngReadAllocator::Deallocate(EKind Kind, void *pData) noexcept
+void CPngReadAllocator::Deallocate(EKind, void *pData) noexcept
 {
-	switch(Kind)
-	{
-	case EKind::STATE: ::operator delete(pData); break;
-	case EKind::ROWS: ::operator delete[](pData); break;
-	case EKind::PIXELS:
-	case EKind::LIBPNG: free(pData); break;
-	}
+	std::free(pData);
 }
 
 unsigned CImageFileOperations::Write(IOHANDLE File, const void *pData, unsigned Size) noexcept
@@ -421,7 +407,7 @@ CImageLoader::EPngLoadResult CImageLoader::LoadPngChecked(CByteBufferReader &Rea
 		log_error("png", "failed to allocate image data. width=%d height=%d bytes=%" PRIzu, Width, Height, ExpectedDataSize);
 		return EPngLoadResult::RESOURCE_ERROR;
 	}
-	pState->m_pRows = static_cast<png_bytepp>(std::malloc(static_cast<size_t>(Height) * sizeof(png_bytep)));
+	pState->m_pRows = static_cast<png_bytepp>(Allocator.Allocate(CPngReadAllocator::EKind::ROWS, static_cast<size_t>(Height) * sizeof(png_bytep)));
 	if(pState->m_pRows == nullptr)
 	{
 		Image.Free();
