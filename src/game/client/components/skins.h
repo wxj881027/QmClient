@@ -646,10 +646,7 @@ public:
 	uint64_t SettingsSourceLoadsCompleted() const { return m_SettingsSourceLoadsCompleted; }
 	const SSettingsSourceAdmissionTelemetry &SettingsSourceAdmissionTelemetry() const { return m_SettingsSourceAdmissionTelemetry; }
 	void SetSettingsTeeVisibleSnapshot(const SSettingsTeeVisibleSnapshot &Snapshot) { m_SettingsTeeVisibleSnapshot = Snapshot; }
-	void SetSettingsVisibleSkinLoads(std::vector<std::string> Names, bool MeasurementOnly = false)
-	{
-		m_SettingsLoadViewport.Publish(std::move(Names), MeasurementOnly);
-	}
+	void SetSettingsVisibleSkinLoads(std::vector<std::string> Names, bool MeasurementOnly = false);
 	void PrepareSettingsThroughputForFrame();
 	void UpdateForSettingsWarmup();
 	int SettingsGpuUploadLimiterUnitsForFrame() const { return m_SettingsThroughputControllerOutput.m_GpuUploadLimitUnits; }
@@ -1079,6 +1076,10 @@ private:
 	void UnloadLoadedSkinTextures(CSkinContainer *pSkinContainer);
 	void QueueSkinTexturesUnloaded(const char *pSkinName);
 	bool ReclaimBackgroundSkinForPriorityRequest(const char *pRequesterName, int CountFuseLimit);
+	void ReleaseSettingsSkinRequest(const char *pSkinName);
+	void ReleaseSettingsSkinLoadRequests();
+	bool SkinNameInActiveUse(const char *pSkinName) const;
+	void FlushSkinSourcesSave(std::chrono::nanoseconds Now);
 	void UpdateStartLoading(CSkinLoadingStats &Stats);
 	void UpdateSkinDownloads(CSkinLoadingStats &Stats);
 	std::unique_ptr<CQmSkinDownloadSession> CreateSkinDownloadSession(const CSkinContainer *pSkinContainer);
@@ -1199,6 +1200,9 @@ private:
 	SSettingsSourceAdmissionTelemetry m_SettingsSourceAdmissionTelemetry;
 	SSettingsSkinThroughputControllerState m_SettingsThroughputControllerState;
 	SSettingsSkinThroughputControllerOutput m_SettingsThroughputControllerOutput;
+	bool m_SettingsTeePageActiveLastUpdate = false;
+	bool m_SkinSourcesSavePending = false;
+	std::optional<std::chrono::nanoseconds> m_SkinSourcesSaveLast;
 
 	/**
 	 * Maximum number of skins to process per frame in UpdateFinishLoading.

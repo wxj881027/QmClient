@@ -97,17 +97,19 @@ class CSettingsSkinLoadViewport
 
 public:
 	void BeginFrame() { ++m_Frame; }
-	void Publish(std::vector<std::string> Names, bool MeasurementOnly = false)
+	bool Publish(std::vector<std::string> Names, bool MeasurementOnly = false)
 	{
 		if(MeasurementOnly)
-			return;
+			return false;
 		m_PublishedFrame = m_Frame;
 		if(Names == m_vNames)
-			return;
+			return false;
 		m_vNames = std::move(Names);
 		m_Names.clear();
 		m_Names.insert(m_vNames.begin(), m_vNames.end());
+		return true;
 	}
+	const std::vector<std::string> &PublishedNames() const { return m_vNames; }
 	bool Contains(const std::string &Name) const { return m_PublishedFrame == m_Frame && m_Names.contains(Name); }
 	static bool RowVisible(bool MeasurementOnly, const CUIRect &Row, const CUIRect *pClip)
 	{
@@ -507,6 +509,27 @@ const char *SettingsAdaptiveBudgetReasonName(ESettingsAdaptiveBudgetReason Reaso
 const char *SettingsSkinEffectiveFrameContextName(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 size_t SettingsSkinSourceBytesEstimate(int Width, int Height, int PixelCopies);
 bool SettingsSkinResidencyShouldReclaim(bool BytesBudgetExceeded, bool CountFuseExceeded);
+constexpr size_t SettingsSkinInactiveResidencyLimit(size_t ConfiguredLimit)
+{
+	// 离开 Tee 设置页后仍保留足够覆盖一局常见人数的已加载皮肤，
+	// 但不允许目录滚动留下的几百张预览继续驻留。
+	return minimum(ConfiguredLimit, (size_t)128);
+}
+constexpr bool SettingsSkinShouldReleaseViewportRequest(bool StillVisible, bool ActiveUse, bool AlwaysLoaded,
+	ESettingsResourcePriority Priority, bool PendingOrLoading)
+{
+	return !StillVisible && !ActiveUse && !AlwaysLoaded &&
+	       Priority != ESettingsResourcePriority::BACKGROUND &&
+	       PendingOrLoading;
+}
+constexpr bool SettingsSkinCanStartDownloadSession(int ActiveSessions, int Limit)
+{
+	return Limit <= 0 || ActiveSessions < Limit;
+}
+constexpr bool SettingsSkinWaitLogShouldEmit(int64_t Now, int64_t Last, int64_t Interval, bool SameReason)
+{
+	return !SameReason || Last == 0 || Now - Last >= Interval;
+}
 constexpr bool SettingsSkinFallbackSweepShouldRun(bool HasUsageRequests, bool HasBackgroundRequests)
 {
 	// fallback 只是显式队列为空时的兜底；显式队列存在时每帧再扫固定 64 项

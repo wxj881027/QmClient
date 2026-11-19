@@ -45,3 +45,21 @@ TEST(QmSkinSourceRegistry, IgnoresUnknownAndLocalSources)
 	EXPECT_FALSE(Registry.Set("Alpha", ESkinSource::LOCAL));
 	EXPECT_TRUE(Registry.Empty());
 }
+
+TEST(QmSkinSourceRegistry, FirstChangeSavesImmediately)
+{
+	EXPECT_TRUE(SkinSourceSaveShouldFlush(true, false, 500, 0, 1000));
+}
+
+TEST(QmSkinSourceRegistry, RepeatedChangesWithinIntervalStayCoalesced)
+{
+	EXPECT_FALSE(SkinSourceSaveShouldFlush(true, true, 1499, 500, 1000));
+	EXPECT_TRUE(SkinSourceSaveShouldFlush(true, true, 1500, 500, 1000));
+	EXPECT_TRUE(SkinSourceSaveShouldFlush(true, true, 2600, 500, 1000));
+}
+
+TEST(QmSkinSourceRegistry, CleanRegistryNeverSaves)
+{
+	EXPECT_FALSE(SkinSourceSaveShouldFlush(false, false, 500, 0, 1000));
+	EXPECT_FALSE(SkinSourceSaveShouldFlush(false, true, 5000, 500, 1000));
+}

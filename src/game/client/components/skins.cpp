@@ -48,6 +48,9 @@ static constexpr const char *DEFAULT_OFFICIAL_SKIN_URL = "https://skins.ddnet.or
 static constexpr const char *DEFAULT_COMMUNITY_SKIN_URL = "https://skins.ddnet.org/skin/community/";
 static constexpr const char *DEFAULT_DDSTATS_SKIN_URL = "https://skins.ddstats.tw/";
 static constexpr int SKIN_CATALOG_MERGE_BUDGET = 256;
+static constexpr int MAX_ACTIVE_SKIN_DOWNLOAD_SESSIONS = 48;
+static constexpr int64_t SKIN_SOURCE_WAIT_LOG_INTERVAL_NS = 1'000'000'000;
+static constexpr int64_t SKIN_SOURCES_SAVE_INTERVAL_NS = 1'000'000'000;
 
 static std::string SkinUrlIdentity(const char *pUrl)
 {
@@ -213,13 +216,31 @@ static void LogSettingsSkinSourceWaitEvent(const char *pSkinName, const char *pR
 {
 	if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
 		return;
+	struct SWaitLogThrottle
+	{
+		int64_t m_LastNs = 0;
+		char m_aReason[32] = {};
+		int m_Suppressed = 0;
+	};
+	static SWaitLogThrottle s_Throttle;
+	const int64_t NowNs = time_get_nanoseconds().count();
+	const bool SameReason = pReason != nullptr && str_comp(pReason, s_Throttle.m_aReason) == 0;
+	if(!SettingsSkinWaitLogShouldEmit(NowNs, s_Throttle.m_LastNs, SKIN_SOURCE_WAIT_LOG_INTERVAL_NS, SameReason))
+	{
+		++s_Throttle.m_Suppressed;
+		return;
+	}
 	char aPayload[256];
-	str_format(aPayload, sizeof(aPayload), "event=source_wait skin=%s artifact=source reason=%s remaining_uploads=%d max_uploads=%d",
+	str_format(aPayload, sizeof(aPayload), "event=source_wait skin=%s artifact=source reason=%s remaining_uploads=%d max_uploads=%d suppressed=%d",
 		pSkinName != nullptr ? pSkinName : "",
 		pReason != nullptr ? pReason : "none",
 		RemainingUploads,
-		MaxUploads);
+		MaxUploads,
+		s_Throttle.m_Suppressed);
 	QmPerfLogPayload("perf/settings-skin-source", aPayload);
+	s_Throttle.m_LastNs = NowNs;
+	str_copy(s_Throttle.m_aReason, pReason != nullptr ? pReason : "none", sizeof(s_Throttle.m_aReason));
+	s_Throttle.m_Suppressed = 0;
 }
 
 static void LogSettingsSkinStartLoadingFallbackSweepEvent(int ItemsTotal, int ItemsScanned, int ItemsStarted, int ItemsSkipped, bool Invoked, double DurationMs, const char *pReason)
@@ -1600,6 +1621,8 @@ void CSkins::OnUpdate()
 	LogStage("start_loading");
 	UpdateSkinDownloads(Stats);
 	LogStage("download_results");
+	FlushSkinSourcesSave(time_get_nanoseconds());
+	LogStage("skin_sources_save");
 	// 检查间隔不是主线程预算：终局上传使用独立的 1 ms 预算，首个皮肤始终取得进展。
 	UpdateFinishLoading(Stats, time_get_nanoseconds(), 1ms);
 	LogStage("finish_loading");
@@ -1642,11 +1665,15 @@ void CSkins::PrepareSettingsThroughputForFrame()
 	const SSettingsResourceFrameContext FrameContext = SettingsFrameContextOrDefault(GameClient());
 	if(!TeeSettingsActive)
 	{
+		if(m_SettingsTeePageActiveLastUpdate)
+			ReleaseSettingsSkinLoadRequests();
+		m_SettingsTeePageActiveLastUpdate = false;
 		m_SettingsThroughputControllerState = {};
 		m_SettingsThroughputControllerOutput = {};
 		m_SettingsTeeVisibleSnapshot = {};
 		return;
 	}
+	m_SettingsTeePageActiveLastUpdate = true;
 
 	CSkinLoadingStats Stats;
 	int LoadingJobsAwaitingResult = 0;
@@ -1706,6 +1733,61 @@ void CSkins::PrepareSettingsThroughputForFrame()
 											    m_SettingsTeeVisibleSnapshot.m_aRequestBudgetBlockReason,
 										    },
 		m_SettingsThroughputControllerState);
+}
+
+bool CSkins::SkinNameInActiveUse(const char *pSkinName) const
+{
+	if(pSkinName == nullptr || pSkinName[0] == '\0')
+		return false;
+	if(g_Config.m_ClPlayerSkin[0] != '\0' && str_comp_nocase(g_Config.m_ClPlayerSkin, pSkinName) == 0)
+		return true;
+	if(g_Config.m_ClDummySkin[0] != '\0' && str_comp_nocase(g_Config.m_ClDummySkin, pSkinName) == 0)
+		return true;
+	if(GameClient() == nullptr)
+		return false;
+	for(const auto &Client : GameClient()->m_aClients)
+	{
+		if(Client.m_Active && Client.m_aSkinName[0] != '\0' &&
+			str_comp_nocase(Client.m_aSkinName, pSkinName) == 0)
+			return true;
+	}
+	return false;
+}
+
+void CSkins::ReleaseSettingsSkinRequest(const char *pSkinName)
+{
+	if(pSkinName == nullptr || pSkinName[0] == '\0')
+		return;
+	const auto SkinIt = m_Skins.find(CanonicalSkinName(pSkinName));
+	if(SkinIt == m_Skins.end())
+		return;
+	CSkinContainer *pSkinContainer = SkinIt->second.get();
+	const bool PendingOrLoading =
+		pSkinContainer->m_State == CSkinContainer::EState::PENDING ||
+		pSkinContainer->m_State == CSkinContainer::EState::LOADING ||
+		pSkinContainer->m_State == CSkinContainer::EState::BACKGROUND_REQUESTED;
+	if(!SettingsSkinShouldReleaseViewportRequest(false, SkinNameInActiveUse(pSkinContainer->Name()),
+		   pSkinContainer->IsAlwaysLoaded(), pSkinContainer->m_LoadPriority, PendingOrLoading))
+		return;
+	pSkinContainer->SetState(CSkinContainer::EState::UNLOADED);
+}
+
+void CSkins::ReleaseSettingsSkinLoadRequests()
+{
+	for(const std::string &SkinName : m_SettingsLoadViewport.PublishedNames())
+		ReleaseSettingsSkinRequest(SkinName.c_str());
+}
+
+void CSkins::SetSettingsVisibleSkinLoads(std::vector<std::string> Names, bool MeasurementOnly)
+{
+	const std::vector<std::string> vPreviousNames = m_SettingsLoadViewport.PublishedNames();
+	if(!m_SettingsLoadViewport.Publish(std::move(Names), MeasurementOnly))
+		return;
+	for(const std::string &SkinName : vPreviousNames)
+	{
+		if(!m_SettingsLoadViewport.Contains(SkinName))
+			ReleaseSettingsSkinRequest(SkinName.c_str());
+	}
 }
 
 void CSkins::ClampSkinQueueIndex(int Dummy)
@@ -1983,8 +2065,10 @@ void CSkins::UpdateUnloadSkins(CSkinLoadingStats &Stats)
 		if(pSkinContainer->m_pSkin != nullptr)
 			SourceBytesInUse += pSkinContainer->SettingsSourceApproxBytes();
 	}
-	const size_t SourceBytesBudget = SettingsSkinSourceBytesEstimate(256, 128, 2) * (size_t)maximum(0, g_Config.m_ClSkinsLoadedMax);
 	const bool TeeSettingsActive = ActiveSettingsTeePage(GameClient());
+	const size_t ConfiguredLoadedLimit = (size_t)maximum(0, g_Config.m_ClSkinsLoadedMax);
+	const size_t ResidencyLimit = TeeSettingsActive ? ConfiguredLoadedLimit : SettingsSkinInactiveResidencyLimit(ConfiguredLoadedLimit);
+	const size_t SourceBytesBudget = SettingsSkinSourceBytesEstimate(256, 128, 2) * ResidencyLimit;
 	const SSettingsResourceFrameContext FrameContext = SettingsFrameContextOrDefault(GameClient());
 	const int CountFuseLimit = SettingsSkinSourceCountFuseLimit(FrameContext, TeeSettingsActive, g_Config.m_ClSkinsLoadedMax);
 	const bool CountFuseExceeded = CountFuseLimit > 0 && Stats.m_NumPending + Stats.m_NumLoading > (size_t)CountFuseLimit;
@@ -2313,6 +2397,14 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 			// 初次目录扫描完成前先使用磁盘上的 canonical 名称，避免用服务器下发的小写名发出 404 请求。
 			if(!m_HasInitialSkinDirectoryScan)
 				return false;
+			if(!SettingsSkinCanStartDownloadSession((int)m_vSkinDownloadNames.size(), MAX_ACTIVE_SKIN_DOWNLOAD_SESSIONS))
+			{
+				str_copy(m_SettingsSourceAdmissionTelemetry.m_aLastWaitReason, "download_session_limit", sizeof(m_SettingsSourceAdmissionTelemetry.m_aLastWaitReason));
+				LogSettingsSkinSourceWaitEvent(pSkinContainer->Name(), "download_session_limit",
+					GameClient()->GpuUploadLimiter()->RemainingUploads(),
+					GameClient()->GpuUploadLimiter()->MaxUploadsPerFrame());
+				return false;
+			}
 			pSkinContainer->m_pDownloadSession = CreateSkinDownloadSession(pSkinContainer);
 			if(std::find(m_vSkinDownloadNames.begin(), m_vSkinDownloadNames.end(), pSkinContainer->Name()) == m_vSkinDownloadNames.end())
 				m_vSkinDownloadNames.emplace_back(pSkinContainer->Name());
@@ -2480,9 +2572,22 @@ void CSkins::RecordSkinSource(CSkinContainer *pSkinContainer, ESkinSource Source
 	pSkinContainer->SetSkinSource(Source);
 	if(m_SkinSources.Set(pSkinContainer->Name(), Source))
 	{
-		m_SkinSources.Save(Storage());
 		m_SkinList.ForceRefresh();
+		// 注册表每次 Save 都会整表重写，成本随目录规模增长；同一帧内多个下载完成时
+		// 逐条写盘会叠加成几十毫秒的主线程停顿，因此这里只标记，交给定时合并写盘。
+		m_SkinSourcesSavePending = true;
 	}
+}
+
+void CSkins::FlushSkinSourcesSave(std::chrono::nanoseconds Now)
+{
+	const bool HasPreviousSave = m_SkinSourcesSaveLast.has_value();
+	const int64_t LastNs = HasPreviousSave ? m_SkinSourcesSaveLast.value().count() : 0;
+	if(!SkinSourceSaveShouldFlush(m_SkinSourcesSavePending, HasPreviousSave, Now.count(), LastNs, SKIN_SOURCES_SAVE_INTERVAL_NS))
+		return;
+	if(m_SkinSources.Save(Storage()))
+		m_SkinSourcesSavePending = false;
+	m_SkinSourcesSaveLast = Now;
 }
 
 CSkins::ESkinProcessResult CSkins::ProcessSkinContainer(CSkinContainer *pSkinContainer, CSkinLoadingStats &Stats,
