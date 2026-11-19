@@ -2509,10 +2509,10 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			else if(pUI->MouseHovered(&UndoRect))
 				pHint = "撤回上一次删除";
 
-			CUIRect TitleRect = ButtonsRow, HintRect;
-			TitleRect.VSplitLeft(22.0f, &TitleRect, &HintRect);
+			CUIRect PaletteTitleRect = ButtonsRow, HintRect;
+			PaletteTitleRect.VSplitLeft(22.0f, &PaletteTitleRect, &HintRect);
 			HintRect.VSplitLeft(ui_token::spacing::XS, nullptr, &HintRect);
-			pUI->DoLabel(&TitleRect, "调色板", 7.0f, TEXTALIGN_ML);
+			pUI->DoLabel(&PaletteTitleRect, "调色板", 7.0f, TEXTALIGN_ML);
 			pUI->TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
 			pUI->DoLabel(&HintRect, pHint, 6.0f, TEXTALIGN_ML);
 			pUI->TextRender()->TextColor(pUI->TextRender()->DefaultTextColor());

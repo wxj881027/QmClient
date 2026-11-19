@@ -11,6 +11,8 @@
 
 from __future__ import annotations
 
+import ctypes
+from ctypes import wintypes
 import errno
 import os
 from pathlib import Path
@@ -158,6 +160,36 @@ class Process:
 	def is_alive(self) -> bool:
 		"""进程是否仍在运行（用于断言弹窗阻塞期间进程没有被看门狗结束）。"""
 		return self._process.poll() is None
+
+	def focus_window(self) -> bool:
+		"""把本进程的可见窗口切到前台；仅用于需要真实截图的进程测试。"""
+		if os.name != "nt":
+			return True
+		user32 = ctypes.WinDLL("user32", use_last_error=True)
+		callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+		user32.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
+		user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+		user32.IsWindowVisible.argtypes = [wintypes.HWND]
+		user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+		user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+		user32.GetForegroundWindow.restype = wintypes.HWND
+		windows: list[int] = []
+
+		@callback_type
+		def visit(window: int, _: int) -> bool:
+			owner = wintypes.DWORD()
+			user32.GetWindowThreadProcessId(window, ctypes.byref(owner))
+			if owner.value == self._process.pid:
+				windows.append(window)
+			return True
+
+		user32.EnumWindows(visit, 0)
+		for window in windows:
+			user32.ShowWindow(window, 9)
+			user32.SetForegroundWindow(window)
+			if user32.GetForegroundWindow() == window:
+				return True
+		return False
 
 	def stop(self) -> None:
 		if self._fifo is not None:

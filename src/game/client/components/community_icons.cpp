@@ -202,9 +202,10 @@ void CCommunityIcons::Update()
 	}
 
 	// Rescan for changed communities only when necessary
-	if(!ServerBrowser()->DDNetInfoAvailable() || m_CommunityIconsInfoSha256 == ServerBrowser()->DDNetInfoSha256().value())
+	const std::optional<SHA256_DIGEST> InfoSha256 = ServerBrowser()->DDNetInfoSha256();
+	if(!ServerBrowser()->DDNetInfoAvailable() || !InfoSha256.has_value() || m_CommunityIconsInfoSha256 == InfoSha256)
 		return;
-	m_CommunityIconsInfoSha256 = ServerBrowser()->DDNetInfoSha256();
+	m_CommunityIconsInfoSha256 = InfoSha256;
 
 	// Remove icons for removed communities
 	auto RemovalIterator = m_vCommunityIcons.begin();

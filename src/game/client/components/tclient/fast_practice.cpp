@@ -915,7 +915,7 @@ void CFastPractice::TickPracticeGuns(CGameWorld &World, int Tick)
 			Collision()->MoverSpeed(Gun.m_Pos.x, Gun.m_Pos.y, &Gun.m_Core);
 			Gun.m_Pos += Gun.m_Core;
 		}
-		if(PRACTICE_PLASMA_PER_SEC > 0)
+		if constexpr(PRACTICE_PLASMA_PER_SEC > 0)
 			FirePracticeGun(World, Gun, Tick);
 	}
 }
@@ -1951,7 +1951,7 @@ void CFastPractice::TrackPracticeTileFeedback(int ClientId, CCharacter *pChar, c
 	{
 		ApplyPracticeRescueTee(pChar, *pTee);
 	}
-	else
+	else if(pStartChar != nullptr)
 	{
 		TeleportCharacter(pChar, pStartChar->Core()->m_Pos);
 	}

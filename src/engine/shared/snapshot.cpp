@@ -16,6 +16,8 @@
 
 #include <cstdlib>
 #include <limits>
+#include <memory>
+#include <vector>
 
 // CSnapshot
 
@@ -300,14 +302,14 @@ int CSnapshotDelta::CreateDelta(const CSnapshot *pFrom, const CSnapshot *pTo, vo
 	pDelta->m_NumUpdateItems = 0;
 	pDelta->m_NumTempItems = 0;
 
-	CItemList aHashlist[HASHLIST_SIZE];
-	GenerateHash(aHashlist, pTo);
+	std::vector<CItemList> HashList(HASHLIST_SIZE);
+	GenerateHash(HashList.data(), pTo);
 
 	// pack deleted stuff
 	for(int i = 0; i < pFrom->NumItems(); i++)
 	{
 		const CSnapshotItem *pFromItem = pFrom->GetItem(i);
-		if(GetItemIndexHashed(pFromItem->Key(), aHashlist) == -1)
+		if(GetItemIndexHashed(pFromItem->Key(), HashList.data()) == -1)
 		{
 			// deleted
 			pDelta->m_NumDeletedItems++;
@@ -320,7 +322,7 @@ int CSnapshotDelta::CreateDelta(const CSnapshot *pFrom, const CSnapshot *pTo, vo
 		}
 	}
 
-	GenerateHash(aHashlist, pFrom);
+	GenerateHash(HashList.data(), pFrom);
 
 	// fetch previous indices
 	// we do this as a separate pass because it helps the cache
@@ -329,7 +331,7 @@ int CSnapshotDelta::CreateDelta(const CSnapshot *pFrom, const CSnapshot *pTo, vo
 	for(int i = 0; i < NumItems; i++)
 	{
 		const CSnapshotItem *pCurItem = pTo->GetItem(i); // O(1) .. O(n)
-		aPastIndices[i] = GetItemIndexHashed(pCurItem->Key(), aHashlist); // O(n) .. O(n^n)
+		aPastIndices[i] = GetItemIndexHashed(pCurItem->Key(), HashList.data()); // O(n) .. O(n^n)
 	}
 
 	for(int i = 0; i < NumItems; i++)
@@ -528,8 +530,9 @@ int CSnapshotDelta::UnpackDelta(const CSnapshot *pFrom, CSnapshotBuffer *pTo, co
 	int *pData = (int *)pDelta->m_aData;
 	int *pEnd = (int *)(((char *)pSrcData + DataSize));
 
-	CSnapshotBuilder Builder;
-	Builder.Init();
+	auto pBuilder = std::make_unique<CSnapshotBuilder>();
+	pBuilder->Init();
+	CSnapshotBuilder &Builder = *pBuilder;
 
 	// unpack deleted stuff
 	int *pDeleted = pData;

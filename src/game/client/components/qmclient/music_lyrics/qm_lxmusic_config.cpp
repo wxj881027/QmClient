@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <string_view>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
@@ -205,11 +206,11 @@ namespace QmLxMusic
 
 		std::filesystem::path ConfigPath()
 		{
-			wchar_t aAppData[32768];
-			const DWORD Length = GetEnvironmentVariableW(L"APPDATA", aAppData, (DWORD)std::size(aAppData));
-			if(Length == 0 || Length >= std::size(aAppData))
+			std::wstring AppData(32768, L'\0');
+			const DWORD Length = GetEnvironmentVariableW(L"APPDATA", AppData.data(), (DWORD)AppData.size());
+			if(Length == 0 || Length >= AppData.size())
 				return {};
-			return std::filesystem::path(aAppData) / L"lx-music-desktop" / L"LxDatas" / L"config_v2.json";
+			return std::filesystem::path(std::wstring_view(AppData.data(), Length)) / L"lx-music-desktop" / L"LxDatas" / L"config_v2.json";
 		}
 
 		bool WideEqualsIgnoreCase(const wchar_t *pLeft, const wchar_t *pRight)

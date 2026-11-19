@@ -614,8 +614,8 @@ void CRankGhost::FinishParse()
 		str_format(aTempGhostPath, sizeof(aTempGhostPath), "%s.tmp", m_aGhostStoragePath);
 		Storage()->RemoveFile(aTempGhostPath, IStorage::TYPE_SAVE);
 		str_copy(m_aGhostWritePath, aTempGhostPath, sizeof(m_aGhostWritePath));
-		CGhostFileWriter TempWriter;
-		const bool WriteOk = WriteTrack(TempWriter, vpTracks[0], NumTicks);
+		auto pTempWriter = std::make_unique<CGhostFileWriter>();
+		const bool WriteOk = WriteTrack(*pTempWriter, vpTracks[0], NumTicks);
 		if(!WriteOk || !Storage()->RenameFile(aTempGhostPath, m_aGhostStoragePath, IStorage::TYPE_SAVE))
 		{
 			Storage()->RemoveFile(aTempGhostPath, IStorage::TYPE_SAVE);
@@ -640,8 +640,8 @@ void CRankGhost::FinishParse()
 		{
 			const int NumTicks = (int)vpTracks[i]->m_vPath.size();
 			str_format(m_aGhostWritePath, sizeof(m_aGhostWritePath), "%s/%02d.gho", aGroupDir, (int)i);
-			CGhostFileWriter Writer;
-			if(!WriteTrack(Writer, vpTracks[i], NumTicks))
+			auto pWriter = std::make_unique<CGhostFileWriter>();
+			if(!WriteTrack(*pWriter, vpTracks[i], NumTicks))
 			{
 				str_copy(aFailedPath, m_aGhostWritePath, sizeof(aFailedPath));
 				break;

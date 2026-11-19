@@ -631,9 +631,9 @@ CClient::CClient() :
 {
 	m_StateStartTime = time_get();
 	for(auto &DemoRecorder : m_aDemoRecorders)
-		DemoRecorder = CDemoRecorder(&m_SnapshotDelta);
+		DemoRecorder.Reset(&m_SnapshotDelta);
 	for(auto &DemoRecorder : m_aDemoRecordersSixup)
-		DemoRecorder = CDemoRecorder(&m_SnapshotDeltaSixup);
+		DemoRecorder.Reset(&m_SnapshotDeltaSixup);
 	m_LastRenderTime = time_get();
 	mem_zero(m_aInputs, sizeof(m_aInputs));
 	mem_zero(m_aapSnapshots, sizeof(m_aapSnapshots));
@@ -4079,18 +4079,26 @@ void CClient::FinishPoseOffscreenCapture()
 	}
 	// 落盘复用截图管线：同一套 screenshots/ 命名、媒体目录解析、水印与 png/webp 选择。
 	CPerfTimer HandoffTimer;
-	if(Read && m_pGraphics->TakeScreenshotFromImage(std::move(Image), m_aPoseScreenshotPath, [this](CImageInfo &&TakenImage, const char *pPath) { GameClient()->OnScreenshotTaken(std::move(TakenImage), pPath); }, GameClient()->ScreenshotProcessor()))
+	if(Read)
 	{
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "screenshot handoff (texture upload + queue) took %.2f ms", HandoffTimer.ElapsedMs());
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
-		return;
+		CImageInfo Handoff = std::move(Image);
+		if(m_pGraphics->TakeScreenshotFromImage(std::move(Handoff), m_aPoseScreenshotPath, [this](CImageInfo &&TakenImage, const char *pPath) { GameClient()->OnScreenshotTaken(std::move(TakenImage), pPath); }, GameClient()->ScreenshotProcessor()))
+		{
+			char aBuf[128];
+			str_format(aBuf, sizeof(aBuf), "screenshot handoff (texture upload + queue) took %.2f ms", HandoffTimer.ElapsedMs());
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+			return;
+		}
+		Handoff.Free();
+	}
+	else
+	{
+		Image.Free();
 	}
 
 	// 读回失败时不能在本帧退回窗口截图：这一帧整幅画面已经画进离屏目标，
 	// 窗口帧缓冲里没有可用内容（会得到一张空白图）。把请求降级成 1 倍并重新排队，
 	// 下一帧照常画进窗口后再抓，至少保证这次渲染有产物。
-	Image.Free();
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "supersampled capture failed; retrying once at the window resolution");
 	m_PoseScreenshotScale = 1;
 	m_PoseScreenshotPending = true;

@@ -553,8 +553,8 @@ void CGhost::OnRender()
 		{
 			// 查看模式：挥锤/开枪相位只跟回放播放头走。实时游戏 tick 在暂停时仍在推进，
 			// 沿用它会让暂停画面里的锤子一直上下摆动。
-			const float PlaybackTick = GhostTick + ManualRenderIntra();
-			Draw.m_AttackTimeOverride = maximum(0.0f, (PlaybackTick - 1.0f - Draw.m_Prev.m_AttackTick) / (float)Client()->GameTickSpeed());
+			const float PlaybackPhase = GhostTick + ManualRenderIntra();
+			Draw.m_AttackTimeOverride = maximum(0.0f, (PlaybackPhase - 1.0f - Draw.m_Prev.m_AttackTick) / (float)Client()->GameTickSpeed());
 		}
 		else
 		{

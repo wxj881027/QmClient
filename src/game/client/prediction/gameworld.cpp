@@ -421,8 +421,8 @@ void CGameWorld::NetCharAdd(int ObjId, CNetObj_Character *pCharObj, CNetObj_DDNe
 {
 	if(ForceAdd || IsLocalTeam(ObjId))
 	{
-		CCharacter *pChar;
-		if((pChar = (CCharacter *)GetEntity(ObjId, ENTTYPE_CHARACTER)))
+		CCharacter *pChar = (CCharacter *)GetEntity(ObjId, ENTTYPE_CHARACTER);
+		if(pChar != nullptr)
 		{
 			pChar->Read(pCharObj, pExtended, IsLocal);
 			pChar->Keep();

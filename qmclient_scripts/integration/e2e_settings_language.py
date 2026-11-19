@@ -2,16 +2,32 @@
 
 from __future__ import annotations
 
+import time
+
 try:
-	from qmclient_scripts.integration.process_harness import ProcessEnvironment
+	from qmclient_scripts.integration.process_harness import ProcessEnvironment, log_message
 except ModuleNotFoundError:
-	from process_harness import ProcessEnvironment  # type: ignore[no-redef]
+	from process_harness import ProcessEnvironment, log_message  # type: ignore[no-redef]
 
 
 def _render_settings_page(env: ProcessEnvironment, page: int) -> None:
 	# 截图成功发生在真实绘制和交换缓冲之后，避免只用 echo 证明命令被处理。
-	env.client.command(f"ui_settings_page {page}; screenshot")
-	env.client.wait_for(lambda line: line.startswith("client: Saved screenshot to '"), "settings page rendered", 15)
+	env.client.command(f"ui_settings_page {page}")
+	offset = len(env.client._lines)
+	deadline = time.monotonic() + 15.0
+	while time.monotonic() < deadline:
+		if not env.client.is_alive():
+			raise RuntimeError("client exited before settings page screenshot")
+		# 窗口可能尚未创建或暂时失焦，持续重试截图请求。
+		if env.client.focus_window():
+			env.client.command("screenshot")
+		if any(
+			log_message(raw).startswith("client: Saved screenshot to '")
+			for raw in env.client._lines[offset:]
+		):
+			return
+		time.sleep(0.1)
+	raise TimeoutError("client: timed out waiting for settings page rendered")
 
 
 def scenario_settings_language_round_trip(env: ProcessEnvironment) -> None:

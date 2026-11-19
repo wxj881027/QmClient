@@ -103,13 +103,13 @@ void CRankGhost::EnterViewMode()
 	str_copy(m_aViewPlaybackFilename, m_aLoadedReplayFilename);
 	// 练习 /pg 组没有源 demo，跳过元数据扫描；其余情况只读 tick 与标记，
 	// 不播放快照，不改变在线服务器状态。
-	CDemoPlayer Metadata(nullptr, nullptr, false);
-	if(m_aViewPlaybackFilename[0] != '\0' && Metadata.Load(Storage(), nullptr, m_aViewPlaybackFilename, IStorage::TYPE_SAVE) != -1)
+	auto pMetadata = std::make_unique<CDemoPlayer>(nullptr, nullptr, false);
+	if(m_aViewPlaybackFilename[0] != '\0' && pMetadata->Load(Storage(), nullptr, m_aViewPlaybackFilename, IStorage::TYPE_SAVE) != -1)
 	{
-		m_ViewPlaybackMetadata = *Metadata.BaseInfo();
+		m_ViewPlaybackMetadata = *pMetadata->BaseInfo();
 		if(m_ViewPlaybackMetadata.m_NumTimelineMarkers >= 2)
 			m_ViewPlaybackMetadata.m_FirstTick = m_ViewPlaybackMetadata.m_aTimelineMarkers[0];
-		Metadata.Stop();
+		pMetadata->Stop();
 	}
 	m_ViewPlaybackMetadata.m_FirstTick = maximum(0, m_ViewPlaybackMetadata.m_FirstTick);
 	m_ViewPlaybackMetadata.m_LastTick = m_ViewPlaybackMetadata.m_FirstTick + GameClient()->m_Ghost.ManualEndTick();

@@ -31,7 +31,7 @@ struct Score : public testing::TestWithParam<IDbConnection *>
 		InsertMap("Kobra 3", "Zerodin", "Novice", 5, 5);
 	}
 
-	~Score()
+	~Score() override
 	{
 		m_pConn->Disconnect();
 	}

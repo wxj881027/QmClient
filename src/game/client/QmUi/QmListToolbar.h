@@ -4,10 +4,10 @@
 #include "UiContext.h"
 #include "UiForms.h"
 
-#include <game/client/qm_icon.h>
-
 #include <engine/graphics.h>
 #include <engine/textrender.h>
+
+#include <game/client/qm_icon.h>
 
 #include <algorithm>
 #include <optional>
@@ -88,11 +88,11 @@ namespace ui_widget
 		if(Ctx.m_pUi == nullptr)
 			return Result;
 		Result.m_RefreshPressed = Ctx.m_pUi->DoButton_QmIcon(Options.m_pRefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0,
-			&Result.m_Layout.m_RefreshRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, false, nullptr,
-			Result.m_Layout.m_RefreshRect.h * 0.5f) != 0;
+						  &Result.m_Layout.m_RefreshRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, false, nullptr,
+						  Result.m_Layout.m_RefreshRect.h * 0.5f) != 0;
 		Result.m_FolderPressed = Ctx.m_pUi->DoButton_QmIcon(Options.m_pFolderButton, EQmIcon::FOLDER, FontIcons::FONT_ICON_FOLDER, 0,
-			&Result.m_Layout.m_FolderRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, false, nullptr,
-			Result.m_Layout.m_FolderRect.h * 0.5f) != 0;
+						 &Result.m_Layout.m_FolderRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, false, nullptr,
+						 Result.m_Layout.m_FolderRect.h * 0.5f) != 0;
 		return Result;
 	}
 } // namespace ui_widget

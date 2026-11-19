@@ -42,7 +42,7 @@ bool CDemoHeader::Valid() const
 	       mem_has_null(m_aTimestamp, sizeof(m_aTimestamp)) && str_utf8_check(m_aTimestamp);
 }
 
-CDemoRecorder::CDemoRecorder(CSnapshotDelta *pSnapshotDelta, bool NoMapData)
+void CDemoRecorder::Reset(CSnapshotDelta *pSnapshotDelta, bool NoMapData)
 {
 	m_File = nullptr;
 	m_aCurrentFilename[0] = '\0';
@@ -51,6 +51,11 @@ CDemoRecorder::CDemoRecorder(CSnapshotDelta *pSnapshotDelta, bool NoMapData)
 	m_LastTickMarker = -1;
 	m_pSnapshotDelta = pSnapshotDelta;
 	m_NoMapData = NoMapData;
+}
+
+CDemoRecorder::CDemoRecorder(CSnapshotDelta *pSnapshotDelta, bool NoMapData)
+{
+	Reset(pSnapshotDelta, NoMapData);
 }
 
 CDemoRecorder::~CDemoRecorder()

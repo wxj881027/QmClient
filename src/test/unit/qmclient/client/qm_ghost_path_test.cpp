@@ -223,7 +223,8 @@ TEST(QmGhostPath, MovingTransfersOwnershipAndTheSourceCanBeReused)
 	SSample *pFirst = Source.Get(0);
 	CPath Destination(std::move(Source));
 	EXPECT_EQ(Destination.Get(0), pFirst);
-	EXPECT_EQ(Source.Size(), 0);
+	// 这里故意检查 moved-from 容器仍可安全复用，静态分析无法区分测试意图。
+	EXPECT_EQ(Source.Size(), 0); // NOLINT(bugprone-use-after-move, clang-analyzer-cplusplus.Move)
 	EXPECT_EQ(Source.Get(0), nullptr);
 	ASSERT_TRUE(Source.Add({9, 200}));
 	EXPECT_EQ(Heap.m_Live, 2);

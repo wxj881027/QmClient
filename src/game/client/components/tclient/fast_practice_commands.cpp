@@ -498,8 +498,8 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 			return true;
 		}
 
-		const int Team = std::clamp(pChar->Team(), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
-		bool NewState = !vSwitchers[Switch].m_aStatus[Team];
+		const int PracticeTeam = std::clamp(pChar->Team(), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
+		bool NewState = !vSwitchers[Switch].m_aStatus[PracticeTeam];
 		if(vArgs.size() > 2)
 		{
 			int StateValue = 0;
@@ -511,8 +511,8 @@ bool CFastPractice::ExecutePracticeCommand(int Team, int LocalClientId, CCharact
 			str_toint(vArgs[3].c_str(), &Seconds);
 		const int EndTick = vArgs.size() > 3 ? m_PracticeBaseWorld.GameTick() + 1 + Seconds * Client()->GameTickSpeed() : 0;
 
-		vSwitchers[Switch].m_aStatus[Team] = NewState;
-		vSwitchers[Switch].m_aEndTick[Team] = EndTick;
+		vSwitchers[Switch].m_aStatus[PracticeTeam] = NewState;
+		vSwitchers[Switch].m_aEndTick[PracticeTeam] = EndTick;
 		vSwitchers[Switch].m_aType[Team] = NewState ? (EndTick ? TILE_SWITCHTIMEDOPEN : TILE_SWITCHOPEN) : (EndTick ? TILE_SWITCHTIMEDCLOSE : TILE_SWITCHCLOSE);
 		return true;
 	}

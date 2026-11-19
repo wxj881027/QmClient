@@ -324,7 +324,13 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 			static CButtonContainer s_QuitButton;
 			bool UsedEscape = false;
-			if(ui_widget::SecondaryButton(Ctx, &s_QuitButton, Localize("Quit"), aMenuButtons[0]) || (UsedEscape = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)) || CheckHotKey(KEY_Q))
+			bool Activate = ui_widget::SecondaryButton(Ctx, &s_QuitButton, Localize("Quit"), aMenuButtons[0]);
+			if(!Activate)
+			{
+				UsedEscape = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE);
+				Activate = UsedEscape || CheckHotKey(KEY_Q);
+			}
+			if(Activate)
 			{
 				if(UsedEscape || EditorDirty || (GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmQuitTime && g_Config.m_ClConfirmQuitTime >= 0))
 				{
@@ -462,7 +468,13 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			CUIRect ScaledButton = ScaleButtonRect(aMenuButtons[0], s_aMenuButtonScale[0]);
 			static CButtonContainer s_QuitButton;
 			bool UsedEscape = false;
-			if(GameClient()->m_Menus.DoButton_Menu(&s_QuitButton, Localize("Quit"), 0, &ScaledButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[0], -1.0f, &aMenuButtons[0]) || (UsedEscape = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)) || CheckHotKey(KEY_Q))
+			bool Activate = GameClient()->m_Menus.DoButton_Menu(&s_QuitButton, Localize("Quit"), 0, &ScaledButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), &m_aButtonLabels[0], -1.0f, &aMenuButtons[0]);
+			if(!Activate)
+			{
+				UsedEscape = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE);
+				Activate = UsedEscape || CheckHotKey(KEY_Q);
+			}
+			if(Activate)
 			{
 				if(UsedEscape || EditorDirty || (GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmQuitTime && g_Config.m_ClConfirmQuitTime >= 0))
 				{

@@ -416,7 +416,7 @@ public:
 
 	CClient();
 #if defined(CONF_VIDEORECORDER)
-	~CClient(); // 等待拼接线程完成（成员仅在 CONF_VIDEORECORDER 下存在）
+	~CClient() override; // 等待拼接线程完成（成员仅在 CONF_VIDEORECORDER 下存在）
 #endif
 
 	// 性能日志文件运行时开/关（供 client.cpp 启动与主循环调用）。

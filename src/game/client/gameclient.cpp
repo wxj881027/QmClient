@@ -7484,7 +7484,7 @@ void CGameClient::UpdateRenderedCharacters()
 			// 服务器快照里的武器（分身从锤子跳成手枪）。
 			if(IsPracticeParticipant)
 			{
-				if(CCharacter *pPracticeChar = m_FastPractice.ResolvePracticeCharacter(i))
+				if(pPracticeChar)
 				{
 					m_aClients[i].m_RenderCur.m_Weapon = pPracticeChar->GetActiveWeapon();
 					m_aClients[i].m_RenderPrev.m_Weapon = pPracticeChar->GetActiveWeapon();
@@ -7562,7 +7562,7 @@ void CGameClient::UpdateRenderedCharacters()
 				Pos = pPracticeCore->m_Pos;
 				// 武器与挥锤相位不在核心字段里：旁观时反向预测（AntiPingGunfire）
 				// 不再接管，RenderCur 会保留服务器快照里的武器，分身会从锤子跳成手枪。
-				if(CCharacter *pPracticeChar = m_FastPractice.ResolvePracticeCharacter(i))
+				if(pPracticeChar)
 				{
 					m_aClients[i].m_RenderCur.m_Weapon = pPracticeChar->GetActiveWeapon();
 					m_aClients[i].m_RenderPrev.m_Weapon = pPracticeChar->GetActiveWeapon();
@@ -7582,7 +7582,7 @@ void CGameClient::UpdateRenderedCharacters()
 			// 冻结状态也只有分支世界知道：快照里的 FreezeEnd 属于服务器时间线。
 			// players/hud 在渲染阶段统一读 ClientData，因此在这里覆盖一次，冻结隐身、
 			// 解冻进度与 HUD 计数才会和分支里的实际碰撞状态一致。
-			if(CCharacter *pPracticeChar = m_FastPractice.ResolvePracticeCharacter(i))
+			if(pPracticeChar)
 			{
 				const CCharacterCore *pCore = pPracticeChar->Core();
 				m_aClients[i].m_FreezeEnd = pCore->m_FreezeEnd;
