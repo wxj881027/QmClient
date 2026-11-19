@@ -43,7 +43,7 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 	const bool TabNamesRefreshed = s_TClientTabNames.Refresh(g_Config.m_ClLanguagefile,
 		{
 			Localizable("Settings"),
-			Localizable("Bind Wheel"),
+			Localizable("Bind Menus"),
 			Localizable("War List"),
 			Localizable("Chat Binds"),
 			Localizable("Status Bar"),

@@ -171,6 +171,7 @@ public:
 	void OnConsoleInit() override;
 	void OnRender() override;
 	void OnRelease() override;
+	void Cancel();
 	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
 	bool OnInput(const IInput::CEvent &Event) override;
 

@@ -92,8 +92,6 @@ struct CDataSprite;
 
 class IHttpRequest;
 class CChat;
-class CProfile;
-struct SQmProfileWheelEditorState;
 struct SQmFriendCodeUiState;
 namespace qm_card_registry
 {
@@ -1472,6 +1470,9 @@ protected:
 	static void ConchainAssetEmoticons(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainAssetHud(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainAssetExtras(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainAssetArrow(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainAssetGuiCursor(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainAssetStrongWeak(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	void ClearCustomItems(int CurTab);
 	void RefreshEntityBgHierarchyView();
@@ -3337,12 +3338,7 @@ private:
 	qm_card_catalog::STClientCardResult RunTClientWarListCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientStatusBarCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientProfilesCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
-	int m_ProfilePresetsTab = 0;
-	std::shared_ptr<SQmProfileWheelEditorState> m_pProfileWheelEditor;
 	std::shared_ptr<SQmFriendCodeUiState> m_pFriendCodeUiState;
-	uint64_t ProfileWheelEditorRevision() const;
-	void RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool ReadOnly);
-	void EditProfileInWheel(const CProfile &Profile, bool Dummy);
 	qm_card_catalog::STClientCardResult RunTClientConfigsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientMainCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	void RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool PrewarmOnly = false);

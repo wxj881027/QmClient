@@ -558,6 +558,48 @@ namespace ui_token::list
 	}
 } // namespace ui_token::list
 
+// 绑定菜单（轮盘 / 计分板式面板）的游戏内叠层几何。面板固定在屏幕正中，
+// 并以最大高度约束条目数；轮盘卡片为
+// 本体/分身两行资料留出高度，超过单环容量后改用内外双环，而不是无限缩卡。
+namespace ui_token::bind_menu
+{
+	inline constexpr float PANEL_WIDTH_RATIO = 0.56f;
+	inline constexpr float PANEL_MIN_WIDTH = 360.0f;
+	inline constexpr float PANEL_MAX_WIDTH = 640.0f;
+	inline constexpr float PANEL_MAX_HEIGHT = 415.0f;
+	inline constexpr int PANEL_MAX_VISIBLE_ROWS = 6;
+	inline constexpr int PREVIEW_MAX_VISIBLE_ROWS = 5;
+	inline constexpr float PREVIEW_HEIGHT_RATIO = 0.68f;
+	inline constexpr float PREVIEW_MIN_HEIGHT = 360.0f;
+	inline constexpr float PREVIEW_MAX_HEIGHT = 560.0f;
+
+	inline constexpr float WHEEL_RADIUS_RATIO = 0.42f;
+	inline constexpr float WHEEL_SCREEN_RADIUS_RATIO = 0.29f;
+	inline constexpr float WHEEL_CARD_WIDTH_RADIUS_RATIO = 0.86f;
+	inline constexpr float WHEEL_CARD_WIDTH_ARC_RATIO = 0.84f;
+	inline constexpr float WHEEL_CARD_WIDTH_MIN = 92.0f;
+	inline constexpr float WHEEL_CARD_WIDTH_MAX = 176.0f;
+	inline constexpr float WHEEL_CARD_HEIGHT_ROWS = 2.8f;
+	inline constexpr float PANEL_ROW_HEIGHT_ROWS = 3.0f;
+	inline constexpr float ASSET_WHEEL_CARD_HEIGHT_ROWS = 3.2f;
+	inline constexpr float ASSET_PANEL_ROW_HEIGHT_ROWS = 3.8f;
+	inline constexpr int WHEEL_SINGLE_RING_MAX = 12;
+	inline constexpr float WHEEL_INNER_RADIUS_RATIO = 0.60f;
+	inline constexpr float WHEEL_INNER_CARD_SCALE = 0.88f;
+	inline constexpr float WHEEL_HUB_RADIUS_RATIO = 0.30f;
+	inline constexpr float WHEEL_HUB_WIDTH_RADIUS_RATIO = 0.76f;
+	inline constexpr float WHEEL_HUB_MIN_WIDTH = 80.0f;
+	inline constexpr float WHEEL_ENTER_SCALE = 0.84f;
+	inline constexpr float PANEL_ENTER_SCALE = 0.94f;
+	inline constexpr int PANEL_SCROLL_ROWS_PER_STEP = 3;
+	inline constexpr float IDENTITY_COLUMN_MIN_WIDTH = 220.0f;
+	inline constexpr float IDENTITY_AVATAR_WIDTH_RATIO = 0.24f;
+	inline constexpr float IDENTITY_AVATAR_HEIGHT_RATIO = 0.86f;
+	inline constexpr float IDENTITY_NAME_HEIGHT_RATIO = 0.56f;
+	inline constexpr float IDENTITY_COMPACT_AVATAR_HEIGHT_RATIO = 0.46f;
+	inline constexpr float IDENTITY_COMPACT_NAME_HEIGHT_RATIO = 0.55f;
+} // namespace ui_token::bind_menu
+
 // 游戏内聊天框（滚动条 + 消息气泡）的尺寸。注意单位：聊天视口由
 // Graphics()->MapScreen(0, 0, W, 300) 映射，这里的长度都是"聊天逻辑单位"
 // （1 单位 ≈ 屏幕高度 / 300），不是 UI 像素。列表滚动条的
@@ -905,6 +947,9 @@ namespace ui_token::panel
 	// 面板之间的缝，PADDING 是内容到壳，MARGIN 是壳到窗口。分开后任一档单独调整
 	// 都不会牵动另外两处。
 	inline constexpr float MARGIN = 8.0f;
+	// 游戏内大面板的表面压暗比例：计分板、投票 HUD 与绑定菜单都从界面表面色乘这一档，
+	// 保证两块半透明面板叠在画面上时是同一深度，而不是一个实色、一个玻璃色。
+	inline constexpr float SURFACE_COLOR_SCALE = 0.16f;
 } // namespace ui_token::panel
 
 // 服务器信息页（游戏内「服务器信息」页）的排版档：标题、字段正文、标签列宽与行高。

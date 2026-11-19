@@ -138,6 +138,7 @@ MACRO_CONFIG_INT(QmIndicatorHideVisible, qm_indicator_hide_visible_tees, 0, 0, 1
 
 // Bind Wheel
 MACRO_CONFIG_INT(QmResetBindWheelMouse, qm_reset_bindwheel_mouse, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Reset mouse position when opening bind wheel")
+MACRO_CONFIG_INT(QmBindWheelLayout, qm_bindwheel_layout, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bind menu layout (0 = wheel, 1 = panel)")
 
 // Regex chat matching
 MACRO_CONFIG_STR(QmRegexChatIgnore, qm_regex_chat_ignore, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Filter chat messages by regular expression")

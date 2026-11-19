@@ -1,79 +1,129 @@
-#include <base/log.h>
 #include <base/math.h>
-#include <base/perf_timer.h>
 #include <base/str.h>
-#include <base/system.h>
-#include <base/types.h>
 
-#include <engine/engine.h>
-#include <engine/graphics.h>
-#include <engine/http.h>
-#include <engine/image.h>
-#include <engine/keys.h>
-#include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
-#include <engine/shared/config_tags.h>
-#include <engine/shared/jobs.h>
-#include <engine/shared/json.h>
-#include <engine/shared/localization.h>
-#include <engine/storage.h>
 #include <engine/textrender.h>
-#include <engine/warning.h>
 
-#include <game/client/QmUi/QmCardOrderModel.h>
-#include <game/client/QmUi/QmCardRegistry.h>
-#include <game/client/QmUi/QmDropdown.h>
-#include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
-#include <game/client/QmUi/SettingsFontSelection.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
-#include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
-#include <game/client/QmUi/UiNavigation.h>
-#include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
-#include <game/client/animstate.h>
-#include <game/client/components/binds.h>
-#include <game/client/components/chat.h>
-#include <game/client/components/countryflags.h>
-#include <game/client/components/menu_background.h>
 #include <game/client/components/menus.h>
-#include <game/client/components/qmclient/font_download_storage.h>
-#include <game/client/components/qmclient/perf_logging.h>
-#include <game/client/components/section_loader.h>
-#include <game/client/components/skins.h>
-#include <game/client/components/tclient/bindchat.h>
+#include <game/client/components/qmclient/bind_menu.h>
+#include <game/client/components/qmclient/bind_menu_preview.h>
+#include <game/client/components/qmclient/wheel_presets.h>
 #include <game/client/components/tclient/bindwheel.h>
-#include <game/client/components/tclient/trails.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon.h>
-#include <game/client/render.h>
-#include <game/client/skin.h>
-#include <game/client/ui.h>
-#include <game/client/ui_listbox.h>
-#include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
-
-#include <SDL3/SDL_audio.h>
 
 #include <algorithm>
 #include <array>
-#include <cctype>
-#include <cmath>
-#include <functional>
-#include <limits>
-#include <map>
 #include <memory>
-#include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
-using namespace FontIcons;
 using namespace qm_tclient_cards;
+
+namespace
+{
+	qm_wheel_presets::SPreset CaptureCurrentIdentity()
+	{
+		using namespace qm_wheel_presets;
+		SPreset Preset;
+		Preset.m_Type = EType::IDENTITY;
+		for(int Tee = 0; Tee < 2; ++Tee)
+		{
+			auto &Values = Preset.m_aTees[Tee].m_aValues;
+			Values[NAME] = Tee ? g_Config.m_ClDummyName : g_Config.m_PlayerName;
+			Values[CLAN] = Tee ? g_Config.m_ClDummyClan : g_Config.m_PlayerClan;
+			Values[SKIN] = Tee ? g_Config.m_ClDummySkin : g_Config.m_ClPlayerSkin;
+			Values[CUSTOM_COLORS] = std::to_string(Tee ? g_Config.m_ClDummyUseCustomColor : g_Config.m_ClPlayerUseCustomColor);
+			Values[BODY_COLOR] = std::to_string(Tee ? g_Config.m_ClDummyColorBody : g_Config.m_ClPlayerColorBody);
+			Values[FEET_COLOR] = std::to_string(Tee ? g_Config.m_ClDummyColorFeet : g_Config.m_ClPlayerColorFeet);
+			Values[COUNTRY] = std::to_string(Tee ? g_Config.m_ClDummyCountry : g_Config.m_PlayerCountry);
+			Values[EYES] = std::to_string(Tee ? g_Config.m_ClDummyDefaultEyes : g_Config.m_ClPlayerDefaultEyes);
+		}
+		return Preset;
+	}
+
+	qm_wheel_presets::SPreset CaptureCurrentAssets()
+	{
+		using namespace qm_wheel_presets;
+		SPreset Preset;
+		Preset.m_Type = EType::ASSETS;
+		Preset.m_aAssets = {
+			g_Config.m_ClAssetsEntities,
+			g_Config.m_ClAssetGame,
+			g_Config.m_ClAssetEmoticons,
+			g_Config.m_ClAssetParticles,
+			g_Config.m_ClAssetHud,
+			g_Config.m_ClAssetExtras,
+			g_Config.m_ClAssetArrow,
+			g_Config.m_ClAssetGuiCursor,
+			g_Config.m_ClAssetStrongWeak,
+		};
+		return Preset;
+	}
+
+	const char *AssetPresetLabel(const qm_wheel_presets::SPreset &Preset)
+	{
+		for(const auto &Asset : Preset.m_aAssets)
+		{
+			if(!Asset.empty() && str_comp(Asset.c_str(), "default") != 0)
+				return Asset.c_str();
+		}
+		return Localize("Assets");
+	}
+
+	std::string TruncateLabel(const char *pText, const char *pFallback)
+	{
+		std::string Label = pText != nullptr && pText[0] != '\0' ? pText : pFallback;
+		if(Label.size() >= BINDWHEEL_MAX_NAME)
+			Label.resize(BINDWHEEL_MAX_NAME - 1);
+		const auto Trim = [&]() {
+			while(!Label.empty() && (Label.back() == ' ' || Label.back() == '\t'))
+				Label.pop_back();
+		};
+		Trim();
+		if(Label.empty() && pFallback != nullptr)
+		{
+			Label = pFallback;
+			if(Label.size() >= BINDWHEEL_MAX_NAME)
+				Label.resize(BINDWHEEL_MAX_NAME - 1);
+			Trim();
+		}
+		return Label;
+	}
+
+	std::vector<int> VisibleBinds(CGameClient *pGameClient, qm_bind_menu::EMenu Menu)
+	{
+		std::vector<int> vIndices;
+		const auto &vBinds = pGameClient->m_BindWheel.m_vBinds;
+		for(int Index = 0; Index < (int)vBinds.size(); ++Index)
+		{
+			if(pGameClient->m_BindWheel.MenuForBind(Index) == Menu)
+				vIndices.push_back(Index);
+		}
+		return vIndices;
+	}
+
+	void AddPreset(CGameClient *pGameClient, const qm_wheel_presets::SPreset &Preset, const std::string &Label, const char **ppStatus)
+	{
+		std::string Command;
+		if(Label.empty() || !qm_wheel_presets::BuildCommand(Preset, Command))
+		{
+			*ppStatus = Localize("Could not add this entry.");
+			return;
+		}
+		if(!pGameClient->m_BindWheel.SetBind(-1, Label.c_str(), Command.c_str()))
+			*ppStatus = Localize("The bind menu is full.");
+		else
+			*ppStatus = Localize("Added to this bind menu.");
+	}
+} // namespace
 
 qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass)
 {
@@ -83,167 +133,324 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 	std::unique_ptr<CUiRenderOnlyGuard> pRenderOnlyGuard;
 	if(ReadOnly && !Ui()->RenderOnly())
 		pRenderOnlyGuard = std::make_unique<CUiRenderOnlyGuard>(Ui());
+
+	const auto &Metrics = Ctx.m_Metrics;
 	const float UiScale = SettingsPageUiScale(MainView.w);
-	const float SmallSize = ResolveSettingsContentMetrics(MainView.w).m_SmallSize;
-	const SSettingsPageLayoutFrame Page = Ctx.m_Page;
-	IUiContext TClientBindWheelTextInputCtx = SettingsUiContext("settings_tclient_bindwheel_text_inputs", UiScale);
+	IUiContext InputCtx = SettingsUiContext("settings_tclient_bind_menu_inputs", UiScale);
 	if(ReadOnly)
 	{
-		TClientBindWheelTextInputCtx.m_pAnim = nullptr;
-		TClientBindWheelTextInputCtx.m_pTree = nullptr;
+		InputCtx.m_pAnim = nullptr;
+		InputCtx.m_pTree = nullptr;
 	}
-	static CScrollRegion s_BindWheelSettingsScrollRegion;
-	static char s_aBindName[BINDWHEEL_MAX_NAME];
-	static char s_aBindCommand[BINDWHEEL_MAX_CMD];
-	static int s_SelectedBindIndex = -1;
-	const float PreviewContentHeight = 280.0f;
-	const auto RenderEditor = [this, &TClientBindWheelTextInputCtx, ReadOnly, SmallSize](CUIRect &Content) {
-		CPerfTimer EditorTimer;
-		CUIRect LeftView = Content, Label, Button;
-		CSettingsContentLayoutFlow Flow(LeftView);
-		static CButtonContainer s_AddButton, s_RemoveButton, s_OverrideButton;
 
-		if(Flow.Control("tclient-bindwheel-name", LineSize, Button, RowSpacing))
+	static int s_Menu = (int)qm_bind_menu::EMenu::IDENTITY;
+	static int s_SelectedSource = -1;
+	static int s_ChatTeam = 0;
+	static const char *s_pStatus = "";
+	static CLineInputBuffered<BINDWHEEL_MAX_NAME> s_CustomName;
+	static CLineInputBuffered<BINDWHEEL_MAX_CMD> s_CustomCommand;
+	static CLineInputBuffered<BINDWHEEL_MAX_NAME> s_ChatTitle;
+	static CLineInputBuffered<256> s_ChatText;
+	static CLineInputBuffered<BINDWHEEL_MAX_NAME> s_AssetTitle;
+	static int s_ChatFieldsSource = -2;
+	static int s_AssetFieldsSource = -2;
+	static CButtonContainer s_aMenuButtons[qm_bind_menu::NUM_MENUS];
+	static CButtonContainer s_aLayoutButtons[2];
+	static CButtonContainer s_ReaderButton, s_ClearButton;
+	static CButtonContainer s_AddButton, s_DeleteButton;
+	static CListBox s_List;
+	static std::array<int, BINDWHEEL_MAX_BINDS> s_aItemIds{};
+
+	if(s_Menu < 0 || s_Menu >= qm_bind_menu::NUM_MENUS)
+		s_Menu = 0;
+	const auto Menu = (qm_bind_menu::EMenu)s_Menu;
+	const auto vVisible = VisibleBinds(GameClient(), Menu);
+	const bool Editable = Pass == qm_card_catalog::ETClientCardPass::RENDER && !ReadOnly && !Ui()->RenderOnly();
+
+	if(Editable && Menu == qm_bind_menu::EMenu::CHAT && s_SelectedSource != s_ChatFieldsSource)
+	{
+		s_ChatFieldsSource = s_SelectedSource;
+		const qm_wheel_presets::SPreset *pPreset = s_SelectedSource >= 0 ?
+								   GameClient()->m_BindWheel.PresetForBind(s_SelectedSource) :
+								   nullptr;
+		if(pPreset != nullptr && pPreset->m_Type == qm_wheel_presets::EType::CHAT)
 		{
-			SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button);
-			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, "tclient-bindwheel-name-label", &Label, Localize("Name:"), FontSize, TEXTALIGN_ML);
-			static CLineInput s_NameInput;
-			s_NameInput.SetBuffer(s_aBindName, sizeof(s_aBindName));
-			s_NameInput.SetEmptyText(Localize("Name"));
-			ui_widget::InputField(TClientBindWheelTextInputCtx, &s_NameInput, Button, Localize("Name"), EditBoxFontSize);
+			const auto &Bind = GameClient()->m_BindWheel.m_vBinds[s_SelectedSource];
+			s_ChatTitle.Set(Bind.m_aName);
+			s_ChatText.Set(pPreset->m_Chat.c_str());
+			s_ChatTeam = pPreset->m_TeamChat ? 1 : 0;
 		}
-
-		if(Flow.Control("tclient-bindwheel-command", LineSize, Button, RowSpacing))
+		else
 		{
-			SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button);
-			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, "tclient-bindwheel-command-label", &Label, Localize("Command:"), FontSize, TEXTALIGN_ML);
-			static CLineInput s_BindInput;
-			s_BindInput.SetBuffer(s_aBindCommand, sizeof(s_aBindCommand));
-			s_BindInput.SetEmptyText(Localize("Command"));
-			ui_widget::InputField(TClientBindWheelTextInputCtx, &s_BindInput, Button, Localize("Command"), EditBoxFontSize);
+			s_ChatTitle.Clear();
+			s_ChatText.Clear();
+			s_ChatTeam = 0;
 		}
+	}
+	if(Editable && Menu == qm_bind_menu::EMenu::ASSETS && s_SelectedSource != s_AssetFieldsSource)
+	{
+		s_AssetFieldsSource = s_SelectedSource;
+		const qm_wheel_presets::SPreset *pPreset = s_SelectedSource >= 0 ?
+								   GameClient()->m_BindWheel.PresetForBind(s_SelectedSource) :
+								   nullptr;
+		if(pPreset != nullptr && pPreset->m_Type == qm_wheel_presets::EType::ASSETS)
+			s_AssetTitle.Set(GameClient()->m_BindWheel.m_vBinds[s_SelectedSource].m_aName);
+		else
+			s_AssetTitle.Clear();
+	}
 
-		if(Flow.Control("tclient-bindwheel-override", LineSize, Button, RowSpacing))
+	auto RenderEditor = [&](CUIRect &View) {
+		CSettingsContentLayoutFlow Flow(View);
+		const auto TextRow = [&](const char *pId, const char *pText, const char *pTextId, float Size = -1.0f, float Spacing = -1.0f) {
+			CUIRect Row;
+			const float ResolvedSize = Size > 0.0f ? Size : Metrics.m_BodySize;
+			const float ResolvedSpacing = Spacing >= 0.0f ? Spacing : ui_token::settings::RowGap(Metrics.m_LineSpacing);
+			if(!Flow.Control(pId, ResolvedSize * 1.5f, Row, ResolvedSpacing))
+				return;
+			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, pTextId, &Row, pText, ResolvedSize, TEXTALIGN_ML);
+		};
+		const auto InputRow = [&](const char *pId, const char *pLabel, CLineInput *pInput, float Spacing) {
+			CUIRect Row;
+			if(!Flow.Control(pId, Metrics.m_ButtonHeight, Row, Spacing))
+				return;
+			CUIRect Label, Control;
+			SplitSettingsControlRow(Row, Metrics, &Label, &Control);
+			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, pId, &Label, pLabel, Metrics.m_BodySize, TEXTALIGN_ML);
+			ui_widget::InputField(InputCtx, pInput, Control, pLabel, Metrics.m_BodySize);
+		};
+
+		CUIRect Row;
+		if(Flow.Control("bind-menu-kind", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 		{
-			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_OverrideButton, "tclient-bindwheel-override-selected", Localize("Override Selected"), 0, &Button) && !ReadOnly && !Ui()->RenderOnly() && s_SelectedBindIndex >= 0 && s_SelectedBindIndex < static_cast<int>(GameClient()->m_BindWheel.m_vBinds.size()))
+			CUIRect Label, Control;
+			SplitSettingsControlRow(Row, Metrics, &Label, &Control);
+			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, "bind-menu-kind-label", &Label, Localize("Menu type"), Metrics.m_BodySize, TEXTALIGN_ML);
+			const char *apLabels[] = {Localize("Identity"), Localize("Chat"), Localize("Assets"), Localize("Custom")};
+			const int NewMenu = DoSegmentedChoice(s_aMenuButtons, apLabels, qm_bind_menu::NUM_MENUS, s_Menu, Control, ui_token::radius::BASE, nullptr, Metrics.m_BodySize);
+			if(Editable && NewMenu != s_Menu)
 			{
-				CBindWheel::CBind TempBind;
-				str_copy(TempBind.m_aName, str_length(s_aBindName) == 0 ? "*" : s_aBindName);
-				str_copy(GameClient()->m_BindWheel.m_vBinds[s_SelectedBindIndex].m_aName, TempBind.m_aName);
-				str_copy(GameClient()->m_BindWheel.m_vBinds[s_SelectedBindIndex].m_aCommand, s_aBindCommand);
+				s_Menu = NewMenu;
+				s_SelectedSource = -1;
+				s_ChatFieldsSource = -2;
+				s_AssetFieldsSource = -2;
+				s_pStatus = "";
 			}
 		}
 
-		if(Flow.Control("tclient-bindwheel-add-remove", LineSize, Button, RowSpacing))
+		if(Flow.Control("bind-menu-layout", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 		{
-			CUIRect ButtonAdd, ButtonRemove;
-			static ui_widget::SSettingsActionGroupState s_BindActionWidths;
-			const char *apActionLabels[] = {Localize("Remove Bind"), Localize("Add Bind")};
-			const auto Actions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_BindActionWidths, Button, apActionLabels, 2, CurrentSettingsContentMetrics());
-			ButtonRemove = Actions.m_aButtons[0];
-			ButtonAdd = Actions.m_aButtons[1];
-			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_AddButton, "tclient-bindwheel-add-bind", Localize("Add Bind"), 0, &ButtonAdd) && !ReadOnly && !Ui()->RenderOnly())
+			CUIRect Label, Control;
+			SplitSettingsControlRow(Row, Metrics, &Label, &Control);
+			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, "bind-menu-layout-label", &Label, Localize("Layout"), Metrics.m_BodySize, TEXTALIGN_ML);
+			const char *apLabels[] = {Localize("Wheel"), Localize("Panel")};
+			const int NewLayout = DoSegmentedChoice(s_aLayoutButtons, apLabels, 2, g_Config.m_QmBindWheelLayout, Control, ui_token::radius::BASE, nullptr, Metrics.m_BodySize);
+			if(Editable && NewLayout != g_Config.m_QmBindWheelLayout)
+				g_Config.m_QmBindWheelLayout = NewLayout;
+		}
+
+		if(Flow.Control("bind-menu-key", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
+			DoLine_KeyReader(Row, s_ReaderButton, s_ClearButton, Localize("Trigger key"), qm_bind_menu::TriggerCommand(Menu), Metrics.m_BodySize);
+
+		TextRow("bind-menu-options-title", Localize("Options"), "bind-menu-options-title-label", Metrics.m_BodySize, ui_token::settings::SectionGap(Metrics.m_LineSpacing));
+
+		const int VisibleRows = vVisible.empty() ? 1 : ui_token::list::VisibleRows((int)vVisible.size(), 1, 1, 5);
+		const float RowHeight = Metrics.m_ListRowHeight *
+					(Menu == qm_bind_menu::EMenu::ASSETS ? ui_token::bind_menu::ASSET_PANEL_ROW_HEIGHT_ROWS : 2.8f);
+		const float ListPadding = ui_token::list::ContainerPadding(RowHeight);
+		if(Flow.Control("bind-menu-options", ui_token::list::PaddedRowsHeight(VisibleRows, RowHeight, ui_token::list::ROW_SPACING, ListPadding), Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
+		{
+			int SelectedVisible = -1;
+			for(int Index = 0; Index < (int)vVisible.size(); ++Index)
+				if(vVisible[Index] == s_SelectedSource)
+					SelectedVisible = Index;
+			s_List.SetActive(Editable);
+			s_List.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
+			s_List.SetCapsuleRows(Metrics.m_BodySize);
+			s_List.SetContainerPadding(ListPadding);
+			s_List.SetDeferredItemFeedback(true);
+			s_List.SetVisibleRowRange(VisibleRows, VisibleRows);
+			s_List.DoAutoSpacing(ui_token::list::ROW_SPACING);
+			s_List.DoStart(RowHeight, (int)vVisible.size(), 1, 3, SelectedVisible, &Row);
+			for(int Index = 0; Index < (int)vVisible.size(); ++Index)
 			{
-				CBindWheel::CBind TempBind;
-				str_copy(TempBind.m_aName, str_length(s_aBindName) == 0 ? "*" : s_aBindName);
-				GameClient()->m_BindWheel.AddBind(TempBind.m_aName, s_aBindCommand);
-				s_SelectedBindIndex = static_cast<int>(GameClient()->m_BindWheel.m_vBinds.size()) - 1;
+				const CListboxItem Item = s_List.DoNextItem(&s_aItemIds[Index], Index == SelectedVisible);
+				if(!Item.m_Visible)
+					continue;
+				const auto &Bind = GameClient()->m_BindWheel.m_vBinds[vVisible[Index]];
+				const auto *pPreset = GameClient()->m_BindWheel.PresetForBind(vVisible[Index]);
+				const qm_bind_menu_preview::SOption Option{Bind.m_aName, Bind.m_aCommand, pPreset, pPreset == nullptr};
+				CUIRect OptionRect = Item.m_ContentRect;
+				const bool Expanded = Ui()->HotItem() == &s_aItemIds[Index];
+				s_List.DrawItemFeedback(Index, OptionRect, ui_token::list::ContainerRadius(OptionRect.w, OptionRect.h));
+				qm_bind_menu_preview::RenderOption(Ui(), GameClient(), OptionRect, Menu, Option, UiScale, 1.0f, Expanded);
+				if(Expanded)
+					GameClient()->m_Tooltips.DoToolTipForRect(&s_aItemIds[Index], &OptionRect,
+						qm_bind_menu_preview::BuildHoverText(Menu, Option, pPreset).c_str());
 			}
-			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_RemoveButton, "tclient-bindwheel-remove-bind", Localize("Remove Bind"), 0, &ButtonRemove) && !ReadOnly && !Ui()->RenderOnly() && s_SelectedBindIndex >= 0)
+			const int NewSelected = s_List.DoEnd();
+			if(Editable)
 			{
-				GameClient()->m_BindWheel.RemoveBind(s_SelectedBindIndex);
-				s_SelectedBindIndex = -1;
+				s_SelectedSource = NewSelected >= 0 && NewSelected < (int)vVisible.size() ? vVisible[NewSelected] : -1;
+			}
+			if(vVisible.empty())
+				Ui()->DoLabel(&Row, Localize("No entries yet"), Metrics.m_BodySize, TEXTALIGN_MC);
+		}
+
+		if(Menu == qm_bind_menu::EMenu::IDENTITY)
+		{
+			if(Flow.Control("bind-menu-add-identity", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
+			{
+				if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_AddButton,
+					   "bind-menu-add-identity", Localize("Capture current appearance"), 0, &Row, Metrics) &&
+					Editable)
+				{
+					const auto Preset = CaptureCurrentIdentity();
+					const char *pLabel = g_Config.m_PlayerName[0] ? g_Config.m_PlayerName : Localize("Identity");
+					AddPreset(GameClient(), Preset, TruncateLabel(pLabel, Localize("Identity")), &s_pStatus);
+				}
+			}
+		}
+		else if(Menu == qm_bind_menu::EMenu::CHAT)
+		{
+			const auto *pSelectedPreset = s_SelectedSource >= 0 && s_SelectedSource < (int)GameClient()->m_BindWheel.m_vBinds.size() ?
+							      GameClient()->m_BindWheel.PresetForBind(s_SelectedSource) :
+							      nullptr;
+			const bool EditingChat = pSelectedPreset != nullptr && pSelectedPreset->m_Type == qm_wheel_presets::EType::CHAT;
+			s_ChatTitle.SetEmptyText(Localize("Title"));
+			s_ChatText.SetEmptyText(Localize("Chat phrase"));
+			InputRow("bind-menu-chat-title", Localize("Title"), &s_ChatTitle, ui_token::settings::RowGap(Metrics.m_LineSpacing));
+			InputRow("bind-menu-chat-input", Localize("Phrase"), &s_ChatText, ui_token::settings::RowGap(Metrics.m_LineSpacing));
+			if(Flow.Control("bind-menu-chat-add", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
+			{
+				CUIRect Team, Add;
+				Row.VSplitMid(&Team, &Add, Metrics.m_LineSpacing);
+				if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_ChatTeam,
+					   "bind-menu-chat-team", Localize("Team chat"), s_ChatTeam, &Team) &&
+					Editable)
+					s_ChatTeam ^= 1;
+				if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_AddButton,
+					   "bind-menu-chat-add", EditingChat ? Localize("Save phrase") : Localize("Add phrase"), 0, &Add, Metrics) &&
+					Editable)
+				{
+					qm_wheel_presets::SPreset Preset;
+					Preset.m_Type = qm_wheel_presets::EType::CHAT;
+					Preset.m_Chat = s_ChatText.GetString();
+					Preset.m_TeamChat = s_ChatTeam != 0;
+					if(Preset.m_Chat.empty())
+						s_pStatus = Localize("Enter a phrase.");
+					else
+					{
+						std::string Command;
+						if(!qm_wheel_presets::BuildCommand(Preset, Command))
+							s_pStatus = Localize("Enter a phrase.");
+						else
+						{
+							const std::string Label = TruncateLabel(s_ChatTitle.GetString(), Preset.m_Chat.c_str());
+							if(!GameClient()->m_BindWheel.SetBind(EditingChat ? s_SelectedSource : -1, Label.c_str(), Command.c_str()))
+								s_pStatus = Localize("The bind menu is full.");
+							else if(EditingChat)
+							{
+								s_ChatFieldsSource = s_SelectedSource;
+								s_pStatus = Localize("Updated this phrase.");
+							}
+							else
+							{
+								s_SelectedSource = -1;
+								s_ChatFieldsSource = -2;
+								s_ChatTitle.Clear();
+								s_ChatText.Clear();
+								s_ChatTeam = 0;
+								s_pStatus = Localize("Added to this bind menu.");
+							}
+						}
+					}
+				}
+			}
+		}
+		else if(Menu == qm_bind_menu::EMenu::ASSETS)
+		{
+			const auto *pSelectedPreset = s_SelectedSource >= 0 && s_SelectedSource < (int)GameClient()->m_BindWheel.m_vBinds.size() ?
+							      GameClient()->m_BindWheel.PresetForBind(s_SelectedSource) :
+							      nullptr;
+			const bool EditingAssets = pSelectedPreset != nullptr && pSelectedPreset->m_Type == qm_wheel_presets::EType::ASSETS;
+			s_AssetTitle.SetEmptyText(Localize("Title"));
+			InputRow("bind-menu-asset-title", Localize("Title"), &s_AssetTitle, ui_token::settings::RowGap(Metrics.m_LineSpacing));
+			if(Flow.Control("bind-menu-add-assets", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
+			{
+				if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_AddButton,
+					   "bind-menu-add-assets", EditingAssets ? Localize("Save configuration") : Localize("Use current settings"), 0, &Row, Metrics) &&
+					Editable)
+				{
+					const auto Preset = CaptureCurrentAssets();
+					std::string Command;
+					if(!qm_wheel_presets::BuildCommand(Preset, Command))
+						s_pStatus = Localize("Could not add this entry.");
+					else
+					{
+						const std::string Label = TruncateLabel(s_AssetTitle.GetString(), AssetPresetLabel(Preset));
+						if(!GameClient()->m_BindWheel.SetBind(EditingAssets ? s_SelectedSource : -1, Label.c_str(), Command.c_str()))
+							s_pStatus = Localize("The bind menu is full.");
+						else if(EditingAssets)
+						{
+							s_AssetFieldsSource = s_SelectedSource;
+							s_pStatus = Localize("Updated this configuration.");
+						}
+						else
+						{
+							s_SelectedSource = -1;
+							s_AssetFieldsSource = -2;
+							s_AssetTitle.Clear();
+							s_pStatus = Localize("Added to this bind menu.");
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			s_CustomName.SetEmptyText(Localize("Name"));
+			s_CustomCommand.SetEmptyText(Localize("Console command"));
+			InputRow("bind-menu-custom-name", Localize("Name"), &s_CustomName, ui_token::settings::RowGap(Metrics.m_LineSpacing));
+			InputRow("bind-menu-custom-command", Localize("Command"), &s_CustomCommand, ui_token::settings::RowGap(Metrics.m_LineSpacing));
+			if(Flow.Control("bind-menu-custom-add", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
+			{
+				if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_AddButton,
+					   "bind-menu-custom-add", Localize("Add command"), 0, &Row, Metrics) &&
+					Editable)
+				{
+					const std::string Label = TruncateLabel(s_CustomName.GetString(), Localize("Custom"));
+					if(s_CustomCommand.GetString()[0] == '\0' ||
+						!GameClient()->m_BindWheel.SetBind(-1, Label.c_str(), s_CustomCommand.GetString()))
+						s_pStatus = Localize("Enter a command and keep the menu under 64 entries.");
+					else
+						s_pStatus = Localize("Added to this bind menu.");
+				}
 			}
 		}
 
-		if(Flow.Control("tclient-bindwheel-help-console", LineSize, Label, RowSpacing))
+		if(Flow.Control("bind-menu-delete", Metrics.m_ButtonHeight, Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 		{
-			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, "tclient-bindwheel-footer-console", &Label, Localize("Commands run in the console"), FontSize, TEXTALIGN_ML);
+			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_DeleteButton,
+				   "bind-menu-delete", Localize("Delete selected"), 0, &Row, Metrics) &&
+				Editable && s_SelectedSource >= 0)
+			{
+				GameClient()->m_BindWheel.RemoveBind(s_SelectedSource);
+				s_SelectedSource = -1;
+				s_ChatFieldsSource = -2;
+				s_AssetFieldsSource = -2;
+				s_ChatTitle.Clear();
+				s_ChatText.Clear();
+				s_ChatTeam = 0;
+				s_AssetTitle.Clear();
+				s_pStatus = Localize("Removed from this bind menu.");
+			}
 		}
 
-		if(Flow.Control("tclient-bindwheel-help-mouse", SmallSize, Label, RowSpacing))
-		{
-			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, "tclient-bindwheel-footer-mouse", &Label, Localize("L select  R swap  M select only"), SmallSize, TEXTALIGN_ML);
-		}
-
-		CUIRect CheckBoxRect;
-		if(Flow.Control("tclient-bindwheel-reset-mouse", LineSize, CheckBoxRect))
-		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &g_Config.m_QmResetBindWheelMouse, "tclient-bindwheel-reset-mouse", Localize("Reset position of mouse when opening bindwheel"), g_Config.m_QmResetBindWheelMouse, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
-				g_Config.m_QmResetBindWheelMouse ^= 1;
-		}
-		if(Flow.Control("tclient-bindwheel-key", LineSize, Label))
-		{
-			static CButtonContainer s_ReaderButtonWheel, s_ClearButtonWheel;
-			DoLine_KeyReader(Label, s_ReaderButtonWheel, s_ClearButtonWheel, Localize("Bind Wheel Key"), "+bindwheel");
-		}
-		Content = LeftView;
-		LogTClientPerfStage("tclient_bindwheel_editor", EditorTimer.ElapsedMs(), false);
+		if(s_pStatus[0] != '\0')
+			TextRow("bind-menu-status", s_pStatus, "bind-menu-status-label", Metrics.m_SmallSize, 0.0f);
 	};
-	const auto MeasurePreview = [PreviewContentHeight](float) { return PreviewContentHeight; };
-	const auto RenderPreview = [this, ReadOnly](CUIRect RightView, bool ProcessInput) {
-		if(ReadOnly)
-			return;
-		CPerfTimer WheelTimer;
-		const float Radius = minimum(RightView.w, RightView.h) / 2.0f;
-		const vec2 Center = RightView.Center();
-		Graphics()->TextureClear();
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.3f);
-		Graphics()->DrawCircle(Center.x, Center.y, Radius, 64);
-		Graphics()->QuadsEnd();
 
-		int HoveringIndex = -1;
-		const int SegmentCount = GameClient()->m_BindWheel.m_vBinds.size();
-		const float MouseDist = distance(Center, Ui()->MousePos());
-		if(MouseDist < Radius && MouseDist > Radius * 0.25f && SegmentCount > 0)
-		{
-			float HoveringAngle = angle(Ui()->MousePos() - Center) + pi / SegmentCount;
-			if(HoveringAngle < 0.0f)
-				HoveringAngle += 2.0f * pi;
-			HoveringIndex = std::clamp((int)(HoveringAngle / (2.0f * pi) * SegmentCount), 0, SegmentCount - 1);
-			if(ProcessInput && Ui()->MouseButtonClicked(0))
-			{
-				s_SelectedBindIndex = HoveringIndex;
-				str_copy(s_aBindName, GameClient()->m_BindWheel.m_vBinds[HoveringIndex].m_aName);
-				str_copy(s_aBindCommand, GameClient()->m_BindWheel.m_vBinds[HoveringIndex].m_aCommand);
-			}
-			else if(ProcessInput && Ui()->MouseButtonClicked(1) && s_SelectedBindIndex >= 0 && s_SelectedBindIndex < SegmentCount && HoveringIndex != s_SelectedBindIndex)
-			{
-				std::swap(GameClient()->m_BindWheel.m_vBinds[s_SelectedBindIndex], GameClient()->m_BindWheel.m_vBinds[HoveringIndex]);
-			}
-			else if(ProcessInput && Ui()->MouseButtonClicked(2))
-				s_SelectedBindIndex = HoveringIndex;
-		}
-		else if(ProcessInput && MouseDist < Radius && Ui()->MouseButtonClicked(0))
-		{
-			s_SelectedBindIndex = -1;
-			str_copy(s_aBindName, "");
-			str_copy(s_aBindCommand, "");
-		}
-
-		const float Theta = pi * 2.0f / std::max<float>(1.0f, SegmentCount);
-		for(int Index = 0; Index < SegmentCount; ++Index)
-		{
-			TextRender()->TextColor(ui_token::color::NEUTRAL_WHITE);
-			float SegmentFontSize = FontSize * 1.1f;
-			if(Index == s_SelectedBindIndex)
-			{
-				SegmentFontSize = FontSize * 1.7f;
-				TextRender()->TextColor(ColorRGBA(0.5f, 1.0f, 0.75f, 1.0f));
-			}
-			else if(Index == HoveringIndex)
-				SegmentFontSize = FontSize * 1.35f;
-			const vec2 Pos = direction(Theta * Index) * (Radius * 0.75f) + Center;
-			const CUIRect Rect{Pos.x - 50.0f, Pos.y - 50.0f, 100.0f, 100.0f};
-			Ui()->DoLabel(&Rect, GameClient()->m_BindWheel.m_vBinds[Index].m_aName, SegmentFontSize, TEXTALIGN_MC);
-		}
-		TextRender()->TextColor(ui_token::color::NEUTRAL_WHITE);
-		char aExtra[96];
-		str_format(aExtra, sizeof(aExtra), "count=%d", SegmentCount);
-		LogTClientPerfStage("tclient_bindwheel_wheel", WheelTimer.ElapsedMs(), false, aExtra);
-	};
-	const uint64_t CardRevision = (uint64_t)GameClient()->m_BindWheel.m_vBinds.size();
+	const uint64_t CardRevision = ((uint64_t)GameClient()->m_BindWheel.m_vBinds.size() << 8) ^ (uint64_t)s_Menu ^ ((uint64_t)(s_SelectedSource + 1) << 16) ^ (uint64_t)g_Config.m_QmBindWheelLayout;
 	if(Pass == qm_card_catalog::ETClientCardPass::REVISION)
 		return {0.0f, CardRevision};
 	if(str_comp(pStableId, "deck:tclient-bind-wheel-editor") == 0)
@@ -254,11 +461,29 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 	}
 	if(str_comp(pStableId, "deck:tclient-bind-wheel-preview") == 0)
 	{
-		const float Height = MeasurePreview(Content.w);
 		CSettingsContentLayoutFlow Flow(Content);
-		CUIRect Block;
-		if(Flow.Control("tclient-bindwheel-preview", Height, Block))
-			RenderPreview(Block, Flow.Input() && !ReadOnly && !Ui()->RenderOnly());
+		CUIRect Preview;
+		const float Height = std::clamp(Content.w * ui_token::bind_menu::PREVIEW_HEIGHT_RATIO,
+			ui_token::bind_menu::PREVIEW_MIN_HEIGHT * UiScale, ui_token::bind_menu::PREVIEW_MAX_HEIGHT * UiScale);
+		if(!Flow.Control("bind-menu-preview", Height, Preview))
+			return {0.0f, CardRevision};
+		if(ReadOnly)
+			return {Height, CardRevision};
+		const auto LayoutKind = g_Config.m_QmBindWheelLayout == (int)qm_bind_menu::ELayout::PANEL ? qm_bind_menu::ELayout::PANEL : qm_bind_menu::ELayout::WHEEL;
+		std::vector<qm_bind_menu_preview::SOption> vOptions;
+		vOptions.reserve(vVisible.size());
+		for(const int SourceIndex : vVisible)
+		{
+			const auto &Bind = GameClient()->m_BindWheel.m_vBinds[SourceIndex];
+			const auto *pPreset = GameClient()->m_BindWheel.PresetForBind(SourceIndex);
+			vOptions.push_back({Bind.m_aName, Bind.m_aCommand, pPreset, pPreset == nullptr});
+		}
+		const auto Layout = qm_bind_menu_preview::BuildLayout(Preview, LayoutKind, (int)vOptions.size(), 0, UiScale, false, Menu);
+		const vec2 PreviewMouse = Ui()->MousePos();
+		const int PreviewHovered = Preview.Inside(PreviewMouse) ?
+						   qm_bind_menu_preview::HitTest(Layout, PreviewMouse, (int)vOptions.size(), 0) :
+						   -1;
+		qm_bind_menu_preview::Render(Ui(), GameClient(), Layout, Menu, vOptions.data(), (int)vOptions.size(), PreviewHovered, 0, UiScale, 1.0f);
 		return {Height, CardRevision};
 	}
 	return {0.0f, CardRevision};

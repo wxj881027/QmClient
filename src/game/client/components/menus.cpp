@@ -4268,6 +4268,9 @@ void CMenus::OnInit()
 	Console()->Chain("cl_asset_particles", ConchainAssetParticles, this);
 	Console()->Chain("cl_asset_hud", ConchainAssetHud, this);
 	Console()->Chain("cl_asset_extras", ConchainAssetExtras, this);
+	Console()->Chain("cl_asset_arrow", ConchainAssetArrow, this);
+	Console()->Chain("cl_asset_gui_cursor", ConchainAssetGuiCursor, this);
+	Console()->Chain("cl_asset_strong_weak", ConchainAssetStrongWeak, this);
 
 	Console()->Chain("demo_play", ConchainDemoPlay, this);
 	Console()->Chain("demo_speed", ConchainDemoSpeed, this);

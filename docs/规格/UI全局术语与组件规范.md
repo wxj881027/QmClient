@@ -163,6 +163,26 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 行内输入框（地图备注等）的**文字比同行标签小一档**（`FontSizeBody × 0.85`）：正文 15 号塞进 22 高的胶囊会顶满上下边距，读起来比左侧标签还重。
 - 禁止的反面写法：自绘胶囊再调 `DrawRoundedSurface`；字号/内边距/高度跟着所在行高或卡片宽度变；每次进游戏重新随机一次颜色（必须由标签文本决定）；给标签加描边；把「提交到服务器」和「加到我自己的标签」混成同一个动作；把审核规则写成面板正文（应进上传按钮的 tooltip）；把行内输入框塞进第二行、或让它比同行胶囊高；给图标按钮配可能为假的 `Enabled` 再指望普通 `DoToolTip` 出提示；常驻一排 `×`（删除钮只在点击后出现）；另写一套拖动排序状态（池内排序与选项池换池共用同一骨架，只有落点计算不同）。
 
+### 2.13b 绑定菜单叠层（bind menu overlay）
+
+- 定义：一个按键打开一个同类条目菜单（身份、语录、资源、自定义）；轮盘与计分板式面板共用同一份条目数据、输入状态和视觉预览。**按下触发键打开，松开触发键必定关闭并应用当前悬停项；点击条目也应用并关闭。** 两种布局打开期间都接管鼠标并冻结玩家输入，光标始终使用同一套绘制。
+- 唯一实现：`qm_bind_menu_preview::BuildLayout` / `BuildIdentityLayout` / `WheelItemRect` / `HitTest`（`src/game/client/components/qmclient/bind_menu_layout.h`）、`Render` / `RenderOption`（`src/game/client/components/qmclient/bind_menu_preview.cpp`）、`CQmBindWheelState`（`src/game/client/components/qmclient/bindwheel_state.h`）、`CBindWheel`（`src/game/client/components/tclient/bindwheel.cpp`）、`ui_token::bind_menu::*`（`src/game/client/QmUi/UiTokens.h`）。
+- 身份条目必须把本体、分身各自的名字和战队画在独立资料行里；窄轮盘卡片改为头像行 + 姓名行 + 战队行，不能把两行资料硬塞进左右分栏。轮盘按可用面积取半径，条目互不覆盖且四角完全落在外圈背景内；超过单环容量时走内外双环，内环半径和卡片都小于外环。设置页预览保留完整视觉尺寸，游戏内轮盘使用更小的屏幕占比。**面板在屏幕正中定位**，不沿用计分板或设置页的顶部锚点。
+- 资源条目一次表达实体、游戏、表情、粒子、HUD、额外、箭头、界面光标、强弱图九类贴图；宽卡片用三列类别格展示完整组合，窄轮盘卡片只展示前两类并用 `+N` 收尾。资源菜单的行高取 `ASSET_PANEL_ROW_HEIGHT_ROWS` / `ASSET_WHEEL_CARD_HEIGHT_ROWS`，不得复用身份卡高度把九行文字压到不可读。
+- 轮盘和面板都走同一套淡入 + 缩放入场/退场；面板与轮盘都必须先切到屏幕映射再绘制，不能只在轮盘分支切映射。
+- 面板和轮盘只画一层表面：`ResolveConfiguredInterfaceSurface(Alpha, ui_token::panel::SURFACE_COLOR_SCALE)`，与计分板同源；不得再叠加内圈、中心 Hub、条目卡片底色、描边、阴影或强调色块。文字取 `ResolveConfiguredSecondaryPanelTheme()` 的文本角色，悬停只提高文本亮度，完整内容通过条目外侧的 tooltip 浮层显示。
+- 语录与资源以绑定名作短标题：常规只画标题，悬停时在条目外侧显示完整语录或九类资源组合，不得在条目内部撑开第二段布局。设置页选中已有语录后回填标题、内容和队伍聊天；选中已有资源后回填标题并原位保存当前九类贴图，新增成功后清空输入与选中项。设置页列表的选中/悬浮反馈必须延后到 `Item.m_ContentRect` 绘制，不能铺满更宽的 `m_Rect`。
+- 禁止的反面写法：给面板单独再做一套列表或身份预览；用 `Esc` 打开/关闭/应用；面板打开后仍把射击、跳跃、换武器传给游戏；面板松开触发键后仍留在屏幕上；在面板或轮盘底部补操作提示；给轮盘画内圈/中心底色或给条目加卡片背景；把 `exec` 脚本原文当身份条目的主视觉；在设置页用固定十行高度撑出空白预览。
+
+横向对比：
+
+| 组件 | 触发 | 光标与输入 | 结束方式 |
+| --- | --- | --- | --- |
+| 表情轮盘 | `+emote` 按下 | 游戏内虚拟光标，不显示系统鼠标 | 松开触发键提交悬停项 |
+| 计分板 | 计分板键 | 系统鼠标光标，显示期间屏蔽游戏操作 | 再次按下或按释放语义关闭 |
+| 绑定菜单·轮盘 | `+bindmenu <type>` 按下 | 游戏内虚拟光标，冻结玩家输入 | 松开触发键或点击条目应用并关闭 |
+| 绑定菜单·面板 | `+bindmenu <type>` 按下 | 同一套光标与输入接管，面板固定居中 | 松开触发键或点击条目应用并关闭 |
+
 ### 2.14 对比表：三类动效机制
 
 | 机制 | 何时用 | 布局占位 | 唯一实现 | 禁止混用 |
@@ -396,7 +416,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 3.14 提示（Tooltip）
 
 - 定义：悬停后的补充说明，默认不常显、不占布局；配置项说明取配置描述。
-- 唯一实现：`ui_widget::Tooltip`（`src/game/client/QmUi/UiOverlays.h`）、`GameClient()->m_Tooltips.DoToolTip(...)` / `DoSmallToolTip(...)` / `DoSettingsToolTipForConfig(...)`（`CTooltips`，`src/game/client/ui.h`）；尺寸与颜色 `ui_token::tooltip::*`、`ui_token::motion::TOOLTIP_FADE`。
+- 唯一实现：`ui_widget::Tooltip`（`src/game/client/QmUi/UiOverlays.h`）、`GameClient()->m_Tooltips.DoToolTip(...)` / `DoToolTipForRect(...)` / `DoToolTipForRectForced(...)` / `DoSmallToolTip(...)` / `DoSettingsToolTipForConfig(...)`（`CTooltips`，`src/game/client/ui.h`）；设置页按系统鼠标命中，游戏内虚拟光标由调用方完成命中后用 `DoToolTipForRectForced`。尺寸与颜色 `ui_token::tooltip::*`、`ui_token::motion::TOOLTIP_FADE`。
 - 禁止的反面写法：用 tooltip 承载必须常显的信息（应当用行尾说明）；自己画矩形加文字；把长句塞进 tooltip 而不给 `m_MaxWidth`。
 
 ### 3.15 浮层骨架（Secondary panel）

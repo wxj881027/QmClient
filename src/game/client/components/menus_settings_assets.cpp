@@ -8365,6 +8365,52 @@ void CMenus::ConchainAssetExtras(IConsole::IResult *pResult, void *pUserData, IC
 
 	pfnCallback(pResult, pCallbackUserData);
 }
+
+void CMenus::ConchainAssetArrow(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	CMenus *pThis = (CMenus *)pUserData;
+	if(pResult->NumArguments() == 1)
+	{
+		const char *pArg = pResult->GetString(0);
+		if(str_comp(pArg, g_Config.m_ClAssetArrow) != 0)
+		{
+			pThis->GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", pArg);
+		}
+	}
+
+	pfnCallback(pResult, pCallbackUserData);
+}
+
+void CMenus::ConchainAssetGuiCursor(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	CMenus *pThis = (CMenus *)pUserData;
+	if(pResult->NumArguments() == 1)
+	{
+		const char *pArg = pResult->GetString(0);
+		if(str_comp(pArg, g_Config.m_ClAssetGuiCursor) != 0)
+		{
+			pThis->GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_CURSOR, "gui_cursor", pArg);
+		}
+	}
+
+	pfnCallback(pResult, pCallbackUserData);
+}
+
+void CMenus::ConchainAssetStrongWeak(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	CMenus *pThis = (CMenus *)pUserData;
+	if(pResult->NumArguments() == 1)
+	{
+		const char *pArg = pResult->GetString(0);
+		if(str_comp(pArg, g_Config.m_ClAssetStrongWeak) != 0)
+		{
+			pThis->GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", pArg);
+		}
+	}
+
+	pfnCallback(pResult, pCallbackUserData);
+}
+
 int CMenus::CurrentSettingsAssetsTab() const
 {
 	return std::clamp(s_CurCustomTab, (int)ASSETS_TAB_ENTITIES, NUMBER_OF_ASSETS_TABS - 1);

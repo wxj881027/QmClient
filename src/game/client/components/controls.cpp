@@ -16,9 +16,9 @@
 #include <game/client/components/chat.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/scoreboard.h>
-#include <game/localization.h>
 #include <game/client/gameclient.h>
 #include <game/collision.h>
+#include <game/localization.h>
 
 #include <algorithm>
 
@@ -254,7 +254,7 @@ int CControls::SnapInput(int *pData)
 	// update player state
 	if(GameClient()->m_Chat.IsActive())
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_CHATTING;
-	else if(GameClient()->m_Menus.IsActive() || GameClient()->m_RankGhost.IsViewModeActive())
+	else if(GameClient()->m_Menus.IsActive() || GameClient()->m_RankGhost.IsViewModeActive() || GameClient()->m_BindWheel.IsActive())
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_IN_MENU;
 	else
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_PLAYING;

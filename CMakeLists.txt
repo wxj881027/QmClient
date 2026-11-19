@@ -3399,7 +3399,6 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogTClientWarList.cpp
     QmUi/cards/QmCardCatalogTClientStatusBar.cpp
     QmUi/cards/QmCardCatalogTClientProfiles.cpp
-    QmUi/cards/QmProfileWheelEditor.cpp
     QmUi/cards/QmCardCatalogTClientConfigs.cpp
     QmUi/cards/QmCardCatalogTClientMain.cpp
     QmUi/cards/QmCardCatalogTClientFont.cpp
@@ -3866,6 +3865,10 @@ if(CLIENT)
     components/qmclient/font_download_storage.h
     components/qmclient/auto_vote.h
     components/qmclient/bg_draw_state.h
+    components/qmclient/bind_menu.h
+    components/qmclient/bind_menu_layout.h
+    components/qmclient/bind_menu_preview.cpp
+    components/qmclient/bind_menu_preview.h
     components/qmclient/bindwheel_state.h
     components/qmclient/wheel_presets.cpp
     components/qmclient/wheel_presets.h

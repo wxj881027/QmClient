@@ -41,37 +41,10 @@ TEST(QmWheelPresets, IdentityKeepsDistinctMainAndDummyValues)
 	EXPECT_EQ(Restored->m_aTees[1].m_aValues, Preset.m_aTees[1].m_aValues);
 }
 
-TEST(QmWheelPresets, ProfileCombinesIdentityAssetsAndChat)
-{
-	SPreset Preset;
-	Preset.m_Type = EType::PROFILE;
-	Preset.m_aTees[0].m_aValues[NAME] = "DYL";
-	Preset.m_aTees[0].m_aValues[SKIN] = "default_v2";
-	Preset.m_aAssets[1] = "gamepack";
-	Preset.m_Chat = "ready";
-	std::string Command;
-	ASSERT_TRUE(BuildCommand(Preset, Command));
-	EXPECT_EQ(Command.rfind("say \"ready\""), Command.size() - std::string("say \"ready\"").size());
-
-	const auto Restored = ParseCommand(Command);
-	ASSERT_TRUE(Restored);
-	EXPECT_EQ(Restored->m_Type, EType::PROFILE);
-	EXPECT_EQ(Restored->m_aTees[0].m_aValues[NAME], Preset.m_aTees[0].m_aValues[NAME]);
-	EXPECT_EQ(Restored->m_aTees[0].m_aValues[SKIN], Preset.m_aTees[0].m_aValues[SKIN]);
-	EXPECT_EQ(Restored->m_aAssets[1], "gamepack");
-	EXPECT_EQ(Restored->m_Chat, "ready");
-}
-
-TEST(QmWheelPresets, MixedAssignmentsParseAsProfilePreset)
+TEST(QmWheelPresets, MixedAssignmentsDoNotCreateACombinedPreset)
 {
 	const auto Preset = ParseCommand("player_skin \"default\"; cl_asset_game \"default\"; say_team \"help\"");
-	ASSERT_TRUE(Preset);
-	EXPECT_EQ(Preset->m_Type, EType::PROFILE);
-	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[SKIN]);
-	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[SKIN], "default");
-	EXPECT_EQ(Preset->m_aAssets[1], "default");
-	EXPECT_EQ(Preset->m_Chat, "help");
-	EXPECT_TRUE(Preset->m_TeamChat);
+	EXPECT_FALSE(Preset);
 }
 
 TEST(QmWheelPresets, PartialIdentityDoesNotTurnUnspecifiedFieldsIntoResets)
@@ -203,10 +176,75 @@ TEST(QmWheelPresets, CustomScriptsRemainOutsideThePresetEditor)
 TEST(QmWheelPresets, EmptyPresetsCannotCreateNoOpWheelEntries)
 {
 	std::string Command;
-	for(EType Type : {EType::NAME, EType::PROFILE, EType::IDENTITY, EType::CHAT, EType::ASSETS})
+	for(EType Type : {EType::NAME, EType::IDENTITY, EType::CHAT, EType::ASSETS})
 	{
 		SPreset Preset;
 		Preset.m_Type = Type;
 		EXPECT_FALSE(BuildCommand(Preset, Command));
 	}
+}
+
+TEST(QmWheelPresets, CommandsAreClassifiedIntoVisualMenus)
+{
+	EXPECT_EQ(MenuForType(EType::NAME), qm_bind_menu::EMenu::IDENTITY);
+	EXPECT_EQ(MenuForType(EType::IDENTITY), qm_bind_menu::EMenu::IDENTITY);
+	EXPECT_EQ(MenuForType(EType::CHAT), qm_bind_menu::EMenu::CHAT);
+	EXPECT_EQ(MenuForType(EType::ASSETS), qm_bind_menu::EMenu::ASSETS);
+	EXPECT_STREQ(AssetCategoryName(0), "Entities");
+	EXPECT_STREQ(AssetCategoryName(NUM_ASSETS - 1), "Strong / Weak");
+
+	EXPECT_EQ(MenuForCommand("player_name \"DYL\""), qm_bind_menu::EMenu::IDENTITY);
+	EXPECT_EQ(MenuForCommand("say_team \"ready\""), qm_bind_menu::EMenu::CHAT);
+	EXPECT_EQ(MenuForCommand("cl_asset_game \"gamepack\""), qm_bind_menu::EMenu::ASSETS);
+	EXPECT_EQ(MenuForCommand("exec DYL.cfg"), std::nullopt);
+}
+
+TEST(QmWheelPresets, LegacyConfigKeepsIdentityForVisualPreview)
+{
+	const auto Preset = ParseLegacyConfig(
+		"# old bind wheel identity\n"
+		"player_name \"DYL\"\n"
+		"player_clan \"Wolf\"\n"
+		"player_skin \"default_v2\"\n"
+		"player_use_custom_color 1\n"
+		"player_color_body 1048831\n"
+		"player_color_feet 2603775\n"
+		"cl_asset_game \"gamepack\"\n"
+		"say \"ready\"\n"
+		"unbindall\n");
+	ASSERT_TRUE(Preset);
+	EXPECT_EQ(Preset->m_Type, EType::IDENTITY);
+	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[NAME]);
+	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[NAME], "DYL");
+	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[CLAN]);
+	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[CLAN], "Wolf");
+	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[SKIN]);
+	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[SKIN], "default_v2");
+	EXPECT_EQ(Preset->m_aAssets[1], "gamepack");
+	EXPECT_EQ(Preset->m_Chat, "ready");
+}
+
+TEST(QmWheelPresets, LegacyConfigHonorsQuotedCommentsAndLineSeparators)
+{
+	const auto Preset = ParseLegacyConfig(
+		"player_name \"A#B\" # trailing comment\n"
+		"player_clan \"C\"\r\n"
+		"echo ignored\n");
+	ASSERT_TRUE(Preset);
+	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[NAME]);
+	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[NAME], "A#B");
+	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[CLAN]);
+	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[CLAN], "C");
+}
+
+TEST(QmWheelPresets, ExecPathOnlyAcceptsOneScriptCommand)
+{
+	EXPECT_EQ(ExecPath("exec Binds/主号.cfg"), std::optional<std::string>("Binds/主号.cfg"));
+	EXPECT_EQ(ExecPath("exec \"Binds/name with spaces.cfg\""), std::optional<std::string>("Binds/name with spaces.cfg"));
+	EXPECT_EQ(ExecPath(R"(exec Binds\改名字\改名字_轮盘版\狼ヤミ.cfg)"), std::optional<std::string>(R"(Binds\改名字\改名字_轮盘版\狼ヤミ.cfg)"));
+	EXPECT_EQ(ExecPath(R"(exec "Binds\改名字\改名字_轮盘版\狼ヤミ.cfg")"), std::optional<std::string>(R"(Binds\改名字\改名字_轮盘版\狼ヤミ.cfg)"));
+	EXPECT_FALSE(ExecPath("exec one.cfg; exec two.cfg"));
+	EXPECT_FALSE(ExecPath("exec \"one.cfg\" trailing"));
+	EXPECT_FALSE(ExecPath("exec one.cfg\nsay injected"));
+	EXPECT_FALSE(ExecPath("player_name DYL"));
 }
