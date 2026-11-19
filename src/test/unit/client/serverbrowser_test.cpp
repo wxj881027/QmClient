@@ -392,6 +392,33 @@ TEST(ServerBrowserStatusLayout, FreshListDoesNotReserveAnEmptyNoticeRow)
 	EXPECT_FLOAT_EQ(Stale.m_Status.y + Stale.m_Status.h, View.y + View.h);
 }
 
+TEST(ServerBrowserNavigationLayout, TabsAndPanelSeparatedByPanelGapToken)
+{
+	const CUIRect View{8.0f, 16.0f, 960.0f, 500.0f};
+	const auto Layout = QmBrowserNavigationLayout(View, 26.0f);
+	EXPECT_FLOAT_EQ(Layout.m_TabBar.h, 26.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Gap.h, ui_token::panel::GAP);
+	EXPECT_FLOAT_EQ(Layout.m_Content.y, Layout.m_TabBar.y + Layout.m_TabBar.h + ui_token::panel::GAP);
+	EXPECT_FLOAT_EQ(Layout.m_Content.h, View.h - 26.0f - ui_token::panel::GAP);
+	EXPECT_FLOAT_EQ(Layout.m_Content.y + Layout.m_Content.h, View.y + View.h);
+}
+
+TEST(ServerBrowserNavigationLayout, ShortViewportBoundsGapAndContentWithoutOverflow)
+{
+	for(const float Height : {0.0f, 1.0f, 20.0f, 26.0f, 30.0f, 33.0f, 34.0f})
+	{
+		SCOPED_TRACE(Height);
+		const CUIRect View{8.0f, 16.0f, 960.0f, Height};
+		const auto Layout = QmBrowserNavigationLayout(View, 26.0f);
+		ExpectBrowserRectWithin(Layout.m_TabBar, View);
+		ExpectBrowserRectWithin(Layout.m_Gap, View);
+		ExpectBrowserRectWithin(Layout.m_Content, View);
+		const float ExpectedGap = std::min(ui_token::panel::GAP, std::max(0.0f, Height - 26.0f));
+		EXPECT_FLOAT_EQ(Layout.m_Content.y - (Layout.m_TabBar.y + Layout.m_TabBar.h), ExpectedGap);
+		EXPECT_FLOAT_EQ(Layout.m_Content.y + Layout.m_Content.h, View.y + View.h);
+	}
+}
+
 TEST(ServerBrowserPanelLayout, DecreasingHeightShrinksListBeforeStatusContent)
 {
 	const auto Tall = QmBrowserPanelLayout({8.0f, 16.0f, 960.0f, 500.0f}, true);

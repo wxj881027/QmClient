@@ -37,6 +37,7 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/animstate.h>
 #include <game/client/components/countryflags.h>
+#include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/scoreboard_skin.h>
 #include <game/client/components/touch_controls.h>
@@ -2213,9 +2214,11 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 
 void CMenus::RenderInGameNetwork(CUIRect MainView)
 {
-	CUIRect TabBar;
-	MainView.HSplitTop(MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW, &TabBar, &MainView);
+	const SQmBrowserNavigationLayout NetworkLayout = QmBrowserNavigationLayout(MainView, MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW);
+	const CUIRect TabBar = NetworkLayout.m_TabBar;
+	MainView = NetworkLayout.m_Content;
 	AddMenuHitRegion(TabBar);
+	AddMenuHitRegion(NetworkLayout.m_Gap);
 
 	int NewPage = g_Config.m_UiPage;
 

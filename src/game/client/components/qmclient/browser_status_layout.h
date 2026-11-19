@@ -24,6 +24,28 @@ inline float QmBrowserLayoutExtent(float Value)
 	return std::isfinite(Value) ? std::max(0.0f, Value) : 0.0f;
 }
 
+struct SQmBrowserNavigationLayout
+{
+	CUIRect m_TabBar{};
+	CUIRect m_Gap{};
+	CUIRect m_Content{};
+};
+
+// ESC 游戏内浏览页的第二层服务器页签与正文列表面板之间留一档面板缝。
+// 页签行高度由调用点给出，正文从页签底边再下移 ui_token::panel::GAP。
+inline SQmBrowserNavigationLayout QmBrowserNavigationLayout(CUIRect View, float TabBarHeight)
+{
+	SQmBrowserNavigationLayout Result;
+	const float Width = QmBrowserLayoutExtent(View.w);
+	const float Height = QmBrowserLayoutExtent(View.h);
+	const float TabsHeight = std::min(QmBrowserLayoutExtent(TabBarHeight), Height);
+	const float GapHeight = std::min(ui_token::panel::GAP, Height - TabsHeight);
+	Result.m_TabBar = {View.x, View.y, Width, TabsHeight};
+	Result.m_Gap = {View.x, View.y + TabsHeight, Width, GapHeight};
+	Result.m_Content = {View.x, View.y + TabsHeight + GapHeight, Width, Height - TabsHeight - GapHeight};
+	return Result;
+}
+
 // 页面底部外距必须**按实际已内缩的量**补足：菜单壳层已经对 Screen 应用过全局安全区
 // （menus.cpp 的 Screen.Margin(panel::MARGIN)），页面若再切一次 8 就变成 16。
 // 回放播放 / 幽灵视角下安全区不生效，此时 View 底边贴着 Screen，需要页面自己补满 8。
