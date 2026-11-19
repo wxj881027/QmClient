@@ -1,3 +1,6 @@
+#include <engine/shared/json.h>
+
+#include <game/client/components/qmclient/translate/translate_detect.h>
 #include <game/client/components/qmclient/translate/translate_jobs.h>
 
 #include <test/support/translate_completion_test_memory.h>
@@ -496,6 +499,50 @@ TEST_F(CTranslateQueueTest, SuccessfulOutgoingDispatchSendsOneTranslationWithSep
 		EXPECT_TRUE(Queue.Update([](const auto &) { return true; }).empty());
 	}
 }
+
+TEST_F(CTranslateQueueTest, AddressedChatTranslatesOnlyTheBodyAndRestoresThePrefix)
+{
+	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://translate.test/v1/chat/completions");
+	for(bool Outgoing : {false, true})
+	{
+		SCOPED_TRACE(Outgoing);
+		const char *pOriginal = "落凡: 你在干什么";
+		const qm_translate::SPlayerReference aPlayers[] = {{"落凡", 7}};
+		const char *pBody = qm_translate::ChatAddressBody(pOriginal, aPlayers, 1);
+		STranslateJob Job;
+		Job.m_Outgoing = Outgoing;
+		Job.m_OriginalText = pOriginal;
+		str_copy(Job.m_aTarget, "en");
+		const size_t NumSubmissions = m_Http.m_vSubmissions.size();
+		Job.StartChatTranslation(m_Http, pOriginal, pBody, "auto", CreateTranslateTestRequest);
+		CTranslateJobQueue Queue;
+		ASSERT_TRUE(Queue.Submit(std::move(Job), 1));
+
+		ASSERT_EQ(m_Http.m_vSubmissions.size(), NumSubmissions + 1);
+		const auto &Submission = m_Http.m_vSubmissions.back();
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(JsonParse(Submission.m_Body.c_str(), Submission.m_Body.size()), json_value_free);
+		ASSERT_NE(pJson, nullptr);
+		const json_value *pMessages = json_object_get(pJson.get(), "messages");
+		ASSERT_EQ(json_array_length(pMessages), 2);
+		EXPECT_STREQ(json_string_get(json_object_get(json_array_get(pMessages, 1), "content")), "你在干什么");
+		Submission.m_pRequest->Finish(R"({"choices":[{"message":{"content":"What are you doing?"}}]})");
+		CTranslateCompletionTestMemory Memory;
+		Memory.m_FailAt = 1;
+		EXPECT_TRUE(Queue.Update([](const auto &) { return true; }, &Memory).empty());
+		Memory.AllowAllocations();
+		const auto Done = Queue.Update([](const auto &) { return true; }, &Memory);
+		ASSERT_EQ(Done.size(), 1u);
+		ASSERT_TRUE(Done[0].m_Success);
+		EXPECT_STREQ(Done[0].m_Job.m_pTranslateResponse->m_Text, "落凡: What are you doing?");
+		if(Outgoing)
+			EXPECT_TRUE(DispatchOutgoingTranslation(Done[0], [&](int, const char *pText, const char *pLocalOriginal, int) {
+				EXPECT_STREQ(pText, "落凡: What are you doing?");
+				EXPECT_STREQ(pLocalOriginal, pOriginal);
+				return true;
+			}));
+	}
+}
+
 TEST_F(CTranslateQueueTest, FailureOrCancellationNeverCallsTheChatTransport)
 {
 	for(EHttpState State : {EHttpState::ERROR, EHttpState::ABORTED})

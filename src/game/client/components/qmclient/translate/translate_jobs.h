@@ -27,6 +27,10 @@ struct STranslateJob
 	int m_Team = 0;
 	char m_aTarget[16] = "";
 	std::string m_OriginalText;
+	std::string m_AddressPrefix;
+
+	// pBody 指向 pText 内的正文起点。后端只接收正文，前缀随任务保留。
+	void StartChatTranslation(IHttp &Http, const char *pText, const char *pBody, const char *pSource, FTranslateRequestFactory pCreateRequest = CreateHttpRequest);
 };
 
 struct STranslateCompletion
