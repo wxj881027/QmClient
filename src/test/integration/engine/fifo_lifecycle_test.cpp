@@ -13,6 +13,7 @@
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <base/windows.h>
+#include <windows.h>
 #elif defined(CONF_FAMILY_UNIX)
 #include <fcntl.h>
 #include <sys/stat.h>
