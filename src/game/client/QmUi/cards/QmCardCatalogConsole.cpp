@@ -25,6 +25,7 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 		ui_widget::SNumericFieldState m_FontSize;
 		ui_widget::SNumericFieldState m_LineSpacing;
 		ui_widget::SNumericFieldState m_Opacity;
+		ui_widget::SNumericFieldState m_LinkHoverHue;
 		CButtonContainer m_Highlight;
 		CButtonContainer m_aSchemeRows[qm_console_scheme_list::Count()];
 		CButtonContainer m_aColorReset[QmConsoleAppearance::COLOR_COUNT];
@@ -131,6 +132,10 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 		Numeric(Controls.m_Opacity, &g_Config.m_QmConsoleOpacity, "console-opacity", Localize("Console background opacity"), 20, 100, "%");
 		// 日志行距：百分比放宽，0 = 与旧版一致；与控制台正文读同一个配置。
 		Numeric(Controls.m_LineSpacing, &g_Config.m_QmConsoleLineSpacing, "console-line-spacing", Localize("Console line spacing"), 0, 24, "px");
+		// 复用已有的本地化词条，避免为这一个数值项引入新的翻译键。
+		char aLinkHoverHueLabel[128];
+		str_format(aLinkHoverHueLabel, sizeof(aLinkHoverHueLabel), "%s / %s", Localize("Console link color"), Localize("Hue"));
+		Numeric(Controls.m_LinkHoverHue, &g_Config.m_QmConsoleLinkHoverHueShift, "console-link-hover-hue", aLinkHoverHueLabel, -180, 180, "°");
 		RenderHighlight();
 		// 配色方案只有一个选择集合：历史三项（现代终端 / 经典 PowerShell / 自定义）
 		// 与 Windows Terminal 内置配色同属一个列表，选中任意一行都能再切回其它行。

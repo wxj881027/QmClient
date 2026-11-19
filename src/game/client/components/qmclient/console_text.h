@@ -187,6 +187,12 @@ namespace QmConsoleText
 		});
 	}
 
+	// 链接悬停必须同时满足 Ctrl 按住与指针落在实际换行后的字形矩形内。
+	inline bool ShouldHighlightLinkHover(bool CtrlPressed, const std::vector<IGraphics::CQuadItem> &vQuads, vec2 Point)
+	{
+		return CtrlPressed && ContainsPoint(vQuads, Point);
+	}
+
 	inline STextColorSplit ColorSplitForCharacters(const char *pText, int Start, int Length, ColorRGBA Color)
 	{
 		const int StartByte = static_cast<int>(str_utf8_offset_chars_to_bytes(pText, std::max(0, Start)));

@@ -71,7 +71,6 @@ static constexpr float CONSOLE_SCROLLBAR_MARGIN = ui_token::list::SCROLLBAR_MARG
 // 滑块最短高度：日志只有几行时也要按得住，取旧实现里写死的 14。
 static constexpr float CONSOLE_SCROLLBAR_MIN_THUMB = 14.0f;
 static constexpr ColorRGBA LINK_TEXT_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 1.0f);
-static constexpr ColorRGBA LINK_UNDERLINE_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 0.9f);
 
 namespace
 {
@@ -2708,6 +2707,10 @@ void CGameConsole::OnRender()
 
 		std::vector<QmConsoleText::SRange> vLinkRanges;
 		std::vector<STextColorSplit> vColorLayers;
+		CUiV2AnimationRuntime *pLinkHoverAnim = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled() ?
+								&GameClient()->UiRuntimeV2()->AnimRuntime() :
+								nullptr;
+		const vec2 LinkHoverMouse = GetMousePosition();
 
 		pConsole->m_BacklogLastActiveLine = pConsole->m_BacklogCurLine;
 
@@ -2851,7 +2854,6 @@ void CGameConsole::OnRender()
 			QmConsoleText::CollectLinks(pText, vLinkRanges);
 			for(const auto &Range : vLinkRanges)
 			{
-				vColorLayers.emplace_back(Range.m_StartByte, Range.m_EndByte - Range.m_StartByte, LocalConsole ? Palette.m_aColors[QmConsoleAppearance::LINK] : LINK_TEXT_COLOR);
 				CTextCursor LinkCursor;
 				LinkCursor.SetPosition(vec2(EntryTextX, EntryTop));
 				LinkCursor.m_FontSize = FontSize;
@@ -2865,6 +2867,19 @@ void CGameConsole::OnRender()
 				LinkCursor.m_SelectionEnd = Range.m_EndChar;
 				TextRender()->TextEx(&LinkCursor, pText);
 				// 使用实际换行后的链接矩形，空白处不会被最近字符的光标吸附误判。
+				const bool LinkHovered = !SettingsOpen && QmConsoleText::ShouldHighlightLinkHover(CtrlPressed, LinkCursor.m_vSelectionQuads, LinkHoverMouse);
+				const ColorRGBA LinkBaseColor = LocalConsole ? Palette.m_aColors[QmConsoleAppearance::LINK] : LINK_TEXT_COLOR;
+				const uint64_t LinkHoverNode = BuildUiAnimNodeKey(
+					static_cast<uint64_t>(str_quickhash("qm_console_link_hover")),
+					(static_cast<uint64_t>(pEntry->m_ExportId) << 32) | static_cast<uint32_t>(Range.m_StartByte));
+				const float LinkHoverMix = pLinkHoverAnim != nullptr ?
+								   ResolveUiAnimValue(*pLinkHoverAnim, LinkHoverNode, EUiAnimProperty::ALPHA, LinkHovered ? 1.0f : 0.0f,
+									   ui_token::motion::HOVER_FADE.m_DurationSec, ui_token::motion::HOVER_FADE.m_Easing) :
+								   (LinkHovered ? 1.0f : 0.0f);
+				const ColorRGBA LinkColor = ResolveUiAnimInterpolatedColor(
+					LinkBaseColor, QmConsoleAppearance::LinkHoverColor(LinkBaseColor, g_Config.m_QmConsoleLinkHoverHueShift),
+					std::clamp(LinkHoverMix, 0.0f, 1.0f));
+				vColorLayers.emplace_back(Range.m_StartByte, Range.m_EndByte - Range.m_StartByte, LinkColor);
 				if(HandleLinkClick && QmConsoleText::ContainsPoint(LinkCursor.m_vSelectionQuads, LinkClickPress) &&
 					QmConsoleText::ContainsPoint(LinkCursor.m_vSelectionQuads, LinkClickPos))
 				{
@@ -2883,7 +2898,7 @@ void CGameConsole::OnRender()
 				{
 					const float Height = Quad.m_Height * LINK_UNDERLINE_HEIGHT;
 					const CUIRect Underline = {Quad.m_X, Quad.m_Y + Quad.m_Height - Height, Quad.m_Width, Height};
-					const ColorRGBA UnderlineColor = LocalConsole ? Palette.m_aColors[QmConsoleAppearance::LINK].WithAlpha(0.9f) : LINK_UNDERLINE_COLOR;
+					const ColorRGBA UnderlineColor = LinkColor.WithAlpha(0.9f);
 					QmConsoleUi::DrawPanel(Ui(), Underline, UnderlineColor.WithAlpha(UnderlineColor.a * ContentAlpha));
 				}
 			}

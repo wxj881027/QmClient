@@ -46,17 +46,53 @@ TEST(QmConsoleAppearance, ResetRestoresAppearanceAndPreservesLogFilters)
 	CConfig Config{};
 	Config.m_QmConsoleFilterMask = 2;
 	Config.m_QmConsoleFontSize = 24;
-	Config.m_QmConsoleColorScheme = 2;
+	Config.m_QmConsoleColorScheme = 0;
 	Config.m_QmConsoleOpacity = 20;
+	Config.m_QmConsoleLineSpacing = 12;
 	Config.m_QmConsoleHighlightCommands = 0;
+	Config.m_QmConsoleBackgroundColor = 0x123456;
+	Config.m_QmConsoleLinkHoverHueShift = 0;
 	QmConsoleAppearance::Reset(Config);
 	EXPECT_EQ(Config.m_QmConsoleFilterMask, 2);
-	EXPECT_EQ(Config.m_QmConsoleFontSize, 10);
-	EXPECT_EQ(Config.m_QmConsoleColorScheme, 0);
-	EXPECT_EQ(Config.m_QmConsoleOpacity, 96);
+	EXPECT_EQ(Config.m_QmConsoleFontSize, 9);
+	EXPECT_EQ(Config.m_QmConsoleColorScheme, QmConsoleAppearance::CONFIG_CUSTOM_SCHEME);
+	EXPECT_EQ(Config.m_QmConsoleOpacity, 80);
+	EXPECT_EQ(Config.m_QmConsoleLineSpacing, 0);
 	EXPECT_EQ(Config.m_QmConsoleHighlightCommands, 1);
+	EXPECT_EQ(Config.m_QmConsoleBackgroundColor, 0x00002C);
 	EXPECT_EQ(Config.m_QmConsoleLinkColor, DefaultConfig::QmConsoleLinkColor);
+	EXPECT_EQ(Config.m_QmConsoleLinkHoverHueShift, 45);
 	EXPECT_EQ(Config.m_QmConsoleSearchSelectedColor, DefaultConfig::QmConsoleSearchSelectedColor);
+}
+
+TEST(QmConsoleAppearance, DefaultConfigUsesCurrentConsoleLook)
+{
+	EXPECT_EQ(DefaultConfig::QmConsoleFontSize, 9);
+	EXPECT_EQ(DefaultConfig::QmConsoleColorScheme, QmConsoleAppearance::CONFIG_CUSTOM_SCHEME);
+	EXPECT_EQ(DefaultConfig::QmConsoleOpacity, 80);
+	EXPECT_EQ(DefaultConfig::QmConsoleBackgroundColor, 0x00002C);
+	EXPECT_EQ(DefaultConfig::QmConsoleLinkHoverHueShift, 45);
+}
+
+TEST(QmConsoleAppearance, LinkHoverRotatesHueWithoutChangingSaturationLightnessOrAlpha)
+{
+	const ColorRGBA Link = color_cast<ColorRGBA>(ColorHSLA(0.60f, 0.80f, 0.55f, 0.70f));
+	const ColorRGBA Hover = QmConsoleAppearance::LinkHoverColor(Link, 45);
+	const ColorHSLA LinkHsla = color_cast<ColorHSLA>(Link);
+	const ColorHSLA HoverHsla = color_cast<ColorHSLA>(Hover);
+	EXPECT_NE(Hover, Link);
+	EXPECT_NEAR(HoverHsla.h, LinkHsla.h + 45.0f / 360.0f, 0.001f);
+	EXPECT_NEAR(HoverHsla.s, LinkHsla.s, 0.001f);
+	EXPECT_NEAR(HoverHsla.l, LinkHsla.l, 0.001f);
+	EXPECT_NEAR(HoverHsla.a, LinkHsla.a, 0.001f);
+	EXPECT_EQ(QmConsoleAppearance::LinkHoverColor(Link, 0), Link);
+}
+
+TEST(QmConsoleAppearance, LinkHoverWrapsHueAcrossTheColorWheel)
+{
+	const ColorRGBA Link = color_cast<ColorRGBA>(ColorHSLA(0.95f, 0.80f, 0.55f, 1.0f));
+	const ColorHSLA Hover = color_cast<ColorHSLA>(QmConsoleAppearance::LinkHoverColor(Link, 45));
+	EXPECT_NEAR(Hover.h, 0.075f, 0.001f);
 }
 
 TEST(QmConsoleAppearance, FontSizeAllowsOneThroughSevenWithoutClampingToEight)
