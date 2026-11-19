@@ -446,6 +446,11 @@ void CRankGhost::OnUpdate()
 		break;
 	}
 	StartNextQueuedDemoDownload();
+
+	// 查看时间线必须在 Items 之前更新：Items 组件先于 RankGhost 渲染，
+	// 否则拖动进度或切换开关后的首帧仍会使用上一帧的机关状态。
+	if(IsViewModeActive())
+		UpdateViewTimeline();
 }
 
 void CRankGhost::OnMapLoad()
@@ -500,15 +505,7 @@ void CRankGhost::OnShutdown()
 
 void CRankGhost::OnRender()
 {
-	// 查看模式按播放头回放时间线（事件 + 开关状态）；非查看态只重置游标
-	if(!IsViewModeActive())
-	{
-		m_ViewLastTick = -1;
-		m_ViewAppliedSwitch = -1;
-		m_ViewEventCursor = 0;
-		return;
-	}
-	UpdateViewTimeline();
+	// 查看时间线已在 OnUpdate() 应用，渲染阶段不再推进游标。
 }
 
 void CRankGhost::StartLookup(const char *pMap, int Rank)

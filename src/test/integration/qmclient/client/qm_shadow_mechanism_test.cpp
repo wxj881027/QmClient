@@ -1,8 +1,11 @@
 #include <engine/map.h>
 
+#include <game/client/components/qmclient/map_mechanism_builder.h>
 #include <game/client/components/qmclient/shadow_gun_replay.h>
 #include <game/client/laser_data.h>
 #include <game/client/prediction/entities/door.h>
+#include <game/client/prediction/entities/dragger.h>
+#include <game/client/prediction/entities/practice_light.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/collision.h>
 #include <game/gamecore.h>
@@ -129,6 +132,11 @@ namespace
 		{
 			m_vGame[Y * 32 + X].m_Index = ENTITY_OFFSET + Entity;
 		}
+		void SetGameTile(int X, int Y, int Index, int Flags = 0)
+		{
+			m_vGame[Y * 32 + X].m_Index = Index;
+			m_vGame[Y * 32 + X].m_Flags = Flags;
+		}
 		void SetSwitchEntity(int X, int Y, int Entity, int Number)
 		{
 			CSwitchTile &Tile = m_vSwitch[Y * 32 + X];
@@ -175,6 +183,77 @@ TEST(ShadowMechanism, DoorCollisionOwnershipStaysWithPlayableWorld)
 	pDoor->Destroy();
 	F.m_Collision.GetDoorTile(DoorIndex, &DoorTile);
 	EXPECT_EQ(DoorTile.m_Index, 0);
+}
+
+TEST(ShadowMechanism, DoorSnapshotMatchingRespectsSide)
+{
+	SMechanismFixture F;
+	F.SetGameEntity(2, 2, ENTITY_DOOR);
+	F.SetGameEntity(2, 3, ENTITY_LASER_SHORT);
+	F.SetGameEntity(3, 2, ENTITY_LASER_SHORT);
+	F.Init();
+
+	CGameWorld World;
+	CTuningParams Tuning;
+	World.Init(&F.m_Collision, &Tuning, nullptr);
+
+	const vec2 Hub(2 * 32 + 16, 2 * 32 + 16);
+	std::vector<qm_map_mechanisms::SSnapshotLaser> vSnapshots = {
+		{Hub, Hub + vec2(0, 96), -1, LASERTYPE_DOOR, 0},
+		{Hub, Hub + vec2(96, 0), -1, LASERTYPE_DOOR, 0},
+	};
+	qm_map_mechanisms::SBuildOptions Options;
+	Options.m_pSnapshots = &vSnapshots;
+	Options.m_BuildPickups = false;
+	Options.m_RegisterDoorCollision = false;
+	int NextEntityId = 100;
+	const qm_map_mechanisms::SBuildCounts Counts = qm_map_mechanisms::Build(World, &F.m_Collision, NextEntityId, Options);
+	ASSERT_EQ(Counts.m_Doors, 2);
+
+	bool FoundUp = false;
+	bool FoundRight = false;
+	for(CEntity *pEnt = World.FindFirst(CGameWorld::ENTTYPE_DOOR); pEnt; pEnt = pEnt->TypeNext())
+	{
+		auto *pDoor = dynamic_cast<CDoor *>(pEnt);
+		ASSERT_NE(pDoor, nullptr);
+		const CLaserData Data = pDoor->RenderData(0);
+		const vec2 Direction = normalize(Data.m_From - Data.m_To);
+		FoundUp = FoundUp || dot(Direction, vec2(0.0f, 1.0f)) > 0.99f;
+		FoundRight = FoundRight || dot(Direction, vec2(1.0f, 0.0f)) > 0.99f;
+	}
+	EXPECT_TRUE(FoundUp);
+	EXPECT_TRUE(FoundRight);
+}
+
+TEST(ShadowMechanism, MechanismReplayFollowsMovingPlatformAndResetsOnSeekBack)
+{
+	SMechanismFixture F;
+	F.SetGameTile(2, 2, TILE_CP, ROTATION_90);
+	F.Init();
+
+	CGameWorld World;
+	CTuningParams Tuning;
+	World.Init(&F.m_Collision, &Tuning, nullptr);
+
+	const vec2 Hub(2 * 32 + 16, 2 * 32 + 16);
+	CLaserData DraggerData = {};
+	DraggerData.m_From = Hub;
+	DraggerData.m_To = Hub;
+	DraggerData.m_Type = LASERTYPE_DRAGGER;
+	DraggerData.m_SwitchNumber = 0;
+	DraggerData.m_Subtype = 0;
+	CDragger Dragger(&World, 1, &DraggerData);
+	CPracticeLight Light(&World, Hub, 0.0f, 96, LAYER_GAME, 0);
+
+	Dragger.SetPlaybackTick(35);
+	Light.SetPhaseTick(35, 35);
+	EXPECT_FLOAT_EQ(Dragger.m_Pos.x, Hub.x + 20.0f);
+	EXPECT_FLOAT_EQ(Light.m_Pos.x, Hub.x + 20.0f);
+
+	Dragger.SetPlaybackTick(0);
+	Light.SetPhaseTick(0, 0);
+	EXPECT_FLOAT_EQ(Dragger.m_Pos.x, Hub.x);
+	EXPECT_FLOAT_EQ(Light.m_Pos.x, Hub.x);
 }
 
 TEST(ShadowMechanism, GunReplayFiresAtShadowTargetWithoutCharacters)

@@ -18,15 +18,15 @@ namespace
 	constexpr int s_aSideOffsetX[8] = {0, 1, 1, 1, 0, -1, -1, -1};
 	constexpr int s_aSideOffsetY[8] = {1, 1, 0, -1, -1, -1, 0, 1};
 
-	const qm_map_mechanisms::SSnapshotLaser *FindNearestSnapshotLaser(
-		const std::vector<qm_map_mechanisms::SSnapshotLaser> &vSnapshots,
+	qm_map_mechanisms::SSnapshotLaser *FindNearestSnapshotLaser(
+		std::vector<qm_map_mechanisms::SSnapshotLaser> &vSnapshots,
 		int Type, vec2 Hub, int Number, float MaxDistance)
 	{
-		const qm_map_mechanisms::SSnapshotLaser *pBest = nullptr;
+		qm_map_mechanisms::SSnapshotLaser *pBest = nullptr;
 		float BestDistance = MaxDistance;
-		for(const qm_map_mechanisms::SSnapshotLaser &Snapshot : vSnapshots)
+		for(qm_map_mechanisms::SSnapshotLaser &Snapshot : vSnapshots)
 		{
-			if(Snapshot.m_Type != Type || Snapshot.m_SwitchNumber != Number)
+			if(Snapshot.m_Used || Snapshot.m_Type != Type || Snapshot.m_SwitchNumber != Number)
 				continue;
 			const float Distance = distance(Snapshot.m_Hub, Hub);
 			if(Distance > BestDistance)
@@ -34,28 +34,68 @@ namespace
 			BestDistance = Distance;
 			pBest = &Snapshot;
 		}
+		if(pBest != nullptr)
+			pBest->m_Used = true;
 		return pBest;
 	}
 
-	const qm_map_mechanisms::SSnapshotLaser *FindSnapshotLight(
-		const std::vector<qm_map_mechanisms::SSnapshotLaser> &vSnapshots,
+	qm_map_mechanisms::SSnapshotLaser *FindSnapshotLight(
+		std::vector<qm_map_mechanisms::SSnapshotLaser> &vSnapshots,
 		vec2 Hub, int Number, vec2 Direction)
 	{
-		const qm_map_mechanisms::SSnapshotLaser *pBest = nullptr;
+		qm_map_mechanisms::SSnapshotLaser *pBest = nullptr;
+		float BestDistance = 512.0f;
 		float BestDirection = -2.0f;
-		for(const qm_map_mechanisms::SSnapshotLaser &Snapshot : vSnapshots)
+		for(qm_map_mechanisms::SSnapshotLaser &Snapshot : vSnapshots)
 		{
-			if(Snapshot.m_Type != LASERTYPE_FREEZE || Snapshot.m_SwitchNumber != Number || distance(Snapshot.m_Hub, Hub) > 512.0f)
+			if(Snapshot.m_Used || Snapshot.m_Type != LASERTYPE_FREEZE || Snapshot.m_SwitchNumber != Number)
 				continue;
 			const vec2 SnapshotDirection = Snapshot.m_From - Snapshot.m_Hub;
 			if(length(SnapshotDirection) < 0.5f)
 				continue;
 			const float DirectionScore = dot(normalize(SnapshotDirection), Direction);
-			if(DirectionScore <= BestDirection)
+			const float SnapshotDistance = distance(Snapshot.m_Hub, Hub);
+			if(DirectionScore <= 0.0f || SnapshotDistance > 512.0f)
 				continue;
+			if(SnapshotDistance > BestDistance + 0.5f ||
+				(absolute(SnapshotDistance - BestDistance) <= 0.5f && DirectionScore <= BestDirection))
+				continue;
+			BestDistance = SnapshotDistance;
 			BestDirection = DirectionScore;
 			pBest = &Snapshot;
 		}
+		if(pBest != nullptr)
+			pBest->m_Used = true;
+		return pBest;
+	}
+
+	qm_map_mechanisms::SSnapshotLaser *FindSnapshotDoor(
+		std::vector<qm_map_mechanisms::SSnapshotLaser> &vSnapshots,
+		vec2 Hub, int Number, vec2 Direction)
+	{
+		qm_map_mechanisms::SSnapshotLaser *pBest = nullptr;
+		float BestDistance = 512.0f;
+		float BestDirection = 0.9f;
+		for(qm_map_mechanisms::SSnapshotLaser &Snapshot : vSnapshots)
+		{
+			if(Snapshot.m_Used || Snapshot.m_Type != LASERTYPE_DOOR || Snapshot.m_SwitchNumber != Number)
+				continue;
+			const vec2 SnapshotDirection = Snapshot.m_From - Snapshot.m_Hub;
+			if(length(SnapshotDirection) < 0.5f)
+				continue;
+			const float DirectionScore = dot(normalize(SnapshotDirection), Direction);
+			const float SnapshotDistance = distance(Snapshot.m_Hub, Hub);
+			if(DirectionScore < BestDirection || SnapshotDistance > 512.0f)
+				continue;
+			if(SnapshotDistance > BestDistance + 0.5f ||
+				(absolute(SnapshotDistance - BestDistance) <= 0.5f && DirectionScore <= BestDirection))
+				continue;
+			BestDistance = SnapshotDistance;
+			BestDirection = DirectionScore;
+			pBest = &Snapshot;
+		}
+		if(pBest != nullptr)
+			pBest->m_Used = true;
 		return pBest;
 	}
 }
@@ -151,9 +191,19 @@ namespace qm_map_mechanisms
 							const vec2 Dir(std::sin(pi / 4 * Side), std::cos(pi / 4 * Side));
 							vec2 To = Pos + Dir * Length;
 							pCollision->IntersectNoLaser(Pos, To, &To, nullptr);
+							vec2 DoorHub = Pos;
+							if(Options.m_pSnapshots != nullptr)
+							{
+								if(const SSnapshotLaser *pSnapshot = FindSnapshotDoor(
+									   *Options.m_pSnapshots, Pos, Number, Dir))
+								{
+									DoorHub = pSnapshot->m_Hub;
+									To = pSnapshot->m_From;
+								}
+							}
 							CLaserData Data = {};
 							Data.m_From = To;
-							Data.m_To = Pos;
+							Data.m_To = DoorHub;
 							Data.m_StartTick = -1;
 							Data.m_ExtraInfo = true;
 							Data.m_Owner = -1;
@@ -277,13 +327,19 @@ namespace qm_map_mechanisms
 		return Counts;
 	}
 
-	void AdvanceLights(CGameWorld &World, int Tick)
+	void AdvanceMechanisms(CGameWorld &World, int Tick, int RenderTick)
 	{
 		for(CEntity *pEnt = World.FindFirst(CGameWorld::ENTTYPE_LIGHT); pEnt; pEnt = pEnt->TypeNext())
 		{
 			auto *pLight = dynamic_cast<CPracticeLight *>(pEnt);
 			if(pLight != nullptr)
-				pLight->SetPhaseTick(Tick);
+				pLight->SetPhaseTick(Tick, RenderTick);
+		}
+		for(CEntity *pEnt = World.FindFirst(CGameWorld::ENTTYPE_DRAGGER); pEnt; pEnt = pEnt->TypeNext())
+		{
+			auto *pDragger = dynamic_cast<CDragger *>(pEnt);
+			if(pDragger != nullptr)
+				pDragger->SetPlaybackTick(Tick);
 		}
 	}
 }

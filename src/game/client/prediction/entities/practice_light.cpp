@@ -22,6 +22,7 @@ CPracticeLight::CPracticeLight(CGameWorld *pGameWorld, vec2 Pos, float Rotation,
 	m_Rotation = Rotation;
 	m_Length = Length;
 	m_EvalTick = GameWorld()->GameTick();
+	m_PhaseStartPos = m_Pos;
 	m_PhaseStartRotation = m_Rotation;
 	m_PhaseStartCurveLength = m_CurveLength;
 	m_PhaseStartSpeed = m_Speed;
@@ -75,6 +76,7 @@ void CPracticeLight::RefreshGeometry()
 
 void CPracticeLight::CapturePhaseOrigin()
 {
+	m_PhaseStartPos = m_Pos;
 	m_PhaseStartRotation = m_Rotation;
 	m_PhaseStartCurveLength = m_CurveLength;
 	m_PhaseStartSpeed = m_Speed;
@@ -82,12 +84,15 @@ void CPracticeLight::CapturePhaseOrigin()
 	m_PhaseOriginCaptured = true;
 }
 
-void CPracticeLight::SetPhaseTick(int Tick)
+void CPracticeLight::SetPhaseTick(int Tick, int RenderTick)
 {
 	if(!m_PhaseOriginCaptured)
 		CapturePhaseOrigin();
 	if(Tick < m_PhaseTick)
 	{
+		// 移动平台：位置也要回到零点，不能只重置角度。
+		m_Pos = m_PhaseStartPos;
+		m_Core = vec2(0.0f, 0.0f);
 		// 拖动回退：回到地图初始相位，再从零点重放到目标 tick。
 		m_Rotation = m_PhaseStartRotation;
 		m_CurveLength = m_PhaseStartCurveLength;
@@ -98,9 +103,11 @@ void CPracticeLight::SetPhaseTick(int Tick)
 	while(m_PhaseTick + m_Tick <= Tick)
 	{
 		m_PhaseTick += m_Tick;
+		Collision()->MoverSpeed(m_Pos.x, m_Pos.y, &m_Core);
+		m_Pos += m_Core;
 		Move();
 	}
-	m_EvalTick = m_PhaseTick;
+	m_EvalTick = RenderTick;
 	RefreshGeometry();
 }
 

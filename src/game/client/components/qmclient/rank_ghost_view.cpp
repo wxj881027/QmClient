@@ -74,9 +74,21 @@ bool CRankGhost::ViewPracticeGroup(const char *pGroupDir)
 	if(!LoadGhostGroup(pGroupDir))
 	{
 		m_PendingView = false;
+		char aBuf[IO_MAX_PATH_LENGTH + 128];
+		str_format(aBuf, sizeof(aBuf), Localize("Rank ghost: failed to load the replay: %s"), pGroupDir);
+		Echo(aBuf);
 		return false;
 	}
-	LoadViewTimeline();
+	if(!LoadViewTimeline())
+	{
+		// 练习组没有源 demo，无法像 Rank 1 一样后台重建时间线；明确告知玩家
+		// 当前仍是可播放的虚影，但没有开关、事件、音效和成绩时间线。
+		char aTimelinePath[IO_MAX_PATH_LENGTH];
+		ViewTimelinePath(aTimelinePath, sizeof(aTimelinePath));
+		char aBuf[IO_MAX_PATH_LENGTH + 128];
+		str_format(aBuf, sizeof(aBuf), Localize("Rank ghost: failed to load the replay: %s"), aTimelinePath);
+		Echo(aBuf);
+	}
 	return IsViewModeActive();
 }
 
@@ -224,6 +236,10 @@ bool CRankGhost::GetViewState(SViewState &Out) const
 void CRankGhost::EndViewSessionState()
 {
 	m_ViewMode = false;
+	m_ViewLastTick = -1;
+	m_ViewEventCursor = 0;
+	m_ViewMessageCursor = 0;
+	m_ViewAppliedSwitch = -1;
 	m_ViewSwitchersActive = false;
 	m_vViewSwitchers.clear();
 	m_pViewMechanismWorld.reset();
@@ -448,9 +464,12 @@ void CRankGhost::UpdateViewTimeline()
 {
 	CGhost *pGhost = &GameClient()->m_Ghost;
 	const int CurTick = pGhost->ManualPlaybackTick();
+	// 回放时间轴是相对轨迹起点的；地图机关包络和静态光相位使用绝对 tick。
+	// 统一换成 demo 时间轴后再求值，避免从非零起点进入回放时机关相位错位。
+	const int MechanismTick = m_ViewPlaybackMetadata.m_FirstTick + CurTick;
 	// 移动方块的包络按回放播放头求值，暂停时随播放头冻结。
-	GameClient()->m_MovingTilesBackground.SetViewPlaybackTime(CurTick, pGhost->ManualRenderIntra());
-	GameClient()->m_MovingTilesForeground.SetViewPlaybackTime(CurTick, pGhost->ManualRenderIntra());
+	GameClient()->m_MovingTilesBackground.SetViewPlaybackTime(MechanismTick, pGhost->ManualRenderIntra());
+	GameClient()->m_MovingTilesForeground.SetViewPlaybackTime(MechanismTick, pGhost->ManualRenderIntra());
 	if(CurTick < m_ViewLastTick)
 	{
 		// 播放头后退（拖进度条）：重置游标，重放这段的特效与状态
@@ -519,8 +538,9 @@ void CRankGhost::UpdateViewTimeline()
 
 	if(m_pViewMechanismWorld != nullptr)
 	{
-		m_pViewMechanismWorld->m_GameTick = std::max(0, CurTick);
-		qm_map_mechanisms::AdvanceLights(*m_pViewMechanismWorld, CurTick);
+		const int RenderTick = std::max(0, CurTick);
+		m_pViewMechanismWorld->m_GameTick = RenderTick;
+		qm_map_mechanisms::AdvanceMechanisms(*m_pViewMechanismWorld, MechanismTick, RenderTick);
 	}
 
 	if(!m_vViewGuns.empty())

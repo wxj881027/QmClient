@@ -22,6 +22,9 @@ class CDragger : public CEntity
 	float m_Strength;
 	bool m_IgnoreWalls;
 	int m_TargetId;
+	vec2 m_PlaybackStartPos;
+	int m_PlaybackTick;
+	int m_Tick;
 
 	void LookForPlayersToDrag();
 	void DraggerBeamTick();
@@ -31,6 +34,8 @@ public:
 	CDragger(CGameWorld *pGameWorld, int Id, const CLaserData *pData);
 	bool Match(CDragger *pDragger);
 	void Read(const CLaserData *pData);
+	// 影子回放：按绝对回放 tick 重放移动平台位置，支持后退拖动。
+	void SetPlaybackTick(int Tick);
 	float GetStrength() const { return m_Strength; }
 	// 渲染层数据。有分支目标时从轮毂画向目标，否则保留零长度轮毂。
 	std::optional<CLaserData> RenderData(int Team);

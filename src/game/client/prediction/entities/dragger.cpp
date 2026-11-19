@@ -135,6 +135,7 @@ CDragger::CDragger(CGameWorld *pGameWorld, int Id, const CLaserData *pData) :
 	m_Core = vec2(0.f, 0.f);
 	m_Id = Id;
 	m_TargetId = -1;
+	m_Tick = std::max(1, (int)(pGameWorld->GameTickSpeed() * 0.15f));
 
 	m_Strength = 0;
 	m_IgnoreWalls = false;
@@ -147,12 +148,32 @@ CDragger::CDragger(CGameWorld *pGameWorld, int Id, const CLaserData *pData) :
 	m_Layer = m_Number > 0 ? LAYER_SWITCH : LAYER_GAME;
 
 	Read(pData);
+	m_PlaybackStartPos = m_Pos;
+	m_PlaybackTick = 0;
 }
 
 void CDragger::Read(const CLaserData *pData)
 {
 	m_Pos = pData->m_From;
 	m_TargetId = pData->m_Owner;
+}
+
+void CDragger::SetPlaybackTick(int Tick)
+{
+	if(Tick < m_PlaybackTick)
+	{
+		// 拖动回退：回到地图初始位置后重放到目标 tick。
+		m_Pos = m_PlaybackStartPos;
+		m_Core = vec2(0.f, 0.f);
+		m_PlaybackTick = 0;
+		m_TargetId = -1;
+	}
+	while(m_PlaybackTick + m_Tick <= Tick)
+	{
+		m_PlaybackTick += m_Tick;
+		Collision()->MoverSpeed(m_Pos.x, m_Pos.y, &m_Core);
+		m_Pos += m_Core;
+	}
 }
 
 bool CDragger::Match(CDragger *pDragger)

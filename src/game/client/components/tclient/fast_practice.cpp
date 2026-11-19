@@ -790,7 +790,8 @@ void CFastPractice::LoadPracticeMapMechanisms(CGameWorld &World)
 		if(Ent.m_Item.m_Type != NETOBJTYPE_LASER && Ent.m_Item.m_Type != NETOBJTYPE_DDNETLASER)
 			continue;
 		const CLaserData Data = ExtractLaserInfo(Ent.m_Item.m_Type, Ent.m_Item.m_pData, &GameClient()->m_GameWorld, Ent.m_pDataEx);
-		if(Data.m_Type != LASERTYPE_FREEZE && Data.m_Type != LASERTYPE_DRAGGER && Data.m_Type != LASERTYPE_GUN)
+		if(Data.m_Type != LASERTYPE_FREEZE && Data.m_Type != LASERTYPE_DRAGGER &&
+			Data.m_Type != LASERTYPE_GUN && Data.m_Type != LASERTYPE_DOOR)
 			continue;
 		vSnapshots.push_back({Data.m_To, Data.m_From, Data.m_StartTick, Data.m_Type, Data.m_SwitchNumber});
 	}
@@ -880,9 +881,9 @@ void CFastPractice::LoadPracticeGuns()
 					vUsedGunSnapshots[BestSnapshot] = true;
 					Gun.m_Pos = vGunSnapshots[BestSnapshot].m_Hub;
 				}
-				const int InitialCooldown = -(Client()->GameTickSpeed() / PRACTICE_PLASMA_PER_SEC);
-				std::fill(std::begin(Gun.m_aLastFireTeam), std::end(Gun.m_aLastFireTeam), InitialCooldown);
-				std::fill(std::begin(Gun.m_aLastFireSolo), std::end(Gun.m_aLastFireSolo), InitialCooldown);
+				// CGun 构造时把两个冷却数组初始化为 0；不是负 tick。
+				std::fill(std::begin(Gun.m_aLastFireTeam), std::end(Gun.m_aLastFireTeam), 0);
+				std::fill(std::begin(Gun.m_aLastFireSolo), std::end(Gun.m_aLastFireSolo), 0);
 				m_vPracticeGuns.push_back(Gun);
 			};
 

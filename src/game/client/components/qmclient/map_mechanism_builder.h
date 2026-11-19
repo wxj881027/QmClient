@@ -16,6 +16,7 @@ namespace qm_map_mechanisms
 		int m_StartTick;
 		int m_Type;
 		int m_SwitchNumber;
+		bool m_Used = false;
 	};
 
 	// 从地图图层重建门、拖拉、静态激光等机关实体。
@@ -30,7 +31,7 @@ namespace qm_map_mechanisms
 		bool m_RegisterDoorCollision = true;
 		// 练习分支可继承快照里同位置的激光相位；影子世界没有源世界，默认关闭。
 		bool m_InheritSnapshotLights = true;
-		const std::vector<SSnapshotLaser> *m_pSnapshots = nullptr;
+		std::vector<SSnapshotLaser> *m_pSnapshots = nullptr;
 	};
 
 	struct SBuildCounts
@@ -44,9 +45,9 @@ namespace qm_map_mechanisms
 	// NextEntityId 由调用方独占；返回实际构建数量，并推进 NextEntityId。
 	SBuildCounts Build(CGameWorld &World, CCollision *pCollision, int &NextEntityId, const SBuildOptions &Options = {});
 
-	// 影子世界没有逐 tick 的 CGameWorld::Tick，静态激光需要按回放播放头
-	// 单独推进相位。支持后退拖动：内部会从时间线零点重算。
-	void AdvanceLights(CGameWorld &World, int Tick);
+	// 影子世界没有逐 tick 的 CGameWorld::Tick，静态激光与拖拉需要按回放播放头
+	// 单独推进相位和移动平台位置。支持后退拖动：内部会从时间线零点重算。
+	void AdvanceMechanisms(CGameWorld &World, int PhaseTick, int RenderTick);
 }
 
 #endif

@@ -5933,6 +5933,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/prediction/entities/pickup.cpp
       src/game/client/prediction/entities/plasma.cpp
       src/game/client/prediction/entities/practice_light.cpp
+      src/game/client/components/qmclient/map_mechanism_builder.cpp
       src/game/client/components/qmclient/shadow_gun_replay.cpp
       src/game/client/prediction/entities/projectile.cpp
       src/game/client/projectile_data.cpp

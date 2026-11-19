@@ -297,13 +297,13 @@
 
 <h3>2.4 机关重建与渲染</h3>
 
-<p>分支世界不能依赖快照范围，否则走出镜头就会“看不见但还在挡”。<code>LoadPracticeMapMechanisms()</code>（<code>fast_practice.cpp:784</code>）直接读地图三层的实体 tile，按服务端创建规则重建，并在快照仍可见时继承当前相位：</p>
+<p>分支世界不能依赖快照范围，否则走出镜头就会“看不见但还在挡”。<code>LoadPracticeMapMechanisms()</code>（<code>fast_practice.cpp:784</code>）直接读地图三层的实体 tile，按服务端创建规则重建，并在快照仍可见时继承当前相位。快照匹配按类型、编号和方向消费记录，同一门格有多个方向时不会把相邻门的端点错配；查看世界的静态光相位和拖拉位置使用绝对 demo tick，渲染仍使用相对播放头，长回放从非零起点进入时不会整体错位，拖动进度条后退时会回到时间线零点重算移动平台位置。</p>
 
 <div class="grid">
 	<div class="card"><h4>拾取物</h4><p>护甲、武器、生命、忍者，按 <code>ENTITY_*</code> 还原类型与子类型。</p></div>
-	<div class="card"><h4>门</h4><p><code>CDoor</code>，记录 hub、方向、长度；<code>ResetCollision()</code> 把门碰撞端点写进当前碰撞缓存。</p></div>
-	<div class="card"><h4>拖拉</h4><p><code>CDragger</code>，记录强度、穿墙、开关编号与目标。</p></div>
-	<div class="card"><h4>静态激光</h4><p><code>CPracticeLight</code>，按 hub、方向和开关编号匹配当前 snapshot；继承 hub、头部端点与 eval tick，保留生长相位。</p></div>
+	<div class="card"><h4>门</h4><p><code>CDoor</code>，记录 hub、方向、长度；同格多方向按方向消费快照，<code>ResetCollision()</code> 把门碰撞端点写进当前碰撞缓存。</p></div>
+	<div class="card"><h4>拖拉</h4><p><code>CDragger</code>，记录强度、穿墙、开关编号与目标；查看世界按绝对 tick 沿 <code>MoverSpeed</code> 重放移动平台位置，后退时回到地图起点重算。</p></div>
+	<div class="card"><h4>静态激光</h4><p><code>CPracticeLight</code>，按 hub、方向和开关编号匹配当前 snapshot；继承 hub、头部端点与 eval tick，保留生长相位。回放世界用绝对 tick 推进相位和移动平台位置，渲染数据仍写相对播放头。</p></div>
 	<div class="card"><h4>机关炮</h4><p><code>m_vPracticeGuns</code> 单独模拟，按 <code>MoverSpeed</code> 跟随移动平台，按队伍/solo 选择目标；入口快照中的炮位与开火计时单独保存，重开时一起恢复。</p></div>
 </div>
 
@@ -506,7 +506,7 @@
 		<tr>
 			<td>B1</td>
 			<td>门、拖拉、静态激光影子化：只读机关世界 + <code>.qmevt</code> 开关驱动</td>
-			<td><span class="tag done">已实现</span><code>map_mechanism_builder</code> 共用地图扫描；门不注册共享碰撞，激光按播放头重算相位，拖拉指向影子 Tee；查看世界使用录制队伍，不污染主世界去重表</td>
+			<td><span class="tag done">已实现</span><code>map_mechanism_builder</code> 共用地图扫描；门按方向消费同格快照，不注册共享碰撞；静态光与拖拉用绝对 demo tick 推进相位和移动平台位置、相对播放头渲染；拖拉指向影子 Tee；查看世界使用录制队伍，不污染主世界去重表</td>
 		</tr>
 		<tr>
 			<td>B2</td>
@@ -606,17 +606,17 @@
 <table>
 	<thead><tr><th>项目</th><th>结果</th></tr></thead>
 	<tbody>
-		<tr><td>构建 <code>game-client</code></td><td>成功（当前工作树 <code>61b6cff70b</code> + 本轮修复）</td></tr>
+		<tr><td>构建 <code>game-client</code></td><td>成功（<code>cmake-build-fast</code>，当前工作树 <code>61b6cff70b</code> + 本轮修复）</td></tr>
 		<tr><td><code>testrunner</code></td><td>7325 / 7325 通过</td></tr>
 		<tr><td><code>qm-nmt-tests</code></td><td>176 / 176 通过</td></tr>
 		<tr><td><code>qm-ui-popup-tests</code></td><td>502 / 502 通过</td></tr>
-		<tr><td><code>qm-practice-predict-tests</code></td><td>40 / 40 通过</td></tr>
+		<tr><td><code>qm-practice-predict-tests</code></td><td>42 / 42 通过</td></tr>
 		<tr><td>quick gate</td><td>14 通过 / 2 失败；失败均为既有格式债（<code>config_variables_qmclient.h</code>、<code>uuid_manager.cpp</code>、<code>QmConsoleUi.h</code>、<code>QmListToolbar.h</code>、<code>UiForms.cpp</code>、<code>generate_rust_bridge.py</code>）；本轮代码文件 <code>clang-format</code> 通过</td></tr>
 		<tr><td>语言校验</td><td><code>extracted_strings.txt</code> 7418 项；12 个生成语言文件全部通过</td></tr>
-		<tr><td><code>BM_GhostPathAppend/1000</code></td><td>CPU 中位数约 6.28µs（0.2s × 5 次聚合）</td></tr>
-		<tr><td><code>BM_GhostExtraDataDecode</code></td><td>CPU 中位数约 0.85ns</td></tr>
-		<tr><td><code>BM_OnlineReplayClock</code></td><td>CPU 中位数约 5.58ns</td></tr>
-		<tr><td><code>BM_PracticeLightPhase/12000</code></td><td>CPU 中位数约 4.36µs（12000 tick 从零点重算）</td></tr>
+		<tr><td><code>BM_GhostPathAppend/1000</code></td><td>CPU 中位数约 4.88µs（0.2s × 5 次聚合）</td></tr>
+		<tr><td><code>BM_GhostExtraDataDecode</code></td><td>CPU 中位数约 1.19ns</td></tr>
+		<tr><td><code>BM_OnlineReplayClock</code></td><td>CPU 中位数约 3.66ns</td></tr>
+		<tr><td><code>BM_PracticeLightPhase/12000</code></td><td>CPU 中位数约 3.44µs（12000 tick 从零点重算）</td></tr>
 	</tbody>
 </table>
 

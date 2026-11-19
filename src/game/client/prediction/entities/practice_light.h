@@ -21,6 +21,7 @@ class CPracticeLight : public CEntity
 	void Step();
 
 	// 影子回放的时间线基准：构造函数与地图配置完成时的相位。
+	vec2 m_PhaseStartPos = vec2(0.0f, 0.0f);
 	float m_PhaseStartRotation = 0.0f;
 	int m_PhaseStartCurveLength = 0;
 	int m_PhaseStartSpeed = 0;
@@ -45,7 +46,7 @@ public:
 	// 记录“时间线零点”的相位。影子世界在开关状态或播放头跳转后从这里重放。
 	void CapturePhaseOrigin();
 	// 把相位推进到指定回放 tick；小于上次 tick 时会从头重算，支持倒退拖动。
-	void SetPhaseTick(int Tick);
+	void SetPhaseTick(int Tick, int RenderTick);
 	void ShiftEvalTick(int TickDelta) { m_EvalTick += TickDelta; }
 	// 渲染层数据。开关关闭时返回空，网络裁剪外也能画出与分支碰撞一致的激光。
 	std::optional<CLaserData> RenderData(int Team);
