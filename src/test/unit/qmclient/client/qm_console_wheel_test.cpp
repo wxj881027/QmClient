@@ -4,21 +4,22 @@
 
 #include <cmath>
 
-TEST(QmConsoleWheel, DefaultStepUsesThreeLines)
+TEST(QmConsoleWheel, DefaultStepUsesFiveLines)
 {
-	EXPECT_EQ(QmConsoleWheelLines(1.0f, 20), 3);
+	EXPECT_EQ(QmConsoleWheelLines(1.0f, 20), 5);
 }
 
 TEST(QmConsoleWheel, GlobalStepScalesTheSemanticBaseLineCount)
 {
-	EXPECT_EQ(QmConsoleWheelLines(2.0f, 20), 6);
+	EXPECT_EQ(QmConsoleWheelLines(2.0f, 20), 8);
 	EXPECT_EQ(QmConsoleWheelLines(10.0f, 20), 8);
 }
 
 TEST(QmConsoleWheel, NarrowViewportLowersTheCap)
 {
-	// 六行目标在四行日志区最多推进三行，避免一档滚出视口。
+	// 十行目标在四行日志区最多推进三行，避免一档滚出视口。
 	EXPECT_EQ(QmConsoleWheelLines(2.0f, 4), 3);
+	EXPECT_EQ(QmConsoleWheelLines(1.0f, 6), 5);
 	EXPECT_EQ(QmConsoleWheelLines(1.0f, 3), 2);
 	EXPECT_EQ(QmConsoleWheelLines(1.0f, 1), 1);
 }
@@ -26,10 +27,10 @@ TEST(QmConsoleWheel, NarrowViewportLowersTheCap)
 TEST(QmConsoleWheel, UnknownGeometryAndInvalidScaleUseSafeFallbacks)
 {
 	// 几何未知时只使用语义基准，不因视口为 0 退化成 1 行。
-	EXPECT_EQ(QmConsoleWheelLines(1.0f, 0), 3);
-	EXPECT_EQ(QmConsoleWheelLines(1.0f, -1), 3);
+	EXPECT_EQ(QmConsoleWheelLines(1.0f, 0), 5);
+	EXPECT_EQ(QmConsoleWheelLines(1.0f, -1), 5);
 	EXPECT_EQ(QmConsoleWheelLines(0.0f, 20), 1);
-	EXPECT_EQ(QmConsoleWheelLines(std::nanf(""), 20), 3);
+	EXPECT_EQ(QmConsoleWheelLines(std::nanf(""), 20), 5);
 }
 
 TEST(QmConsoleLogClip, StartsAtToolbarBottomWithoutWholeLineRounding)

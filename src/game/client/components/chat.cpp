@@ -2899,7 +2899,8 @@ bool CChat::OnPrepareLines(float y)
 	}
 
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
-	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
+	const bool InputActive = m_Mode != MODE_NONE;
+	const bool ShowLargeArea = ShouldShowLargeArea(m_Show, InputActive, g_Config.m_ClShowChat);
 	const std::array<int, 5> aTitleVisibility = {g_Config.m_QmShowMainTitle, g_Config.m_QmShowDummyTitle, g_Config.m_QmChatSponsorBadges,
 		GameClient()->m_aLocalIds[IClient::CONN_MAIN], GameClient()->m_aLocalIds[IClient::CONN_DUMMY]};
 	const bool ForceRecreate = IsScoreBoardOpen != m_PrevScoreBoardShowed || ShowLargeArea != m_PrevShowChat;
@@ -3580,10 +3581,7 @@ void CChat::OnRender()
 
 	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
 	const bool InputActive = m_Mode != MODE_NONE;
-	const bool ShowLargeArea =
-		m_Show ||
-		(InputActive && g_Config.m_ClShowChat == 1) ||
-		g_Config.m_ClShowChat == 2;
+	const bool ShowLargeArea = ShouldShowLargeArea(m_Show, InputActive, g_Config.m_ClShowChat);
 	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 	const int64_t Now = time();
 	// 动画与滚动物理必须共用渲染帧的真实步长。time() 只有毫秒精度，
@@ -4777,7 +4775,8 @@ bool CChat::TranslateVisibleChatLines()
 	const bool FocusHideSystemPromptMessages = Focus.m_HideSystemPromptMessages;
 	const bool FocusHideEcho = Focus.m_HideEchoMessages;
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
-	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
+	const bool InputActive = m_Mode != MODE_NONE;
+	const bool ShowLargeArea = ShouldShowLargeArea(m_Show, InputActive, g_Config.m_ClShowChat);
 	const int OffsetType = IsScoreBoardOpen ? 1 : 0;
 
 	int aLineIndices[MAX_LINES];

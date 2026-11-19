@@ -173,7 +173,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.8b 控制台日志滚动（console log scroll）
 
-- 定义：控制台日志的滚轮、翻页、滑块与触控拖动共用全站滚动物理；偏移以像素推进、读取时折回「整行 + 亚行余量」，贴底时新日志自动跟随。滚轮每档以 3 行为基准，按全站倍率缩放，最多 8 行，并按可见行数兜底。
+- 定义：控制台日志的滚轮、翻页、滑块与触控拖动共用全站滚动物理；偏移以像素推进、读取时折回「整行 + 亚行余量」，贴底时新日志自动跟随。滚轮每档以 5 行为基准，按全站倍率缩放，最多 8 行，并按可见行数兜底。
 - 唯一实现：`CQmConsoleScrollRuntime`（`src/game/client/QmUi/QmConsoleScroll.h`）+ `CQmScrollState` / `QmNativeWheelScrollConfig`，行数解析走 `QmConsoleWheelLines`（`console_scroll.h`）与 `QmResolveWheelLineCount`（`QmUi/QmScroll.h`）；调用点 `CGameConsole::CInstance::OnInput`、`CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
 - 禁止的反面写法：在控制台里自己写 `m_BacklogCurLine += 行数` 直跳滚轮；拖动滑块走弹簧（应跟手）；新日志到达时搬整型行锚而不是按内容增长量抬高偏移；另写一套平滑时长或阻尼；把 `qm_ui_scroll_step` 当像素步长除以行高来求行数。
 
@@ -229,7 +229,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.16 聊天气泡与聊天滚动条（chat bubble / chat scrollbar）
 
-- 定义：游戏内聊天框是独立的 300 高虚拟屏，尺寸单位是「聊天逻辑单位」（1 单位 ≈ 屏幕高度/300），不是 UI 像素；消息气泡单行画成完整胶囊、多行画成圆角矩形，聊天滚动条与列表滚动条共用同一套滑块绘制入口。历史滚轮以 3 行为基准，按全站倍率缩放，最多 8 行，并按可见行数兜底。
+- 定义：游戏内聊天框是独立的 300 高虚拟屏，尺寸单位是「聊天逻辑单位」（1 单位 ≈ 屏幕高度/300），不是 UI 像素；消息气泡单行画成完整胶囊、多行画成圆角矩形，聊天滚动条与列表滚动条共用同一套滑块绘制入口。历史滚轮以 3 行为基准，按全站倍率缩放，最多 8 行，并按可见行数兜底。输入框激活时始终展开历史；`cl_showchat=0` 只控制常驻聊天 HUD，不能隐藏正在输入时的历史。
 - 唯一实现：`ui_token::chat`（`SCROLLBAR_WIDTH/SCROLLBAR_MARGIN/SCROLLBAR_MIN_THUMB/SCROLLBAR_MAX_THUMB_RATIO/SCROLLBAR_RADIUS/SCROLLBAR_FEEDBACK_INSET_MAX_RATIO/BUBBLE_*`、`BubbleIsSingleLine`、`BubbleRadius`）+ `ui_token::feedback::HANDLE_{HOVER,PRESS}_GROW`（滑块悬浮/按下放大，与 `ui_widget::DrawScrollbarHandle` 同源）+ `src/game/client/components/qmclient/chat_scrollbar.h`（`QmChatHistoryScrollMetrics/ScrollConfig/ScrollLine/Wheel/DragToLine` 为历史滚动推进唯一入口；`QmResolveChatScrollbarFrame/QmChatScrollbarThumbHeight/QmChatScrollbarProgressFromPointer` 为滑块几何，几何本体委托 `CQmScrollController::PreviewFrame`，与列表覆盖式轨道同一条算法）（`QmChatScrollbarRail`、`QmChatScrollbarHandleHeight`、`QmDrawChatScrollbar`）；滑块绘制走 `ui_widget::DrawScrollbarHandle`（与 `CListBox`/`CScrollRegion` 同一入口），气泡圆角走 `DrawRoundedSurface`（`ResolveRoundedSurfacePlan` + `QmEffectiveCornerSmoothing` 曲线链）。
 - 禁止的反面写法：在 chat.cpp 里写 `FontSize() * 0.5f` 之类的半径、给气泡另起一套 `CreateRectQuadContainer` 直绘几何（只认圆弧，和气泡自己的背景模糊会错位）、把列表滚动条的 UI 像素值直接当聊天单位用、聊天滚动条自己画强调色与卡片描边。
 
@@ -362,7 +362,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
   | 行列表 / 卡片内列表 | `MENU_LIST`、`SETTINGS_INNER` | `RowExtent × RowsPerStep × StepScale` |
   | 网格（皮肤、资源、筛选） | `SETTINGS_GRID`、`GRID`、`FILTER_GRID` | `RowExtent × RowsPerStep × StepScale` |
   | 弹层列表 | `POPUP_LIST` | `RowExtent × 3 × StepScale` |
-  | 控制台日志 | 行型面 | `QmResolveWheelLineCount(3, StepScale, 可见行数, 8) × 行高` |
+  | 控制台日志 | 行型面 | `QmResolveWheelLineCount(5, StepScale, 可见行数, 8) × 行高` |
   | 聊天历史 | 行型面 | `QmResolveWheelLineCount(3, StepScale, 可见行数, 8)` 行 |
 
   `CListBox::SetWheelStepScale` 是**单列表**倍率，只乘该列表的 `m_WheelScale`（皮肤列表行高含预览图，取 0.7）。按住 Alt 滚轮额外 `× QmScrollAltMultiplier()`(3)。

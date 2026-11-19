@@ -8,9 +8,9 @@
 // 控制台滚轮每档滚动的行数。
 //
 // 控制台是行型滚动面：用户只调全站倍率，这里用固定基准行数和视口上限兜底。
-// 默认倍率（qm_ui_scroll_step = 10）每档 3 行；大倍率最多 8 行，窄日志区
+// 默认倍率（qm_ui_scroll_step = 10）每档 5 行；大倍率最多 8 行，窄日志区
 // 再按可见行数压低，避免一档翻掉半个屏幕或滚出空白。
-inline constexpr int QM_CONSOLE_WHEEL_BASE_LINES = 3;
+inline constexpr int QM_CONSOLE_WHEEL_BASE_LINES = 5;
 inline constexpr int QM_CONSOLE_WHEEL_MAX_LINES = 8;
 
 inline int QmConsoleWheelLines(float StepScale, int VisibleLines)
