@@ -166,27 +166,55 @@ class Process:
 		if os.name != "nt":
 			return True
 		user32 = ctypes.WinDLL("user32", use_last_error=True)
+		kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 		callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 		user32.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
 		user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
 		user32.IsWindowVisible.argtypes = [wintypes.HWND]
+		user32.GetWindow.argtypes = [wintypes.HWND, wintypes.UINT]
+		user32.GetWindow.restype = wintypes.HWND
+		user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
 		user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+		user32.BringWindowToTop.argtypes = [wintypes.HWND]
 		user32.SetForegroundWindow.argtypes = [wintypes.HWND]
 		user32.GetForegroundWindow.restype = wintypes.HWND
-		windows: list[int] = []
+		user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+		user32.SetFocus.argtypes = [wintypes.HWND]
+		kernel32.GetCurrentThreadId.restype = wintypes.DWORD
+		windows: list[tuple[int, int]] = []
 
 		@callback_type
 		def visit(window: int, _: int) -> bool:
 			owner = wintypes.DWORD()
 			user32.GetWindowThreadProcessId(window, ctypes.byref(owner))
-			if owner.value == self._process.pid:
-				windows.append(window)
+			# EnumWindows 也会枚举隐藏的辅助窗口和 owned popup。把它们显示出来会
+			# 制造一块没有渲染内容的空白窗口，并抢走真实游戏窗口的前台焦点。
+			if owner.value != self._process.pid or not user32.IsWindowVisible(window):
+				return True
+			if user32.GetWindow(window, 4):  # GW_OWNER
+				return True
+			rect = wintypes.RECT()
+			if user32.GetWindowRect(window, ctypes.byref(rect)):
+				windows.append(((rect.right - rect.left) * (rect.bottom - rect.top), window))
 			return True
 
 		user32.EnumWindows(visit, 0)
-		for window in windows:
+		for _, window in sorted(windows, reverse=True):
+			current_thread = kernel32.GetCurrentThreadId()
+			target_thread = user32.GetWindowThreadProcessId(window, None)
+			foreground = user32.GetForegroundWindow()
+			foreground_thread = user32.GetWindowThreadProcessId(foreground, None) if foreground else 0
+			attached_threads: list[int] = []
+			for thread in (foreground_thread, target_thread):
+				if thread and thread != current_thread:
+					user32.AttachThreadInput(current_thread, thread, True)
+					attached_threads.append(thread)
 			user32.ShowWindow(window, 9)
+			user32.BringWindowToTop(window)
 			user32.SetForegroundWindow(window)
+			user32.SetFocus(window)
+			for thread in reversed(attached_threads):
+				user32.AttachThreadInput(current_thread, thread, False)
 			if user32.GetForegroundWindow() == window:
 				return True
 		return False
