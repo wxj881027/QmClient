@@ -75,6 +75,12 @@ bool PrepareOutgoingTranslateRequest(const char *pLine, const char *pFallbackTar
 	return true;
 }
 
+void STranslateJob::StartChatTranslation(IHttp &Http, const char *pText, const char *pBody, const char *pSource, FTranslateRequestFactory pCreateRequest)
+{
+	m_AddressPrefix.assign(pText, pBody);
+	m_pBackend = CreateTranslateBackend(Http, pBody, m_aTarget, pSource, pCreateRequest);
+}
+
 bool CTranslateJobQueue::CanSubmit(int Limit) const
 {
 	return Limit > 0 && m_vJobs.size() < static_cast<size_t>(Limit);
@@ -130,6 +136,15 @@ std::vector<STranslateCompletion, CBorrowedAllocator<STranslateCompletion>> CTra
 				{
 					Success = false;
 					str_copy(Response.m_Text, "Empty translation result");
+				}
+				if(Success && !Job.m_AddressPrefix.empty() && Response.m_Text[0] != '\0')
+				{
+					// 只在后端首次完成时复原前缀。结果存储失败后重试不会重复拼接。
+					char aText[sizeof(Response.m_Text)];
+					str_utf8_copy_num(aText, Job.m_AddressPrefix.c_str(), sizeof(aText), sizeof(aText));
+					const int PrefixLength = str_length(aText);
+					str_utf8_copy_num(aText + PrefixLength, Response.m_Text, sizeof(aText) - PrefixLength, sizeof(aText));
+					str_copy(Response.m_Text, aText);
 				}
 				Response.m_Error = !Success;
 				It->m_Done = true;

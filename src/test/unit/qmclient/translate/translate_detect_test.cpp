@@ -60,6 +60,31 @@ TEST(TranslateDetect, KnownNameAddressSkipsChineseBody)
 	EXPECT_TRUE(ShouldTranslate("DYL：help me", aPlayers, 1));
 }
 
+TEST(TranslateChatAddress, UsesLongestConnectedNameAndKeepsOriginalPrefixBytes)
+{
+	const qm_translate::SPlayerReference aPlayers[] = {{"落凡", 7}, {"落凡:K", 9}};
+	const char *pText = "  落凡:k ：  你在干什么";
+	const char *pBody = qm_translate::ChatAddressBody(pText, aPlayers, 2);
+	EXPECT_STREQ(pBody, "你在干什么");
+	EXPECT_EQ(std::string(pText, pBody), "  落凡:k ：  ");
+}
+
+TEST(TranslateChatAddress, OrdinaryColonTextRemainsInTheBody)
+{
+	const qm_translate::SPlayerReference aPlayers[] = {{"落凡", 7}};
+	for(const char *pText : {"时间: 晚上八点", "落凡的队友: 你好", "你好，落凡: 你在干什么"})
+	{
+		SCOPED_TRACE(pText);
+		EXPECT_EQ(qm_translate::ChatAddressBody(pText, aPlayers, 1), pText);
+	}
+}
+
+TEST(TranslateChatAddress, AddressWithoutBodyLeavesNothingToTranslate)
+{
+	const qm_translate::SPlayerReference aPlayers[] = {{"落凡", 7}};
+	EXPECT_STREQ(qm_translate::ChatAddressBody("落凡: \t", aPlayers, 1), "");
+}
+
 TEST(TranslateDetect, UnknownNameAddressRemainsInLanguageDecision)
 {
 	const qm_translate::SPlayerReference aPlayers[] = {{"DY", 7}};
