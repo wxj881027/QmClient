@@ -61,6 +61,24 @@ TEST(QmFontNames, TextFontCandidatesRequireAUnicodeCharmap)
 	EXPECT_FALSE(QmFontFaceHasUnicodeCharmap(&Face));
 }
 
+TEST(QmFontNames, TextFontCandidatesRequireCommonHanGlyphs)
+{
+	const auto HasPunctuationOrKana = [](int Codepoint) {
+		return Codepoint == 0x3001 || Codepoint == 0x3042 || Codepoint == 0x30A2 || Codepoint == 0xAC00;
+	};
+	EXPECT_FALSE(QmHasCommonHanGlyphs(HasPunctuationOrKana));
+
+	const auto HasAllCommonHan = [](int Codepoint) {
+		return Codepoint == 0x4E2D || Codepoint == 0x6C38 || Codepoint == 0x4E00;
+	};
+	EXPECT_TRUE(QmHasCommonHanGlyphs(HasAllCommonHan));
+
+	const auto MissingYong = [](int Codepoint) {
+		return Codepoint != 0x6C38;
+	};
+	EXPECT_FALSE(QmHasCommonHanGlyphs(MissingYong));
+}
+
 TEST(QmFontNames, MissingUnicodeRecordsUseOnlyValidUtf8Fallback)
 {
 	FT_Library Library = nullptr;

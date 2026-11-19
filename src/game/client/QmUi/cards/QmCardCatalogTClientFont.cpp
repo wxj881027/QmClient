@@ -1183,16 +1183,16 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		{
 			s_CjkFacesSource = CustomFaces;
 			s_CjkConfigSource = g_Config.m_QmCustomFontCjk;
-			// CJK 槽只收含 CJK 字形的 face：纯拉丁字体选进该槽没有意义（无字形
-			// 可渲染，等同回退默认链）。当前配置值例外保留，避免已选项从列表
-			// 消失后下拉显示错位。
+			// CJK 槽只收覆盖常用汉字的 face：纯拉丁字体选进该槽没有意义（无
+			// 字形可渲染，等同回退默认链）。当前配置值例外保留，避免已选项从
+			// 列表消失后下拉显示错位。
 			s_CjkEligibleFamilies.clear();
 			for(const auto &FaceName : CustomFaces)
 			{
 				const bool IsCurrentConfig = QmFontNamesEqual(aCjkFamily, FaceName.c_str());
 				std::string FamilyDefaultConfig;
 				const bool FamilyAvailable = TextRender()->QmFontFamilyDefaultConfig(FaceName.c_str(), FamilyDefaultConfig);
-				if(IsCurrentConfig || (FamilyAvailable && TextRender()->QmFaceHasCjk(FamilyDefaultConfig.c_str())))
+				if(IsCurrentConfig || (FamilyAvailable && TextRender()->QmFaceHasHan(FamilyDefaultConfig.c_str())))
 					s_CjkEligibleFamilies.push_back(FaceName);
 			}
 		}

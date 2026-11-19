@@ -37,6 +37,18 @@ inline bool QmFontFaceHasUnicodeCharmap(FT_Face Face)
 	return false;
 }
 
+// 中文字体候选必须覆盖常用汉字。只含 CJK 标点（例如 Mongolian Baiti 的顿号）
+// 或假名/谚文的字体不能作为中文字体，否则名称预览会落到方框字形。
+template<typename THasGlyph>
+inline bool QmHasCommonHanGlyphs(THasGlyph &&HasGlyph)
+{
+	static constexpr int aSampleCodepoints[] = {0x4E2D, 0x6C38, 0x4E00};
+	for(const int Codepoint : aSampleCodepoints)
+		if(!HasGlyph(Codepoint))
+			return false;
+	return true;
+}
+
 inline std::string QmDecodeSfntName(const FT_SfntName &Name)
 {
 	if(Name.string == nullptr || Name.string_len == 0 || Name.string_len > 65536)
