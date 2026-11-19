@@ -92,12 +92,9 @@ void CMenus::OpenDemoScreenshotViewer(const CDemoItem &Item)
 {
 	if(!DemoBrowserBrowsingScreenshots() || Item.m_IsDir)
 		return;
-	char aPath[IO_MAX_PATH_LENGTH];
-	str_format(aPath, sizeof(aPath), "%s/%s", m_aCurrentDemoFolder, Item.m_aFilename);
-	char aFullPath[IO_MAX_PATH_LENGTH];
-	Storage()->GetCompletePath(Item.m_StorageType, aPath, aFullPath, sizeof(aFullPath));
+	const std::string Path = qmclient::demo_browser::BuildScreenshotViewerPath(*Storage(), Item.m_StorageType, m_aCurrentDemoFolder, Item.m_aFilename);
 	// 外部查看器起不来只影响这一次点击，再点一次就是重试：用非阻断失败提示。
-	if(!OpenQmScreenshotViewer(Client(), aFullPath, Localize("Error opening screenshot"), Localize("Unable to open the screenshot file")))
+	if(Path.empty() || !OpenQmScreenshotViewer(Client(), Path.c_str(), Localize("Error opening screenshot"), Localize("Unable to open the screenshot file")))
 		qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to open the screenshot file"));
 }
 

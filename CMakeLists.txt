@@ -5029,6 +5029,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/android_asset_integrity_test.cpp
     src/test/unit/client/android_jni_calls_test.cpp
     src/test/unit/client/android_jni_string_test.cpp
+    src/test/unit/client/controls_input_reset_test.cpp
     src/test/unit/client/local_server_launch_test.cpp
     src/test/unit/client/android_jni_server_string_test.cpp
     src/test/unit/client/android_jni_server_test.cpp
@@ -5258,6 +5259,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/assets_author_persistence_test.cpp
     src/test/unit/client/assets_resource_migration_test.cpp
     src/test/unit/client/assets_resource_registry_test.cpp
+    src/test/unit/client/qm_assets_editor_export_composition_test.cpp
+    src/test/unit/client/qm_assets_editor_filter_selection_test.cpp
     src/test/unit/client/audio_pack_editor_test.cpp
     src/test/unit/base/bezier_test.cpp
     src/test/unit/client/binds_test.cpp
@@ -5606,6 +5609,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/water_hammer_collision_sampling_test.cpp
     src/test/unit/qmclient/client/qm_demo_display_test.cpp
     src/test/unit/qmclient/client/qm_demo_ui_test.cpp
+    src/test/unit/client/qm_demo_browser_metadata_order_test.cpp
     src/test/unit/qmclient/client/qm_pose_file_test.cpp
     src/test/unit/qmclient/client/qm_pose_scene_test.cpp
     src/test/unit/qmclient/client/qm_pose_map_test.cpp
@@ -5682,6 +5686,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_ime_platform_test.cpp
     src/test/unit/qmclient/client/qm_serverlist_cache_test.cpp
     src/test/unit/qmclient/client/qm_input_overlay_count_test.cpp
+    src/test/unit/qmclient/client/qm_input_overlay_layout_test.cpp
     src/test/unit/qmclient/ui/qm_ui_scale_test.cpp
     src/test/unit/qmclient/ui/qm_ui_lifetime_test.cpp
     src/test/integration/qmclient/settings/qm_card_search_config_keys_test.cpp
@@ -5757,6 +5762,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_scripting_execution_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
+    src/test/integration/qmclient/client/qm_demo_cut_output_directory_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
     src/test/unit/qmclient/client/qm_local_save_post_send_test.cpp
     src/test/unit/qmclient/client/qm_local_save_removal_test.cpp
@@ -6029,6 +6035,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_screenshot_image_policy_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_viewer_viewport_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_viewer_process_test.cpp
+    src/test/integration/qmclient/client/qm_screenshot_gallery_viewer_path_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_thumbnail_submission_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_thumbnail_upload_test.cpp
     src/test/unit/qmclient/client/qm_image_view_test.cpp

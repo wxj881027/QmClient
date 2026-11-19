@@ -3518,11 +3518,9 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	// 行高固定且都远宽于高，圆角矩形会和胶囊圆环/胶囊链接按钮混在一条竖线上。
 	const char *pRefreshStatsLabel = StatisticsFetching ? Localize("Syncing remote stats") : (StatisticsFailed ? Localize("Retry remote stats") : Localize("Sync remote stats"));
 	static CButtonContainer s_StatisticsRefreshButton;
-	if(DoButton_Menu(&s_StatisticsRefreshButton, pRefreshStatsLabel, 0, &ActionTop, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
-		GameClient()->m_QmClient.RefreshQmClientStatistics();
+	const bool RefreshStats = DoButton_Menu(&s_StatisticsRefreshButton, pRefreshStatsLabel, 0, &ActionTop, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f) != 0;
 	static CButtonContainer s_StatisticsUseCurrentNameButton;
-	if(DoButton_Menu(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), 0, &ActionMiddle, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
-		GameClient()->m_QmClient.UseCurrentQmDdnetPlayerName();
+	const bool UseCurrentName = DoButton_Menu(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), 0, &ActionMiddle, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f) != 0;
 	static CButtonContainer s_TotalHoursButton;
 	if(DoButton_Menu(&s_TotalHoursButton, Localize("Total hours"), s_ShowTotalHours ? 1 : 0, &ActionBottom, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
 		s_ShowTotalHours = !s_ShowTotalHours;
@@ -3663,6 +3661,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		const float CapAngle = std::asin(std::clamp(CapRadius / maximum(MidRadius, 1.0f), 0.0f, 1.0f));
 		struct SStatsArc
 		{
+			int m_ModeIndex;
 			float m_Start;
 			float m_End;
 			float m_NominalStart;
@@ -3684,6 +3683,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			const float ArcEnd = StartAngle + Sweep - GapAngle * 0.5f;
 			// 太短的段放不下两枚端帽，保持平头，避免端帽盖到相邻分段。
 			const bool Rounded = ArcEnd - ArcStart > CapAngle * 2.2f;
+			aArcs[ArcCount].m_ModeIndex = static_cast<int>(Index);
 			aArcs[ArcCount].m_Start = Rounded ? ArcStart + CapAngle : ArcStart;
 			aArcs[ArcCount].m_End = Rounded ? ArcEnd - CapAngle : ArcEnd;
 			aArcs[ArcCount].m_NominalStart = ArcStart;
@@ -3762,9 +3762,10 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		// 悬浮联动：圆环命中或对应图例行命中时，把这一段整体放大 2px 并描一圈白边，
 		// 视觉上从环里抬起来；先画放大版，正常尺寸的分段随后压在上面留出外沿。
 		const int HighlightedMode = HoveredMode >= 0 ? HoveredMode : HoveredLegendRow;
-		if(HighlightedMode >= 0 && HighlightedMode < ArcCount)
+		const SStatsArc *pHighlightedArc = std::find_if(aArcs, aArcs + ArcCount, [HighlightedMode](const SStatsArc &Arc) { return Arc.m_ModeIndex == HighlightedMode; });
+		if(pHighlightedArc != aArcs + ArcCount)
 		{
-			const SStatsArc &Arc = aArcs[HighlightedMode];
+			const SStatsArc &Arc = *pHighlightedArc;
 			// 圆头分段按收口后的角度画，端帽半径同步放大：整段等比放大而不是换个方头。
 			// 只放大、不描边，避免在圆环上多出一圈不属于数据的白线。没有圆头的细分段仍按真实角度画。
 			const float BandStart = Arc.m_Rounded ? Arc.m_Start : Arc.m_NominalStart;
@@ -3829,7 +3830,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		const char *pTotalLabel;
 		if(ChartUsesMaps)
 		{
-			str_format(aTotalText, sizeof(aTotalText), "%d", TotalMaps);
+			str_format(aTotalText, sizeof(aTotalText), "%" PRId64, TotalMaps);
 			pTotalLabel = Localize("Maps finished");
 		}
 		else
@@ -4193,6 +4194,12 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	StatisticsEndRect.h = 1.0f;
 	s_StatisticsScrollRegion.AddRect(StatisticsEndRect);
 	s_StatisticsScrollRegion.End();
+
+	// 刷新可能替换成绩缓存条目，本帧绘制用完借用的数据后再提交。
+	if(UseCurrentName)
+		GameClient()->m_QmClient.UseCurrentQmDdnetPlayerName();
+	else if(RefreshStats)
+		GameClient()->m_QmClient.RefreshQmClientStatistics();
 }
 
 void CMenus::OnInterfacesInit(CGameClient *pClient)
@@ -4941,6 +4948,17 @@ void CMenus::Render()
 	RecordSettingsPerfWindowFrame(TotalDurationMs);
 }
 
+static CUi::SConfirmPopupContext::EConfirmationResult ReadFullscreenConfirmation(CUi &Ui, bool CancelClicked, bool ConfirmClicked)
+{
+	const bool Escape = Ui.ConsumeHotkey(CUi::HOTKEY_ESCAPE);
+	const bool Enter = Ui.ConsumeHotkey(CUi::HOTKEY_ENTER);
+	if(CancelClicked || Escape)
+		return CUi::SConfirmPopupContext::CANCELED;
+	if(ConfirmClicked || Enter)
+		return CUi::SConfirmPopupContext::CONFIRMED;
+	return CUi::SConfirmPopupContext::UNSET;
+}
+
 void CMenus::RenderPopupFullscreen(CUIRect Screen)
 {
 	const bool DemoRenderPopup = m_Popup == POPUP_RENDER_DEMO;
@@ -5185,23 +5203,17 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		Part.VSplitMid(&Abort, &TryAgain, 40.0f);
 
 		static CButtonContainer s_ButtonAbort;
-		if(DoButton_Menu(&s_ButtonAbort, Localize("Abort"), 0, &Abort) ||
-			Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
-		{
+		const bool CancelClicked = DoButton_Menu(&s_ButtonAbort, Localize("Abort"), 0, &Abort);
+		static CButtonContainer s_ButtonTryAgain;
+		const bool ConfirmClicked = DoButton_Menu(&s_ButtonTryAgain, Localize("Try again"), 0, &TryAgain);
+		const auto Confirmation = ReadFullscreenConfirmation(*Ui(), CancelClicked, ConfirmClicked);
+		if(Confirmation == CUi::SConfirmPopupContext::CANCELED)
 			m_Popup = POPUP_NONE;
-		}
 
 		const NETADDR *pServerAddr = Client()->ServerAddress();
 		char aAddr[NETADDR_MAXSTRSIZE] = "";
 		if(pServerAddr)
 			net_addr_str(pServerAddr, aAddr, sizeof(aAddr), true);
-
-		static CButtonContainer s_ButtonTryAgain;
-		if(DoButton_Menu(&s_ButtonTryAgain, Localize("Try again"), 0, &TryAgain) ||
-			Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
-		{
-			Client()->Connect(aAddr, g_Config.m_Password);
-		}
 
 		Box.VMargin(60.0f, &Box);
 		Box.HSplitBottom(32.0f, &Box, nullptr);
@@ -5253,6 +5265,8 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			Ui()->DoLabel(&Label, Localize("Name"), 18.0f, TEXTALIGN_ML);
 			Ui()->DoLabel(&Name, pEntry->m_Info.m_aName, 18.0f, TEXTALIGN_ML);
 		}
+		if(Confirmation == CUi::SConfirmPopupContext::CONFIRMED)
+			Client()->Connect(aAddr, g_Config.m_Password);
 	}
 	else if(m_Popup == POPUP_QM_POSE_MAP)
 	{
@@ -5560,19 +5574,18 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		Join.VMargin(20.0f, &Join);
 
 		static CButtonContainer s_JoinTutorialButton;
-		if(DoButton_Menu(&s_JoinTutorialButton, Localize("Join Tutorial Server"), 0, &Join) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
-		{
-			Client()->RequestDDNetInfo();
-			m_Popup = g_Config.m_BrIndicateFinished ? POPUP_POINTS : POPUP_NONE;
-			JoinTutorial();
-		}
-
+		const bool ConfirmClicked = DoButton_Menu(&s_JoinTutorialButton, Localize("Join Tutorial Server"), 0, &Join);
 		static CButtonContainer s_SkipTutorialButton;
-		if(DoButton_Menu(&s_SkipTutorialButton, Localize("Skip Tutorial"), 0, &Skip) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
+		const bool CancelClicked = DoButton_Menu(&s_SkipTutorialButton, Localize("Skip Tutorial"), 0, &Skip);
+		const auto Confirmation = ReadFullscreenConfirmation(*Ui(), CancelClicked, ConfirmClicked);
+		if(Confirmation != CUi::SConfirmPopupContext::UNSET)
 		{
 			Client()->RequestDDNetInfo();
-			m_JoinTutorial.m_Queued = false;
 			m_Popup = g_Config.m_BrIndicateFinished ? POPUP_POINTS : POPUP_NONE;
+			if(Confirmation == CUi::SConfirmPopupContext::CONFIRMED)
+				JoinTutorial();
+			else
+				m_JoinTutorial.m_Queued = false;
 		}
 
 		Box.HSplitBottom(20.f, &Box, &Part);
@@ -5611,6 +5624,18 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		StatusLabel.VMargin(20.0f, &StatusLabel);
 		StatusLabel.HSplitMid(&StatusLabel, &ProgressLabel);
 		ProgressLabel.VSplitLeft(50.0f, &ProgressIndicator, &ProgressLabel);
+
+		static CButtonContainer s_Button;
+		if(DoButton_Menu(&s_Button, Localize("Cancel"), 0, &ButtonBar) ||
+			Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE) ||
+			Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
+		{
+			if(GameClient()->m_LocalServer.IsServerStarting())
+				GameClient()->m_LocalServer.KillServer();
+			m_Popup = POPUP_NONE;
+			Ui()->SetActiveItem(nullptr);
+			return;
+		}
 
 		if(m_JoinTutorial.m_Status == CJoinTutorial::EStatus::REFRESHING)
 		{
@@ -5783,15 +5808,6 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			Ui()->DoLabel(&ProgressLabel, pProgressLabel, 20.0f, TEXTALIGN_ML);
 		}
 
-		static CButtonContainer s_Button;
-		if(DoButton_Menu(&s_Button, Localize("Cancel"), 0, &ButtonBar) ||
-			Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE) ||
-			Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
-		{
-			if(GameClient()->m_LocalServer.IsServerStarting())
-				GameClient()->m_LocalServer.KillServer();
-			m_Popup = POPUP_NONE;
-		}
 	}
 	else if(m_Popup == POPUP_POINTS)
 	{
@@ -5804,18 +5820,14 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			CUIRect Yes, No;
 			Part.VSplitMid(&No, &Yes, 40.0f);
 			static CButtonContainer s_ButtonNo;
-			if(DoButton_Menu(&s_ButtonNo, Localize("No"), 0, &No) ||
-				Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
-			{
-				m_Popup = POPUP_FIRST_LAUNCH;
-			}
-
+			const bool CancelClicked = DoButton_Menu(&s_ButtonNo, Localize("No"), 0, &No);
 			static CButtonContainer s_ButtonYes;
-			if(DoButton_Menu(&s_ButtonYes, Localize("Yes"), 0, &Yes) ||
-				Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
-			{
+			const bool ConfirmClicked = DoButton_Menu(&s_ButtonYes, Localize("Yes"), 0, &Yes);
+			const auto Confirmation = ReadFullscreenConfirmation(*Ui(), CancelClicked, ConfirmClicked);
+			if(Confirmation == CUi::SConfirmPopupContext::CANCELED)
+				m_Popup = POPUP_FIRST_LAUNCH;
+			else if(Confirmation == CUi::SConfirmPopupContext::CONFIRMED)
 				m_Popup = POPUP_NONE;
-			}
 		}
 		else
 		{
@@ -6947,6 +6959,8 @@ const char *CMenus::SettingsPerfStableTextScope(int Page) const
 
 void CMenus::OnReset()
 {
+	m_DemoPlayerState = DEMOPLAYER_NONE;
+	ClearDemoCutOverwriteConfirmation();
 	m_ScreenshotEditor.Close(this);
 	m_TranslateProbe.Cancel();
 	ResetDemoScreenshotPreview();
@@ -6956,6 +6970,7 @@ void CMenus::OnReset()
 
 void CMenus::OnShutdown()
 {
+	ClearDemoCutOverwriteConfirmation();
 	m_MapDifficultyCatalog.CancelAxiomRequests();
 	if(m_MapDifficultyCatalog.AxiomCacheDirty() && !m_MapDifficultyCatalog.SaveAxiomCache(Storage()))
 		log_warn("map_difficulty", "could not save Axiom map difficulty cache");
@@ -7239,9 +7254,8 @@ void CMenus::DoIngameMenuTitleLabel(int Page, const char *pTextId, const CUIRect
 	}
 }
 
-CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const SMenuTextStyleKey &StyleKey)
+void CMenus::SyncMenuTextPoolIdentity(uint64_t CurrentFrame)
 {
-	const uint64_t CurrentFrame = Client()->PerfFrame();
 	// 语言/字体哈希只随配置变化，但 MenuTextElement 每个标签都会调用；
 	// 按帧缓存，避免同一帧内对同一批字体路径重复做 str_quickhash。
 	if(m_MenuTextHashFrame != CurrentFrame)
@@ -7257,27 +7271,20 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 	}
 	const uint64_t LanguageHash = m_MenuTextCachedLanguageHash;
 	const uint64_t FontHash = m_MenuTextCachedFontHash;
-	if(m_MenuTextPoolLanguageHash == 0 || m_MenuTextPoolFontHash == 0)
-	{
-		m_MenuTextPoolLanguageHash = LanguageHash;
-		m_MenuTextPoolFontHash = FontHash;
-	}
-	else if(m_MenuTextPoolLanguageHash != LanguageHash || m_MenuTextPoolFontHash != FontHash)
-	{
-		const char *pReason = m_MenuTextPoolLanguageHash != LanguageHash ? "language" : "font";
-		InvalidateMenuTextPool(pReason);
-		m_MenuTextPoolLanguageHash = LanguageHash;
-		m_MenuTextPoolFontHash = FontHash;
-	}
 	const uint64_t GlyphAtlasRevision = TextRender()->GlyphAtlasRevision();
-	if(m_MenuTextPoolGlyphAtlasRevision == 0)
-		m_MenuTextPoolGlyphAtlasRevision = GlyphAtlasRevision;
-	else if(m_MenuTextPoolGlyphAtlasRevision != GlyphAtlasRevision)
-	{
+	if(m_MenuTextPoolLanguageHash != 0 && m_MenuTextPoolLanguageHash != LanguageHash)
+		InvalidateMenuTextPool("language");
+	else if(m_MenuTextPoolFontHash != 0 && m_MenuTextPoolFontHash != FontHash)
+		InvalidateMenuTextPool("font");
+	else if(m_MenuTextPoolGlyphAtlasRevision != 0 && m_MenuTextPoolGlyphAtlasRevision != GlyphAtlasRevision)
 		InvalidateMenuTextPool("glyph_atlas");
-		m_MenuTextPoolGlyphAtlasRevision = GlyphAtlasRevision;
-	}
+	m_MenuTextPoolLanguageHash = LanguageHash;
+	m_MenuTextPoolFontHash = FontHash;
+	m_MenuTextPoolGlyphAtlasRevision = GlyphAtlasRevision;
+}
 
+CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const SMenuTextStyleKey &StyleKey)
+{
 	if(m_MenuTextPlanCollecting)
 	{
 		m_MenuTextPlanPendingItem = {};
@@ -7294,6 +7301,9 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 			m_MenuTextFallbackElement.Init(Ui(), 1);
 		return m_MenuTextFallbackElement;
 	}
+
+	const uint64_t CurrentFrame = Client()->PerfFrame();
+	SyncMenuTextPoolIdentity(CurrentFrame);
 
 	// 命中路径只在栈上格式化一次键，不分配字符串；未命中插入时才复制一次。
 	char aKey[MENU_TEXT_CACHE_KEY_SIZE];
@@ -8059,7 +8069,8 @@ bool CMenus::SettingsMenuTextPrebuildReady(const char *pOperationOverride) const
 	       m_SettingsMenuTextPlanGeneration == m_MenuTextPoolGeneration &&
 	       m_SettingsMenuTextPlanCollectionOperation == (pOperation != nullptr ? pOperation : "") &&
 	       m_SettingsMenuTextPlanCollectionComplete &&
-	       m_SettingsMenuTextPlanCursor >= m_vSettingsMenuTextPrebuildPlan.size();
+	       m_SettingsMenuTextPlanCursor >= m_vSettingsMenuTextPrebuildPlan.size() &&
+	       m_MenuTextPoolGlyphAtlasRevision == TextRender()->GlyphAtlasRevision();
 }
 
 void CMenus::PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride, const char *pOperationOverride)
@@ -8158,6 +8169,9 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 	if(Budget <= 0 || Ui()->Screen() == nullptr || SettingsMenuTextPrebuildReady(pOperationOverride))
 		return maximum(Budget, 0);
 
+	const uint64_t CurrentFrame = Client()->PerfFrame();
+	SyncMenuTextPoolIdentity(CurrentFrame);
+
 	SSettingsAdaptiveBudgetInput Input;
 	Input.m_FrameId = GameClient()->PerfFrameOrOne();
 	str_copy(Input.m_aOperation, pOperationOverride != nullptr ? pOperationOverride : SettingsPerfActiveOperation(), sizeof(Input.m_aOperation));
@@ -8221,6 +8235,11 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 		if(!PixelSize || !m_MenuTextGlyphPrewarm.Prepare(Item.m_Text, *PixelSize))
 			break;
 		if(!m_MenuTextGlyphPrewarm.Advance(PrewarmBudget, [] { return time_get_nanoseconds().count(); }, [&](int Chr, int FontSize) { TextRender()->QmPrewarmGlyph(Chr, FontSize); }))
+			break;
+
+		// 字体缓存失效会清空计划。此时留待下一次收集，不继续读取 Item。
+		SyncMenuTextPoolIdentity(CurrentFrame);
+		if(m_SettingsMenuTextPlanGeneration != m_MenuTextPoolGeneration)
 			break;
 
 		const bool Built = PrebuildSettingsTextPlanItem(Item, RemainingBudget);
@@ -8606,6 +8625,11 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 void CMenus::OnStateChange(int NewState, int OldState)
 {
 	Ui()->CancelTouchInput();
+	if(m_DemoPlayerState == DEMOPLAYER_SLICE_SAVE)
+	{
+		m_DemoPlayerState = DEMOPLAYER_NONE;
+		ClearDemoCutOverwriteConfirmation();
+	}
 	m_DemoTouchSeeking = false;
 	m_QmVoteMenu.m_Loader.Suspend();
 	m_QmVoteMenu.m_SelectedName.clear();

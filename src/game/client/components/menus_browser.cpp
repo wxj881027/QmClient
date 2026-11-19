@@ -3542,7 +3542,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			FriendDropCategoryIndex = CategoryIndex;
 		const bool DraggingThisHeader = s_CategoryDragState.m_DraggingIndex == CategoryIndex;
 		const bool HeaderHovered = HeaderInside || DraggingThisHeader;
-		const bool PopupOpen = Ui()->IsPopupOpen(&m_FriendsCategoryPopupContext) && m_FriendsCategoryPopupContext.m_CategoryIndex == CategoryIndex;
+		const bool PopupOpen = Ui()->IsPopupOpen(&m_FriendsCategoryPopupContext) &&
+				       str_comp_nocase(m_FriendsCategoryPopupContext.m_aCategoryName, pCategoryName) == 0;
 		ColorRGBA HeaderColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 		if(str_comp_nocase(pCategoryName, IFriends::DEFAULT_CATEGORY) == 0)
 			HeaderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendsListFriendColor));
@@ -3595,7 +3596,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 		auto OpenCategoryManagePopup = [&]() {
 			m_FriendsCategoryPopupContext.m_pMenus = this;
-			m_FriendsCategoryPopupContext.m_CategoryIndex = CategoryIndex;
+			str_copy(m_FriendsCategoryPopupContext.m_aCategoryName, pCategoryName);
 			m_FriendsCategoryPopupContext.m_Mode = CFriendsCategoryPopupContext::MODE_ACTIONS;
 			m_FriendsCategoryPopupContext.m_NameInput.Clear();
 			const CUIRect Panel = CMenus::SecondaryPanelRect(Ui()->MouseX(), Ui()->MouseY(), 220.0f, CMenus::FriendsCategoryActionsPopupHeight() + CUi::PopupMenuContentInset(), *Ui()->Screen());
@@ -4444,7 +4445,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			if(Ui()->DoButton_QmIcon(&m_FriendsAddCategoryCreateButton, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &CreateCategoryButton, BUTTONFLAG_LEFT))
 			{
 				m_FriendsCategoryPopupContext.m_pMenus = this;
-				m_FriendsCategoryPopupContext.m_CategoryIndex = m_FriendAddCategoryIndex;
+				m_FriendsCategoryPopupContext.m_aCategoryName[0] = '\0';
 				m_FriendsCategoryPopupContext.m_Mode = CFriendsCategoryPopupContext::MODE_ADD;
 				m_FriendsCategoryPopupContext.m_NameInput.Clear();
 				const CUIRect Panel = CMenus::SecondaryPanelRect(Ui()->MouseX(), Ui()->MouseY(), 220.0f, CMenus::FriendsCategoryEditPopupHeight() + CUi::PopupMenuContentInset(), *Ui()->Screen());
@@ -4481,10 +4482,11 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendsCategory(void *pContext, CUIRe
 		return CUi::POPUP_CLOSE_CURRENT;
 
 	IFriends *pFriends = pMenus->GameClient()->Friends();
-	if(pPopupContext->m_CategoryIndex < 0 || pPopupContext->m_CategoryIndex >= pFriends->NumCategories())
+	const bool AddingCategory = pPopupContext->m_Mode == CFriendsCategoryPopupContext::MODE_ADD;
+	const char *pCategory = pPopupContext->m_aCategoryName;
+	if(!AddingCategory && pFriends->FindCategory(pCategory) < 0)
 		return CUi::POPUP_CLOSE_CURRENT;
 
-	const char *pCategory = pFriends->GetCategory(pPopupContext->m_CategoryIndex);
 	const bool IsProtectedCategory = IsProtectedFriendsCategory(pCategory);
 	const float FontSize = ui_token::font::SMALL + 1.0f;
 
@@ -4541,7 +4543,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendsCategory(void *pContext, CUIRe
 
 	CUIRect Label, Input, Buttons, Cancel, Confirm;
 	View.HSplitTop(12.0f, &Label, &View);
-	pMenus->Ui()->DoLabel(&Label, pPopupContext->m_Mode == CFriendsCategoryPopupContext::MODE_ADD ? Localize("Category name") : Localize("New category name"), FontSize, TEXTALIGN_ML);
+	pMenus->Ui()->DoLabel(&Label, AddingCategory ? Localize("Category name") : Localize("New category name"), FontSize, TEXTALIGN_ML);
 
 	View.HSplitTop(3.0f, nullptr, &View);
 	View.HSplitTop(18.0f, &Input, &View);
@@ -4558,7 +4560,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendsCategory(void *pContext, CUIRe
 	if(CancelPressed)
 		return CUi::POPUP_CLOSE_CURRENT;
 
-	const bool ConfirmPressed = ui_widget::PrimaryButton(FriendsCategoryTextInputCtx, &pPopupContext->m_ConfirmButton, pPopupContext->m_Mode == CFriendsCategoryPopupContext::MODE_ADD ? Localize("Add") : Localize("Rename"), Confirm) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
+	const bool ConfirmPressed = ui_widget::PrimaryButton(FriendsCategoryTextInputCtx, &pPopupContext->m_ConfirmButton, AddingCategory ? Localize("Add") : Localize("Rename"), Confirm) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
 	if(ConfirmPressed)
 	{
 		char aCategory[IFriends::MAX_FRIEND_CATEGORY_LENGTH];
@@ -4568,7 +4570,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendsCategory(void *pContext, CUIRe
 		if(aCategory[0] != '\0')
 		{
 			bool Changed = false;
-			if(pPopupContext->m_Mode == CFriendsCategoryPopupContext::MODE_ADD)
+			if(AddingCategory)
 				Changed = pFriends->AddCategory(aCategory);
 			else
 				Changed = pFriends->RenameCategory(pCategory, aCategory);
@@ -4823,10 +4825,6 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));
-	m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2,
-		[this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
-	const auto &vSaveEntries = m_LocalSaveDisplay.Entries();
-	const bool SaveFileExists = m_LocalSaveDisplay.FileExists();
 	const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
 	const std::vector<QmMapHistory::SMapHistoryRecord> &HistoryEntries = GameClient()->m_TClient.GetMapHistory().Entries();
 	const ColorRGBA TabInactiveColor = BrowserPanelColor(0.68f);
@@ -4836,6 +4834,8 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	CUIRect WorkspaceTabs;
 	View.HSplitTop(Layout.m_TabHeight, &WorkspaceTabs, &View);
 	DoMapWorkspaceTabs(WorkspaceTabs, Layout.m_TabHeight * 0.20f, s_FavoriteMapsWorkspaceTab, ui_token::settings::TAB_FONT_SIZE);
+	const auto &vSaveEntries = m_LocalSaveDisplay.Entries();
+	const bool SaveFileExists = m_LocalSaveDisplay.FileExists();
 	View.HSplitTop(Layout.m_SectionGap, nullptr, &View);
 
 	View.Draw(BrowserPanelColor(0.82f), IGraphics::CORNER_ALL, Layout.m_PanelMargin);
@@ -5621,7 +5621,9 @@ bool CMenus::PrintHighlighted(const char *pName, F &&PrintFn)
 		// highlight the parts that matches
 		const char *pFilteredStr;
 		int FilterLen = str_length(aFilterStrTrimmed);
-		if(aFilterStrTrimmed[0] == '"' && aFilterStrTrimmed[FilterLen - 1] == '"')
+		if(FilterLen == 0)
+			continue;
+		if(FilterLen >= 2 && aFilterStrTrimmed[0] == '"' && aFilterStrTrimmed[FilterLen - 1] == '"')
 		{
 			aFilterStrTrimmed[FilterLen - 1] = '\0';
 			pFilteredStr = str_comp(pName, &aFilterStrTrimmed[1]) == 0 ? pName : nullptr;
@@ -5634,7 +5636,7 @@ bool CMenus::PrintHighlighted(const char *pName, F &&PrintFn)
 			if(pFilteredStr != nullptr && pFilteredStrEnd != nullptr)
 				FilterLen = pFilteredStrEnd - pFilteredStr;
 		}
-		if(pFilteredStr)
+		if(pFilteredStr && FilterLen > 0)
 		{
 			PrintFn(pFilteredStr, FilterLen);
 			return true;
