@@ -50,6 +50,14 @@ namespace
 			m_Previous(g_Config.m_QmUiScrollFeel) { g_Config.m_QmUiScrollFeel = Feel; }
 		~SScrollFeelScope() { g_Config.m_QmUiScrollFeel = m_Previous; }
 	};
+
+	struct SScrollStepScope
+	{
+		int m_Previous;
+		explicit SScrollStepScope(int Step) :
+			m_Previous(g_Config.m_QmUiScrollStep) { g_Config.m_QmUiScrollStep = Step; }
+		~SScrollStepScope() { g_Config.m_QmUiScrollStep = m_Previous; }
+	};
 }
 
 TEST(UiV2ScrollPhysics, WheelImpulseDecaysAndClampsToRange)
@@ -527,6 +535,48 @@ TEST(UiV2ScrollPolicy, ResolvesSharedVisualAndInteractionProfiles)
 	EXPECT_EQ(PopupPolicy.m_MaxVisibleItems, QM_POPUP_LIST_MAX_VISIBLE_ITEMS);
 	EXPECT_NEAR(PopupPolicy.m_Config.m_WheelScale, 60.0f, 0.01f);
 }
+
+TEST(UiV2ScrollPolicy, GlobalStepIsTheSingleDistanceScaleForEverySurface)
+{
+	{
+		const SScrollStepScope StepScope(10);
+		EXPECT_FLOAT_EQ(QmWheelStepScale(), 1.0f);
+		EXPECT_FLOAT_EQ(QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale, 10.0f);
+		EXPECT_FLOAT_EQ(QmSettingsScrollConfig(1.0f, 0.0f).m_WheelScale, 120.0f);
+		EXPECT_EQ(QmResolveWheelLineCount(3, QmWheelStepScale(), 20, 8), 3);
+	}
+
+	{
+		const SScrollStepScope StepScope(20);
+		EXPECT_FLOAT_EQ(QmWheelStepScale(), 2.0f);
+		EXPECT_FLOAT_EQ(QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale, 20.0f);
+		EXPECT_FLOAT_EQ(QmSettingsScrollConfig(1.0f, 0.0f).m_WheelScale, 240.0f);
+		EXPECT_EQ(QmResolveWheelLineCount(3, QmWheelStepScale(), 20, 8), 6);
+
+		SQmScrollRequest ListRequest;
+		ListRequest.m_Profile = EQmScrollProfile::MENU_LIST;
+		ListRequest.m_RowExtent = 24.0f;
+		ListRequest.m_RowsPerStep = 2;
+		EXPECT_FLOAT_EQ(QmResolveScrollPolicy(ListRequest).m_Config.m_WheelScale, 96.0f);
+	}
+}
+
+TEST(UiV2ScrollPolicy, InvalidGlobalStepFallsBackAndClamps)
+{
+	{
+		const SScrollStepScope StepScope(0);
+		EXPECT_FLOAT_EQ(QmWheelStepScale(), 1.0f);
+	}
+	{
+		const SScrollStepScope StepScope(1);
+		EXPECT_FLOAT_EQ(QmWheelStepScale(), 0.2f);
+	}
+	{
+		const SScrollStepScope StepScope(1000);
+		EXPECT_FLOAT_EQ(QmWheelStepScale(), 10.0f);
+	}
+}
+
 TEST(UiV2ScrollController, SettingsGridShowsRailOnlyWhenContentOverflows)
 {
 	const SQmResolvedScrollPolicy Policy = QmResolveScrollPolicy({EQmScrollProfile::SETTINGS_GRID, EQmScrollAxis::VERTICAL, 40.0f, 2});

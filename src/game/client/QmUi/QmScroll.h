@@ -14,9 +14,19 @@ constexpr float QmScrollAltMultiplier()
 	return 3.0f;
 }
 
+// 用户可调的唯一滚轮距离入口：返回相对默认步长 10 的倍率。
+// 各滚动面只把这个倍率乘到自己的语义基准上，不再各自解释像素步长。
+float QmWheelStepScale();
+
+// 行型滚动面（控制台、聊天历史）的每档行数：基准行数 × 全局倍率，
+// 再按可见行数和面自身的上限夹取。VisibleLines <= 0 表示几何未知，
+// 此时只使用 MaxLines，保证启动/测试环境也有可用兜底。
+int QmResolveWheelLineCount(int BaseLines, float StepScale, int VisibleLines, int MaxLines);
+
 // 面板级滚动面（设置主区、wiki 弹窗、统计页等整页容器）的滚轮档位倍率：
-// 这类容器行高远大于列表行，每档 = qm_ui_scroll_step × 该倍率，保持单屏节奏。
-// 全站滚轮档位都由 qm_ui_scroll_step 等比驱动，此处只定义语义倍率，不含第二处 token。
+// 这类容器行高远大于列表行，每档 = 默认 10 × StepScale × 该倍率，保持单屏节奏。
+// 全站滚轮距离都由 qm_ui_scroll_step 的同一位倍率驱动，此处只定义语义倍率，
+// 不含第二处用户可调项。
 constexpr float QmPanelWheelStepMultiplier()
 {
 	return 12.0f;

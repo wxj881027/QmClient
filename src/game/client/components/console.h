@@ -177,8 +177,6 @@ private:
 		bool OnInput(const IInput::CEvent &Event);
 		void PrintLine(const char *pLine, int Len, ColorRGBA PrintColor, const SColorSpan *pColorSpans = nullptr, size_t NumColorSpans = 0, std::shared_ptr<const QmChatExport::SMetadata> pChatMetadata = nullptr, bool CommandEcho = false) REQUIRES(!m_BacklogPendingLock);
 		int GetLinesToScroll(int Direction, int LinesToScroll);
-		// 滚轮每档滚动的行数，按 qm_ui_scroll_step 与当前行高折算。
-		int GetWheelLinesToScroll() const;
 		void ScrollToCenter(int StartLine, int EndLine);
 		void Dump() REQUIRES(!m_BacklogPendingLock);
 		void SetChatExportMode(bool Enable) REQUIRES(!m_BacklogPendingLock);

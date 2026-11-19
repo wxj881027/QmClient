@@ -173,9 +173,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.8b 控制台日志滚动（console log scroll）
 
-- 定义：控制台日志的滚轮、翻页、滑块与触控拖动共用全站滚动物理；偏移以像素推进、读取时折回「整行 + 亚行余量」，贴底时新日志自动跟随。
-- 唯一实现：`CQmConsoleScrollRuntime`（`src/game/client/QmUi/QmConsoleScroll.h`）+ `CQmScrollState` / `QmNativeWheelScrollConfig`；调用点 `CGameConsole::CInstance::OnInput`、`CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
-- 禁止的反面写法：在控制台里自己写 `m_BacklogCurLine += 行数` 直跳滚轮；拖动滑块走弹簧（应跟手）；新日志到达时搬整型行锚而不是按内容增长量抬高偏移；另写一套平滑时长或阻尼。
+- 定义：控制台日志的滚轮、翻页、滑块与触控拖动共用全站滚动物理；偏移以像素推进、读取时折回「整行 + 亚行余量」，贴底时新日志自动跟随。滚轮每档以 3 行为基准，按全站倍率缩放，最多 8 行，并按可见行数兜底。
+- 唯一实现：`CQmConsoleScrollRuntime`（`src/game/client/QmUi/QmConsoleScroll.h`）+ `CQmScrollState` / `QmNativeWheelScrollConfig`，行数解析走 `QmConsoleWheelLines`（`console_scroll.h`）与 `QmResolveWheelLineCount`（`QmUi/QmScroll.h`）；调用点 `CGameConsole::CInstance::OnInput`、`CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
+- 禁止的反面写法：在控制台里自己写 `m_BacklogCurLine += 行数` 直跳滚轮；拖动滑块走弹簧（应跟手）；新日志到达时搬整型行锚而不是按内容增长量抬高偏移；另写一套平滑时长或阻尼；把 `qm_ui_scroll_step` 当像素步长除以行高来求行数。
 
 ### 2.8c 覆盖式滚动条（overlay scrollbar）
 
@@ -229,7 +229,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.16 聊天气泡与聊天滚动条（chat bubble / chat scrollbar）
 
-- 定义：游戏内聊天框是独立的 300 高虚拟屏，尺寸单位是「聊天逻辑单位」（1 单位 ≈ 屏幕高度/300），不是 UI 像素；消息气泡单行画成完整胶囊、多行画成圆角矩形，聊天滚动条与列表滚动条共用同一套滑块绘制入口。
+- 定义：游戏内聊天框是独立的 300 高虚拟屏，尺寸单位是「聊天逻辑单位」（1 单位 ≈ 屏幕高度/300），不是 UI 像素；消息气泡单行画成完整胶囊、多行画成圆角矩形，聊天滚动条与列表滚动条共用同一套滑块绘制入口。历史滚轮以 3 行为基准，按全站倍率缩放，最多 8 行，并按可见行数兜底。
 - 唯一实现：`ui_token::chat`（`SCROLLBAR_WIDTH/SCROLLBAR_MARGIN/SCROLLBAR_MIN_THUMB/SCROLLBAR_MAX_THUMB_RATIO/SCROLLBAR_RADIUS/SCROLLBAR_FEEDBACK_INSET_MAX_RATIO/BUBBLE_*`、`BubbleIsSingleLine`、`BubbleRadius`）+ `ui_token::feedback::HANDLE_{HOVER,PRESS}_GROW`（滑块悬浮/按下放大，与 `ui_widget::DrawScrollbarHandle` 同源）+ `src/game/client/components/qmclient/chat_scrollbar.h`（`QmChatHistoryScrollMetrics/ScrollConfig/ScrollLine/Wheel/DragToLine` 为历史滚动推进唯一入口；`QmResolveChatScrollbarFrame/QmChatScrollbarThumbHeight/QmChatScrollbarProgressFromPointer` 为滑块几何，几何本体委托 `CQmScrollController::PreviewFrame`，与列表覆盖式轨道同一条算法）（`QmChatScrollbarRail`、`QmChatScrollbarHandleHeight`、`QmDrawChatScrollbar`）；滑块绘制走 `ui_widget::DrawScrollbarHandle`（与 `CListBox`/`CScrollRegion` 同一入口），气泡圆角走 `DrawRoundedSurface`（`ResolveRoundedSurfacePlan` + `QmEffectiveCornerSmoothing` 曲线链）。
 - 禁止的反面写法：在 chat.cpp 里写 `FontSize() * 0.5f` 之类的半径、给气泡另起一套 `CreateRectQuadContainer` 直绘几何（只认圆弧，和气泡自己的背景模糊会错位）、把列表滚动条的 UI 像素值直接当聊天单位用、聊天滚动条自己画强调色与卡片描边。
 
@@ -352,20 +352,22 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 3.12c 滚动步长与速度（wheel step）
 
-- 定义：**所有竖向滚动面共用一个等比基准** `qm_ui_scroll_step`（设置页「界面动画 → 滚动步长」，默认 10，范围 2–100）。每个滚动面再按自己的语义档位把它换算成「每格位移」`CScrollRegionParams::m_ScrollUnit`；设置项改一倍，所有滚动面等比变一倍，绝对像素仍由各自的档位决定。
-- 唯一实现：`QmResolveScrollPolicy`（`QmUi/QmScroll.cpp`）产出 `SQmScrollConfig::m_WheelScale`，`QmScrollRegionParamsFromPolicy` / `QmScrollRegionParamsForSize`（`ui_scrollregion.h`）写入 `m_ScrollUnit`。`StepScale = qm_ui_scroll_step / 10`。
+- 定义：用户只有 `qm_ui_scroll_step` 一个滚轮距离入口（设置页「界面动画 → 滚动步长」，默认 10，范围 2–100）。它是全站倍率，不是某个面的绝对像素；每个滚动面按自己的语义单位（行、格、面板区）声明基准与上限，再乘 `StepScale = QmWheelStepScale()`。内部解耦不会新增用户可调的逐面速度项。
+- 唯一实现：`QmWheelStepScale` + `QmResolveWheelLineCount` + `QmResolveScrollPolicy`（`QmUi/QmScroll.cpp`）产出 `SQmScrollConfig::m_WheelScale`，`QmScrollRegionParamsFromPolicy` / `QmScrollRegionParamsForSize`（`ui_scrollregion.h`）写入 `m_ScrollUnit`；行型面（控制台、聊天历史）只通过 `QmResolveWheelLineCount` 取每档行数。
 - 档位表（`RowExtent = 行高 + 行距`，`RowsPerStep` 由 `CListBox::DoStart` 传入，皮肤/资源网格是 2）：
 
   | 滚动面 | 档位 | 每格位移 |
   |---|---|---|
-  | 面板级（设置主区、wiki/统计/控制台整页容器） | `SETTINGS_PAGE/OUTER`、`QmScrollRegionParamsForSize` | `qm_ui_scroll_step × QmPanelWheelStepMultiplier()`（默认 10×12 = 120） |
+  | 面板级（设置主区、wiki/统计/控制台整页容器） | `SETTINGS_PAGE/OUTER`、`QmScrollRegionParamsForSize` | `10 × StepScale × QmPanelWheelStepMultiplier()`（默认 10×1×12 = 120） |
   | 行列表 / 卡片内列表 | `MENU_LIST`、`SETTINGS_INNER` | `RowExtent × RowsPerStep × StepScale` |
   | 网格（皮肤、资源、筛选） | `SETTINGS_GRID`、`GRID`、`FILTER_GRID` | `RowExtent × RowsPerStep × StepScale` |
   | 弹层列表 | `POPUP_LIST` | `RowExtent × 3 × StepScale` |
+  | 控制台日志 | 行型面 | `QmResolveWheelLineCount(3, StepScale, 可见行数, 8) × 行高` |
+  | 聊天历史 | 行型面 | `QmResolveWheelLineCount(3, StepScale, 可见行数, 8)` 行 |
 
   `CListBox::SetWheelStepScale` 是**单列表**倍率，只乘该列表的 `m_WheelScale`（皮肤列表行高含预览图，取 0.7）。按住 Alt 滚轮额外 `× QmScrollAltMultiplier()`(3)。
-- 手感参数与距离无关：`qm_ui_scroll_feel`（原版 / 平滑 / 弹簧）、`qm_ui_scroll_spring_response`、`qm_ui_scroll_spring_damping`、`qm_ui_scroll_bounce` 只改动画曲线与回弹，不改每格位移。**默认档是弹簧**（`qm_ui_scroll_feel = 2`，响应 300ms / 阻尼 90% / 回弹 25）；原版与平滑保留为可切回的兜底档。
-- 禁止的反面写法：调用点直接写绝对滚动像素；用单列表倍率去补全局配置该改的值（会让不同页面失去等比关系）；改 `DoStart` 的 `RowsPerScroll` 来调滚轮速度（它会连带把键盘 PageUp/Down 的 `RowsPerScroll×4` 一起改掉）；面板级再乘一次 `QmPanelWheelStepMultiplier`（`QmSettingsScrollConfig` 已乘过）。
+- 手感参数与距离无关：`qm_ui_scroll_feel`（原版 / 平滑 / 弹簧）、`qm_ui_scroll_spring_response`、`qm_ui_scroll_spring_damping`、`qm_ui_scroll_bounce` 只改动画曲线与回弹，不改每格位移。默认档以配置默认值为准（当前原版）；原版与平滑保留为可切回的兜底档。
+- 禁止的反面写法：调用点直接写绝对滚动像素；用单列表倍率去补全局配置该改的值（会让不同页面失去等比关系）；改 `DoStart` 的 `RowsPerScroll` 来调滚轮速度（它会连带把键盘 PageUp/Down 的 `RowsPerScroll×4` 一起改掉）；面板级再乘一次 `QmPanelWheelStepMultiplier`（`QmSettingsScrollConfig` 已乘过）；给控制台或聊天新增逐面速度配置，或继续用 `qm_ui_scroll_step / 行高` 求行数。
 
 ### 3.12d 游戏内 HUD 背景模糊接入（in-game blur scope）
 

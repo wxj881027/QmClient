@@ -76,7 +76,7 @@ MACRO_CONFIG_STR(QmNewsReadContentId, qm_news_read_content_id, 65, "", CFGFLAG_C
 // 默认保持原版手感：每档从静止重新起步、不继承上一档速度，与已发布版本一致。
 // 顺滑（继承速度）与弹簧两档保留在设置里，由玩家主动切换。
 MACRO_CONFIG_INT(QmUiScrollFeel, qm_ui_scroll_feel, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring")
-MACRO_CONFIG_INT(QmUiScrollStep, qm_ui_scroll_step, 10, 2, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick")
+MACRO_CONFIG_INT(QmUiScrollStep, qm_ui_scroll_step, 10, 2, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global wheel distance scale (10=default); settings card pages scroll 12x this per tick")
 MACRO_CONFIG_INT(QmUiScrollBounce, qm_ui_scroll_bounce, 25, 0, 64, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops")
 MACRO_CONFIG_INT(QmUiScrollSpringResponse, qm_ui_scroll_spring_response, 300, 80, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel response time in milliseconds; lower reaches the target sooner")
 MACRO_CONFIG_INT(QmUiScrollSpringDamping, qm_ui_scroll_spring_damping, 90, 50, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel damping ratio in percent; 100 stops without overshoot")

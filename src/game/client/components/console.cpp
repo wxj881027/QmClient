@@ -76,11 +76,11 @@ namespace
 {
 	// 控制台特化：一档滚轮 = QmConsoleWheelLines 折算出来的行数，不是设置页那种像素档；
 	// 手感档位、弹簧响应与阻尼、橡皮筋距离仍然全部来自公共配置 QmNativeWheelScrollConfig。
-	SQmScrollConfig ConsoleScrollConfig(float LineHeight)
+	SQmScrollConfig ConsoleScrollConfig(float LineHeight, int VisibleLines)
 	{
 		SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, g_Config.m_UiSmoothScrollTime / 1000.0f);
 		const float SafeLine = maximum(1.0f, LineHeight);
-		Config.m_WheelScale = (float)QmConsoleWheelLines(g_Config.m_QmUiScrollStep, SafeLine) * SafeLine;
+		Config.m_WheelScale = (float)QmConsoleWheelLines(QmWheelStepScale(), VisibleLines) * SafeLine;
 		return Config;
 	}
 } // namespace
@@ -1086,8 +1086,8 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		}
 		else if(Event.m_Key == KEY_MOUSE_WHEEL_UP)
 		{
-			// 每档滚多行。原先上下都只走一行，控制台滚起来慢得几乎没反应；
-			// 行数按 qm_ui_scroll_step 折算，由公共滚动物理逐帧逼近（见 QmConsoleScroll.h）。
+			// 每档滚多行。行数以控制台语义基准乘全站倍率，再由公共滚动物理逐帧逼近
+			// （见 QmConsoleScroll.h）；不再把 qm_ui_scroll_step 当像素步长除以行高。
 			m_Scroll.Wheel(1, m_pGameConsole->Input()->AltIsPressed());
 			Handled = true;
 		}
@@ -1358,12 +1358,6 @@ void CGameConsole::CInstance::SetChatExportMode(bool Enable)
 		m_MouseIsPress = false;
 	}
 	UpdateBacklogTextAttributes();
-}
-
-// 滚轮每档滚几行：把像素口径的 qm_ui_scroll_step 按当前行高折算成行数（见 console_scroll.h）。
-int CGameConsole::CInstance::GetWheelLinesToScroll() const
-{
-	return QmConsoleWheelLines(g_Config.m_QmUiScrollStep, FontSize() + ConsoleLineSpacing(FontSize()));
 }
 
 int CGameConsole::CInstance::GetLinesToScroll(int Direction, int LinesToScroll)
@@ -2610,7 +2604,7 @@ void CGameConsole::OnRender()
 		// 静止态先把偏移吸到整行，再推进：滚动停下后正文不再带亚行余量，避免闪。
 		if(!pConsole->m_ScrollbarDragging && !pConsole->m_Selection.IsDragging() && !Scroll.Animating())
 			Scroll.SnapToNearestLine();
-		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(Client()->RenderFrameTime(), LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight));
+		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(Client()->RenderFrameTime(), LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight, VisibleBacklogLines));
 		const float SubLine = ScrollFrame.m_SubLine;
 		const int MaxScroll = maximum(0, TotalBacklogLines - VisibleBacklogLines);
 		pConsole->m_BacklogCurLine = std::clamp(ScrollFrame.m_Line, 0, MaxScroll);

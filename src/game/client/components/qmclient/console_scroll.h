@@ -1,20 +1,21 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_CONSOLE_SCROLL_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_CONSOLE_SCROLL_H
 
+#include <game/client/QmUi/QmScroll.h>
+
 #include <algorithm>
-#include <cmath>
 
 // 控制台滚轮每档滚动的行数。
 //
-// 滚轮步长是像素口径（qm_ui_scroll_step，默认 10），而控制台行高随字号变化：
-// 直接按像素滚，小字号一次翻太多、大字号又几乎不动。这里先按当前行高把像素
-// 折算成行数，再夹在 [1, 3]——默认 10px 步长只滚一行，与已发布版本一致；
-// 调大步长最多三行，避免一档翻掉半个屏幕。
-inline int QmConsoleWheelLines(float StepPixels, float LineHeight)
+// 控制台是行型滚动面：用户只调全站倍率，这里用固定基准行数和视口上限兜底。
+// 默认倍率（qm_ui_scroll_step = 10）每档 3 行；大倍率最多 8 行，窄日志区
+// 再按可见行数压低，避免一档翻掉半个屏幕或滚出空白。
+inline constexpr int QM_CONSOLE_WHEEL_BASE_LINES = 3;
+inline constexpr int QM_CONSOLE_WHEEL_MAX_LINES = 8;
+
+inline int QmConsoleWheelLines(float StepScale, int VisibleLines)
 {
-	const float SafeStep = StepPixels > 0.0f ? StepPixels : 10.0f;
-	const float SafeLine = LineHeight > 0.0f ? LineHeight : 1.0f;
-	return std::clamp(static_cast<int>(std::lround(SafeStep / SafeLine)), 1, 3);
+	return QmResolveWheelLineCount(QM_CONSOLE_WHEEL_BASE_LINES, StepScale, VisibleLines, QM_CONSOLE_WHEEL_MAX_LINES);
 }
 
 struct SQmConsoleLogClipBounds

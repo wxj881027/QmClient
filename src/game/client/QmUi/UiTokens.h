@@ -575,9 +575,9 @@ namespace ui_token::chat
 	// 滑块最长占轨道的比例：内容刚超过一屏时，滑块仍要留出可见行程，
 	// 不能几乎铺满整条轨道而看起来没有滚动空间。
 	inline constexpr float SCROLLBAR_MAX_THUMB_RATIO = 0.82f;
-	// 一档滚轮推进多少行：聊天偏移单位是行，所以这里就是行数；
-	// 用户调 qm_ui_scroll_step 时与列表同一份系数等比缩放。
-	inline constexpr float WHEEL_LINES_PER_STEP = 1.0f;
+	// 一档滚轮的基础行数：聊天偏移单位是行，用户调 qm_ui_scroll_step 时
+	// 以这里为基准等比缩放。视口上限与最大行数由公共行数解析器兜底。
+	inline constexpr int WHEEL_LINES_PER_STEP = 3;
 	// 滑块最长占轨道的比例：内容只比一屏多一点时，按「可见/内容」比例算出来的滑块
 	// 轨道与滑块的圆角：胶囊端头，和列表覆盖式滚动条同一档（绘制层按短边一半兜底）。
 	inline constexpr float SCROLLBAR_RADIUS = radius::PILL;

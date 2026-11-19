@@ -1,30 +1,35 @@
 #include <game/client/components/qmclient/console_scroll.h>
-#include <game/client/QmUi/QmScroll.h>
 
 #include <gtest/gtest.h>
 
-TEST(QmConsoleWheel, SmallStepStillScrollsAUsefulNumberOfLines)
+#include <cmath>
+
+TEST(QmConsoleWheel, DefaultStepUsesThreeLines)
 {
-	// 默认 10px 步长配 14px 行高：折算不到 1 行，取下限 1 行。
-	EXPECT_EQ(QmConsoleWheelLines(10.0f, 14.0f), 1);
-	EXPECT_EQ(QmConsoleWheelLines(2.0f, 14.0f), 1);
+	EXPECT_EQ(QmConsoleWheelLines(1.0f, 20), 3);
 }
 
-TEST(QmConsoleWheel, StepIsConvertedByLineHeightNotPixels)
+TEST(QmConsoleWheel, GlobalStepScalesTheSemanticBaseLineCount)
 {
-	// 同样 40px 的步长：行高 14 折算约 3 行，行高 26 折算约 1.5 行（保留 2 行）。
-	EXPECT_EQ(QmConsoleWheelLines(40.0f, 14.0f), 3);
-	EXPECT_EQ(QmConsoleWheelLines(40.0f, 26.0f), 2);
-	// 130px / 26px = 5 行：超过上限，夹到 3 行。
-	EXPECT_EQ(QmConsoleWheelLines(130.0f, 26.0f), 3);
+	EXPECT_EQ(QmConsoleWheelLines(2.0f, 20), 6);
+	EXPECT_EQ(QmConsoleWheelLines(10.0f, 20), 8);
 }
 
-TEST(QmConsoleWheel, ClampsToThreeLinesAndFallsBackOnInvalidInput)
+TEST(QmConsoleWheel, NarrowViewportLowersTheCap)
 {
-	// 超大步长最多 3 行，避免一档翻过整屏。
-	EXPECT_EQ(QmConsoleWheelLines(1000.0f, 10.0f), 3);
-	// 未跑配置加载（步长 0）或行高未初始化时用安全值，不产生除零。
-	EXPECT_EQ(QmConsoleWheelLines(0.0f, 0.0f), 3);
+	// 六行目标在四行日志区最多推进三行，避免一档滚出视口。
+	EXPECT_EQ(QmConsoleWheelLines(2.0f, 4), 3);
+	EXPECT_EQ(QmConsoleWheelLines(1.0f, 3), 2);
+	EXPECT_EQ(QmConsoleWheelLines(1.0f, 1), 1);
+}
+
+TEST(QmConsoleWheel, UnknownGeometryAndInvalidScaleUseSafeFallbacks)
+{
+	// 几何未知时只使用语义基准，不因视口为 0 退化成 1 行。
+	EXPECT_EQ(QmConsoleWheelLines(1.0f, 0), 3);
+	EXPECT_EQ(QmConsoleWheelLines(1.0f, -1), 3);
+	EXPECT_EQ(QmConsoleWheelLines(0.0f, 20), 1);
+	EXPECT_EQ(QmConsoleWheelLines(std::nanf(""), 20), 3);
 }
 
 TEST(QmConsoleLogClip, StartsAtToolbarBottomWithoutWholeLineRounding)

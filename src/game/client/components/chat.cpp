@@ -853,7 +853,7 @@ bool CChat::UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit,
 	// 拖动与滚动条是同一语义：直接跟手写进公共滚动状态（SetOffset），松手后
 	// 由 QmScroll 的越界回弹收回合法范围，不再各自维护一份整数偏移。
 	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(TotalVisibleLines, VisibleLineCapacity);
-	const SQmScrollConfig Config = QmChatHistoryScrollConfig(LineHeight);
+	const SQmScrollConfig Config = QmChatHistoryScrollConfig(LineHeight, VisibleLineCapacity);
 	const int CurrentLine = QmChatHistoryScrollLine(m_HistoryScroll.Offset(), Metrics);
 	const int NewBacklogLine = ClampBacklogLine(CurrentLine + Lines, TotalVisibleLines, VisibleLineCapacity);
 	if(NewBacklogLine == m_BacklogCurLine)
@@ -3963,7 +3963,7 @@ void CChat::OnRender()
 	// 松手后由同一条越界回弹把偏移收回合法范围。聊天不再自己按整数行瞬时跳。
 	const SQmScrollMetrics HistoryScrollMetrics = QmChatHistoryScrollMetrics(TotalVisibleLines, VisibleLineCapacity);
 	const float HistoryFallbackStepExtent = RowHeight + ExtraLineSpacing;
-	const SQmScrollConfig HistoryScrollConfig = QmChatHistoryScrollConfig(HistoryFallbackStepExtent);
+	const SQmScrollConfig HistoryScrollConfig = QmChatHistoryScrollConfig(HistoryFallbackStepExtent, VisibleLineCapacity);
 	if(!InputActive)
 	{
 		m_HistoryScroll.Reset();
