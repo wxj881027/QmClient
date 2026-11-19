@@ -406,40 +406,27 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_qmclient_contributors_title[] = {
+		{Localizable("Bound nickname (leave empty for any name)"), nullptr, "绑定昵称 不限昵称"},
 		{Localizable("Chat message preview"), nullptr, "发言预览"},
 		{Localizable("Chat message style"), nullptr, "发言样式"},
 		{Localizable("Custom title"), nullptr, "自定义头衔"},
-		{Localizable("Exact bound nickname"), nullptr, "要绑定的完整昵称"},
 		{Localizable("Fluid"), nullptr, "流体 液体 蓝青"},
-		{Localizable("Limit the title to the exact nickname below."), nullptr, "仅在使用下方昵称时显示头衔。"},
+		{Localizable("Moon"), nullptr, "月亮"},
+		{Localizable("Nameplate title size"), nullptr, "名牌头衔大小"},
 		{Localizable("Normal"), nullptr, "正常"},
-		{Localizable("Only show with this nickname"), nullptr, "仅在使用此昵称时显示"},
 		{Localizable("Permanent access; up to 4 online IP addresses"), nullptr, "永久资格，最多 4 个 IP 同时在线"},
 		{Localizable("Platinum highlight"), nullptr, "铂金高光"},
 		{Localizable("Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate."), nullptr, "使用赞助兑换码解锁自定义称号，称号会显示在聊天与名牌上。"},
 		{Localizable("Saved with your title and shared with other QmClient players."), nullptr, "随头衔一起保存，并同步给其他 QmClient 玩家。"},
 		{Localizable("See you at the next checkpoint."), nullptr, "下个检查点见。"},
-		{Localizable("Sponsor code"), nullptr, "认证码"},
-		{Localizable("Sponsor title"), nullptr, "赞助头衔"},
-		{Localizable("Up to 6 Chinese or 12 ASCII characters"), nullptr, "最多 6 个中文或 12 个英文字符"},
-		{nullptr, "qm_sponsor_chat_style", nullptr},
-	};
-	QM_CARD_SEARCH_REGISTER("deck:qmclient-contributors-title", deck_qmclient_contributors_title);
-}
-
-namespace
-{
-	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_qmclient_contributors_title_display[] = {
-		{Localizable("Fluid"), nullptr, "流体 液体 蓝青"},
-		{Localizable("Moon"), nullptr, "月亮"},
-		{Localizable("Nameplate title size"), nullptr, "名牌头衔大小"},
-		{Localizable("Normal"), nullptr, "正常"},
-		{Localizable("Platinum highlight"), nullptr, "铂金高光"},
 		{Localizable("Show dummy title locally"), nullptr, "本机显示分身头衔"},
 		{Localizable("Show main tee title locally"), nullptr, "本机显示本体头衔"},
+		{Localizable("Show my titles locally"), nullptr, "在本机显示自己的头衔"},
 		{Localizable("Show per-character title waves locally"), "qm_title_text_wave", "逐字波动 文字波浪 本地头衔动画"},
 		{Localizable("Show sponsor chat effects locally"), nullptr, "本机显示赞助者发言特效"},
 		{Localizable("Show titles on nameplates"), nullptr, "显示名牌头衔"},
+		{Localizable("Sponsor code"), nullptr, "认证码"},
+		{Localizable("Sponsor title"), nullptr, "赞助头衔"},
 		{Localizable("Sun"), nullptr, "太阳"},
 		{Localizable("Text 1"), "qm_title_text_style", "文字1 文字 1 文字头衔"},
 		{Localizable("Text 2"), nullptr, "文字2 文字 2"},
@@ -447,20 +434,23 @@ namespace
 		{Localizable("Text 4"), nullptr, "文字4 文字 4"},
 		{Localizable("Text 5"), nullptr, "文字5 文字 5"},
 		{Localizable("Title color"), nullptr, "头衔颜色"},
+		{Localizable("Title display"), nullptr, "头衔显示 头衔样式"},
 		{Localizable("Title opacity"), nullptr, "头衔不透明度"},
 		{Localizable("Title preview"), nullptr, "头衔成品预览"},
 		{Localizable("Title style"), nullptr, "头衔风格"},
 		{Localizable("Turning this off only changes your display."), nullptr, "关闭后仅影响本机显示。"},
+		{Localizable("Up to 6 Chinese or 12 ASCII characters"), nullptr, "最多 6 个中文或 12 个英文字符"},
 		{nullptr, "qm_nameplate_title_scale", nullptr},
 		{nullptr, "qm_show_dummy_title", nullptr},
 		{nullptr, "qm_show_main_title", nullptr},
 		{nullptr, "qm_show_nameplate_title", nullptr},
 		{nullptr, "qm_sponsor_chat_effects", nullptr},
+		{nullptr, "qm_sponsor_chat_style", nullptr},
 		{nullptr, "qm_title_badge_color", nullptr},
 		{nullptr, "qm_title_badge_style", nullptr},
 		{nullptr, "qm_title_opacity", nullptr},
 	};
-	QM_CARD_SEARCH_REGISTER("deck:qmclient-contributors-title-display", deck_qmclient_contributors_title_display);
+	QM_CARD_SEARCH_REGISTER("deck:qmclient-contributors-title", deck_qmclient_contributors_title);
 }
 
 namespace

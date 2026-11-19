@@ -1,40 +1,22 @@
-## What this controls
+## Redeem and edit a title
 
-Redeems a sponsor code, writes a custom title, stores it on the title server. The title is a small icon badge beside your name, used in chat and on the name plate. This path carries identity data only; no in-game values are touched.
+Open **Player titles** on the same page as **Sponsor support**. Enter your sponsor code and press **Redeem**. Once authenticated, enter a custom title of up to 6 Chinese characters or 12 half-width characters.
 
-## In game
+Enter an exact, case-sensitive nickname to limit where the title appears. To remove the restriction, clear the nickname and save.
 
-Once saved, the badge shows beside your name in chat and on the name plate above your head. Unredeemed players can still open the card; the status line just stays on "Enter your sponsor code".
+Under personalization, choose a text style, moon or sun badge. Check the title and chat previews, then press **Save** beside the chat preview to submit the title, nickname, chat style and appearance together. **Refresh** replaces unsaved edits with the profile on the server.
 
-"Chat message style" decides how your chat messages render: Normal or Platinum highlight. Others see the same style, and "Chat message preview" below uses the same rendering.
+## Local display
 
-The title follows the nickname. With "Only show with this nickname" ticked, a name change — even just capitalization — hides the badge until you rebind and save.
+- **Show titles on nameplates** controls nameplate titles. Chat badges have their own setting.
+- **Show my titles locally** lets you show your main tee, dummy, both or neither on your own screen.
+- Expand personalization to adjust nameplate title size, per-character waves and sponsor chat effects. These settings apply locally as soon as you change them.
 
-## How to tune it
+## Redemption credential
 
-1. Paste the code into the input field, press "Redeem". The code is 48 hexadecimal characters; a wrong length is reported invalid at once.
-2. Write under "Custom title"; the limit is display width: 12 half-width or 6 Chinese characters.
-3. To lock the nickname, tick "Only show with this nickname" and put the exact name in "Exact bound nickname".
-4. Pick a "Chat message style"; watch the "Chat message preview".
-5. Press "Save": title, bound nickname, chat style and badge appearance go out together.
-
-| Goal | How |
-| --- | --- |
-| Just a small mark beside the name | Two or three characters, not a full sentence |
-| Reserve it for one alt account | Tick "Only show with this nickname", fill in the full nickname |
-| Let others see the new style | Picking the style is not enough; press "Save" |
-
-## Watch out
-
-- Square brackets, control characters and zero-width characters are not allowed in the title; saving is blocked locally with a message.
-- A code works once; claimed elsewhere you get "Sponsor code already claimed".
-- The redemption credential is stored locally; back it up before switching computers or clearing the client directory, or the data cannot be recovered.
-- "Redeem" only works before authentication; afterwards, changing codes requires the local credential to be gone first.
-- "Refresh" rebuilds the draft from the server's saved copy; unsaved edits are overwritten.
-- Saving submits the whole set — one changed item writes the rest back too; if the server does not yet support some fields, the save is rejected with a reason.
-- The "Title display" button jumps to another card that tunes local drawing; nothing is saved there.
+A code can only be redeemed once. Back up the local credential before switching computers or clearing the client directory.
 
 ## Related
 
-- [Title display](deck:qmclient-contributors-title-display)
 - [Sponsor support](deck:qmclient-contributors-sponsors)
+- [Name plates](deck:appearance-name-plate-settings)

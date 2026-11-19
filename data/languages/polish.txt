@@ -1943,6 +1943,9 @@ Bouncy
 Bound functions
 == Przypisane funkcje
 
+Bound nickname (leave empty for any name)
+== Powiązany pseudonim (puste pole oznacza dowolny pseudonim)
+
 Bounded capture frame queue depth for demo export (higher values use more memory)
 == Ograniczenie głębokości kolejki klatek przechwytywania dla eksportu dema (wyższe wartości używają więcej pamięci)
 
@@ -2419,9 +2422,6 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == Wybierz położenie na ekranie i rozmiar czcionki, a potem sprawdź na karcie podglądu, czy tekst się zawija.
-
-Choose a sponsor title style for your nameplate and chat messages.
-== Wybierz styl tytułu wspierającego widocznego na tabliczce z nazwą i w wiadomościach na czacie.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == Wybierz cel, a potem ustaw jego kolor; lasery obiektów mogą używać kolorów drużyny.
@@ -4811,9 +4811,6 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Edytuj to własne polecenie na stronie koła poleceń.
 
-Edit title style
-== Edytuj styl tytułu
-
 Edit touch controls
 == Edytuj sterowanie dotykowe
 
@@ -5515,9 +5512,6 @@ Every click applies the skin at once, so star the ones you like before you start
 
 Every wheel tick restarts from rest, matching the original client
 == Każdy krok kółka startuje od zera, jak w oryginalnym kliencie
-
-Exact bound nickname
-== Dokładny powiązany pseudonim
 
 Example /help settings will display the help about /settings
 == Przykład: /help settings wyświetli pomoc dotyczącą /settings
@@ -8150,9 +8144,6 @@ Limit cursor to game window
 Limit information in spectator mode
 == Ogranicz informacje w trybie widza
 
-Limit the title to the exact nickname below.
-== Pokazuj tytuł tylko przy dokładnym dopasowaniu poniższego pseudonimu.
-
 Limiter threshold (percent)
 == Próg ogranicznika (procent)
 
@@ -10061,9 +10052,6 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == Pokaż tylko wtedy, gdy drugi tee nie jest na ekranie
 
-Only show with this nickname
-== Pokazuj tylko z tym pseudonimem
-
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == Zmienia się tylko wybrany Tee, więc przełącz na Dummy, zanim ustawisz kolory swojego dummy.
 
@@ -10892,6 +10880,9 @@ Player stats
 Player stats and info display
 == Wyświetlanie statystyk i informacji o graczu
 
+Player titles
+== Tytuły graczy
+
 Player to follow across servers until cancelled; empty disables following
 == Gracz do śledzenia między serwerami do anulowania; puste pole wyłącza podążanie
 
@@ -11155,9 +11146,6 @@ Preset type
 
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == Preset podczas kodowania wideo za pomocą libx264, domyślnie 5 (medium), 0 to ultrafast, 9 to placebo (najwolniejszy, niezalecany)
-
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
-== Po każdej zmianie naciśnij Zapisz: tytuł i styl czatu są przechowywane na twoim koncie, a Odśwież wczytuje je ponownie.
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == Naciśnij wybierz mapę, aby wybrać plik, sprawdź docelowy serwer i gracza wysyłki, a następnie naciśnij prześlij mapę; anuluj przerywa.
@@ -14054,6 +14042,9 @@ Show moving tiles in entities
 Show moving tiles in entity layer
 == Pokaż ruchome kafelki w warstwie encji
 
+Show my titles locally
+== Pokaż moje tytuły na tym urządzeniu
+
 Show name
 == Pokaż nazwę
 
@@ -15983,9 +15974,6 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 The name "default" is reserved.
 == Nazwa "default" jest zarezerwowana.
 
-The per-character wave setting affects text titles on your screen only.
-== Falowanie liter dotyczy tylko tytułów tekstowych na twoim ekranie.
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Gracz, do którego szeptałeś, nie połączył się ponownie lub wyszedł. Poczekaj albo szepnij do kogoś innego
 
@@ -16381,9 +16369,6 @@ Title style
 
 Title too long or contains unsupported characters
 == Tytuł jest za długi lub zawiera niedozwolone znaki
-
-Title visibility and appearance
-== Widoczność i wygląd tytułów
 
 Title wave strength (0-3, 0 = off)
 == Siła fali tytułu (0-3, 0 = wyłączone)

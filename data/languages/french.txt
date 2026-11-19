@@ -1943,6 +1943,9 @@ Bouncy
 Bound functions
 == Fonctions assignées
 
+Bound nickname (leave empty for any name)
+== Pseudo associé (laisser vide pour accepter tout pseudo)
+
 Bounded capture frame queue depth for demo export (higher values use more memory)
 == profondeur maximale de la file d'images de capture pour l'export de démo (des valeurs plus hautes utilisent plus de mémoire)
 
@@ -2419,9 +2422,6 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == Choisissez une position à l'écran et une taille de police, puis vérifiez les retours à la ligne dans la carte d'aperçu.
-
-Choose a sponsor title style for your nameplate and chat messages.
-== Choisis le style de ton titre de soutien sur ta plaque de nom et dans tes messages de chat.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == Choisis une cible, puis sa couleur ; les lasers d'entités peuvent suivre les couleurs d'équipe.
@@ -4811,9 +4811,6 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Modifiez cette commande personnalisée sur la page Roue de commandes.
 
-Edit title style
-== Modifier le style du titre
-
 Edit touch controls
 == Modifier les contrôles tactiles
 
@@ -5515,9 +5512,6 @@ Every click applies the skin at once, so star the ones you like before you start
 
 Every wheel tick restarts from rest, matching the original client
 == Chaque cran de molette repart de l'arrêt, comme dans le client d'origine
-
-Exact bound nickname
-== Pseudo exact associé
 
 Example /help settings will display the help about /settings
 == Exemple : /help settings affichera l'aide concernant /settings
@@ -8150,9 +8144,6 @@ Limit cursor to game window
 Limit information in spectator mode
 == Limiter les informations en mode spectateur
 
-Limit the title to the exact nickname below.
-== Afficher le titre uniquement avec le pseudonyme exact ci-dessous.
-
 Limiter threshold (percent)
 == Seuil du limiteur (pourcentage)
 
@@ -10061,9 +10052,6 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == Afficher uniquement quand l'autre Tee n'est pas à l'écran
 
-Only show with this nickname
-== Afficher uniquement avec ce pseudo
-
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == Seul le Tee sélectionné change ; passe sur Dummy avant de régler les couleurs de ton dummy.
 
@@ -10892,6 +10880,9 @@ Player stats
 Player stats and info display
 == Affichage des statistiques et informations du joueur
 
+Player titles
+== Titres des joueurs
+
 Player to follow across servers until cancelled; empty disables following
 == Joueur à suivre entre les serveurs jusqu'à annulation ; laisser vide pour désactiver
 
@@ -11155,9 +11146,6 @@ Preset type
 
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == Préréglage lors de l'encodage vidéo avec libx264, défaut 5 (medium), 0 est ultrafast, 9 est placebo (le plus lent, déconseillé)
-
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
-== Appuie sur Sauvegarder après chaque changement : le titre et le style de chat sont stockés sur ton compte, et Actualiser les recharge.
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == Appuyez sur choisir une carte, vérifiez le serveur et le joueur cibles, puis appuyez sur envoyer la carte ; annuler l'interrompt.
@@ -14054,6 +14042,9 @@ Show moving tiles in entities
 Show moving tiles in entity layer
 == Afficher les tuiles mobiles dans la couche d'entités
 
+Show my titles locally
+== Afficher mes titres sur cet appareil
+
 Show name
 == Afficher le nom
 
@@ -15983,9 +15974,6 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 The name "default" is reserved.
 == Le nom "default" est réservé.
 
-The per-character wave setting affects text titles on your screen only.
-== L’ondulation des lettres s’applique uniquement aux titres textuels sur ton écran.
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Le joueur à qui vous chuchotiez ne s'est pas encore reconnecté ou a quitté. Attendez ou chuchotez à quelqu'un d'autre
 
@@ -16381,9 +16369,6 @@ Title style
 
 Title too long or contains unsupported characters
 == Titre trop long ou caractères non pris en charge
-
-Title visibility and appearance
-== Visibilité et apparence des titres
 
 Title wave strength (0-3, 0 = off)
 == Intensité de la vague du titre (0-3, 0 = désactivé)

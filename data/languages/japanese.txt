@@ -1943,6 +1943,9 @@ Bouncy
 Bound functions
 == 割り当て済みの機能
 
+Bound nickname (leave empty for any name)
+== 紐付けるニックネーム（空欄なら制限なし）
+
 Bounded capture frame queue depth for demo export (higher values use more memory)
 == デモ書き出しのキャプチャフレームキュー深さの上限（大きいほどメモリを消費）
 
@@ -2419,9 +2422,6 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == 画面上の位置と文字サイズを選び、プレビューカードで折り返しを確認します。
-
-Choose a sponsor title style for your nameplate and chat messages.
-== ネームプレートとチャットに表示する支援者称号のスタイルを選びます。
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == 対象を選んで色を設定します。エンティティのレーザーはチームカラーに合わせられます。
@@ -4811,9 +4811,6 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == このカスタムコマンドはバインドホイールのページで編集してください。
 
-Edit title style
-== タイトルスタイルを編集
-
 Edit touch controls
 == タッチコントロールを編集
 
@@ -5515,9 +5512,6 @@ Every click applies the skin at once, so star the ones you like before you start
 
 Every wheel tick restarts from rest, matching the original client
 == ホイール1目盛ごとに静止状態から始まり、オリジナル版と同じ挙動になります
-
-Exact bound nickname
-== 紐付ける正確なニックネーム
 
 Example /help settings will display the help about /settings
 == 例: /help settings で /settings のヘルプが表示されます
@@ -8150,9 +8144,6 @@ Limit cursor to game window
 Limit information in spectator mode
 == 観戦モードの情報を制限する
 
-Limit the title to the exact nickname below.
-== 下のニックネームと完全に一致する場合だけ称号を表示します。
-
 Limiter threshold (percent)
 == リミッターしきい値（パーセント）
 
@@ -10061,9 +10052,6 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == もう一方のTeeが画面にいない場合のみ表示
 
-Only show with this nickname
-== このニックネーム使用時のみ表示
-
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == 変更は選択中の Tee にだけ効くので、dummy の色を変える前に Dummy へ切り替えてください。
 
@@ -10892,6 +10880,9 @@ Player stats
 Player stats and info display
 == プレイヤー統計と情報表示
 
+Player titles
+== プレイヤーの称号
+
 Player to follow across servers until cancelled; empty disables following
 == キャンセルするまでサーバー間で追跡するプレイヤー。空欄で無効
 
@@ -11155,9 +11146,6 @@ Preset type
 
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == libx264 でビデオをエンコードする際のプリセット、デフォルト 5 (medium)、0 は ultrafast、9 は placebo（最も遅い、非推奨）
-
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
-== 変更したら必ず保存を押してください。称号とチャットのスタイルはアカウントに保存され、更新で読み直せます。
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == マップを選択のボタンでファイルを選び、アップロード先のサーバーとプレイヤーを確認してからマップをアップロードのボタンを押します。キャンセルで中止できます。
@@ -14054,6 +14042,9 @@ Show moving tiles in entities
 Show moving tiles in entity layer
 == エンティティレイヤーに移動タイルを表示
 
+Show my titles locally
+== 自分の称号の表示対象
+
 Show name
 == 名前を表示
 
@@ -15983,9 +15974,6 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 The name "default" is reserved.
 == 「default」という名前は予約されています。
 
-The per-character wave setting affects text titles on your screen only.
-== 文字を波打たせる設定は、自分の画面に表示されるテキスト称号にだけ適用されます。
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == あなたがささやき中だったプレイヤーは、まだ再接続していないか退出しました。少し待つか、別の相手にささやいてください
 
@@ -16381,9 +16369,6 @@ Title style
 
 Title too long or contains unsupported characters
 == 称号が長すぎるか使用できない文字を含んでいます
-
-Title visibility and appearance
-== 称号の表示と外観
 
 Title wave strength (0-3, 0 = off)
 == 称号の波の強さ（0-3、0 = 無効）

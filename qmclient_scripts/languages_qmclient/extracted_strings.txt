@@ -667,6 +667,7 @@ Bottom right
 Bounce
 Bouncy
 Bound functions
+Bound nickname (leave empty for any name)
 Bounded capture frame queue depth for demo export (higher values use more memory)
 Bounding box of the whole selection; edit geometry with a single node selected.
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
@@ -835,7 +836,6 @@ Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Siz
 Choose a position, then adjust width and size; the preview card shows the result.
 Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
 Choose a screen position and font size, then check the preview card for wrapping.
-Choose a sponsor title style for your nameplate and chat messages.
 Choose a target, then set its color; entity lasers can follow team colors.
 Choose colors for weapons and entity lasers
 Choose country flag
@@ -1660,7 +1660,6 @@ Edit player and dummy identity information
 Edit skin texture
 Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
-Edit title style
 Edit touch controls
 Editing (all-intra H.264 / MP4)
 Editor
@@ -1897,7 +1896,6 @@ Event
 Event - Press
 Every click applies the skin at once, so star the ones you like before you start browsing.
 Every wheel tick restarts from rest, matching the original client
-Exact bound nickname
 Example /help settings will display the help about /settings
 Example flow
 Example of usage
@@ -2810,7 +2808,6 @@ LibreTranslate endpoint
 Light
 Limit cursor to game window
 Limit information in spectator mode
-Limit the title to the exact nickname below.
 Limiter threshold (percent)
 Line
 Line length
@@ -3494,7 +3491,6 @@ Only show messages related to me
 Only show outlines in the entities layer
 Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
-Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 Only what you can't imagine, nothing Dream can't do
 Opacity
@@ -3778,6 +3774,7 @@ Player spawn
 Player state
 Player stats
 Player stats and info display
+Player titles
 Player to follow across servers until cancelled; empty disables following
 Player: %s
 Players
@@ -3869,7 +3866,6 @@ Preset bar
 Preset type
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 Presets
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 Press '%s' to show cursor.
 Press a key, do a command: drag from the right dot of one node to the left dot of the next. Double-click a node to edit it, right-click a link to delete it, Ctrl+Z to undo.
@@ -4856,6 +4852,7 @@ Show map progress test point route
 Show mention option
 Show moving tiles in entities
 Show moving tiles in entity layer
+Show my titles locally
 Show name
 Show name in team color
 Show name plates
@@ -5518,7 +5515,6 @@ The look of the help bubbles that appear when you hover over buttons, settings a
 The map progress bar only fills on Gores maps; the other three lines work on any server.
 The message is sent on every water death, so keep it short; leaving "Chat message" empty disables sending.
 The name "default" is reserved.
-The per-character wave setting affects text titles on your screen only.
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 The preview does not show every weapon; check in game.
 The preview uses your own name and colors; other players may look different.
@@ -5654,7 +5650,6 @@ Title server unavailable; retry
 Title spatial effect: 0 = polished, 1 = solid, 2 = classic Calamity, 3 = off
 Title style
 Title too long or contains unsupported characters
-Title visibility and appearance
 Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected
