@@ -1,6 +1,8 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "ui_effects.h"
 
+#include <base/time.h>
+
 #include <engine/image.h>
 #include <engine/shared/config.h>
 
@@ -15,13 +17,10 @@
 constexpr float PI = 3.14159265358979323846f;
 constexpr float SMOOTH_VALUE_EPSILON = 0.01f; // Threshold for smooth value convergence
 constexpr float SMOOTH_VALUE_STEP_MULTIPLIER = 10.0f; // Controls interpolation speed
-// 拍立得式的残影：闪一下 → 缩到屏幕中间 → 停一会儿 → 淡出。
-// 不是缩到角落当缩略图，而是像刚拍完的照片留在画面上。
+// 闪光后将预览缩到屏幕中央，留出操作时间再淡出。
 constexpr float SCREENSHOT_FLASH_DURATION = 0.16f;
 constexpr float SCREENSHOT_SHRINK_START = 0.14f;
-constexpr float SCREENSHOT_SHRINK_END = 0.78f;
-// 拍完就停在那里，像二级菜单一样等人点掉；只有主动关闭时才快速淡出。
-constexpr float SCREENSHOT_DISMISS_DURATION = 0.22f;
+constexpr float SCREENSHOT_SHRINK_END = 0.32f;
 constexpr float SCREENSHOT_CARD_SCREEN_FRACTION = 0.62f;
 constexpr float SCREENSHOT_CARD_MAX_HEIGHT_FRACTION = 0.66f;
 // 卡片内的滚轮缩放范围：1x 贴合卡片，最多放大 8 倍。
@@ -69,8 +68,7 @@ CUiEffects::CUiEffects()
 
 void CUiEffects::OnReset()
 {
-	// 截图预览是界面效果，不随地图/连接状态重置：拍完的照片要能留在屏幕上等人点掉。
-	// 断开、换图都会触发 OnReset，这里清掉的话照片会在回到列表的瞬间消失。
+	// 断开或换图时，截图预览沿用原来的结束时间。
 	m_vSmoothValues.clear();
 	m_Time = 0.0f;
 }
@@ -88,10 +86,7 @@ void CUiEffects::OnRender()
 	m_Time += TimePassed;
 
 	if(m_ScreenshotAnimation.m_Active)
-	{
-		m_ScreenshotAnimation.m_Time += TimePassed;
 		RenderScreenshotAnimation();
-	}
 
 	if(!g_Config.m_ClHudAnimations)
 		return;
@@ -120,6 +115,7 @@ void CUiEffects::StartScreenshotAnimation(CImageInfo &&Image, const char *pPath)
 	if(m_ScreenshotAnimation.m_Texture.IsValid())
 		Graphics()->UnloadTexture(&m_ScreenshotAnimation.m_Texture);
 
+	m_ScreenshotAnimation = CScreenshotAnimation();
 	const int ImageWidth = (int)Image.m_Width;
 	const int ImageHeight = (int)Image.m_Height;
 	// 截图是交换链里读回的 RGBA：部分后端/驱动给出的 alpha 通道是 0，直接上传就会
@@ -155,10 +151,7 @@ void CUiEffects::StartScreenshotAnimation(CImageInfo &&Image, const char *pPath)
 	m_ScreenshotAnimation.m_Texture = Texture;
 	m_ScreenshotAnimation.m_ImageWidth = ImageWidth;
 	m_ScreenshotAnimation.m_ImageHeight = ImageHeight;
-	m_ScreenshotAnimation.m_Time = 0.0f;
-	m_ScreenshotAnimation.m_DismissTime = -1.0f;
 	// 照片卡以「铺满卡片」为 1x，不按图片原始像素限制放大；换图会重置缩放和平移。
-	m_ScreenshotAnimation.m_View = CQmImageView();
 	m_ScreenshotAnimation.m_View.SetImageSize(ImageWidth, ImageHeight);
 	m_ScreenshotAnimation.m_View.SetFitAllowsUpscale(true);
 	// 落盘路径可能是相对存档目录的写法：界面要用它去开看图窗口，必须换成完整路径，
@@ -177,6 +170,7 @@ void CUiEffects::StartScreenshotAnimation(CImageInfo &&Image, const char *pPath)
 	{
 		m_ScreenshotAnimation.m_aPath[0] = '\0';
 	}
+	m_ScreenshotAnimation.m_Timing.Start(time_get_nanoseconds());
 	m_ScreenshotAnimation.m_Active = true;
 }
 
@@ -188,9 +182,9 @@ void CUiEffects::RenderScreenshotAnimation()
 		return;
 	}
 
-	// 只有玩家主动关闭时才卸载；缩到位之后画面一直留着。
-	if(m_ScreenshotAnimation.m_DismissTime >= 0.0f &&
-		m_ScreenshotAnimation.m_Time - m_ScreenshotAnimation.m_DismissTime >= SCREENSHOT_DISMISS_DURATION)
+	const auto Now = time_get_nanoseconds();
+	const float CardAlpha = m_ScreenshotAnimation.m_Timing.Alpha(Now);
+	if(CardAlpha <= 0.0f)
 	{
 		Graphics()->UnloadTexture(&m_ScreenshotAnimation.m_Texture);
 		m_ScreenshotAnimation = CScreenshotAnimation();
@@ -208,7 +202,8 @@ void CUiEffects::RenderScreenshotAnimation()
 	const float ScreenWidth = pScreen->w;
 	const float ScreenHeight = pScreen->h;
 
-	const float ShrinkT = std::clamp((m_ScreenshotAnimation.m_Time - SCREENSHOT_SHRINK_START) / (SCREENSHOT_SHRINK_END - SCREENSHOT_SHRINK_START), 0.0f, 1.0f);
+	const float Elapsed = m_ScreenshotAnimation.m_Timing.ElapsedSeconds(Now);
+	const float ShrinkT = std::clamp((Elapsed - SCREENSHOT_SHRINK_START) / (SCREENSHOT_SHRINK_END - SCREENSHOT_SHRINK_START), 0.0f, 1.0f);
 	const float Ease = ApplyTransition(ShrinkT, TRANSITION_EASE_OUT);
 	const float ImageAspect = (float)m_ScreenshotAnimation.m_ImageWidth / (float)m_ScreenshotAnimation.m_ImageHeight;
 	// 目标：屏幕正中、按画面比例缩到 62%，高度再卡一次上限，避免竖图顶到边。
@@ -256,35 +251,34 @@ void CUiEffects::RenderScreenshotAnimation()
 		return MousePos.x >= Rect.x && MousePos.x <= Rect.x + Rect.w && MousePos.y >= Rect.y && MousePos.y <= Rect.y + Rect.h;
 	};
 
-	static bool s_WasMouseDown = false;
-	static vec2 s_LastMousePos{0.0f, 0.0f};
-	static int s_PressedControl = 0; // 0=无 1=关闭 2=查看截图 3=拖动
 	const bool MouseDown = Input()->KeyIsPressed(KEY_MOUSE_1);
-	if(Settled && m_ScreenshotAnimation.m_DismissTime < 0.0f && Interactive)
+	if(Settled && Interactive && CardAlpha >= 1.0f)
 	{
+		if(Input()->KeyPress(KEY_ESCAPE))
+			m_ScreenshotAnimation.m_Timing.Dismiss(Now);
 		if(Input()->KeyPress(KEY_MOUSE_1))
 		{
 			if(Inside(CloseRect))
-				s_PressedControl = 1;
+				m_ScreenshotAnimation.m_PressedControl = 1;
 			else if(HasPath && Inside(ViewRect))
-				s_PressedControl = 2;
+				m_ScreenshotAnimation.m_PressedControl = 2;
 			else if(Inside(CardRect))
-				s_PressedControl = 3;
+				m_ScreenshotAnimation.m_PressedControl = 3;
 			else
-				m_ScreenshotAnimation.m_DismissTime = m_ScreenshotAnimation.m_Time;
+				m_ScreenshotAnimation.m_Timing.Dismiss(Now);
 		}
-		if(s_PressedControl == 3 && MouseDown)
-			View.Pan(MousePos.x - s_LastMousePos.x, MousePos.y - s_LastMousePos.y);
-		if(!MouseDown && s_WasMouseDown)
+		if(m_ScreenshotAnimation.m_PressedControl == 3 && MouseDown)
+			View.Pan(MousePos.x - m_ScreenshotAnimation.m_LastMousePos.x, MousePos.y - m_ScreenshotAnimation.m_LastMousePos.y);
+		if(!MouseDown && m_ScreenshotAnimation.m_WasMouseDown)
 		{
-			if(s_PressedControl == 1 && Inside(CloseRect))
-				m_ScreenshotAnimation.m_DismissTime = m_ScreenshotAnimation.m_Time;
-			else if(s_PressedControl == 2 && HasPath && Inside(ViewRect))
+			if(m_ScreenshotAnimation.m_PressedControl == 1 && Inside(CloseRect))
+				m_ScreenshotAnimation.m_Timing.Dismiss(Now);
+			else if(m_ScreenshotAnimation.m_PressedControl == 2 && HasPath && Inside(ViewRect))
 			{
 				OpenQmScreenshotViewer(Client(), m_ScreenshotAnimation.m_aPath, Localize("Error opening screenshot"), Localize("Unable to open the screenshot file"));
-				m_ScreenshotAnimation.m_DismissTime = m_ScreenshotAnimation.m_Time;
+				m_ScreenshotAnimation.m_Timing.Dismiss(Now);
 			}
-			s_PressedControl = 0;
+			m_ScreenshotAnimation.m_PressedControl = 0;
 		}
 		// 滚轮只在这张照片上生效，避免和背后的列表滚动抢。
 		int Steps = 0;
@@ -298,14 +292,9 @@ void CUiEffects::RenderScreenshotAnimation()
 			View.ZoomAt(std::pow(1.2f, (float)Steps), MousePos.x - CardX, MousePos.y - CardY);
 		}
 	}
-	s_WasMouseDown = MouseDown;
-	s_LastMousePos = MousePos;
-	if(Settled && Interactive && Input()->KeyPress(KEY_ESCAPE) && m_ScreenshotAnimation.m_DismissTime < 0.0f)
-		m_ScreenshotAnimation.m_DismissTime = m_ScreenshotAnimation.m_Time;
-	const float DismissT = m_ScreenshotAnimation.m_DismissTime < 0.0f ? 0.0f :
-									    std::clamp((m_ScreenshotAnimation.m_Time - m_ScreenshotAnimation.m_DismissTime) / SCREENSHOT_DISMISS_DURATION, 0.0f, 1.0f);
-	const float CardAlpha = 1.0f - DismissT;
-	const float FlashAlpha = m_ScreenshotAnimation.m_Time < SCREENSHOT_FLASH_DURATION ? 0.65f * (1.0f - m_ScreenshotAnimation.m_Time / SCREENSHOT_FLASH_DURATION) : 0.0f;
+	m_ScreenshotAnimation.m_WasMouseDown = MouseDown;
+	m_ScreenshotAnimation.m_LastMousePos = MousePos;
+	const float FlashAlpha = Elapsed < SCREENSHOT_FLASH_DURATION ? 0.65f * (1.0f - Elapsed / SCREENSHOT_FLASH_DURATION) : 0.0f;
 
 	// 不再画投影：卡片边缘只有一条 1px 描边。之前那张 0.28 黑的圆角"影子"
 	// 是硬边、还偏移 (2+8*Ease)，在照片旁边会露出一条明显的深色带，看起来像
@@ -361,6 +350,7 @@ void CUiEffects::RenderScreenshotAnimation()
 	// 看图窗口的两个操作：右上角关闭、右下角跳到独立看图程序。
 	if(Settled && Interactive)
 	{
+		const CUiScopedControlAlphaScale TextAlpha(Ui(), CardAlpha);
 		const ColorRGBA ButtonFill = ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f * CardAlpha);
 		const ColorRGBA ButtonBorder = ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f * CardAlpha);
 		DrawRoundedSurface(Ui(), CloseRect, ButtonFill, ButtonBorder, CloseSize * 0.5f, 1.0f);
