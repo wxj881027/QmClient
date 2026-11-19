@@ -222,6 +222,69 @@ TEST_F(CQmSkin7PartPublisherTest, UnreleasedAccessoryCandidateAlsoBlocksPartUplo
 	m_Graphics.UnloadTexture(&OldAccessory);
 }
 
+TEST_F(CQmSkin7PartPublisherTest, RepeatedGpuFailuresConsumeOnlyTheFailedJob)
+{
+	using ECompletion = CQmSkin7PartPublisher::ECompletion;
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	IOHANDLE File = pStorage->OpenFile("part.png", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	ASSERT_NE(File, nullptr);
+	ASSERT_TRUE(CImageLoader::SavePng(File, "part", m_Result.m_OriginalImage));
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+
+	auto pFailed = std::make_shared<CQmSkin7PartLoadJob>("part.png", "failed", pStorage.get(), IStorage::TYPE_SAVE, 2, 3, [](auto &) {});
+	auto pNext = std::make_shared<CQmSkin7PartLoadJob>("part.png", "next", pStorage.get(), IStorage::TYPE_SAVE, 2, 3, [](auto &) {});
+	ASSERT_TRUE(Pool.TryAdd(pFailed));
+	ASSERT_TRUE(Pool.TryAdd(pNext));
+	ASSERT_TRUE(WaitForJobDone(*pFailed));
+	ASSERT_TRUE(WaitForJobDone(*pNext));
+
+	const auto Complete = [&](CQmSkin7PartLoadJob &Job) {
+		return Job.PublishResult([&](const auto &Result) {
+			return CQmSkin7PartPublisher::PublishWithRetry(m_Limiter, Job.m_FailedUploadAttempts, [&] {
+				return m_Publisher.TryPublish(Result, m_vParts, m_Graphics, m_Limiter);
+			}) != ECompletion::DEFERRED;
+		});
+	};
+	for(int Attempt = 1; Attempt <= 3; ++Attempt)
+	{
+		m_Limiter.OnFrameStart();
+		m_Graphics.m_FailAt = m_Graphics.m_Attempts + 1;
+		EXPECT_EQ(Complete(*pFailed), Attempt == 3);
+	}
+	EXPECT_TRUE(m_vParts.empty());
+	EXPECT_FALSE(Complete(*pFailed));
+
+	m_Limiter.OnFrameStart();
+	m_Graphics.m_FailAt = 0;
+	ASSERT_TRUE(Complete(*pNext));
+	ASSERT_EQ(m_vParts.size(), 1u);
+	EXPECT_STREQ(m_vParts.front().m_aName, "next");
+}
+
+TEST_F(CQmSkin7PartPublisherTest, WaitingForBudgetDoesNotAbandonPart)
+{
+	using ECompletion = CQmSkin7PartPublisher::ECompletion;
+	unsigned FailedAttempts = 0;
+	const auto Complete = [&] {
+		return CQmSkin7PartPublisher::PublishWithRetry(m_Limiter, FailedAttempts, [&] { return Publish(); });
+	};
+
+	for(int Frame = 0; Frame < 4; ++Frame)
+	{
+		m_Limiter.OnFrameStart(1);
+		EXPECT_EQ(Complete(), ECompletion::DEFERRED);
+	}
+	EXPECT_EQ(FailedAttempts, 0u);
+	EXPECT_EQ(m_Graphics.m_Attempts, 0);
+
+	m_Limiter.OnFrameStart(2);
+	EXPECT_EQ(Complete(), ECompletion::PUBLISHED);
+	ASSERT_EQ(m_vParts.size(), 1u);
+}
+
 TEST_F(CQmSkin7PartPublisherTest, NativePngJobRetriesGpuFailureAndConsumesOnlyCommittedResult)
 {
 	CTestInfo Info;

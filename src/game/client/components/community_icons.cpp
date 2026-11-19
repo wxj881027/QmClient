@@ -25,7 +25,8 @@ CCommunityIcons::CCommunityIconDownloadJob::CCommunityIconDownloadJob(CCommunity
 {
 	m_Sha256 = Sha256;
 	m_pHttpRequest = std::shared_ptr<IHttpRequest>(CreateHttpRequest(pUrl));
-	m_pHttpRequest->WriteToFile(pCommunityIcons->Storage(), m_aPath, IStorage::TYPE_SAVE);
+	m_pHttpRequest->WriteToFileAndMemory(pCommunityIcons->Storage(), m_aPath, IStorage::TYPE_SAVE);
+	m_pHttpRequest->ValidateBeforeOverwrite(true);
 	m_pHttpRequest->ExpectSha256(Sha256);
 	m_pHttpRequest->MaxResponseSize(qm_community_icons::MAX_FILE_BYTES);
 	// Keep icon downloads bounded so broken remote endpoints can't hang forever.
@@ -37,11 +38,19 @@ CCommunityIcons::CCommunityIconDownloadJob::CCommunityIconDownloadJob(CCommunity
 
 void CCommunityIcons::CCommunityIconLoadJob::Run()
 {
-	m_Success = m_pCommunityIcons->LoadFile(m_aPath, m_StorageType, m_ImageInfo, m_ImageInfoGrayscale, m_Sha256);
+	if(!m_pResponse)
+	{
+		m_Success = m_pCommunityIcons->LoadFile(m_aPath, m_StorageType, m_ImageInfo, m_ImageInfoGrayscale, m_Sha256);
+		return;
+	}
+	m_Success = qm_community_icons::LoadResponseImage(*m_pResponse, m_ImageInfo, m_ImageInfoGrayscale, m_Sha256) == qm_community_icons::ELoadResult::LOADED;
+	if(!m_Success)
+		log_error("menus/browser", "Failed to decode downloaded community icon '%s'", m_aCommunityId);
 }
 
-CCommunityIcons::CCommunityIconLoadJob::CCommunityIconLoadJob(CCommunityIcons *pCommunityIcons, const char *pCommunityId, int StorageType) :
-	CAbstractCommunityIconJob(pCommunityIcons, pCommunityId, StorageType)
+CCommunityIcons::CCommunityIconLoadJob::CCommunityIconLoadJob(CCommunityIcons *pCommunityIcons, const char *pCommunityId, int StorageType, std::shared_ptr<IHttpRequest> pResponse) :
+	CAbstractCommunityIconJob(pCommunityIcons, pCommunityId, StorageType),
+	m_pResponse(std::move(pResponse))
 {
 	Abortable(true);
 }
@@ -66,9 +75,9 @@ int CCommunityIcons::FileScan(const char *pName, int IsDir, int DirType, void *p
 	return 0;
 }
 
-bool CCommunityIcons::QueueLoadJob(const char *pCommunityId, int StorageType)
+bool CCommunityIcons::QueueLoadJob(const char *pCommunityId, int StorageType, std::shared_ptr<IHttpRequest> pResponse)
 {
-	return m_CommunityIconLoadJobs.Enqueue([&] { return std::make_shared<CCommunityIconLoadJob>(this, pCommunityId, StorageType); });
+	return m_CommunityIconLoadJobs.Enqueue([&] { return std::make_shared<CCommunityIconLoadJob>(this, pCommunityId, StorageType, std::move(pResponse)); });
 }
 
 const CCommunityIcon *CCommunityIcons::Find(const char *pCommunityId)
@@ -154,14 +163,15 @@ void CCommunityIcons::Update()
 	}
 	m_CleanupFailed = false;
 	m_CommunityIconLoadJobs.SubmitPending(qm_community_icons::MAX_PREPARED_LOADS, [this](const auto &pJob) { return Engine()->TryAddJob(pJob); });
-	// Update load jobs (icon is loaded from existing file)
+	// 已完成的解码来自现有缓存或下载候选。
 	if(!m_CommunityIconLoadJobs.Empty())
 	{
 		std::shared_ptr<CCommunityIconLoadJob> pJob = m_CommunityIconLoadJobs.Front();
-		if(pJob->Done())
+		if(pJob->Finished())
 		{
-			if(pJob->State() == IJob::STATE_DONE && pJob->Success() &&
-				qm_community_icons::AcceptsResult(ServerBrowser()->DDNetInfoAvailable(), ServerBrowser()->Community(pJob->CommunityId()), pJob->Sha256()))
+			const auto pResponse = pJob->TakeResponse();
+			const bool Decoded = pJob->State() == IJob::STATE_DONE && pJob->Success();
+			if(AcceptLoadResult(Decoded, pResponse.get(), ServerBrowser()->DDNetInfoAvailable(), ServerBrowser()->Community(pJob->CommunityId()), pJob->Sha256()))
 			{
 				if(!LoadFinish(pJob->CommunityId(), pJob->ImageInfo(), pJob->ImageInfoGrayscale(), pJob->Sha256()))
 					return;
@@ -176,22 +186,25 @@ void CCommunityIcons::Update()
 			return;
 	}
 
-	// Update download jobs (icon is downloaded and loaded from new file)
+	// 下载完成后交给后台解码。
 	if(!m_CommunityIconDownloadJobs.empty())
 	{
 		std::shared_ptr<CCommunityIconDownloadJob> pJob = m_CommunityIconDownloadJobs.front();
-		if(pJob->HttpRequest()->Done())
+		const auto pRequest = pJob->HttpRequest();
+		if(pRequest->Done())
 		{
-			if(pJob->HttpRequest()->State() == EHttpState::DONE)
+			if(pRequest->State() == EHttpState::DONE)
 			{
-				if(!QueueLoadJob(pJob->CommunityId(), IStorage::TYPE_SAVE))
+				// 摘要命中时 HTTP 没有候选正文，仍从已有缓存解码。
+				const auto pResponse = pRequest->StatusCode() == 0 ? nullptr : pRequest;
+				if(!QueueLoadJob(pJob->CommunityId(), IStorage::TYPE_SAVE, pResponse))
 					return;
 			}
 			m_CommunityIconDownloadJobs.pop_front();
 		}
 	}
 
-	// 新增的解码任务也先完成，避免同一ID的新下载覆盖正在读取的缓存文件。
+	// 先消费已完成的解码任务，再按最新社区信息安排下载。
 	if(!m_CommunityIconLoadJobs.Empty() || !ServerBrowser()->DDNetInfoAvailable())
 		return;
 	const auto InfoSha256 = ServerBrowser()->DDNetInfoSha256();

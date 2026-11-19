@@ -1154,7 +1154,7 @@ static bool AssetsEditorExtractSubImage(const CImageInfo &Src, CImageInfo &Dst, 
 	return true;
 }
 
-bool CMenus::AssetsEditorComposeImage(CImageInfo &OutputImage)
+std::optional<int> CMenus::AssetsEditorComposeImage(CImageInfo &OutputImage)
 {
 	const auto &vAssets = m_AssetsEditorState.m_avAssets[m_AssetsEditorState.m_Type];
 	const int MainAssetIndex = m_AssetsEditorState.m_aMainAssetIndex[m_AssetsEditorState.m_Type];
@@ -1162,7 +1162,7 @@ bool CMenus::AssetsEditorComposeImage(CImageInfo &OutputImage)
 	{
 		str_copy(m_AssetsEditorState.m_aStatusMessage, Localize("No assets available for composition."));
 		m_AssetsEditorState.m_StatusIsError = true;
-		return false;
+		return std::nullopt;
 	}
 
 	const SAssetsEditorAssetEntry &MainAsset = vAssets[MainAssetIndex];
@@ -1171,7 +1171,7 @@ bool CMenus::AssetsEditorComposeImage(CImageInfo &OutputImage)
 	{
 		str_format(m_AssetsEditorState.m_aStatusMessage, sizeof(m_AssetsEditorState.m_aStatusMessage), Localize("Failed to load main asset: %s"), MainAsset.m_aName);
 		m_AssetsEditorState.m_StatusIsError = true;
-		return false;
+		return std::nullopt;
 	}
 
 	CImageInfo BaseImageStable = pBaseImage->DeepCopy();
@@ -1182,7 +1182,7 @@ bool CMenus::AssetsEditorComposeImage(CImageInfo &OutputImage)
 		OutputImage.Free();
 		str_copy(m_AssetsEditorState.m_aStatusMessage, Localize("Failed to copy main asset image."));
 		m_AssetsEditorState.m_StatusIsError = true;
-		return false;
+		return std::nullopt;
 	}
 	if(OutputImage.m_Format != CImageInfo::FORMAT_RGBA)
 		ConvertToRgba(OutputImage);
@@ -1192,7 +1192,7 @@ bool CMenus::AssetsEditorComposeImage(CImageInfo &OutputImage)
 		OutputImage.Free();
 		str_copy(m_AssetsEditorState.m_aStatusMessage, Localize("Failed to prepare main asset image."));
 		m_AssetsEditorState.m_StatusIsError = true;
-		return false;
+		return std::nullopt;
 	}
 
 	struct SPreparedDonor
@@ -1308,12 +1308,7 @@ bool CMenus::AssetsEditorComposeImage(CImageInfo &OutputImage)
 		Prepared.m_Image.Free();
 	BaseImageStable.Free();
 
-	if(SkippedSlots > 0)
-	{
-		str_format(m_AssetsEditorState.m_aStatusMessage, sizeof(m_AssetsEditorState.m_aStatusMessage), Localize("Preview built with %d skipped slot(s)."), SkippedSlots);
-		m_AssetsEditorState.m_StatusIsError = false;
-	}
-	return true;
+	return SkippedSlots;
 }
 
 bool CMenus::AssetsEditorExport()
@@ -1339,8 +1334,15 @@ bool CMenus::AssetsEditorExport()
 	}
 
 	CImageInfo OutputImage;
-	if(!AssetsEditorComposeImage(OutputImage))
+	const auto SkippedSlots = AssetsEditorComposeImage(OutputImage);
+	if(!SkippedSlots)
 		return false;
+	if(!qmclient::assets_editor::KeepCompleteExportImage(OutputImage, *SkippedSlots))
+	{
+		str_format(m_AssetsEditorState.m_aStatusMessage, sizeof(m_AssetsEditorState.m_aStatusMessage), Localize("Export failed. Could not compose %d edited slot(s)."), *SkippedSlots);
+		m_AssetsEditorState.m_StatusIsError = true;
+		return false;
+	}
 
 	if(m_AssetsEditorState.m_Type == ASSETS_EDITOR_TYPE_SKIN)
 	{
@@ -1515,7 +1517,11 @@ void CMenus::AssetsEditorRenderExitConfirm(const CUIRect &Rect)
 	Box.HSplitBottom(LineSize + 4.0f, &Box, &Buttons);
 
 	Ui()->DoLabel(&Title, Localize("Save asset before closing?"), FontSize * 1.1f, TEXTALIGN_ML);
-	Ui()->DoLabel(&Message, Localize("You have unsaved changes."), FontSize, TEXTALIGN_ML);
+	const bool ShowError = m_AssetsEditorState.m_StatusIsError && m_AssetsEditorState.m_aStatusMessage[0] != '\0';
+	SLabelProperties MessageProperties;
+	MessageProperties.m_MaxWidth = Message.w;
+	MessageProperties.m_EllipsisAtEnd = true;
+	Ui()->DoLabel(&Message, ShowError ? m_AssetsEditorState.m_aStatusMessage : Localize("You have unsaved changes."), FontSize, TEXTALIGN_ML, MessageProperties);
 
 	CUIRect SaveButton, DiscardButton, CancelButton;
 	Buttons.VSplitLeft((Buttons.w - MarginSmall * 2.0f) / 3.0f, &SaveButton, &Buttons);
@@ -1698,8 +1704,13 @@ void CMenus::AssetsEditorUpdatePreviewIfDirty()
 		return;
 
 	CImageInfo ComposedImage;
-	if(AssetsEditorComposeImage(ComposedImage))
+	if(const auto SkippedSlots = AssetsEditorComposeImage(ComposedImage))
 	{
+		if(*SkippedSlots > 0)
+		{
+			str_format(m_AssetsEditorState.m_aStatusMessage, sizeof(m_AssetsEditorState.m_aStatusMessage), Localize("Preview built with %d skipped slot(s)."), *SkippedSlots);
+			m_AssetsEditorState.m_StatusIsError = false;
+		}
 		m_AssetsEditorState.m_ComposedPreviewWidth = ComposedImage.m_Width;
 		m_AssetsEditorState.m_ComposedPreviewHeight = ComposedImage.m_Height;
 		Graphics()->UnloadTexture(&m_AssetsEditorState.m_ComposedPreviewTexture);
@@ -1955,16 +1966,14 @@ void CMenus::RenderAssetsEditorScreen(CUIRect MainView)
 		if(!CurrentDonorVisible)
 			DonorAssetIndex = vFilteredDonorAssetIndices.front();
 	}
-	if(!vFilteredMainAssetIndices.empty())
+	const int FilteredMainAssetIndex = qmclient::assets_editor::FilteredMainAssetSelection(
+		vFilteredMainAssetIndices, MainAssetIndex, m_AssetsEditorState.m_HasUnsavedChanges);
+	if(FilteredMainAssetIndex >= 0 && vFilteredMainAssetIndices[FilteredMainAssetIndex] != MainAssetIndex)
 	{
-		const bool CurrentMainVisible = std::find(vFilteredMainAssetIndices.begin(), vFilteredMainAssetIndices.end(), MainAssetIndex) != vFilteredMainAssetIndices.end();
-		if(!CurrentMainVisible)
-		{
-			AssetsEditorCancelDrag();
-			MainAssetIndex = vFilteredMainAssetIndices.front();
-			m_AssetsEditorState.m_ShowExitConfirm = false;
-			AssetsEditorResetPartSlots();
-		}
+		AssetsEditorCancelDrag();
+		MainAssetIndex = vFilteredMainAssetIndices[FilteredMainAssetIndex];
+		m_AssetsEditorState.m_ShowExitConfirm = false;
+		AssetsEditorResetPartSlots();
 	}
 
 	static CLineInput s_ExportNameInput;
@@ -2448,15 +2457,6 @@ void CMenus::RenderAssetsEditorScreen(CUIRect MainView)
 	static CUi::SDropDownState s_BottomMainDropDownState[ASSETS_EDITOR_TYPE_COUNT];
 	static CScrollRegion s_BottomMainDropDownScrollRegion[ASSETS_EDITOR_TYPE_COUNT];
 	s_BottomMainDropDownState[m_AssetsEditorState.m_Type].m_SelectionPopupContext.m_pScrollRegion = &s_BottomMainDropDownScrollRegion[m_AssetsEditorState.m_Type];
-	int FilteredMainAssetIndex = 0;
-	for(size_t Index = 0; Index < vFilteredMainAssetIndices.size(); ++Index)
-	{
-		if(vFilteredMainAssetIndices[Index] == MainAssetIndex)
-		{
-			FilteredMainAssetIndex = (int)Index;
-			break;
-		}
-	}
 	if(!vFilteredMainAssetNames.empty())
 	{
 		const int NewFilteredMainAssetIndex = Ui()->DoDropDown(&BottomMainDropDown, FilteredMainAssetIndex, vFilteredMainAssetNames.data(), (int)vFilteredMainAssetNames.size(), s_BottomMainDropDownState[m_AssetsEditorState.m_Type]);

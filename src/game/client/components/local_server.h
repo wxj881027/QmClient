@@ -17,8 +17,10 @@ class CLocalServer : public CComponentInterfaces
 public:
 	bool RunServer(const std::vector<const char *> &vpArguments, bool ConnectWhenReady = false);
 	void Update();
+	void UpdateStoppingServer();
 	bool IsServerStarting() const;
 	void KillServer();
+	// Unix 本地服在停止期间仍占用启动位置，供重启入口等待回收。
 	bool IsServerRunning();
 	void RconAuthIfPossible();
 	void Connect();
@@ -36,9 +38,13 @@ private:
 
 	void Reset();
 	void WaitForPort();
+	bool IsServerStopping() const;
 
 #if defined(CONF_PLATFORM_ANDROID)
 	CLocalServerLaunch m_Launch;
+#elif defined(CONF_FAMILY_UNIX)
+	CLocalServerUnixProcess m_UnixProcess;
+	void PollUnixServer();
 #else
 	PROCESS m_Process = INVALID_PROCESS;
 #endif

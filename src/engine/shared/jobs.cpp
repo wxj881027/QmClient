@@ -134,7 +134,9 @@ void CJobPool::RunLoop()
 			bool Failed = false;
 			try
 			{
-				pJob->Run();
+				// 作业离开队列后仍可能在进入 Run 前被取消。
+				if(pJob->State() != IJob::STATE_ABORTED)
+					pJob->Run();
 			}
 			catch(const std::exception &Error)
 			{

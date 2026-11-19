@@ -1,6 +1,7 @@
 #include "local_server.h"
 
 #include <base/fs.h>
+#include <base/log.h>
 #include <base/secure.h>
 #include <base/system.h>
 #include <base/time.h>
@@ -15,6 +16,9 @@
 
 #if defined(CONF_PLATFORM_ANDROID)
 #include <android/android_main.h>
+#elif defined(CONF_FAMILY_UNIX)
+#include <signal.h>
+#include <sys/wait.h>
 #endif
 
 namespace {
@@ -46,6 +50,9 @@ void CLocalServer::WaitForPort()
 
 void CLocalServer::Connect()
 {
+	if(IsServerStopping())
+		return;
+
 	// 服务端异步上报端口，拿到端口后再连。
 	m_ConnectRequested = true;
 	if(m_Port == 0 && !m_WaitingForPort)
@@ -65,6 +72,8 @@ bool CLocalServer::RunServer(const std::vector<const char *> &vpArguments, bool 
 		return true;
 	if(IsServerRunning())
 	{
+		if(IsServerStopping())
+			return false;
 		if(ConnectWhenReady)
 			Connect();
 		return true;
@@ -107,19 +116,23 @@ bool CLocalServer::RunServer(const std::vector<const char *> &vpArguments, bool 
 	// No / in binary path means to search in $PATH, so it is expected that the file can't be opened. Just try executing anyway.
 	if(str_find(aBuf, "/") == nullptr || fs_is_file(aBuf))
 	{
+		bool Started;
 		try
 		{
 #if defined(CONF_FAMILY_WINDOWS)
 			m_Process = shell_execute_owned(aBuf, Launch.Data(), Launch.Count());
+			Started = m_Process != INVALID_PROCESS;
 #else
-			m_Process = shell_execute(aBuf, EShellExecuteWindowState::BACKGROUND, Launch.Data(), Launch.Count());
+			Started = m_UnixProcess.TryStart([&] {
+				return shell_execute(aBuf, EShellExecuteWindowState::BACKGROUND, Launch.Data(), Launch.Count());
+			});
 #endif
 		}
 		catch(...)
 		{
-			m_Process = INVALID_PROCESS;
+			Started = false;
 		}
-		if(m_Process != INVALID_PROCESS)
+		if(Started)
 		{
 			mem_copy(m_aRconPassword, aPassword, sizeof(m_aRconPassword));
 			GameClient()->m_Menus.ForceRefreshLanPage();
@@ -184,8 +197,17 @@ bool CLocalServer::IsServerStarting() const
 #endif
 }
 
+void CLocalServer::UpdateStoppingServer()
+{
+#if defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_ANDROID)
+	if(IsServerStopping())
+		PollUnixServer();
+#endif
+}
+
 void CLocalServer::Update()
 {
+	UpdateStoppingServer();
 	if(m_WaitingForPort && time_get_nanoseconds() >= m_NextPortCheck)
 	{
 		m_NextPortCheck = time_get_nanoseconds() + std::chrono::milliseconds(100);
@@ -280,6 +302,22 @@ void CLocalServer::KillServer()
 	m_Launch.Reset();
 	StopAndroidServer();
 	GameClient()->m_Menus.ForceRefreshLanPage();
+#elif defined(CONF_FAMILY_UNIX)
+	if(m_UnixProcess.HasProcess())
+	{
+		CancelConnect();
+		m_WaitingForPort = false;
+		m_UnixProcess.RequestStop();
+		PollUnixServer();
+
+		const auto State = Client()->State();
+		if((State == IClient::STATE_QUITTING || State == IClient::STATE_RESTARTING) && IsServerRunning())
+		{
+			// 退出时也只做非阻塞回收。父进程退出后，由系统接管剩余子进程。
+			log_info("local_server", "client exiting before local server PID %d was reaped", static_cast<int>(m_UnixProcess.Pid()));
+		}
+		return;
+	}
 #else
 	if(m_Process != INVALID_PROCESS && kill_process(m_Process))
 	{
@@ -294,6 +332,9 @@ bool CLocalServer::IsServerRunning()
 {
 #if defined(CONF_PLATFORM_ANDROID)
 	return IsAndroidServerRunning();
+#elif defined(CONF_FAMILY_UNIX)
+	PollUnixServer();
+	return m_UnixProcess.HasProcess();
 #else
 	if(m_Process != INVALID_PROCESS && !is_process_alive(m_Process))
 	{
@@ -303,9 +344,45 @@ bool CLocalServer::IsServerRunning()
 #endif
 }
 
+bool CLocalServer::IsServerStopping() const
+{
+#if defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_ANDROID)
+	return m_UnixProcess.IsStopping();
+#else
+	return false;
+#endif
+}
+
+#if defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_ANDROID)
+void CLocalServer::PollUnixServer()
+{
+	const pid_t Pid = m_UnixProcess.Pid();
+	const auto Result = m_UnixProcess.Poll(
+		[](pid_t Child) -> CLocalServerUnixProcess::SProbeResult {
+			int Status = 0;
+			const pid_t Waited = waitpid(Child, &Status, WNOHANG);
+			if(Waited < 0)
+				return {false, errno};
+			return {Waited == Child && (WIFEXITED(Status) || WIFSIGNALED(Status)), 0};
+		},
+		[](pid_t Child) { return kill(Child, SIGTERM) == 0 ? 0 : errno; });
+
+	if(Result.m_ProbeError != 0)
+		log_warn("local_server", "waitpid failed for PID %d (errno %d); keeping local server tracked", static_cast<int>(Pid), Result.m_ProbeError);
+	if(Result.m_SignalError != 0)
+		log_warn("local_server", "SIGTERM failed for PID %d (errno %d); retry by stopping the local server again", static_cast<int>(Pid), Result.m_SignalError);
+	if(Result.m_Released)
+	{
+		Reset();
+		GameClient()->m_Menus.ForceRefreshLanPage();
+	}
+}
+#endif
+
 void CLocalServer::RconAuthIfPossible()
 {
 	if(!IsServerRunning() ||
+		IsServerStopping() ||
 		m_aRconPassword[0] == '\0' ||
 		Client()->ServerAddress() == nullptr ||
 		!net_addr_is_local(Client()->ServerAddress()))

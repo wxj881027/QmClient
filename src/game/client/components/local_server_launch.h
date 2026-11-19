@@ -2,10 +2,12 @@
 #define GAME_CLIENT_COMPONENTS_LOCAL_SERVER_LAUNCH_H
 
 #include <base/borrowed_allocator.h>
+#include <base/types.h>
 
 #include <game/client/components/qmclient/bounded_file_reader.h>
 
 #include <algorithm>
+#include <cerrno>
 #include <charconv>
 #include <cstdint>
 #include <string>
@@ -135,6 +137,108 @@ public:
 		m_ConnectWhenReady = false;
 		m_BindingStarted = 0;
 	}
+};
+
+// Unix 子进程在回收前独占本地服的启动位置。
+class CLocalServerUnixProcess
+{
+public:
+#if defined(CONF_FAMILY_UNIX)
+	using TPid = PROCESS;
+#else
+	using TPid = int;
+#endif
+
+	struct SProbeResult
+	{
+		bool m_Exited = false;
+		int m_Error = 0;
+	};
+	struct SPollResult
+	{
+		bool m_Released = false;
+		int m_ProbeError = 0;
+		int m_SignalError = 0;
+	};
+
+	CLocalServerUnixProcess() = default;
+	CLocalServerUnixProcess(const CLocalServerUnixProcess &) = delete;
+	CLocalServerUnixProcess &operator=(const CLocalServerUnixProcess &) = delete;
+
+	TPid Pid() const { return m_Pid; }
+	bool HasProcess() const { return m_Pid > 0; }
+	bool IsStopping() const { return m_State != EState::RUNNING; }
+
+	template<typename FSpawn>
+	bool TryStart(FSpawn &&Spawn)
+	{
+		if(HasProcess())
+			return false;
+		const TPid Pid = Spawn();
+		if(Pid <= 0)
+			return false;
+		m_Pid = Pid;
+		return true;
+	}
+
+	void RequestStop()
+	{
+		if(HasProcess() && m_State != EState::WAITING_FOR_REAP)
+			m_State = EState::STOP_REQUESTED;
+	}
+
+	template<typename FProbe, typename FTerminate>
+	SPollResult Poll(FProbe &&Probe, FTerminate &&Terminate)
+	{
+		if(!HasProcess())
+			return {};
+
+		const SProbeResult Result = Probe(m_Pid);
+		if(Result.m_Exited || Result.m_Error == ECHILD)
+		{
+			m_Pid = 0;
+			m_State = EState::RUNNING;
+			m_LastProbeError = 0;
+			return {.m_Released = true};
+		}
+		if(Result.m_Error != 0)
+		{
+			// 探测失败时保留 PID，等下次轮询确认子进程归属后再发信号。
+			if(Result.m_Error == EINTR || Result.m_Error == m_LastProbeError)
+				return {};
+			m_LastProbeError = Result.m_Error;
+			return {.m_ProbeError = Result.m_Error};
+		}
+
+		m_LastProbeError = 0;
+		if(m_State != EState::STOP_REQUESTED)
+			return {};
+
+		const int SignalError = Terminate(m_Pid);
+		if(SignalError == 0 || SignalError == ESRCH)
+		{
+			// 服务端收到第二次 SIGTERM 会直接退出。ESRCH 也要等 waitpid 确认。
+			m_State = EState::WAITING_FOR_REAP;
+			return {};
+		}
+
+		// 保持停止中。下一次显式停服可以重试，轮询只负责回收进程。
+		m_State = EState::SIGNAL_FAILED;
+		return {.m_SignalError = SignalError};
+	}
+
+private:
+	enum class EState
+	{
+		RUNNING,
+		STOP_REQUESTED,
+		WAITING_FOR_REAP,
+		SIGNAL_FAILED,
+	};
+
+	TPid m_Pid = 0;
+	EState m_State = EState::RUNNING;
+	int m_LastProbeError = 0;
 };
 
 #endif

@@ -15,6 +15,26 @@ class CQmSkin7PartPublisher
 	IGraphics::CTextureHandle m_aUncommitted[2];
 
 public:
+	enum class ECompletion
+	{
+		DEFERRED,
+		PUBLISHED,
+		SKIPPED,
+	};
+
+	template<typename TPublish>
+	static ECompletion PublishWithRetry(CGpuUploadLimiter &Limiter, unsigned &FailedAttempts, TPublish &&Publish)
+	{
+		const int UploadsBefore = Limiter.UploadsThisFrame();
+		if(Publish())
+			return ECompletion::PUBLISHED;
+		// 发布器在调用图形接口前登记尝试，单纯等待额度或资源清理不计入失败次数。
+		constexpr unsigned MAX_FAILED_UPLOAD_ATTEMPTS = 3;
+		if(Limiter.UploadsThisFrame() > UploadsBefore && ++FailedAttempts >= MAX_FAILED_UPLOAD_ATTEMPTS)
+			return ECompletion::SKIPPED;
+		return ECompletion::DEFERRED;
+	}
+
 	CQmSkin7PartPublisher() = default;
 	CQmSkin7PartPublisher(const CQmSkin7PartPublisher &) = delete;
 	CQmSkin7PartPublisher &operator=(const CQmSkin7PartPublisher &) = delete;

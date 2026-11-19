@@ -59,6 +59,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <vector>
 
 using namespace FontIcons;
@@ -564,7 +565,7 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 
 	// 色彩采样：4:2:0 最兼容；4:4:4 保留完整色度，细线、彩色小字与描边最清楚。
 	static CUi::SDropDownState s_PixelFormatDropDownState;
-	static const char *const s_apPixelFormatLabels[] = {
+	const char *const apPixelFormatLabels[] = {
 		Localize("Auto"),
 		Localize("4:2:0 (most compatible)"),
 		Localize("4:2:2 (editing)"),
@@ -577,7 +578,7 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 	Ui()->DoLabel(&Label, Localize("Color sampling:"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
 	CUi::SDropDownProperties PixelFormatDropDownProps;
 	PixelFormatDropDownProps.m_FontSize = FontSize;
-	const int NewPixelFormat = Ui()->DoDropDown(&Control, CurrentPixelFormat, s_apPixelFormatLabels, (int)std::size(s_apPixelFormatLabels), s_PixelFormatDropDownState, PixelFormatDropDownProps);
+	const int NewPixelFormat = Ui()->DoDropDown(&Control, CurrentPixelFormat, apPixelFormatLabels, (int)std::size(apPixelFormatLabels), s_PixelFormatDropDownState, PixelFormatDropDownProps);
 	if(NewPixelFormat != CurrentPixelFormat)
 	{
 		m_DemoRenderPixelFormat = NewPixelFormat;
@@ -590,7 +591,7 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 	// 导出抗锯齿：与全局 FSAA 分家的独立档位。跟随全局沿用窗口帧缓冲（窗口开 AA 导出就带）；
 	// 显式档位（含「关」）整段录制画进离屏多采样目标，游玩可以关 AA 保帧率、导出单独开。
 	static CUi::SDropDownState s_VideoFsaaDropDownState;
-	static const char *const s_apVideoFsaaLabels[] = {
+	const char *const apVideoFsaaLabels[] = {
 		Localize("Follow graphics setting"),
 		Localize("Off"),
 		"2x",
@@ -610,7 +611,7 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 	Ui()->DoLabel(&Label, Localize("Anti-aliasing:"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
 	CUi::SDropDownProperties VideoFsaaDropDownProps;
 	VideoFsaaDropDownProps.m_FontSize = FontSize;
-	const int NewVideoFsaa = Ui()->DoDropDown(&Control, CurrentVideoFsaa, s_apVideoFsaaLabels, (int)std::size(s_apVideoFsaaLabels), s_VideoFsaaDropDownState, VideoFsaaDropDownProps);
+	const int NewVideoFsaa = Ui()->DoDropDown(&Control, CurrentVideoFsaa, apVideoFsaaLabels, (int)std::size(apVideoFsaaLabels), s_VideoFsaaDropDownState, VideoFsaaDropDownProps);
 	if(NewVideoFsaa != CurrentVideoFsaa)
 	{
 		m_DemoRenderFsaa = qm_demo_ui::VIDEO_FSAA_CHOICES[NewVideoFsaa];
@@ -647,7 +648,7 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 
 	// 导出预设：选择即展开为编码器+容器组合；自定义时三项独立可选。
 	static CUi::SDropDownState s_ExportPresetDropDownState;
-	static const char *const s_apExportPresets[] = {
+	const char *const apExportPresets[] = {
 		Localize("Custom"),
 		Localize("Daily (H.264 / MP4)"),
 		Localize("Efficient sharing (HEVC / MP4)"),
@@ -665,7 +666,7 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 	Ui()->DoLabel(&Label, Localize("Export preset:"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
 	CUi::SDropDownProperties ExportPresetDropDownProps;
 	ExportPresetDropDownProps.m_FontSize = FontSize;
-	const int NewExportPreset = Ui()->DoDropDown(&Control, CurrentExportPreset, s_apExportPresets, (int)std::size(s_apExportPresets), s_ExportPresetDropDownState, ExportPresetDropDownProps);
+	const int NewExportPreset = Ui()->DoDropDown(&Control, CurrentExportPreset, apExportPresets, (int)std::size(apExportPresets), s_ExportPresetDropDownState, ExportPresetDropDownProps);
 	if(NewExportPreset != CurrentExportPreset)
 	{
 		m_DemoRenderPresetSel = NewExportPreset;
@@ -1062,7 +1063,7 @@ void CMenus::RenderDemoEncodeSettings(CUIRect View)
 
 	// ProRes 档位：-1 = 自动（4:4:4 输入用 4444，其余用 HQ）。
 	static const int s_aProresValues[] = {-1, 0, 1, 2, 3, 4, 5};
-	static const char *const s_apProresLabels[] = {
+	const char *const apProresLabels[] = {
 		Localize("Auto"),
 		"Proxy",
 		"LT",
@@ -1087,12 +1088,12 @@ void CMenus::RenderDemoEncodeSettings(CUIRect View)
 	static CUi::SDropDownState s_ProresDropDownState;
 	CUi::SDropDownProperties ProresDropDownProps;
 	ProresDropDownProps.m_FontSize = FontSize;
-	const int NewProres = Ui()->DoDropDown(&ProresControl, ProresIndex, s_apProresLabels, (int)std::size(s_apProresLabels), s_ProresDropDownState, ProresDropDownProps);
+	const int NewProres = Ui()->DoDropDown(&ProresControl, ProresIndex, apProresLabels, (int)std::size(apProresLabels), s_ProresDropDownState, ProresDropDownProps);
 	if(NewProres != ProresIndex)
 		g_Config.m_QmVideoProresProfile = s_aProresValues[NewProres];
 	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmVideoProresProfile, &Row,
 		Localize("ProRes profile for 4:4:4 input; other encoders ignore it."));
-	Ui()->DoLabel(&ProresHint, g_Config.m_QmVideoProresProfile < 0 ? Localize("Auto") : s_apProresLabels[ProresIndex], FontSize, TEXTALIGN_MR, {.m_MaxWidth = ProresHint.w - 2.0f});
+	Ui()->DoLabel(&ProresHint, g_Config.m_QmVideoProresProfile < 0 ? Localize("Auto") : apProresLabels[ProresIndex], FontSize, TEXTALIGN_MR, {.m_MaxWidth = ProresHint.w - 2.0f});
 	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
 }
 
@@ -1274,6 +1275,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		m_DemoControlsDragOperation = 0;
 		m_DemoControlsPositionOffset = vec2(0.0f, 0.0f);
 		m_DemoPlayerState = DEMOPLAYER_NONE;
+		ClearDemoCutOverwriteConfirmation();
 		m_DemoCutPreview.Reset();
 		m_vDemoCutSegments.clear();
 		g_Config.m_ClDemoSliceBegin = -1;
@@ -2227,6 +2229,15 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	}
 }
 
+void CMenus::ClearDemoCutOverwriteConfirmation()
+{
+	if(m_PendingDemoCutTarget.m_Path.empty())
+		return;
+	Ui()->ClosePopupMenu(&m_DemoCutOverwriteConfirm);
+	m_DemoCutOverwriteConfirm.Reset();
+	m_PendingDemoCutTarget = {};
+}
+
 void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 {
 	const IDemoPlayer::CInfo *pInfo = PlaybackPlayer()->BaseInfo();
@@ -2444,12 +2455,23 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	ButtonBar.VSplitMid(&AbortButton, &OkButton, 40.0f);
 
 	static CButtonContainer s_ButtonAbort;
-	if(DoButton_Menu(&s_ButtonAbort, Localize("Abort"), 0, &AbortButton) || (!Ui()->IsPopupOpen() && Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)))
-		m_DemoPlayerState = DEMOPLAYER_NONE;
-
-	static CUi::SConfirmPopupContext s_ConfirmPopupContext;
+	const bool AbortPressed = DoButton_Menu(&s_ButtonAbort, Localize("Abort"), 0, &AbortButton);
 	static CButtonContainer s_ButtonOk;
-	if(DoButton_Menu(&s_ButtonOk, Localize("Ok"), 0, &OkButton) || (!Ui()->IsPopupOpen() && Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER)))
+	const bool OkPressed = DoButton_Menu(&s_ButtonOk, Localize("Ok"), 0, &OkButton);
+	if(Ui()->RenderOnly())
+		return;
+
+	if(m_DemoCutOverwriteConfirm.m_Result == CUi::SConfirmPopupContext::UNSET && !Ui()->IsPopupOpen(&m_DemoCutOverwriteConfirm))
+		ClearDemoCutOverwriteConfirmation();
+	if(!Ui()->IsPopupOpen() && (AbortPressed || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)))
+	{
+		m_DemoPlayerState = DEMOPLAYER_NONE;
+		ClearDemoCutOverwriteConfirmation();
+		Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER);
+		return;
+	}
+
+	if(m_DemoCutOverwriteConfirm.m_Result == CUi::SConfirmPopupContext::UNSET && !Ui()->IsPopupOpen() && (OkPressed || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER)))
 	{
 		if(str_endswith_nocase(m_DemoSliceInput.GetString(), ".demo"))
 		{
@@ -2481,38 +2503,39 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 		}
 		else
 		{
-			char aPath[IO_MAX_PATH_LENGTH];
-			const std::string Path = qmclient::media_paths::Join(m_aCurrentDemoFolder, std::string(m_DemoSliceInput.GetString()) + ".demo");
-			if(!qmclient::media_paths::PrepareWrite(Storage(), Path))
+			SDemoCutTarget Target;
+			Target.m_Directory = qmclient::demo_browser::DemoCutOutputDirectory(*Storage(), g_Config, m_aCurrentDemoFolder, DemoBrowserBrowsingScreenshots());
+			Target.m_Path = qmclient::media_paths::Join(Target.m_Directory, std::string(m_DemoSliceInput.GetString()) + ".demo");
+			if(!qmclient::media_paths::PrepareWrite(Storage(), Target.m_Path))
 			{
 				s_MessagePopupContext.ErrorColor();
 				str_copy(s_MessagePopupContext.m_aMessage, Localize("Failed to save demo"));
 				Ui()->ShowPopupMessage(Ui()->MouseX(), OkButton.y + OkButton.h + 5.0f, &s_MessagePopupContext);
 				return;
 			}
-			str_copy(aPath, Path.c_str());
-			if(Storage()->FileExists(aPath, IStorage::TYPE_SAVE_OR_ABSOLUTE))
+			m_PendingDemoCutTarget = std::move(Target);
+			if(Storage()->FileExists(m_PendingDemoCutTarget.m_Path.c_str(), IStorage::TYPE_SAVE_OR_ABSOLUTE))
 			{
-				s_ConfirmPopupContext.Reset();
+				m_DemoCutOverwriteConfirm.Reset();
 				// 覆盖已存在的 demo 文件是破坏性动作：按钮用 Cancel/OK（不用指代不明的 Yes/No），
 				// 确认键走危险色。
-				s_ConfirmPopupContext.DefaultButtons();
-				s_ConfirmPopupContext.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
-				str_copy(s_ConfirmPopupContext.m_aMessage, Localize("File already exists, do you want to overwrite it?"));
-				Ui()->ShowPopupConfirm(Ui()->MouseX(), OkButton.y + OkButton.h + 5.0f, &s_ConfirmPopupContext);
+				m_DemoCutOverwriteConfirm.DefaultButtons();
+				m_DemoCutOverwriteConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+				str_copy(m_DemoCutOverwriteConfirm.m_aMessage, Localize("File already exists, do you want to overwrite it?"));
+				Ui()->ShowPopupConfirm(Ui()->MouseX(), OkButton.y + OkButton.h + 5.0f, &m_DemoCutOverwriteConfirm);
 			}
 			else
 			{
-				s_ConfirmPopupContext.m_Result = CUi::SConfirmPopupContext::CONFIRMED;
+				m_DemoCutOverwriteConfirm.m_Result = CUi::SConfirmPopupContext::CONFIRMED;
 			}
 		}
 	}
 
-	if(s_ConfirmPopupContext.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+	if(m_DemoCutOverwriteConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
 	{
-		s_ConfirmPopupContext.Reset();
-		char aPath[IO_MAX_PATH_LENGTH];
-		const std::string Path = qmclient::media_paths::Join(m_aCurrentDemoFolder, std::string(m_DemoSliceInput.GetString()) + ".demo");
+		m_DemoCutOverwriteConfirm.Reset();
+		const SDemoCutTarget Target = std::exchange(m_PendingDemoCutTarget, {});
+		const std::string &Path = Target.m_Path;
 		if(!qmclient::media_paths::PrepareWrite(Storage(), Path))
 		{
 			static CUi::SMessagePopupContext s_PathErrorContext;
@@ -2521,17 +2544,14 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 			Ui()->ShowPopupMessage(Ui()->MouseX(), ButtonBar.y - 5.0f, &s_PathErrorContext);
 			return;
 		}
-		str_copy(aPath, Path.c_str());
-		str_format(m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName), "%s.demo", m_DemoSliceInput.GetString());
-
 		std::vector<SDemoSliceSegment> vDemoSliceSegments;
 		vDemoSliceSegments.reserve(vExportSegments.size());
 		for(const auto &Segment : vExportSegments)
 			vDemoSliceSegments.push_back({Segment.m_StartTick, Segment.m_EndTick});
 		static CUi::SMessagePopupContext s_MessagePopupContext;
 		const bool Exported = GameClient()->m_RankGhost.IsViewModeActive() ?
-					      GameClient()->m_RankGhost.ExportViewCut(aPath, vDemoSliceSegments, CMenus::DemoFilterChat, &s_RemoveChat) :
-					      Client()->DemoSlice(aPath, vDemoSliceSegments, CMenus::DemoFilterChat, &s_RemoveChat);
+					      GameClient()->m_RankGhost.ExportViewCut(Path.c_str(), vDemoSliceSegments, CMenus::DemoFilterChat, &s_RemoveChat) :
+					      Client()->DemoSlice(Path.c_str(), vDemoSliceSegments, CMenus::DemoFilterChat, &s_RemoveChat);
 		if(!Exported)
 		{
 			s_MessagePopupContext.ErrorColor();
@@ -2539,15 +2559,21 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 			Ui()->ShowPopupMessage(Ui()->MouseX(), ButtonBar.y - 5.0f, &s_MessagePopupContext);
 			return;
 		}
-		if(!GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_DemoCamera.ExportCut(aPath, vDemoSliceSegments))
+		if(!GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_DemoCamera.ExportCut(Path.c_str(), vDemoSliceSegments))
 		{
 			s_MessagePopupContext.ErrorColor();
 			str_copy(s_MessagePopupContext.m_aMessage, Localize("Demo cut saved, but its camera path could not be saved"));
 			Ui()->ShowPopupMessage(Ui()->MouseX(), ButtonBar.y - 5.0f, &s_MessagePopupContext);
 			return;
 		}
-		DemolistPopulate();
-		DemolistOnUpdate(false);
+		const char *pFilename = fs_filename(Path.c_str());
+		const bool ShowingCutFolder = !DemoBrowserBrowsingScreenshots() && Target.m_Directory == m_aCurrentDemoFolder;
+		if(ShowingCutFolder)
+		{
+			str_copy(m_aCurrentDemoSelectionName, pFilename);
+			DemolistPopulate();
+			DemolistOnUpdate(false);
+		}
 		m_vDemoCutSegments.clear();
 		m_DemoCutPreview.Reset();
 		m_DemoPlayerState = DEMOPLAYER_NONE;
@@ -2555,24 +2581,26 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 		if(s_RenderCut && !GameClient()->m_RankGhost.IsViewModeActive())
 		{
 			m_HasPendingDemoRenderSource = true;
-			str_copy(m_aPendingDemoRenderFolder, m_aCurrentDemoFolder);
-			str_format(m_aPendingDemoRenderSelectionName, sizeof(m_aPendingDemoRenderSelectionName), "%s.demo", m_DemoSliceInput.GetString());
-			m_PendingDemoRenderStorageType = qmclient::media_paths::StorageType(aPath);
+			str_copy(m_aPendingDemoRenderFolder, Target.m_Directory.c_str());
+			str_copy(m_aPendingDemoRenderSelectionName, pFilename);
+			m_PendingDemoRenderStorageType = qmclient::media_paths::StorageType(Path.c_str());
 			m_Popup = POPUP_RENDER_DEMO;
 			m_StartPaused = false;
-			m_DemoRenderInput.Set(m_DemoSliceInput.GetString());
+			char aVideoName[IO_MAX_PATH_LENGTH];
+			fs_split_file_extension(pFilename, aVideoName, sizeof(aVideoName));
+			m_DemoRenderInput.Set(aVideoName);
 			InitDemoRenderInputs();
 			Ui()->SetActiveItem(&m_DemoRenderInput);
-			if(m_DemolistStorageType != IStorage::TYPE_ALL && m_DemolistStorageType != m_PendingDemoRenderStorageType)
-				m_DemolistStorageType = fs_is_relative_path(aPath) ? IStorage::TYPE_ALL : IStorage::TYPE_ABSOLUTE; // 选择包含剪辑文件的存储类型
-			DemolistOnUpdate(false);
+			if(ShowingCutFolder && m_DemolistStorageType != IStorage::TYPE_ALL && m_DemolistStorageType != m_PendingDemoRenderStorageType)
+			{
+				m_DemolistStorageType = fs_is_relative_path(Path.c_str()) ? IStorage::TYPE_ALL : IStorage::TYPE_ABSOLUTE;
+				DemolistOnUpdate(false);
+			}
 		}
 #endif
 	}
-	if(s_ConfirmPopupContext.m_Result != CUi::SConfirmPopupContext::UNSET)
-	{
-		s_ConfirmPopupContext.Reset();
-	}
+	if(m_DemoCutOverwriteConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED)
+		ClearDemoCutOverwriteConfirmation();
 }
 
 int CMenus::DemolistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)
@@ -4686,9 +4714,6 @@ void CMenus::QmRequestPoseMap(const char *pPosesPath, qm_pose_map::EAction Actio
 		State.m_Selection.SetCaptureScale(State.m_RenderScale);
 		State.m_Selection.SetEntityLayer(State.m_RenderEntityLayer);
 	}
-	// 实体层只有一个真实开关：预览看的是 cl_overlay_entities，渲染走弹窗选项。
-	// 不在这里同步的话，弹窗打开实体层、进预览却还是关着的（两套配置）。
-	g_Config.m_ClOverlayEntities = State.m_RenderEntityLayer ? 100 : 0;
 	m_Popup = POPUP_QM_POSE_MAP;
 
 	SetShowStart(false);
@@ -4757,7 +4782,10 @@ void CMenus::QmConfirmPoseMap(qm_pose_map::EAction Action)
 	{
 		SetActive(false);
 		if(Action == qm_pose_map::EAction::OPEN)
+		{
+			g_Config.m_ClOverlayEntities = State.m_RenderEntityLayer ? 100 : 0;
 			m_QmPoseHud.m_Open = true;
+		}
 	}
 }
 

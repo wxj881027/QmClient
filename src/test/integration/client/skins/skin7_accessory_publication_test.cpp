@@ -112,6 +112,37 @@ TEST_F(CQmSkin7AccessoryPublicationTest, NativeJobPublishesHatThenBotAndStopsAtE
 	Bot.Free();
 }
 
+TEST_F(CQmSkin7AccessoryPublicationTest, RepeatedHatUploadFailuresKeepOldHatAndAllowBot)
+{
+	using ECompletion = CQmSkin7PartPublisher::ECompletion;
+	SeedOldHat();
+	const auto OldHat = m_aTargets[0];
+	unsigned FailedAttempts = 0;
+	const auto Complete = [&] {
+		return m_pJob->PublishNextAccessory(m_Next, [&](const CImageInfo &Image, bool Hat) {
+			return CQmSkin7PartPublisher::PublishWithRetry(m_Limiter, FailedAttempts, [&] {
+				return m_Publisher.TryPublishAccessory(Image, m_aTargets[Hat ? 0 : 1], m_Graphics, m_Limiter, Hat ? "hat" : "bot");
+			}) != ECompletion::DEFERRED;
+		});
+	};
+	for(int Attempt = 1; Attempt <= 3; ++Attempt)
+	{
+		m_Limiter.OnFrameStart();
+		m_Graphics.m_FailAt = m_Graphics.m_Attempts + 1;
+		EXPECT_EQ(Complete(), Attempt == 3);
+	}
+	EXPECT_EQ(m_Next, 1);
+	EXPECT_EQ(m_aTargets[0].Id(), OldHat.Id());
+	EXPECT_TRUE(m_Graphics.IsTextureHandleAllocated(OldHat));
+
+	m_Limiter.OnFrameStart();
+	m_Graphics.m_FailAt = 0;
+	FailedAttempts = 0;
+	ASSERT_TRUE(Complete());
+	EXPECT_EQ(m_Next, 2);
+	EXPECT_TRUE(m_Graphics.IsTextureHandleAllocated(m_aTargets[1]));
+}
+
 TEST_F(CQmSkin7AccessoryPublicationTest, InvalidUploadKeepsOldTexturePixelsAndCursorUntilRetry)
 {
 	SeedOldHat();

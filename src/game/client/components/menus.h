@@ -59,6 +59,7 @@
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
 #include <game/client/components/qmclient/map_preview_panel.h>
 #include <game/client/components/qmclient/map_vote_difficulty.h>
+#include <game/client/components/qmclient/media_paths.h>
 #include <game/client/components/qmclient/menu_hit_regions.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/components/qmclient/pose_map.h>
@@ -78,6 +79,7 @@
 #include <game/client/ui_listbox.h>
 #include <game/voting.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <deque>
@@ -1578,7 +1580,7 @@ private:
 	void AssetsEditorSyncExportNameFromType();
 	void AssetsEditorCommitExportNameForType();
 	void AssetsEditorValidateRequiredSlotsForType(int Type);
-	bool AssetsEditorComposeImage(CImageInfo &OutputImage);
+	std::optional<int> AssetsEditorComposeImage(CImageInfo &OutputImage);
 	bool AssetsEditorExport();
 	void AssetsEditorRenderCanvas(const CUIRect &Rect, IGraphics::CTextureHandle Texture, int W, int H, int Type, bool ShowGrid, int HighlightSlot, bool ShowTintFeedback, int PersistentHighlightSlot);
 	void AssetsEditorCollectHoveredCandidates(const CUIRect &Rect, int Type, const std::vector<SAssetsEditorPartSlot> &vSlots, vec2 Mouse, std::vector<int> &vOutCandidates) const;
@@ -1800,6 +1802,11 @@ protected:
 
 		bool operator<(const CDemoItem &Other) const
 		{
+			return SortLess(Other, g_Config.m_BrDemoSort, g_Config.m_BrDemoSortOrder != 0);
+		}
+
+		bool SortLess(const CDemoItem &Other, int SortColumn, bool Descending) const
+		{
 			if(!str_comp(Other.m_aFilename, ".."))
 				return false;
 			if(!str_comp(m_aFilename, ".."))
@@ -1809,28 +1816,25 @@ protected:
 			if(!m_IsDir && Other.m_IsDir)
 				return false;
 
-			const CDemoItem &Left = g_Config.m_BrDemoSortOrder ? Other : *this;
-			const CDemoItem &Right = g_Config.m_BrDemoSortOrder ? *this : Other;
+			const CDemoItem &Left = Descending ? Other : *this;
+			const CDemoItem &Right = Descending ? *this : Other;
 
-			const int Sort = g_Config.m_BrDemoSort;
-			if(Sort == SORT_DATE)
+			if(SortColumn == SORT_DATE)
 				return Left.m_Date < Right.m_Date;
-			if(Sort == SORT_MARKERS || Sort == SORT_LENGTH)
-			{
-				const bool IsDemo = IsDemoFile();
-				const bool IsOtherDemo = Other.IsDemoFile();
-				if(IsDemo != IsOtherDemo)
-					return IsDemo;
-				if(IsDemo)
-				{
-					if(m_InfosLoaded != Other.m_InfosLoaded)
-						return m_InfosLoaded;
-					if(!m_InfosLoaded)
-						return false;
-					return Sort == SORT_MARKERS ? Left.NumMarkers() < Right.NumMarkers() : Left.Length() < Right.Length();
-				}
-			}
-			return str_comp_filenames(Left.m_aFilename, Right.m_aFilename) < 0;
+			if(SortColumn != SORT_MARKERS && SortColumn != SORT_LENGTH)
+				return str_comp_filenames(Left.m_aFilename, Right.m_aFilename) < 0;
+
+			// 有可排序数据的回放固定放前面，其余条目按文件名排列。
+			const bool HasMetadata = m_InfosLoaded && m_Valid && IsDemoFile();
+			const bool OtherHasMetadata = Other.m_InfosLoaded && Other.m_Valid && Other.IsDemoFile();
+			if(HasMetadata != OtherHasMetadata)
+				return HasMetadata;
+			if(!HasMetadata)
+				return str_comp_filenames(Left.m_aFilename, Right.m_aFilename) < 0;
+
+			if(SortColumn == SORT_MARKERS)
+				return Left.NumMarkers() < Right.NumMarkers();
+			return Left.Length() < Right.Length();
 		}
 	};
 
@@ -1852,6 +1856,11 @@ protected:
 	};
 
 	using SDemoCutSegment = SDemoSliceSegment;
+	struct SDemoCutTarget
+	{
+		std::string m_Directory;
+		std::string m_Path;
+	};
 
 	char m_aCurrentDemoFolder[IO_MAX_PATH_LENGTH];
 	char m_aDemoBrowserBaseFolder[IO_MAX_PATH_LENGTH] = "demos";
@@ -1859,6 +1868,8 @@ protected:
 	char m_aCurrentDemoSelectionName[IO_MAX_PATH_LENGTH];
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoRenameInput;
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoSliceInput;
+	CUi::SConfirmPopupContext m_DemoCutOverwriteConfirm;
+	SDemoCutTarget m_PendingDemoCutTarget;
 	// 导出/预览弹窗里的「Demo display」折叠状态：展开后显示回放专用显示选项。
 	bool m_DemoExportDisplayExpanded = false;
 	bool m_DemoDisplayExpanded = false;
@@ -2167,7 +2178,7 @@ protected:
 		};
 
 		CMenus *m_pMenus = nullptr;
-		int m_CategoryIndex = -1;
+		char m_aCategoryName[IFriends::MAX_FRIEND_CATEGORY_LENGTH] = {};
 		EMode m_Mode = MODE_ACTIONS;
 		CLineInputBuffered<IFriends::MAX_FRIEND_CATEGORY_LENGTH> m_NameInput;
 		CButtonContainer m_AddButton;
@@ -2257,6 +2268,7 @@ protected:
 	void RenderDemoCard(const CUIRect &Rect);
 	void RenderDemoPlayer(CUIRect MainView);
 	void RenderDemoPlayerSliceSavePopup(CUIRect MainView);
+	void ClearDemoCutOverwriteConfirmation();
 	// 回放/导出共用的显示选项面板与其折叠开关；WithToggles=false 时只渲染标题与三组段选
 	//（渲染弹窗平铺用，HUD/聊天开关由弹窗主区提供）。
 	void RenderDemoDisplaySettings(CUIRect View, bool Enabled = true, bool WithToggles = true);
@@ -3010,6 +3022,7 @@ public:
 	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView, std::vector<SMenuTextPlanItem> &vItems);
 	bool AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOperationOverride, int64_t Deadline);
 	bool PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget);
+	void SyncMenuTextPoolIdentity(uint64_t CurrentFrame);
 	int CountMissingSettingsMenuTextPlanItems() const;
 	bool SettingsMenuTextPrebuildReady(const char *pOperationOverride) const;
 	void PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride = nullptr, const char *pOperationOverride = nullptr);
@@ -3532,4 +3545,47 @@ namespace qmclient::settings_card_order
 		return true;
 	}
 }
+
+namespace qmclient::demo_browser
+{
+	inline std::string DemoCutOutputDirectory(IStorage &Storage, const CConfig &Config, const char *pBrowserFolder, bool BrowsingScreenshots)
+	{
+		if(!BrowsingScreenshots && pBrowserFolder[0] != '\0')
+			return pBrowserFolder;
+		return media_paths::Directory(&Storage, Config, media_paths::EKind::DEMOS);
+	}
+
+	inline std::string BuildScreenshotViewerPath(IStorage &Storage, int StorageType, const char *pFolder, const char *pFilename)
+	{
+		const std::string Path = media_paths::Join(pFolder, pFilename);
+		if(Path.empty() || StorageType == IStorage::TYPE_ABSOLUTE)
+			return Path;
+
+		char aPrefix[IO_MAX_PATH_LENGTH + 1];
+		Storage.GetCompletePath(StorageType, "", aPrefix, sizeof(aPrefix));
+		if(str_length(aPrefix) + Path.size() >= IO_MAX_PATH_LENGTH)
+			return {};
+		return aPrefix + Path;
+	}
+}
+
+namespace qmclient::assets_editor
+{
+	inline bool KeepCompleteExportImage(CImageInfo &Image, int SkippedSlots)
+	{
+		if(SkippedSlots == 0)
+			return true;
+		Image.Free();
+		return false;
+	}
+
+	inline int FilteredMainAssetSelection(const std::vector<int> &vMatches, int MainAssetIndex, bool HasUnsavedChanges)
+	{
+		const auto Current = std::find(vMatches.begin(), vMatches.end(), MainAssetIndex);
+		if(Current != vMatches.end())
+			return static_cast<int>(Current - vMatches.begin());
+		return HasUnsavedChanges || vMatches.empty() ? -1 : 0;
+	}
+}
+
 #endif

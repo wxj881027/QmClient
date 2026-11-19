@@ -165,6 +165,7 @@ private:
 	size_t m_NextPart = 0;
 	size_t m_NextSkin = 0;
 	int m_NextAccessory = 0;
+	unsigned m_FailedAccessoryUploadAttempts = 0;
 	CQmSkin7ResourceLifecycle m_ResourceLifecycle;
 	CQmSkin7PartPublisher m_PartPublisher;
 	CQmSkin7RefreshRequest<CSkinPart> m_RefreshRequest;
