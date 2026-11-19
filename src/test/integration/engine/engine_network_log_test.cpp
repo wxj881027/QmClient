@@ -84,8 +84,8 @@ public:
 	void GetCompletePath(int Type, const char *pName, char *pBuffer, unsigned Size) override { m_Storage.GetCompletePath(Type, pName, pBuffer, Size); }
 	bool RemoveBinaryFile(const char *pName) override { return m_Storage.RemoveBinaryFile(pName); }
 	bool RenameBinaryFile(const char *pFrom, const char *pTo) override { return m_Storage.RenameBinaryFile(pFrom, pTo); }
-	const char *GetBinaryPath(const char *pName) override { return m_Storage.GetBinaryPath(pName); }
-	const char *GetBinaryPathAbsolute(const char *pName) override { return m_Storage.GetBinaryPathAbsolute(pName); }
+	const char *GetBinaryPath(const char *pName, char *pBuffer, unsigned Size) override { return m_Storage.GetBinaryPath(pName, pBuffer, Size); }
+	const char *GetBinaryPathAbsolute(const char *pName, char *pBuffer, unsigned Size) override { return m_Storage.GetBinaryPathAbsolute(pName, pBuffer, Size); }
 };
 
 class EngineNetworkLog : public ::testing::Test
