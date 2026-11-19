@@ -56,6 +56,7 @@ class CQmFinishSummary : public CComponent
 	double m_NextRequest = 0.0;
 	uint64_t m_Generation = 0;
 	std::optional<int64_t> m_PreviousBest;
+	std::optional<int64_t> m_AwardedTotal;
 	bool m_PreviousHistoryKnown = false;
 	bool m_QueriesEnabled = false;
 	std::vector<QmFinishSummary::SOnlineTime> m_vFinishOnlineTimes;
