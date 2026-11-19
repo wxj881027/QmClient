@@ -21,6 +21,8 @@ TEST(QmMonitoringFontStoreContract, PreviewFacesAreExcludedFromFamilyList)
 
 	// 构建族列表时必须先排除预览 face，再走常规收集链。
 	EXPECT_NE(UpdateListBody.find("if(m_pGlyphMap->QmIsPreviewFace(CurrentFace))"), std::string::npos);
+	// 符号字体只有 MS Symbol 编码，不能被当成正文候选或套用预览面。
+	EXPECT_NE(UpdateListBody.find("if(!QmFontFaceHasUnicodeCharmap(CurrentFace))"), std::string::npos);
 	// 预览加载路径必须把新 face 标记为预览 face：加载时设置预览路径，登记时
 	// 随 collection 一起标记（覆盖多 face 字体文件与异常回滚），不再逐 face 标记。
 	EXPECT_NE(EnsurePreviewBody.find("Options.m_pPreviewPath = Path.c_str();"), std::string::npos);

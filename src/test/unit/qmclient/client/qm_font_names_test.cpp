@@ -41,6 +41,26 @@ TEST(QmFontNames, MalformedUtf16AndUnsafeLegacyNamesAreRejected)
 	EXPECT_TRUE(QmDecodeSfntName(Name).empty());
 }
 
+TEST(QmFontNames, TextFontCandidatesRequireAUnicodeCharmap)
+{
+	FT_CharMapRec aCharmaps[2]{};
+	aCharmaps[0].encoding = FT_ENCODING_MS_SYMBOL;
+	aCharmaps[1].encoding = FT_ENCODING_UNICODE;
+	FT_CharMap apCharmaps[2] = {&aCharmaps[0], &aCharmaps[1]};
+	FT_FaceRec Face{};
+	Face.charmaps = apCharmaps;
+
+	EXPECT_FALSE(QmFontFaceHasUnicodeCharmap(nullptr));
+	Face.num_charmaps = 0;
+	EXPECT_FALSE(QmFontFaceHasUnicodeCharmap(&Face));
+	Face.num_charmaps = 1;
+	EXPECT_FALSE(QmFontFaceHasUnicodeCharmap(&Face));
+	Face.num_charmaps = 2;
+	EXPECT_TRUE(QmFontFaceHasUnicodeCharmap(&Face));
+	aCharmaps[1].encoding = FT_ENCODING_MS_SYMBOL;
+	EXPECT_FALSE(QmFontFaceHasUnicodeCharmap(&Face));
+}
+
 TEST(QmFontNames, MissingUnicodeRecordsUseOnlyValidUtf8Fallback)
 {
 	FT_Library Library = nullptr;

@@ -22,6 +22,21 @@ inline bool QmFontNameUsable(const std::string &Name)
 	return Name.find_first_not_of("? \t\r\n") != std::string::npos;
 }
 
+// 正文字体候选必须带 Unicode 字符表。Marlett、Wingdings 等系统符号字体只有
+// MS Symbol 编码，字体名套用其预览面时会被画成一排方框，也不能作为正文使用。
+inline bool QmFontFaceHasUnicodeCharmap(FT_Face Face)
+{
+	if(Face == nullptr || Face->charmaps == nullptr)
+		return false;
+	for(FT_Int Index = 0; Index < Face->num_charmaps; ++Index)
+	{
+		const FT_CharMap pCharmap = Face->charmaps[Index];
+		if(pCharmap != nullptr && pCharmap->encoding == FT_ENCODING_UNICODE)
+			return true;
+	}
+	return false;
+}
+
 inline std::string QmDecodeSfntName(const FT_SfntName &Name)
 {
 	if(Name.string == nullptr || Name.string_len == 0 || Name.string_len > 65536)

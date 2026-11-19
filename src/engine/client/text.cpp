@@ -2458,6 +2458,9 @@ public:
 				// 加载出独立 face，正常出现在列表中。
 				if(m_pGlyphMap->QmIsPreviewFace(CurrentFace))
 					continue;
+				// 符号字体没有 Unicode 字符表，字体名会被自己的符号面画成方框。
+				if(!QmFontFaceHasUnicodeCharmap(CurrentFace))
+					continue;
 				if(!g_Config.m_QmShowSystemFonts && m_QmSystemFontFaces.count(CurrentFace))
 					continue;
 				// 字体族直接展示解码后的 family；Book 等样式由样式选择管理。
@@ -2502,6 +2505,8 @@ public:
 			ReplaceHyphensWithSpaces(aTargetFamily);
 			for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
 			{
+				if(!QmFontFaceHasUnicodeCharmap(CurrentFace))
+					continue;
 				if(!g_Config.m_QmShowSystemFonts && m_QmSystemFontFaces.count(CurrentFace))
 					continue;
 				char aNormalizedFamily[FONT_NAME_SIZE];
