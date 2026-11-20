@@ -179,21 +179,24 @@ public final class QmMediaExporter {
 			if(uri == null)
 				throw new IOException("insert failed");
 			boolean ok = false;
-			try(OutputStream out = activity.getContentResolver().openOutputStream(uri); FileInputStream in = new FileInputStream(source)) {
-				if(out == null)
-					throw new IOException("open failed");
-				byte[] buffer = new byte[64 * 1024];
-				int read;
-				while((read = in.read(buffer)) > 0)
-					out.write(buffer, 0, read);
+			try {
+				try(OutputStream out = activity.getContentResolver().openOutputStream(uri); FileInputStream in = new FileInputStream(source)) {
+					if(out == null)
+						throw new IOException("open failed");
+					byte[] buffer = new byte[64 * 1024];
+					int read;
+					while((read = in.read(buffer)) > 0)
+						out.write(buffer, 0, read);
+				}
+				ContentValues done = new ContentValues();
+				done.put(MediaStore.MediaColumns.IS_PENDING, 0);
+				if(activity.getContentResolver().update(uri, done, null, null) != 1)
+					throw new IOException("publish failed");
 				ok = true;
 			} finally {
 				if(!ok)
 					activity.getContentResolver().delete(uri, null, null);
 			}
-			ContentValues done = new ContentValues();
-			done.put(MediaStore.MediaColumns.IS_PENDING, 0);
-			activity.getContentResolver().update(uri, done, null, null);
 			return displayName;
 		}
 		File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "QmClient");

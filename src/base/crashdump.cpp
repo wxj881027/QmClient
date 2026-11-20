@@ -392,6 +392,10 @@ static char gs_aAndroidReportPath[IO_MAX_PATH_LENGTH] = "";
 static char gs_aAndroidStartTime[64] = "";
 static int gs_AndroidPid = 0;
 static bool gs_AndroidHandlersInstalled = false;
+// 预打开的公共「下载/QmClient」报告条目。崩溃处理器里只做 write/fsync，
+// 不碰 MediaStore——那需要 binder 与 Java 调用，都不是 async-signal-safe。
+static std::atomic<int> gs_AndroidLiveReportFd{-1};
+static_assert(std::atomic<int>::is_always_lock_free);
 // handler 重入即意味着回溯读到了不可访问的内存：核心现场已落盘，直接结束进程。
 static volatile sig_atomic_t gs_AndroidHandlerDepth = 0;
 
@@ -452,16 +456,54 @@ static void AndroidLoadModuleRanges()
 	fclose(pFile);
 }
 
-static void AndroidWriteAll(int File, const char *pData, size_t Size)
+static bool AndroidWriteAll(int File, const char *pData, size_t Size)
 {
 	while(Size > 0)
 	{
 		const ssize_t Written = write(File, pData, Size);
 		if(Written <= 0)
-			return;
+			return false;
 		pData += Written;
 		Size -= (size_t)Written;
 	}
+	return true;
+}
+
+void crashdump_set_live_report_fd(int File)
+{
+	gs_AndroidLiveReportFd.store(File, std::memory_order_relaxed);
+}
+
+// 报告同时写两处：预打开的公共条目（崩溃后立即可见）与沙盒副本
+// （供下次启动搬运，也是公共条目创建失败时的兜底）。两处互不影响。
+struct SAndroidReportWriteResult
+{
+	bool m_LiveWritten = false;
+	bool m_SandboxWritten = false;
+};
+
+static SAndroidReportWriteResult AndroidWriteReportChunk(const char *pData, size_t Size, bool Append, bool WriteLive, bool WriteSandbox)
+{
+	SAndroidReportWriteResult Result;
+	const int LiveFd = gs_AndroidLiveReportFd.load(std::memory_order_relaxed);
+	if(WriteLive && LiveFd >= 0)
+	{
+		// MediaStore 的 fd 由 FUSE 代理，ftruncate(0) 未必生效；写完再按
+		// 实际写入位置截断，避免上一次的占位文本残留在报告末尾。
+		if(lseek(LiveFd, 0, Append ? SEEK_END : SEEK_SET) >= 0 && AndroidWriteAll(LiveFd, pData, Size))
+		{
+			const off_t End = lseek(LiveFd, 0, SEEK_CUR);
+			Result.m_LiveWritten = End >= 0 && (Append || ftruncate(LiveFd, End) == 0) && fsync(LiveFd) == 0;
+		}
+	}
+
+	const int File = WriteSandbox ? open(gs_aAndroidReportPath, Append ? (O_WRONLY | O_APPEND) : (O_WRONLY | O_CREAT | O_TRUNC), 0600) : -1;
+	if(File >= 0)
+	{
+		Result.m_SandboxWritten = AndroidWriteAll(File, pData, Size) && fsync(File) == 0;
+		close(File);
+	}
+	return Result;
 }
 
 #if !defined(__arm__)
@@ -531,46 +573,32 @@ static void AndroidFatalSignalHandler(int Signal, siginfo_t *pInfo, void *pConte
 
 	char aBuffer[8192];
 	const size_t Length = crashdump_format_fatal_report(aBuffer, sizeof(aBuffer), Report);
-	if(Length > 0)
+	// 核心现场先落盘：后面的栈回溯可能踩到坏内存触发二次崩溃。
+	const SAndroidReportWriteResult Written = Length > 0 ? AndroidWriteReportChunk(aBuffer, Length, false, true, true) : SAndroidReportWriteResult{};
+	if(Written.m_SandboxWritten && !Written.m_LiveWritten)
 	{
-		// 核心现场先落盘：后面的栈回溯可能踩到坏内存触发二次崩溃。
-		const int File = open(gs_aAndroidReportPath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-		if(File >= 0)
-		{
-			AndroidWriteAll(File, aBuffer, Length);
-			fsync(File);
-			close(File);
-		}
+		char aPendingPath[IO_MAX_PATH_LENGTH + 16];
+		str_format(aPendingPath, sizeof(aPendingPath), "%s.pending", gs_aAndroidReportPath);
+		const int PendingFile = open(aPendingPath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+		if(PendingFile >= 0)
+			close(PendingFile);
 	}
-
-	size_t AppendedLength = 0;
+	if(Written.m_LiveWritten || Written.m_SandboxWritten)
+	{
+		size_t AppendedLength = 0;
 #if defined(__arm__)
-	// 32 位 ARM 的 frame pointer 布局随编译选项变化，宁可明确说明也不给错栈。
-	str_copy(aBuffer, "Backtrace not collected: 32-bit ARM frame pointer layout is not reliable.\n");
-	AppendedLength = (size_t)str_length(aBuffer);
+		// 32 位 ARM 的 frame pointer 布局随编译选项变化，宁可明确说明也不给错栈。
+		str_copy(aBuffer, "Backtrace not collected: 32-bit ARM frame pointer layout is not reliable.\n");
+		AppendedLength = (size_t)str_length(aBuffer);
 #else
-	uintptr_t aFrames[32];
-	const size_t NumFrames = crashdump_walk_frame_chain(AndroidReadMemory, nullptr, Pc, Fp, Sp, aFrames, std::size(aFrames));
-	if(NumFrames > 0)
-		AppendedLength = crashdump_append_frame_lines(aBuffer, sizeof(aBuffer), 0, aFrames, NumFrames, gs_aAndroidModules, gs_NumAndroidModules);
+		uintptr_t aFrames[32];
+		const size_t NumFrames = crashdump_walk_frame_chain(AndroidReadMemory, nullptr, Pc, Fp, Sp, aFrames, std::size(aFrames));
+		if(NumFrames > 0)
+			AppendedLength = crashdump_append_frame_lines(aBuffer, sizeof(aBuffer), 0, aFrames, NumFrames, gs_aAndroidModules, gs_NumAndroidModules);
 #endif
-	if(AppendedLength > 0)
-	{
-		const int File = open(gs_aAndroidReportPath, O_WRONLY | O_APPEND);
-		if(File >= 0)
-		{
-			AndroidWriteAll(File, aBuffer, AppendedLength);
-			fsync(File);
-			close(File);
-		}
+		if(AppendedLength > 0)
+			AndroidWriteReportChunk(aBuffer, AppendedLength, true, Written.m_LiveWritten, Written.m_SandboxWritten);
 	}
-
-	// 空标记文件：下次启动只搬运本次崩溃新产生、尚未导出的报告。
-	char aPendingPath[IO_MAX_PATH_LENGTH + 16];
-	str_format(aPendingPath, sizeof(aPendingPath), "%s.pending", gs_aAndroidReportPath);
-	const int PendingFile = open(aPendingPath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-	if(PendingFile >= 0)
-		close(PendingFile);
 
 	// 交回系统默认处理，让 Android 侧仍能生成 tombstone 与崩溃统计。
 	struct sigaction Default = {};

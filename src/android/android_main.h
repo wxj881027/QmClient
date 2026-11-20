@@ -83,6 +83,11 @@ bool ShowAndroidMediaFiles(const char *pDirectory, bool Videos, const char *cons
 // 把单个文件导出到系统「下载/QmClient」（Android 10+ 走 MediaStore，无需存储权限）。
 bool ExportAndroidMediaFile(const char *pPath);
 
+// 预打开系统「下载/QmClient」里的崩溃报告条目，返回可写裸 fd（失败 -1）。
+// 崩溃处理器只做 ftruncate/write/fsync，报告因此在崩溃后立即可见，
+// 不依赖下一次启动；失败时客户端回退到沙盒报告 + 下次启动搬运。
+int PrepareAndroidCrashReportSink(const char *pDisplayName);
+
 // 用系统文件管理器（DocumentsUI）打开下载目录，替代自绘的文件列表对话框。
 bool OpenAndroidDownloadsFolder();
 

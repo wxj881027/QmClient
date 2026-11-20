@@ -429,7 +429,7 @@ bool ExportAndroidMediaFile(const char *pPath)
 		jclass ActivityClass = pEnv->GetObjectClass(Activity);
 		if(ActivityClass != nullptr)
 		{
-			jmethodID Method = pEnv->GetMethodID(ActivityClass, "exportToDownloads", "(Ljava/lang/String;)V");
+			jmethodID Method = pEnv->GetMethodID(ActivityClass, "exportToDownloads", "(Ljava/lang/String;)Z");
 			if(Method != nullptr)
 			{
 				// JNI 用 modified UTF-8：先把 UTF-8 解码成 UTF-16，路径里的中文才不会乱。
@@ -450,8 +450,8 @@ bool ExportAndroidMediaFile(const char *pPath)
 				jstring Path = pEnv->NewString(vCharacters.data(), (jsize)vCharacters.size());
 				if(Path != nullptr)
 				{
-					pEnv->CallVoidMethod(Activity, Method, Path);
-					Success = !pEnv->ExceptionCheck();
+					const jboolean Exported = pEnv->CallBooleanMethod(Activity, Method, Path);
+					Success = !pEnv->ExceptionCheck() && Exported == JNI_TRUE;
 					pEnv->DeleteLocalRef(Path);
 				}
 			}
@@ -466,6 +466,56 @@ bool ExportAndroidMediaFile(const char *pPath)
 	}
 	pEnv->DeleteLocalRef(Activity);
 	return Success;
+}
+
+namespace
+{
+	// JNI 抛异常后 CallIntMethod 的返回值不可用，统一在这里清理并回落。
+	void ClearJavaException(JNIEnv *pEnv)
+	{
+		if(pEnv->ExceptionCheck())
+		{
+			pEnv->ExceptionDescribe();
+			pEnv->ExceptionClear();
+		}
+	}
+}
+
+int PrepareAndroidCrashReportSink(const char *pDisplayName)
+{
+	if(pDisplayName == nullptr || pDisplayName[0] == '\0')
+		return -1;
+	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
+	if(pEnv == nullptr)
+		return -1;
+	jobject Activity = static_cast<jobject>(SDL_GetAndroidActivity());
+	if(Activity == nullptr)
+		return -1;
+
+	int Fd = -1;
+	jclass ActivityClass = pEnv->GetObjectClass(Activity);
+	if(ActivityClass != nullptr)
+	{
+		// 文件名只含 ASCII（QmClient_crash_<时间戳>.txt），不需要 UTF-16 转换。
+		jmethodID Method = pEnv->GetMethodID(ActivityClass, "prepareCrashReport", "(Ljava/lang/String;)I");
+		if(Method != nullptr)
+		{
+			jstring Name = pEnv->NewStringUTF(pDisplayName);
+			if(Name != nullptr)
+			{
+				Fd = pEnv->CallIntMethod(Activity, Method, Name);
+				pEnv->DeleteLocalRef(Name);
+			}
+		}
+		pEnv->DeleteLocalRef(ActivityClass);
+	}
+	if(pEnv->ExceptionCheck())
+	{
+		ClearJavaException(pEnv);
+		Fd = -1;
+	}
+	pEnv->DeleteLocalRef(Activity);
+	return Fd;
 }
 
 namespace

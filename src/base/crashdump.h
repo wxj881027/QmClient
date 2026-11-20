@@ -1,6 +1,8 @@
 #ifndef BASE_CRASHDUMP_H
 #define BASE_CRASHDUMP_H
 
+#include "detect.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
@@ -18,6 +20,19 @@
  * @param log_file_path Absolute path to which crash log file should be written.
  */
 void crashdump_init_if_available(const char *log_file_path);
+
+#if defined(CONF_PLATFORM_ANDROID)
+/**
+ * 设置预打开的公共报告文件描述符（仅手机版）。
+ *
+ * 崩溃处理器只做 ftruncate/write/fsync，因此报告在崩溃后立刻出现在系统
+ * 「下载」目录，不需要再启动一次客户端。传 -1 关闭该路径，处理器退回
+ * 只写沙盒报告。桌面端没有这条路径，全部实现位于 Android 条件编译内。
+ *
+ * @ingroup Crash-Dumping
+ */
+void crashdump_set_live_report_fd(int file);
+#endif
 
 // 图形后端在初始化/切换时可报告名称；不支持的平台保留空实现。
 void crashdump_set_graphics_backend(const char *pBackendName);

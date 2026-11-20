@@ -453,7 +453,11 @@ static void ExportPendingQmMobileCrashReports(IStorage *pStorage)
 
 		char aReportAbsolute[IO_MAX_PATH_LENGTH];
 		pStorage->GetCompletePath(IStorage::TYPE_SAVE, aReportRelative, aReportAbsolute, sizeof(aReportAbsolute));
-		// JNI 侧异步复制并提示结果；失败时保留标记，下次启动重试。
+		if(!fs_is_file(aReportAbsolute))
+		{
+			pStorage->RemoveFile(Search.m_aaFound[i], IStorage::TYPE_SAVE);
+			continue;
+		}
 		if(!ExportAndroidMediaFile(aReportAbsolute))
 			continue;
 
@@ -1756,6 +1760,28 @@ int CClient::SnapNumItems(int SnapId) const
 	if(!m_aapSnapshots[g_Config.m_ClDummy][SnapId])
 		return 0;
 	return m_aapSnapshots[g_Config.m_ClDummy][SnapId]->m_pAltSnap->NumItems();
+}
+
+int CClient::GetLocalClientId(int Conn) const
+{
+	if(Conn < 0 || Conn >= NUM_DUMMIES || !m_aapSnapshots[Conn][SNAP_CURRENT])
+		return -1;
+
+	const CSnapshot *pSnapshot = m_aapSnapshots[Conn][SNAP_CURRENT]->m_pAltSnap;
+	if(!pSnapshot)
+		return -1;
+
+	for(int Index = pSnapshot->NumItems() - 1; Index >= 0; --Index)
+	{
+		const CSnapshotItem *pItem = pSnapshot->GetItem(Index);
+		if(pItem->InternalType() != NETOBJTYPE_PLAYERINFO || pSnapshot->GetItemSize(Index) < (int)sizeof(CNetObj_PlayerInfo))
+			continue;
+
+		const auto *pInfo = reinterpret_cast<const CNetObj_PlayerInfo *>(pItem->Data());
+		if(pInfo->m_Local && pInfo->m_ClientId == pItem->Id() && pInfo->m_ClientId < MAX_CLIENTS)
+			return pInfo->m_ClientId;
+	}
+	return -1;
 }
 
 void CClient::SnapSetStaticsize(int ItemType, int Size)
@@ -8614,6 +8640,21 @@ int main(int argc, const char **argv)
 	pConsole->SetUnknownCommandCallback(UnknownArgumentCallback, pClient);
 	pConsole->ParseArguments(argc - 1, &argv[1]);
 	pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
+
+#if defined(CONF_PLATFORM_ANDROID)
+	if(g_Config.m_QmMobileCrashReportExport != 0)
+	{
+		char aDate[64];
+		str_timestamp(aDate, sizeof(aDate));
+		char aDisplayName[96];
+		str_format(aDisplayName, sizeof(aDisplayName), "QmClient_crash_%s_%d.txt", aDate, pid());
+		const int ReportFd = PrepareAndroidCrashReportSink(aDisplayName);
+		if(ReportFd >= 0)
+			crashdump_set_live_report_fd(ReportFd);
+		else
+			log_info("crash_reporter", "could not pre-open the live crash report; the sandbox copy will be exported on the next launch");
+	}
+#endif
 
 	// 静默在后台启动 Steam，客户端仍由当前进程继续启动。
 	if(g_Config.m_QmSteamAutoLaunch)

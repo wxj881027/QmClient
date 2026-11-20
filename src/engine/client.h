@@ -332,6 +332,8 @@ public:
 	virtual int SnapNumItems(int SnapId) const = 0;
 	virtual const void *SnapFindItem(int SnapId, int Type, int Id) const = 0;
 	virtual CSnapItem SnapGetItem(int SnapId, int Index) const = 0;
+	// 返回指定连接快照中的本地玩家编号，不依赖当前视角切换。
+	virtual int GetLocalClientId(int Conn) const = 0;
 
 	virtual void SnapSetStaticsize(int ItemType, int Size) = 0;
 	virtual void SnapSetStaticsize7(int ItemType, int Size) = 0;
