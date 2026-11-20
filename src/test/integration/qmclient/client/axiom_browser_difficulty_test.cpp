@@ -50,7 +50,7 @@ TEST_F(AxiomBrowserDifficulty, RoomsShareRequestAndPersistCategoryAndStars)
 	const auto *pEntry = Restored.FindForServer(m_Server);
 	ASSERT_NE(pEntry, nullptr);
 	EXPECT_EQ(pEntry->m_Category, "Easy");
-	EXPECT_STREQ(pEntry->StarLabel(), "★★☆");
+	EXPECT_STREQ(pEntry->StarLabel(), "★★☆☆☆");
 	Restored.RequestAxiomDifficulty(m_Server, m_Http, m_Budget, "", m_Now);
 	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
 }
@@ -75,11 +75,35 @@ TEST_F(AxiomBrowserDifficulty, SameNameUsesSeparateModesAndCommunity)
 	EXPECT_EQ(m_Http.m_vRequests.size(), 2u);
 }
 
+TEST_F(AxiomBrowserDifficulty, GoresAcceptsFourStars)
+{
+	Request();
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	m_Http.m_vRequests.front()->Finish(R"({"code":200,"data":{"map":"Two Words","stars":4,"difficulty":"Hard"}})");
+	ASSERT_TRUE(Poll());
+	const auto *pEntry = m_Catalog.FindForServer(m_Server);
+	ASSERT_NE(pEntry, nullptr);
+	EXPECT_STREQ(pEntry->StarLabel(), "★★★★☆");
+}
+
+TEST_F(AxiomBrowserDifficulty, LateHttpResponseDoesNotReplaceAnnouncement)
+{
+	Request();
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	ASSERT_TRUE(m_Catalog.RecordAxiomMotd(m_Server, "Axiom 当前地图\n│ 地图：Two Words\n│ 难度：Hard ★★★★☆\n"));
+	m_Http.m_vRequests.front()->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Easy"}})");
+	EXPECT_FALSE(Poll());
+	const auto *pEntry = m_Catalog.FindForServer(m_Server);
+	ASSERT_NE(pEntry, nullptr);
+	EXPECT_EQ(pEntry->m_Category, "Hard");
+	EXPECT_STREQ(pEntry->StarLabel(), "★★★★☆");
+}
+
 TEST_F(AxiomBrowserDifficulty, InvalidResponsesLeaveMapUnknownAndDelayRetry)
 {
 	for(const char *pJson : {
 		    R"({"code":200,"data":{"map":"Other","stars":2,"difficulty":"Easy"}})",
-		    R"({"code":200,"data":{"map":"Two Words","stars":4,"difficulty":"Easy"}})",
+		    R"({"code":200,"data":{"map":"Two Words","stars":6,"difficulty":"Easy"}})",
 		    R"({"code":200,"data":{"map":"Two Words","stars":2}})"})
 	{
 		SCOPED_TRACE(pJson);

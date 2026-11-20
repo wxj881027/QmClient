@@ -310,8 +310,7 @@ void CQmMapDifficultyCatalog::RequestAxiomDifficulty(const CServerInfo &Server, 
 
 bool CQmMapDifficultyCatalog::RecordAxiomResponse(const TAxiomKey &Key, const IHttpRequest &Request)
 {
-	const EAxiomMode Mode = Key.first == (int)EAxiomMode::GORES ? EAxiomMode::GORES : EAxiomMode::AXRACE;
-	const int MaxStars = Mode == EAxiomMode::GORES ? 3 : 5;
+	constexpr int MaxStars = 5;
 	std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(Request.ResultJson(), json_value_free);
 	if(!pRoot || pRoot->type != json_object)
 		return false;
@@ -328,7 +327,7 @@ bool CQmMapDifficultyCatalog::RecordAxiomResponse(const TAxiomKey &Key, const IH
 	std::string Category(pCategory->u.string.ptr, pCategory->u.string.length);
 	if(!ValidField(Key.second, MAX_MAP_LENGTH - 1) || !ValidField(Category, 64))
 		return false;
-	return StoreAxiomEntry((int)Mode, {Key.second, std::move(Category), (int)pStars->u.integer, MaxStars});
+	return StoreAxiomEntry(Key.first, {Key.second, std::move(Category), (int)pStars->u.integer, MaxStars});
 }
 
 bool CQmMapDifficultyCatalog::PollAxiomRequests(CQmAxiomRequestBudget &Budget, int64_t Now)
@@ -345,7 +344,7 @@ bool CQmMapDifficultyCatalog::PollAxiomRequests(CQmAxiomRequestBudget &Budget, i
 		const int Code = Request.CompletedStatusCode();
 		if(Code == 429)
 			Budget.RateLimited(Now);
-		if(Code == 200 && Request.State() == EHttpState::DONE && RecordAxiomResponse(It->first, Request))
+		if(Code == 200 && Request.State() == EHttpState::DONE && !m_AxiomEntries.contains(It->first) && RecordAxiomResponse(It->first, Request))
 			Changed = true;
 		else if(!m_AxiomEntries.contains(It->first))
 		{

@@ -2983,7 +2983,7 @@ bool CChat::OnPrepareLines(float y)
 			Line.m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 			TitleHidden = true;
 		}
-		if(Line.m_aQmTitle[0] != '\0' && GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
+		if((Line.m_aQmTitle[0] != '\0' || Line.m_DeveloperBadge) && GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
 		{
 			Line.m_aQmTitle[0] = '\0';
 			Line.m_DeveloperBadge = false;
@@ -2996,7 +2996,7 @@ bool CChat::OnPrepareLines(float y)
 				Line.m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 				TitleHidden = true;
 			}
-			if(Author.m_aQmTitle[0] != '\0' && GameClient()->ShouldHideStreamerIdentity(Author.m_ClientId))
+			if((Author.m_aQmTitle[0] != '\0' || Author.m_DeveloperBadge) && GameClient()->ShouldHideStreamerIdentity(Author.m_ClientId))
 			{
 				Author.m_aQmTitle[0] = '\0';
 				Author.m_DeveloperBadge = false;
@@ -3006,7 +3006,7 @@ bool CChat::OnPrepareLines(float y)
 		const bool MergedPlayerMessages = Line.m_TimesRepeated > 0 && !Line.m_vMergedAuthors.empty();
 		const auto HasWavyTitle = [&](const auto &Author) {
 			return Author.m_TitleAppearance.m_TextStyle != 0 && Author.m_TitleAppearance.m_Opacity > 0 &&
-			       !(Author.m_DeveloperBadge && DeveloperBadgeAvailable) && VisibleTitle(Author.m_aQmTitle, Author.m_ClientId)[0] != '\0';
+			       VisibleTitle(Author.m_aQmTitle, Author.m_ClientId)[0] != '\0';
 		};
 		const bool WaveVisible = g_Config.m_QmTitleTextWave && (MergedPlayerMessages ?
 										       std::any_of(Line.m_vMergedAuthors.begin(), Line.m_vMergedAuthors.end(), HasWavyTitle) :
@@ -3041,16 +3041,18 @@ bool CChat::OnPrepareLines(float y)
 		Line.m_vDeveloperBadgeRects.clear();
 		Line.m_vTitleBadges.clear();
 		const auto LayoutTitle = [&](CTextCursor &Cursor, const auto &Author, bool Prepare) {
-			const char *pTitle = VisibleTitle(Author.m_aQmTitle, Author.m_ClientId);
-			if(!pTitle[0])
+			if(!g_Config.m_QmChatSponsorBadges || !GameClient()->m_QmClient.ShouldShowPlayerTitle(Author.m_ClientId))
 				return;
-			if(Author.m_DeveloperBadge && DeveloperBadgeAvailable)
+			const char *pTitle = VisibleTitle(Author.m_aQmTitle, Author.m_ClientId);
+			if(QmUseDeveloperBadgeFallback(pTitle, Author.m_DeveloperBadge, DeveloperBadgeAvailable))
 			{
 				const CUIRect Rect = QmLayoutDeveloperBadge(Cursor);
 				if(Prepare)
 					Line.m_vDeveloperBadgeRects.push_back(Rect);
 				return;
 			}
+			if(!pTitle[0])
+				return;
 
 			const auto &Appearance = Author.m_TitleAppearance;
 			const bool TextOnly = Appearance.m_TextStyle != 0;

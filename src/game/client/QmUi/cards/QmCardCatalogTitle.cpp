@@ -170,7 +170,7 @@ void qm_card_catalog::QmCardRenderHook::RenderQmSponsorChatMessagePreview(CMenus
 	const bool ShowLocalTitle = HaveLocal ? Auth.ShouldShowPlayerTitle(LocalId) && !pMenus->GameClient()->ShouldHideStreamerIdentity(LocalId) : g_Config.m_QmShowMainTitle != 0;
 	if(g_Config.m_QmChatSponsorBadges && ShowLocalTitle)
 	{
-		if(HaveLocal && Auth.PlayerHasDeveloperBadge(LocalId) && Auth.DeveloperBadge().Available())
+		if(QmUseDeveloperBadgeFallback(pTitle, HaveLocal && Auth.PlayerHasDeveloperBadge(LocalId), Auth.DeveloperBadge().Available()))
 		{
 			const CUIRect BadgeRect = QmLayoutDeveloperBadge(NameCursor);
 			Auth.DeveloperBadge().Render(pMenus->Graphics(), BadgeRect, 1.0f, TimeSeconds);
@@ -507,7 +507,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				TitlePreviewArea.Draw(ui_token::color::PREVIEW_SURFACE, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 				TitlePreviewArea.Margin(TipSize * 0.45f, &TitlePreviewArea);
 				pMenus->Ui()->ClipEnable(&TitlePreviewArea);
-				if(Auth.PlayerHasDeveloperBadge(pMenus->GameClient()->m_Snap.m_LocalClientId) && Auth.DeveloperBadge().Available())
+				if(QmUseDeveloperBadgeFallback(Draft.m_Title.GetString(), Auth.PlayerHasDeveloperBadge(pMenus->GameClient()->m_Snap.m_LocalClientId), Auth.DeveloperBadge().Available()))
 				{
 					const vec2 Size = QmDeveloperBadgeSize(BodySize * 1.4f);
 					Auth.DeveloperBadge().Render(pMenus->Graphics(),

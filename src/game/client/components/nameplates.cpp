@@ -434,7 +434,8 @@ static void SetNameplateTitle(CGameClient &This, CNamePlateData &Data, int Clien
 	const bool ShowTitle = Data.m_ShowName && This.m_QmClient.ShouldShowPlayerTitle(ClientId);
 	str_copy(Data.m_aQmTitle, ShowTitle ? This.m_QmClient.PlayerTitle(ClientId, true) : "");
 	Data.m_TitleAppearance = This.m_QmClient.PlayerTitleAppearance(ClientId, true);
-	Data.m_DeveloperBadge = ShowTitle && This.m_QmClient.PlayerHasDeveloperBadge(ClientId, true) && This.m_QmClient.DeveloperBadge().Available();
+	Data.m_DeveloperBadge = ShowTitle && QmUseDeveloperBadgeFallback(Data.m_aQmTitle,
+						     This.m_QmClient.PlayerHasDeveloperBadge(ClientId, true), This.m_QmClient.DeveloperBadge().Available());
 }
 
 static ColorRGBA NameplateTextColor(const CGameClient &This, int ClientId)
