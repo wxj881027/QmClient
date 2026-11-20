@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <limits>
+#include <memory>
 #include <vector>
 
 namespace QmSpotifyToken
@@ -54,15 +56,16 @@ namespace QmSpotifyToken
 				if(Entry.name == nullptr || Entry.value == nullptr || Entry.value->type != json_array)
 					continue;
 				int64_t Version = 0;
-				bool Valid = true;
-				for(const char *p = Entry.name; *p != '\0'; ++p)
+				const std::string_view Name(Entry.name, Entry.name_length);
+				bool Valid = !Name.empty();
+				for(const char C : Name)
 				{
-					if(*p < '0' || *p > '9')
+					if(C < '0' || C > '9' || Version > (std::numeric_limits<int64_t>::max() - (C - '0')) / 10)
 					{
 						Valid = false;
 						break;
 					}
-					Version = Version * 10 + (*p - '0');
+					Version = Version * 10 + (C - '0');
 				}
 				if(Valid && Version > BestVersion)
 				{
@@ -102,12 +105,10 @@ namespace QmSpotifyToken
 		if(Json.empty())
 			return false;
 		const std::string Copy(Json);
-		json_value *pRoot = json_parse(Copy.c_str(), Copy.size());
-		if(pRoot == nullptr)
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(json_parse(Copy.c_str(), Copy.size()), json_value_free);
+		if(!pRoot)
 			return false;
-		const bool Result = ParsePayload(pRoot, pOut);
-		json_value_free(pRoot);
-		return Result;
+		return ParsePayload(pRoot.get(), pOut);
 	}
 
 	std::string GenerateTotp(const std::string &Secret, int64_t ServerTimeSeconds)

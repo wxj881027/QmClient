@@ -13,9 +13,12 @@
 
 #include <cstdint>
 #include <map>
+#include <memory>
 
 class CQmTsfUiElementSink final : public ITfUIElementSink
 {
+	friend class CQmTsfUiLess;
+
 	enum class EDisplayMode
 	{
 		CUSTOM,
@@ -31,12 +34,15 @@ class CQmTsfUiElementSink final : public ITfUIElementSink
 	LONG m_RefCount = 1;
 	Microsoft::WRL::ComPtr<ITfUIElementMgr> m_pManager;
 	CQmImeCandidateState *m_pCandidates = nullptr;
-	std::map<DWORD, SElement> m_Elements;
+	using TElements = std::map<DWORD, SElement>;
+	std::unique_ptr<TElements> m_pElements;
 	uint64_t m_Session = 0;
 	uint64_t m_NextRevision = 0;
 
+	SElement *FindElement(DWORD ElementId);
+
 public:
-	explicit CQmTsfUiElementSink(ITfUIElementMgr *pManager);
+	explicit CQmTsfUiElementSink(ITfUIElementMgr *pManager) noexcept;
 	void Enable(CQmImeCandidateState &Candidates);
 	void Disable();
 	void Shutdown();

@@ -7,15 +7,21 @@
 #include "detect.h"
 #include "str.h"
 
+#include <atomic>
 #include <cmath>
 #include <iomanip> // std::get_time
 #include <sstream> // std::istringstream
+#include <utility>
 
-static int new_tick = -1;
+static constexpr int64_t UNCACHED_TICK_TIME = -1;
+static std::atomic<int64_t> gs_TickTime{UNCACHED_TICK_TIME};
+static std::atomic<int64_t> gs_NextPendingTick{UNCACHED_TICK_TIME - 1};
 
 void set_new_tick()
 {
-	new_tick = 1;
+	// 每次刷新使用不同的负值，防止上一帧的取样跨帧发布。
+	const int64_t pending_tick = gs_NextPendingTick.fetch_sub(1, std::memory_order_relaxed);
+	gs_TickTime.store(pending_tick, std::memory_order_relaxed);
 }
 
 static_assert(std::chrono::steady_clock::is_steady, "Compiler does not support steady clocks, it might be out of date.");
@@ -34,14 +40,17 @@ int64_t time_get_impl()
 
 int64_t time_get()
 {
-	static int64_t last = 0;
-	if(new_tick == 0)
-		return last;
-	if(new_tick != -1)
-		new_tick = 0;
+	int64_t tick_time = gs_TickTime.load(std::memory_order_relaxed);
+	if(tick_time == UNCACHED_TICK_TIME)
+		return time_get_impl();
 
-	last = time_get_impl();
-	return last;
+	while(tick_time < 0)
+	{
+		const int64_t now = time_get_impl();
+		if(gs_TickTime.compare_exchange_strong(tick_time, now, std::memory_order_relaxed))
+			return now;
+	}
+	return tick_time;
 }
 
 int64_t time_timestamp()
@@ -49,64 +58,61 @@ int64_t time_timestamp()
 	return time(nullptr);
 }
 
-static tm time_localtime_threadlocal(time_t *time_data)
+static bool time_localtime(time_t time_data, tm &time_info)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	// The result of localtime is thread-local on Windows
-	// https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/localtime-localtime32-localtime64
-	tm *time = localtime(time_data);
+	// 有效指针配合超范围时间只返回错误码，不触发 CRT 的无效参数处理器。
+	return localtime_s(&time_info, &time_data) == 0;
 #else
-	// Thread-local buffer for the result of localtime_r
-	thread_local tm time_info_buf;
-	tm *time = localtime_r(time_data, &time_info_buf);
+	return localtime_r(&time_data, &time_info) != nullptr;
 #endif
-	dbg_assert(time != nullptr, "Failed to get local time for time data %" PRId64, (int64_t)*time_data);
-	return *time;
+}
+
+static bool time_localtime_now(tm &time_info)
+{
+	const time_t time_data = time(nullptr);
+	return time_data != static_cast<time_t>(-1) && time_localtime(time_data, time_info);
 }
 
 int time_houroftheday()
 {
-	time_t time_data;
-	time(&time_data);
-	const tm time_info = time_localtime_threadlocal(&time_data);
-	return time_info.tm_hour;
+	tm time_info{};
+	return time_localtime_now(time_info) ? time_info.tm_hour : 0;
 }
 
-static bool time_iseasterday(time_t time_data, tm time_info)
+static bool time_iseasterday(const tm &time_info)
 {
-	// compute Easter day (Sunday) using https://en.wikipedia.org/w/index.php?title=Computus&oldid=890710285#Anonymous_Gregorian_algorithm
-	int Y = time_info.tm_year + 1900;
-	int a = Y % 19;
-	int b = Y / 100;
-	int c = Y % 100;
-	int d = b / 4;
-	int e = b % 4;
-	int f = (b + 8) / 25;
-	int g = (b - f + 1) / 3;
-	int h = (19 * a + b - d - g + 15) % 30;
-	int i = c / 4;
-	int k = c % 4;
-	int L = (32 + 2 * e + 2 * i - h - k) % 7;
-	int m = (a + 11 * h + 22 * L) / 451;
-	int month = (h + L - 7 * m + 114) / 31;
-	int day = ((h + L - 7 * m + 114) % 31) + 1;
+	// 使用格里高利历算法计算复活节。https://en.wikipedia.org/w/index.php?title=Computus&oldid=890710285#Anonymous_Gregorian_algorithm
+	const int64_t Y = static_cast<int64_t>(time_info.tm_year) + 1900;
+	if(Y <= 0)
+		return false;
+	const int64_t a = Y % 19;
+	const int64_t b = Y / 100;
+	const int64_t c = Y % 100;
+	const int64_t d = b / 4;
+	const int64_t e = b % 4;
+	const int64_t f = (b + 8) / 25;
+	const int64_t g = (b - f + 1) / 3;
+	const int64_t h = (19 * a + b - d - g + 15) % 30;
+	const int64_t i = c / 4;
+	const int64_t k = c % 4;
+	const int64_t L = (32 + 2 * e + 2 * i - h - k) % 7;
+	const int64_t m = (a + 11 * h + 22 * L) / 451;
+	const int64_t month = (h + L - 7 * m + 114) / 31;
+	const int64_t day = ((h + L - 7 * m + 114) % 31) + 1;
 
-	// (now-1d ≤ easter ≤ now+2d) <=> (easter-2d ≤ now ≤ easter+1d) <=> (Good Friday ≤ now ≤ Easter Monday)
-	for(int day_offset = -1; day_offset <= 2; day_offset++)
-	{
-		time_t offset_time_data = time_data + day_offset * 60 * 60 * 24;
-		const tm offset_time_info = time_localtime_threadlocal(&offset_time_data);
-		if(offset_time_info.tm_mon == month - 1 && offset_time_info.tm_mday == day)
-			return true;
-	}
-	return false;
+	// 复活节在三月或四月。按本地日期覆盖耶稣受难日至复活节周一，避免夏令时跳时。
+	const bool leap_year = Y % 4 == 0 && (Y % 100 != 0 || Y % 400 == 0);
+	const int64_t easter_yday = 31 + 28 + leap_year + (month == 4 ? 31 : 0) + day - 1;
+	const int64_t day_offset = time_info.tm_yday - easter_yday;
+	return day_offset >= -2 && day_offset <= 1;
 }
 
 ETimeSeason time_season()
 {
-	time_t time_data;
-	time(&time_data);
-	const tm time_info = time_localtime_threadlocal(&time_data);
+	tm time_info{};
+	if(!time_localtime_now(time_info))
+		return ETimeSeason::SPRING;
 
 	if((time_info.tm_mon == 11 && time_info.tm_mday == 31) || (time_info.tm_mon == 0 && time_info.tm_mday == 1))
 	{
@@ -120,7 +126,7 @@ ETimeSeason time_season()
 	{
 		return ETimeSeason::HALLOWEEN;
 	}
-	else if(time_iseasterday(time_data, time_info))
+	else if(time_iseasterday(time_info))
 	{
 		return ETimeSeason::EASTER;
 	}
@@ -159,16 +165,45 @@ void str_timestamp(char *buffer, int buffer_size)
 
 void str_timestamp_format(char *buffer, int buffer_size, const char *format)
 {
-	time_t time_data;
-	time(&time_data);
+	const time_t time_data = time(nullptr);
+	if(time_data == static_cast<time_t>(-1))
+	{
+		if(buffer != nullptr && buffer_size > 0)
+			buffer[0] = '\0';
+		return;
+	}
 	str_timestamp_ex(time_data, buffer, buffer_size, format);
 }
 
 void str_timestamp_ex(time_t time_data, char *buffer, int buffer_size, const char *format)
 {
-	const tm time_info = time_localtime_threadlocal(&time_data);
-	strftime(buffer, buffer_size, format, &time_info);
-	buffer[buffer_size - 1] = 0; /* assure null termination */
+	if(!std::in_range<int64_t>(time_data))
+	{
+		if(buffer != nullptr && buffer_size > 0)
+			buffer[0] = '\0';
+		return;
+	}
+	(void)str_timestamp_ex_try(static_cast<int64_t>(time_data), buffer, buffer_size, format);
+}
+
+bool str_timestamp_ex_try(int64_t timestamp, char *buffer, int buffer_size, const char *format)
+{
+	if(buffer == nullptr || buffer_size <= 0)
+		return false;
+	buffer[0] = '\0';
+	if(format == nullptr || !std::in_range<time_t>(timestamp))
+		return false;
+	const time_t time_data = static_cast<time_t>(timestamp);
+	tm time_info{};
+	if(!time_localtime(time_data, time_info))
+		return false;
+	if(strftime(buffer, buffer_size, format, &time_info) == 0)
+	{
+		buffer[0] = '\0';
+		return false;
+	}
+	buffer[buffer_size - 1] = '\0';
+	return true;
 }
 
 bool timestamp_from_str(const char *string, const char *format, time_t *timestamp)
@@ -191,15 +226,24 @@ bool timestamp_from_str(const char *string, const char *format, time_t *timestam
 #pragma GCC diagnostic pop
 #endif
 
+static int64_t time_rounded_units_or_zero(double rounded)
+{
+	// 上界是可精确表示的 2^63。NaN、无穷大和超范围结果都回退为零。
+	constexpr double LIMIT = -static_cast<double>(INT64_MIN);
+	if(rounded >= -LIMIT && rounded < LIMIT)
+		return static_cast<int64_t>(rounded);
+	return 0;
+}
+
 int64_t time_milliseconds_from_seconds(float seconds)
 {
-	return static_cast<int64_t>(std::round(static_cast<double>(seconds) * 1000.0));
+	return time_rounded_units_or_zero(std::round(static_cast<double>(seconds) * 1000.0));
 }
 
 int64_t time_even_centiseconds_from_seconds(float seconds)
 {
 	// 服务端 50Hz，一个 tick 是 20ms，厘秒必然是偶数。
-	return static_cast<int64_t>(std::round(static_cast<double>(seconds) * 50.0)) * 2;
+	return time_rounded_units_or_zero(std::round(static_cast<double>(seconds) * 50.0) * 2.0);
 }
 
 int str_time(int64_t centisecs, int format, char *buffer, int buffer_size)

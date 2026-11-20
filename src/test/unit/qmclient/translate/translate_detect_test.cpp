@@ -4,6 +4,40 @@
 
 #include <string>
 
+TEST(TranslateDetectBoundary, InvalidUtf8DoesNotConsumeFollowingValidScripts)
+{
+	const auto Stats = qm_translate::AnalyzeLanguage("a\xE4"
+							 "b好");
+	EXPECT_EQ(Stats.m_Latin, 2);
+	EXPECT_EQ(Stats.m_Han, 1);
+	EXPECT_EQ(Stats.m_Other, 0);
+	EXPECT_EQ(Stats.m_ScriptTotal, 3);
+}
+
+TEST(TranslateDetectBoundary, TruncatedUtf8AtTerminatorPreservesEarlierStats)
+{
+	const auto Stats = qm_translate::AnalyzeLanguage("好\xE4\xBD");
+	EXPECT_EQ(Stats.m_Han, 1);
+	EXPECT_EQ(Stats.m_ScriptTotal, 1);
+	EXPECT_EQ(Stats.m_Meaningful, 1);
+}
+
+TEST(TranslateDetectBoundary, PlayerNameLongerThanInputDoesNotConsumePrefix)
+{
+	const qm_translate::SPlayerReference aPlayers[] = {{"DYLlongname", 7}};
+	const auto Stats = qm_translate::AnalyzeLanguage("@DY", aPlayers, 1);
+	EXPECT_EQ(Stats.m_Latin, 2);
+	EXPECT_EQ(Stats.m_ScriptTotal, 2);
+}
+
+TEST(TranslateDetectBoundary, ThresholdUsesClampedRatioAndRejectsEmptyCounts)
+{
+	EXPECT_TRUE(qm_translate::PassLocalDetectThreshold(3, 4, 0));
+	EXPECT_FALSE(qm_translate::PassLocalDetectThreshold(3, 4, 200));
+	EXPECT_FALSE(qm_translate::PassLocalDetectThreshold(0, 4, 50));
+	EXPECT_FALSE(qm_translate::PassLocalDetectThreshold(3, 0, 50));
+}
+
 namespace
 {
 	bool ShouldTranslate(const char *pText, const qm_translate::SPlayerReference *pPlayers = nullptr, int NumPlayers = 0, const char *pTarget = "zh", bool Always = false)
@@ -24,6 +58,31 @@ TEST(TranslateDetect, KnownNameAddressSkipsChineseBody)
 	EXPECT_FALSE(ShouldTranslate("DYL：泥蛙！！！", aPlayers, 1));
 	EXPECT_FALSE(ShouldTranslate("  DYL : 好", aPlayers, 1));
 	EXPECT_TRUE(ShouldTranslate("DYL：help me", aPlayers, 1));
+}
+
+TEST(TranslateChatAddress, UsesLongestConnectedNameAndKeepsOriginalPrefixBytes)
+{
+	const qm_translate::SPlayerReference aPlayers[] = {{"落凡", 7}, {"落凡:K", 9}};
+	const char *pText = "  落凡:k ：  你在干什么";
+	const char *pBody = qm_translate::ChatAddressBody(pText, aPlayers, 2);
+	EXPECT_STREQ(pBody, "你在干什么");
+	EXPECT_EQ(std::string(pText, pBody), "  落凡:k ：  ");
+}
+
+TEST(TranslateChatAddress, OrdinaryColonTextRemainsInTheBody)
+{
+	const qm_translate::SPlayerReference aPlayers[] = {{"落凡", 7}};
+	for(const char *pText : {"时间: 晚上八点", "落凡的队友: 你好", "你好，落凡: 你在干什么"})
+	{
+		SCOPED_TRACE(pText);
+		EXPECT_EQ(qm_translate::ChatAddressBody(pText, aPlayers, 1), pText);
+	}
+}
+
+TEST(TranslateChatAddress, AddressWithoutBodyLeavesNothingToTranslate)
+{
+	const qm_translate::SPlayerReference aPlayers[] = {{"落凡", 7}};
+	EXPECT_STREQ(qm_translate::ChatAddressBody("落凡: \t", aPlayers, 1), "");
 }
 
 TEST(TranslateDetect, UnknownNameAddressRemainsInLanguageDecision)

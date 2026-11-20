@@ -235,7 +235,8 @@ void CLayerTele::BrushRotate(float Amount)
 
 void CLayerTele::FillSelection(bool Empty, CLayer *pBrush, CUIRect Rect)
 {
-	if(m_Readonly || (!Empty && pBrush->m_Type != LAYERTYPE_TILES))
+	const CLayerTele *pLt;
+	if(m_Readonly || !ResolveFillBrush(Empty, pBrush, pLt))
 		return;
 
 	Snap(&Rect);
@@ -244,8 +245,6 @@ void CLayerTele::FillSelection(bool Empty, CLayer *pBrush, CUIRect Rect)
 	int sy = ConvertY(Rect.y);
 	int w = ConvertX(Rect.w);
 	int h = ConvertY(Rect.h);
-
-	CLayerTele *pLt = static_cast<CLayerTele *>(pBrush);
 
 	bool Destructive = Editor()->m_BrushDrawDestructive || Empty || pLt->IsEmpty();
 

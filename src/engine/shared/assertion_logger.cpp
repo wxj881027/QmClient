@@ -8,6 +8,8 @@
 #include <engine/shared/ringbuffer.h>
 #include <engine/storage.h>
 
+#include <cstdio>
+
 namespace
 {
 
@@ -58,7 +60,10 @@ void CAssertionLogger::Dump()
 	char aAssertLogFile[IO_MAX_PATH_LENGTH];
 	char aDate[64];
 	str_timestamp(aDate, sizeof(aDate));
-	str_format(aAssertLogFile, std::size(aAssertLogFile), "%s%s_assert_log_%s_%d.txt", m_aAssertLogPath, m_aGameName, aDate, pid());
+	const int PathLength = std::snprintf(aAssertLogFile, sizeof(aAssertLogFile), "%s%s_assert_log_%s_%d.txt", m_aAssertLogPath, m_aGameName, aDate, pid());
+	// 路径截断可能丢失时间戳和进程号，覆盖之前的断言日志。
+	if(PathLength < 0 || static_cast<size_t>(PathLength) >= sizeof(aAssertLogFile))
+		return;
 	fs_makedir_rec_for(aAssertLogFile);
 	const CLockScope LockScope(m_DbgMessageMutex);
 	IOHANDLE FileHandle = io_open(aAssertLogFile, IOFLAG_WRITE);

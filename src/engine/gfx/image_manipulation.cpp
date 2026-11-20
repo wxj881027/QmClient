@@ -174,6 +174,8 @@ void ColorizeWithHueRect(CImageInfo &Image, float Hue, float Sat, size_t StartX,
 {
 	dbg_assert(Hue >= 0.0f && Hue <= 1.0f, "Invalid hue");
 	dbg_assert(Sat >= 0.0f && Sat <= 1.0f, "Invalid saturation");
+	if(Image.m_Format == CImageInfo::FORMAT_R || Image.m_Format == CImageInfo::FORMAT_RA)
+		return;
 	dbg_assert(Image.m_Format == CImageInfo::FORMAT_RGB || Image.m_Format == CImageInfo::FORMAT_RGBA, "Invalid image format");
 	dbg_assert(StartX + Width <= Image.m_Width && StartY + Height <= Image.m_Height, "Image rect is out of range");
 
@@ -208,14 +210,14 @@ static void Dilate(int w, int h, const uint8_t *pSrc, uint8_t *pDest)
 	const int aDirX[] = {0, -1, 1, 0};
 	const int aDirY[] = {-1, 0, 0, 1};
 
-	int m = 0;
+	size_t Offset = 0;
 	for(int y = 0; y < h; y++)
 	{
-		for(int x = 0; x < w; x++, m += DILATE_BPP)
+		for(int x = 0; x < w; x++, Offset += DILATE_BPP)
 		{
 			for(int i = 0; i < DILATE_BPP; ++i)
-				pDest[m + i] = pSrc[m + i];
-			if(pSrc[m + DILATE_BPP - 1] > DILATE_ALPHA_THRESHOLD)
+				pDest[Offset + i] = pSrc[Offset + i];
+			if(pSrc[Offset + DILATE_BPP - 1] > DILATE_ALPHA_THRESHOLD)
 				continue;
 
 			// --- Implementation Note ---
@@ -228,7 +230,7 @@ static void Dilate(int w, int h, const uint8_t *pSrc, uint8_t *pDest)
 			{
 				const int ClampedX = std::clamp(x + aDirX[c], 0, w - 1);
 				const int ClampedY = std::clamp(y + aDirY[c], 0, h - 1);
-				const int SrcIndex = ClampedY * w * DILATE_BPP + ClampedX * DILATE_BPP;
+				const size_t SrcIndex = (static_cast<size_t>(ClampedY) * w + ClampedX) * DILATE_BPP;
 				if(pSrc[SrcIndex + DILATE_BPP - 1] > DILATE_ALPHA_THRESHOLD)
 				{
 					for(int p = 0; p < DILATE_BPP - 1; ++p)
@@ -243,27 +245,21 @@ static void Dilate(int w, int h, const uint8_t *pSrc, uint8_t *pDest)
 				for(int i = 0; i < DILATE_BPP - 1; ++i)
 				{
 					aSumOfOpaque[i] /= Counter;
-					pDest[m + i] = (uint8_t)aSumOfOpaque[i];
+					pDest[Offset + i] = (uint8_t)aSumOfOpaque[i];
 				}
 
-				pDest[m + DILATE_BPP - 1] = 255;
+				pDest[Offset + DILATE_BPP - 1] = 255;
 			}
 		}
 	}
 }
 
-static void CopyColorValues(int w, int h, const uint8_t *pSrc, uint8_t *pDest)
+static void CopyColorValues(size_t Size, const uint8_t *pSrc, uint8_t *pDest)
 {
-	int m = 0;
-	for(int y = 0; y < h; y++)
+	for(size_t Offset = 0; Offset < Size; Offset += DILATE_BPP)
 	{
-		for(int x = 0; x < w; x++, m += DILATE_BPP)
-		{
-			if(pDest[m + DILATE_BPP - 1] == 0)
-			{
-				mem_copy(&pDest[m], &pSrc[m], DILATE_BPP - 1);
-			}
-		}
+		if(pDest[Offset + DILATE_BPP - 1] == 0)
+			mem_copy(&pDest[Offset], &pSrc[Offset], DILATE_BPP - 1);
 	}
 }
 
@@ -275,24 +271,25 @@ void DilateImage(uint8_t *pImageBuff, int w, int h)
 void DilateImage(const CImageInfo &Image)
 {
 	dbg_assert(Image.m_Format == CImageInfo::FORMAT_RGBA, "Dilate requires RGBA format");
-	if(Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0)
+	if(Image.m_Width > std::numeric_limits<int>::max() || Image.m_Height > std::numeric_limits<int>::max())
 		return;
-	DilateImage(Image.m_pData, Image.m_Width, Image.m_Height);
+	DilateImage(Image.m_pData, static_cast<int>(Image.m_Width), static_cast<int>(Image.m_Height));
 }
 
 void DilateImageSub(uint8_t *pImageBuff, int w, int h, int x, int y, int SubWidth, int SubHeight)
 {
-	if(pImageBuff == nullptr || w <= 0 || h <= 0 || x < 0 || y < 0 || SubWidth <= 0 || SubHeight <= 0 || x + SubWidth > w || y + SubHeight > h)
+	if(pImageBuff == nullptr || w <= 0 || h <= 0 || x < 0 || y < 0 || SubWidth <= 0 || SubHeight <= 0 || SubWidth > w - x || SubHeight > h - y)
 		return;
 
-	uint8_t *apBuffer[2] = {nullptr, nullptr};
-
-	size_t ImageSize = 0;
-	if(!CalculateImageBufferSize(SubWidth, SubHeight, DILATE_BPP, ImageSize))
+	size_t ImageSize, SubSize;
+	if(!CalculateImageBufferSize(w, h, DILATE_BPP, ImageSize) ||
+		!CalculateImageBufferSize(SubWidth, SubHeight, DILATE_BPP, SubSize))
 		return;
-	apBuffer[0] = (uint8_t *)malloc(ImageSize);
-	apBuffer[1] = (uint8_t *)malloc(ImageSize);
-	uint8_t *pBufferOriginal = (uint8_t *)malloc(ImageSize);
+	const size_t ImageStride = ImageSize / h;
+	const size_t SubStride = SubSize / SubHeight;
+	const size_t SubStart = static_cast<size_t>(y) * ImageStride + static_cast<size_t>(x) * DILATE_BPP;
+	uint8_t *apBuffer[2] = {static_cast<uint8_t *>(malloc(SubSize)), static_cast<uint8_t *>(malloc(SubSize))};
+	uint8_t *pBufferOriginal = static_cast<uint8_t *>(malloc(SubSize));
 	if(apBuffer[0] == nullptr || apBuffer[1] == nullptr || pBufferOriginal == nullptr)
 	{
 		free(apBuffer[0]);
@@ -303,10 +300,9 @@ void DilateImageSub(uint8_t *pImageBuff, int w, int h, int x, int y, int SubWidt
 
 	for(int Y = 0; Y < SubHeight; ++Y)
 	{
-		int SrcImgOffset = ((y + Y) * w * DILATE_BPP) + (x * DILATE_BPP);
-		int DstImgOffset = (Y * SubWidth * DILATE_BPP);
-		int CopySize = SubWidth * DILATE_BPP;
-		mem_copy(&pBufferOriginal[DstImgOffset], &pImageBuff[SrcImgOffset], CopySize);
+		const size_t ImageOffset = SubStart + Y * ImageStride;
+		const size_t SubOffset = Y * SubStride;
+		mem_copy(&pBufferOriginal[SubOffset], &pImageBuff[ImageOffset], SubStride);
 	}
 
 	Dilate(SubWidth, SubHeight, pBufferOriginal, apBuffer[0]);
@@ -317,17 +313,16 @@ void DilateImageSub(uint8_t *pImageBuff, int w, int h, int x, int y, int SubWidt
 		Dilate(SubWidth, SubHeight, apBuffer[1], apBuffer[0]);
 	}
 
-	CopyColorValues(SubWidth, SubHeight, apBuffer[0], pBufferOriginal);
+	CopyColorValues(SubSize, apBuffer[0], pBufferOriginal);
 
 	free(apBuffer[0]);
 	free(apBuffer[1]);
 
 	for(int Y = 0; Y < SubHeight; ++Y)
 	{
-		int SrcImgOffset = ((y + Y) * w * DILATE_BPP) + (x * DILATE_BPP);
-		int DstImgOffset = (Y * SubWidth * DILATE_BPP);
-		int CopySize = SubWidth * DILATE_BPP;
-		mem_copy(&pImageBuff[SrcImgOffset], &pBufferOriginal[DstImgOffset], CopySize);
+		const size_t ImageOffset = SubStart + Y * ImageStride;
+		const size_t SubOffset = Y * SubStride;
+		mem_copy(&pImageBuff[ImageOffset], &pBufferOriginal[SubOffset], SubStride);
 	}
 
 	free(pBufferOriginal);

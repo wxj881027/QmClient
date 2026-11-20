@@ -2,7 +2,7 @@
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_player_country[] = {
-		{nullptr, "cl_dummy_country", nullptr},
+		{nullptr, "dummy_country", "cl_dummy_country"},
 		{nullptr, "player_country", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:player-country", deck_player_country);
@@ -14,8 +14,8 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_player_identity[] = {
 		{Localizable("Clan"), nullptr, "战队"},
 		{Localizable("Name"), nullptr, "名称"},
-		{nullptr, "cl_dummy_clan", nullptr},
-		{nullptr, "cl_dummy_name", nullptr},
+		{nullptr, "dummy_clan", "cl_dummy_clan"},
+		{nullptr, "dummy_name", "cl_dummy_name"},
 		{nullptr, "player_clan", nullptr},
 		{nullptr, "player_name", nullptr},
 	};

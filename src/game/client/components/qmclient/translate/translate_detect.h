@@ -1,7 +1,6 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_TRANSLATE_TRANSLATE_DETECT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_TRANSLATE_TRANSLATE_DETECT_H
 
-// 玩家引用只影响语言统计，原始消息保持不变。
 namespace qm_translate
 {
 	struct SPlayerReference
@@ -9,6 +8,9 @@ namespace qm_translate
 		const char *m_pName;
 		int m_ClientId;
 	};
+
+	// 返回行首点名后的正文。没有匹配的在线玩家时返回原指针。
+	const char *ChatAddressBody(const char *pText, const SPlayerReference *pPlayers, int NumPlayers);
 
 	struct SLanguageStats
 	{

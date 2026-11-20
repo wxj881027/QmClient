@@ -6,6 +6,7 @@
 #include <engine/textrender.h>
 
 #include <game/client/QmUi/QmScroll.h>
+#include <game/client/QmUi/SettingsBindCache.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
@@ -23,6 +24,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 using namespace qm_tclient_cards;
 
@@ -187,12 +189,7 @@ void CMenus::RenderQmHudKeyBindRow(CUIRect &Content, CButtonContainer &ReaderBut
 
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&ReaderButton, &ClearButton, &BindKey, Bind, false);
 	if(Result.m_Bind != Bind)
-	{
-		if(Bind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(Bind.m_Key, "", false, Bind.m_ModifierMask);
-		if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, pCommand, false, Result.m_Bind.m_ModifierMask);
-	}
+		GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
 
@@ -252,15 +249,7 @@ bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CBu
 	View.HSplitTop(MarginExtraSmall, nullptr, &View);
 
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&ReaderButton, &ClearButton, &KeyButton, Bind, false, ResolvedBodySize);
-	if(Result.m_Bind != Bind)
-	{
-		if(Bind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(Bind.m_Key, "", false, Bind.m_ModifierMask);
-		if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, pCommand, false, Result.m_Bind.m_ModifierMask);
-		return true;
-	}
-	return false;
+	return Result.m_Bind != Bind && GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand);
 }
 
 bool CMenus::DoSliderWithScaledValue(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, int Scale, const IScrollbarScale *pScale, unsigned Flags, const char *pSuffix)

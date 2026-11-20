@@ -108,3 +108,37 @@ TEST(Console, VictimParametersAreDetected)
 	EXPECT_TRUE(pConsole->GetCommandInfo("withvictim", CFGFLAG_SERVER, false)->TakesClientId());
 	EXPECT_FALSE(pConsole->GetCommandInfo("withoutvictim", CFGFLAG_SERVER, false)->TakesClientId());
 }
+
+TEST(Console, FlagMaskIsRestoredWhenCommandCallbackThrows)
+{
+	auto pConsole = CreateConsole(CFGFLAG_SERVER);
+	pConsole->Register("mask_throw", "", CFGFLAG_CLIENT, [](IConsole::IResult *, void *) { throw 7; }, nullptr, "");
+	EXPECT_THROW(pConsole->ExecuteLineFlag("mask_throw", CFGFLAG_CLIENT, IConsole::CLIENT_ID_UNSPECIFIED), int);
+	EXPECT_EQ(pConsole->FlagMask(), CFGFLAG_SERVER);
+}
+
+TEST(Console, NestedFlagMasksAreRestoredAtEachExceptionalScope)
+{
+	struct SContext
+	{
+		IConsole *m_pConsole;
+		bool m_OuterMaskRestored = false;
+	};
+	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
+	SContext Context{pConsole.get()};
+	pConsole->Register("mask_inner", "", CFGFLAG_CLIENT, [](IConsole::IResult *, void *) { throw 7; }, nullptr, "");
+	pConsole->Register("mask_outer", "", CFGFLAG_SERVER, [](IConsole::IResult *, void *pUser) {
+		auto &State = *static_cast<SContext *>(pUser);
+		try
+		{
+			State.m_pConsole->ExecuteLineFlag("mask_inner", CFGFLAG_CLIENT, IConsole::CLIENT_ID_UNSPECIFIED);
+		}
+		catch(...)
+		{
+			State.m_OuterMaskRestored = State.m_pConsole->FlagMask() == CFGFLAG_SERVER;
+			throw;
+		} }, &Context, "");
+	EXPECT_THROW(pConsole->ExecuteLineFlag("mask_outer", CFGFLAG_SERVER, IConsole::CLIENT_ID_UNSPECIFIED), int);
+	EXPECT_TRUE(Context.m_OuterMaskRestored);
+	EXPECT_EQ(pConsole->FlagMask(), CFGFLAG_CLIENT);
+}

@@ -4,6 +4,7 @@
 #include <game/client/components/qmclient/hook_countdown.h>
 
 #include <gtest/gtest.h>
+#include <test/support/icon_benchmark_graphics.h>
 #include <test/test.h>
 
 #include <cmath>
@@ -12,6 +13,35 @@
 
 namespace
 {
+	// 只记录设备边界提交的顶点，不重建圆环或无限符号的几何。
+	class CCountdownGeometryGraphics final : public CIconBenchmarkGraphics
+	{
+		vec2 m_Center;
+
+	public:
+		float m_MaxExtent = 0.0f;
+		int m_SubmittedQuads = 0;
+		bool m_AllFinite = true;
+
+		explicit CCountdownGeometryGraphics(vec2 Center) :
+			m_Center(Center) {}
+
+		void SetColorVertex(const CColorVertex *, size_t) override {}
+		void QuadsDrawFreeform(const CFreeformItem *pQuads, int Num) override
+		{
+			m_SubmittedQuads += Num;
+			for(int i = 0; i < Num; ++i)
+			{
+				const CFreeformItem &Quad = pQuads[i];
+				for(const vec2 Position : {vec2(Quad.m_X0, Quad.m_Y0), vec2(Quad.m_X1, Quad.m_Y1), vec2(Quad.m_X2, Quad.m_Y2), vec2(Quad.m_X3, Quad.m_Y3)})
+				{
+					m_AllFinite = m_AllFinite && std::isfinite(Position.x) && std::isfinite(Position.y);
+					m_MaxExtent = std::max({m_MaxExtent, std::abs(Position.x - m_Center.x), std::abs(Position.y - m_Center.y)});
+				}
+			}
+		}
+	};
+
 	SQmHookCountdownInput PlayerHook()
 	{
 		SQmHookCountdownInput Input;
@@ -662,6 +692,7 @@ TEST(QmHookCountdownRender, ClipRadiusCoversTheGlowAndFollowsTheSizePercent)
 	Visual.m_Scale = 1.0f;
 	Visual.m_EndlessHook = false;
 	const int SavedSize = g_Config.m_QmHookCountdownSize;
+	const int SavedStyle = g_Config.m_QmHookCountdownEndlessStyle;
 	g_Config.m_QmHookCountdownSize = 100;
 	const float NormalRing = qm_hook_countdown_ui::RenderClipRadius(Visual);
 	EXPECT_GT(NormalRing, qm_hook_countdown_ui::OUTER_RADIUS);
@@ -669,11 +700,55 @@ TEST(QmHookCountdownRender, ClipRadiusCoversTheGlowAndFollowsTheSizePercent)
 	g_Config.m_QmHookCountdownSize = 200;
 	EXPECT_NEAR(qm_hook_countdown_ui::RenderClipRadius(Visual), NormalRing * 2.0f, 0.0001f);
 	g_Config.m_QmHookCountdownSize = 100;
-	// ∞ 的横向半宽更大，裁剪半径必须跟着用 ∞ 的包络。
+	// 无限符号样式按自身路径包络裁剪，与彩虹圆环的半径分开选择。
+	g_Config.m_QmHookCountdownEndlessStyle = 0;
 	Visual.m_EndlessHook = true;
 	const float InfinityRadius = qm_hook_countdown_ui::RenderClipRadius(Visual);
 	EXPECT_GE(InfinityRadius, QM_HOOK_COUNTDOWN_INFINITY_HALF_WIDTH + qm_hook_countdown_ui::GLOW_EXTENT);
 	g_Config.m_QmHookCountdownSize = SavedSize;
+	g_Config.m_QmHookCountdownEndlessStyle = SavedStyle;
+}
+
+TEST(QmHookCountdownRender, ClipBoundsContainSubmittedEndlessGeometryForBothStylesAndSizes)
+{
+	struct SRestoreConfiguration
+	{
+		const int m_Size = g_Config.m_QmHookCountdownSize;
+		const int m_Style = g_Config.m_QmHookCountdownEndlessStyle;
+		~SRestoreConfiguration()
+		{
+			g_Config.m_QmHookCountdownSize = m_Size;
+			g_Config.m_QmHookCountdownEndlessStyle = m_Style;
+		}
+	} RestoreConfiguration;
+	constexpr float PixelSize = 0.01f;
+	for(const int Style : {0, 1})
+	{
+		g_Config.m_QmHookCountdownEndlessStyle = Style;
+		for(const float Delta : {0.0f, QM_HOOK_COUNTDOWN_BREATH_PERIOD_SECONDS * 0.5f})
+		{
+			CQmHookCountdown Countdown;
+			auto Input = PlayerHook();
+			Input.m_EndlessHook = true;
+			Countdown.Update(Input, Delta);
+			const SQmHookCountdownVisual &Visual = Countdown.Visual();
+			g_Config.m_QmHookCountdownSize = 100;
+			const float DefaultClipRadius = qm_hook_countdown_ui::RenderClipRadius(Visual);
+			for(const int Size : {50, 100, 200})
+			{
+				SCOPED_TRACE(::testing::Message() << "style=" << Style << " size=" << Size << " delta=" << Delta);
+				g_Config.m_QmHookCountdownSize = Size;
+				CCountdownGeometryGraphics Graphics(Visual.m_Position);
+				qm_hook_countdown_ui::Render(&Graphics, Visual, PixelSize);
+				ASSERT_GT(Graphics.m_SubmittedQuads, 0);
+				EXPECT_TRUE(Graphics.m_AllFinite);
+				const float ClipRadius = qm_hook_countdown_ui::RenderClipRadius(Visual);
+				EXPECT_NEAR(ClipRadius, DefaultClipRadius * Size / 100.0f, 0.0001f);
+				// 使用HUD实际增加的物理像素余量，核对生产绘制提交的全部外缘。
+				EXPECT_GE(ClipRadius + PixelSize * 2.5f, Graphics.m_MaxExtent);
+			}
+		}
+	}
 }
 
 TEST(QmHudHookCountdown, ReleaseKeepsBreathingUntilBothPhasesAreCleared)

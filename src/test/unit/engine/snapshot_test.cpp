@@ -98,6 +98,23 @@ TEST(Snapshot, RejectsUnalignedItemSize)
 	EXPECT_FALSE(Buffer.AsSnapshot()->IsValid(sizeof(CSnapshot) + sizeof(int32_t) + pData[0]));
 }
 
+TEST(Snapshot, OversizedRawItemLeavesCapacityForValidItem)
+{
+	CSnapshotBuilder Builder;
+	Builder.Init();
+
+	constexpr int MaxPayloadSize = CSnapshot::MAX_SIZE - sizeof(CSnapshot) - sizeof(CSnapshotItem) - sizeof(int);
+	EXPECT_EQ(Builder.NewItemRaw(1, 0, MaxPayloadSize + sizeof(int32_t)), nullptr);
+	ASSERT_NE(Builder.NewItemRaw(1, 1, MaxPayloadSize), nullptr);
+
+	CSnapshotBuffer Buffer;
+	const int Size = Builder.Finish(&Buffer);
+	EXPECT_EQ(Size, CSnapshot::MAX_SIZE);
+	ASSERT_TRUE(Buffer.AsSnapshot()->IsValid(Size));
+	ASSERT_EQ(Buffer.AsSnapshot()->NumItems(), 1);
+	EXPECT_EQ(Buffer.AsSnapshot()->GetItem(0)->Id(), 1);
+}
+
 TEST(Snapshot, ExtendedTypeFailsWhenUuidItemExhaustsCapacity)
 {
 	CSnapshotBuilder Builder;
@@ -113,6 +130,14 @@ TEST(Snapshot, ExtendedTypeFailsWhenUuidItemExhaustsCapacity)
 	// 实际对象必须被拒绝，而不是越过 m_aOffsets 边界。
 	EXPECT_FALSE(Builder.NewItem(OFFSET_UUID, 0, &Data, sizeof(Data)));
 	EXPECT_EQ(Builder.FinishIfNoDroppedItems(nullptr), -1);
+}
+
+TEST(Snapshot, UnknownUuidTypePreservesBuilderAssertionContract)
+{
+	CSnapshotBuilder Builder;
+	Builder.Init();
+	const int Data = 0;
+	ASSERT_DEATH(Builder.NewItem(std::numeric_limits<int>::max(), 0, &Data, sizeof(Data)), "");
 }
 
 TEST(SnapshotDelta, LargeDeltaNeedsDoubleSizedBuffer)
@@ -182,6 +207,35 @@ TEST(SnapshotDelta, MalformedDeltaIsRejected)
 	}
 }
 
+TEST(SnapshotDelta, CreateRejectsSizeChangeForExistingKey)
+{
+	CSnapshotBuilder Builder;
+	CSnapshotBuffer Small{};
+	CSnapshotBuffer Large{};
+	const int SmallData = 7;
+	const int aLargeData[] = {7, 9};
+	constexpr int TYPE = 1;
+	constexpr int ID = 0;
+
+	Builder.Init();
+	ASSERT_TRUE(Builder.NewItem(TYPE, ID, &SmallData, sizeof(SmallData)));
+	Builder.Finish(&Small);
+	Builder.Init();
+	ASSERT_TRUE(Builder.NewItem(TYPE, ID, aLargeData, sizeof(aLargeData)));
+	const int LargeSize = Builder.Finish(&Large);
+
+	CSnapshotDelta Delta;
+	int aDeltaData[16];
+	EXPECT_EQ(Delta.CreateDelta(Small.AsSnapshot(), Large.AsSnapshot(), aDeltaData, sizeof(aDeltaData)), -1);
+	EXPECT_EQ(Delta.CreateDelta(Large.AsSnapshot(), Small.AsSnapshot(), aDeltaData, sizeof(aDeltaData)), -1);
+
+	const int DeltaSize = Delta.CreateDelta(CSnapshot::EmptySnapshot(), Large.AsSnapshot(), aDeltaData, sizeof(aDeltaData));
+	ASSERT_GT(DeltaSize, 0);
+	CSnapshotBuffer Reconstructed;
+	ASSERT_EQ(Delta.UnpackDelta(CSnapshot::EmptySnapshot(), &Reconstructed, aDeltaData, DeltaSize), LargeSize);
+	EXPECT_EQ(mem_comp(Reconstructed.m_aData, Large.m_aData, LargeSize), 0);
+}
+
 TEST(SnapshotDelta, CreateRejectsTooSmallOutput)
 {
 	// 目标容量连 delta 头部（三个 int）都放不下时，必须在写入前失败。
@@ -209,4 +263,37 @@ TEST(Snapshot, StorageGet)
 	EXPECT_EQ(Storage.Get(50, nullptr, nullptr, nullptr), -1);
 	EXPECT_EQ(Storage.Get(5, nullptr, nullptr, nullptr), -1);
 	EXPECT_EQ(Storage.Get(25, nullptr, nullptr, nullptr), -1);
+}
+
+TEST(Snapshot, StorageOwnsOriginalAndAlternateSnapshots)
+{
+	CSnapshotStorage Storage;
+	CSnapshotBuilder Builder;
+	CSnapshotBuffer Original;
+	CSnapshotBuffer Alternate;
+	CNetObj_Flag Flag{};
+
+	Builder.Init();
+	Flag.m_X = 7;
+	ASSERT_TRUE(Builder.NewItem(NETOBJTYPE_FLAG, 0, &Flag, sizeof(Flag)));
+	const int OriginalSize = Builder.Finish(&Original);
+
+	Builder.Init();
+	Flag.m_X = 13;
+	ASSERT_TRUE(Builder.NewItem(NETOBJTYPE_FLAG, 0, &Flag, sizeof(Flag)));
+	const int AlternateSize = Builder.Finish(&Alternate);
+
+	Storage.Add(10, 1000, OriginalSize, Original.AsSnapshot(), AlternateSize, Alternate.AsSnapshot());
+	mem_zero(Original.m_aData, OriginalSize);
+	mem_zero(Alternate.m_aData, AlternateSize);
+
+	const CSnapshot *pOriginal = nullptr;
+	const CSnapshot *pAlternate = nullptr;
+	ASSERT_EQ(Storage.Get(10, nullptr, &pOriginal, &pAlternate), OriginalSize);
+	ASSERT_NE(pOriginal, nullptr);
+	ASSERT_NE(pAlternate, nullptr);
+	ASSERT_TRUE(pOriginal->IsValid(OriginalSize));
+	ASSERT_TRUE(pAlternate->IsValid(AlternateSize));
+	EXPECT_EQ(pOriginal->Crc(), 7u);
+	EXPECT_EQ(pAlternate->Crc(), 13u);
 }

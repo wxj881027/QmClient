@@ -4,6 +4,7 @@
 
 #include "rank_ghost_fetch.h"
 
+#include "bounded_file_reader.h"
 #include "rank_demo_cache.h"
 #include "rank_demo_manifest.h"
 #include "rank_ghost.h"
@@ -13,7 +14,9 @@
 #include <base/system.h>
 
 #include <engine/client.h>
+#include <engine/http_response_validation.h>
 #include <engine/shared/config.h>
+#include <engine/shared/demo_output.h>
 #include <engine/storage.h>
 
 #include <game/client/QmUi/QmToast.h>
@@ -23,6 +26,8 @@
 #include <zlib.h>
 
 #include <algorithm>
+#include <atomic>
+#include <cstdio>
 #include <vector>
 
 using qmclient::rank_demo::FindBrowserDownloadedDemo;
@@ -44,107 +49,147 @@ namespace
 	{
 		return Size >= 7 && mem_comp(pData, "TWDEMO\0", 7) == 0;
 	}
-	// 同存储文件流式复制（固定 4 MiB 缓冲，demo 可达数十 MB，不整块进内存）
-	bool CopyStorageFile(IStorage *pStorage, const char *pFrom, const char *pTo)
-	{
-		if(str_comp(pFrom, pTo) == 0)
-			return true;
-		char aFromPath[IO_MAX_PATH_LENGTH];
-		char aToPath[IO_MAX_PATH_LENGTH];
-		pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pFrom, aFromPath, sizeof(aFromPath));
-		pStorage->GetCompletePath(IStorage::TYPE_SAVE, pTo, aToPath, sizeof(aToPath));
-		if(aFromPath[0] == '\0' || aToPath[0] == '\0')
-			return false;
-		IOHANDLE pInput = io_open(aFromPath, IOFLAG_READ);
-		if(pInput == nullptr)
-			return false;
-		IOHANDLE pOutput = io_open(aToPath, IOFLAG_WRITE);
-		if(pOutput == nullptr)
-		{
-			io_close(pInput);
-			return false;
-		}
-		std::vector<unsigned char> Buffer(4 * 1024 * 1024);
-		bool Ok = true;
-		unsigned Read;
-		while((Read = io_read(pInput, Buffer.data(), (unsigned)Buffer.size())) > 0)
-		{
-			if(io_write(pOutput, Buffer.data(), Read) != Read)
-			{
-				Ok = false;
-				break;
-			}
-		}
-		io_close(pInput);
-		io_close(pOutput);
-		if(!Ok)
-			pStorage->RemoveFile(pTo, IStorage::TYPE_SAVE);
-		return Ok;
-	}
-} // namespace
 
-// 读取文件头，判断是否为有效的 demo（服务端通常已解压，个别缓存路径可能返回原始 gzip 字节）
-bool rank_ghost_fetch::ValidateOrUnpackDemo(IStorage *pStorage, const char *pStoragePath)
-{
-	void *pData = nullptr;
-	unsigned DataSize = 0;
-	if(!pStorage->ReadFile(pStoragePath, IStorage::TYPE_SAVE, &pData, &DataSize) || pData == nullptr || DataSize == 0)
+	bool ValidateDemoTimeline(IStorage *pStorage, const char *pPath, int StorageType)
 	{
-		free(pData);
-		return false;
-	}
-
-	if(!IsGzipData((const unsigned char *)pData, DataSize))
-	{
-		const bool Valid = HasDemoMagic((const unsigned char *)pData, DataSize);
-		free(pData);
+		auto pMetadata = std::make_unique<CDemoPlayer>(nullptr, nullptr, false);
+		if(pMetadata->Load(pStorage, pPath, StorageType, false) != 0)
+			return false;
+		const auto &Info = *pMetadata->BaseInfo();
+		const bool Valid = Info.m_FirstTick >= 0 && Info.m_LastTick >= Info.m_FirstTick;
+		pMetadata->Stop();
 		return Valid;
 	}
 
-	// gzip：解压到内存后写回
-	z_stream Stream = {};
-	Stream.next_in = (Bytef *)pData;
-	Stream.avail_in = DataSize;
-	if(inflateInit2(&Stream, 15 + 32) != Z_OK)
+	template<typename TWrite, typename TValidate>
+	bool WriteRankCache(IStorage &Storage, const char *pPath, const TWrite &Write, const TValidate &Validate)
+	try
 	{
-		free(pData);
+		demo_output::CTransaction Transaction;
+		if(!Transaction.Prepare(Storage, pPath))
+			return false;
+		std::unique_ptr<void, decltype(&io_close)> pFile(io_open(Transaction.Filename(), IOFLAG_WRITE), io_close);
+		if(!pFile)
+			return false;
+		const bool Written = Write(pFile.get()) && io_flush(pFile.get()) == 0 && io_error(pFile.get()) == 0;
+		const bool Closed = io_close(pFile.release()) == 0;
+		return Written && Closed && Validate(Transaction.Filename()) && Transaction.Publish();
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+	catch(const std::filesystem::filesystem_error &)
+	{
 		return false;
 	}
 
-	std::vector<unsigned char> Output;
-	Output.resize(std::min<size_t>(std::max<size_t>(DataSize * 4, 1024 * 1024), MAX_UNPACKED_DEMO_BYTES));
+	// 流式复制浏览器里的回放，保留源文件；失败时上层继续走下载。
+	bool CopyStorageFile(IStorage *pStorage, const char *pFrom, const char *pTo)
+	try
+	{
+		if(str_comp(pFrom, pTo) == 0)
+			return false;
+		std::string From;
+		if(!demo_output::Resolve(*pStorage, pFrom, From))
+			return false;
+		std::unique_ptr<void, decltype(&io_close)> pInput(io_open_read_regular_checked(From.c_str(), nullptr), io_close);
+		if(!pInput)
+			return false;
+		const int64_t Length = io_length(pInput.get());
+		if(Length <= 0 || Length > static_cast<int64_t>(MAX_UNPACKED_DEMO_BYTES))
+			return false;
+
+		constexpr unsigned BUFFER_SIZE = 4 * 1024 * 1024;
+		const std::unique_ptr<unsigned char[]> pBuffer(new(std::nothrow) unsigned char[BUFFER_SIZE]);
+		if(!pBuffer)
+			return false;
+		return WriteRankCache(*pStorage, pTo, [&](IOHANDLE Output) {
+			for(int64_t Remaining = Length; Remaining > 0;)
+			{
+				const auto Bytes = static_cast<unsigned>(std::min<int64_t>(Remaining, BUFFER_SIZE));
+				if(io_read(pInput.get(), pBuffer.get(), Bytes) != Bytes || io_write(Output, pBuffer.get(), Bytes) != Bytes)
+					return false;
+				Remaining -= Bytes;
+			}
+			unsigned char Extra;
+			if(io_read(pInput.get(), &Extra, 1) != 0 || io_error(pInput.get()) != 0)
+				return false;
+			return io_close(pInput.release()) == 0; }, [](const char *) { return true; });
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+	catch(const std::filesystem::filesystem_error &)
+	{
+		return false;
+	}
+
+} // namespace
+
+bool rank_ghost_fetch::ValidateOrUnpackDemo(IStorage *pStorage, const char *pStoragePath)
+try
+{
+	CQmCheckedFileData Input;
+	if(!Input.Read(*pStorage, pStoragePath, IStorage::TYPE_SAVE, MAX_UNPACKED_DEMO_BYTES))
+		return false;
+	const auto *pData = static_cast<const unsigned char *>(Input.Data());
+	if(!IsGzipData(pData, Input.Size()))
+	{
+		if(!HasDemoMagic(pData, Input.Size()))
+			return false;
+		Input = {};
+		return ValidateDemoTimeline(pStorage, pStoragePath, IStorage::TYPE_SAVE);
+	}
+
+	z_stream Stream = {};
+	Stream.next_in = const_cast<Bytef *>(pData);
+	Stream.avail_in = Input.Size();
+	if(inflateInit2(&Stream, 15 + 32) != Z_OK)
+		return false;
+	std::unique_ptr<z_stream, decltype(&inflateEnd)> pInflate(&Stream, inflateEnd);
+
+	std::vector<unsigned char> vOutput(std::min(std::max<size_t>(static_cast<size_t>(Input.Size()) * 4, 1024 * 1024), MAX_UNPACKED_DEMO_BYTES));
 	size_t OutputLength = 0;
 	int Result = Z_OK;
 	while(Result == Z_OK)
 	{
-		if(OutputLength == Output.size())
+		if(OutputLength == vOutput.size())
 		{
-			if(Output.size() >= MAX_UNPACKED_DEMO_BYTES)
-			{
-				inflateEnd(&Stream);
-				free(pData);
+			if(vOutput.size() >= MAX_UNPACKED_DEMO_BYTES)
 				return false;
-			}
-			Output.resize(std::min(Output.size() * 2, MAX_UNPACKED_DEMO_BYTES));
+			vOutput.resize(std::min(vOutput.size() * 2, MAX_UNPACKED_DEMO_BYTES));
 		}
-		Stream.next_out = Output.data() + OutputLength;
-		Stream.avail_out = (uInt)std::min<size_t>(Output.size() - OutputLength, 0x40000000);
+		Stream.next_out = vOutput.data() + OutputLength;
+		Stream.avail_out = static_cast<uInt>(vOutput.size() - OutputLength);
 		Result = inflate(&Stream, Z_NO_FLUSH);
-		OutputLength = Output.size() - Stream.avail_out;
+		OutputLength = vOutput.size() - Stream.avail_out;
 	}
-	inflateEnd(&Stream);
-	free(pData);
-
-	if(Result != Z_STREAM_END || OutputLength > MAX_UNPACKED_DEMO_BYTES || !HasDemoMagic(Output.data(), OutputLength))
+	if(Result != Z_STREAM_END || Stream.avail_in != 0 || !HasDemoMagic(vOutput.data(), OutputLength))
 		return false;
+	pInflate.reset();
+	Input = {};
 
-	IOHANDLE File = pStorage->OpenFile(pStoragePath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-	const bool WriteOk = io_write(File, Output.data(), OutputLength) == OutputLength;
-	io_close(File);
-	return WriteOk;
+	return WriteRankCache(*pStorage, pStoragePath, [&](IOHANDLE File) { return io_write(File, vOutput.data(), static_cast<unsigned>(OutputLength)) == OutputLength; }, [&](const char *pFilename) { return ValidateDemoTimeline(pStorage, pFilename, IStorage::TYPE_ABSOLUTE); });
 }
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
+
 void CRankGhost::StartManifestFetch()
 {
 	if(Http() == nullptr)
@@ -212,16 +257,25 @@ void CRankGhost::StartDemoFetch()
 		Fail(Localize("HTTP is not available"), Localize("Rank ghost: HTTP is not available"));
 		return;
 	}
+	static std::atomic<uint64_t> s_NextCandidate{0};
+	char aCandidate[IO_MAX_PATH_LENGTH];
+	const int CandidateLength = std::snprintf(aCandidate, sizeof(aCandidate), "%s/.r%x-%llx",
+		DEMO_CACHE_DIR, static_cast<unsigned>(pid()), static_cast<unsigned long long>(s_NextCandidate.fetch_add(1, std::memory_order_relaxed)));
+	if(CandidateLength < 0 || static_cast<size_t>(CandidateLength) >= sizeof(aCandidate))
+	{
+		Fail(Localize("Failed to download the rank 1 demo"), Localize("Rank ghost: failed to download the replay"));
+		return;
+	}
 
 	// QmClient：demo 浏览器目录已有同一场次回放时复用，避免重复下载。
 	// 无论下载还是影子转换都复制到自己的缓存路径，页面状态才有可观察的文件。
 	char aBrowserDemo[IO_MAX_PATH_LENGTH];
 	if(FindBrowserDownloadedDemo(Storage(), g_Config, m_ActiveEntry, aBrowserDemo, sizeof(aBrowserDemo)))
 	{
-		if(CopyStorageFile(Storage(), aBrowserDemo, m_aDemoStoragePath))
+		if(CopyStorageFile(Storage(), aBrowserDemo, aCandidate))
 		{
 			log_info("rank_ghost", "reusing demo downloaded by demo browser: '%s'", aBrowserDemo);
-			FinishDemoFetch();
+			FinishDemoFetch(aCandidate);
 			return;
 		}
 		log_info("rank_ghost", "failed to reuse demo '%s', falling back to download", aBrowserDemo);
@@ -230,7 +284,16 @@ void CRankGhost::StartDemoFetch()
 	char aUrl[1024];
 	str_format(aUrl, sizeof(aUrl), "%s/%s", DEMO_URL_PREFIX, m_ActiveEntry.m_Demo.c_str());
 
-	m_pDemoRequest = HttpGetFile(aUrl, Storage(), m_aDemoStoragePath, IStorage::TYPE_SAVE);
+	std::string AbsoluteCandidate;
+	if(!demo_output::Resolve(*Storage(), aCandidate, AbsoluteCandidate) ||
+		AbsoluteCandidate.size() + 16 >= IO_MAX_PATH_LENGTH)
+	{
+		Fail(Localize("Failed to download the rank 1 demo"), Localize("Rank ghost: failed to download the replay"));
+		return;
+	}
+	m_pDemoRequest = HttpGetFile(aUrl, Storage(), aCandidate, IStorage::TYPE_SAVE);
+	m_pDemoRequest->SkipByFileTime(false);
+	m_pDemoRequest->ValidateBeforeOverwrite(true);
 	m_pDemoRequest->MaxResponseSize(MAX_DEMO_BYTES);
 	m_pDemoRequest->Timeout(CTimeout{5000, 120000, 200, 10});
 	m_pDemoRequest->LogProgress(HTTPLOG::FAILURE);
@@ -251,27 +314,46 @@ void CRankGhost::UpdateDemoStage()
 	if(!m_pDemoRequest || !m_pDemoRequest->Done())
 		return;
 
-	const bool Ok = m_pDemoRequest->State() == EHttpState::DONE && m_pDemoRequest->StatusCode() == 200;
-	m_pDemoRequest = nullptr;
-
-	if(!Ok)
+	const auto pRequest = std::move(m_pDemoRequest);
+	if(pRequest->State() != EHttpState::DONE)
+	{
+		Fail(Localize("Failed to download the rank 1 demo"), Localize("Rank ghost: failed to download the replay"));
+		return;
+	}
+	CHttpResponseValidation Validation(*pRequest);
+	if(pRequest->StatusCode() != 200 || !Validation.Commit())
 	{
 		Fail(Localize("Failed to download the rank 1 demo"), Localize("Rank ghost: failed to download the replay"));
 		return;
 	}
 
-	FinishDemoFetch();
+	FinishDemoFetch(pRequest->Dest());
 }
 
 // demo 下载（或本地复用）后的公共收尾：校验并按请求模式处理
-void CRankGhost::FinishDemoFetch()
+void CRankGhost::FinishDemoFetch(const char *pCandidate)
 {
-	if(!ValidateOrUnpackDemo(Storage(), m_aDemoStoragePath))
+	const auto RemoveCandidate = [this](const char *pPath) noexcept {
+		try
+		{
+			Storage()->RemoveFile(pPath, IStorage::TYPE_SAVE);
+		}
+		catch(...)
+		{
+		}
+	};
+	std::unique_ptr<const char, decltype(RemoveCandidate)> pCleanup(pCandidate, RemoveCandidate);
+	if(!pCandidate || !ValidateOrUnpackDemo(Storage(), pCandidate))
 	{
-		Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
 		Fail(Localize("The downloaded file is not a valid demo"), Localize("Rank ghost: the downloaded replay is not a valid demo"));
 		return;
 	}
+	if(!Storage()->RenameFile(pCandidate, m_aDemoStoragePath, IStorage::TYPE_SAVE, false))
+	{
+		Fail(Localize("Failed to download the rank 1 demo"), Localize("Rank ghost: failed to download the replay"));
+		return;
+	}
+	pCleanup.release();
 
 	// 仅下载请求到此结束（Rank 1 页面的“下载回放”），不解析成影子
 	if(m_PendingMode == EPendingMode::DEMO_ONLY)

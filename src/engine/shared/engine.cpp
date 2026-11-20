@@ -13,6 +13,8 @@
 #include <engine/shared/network.h>
 #include <engine/storage.h>
 
+#include <memory>
+#include <new>
 #include <thread>
 
 namespace
@@ -30,6 +32,50 @@ namespace
 
 		CJobPool m_JobPool;
 
+		void OpenNetworkLog()
+		try
+		{
+			using CFileOwner = std::unique_ptr<void, decltype(&io_close)>;
+			const auto IsOccupied = [this](const char *pName) {
+				return m_pStorage->FileExists(pName, IStorage::TYPE_SAVE) ||
+				       m_pStorage->FolderExists(pName, IStorage::TYPE_SAVE);
+			};
+
+			char aTimestamp[32];
+			str_timestamp(aTimestamp, sizeof(aTimestamp));
+			for(int Attempt = 0; Attempt < 32; ++Attempt)
+			{
+				char aCapture[40];
+				if(Attempt == 0)
+					str_copy(aCapture, aTimestamp);
+				else
+					str_format(aCapture, sizeof(aCapture), "%s_%d", aTimestamp, Attempt);
+				char aFilenameSent[IO_MAX_PATH_LENGTH], aFilenameRecv[IO_MAX_PATH_LENGTH];
+				str_format(aFilenameSent, sizeof(aFilenameSent), "dumps/network_sent_%s.txt", aCapture);
+				str_format(aFilenameRecv, sizeof(aFilenameRecv), "dumps/network_recv_%s.txt", aCapture);
+				if(IsOccupied(aFilenameSent) || IsOccupied(aFilenameRecv))
+					continue;
+
+				constexpr int OpenFlags = IOFLAG_WRITE | IOFLAG_EXCLUSIVE;
+				CFileOwner pSent(m_pStorage->OpenFile(aFilenameSent, OpenFlags, IStorage::TYPE_SAVE), io_close);
+				// 两个实例同时开始采集时，发送文件由先取得独占句柄的实例保留。
+				if(!pSent && IsOccupied(aFilenameSent))
+					continue;
+				CFileOwner pRecv(m_pStorage->OpenFile(aFilenameRecv, OpenFlags, IStorage::TYPE_SAVE), io_close);
+				if(!pSent && !pRecv && IsOccupied(aFilenameRecv))
+					continue;
+
+				m_Logging = pSent || pRecv;
+				CNetBase::OpenLog(pSent.release(), pRecv.release());
+				return;
+			}
+			log_error("network", "no available filename for network logs");
+		}
+		catch(const std::bad_alloc &)
+		{
+			log_error("network", "could not prepare network log files");
+		}
+
 		static void Con_DbgLognetwork(IConsole::IResult *pResult, void *pUserData)
 		{
 			CEngine *pEngine = static_cast<CEngine *>(pUserData);
@@ -41,14 +87,7 @@ namespace
 			}
 			else
 			{
-				char aBuf[32];
-				str_timestamp(aBuf, sizeof(aBuf));
-				char aFilenameSent[IO_MAX_PATH_LENGTH], aFilenameRecv[IO_MAX_PATH_LENGTH];
-				str_format(aFilenameSent, sizeof(aFilenameSent), "dumps/network_sent_%s.txt", aBuf);
-				str_format(aFilenameRecv, sizeof(aFilenameRecv), "dumps/network_recv_%s.txt", aBuf);
-				CNetBase::OpenLog(pEngine->m_pStorage->OpenFile(aFilenameSent, IOFLAG_WRITE, IStorage::TYPE_SAVE),
-					pEngine->m_pStorage->OpenFile(aFilenameRecv, IOFLAG_WRITE, IStorage::TYPE_SAVE));
-				pEngine->m_Logging = true;
+				pEngine->OpenNetworkLog();
 			}
 		}
 
@@ -74,7 +113,11 @@ namespace
 				net_init();
 				CNetBase::Init();
 			}
+			m_Logging = false;
+		}
 
+		bool StartJobs(THREAD_CREATE pfnCreate)
+		{
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
 			// Make sure we don't use more threads than allowed in total (see PTHREAD_POOL_SIZE in Emscripten.toolchain)
 			// otherwise starting more threads may lead to deadlocks as the threads will simply not start.
@@ -82,9 +125,7 @@ namespace
 #else
 			const size_t ThreadCount = std::max(4, (int)std::thread::hardware_concurrency()) - 2;
 #endif
-			m_JobPool.Init(ThreadCount);
-
-			m_Logging = false;
+			return m_JobPool.TryInit(ThreadCount, pfnCreate);
 		}
 
 		~CEngine() override
@@ -108,6 +149,11 @@ namespace
 			m_JobPool.Add(std::move(pJob));
 		}
 
+		bool TryAddJob(std::shared_ptr<IJob> pJob) override
+		{
+			return m_JobPool.TryAdd(std::move(pJob));
+		}
+
 		void ShutdownJobs() override
 		{
 			m_JobPool.Shutdown();
@@ -121,5 +167,18 @@ namespace
 
 } // namespace
 
-IEngine *CreateEngine(const char *pAppname, std::shared_ptr<CFutureLogger> pFutureLogger) { return new CEngine(false, pAppname, std::move(pFutureLogger)); }
-IEngine *CreateTestEngine(const char *pAppname) { return new CEngine(true, pAppname, nullptr); }
+IEngine *CreateEngine(const char *pAppname, std::shared_ptr<CFutureLogger> pFutureLogger)
+{
+	auto pEngine = std::make_unique<CEngine>(false, pAppname, std::move(pFutureLogger));
+	if(!pEngine->StartJobs(thread_try_init))
+		return nullptr;
+	return pEngine.release();
+}
+
+IEngine *CreateTestEngine(const char *pAppname, THREAD_CREATE pfnCreate)
+{
+	auto pEngine = std::make_unique<CEngine>(true, pAppname, nullptr);
+	if(!pEngine->StartJobs(pfnCreate))
+		return nullptr;
+	return pEngine.release();
+}

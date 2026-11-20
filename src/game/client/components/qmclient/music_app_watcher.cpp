@@ -10,34 +10,56 @@
 #include <windows.h>
 
 #include <tlhelp32.h>
+
+#include <memory>
+#include <new>
 #endif
 
 namespace
 {
 	constexpr int CHECK_INTERVAL_SECONDS = 2;
 
-	uint64_t BuildRunningMask()
-	{
-		uint64_t Mask = 0;
 #if defined(CONF_FAMILY_WINDOWS)
-		size_t HookCount = 0;
-		const SQmMusicHookEntry *pHooks = QmMusicHookRegistry(&HookCount);
-		HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	std::optional<uint64_t> BuildRunningMask(const IJob &Job)
+	{
+		if(Job.State() == IJob::STATE_ABORTED)
+			return std::nullopt;
+
+		const HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 		if(hSnapshot == INVALID_HANDLE_VALUE)
-			return 0;
+			return std::nullopt;
+		const std::unique_ptr<void, decltype(&CloseHandle)> pSnapshot(hSnapshot, &CloseHandle);
+
 		PROCESSENTRY32W Entry{};
 		Entry.dwSize = sizeof(Entry);
-		if(Process32FirstW(hSnapshot, &Entry))
+		// 快照至少应包含当前客户端进程，首条读取失败时不发布结果。
+		if(Job.State() == IJob::STATE_ABORTED || !Process32FirstW(pSnapshot.get(), &Entry))
+			return std::nullopt;
+
+		size_t HookCount = 0;
+		const SQmMusicHookEntry *pHooks = QmMusicHookRegistry(&HookCount);
+		uint64_t Mask = 0;
+		do
 		{
-			do
-			{
-				Mask |= QmMusicHookMaskForProcess(Entry.szExeFile, pHooks, HookCount);
-			} while(Process32NextW(hSnapshot, &Entry));
-		}
-		CloseHandle(hSnapshot);
-#endif
+			Mask |= QmMusicHookMaskForProcess(Entry.szExeFile, pHooks, HookCount);
+			if(Job.State() == IJob::STATE_ABORTED)
+				return std::nullopt;
+		} while(Process32NextW(pSnapshot.get(), &Entry));
+		if(GetLastError() != ERROR_NO_MORE_FILES)
+			return std::nullopt;
 		return Mask;
 	}
+
+	class CWindowsMusicAppScanJob final : public CQmMusicAppScanJob
+	{
+	public:
+		CWindowsMusicAppScanJob() :
+			CQmMusicAppScanJob([this] { return BuildRunningMask(*this); })
+		{
+			Abortable(true);
+		}
+	};
+#endif
 }
 
 void CQmMusicAppWatcher::OnInit()
@@ -57,24 +79,30 @@ void CQmMusicAppWatcher::OnUpdate()
 {
 	if(m_pScanJob)
 	{
-		uint64_t RunningMask;
-		if(!m_pScanJob->TryGetResult(RunningMask))
+		if(!m_pScanJob->Done())
 			return;
+		uint64_t RunningMask;
+		if(m_pScanJob->TryGetResult(RunningMask))
+			ApplyRunningApps(RunningMask);
 		m_pScanJob.reset();
-		ApplyRunningApps(RunningMask);
 	}
 	const int64_t Now = time_get();
 	if(Now - m_LastCheckTick < time_freq() * CHECK_INTERVAL_SECONDS)
 		return;
 	m_LastCheckTick = Now;
 #if defined(CONF_FAMILY_WINDOWS)
-	if(!m_pScanJob)
+	try
 	{
-		m_pScanJob = std::make_shared<CQmMusicAppScanJob>(BuildRunningMask);
-		Engine()->AddJob(m_pScanJob);
+		auto pScanJob = std::make_shared<CWindowsMusicAppScanJob>();
+		if(Engine()->TryAddJob(pScanJob))
+			m_pScanJob = std::move(pScanJob);
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 保留上次检测结果，下一周期再重试。
 	}
 #else
-	ApplyRunningApps(BuildRunningMask());
+	ApplyRunningApps(0);
 #endif
 }
 

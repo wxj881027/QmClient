@@ -52,6 +52,12 @@ TEST(QmChatEmoji, MatchesOnlyExactCodes)
 	EXPECT_EQ(QmChatEmojiTexturePath(static_cast<EQmChatEmoji>(999)), nullptr);
 }
 
+TEST(QmChatEmoji, IncompleteUtf8SuffixDoesNotMatchEmojiCode)
+{
+	EXPECT_EQ(QmChatEmojiFromText(":sq\xE4\xB8"), EQmChatEmoji::NONE);
+	EXPECT_EQ(QmChatEmojiFromText("：sq\xE4\xB8"), EQmChatEmoji::NONE);
+}
+
 TEST(QmChatEmoji, MatchesFullWidthColonCodes)
 {
 	EXPECT_EQ(QmChatEmojiFromText("：ax"), EQmChatEmoji::LOVE);
@@ -208,92 +214,44 @@ TEST(QmChatEmoji, FitSizeShrinksInsteadOfOverflowingTheLine)
 	EXPECT_FLOAT_EQ(QmChatEmojiFitSize(-1.0f, 40.0f), 0.0f);
 }
 
-TEST(QmChatEmoji, LoadedImageInvalidatesCachedTextHeightsForBothChatWidths)
+TEST(QmChatEmoji, LoadedImageInvalidatesCachedTextHeight)
 {
 	bool ImageLayout = false;
-	float aCachedHeights[2] = {8.0f, 14.0f};
+	float CachedHeight = 8.0f;
 
 	const bool WaitingForImage = QmChatEmojiShouldRenderImage(EQmChatEmoji::DEAD, false);
-	EXPECT_FALSE(QmChatEmojiInvalidateChangedLayout(WaitingForImage, ImageLayout, aCachedHeights));
-	EXPECT_FLOAT_EQ(aCachedHeights[0], 8.0f);
-	EXPECT_FLOAT_EQ(aCachedHeights[1], 14.0f);
+	EXPECT_FALSE(QmChatEmojiInvalidateChangedLayout(WaitingForImage, ImageLayout, CachedHeight));
+	EXPECT_FLOAT_EQ(CachedHeight, 8.0f);
 
 	const bool ImageReady = QmChatEmojiShouldRenderImage(EQmChatEmoji::DEAD, true);
-	EXPECT_TRUE(QmChatEmojiInvalidateChangedLayout(ImageReady, ImageLayout, aCachedHeights));
+	EXPECT_TRUE(QmChatEmojiInvalidateChangedLayout(ImageReady, ImageLayout, CachedHeight));
 	EXPECT_TRUE(ImageLayout);
-	EXPECT_LT(aCachedHeights[0], 0.0f);
-	EXPECT_LT(aCachedHeights[1], 0.0f);
+	EXPECT_LT(CachedHeight, 0.0f);
 }
 
 TEST(QmChatEmoji, RepeatedImageFramesKeepMeasuredLayout)
 {
 	bool ImageLayout = false;
-	float aCachedHeights[2] = {20.0f, 26.0f};
+	float CachedHeight = 20.0f;
 
-	ASSERT_TRUE(QmChatEmojiInvalidateChangedLayout(true, ImageLayout, aCachedHeights));
-	aCachedHeights[0] = 20.0f;
-	aCachedHeights[1] = 26.0f;
-	EXPECT_FALSE(QmChatEmojiInvalidateChangedLayout(true, ImageLayout, aCachedHeights));
+	ASSERT_TRUE(QmChatEmojiInvalidateChangedLayout(true, ImageLayout, CachedHeight));
+	CachedHeight = 20.0f;
+	EXPECT_FALSE(QmChatEmojiInvalidateChangedLayout(true, ImageLayout, CachedHeight));
 	EXPECT_TRUE(ImageLayout);
-	EXPECT_FLOAT_EQ(aCachedHeights[0], 20.0f);
-	EXPECT_FLOAT_EQ(aCachedHeights[1], 26.0f);
+	EXPECT_FLOAT_EQ(CachedHeight, 20.0f);
 }
 
 TEST(QmChatEmoji, UnavailableImageInvalidatesCachedImageLayout)
 {
 	bool ImageLayout = true;
-	float aCachedHeights[2] = {20.0f, 26.0f};
+	float CachedHeight = 20.0f;
 
 	const bool ImageAvailable = QmChatEmojiShouldRenderImage(EQmChatEmoji::DEAD, false);
-	EXPECT_TRUE(QmChatEmojiInvalidateChangedLayout(ImageAvailable, ImageLayout, aCachedHeights));
+	EXPECT_TRUE(QmChatEmojiInvalidateChangedLayout(ImageAvailable, ImageLayout, CachedHeight));
 	EXPECT_FALSE(ImageLayout);
-	EXPECT_LT(aCachedHeights[0], 0.0f);
-	EXPECT_LT(aCachedHeights[1], 0.0f);
+	EXPECT_LT(CachedHeight, 0.0f);
 
-	aCachedHeights[0] = 8.0f;
-	EXPECT_FALSE(QmChatEmojiInvalidateChangedLayout(ImageAvailable, ImageLayout, aCachedHeights));
-	EXPECT_FLOAT_EQ(aCachedHeights[0], 8.0f);
-}
-
-TEST(QmChatEmoji, BackgroundImageIsVisibleOnlyAfterDecodeCompletes)
-{
-	CSemaphore Started;
-	CSemaphore Finish;
-	CJobPool Pool;
-	Pool.Init(1);
-	auto pJob = std::make_shared<CQmChatEmojiLoadJob>([&](CImageInfo &Image) {
-		Image.m_Width = 1260;
-		Started.Signal();
-		Finish.Wait();
-		Image.m_Height = 1244;
-	});
-	EXPECT_EQ(pJob->Image(), nullptr);
-	Pool.Add(pJob);
-	Started.Wait();
-	EXPECT_EQ(pJob->Image(), nullptr);
-	Finish.Signal();
-	Pool.Shutdown();
-	ASSERT_NE(pJob->Image(), nullptr);
-	EXPECT_EQ(pJob->Image()->m_Width, 1260U);
-	EXPECT_EQ(pJob->Image()->m_Height, 1244U);
-}
-
-TEST(QmChatEmoji, ReleasingComponentReferenceDoesNotInvalidateTheLoad)
-{
-	CSemaphore Started;
-	CSemaphore Finish;
-	CJobPool Pool;
-	Pool.Init(1);
-	bool Completed = false;
-	auto pJob = std::make_shared<CQmChatEmojiLoadJob>([&](CImageInfo &) {
-		Started.Signal();
-		Finish.Wait();
-		Completed = true;
-	});
-	Pool.Add(pJob);
-	Started.Wait();
-	pJob.reset();
-	Finish.Signal();
-	Pool.Shutdown();
-	EXPECT_TRUE(Completed);
+	CachedHeight = 8.0f;
+	EXPECT_FALSE(QmChatEmojiInvalidateChangedLayout(ImageAvailable, ImageLayout, CachedHeight));
+	EXPECT_FLOAT_EQ(CachedHeight, 8.0f);
 }

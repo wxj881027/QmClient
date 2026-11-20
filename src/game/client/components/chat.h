@@ -15,6 +15,7 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/chat_command_hud.h>
 #include <game/client/components/qmclient/chat_emoji.h>
+#include <game/client/components/qmclient/chat_history.h>
 #include <game/client/components/qmclient/chat_translate_button.h>
 #include <game/client/components/qmclient/chat_translation_notes.h>
 #include <game/client/components/qmclient/hud_notifications/hud_notifications.h>
@@ -176,9 +177,7 @@ private:
 
 		bool m_Initialized;
 		int64_t m_Time;
-		float m_aYOffset[2];
-		bool m_aMergedMessageInline[2] = {};
-		SQmChatTextBlockLayout m_aTextBlockLayout[2];
+		SQmChatLineLayout m_Layout;
 		int m_ClientId;
 		int m_TeamNumber;
 		bool m_Team;
@@ -203,6 +202,7 @@ private:
 		std::optional<ColorRGBA> m_CustomColor;
 		EQmSponsorChatStyle m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 		EQmSponsorChatStyle m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
+		bool m_ColorPreparationPending = false;
 
 		STextContainerIndex m_TextContainerIndex;
 		STextContainerIndex m_BodyTextContainerIndex;
@@ -237,7 +237,6 @@ private:
 		std::string m_LocalOriginal;
 	};
 
-	bool m_PrevScoreBoardShowed;
 	bool m_PrevShowChat;
 	std::array<int, 5> m_aPrevTitleVisibility = {};
 	bool m_PrevSponsorChatEffects = true;
@@ -383,14 +382,8 @@ private:
 	uint64_t m_ServerCommandsRevision = 0;
 	CQmChatCommandHud m_CommandHud;
 
-	struct CHistoryEntry
-	{
-		int m_Team;
-		int m_OriginalOffset;
-		char m_aText[1];
-		const char *InputText() const { return m_aText + (m_OriginalOffset > 0 ? m_OriginalOffset : 0); }
-	};
-	CHistoryEntry *m_pHistoryEntry;
+	using CHistoryEntry = SQmChatHistoryEntry;
+	CHistoryEntry *m_pHistoryEntry = nullptr;
 	CStaticRingBuffer<CHistoryEntry, 64 * 1024, CRingBufferBase::FLAG_RECYCLE> m_History;
 	COutgoingChatAnnotations m_OutgoingAnnotations;
 	CPendingChatMessages m_PendingChatMessages;
@@ -443,7 +436,7 @@ private:
 		// 从最旧一端量出的屏幕容量：滚到顶时这组消息必须完整可见。
 		int m_FittingLines = 1;
 	};
-	SQmChatHistoryExtent MeasureVisibleHistory(int BacklogLine, int OffsetType, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight = -1.0f) const;
+	SQmChatHistoryExtent MeasureVisibleHistory(int BacklogLine, bool IsScoreBoardOpen, bool ShowLargeArea, float FallbackLineHeight, float ExtraLineSpacing, float ViewportHeight = -1.0f) const;
 	void UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations);
 	bool UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit, float HistoryBottom, float LineHeight, int TotalVisibleLines, int VisibleLineCapacity, bool StartAllowed);
 
@@ -507,6 +500,8 @@ private:
 	};
 	CChatTargetPopupContext m_TargetPopupContext;
 	bool m_TargetMenuOpen = false;
+
+	void ClearInvalidWhisperDraft();
 
 public:
 	CChat();
@@ -644,6 +639,10 @@ public:
 	{
 		return ShowChatHeld || InputActive || ShowChatSetting == 2;
 	}
+	static bool ShouldRenderHistory(bool DisplayChat, bool InputActive, bool DemoPlayback, bool VideoRendering)
+	{
+		return DisplayChat || (InputActive && !DemoPlayback && !VideoRendering);
+	}
 	const char *GetInputText() const { return m_Input.GetString(); }
 	void AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible = false);
 	void AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible, std::optional<QmHudNotifications::EServerMessageClass> KnownServerMessageClass, int SourceConnection = -1, int TimesRepeated = 0);
@@ -663,9 +662,10 @@ public:
 	void OnConsoleInit() override;
 	void OnStateChange(int NewState, int OldState) override;
 	void OnRender() override;
-	bool OnPrepareLines(float y);
+	bool OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea);
 	void Reset();
 	void OnRelease() override;
+	void OnNewSnapshot() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void OnMessage(int MsgType, void *pRawMsg, int SourceConnection);
 	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;

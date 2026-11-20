@@ -11,6 +11,7 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.function.BooleanSupplier;
 
 import androidx.core.content.ContextCompat;
 
@@ -23,23 +24,71 @@ public class ClientActivity extends SDLActivity {
 	private String[] launchArguments = new String[0];
 	private QmMediaExporter mediaExporter;
 
-	private final Object serverServiceMonitor = new Object();
-	private Messenger serverServiceMessenger = null;
-	private final ServiceConnection serverServiceConnection = new ServiceConnection() {
+	private final QmServerBinding<Messenger> serverBinding = new QmServerBinding<>();
+
+	private final class ServerConnection implements ServiceConnection, QmServerBinding.Connection {
+		private final Intent intent;
+		private boolean bindingAttempted;
+
+		ServerConnection(String[] arguments) {
+			intent = ServerService.createStartIntent(ClientActivity.this, arguments);
+		}
+
 		@Override
-		public void onServiceConnected(ComponentName name, IBinder service) {
-			synchronized(serverServiceMonitor) {
-				serverServiceMessenger = new Messenger(service);
+		public boolean bind() {
+			return startAndBindServer(
+				() -> ContextCompat.startForegroundService(ClientActivity.this, intent),
+				() -> {
+					bindingAttempted = true;
+					return bindService(intent, this, 0);
+				},
+				() -> stopService(intent));
+		}
+
+		@Override
+		public void unbind() {
+			if(!bindingAttempted)
+				return;
+			bindingAttempted = false;
+			try {
+				unbindService(this);
+			} catch(IllegalArgumentException e) {
+				// bind抛出异常且未登记连接时，框架可能已经没有可解绑记录。
 			}
 		}
 
 		@Override
-		public void onServiceDisconnected(ComponentName name) {
-			synchronized(serverServiceMonitor) {
-				serverServiceMessenger = null;
-			}
+		public void onServiceConnected(ComponentName name, IBinder service) {
+			serverBinding.connected(this, new Messenger(service));
 		}
-	};
+
+		@Override
+		public void onServiceDisconnected(ComponentName name) {
+			serverBinding.disconnected(this);
+		}
+
+		@Override
+		public void onBindingDied(ComponentName name) {
+			serverBinding.failed(this);
+		}
+
+		@Override
+		public void onNullBinding(ComponentName name) {
+			serverBinding.failed(this);
+		}
+	}
+
+	static boolean startAndBindServer(Runnable start, BooleanSupplier bind, Runnable stop) {
+		start.run();
+		boolean bound = false;
+		try {
+			bound = bind.getAsBoolean();
+			return bound;
+		} finally {
+			if(!bound)
+				stop.run();
+		}
+	}
 
 	@Override
 	protected String[] getLibraries() {
@@ -123,14 +172,39 @@ public class ClientActivity extends SDLActivity {
 	}
 
 	public boolean exportToDownloads(String path) {
-		final File source = new File(path);
-		try {
-			final String saved = QmMediaExporter.copyToDownloads(this, source);
-			runOnUiThread(() -> Toast.makeText(this, "已保存到 下载/QmClient/" + saved, Toast.LENGTH_LONG).show());
-			return true;
-		} catch(IOException | RuntimeException error) {
-			Log.w("qmclient", "export failed", error);
+		if(path == null || path.isEmpty() || !new File(path).isFile()) {
+			showDownloadResult("导出失败：文件不存在");
 			return false;
+		}
+		new Thread(() -> exportFileToDownloads(new File(path))).start();
+		return true;
+	}
+
+	public boolean exportCrashReportToDownloads(String path) {
+		return path != null && !path.isEmpty() && exportFileToDownloads(new File(path));
+	}
+
+	private boolean exportFileToDownloads(File source) {
+		final String saved;
+		try {
+			saved = QmMediaExporter.copyToDownloads(getApplicationContext(), source);
+		} catch(IOException | RuntimeException | OutOfMemoryError error) {
+			Log.w("qmclient", "export failed", error);
+			showDownloadResult("导出失败");
+			return false;
+		}
+		showDownloadResult("已保存到 下载/QmClient/" + saved);
+		return true;
+	}
+
+	private void showDownloadResult(String message) {
+		try {
+			runOnUiThread(() -> {
+				if(!isFinishing() && !isDestroyed())
+					Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+			});
+		} catch(RuntimeException | OutOfMemoryError error) {
+			Log.w("qmclient", "could not show export result", error);
 		}
 	}
 
@@ -150,15 +224,20 @@ public class ClientActivity extends SDLActivity {
 
 	@Override
 	protected void onDestroy() {
-		// 正常退出时删掉预建的占位条目；崩溃或被系统杀死时保留现场。
-		if(isFinishing())
-			QmCrashReportSink.discard(this);
-		if(mediaExporter != null)
-			mediaExporter.close();
-		super.onDestroy();
-		synchronized(serverServiceMonitor) {
-			if(serverServiceMessenger != null) {
-				unbindService(serverServiceConnection);
+		try {
+			try {
+				serverBinding.close();
+			} finally {
+				stopServer();
+			}
+		} finally {
+			try {
+				if(mediaExporter != null)
+					mediaExporter.close();
+			} finally {
+				super.onDestroy();
+				if(isFinishing())
+					QmCrashReportSink.discard(this);
 			}
 		}
 	}
@@ -179,47 +258,49 @@ public class ClientActivity extends SDLActivity {
 	}
 
 	public void restartApp() {
-		Intent restartIntent =
-			Intent.makeRestartActivityTask(
-				getPackageManager().getLaunchIntentForPackage(
-					getPackageName()
-				).getComponent()
-			);
+		Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+		if(launchIntent == null || launchIntent.getComponent() == null) {
+			Log.w("qmclient", "restart failed: no launch activity");
+			return;
+		}
+		Intent restartIntent = Intent.makeRestartActivityTask(launchIntent.getComponent());
 		restartIntent.setPackage(getPackageName());
 		startActivity(restartIntent);
 	}
 
 	// Called from native code, see android_main.cpp
 	public void startServer(String[] arguments) {
-		synchronized(serverServiceMonitor) {
-			if(serverServiceMessenger != null) {
-				return;
+		serverBinding.start(() -> new ServerConnection(arguments));
+	}
+
+	// Called from native code, see android_main.cpp
+	public void stopServer() {
+		try {
+			executeCommand("shutdown");
+		} finally {
+			try {
+				serverBinding.cancel();
+			} finally {
+				// 服务的started状态独立于绑定，即使未收到connected也要显式停止。
+				stopService(new Intent(this, ServerService.class));
 			}
-			Intent startIntent = ServerService.createStartIntent(this, arguments);
-			ContextCompat.startForegroundService(this, startIntent);
-			bindService(startIntent, serverServiceConnection, 0);
 		}
 	}
 
 	// Called from native code, see android_main.cpp
 	public void executeCommand(String command) {
-		synchronized(serverServiceMonitor) {
-			if(serverServiceMessenger == null) {
-				return;
-			}
+		serverBinding.send(messenger -> {
 			try {
-				serverServiceMessenger.send(ServerService.createExecuteCommandMessage(command));
+				messenger.send(ServerService.createExecuteCommandMessage(command));
+				return true;
 			} catch (RemoteException e) {
-				// Connection broken
-				unbindService(serverServiceConnection);
+				return false;
 			}
-		}
+		});
 	}
 
 	// Called from native code, see android_main.cpp
 	public boolean isServerRunning() {
-		synchronized(serverServiceMonitor) {
-			return serverServiceMessenger != null;
-		}
+		return serverBinding.isRunning();
 	}
 }

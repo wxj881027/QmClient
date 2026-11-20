@@ -1,11 +1,17 @@
 // 使用真实 SDL 音频转换流，验证应用混音入口，不访问硬件或用户配置。
 #include <engine/client/audio_sdl3.h>
+#include <engine/client/sound.h>
 
+#include <SDL3/SDL_hints.h>
+#include <SDL3/SDL_init.h>
 #include <gtest/gtest.h>
 
 #include <array>
 #include <climits>
 #include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace
@@ -97,4 +103,29 @@ TEST(Sdl3VoiceAudioStream, TwentyMillisecondMonoFrameKeepsDurationAcrossDeviceRe
 	ASSERT_EQ(SDL_GetAudioStreamData(pStream.get(), aDeviceFrame.data(), sizeof(aDeviceFrame)), sizeof(aDeviceFrame));
 	EXPECT_NEAR(aDeviceFrame[240], 1000, 2);
 	EXPECT_EQ(SDL_GetAudioStreamAvailable(pStream.get()), 0);
+}
+
+TEST(Sdl3SoundShutdown, WithoutInitKeepsAnotherAudioOwner)
+{
+	bool HasDummyDriver = false;
+	for(int Index = 0; Index < SDL_GetNumAudioDrivers(); ++Index)
+		HasDummyDriver |= std::string_view(SDL_GetAudioDriver(Index)) == "dummy";
+	if(!HasDummyDriver)
+		GTEST_SKIP() << "SDL dummy audio driver unavailable";
+
+	ASSERT_EQ(SDL_WasInit(SDL_INIT_AUDIO), 0u);
+	const char *pOriginalDriver = SDL_GetHint(SDL_HINT_AUDIO_DRIVER);
+	const auto OriginalDriver = pOriginalDriver != nullptr ? std::make_optional<std::string>(pOriginalDriver) : std::nullopt;
+	ASSERT_TRUE(SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, "dummy", SDL_HINT_OVERRIDE));
+	const bool Initialized = SDL_InitSubSystem(SDL_INIT_AUDIO);
+	SDL_ResetHint(SDL_HINT_AUDIO_DRIVER);
+	const char *pRestoredDriver = SDL_GetHint(SDL_HINT_AUDIO_DRIVER);
+	if(OriginalDriver && (pRestoredDriver == nullptr || *OriginalDriver != pRestoredDriver))
+		SDL_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, OriginalDriver->c_str(), SDL_HINT_OVERRIDE);
+	ASSERT_TRUE(Initialized) << SDL_GetError();
+
+	CSound Sound;
+	Sound.Shutdown();
+	EXPECT_NE(SDL_WasInit(SDL_INIT_AUDIO), 0u);
+	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }

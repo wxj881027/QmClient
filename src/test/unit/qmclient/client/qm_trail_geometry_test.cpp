@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <vector>
@@ -135,6 +136,49 @@ TEST(QmTrailBand, OriginalHeadIsSoftWhenTailTaperAndFadeAreDisabled)
 			VisibleBody |= Quad.m_aColor[i].a > 0.5f;
 		}
 	EXPECT_TRUE(VisibleBody);
+}
+
+TEST(QmTrailBand, InkSealStopsGrowingWhenPixelsExceedItsWorldSizeLimit)
+{
+	using namespace qm_tee_trail;
+	const ColorRGBA Tint(1, 1, 1, 1);
+	const SStyleSample aSamples[] = {
+		{vec2(0, 0), vec2(0, 1), Tint, 24.0, 0.0f, 8.0f, 1.0f, 0.5f, 0.0f, 1.0f},
+		{vec2(-24, 0), vec2(0, 1), Tint, 0.0, 1.0f, 8.0f, 0.5f, 0.5f, 24.0f, 0.5f},
+	};
+	const auto SealGlow = [&](float PixelSize, std::vector<SQuad> &vQuads) {
+		BuildStyledEffect(aSamples, std::size(aSamples), STYLE_INK, true, 8.0f, PixelSize, 17u, vQuads);
+		return std::find_if(vQuads.cbegin(), vQuads.cend(), [](const SQuad &Quad) { return Quad.m_Additive; });
+	};
+	std::vector<SQuad> vAtLimit, vBeyondLimit;
+	const auto AtLimit = SealGlow(5.0f, vAtLimit);
+	const auto BeyondLimit = SealGlow(8.0f, vBeyondLimit);
+	ASSERT_NE(AtLimit, vAtLimit.cend());
+	ASSERT_NE(BeyondLimit, vBeyondLimit.cend());
+	for(int Index = 0; Index < 4; ++Index)
+		EXPECT_EQ(BeyondLimit->m_aPos[Index], AtLimit->m_aPos[Index]);
+}
+
+TEST(QmTrailBand, IgnisResamplesBetweenUnevenlySpacedPoints)
+{
+	using namespace qm_tee_trail;
+	const ColorRGBA Tint(1, 1, 1, 1);
+	const SStyleSample aSamples[] = {
+		{vec2(0, 0), vec2(0, 1), Tint, 20.0, 0.0f, 0.5f, 1.0f, 0.5f, 0.0f, 1.0f},
+		{vec2(-4, 0), vec2(0, 1), Tint, 16.0, 0.1f, 0.5f, 1.0f, 0.5f, 4.0f, 1.0f},
+		{vec2(-20, 0), vec2(0, 1), Tint, 0.0, 0.2f, 0.5f, 1.0f, 0.5f, 20.0f, 1.0f},
+	};
+	std::vector<SQuad> vQuads;
+	BuildStyledEffect(aSamples, std::size(aSamples), STYLE_IGNIS, true, 0.5f, 0.25f, 17u, vQuads);
+	const bool HasVisibleMiddle = std::any_of(vQuads.cbegin(), vQuads.cend(), [](const SQuad &Quad) {
+		if(Quad.m_Additive)
+			return false;
+		for(int Index = 0; Index < 4; ++Index)
+			if(Quad.m_aColor[Index].a > 0.001f && std::abs(Quad.m_aPos[Index].x + 10.0f) < 1.0f)
+				return true;
+		return false;
+	});
+	EXPECT_TRUE(HasVisibleMiddle);
 }
 
 TEST(QmTrailCurve, PreparedCurveKeepsEndpointsAndStraightMidpoint)

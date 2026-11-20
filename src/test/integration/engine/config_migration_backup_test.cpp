@@ -7,6 +7,20 @@
 #include <filesystem>
 #include <fstream>
 
+namespace
+{
+	// 先移除测试创建的链接，再由测试目录清理器处理隔离数据。
+	struct SRemoveLink
+	{
+		std::filesystem::path m_Path;
+		~SRemoveLink()
+		{
+			std::error_code Ignored;
+			std::filesystem::remove(m_Path, Ignored);
+		}
+	};
+}
+
 TEST(ConfigMigrationBackup, FinalizePreservesLinkedBackupAndExternalContents)
 {
 	CTestInfo Info;
@@ -22,16 +36,7 @@ TEST(ConfigMigrationBackup, FinalizePreservesLinkedBackupAndExternalContents)
 	std::filesystem::create_directory_symlink(Root / "external", Link, Error);
 	if(Error)
 		GTEST_SKIP() << "directory links unavailable: " << Error.message();
-	// 必须先移除链接，再让测试目录清理器递归清理隔离数据。
-	struct SRemoveLink
-	{
-		std::filesystem::path m_Path;
-		~SRemoveLink()
-		{
-			std::error_code Ignored;
-			std::filesystem::remove(m_Path, Ignored);
-		}
-	} RemoveLink{Link};
+	SRemoveLink RemoveLink{Link};
 	ASSERT_TRUE(QmFinalizeConfigMigration(pStorage.get()));
 	EXPECT_TRUE(std::filesystem::is_symlink(Link));
 	std::string Contents;
@@ -43,3 +48,28 @@ TEST(ConfigMigrationBackup, FinalizePreservesLinkedBackupAndExternalContents)
 	EXPECT_TRUE(QmFinalizeConfigMigration(pStorage.get()));
 	EXPECT_TRUE(std::filesystem::exists(Root / "external/keep.txt"));
 }
+
+#if !defined(CONF_FAMILY_WINDOWS) && !defined(CONF_PLATFORM_MACOS)
+TEST(ConfigMigrationBackup, FinalizeKeepsCurrentProfilesWhenLegacyDirectoryIsAnAlias)
+{
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	ASSERT_TRUE(pStorage->CreateFolder("QmClient", IStorage::TYPE_SAVE));
+	const auto Legacy = std::filesystem::absolute(Info.StoragePath()) / "QmClient";
+	const auto Current = Legacy.parent_path() / "qmclient";
+	std::error_code Error;
+	std::filesystem::create_directory_symlink(Legacy, Current, Error);
+	if(Error)
+		GTEST_SKIP() << "directory alias unavailable: " << Error.message();
+	SRemoveLink RemoveLink{Current};
+	std::ofstream(Current / "settings.cfg") << "qm_fast_input 1\n";
+	std::ofstream(Current / "qmclient_profiles.cfg") << "# current profile\n";
+
+	ASSERT_TRUE(QmFinalizeConfigMigration(pStorage.get()));
+	std::string Contents;
+	std::ifstream Input(Current / "qmclient_profiles.cfg");
+	ASSERT_TRUE(std::getline(Input, Contents));
+	EXPECT_EQ(Contents, "# current profile");
+}
+#endif

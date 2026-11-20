@@ -2,6 +2,7 @@
 
 #include "QmColorGradient.h"
 #include "QmPieMenuRender.h"
+#include "UiTextRenderState.h"
 #include "UiTokens.h"
 
 #include <base/color.h>
@@ -20,6 +21,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <limits>
 #include <string>
 
 namespace
@@ -66,11 +68,14 @@ namespace
 		}
 
 		float Label(const CUIRect &Rect, float FontSize, const char *pText, const ColorRGBA &Color, float Alignment = 0.0f,
-			int MaxLines = 1, const SQmColorGradient *pGradient = nullptr, const CUIRect *pGradientBounds = nullptr, const ColorRGBA *pGlow = nullptr) const
+			int MaxLines = 1, const SQmColorGradient *pGradient = nullptr, const CUIRect *pGradientBounds = nullptr, const ColorRGBA *pGlow = nullptr, bool FitWidth = false) const
 		{
 			if(Rect.w <= 0.0f || Rect.h <= 0.0f || Color.a <= 0.001f)
 				return 0.0f;
-			const float TextWidth = std::min(Rect.w, Width(FontSize, pText));
+			const float NaturalWidth = Width(FontSize, pText);
+			const float TextWidth = std::min(Rect.w, NaturalWidth);
+			if(FitWidth && NaturalWidth > Rect.w)
+				FontSize *= Rect.w / NaturalWidth;
 			CTextCursor Cursor;
 			Cursor.m_FontSize = FontSize;
 			Cursor.m_LineWidth = Rect.w;
@@ -88,28 +93,36 @@ namespace
 				Cursor.m_ColorSamplerRows = Grid[1];
 			}
 			m_TextRender.TextColor(Color);
-			MapTextScreen();
 			STextContainerIndex Container;
-			const unsigned SavedFlags = m_TextRender.GetRenderFlags();
-			m_TextRender.SetRenderFlags(SavedFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
-			m_TextRender.CreateTextContainer(Container, &Cursor, pText);
-			m_TextRender.SetRenderFlags(SavedFlags);
-			RestoreTargetScreen();
-			if(Container.Valid())
+			try
 			{
-				SQmTextEffectRenderStyle Style;
-				Style.m_OutlineColor = ui_token::finish_summary::TEXT_OUTLINE;
-				if(pGlow)
+				MapTextScreen();
+				const unsigned SavedFlags = m_TextRender.GetRenderFlags();
+				m_TextRender.SetRenderFlags(SavedFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
+				m_TextRender.CreateTextContainer(Container, &Cursor, pText);
+				m_TextRender.SetRenderFlags(SavedFlags);
+				RestoreTargetScreen();
+				if(Container.Valid())
 				{
-					Style.m_Effects = QM_TEXT_EFFECT_GLOW;
-					Style.m_GlowRange = FontSize * 0.075f;
-					Style.m_GlowColor = pGlow->WithAlpha(0.30f);
-					m_RenderTools.RenderTextContainerWithEffects(Container, Style, 0.0f, 0.0f);
+					SQmTextEffectRenderStyle Style;
+					Style.m_OutlineColor = ui_token::finish_summary::TEXT_OUTLINE;
+					if(pGlow)
+					{
+						Style.m_Effects = QM_TEXT_EFFECT_GLOW;
+						Style.m_GlowRange = FontSize * 0.075f;
+						Style.m_GlowColor = pGlow->WithAlpha(0.30f);
+						m_RenderTools.RenderTextContainerWithEffects(Container, Style, 0.0f, 0.0f);
+					}
+					else
+						m_TextRender.RenderTextContainer(Container, m_TextRender.DefaultTextColor(), Style.m_OutlineColor);
 				}
-				else
-					m_TextRender.RenderTextContainer(Container, m_TextRender.DefaultTextColor(), Style.m_OutlineColor);
+				m_TextRender.DeleteTextContainer(Container);
 			}
-			m_TextRender.DeleteTextContainer(Container);
+			catch(...)
+			{
+				m_TextRender.ReleaseTemporaryTextContainer(Container);
+				throw;
+			}
 			return Cursor.Height();
 		}
 	};
@@ -145,8 +158,6 @@ namespace
 		{
 		case EStatus::LOADING:
 			return Localize("Loading...");
-		case EStatus::PENDING:
-			return Localize("Pending sync");
 		default:
 			return Localize("No data");
 		}
@@ -167,12 +178,14 @@ namespace
 		return HasValue(Value) ? Number(Displayed) : StatusText(Value.m_Status);
 	}
 
-	std::string RankText(const SValue &Rank, int64_t Displayed, const SValue *pTotal = nullptr, int64_t DisplayedTotal = 0)
+	std::string RankText(const SValue &Rank, int64_t Displayed, std::optional<int64_t> Change, const SValue *pTotal = nullptr, int64_t DisplayedTotal = 0)
 	{
 		const bool HasRank = Rank.m_Value > 0 && HasValue(Rank);
 		std::string Text = HasRank ? "#" + Number(Displayed) : ValueText(Rank, Displayed);
 		if(HasRank && pTotal && HasValue(*pTotal) && pTotal->m_Value > 0)
 			Text += "/" + Number(DisplayedTotal);
+		if(HasRank && Change)
+			Text += (*Change < 0 ? " -" : " +") + Number(std::abs(*Change));
 		return Text;
 	}
 
@@ -216,7 +229,7 @@ namespace
 		const SQmColorGradient Gradient = NumberGradient(Color, Progress);
 		Painter.Label(Rect, 12.0f * Scale, pLabel, ColorRGBA(0.92f, 0.95f, 1.0f, 0.72f * Alpha));
 		Painter.Label({Rect.x, Rect.y + 18.0f * Scale, Rect.w, 23.0f * Scale},
-			(HasValue(Rank) ? mix(14.0f, 18.0f, Progress) : 13.0f) * Scale, Text.c_str(), Color.WithAlpha(Alpha), 0.0f, 1, HasValue(Rank) ? &Gradient : nullptr, nullptr, HasValue(Rank) ? &Color : nullptr);
+			(HasValue(Rank) ? mix(14.0f, 18.0f, Progress) : 13.0f) * Scale, Text.c_str(), Color.WithAlpha(Alpha), 0.0f, 1, HasValue(Rank) ? &Gradient : nullptr, nullptr, HasValue(Rank) ? &Color : nullptr, HasValue(Rank));
 	}
 }
 
@@ -229,17 +242,23 @@ void qm_finish_summary::CContentCache::Update(const QmFinishSummary::SSnapshot &
 		static_cast<double>((Snapshot.m_TimeMs + 5) / 10), static_cast<double>((std::abs(Snapshot.m_DifferenceMs) + 5) / 10),
 		Target(Snapshot.m_LocalRank), Target(Snapshot.m_LocalRankTotal), Target(Snapshot.m_ChinaRank), Target(Snapshot.m_Rank),
 		Target(Snapshot.m_CompletedMaps), Target(Snapshot.m_TotalMaps), Target(Snapshot.m_Points), Target(Snapshot.m_PointsGained), Progress};
-	m_Presentation.Update(Snapshot.m_Id, NowSeconds, FullyExpanded, MotionLevel, Targets, Snapshot.m_Stars, Snapshot.m_RankPointsGained > 0);
+	m_Presentation.Update(Snapshot.m_Id, NowSeconds, FullyExpanded, MotionLevel, Targets, Snapshot.m_Stars, Snapshot.m_RankPointsGained > 0, Snapshot.m_FirstFinishBasePoints);
 	const bool Changed = !m_Valid || m_Id != Snapshot.m_Id || m_Revision != Snapshot.m_Revision || m_Language != g_Config.m_ClLanguagefile;
+	// 文案分配失败时整份缓存失效，下帧会重建所有字段。
+	m_Valid = false;
 	std::array<int64_t, static_cast<size_t>(ENumber::COUNT)> aNumbers{};
+	constexpr int64_t MaxNumber = std::numeric_limits<int64_t>::max();
 	for(size_t i = 0; i < aNumbers.size(); ++i)
-		aNumbers[i] = std::llround(m_Presentation.Number(static_cast<ENumber>(i)));
+	{
+		const double Displayed = m_Presentation.Number(static_cast<ENumber>(i));
+		// 最大积分转换成 double 后会舍入到 2^63，超出 llround 的返回范围。
+		aNumbers[i] = Displayed >= static_cast<double>(MaxNumber) ? MaxNumber : std::llround(Displayed);
+	}
 	const auto Value = [&](ENumber Number) { return aNumbers[static_cast<size_t>(Number)]; };
 	const auto NumberChanged = [&](ENumber Number) { return Changed || Value(Number) != m_aDisplayedNumbers[static_cast<size_t>(Number)]; };
 
 	if(Changed)
 	{
-		m_Valid = true;
 		m_Id = Snapshot.m_Id;
 		m_Revision = Snapshot.m_Revision;
 		m_Language = g_Config.m_ClLanguagefile;
@@ -298,11 +317,11 @@ void qm_finish_summary::CContentCache::Update(const QmFinishSummary::SSnapshot &
 		}
 	}
 	if(NumberChanged(ENumber::LOCAL_RANK) || NumberChanged(ENumber::LOCAL_TOTAL))
-		m_LocalRank = RankText(Snapshot.m_LocalRank, Value(ENumber::LOCAL_RANK), &Snapshot.m_LocalRankTotal, Value(ENumber::LOCAL_TOTAL));
+		m_LocalRank = RankText(Snapshot.m_LocalRank, Value(ENumber::LOCAL_RANK), Snapshot.m_LocalRankChange, &Snapshot.m_LocalRankTotal, Value(ENumber::LOCAL_TOTAL));
 	if(NumberChanged(ENumber::CHINA_RANK))
-		m_ChinaRank = RankText(Snapshot.m_ChinaRank, Value(ENumber::CHINA_RANK));
+		m_ChinaRank = RankText(Snapshot.m_ChinaRank, Value(ENumber::CHINA_RANK), Snapshot.m_ChinaRankChange);
 	if(NumberChanged(ENumber::RANK))
-		m_Rank = RankText(Snapshot.m_Rank, Value(ENumber::RANK));
+		m_Rank = RankText(Snapshot.m_Rank, Value(ENumber::RANK), Snapshot.m_RankChange);
 	if(NumberChanged(ENumber::COMPLETED) || NumberChanged(ENumber::TOTAL))
 	{
 		const std::string Category = Snapshot.m_Category.empty() ? Localize("No data") : Localize(Snapshot.m_Category.c_str());
@@ -317,6 +336,7 @@ void qm_finish_summary::CContentCache::Update(const QmFinishSummary::SSnapshot &
 	if(NumberChanged(ENumber::GAIN))
 		m_Gain = HasValue(Snapshot.m_PointsGained) ? "+" + Number(Value(ENumber::GAIN)) : StatusText(Snapshot.m_PointsGained.m_Status);
 	m_aDisplayedNumbers = aNumbers;
+	m_Valid = true;
 }
 
 bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRenderTools &RenderTools, const CUIRect &Rect,
@@ -328,9 +348,7 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	if(Alpha <= 0.001f)
 		return Content.m_Presentation.Complete();
 	const CTextPainter Painter(Graphics, TextRender, RenderTools, pTextScreen);
-	const ColorRGBA SavedColor = TextRender.GetTextColor();
-	const ColorRGBA SavedOutline = TextRender.GetTextOutlineColor();
-	const EFontPreset SavedFont = TextRender.GetFontPreset();
+	const CUiScopedTextRenderState TextState(TextRender);
 	TextRender.SetFontPreset(EFontPreset::DEFAULT_FONT);
 	TextRender.TextOutlineColor(0, 0, 0, 0.2f * Alpha);
 	const float Scale = std::min(Rect.w / 480.0f, Rect.h / 216.0f);
@@ -447,8 +465,5 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	const SQmColorGradient GainGradient = NumberGradient(ui_token::finish_summary::GAIN_TEXT_DEEP, Content.m_Presentation.NumberColorProgress(ENumber::GAIN));
 	Painter.Label({GainBadge.x + 7.0f * Scale, GainBadge.y + Scale, GainBadge.w - 14.0f * Scale, GainBadge.h},
 		12.0f * Scale, Content.m_Gain.c_str(), ui_token::finish_summary::GAIN_TEXT_SOFT.WithAlpha(FieldAlpha(EField::POINTS)), 0.5f, 1, &GainGradient);
-	TextRender.SetFontPreset(SavedFont);
-	TextRender.TextColor(SavedColor);
-	TextRender.TextOutlineColor(SavedOutline);
 	return Content.m_Presentation.Complete();
 }

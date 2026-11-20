@@ -13,42 +13,77 @@
 
 class CQmServerVoteList
 {
+public:
+	// 只替换真实字符串和容器扩容边界，借用对象须覆盖列表使用期。
+	class CPreparationOperations
+	{
+	public:
+		virtual ~CPreparationOperations() = default;
+		virtual void AssignSearch(std::string &Search, const char *pSearch) { Search = pSearch; }
+		virtual void AppendOption(std::vector<std::string> &vOptions, const char *pDescription) { vOptions.emplace_back(pDescription); }
+		virtual void AppendVisible(std::vector<int> &vVisible, int Index) { vVisible.push_back(Index); }
+	};
+
+private:
 	std::vector<std::string> m_vOptions;
 	std::vector<int> m_vVisible;
 	std::string m_Search;
 	uint64_t m_Revision = std::numeric_limits<uint64_t>::max();
 	int m_Selected = -1;
+	CPreparationOperations *m_pPreparationOperations = nullptr;
 
 public:
+	CQmServerVoteList() = default;
+	explicit CQmServerVoteList(CPreparationOperations *pOperations) :
+		m_pPreparationOperations(pOperations) {}
+
 	bool NeedsUpdate(uint64_t Revision, const char *pSearch) const
 	{
 		return m_Revision != Revision || m_Search != pSearch;
 	}
 
-	bool Update(const CVoteOptionClient *pFirst, uint64_t Revision, const char *pSearch)
+	bool Update(const CVoteOptionClient *pFirst, uint64_t Revision, const char *pSearch) noexcept
 	{
 		if(!NeedsUpdate(Revision, pSearch))
 			return false;
-		if(m_Revision != Revision)
+		try
 		{
-			// 保留服务器原文与顺序，不解析地图名、排序或合并重复选项。
-			m_vOptions.clear();
-			for(const CVoteOptionClient *pOption = pFirst; pOption != nullptr; pOption = pOption->m_pNext)
-				m_vOptions.emplace_back(pOption->m_aDescription);
+			CPreparationOperations DefaultOperations;
+			auto &Operations = m_pPreparationOperations ? *m_pPreparationOperations : DefaultOperations;
+			std::string Search;
+			Operations.AssignSearch(Search, pSearch);
+			const bool Replace = m_Revision != Revision;
+			std::vector<std::string> vOptions;
+			if(Replace)
+			{
+				// 保留服务器原文与顺序；旧行与可见索引在候选完整前保持同一版本。
+				for(const CVoteOptionClient *pOption = pFirst; pOption != nullptr; pOption = pOption->m_pNext)
+					Operations.AppendOption(vOptions, pOption->m_aDescription);
+			}
+			const auto &Options = Replace ? vOptions : m_vOptions;
+			std::vector<int> vVisible;
+			for(size_t Index = 0; Index < Options.size(); ++Index)
+			{
+				if(Search.empty() || str_utf8_find_nocase(Options[Index].c_str(), Search.c_str()) != nullptr)
+					Operations.AppendVisible(vVisible, (int)Index);
+			}
+			int Selected = Replace ? -1 : m_Selected;
+			if(std::find(vVisible.begin(), vVisible.end(), Selected) == vVisible.end())
+				Selected = -1;
+			// 同一个索引在子菜单里可能已变成另一个动作，只有整份候选可以发布。
+			if(Replace)
+				m_vOptions.swap(vOptions);
+			m_vVisible.swap(vVisible);
+			m_Search.swap(Search);
 			m_Revision = Revision;
-			// 同一个索引在子菜单里可能已经变成另一个动作。
-			m_Selected = -1;
+			m_Selected = Selected;
+			return true;
 		}
-		m_Search = pSearch;
-		m_vVisible.clear();
-		for(size_t Index = 0; Index < m_vOptions.size(); ++Index)
+		catch(...)
 		{
-			if(m_Search.empty() || str_utf8_find_nocase(m_vOptions[Index].c_str(), m_Search.c_str()) != nullptr)
-				m_vVisible.push_back((int)Index);
+			// 失败时保留旧文本、索引、选择和版本，下帧仍可按当前请求重试。
+			return false;
 		}
-		if(SelectedRow() < 0)
-			m_Selected = -1;
-		return true;
 	}
 
 	const std::vector<std::string> &Options() const { return m_vOptions; }

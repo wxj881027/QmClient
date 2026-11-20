@@ -227,8 +227,11 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	State.m_Loader.Update(Http(), Engine(), Client()->LocalTime(), &GameClient()->m_QmAxiomScores.OpenApiBudget(), g_Config.m_QmAxiomApiKey);
 	if(!Axiom && ((State.m_OptionsRevision != Voting.OptionsRevision() && !Voting.IsReceivingOptions()) || State.m_CatalogRevision != State.m_Loader.Revision()))
 	{
+		std::vector<QmVoteMaps::SMap> vCandidate;
+		if(!QmTryPrepareDdnetVoteMaps(State.m_Loader.Maps(), Voting.FirstOption(), vCandidate))
+			return;
 		ClearVoteMapItems(Ui(), State.m_vMaps);
-		State.m_vMaps = QmVoteMaps::MergeCatalog(State.m_Loader.Maps(), Voting.FirstOption());
+		State.m_vMaps.swap(vCandidate);
 		State.m_OptionsRevision = Voting.OptionsRevision();
 		State.m_CatalogRevision = State.m_Loader.Revision();
 		State.m_Dirty = true;
@@ -502,21 +505,12 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	}
 	if(State.m_Dirty)
 	{
-		auto Filter = State.m_Filter;
-		if(Axiom)
-		{
-			// 服务器已按投票分类下发本批地图，保留 DDNet 自己的分类筛选。
-			Filter.m_Category.clear();
-			Filter.m_StarMask &= AvailableStars;
-		}
-		State.m_vVisible.clear();
-		for(size_t i = 0; i < vMaps.size(); ++i)
-		{
-			const auto &Map = vMaps[i];
-			if(QmVoteMaps::Matches(Map, Filter, GameClient()->m_TClient.IsFavoriteMap(Map.m_Name.c_str()), CompletionFor(pCommunity, Map.m_Name.c_str())))
-				State.m_vVisible.push_back((int)i);
-		}
-		QmVoteMaps::Sort(State.m_vVisible, vMaps, State.m_Sort);
+		const bool Prepared = QmTryRebuildVoteMapRows(vMaps, State.m_Filter, State.m_Sort, Axiom, AvailableStars, State.m_vVisible,
+			[&](const QmVoteMaps::SMap &Map, const QmVoteMaps::SFilter &Filter) {
+				return QmVoteMaps::Matches(Map, Filter, GameClient()->m_TClient.IsFavoriteMap(Map.m_Name.c_str()), CompletionFor(pCommunity, Map.m_Name.c_str()));
+			});
+		if(!Prepared)
+			return;
 		State.m_Dirty = false;
 	}
 	CUIRect Count, Random;

@@ -14,10 +14,26 @@
 
 #include "compression.h"
 #include "demo.h"
+#include "demo_output.h"
 #include "network.h"
 #include "snapshot.h"
 
 #include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <memory>
+#include <stdexcept>
+#include <utility>
+
+#if defined(CONF_FAMILY_WINDOWS)
+#include <windows.h>
+
+#include <io.h>
+#else
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 const CUuid SHA256_EXTENSION =
 	{{0x6b, 0xe6, 0xda, 0x4a, 0xce, 0xbd, 0x38, 0x0c,
@@ -40,20 +56,71 @@ bool CDemoHeader::Valid() const
 	       mem_has_null(m_aTimestamp, sizeof(m_aTimestamp)) && str_utf8_check(m_aTimestamp);
 }
 
-void CDemoRecorder::Reset(CSnapshotDelta *pSnapshotDelta, bool NoMapData)
+unsigned CDemoRecorder::CFileOperations::Read(IOHANDLE File, void *pData, unsigned Size) noexcept { return io_read(File, pData, Size); }
+unsigned CDemoRecorder::CFileOperations::Write(IOHANDLE File, const void *pData, unsigned Size) noexcept { return io_write(File, pData, Size); }
+int CDemoRecorder::CFileOperations::Seek(IOHANDLE File, int64_t Offset, ESeekOrigin Origin) noexcept { return io_seek(File, Offset, Origin); }
+int64_t CDemoRecorder::CFileOperations::Length(IOHANDLE File) noexcept { return io_length(File); }
+int CDemoRecorder::CFileOperations::Flush(IOHANDLE File) noexcept { return io_flush(File); }
+int CDemoRecorder::CFileOperations::Error(IOHANDLE File) noexcept { return io_error(File); }
+int CDemoRecorder::CFileOperations::Close(IOHANDLE File) noexcept { return io_close(File); }
+
+CDemoRecorder::CFileOperations &CDemoRecorder::FileOperations()
 {
-	m_File = nullptr;
-	m_aCurrentFilename[0] = '\0';
-	m_pfnFilter = nullptr;
-	m_pUser = nullptr;
-	m_LastTickMarker = -1;
-	m_pSnapshotDelta = pSnapshotDelta;
-	m_NoMapData = NoMapData;
+	static CFileOperations s_Operations;
+	return m_pFileOperations ? *m_pFileOperations : s_Operations;
 }
 
-CDemoRecorder::CDemoRecorder(CSnapshotDelta *pSnapshotDelta, bool NoMapData)
+CDemoRecorder::CDemoRecorder(CSnapshotDelta *pSnapshotDelta, bool NoMapData, CFileOperations *pFileOperations) :
+	m_pFileOperations(pFileOperations), m_pSnapshotDelta(pSnapshotDelta), m_NoMapData(NoMapData)
 {
-	Reset(pSnapshotDelta, NoMapData);
+}
+
+void CDemoRecorder::MarkWriteError() noexcept
+{
+	if(m_WriteError)
+		return;
+	m_WriteError = true;
+	try
+	{
+		log_error("demo_recorder", "Demo file I/O failed; the recording cannot be saved as complete");
+	}
+	catch(...)
+	{
+	}
+}
+
+bool CDemoRecorder::WriteRaw(IOHANDLE File, const void *pData, unsigned Size)
+{
+	if(!File || m_WriteError)
+		return false;
+	if(FileOperations().Write(File, pData, Size) != Size || FileOperations().Error(File) != 0)
+		MarkWriteError();
+	return !m_WriteError;
+}
+
+bool CDemoRecorder::SeekRaw(IOHANDLE File, int64_t Offset)
+{
+	if(m_WriteError)
+		return false;
+	if(FileOperations().Seek(File, Offset, IOSEEK_START) != 0 || FileOperations().Error(File) != 0)
+		MarkWriteError();
+	return !m_WriteError;
+}
+
+void CDemoRecorder::Reset(CSnapshotDelta *pSnapshotDelta, bool NoMapData)
+{
+	dbg_assert(!m_File, "Demo recorder must be stopped before resetting");
+	m_pStorage = nullptr;
+	m_WriteError = false;
+	m_aCurrentFilename[0] = '\0';
+	m_LastTickMarker = -1;
+	m_LastKeyFrame = -1;
+	m_FirstTick = -1;
+	m_pSnapshotDelta = pSnapshotDelta;
+	m_NumTimelineMarkers = 0;
+	m_NoMapData = NoMapData;
+	m_pfnFilter = nullptr;
+	m_pUser = nullptr;
 }
 
 CDemoRecorder::~CDemoRecorder()
@@ -63,10 +130,12 @@ CDemoRecorder::~CDemoRecorder()
 
 // Record
 int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const char *pNetVersion, const char *pMap, const SHA256_DIGEST &Sha256, unsigned Crc, const char *pType, unsigned MapSize, unsigned char *pMapData, IOHANDLE MapFile, DEMOFUNC_FILTER pfnFilter, void *pUser)
+try
 {
 	dbg_assert(m_File == 0, "Demo recorder already recording");
 
 	m_pStorage = pStorage;
+	m_WriteError = false;
 
 	if(!str_valid_filename(fs_filename(pFilename)))
 	{
@@ -74,17 +143,35 @@ int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const 
 		return -1;
 	}
 
-	IOHANDLE DemoFile = pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
+	// 新文件直接录制；已有同名录像要等地图和文件头准备好才替换。
+	std::optional<demo_output::CTransaction> Replacement;
+	IOHANDLE DemoFile = pStorage->OpenFile(pFilename, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
+	if(!DemoFile && pStorage->FileExists(pFilename, IStorage::TYPE_SAVE_OR_ABSOLUTE))
+	{
+		Replacement.emplace();
+		if(Replacement->Prepare(*pStorage, pFilename))
+			DemoFile = pStorage->OpenFile(Replacement->Filename(), IOFLAG_WRITE, IStorage::TYPE_ABSOLUTE);
+	}
 	if(!DemoFile)
 	{
 		log_error_color(DEMO_PRINT_COLOR, "demo_recorder", "Unable to open '%s' for recording", pFilename);
 		return -1;
 	}
 
+	const auto CloseOutput = [this](void *pFile) noexcept {
+		if(FileOperations().Close(pFile) != 0)
+			MarkWriteError();
+	};
+	std::unique_ptr<void, decltype(CloseOutput)> DemoGuard(DemoFile, CloseOutput);
 	bool CloseMapFile = false;
+	const auto ReleaseMap = [this, &CloseMapFile](void *pFile) noexcept {
+		if(CloseMapFile ? FileOperations().Close(pFile) != 0 : FileOperations().Seek(pFile, 0, IOSEEK_START) != 0)
+			MarkWriteError();
+	};
+	std::unique_ptr<void, decltype(ReleaseMap)> MapGuard(MapFile, ReleaseMap);
 
-	if(MapFile)
-		io_seek(MapFile, 0, IOSEEK_START);
+	if(MapFile && !SeekRaw(MapFile, 0))
+		return -1;
 
 	char aSha256[SHA256_MAXSTRSIZE];
 	sha256_str(Sha256, aSha256, sizeof(aSha256));
@@ -113,12 +200,11 @@ int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const 
 		if(!MapFile)
 		{
 			log_error_color(DEMO_PRINT_COLOR, "demo_recorder", "Unable to open mapfile '%s'", pMap);
-			// 地图文件打不开时录制文件已经创建，必须关闭，否则每次录制都泄漏句柄。
-			io_close(DemoFile);
 			return -1;
 		}
 
 		CloseMapFile = true;
+		MapGuard.reset(MapFile);
 	}
 
 	if(m_NoMapData)
@@ -127,13 +213,14 @@ int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const 
 	}
 	else if(MapFile)
 	{
-		const int64_t MapFileSize = io_length(MapFile);
+		const int64_t MapFileSize = FileOperations().Length(MapFile);
+		if(MapFileSize < 0)
+		{
+			MarkWriteError();
+			return -1;
+		}
 		if(MapFileSize > (int64_t)std::numeric_limits<unsigned>::max())
 		{
-			if(CloseMapFile)
-			{
-				io_close(MapFile);
-			}
 			MapSize = 0;
 			log_error_color(DEMO_PRINT_COLOR, "demo_recorder", "Mapfile '%s' too large for demo, recording without it", pMap);
 		}
@@ -155,39 +242,41 @@ int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const 
 	str_copy(Header.m_aType, pType);
 	// Header.m_Length - add this on stop
 	str_timestamp(Header.m_aTimestamp, sizeof(Header.m_aTimestamp));
-	io_write(DemoFile, &Header, sizeof(Header));
+	if(!WriteRaw(DemoFile, &Header, sizeof(Header)))
+		return -1;
 
 	CTimelineMarkers TimelineMarkers;
 	mem_zero(&TimelineMarkers, sizeof(TimelineMarkers));
-	io_write(DemoFile, &TimelineMarkers, sizeof(TimelineMarkers)); // fill this on stop
+	if(!WriteRaw(DemoFile, &TimelineMarkers, sizeof(TimelineMarkers)) || // 停止时填入标记。
+		!WriteRaw(DemoFile, SHA256_EXTENSION.m_aData, sizeof(SHA256_EXTENSION.m_aData)) ||
+		!WriteRaw(DemoFile, &Sha256, sizeof(SHA256_DIGEST)))
+		return -1;
 
-	// Write Sha256
-	io_write(DemoFile, SHA256_EXTENSION.m_aData, sizeof(SHA256_EXTENSION.m_aData));
-	io_write(DemoFile, &Sha256, sizeof(SHA256_DIGEST));
-
-	if(MapSize == 0)
+	if(MapSize != 0 && pMapData)
 	{
+		if(!WriteRaw(DemoFile, pMapData, MapSize))
+			return -1;
 	}
-	else if(pMapData)
+	else if(MapSize != 0)
 	{
-		io_write(DemoFile, pMapData, MapSize);
-	}
-	else
-	{
-		// write map data
-		while(true)
+		unsigned Remaining = MapSize;
+		while(Remaining > 0)
 		{
 			unsigned char aChunk[1024 * 64];
-			int Bytes = io_read(MapFile, &aChunk, sizeof(aChunk));
-			if(Bytes <= 0)
-				break;
-			io_write(DemoFile, &aChunk, Bytes);
+			const unsigned Size = std::min<unsigned>(Remaining, sizeof(aChunk));
+			if(FileOperations().Read(MapFile, aChunk, Size) != Size || FileOperations().Error(MapFile) != 0)
+			{
+				MarkWriteError();
+				return -1;
+			}
+			if(!WriteRaw(DemoFile, aChunk, Size))
+				return -1;
+			Remaining -= Size;
 		}
-		if(CloseMapFile)
-			io_close(MapFile);
-		else
-			io_seek(MapFile, 0, IOSEEK_START);
 	}
+	MapGuard.reset();
+	if(m_WriteError)
+		return -1;
 
 	m_LastKeyFrame = -1;
 	m_LastTickMarker = -1;
@@ -199,10 +288,20 @@ int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const 
 	m_pfnFilter = pfnFilter;
 	m_pUser = pUser;
 
-	m_File = DemoFile;
+	if(Replacement && (FileOperations().Flush(DemoFile) != 0 || FileOperations().Error(DemoFile) != 0 || !Replacement->Publish()))
+	{
+		MarkWriteError();
+		return -1;
+	}
+	m_File = DemoGuard.release();
 	str_copy(m_aCurrentFilename, pFilename);
 
 	return 0;
+}
+catch(...)
+{
+	MarkWriteError();
+	return -1;
 }
 
 /*
@@ -233,8 +332,10 @@ enum
 	CHUNKTYPE_DELTA = 3,
 };
 
-void CDemoRecorder::WriteTickMarker(int Tick, bool Keyframe)
+bool CDemoRecorder::WriteTickMarker(int Tick, bool Keyframe)
 {
+	if(!m_File || m_WriteError)
+		return false;
 	if(m_LastTickMarker == -1 || Tick - m_LastTickMarker > CHUNKMASK_TICK || Keyframe)
 	{
 		unsigned char aChunk[sizeof(int32_t) + 1];
@@ -244,23 +345,26 @@ void CDemoRecorder::WriteTickMarker(int Tick, bool Keyframe)
 		if(Keyframe)
 			aChunk[0] |= CHUNKTICKFLAG_KEYFRAME;
 
-		io_write(m_File, aChunk, sizeof(aChunk));
+		if(!WriteRaw(m_File, aChunk, sizeof(aChunk)))
+			return false;
 	}
 	else
 	{
 		unsigned char aChunk[1];
 		aChunk[0] = CHUNKTYPEFLAG_TICKMARKER | CHUNKTICKFLAG_TICK_COMPRESSED | (Tick - m_LastTickMarker);
-		io_write(m_File, aChunk, sizeof(aChunk));
+		if(!WriteRaw(m_File, aChunk, sizeof(aChunk)))
+			return false;
 	}
 
 	m_LastTickMarker = Tick;
 	if(m_FirstTick < 0)
 		m_FirstTick = Tick;
+	return true;
 }
 
 bool CDemoRecorder::Write(int Type, const void *pData, int Size)
 {
-	if(!m_File)
+	if(!m_File || m_WriteError)
 		return false;
 
 	// 官方 be3e5e6a3：负长度是上游 create delta 的失败返回值，必须在这里拒绝，
@@ -297,7 +401,8 @@ bool CDemoRecorder::Write(int Type, const void *pData, int Size)
 	if(Size < 30)
 	{
 		aChunk[0] |= Size;
-		io_write(m_File, aChunk, 1);
+		if(!WriteRaw(m_File, aChunk, 1))
+			return false;
 	}
 	else
 	{
@@ -305,19 +410,20 @@ bool CDemoRecorder::Write(int Type, const void *pData, int Size)
 		{
 			aChunk[0] |= 30;
 			aChunk[1] = Size & 0xff;
-			io_write(m_File, aChunk, 2);
+			if(!WriteRaw(m_File, aChunk, 2))
+				return false;
 		}
 		else
 		{
 			aChunk[0] |= 31;
 			aChunk[1] = Size & 0xff;
 			aChunk[2] = Size >> 8;
-			io_write(m_File, aChunk, 3);
+			if(!WriteRaw(m_File, aChunk, 3))
+				return false;
 		}
 	}
 
-	io_write(m_File, aBuffer2, Size);
-	return true;
+	return WriteRaw(m_File, aBuffer2, Size);
 }
 
 void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size)
@@ -330,7 +436,8 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size, bool K
 	if(Keyframe || m_LastKeyFrame == -1 || (Tick - m_LastKeyFrame) > SERVER_TICK_SPEED * 5)
 	{
 		// write full tickmarker
-		WriteTickMarker(Tick, true);
+		if(!WriteTickMarker(Tick, true))
+			return;
 
 		// write snapshot。官方 be3e5e6a3：只有 chunk 真正写进文件才推进 delta 基准，
 		// 否则回放会用没写进去的快照去解后续 delta。
@@ -343,7 +450,8 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size, bool K
 	else
 	{
 		// write tickmarker
-		WriteTickMarker(Tick, false);
+		if(!WriteTickMarker(Tick, false))
+			return;
 
 		// create delta
 		CSnapshotDeltaBuffer DeltaData;
@@ -378,53 +486,186 @@ void CDemoRecorder::RecordMessage(const void *pData, int Size)
 	Write(CHUNKTYPE_MESSAGE, pData, Size);
 }
 
+namespace
+{
+	bool IsCapturedFile(IOHANDLE Original, const char *pPath)
+	{
+		std::unique_ptr<void, decltype(&io_close)> Other(io_open_read_regular_checked(pPath, nullptr), &io_close);
+		if(!Other)
+			return false;
+#if defined(CONF_FAMILY_WINDOWS)
+		BY_HANDLE_FILE_INFORMATION A{}, B{};
+		const auto Info = [](IOHANDLE File, BY_HANDLE_FILE_INFORMATION &Result) {
+			const HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(static_cast<FILE *>(File))));
+			if(GetFileInformationByHandle(Handle, &Result))
+				return true;
+			// 录制流可能只有写入权限，按同一个文件对象补开属性句柄。
+			const HANDLE Attributes = ReOpenFile(Handle, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0);
+			if(Attributes == INVALID_HANDLE_VALUE)
+				return false;
+			const bool Read = GetFileInformationByHandle(Attributes, &Result) != 0;
+			CloseHandle(Attributes);
+			return Read;
+		};
+		return Info(Original, A) && Info(Other.get(), B) && (A.nFileIndexHigh || A.nFileIndexLow) &&
+		       A.dwVolumeSerialNumber == B.dwVolumeSerialNumber && A.nFileIndexHigh == B.nFileIndexHigh && A.nFileIndexLow == B.nFileIndexLow;
+#else
+		struct stat A{}, B{};
+		return fstat(fileno(static_cast<FILE *>(Original)), &A) == 0 && fstat(fileno(static_cast<FILE *>(Other.get())), &B) == 0 &&
+		       A.st_dev == B.st_dev && A.st_ino == B.st_ino;
+#endif
+	}
+} // namespace
+
+bool demo_output::CCapturedSource::Claim(IOHANDLE Original, const char *pSource)
+{
+	if(!IsCapturedFile(Original, pSource))
+		return false;
+	m_Original = std::filesystem::u8path(pSource);
+	std::error_code Error;
+	const std::string OriginalName(pSource);
+	const size_t NameStart = OriginalName.find_last_of("/\\") + 1;
+	// 超长文件名也要能停录；同目录的短名避免超出单段或完整路径限制。
+	const std::string Prefix = OriginalName.size() - NameStart > 240 || OriginalName.size() + sizeof(".saving.63/source.demo") > IO_MAX_PATH_LENGTH ?
+					   OriginalName.substr(0, NameStart) + ".qm-replay" :
+					   OriginalName + ".saving";
+	for(int Attempt = 0; Attempt < 64; ++Attempt)
+	{
+		const auto Directory = Attempt ? Prefix + "." + std::to_string(Attempt) : Prefix;
+		m_Filename = Directory + "/source.demo";
+		if(m_Filename.size() >= IO_MAX_PATH_LENGTH)
+			return false;
+		m_Directory = std::filesystem::u8path(Directory);
+		m_Private = std::filesystem::u8path(m_Filename);
+		m_OwnDirectory = std::filesystem::create_directory(m_Directory, Error);
+		if(m_OwnDirectory || (Error && Error != std::errc::file_exists))
+			break;
+	}
+	if(!m_OwnDirectory)
+		return false;
+	std::filesystem::rename(m_Original, m_Private, Error);
+	if(Error)
+		return false;
+	m_Restore = true;
+	// 检查与移动之间也可能换入新文件，必须对已接管的目录项再核对一次。
+	return IsCapturedFile(Original, Filename());
+}
+
+demo_output::CCapturedSource::~CCapturedSource() noexcept
+{
+	if(!m_OwnDirectory)
+		return;
+	try
+	{
+		std::error_code Error;
+		if(m_Restore)
+		{
+			// 原名可被复用，恢复时也只允许创建；恢复失败则保留可找回的源录像。
+			std::filesystem::create_hard_link(m_Private, m_Original, Error);
+			if(Error && Error != std::errc::file_exists)
+				std::filesystem::copy_file(m_Private, m_Original, std::filesystem::copy_options::none, Error);
+			if(Error)
+			{
+				log_warn("replay", "Source recording retained at '%s'", Filename());
+				return;
+			}
+			std::filesystem::remove(m_Private, Error);
+		}
+		std::filesystem::remove(m_Directory, Error);
+	}
+	catch(...)
+	{
+	}
+}
+
 int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilename)
 {
 	if(!m_File)
 		return -1;
 
-	if(Mode == IDemoRecorder::EStopMode::KEEP_FILE)
+	if(Mode == IDemoRecorder::EStopMode::KEEP_FILE && !m_WriteError)
 	{
 		// add the demo length to the header
-		io_seek(m_File, offsetof(CDemoHeader, m_aLength), IOSEEK_START);
 		unsigned char aLength[sizeof(int32_t)];
 		uint_to_bytes_be(aLength, Length());
-		io_write(m_File, aLength, sizeof(aLength));
+		if(SeekRaw(m_File, offsetof(CDemoHeader, m_aLength)))
+			WriteRaw(m_File, aLength, sizeof(aLength));
 
 		// add the timeline markers to the header
-		io_seek(m_File, sizeof(CDemoHeader) + offsetof(CTimelineMarkers, m_aNumTimelineMarkers), IOSEEK_START);
 		unsigned char aNumMarkers[sizeof(int32_t)];
 		uint_to_bytes_be(aNumMarkers, m_NumTimelineMarkers);
-		io_write(m_File, aNumMarkers, sizeof(aNumMarkers));
-		for(int i = 0; i < m_NumTimelineMarkers; i++)
+		if(SeekRaw(m_File, sizeof(CDemoHeader) + offsetof(CTimelineMarkers, m_aNumTimelineMarkers)))
+			WriteRaw(m_File, aNumMarkers, sizeof(aNumMarkers));
+		for(int i = 0; i < m_NumTimelineMarkers && !m_WriteError; i++)
 		{
 			unsigned char aMarker[sizeof(int32_t)];
 			uint_to_bytes_be(aMarker, m_aTimelineMarkers[i]);
-			io_write(m_File, aMarker, sizeof(aMarker));
+			WriteRaw(m_File, aMarker, sizeof(aMarker));
 		}
 	}
 
-	io_close(m_File);
-	m_File = nullptr;
-
-	if(Mode == IDemoRecorder::EStopMode::REMOVE_FILE)
+	demo_output::CCapturedSource Source;
+	std::string Destination;
+	const bool Remove = Mode == IDemoRecorder::EStopMode::REMOVE_FILE;
+	const bool Rename = !Remove && !m_WriteError && pTargetFilename[0] != '\0';
+	bool Claimed = false;
+	bool SameFile = false;
+	if(Remove || Rename)
 	{
-		if(!m_pStorage->RemoveFile(m_aCurrentFilename, fs_is_relative_path(m_aCurrentFilename) ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE))
+		try
+		{
+			std::string Original;
+			if(demo_output::Resolve(*m_pStorage, m_aCurrentFilename, Original) &&
+				(!Rename || demo_output::Resolve(*m_pStorage, pTargetFilename, Destination)))
+			{
+				std::error_code Error;
+				SameFile = Rename && (Original == Destination || std::filesystem::equivalent(std::filesystem::u8path(Original), std::filesystem::u8path(Destination), Error));
+				Claimed = SameFile ? IsCapturedFile(m_File, Original.c_str()) : Source.Claim(m_File, Original.c_str());
+			}
+		}
+		catch(...)
+		{
+			Claimed = false;
+		}
+	}
+	const IOHANDLE File = std::exchange(m_File, nullptr);
+	if(FileOperations().Flush(File) != 0)
+		MarkWriteError();
+	if(FileOperations().Error(File) != 0)
+		MarkWriteError();
+	if(FileOperations().Close(File) != 0)
+		MarkWriteError();
+
+	if((Remove || Rename) && !Claimed)
+		return -1;
+	if(Remove)
+	{
+		if(!m_pStorage->RemoveFile(Source.Filename(), IStorage::TYPE_ABSOLUTE))
 		{
 			log_error_color(DEMO_PRINT_COLOR, "demo_recorder", "Could not remove demo file '%s'.", m_aCurrentFilename);
 			return -1;
 		}
+		Source.Removed();
 	}
-	else if(pTargetFilename[0] != '\0')
+	else if(m_WriteError)
 	{
-		if(!m_pStorage->RenameFile(m_aCurrentFilename, pTargetFilename, fs_is_relative_path(m_aCurrentFilename) ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE))
+		// 关闭并不代表写入完整；损坏的源文件不能移动到成功录像的位置。
+		return -1;
+	}
+	else if(Rename && !SameFile)
+	{
+		if(!m_pStorage->RenameFile(Source.Filename(), Destination.c_str(), IStorage::TYPE_ABSOLUTE, false))
 		{
 			log_error_color(DEMO_PRINT_COLOR, "demo_recorder", "Could not move demo file '%s' to '%s'.", m_aCurrentFilename, pTargetFilename);
 			return -1;
 		}
+		Source.Removed();
 	}
 
+	if(m_WriteError)
+		return -1;
 	log_info_color(DEMO_PRINT_COLOR, "demo_recorder", "Stopped recording to '%s'", m_aCurrentFilename);
+
 	return 0;
 }
 
@@ -486,14 +727,31 @@ void CDemoPlayer::Construct(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSna
 	m_aErrorMessage[0] = '\0';
 }
 
-CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, TUpdateIntraTimesFunc &&UpdateIntraTimesFunc)
+CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, TUpdateIntraTimesFunc &&UpdateIntraTimesFunc) :
+	CDemoPlayer(pSnapshotDelta, pSnapshotDeltaSixup, UseVideo)
 {
-	Construct(pSnapshotDelta, pSnapshotDeltaSixup, UseVideo);
-
 	m_UpdateIntraTimesFunc = UpdateIntraTimesFunc;
 }
 
-CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo)
+unsigned char *CDemoPlayer::CMapDataOperations::Allocate(unsigned Size) noexcept { return static_cast<unsigned char *>(std::malloc(Size)); }
+void CDemoPlayer::CMapDataOperations::Free(unsigned char *pData) noexcept { std::free(pData); }
+int64_t CDemoPlayer::CMapDataOperations::Tell(IOHANDLE File) noexcept { return io_tell(File); }
+int CDemoPlayer::CMapDataOperations::Seek(IOHANDLE File, int64_t Offset) noexcept { return io_seek(File, Offset, IOSEEK_START); }
+unsigned CDemoPlayer::CMapDataOperations::Read(IOHANDLE File, void *pData, unsigned Size) noexcept { return io_read(File, pData, Size); }
+unsigned CDemoPlayer::CMapDataOperations::ReadChunkHeaderBytes(IOHANDLE File, void *pData, unsigned Size) noexcept { return io_read(File, pData, Size); }
+int CDemoPlayer::CMapDataOperations::Error(IOHANDLE File) noexcept { return io_error(File); }
+
+CDemoPlayer::CMapDataOperations &CDemoPlayer::MapDataOperations()
+{
+	static CMapDataOperations s_Operations;
+	return m_pMapDataOperations ? *m_pMapDataOperations : s_Operations;
+}
+
+void *CDemoPlayer::CKeyFrameMemory::Allocate(size_t Bytes) { return ::operator new(Bytes); }
+void CDemoPlayer::CKeyFrameMemory::Free(void *pMemory, size_t) noexcept { ::operator delete(pMemory); }
+
+CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations, ETimeMode TimeMode, CKeyFrameMemory *pKeyFrameMemory) :
+	m_pMapDataOperations(pMapDataOperations), m_TimeMode(TimeMode), m_vKeyFrames(CKeyFrameAllocator<CKeyFrame>(pKeyFrameMemory))
 {
 	Construct(pSnapshotDelta, pSnapshotDeltaSixup, UseVideo);
 }
@@ -501,6 +759,33 @@ CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapsh
 CDemoPlayer::~CDemoPlayer()
 {
 	dbg_assert(m_File == 0, "Demo player not stopped");
+}
+
+void CDemoPlayer::FailLoad(const char *pErrorMessage) noexcept
+{
+	const IOHANDLE File = std::exchange(m_File, nullptr);
+	if(File)
+		io_close(File);
+	{
+		// 分配失败后释放已准备的索引容量，不能继续占住导致失败的内存。
+		decltype(m_vKeyFrames) Empty(m_vKeyFrames.get_allocator());
+		m_vKeyFrames.swap(Empty);
+	}
+	str_copy(m_aFilename, "");
+	str_copy(m_aErrorMessage, pErrorMessage);
+#if defined(CONF_VIDEORECORDER)
+	m_WasRecording = false;
+	if(m_UseVideo && IVideo::Current())
+	{
+		try
+		{
+			IVideo::Current()->Stop();
+		}
+		catch(...)
+		{
+		}
+	}
+#endif
 }
 
 void CDemoPlayer::SetListener(IListener *pListener)
@@ -513,9 +798,18 @@ CDemoPlayer::EReadChunkHeaderResult CDemoPlayer::ReadChunkHeader(int *pType, int
 	*pSize = 0;
 	*pType = 0;
 
+	const auto Read = [this](void *pData, unsigned Size, bool AtChunkStart = false) {
+		const unsigned Bytes = m_pMapDataOperations ? m_pMapDataOperations->ReadChunkHeaderBytes(m_File, pData, Size) : io_read(m_File, pData, Size);
+		if(Bytes == Size)
+			return CHUNKHEADER_SUCCESS;
+		if(m_pMapDataOperations ? m_pMapDataOperations->Error(m_File) : io_error(m_File))
+			return CHUNKHEADER_IO_ERROR;
+		return AtChunkStart ? CHUNKHEADER_EOF : CHUNKHEADER_ERROR;
+	};
+
 	unsigned char Chunk = 0;
-	if(io_read(m_File, &Chunk, sizeof(Chunk)) != sizeof(Chunk))
-		return CHUNKHEADER_EOF;
+	if(const auto Result = Read(&Chunk, sizeof(Chunk), true); Result != CHUNKHEADER_SUCCESS)
+		return Result;
 
 	if(Chunk & CHUNKTYPEFLAG_TICKMARKER)
 	{
@@ -540,8 +834,8 @@ CDemoPlayer::EReadChunkHeaderResult CDemoPlayer::ReadChunkHeader(int *pType, int
 		else
 		{
 			unsigned char aTickdata[sizeof(int32_t)];
-			if(io_read(m_File, aTickdata, sizeof(aTickdata)) != sizeof(aTickdata))
-				return CHUNKHEADER_ERROR;
+			if(const auto Result = Read(aTickdata, sizeof(aTickdata)); Result != CHUNKHEADER_SUCCESS)
+				return Result;
 			NewTick = bytes_be_to_uint(aTickdata);
 		}
 		if(NewTick < MIN_TICK || NewTick >= MAX_TICK) // invalid tick
@@ -557,15 +851,15 @@ CDemoPlayer::EReadChunkHeaderResult CDemoPlayer::ReadChunkHeader(int *pType, int
 		if(*pSize == 30)
 		{
 			unsigned char aSizedata[1];
-			if(io_read(m_File, aSizedata, sizeof(aSizedata)) != sizeof(aSizedata))
-				return CHUNKHEADER_ERROR;
+			if(const auto Result = Read(aSizedata, sizeof(aSizedata)); Result != CHUNKHEADER_SUCCESS)
+				return Result;
 			*pSize = aSizedata[0];
 		}
 		else if(*pSize == 31)
 		{
 			unsigned char aSizedata[2];
-			if(io_read(m_File, aSizedata, sizeof(aSizedata)) != sizeof(aSizedata))
-				return CHUNKHEADER_ERROR;
+			if(const auto Result = Read(aSizedata, sizeof(aSizedata)); Result != CHUNKHEADER_SUCCESS)
+				return Result;
 			*pSize = (aSizedata[1] << 8) | aSizedata[0];
 		}
 	}
@@ -600,6 +894,8 @@ CDemoPlayer::EScanFileResult CDemoPlayer::ScanFile()
 		}
 		int ChunkType, ChunkSize;
 		const EReadChunkHeaderResult Result = ReadChunkHeader(&ChunkType, &ChunkSize, &ChunkTick);
+		if(Result == CHUNKHEADER_IO_ERROR)
+			return EScanFileResult::ERROR_UNRECOVERABLE;
 		if(Result != CHUNKHEADER_SUCCESS ||
 			(ChunkSize > 0 && io_skip(m_File, ChunkSize) != 0))
 		{
@@ -625,12 +921,34 @@ CDemoPlayer::EScanFileResult CDemoPlayer::ScanFile()
 		{
 			return ResetToStartPosition(EScanFileResult::ERROR_RECOVERABLE);
 		}
+		else if(Result == CHUNKHEADER_IO_ERROR)
+		{
+			return EScanFileResult::ERROR_UNRECOVERABLE;
+		}
 
 		if(ChunkType & CHUNKTYPEFLAG_TICKMARKER)
 		{
 			if(ChunkType & CHUNKTICKFLAG_KEYFRAME)
 			{
-				m_vKeyFrames.emplace_back(CurrentPos, ChunkTick);
+				try
+				{
+					m_vKeyFrames.emplace_back(CurrentPos, ChunkTick);
+				}
+				catch(const std::bad_alloc &)
+				{
+					FailLoad("Not enough memory to load demo");
+					return EScanFileResult::ERROR_UNRECOVERABLE;
+				}
+				catch(const std::length_error &)
+				{
+					FailLoad("Demo keyframe index is too large");
+					return EScanFileResult::ERROR_UNRECOVERABLE;
+				}
+				catch(...)
+				{
+					FailLoad("Error loading demo");
+					return EScanFileResult::ERROR_UNRECOVERABLE;
+				}
 			}
 			if(m_Info.m_Info.m_FirstTick == -1)
 			{
@@ -650,7 +968,7 @@ CDemoPlayer::EScanFileResult CDemoPlayer::ScanFile()
 	return ResetToStartPosition(EScanFileResult::SUCCESS);
 }
 
-void CDemoPlayer::DoTick()
+bool CDemoPlayer::DoTick()
 {
 	// update ticks
 	m_Info.m_PreviousTick = m_Info.m_Info.m_CurrentTick;
@@ -681,7 +999,7 @@ void CDemoPlayer::DoTick()
 			}
 			break;
 		}
-		else if(Result == CHUNKHEADER_ERROR)
+		else if(Result != CHUNKHEADER_SUCCESS)
 		{
 			Stop("Error reading chunk header");
 			break;
@@ -772,7 +1090,7 @@ void CDemoPlayer::DoTick()
 			if(ChunkType & CHUNKTYPEFLAG_TICKMARKER)
 			{
 				m_Info.m_NextTick = ChunkTick;
-				break;
+				return IsPlaying();
 			}
 			else if(ChunkType == CHUNKTYPE_MESSAGE)
 			{
@@ -781,6 +1099,7 @@ void CDemoPlayer::DoTick()
 			}
 		}
 	}
+	return false;
 }
 
 void CDemoPlayer::Pause()
@@ -801,131 +1120,163 @@ void CDemoPlayer::Unpause()
 #endif
 }
 
-int CDemoPlayer::Load(class IStorage *pStorage, const char *pFilename, int StorageType)
+int CDemoPlayer::Load(class IStorage *pStorage, const char *pFilename, int StorageType, bool ResetSliceMarkers) noexcept
 {
 	dbg_assert(m_File == 0, "Demo player already playing");
 
-	str_copy(m_aFilename, pFilename);
-	str_copy(m_aErrorMessage, "");
-
-	log_info_color(DEMO_PRINT_COLOR, "demo_player", "Loading demo '%s'", pFilename);
-
-	// clear the playback info
-	mem_zero(&m_Info, sizeof(m_Info));
-	m_Info.m_Info.m_FirstTick = -1;
-	m_Info.m_Info.m_LastTick = -1;
-	m_Info.m_NextTick = -1;
-	m_Info.m_Info.m_CurrentTick = -1;
-	m_Info.m_PreviousTick = -1;
-	m_Info.m_Info.m_Speed = 1;
-	m_SpeedIndex = DEMO_SPEED_INDEX_DEFAULT;
-	m_LastSnapshotDataSize = -1;
-
-	if(!GetDemoInfo(pStorage, pFilename, StorageType, &m_Info.m_Header, &m_Info.m_TimelineMarkers, &m_MapInfo, &m_File, m_aErrorMessage, sizeof(m_aErrorMessage)))
+	try
 	{
-		str_copy(m_aFilename, "");
-		return -1;
-	}
-	m_Sixup = str_startswith(m_Info.m_Header.m_aNetversion, "0.7");
+		str_copy(m_aFilename, pFilename);
+		str_copy(m_aErrorMessage, "");
 
-	// save byte offset of map for later use
-	m_MapOffset = io_tell(m_File);
-	if(m_MapOffset < 0 || io_skip(m_File, m_MapInfo.m_Size) != 0)
-	{
-		Stop("Error skipping map data");
-		return -1;
-	}
+		log_info_color(DEMO_PRINT_COLOR, "demo_player", "Loading demo '%s'", pFilename);
 
-	// Scan the file for interesting points
-	if(ScanFile() == EScanFileResult::ERROR_UNRECOVERABLE)
-	{
-		Stop("Error scanning demo file");
-		return -1;
-	}
-	m_Info.m_LiveStateUpdating = true;
+		// clear the playback info
+		mem_zero(&m_Info, sizeof(m_Info));
+		m_Info.m_Info.m_FirstTick = -1;
+		m_Info.m_Info.m_LastTick = -1;
+		m_Info.m_NextTick = -1;
+		m_Info.m_Info.m_CurrentTick = -1;
+		m_Info.m_PreviousTick = -1;
+		m_Info.m_Info.m_Speed = 1;
+		m_SpeedIndex = DEMO_SPEED_INDEX_DEFAULT;
+		m_LastSnapshotDataSize = -1;
 
-	if(m_Info.m_Header.m_Version > gs_OldVersion)
-	{
-		// get timeline markers
-		int Num = bytes_be_to_uint(m_Info.m_TimelineMarkers.m_aNumTimelineMarkers);
-		m_Info.m_Info.m_NumTimelineMarkers = std::clamp<int>(Num, 0, MAX_TIMELINE_MARKERS);
-		for(int i = 0; i < m_Info.m_Info.m_NumTimelineMarkers; i++)
+		if(!GetDemoInfo(pStorage, pFilename, StorageType, &m_Info.m_Header, &m_Info.m_TimelineMarkers, &m_MapInfo, &m_File, m_aErrorMessage, sizeof(m_aErrorMessage)))
 		{
-			m_Info.m_Info.m_aTimelineMarkers[i] = bytes_be_to_uint(m_Info.m_TimelineMarkers.m_aTimelineMarkers[i]);
-			if(!in_range(m_Info.m_Info.m_aTimelineMarkers[i], m_Info.m_Info.m_FirstTick, m_Info.m_Info.m_LastTick))
+			str_copy(m_aFilename, "");
+			return -1;
+		}
+		m_Sixup = str_startswith(m_Info.m_Header.m_aNetversion, "0.7");
+
+		// save byte offset of map for later use
+		m_MapOffset = io_tell(m_File);
+		if(m_MapOffset < 0 || io_skip(m_File, m_MapInfo.m_Size) != 0)
+		{
+			Stop("Error skipping map data");
+			return -1;
+		}
+
+		// Scan the file for interesting points
+		if(ScanFile() == EScanFileResult::ERROR_UNRECOVERABLE)
+		{
+			Stop("Error scanning demo file");
+			return -1;
+		}
+		m_Info.m_LiveStateUpdating = true;
+
+		if(m_Info.m_Header.m_Version > gs_OldVersion)
+		{
+			// get timeline markers
+			int Num = bytes_be_to_uint(m_Info.m_TimelineMarkers.m_aNumTimelineMarkers);
+			m_Info.m_Info.m_NumTimelineMarkers = std::clamp<int>(Num, 0, MAX_TIMELINE_MARKERS);
+			for(int i = 0; i < m_Info.m_Info.m_NumTimelineMarkers; i++)
 			{
-				Stop("Invalid demo timeline marker");
-				return -1;
+				m_Info.m_Info.m_aTimelineMarkers[i] = bytes_be_to_uint(m_Info.m_TimelineMarkers.m_aTimelineMarkers[i]);
+				if(!in_range(m_Info.m_Info.m_aTimelineMarkers[i], m_Info.m_Info.m_FirstTick, m_Info.m_Info.m_LastTick))
+				{
+					Stop("Invalid demo timeline marker");
+					return -1;
+				}
 			}
 		}
+
+		// reset slice markers
+		if(ResetSliceMarkers)
+		{
+			g_Config.m_ClDemoSliceBegin = -1;
+			g_Config.m_ClDemoSliceEnd = -1;
+		}
+
+		// ready for playback
+		return 0;
 	}
-
-	// reset slice markers
-	g_Config.m_ClDemoSliceBegin = -1;
-	g_Config.m_ClDemoSliceEnd = -1;
-
-	// ready for playback
-	return 0;
+	catch(const std::bad_alloc &)
+	{
+		FailLoad("Not enough memory to load demo");
+	}
+	catch(const std::length_error &)
+	{
+		FailLoad("Demo keyframe index is too large");
+	}
+	catch(...)
+	{
+		FailLoad("Error loading demo");
+	}
+	return -1;
 }
 
 unsigned char *CDemoPlayer::GetMapData(class IStorage *pStorage)
 {
-	if(!m_MapInfo.m_Size)
+	if(!m_File || !m_MapInfo.m_Size)
 		return nullptr;
 
-	const int64_t CurSeek = io_tell(m_File);
-	if(CurSeek < 0 || io_seek(m_File, m_MapOffset, IOSEEK_START) != 0)
+	CMapDataOperations &Operations = MapDataOperations();
+	const int64_t CurSeek = Operations.Tell(m_File);
+	if(CurSeek < 0)
 		return nullptr;
-	unsigned char *pMapData = (unsigned char *)malloc(m_MapInfo.m_Size);
-	if(io_read(m_File, pMapData, m_MapInfo.m_Size) != m_MapInfo.m_Size ||
-		io_seek(m_File, CurSeek, IOSEEK_START) != 0)
+	const auto FreeMap = [&Operations](unsigned char *pData) noexcept { Operations.Free(pData); };
+	std::unique_ptr<unsigned char, decltype(FreeMap)> pMapData(Operations.Allocate(m_MapInfo.m_Size), FreeMap);
+	// 分配失败时尚未移动借用游标，也不能把空缓冲交给 io_read。
+	if(!pMapData)
+		return nullptr;
+	bool ReadComplete = false;
+	if(Operations.Seek(m_File, m_MapOffset) == 0)
+		ReadComplete = Operations.Read(m_File, pMapData.get(), m_MapInfo.m_Size) == m_MapInfo.m_Size && Operations.Error(m_File) == 0;
+	// 短读和初次定位失败同样必须尝试恢复，不能让 || 短路跳过恢复。
+	if(Operations.Seek(m_File, CurSeek) != 0)
 	{
-		free(pMapData);
+		Stop("Error restoring demo position after reading map data");
 		return nullptr;
 	}
-	return pMapData;
+	return ReadComplete ? pMapData.release() : nullptr;
 }
 
-bool CDemoPlayer::ExtractMap(class IStorage *pStorage)
+bool CDemoPlayer::ExtractMap(class IStorage *pStorage, demo_output::COperations *pOutputOperations, CDemoRecorder::CFileOperations *pFileOperations) noexcept
 {
-	unsigned char *pMapData = GetMapData(pStorage);
-	if(!pMapData)
+	try
 	{
-		return false;
-	}
+		std::unique_ptr<unsigned char, decltype(&std::free)> pMapData(GetMapData(pStorage), &std::free);
+		if(!pMapData)
+			return false;
 
-	// handle sha256
-	std::optional<SHA256_DIGEST> Sha256;
-	if(m_Info.m_Header.m_Version >= gs_Sha256Version)
-	{
-		Sha256 = m_MapInfo.m_Sha256;
-		dbg_assert(Sha256.has_value(), "SHA256 missing for version %d demo", m_Info.m_Header.m_Version);
-	}
-	else
-	{
-		Sha256 = sha256(pMapData, m_MapInfo.m_Size);
+		// 缓存名由内嵌内容决定，已有摘要必须与实际读到的地图一致。
+		const SHA256_DIGEST Sha256 = sha256(pMapData.get(), m_MapInfo.m_Size);
+		if(m_MapInfo.m_Sha256 && *m_MapInfo.m_Sha256 != Sha256)
+			return false;
+
+		char aSha[SHA256_MAXSTRSIZE], aMapFilename[IO_MAX_PATH_LENGTH];
+		sha256_str(Sha256, aSha, sizeof(aSha));
+		str_format(aMapFilename, sizeof(aMapFilename), "downloadedmaps/%s_%s.map", m_Info.m_Header.m_aMapName, aSha);
+
+		demo_output::CTransaction Output(pOutputOperations);
+		if(!Output.Prepare(*pStorage, aMapFilename))
+			return false;
+		IOHANDLE MapFile = pStorage->OpenFile(Output.Filename(), IOFLAG_WRITE, IStorage::TYPE_ABSOLUTE);
+		if(!MapFile)
+			return false;
+
+		CDemoRecorder::CFileOperations DefaultOperations;
+		CDemoRecorder::CFileOperations &Operations = pFileOperations ? *pFileOperations : DefaultOperations;
+		// 从打开到关闭只调用 noexcept 文件操作，失败也必须关闭且只能关闭一次。
+		const bool Written = Operations.Write(MapFile, pMapData.get(), m_MapInfo.m_Size) == m_MapInfo.m_Size;
+		const bool Flushed = Operations.Flush(MapFile) == 0;
+		const bool Clean = Operations.Error(MapFile) == 0;
+		const bool Closed = Operations.Close(MapFile) == 0;
+		if(!Written || !Flushed || !Clean || !Closed || !Output.Publish())
+			return false;
 		m_MapInfo.m_Sha256 = Sha256;
+		return true;
 	}
-
-	// construct name
-	char aSha[SHA256_MAXSTRSIZE], aMapFilename[IO_MAX_PATH_LENGTH];
-	sha256_str(Sha256.value(), aSha, sizeof(aSha));
-	str_format(aMapFilename, sizeof(aMapFilename), "downloadedmaps/%s_%s.map", m_Info.m_Header.m_aMapName, aSha);
-
-	// save map
-	IOHANDLE MapFile = pStorage->OpenFile(aMapFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!MapFile)
+	catch(...)
 	{
-		free(pMapData);
 		return false;
 	}
+}
 
-	io_write(MapFile, pMapData, m_MapInfo.m_Size);
-	io_close(MapFile);
-
-	// free data
-	free(pMapData);
-	return true;
+int64_t CDemoPlayer::SystemTime() const
+{
+	return m_TimeMode == ETimeMode::CACHED_FRAME ? time_get() : time_get_impl();
 }
 
 int64_t CDemoPlayer::Time()
@@ -942,7 +1293,7 @@ int64_t CDemoPlayer::Time()
 	}
 	else
 	{
-		const int64_t Now = time_get();
+		const int64_t Now = SystemTime();
 		if(m_WasRecording)
 		{
 			m_WasRecording = false;
@@ -951,12 +1302,14 @@ int64_t CDemoPlayer::Time()
 		return Now;
 	}
 #else
-	return time_get();
+	return SystemTime();
 #endif
 }
 
-void CDemoPlayer::Play()
+bool CDemoPlayer::Play()
 {
+	if(!IsPlaying())
+		return false;
 	// Fill in previous and next tick
 	while(m_Info.m_PreviousTick == -1)
 	{
@@ -964,7 +1317,7 @@ void CDemoPlayer::Play()
 		if(!IsPlaying())
 		{
 			// Empty demo or error playing tick
-			return;
+			return false;
 		}
 	}
 
@@ -973,13 +1326,15 @@ void CDemoPlayer::Play()
 	// the value that `Time` returns when called in the `Update` function can be
 	// very large depending on the time required to load the demo, which causes
 	// demo playback to start later. This ensures it always starts at 00:00.
-	set_new_tick();
+	if(m_TimeMode == ETimeMode::CACHED_FRAME)
+		set_new_tick();
 	m_Info.m_CurrentTime = m_Info.m_PreviousTick * time_freq() / SERVER_TICK_SPEED;
 	m_Info.m_LastUpdate = Time();
 	if(m_Info.m_LiveStateUpdating && m_Info.m_LastScan <= 0)
 	{
 		m_Info.m_LastScan = m_Info.m_LastUpdate;
 	}
+	return true;
 }
 
 bool CDemoPlayer::SeekPercent(float Percent)
@@ -1043,13 +1398,13 @@ bool CDemoPlayer::SetPos(int WantedTick)
 	// Just the next tick
 	if(WantedTick == m_Info.m_NextTick + 1)
 	{
-		DoTick();
-		Play();
-		return true;
+		return DoTick() && Play();
 	}
 
 	const int KeyFrameWantedTick = WantedTick - 5; // -5 because we have to have a current tick and previous tick when we do the playback
-	const float Percent = (KeyFrameWantedTick - m_Info.m_Info.m_FirstTick) / (float)(m_Info.m_Info.m_LastTick - m_Info.m_Info.m_FirstTick);
+	const int TickSpan = m_Info.m_Info.m_LastTick - m_Info.m_Info.m_FirstTick;
+	// 短录像可能得到负比例，单 tick 则无跨度；转为无符号索引前先归入有效范围。
+	const float Percent = TickSpan > 0 ? std::clamp((KeyFrameWantedTick - m_Info.m_Info.m_FirstTick) / (float)TickSpan, 0.0f, 1.0f) : 0.0f;
 
 	// get correct key frame
 	size_t KeyFrame = std::clamp<size_t>(m_vKeyFrames.size() * Percent, 0, m_vKeyFrames.size() - 1);
@@ -1072,26 +1427,25 @@ bool CDemoPlayer::SetPos(int WantedTick)
 		m_Info.m_NextTick = -1;
 		m_Info.m_Info.m_CurrentTick = -1;
 		m_Info.m_PreviousTick = -1;
+		m_LastSnapshotDataSize = -1;
 	}
 
 	// playback everything until we hit our tick
 	while(m_Info.m_NextTick < WantedTick)
 	{
-		DoTick();
-		if(!IsPlaying())
+		if(!DoTick())
 		{
 			return false;
 		}
 	}
 
-	Play();
-
-	return true;
+	return Play();
 }
 
 void CDemoPlayer::SetSpeed(float Speed)
 {
-	m_Info.m_Info.m_Speed = std::clamp(Speed, 0.f, 256.f);
+	if(!std::isnan(Speed))
+		m_Info.m_Info.m_Speed = std::clamp(Speed, 0.f, 256.f);
 }
 
 void CDemoPlayer::SetSpeedIndex(int SpeedIndex)
@@ -1226,9 +1580,12 @@ void CDemoPlayer::UpdateTimes()
 	const int64_t Freq = time_freq();
 	const int64_t CurrentTickStart = m_Info.m_Info.m_CurrentTick * Freq / SERVER_TICK_SPEED;
 	const int64_t PreviousTickStart = m_Info.m_PreviousTick * Freq / SERVER_TICK_SPEED;
-	m_Info.m_IntraTick = (m_Info.m_CurrentTime - PreviousTickStart) / (float)(CurrentTickStart - PreviousTickStart);
-	m_Info.m_IntraTickSincePrev = (m_Info.m_CurrentTime - PreviousTickStart) / (float)(Freq / SERVER_TICK_SPEED);
-	m_Info.m_TickTime = (m_Info.m_CurrentTime - PreviousTickStart) / (float)Freq;
+	// 预热和重复 tick 没有可插值的区间，客户端时钟回调也应收到有限值。
+	const bool HasInterval = m_Info.m_PreviousTick >= 0 && CurrentTickStart > PreviousTickStart;
+	const int64_t Elapsed = HasInterval ? m_Info.m_CurrentTime - PreviousTickStart : 0;
+	m_Info.m_IntraTick = HasInterval ? Elapsed / (float)(CurrentTickStart - PreviousTickStart) : 0.0f;
+	m_Info.m_IntraTickSincePrev = Elapsed / (float)(Freq / SERVER_TICK_SPEED);
+	m_Info.m_TickTime = Elapsed / (float)Freq;
 	m_Info.m_Info.m_LivePlayback = m_Info.m_Info.m_LastTick - m_Info.m_Info.m_CurrentTick < 3 * SERVER_TICK_SPEED;
 
 	if(m_UpdateIntraTimesFunc)
@@ -1278,7 +1635,8 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, const char *pFilename, int Sto
 	pMapInfo->m_Crc = 0;
 	pMapInfo->m_Size = 0;
 
-	IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType);
+	std::unique_ptr<void, decltype(&io_close)> pOwnedFile(pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType), &io_close);
+	const IOHANDLE File = pOwnedFile.get();
 	if(!File)
 	{
 		if(pErrorMessage != nullptr)
@@ -1291,7 +1649,6 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, const char *pFilename, int Sto
 		if(pErrorMessage != nullptr)
 			str_copy(pErrorMessage, "Error reading demo header", ErrorMessageSize);
 		mem_zero(pDemoHeader, sizeof(CDemoHeader));
-		io_close(File);
 		return false;
 	}
 
@@ -1300,7 +1657,6 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, const char *pFilename, int Sto
 		if(pErrorMessage != nullptr)
 			str_format(pErrorMessage, ErrorMessageSize, "Demo version '%d' is not supported", pDemoHeader->m_Version);
 		mem_zero(pDemoHeader, sizeof(CDemoHeader));
-		io_close(File);
 		return false;
 	}
 	else if(pDemoHeader->m_Version > gs_OldVersion)
@@ -1310,7 +1666,6 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, const char *pFilename, int Sto
 			if(pErrorMessage != nullptr)
 				str_copy(pErrorMessage, "Error reading timeline markers", ErrorMessageSize);
 			mem_zero(pDemoHeader, sizeof(CDemoHeader));
-			io_close(File);
 			return false;
 		}
 	}
@@ -1329,7 +1684,6 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, const char *pFilename, int Sto
 					str_copy(pErrorMessage, "Error reading SHA256", ErrorMessageSize);
 				mem_zero(pDemoHeader, sizeof(CDemoHeader));
 				mem_zero(pTimelineMarkers, sizeof(CTimelineMarkers));
-				io_close(File);
 				return false;
 			}
 			Sha256 = ReadSha256;
@@ -1344,7 +1698,6 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, const char *pFilename, int Sto
 					str_copy(pErrorMessage, "Error rewinding SHA256 extension UUID", ErrorMessageSize);
 				mem_zero(pDemoHeader, sizeof(CDemoHeader));
 				mem_zero(pTimelineMarkers, sizeof(CTimelineMarkers));
-				io_close(File);
 				return false;
 			}
 		}
@@ -1355,10 +1708,8 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, const char *pFilename, int Sto
 	pMapInfo->m_Crc = bytes_be_to_uint(pDemoHeader->m_aMapCrc);
 	pMapInfo->m_Size = bytes_be_to_uint(pDemoHeader->m_aMapSize);
 
-	if(pFile == nullptr)
-		io_close(File);
-	else
-		*pFile = File;
+	if(pFile != nullptr)
+		*pFile = pOwnedFile.release();
 
 	return true;
 }
@@ -1374,23 +1725,43 @@ namespace
 		bool m_Stop;
 		int m_StartTick;
 		int m_EndTick;
-		int m_TickOffset;
+		int64_t m_TickOffset;
+		int m_FirstRecordedTick;
 		int m_LastRecordedTick;
+		int m_RecordedTicks = 0;
 		bool m_NeedsKeyframe;
+
+		bool AcceptTick(int Tick)
+		{
+			if(m_EndTick != -1 && Tick > m_EndTick)
+			{
+				m_Stop = true;
+				// 离线 Update 会连续解码，须暂停播放器才能在本段末尾返回。
+				m_pDemoPlayer->Pause();
+				return false;
+			}
+			return m_StartTick == -1 || Tick >= m_StartTick;
+		}
+
+		void TrackRecordedTick(int Tick)
+		{
+			// 只需判断是否有播放预热所需的两条 tick，避免长期计数溢出。
+			if(m_RecordedTicks < 2)
+				++m_RecordedTicks;
+			if(m_FirstRecordedTick == -1)
+				m_FirstRecordedTick = Tick;
+			m_LastRecordedTick = Tick;
+		}
 
 		void OnDemoPlayerSnapshot(void *pData, int Size) override
 		{
 			const CDemoPlayer::CPlaybackInfo *pInfo = m_pDemoPlayer->Info();
 
-			if(m_EndTick != -1 && pInfo->m_Info.m_CurrentTick > m_EndTick)
+			if(AcceptTick(pInfo->m_Info.m_CurrentTick))
 			{
-				m_Stop = true;
-			}
-			else if(m_StartTick == -1 || pInfo->m_Info.m_CurrentTick >= m_StartTick)
-			{
-				const int OutputTick = pInfo->m_Info.m_CurrentTick + m_TickOffset;
+				const int OutputTick = static_cast<int>(pInfo->m_Info.m_CurrentTick + m_TickOffset);
 				m_pDemoRecorder->RecordSnapshot(OutputTick, pData, Size, m_NeedsKeyframe);
-				m_LastRecordedTick = OutputTick;
+				TrackRecordedTick(OutputTick);
 				m_NeedsKeyframe = false;
 			}
 		}
@@ -1399,17 +1770,13 @@ namespace
 		{
 			const CDemoPlayer::CPlaybackInfo *pInfo = m_pDemoPlayer->Info();
 
-			if(m_EndTick != -1 && pInfo->m_Info.m_CurrentTick > m_EndTick)
+			if(AcceptTick(pInfo->m_Info.m_CurrentTick))
 			{
-				m_Stop = true;
-			}
-			else if(m_StartTick == -1 || pInfo->m_Info.m_CurrentTick >= m_StartTick)
-			{
-				const int OutputTick = pInfo->m_Info.m_CurrentTick + m_TickOffset;
+				const int OutputTick = static_cast<int>(pInfo->m_Info.m_CurrentTick + m_TickOffset);
 				if(OutputTick != m_LastRecordedTick)
 				{
 					m_pDemoRecorder->RecordTickMarker(OutputTick);
-					m_LastRecordedTick = OutputTick;
+					TrackRecordedTick(OutputTick);
 				}
 				m_pDemoRecorder->RecordMessage(pData, Size);
 			}
@@ -1418,50 +1785,53 @@ namespace
 
 } // namespace
 
-void CDemoEditor::Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IStorage *pStorage)
+void CDemoEditor::Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IStorage *pStorage, CDemoPlayer::CMapDataOperations *pMapDataOperations, demo_output::COperations *pOutputOperations, CDemoRecorder::CFileOperations *pRecordOperations)
 {
 	m_pSnapshotDelta = pSnapshotDelta;
 	m_pSnapshotDeltaSixup = pSnapshotDeltaSixup;
 	m_pStorage = pStorage;
+	m_pMapDataOperations = pMapDataOperations;
+	m_pOutputOperations = pOutputOperations;
+	m_pRecordOperations = pRecordOperations;
 }
 
-bool CDemoEditor::Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser)
+bool CDemoEditor::Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser) noexcept
 {
-	return Slice(pDemo, pDst, std::vector<SDemoSliceSegment>{{StartTick, EndTick}}, pfnFilter, pUser);
+	try
+	{
+		return SliceImpl(pDemo, pDst, std::vector<SDemoSliceSegment>{{StartTick, EndTick}}, pfnFilter, pUser);
+	}
+	catch(...)
+	{
+		return false;
+	}
 }
 
-bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser)
+bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser) noexcept
 {
-	CDemoPlayer DemoPlayer(m_pSnapshotDelta, m_pSnapshotDeltaSixup, false);
-	if(DemoPlayer.Load(m_pStorage, pDemo, IStorage::TYPE_ALL_OR_ABSOLUTE) == -1)
+	try
+	{
+		return SliceImpl(pDemo, pDst, vSegments, pfnFilter, pUser);
+	}
+	catch(...)
+	{
+		return false;
+	}
+}
+
+bool CDemoEditor::SliceImpl(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser)
+{
+	CDemoPlayer DemoPlayer(m_pSnapshotDelta, m_pSnapshotDeltaSixup, false, m_pMapDataOperations, CDemoPlayer::ETimeMode::UNCACHED);
+	struct CPlayerGuard
+	{
+		CDemoPlayer &m_Player;
+		~CPlayerGuard() { m_Player.Stop(); }
+	} PlayerGuard{DemoPlayer};
+	if(DemoPlayer.Load(m_pStorage, pDemo, IStorage::TYPE_ALL_OR_ABSOLUTE, false) == -1)
 		return false;
 
 	const CMapInfo *pMapInfo = DemoPlayer.GetMapInfo();
 	const CDemoPlayer::CPlaybackInfo *pInfo = DemoPlayer.Info();
-
-	std::optional<SHA256_DIGEST> Sha256 = pMapInfo->m_Sha256;
-	if(pInfo->m_Header.m_Version < gs_Sha256Version)
-	{
-		if(DemoPlayer.ExtractMap(m_pStorage))
-		{
-			Sha256 = pMapInfo->m_Sha256;
-		}
-	}
-	if(!Sha256.has_value())
-	{
-		log_error_color(DEMO_PRINT_COLOR, "demo/slice", "Failed to start demo slicing because map SHA256 could not be determined.");
-		return false;
-	}
-
-	CDemoRecorder DemoRecorder(DemoPlayer.IsSixup() ? m_pSnapshotDeltaSixup : m_pSnapshotDelta);
-	unsigned char *pMapData = DemoPlayer.GetMapData(m_pStorage);
-	const int Result = DemoRecorder.Start(m_pStorage, pDst, pInfo->m_Header.m_aNetversion, pMapInfo->m_aName, Sha256.value(), pMapInfo->m_Crc, pInfo->m_Header.m_aType, pMapInfo->m_Size, pMapData, nullptr, pfnFilter, pUser) == -1;
-	free(pMapData);
-	if(Result != 0)
-	{
-		DemoPlayer.Stop();
-		return false;
-	}
 
 	std::vector<SDemoSliceSegment> vNormalizedSegments;
 	vNormalizedSegments.reserve(vSegments.size());
@@ -1471,6 +1841,8 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<S
 		const int EndTick = Segment.m_EndTick == -1 ? pInfo->m_Info.m_LastTick : Segment.m_EndTick;
 		if(StartTick > EndTick)
 			continue;
+		if(StartTick < MIN_TICK || EndTick >= MAX_TICK)
+			return false;
 		vNormalizedSegments.push_back({StartTick, EndTick});
 	}
 	if(vNormalizedSegments.empty())
@@ -1481,8 +1853,65 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<S
 		return Left.m_EndTick < Right.m_EndTick;
 	});
 
-	int NextOutputTick = vNormalizedSegments[0].m_StartTick;
-	DemoPlayer.Play();
+	// 使用原片段长度拼接，先检查完整输出范围，不能靠整数截断改变时轴。
+	int64_t NextOutputTick = vNormalizedSegments[0].m_StartTick;
+	for(const auto &Segment : vNormalizedSegments)
+	{
+		const int64_t Length = static_cast<int64_t>(Segment.m_EndTick) - Segment.m_StartTick + 1;
+		if(Length <= 0 || Length > MAX_TICK - NextOutputTick)
+			return false;
+		NextOutputTick += Length;
+	}
+
+	std::optional<SHA256_DIGEST> Sha256 = pMapInfo->m_Sha256;
+	if(!Sha256.has_value())
+	{
+		if(DemoPlayer.ExtractMap(m_pStorage))
+		{
+			Sha256 = pMapInfo->m_Sha256;
+		}
+	}
+	if(!Sha256.has_value())
+	{
+		DemoPlayer.Stop();
+		log_error_color(DEMO_PRINT_COLOR, "demo/slice", "Failed to start demo slicing because map SHA256 could not be determined.");
+		return false;
+	}
+
+	demo_output::CTransaction Output(m_pOutputOperations);
+	CDemoRecorder DemoRecorder(DemoPlayer.IsSixup() ? m_pSnapshotDeltaSixup : m_pSnapshotDelta, false, m_pRecordOperations);
+	struct CRecorderGuard
+	{
+		CDemoRecorder &m_Recorder;
+		~CRecorderGuard()
+		{
+			if(m_Recorder.IsRecording())
+				m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE);
+		}
+	} RecorderGuard{DemoRecorder};
+	std::unique_ptr<unsigned char, decltype(&std::free)> pMapData(DemoPlayer.GetMapData(m_pStorage), &std::free);
+	if(pMapInfo->m_Size != 0 && !pMapData)
+	{
+		DemoPlayer.Stop();
+		return false;
+	}
+	if(!Output.Prepare(*m_pStorage, pDst))
+		return false;
+	const int Result = DemoRecorder.Start(m_pStorage, Output.Filename(), pInfo->m_Header.m_aNetversion, pMapInfo->m_aName, Sha256.value(), pMapInfo->m_Crc, pInfo->m_Header.m_aType, pMapInfo->m_Size, pMapData.get(), nullptr, pfnFilter, pUser) == -1;
+	pMapData.reset();
+	if(Result != 0)
+	{
+		DemoPlayer.Stop();
+		return false;
+	}
+
+	NextOutputTick = vNormalizedSegments[0].m_StartTick;
+	int FirstOutputTick = -1;
+	int LastOutputTick = -1;
+	int RecordedTicks = 0;
+	bool RecordedData = false;
+	if(!DemoPlayer.Play())
+		return false;
 	for(const auto &Segment : vNormalizedSegments)
 	{
 		CDemoRecordingListener Listener;
@@ -1492,11 +1921,15 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<S
 		Listener.m_StartTick = Segment.m_StartTick;
 		Listener.m_EndTick = Segment.m_EndTick;
 		Listener.m_TickOffset = NextOutputTick - Segment.m_StartTick;
+		Listener.m_FirstRecordedTick = -1;
 		Listener.m_LastRecordedTick = -1;
 		Listener.m_NeedsKeyframe = true;
 		DemoPlayer.SetListener(&Listener);
 
-		DemoPlayer.SetPos(Segment.m_StartTick + 1);
+		// 离线更新会读到源文件末尾并暂停；开始下一片段时恢复裁剪播放器。
+		DemoPlayer.Unpause();
+		if(!DemoPlayer.SetPos(Segment.m_StartTick + 1))
+			return false;
 
 		while(DemoPlayer.IsPlaying() && !Listener.m_Stop)
 		{
@@ -1506,25 +1939,36 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<S
 				break;
 		}
 
-		NextOutputTick += Segment.m_EndTick - Segment.m_StartTick + 1;
+		NextOutputTick += static_cast<int64_t>(Segment.m_EndTick) - Segment.m_StartTick + 1;
+		RecordedData |= !Listener.m_NeedsKeyframe;
+		RecordedTicks = std::min(2, RecordedTicks + Listener.m_RecordedTicks);
+		if(Listener.m_FirstRecordedTick != -1)
+		{
+			if(FirstOutputTick == -1)
+				FirstOutputTick = Listener.m_FirstRecordedTick;
+			LastOutputTick = Listener.m_LastRecordedTick;
+		}
 	}
 	DemoPlayer.SetListener(nullptr);
+	if(!RecordedData || RecordedTicks < 2 || FirstOutputTick > LastOutputTick || DemoRecorder.HasWriteError() || DemoPlayer.ErrorMessage()[0] != '\0')
+		return false;
 
-	// Copy timeline markers to sliced demo
-	int MarkerOutputTick = vNormalizedSegments[0].m_StartTick;
+	// 只保留实际输出首尾之间的标记，稀疏快照可能让请求范围比输出更宽。
+	int64_t MarkerOutputTick = vNormalizedSegments[0].m_StartTick;
 	for(const auto &Segment : vNormalizedSegments)
 	{
 		for(int i = 0; i < pInfo->m_Info.m_NumTimelineMarkers; i++)
 		{
 			if(pInfo->m_Info.m_aTimelineMarkers[i] >= Segment.m_StartTick && pInfo->m_Info.m_aTimelineMarkers[i] <= Segment.m_EndTick)
 			{
-				DemoRecorder.AddDemoMarker(MarkerOutputTick + pInfo->m_Info.m_aTimelineMarkers[i] - Segment.m_StartTick);
+				const int64_t OutputTick = MarkerOutputTick + pInfo->m_Info.m_aTimelineMarkers[i] - Segment.m_StartTick;
+				if(OutputTick >= FirstOutputTick && OutputTick <= LastOutputTick)
+					DemoRecorder.AddDemoMarker(static_cast<int>(OutputTick));
 			}
 		}
-		MarkerOutputTick += Segment.m_EndTick - Segment.m_StartTick + 1;
+		MarkerOutputTick += static_cast<int64_t>(Segment.m_EndTick) - Segment.m_StartTick + 1;
 	}
 
 	DemoPlayer.Stop();
-	DemoRecorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE);
-	return true;
+	return DemoRecorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE) == 0 && Output.Publish();
 }

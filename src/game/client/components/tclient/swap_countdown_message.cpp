@@ -6,6 +6,9 @@
 #include <engine/shared/protocol.h>
 
 #include <algorithm>
+#include <new>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 namespace
@@ -140,24 +143,39 @@ bool ParseSwapCountdownMessage(const char *pText, ESwapCountdownMessageAction &A
 	return false;
 }
 
-void CSwapCountdownTracker::Start(const char *pCounterpart, bool Outgoing, int StartTick)
+bool CSwapCountdownTracker::Start(const char *pCounterpart, bool Outgoing, int StartTick) noexcept
 {
-	if(pCounterpart == nullptr || pCounterpart[0] == '\0')
-		return;
+	if(pCounterpart == nullptr || pCounterpart[0] == '\0' || !QmSwapCountdownDisplayId(m_NextInstanceId, NUM_DUMMIES - 1))
+		return false;
 
-	m_vEntries.erase(std::remove_if(m_vEntries.begin(), m_vEntries.end(), [pCounterpart, Outgoing](const SSwapCountdownState &Entry) {
-		return Entry.m_Outgoing == Outgoing && (Outgoing || str_comp_nocase(Entry.m_Counterpart.c_str(), pCounterpart) == 0);
-	}),
-		m_vEntries.end());
-
-	SSwapCountdownState Entry;
-	Entry.m_Counterpart = pCounterpart;
-	Entry.m_StartTick = StartTick;
-	Entry.m_InstanceId = m_NextInstanceId++;
-	Entry.m_Outgoing = Outgoing;
-	m_vEntries.insert(m_vEntries.begin(), std::move(Entry));
-	if(m_vEntries.size() > MAX_CLIENTS + 1)
-		m_vEntries.resize(MAX_CLIENTS + 1);
+	try
+	{
+		SSwapCountdownState Candidate;
+		Candidate.m_Counterpart = pCounterpart;
+		Candidate.m_StartTick = StartTick;
+		Candidate.m_InstanceId = m_NextInstanceId;
+		Candidate.m_Outgoing = Outgoing;
+		// 先准备姓名和插入容量；后续移动及删除不会分配，失败不删旧请求或推进身份。
+		static_assert(std::is_nothrow_move_constructible_v<SSwapCountdownState> && std::is_nothrow_move_assignable_v<SSwapCountdownState>);
+		if(m_vEntries.size() == m_vEntries.capacity())
+			m_vEntries.reserve(std::min<size_t>(MAX_CLIENTS + 2, std::max(m_vEntries.size() + 1, m_vEntries.size() * 2)));
+		m_vEntries.erase(std::remove_if(m_vEntries.begin(), m_vEntries.end(), [&](const SSwapCountdownState &Entry) {
+			return Entry.m_Outgoing == Outgoing && (Outgoing || str_comp_nocase(Entry.m_Counterpart.c_str(), Candidate.m_Counterpart.c_str()) == 0);
+		}),
+			m_vEntries.end());
+		m_vEntries.insert(m_vEntries.begin(), std::move(Candidate));
+		if(m_vEntries.size() > MAX_CLIENTS + 1)
+			m_vEntries.erase(m_vEntries.begin() + MAX_CLIENTS + 1, m_vEntries.end());
+		++m_NextInstanceId;
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
+	return false;
 }
 
 void CSwapCountdownTracker::Cancel(const char *pCounterpart, bool Outgoing)

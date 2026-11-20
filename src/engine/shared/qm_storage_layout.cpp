@@ -181,15 +181,13 @@ namespace
 	bool CopyFile(IStorage *pStorage, const char *pFrom, const char *pTo)
 	{
 		char aTemp[IO_MAX_PATH_LENGTH];
-		if(str_length(pTo) + str_length(".migrating") >= sizeof(aTemp))
+		if(str_format(aTemp, sizeof(aTemp), "%s.%d.migrating", pTo, pid()) >= static_cast<int>(sizeof(aTemp) - 1))
 			return false;
-		str_format(aTemp, sizeof(aTemp), "%s.migrating", pTo);
-		pStorage->RemoveFile(aTemp, IStorage::TYPE_SAVE);
 
 		IOHANDLE Source = pStorage->OpenFile(pFrom, IOFLAG_READ, IStorage::TYPE_SAVE);
 		if(Source == nullptr)
 			return false;
-		IOHANDLE Destination = pStorage->OpenFile(aTemp, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		IOHANDLE Destination = pStorage->OpenFile(aTemp, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE);
 		if(Destination == nullptr)
 		{
 			io_close(Source);
@@ -212,18 +210,12 @@ namespace
 		Success &= io_close(Source) == 0;
 		Success &= io_close(Destination) == 0;
 		Success &= FilesEqual(pStorage, pFrom, aTemp);
-		if(!Success || !pStorage->RenameFile(aTemp, pTo, IStorage::TYPE_SAVE, false))
+		if(!Success || !pStorage->MoveFileNoReplace(aTemp, pTo, IStorage::TYPE_SAVE))
 		{
 			pStorage->RemoveFile(aTemp, IStorage::TYPE_SAVE);
 			return false;
 		}
-		if(!pStorage->RemoveFile(pFrom, IStorage::TYPE_SAVE))
-		{
-			// 源文件仍被占用时回滚目标，避免下次启动遇到内容不同的双份文件。
-			pStorage->RemoveFile(pTo, IStorage::TYPE_SAVE);
-			return false;
-		}
-		return true;
+		return pStorage->RemoveFile(pFrom, IStorage::TYPE_SAVE);
 	}
 
 	bool MoveFile(IStorage *pStorage, const char *pFrom, const char *pTo)
@@ -244,7 +236,7 @@ namespace
 			}
 			return pStorage->RemoveFile(pFrom, IStorage::TYPE_SAVE);
 		}
-		if(pStorage->RenameFile(pFrom, pTo, IStorage::TYPE_SAVE, false))
+		if(pStorage->MoveFileNoReplace(pFrom, pTo, IStorage::TYPE_SAVE))
 			return true;
 		if(CopyFile(pStorage, pFrom, pTo))
 			return true;

@@ -90,3 +90,23 @@ TEST(QmPlayerCardGeometry, DegenerateSizesProduceEmptySectionsInsteadOfNegativeR
 	EXPECT_GE(Tight.m_Card.w, 0.0f);
 	EXPECT_LE(Tight.m_Icons.x + Tight.m_Icons.w, Narrow.x + Narrow.w + 0.01f);
 }
+
+TEST(QmPlayerCardGeometry, TinyTilePaddingKeepsSectionsInsideTheCard)
+{
+	const float Padding = ui_token::player_card::PADDING;
+	const CUIRect aTiles[] = {
+		{20.0f, 30.0f, Padding, ui_token::player_card::TILE_HEIGHT},
+		{20.0f, 30.0f, ui_token::player_card::TILE_MIN_WIDTH, Padding},
+	};
+	for(const CUIRect &Tile : aTiles)
+	{
+		SCOPED_TRACE(::testing::Message() << Tile.w << " x " << Tile.h);
+		const auto Layout = QmPlayersUi::PlayerTileLayout(Tile, 5);
+		for(const CUIRect &Rect : {Layout.m_Avatar, Layout.m_Name, Layout.m_Clan, Layout.m_Icons})
+		{
+			EXPECT_GE(Rect.w, 0.0f);
+			EXPECT_GE(Rect.h, 0.0f);
+			EXPECT_TRUE(Inside(Rect, Tile));
+		}
+	}
+}

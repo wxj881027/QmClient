@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_NETEASE_NETEASE_LYRIC_PARSER_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_NETEASE_NETEASE_LYRIC_PARSER_H
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -41,6 +42,32 @@ namespace NeteaseLyrics
 		std::string m_Yrc;
 		std::string m_TranslationLrc;
 	};
+
+	// LineOf 同步返回记录中的行引用，使源序号或译文能随主行一起稳定排序。
+	template<typename TParsedLine, typename TLineOf>
+	void FinalizeTimelineLines(std::vector<TParsedLine> &vLines, TLineOf LineOf)
+	{
+		std::stable_sort(vLines.begin(), vLines.end(), [&](const TParsedLine &A, const TParsedLine &B) { return LineOf(A).m_StartMs < LineOf(B).m_StartMs; });
+		for(size_t First = 0; First < vLines.size();)
+		{
+			size_t Next = First + 1;
+			while(Next < vLines.size() && LineOf(vLines[Next]).m_StartMs == LineOf(vLines[First]).m_StartMs)
+				++Next;
+			if(Next == vLines.size())
+				break;
+			// 同起点整组共用下一组边界，不为每一行重复扫描相同后缀。
+			for(size_t Index = First; Index < Next; ++Index)
+			{
+				auto &Line = LineOf(vLines[Index]);
+				if(Line.m_EndMs <= Line.m_StartMs)
+					Line.m_EndMs = LineOf(vLines[Next]).m_StartMs;
+			}
+			First = Next;
+		}
+	}
+
+	// 稳定排序；仅对 end <= start 的未确定边界取下一严格更晚的行起点，末组保留原值。
+	void FinalizeTimelineLines(std::vector<SLine> &vLines);
 
 	// 解析网易云 LRC。无有效时间戳时返回 false，不构造虚假时间轴。
 	bool ParseLrc(std::string_view Text, STimeline *pOut, std::string *pError = nullptr);

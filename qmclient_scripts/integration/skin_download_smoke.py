@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""真实客户端与本机 HTTP 协作验证缓存先显示及社区 404 回退，不访问用户资料。"""
+"""使用隔离资料目录验证客户端的皮肤下载和预设保存。"""
 
 from __future__ import annotations
 
@@ -143,9 +143,6 @@ def smoke_cache_before_network_and_community_fallback(build_dir: Path) -> None:
 		print(f"artifacts: {env.temp_dir}")
 
 
-SMOKE_TESTS = {"cache_before_network_and_community_fallback": smoke_cache_before_network_and_community_fallback}
-
-
 def smoke_refresh_cancels_loaded_cache_request(build_dir: Path) -> None:
 	env = StartupEnvironment(build_dir)
 	image = (build_dir / "data/skins/default.png").read_bytes()
@@ -277,7 +274,6 @@ def smoke_favorites_are_metadata_until_visible(build_dir: Path) -> None:
 		env.close()
 		print(f"artifacts: {env.temp_dir}")
 
-
 def smoke_invalid_catalog_preserves_cache(build_dir: Path) -> None:
 	env = StartupEnvironment(build_dir)
 	cache_dir = env.temp_dir / "downloadedskins"
@@ -329,18 +325,51 @@ def smoke_invalid_catalog_preserves_cache(build_dir: Path) -> None:
 		print(f"artifacts: {env.temp_dir}")
 
 
+def smoke_presets_round_trip_with_escaped_name_and_full_queue(build_dir: Path) -> None:
+	env = StartupEnvironment(build_dir)
+	config_path = env.temp_dir / "qmclient/settings.cfg"
+	preset_lines = [
+		r'add_skin_queue_preset "Track \"A\" \\ warmup"',
+		'add_skin_queue_preset_item 2 "default"',
+		'add_skin_queue_preset_item_ex 2 "bluekitty" 1 12345 23456',
+	]
+	try:
+		config_path.write_text("\n".join(["qm_skin_queue_length 1", "qm_dummy_skin_queue_length 3", *preset_lines]) + "\n", encoding="utf-8")
+		env.start(["cl_save_settings 1", "cl_download_skins 0", "cl_download_community_skins 0"])
+		env.finish_startup()
+		env.quit()
+		saved_lines = config_path.read_text(encoding="utf-8").splitlines()
+		for line in preset_lines:
+			if saved_lines.count(line) != 1:
+				raise AssertionError(f"missing or duplicated preset command after reload and save: {line}")
+		print("presets_round_trip_with_escaped_name_and_full_queue: passed")
+	finally:
+		env.close()
+		print(f"artifacts: {env.temp_dir}")
+
+
+SMOKE_TESTS = {
+	"cache_before_network_and_community_fallback": smoke_cache_before_network_and_community_fallback,
+	"refresh_cancels_loaded_cache_request": smoke_refresh_cancels_loaded_cache_request,
+	"favorites_are_metadata_until_visible": smoke_favorites_are_metadata_until_visible,
+	"invalid_catalog_preserves_cache": smoke_invalid_catalog_preserves_cache,
+	"presets_round_trip_with_escaped_name_and_full_queue": smoke_presets_round_trip_with_escaped_name_and_full_queue,
+}
+
+
 def main() -> int:
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument("build_dir", type=Path)
+	parser.add_argument("test", choices=SMOKE_TESTS, nargs="?")
 	args = parser.parse_args()
-	try:
-		smoke_cache_before_network_and_community_fallback(args.build_dir.resolve())
-		smoke_refresh_cancels_loaded_cache_request(args.build_dir.resolve())
-		smoke_favorites_are_metadata_until_visible(args.build_dir.resolve())
-		smoke_invalid_catalog_preserves_cache(args.build_dir.resolve())
-	except Exception as exc:
-		print(f"skin_download: FAILED: {exc}", file=sys.stderr)
-		return 1
+	names = [args.test] if args.test else SMOKE_TESTS
+	build_dir = args.build_dir.resolve()
+	for name in names:
+		try:
+			SMOKE_TESTS[name](build_dir)
+		except Exception as exc:
+			print(f"{name}: FAILED: {exc}", file=sys.stderr)
+			return 1
 	return 0
 
 

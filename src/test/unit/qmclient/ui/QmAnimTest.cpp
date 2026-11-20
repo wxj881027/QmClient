@@ -115,6 +115,25 @@ TEST(QmIslandNotice, CountdownResumesAfterInterruptionAndResetClearsElapsedTime)
 	EXPECT_FALSE(qm_island::NeedsRender(State, false));
 }
 
+TEST(QmIslandNotice, ReopeningDuringExitAfterTimeoutStartsNewCountdown)
+{
+	qm_island::SNoticeState State;
+	State.m_DurationSeconds = 2.0f;
+	State.m_ExpandProgress = 1.0f;
+	ASSERT_TRUE(qm_island::AdvanceCountdown(State, true, 2.0f));
+
+	State.m_ExpandProgress = 0.5f;
+	EXPECT_FALSE(qm_island::AdvanceCountdown(State, false, 0.5f));
+	EXPECT_FLOAT_EQ(qm_island::RemainingFraction(State), 0.0f);
+
+	EXPECT_FALSE(qm_island::AdvanceCountdown(State, true, 0.5f));
+	EXPECT_FLOAT_EQ(qm_island::RemainingFraction(State), 1.0f);
+	State.m_ExpandProgress = 1.0f;
+	EXPECT_FALSE(qm_island::AdvanceCountdown(State, true, 1.0f));
+	EXPECT_FLOAT_EQ(qm_island::RemainingFraction(State), 0.5f);
+	EXPECT_TRUE(qm_island::AdvanceCountdown(State, true, 1.0f));
+}
+
 TEST(QmIslandSurface, RoundedRectanglePerimeterVisitsStraightSidesAndCornersClockwise)
 {
 	const CUIRect Rect{10.0f, 20.0f, 100.0f, 60.0f};

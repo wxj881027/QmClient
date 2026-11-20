@@ -23,9 +23,54 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <new>
+#include <stdexcept>
+#include <type_traits>
 
 namespace
 {
+	struct SPreLayoutInputScope
+	{
+		CUi *m_pUi;
+		~SPreLayoutInputScope()
+		{
+			if(m_pUi != nullptr)
+				m_pUi->EndPreLayoutInput();
+		}
+	};
+
+	struct SPreLayoutCardClipScope
+	{
+		CUi *m_pUi;
+		~SPreLayoutCardClipScope()
+		{
+			if(m_pUi != nullptr)
+				m_pUi->ClipDisable();
+		}
+	};
+
+	struct SScrollRegionScope
+	{
+		CScrollRegion *m_pScrollRegion;
+		float m_PreviousScrollableHeight;
+
+		~SScrollRegionScope() noexcept
+		{
+			if(m_pScrollRegion == nullptr)
+				return;
+			try
+			{
+				// Begin 已清空内容高度。中断的布局不能把已有的滚动范围当作空内容。
+				m_pScrollRegion->SetContentHeightForNextFrame(m_PreviousScrollableHeight);
+				m_pScrollRegion->End();
+			}
+			catch(...)
+			{
+				// End 先退出裁剪。滚动条绘制的二次失败不能覆盖原来的失败。
+			}
+		}
+	};
+
 	bool PointInRect(const CUIRect &Rect, float X, float Y)
 	{
 		return X >= Rect.x && X <= Rect.x + Rect.w && Y >= Rect.y && Y <= Rect.y + Rect.h;
@@ -55,14 +100,11 @@ namespace
 	}
 }
 
-void CSettingsCardDeck::ResetDefinitionViewState()
+void CSettingsCardDeck::ResetDefinitionViewState() noexcept
 {
 	m_ObservedContentChanged = false;
 	m_LastContentHeightFrameTimeSec = -1.0f;
-	// Definition state is indexed by the current card-order model. A different
-	// tab or stable-id set may reuse the same indices, so retaining these
-	// values would make the new view inherit heights, animation tracks and
-	// active-column state from the previous view.
+	// 状态按当前模型索引保存，换页或换卡时不能继承旧索引的高度、动画和活动列。
 	m_vRuntimeStates.clear();
 	m_vContentHeights.clear();
 	m_vContentWidths.clear();
@@ -79,7 +121,7 @@ void CSettingsCardDeck::ResetDefinitionViewState()
 	m_vDragGeometry.clear();
 	for(std::vector<int> &vColumn : m_aDragColumns)
 		vColumn.clear();
-	m_ProjectionCache = {};
+	m_ProjectionCache.reset();
 	m_Drag.Reset();
 	m_HasScrollOffset = false;
 	m_LastScrollOffsetY = 0.0f;
@@ -106,42 +148,116 @@ ESettingsCardRenderPass CSettingsCardDeck::RenderPassMode(const IUiContext &Ctx)
 	return Ctx.m_pUi->BackgroundRender() ? ESettingsCardRenderPass::BACKGROUND : ESettingsCardRenderPass::INTERACTIVE;
 }
 
-void CSettingsCardDeck::PrepareDefinitions(const std::vector<SSettingsCardDefinition> &vCards, const qm_card_order::CModel &Model)
+bool CSettingsCardDeck::DefinitionViewChanged(const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, const qm_card_order::CModel &Model) const
 {
-	if(m_vDefinitionsByState.size() != (size_t)Model.Count())
+	if(m_LastRenderedTab != pTab || m_PreparedDefinitionModelCount != Model.Count() ||
+		m_PreparedDefinitionStateIndexRevision != Model.StateIndexRevision() || m_vPreparedStableIds.size() != vCards.size())
+		return true;
+	for(size_t Index = 0; Index < vCards.size(); ++Index)
 	{
-		m_vDefinitionsByState.assign(Model.Count(), nullptr);
-		m_vBoundDefinitionStateIndices.clear();
+		const char *pStableId = vCards[Index].m_Spec.m_pStableId;
+		if(m_vPreparedStableIds[Index] != (pStableId != nullptr ? pStableId : ""))
+			return true;
 	}
-	else
-	{
-		for(const int StateIndex : m_vBoundDefinitionStateIndices)
-			m_vDefinitionsByState[StateIndex] = nullptr;
-		m_vBoundDefinitionStateIndices.clear();
-	}
-	m_vBoundDefinitionStateIndices.reserve(vCards.size());
+	return false;
+}
+
+bool CSettingsCardDeck::ShouldDeferDefinitionView(const IUiContext &Ctx, const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, const qm_card_order::CModel &Model) const
+{
+	// 可见后台不能撤回共享 UI 的旧按钮/弹层来源，回到交互趟再换代。
+	// 独立测量 Deck 和尚无旧 runtime 的首次后台准备不受影响。
+	return Ctx.m_pUi != nullptr && Ctx.m_pUi->BackgroundRender() && !Ctx.m_pUi->MeasurementOnly() &&
+	       !m_vRuntimeStates.empty() && DefinitionViewChanged(pTab, vCards, Model);
+}
+
+CSettingsCardDeck::SDefinitionPreparation CSettingsCardDeck::PrepareDefinitions(const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, const qm_card_order::CModel &Model) const
+{
+	SDefinitionPreparation Candidate;
+	Candidate.m_Tab = pTab;
+	Candidate.m_RenderedTab = pTab;
+	Candidate.m_pData = vCards.data();
+	Candidate.m_Count = vCards.size();
+	Candidate.m_ModelCount = Model.Count();
+	Candidate.m_StateIndexRevision = Model.StateIndexRevision();
+	Candidate.m_vDefinitionsByState.assign(Model.Count(), nullptr);
+	Candidate.m_vBoundStateIndices.reserve(vCards.size());
+	Candidate.m_vStableIds.reserve(vCards.size());
 	for(const SSettingsCardDefinition &Definition : vCards)
 	{
+		Candidate.m_vStableIds.emplace_back(Definition.m_Spec.m_pStableId != nullptr ? Definition.m_Spec.m_pStableId : "");
 		if(Definition.m_Spec.m_pStableId == nullptr)
 			continue;
 		const int StateIndex = Model.StateIndexForStableId(Definition.m_Spec.m_pStableId);
 		if(StateIndex >= 0)
 		{
-			m_vDefinitionsByState[StateIndex] = &Definition;
-			m_vBoundDefinitionStateIndices.push_back(StateIndex);
+			Candidate.m_vDefinitionsByState[StateIndex] = &Definition;
+			Candidate.m_vBoundStateIndices.push_back(StateIndex);
 		}
 	}
-	m_vRuntimeStates.resize(Model.Count());
-	m_vContentHeights.resize(Model.Count(), -1.0f);
-	m_vContentWidths.resize(Model.Count(), -1.0f);
-	m_vMeasureRevisions.resize(Model.Count(), UINT64_MAX);
-	m_vContentLayouts.resize(Model.Count());
-	m_vContentLayoutCaches.resize(Model.Count());
+	if(DefinitionViewChanged(pTab, vCards, Model))
+	{
+		// 只有视图确实换代时准备新数组；普通定义刷新保留当前动画和测量状态。
+		auto &View = Candidate.m_View.emplace();
+		View.m_vRuntimeStates.resize(Model.Count());
+		View.m_vContentHeights.assign(Model.Count(), -1.0f);
+		View.m_vContentWidths.assign(Model.Count(), -1.0f);
+		View.m_vMeasureRevisions.assign(Model.Count(), UINT64_MAX);
+		View.m_vContentLayouts.resize(Model.Count());
+		View.m_vContentLayoutCaches.resize(Model.Count());
+		View.m_vActiveStateIndices.reserve(vCards.size());
+	}
+	return Candidate;
+}
+
+void CSettingsCardDeck::ClosePreparedInteractionSources(const IUiContext &Ctx)
+{
+	if(Ctx.m_pUi == nullptr || Ctx.m_pUi->RenderOnly())
+		return;
+	// 关闭可执行外部回调，须在提交前完成；关闭已生效时不承诺回滚。
+	for(const std::string &StableId : m_vPreparedStableIds)
+		Ctx.m_pUi->CloseInteractionSource(this, StableId.c_str());
+	for(const auto &Runtime : m_vRuntimeStates)
+	{
+		if(Ctx.m_pUi->ActiveItem() == &Runtime.m_DefaultCollapseButtonId || Ctx.m_pUi->ActiveItem() == &Runtime.m_WidthButtonId)
+			Ctx.m_pUi->SetActiveItem(nullptr);
+		if(Ctx.m_pUi->NextHotItem() == &Runtime.m_DefaultCollapseButtonId || Ctx.m_pUi->NextHotItem() == &Runtime.m_WidthButtonId)
+			Ctx.m_pUi->SetHotItem(nullptr);
+	}
+}
+
+void CSettingsCardDeck::CommitDefinitions(SDefinitionPreparation &Preparation) noexcept
+{
+	if(Preparation.m_View)
+	{
+		auto &View = *Preparation.m_View;
+		m_vRuntimeStates.swap(View.m_vRuntimeStates);
+		m_vContentHeights.swap(View.m_vContentHeights);
+		m_vContentWidths.swap(View.m_vContentWidths);
+		m_vMeasureRevisions.swap(View.m_vMeasureRevisions);
+		m_vContentLayouts.swap(View.m_vContentLayouts);
+		m_vContentLayoutCaches.swap(View.m_vContentLayoutCaches);
+		m_vActiveStateIndices.swap(View.m_vActiveStateIndices);
+		static_assert(std::is_nothrow_move_constructible_v<settings_card_deck_logic::CProjectionCache>);
+		m_ProjectionCache.emplace(std::move(View.m_ProjectionCache));
+	}
+	m_vDefinitionsByState.swap(Preparation.m_vDefinitionsByState);
+	m_vBoundDefinitionStateIndices.swap(Preparation.m_vBoundStateIndices);
+	m_vPreparedStableIds.swap(Preparation.m_vStableIds);
+	m_PreparedDefinitionTab.swap(Preparation.m_Tab);
+	m_PreparedDefinitionModelCount = Preparation.m_ModelCount;
+	m_PreparedDefinitionStateIndexRevision = Preparation.m_StateIndexRevision;
+	m_pPreparedDefinitionData = Preparation.m_pData;
+	m_PreparedDefinitionCount = Preparation.m_Count;
 }
 
 void CSettingsCardDeck::RequestReveal(const char *pStableId)
 {
 	m_PendingRevealStableId = pStableId != nullptr ? pStableId : "";
+}
+
+void CSettingsCardDeck::RequestReveal(std::string StableId) noexcept
+{
+	m_PendingRevealStableId.swap(StableId);
 }
 
 void CSettingsCardDeck::BeginDisplayCycle(uint64_t DisplayCycle, bool AnimateEntry)
@@ -180,7 +296,7 @@ SSettingsCardDeckResult CSettingsCardDeck::Render(const IUiContext &Ctx, const S
 	return RenderInternal(Ctx, Layout, pTab, vCards, Model, pScrollRegion, Input, Motion, VisualOptions, true);
 }
 
-SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &InputCtx, const SSettingsPageLayoutFrame &Layout, const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, qm_card_order::CModel &Model, CScrollRegion *pScrollRegion, const SSettingsCardDeckInput &RawInput, const SCardMotionSpec &Motion, const SSettingsCardDeckVisualOptions &VisualOptions, bool PersistentDefinitions)
+SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &InputCtx, const SSettingsPageLayoutFrame &Layout, const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, qm_card_order::CModel &Model, CScrollRegion *pScrollRegion, const SSettingsCardDeckInput &RawInput, const SCardMotionSpec &Motion, const SSettingsCardDeckVisualOptions &VisualOptions, bool PersistentDefinitions, SDefinitionPreparation *pPreparation)
 {
 	IUiContext Ctx = InputCtx;
 	// 后台仍是可见页面：Deck 的几何动画继续消费原轨道，输入仍由 RenderOnly 隔离。
@@ -196,40 +312,54 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	{
 		return Result;
 	}
+	if(ShouldDeferDefinitionView(Ctx, pTab, vCards, Model))
+		return Result;
 	const bool TabChanged = m_LastRenderedTab != pTab;
-	if(TabChanged)
+	const bool ViewChanged = DefinitionViewChanged(pTab, vCards, Model);
+	if(!PersistentDefinitions || m_CachedDefinitionsDirty || ViewChanged || m_pPreparedDefinitionData != vCards.data() || m_PreparedDefinitionCount != vCards.size() || m_PreparedDefinitionTab != pTab)
 	{
-		if(Ctx.m_pUi != nullptr)
-			for(const char *pStableId : m_vPreparedStableIds)
-				Ctx.m_pUi->CloseInteractionSource(this, pStableId);
-		m_LastRenderedTab = pTab;
-		m_FrameRuntime.OnTabChanged(Motion.m_ContinuousEntry);
-		m_SuppressHoverFeedbackOnce = true;
-	}
-
-	bool StableIdsChanged = m_vPreparedStableIds.size() != vCards.size();
-	if(!StableIdsChanged)
-	{
-		for(size_t i = 0; i < vCards.size(); ++i)
+		std::optional<SDefinitionPreparation> LocalPreparation;
+		try
 		{
-			const char *pPreparedStableId = m_vPreparedStableIds[i] != nullptr ? m_vPreparedStableIds[i] : "";
-			const char *pCurrentStableId = vCards[i].m_Spec.m_pStableId != nullptr ? vCards[i].m_Spec.m_pStableId : "";
-			if(str_comp(pPreparedStableId, pCurrentStableId) != 0)
+			// 来源关闭回调可能改变模型；提交前按此刻的模型和定义重新核对候选。
+			if(pPreparation == nullptr || pPreparation->m_pData != vCards.data() || pPreparation->m_Count != vCards.size() ||
+				pPreparation->m_ModelCount != Model.Count() || pPreparation->m_StateIndexRevision != Model.StateIndexRevision() ||
+				static_cast<bool>(pPreparation->m_View) != ViewChanged)
 			{
-				StableIdsChanged = true;
-				break;
+				LocalPreparation.emplace(PrepareDefinitions(pTab, vCards, Model));
+				pPreparation = &*LocalPreparation;
+			}
+			if(pPreparation->m_View && !pPreparation->m_InteractionsClosed)
+			{
+				ClosePreparedInteractionSources(Ctx);
+				pPreparation->m_InteractionsClosed = true;
+			}
+			if(pPreparation->m_ModelCount != Model.Count() || pPreparation->m_StateIndexRevision != Model.StateIndexRevision())
+			{
+				LocalPreparation.emplace(PrepareDefinitions(pTab, vCards, Model));
+				pPreparation = &*LocalPreparation;
+				pPreparation->m_InteractionsClosed = true;
 			}
 		}
-	}
-	const bool ModelCountChanged = m_PreparedDefinitionModelCount != Model.Count();
-	const bool StateIndexChanged = m_PreparedDefinitionStateIndexRevision != Model.StateIndexRevision();
-	if(TabChanged || StableIdsChanged || ModelCountChanged || StateIndexChanged)
-		ResetDefinitionViewState();
-	if(!PersistentDefinitions || m_CachedDefinitionsDirty || m_PreparedDefinitionModelCount != Model.Count() || m_PreparedDefinitionStateIndexRevision != Model.StateIndexRevision() || m_pPreparedDefinitionData != vCards.data() || m_PreparedDefinitionCount != vCards.size() || m_PreparedDefinitionTab != pTab || StableIdsChanged)
-	{
+		catch(const std::bad_alloc &)
+		{
+			return Result;
+		}
+		catch(const std::length_error &)
+		{
+			return Result;
+		}
+		if(TabChanged)
+		{
+			m_LastRenderedTab.swap(pPreparation->m_RenderedTab);
+			m_FrameRuntime.OnTabChanged(Motion.m_ContinuousEntry);
+			m_SuppressHoverFeedbackOnce = true;
+		}
+		if(pPreparation->m_View)
+			ResetDefinitionViewState();
 		if(Input.m_pDiagnostics != nullptr)
 			m_FrameRuntime.CountDefinitionsPrepare();
-		PrepareDefinitions(vCards, Model);
+		CommitDefinitions(*pPreparation);
 		if(m_InvalidateMeasurementsOnDefinitionsPrepare)
 		{
 			// Definitions revision 表示测量闭包或其依赖状态已经改变。同 stable ID
@@ -247,14 +377,6 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			m_InvalidateMeasurementsOnDefinitionsPrepare = false;
 		}
 		m_CachedDefinitionsDirty = false;
-		m_PreparedDefinitionModelCount = Model.Count();
-		m_PreparedDefinitionStateIndexRevision = Model.StateIndexRevision();
-		m_pPreparedDefinitionData = vCards.data();
-		m_PreparedDefinitionCount = vCards.size();
-		m_PreparedDefinitionTab = pTab;
-		m_vPreparedStableIds.resize(vCards.size());
-		for(size_t i = 0; i < vCards.size(); ++i)
-			m_vPreparedStableIds[i] = vCards[i].m_Spec.m_pStableId;
 	}
 	// 定义缓存可跨页保留；每帧从同一状态源读取，让搜索页和原页面立即同步。
 	const qm_card_collapse::CState &CollapseState = qm_card_collapse::CurrentState();
@@ -283,10 +405,13 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	// 有真实滚动容器时由 Begin 扣除固定槽位；预热阶段没有容器，直接使用壳层提供的有效 viewport。
 	CUIRect ScrollViewport = pScrollRegion != nullptr ? Layout.m_UnreservedScrollViewport : Layout.m_ScrollViewport;
 	vec2 ScrollOffset(0.0f, 0.0f);
+	const float PreviousMaxScroll = pScrollRegion != nullptr ? pScrollRegion->MaxScroll() : 0.0f;
+	const float PreviousScrollableHeight = PreviousMaxScroll > 0.0f ? pScrollRegion->ContentAreaSize() + PreviousMaxScroll : 0.0f;
 	if(pScrollRegion != nullptr)
 		pScrollRegion->Begin(&ScrollViewport, &ScrollOffset, Input.m_pScrollParams);
 	else
 		ScrollOffset.y = ResolveSettingsCardDeckPassiveScrollOffset(Ctx.m_pUi != nullptr && Ctx.m_pUi->BackgroundRender(), m_HasScrollOffset, m_LastScrollOffsetY);
+	SScrollRegionScope ScrollRegionScope{pScrollRegion, PreviousScrollableHeight};
 	if(std::abs(m_LastViewportHeight - ScrollViewport.h) > 0.01f)
 	{
 		m_LastViewportHeight = ScrollViewport.h;
@@ -511,24 +636,45 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		}
 	};
 
+	const auto PrepareProjectedCards = [&]() -> const std::array<std::vector<int>, 3> * {
+		try
+		{
+			const auto &aColumns = m_ProjectionCache->Resolve(Model, pTab, m_vActiveStateIndices);
+			BuildPreparedCards(aColumns);
+			return &aColumns;
+		}
+		catch(const std::bad_alloc &)
+		{
+			if(pScrollRegion == nullptr)
+				throw;
+		}
+		catch(const std::length_error &)
+		{
+			if(pScrollRegion == nullptr)
+				throw;
+		}
+		m_ObservedContentChanged = true;
+		return nullptr;
+	};
+
 	RebuildActiveStateIndices();
 	bool GeometryStateChanged = m_vActiveStateIndices != m_vLastRenderedActiveStateIndices;
-	const std::array<std::vector<int>, 3> *pColumns = &m_ProjectionCache.Resolve(Model, pTab, m_vActiveStateIndices);
-	BuildPreparedCards(*pColumns);
+	const auto *pColumns = PrepareProjectedCards();
+	if(pColumns == nullptr)
+		return Result;
 	GeometryStateChanged = GeometryStateChanged || MeasuredGeometryChanged;
 
 	// 先用当前 active snapshot 的几何处理控制器输入，再为最终 active snapshot 重新计算布局。
 	m_vPreviousActiveStateIndices = m_vActiveStateIndices;
 	bool PreLayoutGeometryChanged = false;
-	std::vector<int> vPreLayoutGeometryChangedStates;
 	const bool HasPointerInput = Input.m_MousePressed || Input.m_MouseDown || Input.m_MouseReleased;
 	// Header buttons必须每帧运行以先建立 HotItem；否则鼠标首次按下时
 	// DoButtonLogic 无法进入 active，释放时也就不会提交点击。
 	{
 		if(Ctx.m_pUi != nullptr)
 			Ctx.m_pUi->BeginPreLayoutInput();
-		for(SPreparedCard &Card : m_vPreparedCards)
-		{
+		const SPreLayoutInputScope PreLayoutInputScope{Ctx.m_pUi};
+		const auto RunCardInput = [&](SPreparedCard &Card) {
 			SRuntimeState &Runtime = m_vRuntimeStates[Card.m_StateIndex];
 			CUiScopedInteractionOwner InteractionOwner(Ctx.m_pUi, this, Card.m_pDefinition->m_Spec.m_pStableId);
 			// 鼠标按下与释放跨帧完成。预布局必须沿用上一帧实际绘制位置，
@@ -588,26 +734,40 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 					const CUIRect Clip = ResolveSettingsCardContentClipRect(PreLayoutFrame.m_ContentRect, PreLayoutFrame.m_Rect, Ctx.m_UiScale);
 					Ctx.m_pUi->ClipEnable(&Clip);
 				}
+				const SPreLayoutCardClipScope ClipScope{Ctx.m_pUi};
 				CardGeometryChanged = qm_settings_content::ExecuteInput(*Card.m_pDefinition, Card.m_pContentLayout, m_vContentLayoutCaches[Card.m_StateIndex], PreLayoutFrame.m_ContentRect,
 							      ControllerVisible, HasActiveContentContinuation, Collapsed, Ctx.m_pUi) ||
 						      CardGeometryChanged;
-				if(Ctx.m_pUi != nullptr)
-					Ctx.m_pUi->ClipDisable();
 			}
 			if(SettingsCardDeckShouldRunPreLayoutInput(HasPointerInput, HasPendingPreLayoutInput, HasActiveContentContinuation, ControllerVisible, Collapsed, PreLayoutFrame.m_ContentRect.h) && Card.m_pDefinition->m_PreLayoutInput)
 			{
 				m_FrameRuntime.CountPreLayoutInput();
 				CardGeometryChanged = Card.m_pDefinition->m_PreLayoutInput(PreLayoutFrame.m_ContentRect) || CardGeometryChanged;
 			}
+			return CardGeometryChanged;
+		};
+		for(SPreparedCard &Card : m_vPreparedCards)
+		{
+			bool CardGeometryChanged;
+			try
+			{
+				CardGeometryChanged = RunCardInput(Card);
+			}
+			catch(const std::bad_alloc &)
+			{
+				CardGeometryChanged = true;
+			}
+			catch(const std::length_error &)
+			{
+				CardGeometryChanged = true;
+			}
 			if(CardGeometryChanged)
 			{
+				// 输入可能已提交一部分状态。仅失效本卡测量，在最终布局中重新读取。
 				m_vContentHeights[Card.m_StateIndex] = -1.0f;
-				vPreLayoutGeometryChangedStates.push_back(Card.m_StateIndex);
 				PreLayoutGeometryChanged = true;
 			}
 		}
-		if(Ctx.m_pUi != nullptr)
-			Ctx.m_pUi->EndPreLayoutInput();
 	}
 	// 预布局回调可能刚打开颜色选择器，原始按键快照不得驱动同帧拖动。
 	Input = ResolveSettingsCardDeckPointerInput(Input, Ctx.m_pUi != nullptr && (Ctx.m_pUi->RenderOnly() || Ctx.m_pUi->PointerInputBlocked()));
@@ -615,18 +775,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	if(m_vActiveStateIndices != m_vPreviousActiveStateIndices || PreLayoutGeometryChanged)
 	{
 		GeometryStateChanged = true;
-		if(PreLayoutGeometryChanged)
-		{
-			// 只失效实际处理了输入的卡片。后续卡片的 Y 会由列布局自然
-			// 推进，但它们的内容高度和测量缓存不能因邻卡折叠而被重算。
-			for(const int StateIndex : vPreLayoutGeometryChangedStates)
-			{
-				if(StateIndex >= 0 && StateIndex < (int)m_vContentHeights.size())
-					m_vContentHeights[StateIndex] = -1.0f;
-			}
-		}
-		pColumns = &m_ProjectionCache.Resolve(Model, pTab, m_vActiveStateIndices);
-		BuildPreparedCards(*pColumns);
+		pColumns = PrepareProjectedCards();
+		if(pColumns == nullptr)
+			return Result;
 	}
 	GeometryStateChanged = GeometryStateChanged || MeasuredGeometryChanged;
 	for(const SPreparedCard &Card : m_vPreparedCards)
@@ -674,7 +825,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		}
 	}
 	m_LastEntryOffsetY = DeckEntryOffsetY;
-	if(!m_Drag.Active() && SettingsCardDeckAllowsDragStart(EntryPending, EntryPositionActive, ReflowTargetChanged, ReflowPositionActive || ContentHeightAnimationActive || WidthAnimationActive) && (Input.m_CtrlPressed || Input.m_AllowHeaderDrag) && Input.m_MousePressed)
+	if(!m_Drag.Active() && Input.m_MousePressed && (Input.m_CtrlPressed || Input.m_AllowHeaderDrag) &&
+		ScrollViewport.Inside({Input.m_MouseX, Input.m_MouseY}) && (Ctx.m_pUi == nullptr || Ctx.m_pUi->MouseInsideClip()) &&
+		SettingsCardDeckAllowsDragStart(EntryPending, EntryPositionActive, ReflowTargetChanged, ReflowPositionActive || ContentHeightAnimationActive || WidthAnimationActive))
 	{
 		for(const SPreparedCard &Card : m_vPreparedCards)
 		{
@@ -887,17 +1040,8 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			{
 				const bool RevealInteractive = Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && !Ctx.m_pUi->MeasurementOnly();
 				ContentRender = [pLayout = Card.m_pContentLayout, Draw = Card.m_pDefinition->m_ContentLayoutDraw, pUi = Ctx.m_pUi, pScrollRegion, RevealInteractive, pRevealStableId = Card.m_pDefinition->m_Spec.m_pStableId](CUIRect &Content) {
-					qm_settings_reveal::BeginCard(pRevealStableId, pScrollRegion, RevealInteractive);
-					const CUIRect Origin = Content;
-					// 只读绘制仍提交外观，但不再次处理已经完成的输入。
-					if(pUi != nullptr)
-						pUi->BeginBackgroundRender(true);
-					Draw(*pLayout, Content);
-					if(pUi != nullptr)
-						pUi->EndBackgroundRender(true);
-					Content.y = Origin.y + pLayout->Height();
-					Content.h = Origin.h - pLayout->Height();
-					qm_settings_reveal::EndCard();
+					const qm_settings_reveal::CCardScope Reveal(pRevealStableId, pScrollRegion, RevealInteractive);
+					qm_settings_content::RenderLayoutContent(*pLayout, Content, pUi, Draw);
 				};
 			}
 			SettingsCard(InputCtx, Frame, Card.m_pDefinition->m_Spec, State, VisualOptions,
@@ -928,6 +1072,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		m_WidthScrollFloor = std::min(m_WidthScrollFloor, std::max(0.0f, -ScrollOffset.y));
 		if(m_WidthScrollFloor > 0.0f)
 			pScrollRegion->AddRect({ScrollViewport.x, ScrollViewport.y + ScrollOffset.y, 0.0f, ScrollViewport.h + m_WidthScrollFloor});
+		ScrollRegionScope.m_pScrollRegion = nullptr;
 		pScrollRegion->End();
 	}
 	for(SRuntimeState &Runtime : m_vRuntimeStates)

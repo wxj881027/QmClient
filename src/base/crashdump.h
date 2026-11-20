@@ -15,9 +15,12 @@
  * Initializes the crash dumper and sets the filename to write the crash dump
  * to, if support for crash logging was compiled in. Otherwise does nothing.
  *
+ * Windows 回退处理器只有在完整准备输出路径后才启用文件输出。报告、转储和
+ * 确认标记各自写入候选文件，完成写入并关闭后才发布正式文件。
+ *
  * @ingroup Crash-Dumping
  *
- * @param log_file_path Absolute path to which crash log file should be written.
+ * @param log_file_path UTF-8编码的崩溃日志绝对路径。
  */
 void crashdump_init_if_available(const char *log_file_path);
 
@@ -34,7 +37,7 @@ void crashdump_init_if_available(const char *log_file_path);
 void crashdump_set_live_report_fd(int file);
 #endif
 
-// 图形后端在初始化/切换时可报告名称；不支持的平台保留空实现。
+// 记录已识别的图形后端名称。传入 nullptr 或未识别的名称时清除记录。
 void crashdump_set_graphics_backend(const char *pBackendName);
 
 /**
@@ -49,20 +52,17 @@ void crashdump_set_graphics_backend(const char *pBackendName);
 bool crashdump_launch_reporter_if_available(const char *report_path);
 
 /**
- * 阻止下一次致命错误处理再次打开重复的报告窗口。
+ * 在客户端已同步显示断言窗口时，跳过下一次 Windows 致命报告的即时提示和确认标记。
  *
- * 用于客户端已经同步显示断言窗口的情况；崩溃文件仍会正常生成。
+ * 致命处理器先尝试写入报告和转储，再检查此标记。
  */
 void crashdump_suppress_reporter_once();
 
 /**
  * 标记进程已进入退出清理阶段。
  *
- * 退出清理会销毁图形后端，个别图形驱动（例如 NVIDIA 的 nvoglv64.dll）会在
- * 销毁设备时访问已释放内存。此时进程本来就要结束，弹窗与几十 MB 的完整转储
- * 对用户没有价值。客户端在开始清理前调用本函数，致命错误处理在确认
- * “进程处于退出阶段”且“异常发生在已知图形驱动模块内”时，只记录一条日志，
- * 不再生成报告窗口；真正的崩溃（未进入退出阶段）不受影响。
+ * 客户端在销毁图形后端前调用本函数。Windows 致命处理器在此期间检查异常地址，
+ * 命中清单中的驱动模块时只记录日志，并跳过回退报告、转储和即时提示。
  *
  * @param p_driver_module 预留参数，当前为 nullptr 即可；驱动模块清单固定在
  *                        crashdump.cpp 内维护。
@@ -72,11 +72,11 @@ void crashdump_suppress_reporter_once();
 void crashdump_mark_shutdown_begin(const char *p_driver_module);
 
 /**
- * 查询当前异常是否属于退出阶段的图形驱动故障。
+ * 查询 Windows 致命处理器是否已在退出清理期间识别出图形驱动故障。
  *
- * 供客户端在结束退出阶段前判断是否应把崩溃转成退出告警。
+ * 识别结果保留到进程结束，报告启动入口据此跳过提示。
  *
- * @return 退出阶段且异常落在已知图形驱动模块内时为 true。
+ * @return 已识别出这类故障时为 true。
  *
  * @ingroup Crash-Dumping
  */
@@ -93,8 +93,7 @@ void crashdump_mark_shutdown_end();
  * 查询模块名是否属于“退出期可忽略”的图形驱动清单。
  *
  * 清单包含 NVIDIA / AMD / Intel 的 OpenGL、Vulkan、D3D12 驱动与运行库。
- * 退出清理在驱动内部释放 GPU 对象时崩溃属于已知无害故障，本函数是这一
- * 判断的可测试入口（大小写不敏感、按文件名匹配）。
+ * 按文件名进行大小写不敏感的匹配。
  *
  * @param p_module_name 模块文件名，例如 "nvoglv64.dll"。
  *
@@ -105,10 +104,9 @@ void crashdump_mark_shutdown_end();
 bool crashdump_is_ignorable_shutdown_driver_module(const char *p_module_name);
 
 /**
- * 一次致命信号的己方报告内容。
+ * 一次致命信号报告的现场信息。
  *
- * 结构体与平台无关，便于在任意平台验证文本格式与栈回溯逻辑；Android 的
- * signal handler 只在里面填充现场寄存器，不做额外的字符串处理。
+ * 字符串由调用方持有，须在格式化期间保持有效。
  */
 struct SCrashFatalReport
 {
@@ -147,10 +145,9 @@ const char *crashdump_signal_name(int Signal);
 size_t crashdump_format_fatal_report(char *pBuffer, size_t BufferSize, const SCrashFatalReport &Report);
 
 /**
- * 读取一帧调用栈所需的内存访问回调。
+ * 读取一个指针宽度的内存值。读到有效值时写入 pValue 并返回 true。
  *
- * 真实实现直接解引用地址，非法地址会触发二次崩溃，由调用方的重入保护兜底；
- * 测试实现可以返回构造好的假栈。
+ * Android 回调直接读取栈内存。调用前，致命处理器会先尝试将信号和寄存器写入报告。
  *
  * @ingroup Crash-Dumping
  */
@@ -164,7 +161,7 @@ typedef bool (*FS_CRASH_READ_MEMORY)(uintptr_t Address, uintptr_t *pValue, void 
  * @param pReadMemory 内存读回调，不得为 nullptr。
  * @param Pc          崩溃时的程序计数器。
  * @param Fp          崩溃时的 frame pointer。
- * @param Sp          崩溃时的栈指针；为 0 时跳过有效性检查。
+ * @param Sp          崩溃时的栈指针；为 0 时跳过 Fp 与 Sp 的比较。
  * @param pFrames     输出数组。
  * @param MaxFrames   输出数组容量。
  *
@@ -188,8 +185,8 @@ size_t crashdump_append_frame_lines(char *pBuffer, size_t BufferSize, size_t Len
 /**
  * 一个已加载模块的地址范围。
  *
- * 移动端在初始化阶段（进程健康时）读取 /proc/self/maps 缓存，崩溃处理器只做
- * 纯内存查表，把裸地址换算成「模块名+偏移」，回报问题时可直接 addr2line。
+ * Android 初始化时从 /proc/self/maps 缓存模块映射。信号处理器查表后，
+ * 把地址标注为模块短名和相对缓存范围起点的偏移。
  *
  * @ingroup Crash-Dumping
  */
@@ -200,20 +197,18 @@ struct SCrashModuleRange
 	/** 显示用短名（basename）。 */
 	char m_aName[64];
 	/**
-	 * 合并键：完整路径。
-	 *
-	 * 不能按 basename 合并——同一进程里可能有多个同名库（/system/lib64 与
-	 * APEX 各一份），合并后范围会横跨数个 GB，把小地址误判进该模块。
+	 * 合并键为 Android 模块解析器传入的路径。容量与 AndroidLoadModuleRanges
+	 * 的路径缓冲区一致，用于区分不同目录下的同名库。
 	 */
-	char m_aPath[96];
+	char m_aPath[384];
 };
 
 /**
  * 查找包含指定地址的模块。
  *
- * @param pOffset 输出相对模块基址的偏移；未命中时不写入。
+ * @param pOffset 输出相对缓存范围起点的偏移；未命中时不写入。
  *
- * @return 模块名；未命中返回 nullptr。
+ * @return 模块表内的短名；未命中返回 nullptr。
  *
  * @ingroup Crash-Dumping
  */
@@ -228,7 +223,7 @@ const char *crashdump_find_module(const SCrashModuleRange *pModules, size_t NumM
  * @param pModules    模块表。
  * @param pNumModules 当前条目数，新增时递增。
  * @param MaxModules  模块表容量。
- * @param pPath       /proc/self/maps 中的完整路径。
+ * @param pPath       Android 模块解析器提供的路径，最多 383 字节。
  *
  * @return 是否写入了新条目；同路径合并或容量不足时返回 false。
  *

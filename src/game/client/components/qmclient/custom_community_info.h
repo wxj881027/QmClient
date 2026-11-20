@@ -3,7 +3,9 @@
 
 #include <base/log.h>
 
+#include <engine/engine.h>
 #include <engine/http.h>
+#include <engine/http_response_validation.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
 #include <engine/shared/qm_storage_layout.h>
@@ -11,6 +13,8 @@
 
 #include <cstdlib>
 #include <memory>
+#include <new>
+#include <utility>
 
 inline constexpr const char *QMCLIENT_CUSTOM_COMMUNITIES_INFO_FILE = qm_storage::CUSTOM_COMMUNITIES_CACHE_FILE;
 using TQmCommunityInfo = std::unique_ptr<json_value, decltype(&json_value_free)>;
@@ -47,6 +51,11 @@ inline TQmCommunityInfo QmLoadCustomCommunityInfo(IStorage *pStorage, const IHtt
 		log_error("customcommunities", "invalid info: %s", pInfo ? "root must be an object" : aError);
 		pInfo.reset();
 	}
+	else if(pResponse && (*pInfo)["communities"].type != json_array)
+	{
+		log_error("customcommunities", "invalid info: communities must be an array");
+		pInfo.reset();
+	}
 	return pInfo;
 }
 
@@ -54,6 +63,7 @@ class CQmCustomCommunityCacheJob final : public IJob
 {
 	IStorage *m_pStorage;
 	std::shared_ptr<IHttpRequest> m_pResponse;
+	bool m_ValidateResponse;
 	TQmCommunityInfo m_pInfo{nullptr, json_value_free};
 
 protected:
@@ -65,8 +75,46 @@ protected:
 	}
 
 public:
-	explicit CQmCustomCommunityCacheJob(IStorage *pStorage, std::shared_ptr<IHttpRequest> pResponse = nullptr) : m_pStorage(pStorage), m_pResponse(std::move(pResponse)) { Abortable(true); }
-	TQmCommunityInfo TakeInfo() { return std::move(m_pInfo); }
+	explicit CQmCustomCommunityCacheJob(IStorage *pStorage, std::shared_ptr<IHttpRequest> pResponse = nullptr, bool ValidateResponse = false) :
+		m_pStorage(pStorage), m_pResponse(std::move(pResponse)), m_ValidateResponse(ValidateResponse) { Abortable(true); }
+	static std::shared_ptr<CQmCustomCommunityCacheJob> TryQueue(IEngine &Engine, IStorage *pStorage, std::shared_ptr<IHttpRequest> pResponse = nullptr)
+	{
+		try
+		{
+			const bool ValidateResponse = pResponse != nullptr;
+			auto pJob = std::make_shared<CQmCustomCommunityCacheJob>(pStorage, std::move(pResponse), ValidateResponse);
+			if(Engine.TryAddJob(pJob))
+				return pJob;
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 准备失败时保留当前社区，候选请求自行丢弃临时文件。
+		}
+		return nullptr;
+	}
+
+	TQmCommunityInfo TakeInfo()
+	{
+		// 取消时 worker 仍可能写入结果；只有完成状态才能接收或落盘。
+		if(State() != STATE_DONE)
+			return {nullptr, json_value_free};
+		if(m_ValidateResponse)
+		{
+			m_ValidateResponse = false;
+			if(!m_pResponse || m_pResponse->State() != EHttpState::DONE)
+			{
+				m_pInfo.reset();
+				return {nullptr, json_value_free};
+			}
+			CHttpResponseValidation Validation(*m_pResponse);
+			if(!m_pInfo || !Validation.Commit())
+			{
+				m_pInfo.reset();
+				return {nullptr, json_value_free};
+			}
+		}
+		return std::move(m_pInfo);
+	}
 };
 
 #endif

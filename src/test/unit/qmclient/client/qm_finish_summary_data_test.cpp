@@ -98,6 +98,16 @@ TEST(QmFinishSummaryData, PlayerDataCountsDistinctMapsAndFindsLatestMatchingFini
 	EXPECT_FALSE(ParseDdnetPlayer(pJson, std::strlen(pJson), "alpha", "Map A", Data));
 }
 
+TEST(QmFinishSummaryData, DdnetPlayerRejectsAnEmbeddedNullInTheCategory)
+{
+	constexpr const char *pJson = R"({"player":"Alpha","types":{"Solo\u0000Other":{"maps":{"Map A":{"finishes":0}}}}})";
+	SRemoteData Data;
+	Data.m_Category = "previous category";
+
+	EXPECT_FALSE(ParseDdnetPlayer(pJson, std::strlen(pJson), "Alpha", "Map A", Data));
+	EXPECT_EQ(Data.m_Category, "previous category");
+}
+
 TEST(QmFinishSummaryData, IndividualRankPointsDistinguishUnrankedFromAnUnknownBaseline)
 {
 	SRemoteData Data;
@@ -301,6 +311,20 @@ TEST(QmFinishSummaryData, OutOfRangeIntegerTimestampCannotConfirmDdnetFinish)
 	EXPECT_FALSE(Data.m_LatestTimestamp);
 }
 
+TEST(QmFinishSummaryData, BestPreviewKeepsTheTimeWhenTheDateCannotBeFormatted)
+{
+	auto Snapshot = Finish();
+	Snapshot.m_FinishedAt = "previous date";
+	SRemoteData Data;
+	Data.m_LatestTimeMs = Snapshot.m_TimeMs;
+	Data.m_LatestTimestamp = std::numeric_limits<int64_t>::max();
+
+	ApplyBestPreviewDate(Snapshot, Data);
+
+	EXPECT_EQ(Snapshot.m_TimeMs, 100000);
+	EXPECT_TRUE(Snapshot.m_FinishedAt.empty());
+}
+
 TEST(QmFinishSummaryComparison, KnownFirstFinishHasNoArtificialDifference)
 {
 	auto Snapshot = Finish();
@@ -405,6 +429,15 @@ TEST(QmFinishSummaryLocalRank, SlowerRunUsesExistingPersonalBest)
 	auto Snapshot = Finish();
 	ResolveLocalRank(Snapshot, {{"Beta", 90000, true}}, 80000, true);
 	EXPECT_EQ(Snapshot.m_LocalRank.m_Value, 1);
+	EXPECT_EQ(Snapshot.m_LocalRankChange, 0);
+}
+
+TEST(QmFinishSummaryLocalRank, ImprovementCountsPlayersOvertakenInTheSameField)
+{
+	auto Snapshot = Finish();
+	ResolveLocalRank(Snapshot, {{"Alpha", 100000, true}, {"Beta", 108000, true}, {"Gamma", 108000, true}}, 110000, true);
+	EXPECT_EQ(Snapshot.m_LocalRank.m_Value, 1);
+	EXPECT_EQ(Snapshot.m_LocalRankChange, 2);
 }
 
 TEST(QmFinishSummaryLocalRank, HiddenOrImpreciseScoreKeepsRankingUnavailable)
@@ -433,7 +466,7 @@ TEST(QmFinishSummaryLocalRank, FullCentisecondFasterPlayerRetainsBetterRank)
 	EXPECT_EQ(Snapshot.m_LocalRank.m_Value, 2);
 }
 
-TEST(QmFinishSummaryRemote, UnknownFirstFinishKeepsGainPending)
+TEST(QmFinishSummaryRemote, NoKnownAwardDisplaysZeroGain)
 {
 	auto Snapshot = Finish();
 	SRemoteData After;
@@ -442,7 +475,54 @@ TEST(QmFinishSummaryRemote, UnknownFirstFinishKeepsGainPending)
 	After.m_MapPoints = 5;
 	After.m_Points = 100;
 	ApplyRemote(Snapshot, {}, After, true);
-	EXPECT_EQ(Snapshot.m_PointsGained.m_Status, EStatus::PENDING);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Status, EStatus::READY);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 0);
+	EXPECT_EQ(Snapshot.m_Points.m_Value, 100);
+}
+
+TEST(QmFinishSummaryData, ReadsOnlyCompleteServerAwardMessages)
+{
+	EXPECT_EQ(ParseFinishAward("You earned 1 point for finishing this map!"), 1);
+	EXPECT_EQ(ParseFinishAward("You earned 15 points for finishing this map!"), 15);
+	EXPECT_EQ(ParseFinishAward("你完成这张地图后获得了 5 积分！"), 5);
+	EXPECT_FALSE(ParseFinishAward("Alpha: You earned 5 points for finishing this map!"));
+	EXPECT_FALSE(ParseFinishAward("你完成这张地图后获得了 -1 积分！"));
+	EXPECT_FALSE(ParseFinishAward("You earned 5000000000 points for finishing this map!"));
+	EXPECT_FALSE(ParseFinishAward("You earned 5 points for finishing this map! again"));
+}
+
+TEST(QmFinishSummaryRemote, ServerAwardUpdatesTotalOnceAndSurvivesWebRefresh)
+{
+	auto Snapshot = Finish();
+	SRemoteData Before, After;
+	Before.m_Points = 5366;
+	ApplyRemote(Snapshot, Before, {}, false);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 0);
+	for(int Delivery = 0; Delivery < 2; ++Delivery)
+	{
+		ApplyServerAward(Snapshot, Before.m_Points, 5);
+		EXPECT_EQ(Snapshot.m_Points.m_Value, 5371);
+		EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 5);
+	}
+	for(const int Total : {5366, 5371, 5373})
+	{
+		After.m_Points = Total;
+		ApplyRemote(Snapshot, Before, After, false);
+		EXPECT_EQ(Snapshot.m_Points.m_Value, Total == 5373 ? 5373 : 5371);
+		EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 5);
+	}
+}
+
+TEST(QmFinishSummaryRemote, AwardWithoutPreviousTotalUsesReportedTotalWithoutAddingAgain)
+{
+	auto Snapshot = Finish();
+	ApplyServerAward(Snapshot, std::nullopt, 5);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 5);
+	EXPECT_LT(Snapshot.m_Points.m_Value, 0);
+	SRemoteData After;
+	After.m_Points = 5;
+	ApplyRemote(Snapshot, {}, After, true);
+	EXPECT_EQ(Snapshot.m_Points.m_Value, 5);
 }
 
 TEST(QmFinishSummaryRemote, ConfirmedRankPointGainIsRecordedOnceForTheFinish)
@@ -504,13 +584,47 @@ TEST(QmFinishSummaryRemote, ConfirmedFirstFinishAwardsOnlyThisMapsPoints)
 	After.m_Points = 112;
 	After.m_CompletedMaps = 12;
 	ApplyRemote(Snapshot, Before, After, false);
-	EXPECT_EQ(Snapshot.m_PointsGained.m_Status, EStatus::PENDING);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 5);
+	EXPECT_EQ(Snapshot.m_Points.m_Value, 100);
+	EXPECT_FALSE(Snapshot.m_ConfirmedAward);
 	ApplyRemote(Snapshot, Before, After, true);
 	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 5);
 	EXPECT_EQ(Snapshot.m_Points.m_Value, 112);
 	EXPECT_EQ(Snapshot.m_Points.m_Status, EStatus::READY);
-	ApplyRemote(Snapshot, Before, After, true);
+	ApplyRemote(Snapshot, Before, Before, false);
 	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 5);
+}
+
+TEST(QmFinishSummaryRemote, FirstFinishShowsTheMapValueUntilTheServerReportsTheActualAward)
+{
+	auto Snapshot = Finish();
+	SRemoteData Before;
+	Before.m_Points = 5366;
+	Before.m_HistoryKnown = true;
+	Before.m_MapPoints = 5;
+	ResolveComparison(Snapshot, std::nullopt, true, 0, true);
+	ApplyRemote(Snapshot, Before, Before, false);
+	EXPECT_EQ(Snapshot.m_Points.m_Value, 5366);
+	EXPECT_EQ(Snapshot.m_FirstFinishBasePoints, 5366);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 5);
+	ApplyServerAward(Snapshot, Before.m_Points, 3);
+	ApplyRemote(Snapshot, Before, Before, false);
+	EXPECT_EQ(Snapshot.m_Points.m_Value, 5369);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 3);
+}
+
+TEST(QmFinishSummaryRemote, EarlierBestReportedByServerRulesOutMapAward)
+{
+	auto Snapshot = Finish();
+	SRemoteData Before;
+	Before.m_HistoryKnown = true;
+	Before.m_MapPoints = 5;
+	Before.m_Points = 5366;
+	ResolveComparison(Snapshot, std::nullopt, true, 1200, false);
+	ApplyRemote(Snapshot, Before, Before, false);
+	EXPECT_EQ(Snapshot.m_Points.m_Value, 5366);
+	EXPECT_EQ(Snapshot.m_PointsGained.m_Value, 0);
+	EXPECT_FALSE(Snapshot.m_FirstFinishBasePoints);
 }
 
 TEST(QmFinishSummaryRemote, AxiomPreviouslyCompletedAccountDoesNotAwardRoleFirstFinish)
@@ -536,6 +650,7 @@ TEST(QmFinishSummaryRemote, OldRankAndTotalsRemainMarkedStale)
 	Before.m_Points = 100;
 	ApplyRemote(Snapshot, Before, {}, false);
 	EXPECT_EQ(Snapshot.m_Rank.m_Value, 20);
+	EXPECT_EQ(Snapshot.m_RankChange, 0);
 	EXPECT_EQ(Snapshot.m_Rank.m_Status, EStatus::STALE);
 	EXPECT_EQ(Snapshot.m_Points.m_Status, EStatus::STALE);
 	SRemoteData After = Before;
@@ -545,6 +660,7 @@ TEST(QmFinishSummaryRemote, OldRankAndTotalsRemainMarkedStale)
 	After.m_Rank = 18;
 	ApplyRemote(Snapshot, Before, After, true);
 	EXPECT_EQ(Snapshot.m_Rank.m_Value, 18);
+	EXPECT_EQ(Snapshot.m_RankChange, 2);
 	EXPECT_EQ(Snapshot.m_Rank.m_Status, EStatus::READY);
 }
 
@@ -559,6 +675,7 @@ TEST(QmFinishSummaryRemote, ConfirmedFinishAcceptsRoundedRankTimeInSameCentiseco
 	After.m_ChinaRank = 5;
 	ApplyRemote(Snapshot, {}, After, true);
 	EXPECT_EQ(Snapshot.m_Rank.m_Status, EStatus::READY);
+	EXPECT_FALSE(Snapshot.m_RankChange);
 	EXPECT_EQ(Snapshot.m_ChinaRank.m_Status, EStatus::READY);
 }
 
@@ -612,7 +729,7 @@ TEST(QmFinishSummaryRemote, CurrentMapMismatchCannotOverwriteSnapshot)
 	ApplyRemote(Snapshot, {}, Other, true);
 	EXPECT_EQ(Snapshot.m_Mapper, "Original");
 }
-TEST(QmFinishSummaryRemote, DelayedAggregateDoesNotBecomeCurrentWithOnlyRecentFinish)
+TEST(QmFinishSummaryRemote, ConfirmedFirstFinishAccountsForMapAwardWhileProgressLags)
 {
 	auto Snapshot = Finish();
 	SRemoteData Before;
@@ -623,6 +740,7 @@ TEST(QmFinishSummaryRemote, DelayedAggregateDoesNotBecomeCurrentWithOnlyRecentFi
 	SRemoteData After = Before;
 	After.m_BestTimeMs = Snapshot.m_TimeMs;
 	ApplyRemote(Snapshot, Before, After, true);
-	EXPECT_EQ(Snapshot.m_Points.m_Status, EStatus::STALE);
+	EXPECT_EQ(Snapshot.m_Points.m_Status, EStatus::READY);
+	EXPECT_EQ(Snapshot.m_Points.m_Value, 105);
 	EXPECT_EQ(Snapshot.m_CompletedMaps.m_Status, EStatus::STALE);
 }

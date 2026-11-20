@@ -18,20 +18,16 @@ using namespace FontIcons;
 
 bool CKeyBinder::OnInput(const IInput::CEvent &Event)
 {
-	if(!m_TakeKey)
+	if(!m_Reader.IsCapturing())
 	{
 		return false;
 	}
 
 	if(Event.m_Flags & IInput::FLAG_RELEASE)
 	{
-		int ModifierCombination = CBinds::GetModifierMask(Input());
-		if(ModifierCombination == CBinds::GetModifierMaskOfKey(Event.m_Key))
-		{
-			ModifierCombination = KeyModifier::NONE;
-		}
-		m_Key = {Event.m_Key, ModifierCombination};
-		m_TakeKey = false;
+		const int KeyModifierMask = CBinds::GetModifierMaskOfKey(Event.m_Key);
+		const int ModifierMask = CBinds::GetModifierMask(Input()) & ~KeyModifierMask;
+		m_Reader.Capture({Event.m_Key, ModifierMask});
 	}
 	return true;
 }
@@ -49,7 +45,7 @@ CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(CButtonContainer *pReaderBu
 	// 之前裂开就是因为两块半径不一致：左边按胶囊画、右边按小圆角画。
 	const float SharedRadius = pRect->h * 0.5f;
 	ui_widget::SButtonSurfaceOptions ReaderOptions;
-	ReaderOptions.m_Selected = m_pKeyReaderId == pReaderButton;
+	ReaderOptions.m_Selected = m_Reader.Owns(pReaderButton);
 	ReaderOptions.m_Corners = IGraphics::CORNER_L;
 	ReaderOptions.m_Radius = SharedRadius;
 	const ColorRGBA ReaderBaseColor = ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pReaderButton, KeyReaderButton, ReaderOptions);
@@ -75,9 +71,7 @@ CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(CButtonContainer *pReaderBu
 	const int ButtonResult = Ui()->DoButtonLogic(pReaderButton, 0, &KeyReaderButton, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
 	if(!ReadOnly && (ButtonResult == 1 || Activate))
 	{
-		m_pKeyReaderId = pReaderButton;
-		m_TakeKey = true;
-		m_Key = std::nullopt;
+		m_Reader.Start(pReaderButton);
 	}
 	// 右键不再清空键位：以前右键点键名会直接把整个键的全部命令清掉，界面上没有任何提示，
 	// 手滑一下就是一整键内容没了。清空只能点右侧的垃圾桶按钮（调用方会写撤销点）。
@@ -87,23 +81,21 @@ CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(CButtonContainer *pReaderBu
 		Result.m_Bind = CBindSlot(KEY_UNKNOWN, KeyModifier::NONE);
 	}
 
-	if(!ReadOnly && m_pKeyReaderId == pReaderButton && m_Key.has_value())
+	if(!ReadOnly)
 	{
-		if(m_Key.value().m_Key == KEY_ESCAPE)
+		if(const auto Bind = m_Reader.TakeResult(pReaderButton))
 		{
-			Result.m_Aborted = true;
+			if(Bind->m_Key == KEY_ESCAPE)
+				Result.m_Aborted = true;
+			else
+				Result.m_Bind = *Bind;
+			if(Ui()->IsActiveItem(pReaderButton))
+				Ui()->SetActiveItem(nullptr);
 		}
-		else
-		{
-			Result.m_Bind = m_Key.value();
-		}
-		m_pKeyReaderId = nullptr;
-		m_Key = std::nullopt;
-		Ui()->SetActiveItem(nullptr);
 	}
 
 	char aBuf[64];
-	if(m_pKeyReaderId == pReaderButton && m_TakeKey)
+	if(m_Reader.Owns(pReaderButton) && m_Reader.IsCapturing())
 	{
 		str_copy(aBuf, Localize("Press a key…"));
 	}
@@ -116,7 +108,7 @@ CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(CButtonContainer *pReaderBu
 		GameClient()->m_Binds.GetKeyBindName(Result.m_Bind.m_Key, Result.m_Bind.m_ModifierMask, aBuf, sizeof(aBuf));
 	}
 
-	if(m_pKeyReaderId == pReaderButton && m_TakeKey)
+	if(m_Reader.Owns(pReaderButton) && m_Reader.IsCapturing())
 		DrawRoundedSurface(Ui(), KeyReaderButton, ColorRGBA(0.0f, 1.0f, 0.0f, 0.4f), ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_L);
 	CUIRect Label;
 	KeyReaderButton.HMargin(1.0f, &Label);
@@ -136,14 +128,10 @@ CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(CButtonContainer *pReaderBu
 
 bool CKeyBinder::IsActive() const
 {
-	return m_TakeKey;
+	return m_Reader.IsCapturing();
 }
 
 bool CKeyBinder::AbortPendingKey()
 {
-	if(m_pKeyReaderId == nullptr)
-		return false;
-	m_Key = CBindSlot(KEY_ESCAPE, KeyModifier::NONE);
-	m_TakeKey = false;
-	return true;
+	return m_Reader.Abort();
 }

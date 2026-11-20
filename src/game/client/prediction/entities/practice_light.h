@@ -3,6 +3,7 @@
 
 #include <game/client/laser_data.h>
 #include <game/client/prediction/entity.h>
+#include <game/client/prediction/tick_shift.h>
 
 #include <optional>
 
@@ -47,7 +48,10 @@ public:
 	void CapturePhaseOrigin();
 	// 把相位推进到指定回放 tick；小于上次 tick 时会从头重算，支持倒退拖动。
 	void SetPhaseTick(int Tick, int RenderTick);
-	void ShiftEvalTick(int TickDelta) { m_EvalTick += TickDelta; }
+	[[nodiscard]] bool ShiftEvalTick(int64_t TickDelta, QmTickShift::EMode Mode)
+	{
+		return QmTickShift::TryShiftFields(TickDelta, Mode, {&m_EvalTick});
+	}
 	// 渲染层数据。开关关闭时返回空，网络裁剪外也能画出与分支碰撞一致的激光。
 	std::optional<CLaserData> RenderData(int Team);
 

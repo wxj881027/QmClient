@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <new>
+
 TEST(QmRouteRenderCache, UnchangedRouteIsBuiltOnceAcrossFrames)
 {
 	CQmRouteRenderCache Cache;
@@ -68,6 +70,26 @@ TEST(QmRouteRenderCache, ResetRebuildsEvenWhenNewMapReusesTheSameKey)
 	EXPECT_EQ(Cache.Point(0), vec2(2.0f, 0.0f));
 }
 
+TEST(QmRouteRenderCache, InvalidatingReleasesRouteAndViewportBuffers)
+{
+	CQmRouteRenderCache Cache;
+	const CQmRouteRenderCache::SView View{-1.0f, -1.0f, 1.0f, 1.0f};
+	ASSERT_TRUE(Cache.Update({}, [](std::vector<vec2> &vPoints) {
+		vPoints.emplace_back(0.0f, 0.0f);
+		return true;
+	}));
+	ASSERT_EQ(Cache.QueryVisible(View).size(), 1u);
+
+	Cache.Invalidate();
+
+	EXPECT_EQ(Cache.QueryVisible(View).capacity(), 0u);
+	ASSERT_TRUE(Cache.Update({}, [](std::vector<vec2> &vPoints) {
+		EXPECT_EQ(vPoints.capacity(), 0u);
+		vPoints.emplace_back(0.0f, 0.0f);
+		return true;
+	}));
+}
+
 TEST(QmRouteRenderCache, FailedBuildHidesPartialPointsAndNewRevisionCanRecover)
 {
 	CQmRouteRenderCache Cache;
@@ -84,6 +106,31 @@ TEST(QmRouteRenderCache, FailedBuildHidesPartialPointsAndNewRevisionCanRecover)
 	++Key.m_Revision;
 	ASSERT_TRUE(Cache.Update(Key, Build));
 	EXPECT_EQ(Cache.QueryVisible({-10.0f, -10.0f, 10.0f, 10.0f}), (std::vector<size_t>{0}));
+}
+
+TEST(QmRouteRenderCache, AllocationFailureHidesPartialRouteAndRetriesSameKey)
+{
+	CQmRouteRenderCache Cache;
+	CQmRouteRenderCache::SKey Key;
+	const CQmRouteRenderCache::SView View{-10.0f, -10.0f, 10.0f, 10.0f};
+	ASSERT_TRUE(Cache.Update(Key, [](std::vector<vec2> &vPoints) {
+		vPoints.emplace_back(1.0f, 1.0f);
+		return true;
+	}));
+	ASSERT_EQ(Cache.QueryVisible(View).size(), 1u);
+	++Key.m_Revision;
+	EXPECT_FALSE(Cache.Update(Key, [](std::vector<vec2> &vPoints) -> bool {
+		vPoints.emplace_back(2.0f, 2.0f);
+		throw std::bad_alloc();
+	}));
+	EXPECT_TRUE(Cache.QueryVisible(View).empty());
+
+	ASSERT_TRUE(Cache.Update(Key, [](std::vector<vec2> &vPoints) {
+		vPoints.emplace_back(3.0f, 3.0f);
+		return true;
+	}));
+	ASSERT_EQ(Cache.QueryVisible(View), (std::vector<size_t>{0}));
+	EXPECT_EQ(Cache.Point(0), vec2(3.0f, 3.0f));
 }
 
 TEST(QmRouteRenderCache, ViewIncludesBoundaryPointsInOriginalRouteOrder)

@@ -6,6 +6,8 @@
 #include <game/client/prediction/entity.h>
 #include <game/teamscore.h>
 
+#include <optional>
+
 // 与客户端快照的 Inactive 判定保持一致：只有开关层、正编号、编号在范围内
 // 且目标队伍关闭时才算关闭；编号越界的机关按开启处理。
 inline bool QmPracticeSwitchActive(bool IsSwitchLayer, int Number, int Team, int NumSwitchers, bool SwitchStatus)
@@ -42,6 +44,9 @@ inline bool QmPracticeLaserHubMatches(vec2 SnapshotHub, vec2 PracticeHub)
 
 class CDoor : public CEntity
 {
+	friend class CGameWorld;
+	// 重建时临时借用，不参与实体主链，复制时重新清空。
+	CDoor *m_pCollisionNext = nullptr;
 	vec2 m_To;
 	vec2 m_Direction;
 	int m_Length;
@@ -50,10 +55,18 @@ class CDoor : public CEntity
 	// 影子世界的门只需要几何，不得因为析构误删主世界的门端点。
 	bool m_CollisionRegistered;
 
-	int MapSide() const;
+	static int MapSide(vec2 Direction);
 	int MapLength(int Side);
 
 public:
+	struct SCollisionGeometry
+	{
+		vec2 m_Direction{0.0f, 0.0f};
+		int m_Length = 0;
+	};
+	// 仅准备数值合法的写入几何，不执行逐像素遍历或证明帧预算。
+	static std::optional<SCollisionGeometry> CalcCollisionGeometry(vec2 Pos, vec2 To, int Side, int ConfiguredLength, ivec2 MapSize);
+
 	CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData);
 	// 副本只复制几何，不接管共享 CCollision 上的门碰撞端点：世界树里
 	// 同一扇门同时存在于多个 CGameWorld 副本，只有权威世界负责销毁清理。

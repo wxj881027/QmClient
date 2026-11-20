@@ -7,7 +7,6 @@
 #include <cctype>
 #include <charconv>
 #include <cstdint>
-#include <cstring>
 #include <string>
 #include <vector>
 
@@ -100,7 +99,7 @@ namespace QmNeteaseHook
 	}
 
 	// 网易云主窗口标题由播放器维护，是播放列表中唯一可验证的当前曲目线索。
-	// 同一标题对应不同歌曲 ID 时拒绝猜测，宁可暂时不发布错误媒体信息。
+	// 多条记录命中同一个标题时，需要相同的非空歌曲 ID 才能确认是同一首歌。
 	inline const SLocalTrackMetadata *FindLocalTrackByWindowTitle(const std::vector<SLocalTrackMetadata> &Tracks, const std::string &WindowTitle)
 	{
 		const std::string NormalizedWindowTitle = NormalizeWindowTitleLabel(WindowTitle);
@@ -112,7 +111,7 @@ namespace QmNeteaseHook
 		{
 			if(!IsUsableLocalTrack(Track) || LocalTrackWindowTitle(Track) != NormalizedWindowTitle)
 				continue;
-			if(pMatch != nullptr && pMatch->m_SongId != Track.m_SongId)
+			if(pMatch != nullptr && (Track.m_SongId.empty() || pMatch->m_SongId != Track.m_SongId))
 				return nullptr;
 			pMatch = &Track;
 		}
@@ -121,12 +120,7 @@ namespace QmNeteaseHook
 
 	inline void CopySnapshotField(char *pDestination, size_t DestinationSize, const std::string &Source)
 	{
-		if(pDestination == nullptr || DestinationSize == 0)
-			return;
-		const size_t CopySize = std::min(DestinationSize - 1, Source.size());
-		if(CopySize > 0)
-			std::memcpy(pDestination, Source.data(), CopySize);
-		pDestination[CopySize] = '\0';
+		CopyUtf8Truncated(pDestination, DestinationSize, Source.data(), Source.size());
 	}
 
 	inline uint64_t ParseLocalTrackSongId(const std::string &Value)
@@ -157,7 +151,7 @@ namespace QmNeteaseHook
 		if(pSnapshot->m_DurationMs > 0 && pSnapshot->m_PositionMs > pSnapshot->m_DurationMs)
 			pSnapshot->m_PositionMs = pSnapshot->m_DurationMs;
 		pSnapshot->m_Status |= STATUS_HAS_MEDIA;
-		if(!Track.m_CoverUrl.empty())
+		if(pSnapshot->m_aCoverUrl[0] != '\0')
 			pSnapshot->m_Status |= STATUS_HAS_COVER;
 		return true;
 	}

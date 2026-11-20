@@ -13,6 +13,16 @@
 
 #include <optional>
 
+namespace QmSpectatorSelection
+{
+	template<typename TIsSnapshotPlayerActive>
+	bool ShouldDimDemoPlayer(bool DemoPlayback, bool RankViewActive, TIsSnapshotPlayerActive IsSnapshotPlayerActive)
+	{
+		// Rank 列表使用影子成员编号，只有普通 demo 行可以查询玩家快照。
+		return DemoPlayback && !RankViewActive && !IsSnapshotPlayerActive();
+	}
+}
+
 class CSpectator : public CComponent
 {
 	enum

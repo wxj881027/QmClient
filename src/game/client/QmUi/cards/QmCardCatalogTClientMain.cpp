@@ -64,6 +64,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <new>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -117,18 +118,27 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientMainCard(const qm_card_cat
 	if(str_comp(pStableId, "tclient:finish-name") == 0)
 		return {LayoutTClientFinishNameCard(Ctx, Content, Render), Revision};
 	SSettingsSection Section;
-	if(str_comp(pStableId, "tclient:font") == 0)
-		Section = BuildTClientThemeCacheSection();
-	else if(str_comp(pStableId, "tclient:cursor") == 0)
-		Section = BuildTClientCursorCacheSection();
-	else if(str_comp(pStableId, "tclient:auto-reply") == 0)
-		Section = BuildTClientAutoReplyCacheSection();
-	else if(str_comp(pStableId, "tclient:pet") == 0)
-		Section = BuildTClientPetCacheSection();
-	else if(str_comp(pStableId, "tclient:hud") == 0)
-		Section = BuildTClientHudCacheSection();
-	else
+	try
+	{
+		if(str_comp(pStableId, "tclient:font") == 0)
+			Section = BuildTClientThemeCacheSection();
+		else if(str_comp(pStableId, "tclient:cursor") == 0)
+			Section = BuildTClientCursorCacheSection();
+		else if(str_comp(pStableId, "tclient:auto-reply") == 0)
+			Section = BuildTClientAutoReplyCacheSection();
+		else if(str_comp(pStableId, "tclient:pet") == 0)
+			Section = BuildTClientPetCacheSection();
+		else if(str_comp(pStableId, "tclient:hud") == 0)
+			Section = BuildTClientHudCacheSection();
+		else
+			return {0.0f, Revision};
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 节构造失败时跳过当前趟，下一帧会重新构造。
 		return {0.0f, Revision};
+	}
+
 	const float Height = Render ? (Section.m_RenderFullFn ? Section.m_RenderFullFn(Content) : 0.0f) : (Section.m_MeasureFn ? Section.m_MeasureFn(Content) : 0.0f);
 	return {Height, Revision};
 }

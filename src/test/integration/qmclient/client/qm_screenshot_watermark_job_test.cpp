@@ -108,6 +108,39 @@ TEST_F(CQmScreenshotWatermarkJobTest, CancelBeforeCommitKeepsOldFileAndUncommitt
 	EXPECT_EQ(Read(Temp), "new export");
 }
 
+TEST_F(CQmScreenshotWatermarkJobTest, RemovingACandidatePreservesTheTargetAndAllowsTheNextExport)
+{
+	WriteOldExport();
+	const std::string Candidate = m_Target + ".pending";
+	std::ofstream(std::filesystem::u8path(Candidate), std::ios::binary) << "candidate";
+	ASSERT_EQ(Read(Candidate), "candidate");
+	ASSERT_TRUE(CQmScreenshotExportControl::TryRemoveCandidate(Candidate));
+	EXPECT_FALSE(m_pStorage->FileExists(Candidate.c_str(), IStorage::TYPE_ABSOLUTE));
+	EXPECT_EQ(Read(m_Target), "previous export");
+	EXPECT_TRUE(CQmScreenshotExportControl::TryRemoveCandidate(Candidate));
+	CQmScreenshotExportControl Control;
+	ASSERT_TRUE(CQmScreenshotManager::SavePngAtomically(m_Target, m_Image, "after cleanup", &Control));
+	EXPECT_FALSE(Control.Canceled());
+	std::string Comment;
+	ASSERT_TRUE(CImageLoader::ReadPngComment(io_open(m_Target.c_str(), IOFLAG_READ), m_Target.c_str(), Comment));
+	EXPECT_EQ(Comment, "after cleanup");
+}
+
+TEST_F(CQmScreenshotWatermarkJobTest, FailedDirectoryCleanupPreservesItsContentsAndTheExport)
+{
+	WriteOldExport();
+	const auto Candidate = std::filesystem::u8path(m_Target + ".directory");
+	ASSERT_TRUE(std::filesystem::create_directory(Candidate));
+	const auto Child = Candidate / "keep.txt";
+	std::ofstream(Child, std::ios::binary) << "keep";
+	const auto Utf8 = Candidate.u8string();
+	EXPECT_FALSE(CQmScreenshotExportControl::TryRemoveCandidate(std::string(Utf8.begin(), Utf8.end())));
+	EXPECT_TRUE(std::filesystem::is_directory(Candidate));
+	const auto ChildUtf8 = Child.u8string();
+	EXPECT_EQ(Read(std::string(ChildUtf8.begin(), ChildUtf8.end())), "keep");
+	EXPECT_EQ(Read(m_Target), "previous export");
+}
+
 TEST_F(CQmScreenshotWatermarkJobTest, CancelQueuedJobPreservesPreviousExport)
 {
 	WriteOldExport();
@@ -118,6 +151,21 @@ TEST_F(CQmScreenshotWatermarkJobTest, CancelQueuedJobPreservesPreviousExport)
 	EXPECT_TRUE(pJob->Canceled());
 	EXPECT_FALSE(pJob->Saved());
 	EXPECT_EQ(Read(m_Target), "previous export");
+}
+
+TEST_F(CQmScreenshotWatermarkJobTest, RejectsRelativeTargetThatExceedsTheCompletePathLimit)
+{
+	char aStoragePrefix[IO_MAX_PATH_LENGTH] = {};
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "", aStoragePrefix, sizeof(aStoragePrefix));
+	const size_t PrefixLength = str_length(aStoragePrefix);
+	constexpr size_t SeparatorAndExtensionLength = sizeof("/.png") - 1;
+	ASSERT_GT(PrefixLength, 0u);
+	ASSERT_LT(PrefixLength + SeparatorAndExtensionLength, static_cast<size_t>(IO_MAX_PATH_LENGTH));
+	const size_t StemLength = IO_MAX_PATH_LENGTH - PrefixLength - SeparatorAndExtensionLength;
+	const size_t FolderLength = StemLength / 2;
+	const std::string Target = std::string(FolderLength, 'a') + "/" + std::string(StemLength - FolderLength, 'b') + ".png";
+
+	EXPECT_EQ(m_Manager.CreateWatermarkJob(m_pStorage.get(), "source.png", IStorage::TYPE_SAVE, Target.c_str(), Options("")), nullptr);
 }
 
 TEST_F(CQmScreenshotWatermarkJobTest, JobKeepsRequestOptionsAndSurvivesOriginalStorageDestruction)

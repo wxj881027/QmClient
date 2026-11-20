@@ -694,24 +694,7 @@ bool CFastPractice::ConsumePracticeChatCommand(int Team, const char *pLine)
 			NormalizeWeaponSelectionInput(m_PracticeBaseWorld.GetCharacterById(DummyClientId));
 	}
 
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	if(CCharacter *pPredChar = GameClient()->m_PredictedWorld.GetCharacterById(LocalClientId))
-	{
-		GameClient()->m_PredictedChar = pPredChar->GetCore();
-		GameClient()->m_PredictedPrevChar = pPredChar->GetCore();
-		GameClient()->m_aClients[LocalClientId].m_Predicted = pPredChar->GetCore();
-		GameClient()->m_aClients[LocalClientId].m_PrevPredicted = pPredChar->GetCore();
-	}
-	if(m_RequireDummy && DummyClientId >= 0)
-	{
-		if(CCharacter *pPredDummy = GameClient()->m_PredictedWorld.GetCharacterById(DummyClientId))
-		{
-			GameClient()->m_aClients[DummyClientId].m_Predicted = pPredDummy->GetCore();
-			GameClient()->m_aClients[DummyClientId].m_PrevPredicted = pPredDummy->GetCore();
-		}
-	}
-	GameClient()->m_PredictedTick = m_PracticeBaseWorld.GameTick();
+	PublishPracticeWorldSnapshot(m_PracticeBaseWorld, LocalClientId, m_RequireDummy ? DummyClientId : -1);
 
 	if(m_RequireDummy && DummyClientId >= 0 && !m_PracticeBaseWorld.GetCharacterById(DummyClientId))
 	{

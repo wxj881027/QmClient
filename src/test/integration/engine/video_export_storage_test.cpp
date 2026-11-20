@@ -19,6 +19,7 @@ extern "C" {
 #include <fstream>
 #include <iterator>
 #include <memory>
+#include <new>
 
 namespace
 {
@@ -739,6 +740,22 @@ TEST_F(CVideoExportStorage, FailedReloadClearsPreviouslyLoadedCompletion)
 	EXPECT_EQ(pTask->NextPendingSegment(), 0);
 }
 
+TEST_F(CVideoExportStorage, ProgressReadAllocationFailureKeepsSegmentsPendingUntilRetry)
+{
+	const std::string Progress = Path("read-retry.progress");
+	auto pTask = MakeTask("read-retry", 0, 13000, 50);
+	pTask->MarkSegmentDone(0);
+	ASSERT_TRUE(pTask->SaveProgress(Progress.c_str()));
+
+	SVideoExportIo Io;
+	Io.m_pReadText = [](IOHANDLE) -> char * { throw std::bad_alloc(); };
+	EXPECT_FALSE(pTask->LoadProgress(Progress.c_str(), &Io));
+	EXPECT_EQ(pTask->NextPendingSegment(), 0);
+
+	ASSERT_TRUE(pTask->LoadProgress(Progress.c_str()));
+	EXPECT_EQ(pTask->NextPendingSegment(), 1);
+}
+
 TEST_F(CVideoExportStorage, ConcatCloseFailureKeepsOldOutputAndAllowsRetry)
 {
 	const std::string Segment = WriteMinimalVideoFile(m_Directory, "input.mkv");
@@ -850,14 +867,36 @@ TEST_F(CVideoExportStorage, UncommittedRecordingPreservesPreviousOutput)
 	const std::string Target = Path("recording.mp4");
 	std::ofstream(Target) << "previous-video";
 	{
-		CVideoExportOutput Output(Target.c_str(), ".recording");
-		std::ofstream(Output.TemporaryPath()) << "incomplete-video";
-		Output.Opened();
+		auto pOutput = CVideoExportOutput::PrepareRecording(*m_pStorage, Target.c_str());
+		ASSERT_NE(pOutput, nullptr);
+		EXPECT_TRUE(std::filesystem::exists(pOutput->TemporaryPath()));
+		std::ofstream(pOutput->TemporaryPath()) << "incomplete-video";
 	}
 	std::ifstream Previous(Target);
 	EXPECT_EQ(std::string(std::istreambuf_iterator<char>(Previous), {}), "previous-video");
 	EXPECT_FALSE(std::filesystem::exists(Target + ".recording"));
 }
+
+#if defined(CONF_FAMILY_UNIX)
+TEST_F(CVideoExportStorage, OverlongRecordingTemporaryPathPreservesPreviousOutput)
+{
+	const std::string FileName = "recording.mp4";
+	std::string Target = Path(".");
+	ASSERT_LT(Target.size() + FileName.size() + 1, IO_MAX_PATH_LENGTH);
+	while(Target.size() + FileName.size() + 4 < IO_MAX_PATH_LENGTH)
+		Target += "/./";
+	Target.append(IO_MAX_PATH_LENGTH - 2 - Target.size() - FileName.size(), '/');
+	Target += '/' + FileName;
+	ASSERT_EQ(Target.size(), IO_MAX_PATH_LENGTH - 1);
+
+	std::ofstream(Path(FileName.c_str())) << "previous-video";
+	EXPECT_EQ(CVideoExportOutput::PrepareRecording(*m_pStorage, Target.c_str()), nullptr);
+
+	std::ifstream Previous(Path(FileName.c_str()));
+	EXPECT_EQ(std::string(std::istreambuf_iterator<char>(Previous), {}), "previous-video");
+	EXPECT_FALSE(std::filesystem::exists(Path("recording.mp4.recording")));
+}
+#endif
 
 TEST_F(CVideoExportStorage, SuccessfulRecordingReplacesPreviousOutput)
 {

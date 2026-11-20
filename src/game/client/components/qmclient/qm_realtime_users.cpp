@@ -1,5 +1,6 @@
 #include "qm_realtime_users.h"
 
+#include "qm_json_fields.h"
 #include "qm_realtime.h"
 
 #include <engine/shared/json.h>
@@ -8,6 +9,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <new>
 #include <set>
 #include <utility>
 #include <vector>
@@ -19,14 +21,9 @@ namespace
 	constexpr int64_t MAX_REVISION = 9007199254740991LL;
 	constexpr int64_t MAX_USERS = 1000000;
 
-	const json_value *Field(const json_value *pObject, const char *pName)
-	{
-		return pObject && pObject->type == json_object ? json_object_get(pObject, pName) : nullptr;
-	}
-
 	bool Text(const json_value *pValue, std::string &Out, size_t Max, bool Empty = false)
 	{
-		if(!pValue || pValue->type != json_string || pValue->u.string.length > Max || (!Empty && !pValue->u.string.length))
+		if(!pValue || pValue->type != json_string || pValue->u.string.length > Max || !qm_json::Text(pValue, Empty))
 			return false;
 		for(unsigned i = 0; i < pValue->u.string.length; ++i)
 			if(static_cast<unsigned char>(pValue->u.string.ptr[i]) < 0x20 || pValue->u.string.ptr[i] == 0x7f)
@@ -58,7 +55,15 @@ bool ParseQmCompressedUsersMessage(const char *pData, size_t Size, SQmRealtimeMe
 	const uint32_t DecodedSize = (uint32_t(pBytes[4]) << 24) | (uint32_t(pBytes[5]) << 16) | (uint32_t(pBytes[6]) << 8) | pBytes[7];
 	if(DecodedSize == 0 || DecodedSize > QMCLIENT_USERS_SYNC_MAX_BYTES)
 		return false;
-	std::string Json(DecodedSize, '\0');
+	std::string Json;
+	try
+	{
+		Json.assign(DecodedSize, '\0');
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
 	z_stream Stream{};
 	Stream.next_in = reinterpret_cast<Bytef *>(const_cast<char *>(pData + 8));
 	Stream.avail_in = static_cast<uInt>(Size - 8);
@@ -79,36 +84,41 @@ bool ParseQmCompressedUsersMessage(const char *pData, size_t Size, SQmRealtimeMe
 
 CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::Apply(const json_value *pData, const char *pExpectedServer)
 {
+	return ApplyAndPublish(pData, pExpectedServer, nullptr);
+}
+
+CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const json_value *pData, const char *pExpectedServer, const FPublish &Publish)
+{
 	auto Invalid = [this]() {
 		m_NeedsFull = true;
 		return EApplyResult::RESYNC;
 	};
 	std::string Address;
-	if(!Text(Field(pData, "server_address"), Address, 128, true))
+	if(!Text(qm_json::Field(pData, "server_address"), Address, 128, true))
 		return Invalid();
 	if(Address != (pExpectedServer ? pExpectedServer : ""))
 		return EApplyResult::IGNORED;
 	int64_t Revision, Base, Lease;
-	const json_value *pFull = Field(pData, "full");
-	if(!Integer(Field(pData, "revision"), Revision, 1, MAX_REVISION) ||
-		!Integer(Field(pData, "base_revision"), Base, 0, MAX_REVISION) ||
-		!Integer(Field(pData, "lease_seconds"), Lease, 1, 20) || !pFull || pFull->type != json_boolean)
+	const json_value *pFull = qm_json::Field(pData, "full");
+	if(!Integer(qm_json::Field(pData, "revision"), Revision, 1, MAX_REVISION) ||
+		!Integer(qm_json::Field(pData, "base_revision"), Base, 0, MAX_REVISION) ||
+		!Integer(qm_json::Field(pData, "lease_seconds"), Lease, 1, 20) || !pFull || pFull->type != json_boolean)
 		return Invalid();
 	const bool Full = pFull->u.boolean;
 	if(Full)
 	{
 		if(Base != 0)
 			return Invalid();
-		if(m_ServerAddress == Address && Revision <= m_Revision)
+		if(m_ServerAddress == Address && (Revision < m_Revision || (Revision == m_Revision && !NeedsFull())))
 			return EApplyResult::IGNORED;
 	}
 	else if(m_Revision == 0 || m_ServerAddress != Address || m_NeedsFull || Base != m_Revision || (Revision != Base && Revision != Base + 1))
 		return Invalid();
 
-	const json_value *pServers = Field(pData, "servers");
-	const json_value *pPlayers = Field(pData, "players");
-	const json_value *pRemovedServers = Field(pData, "removed_servers");
-	const json_value *pRemovedPlayers = Field(pData, "removed_players");
+	const json_value *pServers = qm_json::Field(pData, "servers");
+	const json_value *pPlayers = qm_json::Field(pData, "players");
+	const json_value *pRemovedServers = qm_json::Field(pData, "removed_servers");
+	const json_value *pRemovedPlayers = qm_json::Field(pData, "removed_players");
 	if(!Array(pServers, MAX_SERVERS) || !Array(pPlayers, MAX_PLAYERS) || !Array(pRemovedServers, MAX_SERVERS) || !Array(pRemovedPlayers, MAX_PLAYERS))
 		return Invalid();
 	const bool HasChanges = pServers->u.array.length || pPlayers->u.array.length || pRemovedServers->u.array.length || pRemovedPlayers->u.array.length;
@@ -116,8 +126,11 @@ CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::Apply(const json_valu
 		return Invalid();
 	if(!Full && !HasChanges)
 	{
+		if(Publish && !Publish(BuildResult(m_Servers, m_Players, true), static_cast<int>(Lease)))
+			return Invalid();
 		m_Revision = Revision;
 		m_LeaseSeconds = static_cast<int>(Lease);
+		m_LeaseRefreshRequested = false;
 		return EApplyResult::APPLIED;
 	}
 
@@ -173,20 +186,28 @@ CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::Apply(const json_valu
 		if(Total > MAX_USERS)
 			return Invalid();
 	}
+	if(Publish && !Publish(BuildResult(Servers, Players, true), static_cast<int>(Lease)))
+		return Invalid();
 	m_Servers = std::move(Servers);
 	m_Players = std::move(Players);
 	m_ServerAddress = std::move(Address);
 	m_Revision = Revision;
 	m_LeaseSeconds = static_cast<int>(Lease);
 	m_NeedsFull = false;
+	m_LeaseRefreshRequested = false;
 	return EApplyResult::APPLIED;
 }
 
 SQmClientUsersParseResult CQmRealtimeUsersState::Result() const
 {
+	return BuildResult(m_Servers, m_Players, m_Revision != 0);
+}
+
+SQmClientUsersParseResult CQmRealtimeUsersState::BuildResult(const std::map<std::string, SQmClientServerDistribution> &Servers, const std::map<std::string, SQmClientRecognitionMark> &Players, bool Parsed)
+{
 	SQmClientUsersParseResult Result;
-	Result.m_Parsed = m_Revision != 0;
-	for(const auto &[Key, Server] : m_Servers)
+	Result.m_Parsed = Parsed;
+	for(const auto &[Key, Server] : Servers)
 	{
 		Result.m_vServerDistribution.push_back(Server);
 		Result.m_OnlineUserCount += Server.m_UserCount;
@@ -199,7 +220,7 @@ SQmClientUsersParseResult CQmRealtimeUsersState::Result() const
 			return Left.m_DummyCount > Right.m_DummyCount;
 		return Left.m_ServerAddress < Right.m_ServerAddress;
 	});
-	for(const auto &[Key, Player] : m_Players)
+	for(const auto &[Key, Player] : Players)
 		Result.m_vLocalServerMarks.push_back(Player);
 	return Result;
 }
@@ -212,4 +233,5 @@ void CQmRealtimeUsersState::Reset()
 	m_Revision = 0;
 	m_LeaseSeconds = 0;
 	m_NeedsFull = false;
+	m_LeaseRefreshRequested = false;
 }

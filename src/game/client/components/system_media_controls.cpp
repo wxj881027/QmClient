@@ -1,8 +1,6 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "system_media_controls.h"
 
-#include "system_media_controls_timeline.h"
-
 #include <base/time.h>
 
 #include <engine/client/client.h>
@@ -35,11 +33,12 @@
 #include <array>
 #include <chrono>
 #include <cmath>
-#include <deque>
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 #endif
 
@@ -49,7 +48,6 @@
 #include <base/str.h>
 
 #include <game/client/components/qmclient/media_volume_logic.h>
-#include <game/client/components/qmclient/prepared_media_art.h>
 
 #include <dbus/dbus.h>
 
@@ -57,7 +55,6 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
-#include <deque>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -80,6 +77,10 @@ struct SPlainState
 	CSystemMediaControls::EPlaybackState m_PlaybackState = CSystemMediaControls::EPlaybackState::Unknown;
 	bool m_Playing = false;
 	char m_aSourceAppId[128] = {};
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+	// 比较来源和投递命令时使用完整 ID，公开快照仍沿用固定缓冲。
+	std::shared_ptr<const std::string> m_pSourceAppId;
+#endif
 	char m_aTitle[128] = {};
 	char m_aArtist[128] = {};
 	char m_aAlbum[128] = {};
@@ -90,32 +91,34 @@ struct SPlainState
 	double m_PlaybackRate = 1.0;
 };
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-enum class ECommand
-{
-	Prev,
-	PlayPause,
-	Next,
-};
+using ECommand = CQmMediaCommandQueue::ECommand;
+using SMediaCommand = CQmMediaCommandQueue::SCommand;
 
-struct SMediaCommand
-{
-	ECommand m_Type;
-	std::string m_SourceAppId;
-	uint64_t m_Generation = 0;
-};
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+// 未设置表示沿用封面，空指针表示清除，非空指针表示替换。
+using TAlbumArtUpdate = std::optional<std::unique_ptr<CQmPreparedMediaArt>>;
+#endif
 
 struct CSystemMediaControls::SShared
 {
 	std::mutex m_Mutex;
 	SPlainState m_State{};
 	bool m_HasMedia = false;
-	std::deque<SMediaCommand> m_Commands;
+	CQmMediaCommandQueue m_Commands;
 	QmMediaVolume::CPendingVolume m_PendingVolume;
-	std::unique_ptr<CQmPreparedMediaArt> m_pAlbumArt;
-	int m_AlbumArtWidth = 0;
-	int m_AlbumArtHeight = 0;
-	bool m_AlbumArtDirty = false;
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+	TAlbumArtUpdate m_AlbumArtUpdate;
+	bool m_AlbumArtUploadFailed = false;
+
+	// 与状态快照使用同一把锁，换下的像素由调用方在锁外释放。
+	void PublishAlbumArtUpdate(TAlbumArtUpdate &Update)
+	{
+		if(!Update)
+			return;
+		m_AlbumArtUpdate.swap(Update);
+		m_AlbumArtUploadFailed = false;
+	}
+#endif
 };
 
 // 把后台线程发布的状态搬到主线程副本；SMTC 与 MPRIS 后端共用这段搬运逻辑。
@@ -166,55 +169,135 @@ static void ClearState(CSystemMediaControls::SState &State, IGraphics *pGraphics
 #endif
 
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-using namespace winrt::Windows::Media::Control;
-
 struct CSystemMediaControls::SWinrt
+{
+	CSystemMediaControls::SState m_State{};
+	std::shared_ptr<const std::string> m_pSourceAppId;
+	bool m_HasMedia = false;
+};
+#endif
+#if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
+struct CSystemMediaControls::SMpris
 {
 	CSystemMediaControls::SState m_State{};
 	bool m_HasMedia = false;
 };
+#endif
+#if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
+// 完整准备资源后由 worker 持有，工作线程只借用这个稳定地址。
+struct CSystemMediaControls::SRuntime : public CQmMediaWorker::CState
+{
+	CSystemMediaControls &m_Owner;
+	std::unique_ptr<SShared> m_pShared;
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+	std::unique_ptr<SWinrt> m_pWinrt;
+	uint64_t m_NextVolumeGeneration = 1;
+#endif
+#if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
+	std::unique_ptr<SMpris> m_pMpris;
+	SystemMediaControls::CMprisSessionIdentity m_SessionIdentity;
+#endif
+	explicit SRuntime(CSystemMediaControls &Owner) :
+		m_Owner(Owner), m_pShared(std::make_unique<SShared>())
+	{
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+		m_pWinrt = std::make_unique<SWinrt>();
+#endif
+#if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
+		m_pMpris = std::make_unique<SMpris>();
+#endif
+	}
+	~SRuntime() override { ClearMainState(); }
+	void Run(const std::atomic_bool &Stop) override { m_Owner.ThreadMain(*this, Stop); }
+	void OnFailure() noexcept override
+	{
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+		TAlbumArtUpdate ClearAlbumArt(std::in_place);
+#endif
+		try
+		{
+			const std::scoped_lock Lock(m_pShared->m_Mutex);
+			m_pShared->m_State = {};
+			m_pShared->m_HasMedia = false;
+			m_pShared->m_PendingVolume.Reset();
+			m_pShared->m_Commands.Clear();
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+			m_pShared->PublishAlbumArtUpdate(ClearAlbumArt);
+#endif
+		}
+		catch(...)
+		{
+			// worker 的完成标记仍会使主线程停止公开这份快照。
+		}
+#if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
+		m_SessionIdentity.Clear();
+#endif
+	}
+	void BeforeRestart() noexcept override
+	{
+		OnFailure();
+		ClearMainState();
+	}
+	void ClearMainState() noexcept
+	{
+		try
+		{
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+			if(m_pWinrt)
+			{
+				m_pWinrt->m_HasMedia = false;
+				m_pWinrt->m_pSourceAppId.reset();
+				ClearState(m_pWinrt->m_State, m_Owner.Graphics());
+			}
+#endif
+#if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
+			if(m_pMpris)
+			{
+				m_pMpris->m_HasMedia = false;
+				ClearState(m_pMpris->m_State, m_Owner.Graphics());
+			}
+#endif
+		}
+		catch(...)
+		{
+			// 图形失败不允许逃出状态析构；原生图形恢复仍由图形 owner 负责。
+		}
+	}
+};
+#endif
+
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+using namespace winrt::Windows::Media::Control;
 
 template<typename TAsyncOp>
 static bool WaitForAsync(const TAsyncOp &Operation, const std::atomic_bool &StopFlag)
 {
+	using SystemMediaControls::EMediaRequestStatus;
 	using winrt::Windows::Foundation::AsyncStatus;
-	while(true)
+	AsyncStatus Status = AsyncStatus::Started;
+	const auto StopRequested = [&] { return StopFlag.load(std::memory_order_relaxed); };
+	const bool Completed = SystemMediaControls::WaitForMediaRequest(
+		[&] {
+			Status = Operation.Status();
+			if(Status == AsyncStatus::Started)
+				return EMediaRequestStatus::PENDING;
+			return Status == AsyncStatus::Completed ? EMediaRequestStatus::COMPLETE : EMediaRequestStatus::FAILED;
+		},
+		StopRequested,
+		[] { return std::chrono::steady_clock::now(); },
+		[](std::chrono::steady_clock::duration Delay) { std::this_thread::sleep_for(Delay); });
+	if(!Completed && Status == AsyncStatus::Started && !StopRequested())
 	{
-		const AsyncStatus Status = Operation.Status();
-		if(Status == AsyncStatus::Completed)
-			return true;
-		if(Status == AsyncStatus::Canceled || Status == AsyncStatus::Error)
-			return false;
-		if(StopFlag.load(std::memory_order_relaxed))
-			return false;
-		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+		try
+		{
+			Operation.Cancel();
+		}
+		catch(const winrt::hresult_error &)
+		{
+			// 请求可能在超时与取消之间已经结束，继续走失败回退。
+		}
 	}
-}
-
-static void ClearSharedAlbumArt(CSystemMediaControls::SShared *pShared)
-{
-	// 旧封面在离开锁后析构：上传线程只做一次指针移交，不再复制整块像素。
-	std::unique_ptr<CQmPreparedMediaArt> pDiscarded;
-	{
-		std::scoped_lock Lock(pShared->m_Mutex);
-		pDiscarded = std::move(pShared->m_pAlbumArt);
-		pShared->m_AlbumArtWidth = 0;
-		pShared->m_AlbumArtHeight = 0;
-		pShared->m_AlbumArtDirty = true;
-	}
-}
-
-static void SetSharedAlbumArt(CSystemMediaControls::SShared *pShared, const std::vector<uint8_t> &Pixels, const std::vector<uint8_t> &CircularPixels, int Width, int Height)
-{
-	// 分配与像素复制在后台、锁外完成；旧封面同样在离开锁后析构。
-	auto pPrepared = std::make_unique<CQmPreparedMediaArt>(Pixels, CircularPixels, Width, Height);
-	{
-		std::scoped_lock Lock(pShared->m_Mutex);
-		pShared->m_pAlbumArt.swap(pPrepared);
-		pShared->m_AlbumArtWidth = Width;
-		pShared->m_AlbumArtHeight = Height;
-		pShared->m_AlbumArtDirty = true;
-	}
+	return Completed;
 }
 
 static void ClearMediaText(SPlainState &State)
@@ -254,11 +337,11 @@ static void ApplyAppleMusicMetadataFix(const char *pSourceAppId, std::string &Ar
 	RemoveSuffixNoCase(Album, " - EP");
 }
 
-static void ClearMediaDetails(SPlainState &State, std::string &AlbumArtKey, CSystemMediaControls::SShared *pShared)
+static void ClearMediaDetails(SPlainState &State, std::string &AlbumArtKey, TAlbumArtUpdate &AlbumArtUpdate)
 {
 	ClearMediaText(State);
 	AlbumArtKey.clear();
-	ClearSharedAlbumArt(pShared);
+	AlbumArtUpdate.emplace();
 }
 
 static void ResetSharedState(CSystemMediaControls::SShared *pShared, SPlainState &State, bool &HasMedia, std::string &AlbumArtKey)
@@ -266,58 +349,38 @@ static void ResetSharedState(CSystemMediaControls::SShared *pShared, SPlainState
 	HasMedia = false;
 	State = SPlainState{};
 	AlbumArtKey.clear();
-	ClearSharedAlbumArt(pShared);
+	TAlbumArtUpdate ClearAlbumArt(std::in_place);
 	std::scoped_lock Lock(pShared->m_Mutex);
 	pShared->m_State = State;
 	pShared->m_HasMedia = false;
 	pShared->m_PendingVolume.Reset();
-	pShared->m_Commands.clear();
+	pShared->m_Commands.Clear();
+	pShared->PublishAlbumArtUpdate(ClearAlbumArt);
 }
 
 static void ApplyRoundedMask(std::vector<uint8_t> &Pixels, int Width, int Height, float Radius);
 static void ApplyCircularFeatherMask(std::vector<uint8_t> &Pixels, int Width, int Height);
 
-static void UpdateAlbumArtData(CSystemMediaControls::SShared *pShared, const winrt::Windows::Storage::Streams::IRandomAccessStreamReference &Thumbnail, const std::atomic_bool &StopFlag)
+static std::unique_ptr<CQmPreparedMediaArt> PrepareAlbumArt(const winrt::Windows::Storage::Streams::IRandomAccessStreamReference &Thumbnail, const std::atomic_bool &StopFlag)
 {
-	if(!Thumbnail)
-	{
-		ClearSharedAlbumArt(pShared);
-		return;
-	}
-
 	try
 	{
 		const auto StreamOp = Thumbnail.OpenReadAsync();
 		if(!WaitForAsync(StreamOp, StopFlag))
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return nullptr;
 		const auto Stream = StreamOp.GetResults();
 		if(!Stream)
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return nullptr;
 
 		const auto DecoderOp = winrt::Windows::Graphics::Imaging::BitmapDecoder::CreateAsync(Stream);
 		if(!WaitForAsync(DecoderOp, StopFlag))
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return nullptr;
 		const auto Decoder = DecoderOp.GetResults();
 		if(!Decoder)
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return nullptr;
 		const SystemMediaControls::SAlbumArtDecodeSize DecodeSize = SystemMediaControls::CalculateAlbumArtDecodeSize(Decoder.PixelWidth(), Decoder.PixelHeight());
 		if(DecodeSize.m_Width == 0 || DecodeSize.m_Height == 0)
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return nullptr;
 
 		winrt::Windows::Graphics::Imaging::BitmapTransform Transform;
 		Transform.ScaledWidth(DecodeSize.m_Width);
@@ -330,24 +393,15 @@ static void UpdateAlbumArtData(CSystemMediaControls::SShared *pShared, const win
 			winrt::Windows::Graphics::Imaging::ExifOrientationMode::IgnoreExifOrientation,
 			winrt::Windows::Graphics::Imaging::ColorManagementMode::DoNotColorManage);
 		if(!WaitForAsync(PixelDataOp, StopFlag))
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return nullptr;
 		const auto PixelData = PixelDataOp.GetResults();
 		if(!PixelData)
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return nullptr;
 
 		const auto Pixels = PixelData.DetachPixelData();
 		const size_t ExpectedSize = (size_t)DecodeSize.m_Width * (size_t)DecodeSize.m_Height * 4;
 		if(Pixels.size() < ExpectedSize)
-		{
-			ClearSharedAlbumArt(pShared);
-			return;
-		}
+			return nullptr;
 
 		std::vector<uint8_t> Copy(Pixels.begin(), Pixels.begin() + ExpectedSize);
 		std::vector<uint8_t> CircularCopy = Copy;
@@ -355,11 +409,14 @@ static void UpdateAlbumArtData(CSystemMediaControls::SShared *pShared, const win
 		const float RoundingRatio = 2.0f / 14.0f;
 		const float Radius = (float)std::min(DecodeSize.m_Width, DecodeSize.m_Height) * RoundingRatio;
 		ApplyRoundedMask(Copy, (int)DecodeSize.m_Width, (int)DecodeSize.m_Height, Radius);
-		SetSharedAlbumArt(pShared, Copy, CircularCopy, (int)DecodeSize.m_Width, (int)DecodeSize.m_Height);
+		auto pPrepared = std::make_unique<CQmPreparedMediaArt>(Copy, CircularCopy, (int)DecodeSize.m_Width, (int)DecodeSize.m_Height);
+		if(!pPrepared->m_Original.m_pData || !pPrepared->m_Circular.m_pData)
+			return nullptr;
+		return pPrepared;
 	}
 	catch(const winrt::hresult_error &)
 	{
-		ClearSharedAlbumArt(pShared);
+		return nullptr;
 	}
 }
 
@@ -483,29 +540,21 @@ static IGraphics::CTextureHandle LoadAlbumArtTexture(IGraphics *pGraphics, CImag
 	return pGraphics->LoadTextureRawMove(Image, 0, pName);
 }
 
-static void ApplySharedAlbumArt(CSystemMediaControls::SShared *pShared, CSystemMediaControls::SState &State, IGraphics *pGraphics, const IClient *pClient)
+static void RequestAlbumArtRetry(CSystemMediaControls::SShared *pShared)
 {
-	if(!pShared || !pGraphics)
-		return;
+	std::scoped_lock Lock(pShared->m_Mutex);
+	// 已有待上传封面时，由它的上传结果决定是否重试。
+	if(!pShared->m_AlbumArtUpdate)
+		pShared->m_AlbumArtUploadFailed = true;
+}
 
-	bool AlbumArtDirty = false;
-	int AlbumArtWidth = 0;
-	int AlbumArtHeight = 0;
-	std::unique_ptr<CQmPreparedMediaArt> pAlbumArt;
-	{
-		std::scoped_lock Lock(pShared->m_Mutex);
-		if(pShared->m_AlbumArtDirty)
-		{
-			AlbumArtDirty = true;
-			AlbumArtWidth = pShared->m_AlbumArtWidth;
-			AlbumArtHeight = pShared->m_AlbumArtHeight;
-			pAlbumArt = std::move(pShared->m_pAlbumArt);
-			pShared->m_AlbumArtDirty = false;
-		}
-	}
-
-	if(!AlbumArtDirty)
+static void ApplyAlbumArtUpdate(CSystemMediaControls::SShared *pShared, const TAlbumArtUpdate &Update, CSystemMediaControls::SState &State, IGraphics *pGraphics, const IClient *pClient)
+{
+	if(!Update)
 		return;
+	const auto &pAlbumArt = *Update;
+	const int AlbumArtWidth = pAlbumArt ? (int)pAlbumArt->m_Original.m_Width : 0;
+	const int AlbumArtHeight = pAlbumArt ? (int)pAlbumArt->m_Original.m_Height : 0;
 	CPerfTimer ApplyTimer;
 
 	ClearAlbumArtLocal(State, pGraphics);
@@ -514,6 +563,8 @@ static void ApplySharedAlbumArt(CSystemMediaControls::SShared *pShared, CSystemM
 	{
 		State.m_AlbumArt = LoadAlbumArtTexture(pGraphics, pAlbumArt->m_Original, "smtc_album_art");
 		State.m_AlbumArtCircular = LoadAlbumArtTexture(pGraphics, pAlbumArt->m_Circular, "smtc_album_art_circular");
+		if(!State.m_AlbumArt.IsValid() || !State.m_AlbumArtCircular.IsValid())
+			RequestAlbumArtRetry(pShared);
 	}
 	if(State.m_AlbumArt.IsValid())
 	{
@@ -531,46 +582,64 @@ static void ApplySharedAlbumArt(CSystemMediaControls::SShared *pShared, CSystemM
 CSystemMediaControls::CSystemMediaControls() = default;
 CSystemMediaControls::~CSystemMediaControls() = default;
 
-void CSystemMediaControls::SyncNeteaseHookConfiguration()
+static int64_t MediaNowMs() { return time_get_impl() / (time_freq() / 1000); }
+
+bool CSystemMediaControls::SyncNeteaseHookConfiguration() noexcept
 {
 	const bool HookEnabled = g_Config.m_QmNeteaseHookEnable != 0;
-	const bool ConfigurationChanged = !m_NeteaseHookConfigInitialized ||
-					  HookEnabled != m_LastNeteaseHookEnabled ||
-					  (HookEnabled && m_LastNeteaseHookHelperPath != g_Config.m_QmNeteaseHookHelperPath);
-	if(!ConfigurationChanged)
-		return;
-
-	if(m_pNeteaseHook != nullptr)
+	const bool Changed = !m_NeteaseHookConfigInitialized || HookEnabled != m_LastNeteaseHookEnabled ||
+			     (HookEnabled && m_LastNeteaseHookHelperPath != g_Config.m_QmNeteaseHookHelperPath);
+	if(!Changed)
+		return true;
+	if(HookEnabled && !m_HookRetry.Begin(MediaNowMs(), 200))
+		return false;
+	try
 	{
-		if(SystemMediaControls::ShouldStopNeteaseHookForConfigurationChange(m_NeteaseHookConfigInitialized, m_LastNeteaseHookEnabled))
-			m_pNeteaseHook->Stop();
+		std::string Path = HookEnabled ? g_Config.m_QmNeteaseHookHelperPath : "";
 		if(HookEnabled)
-			m_pNeteaseHook->Start(g_Config.m_QmNeteaseHookHelperPath, g_Config.m_QmNeteaseHookTimeoutMs);
+		{
+			std::unique_ptr<CQmNeteaseHookProvider> pPrepared;
+			if(!m_pNeteaseHook)
+				pPrepared = std::make_unique<CQmNeteaseHookProvider>();
+			auto *pProvider = pPrepared ? pPrepared.get() : m_pNeteaseHook.get();
+			if(m_pNeteaseHook && SystemMediaControls::ShouldStopNeteaseHookForConfigurationChange(m_NeteaseHookConfigInitialized, m_LastNeteaseHookEnabled))
+				m_pNeteaseHook->Stop();
+			pProvider->Start(Path.c_str(), g_Config.m_QmNeteaseHookTimeoutMs);
+			if(pPrepared)
+				m_pNeteaseHook = std::move(pPrepared);
+		}
+		else
+		{
+			// provider 的析构会执行 Stop，禁用后不再保留它。
+			m_pNeteaseHook.reset();
+		}
+		m_LastNeteaseHookHelperPath.swap(Path);
+		m_NeteaseHookConfigInitialized = true;
+		m_LastNeteaseHookEnabled = HookEnabled;
+		m_HookRetry.Reset();
 	}
-
-	m_NeteaseHookConfigInitialized = true;
-	m_LastNeteaseHookEnabled = HookEnabled;
-	if(HookEnabled)
-		m_LastNeteaseHookHelperPath.assign(g_Config.m_QmNeteaseHookHelperPath);
-	else
-		m_LastNeteaseHookHelperPath.clear();
+	catch(...)
+	{
+		m_HasNeteaseSnapshot = false;
+		m_NeteaseSnapshot = {};
+		return false;
+	}
 	m_HasNeteaseSnapshot = false;
 	m_NeteaseSnapshot = {};
 	m_LastNeteaseHookReadFrame = 0;
 	m_NeteaseHookReadFrameInitialized = false;
+	return true;
 }
 
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-void CSystemMediaControls::ThreadMain()
+void CSystemMediaControls::ThreadMain(SRuntime &Runtime, const std::atomic_bool &Stop)
 {
-	try
+	auto *pShared = Runtime.m_pShared.get();
+	struct CApartmentScope
 	{
-		winrt::init_apartment(winrt::apartment_type::multi_threaded);
-	}
-	catch(const winrt::hresult_error &)
-	{
-		return;
-	}
+		CApartmentScope() { winrt::init_apartment(winrt::apartment_type::multi_threaded); }
+		~CApartmentScope() { winrt::uninit_apartment(); }
+	} Apartment;
 
 	{
 		// Release WinRT objects before tearing down the apartment.
@@ -580,18 +649,18 @@ void CSystemMediaControls::ThreadMain()
 		bool HasMedia = false;
 		std::string AlbumArtKey;
 		SystemMediaControls::CTimelineGenerationTracker TimelineGenerationTracker;
-		CQmPlayerVolume PlayerVolume;
+		CQmPlayerVolume PlayerVolume(Runtime.m_NextVolumeGeneration);
 		auto LastPropsUpdate = std::chrono::steady_clock::now() - std::chrono::seconds(2);
 
-		while(!m_StopThread)
+		while(!Stop)
 		{
 			try
 			{
-				if(!g_Config.m_QmSmtcEnable)
+				if(!m_BackendEnabled.load(std::memory_order_relaxed))
 				{
 					PlayerVolume.Reset();
 					if(HasMedia)
-						ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
+						ResetSharedState(pShared, State, HasMedia, AlbumArtKey);
 					std::this_thread::sleep_for(std::chrono::milliseconds(200));
 					continue;
 				}
@@ -601,9 +670,9 @@ void CSystemMediaControls::ThreadMain()
 					try
 					{
 						const auto RequestOp = GlobalSystemMediaTransportControlsSessionManager::RequestAsync();
-						if(!WaitForAsync(RequestOp, m_StopThread))
+						if(!WaitForAsync(RequestOp, Stop))
 						{
-							if(m_StopThread.load(std::memory_order_relaxed))
+							if(Stop.load(std::memory_order_relaxed))
 								break;
 							Manager = nullptr;
 						}
@@ -623,7 +692,7 @@ void CSystemMediaControls::ThreadMain()
 				{
 					if(HasMedia)
 					{
-						ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
+						ResetSharedState(pShared, State, HasMedia, AlbumArtKey);
 					}
 					std::this_thread::sleep_for(std::chrono::milliseconds(500));
 					continue;
@@ -648,9 +717,11 @@ void CSystemMediaControls::ThreadMain()
 							const auto Timeline = Candidate.GetTimelineProperties();
 							if(Timeline)
 							{
-								const int64_t DurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(Timeline.EndTime() - Timeline.StartTime()).count();
-								const int64_t LastUpdatedUtc100ns = Timeline.LastUpdatedTime().time_since_epoch().count();
-								if(SystemMediaControls::MediaTimelineLooksStale(true, DurationMs, LastUpdatedUtc100ns, NowUtc100ns))
+								SystemMediaControls::STimelineProperties Properties;
+								Properties.m_Start100ns = Timeline.StartTime().count();
+								Properties.m_End100ns = Timeline.EndTime().count();
+								Properties.m_LastUpdatedUtc100ns = Timeline.LastUpdatedTime().time_since_epoch().count();
+								if(SystemMediaControls::MediaTimelineLooksStale(Properties, NowUtc100ns))
 									Priority = SystemMediaControls::SessionActivityPriority(Activity::PAUSED);
 							}
 						}
@@ -713,7 +784,7 @@ void CSystemMediaControls::ThreadMain()
 					PlayerVolume.Reset();
 					if(HasMedia)
 					{
-						ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
+						ResetSharedState(pShared, State, HasMedia, AlbumArtKey);
 					}
 					std::this_thread::sleep_for(std::chrono::milliseconds(200));
 					continue;
@@ -723,7 +794,7 @@ void CSystemMediaControls::ThreadMain()
 				if(!PlaybackInfo)
 				{
 					if(HasMedia)
-						ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
+						ResetSharedState(pShared, State, HasMedia, AlbumArtKey);
 					std::this_thread::sleep_for(std::chrono::milliseconds(200));
 					continue;
 				}
@@ -731,7 +802,7 @@ void CSystemMediaControls::ThreadMain()
 				if(!Controls)
 				{
 					if(HasMedia)
-						ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
+						ResetSharedState(pShared, State, HasMedia, AlbumArtKey);
 					std::this_thread::sleep_for(std::chrono::milliseconds(200));
 					continue;
 				}
@@ -759,24 +830,28 @@ void CSystemMediaControls::ThreadMain()
 				State.m_Playing = State.m_PlaybackState == CSystemMediaControls::EPlaybackState::Playing;
 				const auto PlaybackRate = PlaybackInfo.PlaybackRate();
 				State.m_PlaybackRate = PlaybackRate ? std::max(0.0, PlaybackRate.Value()) : 1.0;
-				const std::string SourceAppId = winrt::to_string(Session.SourceAppUserModelId());
-				const bool SourceChanged = SystemMediaControls::MediaSourceChanged(State.m_aSourceAppId, SourceAppId.c_str());
+				std::string SelectedAppId = winrt::to_string(Session.SourceAppUserModelId());
+				const bool SourceChanged = !State.m_pSourceAppId ||
+							   SystemMediaControls::MediaSourceChanged(State.m_pSourceAppId->c_str(), SelectedAppId.c_str());
+				TAlbumArtUpdate AlbumArtUpdate;
 				if(SourceChanged)
 				{
-					// 当前会话切换时，旧播放器的标题/封面不能和新来源
-					// 组合发布；同时让下一次循环立即读取新会话属性。
-					ClearMediaDetails(State, AlbumArtKey, m_pShared.get());
+					// 换来源后立即重读属性，旧播放器的文字和封面不能一起带过去。
+					State.m_pSourceAppId = std::make_shared<const std::string>(std::move(SelectedAppId));
+					str_copy(State.m_aSourceAppId, State.m_pSourceAppId->c_str(), sizeof(State.m_aSourceAppId));
+					ClearMediaDetails(State, AlbumArtKey, AlbumArtUpdate);
 					TimelineGenerationTracker.Reset();
 				}
-				str_copy(State.m_aSourceAppId, SourceAppId.c_str(), sizeof(State.m_aSourceAppId));
+				const std::string &SourceAppId = *State.m_pSourceAppId;
 
 				auto Volume = PlayerVolume.Refresh(SourceAppId);
 				std::optional<QmMediaVolume::SRequest> VolumeRequest;
 				{
-					std::scoped_lock Lock(m_pShared->m_Mutex);
-					VolumeRequest = m_pShared->m_PendingVolume.Take(Volume.m_Generation);
+					std::scoped_lock Lock(pShared->m_Mutex);
+					VolumeRequest = pShared->m_PendingVolume.Take(Volume.m_Generation);
 				}
-				if(VolumeRequest && Volume.m_Available)
+				if(VolumeRequest && Volume.m_Available &&
+					!Stop.load(std::memory_order_relaxed) && m_BackendEnabled.load(std::memory_order_relaxed))
 				{
 					PlayerVolume.SetVolume(VolumeRequest->m_Generation, VolumeRequest->m_Level);
 					Volume = PlayerVolume.Refresh(SourceAppId);
@@ -784,12 +859,14 @@ void CSystemMediaControls::ThreadMain()
 				State.m_CanSetVolume = Volume.m_Available;
 				State.m_Volume = Volume.m_Level;
 				State.m_VolumeGeneration = Volume.m_Generation;
+				if(Volume.m_Generation != 0)
+					Runtime.m_NextVolumeGeneration = Volume.m_Generation + 1;
 
 				const auto Timeline = Session.GetTimelineProperties();
 				if(!Timeline)
 				{
 					if(HasMedia)
-						ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
+						ResetSharedState(pShared, State, HasMedia, AlbumArtKey);
 					std::this_thread::sleep_for(std::chrono::milliseconds(200));
 					continue;
 				}
@@ -818,25 +895,25 @@ void CSystemMediaControls::ThreadMain()
 					try
 					{
 						const auto MediaPropsOp = Session.TryGetMediaPropertiesAsync();
-						if(!WaitForAsync(MediaPropsOp, m_StopThread))
+						if(!WaitForAsync(MediaPropsOp, Stop))
 						{
-							if(m_StopThread.load(std::memory_order_relaxed))
+							if(Stop.load(std::memory_order_relaxed))
 								break;
-							ClearMediaDetails(State, AlbumArtKey, m_pShared.get());
+							ClearMediaDetails(State, AlbumArtKey, AlbumArtUpdate);
 						}
 						else
 						{
 							const auto MediaProps = MediaPropsOp.GetResults();
 							if(!MediaProps)
 							{
-								ClearMediaDetails(State, AlbumArtKey, m_pShared.get());
+								ClearMediaDetails(State, AlbumArtKey, AlbumArtUpdate);
 							}
 							else
 							{
 								const std::string Title = winrt::to_string(MediaProps.Title());
 								std::string Artist = winrt::to_string(MediaProps.Artist());
 								std::string Album = winrt::to_string(MediaProps.AlbumTitle());
-								ApplyAppleMusicMetadataFix(State.m_aSourceAppId, Artist, Album);
+								ApplyAppleMusicMetadataFix(SourceAppId.c_str(), Artist, Album);
 
 								if(!Title.empty())
 								{
@@ -868,54 +945,59 @@ void CSystemMediaControls::ThreadMain()
 								const bool HasText = !Title.empty() || !Artist.empty() || !Album.empty();
 								if(HasText)
 								{
+									bool UploadFailed;
+									{
+										std::scoped_lock Lock(pShared->m_Mutex);
+										UploadFailed = std::exchange(pShared->m_AlbumArtUploadFailed, false);
+									}
 									std::string NewKey = Title;
 									NewKey.push_back('\n');
 									NewKey.append(Artist);
 									NewKey.push_back('\n');
 									NewKey.append(Album);
-									if(NewKey != AlbumArtKey)
-									{
-										AlbumArtKey = NewKey;
+									SystemMediaControls::RefreshAlbumArt(AlbumArtKey, std::move(NewKey), UploadFailed, [&] {
 										const auto Thumbnail = MediaProps.Thumbnail();
-										if(Thumbnail)
-											UpdateAlbumArtData(m_pShared.get(), Thumbnail, m_StopThread);
-										else
-											ClearSharedAlbumArt(m_pShared.get());
-									}
+										AlbumArtUpdate.emplace(Thumbnail ? PrepareAlbumArt(Thumbnail, Stop) : nullptr);
+										return !Thumbnail || *AlbumArtUpdate != nullptr;
+									});
 								}
 								else
 								{
-									ClearMediaDetails(State, AlbumArtKey, m_pShared.get());
+									ClearMediaDetails(State, AlbumArtKey, AlbumArtUpdate);
 								}
 							}
 						}
 					}
 					catch(const winrt::hresult_error &)
 					{
-						ClearMediaDetails(State, AlbumArtKey, m_pShared.get());
+						ClearMediaDetails(State, AlbumArtKey, AlbumArtUpdate);
 					}
 				}
 
+				if(Stop.load(std::memory_order_relaxed))
+					break;
 				{
-					std::scoped_lock Lock(m_pShared->m_Mutex);
-					m_pShared->m_State = State;
-					m_pShared->m_HasMedia = HasMedia;
+					std::scoped_lock Lock(pShared->m_Mutex);
+					pShared->m_State = State;
+					pShared->m_HasMedia = HasMedia;
+					pShared->PublishAlbumArtUpdate(AlbumArtUpdate);
 				}
 
-				std::deque<SMediaCommand> Commands;
+				CQmMediaCommandQueue::TBatch Commands;
 				{
-					std::scoped_lock Lock(m_pShared->m_Mutex);
-					Commands.swap(m_pShared->m_Commands);
+					std::scoped_lock Lock(pShared->m_Mutex);
+					pShared->m_Commands.Take(Commands);
 				}
 				if(Session)
 				{
 					for(const auto &Command : Commands)
 					{
+						if(Stop.load(std::memory_order_relaxed))
+							break;
 						try
 						{
-							// 只认应用 id：会话可能是我们按「正在播放」挑出来的非当前会话，
-							// 再拿系统当前会话比对会把这类控制请求全部丢掉。
-							if(!g_Config.m_QmSmtcEnable || Command.m_SourceAppId != SourceAppId)
+							// 当前选中的播放会话可能与系统前台会话不同，按所选应用 id 分派。
+							if(!m_BackendEnabled.load(std::memory_order_relaxed) || Command.m_SourceAppId != SourceAppId)
 								continue;
 							switch(Command.m_Type)
 							{
@@ -941,30 +1023,23 @@ void CSystemMediaControls::ThreadMain()
 			catch(const winrt::hresult_error &)
 			{
 				PlayerVolume.Reset();
-				ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
+				ResetSharedState(pShared, State, HasMedia, AlbumArtKey);
 			}
 			catch(...)
 			{
 				PlayerVolume.Reset();
-				ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
+				ResetSharedState(pShared, State, HasMedia, AlbumArtKey);
 			}
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		}
 	}
-
-	winrt::uninit_apartment();
 }
 #endif
 
 #if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
 // Linux/BSD 的媒体集成走 MPRIS：会话总线上每个播放器都提供
 // org.mpris.MediaPlayer2.Player，属性语义与 SMTC 基本一一对应。
-struct CSystemMediaControls::SMpris
-{
-	CSystemMediaControls::SState m_State{};
-	bool m_HasMedia = false;
-};
 
 static constexpr int MPRIS_POLL_INTERVAL_MS = 500;
 static constexpr const char *MPRIS_NAME_PREFIX = "org.mpris.MediaPlayer2.";
@@ -975,47 +1050,45 @@ static constexpr const char *DBUS_SERVICE_NAME = "org.freedesktop.DBus";
 static constexpr const char *DBUS_OBJECT_PATH = "/org/freedesktop/DBus";
 static constexpr const char *DBUS_INTERFACE_NAME = "org.freedesktop.DBus";
 
-static thread_local const std::atomic_bool *s_pMprisStop = nullptr;
-static thread_local const SystemMediaControls::CMprisPollBudget *s_pMprisBudget = nullptr;
-static thread_local int s_MprisReservedMs = 0;
+static thread_local SystemMediaControls::CMprisRequestContext s_MprisContext;
+using CMprisMessage = std::unique_ptr<DBusMessage, decltype(&dbus_message_unref)>;
+struct CMprisConnectionDeleter
+{
+	void operator()(DBusConnection *pConnection) const noexcept
+	{
+		dbus_connection_close(pConnection);
+		dbus_connection_unref(pConnection);
+	}
+};
+struct CMprisPendingDeleter
+{
+	void operator()(DBusPendingCall *pPending) const noexcept
+	{
+		if(!dbus_pending_call_get_completed(pPending))
+			dbus_pending_call_cancel(pPending);
+		dbus_pending_call_unref(pPending);
+	}
+};
 static int64_t MprisNowMs() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
-static bool MprisRequestAllowed() { return s_pMprisStop != nullptr && s_pMprisBudget != nullptr && s_pMprisBudget->Remaining(MprisNowMs(), s_pMprisStop->load()) > s_MprisReservedMs; }
+static bool MprisRequestAllowed() { return s_MprisContext.Allowed(MprisNowMs()); }
 
 static DBusMessage *MprisSendBlocking(DBusConnection *pConnection, DBusMessage *pRequest)
 {
-	if(pRequest == nullptr)
+	const CMprisMessage Request(pRequest, dbus_message_unref);
+	if(!Request || !MprisRequestAllowed())
 		return nullptr;
-	if(!MprisRequestAllowed())
-	{
-		dbus_message_unref(pRequest);
-		return nullptr;
-	}
 	DBusPendingCall *pPending = nullptr;
-	// 单次请求最多 250ms，且不能超出整轮预算；超时服务不会吃掉全部发现时间。
-	const int Timeout = SystemMediaControls::MprisRequestTimeout(s_pMprisBudget->Remaining(MprisNowMs(), s_pMprisStop->load()), s_MprisReservedMs);
+	const int Timeout = s_MprisContext.Timeout(MprisNowMs());
 	const SystemMediaControls::CMprisPollBudget RequestBudget(MprisNowMs(), Timeout);
-	const bool Sent = dbus_connection_send_with_reply(pConnection, pRequest, &pPending, Timeout) != FALSE;
-	dbus_message_unref(pRequest);
-	if(!Sent || pPending == nullptr)
-	{
-		if(pPending != nullptr)
-			dbus_pending_call_unref(pPending);
+	const bool Sent = dbus_connection_send_with_reply(pConnection, Request.get(), &pPending, Timeout) != FALSE;
+	const std::unique_ptr<DBusPendingCall, CMprisPendingDeleter> Pending(pPending);
+	if(!Sent || !Pending)
 		return nullptr;
-	}
-	const bool Completed = SystemMediaControls::MprisWaitForReply(RequestBudget, [] { return s_pMprisStop->load(); }, [] { return MprisNowMs(); }, [pPending] { return dbus_pending_call_get_completed(pPending) != FALSE; }, [pConnection](int Slice) { return dbus_connection_read_write_dispatch(pConnection, Slice) != FALSE; });
-	DBusMessage *pReply = nullptr;
-	if(Completed)
-		pReply = dbus_pending_call_steal_reply(pPending);
-	else
-		dbus_pending_call_cancel(pPending);
-	dbus_pending_call_unref(pPending);
-	if(pReply != nullptr && dbus_message_get_type(pReply) != DBUS_MESSAGE_TYPE_METHOD_RETURN)
-	{
-		// 播放器已经退出或属性不存在时返回的是错误消息，这里统一当成"没有数据"。
-		dbus_message_unref(pReply);
+	const bool Completed = SystemMediaControls::MprisWaitForReply(RequestBudget, [] { return s_MprisContext.StopRequested(); }, [] { return MprisNowMs(); }, [pPending] { return dbus_pending_call_get_completed(pPending) != FALSE; }, [pConnection](int Slice) { return dbus_connection_read_write_dispatch(pConnection, Slice) != FALSE; });
+	CMprisMessage Reply(Completed ? dbus_pending_call_steal_reply(pPending) : nullptr, dbus_message_unref);
+	if(Reply && dbus_message_get_type(Reply.get()) != DBUS_MESSAGE_TYPE_METHOD_RETURN)
 		return nullptr;
-	}
-	return pReply;
+	return Reply.release();
 }
 
 static DBusMessage *MprisPropertiesGetAll(DBusConnection *pConnection, const char *pDestination, const char *pInterface)
@@ -1156,12 +1229,12 @@ static bool MprisListPlayers(DBusConnection *pConnection, std::vector<std::strin
 {
 	Names.clear();
 	DBusMessage *pRequest = dbus_message_new_method_call(DBUS_SERVICE_NAME, DBUS_OBJECT_PATH, DBUS_INTERFACE_NAME, "ListNames");
-	DBusMessage *pReply = MprisSendBlocking(pConnection, pRequest);
+	CMprisMessage pReply(MprisSendBlocking(pConnection, pRequest), dbus_message_unref);
 	if(pReply == nullptr)
 		return false;
 
 	DBusMessageIter Iterator;
-	if(dbus_message_iter_init(pReply, &Iterator) && dbus_message_iter_get_arg_type(&Iterator) == DBUS_TYPE_ARRAY)
+	if(dbus_message_iter_init(pReply.get(), &Iterator) && dbus_message_iter_get_arg_type(&Iterator) == DBUS_TYPE_ARRAY)
 	{
 		DBusMessageIter ArrayIterator;
 		dbus_message_iter_recurse(&Iterator, &ArrayIterator);
@@ -1175,7 +1248,6 @@ static bool MprisListPlayers(DBusConnection *pConnection, std::vector<std::strin
 			dbus_message_iter_next(&ArrayIterator);
 		}
 	}
-	dbus_message_unref(pReply);
 	return true;
 }
 
@@ -1190,26 +1262,25 @@ static std::string MprisGetOwner(DBusConnection *pConnection, const char *pName)
 		dbus_message_unref(pRequest);
 		return {};
 	}
-	DBusMessage *pReply = MprisSendBlocking(pConnection, pRequest);
+	CMprisMessage pReply(MprisSendBlocking(pConnection, pRequest), dbus_message_unref);
 	if(pReply == nullptr)
 		return {};
 	const char *pOwner = nullptr;
 	std::string Owner;
-	if(dbus_message_get_args(pReply, nullptr, DBUS_TYPE_STRING, &pOwner, DBUS_TYPE_INVALID) && pOwner != nullptr)
+	if(dbus_message_get_args(pReply.get(), nullptr, DBUS_TYPE_STRING, &pOwner, DBUS_TYPE_INVALID) && pOwner != nullptr)
 		Owner = pOwner;
-	dbus_message_unref(pReply);
 	return Owner;
 }
 
 static bool MprisGetPosition(DBusConnection *pConnection, const char *pDestination, int64_t &PositionUs)
 {
-	DBusMessage *pReply = MprisPropertiesGet(pConnection, pDestination, MPRIS_PLAYER_INTERFACE, "Position");
+	CMprisMessage pReply(MprisPropertiesGet(pConnection, pDestination, MPRIS_PLAYER_INTERFACE, "Position"), dbus_message_unref);
 	if(pReply == nullptr)
 		return false;
 
 	bool Success = false;
 	DBusMessageIter Iterator;
-	if(dbus_message_iter_init(pReply, &Iterator) && dbus_message_iter_get_arg_type(&Iterator) == DBUS_TYPE_VARIANT)
+	if(dbus_message_iter_init(pReply.get(), &Iterator) && dbus_message_iter_get_arg_type(&Iterator) == DBUS_TYPE_VARIANT)
 	{
 		DBusMessageIter Variant;
 		dbus_message_iter_recurse(&Iterator, &Variant);
@@ -1221,32 +1292,36 @@ static bool MprisGetPosition(DBusConnection *pConnection, const char *pDestinati
 			Success = true;
 		}
 	}
-	dbus_message_unref(pReply);
 	return Success;
 }
 
 static bool MprisSetVolume(DBusConnection *pConnection, const char *pDestination, double Level)
 {
-	DBusMessage *pRequest = dbus_message_new_method_call(pDestination, MPRIS_OBJECT_PATH, MPRIS_PROPERTIES_INTERFACE, "Set");
-	if(pRequest == nullptr)
+	const CMprisMessage Request(dbus_message_new_method_call(pDestination, MPRIS_OBJECT_PATH, MPRIS_PROPERTIES_INTERFACE, "Set"), dbus_message_unref);
+	if(!Request)
 		return false;
 
 	const char *pInterface = MPRIS_PLAYER_INTERFACE;
 	const char *pProperty = "Volume";
 	DBusMessageIter Iterator;
-	dbus_message_iter_init_append(pRequest, &Iterator);
-	dbus_message_iter_append_basic(&Iterator, DBUS_TYPE_STRING, &pInterface);
-	dbus_message_iter_append_basic(&Iterator, DBUS_TYPE_STRING, &pProperty);
+	dbus_message_iter_init_append(Request.get(), &Iterator);
+	if(!dbus_message_iter_append_basic(&Iterator, DBUS_TYPE_STRING, &pInterface) ||
+		!dbus_message_iter_append_basic(&Iterator, DBUS_TYPE_STRING, &pProperty))
+		return false;
 	DBusMessageIter Variant;
-	dbus_message_iter_open_container(&Iterator, DBUS_TYPE_VARIANT, "d", &Variant);
-	dbus_message_iter_append_basic(&Variant, DBUS_TYPE_DOUBLE, &Level);
-	dbus_message_iter_close_container(&Iterator, &Variant);
+	if(!dbus_message_iter_open_container(&Iterator, DBUS_TYPE_VARIANT, "d", &Variant))
+		return false;
+	if(!dbus_message_iter_append_basic(&Variant, DBUS_TYPE_DOUBLE, &Level))
+	{
+		dbus_message_iter_abandon_container(&Iterator, &Variant);
+		return false;
+	}
+	// close 失败也已经关闭子迭代器，不能再 abandon 或继续发送半份消息。
+	if(!dbus_message_iter_close_container(&Iterator, &Variant))
+		return false;
 
 	// 异步发送由短片 dispatch 推进，不在退出路径执行可能阻塞的 flush。
-	const bool Sent = dbus_connection_send(pConnection, pRequest, nullptr) != FALSE;
-	dbus_message_unref(pRequest);
-
-	return Sent;
+	return dbus_connection_send(pConnection, Request.get(), nullptr) != FALSE;
 }
 
 static void MprisInvokeCommand(DBusConnection *pConnection, const char *pDestination, ECommand Command)
@@ -1271,11 +1346,12 @@ static void ResetMprisSharedState(CSystemMediaControls::SShared *pShared)
 	pShared->m_State = SPlainState{};
 	pShared->m_HasMedia = false;
 	pShared->m_PendingVolume.Reset();
-	pShared->m_Commands.clear();
+	pShared->m_Commands.Clear();
 }
 
-void CSystemMediaControls::ThreadMain()
+void CSystemMediaControls::ThreadMain(SRuntime &Runtime, const std::atomic_bool &Stop)
 {
+	auto *pShared = Runtime.m_pShared.get();
 	// libdbus 要求多线程程序在首次使用前初始化线程支持。
 	if(!dbus_threads_init_default())
 		return;
@@ -1283,24 +1359,25 @@ void CSystemMediaControls::ThreadMain()
 	SPlainState State{};
 	bool HasMedia = false;
 	std::string ActiveName;
-	SystemMediaControls::CMprisSessionIdentity SessionIdentity;
+	auto &SessionIdentity = Runtime.m_SessionIdentity;
 	SystemMediaControls::CMprisTrackIdentity TrackIdentity;
 	SystemMediaControls::CMprisCandidateScheduler CandidateScheduler;
-	s_pMprisStop = &m_StopThread;
+	const SystemMediaControls::CMprisRequestContextScope Context(s_MprisContext, Stop);
 	SystemMediaControls::CTimelineGenerationTracker TimelineGenerationTracker;
 	std::vector<std::string> Players;
 
-	while(!m_StopThread)
+	while(!Stop)
 	{
 		DBusError Error;
 		dbus_error_init(&Error);
-		DBusConnection *pConnection = dbus_bus_get_private(DBUS_BUS_SESSION, &Error);
+		const std::unique_ptr<DBusConnection, CMprisConnectionDeleter> Connection(dbus_bus_get_private(DBUS_BUS_SESSION, &Error));
+		DBusConnection *pConnection = Connection.get();
 		dbus_error_free(&Error);
 		if(pConnection == nullptr)
 		{
 			// 没有会话总线（例如纯 SSH 会话）时保持空状态，稍后重试。
 			if(HasMedia)
-				ResetMprisSharedState(m_pShared.get());
+				ResetMprisSharedState(pShared);
 			HasMedia = false;
 			State = SPlainState{};
 			std::this_thread::sleep_for(std::chrono::milliseconds(MPRIS_POLL_INTERVAL_MS));
@@ -1308,12 +1385,12 @@ void CSystemMediaControls::ThreadMain()
 		}
 		dbus_connection_set_exit_on_disconnect(pConnection, FALSE);
 
-		while(!m_StopThread)
+		while(!Stop)
 		{
-			if(!g_Config.m_QmSmtcEnable)
+			if(!m_BackendEnabled.load(std::memory_order_relaxed))
 			{
 				if(HasMedia)
-					ResetMprisSharedState(m_pShared.get());
+					ResetMprisSharedState(pShared);
 				HasMedia = false;
 				State = SPlainState{};
 				ActiveName.clear();
@@ -1326,28 +1403,25 @@ void CSystemMediaControls::ThreadMain()
 			}
 
 			const SystemMediaControls::CMprisPollBudget PollBudget(MprisNowMs(), 1000);
-			s_pMprisBudget = &PollBudget;
-			s_MprisReservedMs = 200;
+			const SystemMediaControls::CMprisRequestContextScope PollContext(s_MprisContext, Stop, &PollBudget, 200);
 			MprisListPlayers(pConnection, Players);
 
 			// 一次 GetAll 同时拿到播放状态和全部属性，顺便选出目标播放器。
-			DBusMessage *pSelected = nullptr;
+			CMprisMessage pSelected(nullptr, dbus_message_unref);
 			std::string SelectedName;
 			std::string SelectedOwner;
 			DBusMessageIter SelectedProperties;
 			int BestScore = -1;
-			CandidateScheduler.Visit(Players, ActiveName, PollBudget, [] { return MprisNowMs(); }, [&] { return m_StopThread.load(); }, [&](const std::string &Name) {
+			CandidateScheduler.Visit(Players, ActiveName, PollBudget, [] { return MprisNowMs(); }, [&] { return Stop.load(); }, [&](const std::string &Name) {
 				if(!MprisRequestAllowed())
 					return false;
 				const std::string Owner = MprisGetOwner(pConnection, Name.c_str());
 				if(Owner.empty())
 					return true;
-				DBusMessage *pReply = MprisPropertiesGetAll(pConnection, Owner.c_str(), MPRIS_PLAYER_INTERFACE);
+				CMprisMessage pReply(MprisPropertiesGetAll(pConnection, Owner.c_str(), MPRIS_PLAYER_INTERFACE), dbus_message_unref);
 				DBusMessageIter Properties;
-				if(!MprisPropertyDict(pReply, &Properties))
+				if(!MprisPropertyDict(pReply.get(), &Properties))
 				{
-					if(pReply != nullptr)
-						dbus_message_unref(pReply);
 					return true;
 				}
 				std::string PlaybackStatus;
@@ -1360,9 +1434,7 @@ void CSystemMediaControls::ThreadMain()
 				const int Score = PlaybackStatus == "Playing" ? 2 : (PlaybackStatus == "Paused" ? 1 : 0);
 				if(pSelected == nullptr || Score > BestScore)
 				{
-					if(pSelected != nullptr)
-						dbus_message_unref(pSelected);
-					pSelected = pReply;
+					pSelected = std::move(pReply);
 					SelectedName = Name;
 					SelectedOwner = Owner;
 					SelectedProperties = Properties;
@@ -1370,23 +1442,17 @@ void CSystemMediaControls::ThreadMain()
 					if(Score == 2)
 						return false;
 				}
-				else
-				{
-					dbus_message_unref(pReply);
-				}
 				return true; });
-			s_MprisReservedMs = 0;
+			s_MprisContext.SetReserved(0);
 
-			if(m_StopThread.load())
+			if(Stop.load())
 			{
-				if(pSelected != nullptr)
-					dbus_message_unref(pSelected);
 				break;
 			}
 			if(pSelected == nullptr)
 			{
 				if(HasMedia)
-					ResetMprisSharedState(m_pShared.get());
+					ResetMprisSharedState(pShared);
 				HasMedia = false;
 				State = SPlainState{};
 				ActiveName.clear();
@@ -1466,12 +1532,13 @@ void CSystemMediaControls::ThreadMain()
 
 			std::optional<QmMediaVolume::SRequest> VolumeRequest;
 			{
-				std::scoped_lock Lock(m_pShared->m_Mutex);
-				VolumeRequest = m_pShared->m_PendingVolume.Take(SessionIdentity.Generation());
+				std::scoped_lock Lock(pShared->m_Mutex);
+				VolumeRequest = pShared->m_PendingVolume.Take(SessionIdentity.Generation());
 			}
-			if(VolumeRequest.has_value() && State.m_CanSetVolume)
+			if(VolumeRequest.has_value() && State.m_CanSetVolume &&
+				!Stop.load(std::memory_order_relaxed) && m_BackendEnabled.load(std::memory_order_relaxed) &&
+				MprisSetVolume(pConnection, SelectedOwner.c_str(), VolumeRequest->m_Level))
 			{
-				MprisSetVolume(pConnection, SelectedOwner.c_str(), VolumeRequest->m_Level);
 				State.m_Volume = VolumeRequest->m_Level;
 			}
 
@@ -1520,26 +1587,26 @@ void CSystemMediaControls::ThreadMain()
 
 			HasMedia = true;
 			{
-				std::scoped_lock Lock(m_pShared->m_Mutex);
-				m_pShared->m_State = State;
-				m_pShared->m_HasMedia = true;
+				std::scoped_lock Lock(pShared->m_Mutex);
+				pShared->m_State = State;
+				pShared->m_HasMedia = true;
 			}
 
-			std::deque<SMediaCommand> Commands;
+			CQmMediaCommandQueue::TBatch Commands;
 			{
-				std::scoped_lock Lock(m_pShared->m_Mutex);
-				Commands.swap(m_pShared->m_Commands);
+				std::scoped_lock Lock(pShared->m_Mutex);
+				pShared->m_Commands.Take(Commands);
 			}
 			for(const SMediaCommand &Command : Commands)
 			{
-				if(!g_Config.m_QmSmtcEnable || !SessionIdentity.Accepts(Command.m_Generation))
+				if(!m_BackendEnabled.load(std::memory_order_relaxed) || !SessionIdentity.Accepts(Command.m_Generation))
 					continue;
-				if(m_StopThread.load())
+				if(Stop.load())
 					break;
 				MprisInvokeCommand(pConnection, SelectedOwner.c_str(), Command.m_Type);
 			}
 
-			dbus_message_unref(pSelected);
+			pSelected.reset();
 
 			// 带超时的读取代替 sleep：既不空转，又能及时清掉连接队列里的信号。
 			if(!dbus_connection_read_write_dispatch(pConnection, MPRIS_POLL_INTERVAL_MS))
@@ -1547,70 +1614,68 @@ void CSystemMediaControls::ThreadMain()
 		}
 
 		if(HasMedia)
-			ResetMprisSharedState(m_pShared.get());
+			ResetMprisSharedState(pShared);
 		HasMedia = false;
 		State = SPlainState{};
 		ActiveName.clear();
 		TimelineGenerationTracker.Reset();
 		SessionIdentity.Clear();
 		TrackIdentity.Clear();
-		dbus_connection_close(pConnection);
-		dbus_connection_unref(pConnection);
 	}
-	s_pMprisBudget = nullptr;
-	s_MprisReservedMs = 0;
-	s_pMprisStop = nullptr;
+}
+#endif
+
+#if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
+CSystemMediaControls::SRuntime *CSystemMediaControls::Runtime() const
+{
+	return static_cast<SRuntime *>(m_Worker.State());
+}
+
+void CSystemMediaControls::EnsureBackendStarted() noexcept
+{
+	if(m_Worker.Running())
+		return;
+	class COperations : public CQmMediaWorker::COperations
+	{
+		CSystemMediaControls &m_Owner;
+
+	public:
+		explicit COperations(CSystemMediaControls &Owner) :
+			m_Owner(Owner) {}
+		std::unique_ptr<CQmMediaWorker::CState> CreateState() override { return std::make_unique<SRuntime>(m_Owner); }
+	} Operations(*this);
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+	constexpr int RetryMs = 200;
+#else
+	constexpr int RetryMs = MPRIS_POLL_INTERVAL_MS;
+#endif
+	m_Worker.EnsureStarted(Operations, MediaNowMs(), RetryMs);
 }
 #endif
 
 void CSystemMediaControls::OnInit()
 {
-	m_pNeteaseHook = std::make_unique<CQmNeteaseHookProvider>();
+	if(m_Initialized)
+		return;
+	m_Initialized = true;
 	m_LastNeteaseHookReadFrame = 0;
 	m_NeteaseHookReadFrameInitialized = false;
 	SyncNeteaseHookConfiguration();
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
-	m_pShared = std::make_unique<SShared>();
-#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-	m_pWinrt = std::make_unique<SWinrt>();
-#endif
-#if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
-	m_pMpris = std::make_unique<SMpris>();
-#endif
-	m_StopThread = false;
-	m_Thread = std::thread(&CSystemMediaControls::ThreadMain, this);
+	m_BackendEnabled.store(g_Config.m_QmSmtcEnable != 0, std::memory_order_relaxed);
+	EnsureBackendStarted();
 #endif
 }
 
 void CSystemMediaControls::OnShutdown()
 {
+	m_Initialized = false;
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
-	m_StopThread = true;
-	if(m_Thread.joinable())
-	{
-		m_Thread.join();
-	}
-	m_pShared.reset();
-#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-	if(m_pWinrt)
-	{
-		ClearState(m_pWinrt->m_State, Graphics());
-		m_pWinrt.reset();
-	}
+	m_Worker.Stop();
+	m_BackendEnabled.store(false, std::memory_order_relaxed);
 #endif
-#if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
-	if(m_pMpris)
-	{
-		ClearState(m_pMpris->m_State, Graphics());
-		m_pMpris.reset();
-	}
-#endif
-#endif
-	if(m_pNeteaseHook)
-	{
-		m_pNeteaseHook->Stop();
-		m_pNeteaseHook.reset();
-	}
+	m_HookRetry.Reset();
+	m_pNeteaseHook.reset();
 	m_NeteaseHookConfigInitialized = false;
 	m_LastNeteaseHookEnabled = false;
 	m_LastNeteaseHookHelperPath.clear();
@@ -1622,10 +1687,12 @@ void CSystemMediaControls::OnShutdown()
 
 void CSystemMediaControls::OnUpdate()
 {
-	SyncNeteaseHookConfiguration();
+	if(!m_Initialized)
+		return;
+	const bool HookReady = SyncNeteaseHookConfiguration();
 	// v5 是网易云私有补充数据。只在短帧窗口到期时读取，避免主线程每帧
 	// 重试共享内存、复制快照和计算校验和。
-	if(!m_LastNeteaseHookEnabled)
+	if(!HookReady || !m_LastNeteaseHookEnabled)
 	{
 		if(m_HasNeteaseSnapshot)
 		{
@@ -1659,29 +1726,45 @@ void CSystemMediaControls::OnUpdate()
 		}
 	}
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
+	const bool BackendEnabled = g_Config.m_QmSmtcEnable != 0;
+	m_BackendEnabled.store(BackendEnabled, std::memory_order_relaxed);
+	EnsureBackendStarted();
+	auto *pRuntime = Runtime();
+	auto *pShared = pRuntime ? pRuntime->m_pShared.get() : nullptr;
 	SState *pMainState = MainState();
-	if(pMainState == nullptr)
+	if(!pShared || !pMainState)
 		return;
 
-	if(!g_Config.m_QmSmtcEnable)
+	if(!BackendEnabled || !m_Worker.Running())
 	{
 		if(MainHasMedia())
 		{
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+			pRuntime->m_pWinrt->m_pSourceAppId.reset();
+			// 快速关闭再打开时，后台可能还保留当前曲目的封面缓存键。
+			if(!BackendEnabled && (pMainState->m_AlbumArt.IsValid() || pMainState->m_AlbumArtCircular.IsValid()))
+				RequestAlbumArtRetry(pShared);
+#endif
 			ClearState(*pMainState, Graphics());
 			SetMainHasMedia(false);
 		}
 		return;
 	}
 
-	if(!m_pShared)
-		return;
-
 	SPlainState SharedState{};
 	bool HasMedia = false;
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+	IGraphics *pGraphics = Graphics();
+	TAlbumArtUpdate AlbumArtUpdate;
+#endif
 	{
-		std::scoped_lock Lock(m_pShared->m_Mutex);
-		SharedState = m_pShared->m_State;
-		HasMedia = m_pShared->m_HasMedia;
+		std::scoped_lock Lock(pShared->m_Mutex);
+		SharedState = pShared->m_State;
+		HasMedia = pShared->m_HasMedia;
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+		if(pGraphics)
+			AlbumArtUpdate.swap(pShared->m_AlbumArtUpdate);
+#endif
 	}
 
 	if(!HasMedia)
@@ -1689,16 +1772,20 @@ void CSystemMediaControls::OnUpdate()
 		if(MainHasMedia())
 			ClearState(*pMainState, Graphics());
 		SetMainHasMedia(false);
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+		pRuntime->m_pWinrt->m_pSourceAppId.reset();
+#endif
 	}
 	else
 	{
 		SetMainHasMedia(true);
 		ApplySharedState(SharedState, *pMainState);
-	}
-
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-	ApplySharedAlbumArt(m_pShared.get(), *pMainState, Graphics(), Client());
+		pRuntime->m_pWinrt->m_pSourceAppId = SharedState.m_pSourceAppId;
+		if(pGraphics)
+			ApplyAlbumArtUpdate(pShared, AlbumArtUpdate, *pMainState, pGraphics, Client());
 #endif
+	}
 #endif
 }
 
@@ -1711,7 +1798,7 @@ bool CSystemMediaControls::GetStateSnapshot(SState &State) const
 		return false;
 	}
 
-	if(const SState *pMainState = MainState(); pMainState != nullptr && MainHasMedia())
+	if(const SState *pMainState = MainState(); m_Worker.Running() && pMainState != nullptr && MainHasMedia())
 	{
 		State = *pMainState;
 		return true;
@@ -1724,58 +1811,70 @@ bool CSystemMediaControls::GetStateSnapshot(SState &State) const
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
 CSystemMediaControls::SState *CSystemMediaControls::MainState()
 {
+	auto *pRuntime = Runtime();
+	if(!pRuntime)
+		return nullptr;
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-	if(m_pWinrt)
-		return &m_pWinrt->m_State;
+	if(pRuntime->m_pWinrt)
+		return &pRuntime->m_pWinrt->m_State;
 #endif
 #if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
-	if(m_pMpris)
-		return &m_pMpris->m_State;
+	if(pRuntime->m_pMpris)
+		return &pRuntime->m_pMpris->m_State;
 #endif
 	return nullptr;
 }
 
 const CSystemMediaControls::SState *CSystemMediaControls::MainState() const
 {
+	auto *pRuntime = Runtime();
+	if(!pRuntime)
+		return nullptr;
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-	if(m_pWinrt)
-		return &m_pWinrt->m_State;
+	if(pRuntime->m_pWinrt)
+		return &pRuntime->m_pWinrt->m_State;
 #endif
 #if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
-	if(m_pMpris)
-		return &m_pMpris->m_State;
+	if(pRuntime->m_pMpris)
+		return &pRuntime->m_pMpris->m_State;
 #endif
 	return nullptr;
 }
 
 bool CSystemMediaControls::MainHasMedia() const
 {
+	auto *pRuntime = Runtime();
+	if(!pRuntime)
+		return false;
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-	if(m_pWinrt)
-		return m_pWinrt->m_HasMedia;
+	if(pRuntime->m_pWinrt)
+		return pRuntime->m_pWinrt->m_HasMedia;
 #endif
 #if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
-	if(m_pMpris)
-		return m_pMpris->m_HasMedia;
+	if(pRuntime->m_pMpris)
+		return pRuntime->m_pMpris->m_HasMedia;
 #endif
 	return false;
 }
 
 void CSystemMediaControls::SetMainHasMedia(bool HasMedia)
 {
+	auto *pRuntime = Runtime();
+	if(!pRuntime)
+		return;
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-	if(m_pWinrt)
-		m_pWinrt->m_HasMedia = HasMedia;
+	if(pRuntime->m_pWinrt)
+		pRuntime->m_pWinrt->m_HasMedia = HasMedia;
 #endif
 #if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
-	if(m_pMpris)
-		m_pMpris->m_HasMedia = HasMedia;
+	if(pRuntime->m_pMpris)
+		pRuntime->m_pMpris->m_HasMedia = HasMedia;
 #endif
 }
 
 const CSystemMediaControls::SState *CSystemMediaControls::ActiveState() const
 {
-	if(!g_Config.m_QmSmtcEnable || !m_pShared || !MainHasMedia())
+	if(!g_Config.m_QmSmtcEnable || !m_Worker.Running() || !Runtime() || !MainHasMedia())
 		return nullptr;
 	return MainState();
 }
@@ -1792,46 +1891,60 @@ bool CSystemMediaControls::GetNeteaseSnapshot(QmNeteaseHook::SSnapshotV5 &Snapsh
 	return true;
 }
 
-void CSystemMediaControls::Previous()
+void CSystemMediaControls::SubmitCommand(CQmMediaCommandQueue::ECommand Command) noexcept
 {
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
-	const SState *pMainState = ActiveState();
-	if(pMainState == nullptr)
-		return;
-	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back({ECommand::Prev, pMainState->m_aSourceAppId, pMainState->m_VolumeGeneration});
+	try
+	{
+		const SState *pMainState = ActiveState();
+		if(pMainState == nullptr)
+			return;
+		auto *pRuntime = Runtime();
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+		const auto &pFullSourceAppId = pRuntime->m_pWinrt->m_pSourceAppId;
+		if(!pFullSourceAppId)
+			return;
+		const char *pSourceAppId = pFullSourceAppId->c_str();
+#else
+		const char *pSourceAppId = pMainState->m_aSourceAppId;
+#endif
+		auto *pShared = pRuntime->m_pShared.get();
+		std::scoped_lock Lock(pShared->m_Mutex);
+		pShared->m_Commands.TryEnqueue(Command, pSourceAppId, pMainState->m_VolumeGeneration);
+	}
+	catch(...)
+	{
+		// 后端不可用或提交失败只影响此命令，不让按钮回调中断主循环。
+	}
+#else
+	(void)Command;
 #endif
 }
 
-void CSystemMediaControls::PlayPause()
+void CSystemMediaControls::Previous() noexcept
 {
-#if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
-	const SState *pMainState = ActiveState();
-	if(pMainState == nullptr)
-		return;
-	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back({ECommand::PlayPause, pMainState->m_aSourceAppId, pMainState->m_VolumeGeneration});
-#endif
+	SubmitCommand(CQmMediaCommandQueue::ECommand::Prev);
 }
 
-void CSystemMediaControls::Next()
+void CSystemMediaControls::PlayPause() noexcept
 {
-#if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
-	const SState *pMainState = ActiveState();
-	if(pMainState == nullptr)
-		return;
-	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back({ECommand::Next, pMainState->m_aSourceAppId, pMainState->m_VolumeGeneration});
-#endif
+	SubmitCommand(CQmMediaCommandQueue::ECommand::PlayPause);
+}
+
+void CSystemMediaControls::Next() noexcept
+{
+	SubmitCommand(CQmMediaCommandQueue::ECommand::Next);
 }
 
 void CSystemMediaControls::SetVolume(uint64_t Generation, float Volume)
 {
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
-	if(!g_Config.m_QmSmtcEnable || !m_pShared)
+	auto *pRuntime = Runtime();
+	if(!g_Config.m_QmSmtcEnable || !m_Worker.Running() || !pRuntime)
 		return;
-	std::scoped_lock Lock(m_pShared->m_Mutex);
-	if(m_pShared->m_HasMedia && m_pShared->m_State.m_CanSetVolume && m_pShared->m_State.m_VolumeGeneration == Generation)
-		m_pShared->m_PendingVolume.Set(Generation, Volume);
+	auto *pShared = pRuntime->m_pShared.get();
+	std::scoped_lock Lock(pShared->m_Mutex);
+	if(pShared->m_HasMedia && pShared->m_State.m_CanSetVolume && pShared->m_State.m_VolumeGeneration == Generation)
+		pShared->m_PendingVolume.Set(Generation, Volume);
 #endif
 }

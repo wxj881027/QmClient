@@ -43,11 +43,14 @@ namespace QmPublicWordFilter
 
 	class CClient
 	{
+		using TRequestFactory = std::unique_ptr<IHttpRequest> (*)(const char *pUrl);
+		TRequestFactory m_CreateRequest;
 		CState m_State;
 		std::shared_ptr<IHttpRequest> m_pRequest;
 		uint64_t m_RequestGeneration = 0;
 
 	public:
+		explicit CClient(TRequestFactory RequestFactory = nullptr);
 		~CClient();
 		void Initialize(IStorage *pStorage, bool Enabled);
 		void Update(IHttp *pHttp, IStorage *pStorage, bool Enabled, int64_t Now);

@@ -305,7 +305,7 @@ namespace ui_token::world_lyrics
 	inline constexpr ColorRGBA TEXT{0.94f, 0.98f, 1.0f, 1.0f};
 }
 
-// 离散滑块档位色板与满档渐变：UiDiscreteSliderStyle.h 与 UiDiscreteSliderLogic.cpp
+// 离散滑块档位色板与满档渐变：UiDiscreteSliderLogic.cpp
 // 共享的唯一来源，禁止在调用文件复制。
 namespace ui_token::discrete_slider
 {

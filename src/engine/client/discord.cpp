@@ -8,27 +8,15 @@
 
 typedef enum EDiscordResult(DISCORD_API *FDiscordCreate)(DiscordVersion, struct DiscordCreateParams *, struct IDiscordCore **);
 
+#include <memory>
+
 #if defined(CONF_DISCORD_DYNAMIC)
 #include <dlfcn.h>
-static FDiscordCreate GetDiscordCreate()
-{
-	void *pSdk = dlopen("discord_game_sdk.so", RTLD_NOW);
-	if(!pSdk)
-	{
-		return nullptr;
-	}
-	return (FDiscordCreate)dlsym(pSdk, "DiscordCreate");
-}
-#else
-static FDiscordCreate GetDiscordCreate()
-{
-	return DiscordCreate;
-}
 #endif
 
 class CDiscord : public IDiscord
 {
-	DiscordActivity m_Activity;
+	DiscordActivity m_Activity{};
 	bool m_UpdateActivity = false;
 	int64_t m_LastActivityUpdate = 0;
 
@@ -36,18 +24,31 @@ class CDiscord : public IDiscord
 	IDiscordActivityEvents m_ActivityEvents;
 	IDiscordActivityManager *m_pActivityManager;
 
+#if defined(CONF_DISCORD_DYNAMIC)
+	struct CCloseSdk
+	{
+		void operator()(void *pSdk) const { dlclose(pSdk); }
+	};
+	std::unique_ptr<void, CCloseSdk> m_pSdk;
+#endif
 	FDiscordCreate m_pfnDiscordCreate;
-	bool m_Enabled;
+	bool m_Enabled = false;
 
 public:
-	bool Init(FDiscordCreate pfnDiscordCreate)
+	bool Init()
 	{
-		m_pfnDiscordCreate = pfnDiscordCreate;
-		m_Enabled = false;
-		return InitDiscord();
+#if defined(CONF_DISCORD_DYNAMIC)
+		m_pSdk.reset(dlopen("discord_game_sdk.so", RTLD_NOW));
+		if(!m_pSdk)
+			return false;
+		m_pfnDiscordCreate = reinterpret_cast<FDiscordCreate>(dlsym(m_pSdk.get(), "DiscordCreate"));
+#else
+		m_pfnDiscordCreate = DiscordCreate;
+#endif
+		return m_pfnDiscordCreate != nullptr;
 	}
 
-	bool InitDiscord()
+	void InitDiscord()
 	{
 		if(m_pCore)
 		{
@@ -56,7 +57,7 @@ public:
 			m_pActivityManager = nullptr;
 		}
 		if(!m_Enabled)
-			return false;
+			return;
 
 		mem_zero(&m_ActivityEvents, sizeof(m_ActivityEvents));
 
@@ -77,7 +78,7 @@ public:
 		if(Error != DiscordResult_Ok)
 		{
 			dbg_msg("discord", "error initializing discord instance, error=%d", Error);
-			return true;
+			return;
 		}
 
 		m_pActivityManager = m_pCore->get_activity_manager(m_pCore);
@@ -86,9 +87,11 @@ public:
 		m_pActivityManager->register_command(m_pActivityManager, CONNECTLINK_DOUBLE_SLASH);
 		m_pActivityManager->register_steam(m_pActivityManager, 412220); // steam id
 
-		ClearGameInfo();
-
-		return false;
+		// RPC 关闭期间也会更新游戏状态，重建 SDK 后重新发布当前在线活动。
+		if(m_Activity.instance)
+			m_UpdateActivity = true;
+		else
+			ClearGameInfo();
 	}
 
 	void Update(bool Enabled) override
@@ -215,7 +218,7 @@ public:
 		pClient->Connect(pSecret);
 	}
 
-	~CDiscord()
+	~CDiscord() override
 	{
 		if(m_pCore)
 			m_pCore->destroy(m_pCore);
@@ -224,18 +227,8 @@ public:
 
 static IDiscord *CreateDiscordImpl()
 {
-	FDiscordCreate pfnDiscordCreate = GetDiscordCreate();
-	if(!pfnDiscordCreate)
-	{
-		return nullptr;
-	}
-	CDiscord *pDiscord = new CDiscord();
-	if(pDiscord->Init(pfnDiscordCreate))
-	{
-		delete pDiscord;
-		return nullptr;
-	}
-	return pDiscord;
+	auto pDiscord = std::make_unique<CDiscord>();
+	return pDiscord->Init() ? pDiscord.release() : nullptr;
 }
 #else
 static IDiscord *CreateDiscordImpl()

@@ -8,8 +8,20 @@
 #include <limits>
 #include <memory>
 #include <new>
+#include <optional>
 #include <stdexcept>
 #include <vector>
+
+namespace TextureSlotGeneration
+{
+	// 0 未签发；耗尽后停留在范围外，不回绕到任何旧纹理身份。
+	inline std::optional<uint32_t> Take(uint64_t &Next)
+	{
+		if(Next == 0 || Next > std::numeric_limits<uint32_t>::max())
+			return std::nullopt;
+		return static_cast<uint32_t>(Next++);
+	}
+}
 
 struct STextureSlot
 {
@@ -23,7 +35,7 @@ class CTextureSlotPool
 {
 	std::vector<STextureSlot, TAllocator> m_vSlots;
 	size_t m_FirstFree = 0;
-	uint32_t m_Epoch = 0;
+	uint64_t m_NextGeneration = 1;
 
 	size_t MaxSize() const { return std::min<size_t>(std::numeric_limits<int>::max(), m_vSlots.max_size()); }
 
@@ -52,6 +64,11 @@ public:
 
 	int Allocate()
 	{
+		// 未发布/失败申请的代数也不回收，Reset 不重置发号状态。
+		const auto Generation = TextureSlotGeneration::Take(m_NextGeneration);
+		if(!Generation)
+			return -1;
+
 		if(m_FirstFree == m_vSlots.size())
 		{
 			const size_t OldSize = m_vSlots.size();
@@ -63,11 +80,12 @@ public:
 		const int Id = static_cast<int>(m_FirstFree);
 		m_FirstFree = m_vSlots[Id].m_NextFree;
 		m_vSlots[Id].m_NextFree = -1;
+		m_vSlots[Id].m_Generation = *Generation;
 		return Id;
 	}
 
-	// Id 必须来自成功的 Allocate；保留现有的设备纪元与槽位代数编码。
-	uint32_t Generation(int Id) const { return (m_Epoch << 16) | (m_vSlots[Id].m_Generation & 0xffffu); }
+	// Id 必须来自成功的 Allocate；完整代数在本池生命周期内不重用。
+	uint32_t Generation(int Id) const { return m_vSlots[Id].m_Generation; }
 
 	bool IsAllocated(int Id, uint32_t ExpectedGeneration) const
 	{
@@ -80,7 +98,6 @@ public:
 		if(!IsAllocated(Id, ExpectedGeneration))
 			return;
 		m_vSlots[Id].m_NextFree = static_cast<int>(m_FirstFree);
-		++m_vSlots[Id].m_Generation;
 		m_FirstFree = Id;
 	}
 
@@ -88,10 +105,8 @@ public:
 	bool Reset(size_t InitialSize)
 	{
 		const bool Resized = Resize(InitialSize);
-		++m_Epoch;
 		for(size_t Index = 0; Index < m_vSlots.size(); ++Index)
 		{
-			++m_vSlots[Index].m_Generation;
 			m_vSlots[Index].m_NextFree = static_cast<int>(Index + 1);
 		}
 		m_FirstFree = 0;

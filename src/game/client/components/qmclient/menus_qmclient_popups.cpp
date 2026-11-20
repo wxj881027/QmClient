@@ -27,6 +27,8 @@
 
 #include <algorithm>
 #include <iterator>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -178,6 +180,40 @@ namespace
 		pTextRender->TextWidth(FontSize, pText, -1, MaxWidth, 0, TextSizeProps);
 		return maximum(1, LineCount);
 	}
+
+	std::string QmMarkdownBlockText(const qm_md::SBlock &Block)
+	{
+		std::string Text;
+		for(const qm_md::SSpan &Span : Block.m_vSpans)
+			Text += Span.m_Text;
+		return Text;
+	}
+
+	template<typename T, typename F>
+	bool TryPrepareQmPopupMarkdown(const char *pMarkdown, std::vector<T> &vOutput, F PrepareBlock)
+	{
+		try
+		{
+			std::vector<qm_md::SBlock> vBlocks;
+			if(!qm_md::TryParse(pMarkdown, vBlocks))
+				return false;
+
+			std::vector<T> vPrepared;
+			vPrepared.reserve(vBlocks.size());
+			for(qm_md::SBlock &Block : vBlocks)
+				PrepareBlock(Block, vPrepared);
+			vOutput.swap(vPrepared);
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+	}
 }
 
 void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
@@ -214,8 +250,6 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 	Inner.HSplitTop(Gap, nullptr, &Inner);
 
 	CQmClient &QmClient = GameClient()->m_QmClient;
-	// 仅在公告页面实际绘制时标记已读，收到网络更新本身不会确认阅读。
-	QmClient.MarkQmNewsRead();
 	if(m_QmNewFeaturesScrollReset && QmClient.HasDeveloperCredential())
 		QmClient.QmNewsReloadDraft();
 	// 底部：仅保留检查更新入口；关闭交给标题栏 X 与点击面板外。
@@ -299,19 +333,31 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 	// 中心服广播有内容时优先显示受限 Markdown；没有广播时保留本地静态新功能列表。
 	if(QmClient.HasQmMarkdownBroadcast())
 	{
-		static std::vector<qm_md::SBlock> s_vBroadcastBlocks;
-		static int s_BroadcastRevision = -1;
-		if(s_BroadcastRevision != QmClient.QmMarkdownBroadcastRevision())
+		struct SBroadcastBlock
 		{
-			s_vBroadcastBlocks = qm_md::Parse(QmClient.QmMarkdownBroadcast());
-			s_BroadcastRevision = QmClient.QmMarkdownBroadcastRevision();
+			qm_md::SBlock m_Block;
+			std::string m_Text;
+		};
+		static std::vector<SBroadcastBlock> s_vBroadcastBlocks;
+		static int s_BroadcastRevision = -1;
+		const int BroadcastRevision = QmClient.QmMarkdownBroadcastRevision();
+		if(s_BroadcastRevision != BroadcastRevision)
+		{
+			const bool Prepared = TryPrepareQmPopupMarkdown(QmClient.QmMarkdownBroadcast(), s_vBroadcastBlocks, [](qm_md::SBlock &Block, auto &vPrepared) {
+				std::string Text = QmMarkdownBlockText(Block);
+				vPrepared.push_back({std::move(Block), std::move(Text)});
+			});
+			if(Prepared)
+				s_BroadcastRevision = BroadcastRevision;
 		}
+		const bool CurrentBroadcastReady = s_BroadcastRevision == BroadcastRevision;
 		static CButtonContainer s_aBroadcastButtons[16] = {};
 		static CButtonContainer s_aBroadcastLinkButtons[16] = {};
 		int BroadcastButtonIndex = 0;
 		int BroadcastLinkButtonIndex = 0;
-		for(const qm_md::SBlock &Block : s_vBroadcastBlocks)
+		for(const SBroadcastBlock &Prepared : s_vBroadcastBlocks)
 		{
+			const qm_md::SBlock &Block = Prepared.m_Block;
 			if(Block.m_Kind == qm_md::EBlockKind::SETTINGS_BUTTON)
 			{
 				const qm_card_registry::SCardDefault *pCard = qm_card_registry::FindByStableId(Block.m_SettingsCardId.c_str());
@@ -328,12 +374,16 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 						qm_card_registry::SCardNavigationTarget Target;
 						Target.m_pTab = pCard->m_pDefaultTab;
 						Target.m_pStableId = pCard->m_pStableId;
-						NavigateToSettingsCard(Target);
-						m_Popup = POPUP_NONE;
-						SetShowStart(false);
-						SetMenuPage(PAGE_SETTINGS);
-						s_ScrollRegion.End();
-						return;
+						if(NavigateToSettingsCard(Target))
+						{
+							m_Popup = POPUP_NONE;
+							SetShowStart(false);
+							SetMenuPage(PAGE_SETTINGS);
+							s_ScrollRegion.End();
+							if(CurrentBroadcastReady)
+								QmClient.MarkQmNewsRead();
+							return;
+						}
 					}
 				}
 				++BroadcastButtonIndex;
@@ -350,9 +400,7 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 				}
 				continue;
 			}
-			std::string Text;
-			for(const qm_md::SSpan &Span : Block.m_vSpans)
-				Text += Span.m_Text;
+			const std::string &Text = Prepared.m_Text;
 			if(Text.empty())
 				continue;
 			float FontSize = BodySize;
@@ -407,6 +455,9 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 			}
 		}
 		s_ScrollRegion.End();
+		// 准备失败时仍可能在画上一版公告，本次广播保留未读状态。
+		if(CurrentBroadcastReady)
+			QmClient.MarkQmNewsRead();
 		return;
 	}
 	const float TextWidth = std::max(80.0f, Content.w - JumpButtonW - Gap - ui_token::spacing::MD * UiScale);
@@ -459,12 +510,15 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 				qm_card_registry::SCardNavigationTarget Target;
 				Target.m_pTab = Entry.m_pCardTab;
 				Target.m_pStableId = Entry.m_pCardStableId;
-				NavigateToSettingsCard(Target);
-				m_Popup = POPUP_NONE;
-				SetShowStart(false);
-				SetMenuPage(PAGE_SETTINGS);
-				s_ScrollRegion.End();
-				return;
+				if(NavigateToSettingsCard(Target))
+				{
+					m_Popup = POPUP_NONE;
+					SetShowStart(false);
+					SetMenuPage(PAGE_SETTINGS);
+					s_ScrollRegion.End();
+					QmClient.MarkQmNewsRead();
+					return;
+				}
 			}
 		}
 
@@ -484,6 +538,7 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 		TextRender()->TextColor(PanelForeground);
 	}
 	s_ScrollRegion.End();
+	QmClient.MarkQmNewsRead();
 }
 
 void CMenus::RenderQmUpdatePopup(CUIRect Screen)
@@ -546,9 +601,9 @@ void CMenus::RenderQmUpdatePopup(CUIRect Screen)
 		Content.HSplitBottom(Gap, &Content, nullptr);
 	}
 	// 下载进度固定在说明滚动区外，长发布说明不会遮住下载结果。
-	if(Update.IsUpdateDownloading() && Update.m_pUpdatePackageTask)
+	if(Update.IsUpdateDownloading() && Update.m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE))
 	{
-		const auto &Task = Update.m_pUpdatePackageTask;
+		const auto &Task = Update.m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE);
 		char aProgress[128];
 		const bool KnownSize = Task->Size() > 0;
 		const int Percent = std::clamp(Task->Progress(), 0, 100);
@@ -625,19 +680,17 @@ void CMenus::RenderQmUpdatePopup(CUIRect Screen)
 		static std::vector<SNoteParagraph> s_vNotes;
 		static uint64_t s_NotesRevision = UINT64_MAX, s_FontRevision = UINT64_MAX;
 		static float s_NotesWidth = -1, s_NotesSize = -1;
-		if(s_NotesRevision != Update.m_UpdateInfoRevision)
+		const uint64_t NotesRevision = Update.m_UpdateInfoRevision;
+		if(s_NotesRevision != NotesRevision)
 		{
-			s_vNotes.clear();
-			for(const auto &Block : qm_md::Parse(Update.m_UpdateRelease.m_Notes.c_str()))
-			{
+			const bool Prepared = TryPrepareQmPopupMarkdown(Update.m_UpdateRelease.m_Notes.c_str(), s_vNotes, [](const qm_md::SBlock &Block, auto &vPrepared) {
 				SNoteParagraph Paragraph;
 				Paragraph.m_Kind = Block.m_Kind;
 				if(Block.m_Kind == qm_md::EBlockKind::BULLET)
 					Paragraph.m_Marker = "•";
 				else if(Block.m_Kind == qm_md::EBlockKind::NUMBERED)
 					Paragraph.m_Marker = std::to_string(Block.m_Number) + ".";
-				for(const auto &Span : Block.m_vSpans)
-					Paragraph.m_Text += Span.m_Text;
+				Paragraph.m_Text = QmMarkdownBlockText(Block);
 				// 发布说明中的链接与设置标记仅作文本，不执行第三方动作。
 				if(Block.m_Kind == qm_md::EBlockKind::SETTINGS_BUTTON)
 					Paragraph.m_Text = Block.m_SettingsLabel;
@@ -646,17 +699,21 @@ void CMenus::RenderQmUpdatePopup(CUIRect Screen)
 				if(Block.m_Kind == qm_md::EBlockKind::QUOTE)
 					Paragraph.m_FontScale = ui_token::font::TIP / ui_token::font::BODY;
 				if(!Paragraph.m_Text.empty() || Block.m_Kind == qm_md::EBlockKind::SEPARATOR)
-					s_vNotes.push_back(std::move(Paragraph));
+					vPrepared.push_back(std::move(Paragraph));
+			});
+			if(Prepared)
+			{
+				s_NotesRevision = NotesRevision;
+				s_NotesWidth = -1;
 			}
-			s_NotesRevision = Update.m_UpdateInfoRevision;
-			s_NotesWidth = -1;
 		}
-		if(s_vNotes.empty())
+		const bool CurrentNotesReady = s_NotesRevision == NotesRevision;
+		if(CurrentNotesReady && s_vNotes.empty())
 		{
 			Content.HSplitTop(BodySize * 1.7f, &Row, &Content);
 			Label(Row, Localize("No release notes provided"), BodySize, TEXTALIGN_TL);
 		}
-		else
+		else if(CurrentNotesReady)
 		{
 			// 发布者已提供标题时直接使用，不再叠加同义的“发布说明”标题。
 			const auto FirstKind = s_vNotes.front().m_Kind;

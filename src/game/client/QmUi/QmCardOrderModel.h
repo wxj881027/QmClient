@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <initializer_list>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -38,11 +39,13 @@ namespace qm_card_order
 	{
 	public:
 		void SetEntries(std::vector<SEntry> Entries);
+		// 与完整候选交换内容而不分配；两个模型各自推进版本，保留条目与 tab 的所有权配对。
+		void SwapContent(CModel &Other) noexcept;
 		int Count() const { return (int)m_vEntries.size(); }
 		const SEntry &Entry(int Index) const { return m_vEntries[Index]; }
-		// 单调布局版本：仅在 tab/column/order 或 entry 集合改变时递增，供渲染投影缓存失效。
+		// 单调布局版本：布局改变或 entry 内容发布时递增，供渲染投影缓存失效。
 		uint64_t LayoutRevision() const { return m_LayoutRevision; }
-		// stableId 到 state index 的注册表版本。SetEntries/Parse 重新建表时递增，
+		// stableId 到 state index 的注册表版本。SetEntries/Parse 建表或 SwapContent 发布时递增，
 		// 但 Move 只改变布局，不改变 state index，避免打断拖拽和布局动画。
 		uint64_t StateIndexRevision() const { return m_StateIndexRevision; }
 
@@ -50,6 +53,15 @@ namespace qm_card_order
 
 		// 核心操作：把 pStableId 移到 ToColumn 的 ToOrder 位置
 		void Move(const char *pStableId, int ToColumn, int ToOrder);
+
+		struct SColumnOrder
+		{
+			int m_Column;
+			const std::vector<int> &m_vStateIndices;
+		};
+		// 调用方预备各受影响列的完整顺序，索引有效且各卡仅出现一次。
+		// 提交只改列和顺序，保留条目、tab 字符串和 state index 的存储。
+		void CommitColumnOrders(std::initializer_list<SColumnOrder> ColumnOrders) noexcept;
 		// 跨 tab/列移动：tab 是可变位置维度，组件编辑器跨页搬卡时使用。
 		void MoveToTab(const char *pStableId, const char *pToTab, int ToColumn, int ToOrder);
 

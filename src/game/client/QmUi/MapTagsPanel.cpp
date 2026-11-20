@@ -450,15 +450,16 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 
 	if(ClickedRemove >= 0)
 	{
-		const std::string Removed = MyTags[ClickedRemove];
-		Tags.CancelSubmit(Removed.c_str());
-		m_LocalTags.Remove(pGameClient->Storage(), pCommunity, pMapName, Removed.c_str());
-		// 删除只改本地文件；队列里还没发出的同名标签也必须一起撤销。
-		m_vUploadQueue.erase(std::remove(m_vUploadQueue.begin(), m_vUploadQueue.end(), Removed), m_vUploadQueue.end());
-		// 删掉的正是展开那颗：连 × 一起收掉，不给下一颗留下「已经展开」的错觉。
-		m_ExpandedTag.clear();
-		m_VisibleTag.clear();
-		m_ExpandProgress = 0.0f;
+		const std::string &Removed = MyTags[ClickedRemove];
+		if(m_LocalTags.Remove(pGameClient->Storage(), pCommunity, pMapName, Removed.c_str()))
+		{
+			// 本地删除保存成功后，再取消同名标签的提交和排队上传。
+			Tags.CancelSubmit(Removed.c_str());
+			m_vUploadQueue.erase(std::remove(m_vUploadQueue.begin(), m_vUploadQueue.end(), Removed), m_vUploadQueue.end());
+			m_ExpandedTag.clear();
+			m_VisibleTag.clear();
+			m_ExpandProgress = 0.0f;
+		}
 	}
 	else if(ClickedChip >= 0 && ClickedChip < (int)MyTags.size())
 	{

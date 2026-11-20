@@ -12,6 +12,8 @@
 
 #include <chrono>
 #include <cmath>
+#include <limits>
+#include <numbers>
 
 using namespace std::chrono_literals;
 
@@ -46,13 +48,20 @@ int IEnvelopePointAccess::FindPointIndex(CFixedTime Time) const
 
 CMapBasedEnvelopePointAccess::CMapBasedEnvelopePointAccess(CDataFileReader *pReader)
 {
+	m_pPoints = nullptr;
+	m_pPointsBezier = nullptr;
+	m_pPointsBezierUpstream = nullptr;
+	m_NumPointsMax = 0;
 	bool FoundBezierEnvelope = false;
 	int EnvelopeStart, EnvelopeNum;
 	pReader->GetType(MAPITEMTYPE_ENVELOPE, &EnvelopeStart, &EnvelopeNum);
 	for(int EnvelopeIndex = 0; EnvelopeIndex < EnvelopeNum; EnvelopeIndex++)
 	{
-		CMapItemEnvelope *pEnvelope = static_cast<CMapItemEnvelope *>(pReader->GetItem(EnvelopeStart + EnvelopeIndex));
-		if(pEnvelope->m_Version >= CMapItemEnvelope::VERSION_TEEWORLDS_BEZIER)
+		const int ItemIndex = EnvelopeStart + EnvelopeIndex;
+		if(pReader->GetItemSize(ItemIndex) < static_cast<int>(sizeof(int)))
+			continue;
+		const auto *pVersion = static_cast<const int *>(pReader->GetItem(ItemIndex));
+		if(pVersion != nullptr && *pVersion >= CMapItemEnvelope::VERSION_TEEWORLDS_BEZIER)
 		{
 			FoundBezierEnvelope = true;
 			break;
@@ -61,38 +70,36 @@ CMapBasedEnvelopePointAccess::CMapBasedEnvelopePointAccess(CDataFileReader *pRea
 
 	if(FoundBezierEnvelope)
 	{
-		m_pPoints = nullptr;
-		m_pPointsBezier = nullptr;
-
 		int EnvPointStart, FakeEnvPointNum;
 		pReader->GetType(MAPITEMTYPE_ENVPOINTS, &EnvPointStart, &FakeEnvPointNum);
 		if(FakeEnvPointNum > 0)
+		{
 			m_pPointsBezierUpstream = static_cast<CEnvPointBezier_upstream *>(pReader->GetItem(EnvPointStart));
-		else
-			m_pPointsBezierUpstream = nullptr;
-
-		m_NumPointsMax = pReader->GetItemSize(EnvPointStart) / sizeof(CEnvPointBezier_upstream);
+			const int Size = pReader->GetItemSize(EnvPointStart);
+			if(m_pPointsBezierUpstream != nullptr && Size >= 0)
+				m_NumPointsMax = Size / static_cast<int>(sizeof(CEnvPointBezier_upstream));
+		}
 	}
 	else
 	{
 		int EnvPointStart, FakeEnvPointNum;
 		pReader->GetType(MAPITEMTYPE_ENVPOINTS, &EnvPointStart, &FakeEnvPointNum);
 		if(FakeEnvPointNum > 0)
+		{
 			m_pPoints = static_cast<CEnvPoint *>(pReader->GetItem(EnvPointStart));
-		else
-			m_pPoints = nullptr;
-
-		m_NumPointsMax = pReader->GetItemSize(EnvPointStart) / sizeof(CEnvPoint);
+			const int Size = pReader->GetItemSize(EnvPointStart);
+			if(m_pPoints != nullptr && Size >= 0)
+				m_NumPointsMax = Size / static_cast<int>(sizeof(CEnvPoint));
+		}
 
 		int EnvPointBezierStart, FakeEnvPointBezierNum;
 		pReader->GetType(MAPITEMTYPE_ENVPOINTS_BEZIER, &EnvPointBezierStart, &FakeEnvPointBezierNum);
-		const int NumPointsBezier = pReader->GetItemSize(EnvPointBezierStart) / sizeof(CEnvPointBezier);
-		if(FakeEnvPointBezierNum > 0 && m_NumPointsMax == NumPointsBezier)
-			m_pPointsBezier = static_cast<CEnvPointBezier *>(pReader->GetItem(EnvPointBezierStart));
-		else
-			m_pPointsBezier = nullptr;
-
-		m_pPointsBezierUpstream = nullptr;
+		if(FakeEnvPointBezierNum > 0)
+		{
+			const int Size = pReader->GetItemSize(EnvPointBezierStart);
+			if(Size >= 0 && m_NumPointsMax == Size / static_cast<int>(sizeof(CEnvPointBezier)))
+				m_pPointsBezier = static_cast<CEnvPointBezier *>(pReader->GetItem(EnvPointBezierStart));
+		}
 	}
 
 	SetPointsRange(0, m_NumPointsMax);
@@ -146,12 +153,12 @@ const CEnvPointBezier *CMapBasedEnvelopePointAccess::GetBezier(int Index) const
 	return nullptr;
 }
 
-static float SolveBezier(float x, float p0, float p1, float p2, float p3)
+static double SolveBezierPolynomial(double Time, double Control1, double Control2, double Duration)
 {
-	const double x3 = -p0 + 3.0 * p1 - 3.0 * p2 + p3;
-	const double x2 = 3.0 * p0 - 6.0 * p1 + 3.0 * p2;
-	const double x1 = -3.0 * p0 + 3.0 * p1;
-	const double x0 = p0 - x;
+	const double x3 = 3.0 * (Control1 - Control2) + Duration;
+	const double x2 = 3.0 * Control2 - 6.0 * Control1;
+	const double x1 = 3.0 * Control1;
+	const double x0 = -Time;
 
 	if(x3 == 0.0 && x2 == 0.0)
 	{
@@ -228,13 +235,37 @@ static float SolveBezier(float x, float p0, float p1, float p2, float p3)
 			if(0.0 <= t1 && t1 <= 1.0001)
 				return t1;
 
-			const double t2 = -s * std::cos(Phi + pi / 3.0) - Substitute;
+			const double t2 = -s * std::cos(Phi + std::numbers::pi / 3.0) - Substitute;
 
 			if(0.0 <= t2 && t2 <= 1.0001)
 				return t2;
-			return -s * std::cos(Phi - pi / 3.0) - Substitute;
+			return -s * std::cos(Phi - std::numbers::pi / 3.0) - Substitute;
 		}
 	}
+}
+
+static float SolveBezier(double Time, double Control1, double Control2, double Duration)
+{
+	if(Time == 0.0)
+		return 0.0f;
+
+	const double Parameter = SolveBezierPolynomial(Time, Control1, Control2, Duration);
+	constexpr double SamplePrecisionMillis = 1.0 / std::chrono::nanoseconds(1ms).count();
+	if(Parameter >= 0.0 && Parameter <= 1.0 &&
+		std::abs(bezier(0.0, Control1, Control2, Duration, Parameter) - Time) <= SamplePrecisionMillis)
+		return static_cast<float>(Parameter);
+
+	// 闭式解消减误差过大时，在单调的时间轴上二分。
+	double Low = 0.0, High = 1.0;
+	for(int i = 0; i < std::numeric_limits<double>::digits; ++i)
+	{
+		const double Mid = (Low + High) * 0.5;
+		if(bezier(0.0, Control1, Control2, Duration, Mid) < Time)
+			Low = Mid;
+		else
+			High = Mid;
+	}
+	return static_cast<float>((Low + High) * 0.5);
 }
 
 void CRenderMap::RenderEvalEnvelope(const IEnvelopePointAccess *pPoints, std::chrono::nanoseconds TimeNanos, ColorRGBA &Result, size_t Channels)
@@ -277,8 +308,9 @@ void CRenderMap::RenderEvalEnvelope(const IEnvelopePointAccess *pPoints, std::ch
 	const CEnvPoint *pCurrentPoint = pPoints->GetPoint(FoundIndex);
 	const CEnvPoint *pNextPoint = pPoints->GetPoint(FoundIndex + 1);
 
-	const CFixedTime Delta = pNextPoint->m_Time - pCurrentPoint->m_Time;
-	if(Delta <= CFixedTime(0))
+	const int StartMillis = pCurrentPoint->m_Time.GetInternal();
+	const int64_t Delta = static_cast<int64_t>(pNextPoint->m_Time.GetInternal()) - StartMillis;
+	if(Delta <= 0)
 	{
 		for(size_t c = 0; c < Channels; c++)
 		{
@@ -287,7 +319,9 @@ void CRenderMap::RenderEvalEnvelope(const IEnvelopePointAccess *pPoints, std::ch
 		return;
 	}
 
-	float a = (float)(TimeMillis - pCurrentPoint->m_Time.GetInternal()) / Delta.GetInternal();
+	// 按整毫秒查找会向零截断，负的亚毫秒采样可能早于所选区间。
+	const double SampleOffsetMillis = std::max(TimeMillis - StartMillis, 0.0);
+	float a = (float)SampleOffsetMillis / Delta;
 
 	switch(pCurrentPoint->m_Curvetype)
 	{
@@ -314,27 +348,18 @@ void CRenderMap::RenderEvalEnvelope(const IEnvelopePointAccess *pPoints, std::ch
 		const CEnvPointBezier *pNextPointBezier = pPoints->GetBezier(FoundIndex + 1);
 		if(pCurrentPointBezier == nullptr || pNextPointBezier == nullptr)
 			break; // fallback to linear
+		// 段内时间用双精度，避免相近的关键帧在较大的绝对毫秒值下重合。
+		const double Duration = static_cast<double>(Delta);
 		for(size_t c = 0; c < Channels; c++)
 		{
-			// monotonic 2d cubic bezier curve
-			const vec2 p0 = vec2(pCurrentPoint->m_Time.GetInternal(), fx2f(pCurrentPoint->m_aValues[c]));
-			const vec2 p3 = vec2(pNextPoint->m_Time.GetInternal(), fx2f(pNextPoint->m_aValues[c]));
+			const double Control1 = std::clamp(static_cast<double>(pCurrentPointBezier->m_aOutTangentDeltaX[c].GetInternal()), 0.0, Duration);
+			const double Control2 = std::clamp(Duration + pNextPointBezier->m_aInTangentDeltaX[c].GetInternal(), 0.0, Duration);
+			const float Parameter = SolveBezier(SampleOffsetMillis, Control1, Control2, Duration);
 
-			const vec2 OutTang = vec2(pCurrentPointBezier->m_aOutTangentDeltaX[c].GetInternal(), fx2f(pCurrentPointBezier->m_aOutTangentDeltaY[c]));
-			const vec2 InTang = vec2(pNextPointBezier->m_aInTangentDeltaX[c].GetInternal(), fx2f(pNextPointBezier->m_aInTangentDeltaY[c]));
-
-			vec2 p1 = p0 + OutTang;
-			vec2 p2 = p3 + InTang;
-
-			// validate bezier curve
-			p1.x = std::clamp(p1.x, p0.x, p3.x);
-			p2.x = std::clamp(p2.x, p0.x, p3.x);
-
-			// solve x(a) = time for a
-			a = std::clamp(SolveBezier(TimeMillis, p0.x, p1.x, p2.x, p3.x), 0.0f, 1.0f);
-
-			// value = y(t)
-			Result[c] = bezier(p0.y, p1.y, p2.y, p3.y, a);
+			const float StartValue = fx2f(pCurrentPoint->m_aValues[c]);
+			const float EndValue = fx2f(pNextPoint->m_aValues[c]);
+			Result[c] = bezier(StartValue, StartValue + fx2f(pCurrentPointBezier->m_aOutTangentDeltaY[c]),
+				EndValue + fx2f(pNextPointBezier->m_aInTangentDeltaY[c]), EndValue, Parameter);
 		}
 		return;
 	}

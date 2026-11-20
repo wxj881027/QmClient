@@ -202,3 +202,79 @@ TEST(MetalFrameState, ShutdownDrainReleasesInFlightSlots)
 	EXPECT_EQ(State.CurrentFrameId(), 0U);
 	EXPECT_TRUE(State.BeginFrame(2));
 }
+
+TEST(MetalFrameState, DiscardedRecordingReleasesOnlyTheCurrentSlot)
+{
+	CMetalFrameState State;
+	ASSERT_TRUE(State.BeginFrame(0));
+	ASSERT_TRUE(State.DiscardCurrentFrame());
+	EXPECT_TRUE(State.CurrentFrameFailed());
+	EXPECT_EQ(State.SlotState(0), CMetalFrameState::ESlotState::FAILED);
+	EXPECT_FALSE(State.CompleteFrame({1, 0}, true));
+	EXPECT_TRUE(State.BeginFrame(0));
+}
+
+TEST(MetalFrameState, DiscardKeepsOtherSubmittedFramesAndTheirCapture)
+{
+	CMetalFrameState State;
+	ASSERT_TRUE(State.BeginFrame(0));
+	ASSERT_EQ(State.FinalizeFrameForPresent(true), CMetalFrameState::EFinalizeResult::PRESENTED);
+	ASSERT_TRUE(State.BeginFrame(1));
+	ASSERT_TRUE(State.DiscardCurrentFrame());
+	EXPECT_EQ(State.SlotState(0), CMetalFrameState::ESlotState::IN_FLIGHT);
+	CMetalFrameState::SFrameCapture Capture;
+	ASSERT_TRUE(State.ReadLastPresentedFrame(Capture));
+	EXPECT_EQ(Capture.m_FrameId, 1U);
+	EXPECT_TRUE(State.CompleteFrame(Capture, true));
+}
+
+TEST(MetalFrameState, DiscardAfterFinalizationRemovesTheUnsubmittedCapture)
+{
+	CMetalFrameState State;
+	ASSERT_TRUE(State.BeginFrame(0));
+	ASSERT_EQ(State.FinalizeFrameForPresent(true), CMetalFrameState::EFinalizeResult::PRESENTED);
+	State.MarkReadbackPresented();
+	ASSERT_TRUE(State.DiscardCurrentFrame());
+	CMetalFrameState::SFrameCapture Capture;
+	EXPECT_FALSE(State.ReadLastPresentedFrame(Capture));
+	EXPECT_FALSE(State.ReadbackPresented());
+	EXPECT_EQ(State.LastPresentedFrameId(), 0U);
+}
+
+TEST(MetalFrameState, RepeatedDiscardDoesNotChangeCompletedSlots)
+{
+	CMetalFrameState State;
+	EXPECT_FALSE(State.DiscardCurrentFrame());
+	ASSERT_TRUE(State.BeginFrame(0));
+	ASSERT_TRUE(State.DiscardCurrentFrame());
+	EXPECT_FALSE(State.DiscardCurrentFrame());
+	ASSERT_TRUE(State.BeginFrame(1));
+	ASSERT_TRUE(State.FinalizeFrameWithoutPresent());
+	ASSERT_TRUE(State.CompleteFrame({2, 1}, true));
+	EXPECT_FALSE(State.DiscardCurrentFrame());
+	EXPECT_EQ(State.SlotState(1), CMetalFrameState::ESlotState::COMPLETED);
+}
+
+TEST(MetalFrameState, OldCompletionCannotCompleteAReusedDiscardedSlot)
+{
+	CMetalFrameState State;
+	ASSERT_TRUE(State.BeginFrame(0));
+	ASSERT_TRUE(State.DiscardCurrentFrame());
+	ASSERT_TRUE(State.BeginFrame(0));
+	ASSERT_TRUE(State.FinalizeFrameWithoutPresent());
+	EXPECT_FALSE(State.CompleteFrame({1, 0}, true));
+	EXPECT_EQ(State.SlotState(0), CMetalFrameState::ESlotState::IN_FLIGHT);
+	EXPECT_TRUE(State.CompleteFrame({2, 0}, true));
+}
+
+TEST(MetalFrameState, FailedBeginCannotDiscardAnOlderInFlightSlot)
+{
+	CMetalFrameState State(2);
+	ASSERT_TRUE(State.BeginFrame(0));
+	ASSERT_TRUE(State.FinalizeFrameWithoutPresent());
+	ASSERT_TRUE(State.BeginFrame(1));
+	ASSERT_TRUE(State.FinalizeFrameWithoutPresent());
+	ASSERT_FALSE(State.BeginFrame(0));
+	EXPECT_FALSE(State.DiscardCurrentFrame());
+	EXPECT_EQ(State.SlotState(0), CMetalFrameState::ESlotState::IN_FLIGHT);
+}

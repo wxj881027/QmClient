@@ -4,10 +4,12 @@
 
 #include <base/detect.h>
 #include <base/str.h>
+#include <base/time.h>
 
 #include <engine/shared/json.h>
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <ctime>
 #include <iomanip>
@@ -22,6 +24,7 @@ namespace
 	using namespace QmFinishSummary;
 	using TJson = std::unique_ptr<json_value, decltype(&json_value_free)>;
 	constexpr size_t MAX_JSON_BYTES = 8 * 1024 * 1024;
+	constexpr unsigned MAX_TEXT_BYTES = 512;
 	constexpr int64_t MAX_TIME_MS = std::numeric_limits<int>::max();
 
 	int64_t Centiseconds(int64_t Milliseconds)
@@ -48,7 +51,7 @@ namespace
 
 	bool Text(const json_value *pValue, std::string &Out)
 	{
-		if(pValue->type != json_string || pValue->u.string.length > 512)
+		if(pValue->type != json_string || pValue->u.string.length > MAX_TEXT_BYTES)
 			return false;
 		const char *pText = json_string_get(pValue);
 		if(!pText || !str_utf8_check(pText) || pValue->u.string.length != static_cast<unsigned>(str_length(pText)))
@@ -196,12 +199,53 @@ namespace
 			return {*Current, CurrentReady ? EStatus::READY : EStatus::STALE};
 		if(Previous)
 			return {*Previous, EStatus::STALE};
-		return {-1, EStatus::PENDING};
+		return {-1, EStatus::LOADING};
+	}
+
+	std::optional<int64_t> RankChange(std::optional<int64_t> Previous, const SValue &Current)
+	{
+		if(Previous && Current.m_Value > 0)
+			return *Previous - Current.m_Value;
+		return std::nullopt;
+	}
+
+	void ApplyGain(SSnapshot &Snapshot, std::optional<int64_t> PreviousPoints, int Gain)
+	{
+		Snapshot.m_PointsGained = {Gain, EStatus::READY};
+		// 回包可能仍是通关前的总分；同一份奖励只与固定基线相加一次。
+		if(Gain > 0 && PreviousPoints && *PreviousPoints <= std::numeric_limits<int64_t>::max() - Gain)
+			Snapshot.m_Points = {std::max(Snapshot.m_Points.m_Value, *PreviousPoints + Gain), EStatus::READY};
 	}
 }
 
 namespace QmFinishSummary
 {
+	std::optional<int> ParseFinishAward(std::string_view Message)
+	{
+		constexpr std::string_view ENGLISH = "You earned ";
+		constexpr std::string_view CHINESE = "你完成这张地图后获得了 ";
+		const bool English = Message.starts_with(ENGLISH);
+		if(!English && !Message.starts_with(CHINESE))
+			return std::nullopt;
+		Message.remove_prefix(English ? ENGLISH.size() : CHINESE.size());
+		int Points;
+		const char *pEnd = Message.data() + Message.size();
+		const auto [pAfter, Error] = std::from_chars(Message.data(), pEnd, Points);
+		if(Error != std::errc{} || Points < 0)
+			return std::nullopt;
+		const std::string_view Suffix(pAfter, pEnd - pAfter);
+		const std::string_view Expected = English ? (Points == 1 ? " point for finishing this map!" : " points for finishing this map!") : " 积分！";
+		if(Suffix != Expected)
+			return std::nullopt;
+		return Points;
+	}
+
+	void ApplyServerAward(SSnapshot &Snapshot, std::optional<int64_t> PreviousPoints, int Award)
+	{
+		Snapshot.m_ConfirmedAward = Award;
+		ApplyGain(Snapshot, PreviousPoints, Award);
+	}
+
 	bool ParseDdnetMap(const char *pJson, size_t Length, const std::string &Map, SRemoteData &Out)
 	{
 		const auto Root = Parse(pJson, Length);
@@ -220,7 +264,10 @@ namespace QmFinishSummary
 		if(!Matches(Root.get(), "player", Player) || pTypes->type != json_object)
 			return false;
 		SRemoteData Result;
-		Result.m_Points = Integer(Field(Field(Root.get(), "points"), "points"));
+		const json_value *pPoints = Field(Root.get(), "points");
+		Result.m_Points = Integer(Field(pPoints, "points"));
+		if(Field(pPoints, "rank")->type == json_null && Field(pPoints, "points")->type == json_none)
+			Result.m_Points = 0;
 		const json_value *pRank = Field(Root.get(), "rank");
 		Result.m_RankPoints = Integer(Field(pRank, "points"));
 		// DDNet 对未上榜的玩家明确返回 {"rank": null}，字段缺失时仍保留未知。
@@ -228,17 +275,18 @@ namespace QmFinishSummary
 			Result.m_RankPoints = 0;
 		for(unsigned Type = 0; Type < pTypes->u.object.length; ++Type)
 		{
-			const json_value *pMaps = Field(pTypes->u.object.values[Type].value, "maps");
+			const auto &TypeEntry = pTypes->u.object.values[Type];
+			const json_value *pMaps = Field(TypeEntry.value, "maps");
 			const json_value *pMap = Field(pMaps, Map.c_str());
 			if(pMap->type != json_object)
 				continue;
 			// 同名地图出现在多个分类时保持未知，避免选择错误的分类分母。
 			if(!Result.m_Map.empty())
 				return false;
-			Result.m_Map = Map;
-			Result.m_Category = pTypes->u.object.values[Type].name;
-			if(Result.m_Category.size() > 512 || !str_utf8_check(Result.m_Category.c_str()))
+			if(TypeEntry.name_length > MAX_TEXT_BYTES || TypeEntry.name_length != static_cast<unsigned>(str_length(TypeEntry.name)) || !str_utf8_check(TypeEntry.name))
 				return false;
+			Result.m_Map = Map;
+			Result.m_Category.assign(TypeEntry.name, TypeEntry.name_length);
 			const auto Finishes = MapFinishes(pMap);
 			Result.m_BestTimeMs = TimeMs(Field(pMap, "time"));
 			Result.m_HistoryKnown = Finishes && (*Finishes == 0 || Result.m_BestTimeMs.has_value());
@@ -444,6 +492,17 @@ namespace QmFinishSummary
 		return true;
 	}
 
+	void ApplyBestPreviewDate(SSnapshot &Snapshot, const SRemoteData &Remote)
+	{
+		if(Remote.m_LatestTimeMs != Snapshot.m_TimeMs || !Remote.m_LatestTimestamp)
+			return;
+		char aDate[64];
+		if(str_timestamp_ex_try(*Remote.m_LatestTimestamp, aDate, sizeof(aDate), "%Y-%m-%d %H:%M"))
+			Snapshot.m_FinishedAt = aDate;
+		else
+			Snapshot.m_FinishedAt.clear();
+	}
+
 	void ResolveComparison(SSnapshot &Snapshot, std::optional<int64_t> PreviousBest, bool HistoryKnown, std::optional<int64_t> Difference, bool PersonalRecord)
 	{
 		Snapshot.m_Comparison = EComparison::UNKNOWN;
@@ -489,6 +548,7 @@ namespace QmFinishSummary
 	{
 		Snapshot.m_LocalRank = {-1, EStatus::UNAVAILABLE};
 		Snapshot.m_LocalRankTotal = {-1, EStatus::UNAVAILABLE};
+		Snapshot.m_LocalRankChange.reset();
 		if(!Precise || Snapshot.m_TimeMs <= 0 || Snapshot.m_Player.empty())
 			return;
 		const int64_t Best = PreviousBest && *PreviousBest > 0 ? std::min(*PreviousBest, Snapshot.m_TimeMs) : Snapshot.m_TimeMs;
@@ -509,10 +569,17 @@ namespace QmFinishSummary
 		}
 		const int64_t OwnBest = Times.at(Snapshot.m_Player);
 		int64_t Rank = 1;
+		int64_t PreviousRank = 1;
 		for(const auto &Entry : Times)
+		{
+			if(PreviousBest && Entry.first != Snapshot.m_Player && Entry.second < Centiseconds(*PreviousBest))
+				++PreviousRank;
 			if(Entry.second < OwnBest)
 				++Rank;
+		}
 		Snapshot.m_LocalRank = {Rank, EStatus::READY};
+		if(PreviousBest)
+			Snapshot.m_LocalRankChange = PreviousRank - Rank;
 		Snapshot.m_LocalRankTotal = {static_cast<int64_t>(Times.size()), EStatus::READY};
 	}
 
@@ -536,6 +603,8 @@ namespace QmFinishSummary
 			Snapshot.m_ChinaRank = {-1, EStatus::UNAVAILABLE};
 		if(Axiom)
 			Snapshot.m_ChinaRank = {-1, EStatus::UNAVAILABLE};
+		Snapshot.m_RankChange = RankChange(Before.m_Rank, Snapshot.m_Rank);
+		Snapshot.m_ChinaRankChange = RankChange(Before.m_ChinaRank, Snapshot.m_ChinaRank);
 		// 只在本图的本次成绩已同步、个人 Rank 积分确有增长时记录一次，供回看复用。
 		if(Snapshot.m_Community == ECommunity::DDNET && Snapshot.m_RankPointsGained == 0 && ConfirmedFinish &&
 			Before.m_RankPoints && After.m_RankPoints && *After.m_RankPoints > *Before.m_RankPoints &&
@@ -543,14 +612,14 @@ namespace QmFinishSummary
 			Snapshot.m_RankPointsGained = *After.m_RankPoints - *Before.m_RankPoints;
 
 		const bool HadFinish = HistoryKnown && PreviousBest.has_value();
-		const bool FirstFinish = HistoryKnown && !PreviousBest;
+		const bool FirstFinish = HistoryKnown && !PreviousBest &&
+					 (Axiom || Snapshot.m_Comparison == EComparison::FIRST || Snapshot.m_Comparison == EComparison::UNKNOWN);
 		const bool NewFinishVisible = ConfirmedFinish && CurrentHistory && CurrentBest.has_value();
 		const int MapPoints = After.m_MapPoints >= 0 ? After.m_MapPoints : Before.m_MapPoints;
-		Snapshot.m_PointsGained = {-1, EStatus::PENDING};
-		if(HadFinish)
-			Snapshot.m_PointsGained = {0, EStatus::READY};
-		else if(FirstFinish && NewFinishVisible && MapPoints >= 0)
-			Snapshot.m_PointsGained = {MapPoints, EStatus::READY};
+		const bool ShowMapAward = FirstFinish && MapPoints >= 0;
+		Snapshot.m_FirstFinishBasePoints = ShowMapAward ? Before.m_Points : std::nullopt;
+		if(!Snapshot.m_ConfirmedAward && ShowMapAward && NewFinishVisible)
+			Snapshot.m_ConfirmedAward = MapPoints;
 		bool PointsCurrent = HadFinish || NewFinishVisible;
 		bool ProgressCurrent = HadFinish || NewFinishVisible;
 		if(FirstFinish)
@@ -561,6 +630,15 @@ namespace QmFinishSummary
 				ProgressCurrent &= *After.m_CompletedMaps > *Before.m_CompletedMaps;
 		}
 		Snapshot.m_Points = RemoteValue(After.m_Points, Before.m_Points, PointsCurrent);
+		if(Snapshot.m_ConfirmedAward)
+			ApplyGain(Snapshot, Before.m_Points, *Snapshot.m_ConfirmedAward);
+		else
+		{
+			// 首通先列出地图分值，实际奖励确认后才计入总分。
+			Snapshot.m_PointsGained = {ShowMapAward ? MapPoints : 0, EStatus::READY};
+			if(Snapshot.m_FirstFinishBasePoints)
+				Snapshot.m_Points = {*Snapshot.m_FirstFinishBasePoints, EStatus::STALE};
+		}
 		Snapshot.m_CompletedMaps = RemoteValue(After.m_CompletedMaps, Before.m_CompletedMaps, ProgressCurrent);
 		Snapshot.m_TotalMaps = RemoteValue(After.m_TotalMaps, Before.m_TotalMaps, After.m_TotalMaps.has_value());
 	}

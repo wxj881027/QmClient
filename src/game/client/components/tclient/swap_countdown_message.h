@@ -1,8 +1,12 @@
 #ifndef GAME_CLIENT_COMPONENTS_TCLIENT_SWAP_COUNTDOWN_MESSAGE_H
 #define GAME_CLIENT_COMPONENTS_TCLIENT_SWAP_COUNTDOWN_MESSAGE_H
 
+#include <engine/client/enums.h>
+
 #include <generated/protocol.h>
 
+#include <limits>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -23,6 +27,13 @@ enum class ESwapCountdownMessageDirection
 bool ParseSwapCountdownMessage(const char *pText, ESwapCountdownMessageAction &Action, ESwapCountdownMessageDirection &Direction, char *pCounterpart, int CounterpartSize);
 bool ParseSwapCompletionMessage(const char *pText, char *pFirst, int FirstSize, char *pSecond, int SecondSize);
 
+inline std::optional<int> QmSwapCountdownDisplayId(int InstanceId, int Dummy)
+{
+	if(InstanceId <= 0 || Dummy < 0 || Dummy >= NUM_DUMMIES || InstanceId > (std::numeric_limits<int>::max() - Dummy) / NUM_DUMMIES)
+		return std::nullopt;
+	return InstanceId * NUM_DUMMIES + Dummy;
+}
+
 struct SSwapCountdownState
 {
 	std::string m_Counterpart;
@@ -37,7 +48,7 @@ class CSwapCountdownTracker
 	int m_NextInstanceId = 1;
 
 public:
-	void Start(const char *pCounterpart, bool Outgoing, int StartTick);
+	bool Start(const char *pCounterpart, bool Outgoing, int StartTick) noexcept;
 	void Cancel(const char *pCounterpart, bool Outgoing);
 	void Remove(const char *pCounterpart);
 	void Clear();

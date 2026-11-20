@@ -53,17 +53,31 @@ inline bool QmMapNameIsSafe(const char *pMapName)
 	return true;
 }
 
+inline bool QmMapDownloadHashIsHex(std::string_view Hash)
+{
+	return Hash.find_first_not_of("0123456789abcdefABCDEF") == std::string_view::npos;
+}
+
 inline bool QmMapSha256IsHex(const char *pSha256)
 {
-	if(pSha256 == nullptr || std::strlen(pSha256) != 64)
+	const std::string_view Hash = pSha256 != nullptr ? pSha256 : "";
+	return Hash.size() == 64 && QmMapDownloadHashIsHex(Hash);
+}
+
+// 地图名后的文件尾只允许 CRC、SHA256 或以 CRC 开头的双段哈希。
+inline bool QmMapDownloadSuffixIsHashed(std::string_view Suffix)
+{
+	if(!Suffix.ends_with(".map"))
 		return false;
-	for(const char *p = pSha256; *p != '\0'; ++p)
+	Suffix.remove_suffix(4);
+	const size_t Separator = Suffix.find('_');
+	if(Separator != std::string_view::npos)
 	{
-		const bool Hex = (*p >= '0' && *p <= '9') || (*p >= 'a' && *p <= 'f') || (*p >= 'A' && *p <= 'F');
-		if(!Hex)
+		if(Separator != 8 || !QmMapDownloadHashIsHex(Suffix.substr(0, Separator)))
 			return false;
+		Suffix.remove_prefix(Separator + 1);
 	}
-	return true;
+	return (Suffix.size() == 8 || Suffix.size() == 64) && QmMapDownloadHashIsHex(Suffix);
 }
 
 inline std::string QmMapDownloadUrlEncode(const char *pText)
@@ -126,18 +140,18 @@ inline bool QmBuildMapDownloadPlan(const SQmMapDownloadRequest &Request, SQmMapD
 // 只有地图名时的回退：Href 必须是 CDN 索引中的 <URL 编码名>_<哈希>.map。
 inline bool QmBuildIndexedMapDownloadPlan(const char *pMapName, const std::string_view Href, const char *pBaseUrl, SQmMapDownloadPlan *pPlan)
 {
-	if(pPlan == nullptr || !QmMapNameIsSafe(pMapName) || Href.empty())
+	if(pPlan == nullptr || !QmMapNameIsSafe(pMapName) || !str_valid_filename(pMapName))
 		return false;
-	const std::string EscapedName = QmMapDownloadUrlEncode(pMapName);
-	const std::string Prefix = EscapedName + "_";
-	if(Href.size() <= Prefix.size() || Href.compare(0, Prefix.size(), Prefix) != 0)
+	const std::string Prefix = QmMapDownloadUrlEncode(pMapName) + "_";
+	if(!Href.starts_with(Prefix))
 		return false;
-	if(Href.size() < 4 || Href.compare(Href.size() - 4, 4, ".map") != 0)
+	const std::string_view Suffix = Href.substr(Prefix.size());
+	if(!QmMapDownloadSuffixIsHashed(Suffix))
 		return false;
 	*pPlan = SQmMapDownloadPlan{};
 	pPlan->m_Source = EQmMapDownloadSource::CDN_NAME_INDEX;
 	pPlan->m_Url = QmMapDownloadBaseUrl(pBaseUrl) + "/" + std::string(Href);
-	pPlan->m_FileName = std::string("downloadedmaps/") + pMapName + "_" + std::string(Href.substr(Prefix.size()));
+	pPlan->m_FileName = std::string("downloadedmaps/") + pMapName + "_" + std::string(Suffix);
 	pPlan->m_Valid = true;
 	return true;
 }

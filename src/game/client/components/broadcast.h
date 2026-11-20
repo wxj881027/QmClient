@@ -7,11 +7,13 @@
 
 #include <game/client/component.h>
 
+#include <cstdint>
+
 class CBroadcast : public CComponent
 {
 	// broadcasts
 	char m_aBroadcastText[1024];
-	int m_BroadcastTick;
+	int64_t m_BroadcastTick;
 	float m_BroadcastRenderOffset;
 	STextContainerIndex m_TextContainerIndex;
 

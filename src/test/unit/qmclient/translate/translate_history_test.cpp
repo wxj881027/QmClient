@@ -1,3 +1,5 @@
+#include <engine/shared/protocol.h>
+
 #include <game/client/components/qmclient/translate/translate_jobs.h>
 
 #include <gtest/gtest.h>
@@ -28,12 +30,27 @@ TEST(TranslateHistory, ExactNameWinsOverNewerCaseInsensitiveMatch)
 TEST(TranslateHistory, LocalDummyServerAndUninitializedLinesAreExcluded)
 {
 	const int aLocalIds[] = {2, 5, -1};
-	for(int Id : {2, 5, -1, -2})
+	for(int Id : {2, 5, -1, -2, static_cast<int>(MAX_CLIENTS)})
 		EXPECT_FALSE(IsTranslatePlayerCandidate(Id, true, true, false, aLocalIds, 3));
 	EXPECT_TRUE(IsTranslatePlayerCandidate(3, true, true, false, aLocalIds, 3));
 	EXPECT_FALSE(IsTranslatePlayerCandidate(3, false, true, false, aLocalIds, 3));
 	EXPECT_FALSE(IsTranslatePlayerCandidate(3, true, false, false, aLocalIds, 3));
 	EXPECT_FALSE(IsTranslatePlayerCandidate(3, true, true, true, aLocalIds, 3));
+}
+
+TEST(TranslateHistory, OnlyManualRequestsMayReplaceFailedResponses)
+{
+	const CTranslateResponse PendingOrSuccessful;
+	CTranslateResponse Failure;
+	Failure.m_Error = true;
+
+	EXPECT_FALSE(TranslateResponseBlocksRequest(nullptr));
+	EXPECT_FALSE(TranslateResponseBlocksRequest(nullptr, true));
+	EXPECT_TRUE(TranslateResponseBlocksRequest(&PendingOrSuccessful));
+	EXPECT_TRUE(TranslateResponseBlocksRequest(&PendingOrSuccessful, true));
+	// 静默失败也可以手动重试，判定与提示文本是否可见无关。
+	EXPECT_FALSE(TranslateResponseBlocksRequest(&Failure));
+	EXPECT_TRUE(TranslateResponseBlocksRequest(&Failure, true));
 }
 
 TEST(TranslateHistory, InvalidHistoryBoundsDoNotReadCandidates)

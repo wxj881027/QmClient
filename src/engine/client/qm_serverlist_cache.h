@@ -27,10 +27,11 @@ public:
 		m_vServers = std::move(vServers);
 		m_ReceivedAt = Now;
 		m_SourceAge = std::max(0, Age);
-		m_RefreshFailed = false;
+		RefreshSucceeded();
 		m_RequireLiveRefresh = RequireLiveRefresh;
 		return true;
 	}
+	void RefreshSucceeded() { m_RefreshFailed = false; }
 	void RefreshFailed() { m_RefreshFailed = true; }
 	bool HasRefreshFailed() const { return m_RefreshFailed; }
 	int64_t Age(int64_t Now) const { return m_SourceAge + std::max<int64_t>(0, Now - m_ReceivedAt); }

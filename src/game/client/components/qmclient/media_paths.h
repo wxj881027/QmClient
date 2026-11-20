@@ -9,10 +9,40 @@
 #include <engine/storage.h>
 
 #include <algorithm>
+#include <array>
 #include <string>
 
 namespace qmclient::media_paths
 {
+	// 完整准备排除项后才进入平台入口，不能遗漏仍在录制的文件。
+	template<size_t Recorders, typename TRoot, typename TRecording, typename TPath, typename TOpen>
+	bool TryOpenMedia(std::string &Root, TRoot &&MakeRoot, TRecording &&Recording, TPath &&Path, TOpen &&Open) noexcept
+	{
+		try
+		{
+			Root = MakeRoot();
+			if(Root.empty())
+				return false;
+			std::array<std::string, Recorders> aExcluded;
+			std::array<const char *, Recorders> apExcluded;
+			size_t Count = 0;
+			for(size_t i = 0; i < Recorders; ++i)
+			{
+				if(!Recording(i))
+					continue;
+				aExcluded[Count] = Path(i);
+				if(aExcluded[Count].empty())
+					return false;
+				apExcluded[Count] = aExcluded[Count].c_str();
+				++Count;
+			}
+			return Open(Root.c_str(), apExcluded.data(), Count);
+		}
+		catch(...)
+		{
+			return false;
+		}
+	}
 
 	enum class EKind
 	{
@@ -158,10 +188,17 @@ namespace qmclient::media_paths
 
 	inline bool PrepareWrite(IStorage *pStorage, const std::string &Path)
 	{
-		if(!Path.empty())
+		std::string WholePath = CompletePath(pStorage, Path);
+		size_t ParentLength = WholePath.rfind('/');
+		if(ParentLength != std::string::npos && fs_makedir_rec_for(WholePath.c_str()) == 0)
 		{
-			const std::string WholePath = CompletePath(pStorage, Path);
-			if(!WholePath.empty() && fs_makedir_rec_for(WholePath.c_str()) == 0)
+			while(ParentLength > 0 && WholePath[ParentLength - 1] == '/')
+				--ParentLength;
+			if(ParentLength == 0 || (ParentLength == 2 && WholePath[1] == ':'))
+				++ParentLength;
+			WholePath.resize(ParentLength);
+			// 已存在的普通文件也可能让建目录返回成功。
+			if(fs_is_dir(WholePath.c_str()))
 				return true;
 		}
 		log_error("media_paths", "Could not create the output directory for '%s'", Path.c_str());

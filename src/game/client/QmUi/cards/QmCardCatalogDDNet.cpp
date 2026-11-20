@@ -75,48 +75,17 @@ using namespace std::chrono_literals;
 
 namespace
 {
-	static bool ApplyBackgroundEntitiesInputValue(CLineInput &Input)
+	bool CommitBackgroundEntitiesInput(CUi &Ui, CLineInput &Input, const char *pLastBackgroundPath)
 	{
-		char aNormalized[IO_MAX_PATH_LENGTH];
-		const bool Changed = BuildBackgroundEntitiesCommitValueFromInput(Input.GetString(), g_Config.m_ClBackgroundEntities, aNormalized, sizeof(aNormalized));
-		if(Changed)
-			str_copy(g_Config.m_ClBackgroundEntities, aNormalized, sizeof(g_Config.m_ClBackgroundEntities));
 		if(Input.IsActive())
-			Input.Deactivate();
+			Ui.ReleaseActiveTextInput(&Input);
+
+		// 输入框直接写入配置，用背景最近尝试加载的路径判断是否需要重载。
+		char aNormalized[IO_MAX_PATH_LENGTH];
+		const bool Changed = BuildBackgroundEntitiesCommitValueFromInput(Input.GetString(), pLastBackgroundPath, aNormalized, sizeof(aNormalized));
+		if(str_comp(Input.GetString(), aNormalized) != 0)
+			Input.Set(aNormalized);
 		return Changed;
-	}
-
-	static void SyncBackgroundEntitiesInput(CLineInput &Input, char *pSync, int SyncSize)
-	{
-		char aNormalizedConfig[IO_MAX_PATH_LENGTH];
-		BuildBackgroundEntitiesValueFromInput(g_Config.m_ClBackgroundEntities, aNormalizedConfig, sizeof(aNormalizedConfig));
-		if(str_comp(pSync, aNormalizedConfig) != 0)
-		{
-			if(!Input.IsActive())
-				Input.Set(aNormalizedConfig);
-		}
-		str_copy(pSync, aNormalizedConfig, SyncSize);
-	}
-
-	static bool CommitBackgroundEntitiesInputIfActive(CLineInput &Input, char *pSync, int SyncSize)
-	{
-		if(!Input.IsActive())
-			return false;
-
-		const bool Changed = ApplyBackgroundEntitiesInputValue(Input);
-		SyncBackgroundEntitiesInput(Input, pSync, SyncSize);
-		return Changed;
-	}
-
-	static bool ToggleCurrentMapBackground(CLineInput &Input)
-	{
-		const bool UseCurrentMap = IsCurrentMapBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities);
-		Input.Deactivate();
-		if(UseCurrentMap)
-			g_Config.m_ClBackgroundEntities[0] = '\0';
-		else
-			str_copy(g_Config.m_ClBackgroundEntities, CURRENT_MAP);
-		return true;
 	}
 
 	void LogPerfStage(IClient *pClient, const char *pStage, double DurationMs, bool Force = false, const char *pExtra = nullptr)
@@ -144,8 +113,8 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 		Options.m_LabelAlign = TEXTALIGN_ML;
 		Options.m_CommitPolicy = (Flags & CUi::SCROLLBAR_OPTION_DELAYUPDATE) != 0 ? ui_widget::EInputCommitPolicy::ON_RELEASE_OR_SUBMIT : ui_widget::EInputCommitPolicy::LIVE;
 		if(PrepareSettingsNumericFieldLabel(SETTINGS_DDNET, -1, -1, pTextId, Rect, pLabel, Flags, Options))
-			return false;
-		return ui_widget::NumericField(DDNetCardCtx, GetSettingsNumericFieldState(pId), pId, pOption, Min, Max, Rect, Options);
+			return;
+		ui_widget::NumericField(DDNetCardCtx, GetSettingsNumericFieldState(pId), pId, pOption, Min, Max, Rect, Options);
 	};
 	const qm_card_registry::SCardDefault *pDemoDefault = qm_card_registry::FindByStableId("deck:ddnet-demo");
 	const qm_card_registry::SCardDefault *pGameplayDefault = qm_card_registry::FindByStableId("deck:ddnet-gameplay");
@@ -324,7 +293,9 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			}
 			if(Flow.Control("default-zoom", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 			{
-				if(DoDDNetNumericField("ddnet-default-zoom", &g_Config.m_ClDefaultZoom, &g_Config.m_ClDefaultZoom, Button, Localize("Default zoom"), 0, 20) && CanCommit)
+				const int PreviousZoom = g_Config.m_ClDefaultZoom;
+				DoDDNetNumericField("ddnet-default-zoom", &g_Config.m_ClDefaultZoom, &g_Config.m_ClDefaultZoom, Button, Localize("Default zoom"), 0, 20);
+				if(CanCommit && g_Config.m_ClDefaultZoom != PreviousZoom)
 					GameClient()->m_Camera.SetZoom(CCamera::ZoomStepsToValue(g_Config.m_ClDefaultZoom - 10), g_Config.m_ClSmoothZoomTime, true);
 			}
 			if(CanCommit)
@@ -481,7 +452,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			if(Flow.Declaring())
 				return;
 			static CLineInput s_BackgroundEntitiesInput(g_Config.m_ClBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities));
-			static char s_aBackgroundEntitiesSync[sizeof(g_Config.m_ClBackgroundEntities)] = "";
+			const char *pLastBackgroundPath = GameClient()->m_Background.MapName();
 
 			if(HasMapRow)
 			{
@@ -494,32 +465,29 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 
 				DoSettingsMenuLabel(SETTINGS_DDNET, -1, -1, "ddnet-background-map-label", &Label, Localize("Map"), BodySize, TEXTALIGN_ML);
 
-				const bool WasInputActive = s_BackgroundEntitiesInput.IsActive();
 				IUiContext DDNetBackgroundEntitiesTextInputCtx;
 				DDNetBackgroundEntitiesTextInputCtx.m_pUi = Ui();
 				DDNetBackgroundEntitiesTextInputCtx.m_ScopeHash = MakeUiScopeHash("settings_ddnet_background_entities_text_input");
-				const bool InputCommitted = ui_widget::InputField(DDNetBackgroundEntitiesTextInputCtx, &s_BackgroundEntitiesInput, EditBox, nullptr, BodySize);
-				if(CanCommit && InputCommitted)
-					BackgroundChanged = ApplyBackgroundEntitiesInputValue(s_BackgroundEntitiesInput);
-				else if(CanCommit && ShouldCommitBackgroundEntitiesInputOnBlur(WasInputActive, s_BackgroundEntitiesInput.IsActive(), s_BackgroundEntitiesInput.GetString(), s_aBackgroundEntitiesSync))
-					BackgroundChanged = ApplyBackgroundEntitiesInputValue(s_BackgroundEntitiesInput);
-				if(CanCommit)
-					SyncBackgroundEntitiesInput(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
+				ui_widget::SInputFieldOptions InputOptions;
+				InputOptions.m_FontSize = BodySize;
+				const auto InputResult = ui_widget::InputField(DDNetBackgroundEntitiesTextInputCtx, &s_BackgroundEntitiesInput, EditBox, InputOptions);
+				if(CanCommit && InputResult.m_Committed)
+					BackgroundChanged = CommitBackgroundEntitiesInput(*Ui(), s_BackgroundEntitiesInput, pLastBackgroundPath);
 
 				static CButtonContainer s_BackgroundEntitiesMapPicker, s_BackgroundEntitiesReload;
 
 				if(Ui()->DoButton_QmIcon(&s_BackgroundEntitiesReload, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton, BUTTONFLAG_LEFT) && CanCommit)
 				{
-					CommitBackgroundEntitiesInputIfActive(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
-					g_Config.m_ClBackgroundEntities[0] = '\0';
+					if(s_BackgroundEntitiesInput.IsActive())
+						Ui()->ReleaseActiveTextInput(&s_BackgroundEntitiesInput);
 					s_BackgroundEntitiesInput.Set("");
-					s_aBackgroundEntitiesSync[0] = '\0';
 					BackgroundChanged = true;
 				}
 
 				if(Ui()->DoButton_QmIcon(&s_BackgroundEntitiesMapPicker, EQmIcon::FOLDER, FONT_ICON_FOLDER, 0, &Button, BUTTONFLAG_LEFT) && CanCommit)
 				{
-					BackgroundChanged |= CommitBackgroundEntitiesInputIfActive(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
+					if(s_BackgroundEntitiesInput.IsActive())
+						BackgroundChanged |= CommitBackgroundEntitiesInput(*Ui(), s_BackgroundEntitiesInput, pLastBackgroundPath);
 					static SPopupMenuId s_PopupMapPickerId;
 					static CPopupMapPickerContext s_PopupMapPickerContext;
 					s_PopupMapPickerContext.m_pMenus = this;
@@ -543,9 +511,10 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				static int s_UseCurrentMapId = 0;
 				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &s_UseCurrentMapId, "Use current map as background", Localize("Use current map as background"), UseCurrentMap, &Button) && CanCommit)
 				{
-					BackgroundChanged |= CommitBackgroundEntitiesInputIfActive(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
-					BackgroundChanged |= ToggleCurrentMapBackground(s_BackgroundEntitiesInput);
-					SyncBackgroundEntitiesInput(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
+					if(s_BackgroundEntitiesInput.IsActive())
+						Ui()->ReleaseActiveTextInput(&s_BackgroundEntitiesInput);
+					s_BackgroundEntitiesInput.Set(UseCurrentMap ? "" : CURRENT_MAP);
+					BackgroundChanged = true;
 				}
 			}
 			if(CanCommit && BackgroundChanged)
@@ -578,12 +547,10 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 			if(Flow.Control("run-on-join-input", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 			{
 				static CLineInput s_RunOnJoinInput(g_Config.m_ClRunOnJoin, sizeof(g_Config.m_ClRunOnJoin));
-				if(CanCommit)
-					s_RunOnJoinInput.SetEmptyText(Localize("Chat command (e.g. showall 1)"));
 				IUiContext InputCtx;
 				InputCtx.m_pUi = Ui();
 				InputCtx.m_ScopeHash = MakeUiScopeHash("settings_ddnet_run_on_join_text_input");
-				ui_widget::InputField(InputCtx, &s_RunOnJoinInput, Button, nullptr, BodySize);
+				ui_widget::InputField(InputCtx, &s_RunOnJoinInput, Button, Localize("Chat command (e.g. showall 1)"), BodySize);
 			}
 #if defined(CONF_FAMILY_WINDOWS)
 			// 加入后执行区 → 文件扩展名注册：真分区，间距由这一行自己声明（原来先补 1× 再补 2×，叠成 3×）。

@@ -1,5 +1,12 @@
 #include "envelope_extrema.h"
 
+#include <game/map/map_render_items.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <new>
+
 CEnvelopeExtrema::CEnvelopeExtrema(IMap *pMap) :
 	m_EnvelopePoints(pMap)
 {
@@ -18,7 +25,7 @@ CEnvelopeExtrema::CEnvelopeExtrema(IMap *pMap) :
 	CalculateExtrema();
 }
 
-void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, int EnvelopeIndex)
+void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, int EnvelopeIndex, int &RemainingPoints)
 {
 	CEnvelopeExtremaItem &EnvExt = m_vEnvelopeExtrema[EnvelopeIndex];
 
@@ -34,8 +41,32 @@ void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, 
 	// check if the envelope is a valid position envelope
 	if(!pEnvelopeItem || pEnvelopeItem->m_Channels != 3)
 		return;
+	const int Start = pEnvelopeItem->m_StartPoint;
+	const int Count = pEnvelopeItem->m_NumPoints;
+	if(Count == 0)
+	{
+		EnvExt.m_Minima = EnvExt.m_Maxima = ivec2(0, 0);
+		EnvExt.m_Available = true;
+		return;
+	}
+	if(Start < 0 || Count < 0 || Start > m_EnvelopePoints.NumPointsMax() || Count > m_EnvelopePoints.NumPointsMax() - Start)
+		return;
+	if(Count > RemainingPoints)
+		return;
+	RemainingPoints -= Count;
 
-	for(int PointId = pEnvelopeItem->m_StartPoint; PointId < pEnvelopeItem->m_StartPoint + pEnvelopeItem->m_NumPoints; ++PointId)
+	const auto ExpandByTangent = [&EnvExt](int Channel, int Value, int Tangent) {
+		const int64_t Position = static_cast<int64_t>(Value) + Tangent;
+		// 范围无法表示时禁用提前裁剪，实际包络求值仍走原路径。
+		if(Position < std::numeric_limits<int>::min() || Position > std::numeric_limits<int>::max())
+			return false;
+		EnvExt.m_Minima[Channel] = std::min(static_cast<int>(Position), EnvExt.m_Minima[Channel]);
+		EnvExt.m_Maxima[Channel] = std::max(static_cast<int>(Position), EnvExt.m_Maxima[Channel]);
+		return true;
+	};
+
+	const int End = Start + Count;
+	for(int PointId = Start; PointId < End; ++PointId)
 	{
 		const CEnvPoint *pEnvPoint = m_EnvelopePoints.GetPoint(PointId);
 		if(!pEnvPoint)
@@ -51,8 +82,9 @@ void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, 
 			EnvExt.m_Maxima[Channel] = std::max(pEnvPoint->m_aValues[Channel], EnvExt.m_Maxima[Channel]);
 		}
 
-		const bool HasOutgoing = PointId < pEnvelopeItem->m_StartPoint + pEnvelopeItem->m_NumPoints - 1 && pEnvPoint->m_Curvetype == CURVETYPE_BEZIER;
-		const bool HasIncoming = PointId > pEnvelopeItem->m_StartPoint && m_EnvelopePoints.GetPoint(PointId - 1)->m_Curvetype == CURVETYPE_BEZIER;
+		const bool HasOutgoing = PointId < End - 1 && pEnvPoint->m_Curvetype == CURVETYPE_BEZIER;
+		const CEnvPoint *pPreviousPoint = PointId > Start ? m_EnvelopePoints.GetPoint(PointId - 1) : nullptr;
+		const bool HasIncoming = pPreviousPoint != nullptr && pPreviousPoint->m_Curvetype == CURVETYPE_BEZIER;
 		if(!HasOutgoing && !HasIncoming)
 			continue;
 		const CEnvPointBezier *pBezier = m_EnvelopePoints.GetBezier(PointId);
@@ -64,15 +96,14 @@ void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, 
 				EnvExt.m_Rotating = true;
 			for(int Channel = 0; Channel < 2; ++Channel)
 			{
-				const int Value = pEnvPoint->m_aValues[Channel] + pDeltaY[Channel];
-				EnvExt.m_Minima[Channel] = std::min(Value, EnvExt.m_Minima[Channel]);
-				EnvExt.m_Maxima[Channel] = std::max(Value, EnvExt.m_Maxima[Channel]);
+				if(!ExpandByTangent(Channel, pEnvPoint->m_aValues[Channel], pDeltaY[Channel]))
+					return false;
 			}
+			return true;
 		};
-		if(HasOutgoing)
-			IncludeTangent(pBezier->m_aOutTangentDeltaY);
-		if(HasIncoming)
-			IncludeTangent(pBezier->m_aInTangentDeltaY);
+		if((HasOutgoing && !IncludeTangent(pBezier->m_aOutTangentDeltaY)) ||
+			(HasIncoming && !IncludeTangent(pBezier->m_aInTangentDeltaY)))
+			return;
 	}
 
 	EnvExt.m_Available = true;
@@ -82,11 +113,23 @@ void CEnvelopeExtrema::CalculateExtrema()
 {
 	int EnvelopeStart, EnvelopeNum;
 	m_pMap->GetType(MAPITEMTYPE_ENVELOPE, &EnvelopeStart, &EnvelopeNum);
-	m_vEnvelopeExtrema.resize(EnvelopeNum);
+	// 裁剪表无法分配时保留空表，渲染层会跳过提前裁剪。
+	if(static_cast<std::size_t>(EnvelopeNum) > m_vEnvelopeExtrema.max_size())
+		return;
+	try
+	{
+		m_vEnvelopeExtrema.resize(EnvelopeNum);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
+	// 重叠区间会反复扫描同一批点。超出实际点数时，剩余预算不足的包络禁用提前裁剪。
+	int RemainingPoints = m_EnvelopePoints.NumPointsMax();
 	for(int EnvelopeIndex = 0; EnvelopeIndex < EnvelopeNum; ++EnvelopeIndex)
 	{
-		const CMapItemEnvelope *pItem = static_cast<const CMapItemEnvelope *>(m_pMap->GetItem(EnvelopeStart + EnvelopeIndex));
-		CalculateEnvelope(pItem, EnvelopeIndex);
+		const auto Item = MapRenderItems::ReadEnvelope(*m_pMap, EnvelopeStart + EnvelopeIndex);
+		CalculateEnvelope(Item ? &*Item : nullptr, EnvelopeIndex, RemainingPoints);
 	}
 }
 

@@ -32,6 +32,9 @@ struct LOG_COLOR
 #define log_debug_color(color, sys, ...) log_log_color(LEVEL_DEBUG, color, sys, __VA_ARGS__)
 #define log_trace_color(color, sys, ...) log_log_color(LEVEL_TRACE, color, sys, __VA_ARGS__)
 
+// 下列格式化入口隔离日志后端的 C++ 异常；失败不阻止后续日志。
+// 直接调用 logger 对象的 Log、绑定、过滤和收尾方法不属于此边界。
+
 /**
  * @defgroup Log Logging
  *

@@ -1,16 +1,50 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "impl.h"
 
+#include "script_file.h"
+
 #include <base/log.h>
+#include <base/mem.h>
 
 #include <engine/external/regex.h>
 #include <engine/storage.h>
 
+#include <cstdlib>
+#include <stdexcept>
 #include <variant>
 
 #define CHAISCRIPT_NO_THREADS
 #define CHAISCRIPT_NO_THREADS_WARNING
 #include <chaiscript.hpp>
+
+namespace
+{
+	constexpr int MAX_SCRIPT_CALL_DEPTH = 64;
+	constexpr unsigned MAX_SCRIPT_FILE_BYTES = 1024u * 1024 * 1024;
+
+	struct CQmScriptCallDepth
+	{
+		template<typename T>
+		void trace(const chaiscript::detail::Dispatch_State &Dispatch, const chaiscript::eval::AST_Node_Impl<T> *) const
+		{
+			// include/exec 的文件预算不计 Chai 内部函数调用。
+			if(Dispatch.stack_holder().call_depth > MAX_SCRIPT_CALL_DEPTH)
+				throw std::runtime_error("Maximum script function call depth exceeded");
+		}
+	};
+
+	using TScriptParser = chaiscript::parser::ChaiScript_Parser<chaiscript::eval::Tracer<CQmScriptCallDepth>, chaiscript::optimizer::Optimizer_Default>;
+	// 回调可以保存匹配文本，传入持有字符串的脚本常量。
+	using FRegexMatch = std::function<void(chaiscript::Boxed_Value, int, int)>;
+	using FRegexReplace = std::function<std::string(chaiscript::Boxed_Value, int, int)>;
+
+	void CheckRegexProgress(bool Global, const std::string &Match, int Group)
+	{
+		// 第 0 组是整个匹配。全局模式的空匹配会让底层游标停在原处。
+		if(Global && Group == 0 && Match.empty())
+			throw std::runtime_error("Empty match in global regular expression");
+	}
+} // namespace
 
 static const auto NAMESPACE_RE = [](chaiscript::Namespace &Re) {
 	Re["compile"] = chaiscript::var(chaiscript::fun([](const std::string &s) {
@@ -20,8 +54,23 @@ static const auto NAMESPACE_RE = [](chaiscript::Namespace &Re) {
 		return R;
 	}));
 	Re["test"] = chaiscript::var(chaiscript::fun(&Regex::test));
-	Re["match"] = chaiscript::var(chaiscript::fun(&Regex::match));
-	Re["replace"] = chaiscript::var(chaiscript::fun(&Regex::replace));
+	Re["match"] = chaiscript::var(chaiscript::fun([](Regex &Pattern, const std::string &Text, bool Global, FRegexMatch Callback) {
+		// 脚本回调可能改写原表达式或文本。正则迭代只引用本次调用的副本。
+		Regex PatternCopy(Pattern);
+		const std::string Subject(Text);
+		PatternCopy.match(Subject, Global, [&](const std::string &Match, int Index, int Group) {
+			CheckRegexProgress(Global, Match, Group);
+			Callback(chaiscript::const_var(Match), Index, Group);
+		});
+	}));
+	Re["replace"] = chaiscript::var(chaiscript::fun([](Regex &Pattern, const std::string &Text, bool Global, FRegexReplace Callback) {
+		Regex PatternCopy(Pattern);
+		const std::string Subject(Text);
+		return PatternCopy.replace(Subject, Global, [&](const std::string &Match, int Index, int Group) {
+			CheckRegexProgress(Global, Match, Group);
+			return Callback(chaiscript::const_var(Match), Index, Group);
+		});
+	}));
 };
 
 static const auto NAMESPACE_MATH = [](chaiscript::Namespace &Math) {
@@ -45,33 +94,44 @@ static const auto NAMESPACE_MATH = [](chaiscript::Namespace &Math) {
 	Math["abs"] = chaiscript::var(chaiscript::fun([](double x) { return fabs(x); }));
 };
 
-static const char *ReadScript(IStorage *pStorage, const char *pFilename)
-{
-	const char *pScript;
-	pScript = pStorage->ReadFileStr(pFilename, IStorage::TYPE_ALL);
-	if(!pScript || !*pScript)
-		throw std::string("Failed to open script '") + std::string(pFilename) + std::string("'");
-	return pScript;
-}
-
 class CScriptingCtx::CScriptingCtxData
 {
 public:
-	IStorage *m_pStorage;
-	chaiscript::ChaiScript m_Chai;
+	IStorage *m_pStorage = nullptr;
+	chaiscript::ChaiScript_Basic m_Chai{
+		chaiscript::Std_Lib::library(),
+		std::make_unique<TScriptParser>(),
+		{}, {},
+		{chaiscript::Options::No_Load_Modules, chaiscript::Options::No_External_Scripts}};
+
+	chaiscript::Boxed_Value EvaluateFile(const char *pFilename)
+	{
+		const auto Read = [this](const char *pPath) {
+			void *pRaw = nullptr;
+			unsigned Size = 0;
+			const auto Result = m_pStorage->ReadFileCheckedBounded(pPath, IStorage::TYPE_ALL, &pRaw, &Size, MAX_SCRIPT_FILE_BYTES);
+			std::unique_ptr<char, decltype(&std::free)> pScript(static_cast<char *>(pRaw), std::free);
+			if(Result != IStorage::EReadFileResult::SUCCESS || !pScript || mem_has_null(pScript.get(), Size))
+				pScript.reset();
+			return pScript;
+		};
+		// 求值前释放存储读取缓冲，避免嵌套 include 累积两份源码。
+		const std::string Script = QmEvaluateScriptFile(pFilename, Read, [](const char *pScript) {
+			return std::string(pScript);
+		});
+		return m_Chai.eval(Script, chaiscript::Exception_Handler(), pFilename);
+	}
 };
 
-CScriptingCtx::CScriptingCtx()
+CScriptingCtx::CScriptingCtx() :
+	m_pData(std::make_unique<CScriptingCtxData>())
 {
-	m_pData = new CScriptingCtxData{
-		nullptr,
-		chaiscript::ChaiScript({}, {}, {chaiscript::Options::No_Load_Modules, chaiscript::Options::No_External_Scripts})};
 	static const auto s_PrintStr = chaiscript::fun([](const std::string &Msg) {
 		log_info(SCRIPTING_IMPL "/print", "%s", Msg.c_str());
 	});
 	m_pData->m_Chai.add(s_PrintStr, "print_string");
 	m_pData->m_Chai.add(s_PrintStr, "println_string");
-	const auto PrintStrBoxed = chaiscript::fun([&](const chaiscript::Boxed_Value &Value) {
+	const auto PrintStrBoxed = chaiscript::fun([this](const chaiscript::Boxed_Value &Value) {
 		chaiscript::Boxed_Value ToStringRaw = m_pData->m_Chai.eval("to_string");
 		std::function<std::string(chaiscript::Boxed_Value)> ToString =
 			chaiscript::boxed_cast<std::function<std::string(chaiscript::Boxed_Value)>>(ToStringRaw);
@@ -79,14 +139,14 @@ CScriptingCtx::CScriptingCtx()
 	});
 	m_pData->m_Chai.add(PrintStrBoxed, "print");
 	m_pData->m_Chai.add(PrintStrBoxed, "puts");
-	m_pData->m_Chai.add(chaiscript::fun([&](const std::string &Module) {
-		const char *pScript = ReadScript(m_pData->m_pStorage, Module.c_str());
-		auto Out = m_pData->m_Chai.eval(pScript, chaiscript::Exception_Handler(), Module);
-		std::free((void *)pScript);
-		return Out;
+	m_pData->m_Chai.add(chaiscript::fun([this](const std::string &Module) {
+		CQmScriptExecutionScope Scope;
+		if(!Scope.Entered())
+			throw std::runtime_error(CQmScriptExecutionScope::ERROR);
+		return m_pData->EvaluateFile(Module.c_str());
 	}),
 		"include");
-	m_pData->m_Chai.add(chaiscript::fun([&](const std::string &Path) {
+	m_pData->m_Chai.add(chaiscript::fun([this](const std::string &Path) {
 		return m_pData->m_pStorage->FileExists(Path.c_str(), IStorage::TYPE_ALL);
 	}),
 		"file_exists");
@@ -94,10 +154,7 @@ CScriptingCtx::CScriptingCtx()
 	m_pData->m_Chai.register_namespace(NAMESPACE_MATH, "math");
 }
 
-CScriptingCtx::~CScriptingCtx()
-{
-	delete m_pData;
-}
+CScriptingCtx::~CScriptingCtx() = default;
 
 static chaiscript::Boxed_Value Any2Boxed(const CScriptingCtx::Any &Any)
 {
@@ -154,16 +211,24 @@ void CScriptingCtx::AddGlobal(const char *pName, const std::string &Object)
 void CScriptingCtx::Run(IStorage *pStorage, const char *pFilename, const char *pArgs)
 {
 	m_pData->m_pStorage = pStorage;
-	const char *pScript = nullptr;
 	try
 	{
+		if(pStorage == nullptr)
+			throw std::runtime_error("Script storage is unavailable");
 		m_pData->m_Chai.add_global_const(chaiscript::const_var(std::string(pArgs)), "args");
-		pScript = ReadScript(pStorage, pFilename);
-		m_pData->m_Chai.eval(pScript, chaiscript::Exception_Handler(), pFilename);
+		m_pData->EvaluateFile(pFilename);
 	}
 	catch(const chaiscript::exception::eval_error &e)
 	{
-		log_error(SCRIPTING_IMPL, "Eval error in '%s': %s", pFilename, e.pretty_print().c_str());
+		try
+		{
+			log_error(SCRIPTING_IMPL, "Eval error in '%s': %s", pFilename, e.pretty_print().c_str());
+		}
+		catch(...)
+		{
+			// 详细堆栈格式化失败时使用异常已有的消息。
+			log_error(SCRIPTING_IMPL, "Eval error in '%s': %s", pFilename, e.what());
+		}
 	}
 	catch(const std::exception &e)
 	{
@@ -191,5 +256,4 @@ void CScriptingCtx::Run(IStorage *pStorage, const char *pFilename, const char *p
 	{
 		log_error(SCRIPTING_IMPL, "Unknown exception in '%s'", pFilename);
 	}
-	std::free((void *)pScript);
 }

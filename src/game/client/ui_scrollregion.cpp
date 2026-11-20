@@ -598,9 +598,6 @@ void CScrollRegion::DoScrollInput()
 	float WheelDelta = 0.0f;
 	if(!Ui()->TryConsumeWheel(pWheelOwnerId, &WheelDelta))
 		return;
-	// Alt+滚轮 = 3 倍步长（加速滚动）。
-	if(Input() != nullptr && Input()->AltIsPressed())
-		WheelDelta *= 3.0f;
 	m_WheelConsumedThisFrame = true;
 	m_ScrollState.AddWheelImpulse(WheelDelta, ScrollMetrics(), ScrollConfig());
 }
@@ -638,7 +635,11 @@ void CScrollRegion::MaintainNoScrollSliderActive()
 	const void *pId = &m_SliderId;
 	const bool WasActive = Ui()->IsActiveItem(pId);
 	const bool Active = ScrollRegionShouldKeepNoScrollSliderActive(WasActive, Ui()->MouseButton(0));
-	m_ScrollState.ResetForNonScrollableContent(Active);
+	// 轨道可能尚未展开或太短。内容仍然溢出时，保留滚动偏移和动画。
+	if(!ContentOverflows())
+		m_ScrollState.ResetForNonScrollableContent(Active);
+	else if(!Active)
+		m_ScrollState.EndThumbDrag();
 	if(Active)
 		Ui()->SetActiveItem(pId);
 	else if(WasActive)
@@ -649,15 +650,16 @@ void CScrollRegion::MaintainNoScrollSliderActive()
 
 void CScrollRegion::DoSlider()
 {
+	if(m_Params.m_HideScrollbar)
+	{
+		if(!Ui()->RenderOnly())
+			m_ScrollState.EndThumbDrag();
+		return;
+	}
+
 	const SQmScrollMetrics Metrics = ScrollMetrics();
 	const SQmScrollConfig Config = ScrollConfig();
 	const float ScrollMax = Metrics.MaxOffset();
-	if(m_Params.m_HideScrollbar)
-	{
-		m_ScrollState.Advance(0.0f, Metrics, Config);
-		m_ScrollState.EndThumbDrag();
-		return;
-	}
 
 	// 滑块与占位宽度走同一拍：轨道还在展开时滑块淡入，不会「硬切」冒出来。
 	// 覆盖式轨道不占位，改用独立显示系数：内容溢出时淡入、不溢出时淡出。
@@ -723,9 +725,12 @@ void CScrollRegion::DoSlider()
 	const float MousePos = m_Params.m_ScrollHorizontal ? Ui()->MouseX() : Ui()->MouseY();
 	const bool WasActive = Ui()->ActiveItem() == pId;
 	if(HandleInteractive && !Ui()->RenderOnly())
+	{
 		Ui()->CaptureTouchDrag(pId, &m_RailRect);
-	if(HandleInteractive && !Ui()->RenderOnly())
-		Ui()->DoButtonLogic(pId, 0, &m_RailRect, BUTTONFLAG_LEFT); // Result ignored, we only care about the button becoming and being active
+		// 滑块已抓住时允许拖出轨道。新按下须命中本帧轨道。
+		if(WasActive || !Ui()->MouseButton(0) || Ui()->MouseHovered(&m_RailRect))
+			Ui()->DoButtonLogic(pId, 0, &m_RailRect, BUTTONFLAG_LEFT);
+	}
 	if(HandleInteractive && !Ui()->RenderOnly() && Ui()->CheckActiveItem(pId))
 	{
 		if(!WasActive)

@@ -8,6 +8,8 @@
 #include <cstddef>
 #include <cstdint>
 
+class CPngReadAllocator;
+
 // 地图库条目的封面图：把官方地图缩略图缩成条目左侧的小图，并在右侧接一段
 // 参差的拖尾渐隐到没有。这里只做纯计算与解码，不接触图形接口，因此可以在
 // worker 线程执行并直接单元测试。
@@ -16,12 +18,26 @@
 // 一条极窄的横条，内容无法辨认；缩成正常比例的小图反而能看出是哪张地图。
 namespace QmMapCover
 {
-	// ddnet.org 官方地图缩略图地址前缀；只有该来源的图片会被下载和缓存。
+	enum class EPrepareResult
+	{
+		SUCCESS,
+		INVALID,
+		RESOURCE_ERROR,
+	};
+
+	// 仅在同步合成期间借用，用于输出及结算模糊缓冲。返回的内存须与 free 兼容。
+	struct SOutputAllocation
+	{
+		void *(*m_pfnAllocate)(size_t Size, void *pUser) noexcept = nullptr;
+		void *m_pUser = nullptr;
+	};
+
+	// DDNet 官方地图缩略图的初始请求 URL 前缀，重定向由 HTTP 层处理。
 	inline constexpr const char *THUMBNAIL_URL_PREFIX = "https://ddnet.org/ranks/maps/";
 	// 缓存目录与文件名前缀：缓存文件名沿用 URL 末段，避开 Windows 设备名。
 	inline constexpr const char *CACHE_FOLDER = qm_storage::CACHE_MAP_COVERS_DIR;
 	inline constexpr const char *CACHE_FILE_PREFIX = "cover_";
-	// 输出尺寸上限与单张缩略图解码上限。
+	// 输出尺寸上限与源图像素预算，源图按 RGBA 字节数校验。
 	inline constexpr int MAX_WIDTH = 512;
 	inline constexpr int MAX_HEIGHT = 256;
 	inline constexpr size_t MAX_DECODED_BYTES = 8 * 1024 * 1024;
@@ -57,8 +73,11 @@ namespace QmMapCover
 	// （按目标高度等比缩放并居中裁切），右侧采样缩略图靠右的列拉出参差拖尾。
 	// 输出总是 FORMAT_RGBA，尺寸为 OutWidth×OutHeight。失败时不修改 Out。
 	bool Compose(const CImageInfo &Source, int OutWidth, int OutHeight, const SArt &Art, CImageInfo &Out);
+	EPrepareResult ComposeChecked(const CImageInfo &Source, int OutWidth, int OutHeight, const SArt &Art, CImageInfo &Out, const SOutputAllocation *pAllocation = nullptr);
 	// 在工作线程里先解码 PNG，再走 Compose。pContextName 只用于解码日志。
 	bool DecodeAndCompose(const void *pPngData, size_t DataSize, const char *pContextName, int OutWidth, int OutHeight, const SArt &Art, CImageInfo &Out);
+	EPrepareResult DecodeAndComposeChecked(const void *pPngData, size_t DataSize, const char *pContextName, int OutWidth, int OutHeight, const SArt &Art, CImageInfo &Out,
+		CPngReadAllocator *pPngAllocator = nullptr, const SOutputAllocation *pOutputAllocation = nullptr);
 
 	// 同一张地图的行条目与详情条共用同一个种子，让拖尾走向保持一致。
 	uint32_t SeedForUrl(const char *pUrl);

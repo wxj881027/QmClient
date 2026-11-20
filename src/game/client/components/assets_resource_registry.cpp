@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <new>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -17,6 +18,8 @@ SEntitiesAssetSelection ResolveEntitiesAssetSelection(std::string_view AssetName
 namespace
 {
 	constexpr std::string_view ENTITY_BG_WORKSHOP_PREFIX = "entity_bg/";
+	constexpr std::string_view ENTITY_BG_WORKSHOP_FOLDER_TOKEN = "//entity_bg";
+	constexpr std::string_view ENTITY_BG_WORKSHOP_FOLDER_PREFIX = "//entity_bg/";
 	constexpr std::string_view ENTITY_BG_INSTALL_PREFIX = "assets/entity_bg/";
 	constexpr std::string_view ENTITY_BG_MAP_SUFFIX = ".map";
 	constexpr const char *ENTITY_BG_WORKSHOP_FOLDER_LABEL = "entity_bg (Workshop)";
@@ -121,7 +124,7 @@ bool IsEntityBgWorkshopRootEntry(const SEntityBgHierarchyEntry &Entry)
 {
 	return Entry.m_IsDirectory &&
 	       Entry.m_Source == EEntityBgHierarchyEntrySource::WORKSHOP &&
-	       str_comp(Entry.m_aName, "entity_bg") == 0;
+	       IsEntityBgWorkshopFolderPath(Entry.m_aName);
 }
 
 EEntityBgHierarchyEntrySource MergeEntityBgHierarchyEntrySource(EEntityBgHierarchyEntrySource Existing, EEntityBgHierarchyEntrySource Incoming)
@@ -143,23 +146,63 @@ bool AssetResourceNeedsLegacyImport(std::string_view CurrentName)
 	return !IsProtectedDefaultAsset(CurrentName);
 }
 
+namespace
+{
+	std::string NextIndexedAssetName(std::span<const std::string> ExistingNames, std::string_view BaseName, const SAssetResourceCategory *pReservedCategory)
+	{
+		const auto IsReserved = [pReservedCategory](std::string_view Name) {
+			return pReservedCategory && IsReservedNamedSingleFileAssetName(*pReservedCategory, Name);
+		};
+		const auto HasName = [ExistingNames](std::string_view Name) {
+			return std::any_of(ExistingNames.begin(), ExistingNames.end(), [Name](const auto &Existing) { return Existing == Name; });
+		};
+		if(!IsReserved(BaseName) && !HasName(BaseName))
+			return std::string(BaseName);
+
+		const std::string Prefix = std::string(BaseName) + "_";
+		std::string Candidate = Prefix + "2";
+		if(!IsReserved(Candidate) && !HasName(Candidate))
+			return Candidate;
+
+		// 只索引同族名称；基础名或首个数字名可用时不分配索引。
+		const auto InFamily = [&Prefix](const std::string &Name) { return Name.starts_with(Prefix); };
+		const auto FamilyCount = static_cast<std::size_t>(std::count_if(ExistingNames.begin(), ExistingNames.end(), InFamily));
+		std::vector<std::string_view> Occupied;
+		bool Indexed = false;
+		try
+		{
+			Occupied.reserve(FamilyCount);
+			for(const auto &Name : ExistingNames)
+				if(InFamily(Name))
+					Occupied.emplace_back(Name);
+			std::sort(Occupied.begin(), Occupied.end());
+			Indexed = true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 辅助索引申请失败时仍可按原扫描规则选名，不改变迁移结果。
+		}
+
+		for(std::size_t Suffix = 3;; ++Suffix)
+		{
+			Candidate = Prefix + std::to_string(Suffix);
+			if(IsReserved(Candidate))
+				continue;
+			const bool Exists = Indexed ? std::binary_search(Occupied.begin(), Occupied.end(), std::string_view(Candidate)) : HasName(Candidate);
+			if(!Exists)
+				return Candidate;
+		}
+	}
+}
+
 std::string NextLegacyAssetName(std::span<const std::string> ExistingNames)
 {
-	const auto HasName = [ExistingNames](std::string_view Name) {
-		return std::any_of(ExistingNames.begin(), ExistingNames.end(), [Name](const std::string &ExistingName) {
-			return ExistingName == Name;
-		});
-	};
+	return NextIndexedAssetName(ExistingNames, "legacy", nullptr);
+}
 
-	if(!HasName("legacy"))
-		return "legacy";
-
-	for(int Suffix = 2;; ++Suffix)
-	{
-		std::string Candidate = "legacy_" + std::to_string(Suffix);
-		if(!HasName(Candidate))
-			return Candidate;
-	}
+std::string NextReservedNamedSingleFileMigrationName(const SAssetResourceCategory &Category, std::string_view OldName, std::span<const std::string> ExistingNames)
+{
+	return NextIndexedAssetName(ExistingNames, std::string(OldName) + "_local", &Category);
 }
 
 namespace
@@ -331,13 +374,30 @@ std::array<std::string, 4> BuildNamedSingleFileAssetCandidates(std::string_view 
 
 bool IsEntityBgWorkshopFolderPath(const char *pPath)
 {
-	return pPath != nullptr && str_comp(pPath, "entity_bg") == 0;
+	return pPath != nullptr && (str_comp(pPath, ENTITY_BG_WORKSHOP_FOLDER_TOKEN.data()) == 0 || str_comp(pPath, "entity_bg") == 0);
+}
+
+bool IsEntityBgParentFolderPath(const char *pPath)
+{
+	return pPath != nullptr && str_comp(pPath, "/") == 0;
+}
+
+bool EntityBgWorkshopAssetMatchesFolder(std::string_view AssetName, const char *pCurrentFolder)
+{
+	if(!IsEntityBgWorkshopFolderOrChildPath(pCurrentFolder))
+		return false;
+	if(IsEntityBgWorkshopFolderPath(pCurrentFolder))
+		return true;
+	std::string_view Folder(pCurrentFolder);
+	if(Folder.starts_with("//"))
+		Folder.remove_prefix(2);
+	return AssetName.size() > Folder.size() && AssetName.starts_with(Folder) && AssetName[Folder.size()] == '/';
 }
 
 bool EntityBgHierarchyEntryLess(const SEntityBgHierarchyEntry &Left, const SEntityBgHierarchyEntry &Right)
 {
-	const bool LeftIsParent = str_comp(Left.m_aName, "..") == 0;
-	const bool RightIsParent = str_comp(Right.m_aName, "..") == 0;
+	const bool LeftIsParent = Left.m_IsDirectory && IsEntityBgParentFolderPath(Left.m_aName);
+	const bool RightIsParent = Right.m_IsDirectory && IsEntityBgParentFolderPath(Right.m_aName);
 	if(LeftIsParent != RightIsParent)
 		return LeftIsParent;
 
@@ -380,13 +440,20 @@ static std::string_view EntityBgHierarchyPath(std::string_view AssetName)
 	return AssetName;
 }
 
-static bool IsEntityBgWorkshopFolderOrChildPath(const char *pPath)
+bool IsEntityBgWorkshopFolderOrChildPath(const char *pPath)
 {
-	return pPath != nullptr && (IsEntityBgWorkshopFolderPath(pPath) || str_startswith(pPath, "entity_bg/"));
+	return pPath != nullptr && (IsEntityBgWorkshopFolderPath(pPath) || str_startswith(pPath, ENTITY_BG_WORKSHOP_FOLDER_PREFIX.data()) || str_startswith(pPath, "entity_bg/"));
 }
 
 static std::string_view EntityBgLogicalFolder(std::string_view CurrentFolder)
 {
+	if(CurrentFolder == ENTITY_BG_WORKSHOP_FOLDER_TOKEN)
+		return "";
+	if(CurrentFolder.starts_with(ENTITY_BG_WORKSHOP_FOLDER_PREFIX))
+		return CurrentFolder.substr(ENTITY_BG_WORKSHOP_FOLDER_PREFIX.size());
+	// LOCAL 目录用前导斜杠隔离导航身份；只去掉该标记，不再解释同名 Workshop 前缀。
+	if(CurrentFolder.starts_with('/'))
+		return CurrentFolder.substr(1);
 	if(CurrentFolder == "entity_bg")
 		return "";
 	if(CurrentFolder.starts_with(ENTITY_BG_WORKSHOP_PREFIX))
@@ -419,7 +486,7 @@ std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::ve
 	};
 
 	if(aFolder[0] != '\0')
-		AddEntry("..", "..", true, EEntityBgHierarchyEntrySource::NAVIGATION);
+		AddEntry("/", "..", true, EEntityBgHierarchyEntrySource::NAVIGATION);
 
 	for(const std::string &AssetName : vAssetNames)
 	{
@@ -443,7 +510,7 @@ std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::ve
 			else
 			{
 				const std::string FolderDisplayName(HierarchyName.substr(0, SlashPos));
-				const std::string FolderPath(HierarchyName.substr(0, SlashPos));
+				const std::string FolderPath = "/" + std::string(HierarchyName.substr(0, SlashPos));
 				AddEntry(FolderPath.c_str(), FolderDisplayName.c_str(), true, Source);
 			}
 			continue;
@@ -460,7 +527,7 @@ std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::ve
 				continue;
 		}
 
-		const std::string_view MatchFolder = IsWorkshopFolder ? LogicalFolder : std::string_view(aFolder);
+		const std::string_view MatchFolder = LogicalFolder;
 		if(HierarchyName == MatchFolder)
 			continue;
 		if(!MatchFolder.empty())
@@ -483,13 +550,13 @@ std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::ve
 			const std::string ChildDisplayName(Remainder.substr(0, SlashPos));
 			const std::string ChildLogicalPath = MatchFolder.empty() ? std::string(Remainder.substr(0, SlashPos)) :
 										   std::string(MatchFolder) + "/" + std::string(Remainder.substr(0, SlashPos));
-			const std::string ChildPath = IsWorkshopFolder ? std::string(ENTITY_BG_WORKSHOP_PREFIX) + ChildLogicalPath : ChildLogicalPath;
+			const std::string ChildPath = IsWorkshopFolder ? std::string(ENTITY_BG_WORKSHOP_FOLDER_PREFIX) + ChildLogicalPath : "/" + ChildLogicalPath;
 			AddEntry(ChildPath.c_str(), ChildDisplayName.c_str(), true, Source);
 		}
 	}
 
 	if(aFolder[0] == '\0' && ShowWorkshopFolder && (ForceShowWorkshopFolder || HasEntityBgWorkshopFolder(vAssetNames, pAssetSources)))
-		AddEntry("entity_bg", ENTITY_BG_WORKSHOP_FOLDER_LABEL, true, EEntityBgHierarchyEntrySource::WORKSHOP);
+		AddEntry(ENTITY_BG_WORKSHOP_FOLDER_TOKEN.data(), ENTITY_BG_WORKSHOP_FOLDER_LABEL, true, EEntityBgHierarchyEntrySource::WORKSHOP);
 
 	std::stable_sort(vEntries.begin(), vEntries.end(), EntityBgHierarchyEntryLess);
 	return vEntries;
@@ -509,7 +576,7 @@ void BuildEntityBgParentFolder(const char *pCurrentFolder, char *pOut, int OutSi
 	if(pOut[0] == '\0')
 		return;
 
-	if(str_comp(pOut, "entity_bg") == 0 || fs_parent_dir(pOut) != 0)
+	if(IsEntityBgWorkshopFolderPath(pOut) || fs_parent_dir(pOut) != 0)
 		pOut[0] = '\0';
 }
 

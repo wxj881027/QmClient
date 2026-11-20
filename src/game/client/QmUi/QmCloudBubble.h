@@ -6,7 +6,8 @@
 #include <engine/graphics.h>
 
 #include <cstdint>
-#include <vector>
+
+class IAllocationResource;
 
 namespace qm_chat_bubble
 {
@@ -127,7 +128,7 @@ namespace qm_chat_bubble
 		IGraphics::CTextureHandle m_Texture;
 
 	public:
-		void Init(IGraphics *pGraphics);
+		void Init(IGraphics *pGraphics, IAllocationResource *pPixelMemory = nullptr);
 		void Shutdown(IGraphics *pGraphics);
 		void Render(IGraphics *pGraphics, const SLayout &Layout, const SPalette &Colors, float Assembly);
 	};

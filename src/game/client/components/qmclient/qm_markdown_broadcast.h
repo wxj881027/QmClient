@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 
 inline bool QmNewsShouldAnnounce(bool Offline, bool StartMenu, bool PopupOpen, bool ReleaseChanged, bool UnreadBroadcast)
 {
@@ -14,13 +15,30 @@ inline bool QmNewsShouldAnnounce(bool Offline, bool StartMenu, bool PopupOpen, b
 
 class CQmMarkdownBroadcast
 {
-	static constexpr size_t MAX_BYTES = 64 * 1024;
 	std::string m_Markdown;
 	int m_Version = -1;
 	int m_Revision = 0;
 	char m_aContentId[SHA256_MAXSTRSIZE] = {};
 
 public:
+	static constexpr size_t MAX_BYTES = 64 * 1024;
+	enum class EApplyResult
+	{
+		REJECTED,
+		UNCHANGED,
+		APPLIED,
+		RETRY
+	};
+
+private:
+	EApplyResult CheckApply(std::string_view Markdown, int Version) const;
+	void Publish(std::string &Markdown, int Version);
+
+public:
+	// 复制准备失败保留已发布内容；调用方持有输入并在后续帧重试。
+	EApplyResult TryApply(std::string_view Markdown, int Version);
+	// 拒收时不消费输入；成功时交换所有权，不复制消息正文。
+	EApplyResult ApplyOwned(std::string &&Markdown, int Version);
 	bool Apply(const std::string &Markdown, int Version);
 	bool HasMarkdown() const { return !m_Markdown.empty(); }
 	const char *Markdown() const { return m_Markdown.c_str(); }

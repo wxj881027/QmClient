@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <new>
 
 void CQmAuthorName::Reset(IGraphics *pGraphics)
 {
@@ -34,6 +35,7 @@ void CQmAuthorName::Reset(IGraphics *pGraphics)
 }
 
 void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthors::SAuthor &Author, const CUIRect &Label, float FontSize, bool PointerActive)
+try
 {
 	if(pUi->DrawingSuppressed() || Label.w <= 0.0f || Label.h <= 0.0f)
 		return;
@@ -64,8 +66,9 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 		DrawLabel();
 		return;
 	}
-	float X0, Y0, X1, Y1;
-	pGraphics->GetScreen(&X0, &Y0, &X1, &Y1);
+	const CScreenRect Screen = pGraphics->GetScreen();
+	const float X0 = Screen.m_TopLeft.x, Y0 = Screen.m_TopLeft.y;
+	const float X1 = Screen.m_BottomRight.x, Y1 = Screen.m_BottomRight.y;
 	const vec2 PixelSize((X1 - X0) / std::max(pGraphics->ScreenWidth(), 1), (Y1 - Y0) / std::max(pGraphics->ScreenHeight(), 1));
 	const float Radius = FontSize * (0.035f + 0.20f * Presentation.m_Blur);
 	// 固定最大留白并对齐屏幕像素，鼠标距离只改变卷积核，不改变文字纹理的位置。
@@ -82,8 +85,41 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 	const int Height = PixelSize.y > 0.0f ? static_cast<int>(std::ceil(Area.h / PixelSize.y)) : 0;
 	// 先按屏幕的字号与像素比例排版；小纹理的投影只用于绘制已有字形。
 	CUIElement::SUIElementRect Text;
+	struct STextCleanup
+	{
+		ITextRender &m_TextRender;
+		STextContainerIndex &m_Container;
+		ColorRGBA m_Color;
+		ColorRGBA m_OutlineColor;
+		bool m_Complete = false;
+
+		~STextCleanup()
+		{
+			if(m_Complete)
+				return;
+			// 排版失败时默认色可能尚未恢复，已分配的容器交给文字引擎回收。
+			m_TextRender.TextColor(m_Color);
+			m_TextRender.TextOutlineColor(m_OutlineColor);
+			m_TextRender.ReleaseTemporaryTextContainer(m_Container);
+		}
+	} TextCleanup{*pTextRender, Text.m_UITextContainer, pTextRender->GetTextColor(), pTextRender->GetTextOutlineColor()};
 	pUi->DoLabel(Text, &Label, Presentation.m_pText, FontSize, TEXTALIGN_MC, Props);
 	pUi->FlushQuadBatch();
+
+	struct SRestoreProjection
+	{
+		IGraphics &m_Graphics;
+		const CScreenRect &m_Screen;
+		bool m_EndTarget = false;
+
+		~SRestoreProjection()
+		{
+			if(m_EndTarget)
+				m_Graphics.EndRenderTarget();
+			m_Graphics.MapScreen(m_Screen);
+		}
+	};
+
 	bool Rendered = false;
 	if(pGraphics->IsRenderTargetGaussianBlurSupported() && Width > 0 && Height > 0 && Width <= 1024 && Height <= 512)
 	{
@@ -101,10 +137,11 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 		}
 		if(m_Source.IsValid() && m_aTemporary[0].IsValid() && m_Blurred.IsValid() && pGraphics->BeginRenderTarget(m_Source, ui_token::color::COLOR_TRANSPARENT))
 		{
-			pGraphics->MapScreen(Area.x, Area.y, Area.x + m_Width * PixelSize.x, Area.y + m_Height * PixelSize.y);
-			pTextRender->RenderTextContainer(Text.m_UITextContainer, Text.m_TextColor, Text.m_TextOutlineColor);
-			pGraphics->EndRenderTarget();
-			pGraphics->MapScreen(X0, Y0, X1, Y1);
+			{
+				const SRestoreProjection Restore{*pGraphics, Screen, true};
+				pGraphics->MapScreen(Area.x, Area.y, Area.x + m_Width * PixelSize.x, Area.y + m_Height * PixelSize.y);
+				pTextRender->RenderTextContainer(Text.m_UITextContainer, Text.m_TextColor, Text.m_TextOutlineColor);
+			}
 			IGraphics::SGaussianBlurParams Params;
 			Params.m_Radius = std::clamp(static_cast<int>(std::ceil(Radius * 3.0f / PixelSize.y)), 1, IGraphics::GAUSSIAN_BLUR_MAX_RADIUS);
 			Params.m_Sigma = std::max(0.5f, Radius / PixelSize.y);
@@ -126,6 +163,7 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 	}
 	if(!Rendered)
 	{
+		const SRestoreProjection Restore{*pGraphics, Screen};
 		// 回退也复用同一份排版，避免每个采样点独立像素取整后让名字偏移。
 		for(int Y = -1; Y <= 1; ++Y)
 			for(int X = -1; X <= 1; ++X)
@@ -133,7 +171,11 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 				pGraphics->MapScreen(X0 - X * Radius, Y0 - Y * Radius, X1 - X * Radius, Y1 - Y * Radius);
 				pTextRender->RenderTextContainer(Text.m_UITextContainer, Text.m_TextColor.WithMultipliedAlpha(1.0f / 9.0f), Text.m_TextOutlineColor.WithMultipliedAlpha(1.0f / 9.0f));
 			}
-		pGraphics->MapScreen(X0, Y0, X1, Y1);
 	}
 	pTextRender->DeleteTextContainer(Text.m_UITextContainer);
+	TextCleanup.m_Complete = true;
+}
+catch(const std::bad_alloc &)
+{
+	// 跳过本帧的名字绘制，让赞助卡继续渲染。
 }

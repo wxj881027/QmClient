@@ -1,23 +1,32 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_FONT_STORE_CATALOG_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_FONT_STORE_CATALOG_H
 
+#include "bounded_file_reader.h"
 #include "font_download_storage.h"
 
 #include <base/log.h>
+#include <base/str.h>
 
+#include <engine/engine.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
 #include <engine/storage.h>
 
 #include <algorithm>
 #include <cctype>
-#include <cstdlib>
 #include <map>
+#include <memory>
+#include <new>
+#include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace fontstore
 {
+	inline constexpr unsigned MAX_CATALOG_FILE_BYTES = 8 * 1024 * 1024;
+	inline constexpr unsigned long MAX_CATALOG_JSON_BYTES = 64 * 1024 * 1024;
+
 	struct SEntry
 	{
 		std::string m_Family; // 字体族显示名
@@ -46,7 +55,7 @@ namespace fontstore
 
 	inline bool IsValidFontFileName(const std::string &File)
 	{
-		return qm_font_download::ValidFilename(File);
+		return qm_font_download::ValidFilename(File) && str_valid_filename(File.c_str());
 	}
 
 	// 仓库相对路径会拼进下载 URL 与落盘路径：锁死形态，禁止任何穿越写法。
@@ -60,57 +69,96 @@ namespace fontstore
 		       IsValidFontFileName(Path.substr(Path.rfind('/') + 1));
 	}
 
+	// 按完整字段名匹配，避免含零字节的键被当成已知字段。
+	inline const json_value &CatalogField(const json_value &Object, std::string_view Name)
+	{
+		for(unsigned i = 0; i < Object.u.object.length; ++i)
+		{
+			const json_object_entry &Field = Object.u.object.values[i];
+			if(std::string_view(Field.name, Field.name_length) == Name)
+				return *Field.value;
+		}
+		return json_value_none;
+	}
+
+	inline bool IsCatalogString(const json_value &Value)
+	{
+		return Value.type == json_string && Value.u.string.length == static_cast<unsigned>(str_length(Value.u.string.ptr));
+	}
+
 	// 目录与族聚合共用一次解析（懒加载）：条目按族名（大小写不敏感）归并，
 	// 同名族合并文件列表，族内首条即生成器排序后的主文件（可变字体优先）。
-	inline void LoadCatalog(IStorage *pStorage, std::vector<SEntry> &vEntries, std::vector<SFamily> &vFamilies)
+	template<typename TEntryAllocator, typename TFamilyAllocator>
+	void LoadCatalog(IStorage *pStorage, std::vector<SEntry, TEntryAllocator> &vEntries, std::vector<SFamily, TFamilyAllocator> &vFamilies)
 	{
-		void *pCatalogData = nullptr;
-		unsigned CatalogSize = 0;
-		// TYPE_ALL 会先搜用户目录再搜数据目录：用户侧同名目录可整体覆盖随包目录。
-		if(!pStorage->ReadFile("fonts/fonts_store/font_catalog.json", IStorage::TYPE_ALL, &pCatalogData, &CatalogSize))
+		CQmCheckedFileData File;
+		// TYPE_ALL 优先读取用户目录，只有文件缺失时才搜索后续存储根。
+		if(!File.Read(*pStorage, "fonts/fonts_store/font_catalog.json", IStorage::TYPE_ALL, MAX_CATALOG_FILE_BYTES))
 			return;
 
-		json_value *pJson = json_parse((json_char *)pCatalogData, CatalogSize);
+		json_settings Settings{};
+		Settings.max_memory = MAX_CATALOG_JSON_BYTES;
+		const std::string_view Text(static_cast<const char *>(File.Data()), File.Size());
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(
+			Text.find('\0') == std::string_view::npos ? JsonParseEx(&Settings, Text.data(), Text.size(), nullptr) : nullptr,
+			json_value_free);
+		// 同一对候选完成后才替换调用方状态，异常不能留下先写入的族索引。
+		std::vector<SEntry, TEntryAllocator> vCandidateEntries(vEntries, vEntries.get_allocator());
+		std::vector<SFamily, TFamilyAllocator> vCandidateFamilies(vFamilies, vFamilies.get_allocator());
 		if(pJson != nullptr && pJson->type == json_object)
 		{
-			const json_value &Fonts = (*pJson)["fonts"];
+			const json_value &Fonts = CatalogField(*pJson, "fonts");
 			if(Fonts.type == json_array)
 			{
+				auto CompareTargets = [](const std::string &Left, const std::string &Right) {
+					return str_utf8_comp_nocase(Left.c_str(), Right.c_str()) < 0;
+				};
+				std::set<std::string, decltype(CompareTargets)> UsedTargets(CompareTargets);
+				for(const SEntry &Existing : vEntries)
+					UsedTargets.insert(Existing.m_File);
 				std::map<std::string, size_t> FamilyIndex;
 				for(unsigned i = 0; i < Fonts.u.array.length; ++i)
 				{
 					const json_value &Entry = Fonts[i];
 					if(Entry.type != json_object)
 						continue;
-					const json_value &Name = Entry["n"];
-					const json_value &Path = Entry["f"];
-					if(Name.type != json_string || Path.type != json_string)
+					const json_value &Name = CatalogField(Entry, "n");
+					const json_value &Path = CatalogField(Entry, "f");
+					if(!IsCatalogString(Name) || !IsCatalogString(Path))
 						continue;
 					SEntry Parsed;
 					Parsed.m_Family = Name.u.string.ptr;
 					Parsed.m_RepoPath = Path.u.string.ptr;
-					const json_value &Category = Entry["c"];
-					if(Category.type == json_string)
-						Parsed.m_Category = Category.u.string.ptr;
-					const json_value &Variable = Entry["v"];
-					Parsed.m_Variable = Variable.type == json_integer && Variable.u.integer != 0;
-					// 国内直链锁死 gstatic.cn 域，避免目录被换入任意下载源。
-					const json_value &Direct = Entry["u"];
-					if(Direct.type == json_string && str_startswith(Direct.u.string.ptr, "https://fonts.gstatic.cn/") && str_endswith(Direct.u.string.ptr, ".ttf"))
-						Parsed.m_DirectUrl = Direct.u.string.ptr;
-					const json_value &Subsets = Entry["s"];
-					if(Subsets.type == json_array)
-					{
-						for(unsigned si = 0; si < Subsets.u.array.length; ++si)
-							if(Subsets[si].type == json_string)
-								Parsed.m_vSubsets.emplace_back(Subsets[si].u.string.ptr);
-					}
 					if(Parsed.m_Family.empty() || !IsValidRepoPath(Parsed.m_RepoPath))
 					{
 						log_warn("fontstore", "Font catalog entry for '%s' has an unsafe path, skipped", Parsed.m_Family.c_str());
 						continue;
 					}
 					Parsed.m_File = Parsed.m_RepoPath.substr(Parsed.m_RepoPath.rfind('/') + 1);
+
+					// 安装和预览缓存都按基名存储，只保留最先占用目标的条目。
+					if(!UsedTargets.insert(Parsed.m_File).second)
+					{
+						log_warn("fontstore", "Duplicate font catalog target '%s', skipped", Parsed.m_File.c_str());
+						continue;
+					}
+
+					const json_value &Category = CatalogField(Entry, "c");
+					if(IsCatalogString(Category))
+						Parsed.m_Category = Category.u.string.ptr;
+					const json_value &Variable = CatalogField(Entry, "v");
+					Parsed.m_Variable = Variable.type == json_integer && Variable.u.integer != 0;
+					// 国内直链锁死 gstatic.cn 域，避免目录被换入任意下载源。
+					const json_value &Direct = CatalogField(Entry, "u");
+					if(IsCatalogString(Direct) && str_startswith(Direct.u.string.ptr, "https://fonts.gstatic.cn/") && str_endswith(Direct.u.string.ptr, ".ttf"))
+						Parsed.m_DirectUrl = Direct.u.string.ptr;
+					const json_value &Subsets = CatalogField(Entry, "s");
+					if(Subsets.type == json_array)
+					{
+						for(unsigned si = 0; si < Subsets.u.array.length; ++si)
+							if(IsCatalogString(Subsets[si]))
+								Parsed.m_vSubsets.emplace_back(Subsets[si].u.string.ptr);
+					}
 
 					std::string LowerFamily = Parsed.m_Family;
 					std::transform(LowerFamily.begin(), LowerFamily.end(), LowerFamily.begin(), [](unsigned char c) { return (char)std::tolower(c); });
@@ -121,13 +169,13 @@ namespace fontstore
 						Family.m_Name = Parsed.m_Family;
 						Family.m_Category = Parsed.m_Category;
 						Family.m_vSubsets = Parsed.m_vSubsets;
-						Family.m_vEntryIndices.push_back(vEntries.size());
-						vFamilies.push_back(std::move(Family));
-						It = FamilyIndex.emplace(LowerFamily, vFamilies.size() - 1).first;
+						Family.m_vEntryIndices.push_back(vCandidateEntries.size());
+						vCandidateFamilies.push_back(std::move(Family));
+						It = FamilyIndex.emplace(LowerFamily, vCandidateFamilies.size() - 1).first;
 					}
 					else
-						vFamilies[It->second].m_vEntryIndices.push_back(vEntries.size());
-					vEntries.push_back(std::move(Parsed));
+						vCandidateFamilies[It->second].m_vEntryIndices.push_back(vCandidateEntries.size());
+					vCandidateEntries.push_back(std::move(Parsed));
 				}
 			}
 		}
@@ -135,9 +183,9 @@ namespace fontstore
 		{
 			log_warn("fontstore", "Failed to parse font catalog data/fonts/fonts_store/font_catalog.json");
 		}
-		json_value_free(pJson);
-		free(pCatalogData);
-		log_info("fontstore", "Font catalog loaded with %" PRIzu " files in %" PRIzu " families", vEntries.size(), vFamilies.size());
+		log_info("fontstore", "Font catalog loaded with %" PRIzu " files in %" PRIzu " families", vCandidateEntries.size(), vCandidateFamilies.size());
+		vEntries.swap(vCandidateEntries);
+		vFamilies.swap(vCandidateFamilies);
 	}
 
 	struct SCatalog
@@ -155,16 +203,19 @@ namespace fontstore
 		bool m_Published = false;
 		void Run() override
 		{
-			LoadCatalog(m_pStorage, m_Result.m_vEntries, m_Result.m_vFamilies);
-			for(SFamily &Family : m_Result.m_vFamilies)
+			SCatalog Candidate;
+			LoadCatalog(m_pStorage, Candidate.m_vEntries, Candidate.m_vFamilies);
+			for(SFamily &Family : Candidate.m_vFamilies)
 				Family.m_Installed = std::all_of(Family.m_vEntryIndices.begin(), Family.m_vEntryIndices.end(), [&](size_t Index) {
-					return qm_font_download::Installed(*m_pStorage, m_Result.m_vEntries[Index].m_File);
+					return qm_font_download::Installed(*m_pStorage, Candidate.m_vEntries[Index].m_File);
 				});
-			m_Result.m_Loaded = true;
+			Candidate.m_Loaded = true;
+			m_Result = std::move(Candidate);
 		}
 
 	public:
-		explicit CCatalogLoadJob(IStorage *pStorage) : m_pStorage(pStorage) {}
+		explicit CCatalogLoadJob(IStorage *pStorage) :
+			m_pStorage(pStorage) {}
 
 		bool TakeResult(SCatalog &Result)
 		{
@@ -175,6 +226,25 @@ namespace fontstore
 			return true;
 		}
 	};
+	// 只有引擎确认接收后才发布等待身份，拒绝或构造分配失败可沿原入口再试。
+	inline bool TryQueueCatalogLoadJob(std::shared_ptr<CCatalogLoadJob> &pPending, IEngine &Engine, IStorage *pStorage)
+	{
+		if(pPending)
+			return false;
+		try
+		{
+			auto pCandidate = std::make_shared<CCatalogLoadJob>(pStorage);
+			if(!Engine.TryAddJob(pCandidate))
+				return false;
+			pPending = std::move(pCandidate);
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+	}
+
 }
 
 #endif

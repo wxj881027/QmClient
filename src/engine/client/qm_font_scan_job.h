@@ -125,12 +125,12 @@ public:
 
 	bool Exhausted() const
 	{
-		return State() == STATE_DONE && m_Cursor == m_vFiles.size();
+		return Finished() && (State() != STATE_DONE || m_Cursor == m_vFiles.size());
 	}
 
 	bool Failed() const
 	{
-		return State() == STATE_DONE && m_Failed;
+		return Finished() && (State() != STATE_DONE || m_Failed);
 	}
 };
 

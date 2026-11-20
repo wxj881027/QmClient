@@ -5,6 +5,7 @@
 
 #include "auto_map.h"
 #include "collab_camera.h"
+#include "collab_join.h"
 #include "editor_actions.h"
 
 #include <base/color.h>
@@ -49,6 +50,7 @@
 #include <limits>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using namespace FontIcons;
@@ -250,7 +252,12 @@ bool CEditor::CallbackSaveImage(const char *pFilename, int StorageType, void *pU
 
 	CEditor *pEditor = static_cast<CEditor *>(pUser);
 
-	std::shared_ptr<CEditorImage> pImg = pEditor->Map()->SelectedImage();
+	const auto pImg = pEditor->Map()->SelectedImage();
+	if(!pImg || !pImg->m_pData)
+	{
+		pEditor->ShowFileDialogError(Localize("Exporting is not possible because the image could not be loaded.", "Editor"));
+		return false;
+	}
 
 	if(CImageLoader::SavePng(pEditor->Storage()->OpenFile(pFilename, IOFLAG_WRITE, StorageType), pFilename, *pImg))
 	{
@@ -270,18 +277,28 @@ bool CEditor::CallbackSaveSound(const char *pFilename, int StorageType, void *pU
 
 	CEditor *pEditor = static_cast<CEditor *>(pUser);
 
-	std::shared_ptr<CEditorSound> pSound = pEditor->Map()->SelectedSound();
+	const auto pSound = pEditor->Map()->SelectedSound();
+	if(!pSound || !pSound->m_pData || pSound->m_DataSize == 0)
+	{
+		pEditor->ShowFileDialogError(Localize("Exporting is not possible because the sound could not be loaded.", "Editor"));
+		return false;
+	}
 
 	IOHANDLE File = pEditor->Storage()->OpenFile(pFilename, IOFLAG_WRITE, StorageType);
-	if(File)
+	if(!File)
 	{
-		io_write(File, pSound->m_pData, pSound->m_DataSize);
-		io_close(File);
-		pEditor->OnDialogClose();
-		return true;
+		pEditor->ShowFileDialogError(Localize("Failed to open file '%s'.", "Editor"), pFilename);
+		return false;
 	}
-	pEditor->ShowFileDialogError(Localize("Failed to open file '%s'.", "Editor"), pFilename);
-	return false;
+	const bool WroteAll = io_write(File, pSound->m_pData, pSound->m_DataSize) == pSound->m_DataSize;
+	const bool Closed = io_close(File) == 0;
+	if(!WroteAll || !Closed)
+	{
+		pEditor->ShowFileDialogError(Localize("Failed to write sound to file '%s'.", "Editor"), pFilename);
+		return false;
+	}
+	pEditor->OnDialogClose();
+	return true;
 }
 
 bool CEditor::CallbackCustomEntities(const char *pFilename, int StorageType, void *pUser)
@@ -304,12 +321,19 @@ bool CEditor::CallbackCustomEntities(const char *pFilename, int StorageType, voi
 		return false;
 	}
 
+	const auto Texture = pEditor->Graphics()->LoadTextureRawMove(ImgInfo, pEditor->GetTextureUsageFlag(), pFilename);
+	if(!Texture.IsValid())
+	{
+		pEditor->ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilename);
+		return false;
+	}
+
 	pEditor->m_SelectEntitiesImage = aBuf;
 	pEditor->m_AllowPlaceUnusedTiles = EUnusedEntities::ALLOWED_IMPLICIT;
 	pEditor->m_PreventUnusedTilesWasWarned = false;
 
 	pEditor->Graphics()->UnloadTexture(&pEditor->m_EntitiesTexture);
-	pEditor->m_EntitiesTexture = pEditor->Graphics()->LoadTextureRawMove(ImgInfo, pEditor->GetTextureUsageFlag());
+	pEditor->m_EntitiesTexture = Texture;
 
 	pEditor->OnDialogClose();
 	return true;
@@ -2157,9 +2181,9 @@ void CEditor::DoQuadEnvelopes(const CLayerQuads *pLayerQuads)
 
 void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadIndex, int PointIndex)
 {
-	CEnvPoint_runtime *pPoint = &pEnvelope->m_vPoints[PointIndex];
-	const int Channel = pEnvelope->m_vPoints[PointIndex].m_Channel;
-	if(!(Map()->m_EnvelopeEditorState.m_ActiveChannels & (1 << Channel)))
+	CEnvelope::CPoint *pPoint = &pEnvelope->m_vPoints[PointIndex];
+	const int Channel = pPoint->m_Channel;
+	if(Channel < 0 || Channel >= CEnvPoint::MAX_CHANNELS || !(Map()->m_EnvelopeEditorState.m_ActiveChannels & (1 << Channel)))
 		return;
 	ColorRGBA Position(0, 0, 0, 0);
 	pEnvelope->Eval(pPoint->m_Time.AsSeconds(), Position, 3, false);
@@ -2170,6 +2194,7 @@ void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadI
 	{
 		if(MapView()->MouseDeltaWorld() != vec2(0.0f, 0.0f))
 		{
+			const int PreviousValue = pPoint->m_aValues[Channel];
 			if(m_QuadEnvelopePointOperation == EQuadEnvelopePointOperation::MOVE)
 			{
 				vec2 Pos = MapView()->MouseWorldPos();
@@ -2186,6 +2211,8 @@ void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadI
 			{
 				pPoint->m_aValues[2] += 10 * Ui()->MouseDeltaX();
 			}
+			if(pPoint->m_aValues[Channel] != PreviousValue)
+				Map()->OnModify();
 		}
 
 		if(!Ui()->MouseButton(0))
@@ -2236,6 +2263,18 @@ void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadI
 
 void CEditor::UpdateHotQuadPoint(const CLayerQuads *pLayer)
 {
+	if(Map()->SelectedLayer(0).get() != pLayer)
+		return;
+
+	const auto &vSelectedQuads = Map()->m_vSelectedQuads;
+	if(std::any_of(vSelectedQuads.begin(), vSelectedQuads.end(), [pLayer](int Index) {
+		   return Index < 0 || (size_t)Index >= pLayer->m_vQuads.size();
+	   }))
+	{
+		Map()->DeselectQuads();
+		Map()->DeselectQuadPoints();
+	}
+
 	const vec2 MouseWorld = MapView()->MouseWorldPos();
 
 	float MinDist = 500.0f;
@@ -2261,7 +2300,8 @@ void CEditor::UpdateHotQuadPoint(const CLayerQuads *pLayer)
 		{
 			for(const auto &EnvPoint : Map()->m_vpEnvelopes[Quad.m_PosEnv]->m_vPoints)
 			{
-				if(!(Map()->m_EnvelopeEditorState.m_ActiveChannels & (1 << EnvPoint.m_Channel)))
+				const int Channel = EnvPoint.m_Channel;
+				if(Channel < 0 || Channel >= CEnvPoint::MAX_CHANNELS || !(Map()->m_EnvelopeEditorState.m_ActiveChannels & (1 << Channel)))
 					continue;
 				ColorRGBA Value(0, 0, 0, 0);
 				Map()->m_vpEnvelopes[Quad.m_PosEnv]->Eval(EnvPoint.m_Time.AsSeconds(), Value, 2, false);
@@ -2325,25 +2365,31 @@ void CEditor::DoColorPickerButton(const void *pId, const CUIRect *pRect, ColorRG
 		m_ColorPickerPopupContext.m_HslaColor = color_cast<ColorHSLA>(Color);
 		m_ColorPickerPopupContext.m_HsvaColor = color_cast<ColorHSVA>(m_ColorPickerPopupContext.m_HslaColor);
 		m_ColorPickerPopupContext.m_Alpha = true;
+		m_ColorPickerPopupContext.m_State = EEditState::NONE;
 		m_pColorPickerPopupActiveId = pId;
 		Ui()->ShowPopupColorPicker(Ui()->MouseX(), Ui()->MouseY(), &m_ColorPickerPopupContext);
 	}
 
+	if(m_pColorPickerPopupActiveId != pId)
+		return;
+
+	const ColorRGBA PickerColor = m_ColorPickerPopupContext.m_RgbaColor;
 	if(Ui()->IsPopupOpen(&m_ColorPickerPopupContext))
 	{
-		if(m_pColorPickerPopupActiveId == pId)
-			SetColor(m_ColorPickerPopupContext.m_RgbaColor);
+		SetColor(PickerColor);
+		return;
 	}
-	else
-	{
-		m_pColorPickerPopupActiveId = nullptr;
-		if(m_ColorPickerPopupContext.m_State == EEditState::EDITING)
-		{
-			m_ColorPickerPopupContext.m_State = EEditState::END;
-			SetColor(m_ColorPickerPopupContext.m_RgbaColor);
-			m_ColorPickerPopupContext.m_State = EEditState::NONE;
-		}
-	}
+
+	m_pColorPickerPopupActiveId = nullptr;
+	EEditState &State = m_ColorPickerPopupContext.m_State;
+	if(State == EEditState::EDITING)
+		State = EEditState::END;
+	else if(State == EEditState::START || (State == EEditState::NONE && PickerColor.PackAlphaLast() != Color.PackAlphaLast()))
+		State = EEditState::ONE_GO;
+
+	if(State != EEditState::NONE)
+		SetColor(PickerColor);
+	State = EEditState::NONE;
 }
 
 bool CEditor::IsAllowPlaceUnusedTiles() const
@@ -2352,9 +2398,28 @@ bool CEditor::IsAllowPlaceUnusedTiles() const
 	return m_AllowPlaceUnusedTiles != EUnusedEntities::NOT_ALLOWED;
 }
 
+static bool EditorSavePathsEqual(const char *pFirst, const char *pSecond)
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	return str_utf8_comp_nocase(pFirst, pSecond) == 0;
+#else
+	return str_comp(pFirst, pSecond) == 0;
+#endif
+}
+
 bool CEditor::HasUnsavedData() const
 {
-	return std::any_of(m_vpMaps.begin(), m_vpMaps.end(), [](const auto &pMap) { return pMap->m_Modified; });
+	return std::any_of(m_vpMaps.begin(), m_vpMaps.end(), [&](const auto &pMap) {
+		if(pMap->m_Modified)
+			return true;
+		if(!pMap->m_ValidSaveFilename || pMap->m_aFilename[0] == '\0')
+			return false;
+
+		return std::any_of(m_WriterFinishJobs.begin(), m_WriterFinishJobs.end(), [&](const auto &pJob) {
+			return pJob->Map() == pMap.get() && EditorSavePathsEqual(pMap->m_aFilename, pJob->RealFilename()) &&
+			       (pJob->State() != IJob::STATE_DONE || pJob->ErrorMessage()[0] != '\0');
+		});
+	});
 }
 
 void CEditor::SLayerPanelState::Reset()
@@ -2442,7 +2507,7 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 		UnscrolledLayersBox.HSplitTop(State.m_InitialCutHeight, nullptr, &UnscrolledLayersBox);
 		UnscrolledLayersBox.y -= State.m_InitialMouseY - Ui()->MouseY();
 
-		UnscrolledLayersBox.y = std::clamp(UnscrolledLayersBox.y, MinDraggableValue, MaxDraggableValue);
+		UnscrolledLayersBox.y = std::clamp(UnscrolledLayersBox.y, MinDraggableValue, std::max(MinDraggableValue, MaxDraggableValue));
 
 		UnscrolledLayersBox.w = LayersBox.w;
 	}
@@ -2703,17 +2768,17 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 				if(Map()->m_vpGroups[g]->m_vpLayers[i]->m_Type == LAYERTYPE_TILES)
 				{
 					std::shared_ptr<CLayerTiles> pTiles = std::static_pointer_cast<CLayerTiles>(Map()->m_vpGroups[g]->m_vpLayers[i]);
-					str_copy(aBuf, pTiles->m_Image >= 0 ? Map()->m_vpImages[pTiles->m_Image]->m_aName : Localize("Tiles", "Editor"));
+					str_copy(aBuf, pTiles->m_Image >= 0 && (size_t)pTiles->m_Image < Map()->m_vpImages.size() ? Map()->m_vpImages[pTiles->m_Image]->m_aName : Localize("Tiles", "Editor"));
 				}
 				else if(Map()->m_vpGroups[g]->m_vpLayers[i]->m_Type == LAYERTYPE_QUADS)
 				{
 					std::shared_ptr<CLayerQuads> pQuads = std::static_pointer_cast<CLayerQuads>(Map()->m_vpGroups[g]->m_vpLayers[i]);
-					str_copy(aBuf, pQuads->m_Image >= 0 ? Map()->m_vpImages[pQuads->m_Image]->m_aName : Localize("Quads", "Editor"));
+					str_copy(aBuf, pQuads->m_Image >= 0 && (size_t)pQuads->m_Image < Map()->m_vpImages.size() ? Map()->m_vpImages[pQuads->m_Image]->m_aName : Localize("Quads", "Editor"));
 				}
 				else if(Map()->m_vpGroups[g]->m_vpLayers[i]->m_Type == LAYERTYPE_SOUNDS)
 				{
 					std::shared_ptr<CLayerSounds> pSounds = std::static_pointer_cast<CLayerSounds>(Map()->m_vpGroups[g]->m_vpLayers[i]);
-					str_copy(aBuf, pSounds->m_Sound >= 0 ? Map()->m_vpSounds[pSounds->m_Sound]->m_aName : Localize("Sound", "Editor"));
+					str_copy(aBuf, pSounds->m_Sound >= 0 && (size_t)pSounds->m_Sound < Map()->m_vpSounds.size() ? Map()->m_vpSounds[pSounds->m_Sound]->m_aName : Localize("Sound", "Editor"));
 				}
 			}
 
@@ -2952,12 +3017,21 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 		}
 	}
 
+	const auto ExtendLayerSelection = [&](int Direction) {
+		const auto pGroup = Map()->SelectedGroup();
+		const auto &vSelected = Map()->m_vSelectedLayers;
+		if(!pGroup || vSelected.empty() || vSelected.back() < 0 || (size_t)vSelected.back() >= pGroup->m_vpLayers.size())
+			return;
+
+		const int Index = vSelected.back() + Direction;
+		if(Index >= 0 && (size_t)Index < pGroup->m_vpLayers.size() && std::find(vSelected.begin(), vSelected.end(), Index) == vSelected.end())
+			Map()->AddSelectedLayer(Index);
+	};
 	if(Input()->KeyPress(KEY_DOWN) && m_Dialog == DIALOG_NONE && !Ui()->IsPopupOpen() && CLineInput::GetActiveInput() == nullptr && State.m_Operation == ELayerOperation::NONE)
 	{
 		if(Input()->ShiftIsPressed())
 		{
-			if(Map()->m_vSelectedLayers[Map()->m_vSelectedLayers.size() - 1] < (int)Map()->m_vpGroups[Map()->m_SelectedGroup]->m_vpLayers.size() - 1)
-				Map()->AddSelectedLayer(Map()->m_vSelectedLayers[Map()->m_vSelectedLayers.size() - 1] + 1);
+			ExtendLayerSelection(1);
 		}
 		else
 		{
@@ -2969,8 +3043,7 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 	{
 		if(Input()->ShiftIsPressed())
 		{
-			if(Map()->m_vSelectedLayers[Map()->m_vSelectedLayers.size() - 1] > 0)
-				Map()->AddSelectedLayer(Map()->m_vSelectedLayers[Map()->m_vSelectedLayers.size() - 1] - 1);
+			ExtendLayerSelection(-1);
 		}
 		else
 		{
@@ -3053,8 +3126,45 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 	}
 }
 
+static bool LoadEditorMapImage(CEditor &Editor, CEditorImage &Image, const char *pFilename, int StorageType, const char *pName)
+{
+	if(!Editor.Graphics()->LoadPng(Image, pFilename, StorageType))
+	{
+		Editor.ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilename);
+		return false;
+	}
+
+	ConvertToRgba(Image);
+	if(Image.m_pData == nullptr || Image.m_Format != CImageInfo::FORMAT_RGBA)
+	{
+		Editor.ShowFileDialogError(Localize("Failed to convert image from file \"%s\".", "Editor"), pFilename);
+		return false;
+	}
+	DilateImage(Image);
+
+	const int Flags = Image.m_Width % 16 == 0 && Image.m_Height % 16 == 0 ? Editor.Graphics()->TextureLoadFlags() : 0;
+	Image.m_Texture = Editor.Graphics()->LoadTextureRaw(Image, Flags, pFilename);
+	if(!Image.m_Texture.IsValid())
+	{
+		Editor.ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilename);
+		return false;
+	}
+
+	str_copy(Image.m_aName, pName);
+	Image.m_External = CEditor::IsVanillaImage(Image.m_aName);
+	Image.m_Automapper.Load(Image.m_aName);
+	return true;
+}
+
 bool CEditor::ReplaceImage(const char *pFilename, int StorageType, bool CheckDuplicate)
 {
+	const auto pImg = Map()->SelectedImage();
+	if(!pImg)
+	{
+		ShowFileDialogError(Localize("No image selected.", "Editor"));
+		return false;
+	}
+
 	// check if we have that image already
 	char aBuf[IO_MAX_PATH_LENGTH];
 	IStorage::StripPathAndExtension(pFilename, aBuf, sizeof(aBuf));
@@ -3070,37 +3180,20 @@ bool CEditor::ReplaceImage(const char *pFilename, int StorageType, bool CheckDup
 		}
 	}
 
-	CImageInfo ImgInfo;
-	if(!Graphics()->LoadPng(ImgInfo, pFilename, StorageType))
-	{
-		ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilename);
+	CEditorImage Replacement(Map());
+	if(!LoadEditorMapImage(*this, Replacement, pFilename, StorageType, aBuf))
 		return false;
-	}
 
-	std::shared_ptr<CEditorImage> pImg = Map()->SelectedImage();
 	pImg->CEditorImage::Free();
-	pImg->m_Width = ImgInfo.m_Width;
-	pImg->m_Height = ImgInfo.m_Height;
-	pImg->m_Format = ImgInfo.m_Format;
-	pImg->m_pData = ImgInfo.m_pData;
-	str_copy(pImg->m_aName, aBuf);
-	pImg->m_External = IsVanillaImage(pImg->m_aName);
-
-	if(!ConvertToRgba(*pImg) && (pImg->m_pData == nullptr || pImg->m_Format != CImageInfo::FORMAT_RGBA))
-	{
-		ShowFileDialogError(Localize("Failed to convert image from file \"%s\".", "Editor"), pFilename);
-		return false;
-	}
-	DilateImage(*pImg);
-
-	pImg->m_Automapper.Load(pImg->m_aName);
-	int TextureLoadFlag = Graphics()->TextureLoadFlags();
-	if(pImg->m_Width % 16 != 0 || pImg->m_Height % 16 != 0)
-		TextureLoadFlag = 0;
-	pImg->m_Texture = Graphics()->LoadTextureRaw(*pImg, TextureLoadFlag, pFilename);
+	static_cast<CImageInfo &>(*pImg) = std::move(Replacement);
+	pImg->m_Texture = std::exchange(Replacement.m_Texture, IGraphics::CTextureHandle());
+	str_copy(pImg->m_aName, Replacement.m_aName);
+	pImg->m_External = Replacement.m_External;
+	pImg->m_Automapper = std::move(Replacement.m_Automapper);
 
 	Map()->SortImages();
 	Map()->SelectImage(pImg);
+	Map()->OnModify();
 	OnDialogClose();
 	return true;
 }
@@ -3133,37 +3226,31 @@ bool CEditor::AddImage(const char *pFilename, int StorageType, void *pUser)
 		return false;
 	}
 
-	CImageInfo ImgInfo;
-	if(!pEditor->Graphics()->LoadPng(ImgInfo, pFilename, StorageType))
-	{
-		pEditor->ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilename);
+	const auto pImg = std::make_shared<CEditorImage>(pEditor->Map());
+	if(!LoadEditorMapImage(*pEditor, *pImg, pFilename, StorageType, aBuf))
 		return false;
-	}
 
-	std::shared_ptr<CEditorImage> pImg = std::make_shared<CEditorImage>(pEditor->Map());
-	pImg->m_Width = ImgInfo.m_Width;
-	pImg->m_Height = ImgInfo.m_Height;
-	pImg->m_Format = ImgInfo.m_Format;
-	pImg->m_pData = ImgInfo.m_pData;
-	pImg->m_External = IsVanillaImage(aBuf);
-
-	if(!ConvertToRgba(*pImg) && (pImg->m_pData == nullptr || pImg->m_Format != CImageInfo::FORMAT_RGBA))
-	{
-		pEditor->ShowFileDialogError(Localize("Failed to convert image from file \"%s\".", "Editor"), pFilename);
-		return false;
-	}
-	DilateImage(*pImg);
-
-	int TextureLoadFlag = pEditor->Graphics()->TextureLoadFlags();
-	if(pImg->m_Width % 16 != 0 || pImg->m_Height % 16 != 0)
-		TextureLoadFlag = 0;
-	pImg->m_Texture = pEditor->Graphics()->LoadTextureRaw(*pImg, TextureLoadFlag, pFilename);
-	str_copy(pImg->m_aName, aBuf);
-	pImg->m_Automapper.Load(pImg->m_aName);
 	pEditor->Map()->m_vpImages.push_back(pImg);
 	pEditor->Map()->SortImages();
 	pEditor->Map()->SelectImage(pImg);
+	pEditor->Map()->OnModify();
 	pEditor->OnDialogClose();
+	return true;
+}
+
+static bool LoadEditorMapSound(CEditor &Editor, CEditorSound &Sound, const char *pFilename, int StorageType)
+{
+	if(!Editor.Storage()->ReadFile(pFilename, StorageType, &Sound.m_pData, &Sound.m_DataSize))
+	{
+		Editor.ShowFileDialogError(Localize("Failed to open sound file '%s'.", "Editor"), pFilename);
+		return false;
+	}
+	Sound.m_SoundId = Editor.Sound()->LoadOpusFromMem(Sound.m_pData, Sound.m_DataSize, true, pFilename);
+	if(Sound.m_SoundId < 0)
+	{
+		Editor.ShowFileDialogError(Localize("Failed to load sound from file '%s'.", "Editor"), pFilename);
+		return false;
+	}
 	return true;
 }
 
@@ -3190,39 +3277,27 @@ bool CEditor::AddSound(const char *pFilename, int StorageType, void *pUser)
 		return false;
 	}
 
-	// load external
-	void *pData;
-	unsigned DataSize;
-	if(!pEditor->Storage()->ReadFile(pFilename, StorageType, &pData, &DataSize))
-	{
-		pEditor->ShowFileDialogError(Localize("Failed to open sound file '%s'.", "Editor"), pFilename);
+	const auto pSound = std::make_shared<CEditorSound>(pEditor->Map());
+	if(!LoadEditorMapSound(*pEditor, *pSound, pFilename, StorageType))
 		return false;
-	}
 
-	// load sound
-	const int SoundId = pEditor->Sound()->LoadOpusFromMem(pData, DataSize, true, pFilename);
-	if(SoundId == -1)
-	{
-		free(pData);
-		pEditor->ShowFileDialogError(Localize("Failed to load sound from file '%s'.", "Editor"), pFilename);
-		return false;
-	}
-
-	// add sound
-	std::shared_ptr<CEditorSound> pSound = std::make_shared<CEditorSound>(pEditor->Map());
-	pSound->m_SoundId = SoundId;
-	pSound->m_DataSize = DataSize;
-	pSound->m_pData = pData;
 	str_copy(pSound->m_aName, aBuf);
 	pEditor->Map()->m_vpSounds.push_back(pSound);
-
 	pEditor->Map()->SelectSound(pSound);
+	pEditor->Map()->OnModify();
 	pEditor->OnDialogClose();
 	return true;
 }
 
 bool CEditor::ReplaceSound(const char *pFilename, int StorageType, bool CheckDuplicate)
 {
+	const auto pSound = Map()->SelectedSound();
+	if(!pSound)
+	{
+		ShowFileDialogError(Localize("No sound selected.", "Editor"));
+		return false;
+	}
+
 	// check if we have that sound already
 	char aBuf[IO_MAX_PATH_LENGTH];
 	IStorage::StripPathAndExtension(pFilename, aBuf, sizeof(aBuf));
@@ -3238,42 +3313,20 @@ bool CEditor::ReplaceSound(const char *pFilename, int StorageType, bool CheckDup
 		}
 	}
 
-	// load external
-	void *pData;
-	unsigned DataSize;
-	if(!Storage()->ReadFile(pFilename, StorageType, &pData, &DataSize))
-	{
-		ShowFileDialogError(Localize("Failed to open sound file '%s'.", "Editor"), pFilename);
+	CEditorSound Replacement(Map());
+	if(!LoadEditorMapSound(*this, Replacement, pFilename, StorageType))
 		return false;
-	}
-
-	// load sound
-	const int SoundId = Sound()->LoadOpusFromMem(pData, DataSize, true, pFilename);
-	if(SoundId == -1)
-	{
-		free(pData);
-		ShowFileDialogError(Localize("Failed to load sound from file '%s'.", "Editor"), pFilename);
-		return false;
-	}
-
-	std::shared_ptr<CEditorSound> pSound = Map()->SelectedSound();
 
 	if(m_ToolbarPreviewSound == pSound->m_SoundId)
-	{
-		m_ToolbarPreviewSound = SoundId;
-	}
+		m_ToolbarPreviewSound = Replacement.m_SoundId;
 
-	// unload sample
-	Sound()->UnloadSample(pSound->m_SoundId);
-	free(pSound->m_pData);
-
-	// replace sound
 	str_copy(pSound->m_aName, aBuf);
-	pSound->m_SoundId = SoundId;
-	pSound->m_pData = pData;
-	pSound->m_DataSize = DataSize;
+	std::swap(pSound->m_SoundId, Replacement.m_SoundId);
+	std::swap(pSound->m_pData, Replacement.m_pData);
+	std::swap(pSound->m_DataSize, Replacement.m_DataSize);
 
 	Map()->SelectSound(pSound);
+	Map()->OnModify();
 	OnDialogClose();
 	return true;
 }
@@ -3411,7 +3464,7 @@ void CEditor::RenderImagesList(CUIRect ToolBox)
 void CEditor::RenderSelectedImage(CUIRect View) const
 {
 	std::shared_ptr<CEditorImage> pSelectedImage = Map()->SelectedImage();
-	if(pSelectedImage == nullptr)
+	if(!pSelectedImage || !pSelectedImage->m_Texture.IsValid() || pSelectedImage->m_Width == 0 || pSelectedImage->m_Height == 0)
 		return;
 
 	View.Margin(10.0f, &View);
@@ -3727,7 +3780,6 @@ void CEditor::UpdateCollabRealtime()
 		const int Id = EditorCollabJsonInt(pRoot, "request_id", -1);
 		const int Status = EditorCollabJsonInt(pRoot, "status", 0);
 		const bool Valid = str_comp(EditorCollabJsonString(pRoot, "type"), "collab") == 0;
-		const bool JoinedResponse = Status == 200 && EditorCollabJsonOk(pRoot);
 		json_value_free(pRoot);
 		if(!Valid)
 			continue;
@@ -3752,8 +3804,6 @@ void CEditor::UpdateCollabRealtime()
 		pRequest->m_Response = std::move(Message.m_Data);
 		pRequest->m_Status = Status;
 		pRequest->m_Done = true;
-		if(JoinedResponse && (pRequest->m_JoinTransport || pRequest == m_pCollabCreateTask))
-			m_CollabJoinedTransport = true;
 		// 按收到的帧顺序更新 revision，避免推送与上传确认互相覆盖。
 		FinishCollabCreateJoin(m_pCollabCreateTask, false);
 		FinishCollabCreateJoin(m_pCollabJoinTask, true);
@@ -3992,23 +4042,26 @@ void CEditor::FinishCollabCreateJoin(std::shared_ptr<SCollabRequest> &pTask, boo
 	}
 	else
 	{
+		const char *pSnapshot = Joining ? EditorCollabJsonString(pRoot, "map_base64") : "";
+		const int Revision = EditorCollabJsonInt(pRoot, "revision", 0);
+		if(!AcceptCollabJoinSnapshot(pSnapshot, Revision, false))
+		{
+			json_value_free(pRoot);
+			return;
+		}
 		const char *pRoomCode = EditorCollabJsonString(pRoot, "room_code");
 		if(pRoomCode[0] != '\0')
 		{
 			str_copy(m_aCollabRoomCode, pRoomCode);
 			m_CollabRoomInput.Set(pRoomCode);
 		}
-		m_CollabRevision = EditorCollabJsonInt(pRoot, "revision", 0);
 		m_CollabMemberCount = EditorCollabJsonInt(pRoot, "member_count", 1);
 		m_CollabMaxMembers = EditorCollabJsonInt(pRoot, "max_members", QM_EDITOR_COLLAB_MAX_MEMBERS);
 		m_CollabState = ECollabState::CONNECTED;
 		m_CollabNextPushTime = 0;
-		m_CollabLastUploadedModifiedTime = -1.0f;
-
-		const char *pMapBase64 = EditorCollabJsonString(pRoot, "map_base64");
-		if(Joining && pMapBase64[0] != '\0')
-			ApplyCollabSnapshotBase64(pMapBase64, m_CollabRevision);
-		else if(!Joining)
+		if(pSnapshot[0] == '\0')
+			m_CollabLastUploadedModifiedTime = -1.0f;
+		if(!Joining)
 			StartCollabSnapshotSave(true);
 
 		SetCollabStatus(Localizable("Joined room %s (%d/%d people)", "Editor"), m_aCollabRoomCode, m_CollabMemberCount, m_CollabMaxMembers);
@@ -4138,9 +4191,16 @@ void CEditor::FinishCollabPull()
 		m_CollabMaxMembers = EditorCollabJsonInt(pRoot, "max_members", m_CollabMaxMembers);
 
 		const char *pMapBase64 = EditorCollabJsonString(pRoot, "map_base64");
-		if(Revision > m_CollabRevision && pMapBase64[0] != '\0')
+		const bool NewSnapshot = Revision > m_CollabRevision && pMapBase64[0] != '\0';
+		const bool Rejoining = m_pCollabPullTask->m_JoinTransport;
+		if(Rejoining && !AcceptCollabJoinSnapshot(pMapBase64, Revision, true))
 		{
-			if(ApplyCollabSnapshotBase64(pMapBase64, Revision, !m_pCollabPullTask->m_JoinTransport))
+			json_value_free(pRoot);
+			return;
+		}
+		if(NewSnapshot)
+		{
+			if(Rejoining || ApplyCollabSnapshotBase64(pMapBase64, Revision, true))
 				SetCollabStatus(Localizable("Received a sync update from room %s (%d/%d people)", "Editor"), m_aCollabRoomCode, m_CollabMemberCount, m_CollabMaxMembers);
 		}
 		else
@@ -4153,6 +4213,17 @@ void CEditor::FinishCollabPull()
 	if(pRoot)
 		json_value_free(pRoot);
 	m_pCollabPullTask = nullptr;
+}
+
+bool CEditor::AcceptCollabJoinSnapshot(const char *pSnapshot, int Revision, bool Rejoining)
+{
+	const auto Load = [this](const char *pData, int RoomRevision) { return ApplyCollabSnapshotBase64(pData, RoomRevision); };
+	if(EditorCollab::AcceptJoinSnapshot(pSnapshot, Revision, Rejoining, m_CollabRevision, m_CollabJoinedTransport, Load))
+		return true;
+
+	// 快照失败时保留具体错误，并清除会话、旧请求和待上传状态，以便重新加入。
+	ResetCollabSession();
+	return false;
 }
 
 bool CEditor::ApplyCollabSnapshotBase64(const char *pMapBase64, int Revision, bool RemoteUpdate)
@@ -4191,19 +4262,14 @@ bool CEditor::ApplyCollabSnapshotBase64(const char *pMapBase64, int Revision, bo
 	}
 	io_close(File);
 
-	m_CollabApplyingRemoteSnapshot = true;
 	const bool FollowPlacement = ShouldFollowEditorCollabPlacement(g_Config.m_QmEditorCollabFollowPlacement != 0, RemoteUpdate, m_CollabRevision, Revision);
-	const bool Loaded = LoadCollabSnapshot(QM_EDITOR_COLLAB_INCOMING_PATH, IStorage::TYPE_SAVE, FollowPlacement);
-	m_CollabApplyingRemoteSnapshot = false;
-	if(!Loaded)
-	{
-		SetCollabStatus(Localizable("Sync failed: could not load the remote map snapshot", "Editor"));
+	if(!LoadCollabSnapshot(QM_EDITOR_COLLAB_INCOMING_PATH, IStorage::TYPE_SAVE, FollowPlacement))
 		return false;
-	}
 
 	m_CollabSnapshotReady = false;
 	m_CollabRevision = Revision;
 	m_CollabLastUploadedModifiedTime = Map()->m_LastModifiedTime;
+	log_info("editor/collab", Localize("Loaded the collaboration room's map snapshot", "Editor"));
 	return true;
 }
 
@@ -4214,38 +4280,40 @@ bool CEditor::LoadCollabSnapshot(const char *pFilename, int StorageType, bool Fo
 	char aPreviousFilename[IO_MAX_PATH_LENGTH];
 	str_copy(aPreviousFilename, Map()->m_aFilename);
 	const bool ValidSaveFilename = Map()->m_ValidSaveFilename;
-	const auto PreviousPlacements = FollowPlacement ? CEditorCollabPlacementSnapshot::Capture(*Map()) : CEditorCollabPlacementSnapshot{};
+	const auto Capture = [this] { return CEditorCollabPlacementSnapshot::Capture(*Map()); };
 
 	const auto &&ErrorHandler = [this](const char *pErrorMessage) {
 		SetCollabStatus("%s", pErrorMessage);
 		log_error("editor/collab", "%s", pErrorMessage);
 	};
 
-	const bool Result = ReloadEditorCollabSnapshotKeepingCamera(Map()->m_MapViewState, [&]() {
-		Reset(false);
-		Map()->Clean();
-		const bool Loaded = Map()->Load(pFilename, StorageType, std::move(ErrorHandler));
-		if(Loaded)
+	bool MapCommitted = false;
+	const auto Load = [&] {
 		{
-			str_copy(Map()->m_aFilename, aPreviousFilename);
-			Map()->m_ValidSaveFilename = ValidSaveFilename;
-			Map()->SortImages();
-			Map()->SelectGameLayer();
-
-			for(CEditorComponent &Component : m_vComponents)
-				Component.OnMapLoad();
-
-			log_info("editor/collab", Localize("Loaded the collaboration room's map snapshot", "Editor"));
+			const EditorCollab::CRestoreOnExit RestoreFilename([&] {
+				str_copy(Map()->m_aFilename, aPreviousFilename);
+				Map()->m_ValidSaveFilename = ValidSaveFilename;
+			});
+			if(!Map()->Load(pFilename, StorageType, ErrorHandler))
+				return false;
 		}
-		return Loaded;
-	});
-	if(Result && FollowPlacement && PreviousPlacements.m_Complete)
-	{
-		const auto Placements = CEditorCollabPlacementSnapshot::Capture(*Map());
-		if(const auto Target = Placements.FindPlacement(PreviousPlacements))
-			Target->CenterCamera(Map()->m_MapViewState.m_WorldOffset, Map()->m_MapViewState.m_EditorOffset);
-	}
-	return Result;
+
+		MapCommitted = true;
+		Reset(false);
+		for(CEditorComponent &Component : m_vComponents)
+			Component.OnMapLoad();
+		return true;
+	};
+	if(EditorCollab::TryApplyingSnapshot(m_CollabApplyingRemoteSnapshot, [&] {
+		   return ReloadEditorCollabSnapshot(Map()->m_MapViewState, FollowPlacement, Capture, Load);
+	   }))
+		return true;
+
+	if(MapCommitted)
+		SetCollabStatus(Localizable("Sync interrupted: the map was loaded, but the editor could not refresh it", "Editor"));
+	else
+		SetCollabStatus(Localizable("Sync failed: could not load the remote map snapshot", "Editor"));
+	return false;
 }
 
 void CEditor::UpdateCollab()
@@ -4553,10 +4621,11 @@ void CEditor::RenderEditorHistory(CUIRect View)
 		{
 			for(int i = 0; i < (SelectedActionIndex - NewSelected); i++)
 			{
-				pCurrentHistory->Redo();
+				if(!pCurrentHistory->Redo())
+					break;
 			}
 		}
-		SelectedActionIndex = NewSelected;
+		SelectedActionIndex = static_cast<int>(pCurrentHistory->m_vpRedoActions.size());
 	}
 }
 
@@ -5475,6 +5544,8 @@ void CEditor::Reset(bool CreateDefault)
 	Map()->m_EnvelopeEvaluator.m_Animate = false;
 
 	m_LayerPanelState.Reset();
+	m_pColorPickerPopupActiveId = nullptr;
+	m_ColorPickerPopupContext.m_State = EEditState::NONE;
 }
 
 void CEditor::AddDefaultMap()
@@ -5889,10 +5960,13 @@ void CEditor::LoadCurrentMap()
 	{
 		Map()->m_ValidSaveFilename = !str_startswith(m_pClient->GetCurrentMapPath(), "downloadedmaps/");
 	}
+	else if(Load(m_pClient->GetCurrentMapPath(), IStorage::TYPE_ALL))
+	{
+		Map()->m_ValidSaveFilename = false;
+	}
 	else
 	{
-		Load(m_pClient->GetCurrentMapPath(), IStorage::TYPE_ALL);
-		Map()->m_ValidSaveFilename = false;
+		return;
 	}
 
 	CGameClient *pGameClient = (CGameClient *)Kernel()->RequestInterface<IGameClient>();
@@ -5906,6 +5980,16 @@ bool CEditor::Save(const char *pFilename)
 	// Check if file with this name is already being saved at the moment
 	if(IsSaving(pFilename))
 	{
+		return false;
+	}
+
+	char aTempPath[2 * IO_MAX_PATH_LENGTH];
+	IStorage::FormatTmpPath(aTempPath, sizeof(aTempPath), pFilename);
+	char aCompletePath[2 * IO_MAX_PATH_LENGTH];
+	Storage()->GetCompletePath(IStorage::TYPE_SAVE, aTempPath, aCompletePath, sizeof(aCompletePath));
+	if(str_length(aTempPath) >= IO_MAX_PATH_LENGTH || str_length(aCompletePath) >= IO_MAX_PATH_LENGTH)
+	{
+		ShowFileDialogError(Localize("The file path is too long.", "Editor"));
 		return false;
 	}
 
@@ -5934,17 +6018,17 @@ bool CEditor::HandleMapDrop(const char *pFilename, int StorageType)
 
 bool CEditor::Load(const char *pFilename, int StorageType)
 {
-	const auto &&ErrorHandler = [this](const char *pErrorMessage) {
-		ShowFileDialogError("%s", pErrorMessage);
-		log_error("editor/load", "%s", pErrorMessage);
+	std::vector<std::string> vLoadMessages;
+	const auto ErrorHandler = [&](const char *pErrorMessage) {
+		vLoadMessages.emplace_back(pErrorMessage);
 	};
 
-	Reset(false);
 	std::unique_ptr<CEditorMap> pNewMap = std::make_unique<CEditorMap>(this);
 	pNewMap->Clean();
-	const bool Result = pNewMap->Load(pFilename, StorageType, std::move(ErrorHandler));
+	const bool Result = pNewMap->Load(pFilename, StorageType, ErrorHandler);
 	if(Result)
 	{
+		Reset(false);
 		pNewMap->SortImages();
 		pNewMap->SelectGameLayer();
 		m_vpMaps.push_back(std::move(pNewMap));
@@ -5954,9 +6038,15 @@ bool CEditor::Load(const char *pFilename, int StorageType)
 
 		for(CEditorComponent &Component : m_vComponents)
 			Component.OnMapLoad();
-
-		log_info("editor/load", Localize("Loaded map '%s'", "Editor"), Map()->m_aFilename);
 	}
+
+	for(const auto &Message : vLoadMessages)
+	{
+		ShowFileDialogError("%s", Message.c_str());
+		log_error("editor/load", "%s", Message.c_str());
+	}
+	if(Result)
+		log_info("editor/load", Localize("Loaded map '%s'", "Editor"), Map()->m_aFilename);
 	return Result;
 }
 
@@ -6052,7 +6142,7 @@ void CEditor::UpdateMapDisplayNames()
 bool CEditor::IsSaving(const char *pFilename) const
 {
 	return std::any_of(m_WriterFinishJobs.begin(), m_WriterFinishJobs.end(), [pFilename](const std::shared_ptr<CDataFileWriterFinishJob> &pJob) {
-		return str_comp(pFilename, pJob->RealFilename()) == 0;
+		return EditorSavePathsEqual(pFilename, pJob->RealFilename());
 	});
 }
 

@@ -4,7 +4,7 @@ from datatypes import Array, Float, Int, Pointer, String, Struct, TextureHandle
 class Sound(Struct):
 	def __init__(self, filename=""):
 		Struct.__init__(self, "CDataSound")
-		self.id = Int(0)
+		self.id = Int(-1)
 		self.filename = String(filename)
 
 

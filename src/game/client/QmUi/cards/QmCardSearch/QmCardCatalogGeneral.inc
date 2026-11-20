@@ -76,12 +76,6 @@ namespace
 		{Localizable("Max demos"), nullptr, "最大回放数"},
 		{Localizable("Demo directory"), "qm_demo_directory", "回放保存目录 路径 demos"},
 		{Localizable("Video directory"), "qm_video_directory", "视频导出目录 路径 videos"},
-		{Localizable("Video quality CRF"), nullptr, "渲染质量 画质 crf"},
-		{nullptr, "cl_video_crf", nullptr},
-		{Localizable("Recorder FPS"), nullptr, "录制帧率 录像帧率 帧率 fps"},
-		{nullptr, "cl_video_recorder_fps", nullptr},
-		{Localizable("Render preset"), nullptr, "渲染预设 编码预设 preset"},
-		{nullptr, "cl_video_x264_preset", nullptr},
 		{Localizable("Screenshot directory"), "qm_screenshot_directory", "截图保存目录 路径 screenshots"},
 		{nullptr, "cl_auto_csv", nullptr},
 		{nullptr, "cl_auto_csv_max", nullptr},
@@ -100,6 +94,7 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_tclient_info_files[] = {
 		{Localizable("Configuration packages"), nullptr, "配置包 打包 qmconfig"},
+		{Localizable("Export configuration package"), nullptr, "导出配置包"},
 		{Localizable("Import configuration package"), nullptr, "导入 配置 恢复 bind cfg"},
 		{Localizable("Chat Binds"), nullptr, "聊天绑定"},
 		{Localizable("Profiles"), nullptr, "配置文件"},

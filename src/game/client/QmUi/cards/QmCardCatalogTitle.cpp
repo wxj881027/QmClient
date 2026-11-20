@@ -40,6 +40,16 @@ static SQmTitleBadgePlacement s_TitleFinishedPreview;
 static STextContainerIndex s_SponsorChatPreviewContainer;
 static SQmTitleBadgePlacement s_ChatTitlePreview;
 
+static constexpr float QmSponsorChatPreviewFontSize(float PreviewHeight, float ChatFontSize)
+{
+	constexpr float MINIMUM_FONT_SIZE = 8.0f;
+	// 最小聊天字号的两倍仍可能低于预览的字号下限。
+	return std::clamp(PreviewHeight * 0.40f, MINIMUM_FONT_SIZE, std::max(MINIMUM_FONT_SIZE, ChatFontSize * 2.0f));
+}
+
+static_assert(QmSponsorChatPreviewFontSize(30.0f, 1.0f) == 8.0f);
+static_assert(QmSponsorChatPreviewFontSize(30.0f, 5.0f) == 10.0f);
+
 void CMenus::ClearQmTitlePreviewContainers()
 {
 	s_TitleFinishedPreview.DeleteText(TextRender());
@@ -118,7 +128,7 @@ void qm_card_catalog::QmCardRenderHook::RenderQmSponsorChatMessagePreview(CMenus
 	const auto Style = static_cast<EQmSponsorChatStyle>(StyleValue);
 	ITextRender *pTextRender = pMenus->TextRender();
 	CChat *pChat = &pMenus->GameClient()->m_Chat;
-	const float FontSize = std::clamp(Rect.h * 0.40f, 8.0f, pChat->FontSize() * 2.0f);
+	const float FontSize = QmSponsorChatPreviewFontSize(Rect.h, pChat->FontSize());
 	const float PaddingX = pChat->MessagePaddingX() * 2.0f;
 	const float TeeSize = pChat->MessageTeeSize() * 2.0f;
 

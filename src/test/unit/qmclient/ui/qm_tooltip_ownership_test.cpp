@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <new>
 #include <string>
 
 TEST(QmTooltips, OwnsCallerText)
@@ -737,6 +738,16 @@ TEST(QmTooltips, DisabledMotionAndPageResetPlaceTheBubbleImmediately)
 	EXPECT_FLOAT_EQ(Motion.Update({200, 100, 100, 30}, 1.1, true).x, 200);
 }
 
+TEST(QmTooltips, FullWidthBubbleKeepsTheLeftMarginAtFractionalScale)
+{
+	// 600×900 窗口在 125% 界面缩放下的逻辑尺寸，使用 11 号提示字。
+	const CUIRect Screen{0.0f, 0.0f, 320.0f, 480.0f};
+	constexpr float Margin = 4.4f;
+	const CUIRect Rect = QmTooltipRect({250, 100, 20, 20}, Screen, vec2(320, 36), Margin);
+	EXPECT_GE(Rect.x, Margin);
+	EXPECT_FLOAT_EQ(Rect.w, 311.2f);
+}
+
 namespace
 {
 	struct STooltipContainerRenderer
@@ -744,6 +755,8 @@ namespace
 		int m_Created = 0;
 		int m_Updated = 0;
 		int m_Deleted = 0;
+		int m_Deferred = 0;
+		bool m_FailRecreate = false;
 		std::string m_Text;
 		void RecreateTextContainerSoft(STextContainerIndex &Index, CTextCursor *pCursor, const char *pText)
 		{
@@ -751,8 +764,16 @@ namespace
 				Index.m_Index = ++m_Created;
 			++m_Updated;
 			m_Text = pText;
+			if(m_FailRecreate)
+				throw std::bad_alloc();
 			EXPECT_FLOAT_EQ(pCursor->m_StartX, 0);
 			EXPECT_FLOAT_EQ(pCursor->m_StartY, 0);
+		}
+		void ReleaseTemporaryTextContainer(STextContainerIndex &Index) noexcept
+		{
+			if(Index.m_Index >= 0)
+				++m_Deferred;
+			Index.Reset();
 		}
 		void DeleteTextContainer(STextContainerIndex &Index)
 		{
@@ -805,6 +826,43 @@ TEST(QmTooltipTextCache, ClosingAndReopeningCreatesAFreshContainer)
 	EXPECT_TRUE(Cache.Index().Valid());
 	EXPECT_EQ(Render.m_Created, 2);
 	EXPECT_EQ(Render.m_Deleted, 1);
+}
+
+TEST(QmTooltipTextCache, FailedFirstCreateReleasesTheSlotAndRetries)
+{
+	CQmTooltipTextCache Cache;
+	STooltipContainerRenderer Render;
+	const CTextCursor Cursor = QmTooltipTextCursor({}, 10, 100, 0);
+
+	Render.m_FailRecreate = true;
+	Cache.Update(Render, Cursor, "first");
+	EXPECT_FALSE(Cache.Index().Valid());
+	EXPECT_EQ(Render.m_Deferred, 1);
+
+	Render.m_FailRecreate = false;
+	Cache.Update(Render, Cursor, "first");
+	EXPECT_TRUE(Cache.Index().Valid());
+	EXPECT_EQ(Render.m_Text, "first");
+	EXPECT_EQ(Render.m_Created, 2);
+}
+
+TEST(QmTooltipTextCache, FailedReflowDoesNotLeaveAPartialContainerForThePreviousText)
+{
+	CQmTooltipTextCache Cache;
+	STooltipContainerRenderer Render;
+	const CTextCursor Cursor = QmTooltipTextCursor({}, 10, 100, 0);
+	Cache.Update(Render, Cursor, "first");
+
+	Render.m_FailRecreate = true;
+	Cache.Update(Render, Cursor, "next");
+	EXPECT_FALSE(Cache.Index().Valid());
+	EXPECT_EQ(Render.m_Deferred, 1);
+
+	Render.m_FailRecreate = false;
+	Cache.Update(Render, Cursor, "first");
+	EXPECT_TRUE(Cache.Index().Valid());
+	EXPECT_EQ(Render.m_Text, "first");
+	EXPECT_EQ(Render.m_Created, 2);
 }
 
 TEST(QmTooltips, UniformTextScaleFitsBothDimensionsAndCentersTheTargetLayout)

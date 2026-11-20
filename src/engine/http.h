@@ -9,6 +9,7 @@
 #include <base/types.h>
 
 #include <engine/shared/http_range.h>
+#include <engine/shared/http_response_buffer_budget.h>
 
 #include <atomic>
 #include <chrono>
@@ -71,6 +72,8 @@ public:
 	long RequestTimeoutMs() const { return m_Timeout.m_TimeoutMs; }
 	// Skip the download if the local file is newer or as new as the remote file.
 	void MaxResponseSize(int64_t MaxResponseSize) { m_MaxResponseSize = MaxResponseSize; }
+	// Run前为纯内存响应设置共享容量预算；缓冲或终态已存在时不能改记账归属。
+	bool SetResponseBufferBudget(std::shared_ptr<CHttpResponseBufferBudget> pBudget) noexcept;
 	// 仅取得正文前缀用于下载测速；达到上限主动结束，不落盘、不作为完整下载。
 	void ResponseSample(size_t Bytes);
 	void ResultResponseSample(unsigned char **ppResult, size_t *pResultLength) const;
@@ -160,7 +163,7 @@ public:
 	// If called with `true`, it'll place the downloaded file at the final
 	// destination, if called with `false`, it'll instead delete the
 	// temporary downloaded file.
-	void OnValidation(bool Success);
+	void OnValidation(bool Success) noexcept;
 
 	void Result(unsigned char **ppResult, size_t *pResultLength) const;
 	json_value *ResultJson() const;
@@ -189,6 +192,7 @@ protected:
 		POST_JSON,
 	};
 	static const char *GetRequestType(REQUEST Type);
+	void SetPostBody(REQUEST Type, const unsigned char *pData, size_t DataLength);
 
 	// Request
 	char m_aUrl[2048] = "";
@@ -220,6 +224,8 @@ protected:
 	std::optional<SHA256_DIGEST> m_ActualSha256 = std::nullopt;
 	SHA256_CTX m_ActualSha256Ctx;
 	uint64_t m_ResponseLength = 0;
+	bool m_ResponseFailed = false;
+	bool m_ProgressCallbackFailed = false;
 	int m_StatusCode = 0;
 	std::optional<int64_t> m_ResultAge = std::nullopt;
 	std::optional<std::chrono::nanoseconds> m_ResultHeadersReceivedAt;
@@ -234,6 +240,7 @@ protected:
 	// If `m_WriteToMemory` is true.
 	size_t m_BufferSize = 0;
 	unsigned char *m_pBuffer = nullptr;
+	std::shared_ptr<CHttpResponseBufferBudget> m_pResponseBufferBudget;
 
 	// If `m_WriteToFile` is true.
 	IOHANDLE m_File = nullptr;
@@ -257,11 +264,24 @@ protected:
 	bool ShouldSkipRequest();
 	// Abort the request with an error if `BeforeInit()` returns false.
 	bool BeforeInit();
+	// 返回内存由请求用free接管；分配失败必须返回nullptr，不抛异常。
+	virtual void *AllocateRequestBody(size_t Size) noexcept;
+	// 扩容失败必须保留旧缓冲；成功返回的内存须兼容 free。
+	virtual void *ReallocateResponseBuffer(size_t Size) noexcept;
+	// 文件边界：关闭总是消费句柄，读取返回的非空缓冲由请求用 free 接管。
+	virtual int CloseResponseFile(IOHANDLE File) noexcept;
+	virtual int RenameResponseFile(bool AllowDestinationRemoval);
+	virtual int RemoveResponseFile();
+	virtual bool ReadResponseFile(void **ppResult, unsigned *pLength);
+	void RemoveResponseFileBestEffort() noexcept;
 
 	// Abort the request if `OnData()` returns something other than
 	// `DataSize`.
 	size_t OnData(const char *pData, size_t DataSize);
 	void OnCompletionInternal(EHttpState State);
+	// 回调失败也必须发布终态并唤醒等待者，不重复执行已部分完成的消费者。
+	void PublishCompletion(EHttpState State);
+	bool PublishProgress();
 };
 
 std::unique_ptr<IHttpRequest> CreateHttpRequest(const char *pUrl);

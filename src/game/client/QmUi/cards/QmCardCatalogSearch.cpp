@@ -9,6 +9,50 @@
 #include <game/client/components/qmclient/search_answers.h>
 #include <game/localization.h>
 
+#include <atomic>
+
+namespace
+{
+	bool IsValidRegistration(const qm_card_search::SRegistration &Registration) noexcept
+	{
+		return Registration.m_pStableId != nullptr && Registration.m_pStableId[0] != '\0' &&
+		       Registration.m_pEntries != nullptr && Registration.m_Count != 0;
+	}
+
+	struct SStaticSearchRegistration
+	{
+		inline static constinit SStaticSearchRegistration *s_pFirst = nullptr;
+		inline static constinit SStaticSearchRegistration *s_pLast = nullptr;
+
+		const qm_card_search::SRegistration m_Entry;
+		SStaticSearchRegistration *m_pNext = nullptr;
+
+		explicit SStaticSearchRegistration(qm_card_search::SRegistration Entry) noexcept :
+			m_Entry(Entry)
+		{
+			if(!IsValidRegistration(m_Entry))
+				return;
+			if(s_pLast != nullptr)
+				s_pLast->m_pNext = this;
+			else
+				s_pFirst = this;
+			s_pLast = this;
+		}
+	};
+
+	constinit std::atomic<const std::vector<qm_card_search::SRegistration> *> s_pMutableRegistrations{nullptr};
+}
+
+// 编译进本聚合器的注册项自带存储，启动时只链接记录。
+#undef QM_CARD_SEARCH_REGISTER
+#define QM_CARD_SEARCH_REGISTER(stable_id, symbol) \
+	SStaticSearchRegistration s_QmSearchRegistrar_##symbol \
+	{ \
+		{ \
+			stable_id, s_aQmSearch_##symbol, std::size(s_aQmSearch_##symbol) \
+		} \
+	}
+
 // 各卡片源文件旁的声明式搜索表，由本聚合器统一编译与注册。
 #include "QmCardSearch/QmCardCatalogAppearance.inc"
 #include "QmCardSearch/QmCardCatalogAppearancePreset.inc"
@@ -37,6 +81,7 @@
 #include "QmCardSearch/QmCardCatalogTooltip.inc"
 #include "QmCardSearch/QmCardCatalogVisual.inc"
 #include "QmCardSearch/QmCardCatalogWaterHammer.inc"
+#undef QM_CARD_SEARCH_REGISTER
 
 #include <base/str.h>
 
@@ -49,26 +94,41 @@ namespace qm_card_search
 {
 	std::vector<SRegistration> &Registrations()
 	{
-		// 函数内静态：卡片文件的静态注册器可能先于本 TU 的全局对象运行。
-		static std::vector<SRegistration> s_vRegistrations;
+		// 显式访问可写列表时才复制内置条目，完整构建后再供 Find 使用。
+		static std::vector<SRegistration> s_vRegistrations = [] {
+			std::vector<SRegistration> vEntries;
+			for(const auto *pRegistration = SStaticSearchRegistration::s_pFirst; pRegistration != nullptr; pRegistration = pRegistration->m_pNext)
+				vEntries.push_back(pRegistration->m_Entry);
+			return vEntries;
+		}();
+		s_pMutableRegistrations.store(&s_vRegistrations, std::memory_order_release);
 		return s_vRegistrations;
 	}
 
 	void Register(const char *pStableId, const qm_card_registry::SCardSettingSearch *pEntries, size_t Count)
 	{
-		if(pStableId == nullptr || pStableId[0] == '\0' || pEntries == nullptr || Count == 0)
-			return;
-		Registrations().push_back({pStableId, pEntries, Count});
+		const SRegistration Entry{pStableId, pEntries, Count};
+		if(IsValidRegistration(Entry))
+			Registrations().push_back(Entry);
 	}
 
 	const SRegistration *Find(const char *pStableId)
 	{
 		if(pStableId == nullptr)
 			return nullptr;
-		for(const SRegistration &Registration : Registrations())
+		if(const auto *pRegistrations = s_pMutableRegistrations.load(std::memory_order_acquire))
 		{
-			if(str_comp(Registration.m_pStableId, pStableId) == 0)
-				return &Registration;
+			for(const SRegistration &Registration : *pRegistrations)
+			{
+				if(str_comp(Registration.m_pStableId, pStableId) == 0)
+					return &Registration;
+			}
+			return nullptr;
+		}
+		for(const auto *pRegistration = SStaticSearchRegistration::s_pFirst; pRegistration != nullptr; pRegistration = pRegistration->m_pNext)
+		{
+			if(str_comp(pRegistration->m_Entry.m_pStableId, pStableId) == 0)
+				return &pRegistration->m_Entry;
 		}
 		return nullptr;
 	}

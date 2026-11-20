@@ -2,25 +2,19 @@
 
 #include <base/str.h>
 
+#include <algorithm>
 #include <cstddef>
 
 static int str_utf8_skeleton(int ch, const int **skeleton, int *skeleton_len)
 {
-	for(size_t i = 0; i < NUM_DECOMPS; i++)
+	const int32_t *end = decomp_chars + NUM_DECOMPS;
+	const int32_t *match = std::lower_bound(decomp_chars, end, ch);
+	if(match != end && *match == ch)
 	{
-		if(ch == decomp_chars[i])
-		{
-			int offset = decomp_slices[i].offset;
-			int length = decomp_lengths[decomp_slices[i].length];
-
-			*skeleton = &decomp_data[offset];
-			*skeleton_len = length;
-			return 1;
-		}
-		else if(ch < decomp_chars[i])
-		{
-			break;
-		}
+		const DECOMP_SLICE &slice = decomp_slices[match - decomp_chars];
+		*skeleton = &decomp_data[slice.offset];
+		*skeleton_len = decomp_lengths[slice.length];
+		return 1;
 	}
 	*skeleton = nullptr;
 	*skeleton_len = 1;

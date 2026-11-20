@@ -51,13 +51,13 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 			}
 			if(DoButton_QmIcon((char *)&pIds[i] + 1, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, Localize("Decrease value.", "Editor"), IGraphics::CORNER_L, 7.0f))
 			{
-				*pNewVal = std::clamp(pProps[i].m_Value - 1, pProps[i].m_Min, pProps[i].m_Max);
+				*pNewVal = EditorValueSelector::Adjust(pProps[i].m_Value, pProps[i].m_Min, pProps[i].m_Max, 1, -1);
 				Change = i;
 				State = EEditState::ONE_GO;
 			}
 			if(DoButton_QmIcon(((char *)&pIds[i]) + 2, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, Localize("Increase value.", "Editor"), IGraphics::CORNER_R, 7.0f))
 			{
-				*pNewVal = std::clamp(pProps[i].m_Value + 1, pProps[i].m_Min, pProps[i].m_Max);
+				*pNewVal = EditorValueSelector::Adjust(pProps[i].m_Value, pProps[i].m_Min, pProps[i].m_Max, 1, 1);
 				Change = i;
 				State = EEditState::ONE_GO;
 			}
@@ -85,18 +85,19 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 			Shifter.VSplitRight(10.0f, &Shifter, &Inc);
 			Shifter.VSplitLeft(10.0f, &Dec, &Shifter);
 			const bool Shift = Input()->ShiftIsPressed();
-			int Step = Shift ? 1 : 45;
+			const int Step = Shift ? 1 : 45;
+			const auto *pId = reinterpret_cast<const char *>(&pIds[i]);
 
-			auto NewValueRes = UiDoValueSelector(&pIds[i], &Shifter, "", pProps[i].m_Value, pProps[i].m_Min, pProps[i].m_Max, Shift ? 1 : 45, Shift ? 1.0f : 10.0f, Localize("Use left mouse button to drag and change the value. Hold shift to be more precise. Right click to edit as text.", "Editor"), false, false, 0);
+			auto NewValueRes = UiDoValueSelector(pId, &Shifter, "", pProps[i].m_Value, pProps[i].m_Min, pProps[i].m_Max, Step, Shift ? 1.0f : 10.0f, Localize("Use left mouse button to drag and change the value. Hold shift to be more precise. Right click to edit as text.", "Editor"), false, false, 0);
 			int NewValue = NewValueRes.m_Value;
-			if(DoButton_QmIcon(&pIds[i] + 1, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, Localize("Decrease value.", "Editor"), IGraphics::CORNER_L, 7.0f))
+			if(DoButton_QmIcon(pId + 1, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, Localize("Decrease value.", "Editor"), IGraphics::CORNER_L, 7.0f))
 			{
 				NewValue = (std::ceil((pProps[i].m_Value / (float)Step)) - 1) * Step;
 				if(NewValue < 0)
 					NewValue += 360;
 				NewValueRes.m_State = EEditState::ONE_GO;
 			}
-			if(DoButton_QmIcon(&pIds[i] + 2, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, Localize("Increase value.", "Editor"), IGraphics::CORNER_R, 7.0f))
+			if(DoButton_QmIcon(pId + 2, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, Localize("Increase value.", "Editor"), IGraphics::CORNER_R, 7.0f))
 			{
 				NewValue = (pProps[i].m_Value + Step) / Step * Step;
 				NewValueRes.m_State = EEditState::ONE_GO;
@@ -140,8 +141,8 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 			if(DoButton_Ex(&pIds[i], pName, 0, &Shifter, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL))
 				PopupSelectImageInvoke(pProps[i].m_Value, Ui()->MouseX(), Ui()->MouseY());
 
-			int Result = PopupSelectImageResult();
-			if(Result >= -1)
+			const int Result = PopupSelectImageResult();
+			if(Result >= -1 && Result < static_cast<int>(Map()->m_vpImages.size()))
 			{
 				*pNewVal = Result;
 				Change = i;
@@ -196,8 +197,8 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 			if(DoButton_Ex(&pIds[i], pName, 0, &Shifter, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL))
 				PopupSelectSoundInvoke(pProps[i].m_Value, Ui()->MouseX(), Ui()->MouseY());
 
-			int Result = PopupSelectSoundResult();
-			if(Result >= -1)
+			const int Result = PopupSelectSoundResult();
+			if(Result >= -1 && Result < static_cast<int>(Map()->m_vpSounds.size()))
 			{
 				*pNewVal = Result;
 				Change = i;
@@ -206,14 +207,17 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 		}
 		else if(pProps[i].m_Type == PROPTYPE_AUTOMAPPER)
 		{
-			const char *pName;
-			if(pProps[i].m_Value < 0 || pProps[i].m_Min < 0 || pProps[i].m_Min >= (int)Map()->m_vpImages.size())
-				pName = Localize("None", "Editor");
-			else
-				pName = Map()->m_vpImages[pProps[i].m_Min]->m_Automapper.GetConfigName(pProps[i].m_Value);
+			const int Image = pProps[i].m_Min;
+			const int Current = pProps[i].m_Value;
+			const CAutomapper *pAutomapper = Image >= 0 && Image < static_cast<int>(Map()->m_vpImages.size()) ? &Map()->m_vpImages[Image]->m_Automapper : nullptr;
+			const char *pName = Current >= 0 && pAutomapper ? pAutomapper->GetConfigName(Current) : Localize("None", "Editor");
 
-			if(DoButton_Ex(&pIds[i], pName, 0, &Shifter, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL))
-				PopupSelectAutomapperConfigInvoke(pProps[i].m_Value, Ui()->MouseX(), Ui()->MouseY());
+			if(DoButton_Ex(&pIds[i], pName, 0, &Shifter, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL) && pAutomapper)
+			{
+				// 弹窗将规则编号加一作为列表索引，-2 对应未选中，仍可显式选择“无”。
+				const int Selection = Current >= -1 && Current < pAutomapper->ConfigNamesNum() ? Current : -2;
+				PopupSelectAutomapperConfigInvoke(Selection, Ui()->MouseX(), Ui()->MouseY());
+			}
 
 			int Result = PopupSelectAutomapperConfigResult();
 			if(Result >= -1)
@@ -246,12 +250,13 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 		{
 			CUIRect Inc, Dec;
 			char aBuf[8];
-			int CurValue = pProps[i].m_Value;
+			const int CurValue = pProps[i].m_Value;
+			const int NumEnvelopes = static_cast<int>(Map()->m_vpEnvelopes.size());
 
 			Shifter.VSplitRight(10.0f, &Shifter, &Inc);
 			Shifter.VSplitLeft(10.0f, &Dec, &Shifter);
 
-			if(CurValue <= 0 || CurValue > (int)Map()->m_vpEnvelopes.size())
+			if(CurValue <= 0 || CurValue > NumEnvelopes)
 			{
 				str_copy(aBuf, Localize("None:", "Editor"));
 			}
@@ -269,11 +274,11 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 				aBuf[0] = '\0';
 			}
 
-			auto NewValueRes = UiDoValueSelector((char *)&pIds[i], &Shifter, aBuf, CurValue, 0, Map()->m_vpEnvelopes.size(), 1, 1.0f, Localize("Select the envelope.", "Editor"), false, false, IGraphics::CORNER_NONE);
-			int NewVal = NewValueRes.m_Value;
+			auto NewValueRes = UiDoValueSelector((char *)&pIds[i], &Shifter, aBuf, CurValue, 0, NumEnvelopes, 1, 1.0f, Localize("Select the envelope.", "Editor"), false, false, IGraphics::CORNER_NONE);
+			const int NewVal = NewValueRes.m_Value;
 			if(NewVal != CurValue || (NewValueRes.m_State != EEditState::NONE && NewValueRes.m_State != EEditState::EDITING))
 			{
-				*pNewVal = NewVal;
+				*pNewVal = std::clamp(NewVal, 0, NumEnvelopes);
 				if(NewValueRes.m_State != EEditState::NONE)
 				{
 					Change = i;
@@ -283,13 +288,13 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 
 			if(DoButton_QmIcon((char *)&pIds[i] + 1, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, Localize("Select previous envelope.", "Editor envelope selector"), IGraphics::CORNER_L, 7.0f))
 			{
-				*pNewVal = pProps[i].m_Value - 1;
+				*pNewVal = EditorValueSelector::Adjust(CurValue, 0, NumEnvelopes, 1, -1);
 				Change = i;
 				State = EEditState::ONE_GO;
 			}
 			if(DoButton_QmIcon(((char *)&pIds[i]) + 2, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, Localize("Select next envelope.", "Editor envelope selector"), IGraphics::CORNER_R, 7.0f))
 			{
-				*pNewVal = pProps[i].m_Value + 1;
+				*pNewVal = EditorValueSelector::Adjust(CurValue, 0, NumEnvelopes, 1, 1);
 				Change = i;
 				State = EEditState::ONE_GO;
 			}

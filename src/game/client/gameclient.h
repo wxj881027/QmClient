@@ -98,13 +98,14 @@
 #include "components/qmclient/music_lyrics/qm_lxmusic_integration.h"
 #include "components/qmclient/music_lyrics/qm_spotify_integration.h"
 #include "components/qmclient/netease/netease_integration.h"
+#include "components/qmclient/pending_hammer_hits.h"
 #include "components/qmclient/qm_hook_coll_candidates.h"
 #include "components/qmclient/qm_hook_coll_spatial_index.h"
 #include "components/qmclient/qmclient.h"
 #include "components/qmclient/rank_ghost.h"
 #include "components/qmclient/replay_session.h"
 #include "components/qmclient/scripting.h"
-#include "components/qmclient/stutter_diagnostics.h"
+#include "components/qmclient/stutter_capture.h"
 #include "components/qmclient/translate/translate.h"
 #include "components/qmclient/voice/voice_component.h"
 #include "components/qmclient/water_hammer_indicator.h"
@@ -361,40 +362,13 @@ public:
 private:
 	void UpdateQmAxiomPrediction();
 
-	struct SQmStutterComponentWindowSamples
-	{
-		CQmStutterSampleSeries m_Update;
-		CQmStutterSampleSeries m_Render;
-	};
-
 	void ProcessQmStutterFrame();
-	void RecordComponentUpdate(size_t ComponentIndex, double DurationMs);
-	void RecordComponentRender(size_t ComponentIndex, double DurationMs);
-	void CaptureQmStutterContext();
-	void CaptureQmStutterFeatureSnapshot();
-	void FlushQmStutterWindow(const SQmStutterFrameDecision &Decision, bool ForceLog);
-	void ResetQmStutterWindowSamples();
+	CQmStutterCapture::SFrame QmStutterFrameContext();
 
 	std::vector<class CComponent *> m_vpAll;
 	std::vector<const char *> m_vpAllPerfNames;
 	std::vector<class CComponent *> m_vpInput;
-	std::vector<double> m_vQmStutterPendingUpdateMs;
-	std::vector<double> m_vQmStutterPendingRenderMs;
-	std::vector<SQmStutterComponentWindowSamples> m_vQmStutterComponentSamples;
-	std::vector<std::pair<std::string, int>> m_vQmStutterFeatureSnapshot;
-	CQmStutterEpisodeTracker m_QmStutterEpisodeTracker;
-	CQmStutterSampleSeries m_QmStutterFrameSamples;
-	bool m_QmStutterDiagnosticsWasEnabled = false;
-	uint64_t m_QmStutterWindowStartFrame = 0;
-	uint64_t m_QmStutterWorstFrame = 0;
-	double m_QmStutterWorstFrameMs = 0.0;
-	double m_QmStutterDetailWorstMs = 0.0;
-	uint64_t m_QmStutterFeatureFrame = 0;
-	std::string m_QmStutterFeaturePage;
-	std::string m_QmStutterFeatureOperation;
-	EQmStutterLimitCause m_QmStutterLimitCause = EQmStutterLimitCause::NONE;
-	std::string m_QmStutterPage;
-	std::string m_QmStutterOperation;
+	CQmStutterCapture m_QmStutterCapture;
 	std::unique_ptr<CQmJelly> m_pJellyTee;
 
 	// 启动赞助提醒：本次启动要展示的启动序号，0 表示不提示。
@@ -449,15 +423,7 @@ private:
 	CQmImeManager m_QmImeManager;
 	CRaceHelper m_RaceHelper;
 	CQmHammerHitTracker m_HammerHitTracker;
-	struct SPendingHammerHitEvent
-	{
-		vec2 m_Pos;
-		int m_SnapshotTick;
-		int m_Connection;
-		int m_EventOrdinal;
-		bool m_RenderEffect;
-	};
-	std::vector<SPendingHammerHitEvent> m_vPendingHammerHitEvents;
+	CQmPendingHammerHits m_PendingHammerHits;
 
 	// 主/分身连接的重复送达只有在攻击者和目标均已确定且一致时才合并。
 	SQmHammerHitRecord m_LastHammerEffect;
@@ -947,8 +913,15 @@ public:
 			m_Active = false;
 			m_IngameTicks += Tick - m_JoinTick;
 		}
-		int GetIngameTicks(int Tick) const { return m_IngameTicks + Tick - m_JoinTick; }
-		float GetFPM(int Tick, int TickSpeed) const { return (float)(m_Frags * TickSpeed * 60) / GetIngameTicks(Tick); }
+		int64_t GetIngameTicks(int Tick) const { return static_cast<int64_t>(m_IngameTicks) + Tick - m_JoinTick; }
+		float GetFPM(int Tick, int TickSpeed) const
+		{
+			const int64_t IngameTicks = GetIngameTicks(Tick);
+			if(IngameTicks <= 0)
+				return 0.0f;
+			const float FragsScaledToMinute = static_cast<float>(static_cast<double>(m_Frags) * TickSpeed * 60.0);
+			return FragsScaledToMinute / static_cast<float>(IngameTicks);
+		}
 	};
 
 	CClientStats m_aStats[MAX_CLIENTS];
@@ -965,6 +938,7 @@ public:
 	// hooks
 	void OnConnected() override;
 	void OnConnectionResourceUpdate() override;
+	bool ConnectionResourcePreparationFailed() const override { return m_ConnectionResourcePreparation.Failed(); }
 	void OnMapLoadStart() override;
 	void OnRender() override;
 	void OnUpdate() override;
@@ -980,11 +954,12 @@ public:
 	void OnConsoleInit() override;
 	void OnStateChange(int NewState, int OldState) override;
 	template<typename T>
-	void ApplySkin7InfoFromGameMsg(const T *pMsg, int ClientId, int Conn);
-	void ApplySkin7InfoFromSnapObj(const protocol7::CNetObj_De_ClientInfo *pObj, int ClientId) override;
+	void ApplySkin7InfoFromGameMsg(const T *pMsg, int ClientId, int Conn, int GameFlags);
+	void ApplySkin7InfoFromSnapObj(const protocol7::CNetObj_De_ClientInfo *pObj, int ClientId, int GameFlags);
 	int OnDemoRecSnap7(CSnapshot *pFrom, CSnapshotBuffer *pTo, int Conn) override;
 	void *TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn);
-	int TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy) override;
+	int TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy, SSixupSnapshotTranslation *pTranslation) override;
+	void CommitSnapshotTranslation(const SSixupSnapshotTranslation &Translation) override;
 	void OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dummy) override;
 	void OnClientBrandsMessage(CUnpacker *pUnpacker) override;
 	bool OnDemoPlaybackMessage(int MsgId, CUnpacker *pUnpacker) override;
@@ -1503,8 +1478,8 @@ private:
 	float m_LastShowDistanceZoom;
 	float m_LastZoom;
 	float m_LastScreenAspect;
-	float m_LastDeadzone;
-	float m_LastFollowFactor;
+	int m_LastDeadzone;
+	int m_LastFollowFactor;
 	bool m_LastDummyConnected;
 
 	void HandleMultiView();

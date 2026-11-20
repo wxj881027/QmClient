@@ -39,6 +39,8 @@
  * @param path File or directory for which to create parent directories.
  *
  * @return `0` on success. Negative value on failure.
+ * @remark The complete path must fit in `IO_MAX_PATH_LENGTH` bytes including its terminator.
+ * @remark 创建失败时，已经创建的父目录会保留。
  *
  * @remark The strings are treated as null-terminated strings.
  */
@@ -69,9 +71,31 @@ int fs_makedir_rec_for(const char *path);
  * @param type Type of the directory.
  * @param user Pointer to give to the callback.
  *
+ * @remark Paths that do not fit in IO_MAX_PATH_LENGTH bytes including the terminator are skipped.
+ * @remark 回调返回非零时停止枚举。名称仅在本次回调期间有效，后续使用时须复制。
  * @remark The strings are treated as null-terminated strings.
  */
 void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user);
+
+enum class EFsListDirectoryResult
+{
+	SUCCESS,
+	NOT_FOUND,
+	STOPPED,
+	IO_FAILURE,
+	UNSUPPORTED,
+};
+
+/**
+ * 枚举目录并返回状态。回调参数的寿命和停止条件与 @ref fs_listdir 相同。
+ *
+ * @ingroup Filesystem
+ *
+ * @remark 完整路径超出容量时返回 `IO_FAILURE`。编码无效的条目名称会跳过。
+ * @remark 返回 `IO_FAILURE` 前可能已调用回调。调用方负责处理已收集的结果。
+ * @remark 返回或传播异常时关闭目录句柄。`UNSUPPORTED` 供未实现该接口的存储后端使用。
+ */
+EFsListDirectoryResult fs_listdir_checked(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user);
 
 /**
  * Lists the files and folders in a directory and gets additional file information.
@@ -83,6 +107,9 @@ void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user);
  * @param type Type of the directory.
  * @param user Pointer to give to the callback.
  *
+ * @remark Paths that do not fit in IO_MAX_PATH_LENGTH bytes including the terminator are skipped.
+ * @remark 回调返回非零时停止枚举。`info` 和 `info->m_pName` 仅在本次回调期间有效。
+ * @remark Unix 下 `m_TimeCreated` 表示文件状态变更时间。读取时间失败时两个时间字段均为 `-1`。
  * @remark The strings are treated as null-terminated strings.
  */
 void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int type, void *user);
@@ -110,6 +137,8 @@ int fs_chdir(const char *path);
  *
  * @return Pointer to the buffer on success, `nullptr` on failure.
  *
+ * @remark The output buffer must fit the complete path and its terminator.
+ * @remark 返回 `nullptr` 时，若 `buffer` 非空且容量大于零，输出会被置为空字符串。
  * @remark The strings are treated as null-terminated strings.
  */
 char *fs_getcwd(char *buffer, int buffer_size);
@@ -125,9 +154,12 @@ char *fs_getcwd(char *buffer, int buffer_size);
  *
  * @return `0` on success. Negative value on failure.
  *
- * @remark Returns ~/.appname on UNIX based systems.
- * @remark Returns ~/Library/Applications Support/appname on macOS.
- * @remark Returns %APPDATA%/Appname on Windows based systems.
+ * @remark The output buffer must fit the complete path and its terminator.
+ * @remark On failure, a writable output buffer is set to an empty string.
+ * @remark Linux 使用 `XDG_DATA_HOME` 指定的数据根目录，默认使用 `$HOME/.local/share`。
+ *         应用名转为小写。旧版 Teeworlds 使用 `$HOME/.teeworlds`。
+ * @remark macOS 使用 `~/Library/Application Support/appname`。
+ * @remark Windows 使用漫游 AppData 下的 `appname` 目录。
  *
  * @remark The strings are treated as null-terminated strings.
  */
@@ -144,6 +176,8 @@ int fs_storage_path(const char *appname, char *path, int max);
  * @return `0` on success. Negative value on failure.
  *
  * @remark The executable name is included in the result.
+ * @remark The output buffer must fit the complete path and its terminator.
+ * @remark 返回失败时，若 `buffer` 非空且容量大于零，输出会被置为空字符串。
  *
  * @remark The strings are treated as null-terminated strings.
  */
@@ -198,7 +232,7 @@ int fs_is_relative_path(const char *path);
  *
  * @param path Path from which to retrieve the filename.
  *
- * @return Filename of the path.
+ * @return 指向 `path` 内最后一段的指针，其寿命取决于 `path` 的缓冲区。
  *
  * @remark Supports forward and backward slashes as path segment separator.
  * @remark No distinction between files and folders is being made.
@@ -217,6 +251,7 @@ const char *fs_filename(const char *path);
  * @param extension Buffer that will receive the extension, may be nullptr.
  * @param extension_size Size of the extension buffer (ignored if extension is nullptr).
  *
+ * @remark 至少提供一个输出缓冲区。提供缓冲区时，容量至少为 1 字节。
  * @remark Does NOT handle forward and backward slashes.
  * @remark No distinction between files and folders is being made.
  * @remark The strings are treated as null-terminated strings.
@@ -259,6 +294,7 @@ void fs_normalize_path(char *path);
  *
  * @remark The strings are treated as null-terminated strings.
  * @remark Returns an error if the path specifies a directory name.
+ * @remark Windows 下，移到临时路径后若删除失败，会尝试恢复原名并报告失败。
  */
 int fs_remove(const char *filename);
 
@@ -269,24 +305,27 @@ int fs_remove(const char *filename);
  *
  * @param oldname The current path of a file or directory.
  * @param newname The new path for the file or directory.
+ * @param allow_destination_removal Windows 直接替换遇到访问拒绝时，是否允许先在同目录暂存旧目标。
  *
  * @return `0` on success. `1` on failure.
  *
+ * @remark Windows 下传 `false` 时，遇到访问拒绝或共享冲突只会重试直接替换。
+ * @remark Windows 暂存后若替换失败，会尝试还原旧目标。还原失败时保留备份并记录路径。
  * @remark The strings are treated as null-terminated strings.
  */
-// 配置等用户文件可禁用删除目标后重试，保证重命名失败时保留原文件。
 int fs_rename(const char *oldname, const char *newname, bool allow_destination_removal = true);
+int fs_move_file_no_replace(const char *oldname, const char *newname);
 
 /**
- * Gets the creation and the last modification date of a file or directory.
+ * 取得文件或目录的时间戳。
  *
  * @ingroup Filesystem
  *
  * @param name Path of a file or directory.
- * @param created Pointer where the creation time will be stored.
- * @param modified Pointer where the modification time will be stored.
+ * @param created 存放 Windows 创建时间或 Unix 文件状态变更时间的可写指针。
+ * @param modified 存放最后修改时间的可写指针。
  *
- * @return `0` on success. non-zero on failure.
+ * @return 成功返回 `0`。失败时返回非零，两个输出值保持原样。
  *
  * @remark The strings are treated as null-terminated strings.
  * @remark Returned time is in seconds since UNIX Epoch.

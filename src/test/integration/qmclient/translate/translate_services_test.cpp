@@ -100,6 +100,32 @@ TEST_F(CTranslateBaiduTest, InvalidLaterResultDoesNotPublishEarlierTranslation)
 	EXPECT_EQ(str_find(Response.m_Text, "部分译文"), nullptr);
 }
 
+TEST_F(CTranslateBaiduTest, MultipleResultsFitAtExactCombinedByteCapacity)
+{
+	auto pBackend = Create();
+	const std::string First(510, 'a');
+	const std::string Second(512, 'b');
+	const std::string Body = "{\"trans_result\":[{\"dst\":\"" + First + "\"},{\"dst\":\"" + Second + "\"}]}";
+	m_Http.m_vSubmissions.back().m_pRequest->Finish(Body.c_str());
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(true));
+	EXPECT_EQ(std::string(Response.m_Text), First + "\n" + Second);
+	EXPECT_EQ(str_length(Response.m_Text), 1023);
+}
+
+TEST_F(CTranslateBaiduTest, CombinedCapacityIncludesSeparatingNewline)
+{
+	auto pBackend = Create();
+	const std::string First(512, 'a');
+	const std::string Second(511, 'b');
+	const std::string Body = "{\"trans_result\":[{\"dst\":\"" + First + "\"},{\"dst\":\"" + Second + "\"}]}";
+	m_Http.m_vSubmissions.back().m_pRequest->Finish(Body.c_str());
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::INVALID_RESPONSE);
+	EXPECT_EQ(str_find(Response.m_Text, First.c_str()), nullptr);
+}
+
 TEST_F(CTranslateBaiduTest, BusinessErrorsNeverBecomeTranslations)
 {
 	struct SCase

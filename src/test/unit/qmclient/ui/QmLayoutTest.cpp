@@ -240,6 +240,7 @@ TEST(QmScoreboardTeamModes, SpecPlayersKeepTheirScoreboardTeamAndLastKnownModeSt
 	aTeamHasPlayer = {};
 	CacheAndRestoreQmScoreboardTeamModes(aTeamModes, aTeamHasPlayer, aCachedTeamModes);
 	EXPECT_FALSE(aTeamModes[DdTeam].m_Known);
+	EXPECT_FALSE(aCachedTeamModes[DdTeam].m_Known);
 }
 
 TEST(UiV2Layout, RowPaddingGapAndPosition)

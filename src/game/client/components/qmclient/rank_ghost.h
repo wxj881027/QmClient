@@ -14,12 +14,14 @@
 #include "rank_demo_manifest.h"
 #include "rank_view_timeline.h"
 
+#include <base/str.h>
 #include <base/vmath.h>
 
 #include <engine/console.h>
 #include <engine/http.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/qm_storage_layout.h>
+#include <engine/storage.h>
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/shadow_gun_replay.h>
@@ -29,12 +31,50 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
-
-class IStorage;
 class CSnapshot;
 class CTeeRenderInfo;
 class CGameWorld;
+
+namespace qmclient::rank_ghost
+{
+	// 旧版多轨影子放在直属子目录里。清理范围必须留在旧缓存目录内。
+	inline void CleanupLegacyGhosts(IStorage &Storage, const char *pDir)
+	{
+		const auto CleanDirectory = [&Storage](const std::string &Directory, bool CollectChildren) {
+			struct SEntries
+			{
+				bool m_CollectChildren;
+				std::vector<std::string> m_vFiles;
+				std::vector<std::string> m_vChildren;
+			};
+			SEntries Entries{CollectChildren, {}, {}};
+			const auto Scan = Storage.ListDirectoryChecked(
+				IStorage::TYPE_SAVE, Directory.c_str(), [](const char *pName, int IsDir, int, void *pUser) {
+					auto &Result = *static_cast<SEntries *>(pUser);
+					if(IsDir)
+					{
+						if(Result.m_CollectChildren && str_comp(pName, ".") != 0 && str_comp(pName, "..") != 0)
+							Result.m_vChildren.emplace_back(pName);
+					}
+					else if(str_endswith(pName, ".gho"))
+						Result.m_vFiles.emplace_back(pName);
+					return 0;
+				},
+				&Entries);
+			if(Scan != EFsListDirectoryResult::SUCCESS)
+				return std::vector<std::string>{};
+			for(const std::string &Name : Entries.m_vFiles)
+				Storage.RemoveFile((Directory + "/" + Name).c_str(), IStorage::TYPE_SAVE);
+			return std::move(Entries.m_vChildren);
+		};
+
+		const std::string Directory(pDir);
+		for(const std::string &Child : CleanDirectory(Directory, true))
+			CleanDirectory(Directory + "/" + Child, false);
+	}
+}
 
 class CRankGhost : public CComponent, private CDemoPlayer::IListener, private COnlineReplayPlayer::ISource
 {
@@ -378,7 +418,7 @@ private:
 	// 仅下载请求：确保选中场次的 demo 落到精确缓存路径，不经过影子缓存/解析
 	void EnsureDemoOnlyReady();
 	// demo 下载完成后的公共收尾：校验并按请求模式收尾（仅下载 → 提示；影子 → 解析）
-	void FinishDemoFetch();
+	void FinishDemoFetch(const char *pCandidate);
 	void StartParse();
 	void FinishParse();
 
@@ -393,8 +433,6 @@ private:
 	void WriteViewTimeline();
 	bool LoadViewTimeline();
 	bool ViewTimelinePath(char *pBuf, size_t BufSize) const;
-	// sidecar 缓存是否已存在且为当前版本；旧版本返回 false，由补齐流程重建
-	bool ViewTimelineCached() const;
 	// 旧缓存缺时间线时后台重放一次回放补齐（不重写影子，不打断查看）
 	void KickViewTimelineRebuild();
 	// 查看模式每帧：按播放头派发事件、应用开关状态
@@ -410,7 +448,7 @@ private:
 	bool ParseManifest(const unsigned char *pData, size_t DataSize);
 
 	// 按条目加载缓存：多轨目录优先，其次单文件
-	bool LoadGhostTarget();
+	bool LoadGhostTarget(bool *pHaveTimeline = nullptr);
 	bool LoadGhostFile(const char *pStoragePath);
 	bool LoadGhostGroup(const char *pDir);
 	void RegisterLoadedGhost(const char *pStoragePath, int Slot);

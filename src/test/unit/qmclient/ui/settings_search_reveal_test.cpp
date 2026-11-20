@@ -4,24 +4,25 @@
 
 #include <gtest/gtest.h>
 
-// 回归：搜索页在卡片头部点击 Locate 时，Request 会清空预览容器；同一帧
-// 卡片内容仍会访问当前卡的键。键指针必须随之改指向目标键，不能悬垂。
-TEST(SettingsSearchReveal, RequestWhileCardIsRenderingSwitchesToTargetKeys)
+// 点击定位时旧结果卡仍可能继续绘制；下一次进入目标卡才绑定定位请求。
+TEST(SettingsSearchReveal, LocateRevokesThePreviewAndTheNextCardUsesTheTargetKeys)
 {
 	qm_settings_reveal::Clear();
 	qm_settings_reveal::SetPreviews({{"qm:card", {"row-a"}}});
 	qm_settings_reveal::BeginCard("qm:card", nullptr, false);
 	ASSERT_TRUE(qm_settings_reveal::ShouldReveal("row-a", nullptr));
 
-	qm_settings_reveal::Request("qm:card", {"row-a", "row-b"});
+	ASSERT_TRUE(qm_settings_reveal::Request("qm:card", {"row-b"}));
 
-	// 预览容器已被清空，当前卡必须使用 Request 刚复制的目标键。
-	EXPECT_TRUE(qm_settings_reveal::ShouldReveal("row-a", nullptr));
+	EXPECT_FALSE(qm_settings_reveal::ShouldReveal("row-a", nullptr));
+	EXPECT_FALSE(qm_settings_reveal::ShouldReveal("row-b", nullptr));
+	qm_settings_reveal::EndCard();
+	qm_settings_reveal::BeginCard("qm:card", nullptr, false);
+	EXPECT_FALSE(qm_settings_reveal::ShouldReveal("row-a", nullptr));
 	EXPECT_TRUE(qm_settings_reveal::ShouldReveal("row-b", nullptr));
-	EXPECT_FALSE(qm_settings_reveal::ShouldReveal("row-c", nullptr));
 
 	qm_settings_reveal::EndCard();
-	EXPECT_FALSE(qm_settings_reveal::ShouldReveal("row-a", nullptr));
+	EXPECT_FALSE(qm_settings_reveal::ShouldReveal("row-b", nullptr));
 	qm_settings_reveal::Clear();
 }
 

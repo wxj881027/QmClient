@@ -10,7 +10,10 @@
 
 #include <engine/shared/config.h>
 
+#include <cmath>
+#include <iterator>
 #include <limits>
+#include <new>
 
 const char *CTuningParams::ms_apNames[] =
 	{
@@ -19,11 +22,19 @@ const char *CTuningParams::ms_apNames[] =
 #undef MACRO_TUNING_PARAM
 };
 
+static constexpr CTuneParam CTuningParams::*TUNING_PARAM_MEMBERS[] =
+	{
+#define MACRO_TUNING_PARAM(Name, ScriptName, Value, Description) &CTuningParams::m_##Name,
+#include "tuning.h"
+#undef MACRO_TUNING_PARAM
+};
+static_assert(std::size(TUNING_PARAM_MEMBERS) * sizeof(int) == sizeof(CTuningParams));
+
 bool CTuningParams::Set(int Index, float Value)
 {
 	if(Index < 0 || Index >= Num())
 		return false;
-	((CTuneParam *)this)[Index] = Value;
+	this->*TUNING_PARAM_MEMBERS[Index] = Value;
 	return true;
 }
 
@@ -31,7 +42,7 @@ bool CTuningParams::Get(int Index, float *pValue) const
 {
 	if(Index < 0 || Index >= Num())
 		return false;
-	*pValue = (float)((CTuneParam *)this)[Index];
+	*pValue = static_cast<float>(this->*TUNING_PARAM_MEMBERS[Index]);
 	return true;
 }
 
@@ -364,9 +375,14 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 					{
 						if(m_HookedPlayer == -1 || distance(m_HookPos, pCharCore->m_Pos) < Distance)
 						{
+							SetHookedPlayer(i);
+							if(m_HookedPlayer != i)
+							{
+								m_TriggeredEvents &= ~COREEVENT_HOOK_ATTACH_PLAYER;
+								break;
+							}
 							m_TriggeredEvents |= COREEVENT_HOOK_ATTACH_PLAYER;
 							m_HookState = HOOK_GRABBED;
-							SetHookedPlayer(i);
 							Distance = distance(m_HookPos, pCharCore->m_Pos);
 							m_AntiPingInterfereCallback(i, false);
 						}
@@ -450,7 +466,8 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 		}
 
 		// release hook (max default hook time is 1.25 s)
-		m_HookTick++;
+		if(m_HookTick < std::numeric_limits<int>::max())
+			++m_HookTick;
 		if(m_HookedPlayer != -1 && (m_HookTick > SERVER_TICK_SPEED + SERVER_TICK_SPEED / 5 || (m_pWorld && !m_pWorld->m_apCharacters[m_HookedPlayer])))
 		{
 			SetHookedPlayer(-1);
@@ -506,9 +523,10 @@ void CCharacterCore::TickDeferred()
 				// handle hook influence
 				if(!m_HookHitDisabled && m_HookedPlayer == i && m_Tuning.m_PlayerHooking)
 				{
-					if(Distance > PhysicalSize() * 1.50f)
+					const float HookLength = m_Tuning.m_HookLength;
+					if(Distance > PhysicalSize() * 1.50f && HookLength != 0.0f)
 					{
-						float HookAccel = m_Tuning.m_HookDragAccel * (Distance / m_Tuning.m_HookLength);
+						float HookAccel = m_Tuning.m_HookDragAccel * (Distance / HookLength);
 						float DragSpeed = m_Tuning.m_HookDragSpeed;
 
 						vec2 Temp;
@@ -539,6 +557,12 @@ void CCharacterCore::TickDeferred()
 void CCharacterCore::Move()
 {
 	float RampValue = VelocityRamp(length(m_Vel) * 50, m_Tuning.m_VelrampStart, m_Tuning.m_VelrampRange, m_Tuning.m_VelrampCurvature);
+	float InverseRamp = std::isfinite(RampValue) && RampValue != 0.0f ? 1.0f / RampValue : 0.0f;
+	if(!std::isfinite(InverseRamp) || InverseRamp == 0.0f)
+	{
+		RampValue = 1.0f;
+		InverseRamp = 1.0f;
+	}
 
 	m_Vel.x = m_Vel.x * RampValue;
 
@@ -570,7 +594,7 @@ void CCharacterCore::Move()
 		m_LeftWall = true;
 	}
 
-	m_Vel.x = m_Vel.x * (1.0f / RampValue);
+	m_Vel.x = m_Vel.x * InverseRamp;
 
 	if(m_pWorld && (m_Super || (m_Tuning.m_PlayerCollision && !m_CollisionDisabled && !m_Solo)))
 	{
@@ -735,7 +759,18 @@ void CCharacterCore::SetHookedPlayer(int HookedPlayer)
 			CCharacterCore *pCharCore = m_pWorld->m_apCharacters[HookedPlayer];
 			if(pCharCore)
 			{
-				pCharCore->m_AttachedPlayers.insert(m_Id);
+				try
+				{
+					pCharCore->m_AttachedPlayers.insert(m_Id);
+				}
+				catch(const std::bad_alloc &)
+				{
+					// 回链创建失败时收回钩索，避免留下单向挂接。
+					HookedPlayer = -1;
+					m_HookState = HOOK_RETRACTED;
+					m_HookPos = m_Pos;
+					m_Reset = true;
+				}
 			}
 		}
 		m_HookedPlayer = HookedPlayer;
@@ -752,7 +787,7 @@ void CCharacterCore::SetTeamsCore(CTeamsCore *pTeams)
 bool CCharacterCore::IsSwitchActiveCb(unsigned char Number, void *pUser)
 {
 	CCharacterCore *pThis = (CCharacterCore *)pUser;
-	if(pThis->m_pWorld && !pThis->m_pWorld->m_vSwitchers.empty())
+	if(pThis->m_pWorld && Number < pThis->m_pWorld->m_vSwitchers.size())
 		if(pThis->m_Id != -1 && pThis->m_pTeams->Team(pThis->m_Id) != pThis->m_pTeams->TeamSuper())
 			return pThis->m_pWorld->m_vSwitchers[Number].m_aStatus[pThis->m_pTeams->Team(pThis->m_Id)];
 	return false;

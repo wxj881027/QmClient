@@ -4,7 +4,10 @@
 #include <game/client/components/settings_runtime_cache.h>
 #include <game/client/ui_rect.h>
 
+#include <cstdint>
+#include <new>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -97,17 +100,35 @@ class CSettingsSkinLoadViewport
 
 public:
 	void BeginFrame() { ++m_Frame; }
-	bool Publish(std::vector<std::string> Names, bool MeasurementOnly = false)
+	bool Publish(std::vector<std::string> &&Names, bool MeasurementOnly = false)
 	{
 		if(MeasurementOnly)
 			return false;
+		const bool Changed = Names != m_vNames;
+		if(Changed)
+		{
+			if(Names.empty())
+				m_Names.clear();
+			else
+			{
+				try
+				{
+					std::unordered_set<std::string> NameIndex(Names.begin(), Names.end(), Names.size());
+					m_Names.swap(NameIndex);
+				}
+				catch(const std::bad_alloc &)
+				{
+					return false;
+				}
+				catch(const std::length_error &)
+				{
+					return false;
+				}
+			}
+			m_vNames.swap(Names);
+		}
 		m_PublishedFrame = m_Frame;
-		if(Names == m_vNames)
-			return false;
-		m_vNames = std::move(Names);
-		m_Names.clear();
-		m_Names.insert(m_vNames.begin(), m_vNames.end());
-		return true;
+		return Changed;
 	}
 	const std::vector<std::string> &PublishedNames() const { return m_vNames; }
 	bool Contains(const std::string &Name) const { return m_PublishedFrame == m_Frame && m_Names.contains(Name); }
@@ -123,7 +144,19 @@ template<typename T, typename FPriority, typename FVisible, typename FVisit>
 void SettingsVisitSkinLoadRequests(const std::vector<T> &Requests, FPriority Priority, FVisible CurrentVisible, FVisit Visit)
 {
 	std::vector<int> vRanks;
-	vRanks.reserve(Requests.size());
+	// 优先级快照建立失败时保留这批请求，等后续加载轮次再处理。
+	try
+	{
+		vRanks.reserve(Requests.size());
+	}
+	catch(const std::bad_alloc &)
+	{
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		return;
+	}
 	for(const auto &Request : Requests)
 	{
 		const auto RequestPriority = Priority(Request);
@@ -568,8 +601,21 @@ int SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(int RemainingBudget,
 bool SettingsResourceConsumeSharedHeavyBudget(int &RemainingBudget);
 bool SettingsResourceUploadWithinByteBudget(int UploadedThisFrame, size_t UploadedBytesThisFrame, size_t ItemBytes, size_t MaxBytesPerFrame);
 bool SettingsResourceOversizedUploadAllowed(const SSettingsResourceFrameContext &Context, bool PageSwitchActive, ESettingsResourcePriority Priority, int OversizedUploadsThisFrame, size_t ItemBytes, size_t MaxBytesPerFrame);
-size_t SettingsAssetPreviewResidentBudgetBytes(size_t OverrideMb, int Percent, float GpuBudgetMb);
-int SettingsAssetPreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, size_t TextureBudgetBytes, size_t CurrentTextureMemoryBytes, size_t ResidentPreviewBytes);
+// 直接统计拥有条目的容器，避免搜索指针在列表重建后失效。
+template<typename TItem, typename TAllocator>
+uint64_t SettingsAssetPreviewResidentBytes(const std::vector<TItem, TAllocator> &Items)
+{
+	uint64_t ResidentBytes = 0;
+	for(const TItem &Item : Items)
+	{
+		if(Item.m_RenderTexture.IsValid())
+			ResidentBytes += Item.m_PreviewResidentBytes;
+	}
+	return ResidentBytes;
+}
+
+uint64_t SettingsAssetPreviewResidentBudgetBytes(size_t OverrideMb, int Percent, float GpuBudgetMb);
+int SettingsAssetPreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, uint64_t TextureBudgetBytes, uint64_t CurrentTextureMemoryBytes, uint64_t ResidentPreviewBytes);
 std::string SettingsAssetPreviewHandleKey(const SSettingsAssetPreviewHandle &Handle);
 bool SettingsAssetPreviewHandleMatches(const SSettingsAssetPreviewHandle &Handle, int CurrentTab, unsigned CurrentEpoch, size_t CurrentIndex, const char *pName);
 // 只看「这个句柄是不是还在说这张卡」：列表在软重扫合并后会重新排序，条目下标

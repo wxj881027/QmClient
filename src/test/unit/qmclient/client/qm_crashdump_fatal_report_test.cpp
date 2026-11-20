@@ -119,6 +119,18 @@ TEST(QmCrashdumpFatalReport, ShortBufferIsTruncatedAndStillTerminated)
 	EXPECT_EQ(aBuffer[Length], '\0');
 }
 
+TEST(QmCrashdumpFatalReport, TruncationStopsBeforeAnIncompleteUtf8Character)
+{
+	SCrashFatalReport Report = MakeReport();
+	Report.m_pProgramName = "\xE4\xB8\xAD";
+	char aBuffer[sizeof("QmClient fatal crash report\n===========================\nProgram: ") + 1];
+
+	const size_t Length = crashdump_format_fatal_report(aBuffer, sizeof(aBuffer), Report);
+
+	EXPECT_EQ(Length, sizeof(aBuffer) - 2);
+	EXPECT_STREQ(aBuffer, "QmClient fatal crash report\n===========================\nProgram: ");
+}
+
 TEST(QmCrashdumpFatalReport, EmptyBufferIsRejectedWithoutWriting)
 {
 	const SCrashFatalReport Report = MakeReport();
@@ -200,12 +212,39 @@ TEST(QmCrashdumpFrameChain, FramePointerBelowStackPointerIsNotTrusted)
 TEST(QmCrashdumpFrameChain, MisalignedFramePointerIsRejected)
 {
 	SFakeStack Stack;
-	PushFrame(Stack, 0x8004, 0x8100, 0x1000);
+	PushFrame(Stack, 0x8001, 0x8100, 0x1000);
 
 	uintptr_t aFrames[16] = {};
-	const size_t Count = crashdump_walk_frame_chain(FakeReadMemory, &Stack, 0x500, 0x8004, 0x7000, aFrames, 16);
+	const size_t Count = crashdump_walk_frame_chain(FakeReadMemory, &Stack, 0x500, 0x8001, 0x7000, aFrames, 16);
 
 	ASSERT_EQ(Count, 1u);
+}
+
+TEST(QmCrashdumpFrameChain, StopsBeforeReadingMisalignedNextFrame)
+{
+	SFakeStack Stack;
+	PushFrame(Stack, 0x8000, 0x8101, 0x1000);
+	PushFrame(Stack, 0x8101, 0, 0x2000);
+
+	uintptr_t aFrames[4] = {};
+	const size_t Count = crashdump_walk_frame_chain(FakeReadMemory, &Stack, 0x500, 0x8000, 0x7000, aFrames, 4);
+
+	ASSERT_EQ(Count, 2u);
+	EXPECT_EQ(aFrames[1], 0x1000u);
+}
+
+TEST(QmCrashdumpFrameChain, RejectsFrameWhoseReturnAddressWouldWrap)
+{
+	SFakeStack Stack;
+	const uintptr_t Frame = UINTPTR_MAX - sizeof(uintptr_t) + 1;
+	Stack.m_Values.emplace(Frame, 0);
+	Stack.m_Values.emplace(0, 0x2000);
+
+	uintptr_t aFrames[4] = {};
+	const size_t Count = crashdump_walk_frame_chain(FakeReadMemory, &Stack, 0x500, Frame, 0x7000, aFrames, 4);
+
+	ASSERT_EQ(Count, 1u);
+	EXPECT_EQ(aFrames[0], 0x500u);
 }
 
 TEST(QmCrashdumpFrameChain, RespectsTheFrameLimit)
@@ -417,6 +456,47 @@ TEST(QmCrashdumpModuleTable, FullTableRejectsNewPathsButStillMergesKnownOnes)
 
 	EXPECT_FALSE(crashdump_add_module_range(aModules, &NumModules, 1, 0x1800, 0x2800, "/a/libx.so"));
 	EXPECT_EQ(aModules[0].m_End, 0x2800u);
+}
+
+TEST(QmCrashdumpModuleTable, LongPathDoesNotOccupyAModuleSlot)
+{
+	SCrashModuleRange aModules[1] = {};
+	size_t NumModules = 0;
+	const std::string LongPath = "/vendor/" + std::string(sizeof(aModules[0].m_aPath), 'x') + "/libfoo.so";
+
+	EXPECT_FALSE(crashdump_add_module_range(aModules, &NumModules, 1, 0x1000, 0x2000, LongPath.c_str()));
+	EXPECT_EQ(NumModules, 0u);
+	EXPECT_TRUE(crashdump_add_module_range(aModules, &NumModules, 1, 0x1000, 0x2000, "/vendor/libfoo.so"));
+}
+
+TEST(QmCrashdumpModuleTable, LongPathMergesAtFullCapacity)
+{
+	SCrashModuleRange aModules[1] = {};
+	size_t NumModules = 0;
+	// Android 解析器最多传入 383 字节的路径。
+	const std::string Path = "/data/app/" + std::string(180, 'a') + "/lib/" + std::string(179, 'b') + "/libqm.so";
+
+	ASSERT_TRUE(crashdump_add_module_range(aModules, &NumModules, 1, 0x1000, 0x2000, Path.c_str()));
+	EXPECT_FALSE(crashdump_add_module_range(aModules, &NumModules, 1, 0x3000, 0x4000, Path.c_str()));
+
+	ASSERT_EQ(NumModules, 1u);
+	uintptr_t Offset = 0;
+	EXPECT_STREQ(crashdump_find_module(aModules, NumModules, 0x3100, &Offset), "libqm.so");
+	EXPECT_EQ(Offset, 0x2100u);
+}
+
+TEST(QmCrashdumpModuleTable, LongPathStaysSeparateFromItsPrefix)
+{
+	SCrashModuleRange aModules[2] = {};
+	size_t NumModules = 0;
+	const std::string ShortPath = "/data/app/" + std::string(75, 'a') + "/libfoo.so";
+	const std::string LongPath = ShortPath + ".1";
+
+	ASSERT_TRUE(crashdump_add_module_range(aModules, &NumModules, 2, 0x1000, 0x2000, LongPath.c_str()));
+	ASSERT_TRUE(crashdump_add_module_range(aModules, &NumModules, 2, 0x5000, 0x6000, ShortPath.c_str()));
+
+	EXPECT_EQ(NumModules, 2u);
+	EXPECT_EQ(crashdump_find_module(aModules, NumModules, 0x3000, nullptr), nullptr);
 }
 
 TEST(QmCrashdumpModuleTable, InvalidInputsAreRejected)

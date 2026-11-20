@@ -5,6 +5,31 @@
 
 #include <algorithm>
 #include <cmath>
+#include <new>
+#include <stdexcept>
+#include <utility>
+
+// 准备失败只隐藏本帧；绘制开始后的设备异常保持传播，不尝试恢复失败批次。
+template<typename TPrepare, typename TDraw>
+bool QmTClientPetRenderFrame(int &FollowedClientId, TPrepare &&Prepare, TDraw &&Draw)
+{
+	try
+	{
+		std::forward<TPrepare>(Prepare)();
+	}
+	catch(const std::bad_alloc &)
+	{
+		FollowedClientId = -1;
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		FollowedClientId = -1;
+		return false;
+	}
+	std::forward<TDraw>(Draw)();
+	return true;
+}
 
 inline void QmTClientPetAdvanceSpring(vec2 &Position, vec2 &Velocity, vec2 Target, float Delta)
 {

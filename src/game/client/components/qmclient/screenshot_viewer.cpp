@@ -22,53 +22,78 @@
 #include <string>
 
 #if defined(CONF_FAMILY_WINDOWS)
+#include <base/windows.h>
+
 #include <windows.h>
 #endif
 
 #if defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_IOS) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+#include <spawn.h>
 #include <sys/wait.h>
 
 #include <cerrno>
-#include <thread>
+
+#if defined(CONF_PLATFORM_MACOS)
+#include <crt_externs.h>
+#else
+extern char **environ;
+#endif
 #endif
 
 bool OpenQmScreenshotViewer(IClient *pClient, const char *pPath, const char *pErrorTitle, const char *pErrorMessage)
 {
-#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS) || defined(CONF_PLATFORM_EMSCRIPTEN)
-	// 移动端和浏览器保留平台原有的文件打开能力。
-	return pClient->ViewFile(pPath);
-#else
-	std::string Path = pPath;
-	if(fs_is_relative_path(pPath))
+	try
 	{
-		char aWorkingDirectory[IO_MAX_PATH_LENGTH];
-		if(fs_getcwd(aWorkingDirectory, sizeof(aWorkingDirectory)) == nullptr)
-			return false;
-		Path = std::string(aWorkingDirectory) + "/" + pPath;
-	}
-	char aExecutable[IO_MAX_PATH_LENGTH];
-#if defined(CONF_FAMILY_WINDOWS)
-	// 路径辅助函数会核对 GetLastError，不能继承此前 SDL 调用留下的错误。
-	SetLastError(ERROR_SUCCESS);
-#endif
-	if(fs_executable_path(aExecutable, sizeof(aExecutable)) != 0)
-		return false;
-	const char *apArguments[] = {"--qm-screenshot-viewer", Path.c_str(), pErrorTitle, pErrorMessage};
-	const PROCESS Process = shell_execute(aExecutable, EShellExecuteWindowState::FOREGROUND, apArguments, std::size(apArguments));
-	if(Process == INVALID_PROCESS)
-		return false;
-#if defined(CONF_FAMILY_WINDOWS)
-	CloseHandle(Process);
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS) || defined(CONF_PLATFORM_EMSCRIPTEN)
+		// 移动端和浏览器保留平台原有的文件打开能力。
+		return pClient->ViewFile(pPath);
 #else
-	// 回收子进程，等待发生在独立线程，不阻塞游戏主循环。
-	std::thread([Process]() {
-		while(waitpid(Process, nullptr, 0) < 0 && errno == EINTR)
+		std::string Path = pPath;
+		if(fs_is_relative_path(pPath))
 		{
+			char aWorkingDirectory[IO_MAX_PATH_LENGTH];
+			if(fs_getcwd(aWorkingDirectory, sizeof(aWorkingDirectory)) == nullptr)
+				return false;
+			Path = std::string(aWorkingDirectory) + "/" + pPath;
 		}
-	}).detach();
+		char aExecutable[IO_MAX_PATH_LENGTH];
+		if(fs_executable_path(aExecutable, sizeof(aExecutable)) != 0)
+			return false;
+		char aViewerMode[] = "--qm-screenshot-viewer";
+#if defined(CONF_FAMILY_WINDOWS)
+		const char *apArguments[] = {aExecutable, aViewerMode, Path.c_str(), pErrorTitle, pErrorMessage};
+		const std::wstring Executable = windows_utf8_to_wide(aExecutable);
+		std::wstring CommandLine = windows_args_to_wide(apArguments, std::size(apArguments));
+		STARTUPINFOW StartupInfo{};
+		StartupInfo.cb = sizeof(StartupInfo);
+		StartupInfo.dwFlags = STARTF_USESHOWWINDOW;
+		StartupInfo.wShowWindow = SW_SHOW;
+		PROCESS_INFORMATION ProcessInfo{};
+		if(!CreateProcessW(Executable.c_str(), CommandLine.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &StartupInfo, &ProcessInfo))
+			return false;
+		CloseHandle(ProcessInfo.hThread);
+		CloseHandle(ProcessInfo.hProcess);
+		return true;
+#else
+		return QmLaunchScreenshotViewerProcess([&]() {
+			char *apArguments[] = {aExecutable, aViewerMode, Path.data(), const_cast<char *>(pErrorTitle), const_cast<char *>(pErrorMessage), nullptr};
+#if defined(CONF_PLATFORM_MACOS)
+			char **ppEnvironment = *_NSGetEnviron();
+#else
+			char **ppEnvironment = environ;
 #endif
-	return true;
+			PROCESS Process = INVALID_PROCESS;
+			return posix_spawnp(&Process, aExecutable, nullptr, nullptr, apArguments, ppEnvironment) == 0 ? Process : INVALID_PROCESS; }, [](PROCESS Process) {
+			while(waitpid(Process, nullptr, 0) < 0 && errno == EINTR)
+			{
+			} });
 #endif
+#endif
+	}
+	catch(const std::exception &)
+	{
+		return false;
+	}
 }
 
 namespace

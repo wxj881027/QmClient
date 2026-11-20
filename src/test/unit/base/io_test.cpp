@@ -169,6 +169,18 @@ TEST(Io, WriteTruncatesFile)
 	EXPECT_FALSE(fs_remove(Info.m_aFilename));
 }
 
+#if defined(CONF_FAMILY_WINDOWS)
+TEST(Io, OpenRejectsInvalidUtf8Path)
+{
+	const char *pInvalidPath = "invalid-\xff-path.txt";
+	EXPECT_EQ(io_open(pInvalidPath, IOFLAG_READ), nullptr);
+
+	bool NotFound = true;
+	EXPECT_EQ(io_open_read_checked(pInvalidPath, &NotFound), nullptr);
+	EXPECT_FALSE(NotFound);
+}
+#endif
+
 TEST(Io, OpenFileShared)
 {
 	CTestInfo Info;

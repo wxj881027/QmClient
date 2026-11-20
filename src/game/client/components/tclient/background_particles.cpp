@@ -456,6 +456,10 @@ void CBackgroundParticles::RenderMesh(const SBackgroundParticleMesh &Mesh, vec2 
 
 void CBackgroundParticles::RenderShape(int Type, vec2 WorldPos, float Depth, float Size, const vec3 &Rotation, ColorRGBA Color, const SBackgroundParticleProjection &Projection, vec2 ScreenOffset) const
 {
+	// 与线段顶点的 8 位 Alpha 舍入一致，跳过完全透明的线框。
+	if(round_to_int(Color.a * 255.0f) <= 0)
+		return;
+
 	const SBackgroundParticleMesh *pMesh = &BackgroundParticleCubeMesh();
 	switch(Type)
 	{
@@ -523,7 +527,7 @@ void CBackgroundParticles::RenderParticle(const SParticle &Particle, const SBack
 		const float TwinkleAlpha = 0.35f + 0.65f * TwinkleWave;
 		Alpha *= 1.0f + (TwinkleAlpha - 1.0f) * TwinkleStrength;
 	}
-	if(Alpha <= 0.01f || Size <= 0.5f)
+	if(Size <= 0.5f)
 		return;
 
 	const ColorRGBA Color = Particle.m_Color.WithMultipliedAlpha(Alpha);

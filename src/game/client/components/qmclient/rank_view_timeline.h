@@ -178,6 +178,17 @@ namespace qmclient::rank_ghost
 	{
 		if(File == nullptr)
 			return false;
+		size_t Remaining = MAX_TIMELINE_BYTES - sizeof(VIEW_TIMELINE_MAGIC) - 3 * sizeof(uint32_t);
+		const auto CountFits = [&](size_t Count, size_t RecordSize) {
+			if(Count > Remaining / RecordSize)
+				return false;
+			Remaining -= Count * RecordSize;
+			return true;
+		};
+		if(!CountFits(vEvents.size(), 5 * sizeof(int)) ||
+			!CountFits(vSwitchStates.size(), 3 * sizeof(int) + 8 * sizeof(unsigned)) ||
+			!CountFits(vMessages.size(), 7 * sizeof(int)))
+			return false;
 		const auto Write = [File](const void *pData, size_t Size) {
 			return io_write(File, pData, (unsigned)Size) == Size;
 		};

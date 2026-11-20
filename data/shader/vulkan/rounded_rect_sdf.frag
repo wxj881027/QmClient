@@ -504,9 +504,12 @@ void main()
 	{
 		// 图片矩形之外保持透明：图片没铺满容器时，边缘和普通 quad 一样是硬边。
 		vec2 TexUV = Point * TexParams0.yz + vec2(TexParams0.w, TexParams1.x);
+		// UV 边界两侧的片元会走不同分支，在判断范围前计算采样梯度。
+		vec2 TexDx = dFdx(TexUV);
+		vec2 TexDy = dFdy(TexUV);
 		vec4 TexColor = vec4(0.0);
 		if(all(greaterThanEqual(TexUV, vec2(0.0))) && all(lessThanEqual(TexUV, vec2(1.0))))
-			TexColor = texture(gTextureSampler, TexUV);
+			TexColor = textureGrad(gTextureSampler, TexUV, TexDx, TexDy);
 		if(TexParams0.x > 1.5)
 		{
 			// 距离场只存轮廓，颜色由调用方提供；按屏幕像素恢复覆盖率，缩放不重建纹理。

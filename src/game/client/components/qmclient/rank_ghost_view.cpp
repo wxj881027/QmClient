@@ -4,6 +4,7 @@
 
 #include "rank_demo_cache.h"
 #include "rank_ghost.h"
+#include "rank_view_camera.h"
 #include "rank_view_timeline.h"
 
 #include <base/log.h>
@@ -14,6 +15,7 @@
 #include <engine/client/ghost.h>
 #include <engine/graphics.h>
 #include <engine/message.h>
+#include <engine/shared/demo_output.h>
 #include <engine/shared/protocol_ex.h>
 #include <engine/shared/snapshot.h>
 #include <engine/storage.h>
@@ -41,6 +43,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -93,37 +96,66 @@ bool CRankGhost::ViewPracticeGroup(const char *pGroupDir)
 }
 
 void CRankGhost::EnterViewMode()
+try
 {
 	if(m_vLoadedSlots.empty())
 		return;
-	GameClient()->m_Ghost.StartRenderManual(m_vLoadedSlots);
-	if(!GameClient()->m_Ghost.ManualModeActive())
-		return;
-	m_ViewPlaybackMetadata = {};
-	str_copy(m_aViewPlaybackFilename, m_aLoadedReplayFilename);
+	IDemoPlayer::CInfo Info{};
+	bool HaveMetadata = false;
 	// 练习 /pg 组没有源 demo，跳过元数据扫描；其余情况只读 tick 与标记，
 	// 不播放快照，不改变在线服务器状态。
-	auto pMetadata = std::make_unique<CDemoPlayer>(nullptr, nullptr, false);
-	if(m_aViewPlaybackFilename[0] != '\0' && pMetadata->Load(Storage(), m_aViewPlaybackFilename, IStorage::TYPE_SAVE) != -1)
+	if(m_aLoadedReplayFilename[0] != '\0')
 	{
-		m_ViewPlaybackMetadata = *pMetadata->BaseInfo();
-		if(m_ViewPlaybackMetadata.m_NumTimelineMarkers >= 2)
-			m_ViewPlaybackMetadata.m_FirstTick = m_ViewPlaybackMetadata.m_aTimelineMarkers[0];
-		pMetadata->Stop();
+		auto pMetadata = std::make_unique<CDemoPlayer>(nullptr, nullptr, false);
+		if(pMetadata->Load(Storage(), m_aLoadedReplayFilename, IStorage::TYPE_SAVE, false) != -1)
+		{
+			Info = *pMetadata->BaseInfo();
+			if(Info.m_NumTimelineMarkers >= 2)
+				Info.m_FirstTick = Info.m_aTimelineMarkers[0];
+			HaveMetadata = true;
+			pMetadata->Stop();
+		}
 	}
-	m_ViewPlaybackMetadata.m_FirstTick = maximum(0, m_ViewPlaybackMetadata.m_FirstTick);
-	m_ViewPlaybackMetadata.m_LastTick = m_ViewPlaybackMetadata.m_FirstTick + GameClient()->m_Ghost.ManualEndTick();
+	COnlineReplayMembers Members;
+	Members.Reset(m_vLoadedSlots.size());
+	auto vSwitchers = GameClient()->m_GameWorld.m_Core.m_vSwitchers;
+	auto pMechanismWorld = std::make_unique<CGameWorld>();
+	int NextMechanismEntityId = 600000;
+	qm_map_mechanisms::Build(*pMechanismWorld, GameClient()->Collision(), NextMechanismEntityId,
+		{.m_BuildPickups = false, .m_RegisterDoorCollision = false, .m_InheritSnapshotLights = false});
+	pMechanismWorld->Switchers() = vSwitchers;
+	std::vector<qm_shadow_gun::SGun> vGuns;
+	std::vector<qm_shadow_gun::SPlasma> vPlasmas;
+	qm_shadow_gun::Load(GameClient()->Collision(), vGuns);
+	qm_shadow_gun::Reset(vGuns, vPlasmas);
+	CGhost &Ghost = GameClient()->m_Ghost;
+	if(!Ghost.StartRenderManual(m_vLoadedSlots, maximum(0, Info.m_FirstTick)))
+	{
+		log_warn("rank_ghost", "could not prepare ghost view samples or timeline range");
+		return;
+	}
+	const auto &Range = Ghost.ManualTimeline();
+	Info.m_FirstTick = Range.First();
+	Info.m_LastTick = Range.Last();
+	Info.m_CurrentTick = Range.First();
 	int Markers = 0;
-	for(int i = 0; i < m_ViewPlaybackMetadata.m_NumTimelineMarkers; ++i)
+	for(int i = 0; i < Info.m_NumTimelineMarkers; ++i)
 	{
-		const int Tick = m_ViewPlaybackMetadata.m_aTimelineMarkers[i];
-		if(Tick >= m_ViewPlaybackMetadata.m_FirstTick && Tick <= m_ViewPlaybackMetadata.m_LastTick)
-			m_ViewPlaybackMetadata.m_aTimelineMarkers[Markers++] = Tick;
+		const int Tick = Info.m_aTimelineMarkers[i];
+		if(Tick >= Range.First() && Tick <= Range.Last())
+			Info.m_aTimelineMarkers[Markers++] = Tick;
 	}
-	m_ViewPlaybackMetadata.m_NumTimelineMarkers = Markers;
-	m_ViewPlaybackMetadata.m_LiveDemo = false;
-	m_ViewPlaybackMetadata.m_LivePlayback = false;
-	m_ViewMembers.Reset(m_vLoadedSlots.size());
+	Info.m_NumTimelineMarkers = Markers;
+	Info.m_LiveDemo = false;
+	Info.m_LivePlayback = false;
+	m_ViewPlaybackMetadata = Info;
+	str_copy(m_aViewPlaybackFilename, m_aLoadedReplayFilename);
+	m_ViewMembers = std::move(Members);
+	if(HaveMetadata)
+	{
+		g_Config.m_ClDemoSliceBegin = -1;
+		g_Config.m_ClDemoSliceEnd = -1;
+	}
 	++m_ViewGeneration;
 	m_ViewMode = true;
 	// 同一影子退出后再次进入时，播放头会从 0 重新开始；游标必须同步归零，
@@ -134,17 +166,13 @@ void CRankGhost::EnterViewMode()
 	m_ViewAppliedSwitch = -1;
 	// 回放开关只画在自己的画布上：服务器世界和练习分支世界是两条可玩时间线的
 	// 权威状态，回放期间不允许改写它们，退出回放也就不需要还原。
-	m_vViewSwitchers = GameClient()->m_GameWorld.m_Core.m_vSwitchers;
+	m_vViewSwitchers = std::move(vSwitchers);
 	m_ViewSwitchersActive = true;
 	// 影子机关世界只保存地图几何和回放开关，不加入主世界 tick。
 	// 它只在查看模式存在，因此退出时整棵释放即可，不需要触碰共享 CCollision。
-	m_pViewMechanismWorld = std::make_unique<CGameWorld>();
-	int NextMechanismEntityId = 600000;
-	qm_map_mechanisms::Build(*m_pViewMechanismWorld, GameClient()->Collision(), NextMechanismEntityId,
-		{.m_BuildPickups = false, .m_RegisterDoorCollision = false, .m_InheritSnapshotLights = false});
-	m_pViewMechanismWorld->Switchers() = m_vViewSwitchers;
-	qm_shadow_gun::Load(GameClient()->Collision(), m_vViewGuns);
-	qm_shadow_gun::Reset(m_vViewGuns, m_vViewPlasmas);
+	m_pViewMechanismWorld = std::move(pMechanismWorld);
+	m_vViewGuns = std::move(vGuns);
+	m_vViewPlasmas = std::move(vPlasmas);
 	m_ViewGunTick = -1;
 	// 只在父集登记会话状态；播放链（CGhost 独立时钟 + CRankGhost 事件派发）
 	// 保持原样，Rank 1 与练习组回放的观感完全一致。
@@ -159,6 +187,14 @@ void CRankGhost::EnterViewMode()
 	const char *pHint = Localize("Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (playback continues). Hold the spectate key for the member list.");
 	Echo(pHint);
 	GameClient()->m_QmHudNotifications.QueueEcho(pHint, g_Config.m_ClMessageClientColor);
+}
+catch(const std::bad_alloc &)
+{
+	log_warn("rank_ghost", "not enough memory to prepare ghost view state");
+}
+catch(const std::length_error &)
+{
+	log_warn("rank_ghost", "ghost view state size is not representable");
 }
 
 bool CRankGhost::IsViewModeActive() const
@@ -355,55 +391,36 @@ bool CRankGhost::ViewTimelinePath(char *pBuf, size_t BufSize) const
 	return false;
 }
 
-bool CRankGhost::ViewTimelineCached() const
-{
-	char aPath[IO_MAX_PATH_LENGTH];
-	ViewTimelinePath(aPath, sizeof(aPath));
-	IOHANDLE File = Storage()->OpenFile(aPath, IOFLAG_READ, IStorage::TYPE_SAVE);
-	if(File == nullptr)
-		return false;
-	// 截断文件即使保留 magic 也不能算有效缓存；完整读取一次才能触发重建。
-	qmclient::rank_ghost::SViewTimeline Timeline;
-	const bool Current = qmclient::rank_ghost::ReadViewTimeline(File, Timeline);
-	io_close(File);
-	// 旧版本 sidecar（例如没有消息段的 QMGHEVT1）按未缓存处理，
-	// 由补齐流程重放一次回放重建，避免查看模式永远缺终点成绩与全局音效。
-	return Current;
-}
-
 void CRankGhost::WriteViewTimeline()
+try
 {
 	if(m_vViewEvents.empty() && m_vViewSwitchStates.empty() && m_vViewMessages.empty())
 		return;
 	char aPath[IO_MAX_PATH_LENGTH];
-	ViewTimelinePath(aPath, sizeof(aPath));
-	char aTmpPath[IO_MAX_PATH_LENGTH];
-	str_format(aTmpPath, sizeof(aTmpPath), "%s.tmp_%d", aPath, pid());
-	Storage()->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
-	IOHANDLE File = Storage()->OpenFile(aTmpPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(File == nullptr)
+	demo_output::CTransaction Output;
+	if(!ViewTimelinePath(aPath, sizeof(aPath)) || !Output.Prepare(*Storage(), aPath))
+		return;
+	std::unique_ptr<void, decltype(&io_close)> pFile(io_open(Output.Filename(), IOFLAG_WRITE), io_close);
+	if(!pFile)
 	{
-		log_error("rank_ghost", "failed to open view timeline '%s'", aTmpPath);
+		log_error("rank_ghost", "failed to open view timeline '%s'", aPath);
 		return;
 	}
 
-	const bool Written = qmclient::rank_ghost::WriteViewTimeline(File, m_vViewEvents, m_vViewSwitchStates, m_vViewMessages);
-	const bool Closed = io_close(File) == 0;
-	if(!Written || !Closed)
-	{
-		log_error("rank_ghost", "failed to write view timeline '%s'", aTmpPath);
-		Storage()->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
-		return;
-	}
-	// RenameFile 在 Windows 上带替换语义；先删旧文件会在改名失败时丢掉可用时间线。
-	if(!Storage()->RenameFile(aTmpPath, aPath, IStorage::TYPE_SAVE))
+	const bool Written = qmclient::rank_ghost::WriteViewTimeline(pFile.get(), m_vViewEvents, m_vViewSwitchStates, m_vViewMessages) &&
+			     io_flush(pFile.get()) == 0 && io_error(pFile.get()) == 0;
+	const bool Closed = io_close(pFile.release()) == 0;
+	if(!Written || !Closed || !Output.Publish())
 	{
 		log_error("rank_ghost", "failed to publish view timeline '%s'", aPath);
-		Storage()->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
 		return;
 	}
 	log_info("rank_ghost", "view timeline written: %d events, %d switch states, %d messages ('%s')",
 		(int)m_vViewEvents.size(), (int)m_vViewSwitchStates.size(), (int)m_vViewMessages.size(), aPath);
+}
+catch(const std::exception &Exception)
+{
+	log_error("rank_ghost", "failed to publish view timeline: %s", Exception.what());
 }
 
 bool CRankGhost::LoadViewTimeline()
@@ -775,8 +792,7 @@ void CRankGhost::ViewFreeCameraPan(float Dx, float Dy)
 	// 那套走的是菜单灵敏度（默认 ui_mousesens=200，等于双倍），会明显过快。
 	float WorldWidth, WorldHeight;
 	Graphics()->CalcScreenParams(Graphics()->GameScreenAspect(), GameClient()->m_Camera.m_Zoom, &WorldWidth, &WorldHeight);
-	const float WindowWidth = maximum(1.0f, (float)Graphics()->WindowWidth());
-	m_ViewFreeCameraCenter += vec2(Dx, Dy) * (WorldWidth / WindowWidth);
+	qmclient::rank_ghost::PanFreeCamera(m_ViewFreeCameraCenter, vec2(Dx, Dy), WorldWidth, Graphics()->WindowWidth());
 }
 
 bool CRankGhost::ViewFocusAllMembers(vec2 *pCenter, vec2 *pSize) const

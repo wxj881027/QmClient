@@ -24,6 +24,9 @@ namespace
 	{
 		SQmPopconfirmContext *pPopconfirm = static_cast<SQmPopconfirmContext *>(pContext);
 		CUi *pUI = pPopconfirm->m_pUI;
+		// 确认操作只接受当前帧仍可见的来源。
+		if(Active && pPopconfirm->m_SourceFrame != pUI->PopupSourceFrame())
+			return CUi::POPUP_CLOSE_CURRENT;
 
 		CUIRect Label, ButtonBar, CancelButton, ConfirmButton;
 		View.HSplitBottom(POPCONFIRM_BUTTON_HEIGHT, &Label, &ButtonBar);
@@ -65,7 +68,7 @@ void SQmPopconfirmContext::DefaultButtons()
 
 void QmShowPopconfirm(CUi *pUi, SQmPopconfirmContext *pContext, const CUIRect &Anchor, const CUIRect *pBounds)
 {
-	if(pUi == nullptr || pContext == nullptr)
+	if(pUi == nullptr || pContext == nullptr || pUi->RenderOnly())
 		return;
 
 	const float TextWidth = std::min(std::ceil(pUi->TextRender()->TextWidth(POPCONFIRM_FONT_SIZE, pContext->m_aMessage, -1, -1.0f) + 0.5f), POPCONFIRM_MAX_TEXT_WIDTH);
@@ -80,6 +83,7 @@ void QmShowPopconfirm(CUi *pUi, SQmPopconfirmContext *pContext, const CUIRect &A
 	const CUIRect Rect = qm_popconfirm_layout::ResolveRect(Anchor, Width, Height, Bounds);
 
 	pContext->m_pUI = pUi;
+	pContext->m_SourceFrame = pUi->PopupSourceFrame();
 
 	SPopupMenuProperties Props;
 	Props.m_CenterInViewport = false;
@@ -92,6 +96,9 @@ void QmShowPopconfirm(CUi *pUi, SQmPopconfirmContext *pContext, const CUIRect &A
 	Props.m_BlockUnderlyingScroll = false;
 	Props.m_Animate = true;
 	Props.m_AutoReposition = false;
+	// 资源列表仍显示锚点时才会重新提交气泡，离开来源后由弹层栈取消。
+	Props.m_RequireSourceRefresh = true;
+	Props.m_SourceFrame = pContext->m_SourceFrame;
 	Props.m_IgnoreOpeningClick = true;
 	// 带按钮的气泡：内部按下直接给按钮，避免第一次点击被外层吞掉。
 	Props.m_PressInsideGoesToContent = true;

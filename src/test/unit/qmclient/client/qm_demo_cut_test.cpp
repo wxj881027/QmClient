@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
+
 TEST(QmDemoCut, RequiresSelectionAndResolvesOpenEnds)
 {
 	SDemoSliceSegment Range;
@@ -49,4 +51,31 @@ TEST(QmDemoCut, PreviewStopsAtEndAndCanRestart)
 	EXPECT_TRUE(Preview.IsActive());
 	Preview.Reset();
 	EXPECT_FALSE(Preview.IsFinished());
+}
+
+TEST(QmDemoCut, InvalidRestartCancelsThePreviousPreview)
+{
+	qm_demo_cut::CPreview Preview;
+	ASSERT_TRUE(Preview.Start({100, 200}));
+	EXPECT_FALSE(Preview.Start({-1, 300}));
+	EXPECT_FALSE(Preview.IsActive());
+	EXPECT_FALSE(Preview.IsFinished());
+	EXPECT_EQ(Preview.EndTick(), -1);
+	EXPECT_FALSE(Preview.Update(400));
+	ASSERT_TRUE(Preview.Start({200, 300}));
+	EXPECT_TRUE(Preview.Update(301));
+	EXPECT_FALSE(Preview.Update(302));
+}
+
+TEST(QmDemoCut, MaximumIntegerTickRangeKeepsTheEndpointAndWideTimeConversion)
+{
+	const int Last = std::numeric_limits<int>::max();
+	SDemoSliceSegment Range;
+	ASSERT_TRUE(qm_demo_cut::ResolveRange(0, -1, 0, Last, Range));
+	EXPECT_EQ(Range.m_EndTick, Last);
+	EXPECT_EQ(qm_demo_cut::ToCentiseconds(Last, 50), 4294967294LL);
+	qm_demo_cut::CPreview Preview;
+	ASSERT_TRUE(Preview.Start(Range));
+	EXPECT_FALSE(Preview.Update(Last - 1));
+	EXPECT_TRUE(Preview.Update(Last));
 }

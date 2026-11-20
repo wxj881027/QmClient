@@ -6,10 +6,12 @@
 #include <game/editor/mapitems.h>
 #include <game/mapitems.h>
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <vector>
 
+class CEnvelope;
 class CLayer;
 class CLayerGroup;
 class CLayerQuads;
@@ -81,7 +83,9 @@ public:
 
 	void Begin(EEnvelopeEditorOp Operation);
 	void Stop(bool Switch = true);
-	void Reset() { m_TrackedOp = EEnvelopeEditorOp::OP_NONE; }
+	void Cancel();
+	void Reset();
+	bool TargetChanged() const;
 
 private:
 	EEnvelopeEditorOp m_TrackedOp = EEnvelopeEditorOp::OP_NONE;
@@ -89,15 +93,19 @@ private:
 	class CPointData
 	{
 	public:
-		bool m_Used;
 		CFixedTime m_Time;
 		std::map<int, int> m_Values;
 	};
 
+	std::weak_ptr<CEnvelope> m_pEnvelope;
+	const void *m_pPointData = nullptr;
+	size_t m_PointCount = 0;
+	std::vector<std::pair<int, int>> m_vSelectedPoints;
 	std::map<int, CPointData> m_SavedValues;
 
-	void HandlePointDragStart();
-	void HandlePointDragEnd(bool Switch);
+	bool PointsMatch(const CEnvelope &Envelope) const;
+	CEnvelope *CurrentTarget() const;
+	void RecordChanges(const CEnvelope &Envelope);
 };
 
 class CSoundSourceOperationTracker : public CMapObject
@@ -139,49 +147,64 @@ public:
 		m_OriginalLayerIndex(-1),
 		m_OriginalGroupIndex(-1),
 		m_CurrentLayerIndex(-1),
-		m_CurrentGroupIndex(-1),
-		m_Tracking(false) {}
+		m_CurrentGroupIndex(-1) {}
 
 	void Begin(const T *pObject, E Prop, EEditState State, int GroupIndex = -1, int LayerIndex = -1)
 	{
-		if(m_Tracking || Prop == static_cast<E>(-1))
+		m_EndReady = false;
+		m_pObject = nullptr;
+
+		const bool Starting = State == EEditState::START || State == EEditState::ONE_GO;
+		if(Prop == NO_PROP || (!Starting && State != EEditState::END))
 			return;
-		m_pObject = pObject;
 
-		m_OriginalGroupIndex = GroupIndex < 0 ? CPropTrackerHelper::GetDefaultGroupIndex(Map()) : GroupIndex;
-		m_OriginalLayerIndex = LayerIndex < 0 ? CPropTrackerHelper::GetDefaultLayerIndex(Map()) : LayerIndex;
-		m_CurrentGroupIndex = m_OriginalGroupIndex;
-		m_CurrentLayerIndex = m_OriginalLayerIndex;
-
-		int Value = PropToValue(Prop);
-		if(State == EEditState::START || State == EEditState::ONE_GO)
+		const int SelectedGroup = GroupIndex < 0 ? CPropTrackerHelper::GetDefaultGroupIndex(Map()) : GroupIndex;
+		const auto ObjectAddress = reinterpret_cast<std::uintptr_t>(pObject);
+		if(Starting)
 		{
-			m_Tracking = true;
-			m_OriginalValue = Value;
+			DiscardEdit();
+			m_TrackedProp = Prop;
+			m_TrackedObjectAddress = ObjectAddress;
+			m_OriginalGroupIndex = SelectedGroup;
+			m_OriginalLayerIndex = LayerIndex < 0 ? CPropTrackerHelper::GetDefaultLayerIndex(Map()) : LayerIndex;
+			m_CurrentGroupIndex = m_OriginalGroupIndex;
+			m_CurrentLayerIndex = m_OriginalLayerIndex;
+
+			m_pObject = pObject;
+			m_OriginalValue = PropToValue(Prop);
 			OnStart(Prop);
 		}
+		else if(Prop != m_TrackedProp || ObjectAddress != m_TrackedObjectAddress ||
+			(pObject == nullptr && SelectedGroup != m_OriginalGroupIndex))
+		{
+			DiscardEdit();
+			return;
+		}
+
+		m_EndReady = State != EEditState::START;
+		m_pObject = m_EndReady ? pObject : nullptr;
 	}
 
 	void End(E Prop, EEditState State, int GroupIndex = -1, int LayerIndex = -1)
 	{
-		if(!m_Tracking || Prop == static_cast<E>(-1))
+		if(!m_EndReady || Prop != m_TrackedProp || (State != EEditState::END && State != EEditState::ONE_GO))
 			return;
 
 		m_CurrentGroupIndex = GroupIndex < 0 ? CPropTrackerHelper::GetDefaultGroupIndex(Map()) : GroupIndex;
 		m_CurrentLayerIndex = LayerIndex < 0 ? CPropTrackerHelper::GetDefaultLayerIndex(Map()) : LayerIndex;
 
-		if(State == EEditState::END || State == EEditState::ONE_GO)
-		{
-			m_Tracking = false;
-			int Value = PropToValue(Prop);
-			if(EndChecker(Prop, Value))
-				OnEnd(Prop, Value);
-		}
+		m_EndReady = false;
+		m_TrackedProp = NO_PROP;
+		const int Value = PropToValue(Prop);
+		if(EndChecker(Prop, Value))
+			OnEnd(Prop, Value);
+		m_pObject = nullptr;
 	}
 
 protected:
 	virtual void OnStart(E Prop) {}
 	virtual void OnEnd(E Prop, int Value) {}
+	virtual void OnDiscard() {}
 	virtual int PropToValue(E Prop) { return 0; }
 	virtual bool EndChecker(E Prop, int Value)
 	{
@@ -194,7 +217,20 @@ protected:
 	int m_OriginalGroupIndex;
 	int m_CurrentLayerIndex;
 	int m_CurrentGroupIndex;
-	bool m_Tracking;
+
+private:
+	static constexpr E NO_PROP = static_cast<E>(-1);
+	E m_TrackedProp = NO_PROP;
+	// 跨帧仅比较地址，读取属性时使用本帧 Begin 传入的对象。
+	std::uintptr_t m_TrackedObjectAddress = 0;
+	bool m_EndReady = false;
+
+	void DiscardEdit()
+	{
+		if(m_TrackedProp != NO_PROP)
+			OnDiscard();
+		m_TrackedProp = NO_PROP;
+	}
 };
 
 class CLayerPropTracker : public CPropTracker<CLayer, ELayerProp>
@@ -217,6 +253,7 @@ public:
 protected:
 	void OnStart(ETilesProp Prop) override;
 	void OnEnd(ETilesProp Prop, int Value) override;
+	void OnDiscard() override { m_SavedLayers.clear(); }
 	bool EndChecker(ETilesProp Prop, int Value) override;
 
 	int PropToValue(ETilesProp Prop) override;

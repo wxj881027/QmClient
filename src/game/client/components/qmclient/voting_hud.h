@@ -140,9 +140,11 @@ inline SQmVoteHudLayout QmScoreboardVoteLayout(const CUIRect &Screen, const CUIR
 	if(Scale <= 0.0f)
 		return {};
 
-	const float Width = PanelWidth * Scale;
-	const float Height = Token::PANEL_HEIGHT * Scale;
-	const float Left = std::clamp(Scoreboard.x, Screen.x + Token::SCREEN_MARGIN, Screen.x + Screen.w - Token::SCREEN_MARGIN - Width);
+	const float Width = std::min(PanelWidth * Scale, AvailableWidth);
+	const float Height = std::min(Token::PANEL_HEIGHT * Scale, AvailableHeight);
+	const float MinLeft = Screen.x + Token::SCREEN_MARGIN;
+	const float MaxLeft = std::max(MinLeft, Screen.x + Screen.w - Token::SCREEN_MARGIN - Width);
+	const float Left = std::clamp(Scoreboard.x, MinLeft, MaxLeft);
 	const float Bottom = std::min(Scoreboard.y - Token::PANEL_GAP, Screen.y + Screen.h - Token::SCREEN_MARGIN);
 	return QmVoteHudLayoutFromRect({Left, Bottom - Height, Width, Height}, Scale);
 }

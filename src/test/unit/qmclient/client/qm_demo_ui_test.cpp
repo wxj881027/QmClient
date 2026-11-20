@@ -1,6 +1,68 @@
+#include <base/bytes.h>
+
+#include <game/client/components/menus.h>
 #include <game/client/components/qmclient/demo_ui.h>
 
 #include <gtest/gtest.h>
+
+namespace
+{
+	class QmDemoBrowserSort : public testing::Test
+	{
+		const int m_OriginalSort = g_Config.m_BrDemoSort;
+		const int m_OriginalSortOrder = g_Config.m_BrDemoSortOrder;
+
+	protected:
+		struct CMenuAccess : CMenus
+		{
+			using CMenus::CDemoItem;
+			static constexpr int SORT_BY_MARKERS = SORT_MARKERS;
+			static constexpr int SORT_BY_LENGTH = SORT_LENGTH;
+		};
+
+		void TearDown() override
+		{
+			g_Config.m_BrDemoSort = m_OriginalSort;
+			g_Config.m_BrDemoSortOrder = m_OriginalSortOrder;
+		}
+	};
+}
+
+TEST_F(QmDemoBrowserSort, MetadataSortKeepsDemosTogetherInEitherDirection)
+{
+	CMenuAccess::CDemoItem Longer{};
+	str_copy(Longer.m_aFilename, "a.demo");
+	Longer.m_InfosLoaded = true;
+	uint_to_bytes_be(Longer.m_Info.m_aLength, 30);
+	uint_to_bytes_be(Longer.m_TimelineMarkers.m_aNumTimelineMarkers, 3);
+
+	CMenuAccess::CDemoItem Shorter{};
+	str_copy(Shorter.m_aFilename, "c.demo");
+	Shorter.m_InfosLoaded = true;
+	uint_to_bytes_be(Shorter.m_Info.m_aLength, 10);
+	uint_to_bytes_be(Shorter.m_TimelineMarkers.m_aNumTimelineMarkers, 1);
+
+	CMenuAccess::CDemoItem Pose{};
+	str_copy(Pose.m_aFilename, "b.poses");
+
+	for(const int Sort : {CMenuAccess::SORT_BY_MARKERS, CMenuAccess::SORT_BY_LENGTH})
+	{
+		g_Config.m_BrDemoSort = Sort;
+		for(const bool Descending : {false, true})
+		{
+			SCOPED_TRACE(testing::Message() << "sort=" << Sort << ", descending=" << Descending);
+			g_Config.m_BrDemoSortOrder = Descending;
+			const auto &First = Descending ? Longer : Shorter;
+			const auto &Second = Descending ? Shorter : Longer;
+			EXPECT_TRUE(First < Second);
+			EXPECT_TRUE(Second < Pose);
+			EXPECT_TRUE(First < Pose);
+			EXPECT_FALSE(Second < First);
+			EXPECT_FALSE(Pose < First);
+			EXPECT_FALSE(Pose < Second);
+		}
+	}
+}
 
 TEST(QmDemoUi, PlayerCentersAndDraggingStaysInsideScreen)
 {
@@ -149,7 +211,7 @@ TEST(QmDemoUi, PresetQualityWritesExplicitValuesAndClearsForOthers)
 
 TEST(QmDemoUi, ResolutionCustomKeepsInputsEqualAndDropDownCapped)
 {
-	for(const float Width : {300.0f, 360.0f, 500.0f})
+	for(const float Width : {160.0f, 200.0f, 300.0f, 360.0f, 500.0f})
 	{
 		SCOPED_TRACE(Width);
 		const CUIRect Control{10.0f, 20.0f, Width, 20.0f};
@@ -160,9 +222,9 @@ TEST(QmDemoUi, ResolutionCustomKeepsInputsEqualAndDropDownCapped)
 
 		const auto CustomLayout = qm_demo_ui::ResolutionControlLayout(Control, true);
 		EXPECT_FLOAT_EQ(CustomLayout.m_WidthInput.w, CustomLayout.m_HeightInput.w);
-		EXPECT_GT(CustomLayout.m_WidthInput.w, 0.0f);
+		EXPECT_GE(CustomLayout.m_WidthInput.w, Control.h);
 		EXPECT_LE(CustomLayout.m_DropDown.w, qm_demo_ui::RESOLUTION_DROPDOWN_MAX_WIDTH);
-		EXPECT_GE(CustomLayout.m_DropDown.w, 0.0f);
+		EXPECT_GT(CustomLayout.m_DropDown.w, 0.0f);
 		EXPECT_FLOAT_EQ(CustomLayout.m_DropDown.x + CustomLayout.m_DropDown.w, Control.x + Control.w);
 		EXPECT_FLOAT_EQ(CustomLayout.m_WidthInput.x, Control.x);
 		EXPECT_LE(CustomLayout.m_HeightInput.x + CustomLayout.m_HeightInput.w, CustomLayout.m_DropDown.x);
@@ -173,6 +235,12 @@ TEST(QmDemoUi, ResolutionCustomKeepsInputsEqualAndDropDownCapped)
 	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(1280, 720), 1);
 	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(1920, 1080), 2);
 	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(1919, 1080), qm_demo_ui::RESOLUTION_PRESET_CUSTOM);
+}
+
+TEST(QmDemoUi, SingleResolutionDimensionStillSelectsCustom)
+{
+	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(1280, 0), qm_demo_ui::RESOLUTION_PRESET_CUSTOM);
+	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(0, 720), qm_demo_ui::RESOLUTION_PRESET_CUSTOM);
 }
 
 TEST(QmDemoUi, PopupFitsTheViewportAndKeepsContentHeightWhenPossible)

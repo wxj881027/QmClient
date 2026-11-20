@@ -207,27 +207,38 @@ namespace qm_pose_map
 		return Output == EOutput::WEBP ? "webp" : "png";
 	}
 
+	inline void AppendQuotedArgument(std::string &Command, const char *pArgument)
+	{
+		Command += " \"";
+		const size_t Start = Command.size();
+		Command.resize(Start + 2 * static_cast<size_t>(str_length(pArgument)) + 1);
+		char *pWrite = Command.data() + Start;
+		str_escape(&pWrite, pArgument, Command.data() + Command.size());
+		Command.resize(pWrite - Command.data());
+		Command += '"';
+	}
+
 	inline std::string BuildCommand(EAction Action, const char *pPosesPath, const char *pMapPath, const char *pOutputName, EOutput Output = EOutput::PNG, int CaptureScale = 1, bool EntityLayer = false)
 	{
-		char aCommand[4 * IO_MAX_PATH_LENGTH + 128];
-		switch(Action)
+		const bool Render = Action == EAction::RENDER;
+		std::string Command = Render ? "poses_render" : "poses_open";
+		AppendQuotedArgument(Command, pPosesPath);
+		if(Render)
 		{
-		case EAction::OPEN:
-			str_format(aCommand, sizeof(aCommand), "poses_open \"%s\" \"%s\"", pPosesPath, pMapPath);
-			break;
-		case EAction::RENDER:
+			// 扩展名决定编码格式。倍数和实体层始终按命令定义的顺序传递。
+			std::string Filename = pOutputName == nullptr ? "" : pOutputName;
+			Filename += '.';
+			Filename += OutputExtension(Output);
+			AppendQuotedArgument(Command, Filename.c_str());
+		}
+		AppendQuotedArgument(Command, pMapPath);
+		if(Render)
 		{
-			// 扩展名决定编码格式：截图管线按后缀选 png / webp，也决定落盘文件名。
-			// 倍数只在大于 1 时写出来：1x 命令与旧调用保持完全一致。
-			const int Scale = qm_pose::NormalizeCaptureScale(CaptureScale);
-			// 第 5 个参数是「实体层」：1 = 用实体铺满背景（盖掉地图方块）。倍数 > 1 时才有第 4 个参数，
-			// 所以这里显式写出倍数，保持参数位置固定。
-			str_format(aCommand, sizeof(aCommand), "poses_render \"%s\" \"%s.%s\" \"%s\" %d %d",
-				pPosesPath, pOutputName == nullptr ? "" : pOutputName, OutputExtension(Output), pMapPath, Scale, EntityLayer ? 1 : 0);
-			break;
+			Command += ' ';
+			Command += std::to_string(qm_pose::NormalizeCaptureScale(CaptureScale));
+			Command += EntityLayer ? " 1" : " 0";
 		}
-		}
-		return aCommand;
+		return Command;
 	}
 
 	// 点击「打开 / 渲染」时的决定：当前地图可用就立刻执行，

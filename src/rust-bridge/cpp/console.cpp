@@ -90,13 +90,13 @@ static_assert(
     "type ColorHSLA should be trivially move constructible and trivially destructible in C++ to be used as a return value of `GetColor` in Rust");
 static_assert(
     ::rust::IsRelocatable<::StrRef>::value,
-    "type StrRef should be trivially move constructible and trivially destructible in C++ to be used as an argument of `ExecuteLine`, `Print`, `Register` or return value of `GetString` in Rust");
+    "type StrRef should be trivially move constructible and trivially destructible in C++ to be used as an argument of `ExecuteLine`, `Print`, `Register`, `TryRegisterRustConsoleCommand` or return value of `GetString` in Rust");
 static_assert(
     ::rust::IsRelocatable<::UserPtr>::value,
-    "type UserPtr should be trivially move constructible and trivially destructible in C++ to be used as an argument of `Register` in Rust");
+    "type UserPtr should be trivially move constructible and trivially destructible in C++ to be used as an argument of `Register`, `TryRegisterRustConsoleCommand` in Rust");
 static_assert(
     ::rust::IsRelocatable<::IConsole_FCommandCallback>::value,
-    "type IConsole_FCommandCallback should be trivially move constructible and trivially destructible in C++ to be used as an argument of `Register` in Rust");
+    "type IConsole_FCommandCallback should be trivially move constructible and trivially destructible in C++ to be used as an argument of `Register`, `TryRegisterRustConsoleCommand` in Rust");
 
 extern "C" {
 ::std::int32_t cxxbridge1$194$IConsole_IResult$GetInteger(::IConsole_IResult const &self, ::std::uint32_t Index) noexcept {
@@ -142,6 +142,11 @@ void cxxbridge1$194$IConsole$Print(::IConsole const &self, ::std::int32_t Level,
 void cxxbridge1$194$IConsole$Register(::IConsole &self, ::StrRef *pName, ::StrRef *pParams, ::std::int32_t Flags, ::IConsole_FCommandCallback *pfnFunc, ::UserPtr *pUser, ::StrRef *pHelp) noexcept {
   void (::IConsole::*Register$)(::StrRef, ::StrRef, ::std::int32_t, ::IConsole_FCommandCallback, ::UserPtr, ::StrRef) = &::IConsole::Register;
   (self.*Register$)(::std::move(*pName), ::std::move(*pParams), Flags, ::std::move(*pfnFunc), ::std::move(*pUser), ::std::move(*pHelp));
+}
+
+bool cxxbridge1$194$TryRegisterRustConsoleCommand(::IConsole &console, ::StrRef *pName, ::StrRef *pParams, ::std::int32_t Flags, ::IConsole_FCommandCallback *pfnFunc, ::UserPtr *pUser, ::StrRef *pHelp) noexcept {
+  bool (*TryRegisterRustConsoleCommand$)(::IConsole &, ::StrRef, ::StrRef, ::std::int32_t, ::IConsole_FCommandCallback, ::UserPtr, ::StrRef) = ::TryRegisterRustConsoleCommand;
+  return TryRegisterRustConsoleCommand$(console, ::std::move(*pName), ::std::move(*pParams), Flags, ::std::move(*pfnFunc), ::std::move(*pUser), ::std::move(*pHelp));
 }
 
 ::IConsole *cxxbridge1$194$CreateConsole(::std::int32_t FlagMask) noexcept {

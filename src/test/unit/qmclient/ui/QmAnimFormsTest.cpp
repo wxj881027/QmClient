@@ -87,6 +87,50 @@ TEST(NumericField, FormatsAndParsesIntegerDecimalAndInfinity)
 	EXPECT_EQ(Stored, 0);
 	EXPECT_EQ(ui_widget::FormatNumericFieldValue(0, Decimal), "∞");
 }
+
+TEST(NumericField, OutOfRangeScaledTextClampsToNearestBound)
+{
+	ui_widget::SNumericValueFormat Format;
+	Format.m_DisplayDivisor = 100;
+	struct SCase
+	{
+		const char *m_pText;
+		int m_ExpectedValue;
+	};
+	const SCase aCases[] = {
+		{"30000000", 100},
+		{"-30000000", -100},
+		{"1e308", 100},
+		{"-1e308", -100},
+	};
+
+	for(const SCase &Case : aCases)
+	{
+		SCOPED_TRACE(Case.m_pText);
+		int Stored = 0;
+		ASSERT_TRUE(ui_widget::ParseNumericFieldValue(Case.m_pText, Format, -100, 100, &Stored));
+		EXPECT_EQ(Stored, Case.m_ExpectedValue);
+	}
+}
+
+TEST(NumericField, NonFiniteTextLeavesStoredValueUnchanged)
+{
+	for(const char *pText : {"nan", "inf", "1e309"})
+	{
+		SCOPED_TRACE(pText);
+		int Stored = 42;
+		EXPECT_FALSE(ui_widget::ParseNumericFieldValue(pText, {}, -100, 100, &Stored));
+		EXPECT_EQ(Stored, 42);
+	}
+}
+
+TEST(NumericField, ReversedParseBoundsLeaveStoredValueUnchanged)
+{
+	int Stored = 42;
+	EXPECT_FALSE(ui_widget::ParseNumericFieldValue("12", {}, 100, -100, &Stored));
+	EXPECT_EQ(Stored, 42);
+}
+
 TEST(NumericField, TextInputUsesIndependentBoundAndPreservesInfinity)
 {
 	EXPECT_EQ(ui_widget::NumericFieldTextInputStoredValue(0, 1, 0, 1000, 10000, false), 0);
@@ -138,6 +182,17 @@ TEST(NumericField, FallsBackToTwoRowsBeforeCollapsingSliderTrack)
 	EXPECT_TRUE(Narrow.m_TwoRows);
 	EXPECT_GE(Narrow.m_SliderRect.w, 96.0f);
 }
+
+TEST(NumericField, UnlabelledLayoutReturnsEmptyLabelRect)
+{
+	const auto Layout = ui_widget::ResolveNumericFieldLayout({10.0f, 20.0f, 260.0f, 36.0f}, false, true);
+
+	EXPECT_FLOAT_EQ(Layout.m_LabelRect.x, 0.0f);
+	EXPECT_FLOAT_EQ(Layout.m_LabelRect.y, 0.0f);
+	EXPECT_FLOAT_EQ(Layout.m_LabelRect.w, 0.0f);
+	EXPECT_FLOAT_EQ(Layout.m_LabelRect.h, 0.0f);
+}
+
 TEST(UiForms, SliderInputValueMappingPreservesStoredScaleAndInfiniteSentinel)
 {
 	EXPECT_EQ(ui_widget::SliderInputStoredMinimum(100, 20), 5);

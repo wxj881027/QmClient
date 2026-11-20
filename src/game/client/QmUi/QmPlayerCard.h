@@ -115,7 +115,7 @@ namespace QmPlayersUi
 
 	struct SPlayerCardActionGrid
 	{
-		std::array<CUIRect, static_cast<int>(EPlayerCardAction::COUNT)> m_aCells;
+		std::array<CUIRect, static_cast<int>(EPlayerCardAction::COUNT)> m_aCells{};
 		int m_Rows = 0;
 	};
 
@@ -154,7 +154,7 @@ namespace QmPlayersUi
 
 	struct SPlayerCardIconRow
 	{
-		std::array<CUIRect, static_cast<int>(EPlayerCardCopy::COUNT)> m_aCells;
+		std::array<CUIRect, static_cast<int>(EPlayerCardCopy::COUNT)> m_aCells{};
 	};
 
 	// 图标复制行：小方形按钮靠右排成一行。行宽不足时等比缩小边长，
@@ -300,7 +300,8 @@ namespace QmPlayersUi
 			return Result;
 		Result.m_Card = Tile;
 		CUIRect Content = Tile;
-		Content.Margin(ui_token::player_card::PADDING, &Content);
+		const float Padding = ui_token::player_card::PADDING;
+		Content.Margin(vec2(std::min(Padding, Tile.w * 0.5f), std::min(Padding, Tile.h * 0.5f)), &Content);
 
 		const int Count = std::max(0, IconCount);
 		if(Count > 0)

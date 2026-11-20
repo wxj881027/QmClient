@@ -5,6 +5,7 @@
 #include <game/gamecore.h>
 
 #include <gtest/gtest.h>
+#include <test/support/prediction_allocation_failure.h>
 
 // 预测状态写回的运行时行为。生产代码把 CGameClient 字段转发给模板，
 // 测试用同形状的记录槽位接收写回，世界与角色仍是生产类型。
@@ -89,6 +90,37 @@ TEST_F(CPracticePredictPublishRuntime, SnapshotPublishesWorldAndBothCores)
 	EXPECT_FLOAT_EQ(Sink.m_PredictedPrevChar.m_Pos.x, 320.0f);
 	EXPECT_FLOAT_EQ(Sink.m_aPredicted[4].m_Pos.x, 320.0f);
 	EXPECT_FLOAT_EQ(Sink.m_aPredicted[7].m_Pos.x, 640.0f);
+}
+
+TEST_F(CPracticePredictPublishRuntime, FailedSecondSnapshotCopyKeepsBothWorldsAndCore)
+{
+	CGameWorld Candidate;
+	size_t Allocations = 0;
+	{
+		CPredictionAllocationFailure Counter(1024);
+		ASSERT_TRUE(Candidate.CopyWorldClean(&m_Source));
+		Allocations = Counter.Attempts();
+	}
+	ASSERT_GT(Allocations, 0u);
+	CTestPracticePredictSink Sink;
+	Sink.m_PredictedWorld.m_GameTick = 80;
+	Sink.m_PrevPredictedWorld.m_GameTick = 79;
+	Sink.m_PredictedTick = 80;
+	Sink.m_PredictedChar.m_Pos = vec2(32, 16);
+	bool Published, Triggered;
+	{
+		CPredictionAllocationFailure Failure(Allocations);
+		Published = QmPublishPracticeWorldSnapshot(Sink, m_Source, 4, 7, Sink.m_PredictedTick);
+		Triggered = Failure.Triggered();
+	}
+	ASSERT_TRUE(Triggered);
+	EXPECT_FALSE(Published);
+	EXPECT_EQ(Sink.m_PredictedTick, 80);
+	EXPECT_EQ(Sink.m_PredictedWorld.GameTick(), 80);
+	EXPECT_EQ(Sink.m_PrevPredictedWorld.GameTick(), 79);
+	EXPECT_EQ(Sink.m_PredictedChar.m_Pos, vec2(32, 16));
+	EXPECT_TRUE(QmPublishPracticeWorldSnapshot(Sink, m_Source, 4, 7, Sink.m_PredictedTick));
+	EXPECT_EQ(Sink.m_PredictedTick, 104);
 }
 
 TEST_F(CPracticePredictPublishRuntime, SnapshotSkipsTheDummyCoreWhenItIsNotAttached)

@@ -1,7 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_MAPSOUNDS_H
 #define GAME_CLIENT_COMPONENTS_MAPSOUNDS_H
 
-#include <engine/sound.h>
+#include "map_sound_source_queue.h"
 
 #include <game/client/component.h>
 #include <game/mapitems.h>
@@ -13,16 +13,7 @@ class CMapSounds : public CComponent
 	int m_aSounds[MAX_MAPSOUNDS];
 	int m_Count;
 
-	class CSourceQueueEntry
-	{
-	public:
-		int m_Sound;
-		bool m_HighDetail;
-		ISound::CVoiceHandle m_Voice;
-		const CMapItemGroup *m_pGroup;
-		const CSoundSource *m_pSource;
-	};
-	std::vector<CSourceQueueEntry> m_vSourceQueue;
+	std::vector<SMapSoundSource> m_vSourceQueue;
 	void Clear();
 	bool SoundEnabled() const;
 

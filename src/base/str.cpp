@@ -9,11 +9,13 @@
 #include "mem.h"
 
 #include <cctype>
+#include <cerrno>
 #include <charconv> // std::to_chars
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <utility>
 
 int str_copy(char *dst, const char *src, int dst_size)
 {
@@ -294,14 +296,14 @@ int str_comp_filenames(const char *a, const char *b)
 			else if(result)
 				return result;
 			else if(*a == '\0' || *b == '\0')
-				return *a - *b;
+				break;
 		}
 
-		result = tolower(*a) - tolower(*b);
+		result = tolower(static_cast<unsigned char>(*a)) - tolower(static_cast<unsigned char>(*b));
 		if(result)
 			return result;
 	}
-	return *a - *b;
+	return static_cast<unsigned char>(*a) - static_cast<unsigned char>(*b);
 }
 
 void str_clean_whitespaces(char *str)
@@ -886,13 +888,13 @@ int str_toint(const char *str)
 
 bool str_toint(const char *str, int *out)
 {
-	// returns true if conversion was successful
+	errno = 0;
 	char *end;
-	int value = strtol(str, &end, 10);
-	if(*end != '\0')
+	const long value = strtol(str, &end, 10);
+	if(end == str || *end != '\0' || errno == ERANGE || !std::in_range<int>(value))
 		return false;
 	if(out != nullptr)
-		*out = value;
+		*out = static_cast<int>(value);
 	return true;
 }
 

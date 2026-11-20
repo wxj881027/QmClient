@@ -48,6 +48,14 @@ void CPlayerIndicator::OnRender()
 		if(HideVisible)
 			Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
+		auto &WarList = GameClient()->m_WarList;
+		const bool UseWarList = g_Config.m_QmWarListIndicator != 0;
+		const CWarType *pTeamType = UseWarList && g_Config.m_QmWarListIndicatorTeam ?
+						    WarList.FindActiveBuiltinWarType(WARLIST_BUILTIN_GROUP_TEAM) :
+						    nullptr;
+		const CWarType *pEnemyType = UseWarList && g_Config.m_QmWarListIndicatorEnemy ?
+						     WarList.FindActiveBuiltinWarType(WARLIST_BUILTIN_GROUP_ENEMY) :
+						     nullptr;
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
 			if(!GameClient()->m_Snap.m_apPlayerInfos[i] || i == LocalClientId)
@@ -108,33 +116,29 @@ void CPlayerIndicator::OnRender()
 				}
 				bool HideIfNotWar = false;
 				ColorRGBA PrevCol = Col;
-				if(g_Config.m_QmWarListIndicator)
+				if(UseWarList)
 				{
 					HideIfNotWar = true;
-					if(g_Config.m_QmWarListIndicatorAll)
+					if(g_Config.m_QmWarListIndicatorAll && WarList.GetAnyWar(i))
 					{
-						if(GameClient()->m_WarList.GetAnyWar(i))
+						Col = WarList.GetPriorityColor(i);
+						HideIfNotWar = false;
+					}
+
+					const auto &vMatches = WarList.GetWarData(i).m_WarGroupMatches;
+					const auto ApplyGroup = [&](const CWarType *pType) {
+						if(pType == nullptr)
+							return;
+						// 槽位与匹配缓存由战争名单在同一次快照更新中刷新。
+						const size_t Index = static_cast<size_t>(pType->m_Index);
+						if(Index < vMatches.size() && vMatches[Index])
 						{
-							Col = GameClient()->m_WarList.GetPriorityColor(i);
+							Col = pType->m_Color;
 							HideIfNotWar = false;
 						}
-					}
-					if(g_Config.m_QmWarListIndicatorTeam)
-					{
-						if(GameClient()->m_WarList.GetWarData(i).m_WarGroupMatches[2])
-						{
-							Col = GameClient()->m_WarList.m_WarTypes[2]->m_Color;
-							HideIfNotWar = false;
-						}
-					}
-					if(g_Config.m_QmWarListIndicatorEnemy)
-					{
-						if(GameClient()->m_WarList.GetWarData(i).m_WarGroupMatches[1])
-						{
-							Col = GameClient()->m_WarList.m_WarTypes[1]->m_Color;
-							HideIfNotWar = false;
-						}
-					}
+					};
+					ApplyGroup(pTeamType);
+					ApplyGroup(pEnemyType);
 				}
 
 				if(HideIfNotWar)

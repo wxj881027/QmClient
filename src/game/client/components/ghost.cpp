@@ -4,6 +4,7 @@
 
 #include <base/log.h>
 #include <base/mem.h>
+#include <base/time.h>
 
 #include <engine/demo.h>
 #include <engine/ghost.h>
@@ -18,7 +19,9 @@
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/ghost_start_detection.h>
 #include <game/client/components/qmclient/ghost_team_metadata.h>
+#include <game/client/components/qmclient/ghost_timeline.h>
 #include <game/client/components/qmclient/practice_timeline.h>
+#include <game/client/components/qmclient/race_timing.h>
 #include <game/client/components/qmclient/rank_view_timeline.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/tclient/fast_practice.h>
@@ -26,6 +29,7 @@
 #include <game/client/race.h>
 
 #include <algorithm>
+#include <ctime>
 
 const char *CGhost::ms_pGhostDir = "ghosts";
 
@@ -105,10 +109,13 @@ void CGhost::AddInfos(const CNetObj_Character *pChar, const CNetObj_DDNetCharact
 		GetPath(m_aTmpFilename, sizeof(m_aTmpFilename), m_CurGhost.m_aPlayer);
 		if(GhostRecorder()->Start(m_aTmpFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), m_CurGhost.m_aPlayer) == 0)
 		{
-			GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &m_CurGhost.m_StartTick, sizeof(int));
-			GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &m_CurGhost.m_Skin, sizeof(CGhostSkin));
-			for(int i = 0; i < NumTicks; i++)
-				GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, m_CurGhost.m_Path.Get(i), sizeof(CGhostCharacter));
+			if(GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &m_CurGhost.m_StartTick, sizeof(int)) &&
+				GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &m_CurGhost.m_Skin, sizeof(CGhostSkin)))
+			{
+				for(int i = 0; i < NumTicks; i++)
+					if(!GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, m_CurGhost.m_Path.Get(i), sizeof(CGhostCharacter)))
+						break;
+			}
 		}
 	}
 
@@ -149,10 +156,10 @@ bool CGhost::IsSlotLoadedWith(int Slot, const char *pFilename) const
 
 void CGhost::CheckStart()
 {
-	int RaceTick = -GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer;
+	const auto RaceTick = qm_race_timing::DecodeStartTick(GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer);
 	int RenderTick = m_NewRenderTick;
 
-	if(GameClient()->LastRaceTick() != RaceTick && Client()->GameTick(g_Config.m_ClDummy) - RaceTick < Client()->GameTickSpeed())
+	if(qm_race_timing::IsNewServerStart(GameClient()->LastRaceTick(), RaceTick, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed()))
 	{
 		if(m_Rendering && m_RenderingStartedByServer) // race restarted: stop rendering
 			StopRender();
@@ -162,7 +169,7 @@ void CGhost::CheckStart()
 			m_NewRenderTick = -1;
 		if(GhostRecorder()->IsRecording()) // race restarted: stop recording
 			GhostRecorder()->Stop(0, -1);
-		int StartTick = RaceTick;
+		int StartTick = *RaceTick;
 
 		if(GameClient()->m_GameInfo.m_BugDDRaceGhost) // the client recognizes the start one tick earlier than ddrace servers
 			StartTick--;
@@ -353,9 +360,9 @@ bool CGhost::SavePracticeTrack(const char *pName, const SLocalSegment &Segment)
 		else
 			str_format(aPlayer, sizeof(aPlayer), "%s (dummy)", aBaseName);
 
-		char aTmp[IO_MAX_PATH_LENGTH];
-		str_format(aTmp, sizeof(aTmp), "%s/track%d_tmp_%d.gho", aGroupDir, (int)TrackIndex, pid());
-		if(GhostRecorder()->Start(aTmp, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), aPlayer) != 0)
+		char aFinal[IO_MAX_PATH_LENGTH];
+		str_format(aFinal, sizeof(aFinal), "%s/track%d.gho", aGroupDir, (int)TrackIndex);
+		if(GhostRecorder()->Start(aFinal, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), aPlayer) != 0)
 			return false;
 
 		GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &Segment.m_StartTick, sizeof(int));
@@ -369,20 +376,9 @@ bool CGhost::SavePracticeTrack(const char *pName, const SLocalSegment &Segment)
 			GhostChar.m_VelY = QmEncodeGhostFreezeMarker(LocalFrame.m_FreezeTicks);
 			GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, &GhostChar, sizeof(CGhostCharacter));
 		}
-		GhostRecorder()->Stop((int)Track.m_vFrames.size(), TimeMs);
-		if(GhostRecorder()->HasWriteError())
-		{
-			log_error("ghost", "failed to write practice track '%s'", aTmp);
-			Storage()->RemoveFile(aTmp, IStorage::TYPE_SAVE);
-			return false;
-		}
-
-		char aFinal[IO_MAX_PATH_LENGTH];
-		str_format(aFinal, sizeof(aFinal), "%s/track%d.gho", aGroupDir, (int)TrackIndex);
-		if(!Storage()->RenameFile(aTmp, aFinal, IStorage::TYPE_SAVE))
+		if(!GhostRecorder()->Stop((int)Track.m_vFrames.size(), TimeMs))
 		{
 			log_error("ghost", "failed to publish practice track '%s'", aFinal);
-			Storage()->RemoveFile(aTmp, IStorage::TYPE_SAVE);
 			return false;
 		}
 		if(Track.m_Team >= TEAM_FLOCK && Track.m_Team < NUM_DDRACE_TEAMS)
@@ -470,29 +466,48 @@ void CGhost::OnRender()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
+	if(m_PersonalBest.FinishedItem() && time_get_nanoseconds() >= m_NextBestRetry)
+		PublishFinishedBest();
+	if(m_FreeSlotAvailable)
+	{
+		m_FreeSlotAvailable = false;
+		auto *pBest = GameClient()->m_Menus.GetOwnGhost();
+		if(pBest && IsUnsavedBest(*pBest) && m_PersonalBest.ShouldActivate())
+		{
+			const int Slot = GetSlot();
+			if(m_PersonalBest.Activate(m_aActiveGhosts, Slot))
+			{
+				pBest->m_Slot = Slot;
+				pBest->m_Failed = false;
+			}
+		}
+	}
+
 	// Play the ghost
 	if(!m_Rendering || (!m_ManualMode && !g_Config.m_ClRaceShowGhost))
 		return;
 
 	int PlaybackTick;
+	int PlaybackOrigin = 0;
 	if(m_ManualMode)
 	{
 		// 查看模式：独立时间线，播到尽头自动停在最后一帧
 		PlaybackTick = ManualPlaybackTick();
-		if(m_ManualClock.Playing() && m_ManualEndTick > 0 && PlaybackTick >= m_ManualEndTick)
+		if(m_ManualClock.Playing() && ManualEndTick() > 0 && PlaybackTick >= ManualEndTick())
 		{
-			ManualSeek(m_ManualEndTick);
+			ManualSeek(ManualEndTick());
 			PlaybackTick = ManualPlaybackTick();
 		}
 	}
 	else
 	{
-		PlaybackTick = Client()->PredGameTick(g_Config.m_ClDummy) - m_StartRenderTick;
 		// 快速练习接管了客户端侧权威世界：它的时钟在暂停/冻结时会与
 		// PredGameTick 分叉，幽灵必须跟着分支世界走，否则会凭空超前。
-		int PracticePlaybackTick;
-		if(GameClient()->m_FastPractice.ResolvePracticePlaybackTick(PracticePlaybackTick))
-			PlaybackTick = PracticePlaybackTick;
+		if(!GameClient()->m_FastPractice.ResolvePracticePlaybackTick(PlaybackTick))
+		{
+			PlaybackTick = Client()->PredGameTick(g_Config.m_ClDummy);
+			PlaybackOrigin = m_StartRenderTick;
+		}
 	}
 
 	CScreenRect ScreenRect = Graphics()->GetScreen();
@@ -505,18 +520,20 @@ void CGhost::OnRender()
 	// 顺序（CPlayers::OnRender：先全部 hook，再全部 Tee）一致；否则多轨回放里
 	// 靠后虚影的 hook 会压在前一个虚影的 Tee 上，出现“hook 盖住 Tee”。
 	// 跑图模式仍按上游的逐槽位顺序绘制。
-	m_vGhostDraws.clear();
+	m_GhostDraws.Clear();
+	if(m_ManualMode)
+		std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
 	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
 	{
 		CGhostItem &Ghost = m_aActiveGhosts[Slot];
-		if(Ghost.Empty() || (m_ManualMode && !m_aManualSlots[Slot]))
+		if(Ghost.Empty() || !Ghost.m_pManagedTeeRenderInfo || (m_ManualMode && !m_ManualPlan.m_aSlots[Slot]))
 			continue;
 
-		int GhostTick = Ghost.m_StartTick + PlaybackTick;
+		int64_t GhostTick = qm_ghost_timeline::OffsetTick(Ghost.m_StartTick, PlaybackTick, PlaybackOrigin);
 		// QmClient：查看模式把播放头钳在轨迹首尾采样内——播到尽头时虚影停在最后一帧，
 		// 而不是让只前进的快照游标越界置 -1 后整只虚影消失（跑图模式保持原语义）
 		if(m_ManualMode)
-			GhostTick = std::clamp(GhostTick, Ghost.m_Path.Get(0)->m_Tick, Ghost.m_Path.Get(Ghost.m_Path.Size() - 1)->m_Tick);
+			GhostTick = std::clamp<int64_t>(GhostTick, Ghost.m_Path.Get(0)->m_Tick, Ghost.m_Path.Get(Ghost.m_Path.Size() - 1)->m_Tick);
 		while(Ghost.m_PlaybackPos >= 0 && Ghost.m_Path.Get(Ghost.m_PlaybackPos)->m_Tick < GhostTick)
 		{
 			if(Ghost.m_PlaybackPos < Ghost.m_Path.Size() - 1)
@@ -540,7 +557,7 @@ void CGhost::OnRender()
 		Draw.m_StrongWeakId = QmDecodeGhostStrongWeak(Ghost.m_Path.Get(CurPos)->m_Direction);
 		Draw.m_HasStrongWeak = Draw.m_StrongWeakId >= 0;
 
-		int TickDiff = Draw.m_Player.m_Tick - Draw.m_Prev.m_Tick;
+		const int64_t TickDiff = static_cast<int64_t>(Draw.m_Player.m_Tick) - Draw.m_Prev.m_Tick;
 		if(TickDiff > 0)
 		{
 			// QmClient：查看模式使用手动时间线的插值相位；本地预测相位会持续波动，
@@ -553,13 +570,20 @@ void CGhost::OnRender()
 		{
 			// 查看模式：挥锤/开枪相位只跟回放播放头走。实时游戏 tick 在暂停时仍在推进，
 			// 沿用它会让暂停画面里的锤子一直上下摆动。
-			const float PlaybackPhase = GhostTick + ManualRenderIntra();
-			Draw.m_AttackTimeOverride = maximum(0.0f, (PlaybackPhase - 1.0f - Draw.m_Prev.m_AttackTick) / (float)Client()->GameTickSpeed());
+			const double PlaybackPhase = static_cast<double>(GhostTick - Draw.m_Prev.m_AttackTick) + ManualRenderIntra();
+			Draw.m_AttackTimeOverride = static_cast<float>(maximum(0.0, (PlaybackPhase - 1.0) / maximum(1, Client()->GameTickSpeed())));
+			Draw.m_Player.m_AttackTick = Client()->PrevGameTick(g_Config.m_ClDummy);
 		}
 		else
 		{
-			Draw.m_Player.m_AttackTick += Client()->GameTick(g_Config.m_ClDummy) - GhostTick;
+			int AttackTick;
+			if(!qm_ghost_timeline::MapAttack(Draw.m_Player.m_AttackTick, GhostTick,
+				   Client()->GameTick(g_Config.m_ClDummy), Client()->PrevGameTick(g_Config.m_ClDummy), AttackTick))
+				continue;
+			Draw.m_Player.m_AttackTick = AttackTick;
 		}
+		if(!qm_ghost_render::Position(Draw.m_Prev, Draw.m_Player, Draw.m_IntraTick, Draw.m_Pos))
+			continue;
 
 		// QmClient：新格式在 m_VelY 写显式冻结标记；旧格式没有标记位时才回退到
 		// WEAPON_NINJA 判定（兼容旧幽灵文件，代价是旧文件里的真实忍者帧仍会被
@@ -616,14 +640,14 @@ void CGhost::OnRender()
 		}
 
 		// QmClient: 查看模式记录每个槽位虚影的插值位置（镜头跟随用）
-		Draw.m_Pos = mix(vec2(Draw.m_Prev.m_X, Draw.m_Prev.m_Y), vec2(Draw.m_Player.m_X, Draw.m_Player.m_Y), Draw.m_IntraTick);
 		if(m_ManualMode)
 		{
 			m_aManualRenderPos[Slot] = Draw.m_Pos;
 			m_aManualRenderPosValid[Slot] = true;
 		}
 
-		m_vGhostDraws.push_back(Draw);
+		if(!m_GhostDraws.Add(std::move(Draw)))
+			break;
 	}
 
 	// 每帧解析该虚影实际使用的渲染信息（冻结换肤时用本帧副本，否则用共享信息）
@@ -634,25 +658,31 @@ void CGhost::OnRender()
 	if(!m_ManualMode)
 	{
 		// 跑图模式：保持上游逐槽位顺序（每个虚影的 hook 紧跟自己的 Tee）
-		for(const SGhostDrawData &Draw : m_vGhostDraws)
+		for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
 		{
+			const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
 			GameClient()->m_Players.RenderHook(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
 			GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
 		}
 		return;
 	}
 
-	// 查看模式：全部 hook -> 全部 Tee -> 名字、强弱钩与方向指示叠加。
-	// 冻结条由 CFreezeBars 在玩家与地图前景之后绘制。
-	for(const SGhostDrawData &Draw : m_vGhostDraws)
-		GameClient()->m_Players.RenderHook(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
-	for(const SGhostDrawData &Draw : m_vGhostDraws)
-		GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick, Draw.m_AttackTimeOverride);
-
-	int PrimaryStrongWeakId = -1;
-	for(const SGhostDrawData &Draw : m_vGhostDraws)
+	// 查看模式：全部 hook -> 全部 Tee -> 名字与方向指示叠加
+	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
 	{
-		if(Draw.m_Slot == m_ManualPrimarySlot && Draw.m_HasStrongWeak)
+		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
+		GameClient()->m_Players.RenderHook(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
+	}
+	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
+	{
+		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
+		GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick, Draw.m_AttackTimeOverride);
+	}
+	int PrimaryStrongWeakId = -1;
+	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
+	{
+		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
+		if(Draw.m_Slot == m_ManualPlan.m_PrimarySlot && Draw.m_HasStrongWeak)
 		{
 			PrimaryStrongWeakId = Draw.m_StrongWeakId;
 			break;
@@ -661,8 +691,9 @@ void CGhost::OnRender()
 
 	// QmClient: 查看模式下为每个虚影标注名字（多轨回放的信息可读性，对齐 demo 播放器）
 	// 名字尺寸跟随客户端名字牌大小设置；方向键指示与名字牌共用 cl_show_direction 数据
-	for(const SGhostDrawData &Draw : m_vGhostDraws)
+	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
 	{
+		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
 		const CGhostItem &Ghost = m_aActiveGhosts[Draw.m_Slot];
 		const vec2 TeePos = Draw.m_Pos;
 		float NameWidth = 0.0f;
@@ -679,7 +710,7 @@ void CGhost::OnRender()
 		const auto DisplaySettings = qm_demo_display::Resolve(g_Config, true, false);
 		if(Draw.m_HasStrongWeak && PrimaryStrongWeakId >= 0 && DisplaySettings.StrongWeakEnabled())
 		{
-			const bool Own = Draw.m_Slot == m_ManualPrimarySlot;
+			const bool Own = Draw.m_Slot == m_ManualPlan.m_PrimarySlot;
 			int State = 0;
 			if(!Own)
 				State = PrimaryStrongWeakId > Draw.m_StrongWeakId ? 1 : -1;
@@ -715,7 +746,7 @@ void CGhost::OnRender()
 
 		// 查看模式使用共用 demo 的方向显示配置，主选手作为回放的自身成员。
 		const int Direction = qm_demo_display::Resolve(g_Config, true, false).m_Direction;
-		const bool Own = Draw.m_Slot == m_ManualPrimarySlot;
+		const bool Own = Draw.m_Slot == m_ManualPlan.m_PrimarySlot;
 		if(!g_Config.m_QmRankGhostShowDirection || Direction == 0 || (Direction == 1 && Own) || (Direction == 3 && !Own))
 			continue;
 		const float DirSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
@@ -779,7 +810,7 @@ void CGhost::OnRender()
 	}
 }
 
-void CGhost::UpdateTeeRenderInfo(CGhostItem &Ghost)
+std::shared_ptr<CManagedTeeRenderInfo> CGhost::CreateRenderInfo(const CGhostItem &Ghost)
 {
 	CSkinDescriptor SkinDescriptor;
 	SkinDescriptor.m_Flags = CSkinDescriptor::FLAG_SIX;
@@ -793,19 +824,18 @@ void CGhost::UpdateTeeRenderInfo(CGhostItem &Ghost)
 	TeeRenderInfo.ApplyColors(Ghost.m_Skin.m_UseCustomColor, Ghost.m_Skin.m_ColorBody, Ghost.m_Skin.m_ColorFeet);
 	TeeRenderInfo.m_Size = 64.0f;
 
-	Ghost.m_pManagedTeeRenderInfo = GameClient()->CreateManagedTeeRenderInfo(TeeRenderInfo, SkinDescriptor);
+	return GameClient()->CreateManagedTeeRenderInfo(TeeRenderInfo, SkinDescriptor);
 }
 
 void CGhost::StartRecord(int Tick)
 {
-	m_Recording = true;
 	m_CurGhost.Reset();
 	m_CurGhost.m_StartTick = Tick;
 
 	const CGameClient::CClientData *pData = &GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId];
 	str_copy(m_CurGhost.m_aPlayer, Client()->PlayerName());
 	SetGhostSkinData(&m_CurGhost.m_Skin, pData->m_aSkinName, pData->m_UseCustomColor, pData->m_ColorBody, pData->m_ColorFeet);
-	UpdateTeeRenderInfo(m_CurGhost);
+	m_Recording = true;
 }
 
 void CGhost::StopRecord(int Time)
@@ -819,47 +849,40 @@ void CGhost::StopRecord(int Time)
 		return;
 	}
 
-	CMenus::CGhostItem *pOwnGhost = nullptr;
-	if(Time > 0)
-		pOwnGhost = GameClient()->m_Menus.GetOwnGhost();
-	const bool StoreGhost = Time > 0 && !m_CurGhost.Empty() && (!pOwnGhost || Time < pOwnGhost->m_Time || !g_Config.m_ClRaceGhostSaveBest);
+	CMenus &Menus = GameClient()->m_Menus;
+	const auto *pOwn = Time > 0 ? Menus.GetOwnGhost() : nullptr;
+	const auto *pFinished = m_PersonalBest.FinishedItem();
+	const bool NewBest = (!pOwn || Time < pOwn->m_Time) && (!pFinished || Time < pFinished->m_Time);
+	const bool StoreGhost = Time > 0 && !m_CurGhost.Empty() && (NewBest || !g_Config.m_ClRaceGhostSaveBest);
 
-	bool WriteFailed = false;
-	if(RecordingToFile)
-	{
-		GhostRecorder()->Stop(m_CurGhost.m_Path.Size(), StoreGhost ? Time : -1);
-		WriteFailed = GhostRecorder()->HasWriteError();
-	}
+	char aFilename[IO_MAX_PATH_LENGTH] = "";
+	if(RecordingToFile && StoreGhost)
+		GetPath(aFilename, sizeof(aFilename), m_CurGhost.m_aPlayer, Time);
+	const bool SavedToFile = RecordingToFile && GhostRecorder()->Stop(m_CurGhost.m_Path.Size(), StoreGhost ? Time : -1, aFilename[0] ? aFilename : nullptr);
 
 	if(StoreGhost)
 	{
-		// add to active ghosts
-		int Slot = GetSlot();
-		if(Slot != -1 && (!pOwnGhost || Time < pOwnGhost->m_Time))
-			m_aActiveGhosts[Slot] = std::move(m_CurGhost);
-
-		if(pOwnGhost && pOwnGhost->Active() && Time < pOwnGhost->m_Time)
-			Unload(pOwnGhost->m_Slot);
-
-		// create ghost item
 		CMenus::CGhostItem Item;
-		if(RecordingToFile && !WriteFailed)
-			GetPath(Item.m_aFilename, sizeof(Item.m_aFilename), m_CurGhost.m_aPlayer, Time);
+		if(SavedToFile)
+		{
+			str_copy(Item.m_aFilename, aFilename);
+			str_copy(m_CurGhost.m_aFilename, aFilename);
+		}
 		str_copy(Item.m_aPlayer, m_CurGhost.m_aPlayer);
 		Item.m_Time = Time;
-		Item.m_Slot = Slot;
-
-		// save new ghost file
-		if(Item.HasFile() && !Storage()->RenameFile(m_aTmpFilename, Item.m_aFilename, IStorage::TYPE_SAVE))
+		Item.m_Date = std::time(nullptr);
+		Item.m_Failed = false;
+		Item.m_Own = NewBest;
+		Item.m_InMemoryBest = NewBest && !SavedToFile;
+		if(NewBest)
 		{
-			log_error("ghost", "failed to publish ghost file '%s'", Item.m_aFilename);
-			Item.m_aFilename[0] = '\0';
+			// 皮肤只用于绘制，分配失败仍保留成绩和可保存的轨迹。
+			ghost_run::PrepareSkin(m_CurGhost, [this](const CGhostItem &Ghost) { return CreateRenderInfo(Ghost); });
+			m_PersonalBest.Finish(Item, m_CurGhost);
+			PublishFinishedBest();
 		}
-		else if(Item.HasFile() && Slot >= 0)
-			str_copy(m_aActiveGhosts[Slot].m_aFilename, Item.m_aFilename);
-
-		// add item to menu list
-		GameClient()->m_Menus.UpdateOwnGhost(Item);
+		else
+			Menus.UpdateOwnGhost(Item);
 	}
 
 	m_aTmpFilename[0] = '\0';
@@ -880,7 +903,6 @@ void CGhost::StopRender()
 	m_Rendering = false;
 	m_NewRenderTick = -1;
 	m_ManualMode = false;
-	m_ManualPrimarySlot = -1;
 	m_ManualFocusSlot = -1;
 	m_ManualClock.SetPlaying(false, Client()->LocalTime());
 	std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
@@ -888,15 +910,14 @@ void CGhost::StopRender()
 		vSpans.clear();
 }
 
-void CGhost::BuildManualFreezeSpans(const std::vector<int> &vSlots)
+bool CGhost::BuildManualFreezeSpans(const std::array<bool, MAX_ACTIVE_GHOSTS> &aSlots, TManualFreezeSpans &aFreezeSpans) const
+try
 {
-	for(int Slot : vSlots)
+	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
 	{
-		if(Slot < 0 || Slot >= MAX_ACTIVE_GHOSTS)
+		if(!aSlots[Slot])
 			continue;
-		std::vector<SGhostFreezeSpan> &vSpans = m_aManualFreezeSpans[Slot];
-		vSpans.clear();
-		CGhostItem &Ghost = m_aActiveGhosts[Slot];
+		const CGhostItem &Ghost = m_aActiveGhosts[Slot];
 		if(Ghost.Empty())
 			continue;
 		// 连续冻结帧 = 一个冻结段。新文件用 m_VelY 显式标记，旧文件回退到
@@ -909,11 +930,23 @@ void CGhost::BuildManualFreezeSpans(const std::vector<int> &vSlots)
 		for(int Index = 0; Index < Ghost.m_Path.Size(); ++Index)
 		{
 			const CGhostCharacter *pFrame = Ghost.m_Path.Get(Index);
-			vRelativeTicks.push_back(pFrame->m_Tick - Ghost.m_StartTick);
+			const int64_t RelativeTick = static_cast<int64_t>(pFrame->m_Tick) - Ghost.m_StartTick;
+			if(!qm_ghost_timeline::FitsInt(RelativeTick))
+				return false;
+			vRelativeTicks.push_back(static_cast<int>(RelativeTick));
 			vFrozen.push_back(QmGhostFrameFrozen(pFrame->m_VelY, pFrame->m_Weapon == WEAPON_NINJA) ? 1 : 0);
 		}
-		QmCollectGhostFreezeSpans(vRelativeTicks, vFrozen, vSpans);
+		QmCollectGhostFreezeSpans(vRelativeTicks, vFrozen, aFreezeSpans[Slot]);
 	}
+	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }
 
 void CGhost::ManualSetSpeed(float Speed)
@@ -924,7 +957,7 @@ void CGhost::ManualSetSpeed(float Speed)
 
 void CGhost::ManualSetFocusSlot(int Slot)
 {
-	if(m_ManualMode && Slot >= 0 && Slot < MAX_ACTIVE_GHOSTS && m_aManualSlots[Slot])
+	if(m_ManualMode && Slot >= 0 && Slot < MAX_ACTIVE_GHOSTS && m_ManualPlan.m_aSlots[Slot])
 		m_ManualFocusSlot = Slot;
 }
 
@@ -935,7 +968,7 @@ void CGhost::RenderManualFreezeBars()
 	const int PlaybackTick = ManualPlaybackTick();
 	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
 	{
-		if(!m_aManualSlots[Slot] || !m_aManualRenderPosValid[Slot])
+		if(!m_ManualPlan.m_aSlots[Slot] || !m_aManualRenderPosValid[Slot])
 			continue;
 		const float FreezeProgress = QmGhostFreezeProgress(m_aManualFreezeSpans[Slot], PlaybackTick);
 		if(FreezeProgress <= 0.0f)
@@ -944,48 +977,29 @@ void CGhost::RenderManualFreezeBars()
 	}
 }
 
-void CGhost::StartRenderManual(const std::vector<int> &vSlots)
+bool CGhost::StartRenderManual(const std::vector<int> &vSlots, int FirstTick)
 {
+	qm_ghost_manual::CPlan<MAX_ACTIVE_GHOSTS> Candidate;
+	if(!Candidate.Prepare(vSlots, [this](int Slot) { return &m_aActiveGhosts[Slot]; }, FirstTick))
+		return false;
+	TManualFreezeSpans aFreezeSpans;
+	if(!BuildManualFreezeSpans(Candidate.m_aSlots, aFreezeSpans))
+		return false;
+	// 所有分配和时间映射检查完成后，才替换播放状态。
+	static_assert(std::is_nothrow_move_assignable_v<decltype(m_ManualPlan)>);
 	StopRender();
-	BuildManualFreezeSpans(vSlots);
-	m_ManualPrimarySlot = vSlots.empty() ? -1 : vSlots.front();
-	m_ManualFocusSlot = m_ManualPrimarySlot;
-	m_vManualSampleTicks.clear();
-	std::fill(std::begin(m_aManualSlots), std::end(m_aManualSlots), false);
-	for(int Slot : vSlots)
-		if(Slot >= 0 && Slot < MAX_ACTIVE_GHOSTS)
-			m_aManualSlots[Slot] = true;
-	bool HaveGhost = false;
-	m_ManualEndTick = 0;
-	for(int Slot : vSlots)
-	{
-		if(Slot < 0 || Slot >= MAX_ACTIVE_GHOSTS)
-			continue;
-		CGhostItem &Ghost = m_aActiveGhosts[Slot];
-		if(Ghost.Empty())
-			continue;
-		HaveGhost = true;
-		if(Slot == m_ManualPrimarySlot)
-		{
-			m_vManualSampleTicks.reserve(Ghost.m_Path.Size());
-			for(int Index = 0; Index < Ghost.m_Path.Size(); ++Index)
-				m_vManualSampleTicks.push_back(Ghost.m_Path.Get(Index)->m_Tick - Ghost.m_StartTick);
-		}
-		// 总时长取所有激活影子中最长的一条轨迹（相对 tick）：团队/接力回放里先
-		// 完成、中途加入或提前离开的玩家轨迹更短，取最短会把整组截断在最早那下；
-		// 短轨迹播到自己的末帧后停在原处（查看模式按各自轨迹范围钳制）
-		const int EndTick = Ghost.m_Path.Get(Ghost.m_Path.Size() - 1)->m_Tick - Ghost.m_StartTick;
-		if(EndTick > m_ManualEndTick)
-			m_ManualEndTick = EndTick;
-		Ghost.m_PlaybackPos = 0;
-	}
-	if(!HaveGhost || m_ManualEndTick <= 0)
-		return;
+	m_ManualPlan = std::move(Candidate);
+	m_aManualFreezeSpans = std::move(aFreezeSpans);
+	m_ManualFocusSlot = m_ManualPlan.m_PrimarySlot;
+	for(size_t Slot = 0; Slot < m_ManualPlan.m_aSlots.size(); ++Slot)
+		if(m_ManualPlan.m_aSlots[Slot] && !m_aActiveGhosts[Slot].Empty())
+			m_aActiveGhosts[Slot].m_PlaybackPos = 0;
 	m_ManualMode = true;
 	m_Rendering = true;
 	m_RenderingStartedByServer = false;
-	m_ManualClock.Start(Client()->LocalTime(), m_ManualEndTick, Client()->GameTickSpeed());
+	m_ManualClock.Start(Client()->LocalTime(), ManualEndTick(), Client()->GameTickSpeed());
 	std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
+	return true;
 }
 
 int CGhost::ManualPlaybackTick() const
@@ -1009,7 +1023,7 @@ bool CGhost::GetManualRenderPosAtTick(int Slot, int Tick, vec2 *pOut) const
 	if(Size <= 0)
 		return false;
 
-	const int TargetTick = Ghost.m_StartTick + std::clamp(Tick, 0, m_ManualEndTick);
+	const int64_t TargetTick = qm_ghost_timeline::OffsetTick(Ghost.m_StartTick, std::clamp(Tick, 0, ManualEndTick()), 0);
 	int Lo = 0;
 	int Hi = Size - 1;
 	while(Lo < Hi)
@@ -1027,7 +1041,7 @@ bool CGhost::GetManualRenderPosAtTick(int Slot, int Tick, vec2 *pOut) const
 		*pOut = vec2(pCur->m_X, pCur->m_Y);
 		return true;
 	}
-	const float Ratio = std::clamp((TargetTick - pPrev->m_Tick) / (float)(pCur->m_Tick - pPrev->m_Tick), 0.0f, 1.0f);
+	const float Ratio = std::clamp((TargetTick - pPrev->m_Tick) / (float)(static_cast<int64_t>(pCur->m_Tick) - pPrev->m_Tick), 0.0f, 1.0f);
 	*pOut = mix(vec2(pPrev->m_X, pPrev->m_Y), vec2(pCur->m_X, pCur->m_Y), Ratio);
 	return true;
 }
@@ -1050,7 +1064,7 @@ void CGhost::ManualSeek(int RelativeTick)
 	{
 		if(Ghost.Empty())
 			continue;
-		const int TargetTick = Ghost.m_StartTick + PlaybackTick;
+		const int64_t TargetTick = qm_ghost_timeline::OffsetTick(Ghost.m_StartTick, PlaybackTick, 0);
 		const int Size = Ghost.m_Path.Size();
 		int Pos = 0;
 		int Last = 0;
@@ -1069,16 +1083,13 @@ int CGhost::Load(const char *pFilename)
 	if(Slot == -1)
 		return -1;
 
+	CGhostItem Candidate;
 	if(!GhostLoader()->Load(pFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), GameClient()->Map()->Crc()))
 		return -1;
 
-	const CGhostInfo *pInfo = GhostLoader()->GetInfo();
+	const CGhostInfo Info = *GhostLoader()->GetInfo();
 
-	// select ghost
-	CGhostItem *pGhost = &m_aActiveGhosts[Slot];
-	pGhost->Reset();
-
-	str_copy(pGhost->m_aPlayer, pInfo->m_aOwner);
+	str_copy(Candidate.m_aPlayer, Info.m_aOwner);
 
 	int Index = 0;
 	bool FoundSkin = false;
@@ -1089,7 +1100,7 @@ int CGhost::Load(const char *pFilename)
 	int Type;
 	while(GhostLoader()->ReadNextType(&Type))
 	{
-		if(Index == pInfo->m_NumTicks && (Type == GHOSTDATA_TYPE_CHARACTER || Type == GHOSTDATA_TYPE_CHARACTER_NO_TICK))
+		if(Index == Info.m_NumTicks && (Type == GHOSTDATA_TYPE_CHARACTER || Type == GHOSTDATA_TYPE_CHARACTER_NO_TICK))
 		{
 			log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: too many ghost characters");
 			Error = true;
@@ -1098,7 +1109,7 @@ int CGhost::Load(const char *pFilename)
 
 		if(Type == GHOSTDATA_TYPE_SKIN && !FoundSkin)
 		{
-			if(!GhostLoader()->ReadData(Type, &pGhost->m_Skin, sizeof(CGhostSkin)))
+			if(!GhostLoader()->ReadData(Type, &Candidate.m_Skin, sizeof(CGhostSkin)))
 			{
 				log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: failed to read skin");
 				Error = true;
@@ -1114,7 +1125,7 @@ int CGhost::Load(const char *pFilename)
 				Error = true;
 				break;
 			}
-			else if(!pGhost->m_Path.ReadAndAdd([&](CGhostCharacter &Value) { return GhostLoader()->ReadData(Type, &Value, sizeof(CGhostCharacter_NoTick)); }))
+			else if(!Candidate.m_Path.ReadAndAdd([&](CGhostCharacter &Value) { return GhostLoader()->ReadData(Type, &Value, sizeof(CGhostCharacter_NoTick)); }))
 			{
 				log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: failed to read ghost character (without tick)");
 				Error = true;
@@ -1131,7 +1142,7 @@ int CGhost::Load(const char *pFilename)
 				Error = true;
 				break;
 			}
-			else if(!pGhost->m_Path.ReadAndAdd([&](CGhostCharacter &Value) { return GhostLoader()->ReadData(Type, &Value, sizeof(CGhostCharacter)); }))
+			else if(!Candidate.m_Path.ReadAndAdd([&](CGhostCharacter &Value) { return GhostLoader()->ReadData(Type, &Value, sizeof(CGhostCharacter)); }))
 			{
 				log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: failed to read ghost character (with tick)");
 				Error = true;
@@ -1142,7 +1153,7 @@ int CGhost::Load(const char *pFilename)
 		}
 		else if(Type == GHOSTDATA_TYPE_START_TICK)
 		{
-			if(!GhostLoader()->ReadData(Type, &pGhost->m_StartTick, sizeof(int)))
+			if(!GhostLoader()->ReadData(Type, &Candidate.m_StartTick, sizeof(int)))
 			{
 				log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: failed to read start tick");
 				Error = true;
@@ -1153,39 +1164,27 @@ int CGhost::Load(const char *pFilename)
 
 	GhostLoader()->Close();
 
-	if(!Error && Index != pInfo->m_NumTicks)
+	if(!Error && Index != Info.m_NumTicks)
 	{
-		log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read all ghost data (got '%d' ticks, wanted '%d' ticks)", Index, pInfo->m_NumTicks);
+		log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read all ghost data (got '%d' ticks, wanted '%d' ticks)", Index, Info.m_NumTicks);
 		Error = true;
 	}
 
 	if(Error)
+		return -1;
+
+	if(!qm_ghost_timeline::Prepare(Candidate.m_Path, FoundCharacterTick, Candidate.m_StartTick))
 	{
-		pGhost->Reset();
+		log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: invalid timeline");
 		return -1;
 	}
 
-	if(FoundCharacterNoTick)
-	{
-		int StartTick = 0;
-		for(int i = 1; i < pInfo->m_NumTicks; i++) // estimate start tick
-			if(pGhost->m_Path.Get(i)->m_AttackTick != pGhost->m_Path.Get(i - 1)->m_AttackTick)
-				StartTick = pGhost->m_Path.Get(i)->m_AttackTick - i;
-		for(int i = 0; i < pInfo->m_NumTicks; i++)
-			pGhost->m_Path.Get(i)->m_Tick = StartTick + i;
-	}
-
-	if(pGhost->m_StartTick == -1)
-		pGhost->m_StartTick = pGhost->m_Path.Get(0)->m_Tick;
-
 	if(!FoundSkin)
 	{
-		SetGhostSkinData(&pGhost->m_Skin, "default", 0, 0, 0);
+		SetGhostSkinData(&Candidate.m_Skin, "default", 0, 0, 0);
 	}
-	str_copy(pGhost->m_aFilename, pFilename);
-	UpdateTeeRenderInfo(*pGhost);
-
-	return Slot;
+	str_copy(Candidate.m_aFilename, pFilename);
+	return ghost_run::Prepare(m_aActiveGhosts[Slot], Candidate, [this](const CGhostItem &Ghost) { return CreateRenderInfo(Ghost); }) ? Slot : -1;
 }
 
 bool CGhost::CanLoad(const char *pFilename)
@@ -1197,26 +1196,77 @@ bool CGhost::CanLoad(const char *pFilename)
 	return GhostLoader()->GetGhostInfo(pFilename, &Info, Client()->GetCurrentMap(), pMap->Sha256(), pMap->Crc());
 }
 
-void CGhost::Unload(int Slot)
+void CGhost::PublishFinishedBest()
 {
-	m_aManualSlots[Slot] = false;
+	CMenus &Menus = GameClient()->m_Menus;
+	const auto *pPrevious = Menus.GetOwnGhost();
+	const auto *pFinished = m_PersonalBest.FinishedItem();
+	if(!pFinished)
+		return;
+	if(pPrevious && pPrevious->m_Time <= pFinished->m_Time)
+	{
+		// 重试前的磁盘扫描可能已经收录了本次文件，或发现了更快的成绩。
+		m_PersonalBest.ForgetFinished();
+		return;
+	}
+	const int PreviousSlot = pPrevious ? pPrevious->m_Slot : -1;
+	const int FreeSlot = PreviousSlot < 0 ? GetSlot() : -1;
+	const bool Published = m_PersonalBest.Publish(m_aActiveGhosts, PreviousSlot, FreeSlot, [&Menus](const CMenus::CGhostItem &Item) { return Menus.UpdateOwnGhost(Item); }, [this](int Slot) { ClearSlot(Slot); });
+	if(!Published)
+		m_NextBestRetry = time_get_nanoseconds() + std::chrono::seconds(1);
+}
+
+bool CGhost::IsUnsavedBest(const CMenus::CGhostItem &Item) const
+{
+	const auto *pBest = m_PersonalBest.UnsavedItem();
+	return pBest && Item.m_InMemoryBest && !Item.HasFile() && pBest->m_Time == Item.m_Time && pBest->m_Date == Item.m_Date && str_comp(pBest->m_aPlayer, Item.m_aPlayer) == 0;
+}
+
+void CGhost::ForgetUnsavedBest(const CMenus::CGhostItem &Item)
+{
+	if(IsUnsavedBest(Item))
+		m_PersonalBest.ForgetUnsaved();
+}
+
+int CGhost::Load(const CMenus::CGhostItem &Item)
+{
+	if(Item.HasFile())
+		return Load(Item.m_aFilename);
+	const int Slot = GetSlot();
+	return IsUnsavedBest(Item) && m_PersonalBest.Activate(m_aActiveGhosts, Slot) ? Slot : -1;
+}
+
+void CGhost::ClearSlot(int Slot)
+{
+	m_ManualPlan.m_aSlots[Slot] = false;
 	m_aManualRenderPosValid[Slot] = false;
 	m_aActiveGhosts[Slot].Reset();
 }
 
+void CGhost::Unload(int Slot)
+{
+	m_PersonalBest.Unload(Slot, m_aActiveGhosts[Slot]);
+	ClearSlot(Slot);
+	m_FreeSlotAvailable = m_PersonalBest.ShouldActivate();
+}
+
 void CGhost::UnloadAll()
 {
+	m_PersonalBest.Suspend();
 	for(int i = 0; i < MAX_ACTIVE_GHOSTS; i++)
 		Unload(i);
+	m_FreeSlotAvailable = false;
 }
 
 void CGhost::SaveGhost(CMenus::CGhostItem *pItem)
 {
-	int Slot = pItem->m_Slot;
-	if(!pItem->Active() || pItem->HasFile() || m_aActiveGhosts[Slot].Empty() || GhostRecorder()->IsRecording())
+	if(pItem->HasFile() || GhostRecorder()->IsRecording())
 		return;
-
-	CGhostItem *pGhost = &m_aActiveGhosts[Slot];
+	CGhostItem *pGhost = IsUnsavedBest(*pItem) ? m_PersonalBest.UnsavedTrack(m_aActiveGhosts) : nullptr;
+	if(!pGhost && pItem->Active())
+		pGhost = &m_aActiveGhosts[pItem->m_Slot];
+	if(!pGhost || pGhost->Empty())
+		return;
 
 	int NumTicks = pGhost->m_Path.Size();
 	char aFilename[IO_MAX_PATH_LENGTH];
@@ -1224,20 +1274,18 @@ void CGhost::SaveGhost(CMenus::CGhostItem *pItem)
 	if(GhostRecorder()->Start(aFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), pItem->m_aPlayer) != 0)
 		return;
 
-	GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &pGhost->m_StartTick, sizeof(int));
-	GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &pGhost->m_Skin, sizeof(CGhostSkin));
-	for(int i = 0; i < NumTicks; i++)
-		GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, pGhost->m_Path.Get(i), sizeof(CGhostCharacter));
+	bool Writing = GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &pGhost->m_StartTick, sizeof(int)) &&
+		       GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &pGhost->m_Skin, sizeof(CGhostSkin));
+	for(int i = 0; Writing && i < NumTicks; i++)
+		Writing = GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, pGhost->m_Path.Get(i), sizeof(CGhostCharacter));
 
-	GhostRecorder()->Stop(NumTicks, pItem->m_Time);
-	if(GhostRecorder()->HasWriteError())
+	if(GhostRecorder()->Stop(NumTicks, pItem->m_Time) && Writing)
 	{
-		Storage()->RemoveFile(aFilename, IStorage::TYPE_SAVE);
-		log_error("ghost", "failed to save ghost file '%s'", aFilename);
-		return;
+		ForgetUnsavedBest(*pItem);
+		pItem->m_InMemoryBest = false;
+		str_copy(pItem->m_aFilename, aFilename);
+		str_copy(pGhost->m_aFilename, aFilename);
 	}
-	str_copy(pItem->m_aFilename, aFilename);
-	str_copy(pGhost->m_aFilename, aFilename);
 }
 
 void CGhost::ConGPlay(IConsole::IResult *pResult, void *pUserData)
@@ -1330,7 +1378,10 @@ void CGhost::OnShutdown()
 void CGhost::OnMapLoad()
 {
 	OnReset();
+	m_PersonalBest.Reset();
 	UnloadAll();
+	for(auto &Ghost : GameClient()->m_Menus.m_vGhosts)
+		Ghost.m_Slot = -1;
 	GameClient()->m_Menus.GhostlistPopulate();
 	m_AllowRestart = false;
 }

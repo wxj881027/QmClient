@@ -49,7 +49,7 @@ namespace QmConsoleUi
 		if(!Split && CurrentTotal > 0.0f)
 		{
 			const float GroupGap = CurrentFilterWidth > 0.001f && CurrentActionWidth > 0.001f ? 10.0f : 0.0f;
-			if(CurrentTotal > Available)
+			if(CurrentTotal + GroupGap > Available)
 			{
 				const float SharedScale = std::clamp((Available - GroupGap) / CurrentTotal, 0.0f, 1.0f);
 				FilterScale = std::min(FilterScale, SharedScale);

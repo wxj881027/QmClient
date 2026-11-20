@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
+
 namespace
 {
 	std::vector<std::string> LinkUrls(const char *pText)
@@ -127,6 +129,19 @@ TEST(QmConsoleText, SearchRangesUseMatchedUtf8Bytes)
 	EXPECT_EQ(vMatches[1].m_EndByte, 19);
 }
 
+TEST(QmConsoleText, SuccessiveSearchMatchesKeepGlyphOffsetsAcrossNewlines)
+{
+	std::vector<QmConsoleText::SRange> vMatches;
+	QmConsoleText::CollectSearchMatches("前缀中文\n 中文", "中文", vMatches);
+	ASSERT_EQ(vMatches.size(), 2u);
+	EXPECT_EQ(vMatches[0].m_StartChar, 2);
+	EXPECT_EQ(vMatches[0].m_EndChar, 4);
+	EXPECT_EQ(vMatches[1].m_StartByte, 14);
+	EXPECT_EQ(vMatches[1].m_EndByte, 20);
+	EXPECT_EQ(vMatches[1].m_StartChar, 5);
+	EXPECT_EQ(vMatches[1].m_EndChar, 7);
+}
+
 TEST(QmConsoleText, CaseInsensitiveSearchUsesActualMatchedLength)
 {
 	std::vector<QmConsoleText::SRange> vMatches;
@@ -233,4 +248,63 @@ TEST(QmConsoleText, NonGlyphNewlineLayerDoesNotDelayNextLineLinkColor)
 	EXPECT_EQ(vResult[0].m_Color, Search);
 	EXPECT_EQ(vResult[1].m_CharIndex, 4);
 	EXPECT_EQ(vResult[1].m_Color, Link);
+}
+
+TEST(QmConsoleText, OverflowingPositiveLayerEndStillCoversTheVisibleSuffix)
+{
+	const ColorRGBA Base(1, 1, 1, 1), Overlay(1, 0, 0, 1);
+	const std::vector<STextColorSplit> vLayers{{0, 4, Base}, {1, std::numeric_limits<int>::max(), Overlay}};
+	std::vector<STextColorSplit> vResult;
+	QmConsoleText::ComposeColorSplits("abcd", vLayers, vResult);
+	ASSERT_EQ(vResult.size(), 2u);
+	EXPECT_EQ(vResult[1].m_CharIndex, 1);
+	EXPECT_EQ(vResult[1].m_Length, 3);
+	EXPECT_EQ(vResult[1].m_Color, Overlay);
+}
+
+TEST(QmConsoleText, ExtremeLayerOutsideTheTextDoesNotOverrideTheBase)
+{
+	const ColorRGBA Base(1, 1, 1, 1), Overlay(1, 0, 0, 1);
+	const std::vector<STextColorSplit> vLayers{{0, 4, Base}, {std::numeric_limits<int>::max(), std::numeric_limits<int>::max(), Overlay}};
+	std::vector<STextColorSplit> vResult;
+	QmConsoleText::ComposeColorSplits("abcd", vLayers, vResult);
+	ASSERT_EQ(vResult.size(), 1u);
+	EXPECT_EQ(vResult[0].m_Color, Base);
+}
+
+TEST(QmConsoleText, NegativeStartingLayerIsClippedWithoutChangingItsVisibleEnd)
+{
+	const ColorRGBA Base(1, 1, 1, 1), Overlay(1, 0, 0, 1);
+	const std::vector<STextColorSplit> vLayers{{0, 4, Base}, {-2, 4, Overlay}};
+	std::vector<STextColorSplit> vResult;
+	QmConsoleText::ComposeColorSplits("abcd", vLayers, vResult);
+	ASSERT_EQ(vResult.size(), 2u);
+	EXPECT_EQ(vResult[0].m_CharIndex, 0);
+	EXPECT_EQ(vResult[0].m_Length, 2);
+	EXPECT_EQ(vResult[0].m_Color, Overlay);
+}
+
+TEST(QmConsoleText, AnyNegativeLengthRetainsTheOpenEndedRule)
+{
+	const ColorRGBA Base(1, 1, 1, 1), Overlay(1, 0, 0, 1);
+	const std::vector<STextColorSplit> vLayers{{0, 4, Base}, {1, -2, Overlay}};
+	std::vector<STextColorSplit> vResult;
+	QmConsoleText::ComposeColorSplits("abcd", vLayers, vResult);
+	ASSERT_EQ(vResult.size(), 2u);
+	EXPECT_EQ(vResult[1].m_Length, 3);
+	EXPECT_EQ(vResult[1].m_Color, Overlay);
+}
+
+TEST(QmConsoleText, ExtremeCharacterSpanStopsAtTheStringTerminator)
+{
+	const auto Split = QmConsoleText::ColorSplitForCharacters("中文", std::numeric_limits<int>::max(), std::numeric_limits<int>::max(), ColorRGBA(1, 0, 0, 1));
+	EXPECT_EQ(Split.m_CharIndex, 6);
+	EXPECT_EQ(Split.m_Length, 0);
+}
+
+TEST(QmConsoleText, NegativeCharacterStartKeepsTheOriginalZeroClampingRule)
+{
+	const auto Split = QmConsoleText::ColorSplitForCharacters("中文abc", -10, 2, ColorRGBA(1, 0, 0, 1));
+	EXPECT_EQ(Split.m_CharIndex, 0);
+	EXPECT_EQ(Split.m_Length, 6);
 }

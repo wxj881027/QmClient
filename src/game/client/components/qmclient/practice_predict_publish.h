@@ -29,10 +29,24 @@
 // CFastPractice 能写，避免模板反过来要求扩大客户端公开面。
 
 template<typename TSink>
-void QmPublishPracticeWorldSnapshot(TSink &Sink, CGameWorld &World, int LocalClientId, int DummyClientId, int &PredictedTick)
+bool QmCopyPracticePredictionWorlds(TSink &Sink, CGameWorld &World, bool CopyWorldToPredicted)
 {
-	Sink.PredictedWorld().CopyWorldClean(&World);
-	Sink.PrevPredictedWorld().CopyWorldClean(&World);
+	if(!CopyWorldToPredicted)
+		return Sink.PrevPredictedWorld().CopyWorldClean(&World);
+	CGameWorld Predicted;
+	CGameWorld Previous;
+	if(!Predicted.CopyWorldClean(&World) || !Previous.CopyWorldClean(&World))
+		return false;
+	Sink.PredictedWorld().AdoptCleanWorld(Predicted);
+	Sink.PrevPredictedWorld().AdoptCleanWorld(Previous);
+	return true;
+}
+
+template<typename TSink>
+bool QmPublishPracticeWorldSnapshot(TSink &Sink, CGameWorld &World, int LocalClientId, int DummyClientId, int &PredictedTick)
+{
+	if(!QmCopyPracticePredictionWorlds(Sink, World, true))
+		return false;
 	if(CCharacter *pLocalChar = World.GetCharacterById(LocalClientId))
 	{
 		Sink.PredictedChar() = pLocalChar->GetCore();
@@ -49,19 +63,15 @@ void QmPublishPracticeWorldSnapshot(TSink &Sink, CGameWorld &World, int LocalCli
 		}
 	}
 	PredictedTick = World.GameTick();
+	return true;
 }
 
 template<typename TSink>
-void QmPublishPracticePredictionBeforeStep(TSink &Sink, CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, bool CopyWorldToPredicted, int LocalClientId)
+bool QmPublishPracticePredictionBeforeStep(TSink &Sink, CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, bool CopyWorldToPredicted, int LocalClientId)
 {
 	const SPracticePublishActions Actions = QmResolvePracticePublishActions(Plan, Tick);
-	if(Actions.m_CopyPrevWorld)
-	{
-		// 步进前的世界就是上一帧：镜头插值与预测差分都从这里取。
-		Sink.PrevPredictedWorld().CopyWorldClean(&World);
-		if(CopyWorldToPredicted)
-			Sink.PredictedWorld().CopyWorldClean(&World);
-	}
+	if(Actions.m_CopyPrevWorld && !QmCopyPracticePredictionWorlds(Sink, World, CopyWorldToPredicted))
+		return false;
 	if(Actions.m_PublishPrevRole)
 	{
 		if(CCharacter *pLocalChar = World.GetCharacterById(LocalClientId))
@@ -76,6 +86,7 @@ void QmPublishPracticePredictionBeforeStep(TSink &Sink, CGameWorld &World, const
 			if(CCharacter *pChar = World.GetCharacterById(i))
 				Sink.ClientPrevPredicted(i) = pChar->GetCore();
 	}
+	return true;
 }
 
 template<typename TSink>

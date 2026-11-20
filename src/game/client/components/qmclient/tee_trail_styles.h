@@ -3,6 +3,9 @@
 
 #include <game/client/components/tclient/qm_tee_trail.h>
 
+#include <cstdint>
+#include <optional>
+
 namespace qm_tee_trail
 {
 	struct SPixelNoise
@@ -37,6 +40,9 @@ namespace qm_tee_trail
 		double m_Distance;
 		float m_Age, m_Width, m_Alpha, m_Energy, m_Head, m_Remaining;
 	};
+
+	// 距离整数部分的低32位用于重播种；非有限值没有有效索引。
+	std::optional<uint32_t> StyleCellId(double Distance);
 
 	void BuildStyledEffect(const SStyleSample *pSamples, size_t Count, int Style, bool Preset, float Width, float PixelSize, unsigned Seed, std::vector<SQuad> &vOut, CPixelNoiseCache *pPixelNoiseCache = nullptr);
 }

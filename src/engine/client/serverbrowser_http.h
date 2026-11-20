@@ -12,6 +12,9 @@ class IEngine;
 class IStorage;
 class IHttp;
 class IHttpRequest;
+typedef struct _json_value json_value;
+
+using FServerListParser = std::function<bool(json_value *, std::vector<CServerInfo> *)>;
 
 class IServerBrowserHttp
 {
@@ -34,11 +37,11 @@ public:
 };
 
 IServerBrowserHttp *CreateServerBrowserHttp(IEngine *pEngine, IStorage *pStorage, IHttp *pHttp, const char *pPreviousBestUrl);
-// 注入仅替换 HTTP 创建与时钟边界，生产调度、解析和缓存仍共用同一个实现。
+// 注入 HTTP、时钟、解析与写入边界，生产调度和缓存仍共用同一个实现。
 IServerBrowserHttp *CreateServerBrowserHttpWithSources(IEngine *pEngine, IStorage *pStorage, IHttp *pHttp,
 	std::vector<std::string> vUrls, const char *pPreviousBestUrl,
 	std::function<std::shared_ptr<IHttpRequest>(const char *)> Factory,
 	std::function<int64_t()> Clock, bool UseFallbackTiers = false,
 	std::function<int(int)> RetryDelay = {},
-	std::function<bool(const std::string &, const std::string &)> SaveWriter = {});
+	std::function<bool(const std::string &, const std::string &)> SaveWriter = {}, FServerListParser ParseList = {});
 #endif // ENGINE_CLIENT_SERVERBROWSER_HTTP_H

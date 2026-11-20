@@ -6,6 +6,8 @@
 #include <gtest/gtest.h>
 #include <test/support/qm_ui_test_input.h>
 
+#include <optional>
+
 namespace
 {
 	// CLineInput 的输入设备是静态依赖，测试前后都要装回/摘掉，避免污染其它 suite。
@@ -27,6 +29,20 @@ namespace
 		return Event;
 	}
 } // namespace
+
+TEST(LineInput, CopyingUnboundInputStartsWithEmptyTextMetrics)
+{
+	char aPreviousText[] = "\xc3\xa9";
+	std::optional<CLineInput> Input(std::in_place, aPreviousText, sizeof(aPreviousText));
+	ASSERT_EQ(Input->GetLength(), 2u);
+	ASSERT_EQ(Input->GetNumChars(), 1u);
+
+	Input.emplace();
+	const CLineInput Copy(*Input);
+
+	EXPECT_EQ(Copy.GetLength(), 0u);
+	EXPECT_EQ(Copy.GetNumChars(), 0u);
+}
 
 TEST(LineInputMultiline, EnterInsertsNewlineAtCursor)
 {

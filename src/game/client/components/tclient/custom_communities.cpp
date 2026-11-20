@@ -11,6 +11,9 @@
 #include <game/client/components/qmclient/custom_community_info.h>
 #include <game/client/components/qmclient/perf_logging.h>
 
+#include <new>
+#include <utility>
+
 void CCustomCommunities::DownloadCustomCommunitiesDDNetInfo()
 {
 	if(m_pCustomCommunitiesDDNetInfoTask)
@@ -31,17 +34,25 @@ void CCustomCommunities::DownloadCustomCommunitiesDDNetInfo()
 		pServerBrowser->LoadDDNetServers();
 		return;
 	}
-	else
+
+	// 加载页同样需要持续响应输入；旧缓存的磁盘读取和解析只能在后台进行。
+	m_pCustomCommunitiesCacheJob = CQmCustomCommunityCacheJob::TryQueue(*Engine(), Storage());
+	try
 	{
-		// 加载页同样需要持续响应输入；旧缓存的磁盘读取和解析只能在后台进行。
-		m_pCustomCommunitiesCacheJob = std::make_shared<CQmCustomCommunityCacheJob>(Storage());
-		Engine()->AddJob(m_pCustomCommunitiesCacheJob);
-		m_pCustomCommunitiesDDNetInfoTask = HttpGetBoth(g_Config.m_QmCustomCommunitiesUrl, Storage(), QMCLIENT_CUSTOM_COMMUNITIES_INFO_FILE, IStorage::TYPE_SAVE);
-		m_pCustomCommunitiesDDNetInfoTask->Timeout(CTimeout{10000, 0, 500, 10});
-		m_pCustomCommunitiesDDNetInfoTask->SkipByFileTime(false); // Always re-download.
+		std::shared_ptr<IHttpRequest> pRequest = HttpGetBoth(g_Config.m_QmCustomCommunitiesUrl, Storage(), QMCLIENT_CUSTOM_COMMUNITIES_INFO_FILE, IStorage::TYPE_SAVE);
+		pRequest->ValidateBeforeOverwrite(true);
+		pRequest->Timeout(CTimeout{10000, 0, 500, 10});
+		pRequest->SkipByFileTime(false); // Always re-download.
 		// Use ipv4 so we can know the ingame ip addresses of players before they join game servers
-		m_pCustomCommunitiesDDNetInfoTask->IpResolve(IPRESOLVE::V4);
-		Http()->Run(m_pCustomCommunitiesDDNetInfoTask);
+		pRequest->IpResolve(IPRESOLVE::V4);
+		Http()->Run(pRequest);
+		const auto State = pRequest->State();
+		if(State != EHttpState::ABORTED && State != EHttpState::ERROR)
+			m_pCustomCommunitiesDDNetInfoTask = std::move(pRequest);
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 保留已显示的社区，仍可接收旧缓存。下次设置 URL 时可以重新请求。
 	}
 }
 
@@ -69,12 +80,12 @@ void CCustomCommunities::ApplyCustomCommunitiesInfo(TQmCommunityInfo pInfo)
 	QmPerfLogStage("perf/custom_communities", "apply", ApplyTimer.ElapsedMs(), false, Client());
 }
 
-void CCustomCommunities::OnInit()
+void CCustomCommunities::OnConsoleInit()
 {
-	DownloadCustomCommunitiesDDNetInfo();
+	// 启动配置在 HTTP 初始化前执行，URL 刷新回调留到组件初始化时绑定。
 }
 
-void CCustomCommunities::OnConsoleInit()
+void CCustomCommunities::OnInit()
 {
 	Console()->Chain(
 		"qm_custom_communities_url", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
@@ -83,11 +94,12 @@ void CCustomCommunities::OnConsoleInit()
 				((CCustomCommunities *)pUserData)->DownloadCustomCommunitiesDDNetInfo();
 		},
 		this);
+	DownloadCustomCommunitiesDDNetInfo();
 }
 
 void CCustomCommunities::OnRender()
 {
-	if(m_pCustomCommunitiesCacheJob && m_pCustomCommunitiesCacheJob->State() == IJob::STATE_DONE)
+	if(m_pCustomCommunitiesCacheJob && m_pCustomCommunitiesCacheJob->Done())
 	{
 		if(auto pInfo = m_pCustomCommunitiesCacheJob->TakeInfo())
 		{
@@ -97,7 +109,7 @@ void CCustomCommunities::OnRender()
 		}
 		m_pCustomCommunitiesCacheJob = nullptr;
 	}
-	if(m_pCustomCommunitiesResponseJob && m_pCustomCommunitiesResponseJob->State() == IJob::STATE_DONE)
+	if(m_pCustomCommunitiesResponseJob && m_pCustomCommunitiesResponseJob->Done())
 	{
 		if(auto pInfo = m_pCustomCommunitiesResponseJob->TakeInfo())
 		{
@@ -118,11 +130,8 @@ void CCustomCommunities::OnRender()
 		{
 			// 失败保留已经加载的社区；成功只消费内存响应，不在交互帧重读缓存。
 			if(State == EHttpState::DONE)
-			{
-				m_pCustomCommunitiesResponseJob = std::make_shared<CQmCustomCommunityCacheJob>(Storage(), m_pCustomCommunitiesDDNetInfoTask);
-				Engine()->AddJob(m_pCustomCommunitiesResponseJob);
-			}
-			m_pCustomCommunitiesDDNetInfoTask = nullptr;
+				m_pCustomCommunitiesResponseJob = CQmCustomCommunityCacheJob::TryQueue(*Engine(), Storage(), std::move(m_pCustomCommunitiesDDNetInfoTask));
+			m_pCustomCommunitiesDDNetInfoTask.reset();
 		}
 	}
 }

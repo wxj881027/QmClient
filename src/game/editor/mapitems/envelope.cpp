@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <iterator>
 #include <limits>
 
 using namespace std::chrono_literals;
@@ -65,24 +66,18 @@ namespace
 		return (Low + High) * 0.5;
 	}
 
-	TCurve ChannelCurve(const CEnvelope &Envelope, int Channel, CFixedTime Start, CFixedTime End)
+	TCurve ChannelCurve(const std::vector<const CEnvelope::CPoint *> &vpPoints, int Channel, CFixedTime Start, CFixedTime End, double DefaultValue)
 	{
-		const CEnvelope::CPoint *pPrevious = nullptr, *pNext = nullptr, *pLast = nullptr;
-		for(const auto &Point : Envelope.m_vPoints)
-		{
-			if(!Point.HasChannel(Channel))
-				continue;
-			if(pLast == nullptr || Point.m_Time >= pLast->m_Time)
-				pLast = &Point;
-			if(Point.m_Time <= Start && (pPrevious == nullptr || Point.m_Time >= pPrevious->m_Time))
-				pPrevious = &Point;
-			if(Point.m_Time > Start && (pNext == nullptr || Point.m_Time < pNext->m_Time))
-				pNext = &Point;
-		}
+		const auto Next = std::upper_bound(vpPoints.begin(), vpPoints.end(), Start, [](CFixedTime Time, const CEnvelope::CPoint *pPoint) {
+			return Time < pPoint->m_Time;
+		});
+		const CEnvelope::CPoint *pPrevious = Next == vpPoints.begin() ? nullptr : *std::prev(Next);
+		const CEnvelope::CPoint *pNext = Next == vpPoints.end() ? nullptr : *Next;
 		const double X0 = Start.GetInternal(), X3 = End.GetInternal();
 		if(pPrevious == nullptr || pNext == nullptr || pPrevious->m_Curvetype == CURVETYPE_STEP)
 		{
-			const double Value = pPrevious ? pPrevious->m_aValues[Channel] : (pLast ? pLast->m_aValues[Channel] : (Envelope.GetChannels() == 4 ? 1024 : 0));
+			const CEnvelope::CPoint *pPoint = pPrevious ? pPrevious : (vpPoints.empty() ? nullptr : vpPoints.back());
+			const double Value = pPoint ? pPoint->m_aValues[Channel] : DefaultValue;
 			return {{{X0, Value}, {X0 + (X3 - X0) / 3, Value}, {X3 - (X3 - X0) / 3, Value}, {X3, Value}}};
 		}
 		const double A = pPrevious->m_Time.GetInternal(), B = pNext->m_Time.GetInternal();
@@ -240,43 +235,65 @@ int CEnvelope::NextPoint(int Index, int Channel) const
 CFixedTime CEnvelope::ClampPointTime(int Index, int Channel, CFixedTime Time) const
 {
 	const int Previous = PreviousPoint(Index, Channel), Next = NextPoint(Index, Channel);
-	const CFixedTime Low = Previous < 0 ? CFixedTime(0) : m_vPoints[Previous].m_Time + CFixedTime(1);
-	const CFixedTime High = Next < 0 ? CFixedTime(std::numeric_limits<int>::max()) : m_vPoints[Next].m_Time - CFixedTime(1);
-	return std::clamp(Time, Low, std::max(Low, High));
+	const int First = Previous < 0 ? 0 : m_vPoints[Previous].m_Time.GetInternal();
+	const int Last = Next < 0 ? std::numeric_limits<int>::max() : m_vPoints[Next].m_Time.GetInternal();
+	const int64_t Low = static_cast<int64_t>(First) + (Previous >= 0);
+	const int64_t High = static_cast<int64_t>(Last) - (Next >= 0);
+	// 旧地图允许同一时刻有多个点。没有空闲毫秒时，仍保持轨道顺序。
+	if(Low > High)
+		return CFixedTime(std::clamp(Time.GetInternal(), std::min(First, Last), Last));
+	return CFixedTime(static_cast<int>(std::clamp<int64_t>(Time.GetInternal(), Low, High)));
 }
 
 std::vector<CEnvPoint_runtime> CEnvelope::ExportPoints() const
 {
+	const int NumChannels = GetChannels();
+	std::array<std::vector<const CPoint *>, CEnvPoint::MAX_CHANNELS> avpChannels;
 	std::vector<CFixedTime> vTimes;
+	vTimes.reserve(m_vPoints.size());
 	for(const auto &Point : m_vPoints)
+	{
 		vTimes.push_back(Point.m_Time);
+		if(Point.m_Channel >= 0 && Point.m_Channel < NumChannels)
+			avpChannels[Point.m_Channel].push_back(&Point);
+	}
 	std::sort(vTimes.begin(), vTimes.end());
 	vTimes.erase(std::unique(vTimes.begin(), vTimes.end()), vTimes.end());
 	if(vTimes.empty())
 		return {};
 
+	// 只在导出期间按轨道建立索引，保留同一时刻各点原有的先后顺序。
+	for(auto &vpPoints : avpChannels)
+		std::stable_sort(vpPoints.begin(), vpPoints.end(), [](const CPoint *pLeft, const CPoint *pRight) {
+			return pLeft->m_Time < pRight->m_Time;
+		});
+
 	// 对齐的旧轨道直接合并，保留原始曲线类型和定点数据。
 	std::vector<CEnvPoint_runtime> vAligned;
-	for(CFixedTime Time : vTimes)
+	for(size_t i = 0; i < vTimes.size(); ++i)
 	{
+		const CFixedTime Time = vTimes[i];
 		CEnvPoint_runtime Combined{};
 		Combined.m_Time = Time;
 		int CurveType = -1;
 		bool Complete = true;
-		for(int c = 0; c < GetChannels(); ++c)
+		for(int c = 0; c < NumChannels; ++c)
 		{
-			const auto It = std::find_if(m_vPoints.begin(), m_vPoints.end(), [&](const CPoint &Point) { return Point.m_Time == Time && Point.HasChannel(c); });
-			if(It == m_vPoints.end() || std::count_if(m_vPoints.begin(), m_vPoints.end(), [&](const CPoint &Point) { return Point.m_Time == Time && Point.HasChannel(c); }) != 1 || (CurveType != -1 && It->m_Curvetype != CurveType))
+			const auto &vpPoints = avpChannels[c];
+			if(i >= vpPoints.size() || vpPoints[i]->m_Time != Time ||
+				(i + 1 < vpPoints.size() && vpPoints[i + 1]->m_Time == Time) ||
+				(CurveType != -1 && vpPoints[i]->m_Curvetype != CurveType))
 			{
 				Complete = false;
 				break;
 			}
-			CurveType = It->m_Curvetype;
-			Combined.m_aValues[c] = It->m_aValues[c];
-			Combined.m_Bezier.m_aInTangentDeltaX[c] = It->m_Bezier.m_aInTangentDeltaX[c];
-			Combined.m_Bezier.m_aInTangentDeltaY[c] = It->m_Bezier.m_aInTangentDeltaY[c];
-			Combined.m_Bezier.m_aOutTangentDeltaX[c] = It->m_Bezier.m_aOutTangentDeltaX[c];
-			Combined.m_Bezier.m_aOutTangentDeltaY[c] = It->m_Bezier.m_aOutTangentDeltaY[c];
+			const CPoint &Point = *vpPoints[i];
+			CurveType = Point.m_Curvetype;
+			Combined.m_aValues[c] = Point.m_aValues[c];
+			Combined.m_Bezier.m_aInTangentDeltaX[c] = Point.m_Bezier.m_aInTangentDeltaX[c];
+			Combined.m_Bezier.m_aInTangentDeltaY[c] = Point.m_Bezier.m_aInTangentDeltaY[c];
+			Combined.m_Bezier.m_aOutTangentDeltaX[c] = Point.m_Bezier.m_aOutTangentDeltaX[c];
+			Combined.m_Bezier.m_aOutTangentDeltaY[c] = Point.m_Bezier.m_aOutTangentDeltaY[c];
 		}
 		if(!Complete)
 		{
@@ -294,6 +311,7 @@ std::vector<CEnvPoint_runtime> CEnvelope::ExportPoints() const
 		vTimes.push_back(vTimes.front() + CFixedTime(1));
 
 	std::vector<CEnvPoint_runtime> vResult;
+	const double DefaultValue = NumChannels == 4 ? 1024 : 0;
 	for(size_t i = 0; i + 1 < vTimes.size(); ++i)
 	{
 		CEnvPoint_runtime Left{}, Right{};
@@ -301,9 +319,9 @@ std::vector<CEnvPoint_runtime> CEnvelope::ExportPoints() const
 		Right.m_Time = vTimes[i + 1];
 		Left.m_Curvetype = CURVETYPE_BEZIER;
 		Right.m_Curvetype = CURVETYPE_LINEAR;
-		for(int c = 0; c < GetChannels(); ++c)
+		for(int c = 0; c < NumChannels; ++c)
 		{
-			const auto Curve = ChannelCurve(*this, c, Left.m_Time, Right.m_Time);
+			const auto Curve = ChannelCurve(avpChannels[c], c, Left.m_Time, Right.m_Time, DefaultValue);
 			Left.m_aValues[c] = static_cast<int>(std::round(Curve[0].m_Y));
 			Right.m_aValues[c] = static_cast<int>(std::round(Curve[3].m_Y));
 			Left.m_Bezier.m_aOutTangentDeltaX[c] = CFixedTime(std::round(Curve[1].m_X - Curve[0].m_X));
@@ -324,10 +342,12 @@ std::vector<CEnvPoint_runtime> CEnvelope::ExportPoints() const
 	}
 	// 最后一轴结束时的终值也用于地图检查和后续编辑。
 	auto Final = vResult.back();
-	for(int c = 0; c < GetChannels(); ++c)
-		for(const auto &Point : m_vPoints)
-			if(Point.HasChannel(c) && Point.m_Time == vTimes.back())
-				Final.m_aValues[c] = Point.m_aValues[c];
+	for(int c = 0; c < NumChannels; ++c)
+	{
+		const auto &vpPoints = avpChannels[c];
+		if(!vpPoints.empty() && vpPoints.back()->m_Time == vTimes.back())
+			Final.m_aValues[c] = vpPoints.back()->m_aValues[c];
+	}
 	if(!std::equal(std::begin(Final.m_aValues), std::end(Final.m_aValues), std::begin(vResult.back().m_aValues)))
 		vResult.push_back(Final);
 	return vResult;

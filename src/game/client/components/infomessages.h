@@ -6,6 +6,14 @@
 
 #include <game/client/component.h>
 #include <game/client/render.h>
+
+#include <cstdint>
+
+inline bool InfoMessageExpired(int CurrentTick, int MessageTick, int TickSpeed) noexcept
+{
+	return static_cast<int64_t>(CurrentTick) - MessageTick > static_cast<int64_t>(TickSpeed) * 10;
+}
+
 class CInfoMessages : public CComponent
 {
 	int m_SpriteQuadContainerIndex = -1;

@@ -6,6 +6,7 @@
 #include <engine/shared/protocol.h>
 
 #include <algorithm>
+#include <exception>
 #include <unordered_map>
 #include <vector>
 
@@ -151,48 +152,64 @@ namespace
 
 	void CFavorites::Add(const NETADDR *pAddrs, int NumAddrs)
 	{
-		if(NumAddrs == 0)
+		if(NumAddrs <= 0)
 		{
 			log_error("client", "discarding empty favorite group");
 			return;
 		}
-		// First make sure that all the addresses are not registered for some
-		// other favorite.
-		for(int i = 0; i < NumAddrs; i++)
+		// 先保存并去重地址，避免压缩旧分组后再次访问同一条目或借用的地址数组。
+		CEntry NewEntry{};
+		const int InputCount = std::min(NumAddrs, (int)std::size(NewEntry.m_aAddrs));
+		for(int i = 0; i < InputCount; i++)
 		{
-			CEntry *pEntry = Entry(pAddrs[i]);
-			if(pEntry == nullptr)
+			const auto pEnd = NewEntry.m_aAddrs + NewEntry.m_NumAddrs;
+			if(std::find(NewEntry.m_aAddrs, pEnd, pAddrs[i]) == pEnd)
+				NewEntry.m_aAddrs[NewEntry.m_NumAddrs++] = pAddrs[i];
+		}
+		// 先分配新索引和条目容量，准备失败时旧分组和索引保持可用。
+		constexpr int UNASSIGNED_ENTRY = -1;
+		try
+		{
+			for(int i = 0; i < NewEntry.m_NumAddrs; i++)
+				m_ByAddr.try_emplace(NewEntry.m_aAddrs[i], UNASSIGNED_ENTRY);
+			if(m_vEntries.size() == m_vEntries.capacity())
+				m_vEntries.reserve(m_vEntries.size() + std::max<size_t>(1, m_vEntries.size() / 2));
+		}
+		catch(const std::exception &)
+		{
+			for(int i = 0; i < NewEntry.m_NumAddrs; i++)
 			{
-				continue;
+				const auto It = m_ByAddr.find(NewEntry.m_aAddrs[i]);
+				if(It != m_ByAddr.end() && It->second == UNASSIGNED_ENTRY)
+					m_ByAddr.erase(It);
 			}
+			log_error("client", "could not allocate favorite group");
+			return;
+		}
+
+		for(int i = 0; i < NewEntry.m_NumAddrs; i++)
+		{
+			const NETADDR &Addr = NewEntry.m_aAddrs[i];
+			const int OldIndex = m_ByAddr.at(Addr);
+			if(OldIndex == UNASSIGNED_ENTRY)
+				continue;
+
+			CEntry *pEntry = &m_vEntries[OldIndex];
 			for(int j = 0; j < pEntry->m_NumAddrs; j++)
 			{
-				if(pEntry->m_aAddrs[j] == pAddrs[i])
+				if(pEntry->m_aAddrs[j] == Addr)
 				{
-					// 先从索引移除地址，避免后续查表取到已移出的旧条目。
-					m_ByAddr.erase(pAddrs[i]);
-					pEntry->m_aAddrs[j] = pEntry->m_aAddrs[pEntry->m_NumAddrs - 1];
-					pEntry->m_NumAddrs -= 1;
+					pEntry->m_aAddrs[j] = pEntry->m_aAddrs[--pEntry->m_NumAddrs];
 					break;
 				}
 			}
-			// If the entry has become empty due to the cleaning, remove it
-			// completely.
 			if(pEntry->m_NumAddrs == 0)
-			{
 				RemoveEntry(pEntry);
-			}
 		}
-		// Add the new entry.
-		CEntry NewEntry;
-		mem_zero(&NewEntry, sizeof(NewEntry));
-		NewEntry.m_NumAddrs = std::min(NumAddrs, (int)std::size(NewEntry.m_aAddrs));
+
+		const int NewIndex = m_vEntries.size();
 		for(int i = 0; i < NewEntry.m_NumAddrs; i++)
-		{
-			NewEntry.m_aAddrs[i] = pAddrs[i];
-			m_ByAddr[pAddrs[i]] = m_vEntries.size();
-		}
-		NewEntry.m_AllowPing = false;
+			m_ByAddr.at(NewEntry.m_aAddrs[i]) = NewIndex;
 		m_vEntries.push_back(NewEntry);
 	}
 

@@ -258,6 +258,12 @@ int CNetConnection::QueueChunk(int Flags, int DataSize, const void *pData)
 
 void CNetConnection::SendConnect()
 {
+	if(m_Sixup)
+	{
+		SendControlWithToken7(NET_CTRLMSG_CONNECT, m_SecurityToken);
+		return;
+	}
+
 	// send the connect message
 	m_LastSendTime = time_get();
 	for(int i = 0; i < m_NumConnectAddrs; i++)
@@ -485,6 +491,17 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 	if(m_Sixup && SecurityToken != m_Token)
 		return 0;
 
+	const bool Control = (pPacket->m_Flags & NET_PACKETFLAG_CONTROL) != 0;
+	if(Control)
+	{
+		// 0.6 剥离尾部令牌后，控制包仍须包含指令。
+		if(pPacket->m_DataSize < 1)
+			return 0;
+		if(m_Sixup && pPacket->m_aChunkData[0] == protocol7::NET_CTRLMSG_TOKEN &&
+			pPacket->m_DataSize < 1 + (int)sizeof(SECURITY_TOKEN))
+			return 0;
+	}
+
 	// check if actual ack value is valid(own sequence..latest peer ack)
 	if(m_Sequence >= m_PeerAck)
 	{
@@ -505,7 +522,7 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 	AnswerResendRequest(Now);
 
 	//
-	if(pPacket->m_Flags & NET_PACKETFLAG_CONTROL)
+	if(Control)
 	{
 		int CtrlMsg = pPacket->m_aChunkData[0];
 
@@ -548,7 +565,7 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 					m_LastRecvTime = Now;
 					m_State = EState::CONNECT;
 					m_SecurityToken = ResponseToken;
-					SendControlWithToken7(NET_CTRLMSG_CONNECT, m_SecurityToken);
+					SendConnect();
 					if(g_Config.m_Debug)
 					{
 						log_debug("connection", "got token, replying, token=%x mytoken=%x", m_SecurityToken, m_Token);

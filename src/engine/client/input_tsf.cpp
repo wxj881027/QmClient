@@ -10,6 +10,8 @@
 #if defined(CONF_FAMILY_WINDOWS) && defined(_MSC_VER)
 #include <limits>
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <utility>
 
 using Microsoft::WRL::ComPtr;
@@ -20,6 +22,7 @@ namespace
 }
 
 std::optional<SQmImeCandidateList> QmReadTsfCandidates(ITfCandidateListUIElement *pElement)
+try
 {
 	UINT Count = 0;
 	if(FAILED(pElement->GetCount(&Count)) || Count > std::numeric_limits<int>::max())
@@ -80,10 +83,26 @@ std::optional<SQmImeCandidateList> QmReadTsfCandidates(ITfCandidateListUIElement
 	}
 	return List;
 }
+catch(const std::bad_alloc &)
+{
+	return std::nullopt;
+}
+catch(const std::length_error &)
+{
+	return std::nullopt;
+}
 
-CQmTsfUiElementSink::CQmTsfUiElementSink(ITfUIElementMgr *pManager) :
+CQmTsfUiElementSink::CQmTsfUiElementSink(ITfUIElementMgr *pManager) noexcept :
 	m_pManager(pManager)
 {
+}
+
+CQmTsfUiElementSink::SElement *CQmTsfUiElementSink::FindElement(DWORD ElementId)
+{
+	if(!m_pElements)
+		return nullptr;
+	const auto It = m_pElements->find(ElementId);
+	return It == m_pElements->end() ? nullptr : &It->second;
 }
 
 void CQmTsfUiElementSink::Enable(CQmImeCandidateState &Candidates)
@@ -100,9 +119,11 @@ void CQmTsfUiElementSink::Disable()
 	++m_Session;
 	if(auto *pCandidates = std::exchange(m_pCandidates, nullptr))
 		pCandidates->ResetTsfCandidates();
-	auto Elements = std::move(m_Elements);
-	m_Elements.clear();
-	for(auto &Entry : Elements)
+	// 移走所有权不分配 map 哨兵，Show 重入时新会话有自己的元素表。
+	auto pElements = std::move(m_pElements);
+	if(!pElements)
+		return;
+	for(auto &Entry : *pElements)
 	{
 		if(Entry.second.m_DisplayMode == EDisplayMode::CUSTOM)
 		{
@@ -159,26 +180,43 @@ HRESULT STDMETHODCALLTYPE CQmTsfUiElementSink::BeginUIElement(DWORD ElementId, B
 		FAILED(pElement.As(&pCandidates)) || m_pCandidates == nullptr || m_Session != Session)
 		return S_OK;
 	// 未知 UI 保留系统显示；已识别候选的内容到 Update 时才保证就绪。
-	const auto [It, Inserted] = m_Elements.emplace(ElementId, SElement{pCandidates, ++m_NextRevision});
-	if(Inserted)
-		m_pCandidates->BeginTsfCandidates(ElementId);
-	*pShow = It->second.m_DisplayMode == EDisplayMode::CUSTOM ? FALSE : TRUE;
+	bool AddedElement = false;
+	try
+	{
+		if(!m_pElements)
+			m_pElements = std::make_unique<TElements>();
+		const auto [It, Inserted] = m_pElements->try_emplace(ElementId, SElement{pCandidates, ++m_NextRevision});
+		if(Inserted)
+		{
+			AddedElement = true;
+			m_pCandidates->BeginTsfCandidates(ElementId);
+		}
+		*pShow = It->second.m_DisplayMode == EDisplayMode::CUSTOM ? FALSE : TRUE;
+	}
+	catch(...)
+	{
+		// 候选状态和 COM 元素必须一起登记，失败让系统继续显示该候选窗。
+		if(AddedElement)
+			m_pElements->erase(ElementId);
+		if(m_pElements && m_pElements->empty())
+			m_pElements.reset();
+	}
 	return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE CQmTsfUiElementSink::UpdateUIElement(DWORD ElementId)
 {
-	auto It = m_Elements.find(ElementId);
-	if(m_pCandidates == nullptr || It == m_Elements.end() || It->second.m_DisplayMode != EDisplayMode::CUSTOM)
+	auto *pEntry = FindElement(ElementId);
+	if(m_pCandidates == nullptr || pEntry == nullptr || pEntry->m_DisplayMode != EDisplayMode::CUSTOM)
 		return S_OK;
 	const uint64_t Session = m_Session;
 	const uint64_t Revision = ++m_NextRevision;
-	It->second.m_Revision = Revision;
-	const auto pElement = It->second.m_pCandidates;
+	pEntry->m_Revision = Revision;
+	const auto pElement = pEntry->m_pCandidates;
 	auto Candidates = QmReadTsfCandidates(pElement.Get());
 	// COM 可关闭并重开输入框、复用元素 ID，或嵌套发布更新的快照。
-	It = m_Elements.find(ElementId);
-	if(m_pCandidates == nullptr || m_Session != Session || It == m_Elements.end() || It->second.m_Revision != Revision)
+	pEntry = FindElement(ElementId);
+	if(m_pCandidates == nullptr || m_Session != Session || pEntry == nullptr || pEntry->m_Revision != Revision)
 		return S_OK;
 	if(Candidates.has_value())
 	{
@@ -186,12 +224,12 @@ HRESULT STDMETHODCALLTYPE CQmTsfUiElementSink::UpdateUIElement(DWORD ElementId)
 		return S_OK;
 	}
 	// 恢复窗口时避免重入更新再次显示自绘候选，失败后允许下一次更新重试。
-	It->second.m_DisplayMode = EDisplayMode::RESTORING_SYSTEM;
+	pEntry->m_DisplayMode = EDisplayMode::RESTORING_SYSTEM;
 	m_pCandidates->UpdateTsfCandidates(ElementId, std::nullopt);
 	const HRESULT Result = pElement->Show(TRUE);
-	It = m_Elements.find(ElementId);
-	if(m_pCandidates != nullptr && m_Session == Session && It != m_Elements.end() && It->second.m_Revision == Revision)
-		It->second.m_DisplayMode = SUCCEEDED(Result) ? EDisplayMode::SYSTEM : EDisplayMode::CUSTOM;
+	pEntry = FindElement(ElementId);
+	if(m_pCandidates != nullptr && m_Session == Session && pEntry != nullptr && pEntry->m_Revision == Revision)
+		pEntry->m_DisplayMode = SUCCEEDED(Result) ? EDisplayMode::SYSTEM : EDisplayMode::CUSTOM;
 	dbg_msg("input/ime", "event=tsf_candidate_fallback element=%lu hr=0x%08lx", (unsigned long)ElementId, (unsigned long)Result);
 	return S_OK;
 }
@@ -199,7 +237,9 @@ HRESULT STDMETHODCALLTYPE CQmTsfUiElementSink::UpdateUIElement(DWORD ElementId)
 HRESULT STDMETHODCALLTYPE CQmTsfUiElementSink::EndUIElement(DWORD ElementId)
 {
 	// 延后释放 COM 引用，避免析构重入时把同 ID 的新候选一并清除。
-	auto Element = m_Elements.extract(ElementId);
+	if(!m_pElements)
+		return S_OK;
+	auto Element = m_pElements->extract(ElementId);
 	if(m_pCandidates != nullptr && !Element.empty())
 		m_pCandidates->EndTsfCandidates(ElementId);
 	return S_OK;
@@ -214,6 +254,11 @@ bool CQmTsfUiLess::Activate(CQmImeCandidateState &Candidates)
 {
 	if(IsActive())
 		return true;
+	// 激活后只做 COM 接口查询和所有权转移；本地内存不足时直接沿用备用输入。
+	ComPtr<CQmTsfUiElementSink> pSink;
+	pSink.Attach(new(std::nothrow) CQmTsfUiElementSink(nullptr));
+	if(!pSink)
+		return false;
 	ComPtr<ITfThreadMgrEx> pThreadMgr;
 	HRESULT Result = CoCreateInstance(s_ClsidTfThreadMgr, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pThreadMgr));
 	if(FAILED(Result))
@@ -228,15 +273,14 @@ bool CQmTsfUiLess::Activate(CQmImeCandidateState &Candidates)
 		dbg_msg("input/ime", "event=tsf_uiless_failed step=activate hr=0x%08lx", (unsigned long)Result);
 		return false;
 	}
-	ComPtr<ITfUIElementMgr> pManager;
-	Result = pThreadMgr.As(&pManager);
+	Result = pThreadMgr.As(&pSink->m_pManager);
 	if(FAILED(Result))
 	{
 		pThreadMgr->Deactivate();
 		dbg_msg("input/ime", "event=tsf_uiless_failed step=ui_manager hr=0x%08lx", (unsigned long)Result);
 		return false;
 	}
-	m_pSink = new CQmTsfUiElementSink(pManager.Get());
+	m_pSink = pSink.Detach();
 	m_pThreadMgr = pThreadMgr.Detach();
 	m_pCandidates = &Candidates;
 	dbg_msg("input/ime", "event=tsf_uiless_enabled");

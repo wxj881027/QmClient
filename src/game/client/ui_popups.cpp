@@ -34,6 +34,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <new>
+#include <stdexcept>
+#include <type_traits>
 
 namespace
 {
@@ -43,6 +46,22 @@ namespace
 	uint64_t PopupAnimKey(const SPopupMenuId *pId)
 	{
 		return BuildUiAnimNodeKey(POPUP_ANIM_SCOPE, reinterpret_cast<uint64_t>(pId));
+	}
+
+	bool TryResizePopupSelectionButtons(CUi::SSelectionPopupContext &Context)
+	{
+		try
+		{
+			Context.m_vButtonContainers.resize(Context.m_vEntries.size());
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
+		return false;
 	}
 }
 
@@ -55,6 +74,66 @@ const CUIRect *CUi::GetPopupMenuRect(const SPopupMenuId *pId) const
 {
 	const auto PopupMenuIt = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing && PopupMenu.m_pId == pId; });
 	return PopupMenuIt == m_vPopupMenus.end() ? nullptr : &PopupMenuIt->m_Rect;
+}
+
+void CUi::ReservePopupCloseCallbacks(size_t PopupCount)
+{
+	const size_t Limit = m_vPopupCloseCallbacks.max_size();
+	if(PopupCount > Limit - m_vPopupCloseCallbacks.size())
+		throw std::length_error("popup close callbacks");
+	const size_t Required = m_vPopupCloseCallbacks.size() + PopupCount;
+	if(Required > m_vPopupCloseCallbacks.capacity())
+	{
+		const size_t Capacity = m_vPopupCloseCallbacks.capacity();
+		m_vPopupCloseCallbacks.reserve(std::max(Required, Capacity > Limit / 2 ? Limit : Capacity * 2));
+	}
+}
+
+size_t CUi::QueuePopupCloseCallbacks(size_t FirstPopup) noexcept
+{
+	const size_t FirstCallback = m_vPopupCloseCallbacks.size();
+	dbg_assert(m_vPopupCloseCallbacks.capacity() - FirstCallback >= m_vPopupMenus.size() - FirstPopup, "popup close storage was not prepared");
+	for(size_t Index = FirstPopup; Index < m_vPopupMenus.size(); ++Index)
+	{
+		auto &Popup = m_vPopupMenus[Index];
+		if(!Popup.m_Closing && Popup.m_pOnClosed)
+			m_vPopupCloseCallbacks.emplace_back(std::move(Popup.m_pOnClosed));
+	}
+	return FirstCallback;
+}
+
+void CUi::InvokePopupCloseCallbacks(size_t FirstCallback) noexcept
+{
+	const size_t End = m_vPopupCloseCallbacks.size();
+	for(size_t Index = FirstCallback; Index < End; ++Index)
+	{
+		// 句柄固定目标寿命，回调重入打开/关闭导致队列扩容也不会使正在执行的函数失效。
+		const auto pCallback = m_vPopupCloseCallbacks[Index];
+		try
+		{
+			(*pCallback)();
+		}
+		catch(...)
+		{
+			// 已逻辑关闭的批次仍需通知其余owner，失败回调不重放。
+		}
+	}
+	const auto pClosedCallback = m_pPopupMenuClosedCallback;
+	try
+	{
+		if(pClosedCallback)
+			(*pClosedCallback)();
+	}
+	catch(...)
+	{
+	}
+	// 全批回调及全局通知结束后才释放捕获对象；先移出再释放，析构重入时队列仍有效。
+	while(m_vPopupCloseCallbacks.size() > FirstCallback)
+	{
+		auto pCallback = std::move(m_vPopupCloseCallbacks.back());
+		m_vPopupCloseCallbacks.pop_back();
+		pCallback.reset();
+	}
 }
 
 void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, float Height, void *pContext, FPopupMenuFunction pfnFunc, const SPopupMenuProperties &Props)
@@ -88,94 +167,124 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 		SetActiveItem(nullptr);
 		m_ActiveButtonLogicButton = -1;
 	};
-	SPopupMenuProperties ResolvedProps = Props;
-	// 三组件规约之「popup（动作展开菜单）」：调用方未显式配色（仍是旧默认
-	// 黑底灰边）时，解析为统一下拉列表主题色——编辑器与客户端的裸
-	// DoPopupMenu 调用点一次性接入设计语言；显式配色（二级面板、好友主题、
-	// 下拉框等）不受影响。
-	if(ResolvedProps.m_BackgroundColor == SPopupMenuProperties{}.m_BackgroundColor && ResolvedProps.m_BorderColor == SPopupMenuProperties{}.m_BorderColor)
+	FPopupMenuClosedCallback PreviousCallback;
+	bool SuspendPopupFocus = false;
+	bool NewPopup = false;
+	// 回调复制、存储和动画准备失败时，不发布半初始化弹层或修改旧焦点。
+	try
 	{
-		const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
-		ResolvedProps.m_BackgroundColor = Theme.m_Surface;
-		ResolvedProps.m_BorderColor = Theme.m_Border;
-	}
-	// 转场连续性默认启用，但受两重资格门控：
-	// 1. 动效等级 qm_ui_motion_level == 0 时全局硬切（分级动效规约，
-	//    各封装弹窗的局部门控同义，统一收口到此裁决）；
-	// 2. 无动画运行时的环境（部分 UI 单测）没有轨道时钟，静默退化为硬切
-	//    （转场已由引擎 ALPHA 轨道驱动，依赖运行时而非 IClient 时钟）。
-	if(g_Config.m_QmUiMotionLevel <= 0 || QmAnimationRuntime() == nullptr)
-		ResolvedProps.m_Animate = false;
-	if(ResolvedProps.m_CenterInViewport)
-	{
-		// 居中模态弹层阻断底层滚动，动画开关保留调用方配置。
-		ResolvedProps.m_BlockUnderlyingScroll = true;
-	}
-	if(ResolvedProps.m_CenterInViewport)
-	{
-		// 二级界面弹窗：在当前视口内居中，忽略调用点传入的锚定坐标；
-		// 之后的 AutoReposition 仍兜底弹窗超出视口的情形。
-		X = Screen()->x + (Screen()->w - Width) / 2.0f;
-		Y = Screen()->y + (Screen()->h - Height) / 2.0f;
-	}
-	if(ResolvedProps.m_AutoReposition)
-	{
-		constexpr float Margin = SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN;
-		if(X + Width > Screen()->w - Margin)
-			X = maximum<float>(X - Width, Margin);
-		if(Y + Height > Screen()->h - Margin)
-			Y = maximum<float>(Y - Height, Margin);
-	}
-
-	auto ExistingPopupMenu = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return PopupMenu.m_pId == pId; });
-	if(ExistingPopupMenu != m_vPopupMenus.end())
-	{
-		ExistingPopupMenu->m_Props = ResolvedProps;
-		ExistingPopupMenu->m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
-		ExistingPopupMenu->m_Rect.x = X;
-		ExistingPopupMenu->m_Rect.y = Y;
-		ExistingPopupMenu->m_Rect.w = Width;
-		ExistingPopupMenu->m_Rect.h = Height;
-		ExistingPopupMenu->m_pContext = pContext;
-		ExistingPopupMenu->m_pfnFunc = pfnFunc;
-		// 出场动画期间被重新打开：取消关闭状态即可——引擎 ALPHA 轨道按
-		// MERGE_TARGET 从当前值带速度继续回到展开态，天然无跳变
-		//（旧「等效进度反推」数学已随引擎迁移删除）。
-		if(ExistingPopupMenu->m_Closing)
+		SPopupMenuProperties ResolvedProps = Props;
+		// 三组件规约之「popup（动作展开菜单）」：调用方未显式配色（仍是旧默认
+		// 黑底灰边）时，解析为统一下拉列表主题色——编辑器与客户端的裸
+		// DoPopupMenu 调用点一次性接入设计语言；显式配色（二级面板、好友主题、
+		// 下拉框等）不受影响。
+		if(ResolvedProps.m_BackgroundColor == SPopupMenuProperties{}.m_BackgroundColor && ResolvedProps.m_BorderColor == SPopupMenuProperties{}.m_BorderColor)
 		{
-			SPopupFocus Focus = CaptureFocus();
-			// 来源尚未重绘时立即重开，沿用这一面板原来的返回目标；新点击焦点优先。
-			if(m_KeyboardFocus.m_pItem == nullptr && CLineInput::GetActiveInput() == nullptr)
-				Focus = ExistingPopupMenu->m_ReturnFocus;
-			ExistingPopupMenu->m_ReturnFocus = ResolvedProps.m_ReturnFocus ? Focus : SPopupFocus{};
-			ExistingPopupMenu->m_OpenedFrame = PopupSourceFrame();
-			ExistingPopupMenu->m_Closing = false;
-			if(ResolvedProps.m_BlockUnderlyingPointerInput)
-				SuspendFocus();
+			const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
+			ResolvedProps.m_BackgroundColor = Theme.m_Surface;
+			ResolvedProps.m_BorderColor = Theme.m_Border;
 		}
+		// 转场连续性默认启用，但受两重资格门控：
+		// 1. 动效等级 qm_ui_motion_level == 0 时全局硬切（分级动效规约，
+		//    各封装弹窗的局部门控同义，统一收口到此裁决）；
+		// 2. 无动画运行时的环境（部分 UI 单测）没有轨道时钟，静默退化为硬切
+		//    （转场已由引擎 ALPHA 轨道驱动，依赖运行时而非 IClient 时钟）。
+		if(g_Config.m_QmUiMotionLevel <= 0 || QmAnimationRuntime() == nullptr)
+			ResolvedProps.m_Animate = false;
+		if(ResolvedProps.m_CenterInViewport)
+		{
+			// 居中模态弹层阻断底层滚动，动画开关保留调用方配置。
+			ResolvedProps.m_BlockUnderlyingScroll = true;
+		}
+		if(ResolvedProps.m_CenterInViewport)
+		{
+			// 二级界面弹窗：在当前视口内居中，忽略调用点传入的锚定坐标；
+			// 之后的 AutoReposition 仍兜底弹窗超出视口的情形。
+			X = Screen()->x + (Screen()->w - Width) / 2.0f;
+			Y = Screen()->y + (Screen()->h - Height) / 2.0f;
+		}
+		if(ResolvedProps.m_AutoReposition)
+		{
+			constexpr float Margin = SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN;
+			if(X + Width > Screen()->w - Margin)
+				X = maximum<float>(X - Width, Margin);
+			if(Y + Height > Screen()->h - Margin)
+				Y = maximum<float>(Y - Height, Margin);
+		}
+
+		auto ExistingPopupMenu = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return PopupMenu.m_pId == pId; });
+		const bool Existing = ExistingPopupMenu != m_vPopupMenus.end();
+		ReservePopupCloseCallbacks(m_vPopupMenus.size() + (Existing ? 0 : 1));
+		std::shared_ptr<FPopupMenuClosedCallback> pOnClosed;
+		if(ResolvedProps.m_OnClosed)
+		{
+			pOnClosed = Existing ? ExistingPopupMenu->m_pOnClosed : nullptr;
+			if(!pOnClosed)
+				pOnClosed = std::allocate_shared<FPopupMenuClosedCallback>(CBorrowedAllocator<FPopupMenuClosedCallback>(m_vPopupCloseCallbacks.get_allocator().Resource()));
+		}
+		static_assert(std::is_nothrow_move_constructible_v<SPopupMenu> && std::is_nothrow_move_assignable_v<SPopupMenu>);
+		static_assert(std::is_nothrow_move_assignable_v<SPopupMenuProperties>);
+		// 旧目标的析构可能重入UI；留到本次发布及焦点更新结束后再释放。
+		if(Existing)
+		{
+			if(ExistingPopupMenu->m_pOnClosed)
+				PreviousCallback = std::move(*ExistingPopupMenu->m_pOnClosed);
+			if(pOnClosed)
+			{
+				*pOnClosed = std::move(ResolvedProps.m_OnClosed);
+				ResolvedProps.m_OnClosed = nullptr;
+			}
+			ExistingPopupMenu->m_pOnClosed = std::move(pOnClosed);
+			ExistingPopupMenu->m_Props = std::move(ResolvedProps);
+			ExistingPopupMenu->m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
+			ExistingPopupMenu->m_Rect = {X, Y, Width, Height};
+			ExistingPopupMenu->m_pContext = pContext;
+			ExistingPopupMenu->m_pfnFunc = pfnFunc;
+			if(ExistingPopupMenu->m_Closing)
+			{
+				SPopupFocus Focus = CaptureFocus();
+				if(m_KeyboardFocus.m_pItem == nullptr && CLineInput::GetActiveInput() == nullptr)
+					Focus = ExistingPopupMenu->m_ReturnFocus;
+				ExistingPopupMenu->m_ReturnFocus = ExistingPopupMenu->m_Props.m_ReturnFocus ? Focus : SPopupFocus{};
+				ExistingPopupMenu->m_OpenedFrame = PopupSourceFrame();
+				ExistingPopupMenu->m_Closing = false;
+				SuspendPopupFocus = ExistingPopupMenu->m_Props.m_BlockUnderlyingPointerInput;
+			}
+		}
+		else
+		{
+			SPopupMenu Candidate{};
+			if(pOnClosed)
+			{
+				*pOnClosed = std::move(ResolvedProps.m_OnClosed);
+				ResolvedProps.m_OnClosed = nullptr;
+			}
+			Candidate.m_pOnClosed = std::move(pOnClosed);
+			Candidate.m_pId = pId;
+			Candidate.m_Props = std::move(ResolvedProps);
+			Candidate.m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
+			Candidate.m_ReturnFocus = Candidate.m_Props.m_ReturnFocus ? CaptureFocus() : SPopupFocus{};
+			Candidate.m_OpenedFrame = PopupSourceFrame();
+			Candidate.m_Rect = {X, Y, Width, Height};
+			Candidate.m_pContext = pContext;
+			Candidate.m_pfnFunc = pfnFunc;
+			const bool BlockPointer = Candidate.m_Props.m_BlockUnderlyingPointerInput;
+			if(Candidate.m_Props.m_Animate && QmAnimationRuntime() != nullptr)
+				QmAnimationRuntime()->SetValue(PopupAnimKey(pId), EUiAnimProperty::ALPHA, 0.0f);
+			m_vPopupMenus.push_back(std::move(Candidate));
+			SuspendPopupFocus = BlockPointer;
+			NewPopup = true;
+		}
+	}
+	catch(...)
+	{
 		return;
 	}
-
-	m_vPopupMenus.emplace_back();
-	SPopupMenu *pNewMenu = &m_vPopupMenus.back();
-	pNewMenu->m_pId = pId;
-	pNewMenu->m_Props = ResolvedProps;
-	pNewMenu->m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
-	pNewMenu->m_ReturnFocus = ResolvedProps.m_ReturnFocus ? CaptureFocus() : SPopupFocus{};
-	pNewMenu->m_OpenedFrame = PopupSourceFrame();
-	pNewMenu->m_Rect.x = X;
-	pNewMenu->m_Rect.y = Y;
-	pNewMenu->m_Rect.w = Width;
-	pNewMenu->m_Rect.h = Height;
-	pNewMenu->m_pContext = pContext;
-	pNewMenu->m_pfnFunc = pfnFunc;
-	// 引擎轨道预置 0：首帧渲染从全透明展开，且地址复用不会继承旧轨道值。
-	if(ResolvedProps.m_Animate && QmAnimationRuntime() != nullptr)
-		QmAnimationRuntime()->SetValue(PopupAnimKey(pId), EUiAnimProperty::ALPHA, 0.0f);
-	if(ResolvedProps.m_BlockUnderlyingPointerInput)
+	if(SuspendPopupFocus)
 	{
 		SuspendFocus();
-		SetHotItem(pId);
+		if(NewPopup)
+			SetHotItem(pId);
 	}
 }
 
@@ -525,11 +634,8 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 		if(!IncludeDescendants && PopupMenuToClose->m_Closing)
 			return;
 		const SPopupFocus ReturnFocus = PopupMenuToClose->m_Closing ? SPopupFocus{} : PopupMenuToClose->m_ReturnFocus;
-		std::vector<std::function<void()>> vClosedCallbacks;
 		for(auto It = PopupMenuToClose; It != m_vPopupMenus.end(); ++It)
 		{
-			if(!It->m_Closing && It->m_Props.m_OnClosed)
-				vClosedCallbacks.push_back(It->m_Props.m_OnClosed);
 			if(m_KeyboardFocus.m_pPopupId == It->m_pId)
 				m_KeyboardFocus = {};
 		}
@@ -537,6 +643,7 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 			   return Popup.m_pId == m_pTrackedTextPopupId;
 		   }))
 			ReleaseTrackedTextInput();
+		const size_t FirstCallback = QueuePopupCloseCallbacks(PopupMenuToClose - m_vPopupMenus.begin());
 		// 带出场动画的弹窗（仅二级界面大弹窗启用）：后代立即移除，自身标记
 		// closing 播放收缩渐隐后由渲染循环移除；逻辑关闭（输入解除、关闭回调）
 		// 在标记瞬间完成，与立即关闭语义一致。
@@ -549,10 +656,7 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 			SetActiveItem(nullptr);
 			if(RestoreFocus)
 				QueuePopupFocusRestore(ReturnFocus);
-			for(const auto &Callback : vClosedCallbacks)
-				Callback();
-			if(m_pfnPopupMenuClosedCallback)
-				m_pfnPopupMenuClosedCallback();
+			InvokePopupCloseCallbacks(FirstCallback);
 			return;
 		}
 		if(IncludeDescendants)
@@ -575,10 +679,7 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 		SetActiveItem(nullptr);
 		if(RestoreFocus)
 			QueuePopupFocusRestore(ReturnFocus);
-		for(const auto &Callback : vClosedCallbacks)
-			Callback();
-		if(m_pfnPopupMenuClosedCallback)
-			m_pfnPopupMenuClosedCallback();
+		InvokePopupCloseCallbacks(FirstCallback);
 	}
 }
 
@@ -595,13 +696,9 @@ void CUi::RefreshInteractionSource(const void *pContext, const char *pCardId)
 			pCommit->m_Source.Refresh(pContext, pCardId, Frame);
 }
 
-void CUi::RegisterSelectionCommit(std::shared_ptr<SQmUiSelectionCommit> &pCommit)
+bool CUi::RegisterSelectionCommit(std::shared_ptr<SQmUiSelectionCommit> &pCommit)
 {
-	if(m_pInteractionContext == nullptr || m_pInteractionCardId == nullptr || pCommit)
-		return;
-	pCommit = std::make_shared<SQmUiSelectionCommit>();
-	pCommit->m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
-	m_vPendingSelections.emplace_back(pCommit);
+	return QmTryRegisterSelectionCommit(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame(), m_vPendingSelections, pCommit);
 }
 
 bool CUi::HasPendingInteractionSelection() const
@@ -685,12 +782,7 @@ void CUi::ClosePopupMenus(bool RestoreFocus)
 	if(m_pTrackedTextPopupId != nullptr)
 		ReleaseTrackedTextInput();
 	const SPopupFocus ReturnFocus = m_vPopupMenus.front().m_Closing ? SPopupFocus{} : m_vPopupMenus.front().m_ReturnFocus;
-	std::vector<std::function<void()>> vClosedCallbacks;
-	for(const auto &Popup : m_vPopupMenus)
-	{
-		if(!Popup.m_Closing && Popup.m_Props.m_OnClosed)
-			vClosedCallbacks.push_back(Popup.m_Props.m_OnClosed);
-	}
+	const size_t FirstCallback = QueuePopupCloseCallbacks(0);
 	m_vPopupMenus.clear();
 	m_KeyboardFocus = {};
 	SetActiveItem(nullptr);
@@ -698,10 +790,7 @@ void CUi::ClosePopupMenus(bool RestoreFocus)
 		QueuePopupFocusRestore(ReturnFocus);
 	else
 		m_PendingPopupFocus = {};
-	for(const auto &Callback : vClosedCallbacks)
-		Callback();
-	if(m_pfnPopupMenuClosedCallback)
-		m_pfnPopupMenuClosedCallback();
+	InvokePopupCloseCallbacks(FirstCallback);
 }
 
 bool CUi::IsPopupOpen() const
@@ -726,7 +815,7 @@ bool CUi::IsPopupHovered() const
 
 void CUi::SetPopupMenuClosedCallback(FPopupMenuClosedCallback pfnCallback)
 {
-	m_pfnPopupMenuClosedCallback = std::move(pfnCallback);
+	m_pPopupMenuClosedCallback = pfnCallback ? std::allocate_shared<FPopupMenuClosedCallback>(CBorrowedAllocator<FPopupMenuClosedCallback>(m_vPopupCloseCallbacks.get_allocator().Resource()), std::move(pfnCallback)) : nullptr;
 }
 
 void CUi::SMessagePopupContext::DefaultColor(ITextRender *pTextRender)
@@ -866,7 +955,13 @@ CUi::EPopupMenuFunctionResult CUi::PopupConfirm(void *pContext, CUIRect View, bo
 	return CUi::POPUP_KEEP_OPEN;
 }
 
-CUi::SSelectionPopupContext::SSelectionPopupContext()
+CUi::SSelectionPopupContext::SSelectionPopupContext() :
+	SSelectionPopupContext(nullptr)
+{
+}
+
+CUi::SSelectionPopupContext::SSelectionPopupContext(IAllocationResource *pSourceMemory) :
+	m_Search(pSourceMemory)
 {
 	Reset();
 }
@@ -949,7 +1044,10 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 			pSelectionPopup->m_FocusSearch = false;
 		}
 	}
-	if(pSelectionPopup->m_Search.Update(pSelectionPopup->m_vEntries, pSelectionPopup->m_Searchable ? pSelectionPopup->m_SearchInput.GetString() : "") && pSelectionPopup->m_Searchable)
+	const auto SearchResult = pSelectionPopup->m_Search.TryUpdate(pSelectionPopup->m_vEntries, pSelectionPopup->m_Searchable ? pSelectionPopup->m_SearchInput.GetString() : "");
+	if(SearchResult == CQmDropdownSearch::EUpdateResult::FAILED)
+		return CUi::POPUP_CLOSE_CURRENT;
+	if(SearchResult == CQmDropdownSearch::EUpdateResult::UPDATED && pSelectionPopup->m_Searchable)
 	{
 		pSelectionPopup->m_ActiveIndex = pSelectionPopup->m_Search.Indices().empty() ? -1 : 0;
 		pSelectionPopup->m_ScrollToActiveItem = true;
@@ -974,11 +1072,15 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 	const SQmDropdownUpdateResult KeyboardResult = QmUpdateDropdownPopupSelection(KeyboardInput, vVisible.size(), Active, pSelectionPopup->m_ActiveIndex);
 	if(KeyboardResult.m_Selected)
 	{
+		if(!pUI->RegisterSelectionCommit(pSelectionPopup->m_pCommit))
+			return CUi::POPUP_KEEP_OPEN;
 		pSelectionPopup->m_SelectionIndex = pSelectionPopup->m_Search.SourceIndex(KeyboardResult.m_SelectedIndex);
 		pSelectionPopup->m_pSelection = &pSelectionPopup->m_vEntries[pSelectionPopup->m_SelectionIndex];
-		pUI->RegisterSelectionCommit(pSelectionPopup->m_pCommit);
 	}
 	if(KeyboardResult.m_Closed)
+		return CUi::POPUP_CLOSE_CURRENT;
+	// 已打开的列表也可能换源。先准备按钮，再开启滚动区域的裁剪。
+	if(!TryResizePopupSelectionButtons(*pSelectionPopup))
 		return CUi::POPUP_CLOSE_CURRENT;
 	if(QmDropdownShouldRequestActiveScroll(true, PreviousActiveIndex, pSelectionPopup->m_ActiveIndex))
 		pSelectionPopup->m_ScrollToActiveItem = true;
@@ -1011,8 +1113,6 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 		}
 	}
 
-	pSelectionPopup->m_vButtonContainers.resize(pSelectionPopup->m_vEntries.size());
-
 	size_t Index = 0;
 	int VisibleEntries = 0;
 	for(int SourceIndex : vVisible)
@@ -1041,9 +1141,11 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 																			    std::nullopt;
 			if(pUI->DoButton_PopupMenu(pButton, Entry.c_str(), &Slot, pSelectionPopup->m_FontSize, TEXTALIGN_ML, pSelectionPopup->m_EntryPadding, pSelectionPopup->m_TransparentButtons, true, EntryColor, pSelectionPopup->m_MinimumFontSize, ui_token::dropdown::EntryInsetX(pSelectionPopup->m_FontSize, Slot.h)))
 			{
-				pSelectionPopup->m_pSelection = &Entry;
-				pSelectionPopup->m_SelectionIndex = SourceIndex;
-				pUI->RegisterSelectionCommit(pSelectionPopup->m_pCommit);
+				if(pUI->RegisterSelectionCommit(pSelectionPopup->m_pCommit))
+				{
+					pSelectionPopup->m_pSelection = &Entry;
+					pSelectionPopup->m_SelectionIndex = SourceIndex;
+				}
 			}
 		}
 		++Index;
@@ -1076,6 +1178,10 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 
 void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 {
+	// 新弹层的按钮准备失败时，保留当前弹层和它的输入焦点。
+	if(!RenderOnly() && pContext->m_vButtonContainers.size() < pContext->m_vEntries.size() &&
+		!IsPopupOpen(pContext) && !TryResizePopupSelectionButtons(*pContext))
+		return;
 	const bool HasMessage = pContext->m_aMessage[0] != '\0';
 	const STextBoundingBox TextBoundingBox = TextRender()->TextBoundingBox(pContext->m_FontSize, pContext->m_aMessage, -1, pContext->m_Width);
 	const float OuterHeight = (SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN) * 2;
@@ -1137,13 +1243,15 @@ void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 	const CUIRect PopupRect{X, Y, PopupWidth, PopupHeightResolved};
 	const bool Scrollable = pContext->m_PopupVisible && QmDropdownPopupScrollable(pContext->m_PopupPolicy, PopupHeightResolved);
 	const bool BlockUnderlying = QmDropdownPopupBlocksUnderlying(pContext->m_PopupVisible);
-	RegisterWheelOwner(pContext, EUiWheelOwnerPriority::POPUP, PopupRect, BlockUnderlying);
+	const bool CanRegisterWheel = BlockUnderlying && !WheelInputBlocked(pContext);
 	pContext->m_Scrollable = Scrollable;
 	pContext->m_BlockUnderlyingScroll = BlockUnderlying;
 	pContext->m_Props.m_ClipToViewport = true;
 	pContext->m_Props.m_BlockUnderlyingScroll = BlockUnderlying;
 	pContext->m_Props.m_Viewport = Viewport;
 	DoPopupMenu(pContext, X, Y, PopupWidth, PopupHeightResolved, pContext, PopupSelection, pContext->m_Props);
+	if(CanRegisterWheel && IsPopupOpen(pContext))
+		RegisterWheelOwner(pContext, EUiWheelOwnerPriority::POPUP, PopupRect, true);
 }
 
 int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, const SDropDownProperties &DropDownProps)
@@ -1173,7 +1281,8 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		{
 			if(!State.m_Init)
 			{
-				State.m_UiElement.Init(this, -1);
+				if(!State.m_UiElement.TryInit(this, -1))
+					return CurSelection;
 				State.m_Init = true;
 			}
 			SMenuButtonProperties Props;
@@ -1199,11 +1308,22 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	if(!State.m_Init || !State.m_pOwnedScrollRegion)
 	{
 		if(!State.m_Init)
-			State.m_UiElement.Init(this, -1);
-		State.m_pOwnedScrollRegion = std::make_shared<CScrollRegion>();
+		{
+			if(!State.m_UiElement.TryInit(this, -1))
+				return CurSelection;
+			// 滚动区分配失败后，下一帧只补建滚动区。
+			State.m_Init = true;
+		}
+		try
+		{
+			State.m_pOwnedScrollRegion = std::make_shared<CScrollRegion>();
+		}
+		catch(const std::bad_alloc &)
+		{
+			return CurSelection;
+		}
 		State.m_pScrollRegion = State.m_SelectionPopupContext.m_pScrollRegion != nullptr ? State.m_SelectionPopupContext.m_pScrollRegion : State.m_pOwnedScrollRegion.get();
 		State.m_SelectionPopupContext.m_pScrollRegion = State.m_pScrollRegion;
-		State.m_Init = true;
 	}
 	else if(State.m_SelectionPopupContext.m_pScrollRegion != nullptr && State.m_SelectionPopupContext.m_pScrollRegion != State.m_pScrollRegion)
 		State.m_pScrollRegion = State.m_SelectionPopupContext.m_pScrollRegion;
@@ -1214,6 +1334,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	{
 		ClosePopupMenu(&State.m_SelectionPopupContext);
 		State.m_DropDownState.Reset();
+		State.m_SelectionPopupContext.m_pCommit.reset();
 		State.m_SelectionPopupContext.m_pSelection = nullptr;
 		State.m_SelectionPopupContext.m_SelectionIndex = -1;
 		State.m_SelectionPopupContext.m_ActiveIndex = -1;
@@ -1299,7 +1420,8 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		DropDownInput.m_HoveredIndex = State.m_SelectionPopupContext.m_ActiveIndex;
 	const int PreviousActiveIndex = State.m_DropDownState.ActiveIndex();
 	const SQmDropdownUpdateResult DropDownResult = State.m_DropDownState.Update(DropDownInput, Num);
-	State.m_SelectionPopupContext.m_ActiveIndex = State.m_DropDownState.ActiveIndex();
+	if(!DropDownResult.m_Opened || PopupOpen)
+		State.m_SelectionPopupContext.m_ActiveIndex = State.m_DropDownState.ActiveIndex();
 	if(QmDropdownShouldRequestActiveScroll(PopupOpen, PreviousActiveIndex, State.m_DropDownState.ActiveIndex()))
 		State.m_SelectionPopupContext.m_ScrollToActiveItem = true;
 	if(PopupOpen)
@@ -1320,39 +1442,58 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		if(State.m_DropDownState.IsOpen() && !PopupOpen)
 			State.m_DropDownState.Reset();
 	}
-	if(DropDownResult.m_Opened)
+	if(DropDownResult.m_Opened && !PopupOpen)
 	{
-		CScrollRegion *pScrollRegion = State.m_SelectionPopupContext.m_pScrollRegion;
-		const bool SpecialFontRenderMode = State.m_SelectionPopupContext.m_SpecialFontRenderMode;
-		const bool FontFaceAvailabilityCheck = State.m_SelectionPopupContext.m_FontFaceAvailabilityCheck;
-		const bool FontFamilySelection = State.m_SelectionPopupContext.m_FontFamilySelection;
-		State.m_SelectionPopupContext.Reset();
-		State.m_SelectionPopupContext.m_Props.m_ReturnFocus = true;
-		State.m_SelectionPopupContext.m_pScrollRegion = pScrollRegion != nullptr ? pScrollRegion : State.m_pScrollRegion;
-		State.m_SelectionPopupContext.m_SpecialFontRenderMode = SpecialFontRenderMode;
-		State.m_SelectionPopupContext.m_FontFaceAvailabilityCheck = FontFaceAvailabilityCheck;
-		State.m_SelectionPopupContext.m_FontFamilySelection = FontFamilySelection;
-		State.m_SelectionPopupContext.m_Searchable = DropDownProps.m_Searchable;
-		State.m_SelectionPopupContext.m_FocusSearch = DropDownProps.m_Searchable;
-		State.m_SelectionPopupContext.m_Props.m_BorderColor = VisualStyle.m_PopupBorderColor;
-		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = VisualStyle.m_PopupBackgroundColor;
-		State.m_SelectionPopupContext.m_ActiveEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
-		State.m_SelectionPopupContext.m_HoverEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
-		for(int i = 0; i < Num; ++i)
-			State.m_SelectionPopupContext.m_vEntries.emplace_back(pStrs[i]);
-		State.m_SelectionPopupContext.m_Search.Update(State.m_SelectionPopupContext.m_vEntries, State.m_SelectionPopupContext.m_SearchInput.GetString());
-		State.m_SelectionPopupContext.m_EntryHeight = pRect->h;
-		State.m_SelectionPopupContext.m_EntryPadding = pRect->h >= 20.0f ? 2.0f : 1.0f;
-		State.m_SelectionPopupContext.m_FontSize = ResolvedFontSize;
-		State.m_SelectionPopupContext.m_Width = pRect->w;
-		State.m_SelectionPopupContext.m_AlignmentHeight = pRect->h;
-		State.m_SelectionPopupContext.m_TransparentButtons = DropDownProps.m_VisualStyle.m_TransparentEntries;
-		State.m_SelectionPopupContext.m_ActiveIndex = State.m_DropDownState.ActiveIndex();
-		State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = DropDownProps.m_RequireSourceRefresh;
-		State.m_SelectionPopupContext.m_Props.m_SourceFrame = SourceFrame;
-		State.m_SelectionPopupContext.m_ScrollToActiveItem = true;
-		State.m_SelectionPopupContext.m_Viewport = Viewport;
-		ShowPopupSelection(pRect->x, pRect->y, &State.m_SelectionPopupContext);
+		std::vector<std::string> vEntries;
+		try
+		{
+			vEntries.reserve(Num);
+			for(int i = 0; i < Num; ++i)
+				vEntries.emplace_back(pStrs[i]);
+		}
+		catch(...)
+		{
+			State.m_DropDownState.Reset();
+			return CurSelection;
+		}
+
+		auto &Context = State.m_SelectionPopupContext;
+		const bool SpecialFontRenderMode = Context.m_SpecialFontRenderMode;
+		const bool FontFaceAvailabilityCheck = Context.m_FontFaceAvailabilityCheck;
+		const bool FontFamilySelection = Context.m_FontFamilySelection;
+		Context.Reset();
+		Context.m_Props.m_ReturnFocus = true;
+		Context.m_pScrollRegion = State.m_pScrollRegion;
+		Context.m_SpecialFontRenderMode = SpecialFontRenderMode;
+		Context.m_FontFaceAvailabilityCheck = FontFaceAvailabilityCheck;
+		Context.m_FontFamilySelection = FontFamilySelection;
+		Context.m_Searchable = DropDownProps.m_Searchable;
+		Context.m_FocusSearch = DropDownProps.m_Searchable;
+		Context.m_Props.m_BorderColor = VisualStyle.m_PopupBorderColor;
+		Context.m_Props.m_BackgroundColor = VisualStyle.m_PopupBackgroundColor;
+		Context.m_ActiveEntryColor = VisualStyle.m_ActiveEntryColor;
+		Context.m_HoverEntryColor = VisualStyle.m_ActiveEntryColor;
+		Context.m_vEntries.swap(vEntries);
+		Context.m_EntryHeight = pRect->h;
+		Context.m_EntryPadding = pRect->h >= 20.0f ? 2.0f : 1.0f;
+		Context.m_FontSize = ResolvedFontSize;
+		Context.m_Width = pRect->w;
+		Context.m_AlignmentHeight = pRect->h;
+		Context.m_TransparentButtons = VisualStyle.m_TransparentEntries;
+		Context.m_ActiveIndex = State.m_DropDownState.ActiveIndex();
+		Context.m_Props.m_RequireSourceRefresh = DropDownProps.m_RequireSourceRefresh;
+		Context.m_Props.m_SourceFrame = SourceFrame;
+		Context.m_ScrollToActiveItem = true;
+		Context.m_Viewport = Viewport;
+		if(Context.m_Search.TryUpdate(Context.m_vEntries, Context.m_SearchInput.GetString()) != CQmDropdownSearch::EUpdateResult::FAILED)
+			ShowPopupSelection(pRect->x, pRect->y, &Context);
+		if(!IsPopupOpen(&Context))
+		{
+			State.m_DropDownState.Reset();
+			Context.m_vEntries.clear();
+			Context.m_vButtonContainers.clear();
+			Context.m_Search.Reset();
+		}
 	}
 	if(DropDownResult.m_Selected)
 	{
@@ -1851,8 +1992,7 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 	// 弹窗背板沿用 RenderPopupMenus 的主题玻璃样式（与其他二级菜单一致），
 	// 此处不再叠加自绘底色。
 
-	// 强调色/焦点色跟随用户配置（qm_ui_accent_color / qm_ui_focus_color），
-	// 与设置页按钮、滚动条共用同一份主题；写死 token 会让弹窗里出现用户没选过的蓝色。
+	// 与设置页按钮、滚动条共用控件主题，让弹窗跟随用户配色。
 	const SUiTheme &Theme = pUI->QmControlTheme();
 	// 弹窗内的输入框、滚动区、按钮全部走 QmUi 公共组件，上下文与设置页同源。
 	const IUiContext PickerCtx = ui_widget::ControlContext(pUI);

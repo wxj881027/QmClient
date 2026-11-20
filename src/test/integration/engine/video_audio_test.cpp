@@ -70,6 +70,23 @@ TEST_F(CVideoAudioConversion, ConvertsStereoSamplesAndReplacesPreviousFrame)
 	EXPECT_FLOAT_EQ(reinterpret_cast<float *>(m_pOutput->data[0])[1023], -0.5f);
 }
 
+TEST_F(CVideoAudioConversion, PreservesOwnedInputFramePlane)
+{
+	m_pInput->format = AV_SAMPLE_FMT_S16;
+	m_pInput->sample_rate = m_pOutput->sample_rate;
+#if LIBAVUTIL_VERSION_MAJOR >= 57
+	av_channel_layout_default(&m_pInput->ch_layout, 2);
+#else
+	m_pInput->channel_layout = AV_CH_LAYOUT_STEREO;
+#endif
+	ASSERT_EQ(av_frame_get_buffer(m_pInput, 0), 0);
+	const AVBufferRef *pInputBuffer = av_frame_get_plane_buffer(m_pInput, 0);
+	ASSERT_NE(pInputBuffer, nullptr);
+
+	ASSERT_EQ(Convert(), 0);
+	EXPECT_EQ(av_frame_get_plane_buffer(m_pInput, 0), pInputBuffer);
+}
+
 TEST_F(CVideoAudioConversion, FillFailureIsReturnedBeforeOutputIsTouched)
 {
 	SVideoAudioConversionApi Api;

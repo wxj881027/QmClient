@@ -241,6 +241,7 @@ void CMenus::RenderGame(CUIRect MainView)
 		{
 			s_DisconnectPending = false;
 			PopupConfirmDisconnect();
+			return;
 		}
 		else if(s_DisconnectConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_DisconnectConfirm))
 			s_DisconnectPending = false;
@@ -1049,21 +1050,18 @@ void CMenus::RenderIngameServerInfoValueCached(const char *pTextId, unsigned &Te
 		return;
 	}
 
-	const unsigned NewHash = str_quickhash(pSafeText);
-	TextHash = NewHash;
+	TextHash = str_quickhash(pSafeText);
 	CUIElement *pReadyElement = nullptr;
-	CUIElement *pLastReadyElement = nullptr;
 	if(RequestSnapshotTextContainer(pTextId, pRect, pSafeText, Size, Align, LabelProps, &pReadyElement) && pReadyElement != nullptr)
+	{
 		RenderSnapshotTextContainer(*pReadyElement, pRect);
+	}
 	else
 	{
-		pLastReadyElement = m_SnapshotTextLastReadyByScope[pTextId != nullptr ? pTextId : ""];
-		if(pLastReadyElement != nullptr)
-			RenderSnapshotTextContainer(*pLastReadyElement, pRect);
-		else
-			RequestSnapshotTextContainer(pTextId, pRect, pSafeText, Size, Align, LabelProps);
+		const auto LastReady = m_SnapshotTextLastReadyByScope.find(pTextId != nullptr ? pTextId : "");
+		if(LastReady != m_SnapshotTextLastReadyByScope.end())
+			RenderSnapshotTextContainer(*LastReady->second, pRect);
 	}
-	(void)TextHash;
 }
 
 void CMenus::RenderSnapshotTextContainer(CUIElement &Element, const CUIRect *pRect)
@@ -1094,8 +1092,28 @@ bool CMenus::RequestSnapshotTextContainer(const char *pScope, const CUIRect *pRe
 	Key.m_Align = Align;
 	Key.m_LocaleHash = str_quickhash(g_Config.m_ClLanguagefile);
 	Key.m_UiScaleHash = (uint64_t)round_to_int(Graphics()->ScreenHiDPIScale() * 1000.0f);
-	SMenuSnapshotTextEntry &Entry = m_SnapshotTextCache[Key];
-	if(Entry.m_Ready)
+	auto It = m_SnapshotTextCache.find(Key);
+	if(It == m_SnapshotTextCache.end())
+	{
+		// 延迟等值会不断变化，给缓存和排队请求设上限，同时保留每个字段的回退容器。
+		constexpr size_t MaxSnapshotTextEntries = 128;
+		if(m_SnapshotTextCache.size() >= MaxSnapshotTextEntries)
+		{
+			const auto Evict = std::find_if(m_SnapshotTextCache.begin(), m_SnapshotTextCache.end(), [this](const auto &Candidate) {
+				const auto LastReady = m_SnapshotTextLastReadyByScope.find(Candidate.first.m_Scope);
+				if(LastReady != m_SnapshotTextLastReadyByScope.end() && LastReady->second == &Candidate.second.m_Element)
+					return false;
+				return Candidate.second.m_Ready || std::find(m_SnapshotTextPending.begin(), m_SnapshotTextPending.end(), Candidate.first) == m_SnapshotTextPending.end();
+			});
+			if(Evict == m_SnapshotTextCache.end())
+				return false;
+			m_SnapshotTextCache.erase(Evict);
+		}
+		It = m_SnapshotTextCache.try_emplace(Key).first;
+	}
+
+	SMenuSnapshotTextEntry &Entry = It->second;
+	if(Entry.m_Ready && Entry.m_Text == pText && Entry.m_Element.Rect(0)->m_UITextContainer.Valid())
 	{
 		Entry.m_pLastReadyElement = &Entry.m_Element;
 		m_SnapshotTextLastReadyByScope[Key.m_Scope] = Entry.m_pLastReadyElement;
@@ -1103,6 +1121,7 @@ bool CMenus::RequestSnapshotTextContainer(const char *pScope, const CUIRect *pRe
 			*ppReadyElement = Entry.m_pLastReadyElement;
 		return true;
 	}
+	Entry.m_Ready = false;
 	Entry.m_Text = pText;
 	Entry.m_Rect = *pRect;
 	Entry.m_Size = Size;
@@ -1126,9 +1145,11 @@ void CMenus::DrainSnapshotTextContainers()
 		auto It = m_SnapshotTextCache.find(Key);
 		if(It == m_SnapshotTextCache.end())
 			continue;
+		++SnapshotCacheMiss;
+		--m_IngameTextFrameBudget.m_TextContainerTokens;
 		SMenuSnapshotTextEntry &Entry = It->second;
-		if(!Entry.m_Element.IsRegistered())
-			Entry.m_Element.Init(Ui(), 1);
+		if(!Entry.m_Element.IsRegistered() && !Entry.m_Element.TryInit(Ui(), 1))
+			continue;
 		bool TextContainerRecreated = false;
 		Ui()->DoLabelStreamed(*Entry.m_Element.Rect(0), &Entry.m_Rect, Entry.m_Text.c_str(), Entry.m_Size, Entry.m_Align, Entry.m_LabelProps, -1, nullptr, false, &TextContainerRecreated);
 		if(TextContainerRecreated)
@@ -1139,8 +1160,6 @@ void CMenus::DrainSnapshotTextContainers()
 			Entry.m_pLastReadyElement = &Entry.m_Element;
 			m_SnapshotTextLastReadyByScope[Key.m_Scope] = Entry.m_pLastReadyElement;
 		}
-		++SnapshotCacheMiss;
-		--m_IngameTextFrameBudget.m_TextContainerTokens;
 	}
 	if(QmPerfEnabled() && (SnapshotCacheMiss > 0 || TextContainerNew > 0))
 	{
@@ -1296,8 +1315,7 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 	const float MotdScale = QmServerInfoGeometry::FitScale(Motd, ui_token::motd::DESIGN_WIDTH, ui_token::motd::DESIGN_HEIGHT);
 	Motd.HSplitTop(ui_token::motd::TITLE_HEIGHT_RATIO * MotdFontSize * MotdScale, &MotdHeader, &Motd);
 	Motd.HSplitTop(ui_token::motd::TITLE_GAP * MotdScale, nullptr, &Motd);
-	if(GameClient()->m_Motd.ServerMotd()[0])
-		RequestIngameMotdParagraphCache(Motd, MotdFontSize);
+	RequestIngameMotdParagraphCache(Motd, MotdFontSize);
 
 	if(QmPerfEnabled())
 	{
@@ -1317,6 +1335,8 @@ namespace
 		bool m_Valid = false;
 		unsigned m_TextHash = 0;
 		int64_t m_UpdateTime = -1;
+		uint64_t m_PendingFrame = 0;
+		uint64_t m_GlyphAtlasRevision = 0;
 		float m_Width = 0.0f;
 		float m_FontSize = 0.0f;
 		QmMotdLayout::SLayout m_Layout;
@@ -1333,6 +1353,7 @@ namespace
 	// 容器自身的 bounding box 只反映最后一次追加，缩放必须用这里记下的实测值。
 	float s_IngameMotdContentWidth = 0.0f;
 	float s_IngameMotdContentHeight = 0.0f;
+	uint64_t s_IngameMotdContentGlyphAtlasRevision = 0;
 
 	// 框线字形的自然推进与行高由字体实测：换字号或换字体后仍然首尾相接，不写死像素。
 	void MeasureIngameMotdBoxMetrics(ITextRender *pTextRender, float FontSize, float &CellAdvance, float &LineHeight)
@@ -1362,21 +1383,19 @@ namespace
 	}
 
 	// 保证逐行排版与当前公告文本一致；换文本时丢掉半成品容器，从头开始。
-	void EnsureIngameMotdLayout(ITextRender *pTextRender, STextContainerIndex &BuildContainer, const char *pMotd, unsigned TextHash, int64_t UpdateTime, float Width, float FontSize)
+	void EnsureIngameMotdLayout(ITextRender *pTextRender, STextContainerIndex &BuildContainer, const char *pMotd, unsigned TextHash, int64_t UpdateTime, uint64_t PendingFrame, float Width, float FontSize)
 	{
 		SIngameMotdLayoutBuild &Build = s_IngameMotdLayoutBuild;
+		const uint64_t GlyphAtlasRevision = pTextRender->GlyphAtlasRevision();
+		// 空行会推进排版，但不会创建容器。用请求和字形图集版本判断是否要重新开始。
 		if(Build.m_Valid &&
 			Build.m_TextHash == TextHash &&
 			Build.m_UpdateTime == UpdateTime &&
+			Build.m_PendingFrame == PendingFrame &&
+			Build.m_GlyphAtlasRevision == GlyphAtlasRevision &&
 			absolute(Build.m_Width - Width) < 0.01f &&
 			absolute(Build.m_FontSize - FontSize) < 0.01f)
-		{
-			// 外部重置（换服 / 断线）会删掉半成品容器：进度还在就整段重来，
-			// 否则会把没有字形的空容器当成成品提交。
-			if(!BuildContainer.Valid() && Build.m_Row > 0)
-				ResetIngameMotdLayoutProgress();
 			return;
-		}
 
 		pTextRender->DeleteTextContainer(BuildContainer);
 		float CellAdvance = 0.0f;
@@ -1386,6 +1405,8 @@ namespace
 		Build.m_Valid = true;
 		Build.m_TextHash = TextHash;
 		Build.m_UpdateTime = UpdateTime;
+		Build.m_PendingFrame = PendingFrame;
+		Build.m_GlyphAtlasRevision = GlyphAtlasRevision;
 		Build.m_Width = Width;
 		Build.m_FontSize = FontSize;
 		ResetIngameMotdLayoutProgress();
@@ -1496,11 +1517,26 @@ namespace
 bool CMenus::RequestIngameMotdParagraphCache(CUIRect Motd, float FontSize)
 {
 	const char *pMotd = GameClient()->m_Motd.ServerMotd();
+	const bool Empty = pMotd[0] == '\0';
+	const bool CacheHit = !Empty && IngameMotdParagraphCacheMatches(Motd, FontSize);
+	if(Empty || CacheHit)
+	{
+		if(m_IngameMotdParagraphCache.m_Pending)
+		{
+			TextRender()->DeleteTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex);
+			m_IngameMotdParagraphCache.m_Pending = false;
+			s_IngameMotdLayoutBuild.m_Valid = false;
+		}
+		if(Empty && m_IngameMotdParagraphCache.m_Valid)
+		{
+			TextRender()->DeleteTextContainer(m_MotdTextContainerIndex);
+			m_IngameMotdParagraphCache.m_Valid = false;
+		}
+		return CacheHit;
+	}
+
 	const unsigned TextHash = str_quickhash(pMotd);
 	const int64_t UpdateTime = GameClient()->m_Motd.ServerMotdUpdateTime();
-	if(IngameMotdParagraphCacheMatches(Motd, FontSize))
-		return true;
-
 	if(!m_IngameMotdParagraphCache.m_Pending ||
 		m_IngameMotdParagraphCache.m_PendingTextHash != TextHash ||
 		m_IngameMotdParagraphCache.m_PendingUpdateTime != UpdateTime ||
@@ -1525,6 +1561,7 @@ bool CMenus::IngameMotdParagraphCacheMatches(CUIRect Motd, float FontSize) const
 	const unsigned TextHash = str_quickhash(pMotd);
 	const int64_t UpdateTime = GameClient()->m_Motd.ServerMotdUpdateTime();
 	return m_IngameMotdParagraphCache.m_Valid &&
+	       s_IngameMotdContentGlyphAtlasRevision == TextRender()->GlyphAtlasRevision() &&
 	       m_IngameMotdParagraphCache.m_TextHash == TextHash &&
 	       m_IngameMotdParagraphCache.m_UpdateTime == UpdateTime &&
 	       absolute(m_IngameMotdParagraphCache.m_Width - Motd.w) < 0.01f &&
@@ -1571,7 +1608,7 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 				--m_IngameTextFrameBudget.m_ParagraphLayoutTokens;
 			const auto LayoutStart = time_get_nanoseconds();
 			// 逐行排版：文本/宽度/字号没变时不重算；重算后的进度按 token 分摊到多帧。
-			EnsureIngameMotdLayout(TextRender(), m_IngameMotdParagraphCache.m_BuildTextContainerIndex, pMotd, TextHash, UpdateTime, Motd.w, FontSize);
+			EnsureIngameMotdLayout(TextRender(), m_IngameMotdParagraphCache.m_BuildTextContainerIndex, pMotd, TextHash, UpdateTime, m_IngameMotdParagraphCache.m_PendingFrame, Motd.w, FontSize);
 			StepIngameMotdLayout(TextRender(), m_IngameMotdParagraphCache.m_BuildTextContainerIndex, pMotd, Motd.w, FontSize, SIngameMotdParagraphCache::INGAME_MOTD_PARAGRAPH_CHUNK_BYTES);
 			ParagraphLayoutMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - LayoutStart).count();
 
@@ -1584,6 +1621,8 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 				// 内容尺寸按逐行实测提交：渲染期只做缩放，不再重排。
 				s_IngameMotdContentWidth = IngameMotdLayoutContentWidth();
 				s_IngameMotdContentHeight = IngameMotdLayoutHeight();
+				s_IngameMotdContentGlyphAtlasRevision = s_IngameMotdLayoutBuild.m_GlyphAtlasRevision;
+				s_IngameMotdLayoutBuild.m_Valid = false;
 				m_IngameMotdParagraphCache.m_TextHash = TextHash;
 				m_IngameMotdParagraphCache.m_UpdateTime = UpdateTime;
 				m_IngameMotdParagraphCache.m_Width = Motd.w;
@@ -1968,10 +2007,10 @@ void CMenus::RenderServerInfoMotd(CUIRect Motd)
 	if(m_MenuTextPlanCollecting)
 		return;
 
+	RequestIngameMotdParagraphCache(Motd, MotdFontSize);
 	if(!GameClient()->m_Motd.ServerMotd()[0])
 		return;
 
-	RequestIngameMotdParagraphCache(Motd, MotdFontSize);
 	Ui()->ClipEnable(&Motd);
 	const bool RenderedMotdParagraph = RenderIngameMotdStableParagraphCache(Motd);
 	Ui()->ClipDisable();
@@ -2460,6 +2499,7 @@ void CMenus::GhostlistPopulate()
 	}
 
 	m_vGhosts.clear();
+	GameClient()->m_Ghost.RestoreUnsavedBest(m_vGhosts);
 	m_GhostPopulateStartTime = time_get_nanoseconds();
 	const char *pGhostDir = GameClient()->m_Ghost.GetGhostDir();
 	str_copy(m_aGhostScanDir, pGhostDir);
@@ -2488,7 +2528,7 @@ void CMenus::GhostlistPopulate()
 	if(pOwnGhost)
 	{
 		pOwnGhost->m_Own = true;
-		if(pOwnGhost->m_Slot < 0)
+		if(pOwnGhost->m_Slot < 0 && pOwnGhost->HasFile())
 			pOwnGhost->m_Slot = GameClient()->m_Ghost.Load(pOwnGhost->m_aFilename);
 	}
 }
@@ -2501,38 +2541,24 @@ CMenus::CGhostItem *CMenus::GetOwnGhost()
 	return nullptr;
 }
 
-void CMenus::UpdateOwnGhost(CGhostItem Item)
+static bool GhostRowLess(const CMenus::CGhostItem &Left, const CMenus::CGhostItem &Right)
 {
-	int Own = -1;
-	for(size_t i = 0; i < m_vGhosts.size(); i++)
-		if(m_vGhosts[i].m_Own)
-			Own = i;
+	if(g_Config.m_GhSort == CMenus::GHOST_SORT_NAME)
+	{
+		const int Order = str_comp(Left.m_aPlayer, Right.m_aPlayer);
+		return g_Config.m_GhSortOrder ? Order > 0 : Order < 0;
+	}
+	if(g_Config.m_GhSort == CMenus::GHOST_SORT_DATE)
+		return g_Config.m_GhSortOrder ? Left.m_Date > Right.m_Date : Left.m_Date < Right.m_Date;
+	return g_Config.m_GhSort == CMenus::GHOST_SORT_TIME && g_Config.m_GhSortOrder ? Left.m_Time > Right.m_Time : Left.m_Time < Right.m_Time;
+}
 
-	if(Own == -1)
-	{
-		Item.m_Own = true;
-	}
-	else if(g_Config.m_ClRaceGhostSaveBest && (Item.HasFile() || !m_vGhosts[Own].HasFile()))
-	{
-		Item.m_Own = true;
-		DeleteGhostItem(Own);
-	}
-	else if(m_vGhosts[Own].m_Time > Item.m_Time)
-	{
-		Item.m_Own = true;
-		m_vGhosts[Own].m_Own = false;
-		m_vGhosts[Own].m_Slot = -1;
-	}
-	else
-	{
-		Item.m_Own = false;
-		Item.m_Slot = -1;
-	}
-
-	Item.m_Date = std::time(nullptr);
-	Item.m_Failed = false;
-	m_vGhosts.insert(std::lower_bound(m_vGhosts.begin(), m_vGhosts.end(), Item), Item);
-	SortGhostlist();
+bool CMenus::UpdateOwnGhost(CGhostItem Item)
+{
+	return ghost_run::PublishRow(m_vGhosts, Item, g_Config.m_ClRaceGhostSaveBest, GhostRowLess, [&](const CGhostItem &Old) {
+		if(str_comp(Old.m_aFilename, Item.m_aFilename) != 0)
+			Storage()->RemoveFile(Old.m_aFilename, IStorage::TYPE_SAVE);
+	});
 }
 
 void CMenus::DeleteGhostItem(int Index)
@@ -2544,18 +2570,8 @@ void CMenus::DeleteGhostItem(int Index)
 
 void CMenus::SortGhostlist()
 {
-	if(g_Config.m_GhSort == GHOST_SORT_NAME)
-		std::stable_sort(m_vGhosts.begin(), m_vGhosts.end(), [](const CGhostItem &Left, const CGhostItem &Right) {
-			return g_Config.m_GhSortOrder ? (str_comp(Left.m_aPlayer, Right.m_aPlayer) > 0) : (str_comp(Left.m_aPlayer, Right.m_aPlayer) < 0);
-		});
-	else if(g_Config.m_GhSort == GHOST_SORT_TIME)
-		std::stable_sort(m_vGhosts.begin(), m_vGhosts.end(), [](const CGhostItem &Left, const CGhostItem &Right) {
-			return g_Config.m_GhSortOrder ? (Left.m_Time > Right.m_Time) : (Left.m_Time < Right.m_Time);
-		});
-	else if(g_Config.m_GhSort == GHOST_SORT_DATE)
-		std::stable_sort(m_vGhosts.begin(), m_vGhosts.end(), [](const CGhostItem &Left, const CGhostItem &Right) {
-			return g_Config.m_GhSortOrder ? (Left.m_Date > Right.m_Date) : (Left.m_Date < Right.m_Date);
-		});
+	if(g_Config.m_GhSort != GHOST_SORT_NONE)
+		std::stable_sort(m_vGhosts.begin(), m_vGhosts.end(), GhostRowLess);
 }
 
 // 游戏内菜单底部动作栏的按钮排布：宽度由文案宽度 + token 内边距推导，
@@ -2851,12 +2867,12 @@ void CMenus::RenderGhost(CUIRect MainView)
 				{
 					CGhostItem *pGhost = &m_vGhosts[i];
 					// 练习组走 Rank 1 查看模式，不进入普通影子的 Load 槽位。
-					if(pGhost->m_PracticeGroup || pGhost->m_Failed || pGhost->m_Slot != -1)
+					if(pGhost->m_PracticeGroup || pGhost->m_Failed || pGhost->m_Slot != -1 || (!pGhost->HasFile() && !GameClient()->m_Ghost.IsUnsavedBest(*pGhost)))
 						continue;
 					if(!GameClient()->m_Ghost.FreeSlots())
 						break;
 
-					pGhost->m_Slot = GameClient()->m_Ghost.Load(pGhost->m_aFilename);
+					pGhost->m_Slot = GameClient()->m_Ghost.Load(*pGhost);
 					if(pGhost->m_Slot == -1)
 						pGhost->m_Failed = true;
 					else
@@ -2883,7 +2899,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 		if(Button.w > 0.0f && (DoIngameMenuButton(PAGE_GHOST, "ingame-ghost-view", &s_ViewButton, Localize("View replay"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::PILL) || s_ListBox.WasItemActivated()))
 			GameClient()->m_RankGhost.ViewPracticeGroup(pGhost->m_aFilename);
 	}
-	else if(!pGhost->m_Failed && pGhost->HasFile() && (pGhost->Active() || GameClient()->m_Ghost.FreeSlots() > ReservedSlots))
+	else if(!pGhost->m_Failed && (pGhost->HasFile() || GameClient()->m_Ghost.IsUnsavedBest(*pGhost)) && (pGhost->Active() || GameClient()->m_Ghost.FreeSlots() > ReservedSlots))
 	{
 		static CButtonContainer s_GhostButton;
 		const char *pText = pGhost->Active() ? Localize("Deactivate") : Localize("Activate");
@@ -2898,7 +2914,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 			}
 			else
 			{
-				pGhost->m_Slot = GameClient()->m_Ghost.Load(pGhost->m_aFilename);
+				pGhost->m_Slot = GameClient()->m_Ghost.Load(*pGhost);
 				if(pGhost->m_Slot == -1)
 					pGhost->m_Failed = true;
 				else
@@ -2929,13 +2945,14 @@ void CMenus::RenderGhost(CUIRect MainView)
 			str_format(aFile, sizeof(aFile), "%s/events.qmevt", pGhost->m_aFilename);
 			Storage()->RemoveFile(aFile, IStorage::TYPE_SAVE);
 		}
+		GameClient()->m_Ghost.ForgetUnsavedBest(*pGhost);
 		DeleteGhostItem(s_vVisibleIndices[s_SelectedIndex]);
 		s_SelectedIndex = std::min(s_SelectedIndex, (int)m_vGhosts.size() - 1);
 		return;
 	}
 
 	bool Recording = GameClient()->m_Ghost.GhostRecorder()->IsRecording();
-	if(!pGhost->HasFile() && !Recording && pGhost->Active())
+	if(!pGhost->HasFile() && !Recording && (pGhost->Active() || GameClient()->m_Ghost.IsUnsavedBest(*pGhost)))
 	{
 		static CButtonContainer s_SaveButton;
 		const CUIRect SaveButton = NextIngameActionButton(Status, Localize("Save"));
@@ -2970,6 +2987,8 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 		{
 			s_RankDemoPlayPending = false;
 			PopupConfirmRankDemoPlay();
+			if(Client()->State() != IClient::STATE_ONLINE)
+				return;
 		}
 		else if(s_RankDemoPlayConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_RankDemoPlayConfirm))
 			s_RankDemoPlayPending = false;

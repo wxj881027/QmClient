@@ -27,6 +27,10 @@
 void CMenus::RenderPlayers(CUIRect MainView)
 {
 	auto &State = m_QmPlayersMenu;
+	const bool ProcessActions = !Ui()->RenderOnly();
+	const bool PointerPressed = ProcessActions && Ui()->MouseButtonClicked(0);
+	if(ProcessActions)
+		State.m_ActionPress.CancelIfInactive(Ui()->ActiveItem());
 	// 页面壳层：面板底、面板内边距与圆角全部取 token，页面不再自带一套 10/12。
 	const ColorRGBA PanelColor = MenuPanelColor();
 	AddMenuHitRegion(MainView);
@@ -191,9 +195,11 @@ void CMenus::RenderPlayers(CUIRect MainView)
 			// 悬浮时五个动作都出现；非悬浮只保留已生效的状态（好友 / 静音 / 裂心 / 跟随中）。
 			if(!TileHovered && !(Action < 4 && Spec.m_Active))
 				continue;
-			const int Clicked = Ui()->DoButton_QmIcon(&s_aTileButtons[Id][Action], Spec.m_Icon, Spec.m_pFallback, Spec.m_Active ? 1 : 0, &Slot, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Spec.m_Enabled);
-			ui_widget::Tooltip(Ctx, &s_aTileButtons[Id][Action], Slot, Spec.m_pTooltip);
-			if(Clicked == 0 || !Spec.m_Enabled)
+			CButtonContainer *pButton = &s_aTileButtons[Id][Action];
+			const int Clicked = Ui()->DoButton_QmIcon(pButton, Spec.m_Icon, Spec.m_pFallback, Spec.m_Active ? 1 : 0, &Slot, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Spec.m_Enabled);
+			ui_widget::Tooltip(Ctx, pButton, Slot, Spec.m_pTooltip);
+			const bool Pressed = PointerPressed && Spec.m_Enabled && Ui()->IsActiveItem(pButton);
+			if(!ProcessActions || !State.m_ActionPress.ProcessButton(pButton, Player.m_aName, Player.m_aClan, Pressed, Clicked != 0) || !Spec.m_Enabled)
 				continue;
 			switch(Action)
 			{

@@ -12,6 +12,7 @@
 
 #include <cstdio>
 #include <string>
+#include <utility>
 #include <vector>
 
 #ifndef BACKEND_AS_OPENGL_ES
@@ -27,7 +28,7 @@
 
 bool CGLSL::LoadShader(CGLSLCompiler *pCompiler, IStorage *pStorage, const char *pFile, int Type)
 {
-	if(m_IsLoaded)
+	if(IsLoaded())
 		return true;
 
 	CLineReader LineReader;
@@ -120,15 +121,30 @@ bool CGLSL::LoadShader(CGLSLCompiler *pCompiler, IStorage *pStorage, const char 
 		vpShaderCode.push_back(Line.c_str());
 	}
 
-	const TWGLuint ShaderId = glCreateShader(Type);
+	// 编译诊断也可能分配失败，成功前由栈上的候选持有 GL 对象。
+	struct SShaderCandidate
+	{
+		TWGLuint m_Id;
+		~SShaderCandidate()
+		{
+			if(m_Id != 0)
+				glDeleteShader(m_Id);
+		}
+	} Candidate{glCreateShader(Type)};
+	const TWGLuint ShaderId = Candidate.m_Id;
+	if(ShaderId == 0)
+	{
+		log_error("gfx/opengl/shader", "Failed to create a shader for file '%s'.", pFile);
+		return false;
+	}
 
 	glShaderSource(ShaderId, vpShaderCode.size(), vpShaderCode.data(), nullptr);
 	glCompileShader(ShaderId);
 
-	TWGLint CompilationStatus;
+	TWGLint CompilationStatus = GL_FALSE;
 	glGetShaderiv(ShaderId, GL_COMPILE_STATUS, &CompilationStatus);
 
-	if(CompilationStatus == GL_FALSE)
+	if(CompilationStatus != GL_TRUE)
 	{
 		TWGLint LogLength = 0;
 		glGetShaderiv(ShaderId, GL_INFO_LOG_LENGTH, &LogLength);
@@ -146,37 +162,27 @@ bool CGLSL::LoadShader(CGLSLCompiler *pCompiler, IStorage *pStorage, const char 
 		{
 			log_error("gfx/opengl/shader", "Failed to compile shader file '%s'. The compiler did not return an error.", pFile);
 		}
-		glDeleteShader(ShaderId);
 		return false;
 	}
 
-	m_Type = Type;
-	m_IsLoaded = true;
-	m_ShaderId = ShaderId;
+	m_ShaderId = std::exchange(Candidate.m_Id, 0);
 	return true;
 }
 
 void CGLSL::DeleteShader()
 {
-	if(!IsLoaded())
-		return;
-	m_IsLoaded = false;
-	glDeleteShader(m_ShaderId);
+	if(IsLoaded())
+		glDeleteShader(std::exchange(m_ShaderId, 0));
 }
 
 bool CGLSL::IsLoaded() const
 {
-	return m_IsLoaded;
+	return m_ShaderId != 0;
 }
 
 TWGLuint CGLSL::GetShaderId() const
 {
 	return m_ShaderId;
-}
-
-CGLSL::CGLSL()
-{
-	m_IsLoaded = false;
 }
 
 CGLSL::~CGLSL()

@@ -2112,21 +2112,6 @@ namespace
 		return (Code >= 'a' && Code <= 'z') || (Code >= '0' && Code <= '9');
 	}
 
-	bool IsWordBefore(const char *pText, const char *pStart)
-	{
-		while(pStart > pText)
-		{
-			--pStart;
-			while(pStart > pText && (static_cast<unsigned char>(*pStart) & 0xc0) == 0x80)
-				--pStart;
-			const char *pDecode = pStart;
-			const int Code = str_utf8_decode(&pDecode);
-			if(!IsFormatting(Code))
-				return IsWordCharacter(Code);
-		}
-		return false;
-	}
-
 	bool IsWordAfter(const char *pEnd)
 	{
 		while(*pEnd)
@@ -2137,6 +2122,31 @@ namespace
 		}
 		return false;
 	}
+
+	struct SColorMarkerSearch
+	{
+		const char *m_pFrom;
+		const char *m_pStop;
+
+		const char *FindEnd(const char *pFrom)
+		{
+			// 同一段内的后续搜索会遇到同一个闭合符或行尾。
+			if(pFrom < m_pFrom || pFrom > m_pStop)
+			{
+				m_pFrom = pFrom;
+				m_pStop = pFrom;
+				while(*m_pStop && *m_pStop != '\n' && *m_pStop != '\r' && !(m_pStop[0] == ']' && m_pStop[1] == ']'))
+					++m_pStop;
+			}
+			return *m_pStop == ']' ? m_pStop + 2 : nullptr;
+		}
+	};
+
+	struct SMatch
+	{
+		const char *m_pEnd = nullptr;
+		int m_LastCode = 0;
+	};
 
 	struct SNode
 	{
@@ -2184,25 +2194,23 @@ namespace
 			}
 		}
 
-		const char *MatchEnd(const char *pText, const char *pStart) const
+		SMatch FindMatch(const char *pStart, int PreviousCode, SColorMarkerSearch &MarkerSearch) const
 		{
 			size_t Node = 0;
-			const char *pEnd = nullptr;
+			SMatch Match;
 			for(const char *pCursor = pStart; *pCursor;)
 			{
 				// 与现有 [[...]] 聊天颜色标记兼容，不能靠插入标记拆开词语。
 				if(Node != 0 && pCursor[0] == '[' && pCursor[1] == '[')
 				{
-					const char *pMarker = pCursor + 2;
-					while(*pMarker && *pMarker != '\n' && *pMarker != '\r' && !(pMarker[0] == ']' && pMarker[1] == ']'))
-						++pMarker;
-					if(*pMarker == ']')
+					if(const char *pMarkerEnd = MarkerSearch.FindEnd(pCursor + 2))
 					{
-						pCursor = pMarker + 2;
+						pCursor = pMarkerEnd;
 						continue;
 					}
 				}
-				const int Code = Normalize(str_utf8_decode(&pCursor));
+				const int OriginalCode = str_utf8_decode(&pCursor);
+				const int Code = Normalize(OriginalCode);
 				// 调用以单条消息为界；损坏的 UTF-8 不参与拼接。
 				if(Code < 0)
 					break;
@@ -2218,70 +2226,112 @@ namespace
 				Node = It->second;
 				const SNode &Current = m_vNodes[Node];
 				if(Current.m_Terminal &&
-					(!Current.m_RequiresWordBoundary || (!IsWordBefore(pText, pStart) && !IsWordAfter(pCursor))))
-					pEnd = pCursor;
+					(!Current.m_RequiresWordBoundary || (!IsWordCharacter(PreviousCode) && !IsWordAfter(pCursor))))
+					Match = {pCursor, OriginalCode};
 			}
-			return pEnd;
+			return Match;
 		}
 	};
 
-	struct SSharedFilter
+	QmStreamerWordFilter::CFilter &SharedFilter()
 	{
-		CWordTrie m_Trie;
-		std::vector<std::string> m_vAdditionalWords;
-		uint64_t m_Revision = 1;
-	};
-
-	SSharedFilter &SharedFilter()
-	{
-		static SSharedFilter s_Filter;
+		static QmStreamerWordFilter::CFilter s_Filter;
 		return s_Filter;
 	}
 }
 
-void QmStreamerWordFilter::SetAdditionalWords(const std::vector<std::string> &vWords)
+struct QmStreamerWordFilter::CFilter::SState
 {
-	auto &Filter = SharedFilter();
-	if(Filter.m_vAdditionalWords == vWords)
-		return;
-	CWordTrie Trie;
-	for(const std::string &Word : vWords)
-		Trie.Add(Word.c_str());
-	Filter.m_Trie = std::move(Trie);
-	Filter.m_vAdditionalWords = vWords;
-	++Filter.m_Revision;
+	std::vector<std::string> m_vAdditionalWords;
+	CWordTrie m_Trie;
+	uint64_t m_Revision;
+
+	// MSVC 调试迭代器会为空向量分配代理，零元素构造可将异常交给 EnsureState。
+	SState() :
+		m_vAdditionalWords(0), m_Revision(1)
+	{
+	}
+
+	SState(const std::vector<std::string> &vWords, uint64_t Revision) :
+		m_vAdditionalWords(vWords), m_Revision(Revision)
+	{
+		for(const std::string &Word : m_vAdditionalWords)
+			m_Trie.Add(Word.c_str());
+	}
+};
+
+QmStreamerWordFilter::CFilter::CFilter() noexcept = default;
+QmStreamerWordFilter::CFilter::~CFilter() = default;
+
+bool QmStreamerWordFilter::CFilter::SetAdditionalWords(const std::vector<std::string> &vWords) noexcept
+{
+	try
+	{
+		if(m_pState && m_pState->m_vAdditionalWords == vWords)
+			return true;
+		const uint64_t NextRevision = m_pState ? m_pState->m_Revision + 1 : (vWords.empty() ? 1 : 2);
+		auto pPrepared = std::make_unique<SState>(vWords, NextRevision);
+		m_pState.swap(pPrepared);
+		return true;
+	}
+	catch(...)
+	{
+		return false;
+	}
 }
 
-uint64_t QmStreamerWordFilter::Revision()
+bool QmStreamerWordFilter::CFilter::EnsureState() noexcept
 {
-	return SharedFilter().m_Revision;
+	if(m_pState)
+		return true;
+	try
+	{
+		m_pState = std::make_unique<SState>();
+		return true;
+	}
+	catch(...)
+	{
+		return false;
+	}
 }
 
-bool QmStreamerWordFilter::Filter(char *pText, bool Enabled)
+uint64_t QmStreamerWordFilter::CFilter::Revision() noexcept
 {
-	if(!Enabled || pText == nullptr || pText[0] == '\0')
+	return EnsureState() ? m_pState->m_Revision : 0;
+}
+
+bool QmStreamerWordFilter::CFilter::Filter(char *pText, bool Enabled) noexcept
+{
+	if(!Enabled || pText == nullptr || pText[0] == '\0' || !EnsureState())
 		return false;
 
 	// 过滤只读取已发布的词表；直接在调用方缓冲区压缩。
-	const CWordTrie &Trie = SharedFilter().m_Trie;
+	const CWordTrie &Trie = m_pState->m_Trie;
 	bool Changed = false;
+	// 保留原文中最近的非格式码点，避免在写入的星号上判断词边界。
+	int PreviousCode = 0;
 	const char *pRead = pText;
 	char *pWrite = pText;
+	SColorMarkerSearch MarkerSearch{pText, pText};
 	while(*pRead)
 	{
-		if(const char *pEnd = Trie.MatchEnd(pText, pRead))
+		const SMatch Match = Trie.FindMatch(pRead, PreviousCode, MarkerSearch);
+		if(Match.m_pEnd)
 		{
 			// 外部词表可有短 ASCII 词；替换长度不能超过命中片段。
-			const size_t ReplacementLength = std::min(size_t{3}, static_cast<size_t>(pEnd - pRead));
+			const size_t ReplacementLength = std::min(size_t{3}, static_cast<size_t>(Match.m_pEnd - pRead));
 			mem_copy(pWrite, "***", ReplacementLength);
 			pWrite += ReplacementLength;
-			pRead = pEnd;
+			pRead = Match.m_pEnd;
+			PreviousCode = Match.m_LastCode;
 			Changed = true;
 		}
 		else
 		{
 			const char *pNext = pRead;
-			str_utf8_decode(&pNext);
+			const int Code = str_utf8_decode(&pNext);
+			if(!IsFormatting(Code))
+				PreviousCode = Code;
 			const size_t Length = pNext - pRead;
 			mem_move(pWrite, pRead, Length);
 			pWrite += Length;
@@ -2292,10 +2342,30 @@ bool QmStreamerWordFilter::Filter(char *pText, bool Enabled)
 	return Changed;
 }
 
-bool QmStreamerWordFilter::Filter(std::string &Text, bool Enabled)
+bool QmStreamerWordFilter::CFilter::Filter(std::string &Text, bool Enabled) noexcept
 {
 	if(!Filter(Text.data(), Enabled))
 		return false;
 	Text.resize(str_length(Text.c_str()));
 	return true;
+}
+
+bool QmStreamerWordFilter::SetAdditionalWords(const std::vector<std::string> &vWords) noexcept
+{
+	return SharedFilter().SetAdditionalWords(vWords);
+}
+
+uint64_t QmStreamerWordFilter::Revision() noexcept
+{
+	return SharedFilter().Revision();
+}
+
+bool QmStreamerWordFilter::Filter(char *pText, bool Enabled) noexcept
+{
+	return SharedFilter().Filter(pText, Enabled);
+}
+
+bool QmStreamerWordFilter::Filter(std::string &Text, bool Enabled) noexcept
+{
+	return SharedFilter().Filter(Text, Enabled);
 }

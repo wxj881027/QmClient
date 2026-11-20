@@ -2,6 +2,22 @@
 
 #include <gtest/gtest.h>
 
+#include <new>
+
+#if defined(CONF_FAMILY_WINDOWS)
+TEST(QmGraphicsAdapters, AdapterNameUsesReportedBytesWithoutTerminator)
+{
+	const wchar_t aDescription[] = L"GPU (previous property)";
+	EXPECT_EQ(QmDecodeSystemGraphicsAdapterName(aDescription, sizeof(L"GPU") - sizeof(wchar_t)), "GPU");
+}
+
+TEST(QmGraphicsAdapters, AdapterNameRejectsPartialUtf16CodeUnit)
+{
+	const wchar_t aDescription[] = L"GPU";
+	EXPECT_TRUE(QmDecodeSystemGraphicsAdapterName(aDescription, sizeof(aDescription) - 1).empty());
+}
+#endif
+
 TEST(QmGraphicsAdapters, VirtualDisplayCopyOfPhysicalGpuDoesNotCountAsSecondAdapter)
 {
 	STWGraphicGpu List;
@@ -102,5 +118,15 @@ TEST(QmGraphicsAdapters, MissingRendererResetsPreviousAutomaticDevice)
 	QmPopulateOpenGLGpuList(List, "Previous renderer", [] { return std::vector<std::string>{}; });
 	QmPopulateOpenGLGpuList(List, nullptr, [] { return std::vector<std::string>{}; });
 	EXPECT_STREQ(List.m_AutoGpu.m_aName, "");
+	EXPECT_FALSE(List.m_CanSelect);
+}
+
+TEST(QmGraphicsAdapters, HardwareEnumerationAllocationFailurePreservesCurrentRenderer)
+{
+	STWGraphicGpu List;
+	QmPopulateOpenGLGpuList(List, "Previous renderer", [] { return std::vector<std::string>{"Previous GPU"}; });
+	QmPopulateOpenGLGpuList(List, "Current renderer", []() -> std::vector<std::string> { throw std::bad_alloc(); });
+	EXPECT_STREQ(List.m_AutoGpu.m_aName, "Current renderer");
+	EXPECT_TRUE(List.m_vGpus.empty());
 	EXPECT_FALSE(List.m_CanSelect);
 }

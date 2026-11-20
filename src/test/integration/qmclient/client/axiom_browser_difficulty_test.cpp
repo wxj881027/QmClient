@@ -9,6 +9,7 @@
 #include <test/support/map_http_recorder.h>
 
 #include <functional>
+#include <memory>
 #include <new>
 #include <stdexcept>
 #include <utility>
@@ -27,6 +28,18 @@ namespace
 			CHttpRecorder::Run(std::move(pRequest));
 		}
 	};
+
+	class CHeaderFailureResponse : public MapHttpTest::CResponse
+	{
+	public:
+		using CResponse::CResponse;
+		void Header(const char *) override { throw std::bad_alloc(); }
+	};
+
+	std::unique_ptr<IHttpRequest> CreateHeaderFailureResponse(const char *pUrl)
+	{
+		return std::make_unique<CHeaderFailureResponse>(pUrl);
+	}
 
 	class AxiomBrowserDifficulty : public ::testing::Test
 	{
@@ -163,6 +176,23 @@ TEST_F(AxiomBrowserDifficulty, CancelledLookupCannotPublishItsLateResponse)
 	m_Http.m_vRequests[0]->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Easy"}})");
 	EXPECT_FALSE(Poll());
 	EXPECT_EQ(m_Catalog.FindForServer(m_Server), nullptr);
+}
+
+TEST_F(AxiomBrowserDifficulty, HeaderAllocationFailureKeepsExistingRequestAndConsumesBudget)
+{
+	CQmMapDifficultyCatalog Catalog(CreateHeaderFailureResponse);
+	Catalog.RequestAxiomDifficulty(m_Server, m_Http, m_Budget, "", m_Now);
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	const CServerInfo ExistingServer = m_Server;
+	str_copy(m_Server.m_aMap, "Other Map");
+	EXPECT_NO_THROW(Catalog.RequestAxiomDifficulty(m_Server, m_Http, m_Budget, "example", m_Now));
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	EXPECT_TRUE(m_Budget.TryStart(m_Now, false));
+	EXPECT_FALSE(m_Budget.TryStart(m_Now, false));
+	m_Http.m_vRequests[0]->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Easy"}})");
+	EXPECT_TRUE(Catalog.PollAxiomRequests(m_Budget, m_Now));
+	EXPECT_NE(Catalog.FindForServer(ExistingServer), nullptr);
+	EXPECT_EQ(Catalog.FindForServer(m_Server), nullptr);
 }
 
 TEST_F(AxiomBrowserDifficulty, SubmissionResourceFailureReleasesLookupSlot)

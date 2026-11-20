@@ -27,8 +27,14 @@ bool CLayerSelector::SelectByTile()
 	bool IsFound = false;
 	for(const auto &HoverTile : m_vHoverTiles)
 	{
-		if(!Map()->m_vpGroups[HoverTile.m_Group]->m_Visible ||
-			!Map()->m_vpGroups[HoverTile.m_Group]->m_vpLayers[HoverTile.m_Layer]->m_Visible)
+		// 更新悬停后，保存完成或标签切换仍可能替换地图。
+		if(HoverTile.m_Group >= Map()->m_vpGroups.size())
+			continue;
+		const auto &pGroup = Map()->m_vpGroups[HoverTile.m_Group];
+		if(!pGroup->m_Visible)
+			continue;
+		const auto pLayer = HoverTile.ResolveLayer(pGroup->m_vpLayers);
+		if(!pLayer || !pLayer->m_Visible)
 			continue;
 
 		if(MatchedGroup == -1)
@@ -60,6 +66,11 @@ void CLayerSelector::UpdateHoveredTiles()
 	const vec2 UpdatedMousePos = Ui()->UpdatedMousePos();
 
 	m_vHoverTiles.clear();
+	const int WindowWidth = Graphics()->WindowWidth();
+	const int WindowHeight = Graphics()->WindowHeight();
+	if(WindowWidth <= 0 || WindowHeight <= 0)
+		return;
+
 	for(size_t g = 0; g < Map()->m_vpGroups.size(); g++)
 	{
 		const std::shared_ptr<CLayerGroup> pGroup = Map()->m_vpGroups[g];
@@ -82,8 +93,8 @@ void CLayerSelector::UpdateHoveredTiles()
 			float WorldWidth = aPoints[2] - aPoints[0];
 			float WorldHeight = aPoints[3] - aPoints[1];
 			CUIRect Rect;
-			Rect.x = aPoints[0] + WorldWidth * (UpdatedMousePos.x / Graphics()->WindowWidth());
-			Rect.y = aPoints[1] + WorldHeight * (UpdatedMousePos.y / Graphics()->WindowHeight());
+			Rect.x = aPoints[0] + WorldWidth * (UpdatedMousePos.x / WindowWidth);
+			Rect.y = aPoints[1] + WorldHeight * (UpdatedMousePos.y / WindowHeight);
 			Rect.w = 0;
 			Rect.h = 0;
 			CIntRect r;
@@ -98,7 +109,7 @@ void CLayerSelector::UpdateHoveredTiles()
 				continue;
 
 			if(pTiles->GetTile(x, y).m_Index > 0)
-				m_vHoverTiles.emplace_back(g, l);
+				m_vHoverTiles.emplace_back(g, l, pLayer);
 		}
 	}
 	Ui()->MapScreen();

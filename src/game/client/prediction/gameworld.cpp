@@ -3,6 +3,7 @@
 
 #include "gameworld.h"
 
+#include "copy_links.h"
 #include "entities/character.h"
 #include "entities/door.h"
 #include "entities/dragger.h"
@@ -23,6 +24,9 @@
 #include <game/mapitems.h>
 
 #include <algorithm>
+#include <limits>
+#include <memory>
+#include <new>
 #include <utility>
 
 //////////////////////////////////////////////////
@@ -38,18 +42,14 @@ CGameWorld::CGameWorld()
 	m_GameTick = 0;
 	m_pParent = nullptr;
 	m_pChild = nullptr;
+	m_IsValidCopy = false;
 }
 
 CGameWorld::~CGameWorld()
 {
 	Clear();
-	if(m_pChild && m_pChild->m_pParent == this)
-	{
-		OnModified();
-		m_pChild->m_pParent = nullptr;
-	}
-	if(m_pParent && m_pParent->m_pChild == this)
-		m_pParent->m_pChild = nullptr;
+	OnModified();
+	QmCopyLinks::Unlink(*this);
 }
 
 void CGameWorld::Init(CCollision *pCollision, CTuningParams *pTuningList, const CMapBugs *pMapBugs)
@@ -161,18 +161,9 @@ void CGameWorld::RemoveEntity(CEntity *pEnt)
 	pEnt->m_pNextTypeEntity = nullptr;
 	pEnt->m_pPrevTypeEntity = nullptr;
 
-	if(pEnt->m_pParent)
-	{
-		if(m_IsValidCopy && m_pParent && m_pParent->m_pChild == this)
-			pEnt->m_pParent->m_DestroyTick = GameTick();
-		pEnt->m_pParent->m_pChild = nullptr;
-		pEnt->m_pParent = nullptr;
-	}
-	if(pEnt->m_pChild)
-	{
-		pEnt->m_pChild->m_pParent = nullptr;
-		pEnt->m_pChild = nullptr;
-	}
+	if(pEnt->m_pParent && pEnt->m_pParent->m_pChild == pEnt && m_IsValidCopy && m_pParent && m_pParent->m_pChild == this)
+		pEnt->m_pParent->m_DestroyTick = GameTick();
+	QmCopyLinks::Unlink(*pEnt);
 }
 
 void CGameWorld::RemoveCharacter(CCharacter *pChar)
@@ -180,8 +171,11 @@ void CGameWorld::RemoveCharacter(CCharacter *pChar)
 	int Id = pChar->GetCid();
 	if(Id >= 0 && Id < MAX_CLIENTS)
 	{
-		m_apCharacters[Id] = nullptr;
-		m_Core.m_apCharacters[Id] = nullptr;
+		// 临时匹配对象和未登记副本也会析构，只解除仍属于该对象的索引。
+		if(m_apCharacters[Id] == pChar)
+			m_apCharacters[Id] = nullptr;
+		if(m_Core.m_apCharacters[Id] == &pChar->m_Core)
+			m_Core.m_apCharacters[Id] = nullptr;
 	}
 }
 
@@ -198,6 +192,32 @@ void CGameWorld::RemoveEntities()
 			}
 			pEnt = m_pNextTraverseEntity;
 		}
+}
+
+bool CGameWorld::TrySetSwitchState(int Number, int Team, int Type, int Delay)
+{
+	if(Number <= 0 || static_cast<size_t>(Number) >= Switchers().size() || Team < 0 || Team >= NUM_DDRACE_TEAMS)
+		return false;
+	const bool Timed = Type == TILE_SWITCHTIMEDOPEN || Type == TILE_SWITCHTIMEDCLOSE;
+	if(!Timed && Type != TILE_SWITCHOPEN && Type != TILE_SWITCHCLOSE)
+		return false;
+	int EndTick = 0;
+	if(Timed)
+	{
+		if(Delay < 0)
+			return false;
+		const int64_t Deadline = static_cast<int64_t>(GameTick()) + 1 + static_cast<int64_t>(Delay) * GameTickSpeed();
+		if(Deadline < std::numeric_limits<int>::min() || Deadline > std::numeric_limits<int>::max())
+			return false;
+		EndTick = static_cast<int>(Deadline);
+	}
+	// 完整期限与索引检查后才发布，失败不留下仅改变开闭状态的半次更新。
+	auto &Switcher = Switchers()[Number];
+	Switcher.m_aStatus[Team] = Type == TILE_SWITCHOPEN || Type == TILE_SWITCHTIMEDOPEN;
+	Switcher.m_aEndTick[Team] = EndTick;
+	Switcher.m_aType[Team] = Type;
+	Switcher.m_aLastUpdateTick[Team] = GameTick();
+	return true;
 }
 
 void CGameWorld::Tick()
@@ -404,6 +424,7 @@ bool CGameWorld::IsLocalTeam(int OwnerId) const
 
 void CGameWorld::NetObjBegin(CTeamsCore Teams, int LocalClientId)
 {
+	m_SnapshotUpdateFailed = false;
 	m_Teams = Teams;
 	m_LocalClientId = LocalClientId;
 
@@ -418,32 +439,40 @@ void CGameWorld::NetObjBegin(CTeamsCore Teams, int LocalClientId)
 }
 
 void CGameWorld::NetCharAdd(int ObjId, CNetObj_Character *pCharObj, CNetObj_DDNetCharacter *pExtended, int GameTeam, bool IsLocal, bool ForceAdd)
+try
 {
-	if(ForceAdd || IsLocalTeam(ObjId))
-	{
-		CCharacter *pChar = (CCharacter *)GetEntity(ObjId, ENTTYPE_CHARACTER);
-		if(pChar != nullptr)
-		{
-			pChar->Read(pCharObj, pExtended, IsLocal);
-			pChar->Keep();
-		}
-		else
-		{
-			pChar = new CCharacter(this, ObjId, pCharObj, pExtended);
-			InsertEntity(pChar);
-		}
+	if(m_SnapshotUpdateFailed || (!ForceAdd && !IsLocalTeam(ObjId)))
+		return;
 
-		if(pChar)
-			pChar->m_GameTeam = GameTeam;
+	if(auto *pChar = static_cast<CCharacter *>(GetEntity(ObjId, ENTTYPE_CHARACTER)))
+	{
+		pChar->Read(pCharObj, pExtended, IsLocal);
+		pChar->Keep();
+		pChar->m_GameTeam = GameTeam;
 	}
+	else
+	{
+		auto pNewChar = std::make_unique<CCharacter>(this, ObjId, pCharObj, pExtended);
+		InsertEntity(pNewChar.get());
+		pNewChar->m_GameTeam = GameTeam;
+		pNewChar.release();
+	}
+}
+catch(const std::bad_alloc &)
+{
+	m_SnapshotUpdateFailed = true;
 }
 
 void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const CNetObj_EntityEx *pDataEx)
+try
 {
+	if(m_SnapshotUpdateFailed)
+		return;
+
 	if((ObjType == NETOBJTYPE_PROJECTILE || ObjType == NETOBJTYPE_DDRACEPROJECTILE || ObjType == NETOBJTYPE_DDNETPROJECTILE) && m_WorldConfig.m_PredictWeapons)
 	{
 		CProjectileData Data = ExtractProjectileInfo(ObjType, pObjData, this, pDataEx);
-		if(!IsLocalTeam(Data.m_Owner))
+		if(!Data.HasValidStart() || !IsLocalTeam(Data.m_Owner))
 			return;
 
 		CProjectile NetProj = CProjectile(this, ObjId, &Data);
@@ -457,7 +486,7 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 			{
 				pProj->Keep();
 				if(pProj->m_Type == WEAPON_SHOTGUN && m_WorldConfig.m_IsDDRace)
-					pProj->m_LifeSpan = 20 * GameTickSpeed() - (GameTick() - pProj->m_StartTick);
+					pProj->m_LifeSpan = NetProj.GetLifeSpan();
 				return;
 			}
 		}
@@ -474,10 +503,10 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 				}
 			}
 			// otherwise try to determine its owner by checking if there is only one player nearby
-			if(NetProj.m_StartTick >= GameTick() - 4)
+			if(static_cast<int64_t>(NetProj.m_StartTick) >= static_cast<int64_t>(GameTick()) - 4)
 			{
 				const vec2 NetPos = NetProj.m_Pos - normalize(NetProj.m_Direction) * CCharacterCore::PhysicalSize() * 0.75;
-				const bool Prev = (GameTick() - NetProj.m_StartTick) > 1;
+				const bool Prev = (static_cast<int64_t>(GameTick()) - NetProj.m_StartTick) > 1;
 				float First = 200.0f, Second = 200.0f;
 				CCharacter *pClosest = nullptr;
 				for(CCharacter *pChar = (CCharacter *)FindFirst(ENTTYPE_CHARACTER); pChar; pChar = (CCharacter *)pChar->TypeNext())
@@ -485,6 +514,7 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 					float Dist = distance(Prev ? pChar->m_PrevPrevPos : pChar->m_PrevPos, NetPos);
 					if(Dist < First)
 					{
+						Second = First;
 						pClosest = pChar;
 						First = Dist;
 					}
@@ -503,7 +533,7 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 	else if((ObjType == NETOBJTYPE_PICKUP || ObjType == NETOBJTYPE_DDNETPICKUP) && m_WorldConfig.m_PredictWeapons)
 	{
 		CPickupData Data = ExtractPickupInfo(ObjType, pObjData, pDataEx);
-		if(Data.m_Flags & PICKUPFLAG_NO_PREDICT)
+		if(!Data.HasValidPosition() || (Data.m_Flags & PICKUPFLAG_NO_PREDICT))
 			return;
 		CPickup NetPickup = CPickup(this, ObjId, &Data);
 		if(CPickup *pPickup = (CPickup *)GetEntity(ObjId, ENTTYPE_PICKUP))
@@ -521,7 +551,7 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 	else if(ObjType == NETOBJTYPE_LASER || ObjType == NETOBJTYPE_DDNETLASER)
 	{
 		CLaserData Data = ExtractLaserInfo(ObjType, pObjData, this, pDataEx);
-		if(!IsLocalTeam(Data.m_Owner) || !Data.m_Predict)
+		if(!Data.HasValidPositions() || !IsLocalTeam(Data.m_Owner) || !Data.m_Predict)
 		{
 			return;
 		}
@@ -603,26 +633,78 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 		}
 	}
 }
+catch(const std::bad_alloc &)
+{
+	m_SnapshotUpdateFailed = true;
+}
 
 void CGameWorld::ResetDoorCollision()
 {
-	// 移除旧实体后重建门碰撞，使重叠门按服务端地图实体的创建顺序生效。
-	std::vector<CDoor *> vpDoors;
+	// 只使用门的临时借用链，保留实体主链与原并列顺序，不在快照收尾分配内存。
+	CDoor *pHead = nullptr;
+	CDoor **ppTail = &pHead;
 	for(CEntity *pEnt = FindFirst(ENTTYPE_DOOR); pEnt; pEnt = pEnt->TypeNext())
-		vpDoors.push_back(static_cast<CDoor *>(pEnt));
-	std::stable_sort(vpDoors.begin(), vpDoors.end(), [this](const CDoor *pLeft, const CDoor *pRight) {
-		const int LeftIndex = Collision()->GetPureMapIndex(pLeft->m_Pos);
-		const int RightIndex = Collision()->GetPureMapIndex(pRight->m_Pos);
+	{
+		auto *pDoor = static_cast<CDoor *>(pEnt);
+		*ppTail = pDoor;
+		ppTail = &pDoor->m_pCollisionNext;
+		*ppTail = nullptr;
+	}
+	const auto Less = [this](const CDoor *pLeft, const CDoor *pRight) {
+		const int LeftIndex = QmCollision::CanRoundPosition(pLeft->m_Pos) ? Collision()->GetPureMapIndex(pLeft->m_Pos) : -1;
+		const int RightIndex = QmCollision::CanRoundPosition(pRight->m_Pos) ? Collision()->GetPureMapIndex(pRight->m_Pos) : -1;
 		if(LeftIndex != RightIndex)
 			return LeftIndex < RightIndex;
 		return (pLeft->m_Number > 0) < (pRight->m_Number > 0);
-	});
-	for(CDoor *pDoor : vpDoors)
-		pDoor->ResetCollision();
+	};
+	const auto Sort = [&Less](auto &&Self, CDoor *pList) -> CDoor * {
+		if(!pList || !pList->m_pCollisionNext)
+			return pList;
+		CDoor *pSlow = pList;
+		CDoor *pFast = pList->m_pCollisionNext;
+		while(pFast && pFast->m_pCollisionNext)
+		{
+			pSlow = pSlow->m_pCollisionNext;
+			pFast = pFast->m_pCollisionNext->m_pCollisionNext;
+		}
+		CDoor *pRight = pSlow->m_pCollisionNext;
+		pSlow->m_pCollisionNext = nullptr;
+		CDoor *pLeft = Self(Self, pList);
+		pRight = Self(Self, pRight);
+		CDoor *pMerged = nullptr;
+		CDoor **ppNext = &pMerged;
+		while(pLeft && pRight)
+		{
+			// 相同键先取左侧，维持原 stable_sort 的稳定性。
+			CDoor *&pChosen = !Less(pRight, pLeft) ? pLeft : pRight;
+			*ppNext = pChosen;
+			pChosen = pChosen->m_pCollisionNext;
+			ppNext = &(*ppNext)->m_pCollisionNext;
+		}
+		*ppNext = pLeft ? pLeft : pRight;
+		return pMerged;
+	};
+	pHead = Sort(Sort, pHead);
+	while(pHead)
+	{
+		CDoor *pNext = pHead->m_pCollisionNext;
+		pHead->m_pCollisionNext = nullptr;
+		pHead->ResetCollision();
+		pHead = pNext;
+	}
 }
 
-void CGameWorld::NetObjEnd()
+bool CGameWorld::NetObjEnd()
 {
+	if(m_SnapshotUpdateFailed)
+	{
+		// 角色和实体可能已经部分更新，先撤销门写入，再清空本次预测结果。
+		while(CEntity *pDoor = FindFirst(ENTTYPE_DOOR))
+			pDoor->Destroy();
+		Clear();
+		return false;
+	}
+
 	// keep predicting hooked characters, based on hook position
 	for(int i = 0; i < MAX_CLIENTS; i++)
 		if(CCharacter *pChar = GetCharacterById(i))
@@ -655,117 +737,117 @@ void CGameWorld::NetObjEnd()
 			m_Core.m_apCharacters[Id] = &pChar->m_Core;
 		}
 	}
+	return true;
 }
 
-void CGameWorld::CopyWorldClean(CGameWorld *pFrom)
+bool CGameWorld::CopyWorldClean(CGameWorld *pFrom) noexcept
+{
+	return TryCopyWorld(pFrom, false);
+}
+
+bool CGameWorld::CopyWorld(CGameWorld *pFrom) noexcept
+{
+	return TryCopyWorld(pFrom, true);
+}
+
+bool CGameWorld::TryCopyWorld(CGameWorld *pFrom, bool LinkCopy) noexcept
 {
 	if(pFrom == this || !pFrom)
-		return;
-	m_IsValidCopy = false;
-
-	m_GameTick = pFrom->m_GameTick;
-	m_pCollision = pFrom->m_pCollision;
-	m_WorldConfig = pFrom->m_WorldConfig;
-	m_pTuningList = pFrom->m_pTuningList;
-	m_pMapBugs = pFrom->m_pMapBugs;
-	m_Teams = pFrom->m_Teams;
-	m_Core.m_vSwitchers = pFrom->m_Core.m_vSwitchers;
-	m_PredictedEvents = pFrom->m_PredictedEvents;
-	// delete the previous entities
-	Clear();
-	for(int i = 0; i < MAX_CLIENTS; i++)
+		return true;
+	try
 	{
-		m_apCharacters[i] = 0;
-		m_Core.m_apCharacters[i] = 0;
-	}
-	// copy and add the new entities
-	for(int Type = 0; Type < NUM_ENTTYPES; Type++)
-	{
-		for(CEntity *pEnt = pFrom->FindLast(Type); pEnt; pEnt = pEnt->TypePrev())
+		CGameWorld Candidate;
+		Candidate.m_GameTick = pFrom->m_GameTick;
+		Candidate.m_pCollision = pFrom->m_pCollision;
+		Candidate.m_WorldConfig = pFrom->m_WorldConfig;
+		Candidate.m_pTuningList = pFrom->m_pTuningList;
+		Candidate.m_pMapBugs = pFrom->m_pMapBugs;
+		Candidate.m_Teams = pFrom->m_Teams;
+		Candidate.m_Core.m_vSwitchers = pFrom->m_Core.m_vSwitchers;
+		Candidate.m_PredictedEvents = pFrom->m_PredictedEvents;
+		for(int Type = 0; Type < NUM_ENTTYPES; Type++)
 		{
-			CEntity *pCopy = nullptr;
-			if(Type == ENTTYPE_PROJECTILE)
-				pCopy = new CProjectile(*((CProjectile *)pEnt));
-			else if(Type == ENTTYPE_LASER)
-				pCopy = new CLaser(*((CLaser *)pEnt));
-			else if(Type == ENTTYPE_DRAGGER)
-				pCopy = new CDragger(*((CDragger *)pEnt));
-			else if(Type == ENTTYPE_CHARACTER)
-				pCopy = new CCharacter(*((CCharacter *)pEnt));
-			else if(Type == ENTTYPE_DOOR)
-				pCopy = new CDoor(*((CDoor *)pEnt));
-			else if(Type == ENTTYPE_PICKUP)
-				pCopy = new CPickup(*((CPickup *)pEnt));
-			else if(Type == ENTTYPE_PLASMA)
-				pCopy = new CPlasma(*((CPlasma *)pEnt));
-			else if(Type == ENTTYPE_LIGHT)
-				pCopy = new CPracticeLight(*((CPracticeLight *)pEnt));
-			if(pCopy)
+			for(CEntity *pEnt = pFrom->FindLast(Type); pEnt; pEnt = pEnt->TypePrev())
 			{
-				pCopy->m_pParent = nullptr;
-				pCopy->m_pChild = nullptr;
-				this->InsertEntity(pCopy);
+				std::unique_ptr<CEntity> pCopy;
+				if(Type == ENTTYPE_PROJECTILE)
+					pCopy.reset(new CProjectile(*static_cast<CProjectile *>(pEnt)));
+				else if(Type == ENTTYPE_LASER)
+					pCopy.reset(new CLaser(*static_cast<CLaser *>(pEnt)));
+				else if(Type == ENTTYPE_DRAGGER)
+					pCopy.reset(new CDragger(*static_cast<CDragger *>(pEnt)));
+				else if(Type == ENTTYPE_CHARACTER)
+					pCopy.reset(new CCharacter(*static_cast<CCharacter *>(pEnt)));
+				else if(Type == ENTTYPE_DOOR && !LinkCopy)
+					pCopy.reset(new CDoor(*static_cast<CDoor *>(pEnt)));
+				else if(Type == ENTTYPE_PICKUP)
+					pCopy.reset(new CPickup(*static_cast<CPickup *>(pEnt)));
+				else if(Type == ENTTYPE_PLASMA)
+					pCopy.reset(new CPlasma(*static_cast<CPlasma *>(pEnt)));
+				else if(Type == ENTTYPE_LIGHT && !LinkCopy)
+					pCopy.reset(new CPracticeLight(*static_cast<CPracticeLight *>(pEnt)));
+				if(pCopy)
+				{
+					// 只暂存源身份，准备阶段不建立源对象的反向引用。
+					if(LinkCopy)
+						pCopy->m_pParent = pEnt;
+					Candidate.InsertEntity(pCopy.get());
+					pCopy.release();
+				}
 			}
 		}
+
+		AdoptCleanWorld(Candidate);
+		if(LinkCopy)
+		{
+			if(pFrom->m_pChild)
+				pFrom->m_pChild->m_IsValidCopy = false;
+			QmCopyLinks::Attach(*pFrom, *this);
+		}
+		if(LinkCopy)
+			for(int Type = 0; Type < NUM_ENTTYPES; Type++)
+				for(CEntity *pEnt = FindFirst(Type); pEnt; pEnt = pEnt->TypeNext())
+					if(pEnt->m_pParent)
+						QmCopyLinks::Attach(*pEnt->m_pParent, *pEnt);
+		m_IsValidCopy = LinkCopy;
+		return true;
+	}
+	catch(...)
+	{
+		return false;
 	}
 }
 
-void CGameWorld::CopyWorld(CGameWorld *pFrom)
+void CGameWorld::AdoptCleanWorld(CGameWorld &Candidate) noexcept
 {
-	if(pFrom == this || !pFrom)
+	if(&Candidate == this)
 		return;
 	m_IsValidCopy = false;
-	m_pParent = pFrom;
-	if(m_pParent->m_pChild && m_pParent->m_pChild != this)
-		m_pParent->m_pChild->m_IsValidCopy = false;
-	pFrom->m_pChild = this;
-
-	m_GameTick = pFrom->m_GameTick;
-	m_pCollision = pFrom->m_pCollision;
-	m_WorldConfig = pFrom->m_WorldConfig;
-	m_pTuningList = pFrom->m_pTuningList;
-	m_pMapBugs = pFrom->m_pMapBugs;
-	m_Teams = pFrom->m_Teams;
-	m_Core.m_vSwitchers = pFrom->m_Core.m_vSwitchers;
-	m_PredictedEvents = pFrom->m_PredictedEvents;
-	// delete the previous entities
+	OnModified();
+	QmCopyLinks::Unlink(*this);
 	Clear();
-	for(int i = 0; i < MAX_CLIENTS; i++)
-	{
-		m_apCharacters[i] = nullptr;
-		m_Core.m_apCharacters[i] = nullptr;
-	}
-	// copy and add the new entities
+	m_GameTick = Candidate.m_GameTick;
+	m_pCollision = Candidate.m_pCollision;
+	m_WorldConfig = Candidate.m_WorldConfig;
+	m_pTuningList = Candidate.m_pTuningList;
+	m_pMapBugs = Candidate.m_pMapBugs;
+	m_Teams = Candidate.m_Teams;
+	m_Core.m_vSwitchers.swap(Candidate.m_Core.m_vSwitchers);
+	m_PredictedEvents.swap(Candidate.m_PredictedEvents);
 	for(int Type = 0; Type < NUM_ENTTYPES; Type++)
+		m_apFirstEntityTypes[Type] = std::exchange(Candidate.m_apFirstEntityTypes[Type], nullptr);
+	for(int Id = 0; Id < MAX_CLIENTS; Id++)
 	{
-		for(CEntity *pEnt = pFrom->FindLast(Type); pEnt; pEnt = pEnt->TypePrev())
-		{
-			CEntity *pCopy = nullptr;
-			if(Type == ENTTYPE_PROJECTILE)
-				pCopy = new CProjectile(*((CProjectile *)pEnt));
-			else if(Type == ENTTYPE_LASER)
-				pCopy = new CLaser(*((CLaser *)pEnt));
-			else if(Type == ENTTYPE_DRAGGER)
-				pCopy = new CDragger(*((CDragger *)pEnt));
-			else if(Type == ENTTYPE_CHARACTER)
-				pCopy = new CCharacter(*((CCharacter *)pEnt));
-			else if(Type == ENTTYPE_DOOR)
-				pCopy = new CDoor(*((CDoor *)pEnt));
-			else if(Type == ENTTYPE_PICKUP)
-				pCopy = new CPickup(*((CPickup *)pEnt));
-			else if(Type == ENTTYPE_PLASMA)
-				pCopy = new CPlasma(*((CPlasma *)pEnt));
-			else if(Type == ENTTYPE_LIGHT)
-				pCopy = new CPracticeLight(*((CPracticeLight *)pEnt));
-			if(pCopy)
-			{
-				pCopy->m_pParent = pEnt;
-				pEnt->m_pChild = pCopy;
-				this->InsertEntity(pCopy);
-			}
-		}
+		m_apCharacters[Id] = std::exchange(Candidate.m_apCharacters[Id], nullptr);
+		m_Core.m_apCharacters[Id] = std::exchange(Candidate.m_Core.m_apCharacters[Id], nullptr);
 	}
-	m_IsValidCopy = true;
+	for(int Type = 0; Type < NUM_ENTTYPES; Type++)
+		for(CEntity *pEnt = FindFirst(Type); pEnt; pEnt = pEnt->TypeNext())
+		{
+			pEnt->m_pGameWorld = this;
+			if(Type == ENTTYPE_CHARACTER)
+				static_cast<CCharacter *>(pEnt)->m_Core.SetCoreWorld(&m_Core, m_pCollision, &m_Teams);
+		}
 }
 
 CEntity *CGameWorld::FindMatch(int ObjId, int ObjType, const void *pObjData)
@@ -786,6 +868,8 @@ CEntity *CGameWorld::FindMatch(int ObjId, int ObjType, const void *pObjData)
 	case NETOBJTYPE_DDNETPROJECTILE:
 	{
 		CProjectileData Data = ExtractProjectileInfo(ObjType, pObjData, this, nullptr);
+		if(!Data.HasValidStart())
+			return nullptr;
 		CProjectile *pEnt = (CProjectile *)GetEntity(ObjId, ENTTYPE_PROJECTILE);
 		if(pEnt && CProjectile(this, ObjId, &Data).Match(pEnt))
 		{
@@ -797,6 +881,8 @@ CEntity *CGameWorld::FindMatch(int ObjId, int ObjType, const void *pObjData)
 	case NETOBJTYPE_DDNETLASER:
 	{
 		CLaserData Data = ExtractLaserInfo(ObjType, pObjData, this, nullptr);
+		if(!Data.HasValidPositions())
+			return nullptr;
 		if(Data.m_Type == LASERTYPE_RIFLE || Data.m_Type == LASERTYPE_SHOTGUN)
 		{
 			CLaser *pEnt = (CLaser *)GetEntity(ObjId, ENTTYPE_LASER);
@@ -835,6 +921,8 @@ CEntity *CGameWorld::FindMatch(int ObjId, int ObjType, const void *pObjData)
 	case NETOBJTYPE_DDNETPICKUP:
 	{
 		CPickupData Data = ExtractPickupInfo(ObjType, pObjData, nullptr);
+		if(!Data.HasValidPosition())
+			return nullptr;
 		CPickup *pEnt = (CPickup *)GetEntity(ObjId, ENTTYPE_PICKUP);
 		if(pEnt && CPickup(this, ObjId, &Data).Match(pEnt))
 		{
@@ -876,12 +964,28 @@ bool CGameWorld::EmulateBug(int Bug) const
 	return m_pMapBugs->Contains(Bug);
 }
 
+bool CGameWorld::TryAppendPredictedEvent(const CPredictedEvent &Event) noexcept
+{
+	if(!Event.HasValidPosition())
+		return false;
+	try
+	{
+		m_PredictedEvents.push_back(Event);
+		return true;
+	}
+	catch(...)
+	{
+		// 事件是值数据；扩容失败只丢弃本次记录，保留已有队列供后续帧使用。
+		return false;
+	}
+}
+
 void CGameWorld::CreatePredictedEvent(const CPredictedEvent &NewEvent)
 {
 	// 只认世界配置：cl_predict_events 与服务器的 PREDICT_EVENTS 能力已经在
 	// m_WorldConfig.m_PredictEvents 里合成过一次。快速练习会为分支世界单独打开
 	// 这个开关（分支不消费服务器事件），这里再查一遍全局配置会把它挡掉。
-	if(!m_WorldConfig.m_PredictEvents)
+	if(!NewEvent.HasValidPosition() || !m_WorldConfig.m_PredictEvents)
 		return;
 
 	// prediction is ran multiple times per tick, check if event already exists
@@ -892,7 +996,7 @@ void CGameWorld::CreatePredictedEvent(const CPredictedEvent &NewEvent)
 
 	if(It == m_PredictedEvents.end())
 	{
-		m_PredictedEvents.push_back(NewEvent);
+		(void)TryAppendPredictedEvent(NewEvent);
 	}
 	else if(NewEvent.m_EventId == NETEVENTTYPE_SOUNDWORLD && !It->m_Handled)
 	{
@@ -940,13 +1044,15 @@ void CGameWorld::CreateHandledPredictedSound(vec2 Pos, int SoundId, int Id)
 		return;
 
 	CPredictedEvent Event(NETEVENTTYPE_SOUNDWORLD, Pos, Id, GameTick(), SoundId);
+	if(!Event.HasValidPosition())
+		return;
 	Event.m_Handled = true;
 	const auto It = std::find_if(
 		m_PredictedEvents.begin(),
 		m_PredictedEvents.end(),
 		[Event](const CPredictedEvent &Existing) { return QmPredictedEventMatchesForCreation(Existing, Event); });
 	if(It == m_PredictedEvents.end())
-		m_PredictedEvents.push_back(Event);
+		(void)TryAppendPredictedEvent(Event);
 }
 
 void CGameWorld::CreatePredictedExplosionEvent(vec2 Pos, int Id)
@@ -962,17 +1068,13 @@ void CGameWorld::CreatePredictedHammerHitEvent(vec2 Pos, int Id, int TargetId)
 		return;
 
 	CPredictedEvent Event(NETEVENTTYPE_HAMMERHIT, Pos, Id, GameTick(), TargetId);
+	if(!Event.HasValidPosition())
+		return;
 	// 预测在同一 tick 内可能重复运行，位置修正不应把同一次命中拆成多个粒子事件。
 	const auto It = std::find_if(
 		m_PredictedEvents.begin(),
 		m_PredictedEvents.end(),
-		[Event](const CPredictedEvent &Existing) {
-			return (Existing.m_EventId == Event.m_EventId && Existing.m_Id == Event.m_Id &&
-				       Existing.m_Tick == Event.m_Tick && Existing.m_ExtraInfo == Event.m_ExtraInfo) ||
-			       (Existing.m_EventId == Event.m_EventId && Existing.m_Handled && Existing.m_Id == Event.m_Id &&
-				       Existing.m_ExtraInfo == Event.m_ExtraInfo && Event.m_Tick >= Existing.m_Tick &&
-				       Event.m_Tick - Existing.m_Tick <= 1 && QmPredictedEventPositionsMatch(Event.m_EventId, Existing.m_Pos, Event.m_Pos));
-		});
+		[Event](const CPredictedEvent &Existing) { return QmPredictedHammerHitMatchesForCreation(Existing, Event); });
 	if(It != m_PredictedEvents.end())
 	{
 		// 命中身份由攻击者、目标和 tick 决定；仅在粒子尚未播放时

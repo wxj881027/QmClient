@@ -241,11 +241,8 @@ private:
 	int CurrentLocalPracticeId() const;
 	bool ResolvePracticeRoles(int &LocalClientId, int &DummyClientId) const;
 	bool IsPracticeServerPauseActive() const;
-	void ShiftPracticeWorldTicks(int TickDelta);
-	void ShiftPracticeGunTicks(int TickDelta);
-	// 只平移世界实体与开关的绝对 tick；/restart 从入口快照恢复时使用，
-	// 不碰 LocalWorld 轨迹、事件屏障和当前练习会话的命令状态。
-	void ShiftPracticeWorldEntityTicks(CGameWorld &World, int TickDelta);
+	bool ShiftPracticeWorldTicks(int64_t TickDelta);
+	static bool ShiftPracticeGunTicks(std::vector<SPracticeGun> &vGuns, int64_t TickDelta, QmTickShift::EMode Mode);
 	// 旁观时 m_PredictedWorld 归服务器预测所有；这里直接推进分支世界，
 	// 用中性输入继续计时、机关与轨迹采样，退出旁观无需追赶。
 	void TickPracticeWorldDuringSpectate();
@@ -357,12 +354,12 @@ private:
 	void ResetPracticeTimelineState();
 	// 把一份分支世界整体铺到渲染/预测读取面：两个预测世界、角色核心与预测 tick。
 	// 启用、延迟接入分身、进入旁观、服务器暂停冻结与复位都走同一入口。
-	void PublishPracticeWorldSnapshot(CGameWorld &World, int LocalClientId, int DummyClientId);
+	bool PublishPracticeWorldSnapshot(CGameWorld &World, int LocalClientId, int DummyClientId);
 	void PublishPracticeWorldState();
 	// 两条预测循环共用的预测状态发布。主循环追赶真实 tick，视觉循环外推快速输入，
 	// 两者必须写出同一套 m_PrevPredictedWorld / m_PredictedChar / m_aClients 状态，
 	// 否则镜头插值、分身预测和位置回查会在两条循环之间跳变。
-	void PublishPracticePredictionBeforeStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, bool CopyWorldToPredicted, int LocalClientId);
+	bool PublishPracticePredictionBeforeStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, bool CopyWorldToPredicted, int LocalClientId);
 	void PublishPracticePredictionAfterStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, int LocalClientId);
 	void PublishPracticePredictedPositions(CGameWorld &World, int Tick);
 	// 新预测 tick 的跳跃/钩子反馈。本体与分身走同一入口，按输入槽位去重。

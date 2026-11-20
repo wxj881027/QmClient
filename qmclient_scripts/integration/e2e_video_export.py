@@ -78,6 +78,7 @@ def probe_duration(video: Path) -> float:
 		capture_output=True,
 		text=True,
 		check=False,
+		timeout=30,
 	)
 	if result.returncode != 0:
 		raise AssertionError(f"ffprobe 无法读取 {video}: {result.stderr.strip()}")
@@ -100,10 +101,11 @@ def probe_streams(video: Path) -> list[dict[str, object]]:
 	if ffprobe is None:
 		raise SkipTest("ffprobe 不可用，无法校验音视频流")
 	result = subprocess.run(
-		[ffprobe, "-v", "error", "-show_entries", "stream=codec_type,duration,nb_frames,r_frame_rate,avg_frame_rate,channels", "-of", "json", str(video)],
+		[ffprobe, "-v", "error", "-show_entries", "stream=codec_type,duration,nb_frames,r_frame_rate,avg_frame_rate,channels,sample_rate", "-of", "json", str(video)],
 		capture_output=True,
 		text=True,
 		check=False,
+		timeout=30,
 	)
 	if result.returncode != 0:
 		raise AssertionError(f"ffprobe 无法读取 {video}: {result.stderr.strip()}")
@@ -123,6 +125,7 @@ def probe_stream_end(video: Path, selector: str) -> float:
 		capture_output=True,
 		text=True,
 		check=False,
+		timeout=30,
 	)
 	if result.returncode != 0:
 		raise AssertionError(f"ffprobe 无法读取 {video} 的 {selector} 包: {result.stderr.strip()}")
@@ -176,20 +179,25 @@ def scenario_video_export_range(env: ProcessEnvironment) -> None:
 
 
 def scenario_video_export_noninteger_fps_audio_sync(env: ProcessEnvironment) -> None:
-	"""144 FPS 导出仍写出音频且音画时长一致，验证非整数帧率下时间轴推进可用。
+	"""144 FPS 导出在混音与编码采样率相同和不同时都应保持音画同步。"""
+	fixture = os.environ.get("QM_E2E_DEMO")
+	if not fixture or not Path(fixture).is_file():
+		raise SkipTest("缺少隔离 demo fixture：设置 QM_E2E_DEMO")
+	demo = Path(fixture).resolve()
+	# 100 kHz 不是 AAC 支持的采样率，录制必须先降低采样率。
+	for mix_rate in (48000, 100000):
+		check_noninteger_fps_audio_sync(env, demo, mix_rate)
 
-	逐帧样本余数导致的长期漂移由 VideoAudioTimeline 单元测试覆盖；这里验证真实
-	录制链路在非整数帧率下同时产出音视频流，且不会因时间轴改动整体中断。
-	"""
-	demo = demo_path()
-	if demo is None:
-		raise SkipTest("缺少 demo：设置 QM_E2E_DEMO 或提供测试 demo")
-	name = "qme2e_noninteger_fps"
+
+def check_noninteger_fps_audio_sync(env: ProcessEnvironment, demo: Path, mix_rate: int) -> None:
+	name = f"qme2e_noninteger_fps_{mix_rate}"
 	expected_seconds = 12
 	client = start_demo_client(
 		env,
 		[
 			"snd_enable 1",
+			f"snd_rate {mix_rate}",
+			"cl_video_sound_enable 1",
 			"demo_speed 8",
 			f"cl_video_recorder_fps {NONINTEGER_FPS}",
 			"qm_video_segment_seconds 0",
@@ -198,13 +206,22 @@ def scenario_video_export_noninteger_fps_audio_sync(env: ProcessEnvironment) -> 
 			f"qm_video_width {OUTPUT_WIDTH}",
 			f"qm_video_height {OUTPUT_HEIGHT}",
 		],
+		extra_env={"SDL_AUDIO_DRIVER": "dummy"},
 	)
 	try:
 		client.command(f'play "{demo}"')
 		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
 		client.command(f"start_video {name} {RANGE_START_SECONDS} {RANGE_START_SECONDS + expected_seconds}")
-		client.wait_for(lambda line: "Audio recording enabled" in line, "音频录制已启用", 60)
-		client.wait_for(lambda line: "Concatenated" in line and f"{name}.mkv" in line, "导出完成", 300)
+		audio_start = client.wait_for(lambda line: "Audio recording enabled" in line, "音频录制已启用", 60)
+		result = client.wait_for(
+			lambda line: ("Concatenated" in line and f"{name}.mkv" in line) or "Could not convert audio frame" in line,
+			f"{mix_rate} Hz 混音导出完成",
+			300,
+		)
+		if "Concatenated" not in result:
+			raise AssertionError(f"{mix_rate} Hz 混音导出失败: {result}")
+		if f"mixer {mix_rate} Hz" not in audio_start:
+			raise AssertionError(f"客户端未使用 {mix_rate} Hz 混音: {audio_start}")
 		client.command("quit")
 		if client.wait_for_exit(30) != 0:
 			raise AssertionError("客户端未正常退出")
@@ -218,6 +235,9 @@ def scenario_video_export_noninteger_fps_audio_sync(env: ProcessEnvironment) -> 
 	audio_streams = [stream for stream in streams if stream.get("codec_type") == "audio"]
 	if len(video_streams) != 1 or len(audio_streams) != 1:
 		raise AssertionError(f"预期一条视频流和一条音频流，实际 {streams}")
+	encoded_rate = int(audio_streams[0]["sample_rate"])
+	if mix_rate == 100000 and encoded_rate >= mix_rate:
+		raise AssertionError(f"预期 AAC 采样率低于 {mix_rate} Hz，实际 {encoded_rate} Hz")
 	# avg_frame_rate 是 matroska DefaultDuration/封装器写入的权威帧率；r_frame_rate 由 FFmpeg
 	# 按包时长反推，非整除帧间隔下可能给出非记录值，因此只校验平均帧率。
 	if video_streams[0].get("avg_frame_rate") != f"{NONINTEGER_FPS}/1":
@@ -480,6 +500,55 @@ def scenario_video_export_failed_start_preserves_output(env: ProcessEnvironment)
 		client.stop()
 
 
+def scenario_video_export_segment_failed_start_keeps_progress(env: ProcessEnvironment) -> None:
+	"""分段录制无法打开临时输出时，旧段不能被登记为本次完成。"""
+	fixture = os.environ.get("QM_E2E_DEMO")
+	if not fixture or not Path(fixture).is_file():
+		raise SkipTest("缺少隔离 demo fixture：设置 QM_E2E_DEMO")
+	demo = Path(fixture).resolve()
+	name = "qme2e_segment_start_fail"
+	client = start_demo_client(env, [
+		"demo_speed 1",
+		"qm_video_segment_seconds 0",
+		"qm_video_encoder libx264",
+		"qm_video_container mkv",
+		f"qm_video_width {OUTPUT_WIDTH}",
+		f"qm_video_height {OUTPUT_HEIGHT}",
+		"cl_show_welcome 1",
+	])
+	try:
+		client.command(f'play "{demo}"')
+		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
+		command = f"start_video {name} {RANGE_START_SECONDS} {RANGE_END_SECONDS}"
+		client.command(command)
+		client.wait_for(lambda line: "Concatenated" in line and f"{name}.mkv" in line, "生成旧段和成片", 180)
+
+		progress = env.path("videos", f"{name}.progress")
+		previous_progress = progress.read_bytes()
+		segment_name = f"{name}_p001.mkv"
+		env.path("videos", f"{segment_name}.recording").mkdir()
+		# 改变输出尺寸，让续渲重新录制同名片段。
+		client.command(f"qm_video_width {OUTPUT_WIDTH - 16}")
+		client.command(command)
+		client.wait_for(
+			lambda line: "Could not open temporary file" in line and segment_name in line,
+			"分段录制无法打开临时输出",
+			60,
+		)
+		client.wait_for(
+			lambda line: line.startswith("client: disconnecting.") and "Failed to start video recording" in line,
+			"录制失败后的回放收尾",
+			30,
+		)
+		if progress.read_bytes() != previous_progress:
+			raise AssertionError("启动失败后把旧段写入了当前导出进度")
+		client.command("quit")
+		if client.wait_for_exit(30) != 0:
+			raise AssertionError("客户端未正常退出")
+	finally:
+		client.stop()
+
+
 def scenario_video_export_display_snapshot_and_resume(env: ProcessEnvironment) -> None:
 	"""导出中改显示配置不改变当前任务快照；重启后指纹失效并从第一段重渲。"""
 	demo = demo_path()
@@ -594,6 +663,63 @@ def scenario_video_export_audio_failure_keeps_segment_pending(env: ProcessEnviro
 	assert_video(env.path("videos", f"{name}.mkv"), 2)
 
 
+def scenario_video_export_conversion_failure_keeps_segment_pending(env: ProcessEnvironment) -> None:
+	"""转换线程失败可退出，旧成片保留；取消故障后从待渲段重试。"""
+	# 新场景只接受显式 fixture，不回退读取真实用户目录。
+	fixture = os.environ.get("QM_E2E_DEMO")
+	if not fixture or not Path(fixture).is_file():
+		raise SkipTest("缺少隔离 demo fixture：设置 QM_E2E_DEMO")
+	demo = Path(fixture).resolve()
+	name = "qme2e_convert_fail"
+	video = env.path("videos", f"{name}.mkv")
+	video.parent.mkdir(parents=True, exist_ok=True)
+	previous = b"previous export must survive failed frame conversion"
+	video.write_bytes(previous)
+	config = [
+		"demo_speed 1",
+		"qm_video_segment_seconds 0",
+		"qm_video_encoder libx264",
+		"qm_video_container mkv",
+		"qm_video_convert_threads 3",
+		"qm_video_queue_frames 2",
+		f"qm_video_width {OUTPUT_WIDTH}",
+		f"qm_video_height {OUTPUT_HEIGHT}",
+	]
+	client = start_demo_client(env, config, extra_env={"QMCLIENT_TEST_VIDEO_CONVERSION_FAIL": "1"})
+	try:
+		client.command(f'play "{demo}"')
+		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
+		client.command(f"start_video {name} 2 4")
+		client.wait_for(lambda line: "Could not convert video frame:" in line, "注入视频转换失败", 60)
+		client.wait_for(lambda line: "Segment 1 recording failed" in line, "失败段保持待渲且工作线程已回收", 60)
+		client.command("quit")
+		if client.wait_for_exit(30) != 0:
+			raise AssertionError("转换失败后客户端未正常退出")
+	finally:
+		client.stop()
+	if video.read_bytes() != previous:
+		raise AssertionError("视频转换失败改写了同名旧成片")
+	if list(video.parent.glob(f"{name}*.recording")):
+		raise AssertionError("视频转换失败遗留临时输出")
+	progress = env.path("videos", f"{name}.progress")
+	if progress.exists() and "segment_0_done=1" in progress.read_text(encoding="utf-8"):
+		raise AssertionError("视频转换失败仍把该段标记为完成")
+
+	client = start_demo_client(env, config)
+	try:
+		client.command(f'play "{demo}"')
+		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
+		client.command(f"start_video {name} 2 4")
+		client.wait_for(lambda line: "starting at segment 1/1" in line, "失败段从头重试", 60)
+		client.wait_for(lambda line: "Concatenated" in line and f"{name}.mkv" in line, "重试导出完成", 180)
+		client.command("quit")
+		if client.wait_for_exit(30) != 0:
+			raise AssertionError("重试后客户端未正常退出")
+	finally:
+		client.stop()
+	assert_video(video, 2)
+
+
 def probe_video_dimensions(video: Path) -> tuple[int, int]:
 	"""读取成片的像素尺寸，用于验证输出分辨率（离屏超采样导出）。"""
 	ffprobe = shutil.which("ffprobe")
@@ -674,6 +800,76 @@ def scenario_video_export_offscreen_fsaa(env: ProcessEnvironment) -> None:
 			raise AssertionError(f"离屏导出帧数 {nb_frames} 偏离 2s@60fps 预期（异步读回生命周期缺陷）")
 
 
+def scenario_video_export_vulkan_offscreen_fsaa(env: ProcessEnvironment) -> None:
+	"""启用窗口和导出 4x FSAA 后，从 Vulkan 离屏 resolve 图完整导出视频。"""
+	fixture = os.environ.get("QM_E2E_DEMO")
+	if not fixture or not Path(fixture).is_file():
+		raise SkipTest("缺少隔离 demo fixture，请设置 QM_E2E_DEMO")
+	demo = Path(fixture).resolve()
+	name = "qme2e_vulkan_offscreen_fsaa"
+	settings = env.path("qmclient", "settings.cfg")
+	settings.parent.mkdir(parents=True, exist_ok=True)
+	settings.write_text('qm_graphics_mode -1\ngfx_backend "Vulkan"\ngfx_fsaa_samples 4\n', encoding="utf-8")
+	client = start_demo_client(
+		env,
+		[
+			"qm_video_fsaa 4",
+			"cl_video_recorder_fps 60",
+			"demo_speed 8",
+			"qm_video_segment_seconds 0",
+			"qm_video_encoder libx264",
+			"qm_video_container mp4",
+			f"qm_video_width {OUTPUT_WIDTH}",
+			f"qm_video_height {OUTPUT_HEIGHT}",
+		],
+	)
+	try:
+		swapchain_fsaa = ""
+
+		def collect_graphics_startup(line: str) -> bool:
+			nonlocal swapchain_fsaa
+			if "swapchain fsaa requested=" in line:
+				swapchain_fsaa = line
+			return "GPU version:" in line
+
+		version = client.wait_for(collect_graphics_startup, "图形初始化完成", 30)
+		if "GPU version: Vulkan " not in version:
+			raise SkipTest(f"客户端启动时未启用 Vulkan（{version}）")
+		if not swapchain_fsaa:
+			raise AssertionError("Vulkan 启动日志缺少交换链采样数")
+		if "selected=4 multisample=1" not in swapchain_fsaa:
+			raise SkipTest(f"Vulkan 交换链未启用 4x FSAA（{swapchain_fsaa}）")
+		client.command(f'play "{demo}"')
+		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
+		client.command(f"start_video {name} {RANGE_START_SECONDS} {RANGE_END_SECONDS}")
+		plan = client.wait_for(lambda line: "Offscreen export: rendering" in line, "Vulkan 离屏导出已启动", 60)
+		if "(4x multisampling)" not in plan:
+			raise AssertionError(f"Vulkan 离屏导出未启用 4x 采样（{plan}）")
+		result = client.wait_for(
+			lambda line: ("Concatenated" in line and f"{name}.mp4" in line)
+			or "Segment 1 recording failed" in line
+			or "capturing from the window framebuffer" in line,
+			"Vulkan 离屏导出结束",
+			180,
+		)
+		if "Concatenated" not in result:
+			raise AssertionError(f"Vulkan 离屏导出失败（{result}）")
+		client.command("quit")
+		if client.wait_for_exit(30) != 0:
+			raise AssertionError("客户端未正常退出")
+	finally:
+		client.stop()
+
+	video = env.path("videos", f"{name}.mp4")
+	assert_video(video, RANGE_END_SECONDS - RANGE_START_SECONDS)
+	dimensions = probe_video_dimensions(video)
+	if dimensions != (OUTPUT_WIDTH, OUTPUT_HEIGHT):
+		raise AssertionError(f"Vulkan 离屏成片尺寸不符（{dimensions}）")
+	frames = next((stream.get("nb_frames") for stream in probe_streams(video) if stream.get("codec_type") == "video"), None)
+	if frames in (None, "N/A") or not 118 <= int(frames) <= 122:
+		raise AssertionError(f"Vulkan 离屏成片帧数偏离 2s@60fps 预期（{frames}）")
+
+
 def scenario_video_export_upscale_output(env: ProcessEnvironment) -> None:
 	"""输出大于窗口：按输出尺寸离屏渲染（真分辨率导出），成片尺寸就是输出尺寸。
 
@@ -718,9 +914,11 @@ def scenario_video_export_upscale_output(env: ProcessEnvironment) -> None:
 
 E2E_TESTS = {
 	"video_export_failed_start_preserves_output": scenario_video_export_failed_start_preserves_output,
+	"video_export_segment_failed_start_keeps_progress": scenario_video_export_segment_failed_start_keeps_progress,
 	"video_export_noninteger_fps_audio_sync": scenario_video_export_noninteger_fps_audio_sync,
 	"video_export_display_snapshot_and_resume": scenario_video_export_display_snapshot_and_resume,
 	"video_export_audio_failure_keeps_segment_pending": scenario_video_export_audio_failure_keeps_segment_pending,
+	"video_export_conversion_failure_keeps_segment_pending": scenario_video_export_conversion_failure_keeps_segment_pending,
 	"video_export_offscreen_fsaa": scenario_video_export_offscreen_fsaa,
 	"video_export_range": scenario_video_export_range,
 	"video_export_segmented_range": scenario_video_export_segmented_range,
@@ -728,6 +926,7 @@ E2E_TESTS = {
 	"video_export_resume_truncated_segment": scenario_video_export_resume_truncated_segment,
 	"video_export_range_rejection_and_restart": scenario_video_export_range_rejection_and_restart,
 	"video_export_upscale_output": scenario_video_export_upscale_output,
+	"video_export_vulkan_offscreen_fsaa": scenario_video_export_vulkan_offscreen_fsaa,
 }
 
 

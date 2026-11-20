@@ -97,7 +97,7 @@ namespace qm_finish_summary
 		}
 
 	public:
-		void Update(uint64_t Id, double Now, bool FullyExpanded, int MotionLevel, const TNumberTargets &Targets, int Stars = -1, bool RankGain = false)
+		void Update(uint64_t Id, double Now, bool FullyExpanded, int MotionLevel, const TNumberTargets &Targets, int Stars = -1, bool RankGain = false, std::optional<int64_t> FirstFinishBasePoints = std::nullopt)
 		{
 			if(!m_Valid || m_Id != Id)
 			{
@@ -142,6 +142,13 @@ namespace qm_finish_summary
 				else if(Number.m_Target != Targets[i])
 				{
 					Number.m_From = Number.Value(m_Now);
+					if(Number.m_Target < 0.0 && FirstFinishBasePoints)
+					{
+						if(i == static_cast<size_t>(ENumber::POINTS))
+							Number.m_From = static_cast<double>(*FirstFinishBasePoints);
+						else if(i == static_cast<size_t>(ENumber::GAIN))
+							Number.m_From = Targets[i];
+					}
 					Number.m_ColorFrom = Number.ColorProgress(m_Now);
 					Number.m_Target = Targets[i];
 					Number.m_Start = m_Settled ? m_Now : std::max(m_Now, m_Start + NumberStart(static_cast<ENumber>(i)));

@@ -61,3 +61,58 @@ TEST(QmMarkdown, NormalizesLineEndingsAndNumbers)
 	ASSERT_EQ(vGlyphs.size(), 3u);
 	EXPECT_EQ(vGlyphs[2], "🙂");
 }
+
+TEST(QmMarkdown, ReadsOnlyTheExplicitByteBudgetWithoutTerminator)
+{
+	const char aText[] = {'a', 'b', 'c'};
+	const auto vBlocks = qm_md::Parse(aText, {.m_MaxBytes = sizeof(aText)});
+	ASSERT_EQ(vBlocks.size(), 1u);
+	ASSERT_EQ(vBlocks[0].m_vSpans.size(), 1u);
+	EXPECT_EQ(vBlocks[0].m_vSpans[0].m_Text, "abc");
+}
+
+TEST(QmMarkdown, ZeroByteBudgetProducesNoBlocks)
+{
+	const char Text = 'x';
+	EXPECT_TRUE(qm_md::Parse(&Text, {.m_MaxBytes = 0}).empty());
+}
+
+TEST(QmMarkdown, SuccessfulEmptyParseReplacesPreviousOutput)
+{
+	auto vBlocks = qm_md::Parse("kept");
+	ASSERT_FALSE(vBlocks.empty());
+	EXPECT_TRUE(qm_md::TryParse(nullptr, vBlocks));
+	EXPECT_TRUE(vBlocks.empty());
+	vBlocks = qm_md::Parse("kept again");
+	EXPECT_TRUE(qm_md::TryParse("", vBlocks));
+	EXPECT_TRUE(vBlocks.empty());
+}
+
+TEST(QmMarkdown, TruncatedInputPreservesOnlyItsBudgetedPrefix)
+{
+	const auto vBlocks = qm_md::Parse("# title\nignored", {.m_MaxBytes = 7});
+	ASSERT_EQ(vBlocks.size(), 1u);
+	EXPECT_EQ(vBlocks[0].m_Kind, qm_md::EBlockKind::HEADING1);
+	ASSERT_EQ(vBlocks[0].m_vSpans.size(), 1u);
+	EXPECT_EQ(vBlocks[0].m_vSpans[0].m_Text, "title");
+}
+
+TEST(QmMarkdown, SettingsButtonsAndTextShareTheBlockBudget)
+{
+	const auto vBlocks = qm_md::Parse("text [[settings:one|first]][[settings:two|second]]\nignored", {.m_MaxBlocks = 2});
+	ASSERT_EQ(vBlocks.size(), 2u);
+	EXPECT_EQ(vBlocks[0].m_Kind, qm_md::EBlockKind::PARAGRAPH);
+	EXPECT_EQ(vBlocks[1].m_SettingsCardId, "one");
+}
+
+TEST(QmMarkdown, ResultOwnsTextAfterInputChanges)
+{
+	std::string Markdown = "[original](https://example.test)";
+	std::vector<qm_md::SBlock> vBlocks;
+	ASSERT_TRUE(qm_md::TryParse(Markdown.c_str(), vBlocks));
+	Markdown.assign("replaced");
+	ASSERT_EQ(vBlocks.size(), 1u);
+	ASSERT_EQ(vBlocks[0].m_vSpans.size(), 1u);
+	EXPECT_EQ(vBlocks[0].m_vSpans[0].m_Text, "original");
+	EXPECT_EQ(vBlocks[0].m_vSpans[0].m_Link, "https://example.test");
+}

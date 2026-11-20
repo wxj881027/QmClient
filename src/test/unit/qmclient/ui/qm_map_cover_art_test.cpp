@@ -179,6 +179,50 @@ TEST(QmMapCoverArt, ComposeShowsShadedThumbnailAndTransparentTail)
 	Output.Free();
 }
 
+TEST(QmMapCoverArt, ThumbnailRoundingPreservesTheStraightTopAndBottomEdges)
+{
+	const int aaSizesAndRadii[][3] = {{167, 72, 7}, {278, 120, 9}};
+	for(const auto &[Width, Height, Radius] : aaSizesAndRadii)
+	{
+		SCOPED_TRACE(Width);
+		CImageInfo Source = SolidImage(4, 2, 255, 255, 255);
+		CImageInfo Output;
+		auto Art = DefaultArt();
+		Art.m_CornerRadius = static_cast<float>(Radius);
+		const bool Success = QmMapCover::Compose(Source, Width, Height, Art, Output);
+		Source.Free();
+		ASSERT_TRUE(Success);
+		for(const int Y : {0, Height - 1})
+		{
+			SCOPED_TRACE(Y);
+			EXPECT_EQ(PixelAt(Output, 0, Y)[3], 0);
+			EXPECT_EQ(PixelAt(Output, Width / 2, Y)[3], 255);
+		}
+		Output.Free();
+	}
+}
+
+TEST(QmMapCoverArt, TailStartsAtTheCroppedThumbnailEdge)
+{
+	CImageInfo Source = SolidImage(12, 4, 0, 0, 0);
+	for(size_t Y = 0; Y < Source.m_Height; ++Y)
+		for(size_t X = 0; X < Source.m_Width; ++X)
+			Source.m_pData[(Y * Source.m_Width + X) * 3] = static_cast<uint8_t>(X * 20);
+	CImageInfo Output;
+	auto Art = DefaultArt();
+	Art.m_ImageFraction = 2.0f / 3.0f;
+	const bool Success = QmMapCover::Compose(Source, 12, 8, Art, Output);
+	Source.Free();
+	ASSERT_TRUE(Success);
+	// 宽源图的两侧会被裁掉。拖尾第一列的红色必须延续缩略图实际保留的边缘。
+	const auto *pLastThumbnail = PixelAt(Output, 7, 4);
+	const auto *pFirstTail = PixelAt(Output, 8, 4);
+	EXPECT_NE(PixelAt(Output, 0, 4)[0], pLastThumbnail[0]);
+	EXPECT_EQ(pFirstTail[0], pLastThumbnail[0]);
+	EXPECT_GT(pFirstTail[3], 0);
+	Output.Free();
+}
+
 TEST(QmMapCoverArt, ComposeTailEndsFullyTransparentForEveryRow)
 {
 	// 列表、详情和最窄拖尾在不同地图种子下都必须完全消失，不能只检查中间一行。
@@ -225,6 +269,29 @@ TEST(QmMapCoverArt, FullImageFlattensTranslucentSourcePixels)
 	EXPECT_EQ(PixelAt(Output, 1, 0)[0], 200);
 	Output.Free();
 	Source.Free();
+}
+
+TEST(QmMapCoverArt, FullImageResamplingIgnoresTransparentSourceColor)
+{
+	uint8_t aPixels[] = {255, 0, 255, 0, 0, 128, 0, 255};
+	CImageInfo Source;
+	Source.m_Width = 2;
+	Source.m_Height = 1;
+	Source.m_Format = CImageInfo::FORMAT_RGBA;
+	Source.m_pData = aPixels;
+	CImageInfo Output;
+	auto Art = DefaultArt();
+	Art.m_ImageFraction = 1.0f;
+	Art.m_Shade = 1.0f;
+	Art.m_CornerRadius = 0.0f;
+	ASSERT_TRUE(QmMapCover::Compose(Source, 3, 1, Art, Output));
+	// 中间像素只收到右边不透明像素的一半颜色。
+	const auto *pMiddle = PixelAt(Output, 1, 0);
+	EXPECT_EQ(pMiddle[0], 0);
+	EXPECT_EQ(pMiddle[1], 64);
+	EXPECT_EQ(pMiddle[2], 0);
+	EXPECT_EQ(pMiddle[3], 255);
+	Output.Free();
 }
 
 TEST(QmMapCoverArt, SummaryBlurSpreadsMoreDetailOnRightAndPreservesColorAndOpacity)

@@ -154,13 +154,10 @@ static void SetTilelayerIndices(const std::shared_ptr<CLayerTiles> &pLayer, cons
 	}
 }
 
-void CEditorMap::AddTileArt(CImageInfo &&Image, const char *pFilename, bool IgnoreHistory)
+bool CEditorMap::AddTileArt(CImageInfo &&Image, const char *pFilename, bool IgnoreHistory)
 {
 	char aTileArtFilename[IO_MAX_PATH_LENGTH];
 	IStorage::StripPathAndExtension(pFilename, aTileArtFilename, sizeof(aTileArtFilename));
-
-	std::shared_ptr<CLayerGroup> pGroup = NewGroup();
-	str_copy(pGroup->m_aName, aTileArtFilename);
 
 	int ImageCount = m_vpImages.size();
 
@@ -171,8 +168,12 @@ void CEditorMap::AddTileArt(CImageInfo &&Image, const char *pFilename, bool Igno
 	{
 		Image.Free();
 		Editor()->ShowFileDialogError(Localize("Could not generate the tile art image.", "Editor"));
-		return;
+		return false;
 	}
+
+	std::shared_ptr<CLayerGroup> pGroup = NewGroup();
+	str_copy(pGroup->m_aName, aTileArtFilename);
+
 	char aImageName[IO_MAX_PATH_LENGTH];
 	for(size_t i = 0; i < vColorImages.size(); i++)
 	{
@@ -189,6 +190,7 @@ void CEditorMap::AddTileArt(CImageInfo &&Image, const char *pFilename, bool Igno
 
 	Image.Free();
 	OnModify();
+	return true;
 }
 
 void CEditor::TileartCheckColors()
@@ -217,6 +219,7 @@ bool CEditor::CallbackAddTileart(const char *pFilepath, int StorageType, void *p
 {
 	CEditor *pEditor = (CEditor *)pUser;
 
+	pEditor->m_TileartImageInfo.Free();
 	if(!pEditor->Graphics()->LoadPng(pEditor->m_TileartImageInfo, pFilepath, StorageType))
 	{
 		pEditor->ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), pFilepath);

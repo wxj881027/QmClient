@@ -2,6 +2,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_GHOST_FREEZE_BAR_H
 
 #include <algorithm>
+#include <cstdint>
 #include <vector>
 
 // 查看模式虚影的冻结进度条策略。
@@ -99,7 +100,8 @@ inline float QmGhostFreezeProgress(const std::vector<SGhostFreezeSpan> &vSpans, 
 			continue;
 		if(Span.m_EndTick <= Span.m_StartTick)
 			return -1.0f;
-		const float Progress = (float)(Span.m_EndTick - Tick) / (float)(Span.m_EndTick - Span.m_StartTick);
+		const float Progress = static_cast<float>(static_cast<int64_t>(Span.m_EndTick) - Tick) /
+				       static_cast<float>(static_cast<int64_t>(Span.m_EndTick) - Span.m_StartTick);
 		return std::clamp(Progress, 0.0f, 1.0f);
 	}
 	return -1.0f;

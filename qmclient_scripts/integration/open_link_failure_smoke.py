@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""隔离 Unix 链接启动器，验证真实生产接口的 exec 失败与恢复路径。"""
+"""隔离 Unix 打开器，验证 exec 失败、异步返回和子进程回收。"""
 
 from __future__ import annotations
 
@@ -17,13 +17,17 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 LINK = "https://example.invalid/path?value=two words;$(unused)"
 
 
-def run_probe(binary: Path, directory: Path, mode: str, target: str, expected_exit: int) -> None:
+def run_probe(binary: Path, directory: Path, mode: str, target: str, wait_for_return: bool = False) -> None:
 	environment = os.environ.copy()
 	environment["PATH"] = str(directory)
+	command = [str(binary), "--qm-test-open-link", mode, target]
+	if wait_for_return:
+		command.append("wait-for-return")
 	process = subprocess.Popen(
-		[str(binary), "--qm-test-open-link", mode, target, str(expected_exit)],
+		command,
 		cwd=directory,
 		env=environment,
+		stdin=subprocess.DEVNULL,
 		stdout=subprocess.PIPE,
 		stderr=subprocess.PIPE,
 		text=True,
@@ -51,7 +55,11 @@ def run_probe(binary: Path, directory: Path, mode: str, target: str, expected_ex
 	(directory / "probe.stderr.log").write_text(stderr, encoding="utf-8")
 	if timed_out:
 		raise AssertionError(f"launcher probe timed out: {stdout}\n{stderr}")
-	if process.returncode != 0 or f"launcher-exit={expected_exit}" not in stdout:
+	if process.returncode == 77:
+		raise RuntimeError("launcher probe requires waitid with WNOWAIT")
+	if "launcher-returned-to-probe" in stderr:
+		raise AssertionError(f"launcher returned to the probe after exec failed: {stderr}")
+	if process.returncode != 0 or "launcher-reaped" not in stdout.splitlines():
 		raise AssertionError(f"launcher probe failed ({process.returncode}): {stdout}\n{stderr}")
 
 
@@ -59,32 +67,33 @@ def launcher_path(directory: Path) -> Path:
 	return directory / ("xdg-open" if sys.platform.startswith("linux") else "open")
 
 
-def install_launcher(directory: Path, executable: bool) -> Path:
+def install_launcher(directory: Path, executable: bool, wait_for_return: bool = False) -> Path:
 	marker = directory / "launcher.argument.txt"
 	launcher = launcher_path(directory)
-	launcher.write_text(
-		f"#!/bin/sh\nprintf '%s' \"$1\" > {shlex.quote(str(marker))}\nexit 0\n",
-		encoding="utf-8",
-	)
+	script = "#!/bin/sh\n"
+	if wait_for_return:
+		script += "read -r line || :\n"
+	script += f"printf '%s' \"$1\" > {shlex.quote(str(marker))}\nexit 0\n"
+	launcher.write_text(script, encoding="utf-8")
 	launcher.chmod(0o700 if executable else 0o600)
 	return marker
 
 
 def smoke_missing_launcher(binary: Path, directory: Path) -> None:
-	run_probe(binary, directory, "link", LINK, 1)
+	run_probe(binary, directory, "link", LINK)
 
 
 def smoke_nonexecutable_launcher(binary: Path, directory: Path) -> None:
 	marker = install_launcher(directory, False)
-	run_probe(binary, directory, "link", LINK, 1)
+	run_probe(binary, directory, "link", LINK)
 	if marker.exists():
 		raise AssertionError("non-executable launcher was unexpectedly run")
 
 
 def smoke_launcher_recovery(binary: Path, directory: Path) -> None:
-	run_probe(binary, directory, "link", LINK, 1)
-	marker = install_launcher(directory, True)
-	run_probe(binary, directory, "link", LINK, 0)
+	run_probe(binary, directory, "link", LINK)
+	marker = install_launcher(directory, True, wait_for_return=True)
+	run_probe(binary, directory, "link", LINK, wait_for_return=True)
 	if marker.read_text(encoding="utf-8") != LINK:
 		raise AssertionError("launcher did not receive the original URL argument")
 
@@ -93,7 +102,7 @@ def smoke_open_file_delegation(binary: Path, directory: Path) -> None:
 	target = directory / "文件 目录"
 	target.mkdir()
 	marker = install_launcher(directory, True)
-	run_probe(binary, directory, "file", str(target), 0)
+	run_probe(binary, directory, "file", str(target))
 	expected = str(target) if sys.platform == "darwin" else f"file://{target}"
 	if marker.read_text(encoding="utf-8") != expected:
 		raise AssertionError("open_file did not pass the expected path to the launcher")

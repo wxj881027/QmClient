@@ -25,9 +25,53 @@
 #include <game/client/ui_rect.h>
 #include <game/teamscore.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <vector>
+
+constexpr bool QmHudHasClientTarget(int ClientId)
+{
+	return ClientId >= 0 && ClientId < MAX_CLIENTS;
+}
+
+// 自由视角用 SPEC_FREEVIEW，没有有效目标时不显示小调试信息。
+constexpr std::optional<int> QmHudMiniDebugTarget(bool Spectating, int LocalClientId, int SpectatorId)
+{
+	if(Spectating && SpectatorId == SPEC_FREEVIEW)
+		return SPEC_FREEVIEW;
+
+	const int ClientId = Spectating ? SpectatorId : LocalClientId;
+	if(!QmHudHasClientTarget(ClientId))
+		return std::nullopt;
+	return ClientId;
+}
+
+constexpr float QmHudNinjaProgress(int64_t EndTick, int CurrentTick, int DurationTicks)
+{
+	if(DurationTicks <= 0)
+		return 0.0f;
+	const int64_t FullTick = static_cast<int64_t>(CurrentTick) + DurationTicks;
+	const int64_t RemainingTicks = std::clamp<int64_t>(EndTick, CurrentTick, FullTick) - CurrentTick;
+	return static_cast<float>(RemainingTicks) / DurationTicks;
+}
+
+constexpr float QmHudRaceEffectAlpha(int CurrentTick, int ReceivedTick, int TickSpeed)
+{
+	if(TickSpeed <= 0)
+		return 0.0f;
+	const int64_t ElapsedTicks = static_cast<int64_t>(CurrentTick) - ReceivedTick;
+	const int64_t RemainingTicks = std::clamp(6LL * TickSpeed - ElapsedTicks, 0LL, 2LL * TickSpeed);
+	return static_cast<float>(RemainingTicks) / (2LL * TickSpeed);
+}
+
+constexpr uint32_t QmHudSnapshotSpeed(int PreviousVelocity, int CurrentVelocity, float IntraTick)
+{
+	// 沿用整数采样：两个快照之间用上一份速度，到达下一快照再切换。
+	const int64_t Velocity = IntraTick >= 1.0f ? CurrentVelocity : PreviousVelocity;
+	return static_cast<uint32_t>(Velocity < 0 ? -Velocity : Velocity);
+}
 
 struct SScoreInfo
 {
@@ -49,6 +93,11 @@ struct SScoreInfo
 		m_ScoreTextWidth = 0.f;
 		m_RankTextWidth = 0.f;
 		m_Initialized = false;
+	}
+
+	static bool NeedsTextContainer(const STextContainerIndex &Index, const char *pText)
+	{
+		return pText[0] != '\0' && !Index.Valid();
 	}
 
 	STextContainerIndex m_TextRankContainerIndex;
@@ -78,7 +127,7 @@ class CHud : public CComponent
 	float m_PlayerPrevAngle;
 	STextContainerIndex m_aPlayerSpeedTextContainers[2];
 	float m_aPlayerPrevSpeed[2];
-	int m_aPlayerSpeed[2];
+	uint32_t m_aPlayerSpeed[2];
 	enum class ESpeedChange
 	{
 		NONE,
@@ -397,7 +446,7 @@ class CHud : public CComponent
 		int m_ClientId = -1;
 		int m_Connection = 0;
 		int m_TriggerTick = 0;
-		int m_EndTick = 0;
+		int64_t m_EndTick = 0;
 		int m_LayoutSlot = 0;
 		vec2 m_Position{};
 		vec2 m_Velocity{};
@@ -413,27 +462,6 @@ class CHud : public CComponent
 		}
 	};
 	std::array<SHudSwitchCountdownRingState, SWITCH_COUNTDOWN_MAX_LINES> m_aSwitchCountdownRings{};
-	struct SHudSwitchCountdownTracker
-	{
-		int m_aaEndTick[NUM_DDRACE_TEAMS][256] = {};
-		int m_aaTouchTick[NUM_DDRACE_TEAMS][256] = {};
-		int m_aaClientId[NUM_DDRACE_TEAMS][256] = {};
-		int m_aaConnection[NUM_DDRACE_TEAMS][256] = {};
-
-		void Reset()
-		{
-			for(int t = 0; t < NUM_DDRACE_TEAMS; ++t)
-			{
-				for(int i = 0; i < 256; ++i)
-				{
-					m_aaEndTick[t][i] = 0;
-					m_aaTouchTick[t][i] = 0;
-					m_aaClientId[t][i] = -1;
-					m_aaConnection[t][i] = -1;
-				}
-			}
-		}
-	};
 	SHudSwitchCountdownTracker m_SwitchCountdownTracker;
 	CQmHookCountdown m_HookCountdownRing;
 	struct SHudMediaIslandMuteState

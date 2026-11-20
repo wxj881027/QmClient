@@ -13,6 +13,10 @@ struct SLlmParseResult
 
 struct _json_value;
 
+// 成员名称/字符串值按完整JSON长度匹配；返回成员借用JSON树，缺失时返回json_none。
+const struct _json_value *TranslateJsonObjectGet(const struct _json_value *pObject, const char *pName);
+bool TranslateJsonStringIs(const struct _json_value *pValue, const char *pExpected);
+
 // 解析 LLM API 的 JSON 响应
 // pObj: 解析后的 JSON 对象（来自 json_parse）
 // Out: 解析结果

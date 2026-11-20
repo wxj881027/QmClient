@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
 #include <vector>
 
 namespace
@@ -75,6 +76,13 @@ TEST(QmGhostFreezeBar, EmptyPathProducesNoSpans)
 	std::vector<SGhostFreezeSpan> vSpans;
 	QmCollectGhostFreezeSpans({}, {}, vSpans);
 	EXPECT_TRUE(vSpans.empty());
+}
+
+TEST(QmGhostFreezeBar, CountdownSpanningTheSignedTickRangeKeepsItsMidpoint)
+{
+	const std::vector<SGhostFreezeSpan> vSpans{{std::numeric_limits<int>::min(), std::numeric_limits<int>::max()}};
+	EXPECT_FLOAT_EQ(QmGhostFreezeProgress(vSpans, 0), 0.5f);
+	EXPECT_FLOAT_EQ(QmGhostFreezeProgress(vSpans, std::numeric_limits<int>::max()), 0.0f);
 }
 
 // 显式标记把“明确未冻结”和旧文件的“无标记”区分开：新文件里的真实忍者帧

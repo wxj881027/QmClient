@@ -2,11 +2,13 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "linereader.h"
 
+#include <base/io_read_all.h>
 #include <base/mem.h>
 #include <base/str.h>
 #include <base/system.h>
 
 #include <cstdlib>
+#include <limits>
 
 static bool IsValidLine(const char *pLine)
 {
@@ -31,8 +33,11 @@ static bool IsValidLine(const char *pLine)
 // UTF-16 按码点转成 UTF-8。无法配对的代理项写成替换字符，避免整份脚本被当成二进制拒绝。
 static char *DecodeUtf16(const unsigned char *pData, unsigned Length, bool BigEndian)
 {
-	// 每 2 字节最多产生 3 字节 UTF-8。
-	const unsigned Capacity = Length / 2 * 3 + 1;
+	const unsigned CodeUnits = Length / 2;
+	// 每个码元最多写 3 字节，末尾留 1 字节。行偏移使用 unsigned。
+	if(CodeUnits > (std::numeric_limits<unsigned>::max() - 1) / 3)
+		return nullptr;
+	const size_t Capacity = static_cast<size_t>(CodeUnits) * 3 + 1;
 	auto *pBuffer = static_cast<char *>(malloc(Capacity));
 	if(pBuffer == nullptr)
 		return nullptr;
@@ -87,7 +92,7 @@ static bool LooksLikeUtf16(const unsigned char *pData, unsigned Length, bool *pB
 		if(Index % 2 == 0)
 			++EvenNulls;
 	}
-	if(Length < 2 || Nulls < Length / 4)
+	if(Length < 2 || Nulls == 0 || Nulls < Length / 4)
 		return false;
 	if(EvenNulls == 0)
 	{
@@ -131,23 +136,34 @@ bool CLineReader::IsValidBuffer(const char *pBuffer)
 
 bool CLineReader::OpenFile(IOHANDLE File, bool RejectInvalidLines)
 {
+	return OpenFileWithBudget(File, 0, RejectInvalidLines);
+}
+
+bool CLineReader::OpenFileWithBudget(IOHANDLE File, unsigned MaxBufferBytes, bool RejectInvalidLines)
+{
+	m_LastOpenResult = EOpenResult::CANNOT_READ;
+	if(!File)
+		return false;
+
+	void *pRaw = nullptr;
+	unsigned RawLength = 0;
+	const SIOReadAllAllocator BoundedAllocator{
+		[](void *pBuffer, size_t Size, void *pUser) -> void * {
+			return Size <= *static_cast<unsigned *>(pUser) ? realloc(pBuffer, Size) : nullptr;
+		},
+		[](void *pBuffer, void *) { free(pBuffer); },
+		&MaxBufferBytes};
+	const bool Read = MaxBufferBytes ? io_read_all_with_allocator(File, &pRaw, &RawLength, BoundedAllocator) : io_read_all(File, &pRaw, &RawLength);
+	io_close(File);
+	return Read && OpenTextBuffer(pRaw, RawLength, RejectInvalidLines);
+}
+
+bool CLineReader::OpenTextBuffer(void *pRaw, unsigned RawLength, bool RejectInvalidLines)
+{
 	const auto Fail = [this](EOpenResult Result) {
 		m_LastOpenResult = Result;
 		return false;
 	};
-
-	if(!File)
-	{
-		return Fail(EOpenResult::CANNOT_READ);
-	}
-	void *pRaw = nullptr;
-	unsigned RawLength = 0;
-	const bool Read = io_read_all(File, &pRaw, &RawLength);
-	io_close(File);
-	if(!Read)
-	{
-		return Fail(EOpenResult::CANNOT_READ);
-	}
 
 	const auto *pData = static_cast<const unsigned char *>(pRaw);
 	char *pBuffer = nullptr;

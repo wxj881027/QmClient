@@ -1,6 +1,8 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "input_overlay.h"
 
+#include "bounded_file_reader.h"
+
 #include <base/color.h>
 #include <base/log.h>
 #include <base/str.h>
@@ -21,10 +23,51 @@
 #include <cctype>
 #include <cmath>
 #include <ctime>
+#include <limits>
+#include <new>
+#include <stdexcept>
 
 namespace
 {
 	static constexpr const char *CONFIGURATION_FILENAME = "input_overlay.json";
+	// 由存储层执行原有文件大小上限，并拒绝非普通文件。
+	static constexpr unsigned ASSET_READ_LIMIT = std::numeric_limits<unsigned>::max();
+	using TJsonOwner = std::unique_ptr<json_value, decltype(&json_value_free)>;
+
+	TJsonOwner ReadLayoutJson(IStorage &Storage, const char *pPath, int StorageType)
+	{
+		CQmCheckedFileData File;
+		if(!File.Read(Storage, pPath, StorageType, ASSET_READ_LIMIT))
+		{
+			log_error("input_overlay", "Failed to read '%s'", pPath);
+			return {nullptr, json_value_free};
+		}
+
+		json_settings Settings{};
+		Settings.settings = json_enable_comments;
+		char aError[256];
+		TJsonOwner pRoot(JsonParseEx(&Settings, static_cast<const json_char *>(File.Data()), File.Size(), aError), json_value_free);
+		if(pRoot == nullptr)
+		{
+			log_error("input_overlay", "Failed to parse '%s': '%s'", pPath, aError);
+			return pRoot;
+		}
+		if(pRoot->type != json_object)
+		{
+			log_error("input_overlay", "'%s' must be a JSON object", pPath);
+			return {nullptr, json_value_free};
+		}
+		return pRoot;
+	}
+
+	bool TryLayoutInt(double Value, int &Out)
+	{
+		Value = std::trunc(Value);
+		if(!(Value >= std::numeric_limits<int>::min() && Value <= std::numeric_limits<int>::max()))
+			return false;
+		Out = static_cast<int>(Value);
+		return true;
+	}
 
 	static ColorRGBA ApplyOpacity(ColorRGBA Color, float Opacity)
 	{
@@ -93,6 +136,12 @@ void CInputOverlay::OnInit()
 		m_ConfigModifiedTime = Modified;
 		m_HasConfigModifiedTime = true;
 	}
+}
+
+void CInputOverlay::OnShutdown()
+{
+	m_pFileTimeJob.reset();
+	m_vObsLayouts.clear();
 }
 
 void CInputOverlay::OnWindowResize()
@@ -177,6 +226,8 @@ void CInputOverlay::OnRender()
 		LoadConfiguration(IStorage::TYPE_ALL);
 
 	std::optional<time_t> Modified;
+	if(m_pFileTimeJob && m_pFileTimeJob->State() == IJob::STATE_FAILED)
+		m_pFileTimeJob.reset();
 	if(m_pFileTimeJob && m_pFileTimeJob->TryGetResult(Modified))
 	{
 		m_pFileTimeJob.reset();
@@ -191,13 +242,24 @@ void CInputOverlay::OnRender()
 	if(m_ConfigCheckTimer >= 0.5f && !m_pFileTimeJob)
 	{
 		m_ConfigCheckTimer = 0.0f;
-		m_pFileTimeJob = std::make_shared<CQmInputOverlayFileTimeJob>([pStorage = Storage(), vPaths = ConfigPaths()]() -> std::optional<time_t> {
-			time_t Latest;
-			if(GetInputOverlayModifiedTime(pStorage, vPaths, Latest))
-				return Latest;
-			return std::nullopt;
-		});
-		Engine()->AddJob(m_pFileTimeJob);
+		try
+		{
+			auto pJob = std::make_shared<CQmInputOverlayFileTimeJob>([pStorage = Storage(), vPaths = ConfigPaths()]() -> std::optional<time_t> {
+				time_t Latest;
+				if(GetInputOverlayModifiedTime(pStorage, vPaths, Latest))
+					return Latest;
+				return std::nullopt;
+			});
+			if(Engine()->TryAddJob(pJob))
+				m_pFileTimeJob = std::move(pJob);
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 保持检查槽为空，下个检查周期可再次提交。
+		}
+		catch(const std::length_error &)
+		{
+		}
 	}
 
 	if(!m_ConfigValid)
@@ -209,7 +271,7 @@ void CInputOverlay::OnRender()
 		bool HasLayout = false;
 		for(const SObsLayout &Layout : m_vObsLayouts)
 		{
-			if(!Layout.m_vElements.empty() && Layout.m_Texture.IsValid())
+			if(!Layout.m_vElements.empty() && Layout.m_Texture.Handle().IsValid())
 			{
 				HasLayout = true;
 				break;
@@ -238,7 +300,7 @@ void CInputOverlay::OnRender()
 		QmInputOverlay::SScaledBounds Bounds{};
 		for(const SObsLayout &Layout : m_vObsLayouts)
 		{
-			if(Layout.m_vElements.empty() || !Layout.m_Texture.IsValid())
+			if(Layout.m_vElements.empty() || !Layout.m_Texture.Handle().IsValid())
 				continue;
 			const float LayoutScale = QmInputOverlay::LayoutScale(Layout.m_IsMouseLayout, KeyboardScale, MouseScale);
 			const auto LayoutBounds = QmInputOverlay::ScaledLayoutBounds(
@@ -368,14 +430,14 @@ void CInputOverlay::OnRender()
 
 		for(const SObsLayout &Layout : m_vObsLayouts)
 		{
-			if(Layout.m_vElements.empty() || !Layout.m_Texture.IsValid())
+			if(Layout.m_vElements.empty() || !Layout.m_Texture.Handle().IsValid())
 				continue;
 
 			const float LayoutScale = QmInputOverlay::LayoutScale(Layout.m_IsMouseLayout, KeyboardScale, MouseScale);
 			const float LayoutOriginX = OriginX + Layout.m_OffsetX * KeyboardScale - ObsMinX;
 			const float LayoutOriginY = OriginY + Layout.m_OffsetY * KeyboardScale - ObsMinY;
 
-			Graphics()->TextureSet(Layout.m_Texture);
+			Graphics()->TextureSet(Layout.m_Texture.Handle());
 			Graphics()->QuadsBegin();
 
 			for(const SObsElement &Element : Layout.m_vElements)
@@ -638,48 +700,28 @@ void CInputOverlay::OnRender()
 
 bool CInputOverlay::LoadConfiguration(int StorageType)
 {
-	void *pFileData;
-	unsigned FileLength;
-	if(!Storage()->ReadFile(CONFIGURATION_FILENAME, StorageType, &pFileData, &FileLength))
-	{
-		log_error("input_overlay", "Failed to read configuration from '%s'", CONFIGURATION_FILENAME);
-		m_ConfigLoaded = true;
-		m_ConfigValid = false;
-		return false;
-	}
-
-	const bool HadValid = m_ConfigValid;
-	const bool Result = ParseConfiguration(pFileData, FileLength);
-
-	free(pFileData);
-
 	m_ConfigLoaded = true;
-	if(Result)
+	try
+	{
+		const auto pRoot = ReadLayoutJson(*Storage(), CONFIGURATION_FILENAME, StorageType);
+		if(pRoot == nullptr || !ParseConfiguration(*pRoot))
+			return false;
 		m_ConfigValid = true;
-	else if(!HadValid)
-		m_ConfigValid = false;
-	return Result;
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		log_error("input_overlay", "Not enough memory to load input overlay configuration");
+	}
+	catch(const std::length_error &)
+	{
+		log_error("input_overlay", "Input overlay configuration exceeds container capacity");
+	}
+	return false;
 }
 
-bool CInputOverlay::ParseConfiguration(const void *pFileData, unsigned FileLength)
+bool CInputOverlay::ParseConfiguration(const json_value &Root)
 {
-	json_settings JsonSettings{};
-	JsonSettings.settings = json_enable_comments;
-	char aError[256];
-	json_value *pJson = JsonParseEx(&JsonSettings, static_cast<const json_char *>(pFileData), FileLength, aError);
-	if(pJson == nullptr)
-	{
-		log_error("input_overlay", "Failed to parse configuration (invalid json): '%s'", aError);
-		return false;
-	}
-	if(pJson->type != json_object)
-	{
-		log_error("input_overlay", "Failed to parse configuration: root must be an object");
-		json_value_free(pJson);
-		return false;
-	}
-
-	const json_value &Root = *pJson;
 	ColorRGBA ObsColor = ui_token::color::NEUTRAL_WHITE;
 	ColorRGBA ObsActiveColor = ColorRGBA(1.0f, 0.9f, 0.2f, 1.0f);
 	float ObsInactiveAlpha = 0.65f;
@@ -699,37 +741,44 @@ bool CInputOverlay::ParseConfiguration(const void *pFileData, unsigned FileLengt
 	float RootOffsetX = 0.0f;
 	float RootOffsetY = 0.0f;
 	ParseOffset(Root, RootOffsetX, RootOffsetY);
-	int RootPressedOffset = 0;
-	bool HasRootPressedOffset = false;
-	float RootPressedOffsetValue = 0.0f;
-	if(ParseFloat(Root["pressed_offset_y"], RootPressedOffsetValue))
-	{
-		RootPressedOffset = std::max(0, (int)std::round(RootPressedOffsetValue));
-		HasRootPressedOffset = true;
-	}
+	const std::optional<int> RootPressedOffset = ParsePressedOffset(Root["pressed_offset_y"], true);
 
-	auto ClearLayouts = [&](std::vector<SObsLayout> &Layouts) {
-		for(SObsLayout &Layout : Layouts)
+	std::vector<SObsLayout> vParsedLayouts;
+	auto CommitObsLayouts = [&] {
+		m_vObsLayouts.swap(vParsedLayouts);
+		m_ConfigMode = EConfigMode::OBS;
+		m_ObsColor = ObsColor;
+		m_ObsActiveColor = ObsActiveColor;
+		m_ObsInactiveAlpha = ObsInactiveAlpha;
+		m_PosXPercent = std::clamp(PosX, 0.0f, 100.0f);
+		m_PosYPercent = std::clamp(PosY, 0.0f, 100.0f);
+	};
+	auto LoadObsLayout = [&](const char *pLayoutPath, const char *pImageOverride, float OffsetX, float OffsetY, std::optional<int> PressedOffset) {
+		const auto pLayout = ReadLayoutJson(*Storage(), pLayoutPath, IStorage::TYPE_ALL);
+		if(pLayout == nullptr)
+			return false;
+
+		SObsLayout &Layout = vParsedLayouts.emplace_back();
+		if(!ParseObsConfiguration(*pLayout, pLayoutPath, pImageOverride, OffsetX, OffsetY, Layout))
+			return false;
+		if(PressedOffset.has_value())
 		{
-			if(Layout.m_Texture.IsValid())
-				Graphics()->UnloadTexture(&Layout.m_Texture);
+			Layout.m_PressedOffsetY = *PressedOffset;
+			Layout.m_HasPressedOffset = *PressedOffset > 0;
 		}
-		Layouts.clear();
+		return true;
 	};
 
 	const json_value &LayoutsValue = Root["layouts"];
 	if(LayoutsValue.type == json_array)
 	{
-		std::vector<SObsLayout> ParsedLayouts;
-		ParsedLayouts.reserve(LayoutsValue.u.array.length);
+		vParsedLayouts.reserve(LayoutsValue.u.array.length);
 		for(unsigned i = 0; i < LayoutsValue.u.array.length; ++i)
 		{
 			const json_value &Entry = LayoutsValue[i];
 			if(Entry.type != json_object)
 			{
 				log_error("input_overlay", "Failed to parse configuration: layouts entry '%u' must be an object", i);
-				ClearLayouts(ParsedLayouts);
-				json_value_free(pJson);
 				return false;
 			}
 
@@ -737,8 +786,6 @@ bool CInputOverlay::ParseConfiguration(const void *pFileData, unsigned FileLengt
 			if(LayoutValue.type != json_string)
 			{
 				log_error("input_overlay", "Failed to parse configuration: layouts entry '%u' missing 'layout'", i);
-				ClearLayouts(ParsedLayouts);
-				json_value_free(pJson);
 				return false;
 			}
 
@@ -747,81 +794,12 @@ bool CInputOverlay::ParseConfiguration(const void *pFileData, unsigned FileLengt
 			float OffsetX = RootOffsetX;
 			float OffsetY = RootOffsetY;
 			ParseOffset(Entry, OffsetX, OffsetY);
-			int EntryPressedOffset = 0;
-			bool HasEntryPressedOffset = false;
-			float EntryPressedOffsetValue = 0.0f;
-			if(ParseFloat(Entry["pressed_offset_y"], EntryPressedOffsetValue))
-			{
-				EntryPressedOffset = std::max(0, (int)std::round(EntryPressedOffsetValue));
-				HasEntryPressedOffset = true;
-			}
-
-			void *pLayoutData;
-			unsigned LayoutLength;
-			const char *pLayoutPath = LayoutValue.u.string.ptr;
-			if(!Storage()->ReadFile(pLayoutPath, IStorage::TYPE_ALL, &pLayoutData, &LayoutLength))
-			{
-				log_error("input_overlay", "Failed to read layout file '%s'", pLayoutPath);
-				ClearLayouts(ParsedLayouts);
-				json_value_free(pJson);
+			const std::optional<int> EntryPressedOffset = ParsePressedOffset(Entry["pressed_offset_y"], true);
+			if(!LoadObsLayout(LayoutValue.u.string.ptr, pImageOverride, OffsetX, OffsetY, EntryPressedOffset.has_value() ? EntryPressedOffset : RootPressedOffset))
 				return false;
-			}
-
-			json_settings LayoutSettings{};
-			LayoutSettings.settings = json_enable_comments;
-			char aLayoutError[256];
-			json_value *pLayoutJson = JsonParseEx(&LayoutSettings, static_cast<const json_char *>(pLayoutData), LayoutLength, aLayoutError);
-			free(pLayoutData);
-			if(pLayoutJson == nullptr)
-			{
-				log_error("input_overlay", "Failed to parse layout file '%s': '%s'", pLayoutPath, aLayoutError);
-				ClearLayouts(ParsedLayouts);
-				json_value_free(pJson);
-				return false;
-			}
-			if(pLayoutJson->type != json_object)
-			{
-				log_error("input_overlay", "Layout file '%s' must be a JSON object", pLayoutPath);
-				json_value_free(pLayoutJson);
-				ClearLayouts(ParsedLayouts);
-				json_value_free(pJson);
-				return false;
-			}
-
-			SObsLayout Layout;
-			const json_value &LayoutRoot = *pLayoutJson;
-			const bool Result = ParseObsConfiguration(LayoutRoot, pLayoutPath, pImageOverride, OffsetX, OffsetY, Layout);
-			json_value_free(pLayoutJson);
-			if(!Result)
-			{
-				ClearLayouts(ParsedLayouts);
-				json_value_free(pJson);
-				return false;
-			}
-			if(HasEntryPressedOffset)
-			{
-				Layout.m_PressedOffsetY = EntryPressedOffset;
-				Layout.m_HasPressedOffset = EntryPressedOffset > 0;
-			}
-			else if(HasRootPressedOffset)
-			{
-				Layout.m_PressedOffsetY = RootPressedOffset;
-				Layout.m_HasPressedOffset = RootPressedOffset > 0;
-			}
-
-			ParsedLayouts.push_back(std::move(Layout));
 		}
 
-		ClearObsLayouts();
-		m_ConfigMode = EConfigMode::OBS;
-		m_vObsLayouts = std::move(ParsedLayouts);
-		m_ObsColor = ObsColor;
-		m_ObsActiveColor = ObsActiveColor;
-		m_ObsInactiveAlpha = ObsInactiveAlpha;
-		m_PosXPercent = std::clamp(PosX, 0.0f, 100.0f);
-		m_PosYPercent = std::clamp(PosY, 0.0f, 100.0f);
-
-		json_value_free(pJson);
+		CommitObsLayouts();
 		return true;
 	}
 
@@ -830,61 +808,10 @@ bool CInputOverlay::ParseConfiguration(const void *pFileData, unsigned FileLengt
 	const char *pImageOverride = ImageValue.type == json_string ? ImageValue.u.string.ptr : nullptr;
 	if(LayoutValue.type == json_string)
 	{
-		void *pLayoutData;
-		unsigned LayoutLength;
-		const char *pLayoutPath = LayoutValue.u.string.ptr;
-		if(!Storage()->ReadFile(pLayoutPath, IStorage::TYPE_ALL, &pLayoutData, &LayoutLength))
-		{
-			log_error("input_overlay", "Failed to read layout file '%s'", pLayoutPath);
-			json_value_free(pJson);
+		if(!LoadObsLayout(LayoutValue.u.string.ptr, pImageOverride, RootOffsetX, RootOffsetY, RootPressedOffset))
 			return false;
-		}
 
-		json_settings LayoutSettings{};
-		LayoutSettings.settings = json_enable_comments;
-		char aLayoutError[256];
-		json_value *pLayoutJson = JsonParseEx(&LayoutSettings, static_cast<const json_char *>(pLayoutData), LayoutLength, aLayoutError);
-		free(pLayoutData);
-		if(pLayoutJson == nullptr)
-		{
-			log_error("input_overlay", "Failed to parse layout file '%s': '%s'", pLayoutPath, aLayoutError);
-			json_value_free(pJson);
-			return false;
-		}
-		if(pLayoutJson->type != json_object)
-		{
-			log_error("input_overlay", "Layout file '%s' must be a JSON object", pLayoutPath);
-			json_value_free(pLayoutJson);
-			json_value_free(pJson);
-			return false;
-		}
-
-		SObsLayout Layout;
-		const json_value &LayoutRoot = *pLayoutJson;
-		const bool Result = ParseObsConfiguration(LayoutRoot, pLayoutPath, pImageOverride, RootOffsetX, RootOffsetY, Layout);
-		json_value_free(pLayoutJson);
-		if(!Result)
-		{
-			json_value_free(pJson);
-			return false;
-		}
-		if(HasRootPressedOffset)
-		{
-			Layout.m_PressedOffsetY = RootPressedOffset;
-			Layout.m_HasPressedOffset = RootPressedOffset > 0;
-		}
-
-		ClearObsLayouts();
-		m_ConfigMode = EConfigMode::OBS;
-		m_vObsLayouts.clear();
-		m_vObsLayouts.push_back(std::move(Layout));
-		m_ObsColor = ObsColor;
-		m_ObsActiveColor = ObsActiveColor;
-		m_ObsInactiveAlpha = ObsInactiveAlpha;
-		m_PosXPercent = std::clamp(PosX, 0.0f, 100.0f);
-		m_PosYPercent = std::clamp(PosY, 0.0f, 100.0f);
-
-		json_value_free(pJson);
+		CommitObsLayouts();
 		return true;
 	}
 
@@ -897,25 +824,10 @@ bool CInputOverlay::ParseConfiguration(const void *pFileData, unsigned FileLengt
 					  ElementsProbe[0].type == json_object && ElementsProbe[0]["mapping"].type == json_array && ElementsProbe[0]["pos"].type == json_array);
 	if(LooksLikeObs)
 	{
-		SObsLayout Layout;
-		const bool Result = ParseObsConfiguration(Root, CONFIGURATION_FILENAME, pImageOverride, RootOffsetX, RootOffsetY, Layout);
-		if(!Result)
-		{
-			json_value_free(pJson);
+		if(!ParseObsConfiguration(Root, CONFIGURATION_FILENAME, pImageOverride, RootOffsetX, RootOffsetY, vParsedLayouts.emplace_back()))
 			return false;
-		}
 
-		ClearObsLayouts();
-		m_ConfigMode = EConfigMode::OBS;
-		m_vObsLayouts.clear();
-		m_vObsLayouts.push_back(std::move(Layout));
-		m_ObsColor = ObsColor;
-		m_ObsActiveColor = ObsActiveColor;
-		m_ObsInactiveAlpha = ObsInactiveAlpha;
-		m_PosXPercent = std::clamp(PosX, 0.0f, 100.0f);
-		m_PosYPercent = std::clamp(PosY, 0.0f, 100.0f);
-
-		json_value_free(pJson);
+		CommitObsLayouts();
 		return true;
 	}
 
@@ -947,7 +859,6 @@ bool CInputOverlay::ParseConfiguration(const void *pFileData, unsigned FileLengt
 	if(Elements.type != json_array)
 	{
 		log_error("input_overlay", "Failed to parse configuration: attribute 'elements' must specify an array");
-		json_value_free(pJson);
 		return false;
 	}
 
@@ -959,7 +870,6 @@ bool CInputOverlay::ParseConfiguration(const void *pFileData, unsigned FileLengt
 		if(!ParseElement(Elements[i], Defaults, Element))
 		{
 			log_error("input_overlay", "Failed to parse configuration: invalid element at index '%u'", i);
-			json_value_free(pJson);
 			return false;
 		}
 		ParsedElements.push_back(std::move(Element));
@@ -969,12 +879,11 @@ bool CInputOverlay::ParseConfiguration(const void *pFileData, unsigned FileLengt
 	m_CanvasWidth = CanvasW;
 	m_CanvasHeight = CanvasH;
 	if(m_ConfigMode != EConfigMode::VECTOR)
-		ClearObsLayouts();
+		m_vObsLayouts.clear();
 	m_ConfigMode = EConfigMode::VECTOR;
 	m_PosXPercent = std::clamp(PosX, 0.0f, 100.0f);
 	m_PosYPercent = std::clamp(PosY, 0.0f, 100.0f);
 
-	json_value_free(pJson);
 	return true;
 }
 
@@ -1105,7 +1014,7 @@ bool CInputOverlay::ParseFloat(const json_value &Value, float &Out) const
 		Out = (float)Value.u.integer;
 		return true;
 	}
-	if(Value.type == json_double)
+	if(Value.type == json_double && std::isfinite(Value.u.dbl) && std::abs(Value.u.dbl) <= std::numeric_limits<float>::max())
 	{
 		Out = (float)Value.u.dbl;
 		return true;
@@ -1123,6 +1032,18 @@ bool CInputOverlay::ParseFloatArray(const json_value &Value, float *pOut, int Co
 			return false;
 	}
 	return true;
+}
+
+std::optional<int> CInputOverlay::ParsePressedOffset(const json_value &Value, bool Round) const
+{
+	float Pixels;
+	if(!ParseFloat(Value, Pixels))
+		return std::nullopt;
+
+	int Offset;
+	if(!TryLayoutInt(Round ? std::round(Pixels) : Pixels, Offset))
+		return std::nullopt;
+	return std::max(0, Offset);
 }
 
 void CInputOverlay::ParsePosition(const json_value &Root, float &PosX, float &PosY, bool &HasPosX, bool &HasPosY) const
@@ -1322,11 +1243,20 @@ bool CInputOverlay::ParseObsConfiguration(const json_value &Root, const char *pL
 		return false;
 	}
 
-	CImageInfo ImageInfo;
-	if(!Graphics()->LoadPng(ImageInfo, ImagePath.c_str(), IStorage::TYPE_ALL))
+	struct SImageOwner
 	{
-		log_error("input_overlay", "Failed to load OBS overlay image '%s'", ImagePath.c_str());
-		return false;
+		CImageInfo m_Image;
+		~SImageOwner() { m_Image.Free(); }
+	} ImageOwner;
+	CImageInfo &ImageInfo = ImageOwner.m_Image;
+	{
+		CQmCheckedFileData File;
+		if(!File.Read(*Storage(), ImagePath.c_str(), IStorage::TYPE_ALL, ASSET_READ_LIMIT) ||
+			!Graphics()->LoadPng(ImageInfo, static_cast<const uint8_t *>(File.Data()), File.Size(), ImagePath.c_str()))
+		{
+			log_error("input_overlay", "Failed to load OBS overlay image '%s'", ImagePath.c_str());
+			return false;
+		}
 	}
 	const int TextureWidth = ImageInfo.m_Width;
 	const int TextureHeight = ImageInfo.m_Height;
@@ -1352,34 +1282,20 @@ bool CInputOverlay::ParseObsConfiguration(const json_value &Root, const char *pL
 		return A.m_ZLevel < B.m_ZLevel;
 	});
 
-	int PressedOffsetY = 0;
-	bool HasPressedOffset = false;
-	float PressedOffsetValue = 0.0f;
-	if(const json_value &PressedValue = Root["pressed_offset_y"]; ParseFloat(PressedValue, PressedOffsetValue))
-	{
-		PressedOffsetY = (int)PressedOffsetValue;
-		PressedOffsetY = std::max(0, PressedOffsetY);
-		HasPressedOffset = PressedOffsetY > 0;
-	}
-	if(!HasPressedOffset)
-	{
-		const int Detected = DetectObsPressedOffset(ImageInfo, ParsedElements);
-		if(Detected > 0)
-		{
-			PressedOffsetY = Detected;
-			HasPressedOffset = true;
-		}
-	}
+	int PressedOffsetY = ParsePressedOffset(Root["pressed_offset_y"], false).value_or(0);
+	if(PressedOffsetY <= 0)
+		PressedOffsetY = DetectObsPressedOffset(ImageInfo, ParsedElements);
 
-	IGraphics::CTextureHandle Texture = Graphics()->LoadTextureRawMove(ImageInfo, 0, ImagePath.c_str());
+	Out.m_LayoutPath = pLayoutPath != nullptr ? pLayoutPath : CONFIGURATION_FILENAME;
+	Out.m_ImagePath = std::move(ImagePath);
+	Out.m_vElements = std::move(ParsedElements);
+	const auto Texture = Graphics()->LoadTextureRawMove(ImageInfo, 0, Out.m_ImagePath.c_str());
 	if(!Texture.IsValid())
 	{
-		log_error("input_overlay", "Failed to create texture for '%s'", ImagePath.c_str());
+		log_error("input_overlay", "Failed to create texture for '%s'", Out.m_ImagePath.c_str());
 		return false;
 	}
-
-	Out.m_vElements = std::move(ParsedElements);
-	Out.m_Texture = Texture;
+	Out.m_Texture.Take(*Graphics(), Texture);
 	Out.m_TextureWidth = TextureWidth;
 	Out.m_TextureHeight = TextureHeight;
 	Out.m_OverlayWidth = OverlayW;
@@ -1389,10 +1305,8 @@ bool CInputOverlay::ParseObsConfiguration(const json_value &Root, const char *pL
 	Out.m_OffsetX = OffsetX;
 	Out.m_OffsetY = OffsetY;
 	Out.m_PressedOffsetY = PressedOffsetY;
-	Out.m_HasPressedOffset = HasPressedOffset;
+	Out.m_HasPressedOffset = PressedOffsetY > 0;
 	Out.m_IsMouseLayout = QmInputOverlay::IsMouseOnlyLayout(HasKeyboardInput, HasMouseInput);
-	Out.m_LayoutPath = pLayoutPath != nullptr ? pLayoutPath : CONFIGURATION_FILENAME;
-	Out.m_ImagePath = ImagePath;
 
 	return true;
 }
@@ -1402,17 +1316,11 @@ bool CInputOverlay::ParseObsElement(const json_value &Object, SObsElement &Out) 
 	if(Object.type != json_object)
 		return false;
 
-	auto ParseIntValue = [&](const json_value &Value, int &OutValue) {
+	auto ParseIntValue = [](const json_value &Value, int &OutValue) {
 		if(Value.type == json_integer)
-		{
-			OutValue = (int)Value.u.integer;
-			return true;
-		}
+			return TryLayoutInt(static_cast<double>(Value.u.integer), OutValue);
 		if(Value.type == json_double)
-		{
-			OutValue = (int)Value.u.dbl;
-			return true;
-		}
+			return TryLayoutInt(Value.u.dbl, OutValue);
 		return false;
 	};
 
@@ -1647,81 +1555,82 @@ std::vector<std::string> CInputOverlay::ConfigPaths() const
 
 bool CInputOverlay::GetConfigModifiedTime(time_t &OutModified) const
 {
-	return GetInputOverlayModifiedTime(Storage(), ConfigPaths(), OutModified);
+	try
+	{
+		return GetInputOverlayModifiedTime(Storage(), ConfigPaths(), OutModified);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
 }
 
 int CInputOverlay::DetectObsPressedOffset(const CImageInfo &Image, const std::vector<SObsElement> &Elements) const
 {
-	if(Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0)
+	if(Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0 ||
+		Image.m_Width > std::numeric_limits<int>::max() || Image.m_Height > std::numeric_limits<int>::max())
 		return 0;
 
+	const int TextureW = static_cast<int>(Image.m_Width);
+	const int TextureH = static_cast<int>(Image.m_Height);
 	constexpr int SampleCols = 6;
 	constexpr int SampleRows = 6;
 	constexpr float AlphaThreshold = 0.1f;
 	constexpr float MinColorDiff = 12.0f / 255.0f;
 
-	auto BuildSamples = [&](const SObsElement &Element, std::vector<vec2> &OutPositions, std::vector<ColorRGBA> &OutColors) {
-		const int BaseX = (int)std::round(Element.m_MapX);
-		const int BaseY = (int)std::round(Element.m_MapY);
-		const int MapW = (int)std::round(Element.m_MapW);
-		const int MapH = (int)std::round(Element.m_MapH);
-		if(MapW <= 0 || MapH <= 0)
-			return;
-		if(BaseX < 0 || BaseY < 0)
-			return;
-		if(BaseX + MapW > (int)Image.m_Width || BaseY + MapH > (int)Image.m_Height)
-			return;
-
-		OutPositions.clear();
-		OutColors.clear();
-		OutPositions.reserve(SampleCols * SampleRows);
-		OutColors.reserve(SampleCols * SampleRows);
+	std::vector<ivec2> vSamplePositions;
+	std::vector<ColorRGBA> vSampleColors;
+	auto BuildSamples = [&](int BaseX, int BaseY, int MapW, int MapH) {
+		vSamplePositions.clear();
+		vSampleColors.clear();
+		vSamplePositions.reserve(SampleCols * SampleRows);
+		vSampleColors.reserve(SampleCols * SampleRows);
 		for(int Sy = 0; Sy < SampleRows; ++Sy)
 		{
 			const int Y = BaseY + (int)((Sy + 0.5f) * MapH / SampleRows);
 			for(int Sx = 0; Sx < SampleCols; ++Sx)
 			{
 				const int X = BaseX + (int)((Sx + 0.5f) * MapW / SampleCols);
-				if(X < 0 || Y < 0 || X >= (int)Image.m_Width || Y >= (int)Image.m_Height)
+				if(X < 0 || Y < 0 || X >= TextureW || Y >= TextureH)
 					continue;
 				const ColorRGBA Base = Image.PixelColor(X, Y);
 				if(Base.a <= AlphaThreshold)
 					continue;
-				OutPositions.emplace_back(X, Y);
-				OutColors.emplace_back(Base);
+				vSamplePositions.emplace_back(X, Y);
+				vSampleColors.emplace_back(Base);
 			}
 		}
 	};
 
-	const SObsElement *pSample = nullptr;
-	std::vector<vec2> SamplePositions;
-	std::vector<ColorRGBA> SampleColors;
+	int BaseY = 0;
+	int MapH = 0;
 	for(const SObsElement &Element : Elements)
 	{
 		if(Element.m_InputKind != EObsInputKind::KEY &&
 			Element.m_InputKind != EObsInputKind::MOUSE &&
 			Element.m_InputKind != EObsInputKind::WHEEL)
 			continue;
-		if(Element.m_MapW <= 1.0f || Element.m_MapH <= 1.0f)
+		const auto SampleRect = QmInputOverlay::ResolveObsAtlasSampleRect(Element.m_MapX, Element.m_MapY, Element.m_MapW, Element.m_MapH, TextureW, TextureH);
+		if(!SampleRect.has_value())
 			continue;
 
-		BuildSamples(Element, SamplePositions, SampleColors);
-		if(SamplePositions.size() >= 4)
+		BuildSamples(SampleRect->m_X, SampleRect->m_Y, SampleRect->m_W, SampleRect->m_H);
+		if(vSamplePositions.size() >= 4)
 		{
-			pSample = &Element;
+			BaseY = SampleRect->m_Y;
+			MapH = SampleRect->m_H;
 			break;
 		}
 	}
 
-	if(pSample == nullptr)
-		return 0;
-
-	const int BaseY = (int)std::round(pSample->m_MapY);
-	const int MapH = (int)std::round(pSample->m_MapH);
 	if(MapH <= 0)
 		return 0;
 
-	const int MaxOffset = std::min((int)Image.m_Height - (BaseY + MapH), MapH * 3);
+	const int MaxOffset = static_cast<int>(std::min<int64_t>(TextureH - BaseY - MapH, 3LL * MapH));
 	const int MinOffset = std::max(1, MapH / 2);
 	if(MaxOffset < MinOffset)
 		return 0;
@@ -1734,17 +1643,17 @@ int CInputOverlay::DetectObsPressedOffset(const CImageInfo &Image, const std::ve
 		int OpaqueCount = 0;
 		float ColorDiffSum = 0.0f;
 		int ColorSamples = 0;
-		for(size_t i = 0; i < SamplePositions.size(); ++i)
+		for(size_t i = 0; i < vSamplePositions.size(); ++i)
 		{
-			const int X = (int)SamplePositions[i].x;
-			const int Y = (int)SamplePositions[i].y + Offset;
-			if(Y < 0 || Y >= (int)Image.m_Height)
+			const int X = vSamplePositions[i].x;
+			const int Y = vSamplePositions[i].y + Offset;
+			if(Y < 0 || Y >= TextureH)
 				continue;
 			const ColorRGBA Other = Image.PixelColor(X, Y);
 			if(Other.a <= AlphaThreshold)
 				continue;
 			++OpaqueCount;
-			const ColorRGBA Base = SampleColors[i];
+			const ColorRGBA Base = vSampleColors[i];
 			const float Diff = (std::fabs(Base.r - Other.r) +
 						   std::fabs(Base.g - Other.g) +
 						   std::fabs(Base.b - Other.b)) /
@@ -1753,7 +1662,7 @@ int CInputOverlay::DetectObsPressedOffset(const CImageInfo &Image, const std::ve
 			++ColorSamples;
 		}
 
-		const float MatchRatio = SamplePositions.empty() ? 0.0f : (float)OpaqueCount / SamplePositions.size();
+		const float MatchRatio = (float)OpaqueCount / vSamplePositions.size();
 		const float ColorDiff = ColorSamples > 0 ? ColorDiffSum / ColorSamples : 0.0f;
 		if(ColorDiff < MinColorDiff)
 			continue;
@@ -1771,16 +1680,6 @@ int CInputOverlay::DetectObsPressedOffset(const CImageInfo &Image, const std::ve
 		return 0;
 
 	return BestOffset;
-}
-
-void CInputOverlay::ClearObsLayouts()
-{
-	for(SObsLayout &Layout : m_vObsLayouts)
-	{
-		if(Layout.m_Texture.IsValid())
-			Graphics()->UnloadTexture(&Layout.m_Texture);
-	}
-	m_vObsLayouts.clear();
 }
 
 bool CInputOverlay::IsActiveInput(const SElement &Element) const

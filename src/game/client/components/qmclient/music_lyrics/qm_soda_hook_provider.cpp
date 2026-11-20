@@ -11,21 +11,15 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <new>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace
 {
 	constexpr uint64_t HELPER_RETRY_MS = 5000;
-
-	// 启动结果必须区分“按设计不启动”和“启动失败”：测试存储构建属于前者，
-	// 不能当成失败去报告系统错误，也不能进入重试节奏。
-	enum class ELaunchResult
-	{
-		LAUNCHED,
-		FAILED,
-		DISABLED,
-	};
 
 	std::wstring Utf8ToWide(const char *pText)
 	{
@@ -55,43 +49,53 @@ namespace
 		return Path;
 	}
 
-	ELaunchResult LaunchHelper(const char *pHelperPath, const std::string &Source, HANDLE *pOutProcess, DWORD *pOutError)
+	struct SPreparedHelperLaunch
 	{
-#if defined(CONF_QMCLIENT_TEST_STORAGE)
-		// 测试存储构建不启动音乐 hook 助手，理由同网易云接入：
-		// 测试客户端不注入玩家正在运行的音乐应用，也不触发系统安全弹窗。
-		(void)pHelperPath;
-		(void)Source;
-		(void)pOutProcess;
-		(void)pOutError;
-		return ELaunchResult::DISABLED;
-#endif
-		*pOutProcess = nullptr;
-		*pOutError = ERROR_SUCCESS;
-		std::wstring Path = Utf8ToWide(pHelperPath);
-		if(Path.empty())
-			Path = DefaultHelperPath(Source != "soda");
-		if(Path.empty())
+		std::wstring m_Path;
+		std::vector<wchar_t> m_CommandLine;
+		std::string m_Error;
+		DWORD m_PathError = ERROR_SUCCESS;
+	};
+
+	SPreparedHelperLaunch PrepareHelperLaunch(const char *pHelperPath, const std::string &Source)
+	{
+		SPreparedHelperLaunch Prepared;
+		Prepared.m_Path = Utf8ToWide(pHelperPath);
+		if(Prepared.m_Path.empty())
+			Prepared.m_Path = DefaultHelperPath(Source != "soda");
+		if(Prepared.m_Path.empty())
+			Prepared.m_PathError = ERROR_FILE_NOT_FOUND;
+		else
 		{
-			*pOutError = ERROR_FILE_NOT_FOUND;
-			return ELaunchResult::FAILED;
+			const std::wstring CommandLine = L"\"" + Prepared.m_Path + L"\" --parent-pid " + std::to_wstring(GetCurrentProcessId()) +
+							 (Source == "soda" ? L"" : L" --source " + Utf8ToWide(Source.c_str()));
+			Prepared.m_CommandLine.assign(CommandLine.begin(), CommandLine.end());
+			Prepared.m_CommandLine.push_back(L'\0');
 		}
-		const std::wstring CommandLine = L"\"" + Path + L"\" --parent-pid " + std::to_wstring(GetCurrentProcessId()) +
-						 (Source == "soda" ? L"" : L" --source " + Utf8ToWide(Source.c_str()));
+		// 在启动进程前备齐错误文字的可写空间，之后只缩短并交换所有权。
+		Prepared.m_Error.resize(128);
+		return Prepared;
+	}
+
+	HANDLE LaunchPreparedHelper(const std::wstring &Path, std::vector<wchar_t> &CommandLine, DWORD &Error)
+	{
 		STARTUPINFOW Startup{};
 		Startup.cb = sizeof(Startup);
 		PROCESS_INFORMATION Process{};
-		std::vector<wchar_t> Mutable(CommandLine.begin(), CommandLine.end());
-		Mutable.push_back(L'\0');
-		if(CreateProcessW(Path.c_str(), Mutable.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT, nullptr, nullptr, &Startup, &Process))
+		if(CreateProcessW(Path.c_str(), CommandLine.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT, nullptr, nullptr, &Startup, &Process))
 		{
 			CloseHandle(Process.hThread);
-			*pOutProcess = Process.hProcess;
-			return ELaunchResult::LAUNCHED;
+			return Process.hProcess;
 		}
-		// 错误码必须在 CreateProcessW 失败后立刻取，返回后再调用其它函数可能覆盖它。
-		*pOutError = GetLastError();
-		return ELaunchResult::FAILED;
+		Error = GetLastError();
+		return nullptr;
+	}
+
+	void PublishLaunchError(std::string &Error, std::string &PreparedError, const char *pFormat, DWORD Code)
+	{
+		std::snprintf(PreparedError.data(), PreparedError.size(), pFormat, (unsigned long)Code);
+		PreparedError.resize(std::strlen(PreparedError.c_str()));
+		Error.swap(PreparedError);
 	}
 }
 
@@ -149,46 +153,56 @@ CQmSodaHookProvider::~CQmSodaHookProvider()
 	Stop();
 }
 
-void CQmSodaHookProvider::Start(const char *pHelperPath, const char *pSource)
+bool CQmSodaHookProvider::Start(const char *pHelperPath, const char *pSource)
+try
 {
-	const std::string Source = pSource != nullptr ? pSource : "soda";
-	if(Source != m_pImpl->m_Source)
+	const std::string_view Source = pSource != nullptr ? pSource : "soda";
+	const bool SourceChanged = Source != m_pImpl->m_Source;
+	if(!SourceChanged && m_pImpl->m_hHelperProcess != nullptr && WaitForSingleObject(m_pImpl->m_hHelperProcess, 0) == WAIT_TIMEOUT)
+		return true;
+	const uint64_t Now = GetTickCount64();
+	if(!SourceChanged && Now < m_pImpl->m_NextLaunchTick)
+		return true;
+	std::string PreparedSource(Source);
+#if !defined(CONF_QMCLIENT_TEST_STORAGE)
+	auto Prepared = PrepareHelperLaunch(pHelperPath, PreparedSource);
+#else
+	(void)pHelperPath;
+#endif
+	// 仅完整准备后才退休旧句柄、切来源并开始一次实际启动的节流。
+	if(SourceChanged)
 	{
 		Stop();
-		m_pImpl->m_Source = Source;
+		m_pImpl->m_Source.swap(PreparedSource);
 	}
-	if(m_pImpl->m_hHelperProcess != nullptr)
+	else if(m_pImpl->m_hHelperProcess != nullptr)
 	{
-		if(WaitForSingleObject(m_pImpl->m_hHelperProcess, 0) == WAIT_TIMEOUT)
-			return;
 		CloseHandle(m_pImpl->m_hHelperProcess);
 		m_pImpl->m_hHelperProcess = nullptr;
 	}
-	const uint64_t Now = GetTickCount64();
-	if(Now < m_pImpl->m_NextLaunchTick)
-		return;
 	m_pImpl->m_NextLaunchTick = Now + HELPER_RETRY_MS;
-	HANDLE hHelper = nullptr;
-	DWORD LaunchError = ERROR_SUCCESS;
-	const ELaunchResult LaunchResult = LaunchHelper(pHelperPath, Source, &hHelper, &LaunchError);
-	if(LaunchResult == ELaunchResult::DISABLED)
-	{
-		// 测试存储构建不启动助手是预期行为，不清错也不报错。
-		m_pImpl->m_Error.clear();
-		return;
-	}
-	m_pImpl->m_hHelperProcess = hHelper;
-	if(LaunchResult == ELaunchResult::FAILED)
-	{
-		char aError[128];
-		std::snprintf(aError, sizeof(aError), "歌词采集器启动失败（Windows 错误 %lu）", (unsigned long)LaunchError);
-		m_pImpl->m_Error = aError;
-	}
+#if !defined(CONF_QMCLIENT_TEST_STORAGE)
+	DWORD Error = Prepared.m_PathError;
+	m_pImpl->m_hHelperProcess = Prepared.m_Path.empty() ? nullptr : LaunchPreparedHelper(Prepared.m_Path, Prepared.m_CommandLine, Error);
+	if(m_pImpl->m_hHelperProcess == nullptr)
+		PublishLaunchError(m_pImpl->m_Error, Prepared.m_Error, "歌词采集器启动失败（Windows 错误 %lu）", Error);
 	else
+#endif
 		m_pImpl->m_Error.clear();
+	return true;
+}
+catch(const std::bad_alloc &)
+{
+	// 保留原来源、句柄及重试时刻，下帧重新准备。
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }
 
 bool CQmSodaHookProvider::RunKugouSetup(bool Restore)
+try
 {
 #if defined(CONF_QMCLIENT_TEST_STORAGE)
 	(void)Restore;
@@ -200,19 +214,24 @@ bool CQmSodaHookProvider::RunKugouSetup(bool Restore)
 	const std::wstring Command = L"\"" + Path + (Restore ? L"\" --kugou-restore" : L"\" --kugou-setup");
 	std::vector<wchar_t> Mutable(Command.begin(), Command.end());
 	Mutable.push_back(L'\0');
-	STARTUPINFOW Startup{};
-	Startup.cb = sizeof(Startup);
-	PROCESS_INFORMATION Process{};
-	if(!CreateProcessW(Path.c_str(), Mutable.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT, nullptr, nullptr, &Startup, &Process))
+	std::string PreparedError(160, '\0');
+	DWORD Error = ERROR_SUCCESS;
+	const HANDLE hProcess = LaunchPreparedHelper(Path, Mutable, Error);
+	if(hProcess == nullptr)
 	{
-		char aError[160];
-		std::snprintf(aError, sizeof(aError), "无法启动酷狗接入程序（Windows 错误 %lu）", (unsigned long)GetLastError());
-		m_pImpl->m_Error = aError;
+		PublishLaunchError(m_pImpl->m_Error, PreparedError, "无法启动酷狗接入程序（Windows 错误 %lu）", Error);
 		return false;
 	}
-	CloseHandle(Process.hThread);
-	CloseHandle(Process.hProcess);
+	CloseHandle(hProcess);
 	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }
 
 bool CQmSodaHookProvider::GetStatus(char *pBuffer, size_t BufferSize) const
@@ -294,7 +313,7 @@ struct CQmSodaHookProvider::SImpl
 CQmSodaHookProvider::CQmSodaHookProvider() :
 	m_pImpl(std::make_unique<SImpl>()) {}
 CQmSodaHookProvider::~CQmSodaHookProvider() = default;
-void CQmSodaHookProvider::Start(const char *, const char *) {}
+bool CQmSodaHookProvider::Start(const char *, const char *) { return true; }
 bool CQmSodaHookProvider::RunKugouSetup(bool) { return false; }
 bool CQmSodaHookProvider::GetStatus(char *pBuffer, size_t BufferSize) const
 {

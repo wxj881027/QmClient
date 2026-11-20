@@ -134,7 +134,7 @@ namespace QmLegacyConfig
 			bool Quoted = false;
 			for(size_t Pos = 0; Pos < Text.size(); ++Pos)
 			{
-				if(Text[Pos] == '\\' && Pos + 1 < Text.size() && Text[Pos + 1] == '"')
+				if(Text[Pos] == '\\' && Pos + 1 < Text.size() && (Text[Pos + 1] == '\\' || Text[Pos + 1] == '"'))
 					++Pos;
 				else if(Text[Pos] == '"')
 					Quoted = !Quoted;

@@ -12,6 +12,7 @@
 #include <engine/shared/jsonwriter.h>
 #include <engine/shared/localization.h>
 
+#include <game/client/QmUi/UiTextRenderState.h>
 #include <game/client/components/camera.h>
 #include <game/client/components/chat.h>
 #include <game/client/components/console.h>
@@ -30,6 +31,7 @@
 #include <iterator>
 #include <limits>
 #include <queue>
+#include <utility>
 
 using namespace std::chrono_literals;
 
@@ -48,7 +50,7 @@ static constexpr std::chrono::milliseconds LONG_TOUCH_DURATION = 500ms;
 static constexpr std::chrono::milliseconds BIND_REPEAT_INITIAL_DELAY = 250ms;
 static constexpr std::chrono::nanoseconds BIND_REPEAT_RATE = std::chrono::nanoseconds(1s) / 15;
 
-static constexpr const char *const CONFIGURATION_FILENAME = "touch_controls.json";
+using qm_touch_controls::CONFIGURATION_FILENAME;
 
 /* This is required for the localization script to find the labels of the default bind buttons specified in the configuration file:
 Localizable("Move left") Localizable("Move right") Localizable("Jump") Localizable("Prev. weapon") Localizable("Next weapon")
@@ -284,7 +286,7 @@ void CTouchControls::RenderButtonLabel(const CButtonLabel &Label, const CUIRect 
 	if(Label.m_pLabel == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f || FontSize <= 0.0f)
 		return;
 
-	const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
+	const CUiScopedTextRenderState TextState(*TextRender());
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	// 两次调用无分配分段器完成测量和绘制，正文与图标共享布局尺寸。
 	float Width = 0.0f;
@@ -324,7 +326,6 @@ void CTouchControls::RenderButtonLabel(const CButtonLabel &Label, const CUIRect 
 			}
 		});
 	}
-	TextRender()->SetFontPreset(PreviousPreset);
 }
 
 // TODO: Optimization: Use text and quad containers for rendering
@@ -408,17 +409,6 @@ void CTouchControls::CTouchButton::WriteToConfiguration(CJsonWriter *pWriter)
 	pWriter->EndObject();
 }
 
-void CTouchControls::CTouchButtonBehavior::Init(CTouchButton *pTouchButton)
-{
-	m_pTouchButton = pTouchButton;
-	m_pTouchControls = pTouchButton->m_pTouchControls;
-}
-
-void CTouchControls::CTouchButtonBehavior::Reset()
-{
-	m_Active = false;
-}
-
 void CTouchControls::CTouchButtonBehavior::SetActive(const IInput::CTouchFingerState &FingerState)
 {
 	const vec2 ScreenSize = m_pTouchControls->CalculateScreenSize();
@@ -444,20 +434,6 @@ void CTouchControls::CTouchButtonBehavior::SetActive(const IInput::CTouchFingerS
 	{
 		dbg_assert_failed("Touch button must be inactive or use same finger");
 	}
-}
-
-void CTouchControls::CTouchButtonBehavior::SetInactive(bool ByFinger)
-{
-	if(m_Active)
-	{
-		m_Active = false;
-		OnDeactivate(ByFinger);
-	}
-}
-
-bool CTouchControls::CTouchButtonBehavior::IsActive() const
-{
-	return m_Active;
 }
 
 bool CTouchControls::CTouchButtonBehavior::IsActive(const IInput::CTouchFinger &Finger) const
@@ -914,12 +890,12 @@ void CTouchControls::RenderChatCloseButtons()
 
 bool CTouchControls::OnTouchState(std::vector<IInput::CTouchFingerState> &vTouchFingerStates)
 {
-	if(qm_mobile_spectator::Enabled())
+	if(qm_mobile_spectator::Enabled() || !g_Config.m_ClTouchControls ||
+		(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK))
+	{
+		ResetButtons();
 		return false;
-	if(!g_Config.m_ClTouchControls)
-		return false;
-	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
-		return false;
+	}
 	if(GameClient()->m_Chat.IsActive() ||
 		GameClient()->m_GameConsole.IsActive() ||
 		GameClient()->m_Menus.IsActive() ||
@@ -935,7 +911,10 @@ bool CTouchControls::OnTouchState(std::vector<IInput::CTouchFingerState> &vTouch
 	}
 
 	if(m_EditingActive)
+	{
+		ResetButtons();
 		UpdateButtonsEditor(vTouchFingerStates);
+	}
 	else
 		UpdateButtonsGame(vTouchFingerStates);
 	vTouchFingerStates.clear();
@@ -972,13 +951,14 @@ void CTouchControls::OnRender()
 		return;
 	}
 	// If not editing, deselect it.
-	m_pSelectedButton = nullptr;
-	m_pSampleButton = nullptr;
+	if(IsButtonEditing())
+		ResetButtonPointers();
 	m_UnsavedChanges = false;
 	RenderButtonsGame();
 }
 
 bool CTouchControls::LoadConfigurationFromFile(int StorageType)
+try
 {
 	void *pFileData;
 	unsigned FileLength;
@@ -988,9 +968,13 @@ bool CTouchControls::LoadConfigurationFromFile(int StorageType)
 		return false;
 	}
 
-	const bool Result = ParseConfiguration(pFileData, FileLength);
-	free(pFileData);
-	return Result;
+	const std::unique_ptr<void, decltype(&std::free)> pOwnedData(pFileData, std::free);
+	return ParseConfiguration(pOwnedData.get(), FileLength);
+}
+catch(...)
+{
+	log_error("touch_controls", "Failed to read configuration from '%s'", CONFIGURATION_FILENAME);
+	return false;
 }
 
 bool CTouchControls::LoadConfigurationFromClipboard()
@@ -1001,24 +985,23 @@ bool CTouchControls::LoadConfigurationFromClipboard()
 
 bool CTouchControls::SaveConfigurationToFile()
 {
-	IOHANDLE File = Storage()->OpenFile(CONFIGURATION_FILENAME, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-	{
-		log_error("touch_controls", "Failed to open '%s' for writing configuration", CONFIGURATION_FILENAME);
-		return false;
-	}
-
-	CJsonFileWriter Writer(File);
-	WriteConfiguration(&Writer);
-	return true;
+	const bool Saved = qm_touch_controls::SaveConfiguration(*Storage(), [this](CJsonWriter &Writer) { WriteConfiguration(&Writer); });
+	if(!Saved)
+		log_error("touch_controls", "Failed to save configuration to '%s'", CONFIGURATION_FILENAME);
+	return Saved;
 }
 
 void CTouchControls::SaveConfigurationToClipboard()
+try
 {
 	CJsonStringWriter Writer;
 	WriteConfiguration(&Writer);
 	std::string ConfigurationString = Writer.GetOutputString();
 	Input()->SetClipboardText(ConfigurationString.c_str());
+}
+catch(...)
+{
+	log_error("touch_controls", "Failed to export configuration to clipboard");
 }
 
 void CTouchControls::InitVisibilityFunctions()
@@ -1130,6 +1113,7 @@ static auto MatchFingerStateFinger(const IInput::CTouchFinger &Finger)
 
 void CTouchControls::UpdateButtonsGame(const std::vector<IInput::CTouchFingerState> &vTouchFingerStates)
 {
+	m_GameTouchInputActive = true;
 	// Update cached button visibilities and store time that buttons become visible.
 	for(CTouchButton &TouchButton : m_vTouchButtons)
 	{
@@ -1319,17 +1303,24 @@ void CTouchControls::UpdateButtonsGame(const std::vector<IInput::CTouchFingerSta
 	{
 		Console()->ExecuteLineStroked(1, ACTION_COMMANDS[ActivateAction], IConsole::CLIENT_ID_UNSPECIFIED);
 	}
+	// 绑定命令可能在处理这一批输入时重置触控，下一帧仍需要释放此后激活的按键。
+	m_GameTouchInputActive = true;
 }
 
 void CTouchControls::ResetButtons()
 {
+	if(!std::exchange(m_GameTouchInputActive, false))
+		return;
+
+	// 触控被中断时释放已按下的命令，不触发仅在手指抬起时执行的动作。
 	for(CTouchButton &TouchButton : m_vTouchButtons)
 	{
 		TouchButton.m_pBehavior->Reset();
 	}
-	for(CActionState &ActionState : m_aDirectTouchActionStates)
+	for(int Action = ACTION_AIM; Action < NUM_ACTIONS; ++Action)
 	{
-		ActionState.m_Active = false;
+		if(std::exchange(m_aDirectTouchActionStates[Action].m_Active, false) && Action != ACTION_AIM)
+			Console()->ExecuteLineStroked(0, ACTION_COMMANDS[Action], IConsole::CLIENT_ID_UNSPECIFIED);
 	}
 }
 
@@ -1358,11 +1349,13 @@ vec2 CTouchControls::CalculateScreenSize() const
 	return vec2(ScreenWidth, ScreenHeight);
 }
 
-bool CTouchControls::ParseConfiguration(const void *pFileData, unsigned FileLength)
+bool CTouchControls::ParseConfiguration(const void *pFileData, size_t FileLength)
+try
 {
 	json_settings JsonSettings{};
 	char aError[256];
-	json_value *pConfiguration = JsonParseEx(&JsonSettings, static_cast<const json_char *>(pFileData), FileLength, aError);
+	const std::unique_ptr<json_value, decltype(&json_value_free)> pConfiguration(
+		JsonParseEx(&JsonSettings, static_cast<const json_char *>(pFileData), FileLength, aError), json_value_free);
 
 	if(pConfiguration == nullptr)
 	{
@@ -1372,45 +1365,31 @@ bool CTouchControls::ParseConfiguration(const void *pFileData, unsigned FileLeng
 	if(pConfiguration->type != json_object)
 	{
 		log_error("touch_controls", "Failed to parse configuration: root must be an object");
-		json_value_free(pConfiguration);
 		return false;
 	}
 
 	std::optional<EDirectTouchIngameMode> ParsedDirectTouchIngame = ParseDirectTouchIngameMode(&(*pConfiguration)["direct-touch-ingame"]);
 	if(!ParsedDirectTouchIngame.has_value())
-	{
-		json_value_free(pConfiguration);
 		return false;
-	}
 
 	std::optional<EDirectTouchSpectateMode> ParsedDirectTouchSpectate = ParseDirectTouchSpectateMode(&(*pConfiguration)["direct-touch-spectate"]);
 	if(!ParsedDirectTouchSpectate.has_value())
-	{
-		json_value_free(pConfiguration);
 		return false;
-	}
 
 	std::optional<ColorRGBA> ParsedBackgroundColorInactive =
 		ParseColor(&(*pConfiguration)["background-color-inactive"], "background-color-inactive", ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f));
 	if(!ParsedBackgroundColorInactive.has_value())
-	{
-		json_value_free(pConfiguration);
 		return false;
-	}
 
 	std::optional<ColorRGBA> ParsedBackgroundColorActive =
 		ParseColor(&(*pConfiguration)["background-color-active"], "background-color-active", ColorRGBA(0.2f, 0.2f, 0.2f, 0.25f));
 	if(!ParsedBackgroundColorActive.has_value())
-	{
-		json_value_free(pConfiguration);
 		return false;
-	}
 
 	const json_value &TouchButtons = (*pConfiguration)["touch-buttons"];
 	if(TouchButtons.type != json_array)
 	{
 		log_error("touch_controls", "Failed to parse configuration: attribute 'touch-buttons' must specify an array");
-		json_value_free(pConfiguration);
 		return false;
 	}
 
@@ -1421,8 +1400,7 @@ bool CTouchControls::ParseConfiguration(const void *pFileData, unsigned FileLeng
 		std::optional<CTouchButton> ParsedButton = ParseButton(&TouchButtons[ButtonIndex]);
 		if(!ParsedButton.has_value())
 		{
-			log_error("touch_controls", "Failed to parse configuration: could not parse button at index '%d'", ButtonIndex);
-			json_value_free(pConfiguration);
+			log_error("touch_controls", "Failed to parse configuration: could not parse button at index '%u'", ButtonIndex);
 			return false;
 		}
 
@@ -1430,26 +1408,22 @@ bool CTouchControls::ParseConfiguration(const void *pFileData, unsigned FileLeng
 	}
 
 	// Parsing successful. Apply parsed configuration.
+	ResetButtons();
+	ResetButtonPointers();
 	m_DirectTouchIngame = ParsedDirectTouchIngame.value();
 	m_DirectTouchSpectate = ParsedDirectTouchSpectate.value();
 	m_BackgroundColorInactive = ParsedBackgroundColorInactive.value();
 	m_BackgroundColorActive = ParsedBackgroundColorActive.value();
 
 	m_vTouchButtons = std::move(vParsedTouchButtons);
-	for(CTouchButton &TouchButton : m_vTouchButtons)
-	{
-		TouchButton.UpdatePointers();
-		TouchButton.UpdateScreenFromUnitRect();
-	}
-
-	json_value_free(pConfiguration);
-
-	// If successfully parsing buttons, deselect it.
-	m_pSelectedButton = nullptr;
-	m_pSampleButton = nullptr;
 	m_UnsavedChanges = false;
 
 	return true;
+}
+catch(...)
+{
+	log_error("touch_controls", "Failed to prepare touch controls configuration");
+	return false;
 }
 
 std::optional<CTouchControls::EDirectTouchIngameMode> CTouchControls::ParseDirectTouchIngameMode(const json_value *pModeValue)
@@ -1703,6 +1677,7 @@ std::unique_ptr<CTouchControls::CPredefinedTouchButtonBehavior> CTouchControls::
 		{CUseActionTouchButtonBehavior::BEHAVIOR_ID, [](const json_value *pBehavior) { return std::make_unique<CUseActionTouchButtonBehavior>(); }},
 		{CJoystickActionTouchButtonBehavior::BEHAVIOR_ID, [](const json_value *pBehavior) { return std::make_unique<CJoystickActionTouchButtonBehavior>(); }},
 		{CJoystickAimTouchButtonBehavior::BEHAVIOR_ID, [](const json_value *pBehavior) { return std::make_unique<CJoystickAimTouchButtonBehavior>(); }},
+		{CJoystickAimRelativeTouchButtonBehavior::BEHAVIOR_ID, [](const json_value *pBehavior) { return std::make_unique<CJoystickAimRelativeTouchButtonBehavior>(); }},
 		{CJoystickFireTouchButtonBehavior::BEHAVIOR_ID, [](const json_value *pBehavior) { return std::make_unique<CJoystickFireTouchButtonBehavior>(); }},
 		{CJoystickHookTouchButtonBehavior::BEHAVIOR_ID, [](const json_value *pBehavior) { return std::make_unique<CJoystickHookTouchButtonBehavior>(); }}};
 	for(const CBehaviorFactory &BehaviorFactory : BEHAVIOR_FACTORIES)
@@ -1898,33 +1873,10 @@ void CTouchControls::UpdateButtonsEditor(const std::vector<IInput::CTouchFingerS
 	if(vTouchFingerStates.empty())
 		m_PreventSaving = false;
 
-	// Remove if the finger deleted has released.
-	if(!m_vDeletedFingerState.empty())
+	if(qm_touch_controls::UpdateLongPressExclusions(m_vLongPressExclusions, vTouchFingerStates))
 	{
-		const auto &Remove = std::remove_if(m_vDeletedFingerState.begin(), m_vDeletedFingerState.end(), [&vTouchFingerStates](const auto &TargetState) {
-			return std::none_of(vTouchFingerStates.begin(), vTouchFingerStates.end(), [&](const auto &State) {
-				return State.m_Finger == TargetState.m_Finger;
-			});
-		});
-		m_vDeletedFingerState.erase(Remove, m_vDeletedFingerState.end());
-	}
-	// Delete fingers if they are press later. So they cant be the longpress finger.
-	if(vTouchFingerStates.size() > 1)
-	{
-		std::for_each(vTouchFingerStates.begin() + 1, vTouchFingerStates.end(), [&](const auto &State) {
-			m_vDeletedFingerState.push_back(State);
-		});
-	}
-
-	// If released, and there is finger on screen, and the "first finger" is not deleted(new finger), then it can be a LongPress candidate.
-	if(!vTouchFingerStates.empty() && !std::any_of(m_vDeletedFingerState.begin(), m_vDeletedFingerState.end(), [&vTouchFingerStates](const auto &State) {
-		   return vTouchFingerStates[0].m_Finger == State.m_Finger;
-	   }))
-	{
-		// If has different finger, reset the accumulated delta.
-		if(m_LongPressFingerState.has_value() && (*m_LongPressFingerState).m_Finger != vTouchFingerStates[0].m_Finger)
+		if(!m_LongPressFingerState.has_value() || !qm_touch_controls::SamePress(*m_LongPressFingerState, vTouchFingerStates[0]))
 			m_AccumulatedDelta = vec2(0.0f, 0.0f);
-		// Update the LongPress candidate state.
 		m_LongPressFingerState = vTouchFingerStates[0];
 	}
 	// If no suitable finger for long press, then clear it.
@@ -1941,7 +1893,7 @@ void CTouchControls::UpdateButtonsEditor(const std::vector<IInput::CTouchFingerS
 		if(length(m_AccumulatedDelta) > 0.005f)
 		{
 			m_AccumulatedDelta = vec2(0.0f, 0.0f);
-			m_vDeletedFingerState.push_back(*m_LongPressFingerState);
+			m_vLongPressExclusions.push_back(*m_LongPressFingerState);
 			m_LongPressFingerState = std::nullopt;
 			m_PreventSaving = true;
 		}
@@ -1952,7 +1904,7 @@ void CTouchControls::UpdateButtonsEditor(const std::vector<IInput::CTouchFingerS
 			if(!m_PreventSaving && Now - (*m_LongPressFingerState).m_PressTime > LONG_TOUCH_DURATION)
 			{
 				LongPress = true;
-				m_vDeletedFingerState.push_back(*m_LongPressFingerState);
+				m_vLongPressExclusions.push_back(*m_LongPressFingerState);
 				// LongPress will be used this frame for sure, so reset delta.
 				m_AccumulatedDelta = vec2(0.0f, 0.0f);
 			}
@@ -2008,8 +1960,6 @@ void CTouchControls::UpdateButtonsEditor(const std::vector<IInput::CTouchFingerS
 				// If m_pSelectedButton changes, Confirm if saving changes, then change.
 				// LongPress used.
 				LongPress = false;
-				// Note: Even after the popup is opened by ChangeSelectedButtonWhile..., the fingerstate still exists. So we have to add it to m_vDeletedFingerState.
-				m_vDeletedFingerState.push_back(*m_LongPressFingerState);
 				m_LongPressFingerState = std::nullopt;
 				if(m_UnsavedChanges)
 				{
@@ -2024,19 +1974,19 @@ void CTouchControls::UpdateButtonsEditor(const std::vector<IInput::CTouchFingerS
 					// End the function.
 					return;
 				}
+				CTouchButton *pPreviousSelection = m_pSelectedButton;
 				m_pSelectedButton = &TouchButton;
 				// Update illegal position when Long press the button. Or later it will keep saying unsavedchanges.
 				if(IsRectOverlapping(TouchButton.m_UnitRect, TouchButton.m_Shape))
 				{
 					std::optional<CUnitRect> FreeRect = UpdatePosition(TouchButton.m_UnitRect, TouchButton.m_Shape);
-					m_UnsavedChanges = true;
 					if(!FreeRect.has_value())
 					{
-						m_PopupParam.m_PopupType = EPopupType::NO_SPACE;
-						m_PopupParam.m_KeepMenuOpen = true;
-						GameClient()->m_Menus.SetActive(true);
+						m_pSelectedButton = pPreviousSelection;
+						ShowNoSpacePopup();
 						return;
 					}
+					m_UnsavedChanges = true;
 					TouchButton.m_UnitRect = FreeRect.value();
 					TouchButton.UpdateScreenFromUnitRect();
 				}
@@ -2064,12 +2014,9 @@ void CTouchControls::UpdateButtonsEditor(const std::vector<IInput::CTouchFingerS
 		return;
 
 	// If LongPress == true, LongPress finger has to be outside of all visible buttons.(Except m_pSampleButton. This button hasn't been checked)
-	if(LongPress)
+	if(LongPress && m_ShownRect.has_value())
 	{
-		// LongPress should be set to false, but to pass clang-tidy check, this shouldn't be set now
-		// LongPress = false;
-		bool IsInside = CalculateScreenFromUnitRect(*m_ShownRect).Inside(m_LongPressFingerState->m_Position * ScreenSize);
-		m_vDeletedFingerState.push_back(*m_LongPressFingerState);
+		const bool IsInside = CalculateScreenFromUnitRect(*m_ShownRect).Inside(m_LongPressFingerState->m_Position * ScreenSize);
 		m_LongPressFingerState = std::nullopt;
 		if(m_UnsavedChanges && !IsInside)
 		{
@@ -2084,23 +2031,36 @@ void CTouchControls::UpdateButtonsEditor(const std::vector<IInput::CTouchFingerS
 		{
 			m_UnsavedChanges = false;
 			ResetButtonPointers();
-			// No need for caching settings issue. So the issue is set to finished.
-			m_aIssueParam[(int)EIssueType::CACHE_SETTINGS].m_Resolved = true;
-			m_aIssueParam[(int)EIssueType::SAVE_SETTINGS].m_Resolved = true;
-			m_aIssueParam[(int)EIssueType::CACHE_POSITION].m_Resolved = true;
 		}
 	}
 
 	if(m_pSampleButton != nullptr)
 	{
+		const auto UpdateSamplePosition = [&]() {
+			const auto Hitbox = CalculateHitbox(m_pSampleButton->m_UnitRect, m_pSampleButton->m_Shape);
+			const auto FreeRect = FindPositionXY(vVisibleButtonRects, Hitbox);
+			if(FreeRect.has_value())
+			{
+				SetShownRect(FreeRect);
+				return true;
+			}
+			// 保留上次预览的位置，让玩家可以改大小或可见性后继续编辑。
+			if(m_ShownRect.has_value())
+			{
+				m_pSampleButton->m_UnitRect = *m_ShownRect;
+				m_pSampleButton->UpdateScreenFromUnitRect();
+			}
+			if(!std::exchange(m_SamplePlacementBlocked, true))
+				ShowNoSpacePopup();
+			return false;
+		};
 		if(m_ActiveFingerState.has_value() && m_ZoomFingerState == std::nullopt)
 		{
 			vec2 UnitXYDelta = m_ActiveFingerState->m_Delta * BUTTON_SIZE_SCALE;
 			m_pSampleButton->m_UnitRect.m_X += UnitXYDelta.x;
 			m_pSampleButton->m_UnitRect.m_Y += UnitXYDelta.y;
-			auto Hitbox = CalculateHitbox(m_pSampleButton->m_UnitRect, m_pSampleButton->m_Shape);
-			m_ShownRect = FindPositionXY(vVisibleButtonRects, Hitbox);
-			dbg_assert(m_ShownRect.has_value(), "Unexpected nullopt in m_ShownRect. Original rect: %d %d %d %d", Hitbox.m_X, Hitbox.m_Y, Hitbox.m_W, Hitbox.m_H);
+			if(!UpdateSamplePosition())
+				return;
 			if(m_pSelectedButton != nullptr)
 			{
 				unsigned Movement = std::abs(m_pSelectedButton->m_UnitRect.m_X - m_ShownRect->m_X) + std::abs(m_pSelectedButton->m_UnitRect.m_Y - m_ShownRect->m_Y);
@@ -2123,35 +2083,26 @@ void CTouchControls::UpdateButtonsEditor(const std::vector<IInput::CTouchFingerS
 			m_ShownRect = FindSizeWH(vVisibleButtonRects, m_ShownRect.value());
 			m_UnsavedChanges = true;
 		}
-		// No finger on screen, then show it as is.
+		// 手指抬起后，只将已经放置成功的位置交给菜单编辑器。
 		else
 		{
-			m_ShownRect = m_pSampleButton->m_UnitRect;
-		}
-		// Finished moving, no finger on screen.
-		if(vTouchFingerStates.empty())
-		{
 			m_AccumulatedDelta = vec2(0.0f, 0.0f);
-			std::optional<CUnitRect> OldRect = m_ShownRect;
-			auto Hitbox = CalculateHitbox(m_pSampleButton->m_UnitRect, m_pSampleButton->m_Shape);
-			m_ShownRect = FindPositionXY(vVisibleButtonRects, Hitbox);
-			dbg_assert(m_ShownRect.has_value(), "Unexpected nullopt in m_ShownRect. Original rect: %d %d %d %d", Hitbox.m_X, Hitbox.m_Y, Hitbox.m_W, Hitbox.m_H);
+			const auto OldRect = m_ShownRect;
+			if(!UpdateSamplePosition())
+				return;
 			m_UnsavedChanges |= OldRect != m_ShownRect;
 			m_pSampleButton->m_UnitRect = (*m_ShownRect);
 			m_aIssueParam[(int)EIssueType::CACHE_POSITION].m_pTargetButton = m_pSampleButton.get();
 			m_aIssueParam[(int)EIssueType::CACHE_POSITION].m_Resolved = false;
-			m_pSampleButton->UpdateScreenFromUnitRect();
-		}
-		if(m_ShownRect->m_X == -1)
-		{
-			m_UnsavedChanges = true;
-			m_PopupParam.m_PopupType = EPopupType::NO_SPACE;
-			m_PopupParam.m_KeepMenuOpen = true;
-			GameClient()->m_Menus.SetActive(true);
-			return;
 		}
 		m_pSampleButton->UpdateScreenFromUnitRect();
 	}
+}
+
+void CTouchControls::ShowNoSpacePopup()
+{
+	m_PopupParam = {EPopupType::NO_SPACE, nullptr, nullptr, true};
+	GameClient()->m_Menus.SetActive(true);
 }
 
 void CTouchControls::RenderButtonsEditor()
@@ -2614,17 +2565,25 @@ std::optional<CTouchControls::CUnitRect> CTouchControls::UpdatePosition(CUnitRec
 
 void CTouchControls::ResetButtonPointers()
 {
+	m_aIssueParam = {};
+	m_PopupParam = {};
 	m_pSelectedButton = nullptr;
 	m_pSampleButton = nullptr;
-	m_ShownRect = std::nullopt;
+	SetShownRect(std::nullopt);
+}
+
+void CTouchControls::RemakeSampleButton()
+{
+	auto pSampleButton = std::make_unique<CTouchButton>(this);
+	m_aIssueParam[(int)EIssueType::CACHE_POSITION] = {};
+	m_pSampleButton = std::move(pSampleButton);
 }
 
 // After sending the type, the popup should be reset immediately.
 CTouchControls::CPopupParam CTouchControls::RequiredPopup()
 {
 	CPopupParam ReturnPopup = m_PopupParam;
-	// Reset type so it won't be called for multiple times.
-	m_PopupParam.m_PopupType = EPopupType::NUM_POPUPS;
+	m_PopupParam = {};
 	return ReturnPopup;
 }
 
@@ -2659,6 +2618,7 @@ void CTouchControls::UpdateSampleButton(const CTouchButton &SrcButton)
 	m_pSampleButton->UpdatePointers();
 	m_pSampleButton->m_UnitRect = CalculateHitbox(m_pSampleButton->m_UnitRect, m_pSampleButton->m_Shape);
 	m_pSampleButton->UpdateScreenFromUnitRect();
+	SetShownRect(m_pSampleButton->m_UnitRect);
 }
 
 std::vector<CTouchControls::CTouchButton *> CTouchControls::GetButtonsEditor()

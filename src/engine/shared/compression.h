@@ -43,6 +43,9 @@ public:
 	}
 	static const unsigned char *Unpack(const unsigned char *pSrc, int *pInOut, int SrcSize);
 
+	// 批量接口接收不重叠的字节缓冲，无int对齐要求；长度无效或容量不足返回-1。
+	// Compress的输入长度、Decompress的输出容量必须为sizeof(int)的倍数。
+	// 失败时输出不可消费；成功返回写入字节数，空缓冲可使用nullptr。
 	static long Compress(const void *pSrc, int SrcSize, void *pDst, int DstSize);
 	static long Decompress(const void *pSrc, int SrcSize, void *pDst, int DstSize);
 };

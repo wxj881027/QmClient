@@ -185,6 +185,23 @@ TEST(EditorCollabCamera, NewlyAddedLayerLocatesOnlyItsNonemptyContent)
 	ExpectCenter(Previous, Current, 304.0f, 304.0f);
 }
 
+TEST(EditorCollabCamera, IdenticalLayerCopiedToAnotherGroupFollowsTheCopy)
+{
+	CEditorCollabPlacementSnapshot Previous;
+	Previous.m_vLayers.push_back(Tiles(4, 1, "Detail"));
+	Previous.m_vLayers[0].m_vTiles[2] = 1;
+	auto Current = Previous;
+	Current.m_vLayers.insert(Current.m_vLayers.begin(), Previous.m_vLayers.front());
+	Current.m_vLayers[0].m_GroupName = "Decor";
+	Current.m_vLayers[0].m_GroupOffset = ivec2(64, 32);
+	Current.m_vLayers[1].m_GroupIndex = 1;
+
+	const auto Target = Current.FindPlacement(Previous);
+	ASSERT_TRUE(Target.has_value());
+	EXPECT_EQ(Target->m_GroupOffset, ivec2(64, 32));
+	EXPECT_EQ(Target->m_Center, vec2(80.0f, 16.0f));
+}
+
 TEST(EditorCollabCamera, NewOrMovedQuadLocatesItsGeometryWithoutDeletedQuad)
 {
 	CEditorCollabPlacementSnapshot Previous;

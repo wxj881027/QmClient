@@ -22,7 +22,20 @@ public:
 	virtual int BrushGrab(CLayerGroup *pBrush, CUIRect Rect) { return 0; }
 	virtual void FillSelection(bool Empty, CLayer *pBrush, CUIRect Rect) {}
 	virtual void BrushDraw(CLayer *pBrush, vec2 WorldPos) {}
-	virtual void BrushPlace(CLayer *pBrush, vec2 WorldPos) {}
+	virtual void BrushPlace(const CLayer *pBrush, vec2 WorldPos, int LayerIndex) {}
+
+	void FillWithBrush(bool BrushEmpty, CLayer *pBrush, CUIRect Rect)
+	{
+		if(BrushEmpty || pBrush)
+			FillSelection(BrushEmpty, pBrush, Rect);
+	}
+
+	void PlaceBrush(const CLayer *pBrush, vec2 WorldPos, int LayerIndex)
+	{
+		if(pBrush && m_Type == pBrush->m_Type)
+			BrushPlace(pBrush, WorldPos, LayerIndex);
+	}
+
 	virtual void BrushFlipX() {}
 	virtual void BrushFlipY() {}
 	virtual void BrushRotate(float Amount) {}

@@ -246,6 +246,7 @@ class CCommunity // NOLINT(bugprone-exception-escape)
 	int m_NumPlayers = 0;
 	bool m_HasFinishes = false;
 	std::unordered_set<CCommunityMap, CCommunityMap::SHash> m_FinishedMaps;
+	void Swap(CCommunity &Other) noexcept;
 
 public:
 	CCommunity(const char *pId, const char *pName, std::optional<SHA256_DIGEST> IconSha256, const char *pIconUrl) :
@@ -354,9 +355,6 @@ public:
 		int64_t m_RequestTime;
 		bool m_RequestIgnoreInfo;
 		int m_GotInfo;
-		// QmClient: 可见行补测延迟用。表示条目已在请求队列中（含尚未发出的），
-		// 避免同一服务器重复入队。按 IP 的去重记录在浏览器上。
-		bool m_RequestQueued = false;
 		// QmClient: 该条目的补测请求已入队且尚未收到回复。
 		bool m_PingProbePending = false;
 		// QmClient: 该条目的补测请求被释放且没等到回复。本次列表生命周期内不再
@@ -408,6 +406,8 @@ public:
 	virtual const CServerInfo *Get(int Index) const = 0;
 	virtual int NumHttpServers() const = 0;
 	virtual const CServerInfo *HttpGet(int Index) const = 0;
+	// 原始 HTTP 列表的代次，不受可见列表排序或延迟变化影响。
+	virtual uint64_t HttpListRevision() const = 0;
 
 	virtual int Players(const CServerInfo &Item) const = 0;
 	virtual int Max(const CServerInfo &Item) const = 0;
@@ -416,7 +416,8 @@ public:
 	virtual int NumSortedPlayers() const = 0;
 	virtual const CServerInfo *SortedGet(int Index) const = 0;
 	// 中心服下发的在线分布（"ip:port" → 人数），游戏层在分布更新时推送。
-	virtual void SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) = 0;
+	// 完整准备失败时保留原计数和排序状态，并返回false。
+	virtual bool SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) = 0;
 
 	virtual const std::vector<CCommunity> &Communities() const = 0;
 	virtual const CCommunity *Community(const char *pCommunityId) const = 0;

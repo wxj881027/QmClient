@@ -16,7 +16,9 @@ class CGameClient;
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <new>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -62,5 +64,53 @@ struct SQmVoteMenuState
 	std::string m_RankPlayer;
 	std::set<std::string> m_Favorites;
 };
+
+inline bool QmTryPrepareDdnetVoteMaps(const std::vector<QmVoteMaps::SMap> &vCatalog, const CVoteOptionClient *pFirst, std::vector<QmVoteMaps::SMap> &vCandidate)
+{
+	try
+	{
+		vCandidate = QmVoteMaps::MergeCatalog(vCatalog, pFirst);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+}
+
+template<typename FMatches>
+bool QmTryRebuildVoteMapRows(const std::vector<QmVoteMaps::SMap> &vMaps, const QmVoteMaps::SFilter &CurrentFilter, QmVoteMaps::ESort Sort,
+	bool Axiom, int AvailableStarMask, std::vector<int> &vVisible, const FMatches &Matches)
+{
+	vVisible.clear();
+	try
+	{
+		auto Filter = CurrentFilter;
+		if(Axiom)
+		{
+			// Axiom 由服务器下发当前分类，本地保存的分类筛选留给 DDNet 使用。
+			Filter.m_Category.clear();
+			Filter.m_StarMask &= AvailableStarMask;
+		}
+		for(size_t Index = 0; Index < vMaps.size(); ++Index)
+			if(Matches(vMaps[Index], Filter))
+				vVisible.push_back((int)Index);
+		QmVoteMaps::Sort(vVisible, vMaps, Sort);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
+	// 不向绘制和投票入口暴露只筛完一部分的索引。
+	vVisible.clear();
+	return false;
+}
 
 #endif

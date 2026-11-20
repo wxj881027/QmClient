@@ -74,6 +74,34 @@ TEST_F(QmTitleBadgeText, PreparingBadgePreservesChatContainerAndRendererState)
 	pText->DeleteTextContainer(ChatContainer);
 }
 
+TEST_F(QmTitleBadgeText, FailedBadgeUploadRestoresChatStateAndAllowsRetry)
+{
+	auto *pText = m_Ui.TextRender();
+	const unsigned Flags = TEXT_RENDER_FLAG_NO_AUTOMATIC_QUAD_UPLOAD;
+	const ColorRGBA ChatColor(0.2f, 0.3f, 0.4f, 0.5f);
+	pText->SetRenderFlags(Flags);
+	pText->TextColor(ChatColor);
+	const auto InitialBuffers = Graphics().m_Buffers.size();
+	const auto InitialContainers = Graphics().m_Containers.size();
+	SQmTitleBadgePlacement Badge;
+	Badge.m_Rect = {30.0f, 20.0f, 100.0f, 24.0f};
+
+	Graphics().m_FailBufferContainerCreate = true;
+	EXPECT_NO_THROW(Badge.PrepareText(pText, "Badge"));
+	EXPECT_FALSE(Graphics().m_FailBufferContainerCreate);
+	EXPECT_FALSE(Badge.m_TextContainerIndex.Valid());
+	EXPECT_EQ(pText->GetRenderFlags(), Flags);
+	EXPECT_EQ(pText->GetTextColor(), ChatColor);
+	pText->QmTextFrameEnd();
+	EXPECT_EQ(Graphics().m_Buffers.size(), InitialBuffers);
+	EXPECT_EQ(Graphics().m_Containers.size(), InitialContainers);
+
+	Badge.PrepareText(pText, "Badge");
+	ASSERT_TRUE(Badge.m_TextContainerIndex.Valid());
+	EXPECT_GT(Badge.m_TextVisualBounds.h, 0.0f);
+	Badge.DeleteText(pText);
+}
+
 TEST_F(QmTitleBadgeText, TextOpacityCombinesAppearanceAndChatFadeOnce)
 {
 	auto *pText = m_Ui.TextRender();

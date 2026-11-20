@@ -23,6 +23,17 @@ TEST(QmChatPresentation, InputExpandsHistoryIndependentlyOfAmbientChatVisibility
 	EXPECT_TRUE(CChat::ShouldShowLargeArea(true, false, 0));
 }
 
+TEST(QmChatPresentation, InputShowsLiveHistoryWithoutOverridingPlaybackOrExportVisibility)
+{
+	EXPECT_FALSE(CChat::ShouldRenderHistory(false, false, false, false));
+	EXPECT_TRUE(CChat::ShouldRenderHistory(false, true, false, false));
+	EXPECT_FALSE(CChat::ShouldRenderHistory(false, true, true, false));
+	EXPECT_FALSE(CChat::ShouldRenderHistory(false, true, false, true));
+	EXPECT_FALSE(CChat::ShouldRenderHistory(false, true, true, true));
+	EXPECT_TRUE(CChat::ShouldRenderHistory(true, false, true, false));
+	EXPECT_TRUE(CChat::ShouldRenderHistory(true, false, false, true));
+}
+
 TEST(QmChatPresentation, NewLineEntersThenBecomesVisible)
 {
 	CChat::SPresentationState Presentation;

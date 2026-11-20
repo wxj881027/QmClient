@@ -13,6 +13,7 @@
 #include <game/client/component.h>
 #include <game/client/components/qm_console_log_filter.h>
 #include <game/client/components/qmclient/console_search_input.h>
+#include <game/client/components/qmclient/console_search_results.h>
 #include <game/client/components/qmclient/console_selection.h>
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/lineinput.h>
@@ -21,6 +22,9 @@
 
 #include <cstdint>
 #include <memory>
+#include <new>
+#include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -32,6 +36,38 @@ enum
 	CONSOLE_OPEN,
 	CONSOLE_CLOSING,
 };
+
+namespace QmConsoleCompletion
+{
+	inline void CollectSuggestion(int, const char *pText, void *pUser)
+	{
+		auto &vSuggestions = *static_cast<std::vector<std::string> *>(pUser);
+		vSuggestions.emplace_back(pText);
+	}
+
+	struct SSuggestions
+	{
+		std::vector<std::string> m_vCommands;
+		std::vector<std::string> m_vArguments;
+	};
+
+	template<typename FCollect>
+	std::optional<SSuggestions> TryCollectSuggestions(const FCollect &Collect)
+	try
+	{
+		std::optional<SSuggestions> Result(std::in_place);
+		Collect(*Result);
+		return Result;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return std::nullopt;
+	}
+	catch(const std::length_error &)
+	{
+		return std::nullopt;
+	}
+}
 
 class CConsoleLogger;
 class CQmChatExportJob;
@@ -73,6 +109,7 @@ private:
 			int m_ExportId;
 			bool m_ExportSelected;
 			bool m_CommandEcho;
+			bool m_ColorPreparationPending;
 			uint64_t m_StreamerWordsRevision;
 			char m_aText[1];
 		};
@@ -116,7 +153,7 @@ private:
 		bool m_ScrollbarDragging = false;
 		float m_ScrollbarDragOffset = 0.0f;
 		int m_TotalBacklogLines = 0;
-		bool m_TotalBacklogLinesValid = false;
+		mutable bool m_TotalBacklogLinesValid = false;
 
 		CGameConsole *m_pGameConsole;
 		// 日志滚动态跟着实例走（本地 / 远程各一份），不再用按类型索引的文件级静态数组。
@@ -137,31 +174,22 @@ private:
 		bool m_UserGot;
 		bool m_UsernameReq;
 
-		bool m_IsCommand;
-		const char *m_pCommandName;
-		const char *m_pCommandHelp;
-		const char *m_pCommandParams;
+		struct SCommandHint
+		{
+			std::string m_Name;
+			std::string m_Help;
+			std::string m_Params;
+		};
+		std::optional<SCommandHint> m_CommandHint;
+		bool m_CommandHintCopyFailed = false;
 
 		bool m_CompletionDirty;
 		bool m_QueueResetAnimation;
-		std::vector<const char *> m_vpCommandSuggestions;
-		std::vector<const char *> m_vpArgumentSuggestions;
+		std::vector<std::string> m_vCommandSuggestions;
+		std::vector<std::string> m_vArgumentSuggestions;
 
 		CQmConsoleSearchInput m_SearchInput;
-		struct SSearchMatch
-		{
-			int m_Pos;
-			int m_Length;
-			int m_StartLine;
-			int m_EndLine;
-			int m_EntryLine;
-
-			SSearchMatch(int Pos, int Length, int StartLine, int EndLine, int EntryLine) :
-				m_Pos(Pos), m_Length(Length), m_StartLine(StartLine), m_EndLine(EndLine), m_EntryLine(EntryLine) {}
-		};
-		int m_CurrentMatchIndex;
-		char m_aCurrentSearchString[IConsole::CMDLINE_LENGTH];
-		std::vector<SSearchMatch> m_vSearchMatches;
+		mutable QmConsoleSearch::CResults<IConsole::CMDLINE_LENGTH> m_SearchResults;
 
 		CInstance(int t);
 		void Init(CGameConsole *pGameConsole);
@@ -209,10 +237,11 @@ private:
 		float FontSize() const;
 		bool ParseEntryColors(const CBacklogEntry *pEntry) const;
 		CQmConsoleSelection::CPosition SelectionPositionAt(vec2 Position, float LogBottom, float LineHeight);
-		std::string SelectionText();
+		bool BuildSelectionText(std::string &Result);
 
 		bool IsInputHidden() const;
-		void UpdateCompletionSuggestions();
+		bool UpdateCompletionSuggestions();
+		void UpdateCommandHint();
 		void UpdateInputState(bool ResetCompletion);
 
 		/** 顶栏筛选按钮对应的日志类别位；下标即按钮顺序。 */

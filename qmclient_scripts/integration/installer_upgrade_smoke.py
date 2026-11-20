@@ -11,7 +11,7 @@ import sys
 import uuid
 from pathlib import Path
 
-from windows_setup_ui import assert_setup_completion_page, assert_setup_directory_page
+from windows_setup_ui import assert_setup_completion_page, assert_setup_directory_page, assert_setup_launch_failure
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OBSOLETE_BUNDLED_FILES = (
@@ -182,6 +182,8 @@ def main() -> int:
 		parser.error("--workspace must be inside the current repository")
 	workspace.mkdir(parents=True)
 	print(f"artifacts: {workspace}", flush=True)
+	assert_setup_launch_failure(args.current.resolve(strict=True), workspace)
+	print("PASS native setup launch failure cleans staging and hides the absent log", flush=True)
 	smoke_setup_fresh_storage_config(args.current.resolve(strict=True), args.payload.resolve(strict=True), workspace)
 	smoke_setup_upgrade(args.previous.resolve(strict=True), args.current.resolve(strict=True), args.payload.resolve(strict=True), workspace)
 	print("Setup install, upgrade and uninstall: passed")

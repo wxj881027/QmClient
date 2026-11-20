@@ -144,7 +144,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 	}
 
 	static int s_Menu = (int)qm_bind_menu::EMenu::IDENTITY;
-	static int s_SelectedSource = -1;
+	static CTClientBindWheelSelection s_Selection;
 	static int s_ChatTeam = 0;
 	static const char *s_pStatus = "";
 	static CLineInputBuffered<BINDWHEEL_MAX_NAME> s_CustomName;
@@ -163,41 +163,53 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 
 	if(s_Menu < 0 || s_Menu >= qm_bind_menu::NUM_MENUS)
 		s_Menu = 0;
+	auto &BindWheel = GameClient()->m_BindWheel;
+	const auto &vBinds = BindWheel.m_vBinds;
 	const auto Menu = (qm_bind_menu::EMenu)s_Menu;
 	const auto vVisible = VisibleBinds(GameClient(), Menu);
 	const bool Editable = Pass == qm_card_catalog::ETClientCardPass::RENDER && !ReadOnly && !Ui()->RenderOnly();
+	int SelectedSource = s_Selection.Resolve(vBinds);
+	if(std::find(vVisible.begin(), vVisible.end(), SelectedSource) == vVisible.end())
+	{
+		SelectedSource = -1;
+		if(Editable)
+			s_Selection.Clear();
+	}
 
-	if(Editable && Menu == qm_bind_menu::EMenu::CHAT && s_SelectedSource != s_ChatFieldsSource)
-	{
-		s_ChatFieldsSource = s_SelectedSource;
-		const qm_wheel_presets::SPreset *pPreset = s_SelectedSource >= 0 ?
-								   GameClient()->m_BindWheel.PresetForBind(s_SelectedSource) :
-								   nullptr;
-		if(pPreset != nullptr && pPreset->m_Type == qm_wheel_presets::EType::CHAT)
+	const auto RefreshDraftFields = [&] {
+		if(Menu == qm_bind_menu::EMenu::CHAT && SelectedSource != s_ChatFieldsSource)
 		{
-			const auto &Bind = GameClient()->m_BindWheel.m_vBinds[s_SelectedSource];
-			s_ChatTitle.Set(Bind.m_aName);
-			s_ChatText.Set(pPreset->m_Chat.c_str());
-			s_ChatTeam = pPreset->m_TeamChat ? 1 : 0;
+			s_ChatFieldsSource = SelectedSource;
+			const auto *pPreset = BindWheel.PresetForBind(SelectedSource);
+			if(pPreset != nullptr && pPreset->m_Type == qm_wheel_presets::EType::CHAT)
+			{
+				s_ChatTitle.Set(vBinds[SelectedSource].m_aName);
+				s_ChatText.Set(pPreset->m_Chat.c_str());
+				s_ChatTeam = pPreset->m_TeamChat ? 1 : 0;
+			}
+			else
+			{
+				s_ChatTitle.Clear();
+				s_ChatText.Clear();
+				s_ChatTeam = 0;
+			}
 		}
-		else
+		if(Menu == qm_bind_menu::EMenu::ASSETS && SelectedSource != s_AssetFieldsSource)
 		{
-			s_ChatTitle.Clear();
-			s_ChatText.Clear();
-			s_ChatTeam = 0;
+			s_AssetFieldsSource = SelectedSource;
+			const auto *pPreset = BindWheel.PresetForBind(SelectedSource);
+			if(pPreset != nullptr && pPreset->m_Type == qm_wheel_presets::EType::ASSETS)
+				s_AssetTitle.Set(vBinds[SelectedSource].m_aName);
+			else
+				s_AssetTitle.Clear();
 		}
-	}
-	if(Editable && Menu == qm_bind_menu::EMenu::ASSETS && s_SelectedSource != s_AssetFieldsSource)
-	{
-		s_AssetFieldsSource = s_SelectedSource;
-		const qm_wheel_presets::SPreset *pPreset = s_SelectedSource >= 0 ?
-								   GameClient()->m_BindWheel.PresetForBind(s_SelectedSource) :
-								   nullptr;
-		if(pPreset != nullptr && pPreset->m_Type == qm_wheel_presets::EType::ASSETS)
-			s_AssetTitle.Set(GameClient()->m_BindWheel.m_vBinds[s_SelectedSource].m_aName);
-		else
-			s_AssetTitle.Clear();
-	}
+	};
+	const auto ClearSelection = [&] {
+		s_Selection.Clear();
+		SelectedSource = -1;
+	};
+	if(Editable)
+		RefreshDraftFields();
 
 	auto RenderEditor = [&](CUIRect &View) {
 		CSettingsContentLayoutFlow Flow(View);
@@ -230,7 +242,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 			if(Editable && NewMenu != s_Menu)
 			{
 				s_Menu = NewMenu;
-				s_SelectedSource = -1;
+				ClearSelection();
 				s_ChatFieldsSource = -2;
 				s_AssetFieldsSource = -2;
 				s_pStatus = "";
@@ -255,13 +267,13 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 
 		const int VisibleRows = vVisible.empty() ? 1 : ui_token::list::VisibleRows((int)vVisible.size(), 1, 1, 5);
 		const float RowHeight = Metrics.m_ListRowHeight *
-					(Menu == qm_bind_menu::EMenu::ASSETS ? ui_token::bind_menu::ASSET_PANEL_ROW_HEIGHT_ROWS : 2.8f);
+					(Menu == qm_bind_menu::EMenu::ASSETS ? ui_token::bind_menu::ASSET_PANEL_ROW_HEIGHT_ROWS : ui_token::bind_menu::WHEEL_CARD_HEIGHT_ROWS);
 		const float ListPadding = ui_token::list::ContainerPadding(RowHeight);
 		if(Flow.Control("bind-menu-options", ui_token::list::PaddedRowsHeight(VisibleRows, RowHeight, ui_token::list::ROW_SPACING, ListPadding), Row, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 		{
 			int SelectedVisible = -1;
 			for(int Index = 0; Index < (int)vVisible.size(); ++Index)
-				if(vVisible[Index] == s_SelectedSource)
+				if(vVisible[Index] == SelectedSource)
 					SelectedVisible = Index;
 			s_List.SetActive(Editable);
 			s_List.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
@@ -276,8 +288,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 				const CListboxItem Item = s_List.DoNextItem(&s_aItemIds[Index], Index == SelectedVisible);
 				if(!Item.m_Visible)
 					continue;
-				const auto &Bind = GameClient()->m_BindWheel.m_vBinds[vVisible[Index]];
-				const auto *pPreset = GameClient()->m_BindWheel.PresetForBind(vVisible[Index]);
+				const auto &Bind = vBinds[vVisible[Index]];
+				const auto *pPreset = BindWheel.PresetForBind(vVisible[Index]);
 				const qm_bind_menu_preview::SOption Option{Bind.m_aName, Bind.m_aCommand, pPreset, pPreset == nullptr};
 				CUIRect OptionRect = Item.m_ContentRect;
 				const bool Expanded = Ui()->HotItem() == &s_aItemIds[Index];
@@ -288,9 +300,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 						qm_bind_menu_preview::BuildHoverText(Menu, Option, pPreset).c_str());
 			}
 			const int NewSelected = s_List.DoEnd();
-			if(Editable)
+			if(Editable && NewSelected != SelectedVisible && s_Menu == (int)Menu)
 			{
-				s_SelectedSource = NewSelected >= 0 && NewSelected < (int)vVisible.size() ? vVisible[NewSelected] : -1;
+				if(NewSelected >= 0 && NewSelected < (int)vVisible.size())
+				{
+					SelectedSource = vVisible[NewSelected];
+					s_Selection.Select(SelectedSource, vBinds[SelectedSource]);
+				}
+				else
+					ClearSelection();
+				RefreshDraftFields();
 			}
 			if(vVisible.empty())
 				Ui()->DoLabel(&Row, Localize("No entries yet"), Metrics.m_BodySize, TEXTALIGN_MC);
@@ -312,9 +331,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 		}
 		else if(Menu == qm_bind_menu::EMenu::CHAT)
 		{
-			const auto *pSelectedPreset = s_SelectedSource >= 0 && s_SelectedSource < (int)GameClient()->m_BindWheel.m_vBinds.size() ?
-							      GameClient()->m_BindWheel.PresetForBind(s_SelectedSource) :
-							      nullptr;
+			const auto *pSelectedPreset = BindWheel.PresetForBind(SelectedSource);
 			const bool EditingChat = pSelectedPreset != nullptr && pSelectedPreset->m_Type == qm_wheel_presets::EType::CHAT;
 			s_ChatTitle.SetEmptyText(Localize("Title"));
 			s_ChatText.SetEmptyText(Localize("Chat phrase"));
@@ -346,16 +363,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 						else
 						{
 							const std::string Label = TruncateLabel(s_ChatTitle.GetString(), Preset.m_Chat.c_str());
-							if(!GameClient()->m_BindWheel.SetBind(EditingChat ? s_SelectedSource : -1, Label.c_str(), Command.c_str()))
+							if(!BindWheel.SetBind(EditingChat ? SelectedSource : -1, Label.c_str(), Command.c_str()))
 								s_pStatus = Localize("The bind menu is full.");
 							else if(EditingChat)
 							{
-								s_ChatFieldsSource = s_SelectedSource;
+								s_Selection.Select(SelectedSource, vBinds[SelectedSource]);
 								s_pStatus = Localize("Updated this phrase.");
 							}
 							else
 							{
-								s_SelectedSource = -1;
+								ClearSelection();
 								s_ChatFieldsSource = -2;
 								s_ChatTitle.Clear();
 								s_ChatText.Clear();
@@ -369,9 +386,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 		}
 		else if(Menu == qm_bind_menu::EMenu::ASSETS)
 		{
-			const auto *pSelectedPreset = s_SelectedSource >= 0 && s_SelectedSource < (int)GameClient()->m_BindWheel.m_vBinds.size() ?
-							      GameClient()->m_BindWheel.PresetForBind(s_SelectedSource) :
-							      nullptr;
+			const auto *pSelectedPreset = BindWheel.PresetForBind(SelectedSource);
 			const bool EditingAssets = pSelectedPreset != nullptr && pSelectedPreset->m_Type == qm_wheel_presets::EType::ASSETS;
 			s_AssetTitle.SetEmptyText(Localize("Title"));
 			InputRow("bind-menu-asset-title", Localize("Title"), &s_AssetTitle, ui_token::settings::RowGap(Metrics.m_LineSpacing));
@@ -388,16 +403,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 					else
 					{
 						const std::string Label = TruncateLabel(s_AssetTitle.GetString(), AssetPresetLabel(Preset));
-						if(!GameClient()->m_BindWheel.SetBind(EditingAssets ? s_SelectedSource : -1, Label.c_str(), Command.c_str()))
+						if(!BindWheel.SetBind(EditingAssets ? SelectedSource : -1, Label.c_str(), Command.c_str()))
 							s_pStatus = Localize("The bind menu is full.");
 						else if(EditingAssets)
 						{
-							s_AssetFieldsSource = s_SelectedSource;
+							s_Selection.Select(SelectedSource, vBinds[SelectedSource]);
 							s_pStatus = Localize("Updated this configuration.");
 						}
 						else
 						{
-							s_SelectedSource = -1;
+							ClearSelection();
 							s_AssetFieldsSource = -2;
 							s_AssetTitle.Clear();
 							s_pStatus = Localize("Added to this bind menu.");
@@ -432,10 +447,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 		{
 			if(DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_DeleteButton,
 				   "bind-menu-delete", Localize("Delete selected"), 0, &Row, Metrics) &&
-				Editable && s_SelectedSource >= 0)
+				Editable && SelectedSource >= 0)
 			{
-				GameClient()->m_BindWheel.RemoveBind(s_SelectedSource);
-				s_SelectedSource = -1;
+				BindWheel.RemoveBind(SelectedSource);
+				ClearSelection();
 				s_ChatFieldsSource = -2;
 				s_AssetFieldsSource = -2;
 				s_ChatTitle.Clear();
@@ -450,7 +465,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 			TextRow("bind-menu-status", s_pStatus, "bind-menu-status-label", Metrics.m_SmallSize, 0.0f);
 	};
 
-	const uint64_t CardRevision = ((uint64_t)GameClient()->m_BindWheel.m_vBinds.size() << 8) ^ (uint64_t)s_Menu ^ ((uint64_t)(s_SelectedSource + 1) << 16) ^ (uint64_t)g_Config.m_QmBindWheelLayout;
+	const uint64_t CardRevision = ((uint64_t)vBinds.size() << 8) ^ (uint64_t)s_Menu ^ ((uint64_t)(SelectedSource + 1) << 16) ^ (uint64_t)g_Config.m_QmBindWheelLayout;
 	if(Pass == qm_card_catalog::ETClientCardPass::REVISION)
 		return {0.0f, CardRevision};
 	if(str_comp(pStableId, "deck:tclient-bind-wheel-editor") == 0)
@@ -474,8 +489,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 		vOptions.reserve(vVisible.size());
 		for(const int SourceIndex : vVisible)
 		{
-			const auto &Bind = GameClient()->m_BindWheel.m_vBinds[SourceIndex];
-			const auto *pPreset = GameClient()->m_BindWheel.PresetForBind(SourceIndex);
+			const auto &Bind = vBinds[SourceIndex];
+			const auto *pPreset = BindWheel.PresetForBind(SourceIndex);
 			vOptions.push_back({Bind.m_aName, Bind.m_aCommand, pPreset, pPreset == nullptr});
 		}
 		const auto Layout = qm_bind_menu_preview::BuildLayout(Preview, LayoutKind, (int)vOptions.size(), 0, UiScale, false, Menu);

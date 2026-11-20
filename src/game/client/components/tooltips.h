@@ -17,6 +17,7 @@
 #include <cmath>
 #include <cstdint>
 #include <functional>
+#include <new>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -74,13 +75,18 @@ inline CUIRect QmTooltipRect(const CUIRect &Anchor, const CUIRect &Screen, vec2 
 	Margin = std::max(0.0f, std::min(Margin, std::min(Screen.w, Screen.h) * 0.5f));
 	const float Width = std::clamp(Size.x, 0.0f, std::max(0.0f, Screen.w - 2.0f * Margin));
 	const float Height = std::clamp(Size.y, 0.0f, std::max(0.0f, Screen.h - 2.0f * Margin));
+	const float MinX = Screen.x + Margin;
+	const float MinY = Screen.y + Margin;
+	// 气泡刚好铺满可用宽高时，减法舍入可能让末端略小于起点。
+	const float MaxX = std::max(MinX, Screen.x + Screen.w - Width - Margin);
+	const float MaxY = std::max(MinY, Screen.y + Screen.h - Height - Margin);
 	if(Placement == EQmTooltipPlacement::LEFT)
 	{
 		const float X = Anchor.x - Width - Margin;
 		if(X >= Screen.x + Margin)
 		{
 			CUIRect Rect{X, Anchor.y + (Anchor.h - Height) * 0.5f, Width, Height};
-			Rect.y = std::clamp(Rect.y, Screen.y + Margin, Screen.y + Screen.h - Rect.h - Margin);
+			Rect.y = std::clamp(Rect.y, MinY, MaxY);
 			return Rect;
 		}
 	}
@@ -98,8 +104,8 @@ inline CUIRect QmTooltipRect(const CUIRect &Anchor, const CUIRect &Screen, vec2 
 			Rect.y = Anchor.y + (Anchor.h - Rect.h) * 0.5f;
 		}
 	}
-	Rect.x = std::clamp(Rect.x, Screen.x + Margin, Screen.x + Screen.w - Rect.w - Margin);
-	Rect.y = std::clamp(Rect.y, Screen.y + Margin, Screen.y + Screen.h - Rect.h - Margin);
+	Rect.x = std::clamp(Rect.x, MinX, MaxX);
+	Rect.y = std::clamp(Rect.y, MinY, MaxY);
 	return Rect;
 }
 
@@ -396,16 +402,26 @@ public:
 	template<typename TTextRender>
 	void Update(TTextRender &TextRender, CTextCursor Cursor, const std::string &Text)
 	{
-		if(!m_Index.Valid() || m_Text != Text || m_FontSize != Cursor.m_FontSize || m_WrapWidth != Cursor.m_LineWidth || m_MaxLines != Cursor.m_MaxLines)
+		if(m_Index.Valid() && m_Text == Text && m_FontSize == Cursor.m_FontSize && m_WrapWidth == Cursor.m_LineWidth && m_MaxLines == Cursor.m_MaxLines)
+			return;
+
+		Cursor.SetPosition(vec2(0, 0));
+		try
 		{
-			Cursor.SetPosition(vec2(0, 0));
 			TextRender.RecreateTextContainerSoft(m_Index, &Cursor, Text.c_str());
 			m_Text = Text;
-			m_FontSize = Cursor.m_FontSize;
-			m_WrapWidth = Cursor.m_LineWidth;
-			m_MaxLines = Cursor.m_MaxLines;
-			m_Cursor = std::move(Cursor);
 		}
+		catch(const std::bad_alloc &)
+		{
+			// 原地重排会先清掉旧字形，失败后必须作废容器，允许下一帧重新创建。
+			TextRender.ReleaseTemporaryTextContainer(m_Index);
+			m_Cursor = {};
+			return;
+		}
+		m_FontSize = Cursor.m_FontSize;
+		m_WrapWidth = Cursor.m_LineWidth;
+		m_MaxLines = Cursor.m_MaxLines;
+		m_Cursor = std::move(Cursor);
 	}
 
 	template<typename TTextRender>

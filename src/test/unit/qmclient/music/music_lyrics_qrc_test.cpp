@@ -1,52 +1,18 @@
+#include <game/client/components/qmclient/music_lyrics/music_lyrics_community_format.h>
 #include <game/client/components/qmclient/music_lyrics/music_lyrics_qrc.h>
 // SelectCurrentLine / SelectLatestStartedLine / SSelectedLine 声明在独立的 timeline 头里，
 // qrc 头只给出 STimeline 与解析入口。
 #include <game/client/components/qmclient/netease/netease_lyric_timeline.h>
 
 #include <gtest/gtest.h>
+#include <test/support/qrc_test_fixture.h>
 
 #include <string>
 #include <vector>
 
 using namespace QmMusicLyrics;
-
-namespace
-{
-	// 由 Python 验证脚本(tmp/verify_qrc.py 算法)构造的固定向量:
-	// 明文(XML 包裹 rlrc) -> zlib -> 3DES 加密 -> QMC1 XOR(全局偏移) -> 魔数头。
-	// 明文:
-	//   <?xml version="1.0" encoding="utf-8"?>
-	//   <QrcInfos>
-	//   <LyricInfo LyricCount="1">
-	//   <Lyric_1 LyricType="1" LyricContent="[ti:测试歌曲]
-	//   [ar:测试歌手]
-	//   [0,4390]停(0,274)下(274,274)脚(548,274)步(822,274)吧(1096,274)
-	//   [4390,2000]第二(4390,500)行(4890,600)歌(5490,700)词(6190,300)"/>
-	//   </LyricInfo>
-	//   </QrcInfos>
-	const char *ENCRYPTED_RLRC_HEX =
-		"9825b0ace3028368e8fc6c6e123cd43e97c7e195d1c1797a8163073d3aaea503778bf71928c92e810fb5acee6a06e752e8b378b9a58c5c04f6e262135f54cf16da5b938a440d187557cd781f8c237b0f63556bd9845001bf08e2af678cd9bbc9bbe1416f22325ab3ac570d4b44dc1d25d95f9966c4531604e3b3347ff66ee5392f9f822fc958e761b578e6439f6a77b017c68b3d14f2470374f502c0d9db630b3cabf1d55d4a3d4314e91051b6ed19bdea1218c73e41f0a8bcc85db0909ecb29e9d58f9c71380d125623ced5164e393e598a3816a7938efab653c84b4ad54bfdacfb385d873bbb33433a97163787ac7eec0f1687aed9d4d1a1aa22689539da06391ddcc3533f77d6206ee4";
-
-	std::vector<uint8_t> FromHex(const char *pH)
-	{
-		std::vector<uint8_t> Result;
-		while(pH[0] != '\0' && pH[1] != '\0')
-		{
-			auto Digit = [](char C) -> int {
-				if(C >= '0' && C <= '9')
-					return C - '0';
-				if(C >= 'a' && C <= 'f')
-					return C - 'a' + 10;
-				if(C >= 'A' && C <= 'F')
-					return C - 'A' + 10;
-				return 0;
-			};
-			Result.push_back((uint8_t)((Digit(pH[0]) << 4) | Digit(pH[1])));
-			pH += 2;
-		}
-		return Result;
-	}
-}
+using QrcTestFixture::ENCRYPTED_RLRC_HEX;
+using QrcTestFixture::FromHex;
 
 TEST(MusicLyricsQrc, DecryptsFixedVectorToXml)
 {
@@ -104,11 +70,81 @@ TEST(MusicLyricsQrc, ParsesRlrcWordTiming)
 	EXPECT_EQ(Timeline.m_vLines[0].m_vWords[0].m_StartMs, 0);
 	EXPECT_EQ(Timeline.m_vLines[0].m_vWords[0].m_EndMs, 274);
 	EXPECT_EQ(Timeline.m_vLines[0].m_vWords[1].m_StartMs, 274);
+	const char *apFirstWords[] = {"停", "下", "脚", "步", "吧"};
+	for(size_t Index = 0; Index < Timeline.m_vLines[0].m_vWords.size(); ++Index)
+		EXPECT_EQ(Timeline.m_vLines[0].m_vWords[Index].m_Text, apFirstWords[Index]);
 	EXPECT_EQ(Timeline.m_vLines[1].m_StartMs, 4390);
 	EXPECT_EQ(Timeline.m_vLines[1].m_EndMs, 6390);
+	EXPECT_EQ(Timeline.m_vLines[1].m_Text, "第二行歌词");
 	ASSERT_EQ(Timeline.m_vLines[1].m_vWords.size(), 4u);
 	EXPECT_EQ(Timeline.m_vLines[1].m_vWords[3].m_StartMs, 6190);
 	EXPECT_EQ(Timeline.m_vLines[1].m_vWords[3].m_EndMs, 6490);
+	const char *apSecondWords[] = {"第二", "行", "歌", "词"};
+	for(size_t Index = 0; Index < Timeline.m_vLines[1].m_vWords.size(); ++Index)
+		EXPECT_EQ(Timeline.m_vLines[1].m_vWords[Index].m_Text, apSecondWords[Index]);
+}
+
+TEST(MusicLyricsQrc, KeepsUntimedFragmentsAndPermissiveMarkers)
+{
+	struct SCase
+	{
+		const char *m_pBody;
+		const char *m_pText;
+		std::vector<const char *> m_vWords;
+		bool m_HasWordTiming;
+	};
+	const SCase aCases[] = {
+		{"没有逐字标记", "没有逐字标记", {}, false},
+		{"前词(60000,500)尾文", "前词尾文", {"前词"}, false},
+		{"(60000,100)前词(60100,400)(60500,100)", "前词", {"", "前词", ""}, true},
+		{"前)词(60000,500)", "前)词", {"前)词"}, true},
+		{"零时长(60000,0)正常(60000,500)", "零时长正常", {"正常"}, false},
+		{"溢出(9223372036854775807,1)正常(60000,500)", "溢出正常", {"正常"}, false},
+	};
+	for(const SCase &Case : aCases)
+	{
+		SCOPED_TRACE(Case.m_pBody);
+		SLyricsData Lyrics;
+		ASSERT_TRUE(ParseQrcRlrc(std::string("[60000,2000]") + Case.m_pBody, &Lyrics.m_Timeline));
+		ASSERT_EQ(Lyrics.m_Timeline.m_vLines.size(), 1u);
+		const auto &Line = Lyrics.m_Timeline.m_vLines.front();
+		EXPECT_EQ(Line.m_StartMs, 60000);
+		EXPECT_EQ(Line.m_EndMs, 62000);
+		EXPECT_EQ(Line.m_Text, Case.m_pText);
+		ASSERT_EQ(Line.m_vWords.size(), Case.m_vWords.size());
+		for(size_t Index = 0; Index < Case.m_vWords.size(); ++Index)
+			EXPECT_EQ(Line.m_vWords[Index].m_Text, Case.m_vWords[Index]);
+		EXPECT_EQ(HasWordTiming(Lyrics), Case.m_HasWordTiming);
+	}
+}
+
+TEST(MusicLyricsQrc, DiscardsMalformedMarkerLineAndKeepsFollowingLine)
+{
+	const char *apBodies[] = {
+		"缺尾括号(60000,100",
+		"缺逗号(60000)",
+		"负数(-1,100)",
+		"坏值(60000,no)",
+		"超范围(9223372036854775808,1)",
+		"额外逗号(60000,100,0)",
+	};
+	for(const char *pBody : apBodies)
+	{
+		SCOPED_TRACE(pBody);
+		SLyricsData Lyrics;
+		const std::string Rlrc = std::string("[60000,2000]") + pBody + "\n[63000,500]保留(63000,500)\n";
+		ASSERT_TRUE(ParseQrcRlrc(Rlrc, &Lyrics.m_Timeline));
+		ASSERT_EQ(Lyrics.m_Timeline.m_vLines.size(), 1u);
+		const auto &Line = Lyrics.m_Timeline.m_vLines.front();
+		EXPECT_EQ(Line.m_StartMs, 63000);
+		EXPECT_EQ(Line.m_EndMs, 63500);
+		EXPECT_EQ(Line.m_Text, "保留");
+		ASSERT_EQ(Line.m_vWords.size(), 1u);
+		EXPECT_EQ(Line.m_vWords[0].m_Text, "保留");
+		EXPECT_EQ(Line.m_vWords[0].m_StartMs, 63000);
+		EXPECT_EQ(Line.m_vWords[0].m_EndMs, 63500);
+		EXPECT_TRUE(HasWordTiming(Lyrics));
+	}
 }
 
 TEST(MusicLyricsQrc, SelectsPreviousLineDuringInterlude)
@@ -132,6 +168,11 @@ TEST(MusicLyricsQrc, RoundTripsFixedVectorThroughDataEntry)
 	EXPECT_TRUE(Lyrics.HasLyrics());
 	ASSERT_EQ(Lyrics.m_Timeline.m_vLines.size(), 2u);
 	EXPECT_EQ(Lyrics.m_Timeline.m_vLines[0].m_Text, "停下脚步吧");
+	ASSERT_EQ(Lyrics.m_Timeline.m_vLines[0].m_vWords.size(), 5u);
+	const char *apWords[] = {"停", "下", "脚", "步", "吧"};
+	for(size_t Index = 0; Index < Lyrics.m_Timeline.m_vLines[0].m_vWords.size(); ++Index)
+		EXPECT_EQ(Lyrics.m_Timeline.m_vLines[0].m_vWords[Index].m_Text, apWords[Index]);
+	EXPECT_TRUE(HasWordTiming(Lyrics));
 	EXPECT_TRUE(Lyrics.m_vTranslations.empty());
 }
 

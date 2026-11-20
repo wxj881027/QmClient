@@ -118,6 +118,14 @@ TEST(StrUtf8, Utf8ToSkeleton)
 	EXPECT_EQ(aBuf[5], 'u');
 }
 
+TEST(StrUtf8, SkeletonMapsAConfusableAndPreservesAnUnmappedSupplementaryCodepoint)
+{
+	int aSkeleton[2];
+	ASSERT_EQ(str_utf8_to_skeleton("\U0001D41A\U0001F642", aSkeleton, std::size(aSkeleton)), 2);
+	EXPECT_EQ(aSkeleton[0], 'a');
+	EXPECT_EQ(aSkeleton[1], 0x1F642);
+}
+
 TEST(StrUtf8, Utf8ToLowerCodepoint)
 {
 	EXPECT_TRUE(str_utf8_tolower_codepoint('A') == 'a');

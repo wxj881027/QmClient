@@ -3,6 +3,8 @@
 
 #include <base/color.h>
 #include <base/hash.h>
+#include <base/io.h>
+#include <base/str.h>
 
 #include <engine/client/enums.h>
 #include <engine/external/regex.h>
@@ -10,19 +12,24 @@
 #include <engine/http.h>
 #include <engine/shared/console.h>
 #include <engine/shared/json.h>
+#include <engine/shared/jsonwriter.h>
 #include <engine/shared/protocol.h>
+#include <engine/storage.h>
 #include <engine/textrender.h>
 
 #include <generated/protocol.h>
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/auto_reply.h>
-#include <game/client/components/qmclient/friend_enter_tracker.h>
-#include <game/client/components/qmclient/friend_online_tracker.h>
+#include <game/client/components/qmclient/friend_enter_notify.h>
+#include <game/client/components/qmclient/friend_online_notify.h>
+#include <game/client/components/qmclient/friend_online_scan.h>
 #include <game/client/components/qmclient/gores_drown_tracker.h>
 #include <game/client/components/qmclient/hammer_hit_detection.h>
 #include <game/client/components/qmclient/keyword_reply_rules.h>
 #include <game/client/components/qmclient/local_saves.h>
+#include <game/client/components/qmclient/map_history_session.h>
+#include <game/client/components/qmclient/map_history_storage.h>
 #include <game/client/components/qmclient/map_progress.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/red_packet_auto_claim.h>
@@ -38,6 +45,7 @@
 
 #include <array>
 #include <deque>
+#include <memory>
 #include <queue>
 #include <set>
 #include <string>
@@ -52,6 +60,92 @@ namespace qm_update
 	class CPackageDownload;
 }
 struct CNetMsg_Sv_Chat;
+
+namespace qm_tclient_map_data
+{
+	struct SFile
+	{
+		const char *m_pPath;
+		const char *m_pKey;
+	};
+
+	inline constexpr SFile NOTES{qm_storage::MAP_NOTES_FILE, "notes"};
+	inline constexpr SFile CATEGORIES{qm_storage::MAP_CATEGORIES_FILE, "maps"};
+
+	inline bool FormatFavoriteCommand(const char *pMapName, char (&aLine)[IConsole::CMDLINE_LENGTH])
+	{
+		if(!str_utf8_check(pMapName))
+			return false;
+		constexpr char PREFIX[] = "add_favorite_map \"";
+		size_t Length = sizeof(PREFIX) + 1;
+		for(const char *pChar = pMapName; *pChar; ++pChar)
+		{
+			if(static_cast<unsigned char>(*pChar) < ' ' && *pChar != '\t')
+				return false;
+			Length += (*pChar == '"' || *pChar == '\\') ? 2 : 1;
+			if(Length > sizeof(aLine))
+				return false;
+		}
+		str_copy(aLine, PREFIX);
+		char *pEnd = aLine + sizeof(PREFIX) - 1;
+		str_escape(&pEnd, pMapName, aLine + sizeof(aLine) - 1);
+		*pEnd++ = '"';
+		*pEnd = '\0';
+		return true;
+	}
+
+	inline bool Save(IStorage &Storage, const SFile &File, const std::unordered_map<std::string, std::string> &Entries, bool &Dirty) noexcept
+	try
+	{
+		char aCandidate[IO_MAX_PATH_LENGTH];
+		IStorage::FormatTmpPath(aCandidate, sizeof(aCandidate), File.m_pPath);
+		char aRoot[IO_MAX_PATH_LENGTH] = "";
+		Storage.GetCompletePath(IStorage::TYPE_SAVE, "", aRoot, sizeof(aRoot));
+		if(str_length(aRoot) + str_length(aCandidate) >= IO_MAX_PATH_LENGTH)
+			return false;
+		qm_storage::EnsureFolder(&Storage, qm_storage::STATE_MAPS_DIR);
+		qm_map_history_storage::STemporaryFile Candidate{Storage, aCandidate};
+		std::unique_ptr<void, decltype(&io_close)> pFile(Storage.OpenFile(aCandidate, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE), io_close);
+		if(!pFile)
+			return false;
+		Candidate.m_Owned = true;
+		CJsonFileWriter Writer(pFile.get());
+		pFile.release();
+		Writer.BeginObject();
+		Writer.WriteAttribute("version");
+		Writer.WriteIntValue(1);
+		Writer.WriteAttribute(File.m_pKey);
+		Writer.BeginObject();
+		for(const auto &[Map, Value] : Entries)
+		{
+			if(Map.empty() || Value.empty())
+				continue;
+			if(!str_utf8_check(Map.c_str()) || !str_utf8_check(Value.c_str()))
+				return false;
+			Writer.WriteAttribute(Map.c_str());
+			Writer.WriteStrValue(Value.c_str());
+		}
+		Writer.EndObject();
+		Writer.EndObject();
+		// 候选写入、同步和关闭都成功后才能替换，重命名失败时保留旧文件。
+		if(!Writer.Finish() || !Storage.RenameFile(aCandidate, File.m_pPath, IStorage::TYPE_SAVE, false))
+			return false;
+		Candidate.m_Owned = false;
+		Dirty = false;
+		return true;
+	}
+	catch(...)
+	{
+		return false;
+	}
+}
+
+template<typename TPickFlagCode>
+void QmApplyRandomFlag(int &CountryCode, size_t FlagCount, TPickFlagCode &&PickFlagCode)
+{
+	if(FlagCount != 0)
+		CountryCode = PickFlagCode(FlagCount);
+}
 
 // 玩家统计数据结构
 struct SPlayerStats
@@ -177,6 +271,8 @@ class CTClient : public CComponent
 	void DoFinishCheck();
 	const char *CurrentCommunityIdForFinishCheck() const;
 	void StartUpdateDownload(bool NextSource = false);
+	void FailUpdateDownloadPreparation() noexcept;
+	void FailUpdateMetadataCheck(const char *pMessage, bool NetworkError) noexcept;
 	void StartUpdateSourceSurvey();
 	void PollUpdateRequests();
 	void RunUpdateHttp(std::shared_ptr<IHttpRequest> pRequest);
@@ -390,10 +486,7 @@ class CTClient : public CComponent
 	// Map play history
 	QmMapHistory::CMapHistory m_MapHistory;
 	bool m_MapHistoryDirty = false;
-	bool m_MapHistorySessionActive = false;
-	int64_t m_MapHistorySessionStart = 0;
-	std::string m_MapHistoryActiveMapId;
-	std::string m_MapHistoryActiveMapName;
+	QmMapHistory::CSession m_MapHistorySession;
 	std::string m_MapHistorySuppressedMapId;
 	void LoadMapHistory();
 	void SaveMapHistory();
@@ -402,7 +495,7 @@ class CTClient : public CComponent
 	void EndMapHistorySession(bool SaveNow);
 	void UpdateMapHistorySession();
 	void TouchMapHistoryPlayTime();
-	std::string CurrentMapHistoryId() const;
+	bool TryCurrentMapHistoryId(std::string &Output) const;
 	int64_t CurrentMapHistoryPlayTimeMs() const;
 	void HandleMapHistoryDeath(int ClientId);
 	void HandleMapHistoryTeamDeath(int Team);
@@ -438,31 +531,21 @@ class CTClient : public CComponent
 	void ClearSwapCountdown(int Dummy = -1);
 
 	// 好友上线提醒
-	struct SFriendOnlineState
-	{
-		float m_LastSeen = 0.0f;
-	};
-	std::unordered_map<std::string, SFriendOnlineState> m_FriendOnline;
-	qm_friend_notify::COnlineTracker m_FriendOnlineTracker;
-	std::vector<qm_friend_notify::CFriend> m_vFriendOnlineScan;
-	std::unordered_set<std::string> m_FriendOnlineAvailableServers;
-	std::unordered_set<std::string> m_FriendOnlineNames;
+	qm_friend_notify::COnlineNotifier m_FriendOnlineNotifier;
+	qm_friend_notify::COnlineScanner m_FriendOnlineScanner;
 	float m_FriendNotifyNextCheck = 0.0f;
 	int m_FriendNotifyPrevEnabled = -1;
 	int m_FriendNotifyPrevIgnoreClan = -1;
 	uint64_t m_FriendNotifyPrevRevision = 0;
-	bool m_FriendNotifyScanRunning = false;
-	int m_FriendNotifyScanIndex = 0;
 	float m_FriendAutoRefreshNext = 0.0f;
 	int m_FriendAutoRefreshPrevEnabled = -1;
 	int m_FriendAutoRefreshPrevSeconds = -1;
 	void CheckFriendOnline();
-	// 本服进服通知和自动问候共享服务端提示的出入状态。
-	qm_friend_notify::CEnterTracker m_FriendEnterTracker;
+	// 本服进服通知与问候由服务端出入提示驱动，共享事务状态。
+	qm_friend_notify::CEnterNotifier m_FriendEnterNotifier;
 	int m_FriendEnterPrevEnabled = -1;
 	int m_FriendEnterPrevDummy = -1;
 	uint64_t m_FriendEnterPrevRevision = 0;
-	qm_friend_notify::CGreetQueue m_FriendEnterPending;
 	void ResetFriendEnter();
 	bool SyncFriendEnterSettings();
 	void CheckFriendEnterGreet();
@@ -518,11 +601,8 @@ public:
 	bool IsPreparingUpdateForShutdown() const { return m_UpdateShutdownRequested; }
 
 	std::shared_ptr<IHttpRequest> m_pQmClientUpdateInfoTask = nullptr;
-	std::shared_ptr<IHttpRequest> m_pUpdatePackageTask = nullptr;
+	qm_update::CDownloadTasks m_UpdateDownloadTasks;
 	std::shared_ptr<qm_update::CPackageDownload> m_pUpdatePackageDownload = nullptr;
-	std::shared_ptr<IHttpRequest> m_pUpdatePackageSignatureTask = nullptr;
-	std::shared_ptr<IHttpRequest> m_pUpdateManifestTask = nullptr;
-	std::shared_ptr<IHttpRequest> m_pUpdateManifestSignatureTask = nullptr;
 	void InitUpdateLifecycle();
 	void TickUpdateLifecycle();
 	void ShutdownUpdateLifecycle();
@@ -530,7 +610,7 @@ public:
 	std::shared_ptr<IHttpRequest> CreateUpdateInfoRequest(const std::string &Url, bool Direct = false);
 	void FetchQmClientUpdateInfo();
 	void FinishQmClientUpdateInfo();
-	void ResetQmClientUpdateInfoTask();
+	void ResetQmClientUpdateInfoTask() noexcept;
 	bool NeedQmClientUpdate();
 	void RequestQmClientUpdateCheck(bool UpdateAfterCheck = false);
 	void RequestQmClientUpdateCheckAndUpdate();
@@ -542,10 +622,7 @@ public:
 	bool IsUpdateChecking() const { return m_pQmClientUpdateInfoTask != nullptr; }
 	bool IsUpdateDownloading() const
 	{
-		return m_UpdateSurvey.Running() || m_pUpdatePackageTask != nullptr ||
-		       m_pUpdatePackageSignatureTask != nullptr ||
-		       m_pUpdateManifestTask != nullptr ||
-		       m_pUpdateManifestSignatureTask != nullptr;
+		return m_UpdateSurvey.Running() || m_UpdateDownloadTasks.Any();
 	}
 
 	void RenderCenterLines();

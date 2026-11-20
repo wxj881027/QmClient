@@ -122,6 +122,17 @@ TEST(QmVotingHud, ScoreboardPanelFitsAcrossAvailableSizes)
 	}
 }
 
+TEST(QmVotingHud, WidthLimitedPanelKeepsBothMarginsAfterScaling)
+{
+	const CUIRect Screen{0.0f, 0.0f, 133.33334f, 400.0f};
+	const CUIRect Scoreboard{-33.33333f, 75.0f, 200.0f, 220.0f};
+	const SQmVoteHudLayout Layout = QmScoreboardVoteLayout(Screen, Scoreboard);
+	ASSERT_GT(Layout.m_Panel.w, 0.0f);
+	EXPECT_GE(Layout.m_Panel.x, 6.0f);
+	EXPECT_LE(Layout.m_Panel.w, Screen.w - 12.0f);
+	EXPECT_LE(Layout.m_Panel.x + Layout.m_Panel.w, Screen.w - 6.0f);
+}
+
 TEST(QmVotingHud, NoTopSpaceProducesNoOverlappingPanel)
 {
 	const CUIRect Screen = {0.0f, 0.0f, 800.0f, 600.0f};

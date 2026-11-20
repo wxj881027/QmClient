@@ -81,7 +81,8 @@ namespace qm_ui
 
 	void Toast(EQmToastKind Kind, const char *pText, const SToastOptions &Options)
 	{
-		s_Queue.Push(Kind, pText, Options, time_get());
+		const double NowSec = static_cast<double>(time_get()) / static_cast<double>(time_freq());
+		s_Queue.Push(Kind, pText, Options, NowSec);
 	}
 
 	void ClearToasts()

@@ -146,6 +146,18 @@ TEST_F(CQmStorageLayout, ConflictingTargetPreservesBothFilesAndSkipsMarker)
 	EXPECT_FALSE(m_pStorage->FileExists(qm_storage::LAYOUT_MIGRATION_MARKER_FILE, IStorage::TYPE_SAVE));
 }
 
+TEST_F(CQmStorageLayout, NoReplaceMovePreservesThePublishedFile)
+{
+	Write("candidate", "candidate contents");
+	Write("published", "published contents");
+	EXPECT_FALSE(m_pStorage->MoveFileNoReplace("candidate", "published", IStorage::TYPE_SAVE));
+	EXPECT_EQ(Read("candidate"), "candidate contents");
+	EXPECT_EQ(Read("published"), "published contents");
+	ASSERT_TRUE(m_pStorage->MoveFileNoReplace("candidate", "available", IStorage::TYPE_SAVE));
+	EXPECT_EQ(Read("available"), "candidate contents");
+	EXPECT_FALSE(m_pStorage->FileExists("candidate", IStorage::TYPE_SAVE));
+}
+
 TEST_F(CQmStorageLayout, FontConflictsArePreservedWithoutBlockingMigration)
 {
 	Write("qmclient/fonts/Shared.ttf", "legacy-user-font");

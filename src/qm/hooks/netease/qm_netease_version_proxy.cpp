@@ -13,6 +13,9 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <memory>
+#include <new>
+#include <stdexcept>
 #include <string>
 
 namespace
@@ -133,20 +136,24 @@ namespace
 			return false;
 		if(Patched.empty())
 			return false;
+		if(Patched.size() >= std::numeric_limits<SIZE_T>::max() / sizeof(wchar_t))
+			return false;
+		const HANDLE hHeap = GetProcessHeap();
+		auto Free = [hHeap](void *pBuffer) { HeapFree(hHeap, 0, pBuffer); };
 		const size_t WideBytes = (Patched.size() + 1) * sizeof(wchar_t);
-		if(WideBytes > std::numeric_limits<SIZE_T>::max())
+		std::unique_ptr<wchar_t, decltype(Free)> Wide(static_cast<LPWSTR>(HeapAlloc(hHeap, 0, WideBytes)), Free);
+		if(!Wide)
 			return false;
-		g_pPatchedCommandLineW = static_cast<LPWSTR>(HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, WideBytes));
-		if(g_pPatchedCommandLineW == nullptr)
-			return false;
-		std::memcpy(g_pPatchedCommandLineW, Patched.c_str(), WideBytes);
+		std::memcpy(Wide.get(), Patched.c_str(), WideBytes);
 
 		const int AnsiBytes = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, Patched.c_str(), -1, nullptr, 0, nullptr, nullptr);
 		if(AnsiBytes <= 0)
 			return false;
-		g_pPatchedCommandLineA = static_cast<LPSTR>(HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (SIZE_T)AnsiBytes));
-		if(g_pPatchedCommandLineA == nullptr || WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, Patched.c_str(), -1, g_pPatchedCommandLineA, AnsiBytes, nullptr, nullptr) <= 0)
+		std::unique_ptr<char, decltype(Free)> Ansi(static_cast<LPSTR>(HeapAlloc(hHeap, 0, (SIZE_T)AnsiBytes)), Free);
+		if(!Ansi || WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, Patched.c_str(), -1, Ansi.get(), AnsiBytes, nullptr, nullptr) != AnsiBytes)
 			return false;
+		g_pPatchedCommandLineW = Wide.release();
+		g_pPatchedCommandLineA = Ansi.release();
 		return true;
 	}
 
@@ -154,16 +161,24 @@ namespace
 	{
 		if(InterlockedCompareExchange(&g_CommandLineHookState, 1, 0) != 0)
 			return;
-		if(!PreparePatchedCommandLine())
+		try
 		{
-			InterlockedExchange(&g_CommandLineHookState, 2);
-			return;
+			if(PreparePatchedCommandLine())
+			{
+				// 主程序和 CEF 相关模块都可能直接通过各自的 IAT 读取命令行。
+				PatchModuleImports(GetModuleHandleW(nullptr));
+				PatchModuleImports(GetModuleHandleW(L"cloudmusic.dll"));
+				PatchModuleImports(GetModuleHandleW(L"libcef.dll"));
+				PatchModuleImports(GetModuleHandleW(L"chrome_elf.dll"));
+			}
 		}
-		// 主程序和 CEF 相关模块都可能直接通过各自的 IAT 读取命令行。
-		PatchModuleImports(GetModuleHandleW(nullptr));
-		PatchModuleImports(GetModuleHandleW(L"cloudmusic.dll"));
-		PatchModuleImports(GetModuleHandleW(L"libcef.dll"));
-		PatchModuleImports(GetModuleHandleW(L"chrome_elf.dll"));
+		catch(const std::bad_alloc &)
+		{
+			// 启动参数准备失败时，DLL 仍应继续提供系统 VERSION API。
+		}
+		catch(const std::length_error &)
+		{
+		}
 		InterlockedExchange(&g_CommandLineHookState, 2);
 	}
 
@@ -176,9 +191,18 @@ namespace
 	}
 
 	BOOL CALLBACK InitSystemVersion(PINIT_ONCE, PVOID, PVOID *)
+	try
 	{
 		g_hSystemVersion = LoadSystemVersion();
-		return TRUE;
+		return g_hSystemVersion != nullptr;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return FALSE;
+	}
+	catch(const std::length_error &)
+	{
+		return FALSE;
 	}
 
 	bool EnsureSystemVersion()
@@ -186,8 +210,7 @@ namespace
 		// 如果某个模块在 DLL_PROCESS_ATTACH 之后才进入 loader list，
 		// 在首次 VERSION API 调用时再补一次 IAT 拦截。
 		InstallCommandLineHooks();
-		InitOnceExecuteOnce(&g_InitOnce, InitSystemVersion, nullptr, nullptr);
-		return g_hSystemVersion != nullptr;
+		return InitOnceExecuteOnce(&g_InitOnce, InitSystemVersion, nullptr, nullptr) != FALSE;
 	}
 
 	template<typename T>

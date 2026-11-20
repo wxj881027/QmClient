@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <new>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -62,6 +63,7 @@ namespace
 		const char *m_apCardParagraphs[3]{};
 		SWikiSection m_aCardSections[3]{};
 		char m_aTitle[96] = "";
+		ui_widget::SSecondaryPanelLabel m_TitleLabel;
 		bool m_IsCard = true;
 
 		// 内容、目录、草稿与保存/还原全部由编辑状态机维护，面板只负责绘制。
@@ -81,8 +83,8 @@ namespace
 		// 本帧鼠标是否真的在目录行上（由 MouseHovered 给出，含裁剪与弹层输入屏蔽）。
 		bool m_aTocRowHovered[64]{};
 		int m_TocRowCount = 0;
-		// 正文跳转先记下来，等本次绘制结束后再换内容，避免布局中途失效。
-		char m_aPendingLink[128] = "";
+		// 正文跳转延至下一帧处理，保留 Markdown 链接的完整地址。
+		std::string m_PendingLink;
 	};
 
 	SWikiPopupContext gs_WikiPopupContext;
@@ -98,6 +100,9 @@ namespace
 		const bool IsCard = str_startswith(pTarget, "qm:") != nullptr || str_startswith(pTarget, "tclient:") != nullptr || str_startswith(pTarget, "deck:") != nullptr;
 		if(!IsCard)
 		{
+			// 本地覆盖和导入的文档也能包含链接，只把网页地址交给系统。
+			if(!str_startswith_nocase(pTarget, "https://") && !str_startswith_nocase(pTarget, "http://"))
+				return;
 #if defined(CONF_PLATFORM_ANDROID)
 			// Android 上 base 层不提供 os_open_link（os.h 在该平台隐藏声明），
 			// 外部链接交给 SDL 转交系统浏览器。
@@ -110,21 +115,21 @@ namespace
 		const SCardWikiCopy *pCopy = FindCardWikiCopy(pTarget);
 		if(pCopy == nullptr)
 			return;
-		const auto *pDefault = qm_card_registry::FindByStableId(pTarget);
-		const char *pTitle = pDefault != nullptr && pDefault->m_pTitle != nullptr ? Localize(pDefault->m_pTitle) : pTarget;
+		const auto *pDefault = qm_card_registry::FindByStableId(pCopy->m_pStableId);
+		const char *pTitleKey = pDefault != nullptr ? pDefault->m_pTitle : nullptr;
 		pPopup->m_apCardParagraphs[0] = pCopy->m_pWhat;
 		pPopup->m_apCardParagraphs[1] = pCopy->m_pHow;
 		pPopup->m_apCardParagraphs[2] = pCopy->m_pAdvice;
 		const char *apHeadings[3] = {Localizable("What this controls"), Localizable("How to use it"), Localizable("Good to know")};
 		for(int Index = 0; Index < 3; ++Index)
 			pPopup->m_aCardSections[Index] = {apHeadings[Index], &pPopup->m_apCardParagraphs[Index], 1};
-		pPopup->m_Fallback = {pTarget, pTitle, pPopup->m_aCardSections, 3};
+		pPopup->m_Fallback = {pCopy->m_pStableId, pTitleKey, pPopup->m_aCardSections, 3};
 		pPopup->m_IsCard = true;
-		str_copy(pPopup->m_aTitle, pTitle, sizeof(pPopup->m_aTitle));
+		str_copy(pPopup->m_aTitle, pTitleKey != nullptr ? Localize(pTitleKey) : pCopy->m_pStableId, sizeof(pPopup->m_aTitle));
 		pPopup->m_Editor.LeaveEditing();
 		pPopup->m_ResetScroll = true;
 		pPopup->m_TocTarget = -1;
-		pPopup->m_Editor.Load(pTarget, pPopup->m_Fallback, true);
+		pPopup->m_Editor.Load(pCopy->m_pStableId, pPopup->m_Fallback, true);
 	}
 
 	CUi::EPopupMenuFunctionResult RenderWikiPopup(void *pContext, CUIRect View, bool Active)
@@ -141,12 +146,10 @@ namespace
 		pPopup->m_pUi->RefreshPopupMenuSource(&gs_WikiPopupId, true, pPopup->m_pUi->PopupSourceFrame());
 
 		// 上一帧请求的跳转在这里落地：此时没有正在迭代的正文，可以安全换内容。
-		if(pPopup->m_aPendingLink[0] != '\0')
+		if(!pPopup->m_PendingLink.empty())
 		{
-			char aTarget[128];
-			str_copy(aTarget, pPopup->m_aPendingLink, sizeof(aTarget));
-			pPopup->m_aPendingLink[0] = '\0';
-			NavigateTo(pPopup, aTarget);
+			const std::string Target = std::exchange(pPopup->m_PendingLink, {});
+			NavigateTo(pPopup, Target.c_str());
 		}
 
 		IUiContext Ctx;
@@ -165,11 +168,10 @@ namespace
 		const float Gap = ui_token::spacing::MD * UiScale;
 		const SUiTheme &Theme = *Ctx.m_pTheme;
 
-		static ui_widget::SSecondaryPanelLabel s_Title;
 		static CButtonContainer s_CloseButton;
 		ui_widget::CSecondaryPanel Panel(Ctx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(std::max(0.0f, Ctx.m_pUi->Screen()->w - 16.0f), pPopup->m_Kind, UiScale), {});
 		const char *pTitle = pPopup->m_aTitle[0] != '\0' ? pPopup->m_aTitle : (pPopup->m_Fallback.m_pTitle != nullptr ? Localize(pPopup->m_Fallback.m_pTitle) : Localize("Card guide"));
-		if(Panel.Header(s_Title, s_CloseButton, pTitle))
+		if(Panel.Header(pPopup->m_TitleLabel, s_CloseButton, pTitle))
 			return CUi::POPUP_CLOSE_CURRENT;
 
 		CUIRect Content = Panel.ContentRect();
@@ -227,10 +229,17 @@ namespace
 			StatusRect.w = std::max(0.0f, StatusRect.w - (SaveRect.w + RevertRect.w + CancelRect.w + Gap * 3.0f));
 			if(ui_widget::PrimaryButton(Ctx, &s_SaveButton, Localize("Save"), SaveRect) && pPopup->m_Editor.Save())
 				pPopup->m_EditInput.Set(pPopup->m_Editor.m_Draft.c_str());
-			if(ui_widget::SecondaryButton(Ctx, &s_RevertButton, Localize("Reset"), RevertRect))
+			if(ui_widget::SecondaryButton(Ctx, &s_RevertButton, Localize("Reset"), RevertRect) && pPopup->m_Editor.ResetToBuiltIn())
 			{
-				pPopup->m_Editor.ResetToBuiltIn();
-				pPopup->m_EditInput.Set(pPopup->m_Editor.m_Draft.c_str());
+				pPopup->m_EditInput.WasChanged();
+				// 还原后也要遵守编辑框容量和读取状态，避免把回退正文截短后再保存。
+				if(pPopup->m_Editor.m_Content.m_ReadFailed || pPopup->m_Editor.m_Draft.size() >= pPopup->m_EditInput.GetMaxSize())
+				{
+					pPopup->m_Editor.LeaveEditing();
+					Ctx.m_pUi->ReleaseActiveTextInput(&pPopup->m_EditInput);
+				}
+				else
+					pPopup->m_EditInput.Set(pPopup->m_Editor.m_Draft.c_str());
 			}
 			if(ui_widget::SecondaryButton(Ctx, &s_CancelButton, Localize("Done"), CancelRect))
 			{
@@ -381,11 +390,10 @@ namespace
 			}
 			else
 			{
-				static SWikiLinkContext s_Links;
-				const std::function<void(const char *)> OnLink = [pPopup](const char *pTarget) {
-					str_copy(pPopup->m_aPendingLink, pTarget != nullptr ? pTarget : "", sizeof(pPopup->m_aPendingLink));
+				static const std::function<void(const char *)> s_OnLink = [](const char *pTarget) {
+					gs_WikiPopupContext.m_PendingLink = pTarget != nullptr ? pTarget : "";
 				};
-				s_Links.m_pOnClick = &OnLink;
+				static SWikiLinkContext s_Links{&s_OnLink};
 				qm_wiki_markdown::RenderBlocks(Ctx, pPopup->m_Editor.m_Markdown.Blocks(), Body, Style, &gs_WikiScroll, &s_Links, pPopup->m_TocTarget);
 				if(!Ctx.m_pUi->RenderOnly())
 					pPopup->m_TocTarget = -1;
@@ -441,6 +449,7 @@ namespace
 		gs_WikiPopupContext.m_IsCard = IsCard;
 		gs_WikiPopupContext.m_Fallback = Fallback;
 		gs_WikiPopupContext.m_EditInput.Clear();
+		gs_WikiPopupContext.m_PendingLink.clear();
 		gs_WikiPopupContext.m_ResetScroll = true;
 		str_copy(gs_WikiPopupContext.m_aTitle, pTitle != nullptr ? pTitle : "");
 

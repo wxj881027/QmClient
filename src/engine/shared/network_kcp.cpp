@@ -6,6 +6,7 @@
 #include <base/system.h>
 
 #include <algorithm>
+#include <chrono>
 #include <utility>
 
 extern "C" {
@@ -15,9 +16,17 @@ extern "C" {
 static constexpr unsigned char s_aKcpMagic[] = {'Q', 'K', 'C', 'P'};
 static constexpr unsigned char s_KcpVersion = 1;
 
+static constexpr uint32_t KcpTimeMs(std::chrono::nanoseconds Time)
+{
+	return static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(Time).count());
+}
+
+// 跨过三次 32 位毫秒回绕后，仍保留剩余毫秒。
+static_assert(KcpTimeMs(std::chrono::milliseconds{(int64_t{3} << 32) + 42}) == 42);
+
 static uint32_t KcpNowMs()
 {
-	return (uint32_t)(time_get() * 1000 / time_freq());
+	return KcpTimeMs(std::chrono::nanoseconds{time_get()});
 }
 
 CNetKcpSession::~CNetKcpSession()
@@ -63,14 +72,20 @@ CNetKcpSession &CNetKcpSession::operator=(CNetKcpSession &&Other) noexcept
 
 bool CNetKcpSession::Init(NETSOCKET Socket, const NETADDR &PeerAddr, uint32_t Conv)
 {
-	Reset();
 	if(Socket == nullptr || Conv == 0)
 		return false;
 
-	m_pKcp = ikcp_create(Conv, this);
-	if(!m_pKcp)
+	IKCPCB *pKcp = ikcp_create(Conv, this);
+	if(!pKcp)
 		return false;
+	if(ikcp_setmtu(pKcp, NET_KCP_MTU) != 0)
+	{
+		ikcp_release(pKcp);
+		return false;
+	}
 
+	Reset();
+	m_pKcp = pKcp;
 	m_Socket = Socket;
 	m_PeerAddr = PeerAddr;
 	m_Conv = Conv;
@@ -110,7 +125,6 @@ void CNetKcpSession::ApplyTuning()
 	if(!m_pKcp)
 		return;
 
-	ikcp_setmtu(m_pKcp, NET_KCP_MTU);
 	ikcp_nodelay(m_pKcp, 1, 10, 2, 0);
 	ikcp_wndsize(m_pKcp, 64, 128);
 	m_pKcp->rx_minrto = 30;

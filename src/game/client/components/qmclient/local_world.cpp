@@ -193,34 +193,27 @@ void CLocalWorld::EndViewSession()
 	m_ViewSessionSlotCount = 0;
 }
 
-void CLocalWorld::ShiftTrackTicks(int TickDelta)
+bool CLocalWorld::ShiftTrackTicks(int64_t TickDelta, QmTickShift::EMode Mode)
 {
 	if(TickDelta <= 0)
-		return;
+		return true;
 	// 世界 tick 被平移后，轨迹里的绝对时间量必须同步，否则存成幽灵后
 	// 播放头会与当前世界错开一截（起跑、攻击动画都会偏）。
-	for(STrackBuffer &Track : m_aTracks)
-	{
-		for(SLocalActorFrame &Frame : Track.m_vFrames)
-		{
-			Frame.m_Tick += TickDelta;
-			Frame.m_AttackTick += TickDelta;
-		}
-		for(SLocalActorFrame &Frame : Track.m_vCompleted)
-		{
-			Frame.m_Tick += TickDelta;
-			Frame.m_AttackTick += TickDelta;
-		}
-	}
-	for(SLocalActorEvent &Event : m_vEvents)
-		Event.m_Tick += TickDelta;
-	for(SLocalActorEvent &Event : m_vCompletedEvents)
-		Event.m_Tick += TickDelta;
-	for(SLocalSwitchState &Switch : m_vSwitchStates)
-		Switch.m_Tick += TickDelta;
-	for(SLocalSwitchState &Switch : m_vCompletedSwitchStates)
-		Switch.m_Tick += TickDelta;
-	m_TrackStartTick += TickDelta;
-	if(m_CompletedStartTick != 0)
-		m_CompletedStartTick += TickDelta;
+	const auto Shift = [&](QmTickShift::EMode Pass) {
+		for(STrackBuffer &Track : m_aTracks)
+			for(auto *pvFrames : {&Track.m_vFrames, &Track.m_vCompleted})
+				for(SLocalActorFrame &Frame : *pvFrames)
+					if(!QmTickShift::TryShiftFields(TickDelta, Pass, {&Frame.m_Tick, &Frame.m_AttackTick}))
+						return false;
+		for(auto *pvEvents : {&m_vEvents, &m_vCompletedEvents})
+			for(SLocalActorEvent &Event : *pvEvents)
+				if(!QmTickShift::TryShiftFields(TickDelta, Pass, {&Event.m_Tick}))
+					return false;
+		for(auto *pvSwitches : {&m_vSwitchStates, &m_vCompletedSwitchStates})
+			for(SLocalSwitchState &Switch : *pvSwitches)
+				if(!QmTickShift::TryShiftFields(TickDelta, Pass, {&Switch.m_Tick}))
+					return false;
+		return QmTickShift::TryShiftFields(TickDelta, Pass, {&m_TrackStartTick, m_CompletedStartTick != 0 ? &m_CompletedStartTick : nullptr});
+	};
+	return Shift(QmTickShift::EMode::CHECK) && (Mode == QmTickShift::EMode::CHECK || Shift(QmTickShift::EMode::COMMIT));
 }

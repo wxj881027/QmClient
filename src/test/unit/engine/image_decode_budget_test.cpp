@@ -1,6 +1,9 @@
+#include <base/io.h>
+
 #include <engine/gfx/image_loader.h>
 
 #include <gtest/gtest.h>
+#include <test/test.h>
 
 namespace
 {
@@ -77,5 +80,30 @@ TEST(ImageDecodeBudget, WebpRejectsOneByteBelowPixelBudgetAndAcceptsExactBudget)
 	ASSERT_TRUE(CImageLoader::LoadWebP(Writer.Data(), Writer.Size(), "budget", Decoded.m_Image, 32));
 	EXPECT_EQ(Decoded.m_Image.m_Width, 2u);
 	EXPECT_EQ(Decoded.m_Image.m_Height, 4u);
+}
+
+TEST(ImageDecodeBudget, WebpFileLoadRecoversAfterEmptyInput)
+{
+	CTestInfo TestInfo;
+	const char *pFilename = TestInfo.m_aFilename;
+	IOHANDLE EmptyFile = io_open(pFilename, IOFLAG_WRITE);
+	ASSERT_NE(EmptyFile, nullptr);
+	ASSERT_EQ(io_close(EmptyFile), 0);
+
+	SDecodedImage Decoded;
+	IOHANDLE EmptyInput = io_open(pFilename, IOFLAG_READ);
+	ASSERT_NE(EmptyInput, nullptr);
+	EXPECT_FALSE(CImageLoader::LoadWebP(EmptyInput, pFilename, Decoded.m_Image));
+	EXPECT_EQ(Decoded.m_Image.m_pData, nullptr);
+
+	uint8_t aPixels[32] = {17, 23, 42, 255};
+	ASSERT_TRUE(CImageLoader::SaveWebP(io_open(pFilename, IOFLAG_WRITE), pFilename, SmallImage(aPixels)));
+	ASSERT_TRUE(CImageLoader::LoadWebP(io_open(pFilename, IOFLAG_READ), pFilename, Decoded.m_Image));
+	ASSERT_EQ(Decoded.m_Image.m_Width, 2u);
+	ASSERT_EQ(Decoded.m_Image.m_Height, 4u);
+	EXPECT_EQ(Decoded.m_Image.m_Format, CImageInfo::FORMAT_RGBA);
+	ASSERT_NE(Decoded.m_Image.m_pData, nullptr);
+	EXPECT_EQ(Decoded.m_Image.m_pData[0], 17);
+	EXPECT_EQ(Decoded.m_Image.m_pData[3], 255);
 }
 #endif

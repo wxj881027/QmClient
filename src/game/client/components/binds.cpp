@@ -51,19 +51,7 @@ static bool IsExactDebugGraphToggleCommand(const char *pCommand)
 
 static void ExecuteBindCommand(IConsole *pConsole, const char *pBind, const CGameClient *pGameClient, int Stroke, int ClientId)
 {
-	if(!pBind)
-		return;
-	// 绑定命令可能在执行中解绑或改写自身槽位，先复制再交给控制台。
-	const std::string BindCopy(pBind);
-	if(!ShouldAppendGoresPrevWeapon(pGameClient) || str_find(BindCopy.c_str(), "+fire") == nullptr || str_find(BindCopy.c_str(), "+prevweapon") != nullptr)
-	{
-		pConsole->ExecuteLineStroked(Stroke, BindCopy.c_str(), ClientId);
-		return;
-	}
-
-	std::string Command(BindCopy);
-	Command += ";+prevweapon";
-	pConsole->ExecuteLineStroked(Stroke, Command.c_str(), ClientId);
+	CBinds::ExecuteCommand(pConsole, pBind, ShouldAppendGoresPrevWeapon(pGameClient), Stroke, ClientId);
 }
 
 bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
@@ -81,18 +69,18 @@ bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
 
 	const int KeyModifierMask = GetModifierMaskOfKey(Event.m_Key);
 	const int ModifierMask = GetModifierMask(Input()) & ~KeyModifierMask;
-	const auto HasGlobalDebugGraphBind = [&](int Mask) {
-		return IsExactDebugGraphToggleCommand(m_pBinds->Get(Event.m_Key, Mask));
-	};
-	if(HasGlobalDebugGraphBind(ModifierMask) ||
-		(ModifierMask != ((1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT)) &&
-			ModifierMask != ((1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT)) &&
-			HasGlobalDebugGraphBind(KeyModifier::NONE)))
-	{
-		return m_pBinds->OnInput(Event);
-	}
+	const char *pBind = m_pBinds->Get(Event.m_Key, ModifierMask);
+	if(!pBind[0] && AllowsUnmodifiedFallback(Event.m_Key, ModifierMask))
+		pBind = m_pBinds->Get(Event.m_Key, KeyModifier::NONE);
+	if(!IsExactDebugGraphToggleCommand(pBind))
+		return false;
 
-	return false;
+	// 已按住的键仍按活动槽位处理，避免提前执行该槽位中的普通命令。
+	const auto OtherActiveId = m_pBinds->m_ActiveBinds.Find([&](const CActiveBind &Bind) {
+		return Bind.m_Key == Event.m_Key &&
+		       !IsExactDebugGraphToggleCommand(Bind.m_ShortcutState.Command(m_pBinds->Get(Bind)));
+	});
+	return OtherActiveId == 0 && m_pBinds->OnInput(Event);
 }
 
 CBinds::CBinds()
@@ -110,6 +98,18 @@ void CBinds::Bind(int KeyId, const char *pStr, bool FreeOnly, int ModifierCombin
 {
 	if(!m_Storage.Bind(KeyId, pStr, FreeOnly, ModifierCombination))
 		return;
+	OnBindChanged(KeyId, ModifierCombination);
+}
+
+bool CBinds::Rebind(const CBindSlot &Old, const CBindSlot &Target, const char *pCommand)
+{
+	return m_Storage.Rebind(Old, Target, pCommand, [this](const CBindSlot &Slot) noexcept {
+		OnBindChanged(Slot.m_Key, Slot.m_ModifierMask);
+	});
+}
+
+void CBinds::OnBindChanged(int KeyId, int ModifierCombination) const noexcept
+{
 	char aBindName[128];
 	GetKeyBindName(KeyId, ModifierCombination, aBindName, sizeof(aBindName));
 	const char *pStored = m_Storage.Get(KeyId, ModifierCombination);
@@ -188,30 +188,31 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 		{
 			while(true)
 			{
-				auto ActiveModifierBind = std::find_if(m_vActiveBinds.begin(), m_vActiveBinds.end(), [&](const CActiveBind &Bind) {
+				const auto Id = m_ActiveBinds.Find([&](const CActiveBind &Bind) {
 					return !Bind.m_ShortcutState.Restricted() && ShouldRestrictUnmodifiedShiftBindOnModifierPress(Bind, KeyModifierMask);
 				});
-				if(ActiveModifierBind == m_vActiveBinds.end())
+				if(Id == 0)
 					break;
 
-				const bool KeepHeldPanel = ActiveModifierBind->m_ShortcutState.Restrict(Get(*ActiveModifierBind), [&](const char *pCommand) {
-					ExecuteBindCommand(Console(), pCommand, GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+				m_ActiveBinds.Update(Id, [&](CActiveBind &Bind) {
+					return Bind.m_ShortcutState.Restrict(Get(Bind), [&](const char *pCommand) {
+						ExecuteBindCommand(Console(), pCommand, GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+					});
 				});
-				if(!KeepHeldPanel)
-					m_vActiveBinds.erase(ActiveModifierBind);
 			}
 		}
 
-		auto ActiveBind = std::find_if(m_vActiveBinds.begin(), m_vActiveBinds.end(), [&](const CBindSlot &Bind) {
+		const auto ActiveId = m_ActiveBinds.Find([&](const CActiveBind &Bind) {
 			return Event.m_Key == Bind.m_Key;
 		});
-		if(ActiveBind == m_vActiveBinds.end())
+		if(ActiveId == 0)
 		{
 			m_HandlingNewBind = true;
 			const auto &&OnKeyPress = [&](int Mask) {
-				const char *pBind = m_Storage.m_aapKeyBindings[Mask][Event.m_Key];
-				ExecuteBindCommand(Console(), pBind, GameClient(), 1, IConsole::CLIENT_ID_UNSPECIFIED);
-				m_vActiveBinds.emplace_back(Event.m_Key, Mask);
+				m_ActiveBinds.Press(Event.m_Key, Mask, [&]() {
+					const char *pBind = m_Storage.m_aapKeyBindings[Mask][Event.m_Key];
+					ExecuteBindCommand(Console(), pBind, GameClient(), 1, IConsole::CLIENT_ID_UNSPECIFIED);
+				});
 			};
 
 			if(m_Storage.m_aapKeyBindings[ModifierMask][Event.m_Key])
@@ -231,10 +232,11 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 		{
 			// Repeat active bind while key is held down
 			// Have to check for nullptr again because the previous execute can unbind itself
-			if(m_Storage.m_aapKeyBindings[ActiveBind->m_ModifierMask][ActiveBind->m_Key])
-			{
-				ExecuteBindCommand(Console(), ActiveBind->m_ShortcutState.Command(Get(*ActiveBind)), GameClient(), 1, IConsole::CLIENT_ID_UNSPECIFIED);
-			}
+			m_ActiveBinds.Update(ActiveId, [&](CActiveBind &Bind) {
+				if(m_Storage.m_aapKeyBindings[Bind.m_ModifierMask][Bind.m_Key])
+					ExecuteBindCommand(Console(), Bind.m_ShortcutState.Command(Get(Bind)), GameClient(), 1, IConsole::CLIENT_ID_UNSPECIFIED);
+				return true;
+			});
 			Handled = true;
 		}
 	}
@@ -270,13 +272,12 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 		};
 
 		// Release active bind that uses this primary key
-		auto ActiveBind = std::find_if(m_vActiveBinds.begin(), m_vActiveBinds.end(), [&](const CBindSlot &Bind) {
+		const auto ActiveId = m_ActiveBinds.Find([&](const CActiveBind &Bind) {
 			return Event.m_Key == Bind.m_Key;
 		});
-		if(ActiveBind != m_vActiveBinds.end())
+		if(ActiveId != 0)
 		{
-			if(!OnKeyRelease(*ActiveBind))
-				m_vActiveBinds.erase(ActiveBind);
+			m_ActiveBinds.Update(ActiveId, OnKeyRelease);
 			Handled = true;
 		}
 
@@ -285,14 +286,12 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 		{
 			while(true)
 			{
-				auto ActiveModifierBind = std::find_if(m_vActiveBinds.begin(), m_vActiveBinds.end(), [&](const CBindSlot &Bind) {
-					const auto &Active = static_cast<const CActiveBind &>(Bind);
-					return !Active.m_ShortcutState.WaitingForFocusReturn() && (Bind.m_ModifierMask & KeyModifierMask) != 0;
+				const auto Id = m_ActiveBinds.Find([&](const CActiveBind &Bind) {
+					return !Bind.m_ShortcutState.WaitingForFocusReturn() && (Bind.m_ModifierMask & KeyModifierMask) != 0;
 				});
-				if(ActiveModifierBind == m_vActiveBinds.end())
+				if(Id == 0)
 					break;
-				if(!OnKeyRelease(*ActiveModifierBind))
-					m_vActiveBinds.erase(ActiveModifierBind);
+				m_ActiveBinds.Update(Id, OnKeyRelease);
 				Handled = true;
 			}
 		}
@@ -305,36 +304,29 @@ void CBinds::OnRender()
 {
 	IEngineGraphics *pEngineGraphics = Kernel()->RequestInterface<IEngineGraphics>();
 	const bool WindowActive = pEngineGraphics == nullptr || pEngineGraphics->WindowActive() != 0;
-	for(size_t i = 0; i < m_vActiveBinds.size();)
+	while(true)
 	{
-		CActiveBind &Bind = m_vActiveBinds[i];
-		if(!Bind.m_ShortcutState.ReleaseOnFocusReturn(WindowActive))
-		{
-			++i;
-			continue;
-		}
+		const auto Id = m_ActiveBinds.Find([&](const CActiveBind &Bind) { return Bind.m_ShortcutState.ReleaseOnFocusReturn(WindowActive); });
+		if(Id == 0)
+			break;
 		// 切回游戏先结束被冻结的显示状态，新的按键事件可重新打开；不恢复任何玩家输入。
-		const std::string Command = Bind.m_ShortcutState.Command(Get(Bind));
-		m_vActiveBinds.erase(m_vActiveBinds.begin() + i);
-		ExecuteBindCommand(Console(), Command.c_str(), GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+		m_ActiveBinds.Update(Id, [&](CActiveBind &Bind) {
+			const std::string Command = Bind.m_ShortcutState.Command(Get(Bind));
+			m_ActiveBinds.Erase(Id);
+			ExecuteBindCommand(Console(), Command.c_str(), GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+			return false;
+		});
 	}
 }
 
 void CBinds::RefreshActiveBinds()
 {
-	for(const CActiveBind &Bind : m_vActiveBinds)
-	{
+	m_ActiveBinds.Visit([&](const CActiveBind &Bind) {
 		if(Bind.m_ShortcutState.WaitingForFocusReturn())
-			continue;
+			return;
 		const char *pBind = Bind.m_ShortcutState.Command(Get(Bind));
-		if(pBind[0] == '\0')
-			continue;
-
-		ForEachTopLevelBindCommand(pBind, [&](const char *pCommand) {
-			if(pCommand[0] == '+')
-				Console()->ExecuteLineStroked(1, pCommand, IConsole::CLIENT_ID_UNSPECIFIED);
-		});
-	}
+		RefreshCommand(Console(), pBind, IConsole::CLIENT_ID_UNSPECIFIED);
+	});
 }
 
 void CBinds::UnbindAll()
@@ -497,6 +489,13 @@ void CBinds::ConBind(IConsole::IResult *pResult, void *pUserData)
 void CBinds::ConBinds(IConsole::IResult *pResult, void *pUserData)
 {
 	CBinds *pBinds = (CBinds *)pUserData;
+	const auto PrintBinding = [pBinds](const CBindSlot &Slot) {
+		const auto Line = pBinds->GetKeyBindCommand(Slot, std::string::npos);
+		if(Line)
+			log_info_color(BIND_PRINT_COLOR, "binds", "%s", Line->c_str());
+		else
+			log_error("binds", "could not format binding");
+	};
 	if(pResult->NumArguments() == 1)
 	{
 		const char *pKeyName = pResult->GetString(0);
@@ -513,9 +512,7 @@ void CBinds::ConBinds(IConsole::IResult *pResult, void *pUserData)
 			}
 			else
 			{
-				char *pBuf = pBinds->GetKeyBindCommand(BindSlot.m_ModifierMask, BindSlot.m_Key);
-				log_info_color(BIND_PRINT_COLOR, "binds", "%s", pBuf);
-				free(pBuf);
+				PrintBinding(BindSlot);
 			}
 		}
 	}
@@ -527,9 +524,7 @@ void CBinds::ConBinds(IConsole::IResult *pResult, void *pUserData)
 			{
 				if(!pBinds->m_Storage.m_aapKeyBindings[Modifier][Key])
 					continue;
-				char *pBuf = pBinds->GetKeyBindCommand(Modifier, Key);
-				log_info_color(BIND_PRINT_COLOR, "binds", "%s", pBuf);
-				free(pBuf);
+				PrintBinding(CBindSlot(Key, Modifier));
 			}
 		}
 	}
@@ -578,7 +573,8 @@ CBindSlot CBinds::GetBindSlot(const char *pBindString) const
 		if(str_find(pKey + 1, "+"))
 		{
 			pKey = str_next_token(pKey + 1, "+", aMod, sizeof(aMod));
-			if(pKey == nullptr)
+			// 分词可能跳过段首的 '+'，下一段修饰键仍须以 '+' 结束。
+			if(pKey == nullptr || *pKey != '+')
 				return EMPTY_BIND_SLOT;
 		}
 		else
@@ -624,19 +620,11 @@ void CBinds::GetKeyBindName(int Key, int ModifierMask, char *pBuf, size_t BufSiz
 	str_append(pBuf, Input()->KeyName(Key), BufSize);
 }
 
-char *CBinds::GetKeyBindCommand(int ModifierCombination, int Key) const
+std::optional<std::string> CBinds::GetKeyBindCommand(const CBindSlot &Slot, size_t MaxBytes) const
 {
 	char aBindName[128];
-	GetKeyBindName(Key, ModifierCombination, aBindName, sizeof(aBindName));
-	// worst case the str_escape can double the string length
-	int Size = str_length(m_Storage.m_aapKeyBindings[ModifierCombination][Key]) * 2 + str_length(aBindName) + 16;
-	auto *pBuf = static_cast<char *>(malloc(Size));
-	str_format(pBuf, Size, "bind %s \"", aBindName);
-	char *pDst = pBuf + str_length(pBuf);
-	// process the string. we need to escape some characters
-	str_escape(&pDst, m_Storage.m_aapKeyBindings[ModifierCombination][Key], pBuf + Size);
-	str_append(pBuf, "\"", Size);
-	return pBuf;
+	GetKeyBindName(Slot.m_Key, Slot.m_ModifierMask, aBindName, sizeof(aBindName));
+	return FormatBindLine(aBindName, Get(Slot), MaxBytes);
 }
 
 void CBinds::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
@@ -650,9 +638,18 @@ void CBinds::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
 		{
 			if(!pSelf->m_Storage.m_aapKeyBindings[Modifier][Key])
 				continue;
-			char *pBuf = pSelf->GetKeyBindCommand(Modifier, Key);
-			pConfigManager->WriteLine(pBuf);
-			free(pBuf);
+			const CBindSlot Slot(Key, Modifier);
+			const auto Line = pSelf->GetKeyBindCommand(Slot);
+			// 配置读取器按物理行切分，带换行的绑定无法原样读回。
+			if(!Line || Line->find_first_of("\r\n") != std::string::npos)
+			{
+				pConfigManager->MarkSaveFailed();
+				char aBindName[128];
+				pSelf->GetKeyBindName(Key, Modifier, aBindName, sizeof(aBindName));
+				log_error("binds", "could not serialize binding %s", aBindName);
+				return;
+			}
+			pConfigManager->WriteLine(Line->c_str());
 		}
 	}
 }

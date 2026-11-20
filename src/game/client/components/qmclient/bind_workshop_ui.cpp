@@ -259,7 +259,6 @@ namespace
 		double m_StatusTime = 0.0;
 		bool m_Initialized = false;
 		// 撤销栈：0 无、1 撤销、2 重做；在帧尾执行，避免中途换掉图引用。
-		CBlueprintHistory m_History;
 		int m_PendingHistory = 0;
 	};
 
@@ -701,15 +700,8 @@ namespace
 	// 成功时把完整绝对路径回填给状态栏，用户不必猜文件在哪。
 	bool WriteCfgBundle(IStorage *pStorage, const SCfgBundle &Bundle, std::string &rMessage)
 	{
-		if(pStorage == nullptr || Bundle.m_FileName.empty() || Bundle.m_Content.empty())
-			return false;
 		char aFullPath[IO_MAX_PATH_LENGTH] = {};
-		IOHANDLE File = pStorage->OpenFile(Bundle.m_FileName.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE, aFullPath, sizeof(aFullPath));
-		if(File == nullptr)
-			return false;
-		const bool Written = io_write(File, Bundle.m_Content.data(), static_cast<unsigned>(Bundle.m_Content.size())) == Bundle.m_Content.size();
-		io_close(File);
-		if(!Written)
+		if(pStorage == nullptr || !SaveBlueprintCfg(*pStorage, Bundle, aFullPath, sizeof(aFullPath)))
 			return false;
 		char aBuffer[IO_MAX_PATH_LENGTH + 32];
 		str_format(aBuffer, sizeof(aBuffer), "%s %s", Localize("Exported"), aFullPath);
@@ -748,18 +740,7 @@ namespace
 				rError = Localize("Built-in cfg is empty - nothing was installed");
 				return false;
 			}
-			char aFullPath[IO_MAX_PATH_LENGTH] = {};
-			IOHANDLE File = pStorage->OpenFile(FileName.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE, aFullPath, sizeof(aFullPath));
-			if(File == nullptr)
-			{
-				char aBuffer[IO_MAX_PATH_LENGTH + 64];
-				str_format(aBuffer, sizeof(aBuffer), "%s %s", Localize("Cannot write cfg file"), FileName.c_str());
-				rError = aBuffer;
-				return false;
-			}
-			const bool Written = io_write(File, Content.data(), static_cast<unsigned>(Content.size())) == Content.size();
-			io_close(File);
-			if(!Written)
+			if(!SaveCfgFile(*pStorage, FileName.c_str(), Content))
 			{
 				char aBuffer[IO_MAX_PATH_LENGTH + 64];
 				str_format(aBuffer, sizeof(aBuffer), "%s %s", Localize("Cannot write cfg file"), FileName.c_str());
@@ -879,14 +860,13 @@ void CMenus::RenderSettingsBindWorkshop(CUIRect MainView, const bool PrewarmOnly
 	{
 		State.m_CfgProbed = true;
 		IStorage *pStorage = Storage();
-		for(size_t Index = 0; Index < vPresets.size() && Index < MAX_PRESETS; ++Index)
+		for(size_t Index = 0; pStorage != nullptr && Index < vPresets.size() && Index < MAX_PRESETS; ++Index)
 		{
+			if(!HasCompleteBuiltinCfgSet(*pStorage, vPresets[Index]))
+				continue;
 			for(size_t Variant = 0; Variant < vPresets[Index].m_vVariants.size(); ++Variant)
 			{
-				if(!HasBuiltinCfg(vPresets[Index], Variant))
-					continue;
-				const std::string FileName = CfgFileName(vPresets[Index], Variant);
-				if(pStorage != nullptr && !FileName.empty() && pStorage->FileExists(FileName.c_str(), IStorage::TYPE_SAVE))
+				if(HasBuiltinCfg(vPresets[Index], Variant))
 					State.m_aCfgInstalled[Index] |= (1U << Variant);
 			}
 		}
@@ -912,11 +892,9 @@ void CMenus::RenderSettingsBindWorkshop(CUIRect MainView, const bool PrewarmOnly
 		if(ui_widget::SecondaryButton(Ctx, &State.m_UndoButton, Localize("Undo"), Undo, !Enabled))
 		{
 			CBinds &Binds = GameClient()->m_Binds;
-			// 整批还原：一组动作写过几条就还几条，原来没绑的键重新解绑（空命令即解绑）。
-			// 执行细节走纯逻辑层的 RestoreUndo，行为与单元测试共用同一份实现。
-			RestoreUndo(State.m_Undo, [&Binds](const CBindSlot &Slot, const char *pCommand) { Binds.Bind(Slot.m_Key, pCommand, false, Slot.m_ModifierMask); });
+			const size_t Restored = RestoreUndo(State.m_Undo, [&Binds](const CBindSlot &Slot) { return std::string(Binds.Get(Slot)); }, [&Binds](const CBindSlot &Slot, const char *pCommand) { Binds.Bind(Slot.m_Key, pCommand, false, Slot.m_ModifierMask); });
 			State.m_Undo.Clear();
-			SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Restored previous bind"));
+			SetStatus(State.m_Status, State.m_StatusTime, Client(), Restored > 0 ? Localize("Restored previous bind") : Localize("Nothing to undo"));
 		}
 	}
 
@@ -1536,13 +1514,11 @@ void CMenus::RenderSettingsBindWorkshop(CUIRect MainView, const bool PrewarmOnly
 		if(ui_widget::PrimaryButton(Ctx, &State.m_ConfirmButton, Localize("Apply"), Confirm, false))
 		{
 			CBinds &Binds = GameClient()->m_Binds;
-			// 一次写全部条目；撤销记录整批原值（原来没绑的键撤销时解绑）。
-			// 重复槽位已在计划层去掉，这里按顺序直写，不再做「后写顶掉前写」的二次判断。
-			for(const SApplyEntry &Entry : State.m_PendingPlan.m_vEntries)
-				Binds.Bind(Entry.m_Slot.m_Key, Entry.m_Command.c_str(), false, Entry.m_Slot.m_ModifierMask);
-			State.m_Undo.Record(State.m_PendingPlan);
-			State.m_ConfirmOpen = false;
-			SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Bind applied - undo available"));
+			if(ApplyPresetPlan(State.m_PendingPlan, State.m_Undo, [&Binds](const CBindSlot &Slot) { return std::string(Binds.Get(Slot)); }, [&Binds](const CBindSlot &Slot, const char *pCommand) { Binds.Bind(Slot.m_Key, pCommand, false, Slot.m_ModifierMask); }))
+			{
+				State.m_ConfirmOpen = false;
+				SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Bind applied - undo available"));
+			}
 		}
 	}
 }
@@ -1587,7 +1563,36 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 	const std::string FlowFileName = Flows.FileName(ActiveFlow);
 	const SCompileResult Compile = Graph.Compile(BLUEPRINT_KEY_NAME);
 	// 任何会改图的动作之前先记一笔；没有变化的动作不会走到这里。
-	const auto PushUndo = [&State, ActiveFlow, &Graph]() { State.m_History.Record(ActiveFlow, Graph); };
+	const auto PushUndo = [&Flows]() { Flows.RecordEdit(); };
+	const auto ClearSelection = [&State]() {
+		State.m_vSelectedNodes.clear();
+		State.m_SelectedNode = 0;
+		State.m_SelectedEdgeFrom = 0;
+		State.m_SelectedEdgeTo = 0;
+	};
+	const auto SelectOnly = [&State, &ClearSelection](const int Id) {
+		ClearSelection();
+		if(Id != 0)
+			State.m_vSelectedNodes.push_back(Id);
+		State.m_SelectedNode = Id;
+	};
+	const auto ResetGraphInteraction = [&]() {
+		// 节点 ID 只在当前图内唯一。切换或替换图后，旧选区和手势不能继续操作同号节点。
+		ClearSelection();
+		State.m_EditedNode = -1;
+		State.m_FocusCommand = false;
+		State.m_ContextNode = 0;
+		State.m_TypeMenuOpen = false;
+		State.m_DragNode = 0;
+		State.m_ResizeNode = 0;
+		State.m_Linking = false;
+		State.m_LinkFrom = 0;
+		State.m_BoxSelecting = false;
+		State.m_Panning = false;
+		State.m_TitleFlow = -1;
+		Ui()->ReleaseActiveTextInput(&State.m_TitleInput);
+		Ui()->ReleaseActiveTextInput(&State.m_CommandInput);
+	};
 	const std::vector<SNodeTemplate> &vTemplates = NodeTemplates();
 	const std::vector<SCommandSnippet> &vSnippets = CommandSnippets();
 
@@ -1747,10 +1752,7 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 				Flows.RenameFlow(ActiveFlow, Localize(vPresets[Index].m_pTitle));
 				State.m_PanX = 0.0f;
 				State.m_PanY = 0.0f;
-				State.m_SelectedNode = 0;
-				State.m_EditedNode = -1;
-				State.m_ContextNode = 0;
-				State.m_TypeMenuOpen = false;
+				ResetGraphInteraction();
 				State.m_LibraryIndex = static_cast<int>(Index);
 				SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Flow loaded"));
 			}
@@ -1760,13 +1762,14 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 		Rows.HSplitTop(30.0f * Scale, &NewFlow, &Rows);
 		if(ui_widget::SecondaryButton(Ctx, NextButton(State), Localize("New flow"), NewFlow, !Enabled))
 		{
+			PushUndo();
+			ResetGraphInteraction();
 			Graph.Clear();
 			SNode Event;
 			Event.m_Type = ENodeType::EVENT_PRESS;
 			Event.m_X = 24.0f;
 			Event.m_Y = 96.0f;
-			State.m_SelectedNode = Graph.AddNode(Event);
-			State.m_EditedNode = -1;
+			SelectOnly(Graph.AddNode(Event));
 			State.m_LibraryIndex = -1;
 			Flows.RenameFlow(ActiveFlow, Localize("Untitled flow"));
 			SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Flow loaded"));
@@ -1842,6 +1845,33 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 	}
 	const bool PointerInMenu = (State.m_TypeMenuOpen && Ui()->MouseHovered(&TypeMenuRect)) || (State.m_ContextNode != 0 && Ui()->MouseHovered(&ContextMenuRect));
 
+	// 先处理删除，后续命中测试统一读取删除后的图。
+	if(Enabled && !PointerInMenu && !EditingText && Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE))
+	{
+		if(State.m_SelectedEdgeFrom != 0 || State.m_SelectedEdgeTo != 0)
+		{
+			PushUndo();
+			if(Graph.Disconnect(State.m_SelectedEdgeFrom, State.m_SelectedEdgeTo))
+				SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Link deleted"));
+			State.m_SelectedEdgeFrom = 0;
+			State.m_SelectedEdgeTo = 0;
+		}
+		else if(!State.m_vSelectedNodes.empty())
+		{
+			PushUndo();
+			size_t Removed = 0;
+			for(const int Id : State.m_vSelectedNodes)
+			{
+				if(Graph.RemoveNode(Id))
+					++Removed;
+			}
+			ClearSelection();
+			State.m_EditedNode = -1;
+			if(Removed > 0)
+				SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Node deleted"));
+		}
+	}
+
 	// ---- 画布命中测试：只查指针附近的网格桶 ----
 	const SCanvasHit PointerHit = HitTestCanvas(Graph, PointerCanvasX, PointerCanvasY);
 	// 分组框右下角的改尺寸手柄：14 屏幕像素见方，缩小时不跟着缩小手感。
@@ -1866,16 +1896,6 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 	const auto IsNodeSelected = [&State](const int Id) {
 		return std::find(State.m_vSelectedNodes.begin(), State.m_vSelectedNodes.end(), Id) != State.m_vSelectedNodes.end();
 	};
-	const auto SelectOnly = [&State](const int Id) {
-		State.m_vSelectedNodes.clear();
-		if(Id != 0)
-			State.m_vSelectedNodes.push_back(Id);
-		State.m_SelectedNode = Id;
-	};
-	const auto ClearSelection = [&State]() {
-		State.m_vSelectedNodes.clear();
-		State.m_SelectedNode = 0;
-	};
 	const auto ToggleSelected = [&State](const int Id) {
 		auto &vSelected = State.m_vSelectedNodes;
 		const auto It = std::find(vSelected.begin(), vSelected.end(), Id);
@@ -1885,8 +1905,6 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 			vSelected.erase(It);
 		State.m_SelectedNode = vSelected.empty() ? 0 : vSelected.back();
 	};
-
-	const SNode *pNodeForCorner = PointerHit.m_NodeId != 0 ? Graph.FindNode(PointerHit.m_NodeId) : nullptr;
 
 	// ---- 画布输入 ----
 	if(!PointerInMenu && (Ui()->MouseButtonClicked(0) || Ui()->MouseButtonClicked(1)))
@@ -1898,34 +1916,6 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 
 	if(Enabled && !PointerInMenu)
 	{
-		// Delete：优先删选中的连线，其次删选中节点及其全部边（编辑命令时不抢按键）。
-		if(!EditingText && Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE))
-		{
-			if(State.m_SelectedEdgeFrom != 0 || State.m_SelectedEdgeTo != 0)
-			{
-				PushUndo();
-				if(Graph.Disconnect(State.m_SelectedEdgeFrom, State.m_SelectedEdgeTo))
-					SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Link deleted"));
-				State.m_SelectedEdgeFrom = 0;
-				State.m_SelectedEdgeTo = 0;
-			}
-			else if(!State.m_vSelectedNodes.empty())
-			{
-				PushUndo();
-				// 删除整个多选集合；主选之外的节点一起走，边随节点一起消失。
-				size_t Removed = 0;
-				for(const int Id : State.m_vSelectedNodes)
-				{
-					if(Graph.RemoveNode(Id))
-						++Removed;
-				}
-				ClearSelection();
-				State.m_EditedNode = -1;
-				if(Removed > 0)
-					SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Node deleted"));
-			}
-		}
-
 		// 撤销/重做：Ctrl+Z、Ctrl+Shift+Z 或 Ctrl+Y，编辑命令时不抢按键。
 		if(!EditingText && Ui()->Input()->ModifierIsPressed() && Ui()->Input()->KeyPress(KEY_Z))
 			State.m_PendingHistory = Ui()->Input()->ShiftIsPressed() ? 2 : 1;
@@ -1934,15 +1924,16 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 
 		if(HoverCanvas && Ui()->MouseButtonClicked(0))
 		{
+			const SNode *pNodeForCorner = PointerHit.m_NodeId != 0 ? Graph.FindNode(PointerHit.m_NodeId) : nullptr;
 			const bool DoubleClicked = Ui()->DoDoubleClickLogic(&State.m_DoubleClickId);
 			if(PointerHit.Empty())
 			{
 				if(!HoverEdge.Empty())
 				{
 					// 点中连线：选中它（Delete / 右键删除），不平移画布。
+					ClearSelection();
 					State.m_SelectedEdgeFrom = HoverEdge.m_From;
 					State.m_SelectedEdgeTo = HoverEdge.m_To;
-					State.m_SelectedNode = 0;
 					State.m_EditedNode = -1;
 					State.m_Panning = false;
 				}
@@ -1964,6 +1955,8 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 					State.m_BoxStartY = State.m_CursorY;
 					if(!AdditiveSelect)
 						ClearSelection();
+					State.m_SelectedEdgeFrom = 0;
+					State.m_SelectedEdgeTo = 0;
 					State.m_EditedNode = -1;
 					State.m_Panning = false;
 				}
@@ -1993,11 +1986,12 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 					ToggleSelected(PointerHit.m_NodeId);
 				else if(!IsNodeSelected(PointerHit.m_NodeId))
 					SelectOnly(PointerHit.m_NodeId);
-				State.m_SelectedNode = PointerHit.m_NodeId;
+				else
+					State.m_SelectedNode = PointerHit.m_NodeId;
 				State.m_SelectedEdgeFrom = 0;
 				State.m_SelectedEdgeTo = 0;
 				State.m_Panning = false;
-				const SNode *pNode = Graph.FindNode(PointerHit.m_NodeId);
+				const SNode *pNode = IsNodeSelected(PointerHit.m_NodeId) ? Graph.FindNode(PointerHit.m_NodeId) : nullptr;
 				if(DoubleClicked && pNode != nullptr)
 				{
 					// 双击节点：聚焦并进入该节点的编辑态。
@@ -2029,7 +2023,10 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 		if(HoverCanvas && Ui()->MouseButtonClicked(1) && PointerHit.m_NodeId != 0)
 		{
 			State.m_ContextNode = PointerHit.m_NodeId;
-			State.m_SelectedNode = PointerHit.m_NodeId;
+			if(IsNodeSelected(PointerHit.m_NodeId))
+				State.m_SelectedNode = PointerHit.m_NodeId;
+			else
+				SelectOnly(PointerHit.m_NodeId);
 			State.m_EditedNode = -1;
 			State.m_ContextScreenX = Ui()->MouseX();
 			State.m_ContextScreenY = Ui()->MouseY();
@@ -2438,7 +2435,7 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 				const int NewId = AddNodeFromTemplate(Graph, Index, State.m_TypeMenuCanvasX, State.m_TypeMenuCanvasY);
 				if(NewId != 0)
 				{
-					State.m_SelectedNode = NewId;
+					SelectOnly(NewId);
 					State.m_EditedNode = -1;
 					SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Node created"));
 				}
@@ -2486,7 +2483,7 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 					const int NewId = Graph.DuplicateNode(ContextId, NODE_WIDTH + 24.0f, 0.0f);
 					if(NewId != 0)
 					{
-						State.m_SelectedNode = NewId;
+						SelectOnly(NewId);
 						State.m_EditedNode = -1;
 						SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Node duplicated"));
 					}
@@ -2513,8 +2510,9 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 				default:
 					PushUndo();
 					Graph.RemoveNode(ContextId);
+					std::erase(State.m_vSelectedNodes, ContextId);
 					if(State.m_SelectedNode == ContextId)
-						State.m_SelectedNode = 0;
+						State.m_SelectedNode = State.m_vSelectedNodes.empty() ? 0 : State.m_vSelectedNodes.back();
 					State.m_EditedNode = -1;
 					SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Node deleted"));
 					break;
@@ -2603,7 +2601,7 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 				const int NewId = AddNodeFromTemplate(Graph, Index, State.m_CursorX, State.m_CursorY);
 				if(NewId != 0)
 				{
-					State.m_SelectedNode = NewId;
+					SelectOnly(NewId);
 					State.m_EditedNode = -1;
 					SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Node created"));
 				}
@@ -2686,8 +2684,7 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 		else
 		{
 			const int SelectedId = pSelected->m_Id;
-			const ENodeType SelectedType = pSelected->m_Type;
-			const bool IsNote = SelectedType == ENodeType::NOTE;
+			ENodeType SelectedType = pSelected->m_Type;
 
 			// 类型切换：按钮显示当前类型，点一下循环到下一个。
 			CUIRect TypeRow;
@@ -2701,7 +2698,8 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 				if(ui_widget::SecondaryButton(Ctx, NextButton(State), aTypeLabel, TypeRow, !Enabled))
 				{
 					PushUndo();
-					Graph.SetNodeType(SelectedId, CycleNodeType(SelectedType));
+					SelectedType = CycleNodeType(SelectedType);
+					Graph.SetNodeType(SelectedId, SelectedType);
 					State.m_EditedNode = -1;
 				}
 			}
@@ -2736,6 +2734,7 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 				ApplyNodeGeometry(Graph, SelectedId, Geometry);
 			}
 
+			const bool IsNote = SelectedType == ENodeType::NOTE;
 			if(State.m_EditedNode != SelectedId)
 			{
 				State.m_CommandInput.Set(IsNote ? pSelected->m_Comment.c_str() : pSelected->m_Command.c_str());
@@ -2886,26 +2885,9 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 	{
 		const bool Undo = State.m_PendingHistory == 1;
 		State.m_PendingHistory = 0;
-		size_t SnapshotFlow = 0;
-		CBlueprintGraph Snapshot;
-		const bool HasSnapshot = Undo ? State.m_History.PopUndo(SnapshotFlow, Snapshot) : State.m_History.PopRedo(SnapshotFlow, Snapshot);
-		if(HasSnapshot)
+		if(Undo ? Flows.Undo() : Flows.Redo())
 		{
-			const size_t CurrentFlow = Flows.ActiveIndex();
-			CBlueprintGraph Current = Flows.Graph(CurrentFlow).Clone();
-			if(Undo)
-				State.m_History.PushRedo(CurrentFlow, std::move(Current));
-			else
-				State.m_History.PushUndo(CurrentFlow, std::move(Current));
-			Flows.SetActive(SnapshotFlow);
-			Flows.Graph(SnapshotFlow) = std::move(Snapshot);
-			ClearSelection();
-			State.m_EditedNode = -1;
-			State.m_ContextNode = 0;
-			State.m_TypeMenuOpen = false;
-			State.m_DragNode = 0;
-			State.m_Linking = false;
-			State.m_LinkFrom = 0;
+			ResetGraphInteraction();
 			SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize(Undo ? "Undo" : "Redo"));
 		}
 		else
@@ -3033,27 +3015,21 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 	}
 	if(State.m_PendingActiveFlow >= 0)
 	{
-		Flows.SetActive(static_cast<size_t>(State.m_PendingActiveFlow));
+		if(Flows.SetActive(static_cast<size_t>(State.m_PendingActiveFlow)))
+			ResetGraphInteraction();
 		State.m_PendingActiveFlow = -1;
-		ClearSelection();
-		State.m_EditedNode = -1;
-		State.m_ContextNode = 0;
-		State.m_TypeMenuOpen = false;
 	}
 	if(State.m_PendingAddFlow)
 	{
 		State.m_PendingAddFlow = false;
 		const size_t NewIndex = Flows.AddFlow(Localize("Untitled flow"));
 		Flows.SetActive(NewIndex);
-		ClearSelection();
-		State.m_EditedNode = -1;
+		ResetGraphInteraction();
 	}
 	if(State.m_PendingCloseFlow >= 0)
 	{
-		Flows.RemoveFlow(static_cast<size_t>(State.m_PendingCloseFlow));
+		if(Flows.RemoveFlow(static_cast<size_t>(State.m_PendingCloseFlow)))
+			ResetGraphInteraction();
 		State.m_PendingCloseFlow = -1;
-		ClearSelection();
-		State.m_EditedNode = -1;
-		State.m_ContextNode = 0;
 	}
 }

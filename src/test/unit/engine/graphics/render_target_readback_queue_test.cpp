@@ -1,6 +1,7 @@
 #include <engine/client/render_target_readback_queue.h>
 
 #include <gtest/gtest.h>
+#include <test/support/async_io_wait.h>
 
 #include <cstdlib>
 #include <thread>
@@ -10,7 +11,7 @@ namespace
 	using EState = IGraphics::ERenderTargetReadbackState;
 	using SAllocation = CRenderTargetReadbackQueue::SAllocation;
 
-	void Complete(const SAllocation &Allocation, uint8_t Value)
+	void WritePixel(const SAllocation &Allocation, uint8_t Value)
 	{
 		Allocation.m_pImage->m_Width = 1;
 		Allocation.m_pImage->m_Height = 1;
@@ -18,8 +19,27 @@ namespace
 		Allocation.m_pImage->m_pData = static_cast<uint8_t *>(malloc(4));
 		ASSERT_NE(Allocation.m_pImage->m_pData, nullptr);
 		Allocation.m_pImage->m_pData[0] = Value;
+	}
+
+	void Complete(const SAllocation &Allocation, uint8_t Value)
+	{
+		ASSERT_NO_FATAL_FAILURE(WritePixel(Allocation, Value));
 		Allocation.m_pCompletion->Signal();
 	}
+}
+
+TEST(RenderTargetReadbackQueue, PollKeepsWrittenPixelsPendingUntilCompletion)
+{
+	ASSERT_TRUE(WaitForAsyncIo([] {
+		CRenderTargetReadbackQueue Queue;
+		const auto Request = Queue.Allocate();
+		ASSERT_GE(Request.m_Index, 0);
+		ASSERT_NO_FATAL_FAILURE(WritePixel(Request, 4));
+		EXPECT_EQ(Queue.Poll(Request.m_Index, Request.m_Generation), EState::PENDING);
+		Request.m_pCompletion->Signal();
+		EXPECT_EQ(Queue.Poll(Request.m_Index, Request.m_Generation), EState::READY);
+		EXPECT_FALSE(Request.m_pCompletion->TryWait());
+	}));
 }
 
 TEST(RenderTargetReadbackQueue, GrowingRequestsKeepsPendingRenderOutputAlive)
@@ -162,4 +182,49 @@ TEST(RenderTargetReadbackQueue, BlockingResolveReportsFailureAndKeepsCallerImage
 	EXPECT_EQ(Image.m_Width, 9u);
 	EXPECT_EQ(Queue.Poll(Failed.m_Index, Failed.m_Generation), EState::INVALID);
 	EXPECT_EQ(Queue.Allocate().m_Index, Failed.m_Index); // 槽位已回收复用
+}
+
+TEST(RenderTargetReadbackQueue, IdleResolveAcceptsAPolledReadyResult)
+{
+	CRenderTargetReadbackQueue Queue;
+	const auto Request = Queue.Allocate();
+	ASSERT_GE(Request.m_Index, 0);
+	Complete(Request, 43);
+	ASSERT_EQ(Queue.Poll(Request.m_Index, Request.m_Generation), EState::READY);
+	CImageInfo Image;
+	ASSERT_TRUE(Queue.ResolveAfterIdle(Request.m_Index, Request.m_Generation, Image));
+	EXPECT_EQ(Image.m_pData[0], 43);
+	Image.Free();
+	EXPECT_EQ(Queue.Poll(Request.m_Index, Request.m_Generation), EState::INVALID);
+}
+
+TEST(RenderTargetReadbackQueue, IdleResolveConsumesTheSignalBeforeReusingTheRequest)
+{
+	CRenderTargetReadbackQueue Queue;
+	const auto Request = Queue.Allocate();
+	ASSERT_GE(Request.m_Index, 0);
+	Complete(Request, 51);
+	CImageInfo Image;
+	ASSERT_TRUE(Queue.ResolveAfterIdle(Request.m_Index, Request.m_Generation, Image));
+	Image.Free();
+	const auto Next = Queue.Allocate();
+	EXPECT_EQ(Next.m_Index, Request.m_Index);
+	EXPECT_NE(Next.m_Generation, Request.m_Generation);
+	EXPECT_EQ(Queue.Poll(Next.m_Index, Next.m_Generation), EState::PENDING);
+}
+
+TEST(RenderTargetReadbackQueue, IdleResolveReleasesAPolledFailureWithoutChangingCallerImage)
+{
+	CRenderTargetReadbackQueue Queue;
+	const auto Request = Queue.Allocate();
+	ASSERT_GE(Request.m_Index, 0);
+	Request.m_pCompletion->Signal();
+	ASSERT_EQ(Queue.Poll(Request.m_Index, Request.m_Generation), EState::FAILED);
+	CImageInfo Image;
+	Image.m_Width = 19;
+	EXPECT_FALSE(Queue.ResolveAfterIdle(Request.m_Index, Request.m_Generation, Image));
+	EXPECT_EQ(Image.m_Width, 19u);
+	const auto Next = Queue.Allocate();
+	EXPECT_EQ(Next.m_Index, Request.m_Index);
+	EXPECT_EQ(Queue.Poll(Next.m_Index, Next.m_Generation), EState::PENDING);
 }

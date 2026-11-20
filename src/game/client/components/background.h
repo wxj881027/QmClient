@@ -14,7 +14,10 @@
 #include <cstdint>
 #include <deque>
 #include <mutex>
+#include <new>
+#include <stdexcept>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #if defined(CONF_VIDEORECORDER)
@@ -245,8 +248,52 @@ public:
 	using CMap::CMap;
 };
 
+namespace EntityBackgroundMap
+{
+	enum class ELoadResult
+	{
+		NOT_READY,
+		READY,
+		FAILED,
+	};
+
+	template<typename FStep>
+	ELoadResult TryLoadStep(FStep &&Step)
+	{
+		try
+		{
+			return std::forward<FStep>(Step)() ? ELoadResult::READY : ELoadResult::NOT_READY;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return ELoadResult::FAILED;
+		}
+		catch(const std::length_error &)
+		{
+			return ELoadResult::FAILED;
+		}
+	}
+
+	template<typename TRenderer, typename TImages, typename TLayers, typename TMap>
+	bool ReleaseResources(TRenderer &Renderer, TImages &Images, TLayers &Layers, TMap &PrivateMap)
+	{
+		// 清理持有地图数据的对象后，才能释放地图本身。
+		return TryLoadStep([&] {
+			Renderer.UnloadMap();
+			Images.Unload();
+			Layers.Unload();
+			PrivateMap.Unload();
+			return true;
+		}) == ELoadResult::READY;
+	}
+} // namespace EntityBackgroundMap
+
 class CBackground : public CMapLayers
 {
+	bool ResetMapBackground();
+	bool HandleMapBackgroundLoadResult(EntityBackgroundMap::ELoadResult Result);
+	bool TryAdvanceMapBackground();
+
 protected:
 	IEngineMap *m_pMap;
 	bool m_Loaded;
@@ -292,7 +339,7 @@ protected:
 #endif
 
 	//to avoid memory leak when switching to %current%
-	CBackgroundEngineMap *m_pBackgroundMap;
+	CBackgroundEngineMap *m_pBackgroundMap = nullptr;
 	CLayers *m_pBackgroundLayers;
 	CMapImages *m_pBackgroundImages;
 

@@ -29,6 +29,7 @@
 #include <exception>
 #include <filesystem>
 #include <limits>
+#include <new>
 #include <utility>
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -37,6 +38,12 @@
 
 namespace
 {
+	struct SImageLifetime
+	{
+		CImageInfo m_Image;
+		~SImageLifetime() { m_Image.Free(); }
+	};
+
 	void BlendImagePixel(CImageInfo &Image, int X, int Y, ColorRGBA Color)
 	{
 		if(X < 0 || Y < 0 || X >= (int)Image.m_Width || Y >= (int)Image.m_Height)
@@ -54,7 +61,7 @@ namespace
 	{
 		FT_Library m_Library = nullptr;
 		FT_Face m_Face = nullptr;
-		std::vector<unsigned char> m_vData;
+		std::unique_ptr<unsigned char, decltype(&free)> m_pData{nullptr, free};
 
 		~SWatermarkFont()
 		{
@@ -81,21 +88,19 @@ namespace
 				unsigned DataSize = 0;
 				const bool ReadOk = io_read_all(File, &pData, &DataSize);
 				io_close(File);
-				if(!ReadOk || pData == nullptr || DataSize == 0 || (uint64_t)DataSize > (uint64_t)std::numeric_limits<FT_Long>::max())
-				{
-					free(pData);
+				std::unique_ptr<unsigned char, decltype(&free)> Data(static_cast<unsigned char *>(pData), free);
+				if(!ReadOk || Data == nullptr || DataSize == 0 || (uint64_t)DataSize > (uint64_t)std::numeric_limits<FT_Long>::max())
 					continue;
-				}
 
-				m_vData.assign(static_cast<unsigned char *>(pData), static_cast<unsigned char *>(pData) + DataSize);
-				free(pData);
-				if(FT_New_Memory_Face(m_Library, m_vData.data(), static_cast<FT_Long>(m_vData.size()), 0, &m_Face) == 0)
+				// FreeType 借用文件缓冲，字体面释放前始终由本对象持有，不再复制一份。
+				m_pData = std::move(Data);
+				if(FT_New_Memory_Face(m_Library, m_pData.get(), static_cast<FT_Long>(DataSize), 0, &m_Face) == 0)
 				{
 					// TTC 的默认字面是日文，不依赖当前集合中的简体字面序号。
 					for(FT_Long FaceIndex = 1; FaceIndex < m_Face->num_faces; ++FaceIndex)
 					{
 						FT_Face Candidate = nullptr;
-						if(FT_New_Memory_Face(m_Library, m_vData.data(), static_cast<FT_Long>(m_vData.size()), FaceIndex, &Candidate) != 0)
+						if(FT_New_Memory_Face(m_Library, m_pData.get(), static_cast<FT_Long>(DataSize), FaceIndex, &Candidate) != 0)
 							continue;
 						if(Candidate->family_name != nullptr && str_comp(Candidate->family_name, "Source Han Sans SC") == 0)
 						{
@@ -107,7 +112,7 @@ namespace
 					}
 					return true;
 				}
-				m_vData.clear();
+				m_pData.reset();
 			}
 
 			return false;
@@ -235,6 +240,18 @@ namespace
 		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1f}, // _
 	};
 
+	std::string ResolveScreenshotTargetPath(IStorage &Storage, const char *pPath)
+	{
+		if(pPath == nullptr || pPath[0] == '\0' || str_length(pPath) >= IO_MAX_PATH_LENGTH)
+			return {};
+		// 先解析完整路径，再检查存储前缀与文件名的总长度。
+		char aPath[IO_MAX_PATH_LENGTH * 2] = {};
+		Storage.GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pPath, aPath, sizeof(aPath));
+		if(str_length(aPath) >= IO_MAX_PATH_LENGTH)
+			return {};
+		return aPath;
+	}
+
 	const uint8_t *Glyph(char Character)
 	{
 		if(Character >= '0' && Character <= '9')
@@ -277,32 +294,60 @@ std::string CQmScreenshotManager::ThumbnailKey(const char *pPath, int StorageTyp
 
 const CQmScreenshotManager::SThumbnail *CQmScreenshotManager::LoadThumbnail(const char *pPath, int StorageType)
 {
-	if(pPath == nullptr || pPath[0] == '\0')
+	if(m_ThumbnailClearPending || pPath == nullptr || pPath[0] == '\0')
 		return nullptr;
 
-	const std::string Key = ThumbnailKey(pPath, StorageType);
-	auto It = m_vThumbnails.find(Key);
-	if(It == m_vThumbnails.end())
+	try
 	{
-		SThumbnailEntry Entry;
-		Entry.m_Path = pPath;
-		Entry.m_StorageType = StorageType;
-		Entry.m_Thumbnail.m_Loading = true;
-		Entry.m_LastUsedFrame = m_ThumbnailFrame;
-		It = m_vThumbnails.emplace(Key, std::move(Entry)).first;
-	}
+		const std::string Key = ThumbnailKey(pPath, StorageType);
+		auto It = m_vThumbnails.find(Key);
+		if(It == m_vThumbnails.end())
+		{
+			SThumbnailEntry Entry;
+			Entry.m_Path = pPath;
+			Entry.m_StorageType = StorageType;
+			Entry.m_Thumbnail.m_Loading = true;
+			Entry.m_LastUsedFrame = m_ThumbnailFrame;
+			It = m_vThumbnails.emplace(Key, std::move(Entry)).first;
+		}
 
-	SThumbnailEntry &Entry = It->second;
-	if(!Entry.m_Requested)
-	{
-		Entry.m_Requested = true;
-		m_vThumbnailRequests.push_back(Key);
+		SThumbnailEntry &Entry = It->second;
+		QmTryQueueScreenshotThumbnailRequest(m_vThumbnailRequests, Entry.m_Requested, Key);
+		Entry.m_LastUsedFrame = m_ThumbnailFrame;
+		if(Entry.m_pJob != nullptr && !Entry.m_Thumbnail.m_Loading)
+			return nullptr;
+		return &Entry.m_Thumbnail;
 	}
-	Entry.m_LastUsedFrame = m_ThumbnailFrame;
-	return &Entry.m_Thumbnail;
+	catch(const std::bad_alloc &)
+	{
+		return nullptr;
+	}
 }
 
 void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStorage, IEngine *pEngine, CGpuUploadLimiter *pLimiter)
+{
+	try
+	{
+		if(m_ThumbnailClearPending)
+			ClearThumbnails(pGraphics);
+		if(!m_ThumbnailClearPending)
+			PumpThumbnailWork(pGraphics, pStorage, pEngine, pLimiter);
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 保留尚未交付的图像与纹理；已完成的上传或卸载不回滚，下帧继续处理。
+	}
+	for(const std::string &Key : m_vThumbnailRequests)
+	{
+		const auto It = m_vThumbnails.find(Key);
+		if(It != m_vThumbnails.end())
+			It->second.m_Requested = false;
+	}
+	m_vThumbnailRequests.clear();
+	++m_ThumbnailFrame;
+}
+
+void CQmScreenshotManager::PumpThumbnailWork(IGraphics *pGraphics, IStorage *pStorage, IEngine *pEngine, CGpuUploadLimiter *pLimiter)
 {
 	// 请求表记录的是「本帧可见」的条目：先回收上一帧的结果，再按需补足后台任务。
 	if(pGraphics != nullptr)
@@ -311,17 +356,28 @@ void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStora
 		for(auto &[Key, Entry] : m_vThumbnails)
 		{
 			(void)Key;
-			if(Entry.m_pJob == nullptr || Entry.m_pJob->State() != IJob::STATE_DONE)
+			if(!Entry.m_Thumbnail.m_Loading || Entry.m_pJob == nullptr || !Entry.m_pJob->Finished())
 				continue;
-			if(UploadsLeft <= 0 || (pLimiter != nullptr && !pLimiter->CanUpload()))
+			if(Entry.m_pJob->State() != IJob::STATE_DONE)
+			{
+				Entry.m_Thumbnail.m_LoadFailed = true;
+				Entry.m_Thumbnail.m_Loading = false;
+				Entry.m_pJob.reset();
 				continue;
+			}
 
 			CImageInfo *pImage = Entry.m_pJob->Image();
 			if(pImage != nullptr && pImage->m_Width > 0 && pImage->m_Height > 0)
 			{
-				Entry.m_Thumbnail.m_Width = (int)pImage->m_Width;
-				Entry.m_Thumbnail.m_Height = (int)pImage->m_Height;
-				Entry.m_Thumbnail.m_Texture = pGraphics->LoadTextureRawMove(*pImage, 0, Entry.m_Path.c_str());
+				if(UploadsLeft <= 0 || (pLimiter != nullptr && !pLimiter->CanUpload()))
+					continue;
+
+				const int Width = (int)pImage->m_Width;
+				const int Height = (int)pImage->m_Height;
+				const auto Texture = pGraphics->LoadTextureRawMove(*pImage, 0, Entry.m_Path.c_str());
+				Entry.m_Thumbnail.m_Width = Width;
+				Entry.m_Thumbnail.m_Height = Height;
+				Entry.m_Thumbnail.m_Texture = Texture;
 				Entry.m_Thumbnail.m_LoadFailed = !Entry.m_Thumbnail.m_Texture.IsValid();
 				if(pLimiter != nullptr)
 					pLimiter->OnUploaded();
@@ -336,13 +392,21 @@ void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStora
 		}
 	}
 
-	int RunningJobs = 0;
-	for(const auto &[Key, Entry] : m_vThumbnails)
+	int OutstandingJobs = 0;
+	for(auto &[Key, Entry] : m_vThumbnails)
 	{
 		(void)Key;
-		// 已完成但还没上传的条目只占内存，不占用后台解码槽位。
-		if(Entry.m_pJob != nullptr && Entry.m_pJob->State() != IJob::STATE_DONE)
-			++RunningJobs;
+		if(Entry.m_pJob == nullptr)
+			continue;
+		// 刷新前的结果只释放名额，不能发布到刷新后的列表。
+		if(!Entry.m_Thumbnail.m_Loading && Entry.m_pJob->Finished())
+		{
+			Entry.m_pJob.reset();
+			Entry.m_Thumbnail.m_Loading = true;
+			continue;
+		}
+		// 在途解码和等待上传的结果都占名额。
+		++OutstandingJobs;
 	}
 
 	int PendingRequests = 0;
@@ -355,7 +419,7 @@ void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStora
 
 	if(pEngine != nullptr && pStorage != nullptr)
 	{
-		int JobsToStart = QmScreenshotImageJobsToStart(RunningJobs, PendingRequests, QM_SCREENSHOT_THUMBNAIL_MAX_CONCURRENT_JOBS);
+		int JobsToStart = QmScreenshotImageJobsToStart(OutstandingJobs, PendingRequests, QM_SCREENSHOT_THUMBNAIL_MAX_CONCURRENT_JOBS);
 		for(const std::string &Key : m_vThumbnailRequests)
 		{
 			if(JobsToStart <= 0)
@@ -368,9 +432,19 @@ void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStora
 			if(Entry.m_pJob != nullptr || !Entry.m_Thumbnail.m_Loading)
 				continue;
 
-			Entry.m_pJob = std::make_shared<CQmScreenshotImageJob>(pStorage, Entry.m_Path, Entry.m_StorageType, QM_SCREENSHOT_THUMBNAIL_MAX_EDGE);
-			pEngine->AddJob(Entry.m_pJob);
-			--JobsToStart;
+			try
+			{
+				auto pJob = std::make_shared<CQmScreenshotImageJob>(pStorage, Entry.m_Path, Entry.m_StorageType, QM_SCREENSHOT_THUMBNAIL_MAX_EDGE);
+				if(!pEngine->TryAddJob(pJob))
+					continue;
+				Entry.m_pJob = std::move(pJob);
+				--JobsToStart;
+			}
+			catch(const std::bad_alloc &)
+			{
+				// 未接收的条目保持待处理，帧末清理请求标记后可重新尝试。
+				break;
+			}
 		}
 	}
 
@@ -390,8 +464,9 @@ void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStora
 		{
 			std::vector<std::string> vEvictable;
 			vEvictable.reserve(m_vThumbnails.size());
+			// 入队分配失败时也保留本帧可见项，不能把“未排队”当成“不可见”。
 			for(const auto &[Key, Entry] : m_vThumbnails)
-				if(Entry.m_pJob == nullptr && !Entry.m_Requested)
+				if(Entry.m_pJob == nullptr && Entry.m_LastUsedFrame != m_ThumbnailFrame)
 					vEvictable.push_back(Key);
 			std::sort(vEvictable.begin(), vEvictable.end(), [this](const std::string &Left, const std::string &Right) {
 				return m_vThumbnails.at(Left).m_LastUsedFrame < m_vThumbnails.at(Right).m_LastUsedFrame;
@@ -409,31 +484,47 @@ void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStora
 			}
 		}
 	}
-
-	for(const std::string &Key : m_vThumbnailRequests)
-	{
-		const auto It = m_vThumbnails.find(Key);
-		if(It != m_vThumbnails.end())
-			It->second.m_Requested = false;
-	}
-	m_vThumbnailRequests.clear();
-	++m_ThumbnailFrame;
 }
 
 void CQmScreenshotManager::ClearThumbnails(IGraphics *pGraphics)
 {
-	if(pGraphics != nullptr)
-	{
-		for(auto &[Key, Entry] : m_vThumbnails)
-		{
-			(void)Key;
-			if(Entry.m_Thumbnail.m_Texture.IsValid())
-				pGraphics->UnloadTexture(&Entry.m_Thumbnail.m_Texture);
-		}
-	}
-	// 正在运行的任务不再持有结果引用，解码结束后随任务对象自行释放。
-	m_vThumbnails.clear();
+	m_ThumbnailClearPending = true;
 	m_vThumbnailRequests.clear();
+	bool TextureReleasePending = false;
+	for(auto It = m_vThumbnails.begin(); It != m_vThumbnails.end();)
+	{
+		SThumbnailEntry &Entry = It->second;
+		if(Entry.m_Thumbnail.m_Texture.IsValid())
+		{
+			if(pGraphics == nullptr)
+			{
+				TextureReleasePending = true;
+				++It;
+				continue;
+			}
+			try
+			{
+				pGraphics->UnloadTexture(&Entry.m_Thumbnail.m_Texture);
+			}
+			catch(const std::bad_alloc &)
+			{
+				// 保留尚未交付的句柄，并继续释放其它条目；成功的卸载不重复提交。
+				TextureReleasePending = true;
+				++It;
+				continue;
+			}
+		}
+		if(Entry.m_pJob != nullptr && !Entry.m_pJob->Finished())
+		{
+			// 清空显示状态，任务结束前继续计入解码上限。
+			Entry.m_Thumbnail = {};
+			Entry.m_Requested = false;
+			++It;
+			continue;
+		}
+		It = m_vThumbnails.erase(It);
+	}
+	m_ThumbnailClearPending = TextureReleasePending;
 }
 
 int CQmScreenshotManager::ScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
@@ -675,20 +766,17 @@ bool CQmScreenshotManager::DrawEditorWatermark(IStorage *pStorage, CImageInfo &I
 
 bool CQmScreenshotManager::ApplyWatermark(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options) const
 {
-	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0')
+	if(pStorage == nullptr || pSourcePath == nullptr)
 		return false;
-	CImageInfo Image;
+	const std::string Target = ResolveScreenshotTargetPath(*pStorage, pTargetPath);
+	if(Target.empty())
+		return false;
+	SImageLifetime ImageLifetime;
+	CImageInfo &Image = ImageLifetime.m_Image;
 	if(!LoadScreenshotImage(pStorage, pSourcePath, SourceStorageType, Image) || !(Options.m_Editor ? DrawEditorWatermark(pStorage, Image, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), Options, {}) : DrawWatermark(pStorage, Image, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), Options.m_Position)))
-	{
-		Image.Free();
 		return false;
-	}
 	const SCaptureMetadata &Metadata = CaptureMetadata(pStorage, pSourcePath, SourceStorageType);
-	char aTargetPath[IO_MAX_PATH_LENGTH];
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pTargetPath, aTargetPath, sizeof(aTargetPath));
-	const bool Saved = SavePngAtomically(aTargetPath, Image, Metadata.m_Comment.c_str());
-	Image.Free();
-	return Saved;
+	return SavePngAtomically(Target, Image, Metadata.m_Comment.c_str());
 }
 
 namespace
@@ -740,6 +828,11 @@ bool CQmScreenshotExportControl::Commit(const std::string &TempPath, const std::
 	return true;
 }
 
+bool CQmScreenshotExportControl::TryRemoveCandidate(const std::string &Path) noexcept
+{
+	return TryRemoveCandidate(Path, fs_remove);
+}
+
 bool CQmScreenshotManager::SavePngAtomically(const std::string &TargetPath, const CImageInfo &Image, const char *pComment, CQmScreenshotExportControl *pControl)
 {
 	if(TargetPath.empty() || (pControl != nullptr && pControl->Canceled()))
@@ -774,7 +867,7 @@ bool CQmScreenshotManager::SavePngAtomically(const std::string &TargetPath, cons
 		~STempCleanup()
 		{
 			if(m_Active)
-				fs_remove(m_Path.c_str());
+				CQmScreenshotExportControl::TryRemoveCandidate(m_Path);
 		}
 	} Cleanup{TempPath};
 	std::unique_ptr<FILE, decltype(&std::fclose)> File(pFile, std::fclose);
@@ -790,17 +883,18 @@ bool CQmScreenshotManager::SavePngAtomically(const std::string &TargetPath, cons
 
 std::shared_ptr<CQmScreenshotWatermarkJob> CQmScreenshotManager::CreateWatermarkJob(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options, int PreviewMaxEdge) const
 {
-	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0' || str_length(pTargetPath) >= IO_MAX_PATH_LENGTH)
+	if(pStorage == nullptr || pSourcePath == nullptr)
+		return nullptr;
+	const std::string TargetPath = ResolveScreenshotTargetPath(*pStorage, pTargetPath);
+	if(TargetPath.empty())
 		return nullptr;
 	char aSource[IO_MAX_PATH_LENGTH];
-	char aTarget[IO_MAX_PATH_LENGTH];
 	IOHANDLE SourceFile = pStorage->OpenFile(pSourcePath, IOFLAG_READ, SourceStorageType, aSource, sizeof(aSource));
 	if(SourceFile == nullptr)
 		return nullptr;
 	io_close(SourceFile);
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pTargetPath, aTarget, sizeof(aTarget));
 	const std::string Source = AbsoluteScreenshotPath(aSource);
-	const std::string Target = AbsoluteScreenshotPath(aTarget);
+	const std::string Target = AbsoluteScreenshotPath(TargetPath.c_str());
 	if(Source.empty() || Target.empty() || Source == Target)
 		return nullptr;
 	std::vector<std::string> vFontPaths;
@@ -808,9 +902,10 @@ std::shared_ptr<CQmScreenshotWatermarkJob> CQmScreenshotManager::CreateWatermark
 	{
 		char aFont[IO_MAX_PATH_LENGTH];
 		IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_ALL, aFont, sizeof(aFont));
-		vFontPaths.push_back(File != nullptr ? AbsoluteScreenshotPath(aFont) : std::string());
-		if(File != nullptr)
+		const bool Found = File != nullptr;
+		if(Found)
 			io_close(File);
+		vFontPaths.push_back(Found ? AbsoluteScreenshotPath(aFont) : std::string());
 	}
 	return std::make_shared<CQmScreenshotWatermarkJob>(Source, Target, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), CaptureMetadata(pStorage, pSourcePath, SourceStorageType).m_Comment, std::move(vFontPaths), Options, PreviewMaxEdge);
 }
@@ -830,12 +925,8 @@ void CQmScreenshotWatermarkJob::Run()
 {
 	if(m_Control.Canceled())
 		return;
-	CImageInfo Image;
-	struct SFreeImage
-	{
-		CImageInfo &m_Image;
-		~SFreeImage() { m_Image.Free(); }
-	} FreeImage{Image};
+	SImageLifetime ImageLifetime;
+	CImageInfo &Image = ImageLifetime.m_Image;
 	try
 	{
 		auto pStorage = CreateLocalStorage();

@@ -10,6 +10,7 @@
 #include <game/client/QmUi/QmAnimationBackend.h>
 #include <game/gamecore.h>
 
+#include <cstdint>
 #include <optional>
 
 class CGameClient;
@@ -17,6 +18,12 @@ class IGraphics;
 
 namespace qm_dummy_link
 {
+	inline bool CanUseFallbackSnapshot(int CharacterTick, int ConnectionTick, int TickSpeed)
+	{
+		const int64_t Age = static_cast<int64_t>(ConnectionTick) - CharacterTick;
+		return CharacterTick == 0 || (Age >= 0 && Age <= 3LL * TickSpeed);
+	}
+
 	struct SEndpoint
 	{
 		vec2 m_Pos;

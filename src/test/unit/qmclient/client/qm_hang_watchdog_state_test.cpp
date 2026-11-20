@@ -6,6 +6,7 @@
 
 #include <chrono>
 #include <future>
+#include <limits>
 
 namespace
 {
@@ -116,6 +117,19 @@ TEST(QmHangWatchdogState, ZeroTimestampIsAValidFirstHeartbeat)
 	State.StartWatchdog();
 	PublishHeartbeat(State, 0, IClient::STATE_OFFLINE, "", "unknown");
 	EXPECT_TRUE(State.TryClaimReport(10, 10).has_value());
+}
+
+TEST(QmHangWatchdogState, ElapsedBeyondSignedRangeStillClaimsReport)
+{
+	QmHangDiagnostics::CSnapshotStore State;
+	State.StartWatchdog();
+	constexpr int64_t LastHeartbeat = std::numeric_limits<int64_t>::min();
+	constexpr int64_t Timeout = std::numeric_limits<int64_t>::max();
+	PublishHeartbeat(State, LastHeartbeat, IClient::STATE_LOADING, "map", "unknown");
+	EXPECT_FALSE(State.TryClaimReport(-2, Timeout).has_value());
+	const auto Snapshot = State.TryClaimReport(0, Timeout);
+	ASSERT_TRUE(Snapshot.has_value());
+	EXPECT_EQ(Snapshot->m_LastHeartbeat, LastHeartbeat);
 }
 
 TEST(QmHangWatchdogState, ConcurrentHeartbeatAndClaimKeepSnapshotFieldsTogether)

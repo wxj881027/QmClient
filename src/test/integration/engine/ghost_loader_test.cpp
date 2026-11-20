@@ -8,6 +8,7 @@
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/ghost_path.h>
+#include <game/client/components/qmclient/ghost_timeline.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
@@ -157,7 +158,7 @@ TEST_F(GhostLoaderIntegration, NewerVersionsResetTheBaseWhenChangingChunkType)
 
 TEST_F(GhostLoaderIntegration, FailedRecordingStartIgnoresWritesAndAllowsAValidRetry)
 {
-	ASSERT_TRUE(m_pStorage->CreateFolder("blocked.gho", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(m_pStorage->CreateFolder("blocked.gho.tmp", IStorage::TYPE_SAVE));
 	ASSERT_EQ(m_Recorder.Start("blocked.gho", "test-map", m_MapHash, "test"), -1);
 	const uint32_t Value = 11;
 	m_Recorder.WriteData(3, &Value, sizeof(Value));
@@ -217,4 +218,63 @@ TEST_F(GhostLoaderIntegration, ReadingAnOlderPrefixIntoThePathKeepsTheNewFieldZe
 	ASSERT_NE(Path.Get(0), nullptr);
 	EXPECT_EQ(Path.Get(0)->m_Value, 7u);
 	EXPECT_EQ(Path.Get(0)->m_NewField, 0u);
+}
+
+TEST_F(GhostLoaderIntegration, DecodedDescendingTimelineIsRejectedAndANewFileCanRecover)
+{
+	struct SFrame
+	{
+		int m_Tick;
+		int m_AttackTick;
+	};
+	qm_ghost_path::CChunkedPath<SFrame> Path;
+	ASSERT_NO_FATAL_FAILURE(Write(6, {{2, {7, 0}}, {2, {1, 0}}}));
+	ASSERT_NO_FATAL_FAILURE(Open());
+	for(int i = 0; i < 2; ++i)
+	{
+		int Type = -1;
+		ASSERT_TRUE(m_Loader.ReadNextType(&Type));
+		ASSERT_TRUE(Path.ReadAndAdd([&](SFrame &Value) { return m_Loader.ReadData(Type, &Value, sizeof(Value)); }));
+	}
+	m_Loader.Close();
+	int Start = -1;
+	EXPECT_FALSE(qm_ghost_timeline::Prepare(Path, true, Start));
+	EXPECT_EQ(Start, -1);
+	Path.Reset();
+	ASSERT_NO_FATAL_FAILURE(Write(6, {{2, {7, 0}}, {2, {9, 0}}}));
+	ASSERT_NO_FATAL_FAILURE(Open());
+	for(int i = 0; i < 2; ++i)
+	{
+		int Type = -1;
+		ASSERT_TRUE(m_Loader.ReadNextType(&Type));
+		ASSERT_TRUE(Path.ReadAndAdd([&](SFrame &Value) { return m_Loader.ReadData(Type, &Value, sizeof(Value)); }));
+	}
+	m_Loader.Close();
+	ASSERT_TRUE(qm_ghost_timeline::Prepare(Path, true, Start));
+	EXPECT_EQ(Start, 7);
+	EXPECT_EQ(Path.Get(1)->m_Tick, 9);
+}
+
+TEST_F(GhostLoaderIntegration, DecodedLegacyAttackUnderflowDoesNotPartiallyRewriteTicks)
+{
+	struct SFrame
+	{
+		int m_AttackTick;
+		int m_Tick;
+	};
+	qm_ghost_path::CChunkedPath<SFrame> Path;
+	ASSERT_NO_FATAL_FAILURE(Write(4, {{1, {0}}, {1, {0x80000000u}}}));
+	ASSERT_NO_FATAL_FAILURE(Open());
+	for(int i = 0; i < 2; ++i)
+	{
+		int Type = -1;
+		ASSERT_TRUE(m_Loader.ReadNextType(&Type));
+		ASSERT_TRUE(Path.ReadAndAdd([&](SFrame &Value) { return m_Loader.ReadData(Type, &Value, sizeof(Value.m_AttackTick)); }));
+	}
+	m_Loader.Close();
+	int Start = -1;
+	EXPECT_FALSE(qm_ghost_timeline::Prepare(Path, false, Start));
+	EXPECT_EQ(Start, -1);
+	EXPECT_EQ(Path.Get(0)->m_Tick, 0);
+	EXPECT_EQ(Path.Get(1)->m_Tick, 0);
 }

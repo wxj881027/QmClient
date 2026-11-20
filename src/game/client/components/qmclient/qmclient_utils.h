@@ -8,15 +8,30 @@
 #include <base/color.h>
 
 #include <engine/shared/client_brand.h>
+#include <engine/shared/qm_storage_layout.h>
 
 #include <game/client/QmUi/UiTokens.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
 
+class IStorage;
 typedef struct _json_value json_value;
 
+inline constexpr const char *QMCLIENT_LIFECYCLE_MARKER_FILE = qm_storage::LIFECYCLE_MARKER_FILE;
+inline constexpr unsigned QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES = 383;
+inline constexpr const char *QMCLIENT_NEWS_DRAFT_FILE = qm_storage::NEWS_DRAFT_FILE;
+inline constexpr std::size_t QMCLIENT_NEWS_MAX_BYTES = 64 * 1024;
+
+// 返回是否有待恢复标记。标记内容不可用时，两个时间都为 0。
+bool QmReadLifecycleMarker(IStorage &Storage, int64_t &OutStartedAt, int64_t &OutLastSeenAt) noexcept;
+// 调用方串行提交标记。提交失败时保留上次完整写入的文件。
+bool QmWriteLifecycleMarker(IStorage &Storage, const char *pContent) noexcept;
+bool QmLoadNewsDraft(IStorage &Storage, std::string &Output) noexcept;
+
+// 地址标准化失败或分配失败返回空串。
 std::string NormalizeQmServerAddress(const char *pServerAddress);
 
 struct SQmTitlePresence
@@ -30,7 +45,15 @@ struct SQmTitlePresence
 	SQmTitleAppearance m_Appearance;
 };
 
-std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress, int64_t *pServerTime = nullptr);
+struct SQmTitlePresenceParseResult
+{
+	bool m_Parsed = false;
+	int64_t m_ServerTime = 0;
+	std::vector<SQmTitlePresence> m_vPresences;
+};
+
+// 成功空快照与解析失败分开；失败不发布时间或部分记录。
+bool ParseQmTitlePresencesJson(const json_value *pRoot, const char *pServerAddress, SQmTitlePresenceParseResult &OutResult);
 bool IsValidQmTitle(const char *pTitle);
 // 缺字段兼容旧服务；不完整或非法的新外观整体回退，避免半份资料。
 bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out, bool *pTextStyleSupported = nullptr);

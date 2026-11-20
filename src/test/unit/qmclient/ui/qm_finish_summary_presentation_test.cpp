@@ -123,6 +123,20 @@ TEST(QmFinishSummaryPresentation, RevisedTargetContinuesFromCurrentNumber)
 	EXPECT_DOUBLE_EQ(Presentation.Number(ENumber::TIME), 8000.0);
 }
 
+TEST(QmFinishSummaryPresentation, FirstFinishStartsAtPreviousTotalWithFullMapAward)
+{
+	CPresentation Presentation;
+	auto Values = Targets();
+	Values[static_cast<size_t>(ENumber::POINTS)] = 5371;
+	Values[static_cast<size_t>(ENumber::GAIN)] = 5;
+	Presentation.Update(1, 0.0, true, 2, Values, -1, false, 5366);
+	EXPECT_DOUBLE_EQ(Presentation.Number(ENumber::POINTS), 5366);
+	EXPECT_DOUBLE_EQ(Presentation.Number(ENumber::GAIN), 5);
+	Presentation.Update(1, 3.0, true, 2, Values, -1, false, 5366);
+	EXPECT_DOUBLE_EQ(Presentation.Number(ENumber::POINTS), 5371);
+	EXPECT_DOUBLE_EQ(Presentation.Number(ENumber::GAIN), 5);
+}
+
 TEST(QmFinishSummaryPresentation, AsyncUpdateKeepsCompletedEntrance)
 {
 	CPresentation Presentation;

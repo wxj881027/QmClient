@@ -285,62 +285,21 @@ namespace
 
 	STeeSettingsPageState gs_TeeSettingsPageState;
 
-	enum class ETeeSkinCollection
-	{
-		ALL,
-		FAVORITES,
-		RECENT,
-	};
+	using ETeeSkinCollection = EQmTeeSkinCollection;
 
 	struct STeeSkinCollectionState
 	{
 		ETeeSkinCollection m_Collection = ETeeSkinCollection::ALL;
-		ETeeSkinCollection m_CachedCollection = ETeeSkinCollection::ALL;
-		uint64_t m_SourceRevision = UINT64_MAX;
-		uint64_t m_HistoryRevision = UINT64_MAX;
-		uint64_t m_Revision = 0;
-		std::string m_Filter;
-		SQmRecentTeeSkin m_Main;
-		SQmRecentTeeSkin m_Dummy;
-		std::vector<SQmRecentTeeSkin> m_vRecentOrder;
-		std::vector<CSkins::CSkinListEntry> m_vEntries;
+		CQmTeeSkinCollectionCache<CSkins::CSkinListEntry> m_Cache;
+		uint64_t Revision() const { return m_Cache.Revision(); }
 
 		std::vector<CSkins::CSkinListEntry> &Resolve(CSkins &Skins, CSkins::CSkinList &Source)
 		{
 			const SQmRecentTeeSkin Main = QmCurrentTeeSkin(g_Config, false);
 			const SQmRecentTeeSkin Dummy = QmCurrentTeeSkin(g_Config, true);
-			if(m_SourceRevision != Source.Revision() || m_HistoryRevision != Skins.RecentSkins().Revision() ||
-				m_CachedCollection != m_Collection || m_Filter != g_Config.m_ClSkinFilterString || !(m_Main == Main) || !(m_Dummy == Dummy))
-			{
-				if(m_Collection == ETeeSkinCollection::RECENT)
-					m_vRecentOrder = m_CachedCollection == ETeeSkinCollection::RECENT ? QmStableRecentTeeSkinOrder(Skins.RecentSkins().Entries(), m_vRecentOrder) : Skins.RecentSkins().Entries();
-				m_SourceRevision = Source.Revision();
-				m_HistoryRevision = Skins.RecentSkins().Revision();
-				m_CachedCollection = m_Collection;
-				m_Filter = g_Config.m_ClSkinFilterString;
-				m_Main = Main;
-				m_Dummy = Dummy;
-				m_vEntries.clear();
-				if(m_Collection == ETeeSkinCollection::FAVORITES)
-				{
-					for(const auto &Entry : Source.Skins())
-						if(Entry.IsFavorite())
-							m_vEntries.push_back(Entry);
-				}
-				else if(m_Collection == ETeeSkinCollection::RECENT)
-				{
-					for(const SQmRecentTeeSkin &Entry : m_vRecentOrder)
-					{
-						if(!m_Filter.empty() && str_utf8_find_nocase(Entry.m_Name.c_str(), m_Filter.c_str()) == nullptr)
-							continue;
-						const auto ListEntry = Skins.RecentSkinListEntry(Entry);
-						if(ListEntry.has_value())
-							m_vEntries.push_back(*ListEntry);
-					}
-				}
-				++m_Revision;
-			}
-			return m_Collection == ETeeSkinCollection::ALL ? Source.Skins() : m_vEntries;
+			const SQmTeeSkinCollectionRequest Request{Source.Revision(), Skins.RecentSkins().Revision(), m_Collection, g_Config.m_ClSkinFilterString, Main, Dummy};
+			return m_Cache.Resolve(Request, Skins.RecentSkins().Entries(), Source.Skins(),
+				[&](const SQmRecentTeeSkin &Entry) { return Skins.RecentSkinListEntry(Entry); });
 		}
 	};
 	STeeSkinCollectionState gs_TeeSkinCollection;
@@ -435,16 +394,15 @@ namespace
 	}
 }
 
-void CMenus::InvalidateSettingsTeeSkinCollection()
+void CMenus::ClearSettingsTeePreviewCache()
 {
-	gs_TeeSkinCollection.m_SourceRevision = UINT64_MAX;
+	gs_TeeSkinCollection.m_Cache.Invalidate();
 }
 
 void CMenus::FinalizeTeeListDrainPerfSession()
 {
 	CommitSettingsTeeSkinEdits();
-	gs_TeeSkinCollection.m_CachedCollection = ETeeSkinCollection::ALL;
-	gs_TeeSkinCollection.m_SourceRevision = UINT64_MAX;
+	gs_TeeSkinCollection.m_Cache.Invalidate(true);
 	gs_TeeSkinListState = {};
 	LogTeeListDrainSummary(Client(), GameClient()->m_Skins, GameClient()->m_Skins.LoadingStats(), false, time_get_nanoseconds().count());
 	m_SettingsHighPrioritySettled = false;
@@ -1129,7 +1087,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	else
 		str_format(aSkinCount, sizeof(aSkinCount), "%s: %s", Localize("Skin"), Localize("Loading…"));
 	DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee_skin_list_count_label", &Toolbar.m_Count, aSkinCount, TeeMetrics.m_SmallSize, TEXTALIGN_ML);
-	const uint64_t ListRevision = gs_TeeSkinCollection.m_Revision;
+	const uint64_t ListRevision = gs_TeeSkinCollection.Revision();
 	static std::vector<size_t> s_vVisibleSkinIndices;
 	s_vVisibleSkinIndices.clear();
 	if(s_vVisibleSkinIndices.capacity() < 32)
@@ -2067,7 +2025,7 @@ void CMenus::AdvanceSettingsTeeSkinListOffscreen()
 	}
 	CSkins::CSkinList &SkinList = GameClient()->m_Skins.SkinList(QueueDummy);
 	std::vector<CSkins::CSkinListEntry> &vSkinList = gs_TeeSkinCollection.Resolve(GameClient()->m_Skins, SkinList);
-	const uint64_t ListRevision = gs_TeeSkinCollection.m_Revision;
+	const uint64_t ListRevision = gs_TeeSkinCollection.Revision();
 	if(!gs_TeeSettingsPageState.m_TeePageActiveLastFrame)
 	{
 		gs_TeeListDrainPerfSession.m_Active = false;
@@ -2860,7 +2818,7 @@ void CMenus::RefreshSettingsTeeSkins(int RefreshVisibleRows, const char *aRefres
 	str_format(aPayload, sizeof(aPayload), "event=tee_refresh_begin visible_rows=%d first_visible_skin=%s",
 		RefreshVisibleRows, aRefreshFirstVisibleSkin);
 	QmPerfLogPayload("perf/interaction", aPayload, Client(), "settings:tee");
-	InvalidateSettingsTeeSkinCollection();
+	ClearSettingsTeePreviewCache();
 	GameClient()->RefreshSkins(CSkinDescriptor::FLAG_SIX);
 }
 

@@ -136,3 +136,29 @@ TEST_F(CQmLegacyConfigLoad, LegacyWriteRunsCanonicalCommandChainAndMarksExplicit
 	QmInitializeDefaultProfile(g_Config, true, [this](const char *pName) { return QmConfigValueWasExplicitlySet(*m_pConfigManager, pName); });
 	EXPECT_STREQ(g_Config.m_QmCustomFont, "chosen font");
 }
+
+TEST_F(CQmLegacyConfigLoad, LegacyToggleRestoreKeepsNewHoldStartedDuringRelease)
+{
+	struct SContext
+	{
+		IConsole *m_pConsole;
+		bool m_StartNewHold = false;
+	} Context{m_pConsole.get()};
+	m_pConsole->Chain("qm_jump_hint", [](IConsole::IResult *pResult, void *pUser, IConsole::FCommandCallback pfnCallback, void *pCallbackUser) {
+		pfnCallback(pResult, pCallbackUser);
+		auto &Context = *static_cast<SContext *>(pUser);
+		if(Context.m_StartNewHold && pResult->NumArguments() > 0 && pResult->GetInteger(0) == 0)
+		{
+			Context.m_StartNewHold = false;
+			Context.m_pConsole->ExecuteLineStroked(1, "+toggle_restore tc_jump_hint 1", IConsole::CLIENT_ID_UNSPECIFIED);
+		} }, &Context);
+
+	g_Config.m_QmJumpHint = 0;
+	m_pConsole->ExecuteLineStroked(1, "+toggle_restore tc_jump_hint 1", IConsole::CLIENT_ID_UNSPECIFIED);
+	ASSERT_EQ(g_Config.m_QmJumpHint, 1);
+	Context.m_StartNewHold = true;
+	m_pConsole->ExecuteLineStroked(0, "+toggle_restore tc_jump_hint 1", IConsole::CLIENT_ID_UNSPECIFIED);
+	ASSERT_EQ(g_Config.m_QmJumpHint, 1);
+	m_pConsole->ExecuteLineStroked(0, "+toggle_restore tc_jump_hint 1", IConsole::CLIENT_ID_UNSPECIFIED);
+	EXPECT_EQ(g_Config.m_QmJumpHint, 0);
+}

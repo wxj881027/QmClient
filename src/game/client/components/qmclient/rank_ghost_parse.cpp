@@ -16,6 +16,7 @@
 #include <engine/client.h>
 #include <engine/client/ghost.h>
 #include <engine/shared/compression.h>
+#include <engine/shared/demo_output.h>
 #include <engine/shared/network.h>
 #include <engine/shared/snapshot.h>
 #include <engine/storage.h>
@@ -29,16 +30,18 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 #include <limits>
 #include <map>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace
 {
-	constexpr int64_t PARSE_TIME_BUDGET_MS = 5;
+	constexpr auto PARSE_TIME_BUDGET = std::chrono::milliseconds(5);
 	constexpr int MIN_PATH_TICKS = 25;
 
 	using qmclient::rank_demo::ListCacheFiles;
@@ -110,7 +113,7 @@ namespace
 	public:
 		bool Open(IStorage *pStorage, const char *pPath, const char *pMap, const SHA256_DIGEST &MapSha256, const char *pOwner, int NumTicks, int TimeMs)
 		{
-			m_File = pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			m_File = pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 			if(m_File == nullptr)
 				return false;
 
@@ -178,10 +181,10 @@ namespace
 		{
 			if(m_File == nullptr)
 				return !m_Failed;
-			const bool Flushed = FlushChunk();
-			io_close(m_File);
-			m_File = nullptr;
-			return Flushed && !m_Failed;
+			const bool Flushed = FlushChunk() && io_flush(m_File) == 0 && io_error(m_File) == 0;
+			const bool Closed = io_close(std::exchange(m_File, nullptr)) == 0;
+			m_Failed |= !Flushed || !Closed;
+			return !m_Failed;
 		}
 	};
 	int FindObjItemIndex(const CSnapshot *pSnapshot, int Type, int Id)
@@ -333,16 +336,14 @@ namespace
 				TrackIt = Parse.m_Tracks.emplace(Cid, STrackContext{}).first;
 				TrackIt->second.m_Cid = Cid;
 				TrackIt->second.m_vPath.reserve((size_t)std::clamp(Parse.m_RunEnd - Parse.m_RunStart, 0, 60 * 60 * 50));
-				ExtractClientInfo(Parse, pSnapshot, Cid, TrackIt->second);
 			}
 			STrackContext &Track = TrackIt->second;
+			ExtractClientInfo(Parse, pSnapshot, Cid, Track);
 
 			CNetObj_Character Char;
 			const CNetObj_DDNetCharacter *pDDNetChar = nullptr;
 			if(!UnpackCharacter(Parse, pSnapshot, Cid, Char, pDDNetChar))
 				continue;
-			ExtractClientInfo(Parse, pSnapshot, Cid, Track);
-
 			CGhostCharacter GhostChar;
 			CopyGhostCharacter(GhostChar, Char, pDDNetChar, Tick);
 			Track.m_vPath.push_back(GhostChar);
@@ -391,7 +392,8 @@ void CRankGhost::StartParse()
 		if(Parse.m_vAllowedGhosts.empty())
 		{
 			m_pParse.reset();
-			Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
+			if(!m_EventRebuildOnly)
+				Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
 			Fail(Localize("Rank ghost: this replay has no playable tee"));
 			return;
 		}
@@ -408,31 +410,32 @@ void CRankGhost::StartParse()
 
 	Parse.m_pPlayer = std::make_unique<CDemoPlayer>(&Parse.m_Delta, &Parse.m_DeltaSixup, false);
 
-	if(Parse.m_pPlayer->Load(Storage(), m_aDemoStoragePath, IStorage::TYPE_SAVE) == -1)
+	if(Parse.m_pPlayer->Load(Storage(), m_aDemoStoragePath, IStorage::TYPE_SAVE, false) == -1)
 	{
 		char aBuf[512];
 		str_format(aBuf, sizeof(aBuf), Localize("Rank ghost: failed to load the replay: %s"), Parse.m_pPlayer->ErrorMessage());
 		// CDemoPlayer 析构要求文件已关闭，否则 dbg_assert 在 Release 下也会 abort
 		Parse.m_pPlayer->Stop();
 		m_pParse.reset();
-		Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
+		if(!m_EventRebuildOnly)
+			Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
 		Fail(aBuf);
 		return;
 	}
 	Parse.m_pPlayer->SetListener(this);
 
-	const CDemoPlayer::CPlaybackInfo *pInfo = Parse.m_pPlayer->Info();
-	const int NumMarkers = bytes_be_to_uint(pInfo->m_TimelineMarkers.m_aNumTimelineMarkers);
-	Parse.m_HasRunMarkers = NumMarkers >= 2;
+	const IDemoPlayer::CInfo *pInfo = Parse.m_pPlayer->BaseInfo();
+	Parse.m_HasRunMarkers = pInfo->m_NumTimelineMarkers >= 2;
 	if(Parse.m_HasRunMarkers)
 	{
-		Parse.m_RunStart = (int)bytes_be_to_uint(pInfo->m_TimelineMarkers.m_aTimelineMarkers[0]);
-		Parse.m_RunEnd = (int)bytes_be_to_uint(pInfo->m_TimelineMarkers.m_aTimelineMarkers[1]);
-		if(Parse.m_RunEnd <= Parse.m_RunStart)
+		Parse.m_RunStart = pInfo->m_aTimelineMarkers[0];
+		Parse.m_RunEnd = pInfo->m_aTimelineMarkers[1];
+		if(Parse.m_RunStart < 0 || Parse.m_RunEnd <= Parse.m_RunStart)
 		{
 			Parse.m_pPlayer->Stop();
 			m_pParse.reset();
-			Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
+			if(!m_EventRebuildOnly)
+				Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
 			Fail(Localize("Rank ghost: the replay has an invalid run range"));
 			return;
 		}
@@ -442,8 +445,8 @@ void CRankGhost::StartParse()
 		// 没有起止标记：整段回放就是这一轮，从回放起点开始、到回放结束为止。
 		// m_RunEnd 用回放自身的末尾 tick 作上界——不能取"无穷大"，否则轨迹预留会按
 		// 上界申请巨额内存；真正的结束 tick 由解析中观察到的最大 tick 决定。
-		Parse.m_RunStart = (int)pInfo->m_Info.m_FirstTick;
-		Parse.m_RunEnd = maximum((int)pInfo->m_Info.m_LastTick, Parse.m_RunStart + 1);
+		Parse.m_RunStart = maximum(0, pInfo->m_FirstTick);
+		Parse.m_RunEnd = maximum(pInfo->m_LastTick, Parse.m_RunStart < std::numeric_limits<int>::max() ? Parse.m_RunStart + 1 : Parse.m_RunStart);
 		log_info("rank_ghost", "demo has no run start/end markers, using the whole replay");
 	}
 
@@ -482,7 +485,7 @@ void CRankGhost::UpdateParseStage()
 	// tick 钳在 LastTick 后，TICK_NEXT 的慢速路径会因 m_NextTick >= WantedTick
 	// 直接跳过并返回成功。必须按"播放头停滞"识别文件结束，否则解析会永远停在
 	// 99% 空转（文件比 run 终点标记短的回放必现）
-	const int64_t Deadline = time_get() + time_freq() * PARSE_TIME_BUDGET_MS / 1000;
+	const auto Deadline = time_get_nanoseconds() + PARSE_TIME_BUDGET;
 	int Processed = 0;
 	bool Failed = false;
 	bool Stalled = false;
@@ -502,9 +505,7 @@ void CRankGhost::UpdateParseStage()
 			break;
 		}
 		PrevTick = CurTick;
-		if(Processed >= PARSE_TICKS_PER_FRAME)
-			break;
-		if((Processed & 0xFF) == 0 && time_get() >= Deadline)
+		if(Processed >= PARSE_TICKS_PER_FRAME || time_get_nanoseconds() >= Deadline)
 			break;
 	}
 
@@ -538,8 +539,9 @@ void CRankGhost::FinishParse()
 				   Parse.m_RunEnd - Parse.m_LastSeenTick <= SERVER_TICK_SPEED;
 	if(TruncatedTail)
 		RunEnd = Parse.m_LastSeenTick;
-	const int RunTicks = RunEnd - Parse.m_RunStart;
-	const int TimeMs = RunTicks * 1000 / SERVER_TICK_SPEED;
+	const int64_t RunTicks = static_cast<int64_t>(RunEnd) - Parse.m_RunStart;
+	const int64_t DurationMs = RunTicks * 1000 / SERVER_TICK_SPEED;
+	const int TimeMs = DurationMs > 0 && DurationMs <= std::numeric_limits<int>::max() ? static_cast<int>(DurationMs) : 0;
 	// 有标记时 m_ReachedRunEnd 为假说明回放在 run 结束前就被截断，避免写出不完整的影子；
 	// 只差结尾 1 秒内按完成处理（TruncatedTail），无标记时"回放放完"本身就是合法的结束条件
 	const bool RunComplete = !Parse.m_HasRunMarkers || Parse.m_ReachedRunEnd || TruncatedTail;
@@ -608,17 +610,22 @@ void CRankGhost::FinishParse()
 
 	if(vpTracks.size() == 1)
 	{
-		// 单轨：沿用单文件缓存
-		const int NumTicks = (int)vpTracks[0]->m_vPath.size();
-		char aTempGhostPath[IO_MAX_PATH_LENGTH];
-		str_format(aTempGhostPath, sizeof(aTempGhostPath), "%s.tmp", m_aGhostStoragePath);
-		Storage()->RemoveFile(aTempGhostPath, IStorage::TYPE_SAVE);
-		str_copy(m_aGhostWritePath, aTempGhostPath, sizeof(m_aGhostWritePath));
-		auto pTempWriter = std::make_unique<CGhostFileWriter>();
-		const bool WriteOk = WriteTrack(*pTempWriter, vpTracks[0], NumTicks);
-		if(!WriteOk || !Storage()->RenameFile(aTempGhostPath, m_aGhostStoragePath, IStorage::TYPE_SAVE))
+		bool Published = false;
+		try
 		{
-			Storage()->RemoveFile(aTempGhostPath, IStorage::TYPE_SAVE);
+			demo_output::CTransaction Output;
+			if(Output.Prepare(*Storage(), m_aGhostStoragePath))
+			{
+				str_copy(m_aGhostWritePath, Output.Filename(), sizeof(m_aGhostWritePath));
+				CGhostFileWriter Writer;
+				Published = WriteTrack(Writer, vpTracks[0], static_cast<int>(vpTracks[0]->m_vPath.size())) && Output.Publish();
+			}
+		}
+		catch(...)
+		{
+		}
+		if(!Published)
+		{
 			Fail(Localize("Rank ghost: failed to write the ghost file"));
 			return;
 		}
@@ -761,7 +768,7 @@ void CRankGhost::OnDemoPlayerMessage(void *pData, int Size)
 	// 才发送），因此允许越过终点两个 tick，并把相对 tick 钳在轨迹长度内，
 	// 否则播放头永远到不了这条记录。
 	const int Tick = Parse.m_pPlayer->Info()->m_Info.m_CurrentTick;
-	if(Tick < Parse.m_RunStart || Tick > Parse.m_RunEnd + 2)
+	if(Tick < Parse.m_RunStart || static_cast<int64_t>(Tick) > static_cast<int64_t>(Parse.m_RunEnd) + 2)
 		return;
 	const int RelTick = minimum(Tick - Parse.m_RunStart, Parse.m_RunEnd - Parse.m_RunStart);
 
@@ -800,23 +807,22 @@ void CRankGhost::OnDemoPlayerMessage(void *pData, int Size)
 		const int aData[5] = {pMsg->m_ClientId, pMsg->m_Time, pMsg->m_Diff, pMsg->m_RecordPersonal ? 1 : 0, pMsg->m_RecordServer ? 1 : 0};
 		RecordViewMessage(RelTick, EViewMessageType::RACE_FINISH, aData, (int)std::size(aData));
 	}
-	else if(Msg == NETMSGTYPE_SV_DDRACETIME)
+	else if(Msg == NETMSGTYPE_SV_DDRACETIME || Msg == NETMSGTYPE_SV_DDRACETIMELEGACY)
 	{
-		const CNetMsg_Sv_DDRaceTime *pMsg = (const CNetMsg_Sv_DDRaceTime *)Parse.m_NetObjHandler.SecureUnpackMsg(Msg, &Unpacker);
-		if(pMsg == nullptr)
-			return;
-		// 原生 HUD 用 TIME_HOURS_CENTISECS 显示 m_Time、用 m_Check / 100 算差值，
-		// 这里统一把成绩换算成毫秒、差值保持厘秒，与 RACE_FINISH 的毫秒区分开
-		const int aData[5] = {pMsg->m_Time * 10, pMsg->m_Check, pMsg->m_Finish, 0, 0};
-		RecordViewMessage(RelTick, EViewMessageType::RACE_TIME, aData, 3);
-	}
-	else if(Msg == NETMSGTYPE_SV_DDRACETIMELEGACY)
-	{
-		const CNetMsg_Sv_DDRaceTimeLegacy *pMsg = (const CNetMsg_Sv_DDRaceTimeLegacy *)Parse.m_NetObjHandler.SecureUnpackMsg(Msg, &Unpacker);
-		if(pMsg == nullptr)
-			return;
-		const int aData[5] = {pMsg->m_Time * 10, pMsg->m_Check, pMsg->m_Finish, 0, 0};
-		RecordViewMessage(RelTick, EViewMessageType::RACE_TIME, aData, 3);
+		const auto RecordRaceTime = [&](const auto *pMsg) {
+			if(pMsg == nullptr)
+				return;
+			const int64_t TimeMs = static_cast<int64_t>(pMsg->m_Time) * 10;
+			if(TimeMs < std::numeric_limits<int>::min() || TimeMs > std::numeric_limits<int>::max())
+				return;
+			const int aData[] = {static_cast<int>(TimeMs), pMsg->m_Check, pMsg->m_Finish};
+			RecordViewMessage(RelTick, EViewMessageType::RACE_TIME, aData, static_cast<int>(std::size(aData)));
+		};
+		const void *pMessage = Parse.m_NetObjHandler.SecureUnpackMsg(Msg, &Unpacker);
+		if(Msg == NETMSGTYPE_SV_DDRACETIME)
+			RecordRaceTime(static_cast<const CNetMsg_Sv_DDRaceTime *>(pMessage));
+		else
+			RecordRaceTime(static_cast<const CNetMsg_Sv_DDRaceTimeLegacy *>(pMessage));
 	}
 	else if(Msg == NETMSGTYPE_SV_SOUNDGLOBAL)
 	{

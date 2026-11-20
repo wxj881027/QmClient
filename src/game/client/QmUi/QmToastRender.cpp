@@ -43,9 +43,9 @@ namespace qm_ui
 			return;
 		const CUIRect Screen = *pUi->Screen();
 		CToastQueue &Queue = Toasts();
-		const double Now = time_get();
-		Queue.Expire(Now);
-		if(Queue.Size() == 0)
+		const double NowSec = static_cast<double>(time_get()) / static_cast<double>(time_freq());
+		Queue.Expire(NowSec);
+		if(Queue.Size() == 0 || Screen.w <= 0.0f)
 			return;
 
 		const int MotionLevel = g_Config.m_QmUiMotionLevel;
@@ -58,7 +58,7 @@ namespace qm_ui
 		for(size_t Index = Queue.Size(); Index-- > 0;)
 		{
 			CToastQueue::SEntry &Entry = Queue.At(Index);
-			const float Alpha = Queue.EntryAlpha(Entry, Now, MotionLevel);
+			const float Alpha = Queue.EntryAlpha(Entry, NowSec, MotionLevel);
 			if(Alpha <= 0.01f)
 			{
 				// 退场结束但还没被清理：跳过绘制，等下一帧 Expire。
@@ -68,13 +68,14 @@ namespace qm_ui
 
 			const float TextWidth = pTextRender->TextWidth(ui_token::font::BODY, Entry.m_Text.c_str(), -1, -1.0f);
 			const float ActionWidth = Entry.m_ActionLabel.empty() ? 0.0f : pTextRender->TextWidth(ui_token::font::BODY, Entry.m_ActionLabel.c_str(), -1, -1.0f) + 16.0f;
-			const float Width = std::clamp(TextWidth + ActionWidth + 2.0f * TOAST_PADDING_X + TOAST_LEADING_BAR + 10.0f, TOAST_MIN_WIDTH, TOAST_MAX_WIDTH);
+			const float PreferredWidth = std::clamp(TextWidth + ActionWidth + 2.0f * TOAST_PADDING_X + TOAST_LEADING_BAR + 10.0f, TOAST_MIN_WIDTH, TOAST_MAX_WIDTH);
+			const float Width = std::min(PreferredWidth, Screen.w);
 
 			CUIRect Rect;
 			Rect.w = Width;
 			Rect.h = TOAST_HEIGHT;
 			Rect.x = Screen.x + (Screen.w - Width) * 0.5f;
-			Rect.y = Bottom - TOAST_HEIGHT + Queue.EntryOffset(Entry, Now, MotionLevel);
+			Rect.y = Bottom - TOAST_HEIGHT + Queue.EntryOffset(Entry, NowSec, MotionLevel);
 
 			ColorRGBA Surface = ui_token::color::SURFACE_ELEVATED;
 			Surface.a *= Alpha;
@@ -98,16 +99,20 @@ namespace qm_ui
 			CUIRect Label = Inner;
 			Label.x += TOAST_LEADING_BAR + 6.0f;
 			Label.w -= TOAST_LEADING_BAR + 6.0f;
-			if(ActionWidth > 0.0f)
+			const float ActionSlotWidth = std::min(ActionWidth, Label.w);
+			if(ActionSlotWidth > 0.0f)
 			{
 				CUIRect ActionRect;
-				Label.VSplitRight(ActionWidth, &Label, &ActionRect);
+				Label.VSplitRight(ActionSlotWidth, &Label, &ActionRect);
 				ActionRect.y = Rect.y + (TOAST_HEIGHT - TOAST_ACTION_HEIGHT) * 0.5f;
 				ActionRect.h = TOAST_ACTION_HEIGHT;
 
 				const ColorRGBA PreviousColor = pTextRender->GetTextColor();
 				pTextRender->TextColor(ui_token::color::ACCENT_PRIMARY.WithAlpha(Alpha));
-				pUi->DoLabel(&ActionRect, Entry.m_ActionLabel.c_str(), ui_token::font::BODY, TEXTALIGN_MC);
+				SLabelProperties ActionProps;
+				ActionProps.m_MaxWidth = ActionRect.w;
+				ActionProps.m_EllipsisAtEnd = true;
+				pUi->DoLabel(&ActionRect, Entry.m_ActionLabel.c_str(), ui_token::font::BODY, TEXTALIGN_MC, ActionProps);
 				pTextRender->TextColor(PreviousColor);
 				// 只有动作按钮参与命中测试，toast 本体永不接管输入。
 				const bool Clicked = pUi->DoButtonLogic(&Entry.m_ButtonToken, 0, &ActionRect, BUTTONFLAG_LEFT) != 0;
@@ -121,15 +126,17 @@ namespace qm_ui
 				}
 			}
 
+			Bottom -= TOAST_HEIGHT + TOAST_GAP;
+			if(Label.w <= 0.0f)
+				continue;
+
 			SLabelProperties Props;
-			Props.m_MaxWidth = std::max(0.0f, Label.w);
+			Props.m_MaxWidth = Label.w;
 			Props.m_EllipsisAtEnd = true;
 			const ColorRGBA PreviousColor = pTextRender->GetTextColor();
 			pTextRender->TextColor(ui_token::color::TEXT_PRIMARY.WithAlpha(Alpha));
 			pUi->DoLabel(&Label, Entry.m_Text.c_str(), ui_token::font::BODY, TEXTALIGN_ML, Props);
 			pTextRender->TextColor(PreviousColor);
-
-			Bottom -= TOAST_HEIGHT + TOAST_GAP;
 		}
 	}
 } // namespace qm_ui

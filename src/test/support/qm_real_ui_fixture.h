@@ -22,8 +22,10 @@
 #include <test/test.h>
 
 #include <memory>
+#include <new>
 #include <stdexcept>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace qm_ui_test
@@ -56,11 +58,30 @@ namespace qm_ui_test
 			ColorRGBA m_OutlineColor;
 		};
 		std::vector<STextSubmission> m_vTextSubmissions;
-		// 文字缓冲默认开启，其他测试观察到的设备提交与后端行为保持不变；
-		// 关掉后引擎改走逐字符上色的回退分支（text.cpp 的逐 quad 填充），
-		// 于是每个字形的最终填充色会经 ChangeColorOfQuadVertices 暴露出来。
+		// 只在设备调用前注入一次失败，文字创建/删除仍由真实引擎执行。
+		bool m_FailBufferObjectCreate = false;
+		bool m_FailBufferContainerCreate = false;
+		enum class EDeleteFailure
+		{
+			NONE,
+			ALLOCATION,
+			LENGTH,
+			OTHER,
+		};
+		EDeleteFailure m_BufferObjectDeleteFailure = EDeleteFailure::NONE;
+		bool m_FailQuadContainerDelete = false;
+		bool m_FailTextDraw = false;
 		bool m_TextBuffering = true;
-		bool IsTextBufferingEnabled() override { return m_TextBuffering; }
+		bool m_RecordLegacyText = false;
+		int m_FailLegacyDrawAfter = -1;
+		struct SLegacyDraw
+		{
+			CQuadItem m_Item;
+			ColorRGBA m_Color;
+			int m_Texture;
+		};
+		std::vector<SLegacyDraw> m_vLegacyDraws;
+		std::vector<std::pair<size_t, ColorRGBA>> m_vLegacyRecolors;
 		struct SQuadVertexColor
 		{
 			size_t m_QuadOffset;
@@ -70,15 +91,75 @@ namespace qm_ui_test
 			unsigned char m_a;
 		};
 		std::vector<SQuadVertexColor> m_vQuadVertexColors;
-		// 逐字填充色是「容器顶点色 × 绘制 tint」，只有关掉缓冲才能观察到。
-		void ChangeColorOfQuadVertices(size_t QuadOffset, unsigned char r, unsigned char g, unsigned char b, unsigned char a) override
+		ColorRGBA m_LegacyColor{1, 1, 1, 1};
+		int m_LegacyTexture = -1;
+		int m_LegacyKeepCalls = 0, m_LegacyReplayCalls = 0;
+		bool IsTextBufferingEnabled() override { return m_TextBuffering; }
+		void TextureSet(CTextureHandle Texture) override
 		{
-			m_vQuadVertexColors.push_back({QuadOffset, r, g, b, a});
+			if(m_RecordLegacyText)
+				m_LegacyTexture = Texture.Id();
 		}
-		void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override
+		void SetColor(float R, float G, float B, float A) override
 		{
-			CIconBenchmarkGraphics::RenderText(BufferContainerIndex, TextQuadNum, TextureSize, TextTexture, TextOutlineTexture, TextColor, TextOutlineColor);
-			m_vTextSubmissions.push_back({m_MapRect, TextColor, TextOutlineColor});
+			if(m_RecordLegacyText)
+				m_LegacyColor = ColorRGBA(R, G, B, A);
+		}
+		void SetColor(ColorRGBA Color) override { SetColor(Color.r, Color.g, Color.b, Color.a); }
+		void QuadsEndKeepVertices() override
+		{
+			if(m_RecordLegacyText)
+				++m_LegacyKeepCalls;
+		}
+		void QuadsDrawCurrentVertices(bool = true) override
+		{
+			if(m_RecordLegacyText)
+				++m_LegacyReplayCalls;
+		}
+		void ChangeColorOfQuadVertices(size_t Offset, unsigned char R, unsigned char G, unsigned char B, unsigned char A) override
+		{
+			m_vQuadVertexColors.push_back({Offset, R, G, B, A});
+			if(m_RecordLegacyText)
+				m_vLegacyRecolors.emplace_back(Offset, ColorRGBA(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f));
+		}
+		int m_DirectBufferObjectDeleteCalls = 0;
+		size_t QuadContainerCount() const { return m_QuadCounts.size(); }
+		void ResetDeviceBuffers()
+		{
+			m_QuadCounts.clear();
+			m_Buffers.clear();
+			m_Containers.clear();
+		}
+		void RenderText(int Container, int Quads, int TextureSize, CTextureHandle Texture, CTextureHandle Outline, const ColorRGBA &Color, const ColorRGBA &OutlineColor) override
+		{
+			if(std::exchange(m_FailTextDraw, false))
+				throw std::bad_alloc();
+			CIconBenchmarkGraphics::RenderText(Container, Quads, TextureSize, Texture, Outline, Color, OutlineColor);
+			m_vTextSubmissions.push_back({m_MapRect, Color, OutlineColor});
+		}
+		int CreateBufferObject(size_t Size, void *pData, int Flags, bool Moved = false) override
+		{
+			if(std::exchange(m_FailBufferObjectCreate, false))
+				throw std::bad_alloc();
+			return CIconBenchmarkGraphics::CreateBufferObject(Size, pData, Flags, Moved);
+		}
+		int CreateBufferContainer(SBufferContainerInfo *pInfo) override
+		{
+			if(std::exchange(m_FailBufferContainerCreate, false))
+				throw std::bad_alloc();
+			return CIconBenchmarkGraphics::CreateBufferContainer(pInfo);
+		}
+		void DeleteBufferObject(int Index) override
+		{
+			++m_DirectBufferObjectDeleteCalls;
+			const EDeleteFailure Failure = std::exchange(m_BufferObjectDeleteFailure, EDeleteFailure::NONE);
+			if(Failure == EDeleteFailure::ALLOCATION)
+				throw std::bad_alloc();
+			if(Failure == EDeleteFailure::LENGTH)
+				throw std::length_error("controlled device deletion limit");
+			if(Failure == EDeleteFailure::OTHER)
+				throw std::logic_error("unrelated device deletion failure");
+			CIconBenchmarkGraphics::DeleteBufferObject(Index);
 		}
 		// 测试只改变 framebuffer 设备尺寸，真实字号量化与布局仍由文字引擎执行。
 		void SetFramebufferSize(int Width, int Height)
@@ -133,19 +214,41 @@ namespace qm_ui_test
 			m_vRoundedClips.push_back(m_vClipStack.empty() ? SClipRect{0, 0, m_ScreenWidth, m_ScreenHeight} : m_vClipStack.back());
 		}
 		// 裁剪、光标与选区只提交 GPU 绘制，不替代真实文字布局和输入行为。
-		void ClipEnable(int x, int y, int w, int h) override { m_vClipStack.push_back({x, y, w, h}); }
+		bool m_Clipped = false;
+		bool m_FailClipDisable = false;
+		CUIRect m_ClipRect{};
+		int m_ClipChanges = 0;
+		void ClipEnable(int X, int Y, int W, int H) override
+		{
+			m_vClipStack.push_back({X, Y, W, H});
+			m_Clipped = true;
+			m_ClipRect = {static_cast<float>(X), static_cast<float>(Y), static_cast<float>(W), static_cast<float>(H)};
+			++m_ClipChanges;
+		}
 		void ClipDisable() override
 		{
+			if(std::exchange(m_FailClipDisable, false))
+				throw std::bad_alloc();
 			if(!m_vClipStack.empty())
 				m_vClipStack.pop_back();
+			m_Clipped = false;
+			++m_ClipChanges;
 		}
-		// 采样边界只是设备状态：色环纹理需要 clamp，由真实后端生效，测试不关心。
 		void WrapClamp() override {}
 		void WrapNormal() override {}
-		// 引擎接口新增的纹理目标标志：测试桩不加载真实纹理，统一返回 0（不启用数组/3D 目标）。
 		int TextureLoadFlags() override { return 0; }
-		void QuadsDrawTL(const CQuadItem *, int Num) override
+		void QuadsDrawTL(const CQuadItem *pItems, int Num) override
 		{
+			if(m_RecordLegacyText)
+				for(int i = 0; i < Num; ++i)
+				{
+					if(m_FailLegacyDrawAfter >= 0 && m_vLegacyDraws.size() == static_cast<size_t>(m_FailLegacyDrawAfter))
+					{
+						m_FailLegacyDrawAfter = -1;
+						throw std::bad_alloc();
+					}
+					m_vLegacyDraws.push_back({pItems[i], m_LegacyColor, m_LegacyTexture});
+				}
 			++m_Draws;
 			m_Quads += Num;
 		}
@@ -179,6 +282,8 @@ namespace qm_ui_test
 		{
 			if(ContainerIndex == -1)
 				return;
+			if(std::exchange(m_FailQuadContainerDelete, false))
+				throw std::bad_alloc();
 			m_QuadCounts.erase(ContainerIndex);
 			ContainerIndex = -1;
 		}
@@ -249,6 +354,9 @@ namespace qm_ui_test
 
 	protected:
 		CUi m_Ui;
+		explicit CRealUiFixture(IAllocationResource *pPopupCallbackMemory = nullptr, IAllocationResource *pClipMemory = nullptr) :
+			m_Ui(pPopupCallbackMemory, pClipMemory) {}
+		CRealUiTestGraphics &Graphics() { return m_Graphics; }
 		// 真实 UI 环境默认挂动画运行时（生产 gameclient 恒挂）；动效等级
 		// 默认 0 时资格门仍禁动画，需要动画的测试显式开 FullMotion 并用
 		// AdvanceAnimFrame 同步驱动轨道时钟。

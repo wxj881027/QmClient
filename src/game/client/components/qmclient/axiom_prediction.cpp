@@ -1,7 +1,6 @@
 #include <engine/shared/config.h>
 
 #include <game/client/gameclient.h>
-#include <game/client/prediction/entities/character.h>
 
 // 仅在线客户端启用；公共碰撞类和服务端不读取客户端配置。
 // 角色侧的 Qm 四边形钩子与地块处理属于预测实体，定义在 character.cpp。

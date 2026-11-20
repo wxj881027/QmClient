@@ -9,6 +9,7 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -117,14 +118,16 @@ class CQmAxiomScores : public CComponent
 		std::string m_PlayerName;
 	};
 
-	std::map<std::string, SCacheEntry> m_Cache;
+	using TCache = std::map<std::string, SCacheEntry, std::less<>>;
+	TCache m_Cache;
 	uint64_t m_AccessOrderClock = 0;
 	SRequestSlot m_SearchRequest;
 	std::array<SRequestSlot, 2> m_aModeRequests;
 	SRequestSlot m_DdStatsRequest;
 	std::shared_ptr<CQmAxiomDdStatsParseJob> m_pDdStatsParseJob;
+	std::shared_ptr<CHttpResponseBufferBudget> m_pResponseBufferBudget;
 	std::string m_ActivePlayerName;
-	std::map<std::string, std::shared_ptr<IQmAxiomHttpRequest>> m_PointsRequests;
+	std::map<std::string, std::shared_ptr<IQmAxiomHttpRequest>, std::less<>> m_PointsRequests;
 	EQmAxiomMode m_Mode = EQmAxiomMode::NONE;
 	CQmAxiomRequestBudget m_OpenApiBudget;
 	uint64_t m_Generation = 0;
@@ -142,23 +145,29 @@ class CQmAxiomScores : public CComponent
 	static void RecordFailure(int &ConsecutiveFailures);
 	static void ClearFailure(int &ConsecutiveFailures);
 
-	void AbortActiveRequests(bool ResetFetchingStates);
+	void AbortActiveRequests(bool ResetFetchingStates) noexcept;
 	void BeginActiveQuery(const char *pPlayerName);
-	void StartSearchRequest(const char *pPlayerName, SCacheEntry &Entry);
-	void StartModeRequest(const char *pPlayerName, SCacheEntry &Entry, EQmAxiomMode Mode);
-	void StartDdStatsRequest(const char *pPlayerName, SCacheEntry &Entry);
+	void StartSearchRequest(const char *pPlayerName, SCacheEntry &Entry) noexcept;
+	void StartModeRequest(const char *pPlayerName, SCacheEntry &Entry, EQmAxiomMode Mode) noexcept;
+	void StartDdStatsRequest(const char *pPlayerName, SCacheEntry &Entry) noexcept;
 	void ProcessSearchRequest();
 	void ProcessModeRequests();
 	void ProcessDdStatsRequest();
 	void FinishActiveQueryIfIdle();
-	void EvictCacheEntryIfNeeded();
+	TCache::iterator FindOrCreateCacheEntry(const char *pPlayerName);
 	void ProcessScoreboardRequests();
-	void AbortScoreboardRequests();
-	std::shared_ptr<IQmAxiomHttpRequest> StartRequest(const char *pUrl, int TimeoutMs, const char *pApiKey = "");
+	void AbortScoreboardRequests() noexcept;
+	std::shared_ptr<IQmAxiomHttpRequest> StartRequest(const char *pUrl, int TimeoutMs, const char *pApiKey = "") noexcept;
+	void FailSearchRequest(SCacheEntry &Entry, const char *pReason) noexcept;
+	void FailModeRequest(SCacheEntry &Entry, EQmAxiomMode Mode, const char *pReason) noexcept;
+	void FailDdStatsRequest(SCacheEntry &Entry) noexcept;
 
 protected:
-	virtual int64_t CurrentTick() const;
-	virtual void SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob);
+	virtual int64_t CurrentTick() const noexcept;
+	virtual const char *StatisticsPlayerName() const;
+	virtual std::shared_ptr<IHttpRequest> CreateNativeRequest(const char *pUrl);
+	virtual void SubmitNativeRequest(const std::shared_ptr<IHttpRequest> &pRequest);
+	virtual bool SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob);
 
 public:
 	CQmAxiomScores() = default;
@@ -176,10 +185,10 @@ public:
 	void SetMode(EQmAxiomMode Mode);
 	EQmAxiomMode Mode() const { return m_Mode; }
 
+	void EnsureScoreboardQueried(const char *pPlayerName) noexcept;
 	CQmAxiomRequestBudget &OpenApiBudget() { return m_OpenApiBudget; }
-	void EnsureScoreboardQueried(const char *pPlayerName);
 	// 统计页需要完整的双模式数据和 DDStats 时长。
-	void EnsureQueried(const char *pPlayerName);
+	void EnsureQueried(const char *pPlayerName) noexcept;
 	SQmAxiomLookupResult GetLookup(const char *pPlayerName) const;
 	void Refresh(const char *pPlayerName);
 	// 测试可关闭外部 DDStats 请求，避免旧的 Axiom 请求断言被额外请求干扰。
@@ -192,7 +201,7 @@ public:
 	// 该玩家 Axiom 侧是否处于失败态（搜索或任一模式）。
 	bool IsPlayerFailed(const char *pPlayerName) const;
 	int64_t LastSuccessfulSyncTimestamp() const { return m_LastSuccessfulSyncTimestamp; }
-	void LoadPersistentCache(const json_value *pRoot);
+	void LoadPersistentCache(const json_value *pRoot) noexcept;
 	void WritePersistentCache(CJsonWriter &Writer) const;
 	bool PersistentCacheDirty() const { return m_PersistentCacheDirty; }
 	void ClearPersistentCacheDirty() { m_PersistentCacheDirty = false; }

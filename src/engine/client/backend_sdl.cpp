@@ -29,6 +29,7 @@
 #endif
 
 #include "backend/graphics_backend_contract.h"
+#include "backend/graphics_command_execution.h"
 #include "backend_sdl.h"
 
 #if defined(CONF_HEADLESS_CLIENT)
@@ -58,6 +59,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <vector>
 
 class IStorage;
@@ -65,16 +67,21 @@ class IStorage;
 // ------------ CCommandProcessorFragment_SDL
 void CCommandProcessorFragment_SDL::Cmd_Init(const SCommand_Init *pCommand)
 {
+	if(pCommand->m_GLContext != nullptr && !SDL_GL_MakeCurrent(pCommand->m_pWindow, pCommand->m_GLContext))
+	{
+		log_error("gfx", "Unable to bind graphics context on the render thread: %s", SDL_GetError());
+		return;
+	}
 	m_GLContext = pCommand->m_GLContext;
 	m_pWindow = pCommand->m_pWindow;
-	if(m_GLContext)
-		SDL_GL_MakeCurrent(m_pWindow, m_GLContext);
+	if(pCommand->m_pContextBound != nullptr)
+		*pCommand->m_pContextBound = true;
 }
 
 void CCommandProcessorFragment_SDL::Cmd_Shutdown(const SCommand_Shutdown *pCommand)
 {
-	if(m_GLContext)
-		SDL_GL_MakeCurrent(nullptr, nullptr);
+	if(m_GLContext != nullptr && !SDL_GL_MakeCurrent(nullptr, nullptr))
+		log_error("gfx", "Unable to release graphics context on the render thread: %s", SDL_GetError());
 }
 
 void CCommandProcessorFragment_SDL::Cmd_Swap(const CCommandBuffer::SCommand_Swap *pCommand)
@@ -161,118 +168,96 @@ bool CCommandProcessorFragment_SDL::RunCommand(const CCommandBuffer::SCommand *p
 
 // ------------ CCommandProcessor_SDL_GL
 
-void CCommandProcessor_SDL_GL::HandleError()
+void CCommandProcessor_SDL_GL::HandleError() noexcept
 {
-	switch(m_Error.m_ErrorType)
+	m_Error = m_pGLBackend->TakeError();
+	try
 	{
-	case GFX_ERROR_TYPE_INIT:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_OUT_OF_MEMORY_IMAGE:
-		[[fallthrough]];
-	case GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER:
-		[[fallthrough]];
-	case GFX_ERROR_TYPE_OUT_OF_MEMORY_STAGING:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Out of VRAM. Try setting 'cl_skins_loaded_max' to a lower value or remove custom assets (skins, entities, etc.), especially those with high resolution.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_RENDER_RECORDING:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("An error during command recording occurred. Try to update your GPU drivers.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_RENDER_CMD_FAILED:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("A render command failed. Try to update your GPU drivers.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Submitting the render commands failed. Try to update your GPU drivers.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_SWAP_FAILED:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Failed to swap framebuffers. Try to update your GPU drivers.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_UNKNOWN:
-		[[fallthrough]];
-	default:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.", "Graphics error")});
-		break;
+		switch(m_Error.m_ErrorType)
+		{
+		case GFX_ERROR_TYPE_INIT:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_OUT_OF_MEMORY_IMAGE:
+			[[fallthrough]];
+		case GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER:
+			[[fallthrough]];
+		case GFX_ERROR_TYPE_OUT_OF_MEMORY_STAGING:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Out of VRAM. Try setting 'cl_skins_loaded_max' to a lower value or remove custom assets (skins, entities, etc.), especially those with high resolution.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_RENDER_RECORDING:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("An error during command recording occurred. Try to update your GPU drivers.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_RENDER_CMD_FAILED:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("A render command failed. Try to update your GPU drivers.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Submitting the render commands failed. Try to update your GPU drivers.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_SWAP_FAILED:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Failed to swap framebuffers. Try to update your GPU drivers.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_UNKNOWN:
+			[[fallthrough]];
+		default:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.", "Graphics error")});
+			break;
+		}
+	}
+	catch(...)
+	{
+		// 附加建议失败不丢弃已转移的后端类型与原始诊断。
+		log_error("gfx", "Failed to append graphics error advice.");
 	}
 }
 
-void CCommandProcessor_SDL_GL::HandleWarning()
+void CCommandProcessor_SDL_GL::HandleWarning() noexcept
 {
-	switch(m_Warning.m_WarningType)
+	m_Warning = m_pGLBackend->TakeWarning();
+	try
 	{
-	case GFX_WARNING_TYPE_INIT_FAILED:
-		m_Warning.m_vWarnings.emplace_back(Localizable("Could not initialize the given graphics backend, reverting to the default backend now.", "Graphics error"));
-		break;
-	case GFX_WARNING_TYPE_INIT_FAILED_MISSING_INTEGRATED_GPU_DRIVER:
-		m_Warning.m_vWarnings.emplace_back(Localizable("Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.", "Graphics error"));
-		break;
-	case GFX_WARNING_MISSING_EXTENSION:
-		// ignore this warning for now
-		return;
-	case GFX_WARNING_LOW_ON_MEMORY:
-		// ignore this warning for now
-		return;
-	case GFX_WARNING_TYPE_INIT_FAILED_NO_DEVICE_WITH_REQUIRED_VERSION:
-	{
-		// Ignore this warning for now completely.
-		// A console message was already printed by the backend
-		m_Warning.m_WarningType = GFX_WARNING_TYPE_NONE;
-		m_Warning.m_vWarnings.clear();
-		return;
+		switch(m_Warning.m_WarningType)
+		{
+		case GFX_WARNING_TYPE_INIT_FAILED:
+			m_Warning.m_vWarnings.emplace_back(Localizable("Could not initialize the given graphics backend, reverting to the default backend now.", "Graphics error"));
+			break;
+		case GFX_WARNING_TYPE_INIT_FAILED_MISSING_INTEGRATED_GPU_DRIVER:
+			m_Warning.m_vWarnings.emplace_back(Localizable("Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.", "Graphics error"));
+			break;
+		case GFX_WARNING_MISSING_EXTENSION:
+			// ignore this warning for now
+			return;
+		case GFX_WARNING_LOW_ON_MEMORY:
+			// ignore this warning for now
+			return;
+		case GFX_WARNING_TYPE_INIT_FAILED_NO_DEVICE_WITH_REQUIRED_VERSION:
+		{
+			// Ignore this warning for now completely.
+			// A console message was already printed by the backend
+			m_Warning.m_WarningType = GFX_WARNING_TYPE_NONE;
+			m_Warning.m_vWarnings.clear();
+			return;
+		}
+		default:
+			dbg_assert_failed("Unhandled graphics warning type %d", (int)m_Warning.m_WarningType);
+		}
 	}
-	default:
-		dbg_assert_failed("Unhandled graphics warning type %d", (int)m_Warning.m_WarningType);
+	catch(...)
+	{
+		// 附加建议失败不丢弃已转移的后端类型与原始诊断。
+		log_error("gfx", "Failed to append graphics warning advice.");
 	}
 }
 
-void CCommandProcessor_SDL_GL::RunBuffer(CCommandBuffer *pBuffer)
+void CCommandProcessor_SDL_GL::RunBuffer(CCommandBuffer *pBuffer) noexcept
 {
-	m_pGLBackend->StartCommands(pBuffer->m_CommandCount, pBuffer->m_RenderCallCount);
-
-	for(const CCommandBuffer::SCommand *pCommand = pBuffer->Head(); pCommand; pCommand = pCommand->m_pNext)
-	{
-		auto Res = m_pGLBackend->RunCommand(pCommand);
-		if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_HANDLED)
-		{
-			continue;
-		}
-		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR)
-		{
-			// 错误返回时也要收拢录制线程，再读取它们写入的诊断。
-			m_pGLBackend->EndCommands();
-			m_Error = m_pGLBackend->GetError();
-			HandleError();
-			return;
-		}
-		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_WARNING)
-		{
-			m_pGLBackend->EndCommands();
-			if(m_pGLBackend->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE)
-			{
-				m_Error = m_pGLBackend->GetError();
-				HandleError();
-				return;
-			}
-			m_Warning = m_pGLBackend->GetWarning();
-			HandleWarning();
-			return;
-		}
-
-		if(m_SDL.RunCommand(pCommand))
-			continue;
-
-		if(m_General.RunCommand(pCommand))
-			continue;
-
-		dbg_assert_failed("Unknown graphics command %d", pCommand->m_Cmd);
-	}
-
-	m_pGLBackend->EndCommands();
-	// 工作线程可能在最后一次 RunCommand 之后才失败。
-	if(m_pGLBackend->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE)
-	{
-		m_Error = m_pGLBackend->GetError();
+	const auto Result = RunGraphicsCommandBuffer(*m_pGLBackend, *pBuffer, [this](const CCommandBuffer::SCommand *pCommand) {
+		return m_SDL.RunCommand(pCommand) || m_General.RunCommand(pCommand);
+	});
+	if(Result == RUN_COMMAND_COMMAND_ERROR)
 		HandleError();
-	}
+	else if(Result == RUN_COMMAND_COMMAND_WARNING)
+		HandleWarning();
 }
 
 CCommandProcessor_SDL_GL::CCommandProcessor_SDL_GL(EBackendType BackendType, int GLMajor, int GLMinor, int GLPatch)
@@ -788,6 +773,12 @@ std::optional<int> CGraphicsBackend_SDL_GL::ShowMessageBox(const IGraphics::CMes
 	if(m_BackendType == EBackendType::BACKEND_TYPE_VULKAN)
 		return ShowMessageBoxImpl(MessageBox, nullptr);
 #endif
+	if(m_GLContext != nullptr)
+	{
+		// 先隐藏窗口，等关闭流程在线程上解绑上下文后再销毁窗口。
+		HideWindow();
+		return ShowMessageBoxWithoutGraphics(MessageBox);
+	}
 	if(m_pProcessor != nullptr)
 	{
 		m_pProcessor->ErroneousCleanup();
@@ -808,23 +799,19 @@ static int RoundRefreshRate(float RefreshRate)
 	return (int)std::lround(RefreshRate);
 }
 
-static std::vector<SDL_DisplayID> DisplayIds()
+static std::unique_ptr<SDL_DisplayID, decltype(&SDL_free)> DisplayIds(int &Count)
 {
-	int DisplayNum = 0;
-	SDL_DisplayID *pDisplayIds = SDL_GetDisplays(&DisplayNum);
-	if(pDisplayIds == nullptr)
-		return {};
-	const std::vector<SDL_DisplayID> vDisplayIds(pDisplayIds, pDisplayIds + DisplayNum);
-	SDL_free(pDisplayIds);
-	return vDisplayIds;
+	Count = 0;
+	return {SDL_GetDisplays(&Count), SDL_free};
 }
 
 SDL_DisplayID CGraphicsBackend_SDL_GL::DisplayIdFromIndex(int Index)
 {
-	const std::vector<SDL_DisplayID> vDisplayIds = DisplayIds();
-	if(Index < 0 || Index >= (int)vDisplayIds.size())
+	int Count;
+	const auto pDisplayIds = DisplayIds(Count);
+	if(!pDisplayIds || Index < 0 || Index >= Count)
 		return 0; // 0 is invalid
-	return vDisplayIds[Index];
+	return pDisplayIds.get()[Index];
 }
 
 bool CGraphicsBackend_SDL_GL::IsModernAPI(EBackendType BackendType)
@@ -954,7 +941,9 @@ bool CGraphicsBackend_SDL_GL::GetDetectedContextVersion(int &Major, int &Minor, 
 
 int CGraphicsBackend_SDL_GL::GetNumScreens() const
 {
-	return DisplayIds().size();
+	int Count;
+	const auto pDisplayIds = DisplayIds(Count);
+	return pDisplayIds ? Count : 0;
 }
 
 const char *CGraphicsBackend_SDL_GL::GetScreenName(int Index) const
@@ -1085,6 +1074,7 @@ CGraphicsBackend_SDL_GL::CGraphicsBackend_SDL_GL(TTranslateFunc &&TranslateFunc)
 int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, int *pHeight, int *pRefreshRate, int *pFsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight, int *pCurrentWidth, int *pCurrentHeight, IStorage *pStorage)
 {
 	crashdump_set_graphics_backend(nullptr);
+	m_aErrorString[0] = '\0';
 #if defined(CONF_HEADLESS_CLIENT)
 	m_BackendType = BACKEND_TYPE_OPENGL;
 	g_Config.m_GfxGLMajor = 0;
@@ -1183,6 +1173,11 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		else if(UseModernGL)
 		{
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		}
+		else
+		{
+			// SDL 保留上一次尝试的属性，旧版上下文需要清掉 profile 才能走兼容入口。
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0);
 		}
 	}
 	else if(m_BackendType == BACKEND_TYPE_OPENGL_ES)
@@ -1296,15 +1291,17 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		}
 	}
 
-	SDL_PropertiesID Props = SDL_CreateProperties();
-	SDL_SetStringProperty(Props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, pName);
-	SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(DisplayId));
-	SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(DisplayId));
-	SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, *pWidth);
-	SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, *pHeight);
-	SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SdlFlags);
-	m_pWindow = SDL_CreateWindowWithProperties(Props);
-	SDL_DestroyProperties(Props);
+	const SDL_PropertiesID Props = SDL_CreateProperties();
+	const bool WindowPropertiesReady = Props != 0 &&
+					   SDL_SetStringProperty(Props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, pName) &&
+					   SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(DisplayId)) &&
+					   SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(DisplayId)) &&
+					   SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, *pWidth) &&
+					   SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, *pHeight) &&
+					   SDL_SetNumberProperty(Props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SdlFlags);
+	m_pWindow = WindowPropertiesReady ? SDL_CreateWindowWithProperties(Props) : nullptr;
+	if(Props != 0)
+		SDL_DestroyProperties(Props);
 
 #if !defined(CONF_PLATFORM_MACOS) && !defined(CONF_PLATFORM_HAIKU)
 	if(m_pWindow != nullptr && IsExclusiveFullscreen)
@@ -1350,6 +1347,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		if(!BackendInitGlew(m_BackendType, GlewMajor, GlewMinor, GlewPatch))
 		{
 			SDL_GL_DestroyContext(m_GLContext);
+			m_GLContext = nullptr;
 			SDL_DestroyWindow(m_pWindow);
 			m_pWindow = nullptr;
 			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GLEW_INIT_FAILED;
@@ -1375,13 +1373,23 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		// emscripten_set_main_loop function before.
 		SDL_GL_SetSwapInterval(Flags & IGraphicsBackend::INITFLAG_VSYNC ? 1 : 0);
 #endif
-		SDL_GL_MakeCurrent(nullptr, nullptr);
+		if(!SDL_GL_MakeCurrent(nullptr, nullptr) && InitError == 0)
+		{
+			log_error("gfx", "Unable to release graphics context on the main thread: %s", SDL_GetError());
+			str_copy(m_aErrorString, "Unable to release the OpenGL context on the main thread.");
+			SDL_GL_DestroyContext(m_GLContext);
+			m_GLContext = nullptr;
+			SDL_DestroyWindow(m_pWindow);
+			m_pWindow = nullptr;
+			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_CONTEXT_FAILED;
+		}
 	}
 
 	if(InitError != 0)
 	{
 		if(m_GLContext)
 			SDL_GL_DestroyContext(m_GLContext);
+		m_GLContext = nullptr;
 		SDL_DestroyWindow(m_pWindow);
 		m_pWindow = nullptr;
 
@@ -1402,11 +1410,33 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 
 	// start the command processor
 	dbg_assert(m_pProcessor == nullptr, "Processor was not cleaned up properly.");
-	m_pProcessor = new CCommandProcessor_SDL_GL(m_BackendType, EffectiveGLMajor, EffectiveGLMinor, EffectiveGLPatch);
-	StartProcessor(m_pProcessor);
+	m_pProcessor = PrepareProcessor([&] { return new CCommandProcessor_SDL_GL(m_BackendType, EffectiveGLMajor, EffectiveGLMinor, EffectiveGLPatch); });
+	if(m_pProcessor == nullptr)
+	{
+		if(m_GLContext)
+			SDL_GL_DestroyContext(m_GLContext);
+		m_GLContext = nullptr;
+		SDL_DestroyWindow(m_pWindow);
+		m_pWindow = nullptr;
+		log_error("gfx", "Failed to prepare graphics processor resources");
+		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_RESOURCE_INIT_FAILED;
+	}
+	if(!StartProcessor(m_pProcessor))
+	{
+		delete m_pProcessor;
+		m_pProcessor = nullptr;
+		ReleaseLifecycleCommands();
+		if(m_GLContext)
+			SDL_GL_DestroyContext(m_GLContext);
+		m_GLContext = nullptr;
+		SDL_DestroyWindow(m_pWindow);
+		m_pWindow = nullptr;
+		log_error("gfx", "Failed to create graphics thread");
+		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_THREAD_CREATE_FAILED;
+	}
 
 	// issue init commands for OpenGL and SDL
-	CCommandBuffer CmdBuffer(1024, 512);
+	CCommandBuffer &CmdBuffer = *LifecycleCommands();
 	const char *pErrorStr = nullptr;
 	CCommandProcessorFragment_GLBase::SCommand_PreInit CmdPre;
 	CmdPre.m_pWindow = m_pWindow;
@@ -1424,13 +1454,27 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	CmdBuffer.Reset();
 
 	// run sdl first to have the context in the thread
+	bool ContextBound = false;
 	CCommandProcessorFragment_SDL::SCommand_Init CmdSDL;
 	CmdSDL.m_pWindow = m_pWindow;
 	CmdSDL.m_GLContext = m_GLContext;
+	CmdSDL.m_pContextBound = &ContextBound;
 	CmdBuffer.AddCommandUnsafe(CmdSDL);
 	RunBuffer(&CmdBuffer);
 	WaitForIdle();
 	CmdBuffer.Reset();
+
+	const bool ContextBindFailed = m_GLContext != nullptr && !ContextBound;
+	if(HasFatalError())
+	{
+		InitError = -1;
+		pErrorStr = "Unexpected graphics failure during initialization.";
+	}
+	else if(ContextBindFailed)
+	{
+		InitError = -1;
+		pErrorStr = "Unable to bind the OpenGL context on the render thread.";
+	}
 
 	if(InitError == 0)
 	{
@@ -1467,7 +1511,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 
 	if(InitError != 0)
 	{
-		if(InitError != -2)
+		if(InitError != -2 && !ContextBindFailed)
 		{
 			// shutdown the context, as it might have been initialized
 			CCommandProcessorFragment_GLBase::SCommand_Shutdown CmdGL;
@@ -1477,6 +1521,13 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 			CmdBuffer.Reset();
 		}
 
+		if(m_GLContext != nullptr && !ContextBindFailed)
+		{
+			// GL 初始化失败后，仍需把解绑命令提交给持有当前上下文的线程。
+			ProcessError(m_pProcessor->GetError());
+			m_pProcessor->ClearError();
+			ResetSubmissionStopForCleanup();
+		}
 		CCommandProcessorFragment_SDL::SCommand_Shutdown Cmd;
 		CmdBuffer.AddCommandUnsafe(Cmd);
 		RunBuffer(&CmdBuffer);
@@ -1493,9 +1544,11 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		StopProcessor();
 		delete m_pProcessor;
 		m_pProcessor = nullptr;
+		ReleaseLifecycleCommands();
 
 		if(m_GLContext)
 			SDL_GL_DestroyContext(m_GLContext);
+		m_GLContext = nullptr;
 		SDL_DestroyWindow(m_pWindow);
 		m_pWindow = nullptr;
 
@@ -1512,6 +1565,8 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 			str_copy(m_aErrorString, pErrorStr);
 		}
 
+		if(ContextBindFailed)
+			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_CONTEXT_FAILED;
 		return m_BackendType == BACKEND_TYPE_METAL ? EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_METAL_INIT_FAILED : EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_VERSION_FAILED;
 	}
 
@@ -1542,13 +1597,20 @@ int CGraphicsBackend_SDL_GL::Shutdown()
 	if(m_pProcessor != nullptr)
 	{
 		// issue a shutdown command
-		CCommandBuffer CmdBuffer(1024, 512);
+		CCommandBuffer &CmdBuffer = *LifecycleCommands();
 		CCommandProcessorFragment_GLBase::SCommand_Shutdown CmdGL;
 		CmdBuffer.AddCommandUnsafe(CmdGL);
 		RunBuffer(&CmdBuffer);
 		WaitForIdle();
 		CmdBuffer.Reset();
 
+		if(m_GLContext != nullptr)
+		{
+			// 停止提交后，只恢复 SDL 解绑命令的提交，避免主线程直接销毁仍绑定的上下文。
+			ProcessError(m_pProcessor->GetError());
+			m_pProcessor->ClearError();
+			ResetSubmissionStopForCleanup();
+		}
 		CCommandProcessorFragment_SDL::SCommand_Shutdown Cmd;
 		CmdBuffer.AddCommandUnsafe(Cmd);
 		RunBuffer(&CmdBuffer);
@@ -1565,9 +1627,11 @@ int CGraphicsBackend_SDL_GL::Shutdown()
 		delete m_pProcessor;
 		m_pProcessor = nullptr;
 	}
+	ReleaseLifecycleCommands();
 
 	if(m_GLContext != nullptr)
 		SDL_GL_DestroyContext(m_GLContext);
+	m_GLContext = nullptr;
 	SDL_DestroyWindow(m_pWindow);
 	m_pWindow = nullptr;
 
@@ -1742,9 +1806,14 @@ bool CGraphicsBackend_SDL_GL::UpdateDisplayMode(int Index, ivec2 *pDesktopSize)
 
 int CGraphicsBackend_SDL_GL::IndexFromDisplayId(SDL_DisplayID DisplayId)
 {
-	const std::vector<SDL_DisplayID> vDisplayIds = DisplayIds();
-	const auto It = std::find(vDisplayIds.begin(), vDisplayIds.end(), DisplayId);
-	return It == vDisplayIds.end() ? -1 : It - vDisplayIds.begin();
+	int Count;
+	const auto pDisplayIds = DisplayIds(Count);
+	if(!pDisplayIds)
+		return -1;
+	const SDL_DisplayID *pBegin = pDisplayIds.get();
+	const SDL_DisplayID *pEnd = pBegin + Count;
+	const SDL_DisplayID *pFound = std::find(pBegin, pEnd, DisplayId);
+	return pFound == pEnd ? -1 : static_cast<int>(pFound - pBegin);
 }
 
 bool CGraphicsBackend_SDL_GL::SetExclusiveFullscreenMode(int Index, int Width, int Height, int RefreshRate)

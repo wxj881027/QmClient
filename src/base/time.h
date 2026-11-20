@@ -25,7 +25,7 @@
  */
 
 /**
- * Clears the cached sample of the high resolution timer.
+ * 将计时缓存标记为待刷新，下次调用 @link time_get @endlink 时重新取样。
  *
  * @ingroup Time
  *
@@ -63,8 +63,10 @@ int64_t time_get_impl();
  * @return Current value of the timer.
  *
  * @remark To know how fast the timer is ticking, see @link time_freq @endlink.
- * @remark The value is cached for each tick, see @link set_new_tick @endlink.
- *         Uses @link time_get_impl @endlink to fetch the uncached sample.
+ * @remark 首次调用 @link set_new_tick @endlink 前，每次调用都重新取样。
+ *         设置新 tick 后，首次调用刷新缓存，随后复用样本。
+ * @remark 并发调用可复用已发布的当前 tick 样本。
+ *         工作线程通过 @link time_get_impl @endlink 或 @link time_get_nanoseconds @endlink 取样。
  *
  * @see time_freq time_get_impl
  */
@@ -133,7 +135,8 @@ ETimeSeason time_season();
  * @param buffer Pointer to a buffer that shall receive the timestamp string.
  * @param buffer_size Size of the buffer.
  *
- * @remark Guarantees that buffer string will contain null-termination.
+ * @remark 输出缓冲区有效且容量大于零时，保证输出以空字符终止。
+ * @see str_timestamp_ex_try
  */
 void str_timestamp(char *buffer, int buffer_size);
 
@@ -146,7 +149,8 @@ void str_timestamp(char *buffer, int buffer_size);
  * @param buffer_size Size of the buffer.
  * @param format Time formatting string. See https://cppreference.com/w/c/chrono/strftime.html for format description.
  *
- * @remark Guarantees that buffer string will contain null-termination.
+ * @remark 输出缓冲区有效且容量大于零时，保证输出以空字符终止。
+ * @see str_timestamp_ex_try
  */
 [[gnu::format(strftime, 3, 0)]] void str_timestamp_format(char *buffer, int buffer_size, const char *format);
 
@@ -160,9 +164,13 @@ void str_timestamp(char *buffer, int buffer_size);
  * @param buffer_size Size of the buffer.
  * @param format Time formatting string. See https://cppreference.com/w/c/chrono/strftime.html for format description.
  *
- * @remark Guarantees that buffer string will contain null-termination.
+ * @remark Sets a writable buffer to an empty string on conversion or formatting failure.
  */
 [[gnu::format(strftime, 4, 0)]] void str_timestamp_ex(time_t time, char *buffer, int buffer_size, const char *format);
+
+// 格式化文件等外部来源的时间戳。转换或格式化失败时返回 false，有效缓冲区置为空字符串。
+// 输出指针为空或容量不大于零时直接返回 false。
+[[gnu::format(strftime, 4, 0)]] bool str_timestamp_ex_try(int64_t timestamp, char *buffer, int buffer_size, const char *format);
 
 /**
  * Parses a string into a timestamp following a specified format.
@@ -243,7 +251,7 @@ int str_time(int64_t centisecs, int format, char *buffer, int buffer_size);
  * @param buffer Pointer to a buffer that shall receive the timestamp string.
  * @param buffer_size Size of the buffer.
  *
- * @remark The time is rounded to the nearest centisecond.
+ * @remark 以 20 毫秒（2 厘秒）为单位取最近值。
  *
  * @return Number of bytes written, `-1` on invalid format or `buffer_size <= 0`.
  */

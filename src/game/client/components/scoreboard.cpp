@@ -49,6 +49,7 @@ namespace
 	// 记分板未打开时每帧预热的 Axiom 分数条数：够让打开时立刻有数据，又不会无谓刷接口。
 	constexpr int AXIOM_SCOREBOARD_PREFETCH_BUDGET = 12;
 	static constexpr const char *TIME_WIDTH_TEXT = "00:00:00";
+	constexpr char DEAD_TEE_TEXTURE_PATH[] = "deadtee.png";
 	static constexpr ColorRGBA TEAM_RED_TITLE_COLOR(0.975f, 0.17f, 0.17f);
 	static constexpr ColorRGBA TEAM_BLUE_TITLE_COLOR(0.17f, 0.46f, 0.975f);
 
@@ -305,6 +306,16 @@ namespace
 	constexpr float SCOREBOARD_MEDIA_COVER_PAD_X = 3.0f;
 	constexpr float SCOREBOARD_MEDIA_COVER_GAP = 6.0f;
 
+	bool ScoreboardInputCovered(const CGameClient &GameClient)
+	{
+		return GameClient.m_Menus.IsActive() || GameClient.m_Chat.IsActive();
+	}
+
+	bool ScoreboardInputAvailable(const CGameClient &GameClient)
+	{
+		return !ScoreboardInputCovered(GameClient) && !GetQmFocusModeDecisions().m_HideScoreboard;
+	}
+
 }
 
 CScoreboard::CScoreboard()
@@ -322,6 +333,20 @@ void CScoreboard::SetUiMousePos(vec2 Pos)
 	Ui()->OnCursorMove(Pos.x - UpdatedMousePos.x, Pos.y - UpdatedMousePos.y);
 }
 
+void CScoreboard::LockMouse()
+{
+	if(!m_MouseUnlocked)
+		return;
+
+	m_MouseUnlocked = false;
+	m_RenderInteractions = false;
+	Ui()->ClosePopupMenu(&m_ScoreboardPopupContext, true, false);
+	Ui()->ClosePopupMenu(&m_MapTitlePopupContext, true, false);
+	if(m_LastMousePos.has_value() && !ScoreboardInputCovered(*GameClient()))
+		SetUiMousePos(m_LastMousePos.value());
+	m_LastMousePos = Ui()->MousePos();
+}
+
 void CScoreboard::ConKeyScoreboard(IConsole::IResult *pResult, void *pUserData)
 {
 	CScoreboard *pSelf = static_cast<CScoreboard *>(pUserData);
@@ -335,14 +360,8 @@ void CScoreboard::SetActive(bool Active)
 
 	m_Active = Active;
 
-	if(!IsActive() && m_MouseUnlocked)
-	{
-		Ui()->ClosePopupMenus();
-		m_MouseUnlocked = false;
-		if(m_LastMousePos.has_value())
-			SetUiMousePos(m_LastMousePos.value());
-		m_LastMousePos = Ui()->MousePos();
-	}
+	if(!IsActive())
+		LockMouse();
 }
 
 bool CScoreboard::MobilePanelContains(vec2 NdcPos) const
@@ -441,19 +460,16 @@ void CScoreboard::ConToggleScoreboardCursor(IConsole::IResult *pResult, void *pU
 {
 	CScoreboard *pSelf = static_cast<CScoreboard *>(pUserData);
 
-	if(!pSelf->IsActive() ||
-		pSelf->GameClient()->m_Menus.IsActive() ||
+	if(!pSelf->IsActive() || !ScoreboardInputAvailable(*pSelf->GameClient()) ||
 		pSelf->Client()->State() == IClient::STATE_DEMOPLAYBACK)
+		return;
+
+	if(pSelf->m_MouseUnlocked)
 	{
+		pSelf->LockMouse();
 		return;
 	}
-
-	pSelf->m_MouseUnlocked = !pSelf->m_MouseUnlocked;
-
-	// 锁定光标时计分板不再接收点击，已打开的玩家菜单必须同步关闭，
-	// 否则弹层会在无光标状态下继续占着输入。
-	if(!pSelf->m_MouseUnlocked)
-		pSelf->Ui()->ClosePopupMenus();
+	pSelf->m_MouseUnlocked = true;
 
 	vec2 OldMousePos = pSelf->Ui()->MousePos();
 
@@ -478,7 +494,7 @@ void CScoreboard::OnConsoleInit()
 
 void CScoreboard::OnInit()
 {
-	m_DeadTeeTexture = Graphics()->LoadTexture("deadtee.png", IStorage::TYPE_ALL);
+	m_DeadTeeTexture = Graphics()->LoadTexture(DEAD_TEE_TEXTURE_PATH, IStorage::TYPE_ALL);
 }
 
 void CScoreboard::OnReset()
@@ -496,11 +512,11 @@ void CScoreboard::OnReset()
 	m_AutoOffFrames = 0;
 	m_TextEntryElapsedSec = -1.0f;
 	m_TextEntryStartTime = 0;
-	m_MouseUnlocked = false;
 	m_RenderInteractions = false;
 	m_aCachedTeamModes = {};
 	m_ScrollRegion.Reset();
-	m_LastMousePos = std::nullopt;
+	LockMouse();
+	m_LastMousePos.reset();
 	m_SoundMuteButtonAnimState.Reset();
 	m_SoundMuteInfoAnimState.Reset();
 }
@@ -526,14 +542,7 @@ void CScoreboard::OnRelease()
 	m_SoundMuteButtonAnimState.Reset();
 	m_SoundMuteInfoAnimState.Reset();
 
-	if(m_MouseUnlocked)
-	{
-		Ui()->ClosePopupMenus();
-		m_MouseUnlocked = false;
-		if(m_LastMousePos.has_value())
-			SetUiMousePos(m_LastMousePos.value());
-		m_LastMousePos = Ui()->MousePos();
-	}
+	LockMouse();
 }
 
 void CScoreboard::OnMessage(int MsgType, void *pRawMsg)
@@ -552,7 +561,7 @@ void CScoreboard::OnMessage(int MsgType, void *pRawMsg)
 
 bool CScoreboard::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	if(!IsActive() || !m_MouseUnlocked)
+	if(!m_MouseUnlocked || !IsActive() || !ScoreboardInputAvailable(*GameClient()))
 		return false;
 
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
@@ -563,31 +572,26 @@ bool CScoreboard::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 
 bool CScoreboard::OnInput(const IInput::CEvent &Event)
 {
-	if(m_MouseUnlocked && Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_PRESS))
-	{
-		// 手机上的返回键等价于关掉面板；桌面解锁后 ESC 仍然只是把光标锁回去。
-		if(QmUiMobilePlatform() && IsActive())
-		{
-			SetActive(false);
-			return true;
-		}
-		Ui()->ClosePopupMenus();
-		m_MouseUnlocked = false;
-		if(m_LastMousePos.has_value())
-			SetUiMousePos(m_LastMousePos.value());
-		m_LastMousePos = Ui()->MousePos();
-		return true;
-	}
-	if(!IsActive() || !m_MouseUnlocked)
+	if(!m_MouseUnlocked || !IsActive() || !ScoreboardInputAvailable(*GameClient()))
 		return false;
 
-	return QmScoreboardUiInput(*Ui(), IsActive() && m_MouseUnlocked, Event, CBinds::IsReservedShortcutChord(CBinds::GetModifierMask(Input())));
+	if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_PRESS))
+	{
+		// 手机返回键关闭面板，桌面 ESC 将光标锁回游戏。
+		if(QmUiMobilePlatform())
+			SetActive(false);
+		else
+			LockMouse();
+		return true;
+	}
+
+	return QmScoreboardUiInput(*Ui(), true, Event, CBinds::IsReservedShortcutChord(CBinds::GetModifierMask(Input())));
 }
 
 void CScoreboard::RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, float TitleFontSize, bool Subpixel)
 {
 	const bool IsMapTitle = Team == TEAM_GAME && !GameClient()->IsTeamPlay();
-	if(IsMapTitle && m_MouseUnlocked && GameClient()->m_aMapDescription[0] != '\0')
+	if(IsMapTitle && m_RenderInteractions && GameClient()->m_aMapDescription[0] != '\0')
 	{
 		const int ButtonResult = Ui()->DoButtonLogic(&m_MapTitleButtonId, 0, &TitleLabel, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
 		if(ButtonResult != 0)
@@ -1265,13 +1269,9 @@ void CScoreboard::RenderSoundMuteBar(CUIRect ScoreboardRect)
 	const float InfoWidth = std::clamp(InfoTextWidth + Padding * 2.0f, 170.0f, 360.0f);
 	const float InfoHeight = Padding * 2.0f + TitleFontSize + InnerGap + BodyFontSize + 2.0f;
 
-	CUIRect InfoRect = {Anchor.x + Anchor.w + 8.0f, Anchor.y + (Anchor.h - InfoHeight) * 0.5f, InfoWidth, InfoHeight};
-	InfoRect.x += InfoOffsetX;
-	const float ScreenMargin = 5.0f;
-	if(InfoRect.x + InfoRect.w + ScreenMargin > pScreen->w)
-		InfoRect.x = Anchor.x - InfoRect.w - 8.0f;
-	InfoRect.x = std::clamp(InfoRect.x, ScreenMargin, pScreen->w - InfoRect.w - ScreenMargin);
-	InfoRect.y = std::clamp(InfoRect.y, ScreenMargin, pScreen->h - InfoRect.h - ScreenMargin);
+	const CUIRect InfoRect = ScoreboardSoundInfoRect(*pScreen, Anchor, InfoWidth, InfoHeight, InfoOffsetX);
+	if(InfoRect.w <= 0.0f)
+		return;
 
 	InfoRect.Draw(ScoreboardUiColorSurface(InfoAlpha * ContentAlpha, 0.18f), IGraphics::CORNER_ALL, 6.0f);
 
@@ -1560,6 +1560,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	char aBuf[64];
 	int MaxTeamSize = Config()->m_SvMaxTeamSize;
 	const CAnimState *pIdleState = CAnimState::GetIdle();
+	const bool HasDeadTeeTexture = m_DeadTeeTexture.IsValid() && !m_DeadTeeTexture.IsNullTexture();
 	const int LocalClientId = GameClient()->m_aLocalIds[g_Config.m_ClDummy];
 	const char *pLocalClan = LocalClientId >= 0 ? GameClient()->m_aClients[LocalClientId].m_aClan : "";
 
@@ -1746,14 +1747,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		}
 		else if(TimeScore)
 		{
-			if(pInfo->m_Score == -9999)
-			{
-				aBuf[0] = '\0';
-			}
-			else
-			{
-				str_time((int64_t)absolute(pInfo->m_Score) * 100, TIME_HOURS, aBuf, sizeof(aBuf));
-			}
+			ScoreboardFormatLegacyTimeScore(pInfo->m_Score, aBuf, sizeof(aBuf));
 		}
 		else
 		{
@@ -1846,7 +1840,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		}
 
 		// skin
-		if(RenderDead)
+		if(RenderDead && HasDeadTeeTexture)
 		{
 			Graphics()->TextureSet(m_DeadTeeTexture);
 			Graphics()->QuadsBegin();
@@ -1880,7 +1874,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos, TEE_PREVIEW_LAYER_BODY, ItemAlpha);
 
 			// 光标解锁时悬停皮肤显示皮肤名；0.7 下 m_aSkinName 是 body 部件名。
-			if(m_MouseUnlocked && m_RenderInteractions && ClientData.m_aSkinName[0] != '\0')
+			if(!RenderDead && m_MouseUnlocked && m_RenderInteractions && ClientData.m_aSkinName[0] != '\0')
 			{
 				const CUIRect SkinRect = {TeeOffset, Row.y, TeeLength, Row.h};
 				GameClient()->m_Tooltips.DoToolTip(&ClientData, &SkinRect, ClientData.m_aSkinName);
@@ -2093,8 +2087,10 @@ void CScoreboard::OnRender()
 			m_AutoActiveStable = false;
 	}
 
+	const bool HideScoreboard = GetQmFocusModeDecisions().m_HideScoreboard;
+	const bool InputCovered = ScoreboardInputCovered(*GameClient());
 	m_RenderInteractions = false;
-	if(!IsActive() || !m_MouseUnlocked || GameClient()->m_Menus.IsActive() || GameClient()->m_Chat.IsActive() || GetQmFocusModeDecisions().m_HideScoreboard)
+	if(!IsActive() || !m_MouseUnlocked || InputCovered || HideScoreboard)
 		m_MediaControls.Cancel(*Ui());
 
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
@@ -2102,8 +2098,11 @@ void CScoreboard::OnRender()
 	UpdateTeamModeCache();
 	UpdateQmAxiomScoreMode();
 
-	if(GetQmFocusModeDecisions().m_HideScoreboard)
+	if(HideScoreboard)
+	{
+		LockMouse();
 		return;
+	}
 
 	// 沿用积分预热；切换统计列复用同一份 DDNet 响应。
 	if(HasQmAxiomScoreMode())
@@ -2145,14 +2144,8 @@ void CScoreboard::OnRender()
 	}
 
 	// If scoreboard was opened by death/pause auto activation, ensure cursor locks back when it closes.
-	if(!IsActive() && m_MouseUnlocked)
-	{
-		Ui()->ClosePopupMenus();
-		m_MouseUnlocked = false;
-		if(m_LastMousePos.has_value())
-			SetUiMousePos(m_LastMousePos.value());
-		m_LastMousePos = Ui()->MousePos();
-	}
+	if(!IsActive())
+		LockMouse();
 
 	const bool WantActive = IsActive();
 	// 手机上没有“锁定光标”这一步：计分板一打开就按已解锁处理，玩家行和「…」按钮直接可点。
@@ -2274,8 +2267,8 @@ void CScoreboard::OnRender()
 		m_TextEntryElapsedSec = m_TextEntryStartTime > 0 ? (float)((double)(time_get() - m_TextEntryStartTime) / (double)time_freq()) : 0.0f;
 	}
 
-	const bool ScoreboardUiInteractive = WantActive && !GameClient()->m_Menus.IsActive() && !GameClient()->m_Chat.IsActive();
-	m_RenderInteractions = ScoreboardUiInteractive;
+	const bool ScoreboardUiInteractive = WantActive && !InputCovered;
+	m_RenderInteractions = ScoreboardUiInteractive && m_MouseUnlocked;
 	if(ScoreboardUiInteractive)
 	{
 		Ui()->StartCheck();
@@ -2285,6 +2278,10 @@ void CScoreboard::OnRender()
 	// 如果记分板处于活动状态，则应同时清除每日公告消息。
 	if(WantActive && GameClient()->m_Motd.IsActive())
 		GameClient()->m_Motd.Clear();
+
+	// 图形设备重建后旧纹理槽失效，首次绘制计分板时补载死亡 Tee 图标。
+	if(m_DeadTeeTexture.IsValid() && !Graphics()->IsTextureHandleAllocated(m_DeadTeeTexture))
+		m_DeadTeeTexture = Graphics()->LoadTexture(DEAD_TEE_TEXTURE_PATH, IStorage::TYPE_ALL);
 
 	const CUIRect Screen = *Ui()->Screen();
 	Ui()->MapScreen();
@@ -2803,7 +2800,9 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 {
 	CScoreboardPopupContext *pPopupContext = static_cast<CScoreboardPopupContext *>(pContext);
 	CScoreboard *pScoreboard = pPopupContext->m_pScoreboard;
-	CUi *pUi = pPopupContext->m_pScoreboard->Ui();
+	if(!pScoreboard->m_RenderInteractions || !ScoreboardInputAvailable(*pScoreboard->GameClient()))
+		return CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS;
+	CUi *pUi = pScoreboard->Ui();
 
 	CGameClient::CClientData &Client = pScoreboard->GameClient()->m_aClients[pPopupContext->m_ClientId];
 
@@ -2988,6 +2987,8 @@ CUi::EPopupMenuFunctionResult CScoreboard::CMapTitlePopupContext::Render(void *p
 {
 	CMapTitlePopupContext *pPopupContext = static_cast<CMapTitlePopupContext *>(pContext);
 	CScoreboard *pScoreboard = pPopupContext->m_pScoreboard;
+	if(!pScoreboard->m_RenderInteractions || !ScoreboardInputAvailable(*pScoreboard->GameClient()))
+		return CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS;
 
 	pScoreboard->TextRender()->Text(View.x, View.y, pPopupContext->m_FontSize, pScoreboard->GameClient()->m_aMapDescription, View.w);
 

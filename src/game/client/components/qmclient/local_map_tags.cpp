@@ -2,198 +2,323 @@
 
 #include "map_tags.h"
 
-#include <base/system.h>
+#include <base/io.h>
+#include <base/log.h>
+#include <base/str.h>
 
 #include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <algorithm>
-#include <cstring>
+#include <array>
+#include <atomic>
+#include <cstddef>
+#include <cstdlib>
+#include <memory>
+#include <new>
+#include <string_view>
+#include <unordered_map>
 
 namespace QmMapTags
 {
 	namespace
 	{
-		const char *LOCAL_TAGS_FILE = qm_storage::LOCAL_MAP_TAGS_FILE;
+		constexpr const char *LOCAL_TAGS_FILE = qm_storage::LOCAL_MAP_TAGS_FILE;
 		constexpr int MAX_LOCAL_TAGS_PER_MAP = 16;
-		constexpr int64_t MAX_FILE_BYTES = 256 * 1024;
+		constexpr unsigned MAX_FILE_BYTES = 256 * 1024;
+		constexpr int MAX_TEMPORARY_ATTEMPTS = 8;
+		constexpr char KEY_SEPARATOR = '\x1f';
 
-		std::string TrimLine(std::string_view Line)
+		std::string_view AsView(const char *pText)
 		{
-			while(!Line.empty() && (Line.back() == '\r' || Line.back() == '\n' || Line.back() == ' '))
-				Line.remove_suffix(1);
-			while(!Line.empty() && (Line.front() == ' '))
-				Line.remove_prefix(1);
-			return std::string(Line);
+			return pText != nullptr ? pText : "";
+		}
+
+		bool ValidKeyFields(std::string_view Community, std::string_view Map)
+		{
+			return !Map.empty() && Community.find_first_of("\t\r\n\x1f") == std::string_view::npos &&
+			       Map.find_first_of("\t\r\n") == std::string_view::npos;
+		}
+
+		std::string MakeKey(std::string_view Community, std::string_view Map)
+		{
+			std::string Key(Community);
+			Key.push_back(KEY_SEPARATOR);
+			Key.append(Map);
+			return Key;
+		}
+
+		bool MatchesKey(std::string_view Key, std::string_view Community, std::string_view Map)
+		{
+			const size_t Separator = Community.size();
+			return Key.size() > Separator && Key.size() - Separator - 1 == Map.size() &&
+			       Key[Separator] == KEY_SEPARATOR && Key.starts_with(Community) && Key.substr(Separator + 1) == Map;
 		}
 	} // namespace
 
-	std::string CLocalTags::MakeKey(const char *pCommunity, const char *pMap)
-	{
-		// 社区 id 可能为空（单机/局域网），此时只用地图名。
-		std::string Key = pCommunity != nullptr ? pCommunity : "";
-		Key.push_back('\x1f');
-		Key += pMap != nullptr ? pMap : "";
-		return Key;
-	}
-
 	void CLocalTags::Load(IStorage *pStorage)
 	{
-		if(m_Loaded)
-			return;
-		m_Loaded = true;
-		if(pStorage == nullptr)
-			return;
-		IOHANDLE File = pStorage->OpenFile(LOCAL_TAGS_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
-		if(!File)
-			return;
-		const int64_t Length = io_length(File);
-		std::string Content;
-		if(Length > 0 && Length <= MAX_FILE_BYTES)
-		{
-			Content.resize(static_cast<size_t>(Length));
-			if(io_read(File, Content.data(), Content.size()) != Content.size())
-				Content.clear();
-		}
-		io_close(File);
-		size_t Pos = 0;
-		while(Pos < Content.size())
-		{
-			size_t End = Content.find('\n', Pos);
-			if(End == std::string::npos)
-				End = Content.size();
-			const std::string Line = TrimLine(std::string_view(Content).substr(Pos, End - Pos));
-			Pos = End + 1;
-			if(Line.empty())
-				continue;
-			// community \t map \t tag（tag 里不允许 tab/换行，由 ValidTag 保证）
-			const size_t FirstTab = Line.find('\t');
-			if(FirstTab == std::string::npos)
-				continue;
-			const size_t SecondTab = Line.find('\t', FirstTab + 1);
-			if(SecondTab == std::string::npos)
-				continue;
-			const std::string Community = Line.substr(0, FirstTab);
-			const std::string Map = Line.substr(FirstTab + 1, SecondTab - FirstTab - 1);
-			const std::string Tag = Line.substr(SecondTab + 1);
-			if(Tag.empty() || Map.empty() || !ValidTag(Tag.c_str()))
-				continue;
-			const std::string Key = MakeKey(Community.c_str(), Map.c_str());
-			const int Existing = (int)std::count_if(m_vEntries.begin(), m_vEntries.end(), [&](const auto &Entry) { return Entry.first == Key; });
-			if(Existing >= MAX_LOCAL_TAGS_PER_MAP)
-				continue;
-			if(std::find_if(m_vEntries.begin(), m_vEntries.end(), [&](const auto &Entry) { return Entry.first == Key && Entry.second == Tag; }) != m_vEntries.end())
-				continue;
-			m_vEntries.emplace_back(Key, Tag);
-		}
+		if(pStorage != nullptr && !m_LoadAttempted)
+			LoadFromStorage(*pStorage);
 	}
 
-	bool CLocalTags::Save(IStorage *pStorage)
+	void CLocalTags::LoadFromStorage(IStorage &Storage)
 	{
-		if(pStorage == nullptr)
-			return false;
-		qm_storage::EnsureFolder(pStorage, qm_storage::STATE_MAPS_DIR);
-		IOHANDLE File = pStorage->OpenFile(LOCAL_TAGS_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		if(!File)
-			return false;
-		bool Success = true;
-		for(const auto &[Key, Tag] : m_vEntries)
+		m_LoadAttempted = true;
+		try
 		{
-			const size_t Separator = Key.find('\x1f');
-			const std::string Community = Separator == std::string::npos ? std::string() : Key.substr(0, Separator);
-			const std::string Map = Separator == std::string::npos ? Key : Key.substr(Separator + 1);
-			const std::string Line = Community + "\t" + Map + "\t" + Tag + "\n";
-			Success = io_write(File, Line.data(), Line.size()) == Line.size() && Success;
+			void *pRaw = nullptr;
+			unsigned Size = 0;
+			using EReadResult = IStorage::EReadFileResult;
+			const auto Result = Storage.ReadFileCheckedBounded(LOCAL_TAGS_FILE, IStorage::TYPE_SAVE, &pRaw, &Size, MAX_FILE_BYTES);
+			const std::unique_ptr<void, decltype(&std::free)> pContent(pRaw, std::free);
+			if(Result == EReadResult::NOT_FOUND)
+			{
+				m_Loaded = true;
+				return;
+			}
+			if(Result == EReadResult::SUCCESS && pContent)
+			{
+				TTagEntries vEntries;
+				// 索引只借用读取缓冲，避免每行重新扫描已加载的整份记录。
+				std::unordered_map<std::string_view, std::vector<std::string_view>> TagsByMap;
+				std::string_view Remaining(static_cast<const char *>(pContent.get()), Size);
+				while(!Remaining.empty())
+				{
+					const size_t End = Remaining.find('\n');
+					std::string_view Line = Remaining.substr(0, End);
+					Remaining.remove_prefix(End == std::string_view::npos ? Remaining.size() : End + 1);
+					if(!Line.empty() && Line.back() == '\r')
+						Line.remove_suffix(1);
+					const size_t FirstTab = Line.find('\t');
+					if(FirstTab == std::string_view::npos)
+						continue;
+					const size_t SecondTab = Line.find('\t', FirstTab + 1);
+					if(SecondTab == std::string_view::npos || Line.find('\0') != std::string_view::npos)
+						continue;
+
+					const std::string_view Community = Line.substr(0, FirstTab);
+					const std::string_view Map = Line.substr(FirstTab + 1, SecondTab - FirstTab - 1);
+					const std::string_view Tag = Line.substr(SecondTab + 1);
+					if(!ValidKeyFields(Community, Map) || Tag.size() > MAX_CHARACTERS * 4)
+						continue;
+					std::string Text(Tag);
+					if(!ValidTag(Text.c_str()))
+						continue;
+
+					auto &vTags = TagsByMap[Line.substr(0, SecondTab)];
+					if(vTags.size() >= MAX_LOCAL_TAGS_PER_MAP || std::find(vTags.begin(), vTags.end(), Tag) != vTags.end())
+						continue;
+					vTags.push_back(Tag);
+					vEntries.emplace_back(MakeKey(Community, Map), std::move(Text));
+				}
+				m_vEntries.swap(vEntries);
+				m_Loaded = true;
+				return;
+			}
 		}
-		Success = io_sync(File) == 0 && Success;
-		Success = io_close(File) == 0 && Success;
-		return Success;
+		catch(...)
+		{
+			// 候选还在局部，读取或构建失败后允许下一次编辑重试。
+		}
+		log_error("map-tags", "could not read local map tags from %s", LOCAL_TAGS_FILE);
+	}
+
+	bool CLocalTags::Save(IStorage &Storage, const TTagEntries &vEntries)
+	{
+		qm_storage::EnsureFolder(&Storage, qm_storage::STATE_MAPS_DIR);
+		std::string Content;
+		for(const auto &[Key, Tag] : vEntries)
+		{
+			// 键内分隔符已计入，只需另算标签前的制表符。
+			if(Key.size() + Tag.size() + 1 > MAX_FILE_BYTES - Content.size())
+				return false;
+			const size_t Separator = Key.find(KEY_SEPARATOR);
+			Content.append(Key, 0, Separator);
+			Content.push_back('\t');
+			Content.append(Key, Separator + 1, std::string::npos);
+			Content.push_back('\t');
+			Content.append(Tag);
+			// 末行正文占满上限时，读取仍可识别没有换行的末行。
+			if(Content.size() < MAX_FILE_BYTES)
+				Content.push_back('\n');
+		}
+
+		char aTemporary[IO_MAX_PATH_LENGTH];
+		char aRoot[IO_MAX_PATH_LENGTH] = "";
+		Storage.GetCompletePath(IStorage::TYPE_SAVE, "", aRoot, sizeof(aRoot));
+
+		std::unique_ptr<void, decltype(&io_close)> pFile(nullptr, &io_close);
+		static std::atomic<unsigned> s_NextTemporary{0};
+		char aBase[IO_MAX_PATH_LENGTH];
+		str_copy(aBase, LOCAL_TAGS_FILE);
+		for(int Attempt = 0; Attempt < MAX_TEMPORARY_ATTEMPTS; ++Attempt)
+		{
+			if(Attempt != 0)
+				str_format(aBase, sizeof(aBase), "%s.%u", LOCAL_TAGS_FILE, s_NextTemporary.fetch_add(1, std::memory_order_relaxed));
+			IStorage::FormatTmpPath(aTemporary, sizeof(aTemporary), aBase);
+			if(str_length(aRoot) + str_length(aTemporary) >= IO_MAX_PATH_LENGTH)
+				return false;
+
+			pFile.reset(Storage.OpenFile(aTemporary, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE));
+			if(pFile)
+				break;
+			// 同名候选可能在上次退出后遗留，只遇到占用时才换名字。
+			if(!Storage.FileExists(aTemporary, IStorage::TYPE_SAVE) && !Storage.FolderExists(aTemporary, IStorage::TYPE_SAVE))
+				return false;
+		}
+		if(!pFile)
+			return false;
+		const auto Size = static_cast<unsigned>(Content.size());
+		const bool Written = io_write(pFile.get(), Content.data(), Size) == Size;
+		const bool Synced = Written && io_sync(pFile.get()) == 0;
+		const bool Clean = io_error(pFile.get()) == 0;
+		const bool Closed = io_close(pFile.release()) == 0;
+		try
+		{
+			if(Synced && Clean && Closed && Storage.RenameFile(aTemporary, LOCAL_TAGS_FILE, IStorage::TYPE_SAVE, false))
+				return true;
+		}
+		catch(...)
+		{
+			// 发布失败时只清理本次创建的候选文件。
+		}
+		Storage.RemoveFile(aTemporary, IStorage::TYPE_SAVE);
+		return false;
+	}
+
+	template<typename TEdit>
+	bool CLocalTags::Edit(IStorage *pStorage, TEdit &&Apply)
+	{
+		try
+		{
+			if(pStorage != nullptr && !m_Loaded)
+			{
+				LoadFromStorage(*pStorage);
+				if(!m_Loaded)
+					return false;
+			}
+			TTagEntries vEntries = m_vEntries;
+			if(!Apply(vEntries))
+				return false;
+			if(pStorage == nullptr || Save(*pStorage, vEntries))
+			{
+				m_vEntries.swap(vEntries);
+				return true;
+			}
+		}
+		catch(...)
+		{
+			// 写入确认之前保留原记录和顺序。
+		}
+		log_error("map-tags", "could not save local map tags to %s", LOCAL_TAGS_FILE);
+		return false;
 	}
 
 	bool CLocalTags::Has(const char *pCommunity, const char *pMap, const char *pTag) const
 	{
 		if(pTag == nullptr || pTag[0] == '\0')
 			return false;
-		const std::string Key = MakeKey(pCommunity, pMap);
+		const auto Community = AsView(pCommunity);
+		const auto Map = AsView(pMap);
+		if(!ValidKeyFields(Community, Map))
+			return false;
 		return std::any_of(m_vEntries.begin(), m_vEntries.end(), [&](const auto &Entry) {
-			return Entry.first == Key && Entry.second == pTag;
+			return MatchesKey(Entry.first, Community, Map) && Entry.second == pTag;
 		});
 	}
 
 	std::vector<std::string> CLocalTags::Get(const char *pCommunity, const char *pMap) const
 	{
-		const std::string Key = MakeKey(pCommunity, pMap);
-		std::vector<std::string> Tags;
-		for(const auto &[EntryKey, Tag] : m_vEntries)
+		try
 		{
-			if(EntryKey == Key)
-				Tags.push_back(Tag);
+			const auto Community = AsView(pCommunity);
+			const auto Map = AsView(pMap);
+			if(!ValidKeyFields(Community, Map))
+				return {};
+			std::vector<std::string> vTags;
+			for(const auto &[Key, Tag] : m_vEntries)
+			{
+				if(MatchesKey(Key, Community, Map))
+					vTags.push_back(Tag);
+			}
+			return vTags;
 		}
-		return Tags;
+		catch(const std::bad_alloc &)
+		{
+			return {};
+		}
 	}
 
 	bool CLocalTags::Add(IStorage *pStorage, const char *pCommunity, const char *pMap, const char *pTag)
 	{
-		if(pTag == nullptr || !ValidTag(pTag))
+		const auto Community = AsView(pCommunity);
+		const auto Map = AsView(pMap);
+		if(!ValidTag(pTag) || !ValidKeyFields(Community, Map))
 			return false;
-		if(pMap == nullptr || pMap[0] == '\0')
-			return false;
-		if(Has(pCommunity, pMap, pTag))
-			return false;
-		const std::string Key = MakeKey(pCommunity, pMap);
-		const int Count = (int)std::count_if(m_vEntries.begin(), m_vEntries.end(), [&](const auto &Entry) { return Entry.first == Key; });
-		if(Count >= MAX_LOCAL_TAGS_PER_MAP)
-			return false;
-		m_vEntries.emplace_back(Key, pTag);
-		Save(pStorage);
-		return true;
+		return Edit(pStorage, [&](TTagEntries &vEntries) {
+			std::string Key = MakeKey(Community, Map);
+			int Count = 0;
+			for(const auto &Entry : vEntries)
+			{
+				if(Entry.first == Key && (Entry.second == pTag || ++Count >= MAX_LOCAL_TAGS_PER_MAP))
+					return false;
+			}
+			vEntries.emplace_back(std::move(Key), pTag);
+			return true;
+		});
 	}
 
 	bool CLocalTags::Remove(IStorage *pStorage, const char *pCommunity, const char *pMap, const char *pTag)
 	{
 		if(pTag == nullptr)
 			return false;
-		const std::string Key = MakeKey(pCommunity, pMap);
-		const auto It = std::find_if(m_vEntries.begin(), m_vEntries.end(), [&](const auto &Entry) {
-			return Entry.first == Key && Entry.second == pTag;
-		});
-		if(It == m_vEntries.end())
+		const auto Community = AsView(pCommunity);
+		const auto Map = AsView(pMap);
+		if(!ValidKeyFields(Community, Map))
 			return false;
-		m_vEntries.erase(It);
-		Save(pStorage);
-		return true;
+		return Edit(pStorage, [&](TTagEntries &vEntries) {
+			const auto It = std::find_if(vEntries.begin(), vEntries.end(), [&](const auto &Entry) {
+				return MatchesKey(Entry.first, Community, Map) && Entry.second == pTag;
+			});
+			if(It == vEntries.end())
+				return false;
+			vEntries.erase(It);
+			return true;
+		});
 	}
+
 	bool CLocalTags::Move(IStorage *pStorage, const char *pCommunity, const char *pMap, int FromIndex, int ToIndex)
 	{
-		const std::string Key = MakeKey(pCommunity, pMap);
-		// m_vEntries 是跨地图混排的扁平表，这里只取「同一张图」的那几条的位置。
-		std::vector<size_t> Positions;
-		for(size_t Index = 0; Index < m_vEntries.size(); ++Index)
-		{
-			if(m_vEntries[Index].first == Key)
-				Positions.push_back(Index);
-		}
-		if(FromIndex < 0 || FromIndex >= (int)Positions.size())
+		if(FromIndex < 0 || ToIndex < 0 || FromIndex == ToIndex)
 			return false;
-		// ToIndex 是**最终索引**（0..Count-1）：越界说明调用点算错了槽位，直接拒绝，
-		// 不要静默夹到末尾——那会让玩家拖到行外时顺序莫名其妙地变了。
-		if(ToIndex < 0 || ToIndex >= (int)Positions.size())
+		const auto Community = AsView(pCommunity);
+		const auto Map = AsView(pMap);
+		if(!ValidKeyFields(Community, Map))
 			return false;
-		if(FromIndex == ToIndex)
-			return false;
-		const auto Entry = m_vEntries[Positions[FromIndex]];
-		m_vEntries.erase(m_vEntries.begin() + (std::ptrdiff_t)Positions[FromIndex]);
-		// 移除后同一张图的条目会前移，重新取一遍位置再插入，避免用旧下标插错。
-		Positions.clear();
-		for(size_t Index = 0; Index < m_vEntries.size(); ++Index)
-		{
-			if(m_vEntries[Index].first == Key)
-				Positions.push_back(Index);
-		}
-		const size_t InsertAt = ToIndex >= (int)Positions.size() ? (Positions.empty() ? m_vEntries.size() : Positions.back() + 1) : Positions[ToIndex];
-		m_vEntries.insert(m_vEntries.begin() + (std::ptrdiff_t)InsertAt, Entry);
-		Save(pStorage);
-		return true;
+		return Edit(pStorage, [&](TTagEntries &vEntries) {
+			// 只登记指定地图的标签位置，ToIndex 是移完后的该图索引。
+			std::array<size_t, MAX_LOCAL_TAGS_PER_MAP> aPositions;
+			int Count = 0;
+			for(size_t Index = 0; Index < vEntries.size(); ++Index)
+			{
+				if(MatchesKey(vEntries[Index].first, Community, Map))
+					aPositions[Count++] = Index;
+			}
+			if(FromIndex >= Count || ToIndex >= Count)
+				return false;
+
+			const auto Begin = vEntries.begin();
+			const auto From = static_cast<std::ptrdiff_t>(aPositions[FromIndex]);
+			if(ToIndex < FromIndex)
+				std::rotate(Begin + static_cast<std::ptrdiff_t>(aPositions[ToIndex]), Begin + From, Begin + From + 1);
+			else
+			{
+				const size_t End = ToIndex + 1 == Count ? aPositions[ToIndex] + 1 : aPositions[ToIndex + 1];
+				std::rotate(Begin + From, Begin + From + 1, Begin + static_cast<std::ptrdiff_t>(End));
+			}
+			return true;
+		});
 	}
 
 } // namespace QmMapTags

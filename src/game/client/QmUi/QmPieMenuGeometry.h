@@ -89,12 +89,17 @@ namespace qm_pie_menu_ui
 
 	inline int ArcSegments(float Radius, float SweepRadians, float PixelSize)
 	{
-		if(Radius <= 0.0f || SweepRadians <= 0.0f || PixelSize <= 0.0f)
+		if(Radius <= 0.0f || SweepRadians <= 0.0f || PixelSize <= 0.0f ||
+			!std::isfinite(Radius) || !std::isfinite(SweepRadians) || !std::isfinite(PixelSize))
 			return 0;
 		// 由弦中点到圆弧的距离约束分段，避免少量选项时出现明显折线。
 		const double RelativeError = std::min(static_cast<double>(ARC_ERROR_PIXELS) * PixelSize / Radius, 1.0);
 		const double Step = 2.0 * std::acos(1.0 - RelativeError);
-		return std::clamp(static_cast<int>(std::ceil(SweepRadians / Step)), 8, MAX_ARC_SEGMENTS);
+		// 像素相对半径过小时，1.0 - RelativeError 可能舍入到 1.0。
+		if(Step == 0.0)
+			return MAX_ARC_SEGMENTS;
+		const double Segments = std::ceil(SweepRadians / Step);
+		return static_cast<int>(std::clamp(Segments, 8.0, static_cast<double>(MAX_ARC_SEGMENTS)));
 	}
 
 	inline void BuildFringe(SGeometry &Geometry)
@@ -127,7 +132,8 @@ namespace qm_pie_menu_ui
 	inline SGeometry BuildSector(float InnerRadius, float OuterRadius, float StartAngle, float EndAngle, float GapDegrees, float PixelSize)
 	{
 		SGeometry Geometry;
-		if(InnerRadius <= 0.0f || OuterRadius <= InnerRadius || EndAngle <= StartAngle || PixelSize <= 0.0f)
+		if(!(InnerRadius > 0.0f && OuterRadius > InnerRadius && EndAngle > StartAngle && PixelSize > 0.0f) ||
+			!std::isfinite(StartAngle) || !std::isfinite(EndAngle))
 			return Geometry;
 
 		const float Sweep = std::min(EndAngle - StartAngle, 360.0f) * pi / 180.0f;
@@ -138,6 +144,8 @@ namespace qm_pie_menu_ui
 		const float InnerInset = CornerRadius > 0.0f ? std::asin(CornerRadius / (InnerRadius + CornerRadius)) : 0.0f;
 		Geometry.m_CornerSegments = CornerRadius > 0.0f ? std::min(16, ArcSegments(CornerRadius, pi * 0.5f + OuterInset, PixelSize)) : 0;
 		const int MiddleSegments = std::min(ArcSegments(OuterRadius, Sweep - 2.0f * OuterInset, PixelSize), MAX_ARC_SEGMENTS - 2 * Geometry.m_CornerSegments);
+		if(MiddleSegments == 0)
+			return {};
 		Geometry.m_ArcSegments = MiddleSegments + 2 * Geometry.m_CornerSegments;
 		Geometry.m_PointCount = 2 * (Geometry.m_ArcSegments + 1);
 		Geometry.m_Feather = std::min(FEATHER_PIXELS * PixelSize, std::min(OuterRadius - InnerRadius, InnerRadius) * 0.25f);
@@ -193,14 +201,14 @@ namespace qm_pie_menu_ui
 
 	inline int HoveredSector(vec2 Pointer, float InnerRadius, float OuterRadius, float StartAngle, int Count, float GapDegrees, float PixelSize, float SpanFactor = 1.0f)
 	{
-		if(Count <= 0)
+		if(Count <= 0 || !std::isfinite(Pointer.x) || !std::isfinite(Pointer.y) || !std::isfinite(StartAngle))
 			return -1;
 		const float Step = 360.0f / Count;
 		const float Gap = Count == 1 ? 0.0f : std::min(GapDegrees, Step * 0.35f);
 		float Angle = std::fmod(std::atan2(Pointer.y, Pointer.x) * 180.0f / pi - StartAngle, 360.0f);
 		if(Angle < 0.0f)
 			Angle += 360.0f;
-		const int Index = std::min(static_cast<int>(Angle / Step), Count - 1);
+		const int Index = static_cast<int>(std::min<double>(Angle / Step, Count - 1));
 		const float Start = StartAngle + Index * Step + Gap * 0.5f;
 		return BuildSector(InnerRadius, OuterRadius, Start, Start + (Step - Gap) * std::clamp(SpanFactor, 0.0f, 1.0f), Gap, PixelSize).Contains(Pointer) ? Index : -1;
 	}
@@ -208,9 +216,9 @@ namespace qm_pie_menu_ui
 	inline SGeometry BuildDisc(float Radius, float PixelSize)
 	{
 		SGeometry Geometry;
-		if(Radius <= 0.0f || PixelSize <= 0.0f)
-			return Geometry;
 		Geometry.m_ArcSegments = ArcSegments(Radius, 2.0f * pi, PixelSize);
+		if(Geometry.m_ArcSegments == 0)
+			return Geometry;
 		Geometry.m_PointCount = Geometry.m_ArcSegments;
 		Geometry.m_Feather = std::min(FEATHER_PIXELS * PixelSize, Radius * 0.25f);
 		Geometry.m_Disc = true;

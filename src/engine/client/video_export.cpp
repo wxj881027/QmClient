@@ -5,6 +5,7 @@
 
 #include <engine/shared/config.h>
 #include <engine/shared/protocol.h>
+#include <engine/storage.h>
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -13,7 +14,9 @@ extern "C" {
 
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <new>
 
 namespace
 {
@@ -33,15 +36,50 @@ CVideoExportOutput::CVideoExportOutput(const char *pTarget, const char *pSuffix)
 
 CVideoExportOutput::~CVideoExportOutput()
 {
-	if(m_OwnsTemporary)
+	if(!m_OwnsTemporary)
+		return;
+	try
+	{
 		fs_remove(m_Temporary.c_str());
+	}
+	catch(...)
+	{
+		// Windows 清理路径也会分配内存。清理失败时保留临时文件。
+	}
 }
 
-bool CVideoExportOutput::Commit()
+std::unique_ptr<CVideoExportOutput> CVideoExportOutput::PrepareRecording(IStorage &Storage, const char *pName)
 {
-	// 禁用 Windows 的先删除目标再重试兜底，替换失败必须保留旧文件。
-	if(!m_OwnsTemporary || fs_rename(m_Temporary.c_str(), m_Target.c_str(), false) != 0)
+	static constexpr char s_aSuffix[] = ".recording";
+	char aTarget[IO_MAX_PATH_LENGTH];
+	Storage.GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pName, aTarget, sizeof(aTarget));
+	// Storage 会截断超过缓冲区的路径。任何写入之前都须为完整后缀和 NUL 留出空间。
+	if(aTarget[0] == '\0' || str_length(aTarget) + sizeof(s_aSuffix) > sizeof(aTarget))
+		return nullptr;
+
+	auto pOutput = std::make_unique<CVideoExportOutput>(aTarget, s_aSuffix);
+	const std::string TemporaryName = std::string(pName) + s_aSuffix;
+	IOHANDLE File = Storage.OpenFile(TemporaryName.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
+	if(!File)
+		return nullptr;
+	pOutput->Opened();
+	if(io_close(File) != 0)
+		return nullptr;
+	return pOutput;
+}
+
+bool CVideoExportOutput::Commit() noexcept
+{
+	try
+	{
+		// 禁用 Windows 的先删除目标再重试兜底，替换失败必须保留旧文件。
+		if(!m_OwnsTemporary || fs_rename(m_Temporary.c_str(), m_Target.c_str(), false) != 0)
+			return false;
+	}
+	catch(...)
+	{
 		return false;
+	}
 	m_OwnsTemporary = false;
 	return true;
 }
@@ -174,7 +212,8 @@ void CVideoExportTask::FinalOutputName(char *pBuffer, size_t BufferSize) const
 }
 
 // 进度文件：videos/<name>.progress，一行一个 key=value 的纯文本键值对。
-bool CVideoExportTask::LoadProgress(const char *pProgressPath)
+bool CVideoExportTask::LoadProgress(const char *pProgressPath, const SVideoExportIo *pIo)
+try
 {
 	// 失败不能留下上一次加载的完成标记。
 	for(CSegment &Segment : m_vSegments)
@@ -182,12 +221,13 @@ bool CVideoExportTask::LoadProgress(const char *pProgressPath)
 		Segment.m_Done = false;
 		Segment.m_FileSize = -1;
 	}
-	IOHANDLE File = io_open(pProgressPath, IOFLAG_READ);
-	if(!File)
+	std::unique_ptr<void, decltype(&io_close)> pFile(io_open(pProgressPath, IOFLAG_READ), io_close);
+	if(!pFile)
 		return false;
 
-	char *pContents = io_read_all_str(File);
-	io_close(File);
+	const auto pReadText = pIo ? pIo->m_pReadText : io_read_all_str;
+	const std::unique_ptr<char, decltype(&std::free)> pContents(pReadText(pFile.get()), std::free);
+	pFile.reset();
 	if(!pContents)
 		return false;
 
@@ -197,7 +237,7 @@ bool CVideoExportTask::LoadProgress(const char *pProgressPath)
 	std::vector<bool> vDone(m_vSegments.size(), false);
 	std::vector<int64_t> vSizes(m_vSegments.size(), -1);
 	// 逐行扫描（\n 或 \r\n 分隔），每行格式 key=value
-	char *pLine = pContents;
+	char *pLine = pContents.get();
 	while(pLine && *pLine)
 	{
 		char *pEnd = strchr(pLine, '\n');
@@ -223,10 +263,7 @@ bool CVideoExportTask::LoadProgress(const char *pProgressPath)
 			else if(str_comp(aKey, "segment_count") == 0)
 			{
 				if(str_toint(pValue) != (int)m_vSegments.size())
-				{
-					free(pContents);
 					return false; // 段数不一致（参数变更），整单重置
-				}
 				SegmentCountOk = true;
 			}
 			else if(str_startswith(aKey, "segment_") && str_endswith(aKey, "_done"))
@@ -240,17 +277,13 @@ bool CVideoExportTask::LoadProgress(const char *pProgressPath)
 				const int Index = str_toint(aKey + str_length("segment_"));
 				const int64_t Size = str_toint64_base(pValue);
 				if(Index < 0 || Index >= (int)vSizes.size() || Size <= 0)
-				{
-					free(pContents);
 					return false;
-				}
 				vSizes[Index] = Size;
 			}
 		}
 
 		pLine = pEnd ? pEnd + 1 : nullptr;
 	}
-	free(pContents);
 
 	if(!VersionOk || !FingerprintOk || !SegmentCountOk)
 		return false;
@@ -261,6 +294,11 @@ bool CVideoExportTask::LoadProgress(const char *pProgressPath)
 		m_vSegments[i].m_FileSize = vDone[i] ? vSizes[i] : -1;
 	}
 	return true;
+}
+catch(const std::bad_alloc &)
+{
+	// 资源不足时沿原续渲失败处理，所有段保持待渲染。
+	return false;
 }
 
 bool CVideoExportTask::CompleteSegmentFile(int SegmentIndex, const char *pPath)

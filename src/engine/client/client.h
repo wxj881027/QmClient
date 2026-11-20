@@ -6,10 +6,12 @@
 #include "game_ping.h"
 #include "graph.h"
 #include "link_probe.h"
+#include "map_download_file.h"
 #include "qm_hang_diagnostics.h"
 #include "smooth_time.h"
 
 #include <base/hash.h>
+#include <base/log.h>
 #include <base/types.h>
 
 #include <engine/client.h>
@@ -26,19 +28,24 @@
 #include <engine/shared/demo.h>
 #include <engine/shared/fifo.h>
 #include <engine/shared/network.h>
+#include <engine/shared/snapshot.h>
 #include <engine/textrender.h>
 #include <engine/warning.h>
+
+#include <generated/protocol.h>
 
 #include <game/client/components/qmclient/perf_diagnostics.h>
 
 #include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <deque>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
+#include <utility>
 
 // 性能日志文件的运行时开关包装（定义见 client.cpp）：CFutureLogger 只能 Set
 // 一次，游戏内开/关通过切换内部 logger（文件 logger ↔ noop）实现。
@@ -62,6 +69,117 @@ class INotifications;
 class IStorage;
 class IUpdater;
 
+// 输入快照已通过 CSnapshot::IsValid。只在录制改写期间隐藏容量不足的对象。
+class CDemoSnapshotWriteGuard
+{
+	struct SItemKey
+	{
+		int m_Index;
+		int m_Key;
+	};
+
+	CSnapshot &m_Snapshot;
+	SItemKey m_aHiddenItems[CSnapshot::MAX_ITEMS];
+	int m_NumHiddenItems = 0;
+
+public:
+	explicit CDemoSnapshotWriteGuard(CSnapshot &Snapshot) :
+		m_Snapshot(Snapshot)
+	{
+		// 旧服务器发送前四个字段，只有 SpectatorCount 是可选尾字段。
+		constexpr int CameraFieldsSize = offsetof(CNetObj_DDNetSpectatorInfo, m_SpectatorCount);
+		constexpr int ProjectileSize = sizeof(CNetObj_Projectile);
+		for(int Index = 0; Index < Snapshot.NumItems(); ++Index)
+		{
+			const int Size = Snapshot.GetItemSize(Index);
+			if(Size >= CameraFieldsSize && Size >= ProjectileSize)
+				continue;
+
+			const CSnapshotItem *pItem = Snapshot.GetItem(Index);
+			const int InternalType = pItem->InternalType();
+			const bool ShortProjectile = InternalType == NETOBJTYPE_PROJECTILE && Size < ProjectileSize;
+			const bool ShortSpectatorInfo = Size < CameraFieldsSize && InternalType >= CSnapshot::OFFSET_UUID_TYPE &&
+							Snapshot.GetItemType(Index) == NETOBJTYPE_DDNETSPECTATORINFO;
+			if(!ShortProjectile && !ShortSpectatorInfo)
+				continue;
+
+			m_aHiddenItems[m_NumHiddenItems++] = {Index, pItem->Key()};
+			Snapshot.InvalidateItem(Index);
+		}
+	}
+
+	CDemoSnapshotWriteGuard(const CDemoSnapshotWriteGuard &) = delete;
+
+	~CDemoSnapshotWriteGuard()
+	{
+		for(int i = 0; i < m_NumHiddenItems; ++i)
+		{
+			const SItemKey &Item = m_aHiddenItems[i];
+			const_cast<CSnapshotItem *>(m_Snapshot.GetItem(Item.m_Index))->m_TypeAndId = Item.m_Key;
+		}
+	}
+};
+
+#if defined(CONF_VIDEORECORDER)
+// 线程句柄由客户端主线程管理，后台只写入拼接结果。
+class CSegmentConcatWorker
+{
+	enum class EState
+	{
+		IDLE,
+		PENDING,
+		SUCCEEDED,
+		FAILED,
+	};
+
+	std::thread m_Thread;
+	std::atomic<EState> m_State{EState::IDLE};
+
+public:
+	~CSegmentConcatWorker() { Join(); }
+
+	bool Pending() const { return m_State.load() == EState::PENDING; }
+	bool Failed() const { return m_State.load() == EState::FAILED; }
+	void ResetResult() { m_State.store(EState::IDLE); }
+	void MarkFailed() { m_State.store(EState::FAILED); }
+
+	void Join()
+	{
+		if(m_Thread.joinable())
+			m_Thread.join();
+	}
+
+	template<typename F>
+	void Start(F &&Concat)
+	{
+		if(Pending())
+			return;
+
+		Join();
+		m_State.store(EState::PENDING);
+		try
+		{
+			m_Thread = std::thread([this, Concat = std::forward<F>(Concat)]() mutable {
+				try
+				{
+					m_State.store(Concat() ? EState::SUCCEEDED : EState::FAILED);
+				}
+				catch(...)
+				{
+					log_error("video_export", "Unexpected error while concatenating video segments.");
+					MarkFailed();
+				}
+			});
+		}
+		catch(...)
+		{
+			MarkFailed();
+			log_error("video_export", "Could not start the video concat thread.");
+		}
+	}
+};
+#endif
+
 class CServerCapabilities
 {
 public:
@@ -80,7 +198,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	CConfig *m_pConfig = nullptr;
 	IConsole *m_pConsole = nullptr;
 	IDiscord *m_pDiscord = nullptr;
-	IEditor *m_pEditor = nullptr;
+	std::unique_ptr<IEditor> m_pEditor;
 	IEngine *m_pEngine = nullptr;
 	IFavorites *m_pFavorites = nullptr;
 	IGameClient *m_pGameClient = nullptr;
@@ -107,7 +225,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	CFriends m_Friends;
 	CFriends m_Foes;
 
-	char m_aConnectAddressStr[MAX_SERVER_ADDRESSES * NETADDR_MAXSTRSIZE] = "";
+	char m_aConnectAddressStr[sizeof(g_Config.m_UiServerAddress)] = "";
 
 	CUuid m_ConnectionId = UUID_ZEROED;
 	bool m_Sixup;
@@ -129,8 +247,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	// 单帧恰好静止不能代表滑块液态回弹已经到位。
 	int m_QmVSyncIdleFrames = 0;
 	int64_t m_QmVSyncQueuedAt = 0;
-	std::atomic<bool> m_HangWatchdogStop{false};
-	std::thread m_HangWatchdogThread;
+	QmHangDiagnostics::CWatchdog m_HangWatchdog{m_HangInfo};
 	char m_aHangDumpDir[IO_MAX_PATH_LENGTH] = "";
 	int m_NetworkPumpFirstConn = 0;
 
@@ -143,6 +260,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	// 隐藏窗口准备好首帧后只显示一次，随后在可见窗口上提交首帧。
 	bool m_WindowShown = false;
+	bool m_QuitRequestedWhileLoading = false;
 
 	int m_SnapCrcErrors = 0;
 	bool m_AutoScreenshotRecycle = false;
@@ -188,7 +306,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	// TClient
 	std::array<bool, NUM_DUMMIES> m_aExecuteOnJoinDone = {};
 
-	char m_aCmdConnect[256] = "";
+	char m_aCmdConnect[sizeof(m_aConnectAddressStr)] = "";
 	char m_aCmdPlayDemo[IO_MAX_PATH_LENGTH] = "";
 	char m_aCmdOpenPoses[IO_MAX_PATH_LENGTH] = "";
 	char m_aCmdEditMap[IO_MAX_PATH_LENGTH] = "";
@@ -196,10 +314,10 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	// map download
 	char m_aMapDownloadUrl[256] = "";
 	std::shared_ptr<IHttpRequest> m_pMapdownloadTask = nullptr;
-	char m_aMapdownloadFilename[256] = "";
-	char m_aMapdownloadFilenameTemp[256] = "";
+	char m_aMapdownloadFilename[IO_MAX_PATH_LENGTH] = "";
+	char m_aMapdownloadFilenameTemp[IO_MAX_PATH_LENGTH] = "";
 	char m_aMapdownloadName[256] = "";
-	IOHANDLE m_MapdownloadFileTemp = nullptr;
+	CMapDownloadFile m_MapdownloadFileTemp;
 	int m_MapdownloadChunk = 0;
 	int m_MapdownloadCrc = 0;
 	int m_MapdownloadAmount = -1;
@@ -267,6 +385,9 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	CSnapshotStorage::CHolder m_aDemorecSnapshotHolders[NUM_SNAPSHOT_TYPES];
 	CSnapshotBuffer m_aaDemorecSnapshotData[NUM_SNAPSHOT_TYPES][2];
 
+	const CSnapshot *SnapshotForGame(int SnapId) const;
+	void PublishSourceSnapshot(bool DummySwapped);
+
 	CSnapshotDelta m_SnapshotDelta;
 	CSnapshotDelta m_SnapshotDeltaSixup;
 	CSnapshotDelta *SnapshotDelta();
@@ -295,12 +416,12 @@ public:
 	// 否则用户在成片写出前点"Videos directory"会看到文件不存在或不可播放。
 	bool VideoExportConcatPending() const override
 	{
-		return m_ConcatThread.joinable() && !m_ConcatThreadFinished.load();
+		return m_SegmentConcat.Pending();
 	}
 	// 最近一次拼接是否失败（有尝试且未成功）。失败时 UI 不应宣称渲染完成。
 	bool VideoExportConcatFailed() const override
 	{
-		return m_ConcatAttempted.load() && !m_ConcatLastSucceeded.load();
+		return m_SegmentConcat.Failed();
 	}
 #endif
 
@@ -339,7 +460,7 @@ private:
 
 	CFifo m_Fifo;
 
-	IOHANDLE m_BenchmarkFile = nullptr;
+	std::unique_ptr<void, decltype(&io_close)> m_pBenchmarkFile{nullptr, &io_close};
 	int64_t m_BenchmarkStopTime = 0;
 
 	CChecksum m_Checksum;
@@ -415,9 +536,7 @@ public:
 	IHttp *Http() { return m_pHttp; }
 
 	CClient();
-#if defined(CONF_VIDEORECORDER)
-	~CClient() override; // 等待拼接线程完成（成员仅在 CONF_VIDEORECORDER 下存在）
-#endif
+	~CClient() override;
 
 	// 性能日志文件运行时开/关（供 client.cpp 启动与主循环调用）。
 	void SetQmPerfFileSwitch(std::shared_ptr<CQmPerfFileSwitchLogger> pSwitch);
@@ -539,11 +658,12 @@ public:
 
 	void ResetMapDownload(bool ResetActive);
 	void FinishMapDownload();
+	void ReportMapDownloadSaveFailure(const char *pFilename);
 
 	EInfoState InfoState() const override { return m_InfoState; }
 	void RequestDDNetInfo() override;
 	void ResetDDNetInfoTask();
-	void LoadDDNetInfo();
+	void LoadDDNetInfo(IHttpRequest *pResponse = nullptr);
 
 	bool IsSixup() const override { return m_Sixup; }
 
@@ -562,6 +682,8 @@ public:
 	void Update();
 
 	void RegisterInterfaces();
+	void RegisterEditor();
+	void DestroyEditor() { m_pEditor.reset(); }
 	void InitConfigCommands();
 	void InitInterfaces();
 
@@ -604,7 +726,7 @@ public:
 	bool EnterPoseSession(const char *pPosesPath, int &TeeCountOut, const char *pMapPath = nullptr);
 	bool EnsurePosePlaybackContext(const char *pMapPath);
 	// 退出合影会话：清空合成快照，让普通渲染恢复。
-	void LeavePoseSession();
+	void LeavePoseSession(bool RestorePlaybackSnapshot = true);
 
 #if defined(CONF_VIDEORECORDER)
 	void StartVideo(const char *pFilename, bool WithTimestamp);
@@ -634,14 +756,7 @@ public:
 	const char *ContainerName() const;
 	// 拼接 muxer 格式名：mkv 对应 libavformat 的 "matroska"，mp4/mov 同名。
 	const char *ConcatFormatName() const;
-	// 拼接后台线程；避免 detached 线程在退出时被撕裂（输出文件无 trailer）。
-	std::thread m_ConcatThread;
-	// 拼接线程是否已执行完。std::thread 只有在 join/detach 后才不再 joinable，
-	// 需要该标志区分"仍在跑"与"跑完但未 join"，否则同一进程内第二次导出永远无法拼接。
-	std::atomic<bool> m_ConcatThreadFinished{true};
-	// 是否已尝试过拼接，以及最近一次拼接的结果（供 UI 区分"完成"与"失败"）。
-	std::atomic<bool> m_ConcatAttempted{false};
-	std::atomic<bool> m_ConcatLastSucceeded{false};
+	CSegmentConcatWorker m_SegmentConcat;
 #endif
 
 	static void Con_Rcon(IConsole::IResult *pResult, void *pUserData);
@@ -717,6 +832,9 @@ public:
 
 	// 合影会话是否进行中。进行中时 demo 播放器被暂停，合成快照不会被覆盖。
 	bool m_PoseSessionActive = false;
+	CSnapshotBuffer m_aPosePresentationSnapshots[NUM_SNAPSHOT_TYPES];
+	int m_PoseCurrentSnapshot = -1;
+	int m_PosePreviousSnapshot = -1;
 	// 合影取景：进入会话时按所有 Tee 的包围盒算一次，之后由预览 HUD 缩放/平移。
 	vec2 m_PoseCameraCenter = vec2(0.0f, 0.0f);
 	float m_PoseCameraZoom = 1.0f;
@@ -813,7 +931,7 @@ public:
 	bool DemoSlice(const char *pDstPath, const std::vector<SDemoSliceSegment> &vSegments, CLIENTFUNC_FILTER pfnFilter, void *pUser) override;
 	void SaveReplay(int Length, const char *pFilename = "") override;
 
-	bool EditorHasUnsavedData() const override { return m_pEditor->HasUnsavedData(); }
+	bool EditorHasUnsavedData() const override { return m_pEditor && m_pEditor->HasUnsavedData(); }
 
 	IFriends *Foes() override { return &m_Foes; }
 

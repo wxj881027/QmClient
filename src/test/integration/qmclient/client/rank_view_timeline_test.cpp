@@ -136,6 +136,20 @@ TEST(RankViewTimeline, RejectsUnknownMessageType)
 	EXPECT_FALSE(ReadData(TimelineData({}, {}, {{1, 99, 0, 0, 0, 0, 0}}), Timeline));
 }
 
+TEST(RankViewTimeline, OversizeOutputIsRejectedBeforeWritingAnyBytes)
+{
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	SViewTimeline Timeline;
+	Timeline.m_vMessages.resize(MAX_TIMELINE_BYTES / sizeof(SViewMessage) + 1);
+	IOHANDLE File = pStorage->OpenFile("oversize.events", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	ASSERT_NE(File, nullptr);
+	EXPECT_FALSE(WriteViewTimeline(File, Timeline));
+	EXPECT_EQ(io_tell(File), 0);
+	EXPECT_EQ(io_close(File), 0);
+}
+
 TEST(RankViewTimeline, RejectsRaceFinishClientOutsideClientArray)
 {
 	SViewTimeline Timeline;

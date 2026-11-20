@@ -11,11 +11,23 @@
 #include <game/client/components/qmclient/statusbar_items.h>
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <map>
 #include <string>
 
 namespace tclient_statusbar
 {
+	inline int FramesPerSecond(float FrameTime)
+	{
+		if(!(FrameTime > 0.0f) || !std::isfinite(FrameTime))
+			return 0;
+		const float Rounded = 1.0f / FrameTime + 0.5f;
+		if(static_cast<double>(Rounded) > std::numeric_limits<int>::max())
+			return 0;
+		return static_cast<int>(Rounded);
+	}
+
 	inline bool IsValidPlayerId(int PlayerId)
 	{
 		return PlayerId >= 0 && PlayerId < MAX_CLIENTS;

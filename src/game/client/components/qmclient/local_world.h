@@ -5,6 +5,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/prediction/tick_shift.h>
 #include <game/gamecore.h>
 
 #include <algorithm>
@@ -164,7 +165,7 @@ public:
 	bool HasCompletedSegment() const { return !m_aTracks[0].m_vCompleted.empty(); }
 
 	// 世界被外部时钟平移时（服务器暂停恢复），绝对时间量要跟着走。
-	void ShiftTrackTicks(int TickDelta);
+	bool ShiftTrackTicks(int64_t TickDelta, QmTickShift::EMode Mode = QmTickShift::EMode::COMMIT);
 
 	// 查看模式会话登记：Rank 1 与练习组回放都在这里挂号，父集因此知道
 	// "当前有没有独立时间线在播、几条轨"。只记状态，播放仍由 CGhost /

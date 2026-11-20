@@ -16,7 +16,7 @@
  * @param elem_size 单个元素字节数。
  * @param num 元素数量。
  *
- * @remark 调用方必须保证数据至少为 `elem_size * num` 字节。
+ * @remark 调用方必须保证数据至少为 `elem_size * num` 字节。元素少于 2 字节或数量为 0 时不访问数据。
  */
 void swap_endian(void *data, unsigned elem_size, unsigned num);
 

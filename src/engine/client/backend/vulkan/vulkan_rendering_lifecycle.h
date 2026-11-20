@@ -1,10 +1,16 @@
 #ifndef ENGINE_CLIENT_BACKEND_VULKAN_VULKAN_RENDERING_LIFECYCLE_H
 #define ENGINE_CLIENT_BACKEND_VULKAN_VULKAN_RENDERING_LIFECYCLE_H
 
+#include <engine/client/backend/readback_image.h>
+#include <engine/client/backend/screenshot_image.h>
+
 #include <vulkan/vulkan_core.h>
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <utility>
 #include <vector>
 
 class CQmVulkanSwapPassPlan
@@ -108,6 +114,44 @@ void FreeQmVulkanCommandBuffers(VkCommandPool Pool, std::vector<VkCommandBuffer>
 	if(Pool != VK_NULL_HANDLE && !Buffers.empty())
 		Free(Pool, static_cast<uint32_t>(Buffers.size()), Buffers.data());
 	Buffers.clear();
+}
+
+template<typename TWaitIdle, typename TSubmit, typename TDestroy>
+bool DestroyQmVulkanRenderTargetAfterUse(bool RenderingPaused, VkImage Image, TWaitIdle &&WaitIdle, TSubmit &&Submit, TDestroy &&Destroy)
+{
+	if(Image != VK_NULL_HANDLE && !(RenderingPaused ? WaitIdle() : Submit()))
+		return false;
+	Destroy();
+	return true;
+}
+
+inline VkMappedMemoryRange QmVulkanReadbackMemoryRange(VkDeviceMemory Memory)
+{
+	// 整块读回内存从零开始映射，图像子资源的偏移不一定满足 nonCoherentAtomSize。
+	VkMappedMemoryRange Range{};
+	Range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+	Range.memory = Memory;
+	Range.size = VK_WHOLE_SIZE;
+	return Range;
+}
+
+template<typename TAllocate>
+bool CompleteQmVulkanRenderTargetReadback(CImageInfo &Image, const uint8_t *pSource, uint32_t Width, uint32_t Height,
+	VkDeviceSize RowPitch, VkDeviceSize AvailableBytes, bool SwapRedBlue, TAllocate &&Allocate)
+{
+	readback_image::SRgbaLayout Layout;
+	if(pSource == nullptr || !readback_image::GetRgbaLayout(Width, Height, RowPitch, AvailableBytes, Layout))
+		return false;
+
+	screenshot_image::CaptureRgba(Image, Width, Height, screenshot_image::ERowOrder::TOP_DOWN, [&](uint8_t *pPixels, size_t DataBytes) {
+			for(size_t Y = 0; Y < Height; ++Y)
+				std::memcpy(pPixels + Y * Layout.m_RowBytes, pSource + Y * Layout.m_RowPitch, Layout.m_RowBytes);
+			if(SwapRedBlue)
+				for(size_t Offset = 0; Offset < DataBytes; Offset += 4)
+					std::swap(pPixels[Offset], pPixels[Offset + 2]);
+			return true; }, std::forward<TAllocate>(Allocate), screenshot_image::EAlphaMode::PRESERVE);
+	// GPU 已完成。CPU 像素分配失败时留空，由读回队列报告本次请求失败。
+	return true;
 }
 
 inline VkImageMemoryBarrier QmVulkanResolvedSwapCaptureBarrier(VkImage SwapImage)

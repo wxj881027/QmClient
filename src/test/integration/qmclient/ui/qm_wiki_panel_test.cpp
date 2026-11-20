@@ -4,12 +4,17 @@
 
 #include <game/client/QmUi/QmCardWikiPanel.h>
 #include <game/client/QmUi/QmWikiDocs.h>
+#include <game/client/QmUi/QmWikiMedia.h>
+#include <game/client/QmUi/QmWikiStore.h>
+#include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContext.h>
 
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_client.h>
 #include <test/support/qm_ui_test_input.h>
+
+#include <string>
 
 namespace
 {
@@ -34,8 +39,10 @@ namespace
 		// 会去问上一个用例已经销毁的 CUi。
 		void TearDown() override
 		{
-			qm_wiki_panel_test::ResetState();
+			qm_wiki_media::Init(nullptr, nullptr);
+			qm_wiki_store::Init(nullptr);
 			qm_ui_test::CRealUiFixture::TearDown();
+			qm_wiki_panel_test::ResetState();
 		}
 
 		void Frame(vec2 Position, bool Pressed)
@@ -53,6 +60,29 @@ namespace
 		{
 			Frame(Position, Pressed);
 			m_Ui.RenderPopupMenus();
+		}
+
+		void Click(vec2 Position)
+		{
+			Render(Position, false);
+			Render(Position, true);
+			Render(Position, false);
+		}
+
+		CUIRect WikiContent(ESettingsSecondaryPanelKind Kind)
+		{
+			const CUIRect Screen = *m_Ui.Screen();
+			const auto Metrics = ui_widget::ResolveSecondaryPanelMetrics(Screen.w - 16.0f, Kind);
+			CUIRect Content = ResolveSettingsSecondaryPanelRect(Screen, Kind);
+			Content.Margin(CUi::PopupMenuContentInset() * 0.5f + Metrics.m_Margin, &Content);
+			Content.HSplitTop(Metrics.ContentHeight(0, 0, 0) - 2.0f * Metrics.m_Margin, nullptr, &Content);
+			return Content;
+		}
+
+		vec2 WikiResetButton(ESettingsSecondaryPanelKind Kind)
+		{
+			const CUIRect Content = WikiContent(Kind);
+			return {Content.x + Content.w - 78.0f, Content.y + 11.0f};
 		}
 
 		void Key(int Code)
@@ -149,4 +179,77 @@ TEST_F(QmWikiPanel, TocClickScrollsTheTargetSectionTowardsTheTop)
 	for(int Index = 0; Index < 30; ++Index)
 		Render({0.0f, 0.0f}, false);
 	EXPECT_LT(qm_wiki_panel_test::ScrollOffsetY(), -1.0f);
+}
+
+TEST_F(QmWikiPanel, ClosingOnLinkClickDropsThePendingNavigation)
+{
+	const char *const apParagraphs[] = {"[Related card](deck:appearance-chat-messages)"};
+	const SWikiSection Section{nullptr, apParagraphs, 1};
+	const SWikiDocument Document{"wiki-panel-link-test", "Link guide", &Section, 1};
+	const IUiContext Ctx = MakeContext();
+	OpenWikiDocumentPopup(Ctx, Document);
+	const CUIRect Content = WikiContent(ESettingsSecondaryPanelKind::NEWS);
+	const vec2 Link{Content.x + 5.0f, Content.y + 34.0f};
+	Render(Link, false);
+	Render(Link, true);
+	Key(KEY_ESCAPE);
+	Render(Link, false);
+	ASSERT_FALSE(qm_wiki_panel_test::IsOpen());
+
+	OpenWikiDocumentPopup(Ctx, Document);
+	Render();
+	ASSERT_TRUE(qm_wiki_panel_test::IsOpen());
+	EXPECT_EQ(qm_wiki_panel_test::TocRowCount(), 0);
+
+	// 同一个链接在面板继续打开时，仍在下一帧跳转到有目录的卡片。
+	Click(Link);
+	EXPECT_EQ(qm_wiki_panel_test::TocRowCount(), 0);
+	Render();
+	EXPECT_GE(qm_wiki_panel_test::TocRowCount(), 2);
+}
+
+TEST_F(QmWikiPanel, FailedResetKeepsTheEditorCaret)
+{
+	const IUiContext Ctx = MakeContext();
+	OpenCardWikiPopup(Ctx, "deck:appearance-chat-messages", "Chat messages");
+	Render();
+	ASSERT_TRUE(qm_wiki_panel_test::BeginEditing());
+	const CUIRect Screen = *m_Ui.Screen();
+	Click({Screen.x + Screen.w * 0.5f, Screen.y + Screen.h * 0.5f});
+	CLineInput *pInput = CLineInput::GetActiveInput();
+	ASSERT_NE(pInput, nullptr);
+	ASSERT_GT(pInput->GetLength(), 0u);
+	pInput->SetCursorOffset(0);
+
+	// 留空的存储会使还原失败。
+	const vec2 Reset = WikiResetButton(ESettingsSecondaryPanelKind::LIBRARY);
+	Render(Reset, false);
+	Render(Reset, true);
+	ASSERT_NE(m_Ui.ActiveItem(), nullptr);
+	ASSERT_NE(m_Ui.ActiveItem(), static_cast<const void *>(pInput));
+	Render(Reset, false);
+	EXPECT_TRUE(qm_wiki_panel_test::IsEditing());
+	EXPECT_EQ(pInput->GetCursorOffset(), 0u);
+}
+
+TEST_F(QmWikiPanel, ResetToOversizedContentReturnsToReading)
+{
+	std::string Paragraph(256 * 1024, ' ');
+	Paragraph += "Long guide.";
+	const char *const apParagraphs[] = {Paragraph.c_str()};
+	const SWikiSection Section{"Guide", apParagraphs, 1};
+	const SWikiDocument Document{"wiki-panel-reset-test", "Reset guide", &Section, 1};
+	IUiContext Ctx = MakeContext();
+	Ctx.m_pStorage = Graphics().m_pStorage;
+	qm_wiki_store::Init(Ctx.m_pStorage);
+	ASSERT_TRUE(qm_wiki_store::SaveOverride(Document.m_pId, "Small override.", nullptr));
+	OpenWikiDocumentPopup(Ctx, Document);
+	Render();
+	ASSERT_TRUE(qm_wiki_panel_test::BeginEditing());
+
+	Click(WikiResetButton(ESettingsSecondaryPanelKind::NEWS));
+	EXPECT_FALSE(qm_wiki_store::HasOverride(Document.m_pId));
+	EXPECT_TRUE(qm_wiki_panel_test::IsOpen());
+	EXPECT_FALSE(qm_wiki_panel_test::IsEditing());
+	EXPECT_FALSE(qm_wiki_panel_test::BeginEditing());
 }

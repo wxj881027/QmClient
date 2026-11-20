@@ -61,6 +61,42 @@ TEST(MetalTypes, RejectsTextureSizeOverflow)
 	EXPECT_EQ(LayerHeight, 0U);
 }
 
+TEST(MetalTypes, SingleChannelUnmippedTextureAcceptsLargestRepresentableRow)
+{
+	SMetalTextureLayout Layout;
+	const size_t Width = std::numeric_limits<size_t>::max();
+	ASSERT_TRUE(MetalTextureLayout(Width, 1, EMetalTextureFormat::R8, true, Layout));
+	EXPECT_EQ(Layout.m_RowBytes, Width);
+	EXPECT_EQ(Layout.m_DataBytes, Width);
+	EXPECT_EQ(Layout.m_MipLevels, 1U);
+}
+
+TEST(MetalTypes, MipTotalOverflowClearsPartialLayout)
+{
+	SMetalTextureLayout Layout{4, 8, 64, 4};
+	const size_t Width = std::numeric_limits<size_t>::max() / 2 + 2;
+	EXPECT_FALSE(MetalTextureLayout(Width, 1, EMetalTextureFormat::R8, false, Layout));
+	EXPECT_EQ(Layout.m_BytesPerPixel, 0U);
+	EXPECT_EQ(Layout.m_RowBytes, 0U);
+	EXPECT_EQ(Layout.m_DataBytes, 0U);
+	EXPECT_EQ(Layout.m_MipLevels, 0U);
+}
+
+TEST(MetalTypes, ArrayTotalOverflowClearsDimensionsAndLayout)
+{
+	SMetalTextureLayout Layout{4, 8, 64, 4};
+	size_t LayerWidth = 123;
+	size_t LayerHeight = 456;
+	const size_t SourceWidth = std::numeric_limits<size_t>::max() / 16 * 16;
+	EXPECT_FALSE(MetalTextureArrayLayout(SourceWidth, 16, EMetalTextureFormat::R8, true, LayerWidth, LayerHeight, Layout));
+	EXPECT_EQ(LayerWidth, 0U);
+	EXPECT_EQ(LayerHeight, 0U);
+	EXPECT_EQ(Layout.m_BytesPerPixel, 0U);
+	EXPECT_EQ(Layout.m_RowBytes, 0U);
+	EXPECT_EQ(Layout.m_DataBytes, 0U);
+	EXPECT_EQ(Layout.m_MipLevels, 0U);
+}
+
 TEST(MetalTypes, ValidatesSubregionsWithoutOverflow)
 {
 	EXPECT_TRUE(MetalValidateSubregion(16, 8, 0, 0, 16, 8));
@@ -68,22 +104,6 @@ TEST(MetalTypes, ValidatesSubregionsWithoutOverflow)
 	EXPECT_FALSE(MetalValidateSubregion(16, 8, 5, 0, 12, 8));
 	EXPECT_FALSE(MetalValidateSubregion(16, 8, 0, 0, 0, 1));
 	EXPECT_FALSE(MetalValidateSubregion(16, 8, std::numeric_limits<size_t>::max(), 0, 1, 1));
-}
-
-TEST(MetalTypes, RejectsStaleTextureHandles)
-{
-	CMetalTextureRegistry Registry;
-	const SMetalTextureHandle First = Registry.Allocate(7);
-	ASSERT_TRUE(Registry.IsValid(First));
-	EXPECT_FALSE(Registry.Allocate(7).IsValid());
-	ASSERT_TRUE(Registry.Release(First));
-	EXPECT_FALSE(Registry.IsValid(First));
-
-	const SMetalTextureHandle Second = Registry.Allocate(7);
-	ASSERT_TRUE(Registry.IsValid(Second));
-	EXPECT_NE(First.m_Generation, Second.m_Generation);
-	EXPECT_FALSE(Registry.Release(First));
-	EXPECT_TRUE(Registry.IsValid(Second));
 }
 
 TEST(MetalTypes, ValidatesBufferLayoutsAndRanges)
@@ -101,25 +121,6 @@ TEST(MetalTypes, ValidatesBufferLayoutsAndRanges)
 	EXPECT_FALSE(MetalValidateBufferRange(128, 129, 1));
 	EXPECT_FALSE(MetalValidateBufferRange(128, 127, 2));
 	EXPECT_FALSE(MetalValidateBufferRange(128, 0, 0));
-}
-
-TEST(MetalTypes, RejectsStaleBufferHandlesAndPreservesMetadata)
-{
-	CMetalBufferRegistry Registry;
-	const SMetalBufferHandle First = Registry.Allocate(4, 256, true);
-	ASSERT_TRUE(Registry.IsValid(First));
-	EXPECT_EQ(Registry.DataBytes(First), 256U);
-	EXPECT_TRUE(Registry.IsOneTimeUse(First));
-	EXPECT_FALSE(Registry.Allocate(4, 8, false).IsValid());
-	ASSERT_TRUE(Registry.Release(First));
-	EXPECT_FALSE(Registry.IsValid(First));
-
-	const SMetalBufferHandle Second = Registry.Allocate(4, 512, false);
-	ASSERT_TRUE(Registry.IsValid(Second));
-	EXPECT_NE(First.m_Generation, Second.m_Generation);
-	EXPECT_EQ(Registry.DataBytes(Second), 512U);
-	EXPECT_FALSE(Registry.IsOneTimeUse(Second));
-	EXPECT_FALSE(Registry.Release(First));
 }
 
 TEST(MetalTypes, ValidatesVertexAttributeLayoutAgainstStride)
@@ -145,15 +146,6 @@ TEST(MetalTypes, MapsBlendModesToOpenGLCompatibleFactors)
 	const SMetalBlendState Additive = MetalBlendState(EMetalBlendMode::ADDITIVE);
 	EXPECT_TRUE(Additive.m_Enabled);
 	EXPECT_EQ(Additive.m_Destination, EMetalBlendFactor::ONE);
-}
-
-TEST(MetalTypes, PipelineKeySeparatesRenderVariants)
-{
-	const SMetalPipelineKey Base{0, 1, static_cast<uint8_t>(EMetalBlendMode::ALPHA), false, false};
-	EXPECT_EQ(Base, Base);
-	EXPECT_NE(Base, (SMetalPipelineKey{0, 1, static_cast<uint8_t>(EMetalBlendMode::ADDITIVE), false, false}));
-	EXPECT_NE(Base, (SMetalPipelineKey{0, 1, static_cast<uint8_t>(EMetalBlendMode::ALPHA), true, false}));
-	EXPECT_NE(Base, (SMetalPipelineKey{0, 2, static_cast<uint8_t>(EMetalBlendMode::ALPHA), false, false}));
 }
 
 TEST(MetalTypes, ChoosesOnlySupportedMultisampleCounts)

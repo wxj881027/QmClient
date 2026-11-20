@@ -14,6 +14,7 @@ struct SWikiContent
 	std::string m_Markdown;
 	bool m_HasUserOverride = false;
 	bool m_HasShippedFile = false;
+	bool m_ReadFailed = false;
 	// 相对 wiki/ 的文档路径（不含语言目录与扩展名），界面上用来提示编辑位置。
 	std::string m_RelativePath;
 };
@@ -29,6 +30,7 @@ namespace qm_wiki_store
 	SWikiContent ResolveDocument(const char *pDocumentId, const SWikiDocument &Fallback);
 
 	bool SaveOverride(const char *pRelativePath, const std::string &Markdown, std::string *pError);
+	// 没有覆盖也算成功，存储不可用或已有覆盖移除失败时返回 false。
 	bool DeleteOverride(const char *pRelativePath);
 	bool HasOverride(const char *pRelativePath);
 

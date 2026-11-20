@@ -36,6 +36,30 @@ TEST(UiV2Anim, DelayDefersAnimationStart)
 	EXPECT_NEAR(Runtime.GetValue(8, EUiAnimProperty::POS_Y), 8.0f, 0.001f);
 }
 
+TEST(UiV2Anim, RetargetedAnimationWaitsForTheNewDelay)
+{
+	CUiV2AnimationRuntime Runtime;
+	constexpr uint64_t NODE = 1;
+	constexpr EUiAnimProperty PROPERTY = EUiAnimProperty::ALPHA;
+	SUiAnimTransition Transition;
+	Transition.m_DurationSec = 0.5f;
+	Transition.m_Easing = EEasing::LINEAR;
+	Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+	Transition.m_RespectMotionLevel = false;
+
+	Runtime.SetValue(NODE, PROPERTY, 0.0f);
+	Runtime.ResolveTargetValue(NODE, PROPERTY, 1.0f, Transition);
+	Runtime.Advance(0.25f);
+	ASSERT_FLOAT_EQ(Runtime.GetValue(NODE, PROPERTY), 0.5f);
+
+	Transition.m_DelaySec = 0.25f;
+	EXPECT_FLOAT_EQ(Runtime.ResolveTargetValue(NODE, PROPERTY, 0.0f, Transition), 0.5f);
+	Runtime.Advance(0.125f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NODE, PROPERTY), 0.5f);
+	Runtime.Advance(0.25f);
+	EXPECT_LT(Runtime.GetValue(NODE, PROPERTY), 0.5f);
+}
+
 TEST(UiV2Anim, ZeroDeltaTimeDoesNotAdvance)
 {
 	CUiV2AnimationRuntime Runtime;
@@ -45,6 +69,18 @@ TEST(UiV2Anim, ZeroDeltaTimeDoesNotAdvance)
 	Runtime.Advance(0.0f);
 	EXPECT_NEAR(Before, Runtime.GetValue(9, EUiAnimProperty::POS_X), 0.0001f);
 	EXPECT_TRUE(Runtime.HasActiveAnimation(9, EUiAnimProperty::POS_X));
+}
+
+TEST(UiV2Anim, ClockKeepsAdvancingWithShortFramesInLongSessions)
+{
+	CUiV2AnimationRuntime Runtime;
+	constexpr float LONG_SESSION_SEC = 131072.0f;
+	constexpr int FRAMES_PER_SECOND = 144;
+	Runtime.Advance(LONG_SESSION_SEC);
+	for(int Frame = 0; Frame < FRAMES_PER_SECOND; ++Frame)
+		Runtime.Advance(1.0f / FRAMES_PER_SECOND);
+
+	EXPECT_FLOAT_EQ(Runtime.TimeSec(), LONG_SESSION_SEC + 1.0f);
 }
 
 TEST(UiV2Anim, ZeroDurationCompletesImmediately)
@@ -246,4 +282,29 @@ TEST(UiV2Anim, IdleValueCacheEntriesAreEvictedWhileReadOnesSurvive)
 	EXPECT_FLOAT_EQ(Runtime.GetValue(1, EUiAnimProperty::POS_X, -1.0f), 0.0f);
 	// 从未被读取的一次性键在空闲窗口后淘汰，回落到调用方给的默认值。
 	EXPECT_FLOAT_EQ(Runtime.GetValue(2000, EUiAnimProperty::POS_X, -1.0f), -1.0f);
+}
+
+TEST(UiV2Anim, ValueCacheHardPruningKeepsActiveTrackValues)
+{
+	CUiV2AnimationRuntime Runtime;
+	constexpr uint64_t ACTIVE_NODE = 1;
+	constexpr EUiAnimProperty PROPERTY = EUiAnimProperty::ALPHA;
+	// 在清理前一帧填满缓存，确保这些键都还未到空闲淘汰时间。
+	for(int Frame = 1; Frame < 1024; ++Frame)
+		Runtime.Advance(1.0f / 60.0f);
+	for(uint64_t Node = 2; Node <= 9000; ++Node)
+		Runtime.SetValue(Node, PROPERTY, 1.0f);
+
+	SUiAnimTransition Transition;
+	Transition.m_DurationSec = 1.0f;
+	Transition.m_Easing = EEasing::LINEAR;
+	Transition.m_RespectMotionLevel = false;
+	Runtime.SetValue(ACTIVE_NODE, PROPERTY, 0.0f);
+	ASSERT_TRUE(Runtime.RequestAnimation({ACTIVE_NODE, PROPERTY, 1.0f, Transition}));
+	Runtime.Advance(0.25f);
+
+	ASSERT_TRUE(Runtime.HasActiveAnimation(ACTIVE_NODE, PROPERTY));
+	EXPECT_TRUE(Runtime.HasValue(ACTIVE_NODE, PROPERTY));
+	EXPECT_FLOAT_EQ(Runtime.GetValue(ACTIVE_NODE, PROPERTY), 0.25f);
+	EXPECT_FALSE(Runtime.HasValue(2, PROPERTY));
 }

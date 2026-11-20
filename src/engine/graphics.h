@@ -20,6 +20,13 @@
 #include <string>
 #include <vector>
 
+// 命令区只复制这两个字段；接收方在像素释放后归还自有上下文。
+struct SGraphicsUploadRelease
+{
+	void *m_pContext = nullptr;
+	void (*m_pfnRelease)(void *) noexcept = nullptr;
+};
+
 #define GRAPHICS_TYPE_UNSIGNED_BYTE 0x1401
 #define GRAPHICS_TYPE_UNSIGNED_SHORT 0x1403
 #define GRAPHICS_TYPE_INT 0x1404
@@ -364,8 +371,8 @@ public:
 	{
 		if(SourceDimension <= 0 || Level < 0)
 			return 0;
-		for(int CurrentLevel = 0; CurrentLevel <= Level; ++CurrentLevel)
-			SourceDimension = (SourceDimension + 1) / 2;
+		for(int CurrentLevel = 0; CurrentLevel <= Level && SourceDimension > 1; ++CurrentLevel)
+			SourceDimension = SourceDimension / 2 + SourceDimension % 2;
 		return SourceDimension;
 	}
 
@@ -662,13 +669,20 @@ public:
 	virtual void UnloadTexture(CTextureHandle *pIndex) = 0;
 	virtual CTextureHandle LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pTexName = nullptr) = 0;
 	virtual CTextureHandle LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pTexName = nullptr) = 0;
+	// false 保留图像和上下文供延期；true 已接管二者，纹理仍可能创建失败。
+	// 调用方在进入前须为原图及格式转换、后端缩放的并存像素预留额度。
+	virtual bool TryLoadTextureRawMoveOwned(CImageInfo &, int, const char *, SGraphicsUploadRelease &, CTextureHandle &Texture)
+	{
+		Texture.Invalidate();
+		return false;
+	}
 	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int Flags = 0) = 0;
 	virtual CTextureHandle FinishExternalTexture(CImageInfo &Image, int Flags, const char *pName, int /* PngliteIncompatible */)
 	{
 		return Image.m_pData ? LoadTextureRawMove(Image, Flags, pName) : CTextureHandle();
 	}
 	/**
-	 * 判断句柄当前是否真的还指向一张已分配贴图。
+	 * 检查纹理槽位是否仍由该句柄占用。GPU 上传由后端异步执行。
 	 *
 	 * 贴图被卸载（UnloadTexture）或经历显卡设备重建后，旧句柄的 IsValid() 依旧为真，
 	 * 但 TextureSet 会把它降级成「无贴图」，于是绘制出来的是一块没有贴图的实心色块。
@@ -894,21 +908,15 @@ public:
 	virtual const char *GetRendererString() = 0;
 	virtual const char *GetFatalError() const = 0;
 	/**
-	 * 非破坏性查询图形后端是否已经记录了致命错误。
+	 * 查询后端是否记录了尚未消费的致命错误。
+	 * 线程后端会先等待当前渲染命令执行结束。主循环用 TakeFatalError() 轮询。
 	 *
-	 * 后端一旦把致命错误提交出去（CGraphicsBackend_Threaded::ProcessError 会调用
-	 * dbg_assert_failed 直接中止进程），就没有任何恢复余地，所以主循环必须在提交
-	 * 之前轮询这个接口，才能在设备丢失这类故障上主动做恢复/退出，而不是让进程
-	 * 卡在断言弹出的模态错误框里（那会让心跳停止并写出误导性的 hang 报告）。
-	 *
-	 * @return true 表示后端已记录致命错误，图形输出不可继续信任。
+	 * @return true 表示存在尚未消费的致命错误。
 	 */
 	virtual bool HasFatalError() const { return false; }
 	/**
-	 * 检查并清除图形后端的致命错误标记。
-	 *
-	 * 只有在「已经决定不再信任本帧图形输出、准备收尾/重启」时才允许调用：
-	 * 清除标记的目的是让随后的收尾流程（关停仍会提交清理命令）不再重复触发断言。
+	 * 渲染线程空闲时消费致命错误，保留首份诊断并停止正常命令提交。
+	 * 渲染线程忙时立即返回 false，主循环可在后续帧继续轮询。
 	 *
 	 * @return true 表示刚刚消费掉一个致命错误。
 	 */
@@ -1158,12 +1166,15 @@ public:
 	// 宽高比回绘到窗口（导出期间预览不冻结）。读回是 PBO 异步的：这里排队本帧 DMA；
 	// 有完成信号的后端维持两笔在途并返回「上上帧」的像素（主线程与渲染线程按帧重叠），
 	// 其余后端逐帧等待并返回「上一帧」。在途帧由 FlushVideoFrameReadbacks 收尾。
-	virtual void EndVideoFrame(CImageInfo &Image)
+	// true 且图像为空表示正常预热；false 表示本帧申请或较早帧读回失败。
+	virtual bool EndVideoFrame(CImageInfo &Image)
 	{
 		(void)Image;
+		return false;
 	}
 	// 结算离屏视频的全部在途读回（录制收尾时调用）：按序把成功帧写入 pOutImages
-	// （最多 MaxImages 帧），返回写入数；没有在途请求返回 0。
+	// （最多 MaxImages 帧），返回写入数；没有在途请求返回 0。失败返回 -1，
+	// 调用方仍需释放输出数组中已转移的图像。
 	virtual int FlushVideoFrameReadbacks(CImageInfo *pOutImages, int MaxImages)
 	{
 		(void)pOutImages;
@@ -1186,8 +1197,7 @@ public:
 	virtual void SetWindowGrab(bool Grab) = 0;
 	virtual void NotifyWindow() = 0;
 
-	// be aware that this function should only be called from the graphics thread, and even then you should really know what you are doing
-	// this function always returns the pixels in RGB
+	// 仅在图形线程调用。读回成功时，回调输出 RGBA 像素、宽高和格式。
 	virtual TGLBackendReadPresentedImageData &GetReadPresentedImageDataFuncUnsafe() = 0;
 
 	virtual std::optional<SWarning> CurrentWarning() = 0;

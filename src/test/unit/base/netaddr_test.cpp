@@ -3,6 +3,8 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+
 TEST(NetAddr, FromUrlStringInvalid)
 {
 	NETADDR Addr;
@@ -133,6 +135,61 @@ TEST(NetAddr, FromStrInvalid)
 	EXPECT_TRUE(net_addr_from_str(&Addr, "[::]:"));
 	EXPECT_TRUE(net_addr_from_str(&Addr, "127.0.0.1:1a"));
 	EXPECT_TRUE(net_addr_from_str(&Addr, "[::]:c"));
+}
+
+TEST(NetAddr, OversizedDecimalOctetsCannotWrapIntoValidIpv4)
+{
+	NETADDR Addr;
+	for(const char *pAddress : {"4294967423.0.0.1", "127.4294967296.0.1", "127.0.4294967296.1", "127.0.0.4294967297"})
+	{
+		SCOPED_TRACE(pAddress);
+		EXPECT_NE(net_addr_from_str(&Addr, pAddress), 0);
+	}
+	const std::string LongAddress = std::string(1024, '9') + ".0.0.1";
+	EXPECT_NE(net_addr_from_str(&Addr, LongAddress.c_str()), 0);
+}
+
+TEST(NetAddr, OversizedDecimalPortsAreRejectedForBothAddressFamilies)
+{
+	NETADDR Addr;
+	EXPECT_NE(net_addr_from_str(&Addr, "127.0.0.1:4294967296"), 0);
+	EXPECT_NE(net_addr_from_str(&Addr, "[::1]:4294967296"), 0);
+	const std::string LongPort = "127.0.0.1:" + std::string(1024, '9');
+	EXPECT_NE(net_addr_from_str(&Addr, LongPort.c_str()), 0);
+}
+
+TEST(NetAddr, Ipv6RequiresTheWholeAddressToBeConsumed)
+{
+	NETADDR Addr;
+	EXPECT_NE(net_addr_from_str(&Addr, "[::1]suffix"), 0);
+	EXPECT_NE(net_addr_from_str(&Addr, "[::1]:8303suffix"), 0);
+	EXPECT_NE(net_addr_from_str(&Addr, "[::1]:8303:80"), 0);
+}
+
+TEST(NetAddr, ValidMaximumPortAndLeadingZeroesKeepTheirMeaning)
+{
+	NETADDR Addr;
+	ASSERT_EQ(net_addr_from_str(&Addr, "255.255.255.255:65535"), 0);
+	EXPECT_EQ(Addr.port, 65535);
+	ASSERT_EQ(net_addr_from_str(&Addr, "[::1]:65535"), 0);
+	EXPECT_EQ(Addr.port, 65535);
+	const std::string Address = std::string(64, '0') + "127.0.0.1:0008303";
+	ASSERT_EQ(net_addr_from_str(&Addr, Address.c_str()), 0);
+	EXPECT_EQ(Addr.ip[0], 127);
+	EXPECT_EQ(Addr.port, 8303);
+}
+
+TEST(NetAddr, ValidParseAfterRejectedOverflowProducesFreshAddress)
+{
+	NETADDR Addr;
+	EXPECT_NE(net_addr_from_str(&Addr, "127.0.0.1:99999999999999999999999"), 0);
+	ASSERT_EQ(net_addr_from_str(&Addr, "192.0.2.1:8303"), 0);
+	EXPECT_EQ(Addr.type, NETTYPE_IPV4);
+	EXPECT_EQ(Addr.ip[0], 192);
+	EXPECT_EQ(Addr.ip[1], 0);
+	EXPECT_EQ(Addr.ip[2], 2);
+	EXPECT_EQ(Addr.ip[3], 1);
+	EXPECT_EQ(Addr.port, 8303);
 }
 
 TEST(NetAddrDeathTest, StrInvalid1)

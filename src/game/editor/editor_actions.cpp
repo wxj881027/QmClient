@@ -11,6 +11,7 @@
 #include <game/editor/mapitems/layer_quads.h>
 #include <game/editor/mapitems/layer_sounds.h>
 #include <game/editor/mapitems/map.h>
+#include <game/editor/mapitems/sound.h>
 
 static const char *LayerTypeDisplayName(const std::shared_ptr<CLayer> &pLayer)
 {
@@ -41,6 +42,13 @@ static const char *LayerTypeDisplayName(const std::shared_ptr<CLayer> &pLayer)
 CEditorBrushDrawAction::CEditorBrushDrawAction(CEditorMap *pMap, int Group) :
 	IEditorAction(pMap), m_Group(Group)
 {
+	if(Group < 0 || (size_t)Group >= Map()->m_vpGroups.size())
+	{
+		SetInfos();
+		m_aDisplayText[0] = '\0';
+		return;
+	}
+
 	for(size_t k = 0; k < Map()->m_vpGroups[Group]->m_vpLayers.size(); k++)
 	{
 		auto pLayer = Map()->m_vpGroups[Group]->m_vpLayers[k];
@@ -164,11 +172,19 @@ void CEditorBrushDrawAction::Redo()
 
 void CEditorBrushDrawAction::Apply(bool Undo)
 {
+	bool Modified = false;
+
 	// Process normal tiles
 	for(auto const &Pair : m_vTileChanges)
 	{
+		if(m_Group < 0 || (size_t)m_Group >= Map()->m_vpGroups.size())
+			break;
+
 		int Layer = Pair.first;
-		std::shared_ptr<CLayer> pLayer = Map()->m_vpGroups[m_Group]->m_vpLayers[Layer];
+		const auto &vpLayers = Map()->m_vpGroups[m_Group]->m_vpLayers;
+		if(Layer < 0 || (size_t)Layer >= vpLayers.size())
+			continue;
+		const auto &pLayer = vpLayers[Layer];
 
 		if(pLayer->m_Type == LAYERTYPE_TILES)
 		{
@@ -181,91 +197,134 @@ void CEditorBrushDrawAction::Apply(bool Undo)
 				for(auto &Tile : Line)
 				{
 					int x = Tile.first;
+					if(x < 0 || x >= pLayerTiles->m_Width || y < 0 || y >= pLayerTiles->m_Height)
+						continue;
 					STileStateChange State = Tile.second;
 					pLayerTiles->SetTileIgnoreHistory(x, y, Undo ? State.m_Previous : State.m_Current);
+					Modified = true;
 				}
 			}
 		}
 	}
 
 	// Process speedup tiles
+	const auto &pSpeedupLayer = Map()->m_pSpeedupLayer;
 	for(auto const &SpeedupChange : m_SpeedupTileChanges)
 	{
 		int y = SpeedupChange.first;
+		if(!pSpeedupLayer || y < 0 || y >= pSpeedupLayer->m_Height)
+			continue;
 		auto Line = SpeedupChange.second;
 		for(auto &Tile : Line)
 		{
 			int x = Tile.first;
-			int Index = y * Map()->m_pSpeedupLayer->m_Width + x;
+			if(x < 0 || x >= pSpeedupLayer->m_Width)
+				continue;
+			const size_t Index = (size_t)y * pSpeedupLayer->m_Width + x;
 			SSpeedupTileStateChange State = Tile.second;
 			SSpeedupTileStateChange::SData Data = Undo ? State.m_Previous : State.m_Current;
 
-			Map()->m_pSpeedupLayer->m_pSpeedupTile[Index].m_Force = Data.m_Force;
-			Map()->m_pSpeedupLayer->m_pSpeedupTile[Index].m_MaxSpeed = Data.m_MaxSpeed;
-			Map()->m_pSpeedupLayer->m_pSpeedupTile[Index].m_Angle = Data.m_Angle;
-			Map()->m_pSpeedupLayer->m_pSpeedupTile[Index].m_Type = Data.m_Type;
-			Map()->m_pSpeedupLayer->m_pTiles[Index].m_Index = Data.m_Index;
+			pSpeedupLayer->m_pSpeedupTile[Index].m_Force = Data.m_Force;
+			pSpeedupLayer->m_pSpeedupTile[Index].m_MaxSpeed = Data.m_MaxSpeed;
+			pSpeedupLayer->m_pSpeedupTile[Index].m_Angle = Data.m_Angle;
+			pSpeedupLayer->m_pSpeedupTile[Index].m_Type = Data.m_Type;
+			pSpeedupLayer->m_pTiles[Index].m_Index = Data.m_Index;
+			Modified = true;
 		}
 	}
 
 	// Process tele tiles
+	const auto &pTeleLayer = Map()->m_pTeleLayer;
 	for(auto const &TeleChange : m_TeleTileChanges)
 	{
 		int y = TeleChange.first;
+		if(!pTeleLayer || y < 0 || y >= pTeleLayer->m_Height)
+			continue;
 		auto Line = TeleChange.second;
 		for(auto &Tile : Line)
 		{
 			int x = Tile.first;
-			int Index = y * Map()->m_pTeleLayer->m_Width + x;
+			if(x < 0 || x >= pTeleLayer->m_Width)
+				continue;
+			const size_t Index = (size_t)y * pTeleLayer->m_Width + x;
 			STeleTileStateChange State = Tile.second;
 			STeleTileStateChange::SData Data = Undo ? State.m_Previous : State.m_Current;
 
-			Map()->m_pTeleLayer->m_pTeleTile[Index].m_Number = Data.m_Number;
-			Map()->m_pTeleLayer->m_pTeleTile[Index].m_Type = Data.m_Type;
-			Map()->m_pTeleLayer->m_pTiles[Index].m_Index = Data.m_Index;
+			pTeleLayer->m_pTeleTile[Index].m_Number = Data.m_Number;
+			pTeleLayer->m_pTeleTile[Index].m_Type = Data.m_Type;
+			pTeleLayer->m_pTiles[Index].m_Index = Data.m_Index;
+			Modified = true;
 		}
 	}
 
 	// Process switch tiles
+	const auto &pSwitchLayer = Map()->m_pSwitchLayer;
 	for(auto const &SwitchChange : m_SwitchTileChanges)
 	{
 		int y = SwitchChange.first;
+		if(!pSwitchLayer || y < 0 || y >= pSwitchLayer->m_Height)
+			continue;
 		auto Line = SwitchChange.second;
 		for(auto &Tile : Line)
 		{
 			int x = Tile.first;
-			int Index = y * Map()->m_pSwitchLayer->m_Width + x;
+			if(x < 0 || x >= pSwitchLayer->m_Width)
+				continue;
+			const size_t Index = (size_t)y * pSwitchLayer->m_Width + x;
 			SSwitchTileStateChange State = Tile.second;
 			SSwitchTileStateChange::SData Data = Undo ? State.m_Previous : State.m_Current;
 
-			Map()->m_pSwitchLayer->m_pSwitchTile[Index].m_Number = Data.m_Number;
-			Map()->m_pSwitchLayer->m_pSwitchTile[Index].m_Type = Data.m_Type;
-			Map()->m_pSwitchLayer->m_pSwitchTile[Index].m_Flags = Data.m_Flags;
-			Map()->m_pSwitchLayer->m_pSwitchTile[Index].m_Delay = Data.m_Delay;
-			Map()->m_pSwitchLayer->m_pTiles[Index].m_Index = Data.m_Index;
+			pSwitchLayer->m_pSwitchTile[Index].m_Number = Data.m_Number;
+			pSwitchLayer->m_pSwitchTile[Index].m_Type = Data.m_Type;
+			pSwitchLayer->m_pSwitchTile[Index].m_Flags = Data.m_Flags;
+			pSwitchLayer->m_pSwitchTile[Index].m_Delay = Data.m_Delay;
+			pSwitchLayer->m_pTiles[Index].m_Index = Data.m_Index;
+			Modified = true;
 		}
 	}
 
 	// Process tune tiles
+	const auto &pTuneLayer = Map()->m_pTuneLayer;
 	for(auto const &TuneChange : m_TuneTileChanges)
 	{
 		int y = TuneChange.first;
+		if(!pTuneLayer || y < 0 || y >= pTuneLayer->m_Height)
+			continue;
 		auto Line = TuneChange.second;
 		for(auto &Tile : Line)
 		{
 			int x = Tile.first;
-			int Index = y * Map()->m_pTuneLayer->m_Width + x;
+			if(x < 0 || x >= pTuneLayer->m_Width)
+				continue;
+			const size_t Index = (size_t)y * pTuneLayer->m_Width + x;
 			STuneTileStateChange State = Tile.second;
 			STuneTileStateChange::SData Data = Undo ? State.m_Previous : State.m_Current;
 
-			Map()->m_pTuneLayer->m_pTuneTile[Index].m_Number = Data.m_Number;
-			Map()->m_pTuneLayer->m_pTuneTile[Index].m_Type = Data.m_Type;
-			Map()->m_pTuneLayer->m_pTiles[Index].m_Index = Data.m_Index;
+			pTuneLayer->m_pTuneTile[Index].m_Number = Data.m_Number;
+			pTuneLayer->m_pTuneTile[Index].m_Type = Data.m_Type;
+			pTuneLayer->m_pTiles[Index].m_Index = Data.m_Index;
+			Modified = true;
 		}
 	}
+	if(Modified)
+		Map()->OnModify();
 }
 
 // -------------------------------------------
+
+static void DeselectRemovedQuads(CEditorMap *pMap, const std::shared_ptr<CLayerQuads> &pLayer)
+{
+	if(pMap->SelectedLayer(0) != pLayer)
+		return;
+
+	auto &vSelected = pMap->m_vSelectedQuads;
+	vSelected.erase(std::remove_if(vSelected.begin(), vSelected.end(), [&](int Index) {
+		return Index < 0 || (size_t)Index >= pLayer->m_vQuads.size();
+	}),
+		vSelected.end());
+	if(vSelected.empty())
+		pMap->DeselectQuadPoints();
+}
 
 CEditorActionQuadPlace::CEditorActionQuadPlace(CEditorMap *pMap, int GroupIndex, int LayerIndex, std::vector<CQuad> &vBrush) :
 	CEditorActionLayerBase(pMap, GroupIndex, LayerIndex), m_vBrush(vBrush)
@@ -279,6 +338,7 @@ void CEditorActionQuadPlace::Undo()
 	for(size_t k = 0; k < m_vBrush.size(); k++)
 		pLayerQuads->m_vQuads.pop_back();
 
+	DeselectRemovedQuads(Map(), pLayerQuads);
 	Map()->OnModify();
 }
 void CEditorActionQuadPlace::Redo()
@@ -346,7 +406,11 @@ void CEditorActionDeleteQuad::Undo()
 	{
 		pLayerQuads->m_vQuads.insert(pLayerQuads->m_vQuads.begin() + m_vQuadsIndices[IndexId], m_vDeletedQuads[IndexId]);
 	}
-	Map()->m_vSelectedQuads = m_vQuadsIndices;
+	if(Map()->SelectedLayer(0) == m_pLayer)
+	{
+		Map()->m_vSelectedQuads = m_vQuadsIndices;
+		Map()->DeselectQuadPoints();
+	}
 
 	Map()->OnModify();
 }
@@ -360,7 +424,11 @@ void CEditorActionDeleteQuad::Redo()
 	{
 		pLayerQuads->m_vQuads.erase(pLayerQuads->m_vQuads.begin() + QuadId);
 	}
-	Map()->m_vSelectedQuads.clear();
+	if(Map()->SelectedLayer(0) == m_pLayer)
+	{
+		Map()->DeselectQuads();
+		Map()->DeselectQuadPoints();
+	}
 
 	Map()->OnModify();
 }
@@ -389,6 +457,7 @@ void CEditorActionEditQuadPoint::Apply(const std::vector<CPoint> &vValue)
 	CQuad &Quad = pLayerQuads->m_vQuads[m_QuadIndex];
 	dbg_assert(std::size(Quad.m_aPoints) == vValue.size(), "Expected %d values, got %d", (int)std::size(Quad.m_aPoints), (int)vValue.size());
 	std::copy_n(vValue.begin(), std::size(Quad.m_aPoints), Quad.m_aPoints);
+	Map()->OnModify();
 }
 
 CEditorActionEditQuadColor::CEditorActionEditQuadColor(CEditorMap *pMap, int GroupIndex, int LayerIndex, int QuadIndex, std::vector<CColor> const &vPreviousColors, std::vector<CColor> const &vCurrentColors) :
@@ -413,6 +482,7 @@ void CEditorActionEditQuadColor::Apply(std::vector<CColor> &vValue)
 	CQuad &Quad = pLayerQuads->m_vQuads[m_QuadIndex];
 	dbg_assert(std::size(Quad.m_aColors) == vValue.size(), "Expected %d values, got %d", (int)std::size(Quad.m_aColors), (int)vValue.size());
 	std::copy_n(vValue.begin(), std::size(Quad.m_aColors), Quad.m_aColors);
+	Map()->OnModify();
 }
 
 CEditorActionEditQuadProp::CEditorActionEditQuadProp(CEditorMap *pMap, int GroupIndex, int LayerIndex, int QuadIndex, EQuadProp Prop, int Previous, int Current) :
@@ -454,6 +524,7 @@ void CEditorActionEditQuadProp::Apply(int Value)
 		Quad.m_ColorEnv = Value;
 	else if(m_Prop == EQuadProp::PROP_COLOR_ENV_OFFSET)
 		Quad.m_ColorEnvOffset = Value;
+	Map()->OnModify();
 }
 
 CEditorActionEditQuadPointProp::CEditorActionEditQuadPointProp(CEditorMap *pMap, int GroupIndex, int LayerIndex, int QuadIndex, int PointIndex, EQuadPointProp Prop, int Previous, int Current) :
@@ -505,6 +576,7 @@ void CEditorActionEditQuadPointProp::Apply(int Value)
 	{
 		Quad.m_aTexcoords[m_PointIndex].y = Value;
 	}
+	Map()->OnModify();
 }
 
 // ---------------------------------------------------------------------------------------
@@ -515,7 +587,12 @@ CEditorActionBulk::CEditorActionBulk(CEditorMap *pMap, const std::vector<std::sh
 	// Assuming we only use bulk for actions of same type, if no display was provided
 	if(!pDisplay)
 	{
-		const char *pBaseDisplay = m_vpActions[0]->DisplayText();
+		if(m_vpActions.empty())
+		{
+			m_aDisplayText[0] = '\0';
+			return;
+		}
+		const char *pBaseDisplay = m_vpActions.front()->DisplayText();
 		if(m_vpActions.size() == 1)
 			str_copy(m_aDisplayText, pBaseDisplay);
 		else
@@ -960,7 +1037,7 @@ void CEditorActionEditLayerTilesProp::Undo()
 			pLayerTiles->Resize(m_Previous, pLayerTiles->m_Height);
 
 		RestoreLayer(LAYERTYPE_TILES, pLayerTiles);
-		if(pLayerTiles->m_HasGame || pLayerTiles->m_HasFront || pLayerTiles->m_HasSwitch || pLayerTiles->m_HasSpeedup || pLayerTiles->m_HasTune)
+		if(pLayerTiles->m_HasGame || pLayerTiles->m_HasFront || pLayerTiles->m_HasSwitch || pLayerTiles->m_HasSpeedup || pLayerTiles->m_HasTune || pLayerTiles->m_HasTele)
 		{
 			if(Map()->m_pFrontLayer && !pLayerTiles->m_HasFront)
 				RestoreLayer(LAYERTYPE_FRONT, Map()->m_pFrontLayer);
@@ -1119,9 +1196,10 @@ void CEditorActionEditLayerTilesProp::Redo()
 
 void CEditorActionEditLayerTilesProp::RestoreLayer(int Layer, const std::shared_ptr<CLayerTiles> &pLayerTiles)
 {
-	if(m_SavedLayers[Layer] != nullptr)
+	const auto SavedLayer = m_SavedLayers.find(Layer);
+	if(SavedLayer != m_SavedLayers.end() && SavedLayer->second)
 	{
-		std::shared_ptr<CLayerTiles> pSavedLayerTiles = std::static_pointer_cast<CLayerTiles>(m_SavedLayers[Layer]);
+		const auto pSavedLayerTiles = std::static_pointer_cast<CLayerTiles>(SavedLayer->second);
 		auto CopyLayer = [](void *pDst, const void *pSrc, int DstW, int DstH, int SrcW, int SrcH, size_t TileSize) {
 			const int CopyW = minimum(DstW, SrcW);
 			const int CopyH = minimum(DstH, SrcH);
@@ -1280,6 +1358,8 @@ void CEditorActionAppendMap::Undo()
 	// Delete added sounds
 	while((int)Map()->m_vpSounds.size() > m_PrevInfo.m_Sounds)
 	{
+		if(Editor()->m_ToolbarPreviewSound == Map()->m_vpSounds.back()->m_SoundId)
+			Editor()->m_ToolbarPreviewSound = -1;
 		Map()->m_vpSounds.pop_back();
 	}
 
@@ -1318,14 +1398,14 @@ void CEditorActionAppendMap::Undo()
 	Map()->OnModify();
 }
 
-void CEditorActionAppendMap::Redo()
+bool CEditorActionAppendMap::TryRedo()
 {
 	const auto &&ErrorHandler = [this](const char *pErrorMessage) {
 		Editor()->ShowFileDialogError("%s", pErrorMessage);
 		log_error("editor/append", "%s", pErrorMessage);
 	};
 	// Redo is just re-appending the same map
-	Map()->Append(m_aMapName, IStorage::TYPE_ALL, true, ErrorHandler);
+	return Map()->Append(m_aMapName, IStorage::TYPE_ALL, true, ErrorHandler);
 }
 
 // ---------------------------
@@ -1375,15 +1455,15 @@ void CEditorActionTileArt::Undo()
 	}
 }
 
-void CEditorActionTileArt::Redo()
+bool CEditorActionTileArt::TryRedo()
 {
 	CImageInfo Image;
 	if(!Graphics()->LoadPng(Image, m_aFilename, IStorage::TYPE_ALL))
 	{
 		Editor()->ShowFileDialogError(Localize("Failed to load image from file '%s'.", "Editor"), m_aFilename);
-		return;
+		return false;
 	}
-	Map()->AddTileArt(std::move(Image), m_aFilename, true);
+	return Map()->AddTileArt(std::move(Image), m_aFilename, true);
 }
 
 // ---------------------------
@@ -1399,15 +1479,26 @@ void CEditorActionQuadArt::Undo()
 	// Delete added group (keep pointer for redo)
 	auto &vGroups = Map()->m_vpGroups;
 	auto It = std::find(vGroups.begin(), vGroups.end(), m_pGroup);
-	if(It != vGroups.end())
-		vGroups.erase(It);
+	if(It == vGroups.end())
+		return;
+
+	const int GroupIndex = It - vGroups.begin();
+	vGroups.erase(It);
+	if(Map()->m_SelectedGroup == GroupIndex)
+		Map()->SelectLayer(0, maximum(0, GroupIndex - 1));
+	else if(Map()->m_SelectedGroup > GroupIndex)
+		--Map()->m_SelectedGroup;
+	Map()->OnModify();
 }
 
 void CEditorActionQuadArt::Redo()
 {
 	auto &vGroups = Map()->m_vpGroups;
 	if(std::find(vGroups.begin(), vGroups.end(), m_pGroup) == vGroups.end())
+	{
 		vGroups.push_back(m_pGroup);
+		Map()->OnModify();
+	}
 }
 
 // ---------------------------------
@@ -1478,6 +1569,7 @@ void CEditorCommandAction::Undo()
 		break;
 	}
 	}
+	Map()->OnModify();
 }
 
 void CEditorCommandAction::Redo()
@@ -1515,6 +1607,7 @@ void CEditorCommandAction::Redo()
 		break;
 	}
 	}
+	Map()->OnModify();
 }
 
 // ------------------------------------------------
@@ -1529,7 +1622,10 @@ CEditorActionEnvelopeAdd::CEditorActionEnvelopeAdd(CEditorMap *pMap, CEnvelope::
 
 void CEditorActionEnvelopeAdd::Undo()
 {
-	// Undo is removing the envelope, which was added at the back of the list
+	// 撤销追加地图可能已清空包络列表。
+	if(Map()->m_vpEnvelopes.empty())
+		return;
+
 	Map()->m_vpEnvelopes.pop_back();
 	Map()->OnModify();
 	Map()->m_SelectedEnvelope = m_PreviousSelectedEnvelope;
@@ -2094,6 +2190,7 @@ void CEditorActionNewEmptyQuad::Undo()
 	std::shared_ptr<CLayerQuads> pLayerQuads = std::static_pointer_cast<CLayerQuads>(m_pLayer);
 	pLayerQuads->m_vQuads.pop_back();
 
+	DeselectRemovedQuads(Map(), pLayerQuads);
 	Map()->OnModify();
 }
 
@@ -2129,12 +2226,15 @@ void CEditorActionNewQuad::Undo()
 {
 	std::shared_ptr<CLayerQuads> pLayerQuads = std::static_pointer_cast<CLayerQuads>(m_pLayer);
 	pLayerQuads->m_vQuads.pop_back();
+	DeselectRemovedQuads(Map(), pLayerQuads);
+	Map()->OnModify();
 }
 
 void CEditorActionNewQuad::Redo()
 {
 	std::shared_ptr<CLayerQuads> pLayerQuads = std::static_pointer_cast<CLayerQuads>(m_pLayer);
 	pLayerQuads->m_vQuads.emplace_back(m_Quad);
+	Map()->OnModify();
 }
 
 // --------------
@@ -2149,10 +2249,12 @@ void CEditorActionMoveSoundSource::Undo()
 {
 	dbg_assert(m_pLayer->m_Type == LAYERTYPE_SOUNDS, Localize("Layer type does not match a sound layer", "Editor"));
 	std::static_pointer_cast<CLayerSounds>(m_pLayer)->m_vSources[m_SourceIndex].m_Position = m_OriginalPosition;
+	Map()->OnModify();
 }
 
 void CEditorActionMoveSoundSource::Redo()
 {
 	dbg_assert(m_pLayer->m_Type == LAYERTYPE_SOUNDS, Localize("Layer type does not match a sound layer", "Editor"));
 	std::static_pointer_cast<CLayerSounds>(m_pLayer)->m_vSources[m_SourceIndex].m_Position = m_CurrentPosition;
+	Map()->OnModify();
 }

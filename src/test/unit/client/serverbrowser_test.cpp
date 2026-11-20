@@ -6,28 +6,25 @@
 #include <engine/client/serverbrowser_http.h>
 #include <engine/client/serverbrowser_http_parse.h>
 #include <engine/client/serverbrowser_ping_cache.h>
-#include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/favorites.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
 #include <engine/shared/masterserver.h>
-#include <engine/sqlite.h>
-#include <engine/storage.h>
 
 #include <game/client/components/qmclient/browser_column_layout.h>
 #include <game/client/components/qmclient/browser_friend_list.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
 
 #include <gtest/gtest.h>
-#include <sqlite3.h>
-#include <test/test.h>
+#include <test/support/serverbrowser_test_access.h>
 
 #include <algorithm>
 #include <array>
 #include <limits>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -463,6 +460,16 @@ TEST(ServerBrowserStatusLayout, NarrowContentStacksFieldsFilterAndActionsWithout
 	EXPECT_GE(Layout.m_ConnectButton.x, Layout.m_RefreshButton.x + Layout.m_RefreshButton.w);
 }
 
+TEST(ServerBrowserStatusLayout, MapFilterRemainsWideEnoughToRenderAcrossInlineTransition)
+{
+	for(float Width : {549.0f, 550.0f, 600.0f, 666.0f, 667.0f})
+	{
+		SCOPED_TRACE(Width);
+		const auto Layout = QmBrowserStatusLayout({0.0f, 0.0f, Width, 100.0f}, false);
+		EXPECT_GE(Layout.m_MapFilter.w, 150.0f);
+	}
+}
+
 TEST(ServerBrowserStatusLayout, WidthTransitionsKeepEveryControlWithinMeasuredContent)
 {
 	for(float Width : {0.0f, 1.0f, 16.0f, 80.0f, 219.0f, 220.0f, 429.0f, 430.0f, 549.0f, 550.0f, 630.0f, 1000.0f})
@@ -535,67 +542,6 @@ TEST(ServerBrowserPanelLayout, InvalidExtentsProduceBoundedEmptyPanels)
 		EXPECT_FLOAT_EQ(Layout.m_Status.h, 0.0f);
 	}
 }
-
-class CServerBrowserTestAccess
-{
-public:
-	static void Initialize(CServerBrowser &Browser, IFriends *pFriends, IFavorites *pFavorites)
-	{
-		Browser.m_pFriends = pFriends;
-		Browser.m_pFavorites = pFavorites;
-	}
-	static void Add(CServerBrowser &Browser, const NETADDR &Address, const CServerInfo &Info)
-	{
-		Browser.SetInfo(Browser.Add(&Address, 1), Info);
-	}
-	static void ReplaceFirstAddress(CServerBrowser &Browser, const NETADDR &Address)
-	{
-		Browser.ReplaceEntry(Browser.m_vpServerlist[0], &Address, 1);
-	}
-	static void SetFirstInfo(CServerBrowser &Browser, const CServerInfo &Info)
-	{
-		Browser.SetInfo(Browser.m_vpServerlist[0], Info);
-	}
-	static void SetHttp(CServerBrowser &Browser, IServerBrowserHttp *pHttp)
-	{
-		Browser.m_pHttp = pHttp;
-		Browser.m_ServerlistType = IServerBrowser::TYPE_INTERNET;
-		Browser.m_RefreshingHttp = false;
-	}
-	static void Sort(CServerBrowser &Browser) { Browser.Sort(); }
-	static void CleanUp(CServerBrowser &Browser) { Browser.CleanUp(); }
-	static bool NeedsResort(const CServerBrowser &Browser) { return Browser.m_NeedResort; }
-	static void SetPingCache(CServerBrowser &Browser, IServerBrowserPingCache *pCache)
-	{
-		Browser.m_pPingCache = pCache;
-	}
-	static void SetLatency(CServerBrowser &Browser, NETADDR Address, int Latency)
-	{
-		Browser.SetLatency(Address, Latency);
-	}
-	static void SetDifficultyStarsFunction(CServerBrowser &Browser, std::function<int(const CServerInfo *)> Function)
-	{
-		Browser.m_MapDifficultyStarsFunction = std::move(Function);
-	}
-	static IServerBrowser::CServerEntry &FirstEntry(CServerBrowser &Browser) { return *Browser.m_vpServerlist[0]; }
-	static IServerBrowser::CServerEntry &Entry(CServerBrowser &Browser, int Index) { return *Browser.m_vpServerlist[Index]; }
-	static int NumQueuedRequests(const CServerBrowser &Browser) { return Browser.m_NumRequests; }
-	static int GenerateToken(CServerBrowser &Browser, const NETADDR &Addr) { return Browser.GenerateToken(Addr); }
-	static void ReleaseQueuedRequest(CServerBrowser &Browser)
-	{
-		if(Browser.m_pFirstReqServer != nullptr)
-			Browser.RemoveRequest(Browser.m_pFirstReqServer);
-	}
-	static void AgePingRequestWindow(CServerBrowser &Browser, const NETADDR &Addr)
-	{
-		NETADDR IpAddr = Addr;
-		IpAddr.type &= ~NETTYPE_TW7;
-		IpAddr.port = 0;
-		auto It = Browser.m_PingRequestTimeByIp.find(IpAddr);
-		if(It != Browser.m_PingRequestTimeByIp.end())
-			It->second -= 2 * CServerBrowser::PING_SAME_IP_DEDUP_SECONDS * time_freq();
-	}
-};
 
 namespace
 {
@@ -882,6 +828,51 @@ TEST_F(CServerBrowserStateTest, QmClientCountFollowsReplacedServerAddress)
 	EXPECT_NE(m_Browser.Find(Address), nullptr);
 }
 
+TEST_F(CServerBrowserStateTest, AcceptedQmCountsOwnSnapshotForServersAddedLater)
+{
+	std::unordered_map<std::string, int> Counts{{"127.0.0.1:8303", 4}, {"127.0.0.1:8304", 9}};
+	ASSERT_TRUE(m_Browser.SetQmClientServerCounts(Counts));
+	Counts.clear();
+	AddServer("127.0.0.1:8303", "Alpha", 1, 1, {});
+	AddServer("127.0.0.1:8304", "Beta", 1, 1, {});
+	ASSERT_EQ(m_Browser.NumServers(), 2);
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 4);
+	EXPECT_EQ(m_Browser.Get(1)->m_QmClientCount, 9);
+}
+
+TEST_F(CServerBrowserStateTest, EqualQmCountsAreAcceptedWithoutRequestingAnotherResort)
+{
+	AddServer("127.0.0.1:8303", "Alpha", 1, 1, {});
+	g_Config.m_BrSort = IServerBrowser::SORT_QM_CLIENTS;
+	ASSERT_TRUE(m_Browser.SetQmClientServerCounts({{"127.0.0.1:8303", 4}}));
+	CServerBrowserTestAccess::Sort(m_Browser);
+	ASSERT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+	EXPECT_TRUE(m_Browser.SetQmClientServerCounts({{"127.0.0.1:8303", 4}}));
+	EXPECT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 4);
+	EXPECT_TRUE(m_Browser.SetQmClientServerCounts({}));
+	EXPECT_TRUE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 0);
+}
+
+TEST_F(CServerBrowserStateTest, QmCountsReplaceIPv6AndUnmatchedRowsInSamePublication)
+{
+	const char *pAddress = "[2001:db8:abcd:1234::1]:8303";
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, pAddress));
+	char aCanonical[NETADDR_MAXSTRSIZE];
+	net_addr_str(&Address, aCanonical, sizeof(aCanonical), true);
+	AddServer(pAddress, "IPv6", 1, 1, {});
+	AddServer("127.0.0.1:8303", "IPv4", 1, 1, {});
+	ASSERT_TRUE(m_Browser.SetQmClientServerCounts({{aCanonical, 2}, {"127.0.0.1:8303", 8}}));
+	ASSERT_EQ(m_Browser.NumServers(), 2);
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 2);
+	EXPECT_EQ(m_Browser.Get(1)->m_QmClientCount, 8);
+	ASSERT_TRUE(m_Browser.SetQmClientServerCounts({{aCanonical, 5}}));
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 5);
+	EXPECT_EQ(m_Browser.Get(1)->m_QmClientCount, 0);
+}
+
 TEST_F(CServerBrowserStateTest, FriendListMovesOnlineEntriesAndKeepsServerSnapshots)
 {
 	ASSERT_TRUE(m_Friends.AddCategory("Team"));
@@ -957,29 +948,29 @@ TEST_F(CServerBrowserStateTest, RequestServerPingQueuesOnceAndRespectsFailureCoo
 	Entry.m_GotInfo = 1;
 
 	m_Browser.RequestServerPing(Address);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
-	EXPECT_TRUE(Entry.m_RequestQueued);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
+	EXPECT_EQ(CServerBrowserTestAccess::FirstRequest(m_Browser), &Entry);
 	EXPECT_TRUE(Entry.m_RequestIgnoreInfo);
 	EXPECT_EQ(Entry.m_RequestTime, 0);
 
 	// 重复调用（同一行每帧渲染）不重复入队。
 	m_Browser.RequestServerPing(Address);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
 
 	// 请求已发出后超时被释放：条目标记为补测失败，不会立刻重新入队。
 	Entry.m_RequestTime = time_get();
 	CServerBrowserTestAccess::ReleaseQueuedRequest(m_Browser);
-	ASSERT_FALSE(Entry.m_RequestQueued);
+	ASSERT_EQ(CServerBrowserTestAccess::FirstRequest(m_Browser), nullptr);
 	EXPECT_FALSE(Entry.m_PingProbePending);
 	EXPECT_TRUE(Entry.m_PingProbeFailed);
 	m_Browser.RequestServerPing(Address);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
 
 	// 已有可用实测值后不再补测。
 	Entry.m_Info.m_LatencyIsEstimated = false;
 	Entry.m_Info.m_Latency = 42;
 	m_Browser.RequestServerPing(Address);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
 }
 
 TEST_F(CServerBrowserStateTest, RequestServerPingOnlyMeasuresChinaServers)
@@ -993,7 +984,7 @@ TEST_F(CServerBrowserStateTest, RequestServerPingOnlyMeasuresChinaServers)
 	NETADDR Address;
 	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
 	m_Browser.RequestServerPing(Address);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
 }
 
 TEST_F(CServerBrowserStateTest, RequestServerPingDeduplicatesByIpAddress)
@@ -1014,9 +1005,9 @@ TEST_F(CServerBrowserStateTest, RequestServerPingDeduplicatesByIpAddress)
 	NETADDR SecondAddress;
 	ASSERT_FALSE(net_addr_from_str(&SecondAddress, "127.0.0.1:8304"));
 	m_Browser.RequestServerPing(FirstAddress);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
 	m_Browser.RequestServerPing(SecondAddress);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
 }
 
 TEST_F(CServerBrowserStateTest, PingReplyUpdatesEveryInstanceOnSameIpAndStopsRemeasuring)
@@ -1037,7 +1028,7 @@ TEST_F(CServerBrowserStateTest, PingReplyUpdatesEveryInstanceOnSameIpAndStopsRem
 	NETADDR Address;
 	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
 	m_Browser.RequestServerPing(Address);
-	ASSERT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	ASSERT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
 
 	// 模拟 GETINFO 回复：请求约 10ms 前发出，测得延迟应远小于估算值 199。
 	First.m_RequestTime = time_get() - time_freq() / 100;
@@ -1051,14 +1042,14 @@ TEST_F(CServerBrowserStateTest, PingReplyUpdatesEveryInstanceOnSameIpAndStopsRem
 	EXPECT_EQ(First.m_Info.m_Latency, Second.m_Info.m_Latency);
 	EXPECT_NE(First.m_Info.m_Latency, 199);
 	EXPECT_TRUE(CServerInfo::IsUsableLatency(First.m_Info.m_Latency));
-	EXPECT_FALSE(First.m_RequestQueued);
+	EXPECT_EQ(CServerBrowserTestAccess::FirstRequest(m_Browser), nullptr);
 	EXPECT_FALSE(First.m_PingProbePending);
 	EXPECT_FALSE(First.m_PingProbeFailed);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
 
 	// 已有实测值后，行再次可见也不会重复测速。
 	m_Browser.RequestServerPing(Address);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
 }
 
 TEST_F(CServerBrowserStateTest, FailedProbeLetsSiblingPortOnSameIpTryLater)
@@ -1080,21 +1071,21 @@ TEST_F(CServerBrowserStateTest, FailedProbeLetsSiblingPortOnSameIpTryLater)
 	ASSERT_FALSE(net_addr_from_str(&SecondAddress, "127.0.0.1:8304"));
 
 	m_Browser.RequestServerPing(FirstAddress);
-	ASSERT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	ASSERT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
 	First.m_RequestTime = time_get();
 	CServerBrowserTestAccess::ReleaseQueuedRequest(m_Browser);
 	ASSERT_TRUE(First.m_PingProbeFailed);
 
 	// 同 IP 的去重窗口内仍不重复探测。
 	m_Browser.RequestServerPing(SecondAddress);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
 
 	// 窗口过后，失败实例保持静默，探测机会交给存活的另一个实例。
 	CServerBrowserTestAccess::AgePingRequestWindow(m_Browser, FirstAddress);
 	m_Browser.RequestServerPing(FirstAddress);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 0);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
 	m_Browser.RequestServerPing(SecondAddress);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
 	EXPECT_TRUE(Second.m_PingProbePending);
 }
 
@@ -1110,7 +1101,7 @@ TEST_F(CServerBrowserStateTest, RefreshingServerListClearsProbeState)
 	Entry.m_Info.m_LatencyIsEstimated = true;
 	Entry.m_GotInfo = 1;
 	m_Browser.RequestServerPing(Address);
-	ASSERT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	ASSERT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
 	Entry.m_RequestTime = time_get();
 	CServerBrowserTestAccess::ReleaseQueuedRequest(m_Browser);
 	ASSERT_TRUE(Entry.m_PingProbeFailed);
@@ -1122,7 +1113,7 @@ TEST_F(CServerBrowserStateTest, RefreshingServerListClearsProbeState)
 	Refreshed.m_Info.m_LatencyIsEstimated = true;
 	Refreshed.m_GotInfo = 1;
 	m_Browser.RequestServerPing(Address);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
 }
 
 TEST_F(CServerBrowserStateTest, RequestServerPingAlsoMeasuresChineseNamedServerWithoutChinaLocation)
@@ -1138,7 +1129,7 @@ TEST_F(CServerBrowserStateTest, RequestServerPingAlsoMeasuresChineseNamedServerW
 	NETADDR Address;
 	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
 	m_Browser.RequestServerPing(Address);
-	EXPECT_EQ(CServerBrowserTestAccess::NumQueuedRequests(m_Browser), 1);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
 }
 
 TEST(ServerBrowserLatencyDisplay, FormatsUsableValuesAndPlaceholder)
@@ -1255,181 +1246,6 @@ TEST_F(CServerBrowserStateTest, UpdatingExistingServerInfoInvalidatesFriendListS
 	CServerBrowserTestAccess::SetFirstInfo(m_Browser, Updated);
 	EXPECT_NE(m_Browser.FriendListRevision(), Revision);
 	EXPECT_STREQ(m_Browser.Find(Address)->m_Info.m_aName, "Updated server");
-}
-
-TEST(ServerBrowser, PingCache)
-{
-	CTestInfo Info;
-	Info.m_DeleteTestStorageFilesOnSuccess = true;
-
-	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
-	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr) << "Error creating test storage";
-	auto pPingCache = std::unique_ptr<IServerBrowserPingCache>(CreateServerBrowserPingCache(pConsole.get(), pStorage.get()));
-
-	NETADDR Localhost4, Localhost6, OtherLocalhost4, OtherLocalhost6;
-	ASSERT_FALSE(net_addr_from_str(&Localhost4, "127.0.0.1:8303"));
-	ASSERT_FALSE(net_addr_from_str(&Localhost6, "[::1]:8304"));
-	ASSERT_FALSE(net_addr_from_str(&OtherLocalhost4, "127.0.0.1:8305"));
-	ASSERT_FALSE(net_addr_from_str(&OtherLocalhost6, "[::1]:8306"));
-	EXPECT_LT(net_addr_comp(&Localhost4, &Localhost6), 0);
-	NETADDR aLocalhostBoth[2] = {Localhost4, Localhost6};
-
-	EXPECT_EQ(pPingCache->NumEntries(), 0);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost4, 1), -1);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost6, 1), -1);
-	EXPECT_EQ(pPingCache->GetPing(aLocalhostBoth, 2), -1);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost4, 1), -1);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost6, 1), -1);
-
-	pPingCache->Load();
-
-	EXPECT_EQ(pPingCache->NumEntries(), 0);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost4, 1), -1);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost6, 1), -1);
-	EXPECT_EQ(pPingCache->GetPing(aLocalhostBoth, 2), -1);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost4, 1), -1);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost6, 1), -1);
-
-	// Newer pings overwrite older.
-	pPingCache->CachePing(Localhost4, 123);
-	pPingCache->CachePing(Localhost4, 234);
-	pPingCache->CachePing(Localhost4, 345);
-	pPingCache->CachePing(Localhost4, 456);
-	pPingCache->CachePing(Localhost4, 567);
-	pPingCache->CachePing(Localhost4, 678);
-	pPingCache->CachePing(Localhost4, 789);
-	pPingCache->CachePing(Localhost4, 890);
-	pPingCache->CachePing(Localhost4, 901);
-	pPingCache->CachePing(Localhost4, 135);
-	pPingCache->CachePing(Localhost4, 246);
-	pPingCache->CachePing(Localhost4, 357);
-	pPingCache->CachePing(Localhost4, 468);
-	pPingCache->CachePing(Localhost4, 579);
-	pPingCache->CachePing(Localhost4, 680);
-	pPingCache->CachePing(Localhost4, 791);
-	pPingCache->CachePing(Localhost4, 802);
-	pPingCache->CachePing(Localhost4, 913);
-
-	EXPECT_EQ(pPingCache->NumEntries(), 1);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost4, 1), 913);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost6, 1), -1);
-	EXPECT_EQ(pPingCache->GetPing(aLocalhostBoth, 2), 913);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost4, 1), 913);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost6, 1), -1);
-
-	pPingCache->CachePing(Localhost4, 234);
-	pPingCache->CachePing(Localhost6, 345);
-	EXPECT_EQ(pPingCache->NumEntries(), 2);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost4, 1), 234);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost6, 1), 345);
-	EXPECT_EQ(pPingCache->GetPing(aLocalhostBoth, 2), 234);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost4, 1), 234);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost6, 1), 345);
-
-	// Port doesn't matter for overwriting.
-	pPingCache->CachePing(Localhost4, 1337);
-	EXPECT_EQ(pPingCache->NumEntries(), 2);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost4, 1), 1337);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost6, 1), 345);
-	EXPECT_EQ(pPingCache->GetPing(aLocalhostBoth, 2), 345);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost4, 1), 1337);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost6, 1), 345);
-
-	pPingCache.reset(CreateServerBrowserPingCache(pConsole.get(), pStorage.get()));
-
-	// Persistence.
-	pPingCache->Load();
-	EXPECT_EQ(pPingCache->NumEntries(), 2);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost4, 1), 1337);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost6, 1), 345);
-	EXPECT_EQ(pPingCache->GetPing(aLocalhostBoth, 2), 345);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost4, 1), 1337);
-	EXPECT_EQ(pPingCache->GetPing(&OtherLocalhost6, 1), 345);
-
-	// 重复加载必须复位读取语句，周期性缓存刷新不能把 SQLITE_DONE 当作失败。
-	pPingCache->Load();
-	EXPECT_EQ(pPingCache->NumEntries(), 2);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost4, 1), 1337);
-	EXPECT_EQ(pPingCache->GetPing(&Localhost6, 1), 345);
-}
-
-namespace
-{
-	// 配置项在测试失败提前返回时也要还原，避免污染后续用例看到的“默认值”。
-	class CScopedPingCacheMaxAge
-	{
-		int m_Previous;
-
-	public:
-		explicit CScopedPingCacheMaxAge(int Value) : m_Previous(g_Config.m_QmPingCacheMaxAgeHours)
-		{
-			g_Config.m_QmPingCacheMaxAgeHours = Value;
-		}
-		~CScopedPingCacheMaxAge() { g_Config.m_QmPingCacheMaxAgeHours = m_Previous; }
-		void Set(int Value) { g_Config.m_QmPingCacheMaxAgeHours = Value; }
-	};
-}
-
-TEST(ServerBrowser, PingCacheIgnoresExpiredEntries)
-{
-	// 过期缓存值不能当实测延迟用：延迟列应回落到地区估算，而不是显示很久以前的测量值。
-	CTestInfo Info;
-	Info.m_DeleteTestStorageFilesOnSuccess = true;
-
-	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
-	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr) << "Error creating test storage";
-
-	NETADDR OldAddr, FreshAddr;
-	ASSERT_FALSE(net_addr_from_str(&OldAddr, "127.0.0.1:8303"));
-	ASSERT_FALSE(net_addr_from_str(&FreshAddr, "127.0.0.2:8303"));
-
-	// 直接写入缓存数据库：一条 30 天前的记录和一条刚写入的记录。
-	{
-		CSqlite pDisk = SqliteOpen(pStorage.get(), "ddnet-cache.sqlite3");
-		ASSERT_TRUE(pDisk) << "Error opening ping cache database";
-		ASSERT_EQ(sqlite3_exec(pDisk.get(), "CREATE TABLE IF NOT EXISTS server_pings (ip_address TEXT PRIMARY KEY NOT NULL, ping INTEGER NOT NULL, utc_timestamp TEXT NOT NULL)", nullptr, nullptr, nullptr), SQLITE_OK);
-		ASSERT_EQ(sqlite3_exec(pDisk.get(), "INSERT OR REPLACE INTO server_pings (ip_address, ping, utc_timestamp) VALUES ('127.0.0.1', 171, datetime('now', '-30 days')), ('127.0.0.2', 123, datetime('now'))", nullptr, nullptr, nullptr), SQLITE_OK);
-	}
-
-	CScopedPingCacheMaxAge MaxAgeHours(72);
-
-	auto pPingCache = std::unique_ptr<IServerBrowserPingCache>(CreateServerBrowserPingCache(pConsole.get(), pStorage.get()));
-	pPingCache->Load();
-	EXPECT_EQ(pPingCache->NumEntries(), 2);
-	EXPECT_EQ(pPingCache->GetPing(&OldAddr, 1), -1);
-	EXPECT_EQ(pPingCache->GetPing(&FreshAddr, 1), 123);
-
-	// 0 表示永不过期：旧记录重新可见。
-	MaxAgeHours.Set(0);
-	EXPECT_EQ(pPingCache->GetPing(&OldAddr, 1), 171);
-}
-
-TEST(ServerBrowser, PingCacheNeverExpiresWithDefaultConfig)
-{
-	// 默认配置必须永不过期（0）：30 天前的记录仍作为实测延迟使用，
-	// 延迟列不会因为缓存老化退回地区估算。
-	EXPECT_EQ(g_Config.m_QmPingCacheMaxAgeHours, 0);
-
-	CTestInfo Info;
-	Info.m_DeleteTestStorageFilesOnSuccess = true;
-	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
-	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr) << "Error creating test storage";
-
-	NETADDR OldAddr;
-	ASSERT_FALSE(net_addr_from_str(&OldAddr, "127.0.0.1:8303"));
-	{
-		CSqlite pDisk = SqliteOpen(pStorage.get(), "ddnet-cache.sqlite3");
-		ASSERT_TRUE(pDisk) << "Error opening ping cache database";
-		ASSERT_EQ(sqlite3_exec(pDisk.get(), "CREATE TABLE IF NOT EXISTS server_pings (ip_address TEXT PRIMARY KEY NOT NULL, ping INTEGER NOT NULL, utc_timestamp TEXT NOT NULL)", nullptr, nullptr, nullptr), SQLITE_OK);
-		ASSERT_EQ(sqlite3_exec(pDisk.get(), "INSERT OR REPLACE INTO server_pings (ip_address, ping, utc_timestamp) VALUES ('127.0.0.1', 171, datetime('now', '-30 days'))", nullptr, nullptr, nullptr), SQLITE_OK);
-	}
-
-	auto pPingCache = std::unique_ptr<IServerBrowserPingCache>(CreateServerBrowserPingCache(pConsole.get(), pStorage.get()));
-	pPingCache->Load();
-	EXPECT_EQ(pPingCache->GetPing(&OldAddr, 1), 171);
 }
 
 namespace

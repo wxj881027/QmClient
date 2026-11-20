@@ -8,6 +8,7 @@
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/UiTextRenderState.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/ui.h>
@@ -17,6 +18,8 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <new>
+#include <stdexcept>
 
 namespace
 {
@@ -303,7 +306,9 @@ void CQmMonitoring::UpdatePerformanceMetrics(SQmPerformanceMetrics &Perf)
 	Perf.m_FrameTimeUs = Client()->FrameTimeAverage() * 1000000.0f;
 	Perf.m_Fps = Perf.m_FrameTimeMs > 0.0f ? 1000.0f / Perf.m_FrameTimeMs : 0.0f;
 	Perf.m_PredictionTimeMs = (float)Client()->GetPredictionTime();
-	const SQmDevicePerfSample ProcessSample = ProcessPerfSamplerState().Snapshot().m_Sample;
+	auto &ProcessSampler = ProcessPerfSamplerState();
+	QmUpdateDevicePerfSamplerState(ProcessSampler, true);
+	const SQmDevicePerfSample ProcessSample = ProcessSampler.Snapshot().m_Sample;
 	Perf.m_CpuUsagePct = ProcessSample.m_CpuUsagePct;
 	Perf.m_TotalCpuUsagePct = ProcessSample.m_TotalCpuUsagePct;
 	Perf.m_MemoryUsageMb = ProcessSample.m_MemoryUsageMb;
@@ -405,17 +410,28 @@ void CQmMonitoring::RenderHud(const SQmMonitoringHudLayout &Layout) const
 	FormatMetricValue(aRtt, sizeof(aRtt), " ms", Net.m_Connected ? Net.m_PingMs : -1.0f);
 	FormatMetricValue(aPrediction, sizeof(aPrediction), " ms", Net.m_Connected ? Net.m_PredictionLeadMs : -1.0f);
 
-	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
-	TextRender()->TextColor(Theme.m_TextTitle);
-	CUIRect RateRect, TimeRect;
-	Summary.VSplitLeft(Summary.w / 3.0f, &RateRect, &TimeRect);
-	Ui()->DoLabel(&RateRect, aFps, ui_token::font::TITLE * Scale, TEXTALIGN_ML);
-	str_format(aLine, sizeof(aLine), "%s  %s", Localize("Frame time"), aFrame);
-	Ui()->DoLabel(&TimeRect, aLine, ui_token::font::BODY * Scale, TEXTALIGN_MR);
-	TextRender()->TextColor(Theme.m_TextBody.WithMultipliedAlpha(ui_token::color::TEXT_SECONDARY.a));
-	str_format(aLine, sizeof(aLine), "%s  %s     %s  %s", Localize("RTT"), aRtt, Localize("Prediction lead"), aPrediction);
-	Ui()->DoLabel(&Network, aLine, ui_token::font::BODY * Scale, TEXTALIGN_ML);
-	TextRender()->TextColor(PreviousTextColor);
+	try
+	{
+		const CUiScopedTextRenderState TextState(*TextRender());
+		TextRender()->TextColor(Theme.m_TextTitle);
+		CUIRect RateRect, TimeRect;
+		Summary.VSplitLeft(Summary.w / 3.0f, &RateRect, &TimeRect);
+		Ui()->DoLabel(&RateRect, aFps, ui_token::font::TITLE * Scale, TEXTALIGN_ML);
+		str_format(aLine, sizeof(aLine), "%s  %s", Localize("Frame time"), aFrame);
+		Ui()->DoLabel(&TimeRect, aLine, ui_token::font::BODY * Scale, TEXTALIGN_MR);
+		TextRender()->TextColor(Theme.m_TextBody.WithMultipliedAlpha(ui_token::color::TEXT_SECONDARY.a));
+		str_format(aLine, sizeof(aLine), "%s  %s     %s  %s", Localize("RTT"), aRtt, Localize("Prediction lead"), aPrediction);
+		Ui()->DoLabel(&Network, aLine, ui_token::font::BODY * Scale, TEXTALIGN_ML);
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 字形准备失败时跳过这一帧的调试图表，下一帧继续绘制。
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		return;
+	}
 
 	const float BarWidth = Graph.w / BAR_COUNT;
 	const int Visible = std::min(m_HistoryCount, BAR_COUNT);

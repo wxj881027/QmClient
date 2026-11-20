@@ -1,5 +1,6 @@
 #include <game/client/QmUi/SettingsParagraph.h>
 
+#include <test/support/prediction_allocation_failure.h>
 #include <test/support/qm_real_ui_fixture.h>
 
 namespace
@@ -40,4 +41,45 @@ TEST_F(QmSettingsParagraph, RepeatedDrawReusesContainerAndNewSpacingRebuildsLayo
 	const auto Before = m_Ui.TextRender()->QmTextRuntimeBudgetSnapshot().m_TextContainerNew;
 	DrawSettingsParagraph(&m_Ui, State, Rect, pText, 14, 4);
 	EXPECT_EQ(m_Ui.TextRender()->QmTextRuntimeBudgetSnapshot().m_TextContainerNew, Before);
+}
+
+TEST_F(QmSettingsParagraph, InitialAllocationFailureKeepsTheSpacingCacheAndCanRetryDrawing)
+{
+	SSettingsParagraphState State;
+	const CUIRect Rect{0, 0, 80, 200};
+	const ColorRGBA BeforeColor = m_Ui.TextRender()->GetTextColor();
+	bool Triggered = false;
+	{
+		CPredictionAllocationFailure Fault;
+		DrawSettingsParagraph(&m_Ui, State, Rect, "Alice, Bob, Carol, Daniel", 14, 4);
+		Triggered = Fault.Triggered();
+	}
+	ASSERT_TRUE(Triggered);
+	ASSERT_FALSE(State.m_Element.IsRegistered());
+	EXPECT_FALSE(State.m_Element.AreRectsInit());
+	EXPECT_FLOAT_EQ(State.m_LineSpacing, -1.0f);
+	EXPECT_EQ(m_Ui.TextRender()->GetTextColor(), BeforeColor);
+	DrawSettingsParagraph(&m_Ui, State, Rect, "Alice, Bob, Carol, Daniel", 14, 4);
+	ASSERT_TRUE(State.m_Element.IsRegistered());
+	EXPECT_FLOAT_EQ(State.m_LineSpacing, 4.0f);
+	EXPECT_GT(State.m_Element.Rect(0)->m_Cursor.m_GlyphCount, 0);
+	EXPECT_TRUE(State.m_Element.Rect(0)->m_UITextContainer.Valid());
+}
+
+TEST_F(QmSettingsParagraph, MeasurementOnlyDrawDoesNotAttemptElementInitialization)
+{
+	SSettingsParagraphState State;
+	bool Triggered = false;
+	{
+		CUiScopedMeasurement Measurement(&m_Ui);
+		{
+			CPredictionAllocationFailure Fault;
+			DrawSettingsParagraph(&m_Ui, State, {0, 0, 80, 200}, "Alice, Bob", 14, 4);
+			Triggered = Fault.Triggered();
+		}
+	}
+	EXPECT_FALSE(Triggered);
+	EXPECT_FALSE(State.m_Element.IsRegistered());
+	EXPECT_FALSE(State.m_Element.AreRectsInit());
+	EXPECT_FLOAT_EQ(State.m_LineSpacing, -1.0f);
 }

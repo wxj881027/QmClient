@@ -6,6 +6,7 @@
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
 
+#include <game/client/components/qmclient/chat_bind_config.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -15,13 +16,6 @@ CBindChat::CBind::CBind(const char *pName, const char *pCommand)
 {
 	str_copy(m_aName, pName);
 	str_copy(m_aCommand, pCommand);
-}
-
-bool CBindChat::CBind::CompContent(const CBind &Other) const
-{
-	if(str_comp(m_aCommand, Other.m_aCommand) != 0)
-		return false;
-	return true;
 }
 
 decltype(CBindChat::BIND_DEFAULTS) CBindChat::BIND_DEFAULTS = {
@@ -111,13 +105,13 @@ void CBindChat::ConBindchatDefaults(IConsole::IResult *pResult, void *pUserData)
 
 	for(const auto &[_, vBindDefaults] : CBindChat::BIND_DEFAULTS)
 		for(const CBindChat::CBindDefault &BindDefault : vBindDefaults)
-			pThis->AddBind(BindDefault.m_Bind);
+			if(!pThis->AddBind(BindDefault.m_Bind))
+				return;
 }
 
-void CBindChat::AddBind(const CBind &Bind)
+bool CBindChat::AddBind(const CBind &Bind)
 {
-	RemoveBind(Bind.m_aName); // Prevent duplicates
-	m_vBinds.push_back(Bind);
+	return QmPublishChatBind(m_vBinds, Bind);
 }
 
 bool CBindChat::RemoveBind(const char *pName)
@@ -205,10 +199,7 @@ bool CBindChat::ChatDoBinds(const char *pText)
 		{
 			ExecuteBind(Bind, pSpace ? pSpace + 1 : nullptr);
 			// Add to history (see CChat::SendChatQueued)
-			const int Length = str_length(pText);
-			CChat::CHistoryEntry *pEntry = Chat.m_History.Allocate(sizeof(CChat::CHistoryEntry) + Length);
-			pEntry->m_Team = 0; // All
-			str_copy(pEntry->m_aText, pText, Length + 1);
+			QmAppendChatHistory(Chat.m_History, 0, pText);
 			return true;
 		}
 	}
@@ -217,62 +208,12 @@ bool CBindChat::ChatDoBinds(const char *pText)
 
 void CBindChat::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
 {
-	CBindChat *pThis = (CBindChat *)pUserData;
-
-	auto Compare = [&](const CBindChat::CBind &A, const CBindChat::CBind &B) {
-		const int Res = str_utf8_comp_nocase(A.m_aName, B.m_aName);
-		return Res < 0 || (Res == 0 && str_comp(A.m_aName, B.m_aName) < 0);
-	};
-
-	std::vector<std::reference_wrapper<const CBindChat::CBind>> vDefaultBinds;
-	for(const auto &[_, vBindDefaults] : CBindChat::BIND_DEFAULTS)
-		for(const CBindChat::CBindDefault &BindDefault : vBindDefaults)
+	const auto *pThis = static_cast<const CBindChat *>(pUserData);
+	std::vector<std::reference_wrapper<const CBind>> vDefaultBinds;
+	for(const auto &[_, vBindDefaults] : BIND_DEFAULTS)
+		for(const CBindDefault &BindDefault : vBindDefaults)
 			vDefaultBinds.emplace_back(BindDefault.m_Bind);
-	std::sort(vDefaultBinds.begin(), vDefaultBinds.end(), Compare);
-
-	std::sort(pThis->m_vBinds.begin(), pThis->m_vBinds.end(), Compare);
-	for(CBind &Bind : pThis->m_vBinds)
-	{
-		const auto It = std::lower_bound(vDefaultBinds.begin(), vDefaultBinds.end(), Bind, Compare);
-		if(It != vDefaultBinds.end() && str_utf8_comp_nocase(It->get().m_aName, Bind.m_aName) == 0)
-		{
-			if(Bind.CompContent(*It)) // Don't write default binds
-			{
-				vDefaultBinds.erase(It);
-				continue;
-			}
-			else
-			{
-				vDefaultBinds.erase(It);
-			}
-		}
-
-		char aBuf[BINDCHAT_MAX_CMD * 2] = "";
-		char *pEnd = aBuf + sizeof(aBuf);
-		char *pDst;
-		str_append(aBuf, "bindchat \"");
-		// Escape name
-		pDst = aBuf + str_length(aBuf);
-		str_escape(&pDst, Bind.m_aName, pEnd);
-		str_append(aBuf, "\" \"");
-		// Escape command
-		pDst = aBuf + str_length(aBuf);
-		str_escape(&pDst, Bind.m_aCommand, pEnd);
-		str_append(aBuf, "\"");
-		pConfigManager->WriteLine(aBuf, ConfigDomain::TCLIENTCHATBINDS);
-	}
-	for(const auto &Bind : vDefaultBinds)
-	{
-		char aBuf[BINDCHAT_MAX_CMD * 2 + 32] = "";
-		char *pEnd = aBuf + sizeof(aBuf);
-		char *pDst;
-
-		str_append(aBuf, "unbindchat \"");
-		// Escape name
-		pDst = aBuf + str_length(aBuf);
-		str_escape(&pDst, Bind.get().m_aName, pEnd);
-		str_append(aBuf, "\"");
-
-		pConfigManager->WriteLine(aBuf, ConfigDomain::TCLIENTCHATBINDS);
-	}
+	const auto vLines = QmPrepareChatBindConfig(pThis->m_vBinds, std::move(vDefaultBinds));
+	for(const auto &Line : vLines)
+		pConfigManager->WriteLine(Line.c_str(), ConfigDomain::TCLIENTCHATBINDS);
 }

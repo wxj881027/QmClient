@@ -1,7 +1,7 @@
 #ifndef GAME_CLIENT_QMUI_SETTINGSTEXTPREWARM_H
 #define GAME_CLIENT_QMUI_SETTINGSTEXTPREWARM_H
 
-#include <base/str.h>
+#include "SettingsGlyphPrewarm.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -28,7 +28,8 @@ struct SSettingsTextPrewarmBudget
 class CSettingsTextPrewarm
 {
 	std::string m_Text;
-	std::vector<int> m_vGlyphs;
+	std::vector<std::pair<int, int>> m_vGlyphs;
+	size_t m_PlanCursor = 0;
 	size_t m_Cursor = 0;
 	int m_FontSize = 0;
 
@@ -41,33 +42,30 @@ public:
 		m_FontSize = 0;
 	}
 
-	void Prepare(const std::string &Text, int FontSize)
+	bool Prepare(const std::string &Text, int FontSize) noexcept
 	{
 		if(m_Text == Text && m_FontSize == FontSize)
-			return;
-		m_Text = Text;
-		m_FontSize = FontSize;
-		m_vGlyphs.clear();
-		m_Cursor = 0;
-		std::unordered_set<int> Seen;
-		for(const char *pCursor = m_Text.c_str(); *pCursor != '\0';)
+			return true;
+		try
 		{
-			const int Chr = str_utf8_decode(&pCursor);
-			if(Chr > 0 && Seen.insert(Chr).second)
-				m_vGlyphs.push_back(Chr);
+			std::string CandidateText = Text;
+			if(!PrepareSettingsGlyphQueue(m_vGlyphs, m_Cursor, m_PlanCursor, 0, CandidateText.c_str(), FontSize))
+				return false;
+			m_Text.swap(CandidateText);
+			m_FontSize = FontSize;
+			return true;
+		}
+		catch(...)
+		{
+			return false;
 		}
 	}
 
 	template<typename TNow, typename TPrewarm>
 	bool Advance(SSettingsTextPrewarmBudget &Budget, TNow &&Now, TPrewarm &&Prewarm)
 	{
-		while(m_Cursor < m_vGlyphs.size())
-		{
-			if(!Budget.ConsumeGlyph(Now()))
-				return false;
-			Prewarm(m_vGlyphs[m_Cursor], m_FontSize);
-			++m_Cursor;
-		}
+		if(!AdvanceSettingsGlyphQueueWhile(m_vGlyphs, m_Cursor, [&] { return Budget.ConsumeGlyph(Now()); }, std::forward<TPrewarm>(Prewarm)))
+			return false;
 		// 单次字形生成不可中断，超时后把容器构建留给下一轮。
 		return Budget.HasTime(Now());
 	}

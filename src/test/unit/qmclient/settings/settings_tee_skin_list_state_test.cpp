@@ -61,3 +61,46 @@ TEST(SettingsTeeSkinListState, SavedColorVariantOnlySelectsTheMatchingAppearance
 	EXPECT_FALSE(SettingsTeeSkinEntryMatches("bluekitty", Color, {"default", true, 123, 456}));
 	EXPECT_TRUE(SettingsTeeSkinEntryMatches("bluekitty", SSettingsSkinListColorKey{false, 123, 456}, {"bluekitty", false, 789, 987}));
 }
+
+TEST(SettingsTee7SkinDeletion, ConfirmedSkinCanBeHiddenByFilter)
+{
+	std::string PendingName = "local-skin";
+	const auto Target = TakeSettingsTee7SkinDeletion(PendingName, CUi::SConfirmPopupContext::CONFIRMED, false, "local-skin", -1);
+	ASSERT_TRUE(Target.has_value());
+	EXPECT_EQ(Target->m_Name, "local-skin");
+	EXPECT_EQ(Target->m_ReplacementIndex, -1);
+}
+
+TEST(SettingsTee7SkinDeletion, SelectionChangePreservesTheConfirmedTargetAndCurrentSelection)
+{
+	std::string PendingName = "local-skin";
+	const auto Target = TakeSettingsTee7SkinDeletion(PendingName, CUi::SConfirmPopupContext::CONFIRMED, false, "another-skin", 2);
+	ASSERT_TRUE(Target.has_value());
+	EXPECT_EQ(Target->m_Name, "local-skin");
+	EXPECT_EQ(Target->m_ReplacementIndex, -1);
+}
+
+TEST(SettingsTee7SkinDeletion, VisibleSelectionOffersItsRowAsReplacementOnce)
+{
+	std::string PendingName = "local-skin";
+	const auto Target = TakeSettingsTee7SkinDeletion(PendingName, CUi::SConfirmPopupContext::CONFIRMED, false, "local-skin", 2);
+	ASSERT_TRUE(Target.has_value());
+	EXPECT_EQ(Target->m_ReplacementIndex, 2);
+	EXPECT_FALSE(TakeSettingsTee7SkinDeletion(PendingName, CUi::SConfirmPopupContext::CONFIRMED, false, "local-skin", 2).has_value());
+}
+
+TEST(SettingsTee7SkinDeletion, CancelClearsThePendingTarget)
+{
+	std::string PendingName = "local-skin";
+	EXPECT_FALSE(TakeSettingsTee7SkinDeletion(PendingName, CUi::SConfirmPopupContext::CANCELED, true, "local-skin", 0).has_value());
+	EXPECT_TRUE(PendingName.empty());
+}
+
+TEST(SettingsTee7SkinDeletion, DismissalClearsAnUnconfirmedTarget)
+{
+	std::string PendingName = "local-skin";
+	EXPECT_FALSE(TakeSettingsTee7SkinDeletion(PendingName, CUi::SConfirmPopupContext::UNSET, true, "local-skin", 0).has_value());
+	EXPECT_EQ(PendingName, "local-skin");
+	EXPECT_FALSE(TakeSettingsTee7SkinDeletion(PendingName, CUi::SConfirmPopupContext::UNSET, false, "local-skin", 0).has_value());
+	EXPECT_TRUE(PendingName.empty());
+}

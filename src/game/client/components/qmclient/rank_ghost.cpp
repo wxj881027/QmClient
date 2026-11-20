@@ -14,9 +14,11 @@
 #include <engine/client.h>
 #include <engine/client/ghost.h>
 #include <engine/graphics.h>
+#include <engine/http_response_validation.h>
 #include <engine/map.h>
 #include <engine/message.h>
 #include <engine/shared/compression.h>
+#include <engine/shared/demo_output.h>
 #include <engine/shared/json.h>
 #include <engine/shared/network.h>
 #include <engine/shared/protocol_ex.h>
@@ -41,11 +43,19 @@
 #include <zlib.h>
 
 #include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <limits>
 #include <map>
+#include <new>
 #include <set>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 using rank_ghost_fetch::ValidateOrUnpackDemo;
@@ -157,46 +167,6 @@ namespace
 		RemoveOlderDuplicates(pDemoDir, ".demo", false);
 		for(const std::string &Path : vRemove)
 			pStorage->RemoveFile(Path.c_str(), IStorage::TYPE_SAVE);
-	}
-
-	// ===== 旧目录迁移/清理（qmclient/rank1 启用前的一次性处理） =====
-
-	void RemoveGhoFilesIn(IStorage *pStorage, const char *pDir)
-	{
-		for(const SCacheNameTime &File : ListCacheFiles(pStorage, pDir, ".gho"))
-		{
-			char aPath[IO_MAX_PATH_LENGTH];
-			str_format(aPath, sizeof(aPath), "%s/%s", pDir, File.m_Name.c_str());
-			pStorage->RemoveFile(aPath, IStorage::TYPE_SAVE);
-		}
-	}
-
-	struct SSubDirCollector
-	{
-		const char *m_pDir;
-		std::vector<std::string> *m_pOut;
-	};
-
-	int CollectSubDirCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
-	{
-		(void)StorageType;
-		auto *pCtx = (SSubDirCollector *)pUser;
-		if(IsDir)
-			pCtx->m_pOut->push_back(std::string(pCtx->m_pDir) + "/" + pInfo->m_pName);
-		return 0;
-	}
-
-	// 清理旧影子目录（全部是时间轴修复前的产物，含多轨子目录）
-	void CleanupLegacyGhosts(IStorage *pStorage, const char *pDir)
-	{
-		if(!pStorage->FolderExists(pDir, IStorage::TYPE_SAVE))
-			return;
-		RemoveGhoFilesIn(pStorage, pDir);
-		std::vector<std::string> vSubDirs;
-		SSubDirCollector Collector{pDir, &vSubDirs};
-		pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, pDir, CollectSubDirCallback, &Collector);
-		for(const std::string &Sub : vSubDirs)
-			RemoveGhoFilesIn(pStorage, Sub.c_str());
 	}
 
 	// 旧 demo 内容有效：搬到新目录复用（新命名优先，其次旧 uuid 命名）
@@ -328,7 +298,6 @@ void CRankGhost::Fail(const char *pMessage)
 
 void CRankGhost::AbortTask()
 {
-	const bool DownloadInProgress = m_Stage == EStage::FETCH_DEMO;
 	if(m_pManifestRequest)
 	{
 		m_pManifestRequest->Abort();
@@ -345,8 +314,6 @@ void CRankGhost::AbortTask()
 	m_Stage = EStage::IDLE;
 	// 时间线补齐被中断时必须清掉标记，否则下一次正常解析会误跳过影子写出
 	m_EventRebuildOnly = false;
-	if(DownloadInProgress && m_aDemoStoragePath[0] != '\0')
-		Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
 }
 
 // 请求到达终态后清空目标：否则下一次清单刷新会把上次请求当成新请求重放。
@@ -398,11 +365,12 @@ void CRankGhost::OnUpdate()
 		const std::string &TargetMap = !m_PendingMap.empty() ? m_PendingMap : m_ActiveEntry.m_Map;
 		if(MapReady && Client()->GetCurrentMap()[0] != '\0' && str_comp_nocase(Client()->GetCurrentMap(), TargetMap.c_str()) == 0 && Now >= m_RetryLoadNextAttempt)
 		{
-			if(LoadGhostTarget())
+			bool HaveTimeline = false;
+			if(LoadGhostTarget(&HaveTimeline))
 			{
 				m_RetryLoadPending = false;
 				NotifyLoaded(m_ActiveEntry.m_Names.c_str(), m_ActiveEntry.m_Time.c_str());
-				if(!ViewTimelineCached())
+				if(!HaveTimeline)
 					KickViewTimelineRebuild();
 			}
 			else
@@ -727,8 +695,9 @@ CRankGhost::STaskProgress CRankGhost::TaskProgress() const
 		{
 			const SParseContext &Parse = m_pParse->m_Context;
 			const int Cur = Parse.m_pPlayer->Info()->m_Info.m_CurrentTick;
-			const int RunTicks = Parse.m_RunEnd - Parse.m_RunStart;
-			Progress.m_Percent = RunTicks > 0 ? std::clamp((Cur - Parse.m_RunStart) * 100 / RunTicks, 0, 100) : 0;
+			const int64_t RunTicks = static_cast<int64_t>(Parse.m_RunEnd) - Parse.m_RunStart;
+			const int64_t Elapsed = static_cast<int64_t>(Cur) - Parse.m_RunStart;
+			Progress.m_Percent = RunTicks > 0 ? static_cast<int>(std::clamp<int64_t>(Elapsed * 100 / RunTicks, 0, 100)) : 0;
 		}
 		break;
 	default:
@@ -901,7 +870,7 @@ void CRankGhost::LookupInManifest()
 	// 目录准备与旧影子清理：无论当前地图是否有官方回放都执行，
 	// 保证“回放目录”按钮与迁移逻辑不依赖具体条目
 	EnsureFolders(Storage());
-	CleanupLegacyGhosts(Storage(), LEGACY_GHOST_DIR);
+	qmclient::rank_ghost::CleanupLegacyGhosts(*Storage(), LEGACY_GHOST_DIR);
 
 	// 仅预热清单的浏览请求（Rank 1 页面 EnsureManifest）没有待执行目标
 	if(m_PendingMap.empty() && m_PendingDemo.empty())
@@ -998,11 +967,12 @@ void CRankGhost::LookupInManifest()
 		const bool HasFile = Storage()->FileExists(aGhostPathProbe, IStorage::TYPE_SAVE);
 		if(HasGroup || HasFile)
 		{
-			if(LoadGhostTarget())
+			bool HaveTimeline = false;
+			if(LoadGhostTarget(&HaveTimeline))
 			{
 				NotifyLoaded(m_ActiveEntry.m_Names.c_str(), m_ActiveEntry.m_Time.c_str());
 				// 旧版本缓存没有查看时间线：后台重放一次回放补齐
-				if(!ViewTimelineCached())
+				if(!HaveTimeline)
 					KickViewTimelineRebuild();
 				return;
 			}
@@ -1057,7 +1027,6 @@ void CRankGhost::EnsureDemoOnlyReady()
 			log_info("rank_ghost", "demo already cached: '%s'", m_aDemoStoragePath);
 			return;
 		}
-		Storage()->RemoveFile(m_aDemoStoragePath, IStorage::TYPE_SAVE);
 		log_info("rank_ghost", "cached demo is not a valid demo, re-downloading: '%s'", m_aDemoStoragePath);
 	}
 	StartDemoFetch();
@@ -1115,7 +1084,7 @@ void CRankGhost::OnGhostUnloaded(int Slot)
 }
 
 // 按条目加载缓存：多轨目录（<base>/）优先，其次单文件（<base>.gho）
-bool CRankGhost::LoadGhostTarget()
+bool CRankGhost::LoadGhostTarget(bool *pHaveTimeline)
 {
 	char aDemoPath[IO_MAX_PATH_LENGTH];
 	BuildEntryCachePaths(m_ActiveEntry, aDemoPath, sizeof(aDemoPath), m_aGhostStoragePath, sizeof(m_aGhostStoragePath));
@@ -1140,7 +1109,9 @@ bool CRankGhost::LoadGhostTarget()
 		return false;
 
 	// 查看模式时间线（事件/开关状态）与影子一起加载
-	LoadViewTimeline();
+	const bool HaveTimeline = LoadViewTimeline();
+	if(pHaveTimeline)
+		*pHaveTimeline = HaveTimeline;
 	return true;
 }
 
@@ -1268,8 +1239,10 @@ IDemoPlayer::CInfo CRankGhost::PlaybackInfo() const
 	const CGhost &Ghost = GameClient()->m_Ghost;
 	Info.m_Paused = !Ghost.ManualPlaying();
 	Info.m_Speed = Ghost.ManualSpeed();
-	Info.m_LastTick = Info.m_FirstTick + maximum(0, Ghost.ManualEndTick());
-	Info.m_CurrentTick = Info.m_FirstTick + std::clamp(Ghost.ManualPlaybackTick(), 0, maximum(0, Ghost.ManualEndTick()));
+	const auto &Range = Ghost.ManualTimeline();
+	Info.m_FirstTick = Range.First();
+	Info.m_LastTick = Range.Last();
+	Info.m_CurrentTick = Range.ToAbsolute(Ghost.ManualPlaybackTick());
 	return Info;
 }
 
@@ -1283,12 +1256,13 @@ IDemoPlayer *CRankGhost::PlaybackMetadataReader() const
 void CRankGhost::PlaybackSeek(int Tick)
 {
 	if(IsViewModeActive())
-		GameClient()->m_Ghost.ManualSeek(Tick - m_ViewPlaybackMetadata.m_FirstTick);
+		GameClient()->m_Ghost.ManualSeek(GameClient()->m_Ghost.ManualTimeline().ToRelative(Tick));
 }
 int CRankGhost::PlaybackAdjacentTick(int Tick, IDemoPlayer::ETickOffset Offset) const
 {
-	const int First = m_ViewPlaybackMetadata.m_FirstTick;
-	return First + GameClient()->m_Ghost.ManualAdjacentTick(Tick - First, Offset);
+	const CGhost &Ghost = GameClient()->m_Ghost;
+	const auto &Range = Ghost.ManualTimeline();
+	return Range.ToAbsolute(Ghost.ManualAdjacentTick(Range.ToRelative(Tick), Offset));
 }
 
 void CRankGhost::PlaybackSetPlaying(bool Playing)

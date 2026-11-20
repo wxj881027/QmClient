@@ -11,7 +11,11 @@
 #include <base/vmath.h>
 
 #include <cstdint>
-#include <vector>
+#include <cstring>
+#include <limits>
+#include <memory>
+#include <new>
+#include <utility>
 
 namespace qm_pose
 {
@@ -146,67 +150,58 @@ namespace qm_pose
 	// 只处理 alpha != 0 的像素：离屏目标初值是全透明，未绘制区域必须保持透明，
 	// 否则透明像素的 RGB 会被邻域"染"出颜色，缩放后出现彩边。
 	//
-	// 纯函数、就地修改，便于单测直接验证。
+	// 输入是紧密排列的 RGBA，缓冲区须包含 Width × Height 个像素。
 	inline void ApplyUnsharpMask(uint8_t *pPixels, int Width, int Height, int Amount)
 	{
 		if(pPixels == nullptr || Width <= 2 || Height <= 2 || Amount <= 0)
 			return;
-		const int Strength = minimum(Amount, 100);
-		// 五抽头近似（中心 5、上下左右各 -1），除以 1 得到原图 + Strength% 的过冲。
-		// 用定点整数：这里的输入是 8 位 RGBA，浮点没有额外收益。
-		const int Center = 4 + Strength;
-		const int Neighbor = Strength / 4;
-		if(Neighbor <= 0)
+		constexpr size_t PIXEL_BYTES = 4;
+		if(static_cast<size_t>(Width) > std::numeric_limits<size_t>::max() / PIXEL_BYTES / static_cast<size_t>(Height))
 			return;
-		// 邻域和与中心差的绝对值超过这个值才认为"有边缘"。
-		// 缓变渐变每像素变化 1-2，这个阈值把它们整片跳过；真实边缘远超它。
+		const int Strength = minimum(Amount, 100);
+		// 只在检测到边缘时锐化，避免把缓变渐变变成分层色带。
 		constexpr int EDGE_THRESHOLD = 12;
 
-		// 先拷一份源：就地处理会让已经锐化过的像素参与邻域计算，产生方向性条纹。
-		const size_t Bytes = (size_t)Width * (size_t)Height * 4;
-		std::vector<uint8_t> Source(Bytes);
-		for(size_t i = 0; i < Bytes; ++i)
-			Source[i] = pPixels[i];
-
-		const auto Sample = [&](int X, int Y, int Channel) {
-			X = minimum(maximum(X, 0), Width - 1);
-			Y = minimum(maximum(Y, 0), Height - 1);
-			return (int)Source[((size_t)Y * (size_t)Width + (size_t)X) * 4 + (size_t)Channel];
-		};
+		// 就地写回时只保留当前行和上一行的原始像素，下一行仍可从原图读取。
+		const size_t RowBytes = static_cast<size_t>(Width) * PIXEL_BYTES;
+		std::unique_ptr<uint8_t[]> pRows(new(std::nothrow) uint8_t[RowBytes * 2]);
+		if(!pRows)
+			return; // 保留原图供后续编码。
+		uint8_t *pCurrent = pRows.get();
+		uint8_t *pPrevious = pCurrent + RowBytes;
 
 		for(int Y = 0; Y < Height; ++Y)
 		{
-			for(int X = 0; X < Width; ++X)
+			uint8_t *pOutput = pPixels + static_cast<size_t>(Y) * RowBytes;
+			std::memcpy(pCurrent, pOutput, RowBytes);
+			const uint8_t *pAbove = Y > 0 ? pPrevious : pCurrent;
+			const uint8_t *pBelow = Y + 1 < Height ? pOutput + RowBytes : pCurrent;
+			for(size_t Index = 0; Index < RowBytes; Index += PIXEL_BYTES)
 			{
-				const size_t Index = ((size_t)Y * (size_t)Width + (size_t)X) * 4;
-				const int CenterAlpha = Source[Index + 3];
-				// 完全透明的像素不参与，否则会把邻域颜色扩散进空白区。
-				if(CenterAlpha == 0)
+				if(pCurrent[Index + 3] == 0)
 					continue;
-				// 边缘闸门：拉普拉斯响应太小说明这里是平坦区或缓变渐变（天空、地面底色），
-				// 放大它只会把渐变变成一层层等值线（实测 40% 时天空出现淡淡的分层）。
-				// 只对真正有边缘的像素施加，平坦区保持原样。
+				const size_t Left = Index == 0 ? Index : Index - PIXEL_BYTES;
+				const size_t Right = Index + PIXEL_BYTES < RowBytes ? Index + PIXEL_BYTES : Index;
+				int aDiff[3];
 				int Response = 0;
 				for(int Channel = 0; Channel < 3; ++Channel)
 				{
-					const int Sum = Sample(X - 1, Y, Channel) + Sample(X + 1, Y, Channel) +
-							Sample(X, Y - 1, Channel) + Sample(X, Y + 1, Channel);
-					const int Diff = 4 * Sample(X, Y, Channel) - Sum;
-					Response = maximum(Response, maximum(Diff, -Diff));
+					const int Sum = pCurrent[Left + Channel] + pCurrent[Right + Channel] +
+							pAbove[Index + Channel] + pBelow[Index + Channel];
+					aDiff[Channel] = 4 * pCurrent[Index + Channel] - Sum;
+					Response = maximum(Response, maximum(aDiff[Channel], -aDiff[Channel]));
 				}
 				if(Response <= EDGE_THRESHOLD)
 					continue;
 
+				// 直接给拉普拉斯响应加权，避免强度取整后改变平坦通道的亮度。
 				for(int Channel = 0; Channel < 3; ++Channel)
 				{
-					const int Value = (Sample(X, Y, Channel) * Center -
-								  (Sample(X - 1, Y, Channel) + Sample(X + 1, Y, Channel) +
-									  Sample(X, Y - 1, Channel) + Sample(X, Y + 1, Channel)) *
-									  Neighbor) /
-							  4;
-					pPixels[Index + (size_t)Channel] = (uint8_t)minimum(maximum(Value, 0), 255);
+					const int Value = (16 * pCurrent[Index + Channel] + Strength * aDiff[Channel]) / 16;
+					pOutput[Index + Channel] = static_cast<uint8_t>(minimum(maximum(Value, 0), 255));
 				}
 			}
+			std::swap(pCurrent, pPrevious);
 		}
 	}
 

@@ -116,33 +116,6 @@ uint64_t CMenus::BuildPlayerSettingsCards(const qm_card_catalog::SQmCardBuildCon
 		s_ClanInput.SetBuffer(g_Config.m_ClDummyClan, sizeof(g_Config.m_ClDummyClan));
 	}
 
-	static CLineInputBuffered<25> s_FlagFilterInput;
-	class CCountryFlagEntry
-	{
-	public:
-		const CCountryFlags::CCountryFlag *m_pFlag;
-		std::optional<std::pair<int, int>> m_NameMatch;
-	};
-	static std::vector<CCountryFlagEntry> s_vFilteredFlags;
-	s_vFilteredFlags.clear();
-	s_vFilteredFlags.reserve(GameClient()->m_CountryFlags.Num());
-	for(size_t i = 0; i < GameClient()->m_CountryFlags.Num(); ++i)
-	{
-		const CCountryFlags::CCountryFlag &Entry = GameClient()->m_CountryFlags.GetByIndex(i);
-		if(!s_FlagFilterInput.IsEmpty())
-		{
-			const char *pNameMatchEnd;
-			const char *pNameMatchStart = str_utf8_find_nocase(Entry.m_aCountryCodeString, s_FlagFilterInput.GetString(), &pNameMatchEnd);
-			if(pNameMatchStart != nullptr)
-			{
-				s_vFilteredFlags.emplace_back(&Entry, std::make_pair<int, int>(pNameMatchStart - Entry.m_aCountryCodeString, pNameMatchEnd - pNameMatchStart));
-			}
-		}
-		else
-		{
-			s_vFilteredFlags.emplace_back(&Entry, std::nullopt);
-		}
-	}
 	const IUiContext PlayerFlagSearchCtx = SettingsUiContext("settings_player_flag_search", UiScale);
 
 	const bool RenderOnly = Ctx.m_ReadOnly;
@@ -167,7 +140,7 @@ uint64_t CMenus::BuildPlayerSettingsCards(const qm_card_catalog::SQmCardBuildCon
 					SplitSettingsControlRow(Row, PlayerMetrics, &Label, &Row);
 					str_format(aBuf, sizeof(aBuf), "%s:", Localize("Name"));
 					Ui()->DoLabel(&Label, aBuf, BodySize, TEXTALIGN_ML, {.m_MaxWidth = Label.w, .m_EllipsisAtEnd = true});
-					if(ui_widget::InputField(PlayerIdentityTextInputCtx, &s_NameInput, Row, Client()->PlayerName(), BodySize))
+					if(ui_widget::InputField(PlayerIdentityTextInputCtx, &s_NameInput, Row, s_NameInput.GetEmptyText(), BodySize))
 						SetNeedSendInfo(m_Dummy);
 				});
 			if(Flow.Control("player-clan", PlayerMetrics.m_LineHeight, ClanRow, ui_token::settings::RowGap(PlayerMetrics.m_LineSpacing)))
@@ -183,9 +156,39 @@ uint64_t CMenus::BuildPlayerSettingsCards(const qm_card_catalog::SQmCardBuildCon
 			CSettingsContentLayoutFlow Flow(Content);
 			CUIRect Grid;
 			// 国旗网格保留原先的专用高度，内部行距由列表组件管理。
-			if(!Flow.Control("player-country-grid", 520.0f * UiScale, Grid))
+			if(!Flow.Control("player-country-grid", 520.0f * UiScale, Grid) || Ui()->MeasurementOnly())
 				return;
 			Content = Grid;
+
+			static CLineInputBuffered<25> s_FlagFilterInput;
+			class CCountryFlagEntry
+			{
+			public:
+				const CCountryFlags::CCountryFlag *m_pFlag;
+				std::optional<std::pair<int, int>> m_NameMatch;
+			};
+			static std::vector<CCountryFlagEntry> s_vFilteredFlags;
+			s_vFilteredFlags.clear();
+			const size_t NumFlags = GameClient()->m_CountryFlags.Num();
+			s_vFilteredFlags.reserve(NumFlags);
+			for(size_t i = 0; i < NumFlags; ++i)
+			{
+				const CCountryFlags::CCountryFlag &Entry = GameClient()->m_CountryFlags.GetByIndex(i);
+				if(!s_FlagFilterInput.IsEmpty())
+				{
+					const char *pNameMatchEnd;
+					const char *pNameMatchStart = str_utf8_find_nocase(Entry.m_aCountryCodeString, s_FlagFilterInput.GetString(), &pNameMatchEnd);
+					if(pNameMatchStart != nullptr)
+					{
+						s_vFilteredFlags.emplace_back(&Entry, std::make_pair<int, int>(pNameMatchStart - Entry.m_aCountryCodeString, pNameMatchEnd - pNameMatchStart));
+					}
+				}
+				else
+				{
+					s_vFilteredFlags.emplace_back(&Entry, std::nullopt);
+				}
+			}
+
 			const bool MenuUiPerfEnabled = QmPerfEnabled();
 			const auto MenuUiStartTime = MenuUiPerfEnabled ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
 			CUIRect QuickSearch, Label;
@@ -241,15 +244,13 @@ uint64_t CMenus::BuildPlayerSettingsCards(const qm_card_catalog::SQmCardBuildCon
 				MenuUiPerf.m_UiMs = MenuUiPerfEnabled ? (float)std::chrono::duration<double, std::milli>(time_get_nanoseconds() - MenuUiStartTime).count() : -1.0f;
 				QmLogMenuUiFramePerf(MenuUiPerf, Client());
 			}
-			if(SelectedOld != NewSelected && NewSelected >= 0 && NewSelected < (int)s_vFilteredFlags.size())
-			{
-				*pCountry = s_vFilteredFlags[NewSelected].m_pFlag->m_CountryCode;
+			if(SelectedOld != NewSelected && NewSelected >= 0 && (size_t)NewSelected < s_vFilteredFlags.size() &&
+				QmCommitCountrySelection(pCountry, s_vFilteredFlags[NewSelected].m_pFlag->m_CountryCode))
 				SetNeedSendInfo();
-			}
 			ui_widget::SInputFieldOptions FlagSearchOptions;
 			FlagSearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
 			FlagSearchOptions.m_Clearable = true;
-			FlagSearchOptions.m_SearchHotkeyEnabled = !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive();
+			// Ctrl+F 由上层搜索入口处理。
 			FlagSearchOptions.m_FontSize = BodySize;
 			ui_widget::InputField(PlayerFlagSearchCtx, &s_FlagFilterInput, QuickSearch, FlagSearchOptions);
 		});

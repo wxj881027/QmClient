@@ -19,6 +19,7 @@
 #include <game/client/components/qmclient/practice_cursor.h>
 #include <game/client/components/qmclient/practice_predict_publish.h>
 #include <game/client/components/qmclient/practice_rescue.h>
+#include <game/client/components/qmclient/practice_tick_shift.h>
 #include <game/client/components/qmclient/predicted_event_queue.h>
 #include <game/client/components/qmclient/snapshot_entities.h>
 #include <game/client/components/qmclient/world_event_gate.h>
@@ -42,6 +43,7 @@
 #include <cmath>
 #include <cstdarg>
 #include <limits>
+#include <new>
 
 namespace
 {
@@ -603,81 +605,53 @@ int CFastPractice::PracticeClockTarget() const
 	return QmPracticeClockTarget(Client()->PredGameTick(g_Config.m_ClDummy), m_PracticeBaseWorld.GameTick());
 }
 
-void CFastPractice::ShiftPracticeWorldTicks(int TickDelta)
+bool CFastPractice::ShiftPracticeWorldTicks(int64_t TickDelta)
 {
 	if(TickDelta <= 0)
-		return;
+		return true;
+	using QmTickShift::EMode;
+	const auto Shift = [&](EMode Mode) {
+		if(!QmPractice::ShiftWorldTicks(m_PracticeBaseWorld, TickDelta, m_aLastAttackTick, Mode) ||
+			!GameClient()->m_LocalWorld.ShiftTrackTicks(TickDelta, Mode) ||
+			!ShiftPracticeGunTicks(m_vPracticeGuns, TickDelta, Mode) ||
+			!QmTickShift::TryShiftFields(TickDelta, Mode, {m_EventBarrierTick >= 0 ? &m_EventBarrierTick : nullptr}))
+			return false;
+		for(auto &Event : m_PracticeBaseWorld.m_PredictedEvents)
+			if(!QmTickShift::TryShiftFields(TickDelta, Mode, {&Event.m_Tick}))
+				return false;
+		for(auto &State : m_aPracticeCommandState)
+			if(!QmTickShift::TryShiftFields(TickDelta, Mode, {State.m_EyeEmote.m_EndTick >= 0 ? &State.m_EyeEmote.m_EndTick : nullptr}))
+				return false;
+		return true;
+	};
+	if(!Shift(EMode::CHECK))
+		return false;
 
 	// 诊断点只记录真正的时钟追赶：服务器暂停期间每帧都会补一两 tick 的节奏差，
 	// 那不是异常，逐帧打印会淹掉控制台；只有回到游戏时一次性平移才值得记录。
 	if(TickDelta >= 10)
-		dbg_msg("fast_practice", "tick shift: +%d branch_tick=%d track_start=%d frames=%d",
-			TickDelta, m_PracticeBaseWorld.GameTick(), GameClient()->m_LocalWorld.TrackStartTick(),
+		dbg_msg("fast_practice", "tick shift: +%lld branch_tick=%d track_start=%d frames=%d",
+			(long long)TickDelta, m_PracticeBaseWorld.GameTick(), GameClient()->m_LocalWorld.TrackStartTick(),
 			GameClient()->m_LocalWorld.CurrentFrameCount());
-	// 轨迹里的绝对 tick 跟着世界时钟一起走，否则暂停恢复后存成幽灵会错开一截。
-	GameClient()->m_LocalWorld.ShiftTrackTicks(TickDelta);
-
-	m_PracticeBaseWorld.m_GameTick += TickDelta;
-	// 预测事件队列会随 CopyWorldClean 一起进入预测世界，tick 必须跟着平移，
-	// 否则平移后的第一帧会把积压事件一次性播出来（特效/音效集中爆发）。
-	QmShiftPracticePredictedEventTicks(m_PracticeBaseWorld.m_PredictedEvents, TickDelta);
-	if(m_EventBarrierTick >= 0)
-		m_EventBarrierTick += TickDelta;
-	ShiftPracticeWorldEntityTicks(m_PracticeBaseWorld, TickDelta);
-	ShiftPracticeGunTicks(TickDelta);
-	for(int &LastAttackTick : m_aLastAttackTick)
-		if(LastAttackTick >= 0)
-			LastAttackTick += TickDelta;
-	for(auto &State : m_aPracticeCommandState)
-		if(State.m_EyeEmote.m_EndTick >= 0)
-			State.m_EyeEmote.m_EndTick += TickDelta;
+	return Shift(EMode::COMMIT);
 }
 
-void CFastPractice::ShiftPracticeWorldEntityTicks(CGameWorld &World, int TickDelta)
+bool CFastPractice::ShiftPracticeGunTicks(std::vector<SPracticeGun> &vGuns, int64_t TickDelta, QmTickShift::EMode Mode)
 {
 	if(TickDelta == 0)
-		return;
-
-	for(auto &Switcher : World.Switchers())
+		return true;
+	for(SPracticeGun &Gun : vGuns)
 	{
-		for(int Team = 0; Team < NUM_DDRACE_TEAMS; Team++)
-		{
-			if(Switcher.m_aEndTick[Team] > 0)
-				Switcher.m_aEndTick[Team] += TickDelta;
-			if(Switcher.m_aLastUpdateTick[Team] > 0)
-				Switcher.m_aLastUpdateTick[Team] += TickDelta;
-		}
-	}
-	for(CCharacter *pChar = (CCharacter *)World.FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChar; pChar = (CCharacter *)pChar->TypeNext())
-		pChar->ShiftTickBase(TickDelta);
-	for(CProjectile *pProj = (CProjectile *)World.FindFirst(CGameWorld::ENTTYPE_PROJECTILE); pProj; pProj = (CProjectile *)pProj->TypeNext())
-		pProj->ShiftStartTick(TickDelta);
-	for(CLaser *pLaser = (CLaser *)World.FindFirst(CGameWorld::ENTTYPE_LASER); pLaser; pLaser = (CLaser *)pLaser->TypeNext())
-	{
-		// 静态地图激光的 eval tick 是 -1（没有开火时刻），平移会把它变成“刚发射”，
-		// 让光柱重新播放生长动画。
-		if(pLaser->GetEvalTick() >= 0)
-			pLaser->ShiftEvalTick(TickDelta);
-	}
-	for(CPlasma *pPlasma = (CPlasma *)World.FindFirst(CGameWorld::ENTTYPE_PLASMA); pPlasma; pPlasma = (CPlasma *)pPlasma->TypeNext())
-		pPlasma->ShiftEvalTick(TickDelta);
-	for(CEntity *pEnt = World.FindFirst(CGameWorld::ENTTYPE_LIGHT); pEnt; pEnt = pEnt->TypeNext())
-		if(auto *pLight = dynamic_cast<CPracticeLight *>(pEnt))
-			pLight->ShiftEvalTick(TickDelta);
-}
-
-void CFastPractice::ShiftPracticeGunTicks(int TickDelta)
-{
-	if(TickDelta <= 0)
-		return;
-	for(SPracticeGun &Gun : m_vPracticeGuns)
-	{
-		Gun.m_EvalTick += TickDelta;
+		if(!QmTickShift::TryShiftFields(TickDelta, Mode, {&Gun.m_EvalTick}))
+			return false;
 		for(int &LastFire : Gun.m_aLastFireTeam)
-			LastFire += TickDelta;
+			if(!QmTickShift::TryShiftFields(TickDelta, Mode, {&LastFire}))
+				return false;
 		for(int &LastFire : Gun.m_aLastFireSolo)
-			LastFire += TickDelta;
+			if(!QmTickShift::TryShiftFields(TickDelta, Mode, {&LastFire}))
+				return false;
 	}
+	return true;
 }
 
 void CFastPractice::FreezePracticeWorldForServerPause()
@@ -685,8 +659,12 @@ void CFastPractice::FreezePracticeWorldForServerPause()
 	if(!m_PracticeWorldInitialized)
 		return;
 
-	const int TargetTick = Client()->PredGameTick(g_Config.m_ClDummy);
-	ShiftPracticeWorldTicks(TargetTick - m_PracticeBaseWorld.GameTick());
+	const int TargetTick = PracticeClockTarget();
+	if(!ShiftPracticeWorldTicks(static_cast<int64_t>(TargetTick) - m_PracticeBaseWorld.GameTick()))
+	{
+		Disable();
+		return;
+	}
 
 	CaptureServerReleasedFireStates();
 	// 临时自由旁观保留练习世界中的钩子，不重新要求松开钩子键。
@@ -704,8 +682,9 @@ void CFastPractice::HoldPracticeWorldForSuspension()
 	if(!m_PracticeWorldInitialized)
 		return;
 
-	const int TargetTick = Client()->PredGameTick(g_Config.m_ClDummy);
-	ShiftPracticeWorldTicks(TargetTick - m_PracticeBaseWorld.GameTick());
+	const int TargetTick = PracticeClockTarget();
+	if(!ShiftPracticeWorldTicks(static_cast<int64_t>(TargetTick) - m_PracticeBaseWorld.GameTick()))
+		return;
 	PublishPracticeWorldSnapshot(m_PracticeBaseWorld, m_EnableLocalClientId, m_RequireDummy ? m_EnableDummyClientId : -1);
 }
 
@@ -1052,7 +1031,8 @@ bool CFastPractice::InitPracticeWorld()
 		m_HasCarriedSwitchers = true;
 	}
 
-	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_GameWorld);
+	if(!m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_GameWorld))
+		return false;
 	// 主世界只按客户端预测开关创建拾取物与激光类实体，快照又只覆盖镜头
 	// 附近；练习世界必须整张地图自洽，因此清掉继承来的同类实体后按地图重建。
 	ResetPracticeMapEntities(m_PracticeBaseWorld);
@@ -1141,7 +1121,8 @@ bool CFastPractice::InitPracticeWorld()
 		if(!m_PracticeGunsLoaded)
 			LoadPracticeGuns();
 		m_PracticeStartGuns = m_vPracticeGuns;
-		m_PracticeStartWorld.CopyWorldClean(&m_PracticeBaseWorld);
+		if(!m_PracticeStartWorld.CopyWorldClean(&m_PracticeBaseWorld))
+			return false;
 		m_HasPracticeStartSnapshot = true;
 	}
 
@@ -1436,6 +1417,14 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 		return;
 	}
 
+	// 在锁定联机输入前准备渲染和相机所需的预测世界。
+	m_PracticeBaseWorld.m_GameTick = PracticeClockTarget();
+	if(!PublishPracticeWorldSnapshot(m_PracticeBaseWorld, m_EnableLocalClientId, m_RequireDummy ? m_EnableDummyClientId : -1))
+	{
+		ResetPracticeState();
+		return;
+	}
+
 	CaptureServerLockedInputs();
 	CaptureServerReleasedFireStates();
 	CapturePracticeInputFilterStates();
@@ -1444,7 +1433,6 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 	ReleaseBufferedActionInputState();
 	m_Enabled = true;
 	m_PracticeRunTicks = 0;
-	m_PracticeBaseWorld.m_GameTick = PracticeClockTarget();
 	// 进入练习前的普通预测已经播到当前预测 tick，分支事件从它之后算起。
 	m_EventBarrierTick = m_PracticeBaseWorld.GameTick();
 	// 录制是全手动的：进入练习不再自动开录，由“开始录制”按键启动轨迹。
@@ -1459,9 +1447,6 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 			TrackSafeRescuePosition(m_EnableDummyClientId, pDummy);
 	m_SuppressFireOnNextPredictTick = true;
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
-
-	// Snap renderer/camera prediction state to the local practice world immediately.
-	PublishPracticeWorldSnapshot(m_PracticeBaseWorld, m_EnableLocalClientId, m_RequireDummy ? m_EnableDummyClientId : -1);
 }
 
 bool CFastPractice::TryAttachDummyFromSnapshot()
@@ -1537,8 +1522,7 @@ bool CFastPractice::TryAttachDummyFromSnapshot()
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 	GameClient()->m_PredictedDummyId = CurrentPracticeDummyId();
 
-	PublishPracticeWorldSnapshot(m_PracticeBaseWorld, m_EnableLocalClientId, m_EnableDummyClientId);
-	return true;
+	return PublishPracticeWorldSnapshot(m_PracticeBaseWorld, m_EnableLocalClientId, m_EnableDummyClientId);
 }
 
 void CFastPractice::Disable()
@@ -1625,7 +1609,8 @@ void CFastPractice::PrepareForSpectating()
 	SyncPracticeWorldConfig();
 	// 进入旁观前把分支对齐到当前预测时刻；实体绝对 tick 必须一起走，
 	// 否则从这一刻开始继续推进时会看到已经过期的投射物和机关相位。
-	ShiftPracticeWorldTicks(PracticeClockTarget() - m_PracticeBaseWorld.GameTick());
+	if(!ShiftPracticeWorldTicks(static_cast<int64_t>(PracticeClockTarget()) - m_PracticeBaseWorld.GameTick()))
+		return;
 
 	StandbyCharacter(m_PracticeBaseWorld.GetCharacterById(LocalClientId));
 	if(m_RequireDummy && DummyClientId >= 0)
@@ -1732,7 +1717,26 @@ bool CFastPractice::RestartPracticeFromStart()
 	// 世界树：主世界一直在推进，重新 fork 只会得到“现在”。这里改用启用练习那一刻的
 	// 快照，机关、移动方块、投射物、开关与角色一起回到入口状态。
 	const CTeamsCore BranchTeams = m_PracticeBaseWorld.m_Teams;
-	m_PracticeBaseWorld.CopyWorldClean(&m_PracticeStartWorld);
+	CGameWorld RestartedWorld;
+	if(!RestartedWorld.CopyWorldClean(&m_PracticeStartWorld))
+		return false;
+	std::vector<SPracticeGun> vRestartedGuns;
+	try
+	{
+		vRestartedGuns = m_PracticeStartGuns;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	const int64_t TickDelta = static_cast<int64_t>(PracticeClockTarget()) - RestartedWorld.GameTick();
+	using QmTickShift::EMode;
+	if(!QmPractice::ShiftWorldTicks(RestartedWorld, TickDelta, {}, EMode::CHECK) ||
+		!ShiftPracticeGunTicks(vRestartedGuns, TickDelta, EMode::CHECK) ||
+		!QmPractice::ShiftWorldTicks(RestartedWorld, TickDelta, {}, EMode::COMMIT) ||
+		!ShiftPracticeGunTicks(vRestartedGuns, TickDelta, EMode::COMMIT))
+		return false;
+	m_PracticeBaseWorld.AdoptCleanWorld(RestartedWorld);
 	// 重开只重置世界实体；队伍与 solo 是整段练习会话的分支配置，不随入口快照回退。
 	m_PracticeBaseWorld.m_Teams = BranchTeams;
 	for(CCharacter *pChar = (CCharacter *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChar; pChar = (CCharacter *)pChar->TypeNext())
@@ -1766,14 +1770,9 @@ bool CFastPractice::RestartPracticeFromStart()
 	// 入口快照里的实体保留着启用练习那一刻的绝对 tick。把世界时钟直接改到现在
 	// 会让投射物、定时开关与激光/等离子相位全部过期；先按时间差平移实体，
 	// 再落世界时钟，重开后机关仍从入口相位继续。
-	const int TargetTick = PracticeClockTarget();
-	const int TickDelta = TargetTick - m_PracticeBaseWorld.GameTick();
-	ShiftPracticeWorldEntityTicks(m_PracticeBaseWorld, TickDelta);
-	m_PracticeBaseWorld.m_GameTick = TargetTick;
 	// 机关炮独立于世界树，按入口快照整体恢复。开火计时回到入口值，
 	// 移动炮位也从入口位置重新跟随平台，而不是沿用重开前的坐标。
-	m_vPracticeGuns = m_PracticeStartGuns;
-	ShiftPracticeGunTicks(TickDelta);
+	m_vPracticeGuns.swap(vRestartedGuns);
 	m_PracticeGunsLoaded = true;
 	PublishPracticeWorldState();
 
@@ -1845,16 +1844,16 @@ void CFastPractice::PublishPracticeWorldState()
 	PublishPracticeWorldSnapshot(m_PracticeBaseWorld, m_EnableLocalClientId, m_RequireDummy ? m_EnableDummyClientId : -1);
 }
 
-void CFastPractice::PublishPracticeWorldSnapshot(CGameWorld &World, int LocalClientId, int DummyClientId)
+bool CFastPractice::PublishPracticeWorldSnapshot(CGameWorld &World, int LocalClientId, int DummyClientId)
 {
 	CPracticePredictStateSink Sink(GameClient());
-	QmPublishPracticeWorldSnapshot(Sink, World, LocalClientId, DummyClientId, GameClient()->m_PredictedTick);
+	return QmPublishPracticeWorldSnapshot(Sink, World, LocalClientId, DummyClientId, GameClient()->m_PredictedTick);
 }
 
-void CFastPractice::PublishPracticePredictionBeforeStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, bool CopyWorldToPredicted, int LocalClientId)
+bool CFastPractice::PublishPracticePredictionBeforeStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, bool CopyWorldToPredicted, int LocalClientId)
 {
 	CPracticePredictStateSink Sink(GameClient());
-	QmPublishPracticePredictionBeforeStep(Sink, World, Plan, Tick, CopyWorldToPredicted, LocalClientId);
+	return QmPublishPracticePredictionBeforeStep(Sink, World, Plan, Tick, CopyWorldToPredicted, LocalClientId);
 }
 
 void CFastPractice::PublishPracticePredictionAfterStep(CGameWorld &World, const SPracticePredictTickPlan &Plan, int Tick, int LocalClientId)
@@ -1979,7 +1978,8 @@ void CFastPractice::TickPracticeWorldDuringSpectate()
 	// 与主预测循环相同的断崖保护：超过两秒只平移时钟，不逐 tick 补算。
 	if(QmPracticeCatchUpNeedsShift(TickPlan.StepCount(), Client()->GameTickSpeed()))
 	{
-		ShiftPracticeWorldTicks(TickPlan.m_FinalTickSelf - BaseTick);
+		if(!ShiftPracticeWorldTicks(static_cast<int64_t>(TickPlan.m_FinalTickSelf) - BaseTick))
+			Disable();
 		return;
 	}
 
@@ -2157,7 +2157,8 @@ bool CFastPractice::OverridePredict()
 
 	SyncPracticeWorldConfig();
 
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
+	if(!GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return true;
 
 	CCharacter *pLocalChar = GameClient()->m_PredictedWorld.GetCharacterById(LocalClientId);
 	CCharacter *pDummyChar = m_RequireDummy ? GameClient()->m_PredictedWorld.GetCharacterById(DummyClientId) : nullptr;
@@ -2195,8 +2196,9 @@ bool CFastPractice::OverridePredict()
 	{
 		if(g_Config.m_Debug)
 			dbg_msg("fast_practice", "catch-up guard: %d steps, shifting branch clock", TickPlan.StepCount());
-		ShiftPracticeWorldTicks(TickPlan.m_FinalTickSelf - BaseGameTick);
-		GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
+		if(!ShiftPracticeWorldTicks(static_cast<int64_t>(TickPlan.m_FinalTickSelf) - BaseGameTick) ||
+			!GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+			return true;
 		pLocalChar = GameClient()->m_PredictedWorld.GetCharacterById(LocalClientId);
 		pDummyChar = m_RequireDummy ? GameClient()->m_PredictedWorld.GetCharacterById(DummyClientId) : nullptr;
 		if(!pLocalChar || (m_RequireDummy && !pDummyChar))
@@ -2228,7 +2230,8 @@ bool CFastPractice::OverridePredict()
 		// 重建，光靠 (id, tick) 匹配挡不住重复开火声，必须在源头关掉。
 		GameClient()->m_PredictedWorld.m_WorldConfig.m_PredictEvents = QmPracticeTickAllowsPredictedEvents(Tick, m_EventBarrierTick);
 
-		PublishPracticePredictionBeforeStep(GameClient()->m_PredictedWorld, TickPlan, Tick, false, LocalClientId);
+		if(!PublishPracticePredictionBeforeStep(GameClient()->m_PredictedWorld, TickPlan, Tick, false, LocalClientId))
+			return true;
 
 		// 和原生预测循环一样取“不晚于该 tick 的最新记录”。输入环按发送序号写入，
 		// 发送频率低于 tick 频率，按 tick 取模定位（旧的 GetInputExact）几乎总是落空，
@@ -2355,7 +2358,8 @@ bool CFastPractice::OverridePredict()
 			PublishPracticeNewPredictedFeedback(DummyTickSlot, pDummyChar, Tick);
 	}
 
-	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_PredictedWorld);
+	if(!m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_PredictedWorld))
+		return true;
 	// 预测世界里的门副本不接管碰撞；把步进后的分支世界接回来时要重新
 	// 装回共享 CCollision 的门碰撞端点。
 	m_PracticeBaseWorld.ResetDoorCollision();
@@ -2378,7 +2382,8 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 		return FinalTickRegular;
 
 	CGameWorld VisualWorld;
-	VisualWorld.CopyWorldClean(&m_PracticeBaseWorld);
+	if(!VisualWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return FinalTickRegular;
 
 	CCharacter *pLocalChar = VisualWorld.GetCharacterById(LocalClientId);
 	CCharacter *pDummyChar = m_RequireDummy ? VisualWorld.GetCharacterById(DummyClientId) : nullptr;
@@ -2409,7 +2414,8 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 		if(!pLocalChar || (m_RequireDummy && !pDummyChar))
 			return FinalTickRegular;
 
-		PublishPracticePredictionBeforeStep(VisualWorld, TickPlan, Tick, true, LocalClientId);
+		if(!PublishPracticePredictionBeforeStep(VisualWorld, TickPlan, Tick, true, LocalClientId))
+			return FinalTickRegular;
 
 		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInput(Tick, DummyInputConn) : nullptr;
 		CNetObj_PlayerInput LocalFastInput = GameClient()->m_Controls.m_aFastInput[LocalTee];

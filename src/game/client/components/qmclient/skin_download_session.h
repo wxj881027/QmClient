@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <new>
 #include <optional>
 #include <string>
 #include <utility>
@@ -58,11 +59,53 @@ public:
 			vFilteredSources.push_back(Source);
 		}
 		m_vSources = std::move(vFilteredSources);
-		m_Submit(m_pJob);
+		try
+		{
+			m_Submit(m_pJob);
+		}
+		catch(const std::bad_alloc &)
+		{
+			FailAllocation();
+		}
 	}
 	~CQmSkinDownloadSession() { Cancel(); }
 
 	EResult Poll()
+	{
+		try
+		{
+			return Advance();
+		}
+		catch(const std::bad_alloc &)
+		{
+			return FailAllocation();
+		}
+	}
+
+	std::shared_ptr<IQmSkinDataJob> TakeReadyJob() { return std::exchange(m_pReadyJob, nullptr); }
+	const std::optional<ESkinSource> &DownloadedSource() const { return m_DownloadedSource; }
+	const std::string &DownloadedUrl() const { return m_DownloadedUrl; }
+	void Cancel()
+	{
+		if(m_pJob)
+			m_pJob->Abort();
+		if(m_pReadyJob)
+			m_pReadyJob->Abort();
+		if(m_pRequest)
+		{
+			if(m_pRequest->Done())
+				ValidateRequest(false);
+			else
+				m_pRequest->Abort();
+		}
+		m_pJob.reset();
+		m_pReadyJob.reset();
+		m_pRequest.reset();
+		m_Result = EResult::DONE;
+	}
+
+private:
+	EResult Advance()
 	{
 		if(m_pReadyJob)
 			return EResult::READY;
@@ -90,12 +133,11 @@ public:
 				return Valid ? EResult::READY : EResult::WAITING;
 			}
 			// 只有当前会话的有效解码结果才可以替换磁盘缓存。
-			m_pRequest->OnValidation(Valid);
-			m_NeedsValidation = false;
+			ValidateRequest(Valid);
 			if(Valid && m_pRequest->State() == EHttpState::DONE)
 			{
 				m_DownloadedSource = m_vSources[m_SourceIndex].m_Source;
-				m_DownloadedUrl = m_vSources[m_SourceIndex].m_Url;
+				m_DownloadedUrl = std::move(m_vSources[m_SourceIndex].m_Url);
 				m_pReadyJob = std::move(m_pJob);
 				m_Result = EResult::DONE;
 				m_pRequest.reset();
@@ -148,29 +190,6 @@ public:
 		return EResult::WAITING;
 	}
 
-	std::shared_ptr<IQmSkinDataJob> TakeReadyJob() { return std::exchange(m_pReadyJob, nullptr); }
-	const std::optional<ESkinSource> &DownloadedSource() const { return m_DownloadedSource; }
-	const std::string &DownloadedUrl() const { return m_DownloadedUrl; }
-	void Cancel()
-	{
-		if(m_pJob)
-			m_pJob->Abort();
-		if(m_pReadyJob)
-			m_pReadyJob->Abort();
-		if(m_pRequest)
-		{
-			if(m_pRequest->Done())
-				ValidateRequest(false);
-			else
-				m_pRequest->Abort();
-		}
-		m_pJob.reset();
-		m_pReadyJob.reset();
-		m_pRequest.reset();
-		m_Result = EResult::DONE;
-	}
-
-private:
 	void StartRequest(bool Unconditional)
 	{
 		m_Unconditional = Unconditional;
@@ -188,6 +207,16 @@ private:
 		if(m_NeedsValidation && m_pRequest && m_pRequest->State() == EHttpState::DONE)
 			m_pRequest->OnValidation(Valid);
 		m_NeedsValidation = false;
+	}
+	EResult FailAllocation()
+	{
+		// 结束本次远端更新；已备好的缓存仍可交付，未提交作业不能继续等待。
+		if(m_pJob)
+			m_pJob->Abort();
+		if(m_pRequest && !m_pRequest->Done())
+			m_pRequest->Abort();
+		Finish(EResult::ERROR);
+		return m_pReadyJob ? EResult::READY : m_Result;
 	}
 	EResult Finish(EResult Result)
 	{
@@ -217,5 +246,24 @@ private:
 	bool m_Unconditional = false;
 	bool m_NeedsValidation = false;
 };
+
+// 候选会话与轮询登记同时准备成功才交接；工厂内的字符串/包装分配也在边界内。
+template<typename TNames, typename FCreate>
+std::unique_ptr<CQmSkinDownloadSession> QmCreateTrackedSkinDownloadSession(TNames &Names, const char *pName, FCreate &&Create)
+{
+	try
+	{
+		auto pSession = std::forward<FCreate>(Create)();
+		if(!pSession)
+			return nullptr;
+		if(std::find(Names.begin(), Names.end(), pName) == Names.end())
+			Names.emplace_back(pName);
+		return pSession;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return nullptr;
+	}
+}
 
 #endif

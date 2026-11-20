@@ -139,9 +139,9 @@ int CLayerSounds::BrushGrab(CLayerGroup *pBrush, CUIRect Rect)
 	return pGrabbed->m_vSources.empty() ? 0 : 1;
 }
 
-void CLayerSounds::BrushPlace(CLayer *pBrush, vec2 WorldPos)
+void CLayerSounds::BrushPlace(const CLayer *pBrush, vec2 WorldPos, int LayerIndex)
 {
-	CLayerSounds *pSoundLayer = static_cast<CLayerSounds *>(pBrush);
+	const CLayerSounds *pSoundLayer = static_cast<const CLayerSounds *>(pBrush);
 	std::vector<CSoundSource> vAddedSources;
 	for(const auto &Source : pSoundLayer->m_vSources)
 	{
@@ -152,7 +152,7 @@ void CLayerSounds::BrushPlace(CLayer *pBrush, vec2 WorldPos)
 		m_vSources.push_back(NewSource);
 		vAddedSources.push_back(NewSource);
 	}
-	Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionSoundPlace>(Map(), Map()->m_SelectedGroup, Map()->m_vSelectedLayers[0], vAddedSources));
+	Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionSoundPlace>(Map(), Map()->m_SelectedGroup, LayerIndex, vAddedSources));
 	Map()->OnModify();
 }
 

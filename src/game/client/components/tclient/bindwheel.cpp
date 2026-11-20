@@ -8,6 +8,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/SettingsPageLayout.h>
+#include <game/client/components/ghost.h>
 #include <game/client/components/qmclient/bind_editor.h>
 #include <game/client/components/qmclient/bind_menu.h>
 #include <game/client/components/qmclient/bind_menu_preview.h>
@@ -57,7 +58,8 @@ void CBindWheel::ConOpenBindwheel(IConsole::IResult *pResult, void *pUserData)
 		pThis->GameClient()->m_Emoticon.Cancel();
 	if(!pThis->IsActive())
 		pThis->GameClient()->m_Emoticon.m_TouchPressedOutside = false;
-	pThis->OpenMenu(qm_bind_menu::EMenu::CUSTOM);
+	if(!pThis->IsActive())
+		pThis->OpenMenu(pThis->GameClient()->m_FastPractice.Enabled() || pThis->InNormalPractice() ? qm_bind_menu::EMenu::PRACTICE : qm_bind_menu::EMenu::CUSTOM);
 }
 
 void CBindWheel::ConOpenBindMenu(IConsole::IResult *pResult, void *pUserData)
@@ -96,12 +98,14 @@ void CBindWheel::ConAddBindwheelLegacy(IConsole::IResult *pResult, void *pUserDa
 	const char *aCommand = pResult->GetString(2);
 
 	CBindWheel *pThis = static_cast<CBindWheel *>(pUserData);
-	if(pThis->m_vBinds.size() <= (size_t)BindPos)
-		pThis->m_vBinds.resize((size_t)BindPos + 1);
-
-	str_copy(pThis->m_vBinds[BindPos].m_aName, aName);
-	str_copy(pThis->m_vBinds[BindPos].m_aCommand, aCommand);
-	pThis->m_State.InvalidateSelection();
+	CBind Bind;
+	str_copy(Bind.m_aName, aName);
+	str_copy(Bind.m_aCommand, aCommand);
+	pThis->m_State.TryChangeBinds([&] {
+		if(pThis->m_vBinds.size() <= (size_t)BindPos)
+			pThis->m_vBinds.resize((size_t)BindPos + 1);
+		pThis->m_vBinds[BindPos] = Bind;
+	});
 }
 
 void CBindWheel::ConAddBindwheel(IConsole::IResult *pResult, void *pUserData)
@@ -128,17 +132,18 @@ void CBindWheel::ConRemoveAllBindwheelBinds(IConsole::IResult *pResult, void *pU
 	pThis->RemoveAllBinds();
 }
 
-void CBindWheel::AddBind(const char *pName, const char *pCommand)
+bool CBindWheel::AddBind(const char *pName, const char *pCommand)
 {
 	if((pName[0] == '\0' && pCommand[0] == '\0') || m_vBinds.size() >= BINDWHEEL_MAX_BINDS)
-		return;
+		return false;
 
 	CBind Bind;
 	str_copy(Bind.m_aName, pName);
 	str_copy(Bind.m_aCommand, pCommand);
-	m_vBinds.push_back(Bind);
-	m_ResolvedBinds.clear();
-	m_State.InvalidateSelection();
+	return m_State.TryChangeBinds([&] {
+		m_vBinds.push_back(Bind);
+		m_ResolvedBinds.clear();
+	});
 }
 
 void CBindWheel::RemoveBind(const char *pName, const char *pCommand)
@@ -164,13 +169,13 @@ bool CBindWheel::SetBind(int Index, const char *pName, const char *pCommand)
 	CBind Bind;
 	str_copy(Bind.m_aName, pName);
 	str_copy(Bind.m_aCommand, pCommand);
-	if(Index == -1)
-		m_vBinds.push_back(Bind);
-	else
-		m_vBinds[Index] = Bind;
-	m_ResolvedBinds.clear();
-	m_State.InvalidateSelection();
-	return true;
+	return m_State.TryChangeBinds([&] {
+		if(Index == -1)
+			m_vBinds.push_back(Bind);
+		else
+			m_vBinds[Index] = Bind;
+		m_ResolvedBinds.clear();
+	});
 }
 
 void CBindWheel::RemoveBind(int Index)
@@ -236,7 +241,7 @@ bool CBindWheel::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 								     g_Config.m_InpMousesens / 100.0f;
 	x *= Factor;
 	y *= Factor;
-	GameClient()->m_Emoticon.m_SelectorMouse += vec2(x, y);
+	GameClient()->m_Emoticon.m_SelectorMouse = CQmBindWheelState::AdvanceCursor(GameClient()->m_Emoticon.m_SelectorMouse, vec2(x, y));
 	return true;
 }
 
@@ -266,16 +271,16 @@ bool CBindWheel::OnInput(const IInput::CEvent &Event)
 void CBindWheel::OpenMenu(qm_bind_menu::EMenu Menu)
 {
 	const bool WasOpen = IsActive() && m_State.Menu() == Menu;
+	if(WasOpen)
+		return;
 	m_State.Open(Menu);
+	m_LastLayout = {};
 	if(Menu == qm_bind_menu::EMenu::PRACTICE)
 		RebuildPracticeBinds();
 	RebuildVisibleBinds();
-	if(!WasOpen)
-	{
-		m_ListScroll = 0;
-		m_JustOpened = true;
-		m_AnimationTime = 0.0f;
-	}
+	m_ListScroll = 0;
+	m_JustOpened = true;
+	m_AnimationTime = 0.0f;
 }
 
 void CBindWheel::ReleaseActiveMenu()
@@ -402,6 +407,22 @@ void CBindWheel::RebuildPracticeBinds()
 		str_copy(Bind.m_aCommand, pEntries[Index].m_pCommand);
 		m_vPracticeBinds.push_back(Bind);
 	}
+	std::vector<CGhost::SPracticeGroup> vGroups;
+	GameClient()->m_Ghost.ListPracticeGroups(vGroups);
+	for(const auto &Group : vGroups)
+	{
+		if(m_vPracticeBinds.size() >= BINDWHEEL_MAX_BINDS)
+			break;
+		const std::string Command = "practice_view_ghost " + qm_bind_editor::QuoteArgument(Group.m_aDir);
+		if(Command.size() >= BINDWHEEL_MAX_CMD)
+			continue;
+		char aTime[32];
+		str_time(std::max(Group.m_Time, 0) / 10, TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
+		CBind Bind;
+		str_format(Bind.m_aName, sizeof(Bind.m_aName), "%s %s", Group.m_aOwner, aTime);
+		str_copy(Bind.m_aCommand, Command.c_str());
+		m_vPracticeBinds.push_back(Bind);
+	}
 }
 
 void CBindWheel::ClampListScroll()
@@ -413,6 +434,8 @@ void CBindWheel::ClampListScroll()
 
 int CBindWheel::CurrentSelection() const
 {
+	if(m_JustOpened)
+		return -1;
 	const CUIRect Screen = *Ui()->Screen();
 	const vec2 Mouse = Screen.Center() + GameClient()->m_Emoticon.m_SelectorMouse;
 	return qm_bind_menu_preview::HitTest(m_LastLayout, Mouse, (int)m_vVisibleBindIndices.size(), m_ListScroll);
@@ -512,6 +535,8 @@ void CBindWheel::OnRender()
 
 	const float Reveal = AnimationTime == 0.0f ? 1.0f : QuadEaseInOut(m_AnimationTime / AnimationTime);
 
+	if(!std::isfinite(GameClient()->m_Emoticon.m_SelectorMouse.x) || !std::isfinite(GameClient()->m_Emoticon.m_SelectorMouse.y))
+		GameClient()->m_Emoticon.m_SelectorMouse = vec2(0, 0);
 	if(WheelLayout == EQmBindWheelLayout::WHEEL)
 	{
 		const float MouseLimit = std::max(1.0f, std::min(Screen.w, Screen.h) * 0.48f);

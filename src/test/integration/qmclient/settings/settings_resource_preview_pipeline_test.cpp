@@ -1,12 +1,30 @@
 // 资源预览管道通过真实缓存、图像处理和上传队列观察状态；不启动 GPU 设备。
+#include <base/borrowed_allocator.h>
+
+#include <engine/gfx/image_loader.h>
+
+#include <game/client/components/qmclient/bounded_file_reader.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
 
 #include <gtest/gtest.h>
+#include <test/support/icon_benchmark_graphics.h>
+#include <test/support/job_wait.h>
+#include <test/support/regular_file_open_timeout.h>
+#include <test/test.h>
 
 #include <chrono>
 #include <cstdlib>
+#include <limits>
+#include <new>
+#include <stdexcept>
 #include <thread>
 #include <utility>
+#include <vector>
+
+#if defined(CONF_FAMILY_UNIX)
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 namespace
 {
@@ -125,7 +143,7 @@ TEST(SettingsResourcePreviewPipeline, MissingGraphicsDefersQueuedWorkAndClearDro
 	CPreviewImage Input(1, 1);
 	ASSERT_NE(Input.m_Image.m_pData, nullptr);
 	int Finalizations = 0;
-	Queue.EnqueueUploadToTarget(PreviewKey(), std::move(Input.m_Image), [&](bool, IGraphics::CTextureHandle) { ++Finalizations; }, nullptr);
+	Queue.EnqueueUploadToTarget(PreviewKey(), std::move(Input.m_Image), [&] { return [&](bool, IGraphics::CTextureHandle) { ++Finalizations; }; }, nullptr);
 	EXPECT_EQ(Input.m_Image.m_pData, nullptr);
 	ASSERT_EQ(Queue.QueueDepth(), 1u);
 	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, nullptr), 0);
@@ -150,10 +168,10 @@ TEST(SettingsResourcePreviewPipeline, MissingPixelsFinalizeFailureOnceWithoutEnt
 	CSettingsResourcePreviewUploadScheduler Queue;
 	CImageInfo Image;
 	int Finalizations = 0;
-	Queue.EnqueueUploadToTarget(PreviewKey(), std::move(Image), [&](bool Success, IGraphics::CTextureHandle Texture) {
+	Queue.EnqueueUploadToTarget(PreviewKey(), std::move(Image), [&] { return [&](bool Success, IGraphics::CTextureHandle Texture) {
 		++Finalizations;
 		EXPECT_FALSE(Success);
-		EXPECT_FALSE(Texture.IsValid()); }, nullptr);
+		EXPECT_FALSE(Texture.IsValid()); }; }, nullptr);
 	EXPECT_EQ(Finalizations, 1);
 	EXPECT_EQ(Queue.QueueDepth(), 0u);
 	Queue.Clear();
@@ -205,4 +223,710 @@ TEST(SettingsResourcePreviewPipeline, WorkerPublishesInvalidInputAsCompletedFail
 	auto Result = pJob->TakeResult();
 	EXPECT_FALSE(Result.m_Artifact.m_Success);
 	EXPECT_EQ(Result.m_Artifact.m_Image.m_pData, nullptr);
+}
+
+TEST(SettingsResourcePreviewPipeline, MovedArtifactRetainsPixelsAfterSourceOwnerLeavesScope)
+{
+	SResourcePreviewArtifact Destination;
+	{
+		CPreviewImage Input(1, 1);
+		ASSERT_NE(Input.m_Image.m_pData, nullptr);
+		Input.m_Image.m_pData[0] = 47;
+		auto Source = BuildPreviewArtifact(std::move(Input.m_Image), 4);
+		ASSERT_TRUE(Source.m_Success);
+		Destination = std::move(Source);
+		EXPECT_EQ(Source.m_Image.m_pData, nullptr);
+	}
+	ASSERT_NE(Destination.m_Image.m_pData, nullptr);
+	EXPECT_EQ(Destination.m_Image.m_pData[0], 47);
+	EXPECT_EQ(Destination.m_Image.m_Width, 1u);
+	EXPECT_TRUE(Destination.m_Success);
+	CImageInfo Transferred = std::move(Destination.m_Image);
+	EXPECT_EQ(Destination.m_Image.m_pData, nullptr);
+	EXPECT_EQ(Transferred.m_pData[0], 47);
+	Transferred.Free();
+}
+
+TEST(SettingsResourcePreviewPipeline, UploadBudgetDefersOriginalRequestAndPublishesOnNextFrame)
+{
+	CSettingsResourcePreviewUploadScheduler Queue;
+	CSettingsResourcePreviewCache Cache;
+	CIconBenchmarkGraphics Graphics;
+	const auto Key = PreviewKey("deferred");
+	Cache.MarkArtifactReady(Key);
+	CPreviewImage Input(2, 1);
+	ASSERT_NE(Input.m_Image.m_pData, nullptr);
+	Queue.EnqueueUpload(Key, std::move(Input.m_Image), "deferred");
+	SResourcePreviewUploadBudget Budget;
+	SResourcePreviewTelemetry Telemetry;
+	EXPECT_FALSE(Queue.DrainOne(Budget, Telemetry, Cache, &Graphics));
+	EXPECT_EQ(Queue.QueueDepth(), 1u);
+	EXPECT_EQ(Telemetry.m_UploadBudgetExhausted, 1);
+	EXPECT_EQ(Graphics.m_Uploads, 0u);
+	ASSERT_NE(Cache.Find(Key), nullptr);
+	EXPECT_TRUE(Cache.Find(Key)->m_UploadPending);
+	EXPECT_FALSE(Cache.Find(Key)->m_Failed);
+	Budget.m_MaxUploads = 1;
+	Telemetry = {};
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 1);
+	EXPECT_EQ(Queue.QueueDepth(), 0u);
+	EXPECT_EQ(Graphics.m_Uploads, 1u);
+	EXPECT_EQ(Graphics.m_UploadBytes, 8u);
+	EXPECT_EQ(Budget.m_UploadsUsed, 1);
+	EXPECT_TRUE(Cache.Find(Key)->m_TextureReady);
+	EXPECT_FALSE(Cache.Find(Key)->m_UploadPending);
+	Cache.Clear(&Graphics);
+}
+
+TEST(SettingsResourcePreviewPipeline, TargetCallbacksKeepFifoOrderAndRunOnceAcrossDeferredFrames)
+{
+	CSettingsResourcePreviewUploadScheduler Queue;
+	CSettingsResourcePreviewCache Cache;
+	CIconBenchmarkGraphics Graphics;
+	std::vector<int> Order;
+	CPreviewImage First(1, 1), Second(1, 1);
+	ASSERT_NE(First.m_Image.m_pData, nullptr);
+	ASSERT_NE(Second.m_Image.m_pData, nullptr);
+	IGraphics::CTextureHandle FirstTexture, SecondTexture;
+	Queue.EnqueueUploadToTarget(PreviewKey("first"), std::move(First.m_Image), [&] { return [&](bool Success, IGraphics::CTextureHandle Texture) {
+		EXPECT_TRUE(Success);
+		FirstTexture = Texture;
+		Order.push_back(1); }; }, "first");
+	Queue.EnqueueUploadToTarget(PreviewKey("second"), std::move(Second.m_Image), [&] { return [&](bool Success, IGraphics::CTextureHandle Texture) {
+		EXPECT_TRUE(Success);
+		SecondTexture = Texture;
+		Order.push_back(2); }; }, "second");
+	SResourcePreviewUploadBudget Budget;
+	SResourcePreviewTelemetry Telemetry;
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 0);
+	EXPECT_TRUE(Order.empty());
+	EXPECT_EQ(Queue.QueueDepth(), 2u);
+	Budget.m_MaxUploads = 1;
+	Telemetry = {};
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 1);
+	EXPECT_EQ(Order, (std::vector<int>{1}));
+	EXPECT_EQ(Queue.QueueDepth(), 1u);
+	Budget = {};
+	Budget.m_MaxUploads = 1;
+	Telemetry = {};
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 1);
+	EXPECT_EQ(Order, (std::vector<int>{1, 2}));
+	EXPECT_EQ(Queue.QueueDepth(), 0u);
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 0);
+	EXPECT_EQ(Order.size(), 2u);
+	EXPECT_TRUE(FirstTexture.IsValid());
+	EXPECT_TRUE(SecondTexture.IsValid());
+	Graphics.UnloadTexture(&FirstTexture);
+	Graphics.UnloadTexture(&SecondTexture);
+}
+
+TEST(SettingsResourcePreviewPipeline, InvalidFrontDoesNotConsumeTheFollowingValidImagesUploadBudget)
+{
+	CSettingsResourcePreviewUploadScheduler Queue;
+	CSettingsResourcePreviewCache Cache;
+	CIconBenchmarkGraphics Graphics;
+	const auto InvalidKey = PreviewKey("invalid"), ValidKey = PreviewKey("valid");
+	CPreviewImage Invalid(1, 1), Valid(1, 1);
+	ASSERT_NE(Invalid.m_Image.m_pData, nullptr);
+	ASSERT_NE(Valid.m_Image.m_pData, nullptr);
+	Invalid.m_Image.m_Width = 0;
+	Queue.EnqueueUpload(InvalidKey, std::move(Invalid.m_Image), "invalid");
+	Queue.EnqueueUpload(ValidKey, std::move(Valid.m_Image), "valid");
+	SResourcePreviewUploadBudget Budget;
+	Budget.m_MaxUploads = 1;
+	SResourcePreviewTelemetry Telemetry;
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 1);
+	EXPECT_EQ(Queue.QueueDepth(), 0u);
+	EXPECT_EQ(Budget.m_UploadsUsed, 1);
+	EXPECT_EQ(Graphics.m_Uploads, 1u);
+	EXPECT_EQ(Graphics.m_UploadBytes, 4u);
+	ASSERT_NE(Cache.Find(InvalidKey), nullptr);
+	EXPECT_TRUE(Cache.Find(InvalidKey)->m_Failed);
+	ASSERT_NE(Cache.Find(ValidKey), nullptr);
+	EXPECT_TRUE(Cache.Find(ValidKey)->m_TextureReady);
+	Cache.Clear(&Graphics);
+}
+
+namespace
+{
+	using TPreviewJobs = std::unordered_map<SResourcePreviewKey, std::shared_ptr<CSettingsResourcePreviewJob>, SResourcePreviewKeyHash>;
+	class CPreviewAdmissionEngine : public IEngine
+	{
+	public:
+		bool m_Accept = true, m_Throw = false;
+		int m_Attempts = 0;
+		CJobPool *m_pPool = nullptr;
+		IJob::EJobState m_LastNativeState = IJob::STATE_DONE;
+		std::vector<std::shared_ptr<IJob>> m_vAccepted;
+		void Init() override {}
+		void AddJob(std::shared_ptr<IJob> pJob) override { (void)TryAddJob(std::move(pJob)); }
+		bool TryAddJob(std::shared_ptr<IJob> pJob) override
+		{
+			++m_Attempts;
+			if(m_Throw)
+				throw std::bad_alloc();
+			if(!m_Accept)
+				return false;
+			if(m_pPool != nullptr)
+			{
+				const bool Accepted = m_pPool->TryAdd(pJob);
+				m_LastNativeState = pJob->State();
+				return Accepted;
+			}
+			m_vAccepted.push_back(std::move(pJob));
+			return true;
+		}
+		void ShutdownJobs() override {}
+		void SetAdditionalLogger(std::shared_ptr<ILogger> &&) override {}
+	};
+	class CPreviewTrackingMemory : public IAllocationResource
+	{
+		void *Allocate(size_t Bytes, size_t Alignment) override
+		{
+			if(m_Fail)
+				throw std::bad_alloc();
+			return IAllocationResource::AllocateDefault(Bytes, Alignment);
+		}
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override { IAllocationResource::DeallocateDefault(pData, Bytes, Alignment); }
+
+	public:
+		bool m_Fail = false;
+	};
+	class ResourcePreviewAdmission : public ::testing::Test
+	{
+	protected:
+		CTestInfo m_Info;
+		std::unique_ptr<IStorage> m_pStorage;
+		CSettingsResourcePreviewCache m_Cache;
+		TPreviewJobs m_Jobs;
+		CPreviewAdmissionEngine m_Engine;
+		SResourcePreviewKey m_Key = PreviewKey("admission");
+		std::weak_ptr<CSettingsResourcePreviewJob> m_LastCandidate;
+		int m_FactoryCalls = 0;
+		void SetUp() override
+		{
+			m_pStorage = m_Info.CreateTestStorage();
+			ASSERT_NE(m_pStorage, nullptr);
+			CPreviewImage Image(2, 1);
+			ASSERT_NE(Image.m_Image.m_pData, nullptr);
+			IOHANDLE File = m_pStorage->OpenFile("preview.png", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			ASSERT_NE(File, nullptr);
+			ASSERT_TRUE(CImageLoader::SavePng(File, "preview.png", Image.m_Image));
+		}
+		std::shared_ptr<CSettingsResourcePreviewJob> CreateJob()
+		{
+			++m_FactoryCalls;
+			auto pJob = CSettingsResourcePreviewJob::FromPath("admission", "preview.png", m_pStorage.get(), IStorage::TYPE_ALL, 4);
+			m_LastCandidate = pJob;
+			return pJob;
+		}
+		std::string Path(const char *pName)
+		{
+			char aPath[IO_MAX_PATH_LENGTH];
+			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, pName, aPath, sizeof(aPath));
+			return aPath;
+		}
+		size_t StoredFileBytes(const char *pPath = "preview.png")
+		{
+			IOHANDLE File = m_pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_SAVE);
+			if(!File)
+				throw std::runtime_error("missing preview fixture");
+			const int64_t Length = io_length(File);
+			const int Closed = io_close(File);
+			if(Length <= 0 || Closed != 0)
+				throw std::runtime_error("invalid preview fixture length");
+			return static_cast<size_t>(Length);
+		}
+		bool Start()
+		{
+			return TryStartSettingsResourcePreviewJob(m_Cache, m_Jobs, m_Key, m_Engine, [this] { return CreateJob(); });
+		}
+		void ExpectUntracked()
+		{
+			EXPECT_TRUE(m_Jobs.empty());
+			ASSERT_NE(m_Cache.Find(m_Key), nullptr);
+			EXPECT_FALSE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+		}
+	};
+	class ResourcePreviewFileDeathTest : public ResourcePreviewAdmission
+	{
+	};
+	class ResourcePreviewLayeredRead : public ResourcePreviewAdmission
+	{
+	protected:
+		std::unique_ptr<IStorage> m_pLayered;
+		std::string m_Relative;
+		void SetUp() override
+		{
+			ResourcePreviewAdmission::SetUp();
+			ASSERT_FALSE(HasFatalFailure());
+			for(const char *pDir : {"preview_save", "preview_app", "preview_app/data", "preview_app/data/mapres"})
+				ASSERT_TRUE(m_pStorage->CreateFolder(pDir, IStorage::TYPE_SAVE));
+			const auto Save = Path("preview_save"), Executable = Path("preview_app/client.exe");
+			const char *apArgs[] = {Executable.c_str()};
+			m_pLayered = CreateTempStorage(Save.c_str(), 1, apArgs);
+			ASSERT_NE(m_pLayered, nullptr);
+			m_Relative = std::string("preview_") + m_Info.m_aFilename;
+			for(const char *pRoot : {"preview_save", "preview_app/data"})
+				ASSERT_TRUE(m_pStorage->CreateFolder((std::string(pRoot) + "/" + m_Relative).c_str(), IStorage::TYPE_SAVE));
+		}
+		void StoreLowerRootPreview()
+		{
+			CPreviewImage Image(2, 1);
+			ASSERT_NE(Image.m_Image.m_pData, nullptr);
+			const auto Name = "preview_app/data/" + m_Relative + "/preview.png";
+			ASSERT_TRUE(CImageLoader::SavePng(m_pStorage->OpenFile(Name.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE), Name.c_str(), Image.m_Image));
+		}
+	};
+}
+
+TEST_F(ResourcePreviewAdmission, RejectionCanRetryAndAcceptedIdentityIsNotDuplicated)
+{
+	m_Engine.m_Accept = false;
+	EXPECT_FALSE(Start());
+	ExpectUntracked();
+	EXPECT_TRUE(m_LastCandidate.expired());
+	m_Engine.m_Accept = true;
+	ASSERT_TRUE(Start());
+	ASSERT_EQ(m_Jobs.size(), 1u);
+	const auto pAccepted = m_Jobs.at(m_Key);
+	EXPECT_TRUE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+	EXPECT_FALSE(Start());
+	EXPECT_EQ(m_Jobs.at(m_Key), pAccepted);
+	EXPECT_EQ(m_Engine.m_Attempts, 2);
+	EXPECT_EQ(m_FactoryCalls, 2);
+}
+
+TEST_F(ResourcePreviewAdmission, EngineExceptionWithdrawsTrackingAndRetainsPriorFailureUntilAccepted)
+{
+	m_Cache.MarkPreviewJobDone(m_Key, false);
+	m_Engine.m_Throw = true;
+	EXPECT_FALSE(Start());
+	ExpectUntracked();
+	EXPECT_TRUE(m_LastCandidate.expired());
+	EXPECT_TRUE(m_Cache.Find(m_Key)->m_Failed);
+	m_Engine.m_Throw = false;
+	ASSERT_TRUE(Start());
+	EXPECT_TRUE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+	EXPECT_FALSE(m_Cache.Find(m_Key)->m_Failed);
+}
+
+TEST_F(ResourcePreviewAdmission, TrackingAllocationFailureDoesNotSubmitCandidateAndCanRecover)
+{
+	CPreviewTrackingMemory Memory;
+	std::unordered_map<SResourcePreviewKey, std::shared_ptr<CSettingsResourcePreviewJob>, SResourcePreviewKeyHash, std::equal_to<SResourcePreviewKey>, CBorrowedAllocator<std::pair<const SResourcePreviewKey, std::shared_ptr<CSettingsResourcePreviewJob>>>> Jobs(&Memory);
+	Memory.m_Fail = true;
+	EXPECT_FALSE(TryStartSettingsResourcePreviewJob(m_Cache, Jobs, m_Key, m_Engine, [this] { return CreateJob(); }));
+	EXPECT_TRUE(Jobs.empty());
+	EXPECT_EQ(m_Engine.m_Attempts, 0);
+	EXPECT_TRUE(m_LastCandidate.expired());
+	ASSERT_NE(m_Cache.Find(m_Key), nullptr);
+	EXPECT_FALSE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+	Memory.m_Fail = false;
+	ASSERT_TRUE(TryStartSettingsResourcePreviewJob(m_Cache, Jobs, m_Key, m_Engine, [this] { return CreateJob(); }));
+	EXPECT_EQ(Jobs.size(), 1u);
+	EXPECT_TRUE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+}
+
+TEST_F(ResourcePreviewAdmission, SourcePreparationExceptionDoesNotSubmitOrPublishWaitingState)
+{
+	EXPECT_FALSE(TryStartSettingsResourcePreviewJob(m_Cache, m_Jobs, m_Key, m_Engine,
+		[]() -> std::shared_ptr<CSettingsResourcePreviewJob> { throw std::bad_alloc(); }));
+	ExpectUntracked();
+	EXPECT_EQ(m_Engine.m_Attempts, 0);
+	ASSERT_TRUE(Start());
+	EXPECT_TRUE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+}
+
+TEST_F(ResourcePreviewAdmission, MissingSourceCandidateDoesNotSubmitOrPublishWaitingState)
+{
+	EXPECT_FALSE(TryStartSettingsResourcePreviewJob(m_Cache, m_Jobs, m_Key, m_Engine,
+		[] { return std::shared_ptr<CSettingsResourcePreviewJob>(); }));
+	ExpectUntracked();
+	EXPECT_EQ(m_Engine.m_Attempts, 0);
+	ASSERT_TRUE(Start());
+}
+
+TEST_F(ResourcePreviewAdmission, ClosedNativePoolLeavesNoWaitingIdentityAndReopenedPoolDecodes)
+{
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	Pool.Shutdown();
+	m_Engine.m_pPool = &Pool;
+	EXPECT_FALSE(Start());
+	ExpectUntracked();
+	EXPECT_EQ(m_Engine.m_LastNativeState, IJob::STATE_QUEUED);
+	EXPECT_TRUE(m_LastCandidate.expired());
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Start());
+	ASSERT_EQ(m_Jobs.size(), 1u);
+	const auto pJob = m_Jobs.at(m_Key);
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+	Pool.Shutdown();
+	ASSERT_TRUE(pJob->Completed());
+	auto Result = pJob->TakeResult();
+	EXPECT_TRUE(Result.m_Artifact.m_Success);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_Width, 2u);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_Height, 1u);
+	EXPECT_NE(Result.m_Artifact.m_Image.m_pData, nullptr);
+}
+
+TEST_F(ResourcePreviewAdmission, FromPathFileLimitRejectsBeforeDecodeAndExactLimitAllowsRetry)
+{
+	const size_t FileBytes = StoredFileBytes();
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	auto pRejected = CSettingsResourcePreviewJob::FromPath("file-budget", "preview.png", m_pStorage.get(), IStorage::TYPE_SAVE, 1, FileBytes - 1, 8);
+	ASSERT_TRUE(Pool.TryAdd(pRejected));
+	ASSERT_TRUE(WaitForJobFinished(*pRejected));
+	auto Rejected = pRejected->TakeResult();
+	EXPECT_FALSE(Rejected.m_Artifact.m_Success);
+	EXPECT_EQ(Rejected.m_Artifact.m_Image.m_pData, nullptr);
+
+	auto pAccepted = CSettingsResourcePreviewJob::FromPath("file-budget", "preview.png", m_pStorage.get(), IStorage::TYPE_SAVE, 1, FileBytes, 8);
+	ASSERT_TRUE(Pool.TryAdd(pAccepted));
+	ASSERT_TRUE(WaitForJobFinished(*pAccepted));
+	Pool.Shutdown();
+	auto Accepted = pAccepted->TakeResult();
+	ASSERT_TRUE(Accepted.m_Artifact.m_Success);
+	EXPECT_EQ(Accepted.m_Artifact.m_Image.DataSize(), 4u);
+}
+
+TEST_F(ResourcePreviewAdmission, CheckedFileBufferMovesWithoutDuplicatingItsOwner)
+{
+	CQmCheckedFileData Input;
+	ASSERT_TRUE(Input.Read(*m_pStorage, "preview.png", IStorage::TYPE_SAVE, StoredFileBytes()));
+	const void *pEncoded = Input.Data();
+	const unsigned Size = Input.Size();
+	CQmCheckedFileData Moved(std::move(Input));
+	EXPECT_EQ(Input.Data(), nullptr);
+	EXPECT_EQ(Input.Size(), 0u);
+	EXPECT_EQ(Moved.Data(), pEncoded);
+	EXPECT_EQ(Moved.Size(), Size);
+	CQmCheckedFileData Replaced;
+	ASSERT_TRUE(Replaced.Read(*m_pStorage, "preview.png", IStorage::TYPE_SAVE, Size));
+	Replaced = std::move(Moved);
+	EXPECT_EQ(Moved.Data(), nullptr);
+	EXPECT_EQ(Moved.Size(), 0u);
+	EXPECT_EQ(Replaced.Data(), pEncoded);
+	EXPECT_EQ(Replaced.Size(), Size);
+}
+
+TEST_F(ResourcePreviewAdmission, FailedCheckedReadClearsPriorEncodedInputAndAllowsRetry)
+{
+	CQmCheckedFileData Input;
+	const size_t FileBytes = StoredFileBytes();
+	ASSERT_TRUE(Input.Read(*m_pStorage, "preview.png", IStorage::TYPE_SAVE, FileBytes));
+	EXPECT_FALSE(Input.Read(*m_pStorage, "preview.png", IStorage::TYPE_SAVE, FileBytes - 1));
+	EXPECT_EQ(Input.Data(), nullptr);
+	EXPECT_EQ(Input.Size(), 0u);
+	ASSERT_TRUE(Input.Read(*m_pStorage, "preview.png", IStorage::TYPE_SAVE, FileBytes));
+	EXPECT_NE(Input.Data(), nullptr);
+	EXPECT_EQ(Input.Size(), FileBytes);
+}
+
+TEST_F(ResourcePreviewLayeredRead, MissingEarlierRootKeepsLowerRootPreviewAvailable)
+{
+	ASSERT_NO_FATAL_FAILURE(StoreLowerRootPreview());
+	const auto Name = m_Relative + "/preview.png";
+	auto Artifact = BuildPreviewArtifactFromPath(Name.c_str(), m_pLayered.get(), IStorage::TYPE_ALL, "lower-root", 0);
+	ASSERT_TRUE(Artifact.m_Success);
+	EXPECT_EQ(Artifact.m_Image.m_Width, 2u);
+	EXPECT_EQ(Artifact.m_Image.m_Height, 1u);
+}
+
+TEST_F(ResourcePreviewLayeredRead, NonregularEarlierRootCannotBeHiddenByLaterPreviewAndRemovalAllowsRetry)
+{
+	ASSERT_NO_FATAL_FAILURE(StoreLowerRootPreview());
+	const auto Earlier = "preview_save/" + m_Relative + "/preview.png";
+	ASSERT_TRUE(m_pStorage->CreateFolder(Earlier.c_str(), IStorage::TYPE_SAVE));
+	const auto Name = m_Relative + "/preview.png";
+	auto Rejected = BuildPreviewArtifactFromPath(Name.c_str(), m_pLayered.get(), IStorage::TYPE_ALL, "nonregular-root", 0);
+	EXPECT_FALSE(Rejected.m_Success);
+	EXPECT_EQ(Rejected.m_Image.m_pData, nullptr);
+	ASSERT_TRUE(m_pStorage->RemoveFolder(Earlier.c_str(), IStorage::TYPE_SAVE));
+	auto Accepted = BuildPreviewArtifactFromPath(Name.c_str(), m_pLayered.get(), IStorage::TYPE_ALL, "recovered-root", 0);
+	ASSERT_TRUE(Accepted.m_Success);
+	EXPECT_EQ(Accepted.m_Image.m_Width, 2u);
+}
+
+#if defined(CONF_FAMILY_UNIX) && GTEST_HAS_DEATH_TEST && !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN)
+TEST_F(ResourcePreviewFileDeathTest, FromPathFifoCompletesFailureWithoutBlockingFollowingReadOrShutdown)
+{
+	const auto Fifo = Path("input.png");
+	ASSERT_EQ(mkfifo(Fifo.c_str(), 0600), 0);
+	ASSERT_EXIT(
+		{
+			ArmRegularFileOpenChildTimeout();
+			CJobPool Pool;
+			if(!Pool.TryInit(1))
+				_exit(2);
+			auto pRejected = CSettingsResourcePreviewJob::FromPath("fifo", "input.png", m_pStorage.get(), IStorage::TYPE_SAVE, 4);
+			if(!Pool.TryAdd(pRejected) || !WaitForJobFinished(*pRejected))
+				_exit(3);
+			auto Rejected = pRejected->TakeResult();
+			if(!pRejected->Completed() || pRejected->State() != IJob::STATE_DONE || Rejected.m_Artifact.m_Success || Rejected.m_Artifact.m_Image.m_pData != nullptr)
+				_exit(4);
+			auto pNext = CSettingsResourcePreviewJob::FromPath("retry", "preview.png", m_pStorage.get(), IStorage::TYPE_SAVE, 4);
+			if(!Pool.TryAdd(pNext) || !WaitForJobFinished(*pNext))
+				_exit(5);
+			auto Next = pNext->TakeResult();
+			const bool Success = Next.m_Artifact.m_Success && Next.m_Artifact.m_Image.m_pData != nullptr;
+			Pool.Shutdown();
+			_exit(Success ? 0 : 6);
+		},
+		testing::ExitedWithCode(0), "");
+}
+#endif
+
+TEST_F(ResourcePreviewAdmission, FromPathDecodedBudgetRejectsSourceBeforeResizeAndExactLimitRecovers)
+{
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	auto pRejected = CSettingsResourcePreviewJob::FromPath("decoded-budget", "preview.png", m_pStorage.get(), IStorage::TYPE_SAVE, 1, StoredFileBytes(), 7);
+	ASSERT_TRUE(Pool.TryAdd(pRejected));
+	ASSERT_TRUE(WaitForJobFinished(*pRejected));
+	auto Rejected = pRejected->TakeResult();
+	EXPECT_FALSE(Rejected.m_Artifact.m_Success);
+	EXPECT_EQ(Rejected.m_Artifact.m_Image.m_pData, nullptr);
+
+	auto pAccepted = CSettingsResourcePreviewJob::FromPath("decoded-budget", "preview.png", m_pStorage.get(), IStorage::TYPE_SAVE, 1, StoredFileBytes(), 8);
+	ASSERT_TRUE(Pool.TryAdd(pAccepted));
+	ASSERT_TRUE(WaitForJobFinished(*pAccepted));
+	Pool.Shutdown();
+	auto Accepted = pAccepted->TakeResult();
+	ASSERT_TRUE(Accepted.m_Artifact.m_Success);
+	EXPECT_EQ(Accepted.m_Artifact.m_Image.m_Width, 1u);
+	EXPECT_EQ(Accepted.m_Artifact.m_Image.m_Height, 1u);
+}
+
+#if defined(CONF_WEBP)
+TEST_F(ResourcePreviewAdmission, FromPathWebpBudgetRejectsSourceBeforeResizeAndCanRetry)
+{
+	CPreviewImage Image(2, 1);
+	ASSERT_NE(Image.m_Image.m_pData, nullptr);
+	ASSERT_TRUE(CImageLoader::SaveWebP(m_pStorage->OpenFile("preview.webp", IOFLAG_WRITE, IStorage::TYPE_SAVE), "preview.webp", Image.m_Image));
+	const size_t FileBytes = StoredFileBytes("preview.webp");
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	auto pRejected = CSettingsResourcePreviewJob::FromPath("webp-budget", "preview.webp", m_pStorage.get(), IStorage::TYPE_SAVE, 1, FileBytes, 7);
+	ASSERT_TRUE(Pool.TryAdd(pRejected));
+	ASSERT_TRUE(WaitForJobFinished(*pRejected));
+	EXPECT_FALSE(pRejected->TakeResult().m_Artifact.m_Success);
+	auto pAccepted = CSettingsResourcePreviewJob::FromPath("webp-budget", "preview.webp", m_pStorage.get(), IStorage::TYPE_SAVE, 1, FileBytes, 8);
+	ASSERT_TRUE(Pool.TryAdd(pAccepted));
+	ASSERT_TRUE(WaitForJobFinished(*pAccepted));
+	Pool.Shutdown();
+	auto Accepted = pAccepted->TakeResult();
+	ASSERT_TRUE(Accepted.m_Artifact.m_Success);
+	EXPECT_EQ(Accepted.m_Artifact.m_Image.DataSize(), 4u);
+}
+#endif
+
+namespace
+{
+	// 只替换文件读取边界，任务、池终态和结果消费均使用生产实现。
+	class CPreviewReadFailureStorage : public IStorage
+	{
+		[[noreturn]] static void Unexpected()
+		{
+			ADD_FAILURE() << "unexpected preview storage boundary";
+			throw std::logic_error("unexpected preview storage boundary");
+		}
+
+	public:
+		enum class EFailure
+		{
+			ALLOCATION,
+			RUNTIME,
+			NON_STANDARD,
+			IO_FAILURE,
+			UNSUPPORTED,
+		};
+		struct SReadFailure
+		{
+		};
+		EFailure m_Failure = EFailure::ALLOCATION;
+		int m_Reads = 0;
+		unsigned m_MaxBytes = 0;
+		int NumPaths() const override { Unexpected(); }
+		bool GetDataPath(const char *, char *, unsigned) const override { Unexpected(); }
+		bool GetExecutablePath(const char *, char *, unsigned) const override { Unexpected(); }
+		void ListDirectory(int, const char *, FS_LISTDIR_CALLBACK, void *) override { Unexpected(); }
+		void ListDirectoryInfo(int, const char *, FS_LISTDIR_CALLBACK_FILEINFO, void *) override { Unexpected(); }
+		IOHANDLE OpenFile(const char *, int, int, char *, int) override { Unexpected(); }
+		EReadFileResult ReadFileCheckedBounded(const char *pName, int Type, void **ppResult, unsigned *pResultLen, unsigned MaxBytes) override
+		{
+			++m_Reads;
+			m_MaxBytes = MaxBytes;
+			if(m_Failure == EFailure::UNSUPPORTED)
+				return IStorage::ReadFileCheckedBounded(pName, Type, ppResult, pResultLen, MaxBytes);
+			*ppResult = nullptr;
+			*pResultLen = 0;
+			if(m_Failure == EFailure::IO_FAILURE)
+				return EReadFileResult::IO_FAILURE;
+			if(m_Failure == EFailure::ALLOCATION)
+				throw std::bad_alloc();
+			if(m_Failure == EFailure::RUNTIME)
+				throw std::runtime_error("preview read failed");
+			throw SReadFailure{};
+		}
+		bool FileExists(const char *, int) override { Unexpected(); }
+		bool FolderExists(const char *, int) override { Unexpected(); }
+		bool ReadFile(const char *, int, void **, unsigned *) override { Unexpected(); }
+		char *ReadFileStr(const char *, int) override { Unexpected(); }
+		bool RetrieveTimes(const char *, int, time_t *, time_t *) override { Unexpected(); }
+		bool CalculateHashes(const char *, int, SHA256_DIGEST *, unsigned *) override { Unexpected(); }
+		bool FindFile(const char *, const char *, int, char *, int) override { Unexpected(); }
+		size_t FindFiles(const char *, const char *, int, std::set<std::string> *) override { Unexpected(); }
+		bool RemoveFile(const char *, int) override { Unexpected(); }
+		bool RemoveFolder(const char *, int) override { Unexpected(); }
+		bool RenameFile(const char *, const char *, int, bool) override { Unexpected(); }
+		bool CreateFolder(const char *, int) override { Unexpected(); }
+		void GetCompletePath(int, const char *, char *, unsigned) override { Unexpected(); }
+		bool RemoveBinaryFile(const char *) override { Unexpected(); }
+		bool RenameBinaryFile(const char *, const char *) override { Unexpected(); }
+		const char *GetBinaryPath(const char *, char *, unsigned) override { Unexpected(); }
+		const char *GetBinaryPathAbsolute(const char *, char *, unsigned) override { Unexpected(); }
+	};
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, CheckedIoFailurePublishesCompletedFailureWithRequestedLimit)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::IO_FAILURE;
+	auto pJob = CSettingsResourcePreviewJob::FromPath("io-failure", "preview.png", &Storage, IStorage::TYPE_ALL, 4, 17);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	Pool.Shutdown();
+	EXPECT_EQ(pJob->State(), IJob::STATE_DONE);
+	EXPECT_TRUE(pJob->Completed());
+	EXPECT_EQ(Storage.m_Reads, 1);
+	EXPECT_EQ(Storage.m_MaxBytes, 17u);
+	auto Result = pJob->TakeResult();
+	EXPECT_FALSE(Result.m_Artifact.m_Success);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_pData, nullptr);
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, UnsupportedCheckedBackendDoesNotFallBackToOrdinaryOpen)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::UNSUPPORTED;
+	auto pJob = CSettingsResourcePreviewJob::FromPath("unsupported", "preview.png", &Storage, IStorage::TYPE_ALL, 4);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	Pool.Shutdown();
+	EXPECT_EQ(pJob->State(), IJob::STATE_DONE);
+	EXPECT_TRUE(pJob->Completed());
+	EXPECT_EQ(Storage.m_Reads, 1);
+	EXPECT_EQ(Storage.m_MaxBytes, static_cast<unsigned>(LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE));
+	auto Result = pJob->TakeResult();
+	EXPECT_FALSE(Result.m_Artifact.m_Success);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_pData, nullptr);
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, WideFileLimitCannotWrapIntoSmallAggregateReservation)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::IO_FAILURE;
+	auto Artifact = BuildPreviewArtifactFromPath("preview.png", &Storage, IStorage::TYPE_ALL, "wide-limit", 4, std::numeric_limits<size_t>::max());
+	EXPECT_FALSE(Artifact.m_Success);
+	EXPECT_TRUE(Artifact.m_Deferred);
+	EXPECT_EQ(Storage.m_Reads, 0);
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, CheckedReaderStillSaturatesWideFileLimitAtInterfaceWidth)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::IO_FAILURE;
+	CQmCheckedFileData Data;
+	EXPECT_FALSE(Data.Read(Storage, "preview.png", IStorage::TYPE_ALL, std::numeric_limits<size_t>::max()));
+	EXPECT_EQ(Storage.m_Reads, 1);
+	EXPECT_EQ(Storage.m_MaxBytes, std::numeric_limits<unsigned>::max());
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, AllocationExceptionCanBeConsumedAsCompletedFailure)
+{
+	CPreviewReadFailureStorage Storage;
+	CSettingsResourcePreviewCache Cache;
+	const auto Key = PreviewKey("allocation-failure");
+	Cache.MarkPreviewJobStarted(Key);
+	auto pJob = CSettingsResourcePreviewJob::FromPath("failure", "preview.png", &Storage, IStorage::TYPE_ALL, 4);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	EXPECT_EQ(pJob->State(), IJob::STATE_FAILED);
+	Pool.Shutdown();
+	ASSERT_TRUE(pJob->Completed());
+	EXPECT_EQ(Storage.m_Reads, 1);
+	auto Result = pJob->TakeResult();
+	EXPECT_FALSE(Result.m_Artifact.m_Success);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_pData, nullptr);
+	Cache.MarkPreviewJobDone(Key, Result.m_Artifact.m_Success);
+	ASSERT_NE(Cache.Find(Key), nullptr);
+	EXPECT_FALSE(Cache.Find(Key)->m_PreviewJobPending);
+	EXPECT_EQ(SettingsResourcePreviewDrawResult(*Cache.Find(Key)), ESettingsResourcePreviewDrawResult::FAILED_PLACEHOLDER);
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, NonStandardExceptionCanBeConsumedAsCompletedFailure)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::NON_STANDARD;
+	auto pJob = CSettingsResourcePreviewJob::FromPath("failure", "preview.png", &Storage, IStorage::TYPE_ALL, 4);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	EXPECT_EQ(pJob->State(), IJob::STATE_FAILED);
+	Pool.Shutdown();
+	ASSERT_TRUE(pJob->Completed());
+	EXPECT_EQ(Storage.m_Reads, 1);
+	auto Result = pJob->TakeResult();
+	EXPECT_FALSE(Result.m_Artifact.m_Success);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_pData, nullptr);
+	auto Repeated = pJob->TakeResult();
+	EXPECT_FALSE(Repeated.m_Artifact.m_Success);
+	EXPECT_EQ(Repeated.m_Artifact.m_Image.m_pData, nullptr);
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, RuntimeFailureAllowsRetryOnTheSameNativePool)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::RUNTIME;
+	CSettingsResourcePreviewCache Cache;
+	const auto Key = PreviewKey("retry");
+	Cache.MarkPreviewJobStarted(Key);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	auto pFailed = CSettingsResourcePreviewJob::FromPath("failure", "preview.png", &Storage, IStorage::TYPE_ALL, 4);
+	ASSERT_TRUE(Pool.TryAdd(pFailed));
+	ASSERT_TRUE(WaitForJobFinished(*pFailed));
+	EXPECT_EQ(pFailed->State(), IJob::STATE_FAILED);
+	ASSERT_TRUE(pFailed->Completed());
+	auto Failed = pFailed->TakeResult();
+	ASSERT_FALSE(Failed.m_Artifact.m_Success);
+	Cache.MarkPreviewJobDone(Key, Failed.m_Artifact.m_Success);
+	EXPECT_FALSE(Cache.Find(Key)->m_PreviewJobPending);
+	EXPECT_TRUE(Cache.Find(Key)->m_Failed);
+
+	CPreviewImage Input(2, 1);
+	ASSERT_NE(Input.m_Image.m_pData, nullptr);
+	auto pRetry = std::make_shared<CSettingsResourcePreviewJob>("retry", std::move(Input.m_Image), 4);
+	Cache.MarkPreviewJobStarted(Key);
+	ASSERT_TRUE(Pool.TryAdd(pRetry));
+	ASSERT_TRUE(WaitForJobDone(*pRetry));
+	Pool.Shutdown();
+	ASSERT_TRUE(pRetry->Completed());
+	auto Success = pRetry->TakeResult();
+	ASSERT_TRUE(Success.m_Artifact.m_Success);
+	Cache.MarkPreviewJobDone(Key, Success.m_Artifact.m_Success);
+	EXPECT_FALSE(Cache.Find(Key)->m_PreviewJobPending);
+	EXPECT_FALSE(Cache.Find(Key)->m_Failed);
+	EXPECT_TRUE(Cache.Find(Key)->m_UploadPending);
+	EXPECT_EQ(Success.m_Artifact.m_Image.m_Width, 2u);
 }

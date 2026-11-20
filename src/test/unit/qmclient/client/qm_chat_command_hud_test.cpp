@@ -195,6 +195,20 @@ TEST(QmChatCommandHud, ScreenEdgesConstrainPanelWithoutChangingCandidateSelectio
 	EXPECT_EQ(Hud.HoveredRow(20.0f, RowCenterY(Hud, 0)), 0);
 }
 
+TEST(QmChatCommandHud, FullWidthPanelStaysInsideFractionalBounds)
+{
+	CQmChatCommandHud Hud;
+	AddServerCandidates(Hud, "/ra", 3);
+	constexpr float ScreenLeft = 10.2f;
+	constexpr float ScreenWidth = 200.0f;
+	constexpr float ScreenRight = ScreenLeft + ScreenWidth;
+	Hud.SetLayout(ScreenLeft, 210.0f, ScreenWidth / CQmChatCommandHud::UI_SCALE, 200.0f, 8.0f, ScreenLeft, ScreenRight);
+	const auto &Layout = Hud.Layout();
+	ASSERT_GT(Layout.m_VisibleRows, 0);
+	EXPECT_EQ(Layout.m_X, ScreenLeft);
+	EXPECT_EQ(Layout.m_X + Layout.m_W, ScreenRight);
+}
+
 TEST(QmChatCommandHud, FirstDownSelectsFirstCandidateAndFirstUpSelectsLast)
 {
 	CQmChatCommandHud Hud;

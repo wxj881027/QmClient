@@ -9,7 +9,9 @@
 
 #include <game/client/ui.h>
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <memory>
 #include <optional>
 
@@ -30,6 +32,22 @@ public:
 		int m_TilesPlacedSinceActivate;
 
 		void Reset();
+
+		void SetCursorFromWorld(vec2 Position, int Width, int Height)
+		{
+			const auto TileCoordinate = [](float World, int Last) {
+				return std::isfinite(World) ? static_cast<int>(std::clamp(World / 32.0, 0.0, static_cast<double>(Last))) : 0;
+			};
+			m_TextIndex = ivec2(TileCoordinate(Position.x, Width), TileCoordinate(Position.y, Height - 1));
+		}
+
+		void ClampCursor(int Width, int Height)
+		{
+			if(m_LineStart)
+				m_LineStart = std::clamp(*m_LineStart, 0, Width - 1);
+			m_TextIndex.x = std::clamp(m_TextIndex.x, 0, Width);
+			m_TextIndex.y = std::clamp(m_TextIndex.y, 0, Height - 1);
+		}
 	};
 
 	void OnInit(CEditor *pEditor) override;
@@ -48,7 +66,7 @@ private:
 	IGraphics::CTextureHandle m_CursorTextTexture;
 	CUi::SConfirmPopupContext m_ConfirmActivatePopupContext;
 
-	void SetCursor();
+	std::shared_ptr<CLayerTiles> SelectedTextLayer() const;
 	void TextModeOff();
 	void TextModeOn();
 	void SetTile(ivec2 Pos, unsigned char Index, const std::shared_ptr<CLayerTiles> &pLayer);

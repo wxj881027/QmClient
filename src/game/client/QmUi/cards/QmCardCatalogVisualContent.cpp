@@ -19,6 +19,7 @@
 #include <engine/textrender.h>
 
 #include <game/client/QmUi/QmChatBubble.h>
+#include <game/client/QmUi/SettingsBindCache.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -533,12 +534,7 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 	const CBindSlot FocusBind = QmLookupCommandBind(GameClient()->m_Binds, "toggle qm_focus_mode 0 1");
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonFocusToggle, &s_ClearButtonFocusToggle, &BindKey, FocusBind, false);
 	if(Flow.Input() && !Ui()->RenderOnly() && Result.m_Bind != FocusBind)
-	{
-		if(FocusBind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(FocusBind.m_Key, "", false, FocusBind.m_ModifierMask);
-		if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, "toggle qm_focus_mode 0 1", false, Result.m_Bind.m_ModifierMask);
-	}
+		GameClient()->m_Binds.Rebind(FocusBind, Result.m_Bind, "toggle qm_focus_mode 0 1");
 }
 
 void CMenus::RenderQmVisualSpectatorModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)

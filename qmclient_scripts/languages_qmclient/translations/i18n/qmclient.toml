@@ -3679,6 +3679,38 @@ turkish = "Anahtar kelime kurallarının her iki tarafı da doldurulmalıdır"
 polish = "Obie strony reguł słów kluczowych muszą być wypełnione"
 
 [[message]]
+key = "A keyword rule could not be saved. Check the trigger for => or a reserved prefix."
+[message.translations]
+simplified_chinese = "有一条关键词规则无法保存。请检查触发词是否含有 => 或以保留前缀开头。"
+traditional_chinese = "有一條關鍵詞規則無法儲存。請檢查觸發詞是否含有 => 或以保留前綴開頭。"
+japanese = "キーワードルールを保存できませんでした。トリガーに => が含まれていないか、予約済みの接頭辞で始まっていないか確認してください。"
+korean = "키워드 규칙을 저장하지 못했습니다. 트리거에 =>가 들어 있거나 예약된 접두사로 시작하는지 확인하세요."
+russian = "Не удалось сохранить правило для ключевого слова. Проверьте, нет ли в триггере символов => и не начинается ли он с зарезервированного префикса."
+german = "Eine Schlüsselwortregel konnte nicht gespeichert werden. Prüfe, ob der Auslöser => enthält oder mit einem reservierten Präfix beginnt."
+spanish = "No se pudo guardar una regla de palabras clave. Comprueba si el activador contiene => o empieza por un prefijo reservado."
+french = "Impossible d’enregistrer une règle de mots-clés. Vérifiez si le déclencheur contient => ou commence par un préfixe réservé."
+brazilian_portuguese = "Não foi possível salvar uma regra de palavra-chave. Verifique se o gatilho contém => ou começa com um prefixo reservado."
+portuguese = "Não foi possível guardar uma regra de palavras-chave. Verifique se o acionador contém => ou começa com um prefixo reservado."
+turkish = "Bir anahtar kelime kuralı kaydedilemedi. Tetikleyicinin => içerip içermediğini veya ayrılmış bir ön ekle başlayıp başlamadığını kontrol edin."
+polish = "Nie udało się zapisać reguły słów kluczowych. Sprawdź, czy wyzwalacz zawiera => lub zaczyna się od zastrzeżonego prefiksu."
+
+[[message]]
+key = "Could not save keyword rules. Edit a rule to retry."
+[message.translations]
+simplified_chinese = "无法保存关键词规则。编辑任意一条规则可重试。"
+traditional_chinese = "無法儲存關鍵詞規則。編輯任一條規則即可重試。"
+japanese = "キーワードルールを保存できませんでした。いずれかのルールを編集して再試行してください。"
+korean = "키워드 규칙을 저장하지 못했습니다. 규칙 하나를 수정해 다시 시도하세요."
+russian = "Не удалось сохранить правила для ключевых слов. Измените одно из правил, чтобы повторить попытку."
+german = "Die Schlüsselwortregeln konnten nicht gespeichert werden. Bearbeite eine Regel, um es erneut zu versuchen."
+spanish = "No se pudieron guardar las reglas de palabras clave. Edita una regla para volver a intentarlo."
+french = "Impossible d’enregistrer les règles de mots-clés. Modifiez une règle pour réessayer."
+brazilian_portuguese = "Não foi possível salvar as regras de palavra-chave. Edite uma regra para tentar novamente."
+portuguese = "Não foi possível guardar as regras de palavras-chave. Edite uma regra para tentar novamente."
+turkish = "Anahtar kelime kuralları kaydedilemedi. Yeniden denemek için bir kuralı düzenleyin."
+polish = "Nie udało się zapisać reguł słów kluczowych. Edytuj jedną z reguł, aby spróbować ponownie."
+
+[[message]]
 key = "Bounce"
 [message.translations]
 simplified_chinese = "弹跳"
@@ -41899,6 +41931,22 @@ brazilian_portuguese = "Você precisa estar em um time (de 1 a 63)"
 portuguese = "Tens de estar numa equipa (de 1 a 63)"
 turkish = "Bir takımda olmalısınız (1-63 arası)"
 polish = "Musisz być w drużynie (od 1 do 63)"
+
+[[message]]
+key = "You have to be in a team (from 1-127)"
+[message.translations]
+simplified_chinese = "必须处于 1–127 号队伍中"
+traditional_chinese = "必須處於 1–127 號隊伍中"
+japanese = "チーム（1～127）に所属している必要があります"
+korean = "팀에 속해 있어야 합니다 (1-127)"
+russian = "Вы должны быть в команде (от 1 до 127)"
+german = "Du musst in einem Team sein (von 1-127)"
+spanish = "Tienes que estar en un equipo (del 1 al 127)"
+french = "Vous devez être dans une équipe (de 1 à 127)"
+brazilian_portuguese = "Você precisa estar em um time (de 1 a 127)"
+portuguese = "Tens de estar numa equipa (de 1 a 127)"
+turkish = "Bir takımda olmalısınız (1-127 arası)"
+polish = "Musisz być w drużynie (od 1 do 127)"
 
 [[message]]
 key = "You have to be in a team to play on this server; if the team is locked, any team member dying will kill the whole team"

@@ -3,18 +3,23 @@
 #ifndef GAME_CLIENT_COMPONENTS_GHOST_H
 #define GAME_CLIENT_COMPONENTS_GHOST_H
 
+#include "ghost_run.h"
+
 #include <generated/protocol.h>
 
 #include <game/client/component.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/ghost_extra_data.h>
 #include <game/client/components/qmclient/ghost_freeze_bar.h>
+#include <game/client/components/qmclient/ghost_manual.h>
 #include <game/client/components/qmclient/ghost_path.h>
+#include <game/client/components/qmclient/ghost_render.h>
 #include <game/client/components/qmclient/local_world.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/render.h>
 
 #include <array>
+#include <chrono>
 #include <optional>
 #include <vector>
 
@@ -71,10 +76,10 @@ private:
 	{
 	public:
 		std::shared_ptr<CManagedTeeRenderInfo> m_pManagedTeeRenderInfo;
-		CGhostSkin m_Skin;
+		CGhostSkin m_Skin{};
 		CGhostPath m_Path;
 		int m_StartTick;
-		char m_aPlayer[MAX_NAME_LENGTH];
+		char m_aPlayer[MAX_NAME_LENGTH]{};
 		// 槽位实际装载的文件。地图重载后菜单的旧列表项会按槽位复用，
 		// 只判断“槽位非空”会把别的影子误标成已激活。
 		char m_aFilename[IO_MAX_PATH_LENGTH];
@@ -100,6 +105,12 @@ private:
 
 	CGhostItem m_aActiveGhosts[MAX_ACTIVE_GHOSTS];
 	CGhostItem m_CurGhost;
+	ghost_run::CPersonalBest<CGhostItem, CMenus::CGhostItem> m_PersonalBest;
+	std::chrono::nanoseconds m_NextBestRetry{};
+	bool m_FreeSlotAvailable = false;
+
+	void PublishFinishedBest();
+	void ClearSlot(int Slot);
 
 	// QmClient: 查看模式要把所有虚影的 hook 先画完再画所有 Tee（对齐 demo 播放的玩家
 	// 渲染顺序），所以先把本帧各虚影的插值数据算出来缓存，再统一绘制。
@@ -120,15 +131,16 @@ private:
 		bool m_HasStrongWeak = false;
 		int m_StrongWeakId = 0;
 	};
-	std::vector<SGhostDrawData> m_vGhostDraws;
+	qm_ghost_render::CFrameCache<SGhostDrawData, MAX_ACTIVE_GHOSTS> m_GhostDraws;
 
 	// 查看模式的冻结段：幽灵格式没有冻结起止字段，新格式在 m_VelY 写显式冻结
 	// 标记（见 ghost_freeze_bar.h），旧格式才回退到 WEAPON_NINJA 判定。播放开始时
 	// 扫一次路径还原成相对 tick 区间，用来画与实机一致的冻结进度条
 	// （cl_show_freeze_bars）。区间与进度计算在 ghost_freeze_bar.h，渲染由
 	// CFreezeBars::RenderBarAt 负责。
-	std::array<std::vector<SGhostFreezeSpan>, MAX_ACTIVE_GHOSTS> m_aManualFreezeSpans;
-	void BuildManualFreezeSpans(const std::vector<int> &vSlots);
+	using TManualFreezeSpans = std::array<std::vector<SGhostFreezeSpan>, MAX_ACTIVE_GHOSTS>;
+	TManualFreezeSpans m_aManualFreezeSpans;
+	bool BuildManualFreezeSpans(const std::array<bool, MAX_ACTIVE_GHOSTS> &aSlots, TManualFreezeSpans &aFreezeSpans) const;
 
 	char m_aTmpFilename[IO_MAX_PATH_LENGTH] = "";
 
@@ -140,13 +152,10 @@ private:
 	bool m_RenderingStartedByServer = false;
 
 	// QmClient: 查看模式——影子按独立时间线播放（游戏内 demo 播放器），不与玩家跑图同步
-	bool m_aManualSlots[MAX_ACTIVE_GHOSTS] = {};
+	qm_ghost_manual::CPlan<MAX_ACTIVE_GHOSTS> m_ManualPlan;
 	bool m_ManualMode = false;
 	COnlineReplayClock m_ManualClock;
-	int m_ManualPrimarySlot = -1;
 	int m_ManualFocusSlot = -1;
-	std::vector<int> m_vManualSampleTicks;
-	int m_ManualEndTick = 0; // 本回放最长成员轨迹
 	vec2 m_aManualRenderPos[MAX_ACTIVE_GHOSTS] = {}; // 每个槽位虚影当前插值位置（供镜头跟随）
 	bool m_aManualRenderPosValid[MAX_ACTIVE_GHOSTS] = {};
 
@@ -167,7 +176,7 @@ private:
 	void StopRecord(int Time = -1);
 	void StopRender();
 
-	void UpdateTeeRenderInfo(CGhostItem &Ghost);
+	std::shared_ptr<CManagedTeeRenderInfo> CreateRenderInfo(const CGhostItem &Ghost);
 
 	static void ConGPlay(IConsole::IResult *pResult, void *pUserData);
 
@@ -211,7 +220,7 @@ public:
 	void ListPracticeGroups(std::vector<SPracticeGroup> &vOut) const;
 
 	// QmClient: 查看模式——独立时间线播放（进度/暂停/拖动由 CRankGhost 控制）
-	void StartRenderManual(const std::vector<int> &vSlots);
+	bool StartRenderManual(const std::vector<int> &vSlots, int FirstTick = 0);
 	void ManualSetPlaying(bool Playing);
 	void ManualSeek(int RelativeTick);
 	void ManualSetSpeed(float Speed);
@@ -220,14 +229,15 @@ public:
 	bool ManualModeActive() const { return m_ManualMode; }
 	bool ManualPlaying() const { return m_ManualClock.Playing(); }
 	int ManualPlaybackTick() const;
-	int ManualAdjacentTick(int Current, IDemoPlayer::ETickOffset Offset) const { return OnlineReplayAdjacentTick(m_vManualSampleTicks, Current, Offset); }
+	int ManualAdjacentTick(int Current, IDemoPlayer::ETickOffset Offset) const { return OnlineReplayAdjacentTick(m_ManualPlan.m_vSampleTicks, Current, Offset); }
 	// 冻结条必须画在玩家与地图前景之后，否则会被前景瓦片盖住。
 	void RenderManualFreezeBars();
 	// 边缘定位箭头跟随当前查看目标；多成员回放里切换成员后不再只指向主轨。
 	void ManualSetFocusSlot(int Slot);
 	// 手动播放的 tick 内插值相位（0–1）；暂停时冻结，不随本地预测波动（避免画面抖动）
 	float ManualRenderIntra() const;
-	int ManualEndTick() const { return m_ManualEndTick; }
+	int ManualEndTick() const { return m_ManualPlan.m_Range.Duration(); }
+	const qm_ghost_timeline::CViewRange &ManualTimeline() const { return m_ManualPlan.m_Range; }
 	// 槽位虚影当前插值位置（查看模式下供镜头跟随选中成员）；false = 该槽位本帧未渲染
 	bool GetManualRenderPos(int Slot, vec2 *pOut) const
 	{
@@ -267,6 +277,10 @@ public:
 	// 只校验文件头、地图和 CRC，不占用槽位，也不改动当前已加载影子。
 	bool CanLoad(const char *pFilename);
 	int Load(const char *pFilename);
+	int Load(const CMenus::CGhostItem &Item);
+	void RestoreUnsavedBest(std::vector<CMenus::CGhostItem> &vRows) const { m_PersonalBest.RestoreRow(vRows); }
+	bool IsUnsavedBest(const CMenus::CGhostItem &Item) const;
+	void ForgetUnsavedBest(const CMenus::CGhostItem &Item);
 	void Unload(int Slot);
 	void UnloadAll();
 

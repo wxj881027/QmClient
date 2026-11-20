@@ -25,6 +25,7 @@
 #include <game/client/gameclient.h>
 #include <game/layers.h>
 #include <game/localization.h>
+#include <game/map/map_render_items.h>
 #include <game/mapitems.h>
 
 static bool ImageDataSizeValid(const CImageInfo &Image, size_t &DataSize)
@@ -215,6 +216,9 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 	pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &m_Count);
 	m_Count = std::clamp<int>(m_Count, 0, MAX_MAPIMAGES);
 
+	int LayersStart, LayersCount;
+	pMap->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersCount);
+	bool ShowWarning = false;
 	unsigned char aTextureUsedByTileOrQuadLayerFlag[MAX_MAPIMAGES] = {0}; // 0: nothing, 1(as flag): tile layer, 2(as flag): quad layer
 	for(int GroupIndex = 0; GroupIndex < pLayers->NumGroups(); GroupIndex++)
 	{
@@ -242,7 +246,13 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 			}
 			else if(pLayer->m_Type == LAYERTYPE_QUADS)
 			{
-				const CMapItemLayerQuads *pLayerQuads = reinterpret_cast<const CMapItemLayerQuads *>(pLayer);
+				const auto *pLayerQuads = MapRenderItems::QuadLayer(*pMap, LayersStart + pGroup->m_StartLayer + LayerIndex);
+				if(pLayerQuads == nullptr)
+				{
+					log_error("mapimages", "Ignoring truncated quad layer %d.", pGroup->m_StartLayer + LayerIndex);
+					ShowWarning = true;
+					continue;
+				}
 				if(pLayerQuads->m_Image >= 0 && pLayerQuads->m_Image < m_Count)
 				{
 					aTextureUsedByTileOrQuadLayerFlag[pLayerQuads->m_Image] |= 2;
@@ -255,9 +265,11 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 		co_await std::suspend_always{};
 
 	const int TextureLoadFlag = Graphics()->TextureLoadFlags();
+	const auto SubmitDecode = [this](const std::shared_ptr<CMapImageDecodeJob> &pJob) {
+		return Engine()->TryAddJob(pJob);
+	};
 
 	// load new textures
-	bool ShowWarning = false;
 	for(int i = 0; i < m_Count; i++)
 	{
 		if(aTextureUsedByTileOrQuadLayerFlag[i] == 0)
@@ -267,12 +279,18 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 		}
 
 		const int LoadFlag = (((aTextureUsedByTileOrQuadLayerFlag[i] & 1) != 0) ? TextureLoadFlag : 0) | (((aTextureUsedByTileOrQuadLayerFlag[i] & 2) != 0) ? 0 : (Graphics()->HasTextureArraysSupport() ? IGraphics::TEXLOAD_NO_2D_TEXTURE : 0));
-		const CMapItemImage_v2 *pImg = static_cast<const CMapItemImage_v2 *>(pMap->GetItem(Start + i));
+		const auto ImageItem = MapRenderItems::ReadImage(*pMap, Start + i);
+		if(!ImageItem)
+		{
+			log_error("mapimages", "Failed to load truncated map image %d.", i);
+			ShowWarning = true;
+			continue;
+		}
 
-		const char *pName = pMap->GetDataString(pImg->m_ImageName);
+		const char *pName = pMap->GetDataString(ImageItem->m_ImageName);
 		if(pName == nullptr || pName[0] == '\0')
 		{
-			if(pImg->m_External)
+			if(ImageItem->m_External)
 			{
 				log_error("mapimages", "Failed to load map image %d: failed to load name.", i);
 				ShowWarning = true;
@@ -281,7 +299,7 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 			pName = "(error)";
 		}
 
-		if(pImg->m_Version > 1 && pImg->m_MustBe1 != 1)
+		if(ImageItem->m_Version > 1 && ImageItem->m_MustBe1 != 1)
 		{
 			log_error("mapimages", "Failed to load map image %d '%s': invalid map image type.", i, pName);
 			ShowWarning = true;
@@ -293,8 +311,9 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 		double DecodeMs = 0.0;
 		double SubmitMs = 0.0;
 		bool CombinedReadDecode = false;
-		std::shared_ptr<CMapImageDecodeJob> pDecode;
-		if(pImg->m_External)
+		SMapImageDecodeStart Decode;
+		using EDecodeStart = SMapImageDecodeStart::EResult;
+		if(ImageItem->m_External)
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
 			bool Translated = false;
@@ -310,13 +329,18 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 			}
 			str_format(aPath, sizeof(aPath), "mapres/%s%s.png", pName, Translated ? "_0.7" : "");
 			if(Live)
-				pDecode = std::make_shared<CMapImageDecodeJob>(Storage(), aPath, Trace);
+			{
+				Decode = TryStartMapImageDecode([&] {
+					return std::make_shared<CMapImageDecodeJob>(Storage(), aPath, Trace);
+				},
+					SubmitDecode);
+			}
 			else
 				m_aTextures[i] = Graphics()->LoadTexture(aPath, IStorage::TYPE_ALL, LoadFlag);
 		}
 		else
 		{
-			if(pImg->m_Width <= 0 || pImg->m_Height <= 0)
+			if(ImageItem->m_Width <= 0 || ImageItem->m_Height <= 0)
 			{
 				log_error("mapimages", "Failed to load map image %d '%s': invalid image dimensions.", i, pName);
 				ShowWarning = true;
@@ -324,31 +348,35 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 			}
 
 			CImageInfo ImageInfo;
-			ImageInfo.m_Width = pImg->m_Width;
-			ImageInfo.m_Height = pImg->m_Height;
+			ImageInfo.m_Width = ImageItem->m_Width;
+			ImageInfo.m_Height = ImageItem->m_Height;
 			ImageInfo.m_Format = CImageInfo::FORMAT_RGBA;
 			size_t ImageDataSize = 0;
-			const int FileDataSize = pMap->GetDataSize(pImg->m_ImageData);
+			const int FileDataSize = pMap->GetDataSize(ImageItem->m_ImageData);
 			char aTexName[IO_MAX_PATH_LENGTH];
 			str_format(aTexName, sizeof(aTexName), "embedded: %s", pName);
 			if(Live && FileDataSize > 0 && ImageInfo.DataSize(ImageDataSize) && (size_t)FileDataSize >= ImageDataSize)
 			{
-				pDecode = std::make_shared<CMapImageDecodeJob>(nullptr, aTexName, Trace);
-				CPerfTimer ReadTimer(Trace);
-				if(pMap->ReadCompressedData(pImg->m_ImageData, pDecode->m_vCompressed))
-				{
-					pDecode->m_Image = std::move(ImageInfo);
-					pDecode->m_UncompressedSize = FileDataSize;
-				}
-				else
-					pDecode.reset();
-				ReadMs = ReadTimer.ElapsedMs();
+				Decode = TryStartMapImageDecode([&] {
+					auto pJob = std::make_shared<CMapImageDecodeJob>(nullptr, aTexName, Trace);
+					CPerfTimer ReadTimer(Trace);
+					if(pMap->ReadCompressedData(ImageItem->m_ImageData, pJob->m_vCompressed))
+					{
+						pJob->m_Image = std::move(ImageInfo);
+						pJob->m_UncompressedSize = FileDataSize;
+					}
+					else
+						pJob.reset();
+					ReadMs = ReadTimer.ElapsedMs();
+					return pJob;
+				},
+					SubmitDecode);
 			}
-			if(!pDecode)
+			if(Decode.m_Result == EDecodeStart::NO_JOB)
 			{
 				CPerfTimer Timer(Trace);
-				ImageInfo.m_pData = static_cast<uint8_t *>(pMap->GetData(pImg->m_ImageData));
-				const int LoadedSize = pMap->GetDataSize(pImg->m_ImageData);
+				ImageInfo.m_pData = static_cast<uint8_t *>(pMap->GetData(ImageItem->m_ImageData));
+				const int LoadedSize = pMap->GetDataSize(ImageItem->m_ImageData);
 				ReadMs += Timer.ElapsedMs();
 				CombinedReadDecode = true;
 				if(ImageInfo.m_pData && LoadedSize >= 0 && ImageInfo.DataSize(ImageDataSize) && (size_t)LoadedSize >= ImageDataSize)
@@ -362,14 +390,13 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 					log_error("mapimages", "Failed to load embedded map image %d.", i);
 					ShowWarning = true;
 				}
-				pMap->UnloadData(pImg->m_ImageData);
+				pMap->UnloadData(ImageItem->m_ImageData);
 			}
 		}
 
-		if(pDecode)
+		if(const auto &pDecode = Decode.m_pJob)
 		{
 			m_pMapImageDecode = pDecode;
-			Engine()->AddJob(pDecode);
 			do
 			{
 				co_await std::suspend_always{};
@@ -379,7 +406,7 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 				ReadMs += pDecode->m_ReadMs;
 				DecodeMs = pDecode->m_DecodeMs;
 				CPerfTimer SubmitTimer(Trace);
-				if(pImg->m_External)
+				if(ImageItem->m_External)
 					m_aTextures[i] = Graphics()->FinishExternalTexture(pDecode->m_Image, LoadFlag, pDecode->m_Path.c_str(), pDecode->m_PngliteIncompatible);
 				else if(pDecode->m_Image.m_pData)
 					m_aTextures[i] = Graphics()->LoadTextureRawMove(pDecode->m_Image, LoadFlag, pDecode->m_Path.c_str());
@@ -390,21 +417,37 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 			ShowWarning |= !m_aTextures[i].IsValid();
 			m_pMapImageDecode.reset();
 		}
+		else if(Decode.m_Result != EDecodeStart::NO_JOB)
+		{
+			const char *pReason = Decode.m_Result == EDecodeStart::REJECTED ? "decode queue unavailable" : "insufficient resources to start decoding";
+			log_error("mapimages", "Failed to prepare map image %d '%s': %s.", i, pName, pReason);
+			ShowWarning = true;
+		}
 		if(Trace)
 		{
 			char aExtra[224];
 			str_format(aExtra, sizeof(aExtra), "image=%d external=%d read_ms=%.3f decode_ms=%.3f submit_ms=%.3f read_includes_decode=%d",
-				i, pImg->m_External != 0, ReadMs, DecodeMs, SubmitMs, CombinedReadDecode ? 1 : 0);
+				i, ImageItem->m_External != 0, ReadMs, DecodeMs, SubmitMs, CombinedReadDecode ? 1 : 0);
 			QmPerfLogStage("perf/connect", "map_image_prepare", ReadMs + DecodeMs + SubmitMs, true, Client(), nullptr, nullptr, aExtra);
 		}
-		pMap->UnloadData(pImg->m_ImageName);
+		pMap->UnloadData(ImageItem->m_ImageName);
 		ShowWarning = ShowWarning || m_aTextures[i].IsNullTexture();
 		if(Live)
 			co_await std::suspend_always{};
 	}
 	if(ShowWarning)
 	{
-		Client()->AddWarning(SWarning(Localize("Some map images could not be loaded. Check the local console for details.")));
+		// 警告队列分配失败时，保留已经完成的纹理。
+		try
+		{
+			Client()->AddWarning(SWarning(Localize("Some map images could not be loaded. Check the local console for details.")));
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
 	}
 }
 
@@ -752,7 +795,7 @@ void CMapImages::HookPreviewKickJob()
 
 void CMapImages::HookPreviewPollJob()
 {
-	if(!m_HookPreviewJobPending || m_pHookPreviewJob == nullptr || !m_pHookPreviewJob->Done())
+	if(!m_HookPreviewJobPending || m_pHookPreviewJob == nullptr || !m_pHookPreviewJob->Finished())
 		return;
 
 	std::shared_ptr<IJob> pJob = std::move(m_pHookPreviewJob);
@@ -768,7 +811,7 @@ void CMapImages::HookPreviewPollJob()
 		pDecode->FreeTiles();
 		return;
 	}
-	if(!pDecode->m_Success)
+	if(pJob->State() != IJob::STATE_DONE || !pDecode->m_Success)
 	{
 		// 包缺失/损坏：保持失败状态，key 变化前不再重试
 		m_HookPreviewFailed = true;

@@ -8,6 +8,8 @@
 #include <generated/protocol.h>
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 
 namespace qm_pose
 {
@@ -20,20 +22,15 @@ namespace qm_pose
 		{
 			for(size_t i = 0; i < NumInts; ++i)
 			{
-				const size_t Base = i * 4;
 				unsigned int Packed = 0;
 				for(int k = 0; k < 4; ++k)
 				{
-					const char Ch = pStr[Base + (size_t)k];
+					// 在结束符处停住，后续所有字节都填入编码后的空字符。
+					const char Ch = *pStr;
+					if(Ch != '\0')
+						++pStr;
 					const unsigned int Value = (unsigned int)((unsigned char)Ch + 128);
 					Packed |= (Value & 0xff) << (24 - k * 8);
-					if(Ch == 0)
-					{
-						// 之后的字节保持 0（也就是编码后的「结束符」）
-						for(int Rest = k + 1; Rest < 4; ++Rest)
-							Packed = (Packed & ~(0xffu << (24 - Rest * 8))) | (128u << (24 - Rest * 8));
-						break;
-					}
 				}
 				pOut[i] = (int)Packed;
 			}
@@ -57,9 +54,10 @@ namespace qm_pose
 		if(Seconds <= 0.0f || Fps <= 0)
 			return 0;
 		// 向上取整：录 0.5 秒 @ 60fps 应该是 30 帧而不是 0 帧。
-		const float Frames = Seconds * (float)Fps;
-		const int Whole = (int)Frames;
-		return Frames > (float)Whole ? Whole + 1 : Whole;
+		const float Frames = std::ceil(Seconds * (float)Fps);
+		if(!std::isfinite(Frames) || static_cast<double>(Frames) > std::numeric_limits<int>::max())
+			return 0;
+		return static_cast<int>(Frames);
 	}
 
 	void ComputeCenter(const std::vector<SPoseTee> &vPoses, int &CenterX, int &CenterY)
@@ -92,8 +90,11 @@ namespace qm_pose
 			return 1.0f;
 		int MinX = vPoses[0].m_X, MaxX = MinX;
 		int MinY = vPoses[0].m_Y, MaxY = MinY;
-		for(const SPoseTee &Pose : vPoses)
+		// 取景中心与缩放都以实际进入快照的 Tee 为准。
+		const size_t VisibleCount = std::min<size_t>(vPoses.size(), MAX_SCENE_TEES);
+		for(size_t i = 0; i < VisibleCount; ++i)
 		{
+			const SPoseTee &Pose = vPoses[i];
 			MinX = std::min(MinX, Pose.m_X);
 			MaxX = std::max(MaxX, Pose.m_X);
 			MinY = std::min(MinY, Pose.m_Y);
@@ -203,12 +204,7 @@ namespace qm_pose
 		int CenterX = Options.m_CenterX;
 		int CenterY = Options.m_CenterY;
 		if(Options.m_AutoCenter)
-		{
-			// 与快照实际保留的前 MAX_SCENE_TEES 名保持一致，避免超限文件中
-			// 被截掉的远端 Tee 把相机拉得过远。
-			std::vector<SPoseTee> vVisiblePoses(vPoses.begin(), vPoses.begin() + NumTees);
-			ComputeCenter(vVisiblePoses, CenterX, CenterY);
-		}
+			ComputeCenter(vPoses, CenterX, CenterY);
 
 		// SPECTATORINFO 把自由视角相机放到合影中心；SpectatorId = -1 表示自由视角。
 		CNetObj_SpectatorInfo SpecInfo{};

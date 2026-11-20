@@ -11,19 +11,6 @@
 
 #include <vector>
 
-class CWarDataCache
-{
-public:
-	ColorRGBA m_NameColor = ColorRGBA(1, 1, 1, 1);
-	ColorRGBA m_ClanColor = ColorRGBA(1, 1, 1, 1);
-	bool m_WarName = false;
-	bool m_WarClan = false;
-
-	std::vector<char> m_WarGroupMatches = {false, false, false};
-
-	char m_aReason[MAX_WARLIST_REASON_LENGTH] = "";
-};
-
 class CWarList : public CComponent, public CQmWarListModel
 {
 	// The war list will have these commands

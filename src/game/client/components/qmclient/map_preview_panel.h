@@ -1,16 +1,543 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_PREVIEW_PANEL_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_PREVIEW_PANEL_H
 
+#include <engine/client/map_download_resolver.h>
+#include <engine/http.h>
 #include <engine/map.h>
+#include <engine/storage.h>
 
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/components/qmclient/browser_map_preview.h>
+#include <game/client/components/qmclient/map_download_index.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 
+#include <algorithm>
+#include <array>
+#include <memory>
+#include <new>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
 class CGameClient;
+
+// 只管理本面板的逐层准备失败；map、layers 和已上传图片继续由原缓存项持有。
+class CQmMapPreviewLayerPreparation
+{
+	bool m_Failed = false;
+	float m_RetryAfterTime = 0.0f;
+
+	template<typename TRenderer>
+	static bool ReleaseRenderer(std::unique_ptr<TRenderer> &pRenderer)
+	{
+		if(pRenderer == nullptr)
+			return true;
+		try
+		{
+			// Clear 先销毁失败协程；GPU 删除失败时，图层和 BO 身份仍留在原 owner。
+			pRenderer->UnloadMap();
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+		pRenderer.reset();
+		return true;
+	}
+
+public:
+	static constexpr float RETRY_DELAY = 2.0f;
+	bool HasFailed() const { return m_Failed; }
+
+	template<typename TRenderer>
+	bool Advance(std::unique_ptr<TRenderer> &pRenderer, float Now)
+	{
+		if(m_Failed || pRenderer == nullptr)
+			return false;
+		try
+		{
+			return pRenderer->AdvanceMapLoad(1);
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
+		m_Failed = true;
+		m_RetryAfterTime = Now + RETRY_DELAY;
+		ReleaseRenderer(pRenderer);
+		return false;
+	}
+
+	template<typename TRenderer, typename TCreateRenderer>
+	void Retry(std::unique_ptr<TRenderer> &pRenderer, float Now, TCreateRenderer &&CreateRenderer)
+	{
+		if(!m_Failed || Now < m_RetryAfterTime)
+			return;
+		m_RetryAfterTime = Now + RETRY_DELAY;
+		if(!ReleaseRenderer(pRenderer))
+			return;
+		try
+		{
+			// 候选只初始化加载状态，不上传图层；完整缓存项与图片来源不参与替换。
+			auto pCandidate = CreateRenderer();
+			if(pCandidate == nullptr)
+				return;
+			pRenderer = std::move(pCandidate);
+			m_Failed = false;
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
+	}
+};
+
+// 目录正文先完整解析为候选；资源失败不追加半份条目，也不覆盖已发布列表。
+class CQmMapPreviewDownloadIndex
+{
+	std::vector<std::string> m_vHrefs;
+
+public:
+	const std::vector<std::string> &Hrefs() const { return m_vHrefs; }
+	bool Prepare(std::string_view Html) noexcept
+	{
+		try
+		{
+			std::vector<std::string> vCandidate;
+			size_t Pos = 0;
+			while((Pos = Html.find("href=\"", Pos)) != std::string_view::npos)
+			{
+				Pos += 6;
+				const size_t End = Html.find('"', Pos);
+				if(End == std::string_view::npos)
+					break;
+				const auto Href = Html.substr(Pos, End - Pos);
+				if(Href.size() > 4 && Href.compare(Href.size() - 4, 4, ".map") == 0 && Href.find('/') == std::string_view::npos)
+					vCandidate.emplace_back(Href);
+				Pos = End + 1;
+			}
+			m_vHrefs.swap(vCandidate);
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+	}
+};
+
+// 面板只保留一份地图文件请求。Abort 只提出取消，Done 才表示旧临时文件 owner 已结束。
+class CQmMapPreviewDownloadState
+{
+	CQmMapPreviewDownloadIndex m_Index;
+	std::shared_ptr<IHttpRequest> m_pIndexTask;
+	bool m_IndexLoaded = false;
+	bool m_IndexFailed = false;
+	std::shared_ptr<IHttpRequest> m_pDownloadTask;
+	char m_aDownloadName[MAX_MAP_LENGTH] = {};
+	char m_aFailedName[MAX_MAP_LENGTH] = {};
+	char m_aUnconditionalRetryName[MAX_MAP_LENGTH] = {};
+	bool m_StoppingDownload = false;
+	bool m_RecheckRequested = false;
+	bool m_LocalReadFailed = false;
+
+	bool Matches(const char *pMapName) const
+	{
+		return m_pDownloadTask != nullptr && str_comp(m_aDownloadName, pMapName) == 0;
+	}
+	void ResetDownload() noexcept
+	{
+		m_pDownloadTask.reset();
+		m_aDownloadName[0] = '\0';
+		m_StoppingDownload = false;
+		m_RecheckRequested = false;
+		m_LocalReadFailed = false;
+	}
+	void CancelIndex() noexcept
+	{
+		if(m_pIndexTask != nullptr && !m_pIndexTask->Done())
+			m_pIndexTask->Abort();
+		m_pIndexTask.reset();
+	}
+
+	template<typename TCreateRequest>
+	bool EnsureIndex(IHttp &Http, const char *pBaseUrl, TCreateRequest &CreateRequest)
+	{
+		if(m_IndexLoaded)
+			return true;
+		if(m_pIndexTask != nullptr)
+		{
+			if(!m_pIndexTask->Done())
+				return false;
+			if(m_pIndexTask->State() == EHttpState::DONE)
+			{
+				unsigned char *pData = nullptr;
+				size_t Length = 0;
+				m_pIndexTask->Result(&pData, &Length);
+				const std::string_view Html = pData != nullptr ? std::string_view(reinterpret_cast<const char *>(pData), Length) : std::string_view{};
+				m_IndexLoaded = m_Index.Prepare(Html);
+			}
+			m_IndexFailed = !m_IndexLoaded;
+			m_pIndexTask.reset();
+			return m_IndexLoaded;
+		}
+		if(m_IndexFailed)
+			return false;
+		char aIndexUrl[512];
+		str_format(aIndexUrl, sizeof(aIndexUrl), "%s/", pBaseUrl);
+		auto pTask = CreateRequest(aIndexUrl);
+		if(pTask == nullptr)
+		{
+			m_IndexFailed = true;
+			return false;
+		}
+		pTask->WriteToMemory();
+		pTask->MaxResponseSize(8 * 1024 * 1024);
+		pTask->Timeout(CTimeout{10000, 60000, 1024, 10});
+		pTask->LogProgress(HTTPLOG::FAILURE);
+		std::shared_ptr<IHttpRequest> pCandidate(std::move(pTask));
+		Http.Run(pCandidate);
+		m_pIndexTask = std::move(pCandidate);
+		return false;
+	}
+
+public:
+	~CQmMapPreviewDownloadState() { Stop(); }
+	CQmMapPreviewDownloadState() = default;
+	CQmMapPreviewDownloadState(const CQmMapPreviewDownloadState &) = delete;
+	CQmMapPreviewDownloadState &operator=(const CQmMapPreviewDownloadState &) = delete;
+
+	bool HasFailed(const char *pMapName) const
+	{
+		if(m_IndexFailed || (m_aFailedName[0] != '\0' && str_comp(m_aFailedName, pMapName) == 0))
+			return true;
+		if(!Matches(pMapName) || m_StoppingDownload)
+			return false;
+		const auto State = m_pDownloadTask->State();
+		return m_LocalReadFailed || State == EHttpState::ERROR || State == EHttpState::ABORTED;
+	}
+	int Progress(const char *pMapName) const
+	{
+		if(m_pIndexTask != nullptr)
+			return m_pIndexTask->Progress();
+		return Matches(pMapName) && !m_StoppingDownload ? m_pDownloadTask->Progress() : -1;
+	}
+
+	template<typename TCreateRequest>
+	bool Ensure(const char *pMapName, const char *pBaseUrl, IHttp &Http, IStorage *pStorage, TCreateRequest &&CreateRequest) noexcept
+	{
+		if(pMapName == nullptr || pMapName[0] == '\0')
+			return false;
+		if(str_comp(m_aFailedName, pMapName) != 0)
+			m_aFailedName[0] = '\0';
+		if(HasFailed(pMapName))
+			return false;
+		if(m_pDownloadTask != nullptr)
+		{
+			if(!m_StoppingDownload && Matches(pMapName))
+				return true;
+			if(!m_pDownloadTask->Done())
+			{
+				m_StoppingDownload = true;
+				m_pDownloadTask->Abort();
+				return true;
+			}
+			ResetDownload();
+		}
+		try
+		{
+			if(!EnsureIndex(Http, pBaseUrl, CreateRequest))
+				return m_pIndexTask != nullptr;
+			char aEscaped[MAX_MAP_LENGTH * 3];
+			EscapeUrl(aEscaped, sizeof(aEscaped), pMapName);
+			const std::string Prefix = std::string(aEscaped) + "_";
+			const std::string Href = QmSelectMapDownloadHref(m_Index.Hrefs(), Prefix);
+			SQmMapDownloadPlan Plan;
+			if(Href.empty() || !QmBuildIndexedMapDownloadPlan(pMapName, Href, pBaseUrl, &Plan))
+			{
+				str_copy(m_aFailedName, pMapName);
+				return false;
+			}
+			auto pTask = CreateRequest(Plan.m_Url.c_str());
+			if(pTask == nullptr)
+			{
+				str_copy(m_aFailedName, pMapName);
+				return false;
+			}
+			pTask->WriteToFile(pStorage, Plan.m_FileName.c_str(), IStorage::TYPE_SAVE);
+			pTask->Timeout(CTimeout{4000, 0, 500, 5});
+			// 已知同名本地地图不可读时获取完整正文，避免 304 继续保留坏文件。
+			if(str_comp(m_aUnconditionalRetryName, pMapName) == 0)
+				pTask->SkipByFileTime(false);
+			std::shared_ptr<IHttpRequest> pCandidate(std::move(pTask));
+			// Run 接管前的资源异常留在局部；返回后只做无分配的所有权发布。
+			Http.Run(pCandidate);
+			m_pDownloadTask = std::move(pCandidate);
+			str_copy(m_aDownloadName, pMapName);
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
+		// 失败记录只写固定数组；不能在分配失败的恢复分支再申请字符串。
+		str_copy(m_aFailedName, pMapName);
+		if(!m_IndexLoaded)
+		{
+			m_IndexFailed = true;
+			CancelIndex();
+		}
+		return false;
+	}
+	bool Ensure(const char *pMapName, const char *pBaseUrl, IHttp &Http, IStorage *pStorage) noexcept
+	{
+		return Ensure(pMapName, pBaseUrl, Http, pStorage, &HttpGet);
+	}
+
+	void Retry() noexcept
+	{
+		m_aFailedName[0] = '\0';
+		m_IndexFailed = false;
+		CancelIndex();
+		if(m_pDownloadTask == nullptr || m_pDownloadTask->Done())
+			ResetDownload();
+		else
+		{
+			m_StoppingDownload = true;
+			m_pDownloadTask->Abort();
+		}
+	}
+	bool Stop() noexcept
+	{
+		CancelIndex();
+		if(m_pDownloadTask == nullptr || m_pDownloadTask->Done())
+			return true;
+		m_StoppingDownload = true;
+		m_pDownloadTask->Abort();
+		return false;
+	}
+	bool TakeCompletedDownload(const char *pMapName) noexcept
+	{
+		if(!Matches(pMapName) || m_StoppingDownload || m_RecheckRequested || m_pDownloadTask->State() != EHttpState::DONE)
+			return false;
+		m_RecheckRequested = true;
+		return true;
+	}
+	std::weak_ptr<IHttpRequest> ValidationRequest(const char *pMapName) const noexcept
+	{
+		if(Matches(pMapName) && !m_StoppingDownload && m_pDownloadTask->State() == EHttpState::DONE)
+			return m_pDownloadTask;
+		return {};
+	}
+	void LocalLoadResult(const std::weak_ptr<IHttpRequest> &Request, bool Success) noexcept
+	{
+		const auto pRequest = Request.lock();
+		if(pRequest != nullptr && pRequest == m_pDownloadTask && !m_StoppingDownload && pRequest->State() == EHttpState::DONE)
+		{
+			m_LocalReadFailed = !Success;
+			if(!Success)
+				str_copy(m_aUnconditionalRetryName, m_aDownloadName);
+			else if(str_comp(m_aUnconditionalRetryName, m_aDownloadName) == 0)
+				m_aUnconditionalRetryName[0] = '\0';
+		}
+	}
+};
+
+// 缓存项进入回收后不再绘制；删除命令失败时，所有来源与 GPU 身份仍由原项持有。
+// 模板只隔离资源接口，生产缓存和真实 renderer 的回归共用这条清理、腾位入口。
+template<typename TEntry>
+class CQmMapPreviewCacheEntries
+{
+	IGraphics *m_pGraphics;
+	std::vector<std::unique_ptr<TEntry>> m_vEntries;
+
+public:
+	static constexpr size_t CAPACITY = 3;
+	static constexpr float MIN_AGE = 0.4f;
+
+	explicit CQmMapPreviewCacheEntries(IGraphics *pGraphics) :
+		m_pGraphics(pGraphics)
+	{
+		m_vEntries.reserve(CAPACITY);
+	}
+	~CQmMapPreviewCacheEntries()
+	{
+		// 显式 Clear 负责图形清理；终态析构只取消任务并释放 CPU owner。
+		for(auto &pEntry : m_vEntries)
+			pEntry->CancelLoad();
+	}
+
+	size_t Size() const { return m_vEntries.size(); }
+	TEntry *Find(const char *pMapName) const
+	{
+		for(const auto &pEntry : m_vEntries)
+			if(str_comp(pEntry->m_aMapName, pMapName) == 0)
+				return pEntry.get();
+		return nullptr;
+	}
+	static bool IsInitializing(const TEntry *pEntry) { return pEntry == nullptr || pEntry->m_Retiring; }
+
+	bool Release(TEntry &Entry)
+	{
+		Entry.m_Retiring = true;
+		Entry.CancelLoad();
+		try
+		{
+			if(m_pGraphics != nullptr && Entry.m_GraphicsResetVersion == m_pGraphics->GraphicsResourcesResetVersion())
+			{
+				// renderer 借用地图和图片；先收回图层，再删除图片和离屏目标。
+				if(Entry.m_pRenderer != nullptr)
+					Entry.m_pRenderer->UnloadMap();
+				if(Entry.m_pImages != nullptr)
+					Entry.m_pImages->UnloadPreview();
+				if(Entry.m_RenderTarget.IsValid())
+					m_pGraphics->DestroyRenderTarget(&Entry.m_RenderTarget);
+			}
+			else
+			{
+				// 旧代 GPU 已整体失效；先销毁协程借用，再关闭地图，不向新代发送删除。
+				Entry.m_pRenderer.reset();
+				Entry.m_RenderTarget.Invalidate();
+			}
+			if(Entry.m_pMap != nullptr)
+				Entry.m_pMap->Unload();
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+	}
+
+	bool Clear()
+	{
+		for(auto It = m_vEntries.begin(); It != m_vEntries.end();)
+		{
+			if(Release(**It))
+				It = m_vEntries.erase(It);
+			else
+				++It;
+		}
+		return m_vEntries.empty();
+	}
+
+	bool MakeRoom(float Now)
+	{
+		if(m_vEntries.size() < CAPACITY)
+			return true;
+		// Touch 和 Insert 维持最近使用顺序；失败项留在原位，继续尝试其他可淘汰项。
+		for(size_t Index = m_vEntries.size(); Index > 0; --Index)
+		{
+			auto &pEntry = m_vEntries[Index - 1];
+			if(Now - pEntry->m_LastUseTime < MIN_AGE || !Release(*pEntry))
+				continue;
+			m_vEntries.erase(m_vEntries.begin() + Index - 1);
+			return true;
+		}
+		return false;
+	}
+
+	void Touch(TEntry &Entry, float Now)
+	{
+		Entry.m_LastUseTime = Now;
+		const auto It = std::find_if(m_vEntries.begin(), m_vEntries.end(), [&](const auto &pEntry) { return pEntry.get() == &Entry; });
+		dbg_assert(It != m_vEntries.end(), "Preview cache entry must be owned before use");
+		std::rotate(m_vEntries.begin(), It, It + 1);
+	}
+	TEntry *Insert(std::unique_ptr<TEntry> pEntry)
+	{
+		dbg_assert(m_vEntries.size() < CAPACITY, "Preview cache must make room before insertion");
+		auto *pResult = pEntry.get();
+		m_vEntries.insert(m_vEntries.begin(), std::move(pEntry));
+		return pResult;
+	}
+	template<typename TInitialize>
+	TEntry *Create(TInitialize &&Initialize)
+	{
+		try
+		{
+			// 初始化只排队本地加载，不创建 GPU 对象；失败仍走原初始化占位。
+			auto pEntry = std::make_unique<TEntry>();
+			Initialize(*pEntry);
+			return Insert(std::move(pEntry));
+		}
+		catch(const std::bad_alloc &)
+		{
+			return nullptr;
+		}
+		catch(const std::length_error &)
+		{
+			return nullptr;
+		}
+	}
+	void RetryMissing(const char *pMapName)
+	{
+		auto *pEntry = Find(pMapName);
+		if(pEntry != nullptr && pEntry->m_LoadFailed && !pEntry->m_Retiring)
+			pEntry->m_RetryAfterTime = 0.0f;
+	}
+};
+
+// 预览绘制临时借用投影与裁剪；离屏目标只在 Begin 成功后由本作用域结束。
+class CQmMapPreviewDrawScope
+{
+	IGraphics &m_Graphics;
+	std::array<float, 4> m_aScreen;
+	CUiScopedClipSuspend m_Clips;
+	bool m_RenderTargetActive = false;
+
+public:
+	explicit CQmMapPreviewDrawScope(CUi &Ui) :
+		m_Graphics(*Ui.Graphics()), m_Clips(&Ui)
+	{
+		m_Graphics.GetScreen(&m_aScreen[0], &m_aScreen[1], &m_aScreen[2], &m_aScreen[3]);
+	}
+	~CQmMapPreviewDrawScope()
+	{
+		EndRenderTarget();
+		m_Graphics.MapScreen(m_aScreen[0], m_aScreen[1], m_aScreen[2], m_aScreen[3]);
+	}
+	CQmMapPreviewDrawScope(const CQmMapPreviewDrawScope &) = delete;
+	CQmMapPreviewDrawScope &operator=(const CQmMapPreviewDrawScope &) = delete;
+
+	bool BeginRenderTarget(IGraphics::CRenderTargetHandle Target, ColorRGBA ClearColor)
+	{
+		dbg_assert(!m_RenderTargetActive, "Preview render target already active");
+		m_RenderTargetActive = m_Graphics.BeginRenderTarget(Target, ClearColor);
+		return m_RenderTargetActive;
+	}
+	void EndRenderTarget()
+	{
+		if(m_RenderTargetActive)
+		{
+			m_Graphics.EndRenderTarget();
+			m_RenderTargetActive = false;
+		}
+	}
+};
 
 // 服务器列表与投票页共用的地图预览面板：同一份离屏地图缓存、同一套相机
 // 拖拽/滚轮缩放和实体层开关。调用点只决定目标地图、标题右侧说明，以及
@@ -44,7 +571,11 @@ public:
 	using FDrawCanvas = void (*)(void *pRenderState, CGameClient *pGameClient, SContext *pContext, CUIRect Preview, CUi *pUi, bool Active);
 
 	CQmMapPreviewPanel() = default;
-	~CQmMapPreviewPanel() = default;
+	~CQmMapPreviewPanel()
+	{
+		if(m_pfnDestroyRenderState != nullptr)
+			m_pfnDestroyRenderState(m_pRenderState);
+	}
 	CQmMapPreviewPanel(const CQmMapPreviewPanel &) = delete;
 	CQmMapPreviewPanel &operator=(const CQmMapPreviewPanel &) = delete;
 
@@ -84,7 +615,7 @@ public:
 		Ctx.m_pUi->DoPopupMenu(pContext, PanelRect.x, PanelRect.y, PanelRect.w, PanelRect.h, pContext, &CQmMapPreviewPanel::PopupThunk, Props);
 	}
 
-	CUi::EPopupMenuFunctionResult Popup(void *pContext, CUIRect View, bool Active) const
+	CUi::EPopupMenuFunctionResult Popup(void *pContext, CUIRect View, bool Active)
 	{
 		auto *pCtx = static_cast<SContext *>(pContext);
 		if(pCtx == nullptr || pCtx->m_pUi == nullptr || pCtx->m_Target.m_aMapName[0] == '\0')
@@ -113,7 +644,10 @@ public:
 		pUi->DoLabel(&Hint, Localize("Drag to pan, scroll to zoom"), Metrics.m_FontSize, TEXTALIGN_ML, HintProps);
 		if(Preview.w <= 2.0f || Preview.h <= 2.0f)
 			return CUi::POPUP_KEEP_OPEN;
-		if(m_pfnDrawCanvas == nullptr || m_pGameClient == nullptr)
+		// Init 的生产回调只在资源准备失败时存在；外壳测试无需链接客户端实现。
+		if(m_pfnRetryInit != nullptr)
+			m_pfnRetryInit(this);
+		if(m_pInitRetryGameClient != nullptr || m_pfnDrawCanvas == nullptr || m_pGameClient == nullptr)
 		{
 			pUi->DoLabel(&Preview, Localize("Map preview unavailable"), Metrics.m_FontSize, TEXTALIGN_MC);
 			return CUi::POPUP_KEEP_OPEN;
@@ -130,7 +664,10 @@ private:
 	}
 
 	CGameClient *m_pGameClient = nullptr;
+	CGameClient *m_pInitRetryGameClient = nullptr;
+	void (*m_pfnRetryInit)(CQmMapPreviewPanel *) = nullptr;
 	void *m_pRenderState = nullptr;
+	void (*m_pfnDestroyRenderState)(void *) noexcept = nullptr;
 	FDrawCanvas m_pfnDrawCanvas = nullptr;
 };
 

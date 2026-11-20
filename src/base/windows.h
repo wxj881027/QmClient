@@ -25,9 +25,9 @@
  *
  * @param error The Windows error code.
  *
- * @return A new std::string representing the error code.
+ * @return A new std::string representing the error code, or an empty string if allocation fails.
  */
-std::string windows_format_system_message(unsigned long error);
+std::string windows_format_system_message(unsigned long error) noexcept;
 
 /**
  * Converts an array of arguments into a wide string with proper escaping for Windows command-line usage.
@@ -65,14 +65,17 @@ std::wstring windows_utf8_to_wide(const char *str);
  * @param wide_str The wide character string to convert.
  *
  * @return The argument as a UTF-8 encoded string, wrapped in an optional.
- * The optional is empty, if the wide string contains invalid codepoints.
+ * Returns an empty optional if the input is null, invalid, or could not be converted.
  *
  * @remark The strings are treated as null-terminated strings.
  */
-std::optional<std::string> windows_wide_to_utf8(const wchar_t *wide_str);
+std::optional<std::string> windows_wide_to_utf8(const wchar_t *wide_str) noexcept;
 
-// 转换有界 UTF-16 字符串，且不会读取 End 之后的数据；输入错误或缺少终止符时返回空值。
-std::optional<std::string> windows_wide_to_utf8_bounded(const wchar_t *wide_str, const wchar_t *wide_end);
+// 转换有界 UTF-16 字符串，读取止于 wide_end；缺少终止符或转换失败时返回空值。
+std::optional<std::string> windows_wide_to_utf8_bounded(const wchar_t *wide_str, const wchar_t *wide_end) noexcept;
+
+// 注册表容量按wchar_t元素计，返回长度按字节计；终止符必须位于返回范围内。
+std::optional<std::string> windows_registry_string_to_utf8(const wchar_t *wide_str, size_t capacity, size_t bytes) noexcept;
 
 /**
  * This is a RAII wrapper to initialize/uninitialize the Windows COM library,
@@ -86,10 +89,20 @@ std::optional<std::string> windows_wide_to_utf8_bounded(const wchar_t *wide_str,
  */
 class CWindowsComLifecycle
 {
+	bool m_Initialized;
+
 public:
-	CWindowsComLifecycle(bool HasWindow);
+	enum class EInitMode
+	{
+		REQUIRED,
+		CHECKED,
+	};
+	// CHECKED 由调用方处理失败；S_FALSE 同样持有一次需要释放的初始化引用。
+	CWindowsComLifecycle(bool HasWindow, EInitMode InitMode = EInitMode::REQUIRED);
 	~CWindowsComLifecycle();
 	CWindowsComLifecycle(const CWindowsComLifecycle &) = delete;
+	CWindowsComLifecycle &operator=(const CWindowsComLifecycle &) = delete;
+	[[nodiscard]] bool IsInitialized() const noexcept { return m_Initialized; }
 };
 
 /**

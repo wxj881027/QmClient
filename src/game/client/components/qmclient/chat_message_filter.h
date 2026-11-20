@@ -28,18 +28,19 @@ namespace QmChatMessageFilter
 
 	inline bool MentionsName(const char *pLine, const char *pName, bool AllowAtPrefix = false)
 	{
-		const int Length = str_length(pName);
-		if(Length == 0)
+		if(pName[0] == '\0')
 			return false;
 
-		const char *pHit = str_utf8_find_nocase(pLine, pName);
+		// 大小写映射可能改变 UTF-8 字节数，边界必须使用实际匹配终点。
+		const char *pEnd = nullptr;
+		const char *pHit = str_utf8_find_nocase(pLine, pName, &pEnd);
 		while(pHit)
 		{
 			const bool NameBoundary = pLine == pHit || pHit[-1] == ' ';
 			const bool AtBoundary = AllowAtPrefix && pHit > pLine && pHit[-1] == '@' && (pHit == pLine + 1 || pHit[-2] == ' ');
-			if((NameBoundary || AtBoundary) && (pHit[Length] == 0 || pHit[Length] == ' ' || pHit[Length] == '.' || pHit[Length] == '!' || pHit[Length] == ',' || pHit[Length] == '?' || pHit[Length] == ':'))
+			if((NameBoundary || AtBoundary) && (*pEnd == 0 || *pEnd == ' ' || *pEnd == '.' || *pEnd == '!' || *pEnd == ',' || *pEnd == '?' || *pEnd == ':'))
 				return true;
-			pHit = str_utf8_find_nocase(pHit + 1, pName);
+			pHit = str_utf8_find_nocase(pHit + 1, pName, &pEnd);
 		}
 		return false;
 	}

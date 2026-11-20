@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <new>
 #include <vector>
 
 TEST(RenderTargetPool, DeferredDestructionKeepsSlotReservedUntilPassEnds)
@@ -84,6 +85,42 @@ TEST(RenderTargetPool, MultipleDeferredSlotsSurvivePoolGrowth)
 	}
 	Pool.FlushDeferred(Destroy);
 	EXPECT_EQ(vDestroyed, (std::vector<int>{First, Second}));
+}
+
+TEST(RenderTargetPool, FailedImmediateDestructionLeavesTargetAvailableToRetry)
+{
+	CRenderTargetPool Pool;
+	const int Target = Pool.Allocate(32, 16);
+	ASSERT_GE(Target, 0);
+	EXPECT_THROW(Pool.Release(Target, false, [](int) { throw std::bad_alloc(); }), std::bad_alloc);
+	EXPECT_EQ(Pool.Size(Target), ivec2(32, 16));
+	Pool.Release(Target, false, [&](int Id) { EXPECT_EQ(Id, Target); });
+	EXPECT_EQ(Pool.Allocate(64, 32), Target);
+}
+
+TEST(RenderTargetPool, RetryingDeferredDestructionDoesNotDestroyReusedSlot)
+{
+	CRenderTargetPool Pool;
+	const int First = Pool.Allocate(8, 8);
+	const int Second = Pool.Allocate(16, 16);
+	ASSERT_GE(First, 0);
+	ASSERT_GE(Second, 0);
+	std::vector<int> vDestroyed;
+	const auto Destroy = [&](int Id) { vDestroyed.push_back(Id); };
+	Pool.Release(First, true, Destroy);
+	Pool.Release(Second, true, Destroy);
+	EXPECT_THROW(Pool.FlushDeferred([&](int Id) {
+		if(Id == Second)
+			throw std::bad_alloc();
+		Destroy(Id);
+	}),
+		std::bad_alloc);
+	ASSERT_EQ(Pool.Allocate(64, 32), First);
+
+	Pool.FlushDeferred(Destroy);
+	EXPECT_EQ(vDestroyed, (std::vector<int>{First, Second}));
+	EXPECT_EQ(Pool.Size(First), ivec2(64, 32));
+	EXPECT_EQ(Pool.Allocate(32, 16), Second);
 }
 
 TEST(RenderTargetPool, InvalidRequestsDoNotConsumeSlotsOrDestroyResources)

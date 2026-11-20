@@ -1,5 +1,9 @@
 #include "android_main.h"
 
+#include "asset_integrity.h"
+#include "asset_unpack.h"
+#include "jni_calls.h"
+
 #include <base/hash.h>
 #include <base/log.h>
 #include <base/system.h>
@@ -8,64 +12,74 @@
 
 #include <SDL3/SDL.h>
 #include <jni.h>
+#include <unistd.h>
 
+#include <algorithm>
 #include <atomic>
-#include <string>
-#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <memory>
 
-static bool UnpackAsset(const char *pFilename)
+static bool UnpackAsset(const char *pFilename) noexcept
 {
-	char aAssetFilename[IO_MAX_PATH_LENGTH] = "asset_integrity_files/";
-	str_append(aAssetFilename, pFilename);
-
-	// This uses SDL_IOFromFile because it can read Android assets,
-	// which are files stored in the app's APK file. All data files
-	// are stored as assets and unpacked to the external storage.
-	SDL_IOStream *pAssetFile = SDL_IOFromFile(aAssetFilename, "rb");
-	if(!pAssetFile)
+	try
 	{
-		log_error("android", "Failed to open asset '%s' for reading", pFilename);
+		constexpr const char *pPrefix = "asset_integrity_files/";
+		char aAssetFilename[IO_MAX_PATH_LENGTH];
+		if(!pFilename || !pFilename[0] || str_length(pFilename) >= static_cast<int>(sizeof(aAssetFilename)) - str_length(pPrefix))
+			return false;
+		str_copy(aAssetFilename, pPrefix);
+		str_append(aAssetFilename, pFilename);
+		std::unique_ptr<SDL_IOStream, decltype(&SDL_CloseIO)> pAssetFile(SDL_IOFromFile(aAssetFilename, "rb"), &SDL_CloseIO);
+		if(!pAssetFile)
+		{
+			log_error("android", "Failed to open asset '%s' for reading", pFilename);
+			return false;
+		}
+		const auto FileLength = SDL_GetIOSize(pAssetFile.get());
+		if(FileLength < 0)
+		{
+			log_error("android", "Failed to determine length of asset '%s'", pFilename);
+			return false;
+		}
+		// 同目录独占候选，不截断正式资源，也不复用其他解包留下的候选。
+		char aCandidate[IO_MAX_PATH_LENGTH + 16];
+		const char *pLastSlash = str_rchr(pFilename, '/');
+		const int ParentLength = pLastSlash ? static_cast<int>(pLastSlash - pFilename + 1) : 0;
+		str_format(aCandidate, sizeof(aCandidate), "%.*s.qm-asset-XXXXXX", ParentLength, pFilename);
+		const int CandidateDescriptor = mkstemp(aCandidate);
+		if(CandidateDescriptor < 0)
+			return false;
+		FILE *pCandidateFile = fdopen(CandidateDescriptor, "wb");
+		if(!pCandidateFile)
+		{
+			close(CandidateDescriptor);
+			return false;
+		}
+		std::unique_ptr<void, decltype(&io_close)> Target(pCandidateFile, &io_close);
+		const auto Read = [&](void *pData, size_t Size, size_t &ReadBytes) {
+			ReadBytes = SDL_ReadIO(pAssetFile.get(), pData, Size);
+			return SDL_GetIOStatus(pAssetFile.get()) != SDL_IO_STATUS_ERROR;
+		};
+		const auto Write = [&](const void *pData, size_t Size) {
+			return io_write(Target.get(), pData, static_cast<unsigned>(Size)) == Size && io_error(Target.get()) == 0;
+		};
+		const auto CloseInput = [&]() noexcept { return SDL_CloseIO(pAssetFile.release()); };
+		const auto CloseOutput = [&](bool Complete) noexcept {
+			const bool Flushed = !Complete || io_flush(Target.get()) == 0;
+			const bool Closed = io_close(Target.release()) == 0;
+			return Complete && Flushed && Closed;
+		};
+		const auto Publish = [&] { return fs_rename(aCandidate, pFilename, false) == 0; };
+		const auto Stage = android_assets::Unpack(FileLength, Read, Write, CloseInput, CloseOutput, Publish);
+		if(Stage != android_assets::EStage::DONE)
+			log_error("android", "Failed to unpack asset '%s' at stage %d (candidate '%s')", pFilename, static_cast<int>(Stage), aCandidate);
+		return Stage == android_assets::EStage::DONE;
+	}
+	catch(...)
+	{
 		return false;
 	}
-
-	const long int FileLength = SDL_GetIOSize(pAssetFile);
-	if(FileLength < 0)
-	{
-		SDL_CloseIO(pAssetFile);
-		log_error("android", "Failed to determine length of asset '%s'", pFilename);
-		return false;
-	}
-
-	char *pData = static_cast<char *>(malloc(FileLength));
-	const size_t ReadLength = SDL_ReadIO(pAssetFile, pData, FileLength);
-	SDL_CloseIO(pAssetFile);
-
-	if(ReadLength != (size_t)FileLength)
-	{
-		free(pData);
-		log_error("android", "Failed to read asset '%s' (read %" PRIzu ", wanted %ld)", pFilename, ReadLength, FileLength);
-		return false;
-	}
-
-	IOHANDLE TargetFile = io_open(pFilename, IOFLAG_WRITE);
-	if(!TargetFile)
-	{
-		free(pData);
-		log_error("android", "Failed to open '%s' for writing", pFilename);
-		return false;
-	}
-
-	const size_t WriteLength = io_write(TargetFile, pData, FileLength);
-	io_close(TargetFile);
-	free(pData);
-
-	if(WriteLength != (size_t)FileLength)
-	{
-		log_error("android", "Failed to write data to '%s' (wrote %" PRIzu ", wanted %ld)", pFilename, WriteLength, FileLength);
-		return false;
-	}
-
-	return true;
 }
 
 constexpr const char *INTEGRITY_INDEX = "integrity.txt";
@@ -111,53 +125,8 @@ static bool EqualIntegrityFiles(const char *pAssetFilename, const char *pStorage
 	return str_comp(aStorageMainSha256, aAssetMainSha256) == 0;
 }
 
-class CIntegrityFileLine
-{
-public:
-	char m_aFilename[IO_MAX_PATH_LENGTH];
-	SHA256_DIGEST m_Sha256;
-};
-
-static std::vector<CIntegrityFileLine> ReadIntegrityFile(const char *pFilename)
-{
-	CLineReader LineReader;
-	if(!LineReader.OpenFile(io_open(pFilename, IOFLAG_READ)))
-	{
-		return {};
-	}
-
-	std::vector<CIntegrityFileLine> vLines;
-	while(const char *pReadLine = LineReader.Get())
-	{
-		const char *pSpaceInLine = str_rchr(pReadLine, ' ');
-		CIntegrityFileLine Line;
-		char aSha256[SHA256_MAXSTRSIZE];
-		if(pSpaceInLine == nullptr)
-		{
-			if(!vLines.empty())
-			{
-				// Only the first line is allowed to not contain a filename
-				log_error("android", "Failed to parse line %" PRIzu " of '%s': line does not contain space", vLines.size() + 1, pFilename);
-				return {};
-			}
-			Line.m_aFilename[0] = '\0';
-			str_copy(aSha256, pReadLine);
-		}
-		else
-		{
-			str_truncate(Line.m_aFilename, sizeof(Line.m_aFilename), pReadLine, pSpaceInLine - pReadLine);
-			str_copy(aSha256, pSpaceInLine + 1);
-		}
-		if(sha256_from_str(&Line.m_Sha256, aSha256) != 0)
-		{
-			log_error("android", "Failed to parse line %" PRIzu " of '%s': invalid SHA256 string", vLines.size() + 1, pFilename);
-			return {};
-		}
-		vLines.emplace_back(std::move(Line));
-	}
-
-	return vLines;
-}
+using android_assets::CIntegrityFileLine;
+using android_assets::ReadIntegrityFile;
 
 const char *InitAndroid()
 {
@@ -178,7 +147,8 @@ const char *InitAndroid()
 		return "Failed to create 'data' and 'user' directories in external storage.";
 	}
 
-	if(EqualIntegrityFiles(INTEGRITY_INDEX, INTEGRITY_INDEX_SAVE))
+	// 存储初始化需要 data/mapres。完整性索引可能在资源目录被清理后仍然存在。
+	if(fs_is_dir("data/mapres") && EqualIntegrityFiles(INTEGRITY_INDEX, INTEGRITY_INDEX_SAVE))
 	{
 		return nullptr;
 	}
@@ -188,24 +158,24 @@ const char *InitAndroid()
 		return "Failed to unpack the integrity index file. Consider reinstalling the app.";
 	}
 
-	std::vector<CIntegrityFileLine> vIntegrityLines = ReadIntegrityFile(INTEGRITY_INDEX);
+	auto vIntegrityLines = ReadIntegrityFile(INTEGRITY_INDEX);
 	if(vIntegrityLines.empty())
 	{
 		return "Failed to load the integrity index file. Consider reinstalling the app.";
 	}
 
-	std::vector<CIntegrityFileLine> vIntegritySaveLines = ReadIntegrityFile(INTEGRITY_INDEX_SAVE);
+	auto vIntegritySaveLines = ReadIntegrityFile(INTEGRITY_INDEX_SAVE);
 
 	// The remaining lines of each integrity file list all assets and their hashes
 	for(size_t i = 1; i < vIntegrityLines.size(); ++i)
 	{
 		const CIntegrityFileLine &IntegrityLine = vIntegrityLines[i];
 
-		// Check if the asset is unchanged from the last unpacking
+		// 只有上次解包的记录和这次相同，且文件还存在时，才复用磁盘上的资源。
 		const auto IntegritySaveLine = std::find_if(vIntegritySaveLines.begin(), vIntegritySaveLines.end(), [&](const CIntegrityFileLine &Line) {
 			return str_comp(Line.m_aFilename, IntegrityLine.m_aFilename) == 0;
 		});
-		if(IntegritySaveLine != vIntegritySaveLines.end() && IntegritySaveLine->m_Sha256 == IntegrityLine.m_Sha256)
+		if(IntegritySaveLine != vIntegritySaveLines.end() && IntegritySaveLine->m_Sha256 == IntegrityLine.m_Sha256 && fs_is_file(IntegrityLine.m_aFilename))
 		{
 			continue;
 		}
@@ -237,7 +207,7 @@ const char *InitAndroid()
 
 	// The integrity file will be unpacked every time when launching,
 	// so we can simply rename it to update the saved integrity file.
-	if(fs_remove(INTEGRITY_INDEX_SAVE) != 0 || fs_rename(INTEGRITY_INDEX, INTEGRITY_INDEX_SAVE) != 0)
+	if(fs_rename(INTEGRITY_INDEX, INTEGRITY_INDEX_SAVE, false) != 0)
 	{
 		return "Failed to update the saved integrity index file.";
 	}
@@ -245,240 +215,88 @@ const char *InitAndroid()
 	return nullptr;
 }
 
+static bool CallAndroidActivityMethod(const char *pMethod)
+{
+	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
+	return android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) {
+		const jclass ActivityClass = pEnv->GetObjectClass(Activity);
+		if(!ActivityClass || pEnv->ExceptionCheck())
+			return false;
+		const jmethodID Method = pEnv->GetMethodID(ActivityClass, pMethod, "()V");
+		if(!Method || pEnv->ExceptionCheck())
+			return false;
+		pEnv->CallVoidMethod(Activity, Method);
+		return true; });
+}
+
 void RestartAndroidApp()
 {
 	// 等待启动请求提交后再结束进程，避免 UI 消息队列中的重启请求随进程一起丢失。
-	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	jobject Activity = (jobject)SDL_GetAndroidActivity();
-	jclass ActivityClass = pEnv->GetObjectClass(Activity);
-	jmethodID MethodId = pEnv->GetMethodID(ActivityClass, "restartApp", "()V");
-	pEnv->CallVoidMethod(Activity, MethodId);
-	pEnv->DeleteLocalRef(ActivityClass);
-	pEnv->DeleteLocalRef(Activity);
+	if(!CallAndroidActivityMethod("restartApp"))
+		log_warn("android", "Failed to request app restart");
 }
 
 bool StartAndroidServer(const char **ppArguments, size_t NumArguments)
 {
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	jobject Activity = (jobject)SDL_GetAndroidActivity();
-	jclass ActivityClass = pEnv->GetObjectClass(Activity);
+	return android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) { return android_jni::StartServer(*pEnv, Activity, ppArguments, NumArguments); });
+}
 
-	jclass StringClass = pEnv->FindClass("java/lang/String");
-	jobjectArray ArgumentsArray = pEnv->NewObjectArray(NumArguments, StringClass, nullptr);
-	pEnv->DeleteLocalRef(StringClass);
-	for(size_t ArgumentIndex = 0; ArgumentIndex < NumArguments; ArgumentIndex++)
-	{
-		jstring ArgumentString = pEnv->NewStringUTF(ppArguments[ArgumentIndex]);
-		pEnv->SetObjectArrayElement(ArgumentsArray, ArgumentIndex, ArgumentString);
-		pEnv->DeleteLocalRef(ArgumentString);
-	}
-
-	jmethodID MethodId = pEnv->GetMethodID(ActivityClass, "startServer", "([Ljava/lang/String;)V");
-	pEnv->CallVoidMethod(Activity, MethodId, ArgumentsArray);
-
-	pEnv->DeleteLocalRef(ArgumentsArray);
-	pEnv->DeleteLocalRef(Activity);
-	pEnv->DeleteLocalRef(ActivityClass);
-
-	return true;
+void StopAndroidServer()
+{
+	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
+	android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) { return android_jni::StopServer(*pEnv, Activity); });
 }
 
 void ExecuteAndroidServerCommand(const char *pCommand)
 {
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	jobject Activity = (jobject)SDL_GetAndroidActivity();
-	jclass ActivityClass = pEnv->GetObjectClass(Activity);
-
-	jstring Command = pEnv->NewStringUTF(pCommand);
-
-	jmethodID MethodId = pEnv->GetMethodID(ActivityClass, "executeCommand", "(Ljava/lang/String;)V");
-	pEnv->CallVoidMethod(Activity, MethodId, Command);
-
-	pEnv->DeleteLocalRef(Command);
-	pEnv->DeleteLocalRef(Activity);
-	pEnv->DeleteLocalRef(ActivityClass);
+	android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) { return android_jni::ExecuteCommand(*pEnv, Activity, pCommand); });
 }
 
 bool IsAndroidServerRunning()
 {
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	jobject Activity = (jobject)SDL_GetAndroidActivity();
-	jclass ActivityClass = pEnv->GetObjectClass(Activity);
-
-	jmethodID MethodId = pEnv->GetMethodID(ActivityClass, "isServerRunning", "()Z");
-	const bool Result = pEnv->CallBooleanMethod(Activity, MethodId);
-
-	pEnv->DeleteLocalRef(Activity);
-	pEnv->DeleteLocalRef(ActivityClass);
-
-	return Result;
+	return android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) { return android_jni::IsRunning(*pEnv, Activity); });
 }
 
 bool ShowAndroidMediaFiles(const char *pDirectory, bool Videos, const char *const *ppExcluded, size_t NumExcluded)
 {
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	if(pEnv == nullptr)
-		return false;
-	jobject Activity = static_cast<jobject>(SDL_GetAndroidActivity());
-	if(Activity == nullptr)
-		return false;
-	const bool HasFrame = pEnv->PushLocalFrame(8) == 0;
-	// JNI 的 NewStringUTF 使用 modified UTF-8，路径中的表情等字符需转为 UTF-16。
-	auto MakeString = [&](const char *pText) {
-		std::vector<jchar> vCharacters;
-		while(*pText != '\0')
-		{
-			const int Codepoint = str_utf8_decode(&pText);
-			if(Codepoint < 0)
-				vCharacters.push_back(0xfffd);
-			else if(Codepoint <= 0xffff)
-				vCharacters.push_back((jchar)Codepoint);
-			else
-			{
-				vCharacters.push_back((jchar)(0xd800 + ((Codepoint - 0x10000) >> 10)));
-				vCharacters.push_back((jchar)(0xdc00 + ((Codepoint - 0x10000) & 0x3ff)));
-			}
-		}
-		return pEnv->NewString(vCharacters.data(), (jsize)vCharacters.size());
-	};
-	const bool Success = HasFrame && [&] {
-		jclass ActivityClass = pEnv->GetObjectClass(Activity);
-		if(ActivityClass == nullptr)
-			return false;
-		jmethodID Method = pEnv->GetMethodID(ActivityClass, "showMediaFiles", "(Ljava/lang/String;Z[Ljava/lang/String;)V");
-		if(Method == nullptr)
-			return false;
-		jclass StringClass = pEnv->FindClass("java/lang/String");
-		if(StringClass == nullptr)
-			return false;
-		jstring Directory = MakeString(pDirectory);
-		if(Directory == nullptr)
-			return false;
-		jobjectArray Excluded = pEnv->NewObjectArray((jsize)NumExcluded, StringClass, nullptr);
-		if(Excluded == nullptr)
-			return false;
-		for(size_t i = 0; i < NumExcluded; ++i)
-		{
-			jstring Path = MakeString(ppExcluded[i]);
-			if(Path == nullptr)
-				return false;
-			pEnv->SetObjectArrayElement(Excluded, (jsize)i, Path);
-			pEnv->DeleteLocalRef(Path);
-			if(pEnv->ExceptionCheck())
-				return false;
-		}
-		pEnv->CallVoidMethod(Activity, Method, Directory, (jboolean)Videos, Excluded);
-		return !pEnv->ExceptionCheck();
-	}();
-	if(pEnv->ExceptionCheck())
-	{
-		pEnv->ExceptionDescribe();
-		pEnv->ExceptionClear();
-	}
-	if(HasFrame)
-		pEnv->PopLocalFrame(nullptr);
-	pEnv->DeleteLocalRef(Activity);
-	return Success;
+	return android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) { return android_jni::ShowMedia(*pEnv, Activity, pDirectory, Videos, ppExcluded, NumExcluded); });
 }
 
 bool OpenAndroidDownloadsFolder()
 {
-	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	if(pEnv == nullptr)
-		return false;
-	jobject Activity = static_cast<jobject>(SDL_GetAndroidActivity());
-	if(Activity == nullptr)
-		return false;
-	jclass ActivityClass = pEnv->GetObjectClass(Activity);
-	if(ActivityClass == nullptr)
-	{
-		pEnv->DeleteLocalRef(Activity);
-		return false;
-	}
-	jmethodID Method = pEnv->GetMethodID(ActivityClass, "openDownloadsFolder", "()V");
-	bool Success = false;
-	if(Method != nullptr)
-	{
-		pEnv->CallVoidMethod(Activity, Method);
-		Success = !pEnv->ExceptionCheck();
-	}
-	if(pEnv->ExceptionCheck())
-	{
-		pEnv->ExceptionDescribe();
-		pEnv->ExceptionClear();
-	}
-	pEnv->DeleteLocalRef(ActivityClass);
-	pEnv->DeleteLocalRef(Activity);
-	return Success;
+	return CallAndroidActivityMethod("openDownloadsFolder");
 }
 
-bool ExportAndroidMediaFile(const char *pPath)
+static bool ExportAndroidFile(const char *pMethod, const char *pPath)
 {
 	if(pPath == nullptr || pPath[0] == '\0')
 		return false;
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	if(pEnv == nullptr)
-		return false;
-	jobject Activity = static_cast<jobject>(SDL_GetAndroidActivity());
-	if(Activity == nullptr)
-		return false;
-	const bool HasFrame = pEnv->PushLocalFrame(8) == 0;
-	bool Success = false;
-	if(HasFrame)
-	{
-		jclass ActivityClass = pEnv->GetObjectClass(Activity);
-		if(ActivityClass != nullptr)
-		{
-			jmethodID Method = pEnv->GetMethodID(ActivityClass, "exportToDownloads", "(Ljava/lang/String;)Z");
-			if(Method != nullptr)
-			{
-				// JNI 用 modified UTF-8：先把 UTF-8 解码成 UTF-16，路径里的中文才不会乱。
-				std::vector<jchar> vCharacters;
-				for(const char *pCursor = pPath; *pCursor != '\0';)
-				{
-					const int Codepoint = str_utf8_decode(&pCursor);
-					if(Codepoint < 0)
-						vCharacters.push_back(0xfffd);
-					else if(Codepoint <= 0xffff)
-						vCharacters.push_back((jchar)Codepoint);
-					else
-					{
-						vCharacters.push_back((jchar)(0xd800 + ((Codepoint - 0x10000) >> 10)));
-						vCharacters.push_back((jchar)(0xdc00 + ((Codepoint - 0x10000) & 0x3ff)));
-					}
-				}
-				jstring Path = pEnv->NewString(vCharacters.data(), (jsize)vCharacters.size());
-				if(Path != nullptr)
-				{
-					const jboolean Exported = pEnv->CallBooleanMethod(Activity, Method, Path);
-					Success = !pEnv->ExceptionCheck() && Exported == JNI_TRUE;
-					pEnv->DeleteLocalRef(Path);
-				}
-			}
-			pEnv->DeleteLocalRef(ActivityClass);
-		}
-		pEnv->PopLocalFrame(nullptr);
-	}
-	if(pEnv->ExceptionCheck())
-	{
-		pEnv->ExceptionDescribe();
-		pEnv->ExceptionClear();
-	}
-	pEnv->DeleteLocalRef(Activity);
-	return Success;
+	return android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) {
+		const jclass ActivityClass = pEnv->GetObjectClass(Activity);
+		if(!ActivityClass || pEnv->ExceptionCheck())
+			return false;
+		const jmethodID Method = pEnv->GetMethodID(ActivityClass, pMethod, "(Ljava/lang/String;)Z");
+		if(!Method || pEnv->ExceptionCheck())
+			return false;
+		const jstring Path = android_jni::MakeString(*pEnv, pPath);
+		if(!Path || pEnv->ExceptionCheck())
+			return false;
+		return pEnv->CallBooleanMethod(Activity, Method, Path) == JNI_TRUE; });
 }
 
-namespace
+bool ExportAndroidMediaFile(const char *pPath)
 {
-	// JNI 抛异常后 CallIntMethod 的返回值不可用，统一在这里清理并回落。
-	void ClearJavaException(JNIEnv *pEnv)
-	{
-		if(pEnv->ExceptionCheck())
-		{
-			pEnv->ExceptionDescribe();
-			pEnv->ExceptionClear();
-		}
-	}
+	return ExportAndroidFile("exportToDownloads", pPath);
+}
+
+bool ExportAndroidCrashReport(const char *pPath)
+{
+	return ExportAndroidFile("exportCrashReportToDownloads", pPath);
 }
 
 int PrepareAndroidCrashReportSink(const char *pDisplayName)
@@ -486,36 +304,20 @@ int PrepareAndroidCrashReportSink(const char *pDisplayName)
 	if(pDisplayName == nullptr || pDisplayName[0] == '\0')
 		return -1;
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	if(pEnv == nullptr)
-		return -1;
-	jobject Activity = static_cast<jobject>(SDL_GetAndroidActivity());
-	if(Activity == nullptr)
-		return -1;
-
 	int Fd = -1;
-	jclass ActivityClass = pEnv->GetObjectClass(Activity);
-	if(ActivityClass != nullptr)
-	{
-		// 文件名只含 ASCII（QmClient_crash_<时间戳>.txt），不需要 UTF-16 转换。
-		jmethodID Method = pEnv->GetMethodID(ActivityClass, "prepareCrashReport", "(Ljava/lang/String;)I");
-		if(Method != nullptr)
-		{
-			jstring Name = pEnv->NewStringUTF(pDisplayName);
-			if(Name != nullptr)
-			{
-				Fd = pEnv->CallIntMethod(Activity, Method, Name);
-				pEnv->DeleteLocalRef(Name);
-			}
-		}
-		pEnv->DeleteLocalRef(ActivityClass);
-	}
-	if(pEnv->ExceptionCheck())
-	{
-		ClearJavaException(pEnv);
-		Fd = -1;
-	}
-	pEnv->DeleteLocalRef(Activity);
-	return Fd;
+	const bool Success = android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) {
+		const jclass ActivityClass = pEnv->GetObjectClass(Activity);
+		if(!ActivityClass || pEnv->ExceptionCheck())
+			return false;
+		const jmethodID Method = pEnv->GetMethodID(ActivityClass, "prepareCrashReport", "(Ljava/lang/String;)I");
+		if(!Method || pEnv->ExceptionCheck())
+			return false;
+		const jstring Name = android_jni::MakeString(*pEnv, pDisplayName);
+		if(!Name || pEnv->ExceptionCheck())
+			return false;
+		Fd = pEnv->CallIntMethod(Activity, Method, Name);
+		return Fd >= 0; });
+	return Success ? Fd : -1;
 }
 
 namespace

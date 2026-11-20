@@ -11,6 +11,7 @@
 #include <SDL3/SDL_events.h>
 
 #include <atomic>
+#include <limits>
 
 struct CSample
 {
@@ -58,10 +59,19 @@ struct CVoice
 		ISound::CVoiceShapeCircle m_Circle;
 		ISound::CVoiceShapeRectangle m_Rectangle;
 	};
+
+	void Release()
+	{
+		// 结束当前播放并使旧句柄失效；共享样本仍由声音引擎持有。
+		m_pSample = nullptr;
+		m_Age = m_Age == std::numeric_limits<int>::max() ? 0 : m_Age + 1;
+	}
 };
 
 class CSound : public IEngineSound
 {
+	friend class CSoundVoiceTestAccess;
+
 	enum
 	{
 		NUM_SAMPLES = 512,

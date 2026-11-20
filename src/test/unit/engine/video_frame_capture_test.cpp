@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <new>
+#include <stdexcept>
+
 namespace
 {
 	TGLBackendReadPresentedImageData FrameReader(uint32_t Width, uint32_t Height, CImageInfo::EImageFormat Format, size_t Bytes)
@@ -100,5 +103,47 @@ TEST(VideoFrameCapture, FailureStopsFurtherReadsUntilANewRecordingIsCreated)
 
 	CVideoFrameCapture NewCapture(2, 2);
 	EXPECT_TRUE(NewCapture.Read(FrameReader(2, 2, CImageInfo::FORMAT_RGBA, 16), vData));
+	EXPECT_FALSE(NewCapture.HasError());
+}
+
+TEST(VideoFrameCapture, PixelAllocationExceptionBecomesARecordingError)
+{
+	CVideoFrameCapture Capture(2, 2);
+	std::vector<uint8_t> vData(16, 42);
+	const TGLBackendReadPresentedImageData Reader = [](uint32_t &, uint32_t &, CImageInfo::EImageFormat &, std::vector<uint8_t> &) -> bool {
+		throw std::bad_alloc();
+	};
+	EXPECT_FALSE(Capture.Read(Reader, vData));
+	EXPECT_EQ(Capture.Error(), CVideoFrameCapture::EError::READ_FAILED);
+}
+
+TEST(VideoFrameCapture, ExceptionAfterWritingPixelsDoesNotPublishACompleteFrame)
+{
+	CVideoFrameCapture Capture(2, 2);
+	std::vector<uint8_t> vData;
+	const TGLBackendReadPresentedImageData Reader = [](uint32_t &Width, uint32_t &Height, CImageInfo::EImageFormat &Format, std::vector<uint8_t> &vPixels) -> bool {
+		FrameReader(2, 2, CImageInfo::FORMAT_RGBA, 16)(Width, Height, Format, vPixels);
+		throw std::length_error("pixel scratch buffer");
+	};
+	EXPECT_FALSE(Capture.Read(Reader, vData));
+	EXPECT_EQ(Capture.Error(), CVideoFrameCapture::EError::READ_FAILED);
+}
+
+TEST(VideoFrameCapture, ReadExceptionStopsFurtherReadsAndANewRecordingCanRecover)
+{
+	CVideoFrameCapture Capture(2, 2);
+	std::vector<uint8_t> vData;
+	int Reads = 0;
+	const TGLBackendReadPresentedImageData Reader = [&](uint32_t &Width, uint32_t &Height, CImageInfo::EImageFormat &Format, std::vector<uint8_t> &vPixels) {
+		if(++Reads == 1)
+			throw 1;
+		return FrameReader(2, 2, CImageInfo::FORMAT_RGBA, 16)(Width, Height, Format, vPixels);
+	};
+	EXPECT_FALSE(Capture.Read(Reader, vData));
+	EXPECT_FALSE(Capture.Read(Reader, vData));
+	EXPECT_EQ(Reads, 1);
+	CVideoFrameCapture NewCapture(2, 2);
+	EXPECT_TRUE(NewCapture.Read(Reader, vData));
+	EXPECT_EQ(Reads, 2);
 	EXPECT_FALSE(NewCapture.HasError());
 }

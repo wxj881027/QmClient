@@ -47,18 +47,22 @@ namespace VoiceUtils
 		bool m_UrlValid = false;
 		bool m_Connected = false;
 		int64_t m_LastConnectedTick = 0;
+		int64_t m_NextConnectAttempt = 0;
 
 	public:
 		CVoiceWebSocketTransport();
 		explicit CVoiceWebSocketTransport(std::unique_ptr<IQmWebSocketClient> pClient);
 		bool Update(const char *pUrl, bool Enabled, uint32_t ContextHash, uint32_t TokenHash, uint8_t ProtocolVersion);
+		// Now 使用 time_get/time_freq 的时钟单位，便于调用方提供可控时钟。
+		bool UpdateAt(const char *pUrl, bool Enabled, uint32_t ContextHash, uint32_t TokenHash, uint8_t ProtocolVersion, int64_t Now);
 		void Disconnect();
 		bool Connected() const;
 		bool Connecting() const;
 		bool UrlValid() const { return m_UrlValid; }
 		const char *LastError() const;
 		bool SendPacket(const uint8_t *pData, size_t Size);
-		bool PollPacket(SQmWebSocketMessage &Out);
+		// 每条出队消息都消耗本轮额度，包括传输层过滤掉的消息。
+		bool PollPacket(SQmWebSocketMessage &Out, size_t &RemainingMessages, bool (*pCanceled)(const void *) = nullptr, const void *pCancelUser = nullptr);
 	};
 	struct SVoicePacketHeader
 	{
@@ -184,6 +188,25 @@ namespace VoiceUtils
 	bool VoiceShouldUpdatePingRtt(uint16_t Sequence, uint16_t LastPingSeq, int64_t LastPingSentTime);
 	uint32_t VoiceTokenGroupHash(uint32_t TokenHash);
 	uint32_t BuildLegacyVoiceTokenHash(const char *pToken);
+	class CVoiceDecoderRetry
+	{
+		int64_t m_NextAttempt = 0;
+
+	public:
+		void Reset() { m_NextAttempt = 0; }
+
+		template<typename TCreate>
+		bool TryCreate(int64_t Now, int64_t RetryInterval, TCreate Create)
+		{
+			if(Now < m_NextAttempt)
+				return false;
+			if(Create())
+				return true;
+			m_NextAttempt = Now + RetryInterval;
+			return false;
+		}
+	};
+
 	bool FindMinLiveVoiceSeq(const uint8_t *pValid, const uint16_t *pSeq, size_t Count, uint16_t &OutSeq);
 	bool SeedVoiceJitterStartSeq(int QueuedPackets, int TargetFrames, bool HasNextSeq, uint16_t InitialNextSeq, const uint8_t *pValid, const uint16_t *pSeq, size_t Count, bool &OutHasNextSeq, uint16_t &OutNextSeq);
 	bool VoiceShouldIgnoreDistance(bool IgnoreDistanceConfig, bool GroupGlobal, uint32_t LocalTokenHash, uint32_t SenderTokenHash);
@@ -236,6 +259,7 @@ namespace VoiceUtils
 
 	struct SVoiceAudioRefreshState
 	{
+		bool m_WorkerRunning = false;
 		bool m_BackendChanged = false;
 		bool m_InputDeviceChanged = false;
 		bool m_OutputDeviceChanged = false;

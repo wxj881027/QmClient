@@ -10,8 +10,11 @@
 
 #include <game/client/QmUi/QmChatCompletionAppearance.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTextRenderState.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
+
+#include <new>
 
 inline void QmRenderChatCommandHud(const CQmChatCommandHud &Hud, CUi *pUi, ITextRender *pTextRender, vec2 MousePos, CQmChatEmoji *pEmoji = nullptr)
 {
@@ -44,25 +47,33 @@ inline void QmRenderChatCommandHud(const CQmChatCommandHud &Hud, CUi *pUi, IText
 	SurfaceParams.m_BorderWidth = Ime.m_BorderInset * Scale;
 	DrawRoundedSurface(pUi->Graphics(), Panel, Appearance.m_Background,
 		Ime.m_PanelBorder.WithMultipliedAlpha(Appearance.m_BackgroundOpacity), SurfaceParams);
-	const ColorRGBA TextColor = pTextRender->GetTextColor();
+	const CUiScopedTextRenderState TextState(*pTextRender);
 	CUIRect Header{Panel.x + 5.0f * Scale, Panel.y, Panel.w - 10.0f * Scale, Layout.m_HeaderHeight};
 	CUIRect CountRect;
 	Header.VSplitRight(44.0f * Scale, &Header, &CountRect);
 	SLabelProperties LabelProps;
-	LabelProps.m_MaxWidth = Header.w;
 	LabelProps.m_EllipsisAtEnd = true;
 	LabelProps.m_StopAtEnd = true;
 	LabelProps.m_DisallowNewline = true;
 	LabelProps.m_EnableWidthCheck = false;
 	// HUD 已按自身坐标缩放字号，不能再被菜单标签默认的最小字号放大。
 	LabelProps.m_MinimumFontSize = 0.0f;
-	pTextRender->TextColor(Ime.m_Text);
-	pUi->DoLabel(&Header, IsEmoji ? Localize("Emoji completion") : Localize("Command completion"), Layout.m_HeaderFontSize, TEXTALIGN_ML, LabelProps);
+	const auto DrawLabel = [&](const CUIRect &Rect, const char *pText, float Size, int Align, ColorRGBA Color) {
+		LabelProps.m_MaxWidth = Rect.w;
+		pTextRender->TextColor(Color);
+		try
+		{
+			pUi->DoLabel(&Rect, pText, Size, Align, LabelProps);
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 文字引擎接管未释放的容器。本帧略过此标签，下帧照常重试。
+		}
+	};
+	DrawLabel(Header, IsEmoji ? Localize("Emoji completion") : Localize("Command completion"), Layout.m_HeaderFontSize, TEXTALIGN_ML, Ime.m_Text);
 	char aCount[48];
 	str_format(aCount, sizeof(aCount), "%d-%d / %d", Hud.Offset() + 1, Hud.Offset() + Layout.m_VisibleRows, Hud.Count());
-	LabelProps.m_MaxWidth = CountRect.w;
-	pTextRender->TextColor(Ime.m_TextMuted);
-	pUi->DoLabel(&CountRect, aCount, FontSize * 0.7f, TEXTALIGN_MR, LabelProps);
+	DrawLabel(CountRect, aCount, FontSize * 0.7f, TEXTALIGN_MR, Ime.m_TextMuted);
 	const CUIRect Divider{Panel.x + 5.0f * Scale, Panel.y + Layout.m_HeaderHeight - Scale, Panel.w - 10.0f * Scale, 0.5f * Scale};
 	Divider.Draw(Ime.m_PanelBorder, IGraphics::CORNER_NONE, 0.0f);
 
@@ -93,17 +104,13 @@ inline void QmRenderChatCommandHud(const CQmChatCommandHud &Hud, CUi *pUi, IText
 			Name.x += EmojiSize + 4.0f * Scale;
 			Name.w -= EmojiSize + 4.0f * Scale;
 		}
-		LabelProps.m_MaxWidth = Name.w;
-		pTextRender->TextColor(Highlighted ? Ime.m_TextSelected : Ime.m_Text);
-		pUi->DoLabel(&Name, Candidate.m_Label.c_str(), FontSize, TEXTALIGN_ML, LabelProps);
+		DrawLabel(Name, Candidate.m_Label.c_str(), FontSize, TEXTALIGN_ML, Highlighted ? Ime.m_TextSelected : Ime.m_Text);
 		if(Layout.m_DetailFontSize > 0.0f)
 		{
 			const CUIRect Detail{Name.x, Name.y + Name.h + CQmChatCommandHud::ROW_LINE_GAP, Name.w, Layout.m_DetailFontSize + Scale};
-			pTextRender->TextColor(Ime.m_TextMuted);
-			pUi->DoLabel(&Detail, Candidate.m_Detail.c_str(), Layout.m_DetailFontSize, TEXTALIGN_ML, LabelProps);
+			DrawLabel(Detail, Candidate.m_Detail.c_str(), Layout.m_DetailFontSize, TEXTALIGN_ML, Ime.m_TextMuted);
 		}
 	}
-	pTextRender->TextColor(TextColor);
 }
 
 #endif

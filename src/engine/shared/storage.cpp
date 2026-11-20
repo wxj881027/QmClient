@@ -12,6 +12,8 @@
 #include <zlib.h>
 
 #include <cstdlib>
+#include <cstring>
+#include <optional>
 #include <unordered_set>
 
 bool StoragePathFromExecutable(const char *pExecutablePath, const char *pRelativePath, char *pBuffer, unsigned BufferSize)
@@ -196,18 +198,31 @@ namespace
 
 		bool LoadPathsFromFile(const char *pArgv0)
 		{
-			char aExecutableStoragePath[IO_MAX_PATH_LENGTH];
-			IOHANDLE File = nullptr;
-			if(StoragePathFromExecutable(pArgv0, "storage.cfg", aExecutableStoragePath, sizeof(aExecutableStoragePath)))
-				File = io_open(aExecutableStoragePath, IOFLAG_READ);
-			if(!File)
-				File = io_open("storage.cfg", IOFLAG_READ);
+			static constexpr char CONFIG_FILENAME[] = "storage.cfg";
+			char aExecutableStoragePath[IO_MAX_PATH_LENGTH + sizeof(CONFIG_FILENAME) - 1];
+			const bool HasExecutableConfigPath = StoragePathFromExecutable(pArgv0, CONFIG_FILENAME, aExecutableStoragePath, sizeof(aExecutableStoragePath));
+			if(!HasExecutableConfigPath && (std::strchr(pArgv0, '/') || std::strchr(pArgv0, '\\')))
+			{
+				log_error("storage", "executable storage configuration path is too long");
+				return false;
+			}
+			const char *pConfigPath = HasExecutableConfigPath ? aExecutableStoragePath : CONFIG_FILENAME;
+			bool NotFound = false;
+			IOHANDLE File = io_open_read_regular_checked(pConfigPath, &NotFound);
+			// 只有配置文件缺失时才换位置，避免读取失败后改用其他存档目录。
+			if(!File && NotFound && HasExecutableConfigPath)
+			{
+				pConfigPath = CONFIG_FILENAME;
+				File = io_open_read_regular_checked(pConfigPath, &NotFound);
+			}
+			if(!File && NotFound)
+				return true;
 
 			CLineReader LineReader;
 			if(!LineReader.OpenFile(File))
 			{
-				log_error("storage", "couldn't open storage.cfg");
-				return true;
+				log_error("storage", "couldn't read storage configuration '%s'", pConfigPath);
+				return false;
 			}
 			while(const char *pLine = LineReader.Get())
 			{
@@ -314,6 +329,11 @@ namespace
 			}
 			else if(str_utf8_check(pPath))
 			{
+				if(std::strlen(pPath) >= sizeof(m_aaStoragePaths[0]))
+				{
+					log_error("storage", "cannot add path '%s', which exceeds the storage path limit", pPath);
+					return false;
+				}
 				if(fs_is_dir(pPath))
 				{
 					str_copy(m_aaStoragePaths[m_NumPaths++], pPath);
@@ -600,6 +620,36 @@ namespace
 			}
 		}
 
+		EFsListDirectoryResult ListDirectoryChecked(int Type, const char *pPath, FS_LISTDIR_CALLBACK pfnCallback, void *pUser) override
+		{
+			const auto ScanAt = [&](int Index, FS_LISTDIR_CALLBACK Callback, void *pCallbackUser) {
+				char aBuffer[IO_MAX_PATH_LENGTH];
+				if(!GetPathChecked(Index, pPath, aBuffer, sizeof(aBuffer)))
+					return EFsListDirectoryResult::IO_FAILURE;
+				return fs_listdir_checked(aBuffer, Callback, Index, pCallbackUser);
+			};
+			if(Type == TYPE_ALL)
+			{
+				SListDirectoryUniqueCallbackData Data;
+				Data.m_pfnDelegate = pfnCallback;
+				Data.m_pDelegateUser = pUser;
+				auto Result = EFsListDirectoryResult::NOT_FOUND;
+				for(int i = TYPE_SAVE; i < m_NumPaths; ++i)
+				{
+					const auto Current = ScanAt(i, ListDirectoryUniqueCallback, &Data);
+					if(Current != EFsListDirectoryResult::SUCCESS && Current != EFsListDirectoryResult::NOT_FOUND)
+						return Current;
+					if(Current == EFsListDirectoryResult::SUCCESS)
+						Result = Current;
+				}
+				return Result;
+			}
+			if(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths))
+				return ScanAt(Type, pfnCallback, pUser);
+			dbg_assert_failed("Type invalid");
+			return EFsListDirectoryResult::IO_FAILURE;
+		}
+
 		const char *GetPath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize) const
 		{
 			if(Type == TYPE_ABSOLUTE)
@@ -611,6 +661,21 @@ namespace
 				str_format(pBuffer, BufferSize, "%s%s%s", m_aaStoragePaths[Type], !m_aaStoragePaths[Type][0] ? "" : "/", pDir);
 			}
 			return pBuffer;
+		}
+
+		bool PathFits(int Type, size_t NameLength, size_t BufferSize) const
+		{
+			const size_t PrefixLength = Type == TYPE_ABSOLUTE ? 0 : std::strlen(m_aaStoragePaths[Type]);
+			const size_t Separator = PrefixLength != 0 ? 1 : 0;
+			return NameLength < BufferSize && PrefixLength + Separator < BufferSize - NameLength;
+		}
+
+		bool GetPathChecked(int Type, const char *pDir, char *pBuffer, unsigned BufferSize) const
+		{
+			if(!PathFits(Type, std::strlen(pDir), BufferSize))
+				return false;
+			GetPath(Type, pDir, pBuffer, BufferSize);
+			return true;
 		}
 
 		void TranslateType(int &Type, const char *pPath) const
@@ -633,11 +698,13 @@ namespace
 				pBuffer = aBuffer;
 				BufferSize = sizeof(aBuffer);
 			}
+			if(BufferSize <= 0)
+				return nullptr;
 			pBuffer[0] = '\0';
 
 			if(Type == TYPE_ABSOLUTE)
 			{
-				return io_open(GetPath(TYPE_ABSOLUTE, pFilename, pBuffer, BufferSize), Flags);
+				return GetPathChecked(Type, pFilename, pBuffer, BufferSize) ? io_open(pBuffer, Flags) : nullptr;
 			}
 
 			if(str_startswith(pFilename, "mapres/../skins/"))
@@ -658,7 +725,9 @@ namespace
 				// check all available directories
 				for(int i = TYPE_SAVE; i < m_NumPaths; ++i)
 				{
-					IOHANDLE Handle = io_open(GetPath(i, pFilename, pBuffer, BufferSize), Flags);
+					if(!GetPathChecked(i, pFilename, pBuffer, BufferSize))
+						continue;
+					IOHANDLE Handle = io_open(pBuffer, Flags);
 					if(Handle)
 					{
 						return Handle;
@@ -669,7 +738,7 @@ namespace
 			else if(Type >= TYPE_SAVE && Type < m_NumPaths)
 			{
 				// check wanted directory
-				return io_open(GetPath(Type, pFilename, pBuffer, BufferSize), Flags);
+				return GetPathChecked(Type, pFilename, pBuffer, BufferSize) ? io_open(pBuffer, Flags) : nullptr;
 			}
 			else
 			{
@@ -688,7 +757,7 @@ namespace
 				// check all available directories
 				for(int i = TYPE_SAVE; i < m_NumPaths; ++i)
 				{
-					if(CheckFunction(GetPath(i, pFilename, aBuffer, sizeof(aBuffer))))
+					if(GetPathChecked(i, pFilename, aBuffer, sizeof(aBuffer)) && CheckFunction(aBuffer))
 						return true;
 				}
 				return false;
@@ -696,7 +765,7 @@ namespace
 			else if(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths))
 			{
 				// check wanted directory
-				return CheckFunction(GetPath(Type, pFilename, aBuffer, sizeof(aBuffer)));
+				return GetPathChecked(Type, pFilename, aBuffer, sizeof(aBuffer)) && CheckFunction(aBuffer);
 			}
 			else
 			{
@@ -734,6 +803,91 @@ namespace
 			return true;
 		}
 
+		EReadFileResult ReadFileChecked(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen) override
+		{
+			return ReadFileCheckedInternal(pFilename, Type, ppResult, pResultLen, std::nullopt);
+		}
+
+		EReadFileResult ReadFileCheckedBounded(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen, unsigned MaxBytes) override
+		{
+			return ReadFileCheckedInternal(pFilename, Type, ppResult, pResultLen, MaxBytes);
+		}
+
+		EReadFileResult ReadFileCheckedInternal(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen, std::optional<unsigned> MaxBytes)
+		{
+			if(ppResult)
+				*ppResult = nullptr;
+			if(pResultLen)
+				*pResultLen = 0;
+			if(!ppResult || !pResultLen || !pFilename || pFilename[0] == '\0')
+				return EReadFileResult::IO_FAILURE;
+			TranslateType(Type, pFilename);
+			if(Type != TYPE_ABSOLUTE)
+			{
+				if(str_startswith(pFilename, "mapres/../skins/"))
+					pFilename += str_length("mapres/../");
+				if(pFilename[0] == '/' || pFilename[0] == '\\' || str_find(pFilename, "../") || str_find(pFilename, "..\\")
+#ifdef CONF_FAMILY_WINDOWS
+					|| (pFilename[0] && pFilename[1] == ':')
+#endif
+				)
+					return EReadFileResult::IO_FAILURE;
+			}
+			const auto ReadAt = [&](int Index) {
+				char aPath[IO_MAX_PATH_LENGTH];
+				if(!GetPathChecked(Index, pFilename, aPath, sizeof(aPath)))
+					return EReadFileResult::IO_FAILURE;
+				bool NotFound = false;
+				std::unique_ptr<void, decltype(&io_close)> File(MaxBytes ? io_open_read_regular_checked(aPath, &NotFound) : io_open_read_checked(aPath, &NotFound), io_close);
+				if(!File)
+					return NotFound ? EReadFileResult::NOT_FOUND : EReadFileResult::IO_FAILURE;
+				std::unique_ptr<void, decltype(&free)> Data(nullptr, free);
+				unsigned Size = 0;
+				bool Read = false;
+				if(MaxBytes)
+				{
+					const int64_t Expected = io_length(File.get());
+					// 额外一字节用于探测增长；保持通用读取原有的1GiB上限。
+					const unsigned Limit = minimum(*MaxBytes, 1024u * 1024 * 1024);
+					if(Expected < 0 || Expected > Limit)
+						return EReadFileResult::IO_FAILURE;
+					Data.reset(malloc(static_cast<size_t>(Expected) + 1));
+					if(!Data)
+						return EReadFileResult::IO_FAILURE;
+					Size = static_cast<unsigned>(Expected);
+					Read = io_read(File.get(), Data.get(), Size + 1) == Size && io_error(File.get()) == 0;
+					static_cast<char *>(Data.get())[Size] = '\0';
+				}
+				else
+				{
+					void *pData = nullptr;
+					Read = io_read_all(File.get(), &pData, &Size);
+					Data.reset(pData);
+				}
+				const bool Closed = io_close(File.release()) == 0;
+				if(!Read || !Closed)
+					return EReadFileResult::IO_FAILURE;
+				*ppResult = Data.release();
+				*pResultLen = Size;
+				return EReadFileResult::SUCCESS;
+			};
+			if(Type == TYPE_ALL)
+			{
+				// 只有缺失才继续搜索后根，实际失败不得被后根成功掩盖。
+				for(int Index = TYPE_SAVE; Index < m_NumPaths; ++Index)
+				{
+					const auto Result = ReadAt(Index);
+					if(Result != EReadFileResult::NOT_FOUND)
+						return Result;
+				}
+				return EReadFileResult::NOT_FOUND;
+			}
+			if(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths))
+				return ReadAt(Type);
+			dbg_assert_failed("Type invalid");
+			return EReadFileResult::IO_FAILURE;
+		}
+
 		char *ReadFileStr(const char *pFilename, int Type) override
 		{
 			IOHANDLE File = OpenFile(pFilename, IOFLAG_READ, Type);
@@ -749,7 +903,7 @@ namespace
 			dbg_assert(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths), "Type invalid");
 
 			char aBuffer[IO_MAX_PATH_LENGTH];
-			return fs_file_time(GetPath(Type, pFilename, aBuffer, sizeof(aBuffer)), pCreated, pModified) == 0;
+			return GetPathChecked(Type, pFilename, aBuffer, sizeof(aBuffer)) && fs_file_time(aBuffer, pCreated, pModified) == 0;
 		}
 
 		bool CalculateHashes(const char *pFilename, int Type, SHA256_DIGEST *pSha256, unsigned *pCrc) override
@@ -763,8 +917,7 @@ namespace
 			SHA256_CTX Sha256Ctxt;
 			if(pSha256 != nullptr)
 				sha256_init(&Sha256Ctxt);
-			if(pCrc != nullptr)
-				*pCrc = 0;
+			unsigned Crc = 0;
 			unsigned char aBuffer[64 * 1024];
 			while(true)
 			{
@@ -774,148 +927,99 @@ namespace
 				if(pSha256 != nullptr)
 					sha256_update(&Sha256Ctxt, aBuffer, Bytes);
 				if(pCrc != nullptr)
-					*pCrc = crc32(*pCrc, aBuffer, Bytes);
+					Crc = crc32(Crc, aBuffer, Bytes);
 			}
+			const bool Read = io_error(File) == 0;
+			const bool Closed = io_close(File) == 0;
+			if(!Read || !Closed)
+				return false;
+
 			if(pSha256 != nullptr)
 				*pSha256 = sha256_finish(&Sha256Ctxt);
-
-			io_close(File);
+			if(pCrc != nullptr)
+				*pCrc = Crc;
 			return true;
 		}
 
-		struct CFindCBData
+		struct SFindFileCallbackData
 		{
-			CStorage *m_pStorage;
+			const CStorage *m_pStorage;
 			const char *m_pFilename;
 			const char *m_pPath;
 			char *m_pBuffer;
 			int m_BufferSize;
+			std::set<std::string> *m_pEntries;
 		};
+
+		bool FindFileAt(int Type, SFindFileCallbackData &Data) const
+		{
+			char aPath[IO_MAX_PATH_LENGTH];
+			// Windows 枚举会追加 /*，必须在进入原生枚举前预留空间。
+			if(!GetPathChecked(Type, Data.m_pPath, aPath, sizeof(aPath) - 2))
+				return false;
+			fs_listdir(aPath, FindFileCallback, Type, &Data);
+			return Data.m_pBuffer != nullptr && Data.m_pBuffer[0] != '\0';
+		}
 
 		static int FindFileCallback(const char *pName, int IsDir, int Type, void *pUser)
 		{
-			CFindCBData Data = *static_cast<CFindCBData *>(pUser);
+			SFindFileCallbackData Data = *static_cast<SFindFileCallbackData *>(pUser);
+			if(IsDir ? pName[0] == '.' : str_comp(pName, Data.m_pFilename) != 0)
+				return 0;
+
+			char aPath[IO_MAX_PATH_LENGTH];
+			const size_t Length = std::strlen(Data.m_pPath) + 1 + std::strlen(pName);
+			if(!Data.m_pStorage->PathFits(Type, Length, sizeof(aPath)))
+				return 0;
+			str_format(aPath, sizeof(aPath), "%s/%s", Data.m_pPath, pName);
 			if(IsDir)
 			{
-				if(pName[0] == '.')
-					return 0;
-
-				// search within the folder
-				char aBuf[IO_MAX_PATH_LENGTH];
-				char aPath[IO_MAX_PATH_LENGTH];
-				str_format(aPath, sizeof(aPath), "%s/%s", Data.m_pPath, pName);
 				Data.m_pPath = aPath;
-				fs_listdir(Data.m_pStorage->GetPath(Type, aPath, aBuf, sizeof(aBuf)), FindFileCallback, Type, &Data);
-				if(Data.m_pBuffer[0])
-					return 1;
-			}
-			else if(!str_comp(pName, Data.m_pFilename))
-			{
-				// found the file = end
-				str_format(Data.m_pBuffer, Data.m_BufferSize, "%s/%s", Data.m_pPath, Data.m_pFilename);
-				return 1;
+				return Data.m_pStorage->FindFileAt(Type, Data);
 			}
 
-			return 0;
+			if(Data.m_pEntries != nullptr)
+			{
+				Data.m_pEntries->emplace(aPath);
+				return 0;
+			}
+			if(Length >= static_cast<size_t>(Data.m_BufferSize))
+				return 0;
+			str_copy(Data.m_pBuffer, aPath, Data.m_BufferSize);
+			return 1;
+		}
+
+		void FindFilesInternal(int Type, SFindFileCallbackData &Data) const
+		{
+			if(Type == TYPE_ALL)
+			{
+				for(int Index = TYPE_SAVE; Index < m_NumPaths; ++Index)
+					if(FindFileAt(Index, Data))
+						break;
+			}
+			else if(Type >= TYPE_SAVE && Type < m_NumPaths)
+			{
+				FindFileAt(Type, Data);
+			}
+			else
+			{
+				dbg_assert_failed("Type invalid");
+			}
 		}
 
 		bool FindFile(const char *pFilename, const char *pPath, int Type, char *pBuffer, int BufferSize) override
 		{
 			dbg_assert(BufferSize >= 1, "BufferSize invalid");
-
-			pBuffer[0] = 0;
-
-			CFindCBData Data;
-			Data.m_pStorage = this;
-			Data.m_pFilename = pFilename;
-			Data.m_pPath = pPath;
-			Data.m_pBuffer = pBuffer;
-			Data.m_BufferSize = BufferSize;
-
-			char aBuf[IO_MAX_PATH_LENGTH];
-			if(Type == TYPE_ALL)
-			{
-				// search within all available directories
-				for(int i = TYPE_SAVE; i < m_NumPaths; ++i)
-				{
-					fs_listdir(GetPath(i, pPath, aBuf, sizeof(aBuf)), FindFileCallback, i, &Data);
-					if(pBuffer[0])
-						return true;
-				}
-			}
-			else if(Type >= TYPE_SAVE && Type < m_NumPaths)
-			{
-				// search within wanted directory
-				fs_listdir(GetPath(Type, pPath, aBuf, sizeof(aBuf)), FindFileCallback, Type, &Data);
-			}
-			else
-			{
-				dbg_assert_failed("Type invalid");
-			}
-
-			return pBuffer[0] != 0;
-		}
-
-		struct SFindFilesCallbackData
-		{
-			CStorage *m_pStorage;
-			const char *m_pFilename;
-			const char *m_pPath;
-			std::set<std::string> *m_pEntries;
-		};
-
-		static int FindFilesCallback(const char *pName, int IsDir, int Type, void *pUser)
-		{
-			SFindFilesCallbackData Data = *static_cast<SFindFilesCallbackData *>(pUser);
-			if(IsDir)
-			{
-				if(pName[0] == '.')
-					return 0;
-
-				// search within the folder
-				char aBuf[IO_MAX_PATH_LENGTH];
-				char aPath[IO_MAX_PATH_LENGTH];
-				str_format(aPath, sizeof(aPath), "%s/%s", Data.m_pPath, pName);
-				Data.m_pPath = aPath;
-				fs_listdir(Data.m_pStorage->GetPath(Type, aPath, aBuf, sizeof(aBuf)), FindFilesCallback, Type, &Data);
-			}
-			else if(!str_comp(pName, Data.m_pFilename))
-			{
-				char aBuffer[IO_MAX_PATH_LENGTH];
-				str_format(aBuffer, sizeof(aBuffer), "%s/%s", Data.m_pPath, Data.m_pFilename);
-				Data.m_pEntries->emplace(aBuffer);
-			}
-
-			return 0;
+			pBuffer[0] = '\0';
+			SFindFileCallbackData Data{this, pFilename, pPath, pBuffer, BufferSize, nullptr};
+			FindFilesInternal(Type, Data);
+			return pBuffer[0] != '\0';
 		}
 
 		size_t FindFiles(const char *pFilename, const char *pPath, int Type, std::set<std::string> *pEntries) override
 		{
-			SFindFilesCallbackData Data;
-			Data.m_pStorage = this;
-			Data.m_pFilename = pFilename;
-			Data.m_pPath = pPath;
-			Data.m_pEntries = pEntries;
-
-			char aBuf[IO_MAX_PATH_LENGTH];
-			if(Type == TYPE_ALL)
-			{
-				// search within all available directories
-				for(int i = TYPE_SAVE; i < m_NumPaths; ++i)
-				{
-					fs_listdir(GetPath(i, pPath, aBuf, sizeof(aBuf)), FindFilesCallback, i, &Data);
-				}
-			}
-			else if(Type >= TYPE_SAVE && Type < m_NumPaths)
-			{
-				// search within wanted directory
-				fs_listdir(GetPath(Type, pPath, aBuf, sizeof(aBuf)), FindFilesCallback, Type, &Data);
-			}
-			else
-			{
-				dbg_assert_failed("Type invalid");
-			}
-
+			SFindFileCallbackData Data{this, pFilename, pPath, nullptr, 0, pEntries};
+			FindFilesInternal(Type, Data);
 			return pEntries->size();
 		}
 
@@ -924,9 +1028,7 @@ namespace
 			dbg_assert(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths), "Type invalid");
 
 			char aBuffer[IO_MAX_PATH_LENGTH];
-			GetPath(Type, pFilename, aBuffer, sizeof(aBuffer));
-
-			return fs_remove(aBuffer) == 0;
+			return GetPathChecked(Type, pFilename, aBuffer, sizeof(aBuffer)) && fs_remove(aBuffer) == 0;
 		}
 
 		bool RemoveFolder(const char *pFilename, int Type) override
@@ -934,9 +1036,7 @@ namespace
 			dbg_assert(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths), "Type invalid");
 
 			char aBuffer[IO_MAX_PATH_LENGTH];
-			GetPath(Type, pFilename, aBuffer, sizeof(aBuffer));
-
-			return fs_removedir(aBuffer) == 0;
+			return GetPathChecked(Type, pFilename, aBuffer, sizeof(aBuffer)) && fs_removedir(aBuffer) == 0;
 		}
 
 		bool RemoveBinaryFile(const char *pFilename) override
@@ -953,10 +1053,21 @@ namespace
 
 			char aOldBuffer[IO_MAX_PATH_LENGTH];
 			char aNewBuffer[IO_MAX_PATH_LENGTH];
-			GetPath(Type, pOldFilename, aOldBuffer, sizeof(aOldBuffer));
-			GetPath(Type, pNewFilename, aNewBuffer, sizeof(aNewBuffer));
+			if(!GetPathChecked(Type, pOldFilename, aOldBuffer, sizeof(aOldBuffer)) ||
+				!GetPathChecked(Type, pNewFilename, aNewBuffer, sizeof(aNewBuffer)))
+				return false;
 
 			return fs_rename(aOldBuffer, aNewBuffer, AllowDestinationRemoval) == 0;
+		}
+
+		bool MoveFileNoReplace(const char *pOldFilename, const char *pNewFilename, int Type) override
+		{
+			dbg_assert(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths), "Type invalid");
+			char aOldPath[IO_MAX_PATH_LENGTH];
+			char aNewPath[IO_MAX_PATH_LENGTH];
+			return GetPathChecked(Type, pOldFilename, aOldPath, sizeof(aOldPath)) &&
+			       GetPathChecked(Type, pNewFilename, aNewPath, sizeof(aNewPath)) &&
+			       fs_move_file_no_replace(aOldPath, aNewPath) == 0;
 		}
 
 		bool RenameBinaryFile(const char *pOldFilename, const char *pNewFilename) override
@@ -980,9 +1091,7 @@ namespace
 			dbg_assert(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths), "Type invalid");
 
 			char aBuffer[IO_MAX_PATH_LENGTH];
-			GetPath(Type, pFoldername, aBuffer, sizeof(aBuffer));
-
-			return fs_makedir(aBuffer) == 0;
+			return GetPathChecked(Type, pFoldername, aBuffer, sizeof(aBuffer)) && fs_makedir(aBuffer) == 0;
 		}
 
 		void GetCompletePath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize) override
@@ -1059,30 +1168,67 @@ const char *IStorage::FormatTmpPath(char *aBuf, unsigned BufSize, const char *pP
 	return aBuf;
 }
 
-bool IStorage::ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, const char *pRealFilename, char *pBackupFilename, unsigned BackupFilenameSize)
+bool IStorage::ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, const char *pRealFilename, char *pBackupFilename, unsigned BackupFilenameSize) noexcept
 {
-	if(pStorage == nullptr || pTempFilename == nullptr || pRealFilename == nullptr || pBackupFilename == nullptr || BackupFilenameSize == 0)
+	if(pBackupFilename != nullptr && BackupFilenameSize != 0)
+		pBackupFilename[0] = '\0';
+	if(pStorage == nullptr || pTempFilename == nullptr || pTempFilename[0] == '\0' || pRealFilename == nullptr || pRealFilename[0] == '\0' || pBackupFilename == nullptr || BackupFilenameSize == 0 || str_comp(pTempFilename, pRealFilename) == 0)
 		return false;
-	pBackupFilename[0] = '\0';
 
-	const bool HadPreviousFile = pStorage->FileExists(pRealFilename, IStorage::TYPE_SAVE);
-	if(HadPreviousFile)
+	bool MayHaveBackup = false;
+	const auto Restore = [&]() noexcept {
+		if(!MayHaveBackup)
+			return;
+		try
+		{
+			if(!pStorage->FileExists(pRealFilename, IStorage::TYPE_SAVE) && pStorage->FileExists(pBackupFilename, IStorage::TYPE_SAVE))
+				(void)pStorage->MoveFileNoReplace(pBackupFilename, pRealFilename, IStorage::TYPE_SAVE);
+		}
+		catch(...)
+		{
+			// 回滚也可能因资源/权限失败，保留备份以供恢复。
+		}
+	};
+
+	try
 	{
-		str_format(pBackupFilename, BackupFilenameSize, "%s.backup", pTempFilename);
-		if(pStorage->FileExists(pBackupFilename, IStorage::TYPE_SAVE) || !pStorage->RenameFile(pRealFilename, pBackupFilename, IStorage::TYPE_SAVE))
+		const bool HadPreviousFile = pStorage->FileExists(pRealFilename, IStorage::TYPE_SAVE);
+		if(HadPreviousFile)
+		{
+			constexpr char SUFFIX[] = ".backup";
+			if(BackupFilenameSize < sizeof(SUFFIX) || std::strlen(pTempFilename) > BackupFilenameSize - sizeof(SUFFIX))
+				return false;
+			str_format(pBackupFilename, BackupFilenameSize, "%s%s", pTempFilename, SUFFIX);
+			if(pStorage->FileExists(pBackupFilename, IStorage::TYPE_SAVE))
+				return false;
+			MayHaveBackup = true;
+			if(!pStorage->MoveFileNoReplace(pRealFilename, pBackupFilename, IStorage::TYPE_SAVE))
+				return false;
+		}
+		if(!pStorage->MoveFileNoReplace(pTempFilename, pRealFilename, IStorage::TYPE_SAVE))
+		{
+			Restore();
 			return false;
-	}
-
-	if(pStorage->RenameFile(pTempFilename, pRealFilename, IStorage::TYPE_SAVE))
-	{
-		if(HadPreviousFile && !pStorage->RemoveFile(pBackupFilename, IStorage::TYPE_SAVE))
-			log_error("storage", "failed to delete replaced-file backup: %s", pBackupFilename);
+		}
+		// 提交已完成；后续清理或诊断异常不能触发回滚或改报失败。
+		if(HadPreviousFile)
+		{
+			try
+			{
+				if(!pStorage->RemoveFile(pBackupFilename, IStorage::TYPE_SAVE))
+					log_error("storage", "failed to delete replaced-file backup: %s", pBackupFilename);
+			}
+			catch(...)
+			{
+			}
+		}
 		return true;
 	}
-
-	if(HadPreviousFile)
-		pStorage->RenameFile(pBackupFilename, pRealFilename, IStorage::TYPE_SAVE);
-	return false;
+	catch(...)
+	{
+		Restore();
+		return false;
+	}
 }
 IStorage *CreateStorage(IStorage::EInitializationType InitializationType, int NumArgs, const char **ppArguments)
 {

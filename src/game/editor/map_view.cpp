@@ -521,13 +521,15 @@ void CEditor::DoMapEditor(CUIRect View)
 				{
 					if(!Ui()->MouseButton(0))
 					{
+						const bool BrushEmpty = m_pBrush->IsEmpty();
 						for(size_t k = 0; k < NumEditLayers; k++)
 						{
-							std::shared_ptr<CLayer> pBrush = m_pBrush->IsEmpty() ? nullptr : FindBrushLayer(m_pBrush, apEditLayers[k].second, m_pBrush->m_vpLayers.size() != NumEditLayers ? 0 : k);
-							apEditLayers[k].second->FillSelection(m_pBrush->IsEmpty(), pBrush.get(), r);
+							std::shared_ptr<CLayer> pBrushLayer = BrushEmpty ? nullptr : FindBrushLayer(m_pBrush, apEditLayers[k].second, m_pBrush->m_vpLayers.size() != NumEditLayers ? 0 : k);
+							apEditLayers[k].second->FillWithBrush(BrushEmpty, pBrushLayer.get(), r);
 						}
-						std::shared_ptr<IEditorAction> Action = std::make_shared<CEditorBrushDrawAction>(Map(), Map()->m_SelectedGroup);
-						Map()->m_EditorHistory.RecordAction(Action);
+						auto pAction = std::make_shared<CEditorBrushDrawAction>(Map(), Map()->m_SelectedGroup);
+						if(!pAction->IsEmpty())
+							Map()->m_EditorHistory.RecordAction(pAction);
 					}
 					else
 					{
@@ -559,11 +561,9 @@ void CEditor::DoMapEditor(CUIRect View)
 						Map()->m_MapViewState.m_ActiveOp = CMapView::EActiveOp::BRUSH_DRAW;
 						for(size_t k = 0; k < NumEditLayers; k++)
 						{
-							std::shared_ptr<CLayer> pBrushLayer = FindBrushLayer(m_pBrush, apEditLayers[k].second, m_pBrush->m_vpLayers.size() != NumEditLayers ? 0 : k);
-							if(!pBrushLayer || apEditLayers[k].second->m_Type != pBrushLayer->m_Type)
-								continue;
-
-							apEditLayers[k].second->BrushPlace(pBrushLayer.get(), vec2(wx, wy));
+							const auto &[LayerIndex, pTargetLayer] = apEditLayers[k];
+							std::shared_ptr<CLayer> pBrushLayer = FindBrushLayer(m_pBrush, pTargetLayer, m_pBrush->m_vpLayers.size() != NumEditLayers ? 0 : k);
+							pTargetLayer->PlaceBrush(pBrushLayer.get(), vec2(wx, wy), LayerIndex);
 						}
 					}
 

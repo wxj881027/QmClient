@@ -11,6 +11,23 @@
 
 #include <algorithm>
 #include <cmath>
+#include <new>
+#include <stdexcept>
+
+namespace
+{
+	struct SRestoreRenderTarget
+	{
+		IGraphics &m_Graphics;
+		CScreenRect m_Screen;
+
+		~SRestoreRenderTarget()
+		{
+			m_Graphics.EndRenderTarget();
+			m_Graphics.MapScreen(m_Screen);
+		}
+	};
+}
 
 void qm_finish_summary::CSurface::Reset(IGraphics &Graphics)
 {
@@ -26,6 +43,7 @@ void qm_finish_summary::CSurface::Reset(IGraphics &Graphics)
 bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextRender, CRenderTools &RenderTools, const CUIRect &Rect,
 	const QmFinishSummary::SSnapshot &Snapshot, const CManagedTeeRenderInfo *pTeeRenderInfo, CContentCache &Content,
 	const SSurfaceStyle &Style, double NowSeconds, bool FullyExpanded, int MotionLevel)
+try
 {
 	if(m_GraphicsVersion != Graphics.GraphicsResourcesResetVersion())
 		Reset(Graphics);
@@ -33,10 +51,9 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 		return false;
 	const float Alpha = std::clamp(Style.m_Alpha, 0.0f, 1.0f);
 	const float ContentAlpha = std::clamp(Style.m_ContentAlpha, 0.0f, 1.0f);
-	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	Graphics.GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	const CUIRect TextScreen{ScreenX0, ScreenY0, ScreenX1 - ScreenX0, ScreenY1 - ScreenY0};
-	const vec2 PixelSize(TextScreen.w / std::max(1, Graphics.ScreenWidth()), TextScreen.h / std::max(1, Graphics.ScreenHeight()));
+	const CScreenRect Screen = Graphics.GetScreen();
+	const vec2 ScreenSize = Screen.m_BottomRight - Screen.m_TopLeft;
+	const vec2 PixelSize(ScreenSize.x / std::max(1, Graphics.ScreenWidth()), ScreenSize.y / std::max(1, Graphics.ScreenHeight()));
 	SHudMediaIslandSdfRenderState Background;
 	Background.m_MainRect = Rect;
 	Background.m_MainRadius = Style.m_Radius;
@@ -52,7 +69,6 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 			Background.m_BackgroundColor = Style.m_BackgroundColor.WithMultipliedAlpha(DrawAlpha);
 			qm_island::Render(&Graphics, Background, pTextScreen ? IGraphics::CRenderTargetHandle() : Style.m_Backdrop);
 		}
-		Content.Update(Snapshot, NowSeconds, FullyExpanded, MotionLevel);
 		const float CoverAlpha = Content.m_Presentation.NumberColorProgress(ENumber::TIME) * DrawAlpha;
 		RenderCover(Graphics, Rect, Style.m_CoverTexture, Style.m_Radius, CoverAlpha);
 		const bool Complete = qm_finish_summary::Render(Graphics, TextRender, RenderTools, Rect, Snapshot, pTeeRenderInfo, Content,
@@ -77,8 +93,12 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 		}
 		return Complete;
 	};
-	if(Alpha <= 0.001f || !Style.m_DrawBackground || !Graphics.IsRenderTargetSupported() || PixelSize.x <= 0.0f || PixelSize.y <= 0.0f)
+	const auto DrawDirect = [&] {
+		Content.Update(Snapshot, NowSeconds, FullyExpanded, MotionLevel);
 		return DrawContents(Alpha, nullptr);
+	};
+	if(Alpha <= 0.001f || !Style.m_DrawBackground || !Graphics.IsRenderTargetSupported() || PixelSize.x <= 0.0f || PixelSize.y <= 0.0f)
+		return DrawDirect();
 
 	const CUIRect &Bounds = Rect;
 	// 预留当前屏幕的最终卡片尺寸，生长期间沿用目标；高分辨率只缩小离屏采样密度。
@@ -97,33 +117,37 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 		m_Target = Graphics.CreateRenderTarget(m_Width, m_Height, std::min(4, std::max(1, Graphics.MaxMultisampleRenderTargetSamples())));
 	}
 	if(!m_Target.IsValid())
-		return DrawContents(Alpha, nullptr);
+		return DrawDirect();
 	bool Complete = false;
 	// 收回期间直接变形上一帧的卡面，保留封面裁切、字形与分隔线的相对位置。
 	if(!Style.m_Closing || m_RenderedId != Snapshot.m_Id)
 	{
+		Content.Update(Snapshot, NowSeconds, FullyExpanded, MotionLevel);
 		if(!Graphics.BeginRenderTarget(m_Target, Style.m_BackgroundColor.WithAlpha(1.0f)))
 			return DrawContents(Alpha, nullptr);
 
-		Graphics.MapScreen(Rect.x, Rect.y, Rect.x + Rect.w, Rect.y + Rect.h);
-		if(Style.m_Backdrop.IsValid())
+		// 开启目标会清掉上一帧。绘制失败时，收回动画也需要重画。
+		m_RenderedId = 0;
 		{
-			// 把已有模糊底图铺入目标，不额外抓取全屏；无底图时保留配置背景实色。
-			const vec4 Uv = QmHudMediaIslandBackdropUv(Rect, Style.m_ScreenRect);
-			IGraphics::SRenderTargetDrawParams Backdrop;
-			Backdrop.m_X = Rect.x;
-			Backdrop.m_Y = Rect.y;
-			Backdrop.m_W = Rect.w;
-			Backdrop.m_H = Rect.h;
-			Backdrop.SetTextureCoordinates(Uv.x, Uv.y, Uv.x + Uv.z, Uv.y + Uv.w);
-			Graphics.DrawRenderTarget(Style.m_Backdrop, Backdrop);
+			const SRestoreRenderTarget Restore{Graphics, Screen};
+			Graphics.MapScreen(Rect.x, Rect.y, Rect.x + Rect.w, Rect.y + Rect.h);
+			if(Style.m_Backdrop.IsValid())
+			{
+				// 把已有模糊底图铺入目标，不额外抓取全屏；无底图时保留配置背景实色。
+				const vec4 Uv = QmHudMediaIslandBackdropUv(Rect, Style.m_ScreenRect);
+				IGraphics::SRenderTargetDrawParams Backdrop;
+				Backdrop.m_X = Rect.x;
+				Backdrop.m_Y = Rect.y;
+				Backdrop.m_W = Rect.w;
+				Backdrop.m_H = Rect.h;
+				Backdrop.SetTextureCoordinates(Uv.x, Uv.y, Uv.x + Uv.z, Uv.y + Uv.w);
+				Graphics.DrawRenderTarget(Style.m_Backdrop, Backdrop);
+			}
+			// 字形按离屏像素密度生成，最终缩回 HUD 时仍有足够的笔画采样。
+			const float TextDensity = std::clamp(std::min(m_Width * PixelSize.x / Rect.w, m_Height * PixelSize.y / Rect.h), 1.0f, 2.0f);
+			const CUIRect GlyphScreen{Rect.x, Rect.y, ScreenSize.x / TextDensity, ScreenSize.y / TextDensity};
+			Complete = DrawContents(1.0f, &GlyphScreen);
 		}
-		// 字形按离屏像素密度生成，最终缩回 HUD 时仍有足够的笔画采样。
-		const float TextDensity = std::clamp(std::min(m_Width * PixelSize.x / Rect.w, m_Height * PixelSize.y / Rect.h), 1.0f, 2.0f);
-		const CUIRect GlyphScreen{Rect.x, Rect.y, TextScreen.w / TextDensity, TextScreen.h / TextDensity};
-		Complete = DrawContents(1.0f, &GlyphScreen);
-		Graphics.EndRenderTarget();
-		Graphics.MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 		m_RenderedId = Snapshot.m_Id;
 	}
 	IGraphics::SRenderTargetDrawParams Draw;
@@ -145,4 +169,12 @@ bool qm_finish_summary::CSurface::Render(IGraphics &Graphics, ITextRender &TextR
 	Draw.m_CornerSeam = QmEffectiveCapsuleSeam();
 	Graphics.DrawRenderTarget(m_Target, Draw);
 	return Complete;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }

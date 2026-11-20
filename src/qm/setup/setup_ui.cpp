@@ -121,7 +121,6 @@ namespace
 		std::array<SControlFeedback, 7> m_aFeedback;
 		DWORD m_ExitCode = 2;
 		std::wstring m_Directory;
-		std::wstring m_Error;
 		std::unique_ptr<QmSetup::CSetupEngine> m_pEngine;
 		ComPtr<ID2D1Factory> m_pFactory;
 		ComPtr<IDWriteFactory> m_pWrite;
@@ -332,7 +331,7 @@ namespace
 			SetWindowPos(m_CloseButton, nullptr, Pixels(WIDTH - 52), Pixels(12), Pixels(36), Pixels(32), SWP_NOZORDER | SWP_NOACTIVATE);
 		}
 
-		void ShowPage(EPage Page)
+		void ShowPage(EPage Page, const wchar_t *pFailureStatus = nullptr)
 		{
 			m_Page = Page;
 			m_Reveal.Snap(0.0f);
@@ -356,10 +355,14 @@ namespace
 													      L"开始安装");
 			SetWindowTextW(m_Secondary, Page == EPage::DONE ? L"完成" : Page == EPage::FAILED ? L"关闭" :
 													    L"取消");
-			const std::wstring Status = Page == EPage::OPTIONS ? (m_Upgrade ? L"已找到旧版本，确认位置即可更新。" : L"选择安装位置，然后开始安装。") : Page == EPage::INSTALLING ? L"请稍候，完成后即可开始。" :
-																			   Page == EPage::DONE               ? L"QmClient 已安装完成，可以立即启动。" :
-																							       m_Error;
-			SetWindowTextW(m_Status, Status.c_str());
+			const wchar_t *pStatus = pFailureStatus ? pFailureStatus : L"";
+			if(Options)
+				pStatus = m_Upgrade ? L"已找到旧版本，确认位置即可更新。" : L"选择安装位置，然后开始安装。";
+			else if(Page == EPage::INSTALLING)
+				pStatus = L"请稍候，完成后即可开始。";
+			else if(Page == EPage::DONE)
+				pStatus = L"QmClient 已安装完成，可以立即启动。";
+			SetWindowTextW(m_Status, pStatus);
 			PlaceContent();
 			EnableWindow(m_Secondary, TRUE);
 			SetFocus(Page == EPage::INSTALLING ? m_Secondary : m_Primary);
@@ -390,32 +393,48 @@ namespace
 
 		void BeginInstall()
 		{
-			std::wstring Directory(static_cast<size_t>(GetWindowTextLengthW(m_Edit)) + 1, L'\0');
-			GetWindowTextW(m_Edit, Directory.data(), static_cast<int>(Directory.size()));
-			Directory.resize(wcslen(Directory.c_str()));
+			std::wstring Directory;
+			std::vector<std::wstring> vArguments;
+			std::unique_ptr<QmSetup::CSetupEngine> pEngine;
+			try
+			{
+				Directory.resize(static_cast<size_t>(GetWindowTextLengthW(m_Edit)) + 1, L'\0');
+				GetWindowTextW(m_Edit, Directory.data(), static_cast<int>(Directory.size()));
+				Directory.resize(wcslen(Directory.c_str()));
+				if(!Directory.empty())
+				{
+					vArguments = QmSetup::NativeArguments(m_Options, Directory, SendMessageW(m_Desktop, BM_GETCHECK, 0, 0) == BST_CHECKED);
+					pEngine = std::make_unique<QmSetup::CSetupEngine>();
+				}
+			}
+			catch(const std::exception &)
+			{
+				m_ExitCode = 1;
+				SetWindowTextW(m_Status, L"无法准备安装任务，请重试。");
+				return;
+			}
 			if(Directory.empty())
 			{
 				MessageBoxW(m_Window, L"请输入安装位置。", L"QmClient", MB_OK | MB_ICONINFORMATION);
 				SetFocus(m_Edit);
 				return;
 			}
-			m_Directory = Directory;
+			m_Directory = std::move(Directory);
 			m_EngineWindow = nullptr;
 			m_CancelRequested = false;
 			m_Progress = 0;
 			m_VisualProgress.Snap(0.0f);
 			m_InstallStart = std::chrono::steady_clock::now();
-			m_pEngine = std::make_unique<QmSetup::CSetupEngine>();
+			m_pEngine = std::move(pEngine);
 			ShowPage(EPage::INSTALLING);
 			try
 			{
-				m_pEngine->Start(QmSetup::NativeArguments(m_Options, Directory, SendMessageW(m_Desktop, BM_GETCHECK, 0, 0) == BST_CHECKED), m_Window);
+				m_pEngine->Start(std::move(vArguments), m_Window);
 			}
 			catch(const std::exception &)
 			{
-				m_Error = L"无法创建安装任务，请重新运行安装程序。";
 				m_ExitCode = 1;
-				ShowPage(EPage::FAILED);
+				ShowPage(EPage::FAILED, L"无法创建安装任务，请重新运行安装程序。");
 			}
 		}
 
@@ -426,7 +445,11 @@ namespace
 				DestroyWindow(m_Window);
 				return;
 			}
-			if(!m_CancelRequested && MessageBoxW(m_Window, L"要取消本次安装吗？安装程序会完成必要的清理后退出安装。", L"取消安装", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES)
+			const auto CanCancel = [this] { return m_Page == EPage::INSTALLING && !m_CancelRequested; };
+			const auto Confirm = [this] {
+				return MessageBoxW(m_Window, L"要取消本次安装吗？安装程序会完成必要的清理后退出安装。", L"取消安装", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES;
+			};
+			if(QmSetup::ConfirmCancellation(CanCancel, Confirm))
 			{
 				m_CancelRequested = true;
 				SetWindowTextW(m_Status, L"正在取消，请稍候。");
@@ -819,10 +842,10 @@ namespace
 					m_pEngine->Join();
 					m_EngineWindow = nullptr;
 					m_ExitCode = static_cast<DWORD>(WParam);
-					m_Error = m_pEngine->Error();
-					if(QmSetup::IsCancelled(m_ExitCode, m_CancelRequested))
-						m_Error = L"安装已取消。可以返回安装选项后重试。";
-					ShowPage(m_ExitCode == 0 ? EPage::DONE : EPage::FAILED);
+					const wchar_t *pFailureStatus = QmSetup::IsCancelled(m_ExitCode, m_CancelRequested) ?
+										L"安装已取消。可以返回安装选项后重试。" :
+										m_pEngine->Error().c_str();
+					ShowPage(m_ExitCode == 0 ? EPage::DONE : EPage::FAILED, pFailureStatus);
 				}
 				return 0;
 			case WM_CLOSE: Close(); return 0;

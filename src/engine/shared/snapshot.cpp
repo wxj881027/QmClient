@@ -78,9 +78,13 @@ void CSnapshot::InvalidateItem(int Index)
 
 const void *CSnapshot::FindItem(int Type, int Id) const
 {
+	if(Type < 0 || Id < 0 || Id > MAX_ID)
+		return nullptr;
 	int InternalType = Type;
 	if(Type >= OFFSET_UUID)
 	{
+		if(!g_UuidManager.IsValidId(Type))
+			return nullptr;
 		CUuid TypeUuid = g_UuidManager.GetUuid(Type);
 		int aTypeUuidItem[UUID_INT_SIZE];
 		UuidToInts(TypeUuid, aTypeUuidItem);
@@ -89,7 +93,7 @@ const void *CSnapshot::FindItem(int Type, int Id) const
 		for(int i = 0; i < m_NumItems; i++)
 		{
 			const CSnapshotItem *pItem = GetItem(i);
-			if(pItem->InternalType() == 0 && pItem->Id() >= OFFSET_UUID_TYPE) // NETOBJTYPE_EX
+			if(pItem->InternalType() == 0 && pItem->Id() >= OFFSET_UUID_TYPE && GetItemSize(i) >= (int)sizeof(CUuid)) // NETOBJTYPE_EX
 			{
 				if(mem_comp(pItem->Data(), aTypeUuidItem, sizeof(CUuid)) == 0)
 				{
@@ -351,6 +355,11 @@ int CSnapshotDelta::CreateDelta(const CSnapshot *pFrom, const CSnapshot *pTo, vo
 		{
 			int *pItemDataDst = pData + 3;
 
+			// 解包端要求同键对象的尺寸一致，尺寸变化时不能按新尺寸读取旧对象。
+			if(pFrom->GetItemSize(PastIndex) != ItemSize)
+			{
+				return -1;
+			}
 			const CSnapshotItem *pPastItem = pFrom->GetItem(PastIndex);
 
 			if(!IncludeSize)
@@ -698,39 +707,44 @@ void CSnapshotStorage::Add(int Tick, int64_t Tagtime, size_t DataSize, const voi
 	dbg_assert(DataSize <= (size_t)CSnapshot::MAX_SIZE, "Snapshot data size invalid");
 	dbg_assert(AltDataSize <= (size_t)CSnapshot::MAX_SIZE, "Alt snapshot data size invalid");
 
-	CHolder *pHolder = static_cast<CHolder *>(malloc(sizeof(CHolder)));
+	// 所有分配和复制完成后才更新链表，失败时保留已有快照。
+	std::unique_ptr<CHolder, decltype(&std::free)> pHolder(static_cast<CHolder *>(std::malloc(sizeof(CHolder))), &std::free);
+	if(!pHolder)
+		return;
+
+	std::unique_ptr<CSnapshot, decltype(&std::free)> pSnap(static_cast<CSnapshot *>(std::malloc(DataSize)), &std::free);
+	if(!pSnap)
+		return;
+
+	std::unique_ptr<CSnapshot, decltype(&std::free)> pAltSnap(nullptr, &std::free);
+	if(AltDataSize)
+	{
+		pAltSnap.reset(static_cast<CSnapshot *>(std::malloc(AltDataSize)));
+		if(!pAltSnap)
+			return;
+		mem_copy(pAltSnap.get(), pAltData, AltDataSize);
+	}
+	mem_copy(pSnap.get(), pData, DataSize);
+
 	pHolder->m_Tick = Tick;
 	pHolder->m_Tagtime = Tagtime;
-
-	pHolder->m_pSnap = static_cast<CSnapshot *>(malloc(DataSize));
-	mem_copy(pHolder->m_pSnap, pData, DataSize);
+	pHolder->m_pSnap = pSnap.release();
 	pHolder->m_SnapSize = DataSize;
+	pHolder->m_pAltSnap = pAltSnap.release();
+	pHolder->m_AltSnapSize = AltDataSize;
 
-	if(AltDataSize) // create alternative if wanted
-	{
-		pHolder->m_pAltSnap = static_cast<CSnapshot *>(malloc(AltDataSize));
-		mem_copy(pHolder->m_pAltSnap, pAltData, AltDataSize);
-		pHolder->m_AltSnapSize = AltDataSize;
-	}
-	else
-	{
-		pHolder->m_pAltSnap = nullptr;
-		pHolder->m_AltSnapSize = 0;
-	}
-
-	// link
 	pHolder->m_pNext = nullptr;
 	pHolder->m_pPrev = m_pLast;
 	if(m_pLast)
 	{
 		dbg_assert(m_pLast->m_Tick < Tick, "snapshots inserted into CSnapshotStorage with non-increasing tick %d >= %d", m_pLast->m_Tick, Tick);
-		m_pLast->m_pNext = pHolder;
+		m_pLast->m_pNext = pHolder.get();
 	}
 	else
 	{
-		m_pFirst = pHolder;
+		m_pFirst = pHolder.get();
 	}
-	m_pLast = pHolder;
+	m_pLast = pHolder.release();
 }
 
 int CSnapshotStorage::Get(int Tick, int64_t *pTagtime, const CSnapshot **ppData, const CSnapshot **ppAltData) const
@@ -903,11 +917,18 @@ void *CSnapshotBuilder::NewItemRaw(int Type, int Id, int Size)
 	const bool Extended = Type >= OFFSET_UUID;
 	dbg_assert((Type >= 0 && Type <= CSnapshot::MAX_TYPE) || Extended || (m_Sixup && Type >= -CSnapshot::MAX_TYPE && Type < 0), "Invalid snap item Type: %d", Type);
 	dbg_assert(Id >= 0 && Id <= CSnapshot::MAX_ID, "Invalid snap item Id: %d", Id);
-	dbg_assert(Size >= 0 && (size_t)Size <= CSnapshot::MAX_SIZE - sizeof(CSnapshot) - sizeof(CSnapshotItem) - sizeof(int) && Size % sizeof(int32_t) == 0, "Invalid snap item Size: %d", Size);
+	dbg_assert(Size >= 0 && Size % sizeof(int32_t) == 0, "Invalid snap item Size: %d", Size);
+
+	// 增量解包后的单项也可能超过快照容量，沿用构建失败返回。
+	if((size_t)Size > CSnapshot::MAX_SIZE - sizeof(CSnapshot) - sizeof(CSnapshotItem) - sizeof(int))
+	{
+		return nullptr;
+	}
 
 	// 先解析扩展类型：UUID 说明项也要占用一个 item，必须计入下面的容量检查。
 	if(Extended)
 	{
+		dbg_assert(g_UuidManager.IsValidId(Type), "type id must be registered");
 		const int ExtendedItemTypeIndex = GetExtendedItemTypeIndex(Type);
 		if(ExtendedItemTypeIndex == -1)
 		{

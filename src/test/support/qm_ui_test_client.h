@@ -10,7 +10,7 @@
 
 namespace qm_ui_test
 {
-	class CTestUiClient final : public IClient
+	class CTestUiClient : public IClient
 	{
 		// 可选挂载的 UI 动画运行时：生产环境由 CGameClient::OnRender 每帧驱动
 		// 轨道时钟，测试里随 AdvanceFrame 同步推进，保持双时钟一致。

@@ -2,6 +2,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_WEAPON_TRAJECTORY_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_WEAPON_TRAJECTORY_H
 
+#include "weapon_trajectory_geometry.h"
+
 #include <base/color.h>
 
 #include <engine/graphics.h>
@@ -120,9 +122,7 @@ inline bool QmWeaponTrajectoryIsTeleGunWall(int Weapon, int FrontTileIndex, int 
 
 class CQmWeaponTrajectory : public CComponent
 {
-	std::vector<vec2> m_vPoints;
-	std::vector<IGraphics::CLineItem> m_vLineSegments;
-	std::vector<IGraphics::CFreeformItem> m_vLineQuadSegments;
+	SQmWeaponTrajectoryScratch m_Scratch;
 
 public:
 	int Sizeof() const override { return sizeof(*this); }

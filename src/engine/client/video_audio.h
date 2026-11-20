@@ -36,15 +36,19 @@ struct SVideoAudioConversionApi
 };
 
 // 返回负值时输出不可提交编码；短转换同样拒绝，避免把旧样本作为本帧尾部写出。
-inline int ConvertVideoAudioFrame(AVFrame *pInput, AVFrame *pOutput, SwrContext *pContext, const int16_t *pSamples, const SVideoAudioConversionApi &Api = {})
+inline int ConvertVideoAudioFrame(const AVFrame *pInput, AVFrame *pOutput, SwrContext *pContext, const int16_t *pSamples, const SVideoAudioConversionApi &Api = {})
 {
-	const int FillResult = Api.m_pFill(pInput->data, nullptr, reinterpret_cast<const uint8_t *>(pSamples), 2, pInput->nb_samples, AV_SAMPLE_FMT_S16, 0);
+	// 混音缓冲由录制槽持有，借用的平面指针只在本次转换中使用。
+	constexpr int INPUT_CHANNELS = 2;
+	uint8_t *apInputData[INPUT_CHANNELS]{};
+	const int FillResult = Api.m_pFill(apInputData, nullptr, reinterpret_cast<const uint8_t *>(pSamples), INPUT_CHANNELS, pInput->nb_samples, AV_SAMPLE_FMT_S16, 0);
 	if(FillResult < 0)
 		return FillResult;
 	const int WritableResult = Api.m_pMakeWritable(pOutput);
 	if(WritableResult < 0)
 		return WritableResult;
-	const int Result = Api.m_pConvert(pContext, pOutput->data, pOutput->nb_samples, const_cast<const uint8_t **>(pInput->data), pInput->nb_samples);
+	const uint8_t *pInputPlane = apInputData[0];
+	const int Result = Api.m_pConvert(pContext, pOutput->data, pOutput->nb_samples, &pInputPlane, pInput->nb_samples);
 	return Result < 0 ? Result : Result == pOutput->nb_samples ? 0 :
 								     AVERROR_INVALIDDATA;
 }

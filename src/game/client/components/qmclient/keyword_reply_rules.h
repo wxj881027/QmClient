@@ -7,8 +7,10 @@
 #include <engine/external/regex.h>
 
 #include <algorithm>
+#include <new>
 #include <optional>
 #include <regex>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -267,20 +269,30 @@ namespace QmKeywordReplyRules
 		std::string m_Config;
 		std::vector<SCompiledRule> m_vRules;
 
+		void Clear()
+		{
+			// 配置已经变更，恢复失败时也不能再发送旧回复或执行旧改名规则。
+			m_Config.clear();
+			m_vRules.clear();
+		}
+
 	public:
 		void SetConfig(const char *pConfig)
+		try
 		{
 			if(!pConfig)
 				pConfig = "";
 			if(m_Config == pConfig)
 				return;
-			m_Config = pConfig;
-			std::vector<char> vDecoded(m_Config.size() + 1);
-			DecodeFromConfig(m_Config.c_str(), vDecoded.data(), vDecoded.size());
-			m_vRules.clear();
-			for(auto &Rule : ParseDecoded(vDecoded.data()))
+			std::string Config(pConfig);
+			std::vector<char> vDecoded(Config.size() + 1);
+			DecodeFromConfig(Config.c_str(), vDecoded.data(), vDecoded.size());
+			auto vParsed = ParseDecoded(vDecoded.data());
+			std::vector<SCompiledRule> vCandidate;
+			vCandidate.reserve(vParsed.size());
+			for(auto &Rule : vParsed)
 			{
-				SCompiledRule Compiled;
+				auto &Compiled = vCandidate.emplace_back();
 				Compiled.m_Rule = std::move(Rule);
 				Compiled.m_vReplies = ReplyTokens(Compiled.m_Rule.m_Reply.c_str());
 				if(Compiled.m_Rule.m_Regex)
@@ -291,6 +303,14 @@ namespace QmKeywordReplyRules
 					{
 						Compiled.m_Regex.emplace(RegexPattern(Compiled.m_Rule.m_Keywords), true);
 					}
+					catch(const std::bad_alloc &)
+					{
+						throw;
+					}
+					catch(const std::length_error &)
+					{
+						throw;
+					}
 					catch(...)
 					{
 						Compiled.m_Regex.reset();
@@ -298,12 +318,22 @@ namespace QmKeywordReplyRules
 				}
 				else
 					Compiled.m_vTokens = LiteralTokens(Compiled.m_Rule.m_Keywords);
-				m_vRules.push_back(std::move(Compiled));
 			}
+			m_Config.swap(Config);
+			m_vRules.swap(vCandidate);
+		}
+		catch(const std::bad_alloc &)
+		{
+			Clear();
+		}
+		catch(const std::length_error &)
+		{
+			Clear();
 		}
 
 		template<typename F>
 		bool Match(const char *pMessage, char *pReply, size_t ReplySize, bool &AutoRename, F &&RandomBelow)
+		try
 		{
 			AutoRename = false;
 			if(!pMessage || !pReply || ReplySize == 0)
@@ -336,6 +366,14 @@ namespace QmKeywordReplyRules
 			str_copy(pReply, Rule.m_vReplies[Index].c_str(), ReplySize);
 			AutoRename = Rule.m_Rule.m_AutoRename;
 			return pReply[0] != '\0';
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
 		}
 	};
 

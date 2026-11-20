@@ -4,26 +4,18 @@
 #include <base/hash.h>
 
 #include <engine/graphics.h>
+#include <engine/http_response_validation.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/jobs.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/community_icon_scan.h>
+#include <game/client/components/qmclient/community_icon_store.h>
 #include <game/client/ui_rect.h>
 
+#include <deque>
 #include <optional>
-
-class IHttpRequest;
-
-class CCommunityIcon
-{
-	friend class CCommunityIcons;
-
-private:
-	char m_aCommunityId[CServerInfo::MAX_COMMUNITY_ID_LENGTH];
-	SHA256_DIGEST m_Sha256;
-	IGraphics::CTextureHandle m_OrgTexture;
-	IGraphics::CTextureHandle m_GreyTexture;
-};
+#include <utility>
 
 class CCommunityIcons : public CComponentInterfaces
 {
@@ -34,6 +26,16 @@ public:
 	void Update();
 	void Shutdown();
 
+	static bool AcceptLoadResult(bool Decoded, IHttpRequest *pResponse, bool InfoAvailable, const CCommunity *pCommunity, const SHA256_DIGEST &Sha256)
+	{
+		const bool Accepted = Decoded && qm_community_icons::AcceptsResult(InfoAvailable, pCommunity, Sha256);
+		if(!pResponse)
+			return Accepted;
+
+		CHttpResponseValidation Validation(*pResponse);
+		return Accepted && InfoAvailable && pCommunity != nullptr && pCommunity->IconSha256().has_value() && Validation.Commit();
+	}
+
 private:
 	class CAbstractCommunityIconJob
 	{
@@ -43,7 +45,7 @@ private:
 		char m_aPath[IO_MAX_PATH_LENGTH];
 		int m_StorageType;
 		bool m_Success = false;
-		SHA256_DIGEST m_Sha256;
+		SHA256_DIGEST m_Sha256{};
 
 		CAbstractCommunityIconJob(CCommunityIcons *pCommunityIcons, const char *pCommunityId, int StorageType);
 
@@ -58,14 +60,21 @@ private:
 	{
 		CImageInfo m_ImageInfo;
 		CImageInfo m_ImageInfoGrayscale;
+		std::shared_ptr<IHttpRequest> m_pResponse;
 
 	protected:
 		void Run() override;
 
 	public:
-		CCommunityIconLoadJob(CCommunityIcons *pCommunityIcons, const char *pCommunityId, int StorageType);
+		CCommunityIconLoadJob(CCommunityIcons *pCommunityIcons, const char *pCommunityId, int StorageType, std::shared_ptr<IHttpRequest> pResponse);
 		~CCommunityIconLoadJob() override;
 
+		void DiscardImages()
+		{
+			m_ImageInfo.Free();
+			m_ImageInfoGrayscale.Free();
+		}
+		std::shared_ptr<IHttpRequest> TakeResponse() { return std::exchange(m_pResponse, nullptr); }
 		CImageInfo &ImageInfo() { return m_ImageInfo; }
 		CImageInfo &ImageInfoGrayscale() { return m_ImageInfoGrayscale; }
 	};
@@ -79,13 +88,16 @@ private:
 		std::shared_ptr<IHttpRequest> HttpRequest() { return m_pHttpRequest; }
 	};
 
-	std::vector<CCommunityIcon> m_vCommunityIcons;
-	std::deque<std::shared_ptr<CCommunityIconLoadJob>> m_CommunityIconLoadJobs;
+	qm_community_icons::CStore m_Icons;
+	qm_community_icons::CLoadQueue<CCommunityIconLoadJob> m_CommunityIconLoadJobs;
 	std::deque<std::shared_ptr<CCommunityIconDownloadJob>> m_CommunityIconDownloadJobs;
-	std::optional<SHA256_DIGEST> m_CommunityIconsInfoSha256;
+	qm_community_icons::CScan m_IconScan;
+	bool m_ScanPreparationFailed = false;
+	bool m_CleanupFailed = false;
+	bool QueueLoadJob(const char *pCommunityId, int StorageType, std::shared_ptr<IHttpRequest> pResponse = nullptr);
 	static int FileScan(const char *pName, int IsDir, int DirType, void *pUser);
 	bool LoadFile(const char *pPath, int DirType, CImageInfo &Info, CImageInfo &InfoGrayscale, SHA256_DIGEST &Sha256);
-	void LoadFinish(const char *pCommunityId, CImageInfo &Info, CImageInfo &InfoGrayscale, const SHA256_DIGEST &Sha256);
+	bool LoadFinish(const char *pCommunityId, CImageInfo &Info, CImageInfo &InfoGrayscale, const SHA256_DIGEST &Sha256);
 };
 
 #endif

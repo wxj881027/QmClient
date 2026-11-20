@@ -5,7 +5,10 @@
 
 #include "kernel.h"
 
+#include <base/thread.h>
+
 #include <memory>
+#include <utility>
 
 class CFutureLogger;
 class IJob;
@@ -18,11 +21,18 @@ class IEngine : public IInterface
 public:
 	virtual void Init() = 0;
 	virtual void AddJob(std::shared_ptr<IJob> pJob) = 0;
+	// 需要保留失败请求的调用方可区分关池拒绝；旧调用入口保持不变。
+	virtual bool TryAddJob(std::shared_ptr<IJob> pJob)
+	{
+		AddJob(std::move(pJob));
+		return true;
+	}
 	virtual void ShutdownJobs() = 0;
 	virtual void SetAdditionalLogger(std::shared_ptr<ILogger> &&pLogger) = 0;
 };
 
+// 工作线程初始化失败返回空，不发布尚未就绪的引擎。
 extern IEngine *CreateEngine(const char *pAppname, std::shared_ptr<CFutureLogger> pFutureLogger);
-extern IEngine *CreateTestEngine(const char *pAppname);
+extern IEngine *CreateTestEngine(const char *pAppname, THREAD_CREATE pfnCreate = thread_try_init);
 
 #endif

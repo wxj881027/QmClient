@@ -1,14 +1,28 @@
 #include "QmCloudBubble.h"
 
+#include <base/borrowed_allocator.h>
+
 #include <engine/image.h>
+
+#include <new>
+#include <vector>
 
 namespace qm_chat_bubble
 {
-	void CCloudRenderer::Init(IGraphics *pGraphics)
+	void CCloudRenderer::Init(IGraphics *pGraphics, IAllocationResource *pPixelMemory)
 	{
 		if(pGraphics->IsTextureHandleAllocated(m_Texture))
 			return;
-		std::vector<uint8_t> vPixels(CLOUD_ATLAS_SIZE * CLOUD_ATLAS_SIZE * 4);
+		std::vector<uint8_t, CBorrowedAllocator<uint8_t>> vPixels{CBorrowedAllocator<uint8_t>(pPixelMemory)};
+		try
+		{
+			vPixels.resize(CLOUD_ATLAS_SIZE * CLOUD_ATLAS_SIZE * 4);
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 云团图集是可选资源，保留绘制时的圆角背景回退。
+			return;
+		}
 		for(int Variant = 0; Variant < 4; ++Variant)
 			for(int y = 0; y < CLOUD_TILE_SIZE; ++y)
 				for(int x = 0; x < CLOUD_TILE_SIZE; ++x)

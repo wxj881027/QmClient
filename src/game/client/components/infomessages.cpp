@@ -19,10 +19,42 @@
 #include <game/client/prediction/gameworld.h>
 #include <game/localization.h>
 
+#include <cstdint>
+#include <new>
+#include <stdexcept>
+
 static constexpr float ROW_HEIGHT = 46.0f;
 // 击杀消息使用 1800 逻辑高度，是普通 HUD 坐标的六倍。
 static constexpr float FONT_SIZE = ui_token::hud::font::CAPTION * 6.0f;
 static constexpr float RACE_FLAG_SIZE = 52.0f;
+static constexpr int NUM_FLAG_QUADS = 4;
+
+template<typename TOperation>
+static bool TryInfoMessageOperation(TOperation &&Operation)
+{
+	try
+	{
+		Operation();
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+}
+
+static void RenderInfoMessageText(ITextRender &TextRender, const STextContainerIndex &Index, ColorRGBA Color, float &X, float Y)
+{
+	X -= TextRender.GetBoundingBoxTextContainer(Index).m_W;
+	// 绘制时可能补传文字缓冲。失败时保留容器，下一次绘制会重试。
+	TryInfoMessageOperation([&] {
+		TextRender.RenderTextContainer(Index, Color, TextRender.DefaultTextOutlineColor(), X, Y + (ROW_HEIGHT - FONT_SIZE) / 2.0f);
+	});
+}
 
 void CInfoMessages::OnWindowResize()
 {
@@ -43,10 +75,12 @@ void CInfoMessages::OnReset()
 
 void CInfoMessages::DeleteTextContainers(CInfoMsg &InfoMsg)
 {
-	TextRender()->DeleteTextContainer(InfoMsg.m_VictimTextContainerIndex);
-	TextRender()->DeleteTextContainer(InfoMsg.m_KillerTextContainerIndex);
-	TextRender()->DeleteTextContainer(InfoMsg.m_DiffTextContainerIndex);
-	TextRender()->DeleteTextContainer(InfoMsg.m_TimeTextContainerIndex);
+	STextContainerIndex *apIndices[] = {&InfoMsg.m_VictimTextContainerIndex, &InfoMsg.m_KillerTextContainerIndex, &InfoMsg.m_DiffTextContainerIndex, &InfoMsg.m_TimeTextContainerIndex};
+	for(STextContainerIndex *pIndex : apIndices)
+	{
+		if(!TryInfoMessageOperation([&] { TextRender()->DeleteTextContainer(*pIndex); }))
+			TextRender()->ReleaseTemporaryTextContainer(*pIndex);
+	}
 }
 
 void CInfoMessages::ResetMessage(CInfoMsg &InfoMsg)
@@ -60,30 +94,40 @@ void CInfoMessages::ResetMessage(CInfoMsg &InfoMsg)
 void CInfoMessages::OnInit()
 {
 	Graphics()->SetColor(1.f, 1.f, 1.f, 1.f);
-	m_SpriteQuadContainerIndex = Graphics()->CreateQuadContainer(false);
+	const bool SpritesPrepared = TryInfoMessageOperation([&] {
+		m_SpriteQuadContainerIndex = Graphics()->CreateQuadContainer(false);
 
-	Graphics()->QuadsSetSubset(0, 0, 1, 1);
-	Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 0.f, 0.f, 28.f, 56.f);
-	Graphics()->QuadsSetSubset(0, 0, 1, 1);
-	Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 0.f, 0.f, 28.f, 56.f);
-
-	Graphics()->QuadsSetSubset(1, 0, 0, 1);
-	Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 0.f, 0.f, 28.f, 56.f);
-	Graphics()->QuadsSetSubset(1, 0, 0, 1);
-	Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 0.f, 0.f, 28.f, 56.f);
-
-	for(int i = 0; i < NUM_WEAPONS; ++i)
-	{
-		float ScaleX, ScaleY;
 		Graphics()->QuadsSetSubset(0, 0, 1, 1);
-		Graphics()->GetSpriteScale(g_pData->m_Weapons.m_aId[i].m_pSpriteBody, ScaleX, ScaleY);
-		Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 96.f * ScaleX, 96.f * ScaleY);
+		Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 0.f, 0.f, 28.f, 56.f);
+		Graphics()->QuadsSetSubset(0, 0, 1, 1);
+		Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 0.f, 0.f, 28.f, 56.f);
+
+		Graphics()->QuadsSetSubset(1, 0, 0, 1);
+		Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 0.f, 0.f, 28.f, 56.f);
+		Graphics()->QuadsSetSubset(1, 0, 0, 1);
+		Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 0.f, 0.f, 28.f, 56.f);
+
+		for(int i = 0; i < NUM_WEAPONS; ++i)
+		{
+			float ScaleX, ScaleY;
+			Graphics()->QuadsSetSubset(0, 0, 1, 1);
+			Graphics()->GetSpriteScale(g_pData->m_Weapons.m_aId[i].m_pSpriteBody, ScaleX, ScaleY);
+			Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 96.f * ScaleX, 96.f * ScaleY);
+		}
+
+		Graphics()->QuadsSetSubset(0, 0, 1, 1);
+		m_QuadOffsetRaceFlag = Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 0.0f, 0.0f, RACE_FLAG_SIZE, RACE_FLAG_SIZE);
+		if(m_QuadOffsetRaceFlag == NUM_FLAG_QUADS + NUM_WEAPONS)
+			Graphics()->QuadContainerUpload(m_SpriteQuadContainerIndex);
+	});
+
+	if(!SpritesPrepared || m_QuadOffsetRaceFlag != NUM_FLAG_QUADS + NUM_WEAPONS)
+	{
+		// 旗帜和武器依赖固定的偏移，不能使用只构建了一部分的容器。
+		Graphics()->QuadsSetSubset(0, 0, 1, 1);
+		Graphics()->DeleteQuadContainer(m_SpriteQuadContainerIndex);
+		m_QuadOffsetRaceFlag = -1;
 	}
-
-	Graphics()->QuadsSetSubset(0, 0, 1, 1);
-	m_QuadOffsetRaceFlag = Graphics()->QuadContainerAddSprite(m_SpriteQuadContainerIndex, 0.0f, 0.0f, RACE_FLAG_SIZE, RACE_FLAG_SIZE);
-
-	Graphics()->QuadContainerUpload(m_SpriteQuadContainerIndex);
 }
 
 CInfoMessages::CInfoMsg CInfoMessages::CreateInfoMsg(EType Type)
@@ -133,20 +177,31 @@ void CInfoMessages::AddInfoMsg(const CInfoMsg &InfoMsg)
 	const float Height = 1.5f * 400.0f * 3.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
 
-	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	struct SRestoreScreen
+	{
+		IGraphics &m_Graphics;
+		CScreenRect m_Screen;
+		~SRestoreScreen() { m_Graphics.MapScreen(m_Screen); }
+	};
+	const SRestoreScreen RestoreScreen{*Graphics(), Graphics()->GetScreen()};
 	Graphics()->MapScreen(0, 0, Width, Height);
 
 	m_InfoMsgCurrent = (m_InfoMsgCurrent + 1) % MAX_INFOMSGS;
 	DeleteTextContainers(m_aInfoMsgs[m_InfoMsgCurrent]);
 	m_aInfoMsgs[m_InfoMsgCurrent] = InfoMsg;
 	CreateTextContainersIfNotCreated(m_aInfoMsgs[m_InfoMsgCurrent]);
-
-	Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 }
 
 void CInfoMessages::CreateTextContainersIfNotCreated(CInfoMsg &InfoMsg)
 {
+	const auto CreateText = [&](STextContainerIndex &Index, const char *pText, ColorRGBA Color) {
+		CTextCursor Cursor;
+		Cursor.m_FontSize = FONT_SIZE;
+		TextRender()->TextColor(Color);
+		if(!TryInfoMessageOperation([&] { TextRender()->CreateTextContainer(Index, &Cursor, pText); }))
+			TextRender()->ReleaseTemporaryTextContainer(Index);
+	};
+
 	const auto &&NameColor = [&](int ClientId) -> ColorRGBA {
 		unsigned Color;
 		if(ClientId == GameClient()->m_Snap.m_LocalClientId)
@@ -161,43 +216,24 @@ void CInfoMessages::CreateTextContainersIfNotCreated(CInfoMsg &InfoMsg)
 	};
 
 	if(!InfoMsg.m_VictimTextContainerIndex.Valid() && InfoMsg.m_aVictimName[0] != '\0')
-	{
-		CTextCursor Cursor;
-		Cursor.m_FontSize = FONT_SIZE;
-		TextRender()->TextColor(NameColor(InfoMsg.m_aVictimIds[0]));
-		TextRender()->CreateTextContainer(InfoMsg.m_VictimTextContainerIndex, &Cursor, InfoMsg.m_aVictimName);
-	}
+		CreateText(InfoMsg.m_VictimTextContainerIndex, InfoMsg.m_aVictimName, NameColor(InfoMsg.m_aVictimIds[0]));
 
 	if(!InfoMsg.m_KillerTextContainerIndex.Valid() && InfoMsg.m_aKillerName[0] != '\0')
-	{
-		CTextCursor Cursor;
-		Cursor.m_FontSize = FONT_SIZE;
-		TextRender()->TextColor(NameColor(InfoMsg.m_KillerId));
-		TextRender()->CreateTextContainer(InfoMsg.m_KillerTextContainerIndex, &Cursor, InfoMsg.m_aKillerName);
-	}
+		CreateText(InfoMsg.m_KillerTextContainerIndex, InfoMsg.m_aKillerName, NameColor(InfoMsg.m_KillerId));
 
 	if(!InfoMsg.m_DiffTextContainerIndex.Valid() && InfoMsg.m_aDiffText[0] != '\0')
 	{
-		CTextCursor Cursor;
-		Cursor.m_FontSize = FONT_SIZE;
-
+		ColorRGBA Color = TextRender()->DefaultTextColor();
 		if(InfoMsg.m_Diff > 0)
-			TextRender()->TextColor(1.0f, 0.5f, 0.5f, 1.0f); // red
+			Color = ColorRGBA(1.0f, 0.5f, 0.5f, 1.0f);
 		else if(InfoMsg.m_Diff < 0)
-			TextRender()->TextColor(0.5f, 1.0f, 0.5f, 1.0f); // green
-		else
-			TextRender()->TextColor(TextRender()->DefaultTextColor());
+			Color = ColorRGBA(0.5f, 1.0f, 0.5f, 1.0f);
 
-		TextRender()->CreateTextContainer(InfoMsg.m_DiffTextContainerIndex, &Cursor, InfoMsg.m_aDiffText);
+		CreateText(InfoMsg.m_DiffTextContainerIndex, InfoMsg.m_aDiffText, Color);
 	}
 
 	if(!InfoMsg.m_TimeTextContainerIndex.Valid() && InfoMsg.m_aTimeText[0] != '\0')
-	{
-		CTextCursor Cursor;
-		Cursor.m_FontSize = FONT_SIZE;
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
-		TextRender()->CreateTextContainer(InfoMsg.m_TimeTextContainerIndex, &Cursor, InfoMsg.m_aTimeText);
-	}
+		CreateText(InfoMsg.m_TimeTextContainerIndex, InfoMsg.m_aTimeText, TextRender()->DefaultTextColor());
 
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 }
@@ -207,18 +243,20 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 	if(GameClient()->m_SuppressEvents)
 		return;
 
-	switch(MsgType)
-	{
-	case NETMSGTYPE_SV_KILLMSGTEAM:
-		OnTeamKillMessage(static_cast<CNetMsg_Sv_KillMsgTeam *>(pRawMsg));
-		break;
-	case NETMSGTYPE_SV_KILLMSG:
-		OnKillMessage(static_cast<CNetMsg_Sv_KillMsg *>(pRawMsg));
-		break;
-	case NETMSGTYPE_SV_RACEFINISH:
-		OnRaceFinishMessage(static_cast<CNetMsg_Sv_RaceFinish *>(pRawMsg));
-		break;
-	}
+	TryInfoMessageOperation([&] {
+		switch(MsgType)
+		{
+		case NETMSGTYPE_SV_KILLMSGTEAM:
+			OnTeamKillMessage(static_cast<CNetMsg_Sv_KillMsgTeam *>(pRawMsg));
+			break;
+		case NETMSGTYPE_SV_KILLMSG:
+			OnKillMessage(static_cast<CNetMsg_Sv_KillMsg *>(pRawMsg));
+			break;
+		case NETMSGTYPE_SV_RACEFINISH:
+			OnRaceFinishMessage(static_cast<CNetMsg_Sv_RaceFinish *>(pRawMsg));
+			break;
+		}
+	});
 }
 
 void CInfoMessages::OnTeamKillMessage(const CNetMsg_Sv_KillMsgTeam *pMsg)
@@ -304,7 +342,7 @@ void CInfoMessages::OnRaceFinishMessage(const CNetMsg_Sv_RaceFinish *pMsg)
 	if(Finish.m_Diff)
 	{
 		char aBuf[64];
-		str_time_float(absolute(Finish.m_Diff) / 1000.0f, TIME_HOURS_CENTISECS, aBuf, sizeof(aBuf));
+		str_time_float(absolute(static_cast<int64_t>(Finish.m_Diff)) / 1000.0f, TIME_HOURS_CENTISECS, aBuf, sizeof(aBuf));
 		str_format(Finish.m_aDiffText, sizeof(Finish.m_aDiffText), "(%c%s)", Finish.m_Diff < 0 ? '-' : '+', aBuf);
 	}
 	str_time_float(pMsg->m_Time / 1000.0f, TIME_HOURS_CENTISECS, Finish.m_aTimeText, sizeof(Finish.m_aTimeText));
@@ -320,16 +358,16 @@ void CInfoMessages::RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y)
 	else
 		TextColor = TextRender()->DefaultTextColor();
 
+	const auto *pGameInfo = GameClient()->m_Snap.m_pGameInfoObj;
+	const bool CanRenderFlags = m_SpriteQuadContainerIndex >= 0 && pGameInfo && (pGameInfo->m_GameFlags & GAMEFLAG_FLAGS);
+
 	// render victim name
 	if(InfoMsg.m_VictimTextContainerIndex.Valid())
-	{
-		x -= TextRender()->GetBoundingBoxTextContainer(InfoMsg.m_VictimTextContainerIndex).m_W;
-		TextRender()->RenderTextContainer(InfoMsg.m_VictimTextContainerIndex, TextColor, TextRender()->DefaultTextOutlineColor(), x, y + (ROW_HEIGHT - FONT_SIZE) / 2.0f);
-	}
+		RenderInfoMessageText(*TextRender(), InfoMsg.m_VictimTextContainerIndex, TextColor, x, y);
 
 	// render victim flag
 	x -= 24.0f;
-	if(GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) && (InfoMsg.m_ModeSpecial & 1))
+	if(CanRenderFlags && (InfoMsg.m_ModeSpecial & 1))
 	{
 		int QuadOffset;
 		if(InfoMsg.m_aVictimIds[0] == InfoMsg.m_FlagCarrierBlue)
@@ -354,10 +392,10 @@ void CInfoMessages::RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y)
 
 	// render weapon
 	x -= 32.0f;
-	if(InfoMsg.m_Weapon >= 0)
+	if(m_SpriteQuadContainerIndex >= 0 && InfoMsg.m_Weapon >= 0)
 	{
 		Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpriteWeapons[InfoMsg.m_Weapon]);
-		Graphics()->RenderQuadContainerAsSprite(m_SpriteQuadContainerIndex, 4 + InfoMsg.m_Weapon, x, y + 28);
+		Graphics()->RenderQuadContainerAsSprite(m_SpriteQuadContainerIndex, NUM_FLAG_QUADS + InfoMsg.m_Weapon, x, y + 28);
 	}
 	x -= 52.0f;
 
@@ -365,7 +403,7 @@ void CInfoMessages::RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y)
 	if(InfoMsg.m_aVictimIds[0] != InfoMsg.m_KillerId)
 	{
 		// render killer flag
-		if(GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) && (InfoMsg.m_ModeSpecial & 2))
+		if(CanRenderFlags && (InfoMsg.m_ModeSpecial & 2))
 		{
 			int QuadOffset;
 			if(InfoMsg.m_KillerId == InfoMsg.m_FlagCarrierBlue)
@@ -391,10 +429,7 @@ void CInfoMessages::RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y)
 
 		// render killer name
 		if(InfoMsg.m_KillerTextContainerIndex.Valid())
-		{
-			x -= TextRender()->GetBoundingBoxTextContainer(InfoMsg.m_KillerTextContainerIndex).m_W;
-			TextRender()->RenderTextContainer(InfoMsg.m_KillerTextContainerIndex, TextColor, TextRender()->DefaultTextOutlineColor(), x, y + (ROW_HEIGHT - FONT_SIZE) / 2.0f);
-		}
+			RenderInfoMessageText(*TextRender(), InfoMsg.m_KillerTextContainerIndex, TextColor, x, y);
 	}
 }
 
@@ -402,33 +437,29 @@ void CInfoMessages::RenderFinishMsg(const CInfoMsg &InfoMsg, float x, float y)
 {
 	// render time diff
 	if(InfoMsg.m_DiffTextContainerIndex.Valid())
-	{
-		x -= TextRender()->GetBoundingBoxTextContainer(InfoMsg.m_DiffTextContainerIndex).m_W;
-		TextRender()->RenderTextContainer(InfoMsg.m_DiffTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), x, y + (ROW_HEIGHT - FONT_SIZE) / 2.0f);
-	}
+		RenderInfoMessageText(*TextRender(), InfoMsg.m_DiffTextContainerIndex, TextRender()->DefaultTextColor(), x, y);
 
 	// render time
 	if(InfoMsg.m_TimeTextContainerIndex.Valid())
-	{
-		x -= TextRender()->GetBoundingBoxTextContainer(InfoMsg.m_TimeTextContainerIndex).m_W;
-		TextRender()->RenderTextContainer(InfoMsg.m_TimeTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), x, y + (ROW_HEIGHT - FONT_SIZE) / 2.0f);
-	}
+		RenderInfoMessageText(*TextRender(), InfoMsg.m_TimeTextContainerIndex, TextRender()->DefaultTextColor(), x, y);
 
 	// render flag
 	x -= RACE_FLAG_SIZE;
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_RACEFLAG].m_Id);
-	Graphics()->RenderQuadContainerAsSprite(m_SpriteQuadContainerIndex, m_QuadOffsetRaceFlag, x, y);
+	if(m_SpriteQuadContainerIndex >= 0)
+	{
+		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_RACEFLAG].m_Id);
+		Graphics()->RenderQuadContainerAsSprite(m_SpriteQuadContainerIndex, m_QuadOffsetRaceFlag, x, y);
+	}
 
 	// render victim name
 	if(InfoMsg.m_VictimTextContainerIndex.Valid())
 	{
-		x -= TextRender()->GetBoundingBoxTextContainer(InfoMsg.m_VictimTextContainerIndex).m_W;
 		ColorRGBA TextColor;
 		if(InfoMsg.m_VictimDDTeam)
 			TextColor = GameClient()->GetDDTeamColor(InfoMsg.m_VictimDDTeam, 0.75f);
 		else
 			TextColor = TextRender()->DefaultTextColor();
-		TextRender()->RenderTextContainer(InfoMsg.m_VictimTextContainerIndex, TextColor, TextRender()->DefaultTextOutlineColor(), x, y + (ROW_HEIGHT - FONT_SIZE) / 2.0f);
+		RenderInfoMessageText(*TextRender(), InfoMsg.m_VictimTextContainerIndex, TextColor, x, y);
 	}
 
 	// render victim tee
@@ -468,7 +499,7 @@ void CInfoMessages::OnRender()
 		{
 			continue;
 		}
-		if(Client()->GameTick(g_Config.m_ClDummy) > InfoMsg.m_Tick + Client()->GameTickSpeed() * 10)
+		if(InfoMessageExpired(Client()->GameTick(g_Config.m_ClDummy), InfoMsg.m_Tick, Client()->GameTickSpeed()))
 		{
 			ResetMessage(InfoMsg);
 			continue;

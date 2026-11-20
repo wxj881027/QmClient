@@ -27,9 +27,11 @@ inline SSettingsChoiceGrid ResolveSettingsToggleGrid(float Width, float MinimumC
 	Grid.m_Gap = std::max(0.0f, Gap);
 	Grid.m_RowHeight = std::max(0.0f, RowHeight);
 	Width = std::max(0.0f, Width);
-	const int FittingColumns = static_cast<int>(std::floor((Width + Grid.m_Gap) / std::max(1.0f, MinimumCellWidth + Grid.m_Gap)));
-	Grid.m_Columns = std::clamp(FittingColumns, 1, std::clamp(MaxColumns, 1, 4));
-	Grid.m_Rows = (std::max(0, Count) + Grid.m_Columns - 1) / Grid.m_Columns;
+	const float FittingColumns = std::floor((Width + Grid.m_Gap) / std::max(1.0f, MinimumCellWidth + Grid.m_Gap));
+	const int ColumnLimit = std::clamp(MaxColumns, 1, 4);
+	Grid.m_Columns = std::isnan(FittingColumns) ? 1 : static_cast<int>(std::clamp(FittingColumns, 1.0f, static_cast<float>(ColumnLimit)));
+	const int Items = std::max(0, Count);
+	Grid.m_Rows = Items / Grid.m_Columns + (Items % Grid.m_Columns != 0);
 	Grid.m_CellWidth = std::max(0.0f, (Width - (Grid.m_Columns - 1) * Grid.m_Gap) / Grid.m_Columns);
 	return Grid;
 }

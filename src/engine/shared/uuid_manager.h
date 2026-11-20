@@ -1,7 +1,10 @@
 #ifndef ENGINE_SHARED_UUID_MANAGER_H
 #define ENGINE_SHARED_UUID_MANAGER_H
 
+#include <cstddef>
 #include <cstdint>
+#include <deque>
+#include <string>
 #include <vector>
 
 class CUuid
@@ -55,7 +58,7 @@ class CName
 {
 public:
 	CUuid m_Uuid;
-	const char *m_pName;
+	std::string m_Name;
 };
 
 class CNameIndexed
@@ -73,11 +76,14 @@ class CUnpacker;
 
 class CUuidManager
 {
-	std::vector<CName> m_vNames;
+	std::deque<CName> m_Names;
 	std::vector<CNameIndexed> m_vNamesSorted;
 
 public:
+	// 注册表持有名称副本；后续注册不使已返回的名称指针失效。
 	void RegisterName(int Id, const char *pName);
+	bool IsValidId(int Id) const;
+	// 未注册编号分别返回空UUID和空字符串，不索引容器。
 	CUuid GetUuid(int Id) const;
 	const char *GetName(int Id) const;
 	int LookupUuid(CUuid Uuid) const;
@@ -85,7 +91,8 @@ public:
 
 	int UnpackUuid(CUnpacker *pUnpacker) const;
 	int UnpackUuid(CUnpacker *pUnpacker, CUuid *pOut) const;
-	void PackUuid(int Id, CPacker *pPacker) const;
+	// 无效编号返回false且不改打包器；有效编号仍需检查打包容量。
+	bool PackUuid(int Id, CPacker *pPacker) const;
 
 	void DebugDump() const;
 };

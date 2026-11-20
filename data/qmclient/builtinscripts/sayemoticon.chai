@@ -4,4 +4,13 @@ if (i == -1) {
 }
 var emoticon = trim(args.substr(0, i))
 var msg = trim(args.substr(i + 1, -1))
-exec("say " + msg + " " + emoticon)
+var text = msg.empty() ? emoticon : msg + " " + emoticon
+var line = "say \""
+for (var j = 0; j < text.size(); ++j) {
+	var c = text[j]
+	if (c == '\\' || c == '"') {
+		line.push_back('\\')
+	}
+	line.push_back(c)
+}
+exec(line + "\"")

@@ -243,7 +243,7 @@ public:
 	void Quantize();
 
 	// DDRace
-	int m_Id;
+	int m_Id = -1;
 	bool m_Reset;
 	CCollision *Collision() { return m_pCollision; }
 
@@ -281,7 +281,7 @@ public:
 private:
 	CTeamsCore *m_pTeams;
 	int m_MoveRestrictions;
-	int m_HookedPlayer;
+	int m_HookedPlayer = -1;
 	static bool IsSwitchActiveCb(unsigned char Number, void *pUser);
 
 	FAntiPingInterfereCallback m_AntiPingInterfereCallback = [](int ClientId, bool DisallowReset) {};

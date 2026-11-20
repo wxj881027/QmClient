@@ -61,7 +61,9 @@ void CMenus::RenderServerVoteList(CUIRect MainView)
 			if(Ui()->ActiveItem() == &Description)
 				Ui()->SetActiveItem(nullptr);
 		}
-		List.Update(Voting.FirstOption(), Voting.OptionsRevision(), SearchInput.GetString());
+		// 候选准备失败时本帧不绘制或提交旧选项，下帧继续重试。
+		if(!List.Update(Voting.FirstOption(), Voting.OptionsRevision(), SearchInput.GetString()))
+			return;
 	}
 
 	auto Label = [&](CUIRect Rect, const char *pText, int Align = TEXTALIGN_ML) {
