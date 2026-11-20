@@ -107,24 +107,28 @@ TEST(SkinsContract, TeeSkinListSortModeKeepsFavoritesPinnedThenUsesOfficialDate)
 	EXPECT_NE(CompareBody.find("g_Config.m_QmSkinSortMode"), std::string::npos);
 	EXPECT_NE(CompareBody.find("OfficialReleaseDate()"), std::string::npos);
 	EXPECT_NE(CompareBody.find("LastModified()"), std::string::npos);
-	EXPECT_NE(CompareBody.find("OfficialReleaseDate > OtherOfficialReleaseDate"), std::string::npos);
-	EXPECT_NE(CompareBody.find("LastModified() > Other.m_pSkinContainer->LastModified()"), std::string::npos);
+	EXPECT_NE(CompareBody.find("SkinListValueOrder("), std::string::npos);
+	const size_t OrderHelperPos = Header.find("constexpr ESkinSortOrder SkinListValueOrder");
+	ASSERT_NE(OrderHelperPos, std::string::npos);
+	const std::string OrderHelperBody = Header.substr(OrderHelperPos, 1200);
+	EXPECT_NE(OrderHelperBody.find("LeftFavorite ? ESkinSortOrder::LESS"), std::string::npos);
+	EXPECT_NE(OrderHelperBody.find("LeftReleaseDate > RightReleaseDate"), std::string::npos);
+	// 目录来源的下载时间不参与排序，避免下载完成引发整表重排。
+	EXPECT_NE(OrderHelperBody.find("LeftLocalSource && RightLocalSource"), std::string::npos);
+	EXPECT_NE(OrderHelperBody.find("LeftModified > RightModified"), std::string::npos);
 	const size_t TimeTranslationPos = MenusI18nSource.find("key = \"Time\"");
 	ASSERT_NE(TimeTranslationPos, std::string::npos);
 	const size_t TimeTranslationEnd = MenusI18nSource.find("[[message]]", TimeTranslationPos + 1);
 	const std::string TimeTranslationBody = MenusI18nSource.substr(TimeTranslationPos, TimeTranslationEnd - TimeTranslationPos);
 	EXPECT_NE(TimeTranslationBody.find("simplified_chinese = \"时间\""), std::string::npos);
 	EXPECT_EQ(TimeTranslationBody.find("simplified_chinese = \"用时\""), std::string::npos);
-	const size_t FavoritePos = CompareBody.find("m_Favorite");
-	const size_t SortModePos = CompareBody.find("g_Config.m_QmSkinSortMode");
-	const size_t ModifiedPos = CompareBody.find("LastModified()");
+	const size_t FavoritePos = OrderHelperBody.find("LeftFavorite");
+	const size_t SortModePos = OrderHelperBody.find("SortByTime");
+	const size_t ModifiedPos = OrderHelperBody.find("LeftModified");
 	ASSERT_NE(FavoritePos, std::string::npos);
 	ASSERT_NE(SortModePos, std::string::npos);
 	ASSERT_NE(ModifiedPos, std::string::npos);
 	EXPECT_LT(FavoritePos, SortModePos);
-	EXPECT_LT(SortModePos, ModifiedPos);
-	EXPECT_NE(CompareBody.find("if(g_Config.m_QmSkinSortMode == 1)"), std::string::npos);
-	EXPECT_NE(CompareBody.find("if(m_Favorite && !Other.m_Favorite)"), std::string::npos);
 }
 
 TEST(SkinsContract, TeeStartLoadingFallbackSweepIsGatedAndCountsRealStarts)

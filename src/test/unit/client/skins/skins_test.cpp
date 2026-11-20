@@ -863,6 +863,22 @@ TEST(SkinUploadBudget, HonorsConfiguredLimit)
 	EXPECT_TRUE(Budget.CanUpload());
 }
 
+TEST(Skins, TimeSortKeepsCatalogOrderStableAfterDownload)
+{
+	using EOrder = CSkins::ESkinSortOrder;
+	// 收藏始终置顶，不随时间排序改变。
+	EXPECT_EQ(CSkins::SkinListValueOrder(true, false, 0, 0, 0, 0, false, false, true), EOrder::LESS);
+	EXPECT_EQ(CSkins::SkinListValueOrder(false, true, 0, 0, 0, 0, false, false, true), EOrder::GREATER);
+	// 时间排序先比较发布日期。
+	EXPECT_EQ(CSkins::SkinListValueOrder(false, false, 20240101, 20231231, 0, 0, false, false, true), EOrder::LESS);
+	// 目录来源条目：下载刷新 LastModified 不参与排序，否则每下载一张就会重排整表。
+	EXPECT_EQ(CSkins::SkinListValueOrder(false, false, 0, 0, 1700000000, 0, false, false, true), EOrder::EQUAL_KEYS);
+	// 两个本地文件才用修改时间。
+	EXPECT_EQ(CSkins::SkinListValueOrder(false, false, 0, 0, 1700000000, 1600000000, true, true, true), EOrder::LESS);
+	// 名称排序下不消费时间字段，统一交给名称比较。
+	EXPECT_EQ(CSkins::SkinListValueOrder(false, false, 20240101, 20231231, 0, 0, false, false, false), EOrder::EQUAL_KEYS);
+}
+
 TEST(Skins, ModifiedLoadedLocalSourceReturnsToPending)
 {
 	using EState = CSkins::CSkinContainer::EState;

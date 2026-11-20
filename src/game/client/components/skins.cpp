@@ -49,6 +49,7 @@ static constexpr const char *DEFAULT_COMMUNITY_SKIN_URL = "https://skins.ddnet.o
 static constexpr const char *DEFAULT_DDSTATS_SKIN_URL = "https://skins.ddstats.tw/";
 static constexpr int SKIN_CATALOG_MERGE_BUDGET = 256;
 static constexpr int MAX_ACTIVE_SKIN_DOWNLOAD_SESSIONS = 48;
+static constexpr int MAX_BACKGROUND_SKIN_DOWNLOAD_SESSIONS = 16;
 static constexpr int64_t SKIN_SOURCE_WAIT_LOG_INTERVAL_NS = 1'000'000'000;
 static constexpr int64_t SKIN_SOURCES_SAVE_INTERVAL_NS = 1'000'000'000;
 
@@ -894,27 +895,15 @@ void CSkins::CSkinContainer::ClearBackgroundUsage()
 
 bool CSkins::CSkinListEntry::operator<(const CSkins::CSkinListEntry &Other) const
 {
-	if(m_Favorite && !Other.m_Favorite)
-	{
-		return true;
-	}
-	if(!m_Favorite && Other.m_Favorite)
-	{
-		return false;
-	}
-	if(g_Config.m_QmSkinSortMode == 1)
-	{
-		const int OfficialReleaseDate = m_pSkinContainer->OfficialReleaseDate();
-		const int OtherOfficialReleaseDate = Other.m_pSkinContainer->OfficialReleaseDate();
-		if(OfficialReleaseDate != OtherOfficialReleaseDate)
-		{
-			return OfficialReleaseDate > OtherOfficialReleaseDate;
-		}
-		if(m_pSkinContainer->LastModified() != Other.m_pSkinContainer->LastModified())
-		{
-			return m_pSkinContainer->LastModified() > Other.m_pSkinContainer->LastModified();
-		}
-	}
+	const ESkinSortOrder Order = SkinListValueOrder(
+		m_Favorite, Other.m_Favorite,
+		m_pSkinContainer->OfficialReleaseDate(), Other.m_pSkinContainer->OfficialReleaseDate(),
+		m_pSkinContainer->LastModified(), Other.m_pSkinContainer->LastModified(),
+		m_pSkinContainer->Type() == CSkinContainer::EType::LOCAL,
+		Other.m_pSkinContainer->Type() == CSkinContainer::EType::LOCAL,
+		g_Config.m_QmSkinSortMode == 1);
+	if(Order != ESkinSortOrder::EQUAL_KEYS)
+		return Order == ESkinSortOrder::LESS;
 	const int NameCompare = str_comp(m_pSkinContainer->Name(), Other.m_pSkinContainer->Name());
 	if(NameCompare != 0)
 	{
@@ -1626,6 +1615,11 @@ void CSkins::OnUpdate()
 	// 检查间隔不是主线程预算：终局上传使用独立的 1 ms 预算，首个皮肤始终取得进展。
 	UpdateFinishLoading(Stats, time_get_nanoseconds(), m_SettingsFinalizeTimeBudget);
 	LogStage("finish_loading");
+	if(m_SkinListRefreshPending)
+	{
+		m_SkinList.ForceRefresh();
+		m_SkinListRefreshPending = false;
+	}
 	ProcessSkinListPlanJob();
 	LogStage("list_plan_results");
 	CollectUnresolvedSkins();
@@ -2329,6 +2323,18 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 		}
 		return Admission;
 	};
+	// 后台预热最多占一部分下载槽：可见项被用户拉到视窗内时，
+	// 不应排在一整批后台预取之后。计数在每次 OnUpdate 开始时重算。
+	int BackgroundDownloadSessions = 0;
+	if(TeeSettingsActive)
+	{
+		for(const std::string &Name : m_vSkinDownloadNames)
+		{
+			const auto It = m_Skins.find(Name);
+			if(It != m_Skins.end() && It->second->m_LoadPriority != ESettingsResourcePriority::VISIBLE)
+				++BackgroundDownloadSessions;
+		}
+	}
 	auto StartLoadJob = [&](CSkinContainer *pSkinContainer, ESettingsResourcePriority Priority) {
 		// 已启动和已加载条目不参与准入，不能因窗口满而阻断其他候选。
 		if(pSkinContainer->m_State != CSkinContainer::EState::PENDING && pSkinContainer->m_State != CSkinContainer::EState::BACKGROUND_REQUESTED)
@@ -2411,13 +2417,23 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 			// 初次目录扫描完成前先使用磁盘上的 canonical 名称，避免用服务器下发的小写名发出 404 请求。
 			if(!m_HasInitialSkinDirectoryScan)
 				return false;
-			if(!SettingsSkinCanStartDownloadSession((int)m_vSkinDownloadNames.size(), MAX_ACTIVE_SKIN_DOWNLOAD_SESSIONS))
 			{
-				str_copy(m_SettingsSourceAdmissionTelemetry.m_aLastWaitReason, "download_session_limit", sizeof(m_SettingsSourceAdmissionTelemetry.m_aLastWaitReason));
-				LogSettingsSkinSourceWaitEvent(pSkinContainer->Name(), "download_session_limit",
-					GameClient()->GpuUploadLimiter()->RemainingUploads(),
-					GameClient()->GpuUploadLimiter()->MaxUploadsPerFrame());
-				return false;
+				const ESettingsResourcePriority EffectivePriority =
+					pSkinContainer->m_State == CSkinContainer::EState::BACKGROUND_REQUESTED ? pSkinContainer->m_LoadPriority : Priority;
+				const bool VisiblePriority = EffectivePriority == ESettingsResourcePriority::VISIBLE;
+				const int ActiveSessions = VisiblePriority ? (int)m_vSkinDownloadNames.size() : BackgroundDownloadSessions;
+				const int SessionLimit = VisiblePriority ? MAX_ACTIVE_SKIN_DOWNLOAD_SESSIONS : MAX_BACKGROUND_SKIN_DOWNLOAD_SESSIONS;
+				if(!SettingsSkinCanStartDownloadSession(ActiveSessions, SessionLimit))
+				{
+					const char *pReason = VisiblePriority ? "download_session_limit" : "background_download_limit";
+					str_copy(m_SettingsSourceAdmissionTelemetry.m_aLastWaitReason, pReason, sizeof(m_SettingsSourceAdmissionTelemetry.m_aLastWaitReason));
+					LogSettingsSkinSourceWaitEvent(pSkinContainer->Name(), pReason,
+						GameClient()->GpuUploadLimiter()->RemainingUploads(),
+						GameClient()->GpuUploadLimiter()->MaxUploadsPerFrame());
+					return false;
+				}
+				if(!VisiblePriority)
+					++BackgroundDownloadSessions;
 			}
 			pSkinContainer->m_pDownloadSession = CreateSkinDownloadSession(pSkinContainer);
 			if(std::find(m_vSkinDownloadNames.begin(), m_vSkinDownloadNames.end(), pSkinContainer->Name()) == m_vSkinDownloadNames.end())
@@ -2573,10 +2589,14 @@ void CSkins::RecordSkinSource(CSkinContainer *pSkinContainer, ESkinSource Source
 {
 	if(pSkinContainer == nullptr || Source == ESkinSource::UNKNOWN || Source == ESkinSource::LOCAL)
 		return;
+	const ESkinSourceMask SourcesBefore = pSkinContainer->EffectiveSkinSources();
 	pSkinContainer->SetSkinSource(Source);
 	if(m_SkinSources.Set(pSkinContainer->Name(), Source))
 	{
-		m_SkinList.ForceRefresh();
+		// 目录已经提供来源掩码时，记录下载来源不会改变筛选归属；
+		// 此前每个下载完成都强刷整表，7k 列表在浏览时会持续重建。
+		if(pSkinContainer->EffectiveSkinSources() != SourcesBefore)
+			m_SkinListRefreshPending = true;
 		// 注册表每次 Save 都会整表重写，成本随目录规模增长；同一帧内多个下载完成时
 		// 逐条写盘会叠加成几十毫秒的主线程停顿，因此这里只标记，交给定时合并写盘。
 		m_SkinSourcesSavePending = true;
