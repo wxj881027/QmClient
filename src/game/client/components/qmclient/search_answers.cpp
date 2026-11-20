@@ -61,7 +61,7 @@ namespace qm_search_answers
 				"在“控制”的“杂项”卡片中绑定“旁观模式”。也可以使用下面的 +spectate 绑定命令；把 key 替换为想使用的按键。",
 				{"旁观选人", "旁观模式按键", "旁观按键", "+spectate"}, {"deck:controls-miscellaneous"}, "bind key \"+spectate\""},
 			{"server-info", "服务器信息不显示怎么办？",
-				"在“梦的百宝箱”卡片中关闭“进图时隐藏服务器信息”。如果手动将 cl_motd_time 设为了 0，可以改成 10 或其他非零值。",
+				"“进图时隐藏服务器信息”开启后，进服时不会自动弹出公告；公告正文仍可在服务器信息面板查看。如果完全没有公告，把 cl_motd_time 改成 10 或其他非零值；服务器没有设置公告时也不会显示。",
 				{"服务器信息", "进图信息", "motd", "cl_motd_time"}, {"qm:mini_features"}, "cl_motd_time 10"},
 			{"title-backup", "重装电脑前如何备份赞助头衔？",
 				"备份客户端数据目录 qmclient/config/credentials 下的 title_token.txt，并在新环境的数据目录中放回同一相对位置。点击“打开目录”可定位到该文件所在目录。这个文件包含头衔凭据，请自行保管，不要发到群里。",

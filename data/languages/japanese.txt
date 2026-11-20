@@ -31,6 +31,9 @@
 "Cycle custom Tee hue" only works with custom colors and does nothing while the TClient rainbow Tee option is on.
 == カスタム Tee の色相切り替えはカスタムカラー専用で、TClient のレインボー Tee がオンの間は何も起きません。
 
+"Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+== "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+
 "Default (software)" is x264: CPU only, best quality, slowest.
 == 「Default (software)」は x264 です。CPU のみで画質は最良、速度は最も遅くなります。
 
@@ -63,9 +66,6 @@
 
 "Use original style" hides the color and countdown options below it.
 == 元のスタイルを使うをオンにすると、その下の色とカウントダウンの設定は隠れます。
-
-"Vanilla skins only" hides every custom skin, so turn it off if your skin suddenly turns default.
-== バニラスキンのみをオンにするとカスタムスキンが全部隠れるので、スキンが急に既定になったらオフにします。
 
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == 自分と X が揃ったら強調は、他のプレイヤーの X が設定した検出時間だけあなたと一致した後に色を付けます。
@@ -569,9 +569,6 @@ Add a type to the exclusion filter for a specific community
 Add a voting option
 == 投票オプションを追加
 
-Add Bind
-== バインドを追加
-
 Add category
 == カテゴリを追加
 
@@ -586,9 +583,6 @@ Add current cut to the export list
 
 Add debug dummy to server (Debug build only)
 == サーバーにデバッグダミーを追加（Debug ビルドのみ）
-
-Add default presets
-== 標準プリセットを追加
 
 Add demo timeline marker
 == デモタイムラインマーカーを追加
@@ -626,6 +620,9 @@ Add options below
 Add or edit entries, then use the bind in chat to send the text.
 == 項目を追加または編集し、チャットでバインドを使って送信します。
 
+Add phrase
+== Add phrase
+
 Add players or groups, then choose which markers and chat highlights apply to them.
 == プレイヤーやグループを追加し、適用するマーカーやチャットの強調表示を選びます。
 
@@ -641,14 +638,14 @@ Add team name:
 Add to %s
 == %s に追加
 
-Add to bind wheel
-== バインドホイールに追加
-
 Add to blocked words
 == ブロック単語に追加
 
 Add to category
 == カテゴリに追加
+
+Add to identity menu
+== Add to identity menu
 
 Add to queue
 == キューに追加
@@ -667,6 +664,9 @@ Added %d missing required slot(s).
 
 Added %s as friend
 == %s をフレンドとして追加しました
+
+Added to this bind menu.
+== Added to this bind menu.
 
 Additional headers for register endpoint, comma-separated "header:value" pairs
 == レジスターエンドポイント用の追加ヘッダー、カンマ区切りの「ヘッダー:値」ペア
@@ -781,9 +781,6 @@ Afterimage pop
 
 AGC, experimental
 == AGC、実験的
-
-Agree
-== 同意
 
 Aim
 == エイム
@@ -944,9 +941,6 @@ Angle
 Angle:
 == 角度：
 
-Angry
-== 怒り
-
 Angular gradient
 == 角度グラデーション
 
@@ -1070,9 +1064,6 @@ Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
 == Q 弾 Tee 変形を他のプレイヤーに適用
 
-Apply to
-== 適用先
-
 Apply to dummy
 == ダミーに適用
 
@@ -1151,9 +1142,6 @@ Are you sure that you want to restart?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == スキンを保存してもよろしいですか？この名前のスキンが既に存在する場合は上書きされます。
 
-Arrow
-== 矢印画像
-
 Arrow assets
 == 矢印アセット
 
@@ -1165,9 +1153,6 @@ Aspect ratio preset
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == 画面アスペクト比プリセット (0=オフ, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=カスタム)
-
-Asset preset
-== 素材プリセット
 
 Asset with this name already exists.
 == 同名のアセットが既に存在します。
@@ -1183,9 +1168,6 @@ Assets editor
 
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
 == 自殺禁止と自殺許可の2つを割り当てます。禁止キーを押した後は、許可キーを押すまでKは無視されます。
-
-Assign commands and labels to wheel slots
-== Assign commands and labels to wheel slots
 
 Assigns commands and labels to the slots of the radial bind wheel.
 == 円形バインドホイールの各スロットにコマンドとラベルを割り当てます。
@@ -1802,6 +1784,12 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == キーにコマンドをバインド、またはキーバインドを表示
 
+Bind menu layout (0 = wheel, 1 = panel)
+== Bind menu layout (0 = wheel, 1 = panel)
+
+Bind Menus
+== Bind Menus
+
 Bind movement, jump, hook, and fire actions
 == Bind movement, jump, hook, and fire actions
 
@@ -1819,12 +1807,6 @@ Bind voting and server browser actions
 
 Bind weapon selection and switching actions
 == Bind weapon selection and switching actions
-
-Bind Wheel
-== バインドホイール
-
-Bind Wheel Key
-== バインドホイールキー
 
 Binds
 == バインド
@@ -1855,9 +1837,6 @@ Blend mode
 
 Blend strength
 == ブレンド強度
-
-Blink
-== まばたき
 
 Blink the active local tee
 == 操作中のローカルキャラクターを点滅させる
@@ -2120,6 +2099,9 @@ Capsule ends
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 == カプセル端: 0 = 通常の円弧、1 = なめらかな端点、2 = Apple 連続曲率
 
+Capture current appearance
+== Capture current appearance
+
 Capture the flag
 == キャプチャー・ザ・フラッグ (CTF)
 
@@ -2359,9 +2341,6 @@ Check input device, system default mic, and mic permission first
 
 Check output device, confirm headphones/speakers are still online
 == まず出力デバイスを確認し、ヘッドホン/スピーカーがまだオンラインであることを確認する
-
-Check the preset fields, label, and wheel capacity (64 entries).
-== プリセット内容、表示名、ホイールの上限（64 項目）を確認してください。
 
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
 == しきい値をいじる前にデバイスを確認しましょう。マイクが無音の多くは入力デバイスの選び間違いだけです。
@@ -2810,14 +2789,8 @@ Command is not available on solo servers
 Command to run when joining server
 == サーバー参加時に実行するコマンド
 
-Command:
-== コマンド：
-
 Commands
 == コマンド
-
-Commands run in the console
-== コンソールで実行されるコマンド
 
 Commands run once per connection, not on every map change; remove the parts that print errors.
 == コマンドは接続ごとに一度だけ実行され、マップが変わるたびには実行されません。エラーを出す部分は削除してください。
@@ -2962,6 +2935,9 @@ Configure hook range and collision guide lines
 
 Configure HUD island appearance
 == Configure HUD island appearance
+
+Configure identity, chat, assets, and custom bind menus
+== Configure identity, chat, assets, and custom bind menus
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
@@ -3143,6 +3119,9 @@ Console color scheme
 Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
 == コンソール配色: 0=モダンターミナル, 1=クラシック PowerShell, 2=カスタム, 3 以上は Windows Terminal の配色
 
+Console command
+== Console command
+
 Console command color
 == コンソール: コマンドの色
 
@@ -3154,6 +3133,9 @@ Console line spacing
 
 Console link color
 == コンソール: リンクの色
+
+Console link hover hue shift in degrees
+== Console link hover hue shift in degrees
 
 Console number color
 == コンソール: 数値の色
@@ -3326,6 +3308,9 @@ Corner curve
 Could not add the player as a friend
 == プレイヤーをフレンドに追加できませんでした
 
+Could not add this entry.
+== Could not add this entry.
+
 Could not back up configuration files.
 == 設定ファイルをバックアップできませんでした。
 
@@ -3416,9 +3401,6 @@ Count players only
 Countries
 == 国
 
-Country code
-== 国・地域コード
-
 Country flag for grouping this community (ISO 3166-1 numeric)
 == このコミュニティをグループ化するための国フラグ（ISO 3166-1 数値）
 
@@ -3445,9 +3427,6 @@ Create a random skin
 
 Create category
 == カテゴリを作成
-
-Create wheel presets here. Existing wheel entries are kept.
-== ここでホイールのプリセットを編集できます。既存の項目は保持されます。
 
 Created
 == 作成日
@@ -3764,6 +3743,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats
+== DDStats
+
 DDStats shows UTC dates, updates daily and matches players by name only.
 == DDStats の日付は UTC 基準で毎日更新され、プレイヤー名のみで照合されます。
 
@@ -3830,8 +3812,8 @@ Debug tile layer clipping.
 Debug websockets
 == WebSocket をデバッグ
 
-Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
-== クライアントがダウンロードして一覧に出すスキンを決め、プレフィックス付きのスキン変種を読み込むための接頭辞も設定できます。
+Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
+== Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
 
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 専用 WebSocket エンドポイント（空欄なら wss://qmclient.icu/ws を使用）
@@ -3964,6 +3946,9 @@ Delete folder
 
 Delete screenshot
 == スクリーンショットを削除
+
+Delete selected
+== Delete selected
 
 Delete selected items
 == 選択したアイテムを削除
@@ -4120,9 +4105,6 @@ Disabled
 
 Disabling system messages also hides server warnings.
 == システムメッセージを無効にすると、サーバーの警告も非表示になります。
-
-Disagree
-== 反対
 
 Disallow chat from blacklisted addresses
 == ブラックリストアドレスからのチャットを禁止
@@ -4297,6 +4279,9 @@ Download "%s"?
 
 Download community skins
 == コミュニティスキンをダウンロード
+
+Download DDStats skins (including unapproved skins)
+== DDStats スキンをダウンロード（未承認スキンを含む）
 
 Download failed
 == ダウンロード失敗
@@ -4723,9 +4708,6 @@ Edit skin texture
 
 Edit the name and clan fields; the dummy keeps its own values.
 == 名前とクランの欄を編集します。ダミーは独自の値を持ちます。
-
-Edit this custom command on the Bind Wheel page.
-== このカスタムコマンドはバインドホイールのページで編集してください。
 
 Edit title style
 == タイトルスタイルを編集
@@ -5321,8 +5303,14 @@ English font:
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice モードに入るか再起動してください。そうしないと 60 秒後にチーム全員が処刑されます
 
+Enter a command and keep the menu under 64 entries.
+== Enter a command and keep the menu under 64 entries.
+
 Enter a CP number from 1 to 255.
 == 1～255 の CP 番号を入力してください。
+
+Enter a phrase.
+== Enter a phrase.
 
 Enter Password
 == パスワードを入力
@@ -5590,9 +5578,6 @@ Extreme values make movement feel wrong, so change one step at a time.
 
 Extremely slow, for testing only
 == 極めて遅い、テスト用
-
-Eyes
-== 目
 
 f = Frame rate
 == f = フレームレート
@@ -6410,6 +6395,9 @@ Global UI size
 Global UI size percentage
 == 全体 UI サイズの割合
 
+Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+== Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+
 Glow
 == グロー
 
@@ -6575,9 +6563,6 @@ Group names are limited to 16 characters
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 入力支援をまとめた項目です。高速入力、自動マージン、サブティック照準、カーソルの挙動を含みます。
 
-GUI cursor
-== UIカーソル
-
 GUI cursor assets
 == GUI カーソルアセット
 
@@ -6619,9 +6604,6 @@ Hammer: %s
 
 Handwriting
 == 手書き
-
-Happy
-== 喜び
 
 Has people playing
 == プレイヤーがいる
@@ -7103,8 +7085,8 @@ Icons
 Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
 == キーを離すか凍結が解除されるとアイコンは消えます。他のプレイヤーの入力表示にはサーバーの事前入力対応が必要です。操作中の自キャラクターは対象外です。
 
-Identity preset
-== プロフィールプリセット
+Identity
+== Identity
 
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == 1 の場合、接続時に一度だけ自動録画を開始します。0 の場合、ゲーム終了後に自動録画が再開されます。
@@ -7826,9 +7808,6 @@ Kugou hook helper path (empty=beside QmClient)
 l = Local time
 == l = ローカル時間
 
-L select  R swap  M select only
-== 左選択 右入れ替え 中選択のみ
-
 Label
 == ラベル
 
@@ -8011,6 +7990,9 @@ Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-cli
 
 Left/right channel width
 == 左右チャンネル幅
+
+Legacy bind script
+== Legacy bind script
 
 Legacy option: connections that skip TLS verification are rejected
 == 旧オプション：TLS 検証を省略する接続は拒否されます
@@ -8306,11 +8288,17 @@ Local-only
 Locate
 == 場所を表示
 
+Lock both teams immediately when entering solo split mode
+== ソロスプリット開始時に両チームをすぐにロック
+
 Lock delay
 == ロック遅延
 
 Lock team
 == チームをロック
+
+Lock teams on entry
+== 入隊後すぐにロック
 
 Lock the team so other players cannot join directly
 == チームをロックして他のプレイヤーが直接参加できないようにする
@@ -8387,9 +8375,6 @@ Main menu
 Main Tee
 == メインTee
 
-Main Tee and dummy
-== メインTeeとダミー
-
 Maintains the list of hostile players and groups plus the rules used to display them.
 == 敵対プレイヤーとグループのリスト、および表示に使うルールを管理します。
 
@@ -8441,8 +8426,8 @@ Manage hostile-list chat shortcuts
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
 
-Manage profiles and bind wheel presets
-== プロフィールとバインドホイールのプリセットを管理
+Manage profiles and add identity entries to bind menus
+== Manage profiles and add identity entries to bind menus
 
 Manage the skin rotation queue
 == スキンローテーションキューを管理
@@ -8536,6 +8521,9 @@ Map preview shows the entity layer only (hides textures)
 
 Map Preview TODO
 == マッププレビュー TODO
+
+Map preview unavailable
+== Map preview unavailable
 
 Map progress
 == マップの進捗
@@ -8836,6 +8824,9 @@ Menu panel color
 
 Menu panel opacity
 == メニューパネルの不透明度
+
+Menu type
+== Menu type
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == このウィンドウ（ミリ秒）内で連続する同一の echo メッセージを統合する（0 で統合しない）
@@ -9239,9 +9230,6 @@ Name plates size
 Name to change to near finish (when qm_change_name_near_finish enabled)
 == ゴール付近で変更する名前（qm_change_name_near_finish が有効な場合）
 
-Name:
-== 名前：
-
 Name: %s
 == 名前：%s
 
@@ -9400,9 +9388,6 @@ New name
 
 New name:
 == 新しい名前：
-
-New preset
-== 新規プリセット
 
 New preset name
 == 新しいプリセット名
@@ -9953,6 +9938,9 @@ Opacity of freeze bars inside freeze
 Opacity of other teams' tees and name plates
 == 他チームのTeeとネームプレートの不透明度
 
+Open a bind menu (identity, chat, assets, custom)
+== Open a bind menu (identity, chat, assets, custom)
+
 Open a link to join the community.
 == リンクを開いてコミュニティに参加できます。
 
@@ -9964,9 +9952,6 @@ Open a link to visit the site.
 
 Open a matching settings card directly
 == Open a matching settings card directly
-
-Open bindwheel selector
-== バインドホイールセレクターを開く
 
 Open DDNet Wiki
 == DDNet Wiki を開く
@@ -10006,6 +9991,9 @@ Open TClient configuration file locations
 
 Open the card and enable only the elements you want; each option explains what it draws.
 == カードを開いて必要な要素だけを有効にしてください。各オプションには描画内容の説明があります。
+
+Open the custom bind menu
+== Open the custom bind menu
 
 Open the directory that contains the configuration and user files
 == 設定ファイルとユーザーファイルを含むディレクトリを開く
@@ -10090,6 +10078,9 @@ Optional export range in seconds. Leave empty to export the whole demo.
 
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 == 任意で指定できる開始・終了時刻（秒）。両方空欄ならデモ全体を書き出します。
+
+Options
+== Options
 
 Options here affect networking or identity; test on a server before using them in matches.
 == ここでの設定は通信や識別情報に影響します。試合で使う前にサーバーで試してください。
@@ -10214,9 +10205,6 @@ Override Freeze Tile Entity Alpha (0-100)
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping 推定地域を上書きします。選択肢：auto、af、as、as:cn、eu、na、oc、sa（自動、アフリカ、アジア、中国、ヨーロッパ、北米、オセアニア/オーストラリア、南米）
 
-Override Selected
-== 選択項目を上書き
-
 Overview
 == 概要
 
@@ -10232,8 +10220,8 @@ p = Ping latency
 Pack name
 == パック名
 
-Pain
-== 痛み
+Panel
+== Panel
 
 Panel opacity
 == パネルの不透明度
@@ -10414,6 +10402,9 @@ Pet Skin:
 
 Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 == ペットは見た目だけの要素です。描画の負荷で動作が重い場合は無効にしてください。
+
+Phrase
+== Phrase
 
 Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
 == ヒントの背景色と文字色を選び、ヒントの文字サイズをドラッグし、小さく弾む動きが欲しければヒントのバウンスアニメーションをオンにします。
@@ -11015,9 +11006,6 @@ Preset %d
 Preset bar
 == プリセットバー
 
-Preset type
-== プリセットの種類
-
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == libx264 でビデオをエンコードする際のプリセット、デフォルト 5 (medium)、0 は ultrafast、9 は placebo（最も遅い、非推奨）
 
@@ -11138,8 +11126,8 @@ Preview selected file
 Preview spacing does not match every map; check in game before a match.
 == プレビューの間隔はすべてのマップと一致しないため、試合前にゲーム内で確認してください。
 
-Preview the bind wheel layout and selection
-== Preview the bind wheel layout and selection
+Preview the bind menu layout and entries
+== Preview the bind menu layout and entries
 
 Preview the composed status bar output
 == Preview the composed status bar output
@@ -11903,9 +11891,6 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == 投票オプションを削除
 
-Remove Bind
-== バインドを削除
-
 Remove chat
 == チャットを削除
 
@@ -11950,6 +11935,9 @@ Remove war name:
 
 Removed %s from friends
 == %s をフレンドから削除しました
+
+Removed from this bind menu.
+== Removed from this bind menu.
 
 Removes all bindwheel binds
 == すべてのバインドホイールバインドを削除
@@ -12272,9 +12260,6 @@ Reset mouse position when opening bind wheel
 Reset pie menu appearance
 == 円形メニューの外観を初期化
 
-Reset position of mouse when opening bindwheel
-== バインドホイールを開くときにマウス位置をリセット
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == サーバー参加時に統計をリセット（0=累積統計、1=参加ごとにリセット）
 
@@ -12551,6 +12536,9 @@ Save changes
 Save changes back to this preset
 == 変更をこのプリセットに保存
 
+Save configuration
+== 設定を保存
+
 Save current queue as a new preset
 == 現在のキューを新しいプリセットとして保存
 
@@ -12571,6 +12559,9 @@ Save loaded; local record removed.
 
 Save loaded; the local record could not be removed.
 == セーブは読み込まれましたが、ローカルの記録を削除できませんでした。
+
+Save phrase
+== Save phrase
 
 Save player names in replay
 == リプレイにプレイヤー名を保存
@@ -12643,9 +12634,6 @@ Saved
 
 Saved to Downloads/QmClient
 == ダウンロード/QmClient に保存しました
-
-Saved to the bind wheel.
-== バインドホイールに保存しました。
 
 Saved with your title and shared with other QmClient players.
 == 称号と一緒に保存され、他のQmClientプレイヤーに共有されます。
@@ -14519,6 +14507,9 @@ Skin is loading.
 Skin list sort mode (0=Name, 1=Release date)
 == スキンリスト並び替えモード (0=名前, 1=公開日)
 
+Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)
+== Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)
+
 Skin options
 == スキンオプション
 
@@ -15173,9 +15164,6 @@ Stroke retention time (0=Never disappear)
 Strokes are local only and vanish when you leave the map; set the fade time to 0 to keep them until you draw again.
 == 線はローカルにだけ描かれ、マップを離れると消えます。フェード時間を 0 にすると、次に描くまで残ります。
 
-Strong / Weak
-== 強弱表示の画像
-
 Strong hook
 == ストロングフック
 
@@ -15229,9 +15217,6 @@ Support is optional; nothing here changes client behavior.
 
 Support ♥
 == サポート ♥
-
-Surprise
-== 驚き
 
 Swap
 == スワップ
@@ -15755,14 +15740,14 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == QmClient へのご支援ありがとうございます
 
-Thanks!
-== ありがとう！
-
 The audio device couldn't be initialised.
 == オーディオデバイスを初期化できませんでした。
 
 The auth level you need to tele others
 == 他のプレイヤーをテレポートさせるのに必要な権限レベル
+
+The bind menu is full.
+== The bind menu is full.
 
 The card only appears while such a bind exists; click its key field to change the key, and the row label is the command it runs.
 == 該当するバインドがあるときだけ表示されます。キー欄をクリックしてキーを変えられ、行の見出しは実行されるコマンドです。
@@ -15853,9 +15838,6 @@ The two keys that cast your vote: one for yes and one for no.
 
 The watermarked screenshot was saved next to the original
 == ウォーターマーク付きのスクリーンショットを元画像の隣に保存しました
-
-The wheel changed. Your draft can be added as a new preset.
-== ホイールが変更されました。編集中の内容は新しいプリセットとして追加できます。
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == テクスチャ %s の幅が %d で割り切れないか、高さが %d で割り切れないため、表示に問題が発生する可能性があります。
@@ -16007,9 +15989,6 @@ Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split ke
 Tick "Debug mode" to turn all options on, then set "Performance debug log threshold (ms)" to choose which frames get logged.
 == デバッグモードをオンにするとすべての項目が有効になります。その後、パフォーマンスデバッグログのしきい値（ms）でどのフレームを記録するかを決めます。
 
-Tick "Download skins", "Download community skins" or "Vanilla skins only", then type a "Skin prefix" or use a preset such as "kitty".
-== スキンをダウンロード、コミュニティスキンをダウンロード、バニラスキンのみのいずれかにチェックを入れ、スキンの接頭辞を入力するか、kitty などのプリセットを使います。
-
 Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its movement, and the weapon switches are separate rows below.
 == ダイナミックカメラにチェックを入れると有効になります。ダイナミックカメラの平滑化は動きに滑らかさを加え、武器の切り替えは下の独立した行です。
 
@@ -16054,6 +16033,9 @@ Tick delay before executing qm_execute_on_join
 
 Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"; "Lock delay" and "Spectator opacity" appear below.
 == 解凍時に自動でスペック解除やチームの自動ロックなど、必要な動作にチェックを入れます。下にロック遅延とスペクテイターの不透明度が表示されます。
+
+Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
+== Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
 
 Ticks after freeze before applying max prediction reduction
 == フリーズ後、最大予測減少を適用するまでの tick 数
@@ -16150,6 +16132,9 @@ Timestamp
 
 Tiny Tee Size
 == ミニ Tee のサイズ
+
+Title
+== Title
 
 Title bob angular speed in 1/100 rad/s
 == タイトルの角速度（1/100 rad/s）
@@ -16537,6 +16522,9 @@ Translation Settings
 
 transmits your player name to info.ddnet.org
 == プレイヤー名を info.ddnet.org に送信します
+
+Trigger key
+== Trigger key
 
 Trigger limits
 == 発動条件
@@ -16991,6 +16979,9 @@ Untick "Show other players' large emoticons" or "Show other players' launched em
 Untick "Use original style" to reach "Background color", the countdown options and "Always show song title and artist"; "Show team" works in both styles.
 == 元のスタイルを使うのチェックを外すと、背景色、カウントダウン設定、曲名とアーティストを常に表示に触れます。チームを表示はどちらのスタイルでも使えます。
 
+Untitled
+== Untitled
+
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
 == 特殊なリフレッシュレートはティアリングの原因になります。モニターのネイティブなリフレッシュレートをおすすめします。
 
@@ -17030,6 +17021,12 @@ Update ready to install
 Update sources are temporarily unavailable
 == 更新元は一時的に利用できません
 
+Updated this configuration.
+== この設定を更新しました。
+
+Updated this phrase.
+== Updated this phrase.
+
 Updating preview…
 == プレビュー更新中…
 
@@ -17050,6 +17047,9 @@ Upstream redundancy (experimental)
 
 URL for downloading community skins
 == コミュニティスキン用ダウンロード URL
+
+URL for downloading DDStats skins
+== URL for downloading DDStats skins
 
 URL for downloading maps (must start with https://)
 == マップ用ダウンロード URL（https:// で始まる必要あり）
@@ -17152,9 +17152,6 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 高帯域モードを使用（サーバー帯域を 2 倍、LAN のみ）
-
-Use installed asset names. Empty fields keep the current asset.
-== インストール済みの素材名を入力してください。空欄は現在の素材を保持します。
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == K キーで自殺（再スタート）、Q キーで一時停止して他のプレイヤーを観戦します。他のキーバインドは設定で確認してください。
@@ -17699,17 +17696,14 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 == これは何か
 
+Wheel
+== Wheel
+
 Wheel distance per tick; hold Alt for 3x
 == ホイール目盛りごとの移動距離。Alt で 3 倍
 
-Wheel label
-== ホイールの表示名
-
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 == ホイールのスクロール感：0=オリジナル（1ティックごとにリセット）、1=スムーズ（速度を引き継ぐ）、2=スプリング
-
-Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
-== ホイール1刻みのUIピクセル移動量。設定カードのページは各刻みでこの値の12倍移動
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient のレインボー Tee が有効な場合、この機能は効果がありません。
@@ -18791,6 +18785,3 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == 日本語翻訳は DDNet チームと QmClient コントリビューターによるものです
-
-Download DDStats skins (including unapproved skins)
-== DDStats スキンをダウンロード（未承認スキンを含む）

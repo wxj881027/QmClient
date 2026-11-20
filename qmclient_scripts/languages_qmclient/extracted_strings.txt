@@ -9,6 +9,7 @@
 "Button - Enabled" only shows while automatic outgoing translation is on; "Reset translation colors" undoes your changes.
 "Copy all" only copies the filtered rows, so clear the search first if you want your whole list.
 "Cycle custom Tee hue" only works with custom colors and does nothing while the TClient rainbow Tee option is on.
+"Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
 "Default (software)" is x264: CPU only, best quality, slowest.
 "Hammer Mode" applies even with both animations off, so check it if your hammer keeps turning with the cursor.
 "Hide player messages" removes the whole line, including team chat that merely mentions a blocked word.
@@ -20,7 +21,6 @@
 "Show on key" needs a key bound to +showweapontrajectory; if nothing appears, switch to "Always show".
 "Switch weapon on pickup" grabs whatever you walk over, which can override the weapon you wanted to keep.
 "Use original style" hides the color and countdown options below it.
-"Vanilla skins only" hides every custom skin, so turn it off if your skin suddenly turns default.
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 %.2f KiB
 %.2f MiB
@@ -196,13 +196,11 @@ add a sqlserver
 Add a tag
 Add a type to the exclusion filter for a specific community
 Add a voting option
-Add Bind
 Add category
 Add clan
 Add command
 Add current cut to the export list
 Add debug dummy to server (Debug build only)
-Add default presets
 Add demo timeline marker
 Add Entry
 Add friend
@@ -215,20 +213,22 @@ Add one
 Add one shortcut per message; it is used when the target is on the list.
 Add options below
 Add or edit entries, then use the bind in chat to send the text.
+Add phrase
 Add players or groups, then choose which markers and chat highlights apply to them.
 Add rules in "Rule list", fill the answer in "Reply content", then under "Trigger limits" turn on "Enable keyword reply" and set "Auto reply cooldown".
 Add team clan:
 Add team name:
 Add to %s
-Add to bind wheel
 Add to blocked words
 Add to category
+Add to identity menu
 Add to queue
 Add war clan:
 Add war name:
 Add/remove Client-IDs to spectate them exclusively (-1 to reset)
 Added %d missing required slot(s).
 Added %s as friend
+Added to this bind menu.
 Additional headers for register endpoint, comma-separated "header:value" pairs
 Address
 Address to bind the external console. Anything other than "localhost" is dangerous.
@@ -267,7 +267,6 @@ After Load
 After uploading again, use: reload or hot_reload
 Afterimage pop
 AGC, experimental
-Agree
 Aim
 Aim bind
 Air jump
@@ -322,7 +321,6 @@ An import replaces settings and binds and then restarts the client, so export yo
 And pick one randomly
 Angle
 Angle:
-Angry
 Angular gradient
 Animated title style id
 Animates the weapon in your hand when you switch or reload, plus an optional hammer rotation mode.
@@ -367,7 +365,6 @@ Apply input early before next tick for prediction
 Apply Qm recommended appearance
 Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
-Apply to
 Apply to dummy
 Apply to key
 Apply to player
@@ -395,18 +392,15 @@ Are you sure that you want to reset the controls to their defaults?
 Are you sure that you want to reset the touch controls to default?
 Are you sure that you want to restart?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
-Arrow
 Arrow assets
 ASI
 Aspect ratio preset
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
-Asset preset
 Asset with this name already exists.
 Assets
 Assets directory
 Assets editor
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
-Assign commands and labels to wheel slots
 Assigns commands and labels to the slots of the radial bind wheel.
 Attempt to change your name when near finish
 Audio
@@ -618,14 +612,14 @@ Bind chat, team chat, and history actions
 Bind command line too long
 Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
+Bind menu layout (0 = wheel, 1 = panel)
+Bind Menus
 Bind movement, jump, hook, and fire actions
 Bind only to IPv4, otherwise bind to all interfaces
 Bind overview
 Bind scoreboard, emote, and console actions
 Bind voting and server browser actions
 Bind weapon selection and switching actions
-Bind Wheel
-Bind Wheel Key
 Binds
 Binds any command to a key, mouse button or wheel direction, including combinations with Ctrl, Alt, Shift and Win.
 Binds that use commands the client does not recognize, listed by their raw command text.
@@ -636,7 +630,6 @@ Blank material
 Blank: hides this asset
 Blend mode
 Blend strength
-Blink
 Blink the active local tee
 Block
 Block client-initiated self-kill (K key / kill command)
@@ -734,6 +727,7 @@ Cannot write the wiki file
 Capsule end strength
 Capsule ends
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
+Capture current appearance
 Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 Card effects
@@ -815,7 +809,6 @@ Check for updates
 Check if voice server address is reachable
 Check input device, system default mic, and mic permission first
 Check output device, confirm headphones/speakers are still online
-Check the preset fields, label, and wheel capacity (64 entries).
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
 Checking for existing player with your name
 Checking for updates...
@@ -969,9 +962,7 @@ Command executed when pointing at someone and shooting (default kill, only works
 Command is not available on solo servers
 Command to run when joining server
 Command Workshop
-Command:
 Commands
-Commands run in the console
 Commands run once per connection, not on every map change; remove the parts that print errors.
 Common filters
 Common key bindings
@@ -1021,6 +1012,7 @@ Configure health, ammo, timer, and race HUD
 Configure HJ unfreeze assistance
 Configure hook range and collision guide lines
 Configure HUD island appearance
+Configure identity, chat, assets, and custom bind menus
 Configure input helpers and cursor behavior
 Configure interface shape, theme, icons and animations
 Configure keyboard, mouse, wheel, and modifier bindings
@@ -1083,10 +1075,12 @@ Console background opacity
 Console color
 Console color scheme
 Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
+Console command
 Console command color
 Console font size
 Console line spacing
 Console link color
+Console link hover hue shift in degrees
 Console number color
 Console parameter color
 Console search match color
@@ -1145,6 +1139,7 @@ Copy skin option color
 Corner curvature
 Corner curve
 Could not add the player as a friend
+Could not add this entry.
 Could not back up configuration files.
 Could not check for existing player with your name. Check your internet connection.
 Could not connect dummy
@@ -1175,7 +1170,6 @@ Could not save touch controls to file. See local console for details.
 Could not stage configuration restore.
 Count players only
 Countries
-Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 CP %d
 CP border overlay alpha (0-100)
@@ -1185,7 +1179,6 @@ Crazy shotgun bullet sound on/off
 Create a profile, edit it, then switch profiles before playing on a different server.
 Create a random skin
 Create category
-Create wheel presets here. Existing wheel entries are kept.
 Created
 Credits
 Credits are read-only.
@@ -1294,6 +1287,7 @@ DDRace HUD is driven by server messages, so it stays empty on servers without DD
 DDRace HUD Pro
 DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you.
 DDRaceNetwork · DDNet
+DDStats
 DDStats shows UTC dates, updates daily and matches players by name only.
 ddstats.tw ID stats
 Deactivate
@@ -1316,7 +1310,7 @@ Debug quad layer cluster clipping.
 Debug SQL.
 Debug tile layer clipping.
 Debug websockets
-Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
+Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 Deep fly
 Deep freeze
@@ -1365,6 +1359,7 @@ Delete command
 Delete demo
 Delete folder
 Delete screenshot
+Delete selected
 Delete selected items
 Delete this preset
 Delete this tag
@@ -1418,7 +1413,6 @@ Disable clipping
 Disable Gores auto-switch when picking up extra weapon
 Disabled
 Disabling system messages also hides server warnings.
-Disagree
 Disallow chat from blacklisted addresses
 Discard
 Discard cached server pings older than this many hours (0 = never expire)
@@ -1480,6 +1474,7 @@ Double-tap the bound key within 400 ms to send the current lyric to public chat
 Download
 Download "%s"?
 Download community skins
+Download DDStats skins (including unapproved skins)
 Download failed
 Download fonts from the internet instead of shipping them with the client
 Download replay
@@ -1631,7 +1626,6 @@ Edit note
 Edit player and dummy identity information
 Edit skin texture
 Edit the name and clan fields; the dummy keeps its own values.
-Edit this custom command on the Bind Wheel page.
 Edit title style
 Edit touch controls
 Editing (all-intra H.264 / MP4)
@@ -1831,7 +1825,9 @@ Endpoint
 Endpoint (optional)
 English font:
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
+Enter a command and keep the menu under 64 entries.
 Enter a CP number from 1 to 255.
+Enter a phrase.
 Enter Password
 Enter solo split mode
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
@@ -1927,7 +1923,6 @@ Extra vertical spacing between chat lines in pixels (0 = default)
 Extras
 Extreme values make movement feel wrong, so change one step at a time.
 Extremely slow, for testing only
-Eyes
 f = Frame rate
 F5 disable
 F6 enable
@@ -2211,6 +2206,7 @@ Global rank
 Global toggle key
 Global UI size
 Global UI size percentage
+Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
 Glow
 Glow alpha
 Glow color
@@ -2268,7 +2264,6 @@ Group frame
 Group name
 Group names are limited to 16 characters
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
-GUI cursor
 GUI cursor assets
 Guide line color
 Guide lines are computed locally and do not guarantee that a hook will connect.
@@ -2283,7 +2278,6 @@ Hammer skin steal
 Hammer swing
 Hammer: %s
 Handwriting
-Happy
 Has people playing
 Has save
 Has unread news
@@ -2452,7 +2446,7 @@ Icon and number
 Icon symbols:
 Icons
 Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
-Identity preset
+Identity
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 If 1, current driver is in blocking error state.
 If a device disappears after unplugging headphones, reselect it or restart the client.
@@ -2699,7 +2693,6 @@ Korean
 Kugou hook heartbeat timeout (milliseconds)
 Kugou hook helper path (empty=beside QmClient)
 l = Local time
-L select  R swap  M select only
 Label
 Label type
 LAN
@@ -2764,6 +2757,7 @@ Left jump
 Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
 Left-drag empty space to box-select, middle-drag to pan, wheel to zoom.
 Left/right channel width
+Legacy bind script
 Legacy option: connections that skip TLS verification are rejected
 Legacy realtime WebSocket URL (migrated to qm_websocket_url)
 Legacy settings card collapse states migrated
@@ -2872,9 +2866,11 @@ Local Time
 Local-only
 Locate
 Lock
+Lock both teams immediately when entering solo split mode
 Lock delay
 Lock mouse distance at the moment of the jump.
 Lock team
+Lock teams on entry
 Lock the team so other players cannot join directly
 Locked
 Log output filename
@@ -2902,7 +2898,6 @@ Main Asset
 Main menu
 Main only
 Main Tee
-Main Tee and dummy
 Main view
 Maintains the list of hostile players and groups plus the rules used to display them.
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
@@ -2922,7 +2917,7 @@ Manage client theme and menu preferences
 Manage hostile players, groups, and display rules
 Manage hostile-list chat shortcuts
 Manage kaomoji chat shortcuts
-Manage profiles and bind wheel presets
+Manage profiles and add identity entries to bind menus
 Manage the skin rotation queue
 Manages additional custom chat shortcuts that do not belong to the other groups.
 Manages chat shortcuts aimed at players on your war list.
@@ -2954,6 +2949,7 @@ Map preview
 Map preview rendering unavailable
 Map preview shows the entity layer only (hides textures)
 Map Preview TODO
+Map preview unavailable
 Map progress
 Map progress bar
 Map progress bar color
@@ -3055,6 +3051,7 @@ Menu option - normal
 Menu option - selected
 Menu panel color
 Menu panel opacity
+Menu type
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 Merge consecutive identical player messages within 2 seconds
 Merges chat messages repeated within a short time into a single line.
@@ -3193,7 +3190,6 @@ Name plate strength line Y offset
 Name plates offset
 Name plates size
 Name to change to near finish (when qm_change_name_near_finish enabled)
-Name:
 Name: %s
 Nameplate count that still keeps full text effect quality; beyond it effect layers scale down by count (higher=keep more)
 Nameplate hook strength icon scope (0=Own 1=Others 2=Strong hook 3=Weak hook 4=All players)
@@ -3251,7 +3247,6 @@ New IME candidate bar background color
 New IME candidate bar opacity
 New name
 New name:
-New preset
 New preset name
 New random timeout code
 New tag
@@ -3458,11 +3453,11 @@ Opacity
 Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, checkpoint and switch tiles.
 Opacity of freeze bars inside freeze
 Opacity of other teams' tees and name plates
+Open a bind menu (identity, chat, assets, custom)
 Open a link to join the community.
 Open a link to reach the project.
 Open a link to visit the site.
 Open a matching settings card directly
-Open bindwheel selector
 Open DDNet Wiki
 Open downloads folder
 Open emote selector
@@ -3476,6 +3471,7 @@ Open settings
 Open spectator mode selector
 Open TClient configuration file locations
 Open the card and enable only the elements you want; each option explains what it draws.
+Open the custom bind menu
 Open the directory that contains the configuration and user files
 Open the directory to add custom assets
 Open the directory to add custom skins
@@ -3504,6 +3500,7 @@ Optional
 Optional authentication key for the DNSBL provider
 Optional export range in seconds. Leave empty to export the whole demo.
 Optional start and end time in seconds. Leave both empty to export the whole demo.
+Options
 Options here affect networking or identity; test on a server before using them in matches.
 Or visit DDNet.org
 Original
@@ -3547,7 +3544,6 @@ Override Entity Alpha for Unfreeze Tiles (0-100)
 Override Entry
 Override Freeze Tile Entity Alpha (0-100)
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
-Override Selected
 Overview
 Overwrite clan even if empty
 Overwrites
@@ -3555,7 +3551,7 @@ overwrites
 Own hook line width
 p = Ping latency
 Pack name
-Pain
+Panel
 Panel opacity
 Parent Folder
 Parsing voice server address
@@ -3617,6 +3613,7 @@ Pet size relative to normal player
 Pet skin
 Pet Skin:
 Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
+Phrase
 Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
 Pick a color preset or a custom color, then choose regular or bold weight.
 Pick a country for each player.
@@ -3821,7 +3818,6 @@ Preparing chat export: %d%%
 Preparing demo playback
 Preset %d
 Preset bar
-Preset type
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 Presets
 Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
@@ -3865,7 +3861,7 @@ Preview player and dummy nameplates
 Preview player nameplate
 Preview selected file
 Preview spacing does not match every map; check in game before a match.
-Preview the bind wheel layout and selection
+Preview the bind menu layout and entries
 Preview the composed status bar output
 Preview the current chat appearance
 Preview the sponsor reminder without changing the launch count
@@ -4122,7 +4118,6 @@ Remove a server from favorites
 Remove a skin from the favorites
 Remove a type from the exclusion filter for a specific community
 remove a voting option
-Remove Bind
 Remove chat
 Remove friend
 Remove from favorites
@@ -4138,6 +4133,7 @@ Remove team name:
 Remove war clan:
 Remove war name:
 Removed %s from friends
+Removed from this bind menu.
 Removes all bindwheel binds
 Removes all chat binds
 Removes all weapons from you
@@ -4248,7 +4244,6 @@ Reset layer
 Reset layout
 Reset mouse position when opening bind wheel
 Reset pie menu appearance
-Reset position of mouse when opening bindwheel
 Reset stats on server join (0=persistent, 1=reset on join)
 Reset stats when joining a server
 Reset to defaults
@@ -4346,6 +4341,7 @@ Save asset before closing?
 Save banlist in a file
 Save changes
 Save changes back to this preset
+Save configuration
 Save current queue as a new preset
 Save drawings to a given csv file (defaults to map name)
 Save failed!
@@ -4353,6 +4349,7 @@ Save ghost
 Save last %d min
 Save loaded; local record removed.
 Save loaded; the local record could not be removed.
+Save phrase
 Save player names in replay
 Save PNG copy
 Save power by lowering update rate
@@ -4377,7 +4374,6 @@ Save/Load Name
 Save/Load Skin
 Saved
 Saved to Downloads/QmClient
-Saved to the bind wheel.
 Saved with your title and shared with other QmClient players.
 Saves and loads complete client profiles, including name, chat settings and bind wheel presets.
 Saves file
@@ -5012,6 +5008,7 @@ Skin Database
 Skin filter string
 Skin is loading.
 Skin list sort mode (0=Name, 1=Release date)
+Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)
 Skin options
 Skin outline color
 Skin outline for other players
@@ -5236,7 +5233,6 @@ Strict mode
 Stroke fade time
 Stroke retention time (0=Never disappear)
 Strokes are local only and vanish when you leave the map; set the fade time to 0 to keep them until you draw again.
-Strong / Weak
 Strong hook
 Strong hook color
 Strong Weak Hook
@@ -5255,7 +5251,6 @@ Super
 Superellipse
 Support is optional; nothing here changes client behavior.
 Support ♥
-Surprise
 Swap
 Swap ghosts with regular players
 Swap is disabled on this server.
@@ -5440,10 +5435,10 @@ Text follows the chosen mode instead of the surface, so a light surface with whi
 Text is too long for the selected translation service.
 Thank you for your company and trust. This is what gives me the courage to keep going.
 Thanks for supporting QmClient
-Thanks!
 That link would close a loop
 The audio device couldn't be initialised.
 The auth level you need to tele others
+The bind menu is full.
 The blueprint never runs by itself: it only writes the bind line at the bottom right.
 The card only appears while such a bind exists; click its key field to change the key, and the row label is the command it runs.
 The command is empty, incomplete, or exceeds the local config line limit.
@@ -5475,7 +5470,6 @@ The server is running a non-standard tuning on a pure game type.
 The server rejected the map upload.
 The two keys that cast your vote: one for yes and one for no.
 The watermarked screenshot was saved next to the original
-The wheel changed. Your draft can be added as a new preset.
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 Theme
 Themes directory
@@ -5529,7 +5523,6 @@ This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 Those nodes are already linked
 Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split key" to toggle, or use the enter and leave keys.
 Tick "Debug mode" to turn all options on, then set "Performance debug log threshold (ms)" to choose which frames get logged.
-Tick "Download skins", "Download community skins" or "Vanilla skins only", then type a "Skin prefix" or use a preset such as "kitty".
 Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its movement, and the weapon switches are separate rows below.
 Tick "Enable 3D background particles", pick a "Particle type", then set "Particle count", "Particle speed" and "Particle color".
 Tick "Enable lyrics" and "Show lyrics inside Dynamic Island", then enable one source such as "Enable Netease music Hook" or "Enable Spotify lyrics".
@@ -5545,6 +5538,7 @@ Tick "Show others" to draw other teams translucently, set their shadow opacity i
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 Tick delay before executing qm_execute_on_join
 Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"; "Lock delay" and "Spectator opacity" appear below.
+Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
 Ticks after freeze before applying max prediction reduction
 tile
 Tile outlines
@@ -5577,6 +5571,7 @@ Timer is displayed in %s
 Timer isn't displayed.
 Timestamp
 Tiny Tee Size
+Title
 Title bob angular speed in 1/100 rad/s
 Title bob wavelength in pixels
 Title color
@@ -5711,6 +5706,7 @@ Translation service returned a notice instead of a translation
 Translation service returned an invalid or incomplete translation.
 Translation Settings
 transmits your player name to info.ddnet.org
+Trigger key
 Trigger limits
 Troubleshooting suggestions
 Try again
@@ -5866,6 +5862,7 @@ Unsaved changes
 Unsolo
 Untick "Show other players' large emoticons" or "Show other players' launched emoticons"; click "Launch emote key" to assign the key that turns launching on and off.
 Untick "Use original style" to reach "Background color", the countdown options and "Always show song title and artist"; "Show team" works in both styles.
+Untitled
 Untitled flow
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
 Up to 6 Chinese or 12 ASCII characters
@@ -5880,6 +5877,8 @@ Update or add a specific war group
 Update Rate
 Update ready to install
 Update sources are temporarily unavailable
+Updated this configuration.
+Updated this phrase.
 Updating preview…
 Updating public word list...
 Upload .map files. Server and admin passwords: s.
@@ -5888,6 +5887,7 @@ Upload local tags for review. Tags stay local until approved.
 Upload map
 Upstream redundancy (experimental)
 URL for downloading community skins
+URL for downloading DDStats skins
 URL for downloading maps (must start with https://)
 URL for downloading skins
 Usage
@@ -5922,7 +5922,6 @@ Use emote
 Use enemy color instead of frozen color
 Use enemy list to drive player indicators
 Use high bandwidth mode (doubles server bandwidth, LAN only)
-Use installed asset names. Empty fields keep the current asset.
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 Use large emote
 Use mouse sensitivity when dynamic camera is on
@@ -6111,11 +6110,10 @@ Website
 Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
+Wheel
 Wheel distance per tick; hold Alt for 3x
 Wheel down
-Wheel label
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
-Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 Wheel to zoom - drag empty space to pan
 Wheel up
 When TClient rainbow Tee is enabled, this feature has no effect.

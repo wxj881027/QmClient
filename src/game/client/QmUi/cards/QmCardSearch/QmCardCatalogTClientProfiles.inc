@@ -8,7 +8,7 @@ namespace
 		{Localizable("Name: %s"), nullptr, "名称：%s"},
 		{Localizable("Skin: %s"), nullptr, "皮肤：%s"},
 		{Localizable("Your profile"), nullptr, "您的个人资料"},
-		{Localizable("Bind Wheel"), nullptr, "绑定轮盘"},
+		{Localizable("Add to identity menu"), nullptr, "加入身份菜单"},
 		{nullptr, "qm_profile_clan", nullptr},
 		{nullptr, "qm_profile_colors", nullptr},
 		{nullptr, "qm_profile_emote", nullptr},
@@ -26,10 +26,8 @@ namespace
 		{Localizable("Save/Load Name"), nullptr, "保存/加载名称"},
 		{Localizable("Save/Load Skin"), nullptr, "保存/加载皮肤"},
 		{Localizable("Profiles file"), nullptr, "配置文件"},
-		{Localizable("Identity preset"), nullptr, "身份 ID 名字 昵称"},
-		{Localizable("Chat phrase"), nullptr, "语录 快捷用语"},
-		{Localizable("Asset preset"), nullptr, "资源 贴图"},
-		{Localizable("Bind Wheel Key"), nullptr, "轮盘 按键"},
+		{Localizable("Identity"), nullptr, "身份 ID 名字 昵称"},
+		{Localizable("Chat"), nullptr, "语录 快捷用语"},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:tclient-profiles", deck_tclient_profiles);
 }

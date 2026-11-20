@@ -139,6 +139,25 @@ namespace
 		}
 	}
 
+	TEST_F(QmListBoxRowSpacing, LargeGridSkipKeepsColumnAndRowAfterPartialRow)
+	{
+		CListBox List;
+		List.DoAutoSpacing(2.5f);
+		List.SetActive(false);
+		const CUIRect View{20.0f, 20.0f, 300.0f, 200.0f};
+		int First = 0;
+		int Last = 0;
+		List.DoStart(20.0f, 10004, 3, 1, -1, &View, false);
+		const auto FirstRect = List.DoNextItem(&First).m_Rect;
+		List.SkipItems(10001);
+		const auto LastRect = List.DoNextItem(&Last).m_Rect;
+		List.SkipItems(10);
+		List.DoEnd();
+		EXPECT_FLOAT_EQ(LastRect.x, FirstRect.x);
+		EXPECT_FLOAT_EQ(LastRect.y - FirstRect.y, 3334 * 22.5f);
+		EXPECT_EQ(List.ItemIndex(), 10004);
+	}
+
 	// 单列列表的既有节奏不能变：相邻两行之间仍然只有一档行距（这里同时走
 	// SetCapsuleRows 的默认行距与默认容器内边距，覆盖真实胶囊列表的取值路径）。
 	TEST_F(QmListBoxRowSpacing, SingleColumnRowsKeepOneSpacingBetweenRows)

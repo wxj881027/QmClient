@@ -133,7 +133,9 @@ namespace ui_widget
 	inline ColorRGBA CapsuleTabBarActiveLabelColor(const ColorRGBA &SurfaceColor)
 	{
 		(void)SurfaceColor;
-		return ResolveConfiguredTextColor();
+		// 滑块取强调色；强调色可能被用户调成白/浅色，不能继续用自动白字，
+		// 否则选中项会变成白底白字。与图标同一套表面派生兜底。
+		return ResolveUiSurfaceIconColor(CapsuleTabBarIndicatorColor(SurfaceColor), ResolveConfiguredTextColor());
 	}
 
 	inline ColorRGBA CapsuleTabBarInactiveLabelColor(const ColorRGBA &SurfaceColor)

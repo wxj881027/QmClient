@@ -31,6 +31,9 @@
 "Cycle custom Tee hue" only works with custom colors and does nothing while the TClient rainbow Tee option is on.
 == Cykliczna zmiana odcienia Tee działa tylko z własnymi kolorami i nic nie robi, gdy w TClient włączona jest opcja tęczowego Tee.
 
+"Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+== "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+
 "Default (software)" is x264: CPU only, best quality, slowest.
 == „Default (software)" to x264: tylko CPU, najlepsza jakość, najwolniejszy.
 
@@ -63,9 +66,6 @@
 
 "Use original style" hides the color and countdown options below it.
 == Przy włączonym używaj oryginalnego stylu opcje koloru i odliczania poniżej są ukryte.
-
-"Vanilla skins only" hides every custom skin, so turn it off if your skin suddenly turns default.
-== Tylko oryginalne skórki ukrywa wszystkie własne skórki, więc wyłącz to, jeśli twoja skórka nagle wróci do domyślnej.
 
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == Podpowiedź wyrównania X ze mną koloruje X innego gracza, gdy przez ustawiony czas wykrywania pokrywa się z twoim.
@@ -569,9 +569,6 @@ Add a type to the exclusion filter for a specific community
 Add a voting option
 == Dodaj opcję głosowania
 
-Add Bind
-== Dodaj wiązanie
-
 Add category
 == Dodaj kategorię
 
@@ -586,9 +583,6 @@ Add current cut to the export list
 
 Add debug dummy to server (Debug build only)
 == Dodaj debug dummy do serwera (tylko wersja Debug)
-
-Add default presets
-== Dodaj domyślne ustawienia
 
 Add demo timeline marker
 == Dodaj znacznik osi czasu dema
@@ -626,6 +620,9 @@ Add options below
 Add or edit entries, then use the bind in chat to send the text.
 == Dodaj lub edytuj wpisy, a potem użyj wiązania na czacie, aby wysłać tekst.
 
+Add phrase
+== Add phrase
+
 Add players or groups, then choose which markers and chat highlights apply to them.
 == Dodaj graczy lub grupy, a następnie wybierz, jakie znaczniki i wyróżnienia czatu ich dotyczą.
 
@@ -641,14 +638,14 @@ Add team name:
 Add to %s
 == Dodaj do %s
 
-Add to bind wheel
-== Dodaj do koła poleceń
-
 Add to blocked words
 == Dodaj do zablokowanych słów
 
 Add to category
 == Dodaj do kategorii
+
+Add to identity menu
+== Add to identity menu
 
 Add to queue
 == Dodaj do kolejki
@@ -667,6 +664,9 @@ Added %d missing required slot(s).
 
 Added %s as friend
 == Dodano %s jako znajomego
+
+Added to this bind menu.
+== Added to this bind menu.
 
 Additional headers for register endpoint, comma-separated "header:value" pairs
 == Dodatkowe nagłówki dla punktu końcowego rejestracji, pary "nagłówek:wartość" oddzielone przecinkami
@@ -781,9 +781,6 @@ Afterimage pop
 
 AGC, experimental
 == AGC, eksperymentalne
-
-Agree
-== Zgadzam się
 
 Aim
 == Celowanie
@@ -944,9 +941,6 @@ Angle
 Angle:
 == Kąt:
 
-Angry
-== Zły
-
 Angular gradient
 == Gradient kątowy
 
@@ -1070,9 +1064,6 @@ Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
 == Zastosuj deformację Q-Elastycznego Tee do innych graczy
 
-Apply to
-== Zastosuj do
-
 Apply to dummy
 == Zastosuj do dummy
 
@@ -1151,9 +1142,6 @@ Are you sure that you want to restart?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == Czy na pewno chcesz zapisać swój skin? Jeśli skin o tej nazwie już istnieje, zostanie zastąpiony.
 
-Arrow
-== Tekstura strzałek
-
 Arrow assets
 == Zasoby strzałek
 
@@ -1165,9 +1153,6 @@ Aspect ratio preset
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == Preset proporcji obrazu (0=wyłączone, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=niestandardowy)
-
-Asset preset
-== Zestaw tekstur
 
 Asset with this name already exists.
 == Zasób o tej nazwie już istnieje.
@@ -1183,9 +1168,6 @@ Assets editor
 
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
 == Przypisz klawisze samobójstwo wyłączone i samobójstwo włączone; po wciśnięciu klawisza wyłączania K jest ignorowany do czasu wciśnięcia klawisza włączania.
-
-Assign commands and labels to wheel slots
-== Assign commands and labels to wheel slots
 
 Assigns commands and labels to the slots of the radial bind wheel.
 == Przypisuje polecenia i etykiety do pól koła poleceń.
@@ -1802,6 +1784,12 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == Przypisz klawisz do wykonania polecenia lub wyświetl przypisania klawiszy
 
+Bind menu layout (0 = wheel, 1 = panel)
+== Bind menu layout (0 = wheel, 1 = panel)
+
+Bind Menus
+== Bind Menus
+
 Bind movement, jump, hook, and fire actions
 == Bind movement, jump, hook, and fire actions
 
@@ -1819,12 +1807,6 @@ Bind voting and server browser actions
 
 Bind weapon selection and switching actions
 == Bind weapon selection and switching actions
-
-Bind Wheel
-== Koło wiązań
-
-Bind Wheel Key
-== Klawisz koła wiązań
 
 Binds
 == Wiązania
@@ -1855,9 +1837,6 @@ Blend mode
 
 Blend strength
 == Siła mieszania
-
-Blink
-== Mruganie
 
 Blink the active local tee
 == Mignij aktywną lokalną postacią
@@ -2120,6 +2099,9 @@ Capsule ends
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 == Końce kapsuły: 0 = zwykły łuk, 1 = gładki koniec, 2 = ciągła krzywizna Apple
 
+Capture current appearance
+== Capture current appearance
+
 Capture the flag
 == Zdobycie flagi (CTF)
 
@@ -2359,9 +2341,6 @@ Check input device, system default mic, and mic permission first
 
 Check output device, confirm headphones/speakers are still online
 == Najpierw sprawdź urządzenie wyjściowe, potwierdź, że słuchawki/głośniki są nadal podłączone
-
-Check the preset fields, label, and wheel capacity (64 entries).
-== Sprawdź pola, nazwę i pojemność koła (64 wpisy).
 
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
 == Sprawdź urządzenia, zanim ruszysz progi; w większości przypadków cisza w mikrofonie to po prostu złe urządzenie wejściowe.
@@ -2810,14 +2789,8 @@ Command is not available on solo servers
 Command to run when joining server
 == Komenda do uruchomienia przy dołączaniu do serwera
 
-Command:
-== Komenda:
-
 Commands
 == Polecenia
-
-Commands run in the console
-== Komendy uruchamiane w konsoli
 
 Commands run once per connection, not on every map change; remove the parts that print errors.
 == Polecenia działają raz na połączenie, a nie przy każdej zmianie mapy; usuń części, które wypisują błędy.
@@ -2962,6 +2935,9 @@ Configure hook range and collision guide lines
 
 Configure HUD island appearance
 == Configure HUD island appearance
+
+Configure identity, chat, assets, and custom bind menus
+== Configure identity, chat, assets, and custom bind menus
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
@@ -3143,6 +3119,9 @@ Console color scheme
 Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
 == Schemat kolorów konsoli: 0=nowoczesny terminal, 1=klasyczny PowerShell, 2=własny, 3+ = schematy Windows Terminal
 
+Console command
+== Console command
+
 Console command color
 == Konsola: kolor poleceń
 
@@ -3154,6 +3133,9 @@ Console line spacing
 
 Console link color
 == Konsola: kolor odnośników
+
+Console link hover hue shift in degrees
+== Console link hover hue shift in degrees
 
 Console number color
 == Konsola: kolor liczb
@@ -3326,6 +3308,9 @@ Corner curve
 Could not add the player as a friend
 == Nie udało się dodać gracza do znajomych
 
+Could not add this entry.
+== Could not add this entry.
+
 Could not back up configuration files.
 == Nie udało się utworzyć kopii zapasowej plików konfiguracji.
 
@@ -3416,9 +3401,6 @@ Count players only
 Countries
 == Kraje
 
-Country code
-== Kod kraju/regionu
-
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Flaga kraju do grupowania tej społeczności (numeryczna ISO 3166-1)
 
@@ -3445,9 +3427,6 @@ Create a random skin
 
 Create category
 == Utwórz kategorię
-
-Create wheel presets here. Existing wheel entries are kept.
-== Tutaj edytuj zestawy koła. Istniejące wpisy zostają zachowane.
 
 Created
 == Utworzono
@@ -3764,6 +3743,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats
+== DDStats
+
 DDStats shows UTC dates, updates daily and matches players by name only.
 == DDStats pokazuje daty UTC, aktualizuje je codziennie i rozpoznaje graczy wyłącznie po nazwie.
 
@@ -3830,8 +3812,8 @@ Debug tile layer clipping.
 Debug websockets
 == Debuguj WebSocket
 
-Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
-== Decyduje, które skórki klient pobiera i wyświetla, i pozwala dodać prefiks, by wczytywać warianty skórek z prefiksem.
+Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
+== Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
 
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Dedykowany adres WebSocket (puste używa wss://qmclient.icu/ws)
@@ -3964,6 +3946,9 @@ Delete folder
 
 Delete screenshot
 == Usuń zrzut ekranu
+
+Delete selected
+== Delete selected
 
 Delete selected items
 == Usuń wybrane elementy
@@ -4120,9 +4105,6 @@ Disabled
 
 Disabling system messages also hides server warnings.
 == Wyłączenie wiadomości systemowych ukrywa też ostrzeżenia serwera.
-
-Disagree
-== Nie zgadzam się
 
 Disallow chat from blacklisted addresses
 == Wyłącz czat z adresów z czarnej listy
@@ -4297,6 +4279,9 @@ Download "%s"?
 
 Download community skins
 == Pobierz skórki społeczności
+
+Download DDStats skins (including unapproved skins)
+== Pobieraj skórki DDStats (w tym niezatwierdzone)
 
 Download failed
 == Pobieranie nieudane
@@ -4723,9 +4708,6 @@ Edit skin texture
 
 Edit the name and clan fields; the dummy keeps its own values.
 == Edytuj pola nazwy i klanu; dummy zachowuje własne wartości.
-
-Edit this custom command on the Bind Wheel page.
-== Edytuj to własne polecenie na stronie koła poleceń.
 
 Edit title style
 == Edytuj styl tytułu
@@ -5321,8 +5303,14 @@ English font:
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == Wpisz /practice lub uruchom ponownie, aby uniknąć śmierci całej drużyny za 60 sekund
 
+Enter a command and keep the menu under 64 entries.
+== Enter a command and keep the menu under 64 entries.
+
 Enter a CP number from 1 to 255.
 == Wpisz numer CP od 1 do 255.
+
+Enter a phrase.
+== Enter a phrase.
 
 Enter Password
 == Wprowadź hasło
@@ -5590,9 +5578,6 @@ Extreme values make movement feel wrong, so change one step at a time.
 
 Extremely slow, for testing only
 == Skrajnie wolne, tylko do testów
-
-Eyes
-== Oczy
 
 f = Frame rate
 == f = Liczba klatek na sekundę
@@ -6410,6 +6395,9 @@ Global UI size
 Global UI size percentage
 == Globalny rozmiar interfejsu w procentach
 
+Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+== Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+
 Glow
 == Poświata
 
@@ -6575,9 +6563,6 @@ Group names are limited to 16 characters
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Grupuje ułatwienia sterowania: szybkie wejście, automatyczny margines, celowanie w podtaktach i zachowanie kursora.
 
-GUI cursor
-== Kursor interfejsu
-
 GUI cursor assets
 == Zasoby kursora GUI
 
@@ -6619,9 +6604,6 @@ Hammer: %s
 
 Handwriting
 == Odręczna
-
-Happy
-== Wesoły
 
 Has people playing
 == Są gracze
@@ -7103,8 +7085,8 @@ Icons
 Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
 == Ikony znikają po zwolnieniu klawisza lub odmrożeniu. Wejścia innych graczy wymagają obsługi wejścia wyprzedzającego na serwerze; aktywna postać gracza jest pomijana.
 
-Identity preset
-== Zestaw profilu
+Identity
+== Identity
 
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == Jeśli 1, automatyczne nagrywanie tylko raz po połączeniu; jeśli 0, automatyczne nagrywanie wznawia się po zakończeniu gry
@@ -7826,9 +7808,6 @@ Kugou hook helper path (empty=beside QmClient)
 l = Local time
 == l = Czas lokalny
 
-L select  R swap  M select only
-== L wybór  P zamiana  M tylko wybór
-
 Label
 == Etykieta
 
@@ -8011,6 +7990,9 @@ Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-cli
 
 Left/right channel width
 == Szerokość kanału lewego/prawego
+
+Legacy bind script
+== Legacy bind script
 
 Legacy option: connections that skip TLS verification are rejected
 == Opcja przestarzała: połączenia pomijające weryfikację TLS są odrzucane
@@ -8306,11 +8288,17 @@ Local-only
 Locate
 == Znajdź
 
+Lock both teams immediately when entering solo split mode
+== Zablokuj oba zespoły po wejściu w tryb solo
+
 Lock delay
 == Opóźnienie blokady
 
 Lock team
 == Zablokuj drużynę
+
+Lock teams on entry
+== Zablokuj po wejściu
 
 Lock the team so other players cannot join directly
 == Zablokuj drużynę, aby inni gracze nie mogli dołączyć bezpośrednio
@@ -8387,9 +8375,6 @@ Main menu
 Main Tee
 == Główny Tee
 
-Main Tee and dummy
-== Główny Tee i dummy
-
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Zarządza listą wrogich graczy i grup oraz regułami ich wyświetlania.
 
@@ -8441,8 +8426,8 @@ Manage hostile-list chat shortcuts
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
 
-Manage profiles and bind wheel presets
-== Zarządzaj profilami i zestawami koła
+Manage profiles and add identity entries to bind menus
+== Manage profiles and add identity entries to bind menus
 
 Manage the skin rotation queue
 == Zarządzaj kolejką rotacji skórek
@@ -8536,6 +8521,9 @@ Map preview shows the entity layer only (hides textures)
 
 Map Preview TODO
 == Podgląd mapy do zrobienia
+
+Map preview unavailable
+== Map preview unavailable
 
 Map progress
 == Postęp map
@@ -8836,6 +8824,9 @@ Menu panel color
 
 Menu panel opacity
 == Krycie panelu menu
+
+Menu type
+== Menu type
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == Scalaj kolejne identyczne wiadomości echo w tym oknie w milisekundach (0 wyłącza scalanie)
@@ -9239,9 +9230,6 @@ Name plates size
 Name to change to near finish (when qm_change_name_near_finish enabled)
 == Nazwa do zmiany blisko mety (gdy włączone qm_change_name_near_finish)
 
-Name:
-== Nazwa:
-
 Name: %s
 == Nazwa: %s
 
@@ -9400,9 +9388,6 @@ New name
 
 New name:
 == Nowa nazwa:
-
-New preset
-== Nowy zestaw
 
 New preset name
 == Nazwa nowego presetu
@@ -9953,6 +9938,9 @@ Opacity of freeze bars inside freeze
 Opacity of other teams' tees and name plates
 == Przezroczystość tee i tabliczek innych drużyn
 
+Open a bind menu (identity, chat, assets, custom)
+== Open a bind menu (identity, chat, assets, custom)
+
 Open a link to join the community.
 == Otwórz link, aby dołączyć do społeczności.
 
@@ -9964,9 +9952,6 @@ Open a link to visit the site.
 
 Open a matching settings card directly
 == Open a matching settings card directly
-
-Open bindwheel selector
-== Otwórz selektor koła wiązań
 
 Open DDNet Wiki
 == Otwórz DDNet Wiki
@@ -10006,6 +9991,9 @@ Open TClient configuration file locations
 
 Open the card and enable only the elements you want; each option explains what it draws.
 == Otwórz kartę i włącz tylko potrzebne elementy; każda opcja opisuje, co rysuje.
+
+Open the custom bind menu
+== Open the custom bind menu
 
 Open the directory that contains the configuration and user files
 == Otwórz katalog zawierający pliki konfiguracyjne i użytkownika
@@ -10090,6 +10078,9 @@ Optional export range in seconds. Leave empty to export the whole demo.
 
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 == Opcjonalny czas początku i końca w sekundach. Pozostaw oba puste, aby wyeksportować całe demo.
+
+Options
+== Options
 
 Options here affect networking or identity; test on a server before using them in matches.
 == Opcje tutaj wpływają na sieć lub tożsamość; przetestuj je na serwerze, zanim użyjesz ich w meczach.
@@ -10214,9 +10205,6 @@ Override Freeze Tile Entity Alpha (0-100)
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Zastąp region szacowania Ping; dostępne opcje: auto, af, as, as:cn, eu, na, oc, sa (Automatycznie, Afryka, Azja, Chiny, Europa, Ameryka Północna, Oceania/Australia, Ameryka Południowa)
 
-Override Selected
-== Nadpisz zaznaczone
-
 Overview
 == Przegląd
 
@@ -10232,8 +10220,8 @@ p = Ping latency
 Pack name
 == Nazwa pakietu
 
-Pain
-== Ból
+Panel
+== Panel
 
 Panel opacity
 == Nieprzezroczystość panelu
@@ -10414,6 +10402,9 @@ Pet Skin:
 
 Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 == Zwierzaki są wyłącznie ozdobne; wyłącz je, jeśli dodatkowe rysowanie obniża wydajność.
+
+Phrase
+== Phrase
 
 Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
 == Wybierz kolor tła i tekstu dymka, przeciągnij rozmiar czcionki, a dla lekkiego podskoku zostaw włączoną animację sprężystości.
@@ -11015,9 +11006,6 @@ Preset %d
 Preset bar
 == Pasek presetów
 
-Preset type
-== Typ zestawu
-
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == Preset podczas kodowania wideo za pomocą libx264, domyślnie 5 (medium), 0 to ultrafast, 9 to placebo (najwolniejszy, niezalecany)
 
@@ -11138,8 +11126,8 @@ Preview selected file
 Preview spacing does not match every map; check in game before a match.
 == Odstępy w podglądzie nie odpowiadają każdej mapie; sprawdź w grze przed meczem.
 
-Preview the bind wheel layout and selection
-== Preview the bind wheel layout and selection
+Preview the bind menu layout and entries
+== Preview the bind menu layout and entries
 
 Preview the composed status bar output
 == Preview the composed status bar output
@@ -11903,9 +11891,6 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == usuń opcję głosowania
 
-Remove Bind
-== Usuń wiązanie
-
 Remove chat
 == Usuń czat
 
@@ -11950,6 +11935,9 @@ Remove war name:
 
 Removed %s from friends
 == %s usunięto ze znajomych
+
+Removed from this bind menu.
+== Removed from this bind menu.
 
 Removes all bindwheel binds
 == Usuwa wszystkie wiązania z koła wiązań
@@ -12272,9 +12260,6 @@ Reset mouse position when opening bind wheel
 Reset pie menu appearance
 == Przywróć wygląd menu kołowego
 
-Reset position of mouse when opening bindwheel
-== Zresetuj pozycję myszy przy otwieraniu koła wiązań
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == Resetuj statystyki przy wejściu na serwer (0 = statystyki skumulowane, 1 = resetuj przy każdym wejściu)
 
@@ -12551,6 +12536,9 @@ Save changes
 Save changes back to this preset
 == Zapisz zmiany w tym presecie
 
+Save configuration
+== Zapisz konfigurację
+
 Save current queue as a new preset
 == Zapisz bieżącą kolejkę jako nowy preset
 
@@ -12571,6 +12559,9 @@ Save loaded; local record removed.
 
 Save loaded; the local record could not be removed.
 == Zapis wczytany, ale nie udało się usunąć lokalnego wpisu.
+
+Save phrase
+== Save phrase
 
 Save player names in replay
 == Zapisz nazwy graczy w powtórce
@@ -12643,9 +12634,6 @@ Saved
 
 Saved to Downloads/QmClient
 == Zapisano w Pobrane/QmClient
-
-Saved to the bind wheel.
-== Zapisano w kole poleceń.
 
 Saved with your title and shared with other QmClient players.
 == Zapisywany wraz z tytułem i udostępniany innym graczom QmClient.
@@ -14519,6 +14507,9 @@ Skin is loading.
 Skin list sort mode (0=Name, 1=Release date)
 == Tryb sortowania listy skinów (0=nazwa, 1=data publikacji)
 
+Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)
+== Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)
+
 Skin options
 == Opcje skórki
 
@@ -15173,9 +15164,6 @@ Stroke retention time (0=Never disappear)
 Strokes are local only and vanish when you leave the map; set the fade time to 0 to keep them until you draw again.
 == Pociągnięcia są tylko lokalne i znikają po opuszczeniu mapy; ustaw czas zanikania na 0, aby zostały do następnego rysowania.
 
-Strong / Weak
-== Tekstury silnego/słabego haka
-
 Strong hook
 == Mocny hak
 
@@ -15229,9 +15217,6 @@ Support is optional; nothing here changes client behavior.
 
 Support ♥
 == Wsparcie ♥
-
-Surprise
-== Zaskoczenie
 
 Swap
 == Zamień
@@ -15755,14 +15740,14 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == Dziękujemy za wsparcie QmClient
 
-Thanks!
-== Dzięki!
-
 The audio device couldn't be initialised.
 == Nie można zainicjować urządzenia audio.
 
 The auth level you need to tele others
 == Poziom uprawnień wymagany do teleportowania innych graczy
+
+The bind menu is full.
+== The bind menu is full.
 
 The card only appears while such a bind exists; click its key field to change the key, and the row label is the command it runs.
 == Karta pojawia się tylko wtedy, gdy takie wiązanie istnieje; kliknij jego pole klawisza, aby zmienić klawisz, a etykieta wiersza to uruchamiana komenda.
@@ -15853,9 +15838,6 @@ The two keys that cast your vote: one for yes and one for no.
 
 The watermarked screenshot was saved next to the original
 == Zrzut z dodanym znakiem wodnym zapisano obok oryginału
-
-The wheel changed. Your draft can be added as a new preset.
-== Koło zostało zmienione. Szkic można dodać jako nowy zestaw.
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == Szerokość tekstury %s nie jest podzielna przez %d, lub wysokość nie jest podzielna przez %d, co może powodować błędy wizualne.
@@ -16007,9 +15989,6 @@ Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split ke
 Tick "Debug mode" to turn all options on, then set "Performance debug log threshold (ms)" to choose which frames get logged.
 == Zaznacz tryb debugowania, aby włączyć wszystkie opcje, potem ustaw próg dziennika wydajności (ms), aby wybrać, które klatki są zapisywane.
 
-Tick "Download skins", "Download community skins" or "Vanilla skins only", then type a "Skin prefix" or use a preset such as "kitty".
-== Zaznacz Pobierz skórki, Pobierz skórki społeczności lub Tylko oryginalne skórki, a potem wpisz prefiks skina albo użyj ustawienia takiego jak kitty.
-
 Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its movement, and the weapon switches are separate rows below.
 == Zaznacz Dynamiczna kamera, by ją włączyć; wygładzanie dynamicznej kamery dodaje płynności, a przełączniki broni to osobne wiersze poniżej.
 
@@ -16054,6 +16033,9 @@ Tick delay before executing qm_execute_on_join
 
 Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"; "Lock delay" and "Spectator opacity" appear below.
 == Zaznacz wybrane działania, np. automatyczne wyjście z podglądu po rozmrożeniu lub automatyczna blokada drużyny; poniżej pojawią się opóźnienie blokady i krycie obserwatora.
+
+Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
+== Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
 
 Ticks after freeze before applying max prediction reduction
 == Liczba ticków po zamrożeniu przed zastosowaniem maksymalnej redukcji przewidywania
@@ -16150,6 +16132,9 @@ Timestamp
 
 Tiny Tee Size
 == Rozmiar małego tee
+
+Title
+== Title
 
 Title bob angular speed in 1/100 rad/s
 == Prędkość kątowa kołysania tytułu (1/100 rad/s)
@@ -16537,6 +16522,9 @@ Translation Settings
 
 transmits your player name to info.ddnet.org
 == przesyła Twoją nazwę gracza do info.ddnet.org
+
+Trigger key
+== Trigger key
 
 Trigger limits
 == Warunki uruchomienia
@@ -16991,6 +16979,9 @@ Untick "Show other players' large emoticons" or "Show other players' launched em
 Untick "Use original style" to reach "Background color", the countdown options and "Always show song title and artist"; "Show team" works in both styles.
 == Odznacz używaj oryginalnego stylu, aby przejść do koloru tła, opcji odliczania i zawsze pokazuj tytuł oraz wykonawcę; pokazuj drużynę działa w obu stylach.
 
+Untitled
+== Untitled
+
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
 == Nietypowe częstotliwości odświeżania mogą powodować rozrywanie obrazu; wybierz natywną częstotliwość monitora.
 
@@ -17030,6 +17021,12 @@ Update ready to install
 Update sources are temporarily unavailable
 == Źródła aktualizacji są tymczasowo niedostępne
 
+Updated this configuration.
+== Zaktualizowano konfigurację.
+
+Updated this phrase.
+== Updated this phrase.
+
 Updating preview…
 == Aktualizowanie podglądu…
 
@@ -17050,6 +17047,9 @@ Upstream redundancy (experimental)
 
 URL for downloading community skins
 == URL do pobierania skórek społeczności
+
+URL for downloading DDStats skins
+== URL for downloading DDStats skins
 
 URL for downloading maps (must start with https://)
 == URL do pobierania map (musi zaczynać się od https://)
@@ -17152,9 +17152,6 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == Użyj trybu wysokiej przepustowości (podwaja przepustowość serwera, tylko LAN)
-
-Use installed asset names. Empty fields keep the current asset.
-== Wpisz nazwy zainstalowanych tekstur. Puste pola zachowują bieżącą teksturę.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == Użyj klawisza k, aby zabić (zrestartować), q, aby wstrzymać i obserwować innych graczy. Zobacz ustawienia, aby poznać inne przypisania klawiszy.
@@ -17699,17 +17696,14 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 == Co ustawia
 
+Wheel
+== Wheel
+
 Wheel distance per tick; hold Alt for 3x
 == Dystans na skok kółka; przytrzymaj Alt dla 3x
 
-Wheel label
-== Nazwa w kole
-
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 == Odczucie przewijania: 0=Oryginalne (reset przy każdym kroku), 1=Gładkie (prędkość jest zachowana), 2=Sprężyna
-
-Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
-== Krok kółka w pikselach interfejsu; strony ustawień przewijają się o 12 razy tę wartość na skok
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Gdy tęczowy Tee TClienta jest włączony, ta funkcja nie działa.
@@ -18791,6 +18785,3 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == Tłumaczenie angielskie przez zespół DDNet
-
-Download DDStats skins (including unapproved skins)
-== Pobieraj skórki DDStats (w tym niezatwierdzone)

@@ -14890,6 +14890,38 @@ turkish = "Geçerli ayarları kullan"
 polish = "Użyj bieżących ustawień"
 
 [[message]]
+key = "Save configuration"
+[message.translations]
+simplified_chinese = "保存配置"
+traditional_chinese = "儲存設定"
+japanese = "設定を保存"
+korean = "설정 저장"
+russian = "Сохранить конфигурацию"
+german = "Konfiguration speichern"
+spanish = "Guardar configuración"
+french = "Enregistrer la configuration"
+brazilian_portuguese = "Salvar configuração"
+portuguese = "Guardar configuração"
+turkish = "Yapılandırmayı kaydet"
+polish = "Zapisz konfigurację"
+
+[[message]]
+key = "Updated this configuration."
+[message.translations]
+simplified_chinese = "已更新此配置。"
+traditional_chinese = "已更新此設定。"
+japanese = "この設定を更新しました。"
+korean = "이 설정을 업데이트했습니다."
+russian = "Конфигурация обновлена."
+german = "Konfiguration aktualisiert."
+spanish = "Configuración actualizada."
+french = "Configuration mise à jour."
+brazilian_portuguese = "Configuração atualizada."
+portuguese = "Configuração atualizada."
+turkish = "Yapılandırma güncellendi."
+polish = "Zaktualizowano konfigurację."
+
+[[message]]
 key = "Use installed asset names. Empty fields keep the current asset."
 [message.translations]
 simplified_chinese = "填写已安装的贴图名称；留空表示保持当前贴图。"
@@ -17206,3 +17238,147 @@ brazilian_portuguese = "Texto 5"
 portuguese = "Texto 5"
 turkish = "Metin 5"
 polish = "Tekst 5"
+
+[[message]]
+key = "Add phrase"
+[message.translations]
+simplified_chinese = "添加语录"
+traditional_chinese = "新增語錄"
+
+[[message]]
+key = "Add to identity menu"
+[message.translations]
+simplified_chinese = "添加到身份菜单"
+traditional_chinese = "加入身份選單"
+
+[[message]]
+key = "Added to this bind menu."
+[message.translations]
+simplified_chinese = "已添加到当前绑定菜单。"
+traditional_chinese = "已加入此綁定選單。"
+
+[[message]]
+key = "Capture current appearance"
+[message.translations]
+simplified_chinese = "读取当前外观"
+traditional_chinese = "讀取目前外觀"
+
+[[message]]
+key = "Configure identity, chat, assets, and custom bind menus"
+[message.translations]
+simplified_chinese = "配置身份、语录、资源和自定义绑定菜单"
+traditional_chinese = "設定身份、語錄、資源與自訂綁定選單"
+
+[[message]]
+key = "Console command"
+[message.translations]
+simplified_chinese = "控制台命令"
+traditional_chinese = "主控台命令"
+
+[[message]]
+key = "Could not add this entry."
+[message.translations]
+simplified_chinese = "无法添加此条目。"
+traditional_chinese = "無法加入此條目。"
+
+[[message]]
+key = "Delete selected"
+[message.translations]
+simplified_chinese = "删除选中项"
+traditional_chinese = "刪除選取項"
+
+[[message]]
+key = "Enter a command and keep the menu under 64 entries."
+[message.translations]
+simplified_chinese = "输入命令，并确保菜单不超过 64 个条目。"
+traditional_chinese = "輸入命令，並確保選單不超過 64 個條目。"
+
+[[message]]
+key = "Enter a phrase."
+[message.translations]
+simplified_chinese = "请输入语录。"
+traditional_chinese = "請輸入語錄。"
+
+[[message]]
+key = "Identity"
+[message.translations]
+simplified_chinese = "身份"
+traditional_chinese = "身份"
+
+[[message]]
+key = "Manage profiles and add identity entries to bind menus"
+[message.translations]
+simplified_chinese = "管理预设，并向绑定菜单添加身份条目"
+traditional_chinese = "管理預設，並將身份條目加入綁定選單"
+
+[[message]]
+key = "Menu type"
+[message.translations]
+simplified_chinese = "菜单类型"
+traditional_chinese = "選單類型"
+
+[[message]]
+key = "Options"
+[message.translations]
+simplified_chinese = "选项"
+traditional_chinese = "選項"
+
+[[message]]
+key = "Panel"
+[message.translations]
+simplified_chinese = "面板"
+traditional_chinese = "面板"
+
+[[message]]
+key = "Phrase"
+[message.translations]
+simplified_chinese = "语录"
+traditional_chinese = "語錄"
+
+[[message]]
+key = "Preview the bind menu layout and entries"
+[message.translations]
+simplified_chinese = "预览绑定菜单布局和条目"
+traditional_chinese = "預覽綁定選單版面與條目"
+
+[[message]]
+key = "Removed from this bind menu."
+[message.translations]
+simplified_chinese = "已从当前绑定菜单移除。"
+traditional_chinese = "已從此綁定選單移除。"
+
+[[message]]
+key = "Save phrase"
+[message.translations]
+simplified_chinese = "保存语录"
+traditional_chinese = "儲存語錄"
+
+[[message]]
+key = "The bind menu is full."
+[message.translations]
+simplified_chinese = "绑定菜单已满。"
+traditional_chinese = "綁定選單已滿。"
+
+[[message]]
+key = "Title"
+[message.translations]
+simplified_chinese = "标题"
+traditional_chinese = "標題"
+
+[[message]]
+key = "Trigger key"
+[message.translations]
+simplified_chinese = "触发键"
+traditional_chinese = "觸發鍵"
+
+[[message]]
+key = "Updated this phrase."
+[message.translations]
+simplified_chinese = "已更新语录。"
+traditional_chinese = "已更新此語錄。"
+
+[[message]]
+key = "Wheel"
+[message.translations]
+simplified_chinese = "轮盘"
+traditional_chinese = "輪盤"

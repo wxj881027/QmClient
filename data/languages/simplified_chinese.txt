@@ -31,6 +31,9 @@
 "Cycle custom Tee hue" only works with custom colors and does nothing while the TClient rainbow Tee option is on.
 == 循环自定义 Tee 色调只在用自定义颜色时生效，TClient 的彩虹 Tee 开着时它不起作用。
 
+"Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+== "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+
 "Default (software)" is x264: CPU only, best quality, slowest.
 == 「Default (software)」就是 x264：纯 CPU、画质最好、速度最慢。
 
@@ -63,9 +66,6 @@
 
 "Use original style" hides the color and countdown options below it.
 == 勾选使用原始样式时，其下方的颜色和倒计时选项会被隐藏。
-
-"Vanilla skins only" hides every custom skin, so turn it off if your skin suddenly turns default.
-== 只显示原生皮肤会把自定义皮肤全部隐藏，皮肤突然变回默认就把它关掉。
 
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == X 与我对齐提示会在另一名玩家的 X 与你的对齐达设定的检测时间后为其变色。
@@ -593,9 +593,6 @@ Add a type to the exclusion filter for a specific community
 Add a voting option
 == 添加投票选项
 
-Add Bind
-== 添加绑定
-
 Add category
 == 新增分类
 
@@ -610,9 +607,6 @@ Add current cut to the export list
 
 Add debug dummy to server (Debug build only)
 == 向服务器添加调试用分身（仅 Debug 构建）
-
-Add default presets
-== 添加默认预设
 
 Add demo timeline marker
 == 添加回放时间线标记
@@ -650,6 +644,9 @@ Add options below
 Add or edit entries, then use the bind in chat to send the text.
 == 添加或编辑条目，然后在聊天中使用对应绑定发送文字。
 
+Add phrase
+== 添加语录
+
 Add players or groups, then choose which markers and chat highlights apply to them.
 == 添加玩家或分组，再选择对它们生效的标记和聊天高亮。
 
@@ -665,14 +662,14 @@ Add team name:
 Add to %s
 == 添加到 %s
 
-Add to bind wheel
-== 加入 Bind 轮盘
-
 Add to blocked words
 == 添加到屏蔽词
 
 Add to category
 == 添加到分类
+
+Add to identity menu
+== 添加到身份菜单
 
 Add to queue
 == 加入队列
@@ -691,6 +688,9 @@ Added %d missing required slot(s).
 
 Added %s as friend
 == 已将 %s 添加为好友
+
+Added to this bind menu.
+== 已添加到当前绑定菜单。
 
 Additional headers for register endpoint, comma-separated "header:value" pairs
 == 要发送到寄存器端点的额外标头，以逗号分隔的“标头：值”对
@@ -805,9 +805,6 @@ Afterimage pop
 
 AGC, experimental
 == AGC，实验性
-
-Agree
-== 同意
 
 Aim
 == 瞄准
@@ -971,9 +968,6 @@ Angle
 Angle:
 == 角度：
 
-Angry
-== 生气
-
 Angular gradient
 == 角度渐变
 
@@ -1106,9 +1100,6 @@ Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
 == 将 Q 弹 Tee 形变应用到其他玩家
 
-Apply to
-== 应用到
-
 Apply to dummy
 == 应用到分身
 
@@ -1190,9 +1181,6 @@ Are you sure that you want to restart?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 确定保存该皮肤？若已有同名皮肤，将被覆盖。
 
-Arrow
-== 箭头贴图
-
 Arrow assets
 == 箭头资源
 
@@ -1204,9 +1192,6 @@ Aspect ratio preset
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == 画面纵横比预设（0=关闭，1=5:4，2=4:3，3=3:2，4=16:9，5=21:9，6=自定义）
-
-Asset preset
-== 资源贴图预设
 
 Asset with this name already exists.
 == 同名材质已存在。
@@ -1222,9 +1207,6 @@ Assets editor
 
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
 == 分别绑定禁止自杀和允许自杀两个按键；按下禁止键后，K 会被忽略，直到你按允许键。
-
-Assign commands and labels to wheel slots
-== 为转盘槽位分配命令和标签
 
 Assigns commands and labels to the slots of the radial bind wheel.
 == 为环形绑定轮盘的各个槽位指定指令和标签。
@@ -1859,6 +1841,12 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == 绑定按键以执行命令或查看按键绑定
 
+Bind menu layout (0 = wheel, 1 = panel)
+== 绑定菜单布局（0 = 轮盘，1 = 面板）
+
+Bind Menus
+== 绑定菜单
+
 Bind movement, jump, hook, and fire actions
 == 绑定移动、跳跃、钩子和开火操作
 
@@ -1876,12 +1864,6 @@ Bind voting and server browser actions
 
 Bind weapon selection and switching actions
 == 绑定武器选择和切换操作
-
-Bind Wheel
-== 绑定轮盘
-
-Bind Wheel Key
-== 唤出滚轮绑键
 
 Binds
 == 绑定
@@ -1912,9 +1894,6 @@ Blend mode
 
 Blend strength
 == 混合强度
-
-Blink
-== 眨眼
 
 Blink the active local tee
 == 让当前本地角色闪烁
@@ -2207,6 +2186,9 @@ Capsule ends
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 == 胶囊端头：0 = 普通圆弧，1 = 丝滑端点，2 = 苹果连续曲率
 
+Capture current appearance
+== 读取当前外观
+
 Capture the flag
 == 夺旗模式 (CTF)
 
@@ -2449,9 +2431,6 @@ Check input device, system default mic, and mic permission first
 
 Check output device, confirm headphones/speakers are still online
 == 建议先检查输出设备，确认耳机或扬声器仍在线
-
-Check the preset fields, label, and wheel capacity (64 entries).
-== 请检查预设内容、显示名称及轮盘容量（最多 64 项）。
 
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
 == 先检查设备再调阈值；大多数麦克风没声音的情况只是输入设备选错了。
@@ -2912,14 +2891,8 @@ Command to run when joining server
 Command Workshop
 == 指令工坊
 
-Command:
-== 指令：
-
 Commands
 == 命令
-
-Commands run in the console
-== 在控制台中执行的命令
 
 Commands run once per connection, not on every map change; remove the parts that print errors.
 == 指令每次连接只执行一次，不会在每次换图时执行；把会报错的部分去掉。
@@ -3067,6 +3040,9 @@ Configure hook range and collision guide lines
 
 Configure HUD island appearance
 == 配置 HUD 灵动岛外观
+
+Configure identity, chat, assets, and custom bind menus
+== 配置身份、语录、资源和自定义绑定菜单
 
 Configure input helpers and cursor behavior
 == 配置输入辅助和光标行为
@@ -3254,6 +3230,9 @@ Console color scheme
 Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
 == 控制台配色：0=现代终端，1=经典 PowerShell, 2=自定义，3 及以上为 Windows Terminal 配色
 
+Console command
+== 控制台命令
+
 Console command color
 == 控制台：命令颜色
 
@@ -3265,6 +3244,9 @@ Console line spacing
 
 Console link color
 == 控制台：链接颜色
+
+Console link hover hue shift in degrees
+== Console link hover hue shift in degrees
 
 Console number color
 == 控制台：数字颜色
@@ -3440,6 +3422,9 @@ Corner curve
 Could not add the player as a friend
 == 无法将该玩家添加为好友
 
+Could not add this entry.
+== 无法添加此条目。
+
 Could not back up configuration files.
 == 无法备份配置文件。
 
@@ -3530,9 +3515,6 @@ Count players only
 Countries
 == 国家
 
-Country code
-== 国家/地区代码
-
 Country flag for grouping this community (ISO 3166-1 numeric)
 == 将此社区分组的国家/地区标志（ISO 3166-1 数字）
 
@@ -3559,9 +3541,6 @@ Create a random skin
 
 Create category
 == 创建分类
-
-Create wheel presets here. Existing wheel entries are kept.
-== 在这里编辑轮盘预设，保留已有轮盘条目。
 
 Created
 == 创建日期
@@ -3887,6 +3866,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats
+== DDStats
+
 DDStats shows UTC dates, updates daily and matches players by name only.
 == DDStats 的日期使用 UTC，每天更新，且仅按玩家名字匹配。
 
@@ -3953,8 +3935,8 @@ Debug tile layer clipping.
 Debug websockets
 == 调试 WebSocket
 
-Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
-== 决定客户端下载并列出哪些皮肤，还可以加前缀来加载带前缀的皮肤变体。
+Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
+== Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
 
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 专用 WebSocket 地址（留空使用 wss://qmclient.icu/ws）
@@ -4099,6 +4081,9 @@ Delete folder
 
 Delete screenshot
 == 删除截图
+
+Delete selected
+== 删除选中项
 
 Delete selected items
 == 删除选中项
@@ -4258,9 +4243,6 @@ Disabled
 
 Disabling system messages also hides server warnings.
 == 关闭系统消息后，服务器警告也会一并隐藏。
-
-Disagree
-== 反对
 
 Disallow chat from blacklisted addresses
 == 不允许来自黑名单地址的聊天
@@ -4444,6 +4426,9 @@ Download "%s"?
 
 Download community skins
 == 下载社区皮肤
+
+Download DDStats skins (including unapproved skins)
+== 下载 DDStats 皮肤（含未审批皮肤）
 
 Download failed
 == 下载失败
@@ -4897,9 +4882,6 @@ Edit skin texture
 
 Edit the name and clan fields; the dummy keeps its own values.
 == 编辑名称和战队字段；分身保留它自己的值。
-
-Edit this custom command on the Bind Wheel page.
-== 请到 Bind 轮盘页面编辑这条自定义命令。
 
 Edit title style
 == 编辑头衔样式
@@ -5498,8 +5480,14 @@ English font:
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == 请输入 /practice 或重新开始，否则整队将在 60 秒后被处死
 
+Enter a command and keep the menu under 64 entries.
+== 输入命令，并确保菜单不超过 64 个条目。
+
 Enter a CP number from 1 to 255.
 == 请输入 1–255 的 CP 编号
+
+Enter a phrase.
+== 请输入语录。
 
 Enter Password
 == 输入密码
@@ -5785,9 +5773,6 @@ Extreme values make movement feel wrong, so change one step at a time.
 
 Extremely slow, for testing only
 == 极慢，仅测试用
-
-Eyes
-== 眼睛
 
 f = Frame rate
 == f = 帧率
@@ -6638,6 +6623,9 @@ Global UI size
 Global UI size percentage
 == 全局 UI 大小百分比
 
+Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+== Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+
 Glow
 == 辉光
 
@@ -6809,9 +6797,6 @@ Group names are limited to 16 characters
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 归集输入辅助功能：快速输入、自动边距、亚 tick 瞄准和光标行为。
 
-GUI cursor
-== 界面光标
-
 GUI cursor assets
 == GUI 光标资源
 
@@ -6853,9 +6838,6 @@ Hammer: %s
 
 Handwriting
 == 手写体
-
-Happy
-== 开心
 
 Has people playing
 == 有玩家
@@ -7361,8 +7343,8 @@ Icons
 Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
 == 松开按键或解冻后隐藏图标。他人按键状态需要服务器支持预输入；不显示当前操控角色的卡键状态。
 
-Identity preset
-== 身份预设
+Identity
+== 身份
 
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == 若为 1，仅在连接时自动开始录制一次 demo；若为 0，游戏结束后也会重新自动开始录制
@@ -8102,9 +8084,6 @@ Kugou hook helper path (empty=beside QmClient)
 l = Local time
 == l = 本地时间
 
-L select  R swap  M select only
-== 左键选择 右键交换 中键仅选择
-
 Label
 == 标签
 
@@ -8296,6 +8275,9 @@ Left-drag empty space to box-select, middle-drag to pan, wheel to zoom.
 
 Left/right channel width
 == 左右声道宽度
+
+Legacy bind script
+== 旧版绑定脚本
 
 Legacy option: connections that skip TLS verification are rejected
 == 旧版选项：跳过 TLS 校验的连接会被拒绝
@@ -8621,6 +8603,9 @@ Locate
 Lock
 == 锁定
 
+Lock both teams immediately when entering solo split mode
+== 进入单刷模式时立即锁定双方队伍
+
 Lock delay
 == 锁队延迟
 
@@ -8629,6 +8614,9 @@ Lock mouse distance at the moment of the jump.
 
 Lock team
 == 锁定队伍
+
+Lock teams on entry
+== 进队后立即锁队
 
 Lock the team so other players cannot join directly
 == 锁定队伍，其他玩家不能直接加入
@@ -8711,9 +8699,6 @@ Main only
 Main Tee
 == 本体
 
-Main Tee and dummy
-== 本体和分身
-
 Main view
 == 主视角
 
@@ -8771,8 +8756,8 @@ Manage hostile-list chat shortcuts
 Manage kaomoji chat shortcuts
 == 管理颜文字聊天快捷方式
 
-Manage profiles and bind wheel presets
-== 管理配置文件与 Bind 轮盘预设
+Manage profiles and add identity entries to bind menus
+== 管理预设，并向绑定菜单添加身份条目
 
 Manage the skin rotation queue
 == 管理皮肤轮换队列
@@ -8866,6 +8851,9 @@ Map preview shows the entity layer only (hides textures)
 
 Map Preview TODO
 == 地图预览待做
+
+Map preview unavailable
+== Map preview unavailable
 
 Map progress
 == 地图进度
@@ -9169,6 +9157,9 @@ Menu panel color
 
 Menu panel opacity
 == 菜单面板不透明度
+
+Menu type
+== 菜单类型
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == 在此窗口（毫秒）内合并连续相同的 echo 消息（0 表示不合并）
@@ -9584,9 +9575,6 @@ Name plates size
 Name to change to near finish (when qm_change_name_near_finish enabled)
 == 接近终点时要改成的名字（启用 qm_change_name_near_finish 时生效）
 
-Name:
-== 名称：
-
 Name: %s
 == 名称：%s
 
@@ -9757,9 +9745,6 @@ New name
 
 New name:
 == 新文件名：
-
-New preset
-== 新建预设
 
 New preset name
 == 新预设名称
@@ -10379,6 +10364,9 @@ Opacity of freeze bars inside freeze
 Opacity of other teams' tees and name plates
 == 其他队伍玩家与名牌的透明度
 
+Open a bind menu (identity, chat, assets, custom)
+== 打开绑定菜单（身份、语录、资源、自定义）
+
 Open a link to join the community.
 == 打开链接即可加入社区。
 
@@ -10390,9 +10378,6 @@ Open a link to visit the site.
 
 Open a matching settings card directly
 == 直接打开匹配的设置卡片
-
-Open bindwheel selector
-== 打开绑定轮盘选择器
 
 Open DDNet Wiki
 == 打开 DDNet Wiki
@@ -10432,6 +10417,9 @@ Open TClient configuration file locations
 
 Open the card and enable only the elements you want; each option explains what it draws.
 == 打开卡片，只启用需要的元素；每个选项都说明了它画什么。
+
+Open the custom bind menu
+== 打开自定义绑定菜单
 
 Open the directory that contains the configuration and user files
 == 打开存有配置文件与用户文件的文件夹路径
@@ -10516,6 +10504,9 @@ Optional export range in seconds. Leave empty to export the whole demo.
 
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 == 可选的起止时间，单位是秒。两个都留空就导出整段 demo。
+
+Options
+== 选项
 
 Options here affect networking or identity; test on a server before using them in matches.
 == 这里的选项会影响网络或身份；在对局中使用前请先在服务器上测试。
@@ -10646,9 +10637,6 @@ Override Freeze Tile Entity Alpha (0-100)
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == 覆盖 Ping 估计位置，可用：auto、af、as、as:cn、eu、na、oc、sa（自动、非洲、亚洲、中国、欧洲、北美、大洋洲/澳大利亚、南美洲）
 
-Override Selected
-== 覆盖选定项
-
 Overview
 == 概览
 
@@ -10670,8 +10658,8 @@ p = Ping latency
 Pack name
 == 包名
 
-Pain
-== 疼痛
+Panel
+== 面板
 
 Panel opacity
 == 面板不透明度
@@ -10855,6 +10843,9 @@ Pet Skin:
 
 Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 == 宠物只是装饰，额外绘制影响性能时请关掉。
+
+Phrase
+== 语录
 
 Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
 == 分别选提示背景色和提示文字色，拖动提示字号滑条，想要弹出时的小回弹就保持提示回弹动画开启。
@@ -11468,9 +11459,6 @@ Preset %d
 Preset bar
 == 预设栏
 
-Preset type
-== 预设类型
-
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == 使用 libx264 编码视频时的预设，默认 5（medium），0 为 ultrafast，9 为 placebo（最慢，不推荐）
 
@@ -11600,8 +11588,8 @@ Preview selected file
 Preview spacing does not match every map; check in game before a match.
 == 预览中的间距并不适用于所有地图，比赛前请进游戏实测。
 
-Preview the bind wheel layout and selection
-== 预览绑定转盘布局和选择
+Preview the bind menu layout and entries
+== 预览绑定菜单布局和条目
 
 Preview the composed status bar output
 == 预览组合后的状态栏输出
@@ -12371,9 +12359,6 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == 删除投票选项
 
-Remove Bind
-== 删除绑定
-
 Remove chat
 == 删除消息记录
 
@@ -12418,6 +12403,9 @@ Remove war name:
 
 Removed %s from friends
 == 已将 %s 从好友中移除
+
+Removed from this bind menu.
+== 已从当前绑定菜单移除。
 
 Removes all bindwheel binds
 == 移除全部绑定轮盘绑定
@@ -12749,9 +12737,6 @@ Reset mouse position when opening bind wheel
 Reset pie menu appearance
 == 恢复饼菜单默认外观
 
-Reset position of mouse when opening bindwheel
-== 打开快捷绑定轮盘时重置鼠标位置
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == 进入服务器时重置统计（0=累计统计，1=每次进服重置）
 
@@ -13043,6 +13028,9 @@ Save changes
 Save changes back to this preset
 == 将改动保存回此预设
 
+Save configuration
+== 保存配置
+
 Save current queue as a new preset
 == 一键保存当前队列为新预设
 
@@ -13063,6 +13051,9 @@ Save loaded; local record removed.
 
 Save loaded; the local record could not be removed.
 == 存档读取成功，但未能删除本地记录。
+
+Save phrase
+== 保存语录
 
 Save player names in replay
 == 在回放中保存玩家名称
@@ -13135,9 +13126,6 @@ Saved
 
 Saved to Downloads/QmClient
 == 已保存到 下载 /QmClient
-
-Saved to the bind wheel.
-== 已保存到 Bind 轮盘。
 
 Saved with your title and shared with other QmClient players.
 == 随头衔一起保存，并同步给其他 QmClient 玩家。
@@ -15041,6 +15029,9 @@ Skin is loading.
 Skin list sort mode (0=Name, 1=Release date)
 == 皮肤列表排序模式（0=名称，1=发布时间）
 
+Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)
+== Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)
+
 Skin options
 == 皮肤选项
 
@@ -15713,9 +15704,6 @@ Stroke retention time (0=Never disappear)
 Strokes are local only and vanish when you leave the map; set the fade time to 0 to keep them until you draw again.
 == 笔画只在本地显示，离开地图就会消失；把消失时间设为 0 可保留到下次绘制。
 
-Strong / Weak
-== 强弱提示贴图
-
 Strong hook
 == 强钩
 
@@ -15769,9 +15757,6 @@ Support is optional; nothing here changes client behavior.
 
 Support ♥
 == 支持 ♥
-
-Surprise
-== 惊讶
 
 Swap
 == 交换
@@ -16325,9 +16310,6 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == 感谢您为 QmClient 做出的贡献
 
-Thanks!
-== 谢谢！
-
 That link would close a loop
 == 这条连线会形成环
 
@@ -16336,6 +16318,9 @@ The audio device couldn't be initialised.
 
 The auth level you need to tele others
 == 将其他玩家传送所需的权限等级
+
+The bind menu is full.
+== 绑定菜单已满。
 
 The blueprint never runs by itself: it only writes the bind line at the bottom right.
 == 蓝图不会自己运行，它只负责写出右下角那一行 bind。
@@ -16429,9 +16414,6 @@ The two keys that cast your vote: one for yes and one for no.
 
 The watermarked screenshot was saved next to the original
 == 带水印的截图已保存到原图旁边
-
-The wheel changed. Your draft can be added as a new preset.
-== 轮盘条目已变化，当前草稿可以作为新预设添加。
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 纹理文件 %s 的宽度无法被 %d 整除，或者高度无法被 %d 整除，这可能会导致显示错误。
@@ -16592,9 +16574,6 @@ Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split ke
 Tick "Debug mode" to turn all options on, then set "Performance debug log threshold (ms)" to choose which frames get logged.
 == 勾选调试模式会打开全部选项，然后设置性能调试日志阈值（ms）来决定记录哪些帧。
 
-Tick "Download skins", "Download community skins" or "Vanilla skins only", then type a "Skin prefix" or use a preset such as "kitty".
-== 勾选下载官方皮肤、下载社区皮肤或只显示原生皮肤，然后输入皮肤名称前缀，或直接用 kitty 之类的预设。
-
 Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its movement, and the weapon switches are separate rows below.
 == 勾上动态视野即可开启；平滑动态视野让镜头移动更顺滑，武器切换则是下面各自独立的行。
 
@@ -16639,6 +16618,9 @@ Tick delay before executing qm_execute_on_join
 
 Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"; "Lock delay" and "Spectator opacity" appear below.
 == 勾选想要的动作，例如解冻后自动取消旁观或自动锁定队伍；下方会出现锁定延迟和旁观透明度。
+
+Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
+== Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
 
 Ticks after freeze before applying max prediction reduction
 == 冻结后经过多少 tick 才应用最大预测减少
@@ -16735,6 +16717,9 @@ Timestamp
 
 Tiny Tee Size
 == 迷你 Tee 大小
+
+Title
+== 标题
 
 Title bob angular speed in 1/100 rad/s
 == 头衔浮动角速度（1/100 弧度每秒）
@@ -17137,6 +17122,9 @@ Translation Settings
 
 transmits your player name to info.ddnet.org
 == 会将玩家昵称发送到 info.ddnet.org
+
+Trigger key
+== 触发键
 
 Trigger limits
 == 触发限制
@@ -17603,6 +17591,9 @@ Untick "Show other players' large emoticons" or "Show other players' launched em
 Untick "Use original style" to reach "Background color", the countdown options and "Always show song title and artist"; "Show team" works in both styles.
 == 取消勾选使用原始样式，才能设置背景色、倒计时选项和始终显示歌曲标题与歌手；显示队伍在两种样式下都有效。
 
+Untitled
+== 未命名
+
 Untitled flow
 == 未命名流程
 
@@ -17645,6 +17636,12 @@ Update ready to install
 Update sources are temporarily unavailable
 == 更新源暂时不可用
 
+Updated this configuration.
+== 已更新此配置。
+
+Updated this phrase.
+== 已更新语录。
+
 Updating preview…
 == 正在更新预览…
 
@@ -17668,6 +17665,9 @@ Upstream redundancy (experimental)
 
 URL for downloading community skins
 == 用于下载社区皮肤的 URL
+
+URL for downloading DDStats skins
+== URL for downloading DDStats skins
 
 URL for downloading maps (must start with https://)
 == 用于下载地图的 URL（必须以 https:// 开头）
@@ -17770,9 +17770,6 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 使用高带宽模式。服务器所需的带宽加倍。仅限局域网使用
-
-Use installed asset names. Empty fields keep the current asset.
-== 填写已安装的贴图名称；留空表示保持当前贴图。
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == 使用 K 键自杀（重新开始），Q 键暂停并旁观其他玩家。其他按键绑定可在设置中查看。
@@ -18338,20 +18335,17 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 == 这是什么
 
+Wheel
+== 轮盘
+
 Wheel distance per tick; hold Alt for 3x
 == 每格滚轮距离；按住 Alt 为三倍
 
 Wheel down
 == 滚轮下
 
-Wheel label
-== 轮盘显示名称
-
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 == 滚轮手感：0=原始（每格重新开始），1=平滑（速度延续），2=弹簧
-
-Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
-== 滚轮每格的界面像素步长；设置卡片页面每格滚动此值的 12 倍
 
 Wheel to zoom - drag empty space to pan
 == 滚轮缩放 · 拖动空白平移
@@ -23436,6 +23430,3 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == 简体中文翻译由 DDNet 队伍和 QmClient 贡献者维护
-
-Download DDStats skins (including unapproved skins)
-== 下载 DDStats 皮肤（含未审批皮肤）

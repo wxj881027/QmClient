@@ -31,6 +31,9 @@
 "Cycle custom Tee hue" only works with custom colors and does nothing while the TClient rainbow Tee option is on.
 == Özel Tee tonu döngüsü yalnızca özel renklerle çalışır ve TClient gökkuşağı Tee seçeneği açıkken hiçbir şey yapmaz.
 
+"Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+== "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+
 "Default (software)" is x264: CPU only, best quality, slowest.
 == "Default (software)" x264'tür: yalnızca CPU, en iyi kalite, en yavaş.
 
@@ -63,9 +66,6 @@
 
 "Use original style" hides the color and countdown options below it.
 == Özgün stili kullan açıkken altındaki renk ve geri sayım seçenekleri gizlenir.
-
-"Vanilla skins only" hides every custom skin, so turn it off if your skin suddenly turns default.
-== Sadece orijinal skinler tüm özel skinleri gizler; skinin bir anda varsayılana dönerse bunu kapat.
 
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == Benimle X hizası ipucu, başka bir oyuncunun X'i ayarlanan algılama süresi boyunca seninkiyle eşleşince onu renklendirir.
@@ -569,9 +569,6 @@ Add a type to the exclusion filter for a specific community
 Add a voting option
 == Bir oylama seçeneği ekle
 
-Add Bind
-== Bind Ekle
-
 Add category
 == Kategori ekle
 
@@ -586,9 +583,6 @@ Add current cut to the export list
 
 Add debug dummy to server (Debug build only)
 == Sunucuya hata ayıklama dummy'si ekle (Yalnızca Debug yapısı)
-
-Add default presets
-== Varsayılan ön ayarları ekle
 
 Add demo timeline marker
 == Demo zaman çizelgesi işareti ekle
@@ -626,6 +620,9 @@ Add options below
 Add or edit entries, then use the bind in chat to send the text.
 == Girdileri ekle veya düzenle, sonra sohbette bağlantıyı kullanarak metni gönder.
 
+Add phrase
+== Add phrase
+
 Add players or groups, then choose which markers and chat highlights apply to them.
 == Oyuncu veya grup ekle, ardından hangi işaretlerin ve sohbet vurgularının uygulanacağını seç.
 
@@ -641,14 +638,14 @@ Add team name:
 Add to %s
 == %s içine ekle
 
-Add to bind wheel
-== Komut çarkına ekle
-
 Add to blocked words
 == Engellenen kelimelere ekle
 
 Add to category
 == Kategoriye ekle
+
+Add to identity menu
+== Add to identity menu
 
 Add to queue
 == Sıraya ekle
@@ -667,6 +664,9 @@ Added %d missing required slot(s).
 
 Added %s as friend
 == %s arkadaş olarak eklendi
+
+Added to this bind menu.
+== Added to this bind menu.
 
 Additional headers for register endpoint, comma-separated "header:value" pairs
 == Kayıt uç noktası için ek başlıklar, virgülle ayrılmış "başlık:değer" çiftleri
@@ -781,9 +781,6 @@ Afterimage pop
 
 AGC, experimental
 == AGC, deneysel
-
-Agree
-== Kabul Et
 
 Aim
 == Nişan al
@@ -944,9 +941,6 @@ Angle
 Angle:
 == Açı:
 
-Angry
-== Kızgın
-
 Angular gradient
 == Açısal gradyan
 
@@ -1070,9 +1064,6 @@ Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
 == Q弹 Tee deformasyonunu diğer oyunculara uygula
 
-Apply to
-== Uygulama hedefi
-
 Apply to dummy
 == Dummy’ye uygula
 
@@ -1151,9 +1142,6 @@ Are you sure that you want to restart?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == Skininizi kaydetmek istediğinizden emin misiniz? Bu isimde bir skin zaten varsa, üzerine yazılacaktır.
 
-Arrow
-== Ok dokusu
-
 Arrow assets
 == Ok varlıkları
 
@@ -1165,9 +1153,6 @@ Aspect ratio preset
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == Görüntü en-boy oranı ön ayarı (0=Kapalı, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=Özel)
-
-Asset preset
-== Doku ön ayarı
 
 Asset with this name already exists.
 == Bu ada sahip bir varlık zaten mevcut.
@@ -1183,9 +1168,6 @@ Assets editor
 
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
 == Kendini öldürme kapalı ve kendini öldürme açık tuşlarını ata; kapalı tuşuna bastıktan sonra açık tuşuna basana kadar K yok sayılır.
-
-Assign commands and labels to wheel slots
-== Assign commands and labels to wheel slots
 
 Assigns commands and labels to the slots of the radial bind wheel.
 == Dairesel komut çarkının dilimlerine komut ve etiket atar.
@@ -1802,6 +1784,12 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == Bir komutu yürütmek için tuş bağla veya tuş bağlantılarını görüntüle
 
+Bind menu layout (0 = wheel, 1 = panel)
+== Bind menu layout (0 = wheel, 1 = panel)
+
+Bind Menus
+== Bind Menus
+
 Bind movement, jump, hook, and fire actions
 == Bind movement, jump, hook, and fire actions
 
@@ -1819,12 +1807,6 @@ Bind voting and server browser actions
 
 Bind weapon selection and switching actions
 == Bind weapon selection and switching actions
-
-Bind Wheel
-== Bind Tekerleği
-
-Bind Wheel Key
-== Bind Tekerleği Tuşu
 
 Binds
 == Tuş atamaları
@@ -1855,9 +1837,6 @@ Blend mode
 
 Blend strength
 == Karıştırma gücü
-
-Blink
-== Göz kırpma
 
 Blink the active local tee
 == Etkin yerel karakteri yanıp söndür
@@ -2120,6 +2099,9 @@ Capsule ends
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 == Kapsül uçları: 0 = düz yay, 1 = ipeksi uç, 2 = Apple sürekli eğrilik
 
+Capture current appearance
+== Capture current appearance
+
 Capture the flag
 == Bayrak kapmaca (CTF)
 
@@ -2359,9 +2341,6 @@ Check input device, system default mic, and mic permission first
 
 Check output device, confirm headphones/speakers are still online
 == Önce çıkış cihazını kontrol edin, kulaklıkların/hoparlörlerin hala çalıştığını onaylayın
-
-Check the preset fields, label, and wheel capacity (64 entries).
-== Ön ayar alanlarını, etiketi ve çark kapasitesini (64 öğe) kontrol edin.
 
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
 == Eşikleri kurcalamadan önce aygıtlarını kontrol et; mikrofonun ses vermemesi çoğunlukla yanlış giriş aygıtından başka bir şey değildir.
@@ -2810,14 +2789,8 @@ Command is not available on solo servers
 Command to run when joining server
 == Sunucuya katılırken çalıştırılacak komut
 
-Command:
-== Komut:
-
 Commands
 == Komutlar
-
-Commands run in the console
-== Konsolda çalıştırılan komutlar
 
 Commands run once per connection, not on every map change; remove the parts that print errors.
 == Komutlar her harita değişiminde değil, bağlantı başına bir kez çalışır; hata yazdıran kısımları kaldırın.
@@ -2962,6 +2935,9 @@ Configure hook range and collision guide lines
 
 Configure HUD island appearance
 == Configure HUD island appearance
+
+Configure identity, chat, assets, and custom bind menus
+== Configure identity, chat, assets, and custom bind menus
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
@@ -3143,6 +3119,9 @@ Console color scheme
 Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
 == Konsol renk şeması: 0=Çağdaş terminal, 1=Klasik PowerShell, 2=özel, 3+ = Windows Terminal şemaları
 
+Console command
+== Console command
+
 Console command color
 == Konsol: komut rengi
 
@@ -3154,6 +3133,9 @@ Console line spacing
 
 Console link color
 == Konsol: bağlantı rengi
+
+Console link hover hue shift in degrees
+== Console link hover hue shift in degrees
 
 Console number color
 == Konsol: sayı rengi
@@ -3326,6 +3308,9 @@ Corner curve
 Could not add the player as a friend
 == Oyuncu arkadaş olarak eklenemedi
 
+Could not add this entry.
+== Could not add this entry.
+
 Could not back up configuration files.
 == Yapılandırma dosyaları yedeklenemedi.
 
@@ -3416,9 +3401,6 @@ Count players only
 Countries
 == Ülkeler
 
-Country code
-== Ülke/bölge kodu
-
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Bu topluluğu gruplandırmak için ülke bayrağı (ISO 3166-1 sayısal)
 
@@ -3445,9 +3427,6 @@ Create a random skin
 
 Create category
 == Kategori oluştur
-
-Create wheel presets here. Existing wheel entries are kept.
-== Çark ön ayarlarını burada düzenleyin. Mevcut öğeler korunur.
 
 Created
 == Oluşturulma
@@ -3764,6 +3743,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats
+== DDStats
+
 DDStats shows UTC dates, updates daily and matches players by name only.
 == DDStats UTC tarihlerini gösterir, günlük güncellenir ve oyuncuları yalnızca adlarına göre eşleştirir.
 
@@ -3830,8 +3812,8 @@ Debug tile layer clipping.
 Debug websockets
 == WebSocket hata ayıkla
 
-Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
-== İstemcinin hangi skinleri indirip listeleyeceğini belirler ve ön ekli skin varyantlarını yüklemek için ön ek ekleyebilir.
+Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
+== Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
 
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Özel WebSocket adresi (boşsa wss://qmclient.icu/ws kullanılır)
@@ -3964,6 +3946,9 @@ Delete folder
 
 Delete screenshot
 == Ekran görüntüsünü sil
+
+Delete selected
+== Delete selected
 
 Delete selected items
 == Seçili öğeleri sil
@@ -4120,9 +4105,6 @@ Disabled
 
 Disabling system messages also hides server warnings.
 == Sistem mesajlarını kapatmak sunucu uyarılarını da gizler.
-
-Disagree
-== Reddet
 
 Disallow chat from blacklisted addresses
 == Kara listedeki adreslerden sohbeti engelle
@@ -4297,6 +4279,9 @@ Download "%s"?
 
 Download community skins
 == Topluluk görünümlerini indir
+
+Download DDStats skins (including unapproved skins)
+== DDStats skinlerini indir (onaylanmamış skinler dahil)
 
 Download failed
 == İndirme başarısız
@@ -4723,9 +4708,6 @@ Edit skin texture
 
 Edit the name and clan fields; the dummy keeps its own values.
 == Ad ve klan alanlarını düzenleyin; dummy kendi değerlerini korur.
-
-Edit this custom command on the Bind Wheel page.
-== Bu özel komutu Komut Çarkı sayfasında düzenleyin.
 
 Edit title style
 == Başlık stilini düzenle
@@ -5321,8 +5303,14 @@ English font:
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice yazın veya yeniden başlatın, aksi takdirde tüm takım 60 saniye içinde öldürülecek
 
+Enter a command and keep the menu under 64 entries.
+== Enter a command and keep the menu under 64 entries.
+
 Enter a CP number from 1 to 255.
 == 1 ile 255 arasında bir CP numarası girin.
+
+Enter a phrase.
+== Enter a phrase.
 
 Enter Password
 == Şifre Gir
@@ -5590,9 +5578,6 @@ Extreme values make movement feel wrong, so change one step at a time.
 
 Extremely slow, for testing only
 == Son derece yavaş, yalnızca test için
-
-Eyes
-== Gözler
 
 f = Frame rate
 == f = Kare hızı
@@ -6410,6 +6395,9 @@ Global UI size
 Global UI size percentage
 == Genel arayüz boyutu yüzdesi
 
+Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+== Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+
 Glow
 == Parlama
 
@@ -6575,9 +6563,6 @@ Group names are limited to 16 characters
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Girdi yardımcılarını gruplar: hızlı girdi, otomatik kenar boşluğu, alt tik nişan alma ve imleç davranışı.
 
-GUI cursor
-== Arayüz imleci
-
 GUI cursor assets
 == GUI imleç varlıkları
 
@@ -6619,9 +6604,6 @@ Hammer: %s
 
 Handwriting
 == El yazısı
-
-Happy
-== Mutlu
 
 Has people playing
 == Oynayan kişi var
@@ -7103,8 +7085,8 @@ Icons
 Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
 == Tuş bırakıldığında veya donma bittiğinde simgeler kaybolur. Diğer oyuncuların girdileri sunucuda ön girdi desteği gerektirir; etkin karakteriniz kapsam dışıdır.
 
-Identity preset
-== Kimlik ön ayarı
+Identity
+== Identity
 
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == 1 ise, bağlantıda yalnızca bir kez otomatik kayıt yap; 0 ise, oyun bittikten sonra otomatik kayıt yeniden başlar
@@ -7826,9 +7808,6 @@ Kugou hook helper path (empty=beside QmClient)
 l = Local time
 == l = Yerel saat
 
-L select  R swap  M select only
-== L seç  R değiştir  M yalnızca seç
-
 Label
 == Etiket
 
@@ -8011,6 +7990,9 @@ Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-cli
 
 Left/right channel width
 == Sol/sağ kanal genişliği
+
+Legacy bind script
+== Legacy bind script
 
 Legacy option: connections that skip TLS verification are rejected
 == Eski seçenek: TLS doğrulamasını atlayan bağlantılar reddedilir
@@ -8306,11 +8288,17 @@ Local-only
 Locate
 == Konumunu bul
 
+Lock both teams immediately when entering solo split mode
+== Solo bölünme moduna girince iki takımı da hemen kilitle
+
 Lock delay
 == Kilit gecikmesi
 
 Lock team
 == Takımı kilitle
+
+Lock teams on entry
+== Girişte kilitle
 
 Lock the team so other players cannot join directly
 == Diğer oyuncular doğrudan katılamasın diye takımı kilitle
@@ -8387,9 +8375,6 @@ Main menu
 Main Tee
 == Ana Tee
 
-Main Tee and dummy
-== Ana Tee ve kukla
-
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Düşman oyuncuların ve grupların listesini, bunların görünüm kurallarıyla birlikte yönetir.
 
@@ -8441,8 +8426,8 @@ Manage hostile-list chat shortcuts
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
 
-Manage profiles and bind wheel presets
-== Profilleri ve komut çarkı ön ayarlarını yönet
+Manage profiles and add identity entries to bind menus
+== Manage profiles and add identity entries to bind menus
 
 Manage the skin rotation queue
 == Skin döndürme kuyruğunu yönet
@@ -8536,6 +8521,9 @@ Map preview shows the entity layer only (hides textures)
 
 Map Preview TODO
 == Harita önizlemesi yapılacak
+
+Map preview unavailable
+== Map preview unavailable
 
 Map progress
 == Harita ilerlemesi
@@ -8836,6 +8824,9 @@ Menu panel color
 
 Menu panel opacity
 == Menü paneli opaklığı
+
+Menu type
+== Menu type
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == Bu pencere içinde (milisaniye) art arda gelen aynı echo mesajlarını birleştir (0 birleştirmeyi kapatır)
@@ -9239,9 +9230,6 @@ Name plates size
 Name to change to near finish (when qm_change_name_near_finish enabled)
 == Bitişe yakın değiştirilecek isim (qm_change_name_near_finish etkinleştirildiğinde)
 
-Name:
-== İsim:
-
 Name: %s
 == İsim: %s
 
@@ -9400,9 +9388,6 @@ New name
 
 New name:
 == Yeni isim:
-
-New preset
-== Yeni ön ayar
 
 New preset name
 == Yeni ön ayar adı
@@ -9953,6 +9938,9 @@ Opacity of freeze bars inside freeze
 Opacity of other teams' tees and name plates
 == Diğer takımların Tee ve isim etiketlerinin opaklığı
 
+Open a bind menu (identity, chat, assets, custom)
+== Open a bind menu (identity, chat, assets, custom)
+
 Open a link to join the community.
 == Topluluğa katılmak için bir bağlantı açın.
 
@@ -9964,9 +9952,6 @@ Open a link to visit the site.
 
 Open a matching settings card directly
 == Open a matching settings card directly
-
-Open bindwheel selector
-== Bind tekerleği seçiciyi aç
 
 Open DDNet Wiki
 == DDNet Wiki'yi aç
@@ -10006,6 +9991,9 @@ Open TClient configuration file locations
 
 Open the card and enable only the elements you want; each option explains what it draws.
 == Kartı açın ve yalnızca istediğiniz öğeleri etkinleştirin; her seçenek ne çizdiğini açıklar.
+
+Open the custom bind menu
+== Open the custom bind menu
 
 Open the directory that contains the configuration and user files
 == Yapılandırma ve kullanıcı dosyalarını içeren dizini aç
@@ -10090,6 +10078,9 @@ Optional export range in seconds. Leave empty to export the whole demo.
 
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 == İsteğe bağlı başlangıç ve bitiş zamanı (saniye). İkisini de boş bırakırsan demonun tamamı aktarılır.
+
+Options
+== Options
 
 Options here affect networking or identity; test on a server before using them in matches.
 == Buradaki seçenekler ağı veya kimliği etkiler; maçlarda kullanmadan önce bir sunucuda test edin.
@@ -10214,9 +10205,6 @@ Override Freeze Tile Entity Alpha (0-100)
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping tahmini konumunu geçersiz kıl; seçenekler: auto, af, as, as:cn, eu, na, oc, sa (Otomatik, Afrika, Asya, Çin, Avrupa, Kuzey Amerika, Okyanusya/Avustralya, Güney Amerika)
 
-Override Selected
-== Seçileni Geçersiz Kıl
-
 Overview
 == Genel bakış
 
@@ -10232,8 +10220,8 @@ p = Ping latency
 Pack name
 == Paket adı
 
-Pain
-== Acı
+Panel
+== Panel
 
 Panel opacity
 == Panel opaklığı
@@ -10414,6 +10402,9 @@ Pet Skin:
 
 Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 == Evcil hayvanlar tamamen görseldir; ek çizim performansı düşürüyorsa kapatın.
+
+Phrase
+== Phrase
 
 Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
 == Yardım balonunun arka plan ve yazı rengini seç, yazı boyutunu sürükle ve açılırken küçük bir zıplama istiyorsan zıplama animasyonunu açık bırak.
@@ -11015,9 +11006,6 @@ Preset %d
 Preset bar
 == Ön ayar çubuğu
 
-Preset type
-== Ön ayar türü
-
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == libx264 ile video kodlarken ön ayar, varsayılan 5 (medium), 0 ultrafast, 9 placebo (en yavaş, önerilmez)
 
@@ -11138,8 +11126,8 @@ Preview selected file
 Preview spacing does not match every map; check in game before a match.
 == Önizleme aralıkları her haritayla eşleşmez; maçtan önce oyun içinde kontrol edin.
 
-Preview the bind wheel layout and selection
-== Preview the bind wheel layout and selection
+Preview the bind menu layout and entries
+== Preview the bind menu layout and entries
 
 Preview the composed status bar output
 == Preview the composed status bar output
@@ -11903,9 +11891,6 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == Bir oylama seçeneğini kaldır
 
-Remove Bind
-== Bind'i Kaldır
-
 Remove chat
 == Sohbeti kaldır
 
@@ -11950,6 +11935,9 @@ Remove war name:
 
 Removed %s from friends
 == %s arkadaşlardan kaldırıldı
+
+Removed from this bind menu.
+== Removed from this bind menu.
 
 Removes all bindwheel binds
 == Tüm bind tekerleği bağlantılarını kaldırır
@@ -12272,9 +12260,6 @@ Reset mouse position when opening bind wheel
 Reset pie menu appearance
 == Dairesel menü görünümünü sıfırla
 
-Reset position of mouse when opening bindwheel
-== Bind tekerleğini açarken farenin konumunu sıfırla
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == Sunucuya girerken istatistikleri sıfırla (0=Kümülatif istatistikler, 1=Her girişte sıfırla)
 
@@ -12551,6 +12536,9 @@ Save changes
 Save changes back to this preset
 == Değişiklikleri bu ön ayara kaydet
 
+Save configuration
+== Yapılandırmayı kaydet
+
 Save current queue as a new preset
 == Geçerli sırayı yeni bir ön ayar olarak kaydet
 
@@ -12571,6 +12559,9 @@ Save loaded; local record removed.
 
 Save loaded; the local record could not be removed.
 == Kayıt yüklendi ancak yerel kayıt girdisi silinemedi.
+
+Save phrase
+== Save phrase
 
 Save player names in replay
 == Tekrar oynatmada oyuncu adlarını kaydet
@@ -12643,9 +12634,6 @@ Saved
 
 Saved to Downloads/QmClient
 == İndirilenler/QmClient konumuna kaydedildi
-
-Saved to the bind wheel.
-== Komut çarkına kaydedildi.
 
 Saved with your title and shared with other QmClient players.
 == Unvanınla birlikte kaydedilir ve diğer QmClient oyuncularıyla paylaşılır.
@@ -14519,6 +14507,9 @@ Skin is loading.
 Skin list sort mode (0=Name, 1=Release date)
 == Skin listesi sıralama modu (0=ad, 1=yayın zamanı)
 
+Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)
+== Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)
+
 Skin options
 == Görünüm seçenekleri
 
@@ -15173,9 +15164,6 @@ Stroke retention time (0=Never disappear)
 Strokes are local only and vanish when you leave the map; set the fade time to 0 to keep them until you draw again.
 == Çizgiler yalnızca yereldir ve haritadan ayrılınca kaybolur; tekrar çizene kadar kalsın diye solma süresini 0 yapın.
 
-Strong / Weak
-== Güçlü/zayıf dokuları
-
 Strong hook
 == Güçlü kanca
 
@@ -15229,9 +15217,6 @@ Support is optional; nothing here changes client behavior.
 
 Support ♥
 == Destek ♥
-
-Surprise
-== Şaşkınlık
 
 Swap
 == Takas
@@ -15755,14 +15740,14 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == QmClient'ı desteklediğiniz için teşekkürler
 
-Thanks!
-== Teşekkürler!
-
 The audio device couldn't be initialised.
 == Ses cihazı başlatılamadı.
 
 The auth level you need to tele others
 == Başkalarını ışınlamak için gereken yetki seviyesi
+
+The bind menu is full.
+== The bind menu is full.
 
 The card only appears while such a bind exists; click its key field to change the key, and the row label is the command it runs.
 == Kart yalnızca böyle bir bağlama varken görünür; tuşu değiştirmek için tuş alanına tıkla, satır etiketi ise çalıştırdığı komuttur.
@@ -15853,9 +15838,6 @@ The two keys that cast your vote: one for yes and one for no.
 
 The watermarked screenshot was saved next to the original
 == Filigranlı ekran görüntüsü orijinalin yanına kaydedildi
-
-The wheel changed. Your draft can be added as a new preset.
-== Çark değişti. Taslağınızı yeni bir ön ayar olarak ekleyebilirsiniz.
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == %s dokusunun genişliği %d'ye bölünemiyor veya yüksekliği %d'ye bölünemiyor, bu da görsel hatalara neden olabilir.
@@ -16007,9 +15989,6 @@ Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split ke
 Tick "Debug mode" to turn all options on, then set "Performance debug log threshold (ms)" to choose which frames get logged.
 == Hata ayıklama modunu işaretleyerek tüm seçenekleri aç, sonra hangi karelerin kaydedileceğini seçmek için performans hata ayıklama günlüğü eşiğini (ms) ayarla.
 
-Tick "Download skins", "Download community skins" or "Vanilla skins only", then type a "Skin prefix" or use a preset such as "kitty".
-== Görünümleri indir, Topluluk görünümlerini indir veya Sadece orijinal skinler seçeneklerini işaretle, sonra bir skin ön eki yaz veya kitty gibi hazır bir ayar kullan.
-
 Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its movement, and the weapon switches are separate rows below.
 == Dinamik Kamera seçeneğini işaretleyerek aç; dinamik kamerayı yumuşatma harekete kayma katar, silah geçişleri ise altta ayrı satırlardır.
 
@@ -16054,6 +16033,9 @@ Tick delay before executing qm_execute_on_join
 
 Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"; "Lock delay" and "Spectator opacity" appear below.
 == İstediğiniz eylemleri işaretleyin, örneğin çözülünce otomatik izleyiciden çık veya otomatik takım kilidi; aşağıda kilit gecikmesi ve izleyici saydamlığı görünür.
+
+Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
+== Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
 
 Ticks after freeze before applying max prediction reduction
 == Maksimum tahmin azaltması uygulanmadan önce donma sonrası tick sayısı
@@ -16150,6 +16132,9 @@ Timestamp
 
 Tiny Tee Size
 == Minik Tee Boyutu
+
+Title
+== Title
 
 Title bob angular speed in 1/100 rad/s
 == Unvan salınım açısal hızı (1/100 rad/s)
@@ -16537,6 +16522,9 @@ Translation Settings
 
 transmits your player name to info.ddnet.org
 == oyuncu adınızı info.ddnet.org'a iletir
+
+Trigger key
+== Trigger key
 
 Trigger limits
 == Tetikleme sınırları
@@ -16991,6 +16979,9 @@ Untick "Show other players' large emoticons" or "Show other players' launched em
 Untick "Use original style" to reach "Background color", the countdown options and "Always show song title and artist"; "Show team" works in both styles.
 == Özgün stili kullan işaretini kaldırarak arka plan rengi, geri sayım seçenekleri ve şarkı adı ile sanatçıyı her zaman göster ayarlarına ulaş; takımı göster iki stilde de çalışır.
 
+Untitled
+== Untitled
+
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
 == Sıra dışı yenileme hızları yırtılmaya yol açabilir; monitörün doğal hızını tercih edin.
 
@@ -17030,6 +17021,12 @@ Update ready to install
 Update sources are temporarily unavailable
 == Güncelleme kaynakları geçici olarak kullanılamıyor
 
+Updated this configuration.
+== Yapılandırma güncellendi.
+
+Updated this phrase.
+== Updated this phrase.
+
 Updating preview…
 == Önizleme güncelleniyor…
 
@@ -17050,6 +17047,9 @@ Upstream redundancy (experimental)
 
 URL for downloading community skins
 == Topluluk skinleri indirmek için URL
+
+URL for downloading DDStats skins
+== URL for downloading DDStats skins
 
 URL for downloading maps (must start with https://)
 == Harita indirmek için URL (https:// ile başlamalıdır)
@@ -17152,9 +17152,6 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == Yüksek bant genişliği modunu kullan (sunucu bant genişliğini iki katına çıkarır, yalnızca LAN)
-
-Use installed asset names. Empty fields keep the current asset.
-== Yüklü doku adlarını girin. Boş alanlar geçerli dokuyu korur.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == Yeniden başlamak için k tuşunu (öldür), duraklatmak ve diğer oyuncuları izlemek için q tuşunu kullanın. Diğer tuş bağlantıları için ayarlara bakın.
@@ -17699,17 +17696,14 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 == Ne ayarlar
 
+Wheel
+== Wheel
+
 Wheel distance per tick; hold Alt for 3x
 == Tekerlek kademesi başına mesafe; 3x için Alt basılı tutun
 
-Wheel label
-== Çark etiketi
-
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 == Tekerlek hissi: 0=Orijinal (her adımda yeniden başlar), 1=Yumuşak (hız devam eder), 2=Yay
-
-Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
-== Tekerlek kademesi başına arayüz pikseli; ayar kartı sayfaları her kademede bu değerin 12 katı kayar
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient gökkuşağı Tee açıkken bu özellik etkili olmaz.
@@ -18791,6 +18785,3 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == Çeviri DDNet Ekibi ve QmClient Katkıda Bulunanları tarafından sağlanmaktadır
-
-Download DDStats skins (including unapproved skins)
-== DDStats skinlerini indir (onaylanmamış skinler dahil)

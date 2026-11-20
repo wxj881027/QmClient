@@ -90,6 +90,7 @@ namespace qm_ui_test
 		int SnapNumItems(int SnapId) const override { throw std::logic_error("unexpected UI client boundary call"); }
 		const void *SnapFindItem(int SnapId, int Type, int Id) const override { throw std::logic_error("unexpected UI client boundary call"); }
 		CSnapItem SnapGetItem(int SnapId, int Index) const override { throw std::logic_error("unexpected UI client boundary call"); }
+		int GetLocalClientId(int Conn) const override { throw std::logic_error("unexpected UI client boundary call"); }
 		void SnapSetStaticsize(int ItemType, int Size) override { throw std::logic_error("unexpected UI client boundary call"); }
 		void SnapSetStaticsize7(int ItemType, int Size) override { throw std::logic_error("unexpected UI client boundary call"); }
 		int SendMsg(int Conn, CMsgPacker *pMsg, int Flags) override { throw std::logic_error("unexpected UI client boundary call"); }

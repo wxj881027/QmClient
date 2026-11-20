@@ -120,6 +120,26 @@ TEST(QmScoreboardTeamModes, AggregationRequiresDisplayInfoAndCombinesKnownMember
 	EXPECT_TRUE(State.Locked());
 }
 
+TEST(QmScoreboardTeamModes, LockHintOnlyFillsMissingCharacterSnapshot)
+{
+	SQmScoreboardTeamModeState UnknownState;
+	ApplyQmScoreboardTeamLockHint(UnknownState, true);
+	EXPECT_TRUE(UnknownState.m_Known);
+	EXPECT_TRUE(UnknownState.Locked());
+
+	SQmScoreboardTeamModeState KnownUnlockedState;
+	AccumulateQmScoreboardTeamModeState(KnownUnlockedState, true, 0);
+	ApplyQmScoreboardTeamLockHint(KnownUnlockedState, true);
+	EXPECT_TRUE(KnownUnlockedState.m_Known);
+	EXPECT_FALSE(KnownUnlockedState.Locked());
+
+	SQmScoreboardTeamModeState AlreadyLockedState;
+	AccumulateQmScoreboardTeamModeState(AlreadyLockedState, true, CHARACTERFLAG_PRACTICE_MODE | CHARACTERFLAG_LOCK_MODE);
+	ApplyQmScoreboardTeamLockHint(AlreadyLockedState, false);
+	EXPECT_TRUE(AlreadyLockedState.Practice());
+	EXPECT_TRUE(AlreadyLockedState.Locked());
+}
+
 TEST(QmScoreboardRender, TitleTimeUsesTheSharedContentAlpha)
 {
 	const ColorRGBA Color = ScoreboardTitleTimeColor(0.35f);

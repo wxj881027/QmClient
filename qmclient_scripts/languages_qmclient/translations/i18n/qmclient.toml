@@ -15423,6 +15423,22 @@ turkish = "Yerel TTML dosyası"
 polish = "Lokalny plik TTML"
 
 [[message]]
+key = "Lock both teams immediately when entering solo split mode"
+[message.translations]
+simplified_chinese = "进入单刷模式时立即锁定双方队伍"
+traditional_chinese = "進入單刷模式時立即鎖定雙方隊伍"
+japanese = "ソロスプリット開始時に両チームをすぐにロック"
+korean = "솔로 스플릿 시작 시 두 팀을 즉시 잠금"
+russian = "Сразу блокировать обе команды при входе в режим соло-разделения"
+german = "Beide Teams beim Betreten des Solo-Aufteilungsmodus sofort sperren"
+spanish = "Bloquear ambos equipos al entrar en el modo de división en solitario"
+french = "Verrouiller les deux équipes dès l'entrée en mode séparation solo"
+brazilian_portuguese = "Bloquear as duas equipes ao entrar no modo de divisão solo"
+portuguese = "Bloquear as duas equipas ao entrar no modo de divisão solo"
+turkish = "Solo bölünme moduna girince iki takımı da hemen kilitle"
+polish = "Zablokuj oba zespoły po wejściu w tryb solo"
+
+[[message]]
 key = "Lock delay"
 [message.translations]
 simplified_chinese = "锁队延迟"
@@ -15437,6 +15453,22 @@ brazilian_portuguese = "Atraso do trancamento"
 portuguese = "Atraso do bloqueio"
 turkish = "Kilit gecikmesi"
 polish = "Opóźnienie blokady"
+
+[[message]]
+key = "Lock teams on entry"
+[message.translations]
+simplified_chinese = "进队后立即锁队"
+traditional_chinese = "進隊後立即鎖隊"
+japanese = "入隊後すぐにロック"
+korean = "입장 후 즉시 잠금"
+russian = "Блокировать при входе"
+german = "Beim Beitritt sofort sperren"
+spanish = "Bloquear al entrar"
+french = "Verrouiller en arrivant"
+brazilian_portuguese = "Bloquear ao entrar"
+portuguese = "Bloquear ao entrar"
+turkish = "Girişte kilitle"
+polish = "Zablokuj po wejściu"
 
 [[message]]
 key = "Log realtime WebSocket channel events"
@@ -41747,3 +41779,15 @@ brazilian_portuguese = "Na edição colaborativa, mover a visão para a área on
 portuguese = "Na edição colaborativa, mover a vista para a área onde outros adicionam ou substituem conteúdo"
 turkish = "Ortak harita düzenlemede görünümü diğer katılımcıların içerik eklediği veya değiştirdiği alana taşı"
 polish = "Podczas wspólnej edycji mapy przenoś widok do obszaru, w którym inni dodają lub zastępują elementy"
+
+[[message]]
+key = "Legacy bind script"
+[message.translations]
+simplified_chinese = "旧版绑定脚本"
+traditional_chinese = "舊版綁定腳本"
+
+[[message]]
+key = "Untitled"
+[message.translations]
+simplified_chinese = "未命名"
+traditional_chinese = "未命名"

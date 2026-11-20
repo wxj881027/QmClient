@@ -585,9 +585,36 @@ void CListBox::DrawItemFeedback(int Index, const CUIRect &Rect, float CornerRadi
 
 void CListBox::SkipItems(int Count)
 {
-	Count = std::max(0, Count);
+	Count = std::clamp(Count, 0, std::max(0, m_ListBoxNumItems - m_ListBoxItemIndex));
 	while(Count > 0 && m_ListBoxItemIndex < m_ListBoxNumItems)
 	{
+		const int WholeRows = m_ListBoxItemIndex % m_ListBoxItemsPerRow == 0 ? Count / m_ListBoxItemsPerRow : 0;
+		if(WholeRows > 0)
+		{
+			const int Skipped = WholeRows * m_ListBoxItemsPerRow;
+			const float Pitch = m_ListBoxRowHeight + m_AutoSpacing;
+			CUIRect FirstRow = m_ListBoxView;
+			FirstRow.y += m_ListBoxItemIndex > 0 ? m_AutoSpacing : 0.0f;
+			FirstRow.h = m_ListBoxRowHeight;
+			if(m_ListBoxUpdateScroll && m_ListBoxSelectedIndex >= m_ListBoxItemIndex && m_ListBoxSelectedIndex < m_ListBoxItemIndex + Skipped)
+			{
+				CUIRect SelectedRow = FirstRow;
+				SelectedRow.y += ((m_ListBoxSelectedIndex - m_ListBoxItemIndex) / m_ListBoxItemsPerRow) * Pitch;
+				m_ScrollRegion.AddRect(SelectedRow);
+				m_ScrollRegion.ScrollHere(CScrollRegion::SCROLLHERE_KEEP_IN_VIEW);
+				m_ListBoxUpdateScroll = false;
+			}
+			m_RowView = FirstRow;
+			m_RowView.y += (WholeRows - 1) * Pitch;
+			m_ScrollRegion.AddRect(m_RowView);
+			const float Height = m_RowView.y + m_RowView.h - m_ListBoxView.y;
+			DoSpacing(Height);
+			m_RowView.x += m_RowView.w;
+			m_RowView.w = 0.0f;
+			m_ListBoxItemIndex += Skipped;
+			Count -= Skipped;
+			continue;
+		}
 		// 跳过也要按行推行距：否则可见范围裁剪后的列表每帧漏掉一段行距，
 		// 行会随滚动一路向上漂（与真实内容高度对不上）。
 		if(BeginRowIfNeeded())
@@ -604,12 +631,8 @@ void CListBox::SkipItems(int Count)
 		}
 
 		const int ItemsToSkip = std::min(Count, ItemsLeftInRow);
-		for(int i = 0; i < ItemsToSkip; ++i)
-		{
-			CUIRect Skipped;
-			m_RowView.VSplitLeft(m_RowView.w / (m_ListBoxItemsPerRow - m_ListBoxItemIndex % m_ListBoxItemsPerRow), &Skipped, &m_RowView);
-			++m_ListBoxItemIndex;
-		}
+		m_RowView.VSplitLeft(m_RowView.w * (static_cast<float>(ItemsToSkip) / ItemsLeftInRow), nullptr, &m_RowView);
+		m_ListBoxItemIndex += ItemsToSkip;
 		Count -= ItemsToSkip;
 	}
 }

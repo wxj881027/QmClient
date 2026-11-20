@@ -11071,3 +11071,27 @@ brazilian_portuguese = "Espessura do contorno dos blocos não gancháveis"
 portuguese = "Espessura do contorno dos blocos não gancháveis"
 turkish = "Kancalanamaz karoların kenar kalınlığı"
 polish = "Kolor obrysu kafelków niezaczepialnych"
+
+[[message]]
+key = "Bind Menus"
+[message.translations]
+simplified_chinese = "绑定菜单"
+traditional_chinese = "綁定選單"
+
+[[message]]
+key = "Bind menu layout (0 = wheel, 1 = panel)"
+[message.translations]
+simplified_chinese = "绑定菜单布局（0 = 轮盘，1 = 面板）"
+traditional_chinese = "綁定選單版面（0 = 輪盤，1 = 面板）"
+
+[[message]]
+key = "Open a bind menu (identity, chat, assets, custom)"
+[message.translations]
+simplified_chinese = "打开绑定菜单（身份、语录、资源、自定义）"
+traditional_chinese = "開啟綁定選單（身份、語錄、資源、自訂）"
+
+[[message]]
+key = "Open the custom bind menu"
+[message.translations]
+simplified_chinese = "打开自定义绑定菜单"
+traditional_chinese = "開啟自訂綁定選單"

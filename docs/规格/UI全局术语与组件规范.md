@@ -370,6 +370,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：缩字号算法 `ResolveFittedFontSize`（`src/game/client/ui_font_fit.h`），唯一调用点 `CalcFontSizeCursorHeightAndBoundingBox`（`ui.cpp`）；档位字段 `SLabelProperties::m_FontSizeStep`（`ui.h`）；墨迹档 `ui_token::control::ActionIconInkHeight`（`UiTokens.h`），字形墨迹比与反算 `QmIconInkHeightRatio` / `QmIconInkFontSize`（`qm_icon.h`，数值为随包 Phosphor TTF 的 fontTools 实测：方框类 0.750、星形 0.844）；图标盒与格间距仍由 `ui_token::control::IconBox` 统一。接入点 `RenderSettingsTeeSkinList`（`QmCardCatalogTee.cpp`）、`CMenus::DoButton_Favorite`（`menus.cpp`，可选 `IconFontSize`）。
 - 禁止的反面写法：把 `Size--` 或逐档线性递减写回 `DoLabel`；用「禁用缩字号」代替连续化（那是把动画删掉，不是修抖动）；用 `ReserveWidthTarget` 掐掉宽度缓动却不提供别的连续反馈；同字号并排方框与星形（墨迹差 12.5%，肉眼就是一高一矮）；给收藏星写死 `12.0f` 而不跟正文字号派生；让细档位变成线性试探（必须走二分，否则每帧每标签的测量次数翻倍）；**二分中间档用任意浮点字号**（每个都是一次性物理字号，会反复光栅化该标签的全部字形，候选必须先量化到档位网格）；把只占第一行的图标占位从第二行元数据宽度里再减一次（悬浮时队列按钮出现，作者名就会在右侧还空着的时候被截掉）；给元数据行也开缩字号（辅助小字缩过头会糊，且它本就不参与悬浮收缩）。
 
+### 3.12d 列表虚拟化步进（virtual list traversal）
+
+- 定义：只构造视口附近的条目；屏外条目仍参与内容高度和选中项定位。
+- 唯一实现：`CListBox::SkipItems`（`src/game/client/ui_listbox.cpp`），按整行批量步进并保留部分行的列位置。
+- 禁止的反面写法：为跳过屏外条目逐个调用 `DoNextItem`，或在页面内另算行距和选中项滚动位置。
+
 ### 3.12c 滚动步长与速度（wheel step）
 
 - 定义：用户只有 `qm_ui_scroll_step` 一个滚轮距离入口（设置页「界面动画 → 滚动步长」，默认 10，范围 2–100）。它是全站倍率，不是某个面的绝对像素；每个滚动面按自己的语义单位（行、格、面板区）声明基准与上限，再乘 `StepScale = QmWheelStepScale()`。内部解耦不会新增用户可调的逐面速度项。

@@ -729,13 +729,12 @@ namespace
 			rError = Localize("Cannot install cfg: storage is not ready");
 			return false;
 		}
-		if(!pStorage->FolderExists(CFG_FOLDER, IStorage::TYPE_SAVE))
+		if(!pStorage->FolderExists(CFG_FOLDER, IStorage::TYPE_SAVE) &&
+			!pStorage->CreateFolder(CFG_FOLDER, IStorage::TYPE_SAVE) &&
+			!pStorage->FolderExists(CFG_FOLDER, IStorage::TYPE_SAVE))
 		{
-			if(!pStorage->CreateFolder(CFG_FOLDER, IStorage::TYPE_SAVE) && !pStorage->FolderExists(CFG_FOLDER, IStorage::TYPE_SAVE))
-			{
-				rError = Localize("Cannot create the qm_bind folder in the config directory");
-				return false;
-			}
+			rError = Localize("Cannot create the qm_bind folder in the config directory");
+			return false;
 		}
 		size_t NumWritten = 0;
 		for(size_t Variant = 0; Variant < Preset.m_vVariants.size(); ++Variant)
