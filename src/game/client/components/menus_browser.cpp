@@ -249,19 +249,6 @@ static const char *FavoriteMapCategoryDisplayName(const char *pType)
 	return Localize("Unknown");
 }
 
-static const char *MapDifficultyStars(int Stars)
-{
-	static constexpr const char *s_apStarLabels[] = {
-		"☆☆☆☆☆",
-		"★☆☆☆☆",
-		"★★☆☆☆",
-		"★★★☆☆",
-		"★★★★☆",
-		"★★★★★",
-	};
-	return Stars >= 0 && Stars <= 5 ? s_apStarLabels[Stars] : "";
-}
-
 // Axiom 公告的类别是玩家可见的原文，直接显示，避免「普通」被归并成「简单」。
 static const char *MapDifficultyCategoryText(const CServerInfo &Server, const CQmMapDifficultyCatalog::SEntry &Entry)
 {
@@ -617,8 +604,10 @@ static ColorRGBA GetServerListPingColor(const CServerInfo *pInfo, int OwnLocatio
 
 void CMenus::OpenMapPreviewPopup(const CServerInfo *pItem)
 {
-	const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.Find(pItem->m_aMap);
-	const char *pStars = pDifficulty != nullptr ? MapDifficultyStars(pDifficulty->m_Stars) : "";
+	const auto *pDifficulty = str_comp_nocase(pItem->m_aCommunityId, "axiom") == 0 ?
+					 m_MapDifficultyCatalog.FindForServer(*pItem) :
+					 m_MapDifficultyCatalog.Find(pItem->m_aMap);
+	const char *pStars = pDifficulty != nullptr ? pDifficulty->StarLabel() : "";
 	char aCaption[192];
 	if(pStars[0] != '\0')
 		str_format(aCaption, sizeof(aCaption), "%s · %s · %d/%d", pStars, pItem->m_aGameType, pItem->m_NumFilteredPlayers, ServerBrowser()->Max(*pItem));
@@ -1244,6 +1233,12 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 	Ui()->ClipDisable();
 
+	const int64_t Now = time_get();
+	const bool NeedDifficultyForList = g_Config.m_QmMapBrowserStarMask || g_Config.m_QmMapBrowserCategoryMask || g_Config.m_BrSort == IServerBrowser::SORT_DIFFICULTY;
+	auto RequestDifficulty = [&](const CServerInfo &Server) {
+		if(!Ui()->RenderOnly())
+			m_MapDifficultyCatalog.RequestAxiomDifficulty(Server, *Http(), GameClient()->m_QmAxiomScores.OpenApiBudget(), g_Config.m_QmAxiomApiKey, Now);
+	};
 	std::vector<int> vVisibleServerIndices;
 	vVisibleServerIndices.reserve(ServerBrowser()->NumSortedServers());
 	for(int SortedIndex = 0; SortedIndex < ServerBrowser()->NumSortedServers(); ++SortedIndex)
@@ -1254,6 +1249,10 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pServer, MapCategoryHintFromServer(pServer));
 		const int Stars = pDifficulty != nullptr ? pDifficulty->m_Stars : -1;
 		const bool IsFavorite = GameClient()->m_TClient.IsFavoriteMap(pServer->m_aMap);
+		// 星级筛选会隐藏未知地图，需在过滤前补查，否则这些图永远无法进入可见行。
+		if(NeedDifficultyForList && !pDifficulty && (!g_Config.m_QmMapBrowserEmptyOnly || !pServer->m_NumFilteredPlayers) &&
+			(!g_Config.m_QmMapBrowserFavoriteOnly || IsFavorite))
+			RequestDifficulty(*pServer);
 		// 目录条目给出权威类别；没有目录收录时退回服务器名/社区类型里解析出的类别。
 		const char *pCategory = pDifficulty != nullptr ? pDifficulty->m_Category.c_str() : MapCategoryHintFromServer(pServer);
 		if(QmMapVotes::MatchesFilter(Stars, pCategory, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserCategoryMask, g_Config.m_QmMapBrowserFavoriteOnly != 0, IsFavorite))
@@ -1443,6 +1442,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		// 几秒内把地区估算换成真实数值；结果写入 ping 缓存，之后打开直接显示。
 		// 同一行重复调用由 RequestServerPing 的队列/失败/同 IP 窗口判断去重。
 		ServerBrowser()->RequestServerPing(pItem->m_aAddresses[0]);
+		if(!NeedDifficultyForList)
+			RequestDifficulty(*pItem);
 
 		// Resolve row-only data after visibility is known. The list can contain
 		// hundreds of servers while only a few rows are on screen; doing these
@@ -1639,6 +1640,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					Props.m_StopAtEnd = true;
 					Props.m_EllipsisAtEnd = true;
 					Props.m_EnableWidthCheck = false;
+					Props.m_pTooltipId = pUiElement->Rect(UI_ELEM_DIFFICULTY);
 					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_DIFFICULTY), &Button, aDifficulty, FontSize, TEXTALIGN_ML, Props);
 				}
 				else

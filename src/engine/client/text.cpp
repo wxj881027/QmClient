@@ -1073,19 +1073,17 @@ public:
 		return GetFaceByFamily(pFamily) != nullptr;
 	}
 
-	// QmClient: 查询名字（族名或族名+样式）对应的 face 是否覆盖任一 CJK 字形。
-	// 取代表性码点采样（汉字/假名/片假名/谚文/CJK 标点各一），任一命中即视为
-	// CJK 字体；CJK 字体下拉用它在 face 池里过滤掉纯拉丁字体。
-	bool QmFaceHasCjk(const char *pFace)
+	// QmClient: 查询名字（族名或族名+样式）对应的 face 是否覆盖常用汉字。
+	// 只含 CJK 标点或假名/谚文的字体不能作为中文字体候选；Mongolian Baiti
+	// 仅映射顿号，旧逻辑会把它误收进中文字体并画成方框。
+	bool QmFaceHasHan(const char *pFace)
 	{
 		FT_Face pFtFace = pFace != nullptr && pFace[0] != '\0' ? GetFaceByName(pFace) : nullptr;
 		if(pFtFace == nullptr || pFtFace->charmap == nullptr)
 			return false;
-		static constexpr int aSampleCodepoints[] = {0x4E2D, 0x6C38, 0x3042, 0x30A2, 0xAC00, 0x3001};
-		for(int Chr : aSampleCodepoints)
-			if(FT_Get_Char_Index(pFtFace, (FT_ULong)Chr) != 0)
-				return true;
-		return false;
+		return QmHasCommonHanGlyphs([pFtFace](int Codepoint) {
+			return FT_Get_Char_Index(pFtFace, static_cast<FT_ULong>(Codepoint)) != 0;
+		});
 	}
 
 	// 预览标记随 collection 一起登记，不会暴露尚未标记的面。
@@ -2458,6 +2456,9 @@ public:
 				// 加载出独立 face，正常出现在列表中。
 				if(m_pGlyphMap->QmIsPreviewFace(CurrentFace))
 					continue;
+				// 符号字体没有 Unicode 字符表，字体名会被自己的符号面画成方框。
+				if(!QmFontFaceHasUnicodeCharmap(CurrentFace))
+					continue;
 				if(!g_Config.m_QmShowSystemFonts && m_QmSystemFontFaces.count(CurrentFace))
 					continue;
 				// 字体族直接展示解码后的 family；Book 等样式由样式选择管理。
@@ -2502,6 +2503,8 @@ public:
 			ReplaceHyphensWithSpaces(aTargetFamily);
 			for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
 			{
+				if(!QmFontFaceHasUnicodeCharmap(CurrentFace))
+					continue;
 				if(!g_Config.m_QmShowSystemFonts && m_QmSystemFontFaces.count(CurrentFace))
 					continue;
 				char aNormalizedFamily[FONT_NAME_SIZE];
@@ -2705,8 +2708,8 @@ public:
 		const bool FamilyResolved = pThis->QmFontFamilyDefaultConfig(pRequested, FamilyConfig);
 		int FamilyWeightMin = 0, FamilyWeightMax = 0;
 		const bool FamilyVariable = FamilyResolved && pThis->CustomFontWeightRange(FamilyConfig.c_str(), FamilyWeightMin, FamilyWeightMax);
-		const bool FamilyCjk = FamilyResolved && pThis->QmFaceHasCjk(FamilyConfig.c_str());
-		log_info("textrender/font", "event=font_family_selection request='%s' resolved=%d config='%s' cjk=%d variable=%d min=%d max=%d", pRequested, FamilyResolved ? 1 : 0, FamilyConfig.c_str(), FamilyCjk ? 1 : 0, FamilyVariable ? 1 : 0, FamilyWeightMin, FamilyWeightMax);
+		const bool FamilyHan = FamilyResolved && pThis->QmFaceHasHan(FamilyConfig.c_str());
+		log_info("textrender/font", "event=font_family_selection request='%s' resolved=%d config='%s' han=%d variable=%d min=%d max=%d", pRequested, FamilyResolved ? 1 : 0, FamilyConfig.c_str(), FamilyHan ? 1 : 0, FamilyVariable ? 1 : 0, FamilyWeightMin, FamilyWeightMax);
 		for(const std::string &Style : *pThis->GetCustomFontStyles(pRequested))
 			log_info("textrender/font", "event=font_family_style request='%s' face='%s'", pRequested, Style.c_str());
 		pThis->UpdateCustomFontStyles(SelectionResolved ? SelectionFamily.c_str() : pRequested);
@@ -2895,9 +2898,9 @@ public:
 		return m_pGlyphMap->QmHasFace(pFace);
 	}
 
-	bool QmFaceHasCjk(const char *pFace) override
+	bool QmFaceHasHan(const char *pFace) override
 	{
-		return m_pGlyphMap->QmFaceHasCjk(pFace);
+		return m_pGlyphMap->QmFaceHasHan(pFace);
 	}
 
 	// QmClient: 商店预览面。字体文件尚未安装时从预览缓存目录临时加载进 face 池

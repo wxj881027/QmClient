@@ -663,6 +663,10 @@ public:
 	virtual CTextureHandle LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pTexName = nullptr) = 0;
 	virtual CTextureHandle LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pTexName = nullptr) = 0;
 	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int Flags = 0) = 0;
+	virtual CTextureHandle FinishExternalTexture(CImageInfo &Image, int Flags, const char *pName, int /* PngliteIncompatible */)
+	{
+		return Image.m_pData ? LoadTextureRawMove(Image, Flags, pName) : CTextureHandle();
+	}
 	/**
 	 * 判断句柄当前是否真的还指向一张已分配贴图。
 	 *

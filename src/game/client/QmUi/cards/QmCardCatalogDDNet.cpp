@@ -239,6 +239,11 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				{
 					DoDDNetNumericField("ddnet-race-ghost-opacity", &g_Config.m_ClRaceGhostAlpha, &g_Config.m_ClRaceGhostAlpha, Button, Localize("Opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0u, "%");
 				}
+				if(Flow.Control("ghost-show-direction", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
+				{
+					if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_QmRankGhostShowDirection, "Rank ghost direction", Localize("Show ghost direction"), g_Config.m_QmRankGhostShowDirection, &Button) && CanCommit)
+						g_Config.m_QmRankGhostShowDirection ^= 1;
+				}
 				if(Flow.Control("save-ghost", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
 				{
 					if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClRaceSaveGhost, "Save ghost", Localize("Save ghost"), g_Config.m_ClRaceSaveGhost, &Button) && CanCommit)
@@ -345,6 +350,14 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClPredictionMargin, &Button, Localize("Formerly \"prediction margin\" (cl_prediction_margin)"));
 			}
 
+			// 平滑预测余量：削弱 ping 抖动带来的修正跳变，默认关（与旧版本行为一致）。
+			if(Flow.Control("prediction-margin-smooth", DDNetMetrics.m_LineHeight, Button, ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing)))
+			{
+				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_QmSmoothPredictionMargin, "Prediction margin smoothing", Localize("Smooth prediction margin"), g_Config.m_QmSmoothPredictionMargin, &Button) && CanCommit)
+					g_Config.m_QmSmoothPredictionMargin ^= 1;
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmSmoothPredictionMargin, &Button, Localize("Smooth sudden prediction margin corrections caused by ping spikes"));
+			}
+
 			// 主控行：延迟补偿。关掉时三个「延迟补偿：预测…」开关整组不存在（约定 A）。
 			if(Flow.Control("anti-ping", DDNetMetrics.m_LineHeight, Button, ui_token::settings::SectionGap(DDNetMetrics.m_LineSpacing)))
 			{
@@ -429,6 +442,15 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 					DoDDNetNumericField("ddnet-upstream-redundancy-copies", &g_Config.m_QmUpstreamRedundancyMaxCopies, &g_Config.m_QmUpstreamRedundancyMaxCopies, Button, Localize("Maximum packet copies"), 2, 3);
 				Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
 			}
+			// 优先游戏流量：属于传输层，不参与预测，所以放在本卡末尾。
+			// 它只做 DSCP/802.1p 标记（Windows qWave），不预留带宽；路由器不认标记时没有效果。
+			if(Flow.Control("net-qos", DDNetMetrics.m_LineHeight, Button, ui_token::settings::SectionGap(DDNetMetrics.m_LineSpacing)))
+			{
+				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_QmNetQos, "net-qos", Localize("Prioritize game traffic (QoS, Windows only)"), g_Config.m_QmNetQos, &Button) && CanCommit)
+					g_Config.m_QmNetQos ^= 1;
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmNetQos, &Button, Localize("Best-effort DSCP marking of the game connection; may be ignored by routers"));
+			}
+			Flow.Space(ui_token::settings::RowGap(DDNetMetrics.m_LineSpacing));
 			if(CanCommit)
 				LogPerfStage(Client(), "ddnet_prediction_section", PredictionSectionTimer.ElapsedMs(), false, "page=ddnet section=prediction");
 		});

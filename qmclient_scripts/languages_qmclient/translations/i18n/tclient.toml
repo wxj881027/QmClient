@@ -623,6 +623,38 @@ turkish = "Canlı bildirimi dikey konumu (ekran yüksekliğinin yüzdesi)"
 polish = "Pionowa pozycja powiadomienia o życiu (procent wysokości ekranu)"
 
 [[message]]
+key = "All items"
+[message.translations]
+simplified_chinese = "全部项目"
+traditional_chinese = "全部項目"
+japanese = "すべての項目"
+korean = "모든 항목"
+russian = "Все элементы"
+german = "Alle Einträge"
+spanish = "Todos los elementos"
+french = "Tous les éléments"
+brazilian_portuguese = "Todos os itens"
+portuguese = "Todos os itens"
+turkish = "Tüm öğeler"
+polish = "Wszystkie elementy"
+
+[[message]]
+key = "All typefaces"
+[message.translations]
+simplified_chinese = "全部书体"
+traditional_chinese = "全部書體"
+japanese = "すべての書体"
+korean = "모든 서체"
+russian = "Все начертания"
+german = "Alle Schriftschnitte"
+spanish = "Todos los tipos"
+french = "Toutes les polices"
+brazilian_portuguese = "Todas as fontes"
+portuguese = "Todos os tipos de letra"
+turkish = "Tüm yazı tipleri"
+polish = "Wszystkie kroje"
+
+[[message]]
 key = "Allow arbitrary game resolution when scaling (may cause issues on Windows)"
 [message.translations]
 simplified_chinese = "允许缩放时使用任意游戏分辨率（Windows 上可能有问题）"
@@ -1193,6 +1225,16 @@ key = "Bind Menus"
 [message.translations]
 simplified_chinese = "绑定菜单"
 traditional_chinese = "綁定選單"
+japanese = "バインドメニュー"
+korean = "바인드 메뉴"
+russian = "Меню биндов"
+german = "Bind-Menüs"
+spanish = "Menús de binds"
+french = "Menus de binds"
+brazilian_portuguese = "Menus de binds"
+portuguese = "Menus de binds"
+turkish = "Bağlama menüleri"
+polish = "Menu bindów"
 
 [[message]]
 key = "Bind Wheel"
@@ -1579,6 +1621,22 @@ turkish = "Tüm favori haritaları temizle"
 polish = "Wyczyść wszystkie ulubione mapy"
 
 [[message]]
+key = "Clear all history"
+[message.translations]
+simplified_chinese = "清空所有历史"
+traditional_chinese = "清空所有歷史"
+japanese = "すべての履歴をクリア"
+korean = "모든 기록 지우기"
+russian = "Очистить всю историю"
+german = "Gesamten Verlauf löschen"
+spanish = "Borrar todo el historial"
+french = "Effacer tout l'historique"
+brazilian_portuguese = "Limpar todo o histórico"
+portuguese = "Limpar todo o histórico"
+turkish = "Tüm geçmişi temizle"
+polish = "Wyczyść całą historię"
+
+[[message]]
 key = "Clear Changes"
 [message.translations]
 simplified_chinese = "清除更改"
@@ -1593,6 +1651,22 @@ brazilian_portuguese = "Limpar Alterações"
 portuguese = "Limpar Alterações"
 turkish = "Değişiklikleri Temizle"
 polish = "Wyczyść zmiany"
+
+[[message]]
+key = "Clear finished"
+[message.translations]
+simplified_chinese = "清空已完成"
+traditional_chinese = "清空已完成"
+japanese = "完了したものをクリア"
+korean = "완료된 항목 지우기"
+russian = "Очистить завершённые"
+german = "Abgeschlossene löschen"
+spanish = "Borrar completados"
+french = "Effacer les terminés"
+brazilian_portuguese = "Limpar concluídos"
+portuguese = "Limpar concluídos"
+turkish = "Tamamlananları temizle"
+polish = "Wyczyść ukończone"
 
 [[message]]
 key = "Color"
@@ -1723,6 +1797,22 @@ turkish = "Yapılandırma Değişiklikleri"
 polish = "Zmiany konfiguracji"
 
 [[message]]
+key = "Config Files"
+[message.translations]
+simplified_chinese = "配置文件"
+traditional_chinese = "配置文件"
+japanese = "設定ファイル"
+korean = "설정 파일"
+russian = "Файлы конфигурации"
+german = "Konfigurationsdateien"
+spanish = "Archivos de Configuración"
+french = "Fichiers de configuration"
+brazilian_portuguese = "Arquivos de Configuração"
+portuguese = "Ficheiros de Configuração"
+turkish = "Yapılandırma Dosyaları"
+polish = "Pliki konfiguracyjne"
+
+[[message]]
 key = "Config Filters"
 [message.translations]
 simplified_chinese = "配置过滤器"
@@ -1737,6 +1827,38 @@ brazilian_portuguese = "Filtros de Configuração"
 portuguese = "Filtros de Configuração"
 turkish = "Yapılandırma Filtreleri"
 polish = "Filtry konfiguracji"
+
+[[message]]
+key = "Confirm clear all"
+[message.translations]
+simplified_chinese = "确认清空全部"
+traditional_chinese = "確認清空全部"
+japanese = "すべてクリアの確認"
+korean = "전체 지우기 확인"
+russian = "Подтвердить очистку всего"
+german = "Löschen aller bestätigen"
+spanish = "Confirmar borrar todo"
+french = "Confirmer l'effacement total"
+brazilian_portuguese = "Confirmar limpeza total"
+portuguese = "Confirmar limpar tudo"
+turkish = "Tümünü temizlemeyi onayla"
+polish = "Potwierdź wyczyszczenie wszystkiego"
+
+[[message]]
+key = "Confirm clear finished"
+[message.translations]
+simplified_chinese = "确认清空已完成"
+traditional_chinese = "確認清空已完成"
+japanese = "完了したものをクリアの確認"
+korean = "완료된 항목 지우기 확인"
+russian = "Подтвердить очистку завершённых"
+german = "Löschen abgeschlossener bestätigen"
+spanish = "Confirmar borrar completados"
+french = "Confirmer l'effacement des terminés"
+brazilian_portuguese = "Confirmar limpeza de concluídos"
+portuguese = "Confirmar limpar concluídos"
+turkish = "Tamamlananları temizlemeyi onayla"
+polish = "Potwierdź wyczyszczenie ukończonych"
 
 [[message]]
 key = "Connection Quality"
@@ -2857,6 +2979,22 @@ turkish = "Farenin olduğu yere çiz"
 polish = "Rysuj tam, gdzie jest mysz"
 
 [[message]]
+key = "Edit Entry"
+[message.translations]
+simplified_chinese = "编辑条目"
+traditional_chinese = "編輯條目"
+japanese = "エントリを編集"
+korean = "항목 편집"
+russian = "Редактировать запись"
+german = "Eintrag bearbeiten"
+spanish = "Editar Entrada"
+french = "Modifier l'entrée"
+brazilian_portuguese = "Editar Entrada"
+portuguese = "Editar Entrada"
+turkish = "Girişi Düzenle"
+polish = "Edytuj wpis"
+
+[[message]]
 key = "Elevated"
 [message.translations]
 simplified_chinese = "提升的"
@@ -3287,6 +3425,22 @@ brazilian_portuguese = "Executar ao conectar"
 portuguese = "Executar ao conectar"
 turkish = "Bağlanırken çalıştır"
 polish = "Wykonaj przy połączeniu"
+
+[[message]]
+key = "Execute on join"
+[message.translations]
+simplified_chinese = "进服时执行"
+traditional_chinese = "進服時執行"
+japanese = "参加時に実行"
+korean = "입장 시 실행"
+russian = "Выполнить при входе"
+german = "Beim Beitritt ausführen"
+spanish = "Ejecutar al entrar"
+french = "Exécuter à l'entrée"
+brazilian_portuguese = "Executar ao entrar"
+portuguese = "Executar ao entrar"
+turkish = "Katılırken çalıştır"
+polish = "Wykonaj przy dołączeniu"
 
 [[message]]
 key = "Fade opacity along trail length"
@@ -4470,6 +4624,22 @@ turkish = "Oyun içi imleç ölçeği"
 polish = "Skala kursora w grze"
 
 [[message]]
+key = "Input"
+[message.translations]
+simplified_chinese = "输入"
+traditional_chinese = "輸入"
+japanese = "入力"
+korean = "입력"
+russian = "Ввод"
+german = "Eingabe"
+spanish = "Entrada"
+french = "Entrée"
+brazilian_portuguese = "Entrada"
+portuguese = "Entrada"
+turkish = "Giriş"
+polish = "Wejście"
+
+[[message]]
 key = "Installed"
 [message.translations]
 simplified_chinese = "已安装"
@@ -4644,6 +4814,22 @@ brazilian_portuguese = "L seleciona  R troca  M seleciona apenas"
 portuguese = "L selecionar  R trocar  M selecionar apenas"
 turkish = "L seç  R değiştir  M yalnızca seç"
 polish = "L wybór  P zamiana  M tylko wybór"
+
+[[message]]
+key = "Last entered"
+[message.translations]
+simplified_chinese = "最后进入"
+traditional_chinese = "最後進入"
+japanese = "最後に入力"
+korean = "마지막 입력"
+russian = "Последние введённые"
+german = "Zuletzt eingegeben"
+spanish = "Último ingresado"
+french = "Dernière entrée"
+brazilian_portuguese = "Último inserido"
+portuguese = "Último inserido"
+turkish = "Son girilen"
+polish = "Ostatnio wprowadzone"
 
 [[message]]
 key = "Latency"
@@ -4868,6 +5054,22 @@ brazilian_portuguese = "Mangá: corte de tinta"
 portuguese = "Manga: corte de tinta"
 turkish = "Manga: mürekkep kesiği"
 polish = "Manga: cięcie tuszem"
+
+[[message]]
+key = "Map play history"
+[message.translations]
+simplified_chinese = "地图游玩历史"
+traditional_chinese = "地圖遊玩歷史"
+japanese = "マッププレイ履歴"
+korean = "맵 플레이 기록"
+russian = "История прохождения карт"
+german = "Karten-Spielverlauf"
+spanish = "Historial de juego de mapas"
+french = "Historique de jeu des cartes"
+brazilian_portuguese = "Histórico de jogos do mapa"
+portuguese = "Histórico de reprodução de mapas"
+turkish = "Harita oynama geçmişi"
+polish = "Historia gry na mapach"
 
 [[message]]
 key = "Max distance for variable offset calculation"
@@ -5302,6 +5504,22 @@ turkish = "İsim: %s"
 polish = "Nazwa: %s"
 
 [[message]]
+key = "Negative stability buffer"
+[message.translations]
+simplified_chinese = "负稳定性缓冲"
+traditional_chinese = "負穩定性緩衝"
+japanese = "負の安定性バッファ"
+korean = "음수 안정성 버퍼"
+russian = "Буфер отрицательной стабильности"
+german = "Negativer Stabilitätspuffer"
+spanish = "Búfer de estabilidad negativa"
+french = "Tampon de stabilité négative"
+brazilian_portuguese = "Buffer de estabilidade negativa"
+portuguese = "Buffer de estabilidade negativa"
+turkish = "Negatif stabilite tamponu"
+polish = "Bufor ujemnej stabilności"
+
+[[message]]
 key = "Negative stability buffer (for Gores)"
 [message.translations]
 simplified_chinese = "负稳定性缓冲（用于 Gores）"
@@ -5444,6 +5662,22 @@ brazilian_portuguese = "Nenhum arquivo de saves local encontrado (ddnet-saves.tx
 portuguese = "Nenhum ficheiro de saves local encontrado (ddnet-saves.txt)"
 turkish = "Yerel kayıt dosyası bulunamadı (ddnet-saves.txt)"
 polish = "Nie znaleziono pliku lokalnych zapisów (ddnet-saves.txt)"
+
+[[message]]
+key = "No map play history yet"
+[message.translations]
+simplified_chinese = "暂无地图游玩历史"
+traditional_chinese = "暫無地圖遊玩歷史"
+japanese = "マッププレイ履歴がまだありません"
+korean = "아직 맵 플레이 기록이 없습니다"
+russian = "История прохождения карт пока пуста"
+german = "Noch kein Karten-Spielverlauf"
+spanish = "Aún no hay historial de juego de mapas"
+french = "Pas encore d'historique de jeu de carte"
+brazilian_portuguese = "Nenhum histórico de jogos do mapa ainda"
+portuguese = "Ainda sem histórico de reprodução de mapas"
+turkish = "Henüz harita oynama geçmişi yok"
+polish = "Brak jeszcze historii gry na mapach"
 
 [[message]]
 key = "No players match"
@@ -5658,6 +5892,16 @@ key = "Open a bind menu (identity, chat, assets, custom)"
 [message.translations]
 simplified_chinese = "打开绑定菜单（身份、语录、资源、自定义）"
 traditional_chinese = "開啟綁定選單（身份、語錄、資源、自訂）"
+japanese = "バインドメニューを開く（アイデンティティ、チャット、アセット、カスタム）"
+korean = "바인드 메뉴 열기 (아이덴티티, 채팅, 에셋, 사용자 지정)"
+russian = "Открыть меню биндов (личность, чат, ресурсы, пользовательское)"
+german = "Bind-Menü öffnen (Identität, Chat, Assets, eigene)"
+spanish = "Abrir un menú de binds (identidad, chat, recursos, personalizado)"
+french = "Ouvrir un menu de binds (identité, chat, ressources, personnalisé)"
+brazilian_portuguese = "Abrir um menu de binds (identidade, chat, recursos, personalizado)"
+portuguese = "Abrir um menu de binds (identidade, chat, recursos, personalizado)"
+turkish = "Bağlama menüsü aç (kimlik, sohbet, varlık, özel)"
+polish = "Otwórz menu bindów (tożsamość, czat, zasoby, własne)"
 
 [[message]]
 key = "Open bindwheel selector"
@@ -5680,6 +5924,16 @@ key = "Open the custom bind menu"
 [message.translations]
 simplified_chinese = "打开自定义绑定菜单"
 traditional_chinese = "開啟自訂綁定選單"
+japanese = "カスタムバインドメニューを開く"
+korean = "사용자 지정 바인드 메뉴 열기"
+russian = "Открыть пользовательское меню биндов"
+german = "Eigenes Bind-Menü öffnen"
+spanish = "Abrir el menú de binds personalizado"
+french = "Ouvrir le menu de binds personnalisé"
+brazilian_portuguese = "Abrir o menu de binds personalizado"
+portuguese = "Abrir o menu de binds personalizado"
+turkish = "Özel bağlama menüsünü aç"
+polish = "Otwórz własne menu bindów"
 
 [[message]]
 key = "Optimistic prediction along stable direction"
@@ -6546,6 +6800,22 @@ turkish = "Rank 1 hayaleti: bu tekrarda oynatılabilir Tee yok"
 polish = "Duch Rank 1: ta powtórka nie zawiera odtwarzalnego Tee"
 
 [[message]]
+key = "Reason"
+[message.translations]
+simplified_chinese = "原因"
+traditional_chinese = "原因"
+japanese = "理由"
+korean = "이유"
+russian = "Причина"
+german = "Grund"
+spanish = "Motivo"
+french = "Raison"
+brazilian_portuguese = "Motivo"
+portuguese = "Motivo"
+turkish = "Sebep"
+polish = "Powód"
+
+[[message]]
 key = "Receive Rate"
 [message.translations]
 simplified_chinese = "接收速率"
@@ -6784,6 +7054,22 @@ brazilian_portuguese = "Remover Atalho"
 portuguese = "Remover Bind"
 turkish = "Bind'i Kaldır"
 polish = "Usuń wiązanie"
+
+[[message]]
+key = "Remove from history"
+[message.translations]
+simplified_chinese = "从历史中移除"
+traditional_chinese = "從歷史中移除"
+japanese = "履歴から削除"
+korean = "기록에서 제거"
+russian = "Удалить из истории"
+german = "Aus Verlauf entfernen"
+spanish = "Eliminar del historial"
+french = "Supprimer de l'historique"
+brazilian_portuguese = "Remover do histórico"
+portuguese = "Remover do histórico"
+turkish = "Geçmişten kaldır"
+polish = "Usuń z historii"
 
 [[message]]
 key = "Remove Item"
@@ -9852,6 +10138,22 @@ turkish = "Maksimum tahmin azaltması uygulanmadan önce donma sonrası tick say
 polish = "Liczba ticków po zamrożeniu przed zastosowaniem maksymalnej redukcji przewidywania"
 
 [[message]]
+key = "Tile outlines"
+[message.translations]
+simplified_chinese = "墙体轮廓"
+traditional_chinese = "牆體輪廓"
+japanese = "タイルのアウトライン"
+korean = "타일 윤곽선"
+russian = "Контуры плиток"
+german = "Kachel-Umrisse"
+spanish = "Contornos de casillas"
+french = "Contours des tuiles"
+brazilian_portuguese = "Contornos de tiles"
+portuguese = "Contornos de tiles"
+turkish = "Karo ana hatları"
+polish = "Kontury kafelków"
+
+[[message]]
 key = "Tiny Tee Size"
 [message.translations]
 simplified_chinese = "迷你 Tee 大小"
@@ -10697,6 +10999,22 @@ turkish = "Hız"
 polish = "Prędkość"
 
 [[message]]
+key = "Visual"
+[message.translations]
+simplified_chinese = "视觉效果"
+traditional_chinese = "視覺效果"
+japanese = "ビジュアル"
+korean = "시각"
+russian = "Визуал"
+german = "Visuell"
+spanish = "Visual"
+french = "Visuel"
+brazilian_portuguese = "Visual"
+portuguese = "Visual"
+turkish = "Görsel"
+polish = "Wizualne"
+
+[[message]]
 key = "Visual: Effects"
 [message.translations]
 simplified_chinese = "视觉：特效"
@@ -10759,6 +11077,38 @@ brazilian_portuguese = "Tempo de espera antes de acionar o voto automático"
 portuguese = "Tempo de espera antes de acionar voto automático"
 turkish = "Otomatik oylamayı tetiklemeden önce bekleme süresi"
 polish = "Czas oczekiwania przed wyzwoleniem automatycznego głosowania"
+
+[[message]]
+key = "War Entries"
+[message.translations]
+simplified_chinese = "敌对条目"
+traditional_chinese = "敵對條目"
+japanese = "戦争エントリ"
+korean = "전쟁 항목"
+russian = "Записи врагов"
+german = "Kriegseinträge"
+spanish = "Entradas de Guerra"
+french = "Entrées de guerre"
+brazilian_portuguese = "Entradas de Guerra"
+portuguese = "Entradas de Guerra"
+turkish = "Savaş Girişleri"
+polish = "Wpisy wojenne"
+
+[[message]]
+key = "War Groups"
+[message.translations]
+simplified_chinese = "敌对群组"
+traditional_chinese = "敵對群組"
+japanese = "戦争グループ"
+korean = "전쟁 그룹"
+russian = "Группы врагов"
+german = "Kriegsgruppen"
+spanish = "Grupos de Guerra"
+french = "Groupes ennemis"
+brazilian_portuguese = "Grupos de Guerra"
+portuguese = "Grupos de Guerra"
+turkish = "Savaş Grupları"
+polish = "Grupy wojenne"
 
 [[message]]
 key = "War List"

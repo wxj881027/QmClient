@@ -41,14 +41,14 @@ public:
 			m_aPresent[Category] = true;
 	}
 
-	template<typename F>
-	void ForEachPresent(F &&Build) const
+	ECategory NextPresent(int Start = 0) const
 	{
-		for(int Category = 0; Category < NUM_CATEGORIES; ++Category)
+		for(int Category = Start; Category < NUM_CATEGORIES; ++Category)
 		{
 			if(m_aPresent[Category])
-				Build(static_cast<ECategory>(Category));
+				return static_cast<ECategory>(Category);
 		}
+		return NUM_CATEGORIES;
 	}
 
 private:

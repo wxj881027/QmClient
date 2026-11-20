@@ -1,6 +1,7 @@
 #include "vote_map_loader.h"
 
 #include <base/str.h>
+#include <base/time.h>
 
 #include <engine/engine.h>
 #include <engine/http.h>
@@ -14,14 +15,19 @@ class CQmVoteMapLoader::CLoadJob : public IJob
 	std::shared_ptr<IHttpRequest> m_pRequest;
 	QmVoteMaps::SMap m_Map;
 	bool m_Catalog;
+	bool m_Axiom;
 
 	void Run() override
 	{
 		unsigned char *pData = nullptr;
 		size_t Length = 0;
 		m_pRequest->Result(&pData, &Length);
-		m_Success = m_Catalog ? QmVoteMaps::ParseCatalog((const char *)pData, Length, m_vMaps) :
-					QmVoteMaps::ParseDetails((const char *)pData, Length, m_Map, m_Details);
+		if(m_Catalog)
+			m_Success = QmVoteMaps::ParseCatalog((const char *)pData, Length, m_vMaps);
+		else if(m_Axiom)
+			m_Success = QmVoteMaps::ParseAxiomDetails((const char *)pData, Length, m_Map, m_Details);
+		else
+			m_Success = QmVoteMaps::ParseDetails((const char *)pData, Length, m_Map, m_Details);
 		m_pRequest.reset();
 	}
 
@@ -29,8 +35,8 @@ public:
 	std::vector<QmVoteMaps::SMap> m_vMaps;
 	QmVoteMaps::SDetails m_Details;
 	bool m_Success = false;
-	CLoadJob(std::shared_ptr<IHttpRequest> pRequest, const QmVoteMaps::SMap &Map, bool Catalog) :
-		m_pRequest(std::move(pRequest)), m_Map(Map), m_Catalog(Catalog) {}
+	CLoadJob(std::shared_ptr<IHttpRequest> pRequest, const QmVoteMaps::SMap &Map, bool Catalog, bool Axiom) :
+		m_pRequest(std::move(pRequest)), m_Map(Map), m_Catalog(Catalog), m_Axiom(Axiom) {}
 };
 
 void CQmVoteMapLoader::Cancel(SRequest &Request)
@@ -44,6 +50,15 @@ void CQmVoteMapLoader::Cancel(SRequest &Request)
 CQmVoteMapLoader::CQmVoteMapLoader(TRequestFactory CreateRequest) :
 	m_CreateRequest(CreateRequest != nullptr ? CreateRequest : HttpGet)
 {
+}
+
+void CQmVoteMapLoader::SetAxiomMode(EQmAxiomMode Mode)
+{
+	if(m_AxiomMode == Mode)
+		return;
+	Suspend();
+	m_AxiomMode = Mode;
+	++m_Revision;
 }
 
 void CQmVoteMapLoader::Suspend()
@@ -61,7 +76,7 @@ CQmVoteMapLoader::~CQmVoteMapLoader()
 	Cancel(m_DetailRequest);
 }
 
-void CQmVoteMapLoader::Start(SRequest &Request, IHttp *pHttp, const char *pUrl, int MaxBytes)
+void CQmVoteMapLoader::Start(SRequest &Request, IHttp *pHttp, const char *pUrl, int MaxBytes, const char *pApiKey)
 {
 	Cancel(Request);
 	Request.m_Attempted = true;
@@ -69,11 +84,19 @@ void CQmVoteMapLoader::Start(SRequest &Request, IHttp *pHttp, const char *pUrl, 
 	Request.m_pHttp->Timeout({5000, 20000, 1024, 10});
 	Request.m_pHttp->MaxResponseSize(MaxBytes);
 	Request.m_pHttp->LogProgress(HTTPLOG::FAILURE);
+	if(pApiKey[0])
+		Request.m_pHttp->Header((std::string("Authorization: Bearer ") + pApiKey).c_str());
 	pHttp->Run(Request.m_pHttp);
 }
 
 void CQmVoteMapLoader::Refresh(IHttp *pHttp)
 {
+	if(m_AxiomMode != EQmAxiomMode::NONE)
+	{
+		Cancel(m_DetailRequest);
+		m_DetailsReady = false;
+		return;
+	}
 	Start(m_CatalogRequest, pHttp, "https://ddnet.org/releases/maps.json", 8 * 1024 * 1024);
 }
 
@@ -83,7 +106,7 @@ bool CQmVoteMapLoader::Poll(SRequest &Request, IEngine *pEngine, bool Catalog)
 	{
 		if(Request.m_pHttp->State() == EHttpState::DONE)
 		{
-			Request.m_pJob = std::make_shared<CLoadJob>(Request.m_pHttp, m_Selected, Catalog);
+			Request.m_pJob = std::make_shared<CLoadJob>(Request.m_pHttp, m_Selected, Catalog, m_AxiomMode != EQmAxiomMode::NONE);
 			pEngine->AddJob(Request.m_pJob);
 		}
 		else
@@ -120,15 +143,26 @@ void CQmVoteMapLoader::Select(const QmVoteMaps::SMap *pMap, float Now)
 	m_DetailsReady = false;
 }
 
-void CQmVoteMapLoader::Update(IHttp *pHttp, IEngine *pEngine, float Now)
+void CQmVoteMapLoader::Update(IHttp *pHttp, IEngine *pEngine, float Now, CQmAxiomRequestBudget *pBudget, const char *pApiKey)
 {
-	if(!m_CatalogRequest.m_Attempted)
+	const bool Axiom = m_AxiomMode != EQmAxiomMode::NONE;
+	if(Axiom && pBudget && m_DetailRequest.m_pHttp && m_DetailRequest.m_pHttp->Done() && m_DetailRequest.m_pHttp->CompletedStatusCode() == 429)
+		pBudget->RateLimited(time_get());
+	if(!Axiom && !m_CatalogRequest.m_Attempted)
 		Refresh(pHttp);
 	Poll(m_CatalogRequest, pEngine, true);
 	Poll(m_DetailRequest, pEngine, false);
 	// 键盘快速浏览时不为每个经过的条目发请求。
-	if(!m_Selected.m_Name.empty() && !m_Selected.m_Category.empty() && !m_DetailRequest.m_Attempted && Now - m_SelectedAt >= 0.3f)
+	if(!m_Selected.m_Name.empty() && (Axiom || !m_Selected.m_Category.empty()) && !m_DetailRequest.m_Attempted && Now - m_SelectedAt >= 0.3f)
 	{
+		if(Axiom)
+		{
+			if(!pBudget || !pBudget->TryStart(time_get(), pApiKey[0] != 0))
+				return;
+			const std::string Url = QmBuildAxiomMapInfoUrl(m_Selected.m_Name.c_str(), m_AxiomMode);
+			Start(m_DetailRequest, pHttp, Url.c_str(), 2 * 1024 * 1024, pApiKey);
+			return;
+		}
 		char aEscaped[MAX_MAP_LENGTH * 3];
 		EscapeUrl(aEscaped, m_Selected.m_Name.c_str());
 		char aUrl[1024];

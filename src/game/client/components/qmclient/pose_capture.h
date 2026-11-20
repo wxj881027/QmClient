@@ -23,9 +23,17 @@ namespace qm_pose
 	constexpr int MAX_CAPTURE_DIMENSION = 16384;
 	// 像素预算：纹理上限拦不住显存与编码耗时。4K 窗口 4 倍 = 15360×8640，
 	// 颜色 + 深度 + 读回各 530 MB，PNG 编码在主线程要几十秒——实测直接触发
-	// 「客户端卡死」看门狗。默认按 8K（7680×4320）封顶，即 4K 窗口最多 2 倍。
-	// 传 0 表示不限（单元测试用）。
+	// 「客户端卡死」看门狗。这里的 8K（7680×4320）是配置项出现前的固定上限，
+	// 现在只作为参考值与单测基准；实际预算由 qm_pose_capture_max_megapixels 决定。
 	constexpr int64_t MAX_CAPTURE_PIXELS = 7680LL * 4320LL;
+
+	// 配置值换算成像素预算：按百万像素计，0 = 不限。
+	// 抓帧（engine）与预览信息行（菜单）共用这一份，避免两处各写一遍
+	// 1000*1000 之后出现「显示 2 倍、实际出 1 倍」的漂移。
+	inline int64_t ConfiguredPixelBudget(int Megapixels)
+	{
+		return Megapixels > 0 ? static_cast<int64_t>(Megapixels) * 1000 * 1000 : 0;
+	}
 
 	inline int NormalizeCaptureScale(int Scale)
 	{

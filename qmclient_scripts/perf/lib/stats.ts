@@ -209,6 +209,7 @@ export interface StutterWindowSummary {
   worstFrame: number;
   capLimited: boolean;
   capReason: string;
+  detailMode: string;
   page: string;
   tab: string;
 }
@@ -340,6 +341,7 @@ export function stutterDiagnosticsSummary(entries: PerfEntry[]): StutterDiagnost
       worstFrame: numberField(e, 'worst_frame'),
       capLimited: numberField(e, 'cap_limited') !== 0,
       capReason: field(e, 'cap_reason', 'none'),
+      detailMode: field(e, 'detail_mode', 'full'),
       page: field(e, 'page', 'unknown'),
       tab: field(e, 'tab', 'none'),
     }))

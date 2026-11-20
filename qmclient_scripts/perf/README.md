@@ -9,10 +9,12 @@
 - 完整渲染间隔按最多 64 帧或累计 1 秒批量写入 `perf/frame`，包括快帧和慢帧。首帧用作时间基点。
 - `session_start` 记录构建提交号 `revision`。慢网络处理记录耗时最长包的 `slowest_packet_bytes`、线上消息编号 `slowest_wire_msg`、系统消息标记 `slowest_wire_sys` 和协议标记 `sixup`；消息编号或标记无法取得时为 `-1`，不记录包体。
 - `perf/connect` 分别记录加载画面、地图层初始化、碰撞初始化、世界与竞速初始化、组件加载和地图设置耗时，并保留 `connected_total` 总耗时。阶段总计与组件明细有包含关系，不应相加。
+- 进服和换图时，`perf/connect` 的 `map_image_prepare` 每张使用的贴图写一条，包含 `read_ms`、`decode_ms`、`submit_ms`。总计是各阶段工作耗时之和，后台解码与主线程可重叠。提交计主线程发出纹理命令的耗时。旧格式或需经地图处理器的数据使用 `read_includes_decode=1`。
+- `map_design_tile_skips` 记录装饰层跳距准备。`map_layer_prepare` 按组和图层记录累计 CPU 耗时、批次数、最长一批 `peak_ms` 和对应帧号 `peak_frame`。未完成且超过诊断预算的批次另记 `map_layer_prepare_slice`。首次生成实体纹理的 `entity_texture_prepare` 可能包含在图层耗时中。
 - `perf/skins` 记录超过帧预算的皮肤更新阶段，包括下载结果处理、目录结果消费、资源回收、加载调度和终局上传；它们包含在 `skins/on_update` 中，不与组件总耗时相加。
 - 设置文本缺失日志每个会话、覆盖帧和分类组合只保留一个样本，单覆盖帧最多 64 个组合。`frame` 保留客户端帧号，菜单内部计数单独记为 `coverage_frame`；旧日志的文本事件可能用内部计数覆盖 `frame`，不能直接与整帧样本对齐。
 - 主线程、渲染阶段明细使用 300 FPS 对应的帧预算自动筛选；普通明细每秒最多 1000 条，超出数量写入日志。完整帧统计、FPS 窗口和卡顿汇总不受此限制。
-- 卡顿目标保持 300 FPS。连续低帧合并为同一区间，恢复稳定一秒后结束；持续低帧每 10 秒写出分段，包含所有顶层组件的 update/render CPU 耗时和最慢帧的功能开关。
+- 卡顿目标保持 300 FPS。连续低帧合并为同一区间，恢复稳定一秒后结束；持续低帧每 10 秒写出分段。有效限帧低于 300 FPS 时，达到限帧周期 1.5 倍才采集组件明细，稳定区间只写摘要（`detail_mode=summary`）。异常区间的 `component_sample` 只统计达到明细阈值的帧，功能开关取这些帧里最慢的一帧。无有效限帧时仍按原 300 FPS 预算采集。
 - 图标诊断按窗口汇总；关闭采集、退出或重启时，先写完剩余帧、卡顿窗口、配置和会话结束标记，再关闭文件。
 - `qm_perf_logfile`、`qm_perf_stutter_diagnostics`、`qm_perf_debug_threshold_ms` 已移除，使用 `qm_perf_debug` 即可。
 

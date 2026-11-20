@@ -27,6 +27,7 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
+#include <game/client/components/qmclient/cursor_rotation.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/dummy_miniview_render.h>
@@ -3395,9 +3396,16 @@ void CHud::RenderCursor()
 			Alpha /= 2.0f;
 	}
 
+	// 光标自转：绕武器光标精灵自身中心转，单位是度/秒；速度为 0 时保持原绘制路径。
+	const float RotationSpeed = (float)g_Config.m_QmCursorRotation;
+	const bool Rotating = RotationSpeed != 0.0f;
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
 	Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpriteWeaponCursors[CurWeapon]);
+	if(Rotating)
+		Graphics()->QuadsSetRotation(QmCursorRotationRadians(g_Config.m_QmCursorRotation, Client()->GlobalTime()));
 	Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_aCursorOffset[CurWeapon], TargetPos.x, TargetPos.y, Scale, Scale);
+	if(Rotating)
+		Graphics()->QuadsSetRotation(0.0f);
 }
 
 void CHud::PrepareAmmoHealthAndArmorQuads()
@@ -3908,7 +3916,8 @@ void CHud::RenderMediaIsland()
 			SetUiPresentationStateValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, AnimState.m_FinishSummaryCloseStart);
 		}
 		AnimState.m_FinishSummaryProgress = std::clamp(ResolveUiAnimValue(FinishRuntime, FinishNode, EUiAnimProperty::ALPHA, 0.0f,
-			0.48f * AnimState.m_FinishSummaryCloseStart, EEasing::LINEAR), 0.0f, 1.0f);
+								       0.48f * AnimState.m_FinishSummaryCloseStart, EEasing::LINEAR),
+			0.0f, 1.0f);
 	}
 	const bool RenderFinish = pFinishSnapshot && AnimState.m_FinishSummaryProgress > 0.001f;
 	const int64_t Now = time_get();

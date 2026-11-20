@@ -31,10 +31,14 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_controls_mouse[] = {
 		{Localizable("Ingame mouse sens."), nullptr, "游戏内鼠标灵敏度"},
 		{Localizable("Maximum cursor distance"), nullptr, "最大光标距离"},
+		{Localizable("Scale cursor distance with resolution"), nullptr, "光标距离随分辨率缩放"},
+		{Localizable("Limit cursor to game window"), nullptr, "限制光标在游戏窗口内"},
 		{Localizable("Minimum cursor distance"), nullptr, "最小光标距离"},
 		{Localizable("UI mouse sens."), nullptr, "鼠标灵敏度（界面）"},
 		{nullptr, "cl_mouse_max_distance", nullptr},
 		{nullptr, "cl_mouse_min_distance", nullptr},
+		{nullptr, "qm_scale_mouse_distance", nullptr},
+		{nullptr, "qm_limit_mouse_to_screen", nullptr},
 		{nullptr, "inp_mousesens", nullptr},
 		{nullptr, "ui_mousesens", nullptr},
 	};

@@ -603,11 +603,14 @@ TEST(QmCardLabelHints, IncompleteGroupsStayVisibleAndPlainWhitespaceIsUnchanged)
 	EXPECT_TRUE(Plain.m_Hint.empty());
 }
 
-TEST(QmCardLabelHints, ParentheticalOnlyChoiceKeepsAVisibleHoverTarget)
+TEST(QmCardLabelHints, ParentheticalOnlyChoiceKeepsItsVisibleLabel)
 {
 	const auto Text = QmSplitCardLabel("(Follow English font)");
-	EXPECT_EQ(Text.m_Label, "…");
-	EXPECT_EQ(Text.m_Hint, "Follow English font");
+	EXPECT_EQ(Text.m_Label, "(Follow English font)");
+	EXPECT_TRUE(Text.m_Hint.empty());
+	const auto Chinese = QmSplitCardLabel("（跟随中文字体）");
+	EXPECT_EQ(Chinese.m_Label, "（跟随中文字体）");
+	EXPECT_TRUE(Chinese.m_Hint.empty());
 }
 
 TEST(QmCardLabelHints, CacheOwnsCallerTextAndKeepsTranslatedEntriesStable)

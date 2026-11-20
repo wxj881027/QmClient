@@ -82,6 +82,7 @@
 #include "components/qmclient/checkpoint_guide.h"
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
+#include "components/qmclient/dummy_distance_link.h"
 #include "components/qmclient/demo_camera.h"
 #include "components/qmclient/finish_summary.h"
 #include "components/qmclient/friend_last_seen.h"
@@ -326,6 +327,7 @@ public:
 	CQmFriendLastSeen m_QmFriendLastSeen;
 	CQmChatEmoji m_QmChatEmoji;
 	CQmCheckpointGuide m_QmCheckpointGuide;
+	qm_dummy_link::CView m_QmDummyDistanceLink;
 	CQmMonitoring m_QmMonitoring;
 	CQmMobileSpectator m_QmMobileSpectator;
 	CQmHudNotifications m_QmHudNotifications;
@@ -368,6 +370,7 @@ private:
 	void ProcessQmStutterFrame();
 	void RecordComponentUpdate(size_t ComponentIndex, double DurationMs);
 	void RecordComponentRender(size_t ComponentIndex, double DurationMs);
+	void CaptureQmStutterContext();
 	void CaptureQmStutterFeatureSnapshot();
 	void FlushQmStutterWindow(const SQmStutterFrameDecision &Decision, bool ForceLog);
 	void ResetQmStutterWindowSamples();
@@ -385,6 +388,10 @@ private:
 	uint64_t m_QmStutterWindowStartFrame = 0;
 	uint64_t m_QmStutterWorstFrame = 0;
 	double m_QmStutterWorstFrameMs = 0.0;
+	double m_QmStutterDetailWorstMs = 0.0;
+	uint64_t m_QmStutterFeatureFrame = 0;
+	std::string m_QmStutterFeaturePage;
+	std::string m_QmStutterFeatureOperation;
 	EQmStutterLimitCause m_QmStutterLimitCause = EQmStutterLimitCause::NONE;
 	std::string m_QmStutterPage;
 	std::string m_QmStutterOperation;
@@ -982,6 +989,7 @@ public:
 	void ResetDemoPlaybackState() override;
 	void InvalidateSnapshot() override;
 	void OnNewSnapshot(bool DummySwapped) override;
+	void EvolveSnapshotCharacter(CNetObj_Character *pCharacter, int Tick);
 	void OnPredict() override;
 	void OnActivateEditor() override;
 	void OnDummySwap() override;
@@ -1096,6 +1104,8 @@ public:
 	CQmHookCollCandidates m_HookCollCandidates;
 	CQmHookCollSpatialIndex m_HookCollSpatialIndex;
 	void UpdateHookCollTargets();
+	vec2 HookCollTargetPosition(int ClientId, float Intra) const;
+	const CTuningParams &HookCollTuning(int ClientId) const;
 
 	int IntersectCharacter(vec2 HookPos, vec2 NewPos, vec2 &NewPos2, int OwnId, vec2 *pPlayerPosition = nullptr);
 
@@ -1418,6 +1428,8 @@ public:
 private:
 	std::vector<CSnapEntities> m_vSnapEntities;
 	CConnectionResourcePreparation m_ConnectionResourcePreparation;
+	CMapLoadTask m_DesignTileSkips;
+	void CancelConnectionResourcePreparation();
 	void FinishConnectionResourcePreparation();
 	// 扩展信息暂存区：保留容量跨帧复用，只在构建快照时原地清空。
 	std::vector<CSnapEntities> m_vSnapEntityExtensionsScratch;

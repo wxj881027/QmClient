@@ -105,6 +105,19 @@ float CMenus::LayoutTClientVisualNameplateCard(const qm_card_catalog::SQmCardBui
 	{
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmColorFreeze, "tclient-color-freeze", Localize("Use colored skins for frozen tees"), &g_Config.m_QmColorFreeze, &Row, LineSize);
 	}
+	static CSettingsConditionalRows s_ColorFreezeRows;
+	if(s_ColorFreezeRows.Update(g_Config.m_QmColorFreeze, Ctx.m_UiContext.m_FrameDt, g_Config.m_QmUiMotionLevel))
+	{
+		const CSettingsContentRevealScope ColorFreezeRevealScope(Ui(), Flow, s_ColorFreezeRows.Fade(g_Config.m_QmUiMotionLevel));
+		if(Flow.Control("color-freeze-darken", LineSize, Row, RowSpacing))
+		{
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-color-freeze-darken", &g_Config.m_QmColorFreezeDarken, &g_Config.m_QmColorFreezeDarken, &Row, Localize("Frozen color darkening"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+		}
+		if(Flow.Control("color-freeze-feet", LineSize, Row, RowSpacing))
+		{
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmColorFreezeFeet, "tclient-color-freeze-feet", Localize("Use skin color for frozen feet"), &g_Config.m_QmColorFreezeFeet, &Row, LineSize);
+		}
+	}
 	if(Flow.Control("freeze-katana", LineSize, Row, RowSpacing))
 	{
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFreezeKatana, "tclient-freeze-katana", Localize("Show katana on frozen players"), &g_Config.m_QmFreezeKatana, &Row, LineSize);
@@ -580,6 +593,10 @@ float CMenus::LayoutTClientRainbowCard(const qm_card_catalog::SQmCardBuildContex
 		MeasureScope.emplace(vRows);
 	CSettingsContentLayoutFlow Flow(Content);
 	CUIRect Row;
+	if(Flow.Control("old-team-colors", LineSize, Row, RowSpacing))
+	{
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmOldTeamColors, "tclient-old-team-colors", Localize("Legacy team colors"), &g_Config.m_QmOldTeamColors, &Row, LineSize);
+	}
 	if(Flow.Control("rainbow-tees", LineSize, Row, RowSpacing))
 	{
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRainbowTees, "tclient-rainbow-tees", Localize("Rainbow Tees"), &g_Config.m_QmRainbowTees, &Row, LineSize);

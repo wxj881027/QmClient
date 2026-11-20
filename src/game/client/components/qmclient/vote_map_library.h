@@ -19,12 +19,31 @@ namespace QmVoteMaps
 		std::string m_Thumbnail;
 		int m_Stars = -1;
 		int m_Points = -1;
+		int m_MaxStars = 5;
+		int m_VoteOption = -1;
 	};
+
+	struct SAxiomCategory
+	{
+		std::string m_Label;
+		int m_VoteOption;
+	};
+
+	struct SAxiomMenu
+	{
+		std::vector<SMap> m_vMaps;
+		std::vector<SAxiomCategory> m_vCategories;
+		int m_SelectedCategory = -1;
+		int m_MaxStars = 0;
+	};
+
+	SAxiomMenu ParseAxiomMenu(const CVoteOptionClient *pFirst);
 
 	struct SDetails
 	{
 		int m_Finishers = -1;
 		double m_AverageSeconds = -1.0;
+		double m_MedianSeconds = -1.0;
 	};
 
 	enum class ECompletion
@@ -62,6 +81,7 @@ namespace QmVoteMaps
 	// 解析失败保留上一次有效目录；未知分类仍可在「全部」中浏览。
 	bool ParseCatalog(const char *pJson, size_t Length, std::vector<SMap> &vMaps);
 	bool ParseDetails(const char *pJson, size_t Length, const SMap &Map, SDetails &Details);
+	bool ParseAxiomDetails(const char *pJson, size_t Length, const SMap &Map, SDetails &Details);
 	bool ParseVoteMap(const char *pDescription, SMap &Map);
 	// 为具体地图构造 /map 命令；完整保留空格和引号，不携带分类或投票理由。
 	std::string MapVoteCommand(const std::string &Name);

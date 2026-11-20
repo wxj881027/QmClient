@@ -17,6 +17,7 @@
 #include <game/client/QmUi/QmChatBubble.h>
 #include <game/client/QmUi/QmCloudBubble.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/nameplate_text_effects.h>
 #include <game/client/components/qmclient/chat_emoji.h>
@@ -27,6 +28,7 @@
 #include <game/client/components/qmclient/nameplate_text_cache.h>
 #include <game/client/components/qmclient/qm_title_badge.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
+#include <game/client/components/qmclient/snap_guides.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/client/ui_rect.h>
@@ -68,7 +70,9 @@ enum class EHookStrongWeakState
 static constexpr std::array<ENameplateCoreRow, kNameplateCoreRowCount> s_aDefaultNameplateCoreRowsTopToBottom = {
 	ENameplateCoreRow::WATER_HOOK,
 	ENameplateCoreRow::WATER_HAMMER,
-	ENameplateCoreRow::KEYS,
+	ENameplateCoreRow::KEYS_LEFT,
+	ENameplateCoreRow::KEYS_UP,
+	ENameplateCoreRow::KEYS_RIGHT,
 	ENameplateCoreRow::COORDS,
 	ENameplateCoreRow::HOOK,
 	ENameplateCoreRow::CLAN,
@@ -144,7 +148,8 @@ static float ResolveChatBubbleAnimValue(
 
 static constexpr int NAMEPLATE_FREE_MOVE_OFFSET_MIN = -300;
 static constexpr int NAMEPLATE_FREE_MOVE_OFFSET_MAX = 300;
-static constexpr float NAMEPLATE_FREE_MOVE_SNAP_DISTANCE = 8.0f;
+// 吸附半径只够到「确实想吸住」的落点：12px 会让候选连成一片，拖到哪都像被粘住。
+static constexpr float NAMEPLATE_FREE_MOVE_SNAP_DISTANCE = 6.0f;
 static constexpr float NAMEPLATE_PREVIEW_AREA_MARGIN = 10.0f;
 static constexpr float NAMEPLATE_PREVIEW_FRAME_INSET = 3.0f;
 static constexpr float NAMEPLATE_PREVIEW_TEE_SIZE = 64.0f;
@@ -180,8 +185,10 @@ static int s_QmNameplateEffectLodDraws = QM_TEXT_EFFECT_DRAWS_UNLIMITED; // 本�
 
 static void QmNameplateEffectLodBeginFrame()
 {
+	// 总开关关闭时按「没有特效」计算档位，避免还在为不会绘制的效果分配预算。
+	const int EffectMask = g_Config.m_QmNameplateTextEffectsEnabled ? g_Config.m_QmNameplateTextEffects : 0;
 	const int FullDraws = QmNameplateEffectFullDraws(
-		g_Config.m_QmNameplateTextEffects,
+		EffectMask,
 		g_Config.m_QmNameplateTextBorderRange,
 		g_Config.m_QmNameplateTextGlowRange);
 	if(g_Config.m_QmNameplateEffectAutoLod && FullDraws > 0)
@@ -289,85 +296,76 @@ static bool NameplatePointInFrame(vec2 Position, vec2 FrameMin, vec2 FrameMax)
 	       Position.y <= FrameMax.y;
 }
 
-static int NameplateSnapCoreRowOffsetX(int OffsetX, int LimitMinX, int LimitMaxX, vec2 RowCenter, vec2 RowSize, vec2 FrameMin, vec2 FrameMax)
+// 联动开启时本体与分身共用一组偏移；关闭后分身改用 qm_nameplate_dummy_*。
+static bool NameplateDummyOffsetsActive(bool Dummy)
 {
-	const float RowMinX = RowCenter.x - RowSize.x / 2.0f;
-	const float RowMaxX = RowCenter.x + RowSize.x / 2.0f;
-	const float FrameCenterX = (FrameMin.x + FrameMax.x) / 2.0f;
-	const int aSnapTargets[] = {
-		std::clamp(round_to_int(FrameMin.x - RowMinX), LimitMinX, LimitMaxX),
-		std::clamp(round_to_int(FrameCenterX - RowCenter.x), LimitMinX, LimitMaxX),
-		std::clamp(round_to_int(FrameMax.x - RowMaxX), LimitMinX, LimitMaxX),
-	};
-
-	int SnappedOffsetX = OffsetX;
-	int BestDistance = round_to_int(NAMEPLATE_FREE_MOVE_SNAP_DISTANCE) + 1;
-	for(const int TargetOffsetX : aSnapTargets)
-	{
-		const int Distance = std::abs(OffsetX - TargetOffsetX);
-		if(Distance <= NAMEPLATE_FREE_MOVE_SNAP_DISTANCE && Distance < BestDistance)
-		{
-			SnappedOffsetX = TargetOffsetX;
-			BestDistance = Distance;
-		}
-	}
-	return SnappedOffsetX;
+	return Dummy && !g_Config.m_QmNameplateOffsetsLinked;
 }
 
-static int *NameplateCoreRowOffsetX(ENameplateCoreRow Row)
+static int *NameplateCoreRowOffsetX(ENameplateCoreRow Row, bool Dummy)
 {
+	const bool UseDummy = NameplateDummyOffsetsActive(Dummy);
 	switch(Row)
 	{
 	case ENameplateCoreRow::NAME:
-		return &g_Config.m_QmNameplateNameOffsetX;
+		return UseDummy ? &g_Config.m_QmNameplateDummyNameOffsetX : &g_Config.m_QmNameplateNameOffsetX;
 	case ENameplateCoreRow::CLAN:
-		return &g_Config.m_QmNameplateClanOffsetX;
+		return UseDummy ? &g_Config.m_QmNameplateDummyClanOffsetX : &g_Config.m_QmNameplateClanOffsetX;
 	case ENameplateCoreRow::HOOK:
-		return &g_Config.m_QmNameplateHookOffsetX;
+		return UseDummy ? &g_Config.m_QmNameplateDummyHookOffsetX : &g_Config.m_QmNameplateHookOffsetX;
 	case ENameplateCoreRow::COORDS:
-		return &g_Config.m_QmNameplateCoordsOffsetX;
-	case ENameplateCoreRow::KEYS:
-		return &g_Config.m_QmNameplateKeysOffsetX;
+		return UseDummy ? &g_Config.m_QmNameplateDummyCoordsOffsetX : &g_Config.m_QmNameplateCoordsOffsetX;
+	case ENameplateCoreRow::KEYS_LEFT:
+		return UseDummy ? &g_Config.m_QmNameplateDummyKeysLeftOffsetX : &g_Config.m_QmNameplateKeysLeftOffsetX;
+	case ENameplateCoreRow::KEYS_UP:
+		return UseDummy ? &g_Config.m_QmNameplateDummyKeysUpOffsetX : &g_Config.m_QmNameplateKeysUpOffsetX;
+	case ENameplateCoreRow::KEYS_RIGHT:
+		return UseDummy ? &g_Config.m_QmNameplateDummyKeysRightOffsetX : &g_Config.m_QmNameplateKeysRightOffsetX;
 	case ENameplateCoreRow::WATER_HAMMER:
-		return &g_Config.m_QmNameplateWaterHammerOffsetX;
+		return UseDummy ? &g_Config.m_QmNameplateDummyWaterHammerOffsetX : &g_Config.m_QmNameplateWaterHammerOffsetX;
 	case ENameplateCoreRow::WATER_HOOK:
-		return &g_Config.m_QmNameplateWaterHookOffsetX;
+		return UseDummy ? &g_Config.m_QmNameplateDummyWaterHookOffsetX : &g_Config.m_QmNameplateWaterHookOffsetX;
 	case ENameplateCoreRow::NUM_ROWS:
 		break;
 	}
 	return nullptr;
 }
 
-static int *NameplateCoreRowOffsetY(ENameplateCoreRow Row)
+static int *NameplateCoreRowOffsetY(ENameplateCoreRow Row, bool Dummy)
 {
+	const bool UseDummy = NameplateDummyOffsetsActive(Dummy);
 	switch(Row)
 	{
 	case ENameplateCoreRow::NAME:
-		return &g_Config.m_QmNameplateNameOffsetY;
+		return UseDummy ? &g_Config.m_QmNameplateDummyNameOffsetY : &g_Config.m_QmNameplateNameOffsetY;
 	case ENameplateCoreRow::CLAN:
-		return &g_Config.m_QmNameplateClanOffsetY;
+		return UseDummy ? &g_Config.m_QmNameplateDummyClanOffsetY : &g_Config.m_QmNameplateClanOffsetY;
 	case ENameplateCoreRow::HOOK:
-		return &g_Config.m_QmNameplateHookOffsetY;
+		return UseDummy ? &g_Config.m_QmNameplateDummyHookOffsetY : &g_Config.m_QmNameplateHookOffsetY;
 	case ENameplateCoreRow::COORDS:
-		return &g_Config.m_QmNameplateCoordsOffsetY;
-	case ENameplateCoreRow::KEYS:
-		return &g_Config.m_QmNameplateKeysOffsetY;
+		return UseDummy ? &g_Config.m_QmNameplateDummyCoordsOffsetY : &g_Config.m_QmNameplateCoordsOffsetY;
+	case ENameplateCoreRow::KEYS_LEFT:
+		return UseDummy ? &g_Config.m_QmNameplateDummyKeysLeftOffsetY : &g_Config.m_QmNameplateKeysLeftOffsetY;
+	case ENameplateCoreRow::KEYS_UP:
+		return UseDummy ? &g_Config.m_QmNameplateDummyKeysUpOffsetY : &g_Config.m_QmNameplateKeysUpOffsetY;
+	case ENameplateCoreRow::KEYS_RIGHT:
+		return UseDummy ? &g_Config.m_QmNameplateDummyKeysRightOffsetY : &g_Config.m_QmNameplateKeysRightOffsetY;
 	case ENameplateCoreRow::WATER_HAMMER:
-		return &g_Config.m_QmNameplateWaterHammerOffsetY;
+		return UseDummy ? &g_Config.m_QmNameplateDummyWaterHammerOffsetY : &g_Config.m_QmNameplateWaterHammerOffsetY;
 	case ENameplateCoreRow::WATER_HOOK:
-		return &g_Config.m_QmNameplateWaterHookOffsetY;
+		return UseDummy ? &g_Config.m_QmNameplateDummyWaterHookOffsetY : &g_Config.m_QmNameplateWaterHookOffsetY;
 	case ENameplateCoreRow::NUM_ROWS:
 		break;
 	}
 	return nullptr;
 }
 
-static vec2 NameplateCoreRowOffset(ENameplateCoreRow Row)
+static vec2 NameplateCoreRowOffset(ENameplateCoreRow Row, bool Dummy)
 {
 	if(!NameplateFreeMoveEnabled())
 		return vec2(0.0f, 0.0f);
-	int *pOffsetX = NameplateCoreRowOffsetX(Row);
-	int *pOffsetY = NameplateCoreRowOffsetY(Row);
+	int *pOffsetX = NameplateCoreRowOffsetX(Row, Dummy);
+	int *pOffsetY = NameplateCoreRowOffsetY(Row, Dummy);
 	const float OffsetX = pOffsetX != nullptr ? (float)*pOffsetX : 0.0f;
 	const float OffsetY = pOffsetY != nullptr ? (float)*pOffsetY : 0.0f;
 	return vec2(OffsetX, OffsetY);
@@ -385,6 +383,7 @@ class CNamePlateData
 {
 public:
 	bool m_Local; // TClient
+	bool m_Dummy = false; // 本机分身：分离偏移时使用 qm_nameplate_dummy_* 一组
 	bool m_InGame;
 	bool m_HideIdentity = false;
 	bool m_HideSkin = false;
@@ -432,9 +431,10 @@ public:
 static void SetNameplateTitle(CGameClient &This, CNamePlateData &Data, int ClientId)
 {
 	// 先测量完整头衔，绘制时再按隐私状态隐藏并保留占位。
-	str_copy(Data.m_aQmTitle, Data.m_ShowName && This.m_QmClient.ShouldShowPlayerTitle(ClientId) ? This.m_QmClient.PlayerTitle(ClientId, true) : "");
+	const bool ShowTitle = Data.m_ShowName && This.m_QmClient.ShouldShowPlayerTitle(ClientId);
+	str_copy(Data.m_aQmTitle, ShowTitle ? This.m_QmClient.PlayerTitle(ClientId, true) : "");
 	Data.m_TitleAppearance = This.m_QmClient.PlayerTitleAppearance(ClientId, true);
-	Data.m_DeveloperBadge = Data.m_aQmTitle[0] != '\0' && This.m_QmClient.PlayerHasDeveloperBadge(ClientId, true) && This.m_QmClient.DeveloperBadge().Available();
+	Data.m_DeveloperBadge = ShowTitle && This.m_QmClient.PlayerHasDeveloperBadge(ClientId, true) && This.m_QmClient.DeveloperBadge().Available();
 }
 
 static ColorRGBA NameplateTextColor(const CGameClient &This, int ClientId)
@@ -728,7 +728,9 @@ public:
 		}
 		m_ShiftOnInvis = true; // Only shift (horizontally) the other parts if directions as a whole is visible
 		m_Size = vec2(Data.m_FontSizeDirection, Data.m_FontSizeDirection);
-		m_Padding.y = m_Size.y / 2.0f;
+		// 高亮方块与强弱钩同尺寸（图标 + 5px 留白），相邻键位拼起来时边框正好相接。
+		const float BlockSide = Data.m_FontSizeHookStrongWeak + DEFAULT_PADDING;
+		m_Padding = vec2(std::max(0.0f, (BlockSide - m_Size.x) * 0.5f), std::max(0.0f, (BlockSide - m_Size.y) * 0.5f));
 		switch(m_Direction)
 		{
 		case DIRECTION_LEFT:
@@ -759,7 +761,9 @@ public:
 		m_ShiftOnInvis = Data.m_ShowDirection && g_Config.m_QmWaterHammerHighlight;
 		m_Visible = m_ShiftOnInvis && m_Texture.IsValid() && (m_Hammer ? Data.m_WaterHeld.m_Hammer : Data.m_WaterHeld.m_Hook);
 		m_Size = vec2(Data.m_FontSizeDirection, Data.m_FontSizeDirection);
-		m_Padding.y = m_Size.y / 2.0f;
+		// 高亮方块与强弱钩同尺寸（图标 + 5px 留白），相邻键位拼起来时边框正好相接。
+		const float BlockSide = Data.m_FontSizeHookStrongWeak + DEFAULT_PADDING;
+		m_Padding = vec2(std::max(0.0f, (BlockSide - m_Size.x) * 0.5f), std::max(0.0f, (BlockSide - m_Size.y) * 0.5f));
 		m_Color = color_cast<ColorRGBA>(ColorHSLA(m_Hammer ? g_Config.m_QmWaterHammerColor : g_Config.m_QmWaterHookColor)).WithAlpha(Data.m_Color.a);
 	}
 };
@@ -1092,7 +1096,10 @@ protected:
 		m_Visible = Data.m_ShowHookStrongWeak;
 		if(!m_Visible)
 			return;
-		m_Size = vec2(Data.m_FontSizeHookStrongWeak + DEFAULT_PADDING, Data.m_FontSizeHookStrongWeak + DEFAULT_PADDING);
+		// 图标本身按字号绘制，5px 留白交给 padding：这样强弱钩、方向键、卡锤卡钩
+		// 五个方块外框一样大，内部图标也都按各自字号缩放，不会出现「钩子强度更大」。
+		m_Size = vec2(Data.m_FontSizeHookStrongWeak, Data.m_FontSizeHookStrongWeak);
+		m_Padding = vec2(DEFAULT_PADDING * 0.5f, DEFAULT_PADDING * 0.5f);
 		switch(Data.m_HookStrongWeakState)
 		{
 		case EHookStrongWeakState::STRONG:
@@ -1439,6 +1446,7 @@ private:
 
 	bool m_Inited = false;
 	bool m_InGame = false;
+	bool m_Dummy = false;
 	CQmNameplateDensity m_Density;
 	PartsVector m_vpParts;
 	std::vector<SCoreRowParts> m_vCoreRows;
@@ -1521,7 +1529,7 @@ private:
 			const size_t Index = static_cast<size_t>(CoreRow.m_Row);
 			aSizes[Index] = LayoutCoreRowSize(CoreRow, pLayoutReference);
 			if(ApplyOffsets)
-				aOffsets[Index] = NameplateCoreRowOffset(CoreRow.m_Row);
+				aOffsets[Index] = NameplateCoreRowOffset(CoreRow.m_Row, m_Dummy);
 		}
 		return QmNameplateCoreRowPositions(aSizes, aOffsets);
 	}
@@ -1692,11 +1700,10 @@ private:
 		AddPart<CNamePlatePartNewLine>(This);
 	}
 
-	void AddKeysRow(CGameClient &This)
+	// 三个方向各自成行，才能分别拖动偏移而不牵连另外两个方向。
+	void AddKeyRow(CGameClient &This, Direction Dir)
 	{
-		AddPart<CNamePlatePartDirection>(This, DIRECTION_LEFT);
-		AddPart<CNamePlatePartDirection>(This, DIRECTION_UP);
-		AddPart<CNamePlatePartDirection>(This, DIRECTION_RIGHT);
+		AddPart<CNamePlatePartDirection>(This, Dir);
 		AddPart<CNamePlatePartNewLine>(This);
 	}
 
@@ -1716,8 +1723,14 @@ private:
 		case ENameplateCoreRow::COORDS:
 			AddCoordsRow(This);
 			break;
-		case ENameplateCoreRow::KEYS:
-			AddKeysRow(This);
+		case ENameplateCoreRow::KEYS_LEFT:
+			AddKeyRow(This, DIRECTION_LEFT);
+			break;
+		case ENameplateCoreRow::KEYS_UP:
+			AddKeyRow(This, DIRECTION_UP);
+			break;
+		case ENameplateCoreRow::KEYS_RIGHT:
+			AddKeyRow(This, DIRECTION_RIGHT);
 			break;
 		case ENameplateCoreRow::WATER_HAMMER:
 		case ENameplateCoreRow::WATER_HOOK:
@@ -1773,6 +1786,7 @@ public:
 		if(m_InGame != Data.m_InGame)
 			Reset(This);
 		m_InGame = Data.m_InGame;
+		m_Dummy = Data.m_Dummy;
 		CNamePlateData BakeData = Data;
 		if(Data.m_InGame)
 		{
@@ -1875,7 +1889,18 @@ public:
 	SCoordXAlignFrameState m_CoordXAlignFrame;
 	ENameplateCoreRow m_FreeMoveDragRow = ENameplateCoreRow::NUM_ROWS;
 	vec2 m_FreeMoveDragStartMouse = vec2(0.0f, 0.0f);
-	vec2 m_FreeMoveDragStartOffset = vec2(0.0f, 0.0f);
+	// 按下瞬间各行偏移的快照。拖动位移必须以它为基准叠加：
+	// 每帧从配置里读「当前偏移」再加一次总位移，等于每帧都把位移重复累加一遍，方块会飞出去。
+	std::array<vec2, kNameplateCoreRowCount> m_aFreeMoveDragStartOffsets{};
+	bool m_DragGuideX = false;
+	float m_DragGuideXPosition = 0.0f;
+	bool m_DragGuideY = false;
+	float m_DragGuideYPosition = 0.0f;
+	// 多选移动：选中的方块整组平移，按下未移动则当作点击切换选中。
+	std::array<bool, kNameplateCoreRowCount> m_aMultiSelect{};
+	bool m_MultiSelectPressWasSelected = false;
+	bool m_MultiSelectPressMoved = false;
+	vec2 m_MultiSelectPressMouse = vec2(0.0f, 0.0f);
 };
 
 static bool NameplateCoreRowRectContains(const SNameplateCoreRowRect &Rect, vec2 Position)
@@ -2044,7 +2069,8 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
 	const bool Spectating = !DemoPlayback && GameClient()->m_Snap.m_SpecInfo.m_Active;
 	const bool SpectateTarget = GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == ClientId;
-	Data.m_UseTextEffects = ShouldUseQmNameplateTextEffects(
+	const bool TextEffectsMasterEnabled = g_Config.m_QmNameplateTextEffectsEnabled != 0;
+	const bool TextEffectsInScope = ShouldUseQmNameplateTextEffects(
 		g_Config.m_QmNameplateTextPlayingScope,
 		g_Config.m_QmNameplateTextSpectateScope,
 		g_Config.m_QmNameplateTextDemoMode,
@@ -2055,6 +2081,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		GameClient()->m_aClients[ClientId].m_Friend,
 		SpectateTarget,
 		ClientId);
+	Data.m_UseTextEffects = TextEffectsMasterEnabled && TextEffectsInScope;
 	Data.m_ShowFriendMark = Data.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
 	Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);
 	Data.m_FontSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
@@ -2209,6 +2236,8 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	if(Data.m_ShowName && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
 		Data.m_ShowClan = true;
 	Data.m_Local = pPlayerInfo->m_Local;
+	// 分身与本体是两台不同的本机角色：分离偏移时各自记一套拖动结果。
+	Data.m_Dummy = ClientId == GameClient()->m_aLocalIds[1] && ClientId != GameClient()->m_aLocalIds[0];
 
 	CNamePlate *pLayoutReference = nullptr;
 	// 「部分隐藏」= 六档里没有选到全体：自由移动时给这类名牌补一个完整预览框。
@@ -2269,7 +2298,7 @@ static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, CNamePlat
 	Data.m_ShowName = NameplateScopeAllowsPreview;
 	SetNameplateTitle(This, Data, HasLocalClient ? LocalClientId : -1);
 	// 设置页预览必须展示当前选择的效果，不能受游戏中 Playing/Spectate/Demo scope 限制。
-	Data.m_UseTextEffects = g_Config.m_QmNameplateTextEffects != 0;
+	Data.m_UseTextEffects = g_Config.m_QmNameplateTextEffectsEnabled != 0 && g_Config.m_QmNameplateTextEffects != 0;
 	const char *pName = DummyIdx == 0 ? This.Client()->PlayerName() : This.Client()->DummyName();
 	str_copy(Data.m_aName, str_utf8_skip_whitespaces(pName));
 	str_utf8_trim_right(Data.m_aName);
@@ -2352,6 +2381,7 @@ static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, CNamePlat
 
 	// TClient
 	Data.m_Local = false;
+	Data.m_Dummy = DummyIdx != 0;
 }
 
 float CNamePlates::MeasurePreviewAreaHeight() const
@@ -2438,107 +2468,246 @@ void CNamePlates::RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy)
 
 		if(m_pData->m_FreeMoveDragRow != ENameplateCoreRow::NUM_ROWS && !Ui()->MouseButton(0))
 		{
+			// 多选：按住已选中的方块原地松开 = 取消选中；拖动过则保留整组。
+			if(g_Config.m_QmNameplateMultiSelect && m_pData->m_MultiSelectPressWasSelected && !m_pData->m_MultiSelectPressMoved)
+				m_pData->m_aMultiSelect[(int)m_pData->m_FreeMoveDragRow] = false;
 			m_pData->m_FreeMoveDragRow = ENameplateCoreRow::NUM_ROWS;
 			m_pData->m_FreeMoveDragStartMouse = vec2(0.0f, 0.0f);
-			m_pData->m_FreeMoveDragStartOffset = vec2(0.0f, 0.0f);
+			m_pData->m_aFreeMoveDragStartOffsets.fill(vec2(0.0f, 0.0f));
+			m_pData->m_MultiSelectPressWasSelected = false;
+			m_pData->m_MultiSelectPressMoved = false;
+			m_pData->m_DragGuideX = false;
+			m_pData->m_DragGuideY = false;
 		}
 
+		// 多选关闭时清空选择，避免下次打开还留着上次的选中集合。
+		if(!g_Config.m_QmNameplateMultiSelect)
+		{
+			m_pData->m_aMultiSelect.fill(false);
+			m_pData->m_MultiSelectPressWasSelected = false;
+			m_pData->m_MultiSelectPressMoved = false;
+		}
 		if(m_pData->m_FreeMoveDragRow == ENameplateCoreRow::NUM_ROWS && HoveredRow != ENameplateCoreRow::NUM_ROWS && Ui()->MouseButtonClicked(0) && Ui()->ActiveItem() == nullptr)
 		{
-			int *pOffsetX = NameplateCoreRowOffsetX(HoveredRow);
-			int *pOffsetY = NameplateCoreRowOffsetY(HoveredRow);
 			m_pData->m_FreeMoveDragRow = HoveredRow;
 			m_pData->m_FreeMoveDragStartMouse = MousePosition;
-			m_pData->m_FreeMoveDragStartOffset = vec2(pOffsetX != nullptr ? (float)*pOffsetX : 0.0f, pOffsetY != nullptr ? (float)*pOffsetY : 0.0f);
+			// 整组共享同一份按下快照：多选时被拖的是所有选中行，各自的起点都要记住。
+			for(size_t RowIndex = 0; RowIndex < m_pData->m_aFreeMoveDragStartOffsets.size(); ++RowIndex)
+			{
+				int *pStartX = NameplateCoreRowOffsetX(static_cast<ENameplateCoreRow>(RowIndex), Dummy != 0);
+				int *pStartY = NameplateCoreRowOffsetY(static_cast<ENameplateCoreRow>(RowIndex), Dummy != 0);
+				m_pData->m_aFreeMoveDragStartOffsets[RowIndex] = vec2(pStartX != nullptr ? (float)*pStartX : 0.0f, pStartY != nullptr ? (float)*pStartY : 0.0f);
+			}
+			if(g_Config.m_QmNameplateMultiSelect)
+			{
+				// 按在未选中的方块上先把它并入选择，再整组拖动。
+				m_pData->m_MultiSelectPressWasSelected = m_pData->m_aMultiSelect[(int)HoveredRow];
+				m_pData->m_aMultiSelect[(int)HoveredRow] = true;
+				m_pData->m_MultiSelectPressMouse = MousePosition;
+				m_pData->m_MultiSelectPressMoved = false;
+			}
 		}
 
 		if(m_pData->m_FreeMoveDragRow != ENameplateCoreRow::NUM_ROWS && Ui()->MouseButton(0))
 		{
-			int *pOffsetX = NameplateCoreRowOffsetX(m_pData->m_FreeMoveDragRow);
-			int *pOffsetY = NameplateCoreRowOffsetY(m_pData->m_FreeMoveDragRow);
-
-			// 行的偏移限制由预览框边界与未偏移的行矩形共同确定；
-			// 限制使用的边界与屏幕上画出的边界相同。
+			// 被拖行在基准布局里的中心与尺寸（不含自身偏移），吸附与限制都以它为准。
 			bool DragHasRow = false;
-			bool DragIgnoreFrame = false;
-			vec2 DragIgnoreFrameMin = vec2(0.0f, 0.0f);
-			vec2 DragIgnoreFrameMax = vec2(0.0f, 0.0f);
+			bool DragFrameIgnored = false;
+			vec2 DragFrameIgnoredMin = vec2(0.0f, 0.0f);
+			vec2 DragFrameIgnoredMax = vec2(0.0f, 0.0f);
 			vec2 DragRowCenter = vec2(0.0f, 0.0f);
 			vec2 DragRowSize = vec2(0.0f, 0.0f);
 			NamePlate.ComputeBaselineLayout(NameplateBottomMiddle, m_pData->m_FreeMoveDragRow,
-				DragIgnoreFrame, DragIgnoreFrameMin, DragIgnoreFrameMax,
+				DragFrameIgnored, DragFrameIgnoredMin, DragFrameIgnoredMax,
 				DragHasRow, DragRowCenter, DragRowSize, pFrameNamePlate);
-			const vec2 DragFrameMin = FrameMin;
-			const vec2 DragFrameMax = FrameMax;
-			const bool DragHasFrame = HasFrame;
 
-			int LimitMinX = NAMEPLATE_FREE_MOVE_OFFSET_MIN;
-			int LimitMaxX = NAMEPLATE_FREE_MOVE_OFFSET_MAX;
-			int LimitMinY = NAMEPLATE_FREE_MOVE_OFFSET_MIN;
-			int LimitMaxY = NAMEPLATE_FREE_MOVE_OFFSET_MAX;
-			if(DragHasFrame && DragHasRow)
+			// 多选：整组选中行一起平移；没开多选时组里只有当前拖动的行。
+			std::array<ENameplateCoreRow, kNameplateCoreRowCount> aDragRows{};
+			bool aIsDragRow[kNameplateCoreRowCount] = {};
+			int NumDragRows = 0;
+			if(g_Config.m_QmNameplateMultiSelect)
 			{
-				const vec2 BaselineRowMin = vec2(DragRowCenter.x - DragRowSize.x / 2.0f, DragRowCenter.y - DragRowSize.y / 2.0f);
-				const vec2 BaselineRowMax = vec2(DragRowCenter.x + DragRowSize.x / 2.0f, DragRowCenter.y + DragRowSize.y / 2.0f);
-				const float MinX = DragFrameMin.x - BaselineRowMin.x;
-				const float MaxX = DragFrameMax.x - BaselineRowMax.x;
-				const float MinY = DragFrameMin.y - BaselineRowMin.y;
-				const float MaxY = DragFrameMax.y - BaselineRowMax.y;
-				if(MinX <= MaxX)
+				for(size_t RowIndex = 0; RowIndex < m_pData->m_aMultiSelect.size(); ++RowIndex)
 				{
-					LimitMinX = std::max(LimitMinX, round_to_int(MinX));
-					LimitMaxX = std::min(LimitMaxX, round_to_int(MaxX));
+					if(!m_pData->m_aMultiSelect[RowIndex])
+						continue;
+					aDragRows[NumDragRows++] = static_cast<ENameplateCoreRow>(RowIndex);
+					aIsDragRow[RowIndex] = true;
+				}
+			}
+			if(NumDragRows == 0)
+			{
+				aDragRows[NumDragRows++] = m_pData->m_FreeMoveDragRow;
+				aIsDragRow[static_cast<size_t>(m_pData->m_FreeMoveDragRow)] = true;
+			}
+
+			// 位移范围与吸附都以画出来的预览框为准：方块不允许被拖出框。
+			std::array<int, kNameplateCoreRowCount> aRowLimitMinX{};
+			std::array<int, kNameplateCoreRowCount> aRowLimitMaxX{};
+			std::array<int, kNameplateCoreRowCount> aRowLimitMinY{};
+			std::array<int, kNameplateCoreRowCount> aRowLimitMaxY{};
+			std::array<vec2, kNameplateCoreRowCount> aRowStartOffset{};
+			// 整组当前外轮廓（基准矩形 + 按下时的偏移）。吸附按这个包围盒算：
+			// 既支持横条这种不规则组合，也保证整组能贴住别的方块，而不是只有主拖行能对齐。
+			vec2 GroupMin = vec2(1.0e9f, 1.0e9f);
+			vec2 GroupMax = vec2(-1.0e9f, -1.0e9f);
+			int DeltaMinX = NAMEPLATE_FREE_MOVE_OFFSET_MIN;
+			int DeltaMaxX = NAMEPLATE_FREE_MOVE_OFFSET_MAX;
+			int DeltaMinY = NAMEPLATE_FREE_MOVE_OFFSET_MIN;
+			int DeltaMaxY = NAMEPLATE_FREE_MOVE_OFFSET_MAX;
+			for(int DragIndex = 0; DragIndex < NumDragRows; ++DragIndex)
+			{
+				const ENameplateCoreRow Row = aDragRows[DragIndex];
+				const size_t RowIndex = static_cast<size_t>(Row);
+				// 基准是按下瞬间的快照，不是本帧的配置值；否则每帧都会把鼠标总位移重复叠加。
+				aRowStartOffset[RowIndex] = m_pData->m_aFreeMoveDragStartOffsets[RowIndex];
+
+				int RowMinX = NAMEPLATE_FREE_MOVE_OFFSET_MIN;
+				int RowMaxX = NAMEPLATE_FREE_MOVE_OFFSET_MAX;
+				int RowMinY = NAMEPLATE_FREE_MOVE_OFFSET_MIN;
+				int RowMaxY = NAMEPLATE_FREE_MOVE_OFFSET_MAX;
+				bool RowHasFrame = false;
+				bool RowHasRow = false;
+				vec2 RowFrameMin = vec2(0.0f, 0.0f);
+				vec2 RowFrameMax = vec2(0.0f, 0.0f);
+				vec2 RowCenter = vec2(0.0f, 0.0f);
+				vec2 RowSize = vec2(0.0f, 0.0f);
+				NamePlate.ComputeBaselineLayout(NameplateBottomMiddle, Row, RowHasFrame, RowFrameMin, RowFrameMax,
+					RowHasRow, RowCenter, RowSize, pFrameNamePlate);
+				if(HasFrame && RowHasRow)
+				{
+					const float MinX = FrameMin.x - (RowCenter.x - RowSize.x / 2.0f);
+					const float MaxX = FrameMax.x - (RowCenter.x + RowSize.x / 2.0f);
+					const float MinY = FrameMin.y - (RowCenter.y - RowSize.y / 2.0f);
+					const float MaxY = FrameMax.y - (RowCenter.y + RowSize.y / 2.0f);
+					// 行比框还宽/高时两条约束会交叉；交换后取并集，保证至少一条边留在框内，
+					// 且零位移永远落在范围内（否则整组会因为一行放不下而完全拖不动）。
+					RowMinX = std::max(RowMinX, round_to_int(std::min(MinX, MaxX)));
+					RowMaxX = std::min(RowMaxX, round_to_int(std::max(MinX, MaxX)));
+					RowMinY = std::max(RowMinY, round_to_int(std::min(MinY, MaxY)));
+					RowMaxY = std::min(RowMaxY, round_to_int(std::max(MinY, MaxY)));
+				}
+				if(RowHasRow)
+				{
+					const vec2 CurrentMin = RowCenter - RowSize / 2.0f + aRowStartOffset[RowIndex];
+					const vec2 CurrentMax = RowCenter + RowSize / 2.0f + aRowStartOffset[RowIndex];
+					GroupMin = vec2(std::min(GroupMin.x, CurrentMin.x), std::min(GroupMin.y, CurrentMin.y));
+					GroupMax = vec2(std::max(GroupMax.x, CurrentMax.x), std::max(GroupMax.y, CurrentMax.y));
+				}
+				aRowLimitMinX[RowIndex] = RowMinX;
+				aRowLimitMaxX[RowIndex] = RowMaxX;
+				aRowLimitMinY[RowIndex] = RowMinY;
+				aRowLimitMaxY[RowIndex] = RowMaxY;
+				DeltaMinX = std::max(DeltaMinX, RowMinX - round_to_int(aRowStartOffset[RowIndex].x));
+				DeltaMaxX = std::min(DeltaMaxX, RowMaxX - round_to_int(aRowStartOffset[RowIndex].x));
+				DeltaMinY = std::max(DeltaMinY, RowMinY - round_to_int(aRowStartOffset[RowIndex].y));
+				DeltaMaxY = std::min(DeltaMaxY, RowMaxY - round_to_int(aRowStartOffset[RowIndex].y));
+			}
+			// 基准行缺失（理论上不会发生）时退回主拖行自己的框，保证仍可拖动。
+			if(GroupMax.x <= GroupMin.x || GroupMax.y <= GroupMin.y)
+			{
+				if(DragHasRow)
+				{
+					GroupMin = DragRowCenter - DragRowSize / 2.0f;
+					GroupMax = DragRowCenter + DragRowSize / 2.0f;
 				}
 				else
 				{
-					LimitMinX = 0;
-					LimitMaxX = 0;
+					GroupMin = vec2(-1.0f, -1.0f);
+					GroupMax = vec2(1.0f, 1.0f);
 				}
-				if(MinY <= MaxY)
+			}
+			if(DeltaMinX > DeltaMaxX)
+				DeltaMinX = DeltaMaxX = 0;
+			if(DeltaMinY > DeltaMaxY)
+				DeltaMinY = DeltaMaxY = 0;
+
+			const int RawDeltaX = round_to_int(MousePosition.x - m_pData->m_FreeMoveDragStartMouse.x);
+			const int RawDeltaY = round_to_int(MousePosition.y - m_pData->m_FreeMoveDragStartMouse.y);
+			const bool CanSnap = HasFrame;
+			SQmSnapTarget aSnapTargetsX[64];
+			SQmSnapTarget aSnapTargetsY[64];
+			int NumSnapTargetsX = 0;
+			int NumSnapTargetsY = 0;
+			if(CanSnap)
+			{
+				// 预览框只给三条对齐线：贴框外沿的落点不可达，夹到边界只会变成死角。
+				NumSnapTargetsX = QmAppendAlignSnapTargets(aSnapTargetsX, 0, (int)std::size(aSnapTargetsX), GroupMin.x, GroupMax.x, FrameMin.x, FrameMax.x);
+				NumSnapTargetsY = QmAppendAlignSnapTargets(aSnapTargetsY, 0, (int)std::size(aSnapTargetsY), GroupMin.y, GroupMax.y, FrameMin.y, FrameMax.y);
+				// 其它行参与吸附；整组一起移动的行互相之间不吸附。
+				for(const SNameplateCoreRowRect &Rect : aEditorRects)
 				{
-					LimitMinY = std::max(LimitMinY, round_to_int(MinY));
-					LimitMaxY = std::min(LimitMaxY, round_to_int(MaxY));
+					if(!Rect.m_Visible || aIsDragRow[static_cast<size_t>(Rect.m_Row)])
+						continue;
+					if(Rect.m_Max.x - Rect.m_Min.x <= 0.5f || Rect.m_Max.y - Rect.m_Min.y <= 0.5f)
+						continue;
+					NumSnapTargetsX = QmAppendBoundsSnapTargets(aSnapTargetsX, NumSnapTargetsX, (int)std::size(aSnapTargetsX), GroupMin.x, GroupMax.x, Rect.m_Min.x, Rect.m_Max.x);
+					NumSnapTargetsY = QmAppendBoundsSnapTargets(aSnapTargetsY, NumSnapTargetsY, (int)std::size(aSnapTargetsY), GroupMin.y, GroupMax.y, Rect.m_Min.y, Rect.m_Max.y);
 				}
-				else
-				{
-					LimitMinY = 0;
-					LimitMaxY = 0;
-				}
+				// 候选与拖动量都在「位移」空间：整组包围盒已经含按下时的偏移，
+				// 对齐量直接就是本次拖动要补的位移，不再和行自身的绝对偏移混算。
+				NumSnapTargetsX = QmFilterSnapTargets(aSnapTargetsX, NumSnapTargetsX, (float)DeltaMinX, (float)DeltaMaxX);
+				NumSnapTargetsY = QmFilterSnapTargets(aSnapTargetsY, NumSnapTargetsY, (float)DeltaMinY, (float)DeltaMaxY);
 			}
 
-			if(pOffsetX != nullptr)
+			int DeltaX = std::clamp(RawDeltaX, DeltaMinX, DeltaMaxX);
+			int DeltaY = std::clamp(RawDeltaY, DeltaMinY, DeltaMaxY);
+			m_pData->m_DragGuideX = false;
+			m_pData->m_DragGuideY = false;
+			if(CanSnap)
 			{
-				int NewOffsetX = std::clamp(round_to_int(m_pData->m_FreeMoveDragStartOffset.x + MousePosition.x - m_pData->m_FreeMoveDragStartMouse.x), LimitMinX, LimitMaxX);
-				if(DragHasFrame && DragHasRow)
-					NewOffsetX = NameplateSnapCoreRowOffsetX(NewOffsetX, LimitMinX, LimitMaxX, DragRowCenter, DragRowSize, DragFrameMin, DragFrameMax);
-				*pOffsetX = NewOffsetX;
+				const SQmSnapAxisResult SnapX = QmSnapAxisToTargets((float)RawDeltaX, aSnapTargetsX, NumSnapTargetsX, NAMEPLATE_FREE_MOVE_SNAP_DISTANCE, (float)DeltaMinX, (float)DeltaMaxX);
+				const SQmSnapAxisResult SnapY = QmSnapAxisToTargets((float)RawDeltaY, aSnapTargetsY, NumSnapTargetsY, NAMEPLATE_FREE_MOVE_SNAP_DISTANCE, (float)DeltaMinY, (float)DeltaMaxY);
+				DeltaX = round_to_int(SnapX.m_Value);
+				DeltaY = round_to_int(SnapY.m_Value);
+				m_pData->m_DragGuideX = SnapX.m_HasGuide;
+				m_pData->m_DragGuideXPosition = SnapX.m_Guide;
+				m_pData->m_DragGuideY = SnapY.m_HasGuide;
+				m_pData->m_DragGuideYPosition = SnapY.m_Guide;
 			}
-			if(pOffsetY != nullptr)
+
+			for(int DragIndex = 0; DragIndex < NumDragRows; ++DragIndex)
 			{
-				const int NewOffsetY = std::clamp(round_to_int(m_pData->m_FreeMoveDragStartOffset.y + MousePosition.y - m_pData->m_FreeMoveDragStartMouse.y), LimitMinY, LimitMaxY);
-				*pOffsetY = NewOffsetY;
+				const size_t RowIndex = static_cast<size_t>(aDragRows[DragIndex]);
+				int *pRowOffsetX = NameplateCoreRowOffsetX(aDragRows[DragIndex], Dummy != 0);
+				int *pRowOffsetY = NameplateCoreRowOffsetY(aDragRows[DragIndex], Dummy != 0);
+				if(pRowOffsetX != nullptr)
+					*pRowOffsetX = std::clamp(round_to_int(aRowStartOffset[RowIndex].x) + DeltaX, aRowLimitMinX[RowIndex], aRowLimitMaxX[RowIndex]);
+				if(pRowOffsetY != nullptr)
+					*pRowOffsetY = std::clamp(round_to_int(aRowStartOffset[RowIndex].y) + DeltaY, aRowLimitMinY[RowIndex], aRowLimitMaxY[RowIndex]);
 			}
+			if(g_Config.m_QmNameplateMultiSelect && length(MousePosition - m_pData->m_MultiSelectPressMouse) > 3.0f)
+				m_pData->m_MultiSelectPressMoved = true;
 			NamePlate.CollectCoreRowRects(NameplateBottomMiddle, aEditorRects, pFrameNamePlate);
 		}
 
 		const bool DraggingAnyRow = m_pData->m_FreeMoveDragRow != ENameplateCoreRow::NUM_ROWS;
 		const bool HoveringFrame = HasFrame && NameplatePointInFrame(MousePosition, FrameMin, FrameMax);
-		const bool ShowEditorFrame = DraggingAnyRow || HoveringFrame;
+		// 多选有选中项时一直显示框与选中底色，鼠标移出预览也能看清选了哪些。
+		const bool MultiSelectActive = g_Config.m_QmNameplateMultiSelect && std::any_of(m_pData->m_aMultiSelect.begin(), m_pData->m_aMultiSelect.end(), [](bool Selected) { return Selected; });
+		const bool ShowEditorFrame = DraggingAnyRow || HoveringFrame || MultiSelectActive;
 		if(ShowEditorFrame)
 		{
 			Graphics()->TextureClear();
 			if(HasFrame)
 			{
-				Graphics()->SetColor(ColorRGBA(0.35f, 0.75f, 1.0f, 0.38f));
-				Graphics()->LinesBegin();
-				const IGraphics::CLineItem aFrameLines[] = {
-					IGraphics::CLineItem(FrameMin.x, FrameMin.y, FrameMax.x, FrameMin.y),
-					IGraphics::CLineItem(FrameMax.x, FrameMin.y, FrameMax.x, FrameMax.y),
-					IGraphics::CLineItem(FrameMax.x, FrameMax.y, FrameMin.x, FrameMax.y),
-					IGraphics::CLineItem(FrameMin.x, FrameMax.y, FrameMin.x, FrameMin.y),
-				};
-				Graphics()->LinesDraw(aFrameLines, std::size(aFrameLines));
-				Graphics()->LinesEnd();
+				// 直角四条线会在圆角处戳到背景外面，这里改成与背景同心的圆角描边。
+				SRoundedSurfaceParams FrameSurface;
+				FrameSurface.m_Radius = std::max(0.0f, ui_token::radius::CARD - NAMEPLATE_PREVIEW_FRAME_INSET);
+				FrameSurface.m_BorderWidth = 1.0f;
+				FrameSurface.m_BorderOnly = true;
+				DrawRoundedSurface(Ui(), CUIRect{FrameMin.x, FrameMin.y, FrameMax.x - FrameMin.x, FrameMax.y - FrameMin.y},
+					ui_token::color::COLOR_TRANSPARENT, ColorRGBA(0.35f, 0.75f, 1.0f, 0.38f), FrameSurface);
+
+				if(DraggingAnyRow)
+				{
+					// 辅助线覆盖整个预览底框而不是内缩的边界框，贴合落点在边缘时也能看清。
+					const ColorRGBA GuideColor = QmDragGuideColor();
+					if(m_pData->m_DragGuideX)
+						QmDrawDragGuideLine(Graphics(), m_pData->m_DragGuideXPosition, PreviewArea.y, m_pData->m_DragGuideXPosition, PreviewArea.y + PreviewArea.h, GuideColor);
+					if(m_pData->m_DragGuideY)
+						QmDrawDragGuideLine(Graphics(), PreviewArea.x, m_pData->m_DragGuideYPosition, PreviewArea.x + PreviewArea.w, m_pData->m_DragGuideYPosition, GuideColor);
+				}
 			}
 
 			SRoundedSurfaceParams RowSurface;
@@ -2550,9 +2719,12 @@ void CNamePlates::RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy)
 					continue;
 				const bool Dragging = m_pData->m_FreeMoveDragRow == Rect.m_Row;
 				const bool Hovered = HoveredRow == Rect.m_Row;
+				const bool Selected = g_Config.m_QmNameplateMultiSelect && m_pData->m_aMultiSelect[(int)Rect.m_Row];
 				ColorRGBA RowColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f);
+				if(Selected)
+					RowColor = ColorRGBA(0.25f, 0.85f, 1.0f, 0.16f);
 				if(Dragging)
-					RowColor = ColorRGBA(0.25f, 0.85f, 1.0f, 0.22f);
+					RowColor = ColorRGBA(0.25f, 0.85f, 1.0f, 0.26f);
 				else if(Hovered)
 					RowColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.14f);
 				DrawRoundedSurface(Ui(), CUIRect{Rect.m_Min.x, Rect.m_Min.y, Rect.m_Max.x - Rect.m_Min.x, Rect.m_Max.y - Rect.m_Min.y}, RowColor, ColorRGBA(), RowSurface);
@@ -2563,6 +2735,8 @@ void CNamePlates::RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy)
 	else
 	{
 		m_pData->m_FreeMoveDragRow = ENameplateCoreRow::NUM_ROWS;
+		m_pData->m_DragGuideX = false;
+		m_pData->m_DragGuideY = false;
 	}
 	NamePlate.Render(*GameClient(), NameplateBottomMiddle, pFrameNamePlate);
 }

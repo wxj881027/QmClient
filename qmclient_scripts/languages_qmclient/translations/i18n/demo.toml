@@ -431,6 +431,22 @@ turkish = "Kamera yolu"
 polish = "Ścieżka kamery"
 
 [[message]]
+key = "Capture queue"
+[message.translations]
+simplified_chinese = "采集队列"
+traditional_chinese = "擷取佇列"
+japanese = "キャプチャキュー"
+korean = "캡처 큐"
+russian = "Очередь захвата"
+german = "Aufnahme-Warteschlange"
+spanish = "Cola de captura"
+french = "File de capture"
+brazilian_portuguese = "Fila de captura"
+portuguese = "Fila de captura"
+turkish = "Yakalama kuyruğu"
+polish = "Kolejka przechwytywania"
+
+[[message]]
 key = "Change the skip duration"
 [message.translations]
 simplified_chinese = "变更指定时长"
@@ -573,6 +589,22 @@ brazilian_portuguese = "Contêiner:"
 portuguese = "Contentor:"
 turkish = "Kapsayıcı:"
 polish = "Kontener:"
+
+[[message]]
+key = "Convert threads"
+[message.translations]
+simplified_chinese = "转换线程"
+traditional_chinese = "轉換執行緒"
+japanese = "変換スレッド"
+korean = "변환 스레드"
+russian = "Потоки конвертации"
+german = "Konvertierungs-Threads"
+spanish = "Hilos de conversión"
+french = "Threads de conversion"
+brazilian_portuguese = "Threads de conversão"
+portuguese = "Threads de conversão"
+turkish = "Dönüştürme iş parçacıkları"
+polish = "Wątki konwersji"
 
 [[message]]
 key = "Could not preview this image"
@@ -1469,6 +1501,22 @@ brazilian_portuguese = "Seguir janela"
 portuguese = "Seguir janela"
 turkish = "Pencereyi izle"
 polish = "Dopasuj do okna"
+
+[[message]]
+key = "Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier."
+[message.translations]
+simplified_chinese = "采集与编码之间缓冲的帧数。队列越深越能吸收编码较慢的帧，但更吃内存；数值越低越早产生背压。"
+traditional_chinese = "擷取與編碼之間緩衝的影格數。佇列越深越能吸收編碼較慢的影格，但更耗記憶體；數值越低越早產生背壓。"
+japanese = "キャプチャとエンコードの間にバッファするフレーム数。深いほどエンコードが遅いフレームを吸収できますがメモリを使います。小さいほど早くバックプレッシャーがかかります。"
+korean = "캡처와 인코딩 사이에 버퍼링하는 프레임 수입니다. 깊을수록 느린 인코더 프레임을 흡수하지만 메모리를 더 쓰고, 낮을수록 백프레셔가 빨리 걸립니다."
+russian = "Сколько кадров буферизуется между захватом и кодированием. Больше — сглаживает медленные кадры ценой памяти; меньше — раньше включает обратное давление."
+german = "Frames, die zwischen Aufnahme und Kodierung gepuffert werden. Tiefere Warteschlangen fangen langsame Encoder-Frames ab, kosten aber Speicher; kleinere Werte erzeugen früher Gegendruck."
+spanish = "Fotogramas en búfer entre captura y codificación. Colas más profundas absorben fotogramas lentos a costa de memoria; valores bajos aplican contrapresión antes."
+french = "Images mises en mémoire entre la capture et l'encodage. Une file plus profonde absorbe les images lentes au prix de la mémoire ; une valeur basse applique la contre-pression plus tôt."
+brazilian_portuguese = "Quadros em buffer entre captura e codificação. Filas mais profundas absorvem quadros lentos ao custo de memória; valores menores aplicam contrapressão antes."
+portuguese = "Fotogramas em buffer entre captura e codificação. Filas mais profundas absorvem fotogramas lentos à custa de memória; valores menores aplicam contrapressão mais cedo."
+turkish = "Yakalama ile kodlama arasında tamponlanan kare sayısı. Daha derin kuyruk yavaş kareleri yutar ama bellek harcar; küçük değerler geri baskıyı erken uygular."
+polish = "Klatki buforowane między przechwytywaniem a kodowaniem. Głębsza kolejka łagodzi wolne klatki kosztem pamięci; mniejsze wartości wcześniej włączają back-pressure."
 
 [[message]]
 key = "Go back one marker"
@@ -2495,6 +2543,38 @@ turkish = "Yolu önizle"
 polish = "Podgląd ścieżki"
 
 [[message]]
+key = "ProRes profile"
+[message.translations]
+simplified_chinese = "ProRes 档位"
+traditional_chinese = "ProRes 檔位"
+japanese = "ProRes プロファイル"
+korean = "ProRes 프로파일"
+russian = "Профиль ProRes"
+german = "ProRes-Profil"
+spanish = "Perfil ProRes"
+french = "Profil ProRes"
+brazilian_portuguese = "Perfil ProRes"
+portuguese = "Perfil ProRes"
+turkish = "ProRes profili"
+polish = "Profil ProRes"
+
+[[message]]
+key = "ProRes profile used when the encoder is ProRes. Auto picks 4444 for 4:4:4 input and HQ otherwise; other encoders ignore this."
+[message.translations]
+simplified_chinese = "编码器为 ProRes 时使用的档位。自动会在 4:4:4 输入时选 4444，其余情况选 HQ；其他编码器忽略此项。"
+traditional_chinese = "編碼器為 ProRes 時使用的檔位。自動會在 4:4:4 輸入時選 4444，其餘情況選 HQ；其他編碼器忽略此項。"
+japanese = "エンコーダーが ProRes のときのプロファイル。自動では 4:4:4 入力なら 4444、それ以外は HQ を選びます。他のエンコーダーでは無視されます。"
+korean = "인코더가 ProRes일 때 사용할 프로파일입니다. 자동은 4:4:4 입력이면 4444, 그 외에는 HQ를 선택합니다. 다른 인코더는 이 값을 무시합니다."
+russian = "Профиль ProRes для энкодера ProRes. «Авто» выбирает 4444 для входа 4:4:4 и HQ в остальных случаях; другие энкодеры игнорируют параметр."
+german = "ProRes-Profil für den ProRes-Encoder. Automatisch wählt 4444 bei 4:4:4-Eingabe, sonst HQ; andere Encoder ignorieren dies."
+spanish = "Perfil de ProRes cuando el codificador es ProRes. Automático elige 4444 con entrada 4:4:4 y HQ en el resto; otros codificadores lo ignoran."
+french = "Profil ProRes lorsque l'encodeur est ProRes. Auto choisit 4444 pour une entrée 4:4:4 et HQ sinon ; les autres encodeurs l'ignorent."
+brazilian_portuguese = "Perfil ProRes quando o codificador é ProRes. Automático escolhe 4444 para entrada 4:4:4 e HQ nos demais casos; outros codificadores ignoram."
+portuguese = "Perfil ProRes quando o codificador é ProRes. Automático escolhe 4444 para entrada 4:4:4 e HQ nos restantes casos; outros codificadores ignoram."
+turkish = "Kodlayıcı ProRes olduğunda kullanılan profil. Otomatik, 4:4:4 girişte 4444, aksi halde HQ seçer; diğer kodlayıcılar bunu yok sayar."
+polish = "Profil ProRes używany, gdy enkoderem jest ProRes. Automatyczny wybiera 4444 dla wejścia 4:4:4, w pozostałych przypadkach HQ; inne enkodery to ignorują."
+
+[[message]]
 key = "Quality"
 [message.translations]
 simplified_chinese = "质量"
@@ -2943,6 +3023,38 @@ turkish = "Arama sonuçları"
 polish = "Wyniki wyszukiwania"
 
 [[message]]
+key = "Segment length (s)"
+[message.translations]
+simplified_chinese = "分段时长（秒）"
+traditional_chinese = "分段時長（秒）"
+japanese = "セグメント長（秒）"
+korean = "분할 길이(초)"
+russian = "Длина сегмента (с)"
+german = "Segmentlänge (s)"
+spanish = "Duración del segmento (s)"
+french = "Durée du segment (s)"
+brazilian_portuguese = "Duração do segmento (s)"
+portuguese = "Duração do segmento (s)"
+turkish = "Segment uzunluğu (sn)"
+polish = "Długość segmentu (s)"
+
+[[message]]
+key = "Segment warmup (ticks)"
+[message.translations]
+simplified_chinese = "分段预热（tick）"
+traditional_chinese = "分段預熱（tick）"
+japanese = "セグメント予熱（tick）"
+korean = "분할 예열(tick)"
+russian = "Прогрев сегмента (тики)"
+german = "Segment-Aufwärmen (Ticks)"
+spanish = "Precalentamiento del segmento (ticks)"
+french = "Préchauffage du segment (ticks)"
+brazilian_portuguese = "Aquecimento do segmento (ticks)"
+portuguese = "Aquecimento do segmento (ticks)"
+turkish = "Segment ısınması (tick)"
+polish = "Rozgrzewka segmentu (ticki)"
+
+[[message]]
 key = "Select map for the pose file"
 [message.translations]
 simplified_chinese = "为合影文件选择地图"
@@ -3135,6 +3247,22 @@ turkish = "Demoyu hızlandır"
 polish = "Przyspiesz demo"
 
 [[message]]
+key = "Split the exported video into segments of this length. 0 writes a single file. Segments disable B-frames so they can be joined without timestamp errors."
+[message.translations]
+simplified_chinese = "把导出视频按该时长分段。0 表示输出单个文件。分段会关闭 B 帧，保证拼接时不会因时间戳出错。"
+traditional_chinese = "把匯出影片依此時長分段。0 表示輸出單一檔案。分段會關閉 B 幀，確保拼接時不會因時間戳出錯。"
+japanese = "書き出す動画をこの長さで分割します。0 なら単一ファイル。分割時は B フレームを無効化し、結合時にタイムスタンプで失敗しないようにします。"
+korean = "내보낼 영상의 분할 길이입니다. 0이면 단일 파일로 출력합니다. 분할 시에는 B 프레임을 꺼서 이어 붙일 때 타임스탬프 오류가 나지 않게 합니다."
+russian = "Разбивает экспортируемое видео на сегменты такой длины. 0 — один файл. В сегментах отключаются B-кадры, чтобы склейка не ломалась на временных метках."
+german = "Teilt das exportierte Video in Segmente dieser Länge. 0 schreibt eine einzelne Datei. Segmente deaktivieren B-Frames, damit sie ohne Zeitstempel-Fehler zusammengefügt werden können."
+spanish = "Divide el vídeo exportado en segmentos de esta duración. 0 escribe un solo archivo. Los segmentos desactivan los fotogramas B para poder unirlos sin errores de marcas de tiempo."
+french = "Découpe la vidéo exportée en segments de cette durée. 0 écrit un seul fichier. Les segments désactivent les images B pour permettre la jonction sans erreur d'horodatage."
+brazilian_portuguese = "Divide o vídeo exportado em segmentos dessa duração. 0 grava um único arquivo. Segmentos desativam quadros B para poderem ser unidos sem erros de timestamp."
+portuguese = "Divide o vídeo exportado em segmentos desta duração. 0 grava um único ficheiro. Os segmentos desativam fotogramas B para poderem ser unidos sem erros de timestamp."
+turkish = "Dışa aktarılan videoyu bu uzunlukta bölümlere ayırır. 0 tek dosya yazar. Bölümler B kareleri kapatır, böylece zaman damgası hatası olmadan birleştirilebilir."
+polish = "Dzieli eksportowane wideo na segmenty o tej długości. 0 zapisuje jeden plik. Segmenty wyłączają klatki B, aby można je było łączyć bez błędów znaczników czasu."
+
+[[message]]
 key = "Start (s)"
 [message.translations]
 simplified_chinese = "开始 (秒)"
@@ -3277,6 +3405,22 @@ brazilian_portuguese = "Este arquivo de poses não registra um mapa. Escolha o m
 portuguese = "Este ficheiro de poses não regista um mapa. Escolha o mapa usado para renderizar."
 turkish = "Bu poz dosyası bir harita kaydetmiyor. İşlemede kullanılacak haritayı seçin."
 polish = "Ten plik póz nie zawiera mapy. Wybierz mapę używaną do renderowania."
+
+[[message]]
+key = "Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second."
+[message.translations]
+simplified_chinese = "每段开始前不带录制地播放的 tick 数，用来让特效和聊天状态与该段起点一致。50 tick 等于 1 秒。"
+traditional_chinese = "每段開始前不帶錄製地播放的 tick 數，用來讓特效與聊天狀態與該段起點一致。50 tick 等於 1 秒。"
+japanese = "各セグメントの前に録画せずに再生する tick 数。エフェクトやチャットの状態を区間の開始に合わせます。50 tick が 1 秒です。"
+korean = "각 구간 전에 녹화 없이 재생하는 tick 수로, 효과와 채팅 상태를 구간 시작에 맞춥니다. 50 tick은 1초입니다."
+russian = "Сколько тиков проигрывать без записи перед каждым сегментом, чтобы эффекты и чат соответствовали началу сегмента. 50 тиков — это одна секунда."
+german = "Ticks, die vor jedem Segment ohne Aufnahme abgespielt werden, damit Effekte und Chat zum Segmentstart passen. 50 Ticks entsprechen einer Sekunde."
+spanish = "Ticks reproducidos sin grabar antes de cada segmento para que los efectos y el chat coincidan con el inicio. 50 ticks equivalen a un segundo."
+french = "Ticks joués sans enregistrer avant chaque segment pour que les effets et le chat correspondent au début du segment. 50 ticks = une seconde."
+brazilian_portuguese = "Ticks reproduzidos sem gravar antes de cada segmento para que efeitos e chat correspondam ao início. 50 ticks equivalem a um segundo."
+portuguese = "Ticks reproduzidos sem gravar antes de cada segmento para que efeitos e chat coincidam com o início. 50 ticks equivalem a um segundo."
+turkish = "Her segmentin öncesinde kayıt yapmadan oynatılan tick sayısı; efektler ve sohbet segment başına uysun diye. 50 tick bir saniyedir."
+polish = "Liczba ticków odtwarzanych bez nagrywania przed każdym segmentem, aby efekty i czat zgadzały się z początkiem segmentu. 50 ticków to jedna sekunda."
 
 [[message]]
 key = "Timestamp"
@@ -3661,6 +3805,22 @@ brazilian_portuguese = "Marca d'água"
 portuguese = "Marca de água"
 turkish = "Filigran"
 polish = "Znak wodny"
+
+[[message]]
+key = "Worker threads that convert captured frames to the encoder pixel format. 2-4 is enough for most CPUs; more threads only help when the encoder is fast."
+[message.translations]
+simplified_chinese = "把采集帧转换成编码器像素格式的工作线程数。多数 CPU 2-4 个就够，编码器很快时增加线程才有收益。"
+traditional_chinese = "把擷取影格轉換成編碼器像素格式的工作執行緒數。多數 CPU 2-4 個就夠，編碼器很快時增加執行緒才有幫助。"
+japanese = "キャプチャしたフレームをエンコーダーのピクセル形式へ変換するワーカースレッド数。多くの CPU では 2〜4 で十分で、エンコーダーが速い場合のみ増やす意味があります。"
+korean = "캡처한 프레임을 인코더 픽셀 형식으로 변환하는 작업 스레드 수입니다. 대부분의 CPU에서는 2~4개면 충분하며, 인코더가 빠를 때만 늘리는 것이 좋습니다."
+russian = "Рабочие потоки, преобразующие захваченные кадры в пиксельный формат энкодера. Для большинства CPU достаточно 2–4; больше помогает только при быстром энкодере."
+german = "Arbeitsthreads, die aufgenommene Frames in das Pixelformat des Encoders umwandeln. Für die meisten CPUs reichen 2-4; mehr hilft nur bei einem schnellen Encoder."
+spanish = "Hilos de trabajo que convierten los fotogramas capturados al formato de píxel del codificador. Con 2-4 basta en la mayoría de CPU; más solo ayuda si el codificador es rápido."
+french = "Threads de travail qui convertissent les images capturées au format de pixel de l'encodeur. 2 à 4 suffisent sur la plupart des CPU ; au-delà, seul un encodeur rapide en profite."
+brazilian_portuguese = "Threads de trabalho que convertem os quadros capturados para o formato de pixel do codificador. 2-4 bastam na maioria das CPUs; mais só ajuda se o codificador for rápido."
+portuguese = "Threads de trabalho que convertem os fotogramas capturados para o formato de píxel do codificador. 2-4 chegam na maioria dos CPUs; mais só ajuda se o codificador for rápido."
+turkish = "Yakalanan kareleri kodlayıcının piksel biçimine dönüştüren çalışan iş parçacıkları. Çoğu CPU için 2-4 yeterlidir; fazlası yalnızca kodlayıcı hızlıysa işe yarar."
+polish = "Wątki robocze konwertujące przechwycone klatki do formatu pikseli enkodera. Na większości CPU wystarczą 2-4; więcej pomaga tylko przy szybkim enkoderze."
 
 [[message]]
 key = "map not included"

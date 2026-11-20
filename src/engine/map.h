@@ -8,6 +8,8 @@
 #include <base/hash.h>
 #include <base/types.h>
 
+#include <vector>
+
 enum
 {
 	MAX_MAP_LENGTH = 128
@@ -21,6 +23,8 @@ class IMap : public IInterface
 public:
 	virtual int GetDataSize(int Index) const = 0;
 	virtual void *GetData(int Index) = 0;
+	// 独立持有的 v4 压缩块可交给后台解码；缓存和需经过地图处理器的块走 GetData。
+	virtual bool ReadCompressedData(int, std::vector<unsigned char> &) { return false; }
 	virtual void *GetDataSwapped(int Index) = 0;
 	virtual const char *GetDataString(int Index) = 0;
 	virtual void UnloadData(int Index) = 0;

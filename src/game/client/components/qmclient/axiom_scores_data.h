@@ -3,9 +3,22 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
+
+// 计分板、选图菜单与服务器浏览器共用开放平台的请求额度。
+class CQmAxiomRequestBudget
+{
+	std::deque<int64_t> m_RecentStarts;
+	int64_t m_RetryAfter = 0;
+
+public:
+	bool TryStart(int64_t Now, bool Authenticated);
+	void RateLimited(int64_t Now);
+};
 
 enum class EQmAxiomMode
 {
@@ -80,6 +93,9 @@ struct SQmAxiomPopupSize
 const char *QmAxiomModeName(EQmAxiomMode Mode);
 // 把解析结果翻成可显示的简短原因；SUCCESS 返回空串。
 const char *QmAxiomParseResultLabel(EQmAxiomParseResult Result);
+std::string QmBuildAxiomMapInfoUrl(const char *pMapName, EQmAxiomMode Mode);
+std::string QmBuildAxiomPointsUrl(const char *pPlayerName, EQmAxiomMode Mode);
+EQmAxiomParseResult QmParseAxiomPointsResponse(const char *pData, size_t DataSize, const char *pPlayerName, EQmAxiomMode Mode, int64_t &OutPoints);
 std::string QmBuildAxiomSearchUrl(const char *pPlayerName);
 std::string QmBuildAxiomInfoUrl(int64_t UserId, EQmAxiomMode Mode);
 std::string QmBuildDdStatsPlayerUrl(const char *pPlayerName);
@@ -87,7 +103,6 @@ EQmAxiomParseResult QmParseAxiomSearchResponse(const char *pData, size_t DataSiz
 EQmAxiomParseResult QmParseAxiomInfoResponse(const char *pData, size_t DataSize, SQmAxiomModeScore &OutScore);
 EQmAxiomParseResult QmParseDdStatsPlayerResponse(const char *pData, size_t DataSize, const char *pPlayerName, std::vector<SQmDdStatsGameType> &OutGameTypes);
 bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, std::string_view CurrentPlayerName, std::string_view ResponsePlayerName);
-bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, EQmAxiomMode CurrentMode, EQmAxiomMode ResponseMode);
 SQmAxiomPopupSize QmAxiomPopupSize(float ScreenWidth, float ScreenHeight);
 
 #endif

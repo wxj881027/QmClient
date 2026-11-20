@@ -72,6 +72,8 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_font[] = {
 		{Localizable("(Follow Chinese font)"), nullptr, "（跟随中文字体）"},
 		{Localizable("(Follow English font)"), nullptr, "（跟随英文字体）"},
+		{Localizable("All items"), nullptr, "全部项目"},
+		{Localizable("All typefaces"), nullptr, "全部书体"},
 		{Localizable("CJK font weight:"), nullptr, "中日韩字体字重："},
 		{Localizable("Chinese font:"), nullptr, "中文字体："},
 		{Localizable("Default"), nullptr, "默认"},
@@ -276,6 +278,7 @@ namespace
 		{Localizable("Pulse"), nullptr, "脉冲"},
 		{Localizable("Rainbow"), nullptr, "彩虹"},
 		{Localizable("Rainbow Tees"), nullptr, "彩虹色 Tee"},
+		{Localizable("Legacy team colors"), nullptr, "旧版队伍配色"},
 		{Localizable("Rainbow hook"), nullptr, "彩虹色钩索"},
 		{Localizable("Rainbow others"), nullptr, "将彩虹带给每个人！"},
 		{Localizable("Rainbow speed"), nullptr, "颜色变化速度"},
@@ -286,6 +289,7 @@ namespace
 		{nullptr, "qm_rainbow_others", nullptr},
 		{nullptr, "qm_rainbow_speed", nullptr},
 		{nullptr, "qm_rainbow_tees", nullptr},
+		{nullptr, "qm_old_team_colors", nullptr},
 		{nullptr, "qm_rainbow_weapon", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("tclient:rainbow", tclient_rainbow);
@@ -388,6 +392,8 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_visual_nameplates[] = {
 		{Localizable("Freeze stars"), nullptr, "显示冻结效果的星星动画"},
+		{Localizable("Frozen color darkening"), nullptr, "冻结时颜色变暗强度"},
+		{Localizable("Use skin color for frozen feet"), nullptr, "冻结脚部使用皮肤色"},
 		{Localizable("Render all custom colored feet as white feet skin"), nullptr, "将所有自定义脚部颜色渲染为白色"},
 		{Localizable("Show country flags in nameplates"), nullptr, "在玩家昵称旁显示国旗"},
 		{Localizable("Show katana on frozen players"), nullptr, "在被冻结的玩家身上显示武士刀"},
@@ -396,6 +402,8 @@ namespace
 		{Localizable("Use colored skins for frozen tees"), nullptr, "冻结 Tee 使用彩色皮肤"},
 		{nullptr, "cl_freeze_stars", nullptr},
 		{nullptr, "qm_color_freeze", nullptr},
+		{nullptr, "qm_color_freeze_darken", nullptr},
+		{nullptr, "qm_color_freeze_feet", nullptr},
 		{nullptr, "qm_frozen_katana", nullptr},
 		{nullptr, "qm_nameplate_country", nullptr},
 		{nullptr, "qm_nameplate_ping_circle", nullptr},

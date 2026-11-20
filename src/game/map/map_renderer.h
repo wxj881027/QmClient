@@ -19,15 +19,27 @@ public:
 
 	void Clear();
 	void BeginLoad(ERenderType Type, CLayers *pLayers, IMapImages *pMapImages, const IEnvelopeEval *pEnvelopeEval, std::optional<FCallbackMapRendererInit> CallbackMapRendererInitOptional = std::nullopt);
-	void LoadStep(int MaxLayers = 1);
+	struct SLoadProfile
+	{
+		int m_Group = -1;
+		int m_Layer = -1;
+		int m_Type = -1;
+		int m_Width = 0;
+		int m_Height = 0;
+		int m_Quads = 0;
+		bool m_Complete = false;
+	};
+
+	void LoadStep(int MaxLayers = 1, CMapLoadTask::TClock::time_point Deadline = CMapLoadTask::TClock::time_point::max(), SLoadProfile *pProfile = nullptr);
 	bool IsLoadFinished() const { return m_LoadFinished; }
 	void Load(ERenderType Type, CLayers *pLayers, IMapImages *pMapImages, const IEnvelopeEval *pEnvelopeEval, std::optional<FCallbackMapRendererInit> CallbackMapRendererInitOptional, bool TileAndQuadBuffering = true);
-	void Render(const CRenderLayerParams &Params);
+	void Render(const CRenderLayerParams &Params, const std::function<void()> &BeforeWorldTiles = {});
 
 private:
 	int GetLayerType(const CMapItemLayer *pLayer) const;
 
 	std::vector<std::unique_ptr<CRenderLayer>> m_vpRenderLayers;
+	const CRenderLayer *m_pFirstWorldTile = nullptr;
 	ERenderType m_LoadType = ERenderType::RENDERTYPE_FULL_DESIGN;
 	CLayers *m_pLoadLayers = nullptr;
 	IMapImages *m_pLoadImages = nullptr;
@@ -35,6 +47,8 @@ private:
 	std::shared_ptr<CEnvelopeManager> m_pLoadEnvelopeManager;
 	std::optional<FCallbackMapRendererInit> m_LoadCallback;
 	std::unique_ptr<CRenderLayer> m_pLoadGroup;
+	std::unique_ptr<CRenderLayer> m_pPreparingLayer;
+	CMapLoadTask m_LayerTask;
 	int m_LoadGroupId = 0;
 	int m_GameGroupId = -1;
 	int m_GameLayerId = -1;

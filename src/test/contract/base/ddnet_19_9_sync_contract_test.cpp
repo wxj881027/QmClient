@@ -87,11 +87,16 @@ TEST(DDNet199Sync, RejectsEscapeBindsAndUsesCurrentHookState)
 TEST(DDNet199Sync, UsesLocalTuningForUnpredictedHookCollision)
 {
 	const std::string Players = ReadTestSourceFile("src/game/client/components/players.cpp");
+	const std::string GameClient = ReadTestSourceFile("src/game/client/gameclient.cpp");
 
-	EXPECT_NE(Players.find("const CCharacterCore &PlayerCore = GameClient()->m_aClients[ClientId].m_IsPredicted"), std::string::npos);
-	EXPECT_NE(Players.find("GameClient()->m_aClients[GameClient()->m_aLocalIds[g_Config.m_ClDummy]].m_Predicted"), std::string::npos);
-	EXPECT_NE(Players.find("PlayerCore.m_Tuning.m_HookLength"), std::string::npos);
-	EXPECT_NE(Players.find("PlayerCore.m_Tuning.m_HookFireSpeed"), std::string::npos);
+	// 19.9 的「对方没预测时用本机 tuning」启发式收敛到唯一入口 HookCollTuning：
+	// 非预测 / 越界 ClientId 一律回落到本机 Predicted，再回落到本机 tuning。
+	EXPECT_NE(Players.find("const CTuningParams &Tuning = GameClient()->HookCollTuning(ClientId);"), std::string::npos);
+	EXPECT_NE(Players.find("float HookLength = Tuning.m_HookLength;"), std::string::npos);
+	EXPECT_NE(Players.find("float HookFireSpeed = Tuning.m_HookFireSpeed;"), std::string::npos);
+	EXPECT_NE(GameClient.find("const CTuningParams &CGameClient::HookCollTuning(int ClientId) const"), std::string::npos);
+	EXPECT_NE(GameClient.find("m_aClients[ClientId].m_IsPredicted ? ClientId : m_aLocalIds[Active]"), std::string::npos);
+	EXPECT_NE(GameClient.find("m_aClients[SourceId].m_Predicted.m_Tuning : m_aTuning[Active]"), std::string::npos);
 }
 
 TEST(DDNet20TouchDismiss, ComponentsCanConsumeTouchFingersInInputOrder)

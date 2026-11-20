@@ -3193,8 +3193,8 @@ const char *CQmClient::PlayerTitle(int ClientId, bool ForNameplateLayout) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || (!ForNameplateLayout && GameClient()->ShouldHideStreamerIdentity(ClientId)))
 		return "";
-	if(PlayerHasDeveloperBadge(ClientId, ForNameplateLayout))
-		return "[开发者]";
+	// 开发者身份只由名牌上的徽章表示；头衔文字与样式完全交给本人设置，
+	// 否则开发者无法使用自己配置的头衔文本。
 	if(m_aTitleExpires[ClientId] > time_get() && str_comp(m_aaTitleNames[ClientId], GameClient()->m_aClients[ClientId].m_aName) == 0)
 		return m_aaPlayerTitles[ClientId];
 	return "";

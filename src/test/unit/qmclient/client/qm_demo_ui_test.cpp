@@ -99,10 +99,11 @@ TEST(QmDemoUi, SliceContentAccountsForFourVisibleSegmentsAndDisplayOptions)
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(4, false), 264.0f);
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(5, false), 280.0f);
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(5, true), 414.0f);
-	// 顶部 4 + 回放显示 110 + 10 + 视频导出 278 + 10 + 播放选项 110 + 10 + 视频编码 110 = 642。
+	// 顶部 4 + 回放显示 110 + 10 + 视频导出 278 + 10 + 播放选项 110 + 10 + 视频编码 230 = 762。
+	// 视频编码分组自 3 行扩到 8 行（转换线程/采集队列/分段时长/分段预热/ProRes 档位）。
 	// 在线时追加断线提示 30。
-	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(false), 642.0f);
-	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(true), 672.0f);
+	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(false), 762.0f);
+	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(true), 792.0f);
 }
 
 TEST(QmDemoUi, PresetGopMakesEditingAllIntraAndResetsOthers)
@@ -215,10 +216,10 @@ TEST(QmDemoUi, PoseMapPopupGrowsWithRowsAndStopsAtTheCap)
 
 TEST(QmDemoUi, PoseMapRenderRowsReserveHeightForBothOutputRows)
 {
-	// 渲染模式比观看模式多三行（输出格式、分辨率倍数、锐化）：高度必须一起长，
-	// 否则列表会压到按钮上或把这两行裁掉。
+	// 渲染模式比观看模式多四行（输出格式、分辨率倍数、锐化、像素预算）：高度必须一起长，
+	// 否则列表会压到按钮上或把这几行裁掉。
 	constexpr int RenderRows = qm_demo_ui::POSE_MAP_RENDER_ROWS;
-	EXPECT_EQ(RenderRows, 3);
+	EXPECT_EQ(RenderRows, 4);
 	EXPECT_FLOAT_EQ(qm_demo_ui::PoseMapRenderRowsHeight(0), 0.0f);
 	EXPECT_FLOAT_EQ(qm_demo_ui::PoseMapRenderRowsHeight(RenderRows), RenderRows * (qm_demo_ui::POSE_MAP_ROW_HEIGHT + qm_demo_ui::POSE_MAP_GAP));
 

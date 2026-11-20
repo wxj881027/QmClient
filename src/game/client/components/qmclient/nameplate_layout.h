@@ -55,16 +55,19 @@ enum class ENameplateCoreRow
 	CLAN,
 	HOOK,
 	COORDS,
-	KEYS,
+	KEYS_LEFT,
+	KEYS_UP,
+	KEYS_RIGHT,
 	WATER_HAMMER,
 	WATER_HOOK,
 	NUM_ROWS
 };
 
-static constexpr size_t kNameplateStackedRowCount = static_cast<size_t>(ENameplateCoreRow::KEYS) + 1;
+// NAME..COORDS 逐行堆叠；方向键三向共用一条基线并排，卡锤、卡钩贴在整组两侧。
+static constexpr size_t kNameplateStackedRowCount = static_cast<size_t>(ENameplateCoreRow::COORDS) + 1;
 static constexpr size_t kNameplateCoreRowCount = static_cast<size_t>(ENameplateCoreRow::NUM_ROWS);
 
-// 卡锤、卡钩独立定位，默认贴在方向键两侧，不占用新的垂直行。
+// 方向键三向各自成行、共用基线并排；卡锤、卡钩贴在整组两侧，不占用新的垂直行。
 inline std::array<vec2, kNameplateCoreRowCount> QmNameplateCoreRowPositions(
 	const std::array<vec2, kNameplateCoreRowCount> &aSizes,
 	const std::array<vec2, kNameplateCoreRowCount> &aOffsets = {})
@@ -76,13 +79,22 @@ inline std::array<vec2, kNameplateCoreRowCount> QmNameplateCoreRowPositions(
 		aPositions[Row] = vec2(0.0f, Bottom);
 		Bottom -= aSizes[Row].y;
 	}
-	const size_t Keys = static_cast<size_t>(ENameplateCoreRow::KEYS);
+	const size_t KeysLeft = static_cast<size_t>(ENameplateCoreRow::KEYS_LEFT);
+	const size_t KeysUp = static_cast<size_t>(ENameplateCoreRow::KEYS_UP);
+	const size_t KeysRight = static_cast<size_t>(ENameplateCoreRow::KEYS_RIGHT);
+	// 部件自带 5 像素横向内边距，因此按相邻宽度均分即可保持原来的并排间距。
+	aPositions[KeysUp] = vec2(0.0f, Bottom);
+	aPositions[KeysLeft] = vec2(-(aSizes[KeysUp].x + aSizes[KeysLeft].x) / 2.0f, Bottom);
+	aPositions[KeysRight] = vec2((aSizes[KeysUp].x + aSizes[KeysRight].x) / 2.0f, Bottom);
+	const float KeysHalfWidth = std::max(
+		-aPositions[KeysLeft].x + aSizes[KeysLeft].x / 2.0f,
+		aPositions[KeysRight].x + aSizes[KeysRight].x / 2.0f);
 	for(const ENameplateCoreRow Row : {ENameplateCoreRow::WATER_HAMMER, ENameplateCoreRow::WATER_HOOK})
 	{
 		const size_t Index = static_cast<size_t>(Row);
 		const float Side = Row == ENameplateCoreRow::WATER_HAMMER ? -1.0f : 1.0f;
-		aPositions[Index] = vec2(Side * (aSizes[Keys].x + aSizes[Index].x) / 2.0f,
-			aPositions[Keys].y + (aSizes[Index].y - aSizes[Keys].y) / 2.0f);
+		aPositions[Index] = vec2(Side * (KeysHalfWidth + aSizes[Index].x / 2.0f),
+			Bottom + (aSizes[Index].y - aSizes[KeysUp].y) / 2.0f);
 	}
 	// 所有默认位置计算完成后才叠加各自偏移，拖动方向键不会带动两侧图标。
 	for(size_t Row = 0; Row < aPositions.size(); ++Row)
@@ -99,19 +111,20 @@ inline std::array<float, kNameplateCoreRowCount> QmNameplateCoreRowBaselines(con
 		aBaselines[RowIndex] = Position;
 		Position -= aHeights[RowIndex];
 	}
-	// 方向键只使用强弱钩默认大小的间距（24 + 5），不随其开关或大小变化。
-	aBaselines[static_cast<size_t>(ENameplateCoreRow::KEYS)] = aBaselines[static_cast<size_t>(ENameplateCoreRow::HOOK)] - 29.0f - aHeights[static_cast<size_t>(ENameplateCoreRow::COORDS)];
-	aBaselines[static_cast<size_t>(ENameplateCoreRow::WATER_HAMMER)] = aBaselines[static_cast<size_t>(ENameplateCoreRow::KEYS)];
-	aBaselines[static_cast<size_t>(ENameplateCoreRow::WATER_HOOK)] = aBaselines[static_cast<size_t>(ENameplateCoreRow::KEYS)];
+	// 方向键只使用强弱钩默认大小的间距（24 + 5），不随其开关或大小变化；三向共用一条基线。
+	const float KeysBaseline = aBaselines[static_cast<size_t>(ENameplateCoreRow::HOOK)] - 29.0f - aHeights[static_cast<size_t>(ENameplateCoreRow::COORDS)];
+	for(const ENameplateCoreRow Row : {ENameplateCoreRow::KEYS_LEFT, ENameplateCoreRow::KEYS_UP, ENameplateCoreRow::KEYS_RIGHT, ENameplateCoreRow::WATER_HAMMER, ENameplateCoreRow::WATER_HOOK})
+		aBaselines[static_cast<size_t>(Row)] = KeysBaseline;
 	return aBaselines;
 }
 
 inline float QmNameplatePreviewContentSpan(std::array<float, kNameplateCoreRowCount> aHeights)
 {
-	// 为两项保留最大尺寸空间：强弱钩为 38 + 5，方向键为 38 * 1.5。
+	// 为两项保留最大尺寸空间：强弱钩与方向键都是 38 + 5 的方块。
 	// 开关和缩放只改变对应图标，不能带动预览框及另一项整体移动。
 	aHeights[static_cast<size_t>(ENameplateCoreRow::HOOK)] = 43.0f;
-	aHeights[static_cast<size_t>(ENameplateCoreRow::KEYS)] = 57.0f;
+	for(const ENameplateCoreRow Row : {ENameplateCoreRow::KEYS_LEFT, ENameplateCoreRow::KEYS_UP, ENameplateCoreRow::KEYS_RIGHT})
+		aHeights[static_cast<size_t>(Row)] = 43.0f;
 	const auto aBaselines = QmNameplateCoreRowBaselines(aHeights);
 	float Span = 0.0f;
 	for(size_t RowIndex = 0; RowIndex < aHeights.size(); ++RowIndex)

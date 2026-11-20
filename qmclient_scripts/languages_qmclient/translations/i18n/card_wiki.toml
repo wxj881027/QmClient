@@ -6415,6 +6415,22 @@ turkish = "İstediğiniz eylemleri işaretleyin, örneğin çözülünce otomati
 polish = "Zaznacz wybrane działania, np. automatyczne wyjście z podglądu po rozmrożeniu lub automatyczna blokada drużyny; poniżej pojawią się opóźnienie blokady i krycie obserwatora."
 
 [[message]]
+key = "Tick the download toggles, then use \"Data source\" in \"Skin search\" to choose which source catalog is shown."
+[message.translations]
+simplified_chinese = "勾选下载开关后，在「皮肤搜索」里用「数据来源」选择要显示哪个来源目录。"
+traditional_chinese = "勾選下載開關後，在「皮膚搜尋」裡用「資料來源」選擇要顯示哪個來源目錄。"
+japanese = "ダウンロードのトグルをオンにし、「スキン検索」の「データソース」で表示するソースカタログを選択します。"
+korean = "다운로드 토글을 켠 뒤 \"스킨 검색\"의 \"데이터 소스\"에서 표시할 소스 카탈로그를 선택하세요."
+russian = "Включите переключатели загрузки, затем в «Поиске скинов» выберите «Источник данных», чтобы указать отображаемый каталог."
+german = "Aktiviere die Download-Schalter und wähle dann unter „Skinsuche“ die „Datenquelle“, um festzulegen, welcher Quellkatalog angezeigt wird."
+spanish = "Marca las casillas de descarga y luego usa «Fuente de datos» en «Búsqueda de skins» para elegir qué catálogo de origen se muestra."
+french = "Cochez les cases de téléchargement, puis utilisez « Source de données » dans « Recherche de skins » pour choisir le catalogue source affiché."
+brazilian_portuguese = "Marque as opções de download e depois use \"Fonte de dados\" em \"Busca de skins\" para escolher qual catálogo de origem é exibido."
+portuguese = "Marque as opções de transferência e depois use «Fonte de dados» em «Pesquisa de skins» para escolher que catálogo de origem é apresentado."
+turkish = "İndirme anahtarlarını işaretleyin, ardından hangi kaynak kataloğunun gösterileceğini seçmek için \"Skin arama\" içindeki \"Veri kaynağı\"nı kullanın."
+polish = "Zaznacz przełączniki pobierania, a następnie użyj „Źródło danych” w „Wyszukiwaniu skinów”, aby wybrać wyświetlany katalog źródłowy."
+
+[[message]]
 key = "Toggles DDNet gameplay indicators and assists such as race time, team markers and hints."
 [message.translations]
 simplified_chinese = "开关 DDNet 的玩法指示与辅助功能，例如竞速时间、队友标记和提示。"

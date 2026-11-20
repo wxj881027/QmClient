@@ -225,6 +225,29 @@ void CMenusSettingsControls::RenderSettingsMouse(CUIRect View)
 	if(Flow.Control("controls-ingame-mouse-max-distance-label", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
 		DoSettingsControlsNumericField("controls-ingame-mouse-max-distance-label", &g_Config.m_ClMouseMaxDistance, &g_Config.m_ClMouseMaxDistance, Button, Localize("Maximum cursor distance"), 0, 5000);
 
+	// 高分辨率下同样手感：最大光标距离按 1000 像素归一化。
+	if(Flow.Control("controls-scale-mouse-distance", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
+	{
+		if(DoSettingsControlsCheckBox(&g_Config.m_QmScaleMouseDistance, "controls-scale-mouse-distance", Localize("Scale cursor distance with resolution"), g_Config.m_QmScaleMouseDistance, &Button))
+			g_Config.m_QmScaleMouseDistance ^= 1;
+		GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmScaleMouseDistance, &Button, Localize("Keep the feeling of the maximum cursor distance independent of resolution"));
+	}
+
+	if(Flow.Control("controls-limit-mouse", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
+	{
+		CUIRect Label, DropDown;
+		SplitSettingsControlRow(Button, m_CardMetrics, &Label, &DropDown, ESettingsControlWidth::LONG_CHOICE);
+		DoSettingsControlsMenuLabel("controls-limit-mouse", &Label, Localize("Limit cursor to game window"), m_CardMetrics.m_BodySize, TEXTALIGN_ML);
+		const char *apModes[] = {Localize("No limit"), Localize("Keep inside game window"), Localize("Keep square inside game window")};
+		static CUi::SDropDownState s_LimitMouseState;
+		static CScrollRegion s_LimitMouseScroll;
+		s_LimitMouseState.m_SelectionPopupContext.m_pScrollRegion = &s_LimitMouseScroll;
+		const int Mode = std::clamp(g_Config.m_QmLimitMouseToScreen, 0, 2);
+		const int NewMode = GameClient()->m_Menus.DoSettingsDropDown(&DropDown, Mode, apModes, 3, s_LimitMouseState, {}, &g_Config.m_QmLimitMouseToScreen, nullptr, &Button);
+		if(NewMode != Mode)
+			g_Config.m_QmLimitMouseToScreen = NewMode;
+	}
+
 	if(Flow.Control("controls-ui-mouse-sens-label", m_CardMetrics.m_LineHeight, Button, ui_token::settings::RowGap(m_CardMetrics.m_LineSpacing)))
 		DoSettingsControlsNumericField("controls-ui-mouse-sens-label", &g_Config.m_UiMousesens, &g_Config.m_UiMousesens, Button, Localize("UI mouse sens."), 1, 500, &CUi::ms_LogarithmicScrollbarScale);
 }

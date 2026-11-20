@@ -2,12 +2,15 @@
 
 #include <base/math.h>
 #include <base/str.h>
+#include <base/time.h>
 
 #include <engine/http.h>
+#include <engine/map.h>
 #include <engine/shared/json.h>
 
 #include <algorithm>
 #include <limits>
+#include <memory>
 
 namespace
 {
@@ -244,6 +247,21 @@ namespace
 	}
 }
 
+bool CQmAxiomRequestBudget::TryStart(int64_t Now, bool Authenticated)
+{
+	while(!m_RecentStarts.empty() && Now - m_RecentStarts.front() >= time_freq())
+		m_RecentStarts.pop_front();
+	if(Now < m_RetryAfter || m_RecentStarts.size() >= (Authenticated ? 10u : 3u))
+		return false;
+	m_RecentStarts.push_back(Now);
+	return true;
+}
+
+void CQmAxiomRequestBudget::RateLimited(int64_t Now)
+{
+	m_RetryAfter = Now + time_freq();
+}
+
 const char *QmAxiomModeName(EQmAxiomMode Mode)
 {
 	switch(Mode)
@@ -292,6 +310,47 @@ const char *QmAxiomParseResultLabel(EQmAxiomParseResult Result)
 		return "invalid response";
 	}
 	return "";
+}
+
+std::string QmBuildAxiomMapInfoUrl(const char *pMapName, EQmAxiomMode Mode)
+{
+	char aEscaped[MAX_MAP_LENGTH * 3];
+	EscapeUrl(aEscaped, pMapName);
+	return std::string("https://api.axiom.teeworlds.cn/v1/open/map/info?mode=") + (Mode == EQmAxiomMode::GORES ? "gores" : "axrace") + "&map=" + aEscaped;
+}
+
+std::string QmBuildAxiomPointsUrl(const char *pPlayerName, EQmAxiomMode Mode)
+{
+	char aEncodedName[1024];
+	EscapeUrl(aEncodedName, sizeof(aEncodedName), pPlayerName);
+	char aUrl[1200];
+	str_format(aUrl, sizeof(aUrl), "https://api.axiom.teeworlds.cn/v1/open/user/points?mode=%s&name=%s", Mode == EQmAxiomMode::GORES ? "gores" : "axrace", aEncodedName);
+	return aUrl;
+}
+
+EQmAxiomParseResult QmParseAxiomPointsResponse(const char *pData, size_t DataSize, const char *pPlayerName, EQmAxiomMode Mode, int64_t &OutPoints)
+{
+	if(!pData || DataSize == 0 || DataSize > MAX_AXIOM_JSON_BYTES)
+		return EQmAxiomParseResult::INVALID_RESPONSE;
+	const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(JsonParse(pData, DataSize), json_value_free);
+	const json_value *pCode = JsonField(pRoot.get(), "code");
+	if(pCode->type != json_integer)
+		return EQmAxiomParseResult::INVALID_RESPONSE;
+	if(pCode->u.integer == 404)
+		return EQmAxiomParseResult::NOT_FOUND;
+	if(pCode->u.integer != 200)
+		return EQmAxiomParseResult::API_ERROR;
+	const json_value *pPayload = JsonField(pRoot.get(), "data");
+	const json_value *pUser = JsonField(pPayload, "user");
+	const json_value *pMain = JsonField(JsonField(pUser, "player"), "name");
+	const json_value *pDummy = JsonField(JsonField(pUser, "dummy"), "name");
+	const bool NameMatches = (pMain->type == json_string && str_comp(json_string_get(pMain), pPlayerName) == 0) ||
+		(pDummy->type == json_string && str_comp(json_string_get(pDummy), pPlayerName) == 0);
+	const json_value *pMode = JsonField(pPayload, "mode");
+	if(!NameMatches || pMode->type != json_string || str_comp_nocase(json_string_get(pMode), QmAxiomModeName(Mode)) != 0 ||
+		!ReadNonNegativeInteger(pPayload, "points", OutPoints))
+		return EQmAxiomParseResult::INVALID_RESPONSE;
+	return EQmAxiomParseResult::SUCCESS;
 }
 
 std::string QmBuildAxiomSearchUrl(const char *pPlayerName)
@@ -358,11 +417,6 @@ EQmAxiomParseResult QmParseDdStatsPlayerResponse(const char *pData, size_t DataS
 bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, std::string_view CurrentPlayerName, std::string_view ResponsePlayerName)
 {
 	return CurrentGeneration == ResponseGeneration && CurrentPlayerName == ResponsePlayerName;
-}
-
-bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, EQmAxiomMode CurrentMode, EQmAxiomMode ResponseMode)
-{
-	return CurrentGeneration == ResponseGeneration && CurrentMode == ResponseMode;
 }
 
 SQmAxiomPopupSize QmAxiomPopupSize(float ScreenWidth, float ScreenHeight)

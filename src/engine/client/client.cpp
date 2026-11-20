@@ -1749,6 +1749,14 @@ const void *CClient::SnapFindItem(int SnapId, int Type, int Id) const
 	return m_aapSnapshots[g_Config.m_ClDummy][SnapId]->m_pAltSnap->FindItem(Type, Id);
 }
 
+const CSnapshot *CClient::CurrentSnapshotForConnection(int Conn) const
+{
+	if(Conn != CONN_MAIN && Conn != CONN_DUMMY)
+		return nullptr;
+	const auto *pHolder = m_aapSnapshots[Conn][SNAP_CURRENT];
+	return pHolder ? pHolder->m_pAltSnap : nullptr;
+}
+
 int CClient::SnapNumItems(int SnapId) const
 {
 	dbg_assert(SnapId >= 0 && SnapId < NUM_SNAPSHOT_TYPES, "invalid SnapId");
@@ -4080,7 +4088,7 @@ bool CClient::BeginPoseOffscreenCapture()
 	// 像素预算可由 qm_pose_capture_max_megapixels 调整（0 = 不限）：上限取决于显存与
 	// 编码耗时，不同机器差别很大，写死一个值要么浪费高端机、要么拖死低端机。
 	// 按「百万像素」换算：这里用 1000*1000，和配置项的说明一致。
-	const int64_t MaxPixels = g_Config.m_QmPoseCaptureMaxMegapixels > 0 ? (int64_t)g_Config.m_QmPoseCaptureMaxMegapixels * 1000 * 1000 : 0;
+	const int64_t MaxPixels = qm_pose::ConfiguredPixelBudget(g_Config.m_QmPoseCaptureMaxMegapixels);
 	const qm_pose::SCaptureSize Size = qm_pose::ComputeCaptureSize(
 		m_pGraphics->ScreenWidth(), m_pGraphics->ScreenHeight(), m_PoseScreenshotScale,
 		qm_pose::MAX_CAPTURE_DIMENSION, MaxPixels);
@@ -5235,6 +5243,13 @@ void CClient::Run()
 				(!AsyncRenderOld || m_pGraphics->IsIdle()) &&
 				RenderDue)
 			{
+				if(PerfEnabled)
+				{
+					m_PerfRenderLimit = GfxRefreshRate ? GfxRefreshRate : RefreshRate;
+					const int DisplayRate = g_Config.m_GfxScreenRefreshRate;
+					if(g_Config.m_GfxVsync && DisplayRate > 0 && (m_PerfRenderLimit == 0 || DisplayRate < m_PerfRenderLimit))
+						m_PerfRenderLimit = DisplayRate;
+				}
 				// update frametime
 				m_RenderFrameTime = (Now - m_LastRenderTime) / (float)time_freq();
 				m_FpsGraph.Add(1.0f / m_RenderFrameTime);

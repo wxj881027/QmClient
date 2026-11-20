@@ -19,7 +19,7 @@ inline const SSettingsLabelMetadata *SettingsLabelMetadata(const char *pId)
 		{"appearance-show-client-ids", Localizable("Show client IDs"), Localizable("Scoreboard, chat, spectating")},
 		{"Predict events (experimental)", Localizable("Predict events"), Localizable("Experimental")},
 		{"AntiPing (latency compensation)", Localizable("AntiPing"), Localizable("Latency compensation")},
-		{"general-lower-refresh-rate", Localizable("Save power by lowering update rate"), Localizable("Higher input latency")},
+		{"graphics-lower-update-rate", Localizable("Cap update rate to save power"), Localizable("Higher input latency")},
 		{"tclient-mini-debug", Localizable("Show position and angle"), Localizable("Mini debug")},
 		{"tclient-fast-input", Localizable("Fast input"), Localizable("Reduce visual latency")},
 		{"tclient-antiping-negative-buffer", Localizable("Negative stability buffer"), Localizable("For Gores")},

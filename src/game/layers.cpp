@@ -6,12 +6,14 @@
 
 #include <engine/map.h>
 
+#include <game/map/map_load_task.h>
+
 CLayers::CLayers()
 {
 	Unload();
 }
 
-void CLayers::Init(IMap *pMap, bool GameOnly, bool InitializeTilemapSkip)
+void CLayers::Init(IMap *pMap, bool GameOnly, bool InitializeTilemapSkip, bool DeferDesignTileSkips)
 {
 	Unload();
 
@@ -95,10 +97,9 @@ void CLayers::Init(IMap *pMap, bool GameOnly, bool InitializeTilemapSkip)
 		}
 	}
 
+	// 竞速组件在进服回调里就读取游戏层跳距，装饰层可在放行连接前补全。
 	if(InitializeTilemapSkip)
-	{
-		InitTilemapSkip(GameOnly);
-	}
+		InitTilemapSkip(true, !GameOnly && !DeferDesignTileSkips).Finish();
 }
 
 void CLayers::Unload()
@@ -119,7 +120,12 @@ void CLayers::Unload()
 	m_pTuneLayer = nullptr;
 }
 
-void CLayers::InitTilemapSkip(bool GameOnly)
+CMapLoadTask CLayers::PrepareDesignTileSkips()
+{
+	return InitTilemapSkip(false, true);
+}
+
+CMapLoadTask CLayers::InitTilemapSkip(bool Game, bool Design)
 {
 	for(int GroupIndex = 0; GroupIndex < NumGroups(); GroupIndex++)
 	{
@@ -132,12 +138,15 @@ void CLayers::InitTilemapSkip(bool GameOnly)
 
 			const CMapItemLayerTilemap *pTilemap = reinterpret_cast<const CMapItemLayerTilemap *>(pLayer);
 			// 服务端只关心 game 层的 skip 表，其余图层建了也不会被读取。
-			if(GameOnly && pTilemap != m_pGameLayer)
+			if(!Design && pTilemap != m_pGameLayer)
 				continue;
 			// 除 game 层外的物理层把 tile 存在各自的数据索引里，其 m_Data 既不使用也不在地图加载时校验。
 			if((pTilemap->m_Flags & (TILESLAYERFLAG_TELE | TILESLAYERFLAG_SPEEDUP | TILESLAYERFLAG_FRONT | TILESLAYERFLAG_SWITCH | TILESLAYERFLAG_TUNE)) != 0)
 				continue;
 
+			if(pTilemap == m_pGameLayer ? !Game : !Design)
+				continue;
+			co_await std::suspend_always{};
 			CTile *pTiles = static_cast<CTile *>(m_pMap->GetData(pTilemap->m_Data));
 			if(pTiles == nullptr || pTilemap->m_Width < 0 || pTilemap->m_Height < 0 ||
 				(int64_t)pTilemap->m_Width * pTilemap->m_Height > m_pMap->GetDataSize(pTilemap->m_Data) / (int)sizeof(CTile))
@@ -145,6 +154,7 @@ void CLayers::InitTilemapSkip(bool GameOnly)
 				continue;
 			}
 
+			unsigned TilesSinceYield = 0;
 			for(int y = 0; y < pTilemap->m_Height; y++)
 			{
 				for(int x = 1; x < pTilemap->m_Width;)
@@ -158,6 +168,12 @@ void CLayers::InitTilemapSkip(bool GameOnly)
 
 					pTiles[y * pTilemap->m_Width + x].m_Skip = SkippedX - 1;
 					x += SkippedX;
+					TilesSinceYield += SkippedX;
+					if(TilesSinceYield >= 8192)
+					{
+						TilesSinceYield = 0;
+						co_await std::suspend_always{};
+					}
 				}
 			}
 		}

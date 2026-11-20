@@ -168,9 +168,10 @@ namespace qm_demo_ui
 	constexpr float PLAYBACK_GROUP_HEIGHT = 2.0f * RENDER_SECTION_PADDING + RENDER_SECTION_TITLE_HEIGHT +
 						RENDER_SECTION_TITLE_GAP + 3.0f * (RENDER_ROW_HEIGHT + RENDER_ROW_GAP);
 
-	// 视频编码分组：标题 + CRF + 渲染预设 + 录制帧率 = 110。
+	// 视频编码分组：标题 + CRF + 渲染预设 + 录制帧率 + 转换线程 + 采集队列
+	// + 分段时长 + 分段预热 + ProRes 档位 = 8 行。
 	constexpr float ENCODE_HEIGHT = 2.0f * RENDER_SECTION_PADDING + RENDER_SECTION_TITLE_HEIGHT +
-					RENDER_SECTION_TITLE_GAP + 3.0f * (RENDER_ROW_HEIGHT + RENDER_ROW_GAP);
+					RENDER_SECTION_TITLE_GAP + 8.0f * (RENDER_ROW_HEIGHT + RENDER_ROW_GAP);
 
 	inline CUIRect PlayerRect(const CUIRect &Screen, bool DisplayExpanded, bool CameraExpanded = false, bool ShowCutControls = true)
 	{
@@ -277,8 +278,9 @@ namespace qm_demo_ui
 		return std::clamp(MapCount, POSE_MAP_MIN_ROWS, POSE_MAP_MAX_ROWS);
 	}
 
-	// 渲染模式在输入行下方多画两行（输出格式 + 分辨率倍数），列表下移，高度必须一起算。
-	constexpr int POSE_MAP_RENDER_ROWS = 3;
+	// 渲染模式在输入行下方多画四行（输出格式 / 分辨率倍数 / 锐化 / 像素预算），
+	// 列表下移，高度必须一起算。
+	constexpr int POSE_MAP_RENDER_ROWS = 4;
 
 	inline float PoseMapRenderRowsHeight(int RenderRows)
 	{

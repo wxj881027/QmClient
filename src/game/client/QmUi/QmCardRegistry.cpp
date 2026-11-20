@@ -202,7 +202,7 @@ namespace qm_card_registry
 			{"deck:global-search-results", "global-search", true, "Search", "global search result cards", "Open a matching settings card directly"},
 			{"deck:general-game", "general", false, Localizable("Game"), "general game camera weapon 动态镜头 dongtai jingtou 平滑 pinghua 拾取切枪 shiqu qieqiang 弹药 danyao", "Configure camera, weapon, and gameplay defaults"},
 			{"deck:general-language", "general", false, Localizable("Language"), "general language localization 语言 yuyan 中文 zhongwen 英文 yingwen", "Choose the language used by the client"},
-			{"deck:general-client", "general", false, Localizable("Client"), "general client theme files 主菜单 zhucaidan 更新频率 gengxin pinlv 省电 shengdian 主题 zhuti 配置目录 peizhi mulu 存档 cundang", "Manage client theme and menu preferences"},
+			{"deck:general-client", "general", false, Localizable("Client"), "general client theme files 主菜单 zhucaidan 更新频率 gengxin pinlv 省电 shengdian 主题 zhuti 配置目录 peizhi mulu 存档 cundang 崩溃报告 bengkui baogao", "Manage client theme and menu preferences"},
 			{"deck:general-recording", "general", false, Localizable("Demo"), "general demo screenshot video directory path csv recording 自动录像 zidong luxiang 回放保存目录 路径 截图 jietu 视频导出 计分板 jifenban 导出 daochu", "Automate demos, screenshots, and match exports"},
 			{"deck:tclient-info-files", "general", false, "Config Files", "config files settings profiles war list chat binds 配置文件 peizhi wenjian 配置方案 peizhi fangan 战争列表 zhanzheng liebiao 聊天绑定 liaotian bangding", "Open TClient configuration file locations"},
 			{"deck:player-identity", "player", false, Localizable("Player"), "player dummy name clan identity", "Edit player and dummy identity information"},
@@ -214,7 +214,7 @@ namespace qm_card_registry
 			{"deck:tee-glow", "tee", false, "Team tee glow", "tee team glow color rainbow spectate", "Color tee outlines by team for spectating"},
 			{"qm:skin_appearance", "tee", false, "Tee appearance", "Tee外观 tee waiguan 皮肤描边 pifu miaobian skin outline 边缘 bianyuan 颜色 yanse 粗细 cuxi 透明度 toumingdu 循环色调 xunhuan sediao hue 速度 sudu 分身 fenshen dummy 表情阴影 biaoqing yinying emoticon shadow 表情弹射时长 tanshe shichang projectile duration 皮肤切换 pifu qiehuan skin transition animation 换皮 huanpi 动画 donghua 锤中偷皮 chuizhong toupi hammer skin steal visual", "Configure Tee appearance and skins"},
 			{"deck:tee7-editor", "tee7", true, "Skin", "tee sixup skin editor", "Edit individual Tee 7 skin parts"},
-			{"deck:graphics-display", "graphics", false, Localizable("Graphics display"), "graphics display monitor window", "Window and monitor"},
+			{"deck:graphics-display", "graphics", false, Localizable("Graphics display"), "graphics display monitor window refresh rate update rate fps frame limit 刷新率 更新频率 帧率 客户端刷新率 省电 shengdian", "Window and monitor"},
 			// 图像页「视觉效果」子页签：原来一张「视觉」卡拆成形状/外观与全局主题两张，
 			// 拆完每张的行数都在一屏内，不再需要「个性调整」折叠。
 			{"deck:graphics-card-effects", "graphics-visual", false, Localizable("Card effects"), "graphics card effects card background border color rainbow title 卡片效果 卡片背景 卡片边框 彩虹标题 显示边框", "Background, border and title effects of the settings cards"},
@@ -231,7 +231,7 @@ namespace qm_card_registry
 			{"deck:ddnet-miscellaneous", "ddnet", false, "Miscellaneous", "miscellaneous ddnet", "Configure remaining DDNet client preferences"},
 			// DDNet 页「网络补偿」子页签：客户端预测主卡 + 从 TClient 页迁来的三张预测/延迟补偿卡。
 			// 卡片 id 与实现不随页面搬家改名（迁移只改归属页），行序即该子页签的默认阅读序。
-			{"deck:ddnet-prediction", "ddnet-prediction", false, "Client prediction", "client prediction prediction antiping latency compensation margin redundancy 客户端预测 预测 网络补偿 延迟补偿 预测余量 预测事件 上行冗余 最大包份数 其他玩家", "Client-side prediction and latency compensation"},
+			{"deck:ddnet-prediction", "ddnet-prediction", false, "Client prediction", "client prediction prediction antiping latency compensation margin redundancy qos 优先游戏流量 wangluo youxian dscp 客户端预测 预测 网络补偿 延迟补偿 预测余量 预测事件 上行冗余 最大包份数 其他玩家", "Client-side prediction and latency compensation"},
 			{"tclient:input", "ddnet-prediction", false, "Input", "input tclient 输入 快速输入 子 tick 瞄准 输入量", "Configure input helpers and cursor behavior"},
 			{"tclient:anti-latency-tools", "ddnet-prediction", false, "Anti latency tools", "anti latency tools tclient 延迟补偿工具 预测余量 冻结预测 解冻 延迟", "Control latency compensation tools"},
 			{"tclient:improved-anti-ping", "ddnet-prediction", false, "Improved anti ping", "improved anti ping tclient 改进版延迟补偿 平滑算法 稳定方向 不确定性 Gores", "Fine-tune improved anti-ping prediction"},

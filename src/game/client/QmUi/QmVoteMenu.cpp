@@ -33,6 +33,20 @@ namespace
 {
 	const char *const s_apCategories[] = {Localizable("Novice"), Localizable("Moderate"), Localizable("Brutal"), Localizable("Insane"), Localizable("Dummy"), "DDmaX", "DDmaX Easy", "DDmaX Next", "DDmaX Pro", "DDmaX Nut", Localizable("Oldschool"), Localizable("Solo"), Localizable("Race"), Localizable("Fun"), Localizable("Event")};
 
+	CUi::SDropDownState s_AxiomCategory;
+
+	void ClearVoteMapItems(CUi *pUi, const std::vector<QmVoteMaps::SMap> &vMaps)
+	{
+		// 仅清理即将失效的行 ID，后台刷新不能打断搜索框输入。
+		for(const auto &Map : vMaps)
+		{
+			if(pUi->HotItem() == &Map || pUi->HotItem() == &Map.m_Points)
+				pUi->SetHotItem(nullptr);
+			if(pUi->ActiveItem() == &Map || pUi->ActiveItem() == &Map.m_Points)
+				pUi->SetActiveItem(nullptr);
+		}
+	}
+
 	const char *CategoryLabel(const char *pKey)
 	{
 		// 目录数据可能写 DDmaX.Next，界面文案统一按空格写法匹配。
@@ -91,7 +105,37 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	const auto *pServerEntry = pServerAddress != nullptr ? ServerBrowser()->Find(*pServerAddress) : nullptr;
 	// 社区名单晚于连接信息到达时，浏览器条目会先更新归属。
 	const char *pCommunityId = pServerEntry != nullptr ? pServerEntry->m_Info.m_aCommunityId : Client()->ServerInfo().m_aCommunityId;
-	bool ModeChanged = State.m_Mode.UpdateCommunity(pCommunityId);
+	auto &Voting = GameClient()->m_Voting;
+	bool ModeChanged = State.m_Mode.UpdateCommunity(pCommunityId, GameClient()->m_QmAxiomAutoLogin.IsAxiomCommunity());
+	const bool Axiom = State.m_Mode.IsAxiom();
+	if(ModeChanged)
+	{
+		State.m_SelectedName.clear();
+		State.m_OptionsRevision = std::numeric_limits<uint64_t>::max();
+		State.m_AxiomRevision = std::numeric_limits<uint64_t>::max();
+		State.m_Dirty = true;
+		ClearVoteMapItems(Ui(), State.m_vMaps);
+		ClearVoteMapItems(Ui(), State.m_AxiomMenu.m_vMaps);
+		State.m_AxiomMenu = {};
+		State.m_vpAxiomCategoryLabels.clear();
+	}
+	if(Axiom && State.m_AxiomRevision != Voting.OptionsRevision() && !Voting.IsReceivingOptions())
+	{
+		if(Ui()->IsPopupOpen(&s_AxiomCategory.m_SelectionPopupContext))
+			Ui()->ClosePopupMenu(&s_AxiomCategory.m_SelectionPopupContext);
+		s_AxiomCategory.m_SelectionPopupContext.m_SelectionIndex = -1;
+		const bool HadMapMenu = !State.m_AxiomMenu.m_vMaps.empty() || !State.m_AxiomMenu.m_vCategories.empty();
+		ClearVoteMapItems(Ui(), State.m_AxiomMenu.m_vMaps);
+		State.m_AxiomMenu = QmVoteMaps::ParseAxiomMenu(Voting.FirstOption());
+		ModeChanged |= HadMapMenu != (!State.m_AxiomMenu.m_vMaps.empty() || !State.m_AxiomMenu.m_vCategories.empty());
+		State.m_AxiomRevision = Voting.OptionsRevision();
+		State.m_vpAxiomCategoryLabels.clear();
+		for(const auto &Category : State.m_AxiomMenu.m_vCategories)
+			State.m_vpAxiomCategoryLabels.push_back(Category.m_Label.c_str());
+		State.m_SelectedName.clear();
+		State.m_Dirty = true;
+	}
+	const bool HasLibrary = State.m_Mode.IsOfficialDdnet() || (Axiom && (!State.m_AxiomMenu.m_vMaps.empty() || !State.m_AxiomMenu.m_vCategories.empty()));
 	const auto PreviousPage = State.m_Page;
 	CUIRect Navigation;
 	// 页签条高度与字号取设置页胶囊页签同一档：投票页顶部不再用更大的一档文字。
@@ -104,7 +148,7 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	CUIRect PreviewButton;
 	Navigation.VSplitRight(Navigation.h, &Navigation, &PreviewButton);
 	Navigation.VSplitRight(ui_token::spacing::SM, &Navigation, nullptr);
-	if(State.m_Mode.IsOfficialDdnet())
+	if(HasLibrary)
 	{
 		CUIRect SwitchView;
 		Navigation.VSplitRight(std::min(140.0f, Navigation.w * 0.25f), &Navigation, &SwitchView);
@@ -124,7 +168,8 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	// 元数据每帧重建：目录与详情是异步到达的，只比名字会让面板长期停在「只有名字、
 	// 说明全是破折号」，直到换图才补齐。目录里能查到就补齐作者 / 难度 / 分数。
 	qm_vote_map_preview::SInfo Info;
-	for(const auto &Candidate : State.m_vMaps)
+	const auto &vPreviewMaps = Axiom ? State.m_AxiomMenu.m_vMaps : State.m_vMaps;
+	for(const auto &Candidate : vPreviewMaps)
 	{
 		if(Candidate.m_Name == pPreviewName)
 		{
@@ -144,7 +189,8 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	m_MapPreviewPanel.DoIconButton(ui_widget::ControlContext(Ui()), &State.m_MapPreviewButton, &State.m_MapPreview, PreviewButton, Target, pPreviewName[0] != '\0');
 	GameClient()->m_Tooltips.DoToolTip(&State.m_MapPreviewButton, &PreviewButton, Localize("Map preview"));
 	static CButtonContainer s_aPages[3];
-	const char *apPages[] = {State.m_Mode.UseMapLibrary() ? Localize("Map") : Localize("Server votes"), Localize("Kick player"), Localize("Move player to spectators")};
+	const bool ShowLibrary = HasLibrary && State.m_Mode.UseMapLibrary();
+	const char *apPages[] = {ShowLibrary ? Localize("Map") : Localize("Server votes"), Localize("Kick player"), Localize("Move player to spectators")};
 	const auto Style = CapsuleTabBarStyleFor(MenuPanelColor());
 	State.m_Page = static_cast<EQmVoteMenuPage>(DoNavigationTabs(s_aPages, apPages, std::size(apPages), static_cast<int>(State.m_Page), Navigation, ui_token::radius::PILL, &Style, ui_token::settings::TAB_FONT_SIZE));
 	if(ModeChanged || State.m_Page != PreviousPage)
@@ -154,9 +200,9 @@ void CMenus::RenderServerControl(CUIRect MainView)
 			Ui()->ReleaseActiveTextInput(pActiveInput);
 		m_ControlPageOpening = true;
 	}
-	if(ModeChanged && !State.m_Mode.UseMapLibrary())
+	if(ModeChanged && !ShowLibrary)
 		GameClient()->m_Voting.ClearUnfinishedMapVoteChain();
-	if(State.m_Page == EQmVoteMenuPage::OPTIONS && State.m_Mode.UseMapLibrary())
+	if(State.m_Page == EQmVoteMenuPage::OPTIONS && ShowLibrary)
 		RenderVoteMapLibrary(MainView);
 	else
 	{
@@ -172,23 +218,22 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 {
 	auto &State = m_QmVoteMenu;
 	auto &Voting = GameClient()->m_Voting;
-	const CCommunity *pCommunity = ServerBrowser()->Community(IServerBrowser::COMMUNITY_DDNET);
-	State.m_Loader.Update(Http(), Engine(), Client()->LocalTime());
-	if((State.m_OptionsRevision != Voting.OptionsRevision() && !Voting.IsReceivingOptions()) || State.m_CatalogRevision != State.m_Loader.Revision())
+	const bool Axiom = State.m_Mode.IsAxiom();
+	const auto &Server = Client()->ServerInfo();
+	const auto *pEntry = Client()->ServerAddress() ? ServerBrowser()->Find(*Client()->ServerAddress()) : nullptr;
+	const char *pType = pEntry && pEntry->m_Info.m_aCommunityType[0] ? pEntry->m_Info.m_aCommunityType : Server.m_aCommunityType;
+	State.m_Loader.SetAxiomMode(Axiom ? QmResolveAxiomModeFromServerContext({pType, Server.m_aName}) : EQmAxiomMode::NONE);
+	const CCommunity *pCommunity = Axiom ? nullptr : ServerBrowser()->Community(IServerBrowser::COMMUNITY_DDNET);
+	State.m_Loader.Update(Http(), Engine(), Client()->LocalTime(), &GameClient()->m_QmAxiomScores.OpenApiBudget(), g_Config.m_QmAxiomApiKey);
+	if(!Axiom && ((State.m_OptionsRevision != Voting.OptionsRevision() && !Voting.IsReceivingOptions()) || State.m_CatalogRevision != State.m_Loader.Revision()))
 	{
-		// 仅清理即将失效的行 ID，后台刷新不能打断搜索框输入。
-		for(const auto &Map : State.m_vMaps)
-		{
-			if(Ui()->HotItem() == &Map || Ui()->HotItem() == &Map.m_Points)
-				Ui()->SetHotItem(nullptr);
-			if(Ui()->ActiveItem() == &Map || Ui()->ActiveItem() == &Map.m_Points)
-				Ui()->SetActiveItem(nullptr);
-		}
+		ClearVoteMapItems(Ui(), State.m_vMaps);
 		State.m_vMaps = QmVoteMaps::MergeCatalog(State.m_Loader.Maps(), Voting.FirstOption());
 		State.m_OptionsRevision = Voting.OptionsRevision();
 		State.m_CatalogRevision = State.m_Loader.Revision();
 		State.m_Dirty = true;
 	}
+	const auto &vMaps = Axiom ? State.m_AxiomMenu.m_vMaps : State.m_vMaps;
 	if(State.m_Favorites != GameClient()->m_TClient.GetFavoriteMaps())
 	{
 		State.m_Favorites = GameClient()->m_TClient.GetFavoriteMaps();
@@ -252,7 +297,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	// 下方，滚动/裁剪/命中都与同一个 pitch 走，视觉上仍是胶囊行 + 半档行距。
 	const float RowPitch = RowHeight + ui_token::list::ROW_SPACING;
 	const float RowCoverHeight = RowHeight - 2.0f;
-	const float RowCoverWidth = RowCoverHeight * (float)CQmMapCovers::ROW_WIDTH / (float)CQmMapCovers::ROW_HEIGHT;
+	const float RowCoverWidth = Axiom ? 0.0f : RowCoverHeight * (float)CQmMapCovers::ROW_WIDTH / (float)CQmMapCovers::ROW_HEIGHT;
 	const float RowNameInset = 20.0f + 16.0f + 4.0f + RowCoverWidth + 6.0f;
 	// 封面图（含压暗和参差拖尾）已经烘进纹理，这里只负责贴在目标矩形上；
 	// 地图库列表行与详情条共用 DrawVoteMapCoverPatch，两处不会各自漂移。
@@ -263,9 +308,10 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	auto PrefetchRowCover = [&](int Row) {
 		if(Row < 0 || Row >= (int)State.m_vVisible.size())
 			return;
-		const auto &Map = State.m_vMaps[State.m_vVisible[Row]];
+		const auto &Map = vMaps[State.m_vVisible[Row]];
 		CQmMapCovers::SImage Image;
-		GameClient()->m_MapCovers.Get(Map.m_Thumbnail.c_str(), CQmMapCovers::ERole::ROW, &Image);
+		if(!Map.m_Thumbnail.empty())
+			GameClient()->m_MapCovers.Get(Map.m_Thumbnail.c_str(), CQmMapCovers::ERole::ROW, &Image);
 	};
 	CUIRect Refresh, Search, Exclude;
 	Header.VSplitRight(ui_token::control::IconBox(ui_token::font::TITLE), &Header, &Refresh);
@@ -325,8 +371,10 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	Ui()->DoLabel_QmIcon(&DifficultyIcon, EQmIcon::STAR, FontIcons::FONT_ICON_STAR, 12.0f, TEXTALIGN_MC);
 	static CButtonContainer s_aStars[7], s_Favorites;
 	const float AllWidth = std::clamp(TextRender()->TextWidth(12.0f, Localize("All")) + 16.0f, 36.0f, 60.0f);
-	const float StarWidth = std::min(28.0f, std::max(0.0f, Stars.w - AllWidth - 24.0f) / 6.0f);
-	for(int Star = -1; Star <= 5; ++Star)
+	const int MaxStars = Axiom && State.m_AxiomMenu.m_MaxStars > 0 ? State.m_AxiomMenu.m_MaxStars : 5;
+	const int AvailableStars = (1 << (MaxStars + 1)) - 1;
+	const float StarWidth = std::min(28.0f, std::max(0.0f, Stars.w - AllWidth - 4.0f * (MaxStars + 1)) / (MaxStars + 1));
+	for(int Star = -1; Star <= MaxStars; ++Star)
 	{
 		CUIRect Chip;
 		Stars.VSplitLeft(Star < 0 ? AllWidth : StarWidth, &Chip, &Stars);
@@ -334,7 +382,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		char aStar[16];
 		str_format(aStar, sizeof(aStar), "%d", Star);
 		const int Mask = Star < 0 ? 0 : 1 << Star;
-		const bool Active = Star < 0 ? State.m_Filter.m_StarMask == 0 : (State.m_Filter.m_StarMask & Mask) != 0;
+		const bool Active = Star < 0 ? (State.m_Filter.m_StarMask & AvailableStars) == 0 : (State.m_Filter.m_StarMask & Mask) != 0;
 		if(CompactButton(s_aStars[Star + 1], Star < 0 ? Localize("All") : aStar, Active, Chip))
 		{
 			State.m_Filter.m_StarMask = Star < 0 ? 0 : State.m_Filter.m_StarMask ^ Mask;
@@ -370,10 +418,27 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	}
 
 	// 目录未到时列表只有服务器当前批次的选项，不把它的数量冒充完整地图库。
-	const bool CatalogPending = State.m_Loader.Loading() && State.m_Loader.Revision() == 0;
+	const bool CatalogPending = State.m_Loader.Loading() && State.m_Loader.Maps().empty();
 	const bool ShowSidebar = MainView.w >= 500.0f;
 	List = MainView;
-	if(ShowSidebar)
+	if(Axiom)
+	{
+		if(!State.m_vpAxiomCategoryLabels.empty())
+		{
+			CUIRect CategoryRow;
+			List.HSplitTop(24.0f, &CategoryRow, &List);
+			List.HSplitTop(4.0f, nullptr, &List);
+			const int Current = State.m_AxiomMenu.m_SelectedCategory;
+			DropDownProps.m_Enabled = !Voting.IsReceivingOptions() && State.m_AxiomRevision == Voting.OptionsRevision() && !Voting.IsVoting();
+			const int Selected = Ui()->DoDropDown(&CategoryRow, Current, State.m_vpAxiomCategoryLabels.data(), (int)State.m_vpAxiomCategoryLabels.size(), s_AxiomCategory, DropDownProps);
+			if(DropDownProps.m_Enabled && Selected != Current && Selected >= 0 && Selected < (int)State.m_AxiomMenu.m_vCategories.size())
+			{
+				Voting.ClearUnfinishedMapVoteChain();
+				Voting.CallvoteOption(State.m_AxiomMenu.m_vCategories[Selected].m_VoteOption, "");
+			}
+		}
+	}
+	else if(ShowSidebar)
 	{
 		MainView.VSplitLeft(112.0f, &Sidebar, &List);
 		List.VSplitLeft(8.0f, nullptr, &List);
@@ -437,14 +502,21 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	}
 	if(State.m_Dirty)
 	{
-		State.m_vVisible.clear();
-		for(size_t i = 0; i < State.m_vMaps.size(); ++i)
+		auto Filter = State.m_Filter;
+		if(Axiom)
 		{
-			const auto &Map = State.m_vMaps[i];
-			if(QmVoteMaps::Matches(Map, State.m_Filter, GameClient()->m_TClient.IsFavoriteMap(Map.m_Name.c_str()), CompletionFor(pCommunity, Map.m_Name.c_str())))
+			// 服务器已按投票分类下发本批地图，保留 DDNet 自己的分类筛选。
+			Filter.m_Category.clear();
+			Filter.m_StarMask &= AvailableStars;
+		}
+		State.m_vVisible.clear();
+		for(size_t i = 0; i < vMaps.size(); ++i)
+		{
+			const auto &Map = vMaps[i];
+			if(QmVoteMaps::Matches(Map, Filter, GameClient()->m_TClient.IsFavoriteMap(Map.m_Name.c_str()), CompletionFor(pCommunity, Map.m_Name.c_str())))
 				State.m_vVisible.push_back((int)i);
 		}
-		QmVoteMaps::Sort(State.m_vVisible, State.m_vMaps, State.m_Sort);
+		QmVoteMaps::Sort(State.m_vVisible, vMaps, State.m_Sort);
 		State.m_Dirty = false;
 	}
 	CUIRect Count, Random;
@@ -454,7 +526,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	if(CatalogPending)
 		str_format(aCount, sizeof(aCount), "%d / %s", (int)State.m_vVisible.size(), Localize("Loading…"));
 	else
-		str_format(aCount, sizeof(aCount), Localize("%d / %d maps"), (int)State.m_vVisible.size(), (int)State.m_vMaps.size());
+		str_format(aCount, sizeof(aCount), Localize("%d / %d maps"), (int)State.m_vVisible.size(), (int)vMaps.size());
 	Label(Count, State.m_Loader.Error() ? Localize("Map data unavailable; server votes remain available") : aCount, 12.0f, TEXTALIGN_ML, true);
 	static int s_CountTooltip;
 	if(State.m_Loader.Error())
@@ -467,7 +539,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	{
 		const int Index = QmVoteMaps::Pick(State.m_vVisible, secure_rand_below((int)State.m_vVisible.size()));
 		if(Index >= 0)
-			State.m_SelectedName = State.m_vMaps[Index].m_Name;
+			State.m_SelectedName = vMaps[Index].m_Name;
 		ScrollToSelection = true;
 	}
 	List.HSplitTop(4.0f, nullptr, &List);
@@ -515,7 +587,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	}
 	int Selected = -1;
 	for(size_t i = 0; i < State.m_vVisible.size(); ++i)
-		if(State.m_vMaps[State.m_vVisible[i]].m_Name == State.m_SelectedName)
+		if(vMaps[State.m_vVisible[i]].m_Name == State.m_SelectedName)
 			Selected = (int)i;
 	// 行的选中/悬停底色改由下面自己画：封面背景必须压在底色之上、文字之下。
 	s_Maps.SetItemColors(ui_token::color::COLOR_TRANSPARENT, ui_token::color::COLOR_TRANSPARENT, ui_token::color::COLOR_TRANSPARENT);
@@ -532,7 +604,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	for(int Row = FirstVisible; Row < EndVisible; ++Row)
 	{
 		const int Index = State.m_vVisible[Row];
-		const auto &Map = State.m_vMaps[Index];
+		const auto &Map = vMaps[Index];
 		const CListboxItem Item = s_Maps.DoNextItem(&Map, false, ui_token::list::RowRadius(RowHeight));
 		if(!Item.m_Visible)
 			continue;
@@ -590,7 +662,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		if(HasMapper)
 			Label(aRow[1], Map.m_Mapper.empty() ? "—" : Map.m_Mapper.c_str(), 12.0f, TEXTALIGN_ML, true);
 		char aValue[32];
-		str_format(aValue, sizeof(aValue), "%d / 5", Map.m_Stars);
+		str_format(aValue, sizeof(aValue), "%d / %d", Map.m_Stars, Map.m_MaxStars);
 		Label(aRow[2], Map.m_Stars < 0 ? "—" : aValue);
 		if(Wide)
 		{
@@ -607,7 +679,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	s_Maps.SkipItems(ItemCount - EndVisible);
 	Selected = s_Maps.DoEnd();
 	const bool Activated = s_Maps.WasItemActivated();
-	const QmVoteMaps::SMap *pSelected = Selected >= 0 && Selected < (int)State.m_vVisible.size() ? &State.m_vMaps[State.m_vVisible[Selected]] : nullptr;
+	const QmVoteMaps::SMap *pSelected = Selected >= 0 && Selected < (int)State.m_vVisible.size() ? &vMaps[State.m_vVisible[Selected]] : nullptr;
 	const char *pNewSelectedName = pSelected != nullptr ? pSelected->m_Name.c_str() : "";
 	if(State.m_SelectedName != pNewSelectedName)
 	{
@@ -627,7 +699,8 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			DrawMapPatch(Cover, pSelected->m_Thumbnail, CQmMapCovers::ERole::DETAILS);
 		CUIRect Content = Details;
 		Content.Margin(8.0f, &Content);
-		Content.x = Cover.x + Cover.w + 8.0f;
+		if(!Axiom)
+			Content.x = Cover.x + Cover.w + 8.0f;
 		Content.w = std::max(24.0f, Details.x + Details.w - 8.0f - Content.x);
 		CUIRect Name, Metadata, Statistics, Favorite;
 		Content.HSplitTop(20.0f, &Name, &Content);
@@ -694,7 +767,18 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			if(const auto *pData = State.m_Loader.Details())
 			{
 				char aStats[160];
-				if(pData->m_Finishers >= 0 && pData->m_AverageSeconds >= 0)
+				if(Axiom)
+				{
+					str_format(aStats, sizeof(aStats), Localize(" · %d finishers"), pData->m_Finishers);
+					str_append(aInfo, aStats, sizeof(aInfo));
+					if(pData->m_MedianSeconds >= 0)
+					{
+						const int Seconds = (int)pData->m_MedianSeconds;
+						str_format(aStats, sizeof(aStats), Localize(" · median %d:%02d:%02d"), Seconds / 3600, Seconds / 60 % 60, Seconds % 60);
+						str_append(aInfo, aStats, sizeof(aInfo));
+					}
+				}
+				else if(pData->m_Finishers >= 0 && pData->m_AverageSeconds >= 0)
 				{
 					const int Seconds = (int)pData->m_AverageSeconds;
 					str_format(aStats, sizeof(aStats), Localize(" · %d finishers · average %d:%02d:%02d"), pData->m_Finishers, Seconds / 3600, Seconds / 60 % 60, Seconds % 60);
@@ -721,11 +805,31 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	CUIRect CallButton;
 	Bottom.VSplitRight(std::min(112.0f, Bottom.w * 0.3f), &Bottom, &CallButton);
 	Bottom.VSplitRight(8.0f, &Bottom, nullptr);
-	const bool CanCall = pSelected != nullptr && !Voting.IsVoting();
+	if(Axiom)
+	{
+		CUIRect Reason;
+		Bottom.VSplitRight(std::min(240.0f, Bottom.w * 0.6f), &Bottom, &Reason);
+		Bottom.VSplitRight(8.0f, &Bottom, nullptr);
+		InputOptions = {};
+		InputOptions.m_pPlaceholder = Localize("Reason (optional)");
+		Ctx.m_ScopeHash = MakeUiScopeHash("qm_axiom_vote_reason");
+		ui_widget::InputField(Ctx, &m_CallvoteReasonInput, Reason, InputOptions);
+	}
+	const bool CanCall = pSelected != nullptr && !Voting.IsVoting() &&
+		(!Axiom || (!Voting.IsReceivingOptions() && State.m_AxiomRevision == Voting.OptionsRevision() && pSelected->m_VoteOption >= 0));
 	Label(Bottom, pSelected != nullptr ? pSelected->m_Name.c_str() : Localize("Select a map"), 12.0f, TEXTALIGN_ML, true);
 	static CButtonContainer s_Call;
 	if((ui_widget::PrimaryButton(ui_widget::ControlContext(Ui()), &s_Call, Localize("Call vote"), CallButton, !CanCall) || Activated) && CanCall)
 	{
+		if(Axiom)
+		{
+			Voting.ClearUnfinishedMapVoteChain();
+			Voting.CallvoteOption(pSelected->m_VoteOption, m_CallvoteReasonInput.GetString());
+			m_CallvoteReasonInput.Clear();
+			if(g_Config.m_UiCloseWindowAfterChangingSetting)
+				SetActive(false);
+			return;
+		}
 		// 具体地图直接交给服务器的 /map 命令，不依赖当前分类的投票选项。
 		const std::string Command = QmVoteMaps::MapVoteCommand(pSelected->m_Name);
 		if(!Command.empty())

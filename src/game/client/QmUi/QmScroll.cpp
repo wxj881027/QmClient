@@ -5,6 +5,7 @@
 #include <engine/shared/config.h>
 
 #include <game/client/QmUi/QmAnimationBackend.h>
+#include <game/client/QmUi/UiTokens.h>
 
 #include <algorithm>
 #include <cmath>
@@ -271,6 +272,7 @@ SQmResolvedScrollPolicy QmResolveScrollPolicy(const SQmScrollRequest &Request, f
 		break;
 	case EQmScrollProfile::POPUP_LIST:
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, UiScale);
+		Policy.m_Style.m_ScrollbarWidth = ui_token::list::SCROLLBAR_WIDTH;
 		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * 3.0f * StepScale : Policy.m_Config.m_WheelScale;
 		Policy.m_MaxVisibleItems = QM_POPUP_LIST_MAX_VISIBLE_ITEMS;
 		break;

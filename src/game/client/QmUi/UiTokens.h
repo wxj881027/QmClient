@@ -125,7 +125,9 @@ namespace ui_token::color
 	// 与 NEUTRAL_* 同值但语义不同：这里是「用户指定白/黑字」，那边是「颜色基准」。
 	inline constexpr ColorRGBA TEXT_FORCED_LIGHT = NEUTRAL_WHITE;
 	inline constexpr ColorRGBA TEXT_FORCED_DARK = NEUTRAL_BLACK;
-
+	// 拖动磁吸辅助线：淡蓝白半透明，压在深色预览或游戏画面上都能读清，
+	// 又不盖住被拖的内容（名牌自由布局与 HUD 编辑器共用同一档）。
+	inline constexpr ColorRGBA DRAG_GUIDE{0.62f, 0.82f, 1.0f, 0.45f};
 	// 自适应对比双色：浅表面用深前景、深表面用浅前景（胶囊导航等明暗推导）。
 	// 成对修改，保持两者的对比关系；透明度由调用点 WithAlpha 决定。
 	inline constexpr ColorRGBA ADAPTIVE_ON_LIGHT{0.09f, 0.10f, 0.12f, 1.0f};
@@ -1184,6 +1186,21 @@ namespace ui_token::hud::font
 	// 重点数值：需要一眼读到的数字（速度、时间、计数）。
 	inline constexpr float EMPHASIS = 12.0f;
 } // namespace ui_token::hud::font
+
+namespace ui_token::hud::debug_graph
+{
+	inline constexpr float WIDTH = 256.0f;
+	inline constexpr float PADDING = spacing::SM;
+	inline constexpr float SUMMARY_HEIGHT = ui_token::font::TITLE + spacing::XS;
+	inline constexpr float NETWORK_HEIGHT = ui_token::font::BODY + spacing::XS;
+	inline constexpr float GRAPH_HEIGHT = 32.0f;
+	inline constexpr float HEIGHT = 2.0f * PADDING + SUMMARY_HEIGHT + NETWORK_HEIGHT + spacing::XS + GRAPH_HEIGHT;
+	inline constexpr int BAR_COUNT = 96;
+	inline constexpr float FRAME_BUDGET_MS = 1000.0f / 60.0f;
+	inline constexpr float GRAPH_MAX_MS = 2.0f * FRAME_BUDGET_MS;
+	inline constexpr float GUIDE_HEIGHT = 1.0f;
+	inline constexpr float GUIDE_ALPHA = 0.30f;
+} // namespace ui_token::hud::debug_graph
 
 // 投票 HUD 与计分板内投票共用同一套排版：常规与计分板内只改变锚点，不改变行序、
 // 字号、圆角或底色来源；旧版小 HUD 只缩小面板和信息密度，不改变配色族。底色统一

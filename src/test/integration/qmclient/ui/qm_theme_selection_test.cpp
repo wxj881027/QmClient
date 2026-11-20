@@ -23,7 +23,7 @@ namespace
 	};
 }
 
-TEST_F(QmThemeSelection, BuiltinsKeepTheirFullGlyphsInsideCardHintScope)
+TEST_F(QmThemeSelection, ParentheticalBuiltinsKeepTheirFullGlyphsInsideCardHintScope)
 {
 	for(const char *pName : {"", "auto", "rand"})
 	{
@@ -32,8 +32,8 @@ TEST_F(QmThemeSelection, BuiltinsKeepTheirFullGlyphsInsideCardHintScope)
 		const uint64_t LiteralQuads = Draw(Name.c_str(), false);
 		ASSERT_GT(LiteralQuads, 0u);
 		m_Ui.SetCardLabelHintsEnabled(true);
-		EXPECT_STREQ(m_Ui.PrepareCardLabel(&m_Row, Name.c_str(), false), "…");
-		EXPECT_LT(Draw(Name.c_str(), false), LiteralQuads);
+		EXPECT_STREQ(m_Ui.PrepareCardLabel(&m_Row, Name.c_str(), false), Name.c_str());
+		EXPECT_EQ(Draw(Name.c_str(), false), LiteralQuads);
 		EXPECT_EQ(Draw(Name.c_str(), true), LiteralQuads);
 		EXPECT_TRUE(m_Ui.CardLabelHintsEnabled());
 	}

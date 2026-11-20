@@ -2111,7 +2111,7 @@ void CScoreboard::OnRender()
 		// Axiom 排序继续使用当前模式分数，显示游玩时间不改变排序数据源。
 		GameClient()->m_QmAxiomScores.SetMode(m_QmAxiomScoreModeFrame);
 		// 记分板打开时给足预算铺满一屏，否则只做少量预热；
-		// 真正发请求的速度由组件内每帧搜索上限控制。
+		// 真正发请求的速度由查分组件按 API 限额控制。
 		int Budget = IsActive() ? MAX_CLIENTS : AXIOM_SCOREBOARD_PREFETCH_BUDGET;
 		for(int i = 0; i < MAX_CLIENTS && Budget > 0; i++)
 		{
@@ -2120,7 +2120,7 @@ void CScoreboard::OnRender()
 			if(GameClient()->ShouldHideStreamerIdentity(i))
 				continue;
 			Budget--;
-			GameClient()->m_QmAxiomScores.EnsureQueried(GameClient()->m_aClients[i].m_aName);
+			GameClient()->m_QmAxiomScores.EnsureScoreboardQueried(GameClient()->m_aClients[i].m_aName);
 		}
 	}
 	else

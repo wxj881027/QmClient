@@ -1055,6 +1055,22 @@ turkish = "Havada zıplama"
 polish = "Skok w powietrzu"
 
 [[message]]
+key = "All players"
+[message.translations]
+simplified_chinese = "所有人"
+traditional_chinese = "所有人"
+japanese = "すべてのプレイヤー"
+korean = "모든 플레이어"
+russian = "Все игроки"
+german = "Alle Spieler"
+spanish = "Todos los jugadores"
+french = "Tous les joueurs"
+brazilian_portuguese = "Todos os jogadores"
+portuguese = "Todos os jogadores"
+turkish = "Tüm oyuncular"
+polish = "Wszyscy gracze"
+
+[[message]]
 key = "All sounds"
 [message.translations]
 simplified_chinese = "全部音效"
@@ -3583,6 +3599,54 @@ turkish = "İstemci kaynaklı intiharı engelle (K tuşu / kill komutu)"
 polish = "Blokuj samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)"
 
 [[message]]
+key = "Border"
+[message.translations]
+simplified_chinese = "边框"
+traditional_chinese = "邊框"
+japanese = "境界線"
+korean = "테두리"
+russian = "Граница"
+german = "Rahmen"
+spanish = "Borde"
+french = "Bordure"
+brazilian_portuguese = "Borda"
+portuguese = "Borda"
+turkish = "Kenarlık"
+polish = "Obramowanie"
+
+[[message]]
+key = "Border color"
+[message.translations]
+simplified_chinese = "边框颜色"
+traditional_chinese = "邊框顏色"
+japanese = "境界線の色"
+korean = "테두리 색상"
+russian = "Цвет границы"
+german = "Rahmenfarbe"
+spanish = "Color del borde"
+french = "Couleur de la bordure"
+brazilian_portuguese = "Cor da borda"
+portuguese = "Cor da borda"
+turkish = "Kenarlık rengi"
+polish = "Kolor obramowania"
+
+[[message]]
+key = "Border range"
+[message.translations]
+simplified_chinese = "边框范围"
+traditional_chinese = "邊框範圍"
+japanese = "境界線の範囲"
+korean = "테두리 범위"
+russian = "Диапазон границы"
+german = "Rahmenbereich"
+spanish = "Rango del borde"
+french = "Plage de la bordure"
+brazilian_portuguese = "Alcance da borda"
+portuguese = "Alcance da borda"
+turkish = "Kenarlık aralığı"
+polish = "Zakres obramowania"
+
+[[message]]
 key = "Both"
 [message.translations]
 simplified_chinese = "两者"
@@ -4125,6 +4189,12 @@ brazilian_portuguese = "Cancelar envio"
 portuguese = "Cancelar envio"
 turkish = "Yüklemeyi iptal et"
 polish = "Anuluj przesyłanie"
+
+[[message]]
+key = "Candy gradient"
+[message.translations]
+simplified_chinese = "糖果渐变"
+traditional_chinese = "糖果漸層"
 
 [[message]]
 key = "Cannot join the target player's team"
@@ -5279,6 +5349,22 @@ turkish = "Yerleşik 4 öğeyi kullanmak için qm_bind_status_items öğesini te
 polish = "Wyczyść qm_bind_status_items i używaj 4 wbudowanych wpisów (blokada klawiszy/młot/sterowanie dummy/synchronizacja dummy)"
 
 [[message]]
+key = "Clearable text..."
+[message.translations]
+simplified_chinese = "可清除文本……"
+traditional_chinese = "可清除文本……"
+japanese = "クリア可能なテキスト..."
+korean = "지울 수 있는 텍스트..."
+russian = "Очищаемый текст..."
+german = "Löschbarer Text..."
+spanish = "Texto editable..."
+french = "Texte effaçable..."
+brazilian_portuguese = "Texto limpável..."
+portuguese = "Texto apagável..."
+turkish = "Temizlenebilir metin..."
+polish = "Tekst do wyczyszczenia..."
+
+[[message]]
 key = "Click a slice to set color"
 [message.translations]
 simplified_chinese = "点击扇区设置颜色"
@@ -5599,6 +5685,12 @@ turkish = "Saat kayması sert yakalama eşiği"
 polish = "Twarde przyciąganie dryfu zegara"
 
 [[message]]
+key = "Cloud bubble"
+[message.translations]
+simplified_chinese = "云朵气泡"
+traditional_chinese = "雲朵氣泡"
+
+[[message]]
 key = "Collect CP %d before teleporting"
 [message.translations]
 simplified_chinese = "请先吃 CP %d，再进入回传入口"
@@ -5725,6 +5817,12 @@ brazilian_portuguese = "Combo"
 portuguese = "Combo"
 turkish = "Kombo"
 polish = "Kombinacja"
+
+[[message]]
+key = "Comic dialogue"
+[message.translations]
+simplified_chinese = "漫画对白"
+traditional_chinese = "漫畫對白"
 
 [[message]]
 key = "Command completion"
@@ -8084,6 +8182,16 @@ turkish = "Derin donma opaklığı."
 polish = "Przezroczystość głębokiego zamrożenia"
 
 [[message]]
+key = "Deep freeze tile outline width"
+[message.translations]
+simplified_chinese = "深层冻结块的描边宽度"
+
+[[message]]
+key = "Deep unfreeze"
+[message.translations]
+simplified_chinese = "深层解冻"
+
+[[message]]
 key = "Deep unfreeze opacity"
 [message.translations]
 simplified_chinese = "深度解冻不透明度"
@@ -8098,6 +8206,11 @@ brazilian_portuguese = "Opacidade do descongelamento profundo"
 portuguese = "Opacidade de descongelamento profundo"
 turkish = "Derin çözülme opaklığı."
 polish = "Przezroczystość głębokiego rozmrożenia"
+
+[[message]]
+key = "Deep unfreeze tile outline width"
+[message.translations]
+simplified_chinese = "深层解冻块的描边宽度"
 
 [[message]]
 key = "Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)"
@@ -9362,6 +9475,22 @@ brazilian_portuguese = "Controle do dummy"
 portuguese = "Controlo do dummy"
 turkish = "Kukla kontrolü"
 polish = "Sterowanie dummy"
+
+[[message]]
+key = "Dummy distance link style: 0 = line, 1 = droplet"
+[message.translations]
+simplified_chinese = "分身连线样式：0 = 直线，1 = 水滴"
+traditional_chinese = "分身連線樣式：0 = 直線，1 = 水滴"
+japanese = "ダミーとの距離線のスタイル：0 = 直線、1 = しずく"
+korean = "더미 연결선 모양: 0 = 직선, 1 = 물방울"
+russian = "Вид линии до дамми: 0 = линия, 1 = капля"
+german = "Linienstil zum Dummy: 0 = Linie, 1 = Tropfen"
+spanish = "Estilo de línea al dummy: 0 = línea, 1 = gota"
+french = "Style du lien vers le dummy : 0 = trait, 1 = goutte"
+brazilian_portuguese = "Estilo da linha até o dummy: 0 = linha, 1 = gota"
+portuguese = "Estilo da linha até ao dummy: 0 = linha, 1 = gota"
+turkish = "Kuklaya mesafe çizgisinin biçimi: 0 = çizgi, 1 = damla"
+polish = "Styl linii do dummy: 0 = linia, 1 = kropla"
 
 [[message]]
 key = "Dummy key/hammer/control/copy status switches"
@@ -12164,6 +12293,22 @@ turkish = "Favori simgesi rengi"
 polish = "Kolor ikony ulubionych"
 
 [[message]]
+key = "Favorite maps"
+[message.translations]
+simplified_chinese = "收藏地图"
+traditional_chinese = "收藏地圖"
+japanese = "お気に入りのマップ"
+korean = "즐겨찾는 맵"
+russian = "Избранные карты"
+german = "Lieblingskarten"
+spanish = "Mapas favoritos"
+french = "Cartes favorites"
+brazilian_portuguese = "Mapas favoritos"
+portuguese = "Mapas favoritos"
+turkish = "Favori haritalar"
+polish = "Ulubione mapy"
+
+[[message]]
 key = "Feature Search"
 [message.translations]
 simplified_chinese = "功能搜索"
@@ -12868,6 +13013,11 @@ turkish = "Freeze mermilerinin çarpışma hacmi"
 polish = "Objętość kolizji pocisków Freeze"
 
 [[message]]
+key = "Freeze tile outline width"
+[message.translations]
+simplified_chinese = "冻结块的描边宽度"
+
+[[message]]
 key = "Friend"
 [message.translations]
 simplified_chinese = "好友"
@@ -13154,6 +13304,12 @@ brazilian_portuguese = "Resgate de mira de lacuna"
 portuguese = "Resgate de mira de lacuna"
 turkish = "Boşluk nişanı kurtarma"
 polish = "Ratowanie celując w szczelinę"
+
+[[message]]
+key = "Gather and disperse"
+[message.translations]
+simplified_chinese = "聚集与散开"
+traditional_chinese = "聚集與散開"
 
 [[message]]
 key = "Generated skin outline color"
@@ -13508,6 +13664,38 @@ turkish = "Parlama alfası"
 polish = "Alfa poświaty"
 
 [[message]]
+key = "Glow color"
+[message.translations]
+simplified_chinese = "辉光颜色"
+traditional_chinese = "輝光顏色"
+japanese = "グロー色"
+korean = "글로우 색상"
+russian = "Цвет свечения"
+german = "Glühfarbe"
+spanish = "Color de resplandor"
+french = "Couleur de la lueur"
+brazilian_portuguese = "Cor do brilho"
+portuguese = "Cor do brilho"
+turkish = "Parlama rengi"
+polish = "Kolor poświaty"
+
+[[message]]
+key = "Glow intensity"
+[message.translations]
+simplified_chinese = "辉光强度"
+traditional_chinese = "輝光強度"
+japanese = "グロー強度"
+korean = "글로우 강도"
+russian = "Интенсивность свечения"
+german = "Leuchtkraft-Intensität"
+spanish = "Intensidad del brillo"
+french = "Intensité de la lueur"
+brazilian_portuguese = "Intensidade do brilho"
+portuguese = "Intensidade do brilho"
+turkish = "Parlama yoğunluğu"
+polish = "Intensywność poświaty"
+
+[[message]]
 key = "Glow offset"
 [message.translations]
 simplified_chinese = "辉光偏移"
@@ -13522,6 +13710,22 @@ brazilian_portuguese = "Deslocamento do brilho"
 portuguese = "Deslocamento do brilho"
 turkish = "Parlama ofseti"
 polish = "Przesunięcie poświaty"
+
+[[message]]
+key = "Glow range"
+[message.translations]
+simplified_chinese = "辉光范围"
+traditional_chinese = "輝光範圍"
+japanese = "グロー範囲"
+korean = "글로우 범위"
+russian = "Диапазон свечения"
+german = "Glühbereich"
+spanish = "Rango de resplandor"
+french = "Portée de la lueur"
+brazilian_portuguese = "Alcance do brilho"
+portuguese = "Alcance do brilho"
+turkish = "Parlama aralığı"
+polish = "Zasięg poświaty"
 
 [[message]]
 key = "Gores Actor"
@@ -13602,6 +13806,22 @@ brazilian_portuguese = "Opacidade do quadro de afogamentos da equipe Gores"
 portuguese = "Opacidade do quadro de afogamentos da equipa Gores"
 turkish = "Gores takım boğulma panosu opaklığı"
 polish = "Krycie tablicy utonięć drużyny Gores"
+
+[[message]]
+key = "Gradient"
+[message.translations]
+simplified_chinese = "渐变"
+traditional_chinese = "漸變"
+japanese = "グラデーション"
+korean = "그라데이션"
+russian = "Градиент"
+german = "Verlauf"
+spanish = "Degradado"
+french = "Dégradé"
+brazilian_portuguese = "Gradiente"
+portuguese = "Gradiente"
+turkish = "Gradyan"
+polish = "Gradient"
 
 [[message]]
 key = "Gradient color"
@@ -15204,6 +15424,21 @@ turkish = "Kanca döngüsü"
 polish = "Pętla dźwięku haka"
 
 [[message]]
+key = "Hookable tile outline color"
+[message.translations]
+simplified_chinese = "可钩方块描边颜色"
+
+[[message]]
+key = "Hookable tile outline width"
+[message.translations]
+simplified_chinese = "可钩方块描边宽度"
+
+[[message]]
+key = "Hookable tiles"
+[message.translations]
+simplified_chinese = "可钩方块"
+
+[[message]]
 key = "Horizontal position"
 [message.translations]
 simplified_chinese = "水平位置"
@@ -15938,6 +16173,22 @@ brazilian_portuguese = "Cor do foco de entrada da interface"
 portuguese = "Cor de foco da entrada da interface"
 turkish = "Arayüz giriş odak rengi"
 polish = "Kolor fokusu wprowadzania w interfejsie"
+
+[[message]]
+key = "Input overlay"
+[message.translations]
+simplified_chinese = "按键显示"
+traditional_chinese = "按鍵顯示"
+japanese = "入力オーバーレイ"
+korean = "입력 오버레이"
+russian = "Наложение ввода"
+german = "Eingabe-Overlay"
+spanish = "Superposición de entrada"
+french = "Superposition de saisie"
+brazilian_portuguese = "Sobreposição de entrada"
+portuguese = "Sobreposição de entrada"
+turkish = "Giriş kaplaması"
+polish = "Nakładka wejścia"
 
 [[message]]
 key = "Input overlay display"
@@ -17220,6 +17471,22 @@ turkish = "Lazer / pompalı etkileşimi"
 polish = "Interakcja lasera / strzelby"
 
 [[message]]
+key = "Laser effect enhancement"
+[message.translations]
+simplified_chinese = "激光效果增强"
+traditional_chinese = "激光效果增強"
+japanese = "レーザーエフェクト強調"
+korean = "레이저 효과 향상"
+russian = "Улучшение эффекта лазера"
+german = "Laser-Effekt-Verbesserung"
+spanish = "Mejora del efecto láser"
+french = "Amélioration de l'effet laser"
+brazilian_portuguese = "Aprimoramento de efeito de laser"
+portuguese = "Melhoria do efeito laser"
+turkish = "Lazer efekti iyileştirmesi"
+polish = "Ulepszenie efektu lasera"
+
+[[message]]
 key = "Laser Enhancement"
 [message.translations]
 simplified_chinese = "激光增强"
@@ -17314,6 +17581,22 @@ brazilian_portuguese = "Pontas arredondadas do laser (0=quadradas, 1=arredondada
 portuguese = "Pontas arredondadas do laser (0=Quadrado, 1=Arredondado)"
 turkish = "Lazer yuvarlak uçları (0=köşeli, 1=yuvarlak)"
 polish = "Zaokrąglone końce lasera (0=kwadratowe, 1=zaokrąglone)"
+
+[[message]]
+key = "Laser settings"
+[message.translations]
+simplified_chinese = "激光设置"
+traditional_chinese = "激光設置"
+japanese = "レーザー設定"
+korean = "레이저 설정"
+russian = "Настройки лазера"
+german = "Laser-Einstellungen"
+spanish = "Configuración del láser"
+french = "Paramètres laser"
+brazilian_portuguese = "Configurações de laser"
+portuguese = "Definições do laser"
+turkish = "Lazer ayarları"
+polish = "Ustawienia lasera"
 
 [[message]]
 key = "Laser size"
@@ -17656,6 +17939,16 @@ key = "Legacy bind script"
 [message.translations]
 simplified_chinese = "旧版绑定脚本"
 traditional_chinese = "舊版綁定腳本"
+japanese = "旧式のバインドスクリプト"
+korean = "레거시 바인드 스크립트"
+russian = "Устаревший скрипт биндов"
+german = "Altes Bind-Skript"
+spanish = "Script de binds heredado"
+french = "Script de binds hérité"
+brazilian_portuguese = "Script de binds legado"
+portuguese = "Script de binds legado"
+turkish = "Eski bağlama betiği"
+polish = "Starszy skrypt bindów"
 
 [[message]]
 key = "Legacy option: connections that skip TLS verification are rejected"
@@ -17688,6 +17981,12 @@ brazilian_portuguese = "Estados antigos de recolhimento dos cartões migrados"
 portuguese = "Estados antigos de recolhimento dos cartões migrados"
 turkish = "Eski ayar kartı kapalı durumları taşındı"
 polish = "Przeniesiono stare stany zwinięcia kart ustawień"
+
+[[message]]
+key = "Let's play together!"
+[message.translations]
+simplified_chinese = "一起玩吧！"
+traditional_chinese = "一起玩吧！"
 
 [[message]]
 key = "LibreTranslate API Key"
@@ -19530,6 +19829,22 @@ turkish = "Şarkı sözü manuel zaman çizelgesi kayması ms (çalışma zaman�
 polish = "Ręczne przesunięcie osi czasu tekstu utworu w ms (krok 500ms podczas działania)"
 
 [[message]]
+key = "Manual scope"
+[message.translations]
+simplified_chinese = "手动范围"
+traditional_chinese = "手動範圍"
+japanese = "手動スコープ"
+korean = "수동 범위"
+russian = "Ручной диапазон"
+german = "Manueller Bereich"
+spanish = "Alcance manual"
+french = "Portée manuelle"
+brazilian_portuguese = "Escopo manual"
+portuguese = "Âmbito manual"
+turkish = "Manuel kapsam"
+polish = "Ręczny zakres"
+
+[[message]]
 key = "Manual Steam path is invalid; using automatic detection"
 [message.translations]
 simplified_chinese = "手动填写的 Steam 路径无效，已使用自动检测"
@@ -19544,6 +19859,22 @@ brazilian_portuguese = "O caminho manual do Steam é inválido; usando detecçã
 portuguese = "O caminho manual do Steam é inválido; a usar deteção automática"
 turkish = "Elle girilen Steam yolu geçersiz; otomatik algılama kullanılıyor"
 polish = "Ręczna ścieżka Steam jest nieprawidłowa; używane jest automatyczne wykrywanie"
+
+[[message]]
+key = "Manual target"
+[message.translations]
+simplified_chinese = "手动目标"
+traditional_chinese = "手動目標"
+japanese = "手動ターゲット"
+korean = "수동 대상"
+russian = "Ручная цель"
+german = "Manuelles Ziel"
+spanish = "Objetivo manual"
+french = "Cible manuelle"
+brazilian_portuguese = "Alvo manual"
+portuguese = "Alvo manual"
+turkish = "Manuel hedef"
+polish = "Ręczny cel"
 
 [[message]]
 key = "Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)"
@@ -22986,6 +23317,22 @@ turkish = "İsteğe bağlı"
 polish = "Opcjonalnie"
 
 [[message]]
+key = "Optional Axiom API key for scoreboard points and map queries (leave empty for anonymous queries)"
+[message.translations]
+simplified_chinese = "可选的 Axiom API 密钥，用于计分板积分和地图查询（留空则以匿名方式查询）"
+traditional_chinese = "可選的 Axiom API 金鑰，用於計分板積分與地圖查詢（留空則以匿名方式查詢）"
+japanese = "スコアボードのポイントとマップ検索用の Axiom API キー（任意、匿名検索なら空欄）"
+korean = "스코어보드 포인트와 지도 조회용 Axiom API 키 (선택 사항, 익명 조회 시 비워 두세요)"
+russian = "Необязательный ключ API Axiom для очков в таблице результатов и запросов карт (оставьте пустым для анонимных запросов)"
+german = "Optionaler Axiom-API-Schlüssel für Punkte im Scoreboard und Kartenabfragen (leer lassen für anonyme Abfragen)"
+spanish = "Clave de API de Axiom opcional para los puntos del marcador y las consultas de mapas (déjala vacía para consultas anónimas)"
+french = "Clé d'API Axiom facultative pour les points du tableau des scores et les requêtes de cartes (laisser vide pour des requêtes anonymes)"
+brazilian_portuguese = "Chave de API do Axiom opcional para pontos do placar e consultas de mapas (deixe vazio para consultas anônimas)"
+portuguese = "Chave de API Axiom opcional para pontos do placar e consultas de mapas (deixe vazio para consultas anónimas)"
+turkish = "Skor tablosu puanları ve harita sorguları için isteğe bağlı Axiom API anahtarı (anonim sorgular için boş bırakın)"
+polish = "Opcjonalny klucz API Axiom do punktów tablicy wyników i zapytań o mapy (pozostaw puste dla zapytań anonimowych)"
+
+[[message]]
 key = "Optional voice WebSocket endpoint (empty keeps UDP transport)"
 [message.translations]
 simplified_chinese = "可选语音 WebSocket 端点（留空则保持 UDP 传输）"
@@ -23112,6 +23459,22 @@ brazilian_portuguese = "Outros sons"
 portuguese = "Outros sons"
 turkish = "Diğer sesler"
 polish = "Inne dźwięki"
+
+[[message]]
+key = "Others only"
+[message.translations]
+simplified_chinese = "仅他人"
+traditional_chinese = "僅他人"
+japanese = "他人のみ"
+korean = "다른 사람만"
+russian = "Только другим"
+german = "Nur andere"
+spanish = "Solo otros"
+french = "Autres uniquement"
+brazilian_portuguese = "Apenas outros"
+portuguese = "Apenas outros"
+turkish = "Yalnızca diğerleri"
+polish = "Tylko inni"
 
 [[message]]
 key = "Outgoing translation target language code"
@@ -24906,6 +25269,22 @@ turkish = "Gösterilen oyuncular"
 polish = "Wyświetlani gracze"
 
 [[message]]
+key = "Playing effects"
+[message.translations]
+simplified_chinese = "播放效果"
+traditional_chinese = "播放效果"
+japanese = "エフェクトの再生"
+korean = "효과 재생"
+russian = "Эффекты воспроизведения"
+german = "Spieleffekte"
+spanish = "Efectos de reproducción"
+french = "Effets de lecture"
+brazilian_portuguese = "Efeitos de reprodução"
+portuguese = "Efeitos de reprodução"
+turkish = "Oynatma efektleri"
+polish = "Efekty odtwarzania"
+
+[[message]]
 key = "Plays an animation whenever your skin changes, including skins stolen with the hammer."
 [message.translations]
 simplified_chinese = "皮肤变化时播放动画，包括锤子偷来的皮肤。"
@@ -25368,6 +25747,11 @@ brazilian_portuguese = "Tempo de previsão"
 portuguese = "Tempo de previsão"
 turkish = "Tahmin süresi"
 polish = "Czas predykcji"
+
+[[message]]
+key = "Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic."
+[message.translations]
+simplified_chinese = "预测用精度换取响应速度：更大的余量和 AntiPing 能抹平 ping 抖动，但可能误判近处动作，上游冗余最多会让上行流量增至三倍。"
 
 [[message]]
 key = "Pressed hammer icon color"
@@ -25946,6 +26330,22 @@ turkish = "Yayınlanıyor…"
 polish = "Publikowanie…"
 
 [[message]]
+key = "Pulse amplitude"
+[message.translations]
+simplified_chinese = "脉冲幅度"
+traditional_chinese = "脈衝幅度"
+japanese = "パルス振幅"
+korean = "펄스 진폭"
+russian = "Амплитуда пульсации"
+german = "Pulsamplitude"
+spanish = "Amplitud del pulso"
+french = "Amplitude de l'impulsion"
+brazilian_portuguese = "Amplitude do pulso"
+portuguese = "Amplitude do pulso"
+turkish = "Atım genliği"
+polish = "Amplituda pulsu"
+
+[[message]]
 key = "Pulse Amplitude (0-100)"
 [message.translations]
 simplified_chinese = "脉冲振幅（0-100）"
@@ -25976,6 +26376,22 @@ brazilian_portuguese = "Velocidade da animação de pulso (porcentagem, 100=norm
 portuguese = "Velocidade da animação de pulso (percentagem, 100=normal)"
 turkish = "Nabız animasyon hızı (yüzde, 100=normal)"
 polish = "Prędkość animacji pulsu (procent, 100=normalna)"
+
+[[message]]
+key = "Pulse speed"
+[message.translations]
+simplified_chinese = "脉冲速度"
+traditional_chinese = "脈衝速度"
+japanese = "パルス速度"
+korean = "펄스 속도"
+russian = "Скорость пульсации"
+german = "Pulsgeschwindigkeit"
+spanish = "Velocidad del pulso"
+french = "Vitesse de l'impulsion"
+brazilian_portuguese = "Velocidade do pulso"
+portuguese = "Velocidade do pulso"
+turkish = "Atım hızı"
+polish = "Prędkość pulsu"
 
 [[message]]
 key = "Pulse strength"
@@ -28474,6 +28890,22 @@ turkish = "Gidiş-dönüş süresi"
 polish = "Czas pełnego obiegu"
 
 [[message]]
+key = "Rounded caps"
+[message.translations]
+simplified_chinese = "圆角端点"
+traditional_chinese = "圓角端點"
+japanese = "丸キャップ"
+korean = "둥근 끝"
+russian = "Скруглённые концы"
+german = "Abgerundete Enden"
+spanish = "Extremos redondeados"
+french = "Caps arrondies"
+brazilian_portuguese = "Pontas arredondadas"
+portuguese = "Pontas arredondadas"
+turkish = "Yuvarlak uçlar"
+polish = "Zaokrąglone końcówki"
+
+[[message]]
 key = "Route Echo messages to notifications"
 [message.translations]
 simplified_chinese = "Echo 消息改走通知栏"
@@ -29373,6 +29805,38 @@ brazilian_portuguese = "Cor de fundo da seleção"
 portuguese = "Cor de fundo da seleção"
 turkish = "Seçim arka plan rengi"
 polish = "Kolor tła zaznaczenia"
+
+[[message]]
+key = "Self and friends"
+[message.translations]
+simplified_chinese = "自己和好友"
+traditional_chinese = "自己和好友"
+japanese = "自分とフレンドのみ"
+korean = "자신과 친구"
+russian = "Себе и друзьям"
+german = "Selbst und Freunde"
+spanish = "Propio y amigos"
+french = "Soi et amis"
+brazilian_portuguese = "Próprio e amigos"
+portuguese = "Próprio e amigos"
+turkish = "Kendim ve arkadaşlar"
+polish = "Ja i znajomi"
+
+[[message]]
+key = "Self only"
+[message.translations]
+simplified_chinese = "仅自己"
+traditional_chinese = "僅自己"
+japanese = "自分のみ"
+korean = "자신만"
+russian = "Отправить"
+german = "Nur selbst"
+spanish = "Solo yo"
+french = "Soi-même uniquement"
+brazilian_portuguese = "Apenas eu"
+portuguese = "Apenas eu"
+turkish = "Yalnızca kendim"
+polish = "Tylko ja"
 
 [[message]]
 key = "Self-kill off"
@@ -30303,6 +30767,22 @@ turkish = "Pompalı tüfek ateşi"
 polish = "Strzał ze strzelby"
 
 [[message]]
+key = "Show a distance link between main tee and dummy"
+[message.translations]
+simplified_chinese = "在本体与分身之间显示距离连线"
+traditional_chinese = "在本體與分身之間顯示距離連線"
+japanese = "メインのティーとダミーを距離線で結ぶ"
+korean = "본체와 더미 사이에 거리 표시선 그리기"
+russian = "Соединять основного ти и дамми линией расстояния"
+german = "Haupt-Tee und Dummy mit einer Entfernungslinie verbinden"
+spanish = "Unir el tee principal y el dummy con una línea de distancia"
+french = "Relier le tee principal au dummy pour indiquer la distance"
+brazilian_portuguese = "Ligar o tee principal ao dummy com uma linha de distância"
+portuguese = "Ligar o tee principal ao dummy com uma linha de distância"
+turkish = "Ana tee ile kukla arasındaki mesafeyi bir çizgiyle göster"
+polish = "Połącz głównego tee z dummy linią wskazującą odległość"
+
+[[message]]
 key = "Show a per-character wave on text titles locally"
 [message.translations]
 simplified_chinese = "在本机为文字头衔显示逐字波动"
@@ -30735,6 +31215,16 @@ turkish = "Hitbox modu harita tehlike sınırlarını göster"
 polish = "Pokaż niebezpieczne granice mapy w trybie hitboxów"
 
 [[message]]
+key = "Show deep freeze tile outlines"
+[message.translations]
+simplified_chinese = "显示深层冻结块描边"
+
+[[message]]
+key = "Show deep unfreeze tile outlines"
+[message.translations]
+simplified_chinese = "显示深层解冻块描边"
+
+[[message]]
 key = "Show default flag in scoreboard"
 [message.translations]
 simplified_chinese = "在记分牌中显示默认国旗"
@@ -30781,6 +31271,38 @@ brazilian_portuguese = "Mostrar debug de rota pontilhada do mapa"
 portuguese = "Mostrar depuração de rota de mapa pontilhada"
 turkish = "Noktalı harita rota hata ayıklamasını göster"
 polish = "Pokaż debug trasy mapy w kropki"
+
+[[message]]
+key = "Show dummy control status"
+[message.translations]
+simplified_chinese = "显示分身控制状态"
+traditional_chinese = "顯示分身控制狀態"
+japanese = "ダミーコントロール状態を表示"
+korean = "더미 제어 상태 표시"
+russian = "Показать статус управления дамми"
+german = "Dummy-Steuerungsstatus anzeigen"
+spanish = "Mostrar estado de control del Dummy"
+french = "Afficher le statut de contrôle du dummy"
+brazilian_portuguese = "Mostrar status de controle do dummy"
+portuguese = "Mostrar estado de controlo do Dummy"
+turkish = "Dummy kontrol durumunu göster"
+polish = "Pokaż status sterowania kukłą"
+
+[[message]]
+key = "Show dummy copy status"
+[message.translations]
+simplified_chinese = "显示分身同步状态"
+traditional_chinese = "顯示分身同步狀態"
+japanese = "ダミー同期状態を表示"
+korean = "더미 동기화 상태 표시"
+russian = "Показать статус синхронизации дамми"
+german = "Dummy-Synchronisationsstatus anzeigen"
+spanish = "Mostrar estado de sincronización del Dummy"
+french = "Afficher le statut de synchronisation du dummy"
+brazilian_portuguese = "Mostrar status de sincronização do dummy"
+portuguese = "Mostrar estado de sincronização do Dummy"
+turkish = "Dummy senkronizasyon durumunu göster"
+polish = "Pokaż status synchronizacji kukły"
 
 [[message]]
 key = "Show dummy mini view only when other tee leaves current view"
@@ -30893,6 +31415,11 @@ brazilian_portuguese = "Mostrar cartão de resultado na ilha dinâmica"
 portuguese = "Mostrar cartão de resultado na ilha dinâmica"
 turkish = "Sonuç kartını dinamik adada göster"
 polish = "Pokaż kartę wyniku na dynamicznej wyspie"
+
+[[message]]
+key = "Show freeze tile outlines"
+[message.translations]
+simplified_chinese = "显示冻结块描边"
 
 [[message]]
 key = "Show friend join in large text"
@@ -31023,6 +31550,22 @@ turkish = "Bomba ve lazer yörünge önizlemesini göster"
 polish = "Pokaż podgląd trajektorii granatu i lasera"
 
 [[message]]
+key = "Show hammer status"
+[message.translations]
+simplified_chinese = "显示锤状态"
+traditional_chinese = "顯示錘狀態"
+japanese = "ハンマーステータスを表示"
+korean = "망치 상태 표시"
+russian = "Показать статус молота"
+german = "Hammer-Status anzeigen"
+spanish = "Mostrar estado del martillo"
+french = "Afficher le statut du marteau"
+brazilian_portuguese = "Mostrar status do martelo"
+portuguese = "Mostrar estado do martelo"
+turkish = "Çekiç durumunu göster"
+polish = "Pokaż status młotka"
+
+[[message]]
 key = "Show hint at random top-left/right of player when main or dummy is hammered awake"
 [message.translations]
 simplified_chinese = "本体或分身被锤醒时，在对应玩家随机的左上或右上角显示提示"
@@ -31053,6 +31596,11 @@ brazilian_portuguese = "Mostrar modo de hitbox"
 portuguese = "Mostrar modo de caixa de colisão"
 turkish = "Hitbox modunu göster"
 polish = "Pokaż tryb hitboxów"
+
+[[message]]
+key = "Show hookable tile outlines"
+[message.translations]
+simplified_chinese = "显示可钩方块描边"
 
 [[message]]
 key = "Show important server prompts"
@@ -31213,6 +31761,22 @@ brazilian_portuguese = "Mostrar a contagem de teclas pressionadas"
 portuguese = "Mostrar a contagem de teclas premidas"
 turkish = "Tuş basma sayılarını göster"
 polish = "Pokaż liczbę naciśnięć klawiszy"
+
+[[message]]
+key = "Show key stuck status"
+[message.translations]
+simplified_chinese = "显示卡键状态"
+traditional_chinese = "顯示卡鍵狀態"
+japanese = "キー固着ステータスを表示"
+korean = "키 고정 상태 표시"
+russian = "Показывать статус залипших клавиш"
+german = "Tastensteck-Status anzeigen"
+spanish = "Mostrar estado de tecla atascada"
+french = "Afficher le statut de touche bloquée"
+brazilian_portuguese = "Mostrar status de tecla presa"
+portuguese = "Mostrar estado de tecla presa"
+turkish = "Tuş sıkışma durumunu göster"
+polish = "Pokaż stan zablokowanych klawiszy"
 
 [[message]]
 key = "Show last seen dates for offline friends using DDStats (updated daily, matched by player name)"
@@ -32271,6 +32835,16 @@ turkish = "Tune bölge renklerini göster"
 polish = "Pokaż kolory stref tune"
 
 [[message]]
+key = "Show unfreeze tile outlines"
+[message.translations]
+simplified_chinese = "显示解冻块描边"
+
+[[message]]
+key = "Show unhookable tile outlines"
+[message.translations]
+simplified_chinese = "显示不可钩方块描边"
+
+[[message]]
 key = "Show unknown server messages"
 [message.translations]
 simplified_chinese = "显示未知服务器消息"
@@ -32701,6 +33275,22 @@ brazilian_portuguese = "Modo de ordenação da lista de skins (0=nome, 1=data de
 portuguese = "Modo de ordenação da lista de skins (0=nome, 1=data de publicação)"
 turkish = "Skin listesi sıralama modu (0=ad, 1=yayın zamanı)"
 polish = "Tryb sortowania listy skinów (0=nazwa, 1=data publikacji)"
+
+[[message]]
+key = "Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)"
+[message.translations]
+simplified_chinese = "皮肤列表来源筛选（0=全部，1=官方，2=社区，3=DDStats，4=自定义 URL，5=原版）"
+traditional_chinese = "皮膚清單來源篩選（0=全部，1=官方，2=社群，3=DDStats，4=自訂 URL，5=原版）"
+japanese = "スキン一覧のソースフィルター（0=すべて、1=公式、2=コミュニティ、3=DDStats、4=カスタム URL、5=バニラ）"
+korean = "스킨 목록 소스 필터 (0=전체, 1=공식, 2=커뮤니티, 3=DDStats, 4=사용자 지정 URL, 5=바닐라)"
+russian = "Фильтр источника списка скинов (0=Все, 1=Официальные, 2=Сообщество, 3=DDStats, 4=Свой URL, 5=Vanilla)"
+german = "Quellenfilter der Skinliste (0=Alle, 1=Offiziell, 2=Community, 3=DDStats, 4=Eigene URL, 5=Vanilla)"
+spanish = "Filtro de origen de la lista de skins (0=Todos, 1=Oficiales, 2=Comunidad, 3=DDStats, 4=URL personalizada, 5=Vanilla)"
+french = "Filtre de source de la liste des skins (0=Tous, 1=Officiels, 2=Communauté, 3=DDStats, 4=URL personnalisée, 5=Vanilla)"
+brazilian_portuguese = "Filtro de origem da lista de skins (0=Todos, 1=Oficiais, 2=Comunidade, 3=DDStats, 4=URL personalizada, 5=Vanilla)"
+portuguese = "Filtro de origem da lista de skins (0=Todos, 1=Oficiais, 2=Comunidade, 3=DDStats, 4=URL personalizado, 5=Vanilla)"
+turkish = "Skin listesi kaynak filtresi (0=Tümü, 1=Resmî, 2=Topluluk, 3=DDStats, 4=Özel URL, 5=Vanilla)"
+polish = "Filtr źródła listy skinów (0=Wszystkie, 1=Oficjalne, 2=Społeczność, 3=DDStats, 4=Własny URL, 5=Vanilla)"
 
 [[message]]
 key = "Skin outline color"
@@ -33599,6 +34189,22 @@ turkish = "Hoparlör"
 polish = "Głośnik"
 
 [[message]]
+key = "Spectate effects"
+[message.translations]
+simplified_chinese = "观战特效"
+traditional_chinese = "觀戰特效"
+japanese = "観戦エフェクト"
+korean = "관전 효과"
+russian = "Эффекты при наблюдении"
+german = "Zuschauereffekte"
+spanish = "Efectos al espectar"
+french = "Effets en spectateur"
+brazilian_portuguese = "Efeitos ao espectar"
+portuguese = "Efeitos de espectador"
+turkish = "İzleme efektleri"
+polish = "Efekty podczas obserwacji"
+
+[[message]]
 key = "Spectate option color"
 [message.translations]
 simplified_chinese = "观战选项颜色"
@@ -33613,6 +34219,38 @@ brazilian_portuguese = "Cor das opções de espectador"
 portuguese = "Cor das opções de espectador"
 turkish = "Seyirci Seçenekleri Rengi"
 polish = "Kolor opcji widza"
+
+[[message]]
+key = "Spectated player"
+[message.translations]
+simplified_chinese = "被观战玩家"
+traditional_chinese = "被觀戰玩家"
+japanese = "観戦中のプレイヤー"
+korean = "관전 중인 플레이어"
+russian = "Наблюдаемый игрок"
+german = "Beobachteter Spieler"
+spanish = "Jugador especiado"
+french = "Joueur observé"
+brazilian_portuguese = "Jogador espectado"
+portuguese = "Jogador observado"
+turkish = "İzlenen oyuncu"
+polish = "Obserwowany gracz"
+
+[[message]]
+key = "Spectated player and friends"
+[message.translations]
+simplified_chinese = "被观战的玩家与好友"
+traditional_chinese = "被觀戰的玩家與好友"
+japanese = "観戦中のプレイヤーとフレンド"
+korean = "관전 중인 플레이어와 친구"
+russian = "Наблюдаемый игрок и друзья"
+german = "Beobachteter Spieler und Freunde"
+spanish = "Jugador especiado y amigos"
+french = "Joueur observé et amis"
+brazilian_portuguese = "Jogador espectado e amigos"
+portuguese = "Jogador observado e amigos"
+turkish = "İzlenen oyuncu ve arkadaşlar"
+polish = "Obserwowany gracz i znajomi"
 
 [[message]]
 key = "Spectator opacity"
@@ -34477,6 +35115,12 @@ brazilian_portuguese = "Modo estrito"
 portuguese = "Modo rigoroso"
 turkish = "Katı mod"
 polish = "Tryb ścisły"
+
+[[message]]
+key = "Style"
+[message.translations]
+simplified_chinese = "样式"
+traditional_chinese = "樣式"
 
 [[message]]
 key = "Style chat names, text, and message colors"
@@ -37295,6 +37939,22 @@ turkish = "İz uzunluğu"
 polish = "Długość śladu"
 
 [[message]]
+key = "Translate"
+[message.translations]
+simplified_chinese = "翻译"
+traditional_chinese = "翻譯"
+japanese = "翻訳"
+korean = "번역"
+russian = "Перевести"
+german = "Übersetzen"
+spanish = "Traducir"
+french = "Traduire"
+brazilian_portuguese = "Traduzir"
+portuguese = "Traduzir"
+turkish = "Çevir"
+polish = "Tłumacz"
+
+[[message]]
 key = "Translate button"
 [message.translations]
 simplified_chinese = "翻译按钮"
@@ -38127,6 +38787,26 @@ turkish = "Çözülme opaklığı"
 polish = "Nieprzezroczystość odmrożenia"
 
 [[message]]
+key = "Unfreeze tile outline width"
+[message.translations]
+simplified_chinese = "解冻块描边宽度"
+
+[[message]]
+key = "Unhookable tile outline color"
+[message.translations]
+simplified_chinese = "不可钩方块描边颜色"
+
+[[message]]
+key = "Unhookable tile outline width"
+[message.translations]
+simplified_chinese = "不可钩方块描边宽度"
+
+[[message]]
+key = "Unhookable tiles"
+[message.translations]
+simplified_chinese = "不可钩方块"
+
+[[message]]
 key = "Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter"
 [message.translations]
 simplified_chinese = "统一导出质量（CRF/CQ/QP 标度 0-51，-1 = 使用 cl_video_crf）；映射到各编码器的原生参数"
@@ -38323,6 +39003,16 @@ key = "Untitled"
 [message.translations]
 simplified_chinese = "未命名"
 traditional_chinese = "未命名"
+japanese = "無題"
+korean = "제목 없음"
+russian = "Без названия"
+german = "Unbenannt"
+spanish = "Sin título"
+french = "Sans titre"
+brazilian_portuguese = "Sem título"
+portuguese = "Sem título"
+turkish = "Başlıksız"
+polish = "Bez tytułu"
 
 [[message]]
 key = "Up to 6 Chinese or 12 ASCII characters"
@@ -38437,6 +39127,22 @@ turkish = "UI rounded corner segment limit"
 polish = "UI rounded corner segment limit"
 
 [[message]]
+key = "URL for downloading DDStats skins"
+[message.translations]
+simplified_chinese = "下载 DDStats 皮肤的 URL"
+traditional_chinese = "下載 DDStats 皮膚的 URL"
+japanese = "DDStats スキンをダウンロードする URL"
+korean = "DDStats 스킨 다운로드 URL"
+russian = "URL для загрузки скинов DDStats"
+german = "URL zum Herunterladen von DDStats-Skins"
+spanish = "URL para descargar skins de DDStats"
+french = "URL de téléchargement des skins DDStats"
+brazilian_portuguese = "URL para baixar skins do DDStats"
+portuguese = "URL para transferir skins do DDStats"
+turkish = "DDStats skinlerini indirme URL'si"
+polish = "URL do pobierania skinów DDStats"
+
+[[message]]
 key = "Usage: %s"
 [message.translations]
 simplified_chinese = "用法：%s"
@@ -38499,6 +39205,12 @@ brazilian_portuguese = "Usar cores personalizadas nos balões de chat"
 portuguese = "Usar cores personalizadas nos balões de conversa"
 turkish = "Özel sohbet balonu renkleri kullan"
 polish = "Użyj własnych kolorów dymków czatu"
+
+[[message]]
+key = "Use custom colors"
+[message.translations]
+simplified_chinese = "使用自定义颜色"
+traditional_chinese = "使用自訂顏色"
 
 [[message]]
 key = "Use custom colors for the pressed hook collision line (0 = always invert)"
@@ -39171,6 +39883,22 @@ brazilian_portuguese = "Fila de retransmissão de blocos vitais"
 portuguese = "Fila de retransmissão de blocos vitais"
 turkish = "Önemli parçaların yeniden gönderim kuyruğu"
 polish = "Kolejka ponownych wysyłek ważnych fragmentów"
+
+[[message]]
+key = "Voice"
+[message.translations]
+simplified_chinese = "语音"
+traditional_chinese = "語音"
+japanese = "音声"
+korean = "음성"
+russian = "Голос"
+german = "Sprache"
+spanish = "Voz"
+french = "Voix"
+brazilian_portuguese = "Voz"
+portuguese = "Voz"
+turkish = "Ses"
+polish = "Głos"
 
 [[message]]
 key = "Voice activation release delay"

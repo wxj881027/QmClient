@@ -1,4 +1,36 @@
 [[message]]
+key = " · %d finishers"
+[message.translations]
+simplified_chinese = " · %d 人完赛"
+traditional_chinese = " · %d 人完賽"
+japanese = " · %d 人が完走"
+korean = " · %d명 완주"
+russian = " · %d финишировавших"
+german = " · %d Zieleinläufe"
+spanish = " · %d finalistas"
+french = " · %d arrivées"
+brazilian_portuguese = " · %d finalizadores"
+portuguese = " · %d finalistas"
+turkish = " · %d bitiren"
+polish = " · %d ukończyło"
+
+[[message]]
+key = " · median %d:%02d:%02d"
+[message.translations]
+simplified_chinese = " · 中位数 %d:%02d:%02d"
+traditional_chinese = " · 中位數 %d:%02d:%02d"
+japanese = " · 中央値 %d:%02d:%02d"
+korean = " · 중앙값 %d:%02d:%02d"
+russian = " · медиана %d:%02d:%02d"
+german = " · Median %d:%02d:%02d"
+spanish = " · mediana %d:%02d:%02d"
+french = " · médiane %d:%02d:%02d"
+brazilian_portuguese = " · mediana %d:%02d:%02d"
+portuguese = " · mediana %d:%02d:%02d"
+turkish = " · medyan %d:%02d:%02d"
+polish = " · mediana %d:%02d:%02d"
+
+[[message]]
 key = "%s from %s"
 [message.translations]
 simplified_chinese = "%s（来自 %s）"
@@ -285,6 +317,22 @@ brazilian_portuguese = "Adicionar dummy de depuração ao servidor (apenas build
 portuguese = "Adicionar dummy de depuração ao servidor (apenas compilação de depuração)"
 turkish = "Sunucuya hata ayıklama dummy'si ekle (Yalnızca Debug yapısı)"
 polish = "Dodaj debug dummy do serwera (tylko wersja Debug)"
+
+[[message]]
+key = "Add every player's skin to the queue when entering a map. Editing the queue by hand turns this off."
+[message.translations]
+simplified_chinese = "进入地图时把所有玩家的皮肤加入队列。手动编辑队列会关闭此项。"
+traditional_chinese = "進入地圖時把所有玩家的皮膚加入佇列。手動編輯佇列會關閉此項。"
+japanese = "マップに入ると全プレイヤーのスキンをキューに追加します。手動でキューを編集するとオフになります。"
+korean = "맵에 들어갈 때 모든 플레이어의 스킨을 큐에 추가합니다. 큐를 직접 편집하면 이 기능이 꺼집니다."
+russian = "При входе на карту добавляет скины всех игроков в очередь. Ручное редактирование очереди отключает это."
+german = "Fügt beim Betreten einer Karte die Skins aller Spieler zur Warteschlange hinzu. Manuelles Bearbeiten der Warteschlange schaltet dies aus."
+spanish = "Añade la skin de cada jugador a la cola al entrar en un mapa. Editar la cola a mano lo desactiva."
+french = "Ajoute la skin de chaque joueur à la file en entrant sur une carte. Modifier la file manuellement désactive cette option."
+brazilian_portuguese = "Adiciona a skin de cada jogador à fila ao entrar em um mapa. Editar a fila manualmente desativa isso."
+portuguese = "Adiciona a skin de cada jogador à fila ao entrar num mapa. Editar a fila manualmente desativa isto."
+turkish = "Haritaya girildiğinde her oyuncunun skinini kuyruğa ekler. Kuyruğu elle düzenlemek bunu kapatır."
+polish = "Dodaje skórkę każdego gracza do kolejki przy wejściu na mapę. Ręczna edycja kolejki wyłącza tę opcję."
 
 [[message]]
 key = "Add latency for antiping (0 to disable)"
@@ -787,6 +835,22 @@ key = "Animate chat box, emote selector, scoreboard, and spectate selection"
 [message.translations]
 simplified_chinese = "聊天框、表情选择、计分板和观战选择的展示动画"
 traditional_chinese = "聊天框、表情選擇、計分板和觀戰選擇的展示動畫"
+
+[[message]]
+key = "Animate country flags"
+[message.translations]
+simplified_chinese = "国旗入场动画"
+traditional_chinese = "國旗入場動畫"
+japanese = "国旗をアニメーション"
+korean = "국기 애니메이션"
+russian = "Анимация флагов стран"
+german = "Länderflaggen animieren"
+spanish = "Animar las banderas de países"
+french = "Animer les drapeaux des pays"
+brazilian_portuguese = "Animar as bandeiras dos países"
+portuguese = "Animar as bandeiras dos países"
+turkish = "Ülke bayraklarını canlandır"
+polish = "Animuj flagi krajów"
 
 [[message]]
 key = "Animate settings card expand and collapse height changes"
@@ -1719,6 +1783,22 @@ turkish = "Kullanılacak arka uç (örn. OpenGL veya Vulkan)"
 polish = "Backend do użycia (np. OpenGL lub Vulkan)"
 
 [[message]]
+key = "Background"
+[message.translations]
+simplified_chinese = "背景"
+traditional_chinese = "背景"
+japanese = "背景"
+korean = "배경"
+russian = "Фон"
+german = "Hintergrund"
+spanish = "Fondo"
+french = "Arrière-plan"
+brazilian_portuguese = "Fundo"
+portuguese = "Fundo"
+turkish = "Arka plan"
+polish = "Tło"
+
+[[message]]
 key = "Background (entities)"
 [message.translations]
 simplified_chinese = "背景（实体）"
@@ -1909,6 +1989,22 @@ brazilian_portuguese = "Antes de eu morrer"
 portuguese = "Antes de eu morrer"
 turkish = "Ölmeden önce"
 polish = "Zanim umrę"
+
+[[message]]
+key = "Best-effort DSCP marking of the game connection; may be ignored by routers"
+[message.translations]
+simplified_chinese = "尽力为游戏连接打 DSCP 标记，路由器可能忽略"
+traditional_chinese = "盡力為遊戲連線打 DSCP 標記，路由器可能忽略"
+japanese = "ゲーム接続に可能な範囲で DSCP マーキングを付けます（ルーターが無視する場合があります）"
+korean = "게임 연결에 DSCP 표시를 최대한 적용합니다(라우터가 무시할 수 있음)"
+russian = "По возможности помечать игровое соединение меткой DSCP; маршрутизаторы могут её игнорировать"
+german = "Bestmögliche DSCP-Markierung der Spielverbindung; Router können sie ignorieren"
+spanish = "Marcar la conexión del juego con DSCP en lo posible; los routers pueden ignorarlo"
+french = "Marquer la connexion de jeu en DSCP au mieux ; les routeurs peuvent l'ignorer"
+brazilian_portuguese = "Marcar a conexão do jogo com DSCP na medida do possível; roteadores podem ignorar"
+portuguese = "Marcar a ligação de jogo com DSCP tanto quanto possível; os routers podem ignorar"
+turkish = "Oyun bağlantısını mümkün olduğunca DSCP ile işaretle; yönlendiriciler yok sayabilir"
+polish = "W miarę możliwości oznaczaj połączenie gry przez DSCP; routery mogą to ignorować"
 
 [[message]]
 key = "Better scoreboard"
@@ -2375,6 +2471,38 @@ turkish = "Aday dosyalar"
 polish = "Pliki kandydujące"
 
 [[message]]
+key = "Cap update rate to save power"
+[message.translations]
+simplified_chinese = "限制更新频率以节约功耗"
+traditional_chinese = "限制更新頻率以節省功耗"
+japanese = "更新レートを制限して消費電力を抑える"
+korean = "전력 절약을 위해 업데이트 속도 제한"
+russian = "Ограничить частоту обновлений для экономии энергии"
+german = "Aktualisierungsrate zur Stromersparnis begrenzen"
+spanish = "Limitar la tasa de actualización para ahorrar energía"
+french = "Limiter la fréquence de mise à jour pour économiser l'énergie"
+brazilian_portuguese = "Limitar a taxa de atualização para economizar energia"
+portuguese = "Limitar a taxa de atualização para poupar energia"
+turkish = "Güç tasarrufu için güncelleme hızını sınırla"
+polish = "Ogranicz częstotliwość aktualizacji, aby oszczędzać energię"
+
+[[message]]
+key = "Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first."
+[message.translations]
+simplified_chinese = "限制更新频率会增加输入延迟，只建议为省电开启。独占全屏失败时，先切回窗口或无边框模式。"
+traditional_chinese = "限制更新頻率會增加輸入延遲，只建議為省電開啟。獨占全螢幕失敗時，先切回視窗或無邊框模式。"
+japanese = "更新レートの制限は入力遅延を増やします。省電力目的以外では使わないでください。排他全画面に失敗したら、まずウィンドウまたはボーダーレスに戻してください。"
+korean = "업데이트 속도 제한은 입력 지연을 늘리므로 전력 절약 목적에만 사용하세요. 전용 전체 화면이 실패하면 먼저 창 또는 테두리 없는 모드로 돌아가세요."
+russian = "Ограничение частоты обновлений добавляет задержку ввода; используйте его только для экономии энергии. Если эксклюзивный полный экран не работает, сначала вернитесь к оконному или безрамочному режиму."
+german = "Eine Begrenzung der Aktualisierungsrate erhöht die Eingabelatenz; nur zur Stromersparnis verwenden. Wenn exklusiver Vollbildmodus scheitert, zuerst auf Fenster- oder rahmenlosen Modus zurückschalten."
+spanish = "Limitar la tasa de actualización añade latencia de entrada; úsalo solo para ahorrar energía. Si falla la pantalla completa exclusiva, vuelve primero al modo ventana o sin bordes."
+french = "Limiter la fréquence de mise à jour ajoute de la latence d'entrée ; à n'utiliser que pour économiser l'énergie. Si le plein écran exclusif échoue, repassez d'abord en mode fenêtré ou sans bordures."
+brazilian_portuguese = "Limitar a taxa de atualização aumenta a latência de entrada; use apenas para economizar energia. Se a tela cheia exclusiva falhar, volte primeiro ao modo janela ou sem bordas."
+portuguese = "Limitar a taxa de atualização aumenta a latência de entrada; use apenas para poupar energia. Se o ecrã inteiro exclusivo falhar, volte primeiro ao modo de janela ou sem bordas."
+turkish = "Güncelleme hızını sınırlamak girdi gecikmesini artırır; yalnızca güç tasarrufu için kullanın. Özel tam ekran başarısız olursa önce pencere veya kenarlıksız moda dönün."
+polish = "Ograniczenie częstotliwości aktualizacji zwiększa opóźnienie wejścia; używaj tylko do oszczędzania energii. Jeśli ekskluzywny pełny ekran zawiedzie, wróć najpierw do okna lub trybu bez ramki."
+
+[[message]]
 key = "Card height animation"
 [message.translations]
 simplified_chinese = "设置卡片高度过渡动画"
@@ -2711,6 +2839,22 @@ turkish = "Kapalı, azaltılmış veya tam seçin; tüm animasyonlar bu tek anah
 polish = "Wybierz wył., ograniczone lub pełne; ten jeden przełącznik steruje wszystkimi animacjami. Następnie wybierz kształt kursora dla ustawień, konsoli i czatu."
 
 [[message]]
+key = "Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate."
+[message.translations]
+simplified_chinese = "设置窗口/全屏模式、显示器与分辨率，以及两个帧节奏上限：渲染帧率和客户端更新频率。"
+traditional_chinese = "設定視窗/全螢幕模式、顯示器與解析度，以及兩個幀節奏上限：渲染幀率與用戶端更新頻率。"
+japanese = "ウィンドウ/全画面モード、モニター、解像度に加え、描画フレームレートとクライアント更新レートの 2 つの上限を設定します。"
+korean = "창/전체 화면 모드, 모니터, 해상도와 함께 렌더링 프레임 속도와 클라이언트 업데이트 속도라는 두 가지 상한을 설정합니다."
+russian = "Выбор оконного/полноэкранного режима, монитора и разрешения, а также двух ограничений темпа кадров: частоты отрисовки и частоты обновления клиента."
+german = "Wählt Fenster-/Vollbildmodus, Monitor und Auflösung sowie zwei Obergrenzen für den Bildtakt: Bildwiederholrate und Client-Aktualisierungsrate."
+spanish = "Elige el modo de ventana o pantalla completa, el monitor y la resolución, además de dos límites de ritmo de fotogramas: la tasa de renderizado y la de actualización del cliente."
+french = "Choisit le mode fenêtré ou plein écran, le moniteur et la résolution, ainsi que deux limites de cadence : fréquence d'affichage et fréquence de mise à jour du client."
+brazilian_portuguese = "Escolhe o modo janela ou tela cheia, o monitor e a resolução, além de dois limites de ritmo de quadros: taxa de renderização e taxa de atualização do cliente."
+portuguese = "Escolhe o modo de janela ou ecrã inteiro, o monitor e a resolução, além de dois limites de ritmo de quadros: taxa de renderização e taxa de atualização do cliente."
+turkish = "Pencere/tam ekran modu, monitör ve çözünürlüğün yanı sıra iki kare hızı sınırını seçer: işleme kare hızı ve istemci güncelleme hızı."
+polish = "Wybiera tryb okna lub pełnego ekranu, monitor i rozdzielczość oraz dwa limity tempa klatek: liczbę klatek renderowania i częstotliwość aktualizacji klienta."
+
+[[message]]
 key = "Clan color in friends list"
 [message.translations]
 simplified_chinese = "好友列表中战队成员条目颜色"
@@ -2823,6 +2967,22 @@ turkish = "Harita adını kopyalamak için tıklayın"
 polish = "Kliknij, aby skopiować nazwę mapy"
 
 [[message]]
+key = "Client"
+[message.translations]
+simplified_chinese = "客户端"
+traditional_chinese = "客戶端"
+japanese = "クライアント"
+korean = "클라이언트"
+russian = "Клиент"
+german = "Client"
+spanish = "Cliente"
+french = "Client"
+brazilian_portuguese = "Cliente"
+portuguese = "Cliente"
+turkish = "İstemci"
+polish = "Klient"
+
+[[message]]
 key = "Client ID size on nameplate"
 [message.translations]
 simplified_chinese = "铭牌中客户端 ID 的大小"
@@ -2887,6 +3047,38 @@ turkish = "İstemci mesaj rengi"
 polish = "Kolor wiadomości klienta"
 
 [[message]]
+key = "Client update rate"
+[message.translations]
+simplified_chinese = "客户端更新频率"
+traditional_chinese = "用戶端更新頻率"
+japanese = "クライアント更新レート"
+korean = "클라이언트 업데이트 속도"
+russian = "Частота обновления клиента"
+german = "Client-Aktualisierungsrate"
+spanish = "Tasa de actualización del cliente"
+french = "Fréquence de mise à jour du client"
+brazilian_portuguese = "Taxa de atualização do cliente"
+portuguese = "Taxa de atualização do cliente"
+turkish = "İstemci güncelleme hızı"
+polish = "Częstotliwość aktualizacji klienta"
+
+[[message]]
+key = "Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking."
+[message.translations]
+simplified_chinese = "客户端预测与延迟补偿：预测余量、AntiPing 及其预测对象、预测事件、上行包冗余与 DSCP 流量标记。"
+traditional_chinese = "用戶端預測與延遲補償：預測餘量、AntiPing 及其預測對象、預測事件、上行封包冗餘與 DSCP 流量標記。"
+japanese = "クライアント側予測と遅延補正：予測マージン、AntiPing とその予測対象、予測イベント、上りパケット冗長化、DSCP トラフィックマーキング。"
+korean = "클라이언트 예측 및 지연 보정: 예측 여유, AntiPing과 예측 대상, 예측 이벤트, 상향 패킷 중복 전송 및 DSCP 트래픽 표시."
+russian = "Клиентское предсказание и компенсация задержки: запас предсказания, AntiPing и предсказываемые объекты, предсказываемые события, избыточность исходящих пакетов и маркировка трафика DSCP."
+german = "Clientseitige Vorhersage und Latenzkompensation: Vorhersage-Puffer, AntiPing und seine vorhergesagten Objekte, vorhergesagte Ereignisse, Redundanz ausgehender Pakete und DSCP-Markierung."
+spanish = "Predicción del cliente y compensación de latencia: margen de predicción, AntiPing y sus entidades predichas, eventos predichos, redundancia de paquetes de subida y marcado DSCP."
+french = "Prédiction côté client et compensation de latence : marge de prédiction, AntiPing et ses entités prédites, événements prédits, redondance des paquets montants et marquage DSCP."
+brazilian_portuguese = "Predição do cliente e compensação de latência: margem de predição, AntiPing e suas entidades previstas, eventos previstos, redundância de pacotes de upload e marcação DSCP."
+portuguese = "Predição do cliente e compensação de latência: margem de predição, AntiPing e as suas entidades previstas, eventos previstos, redundância de pacotes de envio e marcação DSCP."
+turkish = "İstemci tarafı tahmin ve gecikme telafisi: tahmin payı, AntiPing ve tahmin edilen varlıklar, tahmin edilen olaylar, yukarı yönlü paket yedekliliği ve DSCP trafik işaretleme."
+polish = "Predykcja po stronie klienta i kompensacja opóźnień: margines predykcji, AntiPing i przewidywane obiekty, przewidywane zdarzenia, nadmiarowość pakietów wychodzących i znakowanie ruchu DSCP."
+
+[[message]]
 key = "Close"
 [message.translations]
 simplified_chinese = "关闭"
@@ -2917,6 +3109,38 @@ brazilian_portuguese = "Fechar janela após alterar configurações"
 portuguese = "Fechar janela após alterar definições"
 turkish = "Ayarları değiştirdikten sonra pencereyi kapat"
 polish = "Zamknij okno po zmianie ustawień"
+
+[[message]]
+key = "Collect all players' skins on map join"
+[message.translations]
+simplified_chinese = "进图时收集所有玩家皮肤"
+traditional_chinese = "進圖時收集所有玩家皮膚"
+japanese = "マップ開始時に全プレイヤーのスキンを収集"
+korean = "맵 입장 시 모든 플레이어 스킨 수집"
+russian = "Собирать скины всех игроков при входе на карту"
+german = "Beim Kartenbeitritt alle Spieler-Skins sammeln"
+spanish = "Recopilar las skins de todos los jugadores al entrar al mapa"
+french = "Collecter les skins de tous les joueurs à l'entrée sur la carte"
+brazilian_portuguese = "Coletar as skins de todos os jogadores ao entrar no mapa"
+portuguese = "Recolher as skins de todos os jogadores ao entrar no mapa"
+turkish = "Haritaya girişte tüm oyuncuların skinlerini topla"
+polish = "Zbieraj skórki wszystkich graczy przy wejściu na mapę"
+
+[[message]]
+key = "Collect all players' skins on map join; manual edits turn it off."
+[message.translations]
+simplified_chinese = "进图时收集所有玩家皮肤；手动编辑队列会自动关闭它。"
+traditional_chinese = "進圖時收集所有玩家皮膚；手動編輯佇列會自動關閉它。"
+japanese = "マップ参加時に全プレイヤーのスキンを収集します。手動でキューを編集するとオフになります。"
+korean = "맵 입장 시 모든 플레이어의 스킨을 수집합니다. 대기열을 수동 편집하면 꺼집니다."
+russian = "Собирать скины всех игроков при входе на карту; ручное редактирование очереди отключает это."
+german = "Beim Betreten der Map alle Spieler-Skins sammeln; manuelles Bearbeiten schaltet es ab."
+spanish = "Recopilar los skins de todos los jugadores al entrar; editar la cola a mano lo desactiva."
+french = "Collecter les skins de tous les joueurs à l'arrivée ; modifier la file à la main le désactive."
+brazilian_portuguese = "Coletar os skins de todos ao entrar no mapa; editar a fila manualmente desativa."
+portuguese = "Recolher os skins de todos ao entrar no mapa; editar a fila manualmente desativa."
+turkish = "Haritaya girince tüm oyuncuların skinlerini topla; kuyruğu elle düzenlemek kapatır."
+polish = "Zbieraj skiny wszystkich graczy przy wejściu na mapę; ręczna edycja kolejki wyłącza to."
 
 [[message]]
 key = "Color of authenticated player names on scoreboard"
@@ -3543,6 +3767,22 @@ turkish = "Oyuncuyu (0) veya yapayı (1) kontrol et"
 polish = "Kontroluj gracza (0) lub dummy (1)"
 
 [[message]]
+key = "Controller"
+[message.translations]
+simplified_chinese = "手柄"
+traditional_chinese = "手柄"
+japanese = "コントローラー"
+korean = "컨트롤러"
+russian = "Контроллер"
+german = "Controller"
+spanish = "Mando"
+french = "Manette"
+brazilian_portuguese = "Controle"
+portuguese = "Comando"
+turkish = "Kumanda"
+polish = "Kontroler"
+
+[[message]]
 key = "Controller axis for cursor X"
 [message.translations]
 simplified_chinese = "控制光标 X 轴的控制器轴"
@@ -4039,6 +4279,22 @@ turkish = "Geçerli sıra: %s"
 polish = "Bieżąca kolejka: %s"
 
 [[message]]
+key = "Current resolution"
+[message.translations]
+simplified_chinese = "当前分辨率"
+traditional_chinese = "目前解析度"
+japanese = "現在の解像度"
+korean = "현재 해상도"
+russian = "Текущее разрешение"
+german = "Aktuelle Auflösung"
+spanish = "Resolución actual"
+french = "Résolution actuelle"
+brazilian_portuguese = "Resolução atual"
+portuguese = "Resolução atual"
+turkish = "Geçerli çözünürlük"
+polish = "Bieżąca rozdzielczość"
+
+[[message]]
 key = "Current version: %s"
 [message.translations]
 simplified_chinese = "当前版本：%s"
@@ -4197,6 +4453,22 @@ brazilian_portuguese = "O Cliente DDNet precisa ser reiniciado para concluir a a
 portuguese = "O cliente DDNet precisa de ser reiniciado para concluir a atualização!"
 turkish = "Güncellemeyi tamamlamak için DDNet istemcisinin yeniden başlatılması gerekiyor!"
 polish = "Klient DDNet wymaga ponownego uruchomienia, aby zakończyć aktualizację!"
+
+[[message]]
+key = "DDRace HUD"
+[message.translations]
+simplified_chinese = "DDRace HUD"
+traditional_chinese = "DDRace HUD"
+japanese = "DDRace HUD"
+korean = "DDRace HUD"
+russian = "HUD DDRace"
+german = "DDRace-HUD"
+spanish = "HUD de DDRace"
+french = "HUD DDRace"
+brazilian_portuguese = "HUD DDRace"
+portuguese = "HUD DDRace"
+turkish = "DDRace HUD"
+polish = "HUD DDRace"
 
 [[message]]
 key = "DDRaceNetwork · DDNet"
@@ -4837,6 +5109,22 @@ brazilian_portuguese = "Índice de exibição"
 portuguese = "Índice de exibição"
 turkish = "Görüntü indeksi"
 polish = "Indeks wyświetlania"
+
+[[message]]
+key = "Display modes"
+[message.translations]
+simplified_chinese = "显示模式"
+traditional_chinese = "顯示模式"
+japanese = "表示モード"
+korean = "표시 모드"
+russian = "Режимы отображения"
+german = "Anzeigemodi"
+spanish = "Modos de pantalla"
+french = "Modes d'affichage"
+brazilian_portuguese = "Modos de exibição"
+portuguese = "Modos de apresentação"
+turkish = "Görüntü modları"
+polish = "Tryby wyświetlania"
 
 [[message]]
 key = "Do not set this variable, instead create a ddnet-serverlist-urls.cfg next to settings_ddnet.cfg to specify all possible serverlist URLs"
@@ -5653,6 +5941,294 @@ brazilian_portuguese = "Nome do Dummy"
 portuguese = "Nome do dummy"
 turkish = "Kukla adı"
 polish = "Nazwa dummy"
+
+[[message]]
+key = "Dummy name plate clan line X offset"
+[message.translations]
+simplified_chinese = "分身名牌战队行 X 偏移"
+traditional_chinese = "分身名牌戰隊行 X 偏移"
+japanese = "ダミーネームプレートクラン行 X オフセット"
+korean = "더미 네임플레이트 클랜 행 X 오프셋"
+russian = "Смещение строки клана таблички с именем дубликата по оси X"
+german = "Dummy-Namensschild-Clanzeile X-Versatz"
+spanish = "Desplazamiento X de la fila del clan de la placa de nombre del dummy"
+french = "Décalage X de la ligne de clan du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento X da linha do clã da placa de nome do dummy"
+portuguese = "Desvio X da linha do clã da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Klan Satırı X Kayması"
+polish = "Przesunięcie X wiersza klanu tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate clan line Y offset"
+[message.translations]
+simplified_chinese = "分身名牌战队行 Y 偏移"
+traditional_chinese = "分身名牌戰隊行 Y 偏移"
+japanese = "ダミーネームプレートクラン行 Y オフセット"
+korean = "더미 네임플레이트 클랜 행 Y 오프셋"
+russian = "Смещение строки клана таблички с именем дубликата по оси Y"
+german = "Dummy-Namensschild-Clanzeile Y-Versatz"
+spanish = "Desplazamiento Y de la fila del clan de la placa de nombre del dummy"
+french = "Décalage Y de la ligne de clan du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento Y da linha do clã da placa de nome do dummy"
+portuguese = "Desvio Y da linha do clã da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Klan Satırı Y Kayması"
+polish = "Przesunięcie Y wiersza klanu tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate coord line X offset"
+[message.translations]
+simplified_chinese = "分身名牌坐标行 X 偏移"
+traditional_chinese = "分身名牌座標行 X 偏移"
+japanese = "ダミーネームプレート座標行 X オフセット"
+korean = "더미 네임플레이트 좌표 행 X 오프셋"
+russian = "Смещение строки координат таблички с именем дубликата по оси X"
+german = "Dummy-Namensschild-Koordinatenzeile X-Versatz"
+spanish = "Desplazamiento X de la fila de coordenadas de la placa de nombre del dummy"
+french = "Décalage X de la ligne de coordonnées du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento X da linha de coordenadas da placa de nome do dummy"
+portuguese = "Desvio X da linha de coordenadas da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Koordinat Satırı X Kayması"
+polish = "Przesunięcie X wiersza współrzędnych tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate coord line Y offset"
+[message.translations]
+simplified_chinese = "分身名牌坐标行 Y 偏移"
+traditional_chinese = "分身名牌座標行 Y 偏移"
+japanese = "ダミーネームプレート座標行 Y オフセット"
+korean = "더미 네임플레이트 좌표 행 Y 오프셋"
+russian = "Смещение строки координат таблички с именем дубликата по оси Y"
+german = "Dummy-Namensschild-Koordinatenzeile Y-Versatz"
+spanish = "Desplazamiento Y de la fila de coordenadas de la placa de nombre del dummy"
+french = "Décalage Y de la ligne de coordonnées du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento Y da linha de coordenadas da placa de nome do dummy"
+portuguese = "Desvio Y da linha de coordenadas da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Koordinat Satırı Y Kayması"
+polish = "Przesunięcie Y wiersza współrzędnych tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate hammer icon X offset"
+[message.translations]
+simplified_chinese = "分身名牌锤子图标 X 偏移"
+traditional_chinese = "分身名牌錘子圖示 X 偏移"
+japanese = "ダミーネームプレートハンマーアイコン X オフセット"
+korean = "더미 네임플레이트 망치 아이콘 X 오프셋"
+russian = "Смещение иконки молота таблички с именем дубликата по оси X"
+german = "Dummy-Namensschild-Hammer-Symbol X-Versatz"
+spanish = "Desplazamiento X del icono del martillo de la placa de nombre del dummy"
+french = "Décalage X de l'icône marteau du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento X do ícone de martelo da placa de nome do dummy"
+portuguese = "Desvio X do ícone de martelo da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Çekiç Simgesi X Kayması"
+polish = "Przesunięcie X ikony młotka tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate hammer icon Y offset"
+[message.translations]
+simplified_chinese = "分身名牌锤子图标 Y 偏移"
+traditional_chinese = "分身名牌錘子圖示 Y 偏移"
+japanese = "ダミーネームプレートハンマーアイコン Y オフセット"
+korean = "더미 네임플레이트 망치 아이콘 Y 오프셋"
+russian = "Смещение иконки молота таблички с именем дубликата по оси Y"
+german = "Dummy-Namensschild-Hammer-Symbol Y-Versatz"
+spanish = "Desplazamiento Y del icono del martillo de la placa de nombre del dummy"
+french = "Décalage Y de l'icône marteau du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento Y do ícone de martelo da placa de nome do dummy"
+portuguese = "Desvio Y do ícone de martelo da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Çekiç Simgesi Y Kayması"
+polish = "Przesunięcie Y ikony młotka tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate hook icon X offset"
+[message.translations]
+simplified_chinese = "分身名牌钩子图标 X 偏移"
+traditional_chinese = "分身名牌鉤子圖示 X 偏移"
+japanese = "ダミーネームプレートフックアイコン X オフセット"
+korean = "더미 네임플레이트 갈고리 아이콘 X 오프셋"
+russian = "Смещение иконки крюка таблички с именем дубликата по оси X"
+german = "Dummy-Namensschild-Haken-Symbol X-Versatz"
+spanish = "Desplazamiento X del icono del gancho de la placa de nombre del dummy"
+french = "Décalage X de l'icône grappin du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento X do ícone de gancho da placa de nome do dummy"
+portuguese = "Desvio X do ícone de gancho da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Kanca Simgesi X Kayması"
+polish = "Przesunięcie X ikony haka tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate hook icon Y offset"
+[message.translations]
+simplified_chinese = "分身名牌钩子图标 Y 偏移"
+traditional_chinese = "分身名牌鉤子圖示 Y 偏移"
+japanese = "ダミーネームプレートフックアイコン Y オフセット"
+korean = "더미 네임플레이트 갈고리 아이콘 Y 오프셋"
+russian = "Смещение иконки крюка таблички с именем дубликата по оси Y"
+german = "Dummy-Namensschild-Haken-Symbol Y-Versatz"
+spanish = "Desplazamiento Y del icono del gancho de la placa de nombre del dummy"
+french = "Décalage Y de l'icône grappin du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento Y do ícone de gancho da placa de nome do dummy"
+portuguese = "Desvio Y do ícone de gancho da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Kanca Simgesi Y Kayması"
+polish = "Przesunięcie Y ikony haka tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate jump key icon X offset"
+[message.translations]
+simplified_chinese = "分身名牌跳跃键图标 X 偏移"
+traditional_chinese = "分身名牌跳躍鍵圖示 X 偏移"
+japanese = "ダミーネームプレートジャンプキーアイコン X オフセット"
+korean = "더미 네임플레이트 점프 키 아이콘 X 오프셋"
+russian = "Смещение иконки клавиши прыжка таблички с именем дубликата по оси X"
+german = "Dummy-Namensschild-Sprungtaste-Symbol X-Versatz"
+spanish = "Desplazamiento X del icono de la tecla de salto de la placa de nombre del dummy"
+french = "Décalage X de l'icône de la touche de saut du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento X do ícone da tecla de salto da placa de nome do dummy"
+portuguese = "Desvio X do ícone da tecla de salto da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Zıplama Tuşu Simgesi X Kayması"
+polish = "Przesunięcie X ikony klawisza skoku tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate jump key icon Y offset"
+[message.translations]
+simplified_chinese = "分身名牌跳跃键图标 Y 偏移"
+traditional_chinese = "分身名牌跳躍鍵圖示 Y 偏移"
+japanese = "ダミーネームプレートジャンプキーアイコン Y オフセット"
+korean = "더미 네임플레이트 점프 키 아이콘 Y 오프셋"
+russian = "Смещение иконки клавиши прыжка таблички с именем дубликата по оси Y"
+german = "Dummy-Namensschild-Sprungtaste-Symbol Y-Versatz"
+spanish = "Desplazamiento Y del icono de la tecla de salto de la placa de nombre del dummy"
+french = "Décalage Y de l'icône de la touche de saut du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento Y do ícone da tecla de salto da placa de nome do dummy"
+portuguese = "Desvio Y do ícone da tecla de salto da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Zıplama Tuşu Simgesi Y Kayması"
+polish = "Przesunięcie Y ikony klawisza skoku tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate left key icon X offset"
+[message.translations]
+simplified_chinese = "分身名牌左方向键图标 X 偏移"
+traditional_chinese = "分身名牌左方向鍵圖示 X 偏移"
+japanese = "ダミーネームプレート左キーアイコン X オフセット"
+korean = "더미 네임플레이트 왼쪽 키 아이콘 X 오프셋"
+russian = "Смещение иконки левой клавиши таблички с именем дубликата по оси X"
+german = "Dummy-Namensschild-Links-Taste-Symbol X-Versatz"
+spanish = "Desplazamiento X del icono de la tecla izquierda de la placa de nombre del dummy"
+french = "Décalage X de l'icône de la touche gauche du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento X do ícone da tecla esquerda da placa de nome do dummy"
+portuguese = "Desvio X do ícone da tecla esquerda da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Sol Tuş Simgesi X Kayması"
+polish = "Przesunięcie X ikony lewego klawisza tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate left key icon Y offset"
+[message.translations]
+simplified_chinese = "分身名牌左方向键图标 Y 偏移"
+traditional_chinese = "分身名牌左方向鍵圖示 Y 偏移"
+japanese = "ダミーネームプレート左キーアイコン Y オフセット"
+korean = "더미 네임플레이트 왼쪽 키 아이콘 Y 오프셋"
+russian = "Смещение иконки левой клавиши таблички с именем дубликата по оси Y"
+german = "Dummy-Namensschild-Links-Taste-Symbol Y-Versatz"
+spanish = "Desplazamiento Y del icono de la tecla izquierda de la placa de nombre del dummy"
+french = "Décalage Y de l'icône de la touche gauche du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento Y do ícone da tecla esquerda da placa de nome do dummy"
+portuguese = "Desvio Y do ícone da tecla esquerda da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Sol Tuş Simgesi Y Kayması"
+polish = "Przesunięcie Y ikony lewego klawisza tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate name line X offset"
+[message.translations]
+simplified_chinese = "分身名牌名字行 X 偏移"
+traditional_chinese = "分身名牌名字行 X 偏移"
+japanese = "ダミーネームプレートネーム行 X オフセット"
+korean = "더미 네임플레이트 닉네임 행 X 오프셋"
+russian = "Смещение строки ника таблички с именем дубликата по оси X"
+german = "Dummy-Namensschild-Nicknamezeile X-Versatz"
+spanish = "Desplazamiento X de la fila del apodo de la placa de nombre del dummy"
+french = "Décalage X de la ligne de pseudo du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento X da linha de apelido da placa de nome do dummy"
+portuguese = "Desvio X da linha de nickname da placa de nome do dummy"
+turkish = "Dummy İsim Plakası İsim Satırı X Kayması"
+polish = "Przesunięcie X wiersza pseudonimu tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate name line Y offset"
+[message.translations]
+simplified_chinese = "分身名牌名字行 Y 偏移"
+traditional_chinese = "分身名牌名字行 Y 偏移"
+japanese = "ダミーネームプレートネーム行 Y オフセット"
+korean = "더미 네임플레이트 닉네임 행 Y 오프셋"
+russian = "Смещение строки ника таблички с именем дубликата по оси Y"
+german = "Dummy-Namensschild-Nicknamezeile Y-Versatz"
+spanish = "Desplazamiento Y de la fila del apodo de la placa de nombre del dummy"
+french = "Décalage Y de la ligne de pseudo du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento Y da linha de apelido da placa de nome do dummy"
+portuguese = "Desvio Y da linha de nickname da placa de nome do dummy"
+turkish = "Dummy İsim Plakası İsim Satırı Y Kayması"
+polish = "Przesunięcie Y wiersza pseudonimu tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate right key icon X offset"
+[message.translations]
+simplified_chinese = "分身名牌右方向键图标 X 偏移"
+traditional_chinese = "分身名牌右方向鍵圖示 X 偏移"
+japanese = "ダミーネームプレート右キーアイコン X オフセット"
+korean = "더미 네임플레이트 오른쪽 키 아이콘 X 오프셋"
+russian = "Смещение иконки правой клавиши таблички с именем дубликата по оси X"
+german = "Dummy-Namensschild-Rechts-Taste-Symbol X-Versatz"
+spanish = "Desplazamiento X del icono de la tecla derecha de la placa de nombre del dummy"
+french = "Décalage X de l'icône de la touche droite du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento X do ícone da tecla direita da placa de nome do dummy"
+portuguese = "Desvio X do ícone da tecla direita da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Sağ Tuş Simgesi X Kayması"
+polish = "Przesunięcie X ikony prawego klawisza tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate right key icon Y offset"
+[message.translations]
+simplified_chinese = "分身名牌右方向键图标 Y 偏移"
+traditional_chinese = "分身名牌右方向鍵圖示 Y 偏移"
+japanese = "ダミーネームプレート右キーアイコン Y オフセット"
+korean = "더미 네임플레이트 오른쪽 키 아이콘 Y 오프셋"
+russian = "Смещение иконки правой клавиши таблички с именем дубликата по оси Y"
+german = "Dummy-Namensschild-Rechts-Taste-Symbol Y-Versatz"
+spanish = "Desplazamiento Y del icono de la tecla derecha de la placa de nombre del dummy"
+french = "Décalage Y de l'icône de la touche droite du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento Y do ícone da tecla direita da placa de nome do dummy"
+portuguese = "Desvio Y do ícone da tecla direita da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Sağ Tuş Simgesi Y Kayması"
+polish = "Przesunięcie Y ikony prawego klawisza tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate strength line X offset"
+[message.translations]
+simplified_chinese = "分身名牌钩子强度行 X 偏移"
+traditional_chinese = "分身名牌鉤子強度行 X 偏移"
+japanese = "ダミーネームプレート強度行 X オフセット"
+korean = "더미 네임플레이트 강도 행 X 오프셋"
+russian = "Смещение строки силы таблички с именем дубликата по оси X"
+german = "Dummy-Namensschild-Stärkezeile X-Versatz"
+spanish = "Desplazamiento X de la fila de fuerza de la placa de nombre del dummy"
+french = "Décalage X de la ligne de force du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento X da linha de força da placa de nome do dummy"
+portuguese = "Desvio X da linha de força da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Güç Satırı X Kayması"
+polish = "Przesunięcie X wiersza siły tabliczki z nazwą kukły"
+
+[[message]]
+key = "Dummy name plate strength line Y offset"
+[message.translations]
+simplified_chinese = "分身名牌钩子强度行 Y 偏移"
+traditional_chinese = "分身名牌鉤子強度行 Y 偏移"
+japanese = "ダミーネームプレート強度行 Y オフセット"
+korean = "더미 네임플레이트 강도 행 Y 오프셋"
+russian = "Смещение строки силы таблички с именем дубликата по оси Y"
+german = "Dummy-Namensschild-Stärkezeile Y-Versatz"
+spanish = "Desplazamiento Y de la fila de fuerza de la placa de nombre del dummy"
+french = "Décalage Y de la ligne de force du panneau de nom du dummy"
+brazilian_portuguese = "Deslocamento Y da linha de força da placa de nome do dummy"
+portuguese = "Desvio Y da linha de força da placa de nome do dummy"
+turkish = "Dummy İsim Plakası Güç Satırı Y Kayması"
+polish = "Przesunięcie Y wiersza siły tabliczki z nazwą kukły"
 
 [[message]]
 key = "Dummy skin"
@@ -6485,6 +7061,22 @@ brazilian_portuguese = "Habilitar backend MySQL em vez de SQLite (fallback para 
 portuguese = "Ativar backend MySQL em vez de SQLite (recorre a sv_sqlite_file quando nenhum servidor MySQL está acessível)"
 turkish = "SQLite yerine MySQL arka ucu etkinleştir (MySQL sunucusuna ulaşılamadığında sv_sqlite_file'a geri dön)"
 polish = "Włącz backend MySQL zamiast SQLite (powrót do sv_sqlite_file, gdy serwer MySQL jest nieosiągalny)"
+
+[[message]]
+key = "Enable nameplate text effects (master switch)"
+[message.translations]
+simplified_chinese = "启用名牌文本特效（总开关）"
+traditional_chinese = "啟用名牌文字特效（總開關）"
+japanese = "ネームプレートのテキスト効果を有効化（マスタースイッチ）"
+korean = "네임플레이트 텍스트 효과 사용(마스터 스위치)"
+russian = "Включить текстовые эффекты таблички с именем (главный переключатель)"
+german = "Text-Effekte für Namensschilder aktivieren (Hauptschalter)"
+spanish = "Activar los efectos de texto de la placa de nombre (interruptor principal)"
+french = "Activer les effets de texte du panneau de nom (interrupteur principal)"
+brazilian_portuguese = "Ativar os efeitos de texto da placa de nome (interruptor principal)"
+portuguese = "Ativar os efeitos de texto da placa de nome (interruptor principal)"
+turkish = "İsim plakası metin efektlerini aç (ana anahtar)"
+polish = "Włącz efekty tekstowe tabliczki z nazwą (przełącznik główny)"
 
 [[message]]
 key = "Enable pistol sound"
@@ -7783,6 +8375,22 @@ turkish = "Çerçeve arabelleği renk bitleri (yalnızca tam ekran)"
 polish = "Bity koloru bufora ramki (tylko pełny ekran)"
 
 [[message]]
+key = "Frames drawn per second when V-Sync is off; 0 = unlimited"
+[message.translations]
+simplified_chinese = "关闭垂直同步时每秒最多绘制多少帧；0 = 不限"
+traditional_chinese = "關閉垂直同步時每秒最多繪製多少幀；0 = 不限"
+japanese = "垂直同期オフ時に毎秒描画するフレーム数の上限。0 = 無制限"
+korean = "수직 동기화가 꺼졌을 때 초당 그리는 프레임 수 상한. 0 = 무제한"
+russian = "Максимум кадров в секунду при выключенной вертикальной синхронизации; 0 = без ограничения"
+german = "Maximale Bilder pro Sekunde bei ausgeschaltetem V-Sync; 0 = unbegrenzt"
+spanish = "Fotogramas por segundo cuando V-Sync está desactivado; 0 = sin límite"
+french = "Images par seconde lorsque la V-Sync est désactivée ; 0 = illimité"
+brazilian_portuguese = "Quadros por segundo com V-Sync desligado; 0 = sem limite"
+portuguese = "Quadros por segundo com o V-Sync desligado; 0 = sem limite"
+turkish = "V-Sync kapalıyken saniyedeki kare sayısı üst sınırı; 0 = sınırsız"
+polish = "Maksymalna liczba klatek na sekundę przy wyłączonej synchronizacji pionowej; 0 = bez ograniczeń"
+
+[[message]]
 key = "Frankenstein (drop parts on right)"
 [message.translations]
 simplified_chinese = "拼合结果（将部件拖放到右侧）"
@@ -8007,6 +8615,22 @@ turkish = "Arkadaş mesajı kalp rengi"
 polish = "Kolor serduszka wiadomości od znajomego"
 
 [[message]]
+key = "Frozen color darkening"
+[message.translations]
+simplified_chinese = "冻结时颜色变暗强度"
+traditional_chinese = "凍結時顏色變暗強度"
+japanese = "凍結色の暗さ"
+korean = "얼음 색 어둡게"
+russian = "Затемнение цвета заморозки"
+german = "Abdunklung der Frostfarbe"
+spanish = "Oscurecimiento del color de congelación"
+french = "Assombrissement de la couleur de gel"
+brazilian_portuguese = "Escurecimento da cor de congelamento"
+portuguese = "Escurecimento da cor de congelação"
+turkish = "Donma rengi koyulaştırması"
+polish = "Przyciemnienie koloru zamrożenia"
+
+[[message]]
 key = "FSAA samples"
 [message.translations]
 simplified_chinese = "全屏抗锯齿（FSAA）采样倍数"
@@ -8229,6 +8853,22 @@ brazilian_portuguese = "Taxa de atualização do jogo quando a janela está inat
 portuguese = "Taxa de atualização do jogo quando a janela está inativa (Hz)"
 turkish = "Pencere etkin değilken oyun güncelleme hızı (Hz)"
 polish = "Częstotliwość aktualizacji gry, gdy okno jest nieaktywne (Hz)"
+
+[[message]]
+key = "Game window mode"
+[message.translations]
+simplified_chinese = "游戏窗口模式"
+traditional_chinese = "遊戲視窗模式"
+japanese = "ゲームウィンドウモード"
+korean = "게임 창 모드"
+russian = "Режим окна игры"
+german = "Spielfenstermodus"
+spanish = "Modo de ventana del juego"
+french = "Mode de fenêtre du jeu"
+brazilian_portuguese = "Modo de janela do jogo"
+portuguese = "Modo de janela do jogo"
+turkish = "Oyun pencere modu"
+polish = "Tryb okna gry"
 
 [[message]]
 key = "Gamemode. When enabled, players join as spectators"
@@ -8469,6 +9109,38 @@ brazilian_portuguese = "Placa de vídeo"
 portuguese = "Placa gráfica"
 turkish = "Ekran kartı"
 polish = "Karta graficzna"
+
+[[message]]
+key = "Graphics display"
+[message.translations]
+simplified_chinese = "图像显示"
+traditional_chinese = "圖像顯示"
+japanese = "グラフィック表示"
+korean = "그래픽 표시"
+russian = "Отображение графики"
+german = "Grafikanzeige"
+spanish = "Visualización gráfica"
+french = "Affichage graphique"
+brazilian_portuguese = "Exibição gráfica"
+portuguese = "Apresentação gráfica"
+turkish = "Grafik görüntüsü"
+polish = "Wyświetlanie grafiki"
+
+[[message]]
+key = "Graphics hardware details"
+[message.translations]
+simplified_chinese = "图形硬件详情"
+traditional_chinese = "圖形硬體詳情"
+japanese = "グラフィックスハードウェアの詳細"
+korean = "그래픽 하드웨어 정보"
+russian = "Сведения о графическом оборудовании"
+german = "Grafikhardware-Details"
+spanish = "Detalles del hardware gráfico"
+french = "Détails du matériel graphique"
+brazilian_portuguese = "Detalhes do hardware gráfico"
+portuguese = "Detalhes do hardware gráfico"
+turkish = "Grafik donanımı ayrıntıları"
+polish = "Szczegóły sprzętu graficznego"
 
 [[message]]
 key = "Graphics library major version"
@@ -8871,6 +9543,22 @@ turkish = "Kanca"
 polish = "Hak"
 
 [[message]]
+key = "Hook collision line"
+[message.translations]
+simplified_chinese = "钩子辅助线"
+traditional_chinese = "鉤子輔助線"
+japanese = "フック衝突線"
+korean = "갈고리 충돌선"
+russian = "Линия столкновения крюка"
+german = "Haken-Kollisionslinie"
+spanish = "Línea de colisión de gancho"
+french = "Ligne de collision de crochet"
+brazilian_portuguese = "Linha de colisão de gancho"
+portuguese = "Linha de colisão de gancho"
+turkish = "Kanca çarpışma çizgisi"
+polish = "Linia kolizji haka"
+
+[[message]]
 key = "Hook collision line alpha (0 invisible, 100 fully visible)"
 [message.translations]
 simplified_chinese = "钩子辅助线不透明度（0 不可见，100 完全可见）"
@@ -9125,6 +9813,22 @@ brazilian_portuguese = "Quantos segundos os jogadores ficam congelados (aplica-s
 portuguese = "Quantos segundos os jogadores ficam congelados (aplica-se a todos, exceto congelamento atrasado na camada de switch e congelamento profundo)"
 turkish = "Oyuncuların kaç saniye donuk kalacağı (anahtar katmanındaki gecikmeli donma ve derin donma hariç tümü için geçerlidir)"
 polish = "Ile sekund gracze pozostają zamrożeni (dotyczy wszystkich oprócz opóźnionego zamrożenia w warstwie przełącznika i głębokiego zamrożenia)"
+
+[[message]]
+key = "How often game logic and input are processed. Lowering it also throttles rendering, so frames get steadier and cheaper at the cost of input latency."
+[message.translations]
+simplified_chinese = "游戏逻辑与输入的处理频率。调低后渲染也会一起被限速：帧数更稳、更省电，但输入延迟会增加。"
+traditional_chinese = "遊戲邏輯與輸入的處理頻率。調低後渲染也會一併被限速：幀數更穩、更省電，但輸入延遲會增加。"
+japanese = "ゲームロジックと入力を処理する頻度。下げると描画も同じ制限を受け、フレームは安定し消費電力も減りますが、入力遅延が増えます。"
+korean = "게임 로직과 입력을 처리하는 빈도입니다. 낮추면 렌더링도 함께 제한되어 프레임은 안정적이고 전력 소모는 줄지만 입력 지연이 늘어납니다."
+russian = "Частота обработки игровой логики и ввода. При снижении рендеринг тоже ограничивается: кадры стабильнее и расход энергии меньше, но растёт задержка ввода."
+german = "Wie oft Spiellogik und Eingaben verarbeitet werden. Ein niedrigerer Wert drosselt auch das Rendern: gleichmäßigere Bilder und weniger Stromverbrauch, aber höhere Eingabelatenz."
+spanish = "Frecuencia con la que se procesan la lógica del juego y las entradas. Al bajarla también se limita el renderizado: fotogramas más estables y menor consumo, a costa de latencia de entrada."
+french = "Fréquence de traitement de la logique de jeu et des entrées. La réduire limite aussi le rendu : images plus stables et moins d'énergie, mais latence d'entrée accrue."
+brazilian_portuguese = "Com que frequência a lógica do jogo e as entradas são processadas. Ao reduzir, a renderização também é limitada: quadros mais estáveis e menor consumo, ao custo de latência de entrada."
+portuguese = "Com que frequência a lógica do jogo e as entradas são processadas. Ao reduzir, a renderização também é limitada: quadros mais estáveis e menor consumo, ao custo de latência de entrada."
+turkish = "Oyun mantığı ve girdilerin işlenme sıklığı. Düşürüldüğünde render da sınırlanır: kareler daha kararlı ve enerji tüketimi daha az olur, ancak girdi gecikmesi artar."
+polish = "Jak często przetwarzana jest logika gry i wejście. Zmniejszenie ogranicza też renderowanie: klatki są stabilniejsze i oszczędzają energię, ale rośnie opóźnienie wejścia."
 
 [[message]]
 key = "How often the broadcast time updates"
@@ -9479,6 +10183,22 @@ turkish = "Oyun içi kontrolcü hassasiyeti"
 polish = "Czułość kontrolera w grze"
 
 [[message]]
+key = "In-game crosshair rotation speed in degrees per second (0=static, negative=reverse)"
+[message.translations]
+simplified_chinese = "游戏内光标旋转速度（度/秒，0=静止，负值反向）"
+traditional_chinese = "遊戲內游標旋轉速度（度/秒，0=靜止，負值反向）"
+japanese = "ゲーム内照準の回転速度（度/秒、0=静止、負=逆回転）"
+korean = "게임 내 조준선 회전 속도(도/초, 0=정지, 음수=역방향)"
+russian = "Скорость вращения прицела в игре в градусах в секунду (0 — статично, отрицательное — в обратную сторону)"
+german = "Rotationsgeschwindigkeit des Fadenkreuzes im Spiel in Grad pro Sekunde (0 = statisch, negativ = rückwärts)"
+spanish = "Velocidad de rotación de la mira en el juego en grados por segundo (0 = estática, negativo = inversa)"
+french = "Vitesse de rotation du réticule en jeu en degrés par seconde (0 = fixe, négatif = inversé)"
+brazilian_portuguese = "Velocidade de rotação da mira no jogo em graus por segundo (0 = estática, negativo = invertida)"
+portuguese = "Velocidade de rotação da mira no jogo em graus por segundo (0 = estática, negativo = invertida)"
+turkish = "Oyun içi nişangah dönüş hızı (derece/saniye, 0=sabit, negatif=ters)"
+polish = "Prędkość obrotu celownika w grze w stopniach na sekundę (0 = statycznie, ujemna = wstecz)"
+
+[[message]]
 key = "Infinite hook for super players on/off."
 [message.translations]
 simplified_chinese = "超级玩家无限钩子开/关"
@@ -9541,6 +10261,22 @@ brazilian_portuguese = "Sensibilidade do controle no jogo"
 portuguese = "Sensibilidade do comando no jogo"
 turkish = "Oyunda kumanda hassasiyeti"
 polish = "Czułość kontrolera (w grze)"
+
+[[message]]
+key = "Ingame cursor rotation"
+[message.translations]
+simplified_chinese = "游戏内光标旋转"
+traditional_chinese = "遊戲內游標旋轉"
+japanese = "ゲーム内カーソルの回転"
+korean = "게임 내 커서 회전"
+russian = "Вращение курсора в игре"
+german = "Cursor-Rotation im Spiel"
+spanish = "Rotación del cursor en el juego"
+french = "Rotation du curseur en jeu"
+brazilian_portuguese = "Rotação do cursor no jogo"
+portuguese = "Rotação do cursor no jogo"
+turkish = "Oyun içi imleç dönüşü"
+polish = "Obrót kursora w grze"
 
 [[message]]
 key = "Ingame mouse sens."
@@ -9765,6 +10501,54 @@ brazilian_portuguese = "Manter gancho ao teleportar"
 portuguese = "Manter gancho ao teletransportar"
 turkish = "Işınlanırken kancayı koru"
 polish = "Zachowaj hak podczas teleportacji"
+
+[[message]]
+key = "Keep inside game window"
+[message.translations]
+simplified_chinese = "跟随窗口边界"
+traditional_chinese = "跟隨視窗邊界"
+japanese = "ゲームウィンドウ内に保つ"
+korean = "게임 창 안에 유지"
+russian = "Удерживать внутри окна игры"
+german = "Im Spielfenster halten"
+spanish = "Mantener dentro de la ventana del juego"
+french = "Maintenir dans la fenêtre de jeu"
+brazilian_portuguese = "Manter dentro da janela do jogo"
+portuguese = "Manter dentro da janela do jogo"
+turkish = "Oyun penceresi içinde tut"
+polish = "Trzymaj w oknie gry"
+
+[[message]]
+key = "Keep square inside game window"
+[message.translations]
+simplified_chinese = "窗口内保持方形"
+traditional_chinese = "視窗內保持方形"
+japanese = "四角形をゲームウィンドウ内に保つ"
+korean = "사각형을 게임 창 안에 유지"
+russian = "Удерживать квадрат внутри окна игры"
+german = "Quadrat im Spielfenster halten"
+spanish = "Mantener el cuadrado dentro de la ventana del juego"
+french = "Maintenir le carré dans la fenêtre de jeu"
+brazilian_portuguese = "Manter o quadrado dentro da janela do jogo"
+portuguese = "Manter o quadrado dentro da janela do jogo"
+turkish = "Kareyi oyun penceresi içinde tut"
+polish = "Trzymaj kwadrat w oknie gry"
+
+[[message]]
+key = "Keep the feeling of the maximum cursor distance independent of resolution"
+[message.translations]
+simplified_chinese = "让最大光标距离的手感不受分辨率影响"
+traditional_chinese = "讓最大游標距離的手感不受解析度影響"
+japanese = "最大カーソル距離の感覚を解像度に依存させない"
+korean = "최대 커서 거리 감각을 해상도와 무관하게 유지"
+russian = "Сохранять ощущение максимальной дистанции курсора независимо от разрешения"
+german = "Das Gefühl der maximalen Cursor-Distanz unabhängig von der Auflösung halten"
+spanish = "Mantener la sensación de distancia máxima del cursor independiente de la resolución"
+french = "Garder la sensation de distance maximale du curseur indépendante de la résolution"
+brazilian_portuguese = "Manter a sensação de distância máxima do cursor independente da resolução"
+portuguese = "Manter a sensação de distância máxima do cursor independente da resolução"
+turkish = "Maksimum imleç mesafesi hissini çözünürlükten bağımsız tut"
+polish = "Utrzymaj wrażenie maksymalnego dystansu kursora niezależnie od rozdzielczości"
 
 [[message]]
 key = "Keep vote window open after voting"
@@ -10007,6 +10791,22 @@ turkish = "Bir Frankenstein parçasını renklendirmek için sol tıklayın. De�
 polish = "Kliknij lewym przyciskiem część Frankensteina, aby zmienić jej odcień. Przeciągnij części, aby je zastąpić. Kliknij prawym przyciskiem, aby zresetować."
 
 [[message]]
+key = "Legacy team colors"
+[message.translations]
+simplified_chinese = "旧版队伍配色"
+traditional_chinese = "舊版隊伍配色"
+japanese = "旧バージョンのチームカラー"
+korean = "이전 팀 색상"
+russian = "Старые цвета команд"
+german = "Alte Teamfarben"
+spanish = "Colores de equipo antiguos"
+french = "Anciennes couleurs d'équipe"
+brazilian_portuguese = "Cores de equipe antigas"
+portuguese = "Cores de equipa antigas"
+turkish = "Eski takım renkleri"
+polish = "Stare kolory drużyn"
+
+[[message]]
 key = "Let server start ghost"
 [message.translations]
 simplified_chinese = "允许服务器启动幽灵"
@@ -10069,6 +10869,22 @@ brazilian_portuguese = "Leve"
 portuguese = "Leve"
 turkish = "Hafif"
 polish = "Lekki"
+
+[[message]]
+key = "Limit cursor to game window"
+[message.translations]
+simplified_chinese = "限制光标在游戏窗口内"
+traditional_chinese = "限制游標在遊戲視窗內"
+japanese = "カーソルをゲームウィンドウ内に制限"
+korean = "커서를 게임 창 안으로 제한"
+russian = "Ограничить курсор окном игры"
+german = "Cursor auf das Spielfenster begrenzen"
+spanish = "Limitar el cursor a la ventana del juego"
+french = "Limiter le curseur à la fenêtre de jeu"
+brazilian_portuguese = "Limitar o cursor à janela do jogo"
+portuguese = "Limitar o cursor à janela do jogo"
+turkish = "İmleci oyun penceresiyle sınırla"
+polish = "Ogranicz kursor do okna gry"
 
 [[message]]
 key = "Limit information in spectator mode"
@@ -10245,6 +11061,22 @@ brazilian_portuguese = "Registrar a criação/reprodução de eventos previstos 
 portuguese = "Registar a criação/reprodução de eventos previstos e a confirmação de snapshots para depurar sons duplicados."
 turkish = "Çift sesleri ayıklamak için tahmin edilen olayların oluşturulmasını/oynatılmasını ve anlık görüntü onayını günlüğe kaydet."
 polish = "Loguj tworzenie/odtwarzanie przewidywanych zdarzeń i potwierdzenie migawki, aby debugować podwójne dźwięki."
+
+[[message]]
+key = "Logic and input ticks per second; rendering follows this beat."
+[message.translations]
+simplified_chinese = "每秒处理游戏逻辑与输入的次数；渲染跟着这个节拍走。"
+traditional_chinese = "每秒處理遊戲邏輯與輸入的次數；渲染跟著這個節拍走。"
+japanese = "1 秒あたりのゲームロジックと入力の処理回数。描画もこのリズムに従います。"
+korean = "초당 게임 로직과 입력을 처리하는 횟수입니다. 렌더링도 이 박자를 따릅니다."
+russian = "Число обработок игровой логики и ввода в секунду; рендеринг следует этому ритму."
+german = "Logik- und Eingabe-Ticks pro Sekunde; das Rendern folgt diesem Takt."
+spanish = "Ticks de lógica y entrada por segundo; el renderizado sigue ese ritmo."
+french = "Ticks de logique et d'entrée par seconde ; le rendu suit ce rythme."
+brazilian_portuguese = "Ticks de lógica e entrada por segundo; a renderização segue esse ritmo."
+portuguese = "Ticks de lógica e entrada por segundo; a renderização segue esse ritmo."
+turkish = "Saniyedeki oyun mantığı ve girdi tick sayısı; render de bu tempoyu izler."
+polish = "Ticki logiki i wejścia na sekundę; renderowanie podąża za tym rytmem."
 
 [[message]]
 key = "Lose weapons when teleporting (useful for race maps)"
@@ -10647,6 +11479,22 @@ turkish = "Maksimum Ekran Görüntüsü"
 polish = "Maks. zrzutów ekranu"
 
 [[message]]
+key = "Max skins in the rotation queue; 0 stops collecting."
+[message.translations]
+simplified_chinese = "轮换队列最多保留多少皮肤；0 表示停止收集。"
+traditional_chinese = "輪替佇列最多保留多少皮膚；0 表示停止收集。"
+japanese = "ローテーションキューに保持するスキンの上限。0 で収集を停止します。"
+korean = "로테이션 대기열에 보관할 최대 스킨 수입니다. 0이면 수집을 중지합니다."
+russian = "Максимум скинов в очереди ротации; 0 отключает сбор."
+german = "Maximale Anzahl Skins in der Rotationswarteschlange; 0 stoppt das Sammeln."
+spanish = "Máximo de skins en la cola de rotación; 0 detiene la recopilación."
+french = "Nombre maximal de skins dans la file de rotation ; 0 arrête la collecte."
+brazilian_portuguese = "Máximo de skins na fila de rotação; 0 interrompe a coleta."
+portuguese = "Máximo de skins na fila de rotação; 0 interrompe a recolha."
+turkish = "Rotasyon kuyruğundaki azami skin sayısı; 0 toplamayı durdurur."
+polish = "Maksymalna liczba skinów w kolejce rotacji; 0 wyłącza zbieranie."
+
+[[message]]
 key = "Maximum auto-saves retained per map name (0=unlimited)"
 [message.translations]
 simplified_chinese = "每个地图名称保留的最大自动保存数量（0 = 无限制）"
@@ -10933,6 +11781,22 @@ brazilian_portuguese = "Número máximo de respostas de informações do servido
 portuguese = "Número máximo de respostas de informações do servidor, de qualquer tamanho, enviadas por segundo (0 = ilimitado)."
 turkish = "Boyutu ne olursa olsun saniyede gönderilecek sunucu bilgisi yanıtlarının maksimum sayısı (0 = sınırsız)."
 polish = "Maksymalna liczba odpowiedzi z informacjami o serwerze dowolnego rozmiaru wysyłanych na sekundę (0 = bez ograniczeń)."
+
+[[message]]
+key = "Maximum number of skins kept in the rotation queue; extra skins are dropped oldest first. 0 empties the queue and stops collecting."
+[message.translations]
+simplified_chinese = "轮换队列最多保留的皮肤数量，超出时从最早的开始丢弃。0 表示清空队列并停止收集。"
+traditional_chinese = "輪換佇列最多保留的皮膚數量，超出時從最早的開始捨棄。0 表示清空佇列並停止收集。"
+japanese = "ローテーションキューに保持するスキンの上限。超えた分は古い順に削除されます。0 にするとキューを空にして収集を停止します。"
+korean = "순환 큐에 보관할 스킨의 최대 개수입니다. 초과분은 오래된 것부터 버려집니다. 0이면 큐를 비우고 수집을 중지합니다."
+russian = "Максимум скинов в очереди ротации; лишние удаляются начиная с самых старых. 0 очищает очередь и останавливает сбор."
+german = "Maximale Anzahl an Skins in der Rotations-Warteschlange; überzählige werden zuerst die ältesten entfernt. 0 leert die Warteschlange und stoppt das Sammeln."
+spanish = "Número máximo de skins en la cola de rotación; los sobrantes se descartan empezando por los más antiguos. 0 vacía la cola y deja de recopilar."
+french = "Nombre maximal de skins dans la file de rotation ; les plus anciens sont supprimés en premier. 0 vide la file et arrête la collecte."
+brazilian_portuguese = "Número máximo de skins na fila de rotação; os excedentes são descartados a partir dos mais antigos. 0 esvazia a fila e para de coletar."
+portuguese = "Número máximo de skins na fila de rotação; os excedentes são descartados começando pelos mais antigos. 0 esvazia a fila e para de recolher."
+turkish = "Döndürme kuyruğunda tutulacak en fazla skin sayısı; fazlası en eskiden başlanarak atılır. 0 kuyruğu boşaltır ve toplamayı durdurur."
+polish = "Maksymalna liczba skórek w kolejce rotacji; nadmiar jest usuwany od najstarszych. 0 czyści kolejkę i zatrzymuje zbieranie."
 
 [[message]]
 key = "Maximum number of skins loaded simultaneously"
@@ -11383,6 +12247,22 @@ turkish = "ESC menüsünde kayıt kaydetme dakikası"
 polish = "Minuty do zapisania powtórki w menu ESC"
 
 [[message]]
+key = "Miscellaneous"
+[message.translations]
+simplified_chinese = "杂项"
+traditional_chinese = "雜項"
+japanese = "その他"
+korean = "기타"
+russian = "Разное"
+german = "Sonstiges"
+spanish = "Varios"
+french = "Divers"
+brazilian_portuguese = "Diversos"
+portuguese = "Diversos"
+turkish = "Çeşitli"
+polish = "Różne"
+
+[[message]]
 key = "Mix rate"
 [message.translations]
 simplified_chinese = "混音率"
@@ -11573,6 +12453,22 @@ brazilian_portuguese = "Desfoque em múltiplas resoluções, com efeito mais for
 portuguese = "Desfocagem em múltiplas resoluções, com efeito mais forte e custo de GPU equilibrado."
 turkish = "Daha güçlü sonuç ve dengeli GPU maliyeti sunan çok çözünürlüklü bulanıklık."
 polish = "Wielorozdzielcze rozmycie o mocniejszym efekcie i zrównoważonym obciążeniu GPU."
+
+[[message]]
+key = "Multi-select move"
+[message.translations]
+simplified_chinese = "多选移动"
+traditional_chinese = "多選移動"
+japanese = "複数選択で移動"
+korean = "다중 선택 이동"
+russian = "Групповое перемещение"
+german = "Mehrfachauswahl verschieben"
+spanish = "Mover selección múltiple"
+french = "Déplacer la sélection multiple"
+brazilian_portuguese = "Mover seleção múltipla"
+portuguese = "Mover seleção múltipla"
+turkish = "Çoklu seçimi taşı"
+polish = "Przesuń wielokrotny wybór"
 
 [[message]]
 key = "Mute flag sounds"
@@ -11799,6 +12695,102 @@ turkish = "İsim Plakası"
 polish = "Tabliczka z nazwą"
 
 [[message]]
+key = "Name plate jump key icon X offset"
+[message.translations]
+simplified_chinese = "名牌跳跃键图标 X 偏移"
+traditional_chinese = "名牌跳躍鍵圖示 X 偏移"
+japanese = "ネームプレートジャンプキーアイコン X オフセット"
+korean = "네임플레이트 점프 키 아이콘 X 오프셋"
+russian = "Смещение иконки клавиши прыжка таблички с именем по оси X"
+german = "Namensschild-Sprungtaste-Symbol X-Versatz"
+spanish = "Desplazamiento X del icono de la tecla de salto de la placa de nombre"
+french = "Décalage X de l'icône de la touche de saut du panneau de nom"
+brazilian_portuguese = "Deslocamento X do ícone da tecla de salto da placa de nome"
+portuguese = "Desvio X do ícone da tecla de salto da placa de nome"
+turkish = "İsim Plakası Zıplama Tuşu Simgesi X Kayması"
+polish = "Przesunięcie X ikony klawisza skoku tabliczki z nazwą"
+
+[[message]]
+key = "Name plate jump key icon Y offset"
+[message.translations]
+simplified_chinese = "名牌跳跃键图标 Y 偏移"
+traditional_chinese = "名牌跳躍鍵圖示 Y 偏移"
+japanese = "ネームプレートジャンプキーアイコン Y オフセット"
+korean = "네임플레이트 점프 키 아이콘 Y 오프셋"
+russian = "Смещение иконки клавиши прыжка таблички с именем по оси Y"
+german = "Namensschild-Sprungtaste-Symbol Y-Versatz"
+spanish = "Desplazamiento Y del icono de la tecla de salto de la placa de nombre"
+french = "Décalage Y de l'icône de la touche de saut du panneau de nom"
+brazilian_portuguese = "Deslocamento Y do ícone da tecla de salto da placa de nome"
+portuguese = "Desvio Y do ícone da tecla de salto da placa de nome"
+turkish = "İsim Plakası Zıplama Tuşu Simgesi Y Kayması"
+polish = "Przesunięcie Y ikony klawisza skoku tabliczki z nazwą"
+
+[[message]]
+key = "Name plate left key icon X offset"
+[message.translations]
+simplified_chinese = "名牌左方向键图标 X 偏移"
+traditional_chinese = "名牌左方向鍵圖示 X 偏移"
+japanese = "ネームプレート左キーアイコン X オフセット"
+korean = "네임플레이트 왼쪽 키 아이콘 X 오프셋"
+russian = "Смещение иконки левой клавиши таблички с именем по оси X"
+german = "Namensschild-Links-Taste-Symbol X-Versatz"
+spanish = "Desplazamiento X del icono de la tecla izquierda de la placa de nombre"
+french = "Décalage X de l'icône de la touche gauche du panneau de nom"
+brazilian_portuguese = "Deslocamento X do ícone da tecla esquerda da placa de nome"
+portuguese = "Desvio X do ícone da tecla esquerda da placa de nome"
+turkish = "İsim Plakası Sol Tuş Simgesi X Kayması"
+polish = "Przesunięcie X ikony lewego klawisza tabliczki z nazwą"
+
+[[message]]
+key = "Name plate left key icon Y offset"
+[message.translations]
+simplified_chinese = "名牌左方向键图标 Y 偏移"
+traditional_chinese = "名牌左方向鍵圖示 Y 偏移"
+japanese = "ネームプレート左キーアイコン Y オフセット"
+korean = "네임플레이트 왼쪽 키 아이콘 Y 오프셋"
+russian = "Смещение иконки левой клавиши таблички с именем по оси Y"
+german = "Namensschild-Links-Taste-Symbol Y-Versatz"
+spanish = "Desplazamiento Y del icono de la tecla izquierda de la placa de nombre"
+french = "Décalage Y de l'icône de la touche gauche du panneau de nom"
+brazilian_portuguese = "Deslocamento Y do ícone da tecla esquerda da placa de nome"
+portuguese = "Desvio Y do ícone da tecla esquerda da placa de nome"
+turkish = "İsim Plakası Sol Tuş Simgesi Y Kayması"
+polish = "Przesunięcie Y ikony lewego klawisza tabliczki z nazwą"
+
+[[message]]
+key = "Name plate right key icon X offset"
+[message.translations]
+simplified_chinese = "名牌右方向键图标 X 偏移"
+traditional_chinese = "名牌右方向鍵圖示 X 偏移"
+japanese = "ネームプレート右キーアイコン X オフセット"
+korean = "네임플레이트 오른쪽 키 아이콘 X 오프셋"
+russian = "Смещение иконки правой клавиши таблички с именем по оси X"
+german = "Namensschild-Rechts-Taste-Symbol X-Versatz"
+spanish = "Desplazamiento X del icono de la tecla derecha de la placa de nombre"
+french = "Décalage X de l'icône de la touche droite du panneau de nom"
+brazilian_portuguese = "Deslocamento X do ícone da tecla direita da placa de nome"
+portuguese = "Desvio X do ícone da tecla direita da placa de nome"
+turkish = "İsim Plakası Sağ Tuş Simgesi X Kayması"
+polish = "Przesunięcie X ikony prawego klawisza tabliczki z nazwą"
+
+[[message]]
+key = "Name plate right key icon Y offset"
+[message.translations]
+simplified_chinese = "名牌右方向键图标 Y 偏移"
+traditional_chinese = "名牌右方向鍵圖示 Y 偏移"
+japanese = "ネームプレート右キーアイコン Y オフセット"
+korean = "네임플레이트 오른쪽 키 아이콘 Y 오프셋"
+russian = "Смещение иконки правой клавиши таблички с именем по оси Y"
+german = "Namensschild-Rechts-Taste-Symbol Y-Versatz"
+spanish = "Desplazamiento Y del icono de la tecla derecha de la placa de nombre"
+french = "Décalage Y de l'icône de la touche droite du panneau de nom"
+brazilian_portuguese = "Deslocamento Y do ícone da tecla direita da placa de nome"
+portuguese = "Desvio Y do ícone da tecla direita da placa de nome"
+turkish = "İsim Plakası Sağ Tuş Simgesi Y Kayması"
+polish = "Przesunięcie Y ikony prawego klawisza tabliczki z nazwą"
+
+[[message]]
 key = "Name plates offset"
 [message.translations]
 simplified_chinese = "昵称距离"
@@ -11845,6 +12837,22 @@ brazilian_portuguese = "Tamanho da placa de identificação"
 portuguese = "Tamanho da placa de identificação"
 turkish = "İsim levhası boyutu"
 polish = "Rozmiar tabliczki z nazwą"
+
+[[message]]
+key = "Nameplate text effects"
+[message.translations]
+simplified_chinese = "名牌文本特效"
+traditional_chinese = "名牌文字特效"
+japanese = "ネームプレートのテキスト効果"
+korean = "네임플레이트 텍스트 효과"
+russian = "Текстовые эффекты таблички с именем"
+german = "Text-Effekte für Namensschilder"
+spanish = "Efectos de texto de la placa de nombre"
+french = "Effets de texte du panneau de nom"
+brazilian_portuguese = "Efeitos de texto da placa de nome"
+portuguese = "Efeitos de texto da placa de nome"
+turkish = "İsim plakası metin efektleri"
+polish = "Efekty tekstowe tabliczki z nazwą"
 
 [[message]]
 key = "Netlimit: exponential moving average alpha"
@@ -12151,6 +13159,22 @@ turkish = "Grafik bağdaştırıcısı algılanmadı"
 polish = "Nie wykryto kart graficznych"
 
 [[message]]
+key = "No limit"
+[message.translations]
+simplified_chinese = "不限制"
+traditional_chinese = "不限制"
+japanese = "制限なし"
+korean = "제한 없음"
+russian = "Без ограничения"
+german = "Kein Limit"
+spanish = "Sin límite"
+french = "Sans limite"
+brazilian_portuguese = "Sem limite"
+portuguese = "Sem limite"
+turkish = "Sınır yok"
+polish = "Bez limitu"
+
+[[message]]
 key = "No matching assets."
 [message.translations]
 simplified_chinese = "没有匹配的材质。"
@@ -12421,6 +13445,38 @@ brazilian_portuguese = "Estilo de chat antigo: sem ícones de tee, sem fundo"
 portuguese = "Estilo de chat antigo: sem ícones de tee, sem fundo"
 turkish = "Eski sohbet stili: tee simgesi yok, arka plan yok"
 polish = "Stary styl czatu: brak ikon tee, brak tła"
+
+[[message]]
+key = "Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog."
+[message.translations]
+simplified_chinese = "保存数量到上限后会删除旧文件，想留的录像记得另存。姿势截图像素预算不在这里，它是 .poses 文件渲染弹窗里的出图选项。"
+traditional_chinese = "保存數量到上限後會刪除舊檔，想留的錄影記得另存。姿勢截圖像素預算不在這裡，它是 .poses 檔案渲染視窗裡的出圖選項。"
+japanese = "保存数の上限に達すると古いファイルが削除されます。残したいデモは別の場所へコピーしてください。ポーズスクリーンショットの画素予算はここではなく、.poses ファイルのレンダーダイアログにある出力和オプションです。"
+korean = "저장 한도에 도달하면 오래된 파일이 삭제되므로 보관할 데모는 다른 곳에 복사하세요. 포즈 스크린샷 픽셀 예산은 여기에 없고 .poses 파일 렌더링 창의 출력 옵션입니다."
+russian = "При достижении лимита старые файлы удаляются, поэтому скопируйте нужные демо в другое место. Бюджет пикселей для скриншота позы находится не здесь, а в окне рендеринга файла .poses."
+german = "Sobald das Speicherlimit erreicht ist, werden alte Dateien gelöscht; kopiere Demos, die du behalten willst. Das Pixelbudget für Pose-Screenshots steht nicht hier, sondern im Render-Dialog der .poses-Datei."
+spanish = "Al alcanzar el límite se borran los archivos antiguos, así que copia aparte las demos que quieras conservar. El presupuesto de píxeles para capturas de pose no está aquí: es una opción de salida en el diálogo de renderizado de .poses."
+french = "Une fois la limite atteinte, les anciens fichiers sont supprimés : copiez ailleurs les demos à conserver. Le budget de pixels des captures de pose n'est pas ici, c'est une option de rendu dans la fenêtre des fichiers .poses."
+brazilian_portuguese = "Ao atingir o limite, arquivos antigos são excluídos; copie as demos que quiser manter. O orçamento de pixels para capturas de pose não fica aqui: é uma opção de saída na janela de renderização de .poses."
+portuguese = "Ao atingir o limite, os ficheiros antigos são eliminados; copie as demos que quiser guardar. O orçamento de píxeis das capturas de pose não fica aqui: é uma opção de saída na janela de renderização de .poses."
+turkish = "Kayıt sınırına ulaşıldığında eski dosyalar silinir; saklamak istediğiniz demoları başka yere kopyalayın. Poz ekran görüntüsü piksel bütçesi burada değil, .poses dosyası render penceresindeki bir çıktı seçeneğidir."
+polish = "Po osiągnięciu limitu stare pliki są usuwane, więc skopiuj dema, które chcesz zachować. Budżet pikseli zrzutu pozy nie jest tutaj: to opcja wyjściowa w oknie renderowania pliku .poses."
+
+[[message]]
+key = "Old single-segment hook collision line"
+[message.translations]
+simplified_chinese = "旧版单段钩索碰撞线"
+traditional_chinese = "舊版單段鉤索碰撞線"
+japanese = "旧式の単一セグメントフック衝突線"
+korean = "이전 단일 구간 갈고리 충돌선"
+russian = "Старая односегментная линия столкновения крюка"
+german = "Alte einteilige Haken-Kollisionslinie"
+spanish = "Línea de colisión de gancho antigua de un solo segmento"
+french = "Ancienne ligne de collision de grappin en un seul segment"
+brazilian_portuguese = "Linha de colisão de gancho antiga de segmento único"
+portuguese = "Linha de colisão de gancho antiga de segmento único"
+turkish = "Eski tek parçalı kanca çarpışma çizgisi"
+polish = "Stara jednoodcinkowa linia kolizji haka"
 
 [[message]]
 key = "Only .wv and .opus files are supported right now."
@@ -12709,6 +13765,22 @@ brazilian_portuguese = "Chave de autenticação opcional para o provedor DNSBL"
 portuguese = "Chave de autenticação opcional para o provedor DNSBL"
 turkish = "DNSBL sağlayıcısı için isteğe bağlı kimlik doğrulama anahtarı"
 polish = "Opcjonalny klucz uwierzytelniający dla dostawcy DNSBL"
+
+[[message]]
+key = "Optional Axiom API key for scoreboard points and vote map details (leave empty for anonymous queries)"
+[message.translations]
+simplified_chinese = "可选的 Axiom API 密钥，用于查询计分板积分与投票地图详情（留空则匿名查询）"
+traditional_chinese = "可選的 Axiom API 金鑰，用於查詢計分板積分與投票地圖詳情（留空則匿名查詢）"
+japanese = "スコアボードのポイントと投票マップの詳細を取得する Axiom API キー（任意）。空欄なら匿名で照会します。"
+korean = "점수판 점수와 투표 지도 정보를 조회할 Axiom API 키(선택). 비워 두면 익명으로 조회합니다."
+russian = "Необязательный ключ Axiom API для очков в таблице и сведений о карте голосования (пусто = анонимный запрос)."
+german = "Optionaler Axiom-API-Schlüssel für Scoreboard-Punkte und Details der Abstimmungskarte (leer = anonyme Abfrage)."
+spanish = "Clave API de Axiom opcional para los puntos del marcador y los detalles del mapa de votación (vacío = consultas anónimas)."
+french = "Clé API Axiom facultative pour les points du tableau et les détails de la carte de vote (vide = requêtes anonymes)."
+brazilian_portuguese = "Chave de API Axiom opcional para pontos do placar e detalhes do mapa de votação (vazio = consultas anônimas)."
+portuguese = "Chave de API Axiom opcional para pontos do placar e detalhes do mapa de votação (vazio = consultas anónimas)."
+turkish = "Puan tablosu ve oylama haritası ayrıntıları için isteğe bağlı Axiom API anahtarı (boş = anonim sorgular)."
+polish = "Opcjonalny klucz API Axiom do punktów tabeli wyników i szczegółów mapy głosowania (puste = zapytania anonimowe)."
 
 [[message]]
 key = "Original scroll feel"
@@ -13175,6 +14247,22 @@ turkish = "Seçim sonucu: %s"
 polish = "Wynik losowania: %s"
 
 [[message]]
+key = "Pick the mode first, then the monitor and resolution. \"Render frame rate limit\" caps how many frames are drawn when V-Sync is off; \"Client update rate\" caps how often game logic and input are processed and throttles rendering with it."
+[message.translations]
+simplified_chinese = "先选模式，再选显示器与分辨率。「渲染帧率上限」限制关闭垂直同步时每秒画多少帧；「客户端更新频率」限制游戏逻辑与输入的处理频率，并连带限制渲染。"
+traditional_chinese = "先選模式，再選顯示器與解析度。「渲染幀率上限」限制關閉垂直同步時每秒繪製多少幀；「用戶端更新頻率」限制遊戲邏輯與輸入的處理頻率，並連帶限制渲染。"
+japanese = "まずモード、次にモニターと解像度を選びます。「描画フレームレート上限」は垂直同期オフ時に描画するフレーム数を制限し、「クライアント更新レート」はゲームロジックと入力の処理頻度を制限して描画も一緒に絞ります。"
+korean = "먼저 모드를 고른 뒤 모니터와 해상도를 선택하세요. \"렌더링 프레임 속도 상한\"은 수직 동기화가 꺼졌을 때 그리는 프레임 수를 제한하고, \"클라이언트 업데이트 속도\"는 게임 로직과 입력 처리 빈도를 제한하며 렌더링도 함께 제한합니다."
+russian = "Сначала выберите режим, затем монитор и разрешение. «Предел частоты кадров отрисовки» ограничивает число кадров при выключенной вертикальной синхронизации; «Частота обновления клиента» ограничивает обработку логики и ввода и вместе с ней рендеринг."
+german = "Zuerst den Modus wählen, dann Monitor und Auflösung. „Limit der Bildwiederholrate“ begrenzt die Bilder pro Sekunde bei ausgeschaltetem V-Sync; „Client-Aktualisierungsrate“ begrenzt die Verarbeitung von Spiellogik und Eingaben und drosselt damit auch das Rendern."
+spanish = "Elige primero el modo y después el monitor y la resolución. «Límite de fotogramas por segundo» limita los fotogramas con V-Sync desactivado; «Tasa de actualización del cliente» limita el procesamiento de lógica y entradas y con ello también el renderizado."
+french = "Choisissez d'abord le mode, puis le moniteur et la résolution. « Limite de fréquence d'affichage » plafonne les images par seconde sans V-Sync ; « Fréquence de mise à jour du client » plafonne le traitement de la logique et des entrées, et limite aussi le rendu."
+brazilian_portuguese = "Escolha primeiro o modo e depois o monitor e a resolução. \"Limite de taxa de quadros de renderização\" limita os quadros com V-Sync desligado; \"Taxa de atualização do cliente\" limita o processamento da lógica e das entradas e, com isso, a renderização."
+portuguese = "Escolha primeiro o modo e depois o monitor e a resolução. \"Limite de taxa de quadros de renderização\" limita os quadros com o V-Sync desligado; \"Taxa de atualização do cliente\" limita o processamento da lógica e das entradas e, com isso, a renderização."
+turkish = "Önce modu, sonra monitörü ve çözünürlüğü seçin. \"İşleme kare hızı sınırı\" V-Sync kapalıyken çizilen kareleri sınırlar; \"İstemci güncelleme hızı\" oyun mantığı ve girdilerin işlenme sıklığını sınırlayıp renderı da birlikte kısıtlar."
+polish = "Najpierw wybierz tryb, potem monitor i rozdzielczość. „Limit liczby klatek renderowania” ogranicza klatki przy wyłączonej synchronizacji pionowej; „Częstotliwość aktualizacji klienta” ogranicza przetwarzanie logiki i wejścia, a wraz z nim renderowanie."
+
+[[message]]
 key = "Pie menu"
 [message.translations]
 simplified_chinese = "饼菜单"
@@ -13205,6 +14293,22 @@ brazilian_portuguese = "Pistola"
 portuguese = "Pistola"
 turkish = "Tabanca"
 polish = "Pistolet"
+
+[[message]]
+key = "Pixel budget"
+[message.translations]
+simplified_chinese = "像素预算"
+traditional_chinese = "像素預算"
+japanese = "画素予算"
+korean = "픽셀 예산"
+russian = "Бюджет пикселей"
+german = "Pixelbudget"
+spanish = "Presupuesto de píxeles"
+french = "Budget de pixels"
+brazilian_portuguese = "Orçamento de pixels"
+portuguese = "Orçamento de píxeis"
+turkish = "Piksel bütçesi"
+polish = "Budżet pikseli"
 
 [[message]]
 key = "Plasma gun shots per second"
@@ -13671,6 +14775,22 @@ turkish = "Harici konsol için port."
 polish = "Port dla zewnętrznej konsoli."
 
 [[message]]
+key = "Pose screenshot pixel budget (MP, 0 = unlimited)"
+[message.translations]
+simplified_chinese = "姿势截图像素预算（百万像素，0 = 不限）"
+traditional_chinese = "姿勢截圖像素預算（百萬像素，0 = 不限）"
+japanese = "ポーズスクリーンショットの画素上限（MP、0 = 無制限）"
+korean = "포즈 스크린샷 픽셀 예산(MP, 0 = 무제한)"
+russian = "Бюджет пикселей для скриншота позы (МП, 0 = без ограничения)"
+german = "Pixelbudget für Pose-Screenshots (MP, 0 = unbegrenzt)"
+spanish = "Presupuesto de píxeles para capturas de pose (MP, 0 = sin límite)"
+french = "Budget de pixels pour les captures de pose (MP, 0 = illimité)"
+brazilian_portuguese = "Orçamento de pixels para capturas de pose (MP, 0 = ilimitado)"
+portuguese = "Orçamento de píxeis para capturas de pose (MP, 0 = ilimitado)"
+turkish = "Poz ekran görüntüsü piksel bütçesi (MP, 0 = sınırsız)"
+polish = "Budżet pikseli zrzutu pozy (MP, 0 = bez limitu)"
+
+[[message]]
 key = "Predict client movement"
 [message.translations]
 simplified_chinese = "预测客户端移动"
@@ -13861,6 +14981,38 @@ brazilian_portuguese = "Margem de previsão"
 portuguese = "Margem de previsão"
 turkish = "Tahmin payı"
 polish = "Margines predykcji"
+
+[[message]]
+key = "Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic. \"Prioritize game traffic\" only tags packets on Windows and needs a QoS-aware router to have any effect."
+[message.translations]
+simplified_chinese = "预测是用准确性换响应速度：更大的余量与 AntiPing 能平滑 ping 抖动，但可能误判附近动作；上行冗余会让上传流量翻三倍。「优先游戏流量」只在 Windows 上给数据包打标记，还需要路由器识别 QoS 才有效。"
+traditional_chinese = "預測是用準確性換回應速度：更大的餘量與 AntiPing 能平滑 ping 抖動，但可能誤判附近動作；上行冗餘會讓上傳流量翻三倍。「優先遊戲流量」只在 Windows 上替封包標記，還需要路由器辨識 QoS 才有效。"
+japanese = "予測は正確さと応答性のトレードオフです。マージンと AntiPing は ping の揺れを抑えますが、近くの動きを誤予測することがあり、上り冗長化は送信量を 3 倍にします。「ゲームトラフィックを優先」は Windows でパケットに印を付けるだけで、QoS 対応ルーターがなければ効果ありません。"
+korean = "예측은 정확도를 반응성과 맞바꿉니다. 여유와 AntiPing은 ping 흔들림을 완화하지만 근처 동작을 잘못 예측할 수 있고, 상향 중복 전송은 업로드 트래픽을 3배로 늘립니다. \"게임 트래픽 우선\"은 Windows에서 패킷에 표시만 하며 QoS를 인식하는 공유기가 있어야 효과가 있습니다."
+russian = "Предсказание обменивает точность на отзывчивость: большой запас и AntiPing сглаживают скачки пинга, но могут ошибочно предсказать действия рядом; избыточность утроит исходящий трафик. «Приоритет игрового трафика» лишь помечает пакеты в Windows и требует QoS-совместимый маршрутизатор."
+german = "Vorhersage tauscht Genauigkeit gegen Reaktionsschnelligkeit: ein größerer Puffer und AntiPing glätten Ping-Schwankungen, können aber nahe Aktionen falsch vorhersagen; Redundanz verdreifacht den Upload. „Spielverkehr priorisieren“ markiert unter Windows nur Pakete und benötigt einen QoS-fähigen Router."
+spanish = "La predicción cambia precisión por capacidad de respuesta: un margen mayor y AntiPing suavizan el jitter, pero pueden predecir mal acciones cercanas; la redundancia puede triplicar el tráfico de subida. \"Priorizar el tráfico de juego\" solo marca paquetes en Windows y necesita un router con QoS."
+french = "La prédiction échange la précision contre la réactivité : une marge plus grande et AntiPing lissent le jitter mais peuvent mal prédire les actions proches ; la redondance peut tripler le trafic montant. « Prioriser le trafic de jeu » ne fait qu'étiqueter les paquets sous Windows et exige un routeur compatible QoS."
+brazilian_portuguese = "A predição troca precisão por capacidade de resposta: margem maior e AntiPing suavizam o jitter, mas podem prever mal ações próximas; a redundância pode triplicar o tráfego de upload. \"Priorizar tráfego de jogo\" apenas marca pacotes no Windows e exige um roteador com QoS."
+portuguese = "A predição troca precisão por capacidade de resposta: margem maior e AntiPing suavizam o jitter, mas podem prever mal ações próximas; a redundância pode triplicar o tráfego de envio. \"Priorizar tráfego de jogo\" apenas marca pacotes no Windows e exige um router com QoS."
+turkish = "Tahmin, doğruluğu tepki hızıyla takas eder: daha büyük pay ve AntiPing ping dalgalanmasını yumuşatır ama yakındaki hareketleri yanlış tahmin edebilir; yukarı yönlü yedeklilik uploadı üç katına çıkarır. \"Oyun trafiğini önceliklendir\" yalnızca Windows'ta paketleri işaretler ve QoS destekli bir yönlendirici gerektirir."
+polish = "Predykcja wymienia dokładność na responsywność: większy margines i AntiPing wygładzają skoki pingu, ale mogą błędnie przewidzieć działania w pobliżu; nadmiarowość może potroić ruch wychodzący. „Priorytet ruchu gry” tylko znakuje pakiety w Windows i wymaga routera obsługującego QoS."
+
+[[message]]
+key = "Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. \"Prioritize game traffic\" only tags packets on Windows and needs a QoS-aware router to have any effect."
+[message.translations]
+simplified_chinese = "预测是用准确性换响应速度；上行冗余会让上传流量翻三倍。「优先游戏流量」只在 Windows 上给数据包打标记，还需要路由器识别 QoS 才有效。"
+traditional_chinese = "預測是用準確性換回應速度；上行冗餘會讓上傳流量翻三倍。「優先遊戲流量」只在 Windows 上替封包標記，還需要路由器辨識 QoS 才有效。"
+japanese = "予測は正確さと応答性のトレードオフです。上り冗長化は送信量を 3 倍にします。「ゲームトラフィックを優先」は Windows でパケットに印を付けるだけで、QoS 対応ルーターがなければ効果ありません。"
+korean = "예측은 정확도를 반응성과 맞바꿉니다. 상향 중복 전송은 업로드 트래픽을 3배로 늘립니다. \"게임 트래픽 우선\"은 Windows에서 패킷에 표시만 하며 QoS를 인식하는 공유기가 있어야 효과가 있습니다."
+russian = "Предсказание обменивает точность на отзывчивость; избыточность может утроить исходящий трафик. «Приоритет игрового трафика» лишь помечает пакеты в Windows и требует QoS-совместимый маршрутизатор."
+german = "Vorhersage tauscht Genauigkeit gegen Reaktionsschnelligkeit; Redundanz kann den Upload verdreifachen. „Spielverkehr priorisieren“ markiert unter Windows nur Pakete und braucht einen QoS-fähigen Router."
+spanish = "La predicción cambia precisión por respuesta; la redundancia puede triplicar el tráfico de subida. \"Priorizar el tráfico de juego\" solo marca paquetes en Windows y necesita un router con QoS."
+french = "La prédiction échange précision contre réactivité ; la redondance peut tripler le trafic montant. « Prioriser le trafic de jeu » ne fait qu'étiqueter les paquets sous Windows et exige un routeur compatible QoS."
+brazilian_portuguese = "A predição troca precisão por resposta; a redundância pode triplicar o tráfego de upload. \"Priorizar tráfego de jogo\" apenas marca pacotes no Windows e exige um roteador com QoS."
+portuguese = "A predição troca precisão por resposta; a redundância pode triplicar o tráfego de envio. \"Priorizar tráfego de jogo\" apenas marca pacotes no Windows e exige um router com QoS."
+turkish = "Tahmin doğruluğu tepki hızıyla takas eder; yukarı yönlü yedeklilik uploadı üç katına çıkarır. \"Oyun trafiğini önceliklendir\" yalnızca Windows'ta paketleri işaretler ve QoS destekli bir yönlendirici gerektirir."
+polish = "Predykcja wymienia dokładność na responsywność; nadmiarowość może potroić ruch wychodzący. „Priorytet ruchu gry” tylko znakuje pakiety w Windows i wymaga routera obsługującego QoS."
 
 [[message]]
 key = "Presentation animations"
@@ -14135,6 +15287,38 @@ turkish = "Günlük mesajları konsola yazdır"
 polish = "Drukuj codzienne wiadomości do konsoli"
 
 [[message]]
+key = "Prioritize game traffic (QoS, Windows only)"
+[message.translations]
+simplified_chinese = "优先游戏流量（QoS，仅 Windows）"
+traditional_chinese = "優先遊戲流量（QoS，僅 Windows）"
+japanese = "ゲーム通信を優先（QoS、Windows のみ）"
+korean = "게임 트래픽 우선(QoS, Windows 전용)"
+russian = "Приоритет игрового трафика (QoS, только Windows)"
+german = "Spielverkehr priorisieren (QoS, nur Windows)"
+spanish = "Priorizar el tráfico del juego (QoS, solo Windows)"
+french = "Prioriser le trafic du jeu (QoS, Windows uniquement)"
+brazilian_portuguese = "Priorizar o tráfego do jogo (QoS, apenas Windows)"
+portuguese = "Priorizar o tráfego do jogo (QoS, apenas Windows)"
+turkish = "Oyun trafiğine öncelik ver (QoS, yalnızca Windows)"
+polish = "Priorytetyzuj ruch gry (QoS, tylko Windows)"
+
+[[message]]
+key = "ProRes profile for 4:4:4 input; other encoders ignore it."
+[message.translations]
+simplified_chinese = "4:4:4 输入时使用的 ProRes 档位；其它编码器忽略此项。"
+traditional_chinese = "4:4:4 輸入時使用的 ProRes 檔位；其他編碼器忽略此項。"
+japanese = "4:4:4 入力時の ProRes プロファイル。他のエンコーダーは無視します。"
+korean = "4:4:4 입력에 사용할 ProRes 프로필입니다. 다른 인코더는 무시합니다."
+russian = "Профиль ProRes для входа 4:4:4; остальные кодировщики игнорируют его."
+german = "ProRes-Profil für 4:4:4-Eingang; andere Encoder ignorieren es."
+spanish = "Perfil ProRes para entrada 4:4:4; los demás codificadores lo ignoran."
+french = "Profil ProRes pour une entrée 4:4:4 ; les autres encodeurs l'ignorent."
+brazilian_portuguese = "Perfil ProRes para entrada 4:4:4; outros codificadores ignoram."
+portuguese = "Perfil ProRes para entrada 4:4:4; outros codificadores ignoram."
+turkish = "4:4:4 girdi için ProRes profili; diğer kodlayıcılar bunu yok sayar."
+polish = "Profil ProRes dla wejścia 4:4:4; pozostałe kodery go ignorują."
+
+[[message]]
 key = "Pulse amplitude"
 [message.translations]
 simplified_chinese = "脉冲幅度"
@@ -14261,6 +15445,22 @@ brazilian_portuguese = "Fila cheia"
 portuguese = "Fila cheia"
 turkish = "Sıra dolu"
 polish = "Kolejka jest pełna"
+
+[[message]]
+key = "Queue length"
+[message.translations]
+simplified_chinese = "队列长度"
+traditional_chinese = "佇列長度"
+japanese = "キューの長さ"
+korean = "큐 길이"
+russian = "Длина очереди"
+german = "Warteschlangenlänge"
+spanish = "Longitud de la cola"
+french = "Longueur de la file"
+brazilian_portuguese = "Comprimento da fila"
+portuguese = "Comprimento da fila"
+turkish = "Kuyruk uzunluğu"
+polish = "Długość kolejki"
 
 [[message]]
 key = "Queue preset: %s"
@@ -14757,6 +15957,22 @@ brazilian_portuguese = "Renderizar dados de texto de entidade no editor"
 portuguese = "Renderizar dados de texto de entidades no editor"
 turkish = "Editörde varlık metin verilerini işle"
 polish = "Renderuj dane tekstowe encji w edytorze"
+
+[[message]]
+key = "Render frame rate limit"
+[message.translations]
+simplified_chinese = "渲染帧率上限"
+traditional_chinese = "渲染幀率上限"
+japanese = "描画フレームレート上限"
+korean = "렌더링 프레임 속도 상한"
+russian = "Предел частоты кадров отрисовки"
+german = "Limit der Bildwiederholrate"
+spanish = "Límite de fotogramas por segundo"
+french = "Limite de fréquence d'affichage"
+brazilian_portuguese = "Limite de taxa de quadros de renderização"
+portuguese = "Limite de taxa de quadros de renderização"
+turkish = "İşleme kare hızı sınırı"
+polish = "Limit liczby klatek renderowania"
 
 [[message]]
 key = "Render graphics when window is in background"
@@ -15751,6 +16967,22 @@ turkish = "Kayıtlı oyun dosyası"
 polish = "Plik zapisów"
 
 [[message]]
+key = "Scale cursor distance with resolution"
+[message.translations]
+simplified_chinese = "光标距离随分辨率缩放"
+traditional_chinese = "游標距離隨解析度縮放"
+japanese = "カーソル距離を解像度に合わせて拡大縮小"
+korean = "커서 거리를 해상도에 맞춰 조정"
+russian = "Масштабировать дистанцию курсора по разрешению"
+german = "Cursor-Distanz mit der Auflösung skalieren"
+spanish = "Escalar la distancia del cursor con la resolución"
+french = "Adapter la distance du curseur à la résolution"
+brazilian_portuguese = "Escalar a distância do cursor com a resolução"
+portuguese = "Escalar a distância do cursor com a resolução"
+turkish = "İmleç mesafesini çözünürlükle ölçekle"
+polish = "Skaluj dystans kursora wraz z rozdzielczością"
+
+[[message]]
 key = "Scanning current server"
 [message.translations]
 simplified_chinese = "正在扫描当前服务器"
@@ -16117,6 +17349,22 @@ brazilian_portuguese = "Selecione um preset e aplique ao jogador ou ao dummy"
 portuguese = "Selecione uma predefinição e aplique ao jogador ou ao dummy"
 turkish = "Bir ön ayar seçip oyuncuya veya dummy’ye uygula"
 polish = "Wybierz preset, a następnie zastosuj do gracza lub dummy"
+
+[[message]]
+key = "Select several name plate blocks in the preview and move them together"
+[message.translations]
+simplified_chinese = "在预览中选中多个名牌方块后整组移动"
+traditional_chinese = "在預覽中選取多個名牌方塊後整組移動"
+japanese = "プレビューで複数のネームプレートブロックを選び、まとめて移動します"
+korean = "미리보기에서 여러 네임플레이트 블록을 선택해 함께 이동합니다"
+russian = "Выберите несколько блоков таблички в предпросмотре и двигайте их вместе"
+german = "Mehrere Namensschild-Blöcke in der Vorschau auswählen und gemeinsam verschieben"
+spanish = "Selecciona varios bloques de la placa en la vista previa y muévelos juntos"
+french = "Sélectionnez plusieurs blocs du panneau dans l'aperçu et déplacez-les ensemble"
+brazilian_portuguese = "Selecione vários blocos da placa na prévia e mova-os juntos"
+portuguese = "Selecione vários blocos da placa na pré-visualização e mova-os juntos"
+turkish = "Önizlemede birkaç isim plakası bloğu seçip birlikte taşıyın"
+polish = "Zaznacz kilka bloków tabliczki w podglądzie i przesuwaj je razem"
 
 [[message]]
 key = "Select this preset to edit it"
@@ -16583,6 +17831,22 @@ turkish = "Arayüzün ne kadar hareket göstereceğini (geçişler, kart girişi
 polish = "Określa ilość animacji interfejsu (przejścia, wejście kart, animacje przestawiania, odczucie przewijania) oraz kształt kursora we wszystkich polach wprowadzania."
 
 [[message]]
+key = "Sets the client update rate to 480 Hz (0 = unlimited)"
+[message.translations]
+simplified_chinese = "把客户端更新频率设为 480 Hz（0 = 不限）"
+traditional_chinese = "將用戶端更新頻率設為 480 Hz（0 = 不限）"
+japanese = "クライアント更新レートを 480 Hz に設定します（0 = 無制限）"
+korean = "클라이언트 업데이트 속도를 480 Hz로 설정합니다 (0 = 무제한)"
+russian = "Устанавливает частоту обновления клиента на 480 Гц (0 = без ограничения)"
+german = "Setzt die Client-Aktualisierungsrate auf 480 Hz (0 = unbegrenzt)"
+spanish = "Ajusta la tasa de actualización del cliente a 480 Hz (0 = sin límite)"
+french = "Règle la fréquence de mise à jour du client à 480 Hz (0 = illimité)"
+brazilian_portuguese = "Define a taxa de atualização do cliente em 480 Hz (0 = sem limite)"
+portuguese = "Define a taxa de atualização do cliente em 480 Hz (0 = sem limite)"
+turkish = "İstemci güncelleme hızını 480 Hz olarak ayarlar (0 = sınırsız)"
+polish = "Ustawia częstotliwość aktualizacji klienta na 480 Hz (0 = bez ograniczeń)"
+
+[[message]]
 key = "Settings card background"
 [message.translations]
 simplified_chinese = "设置卡片背景"
@@ -16629,6 +17893,38 @@ brazilian_portuguese = "Opacidade do painel direito da página de configuraçõe
 portuguese = "Opacidade do painel direito da página de configurações"
 turkish = "Ayarlar sayfası sağ panel opaklığı"
 polish = "Nieprzezroczystość prawego panelu strony ustawień"
+
+[[message]]
+key = "Share layout with dummy"
+[message.translations]
+simplified_chinese = "与分身共用布局"
+traditional_chinese = "與分身共用佈局"
+japanese = "ダミーとレイアウトを共有"
+korean = "더미와 레이아웃 공유"
+russian = "Общий макет с дубликатом"
+german = "Layout mit Dummy teilen"
+spanish = "Compartir diseño con el dummy"
+french = "Partager la disposition avec le dummy"
+brazilian_portuguese = "Compartilhar layout com o dummy"
+portuguese = "Partilhar disposição com o dummy"
+turkish = "Dummy ile düzeni paylaş"
+polish = "Wspólny układ z kukłą"
+
+[[message]]
+key = "Share name plate offsets between own tee and dummy (0=separate)"
+[message.translations]
+simplified_chinese = "本体与分身共用同一套名牌偏移（0=分开）"
+traditional_chinese = "本體與分身共用同一套名牌偏移（0=分開）"
+japanese = "本体とダミーでネームプレートのオフセットを共有（0=別々）"
+korean = "본체와 더미가 네임플레이트 오프셋 공유(0=별도)"
+russian = "Общие смещения таблички для своего ти и дубликата (0 = раздельно)"
+german = "Namensschild-Versätze zwischen eigenem Tee und Dummy teilen (0 = getrennt)"
+spanish = "Compartir los desplazamientos de la placa entre tu tee y el dummy (0 = separados)"
+french = "Partager les décalages du panneau entre votre tee et le dummy (0 = séparés)"
+brazilian_portuguese = "Compartilhar os deslocamentos da placa entre o seu tee e o dummy (0 = separados)"
+portuguese = "Partilhar os desvios da placa entre o teu tee e o dummy (0 = separados)"
+turkish = "İsim plakası kaymalarını kendi tee'nizle dummy arasında paylaş (0 = ayrı)"
+polish = "Wspólne przesunięcia tabliczki dla własnego tee i kukły (0 = osobno)"
 
 [[message]]
 key = "Share of the server browser name/map split given to the name column (per mille)"
@@ -17301,6 +18597,22 @@ brazilian_portuguese = "Mostrar fantasma"
 portuguese = "Mostrar fantasma"
 turkish = "Hayaleti göster"
 polish = "Pokaż ducha"
+
+[[message]]
+key = "Show ghost direction"
+[message.translations]
+simplified_chinese = "显示影子朝向"
+traditional_chinese = "顯示影子朝向"
+japanese = "ゴーストの向きを表示"
+korean = "고스트 방향 표시"
+russian = "Показывать направление призрака"
+german = "Geister-Richtung anzeigen"
+spanish = "Mostrar la dirección del fantasma"
+french = "Afficher la direction du fantôme"
+brazilian_portuguese = "Mostrar a direção do fantasma"
+portuguese = "Mostrar a direção do fantasma"
+turkish = "Hayalet yönünü göster"
+polish = "Pokaż kierunek ducha"
 
 [[message]]
 key = "Show graphics library warnings and errors if GPU supports (0 = none, 1 = minimal, 2 = impacting performance, 3 = verbose, 4 = all)."
@@ -18263,6 +19575,22 @@ turkish = "Değişiklik sırasında duraklat/oynat göstergesini göster"
 polish = "Pokaż wskaźnik pauzy/odtwarzania podczas zmiany"
 
 [[message]]
+key = "Show pending crash reports on startup"
+[message.translations]
+simplified_chinese = "启动时显示待处理崩溃报告"
+traditional_chinese = "啟動時顯示待處理崩潰報告"
+japanese = "起動時に未送信のクラッシュレポートを表示"
+korean = "시작 시 대기 중인 충돌 보고서 표시"
+russian = "Показывать неотправленные отчёты о сбоях при запуске"
+german = "Ausstehende Absturzberichte beim Start anzeigen"
+spanish = "Mostrar los informes de fallos pendientes al iniciar"
+french = "Afficher les rapports de plantage en attente au démarrage"
+brazilian_portuguese = "Mostrar relatórios de falha pendentes na inicialização"
+portuguese = "Mostrar relatórios de falha pendentes no arranque"
+turkish = "Başlangıçta bekleyen çökme raporlarını göster"
+polish = "Pokazuj oczekujące raporty awarii przy starcie"
+
+[[message]]
 key = "Show performance graphs."
 [message.translations]
 simplified_chinese = "显示性能图表"
@@ -18423,6 +19751,22 @@ turkish = "Skoru göster"
 polish = "Pokaż wynik"
 
 [[message]]
+key = "Show seconds in local time"
+[message.translations]
+simplified_chinese = "本地时间显示秒"
+traditional_chinese = "本地時間顯示秒"
+japanese = "ローカル時刻に秒を表示"
+korean = "현지 시간에 초 표시"
+russian = "Показывать секунды в местном времени"
+german = "Sekunden in der Ortszeit anzeigen"
+spanish = "Mostrar los segundos en la hora local"
+french = "Afficher les secondes dans l'heure locale"
+brazilian_portuguese = "Mostrar os segundos no horário local"
+portuguese = "Mostrar os segundos na hora local"
+turkish = "Yerel saatte saniyeleri göster"
+polish = "Pokazuj sekundy w czasie lokalnym"
+
+[[message]]
 key = "Show server chat messages"
 [message.translations]
 simplified_chinese = "显示来自服务器的聊天消息"
@@ -18567,6 +19911,22 @@ turkish = "Metin varlıklarını göster"
 polish = "Pokaż encje tekstowe"
 
 [[message]]
+key = "Show the reason in name plates"
+[message.translations]
+simplified_chinese = "名牌上显示敌意原因"
+traditional_chinese = "名牌上顯示敵意原因"
+japanese = "ネームプレートに理由を表示"
+korean = "네임플레이트에 사유 표시"
+russian = "Показывать причину в табличке с именем"
+german = "Grund im Namensschild anzeigen"
+spanish = "Mostrar el motivo en la placa de nombre"
+french = "Afficher la raison dans le panneau de nom"
+brazilian_portuguese = "Mostrar o motivo na placa de nome"
+portuguese = "Mostrar o motivo na placa de nome"
+turkish = "İsim plakasında nedeni göster"
+polish = "Pokazuj powód na tabliczce z nazwą"
+
+[[message]]
 key = "Show tiles layers from BG map"
 [message.translations]
 simplified_chinese = "显示实体层背景地图的图块层"
@@ -18693,6 +20053,22 @@ brazilian_portuguese = "Mostrar emoji zzz ao lado de jogadores ausentes"
 portuguese = "Mostrar emoji zzz ao lado de jogadores ausentes"
 turkish = "AFK oyuncuların yanında zzz emojisini göster"
 polish = "Pokaż emoji zzz obok graczy AFK"
+
+[[message]]
+key = "Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget."
+[message.translations]
+simplified_chinese = "显示 FPS、帧耗时、RTT 与预测提前量；超过参考线的帧耗时条表示已超出 60 FPS 的帧预算。"
+traditional_chinese = "顯示 FPS、幀耗時、RTT 與預測提前量；超過參考線的幀耗時條表示已超出 60 FPS 的幀預算。"
+japanese = "FPS、フレーム時間、RTT、予測リードを表示します。ガイド線を超えるバーは 60 FPS のフレーム予算を超えています。"
+korean = "FPS, 프레임 시간, RTT, 예측 리드를 표시합니다. 기준선을 넘는 막대는 60 FPS 프레임 예산을 초과한 것입니다."
+russian = "Показывает FPS, время кадра, RTT и опережение предсказания. Столбцы выше линии превышают бюджет кадра 60 FPS."
+german = "Zeigt FPS, Framezeit, RTT und Vorhersage-Vorsprung. Balken über der Linie überschreiten das 60-FPS-Framebudget."
+spanish = "Muestra FPS, tiempo de fotograma, RTT y ventaja de predicción. Las barras sobre la guía superan el presupuesto de 60 FPS."
+french = "Affiche FPS, temps d'image, RTT et avance de prédiction. Les barres au-dessus du repère dépassent le budget de 60 FPS."
+brazilian_portuguese = "Mostra FPS, tempo de quadro, RTT e vantagem de predição. Barras acima da guia excedem o orçamento de 60 FPS."
+portuguese = "Mostra FPS, tempo de quadro, RTT e vantagem de predição. Barras acima da guia excedem o orçamento de 60 FPS."
+turkish = "FPS, kare süresi, RTT ve tahmin öncülüğünü gösterir. Kılavuzun üstündeki çubuklar 60 FPS kare bütçesini aşar."
+polish = "Pokazuje FPS, czas klatki, RTT i wyprzedzenie predykcji. Słupki powyżej linii przekraczają budżet klatki 60 FPS."
 
 [[message]]
 key = "Shuffle skin queue"
@@ -19079,6 +20455,22 @@ turkish = "Diğer oyuncuların tahmini hareketini yumuşat"
 polish = "Wygładź przewidywany ruch innych graczy"
 
 [[message]]
+key = "Smooth prediction margin"
+[message.translations]
+simplified_chinese = "平滑预测余量"
+traditional_chinese = "平滑預測餘量"
+japanese = "予測マージンを滑らかに"
+korean = "예측 여유 부드럽게"
+russian = "Сглаживание запаса предсказания"
+german = "Vorhersage-Marge glätten"
+spanish = "Suavizar el margen de predicción"
+french = "Lisser la marge de prédiction"
+brazilian_portuguese = "Suavizar a margem de predição"
+portuguese = "Suavizar a margem de previsão"
+turkish = "Tahmin payını yumuşat"
+polish = "Wygładź margines predykcji"
+
+[[message]]
 key = "Smooth scroll animation duration in menu/editor (ms, 0=off)"
 [message.translations]
 simplified_chinese = "菜单/编辑器中平滑滚动动画的时间（单位：毫秒，0 为关闭）"
@@ -19093,6 +20485,22 @@ brazilian_portuguese = "Duração da animação de rolagem suave no menu/editor 
 portuguese = "Duração da animação de scroll suave no menu/editor (ms, 0 = desligado)"
 turkish = "Menü/düzenleyicide yumuşak kaydırma animasyonu süresi (ms, 0=kapalı)"
 polish = "Czas trwania płynnej animacji przewijania w menu/edytorze (ms, 0 = wył.)"
+
+[[message]]
+key = "Smooth sudden prediction margin corrections caused by ping spikes"
+[message.translations]
+simplified_chinese = "平滑由网络抖动引起的预测余量突变"
+traditional_chinese = "平滑由網路抖動引起的預測餘量突變"
+japanese = "ping の急上昇による予測マージンの急な補正を滑らかにします"
+korean = "핑 급증으로 생기는 예측 여유의 급격한 보정을 부드럽게 합니다"
+russian = "Сглаживает резкие правки запаса предсказания из-за скачков пинга"
+german = "Glättet plötzliche Korrekturen der Vorhersage-Marge durch Ping-Spitzen"
+spanish = "Suaviza las correcciones repentinas del margen de predicción por picos de ping"
+french = "Lisse les corrections soudaines de la marge de prédiction dues aux pics de ping"
+brazilian_portuguese = "Suaviza as correções repentinas da margem de predição causadas por picos de ping"
+portuguese = "Suaviza as correções repentinas da margem de previsão causadas por picos de ping"
+turkish = "Ping sıçramalarının yol açtığı ani tahmin payı düzeltmelerini yumuşatır"
+polish = "Wygładza nagłe korekty marginesu predykcji wywołane skokami pingu"
 
 [[message]]
 key = "Smooth zoom animation time in editor (in ms, 0=off)"
@@ -20247,6 +21655,22 @@ turkish = "Rengini ayarlarken seçilen parça vurgulu kalır."
 polish = "Wybrana część pozostaje podświetlona podczas dostosowywania jej koloru."
 
 [[message]]
+key = "The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here."
+[message.translations]
+simplified_chinese = "更新频率与帧率上限已移到图像页：它们属于渲染设置，不该放在这里。"
+traditional_chinese = "更新頻率與幀率上限已移到圖像頁：它們屬於渲染設定，不該放在這裡。"
+japanese = "更新レートとフレームレートの上限は画像ページへ移しました。描画設定の隣にあるべき項目で、ここには属しません。"
+korean = "업데이트 속도와 프레임 속도 상한은 이미지 페이지로 옮겨졌습니다. 렌더링 설정 옆에 있어야 하며 이곳에는 없습니다."
+russian = "Ограничения частоты обновлений и кадров перенесены на страницу графики: они относятся к настройкам рендеринга, а не сюда."
+german = "Die Limits für Aktualisierungs- und Bildwiederholrate sind auf die Grafikseite umgezogen; sie gehören zu den Render-Einstellungen, nicht hierher."
+spanish = "Los límites de actualización y de fotogramas se movieron a la página de gráficos: corresponden a los ajustes de renderizado, no aquí."
+french = "Les limites de mise à jour et d'affichage ont été déplacées vers la page Graphismes : elles appartiennent aux réglages de rendu, pas ici."
+brazilian_portuguese = "Os limites de atualização e de quadros foram movidos para a página de gráficos: pertencem às configurações de renderização, não aqui."
+portuguese = "Os limites de atualização e de quadros foram movidos para a página de gráficos: pertencem às configurações de renderização, não aqui."
+turkish = "Güncelleme ve kare hızı sınırları Grafik sayfasına taşındı; işleme ayarlarının yanında olmalı, burada değil."
+polish = "Limity częstotliwości aktualizacji i klatek przeniesiono na stronę Grafiki; należą one do ustawień renderowania, nie tutaj."
+
+[[message]]
 key = "Themes directory"
 [message.translations]
 simplified_chinese = "主题目录"
@@ -20325,6 +21749,22 @@ brazilian_portuguese = "Este nome de skin não pode ser usado."
 portuguese = "Este nome de skin não pode ser usado."
 turkish = "Bu skin adı kullanılamaz."
 polish = "Ta nazwa skina nie może być użyta."
+
+[[message]]
+key = "Tick \"Skip the main menu\", and use \"Settings file\" or \"Themes directory\" to open those locations."
+[message.translations]
+simplified_chinese = "勾选「跳过主菜单」，用「设置文件」或「主题目录」打开对应位置。"
+traditional_chinese = "勾選「跳過主選單」，用「設定檔」或「主題資料夾」開啟對應位置。"
+japanese = "「メインメニューをスキップ」にチェックを入れ、「設定ファイル」や「テーマディレクトリ」から各場所を開けます。"
+korean = "\"메인 메뉴 건너뛰기\"를 켜고 \"설정 파일\" 또는 \"테마 폴더\"로 해당 위치를 여세요."
+russian = "Отметьте «Пропускать главное меню» и используйте «Файл настроек» или «Папка тем», чтобы открыть эти расположения."
+german = "Aktiviere „Hauptmenü überspringen“ und öffne die Orte über „Einstellungsdatei“ oder „Themes-Verzeichnis“."
+spanish = "Marca \"Omitir el menú principal\" y usa \"Archivo de ajustes\" o \"Directorio de temas\" para abrir esas ubicaciones."
+french = "Cochez « Ignorer le menu principal » et utilisez « Fichier des paramètres » ou « Dossier des thèmes » pour ouvrir ces emplacements."
+brazilian_portuguese = "Marque \"Pular o menu principal\" e use \"Arquivo de configurações\" ou \"Diretório de temas\" para abrir esses locais."
+portuguese = "Marque \"Ignorar o menu principal\" e use \"Ficheiro de configurações\" ou \"Diretório de temas\" para abrir esses locais."
+turkish = "\"Ana menüyü atla\" seçeneğini işaretleyin ve \"Ayarlar dosyası\" veya \"Temalar klasörü\" ile konumları açın."
+polish = "Zaznacz „Pomiń menu główne” i użyj „Pliku ustawień” lub „Katalogu motywów”, aby otworzyć te lokalizacje."
 
 [[message]]
 key = "tile"
@@ -20999,6 +22439,22 @@ turkish = "Zayıf makinelerde kapatın: kartlar anında açılır ve kaydırıl�
 polish = "Na słabszych komputerach wyłącz: karty otwierają się i przewijają natychmiast. Kształt kursora jest tylko estetyczny: wszystkie trzy style mieszczą się w tej samej komórce znaku."
 
 [[message]]
+key = "Turn on \"Nameplate text effects\", open \"Personal adjustments\", then enable \"Border\", \"Gradient\", \"Rainbow\" or \"Glow\" and set the matching ranges and colors."
+[message.translations]
+simplified_chinese = "打开「名牌文本特效」，进入「个性调整」，再勾选「描边」「渐变」「彩虹」或「辉光」并设置对应范围与颜色。"
+traditional_chinese = "開啟「名牌文字特效」，進入「個性調整」，再勾選「描邊」「漸層」「彩虹」或「輝光」並設定對應範圍與顏色。"
+japanese = "「ネームプレートのテキスト効果」をオンにし、「個別調整」を開いてから「枠線」「グラデーション」「レインボー」「発光」を有効にし、対応する範囲と色を設定してください。"
+korean = "\"네임플레이트 텍스트 효과\"를 켜고 \"개별 조정\"을 연 뒤 \"테두리\", \"그라데이션\", \"무지개\", \"발광\"을 켜고 해당 범위와 색상을 설정하세요."
+russian = "Включите «Текстовые эффекты таблички», откройте «Индивидуальная настройка», затем включите «Рамка», «Градиент», «Радуга» или «Свечение» и задайте диапазоны и цвета."
+german = "Schalte „Text-Effekte für Namensschilder“ ein, öffne „Individuelle Anpassung“ und aktiviere „Rahmen“, „Verlauf“, „Regenbogen“ oder „Leuchten“ und stelle die passenden Bereiche und Farben ein."
+spanish = "Activa «Efectos de texto de la placa de nombre», abre «Ajustes personales» y activa «Borde», «Degradado», «Arcoíris» o «Brillo», y ajusta los rangos y colores correspondientes."
+french = "Activez « Effets de texte du panneau de nom », ouvrez « Ajustements personnels », puis activez « Bordure », « Dégradé », « Arc-en-ciel » ou « Lueur » et réglez les plages et couleurs correspondantes."
+brazilian_portuguese = "Ative \"Efeitos de texto da placa de nome\", abra \"Ajustes pessoais\" e ative \"Borda\", \"Gradiente\", \"Arco-íris\" ou \"Brilho\", ajustando as faixas e cores correspondentes."
+portuguese = "Ative \"Efeitos de texto da placa de nome\", abra \"Ajustes pessoais\" e ative \"Borda\", \"Gradiente\", \"Arco-íris\" ou \"Brilho\", ajustando os intervalos e cores correspondentes."
+turkish = "\"İsim plakası metin efektleri\"ni açın, \"Kişisel ayarlar\"ı açıp \"Kenarlık\", \"Gradyan\", \"Gökkuşağı\" veya \"Parlama\"yı etkinleştirin ve ilgili aralıkları ve renkleri ayarlayın."
+polish = "Włącz „Efekty tekstowe tabliczki z nazwą”, otwórz „Ustawienia osobiste”, a następnie włącz „Obramowanie”, „Gradient”, „Tęcza” lub „Poświata” i ustaw odpowiednie zakresy i kolory."
+
+[[message]]
 key = "Tutorial"
 [message.translations]
 simplified_chinese = "教学"
@@ -21351,6 +22807,22 @@ turkish = "IP adresi kaydı için Unix soket sunucusu (yalnızca Unix)"
 polish = "Serwer gniazda Unix do rejestracji adresów IP (tylko Unix)"
 
 [[message]]
+key = "Unlimited"
+[message.translations]
+simplified_chinese = "不限"
+traditional_chinese = "不限"
+japanese = "無制限"
+korean = "무제한"
+russian = "Без ограничения"
+german = "Unbegrenzt"
+spanish = "Sin límite"
+french = "Illimité"
+brazilian_portuguese = "Sem limite"
+portuguese = "Sem limite"
+turkish = "Sınırsız"
+polish = "Bez ograniczeń"
+
+[[message]]
 key = "Unpredictable shadow tee transparency (0 invisible, 100 fully visible)"
 [message.translations]
 simplified_chinese = "不可预测阴影 Tee 的不透明度（0 不可见，100 完全可见）"
@@ -21637,6 +23109,22 @@ brazilian_portuguese = "Usar pré-entrada para prever outros jogadores para uma 
 portuguese = "Usar pré-entrada para prever outros jogadores para uma previsão de entrada mais precisa"
 turkish = "Daha doğru girdi tahmini için diğer oyuncuları tahmin etmek üzere ön girdi kullan"
 polish = "Użyj pre-input do przewidywania innych graczy dla dokładniejszego przewidywania wejścia"
+
+[[message]]
+key = "Use skin color for frozen feet"
+[message.translations]
+simplified_chinese = "冻结脚部使用皮肤色"
+traditional_chinese = "凍結腳部使用膚色"
+japanese = "凍結した足にスキンの色を使う"
+korean = "얼어붙은 발에 스킨 색 사용"
+russian = "Использовать цвет скина для замёрзших ног"
+german = "Skin-Farbe für gefrorene Füße verwenden"
+spanish = "Usar el color de la skin para los pies congelados"
+french = "Utiliser la couleur du skin pour les pieds gelés"
+brazilian_portuguese = "Usar a cor da skin nos pés congelados"
+portuguese = "Usar a cor da skin nos pés congelados"
+turkish = "Donmuş ayaklarda skin rengini kullan"
+polish = "Użyj koloru skórki dla zamrożonych stóp"
 
 [[message]]
 key = "Use team colors for name plates"
@@ -21941,6 +23429,22 @@ brazilian_portuguese = "Votar sim"
 portuguese = "Votar sim"
 turkish = "Evet oyu"
 polish = "Głosuj za"
+
+[[message]]
+key = "Voting"
+[message.translations]
+simplified_chinese = "投票"
+traditional_chinese = "投票"
+japanese = "投票"
+korean = "투표"
+russian = "Голосование"
+german = "Abstimmung"
+spanish = "Votación"
+french = "Vote"
+brazilian_portuguese = "Votação"
+portuguese = "Votação"
+turkish = "Oylama"
+polish = "Głosowanie"
 
 [[message]]
 key = "Vulkan API"
@@ -22389,6 +23893,22 @@ brazilian_portuguese = "Se os jogadores veem outros por padrão (própria equipe
 portuguese = "Se os jogadores veem outros por padrão (própria equipa = 2)"
 turkish = "Oyuncuların varsayılan olarak diğerlerini görüp görmediği (kendi takımı = 2)"
 polish = "Czy gracze domyślnie widzą innych (własna drużyna = 2)"
+
+[[message]]
+key = "Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes."
+[message.translations]
+simplified_chinese = "是否跳过主菜单、社区地图标签、启动时显示崩溃报告，以及设置/存档/主题目录的入口。"
+traditional_chinese = "是否跳過主選單、社群地圖標籤、啟動時顯示崩潰報告，以及設定/存檔/主題資料夾的入口。"
+japanese = "メインメニューをスキップするか、コミュニティのマップタグ、起動時のクラッシュレポート、設定・セーブ・テーマのフォルダを開く入口です。"
+korean = "메인 메뉴 건너뛰기, 커뮤니티 지도 태그, 시작 시 충돌 보고서 표시, 설정/저장/테마 폴더 열기 항목입니다."
+russian = "Пропуск главного меню, метки карт сообщества, отчёты о сбоях при запуске и доступ к папкам настроек, сохранений и тем."
+german = "Ob das Hauptmenü übersprungen wird, Community-Map-Tags, Absturzberichte beim Start sowie die Ordner für Einstellungen, Spielstände und Themes."
+spanish = "Si se omite el menú principal, las etiquetas de mapas de la comunidad, los informes de fallos al iniciar y las carpetas de ajustes, partidas y temas."
+french = "Ignorance du menu principal, étiquettes de cartes de la communauté, rapports de plantage au démarrage et dossiers des paramètres, sauvegardes et thèmes."
+brazilian_portuguese = "Se o menu principal é ignorado, as tags de mapas da comunidade, relatórios de falha na inicialização e as pastas de configurações, saves e temas."
+portuguese = "Se o menu principal é ignorado, as etiquetas de mapas da comunidade, relatórios de falhas ao iniciar e as pastas de configurações, guardados e temas."
+turkish = "Ana menünün atlanması, topluluk harita etiketleri, açılışta çökme raporları ve ayarlar/kayıtlar/temalar klasörleri."
+polish = "Pomijanie menu głównego, tagi map społeczności, raporty o awariach przy starcie oraz foldery ustawień, zapisów i motywów."
 
 [[message]]
 key = "Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)"

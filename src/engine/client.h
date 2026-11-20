@@ -123,6 +123,7 @@ protected:
 	float m_RenderFrameTime = 0.0001f;
 	float m_FrameTimeAverage = 0.0001f;
 	uint64_t m_PerfFrame = 0;
+	int m_PerfRenderLimit = 0;
 
 	TLoadingCallback m_LoadingCallback = nullptr;
 
@@ -208,6 +209,7 @@ public:
 	// Exponentially weighted average of frame times.
 	float FrameTimeAverage() const { return m_FrameTimeAverage; }
 	uint64_t PerfFrame() const { return m_PerfFrame; }
+	int PerfRenderLimit() const { return m_PerfRenderLimit; }
 
 	// actions
 	virtual void Connect(const char *pAddress, const char *pPassword = nullptr) = 0;
@@ -331,6 +333,7 @@ public:
 	// TODO: Refactor: should redo this a bit i think, too many virtual calls
 	virtual int SnapNumItems(int SnapId) const = 0;
 	virtual const void *SnapFindItem(int SnapId, int Type, int Id) const = 0;
+	virtual const CSnapshot *CurrentSnapshotForConnection(int Conn) const = 0;
 	virtual CSnapItem SnapGetItem(int SnapId, int Index) const = 0;
 	// 返回指定连接快照中的本地玩家编号，不依赖当前视角切换。
 	virtual int GetLocalClientId(int Conn) const = 0;

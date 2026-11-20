@@ -162,7 +162,7 @@ namespace qm_card_catalog
 		       (static_cast<uint64_t>(g_Config.m_ClNamePlatesStrong != 0) << 3) |
 		       (static_cast<uint64_t>(g_Config.m_ClShowDirection > 0) << 4) |
 		       (static_cast<uint64_t>(g_Config.m_QmNameplateEffectAutoLod != 0) << 5) |
-		       (static_cast<uint64_t>(g_Config.m_QmNameplateAdvanced != 0) << 6);
+		       (static_cast<uint64_t>(g_Config.m_QmNameplateTextEffectsEnabled != 0) << 6);
 	}
 
 	const std::vector<const char *> &TeeCardStableIds()
@@ -275,10 +275,7 @@ namespace qm_card_catalog
 			{
 				if(!IsStandardCard(Default.m_pStableId) && !IsTClientCard(Default.m_pStableId) && str_comp(Default.m_pStableId, "qm:system_media_controls") != 0 && str_comp(Default.m_pStableId, "qm:chat_bubble") != 0 && str_comp(Default.m_pStableId, "qm:entity_overlay") != 0 && str_comp(Default.m_pStableId, "qm:bind_status_hud") != 0)
 					continue;
-				// 字体卡片是 TClient 的实现，但玩家找它的地方是画面页：按呈现位置归页，
-				// 卡片实现仍按 tclient 分派，不受影响。
-				const char *pPage = str_comp(Default.m_pStableId, "tclient:font") == 0 ? "graphics" : Default.m_pDefaultTab;
-				Cards[pPage].push_back(Default.m_pStableId);
+				Cards[Default.m_pDefaultTab].push_back(Default.m_pStableId);
 			}
 			return Cards;
 		}();

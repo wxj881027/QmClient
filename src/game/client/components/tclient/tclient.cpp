@@ -1131,21 +1131,33 @@ void CTClient::OnConsoleInit()
 		},
 		this);
 
+	// 启动时按已保存的配置重建一次；控制台链只在运行期赋值，
+	// 缺了这一步重启后过滤规则会静默失效。
+	ApplyRegexChatIgnore(g_Config.m_QmRegexChatIgnore);
 	Console()->Chain(
 		"qm_regex_chat_ignore", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
 			if(pResult->NumArguments() == 1)
-			{
-				auto Re = Regex(pResult->GetString(0));
-				if(!Re.error().empty())
-				{
-					log_error("qmclient", "Invalid regex: %s", Re.error().c_str());
-					return;
-				}
-				((CTClient *)pUserData)->m_RegexChatIgnore = std::move(Re);
-			}
+				((CTClient *)pUserData)->ApplyRegexChatIgnore(pResult->GetString(0));
 			pfnCallback(pResult, pCallbackUserData);
 		},
 		this);
+}
+
+void CTClient::ApplyRegexChatIgnore(const char *pPattern)
+{
+	// 空字符串表示「不过滤」：Regex("") 会匹配任意消息，必须显式清空。
+	if(pPattern == nullptr || pPattern[0] == '\0')
+	{
+		m_RegexChatIgnore = Regex();
+		return;
+	}
+	auto Re = Regex(pPattern);
+	if(!Re.error().empty())
+	{
+		log_error("qmclient", "Invalid regex in qm_regex_chat_ignore: %s", Re.error().c_str());
+		return;
+	}
+	m_RegexChatIgnore = std::move(Re);
 }
 
 void CTClient::RandomBodyColor()

@@ -109,7 +109,7 @@ namespace
 		{
 			"deck:appearance-name-plate-text",
 			Localizable("Adds border, gradient, rainbow and glow effects to nameplate text, with separate scopes for play, spectating and demos."),
-			Localizable("Turn on \"Show advanced options\", then enable \"Border\", \"Gradient\", \"Rainbow\" or \"Glow\" and set the matching ranges and colors."),
+			Localizable("Turn on \"Nameplate text effects\", open \"Personal adjustments\", then enable \"Border\", \"Gradient\", \"Rainbow\" or \"Glow\" and set the matching ranges and colors."),
 			Localizable("Effects are heavy on crowded servers, so keep \"Automatic effect LOD when crowded\" enabled."),
 		},
 		{
@@ -204,15 +204,15 @@ namespace
 		},
 		{
 			"deck:ddnet-prediction",
-			Localizable("Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy."),
+			Localizable("Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking."),
 			Localizable("Set \"Prediction margin\" in milliseconds, tick \"AntiPing (latency compensation)\" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections."),
-			Localizable("Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic."),
+			Localizable("Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. \"Prioritize game traffic\" only tags packets on Windows and needs a QoS-aware router to have any effect."),
 		},
 		{
 			"deck:general-client",
-			Localizable("Sets the client update rate, whether the main menu is skipped, and opens the folders for settings, saves and themes."),
-			Localizable("Change \"Update Rate\" in Hz, tick \"Skip the main menu\", and use \"Settings file\" or \"Themes directory\" to open those locations."),
-			Localizable("\"Save power by lowering update rate (higher input latency)\" adds input delay, so keep it off while racing."),
+			Localizable("Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes."),
+			Localizable("Tick \"Skip the main menu\", and use \"Settings file\" or \"Themes directory\" to open those locations."),
+			Localizable("The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here."),
 		},
 		{
 			"deck:general-game",
@@ -230,7 +230,7 @@ namespace
 			"deck:general-recording",
 			Localizable("Automatic demos, game-end screenshots and CSV exports, their file limits and save folders, plus screenshot watermarks."),
 			Localizable("Turn on \"Automatically record demos\" or a screenshot option, set \"Max demos\" or \"Max Screenshots\", and fill \"Demo directory\" or \"Screenshot directory\" to move the files."),
-			Localizable("Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else."),
+			Localizable("Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog."),
 		},
 		{
 			"deck:global-search-input",
@@ -252,9 +252,9 @@ namespace
 		},
 		{
 			"deck:graphics-display",
-			Localizable("Chooses windowed or fullscreen mode, the monitor and the resolution; switching recreates the swap chain, so the screen may flash briefly."),
-			Localizable("Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode."),
-			Localizable("If exclusive fullscreen fails, switch back to windowed or borderless first."),
+			Localizable("Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate."),
+			Localizable("Pick the mode first, then the monitor and resolution. \"Render frame rate limit\" caps how many frames are drawn when V-Sync is off; \"Client update rate\" caps how often game logic and input are processed and throttles rendering with it."),
+			Localizable("Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first."),
 		},
 		{
 			"deck:graphics-icons",
@@ -522,7 +522,7 @@ namespace
 		},
 		{
 			"qm:debug_graph",
-			Localizable("Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the debug graph toggle is on."),
+			Localizable("Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget."),
 			Localizable("Bind \"Global toggle key\" to show or hide the panel, and raise \"Panel opacity\" if the graphs are hard to read."),
 			Localizable("It is a diagnostic overlay, not gameplay data; lower the opacity when it covers the map."),
 		},

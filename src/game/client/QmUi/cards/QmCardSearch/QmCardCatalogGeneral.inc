@@ -4,16 +4,14 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_general_client[] = {
 		{Localizable("Show community map tags"), "qm_map_tags", "地图标签 通关 Tag 审核"},
 		{Localizable("Config directory"), nullptr, "配置目录（cfg）"},
-		{Localizable("Hz", "Hertz"), nullptr, "Hz", "Hertz"},
-		{Localizable("Save power by lowering update rate (higher input latency)"), nullptr, "降低刷新率以节约功耗（增加输入延迟）"},
 		{Localizable("Saves file"), nullptr, "存档密码文件"},
 		{Localizable("Settings file"), nullptr, "设置文件"},
 		{Localizable("Skip the main menu"), nullptr, "跳过主菜单"},
+		{Localizable("Show pending crash reports on startup"), nullptr, "启动时显示待处理崩溃报告"},
 		{Localizable("Themes directory"), nullptr, "主题目录"},
-		{Localizable("Update Rate"), nullptr, "客户端刷新率"},
 		{nullptr, "cl_menu_map", nullptr},
-		{nullptr, "cl_refresh_rate", nullptr},
 		{nullptr, "cl_skip_start_menu", nullptr},
+		{nullptr, "qm_crash_report_on_startup", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:general-client", deck_general_client);
 }

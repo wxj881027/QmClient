@@ -1230,25 +1230,53 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 	// ESC 的字形与 plan 现在改由菜单关闭时的空闲帧预热（CMenus::OnUpdate / OnRender）。
 }
 
-void CGameClient::OnConnectionResourceUpdate()
+void CGameClient::CancelConnectionResourcePreparation()
 {
 	if(m_ConnectionResourcePreparation.Pending())
 	{
-		CPerfTimer ResourceTimer(QmPerfEnabled());
-		// 初始信息仍在资源就绪后发送；准备期间留在加载状态，每帧只推进一个图层。
-		if(Client()->State() != IClient::STATE_LOADING)
-			m_ConnectionResourcePreparation.Cancel();
-		else
-		{
-			if(!m_MapLayersBackground.IsMapLoaded())
-				m_MapLayersBackground.AdvanceMapLoad(1);
-			else if(!m_MapLayersForeground.IsMapLoaded())
-				m_MapLayersForeground.AdvanceMapLoad(1);
-			if(m_ConnectionResourcePreparation.CompleteWhenReady(m_MapLayersBackground.IsMapLoaded(), m_MapLayersForeground.IsMapLoaded()))
-				FinishConnectionResourcePreparation();
-		}
-		LogPerfStage(this, "connection_resource_prepare", ResourceTimer.ElapsedMs());
+		m_MapLayersBackground.UnloadMap();
+		m_MapLayersForeground.UnloadMap();
+		m_MapImages.Unload();
 	}
+	m_DesignTileSkips = {};
+	m_ConnectionResourcePreparation.Cancel();
+}
+
+void CGameClient::OnConnectionResourceUpdate()
+{
+	if(!m_ConnectionResourcePreparation.Pending())
+		return;
+	if(Client()->State() != IClient::STATE_LOADING)
+	{
+		CancelConnectionResourcePreparation();
+		return;
+	}
+
+	const bool Trace = QmPerfEnabled();
+	CPerfTimer Timer(Trace);
+	const auto Deadline = CMapLoadTask::TClock::now() + std::chrono::milliseconds(2);
+	if(!m_MapImages.ImagesReady())
+		m_MapImages.AdvanceImageLoad();
+
+	// 等贴图解码时可以先做装饰层跳距，创建图层时再读取已经就绪的纹理句柄。
+	if(!m_DesignTileSkips.Done() && CMapLoadTask::TClock::now() < Deadline)
+	{
+		CPerfTimer SkipTimer(Trace);
+		m_DesignTileSkips.RunUntil(Deadline);
+		if(Trace)
+			QmPerfLogStage("perf/connect", "map_design_tile_skips", SkipTimer.ElapsedMs(), true, Client());
+	}
+	const bool DataReady = m_MapImages.ImagesReady() && m_DesignTileSkips.Done();
+	if(DataReady && CMapLoadTask::TClock::now() < Deadline)
+	{
+		if(!m_MapLayersBackground.IsMapLoaded())
+			m_MapLayersBackground.AdvanceMapLoad(1, Deadline);
+		else if(!m_MapLayersForeground.IsMapLoaded())
+			m_MapLayersForeground.AdvanceMapLoad(1, Deadline);
+	}
+	if(m_ConnectionResourcePreparation.CompleteWhenReady(DataReady, m_MapLayersBackground.IsMapLoaded(), m_MapLayersForeground.IsMapLoaded()))
+		FinishConnectionResourcePreparation();
+	LogPerfStage(this, "connection_resource_prepare", Timer.ElapsedMs());
 }
 
 void CGameClient::OnUpdate()
@@ -1718,7 +1746,7 @@ void CGameClient::OnMapLoadStart()
 	if(m_ConnectionResourcePreparation.Pending())
 		dbg_msg("client/map", "canceled pending resource preparation for '%s'", Client()->GetCurrentMap());
 	// 取消旧任务并先释放借用地图数据的渲染资源，再让引擎替换地图文件。
-	m_ConnectionResourcePreparation.Cancel();
+	CancelConnectionResourcePreparation();
 	m_MapLayersBackground.UnloadMap();
 	m_MapLayersForeground.UnloadMap();
 	Collision()->Unload();
@@ -1738,14 +1766,17 @@ void CGameClient::OnConnected()
 		StageTimer.Reset();
 	};
 
-	m_ConnectionResourcePreparation.Cancel();
+	CancelConnectionResourcePreparation();
 	m_FastPractice.InvalidateBufferedInputState();
 	const char *pConnectCaption = DemoPlayer()->IsPlaying() ? Localize("Preparing demo playback") : Localize("Connected");
 	const char *pLoadMapContent = Localize("Initializing map logic");
 	// render loading before skip is calculated
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0);
 	LogConnectStage("loading_screen");
-	m_Layers.Init(Kernel()->RequestInterface<IMap>(), false);
+	const bool Live = Client()->State() == IClient::STATE_LOADING;
+	m_Layers.Init(Kernel()->RequestInterface<IMap>(), false, true, Live);
+	if(Live)
+		m_DesignTileSkips = m_Layers.PrepareDesignTileSkips();
 	LogConnectStage("layers_init");
 	m_Collision.Init(Layers());
 	LogConnectStage("collision_init");
@@ -1801,7 +1832,7 @@ void CGameClient::OnReset()
 {
 	// 离开对局：自杀保护回到配置默认值，本局自动开启的拦截不会漏到下一局。
 	ResetQmSelfKillProtectionRound(false);
-	m_ConnectionResourcePreparation.Cancel();
+	CancelConnectionResourcePreparation();
 	InvalidateSnapshot();
 	ResetDemoPlaybackState();
 	m_LastDemoHudRecordTick = -1;
@@ -1876,6 +1907,7 @@ void CGameClient::OnReset()
 
 	std::fill(std::begin(m_aNextChangeInfo), std::end(m_aNextChangeInfo), -1);
 	std::fill(std::begin(m_aLocalIds), std::end(m_aLocalIds), -1);
+	m_QmDummyDistanceLink = {};
 	m_DummyInput = {};
 	m_HammerInput = {};
 	m_DummyFire = 0;
@@ -2309,6 +2341,15 @@ void CGameClient::CaptureQmStutterFeatureSnapshot()
 	ConfigManager()->PossibleConfigVariables("", CFGFLAG_CLIENT, CollectQmStutterFeatureConfig, &m_vQmStutterFeatureSnapshot);
 	std::sort(m_vQmStutterFeatureSnapshot.begin(), m_vQmStutterFeatureSnapshot.end());
 
+	m_QmStutterFeatureFrame = Client()->PerfFrame();
+	const char *pPage = m_Menus.CurrentQmUiPerfPage();
+	const char *pOperation = m_Menus.CurrentQmUiPerfOperation();
+	m_QmStutterFeaturePage = pPage && pPage[0] ? pPage : "game";
+	m_QmStutterFeatureOperation = pOperation && pOperation[0] ? pOperation : "none";
+}
+
+void CGameClient::CaptureQmStutterContext()
+{
 	const char *pPage = m_Menus.CurrentQmUiPerfPage();
 	const char *pOperation = m_Menus.CurrentQmUiPerfOperation();
 	m_QmStutterPage = pPage != nullptr && pPage[0] != '\0' ? pPage : "game";
@@ -2342,6 +2383,8 @@ void CGameClient::ResetQmStutterWindowSamples()
 	m_QmStutterWindowStartFrame = 0;
 	m_QmStutterWorstFrame = 0;
 	m_QmStutterWorstFrameMs = 0.0;
+	m_QmStutterDetailWorstMs = 0.0;
+	m_QmStutterFeatureFrame = 0;
 	m_QmStutterLimitCause = EQmStutterLimitCause::NONE;
 	m_QmStutterPage.clear();
 	m_QmStutterOperation.clear();
@@ -2363,7 +2406,7 @@ void CGameClient::FlushQmStutterWindow(const SQmStutterFrameDecision &Decision, 
 
 	char aPayload[1024];
 	str_format(aPayload, sizeof(aPayload),
-		"schema=1 event=stutter_event stutter_id=%" PRIu64 " segment=%" PRIu64 " classification=%s end_reason=%s window_start_frame=%" PRIu64 " window_end_frame=%" PRIu64 " worst_frame=%" PRIu64 " target_fps=300 target_ms=%.6f sample_frames=%d sample_seconds=%.3f below_target_frames=%d fps_avg=%.3f fps_min=%.3f fps_1pct_low=%.3f frame_ms_avg=%.3f frame_ms_p95=%.3f frame_ms_p99=%.3f frame_ms_max=%.3f cap_limited=%d cap_reason=%s context=%s page=%s tab=%s",
+		"schema=1 event=stutter_event stutter_id=%" PRIu64 " segment=%" PRIu64 " classification=%s end_reason=%s window_start_frame=%" PRIu64 " window_end_frame=%" PRIu64 " worst_frame=%" PRIu64 " target_fps=300 target_ms=%.6f sample_frames=%d sample_seconds=%.3f below_target_frames=%d fps_avg=%.3f fps_min=%.3f fps_1pct_low=%.3f frame_ms_avg=%.3f frame_ms_p95=%.3f frame_ms_p99=%.3f frame_ms_max=%.3f cap_limited=%d cap_reason=%s detail_mode=%s context=%s page=%s tab=%s",
 		Decision.m_StutterId,
 		Decision.m_Segment,
 		pClassification,
@@ -2384,6 +2427,7 @@ void CGameClient::FlushQmStutterWindow(const SQmStutterFrameDecision &Decision, 
 		m_QmStutterFrameSamples.Max(),
 		CapLimited ? 1 : 0,
 		QmStutterLimitCauseName(m_QmStutterLimitCause),
+		m_QmStutterDetailWorstMs > 0.0 ? "slow_frames" : "summary",
 		Client()->State() == IClient::STATE_ONLINE ? "online" : "offline",
 		m_QmStutterPage.empty() ? "game" : m_QmStutterPage.c_str(),
 		m_QmStutterOperation.empty() ? "none" : m_QmStutterOperation.c_str());
@@ -2391,6 +2435,9 @@ void CGameClient::FlushQmStutterWindow(const SQmStutterFrameDecision &Decision, 
 		QmPerfLogPayloadForce("perf/stutter", aPayload, Client());
 	else
 		QmPerfLogPayload("perf/stutter", aPayload, Client());
+
+	if(m_QmStutterDetailWorstMs == 0.0)
+		return;
 
 	for(size_t i = 0; i < m_vQmStutterComponentSamples.size(); ++i)
 	{
@@ -2429,12 +2476,12 @@ void CGameClient::FlushQmStutterWindow(const SQmStutterFrameDecision &Decision, 
 			"schema=1 event=feature_snapshot stutter_id=%" PRIu64 " segment=%" PRIu64 " frame=%" PRIu64 " owner=%s feature=%s module=unmapped config_enabled=1 config_value=%d hud_visible=-1 settings_visible=-1 executed_in_frame=-1 executed_in_window=-1 current_page=%s current_tab=%s",
 			Decision.m_StutterId,
 			Decision.m_Segment,
-			m_QmStutterWorstFrame,
+			m_QmStutterFeatureFrame,
 			pOwner,
 			Name.c_str(),
 			Value,
-			m_QmStutterPage.empty() ? "game" : m_QmStutterPage.c_str(),
-			m_QmStutterOperation.empty() ? "none" : m_QmStutterOperation.c_str());
+			m_QmStutterFeaturePage.c_str(),
+			m_QmStutterFeatureOperation.c_str());
 		if(ForceLog)
 			QmPerfLogPayloadForce("perf/stutter", aFeaturePayload, Client());
 		else
@@ -2480,16 +2527,24 @@ void CGameClient::ProcessQmStutterFrame()
 		if(m_QmStutterFrameSamples.Empty())
 			m_QmStutterWindowStartFrame = FrameId;
 		m_QmStutterFrameSamples.Record(FrameMs, FrameId);
-		for(size_t i = 0; i < m_vQmStutterComponentSamples.size(); ++i)
+		if(QmStutterNeedsDetail(FrameMs, Client()->PerfRenderLimit()))
 		{
-			m_vQmStutterComponentSamples[i].m_Update.Record(m_vQmStutterPendingUpdateMs[i], FrameId);
-			m_vQmStutterComponentSamples[i].m_Render.Record(m_vQmStutterPendingRenderMs[i], FrameId);
+			for(size_t i = 0; i < m_vQmStutterComponentSamples.size(); ++i)
+			{
+				m_vQmStutterComponentSamples[i].m_Update.Record(m_vQmStutterPendingUpdateMs[i], FrameId);
+				m_vQmStutterComponentSamples[i].m_Render.Record(m_vQmStutterPendingRenderMs[i], FrameId);
+			}
+			if(FrameMs > m_QmStutterDetailWorstMs)
+			{
+				m_QmStutterDetailWorstMs = FrameMs;
+				CaptureQmStutterFeatureSnapshot();
+			}
 		}
 		if(FrameMs > m_QmStutterWorstFrameMs)
 		{
 			m_QmStutterWorstFrameMs = FrameMs;
 			m_QmStutterWorstFrame = FrameId;
-			CaptureQmStutterFeatureSnapshot();
+			CaptureQmStutterContext();
 		}
 	}
 
@@ -2511,6 +2566,7 @@ void CGameClient::OnDummyDisconnect()
 	m_aLocalIds[1] = -1;
 	m_aConnectionTeams[IClient::CONN_DUMMY].Reset();
 	m_AutoTeamLock.ResetConnection(IClient::CONN_DUMMY);
+	m_QmDummyDistanceLink = {};
 	m_aDDRaceMsgSent[1] = false;
 	m_aShowOthers[1] = SHOW_OTHERS_NOT_SET;
 	m_aEnableSpectatorCount[1] = -1;
@@ -2726,7 +2782,7 @@ void CGameClient::RenderQmMonitoringHud(float GraphX, float GraphSpacing)
 		Graphics()->ScreenHeight(),
 		GraphX,
 		GraphSpacing);
-	m_QmMonitoring.RenderHud(Layout.m_PanelRect);
+	m_QmMonitoring.RenderHud(Layout);
 }
 
 void CGameClient::FormatStreamerClan(int ClientId, char *pBuf, int BufSize) const
@@ -3384,6 +3440,7 @@ bool CGameClient::QmUiAnimationsIdle() const
 
 void CGameClient::OnShutdown()
 {
+	CancelConnectionResourcePreparation();
 	// 退出前结算进行中的 stutter 窗口，避免最后的诊断数据丢失
 	if(m_QmStutterEpisodeTracker.Active())
 	{
@@ -3978,6 +4035,28 @@ void CGameClient::InvalidateSnapshot()
 		SnapCollectEntities();
 }
 
+void CGameClient::EvolveSnapshotCharacter(CNetObj_Character *pCharacter, int Tick)
+{
+	CQmAxiomQuadTimeScope EvolveQuadTime(m_Collision, pCharacter->m_Tick, Client()->GameTickSpeed());
+	CWorldCore TempWorld;
+	CCharacterCore TempCore = CCharacterCore();
+	CTeamsCore TempTeams = CTeamsCore();
+	TempCore.Init(&TempWorld, Collision(), &TempTeams);
+	TempCore.Read(pCharacter);
+	TempCore.m_ActiveWeapon = pCharacter->m_Weapon;
+
+	while(pCharacter->m_Tick < Tick)
+	{
+		pCharacter->m_Tick++;
+		m_Collision.SetQmAxiomQuadTick(pCharacter->m_Tick, Client()->GameTickSpeed());
+		TempCore.Tick(false);
+		TempCore.Move();
+		TempCore.Quantize();
+	}
+
+	TempCore.Write(pCharacter);
+}
+
 void CGameClient::OnNewSnapshot(bool DummySwapped)
 {
 	UpdateQmAxiomPrediction();
@@ -3988,26 +4067,6 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		if(QmPerfEnabled())
 			LogPerfStage(this, pStage, SnapshotStageTimer.ElapsedMs());
 		SnapshotStageTimer.Reset();
-	};
-	auto &&Evolve = [this](CNetObj_Character *pCharacter, int Tick) {
-		CQmAxiomQuadTimeScope EvolveQuadTime(m_Collision, pCharacter->m_Tick, Client()->GameTickSpeed());
-		CWorldCore TempWorld;
-		CCharacterCore TempCore = CCharacterCore();
-		CTeamsCore TempTeams = CTeamsCore();
-		TempCore.Init(&TempWorld, Collision(), &TempTeams);
-		TempCore.Read(pCharacter);
-		TempCore.m_ActiveWeapon = pCharacter->m_Weapon;
-
-		while(pCharacter->m_Tick < Tick)
-		{
-			pCharacter->m_Tick++;
-			m_Collision.SetQmAxiomQuadTick(pCharacter->m_Tick, Client()->GameTickSpeed());
-			TempCore.Tick(false);
-			TempCore.Move();
-			TempCore.Quantize();
-		}
-
-		TempCore.Write(pCharacter);
 	};
 
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -4180,9 +4239,9 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 						}
 
 						if(EvolvePrev && m_Snap.m_aCharacters[Item.m_Id].m_Prev.m_Tick)
-							Evolve(&m_Snap.m_aCharacters[Item.m_Id].m_Prev, Client()->PrevGameTick(g_Config.m_ClDummy));
+							EvolveSnapshotCharacter(&m_Snap.m_aCharacters[Item.m_Id].m_Prev, Client()->PrevGameTick(g_Config.m_ClDummy));
 						if(EvolveCur && m_Snap.m_aCharacters[Item.m_Id].m_Cur.m_Tick)
-							Evolve(&m_Snap.m_aCharacters[Item.m_Id].m_Cur, Client()->GameTick(g_Config.m_ClDummy));
+							EvolveSnapshotCharacter(&m_Snap.m_aCharacters[Item.m_Id].m_Cur, Client()->GameTick(g_Config.m_ClDummy));
 
 						m_aClients[Item.m_Id].m_Snapped = *((const CNetObj_Character *)Item.m_pData);
 						m_aClients[Item.m_Id].m_Evolved = m_Snap.m_aCharacters[Item.m_Id].m_Cur;
@@ -7054,6 +7113,19 @@ IGameClient *CreateGameClient()
 	return new CGameClient();
 }
 
+const CTuningParams &CGameClient::HookCollTuning(int ClientId) const
+{
+	const int Active = g_Config.m_ClDummy;
+	const int SourceId = ClientId >= 0 && ClientId < MAX_CLIENTS && m_aClients[ClientId].m_IsPredicted ? ClientId : m_aLocalIds[Active];
+	return SourceId >= 0 && SourceId < MAX_CLIENTS ? m_aClients[SourceId].m_Predicted.m_Tuning : m_aTuning[Active];
+}
+
+vec2 CGameClient::HookCollTargetPosition(int ClientId, float Intra) const
+{
+	const auto &Character = m_Snap.m_aCharacters[ClientId];
+	return mix(vec2(Character.m_Prev.m_X, Character.m_Prev.m_Y), vec2(Character.m_Cur.m_X, Character.m_Cur.m_Y), Intra);
+}
+
 void CGameClient::UpdateHookCollTargets()
 {
 	m_HookCollCandidates.Reset();
@@ -7082,9 +7154,7 @@ void CGameClient::UpdateHookCollTargets()
 			Target.m_HookHitDisabled = PracticeHookHitDisabled;
 			continue;
 		}
-		const CNetObj_Character &Prev = m_Snap.m_aCharacters[i].m_Prev;
-		const CNetObj_Character &Cur = m_Snap.m_aCharacters[i].m_Cur;
-		Target.m_Pos = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Cur.m_X, Cur.m_Y), Intra);
+		Target.m_Pos = HookCollTargetPosition(i, Intra);
 	}
 }
 
@@ -7100,7 +7170,7 @@ int CGameClient::IntersectCharacter(vec2 HookPos, vec2 NewPos, vec2 &NewPos2, in
 		const bool IsOneSolo = Target.m_Solo || OwnTarget.m_Solo;
 		return IsOneSuper || (m_Teams.SameTeam(Id, OwnId) && !IsOneSolo && !OwnTarget.m_HookHitDisabled);
 	});
-	const float Radius = CCharacterCore::PhysicalSize() + 2.0f;
+	const float Radius = QmHookCollTargetRadius;
 	const auto PositionOf = [&](int Id) { return m_aHookCollTargets[Id].m_Pos; };
 	const SQmHookCollSegment Segment(HookPos, NewPos, Radius);
 	const auto &vNearby = m_HookCollSpatialIndex.GetCandidates(Segment, vCandidates, PositionOf, [&](int Id) { return m_aHookCollTargets[Id].m_Valid; });

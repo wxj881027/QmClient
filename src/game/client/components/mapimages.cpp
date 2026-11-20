@@ -4,9 +4,11 @@
 
 #include <base/dbg.h>
 #include <base/log.h>
-#include <base/math.h>
 #include <base/mem.h>
+#include <base/math.h>
+#include <base/perf_timer.h>
 
+#include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
 #include <engine/graphics.h>
@@ -18,6 +20,8 @@
 #include <generated/client_data.h>
 
 #include <game/client/components/assets_resource_registry.h>
+#include <game/client/components/qmclient/map_image_decode_job.h>
+#include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
 #include <game/layers.h>
 #include <game/localization.h>
@@ -179,19 +183,34 @@ void CMapImages::OnInit()
 	RequestHookPreviewTileTextures();
 }
 
+void CMapImages::CancelImageLoad()
+{
+	if(m_pMapImageDecode)
+		m_pMapImageDecode->Abort();
+	m_pMapImageDecode.reset();
+	m_ImageLoad = {};
+}
+
+void CMapImages::AdvanceImageLoad()
+{
+	if(m_ImageLoad.Resume())
+		m_ImageLoad = {};
+}
+
 void CMapImages::Unload()
 {
+	CancelImageLoad();
 	// unload all textures
 	for(int i = 0; i < m_Count; i++)
 	{
 		Graphics()->UnloadTexture(&m_aTextures[i]);
+		m_aTextures[i].Invalidate();
 	}
+	m_Count = 0;
 }
 
-void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
+CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 {
-	Unload();
-
 	int Start;
 	pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &m_Count);
 	m_Count = std::clamp<int>(m_Count, 0, MAX_MAPIMAGES);
@@ -232,6 +251,9 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 		}
 	}
 
+	if(Live)
+		co_await std::suspend_always{};
+
 	const int TextureLoadFlag = Graphics()->TextureLoadFlags();
 
 	// load new textures
@@ -266,6 +288,12 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 			continue;
 		}
 
+		const bool Trace = Live && QmPerfEnabled();
+		double ReadMs = 0.0;
+		double DecodeMs = 0.0;
+		double SubmitMs = 0.0;
+		bool CombinedReadDecode = false;
+		std::shared_ptr<CMapImageDecodeJob> pDecode;
 		if(pImg->m_External)
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
@@ -281,7 +309,10 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 					!str_comp(pName, "easter");
 			}
 			str_format(aPath, sizeof(aPath), "mapres/%s%s.png", pName, Translated ? "_0.7" : "");
-			m_aTextures[i] = Graphics()->LoadTexture(aPath, IStorage::TYPE_ALL, LoadFlag);
+			if(Live)
+				pDecode = std::make_shared<CMapImageDecodeJob>(Storage(), aPath, Trace);
+			else
+				m_aTextures[i] = Graphics()->LoadTexture(aPath, IStorage::TYPE_ALL, LoadFlag);
 		}
 		else
 		{
@@ -296,26 +327,80 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 			ImageInfo.m_Width = pImg->m_Width;
 			ImageInfo.m_Height = pImg->m_Height;
 			ImageInfo.m_Format = CImageInfo::FORMAT_RGBA;
-			ImageInfo.m_pData = static_cast<uint8_t *>(pMap->GetData(pImg->m_ImageData));
 			size_t ImageDataSize = 0;
 			const int FileDataSize = pMap->GetDataSize(pImg->m_ImageData);
-			if(ImageInfo.m_pData && FileDataSize >= 0 && ImageInfo.DataSize(ImageDataSize) && (size_t)FileDataSize >= ImageDataSize)
+			char aTexName[IO_MAX_PATH_LENGTH];
+			str_format(aTexName, sizeof(aTexName), "embedded: %s", pName);
+			if(Live && FileDataSize > 0 && ImageInfo.DataSize(ImageDataSize) && (size_t)FileDataSize >= ImageDataSize)
 			{
-				char aTexName[IO_MAX_PATH_LENGTH];
-				str_format(aTexName, sizeof(aTexName), "embedded: %s", pName);
-				m_aTextures[i] = Graphics()->LoadTextureRaw(ImageInfo, LoadFlag, aTexName);
+				pDecode = std::make_shared<CMapImageDecodeJob>(nullptr, aTexName, Trace);
+				CPerfTimer ReadTimer(Trace);
+				if(pMap->ReadCompressedData(pImg->m_ImageData, pDecode->m_vCompressed))
+				{
+					pDecode->m_Image = std::move(ImageInfo);
+					pDecode->m_UncompressedSize = FileDataSize;
+				}
+				else
+					pDecode.reset();
+				ReadMs = ReadTimer.ElapsedMs();
+			}
+			if(!pDecode)
+			{
+				CPerfTimer Timer(Trace);
+				ImageInfo.m_pData = static_cast<uint8_t *>(pMap->GetData(pImg->m_ImageData));
+				const int LoadedSize = pMap->GetDataSize(pImg->m_ImageData);
+				ReadMs += Timer.ElapsedMs();
+				CombinedReadDecode = true;
+				if(ImageInfo.m_pData && LoadedSize >= 0 && ImageInfo.DataSize(ImageDataSize) && (size_t)LoadedSize >= ImageDataSize)
+				{
+					Timer.Reset();
+					m_aTextures[i] = Graphics()->LoadTextureRaw(ImageInfo, LoadFlag, aTexName);
+					SubmitMs = Timer.ElapsedMs();
+				}
+				else
+				{
+					log_error("mapimages", "Failed to load embedded map image %d.", i);
+					ShowWarning = true;
+				}
 				pMap->UnloadData(pImg->m_ImageData);
 			}
-			else
+		}
+
+		if(pDecode)
+		{
+			m_pMapImageDecode = pDecode;
+			Engine()->AddJob(pDecode);
+			do
 			{
-				pMap->UnloadData(pImg->m_ImageData);
-				log_error("mapimages", "Failed to load map image %d: failed to load data.", i);
-				ShowWarning = true;
-				continue;
+				co_await std::suspend_always{};
+			} while(!pDecode->Done());
+			if(pDecode->State() == IJob::STATE_DONE)
+			{
+				ReadMs += pDecode->m_ReadMs;
+				DecodeMs = pDecode->m_DecodeMs;
+				CPerfTimer SubmitTimer(Trace);
+				if(pImg->m_External)
+					m_aTextures[i] = Graphics()->FinishExternalTexture(pDecode->m_Image, LoadFlag, pDecode->m_Path.c_str(), pDecode->m_PngliteIncompatible);
+				else if(pDecode->m_Image.m_pData)
+					m_aTextures[i] = Graphics()->LoadTextureRawMove(pDecode->m_Image, LoadFlag, pDecode->m_Path.c_str());
+				else
+					log_error("mapimages", "Failed to decompress embedded map image %d.", i);
+				SubmitMs = SubmitTimer.ElapsedMs();
 			}
+			ShowWarning |= !m_aTextures[i].IsValid();
+			m_pMapImageDecode.reset();
+		}
+		if(Trace)
+		{
+			char aExtra[224];
+			str_format(aExtra, sizeof(aExtra), "image=%d external=%d read_ms=%.3f decode_ms=%.3f submit_ms=%.3f read_includes_decode=%d",
+				i, pImg->m_External != 0, ReadMs, DecodeMs, SubmitMs, CombinedReadDecode ? 1 : 0);
+			QmPerfLogStage("perf/connect", "map_image_prepare", ReadMs + DecodeMs + SubmitMs, true, Client(), nullptr, nullptr, aExtra);
 		}
 		pMap->UnloadData(pImg->m_ImageName);
 		ShowWarning = ShowWarning || m_aTextures[i].IsNullTexture();
+		if(Live)
+			co_await std::suspend_always{};
 	}
 	if(ShowWarning)
 	{
@@ -327,12 +412,19 @@ void CMapImages::OnMapLoad()
 {
 	IMap *pMap = Kernel()->RequestInterface<IMap>();
 	CLayers *pLayers = GameClient()->Layers();
-	OnMapLoadImpl(pLayers, pMap);
+	Unload();
+	const bool Live = Client()->State() == IClient::STATE_LOADING;
+	m_ImageLoad = LoadMapImages(pLayers, pMap, Live);
+	if(Live)
+		AdvanceImageLoad();
+	else
+		m_ImageLoad.Finish();
 }
 
 void CMapImages::LoadBackground(class CLayers *pLayers, class IMap *pMap)
 {
-	OnMapLoadImpl(pLayers, pMap);
+	Unload();
+	LoadMapImages(pLayers, pMap, false).Finish();
 }
 
 static EMapImageModType GetEntitiesModType(const CGameInfo &GameInfo)
@@ -404,6 +496,8 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 
 	if(!m_aEntitiesIsLoaded[(EntitiesModType * 2) + (int)EntitiesAreMasked])
 	{
+		const bool Trace = QmPerfEnabled() && Client()->State() == IClient::STATE_LOADING;
+		CPerfTimer Timer(Trace);
 		m_aEntitiesIsLoaded[(EntitiesModType * 2) + (int)EntitiesAreMasked] = true;
 
 		int TextureLoadFlag = 0;
@@ -531,6 +625,8 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 			}
 			ImgInfo.Free();
 		}
+		if(Trace)
+			QmPerfLogStage("perf/connect", "entity_texture_prepare", Timer.ElapsedMs(), true, Client());
 	}
 
 	return m_aaEntitiesTextures[(EntitiesModType * 2) + (int)EntitiesAreMasked][EntityLayerType];

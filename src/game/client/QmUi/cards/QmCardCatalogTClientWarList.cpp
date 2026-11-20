@@ -481,6 +481,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListBlockEnemyChat, "tclient-warlist-block-enemy-chat", Localize("Block enemy chat"), g_Config.m_QmWarListBlockEnemyChat, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListBlockEnemyChat ^= 1;
 		}
+		if(Flow.Control("tclient-warlist-reason", LineSize, CheckBoxRect, RowSpacing))
+		{
+			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListReason, "tclient-warlist-reason", Localize("Show the reason in name plates"), g_Config.m_QmWarListReason, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
+				g_Config.m_QmWarListReason ^= 1;
+		}
 	};
 	// 0 = 只看，1 = 新增中，2 = 重命名中。
 	static int s_GroupEditMode = 0;

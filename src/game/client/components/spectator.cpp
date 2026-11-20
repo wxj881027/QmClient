@@ -6,7 +6,6 @@
 #include "camera.h"
 
 #include <base/log.h>
-
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>

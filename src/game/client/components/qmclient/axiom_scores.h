@@ -7,6 +7,7 @@
 
 #include <game/client/component.h>
 
+#include <array>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -33,7 +34,7 @@ class IQmAxiomHttp
 {
 public:
 	virtual ~IQmAxiomHttp() = default;
-	virtual std::shared_ptr<IQmAxiomHttpRequest> Get(const char *pUrl, int ConnectTimeoutMs, int TimeoutMs, int64_t MaxResponseBytes) = 0;
+	virtual std::shared_ptr<IQmAxiomHttpRequest> Get(const char *pUrl, const char *pApiKey, int ConnectTimeoutMs, int TimeoutMs, int64_t MaxResponseBytes) = 0;
 };
 
 enum class EQmAxiomScoreStatus
@@ -48,7 +49,7 @@ enum class EQmAxiomScoreStatus
 	INVALID_RESPONSE,
 };
 
-// 记分板一行的取分结果：玩家名 -> user_id 的搜索与模式分数合并成一个状态。
+// 记分板按玩家名查询当前模式的里程分。
 struct SQmAxiomLookupResult
 {
 	EQmAxiomScoreStatus m_Status = EQmAxiomScoreStatus::NOT_REQUESTED;
@@ -77,9 +78,18 @@ struct SQmAxiomPlayerResult
 
 class CQmAxiomScores : public CComponent
 {
+	struct SPointsEntry
+	{
+		SQmAxiomLookupResult m_Lookup;
+		int64_t m_LastSuccess = 0;
+		int64_t m_LastFailure = 0;
+		int m_Failures = 0;
+	};
+
 	struct SCacheEntry
 	{
 		SQmAxiomPlayerResult m_Result;
+		std::array<SPointsEntry, 2> m_aPoints;
 		int64_t m_LastSearchSuccessTick = 0;
 		int64_t m_LastSearchFailureTick = 0;
 		std::array<int64_t, 2> m_aLastModeSuccessTick{};
@@ -105,7 +115,6 @@ class CQmAxiomScores : public CComponent
 		std::shared_ptr<IQmAxiomHttpRequest> m_pRequest;
 		uint64_t m_Generation = 0;
 		std::string m_PlayerName;
-		EQmAxiomMode m_Mode = EQmAxiomMode::NONE;
 	};
 
 	std::map<std::string, SCacheEntry> m_Cache;
@@ -115,10 +124,9 @@ class CQmAxiomScores : public CComponent
 	SRequestSlot m_DdStatsRequest;
 	std::shared_ptr<CQmAxiomDdStatsParseJob> m_pDdStatsParseJob;
 	std::string m_ActivePlayerName;
-	std::map<std::string, SRequestSlot> m_SearchRequests;
-	std::map<std::string, SRequestSlot> m_ModeRequests;
+	std::map<std::string, std::shared_ptr<IQmAxiomHttpRequest>> m_PointsRequests;
 	EQmAxiomMode m_Mode = EQmAxiomMode::NONE;
-	int m_SearchStartsThisFrame = 0;
+	CQmAxiomRequestBudget m_OpenApiBudget;
 	uint64_t m_Generation = 0;
 	IQmAxiomHttp *m_pHttpOverride = nullptr;
 	bool m_PersistentCacheDirty = false;
@@ -144,10 +152,9 @@ class CQmAxiomScores : public CComponent
 	void ProcessDdStatsRequest();
 	void FinishActiveQueryIfIdle();
 	void EvictCacheEntryIfNeeded();
-	void EnsureScoreboardQueried(const char *pPlayerName);
 	void ProcessScoreboardRequests();
 	void AbortScoreboardRequests();
-	std::shared_ptr<IQmAxiomHttpRequest> StartRequest(const char *pUrl, int TimeoutMs);
+	std::shared_ptr<IQmAxiomHttpRequest> StartRequest(const char *pUrl, int TimeoutMs, const char *pApiKey = "");
 
 protected:
 	virtual int64_t CurrentTick() const;
@@ -169,7 +176,9 @@ public:
 	void SetMode(EQmAxiomMode Mode);
 	EQmAxiomMode Mode() const { return m_Mode; }
 
-	// 本帧为记分板上这个玩家准备分数，必要时发起请求。必须早于 GetLookup。
+	CQmAxiomRequestBudget &OpenApiBudget() { return m_OpenApiBudget; }
+	void EnsureScoreboardQueried(const char *pPlayerName);
+	// 统计页需要完整的双模式数据和 DDStats 时长。
 	void EnsureQueried(const char *pPlayerName);
 	SQmAxiomLookupResult GetLookup(const char *pPlayerName) const;
 	void Refresh(const char *pPlayerName);

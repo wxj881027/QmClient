@@ -1,7 +1,9 @@
  min
  seconds
  seconds (never)
+ · %d finishers
  · %d finishers · average %d:%02d:%02d
+ · median %d:%02d:%02d
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 "Absolute" aims at a fixed point and hides the speed setting, so pick "Relative" if you want to tune it.
 "Active disconnect" leaves the server without closing the client, so bind it only for deliberate use.
@@ -16,7 +18,6 @@
 "Hook strength scope" limits which players get the marker, so pick "All" if it seems missing.
 "Ingame mouse sens." changes your aim, so adjust it in small steps and test it on a warm-up map.
 "None" hides all name plates including your own team, so choose "Others" if you only want a cleaner screen.
-"Save power by lowering update rate (higher input latency)" adds input delay, so keep it off while racing.
 "Scoreboard filter" keeps only players whose name or clan matches, so clear it when the scoreboard looks empty.
 "Show on key" needs a key bound to +showweapontrajectory; if nothing appears, switch to "Always show".
 "Switch weapon on pickup" grabs whatever you walk over, which can override the weapon you wanted to keep.
@@ -109,7 +110,6 @@
 0 disables timed rotation; skins only switch on random start events
 0 to 51, lower is clearer and bigger. Leave it empty to use the video encoding CRF from the settings page.
 0-51, empty = default
-1% low
 128 player id <-> 64 player id map update rate
 3D background
 45 Degree Angle
@@ -284,11 +284,13 @@ Alive: %.1fs/%.1fs
 All
 All categories
 All combined
+All items
 All maps
 All my tags are already on the server.
 All players
 All remaining binds: scoreboard, spectating, console, screenshots, emoticon and practice tools.
 All sounds
+All typefaces
 Allow /map.
 Allow /rescue command to teleport out of freeze (only applies in initial config)
 Allow arbitrary game resolution when scaling (may cause issues on Windows)
@@ -322,6 +324,7 @@ And pick one randomly
 Angle
 Angle:
 Angular gradient
+Animate country flags
 Animated title style id
 Animates the weapon in your hand when you switch or reload, plus an optional hammer rotation mode.
 Animation
@@ -595,6 +598,7 @@ Behavior type
 Benchmark frame times for number of seconds to file, then quit
 Best
 Best quality (all-intra 4:4:4 / MP4)
+Best-effort DSCP marking of the game connection; may be ignored by routers
 Better compression, slower
 Better scoreboard
 Big icons can overlap names and nearby tees, so shrink "Size of key press icons" when many players are close.
@@ -721,10 +725,13 @@ Cannot swap: the other player is not in your team
 Cannot update public words. Previous words remain active.
 Cannot write cfg file
 Cannot write the wiki file
+Cap update rate to save power
+Capping the update rate adds input latency; only use it to save power. If exclusive fullscreen fails, switch back to windowed or borderless first.
 Capsule end strength
 Capsule ends
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 Capture current appearance
+Capture queue
 Capture the flag
 Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.
 Card effects
@@ -739,7 +746,6 @@ Censor word list (comma-separated)
 Center line color (requires qm_show_center)
 Center line width (requires qm_show_center)
 cfg installed
-Change "Update Rate" in Hz, tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
 Change colors and style options, then compare the preview.
 Change indicator offset based on distance to other tees
 Change laser options and compare the preview.
@@ -836,7 +842,7 @@ Chooses the font family and weight used by the menus.
 Chooses the language used by every menu, setting and message in the client.
 Chooses the menu background map and the colors drawn behind the UI.
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
-Chooses windowed or fullscreen mode, the monitor and the resolution; switching recreates the swap chain, so the screen may flash briefly.
+Chooses windowed or fullscreen mode, the monitor and the resolution, plus two frame pacing caps: render frame rate and client update rate.
 Chroma sampling
 Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
@@ -913,9 +919,10 @@ Client prediction time is high
 Client self-kill is disabled (K key / kill command will be ignored)
 Client self-kill is disabled (server commands are not affected)
 Client self-kill is enabled
+Client update rate
 Client uptime
 Client-side prediction and latency compensation
-Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, and upstream packet redundancy.
+Client-side prediction and latency compensation: prediction margin, AntiPing and its predicted entities, predicted events, upstream packet redundancy and DSCP traffic marking.
 Client-side self-kill protection
 Close
 Close the demo player
@@ -1115,6 +1122,7 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 Converse
 Converse with the last person you whispered to (private message)
+Convert threads
 Converting %d%%
 Coordinate size on nameplate
 Coordinates
@@ -1190,11 +1198,9 @@ Current
 Current aspect ratio:
 Current aspect ratio: Show default
 Current cut is invalid or already added
-Current driver
 Current file
-Current GPU
-Current graphics backend
 Current rescue mode: %s
+Current resolution
 Current status
 Current version: %s
 Current version: %s (up to date)
@@ -1535,6 +1541,7 @@ Drift intensity
 Drift smoothness
 Drop on an input port to link
 Drop on right canvas to replace one part.
+Droplet
 Drown deaths
 Dual Kawase
 Dummies are not allowed on this server
@@ -1549,6 +1556,7 @@ Dummy copy
 Dummy copy: %s
 Dummy country (ISO 3166-1 numeric)
 Dummy decoration color
+Dummy distance link style: 0 = line, 1 = droplet
 Dummy eyes color
 Dummy eyes when joining server (0=normal, 1=pain, 2=happy, 3=surprised, 4=angry, 5=blink)
 Dummy feet color
@@ -1573,6 +1581,24 @@ Dummy mini view rendering unavailable
 Dummy mini view size (percent)
 Dummy mini view zoom (percent)
 Dummy name
+Dummy name plate clan line X offset
+Dummy name plate clan line Y offset
+Dummy name plate coord line X offset
+Dummy name plate coord line Y offset
+Dummy name plate hammer icon X offset
+Dummy name plate hammer icon Y offset
+Dummy name plate hook icon X offset
+Dummy name plate hook icon Y offset
+Dummy name plate jump key icon X offset
+Dummy name plate jump key icon Y offset
+Dummy name plate left key icon X offset
+Dummy name plate left key icon Y offset
+Dummy name plate name line X offset
+Dummy name plate name line Y offset
+Dummy name plate right key icon X offset
+Dummy name plate right key icon Y offset
+Dummy name plate strength line X offset
+Dummy name plate strength line Y offset
 Dummy only
 Dummy skin
 Dummy skin decoration
@@ -1733,6 +1759,7 @@ Enable main thread and render stage performance debug logging
 Enable map compatibility mode using the specified bug (example: grenade-doubleexplosion@ddnet.tw)
 Enable mod weapon on %d: %s
 Enable MySQL backend instead of SQLite (fallback to sv_sqlite_file when no MySQL server is reachable)
+Enable nameplate text effects (master switch)
 Enable Netease lyric integration
 Enable Netease music Hook
 Enable Netease Music hook integration
@@ -2091,10 +2118,9 @@ FPM
 FPS
 Fraction of players needed to pass a vote
 Frags
-Frame rate
 Frame time
-Frame time p95
-Frame time p99
+Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier.
+Frames drawn per second when V-Sync is off; 0 = unlimited
 Frankenstein (drop parts on right)
 Free move
 Free view
@@ -2138,6 +2164,7 @@ Friends
 Friends imported and saved.
 Friends imported for this session, but saving settings failed.
 Friends only
+Frozen color darkening
 Frozen fire attempt
 Frozen prediction margin
 FSAA samples
@@ -2161,12 +2188,11 @@ Game mode
 Game over
 Game paused
 Game sound volume
-Game time margin
 Game type
 Game type (ddnet, mod)
 Game update rate (Hz)
 Game update rate when window inactive (Hz)
-Game/predicted tick
+Game window mode
 Gamemode. When enabled, players join as spectators
 Gamepad sensitivity in menu/editor
 Gameplay
@@ -2252,6 +2278,7 @@ Graphics
 Graphics backend does not support dummy mini view
 Graphics card
 Graphics display
+Graphics hardware details
 Graphics library major version (0 = auto-detect)
 Graphics library minor version (0 = auto-detect)
 Graphics library patch version
@@ -2260,7 +2287,6 @@ Graphics mode
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics settings sub-tab: 0=display, 1=visual effects
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
-Graphs RTT, prediction, snapshot age and frame rate in a panel shown while the debug graph toggle is on.
 Greek
 Greeting text
 Grenade
@@ -2393,7 +2419,6 @@ Hook attaches to ground
 Hook attaches to player
 Hook collision line
 Hook collision line alpha (0 invisible, 100 fully visible)
-Hook collision line length follows cursor distance
 Hook collision line opacity
 Hook Collisions
 Hook collisions
@@ -2460,7 +2485,6 @@ If 1, auto record only once on connect; if 0, auto record restarts after game en
 If 1, current driver is in blocking error state.
 If a device disappears after unplugging headphones, reselect it or restart the client.
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
-If exclusive fullscreen fails, switch back to windowed or borderless first.
 If lasers can hit you when shot and pull you to bounce origin (0 for all new maps), or lasers cannot hit you and pull others to shooter.
 If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IME appearance" brings back the defaults.
 If the wheel feels crowded, remove unused slots in the editor card.
@@ -2497,6 +2521,7 @@ In DDNet, played when weapons are removed. Other modes may use it for armor pick
 In memory of me
 In pie menu
 In-game controller sensitivity
+In-game crosshair rotation speed in degrees per second (0=static, negative=reverse)
 In-game crosshair scale percent (50=half, 200=double)
 Inactive color
 Include chat in the recording.
@@ -2534,6 +2559,7 @@ Info
 Info Messages
 Ingame controller mode
 Ingame controller sens.
+Ingame cursor rotation
 Ingame cursor scale
 Ingame mouse sens.
 Initializing assets
@@ -2620,7 +2646,6 @@ Jelly duration
 Jelly others
 Jelly strength
 Jetpack
-Jitter
 Join
 Join a team before inviting another player
 Join a team to enable practice mode, which means you can use /r, but can't earn a rank.
@@ -2651,10 +2676,13 @@ k = Resend loss
 Kaomoji
 Kawase
 Keep hook when teleporting
+Keep inside game window
 Keep it small and in a corner; a large overlay covers the map and hides what matters.
 Keep it small and near an edge: the hint draws over the map and can cover the tile you are aiming at.
 Keep messages short so they fit in one chat line.
+Keep square inside game window
 Keep the defaults unless you play with high ping; then try one option at a time and compare.
+Keep the feeling of the maximum cursor distance independent of resolution
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
 Keep unsent message on chat close
@@ -2771,6 +2799,7 @@ Legacy bind script
 Legacy option: connections that skip TLS verification are rejected
 Legacy realtime WebSocket URL (migrated to qm_websocket_url)
 Legacy settings card collapse states migrated
+Legacy team colors
 Length
 Lenny:
 Let server start ghost
@@ -2781,9 +2810,11 @@ Lht.
 LibreTranslate API Key
 LibreTranslate endpoint
 Light
+Limit cursor to game window
 Limit information in spectator mode
 Limit the title to the exact nickname below.
 Limiter threshold (percent)
+Line
 Line length
 Line length: bytes of the bind line that will be written.
 Line width
@@ -2793,6 +2824,7 @@ Lines %d - %d (%s)
 Link deleted
 Link failed
 Link source is gone
+Link style
 Linked
 Links and gestures
 Links open in the system browser.
@@ -2885,10 +2917,10 @@ Log output filename
 Log predicted event creation/playback and snapshot confirmation to debug double sounds.
 Log realtime WebSocket channel events
 Log the network
+Logic and input ticks per second; rendering follows this beat.
 Logout of econ
 Logout of rcon
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
-Long frames
 Lose weapons when teleporting (useful for race maps)
 Low
 Low contrast between name and message text makes chat hard to scan in fights.
@@ -3043,7 +3075,6 @@ Maximum undo steps in editor history (editor, envelope editor, and server settin
 may cause delay
 May overload the service
 Medium
-Memory
 Mention
 Mention option color
 Menu accent panel opacity
@@ -3140,6 +3171,7 @@ Moving block and freeze prediction (experimental)
 MP4 is the most compatible for sharing, MOV is the editing standard and required by ProRes, and MKV suits lossless archives but is poorly supported by editors.
 Multi
 Multi-resolution blur with a stronger result and balanced GPU cost.
+Multi-select move
 Multi-View
 Multiple exact Axiom players found
 Music
@@ -3189,10 +3221,14 @@ Name plate hammer icon X offset
 Name plate hammer icon Y offset
 Name plate hook icon X offset
 Name plate hook icon Y offset
-Name plate key line X offset
-Name plate key line Y offset
+Name plate jump key icon X offset
+Name plate jump key icon Y offset
+Name plate left key icon X offset
+Name plate left key icon Y offset
 Name plate name line X offset
 Name plate name line Y offset
+Name plate right key icon X offset
+Name plate right key icon Y offset
 Name plate strength line X offset
 Name plate strength line Y offset
 Name plates offset
@@ -3211,6 +3247,7 @@ Nameplate text
 Nameplate text border color
 Nameplate text border range
 Nameplate text effect auto LOD (0=Off 1=On: trim outer effect layers when crowded)
+Nameplate text effects
 Nameplate text effects (1=Border 2=Gradient 4=Rainbow 8=Glow)
 Nameplate text effects demo manual target client ID (-1=None)
 Nameplate text effects demo mode (0=Off 1=Smart 2=Manual target 3=Manual scope)
@@ -3308,6 +3345,7 @@ No favorite maps yet
 No filter
 No functions bound
 No input device available
+No limit
 No local saves file found (ddnet-saves.txt)
 No local servers found (ports %d-%d)
 No login required
@@ -3432,7 +3470,8 @@ Offline
 OK
 Ok
 Old chat style: no tee icons, no background
-Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else.
+Old files are deleted once the save limit is reached, so copy any demo you want to keep somewhere else. The pose screenshot pixel budget is not here: it is a render option in the .poses file dialog.
+Old single-segment hook collision line
 Oldschool
 On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
@@ -3507,6 +3546,7 @@ Opt-in protection for client-initiated self-kill, with optional auto-enable afte
 Optimistic prediction along stable direction
 Optional
 Optional authentication key for the DNSBL provider
+Optional Axiom API key for scoreboard points and map queries (leave empty for anonymous queries)
 Optional export range in seconds. Leave empty to export the whole demo.
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 Options
@@ -3642,7 +3682,7 @@ Pick a text style or a moon or sun badge, check the preview, then press "Save" t
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
 Pick result: %s
 Pick the key that starts this flow.
-Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode.
+Pick the mode first, then the monitor and resolution. "Render frame rate limit" caps how many frames are drawn when V-Sync is off; "Client update rate" caps how often game logic and input are processed and throttles rendering with it.
 Pick the parts to colorize, then choose a gradient mode and colors.
 Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 Pickup range
@@ -3658,6 +3698,7 @@ Ping
 Ping the current server
 Pistol
 Pistol guide line
+Pixel budget
 Pixel: Layer Shift
 Plain
 Plain capsule
@@ -3827,7 +3868,7 @@ Prediction lead
 Prediction lead is high, check prediction settings and server timing
 Prediction margin
 Prediction margin when frozen
-Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
+Prediction trades accuracy for responsiveness; upstream redundancy may triple upload traffic. "Prioritize game traffic" only tags packets on Windows and needs a QoS-aware router to have any effect.
 Preparing chat export: %d%%
 Preparing demo playback
 Preset %d
@@ -3893,6 +3934,7 @@ Print broadcast messages to console
 Print command executed by this keybinding or all binds
 Print command executed by this name or all chat binds
 Print daily messages to console
+Prioritize game traffic (QoS, Windows only)
 Prioritize outgoing game traffic on Windows (best effort)
 Privately messages someone's current time in this current running race (your time by default)
 Privately shows you your current time in this current running race in the broadcast message
@@ -3907,6 +3949,8 @@ Progress bar location
 Progress bar width
 Project and community websites
 Projectile / explosion range
+ProRes profile
+ProRes profile for 4:4:4 input; other encoders ignore it.
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 Protect names and skins while streaming
 PTT release delay (ms)
@@ -4083,7 +4127,6 @@ Reflected gradient
 Refresh
 Refresh interval
 Refresh isolated serverlist consumer
-Refresh Rate
 Refresh the demo list
 Regex
 Region
@@ -4181,6 +4224,7 @@ Render demo content only during video export (hide HUD, chat and spectator overl
 Render demo only
 Render entity text data
 Render entity text data in editor
+Render frame rate limit
 Render ghosts as circles
 Render ghosts as circles instead of Tee
 Render graphics when window is in background
@@ -4374,8 +4418,6 @@ Save loaded; the local record could not be removed.
 Save phrase
 Save player names in replay
 Save PNG copy
-Save power by lowering update rate
-Save power by lowering update rate (higher input latency)
 Save replay of best time per game
 Save restore dismissed.
 Save restore stopped without confirming success. The local record was kept.
@@ -4402,6 +4444,7 @@ Saves file
 Saving…
 Say in chat
 Say in team chat
+Scale cursor distance with resolution
 Scale down other Tees as well
 Scale down Tee
 Scale max mouse distance to 1000 for better aim
@@ -4476,6 +4519,8 @@ SecretId
 SecretKey
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 See you at the next checkpoint.
+Segment length (s)
+Segment warmup (ticks)
 Select a body part, change its sprite or color, then save the skin.
 Select a configuration package to preview its contents.
 Select a map
@@ -4487,6 +4532,7 @@ Select button by touch
 Select export
 Select map
 Select map for the pose file
+Select several name plate blocks in the preview and move them together
 Select the country flag for each player
 Selected %d
 Selected candidate %d/%d under cursor.
@@ -4597,7 +4643,7 @@ Sets laser colors for weapons and entities.
 Sets master, music and game volume separately.
 Sets one of the two rescue modes (auto or manual). Prints current mode if no arguments provided
 Sets player and dummy name, clan and identity information.
-Sets the client update rate, whether the main menu is skipped, and opens the folders for settings, saves and themes.
+Sets the client update rate to 480 Hz (0 = unlimited)
 Sets the position, size and text style of the status bar.
 Sets the scale of the in-game cursor.
 Sets the size of the finished video; "Follow window" uses the current render resolution.
@@ -4620,6 +4666,8 @@ Settings, binds, profiles, chat binds and the war list are included. Select addi
 Severe
 Shape
 Shape, colors and text shared by the whole interface
+Share layout with dummy
+Share name plate offsets between own tee and dummy (0=separate)
 Share of the server browser name/map split given to the name column (per mille)
 Sharpen
 Short pain voice
@@ -4633,12 +4681,11 @@ Shotgun laser inner color
 Shotgun Laser Outline Color
 Shotgun laser outline color
 Show %s group
+Show a distance link between main tee and dummy
 Show a ghost of your best time after crossing the start line
 Show a MomentCap .poses file in game (no export)
 Show a per-character wave on text titles locally
 Show a small view of the dummy
-Show advanced nameplate settings without changing effect values
-Show advanced options
 Show advanced translation options
 Show air jump indicator
 Show all
@@ -4707,6 +4754,7 @@ Show dummy angle in movement info HUD
 Show dummy control status
 Show dummy copy status
 Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
+Show dummy distance link
 Show dummy mini view only when other tee leaves current view
 Show dummy mini view window
 Show dummy position in movement info HUD
@@ -4748,6 +4796,7 @@ Show generated skin outline for local tees
 Show generated skin outline for other tees
 Show ghost
 Show ghost at unpredictable position of other players
+Show ghost direction
 Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out
 Show Gores drown board
 Show graphics library warnings and errors if GPU supports (0 = none, 1 = minimal, 2 = impacting performance, 3 = verbose, 4 = all).
@@ -4868,6 +4917,7 @@ Show own player's hook collision line
 Show path
 Show pause/play indicator when changing
 Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
+Show pending crash reports on startup
 Show per-character title waves locally
 Show performance graphs.
 Show pet
@@ -4901,6 +4951,7 @@ Show region rankings in /rank, /top5, and /top5team.
 Show score
 Show scoreboard
 Show scoreboard after death
+Show seconds in local time
 Show seconds on clock
 Show server chat messages
 Show server help and usage messages
@@ -4950,6 +5001,7 @@ Show the occasional sponsor reminder in the main menu
 Show the original text locally below translated outgoing messages
 Show the pet
 Show the practice run timer in the HUD
+Show the reason in name plates
 Show the screen center line
 Show the server rules
 Show tiles layers from BG map
@@ -4995,6 +5047,7 @@ Shows a translated copy of received chat lines and can translate your own messag
 Shows each player's latest chat message in a bubble above their head, in addition to the chat box.
 Shows five points of the global point ladder beginning with rank i (1 by default)
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
+Shows FPS, frame time, RTT and prediction lead. Frame-time bars above the guide exceed the 60 FPS frame budget.
 Shows fractional position numbers for edge jumps as on-screen text, so you can time a jump at the right spot.
 Shows gameplay information for this server
 Shows help to command r, general help if left blank
@@ -5088,8 +5141,10 @@ Smooth Dynamic Camera
 Smooth fade
 Smooth free spectator camera
 Smooth other players' predicted movement
+Smooth prediction margin
 Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 Smooth scroll animation duration in menu/editor (ms, 0=off)
+Smooth sudden prediction margin corrections caused by ping spikes
 Smooth the mouse-driven camera in live and demo free spectating
 Smooth zoom animation time in editor (in ms, 0=off)
 Smoothness of multi-view zoom (in ms, higher = slower)
@@ -5098,9 +5153,6 @@ Snap title bob offset to whole pixels (sharper glyphs, choppier motion)
 Snapshot Age
 Snapshot age
 Snapshot Latency
-Snapshot payload
-Snapshot rate
-Snapshot tick gap
 Social
 SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
@@ -5167,6 +5219,7 @@ Speed:
 Sphere
 Spin pop
 Split main and dummy into different teams for solo-run sync
+Split the exported video into segments of this length. 0 writes a single file. Segments disable B-frames so they can be joined without timestamp errors.
 Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
 Sponsor code
 Sponsor code already claimed
@@ -5508,6 +5561,7 @@ The selected part stays highlighted while you adjust its color.
 The server is running a non-standard tuning on a pure game type.
 The server rejected the map upload.
 The two keys that cast your vote: one for yes and one for no.
+The update-rate and frame-rate caps moved to the Graphics page; they belong next to the rendering settings, not here.
 The watermarked screenshot was saved next to the original
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 Theme
@@ -5574,11 +5628,13 @@ Tick "Show Gores drown board"; set "Players shown" and "Card opacity", and add "
 Tick "Show hitbox mode", choose the ranges you need, then set "Player range" to "Local only", "Local + Dummy" or "All players".
 Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "Opacity" and the position sliders.
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
+Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 Tick delay before executing qm_execute_on_join
 Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"; "Lock delay" and "Spectator opacity" appear below.
 Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
 Ticks after freeze before applying max prediction reduction
+Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second.
 tile
 Tile outlines
 Tile watermark
@@ -5777,9 +5833,9 @@ Turn on "Enable rotation", set "Switch interval" in milliseconds, then add skins
 Turn on "Enable word filter list", type the words into "Word Filter" separated by commas, then choose "Replace mode" or "Hide player messages" under "Behavior".
 Turn on "Enable Zen mode", pick what to hide under "Interface", "Players", "Visuals", "Audio" and "Chat", then set the "Zen mode key" for quick switching.
 Turn on "Message merging" in Dream Features.
+Turn on "Nameplate text effects", open "Personal adjustments", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
 Turn on "New IME" for the new bar and "Auto manage IME while typing" to switch input mode with the chat box; edit colors under "Edit color".
 Turn on "Notify when friends come online" and "Auto refresh server list", then tune "Refresh interval"; "Auto greet friends entering map" is optional.
-Turn on "Show advanced options", then enable "Border", "Gradient", "Rainbow" or "Glow" and set the matching ranges and colors.
 Turn on "Show chat bubbles above players", then adjust "Duration", "Bubble opacity" and "Font size", or pick your own colors.
 Turn on "Show hook strength icon indicator", optionally add "Show hook strength number indicator", then choose a "Hook strength scope".
 Turn on "Show important server prompts as notifications" or "Route Echo messages to notifications", then set "Notification hold time" and "Notification text size".
@@ -5885,6 +5941,7 @@ Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 Unknown sponsor chat style
 Unknown status
 Unknown title style
+Unlimited
 Unload the rank ghost
 Unlock a team
 Unlock the team
@@ -5917,7 +5974,6 @@ Update failed. Please try again
 Update keyframe
 Update notice
 Update or add a specific war group
-Update Rate
 Update ready to install
 Update sources are temporarily unavailable
 Updated this configuration.
@@ -5982,6 +6038,7 @@ Use pre-input to predict other players for more accurate input prediction
 Use procedural ring pipeline
 Use public word filter
 Use server defaults
+Use skin color for frozen feet
 Use skin color for frozen Tee's feet
 Use skin color when Tee is frozen
 Use sounds
@@ -6172,6 +6229,7 @@ Whether players can pause their character.
 Whether players can use the showother command
 Whether players see all tees by default
 Whether players see others by default (own team = 2)
+Whether the main menu is skipped, the community map tags, crash reports on startup, and the folders for settings, saves and themes.
 Whether to control dummy simultaneously (cl_dummy_jump, cl_dummy_fire, cl_dummy_hook)
 Whether to limit zoom in editor (0=unlimited)
 Whether to publish player scores.
@@ -6222,6 +6280,7 @@ Word list exceeds 100000 unique entries.
 Word list file
 Word list file exceeds 2 MiB.
 Word list must be UTF-8 text without NUL characters.
+Worker threads that convert captured frames to the encoder pixel format. 2-4 is enough for most CPUs; more threads only help when the encoder is fast.
 World lyrics
 Write local console contents to a text file
 Write performance debug logs to dedicated file

@@ -2401,6 +2401,7 @@ set(EXPECTED_DATA
   skins/tuzi.png
   skins/twinbop.png
   skins/twintri.png
+  skins/vaporeon_acqua.png
   skins/veteran.png
   skins/voodoo_tee.png
   skins/warpaint.png
@@ -3626,6 +3627,8 @@ if(CLIENT)
     components/qmclient/data_version.h
     components/qmclient/demo_ui.h
     components/qmclient/emoticon_commands.h
+    components/qmclient/dummy_distance_link.cpp
+    components/qmclient/dummy_distance_link.h
     components/qmclient/hammer_hit_detection.cpp
     components/qmclient/hammer_hit_detection.h
     components/qmclient/hook_countdown.h
@@ -3653,6 +3656,8 @@ if(CLIENT)
     components/qmclient/map_download_index.h
     components/qmclient/map_preview_panel.cpp
     components/qmclient/map_preview_panel.h
+    components/qmclient/map_image_decode_job.cpp
+    components/qmclient/map_image_decode_job.h
     components/qmclient/vote_map_library.cpp
     components/qmclient/vote_map_library.h
     components/qmclient/server_vote_list.h
@@ -4176,6 +4181,7 @@ if(CLIENT)
     envelope_manager.h
     map_preview_common.cpp
     map_preview_common.h
+    map_load_task.h
     map_renderer.cpp
     map_renderer.h
     qm_entity_overlay_build_plan.h
@@ -5100,6 +5106,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_console_slide_test.cpp
     src/test/unit/qmclient/client/qm_streamer_word_filter_test.cpp
     src/test/unit/qmclient/client/qm_map_tags_test.cpp
+    src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp
+    src/test/support/map_http_recorder.h
     src/test/integration/qmclient/client/qm_map_tags_lifecycle_test.cpp
     src/test/unit/qmclient/client/qm_public_word_filter_test.cpp
     src/test/unit/qmclient/client/qm_word_filter_list_test.cpp
@@ -5132,6 +5140,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_video_preset_labels_test.cpp
     src/test/unit/client/online_replay_player_test.cpp
     src/test/unit/qmclient/client/qm_jump_hint_utils_test.cpp
+    src/test/unit/qmclient/client/qm_dummy_distance_link_test.cpp
     src/test/unit/qmclient/client/qm_dummy_mini_view_layout_test.cpp
     src/test/unit/qmclient/client/qm_browser_map_preview_test.cpp
     src/test/unit/qmclient/client/qm_map_render_pass_test.cpp
@@ -5203,6 +5212,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_ghost_path_test.cpp
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
+    src/test/unit/qmclient/client/qm_cursor_rotation_test.cpp
+    src/test/unit/qmclient/client/qm_snap_guides_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
     src/test/unit/qmclient/ui/qm_scroll_content_drag_test.cpp
@@ -5450,6 +5461,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/client/skins/skin_source_job_test.cpp
     src/test/integration/client/skins/skin7_info_job_test.cpp
     src/test/unit/client/skin7_resource_lifecycle_test.cpp
+    src/test/integration/client/map_design_tile_skips_test.cpp
+    src/test/integration/client/map_image_decode_test.cpp
+    src/test/integration/client/map_quad_culling_test.cpp
+    src/test/unit/client/map_load_task_test.cpp
     src/test/unit/client/connection_resource_preparation_test.cpp
     src/test/unit/client/skins/skins_preview_layers_test.cpp
     src/test/contract/client/skins/skins_resource_contract_test.cpp
@@ -5533,6 +5548,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/editor/collab_camera.cpp
     src/game/editor/mapitems/envelope.cpp
     src/game/map/envelope_eval.cpp
+    src/game/map/envelope_extrema.cpp
+    src/game/map/render_component.cpp
+    src/game/map/render_layer.cpp
     src/game/map/render_map.cpp
     src/engine/client/backend_threaded.cpp
     src/engine/client/backend/vulkan/backend_vulkan_qm_ext.cpp
@@ -5613,6 +5631,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/map_cover_art.cpp
     src/game/client/components/qmclient/map_covers.cpp
     src/game/client/components/qmclient/map_difficulty_catalog.cpp
+    src/game/client/components/qmclient/map_image_decode_job.cpp
     src/game/client/components/qmclient/vote_map_library.cpp
     src/game/client/components/qmclient/vote_map_loader.cpp
     src/game/client/components/qmclient/hammer_hit_detection.cpp

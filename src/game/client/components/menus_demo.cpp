@@ -1048,6 +1048,69 @@ void CMenus::RenderDemoEncodeSettings(CUIRect View)
 		g_Config.m_ClVideoRecorderFPS = NewFps;
 	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClVideoRecorderFPS, &Row, Localize("Recorded frame rate; higher is smoother and larger"));
 	Ui()->DoLabel(&RangeHint, "1-1000", FontSize, TEXTALIGN_MR, {.m_MaxWidth = RangeHint.w - 2.0f});
+
+	// 导出管线参数：缓冲线程、采集队列、分段，以及 ProRes 档位。
+	// 这些只在启动导出时读取，因此即时写回配置即可，不需要额外的「应用」按钮。
+	const auto DoPipelineIntRow = [&](const char *pLabel, CLineInputNumber &Input, int *pValue, int Min, int Max, const char *pHint, const char *pTip) {
+		CUIRect PipelineControl, PipelineField, PipelineValue, PipelineHint;
+		TwoColumn(qm_demo_ui::RENDER_ROW_HEIGHT, pLabel, &PipelineControl);
+		PipelineControl.VSplitRight(TierWidth, &PipelineField, &PipelineHint);
+		PipelineHint.VSplitLeft(4.0f, nullptr, &PipelineHint);
+		PipelineField.VSplitRight(ValueWidth, &PipelineField, &PipelineValue);
+		PipelineValue.VSplitLeft(4.0f, nullptr, &PipelineValue);
+		ui_widget::STextFieldOptions PipelineOptions;
+		PipelineOptions.m_FontSize = FontSize;
+		PipelineOptions.m_TextAlign = TEXTALIGN_MC;
+		ui_widget::IntegerField(EncodeInputCtx, &Input, pValue, Min, Max, PipelineValue, PipelineOptions);
+		GameClient()->m_Tooltips.DoToolTip(pValue, &Row, pTip);
+		Ui()->DoLabel(&PipelineHint, pHint, FontSize, TEXTALIGN_MR, {.m_MaxWidth = PipelineHint.w - 2.0f});
+	};
+	static CLineInputNumber s_ConvertThreadsInput;
+	DoPipelineIntRow(Localize("Convert threads"), s_ConvertThreadsInput, &g_Config.m_QmVideoConvertThreads, 1, 8, "1-8",
+		Localize("Worker threads that convert captured frames to the encoder pixel format. 2-4 is enough for most CPUs; more threads only help when the encoder is fast."));
+	static CLineInputNumber s_QueueFramesInput;
+	DoPipelineIntRow(Localize("Capture queue"), s_QueueFramesInput, &g_Config.m_QmVideoQueueFrames, 2, 32, "2-32",
+		Localize("Frames buffered between capture and encoding. Deeper queues absorb slow encoder frames at the cost of memory; lower values apply back-pressure earlier."));
+	static CLineInputNumber s_SegmentSecondsInput;
+	DoPipelineIntRow(Localize("Segment length (s)"), s_SegmentSecondsInput, &g_Config.m_QmVideoSegmentSeconds, 0, 3600, "0-3600",
+		Localize("Split the exported video into segments of this length. 0 writes a single file. Segments disable B-frames so they can be joined without timestamp errors."));
+	static CLineInputNumber s_SegmentWarmupInput;
+	DoPipelineIntRow(Localize("Segment warmup (ticks)"), s_SegmentWarmupInput, &g_Config.m_QmVideoSegmentWarmup, 0, 500, "0-500",
+		Localize("Ticks played without recording before each segment so effects and chat state match the segment start. 50 ticks equal one second."));
+
+	// ProRes 档位：-1 = 自动（4:4:4 输入用 4444，其余用 HQ）。
+	static const int s_aProresValues[] = {-1, 0, 1, 2, 3, 4, 5};
+	static const char *const s_apProresLabels[] = {
+		Localize("Auto"),
+		"Proxy",
+		"LT",
+		"422",
+		"HQ",
+		"4444",
+		"4444XQ",
+	};
+	int ProresIndex = 0;
+	for(int i = 0; i < (int)std::size(s_aProresValues); ++i)
+	{
+		if(s_aProresValues[i] == g_Config.m_QmVideoProresProfile)
+		{
+			ProresIndex = i;
+			break;
+		}
+	}
+	CUIRect ProresControl, ProresHint;
+	TwoColumn(qm_demo_ui::RENDER_ROW_HEIGHT, Localize("ProRes profile"), &ProresControl);
+	ProresControl.VSplitRight(TierWidth, &ProresControl, &ProresHint);
+	ProresHint.VSplitLeft(4.0f, nullptr, &ProresHint);
+	static CUi::SDropDownState s_ProresDropDownState;
+	CUi::SDropDownProperties ProresDropDownProps;
+	ProresDropDownProps.m_FontSize = FontSize;
+	const int NewProres = Ui()->DoDropDown(&ProresControl, ProresIndex, s_apProresLabels, (int)std::size(s_apProresLabels), s_ProresDropDownState, ProresDropDownProps);
+	if(NewProres != ProresIndex)
+		g_Config.m_QmVideoProresProfile = s_aProresValues[NewProres];
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmVideoProresProfile, &Row,
+		Localize("ProRes profile for 4:4:4 input; other encoders ignore it."));
+	Ui()->DoLabel(&ProresHint, g_Config.m_QmVideoProresProfile < 0 ? Localize("Auto") : s_apProresLabels[ProresIndex], FontSize, TEXTALIGN_MR, {.m_MaxWidth = ProresHint.w - 2.0f});
 	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
 }
 
@@ -4923,10 +4986,11 @@ void CMenus::RenderQmPoseHud(CUIRect MainView)
 		const qm_pose_map::EOutput Output = PoseMap.m_RenderOutput == 1 ? qm_pose_map::EOutput::WEBP : qm_pose_map::EOutput::PNG;
 		const std::string MapLabel = pMapName[0] != '\0' ? qm_pose_map::DisplayName(pMapName) : std::string(Localize("No map"));
 		// 目标尺寸和拍摄走同一份计算：超过像素预算时这里先显示降级后的真实倍数，
-		// 玩家不会以为选了 4x 就真出了 4 倍图。
+		// 玩家不会以为选了 4x 就真出了 4 倍图。预算与抓帧共用 ConfiguredPixelBudget，
+		// 否则这里按旧的 8K 常量算、实际抓帧按配置算，显示和出图会对不上。
 		const qm_pose::SCaptureSize Captured = qm_pose::ComputeCaptureSize(
 			Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), PoseMap.m_RenderScale,
-			qm_pose::MAX_CAPTURE_DIMENSION, qm_pose::MAX_CAPTURE_PIXELS);
+			qm_pose::MAX_CAPTURE_DIMENSION, qm_pose::ConfiguredPixelBudget(g_Config.m_QmPoseCaptureMaxMegapixels));
 		const int EffectiveScale = Captured.m_Width > 0 ? Captured.m_Scale : PoseMap.m_RenderScale;
 		const int OutputWidth = Captured.m_Width > 0 ? Captured.m_Width : Graphics()->ScreenWidth();
 		const int OutputHeight = Captured.m_Height > 0 ? Captured.m_Height : Graphics()->ScreenHeight();
@@ -5325,6 +5389,24 @@ void CMenus::RenderQmPoseMapPopup(CUIRect View)
 		const IUiContext SharpenCtx = ui_widget::ControlContext(Ui());
 		if(ui_widget::DiscreteSlider(SharpenCtx, &s_PoseSharpenSliderId, s_PoseSharpenSliderState, &State.m_RenderSharpen, 0, 60, SharpenRow))
 			g_Config.m_QmPoseSharpen = State.m_RenderSharpen;
+
+		// 像素预算：超采样撞到显存/编码上限时的降级阈值，只影响这一次出图。
+		// 和输出格式、倍数、锐化同属「出图」参数，所以跟着它们走，
+		// 不放在回放卡片的常驻行上（那个位置会让人以为它管普通截图）。
+		const float BudgetTop = SharpenTop + qm_demo_ui::POSE_MAP_ROW_HEIGHT + qm_demo_ui::POSE_MAP_GAP;
+		CUIRect BudgetLabel = {View.x, BudgetTop, 110.0f, qm_demo_ui::POSE_MAP_ROW_HEIGHT};
+		char aBudgetLabel[96];
+		if(g_Config.m_QmPoseCaptureMaxMegapixels > 0)
+			str_format(aBudgetLabel, sizeof(aBudgetLabel), "%s: %d MP", Localize("Pixel budget"), g_Config.m_QmPoseCaptureMaxMegapixels);
+		else
+			str_format(aBudgetLabel, sizeof(aBudgetLabel), "%s: %s", Localize("Pixel budget"), Localize("Unlimited"));
+		Ui()->DoLabel(&BudgetLabel, aBudgetLabel, 12.0f, TEXTALIGN_ML);
+		CUIRect BudgetRow = {View.x + 110.0f, BudgetTop, View.w - 110.0f, qm_demo_ui::POSE_MAP_ROW_HEIGHT};
+		BudgetRow.HMargin(4.0f, &BudgetRow);
+		static ui_widget::SDiscreteSliderState s_PoseBudgetSliderState;
+		static const int s_PoseBudgetSliderId = 0;
+		const IUiContext BudgetCtx = ui_widget::ControlContext(Ui());
+		ui_widget::DiscreteSlider(BudgetCtx, &s_PoseBudgetSliderId, s_PoseBudgetSliderState, &g_Config.m_QmPoseCaptureMaxMegapixels, 0, 300, BudgetRow);
 	}
 
 	const std::vector<QmMapUpload::SMapFile> &vRows = Searching ? State.m_vMatches : State.m_vEntries;
