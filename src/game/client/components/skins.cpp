@@ -50,6 +50,7 @@ static constexpr const char *DEFAULT_DDSTATS_SKIN_URL = "https://skins.ddstats.t
 static constexpr int SKIN_CATALOG_MERGE_BUDGET = 256;
 static constexpr int MAX_ACTIVE_SKIN_DOWNLOAD_SESSIONS = 48;
 static constexpr int MAX_BACKGROUND_SKIN_DOWNLOAD_SESSIONS = 16;
+static constexpr int MAX_WAIT_LOG_THROTTLES = 8;
 static constexpr int64_t SKIN_SOURCE_WAIT_LOG_INTERVAL_NS = 1'000'000'000;
 static constexpr int64_t SKIN_SOURCES_SAVE_INTERVAL_NS = 1'000'000'000;
 
@@ -223,12 +224,44 @@ static void LogSettingsSkinSourceWaitEvent(const char *pSkinName, const char *pR
 		char m_aReason[32] = {};
 		int m_Suppressed = 0;
 	};
-	static SWaitLogThrottle s_Throttle;
-	const int64_t NowNs = time_get_nanoseconds().count();
-	const bool SameReason = pReason != nullptr && str_comp(pReason, s_Throttle.m_aReason) == 0;
-	if(!SettingsSkinWaitLogShouldEmit(NowNs, s_Throttle.m_LastNs, SKIN_SOURCE_WAIT_LOG_INTERVAL_NS, SameReason))
+	// 每个等待原因独立限流：原因交替出现时，单槽实现会每次都换原因而绕过限制。
+	static SWaitLogThrottle s_aThrottles[MAX_WAIT_LOG_THROTTLES];
+	const char *pThrottleReason = pReason != nullptr ? pReason : "none";
+	SWaitLogThrottle *pThrottle = nullptr;
+	for(SWaitLogThrottle &Throttle : s_aThrottles)
 	{
-		++s_Throttle.m_Suppressed;
+		if(str_comp(Throttle.m_aReason, pThrottleReason) == 0)
+		{
+			pThrottle = &Throttle;
+			break;
+		}
+	}
+	if(pThrottle == nullptr)
+	{
+		for(SWaitLogThrottle &Throttle : s_aThrottles)
+		{
+			if(Throttle.m_aReason[0] == '\0')
+			{
+				pThrottle = &Throttle;
+				break;
+			}
+		}
+	}
+	if(pThrottle == nullptr)
+	{
+		int OldestIndex = 0;
+		for(int Index = 1; Index < MAX_WAIT_LOG_THROTTLES; ++Index)
+		{
+			if(s_aThrottles[Index].m_LastNs < s_aThrottles[OldestIndex].m_LastNs)
+				OldestIndex = Index;
+		}
+		pThrottle = &s_aThrottles[OldestIndex];
+		*pThrottle = {};
+	}
+	const int64_t NowNs = time_get_nanoseconds().count();
+	if(!SettingsSkinWaitLogShouldEmit(NowNs, pThrottle->m_LastNs, SKIN_SOURCE_WAIT_LOG_INTERVAL_NS))
+	{
+		++pThrottle->m_Suppressed;
 		return;
 	}
 	char aPayload[256];
@@ -237,11 +270,11 @@ static void LogSettingsSkinSourceWaitEvent(const char *pSkinName, const char *pR
 		pReason != nullptr ? pReason : "none",
 		RemainingUploads,
 		MaxUploads,
-		s_Throttle.m_Suppressed);
+		pThrottle->m_Suppressed);
 	QmPerfLogPayload("perf/settings-skin-source", aPayload);
-	s_Throttle.m_LastNs = NowNs;
-	str_copy(s_Throttle.m_aReason, pReason != nullptr ? pReason : "none", sizeof(s_Throttle.m_aReason));
-	s_Throttle.m_Suppressed = 0;
+	pThrottle->m_LastNs = NowNs;
+	str_copy(pThrottle->m_aReason, pThrottleReason, sizeof(pThrottle->m_aReason));
+	pThrottle->m_Suppressed = 0;
 }
 
 static void LogSettingsSkinStartLoadingFallbackSweepEvent(int ItemsTotal, int ItemsScanned, int ItemsStarted, int ItemsSkipped, bool Invoked, double DurationMs, const char *pReason)
@@ -363,6 +396,24 @@ static int SettingsSkinMaxPerFrame(const CGameClient *pGameClient)
 	if(ActiveSettingsTeePage(pGameClient))
 		return pGameClient->m_Skins.SettingsFinalizeBudgetForFrame();
 	return SettingsSkinFinalizeFrameBudget(SettingsFrameContextOrDefault(pGameClient), false);
+}
+
+static float SettingsSkinTargetFrameMs()
+{
+	// 没有显式渲染上限时按 144Hz 计：对 60/75/120Hz 更宽松但不会越帧，
+	// 对 144Hz 正好守住一次刷新间隔。
+	const int RefreshRate = g_Config.m_GfxRefreshRate > 0 ? g_Config.m_GfxRefreshRate : 144;
+	return 1000.0f / (float)maximum(RefreshRate, 30);
+}
+
+// 准入与回收必须共用同一个驻留上限，否则会出现“按 512 准入、按 128 回收”。
+static int SettingsSkinEffectiveCountFuseLimit(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive)
+{
+	const int ConfiguredLimit = maximum(0, g_Config.m_ClSkinsLoadedMax);
+	const size_t ResidencyLimit = TeeSettingsActive ?
+					      (size_t)ConfiguredLimit :
+					      SettingsSkinInactiveResidencyLimit((size_t)ConfiguredLimit);
+	return SettingsSkinSourceCountFuseLimit(Context, TeeSettingsActive, (int)ResidencyLimit);
 }
 
 [[maybe_unused]] static int SettingsSkinGpuUploadUnits(const CGameClient *pGameClient)
@@ -1638,7 +1689,8 @@ void CSkins::OnRender()
 	m_SettingsLoadViewport.BeginFrame();
 	const bool TeeSettingsActive = ActiveSettingsTeePage(GameClient());
 	const int UploadBudgetMs = SettingsSkinUploadTimeBudgetMs(
-		SettingsFrameContextOrDefault(GameClient()), TeeSettingsActive, Client()->RenderFrameTime() * 1000.0f);
+		SettingsFrameContextOrDefault(GameClient()), TeeSettingsActive,
+		Client()->RenderFrameTime() * 1000.0f, SettingsSkinTargetFrameMs());
 	m_SkinUploadFrameBudget.Reset(std::chrono::milliseconds(UploadBudgetMs));
 	// 终局接管与元数据收尾和上传共用同一份帧余量预算。
 	m_SettingsFinalizeTimeBudget = std::chrono::milliseconds(UploadBudgetMs);
@@ -2070,7 +2122,7 @@ void CSkins::UpdateUnloadSkins(CSkinLoadingStats &Stats)
 	const size_t ResidencyLimit = TeeSettingsActive ? ConfiguredLoadedLimit : SettingsSkinInactiveResidencyLimit(ConfiguredLoadedLimit);
 	const size_t SourceBytesBudget = SettingsSkinSourceBytesEstimate(256, 128, 2) * ResidencyLimit;
 	const SSettingsResourceFrameContext FrameContext = SettingsFrameContextOrDefault(GameClient());
-	const int CountFuseLimit = SettingsSkinSourceCountFuseLimit(FrameContext, TeeSettingsActive, g_Config.m_ClSkinsLoadedMax);
+	const int CountFuseLimit = SettingsSkinEffectiveCountFuseLimit(FrameContext, TeeSettingsActive);
 	const bool CountFuseExceeded = CountFuseLimit > 0 && Stats.m_NumPending + Stats.m_NumLoading > (size_t)CountFuseLimit;
 	const bool BytesBudgetExceeded = SourceBytesBudget > 0 && SourceBytesInUse > SourceBytesBudget;
 	const bool ReclaimLoadedSources = BytesBudgetExceeded;
@@ -2245,7 +2297,7 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 	const bool TeeSettingsActive = ActiveSettingsTeePage(GameClient());
 	const SSettingsResourceFrameContext FrameContext = SettingsFrameContextOrDefault(GameClient());
 	const bool BackgroundDrainActive = TeeSettingsActive ? m_SettingsThroughputControllerOutput.m_BackgroundDrainActive : SettingsSkinBackgroundDrainActive(FrameContext, TeeSettingsActive);
-	const int CountFuseLimit = TeeSettingsActive ? m_SettingsThroughputControllerOutput.m_CountFuseLimit : SettingsSkinSourceCountFuseLimit(FrameContext, TeeSettingsActive, g_Config.m_ClSkinsLoadedMax);
+	const int CountFuseLimit = TeeSettingsActive ? m_SettingsThroughputControllerOutput.m_CountFuseLimit : SettingsSkinEffectiveCountFuseLimit(FrameContext, false);
 	const int NormalLoadingWindow = TeeSettingsActive ? m_SettingsThroughputControllerOutput.m_NormalLoadingWindow : SettingsSkinSourceLoadNormalWindow(FrameContext, TeeSettingsActive, g_Config.m_ClSkinsLoadedMax);
 	const int VisibleLoadingWindow = TeeSettingsActive ? m_SettingsThroughputControllerOutput.m_VisibleLoadingWindow : SettingsSkinSourceLoadVisibleWindow(FrameContext, TeeSettingsActive, g_Config.m_ClSkinsLoadedMax);
 	m_SettingsSourceAdmissionTelemetry = {};

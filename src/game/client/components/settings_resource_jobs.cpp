@@ -485,7 +485,7 @@ bool SettingsSkinBackgroundDrainActive(const SSettingsResourceFrameContext &Cont
 	       Context.m_HighPrioritySettled;
 }
 
-int SettingsSkinUploadTimeBudgetMs(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive, float RenderFrameTimeMs)
+int SettingsSkinUploadTimeBudgetMs(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive, float RenderFrameTimeMs, float TargetFrameMs)
 {
 	if(!TeeSettingsActive)
 		return 1;
@@ -496,13 +496,15 @@ int SettingsSkinUploadTimeBudgetMs(const SSettingsResourceFrameContext &Context,
 		BudgetMs = SettingsRecoveryBudget(Context, 1, 3);
 	else if(SettingsSkinBackgroundDrainActive(Context, TeeSettingsActive))
 		BudgetMs = 3;
-	// 上传预算只能在帧余量内加码：帧耗时已接近刷新间隔时退回 1ms，
-	// 否则提高吞吐只会把长帧变成可见卡顿。
-	if(RenderFrameTimeMs >= 8.0f)
+	// 上传预算必须落在本帧真实余量内，而不是只看一个固定门槛：目标帧间隔
+	// 减去已用渲染时间，再留 0.5ms 给提交与系统调度。144Hz 下渲染 5ms 时
+	// 只剩约 1.4ms，不能仍按 3ms 上传。
+	if(TargetFrameMs <= 0.0f)
 		return 1;
-	if(RenderFrameTimeMs >= 6.0f)
-		return minimum(BudgetMs, 2);
-	return BudgetMs;
+	const float HeadroomMs = TargetFrameMs - RenderFrameTimeMs - 0.5f;
+	if(HeadroomMs < 1.0f)
+		return 1;
+	return minimum(BudgetMs, (int)HeadroomMs);
 }
 
 int SettingsSkinBackgroundRequestFrameBudget(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive)

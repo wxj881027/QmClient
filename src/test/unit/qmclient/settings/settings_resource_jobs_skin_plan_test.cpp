@@ -129,11 +129,10 @@ TEST(SettingsResourceJobsSkinPlan, DownloadSessionLimitAndWaitLoggingAreBounded)
 	EXPECT_FALSE(SettingsSkinCanStartDownloadSession(48, 48));
 	EXPECT_TRUE(SettingsSkinCanStartDownloadSession(999, 0));
 
-	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(10, 0, 10, false));
-	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(10, 0, 10, true));
-	EXPECT_FALSE(SettingsSkinWaitLogShouldEmit(19, 10, 10, true));
-	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(20, 10, 10, true));
-	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(11, 10, 10, false));
+	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(10, 0, 10));
+	EXPECT_FALSE(SettingsSkinWaitLogShouldEmit(19, 10, 10));
+	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(20, 10, 10));
+	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(11, 0, 10));
 }
 
 TEST(SettingsResourceJobsSkinPlan, LeavingSettingsUsesBoundedResidency)

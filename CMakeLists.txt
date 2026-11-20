@@ -6045,6 +6045,7 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_render_layer_batch_benchmark.cpp
     src/test/benchmark/qm_font_raster_benchmark.cpp
     src/test/benchmark/qm_font_search_benchmark.cpp
+    src/test/benchmark/qm_skin_sort_benchmark.cpp
     src/game/client/QmUi/QmDropdown.cpp
     src/test/benchmark/qm_icon_render_benchmark.cpp
     src/engine/client/text.cpp

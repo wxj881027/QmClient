@@ -488,7 +488,7 @@ int SettingsSkinGpuUploadUnits(bool TeeSettingsActive);
 int SettingsSkinFinalizeFrameBudget(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinGpuUploadFrameUnits(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinGpuUploadLimiterUnits(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
-int SettingsSkinUploadTimeBudgetMs(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive, float RenderFrameTimeMs);
+int SettingsSkinUploadTimeBudgetMs(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive, float RenderFrameTimeMs, float TargetFrameMs);
 bool SettingsSkinBackgroundDrainActive(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinBackgroundRequestFrameBudget(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 SSettingsSkinBackgroundRequestBudgetOutput SettingsSkinBackgroundRequestBudgetDecision(const SSettingsSkinBackgroundRequestBudgetInput &Input);
@@ -534,9 +534,10 @@ constexpr bool SettingsSkinShouldAdmitLoading(int LoadingCount, int Limit)
 {
 	return Limit <= 0 || LoadingCount < Limit;
 }
-constexpr bool SettingsSkinWaitLogShouldEmit(int64_t Now, int64_t Last, int64_t Interval, bool SameReason)
+// 每个等待原因各自持有时间槽；原因交替出现时也必须分别限流。
+constexpr bool SettingsSkinWaitLogShouldEmit(int64_t Now, int64_t Last, int64_t Interval)
 {
-	return !SameReason || Last == 0 || Now - Last >= Interval;
+	return Last == 0 || Now - Last >= Interval;
 }
 constexpr bool SettingsSkinFallbackSweepShouldRun(bool HasUsageRequests, bool HasBackgroundRequests)
 {

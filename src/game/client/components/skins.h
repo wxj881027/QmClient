@@ -22,6 +22,7 @@
 #include <game/client/components/qmclient/skin_name_index.h>
 #include <game/client/components/qmclient/skin_prepared_textures.h>
 #include <game/client/components/qmclient/skin_prepared_visuals.h>
+#include <game/client/components/qmclient/skin_sort_policy.h>
 #include <game/client/components/qmclient/skin_source.h>
 #include <game/client/components/qmclient/skin_source_job.h>
 #include <game/client/components/qmclient/skin_source_registry.h>
@@ -386,32 +387,6 @@ public:
 	private:
 		bool m_Pending = false;
 	};
-
-	// 时间排序的取值比较：目录来源（下载/目录索引）的 LastModified 会在下载完成时
-	// 刷新；若参与排序，浏览 7k 条目时每下载成功一张就会重排整个列表，把用户正在
-	// 看的位置换成别的皮肤。只有双方都是本地文件时才用修改时间。
-	enum class ESkinSortOrder
-	{
-		LESS,
-		GREATER,
-		EQUAL_KEYS,
-	};
-	static constexpr ESkinSortOrder SkinListValueOrder(bool LeftFavorite, bool RightFavorite,
-		int LeftReleaseDate, int RightReleaseDate,
-		time_t LeftModified, time_t RightModified,
-		bool LeftLocalSource, bool RightLocalSource, bool SortByTime)
-	{
-		if(LeftFavorite != RightFavorite)
-			return LeftFavorite ? ESkinSortOrder::LESS : ESkinSortOrder::GREATER;
-		if(SortByTime)
-		{
-			if(LeftReleaseDate != RightReleaseDate)
-				return LeftReleaseDate > RightReleaseDate ? ESkinSortOrder::LESS : ESkinSortOrder::GREATER;
-			if(LeftLocalSource && RightLocalSource && LeftModified != RightModified)
-				return LeftModified > RightModified ? ESkinSortOrder::LESS : ESkinSortOrder::GREATER;
-		}
-		return ESkinSortOrder::EQUAL_KEYS;
-	}
 
 	/**
 	 * Represents a skin being displayed in a list in the UI.
