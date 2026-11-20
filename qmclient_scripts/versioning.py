@@ -66,18 +66,29 @@ def version_from_header(source: str) -> ReleaseVersion:
 	return parse_version(base[1] + suffix)
 
 
-def next_preview_tag(current: ReleaseVersion, head: str, tags: list[tuple[str, str]]) -> str:
-	target = current.base if current.preview else f"{current.major}.{current.sequence + 1}"
-	candidates: list[tuple[ReleaseVersion, str]] = []
+def preview_tag_for_build(current: ReleaseVersion, head: str, tags: list[tuple[str, str]], build_number: int) -> str:
+	"""按 CI 构建序号选出预览 Tag。
+
+	预览批次不再写进源码：新提交使用构建序号，同一提交重跑复用已有 Tag；
+	构建序号低于仓库里已有批次时取「最大批次 + 1」，保证编号始终前进。
+	基础版本已经打过正式版时直接报错，避免产出比已发布版本更旧的预览。
+	"""
+	if build_number <= 0:
+		raise ValueError("构建序号必须为正整数")
+	highest = 0
+	reused: list[ReleaseVersion] = []
 	for tag, commit in tags:
 		try:
 			version = parse_version(tag)
 		except ValueError:
 			continue
-		if version.base == target and version.preview:
-			candidates.append((version, commit))
-	for version, commit in sorted(candidates, reverse=True):
+		if version.base != current.base:
+			continue
+		if not version.preview:
+			raise ValueError(f"{current.base} 已发布正式版，请先用 --tag 提升 QMCLIENT_BASE_VERSION")
+		highest = max(highest, version.preview)
 		if commit == head:
-			return version.tag
-	number = max((version.preview for version, _ in candidates), default=0) + 1
-	return f"v{target}-preview.{number}"
+			reused.append(version)
+	if reused:
+		return max(reused).tag
+	return f"v{current.base}-preview.{max(build_number, highest + 1)}"

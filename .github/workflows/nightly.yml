@@ -25,12 +25,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Select next preview or reuse this commit's tag
+      - name: Select preview tag from the CI build number
         id: version
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="$(python3 qmclient_scripts/bump_version.py --next-preview-tag)"
+          TAG="$(python3 qmclient_scripts/bump_version.py --ci-preview-tag "$GITHUB_RUN_NUMBER")"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = false ]; then
             echo "publish=false" >> "$GITHUB_OUTPUT"

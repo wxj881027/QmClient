@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest import mock
 
 from qmclient_scripts import bump_version
-from qmclient_scripts.versioning import next_preview_tag, parse_version, version_from_header
+from qmclient_scripts.versioning import parse_version, preview_tag_for_build, version_from_header
 
 
 class BumpVersionTest(unittest.TestCase):
@@ -81,12 +81,26 @@ class BumpVersionTest(unittest.TestCase):
 			with self.subTest(tag=tag), self.assertRaises(ValueError):
 				bump_version.normalize_version(None, tag)
 
-	def test_preview_retries_reuse_the_same_tag_and_new_commits_increment(self) -> None:
-		tags = [("v3.4-preview.1", "first"), ("v3.4-preview.2", "second"), ("nightly", "third")]
-		self.assertEqual(next_preview_tag(parse_version("3.3"), "second", tags), "v3.4-preview.2")
-		self.assertEqual(next_preview_tag(parse_version("3.3"), "third", tags), "v3.4-preview.3")
-		self.assertEqual(next_preview_tag(parse_version("3.4"), "fourth", tags), "v3.5-preview.1")
-		self.assertEqual(next_preview_tag(parse_version("3.4-preview.2"), "third", tags), "v3.4-preview.3")
+	def test_ci_build_number_selects_a_preview_tag(self) -> None:
+		tags = [("v3.4-preview.1", "first"), ("v3.4-preview.2", "second")]
+		self.assertEqual(preview_tag_for_build(parse_version("3.4"), "third", tags, 812), "v3.4-preview.812")
+
+	def test_ci_rerun_on_the_same_commit_reuses_its_tag(self) -> None:
+		tags = [("v3.4-preview.5", "older"), ("v3.4-preview.812", "head")]
+		self.assertEqual(preview_tag_for_build(parse_version("3.4"), "head", tags, 813), "v3.4-preview.812")
+
+	def test_ci_build_number_never_moves_behind_existing_previews(self) -> None:
+		tags = [("v3.4-preview.900", "older"), ("v3.3-preview.950", "older")]
+		self.assertEqual(preview_tag_for_build(parse_version("3.4"), "head", tags, 800), "v3.4-preview.901")
+
+	def test_ci_build_number_must_be_positive(self) -> None:
+		with self.assertRaises(ValueError):
+			preview_tag_for_build(parse_version("3.4"), "head", [], 0)
+
+	def test_ci_refuses_to_preview_an_already_released_base(self) -> None:
+		tags = [("v3.4", "released"), ("v3.4-preview.5", "older")]
+		with self.assertRaises(ValueError):
+			preview_tag_for_build(parse_version("3.4"), "head", tags, 812)
 
 
 if __name__ == "__main__":
