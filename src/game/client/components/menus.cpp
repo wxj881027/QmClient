@@ -6977,7 +6977,7 @@ void CMenus::OnShutdown()
 	ClearQmTitlePreviewContainers();
 	InvalidateSettingsTextPool();
 	ClearSettingsAssetsCardMetadataCache();
-	ClearSettingsTeePreviewCache();
+	InvalidateSettingsTeeSkinCollection();
 	ClearSettingsLanguageRowCache();
 	ResetDemoScreenshotPreview();
 	m_ScreenshotManager.ClearThumbnails(Graphics());
@@ -8445,8 +8445,6 @@ void CMenus::InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason Reason)
 		Reason == ESettingsInvalidationReason::FONT_CHANGED ||
 		Reason == ESettingsInvalidationReason::BACKEND_CHANGED)
 		ClearSettingsLanguageRowCache();
-	if(Reason == ESettingsInvalidationReason::BACKEND_CHANGED)
-		ClearSettingsTeePreviewCache();
 }
 
 bool CMenus::PrewarmSettingsPageResources(int Page, int Tab, const CUIRect &ContentView)

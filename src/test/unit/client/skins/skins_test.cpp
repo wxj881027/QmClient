@@ -267,6 +267,7 @@ TEST(SkinSources, DownloadGateFollowsSourceToggles)
 	EXPECT_TRUE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSource::CUSTOM_COMMUNITY));
 	EXPECT_FALSE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSource::DDSTATS));
 	EXPECT_TRUE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSource::UNKNOWN));
+	EXPECT_TRUE(CSkins::CSkinContainer::SourceDownloadAllowed(ESkinSourceMask::NONE));
 
 	g_Config.m_ClDownloadSkins = 0;
 	g_Config.m_ClDownloadCommunitySkins = 0;

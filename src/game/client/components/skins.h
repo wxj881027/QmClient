@@ -218,21 +218,13 @@ public:
 		{
 			if(Source == ESkinSource::LOCAL)
 				return true;
-			return SourceDownloadAllowed(SkinSourceMaskFromSource(Source), Source == ESkinSource::UNKNOWN);
+			return SourceDownloadAllowed(SkinSourceMaskFromSource(Source));
 		}
-		static bool SourceDownloadAllowed(ESkinSourceMask Sources, bool UnknownSource = false)
+		static bool SourceDownloadAllowed(ESkinSourceMask Sources)
 		{
-			if(UnknownSource)
-				return g_Config.m_ClDownloadSkins != 0 || g_Config.m_ClDownloadCommunitySkins != 0 ||
-				       g_Config.m_QmDownloadDdStatsSkins != 0;
-			bool Allowed = false;
-			if(SkinSourceMaskHas(Sources, ESkinSourceMask::OFFICIAL))
-				Allowed = Allowed || g_Config.m_ClDownloadSkins != 0;
-			if(SkinSourceMaskHas(Sources, ESkinSourceMask::COMMUNITY))
-				Allowed = Allowed || g_Config.m_ClDownloadCommunitySkins != 0;
-			if(SkinSourceMaskHas(Sources, ESkinSourceMask::DDSTATS))
-				Allowed = Allowed || g_Config.m_QmDownloadDdStatsSkins != 0;
-			return Allowed;
+			return (g_Config.m_ClDownloadSkins && RequestSourcesAllowDownloadSlot(Sources, ESkinSource::OFFICIAL)) ||
+			       (g_Config.m_ClDownloadCommunitySkins && RequestSourcesAllowDownloadSlot(Sources, ESkinSource::COMMUNITY)) ||
+			       (g_Config.m_QmDownloadDdStatsSkins && RequestSourcesAllowDownloadSlot(Sources, ESkinSource::DDSTATS));
 		}
 		static bool RequestSourcesAllowDownloadSlot(ESkinSourceMask Sources, ESkinSource Slot)
 		{
@@ -335,6 +327,7 @@ public:
 		bool m_AlwaysLoaded;
 
 		EState m_State = EState::UNLOADED;
+		bool m_StateCounted = false;
 		bool m_UnresolvedNotified = false;
 		ESettingsResourcePriority m_LoadPriority = ESettingsResourcePriority::BACKGROUND;
 		std::unique_ptr<CSkin> m_pSkin = nullptr;
@@ -464,7 +457,10 @@ public:
 		int m_UnfilteredCount = 0;
 		uint64_t m_Revision = 0;
 		int m_Dummy = -1;
+		int m_RequestedDummy = 0;
 		int m_ListFilter = -1;
+		int m_SortMode = -1;
+		std::string m_Search;
 		CSkinListEntry::SColorKey m_MainColorKey;
 		CSkinListEntry::SColorKey m_DummyColorKey;
 		bool m_NeedsUpdate = true;
@@ -481,19 +477,21 @@ public:
 		size_t m_NumError = 0;
 		size_t m_NumNotFound = 0;
 
-		void AddState(CSkinContainer::EState State)
+		size_t &StateCount(CSkinContainer::EState State)
 		{
 			switch(State)
 			{
-			case CSkinContainer::EState::UNLOADED: ++m_NumUnloaded; break;
-			case CSkinContainer::EState::BACKGROUND_REQUESTED: ++m_NumBackgroundRequested; break;
-			case CSkinContainer::EState::PENDING: ++m_NumPending; break;
-			case CSkinContainer::EState::LOADING: ++m_NumLoading; break;
-			case CSkinContainer::EState::LOADED: ++m_NumLoaded; break;
-			case CSkinContainer::EState::ERROR: ++m_NumError; break;
-			case CSkinContainer::EState::NOT_FOUND: ++m_NumNotFound; break;
+			case CSkinContainer::EState::UNLOADED: return m_NumUnloaded;
+			case CSkinContainer::EState::BACKGROUND_REQUESTED: return m_NumBackgroundRequested;
+			case CSkinContainer::EState::PENDING: return m_NumPending;
+			case CSkinContainer::EState::LOADING: return m_NumLoading;
+			case CSkinContainer::EState::LOADED: return m_NumLoaded;
+			case CSkinContainer::EState::ERROR: return m_NumError;
+			case CSkinContainer::EState::NOT_FOUND: return m_NumNotFound;
 			}
+			dbg_assert_failed("Invalid skin state: %d", (int)State);
 		}
+		void AddState(CSkinContainer::EState State) { ++StateCount(State); }
 
 		bool ShouldFinishLoading(bool RefreshUploadPending) const { return m_NumLoading != 0 || RefreshUploadPending; }
 		CSkinContainer::EState FinishLoadingFailure(CSkinContainer::EState State, bool HasPublishedSkin, bool NotFound)
@@ -1099,14 +1097,16 @@ private:
 	void BuildSkinCatalogSources();
 	void LoadSkinCatalogCaches();
 	bool LoadSkinCatalogCache(SSkinCatalogRuntime &Catalog);
+	bool ParseSkinCatalog(const SSkinCatalogSource &Source, const void *pFileData, size_t FileSize, SSkinCatalogSnapshot &Snapshot) const;
+	void PublishSkinCatalog(SSkinCatalogRuntime &Catalog, SSkinCatalogSnapshot Snapshot);
 	void QueueSkinCatalogRequests();
 	void ProcessSkinCatalogRequests();
-	void ApplySkinCatalogEntries(std::vector<qm_skin_catalog::SEntry> vEntries, SSkinCatalogSnapshot &Snapshot, SHA256_DIGEST ContentHash);
 	void RefreshSkinCatalogSourceMasks();
 	void ProcessPendingSkinCatalogEntries();
 	ESkinSourceMask CatalogSourcesForName(const char *pName, bool RequestSources) const;
 	void ApplyCatalogSources(CSkinContainer *pSkinContainer) const;
 	bool SkinListSourcesPending() const;
+	bool SkinListPlanQueryCurrent() const;
 	void RecordSkinSource(CSkinContainer *pSkinContainer, ESkinSource Source);
 	void QueueSkinListPlanJob(int Dummy);
 	void ProcessSkinListPlanJob();
@@ -1148,11 +1148,11 @@ private:
 	std::unordered_map<std::string, std::unique_ptr<CSkinContainer>, SSkinNameHash, SSkinNameEqual> m_Skins;
 	CSkinNameIndex m_SkinNameIndex;
 	CSkinSourceRegistry m_SkinSources;
+	std::unordered_map<std::string, std::pair<std::string, time_t>, SSkinNameHash, SSkinNameEqual> m_VerifiedSkinCacheUrls;
 	std::unordered_set<std::string> m_SkinNotFoundKeys;
 	bool m_HasInitialSkinDirectoryScan = false;
-	bool m_SkinListSourceDataInitialized = false;
 	std::optional<std::chrono::nanoseconds> m_ContainerUpdateTime;
-	size_t m_NumLoadingSkins = 0;
+	CSkinLoadingStats m_LoadingStats;
 	CQmSkinUploadFrameBudget m_SkinUploadFrameBudget;
 	CUnresolvedSkinScanState m_UnresolvedSkinScanState;
 	std::vector<std::string> m_vSkinsUnresolvedThisFrame;

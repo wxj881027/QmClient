@@ -45,8 +45,8 @@ public:
 	};
 
 	CQmSkinDownloadSession(IHttp &Http, std::vector<SSource> vSources,
-		std::shared_ptr<IQmSkinDataJob> pCacheJob, FRequest Request, FDecode Decode, FSubmit Submit) :
-		m_Http(Http), m_vSources(std::move(vSources)), m_pJob(std::move(pCacheJob)), m_Request(std::move(Request)), m_Decode(std::move(Decode)), m_Submit(std::move(Submit))
+		std::shared_ptr<IQmSkinDataJob> pCacheJob, FRequest Request, FDecode Decode, FSubmit Submit, std::string CacheUrl = {}) :
+		m_Http(Http), m_vSources(std::move(vSources)), m_pJob(std::move(pCacheJob)), m_Request(std::move(Request)), m_Decode(std::move(Decode)), m_Submit(std::move(Submit)), m_CacheUrl(std::move(CacheUrl))
 	{
 		std::vector<SSource> vFilteredSources;
 		for(const SSource &Source : m_vSources)
@@ -86,15 +86,16 @@ public:
 					m_Result = Valid ? EResult::DONE : EResult::NOT_FOUND;
 					return Valid ? EResult::READY : m_Result;
 				}
-				StartRequest(false);
+				StartRequest(m_CacheUrl != m_vSources.front().m_Url);
 				return Valid ? EResult::READY : EResult::WAITING;
 			}
 			// 只有当前会话的有效解码结果才可以替换磁盘缓存。
 			m_pRequest->OnValidation(Valid);
 			m_NeedsValidation = false;
-			if(Valid)
+			if(Valid && m_pRequest->State() == EHttpState::DONE)
 			{
 				m_DownloadedSource = m_vSources[m_SourceIndex].m_Source;
+				m_DownloadedUrl = m_vSources[m_SourceIndex].m_Url;
 				m_pReadyJob = std::move(m_pJob);
 				m_Result = EResult::DONE;
 				m_pRequest.reset();
@@ -122,8 +123,9 @@ public:
 		}
 		if(Status == 304)
 		{
-			ValidateRequest(m_HasCache);
-			if(m_HasCache)
+			const bool HasMatchingCache = !m_Unconditional && m_HasCache;
+			ValidateRequest(HasMatchingCache);
+			if(HasMatchingCache)
 			{
 				m_DownloadedSource = m_vSources[m_SourceIndex].m_Source;
 				return Finish(EResult::DONE);
@@ -148,6 +150,7 @@ public:
 
 	std::shared_ptr<IQmSkinDataJob> TakeReadyJob() { return std::exchange(m_pReadyJob, nullptr); }
 	const std::optional<ESkinSource> &DownloadedSource() const { return m_DownloadedSource; }
+	const std::string &DownloadedUrl() const { return m_DownloadedUrl; }
 	void Cancel()
 	{
 		if(m_pJob)
@@ -170,6 +173,7 @@ public:
 private:
 	void StartRequest(bool Unconditional)
 	{
+		m_Unconditional = Unconditional;
 		m_pRequest = m_Request(m_vSources[m_SourceIndex].m_Url.c_str(), Unconditional);
 		m_pRequest->Timeout(CTimeout{10000, 30000, 8192, 10});
 		m_pRequest->MaxResponseSize(10 * 1024 * 1024);
@@ -202,12 +206,15 @@ private:
 	FRequest m_Request;
 	FDecode m_Decode;
 	FSubmit m_Submit;
+	std::string m_CacheUrl;
+	std::string m_DownloadedUrl;
 	EResult m_Result = EResult::WAITING;
 	bool m_CachePhase = true;
 	bool m_HasCache = false;
 	size_t m_SourceIndex = 0;
 	std::optional<ESkinSource> m_DownloadedSource;
 	bool m_RetriedUnconditional = false;
+	bool m_Unconditional = false;
 	bool m_NeedsValidation = false;
 };
 

@@ -9,7 +9,6 @@ class IClient;
 inline constexpr size_t QM_MENU_TEXT_CACHE_CAPACITY = 4096;
 inline constexpr uint64_t QM_MENU_TEXT_CACHE_MAX_AGE_FRAMES = 600;
 inline constexpr size_t QM_ASSET_METADATA_CACHE_CAPACITY = 512;
-inline constexpr size_t QM_TEE_PREVIEW_CACHE_CAPACITY = 192;
 inline constexpr size_t QM_LANGUAGE_ROW_CACHE_CAPACITY = 128;
 
 constexpr bool QmMenuUiScrollPerfActive(bool WheelConsumedThisFrame, bool ScrollbarActive, bool ScrollbarAnimating)

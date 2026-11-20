@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -161,11 +162,17 @@ def smoke_refresh_cancels_loaded_cache_request(build_dir: Path) -> None:
 		def do_GET(self) -> None:
 			if self.path == "/official/qm_skin_refresh.png":
 				requested.set()
-				if release.wait(20):
-					self.send_error(404)
-				responded.set()
-			else:
+				try:
+					if release.wait(20):
+						self.send_error(404)
+				except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+					pass
+				finally:
+					responded.set()
+			elif self.path == "/community/qm_skin_refresh.png":
 				community_requested.set()
+				self.send_error(404)
+			else:
 				self.send_error(404)
 
 	server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
@@ -212,7 +219,6 @@ def smoke_refresh_cancels_loaded_cache_request(build_dir: Path) -> None:
 		print(f"artifacts: {env.temp_dir}")
 
 
-
 def smoke_favorites_are_metadata_until_visible(build_dir: Path) -> None:
 	env = StartupEnvironment(build_dir)
 	requested = threading.Event()
@@ -224,6 +230,9 @@ def smoke_favorites_are_metadata_until_visible(build_dir: Path) -> None:
 			pass
 
 		def do_GET(self) -> None:
+			if self.path == "/":
+				self.send_error(404)
+				return
 			paths.append(self.path)
 			requested.set()
 			self.send_response(200)
@@ -237,9 +246,14 @@ def smoke_favorites_are_metadata_until_visible(build_dir: Path) -> None:
 	try:
 		base = f"http://127.0.0.1:{server.server_port}/"
 		client = env.start([
-			"http_allow_insecure 1", "cl_download_skins 1", "cl_download_community_skins 0",
-			f"cl_skin_download_url {base}", "player_skin default", "dummy_skin default",
-			"cl_skip_start_menu 1", "ui_page 21",
+			"http_allow_insecure 1",
+			"cl_download_skins 1",
+			"cl_download_community_skins 0",
+			f"cl_skin_download_url {base}",
+			"player_skin default",
+			"dummy_skin default",
+			"cl_skip_start_menu 1",
+			"ui_page 21",
 			*[f"add_favorite_skin qm_unseen_favorite_{index}" for index in range(40)],
 		])
 		env.finish_startup()
@@ -263,6 +277,58 @@ def smoke_favorites_are_metadata_until_visible(build_dir: Path) -> None:
 		env.close()
 		print(f"artifacts: {env.temp_dir}")
 
+
+def smoke_invalid_catalog_preserves_cache(build_dir: Path) -> None:
+	env = StartupEnvironment(build_dir)
+	cache_dir = env.temp_dir / "downloadedskins"
+	cache_dir.mkdir()
+	valid_index = b'<a href="qm_cached_skin.png">qm_cached_skin.png</a>'
+	http_error = threading.Event()
+	invalid_body = threading.Event()
+
+	class Handler(BaseHTTPRequestHandler):
+		def log_message(self, *_args: object) -> None:
+			pass
+
+		def do_GET(self) -> None:
+			if self.path == "/invalid/":
+				self.send_response(200)
+				self.end_headers()
+				self.wfile.write(b"<html>not a skin index</html>")
+				invalid_body.set()
+			else:
+				self.send_error(503)
+				http_error.set()
+
+	server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+	thread = threading.Thread(target=server.serve_forever, daemon=True)
+	thread.start()
+	try:
+		base = f"http://127.0.0.1:{server.server_port}"
+		paths = [cache_dir / f"{kind}_{hashlib.sha256(f'{base}/{suffix}'.encode()).hexdigest()}.html" for kind, suffix in (("custom_official_skins", "unavailable"), ("custom_community_skins", "invalid"))]
+		for path in paths:
+			path.write_bytes(valid_index)
+		client = env.start([
+			"http_allow_insecure 1",
+			f"cl_skin_download_url {base}/unavailable/",
+			f"cl_skin_community_download_url {base}/invalid/",
+			"stdout_output_level 1",
+		])
+		assert http_error.wait(20) and invalid_body.wait(20), "catalog requests did not complete"
+		for suffix in ("unavailable", "invalid"):
+			client.wait_for(lambda line: f"Failed to load skin catalog {base}/{suffix}/" in line, f"rejected {suffix} catalog", 15)
+		env.quit()
+		for path in paths:
+			assert path.read_bytes() == valid_index, f"invalid response replaced {path.name}"
+		print("invalid_catalog_preserves_cache: passed")
+	finally:
+		env.close()
+		server.shutdown()
+		server.server_close()
+		thread.join(timeout=5)
+		print(f"artifacts: {env.temp_dir}")
+
+
 def main() -> int:
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument("build_dir", type=Path)
@@ -271,6 +337,7 @@ def main() -> int:
 		smoke_cache_before_network_and_community_fallback(args.build_dir.resolve())
 		smoke_refresh_cancels_loaded_cache_request(args.build_dir.resolve())
 		smoke_favorites_are_metadata_until_visible(args.build_dir.resolve())
+		smoke_invalid_catalog_preserves_cache(args.build_dir.resolve())
 	except Exception as exc:
 		print(f"skin_download: FAILED: {exc}", file=sys.stderr)
 		return 1

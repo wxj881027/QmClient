@@ -8,7 +8,8 @@ std::optional<CSkins::CSkinListEntry> CSkins::RecentSkinListEntry(const SQmRecen
 {
 	// 记录保留原始名字；列表按可见优先级加载，不能在枚举时套前缀或立即下载全部记录。
 	const CSkinContainer *pContainer = FindContainerImpl(Skin.m_Name.c_str(), false);
-	if(pContainer == nullptr || pContainer->IsSpecial() || (g_Config.m_ClVanillaSkinsOnly && !pContainer->IsVanilla()))
+	const auto Filter = ResolveSkinListFilter(g_Config.m_QmSkinListFilter, g_Config.m_ClVanillaSkinsOnly != 0);
+	if(pContainer == nullptr || pContainer->IsSpecial() || !SkinListFilterMatches(pContainer->EffectiveSkinSources(), Filter))
 		return std::nullopt;
 	return MakeSkinListEntry(pContainer, CSkinListEntry::SColorKey{Skin.m_UseCustomColor, static_cast<int>(Skin.m_ColorBody), static_cast<int>(Skin.m_ColorFeet)});
 }

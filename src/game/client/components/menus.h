@@ -134,8 +134,8 @@ enum
 
 // 导航胶囊行高与内容缩放：主菜单导航栏（离线/在线）与游戏内浏览页服务器导航栏
 // 共用同一组尺寸，保证上下两排胶囊导航观感一致。
-	// 与页签胶囊同高同号：ui_token::settings::TAB_HEIGHT(26)，导航选中滑块与页签滑块上下对齐。
-	inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 26.0f;
+// 与页签胶囊同高同号：ui_token::settings::TAB_HEIGHT(26)，导航选中滑块与页签滑块上下对齐。
+inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 26.0f;
 inline constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
 
 class CUIRect;
@@ -2426,6 +2426,7 @@ protected:
 	void DrainIngameUiSnapshotTextRuntime();
 	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
 	void RenderServerControl(CUIRect MainView);
+
 public:
 private:
 	void RenderServerVoteList(CUIRect MainView);
@@ -3198,7 +3199,7 @@ private:
 	void DrainMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor, bool Render, bool *pTextContainerRecreated);
 	void CountMenuTextImmediateFallback();
 	void ClearSettingsAssetsCardMetadataCache();
-	void ClearSettingsTeePreviewCache();
+	void InvalidateSettingsTeeSkinCollection();
 	void ClearSettingsLanguageRowCache();
 	void LogSettingsUiBudget(const char *pPage, const SSettingsUiBudgetFrame &Frame) const;
 
