@@ -1243,25 +1243,60 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		if(!Ui()->RenderOnly())
 			m_MapDifficultyCatalog.RequestAxiomDifficulty(Server, *Http(), GameClient()->m_QmAxiomScores.OpenApiBudget(), g_Config.m_QmAxiomApiKey, Now);
 	};
-	std::vector<int> vVisibleServerIndices;
-	vVisibleServerIndices.reserve(ServerBrowser()->NumSortedServers());
-	for(int SortedIndex = 0; SortedIndex < ServerBrowser()->NumSortedServers(); ++SortedIndex)
+	static std::vector<int> s_vVisibleServerIndices;
+	static uint64_t s_VisibleSortedRevision = ~0ull;
+	static std::set<std::string> s_VisibleFavoriteMaps;
+	static int s_VisibleSortedCount = -1;
+	static int s_VisibleStarMask = -1;
+	static int s_VisibleCategoryMask = -1;
+	static int s_VisibleFavoriteOnly = -1;
+	static int s_VisibleEmptyOnly = -1;
+	static int64_t s_VisibleRefreshTime = 0;
+
+	const int64_t VisibleRefreshInterval = time_freq();
+	// 难度目录由后台补齐，没有独立版本号；保留短周期重算以刷新星级与类别筛选。
+	const uint64_t VisibleRevision = ServerBrowser()->FriendListRevision();
+	const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
+	const int VisibleSortedCount = ServerBrowser()->NumSortedServers();
+	const bool StaleRevision = s_VisibleSortedRevision != VisibleRevision;
+	const bool StaleFavorites = s_VisibleFavoriteMaps != FavoriteMaps;
+	const bool StaleCount = s_VisibleSortedCount != VisibleSortedCount;
+	const bool StaleStarMask = s_VisibleStarMask != g_Config.m_QmMapBrowserStarMask;
+	const bool StaleCategoryMask = s_VisibleCategoryMask != g_Config.m_QmMapBrowserCategoryMask;
+	const bool StaleFavoriteOnly = s_VisibleFavoriteOnly != g_Config.m_QmMapBrowserFavoriteOnly;
+	const bool StaleEmptyOnly = s_VisibleEmptyOnly != g_Config.m_QmMapBrowserEmptyOnly;
+	const bool StaleTimer = Now - s_VisibleRefreshTime >= VisibleRefreshInterval;
+	if(StaleRevision || StaleFavorites || StaleCount || StaleStarMask || StaleCategoryMask || StaleFavoriteOnly || StaleEmptyOnly || StaleTimer)
 	{
-		const CServerInfo *pServer = ServerBrowser()->SortedGet(SortedIndex);
-		if(pServer == nullptr)
-			continue;
-		const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pServer, MapCategoryHintFromServer(pServer));
-		const int Stars = pDifficulty != nullptr ? pDifficulty->m_Stars : -1;
-		const bool IsFavorite = GameClient()->m_TClient.IsFavoriteMap(pServer->m_aMap);
-		// 星级筛选会隐藏未知地图，需在过滤前补查，否则这些图永远无法进入可见行。
-		if(NeedDifficultyForList && !pDifficulty && (!g_Config.m_QmMapBrowserEmptyOnly || !pServer->m_NumFilteredPlayers) &&
-			(!g_Config.m_QmMapBrowserFavoriteOnly || IsFavorite))
-			RequestDifficulty(*pServer);
-		// 目录条目给出权威类别；没有目录收录时退回服务器名/社区类型里解析出的类别。
-		const char *pCategory = pDifficulty != nullptr ? pDifficulty->m_Category.c_str() : MapCategoryHintFromServer(pServer);
-		if(QmMapVotes::MatchesFilter(Stars, pCategory, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserCategoryMask, g_Config.m_QmMapBrowserFavoriteOnly != 0, IsFavorite))
-			vVisibleServerIndices.push_back(SortedIndex);
+		s_vVisibleServerIndices.clear();
+		s_vVisibleServerIndices.reserve(VisibleSortedCount);
+		for(int SortedIndex = 0; SortedIndex < VisibleSortedCount; ++SortedIndex)
+		{
+			const CServerInfo *pServer = ServerBrowser()->SortedGet(SortedIndex);
+			if(pServer == nullptr)
+				continue;
+			const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pServer, MapCategoryHintFromServer(pServer));
+			const int Stars = pDifficulty != nullptr ? pDifficulty->m_Stars : -1;
+			const bool IsFavorite = GameClient()->m_TClient.IsFavoriteMap(pServer->m_aMap);
+			// 星级筛选会隐藏未知地图，需在过滤前补查，否则这些图永远无法进入可见行。
+			if(NeedDifficultyForList && !pDifficulty && (!g_Config.m_QmMapBrowserEmptyOnly || !pServer->m_NumFilteredPlayers) &&
+				(!g_Config.m_QmMapBrowserFavoriteOnly || IsFavorite))
+				RequestDifficulty(*pServer);
+			// 目录条目给出权威类别；没有目录收录时退回服务器名/社区类型里解析出的类别。
+			const char *pCategory = pDifficulty != nullptr ? pDifficulty->m_Category.c_str() : MapCategoryHintFromServer(pServer);
+			if(QmMapVotes::MatchesFilter(Stars, pCategory, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserCategoryMask, g_Config.m_QmMapBrowserFavoriteOnly != 0, IsFavorite))
+				s_vVisibleServerIndices.push_back(SortedIndex);
+		}
+		s_VisibleSortedRevision = ServerBrowser()->FriendListRevision();
+		s_VisibleFavoriteMaps = FavoriteMaps;
+		s_VisibleSortedCount = ServerBrowser()->NumSortedServers();
+		s_VisibleStarMask = g_Config.m_QmMapBrowserStarMask;
+		s_VisibleCategoryMask = g_Config.m_QmMapBrowserCategoryMask;
+		s_VisibleFavoriteOnly = g_Config.m_QmMapBrowserFavoriteOnly;
+		s_VisibleEmptyOnly = g_Config.m_QmMapBrowserEmptyOnly;
+		s_VisibleRefreshTime = Now;
 	}
+	const std::vector<int> &vVisibleServerIndices = s_vVisibleServerIndices;
 	const int NumServers = (int)vVisibleServerIndices.size();
 
 	// display important messages in the middle of the screen so no
