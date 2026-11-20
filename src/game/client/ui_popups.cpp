@@ -933,10 +933,14 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 		CUIRect SearchRect;
 		View.HSplitTop(pSelectionPopup->m_EntryHeight, &SearchRect, &View);
 		View.HSplitTop(pSelectionPopup->m_EntrySpacing, nullptr, &View);
-		pSelectionPopup->m_SearchInput.SetEmptyText(Localize("Search"));
-		SEditBoxRenderOptions SearchOptions;
+		ui_widget::SInputFieldOptions SearchOptions;
+		SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
+		SearchOptions.m_Clearable = true;
+		SearchOptions.m_ProcessInput = Active;
+		SearchOptions.m_SearchHotkeyEnabled = Active;
 		SearchOptions.m_ReleaseFocusOnEnter = false;
-		pUI->DoClearableEditBox(&pSelectionPopup->m_SearchInput, &SearchRect, pSelectionPopup->m_FontSize, IGraphics::CORNER_ALL, {}, SearchOptions);
+		SearchOptions.m_FontSize = pSelectionPopup->m_FontSize;
+		ui_widget::InputField(ui_widget::ControlContext(pUI), &pSelectionPopup->m_SearchInput, SearchRect, SearchOptions);
 		if(Active && pSelectionPopup->m_FocusSearch)
 		{
 			pUI->SetActiveItem(&pSelectionPopup->m_SearchInput);

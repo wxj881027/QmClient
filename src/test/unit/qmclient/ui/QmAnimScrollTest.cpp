@@ -543,6 +543,7 @@ TEST(UiV2ScrollPolicy, ResolvesSharedVisualAndInteractionProfiles)
 	const SQmResolvedScrollPolicy PopupPolicy = QmResolveScrollPolicy(Popup, 1.0f, 0.0f);
 	EXPECT_EQ(PopupPolicy.m_MaxVisibleItems, QM_POPUP_LIST_MAX_VISIBLE_ITEMS);
 	EXPECT_NEAR(PopupPolicy.m_Config.m_WheelScale, 60.0f, 0.01f);
+	EXPECT_FLOAT_EQ(PopupPolicy.m_Style.m_ScrollbarWidth, ui_token::list::SCROLLBAR_WIDTH);
 }
 
 TEST(UiV2ScrollPolicy, GlobalStepIsTheSingleDistanceScaleForEverySurface)
