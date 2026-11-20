@@ -2,6 +2,7 @@
 
 #include "QmColorGradient.h"
 #include "QmPieMenuRender.h"
+#include "UiTokens.h"
 
 #include <base/color.h>
 #include <base/str.h>
@@ -97,7 +98,7 @@ namespace
 			if(Container.Valid())
 			{
 				SQmTextEffectRenderStyle Style;
-				Style.m_OutlineColor = ColorRGBA(0.02f, 0.025f, 0.04f, 0.85f);
+				Style.m_OutlineColor = ui_token::finish_summary::TEXT_OUTLINE;
 				if(pGlow)
 				{
 					Style.m_Effects = QM_TEXT_EFFECT_GLOW;
@@ -115,8 +116,8 @@ namespace
 
 	SQmColorGradient NumberGradient(const ColorRGBA &Accent, float Progress)
 	{
-		const ColorRGBA Start(0.68f, 0.84f, 1.0f, 1.0f);
-		const ColorRGBA End(0.94f, 0.98f, 1.0f, 1.0f);
+		const ColorRGBA Start = ui_token::finish_summary::GRADIENT_START;
+		const ColorRGBA End = ui_token::finish_summary::GRADIENT_END;
 		SQmColorGradient Gradient;
 		Gradient.m_NumColors = 3;
 		Gradient.m_HasPalette = true;
@@ -126,7 +127,7 @@ namespace
 		};
 		Gradient.m_aColors[0] = Interpolate(Start, End);
 		Gradient.m_aColors[1] = Interpolate(Start, Accent);
-		Gradient.m_aColors[2] = Interpolate(ColorRGBA(0.44f, 0.66f, 0.95f, 1.0f), Accent);
+		Gradient.m_aColors[2] = Interpolate(ui_token::finish_summary::NUMBER_ACCENT_DEEP, Accent);
 		return Gradient;
 	}
 
@@ -398,7 +399,7 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	Graphics.DrawRect(Badge.x, Badge.y, Badge.w, Badge.h, ComparisonColor.WithAlpha(0.16f * FieldAlpha(EField::COMPARISON)), IGraphics::CORNER_ALL, Badge.h * 0.5f);
 	Painter.Label({Badge.x + 7.0f * Scale, Badge.y + 2.0f * Scale, Badge.w - 14.0f * Scale, Badge.h}, 12.0f * Scale,
 		Content.m_Comparison.c_str(), ComparisonColor.WithAlpha(FieldAlpha(EField::COMPARISON)));
-	const ColorRGBA DifferenceColor = Snapshot.m_Comparison == EComparison::IMPROVED ? ColorRGBA(0.55f, 0.96f, 0.73f, 1.0f) : ColorRGBA(1.0f, 0.66f, 0.60f, 1.0f);
+	const ColorRGBA DifferenceColor = Snapshot.m_Comparison == EComparison::IMPROVED ? ui_token::finish_summary::DIFFERENCE_IMPROVED : ui_token::finish_summary::DIFFERENCE_REGRESSED;
 	const SQmColorGradient DifferenceGradient = NumberGradient(DifferenceColor, Content.m_Presentation.NumberColorProgress(ENumber::DIFFERENCE));
 	Painter.Label(Box(16, 99, 216, 15), 12.0f * Scale, Content.m_Difference.c_str(), DifferenceColor.WithAlpha(FieldAlpha(EField::DIFFERENCE)), 0.0f, 1, &DifferenceGradient);
 
@@ -443,9 +444,9 @@ bool qm_finish_summary::Render(IGraphics &Graphics, ITextRender &TextRender, CRe
 	const float GainWidth = std::min(116.0f * Scale, Painter.Width(12.0f * Scale, Content.m_Gain.c_str()) + 14.0f * Scale);
 	const CUIRect GainBadge{OriginX + 464.0f * Scale - GainWidth, OriginY + 196.0f * Scale, GainWidth, 16.0f * Scale};
 	Graphics.DrawRect(GainBadge.x, GainBadge.y, GainBadge.w, GainBadge.h, Gold.WithAlpha(0.9f * FieldAlpha(EField::POINTS)), IGraphics::CORNER_ALL, GainBadge.h * 0.5f);
-	const SQmColorGradient GainGradient = NumberGradient(ColorRGBA(0.30f, 0.19f, 0.03f, 1.0f), Content.m_Presentation.NumberColorProgress(ENumber::GAIN));
+	const SQmColorGradient GainGradient = NumberGradient(ui_token::finish_summary::GAIN_TEXT_DEEP, Content.m_Presentation.NumberColorProgress(ENumber::GAIN));
 	Painter.Label({GainBadge.x + 7.0f * Scale, GainBadge.y + Scale, GainBadge.w - 14.0f * Scale, GainBadge.h},
-		12.0f * Scale, Content.m_Gain.c_str(), ColorRGBA(0.18f, 0.15f, 0.06f, FieldAlpha(EField::POINTS)), 0.5f, 1, &GainGradient);
+		12.0f * Scale, Content.m_Gain.c_str(), ui_token::finish_summary::GAIN_TEXT_SOFT.WithAlpha(FieldAlpha(EField::POINTS)), 0.5f, 1, &GainGradient);
 	TextRender.SetFontPreset(SavedFont);
 	TextRender.TextColor(SavedColor);
 	TextRender.TextOutlineColor(SavedOutline);

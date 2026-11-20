@@ -203,6 +203,108 @@ namespace ui_token::replay
 	inline constexpr ColorRGBA POPUP_BACKDROP{0.0f, 0.0f, 0.0f, 0.5f};
 } // namespace ui_token::replay
 
+// 完成摘要卡（结算分享图）的角色色：数字渐变与差值好坏属于成绩语义，
+// 不随界面主题变化，避免同一张成绩图换个主题就读成两种结果。
+namespace ui_token::finish_summary
+{
+	// 大字数字的深色描边；压在浅色渐变上仍然可读。
+	inline constexpr ColorRGBA TEXT_OUTLINE{0.02f, 0.025f, 0.04f, 0.85f};
+	// 数字渐变的浅色两端，与强调色插值出卡片主视觉。
+	inline constexpr ColorRGBA GRADIENT_START{0.68f, 0.84f, 1.0f, 1.0f};
+	inline constexpr ColorRGBA GRADIENT_END{0.94f, 0.98f, 1.0f, 1.0f};
+	inline constexpr ColorRGBA NUMBER_ACCENT_DEEP{0.44f, 0.66f, 0.95f, 1.0f};
+	// 差值好坏：改进用薄荷绿，退步用珊瑚红；与 SUCCESS/DANGER 区分，
+	// 这一档需要压在金色徽章上仍保持柔和。
+	inline constexpr ColorRGBA DIFFERENCE_IMPROVED{0.55f, 0.96f, 0.73f, 1.0f};
+	inline constexpr ColorRGBA DIFFERENCE_REGRESSED{1.0f, 0.66f, 0.60f, 1.0f};
+	// 收益徽章内的深色文字渐变两端。
+	inline constexpr ColorRGBA GAIN_TEXT_DEEP{0.30f, 0.19f, 0.03f, 1.0f};
+	inline constexpr ColorRGBA GAIN_TEXT_SOFT{0.18f, 0.15f, 0.06f, 1.0f};
+} // namespace ui_token::finish_summary
+
+// 地图预览面板：预览框背板与未缓存占位图标始终压在固定深色底上，
+// 不跟随界面主题（地图本身才是主体，背板只负责让地图边缘可读）。
+namespace ui_token::map_preview
+{
+	inline constexpr ColorRGBA BACKDROP{0.055f, 0.065f, 0.085f, 1.0f};
+	inline constexpr ColorRGBA PLACEHOLDER_ICON{0.55f, 0.58f, 0.62f, 1.0f};
+} // namespace ui_token::map_preview
+
+namespace ui_token::tag
+{
+	inline constexpr int MONET_HUE_COUNT = 12;
+	inline constexpr int MONET_VARIANTS_PER_HUE = 4;
+	inline constexpr ColorRGBA MONET_PALETTE[] = {
+		// 罂粟红
+		ColorRGBA(0.630f, 0.449f, 0.421f, 1.0f),
+		ColorRGBA(0.695f, 0.423f, 0.382f, 1.0f),
+		ColorRGBA(0.542f, 0.372f, 0.346f, 1.0f),
+		ColorRGBA(0.614f, 0.344f, 0.302f, 1.0f),
+		// 赭橙
+		ColorRGBA(0.577f, 0.486f, 0.369f, 1.0f),
+		ColorRGBA(0.615f, 0.480f, 0.303f, 1.0f),
+		ColorRGBA(0.484f, 0.409f, 0.310f, 1.0f),
+		ColorRGBA(0.517f, 0.403f, 0.254f, 1.0f),
+		// 麦黄
+		ColorRGBA(0.529f, 0.517f, 0.338f, 1.0f),
+		ColorRGBA(0.542f, 0.524f, 0.267f, 1.0f),
+		ColorRGBA(0.445f, 0.434f, 0.284f, 1.0f),
+		ColorRGBA(0.455f, 0.440f, 0.224f, 1.0f),
+		// 橄榄
+		ColorRGBA(0.467f, 0.546f, 0.349f, 1.0f),
+		ColorRGBA(0.452f, 0.567f, 0.279f, 1.0f),
+		ColorRGBA(0.392f, 0.459f, 0.293f, 1.0f),
+		ColorRGBA(0.380f, 0.476f, 0.235f, 1.0f),
+		// 苔绿
+		ColorRGBA(0.381f, 0.585f, 0.374f, 1.0f),
+		ColorRGBA(0.320f, 0.629f, 0.310f, 1.0f),
+		ColorRGBA(0.320f, 0.491f, 0.314f, 1.0f),
+		ColorRGBA(0.269f, 0.528f, 0.260f, 1.0f),
+		// 灰绿
+		ColorRGBA(0.367f, 0.574f, 0.470f, 1.0f),
+		ColorRGBA(0.301f, 0.610f, 0.455f, 1.0f),
+		ColorRGBA(0.308f, 0.482f, 0.395f, 1.0f),
+		ColorRGBA(0.252f, 0.513f, 0.383f, 1.0f),
+		// 雾青
+		ColorRGBA(0.358f, 0.560f, 0.560f, 1.0f),
+		ColorRGBA(0.290f, 0.589f, 0.589f, 1.0f),
+		ColorRGBA(0.301f, 0.471f, 0.471f, 1.0f),
+		ColorRGBA(0.244f, 0.495f, 0.495f, 1.0f),
+		// 湖蓝
+		ColorRGBA(0.394f, 0.532f, 0.612f, 1.0f),
+		ColorRGBA(0.336f, 0.550f, 0.673f, 1.0f),
+		ColorRGBA(0.330f, 0.447f, 0.516f, 1.0f),
+		ColorRGBA(0.280f, 0.463f, 0.568f, 1.0f),
+		// 群青
+		ColorRGBA(0.442f, 0.502f, 0.643f, 1.0f),
+		ColorRGBA(0.414f, 0.503f, 0.711f, 1.0f),
+		ColorRGBA(0.361f, 0.422f, 0.565f, 1.0f),
+		ColorRGBA(0.323f, 0.423f, 0.657f, 1.0f),
+		// 紫罗兰
+		ColorRGBA(0.505f, 0.467f, 0.659f, 1.0f),
+		ColorRGBA(0.507f, 0.452f, 0.730f, 1.0f),
+		ColorRGBA(0.426f, 0.382f, 0.598f, 1.0f),
+		ColorRGBA(0.428f, 0.364f, 0.687f, 1.0f),
+		// 丁香紫
+		ColorRGBA(0.562f, 0.441f, 0.642f, 1.0f),
+		ColorRGBA(0.591f, 0.413f, 0.711f, 1.0f),
+		ColorRGBA(0.482f, 0.360f, 0.564f, 1.0f),
+		ColorRGBA(0.522f, 0.323f, 0.655f, 1.0f),
+		// 玫瑰粉
+		ColorRGBA(0.628f, 0.418f, 0.586f, 1.0f),
+		ColorRGBA(0.693f, 0.377f, 0.630f, 1.0f),
+		ColorRGBA(0.538f, 0.344f, 0.500f, 1.0f),
+		ColorRGBA(0.608f, 0.300f, 0.546f, 1.0f),
+	};
+	inline constexpr int MONET_PALETTE_SIZE = (int)(sizeof(MONET_PALETTE) / sizeof(MONET_PALETTE[0]));
+}
+
+namespace ui_token::world_lyrics
+{
+	inline constexpr ColorRGBA GLOW{0.4f, 0.75f, 1.0f, 0.14f};
+	inline constexpr ColorRGBA TEXT{0.94f, 0.98f, 1.0f, 1.0f};
+}
+
 // 离散滑块档位色板与满档渐变：UiDiscreteSliderStyle.h 与 UiDiscreteSliderLogic.cpp
 // 共享的唯一来源，禁止在调用文件复制。
 namespace ui_token::discrete_slider

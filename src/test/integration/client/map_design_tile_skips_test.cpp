@@ -2,11 +2,10 @@
 #include <engine/shared/datafile.h>
 #include <engine/storage.h>
 
+#include <game/gamecore.h>
 #include <game/layers.h>
 #include <game/map/map_load_task.h>
 #include <game/mapitems.h>
-
-#include <game/gamecore.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>

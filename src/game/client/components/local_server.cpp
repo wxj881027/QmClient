@@ -16,13 +16,14 @@
 #include <android/android_main.h>
 #endif
 
-namespace {
-// 每个客户端进程独占一个端口文件，避免多开时读到别人的端口。
-const char *PortFile(char *pBuf, unsigned BufSize)
+namespace
 {
-	str_format(pBuf, BufSize, "local_server_port.%d.txt", pid());
-	return pBuf;
-}
+	// 每个客户端进程独占一个端口文件，避免多开时读到别人的端口。
+	const char *PortFile(char *pBuf, unsigned BufSize)
+	{
+		str_format(pBuf, BufSize, "local_server_port.%d.txt", pid());
+		return pBuf;
+	}
 }
 
 void CLocalServer::Reset()

@@ -2,7 +2,9 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SHADOW_GUN_REPLAY_H
 
 #include <base/vmath.h>
+
 #include <engine/shared/protocol.h>
+
 #include <game/teamscore.h>
 
 #include <functional>

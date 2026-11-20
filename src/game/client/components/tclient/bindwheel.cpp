@@ -16,9 +16,9 @@
 #include <game/client/components/qmclient/wheel_presets.h>
 #include <game/client/components/tclient/fast_practice.h>
 #include <game/client/gameclient.h>
-#include <game/localization.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
+#include <game/localization.h>
 
 #include <algorithm>
 #include <cmath>

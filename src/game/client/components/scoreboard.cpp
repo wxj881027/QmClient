@@ -15,9 +15,9 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
-#include <game/client/QmUi/QmListEntryAnimation.h>
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/QmLegacy.h>
+#include <game/client/QmUi/QmListEntryAnimation.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>

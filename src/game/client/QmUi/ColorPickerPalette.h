@@ -21,7 +21,7 @@ namespace qm_picker_palette
 	inline constexpr int MAX_NAME_BYTES = 28; // 含结尾 NUL；中文按 UTF-8 字节计
 
 	// 取色器里的「莫奈」预设组色块数：12 色相 × 4 档，色表本身在
-	// `ui_tag::MONET_PALETTE`（与标签同源，取色器不再抄第二份 RGB）。
+	// `ui_token::tag::MONET_PALETTE`（与标签同源，取色器不再抄第二份 RGB）。
 	// 这里只声明数量给按钮容器定长；两者一致由 ui_popups.cpp 的 static_assert 保证。
 	inline constexpr int MONET_SWATCHES = 48;
 

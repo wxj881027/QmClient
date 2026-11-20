@@ -20,9 +20,10 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 #elif defined(CONF_FAMILY_WINDOWS)
+#include <windows.h>
+
 #include <objbase.h> // required for shellapi.h
 #include <shellapi.h> // ShellExecuteExW
-#include <windows.h>
 
 #include <cfenv> // fesetenv
 #else

@@ -2265,7 +2265,7 @@ void CGameConsole::OnRender()
 		// 命令帮助 + 用法最多占三行；没有提示时日志区一直延伸到底部。
 		const bool ShowSearchMatchInfo = pConsole->m_SearchInput.IsSearching() && !pConsole->m_Input.IsEmpty();
 		const bool ShowCompletionInfo = !pConsole->m_SearchInput.IsSearching() &&
-			(m_ConsoleType == CONSOLETYPE_LOCAL || Client()->RconAuthed()) && !pConsole->m_Input.IsEmpty();
+						(m_ConsoleType == CONSOLETYPE_LOCAL || Client()->RconAuthed()) && !pConsole->m_Input.IsEmpty();
 		char aCommandHelpText[1024] = "";
 		char aCommandUsageText[1024] = "";
 		bool HasCommandHint = false;
@@ -3133,7 +3133,7 @@ void CGameConsole::OnRender()
 			}
 			const char *pHints = pConsole->m_ChatExportMode ? "Shift+Mouse1  |  Esc" :
 									  (pConsole->m_SearchInput.IsSearching() ? "Enter / Shift+Enter  |  Esc  |  Ctrl+Mouse1" :
-														  (LocalConsole ? "Ctrl+F  |  Alt+1-5  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1" : "Ctrl+F  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1"));
+														   (LocalConsole ? "Ctrl+F  |  Alt+1-5  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1" : "Ctrl+F  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1"));
 			const float HintWidth = TextRender()->TextWidth(FontSize * 0.8f, pHints);
 			const float StatusWidth = TextRender()->TextWidth(FontSize * 0.8f, aStatus);
 			const float HintX = Screen.w - HintWidth - 10.0f;

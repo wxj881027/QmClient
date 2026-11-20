@@ -54,7 +54,8 @@ namespace qmclient::rank_demo
 	inline int CompareDemoNames(const SEntry &Left, const SEntry &Right)
 	{
 		const int Compare = str_comp(Left.m_Demo.c_str(), Right.m_Demo.c_str());
-		return Compare < 0 ? -1 : Compare > 0 ? 1 : 0;
+		return Compare < 0 ? -1 : Compare > 0 ? 1 :
+							0;
 	}
 
 	// 统一的列比较，返回 -1/0/1；主键相等时用 demo 名兜底，保证不同刷新顺序

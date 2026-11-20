@@ -1,6 +1,7 @@
 // 主题名称绘制与设置卡片括号说明作用域协作；仅隔离标签提交边界。
 #include <game/client/QmUi/ThemeSelectionLayout.h>
 #include <game/client/components/theme_scan.h>
+
 #include <gtest/gtest.h>
 #include <test/support/qm_real_ui_fixture.h>
 

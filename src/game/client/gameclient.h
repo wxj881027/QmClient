@@ -82,8 +82,8 @@
 #include "components/qmclient/checkpoint_guide.h"
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
-#include "components/qmclient/dummy_distance_link.h"
 #include "components/qmclient/demo_camera.h"
+#include "components/qmclient/dummy_distance_link.h"
 #include "components/qmclient/finish_summary.h"
 #include "components/qmclient/friend_last_seen.h"
 #include "components/qmclient/hammer_hit_detection.h"
@@ -436,9 +436,11 @@ private:
 	CLayers m_Layers;
 	CCollision m_Collision;
 	CUi m_UI;
+
 public:
 	// 气泡实例统一由 CUi 持有，这里保留引用别名给既有调用点，所有权仍只有一份。
 	CTooltips &m_Tooltips = m_UI.Tooltips();
+
 private:
 	CUiRuntimeV2 m_UiRuntimeV2;
 	CQmIconPrewarmPlan m_QmIconPrewarm;

@@ -2042,8 +2042,7 @@ void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTex
 		GameClient()->m_Tooltips.DoSmallToolTip(Presentation.m_pTipId, pRect, Presentation.m_pTip, CurrentSettingsContentMetrics().m_SmallSize);
 	pText = Ui()->PrepareCardLabel(pRect, pText, !m_MenuTextPlanCollecting, AllowHintSplit);
 	SLabelProperties EffectiveProps = Props;
-	const bool Highlight = DrawSearchBackground && !m_MenuTextPlanCollecting && (qm_settings_reveal::OnRow(pTextId, pText, *pRect) ||
-		(pFullText != pText && qm_settings_reveal::OnRow(nullptr, pFullText, *pRect)));
+	const bool Highlight = DrawSearchBackground && !m_MenuTextPlanCollecting && (qm_settings_reveal::OnRow(pTextId, pText, *pRect) || (pFullText != pText && qm_settings_reveal::OnRow(nullptr, pFullText, *pRect)));
 	const qm_settings_highlight::CScopedLabelColor LabelColor(TextRender(), Highlight);
 	if(Page == SETTINGS_TCLIENT && Size > 0.0f)
 	{
@@ -8631,7 +8630,8 @@ void CMenus::OnStateChange(int NewState, int OldState)
 	{
 		m_QmVoteMenu.m_Mode.Reset();
 		m_QmVoteMenu.m_Page = EQmVoteMenuPage::OPTIONS;
-	}	if(NewState == IClient::STATE_DEMOPLAYBACK)
+	}
+	if(NewState == IClient::STATE_DEMOPLAYBACK)
 	{
 		m_DemoDisplayExpanded = false;
 		m_DemoExportDisplayExpanded = false;

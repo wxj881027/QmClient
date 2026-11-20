@@ -1,7 +1,7 @@
-#include <game/client/components/qmclient/local_map_tags.h>
-
-#include <engine/storage.h>
 #include <engine/shared/qm_storage_layout.h>
+#include <engine/storage.h>
+
+#include <game/client/components/qmclient/local_map_tags.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>

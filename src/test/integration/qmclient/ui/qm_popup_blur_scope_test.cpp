@@ -668,34 +668,34 @@ TEST_F(QmUiBlurGraphics, FallbackBorderNeverFillsTranslucentInputInterior)
 			SCOPED_TRACE(Corners);
 			SCOPED_TRACE(Alpha);
 			m_Graphics.m_vRectangles.clear();
-				m_Graphics.m_vFreeforms.clear();
+			m_Graphics.m_vFreeforms.clear();
 			m_Graphics.m_vAntialiasEdges.clear();
-				m_Graphics.m_VertexColorCalls = 0;
+			m_Graphics.m_VertexColorCalls = 0;
 			const ColorRGBA Fill(0.1f, 0.1f, 0.1f, Alpha), Accent(1, 0, 0, 0.8f);
 			ASSERT_TRUE(DrawRoundedSurface(&m_Ui, m_Rect, Fill, Accent, 8, 2, Corners));
-				// 无 SDF 时不再有「整块底色 + 边框垫底」的矩形提交。
-				EXPECT_TRUE(m_Graphics.m_vRectangles.empty());
-				ASSERT_FALSE(m_Graphics.m_vFreeforms.empty());
+			// 无 SDF 时不再有「整块底色 + 边框垫底」的矩形提交。
+			EXPECT_TRUE(m_Graphics.m_vRectangles.empty());
+			ASSERT_FALSE(m_Graphics.m_vFreeforms.empty());
 			const vec2 Center = m_Rect.Center();
-				bool SawFill = false, SawBorder = false;
-				for(const auto &Draw : m_Graphics.m_vFreeforms)
+			bool SawFill = false, SawBorder = false;
+			for(const auto &Draw : m_Graphics.m_vFreeforms)
 			{
-					const IGraphics::CFreeformItem &Quad = Draw.m_Item;
-					if(Draw.m_Color == Fill)
-						SawFill = true;
-					if(Draw.m_Color != Accent)
-						continue;
-					SawBorder = true;
+				const IGraphics::CFreeformItem &Quad = Draw.m_Item;
+				if(Draw.m_Color == Fill)
+					SawFill = true;
+				if(Draw.m_Color != Accent)
+					continue;
+				SawBorder = true;
 				const float Left = std::min({Quad.m_X0, Quad.m_X1, Quad.m_X2, Quad.m_X3});
 				const float Right = std::max({Quad.m_X0, Quad.m_X1, Quad.m_X2, Quad.m_X3});
 				const float Top = std::min({Quad.m_Y0, Quad.m_Y1, Quad.m_Y2, Quad.m_Y3});
 				const float Bottom = std::max({Quad.m_Y0, Quad.m_Y1, Quad.m_Y2, Quad.m_Y3});
 				EXPECT_FALSE(Center.x > Left && Center.x < Right && Center.y > Top && Center.y < Bottom);
 			}
-				EXPECT_TRUE(SawFill);
-				EXPECT_TRUE(SawBorder);
-				// 外缘羽化由逐顶点透明到实色的自由网格完成。
-				EXPECT_GT(m_Graphics.m_VertexColorCalls, 0);
+			EXPECT_TRUE(SawFill);
+			EXPECT_TRUE(SawBorder);
+			// 外缘羽化由逐顶点透明到实色的自由网格完成。
+			EXPECT_GT(m_Graphics.m_VertexColorCalls, 0);
 		}
 	}
 }

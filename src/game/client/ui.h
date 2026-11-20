@@ -11,8 +11,8 @@
 #include "QmUi/QmPopupSource.h"
 #include "QmUi/QmUiLifetime.h"
 #include "QmUi/UiTokens.h"
-#include "lineinput.h"
 #include "components/tooltips.h"
+#include "lineinput.h"
 #include "ui_rect.h"
 
 #include <engine/input.h>
@@ -1722,7 +1722,7 @@ public:
 		// 预设色系按钮：每组最多 8 色，按“组号 * 8 + 组内序号”平铺取用。
 		static constexpr int PRESET_MAX_PER_GROUP = 8;
 		CButtonContainer m_aPresetButtons[3 * PRESET_MAX_PER_GROUP];
-		// 莫奈预设组（12 色相 × 4 档）：色表在 `ui_tag::MONET_PALETTE`，这里只留命中容器。
+		// 莫奈预设组（12 色相 × 4 档）：色表在 `ui_token::tag::MONET_PALETTE`，这里只留命中容器。
 		CButtonContainer m_aMonetSwatchButtons[qm_picker_palette::MONET_SWATCHES];
 		CButtonContainer m_aPaletteSwatchButtons[qm_picker_palette::MAX_SWATCHES];
 		// 名字单独一份命中区：点名字进改名，点色块应用颜色。

@@ -20,7 +20,6 @@
 #include "UiTokens.h"
 
 #include <base/os.h>
-
 #include <base/system.h>
 
 #include <engine/shared/localization.h>

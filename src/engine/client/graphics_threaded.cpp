@@ -886,7 +886,8 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	constexpr int BodyRows = 8;
 	constexpr int FeatherRows = CornerRows * 2 + BodyRows;
 	constexpr size_t MaxVertices = std::max(RECT_CORNER_SEGMENTS / 2 * 4 + 9 * ProjectionColumns * ProjectionRows,
-		(FeatherRows + 2) * (ProjectionColumns + 2)) * 4;
+					       (FeatherRows + 2) * (ProjectionColumns + 2)) *
+				       4;
 	CCommandBuffer::SVertex aVertices[MaxVertices];
 	size_t NumVertices = 0;
 	const float InvW = 1.0f / Params.m_W;

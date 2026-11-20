@@ -12,6 +12,7 @@
 
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/background.h>
 #include <game/client/components/mapimages.h>
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
@@ -454,7 +455,7 @@ namespace
 
 		// 预览框背板。
 		CUiScopedGaussianBlurSuppression PreviewBlurSuppression(pUi);
-		Preview.Draw(ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f), IGraphics::CORNER_ALL, 6.0f);
+		Preview.Draw(ui_token::map_preview::BACKDROP, IGraphics::CORNER_ALL, 6.0f);
 		Preview.Margin(1.0f, &Preview);
 
 		const float Now = pGameClient->Client()->GlobalTime();
@@ -486,7 +487,7 @@ namespace
 			// 骨架占位：未缓存不联网，进入服务器下载后才能预览。
 			pUi->TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			pUi->TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-			pUi->TextRender()->TextColor(ColorRGBA(0.55f, 0.58f, 0.62f, 1.0f));
+			pUi->TextRender()->TextColor(ui_token::map_preview::PLACEHOLDER_ICON);
 			pUi->DoLabel_QmIcon(&Preview, EQmIcon::MAP, FontIcons::FONT_ICON_MAP, 26.0f, TEXTALIGN_MC);
 			pUi->TextRender()->SetRenderFlags(0);
 			pUi->TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -561,7 +562,7 @@ namespace
 			pUi->FlushQuadBatch();
 			pUi->ClipEnable(pUi->Screen());
 			pEntry->m_pRenderer->SetEntityOnly(EntityOnly);
-			if(pGameClient->Graphics()->BeginRenderTarget(pEntry->m_RenderTarget, ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f)))
+			if(pGameClient->Graphics()->BeginRenderTarget(pEntry->m_RenderTarget, ui_token::map_preview::BACKDROP))
 			{
 				if(EntityOnly)
 					pGameClient->m_Background.RenderPreview(Camera.Center(), Camera.Zoom(), *pEntry->m_pRenderer);

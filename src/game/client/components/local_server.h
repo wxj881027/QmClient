@@ -7,8 +7,8 @@
 
 #include <game/client/component.h>
 
-#include <string>
 #include <chrono>
+#include <string>
 #include <vector>
 
 class CLocalServer : public CComponentInterfaces

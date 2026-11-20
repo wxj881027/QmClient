@@ -376,7 +376,7 @@ void CQmMapTagsPanel::Render(CGameClient *pGameClient, CUIRect View)
 		if(DraggingThis)
 			DrawRoundedSurface(pUi, aChipRects[Slot], ui_token::color::COLOR_TRANSPARENT, ui_token::feedback::ACTIVE_BORDER, aChipRects[Slot].h * 0.5f, ui_token::feedback::ICON_BORDER_WIDTH);
 		else if(pUi->MouseHovered(&aChipRects[Slot]))
-			DrawRoundedSurface(pUi, aChipRects[Slot], ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f), ColorRGBA(), aChipRects[Slot].h * 0.5f);
+			DrawRoundedSurface(pUi, aChipRects[Slot], ui_token::color::PREVIEW_SURFACE, ColorRGBA(), aChipRects[Slot].h * 0.5f);
 		if(ChipClicked && !m_LocalTagDrag.m_Dragging)
 			ClickedChip = TagIndex;
 		if(!pUi->RenderOnly())

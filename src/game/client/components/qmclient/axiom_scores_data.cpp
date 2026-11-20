@@ -345,7 +345,7 @@ EQmAxiomParseResult QmParseAxiomPointsResponse(const char *pData, size_t DataSiz
 	const json_value *pMain = JsonField(JsonField(pUser, "player"), "name");
 	const json_value *pDummy = JsonField(JsonField(pUser, "dummy"), "name");
 	const bool NameMatches = (pMain->type == json_string && str_comp(json_string_get(pMain), pPlayerName) == 0) ||
-		(pDummy->type == json_string && str_comp(json_string_get(pDummy), pPlayerName) == 0);
+				 (pDummy->type == json_string && str_comp(json_string_get(pDummy), pPlayerName) == 0);
 	const json_value *pMode = JsonField(pPayload, "mode");
 	if(!NameMatches || pMode->type != json_string || str_comp_nocase(json_string_get(pMode), QmAxiomModeName(Mode)) != 0 ||
 		!ReadNonNegativeInteger(pPayload, "points", OutPoints))

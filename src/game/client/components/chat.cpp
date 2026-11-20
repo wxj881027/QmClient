@@ -3009,7 +3009,8 @@ bool CChat::OnPrepareLines(float y)
 			       !(Author.m_DeveloperBadge && DeveloperBadgeAvailable) && VisibleTitle(Author.m_aQmTitle, Author.m_ClientId)[0] != '\0';
 		};
 		const bool WaveVisible = g_Config.m_QmTitleTextWave && (MergedPlayerMessages ?
-				std::any_of(Line.m_vMergedAuthors.begin(), Line.m_vMergedAuthors.end(), HasWavyTitle) : HasWavyTitle(Line));
+										       std::any_of(Line.m_vMergedAuthors.begin(), Line.m_vMergedAuthors.end(), HasWavyTitle) :
+										       HasWavyTitle(Line));
 		const float TitleBobPadding = WaveVisible ? FontSize * QM_TITLE_TEXT_WAVE_AMPLITUDE : 0.0f;
 		if(LineEmojiLayoutChanged || TitleHidden || TitleBobPadding != Line.m_QmTitleBobPadding)
 		{
@@ -4360,9 +4361,9 @@ void CChat::OnRender()
 	if(ShowChatScrollbar)
 	{
 		// 热项登记走公共按钮逻辑：滑块据此拿到悬浮/按下的几何反馈（变大），
-	// 与控制台、设置页滚动条用同一套，不在聊天里另写放大。
-	Ui()->DoButtonLogic(QmChatScrollbarId(), 0, &ScrollbarFrame.m_Rail, BUTTONFLAG_LEFT);
-	QmDrawChatScrollbar(Ui(), ScrollbarFrame.m_Rail, ScrollbarFrame.m_Thumb, true, ScrollbarHovered, m_ScrollbarDragging);
+		// 与控制台、设置页滚动条用同一套，不在聊天里另写放大。
+		Ui()->DoButtonLogic(QmChatScrollbarId(), 0, &ScrollbarFrame.m_Rail, BUTTONFLAG_LEFT);
+		QmDrawChatScrollbar(Ui(), ScrollbarFrame.m_Rail, ScrollbarFrame.m_Thumb, true, ScrollbarHovered, m_ScrollbarDragging);
 		ExtendBounds(ScrollbarFrame.m_Rail.x, ScrollbarFrame.m_Rail.y, ScrollbarFrame.m_Rail.w, ScrollbarFrame.m_Rail.h);
 	}
 

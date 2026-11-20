@@ -1,5 +1,5 @@
-#include <game/client/QmUi/SettingsSearchReveal.h>
 #include <game/client/QmUi/SettingsSearchHighlight.h>
+#include <game/client/QmUi/SettingsSearchReveal.h>
 #include <game/client/QmUi/UiSurfaceText.h>
 
 #include <gtest/gtest.h>

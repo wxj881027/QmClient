@@ -26,13 +26,13 @@
 #include <game/client/QmUi/QmNeonRainbow.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
-#include <game/client/QmUi/UiTag.h>
 #include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiMotion.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>
+#include <game/client/QmUi/UiTag.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/background.h>
@@ -605,8 +605,8 @@ static ColorRGBA GetServerListPingColor(const CServerInfo *pInfo, int OwnLocatio
 void CMenus::OpenMapPreviewPopup(const CServerInfo *pItem)
 {
 	const auto *pDifficulty = str_comp_nocase(pItem->m_aCommunityId, "axiom") == 0 ?
-					 m_MapDifficultyCatalog.FindForServer(*pItem) :
-					 m_MapDifficultyCatalog.Find(pItem->m_aMap);
+					  m_MapDifficultyCatalog.FindForServer(*pItem) :
+					  m_MapDifficultyCatalog.Find(pItem->m_aMap);
 	const char *pStars = pDifficulty != nullptr ? pDifficulty->StarLabel() : "";
 	char aCaption[192];
 	if(pStars[0] != '\0')

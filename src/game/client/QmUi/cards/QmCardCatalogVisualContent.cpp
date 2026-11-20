@@ -26,8 +26,8 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/binds.h>
-#include <game/client/components/qmclient/bind_index.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/bind_index.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
 #include <game/client/components/qmclient/qmclient_utils.h>

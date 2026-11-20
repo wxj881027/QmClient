@@ -6,6 +6,7 @@
 
 #include <base/color.h>
 #include <base/detect.h>
+
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -69,55 +70,14 @@ namespace ui_tag
 	// 索引由**标签文本的哈希**取模决定，不按添加顺序轮转：顺序是玩家拖动排的，
 	// 按位置取色会让一次拖动把整排颜色全换一遍（这也是项目规范里禁止的
 	// 「每次进游戏重新随机一次颜色」同一条：颜色只能是词的函数）。
-	inline constexpr int MONET_HUE_COUNT = 12;
-	inline constexpr int MONET_VARIANTS_PER_HUE = 4;
-	inline constexpr ColorRGBA MONET_PALETTE[] = {
-		// 罂粟红
-		ColorRGBA(0.630f, 0.449f, 0.421f, 1.0f), ColorRGBA(0.695f, 0.423f, 0.382f, 1.0f),
-		ColorRGBA(0.542f, 0.372f, 0.346f, 1.0f), ColorRGBA(0.614f, 0.344f, 0.302f, 1.0f),
-		// 赭橙
-		ColorRGBA(0.577f, 0.486f, 0.369f, 1.0f), ColorRGBA(0.615f, 0.480f, 0.303f, 1.0f),
-		ColorRGBA(0.484f, 0.409f, 0.310f, 1.0f), ColorRGBA(0.517f, 0.403f, 0.254f, 1.0f),
-		// 麦黄
-		ColorRGBA(0.529f, 0.517f, 0.338f, 1.0f), ColorRGBA(0.542f, 0.524f, 0.267f, 1.0f),
-		ColorRGBA(0.445f, 0.434f, 0.284f, 1.0f), ColorRGBA(0.455f, 0.440f, 0.224f, 1.0f),
-		// 橄榄
-		ColorRGBA(0.467f, 0.546f, 0.349f, 1.0f), ColorRGBA(0.452f, 0.567f, 0.279f, 1.0f),
-		ColorRGBA(0.392f, 0.459f, 0.293f, 1.0f), ColorRGBA(0.380f, 0.476f, 0.235f, 1.0f),
-		// 苔绿
-		ColorRGBA(0.381f, 0.585f, 0.374f, 1.0f), ColorRGBA(0.320f, 0.629f, 0.310f, 1.0f),
-		ColorRGBA(0.320f, 0.491f, 0.314f, 1.0f), ColorRGBA(0.269f, 0.528f, 0.260f, 1.0f),
-		// 灰绿
-		ColorRGBA(0.367f, 0.574f, 0.470f, 1.0f), ColorRGBA(0.301f, 0.610f, 0.455f, 1.0f),
-		ColorRGBA(0.308f, 0.482f, 0.395f, 1.0f), ColorRGBA(0.252f, 0.513f, 0.383f, 1.0f),
-		// 雾青
-		ColorRGBA(0.358f, 0.560f, 0.560f, 1.0f), ColorRGBA(0.290f, 0.589f, 0.589f, 1.0f),
-		ColorRGBA(0.301f, 0.471f, 0.471f, 1.0f), ColorRGBA(0.244f, 0.495f, 0.495f, 1.0f),
-		// 湖蓝
-		ColorRGBA(0.394f, 0.532f, 0.612f, 1.0f), ColorRGBA(0.336f, 0.550f, 0.673f, 1.0f),
-		ColorRGBA(0.330f, 0.447f, 0.516f, 1.0f), ColorRGBA(0.280f, 0.463f, 0.568f, 1.0f),
-		// 群青
-		ColorRGBA(0.442f, 0.502f, 0.643f, 1.0f), ColorRGBA(0.414f, 0.503f, 0.711f, 1.0f),
-		ColorRGBA(0.361f, 0.422f, 0.565f, 1.0f), ColorRGBA(0.323f, 0.423f, 0.657f, 1.0f),
-		// 紫罗兰
-		ColorRGBA(0.505f, 0.467f, 0.659f, 1.0f), ColorRGBA(0.507f, 0.452f, 0.730f, 1.0f),
-		ColorRGBA(0.426f, 0.382f, 0.598f, 1.0f), ColorRGBA(0.428f, 0.364f, 0.687f, 1.0f),
-		// 丁香紫
-		ColorRGBA(0.562f, 0.441f, 0.642f, 1.0f), ColorRGBA(0.591f, 0.413f, 0.711f, 1.0f),
-		ColorRGBA(0.482f, 0.360f, 0.564f, 1.0f), ColorRGBA(0.522f, 0.323f, 0.655f, 1.0f),
-		// 玫瑰粉
-		ColorRGBA(0.628f, 0.418f, 0.586f, 1.0f), ColorRGBA(0.693f, 0.377f, 0.630f, 1.0f),
-		ColorRGBA(0.538f, 0.344f, 0.500f, 1.0f), ColorRGBA(0.608f, 0.300f, 0.546f, 1.0f),
-	};
-	inline constexpr int MONET_PALETTE_SIZE = (int)(sizeof(MONET_PALETTE) / sizeof(MONET_PALETTE[0]));
 
 	// 哈希 → 色板下标：先按色相轮转、再换变体，相邻种子落在不同色相上。
 	inline int MonetPaletteIndex(unsigned Seed)
 	{
-		const int Slot = (int)(Seed % (unsigned)MONET_PALETTE_SIZE);
-		const int HueIndex = Slot % MONET_HUE_COUNT;
-		const int Variant = Slot / MONET_HUE_COUNT;
-		return HueIndex * MONET_VARIANTS_PER_HUE + Variant;
+		const int Slot = (int)(Seed % (unsigned)ui_token::tag::MONET_PALETTE_SIZE);
+		const int HueIndex = Slot % ui_token::tag::MONET_HUE_COUNT;
+		const int Variant = Slot / ui_token::tag::MONET_HUE_COUNT;
+		return HueIndex * ui_token::tag::MONET_VARIANTS_PER_HUE + Variant;
 	}
 
 	// 相对亮度：判断填充是否够亮（只用于派生的填充微调，不做 gamma 精确换算）。
@@ -162,7 +122,7 @@ namespace ui_tag
 		{
 			// 哈希 → 莫奈色板下标：同一个词永远落在同一格，不同词在 48 色里轮转。
 			const unsigned Seed = SeedFromKey(pKey != nullptr ? pKey : "");
-			Colors.m_Fill = MONET_PALETTE[MonetPaletteIndex(Seed)].WithAlpha(0.92f * A);
+			Colors.m_Fill = ui_token::tag::MONET_PALETTE[MonetPaletteIndex(Seed)].WithAlpha(0.92f * A);
 			break;
 		}
 		case EColorMode::DERIVED:

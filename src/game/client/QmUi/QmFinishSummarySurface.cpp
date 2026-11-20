@@ -1,7 +1,7 @@
 #include "QmFinishSummarySurface.h"
 
-#include "QmFinishSummaryCover.h"
 #include "QmColorGradient.h"
+#include "QmFinishSummaryCover.h"
 #include "QmIslandSurface.h"
 #include "UiSurface.h"
 

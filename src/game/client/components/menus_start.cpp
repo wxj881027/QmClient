@@ -664,9 +664,7 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 		// 由控制台自己的输入趟读取同一份几何，主页不再被背景渲染挡住点击。
 		const CUIRect ConsoleHitRect = QmUiSquareIconButtonRect(ConsoleButton);
 		GameClient()->m_GameConsole.RegisterStartMenuToggle(&s_ConsoleButton, ConsoleHitRect);
-		const std::optional<bool> ConsoleToggleHover = GameClient()->m_GameConsole.IsActive()
-			? std::optional<bool>(GameClient()->m_GameConsole.StartMenuToggleHovered())
-			: std::nullopt;
+		const std::optional<bool> ConsoleToggleHover = GameClient()->m_GameConsole.IsActive() ? std::optional<bool>(GameClient()->m_GameConsole.StartMenuToggleHovered()) : std::nullopt;
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		if(GameClient()->m_Menus.DoButton_Menu_QmIcon(&s_ConsoleButton, EQmIcon::TERMINAL, FONT_ICON_TERMINAL, 0, &ConsoleButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.1f), nullptr, -1.0f, ConsoleToggleHover))
