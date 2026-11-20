@@ -25,6 +25,7 @@
 #include <generated/protocol7.h>
 #include <generated/protocolglue.h>
 
+#include <game/client/components/qmclient/auto_team_lock.h>
 #include <game/client/components/qmclient/connection_resource_preparation.h>
 #include <game/client/components/qmclient/self_kill_protection.h>
 #include <game/client/components/qmclient/snapshot_entities.h>
@@ -1060,6 +1061,8 @@ public:
 	bool m_ReceivedDDNetPlayerFinishTimesMillis;
 
 	CTeamsCore m_Teams;
+	// 主号和分身各自连接收到的队伍状态；UI 与通用锁队按连接读取，避免共享表被当前视角覆盖。
+	CTeamsCore m_aConnectionTeams[NUM_DUMMIES];
 
 	// 钩子碰撞线模拟会以「每 tick 一次」的频率调用 IntersectCharacter，而它每次都要遍历
 	// MAX_CLIENTS 个客户端并读取 m_aClients[i]（CClientData 步长上万字节，几乎每次迭代都会
@@ -1410,6 +1413,8 @@ private:
 	void RepairStaleTeeRenderInfos();
 
 	void UpdateAutoTeamLock();
+	void ProcessTeamsState(int Conn, CUnpacker *pUnpacker);
+	void RefreshConnectionLocalIds();
 	void UpdateLocalTuning();
 	void UpdatePrediction();
 	void UpdateSpectatorCursor();
@@ -1437,9 +1442,7 @@ private:
 	uint64_t m_LastStreamerFriendsRevision = std::numeric_limits<uint64_t>::max();
 	CCharOrder m_CharOrder;
 	int m_aSwitchStateTeam[NUM_DUMMIES];
-	int m_aAutoTeamLockLastTeam[NUM_DUMMIES] = {TEAM_FLOCK, TEAM_FLOCK};
-	int64_t m_aAutoTeamLockDeadlineTick[NUM_DUMMIES] = {0, 0};
-	bool m_aAutoTeamLockPending[NUM_DUMMIES] = {false, false};
+	CQmAutoTeamLockState m_AutoTeamLock;
 	int64_t m_aQ1menGSyncMarkUntil[MAX_CLIENTS] = {0};
 	bool m_aQ1menGSyncFootParticlesEnabled[MAX_CLIENTS] = {false};
 	bool m_aQ1menGSyncRemoteParticlesEnabled[MAX_CLIENTS] = {false};

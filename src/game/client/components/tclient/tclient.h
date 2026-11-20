@@ -150,7 +150,13 @@ class CTClient : public CComponent
 	void SoloSplitLeave();
 	void SoloSplitStart(int Action);
 	void SoloSplitUpdate();
+	void ResetSoloSplitLockRetries();
+	void ScheduleSoloSplitLockRetry(int Connection, int Team);
+	void UpdateSoloSplitLockRetries();
 	CQmSoloSplitState m_SoloSplit;
+	CQmSoloSplitLockHints m_SoloSplitLockHints;
+	std::array<int64_t, NUM_DUMMIES> m_aSoloSplitLockRetryAt = {};
+	std::array<int, NUM_DUMMIES> m_aSoloSplitLockRetryAttempts = {};
 
 	int m_EmoteCycle = 0;
 	static void ConEmoteCycle(IConsole::IResult *pResult, void *pUserData);
@@ -474,7 +480,13 @@ public:
 		m_VoteCallerId = -1;
 	}
 	void SetVoteCallerId(int ClientId) { m_VoteCallerId = ClientId; }
-	void CancelSoloSplit() { m_SoloSplit.Reset(); }
+	void CancelSoloSplit()
+	{
+		m_SoloSplit.Reset();
+		ResetSoloSplitLockRetries();
+	}
+	bool IsSoloSplitPending() const { return m_SoloSplit.Pending(); }
+	bool IsSoloSplitTeamLocked(int Team) const { return m_SoloSplitLockHints.IsTeamLocked(Team); }
 	void OnShutdown() override;
 	void OnWindowResize() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;

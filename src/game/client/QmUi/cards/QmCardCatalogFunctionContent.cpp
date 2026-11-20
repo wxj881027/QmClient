@@ -235,16 +235,13 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 	static CButtonContainer s_ReaderButtonSoloSplitEnter, s_ClearButtonSoloSplitEnter;
 	static CButtonContainer s_ReaderButtonSoloSplitLeave, s_ClearButtonSoloSplitLeave;
 	static const void *s_RestoreTeamInputId = &s_RestoreTeamInputId;
-	// 自动锁队配置与 HJAssist 卡共用 qm_auto_team_lock；HJAssist 已用配置地址作控件 id，
-	// 两卡可能同屏显示，这里改用独立静态地址避免 hot/active 项串扰。
-	static const void *s_AutoTeamLockCheckboxId = &s_AutoTeamLockCheckboxId;
 	CUIRect Row, BindLabel, BindKey, LabelColumn, ControlColumn;
 	auto RenderCheckbox = [&](const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		if(Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			RenderQmFunctionCheckbox(pId, pTextId, Localize(pText), pValue, &Row, PrewarmOnly);
 	};
 	RenderCheckbox(&g_Config.m_QmSoloSplitLinkDummy, "qmclient-solo-split-link-dummy", "Auto-connect dummy", &g_Config.m_QmSoloSplitLinkDummy);
-	RenderCheckbox(s_AutoTeamLockCheckboxId, "qmclient-solo-split-auto-team-lock", "Auto team lock", &g_Config.m_QmAutoTeamLock);
+	RenderCheckbox(&g_Config.m_QmSoloSplitAutoTeamLock, "qmclient-solo-split-auto-team-lock", "Lock both teams immediately when entering solo split mode", &g_Config.m_QmSoloSplitAutoTeamLock);
 	if(Flow.Control("qmclient-solo-split-restore-team", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);

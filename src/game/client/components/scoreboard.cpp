@@ -1317,6 +1317,8 @@ void CScoreboard::UpdateTeamModeCache()
 		const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
 		AccumulateQmScoreboardTeamModeState(aTeamModes[DDTeam], Character.m_HasExtendedDisplayInfo, Character.m_ExtendedData.m_Flags);
 	}
+	for(int Team = TEAM_FLOCK; Team < NUM_DDRACE_TEAMS; ++Team)
+		ApplyQmScoreboardTeamLockHint(aTeamModes[Team], GameClient()->TClientComponent().IsSoloSplitTeamLocked(Team));
 	CacheAndRestoreQmScoreboardTeamModes(aTeamModes, aTeamHasPlayer, m_aCachedTeamModes);
 }
 
@@ -1377,6 +1379,8 @@ void CScoreboard::BuildPlayerRowPlan(int Team, CScoreboardPlayerRowPlan &Plan)
 			Row.m_Dead = IsDead;
 		}
 	}
+	for(int DDTeam = TEAM_FLOCK; DDTeam < NUM_DDRACE_TEAMS; ++DDTeam)
+		ApplyQmScoreboardTeamLockHint(Plan.m_aTeamModes[DDTeam], GameClient()->TClientComponent().IsSoloSplitTeamLocked(DDTeam));
 	CacheAndRestoreQmScoreboardTeamModes(Plan.m_aTeamModes, Plan.m_aTeamHasPlayer, m_aCachedTeamModes);
 }
 

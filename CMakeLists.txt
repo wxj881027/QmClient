@@ -5263,6 +5263,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_sponsor_authors_test.cpp
     src/test/unit/qmclient/client/qm_sponsors_test.cpp
     src/test/unit/qmclient/client/qm_solo_split_test.cpp
+    src/test/unit/qmclient/client/qm_auto_team_lock_test.cpp
     src/test/unit/qmclient/client/qm_markdown_test.cpp
     src/test/unit/qmclient/client/qm_markdown_broadcast_test.cpp
     src/test/unit/qmclient/client/qm_emoticon_projectile_test.cpp

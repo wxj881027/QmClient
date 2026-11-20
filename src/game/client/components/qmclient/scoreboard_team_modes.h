@@ -28,6 +28,16 @@ inline void AccumulateQmScoreboardTeamModeState(SQmScoreboardTeamModeState &Stat
 	State.m_Flags |= CharacterFlags & QM_SCOREBOARD_TEAM_MODE_MASK;
 }
 
+// 分身/本体分处不同队伍时，当前连接的快照可能完全不包含另一角色。服务端锁队
+// 确认已足以补上锁图标，但仅在角色快照缺席时使用，角色可见后仍以实际标志为准。
+inline void ApplyQmScoreboardTeamLockHint(SQmScoreboardTeamModeState &State, bool Locked)
+{
+	if(State.m_Known || !Locked)
+		return;
+	State.m_Known = true;
+	State.m_Flags |= CHARACTERFLAG_LOCK_MODE;
+}
+
 constexpr int QmScoreboardEffectivePlayerTeam(int PlayerTeam, bool IsSpec, bool IsTeamPlay)
 {
 	return !IsTeamPlay && IsSpec && PlayerTeam == TEAM_SPECTATORS ? TEAM_GAME : PlayerTeam;

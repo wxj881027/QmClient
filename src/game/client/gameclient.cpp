@@ -1876,6 +1876,8 @@ void CGameClient::OnReset()
 	m_ReceivedDDNetPlayerFinishTimesMillis = false;
 
 	m_Teams.Reset();
+	for(auto &Teams : m_aConnectionTeams)
+		Teams.Reset();
 	m_GameWorld.Clear();
 	m_GameWorld.m_PredictedEvents.clear();
 	m_GameWorld.m_WorldConfig.m_InfiniteAmmo = true;
@@ -1903,13 +1905,7 @@ void CGameClient::OnReset()
 	std::fill(std::begin(m_aLastProcessedEventTick), std::end(m_aLastProcessedEventTick), -1);
 	m_CharOrder.Reset();
 	std::fill(std::begin(m_aSwitchStateTeam), std::end(m_aSwitchStateTeam), -1);
-
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-	{
-		m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-	}
+	m_AutoTeamLock.Reset();
 
 	m_MapBestTimeSeconds = FinishTime::UNSET;
 	m_MapBestTimeMillis = 0;
@@ -2504,6 +2500,8 @@ void CGameClient::OnDummyDisconnect()
 	m_Chat.InvalidateOutgoingConnection(IClient::CONN_DUMMY);
 	TClientComponent().CancelSoloSplit();
 	m_aLocalIds[1] = -1;
+	m_aConnectionTeams[IClient::CONN_DUMMY].Reset();
+	m_AutoTeamLock.ResetConnection(IClient::CONN_DUMMY);
 	m_aDDRaceMsgSent[1] = false;
 	m_aShowOthers[1] = SHOW_OTHERS_NOT_SET;
 	m_aEnableSpectatorCount[1] = -1;
@@ -3008,6 +3006,15 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		}
 	}
 
+	if(MsgId == NETMSGTYPE_SV_TEAMSSTATE || MsgId == NETMSGTYPE_SV_TEAMSSTATELEGACY)
+	{
+		ProcessTeamsState(Conn, pUnpacker);
+		m_Ghost.m_AllowRestart = true;
+		m_RaceDemo.m_AllowRestart = true;
+		if(Dummy)
+			return;
+	}
+
 	if(Dummy)
 	{
 		if(MsgId == NETMSGTYPE_SV_READYTOENTER)
@@ -3068,33 +3075,6 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 			if(g_Config.m_SndGame)
 				m_Sounds.Play(CSounds::CHN_GLOBAL, pMsg->m_SoundId, 1.0f);
 		}
-	}
-	else if(MsgId == NETMSGTYPE_SV_TEAMSSTATE || MsgId == NETMSGTYPE_SV_TEAMSSTATELEGACY)
-	{
-		unsigned int i;
-
-		for(i = 0; i < MAX_CLIENTS; i++)
-		{
-			const int Team = pUnpacker->GetInt();
-			if(!pUnpacker->Error() && Team >= TEAM_FLOCK && Team < NUM_DDRACE_TEAMS)
-			{
-				m_Teams.Team(i, Team);
-			}
-			else
-			{
-				m_Teams.Team(i, 0);
-				break;
-			}
-		}
-
-		if(i <= VANILLA_MAX_CLIENTS)
-		{
-			m_Teams.m_IsDDRace16 = true;
-			m_Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
-		}
-
-		m_Ghost.m_AllowRestart = true;
-		m_RaceDemo.m_AllowRestart = true;
 	}
 	else if(MsgId == NETMSGTYPE_SV_KILLMSG)
 	{
@@ -4413,13 +4393,19 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		m_Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
 	else if(m_GameInfo.m_NumDDRaceTeams > 0)
 		m_Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
+	for(auto &Teams : m_aConnectionTeams)
+	{
+		if(Teams.m_IsDDRace16)
+			Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
+		else if(m_GameInfo.m_NumDDRaceTeams > 0)
+			Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
+	}
 
 	LogSnapshotStage("snapshot_decode");
+	RefreshConnectionLocalIds();
 	// setup local pointers
 	if(m_Snap.m_LocalClientId >= 0)
 	{
-		m_aLocalIds[g_Config.m_ClDummy] = m_Snap.m_LocalClientId;
-
 		CSnapState::CCharacterInfo *pChr = &m_Snap.m_aCharacters[m_Snap.m_LocalClientId];
 		if(pChr->m_Active)
 		{
@@ -4910,56 +4896,92 @@ void CGameClient::UpdateAutoTeamLock()
 {
 	if(Client()->State() != IClient::STATE_ONLINE)
 	{
-		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		m_AutoTeamLock.Reset();
+		return;
+	}
+
+	std::array<bool, NUM_DUMMIES> aConnected{};
+	std::array<bool, NUM_DUMMIES> aSuppressLock{};
+	std::array<int, NUM_DUMMIES> aTeams{};
+	std::array<int, NUM_DUMMIES> aTeamSupers{};
+	std::array<int64_t, NUM_DUMMIES> aGameTicks{};
+	const bool SuppressSoloTeams = g_Config.m_QmSoloSplitAutoTeamLock != 0 && m_TClient.IsSoloSplitPending();
+	for(int Connection = 0; Connection < NUM_DUMMIES; ++Connection)
+	{
+		const int ClientId = m_aLocalIds[Connection];
+		aConnected[Connection] = ClientId >= 0 && ClientId < MAX_CLIENTS &&
+					 (Connection == IClient::CONN_MAIN || Client()->DummyConnected());
+		aTeams[Connection] = aConnected[Connection] ? m_aConnectionTeams[Connection].Team(ClientId) : TEAM_FLOCK;
+		aTeamSupers[Connection] = m_aConnectionTeams[Connection].TeamSuper();
+		aGameTicks[Connection] = Client()->GameTick(Connection);
+		aSuppressLock[Connection] = SuppressSoloTeams;
+	}
+
+	const SQmAutoTeamLockPlan Plan = m_AutoTeamLock.Update(
+		g_Config.m_QmAutoTeamLock != 0,
+		g_Config.m_QmAutoTeamLockDelay,
+		Client()->GameTickSpeed(),
+		aTeams,
+		aTeamSupers,
+		aGameTicks,
+		aConnected,
+		aSuppressLock);
+	for(int i = 0; i < Plan.m_RequestCount; ++i)
+	{
+		const SQmAutoTeamLockRequest &Request = Plan.m_aRequests[i];
+		m_Chat.SendChatOnConn(Request.m_Connection, 0, "/lock 1");
+	}
+}
+
+void CGameClient::ProcessTeamsState(int Conn, CUnpacker *pUnpacker)
+{
+	if(Conn < 0 || Conn >= NUM_DUMMIES)
+		return;
+
+	CTeamsCore &Teams = m_aConnectionTeams[Conn];
+	unsigned int i;
+	for(i = 0; i < MAX_CLIENTS; i++)
+	{
+		const int Team = pUnpacker->GetInt();
+		if(!pUnpacker->Error() && Team >= TEAM_FLOCK && Team < NUM_DDRACE_TEAMS)
 		{
-			m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
-			m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-			m_aAutoTeamLockPending[Dummy] = false;
+			Teams.Team(i, Team);
+			if(Conn == g_Config.m_ClDummy)
+				m_Teams.Team(i, Team);
 		}
-		return;
+		else
+		{
+			Teams.Team(i, 0);
+			if(Conn == g_Config.m_ClDummy)
+				m_Teams.Team(i, 0);
+			break;
+		}
 	}
 
-	const int Dummy = g_Config.m_ClDummy;
-	const int ClientId = m_aLocalIds[Dummy];
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+	if(i <= VANILLA_MAX_CLIENTS)
 	{
-		m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-		return;
+		Teams.m_IsDDRace16 = true;
+		Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
+		if(Conn == g_Config.m_ClDummy)
+		{
+			m_Teams.m_IsDDRace16 = true;
+			m_Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
+		}
 	}
-
-	const int Team = m_Teams.Team(ClientId);
-	const bool TeamCanBeLocked = Team > TEAM_FLOCK && Team < TEAM_SUPER;
-	const bool LastTeamCanBeLocked = m_aAutoTeamLockLastTeam[Dummy] > TEAM_FLOCK && m_aAutoTeamLockLastTeam[Dummy] < TEAM_SUPER;
-
-	if(!g_Config.m_QmAutoTeamLock)
+	else if(m_GameInfo.m_NumDDRaceTeams > 0)
 	{
-		m_aAutoTeamLockLastTeam[Dummy] = Team;
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-		return;
+		Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
+		if(Conn == g_Config.m_ClDummy)
+			m_Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
 	}
+}
 
-	if(TeamCanBeLocked && (!LastTeamCanBeLocked || Team != m_aAutoTeamLockLastTeam[Dummy]))
-	{
-		const int DelayTicks = g_Config.m_QmAutoTeamLockDelay * Client()->GameTickSpeed();
-		m_aAutoTeamLockDeadlineTick[Dummy] = (int64_t)Client()->GameTick(Dummy) + DelayTicks;
-		m_aAutoTeamLockPending[Dummy] = true;
-	}
-	else if(!TeamCanBeLocked)
-	{
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-	}
-
-	if(m_aAutoTeamLockPending[Dummy] && TeamCanBeLocked && Client()->GameTick(Dummy) >= m_aAutoTeamLockDeadlineTick[Dummy])
-	{
-		m_Chat.SendChat(0, "/lock 1");
-		m_aAutoTeamLockPending[Dummy] = false;
-	}
-
-	m_aAutoTeamLockLastTeam[Dummy] = Team;
+void CGameClient::RefreshConnectionLocalIds()
+{
+	const int Active = g_Config.m_ClDummy;
+	const int Other = !Active;
+	m_aLocalIds[Active] = m_Snap.m_LocalClientId;
+	m_aLocalIds[Other] = Other == IClient::CONN_DUMMY && !Client()->DummyConnected() ? -1 : Client()->GetLocalClientId(Other);
 }
 
 void CGameClient::UpdateEditorIngameMoved()

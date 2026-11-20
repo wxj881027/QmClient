@@ -55,7 +55,7 @@ MACRO_CONFIG_INT(QmUiMotionLevel, qm_ui_motion_level, 2, 0, 2, CFGFLAG_CLIENT | 
 MACRO_CONFIG_INT(QmMenuSlideFeel, qm_menu_slide_feel, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "ESC menu slide feel: 0=soft, 1=standard, 2=bouncy")
 // 控制台从顶部下拉展开/收回的弹簧手感：0=柔和 1=标准 2=弹性。
 MACRO_CONFIG_INT(QmConsoleSlideFeel, qm_console_slide_feel, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console slide feel: 0=soft, 1=standard, 2=bouncy")
-// 计分板面板入场：0=柔和 1=标准 2=弹性。打开时从 0 缩放到过冲峰值再回落到 100%。
+// 计分板面板入场：0=柔和 1=标准 2=弹性。打开时从略小尺寸弹到过冲峰值再回落到 100%。
 MACRO_CONFIG_INT(QmScoreboardPopFeel, qm_scoreboard_pop_feel, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy")
 // 计分板入场过冲量（百分比）：6 表示先放大到 106% 再回落到 100%；0 表示不回弹。
 // 上限 15%：过冲同时驱动立即模式布局的字号重排，超过这个量会读作「胀一下再缩回去」。
@@ -518,6 +518,7 @@ MACRO_CONFIG_INT(QmHudNotificationsShowUnknown, qm_hud_notifications_show_unknow
 MACRO_CONFIG_INT(QmHudNotificationsCompatSolo, qm_hud_notifications_compat_solo, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Compatible with single-player area hints from other servers")
 MACRO_CONFIG_INT(QmSoloSplitRestoreTeam, qm_solo_split_restore_team, 0, 0, 63, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Team used when leaving solo split mode")
 MACRO_CONFIG_INT(QmSoloSplitLinkDummy, qm_solo_split_link_dummy, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Connect dummy automatically for solo split mode")
+MACRO_CONFIG_INT(QmSoloSplitAutoTeamLock, qm_solo_split_auto_team_lock, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Lock both teams immediately when entering solo split mode")
 MACRO_CONFIG_COL(QmHudNotificationsBgColor, qm_hud_notifications_bg_color, 0x99000000, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Notification bar background color")
 MACRO_CONFIG_COL(QmHudNotificationsTextColor, qm_hud_notifications_text_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Notification bar system message text color")
 MACRO_CONFIG_INT(QmHudNotificationsEchoInheritColor, qm_hud_notifications_echo_inherit_color, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Notification bar echo inherits chat echo color")

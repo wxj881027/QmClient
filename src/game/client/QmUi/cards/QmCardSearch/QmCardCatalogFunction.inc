@@ -161,12 +161,12 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_hj_assist[] = {
 		{Localizable("Auto switch to the tee that got unfrozen"), nullptr, "自动切换到解冻的 Tee"},
-		{Localizable("Auto team lock"), nullptr, "自动锁队"},
+		{Localizable("Auto-lock after joining lockable team"), nullptr, "加入可锁定队伍后自动锁定"},
 		{Localizable("Auto unspec on unfreeze"), nullptr, "解冻自动取消旁观"},
 		{Localizable("Auto unspec both tees when either is hammered awake"), nullptr, "任一方被锤醒时两个 Tee 都取消旁观"},
 		{Localizable("Automatically close the current chat after waking from freeze"), nullptr, "从冻结状态中醒来自动关闭聊天框"},
 		{Localizable("Fade spectators in water"), nullptr, "虚化水中的旁观者"},
-		{Localizable("Lock delay"), nullptr, "锁队延迟"},
+		{Localizable("Auto-lock delay (seconds)"), nullptr, "自动锁定延迟（秒）"},
 		{Localizable("Show wake-up popup on the other tee"), nullptr, "在另一侧 Tee 显示唤醒提示"},
 		{Localizable("Spectator opacity"), nullptr, "旁观者透明度"},
 		{nullptr, "qm_auto_close_chat_on_unfreeze", nullptr},
@@ -403,18 +403,18 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_solo_split[] = {
-		{Localizable("Auto team lock"), nullptr, "自动锁队"},
+		{Localizable("Lock both teams immediately when entering solo split mode"), nullptr, "进入单刷模式时立即锁定双方队伍"},
 		{Localizable("Auto-connect dummy"), nullptr, "自动连接分身"},
 		{Localizable("Solo split enter key"), nullptr, "单刷模式进队按键"},
 		{Localizable("Solo split key"), nullptr, "单刷模式按键"},
 		{Localizable("Solo split leave key"), nullptr, "单刷模式出队按键"},
 		{Localizable("Team when leaving solo split"), nullptr, "退出单刷时的队伍"},
-		{nullptr, "qm_auto_team_lock", nullptr},
 		{nullptr, "qm_solo_split", nullptr},
 		{nullptr, "qm_solo_split_enter", nullptr},
 		{nullptr, "qm_solo_split_leave", nullptr},
 		{nullptr, "qm_solo_split_link_dummy", nullptr},
 		{nullptr, "qm_solo_split_restore_team", nullptr},
+		{nullptr, "qm_solo_split_auto_team_lock", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("qm:solo_split", qm_solo_split);
 }

@@ -497,6 +497,19 @@ bool CTClient::TryHandleRedPacketAutoClaim(const CNetMsg_Sv_Chat *pMsg)
 
 void CTClient::OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection)
 {
+	if(Client()->State() == IClient::STATE_ONLINE && pMsg != nullptr && pMsg->m_pMessage != nullptr &&
+		Connection >= 0 && Connection < NUM_DUMMIES)
+	{
+		const char *pLocalName = Connection == IClient::CONN_MAIN ? Client()->PlayerName() : Client()->DummyName();
+		const SQmSoloSplitTeamLockMessage LockMessage = QmParseSoloSplitTeamLockMessage(pMsg->m_pMessage, pLocalName);
+		if(LockMessage.m_Recognized && m_SoloSplitLockHints.ApplyConfirmation(Connection, LockMessage.m_Locked))
+		{
+			log_debug("qm_solo_split", "lock confirmation conn=%d locked=%d", Connection, LockMessage.m_Locked);
+			m_aSoloSplitLockRetryAt[Connection] = 0;
+			m_aSoloSplitLockRetryAttempts[Connection] = 0;
+		}
+	}
+
 	if(Client()->State() != IClient::STATE_ONLINE || pMsg == nullptr || pMsg->m_pMessage == nullptr ||
 		pMsg->m_ClientId < 0 || pMsg->m_ClientId >= MAX_CLIENTS)
 		return;
@@ -841,7 +854,9 @@ void CTClient::SoloSplitToggle()
 	{
 		const int MainId = GameClient()->m_aLocalIds[0];
 		const int DummyId = GameClient()->m_aLocalIds[1];
-		if(MainId >= 0 && DummyId >= 0 && GameClient()->m_Teams.Team(MainId) > 0 && GameClient()->m_Teams.Team(DummyId) > 0 && GameClient()->m_Teams.Team(MainId) != GameClient()->m_Teams.Team(DummyId))
+		const CTeamsCore &MainTeams = GameClient()->m_aConnectionTeams[IClient::CONN_MAIN];
+		const CTeamsCore &DummyTeams = GameClient()->m_aConnectionTeams[IClient::CONN_DUMMY];
+		if(MainId >= 0 && DummyId >= 0 && MainTeams.Team(MainId) > 0 && DummyTeams.Team(DummyId) > 0 && MainTeams.Team(MainId) != DummyTeams.Team(DummyId))
 		{
 			SoloSplitLeave();
 			return;
@@ -864,6 +879,7 @@ void CTClient::SoloSplitStart(int Action)
 {
 	if(m_SoloSplit.Pending() || Client()->State() != IClient::STATE_ONLINE)
 		return;
+	ResetSoloSplitLockRetries();
 	if(!Client()->DummyConnected())
 	{
 		if(Action != 1 || !g_Config.m_QmSoloSplitLinkDummy)
@@ -881,9 +897,11 @@ void CTClient::SoloSplitStart(int Action)
 		return;
 	}
 
-	const int MainTeam = GameClient()->m_Teams.Team(MainId);
-	const int DummyTeam = GameClient()->m_Teams.Team(DummyId);
-	const int TeamSuper = GameClient()->m_Teams.TeamSuper();
+	const CTeamsCore &MainTeams = GameClient()->m_aConnectionTeams[IClient::CONN_MAIN];
+	const CTeamsCore &DummyTeams = GameClient()->m_aConnectionTeams[IClient::CONN_DUMMY];
+	const int MainTeam = MainTeams.Team(MainId);
+	const int DummyTeam = DummyTeams.Team(DummyId);
+	const int TeamSuper = std::min(MainTeams.TeamSuper(), DummyTeams.TeamSuper());
 	const int RestoreTeam = g_Config.m_QmSoloSplitRestoreTeam;
 	if(RestoreTeam < 0 || RestoreTeam >= TeamSuper)
 	{
@@ -896,38 +914,71 @@ void CTClient::SoloSplitStart(int Action)
 	}
 	else
 	{
-		// 进队时找两个未被占用的合法 team（0 是公共队，TEAM_SUPER 保留）。
-		bool aTeamUsed[NUM_DDRACE_TEAMS] = {};
+		// 进队时找两个未被其他玩家占用的合法 team。主号和分身自己的旧队伍
+		// 不能算作占用：否则已经分好的 1/2 队会被跳过，反而把两人挤到后续队伍。
+		std::array<bool, NUM_DDRACE_TEAMS> aTeamUsed{};
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
 			if(!GameClient()->m_aClients[i].m_Active)
 				continue;
-			const int Team = GameClient()->m_Teams.Team(i);
+			if(i == MainId || i == DummyId)
+				continue;
+			const int Team = MainTeams.Team(i);
 			if(Team > 0 && Team < TeamSuper && Team < NUM_DDRACE_TEAMS)
 				aTeamUsed[Team] = true;
 		}
 
-		int First = -1, Second = -1;
-		for(int Team = 1; Team < TeamSuper && Team < NUM_DDRACE_TEAMS; ++Team)
-		{
-			if(aTeamUsed[Team])
-				continue;
-			if(First < 0)
-				First = Team;
-			else if(Second < 0)
-			{
-				Second = Team;
-				break;
-			}
-		}
-		if(First < 0 || Second < 0)
-		{
+		const SQmSoloSplitTeamSelection Selection = QmSelectSoloSplitTeams(MainTeam, DummyTeam, TeamSuper, aTeamUsed);
+		if(!Selection.Valid())
 			return;
-		}
-		aTargetTeams = {First, Second};
+		aTargetTeams = {Selection.m_Main, Selection.m_Dummy};
 	}
 	m_SoloSplit.StartTeams(Action, {MainTeam, DummyTeam}, aTargetTeams, time_get());
 	SoloSplitUpdate();
+}
+
+void CTClient::ResetSoloSplitLockRetries()
+{
+	m_aSoloSplitLockRetryAt.fill(0);
+	m_aSoloSplitLockRetryAttempts.fill(0);
+	m_SoloSplitLockHints.Reset();
+}
+
+void CTClient::ScheduleSoloSplitLockRetry(int Connection, int Team)
+{
+	if(Connection < 0 || Connection >= NUM_DUMMIES || !g_Config.m_QmSoloSplitAutoTeamLock)
+		return;
+	// 同帧 mc; 命令已经尝试锁队；这里只处理服务端聊天冷却把主连接 /lock
+	// 静默丢弃的情况。正常连接会在补发前就显示锁图标，补发是幂等操作。
+	m_SoloSplitLockHints.ExpectLock(Connection, Team);
+	m_aSoloSplitLockRetryAt[Connection] = time_get() + time_freq() * 11 / 10;
+	m_aSoloSplitLockRetryAttempts[Connection] = 1;
+}
+
+void CTClient::UpdateSoloSplitLockRetries()
+{
+	if(Client()->State() != IClient::STATE_ONLINE || !Client()->DummyConnected() || !g_Config.m_QmSoloSplitAutoTeamLock)
+	{
+		ResetSoloSplitLockRetries();
+		return;
+	}
+
+	const int64_t Now = time_get();
+	for(int Conn = 0; Conn < NUM_DUMMIES; ++Conn)
+	{
+		if(m_aSoloSplitLockRetryAttempts[Conn] <= 0 || Now < m_aSoloSplitLockRetryAt[Conn])
+			continue;
+		if(GameClient()->m_Chat.SendChatOnConn(Conn, 0, "/lock 1"))
+		{
+			--m_aSoloSplitLockRetryAttempts[Conn];
+			if(m_aSoloSplitLockRetryAttempts[Conn] > 0)
+				m_aSoloSplitLockRetryAt[Conn] = Now + time_freq() * 11 / 10;
+		}
+		else
+		{
+			m_aSoloSplitLockRetryAt[Conn] = Now + time_freq() / 4;
+		}
+	}
 }
 
 void CTClient::SoloSplitUpdate()
@@ -935,15 +986,22 @@ void CTClient::SoloSplitUpdate()
 	const int MainId = GameClient()->m_aLocalIds[0];
 	const int DummyId = GameClient()->m_aLocalIds[1];
 	const bool PlayerIdsValid = MainId >= 0 && DummyId >= 0;
-	const std::array<int, 2> aCurrentTeams = PlayerIdsValid ? std::array<int, 2>{GameClient()->m_Teams.Team(MainId), GameClient()->m_Teams.Team(DummyId)} : std::array<int, 2>{};
+	const CTeamsCore &MainTeams = GameClient()->m_aConnectionTeams[IClient::CONN_MAIN];
+	const CTeamsCore &DummyTeams = GameClient()->m_aConnectionTeams[IClient::CONN_DUMMY];
+	const std::array<int, 2> aCurrentTeams = PlayerIdsValid ? std::array<int, 2>{MainTeams.Team(MainId), DummyTeams.Team(DummyId)} : std::array<int, 2>{};
 	const auto Teams = m_SoloSplit.UpdateTeams(Client()->State() == IClient::STATE_ONLINE, Client()->DummyConnected(), PlayerIdsValid, aCurrentTeams, time_get(), time_freq());
 	if(Teams.has_value())
 	{
+		const bool LockAfterJoin = g_Config.m_QmSoloSplitAutoTeamLock && m_SoloSplit.LocksEnteredTeams();
 		for(int Conn : {IClient::CONN_MAIN, IClient::CONN_DUMMY})
 		{
-			char aCmd[32];
-			str_format(aCmd, sizeof(aCmd), "/team %d", (*Teams)[Conn]);
-			GameClient()->m_Chat.SendChatOnConn(Conn, 0, aCmd);
+			char aCmd[64];
+			if(QmBuildSoloSplitTeamCommand(aCmd, sizeof(aCmd), (*Teams)[Conn], LockAfterJoin))
+			{
+				const bool Sent = GameClient()->m_Chat.SendChatOnConn(Conn, 0, aCmd);
+				if(Sent && LockAfterJoin)
+					ScheduleSoloSplitLockRetry(Conn, (*Teams)[Conn]);
+			}
 		}
 	}
 }
@@ -1275,6 +1333,7 @@ void CTClient::OnUpdate()
 		SoloSplitStart(SoloSplitAction);
 	else if(m_SoloSplit.Pending() && !m_SoloSplit.WaitingForPlayers())
 		SoloSplitUpdate();
+	UpdateSoloSplitLockRetries();
 	UpdateLocalSaveRestore();
 	TickUpdateLifecycle();
 
