@@ -66,11 +66,17 @@ private:
 	};
 	// 键为（玩法，地图名），同名地图不跨玩法共用；星级上限由公告自身决定。
 	using TAxiomKey = std::pair<int, std::string>;
+	using TAxiomRetryMap = std::map<TAxiomKey, int64_t, SAxiomKeyLess>;
+	struct SAxiomRequest
+	{
+		std::shared_ptr<IHttpRequest> m_pRequest;
+		TAxiomRetryMap::node_type m_RetryNode;
+	};
 	bool StoreAxiomEntry(int ModeId, SEntry Entry);
 	bool RecordAxiomResponse(const TAxiomKey &Key, const IHttpRequest &Request);
 	TRequestFactory m_CreateRequest;
-	std::map<TAxiomKey, std::shared_ptr<IHttpRequest>, SAxiomKeyLess> m_AxiomRequests;
-	std::map<TAxiomKey, int64_t, SAxiomKeyLess> m_AxiomRetryAfter;
+	std::map<TAxiomKey, SAxiomRequest, SAxiomKeyLess> m_AxiomRequests;
+	TAxiomRetryMap m_AxiomRetryAfter;
 	std::map<TAxiomKey, SEntry, SAxiomKeyLess> m_AxiomEntries;
 	bool m_AxiomCacheDirty = false;
 	std::vector<SEntry> m_vEntries;

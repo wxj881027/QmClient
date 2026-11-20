@@ -8,13 +8,31 @@
 #include <gtest/gtest.h>
 #include <test/support/map_http_recorder.h>
 
+#include <functional>
+#include <new>
+#include <stdexcept>
+#include <utility>
+
 namespace
 {
+	class CInterruptibleHttp : public MapHttpTest::CHttpRecorder
+	{
+	public:
+		std::function<void()> m_OnNextRun;
+
+		void Run(std::shared_ptr<IHttpRequest> pRequest) override
+		{
+			if(auto OnRun = std::exchange(m_OnNextRun, {}))
+				OnRun();
+			CHttpRecorder::Run(std::move(pRequest));
+		}
+	};
+
 	class AxiomBrowserDifficulty : public ::testing::Test
 	{
 	protected:
 		CServerInfo m_Server{};
-		MapHttpTest::CHttpRecorder m_Http;
+		CInterruptibleHttp m_Http;
 		CQmMapDifficultyCatalog m_Catalog{MapHttpTest::CreateResponse};
 		CQmAxiomRequestBudget m_Budget;
 		int64_t m_Now = time_freq();
@@ -145,4 +163,44 @@ TEST_F(AxiomBrowserDifficulty, CancelledLookupCannotPublishItsLateResponse)
 	m_Http.m_vRequests[0]->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Easy"}})");
 	EXPECT_FALSE(Poll());
 	EXPECT_EQ(m_Catalog.FindForServer(m_Server), nullptr);
+}
+
+TEST_F(AxiomBrowserDifficulty, SubmissionResourceFailureReleasesLookupSlot)
+{
+	m_Http.m_OnNextRun = [] { throw std::length_error("test queue capacity"); };
+	EXPECT_NO_THROW(Request());
+	EXPECT_TRUE(m_Http.m_vRequests.empty());
+	Request();
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	m_Http.m_vRequests.front()->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Easy"}})");
+	EXPECT_TRUE(Poll());
+}
+
+TEST_F(AxiomBrowserDifficulty, FailedSubmissionKeepsReplacementFromReentrantRequest)
+{
+	m_Http.m_OnNextRun = [this] {
+		m_Catalog.CancelAxiomRequests();
+		Request();
+		throw std::bad_alloc();
+	};
+	EXPECT_NO_THROW(Request());
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	m_Http.m_vRequests.front()->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Easy"}})");
+	EXPECT_TRUE(Poll());
+	EXPECT_NE(m_Catalog.FindForServer(m_Server), nullptr);
+}
+
+TEST_F(AxiomBrowserDifficulty, NotFoundRetryDelayBeginsAtResponseCompletion)
+{
+	Request();
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	m_Now += 10 * time_freq();
+	m_Http.m_vRequests.front()->Finish("{}", 404);
+	EXPECT_FALSE(Poll());
+	m_Now += 600 * time_freq() - 1;
+	Request();
+	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
+	++m_Now;
+	Request();
+	EXPECT_EQ(m_Http.m_vRequests.size(), 2u);
 }
