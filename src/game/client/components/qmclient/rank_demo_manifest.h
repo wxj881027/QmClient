@@ -4,12 +4,14 @@
 #include <base/str.h>
 
 #include <engine/shared/json.h>
+#include <engine/shared/protocol.h>
 
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -28,6 +30,9 @@ namespace qmclient::rank_demo
 		std::string m_Kind;
 		int m_Team = 0;
 		std::vector<int> m_vFinishers;
+		// 新版清单显式列出可回放角色；缺失该字段的旧记录保持兼容。
+		bool m_HasGhosts = false;
+		std::vector<int> m_vGhosts;
 		std::string m_Uuid;
 		std::string m_Rev;
 	};
@@ -163,6 +168,20 @@ namespace qmclient::rank_demo
 				Entry.m_Names += pString;
 			}
 		}
+		const json_value *pGhosts = Field(pRoot, "ghosts");
+		if(pGhosts != nullptr && pGhosts->type == json_array)
+		{
+			Entry.m_HasGhosts = true;
+			for(unsigned i = 0; i < pGhosts->u.array.length; ++i)
+			{
+				const json_value *pGhost = pGhosts->u.array.values[i];
+				if(pGhost == nullptr || pGhost->type != json_integer || pGhost->u.integer < 0 || pGhost->u.integer >= MAX_CLIENTS)
+					continue;
+				const int Cid = static_cast<int>(pGhost->u.integer);
+				if(std::find(Entry.m_vGhosts.begin(), Entry.m_vGhosts.end(), Cid) == Entry.m_vGhosts.end())
+					Entry.m_vGhosts.push_back(Cid);
+			}
+		}
 		return true;
 	}
 
@@ -204,6 +223,48 @@ namespace qmclient::rank_demo
 			pCurrent = pLineEnd + 1;
 		}
 		return !Entries.empty();
+	}
+
+	// 去掉 demo 名的 .gz / .demo 后缀（大小写不敏感）。
+	// 旧版 demo 浏览器用 str_endswith_nocase 生成落盘名，这里必须保持同一规则：
+	// 规则一变，同一场次在升级前后会算出两个文件名，旧缓存永远命不中。
+	inline void StripDemoSuffixNoCase(std::string &Name, const char *pSuffix)
+	{
+		const size_t Len = str_length(pSuffix);
+		if(Len == 0 || Name.size() <= Len)
+			return;
+		if(str_comp_nocase(Name.c_str() + Name.size() - Len, pSuffix) != 0)
+			return;
+		Name.resize(Name.size() - Len);
+	}
+
+	// Demo 浏览器下载 Rank 1 回放时的文件名：
+	//   <安全地图名>_rank<N>_<ts>_<去掉 .gz/.demo 后缀并清理的 demo 名>.demo
+	// 浏览器写盘与 Rank 1 页面复用必须用同一份完整身份；只按地图名前缀匹配
+	// 会把同一地图的其它场次误认成当前条目。
+	inline std::string BrowserDemoFileName(const char *pMap, const char *pDemo, int64_t Ts, int Rank)
+	{
+		if(pMap == nullptr || pDemo == nullptr || pMap[0] == '\0' || pDemo[0] == '\0')
+			return {};
+
+		char aSafeMap[128];
+		str_copy(aSafeMap, pMap, sizeof(aSafeMap));
+		str_sanitize_filename(aSafeMap);
+
+		std::string Demo = pDemo;
+		StripDemoSuffixNoCase(Demo, ".gz");
+		StripDemoSuffixNoCase(Demo, ".demo");
+		char aSafeDemo[256];
+		str_copy(aSafeDemo, Demo.c_str(), sizeof(aSafeDemo));
+		str_sanitize_filename(aSafeDemo);
+
+		const int64_t SafeTs = Ts == std::numeric_limits<int64_t>::min() ? 0 : Ts;
+		char aName[512];
+		const int Written = str_format(aName, sizeof(aName), "%s_rank%d_%lld_%s.demo",
+			aSafeMap, Rank, (long long)SafeTs, aSafeDemo);
+		if(Written < 0 || Written >= (int)sizeof(aName))
+			return {};
+		return aName;
 	}
 
 	inline const SEntry *FindLatest(const std::vector<SEntry> &Entries, const char *pMap, int Rank)
@@ -292,6 +353,27 @@ namespace qmclient::rank_demo
 				return !LeftTeam; // solo 在前
 			return Right.m_Ts < Left.m_Ts;
 		});
+	}
+
+	// 全清单搜索：按地图名子串（大小写不敏感）匹配指定名次的条目，按 demo 去重。
+	// 不在这里按展示条数提前退出：先收集全部匹配项，调用方排序后再截断，
+	// 否则表头排序只是清单前 N 条的局部排序。
+	inline void CollectSearchEntries(const std::vector<SEntry> &Entries, const char *pQuery, int Rank, std::vector<SEntry> &Out)
+	{
+		Out.clear();
+		if(pQuery == nullptr || pQuery[0] == '\0')
+			return;
+		std::set<std::string> SeenDemos;
+		for(const SEntry &Entry : Entries)
+		{
+			if(Entry.m_Rank != Rank)
+				continue;
+			if(str_find_nocase(Entry.m_Map.c_str(), pQuery) == nullptr)
+				continue;
+			if(!SeenDemos.insert(Entry.m_Demo).second)
+				continue;
+			Out.push_back(Entry);
+		}
 	}
 } // namespace qmclient::rank_demo
 

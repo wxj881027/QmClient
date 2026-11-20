@@ -502,7 +502,7 @@ void CStatusBar::OnRender()
 
 #if defined(CONF_VIDEORECORDER)
 	// 回放/导出跟随回放显示配置，普通录制跟随 cl_video_showhud，避免状态栏被一起录进视频。
-	if(IVideo::Current() && !qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), true).m_Hud)
+	if(IVideo::Current() && !qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->ReplaySessionStatus().ViewMode(), true).m_Hud)
 		return;
 #endif
 

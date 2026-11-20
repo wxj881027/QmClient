@@ -18,23 +18,6 @@ void CEnvelopeState::EnvelopeEval(int TimeOffsetMillis, int EnvelopeIndex, Color
 {
 	using namespace std::chrono;
 
-	if(!m_pMap)
-		return;
-
-	int EnvelopeStart, EnvelopeNum;
-	m_pMap->GetType(MAPITEMTYPE_ENVELOPE, &EnvelopeStart, &EnvelopeNum);
-	if(EnvelopeIndex < 0 || EnvelopeIndex >= EnvelopeNum)
-		return;
-
-	const CMapItemEnvelope *pItem = (CMapItemEnvelope *)m_pMap->GetItem(EnvelopeStart + EnvelopeIndex);
-	if(pItem->m_Channels <= 0)
-		return;
-	Channels = minimum<size_t>(Channels, pItem->m_Channels, CEnvPoint::MAX_CHANNELS);
-
-	m_pEnvelopePoints->SetPointsRange(pItem->m_StartPoint, pItem->m_NumPoints);
-	if(m_pEnvelopePoints->NumPoints() == 0)
-		return;
-
 	nanoseconds Time;
 
 	// offline rendering (like menu background) relies on local time
@@ -72,5 +55,37 @@ void CEnvelopeState::EnvelopeEval(int TimeOffsetMillis, int EnvelopeIndex, Color
 		}
 	}
 
-	CRenderMap::RenderEvalEnvelope(m_pEnvelopePoints.get(), Time + milliseconds(TimeOffsetMillis), Result, Channels);
+	EvalAtTime(TimeOffsetMillis, EnvelopeIndex, Result, Channels, Time);
+}
+
+void CEnvelopeState::EnvelopeEvalAtTick(int TimeOffsetMillis, int EnvelopeIndex, ColorRGBA &Result, size_t Channels,
+	int Tick, float IntraTick) const
+{
+	using namespace std::chrono;
+	static const nanoseconds s_NanosPerTick = nanoseconds(1s) / static_cast<int64_t>(Client()->GameTickSpeed());
+	EvalAtTime(TimeOffsetMillis, EnvelopeIndex, Result, Channels,
+		duration_cast<nanoseconds>((Tick + (double)IntraTick) * s_NanosPerTick));
+}
+
+void CEnvelopeState::EvalAtTime(int TimeOffsetMillis, int EnvelopeIndex, ColorRGBA &Result, size_t Channels,
+	std::chrono::nanoseconds Time) const
+{
+	if(!m_pMap)
+		return;
+
+	int EnvelopeStart, EnvelopeNum;
+	m_pMap->GetType(MAPITEMTYPE_ENVELOPE, &EnvelopeStart, &EnvelopeNum);
+	if(EnvelopeIndex < 0 || EnvelopeIndex >= EnvelopeNum)
+		return;
+
+	const CMapItemEnvelope *pItem = (CMapItemEnvelope *)m_pMap->GetItem(EnvelopeStart + EnvelopeIndex);
+	if(pItem->m_Channels <= 0)
+		return;
+	Channels = minimum<size_t>(Channels, pItem->m_Channels, CEnvPoint::MAX_CHANNELS);
+
+	m_pEnvelopePoints->SetPointsRange(pItem->m_StartPoint, pItem->m_NumPoints);
+	if(m_pEnvelopePoints->NumPoints() == 0)
+		return;
+
+	CRenderMap::RenderEvalEnvelope(m_pEnvelopePoints.get(), Time + std::chrono::milliseconds(TimeOffsetMillis), Result, Channels);
 }

@@ -4,8 +4,8 @@
 
 #include <base/dbg.h>
 #include <base/log.h>
-#include <base/mem.h>
 #include <base/math.h>
+#include <base/mem.h>
 
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
@@ -112,7 +112,14 @@ namespace
 				Tile.m_Height = TileHeight;
 				Tile.m_Format = Info.m_Format;
 				size_t TileDataSize = 0;
-				if(!Tile.DataSize(TileDataSize) || TileDataSize == 0 || (Tile.m_pData = static_cast<uint8_t *>(malloc(TileDataSize))) == nullptr)
+				if(!Tile.DataSize(TileDataSize) || TileDataSize == 0)
+				{
+					Info.Free();
+					FreeTiles();
+					return;
+				}
+				Tile.m_pData = static_cast<uint8_t *>(malloc(TileDataSize));
+				if(Tile.m_pData == nullptr)
 				{
 					Info.Free();
 					FreeTiles();

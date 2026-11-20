@@ -23,6 +23,9 @@ public:
 		int m_MaxStars = 5;
 
 		const char *StarLabel() const;
+		// 难度列单元格文本：类别 + 空格 + 星级；类别为空时只输出星级。
+		// pCategoryText 由调用方按社区决定使用原文或本地化名称。
+		void CellLabel(const char *pCategoryText, char *pOut, size_t OutSize) const;
 	};
 
 	// 读取随客户端发布的 DDNet 分类 SQL 和本地 Axiom 公告缓存，不访问网络。
@@ -30,6 +33,7 @@ public:
 	// 供行为测试和生成数据校验使用的 SQL 加载入口。
 	bool LoadSqlText(const char *pSql, size_t Length);
 	// 只记录已确认属于 Axiom 的当前地图公告，返回是否产生变化。
+	// 同时支持旧公告的「类型 + 星级」和当前公告的「难度 + 星级」两种写法。
 	bool RecordAxiomMotd(const CServerInfo &Server, const char *pMotd);
 	bool LoadAxiomCacheJson(const char *pJson, size_t Length);
 	std::string SerializeAxiomCache() const;
@@ -49,7 +53,7 @@ private:
 		using is_transparent = void;
 		bool operator()(std::pair<int, std::string_view> A, std::pair<int, std::string_view> B) const { return A < B; }
 	};
-	// 星级上限区分 Gores（3）与 AXRace（5），同名地图不跨玩法共用。
+	// 键为（玩法，地图名），同名地图不跨玩法共用；星级上限由公告自身决定。
 	std::map<std::pair<int, std::string>, SEntry, SAxiomKeyLess> m_AxiomEntries;
 	bool m_AxiomCacheDirty = false;
 	std::vector<SEntry> m_vEntries;

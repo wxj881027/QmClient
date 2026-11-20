@@ -1236,7 +1236,7 @@ int CConsole::CResult::GetVictim(unsigned Slot) const
 {
 	dbg_assert(Slot < m_vVictims.size(), "victim slot %u out of range", Slot);
 	dbg_assert(m_vVictims[Slot].m_Id.has_value(), "victim %u has no value", Slot);
-	return m_vVictims[Slot].m_Id.value();
+	return m_vVictims[Slot].m_Id.value_or(0);
 }
 
 void CConsole::CResult::ResetVictim()

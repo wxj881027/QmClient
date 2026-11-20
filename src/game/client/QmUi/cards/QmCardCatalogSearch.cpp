@@ -5,6 +5,7 @@
 #include <base/detect.h>
 
 #include <game/client/QmUi/QmCardSearchRegistry.h>
+#include <game/client/components/qmclient/practice_menu.h>
 #include <game/client/components/qmclient/search_answers.h>
 #include <game/localization.h>
 
@@ -15,6 +16,7 @@
 #include "QmCardSearch/QmCardCatalogControls.inc"
 #include "QmCardSearch/QmCardCatalogDDNet.inc"
 #include "QmCardSearch/QmCardCatalogFallback.inc"
+#include "QmCardSearch/QmCardCatalogFastPractice.inc"
 #include "QmCardSearch/QmCardCatalogFunction.inc"
 #include "QmCardSearch/QmCardCatalogGeneral.inc"
 #include "QmCardSearch/QmCardCatalogGraphics.inc"

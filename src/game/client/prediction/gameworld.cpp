@@ -9,6 +9,7 @@
 #include "entities/laser.h"
 #include "entities/pickup.h"
 #include "entities/plasma.h"
+#include "entities/practice_light.h"
 #include "entities/projectile.h"
 #include "entity.h"
 
@@ -416,12 +417,12 @@ void CGameWorld::NetObjBegin(CTeamsCore Teams, int LocalClientId)
 	OnModified();
 }
 
-void CGameWorld::NetCharAdd(int ObjId, CNetObj_Character *pCharObj, CNetObj_DDNetCharacter *pExtended, int GameTeam, bool IsLocal)
+void CGameWorld::NetCharAdd(int ObjId, CNetObj_Character *pCharObj, CNetObj_DDNetCharacter *pExtended, int GameTeam, bool IsLocal, bool ForceAdd)
 {
-	if(IsLocalTeam(ObjId))
+	if(ForceAdd || IsLocalTeam(ObjId))
 	{
-		CCharacter *pChar;
-		if((pChar = (CCharacter *)GetEntity(ObjId, ENTTYPE_CHARACTER)))
+		CCharacter *pChar = (CCharacter *)GetEntity(ObjId, ENTTYPE_CHARACTER);
+		if(pChar != nullptr)
 		{
 			pChar->Read(pCharObj, pExtended, IsLocal);
 			pChar->Keep();
@@ -691,10 +692,14 @@ void CGameWorld::CopyWorldClean(CGameWorld *pFrom)
 				pCopy = new CDragger(*((CDragger *)pEnt));
 			else if(Type == ENTTYPE_CHARACTER)
 				pCopy = new CCharacter(*((CCharacter *)pEnt));
+			else if(Type == ENTTYPE_DOOR)
+				pCopy = new CDoor(*((CDoor *)pEnt));
 			else if(Type == ENTTYPE_PICKUP)
 				pCopy = new CPickup(*((CPickup *)pEnt));
 			else if(Type == ENTTYPE_PLASMA)
 				pCopy = new CPlasma(*((CPlasma *)pEnt));
+			else if(Type == ENTTYPE_LIGHT)
+				pCopy = new CPracticeLight(*((CPracticeLight *)pEnt));
 			if(pCopy)
 			{
 				pCopy->m_pParent = nullptr;
@@ -744,10 +749,14 @@ void CGameWorld::CopyWorld(CGameWorld *pFrom)
 				pCopy = new CDragger(*((CDragger *)pEnt));
 			else if(Type == ENTTYPE_CHARACTER)
 				pCopy = new CCharacter(*((CCharacter *)pEnt));
+			else if(Type == ENTTYPE_DOOR)
+				pCopy = new CDoor(*((CDoor *)pEnt));
 			else if(Type == ENTTYPE_PICKUP)
 				pCopy = new CPickup(*((CPickup *)pEnt));
 			else if(Type == ENTTYPE_PLASMA)
 				pCopy = new CPlasma(*((CPlasma *)pEnt));
+			else if(Type == ENTTYPE_LIGHT)
+				pCopy = new CPracticeLight(*((CPracticeLight *)pEnt));
 			if(pCopy)
 			{
 				pCopy->m_pParent = pEnt;
@@ -852,7 +861,12 @@ void CGameWorld::Clear()
 			CEntity *pEntity = pFirstEntityType;
 			CEntity *pNextEntity = pEntity->m_pNextTypeEntity;
 			RemoveEntity(pEntity);
-			delete pEntity; // NOLINT(clang-analyzer-cplusplus.NewDelete)
+			// 门在共享 CCollision 上安装了碰撞端点，必须走虚销毁清理；
+			// 直接 delete 会把分支世界的门碰撞残留到主世界。
+			if(pEntity->m_ObjType == ENTTYPE_DOOR)
+				pEntity->Destroy();
+			else
+				delete pEntity; // NOLINT(clang-analyzer-cplusplus.NewDelete)
 			pFirstEntityType = pNextEntity;
 		}
 }
@@ -864,7 +878,10 @@ bool CGameWorld::EmulateBug(int Bug) const
 
 void CGameWorld::CreatePredictedEvent(const CPredictedEvent &NewEvent)
 {
-	if(!g_Config.m_ClPredictEvents || !m_WorldConfig.m_PredictEvents)
+	// 只认世界配置：cl_predict_events 与服务器的 PREDICT_EVENTS 能力已经在
+	// m_WorldConfig.m_PredictEvents 里合成过一次。快速练习会为分支世界单独打开
+	// 这个开关（分支不消费服务器事件），这里再查一遍全局配置会把它挡掉。
+	if(!m_WorldConfig.m_PredictEvents)
 		return;
 
 	// prediction is ran multiple times per tick, check if event already exists
@@ -940,7 +957,8 @@ void CGameWorld::CreatePredictedExplosionEvent(vec2 Pos, int Id)
 
 void CGameWorld::CreatePredictedHammerHitEvent(vec2 Pos, int Id, int TargetId)
 {
-	if(!g_Config.m_ClPredictEvents || !m_WorldConfig.m_PredictEvents)
+	// 同上：世界配置已经包含用户开关，分支世界可以独立决定是否预测事件。
+	if(!m_WorldConfig.m_PredictEvents)
 		return;
 
 	CPredictedEvent Event(NETEVENTTYPE_HAMMERHIT, Pos, Id, GameTick(), TargetId);

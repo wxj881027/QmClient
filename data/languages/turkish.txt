@@ -32,7 +32,7 @@
 == Özel Tee tonu döngüsü yalnızca özel renklerle çalışır ve TClient gökkuşağı Tee seçeneği açıkken hiçbir şey yapmaz.
 
 "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
-== "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+== "Veri kaynağı" yalnızca katalog üyeliğini belirler ve indirmelerden bağımsızdır; aynı skin birden fazla katalogda yer alabilir.
 
 "Default (software)" is x264: CPU only, best quality, slowest.
 == "Default (software)" x264'tür: yalnızca CPU, en iyi kalite, en yavaş.
@@ -761,9 +761,6 @@ Advanced
 Advanced options
 == Gelişmiş seçenekler
 
-AFR
-== Afrika
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == Yükleme başarılıysa F2 ile giriş yapıp change_map komutunu çalıştırın; dosyalar 64 MiB'nin altında kalmalı.
 
@@ -781,6 +778,9 @@ Afterimage pop
 
 AGC, experimental
 == AGC, deneysel
+
+Agree
+== Kabul Et
 
 Aim
 == Nişan al
@@ -1145,9 +1145,6 @@ Are you sure you want to save your skin? If a skin with this name already exists
 Arrow assets
 == Ok varlıkları
 
-ASI
-== Asya
-
 Aspect ratio preset
 == En boy oranı ön ayarı
 
@@ -1207,9 +1204,6 @@ Audio packs
 
 Aurora: Polar Veil
 == Kutup ışığı: kutup örtüsü
-
-AUS
-== Avustralya
 
 Authed name color in scoreboard
 == Skor tablosunda yetkilendirilmiş isim rengi
@@ -1321,9 +1315,6 @@ Auto switch weapon on ammo depletion
 
 Auto switch weapon on pickup
 == Alma sırasında silahı otomatik değiştir
-
-Auto team lock
-== Otomatik takım kilidi
 
 Auto translate received messages
 == Alınan mesajları otomatik çevir
@@ -1784,8 +1775,8 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == Bir komutu yürütmek için tuş bağla veya tuş bağlantılarını görüntüle
 
-Bind menu layout (0 = wheel, 1 = panel)
-== Bind menu layout (0 = wheel, 1 = panel)
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== Bind menüsü düzeni: 0 = radyal tekerlek, 1 = yuvarlatılmış panel
 
 Bind Menus
 == Bind Menus
@@ -2365,9 +2356,6 @@ Chinese (Traditional)
 
 Chinese font:
 == Çince yazı tipi:
-
-CHN
-== Çin
 
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == Oyuncuların tuş vuruşlarını göster ayarını Kendim, Diğerleri veya Tümü olarak seç, sonra tuş vuruşu simgelerinin boyutunu ayarla.
@@ -3135,7 +3123,7 @@ Console link color
 == Konsol: bağlantı rengi
 
 Console link hover hue shift in degrees
-== Console link hover hue shift in degrees
+== Konsol bağlantısı üzerine gelince ton kayması (derece)
 
 Console number color
 == Konsol: sayı rengi
@@ -3250,6 +3238,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == Son fısıldadığın kişiyle konuş (özel mesaj)
+
+Converting %d%%
+== Dönüştürülüyor %d%%
 
 Coordinate size on nameplate
 == İsim plakasında koordinat boyutu
@@ -3813,7 +3804,7 @@ Debug websockets
 == WebSocket hata ayıkla
 
 Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
-== Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
+== İstemcinin hangi skinleri indireceğini belirler ve önekli skin varyantlarını yüklemek için önek ekleyebilir.
 
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Özel WebSocket adresi (boşsa wss://qmclient.icu/ws kullanılır)
@@ -4097,6 +4088,9 @@ Disable client-initiated self-kill (K key / kill command)
 Disable clipping
 == Kırpmayı devre dışı bırak
 
+Disable fast practice mode
+== Hızlı pratik modunu kapat
+
 Disable Gores auto-switch when picking up extra weapon
 == Ekstra silah alındığında Gores otomatik değiştirmeyi devre dışı bırak
 
@@ -4105,6 +4099,9 @@ Disabled
 
 Disabling system messages also hides server warnings.
 == Sistem mesajlarını kapatmak sunucu uyarılarını da gizler.
+
+Disagree
+== Reddet
 
 Disallow chat from blacklisted addresses
 == Kara listedeki adreslerden sohbeti engelle
@@ -4315,6 +4312,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == İndirilen: %.1f MiB (toplam boyut bilinmiyor)
+
+Downloading %d%%
+== İndiriliyor %d%%
 
 Downloading map
 == Harita indiriliyor
@@ -4585,6 +4585,9 @@ Dummy window size
 
 Dummy window zoom
 == Kukla pencere zoom
+
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== İstemci tarafı dünya durumunu yazdır (pratik dalı, hatlar, anahtarlar, görüntüleme oturumu)
 
 Dump the current savestring
 == Mevcut kayıt dizesini dök
@@ -4931,6 +4934,9 @@ Enable fast input in Gores mode
 Enable fast map download
 == Hızlı harita indirmeyi etkinleştir
 
+Enable fast practice mode
+== Hızlı pratik modunu aç
+
 Enable fat skin
 == Şişman skin'i etkinleştir
 
@@ -4999,6 +5005,12 @@ Enable left swipe offset on chat fade
 
 Enable LLM thinking mode (may increase response time)
 == LLM Düşünme Modu’nu etkinleştir (yanıt süresini artırabilir)
+
+Enable LX Music lyric integration
+== LX Music şarkı sözü entegrasyonunu etkinleştir
+
+Enable LX Music lyrics
+== LX Music şarkı sözlerini etkinleştir
 
 Enable lyrics
 == Şarkı sözlerini etkinleştir
@@ -5279,6 +5291,9 @@ End bounce
 End marker of replay slice
 == Tekrar diliminin bitiş işareti
 
+Endless hook
+== Sonsuz kanca
+
 Endless hook has been activated
 == Sonsuz kanca etkinleştirildi
 
@@ -5312,8 +5327,14 @@ Enter a CP number from 1 to 255.
 Enter a phrase.
 == Enter a phrase.
 
+Enter fast practice
+== Hızlı pratiğe gir
+
 Enter Password
 == Şifre Gir
+
+Enter solo mode
+== Solo moduna gir
 
 Enter solo split mode
 == Solo bölme moduna gir
@@ -5402,9 +5423,6 @@ ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
 ESC replay minutes
 == ESC tekrar oynatma dakikası
 
-EUR
-== Avrupa
-
 Evaluate an expression
 == Bir ifadeyi değerlendir
 
@@ -5468,8 +5486,14 @@ Existing Player
 Exit and install
 == Çık ve kur
 
+Exit fast practice
+== Hızlı pratikten çık
+
 Exit replay view
 == Demo görünümünden çık
+
+Exit solo mode
+== Solo modundan çık
 
 Exit spectating on both tees when either is hammered awake by another player
 == Başka bir oyuncu birini çekiçle çözdüğünde iki Tee de seyirci modundan çıksın
@@ -6282,7 +6306,7 @@ General
 == Genel
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== Genel DDNet görünümü: diğer oyuncuları ve gölge saydamlığını, arka plan dörtgenlerini ve varsayılan yakınlaştırmayı gösterir.
+== Genel DDNet görünümü: diğer oyuncuları ve gölge opaklıklarını, arka plan dörtlülerini ve varsayılan yakınlaştırmayı gösterir.
 
 Generated skin outline color
 == Oluşturulan dış çizgi rengi
@@ -6292,6 +6316,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == Oluşturulan dış çizgi genişliği
+
+Get all weapons
+== Tüm silahları al
 
 Getting game info
 == Oyun bilgisi alınıyor
@@ -6396,7 +6423,7 @@ Global UI size percentage
 == Genel arayüz boyutu yüzdesi
 
 Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
-== Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+== Genel tekerlek mesafesi ölçeği (10 = varsayılan); ayar kartı sayfaları her tikte bunun 12 katı kaydırılır
 
 Glow
 == Parlama
@@ -7565,6 +7592,9 @@ Jelly others
 Jelly strength
 == Jelly gücü
 
+Jetpack
+== Jetpack
+
 Jitter
 == Titreşim
 
@@ -7671,7 +7701,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == Koyu zeminde açık renk yazı daha okunaklıdır; yardım görünümünü sıfırla düğmesi önerilen görünümü geri getirir.
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Bu renkleri takım renklerinden ayrı tutun, yoksa aynı klandaki adlar takım paneline karışıp okunaksız olur.
+== Bunları takım renklerinden ayrı tutun; aksi halde aynı klan adları takım paneliyle karışır ve okunması zorlaşır.
 
 Keep unsent message on chat close
 == Sohbet kapatılırken gönderilmemiş içeriği sakla
@@ -8291,14 +8321,8 @@ Locate
 Lock both teams immediately when entering solo split mode
 == Solo bölünme moduna girince iki takımı da hemen kilitle
 
-Lock delay
-== Kilit gecikmesi
-
 Lock team
 == Takımı kilitle
-
-Lock teams on entry
-== Girişte kilitle
 
 Lock the team so other players cannot join directly
 == Diğer oyuncular doğrudan katılamasın diye takımı kilitle
@@ -8342,6 +8366,9 @@ Low contrast between name and message text makes chat hard to scan in fights.
 Lower means better quality and larger files; 18 is recommended
 == Düşük değerler daha iyi kalite ve daha büyük dosya anlamına gelir; 18 önerilir
 
+LX Music open API port (0=auto-detect from LX Music config)
+== LX Music açık API bağlantı noktası (0=LX Music yapılandırmasından otomatik algıla)
+
 LXGW WenKai is available.
 == LXGW WenKai kullanılabilir.
 
@@ -8372,8 +8399,8 @@ Main Asset
 Main menu
 == Ana menü
 
-Main Tee
-== Ana Tee
+Main-world ghost opacity
+== Ana dünya hayaleti opaklığı
 
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Düşman oyuncuların ve grupların listesini, bunların görünüm kurallarıyla birlikte yönetir.
@@ -9161,9 +9188,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = Tahmin gecikmesi
 
-NA
-== Kuzey Amerika
-
 Name
 == İsim
 
@@ -9926,6 +9950,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == Hayal edemediğin şeyler dışında, Dream'in yapamayacağı hiçbir şey yok
 
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== Yalnızca kendi dünya kopyanız simüle edilir: diğer oyuncular sunucu tarafındaki Tee'lerdir, bu yüzden bastığınız anahtarlar onları etkilemez. Hayalet düğmesi ve opaklık onlara da uygulanır.
+
 Opacity
 == Opaklık
 
@@ -10328,6 +10355,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == Duraklat
 
+Pause recording
+== Kaydı duraklat
+
+Pause recording the practice line (the recorded part is kept)
+== Pratik hattı kaydını duraklat (kaydedilen kısım korunur)
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== Şimdiye kadar kaydedilenleri silmeden kaydı duraklatır. Devam edildiğinde yeni bir bölüm başlar, böylece duraklanan kısım düz bir çizgi olarak çizilmez.
+
 Pause the current demo
 == Geçerli demoyu duraklat
 
@@ -10446,7 +10482,7 @@ Pick a text style or a moon or sun badge, check the preview, then press "Save" t
 == Bir metin stili ya da ay veya güneş rozeti seç. Önizlemeyi kontrol edip “Kaydet” düğmesine basarak seçtiğin stili diğer oyunculara göster.
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Her renk satırında bir renk seçin; kimliği doğrulanmış ve aynı klan renkleri skor tablosuna, iki liste rengi arkadaş listesine uygulanır.
+== Her renk satırında bir renk seçin; kimliği doğrulanmış ve aynı klan renkleri skor tablosuna, iki liste rengi de arkadaş listesine uygulanır.
 
 Pick result: %s
 == Seçim sonucu: %s
@@ -10522,6 +10558,9 @@ Play back a demo
 
 Play background music
 == Arka plan müziğini çal
+
+Play rank ghost replay sounds and hit effects locally
+== Rank 1 hayalet tekrarının seslerini ve vuruş efektlerini yerel olarak oynat
 
 Play replay
 == Tekrarı oynat
@@ -10898,6 +10937,9 @@ Position jump tip
 Position:
 == Konum:
 
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== Bir haritayı tek başınıza çalışın, ana dünya hayaletini gizleyin, tur süresini gösterin ve pratik komutlarını tuşlara atayın.
+
 Practice mode can't be enabled in team 0 mode.
 == Takım 0 modunda antrenman modu etkinleştirilemez.
 
@@ -10962,7 +11004,7 @@ Prediction
 == Tahmin
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== Tahmin ve gecikme telafisi DDNet sayfasının "Ağ telafisi" alt sekmesine taşındı.
+== Tahmin ve gecikme telafisi DDNet sayfasındaki „Ağ telafisi“ alt sekmesine taşındı.
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == Tahmin sınırı (ms, gecikmeyi artırır ancak ping dalgalanmasını azaltır)
@@ -10992,7 +11034,7 @@ Prediction margin when frozen
 == Donduğunda tahmin marjı
 
 Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== Tahmin, isabetlilik yerine tepkisellik sunar: daha büyük pay ve AntiPing ping dalgalanmasını yumuşatır ama yakın eylemleri yanlış tahmin edebilir; üst akış yedekliliği yükleme trafiğini üç katına çıkarabilir.
+== Tahmin, tepkisellik karşılığında doğruluktan ödün verir: daha büyük bir pay ve AntiPing ping dalgalanmasını yumuşatır ancak yakındaki eylemleri yanlış tahmin edebilir; yukarı akış yedekliliği yükleme trafiğini üçe katlayabilir.
 
 Preparing chat export: %d%%
 == Sohbet dışa aktarımı hazırlanıyor: %d%%
@@ -11534,12 +11576,6 @@ Rank 1 demo downloaded to '%s'
 Rank 1 replays
 == Rank 1 demoları
 
-Rank demo already available in the demo browser: %s
-== Demo zaten demo tarayıcısında mevcut: %s
-
-Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
-== Rank demosu indirildi: %s. Rank 1 listesinden veya demo tarayıcısından oynatın.
-
 Rank ghost loaded: %s, %s s. It follows your current run.
 == Rank hayaleti yüklendi: %s, %s sn. Mevcut koşunu takip ediyor.
 
@@ -11617,6 +11653,9 @@ Rank ghost: the replay has an invalid run range
 
 Rank ghost: the replay list is empty or malformed
 == Rank hayaleti: tekrar listesi boş veya bozuk
+
+Rank ghost: this replay has no playable tee
+== Rank 1 hayaleti: bu tekrarda oynatılabilir Tee yok
 
 Rank ghost: timed out waiting for the map to load
 == Rank hayaleti: harita yüklemesi beklenirken zaman aşımı
@@ -11891,6 +11930,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == Bir oylama seçeneğini kaldır
 
+Remove all weapons
+== Tüm silahları kaldır
+
 Remove chat
 == Sohbeti kaldır
 
@@ -12122,11 +12164,17 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == Tekrar Oynat
 
+Replay a saved practice ghost group in demo-style view mode
+== Kaydedilmiş bir pratik hayalet grubunu demo tarzı görüntüleme modunda oynat
+
 Replay downloaded
 == Tekrar indirildi
 
 Replay feature is disabled!
 == Tekrar oynatma özelliği devre dışı!
+
+Replay ghost sounds and effects
+== Hayalet tekrarının seslerini ve vuruş efektlerini oynat
 
 Replay list: failed to load, press Refresh to retry
 == Tekrar listesi: yükleme başarısız, yeniden denemek için Yenile'ye basın
@@ -12181,6 +12229,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == Kurtarma bu sunucuda etkin değil ve /practice açık bir takımda değilsiniz. Antrenman açıkken sıralama kazanamayacağınızı unutmayın.
+
+Rescue mode
+== Kurtarma modu
 
 Rescue mode changed to auto.
 == Kurtarma modu auto olarak değiştirildi.
@@ -12326,6 +12377,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == Önerilenleri geri yükle
 
+Restore the practice world to the state it had when fast practice was enabled
+== Pratik dünyasını hızlı pratik açıldığı andaki duruma döndürür
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== Pratik dünyasını hızlı pratik açıldığı andaki durumuna döndürür. Kaydedilen hat korunur ve yeni bir bölüm başlar.
+
 Restored the built-in content
 == Paket içeriği geri yüklendi
 
@@ -12346,6 +12403,9 @@ Retry remote stats
 
 Retrying…
 == Yeniden deneniyor…
+
+Return to respawn point
+== Yeniden doğma noktasına dön
 
 Reverse chat gradient colors
 == Gradyan renklerini ters çevir (sohbet)
@@ -12373,6 +12433,12 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == Varsayılanlarından farklı yapılandırma değerlerini gözden geçirir ve sıfırlar.
+
+Rewind practice world
+== Pratik dünyasını geri sar
+
+Rifle
+== Tüfek
 
 Rifle Laser Inner Color
 == Tüfek Lazer İç Rengi
@@ -12494,8 +12560,8 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Bir sunucuya bağlandığınızda komutları otomatik çalıştırır; bağlanma ve katılma olarak iki bölüme ayrılır.
 
-SA
-== Güney Amerika
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== Siz girerken sunucu gerçek Tee'nizi girdiğiniz yerde tutarken kendi harita kopyanızı çalıştırır; tur süresi ve pratik komut tuşlarıyla birlikte.
 
 Same as "vote no"
 == "hayır oyu" ile aynı
@@ -12799,6 +12865,9 @@ Search country flag…
 
 Search donor asset
 == Kaynak varlık ara
+
+Search ghosts
+== Hayaletleri ara
 
 Search main asset
 == Ana varlık ara
@@ -13115,6 +13184,9 @@ Server votes
 Server-dependent
 == Sunucuya bağlı
 
+Server-side ghost opacity during fast practice (%)
+== Hızlı pratik sırasında sunucu tarafı hayalet opaklığı (%)
+
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == Arka plan rengini ve arka plan saydamlığını, ardından metin rengi, seçili metin rengi ve seçim arka plan rengini ayarlayın; altında önizleme görünür.
 
@@ -13128,7 +13200,7 @@ Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit t
 == Nişan için oyunda fare hassasiyetini, menüler için arayüz fare hassasiyetini ayarla; ardından minimum ve maksimum imleç mesafesiyle imleci sınırla.
 
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
-== "Tahmin payını" milisaniye olarak ayarlayın, "AntiPing (gecikme telafisi)"ni işaretleyin ve neyin tahmin edileceğini seçin; yedeklilik anahtarı deneyseldir ve yalnızca paket kayıplı bağlantılarda işe yarar.
+== „Tahmin payı“nı milisaniye olarak ayarlayın, „AntiPing (gecikme telafisi)“ni işaretleyin ve neyin tahmin edileceğini seçin; yedeklilik anahtarı deneyseldir ve yalnızca paket kaybı olan bağlantılarda işe yarar.
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == Değiştirme aralığını 0 yapmak zamanlı değişimi durdurur; sıra yalnızca elle ya da haritaya girişte kullanılır.
@@ -13165,6 +13237,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 
 Set microphone mute state (0=on, 1=mute)
 == Mikrofon sessiz durumunu ayarla (0=açık, 1=sessiz)
+
+Set practice respawn point
+== Pratik yeniden doğma noktasını ayarla
 
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == Sunucuyu tek oyunculu moda ayarla (oyuncu etkileşimi yok, harita yüklenmeden önce ayarlanmalıdır)
@@ -13862,6 +13937,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == Ana tee unvanını yerel olarak göster
 
+Show main-world ghost
+== Ana dünya hayaletini göster
+
 Show map details
 == Harita detaylarını göster
 
@@ -14075,6 +14153,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == Konum ve açı hata ayıklama bilgisini göster
 
+Show practice timer
+== Pratik zamanlayıcısını göster
+
 Show predicted position as ghost, original as unpredictable player
 == Tahmin edilen konumu hayalet olarak, orijinali tahmin edilemez oyuncu olarak göster
 
@@ -14125,6 +14206,9 @@ Show server settings
 
 Show server uptime
 == Sunucu çalışma süresini göster
+
+Show server-side tees as ghosts during fast practice
+== Hızlı pratik sırasında sunucu tarafındaki Tee'leri hayalet olarak gösterir
 
 Show settings card borders
 == Ayar kartı kenarlıklarını göster
@@ -14248,6 +14332,9 @@ Show the original text locally below translated outgoing messages
 
 Show the pet
 == Evcil hayvanı göster
+
+Show the practice run timer in the HUD
+== HUD'da bu pratiğin süresini gösterir
 
 Show the screen center line
 == Ekran merkez çizgisini göster
@@ -14996,14 +15083,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == Tekrar diliminin başlangıç işareti
 
+Start or resume recording the practice line
+== Pratik hattı kaydını başlat veya sürdür
+
 Start playback of ghosts
 == Hayaletlerin oynatımını başlat
+
+Start recording
+== Kaydı başlat
 
 Start recording a demo
 == Bir demo kaydetmeye başla
 
 Start recording a video
 == Bir video kaydetmeye başla
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== Hızlı pratik hattının kaydını başlatır veya duraklatmadan sonra devam eder. Kayıt her zaman manueldir: basılmadan hiçbir şey kaydedilmez.
 
 Start skin queue from a random position when entering a map
 == Haritaya girerken skin kuyruğunu rastgele bir konumdan başlat
@@ -15095,6 +15191,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == Bizi %d destekçi ayakta tutuyor. Bakmak ister misin?
 
+Stop and save recording
+== Kaydı bitir ve kaydet
+
 Stop following
 == Takibi durdur
 
@@ -15125,6 +15224,12 @@ Stop recording a demo
 Stop recording a video
 == Bir video kaydetmeyi durdur
 
+Stop recording and save the practice line as a ghost group
+== Kaydı bitir ve pratik hattını hayalet grubu olarak kaydet
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== Kaydı bitirir ve hattı hemen bir hayalet grubu olarak diske yazar. Kaydedilen grup bind menüsünden veya Hayalet sayfasından oynatılabilir.
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == Düzenleyicide veya varlıklarla metin kaplamalarını işlemeyi durdur: yüksek = daha az detay = daha hızlı
 
@@ -15133,6 +15238,12 @@ Stop server
 
 Stop the current demo
 == Geçerli demoyu durdur
+
+Store the current practice tee state as the respawn point
+== Mevcut pratik Tee durumunu yeniden doğma noktası olarak kaydet
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== Mevcut Tee durumunu (konum, silahlar, zıplamalar ve hareket durumu) pratik yeniden doğma noktası olarak kaydeder.
 
 Streamer mode
 == Yayıncı modu
@@ -15584,6 +15695,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == Tüm silahları ışınla (kullanımdan kaldırıldı, bunun yerine özel varlıklar kullanın)
 
+Teleport back to the practice respawn point
+== Pratik yeniden doğma noktasına ışınla
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== Pratik yeniden doğma noktasına ışınlar ve orada kayıtlı Tee durumunu geri yükler. Yalnızca Tee geri alınır, dünya akmaya devam eder.
+
 Teleport dummy to cursor
 == Dummy'yi imlece ışınla
 
@@ -16023,7 +16140,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == Girdileri göster seçeneğini işaretle, sonra klavye boyutu, fare boyutu, saydamlık ve konum kaydırıcılarıyla boyutunu ve yerini ayarla.
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== Diğer takımları yarı saydam çizmek için "Diğerlerini göster"i işaretleyin; gölge saydamlığı hemen altındaki bağımlı satırda ayarlanır, görünüm için "Arka plan dörtgenlerini göster" ve "Varsayılan yakınlaştırma" kullanılır.
+== Diğer takımları yarı saydam çizmek için „Diğerlerini göster“i işaretleyin, gölge opaklıklarını altındaki bağımlı satırda ayarlayın ve görünüm için „Arka plan dörtlülerini göster“ ile „Varsayılan yakınlaştırma“yı kullanın.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Tuş takılı durumunu göster, çekiç durumunu göster, dummy kontrol durumunu göster veya dummy kopya durumunu göster seçeneklerinden istediklerini işaretle.
@@ -16249,6 +16366,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == Yerel konsolu değiştir
+
+Toggle main-world ghost
+== Ana dünya hayaletini aç/kapat
 
 Toggle map preview
 == Harita önizlemesi
@@ -16574,6 +16694,9 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == Zayıf makinelerde kapatın: kartlar anında açılır ve kaydırılır. İmleç biçimi yalnızca görseldir: üç stil de aynı karakter hücresine sığar.
 
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== "Ana dünya hayaletini göster"i kapatınca diğer oyuncular dahil sunucudan gelen tüm Tee'ler gizlenir; açıkken opaklık kaydırıcısı ne kadar görüneceklerini belirler. Bağlantı satırları pratik menüsüyle aynı komutları gönderir, sohbet penceresini açmanız gerekmez.
+
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == "Suda otomatik sohbet"i aç, istediğin "Sohbet mesajı"nı yaz ve istersen "Suda ifade gönder"i ID'siyle etkinleştir.
 
@@ -16645,6 +16768,9 @@ Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow h
 
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.
 == Silah değiştirme animasyonunu veya şarjör doldururken dönme animasyonunu aç, animasyon aralığını seç ve süre, mesafe ile dönüşü ayarla.
+
+Turn on LX Music open API
+== LX Music açık API'sini aç
 
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
 == Seçenekleri tek tek açın: Tee değiştirmek veya sohbeti kapatmak yazmakta olduğunuz mesajı kaybettirebilir.
@@ -16843,6 +16969,9 @@ Underscore
 
 Underscore: a line under the character that follows
 == Alt çizgi: sonraki karakterin altına çizilen çizgi
+
+Undo deep freeze
+== Derin donmayı geri al
 
 Unexpected map upload response.
 == Harita yüklemesine beklenmeyen yanıt geldi.

@@ -228,7 +228,7 @@ MACRO_CONFIG_INT(QmImeSelectedGradientRange, qm_ime_selected_gradient_range, 100
 MACRO_CONFIG_INT(QmImeSelectedGradientReverse, qm_ime_selected_gradient_reverse, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Reverse IME gradient colors")
 MACRO_CONFIG_INT(QmAutoSaveHistoryCount, qm_auto_save_history_count, 100, 0, 1000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-save history count (0=disable)")
 MACRO_CONFIG_INT(QmShortServerNames, qm_short_server_names, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show short server names in browser (applies to China community servers)")
-MACRO_CONFIG_INT(QmPingCacheMaxAgeHours, qm_ping_cache_max_age_hours, 72, 0, 8760, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discard cached server pings older than this many hours (0 = never expire)")
+MACRO_CONFIG_INT(QmPingCacheMaxAgeHours, qm_ping_cache_max_age_hours, 0, 0, 8760, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discard cached server pings older than this many hours (0 = never expire)")
 MACRO_CONFIG_INT(QmSkinSortMode, qm_skin_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin list sort mode (0=Name, 1=Release date)")
 MACRO_CONFIG_INT(QmSkinListFilter, qm_skin_list_filter, 0, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)")
 MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show skin release date and author")
@@ -619,12 +619,12 @@ MACRO_CONFIG_INT(QmBlockWordsMode, qm_block_words_mode, 2, 0, 2, CFGFLAG_CLIENT 
 MACRO_CONFIG_STR(QmBlockWordsReplacementChar, qm_block_words_replacement_char, 8, "*", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Censor replacement character")
 // 大词表由聊天组件分段写入同一 cfg，不能按一个超长命令保存。
 // 容量必须等于 QmWordFilterList::INLINE_CAPACITY（65536）：屏蔽词按内联缓冲区读写，
-	// 配置长度与它不一致会在保存时触发静态断言。
-	MACRO_CONFIG_STR(QmBlockWordsList, qm_block_words_list, 65536, "", CFGFLAG_CLIENT, "Censor word list (comma-separated)")
-	// 控制台日志行距：在基准行高上按百分比加宽，0 表示与旧版一致。
-	MACRO_CONFIG_INT(QmConsoleLineSpacing, qm_console_line_spacing, 0, 0, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Extra console log line spacing in pixels")
-	// 悬浮反馈形态：0 缩放，1 边框高亮；全站按钮与控件共用同一档。
-	MACRO_CONFIG_INT(QmUiHoverStyle, qm_ui_hover_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hover feedback style: 0 = scale, 1 = border highlight")
+// 配置长度与它不一致会在保存时触发静态断言。
+MACRO_CONFIG_STR(QmBlockWordsList, qm_block_words_list, 65536, "", CFGFLAG_CLIENT, "Censor word list (comma-separated)")
+// 控制台日志行距：在基准行高上按百分比加宽，0 表示与旧版一致。
+MACRO_CONFIG_INT(QmConsoleLineSpacing, qm_console_line_spacing, 0, 0, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Extra console log line spacing in pixels")
+// 悬浮反馈形态：0 缩放，1 边框高亮；全站按钮与控件共用同一档。
+MACRO_CONFIG_INT(QmUiHoverStyle, qm_ui_hover_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hover feedback style: 0 = scale, 1 = border highlight")
 MACRO_CONFIG_STR(QmBlockWordsFile, qm_block_words_file, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat word list file")
 MACRO_CONFIG_STR(QmSidebarCardOrder, qm_sidebar_card_order, 2048, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmClient sidebar module order")
 MACRO_CONFIG_STR(QmSidebarCardCollapsed, qm_sidebar_card_collapsed, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmClient sidebar module collapse state")
@@ -892,6 +892,8 @@ MACRO_CONFIG_INT(QmDummyMiniViewZoom, qm_dummy_miniview_zoom, 100, 10, 300, CFGF
 // System Media Controls - 系统媒体控件
 MACRO_CONFIG_INT(QmSmtcEnable, qm_smtc_enable, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable system media transport control integration")
 MACRO_CONFIG_INT(QmRankGhostShowDirection, qm_rank_ghost_show_direction, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show direction key indicators above rank ghost members in view mode")
+// 影子回放是另一条时间线：默认只画画面，不把它的音效和命中特效混进玩家正在听的本地世界。
+MACRO_CONFIG_INT(QmGhostViewFeedback, qm_ghost_view_feedback, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Play rank ghost replay sounds and hit effects locally")
 MACRO_CONFIG_INT(QmSmtcShowHud, qm_smtc_show_hud, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show system media info on HUD")
 MACRO_CONFIG_INT(QmNeteaseHookEnable, qm_netease_hook_enable, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Netease Music hook integration")
 MACRO_CONFIG_INT(QmNeteaseHookTimeoutMs, qm_netease_hook_timeout_ms, 1500, 250, 10000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Netease hook heartbeat timeout (milliseconds)")
@@ -931,6 +933,12 @@ MACRO_CONFIG_STR(QmQQMusicHookHelperPath, qm_qqmusic_hook_helper_path, 512, "", 
 // 共享同一套歌词展示开关(qm_lyrics / qm_lyrics_in_media_island)。
 MACRO_CONFIG_INT(QmSpotifyEnable, qm_spotify_enable, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Spotify lyric integration")
 MACRO_CONFIG_STR(QmSpotifySpDc, qm_spotify_sp_dc, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spotify sp_dc cookie (from browser DevTools, long-lived)")
+
+// LX Music 歌词链路(纯本机 HTTP:轮询开放 API 的 /status 与 /lyric-all)。
+// 开放 API 默认关闭,需在 LX Music 设置里手动启用;端口默认从 LX 自己的
+// config_v2.json 读取,用户改了端口也能跟上。qm_lxmusic_port 非 0 时强制覆盖。
+MACRO_CONFIG_INT(QmLxMusicEnable, qm_lxmusic_enable, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable LX Music lyric integration")
+MACRO_CONFIG_INT(QmLxMusicPort, qm_lxmusic_port, 0, 0, 65535, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LX Music open API port (0=auto-detect from LX Music config)")
 
 // Translate - 翻译模块
 MACRO_CONFIG_STR(QmTranslateBackend, qm_translate_backend, 32, "mymemory", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translation service")
@@ -1043,6 +1051,15 @@ MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 0, 0, 1, CFGFLAG_CLIEN
 // 进图后自动开启保护的延迟（分钟）。0 = 不自动开启，保持配置里的默认状态。
 // 自动开启只改本局运行时状态，不写回 qm_self_kill_enabled。
 MACRO_CONFIG_INT(QmSelfKillAutoDelay, qm_self_kill_auto_delay, 0, 0, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-enable self-kill protection this many minutes after joining a game (0 = never)")
+
+// 快速练习：主世界影子是分支世界之外的另一条时间线。除参与者自己以外，其他
+// 客户端的位置全部来自服务器快照，属于同一条时间线，所以这两个开关管的是
+// 整组服务器侧 Tee（含其他玩家），开启时淡显、关闭时整组隐藏。
+MACRO_CONFIG_INT(QmFastPracticeShowMainWorld, qm_fast_practice_show_main_world, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show server-side tees as ghosts during fast practice")
+// 服务器侧影子的不透明度（百分比）。开启时不透明度越高越显眼，0 等同于隐藏。
+MACRO_CONFIG_INT(QmFastPracticeMainWorldAlpha, qm_fast_practice_main_world_alpha, 28, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Server-side ghost opacity during fast practice (%)")
+// 练习计时：分支世界推进的 tick 累计，/r、传送与重开后归零。
+MACRO_CONFIG_INT(QmFastPracticeTimer, qm_fast_practice_timer, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show the practice run timer in the HUD")
 
 // 圆角曲线档位：0 原圆弧（旧外观，不扩展），1 超椭圆，2 五次贝塞尔，3 圆锥贝塞尔。
 // 超椭圆与五次贝塞尔的端点曲率为 0，是真正的连续曲率；圆锥贝塞尔的端点曲率恒为

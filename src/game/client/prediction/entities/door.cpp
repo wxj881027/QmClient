@@ -14,11 +14,26 @@ CDoor::CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData) :
 {
 	m_Id = Id;
 	m_Active = false;
+	m_To = vec2(0.0f, 0.0f);
+	m_Direction = vec2(0.0f, 0.0f);
+	m_Length = 0;
+	m_CollisionRegistered = false;
 
 	m_Number = pData->m_SwitchNumber;
 	m_Layer = m_Number > 0 ? LAYER_SWITCH : LAYER_GAME;
 
 	Read(pData);
+}
+
+CDoor::CDoor(const CDoor &Other) :
+	CEntity(Other)
+{
+	m_To = Other.m_To;
+	m_Direction = Other.m_Direction;
+	m_Length = Other.m_Length;
+	// 副本不拥有碰撞：销毁时不能清掉权威世界仍在使用的门碰撞端点。
+	m_Active = Other.m_Active;
+	m_CollisionRegistered = false;
 }
 
 // OnEntity 按这个顺序检查八个相邻 tile 来确定激光门长度。
@@ -61,12 +76,11 @@ int CDoor::MapLength(int Side)
 	return Length;
 }
 
-void CDoor::ResetCollision()
+void CDoor::PrepareRenderGeometry()
 {
+	m_Active = false;
 	if(Collision()->GetTile(m_Pos.x, m_Pos.y) || Collision()->GetFrontTile(m_Pos.x, m_Pos.y))
 		return;
-
-	m_Active = true;
 
 	const vec2 Dir = m_To - m_Pos;
 	const float DirLength = length(Dir);
@@ -86,12 +100,17 @@ void CDoor::ResetCollision()
 		// 防止畸形或无界的网络数据使每个 snapshot 执行过长遍历。
 		const float MaxLength = (Collision()->GetWidth() + Collision()->GetHeight()) * 32.0f;
 		if(DirLength <= 0.0f || DirLength > MaxLength)
-		{
-			m_Active = false;
 			return;
-		}
 		m_Length = round_to_int(DirLength);
 	}
+	m_Active = true;
+}
+
+void CDoor::ResetCollision()
+{
+	PrepareRenderGeometry();
+	if(!m_Active)
+		return;
 
 	for(int i = 0; i < m_Length - 1; i++)
 	{
@@ -102,11 +121,12 @@ void CDoor::ResetCollision()
 		else
 			Collision()->SetDoorCollisionAt(CurrentPos.x, CurrentPos.y, TILE_STOPA, 0, m_Number);
 	}
+	m_CollisionRegistered = true;
 }
 
 void CDoor::Destroy()
 {
-	if(m_Active)
+	if(m_CollisionRegistered)
 	{
 		for(int i = 0; i < m_Length - 1; i++)
 		{
@@ -116,6 +136,7 @@ void CDoor::Destroy()
 			else
 				Collision()->SetDoorCollisionAt(CurrentPos.x, CurrentPos.y, TILE_AIR, 0, 0);
 		}
+		m_CollisionRegistered = false;
 	}
 	delete this;
 }
@@ -130,4 +151,26 @@ void CDoor::Read(const CLaserData *pData)
 bool CDoor::Match(const CDoor *pDoor) const
 {
 	return pDoor->m_Pos == m_Pos && pDoor->m_To == m_To && pDoor->m_Number == m_Number;
+}
+
+CLaserData CDoor::RenderData(int Team)
+{
+	const auto &vSwitchers = GameWorld()->Switchers();
+	const bool IsSwitchLayer = m_Layer == LAYER_SWITCH;
+	const bool SwitchStatus = IsSwitchLayer && m_Number > 0 && m_Number < (int)vSwitchers.size() &&
+				  Team >= 0 && Team < NUM_DDRACE_TEAMS && vSwitchers[m_Number].m_aStatus[Team];
+	const bool Active = QmPracticeSwitchActive(IsSwitchLayer, m_Number, Team, (int)vSwitchers.size(), SwitchStatus);
+
+	CLaserData Data = {};
+	Data.m_From = QmPracticeDoorRenderEnd(m_Pos, m_To, m_Direction, m_Length, Active);
+	Data.m_To = m_Pos;
+	Data.m_StartTick = GameWorld()->GameTick();
+	Data.m_ExtraInfo = true;
+	Data.m_Owner = -1;
+	Data.m_Type = LASERTYPE_DOOR;
+	Data.m_SwitchNumber = m_Number;
+	Data.m_Subtype = 0;
+	Data.m_Predict = false;
+	Data.m_TuneZone = GameWorld()->m_WorldConfig.m_UseTuneZones ? Collision()->IsTune(Collision()->GetMapIndex(m_Pos)) : 0;
+	return Data;
 }

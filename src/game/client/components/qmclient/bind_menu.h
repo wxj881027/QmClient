@@ -16,6 +16,9 @@ namespace qm_bind_menu
 		ASSETS,
 		CUSTOM,
 		NUM_MENUS,
+		// 练习菜单不走配置归类，按当前练习上下文临时生成条目，
+		// 因此排除在 NUM_MENUS 的页签与可编辑菜单集合之外。
+		PRACTICE = NUM_MENUS,
 	};
 
 	enum class ELayout
@@ -34,6 +37,7 @@ namespace qm_bind_menu
 		case EMenu::CHAT: return "chat";
 		case EMenu::ASSETS: return "assets";
 		case EMenu::CUSTOM: return "custom";
+		case EMenu::PRACTICE: return "practice";
 		default: return "";
 		}
 	}
@@ -46,6 +50,7 @@ namespace qm_bind_menu
 		case EMenu::CHAT: return "Chat";
 		case EMenu::ASSETS: return "Assets";
 		case EMenu::CUSTOM: return "Custom";
+		case EMenu::PRACTICE: return "Practice";
 		default: return "";
 		}
 	}
@@ -53,7 +58,7 @@ namespace qm_bind_menu
 	inline bool HasHoverDetails(EMenu Menu)
 	{
 		// 身份行的名字、战队和本体/分身两列已经完整展示，不再叠一层悬浮详情。
-		return Menu == EMenu::CHAT || Menu == EMenu::ASSETS || Menu == EMenu::CUSTOM;
+		return Menu == EMenu::CHAT || Menu == EMenu::ASSETS || Menu == EMenu::CUSTOM || Menu == EMenu::PRACTICE;
 	}
 
 	inline std::optional<EMenu> Parse(std::string_view Text)
@@ -65,6 +70,8 @@ namespace qm_bind_menu
 			if(Text.size() == NameLength && str_comp_nocase_num(Text.data(), Name(Menu), Text.size()) == 0)
 				return Menu;
 		}
+		if(Text == Name(EMenu::PRACTICE))
+			return EMenu::PRACTICE;
 		return std::nullopt;
 	}
 
@@ -76,6 +83,7 @@ namespace qm_bind_menu
 		case EMenu::CHAT: return "+bindmenu chat";
 		case EMenu::ASSETS: return "+bindmenu assets";
 		case EMenu::CUSTOM: return "+bindmenu custom";
+		case EMenu::PRACTICE: return "+bindmenu practice";
 		default: return "";
 		}
 	}

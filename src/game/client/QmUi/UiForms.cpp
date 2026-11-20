@@ -4,8 +4,6 @@
 #include "UiForms.h"
 
 #include "QmIconSwap.h"
-
-#include <game/client/QmUi/QmScroll.h>
 #include "QmPasswordIcon.h"
 #include "SettingsPageLayout.h"
 #include "UiButtons.h"
@@ -23,6 +21,7 @@
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
+#include <game/client/QmUi/QmScroll.h>
 #include <game/client/components/tooltips.h>
 #include <game/client/lineinput.h>
 #include <game/client/qm_icon.h>
@@ -918,7 +917,6 @@ namespace ui_widget
 			DrawControlSurface(Ctx, Inner, *pColorInner, ColorRGBA(), ui_token::radius::PILL);
 		}
 	}
-
 
 	void RenderHorizontalSlider(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, float Current, const ColorRGBA *pColorInner)
 	{

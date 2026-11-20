@@ -3379,6 +3379,7 @@ if(CLIENT)
     QmUi/cards/QmSearchAnswerCard.h
     QmUi/cards/QmCardCatalogBind.cpp
     QmUi/cards/QmCardCatalogSelfKillProtection.cpp
+    QmUi/cards/QmCardCatalogFastPractice.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
     QmUi/cards/QmWordFilterFileCard.cpp
     QmUi/cards/QmCardCatalogGeneral.cpp
@@ -3466,6 +3467,7 @@ if(CLIENT)
     components/qmclient/demo_camera.h
     components/qmclient/demo_camera_path.h
     components/qmclient/demo_camera_file.h
+    components/qmclient/ghost_path.h
     components/camera.cpp
     components/camera.h
     components/censor.cpp
@@ -3707,6 +3709,12 @@ if(CLIENT)
     components/qmclient/music_lyrics/music_lyrics_model.h
     components/qmclient/music_lyrics/music_lyrics_qrc.cpp
     components/qmclient/music_lyrics/music_lyrics_qrc.h
+    components/qmclient/music_lyrics/qm_lxmusic_config.cpp
+    components/qmclient/music_lyrics/qm_lxmusic_config.h
+    components/qmclient/music_lyrics/qm_lxmusic_integration.cpp
+    components/qmclient/music_lyrics/qm_lxmusic_integration.h
+    components/qmclient/music_lyrics/qm_lxmusic_parser.cpp
+    components/qmclient/music_lyrics/qm_lxmusic_parser.h
     components/qmclient/music_lyrics/qm_soda_hook_provider.cpp
     components/qmclient/music_lyrics/qm_soda_hook_provider.h
     components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
@@ -3778,7 +3786,18 @@ if(CLIENT)
     components/qmclient/solo_split_state.h
     components/qmclient/rank_view_timeline.h
     components/qmclient/rank_ghost.cpp
+    components/qmclient/rank_ghost_view.cpp
+    components/qmclient/rank_ghost_parse.cpp
+    components/qmclient/rank_ghost_fetch.cpp
     components/qmclient/rank_ghost.h
+    components/qmclient/map_mechanism_builder.cpp
+    components/qmclient/map_mechanism_builder.h
+    components/qmclient/practice_light_phase.h
+    components/qmclient/shadow_gun_replay.cpp
+    components/qmclient/shadow_gun_replay.h
+    components/qmclient/local_world.cpp
+    components/qmclient/local_world.h
+    components/qmclient/world_event_gate.h
     components/qmclient/online_replay_player.h
     components/qmclient/route_render_cache.h
     components/qmclient/route_start_index.h
@@ -3945,6 +3964,9 @@ if(CLIENT)
     components/tclient/custom_communities.cpp
     components/tclient/custom_communities.h
     components/tclient/fast_practice.cpp
+    components/tclient/fast_practice_commands.cpp
+    components/tclient/fast_practice_recording.cpp
+    components/tclient/fast_practice_input.cpp
     components/tclient/fast_practice.h
     components/tclient/map_history.cpp
     components/tclient/map_history.h
@@ -4010,6 +4032,8 @@ if(CLIENT)
     prediction/entities/pickup.h
     prediction/entities/plasma.cpp
     prediction/entities/plasma.h
+    prediction/entities/practice_light.cpp
+    prediction/entities/practice_light.h
     prediction/entities/projectile.cpp
     prediction/entities/projectile.h
     prediction/entity.cpp
@@ -4881,7 +4905,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_friends_category_drag_test.cpp
     src/test/unit/engine/friends_revision_test.cpp
     src/test/unit/engine/friends_pin_test.cpp
+    src/test/unit/engine/input_ring_test.cpp
     src/test/integration/engine/friends_pin_persistence_test.cpp
+    src/test/integration/engine/ghost_loader_test.cpp
     src/test/integration/qmclient/client/qm_browser_friend_pin_test.cpp
     src/test/unit/qmclient/monitoring/qm_perf_diagnostics_test.cpp
     src/test/unit/qmclient/monitoring/qm_perf_json_test.cpp
@@ -4904,6 +4930,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/custom_community_info_test.cpp
     src/test/integration/qmclient/client/qm_sponsors_draft_test.cpp
     src/test/integration/qmclient/client/rank_view_timeline_test.cpp
+    src/test/integration/qmclient/client/qm_rank_demo_cache_test.cpp
     src/test/integration/qmclient/music/netease_shared_memory_readonly_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
     src/test/integration/qmclient/client/qm_pose_capture_save_test.cpp
@@ -5041,6 +5068,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_bind_overview_test.cpp
     src/test/unit/qmclient/client/qm_bind_workshop_catalog_test.cpp
     src/test/unit/qmclient/client/qm_bind_workshop_plan_test.cpp
+    src/test/integration/qmclient/client/qm_bind_workshop_cfg_file_test.cpp
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
     src/test/unit/qmclient/client/qm_finish_summary_data_test.cpp
@@ -5060,6 +5088,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_chat_spacing_test.cpp
     src/test/unit/qmclient/client/qm_pending_chat_messages_test.cpp
     src/test/unit/qmclient/client/qm_outgoing_chat_annotations_test.cpp
+    src/test/unit/qmclient/client/qm_playback_shortcuts_test.cpp
     src/test/unit/qmclient/client/qm_chat_text_layout_test.cpp
     src/test/unit/qmclient/client/qm_console_log_filter_test.cpp
     src/test/unit/qmclient/client/qm_console_selection_test.cpp
@@ -5123,6 +5152,17 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_lyrics_hud_layout_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_hook_input_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_cursor_test.cpp
+    src/test/unit/qmclient/client/qm_fast_practice_rescue_test.cpp
+    src/test/unit/qmclient/client/qm_fast_practice_branch_state_test.cpp
+    src/test/unit/qmclient/client/qm_fast_practice_commands_test.cpp
+    src/test/unit/qmclient/client/qm_practice_switch_carry_test.cpp
+    src/test/unit/qmclient/client/qm_dummy_input_test.cpp
+    src/test/unit/qmclient/client/qm_practice_input_lock_test.cpp
+    src/test/unit/qmclient/client/qm_replay_session_test.cpp
+    src/test/unit/qmclient/client/qm_practice_recorder_test.cpp
+    src/test/unit/qmclient/client/qm_practice_timeline_test.cpp
+    src/test/unit/qmclient/client/qm_local_world_frame_test.cpp
+    src/test/unit/qmclient/client/qm_ghost_team_metadata_test.cpp
     src/test/unit/qmclient/client/qm_media_island_content_test.cpp
     src/test/unit/qmclient/client/qm_media_island_satellite_test.cpp
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
@@ -5160,6 +5200,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_media_paths_storage_test.cpp
     src/test/unit/qmclient/client/qm_demo_camera_path_test.cpp
     src/test/unit/qmclient/client/qm_demo_camera_file_test.cpp
+    src/test/unit/qmclient/client/qm_ghost_path_test.cpp
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
@@ -5237,6 +5278,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/qm_music_transport_test.cpp
     src/test/unit/qmclient/music/qm_kugou_protocol_test.cpp
     src/test/unit/qmclient/music/qm_kugou_patch_test.cpp
+    src/test/unit/qmclient/music/qm_lxmusic_parser_test.cpp
     src/test/unit/qmclient/music/qm_music_registry_test.cpp
     src/test/unit/qmclient/music/music_lyrics_krc_test.cpp
     src/test/unit/qmclient/music/music_lyrics_qrc_test.cpp
@@ -5288,6 +5330,12 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/tee_skin_apply_test.cpp
     src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp
     src/test/unit/qmclient/client/qm_rank_demo_manifest_test.cpp
+    src/test/unit/qmclient/client/qm_rank_demo_search_test.cpp
+    src/test/unit/qmclient/client/qm_rank_demo_sort_test.cpp
+    src/test/unit/qmclient/client/qm_rank_list_layout_test.cpp
+    src/test/unit/qmclient/client/qm_rank_list_controller_test.cpp
+    src/test/unit/qmclient/client/qm_ghost_freeze_bar_test.cpp
+    src/test/unit/qmclient/client/qm_ghost_extra_data_test.cpp
     src/test/unit/qmclient/client/qmclient_update_version_test.cpp
     src/test/unit/qmclient/client/qmclient_update_manifest_test.cpp
     src/test/unit/qmclient/client/qmclient_update_sources_test.cpp
@@ -5467,6 +5515,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/translate/translate_jobs_integration_test.cpp
     src/test/unit/qmclient/translate/translate_responses_test.cpp
     src/test/unit/qmclient/translate/translate_llm_parse_test.cpp
+    src/test/unit/qmclient/client/qm_practice_light_phase_test.cpp
     src/test/unit/base/unix_test.cpp
     src/test/unit/engine/uuid_test.cpp
     src/test/unit/base/vmath_test.cpp
@@ -5480,6 +5529,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/voice_spatial_utils_test.cpp
   )
   set(TESTS_EXTRA
+    src/game/client/components/qmclient/local_world.cpp
     src/game/editor/collab_camera.cpp
     src/game/editor/mapitems/envelope.cpp
     src/game/map/envelope_eval.cpp
@@ -5580,6 +5630,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
     src/game/client/components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
+    src/game/client/components/qmclient/music_lyrics/qm_lxmusic_parser.cpp
+    src/game/client/components/qmclient/music_lyrics/qm_lxmusic_config.cpp
     src/qm/hooks/soda/qm_soda_protocol.cpp
     src/qm/music/qm_kugou_protocol.cpp
     src/qm/music/qm_qqmusic_protocol.cpp
@@ -5729,6 +5781,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/generated/data_types.h
     ${DEPS}
   )
+  # GhostLoaderIntegration 直接构造真实引擎读写器，验证文件事务与分块轨迹协议。
+  target_sources(${TARGET_TESTRUNNER} PRIVATE src/engine/client/ghost.cpp)
   add_dependencies(${TARGET_TESTRUNNER} generate_protocol)
   target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
   if(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
@@ -5973,6 +6027,56 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     add_test(NAME qm-ui-popup-tests COMMAND $<TARGET_FILE:qm-ui-popup-tests>)
   endif()
 
+  # 客户端预测写回测试：预测世界与角色只存在于 game-client，testrunner 不链接
+  # 这组源码（服务端有同名 CGameWorld/CCharacter）。这里单独编一个最小目标。
+  if(CLIENT)
+    add_executable(qm-practice-predict-tests EXCLUDE_FROM_ALL
+      src/test/test.cpp
+      src/test/support/qm_exit_process_probe.cpp
+      src/test/support/qm_open_link_probe.cpp
+      src/test/integration/qmclient/client/qm_fast_practice_predict_loop_test.cpp
+      src/test/integration/qmclient/client/qm_fast_practice_predict_publish_test.cpp
+      src/test/integration/qmclient/client/qm_shadow_mechanism_test.cpp
+      src/test/unit/qmclient/client/qm_practice_predict_plan_test.cpp
+      src/generated/client_data.cpp
+      # 同时列出生成头，CMake 才会为编译加上生成规则的顺序依赖；
+      # 缺少客户端数据头时增量构建会先编译 client_data.cpp 而失败。
+      src/generated/client_data.h
+      src/game/client/prediction/entity.cpp
+      src/game/client/prediction/gameworld.cpp
+      src/game/client/prediction/entities/character.cpp
+      src/game/client/prediction/entities/door.cpp
+      src/game/client/prediction/entities/dragger.cpp
+      src/game/client/prediction/entities/laser.cpp
+      src/game/client/prediction/entities/pickup.cpp
+      src/game/client/prediction/entities/plasma.cpp
+      src/game/client/prediction/entities/practice_light.cpp
+      src/game/client/components/qmclient/map_mechanism_builder.cpp
+      src/game/client/components/qmclient/shadow_gun_replay.cpp
+      src/game/client/prediction/entities/projectile.cpp
+      src/game/client/projectile_data.cpp
+      src/game/client/laser_data.cpp
+      src/game/client/pickup_data.cpp
+      $<TARGET_OBJECTS:engine-shared>
+      $<TARGET_OBJECTS:game-shared>
+      $<TARGET_OBJECTS:rust-bridge-shared>
+      ${DEPS}
+    )
+    add_dependencies(qm-practice-predict-tests generate_protocol)
+    target_link_libraries(qm-practice-predict-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
+    target_include_directories(qm-practice-predict-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${WebP_INCLUDE_DIRS})
+    target_compile_definitions(qm-practice-predict-tests PRIVATE DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    if(MSVC)
+      target_compile_options(qm-practice-predict-tests PRIVATE /bigobj /utf-8)
+    endif()
+    if(TARGET_OS STREQUAL "windows")
+      target_link_libraries(qm-practice-predict-tests bcrypt winhttp ws2_32)
+      add_test(NAME qm-practice-predict-tests COMMAND $<TARGET_FILE:qm-practice-predict-tests>)
+    endif()
+    list(APPEND TARGETS_OWN qm-practice-predict-tests)
+    list(APPEND TARGETS_LINK qm-practice-predict-tests)
+  endif()
+
   # Windows 的独立音乐目标也必须进入日常 C++ gate，避免只有注册却从未执行。
   set(CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS})
   set(CXX_TEST_DEPENDS ${TARGET_TESTRUNNER})
@@ -5983,6 +6087,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   if(TARGET qm-ui-popup-tests)
     list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-ui-popup-tests> ${TESTRUNNER_ARGS})
     list(APPEND CXX_TEST_DEPENDS qm-ui-popup-tests)
+  endif()
+  if(TARGET qm-practice-predict-tests)
+    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-practice-predict-tests> ${TESTRUNNER_ARGS})
+    list(APPEND CXX_TEST_DEPENDS qm-practice-predict-tests)
   endif()
   add_custom_target(run_cxx_tests
     ${CXX_TEST_COMMANDS}
@@ -6014,6 +6122,10 @@ endif()
 if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
   # 对象库集合与 testrunner 一致，基准可覆盖 base/engine/game 各层代码
   add_executable(qm-benchmarks EXCLUDE_FROM_ALL
+    src/test/benchmark/qm_ghost_benchmark.cpp
+    src/test/benchmark/qm_local_world_benchmark.cpp
+    src/test/benchmark/qm_practice_predict_benchmark.cpp
+    src/game/client/components/qmclient/local_world.cpp
     src/test/benchmark/qm_skin_download_benchmark.cpp
     src/test/benchmark/qm_startup_info_benchmark.cpp
     src/test/benchmark/qm_benchmark_main.cpp

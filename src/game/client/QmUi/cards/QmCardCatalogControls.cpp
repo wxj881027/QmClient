@@ -155,7 +155,16 @@ void CMenusSettingsControls::RenderSettingsBinds(EBindOptionGroup Group, CUIRect
 		const char *pBindTextId = BindOption.m_Group == EBindOptionGroup::CUSTOM ? BindOption.m_Command.c_str() : BindOption.m_pLabel;
 		DoSettingsControlsLabel(pBindTextId, &Label, pBindLabel, m_CardMetrics.m_BodySize, TEXTALIGN_ML, LabelProps);
 		Ui()->DoButtonLogic(&BindOption.m_TooltipButtonId, 0, &Label, BUTTONFLAG_NONE);
-		GameClient()->m_Tooltips.DoToolTip(&BindOption.m_TooltipButtonId, &Label, BindOption.m_Command.c_str());
+		// 有说明的动作把"用途"和"命令串"一起放进悬浮 Tips：既说清什么时候能用，
+		// 也能照着命令复制到自定义绑定。static 缓冲保证 tooltip 内部持有的指针有效。
+		if(BindOption.m_pDescription)
+		{
+			static char s_aTip[768];
+			str_format(s_aTip, sizeof(s_aTip), "%s\n%s", Localize(BindOption.m_pDescription), BindOption.m_Command.c_str());
+			GameClient()->m_Tooltips.DoToolTip(&BindOption.m_TooltipButtonId, &Label, s_aTip);
+		}
+		else
+			GameClient()->m_Tooltips.DoToolTip(&BindOption.m_TooltipButtonId, &Label, BindOption.m_Command.c_str());
 
 		for(CBindSlotUiElement &CurrentBind : BindOption.m_vCurrentBinds)
 		{

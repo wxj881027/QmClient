@@ -262,19 +262,27 @@ static const char *MapDifficultyStars(int Stars)
 	return Stars >= 0 && Stars <= 5 ? s_apStarLabels[Stars] : "";
 }
 
-// 独立难度列只显示星级符号；
+// Axiom 公告的类别是玩家可见的原文，直接显示，避免「普通」被归并成「简单」。
+static const char *MapDifficultyCategoryText(const CServerInfo &Server, const CQmMapDifficultyCatalog::SEntry &Entry)
+{
+	if(str_comp_nocase(Server.m_aCommunityId, "axiom") == 0)
+		return Entry.m_Category.c_str();
+	const char *pKey = FavoriteMapCategoryKeyFromText(Entry.m_Category.c_str());
+	if(pKey != nullptr)
+		return FavoriteMapCategoryDisplayName(pKey);
+	return Entry.m_Category.c_str();
+}
+
+// 独立难度列显示「类别 + 星级」（如「简单 ★★☆☆☆」）；
 // 无目录条目返回空串，由调用方显示占位符。
-static void FormatMapDifficultyText(const CQmMapDifficultyCatalog::SEntry *pDifficulty, char *pOut, size_t OutSize)
+static void FormatMapDifficultyText(const CServerInfo &Server, const CQmMapDifficultyCatalog::SEntry *pDifficulty, char *pOut, size_t OutSize)
 {
 	if(pOut == nullptr || OutSize == 0)
 		return;
 	pOut[0] = '\0';
 	if(pDifficulty == nullptr)
 		return;
-	const char *pStars = pDifficulty->StarLabel();
-	if(pStars[0] == '\0')
-		return;
-	str_copy(pOut, pStars, OutSize);
+	pDifficulty->CellLabel(MapDifficultyCategoryText(Server, *pDifficulty), pOut, OutSize);
 }
 
 // 浏览器名称列的区段短名：解析器输出「类别 - 区段」（如「简单 - CHN5 上海」），
@@ -590,33 +598,6 @@ static ColorRGBA PlayerBackgroundColor(bool Friend, bool Clan, bool Afk, bool In
 	else
 		i = 2;
 	return (Afk ? COLORS_AFK[i] : COLORS[i]).WithAlpha(0.3f + (Inside ? 0.15f : 0.0f) + (InSelectedServer ? 0.12f : 0.0f));
-}
-
-template<size_t N>
-static void FormatServerbrowserPing(char (&aBuffer)[N], const CServerInfo *pInfo)
-{
-	if(!pInfo->m_LatencyIsEstimated)
-	{
-		str_format(aBuffer, sizeof(aBuffer), "%d", pInfo->m_Latency);
-		return;
-	}
-	static const char *const LOCATION_NAMES[CServerInfo::NUM_LOCS] = {
-		"", // LOC_UNKNOWN
-		Localizable("AFR"), // LOC_AFRICA
-		Localizable("ASI"), // LOC_ASIA
-		Localizable("AUS"), // LOC_AUSTRALIA
-		Localizable("EUR"), // LOC_EUROPE
-		Localizable("NA"), // LOC_NORTH_AMERICA
-		Localizable("SA"), // LOC_SOUTH_AMERICA
-		Localizable("CHN"), // LOC_CHINA
-	};
-	if(pInfo->m_Location < 0 || pInfo->m_Location >= CServerInfo::NUM_LOCS)
-	{
-		log_warn("serverbrowser", "Invalid estimated ping location %d", pInfo->m_Location);
-		str_copy(aBuffer, Localize(LOCATION_NAMES[CServerInfo::LOC_UNKNOWN]));
-		return;
-	}
-	str_copy(aBuffer, Localize(LOCATION_NAMES[pInfo->m_Location]));
 }
 
 static ColorRGBA GetPingTextColor(int Latency)
@@ -1135,7 +1116,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		const bool BlockHeaderButton = s_HeaderGesture.ResizeColumn() >= 0 || (HoveredHandle >= 0 && s_HeaderGesture.ReorderColumn() < 0);
 		if(BlockHeaderButton)
 			Ui()->BeginBackgroundRender(true);
-		const bool HeaderClicked = DoButton_GridHeader(&Col.m_Id, pCaption, Checked, &Col.m_Rect, TEXTALIGN_ML, QmBrowserTableLabelProperties(Col.m_Rect.w));
+		const bool HeaderClicked = DoButton_GridHeader(&Col.m_Id, pCaption, Checked, &Col.m_Rect, g_Config.m_BrSortOrder != 0, TEXTALIGN_ML, QmBrowserTableLabelProperties(Col.m_Rect.w));
 		if(BlockHeaderButton)
 			Ui()->EndBackgroundRender(true);
 		if(HeaderClicked)
@@ -1458,6 +1439,11 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			continue;
 		}
 
+		// QmClient: 可见行补测延迟。没有可用实测值的行在浏览时排队发一次 GETINFO，
+		// 几秒内把地区估算换成真实数值；结果写入 ping 缓存，之后打开直接显示。
+		// 同一行重复调用由 RequestServerPing 的队列/失败/同 IP 窗口判断去重。
+		ServerBrowser()->RequestServerPing(pItem->m_aAddresses[0]);
+
 		// Resolve row-only data after visibility is known. The list can contain
 		// hundreds of servers while only a few rows are on screen; doing these
 		// lookups and allocating the streamed UI element for every hidden row
@@ -1476,11 +1462,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 		const float FontSize = SERVER_LIST_TEXT_SIZE;
 		char aTemp[64];
-		// 短名仅对国服生效（用户校准：默认开、只对国服）。命中判定：社区 id 含
-		// "chn"（覆盖 chn/ddnet-cn 等命名）**或名称含 "CHN"**——DDNet CHN 系
-		// 国服挂在 DDraceNetwork 社区（id="ddnet"）下，纯 id 门控会全部漏掉。
-		const bool ShortNameAllowed = (pCommunity != nullptr && str_find_nocase(pCommunity->Id(), "chn") != nullptr) ||
-					      str_find_nocase(pItem->m_aName, "CHN") != nullptr;
+		// 短名仅对国服生效（用户校准：默认开、只对国服）。国服判定与可见行
+		// 补测共用 ServerBrowser()->IsChineseServer，避免两处口径分叉。
+		const bool ShortNameAllowed = ServerBrowser()->IsChineseServer(*pItem);
 		char aDisplayServerName[sizeof(pItem->m_aName)];
 		char aParsedShortName[sizeof(pItem->m_aName)];
 		const char *pDisplayServerName = pItem->m_aName;
@@ -1643,10 +1627,10 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_DIFFICULTY)
 			{
-				// 独立难度列只显示星级符号；无目录条目显示占位。
+				// 独立难度列显示类别与星级；无目录条目显示占位。
 				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pItem, MapCategoryHintFromServer(pItem));
-				char aDifficulty[64];
-				FormatMapDifficultyText(pDifficulty, aDifficulty, sizeof(aDifficulty));
+				char aDifficulty[128];
+				FormatMapDifficultyText(*pItem, pDifficulty, aDifficulty, sizeof(aDifficulty));
 				MeasureColumn(Id, aDifficulty[0] != '\0' ? aDifficulty : "--", FontSize);
 				if(aDifficulty[0] != '\0')
 				{
@@ -1804,8 +1788,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			else if(Id == COL_PING)
 			{
 				Button.VMargin(4.0f, &Button);
-				FormatServerbrowserPing(aTemp, pItem);
-				if(g_Config.m_UiColorizePing)
+				CServerInfo::FormatLatency(aTemp, pItem->m_Latency);
+				// 占位符 "--"（地区未知/测量超时）保持默认色，不按 999ms 涂红。
+				if(g_Config.m_UiColorizePing && CServerInfo::IsUsableLatency(pItem->m_Latency))
 				{
 					TextRender()->TextColor(GetServerListPingColor(pItem, ServerBrowser()->GetCurrentClientLocation()));
 				}
@@ -3077,10 +3062,10 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		GameTypeLabelProps.SetColor(pSelectedServer->m_GametypeColor);
 	DrawInfoRow(apLabels[1], pSelectedServer->m_aGameType, RowGap, GameTypeLabelProps);
 	SLabelProperties PingLabelProps;
-	if(g_Config.m_UiColorizePing)
+	if(g_Config.m_UiColorizePing && CServerInfo::IsUsableLatency(pSelectedServer->m_Latency))
 		PingLabelProps.SetColor(GetServerListPingColor(pSelectedServer, ServerBrowser()->GetCurrentClientLocation()));
 	char aPingLabel[8];
-	FormatServerbrowserPing(aPingLabel, pSelectedServer);
+	CServerInfo::FormatLatency(aPingLabel, pSelectedServer->m_Latency);
 	DrawInfoRow(apLabels[2], aPingLabel, RowGap, PingLabelProps);
 	View.HSplitTop(RowGap, nullptr, &View);
 
@@ -3889,7 +3874,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 					// server info text
 					char aLatency[16];
-					FormatServerbrowserPing(aLatency, Friend.ServerInfo());
+					CServerInfo::FormatLatency(aLatency, Friend.ServerInfo()->m_Latency);
 					if(aLatency[0] != '\0')
 						str_format(aBuf, sizeof(aBuf), "%s | %s | %s", Friend.ServerInfo()->m_aMap, Friend.ServerInfo()->m_aGameType, aLatency);
 					else

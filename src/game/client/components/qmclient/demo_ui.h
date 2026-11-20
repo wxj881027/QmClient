@@ -10,6 +10,36 @@ namespace qm_demo_ui
 	constexpr float DISPLAY_HEIGHT = 130.0f;
 	constexpr float CAMERA_HEIGHT = 146.0f;
 
+	// 播放器控制卡：120 高，含上下 8 边距、名称栏、进度、按钮与切片行。
+	// 查看模式没有源 demo，切片行整段隐藏，高度随之减去 CUT_SECTION_HEIGHT。
+	constexpr float PLAYER_PANEL_HEIGHT = 120.0f;
+	constexpr float PLAYER_MARGIN = 8.0f;
+	constexpr float NAME_BAR_HEIGHT = 20.0f;
+	constexpr float SEEK_BAR_HEIGHT = 12.0f;
+	constexpr float TIME_BAR_HEIGHT = 14.0f;
+	constexpr float BUTTON_BAR_HEIGHT = 22.0f;
+	constexpr float CUT_BAR_GAP = 8.0f;
+	constexpr float CUT_BAR_HEIGHT = 24.0f;
+	constexpr float CUT_SECTION_HEIGHT = CUT_BAR_GAP + CUT_BAR_HEIGHT;
+	constexpr float CONTROL_MARGIN = 3.0f;
+	constexpr float TRANSPORT_BUTTON_MAX = 22.0f;
+	constexpr float SEEK_ROUNDING = 5.0f;
+	constexpr float NAME_ACTION_GAP = 3.0f;
+	// 控制卡外壳、按钮与名称栏的固定排版事实。调用点只引用这些名字，
+	// 再按窗口宽度派生实际矩形，不再把圆角、字面字号写回 menus_demo.cpp。
+	constexpr float CARD_SHADOW_OFFSET_Y = 2.0f;
+	constexpr float CARD_RADIUS = 12.0f;
+	constexpr float CARD_BORDER_WIDTH = 0.6f;
+	constexpr float CARD_INNER_RADIUS = 11.4f;
+	constexpr float CONTROL_RADIUS = 6.0f;
+	constexpr float POPUP_RADIUS = 15.0f;
+	constexpr float PLAYHEAD_RADIUS = 2.0f;
+	constexpr float CONTROL_FONT_SIZE = 11.0f;
+	constexpr float NAME_LABEL_FONT_SIZE = 12.0f;
+	constexpr float LIVE_ICON_SIZE = 24.0f;
+	constexpr float DEMO_DISPLAY_BUTTON_WIDTH = 80.0f;
+	constexpr float CAMERA_BUTTON_WIDTH = 90.0f;
+
 	// 渲染回放弹窗与设置页卡片共用同一套单行控件节奏：20 高、4 间距。
 	// 分组上下各留 8，标题行 18，标题与首行间隔 4。
 	constexpr float RENDER_ROW_HEIGHT = 20.0f;
@@ -142,10 +172,11 @@ namespace qm_demo_ui
 	constexpr float ENCODE_HEIGHT = 2.0f * RENDER_SECTION_PADDING + RENDER_SECTION_TITLE_HEIGHT +
 					RENDER_SECTION_TITLE_GAP + 3.0f * (RENDER_ROW_HEIGHT + RENDER_ROW_GAP);
 
-	inline CUIRect PlayerRect(const CUIRect &Screen, bool DisplayExpanded, bool CameraExpanded = false)
+	inline CUIRect PlayerRect(const CUIRect &Screen, bool DisplayExpanded, bool CameraExpanded = false, bool ShowCutControls = true)
 	{
 		const float Width = std::min(640.0f, std::max(0.0f, Screen.w - 24.0f));
-		const float Height = 120.0f + (DisplayExpanded ? DISPLAY_HEIGHT + 6.0f : 0.0f) + (CameraExpanded ? CAMERA_HEIGHT + 6.0f : 0.0f);
+		const float Height = PLAYER_PANEL_HEIGHT - (ShowCutControls ? 0.0f : CUT_SECTION_HEIGHT) +
+				     (DisplayExpanded ? DISPLAY_HEIGHT + 6.0f : 0.0f) + (CameraExpanded ? CAMERA_HEIGHT + 6.0f : 0.0f);
 		return {Screen.x + (Screen.w - Width) * 0.5f, Screen.y + Screen.h - Height - 12.0f, Width, Height};
 	}
 
@@ -157,7 +188,7 @@ namespace qm_demo_ui
 
 	inline float TransportButtonSize(float PanelWidth, bool ShowSkipDuration)
 	{
-		return std::clamp((PanelWidth - 16.0f - TransportWidth(0.0f, ShowSkipDuration)) / 10.0f, 0.0f, 22.0f);
+		return std::clamp((PanelWidth - 16.0f - TransportWidth(0.0f, ShowSkipDuration)) / 10.0f, 0.0f, TRANSPORT_BUTTON_MAX);
 	}
 
 	struct SCutControls

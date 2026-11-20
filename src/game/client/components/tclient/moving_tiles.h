@@ -55,6 +55,9 @@ class CMovingTiles : public CComponent
 	bool m_HasAxiomOrGoresOnlyQuads = false;
 	bool m_RenderAbove;
 	CEnvelopeState m_EnvEvaluator;
+	// 影子回放时由 CRankGhost 写入播放头；-1 表示继续使用主世界时钟。
+	int m_ViewTick = -1;
+	float m_ViewIntraTick = 0.0f;
 
 public:
 	explicit CMovingTiles(bool Above) :
@@ -65,6 +68,12 @@ public:
 	void OnStateChange(int NewState, int OldState) override;
 	void OnMapLoad() override;
 	void OnRender() override;
+	void SetViewPlaybackTime(int Tick, float IntraTick)
+	{
+		m_ViewTick = Tick;
+		m_ViewIntraTick = IntraTick;
+	}
+	void ClearViewPlaybackTime() { m_ViewTick = -1; }
 
 	int Sizeof() const override { return sizeof(*this); }
 };

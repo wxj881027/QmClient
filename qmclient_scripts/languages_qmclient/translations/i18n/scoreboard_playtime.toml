@@ -1,4 +1,18 @@
-# 计分板游玩时间与统计列切换
+[[message]]
+key = "Playtime (h)"
+[message.translations]
+simplified_chinese = "游玩（小时）"
+traditional_chinese = "遊玩（小時）"
+japanese = "プレイ時間 (h)"
+korean = "플레이 시간(h)"
+russian = "Время игры (ч)"
+german = "Spielzeit (h)"
+spanish = "Tiempo de juego (h)"
+french = "Temps de jeu (h)"
+brazilian_portuguese = "Tempo de jogo (h)"
+portuguese = "Tempo de jogo (h)"
+turkish = "Oyun süresi (sa.)"
+polish = "Czas gry (h)"
 
 [[message]]
 key = "Scoreboard playtime"
@@ -47,22 +61,6 @@ brazilian_portuguese = "Mostrar pontos"
 portuguese = "Mostrar pontos"
 turkish = "Puanları göster"
 polish = "Pokaż punkty"
-
-[[message]]
-key = "Playtime (h)"
-[message.translations]
-simplified_chinese = "游玩（小时）"
-traditional_chinese = "遊玩（小時）"
-japanese = "プレイ時間 (h)"
-korean = "플레이 시간(h)"
-russian = "Время игры (ч)"
-german = "Spielzeit (h)"
-spanish = "Tiempo de juego (h)"
-french = "Temps de jeu (h)"
-brazilian_portuguese = "Tempo de jogo (h)"
-portuguese = "Tempo de jogo (h)"
-turkish = "Oyun süresi (sa.)"
-polish = "Czas gry (h)"
 
 [[message]]
 key = "Show total playtime from DDStats instead of points in scoreboard"

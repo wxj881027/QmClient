@@ -7,6 +7,7 @@
 #include "thread.h"
 
 #include <cstdlib>
+#include <vector>
 
 #define ASYNC_BUFSIZE (8 * 1024)
 #define ASYNC_LOCAL_BUFSIZE (64 * 1024)
@@ -78,13 +79,13 @@ static void aio_handle_free_and_unlock(ASYNCIO *aio) RELEASE(aio->lock)
 static void aio_thread(void *user)
 {
 	ASYNCIO *aio = (ASYNCIO *)user;
+	std::vector<unsigned char> local_buffer(ASYNC_LOCAL_BUFSIZE);
 
 	aio->lock.lock();
 	while(true)
 	{
 		struct BUFFERS buffers;
 		int result_io_error;
-		unsigned char local_buffer[ASYNC_LOCAL_BUFSIZE];
 		unsigned int local_buffer_len = 0;
 
 		if(aio->read_pos == aio->write_pos)
@@ -107,26 +108,26 @@ static void aio_thread(void *user)
 		buffer_ptrs(aio, &buffers);
 		if(buffers.buf1)
 		{
-			if(buffers.len1 > sizeof(local_buffer) - local_buffer_len)
+			if(buffers.len1 > local_buffer.size() - local_buffer_len)
 			{
-				buffers.len1 = sizeof(local_buffer) - local_buffer_len;
+				buffers.len1 = local_buffer.size() - local_buffer_len;
 			}
-			mem_copy(local_buffer + local_buffer_len, buffers.buf1, buffers.len1);
+			mem_copy(local_buffer.data() + local_buffer_len, buffers.buf1, buffers.len1);
 			local_buffer_len += buffers.len1;
 			if(buffers.buf2)
 			{
-				if(buffers.len2 > sizeof(local_buffer) - local_buffer_len)
+				if(buffers.len2 > local_buffer.size() - local_buffer_len)
 				{
-					buffers.len2 = sizeof(local_buffer) - local_buffer_len;
+					buffers.len2 = local_buffer.size() - local_buffer_len;
 				}
-				mem_copy(local_buffer + local_buffer_len, buffers.buf2, buffers.len2);
+				mem_copy(local_buffer.data() + local_buffer_len, buffers.buf2, buffers.len2);
 				local_buffer_len += buffers.len2;
 			}
 		}
 		aio->read_pos = (aio->read_pos + buffers.len1 + buffers.len2) % aio->buffer_size;
 		aio->lock.unlock();
 
-		io_write(aio->io, local_buffer, local_buffer_len);
+		io_write(aio->io, local_buffer.data(), local_buffer_len);
 		io_flush(aio->io);
 		result_io_error = io_error(aio->io);
 

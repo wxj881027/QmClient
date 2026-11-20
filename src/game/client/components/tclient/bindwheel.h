@@ -92,10 +92,16 @@ public:
 	const qm_wheel_presets::SPreset *PresetForBind(int Index);
 
 private:
+	// 练习菜单条目按当前上下文临时生成，不写入 bind 配置；只在 PRACTICE 菜单打开时使用。
+	std::vector<CBind> m_vPracticeBinds;
+
 	void OpenMenu(qm_bind_menu::EMenu Menu);
 	void ReleaseActiveMenu();
 	const SResolvedBind &ResolveBind(int Index);
+	const std::vector<CBind> &ActiveBinds() const;
 	std::optional<std::string> ReadExecConfig(const char *pPath);
+	void RebuildPracticeBinds();
+	bool InNormalPractice() const;
 	void RebuildVisibleBinds();
 	void ClampListScroll();
 	int CurrentSelection() const;

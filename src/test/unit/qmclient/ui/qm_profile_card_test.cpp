@@ -21,7 +21,7 @@ TEST(QmProfileCard, IdentityPhraseAndAssetSearchResolveTheUnifiedCard)
 {
 	qm_card_order::CModel Model;
 	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
-	for(const char *pQuery : {"身份", "语录", "贴图", "轮盘"})
+	for(const char *pQuery : {"身份", "语录", "加入身份菜单"})
 	{
 		SCOPED_TRACE(pQuery);
 		const auto Results = qm_card_registry::SearchCards(pQuery, Model);

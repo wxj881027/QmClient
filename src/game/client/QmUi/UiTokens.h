@@ -173,6 +173,34 @@ namespace ui_token::color
 	}
 } // namespace ui_token::color
 
+// 回放控制卡（demo 播放与 Rank 1 / 练习组查看模式共用）的组件内部角色色。
+// 强调色不在这里：它跟随 UiTheme.m_Accent，也就是 qm_ui_accent_color。
+namespace ui_token::replay
+{
+	// 控制卡外壳：投影、描边、内底；模糊不可用时不透明档兜底。
+	inline constexpr ColorRGBA CARD_SHADOW = color::SURFACE_SHADOW;
+	inline constexpr ColorRGBA CARD_BORDER{0.65f, 0.69f, 0.77f, 0.12f};
+	inline constexpr ColorRGBA CARD_FILL_BLURRED{0.07f, 0.08f, 0.11f, 0.56f};
+	inline constexpr ColorRGBA CARD_FILL_OPAQUE{0.07f, 0.08f, 0.11f, 0.92f};
+	// 传输按钮条、进度槽与标记阴影。
+	inline constexpr ColorRGBA TRANSPORT_BAR{1.0f, 1.0f, 1.0f, 0.045f};
+	// 名称栏里的普通动作按钮底；比常驻提示层亮一档，但仍是中性白。
+	inline constexpr ColorRGBA CONTROL_FILL{1.0f, 1.0f, 1.0f, 0.08f};
+	// 只做分区提示的浅底，例如显示选项里的固定控件槽。
+	inline constexpr ColorRGBA CONTROL_FILL_SUBTLE{1.0f, 1.0f, 1.0f, 0.04f};
+	// “回放显示”胶囊页签的底；比控制卡内底再亮一档，页签边界才读得出来。
+	inline constexpr ColorRGBA DISPLAY_BASE{0.10f, 0.11f, 0.14f, 1.0f};
+	// 进度条播放头：白色高光压到 95%，避免压住其下方的切片标记。
+	inline constexpr ColorRGBA PLAYHEAD{1.0f, 1.0f, 1.0f, 0.95f};
+	inline constexpr ColorRGBA SEEK_TRACK{0.0f, 0.0f, 0.0f, 0.28f};
+	inline constexpr ColorRGBA MARKER_SHADOW{0.15f, 0.10f, 0.0f, 0.75f};
+	// Live 指示：直播红点与不可回直播的灰点。
+	inline constexpr ColorRGBA LIVE_ON{1.0f, 0.0f, 0.0f, 1.0f};
+	inline constexpr ColorRGBA LIVE_OFF{0.6f, 0.6f, 0.6f, 1.0f};
+	// 导出弹窗的压暗层；比 SURFACE_OVERLAY 深一档，保证弹窗文字压得住地图。
+	inline constexpr ColorRGBA POPUP_BACKDROP{0.0f, 0.0f, 0.0f, 0.5f};
+} // namespace ui_token::replay
+
 // 离散滑块档位色板与满档渐变：UiDiscreteSliderStyle.h 与 UiDiscreteSliderLogic.cpp
 // 共享的唯一来源，禁止在调用文件复制。
 namespace ui_token::discrete_slider

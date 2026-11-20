@@ -60,6 +60,7 @@
 #include <game/client/components/console.h>
 #include <game/client/components/key_binder.h>
 #include <game/client/components/menu_background.h>
+#include <game/client/components/qmclient/bind_index.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/demo_ui.h>
 #include <game/client/components/qmclient/map_history_ui.h>
@@ -1409,7 +1410,7 @@ int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Ico
 int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture, const CUIRect *pUnscaledRect, const ColorRGBA *pSurfaceColor, std::optional<bool> HoveredOverride)
 {
 	if(Icon != EQmIcon::COUNT && (pText == nullptr || pText[0] == '\0') && pImageName == nullptr && pIconTexture == nullptr)
-		return ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, true, std::nullopt, false, false, nullptr, nullptr, HoveredOverride);
+		return ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, true, std::nullopt, false, false, nullptr, nullptr, -1.0f, HoveredOverride);
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	CUIRect Text = *pRect;
 	ui_widget::SButtonSurfaceOptions Options;
@@ -1778,23 +1779,36 @@ void CMenus::PrepareSettingsTabLabelCache(float MainViewWidth, float TabBarWidth
 	}
 }
 
-int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align, const SLabelProperties &Props)
+int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, bool Descending, int Align, const SLabelProperties &Props)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	const float SortedAlpha = std::clamp(0.34f + g_Config.m_QmUiOpacity / 100.0f * 0.6f, 0.0f, 0.55f);
+	const float Radius = ui_token::radius::SMALL_MENU;
 	if(Checked == 2)
-		DrawRoundedSurface(Ui(), *pRect, ColorRGBA(1, 0.98f, 0.5f, SortedAlpha), ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_T);
+		DrawRoundedSurface(Ui(), *pRect, ColorRGBA(1, 0.98f, 0.5f, SortedAlpha), ColorRGBA(), Radius, 0.0f, IGraphics::CORNER_T);
 	else if(Checked)
-		DrawRoundedSurface(Ui(), *pRect, ColorRGBA(1, 1, 1, SortedAlpha), ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_T);
+		DrawRoundedSurface(Ui(), *pRect, ColorRGBA(1, 1, 1, SortedAlpha), ColorRGBA(), Radius, 0.0f, IGraphics::CORNER_T);
 
 	CUIRect Temp;
 	pRect->VMargin(5.0f, &Temp);
 	SLabelProperties HeaderProps = Props;
 	if(HeaderProps.m_MaxWidth >= 0.0f)
 		HeaderProps.m_MaxWidth = std::min(HeaderProps.m_MaxWidth, std::max(0.0f, Temp.w));
+	CUIRect Arrow;
+	if(Checked && Temp.w > Temp.h)
+	{
+		Temp.VSplitRight(Temp.h, &Temp, &Arrow);
+		// 箭头方向跟随真实排序方向。Checked 只表示该列正在排序（2 是组合排序的
+		// 黄色高亮），不能再把 Checked == 2 当成降序。
+		Ui()->DoLabel_QmIcon(&Arrow, Descending ? EQmIcon::CHEVRON_DOWN : EQmIcon::CHEVRON_UP,
+			Descending ? FONT_ICON_CHEVRON_DOWN : FONT_ICON_CHEVRON_UP, Temp.h * 0.62f, TEXTALIGN_MC, HeaderProps);
+		// 文字区被箭头切掉后重新收敛最大宽度，避免标签画到箭头上。
+		if(HeaderProps.m_MaxWidth >= 0.0f)
+			HeaderProps.m_MaxWidth = std::min(HeaderProps.m_MaxWidth, std::max(0.0f, Temp.w));
+	}
 	// 文字引擎把零行宽视作不限制宽度，空的表头文字区直接跳过绘制。
 	if(HeaderProps.m_MaxWidth != 0.0f)
-		Ui()->DoLabel(&Temp, pText, pRect->h * CUi::ms_FontmodHeight, Align, HeaderProps);
+		Ui()->DoLabel(&Temp, pText, ui_token::font::SMALL, Align, HeaderProps);
 	return Ui()->DoButtonLogic(pId, Checked, pRect, BUTTONFLAG_LEFT);
 }
 
@@ -4301,27 +4315,9 @@ void CMenus::OnInit()
 
 void CMenus::EnsureSettingsBindCache()
 {
-	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
-	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern bool g_CommandBindCacheInitialized;
-
-	if(g_CommandBindCacheInitialized)
-		return;
-
-	g_CommandBindCache.clear();
-	g_CommandBindCache.reserve(64);
-	for(int Mod = 0; Mod < KeyModifier::COMBINATION_COUNT; ++Mod)
-	{
-		for(int KeyId = 0; KeyId < KEY_LAST; ++KeyId)
-		{
-			const char *pBind = GameClient()->m_Binds.Get(KeyId, Mod);
-			if(!pBind[0])
-				continue;
-			g_CommandBindCache.try_emplace(pBind, KeyId, Mod);
-		}
-	}
-	g_CommandBindCacheInitialized = true;
+	// 绑定索引自带版本校验：设置页提前建好索引，之后每次查询只在 Revision
+	// 变化时重建，cfg 载入与控制台 bind 都能被下一次绘制看到。
+	QmRefreshCommandBindIndex(GameClient()->m_Binds);
 }
 
 void CMenus::PrewarmSettingsPages()
@@ -4490,7 +4486,7 @@ void CMenus::Render()
 		m_SettingsCardDeckDisplayState.LeaveSettings();
 
 	CUIRect Screen = *Ui()->Screen();
-	if((Client()->State() != IClient::STATE_DEMOPLAYBACK && !(GameClient()->m_RankGhost.IsViewModeActive() && !IsActive())) || m_Popup != POPUP_NONE)
+	if((Client()->State() != IClient::STATE_DEMOPLAYBACK && !(GameClient()->ReplaySessionStatus().ViewMode() && !IsActive())) || m_Popup != POPUP_NONE)
 	{
 		// 全局安全区 = 统一边距基准：菜单内所有页面到窗口四边的基础距离，
 		// 内部元素（导航胶囊/内容面板）直接对齐安全区边缘，不再叠加额外内缩。
@@ -4728,7 +4724,7 @@ void CMenus::Render()
 		break;
 
 	case IClient::STATE_ONLINE:
-		if(GameClient()->m_RankGhost.IsViewModeActive() && !IsActive())
+		if(GameClient()->ReplaySessionStatus().ViewMode() && !IsActive())
 		{
 			RenderDemoPlayer(Screen);
 			break;
@@ -8779,7 +8775,7 @@ void CMenus::OnRender()
 			}
 			SetActive(true);
 		}
-		else if(Client()->State() != IClient::STATE_DEMOPLAYBACK && !GameClient()->m_RankGhost.IsViewModeActive())
+		else if(Client()->State() != IClient::STATE_DEMOPLAYBACK && !GameClient()->ReplaySessionStatus().ViewMode())
 		{
 			if(!GameClient()->m_GameConsole.IsActive())
 				Ui()->ClearHotkeys();
@@ -8792,7 +8788,7 @@ void CMenus::OnRender()
 	}
 
 	// 在线控制层让出输入时结束拖动，恢复拖动前的播放状态。
-	if(!GameClient()->m_GameConsole.IsActive() && GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_Spectator.PlaybackControlsActive() && Ui()->CheckActiveItem(&m_DemoSeekBarId))
+	if(!GameClient()->m_GameConsole.IsActive() && GameClient()->ReplaySessionStatus().ViewMode() && !GameClient()->m_Spectator.PlaybackControlsActive() && Ui()->CheckActiveItem(&m_DemoSeekBarId))
 	{
 		if(!m_PausedBeforeSeeking)
 			GameClient()->m_RankGhost.ViewPlayer()->Unpause();
@@ -8815,7 +8811,7 @@ void CMenus::OnRender()
 	{
 		// 中断会先清除 UI active；独立结束拖动会话，恢复拖动前的播放状态。
 		m_DemoTouchSeeking = false;
-		if((Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive()) && !m_PausedBeforeSeeking)
+		if((Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->ReplaySessionStatus().ViewMode()) && !m_PausedBeforeSeeking)
 			PlaybackPlayer()->Unpause();
 		if(Ui()->IsActiveItem(&m_DemoSeekBarId))
 			Ui()->SetActiveItem(nullptr);
@@ -8875,7 +8871,7 @@ void CMenus::OnRender()
 	}
 
 	if(IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive() ||
-		(GameClient()->m_RankGhost.IsViewModeActive() && OnlineReplayPopupActive()))
+		(GameClient()->ReplaySessionStatus().ViewMode() && OnlineReplayPopupActive()))
 	{
 		CPerfTimer StageTimer;
 		if(IsActive())

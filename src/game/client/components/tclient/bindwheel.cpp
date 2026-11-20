@@ -5,18 +5,24 @@
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
+#include <generated/protocol.h>
+
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/components/qmclient/bind_editor.h>
 #include <game/client/components/qmclient/bind_menu.h>
 #include <game/client/components/qmclient/bind_menu_preview.h>
 #include <game/client/components/qmclient/bounded_file_reader.h>
+#include <game/client/components/qmclient/practice_menu.h>
 #include <game/client/components/qmclient/wheel_presets.h>
+#include <game/client/components/tclient/fast_practice.h>
 #include <game/client/gameclient.h>
+#include <game/localization.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <vector>
 
 CBindWheel::CBindWheel()
@@ -209,6 +215,7 @@ void CBindWheel::OnReset()
 	m_JustOpened = false;
 	m_LastLayout = {};
 	m_vVisibleBindIndices.clear();
+	m_vPracticeBinds.clear();
 	m_ResolvedBinds.clear();
 }
 
@@ -260,6 +267,8 @@ void CBindWheel::OpenMenu(qm_bind_menu::EMenu Menu)
 {
 	const bool WasOpen = IsActive() && m_State.Menu() == Menu;
 	m_State.Open(Menu);
+	if(Menu == qm_bind_menu::EMenu::PRACTICE)
+		RebuildPracticeBinds();
 	RebuildVisibleBinds();
 	if(!WasOpen)
 	{
@@ -279,10 +288,11 @@ void CBindWheel::ReleaseActiveMenu()
 const CBindWheel::SResolvedBind &CBindWheel::ResolveBind(int Index)
 {
 	static const SResolvedBind s_Empty;
-	if(Index < 0 || Index >= (int)m_vBinds.size())
+	const std::vector<CBind> &Binds = ActiveBinds();
+	if(Index < 0 || Index >= (int)Binds.size())
 		return s_Empty;
 
-	const std::string Command = m_vBinds[Index].m_aCommand;
+	const std::string Command = Binds[Index].m_aCommand;
 	const auto Cached = m_ResolvedBinds.find(Command);
 	if(Cached != m_ResolvedBinds.end())
 		return Cached->second;
@@ -341,10 +351,56 @@ const qm_wheel_presets::SPreset *CBindWheel::PresetForBind(int Index)
 void CBindWheel::RebuildVisibleBinds()
 {
 	m_vVisibleBindIndices.clear();
+	if(m_State.Menu() == qm_bind_menu::EMenu::PRACTICE)
+	{
+		for(int Index = 0; Index < static_cast<int>(m_vPracticeBinds.size()); ++Index)
+			m_vVisibleBindIndices.push_back(Index);
+		return;
+	}
 	for(int Index = 0; Index < static_cast<int>(m_vBinds.size()); ++Index)
 	{
 		if(MenuForBind(Index) == m_State.Menu())
 			m_vVisibleBindIndices.push_back(Index);
+	}
+}
+
+const std::vector<CBindWheel::CBind> &CBindWheel::ActiveBinds() const
+{
+	return m_State.Menu() == qm_bind_menu::EMenu::PRACTICE ? m_vPracticeBinds : m_vBinds;
+}
+
+bool CBindWheel::InNormalPractice() const
+{
+	const int LocalId = GameClient()->m_Snap.m_LocalClientId;
+	if(LocalId < 0 || LocalId >= MAX_CLIENTS)
+		return false;
+	const auto &Character = GameClient()->m_Snap.m_aCharacters[LocalId];
+	return Character.m_HasExtendedDisplayInfo && (Character.m_ExtendedData.m_Flags & CHARACTERFLAG_PRACTICE_MODE) != 0;
+}
+
+void CBindWheel::RebuildPracticeBinds()
+{
+	// 按当前上下文生成只读条目：快速练习优先，其次是服务器练习队伍。
+	m_vPracticeBinds.clear();
+	const qm_practice_menu::SEntry *pEntries = nullptr;
+	size_t NumEntries = 0;
+	if(GameClient()->m_FastPractice.Enabled())
+	{
+		pEntries = qm_practice_menu::s_aFastPracticeEntries;
+		NumEntries = std::size(qm_practice_menu::s_aFastPracticeEntries);
+	}
+	else if(InNormalPractice())
+	{
+		pEntries = qm_practice_menu::s_aPracticeEntries;
+		NumEntries = std::size(qm_practice_menu::s_aPracticeEntries);
+	}
+	m_vPracticeBinds.reserve(NumEntries);
+	for(size_t Index = 0; Index < NumEntries; ++Index)
+	{
+		CBind Bind;
+		str_copy(Bind.m_aName, Localize(pEntries[Index].m_pName));
+		str_copy(Bind.m_aCommand, pEntries[Index].m_pCommand);
+		m_vPracticeBinds.push_back(Bind);
 	}
 }
 
@@ -493,9 +549,10 @@ void CBindWheel::OnRender()
 
 	std::vector<qm_bind_menu_preview::SOption> vOptions;
 	vOptions.reserve(m_vVisibleBindIndices.size());
+	const std::vector<CBind> &Binds = ActiveBinds();
 	for(const int SourceIndex : m_vVisibleBindIndices)
 	{
-		const auto &Bind = m_vBinds[SourceIndex];
+		const auto &Bind = Binds[SourceIndex];
 		vOptions.push_back({Bind.m_aName, Bind.m_aCommand, PresetForBind(SourceIndex), ResolveBind(SourceIndex).m_LegacyScript});
 	}
 
@@ -510,11 +567,12 @@ void CBindWheel::OnRender()
 
 void CBindWheel::ExecuteBind(int Bind)
 {
-	if(Bind < 0 || Bind >= static_cast<int>(m_vBinds.size()))
+	const std::vector<CBind> &Binds = ActiveBinds();
+	if(Bind < 0 || Bind >= static_cast<int>(Binds.size()))
 		return;
 	// 命令可以删除自己的条目，执行期间不能借用 vector 内的字符串。
 	char aCommand[BINDWHEEL_MAX_CMD];
-	str_copy(aCommand, m_vBinds[Bind].m_aCommand);
+	str_copy(aCommand, Binds[Bind].m_aCommand);
 	Console()->ExecuteLine(aCommand);
 }
 

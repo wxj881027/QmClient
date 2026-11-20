@@ -15,6 +15,7 @@
 #include <game/client/components/camera.h>
 #include <game/client/components/chat.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/input_state.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/gameclient.h>
 #include <game/collision.h>
@@ -97,13 +98,9 @@ void CControls::ConKeyInputCounter(IConsole::IResult *pResult, void *pUserData)
 
 	int *pVariable = pState->m_apVariables[g_Config.m_ClDummy];
 	const int Stroke = pResult->GetInteger(0);
-	if(((*pVariable) & 1) != Stroke)
-	{
-		(*pVariable)++;
-		if(Stroke != 0 && pState->m_IsMouseAction && g_Config.m_ClSubTickAiming && pState->m_pControls->GameClient()->m_Binds.m_HandlingNewBind)
-			pState->m_pControls->m_aMouseOnAction[g_Config.m_ClDummy] = true;
-	}
-	*pVariable &= INPUT_STATE_MASK;
+	*pVariable = QmInputCounterAfterEvent(*pVariable, Stroke);
+	if(Stroke != 0 && pState->m_IsMouseAction && g_Config.m_ClSubTickAiming && pState->m_pControls->GameClient()->m_Binds.m_HandlingNewBind)
+		pState->m_pControls->m_aMouseOnAction[g_Config.m_ClDummy] = true;
 }
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
@@ -254,7 +251,7 @@ int CControls::SnapInput(int *pData)
 	// update player state
 	if(GameClient()->m_Chat.IsActive())
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_CHATTING;
-	else if(GameClient()->m_Menus.IsActive() || GameClient()->m_RankGhost.IsViewModeActive() || GameClient()->m_BindWheel.IsActive())
+	else if(GameClient()->m_Menus.IsActive() || GameClient()->ReplaySessionStatus().ViewMode() || GameClient()->m_BindWheel.IsActive())
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_IN_MENU;
 	else
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_PLAYING;
@@ -468,7 +465,11 @@ void CControls::OnRender()
 	}
 	else if(GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_UsePosition)
 	{
-		m_aTargetPos[g_Config.m_ClDummy] = GameClient()->m_Snap.m_SpecInfo.m_Position + m_aMousePos[g_Config.m_ClDummy];
+		// 快速练习在分支世界里推进，服务器快照的旁观坐标属于另一条世界线；
+		// 能解析出分支世界的目标时以它为准，否则落点会整体偏移。
+		vec2 SpecPosition = GameClient()->m_Snap.m_SpecInfo.m_Position;
+		GameClient()->m_FastPractice.ResolvePracticeSpectatorPosition(SpecPosition);
+		m_aTargetPos[g_Config.m_ClDummy] = SpecPosition + m_aMousePos[g_Config.m_ClDummy];
 	}
 	else
 	{

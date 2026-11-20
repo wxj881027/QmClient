@@ -32,7 +32,7 @@
 == 사용자 지정 Tee 색조 순환은 사용자 지정 색상에서만 동작하며, TClient 무지개 Tee 옵션이 켜져 있으면 아무 효과도 없습니다.
 
 "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
-== "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+== "데이터 소스"는 카탈로그 포함 범위만 결정하며 다운로드와는 무관합니다. 같은 스킨이 여러 카탈로그에 속할 수 있습니다.
 
 "Default (software)" is x264: CPU only, best quality, slowest.
 == "Default (software)"는 x264입니다. CPU만 사용하고 화질이 가장 좋지만 가장 느립니다.
@@ -761,9 +761,6 @@ Advanced
 Advanced options
 == 고급 옵션
 
-AFR
-== 아프리카
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == 업로드에 성공하면 F2로 로그인해 change_map 명령을 실행합니다. 파일은 64 MiB 미만이어야 합니다.
 
@@ -781,6 +778,9 @@ Afterimage pop
 
 AGC, experimental
 == AGC, 실험적
+
+Agree
+== 동의
 
 Aim
 == 조준
@@ -1145,9 +1145,6 @@ Are you sure you want to save your skin? If a skin with this name already exists
 Arrow assets
 == 화살표 에셋
 
-ASI
-== 아시아
-
 Aspect ratio preset
 == 화면 비율 프리셋
 
@@ -1207,9 +1204,6 @@ Audio packs
 
 Aurora: Polar Veil
 == 오로라: 극야의 장막
-
-AUS
-== 호주
 
 Authed name color in scoreboard
 == 점수판에서 인증된 이름 색상
@@ -1321,9 +1315,6 @@ Auto switch weapon on ammo depletion
 
 Auto switch weapon on pickup
 == 획득 시 무기 자동 전환
-
-Auto team lock
-== 자동 팀 잠금
 
 Auto translate received messages
 == 수신 메시지 자동 번역
@@ -1784,8 +1775,8 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == 키를 바인딩하여 명령을 실행하거나 키바인딩을 확인합니다
 
-Bind menu layout (0 = wheel, 1 = panel)
-== Bind menu layout (0 = wheel, 1 = panel)
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== 바인드 메뉴 레이아웃: 0 = 방사형 휠, 1 = 둥근 패널
 
 Bind Menus
 == Bind Menus
@@ -2366,9 +2357,6 @@ Chinese (Traditional)
 Chinese font:
 == 중국어 글꼴:
 
-CHN
-== 중국
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == 플레이어 키 입력 표시를 자신, 다른 플레이어, 모두 중에서 고르고 키 입력 아이콘 크기를 맞춥니다.
 
@@ -2757,7 +2745,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == 채팅 입력창의 번역 버튼과 그 버튼으로 여는 언어 메뉴의 색상입니다.
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== 스코어보드 행에 색을 지정합니다: 인증된 플레이어, 같은 클랜 플레이어, 친구, 친구 목록의 클랜 구성원.
+== 점수판 행을 색칠합니다: 인증된 플레이어, 같은 클랜 플레이어, 친구, 친구 목록의 클랜 구성원.
 
 Colors too close to the map background are hard to read while moving.
 == 맵 배경과 너무 비슷한 색은 움직이는 동안 보기 어렵습니다.
@@ -3135,7 +3123,7 @@ Console link color
 == 콘솔: 링크 색상
 
 Console link hover hue shift in degrees
-== Console link hover hue shift in degrees
+== 콘솔 링크 호버 색조 이동(도)
 
 Console number color
 == 콘솔: 숫자 색상
@@ -3250,6 +3238,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == 마지막으로 귓속말한 사람과 대화합니다 (개인 메시지)
+
+Converting %d%%
+== 변환 중 %d%%
 
 Coordinate size on nameplate
 == 이름표에 표시되는 좌표 크기
@@ -3813,7 +3804,7 @@ Debug websockets
 == WebSocket 디버그
 
 Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
-== Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
+== 클라이언트가 다운로드할 스킨을 결정하며, 접두사를 추가해 접두사가 붙은 스킨 변형을 불러올 수 있습니다.
 
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 전용 WebSocket 주소 (비우면 wss://qmclient.icu/ws 사용)
@@ -4097,6 +4088,9 @@ Disable client-initiated self-kill (K key / kill command)
 Disable clipping
 == 클리핑 비활성화
 
+Disable fast practice mode
+== 빠른 연습 모드 끄기
+
 Disable Gores auto-switch when picking up extra weapon
 == 추가 무기 획득 시 Gores 자동 전환 비활성화
 
@@ -4105,6 +4099,9 @@ Disabled
 
 Disabling system messages also hides server warnings.
 == 시스템 메시지를 끄면 서버 경고도 함께 숨겨집니다.
+
+Disagree
+== 반대
 
 Disallow chat from blacklisted addresses
 == 블랙리스트 주소의 채팅 금지
@@ -4315,6 +4312,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == 다운로드됨: %.1f MiB (전체 크기 알 수 없음)
+
+Downloading %d%%
+== 다운로드 중 %d%%
 
 Downloading map
 == 맵 다운로드 중
@@ -4585,6 +4585,9 @@ Dummy window size
 
 Dummy window zoom
 == 더미 창 줌
+
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== 클라이언트 측 세계 상태(연습 분기, 트랙, 스위치, 보기 세션)를 출력
 
 Dump the current savestring
 == 현재 저장 문자열 덤프
@@ -4931,6 +4934,9 @@ Enable fast input in Gores mode
 Enable fast map download
 == 빠른 맵 다운로드 활성화
 
+Enable fast practice mode
+== 빠른 연습 모드 켜기
+
 Enable fat skin
 == 뚱뚱한 스킨 활성화
 
@@ -4999,6 +5005,12 @@ Enable left swipe offset on chat fade
 
 Enable LLM thinking mode (may increase response time)
 == LLM 사고 모드 활성화 (응답 시간이 늘어날 수 있음)
+
+Enable LX Music lyric integration
+== LX Music 가사 통합 활성화
+
+Enable LX Music lyrics
+== LX Music 가사 활성화
 
 Enable lyrics
 == 가사 활성화
@@ -5279,6 +5291,9 @@ End bounce
 End marker of replay slice
 == 리플레이 슬라이스의 끝 마커
 
+Endless hook
+== 무한 갈고리
+
 Endless hook has been activated
 == 무한 갈고리가 활성화되었습니다
 
@@ -5312,8 +5327,14 @@ Enter a CP number from 1 to 255.
 Enter a phrase.
 == Enter a phrase.
 
+Enter fast practice
+== 빠른 연습 시작
+
 Enter Password
 == 비밀번호 입력
+
+Enter solo mode
+== 솔로 모드 들어가기
 
 Enter solo split mode
 == 솔로 스플릿 모드 시작
@@ -5402,9 +5423,6 @@ ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
 ESC replay minutes
 == ESC 리플레이 분
 
-EUR
-== 유럽
-
 Evaluate an expression
 == 표현식 평가
 
@@ -5468,8 +5486,14 @@ Existing Player
 Exit and install
 == 종료 후 설치
 
+Exit fast practice
+== 빠른 연습 종료
+
 Exit replay view
 == 리플레이 보기 종료
+
+Exit solo mode
+== 솔로 모드 나가기
 
 Exit spectating on both tees when either is hammered awake by another player
 == 어느 한 Tee가 다른 플레이어의 망치로 해동되면 두 Tee 모두 관전 해제
@@ -6282,7 +6306,7 @@ General
 == 일반
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== DDNet 일반 표시: 다른 플레이어와 그림자 불투명도, 배경 쿼드, 기본 확대/축소.
+== DDNet 일반 게임플레이 표시: 다른 플레이어와 그림자 불투명도, 배경 쿼드, 기본 줌.
 
 Generated skin outline color
 == 생성된 외곽선 색상
@@ -6292,6 +6316,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == 생성된 외곽선 두께
+
+Get all weapons
+== 모든 무기 얻기
 
 Getting game info
 == 게임 정보를 가져오는 중
@@ -6396,7 +6423,7 @@ Global UI size percentage
 == 전체 UI 크기 백분율
 
 Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
-== Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+== 전체 휠 이동 거리 배율(기본값 10). 설정 카드 페이지 스크롤은 이 값의 12배입니다
 
 Glow
 == 글로우
@@ -7565,6 +7592,9 @@ Jelly others
 Jelly strength
 == 젤리 강도
 
+Jetpack
+== 제트팩
+
 Jitter
 == 지터
 
@@ -7671,7 +7701,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == 어두운 배경에는 밝은 글자가 읽기 좋습니다. 기본 모양으로 되돌리려면 도움말 모양 초기화를 누르세요.
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== 팀 색상과 구분하세요. 그렇지 않으면 같은 클랜 이름이 팀 패널에 묻혀 읽기 어려워집니다.
+== 팀 색상과 구분되게 지정하세요. 그렇지 않으면 같은 클랜 이름이 팀 패널에 묻혀 읽기 어려워집니다.
 
 Keep unsent message on chat close
 == 채팅 닫을 때 전송되지 않은 내용 유지
@@ -8291,14 +8321,8 @@ Locate
 Lock both teams immediately when entering solo split mode
 == 솔로 스플릿 시작 시 두 팀을 즉시 잠금
 
-Lock delay
-== 잠금 지연
-
 Lock team
 == 팀 잠금
-
-Lock teams on entry
-== 입장 후 즉시 잠금
 
 Lock the team so other players cannot join directly
 == 다른 플레이어가 직접 가입할 수 없도록 팀 잠그기
@@ -8342,6 +8366,9 @@ Low contrast between name and message text makes chat hard to scan in fights.
 Lower means better quality and larger files; 18 is recommended
 == 값이 낮을수록 화질이 좋고 파일이 커집니다. 18 권장
 
+LX Music open API port (0=auto-detect from LX Music config)
+== LX Music 오픈 API 포트 (0=LX Music 설정에서 자동 감지)
+
 LXGW WenKai is available.
 == LXGW WenKai를 사용할 수 있습니다.
 
@@ -8372,8 +8399,8 @@ Main Asset
 Main menu
 == 메인 메뉴
 
-Main Tee
-== 본체
+Main-world ghost opacity
+== 메인 월드 고스트 불투명도
 
 Maintains the list of hostile players and groups plus the rules used to display them.
 == 적대 플레이어와 그룹 목록, 그리고 표시에 쓰이는 규칙을 관리합니다.
@@ -9161,9 +9188,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = 예측 지연 시간
 
-NA
-== 북미
-
 Name
 == 이름
 
@@ -9926,6 +9950,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == 상상할 수 없는 것만 있을 뿐, Dream 이 할 수 없는 것은 없습니다
 
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== 시뮬레이션되는 것은 자신의 세계 복사본뿐입니다. 다른 플레이어는 서버 쪽 Tee이므로 당신이 밟은 스위치는 그들에게 영향을 주지 않습니다. 고스트 표시 전환과 불투명도는 그들에게도 적용됩니다.
+
 Opacity
 == 불투명도
 
@@ -10328,6 +10355,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == 일시정지
 
+Pause recording
+== 녹화 일시정지
+
+Pause recording the practice line (the recorded part is kept)
+== 연습 라인 녹화 일시정지(녹화된 부분은 유지)
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== 지금까지 녹화한 내용을 버리지 않고 일시정지합니다. 다시 시작하면 새 구간으로 기록되므로 일시정지한 구간이 직선으로 그려지지 않습니다.
+
 Pause the current demo
 == 현재 데모 일시 정지
 
@@ -10446,7 +10482,7 @@ Pick a text style or a moon or sun badge, check the preview, then press "Save" t
 == 텍스트 스타일이나 달 또는 해 배지를 선택하고 미리보기를 확인하세요. “저장”을 누르면 다른 플레이어에게도 선택한 스타일이 표시됩니다.
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== 각 색상 행에서 색을 고르세요. 인증 및 같은 클랜 색상은 스코어보드에, 두 목록 색상은 친구 목록에 적용됩니다.
+== 각 색상 행에서 색을 선택하세요. 인증됨 및 같은 클랜 색상은 점수판에, 목록 색상 두 개는 친구 목록에 적용됩니다.
 
 Pick result: %s
 == 추첨 결과: %s
@@ -10522,6 +10558,9 @@ Play back a demo
 
 Play background music
 == 배경 음악 재생
+
+Play rank ghost replay sounds and hit effects locally
+== Rank 1 고스트 리플레이의 효과음과 피격 효과를 로컬에서 재생
 
 Play replay
 == 리플레이 재생
@@ -10898,6 +10937,9 @@ Position jump tip
 Position:
 == 위치:
 
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== 맵을 혼자 연습하고, 메인 월드 고스트를 숨기고, 이번 시간을 표시하며, 연습 명령을 키에 지정합니다.
+
 Practice mode can't be enabled in team 0 mode.
 == 팀 0 모드에서는 연습 모드를 활성화할 수 없습니다
 
@@ -10962,7 +11004,7 @@ Prediction
 == 예측
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== 예측과 지연 보상은 DDNet 페이지의 "네트워크 보상" 하위 탭으로 이동했습니다.
+== 예측 및 지연 보정이 DDNet 페이지의 '네트워크 보정' 하위 탭으로 이동했습니다.
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == 예측 경계 (ms, 지연 시간은 증가하지만 핑 지터는 감소)
@@ -10992,7 +11034,7 @@ Prediction margin when frozen
 == 얼었을 때 예측 여백
 
 Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== 예측은 정확도를 응답성과 맞바꿉니다. 큰 여유와 AntiPing은 핑 흔들림을 매끄럽게 하지만 근처 동작을 잘못 예측할 수 있고, 업스트림 중복은 업로드 트래픽을 최대 세 배로 늘립니다.
+== 예측은 정확성 대신 반응성을 얻습니다. 여유를 크게 하고 AntiPing을 쓰면 핑 흔들림이 줄지만 근처 동작을 잘못 예측할 수 있고, 업스트림 중복은 업로드 트래픽을 최대 세 배로 늘릴 수 있습니다.
 
 Preparing chat export: %d%%
 == 채팅 내보내기 준비 중: %d%%
@@ -11534,12 +11576,6 @@ Rank 1 demo downloaded to '%s'
 Rank 1 replays
 == Rank 1 리플레이
 
-Rank demo already available in the demo browser: %s
-== 해당 리플레이는 이미 데모 브라우저에 있습니다: %s
-
-Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
-== 랭크 데모 다운로드됨: %s. 랭크 1 목록 또는 데모 브라우저에서 재생하세요.
-
 Rank ghost loaded: %s, %s s. It follows your current run.
 == Rank 고스트를 불러왔습니다: %s, %s초. 현재 주행을 따라갑니다.
 
@@ -11617,6 +11653,9 @@ Rank ghost: the replay has an invalid run range
 
 Rank ghost: the replay list is empty or malformed
 == Rank 고스트: 리플레이 목록이 비어 있거나 손상되었습니다
+
+Rank ghost: this replay has no playable tee
+== Rank 1 고스트: 이 리플레이에는 재생 가능한 Tee가 없습니다
 
 Rank ghost: timed out waiting for the map to load
 == Rank 고스트: 맵 로드 대기 시간 초과
@@ -11891,6 +11930,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == 투표 옵션 제거
 
+Remove all weapons
+== 모든 무기 제거
+
 Remove chat
 == 채팅 기록 제거
 
@@ -12122,11 +12164,17 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == 리플레이
 
+Replay a saved practice ghost group in demo-style view mode
+== 저장된 연습 고스트 그룹을 데모 방식 보기 모드로 재생
+
 Replay downloaded
 == 리플레이 다운로드됨
 
 Replay feature is disabled!
 == 리플레이 기능이 비활성화되었습니다!
+
+Replay ghost sounds and effects
+== 고스트 리플레이 효과음 및 피격 효과 재생
 
 Replay list: failed to load, press Refresh to retry
 == 리플레이 목록: 불러오기 실패, 새로 고침으로 재시도
@@ -12181,6 +12229,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == 이 서버에서 Rescue 가 활성화되어 있지 않으며 /practice 가 켜진 팀에도 속해 있지 않습니다. 연습 모드에서는 순위를 얻을 수 없습니다.
+
+Rescue mode
+== 구조 모드
 
 Rescue mode changed to auto.
 == 구조 모드가 auto 로 변경되었습니다.
@@ -12326,6 +12377,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == 권장값으로 복원
 
+Restore the practice world to the state it had when fast practice was enabled
+== 연습 세계를 빠른 연습을 시작한 시점의 상태로 되돌림
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== 연습 세계를 빠른 연습을 시작한 시점의 상태로 되돌립니다. 녹화된 라인은 유지되고 새 구간부터 이어집니다.
+
 Restored the built-in content
 == 내장 콘텐츠로 되돌렸습니다
 
@@ -12346,6 +12403,9 @@ Retry remote stats
 
 Retrying…
 == 재시도 중…
+
+Return to respawn point
+== 리스폰 지점으로 돌아가기
 
 Reverse chat gradient colors
 == 그라데이션 색상 반전 (채팅)
@@ -12373,6 +12433,12 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == 기본값과 다른 설정 값을 검토하고 초기화합니다.
+
+Rewind practice world
+== 연습 세계 되돌리기
+
+Rifle
+== 라이플
 
 Rifle Laser Inner Color
 == 라이플 레이저 내부 색상
@@ -12494,8 +12560,8 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == 서버에 연결하면 명령어를 자동으로 실행하며, 연결 단계와 참가 단계로 나뉩니다.
 
-SA
-== 남미
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== 자신만의 맵 복사본을 실행하고 서버의 실제 Tee는 입장했던 위치에 남습니다. 이번 시간 표시와 연습 명령 키 지정도 함께 제공합니다.
 
 Same as "vote no"
 == "투표 반대"와 동일
@@ -12799,6 +12865,9 @@ Search country flag…
 
 Search donor asset
 == 기증자 에셋 검색
+
+Search ghosts
+== 고스트 검색
 
 Search main asset
 == 메인 에셋 검색
@@ -13115,6 +13184,9 @@ Server votes
 Server-dependent
 == 서버에 따라 다름
 
+Server-side ghost opacity during fast practice (%)
+== 빠른 연습 중 서버 쪽 고스트 불투명도 (%)
+
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == 배경색과 배경 불투명도를 설정한 뒤 글자색, 선택 글자색, 선택 배경색을 정합니다. 아래에 미리보기가 나옵니다.
 
@@ -13128,7 +13200,7 @@ Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit t
 == 조준은 게임 내 마우스 감도, 메뉴는 UI 마우스 감도로 설정한 뒤 최소 커서 거리와 최대 커서 거리로 커서 위치를 제한합니다.
 
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
-== "예측 여유"를 밀리초로 설정하고 "AntiPing(지연 보상)"을 켠 뒤 무엇을 예측할지 고르세요. 중복 스위치는 실험적이며 손실이 있는 연결에서만 유용합니다.
+== '예측 여유'를 밀리초로 설정하고 'AntiPing(지연 보정)'을 체크한 뒤 예측할 대상을 고르세요. 중복 스위치는 실험적이며 패킷 손실이 있는 연결에서만 유용합니다.
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == 전환 간격을 0으로 두면 시간에 따른 전환이 멈추고, 대기열은 수동 전환이나 맵 입장 시에만 쓰입니다.
@@ -13165,6 +13237,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 
 Set microphone mute state (0=on, 1=mute)
 == 마이크 음소거 상태 설정 (0=켜짐, 1=음소거)
+
+Set practice respawn point
+== 연습 리스폰 지점 설정
 
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == 서버를 싱글플레이어 모드로 설정 (플레이어 상호작용 없음, 맵 로드 전에 설정해야 함)
@@ -13862,6 +13937,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == 로컬에서 메인 티 칭호 표시
 
+Show main-world ghost
+== 메인 월드 고스트 표시
+
 Show map details
 == 맵 세부 정보 표시
 
@@ -14075,6 +14153,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == 위치 및 각도 디버그 정보 표시
 
+Show practice timer
+== 연습 타이머 표시
+
 Show predicted position as ghost, original as unpredictable player
 == 예측 위치를 유령으로, 원본 위치를 예측 불가능한 플레이어로 표시
 
@@ -14125,6 +14206,9 @@ Show server settings
 
 Show server uptime
 == 서버 가동 시간 표시
+
+Show server-side tees as ghosts during fast practice
+== 빠른 연습 중 서버 쪽 Tee를 고스트로 표시합니다
 
 Show settings card borders
 == 설정 카드 테두리 표시
@@ -14248,6 +14332,9 @@ Show the original text locally below translated outgoing messages
 
 Show the pet
 == 펫 표시
+
+Show the practice run timer in the HUD
+== HUD에 이번 연습 시간을 표시합니다
 
 Show the screen center line
 == 화면 중심선 표시
@@ -14996,14 +15083,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == 리플레이 슬라이스의 시작 마커
 
+Start or resume recording the practice line
+== 연습 라인 녹화 시작 또는 재개
+
 Start playback of ghosts
 == 고스트 재생 시작
+
+Start recording
+== 녹화 시작
 
 Start recording a demo
 == 데모 녹화 시작
 
 Start recording a video
 == 비디오 녹화 시작
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== 빠른 연습 라인 녹화를 시작하거나 일시정지 후 이어서 녹화합니다. 녹화는 항상 수동이며, 누르기 전에는 아무것도 기록되지 않습니다.
 
 Start skin queue from a random position when entering a map
 == 맵 입장 시 스킨 큐를 무작위 위치에서 시작
@@ -15095,6 +15191,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == %d명의 후원자 덕분입니다. 보시겠어요?
 
+Stop and save recording
+== 녹화 종료 및 저장
+
 Stop following
 == 따라가기 중지
 
@@ -15125,6 +15224,12 @@ Stop recording a demo
 Stop recording a video
 == 비디오 녹화 중지
 
+Stop recording and save the practice line as a ghost group
+== 녹화를 종료하고 연습 라인을 고스트 그룹으로 저장
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== 녹화를 종료하고 라인을 고스트 그룹으로 즉시 디스크에 저장합니다. 저장된 그룹은 바인드 메뉴나 고스트 페이지에서 재생할 수 있습니다.
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == 편집기 또는 엔티티에서 텍스트 오버레이 렌더링 중지: 높을수록 = 세부 묘사 감소 = 더 빠름
 
@@ -15133,6 +15238,12 @@ Stop server
 
 Stop the current demo
 == 현재 데모 중지
+
+Store the current practice tee state as the respawn point
+== 현재 연습 Tee 상태를 리스폰 지점으로 저장
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== 현재 Tee 상태(위치, 무기, 점프, 이동 상태)를 연습 리스폰 지점으로 저장합니다.
 
 Streamer mode
 == 스트리머 모드
@@ -15584,6 +15695,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == 모든 무기 순간이동 (사용 중단됨, 대신 특수 엔티티 사용)
 
+Teleport back to the practice respawn point
+== 연습 리스폰 지점으로 돌아가기
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== 연습 리스폰 지점으로 돌아가 그곳에 저장된 Tee 상태를 복원합니다. Tee만 되돌리고 세계는 계속 진행됩니다.
+
 Teleport dummy to cursor
 == 더미를 커서 위치로 순간이동
 
@@ -16023,7 +16140,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == 입력 표시를 선택한 다음 키보드 크기, 마우스 크기, 불투명도, 위치 슬라이더로 크기와 위치를 조정하세요.
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== "다른 팀 표시"를 켜면 다른 팀이 반투명하게 그려집니다. 그림자 불투명도는 그 아래 종속 행에서 설정하고, 시야는 "배경 쿼드 표시"와 "기본 확대/축소"로 조정합니다.
+== '다른 플레이어 표시'를 체크하면 다른 팀이 반투명하게 그려집니다. 그 아래 종속 행에서 그림자 불투명도를 설정하고, '배경 쿼드 표시'와 '기본 줌'으로 화면을 조정하세요.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == 키 걸림 상태 표시, 해머 상태 표시, dummy 조작 상태 표시, dummy 복사 상태 표시 중 필요한 것을 선택하세요.
@@ -16249,6 +16366,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == 로컬 콘솔 전환
+
+Toggle main-world ghost
+== 메인 월드 고스트 전환
 
 Toggle map preview
 == 맵 미리보기
@@ -16574,6 +16694,9 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 성능이 낮은 기기에서는 끄세요. 카드가 즉시 열리고 스크롤도 즉시 반응합니다. 커서 모양은 겉모양일 뿐이며 세 가지 모두 같은 문자 셀에 들어갑니다.
 
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== "메인 월드 고스트 표시"를 끄면 다른 플레이어를 포함해 서버에서 오는 모든 Tee가 숨겨집니다. 켜 둔 상태에서는 불투명도 슬라이더로 보이는 정도를 정할 수 있습니다. 바인드 행은 연습 메뉴와 같은 명령을 보내므로 채팅창을 열 필요가 없습니다.
+
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == "물에 빠지면 자동 채팅"을 켜고 보낼 "채팅 메시지"를 입력한 뒤, 원하면 "물에 빠지면 이모티콘 보내기"와 이모티콘 ID를 설정하세요.
 
@@ -16645,6 +16768,9 @@ Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow h
 
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.
 == 무기 교체 애니메이션 또는 재장전 시 뒤집기 애니메이션을 켜고, 애니메이션 범위를 고른 뒤 길이·거리·회전을 조절하세요.
+
+Turn on LX Music open API
+== LX Music 오픈 API 켜기
 
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
 == 한 번에 하나씩 켜세요. Tee 전환이나 채팅 닫기는 아직 쓰던 메시지를 잃게 할 수 있습니다.
@@ -16843,6 +16969,9 @@ Underscore
 
 Underscore: a line under the character that follows
 == 밑줄: 다음 글자 아래에 그리는 선
+
+Undo deep freeze
+== 깊은 프리즈 해제
 
 Unexpected map upload response.
 == 맵 업로드 응답이 예상과 다릅니다.

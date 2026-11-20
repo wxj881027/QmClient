@@ -211,7 +211,7 @@ namespace qm_bind_menu_preview
 		void RenderOptionContent(CUi *pUi, CGameClient *pGameClient, const CUIRect &Rect, qm_bind_menu::EMenu Menu, const SOption &Option,
 			const SUiTheme &Theme, float UiScale, float Alpha)
 		{
-			if(Menu == qm_bind_menu::EMenu::CUSTOM)
+			if(Menu == qm_bind_menu::EMenu::CUSTOM || Menu == qm_bind_menu::EMenu::PRACTICE)
 			{
 				RenderCustom(pUi, Rect, Option, Theme, UiScale, Alpha);
 				return;

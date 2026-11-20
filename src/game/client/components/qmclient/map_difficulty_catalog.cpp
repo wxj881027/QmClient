@@ -30,22 +30,31 @@ namespace
 	constexpr size_t MAX_AXIOM_CACHE_BYTES = 2 * 1024 * 1024;
 	constexpr size_t MAX_AXIOM_ENTRIES = 4096;
 
-	int AxiomMaxStars(const CServerInfo &Server)
+	// 玩法只用于隔离同名地图，星级上限由 Axiom 公告自身决定。
+	// Axiom 已把 Gores 的星级从 3 格改为 5 格，不能再用玩法硬编码上限。
+	enum class EAxiomMode
+	{
+		NONE = -1,
+		GORES = 0,
+		AXRACE = 1,
+	};
+
+	EAxiomMode AxiomMode(const CServerInfo &Server)
 	{
 		if(str_comp_nocase(Server.m_aCommunityId, "axiom") != 0)
-			return 0;
+			return EAxiomMode::NONE;
 		if(str_comp_nocase(Server.m_aGameType, "Gores") == 0)
-			return 3;
+			return EAxiomMode::GORES;
 		if(str_comp_nocase(Server.m_aGameType, "AXRace") == 0)
-			return 5;
+			return EAxiomMode::AXRACE;
 		const bool IsDdrace = str_comp_nocase(Server.m_aGameType, "DDNet") == 0 ||
 				      str_comp_nocase(Server.m_aGameType, "DDRaceNetwork") == 0 ||
 				      str_comp_nocase(Server.m_aGameType, "DDRace") == 0;
 		if(IsDdrace && str_comp_nocase(Server.m_aCommunityType, "Gores") == 0)
-			return 3;
+			return EAxiomMode::GORES;
 		if(IsDdrace && str_comp_nocase(Server.m_aCommunityType, "Other") == 0)
-			return 5;
-		return 0;
+			return EAxiomMode::AXRACE;
+		return EAxiomMode::NONE;
 	}
 
 	bool ValidField(const std::string &Value, size_t MaxLength)
@@ -80,6 +89,91 @@ namespace
 		return Found;
 	}
 
+	bool IsStarGlyph(int Codepoint)
+	{
+		return Codepoint == 0x2605 || Codepoint == 0x2606 || Codepoint == 0x2730;
+	}
+
+	// 只接受 3 格或 5 格星制；实心星必须全部排在空心星之前。
+	bool ParseStars(std::string_view Text, int &Stars, int &MaxStars)
+	{
+		const char *pCursor = Text.data();
+		const char *pEnd = Text.data() + Text.size();
+		int Total = 0;
+		int Filled = 0;
+		bool EmptySeen = false;
+		while(pCursor < pEnd)
+		{
+			const char *pBefore = pCursor;
+			const int Codepoint = str_utf8_decode(&pCursor);
+			if(pCursor <= pBefore)
+				return false;
+			if(Codepoint == 0x2605)
+			{
+				if(EmptySeen)
+					return false;
+				++Filled;
+			}
+			else if(Codepoint == 0x2606 || Codepoint == 0x2730)
+			{
+				EmptySeen = true;
+			}
+			else
+			{
+				return false;
+			}
+			if(++Total > 5)
+				return false;
+		}
+		if(Total != 3 && Total != 5)
+			return false;
+		Stars = Filled;
+		MaxStars = Total;
+		return true;
+	}
+
+	bool IsBlankCodepoint(int Codepoint)
+	{
+		return Codepoint == ' ' || Codepoint == '\t' || Codepoint == '\r' || Codepoint == 0x00a0 || Codepoint == 0x3000;
+	}
+
+	// 新公告写成「难度：疯狂  ★★★✰✰」，类别与星级之间可能有多个空格。
+	bool ParseCombinedDifficulty(std::string_view Text, std::string &Category, int &Stars, int &MaxStars)
+	{
+		size_t CategoryStart = std::string_view::npos;
+		size_t CategoryEnd = 0;
+		size_t StarOffset = std::string_view::npos;
+		for(size_t Offset = 0; Offset < Text.size();)
+		{
+			const char *pCursor = Text.data() + Offset;
+			const char *pBefore = pCursor;
+			const int Codepoint = str_utf8_decode(&pCursor);
+			if(pCursor <= pBefore)
+				return false;
+			if(IsStarGlyph(Codepoint))
+			{
+				StarOffset = Offset;
+				break;
+			}
+			if(!IsBlankCodepoint(Codepoint))
+			{
+				if(CategoryStart == std::string_view::npos)
+					CategoryStart = Offset;
+				CategoryEnd = (size_t)(pCursor - Text.data());
+			}
+			Offset = (size_t)(pCursor - Text.data());
+		}
+		if(StarOffset == std::string_view::npos || CategoryStart == std::string_view::npos)
+			return false;
+		std::string ParsedCategory(Text.substr(CategoryStart, CategoryEnd - CategoryStart));
+		if(!ValidField(ParsedCategory, 64))
+			return false;
+		if(!ParseStars(Text.substr(StarOffset), Stars, MaxStars))
+			return false;
+		Category = std::move(ParsedCategory);
+		return true;
+	}
+
 	bool EntryLess(const CQmMapDifficultyCatalog::SEntry &A, const CQmMapDifficultyCatalog::SEntry &B)
 	{
 		const int MapCompare = str_comp_nocase(A.m_MapName.c_str(), B.m_MapName.c_str());
@@ -103,42 +197,68 @@ const char *CQmMapDifficultyCatalog::SEntry::StarLabel() const
 	return m_MaxStars == 5 ? s_apFive[m_Stars] : "";
 }
 
+void CQmMapDifficultyCatalog::SEntry::CellLabel(const char *pCategoryText, char *pOut, size_t OutSize) const
+{
+	if(pOut == nullptr || OutSize == 0)
+		return;
+	pOut[0] = '\0';
+	const char *pStars = StarLabel();
+	if(pStars[0] == '\0')
+		return;
+	if(pCategoryText == nullptr || pCategoryText[0] == '\0')
+	{
+		str_copy(pOut, pStars, (int)OutSize);
+		return;
+	}
+	str_format(pOut, (int)OutSize, "%s %s", pCategoryText, pStars);
+}
+
 bool CQmMapDifficultyCatalog::RecordAxiomMotd(const CServerInfo &Server, const char *pMotd)
 {
-	const int MaxStars = AxiomMaxStars(Server);
-	if(MaxStars == 0 || pMotd == nullptr || str_length(pMotd) > 4096 || !str_utf8_check(pMotd))
+	const EAxiomMode Mode = AxiomMode(Server);
+	if(Mode == EAxiomMode::NONE || pMotd == nullptr || str_length(pMotd) > 4096 || !str_utf8_check(pMotd))
 		return false;
 	const std::string_view Motd(pMotd);
-	if(Motd.find("Axiom") == std::string_view::npos || Motd.find("当前地图信息") == std::string_view::npos)
+	// 旧公告标题为「当前地图信息」，新公告标题为「当前地图」，共同前缀足以覆盖两者。
+	if(Motd.find("Axiom") == std::string_view::npos || Motd.find("当前地图") == std::string_view::npos)
 		return false;
+
 	SEntry Entry;
+	std::string Difficulty;
+	std::string Category;
 	std::string Stars;
-	if(!MotdField(Motd, "│ 地图：", Entry.m_MapName) || !MotdField(Motd, "│ 类型：", Entry.m_Category) ||
-		!MotdField(Motd, "│ 星级：", Stars) || !ValidField(Entry.m_MapName, MAX_MAP_LENGTH - 1) ||
-		!ValidField(Entry.m_Category, 64) || Entry.m_MapName != Server.m_aMap)
+	if(!MotdField(Motd, "│ 地图：", Entry.m_MapName) || !ValidField(Entry.m_MapName, MAX_MAP_LENGTH - 1))
 		return false;
-	Entry.m_MaxStars = MaxStars;
-	Entry.m_Stars = 0;
-	int Total = 0;
-	const char *pStar = Stars.c_str();
-	bool EmptyStarSeen = false;
-	while(*pStar != '\0')
+
+	// 新格式把类别和星级合并到「难度」一行，旧格式分为「类型」和「星级」两行。
+	// 一份公告里只能出现其中一种，混用或缺失都视为不可信。
+	const bool HasCombined = MotdField(Motd, "│ 难度：", Difficulty);
+	const bool HasCategory = MotdField(Motd, "│ 类型：", Category);
+	const bool HasStars = MotdField(Motd, "│ 星级：", Stars);
+	if(HasCombined == (HasCategory || HasStars))
+		return false;
+	if(HasCombined)
 	{
-		const int Codepoint = str_utf8_decode(&pStar);
-		if(Codepoint == 0x2605 && !EmptyStarSeen)
-			++Entry.m_Stars;
-		else if(Codepoint == 0x2606 || Codepoint == 0x2730)
-			EmptyStarSeen = true;
-		else
-			return false;
-		if(++Total > MaxStars)
+		if(!ParseCombinedDifficulty(Difficulty, Entry.m_Category, Entry.m_Stars, Entry.m_MaxStars))
 			return false;
 	}
-	if(Total != MaxStars)
+	else
+	{
+		if(!HasCategory || !HasStars || !ValidField(Category, 64) ||
+			!ParseStars(Stars, Entry.m_Stars, Entry.m_MaxStars))
+			return false;
+		Entry.m_Category = std::move(Category);
+	}
+
+	// 首次连接或地图仍在下载时，当前地图名可能为空或仍是上一张图；
+	// 此时信任已验证社区的公告，已知地图名时仍要求与公告一致。
+	if(Server.m_aMap[0] != '\0' && Entry.m_MapName != Server.m_aMap)
 		return false;
-	const auto Key = std::make_pair(MaxStars, Entry.m_MapName);
+
+	const auto Key = std::make_pair((int)Mode, Entry.m_MapName);
 	const auto It = m_AxiomEntries.find(Key);
-	if(It != m_AxiomEntries.end() && It->second.m_Stars == Entry.m_Stars && It->second.m_Category == Entry.m_Category)
+	if(It != m_AxiomEntries.end() && It->second.m_Stars == Entry.m_Stars &&
+		It->second.m_MaxStars == Entry.m_MaxStars && It->second.m_Category == Entry.m_Category)
 		return false;
 	if(It == m_AxiomEntries.end() && m_AxiomEntries.size() >= MAX_AXIOM_ENTRIES)
 		return false;
@@ -156,31 +276,64 @@ bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Lengt
 		return false;
 	const json_value *pVersion = json_object_get(pRoot.get(), "version");
 	const json_value *pEntries = json_object_get(pRoot.get(), "entries");
-	if(pVersion->type != json_integer || pVersion->u.integer != 1 || pEntries->type != json_array || pEntries->u.array.length > MAX_AXIOM_ENTRIES)
+	if(pVersion == nullptr || pEntries == nullptr || pVersion->type != json_integer ||
+		(pVersion->u.integer != 1 && pVersion->u.integer != 2) ||
+		pEntries->type != json_array || pEntries->u.array.length > MAX_AXIOM_ENTRIES)
 		return false;
+	// 版本 1 没有 max_stars，按旧规则还原上限；版本 2 保存公告自己的星制。
+	const bool Legacy = pVersion->u.integer == 1;
 	decltype(m_AxiomEntries) Entries;
 	for(unsigned i = 0; i < pEntries->u.array.length; ++i)
 	{
 		const json_value *pItem = pEntries->u.array.values[i];
-		if(pItem->type != json_object)
+		if(pItem == nullptr || pItem->type != json_object)
 			return false;
 		const json_value *pMap = json_object_get(pItem, "map");
 		const json_value *pCategory = json_object_get(pItem, "category");
 		const json_value *pMode = json_object_get(pItem, "mode");
 		const json_value *pStars = json_object_get(pItem, "stars");
-		if(pMap->type != json_string || pCategory->type != json_string || pMode->type != json_string || pStars->type != json_integer)
+		const json_value *pMaxStars = json_object_get(pItem, "max_stars");
+		if(pMap == nullptr || pCategory == nullptr || pMode == nullptr || pStars == nullptr ||
+			pMap->type != json_string || pCategory->type != json_string ||
+			pMode->type != json_string || pStars->type != json_integer)
 			return false;
+		if(!Legacy && (pMaxStars == nullptr || pMaxStars->type != json_integer))
+			return false;
+
 		const std::string Mode(pMode->u.string.ptr, pMode->u.string.length);
+		int ModeId = -1;
+		int MaxStars = 0;
+		if(Mode == "Gores")
+		{
+			ModeId = (int)EAxiomMode::GORES;
+			MaxStars = 3;
+		}
+		else if(Mode == "AXRace")
+		{
+			ModeId = (int)EAxiomMode::AXRACE;
+			MaxStars = 5;
+		}
+		else
+		{
+			return false;
+		}
+		if(!Legacy)
+		{
+			const json_int_t SavedMaxStars = pMaxStars->u.integer;
+			if(SavedMaxStars != 3 && SavedMaxStars != 5)
+				return false;
+			MaxStars = (int)SavedMaxStars;
+		}
+
 		SEntry Entry;
 		Entry.m_MapName.assign(pMap->u.string.ptr, pMap->u.string.length);
 		Entry.m_Category.assign(pCategory->u.string.ptr, pCategory->u.string.length);
-		Entry.m_MaxStars = Mode == "Gores" ? 3 : Mode == "AXRace" ? 5 :
-									    0;
-		if(Entry.m_MaxStars == 0 || !ValidField(Entry.m_MapName, MAX_MAP_LENGTH - 1) || !ValidField(Entry.m_Category, 64) ||
+		Entry.m_MaxStars = MaxStars;
+		if(!ValidField(Entry.m_MapName, MAX_MAP_LENGTH - 1) || !ValidField(Entry.m_Category, 64) ||
 			pStars->u.integer < 0 || pStars->u.integer > Entry.m_MaxStars)
 			return false;
 		Entry.m_Stars = (int)pStars->u.integer;
-		const auto Key = std::make_pair(Entry.m_MaxStars, Entry.m_MapName);
+		const auto Key = std::make_pair(ModeId, Entry.m_MapName);
 		if(!Entries.emplace(Key, std::move(Entry)).second)
 			return false;
 	}
@@ -194,20 +347,22 @@ std::string CQmMapDifficultyCatalog::SerializeAxiomCache() const
 	CJsonStringWriter Writer;
 	Writer.BeginObject();
 	Writer.WriteAttribute("version");
-	Writer.WriteIntValue(1);
+	Writer.WriteIntValue(2);
 	Writer.WriteAttribute("entries");
 	Writer.BeginArray();
 	for(const auto &[Key, Entry] : m_AxiomEntries)
 	{
 		Writer.BeginObject();
 		Writer.WriteAttribute("mode");
-		Writer.WriteStrValue(Entry.m_MaxStars == 3 ? "Gores" : "AXRace");
+		Writer.WriteStrValue(Key.first == (int)EAxiomMode::GORES ? "Gores" : "AXRace");
 		Writer.WriteAttribute("map");
 		Writer.WriteStrValue(Entry.m_MapName.c_str());
 		Writer.WriteAttribute("category");
 		Writer.WriteStrValue(Entry.m_Category.c_str());
 		Writer.WriteAttribute("stars");
 		Writer.WriteIntValue(Entry.m_Stars);
+		Writer.WriteAttribute("max_stars");
+		Writer.WriteIntValue(Entry.m_MaxStars);
 		Writer.EndObject();
 	}
 	Writer.EndArray();
@@ -344,7 +499,10 @@ const CQmMapDifficultyCatalog::SEntry *CQmMapDifficultyCatalog::FindForServer(co
 {
 	if(str_comp_nocase(Server.m_aCommunityId, "axiom") == 0)
 	{
-		const auto It = m_AxiomEntries.find(std::make_pair(AxiomMaxStars(Server), std::string_view(Server.m_aMap)));
+		const EAxiomMode Mode = AxiomMode(Server);
+		if(Mode == EAxiomMode::NONE)
+			return nullptr;
+		const auto It = m_AxiomEntries.find(std::make_pair((int)Mode, std::string_view(Server.m_aMap)));
 		return It == m_AxiomEntries.end() ? nullptr : &It->second;
 	}
 	// 随包星级属于 DDNet 地图，不能仅凭同名地图或服务器名称中的难度词跨玩法套用。

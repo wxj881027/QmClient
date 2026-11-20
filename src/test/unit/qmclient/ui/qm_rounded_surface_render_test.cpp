@@ -175,7 +175,9 @@ TEST_F(CQmRoundedSurfaceRender, BorderCoversEdgesForEachCornerMaskAndQuality)
 	for(int Segments : {8, 16, 48})
 	{
 		g_Config.m_QmRectCornerSegments = Segments;
-		for(int Corners = 0; Corners <= IGraphics::CORNER_ALL; ++Corners)
+		// 半径是形状的唯一来源：非零半径 + CORNER_NONE 按四角全圆处理，方块请把半径给 0。
+		// 因此这一轮只枚举真正带角掩码的组合，零掩码由几何单测单独钉住。
+		for(int Corners = IGraphics::CORNER_TL; Corners <= IGraphics::CORNER_ALL; ++Corners)
 		{
 			SCOPED_TRACE(::testing::Message() << "segments=" << Segments << " corners=" << Corners);
 			CSurfaceGraphics Graphics;

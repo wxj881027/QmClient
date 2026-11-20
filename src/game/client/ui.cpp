@@ -1685,7 +1685,9 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 	// 触摸没有 hover：第一次按下的位置就是当前指针位置，不能再依赖上一帧的
 	// HotItem（否则第一次只点亮、第二次才激活）。鼠标仍走原来的 HotItem 路径，
 	// 避免多控件重叠时按下未悬停的控件。
-	const bool TouchInputActive = !Input()->TouchFingerStates().empty();
+	// 无输入后端的宿主（离屏测量、无输入的测试镜像）没有触摸状态可言，
+	// 与 m_TouchState 的判定保持同一口径：拿不到输入接口就不算触摸活跃。
+	const bool TouchInputActive = Input() != nullptr && !Input()->TouchFingerStates().empty();
 	bool NoRelevantButtonsPressed = true;
 	for(int Button = 0; Button < 3; ++Button)
 	{
@@ -2850,9 +2852,9 @@ CLabelResult CUi::DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char 
 	return DoLabel(pRect, pFallbackIcon, Size, Align, LabelProps);
 }
 
-int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive, const ui_widget::SIconButtonIconDraw *pIconDraw)
+int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive, const ui_widget::SIconButtonIconDraw *pIconDraw, float Radius)
 {
-	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw);
+	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw, Radius);
 }
 
 int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize, float TextInsetX)

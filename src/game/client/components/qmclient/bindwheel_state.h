@@ -9,6 +9,7 @@
 #include <optional>
 #include <utility>
 
+// 菜单呈现方式：圆形轮盘，或圆角矩形面板 HUD。
 enum class EQmBindWheelLayout
 {
 	WHEEL,

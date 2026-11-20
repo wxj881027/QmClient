@@ -1,4 +1,3 @@
-# 请抬头享受阳光｜日子很好 我很我---------致咩子
 [[message]]
 key = "A vote is currently active."
 [message.translations]
@@ -560,22 +559,6 @@ turkish = "Yükseklik"
 polish = "Wysokość"
 
 [[message]]
-key = "https://wiki.ddnet.org/wiki/Touch_controls"
-[message.translations]
-simplified_chinese = "https://wiki.ddnet.org/wiki/Touch_controls/zh"
-traditional_chinese = "https://wiki.ddnet.org/wiki/Touch_controls/zh"
-japanese = "https://wiki.ddnet.org/wiki/Touch_controls"
-korean = "https://wiki.ddnet.org/wiki/Touch_controls"
-russian = "https://wiki.ddnet.org/wiki/Touch_controls"
-german = "https://wiki.ddnet.org/wiki/Touch_controls"
-spanish = "https://wiki.ddnet.org/wiki/Touch_controls"
-french = "https://wiki.ddnet.org/wiki/Touch_controls"
-brazilian_portuguese = "https://wiki.ddnet.org/wiki/Touch_controls"
-portuguese = "https://wiki.ddnet.org/wiki/Touch_controls"
-turkish = "https://wiki.ddnet.org/wiki/Touch_controls"
-polish = "https://wiki.ddnet.org/wiki/Touch_controls"
-
-[[message]]
 key = "Import from clipboard"
 [message.translations]
 simplified_chinese = "从剪贴板导入"
@@ -606,22 +589,6 @@ brazilian_portuguese = "Cor inativa"
 portuguese = "Cor inativa"
 turkish = "Etkin olmayan renk"
 polish = "Kolor nieaktywny"
-
-[[message]]
-key = "Info"
-[message.translations]
-simplified_chinese = "信息"
-traditional_chinese = "信息"
-japanese = "情報"
-korean = "정보"
-russian = "Информация"
-german = "Info"
-spanish = "Información"
-french = "Infos"
-brazilian_portuguese = "Informação"
-portuguese = "Informação"
-turkish = "Bilgi"
-polish = "Informacje"
 
 [[message]]
 key = "Label"
@@ -1168,6 +1135,22 @@ turkish = "Her zaman kanca kullanan sanal joystick."
 polish = "Wirtualny joystick, który zawsze używa haka."
 
 [[message]]
+key = "Virtual joystick which only aims and moves the mouse pointer relatively."
+[message.translations]
+simplified_chinese = "仅用于瞄准并相对移动鼠标指针的虚拟摇杆。"
+traditional_chinese = "僅用於瞄準並相對移動滑鼠指標的虛擬搖桿。"
+japanese = "照準とマウスポインターの相対移動だけを行う仮想ジョイスティック。"
+korean = "조준과 마우스 포인터의 상대적 이동만 수행하는 가상 조이스틱입니다."
+russian = "Виртуальный джойстик только для прицеливания и относительного перемещения указателя мыши."
+german = "Virtueller Joystick, der nur zum Zielen und zur relativen Bewegung des Mauszeigers dient."
+spanish = "Joystick virtual que solo apunta y mueve el puntero del ratón de forma relativa."
+french = "Joystick virtuel servant uniquement à viser et à déplacer relativement le pointeur de la souris."
+brazilian_portuguese = "Joystick virtual que apenas mira e move o ponteiro do mouse relativamente."
+portuguese = "Joystick virtual que apenas aponta e move o ponteiro do rato de forma relativa."
+turkish = "Yalnızca nişan alan ve fare işaretçisini göreli olarak hareket ettiren sanal joystick."
+polish = "Wirtualny joystick służący tylko do celowania i względnego poruszania wskaźnikiem myszy."
+
+[[message]]
 key = "Virtual joystick which only aims without using an action."
 [message.translations]
 simplified_chinese = "仅用于瞄准而不执行动作的虚拟摇杆。"
@@ -1413,6 +1396,23 @@ turkish = "Kanca"
 polish = "Hak"
 
 [[message]]
+key = "Relative aim"
+context = "Direct touch input"
+[message.translations]
+simplified_chinese = "相对瞄准"
+traditional_chinese = "相對瞄準"
+japanese = "相対照準"
+korean = "상대 조준"
+russian = "Относительное прицеливание"
+german = "Relative Zielsteuerung"
+spanish = "Apuntado relativo"
+french = "Visée relative"
+brazilian_portuguese = "Mira relativa"
+portuguese = "Mira relativa"
+turkish = "Göreli nişan"
+polish = "Względne celowanie"
+
+[[message]]
 key = "Emoticon"
 context = "Predefined touch button behaviors"
 [message.translations]
@@ -1530,6 +1530,23 @@ brazilian_portuguese = "Gancho com Joystick"
 portuguese = "Gancho com Joystick"
 turkish = "Joystick Kancası"
 polish = "Hak joystickiem"
+
+[[message]]
+key = "Joystick Relative Aim"
+context = "Predefined touch button behaviors"
+[message.translations]
+simplified_chinese = "摇杆相对瞄准"
+traditional_chinese = "搖桿相對瞄準"
+japanese = "ジョイスティック相対照準"
+korean = "조이스틱 상대 조준"
+russian = "Относительное прицеливание джойстиком"
+german = "Relative Joystick-Zielsteuerung"
+spanish = "Apuntar relativo con joystick"
+french = "Visée relative au joystick"
+brazilian_portuguese = "Mira relativa do joystick"
+portuguese = "Mira relativa do joystick"
+turkish = "Joystick ile göreli nişan"
+polish = "Względne celowanie joystickiem"
 
 [[message]]
 key = "Spectate"
@@ -1904,53 +1921,3 @@ brazilian_portuguese = "Incluído"
 portuguese = "Incluído"
 turkish = "Dahil edildi"
 polish = "Dołączone"
-
-[[message]]
-key = "Joystick Relative Aim"
-context = "Predefined touch button behaviors"
-[message.translations]
-simplified_chinese = "摇杆相对瞄准"
-traditional_chinese = "搖桿相對瞄準"
-japanese = "ジョイスティック相対照準"
-korean = "조이스틱 상대 조준"
-russian = "Относительное прицеливание джойстиком"
-german = "Relative Joystick-Zielsteuerung"
-spanish = "Apuntar relativo con joystick"
-french = "Visée relative au joystick"
-brazilian_portuguese = "Mira relativa do joystick"
-portuguese = "Mira relativa do joystick"
-turkish = "Joystick ile göreli nişan"
-polish = "Względne celowanie joystickiem"
-
-[[message]]
-key = "Relative aim"
-context = "Direct touch input"
-[message.translations]
-simplified_chinese = "相对瞄准"
-traditional_chinese = "相對瞄準"
-japanese = "相対照準"
-korean = "상대 조준"
-russian = "Относительное прицеливание"
-german = "Relative Zielsteuerung"
-spanish = "Apuntado relativo"
-french = "Visée relative"
-brazilian_portuguese = "Mira relativa"
-portuguese = "Mira relativa"
-turkish = "Göreli nişan"
-polish = "Względne celowanie"
-
-[[message]]
-key = "Virtual joystick which only aims and moves the mouse pointer relatively."
-[message.translations]
-simplified_chinese = "仅用于瞄准并相对移动鼠标指针的虚拟摇杆。"
-traditional_chinese = "僅用於瞄準並相對移動滑鼠指標的虛擬搖桿。"
-japanese = "照準とマウスポインターの相対移動だけを行う仮想ジョイスティック。"
-korean = "조준과 마우스 포인터의 상대적 이동만 수행하는 가상 조이스틱입니다."
-russian = "Виртуальный джойстик только для прицеливания и относительного перемещения указателя мыши."
-german = "Virtueller Joystick, der nur zum Zielen und zur relativen Bewegung des Mauszeigers dient."
-spanish = "Joystick virtual que solo apunta y mueve el puntero del ratón de forma relativa."
-french = "Joystick virtuel servant uniquement à viser et à déplacer relativement le pointeur de la souris."
-brazilian_portuguese = "Joystick virtual que apenas mira e move o ponteiro do mouse relativamente."
-portuguese = "Joystick virtual que apenas aponta e move o ponteiro do rato de forma relativa."
-turkish = "Yalnızca nişan alan ve fare işaretçisini göreli olarak hareket ettiren sanal joystick."
-polish = "Wirtualny joystick służący tylko do celowania i względnego poruszania wskaźnikiem myszy."

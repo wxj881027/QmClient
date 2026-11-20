@@ -1,6 +1,7 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include <game/client/components/binds.h>
 #include <game/client/components/binds_deepfly_mode.h>
+#include <game/client/components/qmclient/bind_index.h>
 
 #include <gtest/gtest.h>
 
@@ -137,4 +138,78 @@ TEST(Binds, StorageFreeOnlyAndAliasedReplacementPreserveCommands)
 	Binds.UnbindAll();
 	Binds.UnbindAll();
 	EXPECT_STREQ(Binds.Get(KEY_RIGHT, KeyModifier::NONE), "");
+}
+
+TEST(Binds, CommandIndexFindsTheKeyBoundToAnExactCommand)
+{
+	CBindStorage Binds;
+	Binds.Bind(KEY_X, "+hook");
+	CCommandBindIndex Index;
+	Index.EnsureFresh(Binds);
+
+	bool ExactMatch = false;
+	const CBindSlot Slot = Index.Find("+hook", &ExactMatch);
+	EXPECT_EQ(Slot.m_Key, KEY_X);
+	EXPECT_EQ(Slot.m_ModifierMask, KeyModifier::NONE);
+	EXPECT_TRUE(ExactMatch);
+	// 未绑定的命令必须返回空槽位，否则绑定行会把别人的键显示成自己的。
+	const CBindSlot Missing = Index.Find("+fire", &ExactMatch);
+	EXPECT_EQ(Missing.m_Key, KEY_UNKNOWN);
+	EXPECT_FALSE(ExactMatch);
+}
+
+TEST(Binds, CommandIndexMatchesWhitespaceVariantsWithoutLosingExactness)
+{
+	// 手改 cfg 常留下多余空格：归一化后仍要能显示出来，但标记为非精确命中。
+	CBindStorage Binds;
+	Binds.Bind(KEY_G, "toggle   qm_gores   0 1");
+	CCommandBindIndex Index;
+	Index.EnsureFresh(Binds);
+
+	bool ExactMatch = true;
+	const CBindSlot Slot = Index.Find("toggle qm_gores 0 1", &ExactMatch);
+	EXPECT_EQ(Slot.m_Key, KEY_G);
+	EXPECT_FALSE(ExactMatch);
+	// 参数不同就是另一条命令：不能因为前缀相同就把键显示过来。
+	EXPECT_EQ(Index.Find("toggle qm_gores 0 2").m_Key, KEY_UNKNOWN);
+}
+
+TEST(Binds, CommandIndexKeepsQuotedChatTextUnchanged)
+{
+	// 引号里的聊天内容原样保留，"hello  world" 与 "hello world" 不是同一条消息。
+	CBindStorage Binds;
+	Binds.Bind(KEY_Y, "say \"hello  world\"");
+	CCommandBindIndex Index;
+	Index.EnsureFresh(Binds);
+
+	EXPECT_EQ(Index.Find("say \"hello  world\"").m_Key, KEY_Y);
+	EXPECT_EQ(Index.Find("say \"hello world\"").m_Key, KEY_UNKNOWN);
+}
+
+TEST(Binds, CommandIndexRebuildsAfterExternalBindChanges)
+{
+	// 设置页打开期间在控制台改键：索引必须跟随 Revision 更新，而不是冻结在首次扫描。
+	CBindStorage Binds;
+	Binds.Bind(KEY_X, "+hook");
+	CCommandBindIndex Index;
+	Index.EnsureFresh(Binds);
+	EXPECT_EQ(Index.Find("+hook").m_Key, KEY_X);
+
+	Binds.Bind(KEY_X, "");
+	Binds.Bind(KEY_C, "+hook");
+	EXPECT_TRUE(Index.EnsureFresh(Binds));
+	EXPECT_EQ(Index.Find("+hook").m_Key, KEY_C);
+
+	Binds.UnbindAll();
+	Index.EnsureFresh(Binds);
+	EXPECT_EQ(Index.Find("+hook").m_Key, KEY_UNKNOWN);
+}
+
+TEST(Binds, CommandIndexSkipsRebuildWhenRevisionIsUnchanged)
+{
+	CBindStorage Binds;
+	Binds.Bind(KEY_X, "+hook");
+	CCommandBindIndex Index;
+	EXPECT_TRUE(Index.EnsureFresh(Binds));
+	EXPECT_FALSE(Index.EnsureFresh(Binds));
 }

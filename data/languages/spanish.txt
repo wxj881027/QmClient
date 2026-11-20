@@ -32,7 +32,7 @@
 == El ciclo de tono del Tee solo actúa con colores personalizados y no hace nada si la opción de Tee arcoíris de TClient está activa.
 
 "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
-== "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+== «Fuente de datos» solo determina la pertenencia al catálogo y es independiente de las descargas; un mismo skin puede aparecer en varios catálogos.
 
 "Default (software)" is x264: CPU only, best quality, slowest.
 == «Default (software)» es x264: solo CPU, la mejor calidad y la más lenta.
@@ -761,9 +761,6 @@ Advanced
 Advanced options
 == Opciones avanzadas
 
-AFR
-== África
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == Tras una subida correcta, inicia sesión con F2 y ejecuta el comando change_map; los archivos deben quedar por debajo de 64 MiB.
 
@@ -781,6 +778,9 @@ Afterimage pop
 
 AGC, experimental
 == AGC, experimental
+
+Agree
+== Aceptar
 
 Aim
 == Apuntar
@@ -1145,9 +1145,6 @@ Are you sure you want to save your skin? If a skin with this name already exists
 Arrow assets
 == Recursos de flecha
 
-ASI
-== Asia
-
 Aspect ratio preset
 == Preajuste de relación de aspecto
 
@@ -1207,9 +1204,6 @@ Audio packs
 
 Aurora: Polar Veil
 == Aurora: velo polar
-
-AUS
-== Australia
 
 Authed name color in scoreboard
 == Color del nombre autenticado en la tabla de puntuaciones
@@ -1321,9 +1315,6 @@ Auto switch weapon on ammo depletion
 
 Auto switch weapon on pickup
 == Cambiar arma automáticamente al recoger
-
-Auto team lock
-== Bloqueo de equipo auto
 
 Auto translate received messages
 == Traducir automáticamente los mensajes recibidos
@@ -1784,8 +1775,8 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == Vincular tecla para ejecutar un comando o ver vinculaciones de teclas
 
-Bind menu layout (0 = wheel, 1 = panel)
-== Bind menu layout (0 = wheel, 1 = panel)
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== Diseño del menú de binds: 0 = rueda radial, 1 = panel redondeado
 
 Bind Menus
 == Bind Menus
@@ -2366,9 +2357,6 @@ Chinese (Traditional)
 Chinese font:
 == Fuente china:
 
-CHN
-== China
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == Elige en Mostrar pulsaciones de teclas de los jugadores entre Propias, Otros o Todos y ajusta el tamaño de los iconos.
 
@@ -2757,7 +2745,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == Colores del botón de traducción del cuadro de chat y del menú de idiomas que abre ese botón.
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Colorea las filas de la tabla de puntuaciones: jugadores autenticados, jugadores del mismo clan, amigos y miembros del clan en la lista de amigos.
+== Colorea las filas del marcador: jugadores autenticados, jugadores del mismo clan, amigos y miembros del clan en la lista de amigos.
 
 Colors too close to the map background are hard to read while moving.
 == Los colores demasiado parecidos al fondo del mapa son difíciles de leer en movimiento.
@@ -3135,7 +3123,7 @@ Console link color
 == Consola: color de enlaces
 
 Console link hover hue shift in degrees
-== Console link hover hue shift in degrees
+== Desplazamiento de tono al pasar sobre enlaces de consola (grados)
 
 Console number color
 == Consola: color de números
@@ -3250,6 +3238,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == Conversar con la última persona a la que le susurraste (mensaje privado)
+
+Converting %d%%
+== Convirtiendo %d%%
 
 Coordinate size on nameplate
 == Tamaño de coordenadas en la placa
@@ -3813,7 +3804,7 @@ Debug websockets
 == Depurar WebSocket
 
 Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
-== Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
+== Decide qué skins descarga el cliente y puede añadir un prefijo para cargar variantes de skin con prefijo.
 
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Dirección WebSocket dedicada (vacío usa wss://qmclient.icu/ws)
@@ -4097,6 +4088,9 @@ Disable client-initiated self-kill (K key / kill command)
 Disable clipping
 == Deshabilitar recorte
 
+Disable fast practice mode
+== Desactivar modo de práctica rápida
+
 Disable Gores auto-switch when picking up extra weapon
 == Desactivar cambio automático de Gores al obtener arma extra
 
@@ -4105,6 +4099,9 @@ Disabled
 
 Disabling system messages also hides server warnings.
 == Si desactivas los mensajes del sistema, también se ocultan los avisos del servidor.
+
+Disagree
+== Rechazar
 
 Disallow chat from blacklisted addresses
 == No permitir chat desde direcciones en lista negra
@@ -4315,6 +4312,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == Descargado: %.1f MiB (tamaño total desconocido)
+
+Downloading %d%%
+== Descargando %d%%
 
 Downloading map
 == Descargando mapa
@@ -4585,6 +4585,9 @@ Dummy window size
 
 Dummy window zoom
 == Zoom de la ventana del Dummy
+
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== Mostrar el estado del mundo del cliente (rama de práctica, pistas, interruptores, sesión de vista)
 
 Dump the current savestring
 == Volcar la cadena de guardado actual
@@ -4931,6 +4934,9 @@ Enable fast input in Gores mode
 Enable fast map download
 == Habilitar descarga rápida de mapas
 
+Enable fast practice mode
+== Activar modo de práctica rápida
+
 Enable fat skin
 == Habilitar skin gorda
 
@@ -4999,6 +5005,12 @@ Enable left swipe offset on chat fade
 
 Enable LLM thinking mode (may increase response time)
 == Activar modo de pensamiento LLM (puede aumentar el tiempo de respuesta)
+
+Enable LX Music lyric integration
+== Habilitar la integración de letras de LX Music
+
+Enable LX Music lyrics
+== Activar letras de LX Music
 
 Enable lyrics
 == Habilitar letras
@@ -5279,6 +5291,9 @@ End bounce
 End marker of replay slice
 == Marcador final del segmento de repetición
 
+Endless hook
+== Gancho infinito
+
 Endless hook has been activated
 == El gancho infinito ha sido activado
 
@@ -5312,8 +5327,14 @@ Enter a CP number from 1 to 255.
 Enter a phrase.
 == Enter a phrase.
 
+Enter fast practice
+== Entrar en práctica rápida
+
 Enter Password
 == Ingresar contraseña
+
+Enter solo mode
+== Entrar en modo solo
 
 Enter solo split mode
 == Entrar en el modo de división en solitario
@@ -5402,9 +5423,6 @@ ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
 ESC replay minutes
 == Minutos de repetición de ESC
 
-EUR
-== Europa
-
 Evaluate an expression
 == Evaluar una expresión
 
@@ -5468,8 +5486,14 @@ Existing Player
 Exit and install
 == Salir e instalar
 
+Exit fast practice
+== Salir de práctica rápida
+
 Exit replay view
 == Salir de la vista de demo
+
+Exit solo mode
+== Salir del modo solo
 
 Exit spectating on both tees when either is hammered awake by another player
 == Salir del modo espectador con ambos Tees cuando otro jugador descongele a cualquiera con el martillo
@@ -6282,7 +6306,7 @@ General
 == General
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== Visualización general de DDNet: mostrar a otros jugadores y la opacidad de su sombra, los quads de fondo y el zoom predeterminado.
+== Visualización general de DDNet: mostrar otros jugadores y la opacidad de sus sombras, los quads de fondo y el zoom predeterminado.
 
 Generated skin outline color
 == Color del contorno generado
@@ -6292,6 +6316,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == Grosor del contorno generado
+
+Get all weapons
+== Obtener todas las armas
 
 Getting game info
 == Obteniendo información del juego
@@ -6396,7 +6423,7 @@ Global UI size percentage
 == Porcentaje de tamaño global de la interfaz
 
 Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
-== Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+== Escala global de distancia de la rueda (10 = predeterminado); el desplazamiento de páginas de ajustes es 12 veces este valor por tick
 
 Glow
 == Resplandor
@@ -7565,6 +7592,9 @@ Jelly others
 Jelly strength
 == Fuerza de la gelatina
 
+Jetpack
+== Jetpack
+
 Jitter
 == Jitter
 
@@ -7671,7 +7701,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == Sobre fondo oscuro se lee mejor el texto claro; el botón de restablecer la apariencia de las ayudas vuelve a los valores recomendados.
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Mantén estos colores aparte de los del equipo, o los nombres del mismo clan se fundirán con el panel del equipo y costará leerlos.
+== Procura que no coincidan con los colores del equipo; si no, los nombres del mismo clan se funden con el panel del equipo y cuesta leerlos.
 
 Keep unsent message on chat close
 == Conservar mensaje no enviado al cerrar el chat
@@ -8291,14 +8321,8 @@ Locate
 Lock both teams immediately when entering solo split mode
 == Bloquear ambos equipos al entrar en el modo de división en solitario
 
-Lock delay
-== Retardo de bloqueo
-
 Lock team
 == Bloquear equipo
-
-Lock teams on entry
-== Bloquear al entrar
 
 Lock the team so other players cannot join directly
 == Bloquear el equipo para que otros jugadores no entren directamente
@@ -8342,6 +8366,9 @@ Low contrast between name and message text makes chat hard to scan in fights.
 Lower means better quality and larger files; 18 is recommended
 == Un valor más bajo significa mejor calidad y archivos más grandes; se recomienda 18
 
+LX Music open API port (0=auto-detect from LX Music config)
+== Puerto de la API abierta de LX Music (0 = detección automática desde la configuración de LX Music)
+
 LXGW WenKai is available.
 == LXGW WenKai está disponible.
 
@@ -8372,8 +8399,8 @@ Main Asset
 Main menu
 == Menú principal
 
-Main Tee
-== Tee principal
+Main-world ghost opacity
+== Opacidad del fantasma del mundo principal
 
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Mantiene la lista de jugadores y grupos hostiles, además de las reglas para mostrarlos.
@@ -9161,9 +9188,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = Latencia de predicción
 
-NA
-== Norteamérica
-
 Name
 == Nombre
 
@@ -9926,6 +9950,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == Solo lo que no puedas imaginar, nada que Dream no pueda hacer
 
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== Solo se simula tu copia del mundo: los demás jugadores son Tee del lado del servidor, así que los interruptores que pisas no les afectan. El interruptor del fantasma y la opacidad también se aplican a ellos.
+
 Opacity
 == Opacidad
 
@@ -10328,6 +10355,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == Pausa
 
+Pause recording
+== Pausar grabación
+
+Pause recording the practice line (the recorded part is kept)
+== Pausar la grabación de la línea de práctica (la parte grabada se conserva)
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== Pausa la grabación sin descartar lo grabado. Al reanudar se inicia un tramo nuevo, para que la pausa no se dibuje como una línea recta.
+
 Pause the current demo
 == Pausar la demo actual
 
@@ -10446,7 +10482,7 @@ Pick a text style or a moon or sun badge, check the preview, then press "Save" t
 == Elige un estilo de texto o una insignia de luna o sol. Revisa la vista previa y pulsa «Guardar» para que los demás jugadores vean el estilo elegido.
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Elige un color en cada fila; los colores de autenticados y del mismo clan se aplican a la tabla de puntuaciones, y los dos colores de lista a la lista de amigos.
+== Elige un color en cada fila; los colores de autenticados y del mismo clan se aplican al marcador, y los dos colores de lista, a la lista de amigos.
 
 Pick result: %s
 == Resultado de la selección: %s
@@ -10522,6 +10558,9 @@ Play back a demo
 
 Play background music
 == Reproducir música de fondo
+
+Play rank ghost replay sounds and hit effects locally
+== Reproducir localmente los sonidos y efectos de impacto del fantasma Rank 1
 
 Play replay
 == Reproducir repetición
@@ -10898,6 +10937,9 @@ Position jump tip
 Position:
 == Posición:
 
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== Practica un mapa en privado, oculta el fantasma del mundo principal, muestra el tiempo de la carrera y asigna teclas a los comandos de práctica.
+
 Practice mode can't be enabled in team 0 mode.
 == El modo práctica no se puede activar en el modo team 0.
 
@@ -10992,7 +11034,7 @@ Prediction margin when frozen
 == Margen de predicción cuando está congelado
 
 Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== La predicción cambia precisión por respuesta: un margen mayor y AntiPing suavizan la variación del ping, pero pueden predecir mal las acciones cercanas, y la redundancia de subida puede triplicar el tráfico de subida.
+== La predicción cambia precisión por capacidad de respuesta: un margen mayor y AntiPing suavizan la variación del ping, pero pueden predecir mal acciones cercanas, y la redundancia de subida puede triplicar el tráfico de subida.
 
 Preparing chat export: %d%%
 == Preparando la exportación del chat: %d%%
@@ -11534,12 +11576,6 @@ Rank 1 demo downloaded to '%s'
 Rank 1 replays
 == Demos de rank 1
 
-Rank demo already available in the demo browser: %s
-== La demo ya está disponible en el navegador de demos: %s
-
-Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
-== Demo de rango descargada: %s. Reprodúcela desde la lista de Rango 1 o el navegador de demos.
-
 Rank ghost loaded: %s, %s s. It follows your current run.
 == Fantasma de rank cargado: %s, %s s. Sigue tu carrera actual.
 
@@ -11617,6 +11653,9 @@ Rank ghost: the replay has an invalid run range
 
 Rank ghost: the replay list is empty or malformed
 == Fantasma de rank: la lista de repeticiones está vacía o mal formada
+
+Rank ghost: this replay has no playable tee
+== Fantasma Rank 1: esta repetición no tiene ningún Tee reproducible
 
 Rank ghost: timed out waiting for the map to load
 == Fantasma de rank: se agotó el tiempo de espera del mapa
@@ -11891,6 +11930,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == eliminar una opción de votación
 
+Remove all weapons
+== Quitar todas las armas
+
 Remove chat
 == Eliminar chat
 
@@ -12122,11 +12164,17 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == Repetición
 
+Replay a saved practice ghost group in demo-style view mode
+== Reproducir un grupo de fantasmas de práctica guardado en modo de vista tipo demo
+
 Replay downloaded
 == Repetición descargada
 
 Replay feature is disabled!
 == ¡La función de repetición está deshabilitada!
+
+Replay ghost sounds and effects
+== Reproducir sonidos y efectos de impacto de la repetición del fantasma
 
 Replay list: failed to load, press Refresh to retry
 == Lista de repeticiones: error al cargar, pulsa Actualizar para reintentar
@@ -12181,6 +12229,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == El rescate no está activado en este servidor y no estás en un equipo con /practice activado. Ten en cuenta que no puedes obtener un rango con la práctica activada.
+
+Rescue mode
+== Modo rescate
 
 Rescue mode changed to auto.
 == Modo de rescate cambiado a auto.
@@ -12326,6 +12377,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == Restaurar recomendados
 
+Restore the practice world to the state it had when fast practice was enabled
+== Devuelve el mundo de práctica al estado que tenía al activar la práctica rápida
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== Devuelve el mundo de práctica al estado que tenía al activar la práctica rápida. La línea grabada se conserva y se inicia un tramo nuevo.
+
 Restored the built-in content
 == Se restauró el contenido incluido
 
@@ -12346,6 +12403,9 @@ Retry remote stats
 
 Retrying…
 == Reintentando…
+
+Return to respawn point
+== Volver al punto de reaparición
 
 Reverse chat gradient colors
 == Invertir los colores del degradado (chat)
@@ -12373,6 +12433,12 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == Revisa los valores de configuración que difieren de los valores por defecto y los restablece.
+
+Rewind practice world
+== Rebobinar mundo de práctica
+
+Rifle
+== Rifle
 
 Rifle Laser Inner Color
 == Color interior del láser del rifle
@@ -12494,8 +12560,8 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Ejecuta comandos automáticamente al conectarte a un servidor, divididos en una parte de conexión y una de entrada.
 
-SA
-== Sudamérica
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== Ejecuta tu propia copia del mapa mientras el servidor mantiene tu Tee real donde entraste, con temporizador y teclas para los comandos de práctica.
 
 Same as "vote no"
 == Igual que "votar no"
@@ -12799,6 +12865,9 @@ Search country flag…
 
 Search donor asset
 == Buscar activo donante
+
+Search ghosts
+== Buscar fantasmas
 
 Search main asset
 == Buscar activo principal
@@ -13115,6 +13184,9 @@ Server votes
 Server-dependent
 == Depende del servidor
 
+Server-side ghost opacity during fast practice (%)
+== Opacidad de los fantasmas del servidor durante la práctica rápida (%)
+
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == Ajusta el color de fondo y la opacidad del fondo, luego el color del texto, el color del texto seleccionado y el color de fondo de selección; hay una vista previa.
 
@@ -13165,6 +13237,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 
 Set microphone mute state (0=on, 1=mute)
 == Establecer estado de silencio del micrófono (0=activado, 1=silencio)
+
+Set practice respawn point
+== Fijar punto de reaparición de práctica
 
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == Establecer el servidor en modo un jugador (sin interacción entre jugadores, debe configurarse antes de cargar el mapa)
@@ -13862,6 +13937,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == Mostrar título del tee principal localmente
 
+Show main-world ghost
+== Mostrar fantasma del mundo principal
+
 Show map details
 == Mostrar detalles del mapa
 
@@ -14075,6 +14153,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == Mostrar información de depuración de posición y ángulo
 
+Show practice timer
+== Mostrar temporizador de práctica
+
 Show predicted position as ghost, original as unpredictable player
 == Mostrar posición predicha como fantasma, original como jugador impredecible
 
@@ -14125,6 +14206,9 @@ Show server settings
 
 Show server uptime
 == Mostrar el tiempo en línea del servidor
+
+Show server-side tees as ghosts during fast practice
+== Muestra los Tee del servidor como fantasmas durante la práctica rápida
 
 Show settings card borders
 == Mostrar los bordes de las tarjetas de configuración
@@ -14248,6 +14332,9 @@ Show the original text locally below translated outgoing messages
 
 Show the pet
 == Mostrar la mascota
+
+Show the practice run timer in the HUD
+== Muestra el tiempo de la práctica actual en el HUD
 
 Show the screen center line
 == Mostrar la línea central de la pantalla
@@ -14996,14 +15083,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == Marcador de inicio del fragmento de repetición
 
+Start or resume recording the practice line
+== Iniciar o reanudar la grabación de la línea de práctica
+
 Start playback of ghosts
 == Iniciar reproducción de fantasmas
+
+Start recording
+== Iniciar grabación
 
 Start recording a demo
 == Iniciar grabación de una demo
 
 Start recording a video
 == Iniciar grabación de un video
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== Inicia la grabación de la línea de práctica rápida o la reanuda tras una pausa. La grabación siempre es manual: no se graba nada hasta pulsar.
 
 Start skin queue from a random position when entering a map
 == Iniciar la cola de skins desde una posición aleatoria al entrar al mapa
@@ -15095,6 +15191,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == Nos sostienen %d patrocinadores. ¿Lo ves?
 
+Stop and save recording
+== Detener y guardar grabación
+
 Stop following
 == Dejar de seguir
 
@@ -15125,6 +15224,12 @@ Stop recording a demo
 Stop recording a video
 == Detener grabación de un video
 
+Stop recording and save the practice line as a ghost group
+== Detener la grabación y guardar la línea de práctica como grupo de fantasmas
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== Detiene la grabación y escribe la línea en disco al instante como grupo de fantasmas. El grupo guardado se puede reproducir desde el menú de binds o la página de fantasmas.
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == Dejar de renderizar superposiciones de texto en el editor o con entidades: más alto = menos detalle = más rápido
 
@@ -15133,6 +15238,12 @@ Stop server
 
 Stop the current demo
 == Detener la demo actual
+
+Store the current practice tee state as the respawn point
+== Guardar el estado actual del tee de práctica como punto de reaparición
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== Guarda el estado actual del tee (posición, armas, saltos y estado de movimiento) como punto de reaparición de práctica.
 
 Streamer mode
 == Modo streamer
@@ -15584,6 +15695,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == Teletransportar todas las armas (obsoleto, usa entidades especiales en su lugar)
 
+Teleport back to the practice respawn point
+== Teletransportar al punto de reaparición de práctica
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== Teletransporta al punto de reaparición de práctica y restaura el estado del tee guardado allí. Solo se restaura el tee; el mundo sigue avanzando.
+
 Teleport dummy to cursor
 == Teletransportar al dummy al cursor
 
@@ -16023,7 +16140,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == Marca mostrar entradas y ajusta tamaño y posición con tamaño del teclado, tamaño del ratón, opacidad y los deslizadores de posición.
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== Marca «Mostrar a otros» para dibujar otros equipos translúcidos; la opacidad de su sombra se ajusta en la fila dependiente de abajo, y para la vista usa «Mostrar quads de fondo» y «Zoom predeterminado».
+== Marca «Mostrar a otros» para dibujar a otros equipos de forma translúcida, ajusta la opacidad de sus sombras en la fila dependiente de debajo y usa «Mostrar quads de fondo» y «Zoom predeterminado» para la vista.
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Marca los que quieras: mostrar teclas atascadas, mostrar estado del martillo, mostrar control del dummy o mostrar copia del dummy.
@@ -16249,6 +16366,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == Alternar consola local
+
+Toggle main-world ghost
+== Alternar fantasma del mundo principal
 
 Toggle map preview
 == Vista previa del mapa
@@ -16574,6 +16694,9 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == En equipos lentos, desactívalo: las tarjetas se abren y desplazan al instante. La forma del cursor es solo estética: los tres estilos ocupan la misma celda.
 
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== Desactiva «Mostrar fantasma del mundo principal» para ocultar todos los Tee que vienen del servidor, incluidos los demás jugadores; mientras siga activo, el control de opacidad decide cuánto se ven. Las filas de atajo envían los mismos comandos que el menú de práctica, así que no hace falta abrir el chat.
+
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Activa «Chat automático en el agua», escribe el «Mensaje de chat» que quieras y, si lo deseas, activa «Enviar emoticono en el agua» con su ID.
 
@@ -16645,6 +16768,9 @@ Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow h
 
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.
 == Activa la animación al cambiar de arma o el volteo al recargar, elige un rango de animación y ajusta duración, distancia y rotación.
+
+Turn on LX Music open API
+== Activar la API abierta de LX Music
 
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
 == Activa una opción cada vez: cambiar de Tee o cerrar el chat puede descartar un mensaje que aún estás escribiendo.
@@ -16843,6 +16969,9 @@ Underscore
 
 Underscore: a line under the character that follows
 == Subrayado: una línea bajo el carácter siguiente
+
+Undo deep freeze
+== Deshacer congelación profunda
 
 Unexpected map upload response.
 == Respuesta inesperada al subir el mapa.

@@ -16,6 +16,28 @@ TEST(NeteaseLyricParser, ParsesLrcAndDerivesBoundaries)
 	EXPECT_EQ(Timeline.m_vLines.back().m_EndMs, -1);
 }
 
+TEST(NeteaseLyricParser, AcceptsColonSeparatedCentiseconds)
+{
+	// [mm:ss:xx] 变体:第三段是百分秒。LX Music 自己生成的提示行就用这种写法。
+	STimeline Timeline;
+	ASSERT_TRUE(ParseLrc("[00:00:00]此歌曲为没有填词的纯音乐，请您欣赏\n[00:12:34]第二句\n", &Timeline));
+	ASSERT_EQ(Timeline.m_vLines.size(), 2u);
+	EXPECT_EQ(Timeline.m_vLines[0].m_StartMs, 0);
+	EXPECT_EQ(Timeline.m_vLines[0].m_Text, "此歌曲为没有填词的纯音乐，请您欣赏");
+	EXPECT_EQ(Timeline.m_vLines[1].m_StartMs, 12340);
+}
+
+TEST(NeteaseLyricParser, MixesColonAndDotTimestampForms)
+{
+	// 同一个文件里两种写法混用是合法的,不能因为一行是冒号格式就整体失败。
+	STimeline Timeline;
+	ASSERT_TRUE(ParseLrc("[00:01.50]点号格式\n[00:02:25]冒号格式\n[00:03.00]再回点号\n", &Timeline));
+	ASSERT_EQ(Timeline.m_vLines.size(), 3u);
+	EXPECT_EQ(Timeline.m_vLines[0].m_StartMs, 1500);
+	EXPECT_EQ(Timeline.m_vLines[1].m_StartMs, 2250);
+	EXPECT_EQ(Timeline.m_vLines[2].m_StartMs, 3000);
+}
+
 TEST(NeteaseLyricParser, SkipsMetadataAndEmptyLines)
 {
 	STimeline Timeline;

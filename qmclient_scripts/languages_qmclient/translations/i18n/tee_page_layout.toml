@@ -1,37 +1,3 @@
-# Tee 皮肤设置页双栏布局（左列表 / 右预览与颜色 / 下方整宽选项）
-
-[[message]]
-key = "Search and pick skins and manage the skin queue"
-[message.translations]
-simplified_chinese = "搜索并选择皮肤，同时管理皮肤轮换队列"
-traditional_chinese = "搜尋並選擇外觀，同時管理外觀輪換佇列"
-japanese = "スキンを検索して選択し、スキンローテーションキューを管理"
-korean = "스킨을 검색하고 선택하며 스킨 순환 대기열을 관리합니다"
-russian = "Поиск и выбор скинов, а также управление очередью ротации"
-german = "Skins suchen, auswählen und die Skin-Rotationswarteschlange verwalten"
-spanish = "Busca y elige skins, y gestiona la cola de rotación"
-french = "Rechercher et choisir des skins, et gérer la file de rotation"
-brazilian_portuguese = "Pesquise e escolha skins e gerencie a fila de rotação"
-portuguese = "Pesquise e escolha skins e gerencie a fila de rotação"
-turkish = "Skinleri arayın, seçin ve skin döngü kuyruğunu yönetin"
-polish = "Wyszukuj i wybieraj skórki oraz zarządzaj kolejką rotacji"
-
-[[message]]
-key = "Preview player and dummy appearance and colors"
-[message.translations]
-simplified_chinese = "预览本体与分身的外观和颜色"
-traditional_chinese = "預覽本體與分身的外觀和顏色"
-japanese = "本体とダミーの外見と色をプレビュー"
-korean = "본체와 더미의 외형과 색상을 미리 봅니다"
-russian = "Предпросмотр внешнего вида и цветов игрока и дубликата"
-german = "Vorschau von Aussehen und Farben für Spieler und Dummy"
-spanish = "Vista previa del aspecto y los colores del jugador y el dummy"
-french = "Aperçu de l'apparence et des couleurs du joueur et du dummy"
-brazilian_portuguese = "Pré-visualize a aparência e as cores do jogador e do dummy"
-portuguese = "Pré-visualize a aparência e as cores do jogador e do dummy"
-turkish = "Oyuncu ve dummy görünümünü ve renklerini önizleyin"
-polish = "Podgląd wyglądu i kolorów gracza oraz dummy"
-
 [[message]]
 key = "Configure skin downloads, prefix, and default eyes"
 [message.translations]
@@ -63,3 +29,35 @@ brazilian_portuguese = "Clique duplo: esquerdo no jogador, direito no dummy"
 portuguese = "Clique duplo: esquerdo no jogador, direito no dummy"
 turkish = "Çift tıklama: sol oyuncuya, sağ dummy'ye uygular"
 polish = "Podwójne kliknięcie: lewy dla gracza, prawy dla dummy"
+
+[[message]]
+key = "Preview player and dummy appearance and colors"
+[message.translations]
+simplified_chinese = "预览本体与分身的外观和颜色"
+traditional_chinese = "預覽本體與分身的外觀和顏色"
+japanese = "本体とダミーの外見と色をプレビュー"
+korean = "본체와 더미의 외형과 색상을 미리 봅니다"
+russian = "Предпросмотр внешнего вида и цветов игрока и дубликата"
+german = "Vorschau von Aussehen und Farben für Spieler und Dummy"
+spanish = "Vista previa del aspecto y los colores del jugador y el dummy"
+french = "Aperçu de l'apparence et des couleurs du joueur et du dummy"
+brazilian_portuguese = "Pré-visualize a aparência e as cores do jogador e do dummy"
+portuguese = "Pré-visualize a aparência e as cores do jogador e do dummy"
+turkish = "Oyuncu ve dummy görünümünü ve renklerini önizleyin"
+polish = "Podgląd wyglądu i kolorów gracza oraz dummy"
+
+[[message]]
+key = "Search and pick skins and manage the skin queue"
+[message.translations]
+simplified_chinese = "搜索并选择皮肤，同时管理皮肤轮换队列"
+traditional_chinese = "搜尋並選擇外觀，同時管理外觀輪換佇列"
+japanese = "スキンを検索して選択し、スキンローテーションキューを管理"
+korean = "스킨을 검색하고 선택하며 스킨 순환 대기열을 관리합니다"
+russian = "Поиск и выбор скинов, а также управление очередью ротации"
+german = "Skins suchen, auswählen und die Skin-Rotationswarteschlange verwalten"
+spanish = "Busca y elige skins, y gestiona la cola de rotación"
+french = "Rechercher et choisir des skins, et gérer la file de rotation"
+brazilian_portuguese = "Pesquise e escolha skins e gerencie a fila de rotação"
+portuguese = "Pesquise e escolha skins e gerencie a fila de rotação"
+turkish = "Skinleri arayın, seçin ve skin döngü kuyruğunu yönetin"
+polish = "Wyszukuj i wybieraj skórki oraz zarządzaj kolejką rotacji"

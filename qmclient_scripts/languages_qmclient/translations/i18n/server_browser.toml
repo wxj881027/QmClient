@@ -1,5 +1,3 @@
-# 请抬头享受阳光｜日子很好 我很我---------致咩子
-
 [[message]]
 key = "%d dummies"
 [message.translations]
@@ -593,6 +591,22 @@ turkish = "Sunucuyu seçmek için tıklayın. Arkadaşınıza katılmak için ç
 polish = "Kliknij, aby wybrać serwer. Kliknij dwukrotnie, aby dołączyć do znajomego."
 
 [[message]]
+key = "Common filters"
+[message.translations]
+simplified_chinese = "常用筛选"
+traditional_chinese = "常用篩選"
+japanese = "よく使うフィルター"
+korean = "자주 쓰는 필터"
+russian = "Частые фильтры"
+german = "Häufige Filter"
+spanish = "Filtros frecuentes"
+french = "Filtres courants"
+brazilian_portuguese = "Filtros comuns"
+portuguese = "Filtros comuns"
+turkish = "Sık kullanılan filtreler"
+polish = "Typowe filtry"
+
+[[message]]
 key = "Communities"
 [message.translations]
 simplified_chinese = "社区"
@@ -671,22 +685,6 @@ brazilian_portuguese = "Não foi possível obter a lista de servidores do servid
 portuguese = "Não foi possível obter a lista de servidores do servidor mestre"
 turkish = "Ana sunucudan sunucu listesi alınamadı"
 polish = "Nie można pobrać listy serwerów z serwera głównego"
-
-[[message]]
-key = "Common filters"
-[message.translations]
-simplified_chinese = "常用筛选"
-traditional_chinese = "常用篩選"
-japanese = "よく使うフィルター"
-korean = "자주 쓰는 필터"
-russian = "Частые фильтры"
-german = "Häufige Filter"
-spanish = "Filtros frecuentes"
-french = "Filtres courants"
-brazilian_portuguese = "Filtros comuns"
-portuguese = "Filtros comuns"
-turkish = "Sık kullanılan filtreler"
-polish = "Typowe filtry"
 
 [[message]]
 key = "Count players only"
@@ -849,6 +847,22 @@ turkish = "ddnet-saves.txt bulunamadı"
 polish = "Nie znaleziono ddnet-saves.txt"
 
 [[message]]
+key = "DDStats shows UTC dates, updates daily and matches players by name only."
+[message.translations]
+simplified_chinese = "DDStats 的日期使用 UTC，每天更新，且仅按玩家名字匹配。"
+traditional_chinese = "DDStats 的日期使用 UTC，每天更新，且僅按玩家名稱比對。"
+japanese = "DDStats の日付は UTC 基準で毎日更新され、プレイヤー名のみで照合されます。"
+korean = "DDStats의 날짜는 UTC 기준으로 매일 갱신되며 플레이어 이름만으로 일치 여부를 확인합니다."
+russian = "DDStats показывает даты по UTC, обновляется ежедневно и сопоставляет игроков только по имени."
+german = "DDStats zeigt UTC-Daten, aktualisiert sie täglich und ordnet Spieler nur anhand ihres Namens zu."
+spanish = "DDStats muestra fechas UTC, se actualiza a diario e identifica a los jugadores solo por su nombre."
+french = "DDStats affiche les dates en UTC, se met à jour chaque jour et identifie les joueurs uniquement par leur nom."
+brazilian_portuguese = "O DDStats mostra datas em UTC, atualiza diariamente e identifica jogadores apenas pelo nome."
+portuguese = "O DDStats mostra datas em UTC, atualiza diariamente e identifica os jogadores apenas pelo nome."
+turkish = "DDStats UTC tarihlerini gösterir, günlük güncellenir ve oyuncuları yalnızca adlarına göre eşleştirir."
+polish = "DDStats pokazuje daty UTC, aktualizuje je codziennie i rozpoznaje graczy wyłącznie po nazwie."
+
+[[message]]
 key = "Deaths"
 [message.translations]
 simplified_chinese = "死亡数"
@@ -911,6 +925,70 @@ brazilian_portuguese = "Desconectar"
 portuguese = "Desligar"
 turkish = "Bağlantıyı kes"
 polish = "Rozłącz"
+
+[[message]]
+key = "Downloading map %d%%"
+[message.translations]
+simplified_chinese = "正在下载地图：%d%%"
+traditional_chinese = "正在下載地圖：%d%%"
+japanese = "マップをダウンロード中：%d%%"
+korean = "맵 다운로드 중: %d%%"
+russian = "Загрузка карты: %d%%"
+german = "Karte wird heruntergeladen: %d%%"
+spanish = "Descargando mapa: %d%%"
+french = "Téléchargement de la carte : %d%%"
+brazilian_portuguese = "Baixando mapa: %d%%"
+portuguese = "A transferir mapa: %d%%"
+turkish = "Harita indiriliyor: %d%%"
+polish = "Pobieranie mapy: %d%%"
+
+[[message]]
+key = "Drag to another category to move this friend."
+[message.translations]
+simplified_chinese = "拖动到其他分类以移动此好友。"
+traditional_chinese = "拖曳到其他分類以移動此好友。"
+japanese = "別のカテゴリにドラッグして、このフレンドを移動します。"
+korean = "이 친구를 다른 카테고리로 드래그하여 이동합니다."
+russian = "Перетащите этого друга в другую категорию, чтобы переместить его."
+german = "Ziehe diesen Freund in eine andere Kategorie, um ihn zu verschieben."
+spanish = "Arrastra a este amigo a otra categoría para moverlo."
+french = "Faites glisser cet ami vers une autre catégorie pour le déplacer."
+brazilian_portuguese = "Arraste este amigo para outra categoria para movê-lo."
+portuguese = "Arraste este amigo para outra categoria para o mover."
+turkish = "Bu arkadaşı taşımak için başka bir kategoriye sürükleyin."
+polish = "Przeciągnij tego znajomego do innej kategorii, aby go przenieść."
+
+[[message]]
+key = "Drag to pan, scroll to zoom"
+[message.translations]
+simplified_chinese = "按住拖动平移，滚轮缩放"
+traditional_chinese = "按住拖曳平移，滾輪縮放"
+japanese = "ドラッグで移動、ホイールで拡大・縮小"
+korean = "드래그하여 이동, 휠로 확대/축소"
+russian = "Перетаскивание — перемещение, колесо — масштаб"
+german = "Ziehen zum Verschieben, Mausrad zum Zoomen"
+spanish = "Arrastra para mover, usa la rueda para ampliar"
+french = "Glisser pour déplacer, molette pour zoomer"
+brazilian_portuguese = "Arraste para mover, use a roda para ampliar"
+portuguese = "Arraste para mover, use a roda para ampliar"
+turkish = "Kaydırmak için sürükleyin, yakınlaştırmak için tekerleği kullanın"
+polish = "Przeciągnij, aby przesunąć; przewijaj, aby przybliżyć"
+
+[[message]]
+key = "Drag to reorder; right-click or use the gear to manage"
+[message.translations]
+simplified_chinese = "拖动排序；右键或齿轮可管理分类"
+traditional_chinese = "拖曳排序；右鍵或齒輪可管理分類"
+japanese = "ドラッグで並べ替え。右クリックまたは歯車で管理"
+korean = "드래그하여 순서 변경. 마우스 오른쪽 버튼이나 톱니바퀴로 관리"
+russian = "Перетаскивайте для изменения порядка; правый клик или шестерёнка для управления"
+german = "Zum Umsortieren ziehen; Rechtsklick oder Zahnrad zum Verwalten"
+spanish = "Arrastra para reordenar; clic derecho o el engranaje para gestionar"
+french = "faites glisser pour réordonner ; clic droit ou engrenage pour gérer"
+brazilian_portuguese = "Arraste para reordenar; clique direito ou engrenagem para gerenciar"
+portuguese = "Arraste para reordenar; clique direito ou engrenagem para gerir"
+turkish = "Yeniden sıralamak için sürükleyin; yönetmek için sağ tıklayın veya dişliyi kullanın"
+polish = "Przeciągnij, aby zmienić kolejność; kliknij prawym lub użyj zębatki, aby zarządzać"
 
 [[message]]
 key = "Dummy"
@@ -1201,6 +1279,22 @@ turkish = "Harita bitişini işaretle"
 polish = "Oznacz ukończone mapy"
 
 [[message]]
+key = "Initializing map layers"
+[message.translations]
+simplified_chinese = "正在初始化地图图层"
+traditional_chinese = "正在初始化地圖圖層"
+japanese = "マップレイヤーを初期化中"
+korean = "맵 레이어 초기화 중"
+russian = "Инициализация слоёв карты"
+german = "Kartenebenen werden initialisiert"
+spanish = "Inicializando capas del mapa"
+french = "Initialisation des couches de la carte"
+brazilian_portuguese = "Inicializando camadas do mapa"
+portuguese = "A inicializar camadas do mapa"
+turkish = "Harita katmanları başlatılıyor"
+polish = "Inicjalizowanie warstw mapy"
+
+[[message]]
 key = "Insane"
 [message.translations]
 simplified_chinese = "疯狂"
@@ -1231,6 +1325,22 @@ brazilian_portuguese = "Último inserido"
 portuguese = "Último inserido"
 turkish = "Son girilen"
 polish = "Ostatnio wprowadzone"
+
+[[message]]
+key = "Last seen (DDStats): %s"
+[message.translations]
+simplified_chinese = "最近在线（DDStats）：%s"
+traditional_chinese = "最近上線（DDStats）：%s"
+japanese = "最終オンライン（DDStats）：%s"
+korean = "최근 접속(DDStats): %s"
+russian = "Последний раз в сети (DDStats): %s"
+german = "Zuletzt online (DDStats): %s"
+spanish = "Última conexión (DDStats): %s"
+french = "Dernière connexion (DDStats) : %s"
+brazilian_portuguese = "Última vez online (DDStats): %s"
+portuguese = "Última vez online (DDStats): %s"
+turkish = "Son görülme (DDStats): %s"
+polish = "Ostatnio online (DDStats): %s"
 
 [[message]]
 key = "Leak IP"
@@ -1297,6 +1407,38 @@ turkish = "Harita"
 polish = "Mapa"
 
 [[message]]
+key = "Map download failed, click to retry"
+[message.translations]
+simplified_chinese = "地图下载失败，点击重试"
+traditional_chinese = "地圖下載失敗，點擊重試"
+japanese = "マップのダウンロードに失敗しました。クリックして再試行"
+korean = "맵 다운로드에 실패했습니다. 클릭하여 다시 시도하세요"
+russian = "Не удалось загрузить карту, нажмите для повторной попытки"
+german = "Kartendownload fehlgeschlagen, zum Wiederholen klicken"
+spanish = "Error al descargar el mapa, haz clic para reintentar"
+french = "Échec du téléchargement de la carte, cliquez pour réessayer"
+brazilian_portuguese = "Falha ao baixar o mapa, clique para tentar novamente"
+portuguese = "Falha ao transferir o mapa, clique para tentar novamente"
+turkish = "Harita indirilemedi, yeniden denemek için tıklayın"
+polish = "Pobieranie mapy nie powiodło się, kliknij, aby spróbować ponownie"
+
+[[message]]
+key = "Map not downloaded yet — join the server to preview it"
+[message.translations]
+simplified_chinese = "地图尚未下载，进入服务器下载后即可预览"
+traditional_chinese = "地圖尚未下載，進入伺服器下載後即可預覽"
+japanese = "未ダウンロードのマップです。サーバーに参加するとプレビューできます"
+korean = "아직 다운로드하지 않은 맵입니다. 서버에 접속하면 미리 볼 수 있습니다"
+russian = "Карта ещё не загружена. Зайдите на сервер для предпросмотра"
+german = "Karte noch nicht heruntergeladen. Zum Vorschauen dem Server beitreten"
+spanish = "Mapa sin descargar. Únete al servidor para verlo"
+french = "Carte non téléchargée. Rejoignez le serveur pour la prévisualiser"
+brazilian_portuguese = "Mapa ainda não baixado. Entre no servidor para visualizar"
+portuguese = "Mapa ainda não transferido. Entre no servidor para pré-visualizar"
+turkish = "Harita henüz indirilmedi. Önizlemek için sunucuya katılın"
+polish = "Mapa nie została pobrana. Dołącz do serwera, aby ją podejrzeć"
+
+[[message]]
 key = "Map play history"
 [message.translations]
 simplified_chinese = "地图游玩历史"
@@ -1311,6 +1453,38 @@ brazilian_portuguese = "Histórico de jogos do mapa"
 portuguese = "Histórico de reprodução de mapas"
 turkish = "Harita oynama geçmişi"
 polish = "Historia gry na mapach"
+
+[[message]]
+key = "Map preview rendering unavailable"
+[message.translations]
+simplified_chinese = "当前无法渲染地图预览"
+traditional_chinese = "目前無法繪製地圖預覽"
+japanese = "マッププレビューを描画できません"
+korean = "맵 미리보기를 렌더링할 수 없습니다"
+russian = "Предпросмотр карты недоступен"
+german = "Kartenvorschau kann nicht gerendert werden"
+spanish = "No se puede mostrar la vista previa del mapa"
+french = "Rendu de l’aperçu de la carte indisponible"
+brazilian_portuguese = "Não é possível renderizar a prévia do mapa"
+portuguese = "Não é possível apresentar a pré-visualização do mapa"
+turkish = "Harita önizlemesi oluşturulamıyor"
+polish = "Renderowanie podglądu mapy niedostępne"
+
+[[message]]
+key = "Map progress"
+[message.translations]
+simplified_chinese = "地图进度"
+traditional_chinese = "地圖進度"
+japanese = "マップの進捗"
+korean = "맵 진행도"
+russian = "Прогресс карт"
+german = "Kartenfortschritt"
+spanish = "Progreso de mapas"
+french = "Progression des cartes"
+brazilian_portuguese = "Progresso dos mapas"
+portuguese = "Progresso dos mapas"
+turkish = "Harita ilerlemesi"
+polish = "Postęp map"
 
 [[message]]
 key = "Moderate"
@@ -1425,22 +1599,6 @@ turkish = "Yerel sunucu bulunamadı (port %d-%d)"
 polish = "Nie znaleziono lokalnych serwerów (porty %d-%d)"
 
 [[message]]
-key = "Map progress"
-[message.translations]
-simplified_chinese = "地图进度"
-traditional_chinese = "地圖進度"
-japanese = "マップの進捗"
-korean = "맵 진행도"
-russian = "Прогресс карт"
-german = "Kartenfortschritt"
-spanish = "Progreso de mapas"
-french = "Progression des cartes"
-brazilian_portuguese = "Progresso dos mapas"
-portuguese = "Progresso dos mapas"
-turkish = "Harita ilerlemesi"
-polish = "Postęp map"
-
-[[message]]
 key = "No login required"
 [message.translations]
 simplified_chinese = "无需登录"
@@ -1487,6 +1645,22 @@ brazilian_portuguese = "Sem senha"
 portuguese = "Sem palavra-passe"
 turkish = "Şifre yok"
 polish = "Bez hasła"
+
+[[message]]
+key = "No record"
+[message.translations]
+simplified_chinese = "暂无记录"
+traditional_chinese = "暫無記錄"
+japanese = "記録なし"
+korean = "기록 없음"
+russian = "Нет записей"
+german = "Kein Eintrag"
+spanish = "Sin registros"
+french = "Aucun historique"
+brazilian_portuguese = "Sem registro"
+portuguese = "Sem registo"
+turkish = "Kayıt yok"
+polish = "Brak danych"
 
 [[message]]
 key = "No server selected"
@@ -1649,6 +1823,22 @@ turkish = "Eski tarz"
 polish = "Oldschool"
 
 [[message]]
+key = "Pin friend"
+[message.translations]
+simplified_chinese = "置顶好友"
+traditional_chinese = "置頂好友"
+japanese = "フレンドを固定"
+korean = "친구 고정"
+russian = "Закрепить друга"
+german = "Freund anheften"
+spanish = "Fijar amigo"
+french = "Épingler cet ami"
+brazilian_portuguese = "Fixar amigo"
+portuguese = "Fixar amigo"
+turkish = "Arkadaşı sabitle"
+polish = "Przypnij znajomego"
+
+[[message]]
 key = "Player count"
 [message.translations]
 simplified_chinese = "人数统计"
@@ -1679,6 +1869,22 @@ brazilian_portuguese = "País do jogador:"
 portuguese = "País do jogador:"
 turkish = "Oyuncu ülkesi:"
 polish = "Kraj gracza:"
+
+[[message]]
+key = "Querying..."
+[message.translations]
+simplified_chinese = "查询中…"
+traditional_chinese = "查詢中…"
+japanese = "照会中…"
+korean = "조회 중…"
+russian = "Запрос…"
+german = "Abfrage läuft…"
+spanish = "Consultando…"
+french = "Recherche en cours…"
+brazilian_portuguese = "Consultando…"
+portuguese = "A consultar…"
+turkish = "Sorgulanıyor…"
+polish = "Pobieranie…"
 
 [[message]]
 key = "Recent"
@@ -1857,6 +2063,38 @@ turkish = "Sunucu filtresi"
 polish = "Filtr serwera"
 
 [[message]]
+key = "Server list is more than five minutes old"
+[message.translations]
+simplified_chinese = "服务器列表已超过五分钟未更新"
+traditional_chinese = "伺服器列表已超過五分鐘未更新"
+japanese = "サーバー一覧は五分以上更新されていません"
+korean = "서버 목록이 오 분 넘게 갱신되지 않았습니다"
+russian = "Список серверов не обновлялся более пяти минут"
+german = "Die Serverliste ist älter als fünf Minuten"
+spanish = "La lista de servidores tiene más de cinco minutos"
+french = "La liste des serveurs date de plus de cinq minutes"
+brazilian_portuguese = "A lista de servidores tem mais de cinco minutos"
+portuguese = "A lista de servidores tem mais de cinco minutos"
+turkish = "Sunucu listesi beş dakikadan eski"
+polish = "Lista serwerów ma więcej niż pięć minut"
+
+[[message]]
+key = "Server list refresh failed; showing the previous list"
+[message.translations]
+simplified_chinese = "服务器列表刷新失败，正在显示上次列表"
+traditional_chinese = "伺服器列表重新整理失敗，正在顯示上次列表"
+japanese = "サーバー一覧の更新に失敗したため、前の一覧を表示しています"
+korean = "서버 목록을 새로 고치지 못해 이전 목록을 표시합니다"
+russian = "Не удалось обновить список серверов; показан предыдущий список"
+german = "Serverliste konnte nicht aktualisiert werden; die vorherige Liste wird angezeigt"
+spanish = "No se pudo actualizar la lista de servidores; se muestra la anterior"
+french = "Échec de l’actualisation des serveurs ; la liste précédente est affichée"
+brazilian_portuguese = "Falha ao atualizar a lista de servidores; exibindo a lista anterior"
+portuguese = "Falha ao atualizar a lista de servidores; a mostrar a lista anterior"
+turkish = "Sunucu listesi yenilenemedi; önceki liste gösteriliyor"
+polish = "Nie udało się odświeżyć listy serwerów; wyświetlono poprzednią listę"
+
+[[message]]
 key = "Server not full"
 [message.translations]
 simplified_chinese = "未满员"
@@ -1871,6 +2109,22 @@ brazilian_portuguese = "Servidor não cheio"
 portuguese = "Servidor não cheio"
 turkish = "Sunucu dolu değil"
 polish = "Serwer nie jest pełny"
+
+[[message]]
+key = "Show entities only (hide textures)"
+[message.translations]
+simplified_chinese = "仅显示实体层（隐藏贴图）"
+traditional_chinese = "僅顯示實體層（隱藏貼圖）"
+japanese = "エンティティのみ表示（テクスチャを非表示）"
+korean = "엔티티만 표시 (텍스처 숨김)"
+russian = "Только объекты (скрыть текстуры)"
+german = "Nur Entities anzeigen (Texturen ausblenden)"
+spanish = "Mostrar solo entidades (ocultar texturas)"
+french = "Afficher uniquement les entités (masquer les textures)"
+brazilian_portuguese = "Mostrar apenas entidades (ocultar texturas)"
+portuguese = "Mostrar apenas entidades (ocultar texturas)"
+turkish = "Yalnızca varlıkları göster (dokuları gizle)"
+polish = "Pokaż tylko encje (ukryj tekstury)"
 
 [[message]]
 key = "Show friends only"
@@ -2001,6 +2255,22 @@ turkish = "Katı oyun türü filtresi"
 polish = "Ścisły filtr typu gry"
 
 [[message]]
+key = "Toggle map preview"
+[message.translations]
+simplified_chinese = "地图预览"
+traditional_chinese = "地圖預覽"
+japanese = "マッププレビュー"
+korean = "맵 미리보기"
+russian = "Предпросмотр карты"
+german = "Kartenvorschau"
+spanish = "Vista previa del mapa"
+french = "Aperçu de la carte"
+brazilian_portuguese = "Prévia do mapa"
+portuguese = "Pré-visualização do mapa"
+turkish = "Harita önizlemesi"
+polish = "Podgląd mapy"
+
+[[message]]
 key = "Type"
 [message.translations]
 simplified_chinese = "类型"
@@ -2095,6 +2365,38 @@ brazilian_portuguese = "Desconhecido"
 portuguese = "Desconhecido"
 turkish = "Bilinmiyor"
 polish = "Nieznany"
+
+[[message]]
+key = "Unpin friend"
+[message.translations]
+simplified_chinese = "取消置顶好友"
+traditional_chinese = "取消置頂好友"
+japanese = "フレンドの固定を解除"
+korean = "친구 고정 해제"
+russian = "Открепить друга"
+german = "Freund lösen"
+spanish = "Desfijar amigo"
+french = "Désépingler cet ami"
+brazilian_portuguese = "Desafixar amigo"
+portuguese = "Desafixar amigo"
+turkish = "Arkadaşın sabitlemesini kaldır"
+polish = "Odepnij znajomego"
+
+[[message]]
+key = "Used"
+[message.translations]
+simplified_chinese = "已使用"
+traditional_chinese = "已使用"
+japanese = "使用済み"
+korean = "사용됨"
+russian = "Использовано"
+german = "Benutzt"
+spanish = "Usado"
+french = "Utilisé"
+brazilian_portuguese = "Usado"
+portuguese = "Usado"
+turkish = "Kullanıldı"
+polish = "Użyty"
 
 [[message]]
 key = "Version"
@@ -2212,307 +2514,3 @@ brazilian_portuguese = "Parar de seguir este amigo"
 portuguese = "Parar de seguir este amigo"
 turkish = "Bu arkadaşı takip etmeyi durdur"
 polish = "Przestań podążać za tym znajomym"
-
-[[message]]
-key = "Drag to another category to move this friend."
-[message.translations]
-simplified_chinese = "拖动到其他分类以移动此好友。"
-traditional_chinese = "拖曳到其他分類以移動此好友。"
-japanese = "別のカテゴリにドラッグして、このフレンドを移動します。"
-korean = "이 친구를 다른 카테고리로 드래그하여 이동합니다."
-russian = "Перетащите этого друга в другую категорию, чтобы переместить его."
-german = "Ziehe diesen Freund in eine andere Kategorie, um ihn zu verschieben."
-spanish = "Arrastra a este amigo a otra categoría para moverlo."
-french = "Faites glisser cet ami vers une autre catégorie pour le déplacer."
-brazilian_portuguese = "Arraste este amigo para outra categoria para movê-lo."
-portuguese = "Arraste este amigo para outra categoria para o mover."
-turkish = "Bu arkadaşı taşımak için başka bir kategoriye sürükleyin."
-polish = "Przeciągnij tego znajomego do innej kategorii, aby go przenieść."
-
-[[message]]
-key = "Drag to reorder; right-click or use the gear to manage"
-[message.translations]
-simplified_chinese = "拖动排序；右键或齿轮可管理分类"
-traditional_chinese = "拖曳排序；右鍵或齒輪可管理分類"
-japanese = "ドラッグで並べ替え。右クリックまたは歯車で管理"
-korean = "드래그하여 순서 변경. 마우스 오른쪽 버튼이나 톱니바퀴로 관리"
-russian = "Перетаскивайте для изменения порядка; правый клик или шестерёнка для управления"
-german = "Zum Umsortieren ziehen; Rechtsklick oder Zahnrad zum Verwalten"
-spanish = "Arrastra para reordenar; clic derecho o el engranaje para gestionar"
-french = "faites glisser pour réordonner ; clic droit ou engrenage pour gérer"
-brazilian_portuguese = "Arraste para reordenar; clique direito ou engrenagem para gerenciar"
-portuguese = "Arraste para reordenar; clique direito ou engrenagem para gerir"
-turkish = "Yeniden sıralamak için sürükleyin; yönetmek için sağ tıklayın veya dişliyi kullanın"
-polish = "Przeciągnij, aby zmienić kolejność; kliknij prawym lub użyj zębatki, aby zarządzać"
-
-[[message]]
-key = "Server list is more than five minutes old"
-[message.translations]
-simplified_chinese = "服务器列表已超过五分钟未更新"
-traditional_chinese = "伺服器列表已超過五分鐘未更新"
-japanese = "サーバー一覧は五分以上更新されていません"
-korean = "서버 목록이 오 분 넘게 갱신되지 않았습니다"
-russian = "Список серверов не обновлялся более пяти минут"
-german = "Die Serverliste ist älter als fünf Minuten"
-spanish = "La lista de servidores tiene más de cinco minutos"
-french = "La liste des serveurs date de plus de cinq minutes"
-brazilian_portuguese = "A lista de servidores tem mais de cinco minutos"
-portuguese = "A lista de servidores tem mais de cinco minutos"
-turkish = "Sunucu listesi beş dakikadan eski"
-polish = "Lista serwerów ma więcej niż pięć minut"
-
-[[message]]
-key = "Server list refresh failed; showing the previous list"
-[message.translations]
-simplified_chinese = "服务器列表刷新失败，正在显示上次列表"
-traditional_chinese = "伺服器列表重新整理失敗，正在顯示上次列表"
-japanese = "サーバー一覧の更新に失敗したため、前の一覧を表示しています"
-korean = "서버 목록을 새로 고치지 못해 이전 목록을 표시합니다"
-russian = "Не удалось обновить список серверов; показан предыдущий список"
-german = "Serverliste konnte nicht aktualisiert werden; die vorherige Liste wird angezeigt"
-spanish = "No se pudo actualizar la lista de servidores; se muestra la anterior"
-french = "Échec de l’actualisation des serveurs ; la liste précédente est affichée"
-brazilian_portuguese = "Falha ao atualizar a lista de servidores; exibindo a lista anterior"
-portuguese = "Falha ao atualizar a lista de servidores; a mostrar a lista anterior"
-turkish = "Sunucu listesi yenilenemedi; önceki liste gösteriliyor"
-polish = "Nie udało się odświeżyć listy serwerów; wyświetlono poprzednią listę"
-
-[[message]]
-key = "Pin friend"
-[message.translations]
-simplified_chinese = "置顶好友"
-traditional_chinese = "置頂好友"
-japanese = "フレンドを固定"
-korean = "친구 고정"
-russian = "Закрепить друга"
-german = "Freund anheften"
-spanish = "Fijar amigo"
-french = "Épingler cet ami"
-brazilian_portuguese = "Fixar amigo"
-portuguese = "Fixar amigo"
-turkish = "Arkadaşı sabitle"
-polish = "Przypnij znajomego"
-
-[[message]]
-key = "Unpin friend"
-[message.translations]
-simplified_chinese = "取消置顶好友"
-traditional_chinese = "取消置頂好友"
-japanese = "フレンドの固定を解除"
-korean = "친구 고정 해제"
-russian = "Открепить друга"
-german = "Freund lösen"
-spanish = "Desfijar amigo"
-french = "Désépingler cet ami"
-brazilian_portuguese = "Desafixar amigo"
-portuguese = "Desafixar amigo"
-turkish = "Arkadaşın sabitlemesini kaldır"
-polish = "Odepnij znajomego"
-
-[[message]]
-key = "Show entities only (hide textures)"
-[message.translations]
-simplified_chinese = "仅显示实体层（隐藏贴图）"
-traditional_chinese = "僅顯示實體層（隱藏貼圖）"
-japanese = "エンティティのみ表示（テクスチャを非表示）"
-korean = "엔티티만 표시 (텍스처 숨김)"
-russian = "Только объекты (скрыть текстуры)"
-german = "Nur Entities anzeigen (Texturen ausblenden)"
-spanish = "Mostrar solo entidades (ocultar texturas)"
-french = "Afficher uniquement les entités (masquer les textures)"
-brazilian_portuguese = "Mostrar apenas entidades (ocultar texturas)"
-portuguese = "Mostrar apenas entidades (ocultar texturas)"
-turkish = "Yalnızca varlıkları göster (dokuları gizle)"
-polish = "Pokaż tylko encje (ukryj tekstury)"
-
-[[message]]
-key = "Drag to pan, scroll to zoom"
-[message.translations]
-simplified_chinese = "按住拖动平移，滚轮缩放"
-traditional_chinese = "按住拖曳平移，滾輪縮放"
-japanese = "ドラッグで移動、ホイールで拡大・縮小"
-korean = "드래그하여 이동, 휠로 확대/축소"
-russian = "Перетаскивание — перемещение, колесо — масштаб"
-german = "Ziehen zum Verschieben, Mausrad zum Zoomen"
-spanish = "Arrastra para mover, usa la rueda para ampliar"
-french = "Glisser pour déplacer, molette pour zoomer"
-brazilian_portuguese = "Arraste para mover, use a roda para ampliar"
-portuguese = "Arraste para mover, use a roda para ampliar"
-turkish = "Kaydırmak için sürükleyin, yakınlaştırmak için tekerleği kullanın"
-polish = "Przeciągnij, aby przesunąć; przewijaj, aby przybliżyć"
-
-[[message]]
-key = "Map not downloaded yet — join the server to preview it"
-[message.translations]
-simplified_chinese = "地图尚未下载，进入服务器下载后即可预览"
-traditional_chinese = "地圖尚未下載，進入伺服器下載後即可預覽"
-japanese = "未ダウンロードのマップです。サーバーに参加するとプレビューできます"
-korean = "아직 다운로드하지 않은 맵입니다. 서버에 접속하면 미리 볼 수 있습니다"
-russian = "Карта ещё не загружена. Зайдите на сервер для предпросмотра"
-german = "Karte noch nicht heruntergeladen. Zum Vorschauen dem Server beitreten"
-spanish = "Mapa sin descargar. Únete al servidor para verlo"
-french = "Carte non téléchargée. Rejoignez le serveur pour la prévisualiser"
-brazilian_portuguese = "Mapa ainda não baixado. Entre no servidor para visualizar"
-portuguese = "Mapa ainda não transferido. Entre no servidor para pré-visualizar"
-turkish = "Harita henüz indirilmedi. Önizlemek için sunucuya katılın"
-polish = "Mapa nie została pobrana. Dołącz do serwera, aby ją podejrzeć"
-
-[[message]]
-key = "Initializing map layers"
-[message.translations]
-simplified_chinese = "正在初始化地图图层"
-traditional_chinese = "正在初始化地圖圖層"
-japanese = "マップレイヤーを初期化中"
-korean = "맵 레이어 초기화 중"
-russian = "Инициализация слоёв карты"
-german = "Kartenebenen werden initialisiert"
-spanish = "Inicializando capas del mapa"
-french = "Initialisation des couches de la carte"
-brazilian_portuguese = "Inicializando camadas do mapa"
-portuguese = "A inicializar camadas do mapa"
-turkish = "Harita katmanları başlatılıyor"
-polish = "Inicjalizowanie warstw mapy"
-
-[[message]]
-key = "Map preview rendering unavailable"
-[message.translations]
-simplified_chinese = "当前无法渲染地图预览"
-traditional_chinese = "目前無法繪製地圖預覽"
-japanese = "マッププレビューを描画できません"
-korean = "맵 미리보기를 렌더링할 수 없습니다"
-russian = "Предпросмотр карты недоступен"
-german = "Kartenvorschau kann nicht gerendert werden"
-spanish = "No se puede mostrar la vista previa del mapa"
-french = "Rendu de l’aperçu de la carte indisponible"
-brazilian_portuguese = "Não é possível renderizar a prévia do mapa"
-portuguese = "Não é possível apresentar a pré-visualização do mapa"
-turkish = "Harita önizlemesi oluşturulamıyor"
-polish = "Renderowanie podglądu mapy niedostępne"
-
-[[message]]
-key = "Toggle map preview"
-[message.translations]
-simplified_chinese = "地图预览"
-traditional_chinese = "地圖預覽"
-japanese = "マッププレビュー"
-korean = "맵 미리보기"
-russian = "Предпросмотр карты"
-german = "Kartenvorschau"
-spanish = "Vista previa del mapa"
-french = "Aperçu de la carte"
-brazilian_portuguese = "Prévia do mapa"
-portuguese = "Pré-visualização do mapa"
-turkish = "Harita önizlemesi"
-polish = "Podgląd mapy"
-
-[[message]]
-key = "Last seen (DDStats): %s"
-[message.translations]
-simplified_chinese = "最近在线（DDStats）：%s"
-traditional_chinese = "最近上線（DDStats）：%s"
-japanese = "最終オンライン（DDStats）：%s"
-korean = "최근 접속(DDStats): %s"
-russian = "Последний раз в сети (DDStats): %s"
-german = "Zuletzt online (DDStats): %s"
-spanish = "Última conexión (DDStats): %s"
-french = "Dernière connexion (DDStats) : %s"
-brazilian_portuguese = "Última vez online (DDStats): %s"
-portuguese = "Última vez online (DDStats): %s"
-turkish = "Son görülme (DDStats): %s"
-polish = "Ostatnio online (DDStats): %s"
-
-[[message]]
-key = "No record"
-[message.translations]
-simplified_chinese = "暂无记录"
-traditional_chinese = "暫無記錄"
-japanese = "記録なし"
-korean = "기록 없음"
-russian = "Нет записей"
-german = "Kein Eintrag"
-spanish = "Sin registros"
-french = "Aucun historique"
-brazilian_portuguese = "Sem registro"
-portuguese = "Sem registo"
-turkish = "Kayıt yok"
-polish = "Brak danych"
-
-[[message]]
-key = "Querying..."
-[message.translations]
-simplified_chinese = "查询中…"
-traditional_chinese = "查詢中…"
-japanese = "照会中…"
-korean = "조회 중…"
-russian = "Запрос…"
-german = "Abfrage läuft…"
-spanish = "Consultando…"
-french = "Recherche en cours…"
-brazilian_portuguese = "Consultando…"
-portuguese = "A consultar…"
-turkish = "Sorgulanıyor…"
-polish = "Pobieranie…"
-
-[[message]]
-key = "DDStats shows UTC dates, updates daily and matches players by name only."
-[message.translations]
-simplified_chinese = "DDStats 的日期使用 UTC，每天更新，且仅按玩家名字匹配。"
-traditional_chinese = "DDStats 的日期使用 UTC，每天更新，且僅按玩家名稱比對。"
-japanese = "DDStats の日付は UTC 基準で毎日更新され、プレイヤー名のみで照合されます。"
-korean = "DDStats의 날짜는 UTC 기준으로 매일 갱신되며 플레이어 이름만으로 일치 여부를 확인합니다."
-russian = "DDStats показывает даты по UTC, обновляется ежедневно и сопоставляет игроков только по имени."
-german = "DDStats zeigt UTC-Daten, aktualisiert sie täglich und ordnet Spieler nur anhand ihres Namens zu."
-spanish = "DDStats muestra fechas UTC, se actualiza a diario e identifica a los jugadores solo por su nombre."
-french = "DDStats affiche les dates en UTC, se met à jour chaque jour et identifie les joueurs uniquement par leur nom."
-brazilian_portuguese = "O DDStats mostra datas em UTC, atualiza diariamente e identifica jogadores apenas pelo nome."
-portuguese = "O DDStats mostra datas em UTC, atualiza diariamente e identifica os jogadores apenas pelo nome."
-turkish = "DDStats UTC tarihlerini gösterir, günlük güncellenir ve oyuncuları yalnızca adlarına göre eşleştirir."
-polish = "DDStats pokazuje daty UTC, aktualizuje je codziennie i rozpoznaje graczy wyłącznie po nazwie."
-
-[[message]]
-key = "Used"
-[message.translations]
-simplified_chinese = "已使用"
-traditional_chinese = "已使用"
-japanese = "使用済み"
-korean = "사용됨"
-russian = "Использовано"
-german = "Benutzt"
-spanish = "Usado"
-french = "Utilisé"
-brazilian_portuguese = "Usado"
-portuguese = "Usado"
-turkish = "Kullanıldı"
-polish = "Użyty"
-
-[[message]]
-key = "Downloading map %d%%"
-[message.translations]
-simplified_chinese = "正在下载地图：%d%%"
-traditional_chinese = "正在下載地圖：%d%%"
-japanese = "マップをダウンロード中：%d%%"
-korean = "맵 다운로드 중: %d%%"
-russian = "Загрузка карты: %d%%"
-german = "Karte wird heruntergeladen: %d%%"
-spanish = "Descargando mapa: %d%%"
-french = "Téléchargement de la carte : %d%%"
-brazilian_portuguese = "Baixando mapa: %d%%"
-portuguese = "A transferir mapa: %d%%"
-turkish = "Harita indiriliyor: %d%%"
-polish = "Pobieranie mapy: %d%%"
-
-[[message]]
-key = "Map download failed, click to retry"
-[message.translations]
-simplified_chinese = "地图下载失败，点击重试"
-traditional_chinese = "地圖下載失敗，點擊重試"
-japanese = "マップのダウンロードに失敗しました。クリックして再試行"
-korean = "맵 다운로드에 실패했습니다. 클릭하여 다시 시도하세요"
-russian = "Не удалось загрузить карту, нажмите для повторной попытки"
-german = "Kartendownload fehlgeschlagen, zum Wiederholen klicken"
-spanish = "Error al descargar el mapa, haz clic para reintentar"
-french = "Échec du téléchargement de la carte, cliquez pour réessayer"
-brazilian_portuguese = "Falha ao baixar o mapa, clique para tentar novamente"
-portuguese = "Falha ao transferir o mapa, clique para tentar novamente"
-turkish = "Harita indirilemedi, yeniden denemek için tıklayın"
-polish = "Pobieranie mapy nie powiodło się, kliknij, aby spróbować ponownie"

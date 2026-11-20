@@ -2112,8 +2112,8 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		Alpha *= std::clamp(1.0f - std::pow(distance(GameClient()->m_Controls.m_aTargetPos[g_Config.m_ClDummy], Position) / 200.0f, 16.0f), 0.0f, 1.0f);
 	if(OtherTeam)
 		Alpha *= (float)g_Config.m_ClShowOthersAlpha / 100.0f;
-	if(GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(pPlayerInfo->m_ClientId))
-		Alpha = std::min(Alpha, 0.5f);
+	// 名牌跟着服务器侧 Tee 走：影子整组隐藏时名牌也一起消失。
+	Alpha = GameClient()->m_FastPractice.ServerTeeAlpha(pPlayerInfo->m_ClientId, Alpha);
 	Data.m_CoordXAlignColor.a *= Alpha;
 
 	Data.m_Color = NameplateTextColor(*GameClient(), ClientId);
@@ -2941,7 +2941,7 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 
 void CNamePlates::OnRender()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 		return;
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;

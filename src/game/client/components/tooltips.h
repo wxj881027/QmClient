@@ -200,6 +200,7 @@ struct CTooltip
 	bool m_OnScreen = false; // 登记时的悬浮资格，保留内容裁剪与弹层屏蔽结果。
 	// 登记发生在弹窗渲染过程中：弹窗接管指针时只有这类来源允许继续悬浮，
 	// 被弹窗盖住的下层控件即使矩形重合也不会透出提示。
+	// 弹层关闭后也不能凭旧矩形继续判定悬浮。
 	bool m_FromPopup = false;
 	bool m_ForcedHover = false;
 	float m_FadeTime = 0.75f;

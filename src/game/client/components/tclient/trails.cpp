@@ -177,7 +177,7 @@ void CTrails::RenderTeeTrails()
 
 void CTrails::OnRender()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		OnReset();
 		return;

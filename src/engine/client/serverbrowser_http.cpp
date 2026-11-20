@@ -294,7 +294,7 @@ namespace
 			const std::string Header = Body.substr(0, End);
 			long long Received;
 			int Age;
-			char aHash[65];
+			char aHash[65] = {};
 			// 刷新失败时沿用上次成功列表：年龄只影响 stale 标记，不再作为丢弃条件；仍拒绝未来时间戳与损坏正文。
 			if(sscanf(Header.c_str(), "QMSL1 %lld %d %64s", &Received, &Age, aHash) != 3 || m_SourceHash != aHash || Age < 0)
 				return;

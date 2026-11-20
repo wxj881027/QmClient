@@ -809,6 +809,15 @@ void CServerBrowser::Sort()
 
 void CServerBrowser::RemoveRequest(CServerEntry *pEntry)
 {
+	pEntry->m_RequestQueued = false;
+	// 补测请求已发出、在队列里被释放却没等到回复：标记该条目本次列表生命周期
+	// 内不再自动补测。按 IP 的去重窗口较短，同 IP 的其他端口实例随后仍有机会
+	// 被测。RequestTime 为 0 说明请求还没发出，不算失败，下次仍可尝试。
+	if(pEntry->m_PingProbePending && pEntry->m_RequestTime > 0)
+	{
+		pEntry->m_PingProbePending = false;
+		pEntry->m_PingProbeFailed = true;
+	}
 	if(pEntry->m_pPrevReq || pEntry->m_pNextReq || m_pFirstReqServer == pEntry)
 	{
 		if(pEntry->m_pPrevReq)
@@ -839,7 +848,10 @@ CServerBrowser::CServerEntry *CServerBrowser::Find(const NETADDR &Addr)
 
 void CServerBrowser::QueueRequest(CServerEntry *pEntry)
 {
+	if(pEntry->m_RequestQueued)
+		return; // 已在队列中：重复入队会破坏请求链表
 	// add it to the list of servers that we should request info from
+	pEntry->m_RequestQueued = true;
 	pEntry->m_pPrevReq = m_pLastReqServer;
 	if(m_pLastReqServer)
 		m_pLastReqServer->m_pNextReq = pEntry;
@@ -961,21 +973,16 @@ void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info)
 	++m_FriendListRevision;
 }
 
-// 可用延迟：未测量（-1）或触到 1 秒测量上限的值都不能当作实测延迟使用。
-static bool IsUsableLatency(int Latency)
-{
-	return Latency >= 0 && Latency < CServerInfo::LATENCY_UNKNOWN;
-}
-
 void CServerBrowser::SetLatency(NETADDR Addr, int Latency)
 {
-	if(!IsUsableLatency(Latency))
+	if(!CServerInfo::IsUsableLatency(Latency))
 	{
 		// 触到上限等于超时：不要把它写进缓存并广播给同一 IP 的其他服务器。
 		return;
 	}
 	m_pPingCache->CachePing(Addr, Latency);
 
+	bool LatencyChanged = false;
 	Addr.port = 0;
 	for(CServerEntry *pEntry : m_vpServerlist)
 	{
@@ -1004,9 +1011,19 @@ void CServerBrowser::SetLatency(NETADDR Addr, int Latency)
 			continue;
 		}
 		if(pEntry->m_Info.m_Latency != Ping || pEntry->m_Info.m_LatencyIsEstimated)
+		{
 			++m_FriendListRevision;
+			LatencyChanged = true;
+		}
 		pEntry->m_Info.m_Latency = Ping;
 		pEntry->m_Info.m_LatencyIsEstimated = false;
+	}
+	// 可见行自动补测会让延迟在浏览过程中从估算值变成实测值；按延迟排序时
+	// 必须重新排序，否则显示的顺序停留在补测前。
+	if(LatencyChanged && (g_Config.m_BrSort == IServerBrowser::SORT_PING ||
+				     (g_Config.m_BrSort == IServerBrowser::SORT_NUMPLAYERS && g_Config.m_BrSortOrder == 2)))
+	{
+		RequestResort();
 	}
 }
 
@@ -1064,6 +1081,9 @@ CServerBrowser::CServerEntry *CServerBrowser::ReplaceEntry(CServerEntry *pEntry,
 
 	pEntry->m_Info.m_Latency = 999;
 	pEntry->m_Info.m_HasRank = CServerInfo::RANK_UNAVAILABLE;
+	// 地址已换，上一条地址的补测状态不适用于新地址。
+	pEntry->m_PingProbePending = false;
+	pEntry->m_PingProbeFailed = false;
 	ServerBrowserFormatAddresses(pEntry->m_Info.m_aAddress, sizeof(pEntry->m_Info.m_aAddress), pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
 	UpdateServerCommunity(&pEntry->m_Info);
 	str_copy(pEntry->m_Info.m_aName, pEntry->m_Info.m_aAddress);
@@ -1159,7 +1179,7 @@ void CServerBrowser::OnServerInfoUpdate(const NETADDR &Addr, int Token, const CS
 		const int Latency = minimum(static_cast<int>((time_get() - pEntry->m_RequestTime) * 1000 / time_freq()), CServerInfo::LATENCY_UNKNOWN);
 		if(!pEntry->m_RequestIgnoreInfo)
 		{
-			if(IsUsableLatency(Latency))
+			if(CServerInfo::IsUsableLatency(Latency))
 			{
 				pEntry->m_Info.m_Latency = Latency;
 			}
@@ -1177,6 +1197,12 @@ void CServerBrowser::OnServerInfoUpdate(const NETADDR &Addr, int Token, const CS
 			SetLatency(Addr, Latency);
 		}
 		pEntry->m_RequestTime = -1; // Request has been answered
+		if(pEntry->m_PingProbePending)
+		{
+			// 回复触到测量上限同样不可用，按失败处理，避免每隔一个去重窗口就重测。
+			pEntry->m_PingProbePending = false;
+			pEntry->m_PingProbeFailed = !CServerInfo::IsUsableLatency(Latency);
+		}
 	}
 	RemoveRequest(pEntry);
 	RequestResort();
@@ -1343,6 +1369,54 @@ void CServerBrowser::SetCurrentServerPing(const NETADDR &Addr, int Ping)
 	SetLatency(Addr, minimum(Ping, CServerInfo::LATENCY_UNKNOWN));
 }
 
+bool CServerBrowser::IsChineseServer(const CServerInfo &Info) const
+{
+	if(Info.m_Location == CServerInfo::LOC_CHINA)
+		return true;
+	// 国服也挂在 DDraceNetwork 等社区下（社区 id 不含 chn），所以同时看社区
+	// id 与服务器名；可见行补测与名称列短名必须用同一口径。
+	const CCommunity *pCommunity = Community(Info.m_aCommunityId);
+	return (pCommunity != nullptr && str_find_nocase(pCommunity->Id(), "chn") != nullptr) ||
+	       str_find_nocase(Info.m_aName, "CHN") != nullptr;
+}
+
+void CServerBrowser::RequestServerPing(const NETADDR &Addr)
+{
+	CServerEntry *pEntry = Find(Addr);
+	if(pEntry == nullptr)
+		return;
+	// 只补测中国服务器：国服列表里大量实例没有实测值，跨区服务器不值得为
+	// 一个数值额外发探测包。
+	if(!IsChineseServer(pEntry->m_Info))
+		return;
+	// 已有可用实测值就不再补测；只有估计值（从未测过或缓存已过期）才需要。
+	if(!pEntry->m_Info.m_LatencyIsEstimated)
+		return;
+	// 本次列表生命周期内已失败过一次：不再自动重试这个实例。
+	if(pEntry->m_PingProbeFailed)
+		return;
+	if(pEntry->m_RequestQueued)
+		return;
+	// 同一 IP 往往挂多个端口实例，只测其中一个：SetLatency 按 IP 把结果广播给
+	// 同 IP 的所有条目并写入 ping 缓存。短窗口只挡住同 IP 的并发重复探测，
+	// 探测失败由条目自身记录，不会让无响应的端口长期占住整个 IP 的机会。
+	NETADDR IpAddr = Addr;
+	IpAddr.type &= ~NETTYPE_TW7;
+	IpAddr.port = 0;
+	const int64_t Now = time_get();
+	const auto It = m_PingRequestTimeByIp.find(IpAddr);
+	if(It != m_PingRequestTimeByIp.end() && Now - It->second < PING_SAME_IP_DEDUP_SECONDS * time_freq())
+		return;
+	m_PingRequestTimeByIp[IpAddr] = Now;
+	// 超时释放请求时 m_RequestTime 会保留旧时间戳，不清零则 Update 不会再发送。
+	pEntry->m_RequestTime = 0;
+	// 已有信息的条目只测延迟，避免回复里的信息覆盖列表数据。
+	if(pEntry->m_GotInfo)
+		pEntry->m_RequestIgnoreInfo = true;
+	pEntry->m_PingProbePending = true;
+	QueueRequest(pEntry);
+}
+
 void CServerBrowser::UpdateFromHttp()
 {
 	const int OwnLocation = DetermineOwnLocation();
@@ -1442,6 +1516,8 @@ void CServerBrowser::CleanUp()
 	m_pLastReqServer = nullptr;
 	m_NumRequests = 0;
 	m_CurrentMaxRequests = g_Config.m_BrMaxRequests;
+	// 条目已全部销毁，按 IP 的探测记录随之失效；清空避免表随会话无限增长。
+	m_PingRequestTimeByIp.clear();
 	++m_FriendListRevision;
 }
 
@@ -1896,8 +1972,8 @@ void CServerBrowser::UpdateServerLatency(CServerInfo *pInfo, int OwnLocation) co
 {
 	const int Ping = m_pPingCache->GetPing(pInfo->m_aAddresses, pInfo->m_NumAddresses);
 	// 没有缓存值（-1，含已过期条目）或缓存值触到测量上限时都按"没有实测"处理，
-	// 让延迟列显示地区名而不是一个看似实测的数字。
-	pInfo->m_LatencyIsEstimated = !IsUsableLatency(Ping);
+	// 延迟列先显示地区估算值；列表行可见时会经 RequestServerPing 补测并替换。
+	pInfo->m_LatencyIsEstimated = !CServerInfo::IsUsableLatency(Ping);
 	if(pInfo->m_LatencyIsEstimated)
 	{
 		pInfo->m_Latency = CServerInfo::EstimateLatency(OwnLocation, pInfo->m_Location);
@@ -2762,13 +2838,18 @@ int CServerInfo::EstimateLatency(int Loc1, int Loc2)
 {
 	if(Loc1 == LOC_UNKNOWN || Loc2 == LOC_UNKNOWN)
 	{
-		return 999;
+		return LATENCY_UNKNOWN;
 	}
 	if(Loc1 != Loc2)
 	{
 		return 199;
 	}
 	return 99;
+}
+
+bool CServerInfo::IsUsableLatency(int Latency)
+{
+	return Latency >= 0 && Latency < LATENCY_UNKNOWN;
 }
 
 ColorRGBA CServerInfo::GametypeColor(const char *pGametype)

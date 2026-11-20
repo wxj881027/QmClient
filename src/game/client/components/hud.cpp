@@ -2484,6 +2484,16 @@ void CHud::RenderTextInfo()
 		const float Line2X = m_Width / 2.0f - TextRender()->TextWidth(Line2Size, Localize(pLine2), -1, -1.0f) / 2.0f;
 		TextRender()->Text(Line1X, 34.0f, Line1Size, Localize(pLine1), -1.0f);
 		TextRender()->Text(Line2X, 45.0f, Line2Size, Localize(pLine2), -1.0f);
+		// 计时只跟着分支世界推进的 tick 走，不走墙钟：进入练习起算，
+		// /r、传送、重开、死亡回退都不清零，显示的是整段练习会话的用时。
+		if(g_Config.m_QmFastPracticeTimer)
+		{
+			char aTime[32];
+			str_time(GameClient()->m_FastPractice.PracticeRunCentiseconds(), TIME_MINS_CENTISECS, aTime, sizeof(aTime));
+			const float TimeSize = 10.0f;
+			const float TimeX = m_Width / 2.0f - TextRender()->TextWidth(TimeSize, aTime, -1, -1.0f) / 2.0f;
+			TextRender()->Text(TimeX, 56.0f, TimeSize, aTime, -1.0f);
+		}
 	}
 
 	if(g_Config.m_QmMiniDebug)
@@ -3597,7 +3607,8 @@ void CHud::EnsureMediaIslandFrameCache() const
 	Cache.m_Frame = CurrentFrame;
 	Cache.m_Valid = true;
 	const bool MusicLyricsEnabled = QmHudMusicLyricsSourceEnabled(g_Config.m_QmSodaHookEnable != 0, g_Config.m_QmKugouHookEnable != 0, g_Config.m_QmQQMusicHookEnable != 0);
-	const bool MediaHudEnabled = g_Config.m_QmSmtcShowHud && SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0 || MusicLyricsEnabled || g_Config.m_QmSpotifyEnable != 0);
+	// LX Music 本身注册了系统媒体会话,开启歌词后媒体岛也能拿到它的封面与歌名。
+	const bool MediaHudEnabled = g_Config.m_QmSmtcShowHud && SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0 || MusicLyricsEnabled || g_Config.m_QmSpotifyEnable != 0 || g_Config.m_QmLxMusicEnable != 0);
 	Cache.m_HasMediaState = MediaHudEnabled && GameClient()->m_SystemMediaControls.GetStateSnapshot(Cache.m_MediaState);
 
 	const auto &Lyrics = GameClient()->m_LyricsPresentation.Frame();
@@ -6830,7 +6841,7 @@ void CHud::RenderSpectatorHud()
 	const float SpectatorHudHeight = QmUiMobilePlatform() ? 28.0f : 15.0f;
 	float BoundsTop = AdjustedHeight - SpectatorHudHeight;
 	float BoundsBottom = AdjustedHeight;
-	const bool ShowAutoTag = !GameClient()->m_RankGhost.IsViewModeActive() && Client()->State() != IClient::STATE_DEMOPLAYBACK &&
+	const bool ShowAutoTag = !GameClient()->ReplaySessionStatus().ViewMode() && Client()->State() != IClient::STATE_DEMOPLAYBACK &&
 				 GameClient()->m_Camera.SpectatingPlayer() &&
 				 GameClient()->m_Camera.CanUseAutoSpecCamera() &&
 				 g_Config.m_ClSpecAutoSync;
@@ -6841,7 +6852,7 @@ void CHud::RenderSpectatorHud()
 	}
 	// draw the text
 	char aBuf[128];
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		const auto &Replay = GameClient()->m_RankGhost;
 		if(Replay.ViewCameraMode() == CRankGhost::EViewCameraMode::ALL_MEMBERS)
@@ -7209,7 +7220,7 @@ void CHud::OnRender()
 	const bool VideoRendering = false;
 #endif
 	// 回放/导出走独立显示选项；其余情况沿用 cl_showhud / cl_video_showhud。
-	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), VideoRendering);
+	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->ReplaySessionStatus().ViewMode(), VideoRendering);
 	const bool MainHudVisible = DisplaySettings.m_Hud;
 	const bool RenderDemoOnly = DisplaySettings.m_RenderDemoOnly;
 	const bool FocusSpectatorHudVisible = !RenderDemoOnly && ShouldRenderFocusSpectatorHud(
@@ -7217,7 +7228,7 @@ void CHud::OnRender()
 									 g_Config.m_ClShowhudSpectator != 0,
 									 MainHudVisible,
 									 GetQmFocusModeDecisions().m_HideHud);
-	const bool LocalCharacterHudVisible = !GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Snap.m_pLocalCharacter &&
+	const bool LocalCharacterHudVisible = !GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_Snap.m_pLocalCharacter &&
 					      !GameClient()->m_Snap.m_SpecInfo.m_Active &&
 					      !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER);
 	if(MainHudVisible)
@@ -7254,9 +7265,9 @@ void CHud::OnRender()
 			}
 			RenderJumpHint();
 		}
-		else if(GameClient()->m_Snap.m_SpecInfo.m_Active || GameClient()->m_RankGhost.IsViewModeActive())
+		else if(GameClient()->m_Snap.m_SpecInfo.m_Active || GameClient()->ReplaySessionStatus().ViewMode())
 		{
-			const int SpectatorId = !GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Snap.m_SpecInfo.m_Active ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : SPEC_FREEVIEW;
+			const int SpectatorId = !GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_Snap.m_SpecInfo.m_Active ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : SPEC_FREEVIEW;
 			if(SpectatorId != SPEC_FREEVIEW && g_Config.m_ClShowhudHealthAmmo)
 			{
 				float HudMainHeight = 0.0f;
@@ -7305,7 +7316,7 @@ void CHud::OnRender()
 			RenderLegacyMediaInfo();
 		}
 		RenderLyricsIsland();
-		if(LocalCharacterHudVisible || GameClient()->m_RankGhost.IsViewModeActive())
+		if(LocalCharacterHudVisible || GameClient()->ReplaySessionStatus().ViewMode())
 			RenderDDRaceEffects();
 		RenderGoresDrownBoard();
 		if(Client()->State() != IClient::STATE_DEMOPLAYBACK)

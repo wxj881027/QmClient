@@ -13,11 +13,17 @@
 
 #include <game/client/components/effects.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/shadow_gun_replay.h>
+#include <game/client/components/tclient/fast_practice.h>
 #include <game/client/gameclient.h>
 #include <game/client/laser_data.h>
 #include <game/client/pickup_data.h>
+#include <game/client/prediction/entities/door.h>
+#include <game/client/prediction/entities/dragger.h>
 #include <game/client/prediction/entities/laser.h>
 #include <game/client/prediction/entities/pickup.h>
+#include <game/client/prediction/entities/plasma.h>
+#include <game/client/prediction/entities/practice_light.h>
 #include <game/client/prediction/entities/projectile.h>
 #include <game/client/projectile_data.h>
 #include <game/mapitems.h>
@@ -275,7 +281,7 @@ void CItems::RenderFlag(const CNetObj_Flag *pPrev, const CNetObj_Flag *pCurrent,
 	Graphics()->RenderQuadContainerAsSprite(m_ItemsQuadContainerIndex, QuadOffset, Pos.x, Pos.y - Size * 0.75f);
 }
 
-void CItems::RenderLaser(const CLaserData *pCurrent, bool IsPredicted)
+void CItems::RenderLaser(const CLaserData *pCurrent, bool IsPredicted, float AlphaScale, int ViewTick)
 {
 	int Type = std::clamp(pCurrent->m_Type, -1, NUM_LASERTYPES - 1);
 	const bool PlayerLaserType = Type == LASERTYPE_RIFLE || Type == LASERTYPE_SHOTGUN || Type == LASERTYPE_GUN || Type == LASERTYPE_PLASMA;
@@ -325,6 +331,7 @@ void CItems::RenderLaser(const CLaserData *pCurrent, bool IsPredicted)
 	float Alpha = 1.0f;
 	if(IsOtherTeam)
 		Alpha = g_Config.m_ClShowOthersAlpha / 100.0f;
+	Alpha *= std::clamp(AlphaScale, 0.0f, 1.0f);
 
 	const ColorRGBA OuterColor = color_cast<ColorRGBA>(ColorHSLA(ColorOut).WithAlpha(Alpha));
 	const ColorRGBA InnerColor = color_cast<ColorRGBA>(ColorHSLA(ColorIn).WithAlpha(Alpha));
@@ -334,6 +341,13 @@ void CItems::RenderLaser(const CLaserData *pCurrent, bool IsPredicted)
 	if(Type == LASERTYPE_DOOR)
 	{
 		Ticks = 1.0f;
+	}
+	else if(ViewTick >= 0)
+	{
+		// 回放暂停时 ManualRenderIntra 冻结，激光不能再跟着本地实时相位闪动。
+		const float Intra = GameClient()->m_Ghost.ManualRenderIntra();
+		Ticks = (float)(ViewTick - pCurrent->m_StartTick) + Intra;
+		TicksHead = (float)ViewTick + Intra;
 	}
 	else if(IsPredicted)
 	{
@@ -605,12 +619,14 @@ void CItems::OnRender()
 	bool BlinkingProj = (Ticks % 20) < 2;
 	bool BlinkingProjEx = (Ticks % 6) < 2;
 	bool BlinkingLight = (Ticks % 6) < 2;
-	int SwitcherTeam = GameClient()->SwitchStateTeam();
+	int PlayableSwitcherTeam = GameClient()->SwitchStateTeam();
 	int DraggerStartTick = maximum((Client()->GameTick(g_Config.m_ClDummy) / 7) * 7, Client()->GameTick(g_Config.m_ClDummy) - 4);
 	int GunStartTick = (Client()->GameTick(g_Config.m_ClDummy) / 7) * 7;
 
 	bool UsePredicted = !RenderingMini && GameClient()->Predict() && GameClient()->AntiPingGunfire();
-	auto &aSwitchers = GameClient()->Switchers();
+	// 主世界/练习分支只读可玩画布；影子开关由 DrawMechanismWorld()
+	// 使用 m_RankGhost.ViewSwitchers() 和只读机关世界另行叠加。
+	auto &aPlayableSwitchers = GameClient()->PlayableSwitchers();
 
 	CScreenRect ScreenRectLaser = Graphics()->GetScreen();
 	CScreenRect ScreenRectProjectile = ScreenRectLaser;
@@ -632,7 +648,7 @@ void CItems::OnRender()
 	{
 		for(auto *pProj = (CProjectile *)GameClient()->m_PrevPredictedWorld.FindFirst(CGameWorld::ENTTYPE_PROJECTILE); pProj; pProj = (CProjectile *)pProj->NextEntity())
 		{
-			if(!IsSuper && pProj->m_Number > 0 && pProj->m_Number < (int)aSwitchers.size() && !aSwitchers[pProj->m_Number].m_aStatus[SwitcherTeam] && (pProj->m_Explosive ? BlinkingProjEx : BlinkingProj))
+			if(!IsSuper && pProj->m_Number > 0 && pProj->m_Number < (int)aPlayableSwitchers.size() && !aPlayableSwitchers[pProj->m_Number].m_aStatus[PlayableSwitcherTeam] && (pProj->m_Explosive ? BlinkingProjEx : BlinkingProj))
 				continue;
 
 			CProjectileData Data = pProj->GetData();
@@ -650,7 +666,7 @@ void CItems::OnRender()
 		}
 		for(auto *pPickup = (CPickup *)GameClient()->m_PrevPredictedWorld.FindFirst(CGameWorld::ENTTYPE_PICKUP); pPickup; pPickup = (CPickup *)pPickup->NextEntity())
 		{
-			if(!IsSuper && pPickup->m_Layer == LAYER_SWITCH && pPickup->m_Number > 0 && pPickup->m_Number < (int)aSwitchers.size() && !aSwitchers[pPickup->m_Number].m_aStatus[SwitcherTeam] && BlinkingPickup)
+			if(!IsSuper && pPickup->m_Layer == LAYER_SWITCH && pPickup->m_Number > 0 && pPickup->m_Number < (int)aPlayableSwitchers.size() && !aPlayableSwitchers[pPickup->m_Number].m_aStatus[PlayableSwitcherTeam] && BlinkingPickup)
 				continue;
 
 			if(pPickup->InDDNetTile())
@@ -666,6 +682,118 @@ void CItems::OnRender()
 		}
 	}
 
+	// 练习分支重建的静态激光没有对应的服务器快照，必须由分支世界自己绘制，
+	// 否则走出网络裁剪范围后会出现看不见、却仍在冻结的机关。
+	std::vector<vec2> vPracticeLightHubs;
+	std::vector<vec2> vPracticeDoorHubs;
+	std::vector<vec2> vPracticeDraggerHubs;
+	// 机制视觉跟分支世界走，而不是跟预测开关走：旁观或服务器暂停时 Predict()
+	// 为假，但分支仍在推进碰撞，少画一束激光就会出现“看不见却被冻住”。
+	if(!RenderingMini)
+	{
+		const auto DrawMechanismWorld = [&](CGameWorld *pWorld, bool IsViewWorld, int Team) {
+			if(pWorld == nullptr)
+				return;
+			const int ViewTick = IsViewWorld ? GameClient()->m_Ghost.ManualPlaybackTick() : -1;
+			const float Alpha = IsViewWorld ? 0.55f : 1.0f;
+			vPracticeLightHubs.reserve(64);
+			vPracticeDoorHubs.reserve(64);
+			vPracticeDraggerHubs.reserve(64);
+			for(CEntity *pEnt = pWorld->FindFirst(CGameWorld::ENTTYPE_LIGHT); pEnt; pEnt = pEnt->TypeNext())
+			{
+				auto *pLight = dynamic_cast<CPracticeLight *>(pEnt);
+				if(pLight == nullptr)
+					continue;
+				// 查看世界是半透明叠加，不能登记到主世界/练习机关的去重表；
+				// 否则回放中关闭的机关会把仍在碰撞的实时机关一并从画面压掉。
+				if(!IsViewWorld)
+					vPracticeLightHubs.push_back(pLight->m_Pos);
+				const std::optional<CLaserData> Data = pLight->RenderData(Team);
+				if(!Data.has_value() || !IsLaserInside(*Data))
+					continue;
+				RenderLaser(&*Data, true, Alpha, ViewTick);
+			}
+			for(CEntity *pEnt = pWorld->FindFirst(CGameWorld::ENTTYPE_DOOR); pEnt; pEnt = pEnt->TypeNext())
+			{
+				auto *pDoor = dynamic_cast<CDoor *>(pEnt);
+				if(pDoor == nullptr)
+					continue;
+				if(!IsViewWorld)
+					vPracticeDoorHubs.push_back(pDoor->m_Pos);
+				const CLaserData Data = pDoor->RenderData(Team);
+				if(!IsLaserInside(Data))
+					continue;
+				RenderLaser(&Data, true, Alpha, ViewTick);
+			}
+			for(CEntity *pEnt = pWorld->FindFirst(CGameWorld::ENTTYPE_DRAGGER); pEnt; pEnt = pEnt->TypeNext())
+			{
+				auto *pDragger = dynamic_cast<CDragger *>(pEnt);
+				if(pDragger == nullptr)
+					continue;
+				if(!IsViewWorld)
+					vPracticeDraggerHubs.push_back(pDragger->m_Pos);
+				std::optional<CLaserData> Data = pDragger->RenderData(Team);
+				if(!Data.has_value() || !IsLaserInside(*Data))
+					continue;
+				if(IsViewWorld && Data->m_To == Data->m_From)
+				{
+					vec2 Target;
+					if(GameClient()->m_RankGhost.ViewDraggerTarget(Data->m_From, &Target, (Data->m_Subtype & 1) != 0))
+						Data->m_To = Target;
+				}
+				RenderLaser(&*Data, true, Alpha, ViewTick);
+			}
+			if(!IsViewWorld)
+			{
+				for(CEntity *pEnt = pWorld->FindFirst(CGameWorld::ENTTYPE_PLASMA); pEnt; pEnt = pEnt->TypeNext())
+				{
+					auto *pPlasma = dynamic_cast<CPlasma *>(pEnt);
+					if(pPlasma == nullptr)
+						continue;
+					const CLaserData Data = pPlasma->RenderData();
+					if(IsLaserInside(Data))
+						RenderLaser(&Data, true, Alpha, ViewTick);
+				}
+			}
+			// 影子机关炮只存在于查看模式；等离子球按回放播放头推进，不进入主世界物理。
+			if(IsViewWorld)
+			{
+				for(const qm_shadow_gun::SPlasma &Plasma : GameClient()->m_RankGhost.ViewPlasmas())
+				{
+					CLaserData Data = {};
+					Data.m_From = Plasma.m_Pos;
+					Data.m_To = Plasma.m_Pos;
+					Data.m_StartTick = pWorld->GameTick();
+					Data.m_ExtraInfo = true;
+					Data.m_Owner = -1;
+					Data.m_Type = LASERTYPE_PLASMA;
+					Data.m_SwitchNumber = Plasma.m_SwitchNumber;
+					Data.m_Subtype = Plasma.m_Subtype;
+					Data.m_Predict = false;
+					if(IsLaserInside(Data))
+						RenderLaser(&Data, true, Alpha, ViewTick);
+				}
+			}
+		};
+
+		// 查看模式与练习分支可能同时存在：影子机关半透明叠加，但绝不能因为
+		// 打开回放就把正在游玩的练习机关从画面里挤掉。
+		if(CGameWorld *pViewWorld = GameClient()->m_RankGhost.ViewMechanismWorld())
+		{
+			const int ViewTeam = GameClient()->m_RankGhost.ViewSwitchTeam() >= 0 ?
+						     GameClient()->m_RankGhost.ViewSwitchTeam() :
+						     PlayableSwitcherTeam;
+			DrawMechanismWorld(pViewWorld, true, ViewTeam);
+		}
+		if(CGameWorld *pPracticeWorld = GameClient()->m_FastPractice.PracticeLightWorld())
+		{
+			const int PracticeTeam = GameClient()->m_FastPractice.PracticeSwitchTeam() >= 0 ?
+							 GameClient()->m_FastPractice.PracticeSwitchTeam() :
+							 PlayableSwitcherTeam;
+			DrawMechanismWorld(pPracticeWorld, false, PracticeTeam);
+		}
+	}
+
 	for(const CSnapEntities &Ent : GameClient()->SnapEntities())
 	{
 		const IClient::CSnapItem Item = Ent.m_Item;
@@ -675,7 +803,7 @@ void CItems::OnRender()
 		if(Item.m_Type == NETOBJTYPE_PROJECTILE || Item.m_Type == NETOBJTYPE_DDRACEPROJECTILE || Item.m_Type == NETOBJTYPE_DDNETPROJECTILE)
 		{
 			CProjectileData Data = ExtractProjectileInfo(Item.m_Type, pData, &GameClient()->m_GameWorld, pEntEx);
-			bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
+			bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aPlayableSwitchers.size() && !aPlayableSwitchers[Data.m_SwitchNumber].m_aStatus[PlayableSwitcherTeam];
 			if(Inactive && (Data.m_Explosive ? BlinkingProjEx : BlinkingProj))
 				continue;
 			if(UsePredicted)
@@ -701,7 +829,7 @@ void CItems::OnRender()
 		else if(Item.m_Type == NETOBJTYPE_PICKUP || Item.m_Type == NETOBJTYPE_DDNETPICKUP)
 		{
 			CPickupData Data = ExtractPickupInfo(Item.m_Type, pData, pEntEx);
-			bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
+			bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aPlayableSwitchers.size() && !aPlayableSwitchers[Data.m_SwitchNumber].m_aStatus[PlayableSwitcherTeam];
 
 			if(Inactive && BlinkingPickup)
 				continue;
@@ -729,7 +857,7 @@ void CItems::OnRender()
 			CLaserData Data = ExtractLaserInfo(Item.m_Type, pData, &GameClient()->m_GameWorld, pEntEx);
 			if(!IsLaserInside(Data))
 				continue;
-			bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
+			bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aPlayableSwitchers.size() && !aPlayableSwitchers[Data.m_SwitchNumber].m_aStatus[PlayableSwitcherTeam];
 
 			bool IsEntBlink = false;
 			int EntStartTick = -1;
@@ -772,6 +900,44 @@ void CItems::OnRender()
 			{
 				Data.m_StartTick = EntStartTick;
 			}
+
+			// 同一束静态激光已经由分支世界绘制，跳过快照副本避免双重曝光与相位错位。
+			bool PracticeDuplicate = false;
+			if(Data.m_Type == LASERTYPE_FREEZE && Data.m_Owner < 0)
+			{
+				for(const vec2 &Hub : vPracticeLightHubs)
+				{
+					if(QmPracticeLaserHubMatches(Data.m_To, Hub))
+					{
+						PracticeDuplicate = true;
+						break;
+					}
+				}
+			}
+			else if(Data.m_Type == LASERTYPE_DOOR && Data.m_Owner < 0)
+			{
+				for(const vec2 &Hub : vPracticeDoorHubs)
+				{
+					if(QmPracticeLaserHubMatches(Data.m_To, Hub))
+					{
+						PracticeDuplicate = true;
+						break;
+					}
+				}
+			}
+			else if(Data.m_Type == LASERTYPE_DRAGGER)
+			{
+				for(const vec2 &Hub : vPracticeDraggerHubs)
+				{
+					if(QmPracticeLaserHubMatches(Data.m_From, Hub))
+					{
+						PracticeDuplicate = true;
+						break;
+					}
+				}
+			}
+			if(PracticeDuplicate)
+				continue;
 
 			RenderLaser(&Data);
 		}

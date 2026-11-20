@@ -32,7 +32,7 @@
 == Циклическая смена оттенка Tee работает только с пользовательскими цветами и ничего не делает, пока включена радужная опция Tee в TClient.
 
 "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
-== "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+== «Источник данных» определяет только состав каталога и не зависит от загрузок; один скин может входить в несколько каталогов.
 
 "Default (software)" is x264: CPU only, best quality, slowest.
 == «Default (software)» — это x264: только процессор, лучшее качество и самая низкая скорость.
@@ -761,9 +761,6 @@ Advanced
 Advanced options
 == Расширенные настройки
 
-AFR
-== Африка
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == После успешной загрузки войдите по F2 и выполните команду change_map; файл должен быть меньше 64 MiB.
 
@@ -781,6 +778,9 @@ Afterimage pop
 
 AGC, experimental
 == AGC, экспериментально
+
+Agree
+== Согласиться
 
 Aim
 == Прицел
@@ -1145,9 +1145,6 @@ Are you sure you want to save your skin? If a skin with this name already exists
 Arrow assets
 == Ресурсы стрелок
 
-ASI
-== Азия
-
 Aspect ratio preset
 == Пресет соотношения сторон
 
@@ -1207,9 +1204,6 @@ Audio packs
 
 Aurora: Polar Veil
 == Полярное сияние: полярная вуаль
-
-AUS
-== Австралия
 
 Authed name color in scoreboard
 == Цвет имени авторизованного в таблице лидеров
@@ -1321,9 +1315,6 @@ Auto switch weapon on ammo depletion
 
 Auto switch weapon on pickup
 == Автоматически переключать оружие при подборе
-
-Auto team lock
-== Автолок команды
 
 Auto translate received messages
 == Автоперевод полученных сообщений
@@ -1784,8 +1775,8 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == Привязать клавишу для выполнения команды или просмотреть привязки клавиш
 
-Bind menu layout (0 = wheel, 1 = panel)
-== Bind menu layout (0 = wheel, 1 = panel)
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== Раскладка меню биндов: 0 = радиальное колесо, 1 = скруглённая панель
 
 Bind Menus
 == Bind Menus
@@ -2366,9 +2357,6 @@ Chinese (Traditional)
 Chinese font:
 == Китайский шрифт:
 
-CHN
-== Китай
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == Выберите для Показывать нажатия клавиш игроков вариант Свои, Другие или Все, затем настройте Размер иконок нажатий клавиш.
 
@@ -2757,7 +2745,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == Цвета кнопки перевода в поле чата и меню языков, которое она открывает.
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== Красит строки таблицы счёта: авторизованные игроки, игроки своего клана, друзья и члены клана из списка друзей.
+== Раскрашивает строки таблицы результатов: авторизованные игроки, игроки того же клана, друзья и участники клана в списке друзей.
 
 Colors too close to the map background are hard to read while moving.
 == Цвета, близкие к фону карты, плохо видны в движении.
@@ -3135,7 +3123,7 @@ Console link color
 == Консоль: цвет ссылок
 
 Console link hover hue shift in degrees
-== Console link hover hue shift in degrees
+== Сдвиг оттенка при наведении на ссылку консоли (градусы)
 
 Console number color
 == Консоль: цвет чисел
@@ -3250,6 +3238,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == Поговорить с последним человеком, которому вы шептали (личное сообщение)
+
+Converting %d%%
+== Преобразование %d%%
 
 Coordinate size on nameplate
 == Размер координат на табличке
@@ -3813,7 +3804,7 @@ Debug websockets
 == Отладка WebSocket
 
 Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
-== Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
+== Определяет, какие скины загружает клиент, и позволяет добавить префикс для загрузки вариантов скинов с префиксом.
 
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Адрес выделенного WebSocket (пусто — используется wss://qmclient.icu/ws)
@@ -4097,6 +4088,9 @@ Disable client-initiated self-kill (K key / kill command)
 Disable clipping
 == Отключить обрезку.
 
+Disable fast practice mode
+== Отключить режим быстрой практики
+
 Disable Gores auto-switch when picking up extra weapon
 == Отключить автосмену Gores при получении дополнительного оружия
 
@@ -4105,6 +4099,9 @@ Disabled
 
 Disabling system messages also hides server warnings.
 == Отключение системных сообщений скрывает и предупреждения сервера.
+
+Disagree
+== Не согласиться
 
 Disallow chat from blacklisted addresses
 == Запретить чат с адресов из чёрного списка.
@@ -4315,6 +4312,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == Загружено: %.1f MiB (общий размер неизвестен)
+
+Downloading %d%%
+== Загрузка %d%%
 
 Downloading map
 == Загрузка карты
@@ -4585,6 +4585,9 @@ Dummy window size
 
 Dummy window zoom
 == Масштаб окна Дами
+
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== Вывести состояние клиентского мира (ветка практики, треки, переключатели, сессия просмотра)
 
 Dump the current savestring
 == Сбросить текущую строку сохранения
@@ -4931,6 +4934,9 @@ Enable fast input in Gores mode
 Enable fast map download
 == Включить быструю загрузку карт
 
+Enable fast practice mode
+== Включить режим быстрой практики
+
 Enable fat skin
 == Включить толстый скин
 
@@ -4999,6 +5005,12 @@ Enable left swipe offset on chat fade
 
 Enable LLM thinking mode (may increase response time)
 == Включить режим размышлений LLM (может увеличить время отклика)
+
+Enable LX Music lyric integration
+== Включить интеграцию текстов песен LX Music
+
+Enable LX Music lyrics
+== Включить тексты песен LX Music
 
 Enable lyrics
 == Включить текст песни
@@ -5279,6 +5291,9 @@ End bounce
 End marker of replay slice
 == Конечный маркер фрагмента повтора
 
+Endless hook
+== Бесконечный крюк
+
 Endless hook has been activated
 == Бесконечный крюк активирован
 
@@ -5312,8 +5327,14 @@ Enter a CP number from 1 to 255.
 Enter a phrase.
 == Enter a phrase.
 
+Enter fast practice
+== Войти в быструю практику
+
 Enter Password
 == Введите пароль
+
+Enter solo mode
+== Войти в режим соло
 
 Enter solo split mode
 == Войти в режим соло-разделения
@@ -5402,9 +5423,6 @@ ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
 ESC replay minutes
 == Минуты повтора ESC
 
-EUR
-== Европа
-
 Evaluate an expression
 == Вычислить выражение
 
@@ -5468,8 +5486,14 @@ Existing Player
 Exit and install
 == Выйти и установить
 
+Exit fast practice
+== Выйти из быстрой практики
+
 Exit replay view
 == Выйти из просмотра реплея
+
+Exit solo mode
+== Выйти из режима соло
 
 Exit spectating on both tees when either is hammered awake by another player
 == Выходить из наблюдения обоими Tee, когда другой игрок размораживает любого из них молотком
@@ -6282,7 +6306,7 @@ General
 == Общие
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== Общее отображение DDNet: показ других игроков и прозрачность их тени, фоновые квадраты и масштаб по умолчанию.
+== Общие параметры отображения DDNet: показ других игроков и прозрачность их теней, фоновые квады и масштаб по умолчанию.
 
 Generated skin outline color
 == Цвет сгенерированной обводки
@@ -6292,6 +6316,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == Ширина сгенерированной обводки
+
+Get all weapons
+== Получить всё оружие
 
 Getting game info
 == Получение информации об игре
@@ -6396,7 +6423,7 @@ Global UI size percentage
 == Общий масштаб интерфейса в процентах
 
 Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
-== Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+== Общий масштаб прокрутки колесом (10 — по умолчанию); прокрутка страниц карточек настроек — в 12 раз больше за тик
 
 Glow
 == Свечение
@@ -7565,6 +7592,9 @@ Jelly others
 Jelly strength
 == Сила желе
 
+Jetpack
+== Джетпак
+
 Jitter
 == Джиттер
 
@@ -7671,7 +7701,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == На тёмном фоне лучше читается светлый текст; кнопка сброса вернёт рекомендуемый вид подсказки.
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== Держите эти цвета отдельно от командных, иначе имена своего клана сливаются с панелью команды и плохо читаются.
+== Не делайте их такими же, как цвета команды, иначе имена соклановцев сольются с панелью команды и станут плохо читаемыми.
 
 Keep unsent message on chat close
 == Сохранять неотправленное содержимое при закрытии чата
@@ -8291,14 +8321,8 @@ Locate
 Lock both teams immediately when entering solo split mode
 == Сразу блокировать обе команды при входе в режим соло-разделения
 
-Lock delay
-== Задержка блокировки
-
 Lock team
 == Заблокировать команду
-
-Lock teams on entry
-== Блокировать при входе
 
 Lock the team so other players cannot join directly
 == Закрыть команду, чтобы другие игроки не могли войти напрямую
@@ -8342,6 +8366,9 @@ Low contrast between name and message text makes chat hard to scan in fights.
 Lower means better quality and larger files; 18 is recommended
 == Чем ниже значение, тем лучше качество и больше файл; рекомендуется 18
 
+LX Music open API port (0=auto-detect from LX Music config)
+== Порт открытого API LX Music (0 — автоопределение из настроек LX Music)
+
 LXGW WenKai is available.
 == Шрифт LXGW WenKai доступен.
 
@@ -8372,8 +8399,8 @@ Main Asset
 Main menu
 == Главное меню
 
-Main Tee
-== Основной Tee
+Main-world ghost opacity
+== Непрозрачность призрака основного мира
 
 Maintains the list of hostile players and groups plus the rules used to display them.
 == Ведёт список враждебных игроков и групп, а также правила их отображения.
@@ -9161,9 +9188,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = Задержка предсказания
 
-NA
-== Северная Америка
-
 Name
 == Имя
 
@@ -9926,6 +9950,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == Только то, что вы не можете себе представить, нет ничего, что Dream не может сделать
 
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== Симулируется только ваша копия мира: другие игроки — это ти на стороне сервера, поэтому включатели, которые вы нажали, на них не влияют. Переключатель призраков и непрозрачность действуют и на них.
+
 Opacity
 == Прозрачность
 
@@ -10328,6 +10355,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == Пауза
 
+Pause recording
+== Приостановить запись
+
+Pause recording the practice line (the recorded part is kept)
+== Приостановить запись линии практики (записанное сохраняется)
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== Приостанавливает запись, не удаляя уже записанное. При возобновлении начинается новый участок, поэтому пропущенный отрезок не будет нарисован прямой линией.
+
 Pause the current demo
 == Приостановить текущее демо
 
@@ -10446,7 +10482,7 @@ Pick a text style or a moon or sun badge, check the preview, then press "Save" t
 == Выберите стиль текста или значок с луной или солнцем. Посмотрите образец и нажмите «Сохранить», чтобы другие игроки увидели выбранный стиль.
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== Выберите цвет в каждой строке: цвета «авторизованные» и «свой клан» действуют на таблицу счёта, два цвета списка — на список друзей.
+== Выберите цвет в каждой строке: цвета авторизованных игроков и игроков клана применяются к таблице результатов, два цвета списка — к списку друзей.
 
 Pick result: %s
 == Результат выбора: %s
@@ -10522,6 +10558,9 @@ Play back a demo
 
 Play background music
 == Играть фоновую музыку
+
+Play rank ghost replay sounds and hit effects locally
+== Локально воспроизводить звуки и эффекты попаданий повтора призрака Rank 1
 
 Play replay
 == Воспроизвести реплей
@@ -10898,6 +10937,9 @@ Position jump tip
 Position:
 == Позиция:
 
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== Тренируйтесь на карте в одиночку, скрывайте призрак основного мира, показывайте время забега и назначайте клавиши для команд практики.
+
 Practice mode can't be enabled in team 0 mode.
 == Режим тренировки нельзя включить в режиме команды 0.
 
@@ -10962,7 +11004,7 @@ Prediction
 == Предсказание
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== Предсказание и компенсация задержки переехали на подвкладку «Компенсация сети» страницы DDNet.
+== Предсказание и компенсация задержки перенесены на вкладку «Сетевая компенсация» страницы DDNet.
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == Граница прогнозирования (ms, увеличивает задержку, но уменьшает джиттер пинга)
@@ -10992,7 +11034,7 @@ Prediction margin when frozen
 == Отступ предсказания при заморозке
 
 Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== Предсказание меняет точность на отзывчивость: больший запас и AntiPing сглаживают дрожание пинга, но могут неверно предсказать близкие действия, а дублирование исходящего трафика способно утроить его объём.
+== Предсказание меняет точность на отзывчивость: больший запас и AntiPing сглаживают дрожание пинга, но могут неверно предсказывать действия рядом, а дублирование исходящих пакетов может утроить трафик.
 
 Preparing chat export: %d%%
 == Подготовка экспорта чата: %d%%
@@ -11534,12 +11576,6 @@ Rank 1 demo downloaded to '%s'
 Rank 1 replays
 == Реплеи ранга 1
 
-Rank demo already available in the demo browser: %s
-== Реплей уже доступен в обозревателе демо: %s
-
-Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
-== Демо ранга загружено: %s. Запустите из списка Rank 1 или браузера демо.
-
 Rank ghost loaded: %s, %s s. It follows your current run.
 == Ghost ранга загружен: %s, %s с. Следует за текущим прохождением.
 
@@ -11617,6 +11653,9 @@ Rank ghost: the replay has an invalid run range
 
 Rank ghost: the replay list is empty or malformed
 == Ghost ранга: список реплеев пуст или повреждён
+
+Rank ghost: this replay has no playable tee
+== Призрак Rank 1: в этом повторе нет воспроизводимого Tee
 
 Rank ghost: timed out waiting for the map to load
 == Ghost ранга: время ожидания загрузки карты истекло
@@ -11891,6 +11930,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == удалить вариант голосования
 
+Remove all weapons
+== Убрать всё оружие
+
 Remove chat
 == Удалить чат
 
@@ -12122,11 +12164,17 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == Повтор
 
+Replay a saved practice ghost group in demo-style view mode
+== Воспроизвести сохранённую группу призраков практики в режиме просмотра как демо
+
 Replay downloaded
 == Реплей загружен
 
 Replay feature is disabled!
 == Функция повтора отключена!
+
+Replay ghost sounds and effects
+== Воспроизводить звуки и эффекты попаданий в повторе призрака
 
 Replay list: failed to load, press Refresh to retry
 == Список реплеев: ошибка загрузки, нажмите «Обновить»
@@ -12181,6 +12229,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == Rescue не включён на этом сервере, и вы не в команде с включённым /practice. Обратите внимание, что с включённым тренировочным режимом нельзя получить рейтинг.
+
+Rescue mode
+== Режим спасения
 
 Rescue mode changed to auto.
 == Режим спасения изменён на auto.
@@ -12326,6 +12377,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == Вернуть рекомендованные
 
+Restore the practice world to the state it had when fast practice was enabled
+== Вернуть мир практики в состояние на момент включения быстрой практики
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== Возвращает мир практики в состояние на момент включения быстрой практики. Записанная линия сохраняется, запись продолжится с нового участка.
+
 Restored the built-in content
 == Встроенный текст восстановлен
 
@@ -12346,6 +12403,9 @@ Retry remote stats
 
 Retrying…
 == Повторная попытка…
+
+Return to respawn point
+== Вернуться к точке возрождения
 
 Reverse chat gradient colors
 == Обратить цвета градиента (чат)
@@ -12373,6 +12433,12 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == Показывает настройки, отличающиеся от значений по умолчанию, и сбрасывает их.
+
+Rewind practice world
+== Откатить мир практики
+
+Rifle
+== Винтовка
 
 Rifle Laser Inner Color
 == Внутренний цвет лазера винтовки
@@ -12494,8 +12560,8 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == Автоматически выполняет команды при подключении к серверу, разделив их на часть подключения и часть входа.
 
-SA
-== Южная Америка
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== Запускает вашу личную копию карты, а сервер оставляет вашего настоящего ти на месте входа; в комплекте таймер забега и привязки команд практики.
 
 Same as "vote no"
 == То же, что и "vote no"
@@ -12799,6 +12865,9 @@ Search country flag…
 
 Search donor asset
 == Поиск ресурса донора
+
+Search ghosts
+== Поиск призраков
 
 Search main asset
 == Поиск основного ресурса
@@ -13115,6 +13184,9 @@ Server votes
 Server-dependent
 == Зависит от сервера
 
+Server-side ghost opacity during fast practice (%)
+== Непрозрачность призраков на стороне сервера во время быстрой практики (%)
+
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == Задайте цвет фона и непрозрачность фона, затем цвет текста, цвет выделенного текста и цвет фона выделения; ниже есть предпросмотр.
 
@@ -13165,6 +13237,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 
 Set microphone mute state (0=on, 1=mute)
 == Установить состояние отключения микрофона (0=вкл, 1=выкл)
+
+Set practice respawn point
+== Задать точку возрождения практики
 
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == Установить сервер в одиночный режим (без взаимодействия игроков, должно быть установлено до загрузки карты)
@@ -13862,6 +13937,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == Показывать титул основного ти локально
 
+Show main-world ghost
+== Показывать призрак основного мира
+
 Show map details
 == Показывать детали карты
 
@@ -14075,6 +14153,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == Показывать отладочную информацию о позиции и угле
 
+Show practice timer
+== Показывать таймер практики
+
 Show predicted position as ghost, original as unpredictable player
 == Показывать предсказанную позицию как призрака, оригинальную как непредсказуемого игрока
 
@@ -14125,6 +14206,9 @@ Show server settings
 
 Show server uptime
 == Показывать время работы сервера
+
+Show server-side tees as ghosts during fast practice
+== Показывать ти на стороне сервера как призраков во время быстрой практики
 
 Show settings card borders
 == Показывать границы карточек настроек
@@ -14248,6 +14332,9 @@ Show the original text locally below translated outgoing messages
 
 Show the pet
 == Показать питомца
+
+Show the practice run timer in the HUD
+== Показывать время текущего забега в HUD
 
 Show the screen center line
 == Показать центральную линию экрана
@@ -14996,14 +15083,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == Начальный маркер фрагмента повтора
 
+Start or resume recording the practice line
+== Начать или продолжить запись линии практики
+
 Start playback of ghosts
 == Начать воспроизведение призраков
+
+Start recording
+== Начать запись
 
 Start recording a demo
 == Начать запись демо
 
 Start recording a video
 == Начать запись видео
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== Начинает запись линии быстрой практики или продолжает после паузы. Запись всегда ручная: до нажатия ничего не записывается.
 
 Start skin queue from a random position when entering a map
 == Начинать очередь скинов со случайной позиции при входе на карту
@@ -15095,6 +15191,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == Нас держат %d спонсоров. Посмотрите?
 
+Stop and save recording
+== Завершить запись и сохранить
+
 Stop following
 == Прекратить следование
 
@@ -15125,6 +15224,12 @@ Stop recording a demo
 Stop recording a video
 == Остановить запись видео
 
+Stop recording and save the practice line as a ghost group
+== Завершить запись и сохранить линию практики как группу призраков
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== Завершает запись и сразу сохраняет линию на диск как группу призраков. Сохранённую группу можно воспроизвести из меню биндов или со страницы призраков.
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == Прекратить рендеринг текстовых наложений в редакторе или с сущностями: выше = меньше деталей = быстрее
 
@@ -15133,6 +15238,12 @@ Stop server
 
 Stop the current demo
 == Остановить текущее демо
+
+Store the current practice tee state as the respawn point
+== Сохранить текущее состояние Tee в практике как точку возрождения
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== Сохраняет текущее состояние Tee (позицию, оружие, прыжки и состояние движения) как точку возрождения практики.
 
 Streamer mode
 == Режим стримера
@@ -15584,6 +15695,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == Телепорт всего оружия (устарело, используйте вместо этого специальные сущности)
 
+Teleport back to the practice respawn point
+== Телепортировать к точке возрождения практики
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== Телепортирует к точке возрождения практики и восстанавливает сохранённое там состояние Tee. Восстанавливается только Tee, мир продолжает идти.
+
 Teleport dummy to cursor
 == Переместить дамми к курсору
 
@@ -16023,7 +16140,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == Отметьте показ ввода, затем задайте размер и положение размерами клавиатуры и мыши, непрозрачностью и ползунками позиции.
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== Включите «Показывать других», чтобы рисовать другие команды полупрозрачно; прозрачность их тени задаётся в зависимой строке ниже, а вид настраивают «Показывать фоновые квадраты» и «Масштаб по умолчанию».
+== Включите «Показывать других», чтобы другие команды рисовались полупрозрачно; задайте прозрачность их теней в зависимой строке ниже, а для вида используйте «Показывать фоновые квады» и «Масштаб по умолчанию».
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == Отметьте нужные: показ зажатых клавиш, состояние молота, состояние управления dummy или состояние копии dummy.
@@ -16249,6 +16366,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == Переключить локальную консоль
+
+Toggle main-world ghost
+== Переключить призрак основного мира
 
 Toggle map preview
 == Предпросмотр карты
@@ -16574,6 +16694,9 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == На слабых машинах выключите: карточки открываются и прокручиваются сразу. Форма курсора только внешняя: все три стиля занимают одно знакоместо.
 
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== Отключите «Показывать призрак основного мира», чтобы скрыть все ти, приходящие с сервера, включая других игроков; пока призрак включён, ползунок непрозрачности задаёт их видимость. Строки привязок отправляют те же команды, что и меню практики, поэтому открывать чат не нужно.
+
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Включите «Автосообщение при падении в воду», впишите нужное «Сообщение в чат» и при желании включите «Отправлять эмоцию» с её ID.
 
@@ -16645,6 +16768,9 @@ Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow h
 
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.
 == Включите анимацию смены оружия или переворот при перезарядке, выберите диапазон анимации и настройте длительность, дистанцию и поворот.
+
+Turn on LX Music open API
+== Включить открытый API LX Music
 
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
 == Включайте по одному: смена Tee или закрытие чата могут стереть сообщение, которое вы ещё печатаете.
@@ -16843,6 +16969,9 @@ Underscore
 
 Underscore: a line under the character that follows
 == Подчёркивание: линия под следующим символом
+
+Undo deep freeze
+== Снять глубокую заморозку
 
 Unexpected map upload response.
 == Неожиданный ответ при загрузке карты.

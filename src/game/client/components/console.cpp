@@ -2634,8 +2634,8 @@ void CGameConsole::OnRender()
 			const CUIRect Owner{0.0f, LogTop, Screen.w, LogHeight};
 			const float ConsoleContentHeight = (float)maximum(TotalBacklogLines, 1) * LineHeight;
 			const float MaxOffset = maximum(ScrollFrame.m_MaxOffset, 1.0f);
-			const float Progress = 1.0f - std::clamp(ScrollFrame.m_Offset / MaxOffset, 0.0f, 1.0f);
-			const auto ScrollbarFrame = ui_widget::ResolveOverlayScrollbarFrame(Owner, LogTop, LogHeight, ConsoleContentHeight, Progress, true,
+			const float ScrollProgress = 1.0f - std::clamp(ScrollFrame.m_Offset / MaxOffset, 0.0f, 1.0f);
+			const auto ScrollbarFrame = ui_widget::ResolveOverlayScrollbarFrame(Owner, LogTop, LogHeight, ConsoleContentHeight, ScrollProgress, true,
 				CONSOLE_SCROLLBAR_WIDTH, CONSOLE_SCROLLBAR_MARGIN, CONSOLE_SCROLLBAR_MIN_THUMB);
 			if(ScrollbarFrame.m_Visible)
 			{

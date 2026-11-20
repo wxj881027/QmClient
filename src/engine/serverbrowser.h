@@ -115,7 +115,8 @@ public:
 	bool m_LatencyIsEstimated;
 	int m_Latency; // in ms
 	// 延迟测量上限：达到该值表示这次测量触到 1 秒超时，不视为可用延迟。
-	// 浏览器只在存在可用实测值时才显示数字，否则显示地区名（见 FormatServerbrowserPing）。
+	// 延迟列对无可用实测值的服务器显示地区估算值，估算不可得时显示占位符
+	// （见 CServerInfo::FormatLatency）。
 	static constexpr int LATENCY_UNKNOWN = 999;
 	ERankState m_HasRank;
 	char m_aGameType[16];
@@ -135,6 +136,21 @@ public:
 	static int EstimateLatency(int Loc1, int Loc2);
 	static bool ParseLocation(int *pResult, const char *pString);
 	static ColorRGBA GametypeColor(const char *pGametype);
+
+	// 可用延迟：未测量（-1）或触到 1 秒测量上限（LATENCY_UNKNOWN）的值都不能
+	// 当作实测延迟使用；延迟列也因此不按这类值着色。
+	static bool IsUsableLatency(int Latency);
+	// 延迟列文本：可用值输出毫秒数，否则输出占位符 "--"。
+	template<size_t N>
+	static void FormatLatency(char (&aBuffer)[N], int Latency)
+	{
+		if(!IsUsableLatency(Latency))
+		{
+			str_copy(aBuffer, "--");
+			return;
+		}
+		str_format(aBuffer, N, "%d", Latency);
+	}
 };
 
 class CCommunityCountryServer
@@ -338,6 +354,15 @@ public:
 		int64_t m_RequestTime;
 		bool m_RequestIgnoreInfo;
 		int m_GotInfo;
+		// QmClient: 可见行补测延迟用。表示条目已在请求队列中（含尚未发出的），
+		// 避免同一服务器重复入队。按 IP 的去重记录在浏览器上。
+		bool m_RequestQueued = false;
+		// QmClient: 该条目的补测请求已入队且尚未收到回复。
+		bool m_PingProbePending = false;
+		// QmClient: 该条目的补测请求被释放且没等到回复。本次列表生命周期内不再
+		// 自动重试，把探测机会让给同 IP 的其他端口实例；列表刷新后条目重建，
+		// 允许重新尝试。
+		bool m_PingProbeFailed = false;
 		bool m_FriendStateValid = false;
 		uint64_t m_FriendStateRevision = 0;
 		bool m_FriendStateIgnoreClan = false;
@@ -371,6 +396,13 @@ public:
 	// QmClient: 当前客户端自身的位置分类（br_location 或 geoip 推断）。
 	// 与服务器 m_Location 同一套枚举；用于「同地区服务器延迟列显示绿色」。
 	virtual int GetCurrentClientLocation() const = 0;
+	// QmClient: 给单个服务器补测一次延迟（GETINFO 只测 ping，不回写服务器信息）。
+	// 已有可用实测值、已在请求队列中、本次列表生命周期内补测失败过，或同一 IP
+	// 刚探测过时忽略。
+	virtual void RequestServerPing(const NETADDR &Addr) = 0;
+	// QmClient: 国服判定。地区为中国、社区 id 含 "chn" 或服务器名含 "CHN" 时
+	// 成立；可见行补测和名称列短名共用这一口径。
+	virtual bool IsChineseServer(const CServerInfo &Info) const = 0;
 
 	virtual int NumServers() const = 0;
 	virtual const CServerInfo *Get(int Index) const = 0;

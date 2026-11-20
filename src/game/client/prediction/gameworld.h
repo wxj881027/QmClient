@@ -97,7 +97,9 @@ public:
 	bool IsLocalTeam(int OwnerId) const;
 	void OnModified() const;
 	void NetObjBegin(CTeamsCore Teams, int LocalClientId);
-	void NetCharAdd(int ObjId, CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtended, int GameTeam, bool IsLocal);
+	// ForceAdd 跳过本地团队过滤：练习分支要求本体与分身都在场，而 solo 区里客户端
+	// 世界只收可碰撞角色，参与者因此可能不在快照世界中。
+	void NetCharAdd(int ObjId, CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtended, int GameTeam, bool IsLocal, bool ForceAdd);
 	void NetObjAdd(int ObjId, int ObjType, const void *pObjData, const CNetObj_EntityEx *pDataEx);
 	void ResetDoorCollision();
 	void NetObjEnd();

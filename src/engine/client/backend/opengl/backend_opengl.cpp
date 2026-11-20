@@ -196,9 +196,10 @@ static bool ParseVersionString(EBackendType BackendType, const char *pStr, int &
 	// If the backend is GLES, the version string starts with `OpenGL ES ` or `OpenGL ES-CM ` for older contexts, rest is the same.
 	if(BackendType == BACKEND_TYPE_OPENGL_ES)
 	{
-		const char *pSkippedPrefix;
-		if((pSkippedPrefix = str_startswith(pStr, "OpenGL ES ")) != nullptr ||
-			(pSkippedPrefix = str_startswith(pStr, "OpenGL ES-CM ")) != nullptr)
+		const char *pSkippedPrefix = str_startswith(pStr, "OpenGL ES ");
+		if(pSkippedPrefix == nullptr)
+			pSkippedPrefix = str_startswith(pStr, "OpenGL ES-CM ");
+		if(pSkippedPrefix != nullptr)
 		{
 			pStr = pSkippedPrefix;
 		}

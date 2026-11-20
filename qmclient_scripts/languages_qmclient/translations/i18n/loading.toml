@@ -1,5 +1,3 @@
-# 请抬头享受阳光｜日子很好 我很我---------致咩子
-
 [[message]]
 key = "%d/%d KiB (%.1f KiB/s)"
 [message.translations]
@@ -321,22 +319,6 @@ turkish = "Adınızla mevcut bir oyuncu kontrol ediliyor"
 polish = "Sprawdzanie, czy istnieje gracz o Twojej nazwie"
 
 [[message]]
-key = "Click to restore full match"
-[message.translations]
-simplified_chinese = "点击恢复完整比赛"
-traditional_chinese = "點擊恢復完整比賽"
-japanese = "クリックしてフルマッチを復元"
-korean = "클릭하여 전체 매치 복원"
-russian = "Нажмите, чтобы восстановить полный матч"
-german = "Klicken, um vollständiges Match wiederherzustellen"
-spanish = "Haz clic para restaurar la partida completa"
-french = "Cliquez pour restaurer le match complet"
-brazilian_portuguese = "Clique para restaurar partida completa"
-portuguese = "Clique para restaurar partida completa"
-turkish = "Tam maçı geri yüklemek için tıklayın"
-polish = "Kliknij, aby przywrócić pełny mecz"
-
-[[message]]
 key = "Client data overview"
 [message.translations]
 simplified_chinese = "客户端数据概览"
@@ -449,22 +431,6 @@ turkish = "Katkıda Bulunanlar"
 polish = "Współtwórcy"
 
 [[message]]
-key = "DDNet contributors and staff credits"
-[message.translations]
-simplified_chinese = "DDNet 贡献者与队伍名单"
-traditional_chinese = "DDNet 貢獻者與團隊名單"
-japanese = "DDNet のコントリビューターとスタッフ"
-korean = "DDNet 기여자 및 스태프"
-russian = "Участники и команда DDNet"
-german = "DDNet-Mitwirkende und Team"
-spanish = "Contribuidores y equipo de DDNet"
-french = "Contributeurs et équipe DDNet"
-brazilian_portuguese = "Contribuidores e equipe do DDNet"
-portuguese = "Contribuidores e equipe do DDNet"
-turkish = "DDNet katkıda bulunanlar ve ekip"
-polish = "DDNet — współtwórcy i zespół"
-
-[[message]]
 key = "Controls"
 [message.translations]
 simplified_chinese = "控制"
@@ -561,36 +527,36 @@ turkish = "Geçerli zaman: %s"
 polish = "Bieżący czas: %s"
 
 [[message]]
-key = "Last successful sync: %s"
+key = "DDNet"
 [message.translations]
-simplified_chinese = "上次成功同步：%s"
-traditional_chinese = "上次成功同步：%s"
-japanese = "前回の同期成功: %s"
-korean = "마지막 동기화 성공: %s"
-russian = "Последняя успешная синхронизация: %s"
-german = "Letzte erfolgreiche Synchronisierung: %s"
-spanish = "Última sincronización correcta: %s"
-french = "Dernière synchronisation réussie : %s"
-brazilian_portuguese = "Última sincronização bem-sucedida: %s"
-portuguese = "Última sincronização bem-sucedida: %s"
-turkish = "Son başarılı eşitleme: %s"
-polish = "Ostatnia udana synchronizacja: %s"
+simplified_chinese = "DDNet"
+traditional_chinese = "DDNet"
+japanese = "DDNet"
+korean = "DDNet"
+russian = "DDNet"
+german = "DDNet"
+spanish = "DDNet"
+french = "DDNet"
+brazilian_portuguese = "DDNet"
+portuguese = "DDNet"
+turkish = "DDNet"
+polish = "DDNet"
 
 [[message]]
-key = "Local mode statistics are stored on this client."
+key = "DDNet contributors and staff credits"
 [message.translations]
-simplified_chinese = "本地游戏模式统计保存在此客户端。"
-traditional_chinese = "本地遊戲模式統計保存在此客戶端。"
-japanese = "ローカルのゲームモード統計はこのクライアントに保存されます。"
-korean = "로컬 게임 모드 통계는 이 클라이언트에 저장됩니다."
-russian = "Статистика локальных игровых режимов хранится в этом клиенте."
-german = "Statistiken lokaler Spielmodi werden in diesem Client gespeichert."
-spanish = "Las estadísticas de los modos locales se guardan en este cliente."
-french = "Les statistiques des modes locaux sont enregistrées dans ce client."
-brazilian_portuguese = "As estatísticas dos modos locais são armazenadas neste cliente."
-portuguese = "As estatísticas dos modos locais são armazenadas neste cliente."
-turkish = "Yerel oyun modu istatistikleri bu istemcide saklanır."
-polish = "Statystyki lokalnych trybów gry są przechowywane w tym kliencie."
+simplified_chinese = "DDNet 贡献者与队伍名单"
+traditional_chinese = "DDNet 貢獻者與團隊名單"
+japanese = "DDNet のコントリビューターとスタッフ"
+korean = "DDNet 기여자 및 스태프"
+russian = "Участники и команда DDNet"
+german = "DDNet-Mitwirkende und Team"
+spanish = "Contribuidores y equipo de DDNet"
+french = "Contributeurs et équipe DDNet"
+brazilian_portuguese = "Contribuidores e equipe do DDNet"
+portuguese = "Contribuidores e equipe do DDNet"
+turkish = "DDNet katkıda bulunanlar ve ekip"
+polish = "DDNet — współtwórcy i zespół"
 
 [[message]]
 key = "DDNet finish totals come from official player data."
@@ -609,38 +575,6 @@ turkish = "DDNet bitirme toplamları resmi oyuncu verilerinden alınır."
 polish = "Łączna liczba ukończeń DDNet pochodzi z oficjalnych danych graczy."
 
 [[message]]
-key = "Links below open external ID and map statistics."
-[message.translations]
-simplified_chinese = "下方链接打开外部 ID 统计和过图统计。"
-traditional_chinese = "下方連結開啟外部 ID 統計和過圖統計。"
-japanese = "下のリンクから外部ID統計とマップ統計を開けます。"
-korean = "아래 링크에서 외부 ID 통계와 맵 통계를 엽니다."
-russian = "Ссылки ниже открывают внешнюю статистику ID и прохождений карт."
-german = "Die Links unten öffnen externe ID- und Kartenstatistiken."
-spanish = "Los enlaces siguientes abren las estadísticas externas del ID y de mapas."
-french = "Les liens ci-dessous ouvrent les statistiques externes d'ID et de cartes."
-brazilian_portuguese = "Os links abaixo abrem as estatísticas externas de ID e mapas."
-portuguese = "Os links abaixo abrem as estatísticas externas de ID e mapas."
-turkish = "Aşağıdaki bağlantılar harici ID ve harita istatistiklerini açar."
-polish = "Poniższe odnośniki otwierają zewnętrzne statystyki ID i map."
-
-[[message]]
-key = "DDNet"
-[message.translations]
-simplified_chinese = "DDNet"
-traditional_chinese = "DDNet"
-japanese = "DDNet"
-korean = "DDNet"
-russian = "DDNet"
-german = "DDNet"
-spanish = "DDNet"
-french = "DDNet"
-brazilian_portuguese = "DDNet"
-portuguese = "DDNet"
-turkish = "DDNet"
-polish = "DDNet"
-
-[[message]]
 key = "DDNet points"
 [message.translations]
 simplified_chinese = "DDNet 分数"
@@ -655,6 +589,22 @@ brazilian_portuguese = "Pontos DDNet"
 portuguese = "Pontos DDNet"
 turkish = "DDNet puanı"
 polish = "Punkty DDNet"
+
+[[message]]
+key = "DDNet.org map stats"
+[message.translations]
+simplified_chinese = "DDNet.org 过图统计"
+traditional_chinese = "DDNet.org 過圖統計"
+japanese = "DDNet.org マップ統計"
+korean = "DDNet.org 맵 통계"
+russian = "Статистика карт на DDNet.org"
+german = "DDNet.org Kartenstatistik"
+spanish = "Estadísticas de mapas de DDNet.org"
+french = "Statistiques des cartes DDNet.org"
+brazilian_portuguese = "Estatísticas de mapas do DDNet.org"
+portuguese = "Estatísticas de mapas do DDNet.org"
+turkish = "DDNet.org harita istatistikleri"
+polish = "Statystyki map DDNet.org"
 
 [[message]]
 key = "DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you."
@@ -673,6 +623,22 @@ turkish = "DDraceNetwork, sizin ve tee grubunuzun haritanın bitiş çizgisine u
 polish = "DDraceNetwork to kooperacyjna gra online, w której celem jest dotarcie z grupą tee do mety mapy. Jako nowy gracz powinieneś zacząć na serwerach Novice, które hostują najłatwiejsze mapy. Wybierz serwer blisko siebie, biorąc pod uwagę ping."
 
 [[message]]
+key = "ddstats.tw ID stats"
+[message.translations]
+simplified_chinese = "ddstats.tw ID 统计"
+traditional_chinese = "ddstats.tw ID 統計"
+japanese = "ddstats.tw ID統計"
+korean = "ddstats.tw ID 통계"
+russian = "Статистика ID на ddstats.tw"
+german = "ddstats.tw ID-Statistik"
+spanish = "Estadísticas del ID en ddstats.tw"
+french = "Statistiques d'ID ddstats.tw"
+brazilian_portuguese = "Estatísticas de ID do ddstats.tw"
+portuguese = "Estatísticas de ID do ddstats.tw"
+turkish = "ddstats.tw ID istatistikleri"
+polish = "Statystyki ID ddstats.tw"
+
+[[message]]
 key = "Demos"
 [message.translations]
 simplified_chinese = "回放"
@@ -687,6 +653,22 @@ brazilian_portuguese = "Demonstrações"
 portuguese = "Demonstrações"
 turkish = "Demolar"
 polish = "Dema"
+
+[[message]]
+key = "Disable client-initiated self-kill (K key / kill command)"
+[message.translations]
+simplified_chinese = "禁用客户端发起的自杀（K 键 / kill 命令）"
+traditional_chinese = "停用用戶端發起的自殺（K 鍵 / kill 指令）"
+japanese = "クライアント発の自殺を無効化（Kキー / killコマンド）"
+korean = "클라이언트 발 자살 비활성화 (K키 / kill 명령)"
+russian = "Отключить самоубийство со стороны клиента (клавиша K / команда kill)"
+german = "Clientseitige Selbsttötung deaktivieren (Taste K / Befehl kill)"
+spanish = "Desactiva el suicidio iniciado por el cliente (tecla K / comando kill)"
+french = "désactive le suicide initié par le client (touche K / commande kill)"
+brazilian_portuguese = "Desativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
+portuguese = "Desativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
+turkish = "İstemci kaynaklı intiharı devre dışı bırak (K tuşu / kill komutu)"
+polish = "Wyłącz samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)"
 
 [[message]]
 key = "Downloading map"
@@ -719,6 +701,22 @@ brazilian_portuguese = "Editor"
 portuguese = "Editor"
 turkish = "Düzenleyici"
 polish = "Edytor"
+
+[[message]]
+key = "Enable client-initiated self-kill (K key / kill command)"
+[message.translations]
+simplified_chinese = "启用客户端发起的自杀（K 键 / kill 命令）"
+traditional_chinese = "啟用用戶端發起的自殺（K 鍵 / kill 指令）"
+japanese = "クライアント発の自殺を有効化（Kキー / killコマンド）"
+korean = "클라이언트 발 자살 활성화 (K키 / kill 명령)"
+russian = "Включить самоубийство со стороны клиента (клавиша K / команда kill)"
+german = "Clientseitige Selbsttötung aktivieren (Taste K / Befehl kill)"
+spanish = "Activa el suicidio iniciado por el cliente (tecla K / comando kill)"
+french = "active le suicide initié par le client (touche K / commande kill)"
+brazilian_portuguese = "Ativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
+portuguese = "Ativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
+turkish = "İstemci kaynaklı intiharı etkinleştir (K tuşu / kill komutu)"
+polish = "Włącz samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)"
 
 [[message]]
 key = "Enable map compatibility mode using the specified bug (example: grenade-doubleexplosion@ddnet.tw)"
@@ -881,54 +879,6 @@ turkish = "'%s' dosyası zaten mevcut, üzerine yazmak istiyor musunuz?"
 polish = "Plik '%s' już istnieje, czy chcesz go nadpisać?"
 
 [[message]]
-key = "Filter off"
-[message.translations]
-simplified_chinese = "不筛选"
-traditional_chinese = "關閉過濾"
-japanese = "フィルターオフ"
-korean = "필터 끄기"
-russian = "Фильтр выключен"
-german = "Filter aus"
-spanish = "Filtro desactivado"
-french = "Filtre désactivé"
-brazilian_portuguese = "Filtro desligado"
-portuguese = "Filtro desligado"
-turkish = "Filtre kapalı"
-polish = "Filtr wyłączony"
-
-[[message]]
-key = "Filter Team %d"
-[message.translations]
-simplified_chinese = "筛选队伍 %d"
-traditional_chinese = "過濾隊伍 %d"
-japanese = "チーム %d をフィルター"
-korean = "팀 %d 필터"
-russian = "Фильтр команды %d"
-german = "Team %d filtern"
-spanish = "Filtrar equipo %d"
-french = "Filtrer équipe %d"
-brazilian_portuguese = "Filtrar time %d"
-portuguese = "Filtrar equipa %d"
-turkish = "Takım %d filtrele"
-polish = "Filtruj drużynę %d"
-
-[[message]]
-key = "Filter: Team %d"
-[message.translations]
-simplified_chinese = "筛选：队伍 %d"
-traditional_chinese = "過濾：隊伍 %d"
-japanese = "フィルター: チーム %d"
-korean = "필터: 팀 %d"
-russian = "Фильтр: команда %d"
-german = "Teamfilter: %d"
-spanish = "Filtro: equipo %d"
-french = "Filtrer : équipe %d"
-brazilian_portuguese = "Filtro: time %d"
-portuguese = "Filtro: equipa %d"
-turkish = "Filtre: Takım %d"
-polish = "Filtr: drużyna %d"
-
-[[message]]
 key = "Finish data source"
 [message.translations]
 simplified_chinese = "完成图来源"
@@ -943,22 +893,6 @@ brazilian_portuguese = "Fonte dos dados de conclusão"
 portuguese = "Fonte dos dados de conclusão"
 turkish = "Bitirme veri kaynağı"
 polish = "Źródło danych ukończeń"
-
-[[message]]
-key = "Finished maps"
-[message.translations]
-simplified_chinese = "完成地图次数"
-traditional_chinese = "完成地圖次數"
-japanese = "クリアしたマップ数"
-korean = "완료한 맵"
-russian = "Завершенные карты"
-german = "Abgeschlossene Karten"
-spanish = "Mapas completados"
-french = "Cartes terminées"
-brazilian_portuguese = "Mapas concluídos"
-portuguese = "Mapas concluídos"
-turkish = "Bitirilen haritalar"
-polish = "Ukończone mapy"
 
 [[message]]
 key = "Finish time"
@@ -977,20 +911,20 @@ turkish = "Tamamlanma süresi"
 polish = "Czas ukończenia"
 
 [[message]]
-key = "Full demo + sidecar"
+key = "Finished maps"
 [message.translations]
-simplified_chinese = "完整 demo + sidecar"
-traditional_chinese = "完整 demo + sidecar"
-japanese = "フルデモ + サイドカー"
-korean = "전체 데모 + 사이드카"
-russian = "Полное демо + sidecar"
-german = "Vollständige Demo + Sidecar"
-spanish = "Demo completa + sidecar"
-french = "Démo complète + sidecar"
-brazilian_portuguese = "Demo completa + sidecar"
-portuguese = "Demo completa + sidecar"
-turkish = "Tam demo + sidecar"
-polish = "Pełne demo + sidecar"
+simplified_chinese = "完成地图次数"
+traditional_chinese = "完成地圖次數"
+japanese = "クリアしたマップ数"
+korean = "완료한 맵"
+russian = "Завершенные карты"
+german = "Abgeschlossene Karten"
+spanish = "Mapas completados"
+french = "Cartes terminées"
+brazilian_portuguese = "Mapas concluídos"
+portuguese = "Mapas concluídos"
+turkish = "Bitirilen haritalar"
+polish = "Ukończone mapy"
 
 [[message]]
 key = "Game"
@@ -1007,6 +941,22 @@ brazilian_portuguese = "Jogo"
 portuguese = "Jogo"
 turkish = "Oyun"
 polish = "Gra"
+
+[[message]]
+key = "Game mode"
+[message.translations]
+simplified_chinese = "游戏模式"
+traditional_chinese = "遊戲模式"
+japanese = "ゲームモード"
+korean = "게임 모드"
+russian = "Игровой режим"
+german = "Spielmodus"
+spanish = "Modo de juego"
+french = "Mode de jeu"
+brazilian_portuguese = "Modo de jogo"
+portuguese = "Modo de jogo"
+turkish = "Oyun modu"
+polish = "Tryb gry"
 
 [[message]]
 key = "General"
@@ -1103,6 +1053,22 @@ brazilian_portuguese = "Ocultar chat"
 portuguese = "Ocultar chat"
 turkish = "Sohbeti gizle"
 polish = "Ukryj czat"
+
+[[message]]
+key = "Ignored legacy Dynamic Island edge margin"
+[message.translations]
+simplified_chinese = "已忽略旧版灵动岛边缘外边距"
+traditional_chinese = "已忽略舊版靈動島邊緣外邊距"
+japanese = "旧式ダイナミックアイランドの端の余白は無視されます"
+korean = "기존 다이내믹 아일랜드 가장자리 여백은 무시됨"
+russian = "Устаревший отступ от края Dynamic Island игнорируется"
+german = "Alter Randabstand der Dynamic Island wird ignoriert"
+spanish = "Se ignora el margen del borde heredado de la isla dinámica"
+french = "La marge de bord héritée du Dynamic Island est ignorée"
+brazilian_portuguese = "A margem de borda legada da Ilha Dinâmica é ignorada"
+portuguese = "A margem de borda legada da Ilha Dinâmica é ignorada"
+turkish = "Eski Dinamik Ada kenar boşluğu yok sayıldı"
+polish = "Zignorowano starszy margines krawędzi Dynamic Island"
 
 [[message]]
 key = "Initializing assets"
@@ -1281,6 +1247,38 @@ turkish = "Dil"
 polish = "Język"
 
 [[message]]
+key = "Last successful sync: %s"
+[message.translations]
+simplified_chinese = "上次成功同步：%s"
+traditional_chinese = "上次成功同步：%s"
+japanese = "前回の同期成功: %s"
+korean = "마지막 동기화 성공: %s"
+russian = "Последняя успешная синхронизация: %s"
+german = "Letzte erfolgreiche Synchronisierung: %s"
+spanish = "Última sincronización correcta: %s"
+french = "Dernière synchronisation réussie : %s"
+brazilian_portuguese = "Última sincronização bem-sucedida: %s"
+portuguese = "Última sincronização bem-sucedida: %s"
+turkish = "Son başarılı eşitleme: %s"
+polish = "Ostatnia udana synchronizacja: %s"
+
+[[message]]
+key = "Links below open external ID and map statistics."
+[message.translations]
+simplified_chinese = "下方链接打开外部 ID 统计和过图统计。"
+traditional_chinese = "下方連結開啟外部 ID 統計和過圖統計。"
+japanese = "下のリンクから外部ID統計とマップ統計を開けます。"
+korean = "아래 링크에서 외부 ID 통계와 맵 통계를 엽니다."
+russian = "Ссылки ниже открывают внешнюю статистику ID и прохождений карт."
+german = "Die Links unten öffnen externe ID- und Kartenstatistiken."
+spanish = "Los enlaces siguientes abren las estadísticas externas del ID y de mapas."
+french = "Les liens ci-dessous ouvrent les statistiques externes d'ID et de cartes."
+brazilian_portuguese = "Os links abaixo abrem as estatísticas externas de ID e mapas."
+portuguese = "Os links abaixo abrem as estatísticas externas de ID e mapas."
+turkish = "Aşağıdaki bağlantılar harici ID ve harita istatistiklerini açar."
+polish = "Poniższe odnośniki otwierają zewnętrzne statystyki ID i map."
+
+[[message]]
 key = "Loading"
 [message.translations]
 simplified_chinese = "加载中"
@@ -1377,6 +1375,54 @@ turkish = "Skin dosyaları yükleniyor"
 polish = "Ładowanie plików skinów"
 
 [[message]]
+key = "Local game mode statistics"
+[message.translations]
+simplified_chinese = "本地游戏模式统计"
+traditional_chinese = "本地遊戲模式統計"
+japanese = "ローカルゲームモード統計"
+korean = "로컬 게임 모드 통계"
+russian = "Статистика локальных игровых режимов"
+german = "Statistiken lokaler Spielmodi"
+spanish = "Estadísticas de modos de juego locales"
+french = "Statistiques des modes de jeu locaux"
+brazilian_portuguese = "Estatísticas de modos de jogo locais"
+portuguese = "Estatísticas de modos de jogo locais"
+turkish = "Yerel oyun modu istatistikleri"
+polish = "Statystyki lokalnych trybów gry"
+
+[[message]]
+key = "Local mode statistics are stored on this client."
+[message.translations]
+simplified_chinese = "本地游戏模式统计保存在此客户端。"
+traditional_chinese = "本地遊戲模式統計保存在此客戶端。"
+japanese = "ローカルのゲームモード統計はこのクライアントに保存されます。"
+korean = "로컬 게임 모드 통계는 이 클라이언트에 저장됩니다."
+russian = "Статистика локальных игровых режимов хранится в этом клиенте."
+german = "Statistiken lokaler Spielmodi werden in diesem Client gespeichert."
+spanish = "Las estadísticas de los modos locales se guardan en este cliente."
+french = "Les statistiques des modes locaux sont enregistrées dans ce client."
+brazilian_portuguese = "As estatísticas dos modos locais são armazenadas neste cliente."
+portuguese = "As estatísticas dos modos locais são armazenadas neste cliente."
+turkish = "Yerel oyun modu istatistikleri bu istemcide saklanır."
+polish = "Statystyki lokalnych trybów gry są przechowywane w tym kliencie."
+
+[[message]]
+key = "Local statistics file is invalid, saving paused"
+[message.translations]
+simplified_chinese = "本地统计文件已损坏，保存已暂停"
+traditional_chinese = "本機統計檔案已損壞，儲存已暫停"
+japanese = "ローカル統計ファイルが破損しているため、保存を停止しています"
+korean = "로컬 통계 파일이 손상되어 저장이 일시 중지되었습니다"
+russian = "Файл локальной статистики повреждён, сохранение приостановлено"
+german = "Lokale Statistikdatei ist beschädigt, Speichern angehalten"
+spanish = "El archivo de estadísticas locales no es válido, guardado en pausa"
+french = "Le fichier de statistiques locales est invalide, sauvegarde en pause"
+brazilian_portuguese = "O arquivo de estatísticas locais é inválido, salvamento pausado"
+portuguese = "O ficheiro de estatísticas locais é inválido, gravação pausada"
+turkish = "Yerel istatistik dosyası geçersiz, kayıt duraklatıldı"
+polish = "Lokalny plik statystyk jest uszkodzony, zapis wstrzymany"
+
+[[message]]
 key = "Main menu"
 [message.translations]
 simplified_chinese = "主菜单"
@@ -1391,6 +1437,22 @@ brazilian_portuguese = "Menu principal"
 portuguese = "Menu principal"
 turkish = "Ana menü"
 polish = "Menu główne"
+
+[[message]]
+key = "Maps finished"
+[message.translations]
+simplified_chinese = "已过地图"
+traditional_chinese = "已過地圖"
+japanese = "クリアしたマップ"
+korean = "완료한 맵"
+russian = "Пройдено карт"
+german = "Abgeschlossene Karten"
+spanish = "Mapas completados"
+french = "Cartes terminées"
+brazilian_portuguese = "Mapas concluídos"
+portuguese = "Mapas concluídos"
+turkish = "Tamamlanan haritalar"
+polish = "Ukończone mapy"
 
 [[message]]
 key = "Name"
@@ -1537,6 +1599,22 @@ turkish = "Çevrimiçi arkadaşlar"
 polish = "Znajomi online"
 
 [[message]]
+key = "Other modes"
+[message.translations]
+simplified_chinese = "其他模式"
+traditional_chinese = "其他模式"
+japanese = "その他のモード"
+korean = "기타 모드"
+russian = "Другие режимы"
+german = "Andere Modi"
+spanish = "Otros modos"
+french = "Autres modes"
+brazilian_portuguese = "Outros modos"
+portuguese = "Outros modos"
+turkish = "Diğer modlar"
+polish = "Inne tryby"
+
+[[message]]
 key = "Password"
 [message.translations]
 simplified_chinese = "密码"
@@ -1601,22 +1679,6 @@ turkish = "Lütfen aşağıya takma adınızı girin."
 polish = "Wpisz poniżej swój pseudonim."
 
 [[message]]
-key = "Please wait…"
-[message.translations]
-simplified_chinese = "请稍等…"
-traditional_chinese = "請稍等…"
-japanese = "お待ちください…"
-korean = "잠시 기다려 주세요…"
-russian = "Пожалуйста, подождите…"
-german = "Bitte warten…"
-spanish = "Por favor espera…"
-french = "Veuillez patienter…"
-brazilian_portuguese = "Aguarde…"
-portuguese = "Por favor, aguarde…"
-turkish = "Lütfen bekleyin…"
-polish = "Proszę czekać…"
-
-[[message]]
 key = "Preparing demo playback"
 [message.translations]
 simplified_chinese = "正在准备回放"
@@ -1631,38 +1693,6 @@ brazilian_portuguese = "Preparando reprodução da demo"
 portuguese = "A preparar reprodução da demo"
 turkish = "Demo oynatımı hazırlanıyor"
 polish = "Przygotowywanie odtwarzania dema"
-
-[[message]]
-key = "Preview/render only one DDRace team from a full match demo"
-[message.translations]
-simplified_chinese = "从完整比赛 demo 中只预览/渲染一个 DDRace 队伍"
-traditional_chinese = "從完整比賽 demo 中只預覽/渲染一個 DDRace 隊伍"
-japanese = "完全試合デモから DDRace チームを1つだけプレビュー/描画"
-korean = "전체 매치 데모에서 하나의 DDRace 팀만 미리보기/렌더"
-russian = "Предпросмотр/рендер только одной команды DDRace из полного матч-демо"
-german = "Nur ein DDRace-Team aus einer vollständigen Match-Demo vorab anzeigen/rendern"
-spanish = "Vista previa/renderizar solo un equipo de DDRace de una demo de partida completa"
-french = "Aperçu/rendu d'une seule équipe DDRace à partir d'une démo de match complet"
-brazilian_portuguese = "Pré-visualizar/renderizar apenas uma equipe DDRace de uma demo de partida completa"
-portuguese = "Pré-visualizar/renderizar apenas uma equipe DDRace de uma demo de partida completa"
-turkish = "Tam maç demosundan yalnızca bir DDRace takımını önizle/oluştur"
-polish = "Podgląd/renderowanie tylko jednej drużyny DDRace z pełnego dema meczu"
-
-[[message]]
-key = "Preview/render only this team"
-[message.translations]
-simplified_chinese = "仅预览/渲染此队伍"
-traditional_chinese = "僅預覽/渲染此隊伍"
-japanese = "このチームのみをプレビュー/レンダリング"
-korean = "이 팀만 미리보기/렌더"
-russian = "Предпросмотр/рендер только этой команды"
-german = "Nur dieses Team vorab anzeigen/rendern"
-spanish = "Vista previa/renderizar solo este equipo"
-french = "Aperçu/rendu de cette équipe uniquement"
-brazilian_portuguese = "Pré-visualizar/renderizar apenas esta equipe"
-portuguese = "Pré-visualizar/renderizar apenas esta equipe"
-turkish = "Yalnızca bu takımı önizle/oluştur"
-polish = "Podgląd/renderowanie tylko tej drużyny"
 
 [[message]]
 key = "Profiles"
@@ -1727,22 +1757,6 @@ brazilian_portuguese = "Reconectar em %d seg"
 portuguese = "Reconnectar em %d seg"
 turkish = "%d sn sonra yeniden bağlan"
 polish = "Ponowne połączenie za %d s"
-
-[[message]]
-key = "Record match"
-[message.translations]
-simplified_chinese = "录制比赛"
-traditional_chinese = "錄製比賽"
-japanese = "試合を録画"
-korean = "매치 녹화"
-russian = "Запись матча"
-german = "Match aufnehmen"
-spanish = "Grabar partida"
-french = "Enregistrer le match"
-brazilian_portuguese = "Gravar partida"
-portuguese = "Gravar partida"
-turkish = "Maç kaydet"
-polish = "Nagrywaj mecz"
 
 [[message]]
 key = "Refresh"
@@ -1937,6 +1951,22 @@ turkish = "Skin'i kaydet"
 polish = "Zapisz skórkę"
 
 [[message]]
+key = "Score earned"
+[message.translations]
+simplified_chinese = "获得分数"
+traditional_chinese = "獲得分數"
+japanese = "獲得スコア"
+korean = "획득 점수"
+russian = "Набрано очков"
+german = "Erzielte Punkte"
+spanish = "Puntuación obtenida"
+french = "Score obtenu"
+brazilian_portuguese = "Pontuação obtida"
+portuguese = "Pontuação obtida"
+turkish = "Kazanılan puan"
+polish = "Zdobyte punkty"
+
+[[message]]
 key = "Sending initial client info"
 [message.translations]
 simplified_chinese = "正在发送初始客户端信息"
@@ -2129,22 +2159,6 @@ turkish = "İstatistik notları"
 polish = "Uwagi do statystyk"
 
 [[message]]
-key = "Stop match record"
-[message.translations]
-simplified_chinese = "停止比赛录制"
-traditional_chinese = "停止比賽錄製"
-japanese = "マッチ録画を停止"
-korean = "매치 녹화 중지"
-russian = "Остановить запись матча"
-german = "Match-Aufnahme stoppen"
-spanish = "Detener grabación de partida"
-french = "Arrêter l'enregistrement du match"
-brazilian_portuguese = "Parar gravação de partida"
-portuguese = "Parar gravação de partida"
-turkish = "Maç kaydını durdur"
-polish = "Zatrzymaj nagrywanie meczu"
-
-[[message]]
 key = "Switch team"
 [message.translations]
 simplified_chinese = "切换队伍"
@@ -2319,6 +2333,38 @@ brazilian_portuguese = "Total de amigos"
 portuguese = "Total de amigos"
 turkish = "Toplam arkadaş"
 polish = "Łącznie znajomych"
+
+[[message]]
+key = "Total hours"
+[message.translations]
+simplified_chinese = "按小时显示"
+traditional_chinese = "按小時顯示"
+japanese = "時間単位で表示"
+korean = "시간 단위로 표시"
+russian = "Показывать в часах"
+german = "In Stunden anzeigen"
+spanish = "Mostrar en horas"
+french = "Afficher en heures"
+brazilian_portuguese = "Exibir em horas"
+portuguese = "Exibir em horas"
+turkish = "Saat cinsinden göster"
+polish = "Wyświetlaj w godzinach"
+
+[[message]]
+key = "Total play time"
+[message.translations]
+simplified_chinese = "总时长"
+traditional_chinese = "總時長"
+japanese = "合計プレイ時間"
+korean = "총 플레이 시간"
+russian = "Общее время игры"
+german = "Gesamte Spielzeit"
+spanish = "Tiempo total de juego"
+french = "Temps de jeu total"
+brazilian_portuguese = "Tempo total de jogo"
+portuguese = "Tempo total de jogo"
+turkish = "Toplam oynama süresi"
+polish = "Łączny czas gry"
 
 [[message]]
 key = "transmits your player name to info.ddnet.org"
@@ -2511,6 +2557,22 @@ brazilian_portuguese = "Não foi possível salvar a skin com um nome reservado"
 portuguese = "Não foi possível guardar a skin com um nome reservado"
 turkish = "Ayrılmış bir isimle skin kaydedilemiyor"
 polish = "Nie można zapisać skórki o zastrzeżonej nazwie"
+
+[[message]]
+key = "Use current name"
+[message.translations]
+simplified_chinese = "使用当前名称"
+traditional_chinese = "使用目前名稱"
+japanese = "現在の名前を使用"
+korean = "현재 이름 사용"
+russian = "Использовать текущее имя"
+german = "Aktuellen Namen verwenden"
+spanish = "Usar el nombre actual"
+french = "Utiliser le nom actuel"
+brazilian_portuguese = "Usar o nome atual"
+portuguese = "Usar o nome atual"
+turkish = "Geçerli adı kullan"
+polish = "Użyj bieżącej nazwy"
 
 [[message]]
 key = "Use k key to kill (restart), q to pause and watch other players. See settings for other key binds."
@@ -2737,182 +2799,6 @@ turkish = "Çevrimiçi bir Eğitim sunucusu bulunamadığı için yerel bir sunu
 polish = "Grasz na lokalnym serwerze, ponieważ nie znaleziono dostępnego serwera samouczka.\\n\\nTwój wynik zostanie zapisany tylko lokalnie."
 
 [[message]]
-key = "Local game mode statistics"
-[message.translations]
-simplified_chinese = "本地游戏模式统计"
-traditional_chinese = "本地遊戲模式統計"
-japanese = "ローカルゲームモード統計"
-korean = "로컬 게임 모드 통계"
-russian = "Статистика локальных игровых режимов"
-german = "Statistiken lokaler Spielmodi"
-spanish = "Estadísticas de modos de juego locales"
-french = "Statistiques des modes de jeu locaux"
-brazilian_portuguese = "Estatísticas de modos de jogo locais"
-portuguese = "Estatísticas de modos de jogo locais"
-turkish = "Yerel oyun modu istatistikleri"
-polish = "Statystyki lokalnych trybów gry"
-
-[[message]]
-key = "Game mode"
-[message.translations]
-simplified_chinese = "游戏模式"
-traditional_chinese = "遊戲模式"
-japanese = "ゲームモード"
-korean = "게임 모드"
-russian = "Игровой режим"
-german = "Spielmodus"
-spanish = "Modo de juego"
-french = "Mode de jeu"
-brazilian_portuguese = "Modo de jogo"
-portuguese = "Modo de jogo"
-turkish = "Oyun modu"
-polish = "Tryb gry"
-
-[[message]]
-key = "Maps finished"
-[message.translations]
-simplified_chinese = "已过地图"
-traditional_chinese = "已過地圖"
-japanese = "クリアしたマップ"
-korean = "완료한 맵"
-russian = "Пройдено карт"
-german = "Abgeschlossene Karten"
-spanish = "Mapas completados"
-french = "Cartes terminées"
-brazilian_portuguese = "Mapas concluídos"
-portuguese = "Mapas concluídos"
-turkish = "Tamamlanan haritalar"
-polish = "Ukończone mapy"
-
-[[message]]
-key = "Score earned"
-[message.translations]
-simplified_chinese = "获得分数"
-traditional_chinese = "獲得分數"
-japanese = "獲得スコア"
-korean = "획득 점수"
-russian = "Набрано очков"
-german = "Erzielte Punkte"
-spanish = "Puntuación obtenida"
-french = "Score obtenu"
-brazilian_portuguese = "Pontuação obtida"
-portuguese = "Pontuação obtida"
-turkish = "Kazanılan puan"
-polish = "Zdobyte punkty"
-
-[[message]]
-key = "Total play time"
-[message.translations]
-simplified_chinese = "总时长"
-traditional_chinese = "總時長"
-japanese = "合計プレイ時間"
-korean = "총 플레이 시간"
-russian = "Общее время игры"
-german = "Gesamte Spielzeit"
-spanish = "Tiempo total de juego"
-french = "Temps de jeu total"
-brazilian_portuguese = "Tempo total de jogo"
-portuguese = "Tempo total de jogo"
-turkish = "Toplam oynama süresi"
-polish = "Łączny czas gry"
-
-[[message]]
-key = "Total hours"
-[message.translations]
-simplified_chinese = "按小时显示"
-traditional_chinese = "按小時顯示"
-japanese = "時間単位で表示"
-korean = "시간 단위로 표시"
-russian = "Показывать в часах"
-german = "In Stunden anzeigen"
-spanish = "Mostrar en horas"
-french = "Afficher en heures"
-brazilian_portuguese = "Exibir em horas"
-portuguese = "Exibir em horas"
-turkish = "Saat cinsinden göster"
-polish = "Wyświetlaj w godzinach"
-
-[[message]]
-key = "Local statistics file is invalid, saving paused"
-[message.translations]
-simplified_chinese = "本地统计文件已损坏，保存已暂停"
-traditional_chinese = "本機統計檔案已損壞，儲存已暫停"
-japanese = "ローカル統計ファイルが破損しているため、保存を停止しています"
-korean = "로컬 통계 파일이 손상되어 저장이 일시 중지되었습니다"
-russian = "Файл локальной статистики повреждён, сохранение приостановлено"
-german = "Lokale Statistikdatei ist beschädigt, Speichern angehalten"
-spanish = "El archivo de estadísticas locales no es válido, guardado en pausa"
-french = "Le fichier de statistiques locales est invalide, sauvegarde en pause"
-brazilian_portuguese = "O arquivo de estatísticas locais é inválido, salvamento pausado"
-portuguese = "O ficheiro de estatísticas locais é inválido, gravação pausada"
-turkish = "Yerel istatistik dosyası geçersiz, kayıt duraklatıldı"
-polish = "Lokalny plik statystyk jest uszkodzony, zapis wstrzymany"
-
-[[message]]
-key = "Use current name"
-[message.translations]
-simplified_chinese = "使用当前名称"
-traditional_chinese = "使用目前名稱"
-japanese = "現在の名前を使用"
-korean = "현재 이름 사용"
-russian = "Использовать текущее имя"
-german = "Aktuellen Namen verwenden"
-spanish = "Usar el nombre actual"
-french = "Utiliser le nom actuel"
-brazilian_portuguese = "Usar o nome atual"
-portuguese = "Usar o nome atual"
-turkish = "Geçerli adı kullan"
-polish = "Użyj bieżącej nazwy"
-
-[[message]]
-key = "ddstats.tw ID stats"
-[message.translations]
-simplified_chinese = "ddstats.tw ID 统计"
-traditional_chinese = "ddstats.tw ID 統計"
-japanese = "ddstats.tw ID統計"
-korean = "ddstats.tw ID 통계"
-russian = "Статистика ID на ddstats.tw"
-german = "ddstats.tw ID-Statistik"
-spanish = "Estadísticas del ID en ddstats.tw"
-french = "Statistiques d'ID ddstats.tw"
-brazilian_portuguese = "Estatísticas de ID do ddstats.tw"
-portuguese = "Estatísticas de ID do ddstats.tw"
-turkish = "ddstats.tw ID istatistikleri"
-polish = "Statystyki ID ddstats.tw"
-
-[[message]]
-key = "DDNet.org map stats"
-[message.translations]
-simplified_chinese = "DDNet.org 过图统计"
-traditional_chinese = "DDNet.org 過圖統計"
-japanese = "DDNet.org マップ統計"
-korean = "DDNet.org 맵 통계"
-russian = "Статистика карт на DDNet.org"
-german = "DDNet.org Kartenstatistik"
-spanish = "Estadísticas de mapas de DDNet.org"
-french = "Statistiques des cartes DDNet.org"
-brazilian_portuguese = "Estatísticas de mapas do DDNet.org"
-portuguese = "Estatísticas de mapas do DDNet.org"
-turkish = "DDNet.org harita istatistikleri"
-polish = "Statystyki map DDNet.org"
-
-[[message]]
-key = "Other modes"
-[message.translations]
-simplified_chinese = "其他模式"
-traditional_chinese = "其他模式"
-japanese = "その他のモード"
-korean = "기타 모드"
-russian = "Другие режимы"
-german = "Andere Modi"
-spanish = "Otros modos"
-french = "Autres modes"
-brazilian_portuguese = "Outros modos"
-portuguese = "Outros modos"
-turkish = "Diğer modlar"
-polish = "Inne tryby"
-
-[[message]]
 key = "Your nickname '%s' is already used (%d points). Do you still want to use it?"
 [message.translations]
 simplified_chinese = "你使用的昵称 \"%s\" 已被使用（%d 分）。确认要使用这个名字吗？"
@@ -2927,51 +2813,3 @@ brazilian_portuguese = "Seu apelido '%s' já está em uso (%d pontos). Você ain
 portuguese = "A tua alcunha '%s' já está a ser usada (%d pontos). Ainda queres usá-la?"
 turkish = "'%s' takma adınız zaten kullanılıyor (%d puan). Yine de kullanmak istiyor musunuz?"
 polish = "Twój pseudonim '%s' jest już używany (%d punktów). Czy nadal chcesz go używać?"
-
-[[message]]
-key = "Ignored legacy Dynamic Island edge margin"
-[message.translations]
-simplified_chinese = "已忽略旧版灵动岛边缘外边距"
-traditional_chinese = "已忽略舊版靈動島邊緣外邊距"
-japanese = "旧式ダイナミックアイランドの端の余白は無視されます"
-korean = "기존 다이내믹 아일랜드 가장자리 여백은 무시됨"
-russian = "Устаревший отступ от края Dynamic Island игнорируется"
-german = "Alter Randabstand der Dynamic Island wird ignoriert"
-spanish = "Se ignora el margen del borde heredado de la isla dinámica"
-french = "La marge de bord héritée du Dynamic Island est ignorée"
-brazilian_portuguese = "A margem de borda legada da Ilha Dinâmica é ignorada"
-portuguese = "A margem de borda legada da Ilha Dinâmica é ignorada"
-turkish = "Eski Dinamik Ada kenar boşluğu yok sayıldı"
-polish = "Zignorowano starszy margines krawędzi Dynamic Island"
-
-[[message]]
-key = "Disable client-initiated self-kill (K key / kill command)"
-[message.translations]
-simplified_chinese = "禁用客户端发起的自杀（K 键 / kill 命令）"
-traditional_chinese = "停用用戶端發起的自殺（K 鍵 / kill 指令）"
-japanese = "クライアント発の自殺を無効化（Kキー / killコマンド）"
-korean = "클라이언트 발 자살 비활성화 (K키 / kill 명령)"
-russian = "Отключить самоубийство со стороны клиента (клавиша K / команда kill)"
-german = "Clientseitige Selbsttötung deaktivieren (Taste K / Befehl kill)"
-spanish = "Desactiva el suicidio iniciado por el cliente (tecla K / comando kill)"
-french = "désactive le suicide initié par le client (touche K / commande kill)"
-brazilian_portuguese = "Desativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
-portuguese = "Desativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
-turkish = "İstemci kaynaklı intiharı devre dışı bırak (K tuşu / kill komutu)"
-polish = "Wyłącz samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)"
-
-[[message]]
-key = "Enable client-initiated self-kill (K key / kill command)"
-[message.translations]
-simplified_chinese = "启用客户端发起的自杀（K 键 / kill 命令）"
-traditional_chinese = "啟用用戶端發起的自殺（K 鍵 / kill 指令）"
-japanese = "クライアント発の自殺を有効化（Kキー / killコマンド）"
-korean = "클라이언트 발 자살 활성화 (K키 / kill 명령)"
-russian = "Включить самоубийство со стороны клиента (клавиша K / команда kill)"
-german = "Clientseitige Selbsttötung aktivieren (Taste K / Befehl kill)"
-spanish = "Activa el suicidio iniciado por el cliente (tecla K / comando kill)"
-french = "active le suicide initié par le client (touche K / commande kill)"
-brazilian_portuguese = "Ativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
-portuguese = "Ativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
-turkish = "İstemci kaynaklı intiharı etkinleştir (K tuşu / kill komutu)"
-polish = "Włącz samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)"

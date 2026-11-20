@@ -208,7 +208,11 @@ public:
 		switch(QmImeResolveCandidateReloadAction(List.has_value(), IsOpenNotify, Suppress))
 		{
 		case EQmImeCandidateReloadAction::REPLACE:
-			m_Candidates = std::move(*List);
+			// REPLACE 只会在 List 有值时返回；这里再守一次，避免静态分析把它当成未检查访问。
+			if(List.has_value())
+				m_Candidates = std::move(*List);
+			else
+				Clear();
 			break;
 		case EQmImeCandidateReloadAction::CLEAR:
 			Clear();

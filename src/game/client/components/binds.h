@@ -133,6 +133,8 @@ public:
 	void SetDefaults();
 	void UnbindAll();
 	uint64_t Revision() const { return m_Storage.Revision(); }
+	// 只读访问绑定表本体：命令索引按 Revision 重建，需要遍历全部按键槽位。
+	const CBindStorage &Storage() const { return m_Storage; }
 	const char *Get(int KeyId, int ModifierCombination) const;
 	const char *Get(const CBindSlot &BindSlot) const;
 	void GetKey(const char *pBindStr, char *pBuf, size_t BufSize) const;

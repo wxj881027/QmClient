@@ -29,12 +29,12 @@ TEST(SettingsWarmupCleanup, SourceNoLongerReferencesSettingsRuntimeFboContracts)
 	EXPECT_FALSE(ContainsAny(Skins, {"FBO_BUDGET"}));
 }
 
-TEST(SettingsWarmupCleanup, SourceKeepsTeeMemoryPreviewCacheAndWorkshopThumbCache)
+TEST(SettingsWarmupCleanup, SourceDropsTeePreviewCacheAndKeepsWorkshopThumbCache)
 {
 	const std::string MenusSettings = ReadRepoFile("src/game/client/QmUi/cards/QmCardCatalogTee.cpp");
 	const std::string Assets = ReadRepoFile("src/game/client/components/menus_settings_assets.cpp");
 
-	EXPECT_TRUE(ContainsAll(MenusSettings, {"SSettingsTeeListPreviewCache", "gs_TeeListPreviewCache"}));
+	EXPECT_FALSE(ContainsAny(MenusSettings, {"SSettingsTeeListPreviewCache", "gs_TeeListPreviewCache"}));
 	EXPECT_FALSE(ContainsAny(MenusSettings, {"settings_skin_preview_cache"}));
 	EXPECT_TRUE(ContainsAll(Assets, {"%s/%s.webp", "qm_storage::CACHE_WORKSHOP_THUMBS_DIR", "m_ThumbCachePath"}));
 }

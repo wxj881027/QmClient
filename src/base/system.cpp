@@ -528,8 +528,10 @@ int net_addr_from_url(NETADDR *addr, const char *string, char *host_buf, size_t 
 	bool sixup = false;
 	mem_zero(addr, sizeof(*addr));
 	const char *str = str_startswith(string, "tw-0.6+udp://");
-	if(!str && (str = str_startswith(string, "tw-0.7+udp://")))
+	const char *pTw7 = str == nullptr ? str_startswith(string, "tw-0.7+udp://") : nullptr;
+	if(pTw7 != nullptr)
 	{
+		str = pTw7;
 		addr->type |= NETTYPE_TW7;
 		sixup = true;
 	}

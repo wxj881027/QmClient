@@ -48,8 +48,12 @@ CEditorCollabPlacementSnapshot CEditorCollabPlacementSnapshot::Capture(const CEd
 				const size_t Count = (size_t)Tiles.m_Width * Tiles.m_Height;
 				if(!Reserve(Count, sizeof(uint16_t)))
 					return Abort();
-				Layer.m_Kind |= (Tiles.m_HasGame | (Tiles.m_HasFront << 1) | (Tiles.m_HasTele << 2) |
-							(Tiles.m_HasSpeedup << 3) | (Tiles.m_HasSwitch << 4) | (Tiles.m_HasTune << 5))
+				Layer.m_Kind |= (static_cast<int>(Tiles.m_HasGame) |
+							(static_cast<int>(Tiles.m_HasFront) << 1) |
+							(static_cast<int>(Tiles.m_HasTele) << 2) |
+							(static_cast<int>(Tiles.m_HasSpeedup) << 3) |
+							(static_cast<int>(Tiles.m_HasSwitch) << 4) |
+							(static_cast<int>(Tiles.m_HasTune) << 5))
 						<< 8;
 				Layer.m_Width = Tiles.m_Width;
 				Layer.m_Height = Tiles.m_Height;

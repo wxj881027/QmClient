@@ -32,7 +32,7 @@
 == カスタム Tee の色相切り替えはカスタムカラー専用で、TClient のレインボー Tee がオンの間は何も起きません。
 
 "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
-== "Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+== 「データソース」はカタログの収録範囲だけを決め、ダウンロードとは独立しています。同じスキンが複数のカタログに属することもあります。
 
 "Default (software)" is x264: CPU only, best quality, slowest.
 == 「Default (software)」は x264 です。CPU のみで画質は最良、速度は最も遅くなります。
@@ -761,9 +761,6 @@ Advanced
 Advanced options
 == 詳細オプション
 
-AFR
-== アフリカ
-
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == アップロードに成功したら F2 でログインし、change_map コマンドを実行します。ファイルは 64 MiB 未満である必要があります。
 
@@ -781,6 +778,9 @@ Afterimage pop
 
 AGC, experimental
 == AGC、実験的
+
+Agree
+== 同意
 
 Aim
 == エイム
@@ -1145,9 +1145,6 @@ Are you sure you want to save your skin? If a skin with this name already exists
 Arrow assets
 == 矢印アセット
 
-ASI
-== アジア
-
 Aspect ratio preset
 == アスペクト比プリセット
 
@@ -1207,9 +1204,6 @@ Audio packs
 
 Aurora: Polar Veil
 == オーロラ：極夜の帳
-
-AUS
-== オーストラリア
 
 Authed name color in scoreboard
 == スコアボードでの認証済みプレイヤー名の色
@@ -1321,9 +1315,6 @@ Auto switch weapon on ammo depletion
 
 Auto switch weapon on pickup
 == 拾得時に自動で武器を切り替え
-
-Auto team lock
-== 自動チームロック
 
 Auto translate received messages
 == 受信メッセージを自動翻訳
@@ -1784,8 +1775,8 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == キーにコマンドをバインド、またはキーバインドを表示
 
-Bind menu layout (0 = wheel, 1 = panel)
-== Bind menu layout (0 = wheel, 1 = panel)
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== バインドメニューのレイアウト: 0 = 放射状ホイール、1 = 角丸パネル
 
 Bind Menus
 == Bind Menus
@@ -2366,9 +2357,6 @@ Chinese (Traditional)
 Chinese font:
 == 中国語フォント：
 
-CHN
-== 中国
-
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == プレイヤーのキー入力表示を自分、他のプレイヤー、すべてから選び、キー入力アイコンのサイズを調整します。
 
@@ -2757,7 +2745,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == チャット入力欄の翻訳ボタンと、そのボタンで開く言語メニューの色。
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== スコアボードの行に色を付けます: 認証済みプレイヤー、同じクランのプレイヤー、フレンド、フレンドリスト内のクランメンバー。
+== スコアボードの行を色分けします：認証済みプレイヤー、同じクランのプレイヤー、フレンド、フレンドリスト内のクランメンバー。
 
 Colors too close to the map background are hard to read while moving.
 == マップの背景に近すぎる色は、動いているときに見分けにくくなります。
@@ -3135,7 +3123,7 @@ Console link color
 == コンソール: リンクの色
 
 Console link hover hue shift in degrees
-== Console link hover hue shift in degrees
+== コンソールリンクのホバー色相シフト（度）
 
 Console number color
 == コンソール: 数値の色
@@ -3250,6 +3238,9 @@ Converse
 
 Converse with the last person you whispered to (private message)
 == 最後にささやいた相手と会話（プライベートメッセージ）
+
+Converting %d%%
+== 変換中 %d%%
 
 Coordinate size on nameplate
 == ネームプレート上の座標のサイズ
@@ -3813,7 +3804,7 @@ Debug websockets
 == WebSocket をデバッグ
 
 Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
-== Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
+== クライアントがダウンロードするスキンを決め、プレフィックスを付けてプレフィックス付きスキン変種を読み込むこともできます。
 
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 専用 WebSocket エンドポイント（空欄なら wss://qmclient.icu/ws を使用）
@@ -4097,6 +4088,9 @@ Disable client-initiated self-kill (K key / kill command)
 Disable clipping
 == クリッピングを無効化
 
+Disable fast practice mode
+== 高速練習モードを無効にする
+
 Disable Gores auto-switch when picking up extra weapon
 == 追加武器取得時に Gores 自動切り替えを無効化
 
@@ -4105,6 +4099,9 @@ Disabled
 
 Disabling system messages also hides server warnings.
 == システムメッセージを無効にすると、サーバーの警告も非表示になります。
+
+Disagree
+== 反対
 
 Disallow chat from blacklisted addresses
 == ブラックリストアドレスからのチャットを禁止
@@ -4315,6 +4312,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == ダウンロード済み：%.1f MiB（総サイズ不明）
+
+Downloading %d%%
+== ダウンロード中 %d%%
 
 Downloading map
 == マップをダウンロード中
@@ -4585,6 +4585,9 @@ Dummy window size
 
 Dummy window zoom
 == ダミーウィンドウズーム
+
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== クライアント側の世界状態（練習ブランチ、トラック、スイッチ、表示セッション）を出力
 
 Dump the current savestring
 == 現在のセーブ文字列をダンプする
@@ -4931,6 +4934,9 @@ Enable fast input in Gores mode
 Enable fast map download
 == 高速マップダウンロードを有効にする
 
+Enable fast practice mode
+== 高速練習モードを有効にする
+
 Enable fat skin
 == ファットスキンを有効にする
 
@@ -4999,6 +5005,12 @@ Enable left swipe offset on chat fade
 
 Enable LLM thinking mode (may increase response time)
 == LLM 思考モードを有効化（応答時間が増加する可能性あり）
+
+Enable LX Music lyric integration
+== LX Music 歌詞統合を有効化
+
+Enable LX Music lyrics
+== LX Music の歌詞を有効化
 
 Enable lyrics
 == 歌詞を有効化
@@ -5279,6 +5291,9 @@ End bounce
 End marker of replay slice
 == リプレイスライスの終了マーカー
 
+Endless hook
+== 無限フック
+
 Endless hook has been activated
 == 無限フックが有効になりました
 
@@ -5312,8 +5327,14 @@ Enter a CP number from 1 to 255.
 Enter a phrase.
 == Enter a phrase.
 
+Enter fast practice
+== 高速練習に入る
+
 Enter Password
 == パスワードを入力
+
+Enter solo mode
+== ソロモードに入る
 
 Enter solo split mode
 == ソロスプリットモードに入る
@@ -5402,9 +5423,6 @@ ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
 ESC replay minutes
 == ESC リプレイ保存時間（分）
 
-EUR
-== ヨーロッパ
-
 Evaluate an expression
 == 式を評価
 
@@ -5468,8 +5486,14 @@ Existing Player
 Exit and install
 == 終了してインストール
 
+Exit fast practice
+== 高速練習を終了
+
 Exit replay view
 == リプレイ視聴を終了
+
+Exit solo mode
+== ソロモードから出る
 
 Exit spectating on both tees when either is hammered awake by another player
 == どちらかが他のプレイヤーのハンマーで解凍されたら両方の Tee の観戦を解除
@@ -6282,7 +6306,7 @@ General
 == 一般
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== DDNet の全般的な表示: 他プレイヤーの表示と影の不透明度、背景クワッド、既定のズーム。
+== DDNet の一般的な表示設定：他のプレイヤーとその影の不透明度、背景クアッド、デフォルトのズーム。
 
 Generated skin outline color
 == 生成アウトラインの色
@@ -6292,6 +6316,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == 生成アウトラインの太さ
+
+Get all weapons
+== 全武器を入手
 
 Getting game info
 == ゲーム情報を取得中
@@ -6396,7 +6423,7 @@ Global UI size percentage
 == 全体 UI サイズの割合
 
 Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
-== Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+== ホイール移動量の全体倍率（10 が既定値）。設定カードのページ送りはこの値の 12 倍です
 
 Glow
 == グロー
@@ -7565,6 +7592,9 @@ Jelly others
 Jelly strength
 == ゼリー強度
 
+Jetpack
+== ジェットパック
+
 Jitter
 == ジッター
 
@@ -7671,7 +7701,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == 暗い背景には明るい文字が見やすいです。既定の見た目に戻すにはヒントの外観をリセットを押します。
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== チーム色と区別してください。同じだと同クランの名前がチームパネルに溶け込み、読みにくくなります。
+== チームカラーとは別の色にしてください。同じだと同クランの名前がチームパネルに溶け込み、読みにくくなります。
 
 Keep unsent message on chat close
 == チャットを閉じる時に未送信内容を保持
@@ -8291,14 +8321,8 @@ Locate
 Lock both teams immediately when entering solo split mode
 == ソロスプリット開始時に両チームをすぐにロック
 
-Lock delay
-== ロック遅延
-
 Lock team
 == チームをロック
-
-Lock teams on entry
-== 入隊後すぐにロック
 
 Lock the team so other players cannot join directly
 == チームをロックして他のプレイヤーが直接参加できないようにする
@@ -8342,6 +8366,9 @@ Low contrast between name and message text makes chat hard to scan in fights.
 Lower means better quality and larger files; 18 is recommended
 == 数値が低いほど高画質でファイルは大きくなります。18 を推奨
 
+LX Music open API port (0=auto-detect from LX Music config)
+== LX Music オープン API ポート（0=LX Music の設定から自動検出）
+
 LXGW WenKai is available.
 == LXGW WenKai を利用できます。
 
@@ -8372,8 +8399,8 @@ Main Asset
 Main menu
 == メインメニュー
 
-Main Tee
-== メインTee
+Main-world ghost opacity
+== メインワールドゴーストの不透明度
 
 Maintains the list of hostile players and groups plus the rules used to display them.
 == 敵対プレイヤーとグループのリスト、および表示に使うルールを管理します。
@@ -9161,9 +9188,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = 予測レイテンシ
 
-NA
-== 北米
-
 Name
 == 名前
 
@@ -9926,6 +9950,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == 想像できないことだけが、Dreamにできないことです
 
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== 模擬されるのは自分の世界コピーだけです。他のプレイヤーはサーバー側の Tee なので、あなたが踏んだスイッチは彼らに影響しません。ゴーストの表示切り替えと不透明度は彼らにも適用されます。
+
 Opacity
 == 不透明度
 
@@ -10328,6 +10355,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == 一時停止
 
+Pause recording
+== 録画を一時停止
+
+Pause recording the practice line (the recorded part is kept)
+== 練習ラインの録画を一時停止（録画済み部分は保持）
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== これまでに録画した内容を捨てずに一時停止します。再開時は新しい区間として記録されるため、一時停止中の区間が直線で描かれることはありません。
+
 Pause the current demo
 == 現在のデモを一時停止
 
@@ -10446,7 +10482,7 @@ Pick a text style or a moon or sun badge, check the preview, then press "Save" t
 == テキストのスタイルか月・太陽のバッジを選び、プレビューを確認して「保存」を押すと、他のプレイヤーにもそのスタイルが表示されます。
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== 各行の色を選んでください。認証済みと同クランの色はスコアボードに、2 つのリスト色はフレンドリストに適用されます。
+== 各行の色を選んでください。認証済みと同クランの色はスコアボードに、リスト用の2色はフレンドリストに適用されます。
 
 Pick result: %s
 == 抽選結果：%s
@@ -10522,6 +10558,9 @@ Play back a demo
 
 Play background music
 == 背景音楽を再生
+
+Play rank ghost replay sounds and hit effects locally
+== Rank 1 ゴーストリプレイの効果音とヒットエフェクトをローカルで再生
 
 Play replay
 == リプレイを再生
@@ -10898,6 +10937,9 @@ Position jump tip
 Position:
 == 位置：
 
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== マップをひとりで練習し、メインワールドのゴーストを隠し、今回のタイムを表示し、練習コマンドをキーに割り当てます。
+
 Practice mode can't be enabled in team 0 mode.
 == チーム 0 モードでは練習モードを有効にできません
 
@@ -10962,7 +11004,7 @@ Prediction
 == 予測
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== 予測と遅延補償は DDNet ページの「ネットワーク補償」サブタブに移動しました。
+== 予測とレイテンシ補正は DDNet ページの「ネットワーク補正」サブタブに移動しました。
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == 予測境界（ms、レイテンシは増加するが Ping ジッターを低減）
@@ -10992,7 +11034,7 @@ Prediction margin when frozen
 == フリーズ時の予測マージン
 
 Prediction trades accuracy for responsiveness: a larger margin and AntiPing smooth out ping jitter but can mispredict nearby actions, and upstream redundancy may triple upload traffic.
-== 予測は精度と引き換えに応答性を得ます。大きなマージンと AntiPing は ping の揺れを滑らかにしますが、近くの動作を誤予測することがあり、上流冗長化はアップロード通信量を最大 3 倍にします。
+== 予測は応答性と引き換えに正確さを犠牲にします。マージンを大きくし AntiPing を使うと ping の揺らぎは滑らかになりますが、近くの動作を誤予測する可能性があり、上り冗長化でアップロード通信量が最大3倍になります。
 
 Preparing chat export: %d%%
 == チャットのエクスポートを準備中：%d%%
@@ -11534,12 +11576,6 @@ Rank 1 demo downloaded to '%s'
 Rank 1 replays
 == Rank 1 リプレイ
 
-Rank demo already available in the demo browser: %s
-== リプレイはすでにデモブラウザーにあります：%s
-
-Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
-== ランクデモをダウンロードしました：%s。ランク1一覧またはデモブラウザから再生できます。
-
 Rank ghost loaded: %s, %s s. It follows your current run.
 == Rankゴーストを読み込みました：%s、%s 秒。現在の走行に追従します。
 
@@ -11617,6 +11653,9 @@ Rank ghost: the replay has an invalid run range
 
 Rank ghost: the replay list is empty or malformed
 == Rankゴースト：リプレイ一覧が空か壊れています
+
+Rank ghost: this replay has no playable tee
+== Rank 1 ゴースト: このリプレイには再生可能な Tee がありません
 
 Rank ghost: timed out waiting for the map to load
 == Rankゴースト：マップの読み込み待機がタイムアウトしました
@@ -11891,6 +11930,9 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == 投票オプションを削除
 
+Remove all weapons
+== 全武器を外す
+
 Remove chat
 == チャットを削除
 
@@ -12122,11 +12164,17 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == リプレイ
 
+Replay a saved practice ghost group in demo-style view mode
+== 保存済みの練習ゴーストグループをデモ風の表示モードで再生
+
 Replay downloaded
 == リプレイをダウンロードしました
 
 Replay feature is disabled!
 == リプレイ機能は無効です！
+
+Replay ghost sounds and effects
+== ゴーストリプレイの効果音とヒットエフェクトを再生
 
 Replay list: failed to load, press Refresh to retry
 == リプレイ一覧：読み込み失敗。更新で再試行
@@ -12181,6 +12229,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == このサーバーではレスキューが有効ではなく、/practice が有効なチームにも参加していません。練習モードではランクを獲得できないことに注意してください。
+
+Rescue mode
+== レスキューモード
 
 Rescue mode changed to auto.
 == 救助モードを auto に切り替えました。
@@ -12326,6 +12377,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == 推奨値に戻す
 
+Restore the practice world to the state it had when fast practice was enabled
+== 練習ワールドを高速練習を開始した時点の状態に戻す
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== 練習ワールドを高速練習を開始した時点の状態に戻します。録画済みのラインは保持され、新しい区間から記録が続きます。
+
 Restored the built-in content
 == 内蔵コンテンツに戻しました
 
@@ -12346,6 +12403,9 @@ Retry remote stats
 
 Retrying…
 == 再試行中…
+
+Return to respawn point
+== リスポーン地点に戻る
 
 Reverse chat gradient colors
 == グラデーションの色を反転 (チャット)
@@ -12373,6 +12433,12 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == 既定値と異なる設定値を確認し、リセットできます。
+
+Rewind practice world
+== 練習ワールドを巻き戻す
+
+Rifle
+== ライフル
 
 Rifle Laser Inner Color
 == ライフルレーザー内部色
@@ -12494,8 +12560,8 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == サーバーに接続したときにコマンドを自動で実行します。接続時と参加時の二段階に分かれています。
 
-SA
-== 南米
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== 自分専用のマップコピーを動かし、サーバー側の本当の Tee は入ったときの位置に残ります。今回のタイムと練習コマンドのキー割り当ても含みます。
 
 Same as "vote no"
 == 「vote no」と同じ
@@ -12799,6 +12865,9 @@ Search country flag…
 
 Search donor asset
 == ドナーアセットを検索
+
+Search ghosts
+== ゴーストを検索
 
 Search main asset
 == メインアセットを検索
@@ -13115,6 +13184,9 @@ Server votes
 Server-dependent
 == サーバー依存
 
+Server-side ghost opacity during fast practice (%)
+== 高速練習中のサーバー側ゴーストの不透明度（%）
+
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == 背景色と背景の不透明度を設定し、次に文字色、選択文字色、選択背景色を決めます。下にプレビューが付きます。
 
@@ -13128,7 +13200,7 @@ Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit t
 == エイムはゲーム内マウス感度、メニューは UI マウス感度で設定し、最小カーソル距離と最大カーソル距離でカーソルの位置を制限します。
 
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
-== 「予測マージン」をミリ秒で設定し、「AntiPing（遅延補償）」をオンにして、何を予測するか選びます。冗長化スイッチは実験的で、パケット損失のある回線でのみ有用です。
+== 「予測マージン」をミリ秒で設定し、「AntiPing（レイテンシ補正）」を有効にしてから予測対象を選びます。冗長化スイッチは実験的で、パケット損失のある接続でのみ有効です。
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == 切り替え間隔を 0 にすると時間での切り替えが止まり、キューは手動やマップ参加時の変更に使えます。
@@ -13165,6 +13237,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 
 Set microphone mute state (0=on, 1=mute)
 == マイクのミュート状態を設定（0=オン、1=ミュート）
+
+Set practice respawn point
+== 練習用リスポーン地点を設定
 
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == サーバーをシングルプレイヤーモードに設定（プレイヤー間の相互作用なし、マップ読み込み前に設定する必要があります）
@@ -13862,6 +13937,9 @@ Show lyrics in Dynamic Island
 Show main tee title locally
 == メインTeeの称号をローカル表示
 
+Show main-world ghost
+== メインワールドのゴーストを表示
+
 Show map details
 == マップの詳細を表示
 
@@ -14075,6 +14153,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == 位置と角度のデバッグ情報を表示
 
+Show practice timer
+== 練習タイマーを表示
+
 Show predicted position as ghost, original as unpredictable player
 == 予測位置をゴーストとして表示、元の位置を予測不可能なプレイヤーとして表示
 
@@ -14125,6 +14206,9 @@ Show server settings
 
 Show server uptime
 == サーバー稼働時間を表示
+
+Show server-side tees as ghosts during fast practice
+== 高速練習中にサーバー側の Tee をゴーストとして表示する
 
 Show settings card borders
 == 設定カードの枠線を表示
@@ -14248,6 +14332,9 @@ Show the original text locally below translated outgoing messages
 
 Show the pet
 == ペットを表示
+
+Show the practice run timer in the HUD
+== HUD に今回の練習タイムを表示します
 
 Show the screen center line
 == 画面中央線を表示
@@ -14996,14 +15083,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == リプレイスライスの開始マーカー
 
+Start or resume recording the practice line
+== 練習ラインの録画を開始または再開
+
 Start playback of ghosts
 == ゴーストの再生を開始
+
+Start recording
+== 録画を開始
 
 Start recording a demo
 == デモの録画を開始
 
 Start recording a video
 == 動画の録画を開始
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== 高速練習ラインの録画を開始するか、一時停止後に再開します。録画は常に手動です。押すまで何も記録されません。
 
 Start skin queue from a random position when entering a map
 == マップ参加時にスキンキューをランダムな位置から開始
@@ -15095,6 +15191,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == %d 人のスポンサーに支えられています。見てみますか？
 
+Stop and save recording
+== 録画を終了して保存
+
 Stop following
 == 追跡を停止
 
@@ -15125,6 +15224,12 @@ Stop recording a demo
 Stop recording a video
 == 動画の録画を停止
 
+Stop recording and save the practice line as a ghost group
+== 録画を終了し、練習ラインをゴーストグループとして保存
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== 録画を終了し、ラインをゴーストグループとしてすぐにディスクへ書き出します。保存したグループはバインドメニューまたはゴーストページから再生できます。
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == エディターまたはエンティティ使用時のテキストオーバーレイのレンダリングを停止：高いほど詳細が減り、処理が速くなります
 
@@ -15133,6 +15238,12 @@ Stop server
 
 Stop the current demo
 == 現在のデモを停止
+
+Store the current practice tee state as the respawn point
+== 現在の練習 Tee 状態をリスポーン地点として保存
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== 現在の Tee の状態（位置、武器、ジャンプ、移動状態）を練習用リスポーン地点として保存します。
 
 Streamer mode
 == ストリーマーモード
@@ -15584,6 +15695,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == 全武器のテレポート（非推奨、代わりに特殊エンティティを使用してください）
 
+Teleport back to the practice respawn point
+== 練習用リスポーン地点に戻る
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== 練習用リスポーン地点に戻り、そこに保存された Tee の状態を復元します。戻るのは Tee だけで、ワールドはそのまま進行します。
+
 Teleport dummy to cursor
 == ダミーをカーソル位置にテレポート
 
@@ -16023,7 +16140,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == 入力を表示をオンにし、キーボードの大きさ、マウスの大きさ、不透明度、位置スライダーでサイズと位置を整えます。
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== 「他のチームを表示」をオンにすると他チームを半透明で描画します。影の不透明度はその下の従属行で設定し、視界は「背景クワッドを表示」と「既定のズーム」で調整します。
+== 「他のプレイヤーを表示」を有効にすると他のチームが半透明で描画されます。その下の依存行で影の不透明度を設定し、「背景クアッドを表示」と「デフォルトのズーム」で表示を調整できます。
 
 Tick any of "Show key stuck status", "Show hammer status", "Show dummy control status" or "Show dummy copy status".
 == キーの引っかかり表示、ハンマー状態を表示、dummy 操作状態を表示、dummy コピー状態を表示のうち、必要なものをオンにします。
@@ -16249,6 +16366,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == ローカルコンソールを切り替え
+
+Toggle main-world ghost
+== メインワールドのゴーストを切り替え
 
 Toggle map preview
 == マッププレビュー
@@ -16574,6 +16694,9 @@ Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 非力な環境ではオフにしてください。カードは即座に開き、スクロールも即時になります。カーソル形状は見た目だけで、3 種とも同じ文字枠に収まります。
 
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== 「メインワールドのゴーストを表示」をオフにすると、他のプレイヤーを含むサーバー側の Tee がすべて隠れます。オンのままなら不透明度スライダーで見え方を調整できます。バインド行は練習メニューと同じコマンドを送るので、チャット欄を開く必要はありません。
+
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == 「水中で自動チャット」をオンにして送りたい「チャットメッセージ」を入力し、必要なら「水中で表情を送信」と表情 ID も設定します。
 
@@ -16645,6 +16768,9 @@ Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow h
 
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.
 == 武器の持ち替えアニメーションかリロード時のフリップアニメーションをオンにし、アニメーション範囲を選んで長さ・距離・回転を調整します。
+
+Turn on LX Music open API
+== LX Music のオープン API をオンにする
 
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
 == 一度に一つずつオンにしましょう。Tee の切り替えやチャットを閉じる動作は、入力途中のメッセージを失わせることがあります。
@@ -16843,6 +16969,9 @@ Underscore
 
 Underscore: a line under the character that follows
 == 下線：次の文字の下に引く線
+
+Undo deep freeze
+== ディープフリーズを解除
 
 Unexpected map upload response.
 == マップのアップロードに対する応答が不正です。
