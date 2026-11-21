@@ -12,7 +12,9 @@ concurrency:
 
 jobs:
   check-style:
-    runs-on: ubuntu-latest
+    # 26.04 的 ubuntu-latest 已无 ddnet-tools，且下方 apt.llvm.org 源固定为 noble；
+    # 固定 24.04 让两者继续匹配。
+    runs-on: ubuntu-24.04
     env:
       CARGO_HTTP_MULTIPLEXING: false
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
