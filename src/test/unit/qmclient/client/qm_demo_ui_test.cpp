@@ -33,12 +33,14 @@ TEST_F(QmDemoBrowserSort, MetadataSortKeepsDemosTogetherInEitherDirection)
 	CMenuAccess::CDemoItem Longer{};
 	str_copy(Longer.m_aFilename, "a.demo");
 	Longer.m_InfosLoaded = true;
+	Longer.m_Valid = true;
 	uint_to_bytes_be(Longer.m_Info.m_aLength, 30);
 	uint_to_bytes_be(Longer.m_TimelineMarkers.m_aNumTimelineMarkers, 3);
 
 	CMenuAccess::CDemoItem Shorter{};
 	str_copy(Shorter.m_aFilename, "c.demo");
 	Shorter.m_InfosLoaded = true;
+	Shorter.m_Valid = true;
 	uint_to_bytes_be(Shorter.m_Info.m_aLength, 10);
 	uint_to_bytes_be(Shorter.m_TimelineMarkers.m_aNumTimelineMarkers, 1);
 

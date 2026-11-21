@@ -111,9 +111,10 @@ TEST_F(EditorMapTileData, InvalidSpeedupPaddingDoesNotCopyDespiteSufficientDecla
 	std::array<CSpeedupTile, 4> aDestination{};
 	for(auto &Tile : aDestination)
 		Tile.m_Force = 77;
+	EXPECT_EQ(m_pMap->GetDataSize(m_DataIndex), static_cast<int>(4 * sizeof(CSpeedupTile)));
 	EXPECT_FALSE(MapRenderItems::CopyTileData<CSpeedupTile>(*m_pMap, m_DataIndex, aDestination));
 	EXPECT_EQ(m_pMap->GetData(m_DataIndex), nullptr);
-	EXPECT_EQ(m_pMap->GetDataSize(m_DataIndex), static_cast<int>(4 * sizeof(CSpeedupTile)));
+	EXPECT_EQ(m_pMap->GetDataSize(m_DataIndex), 0);
 	for(const auto &Tile : aDestination)
 		EXPECT_EQ(Tile.m_Force, 77);
 }

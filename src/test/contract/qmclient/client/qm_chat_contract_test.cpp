@@ -37,14 +37,15 @@ TEST(QmChatInteractions, VisibleTranslationCollectsCandidatesBeforeStartingJobs)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/chat.cpp");
 	const std::string Body = SourceFunctionBody(Source, "bool CChat::TranslateVisibleChatLines()");
-	const size_t ScanLoop = Body.find("for(int i = m_BacklogCurLine; i < MAX_LINES; i++)");
+	const size_t ScanLoop = Body.find("for(int i = 0, LinesToSkip = m_BacklogCurLine; i < MAX_LINES; ++i)");
 	ASSERT_NE(ScanLoop, std::string::npos);
 	const size_t CollectIndex = Body.find("aLineIndices[NumLineIndices++] = LineIndex;", ScanLoop);
 	ASSERT_NE(CollectIndex, std::string::npos);
 	const size_t TranslateLoop = Body.find("for(int i = 0; i < NumLineIndices; i++)", CollectIndex);
 	ASSERT_NE(TranslateLoop, std::string::npos);
-
-	EXPECT_EQ(Body.find("GameClient()->m_Translate.Translate", ScanLoop), TranslateLoop + Body.substr(TranslateLoop).find("GameClient()->m_Translate.Translate"));
+	const size_t TranslateCall = Body.find("GameClient()->m_Translate.Translate", ScanLoop);
+	ASSERT_NE(TranslateCall, std::string::npos);
+	EXPECT_GE(TranslateCall, TranslateLoop);
 }
 
 TEST(QmRedPacketAutoClaim, ServerMessageIntegrationUsesMainConnectionBeforeNegativeClientReturn)

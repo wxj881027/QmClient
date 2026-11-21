@@ -1,6 +1,7 @@
 #include <base/str.h>
 #include <base/system.h>
 
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/public_word_filter.h>
@@ -13,11 +14,11 @@
 
 TEST(QmPublicWordFilterCacheWrite, FailedReplacementRemovesItsCandidateAndKeepsPublishedWords)
 {
-	constexpr const char *CACHE_PATH = "qmclient/public_word_filter.txt";
+	constexpr const char *CACHE_PATH = qm_storage::WORD_FILTER_CACHE_FILE;
 	CTestInfo TestInfo;
 	auto pStorage = TestInfo.CreateTestStorage();
 	ASSERT_NE(pStorage, nullptr);
-	ASSERT_TRUE(pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(qm_storage::EnsureFolder(pStorage.get(), qm_storage::CACHE_REMOTE_DIR));
 	ASSERT_TRUE(pStorage->CreateFolder(CACHE_PATH, IStorage::TYPE_SAVE));
 	char aCandidate[IO_MAX_PATH_LENGTH];
 	str_format(aCandidate, sizeof(aCandidate), "%s.%d.tmp", CACHE_PATH, pid());

@@ -19,6 +19,14 @@ namespace
 {
 	constexpr int MAX_MAP_BLOCK_BYTES = 256 * 1024 * 1024;
 	constexpr int64_t MAX_MAP_DATA_BYTES = 1024LL * 1024 * 1024;
+
+	bool DataBlockFitsBudget(const CDataFileReader &DataFile, int Index)
+	{
+		if(!DataFile.IsOpen() || Index < 0 || Index >= DataFile.NumData())
+			return false;
+		return DataFile.GetDataSize(Index) <= MAX_MAP_BLOCK_BYTES &&
+		       DataFile.GetStoredDataSize(Index) <= MAX_MAP_BLOCK_BYTES;
+	}
 }
 
 CMap::CMap(IStorage *pStorage) :
@@ -33,17 +41,30 @@ int CMap::GetDataSize(int Index) const
 
 void *CMap::GetData(int Index)
 {
+	if(!DataBlockFitsBudget(m_DataFile, Index))
+		return nullptr;
 	return m_DataFile.GetData(Index);
 }
 
 void *CMap::GetDataSwapped(int Index)
 {
+	if(!DataBlockFitsBudget(m_DataFile, Index))
+		return nullptr;
 	return m_DataFile.GetDataSwapped(Index);
 }
 
 const char *CMap::GetDataString(int Index)
 {
+	if(Index == -1)
+		return "";
+	if(!DataBlockFitsBudget(m_DataFile, Index))
+		return nullptr;
 	return m_DataFile.GetDataString(Index);
+}
+
+bool CMap::IsDataFailed(int Index) const
+{
+	return m_DataFile.IsDataFailed(Index);
 }
 
 void CMap::UnloadData(int Index)
@@ -111,16 +132,6 @@ try
 		return false;
 
 	int64_t MapDataBytes = 0;
-	for(int Index = 0; Index < NewDataFile.NumData(); ++Index)
-	{
-		const int Size = NewDataFile.GetDataSize(Index);
-		MapDataBytes += Size;
-		if(Size > MAX_MAP_BLOCK_BYTES || NewDataFile.GetStoredDataSize(Index) > MAX_MAP_BLOCK_BYTES || MapDataBytes > MAX_MAP_DATA_BYTES)
-		{
-			log_error("map/load", "Map exceeds raw data budget (block %d, size %d).", Index, Size);
-			return false;
-		}
-	}
 
 	if(!ValidateMapVersion(NewDataFile))
 	{
@@ -226,8 +237,27 @@ try
 		}
 	}
 
+	// tile 数据已按惰性失败语义校验；其余原始数据仍在载入时满足单块与总量预算。
+	for(int Index = 0; Index < NewDataFile.NumData(); ++Index)
+	{
+		if(UsedDataIndices.contains(Index))
+			continue;
+		const int Size = NewDataFile.GetDataSize(Index);
+		if(Size > MAX_MAP_BLOCK_BYTES || NewDataFile.GetStoredDataSize(Index) > MAX_MAP_BLOCK_BYTES || MapDataBytes + Size > MAX_MAP_DATA_BYTES)
+		{
+			log_error("map/load", "Map exceeds raw data budget (block %d, size %d).", Index, Size);
+			return false;
+		}
+		MapDataBytes += Size;
+	}
+
 	// 立即加载并隐式校验 game 层 tile 数据，因为后续必然用到。
 	// 不预加载其他数据以避免过多内存占用。
+	if(!DataBlockFitsBudget(NewDataFile, pGameLayer->m_Data))
+	{
+		log_error("map/load", "Game layer data exceeds the raw data budget.");
+		return false;
+	}
 	if(NewDataFile.GetData(pGameLayer->m_Data) == nullptr)
 	{
 		log_error("map/load", "Game layer data is invalid.");
@@ -674,6 +704,20 @@ bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int Gro
 		return false;
 	}
 
+	const bool RequiredData = LayerType == LAYERTYPE_GAME;
+	const int DataSize = NewDataFile.GetDataSize(DataIndex);
+	const int StoredDataSize = NewDataFile.GetStoredDataSize(DataIndex);
+	bool DataOversized = DataSize < 0 || StoredDataSize < 0 || DataSize > MAX_MAP_BLOCK_BYTES || StoredDataSize > MAX_MAP_BLOCK_BYTES;
+	if(!DataOversized && DataSize > MAX_MAP_DATA_BYTES - MapDataBytes)
+		DataOversized = true;
+	if(DataOversized && RequiredData)
+	{
+		log_error("map/load", "Tile data %d of layer %d in group %d exceeds the raw data budget.", DataIndex, LayerIndex, GroupIndex);
+		return false;
+	}
+	if(!DataOversized)
+		MapDataBytes += DataSize;
+
 	// datafile 用 int 存储数据块长度，先检查字节数再计算瓦片数量和大小。
 	constexpr size_t MAX_DATA_SIZE = MAX_MAP_BLOCK_BYTES;
 	const size_t Width = pLayerTilemap->m_Width;
@@ -700,7 +744,7 @@ bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int Gro
 	const int LayerVersion = pLayerTilemap->m_Version;
 	size_t MinInputSize = TilemapSize;
 	size_t MaxInputSize = std::numeric_limits<size_t>::max();
-	if(LayerVersion >= 4)
+	if(!DataOversized && LayerVersion >= 4)
 	{
 		if(LayerType == LAYERTYPE_TILES || LayerType == LAYERTYPE_GAME)
 		{
@@ -718,8 +762,8 @@ bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int Gro
 		MaxInputSize = LayerType == LAYERTYPE_TILES || LayerType == LAYERTYPE_GAME ? TilemapSize + sizeof(CTile) - 1 : 0;
 	}
 
-	// 保留可选层的惰性失败，声明长度不足的块无需分配或解压。
-	if(static_cast<size_t>(NewDataFile.GetDataSize(DataIndex)) < MinInputSize)
+	// 保留可选层的惰性失败，声明长度不足或超预算的块无需分配或解压。
+	if(DataOversized || static_cast<size_t>(NewDataFile.GetDataSize(DataIndex)) < MinInputSize)
 		MaxInputSize = 0;
 	NewDataFile.AddDataProcessor(DataIndex, MaxInputSize, [LayerVersion, TileSize, LayerType, GroupIndex, LayerIndex, TilemapCount, TilemapSize](void *pData, size_t Size) -> std::pair<void *, size_t> {
 		const size_t SavedTilesSize = Size / TileSize;

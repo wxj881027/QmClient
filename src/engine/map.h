@@ -45,6 +45,7 @@ public:
 	[[nodiscard]] virtual bool Load(const char *pMapName, int StorageType) = 0;
 	virtual void Unload() = 0;
 	virtual bool IsLoaded() const = 0;
+	virtual bool IsDataFailed(int Index) const { return false; }
 	virtual IOHANDLE File() const = 0;
 
 	virtual SHA256_DIGEST Sha256() const = 0;

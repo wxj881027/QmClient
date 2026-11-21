@@ -50,6 +50,7 @@ public:
 	void Adopt(CMap &&Other);
 	void Unload() override;
 	bool IsLoaded() const override;
+	bool IsDataFailed(int Index) const override;
 	IOHANDLE File() const override;
 
 	SHA256_DIGEST Sha256() const override;
