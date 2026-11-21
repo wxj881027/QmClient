@@ -479,6 +479,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 | 轻提示 | 事件 | 角落浮层 | 计时结束 | `ui_widget::Toast` |
 | 颜色选择器 | 点色块 | 浮层，锚定指针 | 选中、点外部、Esc | `SettingsColorPicker.h` + `CUi::ShowPopupColorPicker` |
 
+### 3.19a 取色器通道轨道（color picker channel track）
+
+- 定义：取色器与皮肤 HSL 滑条的轨道，应显示「当前其它通道已生效」的真实颜色轴；OKLCH 的 H 轨与色环共用固定参考色，C 轨在 L 过低时按可见下限预览，保证当前色为纯黑时 H/C 仍是可读标尺。颜色值仍以 sRGB 的 `ColorRGBA` 输出，OKLCH 只作为取色器工作空间，不改变配置或皮肤存储格式。
+- 唯一实现：`qm_picker_color::ResolveChannelTrack` / `ToRgba` / `FromRgba`（`src/game/client/QmUi/ColorPickerColor.h`）；取色器接入 `CUi::PopupColorPicker`（`src/game/client/ui_popups.cpp`），皮肤接入 `CMenus::RenderHslaScrollbars`（`src/game/client/components/menus_settings.cpp`）。OKLCH 彩度上限与色域映射走 `OKLCH_MAX_CHROMA`；超出 sRGB 时保持 L/H 降低 C；H/C 可见性走 `OKLCH_HUE_REFERENCE_*` 与 `OKLCH_CHROMA_TRACK_MIN_LIGHTNESS`。
+- 禁止的反面写法：HSL 的 L 轨直接用黑→白线性插值（漏掉中点的饱和色）；HSL 的 S 轨固定用中亮度灰→纯色（无视当前 L）；HSV 的 S/V 轨固定用 V=1 或 S=1 的纯色（无视当前另一通道）；RGB 的 R/G/B 轨从黑→纯通道色（丢掉另外两个通道）；让 L/C/H 等通道轨道继承当前颜色的 alpha（轨道固定不透明，透明度只由 A 轨表达）；把 OKLCH 的 H/C 轨直接绑在当前 L/C 上（当前色为黑时整条轨道变黑）；通道轨道只靠渐变描边而没有固定外描边（纯黑轨道会失去边界）；把 OKLCH 的 C 直接裁到 0..1 或直接裁 RGB；在绘制代码里另写一份 OKLCH 换算。
+
 ### 3.20 公告行级排版（MOTD line layout）
 
 - 定义：服务端公告按行分类，整行都是框线/制表字符的行按统一格子推进（一格一字形、字间距为 0，相邻横线首尾相接），其余行沿用普通文本排版；格宽与行高由字体实测，不写死像素。

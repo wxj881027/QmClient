@@ -23,6 +23,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/QmUi/ColorPickerColor.h>
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmListEntryAnimation.h>
@@ -1559,176 +1560,27 @@ bool CMenus::RenderHslaScrollbars(CUIRect *pRect, unsigned int *pColor, bool Alp
 	Preview.Margin(PreviewMargin, &Preview);
 	Preview.Draw(color_cast<ColorRGBA>(Color.UnclampLighting(DarkestLight)), IGraphics::CORNER_ALL, ui_token::radius::BASE + PreviewMargin);
 
-	auto &&RenderHueRect = [&](CUIRect *pColorRect) {
-		float CurXOff = pColorRect->x;
-		const float SizeColor = pColorRect->w / 6;
-
-		// red to yellow
+	const qm_picker_color::STrackOptions TrackOptions{DarkestLight, true};
+	auto &&RenderTrack = [&](CUIRect *pColorRect, const qm_picker_color::SChannelTrack &Track) {
+		if(Track.m_NumStops < 2)
+			return;
+		const int Segments = Track.m_NumStops - 1;
+		const float SegmentWidth = pColorRect->w / (float)Segments;
+		Graphics()->TextureClear();
+		Graphics()->QuadsBegin();
+		for(int Index = 0; Index < Segments; Index++)
 		{
-			IGraphics::CColorVertex aColors[4] = {
-				IGraphics::CColorVertex(0, ColorRGBA(1, 0, 0, 1)),
-				IGraphics::CColorVertex(1, ColorRGBA(1, 1, 0, 1)),
-				IGraphics::CColorVertex(2, ColorRGBA(1, 0, 0, 1)),
-				IGraphics::CColorVertex(3, ColorRGBA(1, 1, 0, 1)),
-			};
-			Graphics()->SetColorVertex(aColors, std::size(aColors));
-
-			IGraphics::CFreeformItem Freeform(
-				CurXOff, pColorRect->y,
-				CurXOff + SizeColor, pColorRect->y,
-				CurXOff, pColorRect->y + pColorRect->h,
-				CurXOff + SizeColor, pColorRect->y + pColorRect->h);
-			Graphics()->QuadsDrawFreeform(&Freeform, 1);
+			const ColorRGBA Left = Track.m_aStops[Index];
+			const ColorRGBA Right = Track.m_aStops[Index + 1];
+			const IGraphics::CQuadItem Segment(
+				pColorRect->x + SegmentWidth * Index,
+				pColorRect->y,
+				SegmentWidth + (Index + 1 < Segments ? 0.5f : 0.0f),
+				pColorRect->h);
+			Graphics()->SetColor4(Left, Right, Left, Right);
+			Graphics()->QuadsDrawTL(&Segment, 1);
 		}
-
-		// yellow to green
-		CurXOff += SizeColor;
-		{
-			IGraphics::CColorVertex aColors[4] = {
-				IGraphics::CColorVertex(0, ColorRGBA(1, 1, 0, 1)),
-				IGraphics::CColorVertex(1, ColorRGBA(0, 1, 0, 1)),
-				IGraphics::CColorVertex(2, ColorRGBA(1, 1, 0, 1)),
-				IGraphics::CColorVertex(3, ColorRGBA(0, 1, 0, 1)),
-			};
-			Graphics()->SetColorVertex(aColors, std::size(aColors));
-
-			IGraphics::CFreeformItem Freeform(
-				CurXOff, pColorRect->y,
-				CurXOff + SizeColor, pColorRect->y,
-				CurXOff, pColorRect->y + pColorRect->h,
-				CurXOff + SizeColor, pColorRect->y + pColorRect->h);
-			Graphics()->QuadsDrawFreeform(&Freeform, 1);
-		}
-
-		CurXOff += SizeColor;
-		// green to turquoise
-		{
-			IGraphics::CColorVertex aColors[4] = {
-				IGraphics::CColorVertex(0, ColorRGBA(0, 1, 0, 1)),
-				IGraphics::CColorVertex(1, ColorRGBA(0, 1, 1, 1)),
-				IGraphics::CColorVertex(2, ColorRGBA(0, 1, 0, 1)),
-				IGraphics::CColorVertex(3, ColorRGBA(0, 1, 1, 1)),
-			};
-			Graphics()->SetColorVertex(aColors, std::size(aColors));
-
-			IGraphics::CFreeformItem Freeform(
-				CurXOff, pColorRect->y,
-				CurXOff + SizeColor, pColorRect->y,
-				CurXOff, pColorRect->y + pColorRect->h,
-				CurXOff + SizeColor, pColorRect->y + pColorRect->h);
-			Graphics()->QuadsDrawFreeform(&Freeform, 1);
-		}
-
-		CurXOff += SizeColor;
-		// turquoise to blue
-		{
-			IGraphics::CColorVertex aColors[4] = {
-				IGraphics::CColorVertex(0, ColorRGBA(0, 1, 1, 1)),
-				IGraphics::CColorVertex(1, ColorRGBA(0, 0, 1, 1)),
-				IGraphics::CColorVertex(2, ColorRGBA(0, 1, 1, 1)),
-				IGraphics::CColorVertex(3, ColorRGBA(0, 0, 1, 1)),
-			};
-			Graphics()->SetColorVertex(aColors, std::size(aColors));
-
-			IGraphics::CFreeformItem Freeform(
-				CurXOff, pColorRect->y,
-				CurXOff + SizeColor, pColorRect->y,
-				CurXOff, pColorRect->y + pColorRect->h,
-				CurXOff + SizeColor, pColorRect->y + pColorRect->h);
-			Graphics()->QuadsDrawFreeform(&Freeform, 1);
-		}
-
-		CurXOff += SizeColor;
-		// blue to purple
-		{
-			IGraphics::CColorVertex aColors[4] = {
-				IGraphics::CColorVertex(0, ColorRGBA(0, 0, 1, 1)),
-				IGraphics::CColorVertex(1, ColorRGBA(1, 0, 1, 1)),
-				IGraphics::CColorVertex(2, ColorRGBA(0, 0, 1, 1)),
-				IGraphics::CColorVertex(3, ColorRGBA(1, 0, 1, 1)),
-			};
-			Graphics()->SetColorVertex(aColors, std::size(aColors));
-
-			IGraphics::CFreeformItem Freeform(
-				CurXOff, pColorRect->y,
-				CurXOff + SizeColor, pColorRect->y,
-				CurXOff, pColorRect->y + pColorRect->h,
-				CurXOff + SizeColor, pColorRect->y + pColorRect->h);
-			Graphics()->QuadsDrawFreeform(&Freeform, 1);
-		}
-
-		CurXOff += SizeColor;
-		// purple to red
-		{
-			IGraphics::CColorVertex aColors[4] = {
-				IGraphics::CColorVertex(0, ColorRGBA(1, 0, 1, 1)),
-				IGraphics::CColorVertex(1, ColorRGBA(1, 0, 0, 1)),
-				IGraphics::CColorVertex(2, ColorRGBA(1, 0, 1, 1)),
-				IGraphics::CColorVertex(3, ColorRGBA(1, 0, 0, 1)),
-			};
-			Graphics()->SetColorVertex(aColors, std::size(aColors));
-
-			IGraphics::CFreeformItem Freeform(
-				CurXOff, pColorRect->y,
-				CurXOff + SizeColor, pColorRect->y,
-				CurXOff, pColorRect->y + pColorRect->h,
-				CurXOff + SizeColor, pColorRect->y + pColorRect->h);
-			Graphics()->QuadsDrawFreeform(&Freeform, 1);
-		}
-	};
-
-	auto &&RenderSaturationRect = [&](CUIRect *pColorRect, const ColorRGBA &CurColor) {
-		ColorHSLA LeftColor = color_cast<ColorHSLA>(CurColor);
-		ColorHSLA RightColor = color_cast<ColorHSLA>(CurColor);
-
-		LeftColor.s = 0.0f;
-		RightColor.s = 1.0f;
-
-		const ColorRGBA LeftColorRGBA = color_cast<ColorRGBA>(LeftColor);
-		const ColorRGBA RightColorRGBA = color_cast<ColorRGBA>(RightColor);
-
-		Graphics()->SetColor4(LeftColorRGBA, RightColorRGBA, RightColorRGBA, LeftColorRGBA);
-
-		IGraphics::CFreeformItem Freeform(
-			pColorRect->x, pColorRect->y,
-			pColorRect->x + pColorRect->w, pColorRect->y,
-			pColorRect->x, pColorRect->y + pColorRect->h,
-			pColorRect->x + pColorRect->w, pColorRect->y + pColorRect->h);
-		Graphics()->QuadsDrawFreeform(&Freeform, 1);
-	};
-
-	auto &&RenderLightingRect = [&](CUIRect *pColorRect, const ColorRGBA &CurColor) {
-		ColorHSLA LeftColor = color_cast<ColorHSLA>(CurColor);
-		ColorHSLA RightColor = color_cast<ColorHSLA>(CurColor);
-
-		LeftColor.l = DarkestLight;
-		RightColor.l = 1.0f;
-
-		const ColorRGBA LeftColorRGBA = color_cast<ColorRGBA>(LeftColor);
-		const ColorRGBA RightColorRGBA = color_cast<ColorRGBA>(RightColor);
-
-		Graphics()->SetColor4(LeftColorRGBA, RightColorRGBA, RightColorRGBA, LeftColorRGBA);
-
-		IGraphics::CFreeformItem Freeform(
-			pColorRect->x, pColorRect->y,
-			pColorRect->x + pColorRect->w, pColorRect->y,
-			pColorRect->x, pColorRect->y + pColorRect->h,
-			pColorRect->x + pColorRect->w, pColorRect->y + pColorRect->h);
-		Graphics()->QuadsDrawFreeform(&Freeform, 1);
-	};
-
-	auto &&RenderAlphaRect = [&](CUIRect *pColorRect, const ColorRGBA &CurColorFull) {
-		const ColorRGBA LeftColorRGBA = color_cast<ColorRGBA>(color_cast<ColorHSLA>(CurColorFull).WithAlpha(0.0f));
-		const ColorRGBA RightColorRGBA = color_cast<ColorRGBA>(color_cast<ColorHSLA>(CurColorFull).WithAlpha(1.0f));
-
-		Graphics()->SetColor4(LeftColorRGBA, RightColorRGBA, RightColorRGBA, LeftColorRGBA);
-
-		IGraphics::CFreeformItem Freeform(
-			pColorRect->x, pColorRect->y,
-			pColorRect->x + pColorRect->w, pColorRect->y,
-			pColorRect->x, pColorRect->y + pColorRect->h,
-			pColorRect->x + pColorRect->w, pColorRect->y + pColorRect->h);
-		Graphics()->QuadsDrawFreeform(&Freeform, 1);
+		Graphics()->QuadsEnd();
 	};
 
 	const int EntryCount = 3 + Alpha;
@@ -1766,30 +1618,20 @@ bool CMenus::RenderHslaScrollbars(CUIRect *pRect, unsigned int *pColor, bool Alp
 			str_format(aBuf, sizeof(aBuf), "%s: %.1f%% (%03d)", apLabels[i], Color[i] * 100.0f, round_to_int(Color[i] * 255.0f));
 		Ui()->DoLabel(&Label, aBuf, Metrics.m_BodySize, TEXTALIGN_ML);
 
-		ColorRGBA HandleColor;
-		Graphics()->TextureClear();
-		Graphics()->TrianglesBegin();
+		const ColorRGBA DisplayedColor = color_cast<ColorRGBA>(Color.UnclampLighting(DarkestLight));
+		const qm_picker_color::SChannelTrack Track = qm_picker_color::ResolveChannelTrack(
+			qm_picker_color::ETrackSpace::HSLA,
+			i,
+			color_cast<ColorHSVA>(Color),
+			DisplayedColor,
+			Color,
+			{},
+			TrackOptions);
+		RenderTrack(&Rail, Track);
+
+		ColorRGBA HandleColor = DisplayedColor;
 		if(i == 0)
-		{
-			RenderHueRect(&Rail);
 			HandleColor = color_cast<ColorRGBA>(ColorHSLA(Color.h, 1.0f, 0.5f, 1.0f));
-		}
-		else if(i == 1)
-		{
-			RenderSaturationRect(&Rail, color_cast<ColorRGBA>(ColorHSLA(Color.h, 1.0f, 0.5f, 1.0f)));
-			HandleColor = color_cast<ColorRGBA>(ColorHSLA(Color.h, Color.s, 0.5f, 1.0f));
-		}
-		else if(i == 2)
-		{
-			RenderLightingRect(&Rail, color_cast<ColorRGBA>(ColorHSLA(Color.h, Color.s, 0.5f, 1.0f)));
-			HandleColor = color_cast<ColorRGBA>(ColorHSLA(Color.h, Color.s, Color.l, 1.0f).UnclampLighting(DarkestLight));
-		}
-		else if(i == 3)
-		{
-			RenderAlphaRect(&Rail, color_cast<ColorRGBA>(ColorHSLA(Color.h, Color.s, Color.l, 1.0f).UnclampLighting(DarkestLight)));
-			HandleColor = color_cast<ColorRGBA>(Color.UnclampLighting(DarkestLight));
-		}
-		Graphics()->TrianglesEnd();
 
 		Color[i] = Ui()->DoScrollbarH(&((char *)pColor)[i], &Button, Color[i], &HandleColor);
 	}

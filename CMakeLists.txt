@@ -5116,6 +5116,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/qmclient/client/qm_phosphor_resource_contract_test.cpp
     src/test/contract/qmclient/ui/qm_font_icon_resource_contract_test.cpp
     src/test/unit/qmclient/ui/QmLayoutTest.cpp
+    src/test/unit/qmclient/ui/QmColorPickerColorTest.cpp
     src/test/unit/qmclient/ui/QmColorPickerPaletteTest.cpp
     src/test/unit/qmclient/ui/qm_input_focus_glow_test.cpp
     src/test/unit/qmclient/ui/qm_secondary_button_style_test.cpp
