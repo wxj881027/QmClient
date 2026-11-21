@@ -191,6 +191,7 @@ public:
 	void AddSelectedLayer(int LayerIndex);
 	void SelectNextLayer();
 	void SelectPreviousLayer();
+	void NormalizeSelection();
 	void SelectGameLayer();
 	void MakeGameLayer(const std::shared_ptr<CLayer> &pLayer);
 	void MakeTeleLayer(const std::shared_ptr<CLayer> &pLayer);

@@ -1395,6 +1395,7 @@ void CEditorActionAppendMap::Undo()
 		Map()->m_vpImages.pop_back();
 	}
 
+	Map()->NormalizeSelection();
 	Map()->OnModify();
 }
 
@@ -1453,6 +1454,9 @@ void CEditorActionTileArt::Undo()
 	{
 		Map()->m_vpImages.pop_back();
 	}
+
+	Map()->NormalizeSelection();
+	Map()->OnModify();
 }
 
 bool CEditorActionTileArt::TryRedo()

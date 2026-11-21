@@ -454,6 +454,52 @@ void CEditorMap::SelectPreviousLayer()
 	SelectLayer(0);
 }
 
+void CEditorMap::NormalizeSelection()
+{
+	if(m_vpGroups.empty())
+	{
+		m_SelectedGroup = 0;
+		m_vSelectedLayers.clear();
+		DeselectQuads();
+		DeselectQuadPoints();
+		return;
+	}
+
+	const int PreviousGroup = m_SelectedGroup;
+	m_SelectedGroup = std::clamp(m_SelectedGroup, 0, (int)m_vpGroups.size() - 1);
+	auto &vLayers = m_vpGroups[m_SelectedGroup]->m_vpLayers;
+	const size_t PreviousLayerCount = m_vSelectedLayers.size();
+	m_vSelectedLayers.erase(
+		std::remove_if(m_vSelectedLayers.begin(), m_vSelectedLayers.end(), [&vLayers](int LayerIndex) {
+			return LayerIndex < 0 || LayerIndex >= (int)vLayers.size();
+		}),
+		m_vSelectedLayers.end());
+	const bool SelectionChanged = PreviousGroup != m_SelectedGroup || PreviousLayerCount != m_vSelectedLayers.size();
+	if(SelectionChanged)
+	{
+		m_SelectedQuadEnvelope = -1;
+		m_CurrentQuadIndex = -1;
+		m_SelectedSoundSource = -1;
+		DeselectQuads();
+		DeselectQuadPoints();
+	}
+	if(m_vSelectedLayers.empty() && !vLayers.empty())
+	{
+		m_vSelectedLayers.push_back((int)vLayers.size() - 1);
+		DeselectQuads();
+		DeselectQuadPoints();
+	}
+
+	if(m_SelectedQuadEnvelope < 0 || m_SelectedQuadEnvelope >= (int)m_vpEnvelopes.size())
+		m_SelectedQuadEnvelope = -1;
+	if(m_SelectedEnvelope < 0 || m_SelectedEnvelope >= (int)m_vpEnvelopes.size())
+		m_SelectedEnvelope = 0;
+	if(m_SelectedImage < 0 || m_SelectedImage >= (int)m_vpImages.size())
+		m_SelectedImage = 0;
+	if(m_SelectedSound < 0 || m_SelectedSound >= (int)m_vpSounds.size())
+		m_SelectedSound = 0;
+}
+
 void CEditorMap::SelectGameLayer()
 {
 	for(size_t g = 0; g < m_vpGroups.size(); g++)
