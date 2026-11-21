@@ -789,7 +789,7 @@ json_value * json_parse_ex (json_settings * settings,
 
                            flags &= ~ (flag_num_negative | flag_num_e |
                                         flag_num_e_got_sign | flag_num_e_negative |
-                                           flag_num_zero);
+                                           flag_num_zero | flag_num_got_decimal);
 
                            num_digits = 0;
                            num_fraction = 0;
@@ -916,17 +916,20 @@ json_value * json_parse_ex (json_settings * settings,
                      continue;
                   }
                }
-               else if (b == '.' && top->type == json_integer)
+               else if (b == '.' && ! (flags & flag_num_e) && ! (flags & flag_num_got_decimal))
                {
-                  json_int_t integer = top->u.integer;
-
                   if (!num_digits)
                   {  sprintf (error, "%u:%u: Expected digit before `.`", line_and_col);
                      goto e_failed;
                   }
 
-                  top->type = json_double;
-                  top->u.dbl = (double) integer;
+                  // 整数部分溢出时类型已提前变成 double，此时同样要接受小数点。
+                  if (top->type == json_integer)
+                  {
+                     json_int_t integer = top->u.integer;
+                     top->type = json_double;
+                     top->u.dbl = (double) integer;
+                  }
 
                   flags |= flag_num_got_decimal;
                   num_digits = 0;

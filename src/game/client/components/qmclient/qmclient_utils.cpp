@@ -147,9 +147,9 @@ try
 	const size_t Size = str_length(pContent);
 	if(Size > QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES)
 		return false;
-	char aTemporary[sizeof(QMCLIENT_LIFECYCLE_MARKER_FILE) + 32];
+	char aTemporary[IO_MAX_PATH_LENGTH];
 	IStorage::FormatTmpPath(aTemporary, sizeof(aTemporary), QMCLIENT_LIFECYCLE_MARKER_FILE);
-	Storage.CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	qm_storage::EnsureFolder(&Storage, qm_storage::RUNTIME_DIR);
 	IOHANDLE File = Storage.OpenFile(aTemporary, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE);
 	if(!File)
 	{

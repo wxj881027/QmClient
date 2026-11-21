@@ -12,7 +12,6 @@ TEST(QmChatTextLayout, RecalledLineCannotReuseScoreboardWrappingInExpandedHistor
 	Line.m_Height = 24.0f;
 	Line.m_TextBlocks.m_SecondaryOffset = 16.0f;
 
-	// 计分板关闭时这条消息在可见范围之外，直到再次展开历史才轮到它。
 	EXPECT_LT(Line.HeightFor(false, true), 0.0f);
 	Line.SelectView(false, true);
 	EXPECT_LT(Line.m_Height, 0.0f);

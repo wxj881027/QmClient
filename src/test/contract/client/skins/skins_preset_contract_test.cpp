@@ -195,7 +195,7 @@ TEST(SkinsContract, SkinQueuePresetCompatibilityKeepsLimitAndMigratesLegacyDummy
 	const size_t AddActiveEnd = Source.find("bool CSkins::RemoveSkinQueue", AddActivePos);
 	ASSERT_NE(AddActiveEnd, std::string::npos);
 	const std::string AddActiveBody = Source.substr(AddActivePos, AddActiveEnd - AddActivePos);
-	const size_t AddPresetItemPos = Source.find("bool CSkins::AddSkinQueuePresetItem(int PresetIndex, const char *pSkinName, bool UseCustomColor, int ColorBody, int ColorFeet, int Dummy)");
+	const size_t AddPresetItemPos = Source.find("bool CSkins::AddSkinQueuePresetItem(int PresetIndex, const char *pSkinName, bool UseCustomColor, int ColorBody, int ColorFeet, int)");
 	ASSERT_NE(AddPresetItemPos, std::string::npos);
 	const size_t AddPresetItemEnd = Source.find("bool CSkins::AddSkinQueuePresetFromCurrent", AddPresetItemPos);
 	ASSERT_NE(AddPresetItemEnd, std::string::npos);
@@ -230,10 +230,11 @@ TEST(SkinsContract, SkinQueuePresetCompatibilityKeepsLimitAndMigratesLegacyDummy
 	EXPECT_EQ(AddActiveBody.find("const int Limit = minimum(SKIN_QUEUE_HARD_LIMIT"), std::string::npos);
 	EXPECT_NE(Source.find("SKIN_QUEUE_PRESET_HARD_LIMIT"), std::string::npos);
 	EXPECT_NE(AddPresetBody.find("Presets.size() >= SKIN_QUEUE_PRESET_HARD_LIMIT"), std::string::npos);
-	EXPECT_NE(AddPresetBody.find("std::find_if(Presets.begin(), Presets.end()"), std::string::npos);
-	EXPECT_NE(AddPresetBody.find("str_comp(Preset.m_Name.c_str(), aPresetName) == 0"), std::string::npos);
-	EXPECT_NE(AddPresetItemBody.find("const int Limit = minimum(SKIN_QUEUE_HARD_LIMIT, maximum(0, SkinQueueLengthVar(Dummy)));"), std::string::npos);
-	EXPECT_NE(AddPresetItemBody.find("if((int)Queue.size() >= Limit)"), std::string::npos);
+	// 查重收敛到 SkinQueuePresetNameInUse：只比用户预设，且共享预设不受播放队列长度影响。
+	EXPECT_NE(AddPresetBody.find("SkinQueuePresetNameInUse(Presets, aPresetName)"), std::string::npos);
+	EXPECT_NE(Source.find("std::any_of(vPresets.begin(), vPresets.end()"), std::string::npos);
+	EXPECT_NE(Source.find("Preset.m_Name == pName"), std::string::npos);
+	EXPECT_NE(AddPresetItemBody.find("if(Queue.size() >= SKIN_QUEUE_HARD_LIMIT)"), std::string::npos);
 
 	EXPECT_NE(DummyPresetBody.find("AddSkinQueuePreset("), std::string::npos);
 	EXPECT_NE(DummyPresetItemBody.find("AddSkinQueuePresetItem("), std::string::npos);

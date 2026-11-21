@@ -167,6 +167,8 @@ namespace
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
 			m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+			m_pStorage->CreateFolder("qmclient/cache", IStorage::TYPE_SAVE);
+			m_pStorage->CreateFolder("qmclient/cache/maps", IStorage::TYPE_SAVE);
 			m_pStorage->CreateFolder(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE);
 			uint8_t aPixel[] = {80, 120, 160, 255};
 			CImageInfo Image;

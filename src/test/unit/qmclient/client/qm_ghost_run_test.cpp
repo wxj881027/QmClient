@@ -63,9 +63,7 @@ namespace
 
 		bool Publish(int Previous, int Free)
 		{
-			return m_Best.Publish(m_aSlots, Previous, Free, [this](const CRow &Item) {
-				return ghost_run::PublishRow(m_vRows, Item, true, [](const CRow &A, const CRow &B) { return A < B; }, [this](const CRow &) { ++m_RemovedFiles; });
-			}, [this](int Slot) { m_aSlots[Slot].m_Path.Reset(); });
+			return m_Best.Publish(m_aSlots, Previous, Free, [this](const CRow &Item) { return ghost_run::PublishRow(m_vRows, Item, true, [](const CRow &A, const CRow &B) { return A < B; }, [this](const CRow &) { ++m_RemovedFiles; }); }, [this](int Slot) { m_aSlots[Slot].m_Path.Reset(); });
 		}
 	};
 }

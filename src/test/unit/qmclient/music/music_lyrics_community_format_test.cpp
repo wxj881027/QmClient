@@ -11,7 +11,7 @@ TEST(MusicLyricsCommunityFormat, NeteaseUsesTheNumericSongId)
 	const auto Song = CommunitySong(1, 42, "unrelated");
 	EXPECT_EQ(Song.m_Source, ECommunitySource::NETEASE);
 	EXPECT_EQ(Song.m_Id, "42");
-	EXPECT_EQ(CommunityCachePath(Song), "qmclient/lyrics/netease/42.yrc");
+	EXPECT_EQ(CommunityCachePath(Song), "qmclient/content/lyrics/netease/42.yrc");
 	EXPECT_EQ(CommunityUrl(Song), "https://raw.githubusercontent.com/amll-dev/amll-ttml-db/main/ncm-lyrics/42.yrc");
 	EXPECT_EQ(CommunitySong(1, std::numeric_limits<uint64_t>::max(), {}).m_Id, "18446744073709551615");
 	EXPECT_EQ(CommunitySong(1, 0, "42").m_Source, ECommunitySource::NONE);
@@ -22,7 +22,7 @@ TEST(MusicLyricsCommunityFormat, QqUsesOnlyTheFullNativeCatalogIdentifier)
 	const auto Numeric = CommunitySong(4, 999, "qqmusic:id:42");
 	EXPECT_EQ(Numeric.m_Source, ECommunitySource::QQMUSIC);
 	EXPECT_EQ(Numeric.m_Id, "42");
-	EXPECT_EQ(CommunityCachePath(Numeric), "qmclient/lyrics/qqmusic/42.yrc");
+	EXPECT_EQ(CommunityCachePath(Numeric), "qmclient/content/lyrics/qqmusic/42.yrc");
 	const auto Mid = CommunitySong(4, 999, "qqmusic:mid:001AbCdEfGhIjK");
 	EXPECT_EQ(Mid.m_Source, ECommunitySource::QQMUSIC);
 	EXPECT_EQ(Mid.m_Id, "001AbCdEfGhIjK");
@@ -35,7 +35,7 @@ TEST(MusicLyricsCommunityFormat, SpotifyKeepsItsCaseSensitiveCatalogId)
 	const auto Song = CommunitySong(5, 999, "0123456789aBcDeFgHiJkL");
 	EXPECT_EQ(Song.m_Source, ECommunitySource::SPOTIFY);
 	EXPECT_EQ(Song.m_Id, "0123456789aBcDeFgHiJkL");
-	EXPECT_EQ(CommunityCachePath(Song), "qmclient/lyrics/spotify/0123456789aBcDeFgHiJkL.yrc");
+	EXPECT_EQ(CommunityCachePath(Song), "qmclient/content/lyrics/spotify/0123456789aBcDeFgHiJkL.yrc");
 	EXPECT_EQ(CommunityUrl(Song), "https://raw.githubusercontent.com/amll-dev/amll-ttml-db/main/spotify-lyrics/0123456789aBcDeFgHiJkL.yrc");
 }
 

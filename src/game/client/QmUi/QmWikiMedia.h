@@ -34,7 +34,7 @@ namespace qm_wiki_media
 	// 丢弃已加载的图片缓存（不主动卸载贴图句柄：图形设备重建后仍需要重启客户端）。
 	// 目前没有调用点——面板只在打开时 Init 一次；将来接语言切换时在这里补卸载。
 	void Clear();
-	// pPath 相对 wiki/media/；未找到或解码失败返回 nullptr。
+	// pPath 相对 qmclient/content/wiki/media/；未找到或解码失败返回 nullptr。
 	const SWikiMedia *Get(const char *pPath);
 	// 只查缓存，不触发解码：布局阶段用，避免打开文档时在绘制帧里同步解多张大图。
 	const SWikiMedia *Peek(const char *pPath);

@@ -17,6 +17,7 @@
 #include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
 #include <game/client/components/binds.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/bind_index.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/localization.h>
@@ -27,7 +28,24 @@
 
 using namespace qm_tclient_cards;
 
-CSettingsBindCache g_CommandBindCache;
+// 设置页所有绑定行共用的命令索引。定义放在这里而不是头文件里，卡片只通过
+// QmLookupCommandBind 访问，不各自持有副本。
+CCommandBindIndex &QmCommandBindIndex()
+{
+	static CCommandBindIndex s_Index;
+	return s_Index;
+}
+
+void QmRefreshCommandBindIndex(const CBinds &Binds)
+{
+	QmCommandBindIndex().EnsureFresh(Binds.Storage());
+}
+
+CBindSlot QmLookupCommandBind(const CBinds &Binds, const char *pCommand, bool *pExactMatch)
+{
+	QmRefreshCommandBindIndex(Binds);
+	return QmCommandBindIndex().Find(pCommand, pExactMatch);
+}
 
 void CMenus::RenderQmSettingsSliderWithValueInput(const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix, bool PrewarmOnly, unsigned Flags)
 {
@@ -160,7 +178,9 @@ void CMenus::RenderQmHudLabel(const char *pTextId, CUIRect *pRect, const char *p
 
 void CMenus::RenderQmHudKeyBindRow(CUIRect &Content, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pLabel, const char *pCommand, float LineHeight, float BodySize, float LineSpacing, float LabelWidth)
 {
-	const CBindSlot Bind = g_CommandBindCache.Find(GameClient()->m_Binds, pCommand);
+	// 直接查绑定表：cfg 载入、控制台 bind、控制页改键都会在下一帧反映到这里，
+	// 不再依赖设置页首次打开时扫出的一份快照。
+	const CBindSlot Bind = QmLookupCommandBind(GameClient()->m_Binds, pCommand);
 
 	CUIRect BindRow, BindLabel, BindKey;
 	Content.HSplitTop(LineHeight, &BindRow, &Content);
@@ -169,10 +189,7 @@ void CMenus::RenderQmHudKeyBindRow(CUIRect &Content, CButtonContainer &ReaderBut
 
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&ReaderButton, &ClearButton, &BindKey, Bind, false);
 	if(Result.m_Bind != Bind)
-	{
-		if(GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand))
-			g_CommandBindCache.Invalidate();
-	}
+		GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
 
@@ -219,7 +236,7 @@ int CMenus::DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(const void *pId, c
 bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand, float BodySize)
 {
 	const float ResolvedBodySize = BodySize > 0.0f ? BodySize : CurrentSettingsContentMetrics().m_BodySize;
-	const CBindSlot Bind = g_CommandBindCache.Find(GameClient()->m_Binds, pCommand, CSettingsBindCache::EFallback::LAST_MODIFIER_MATCH);
+	const CBindSlot Bind = QmLookupCommandBind(GameClient()->m_Binds, pCommand);
 
 	CUIRect KeyButton, KeyLabel;
 	View.HSplitTop(LineSize, &KeyButton, &View);
@@ -232,14 +249,7 @@ bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CBu
 	View.HSplitTop(MarginExtraSmall, nullptr, &View);
 
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&ReaderButton, &ClearButton, &KeyButton, Bind, false, ResolvedBodySize);
-	if(Result.m_Bind != Bind)
-	{
-		if(!GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand))
-			return false;
-		g_CommandBindCache.Invalidate();
-		return true;
-	}
-	return false;
+	return Result.m_Bind != Bind && GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand);
 }
 
 bool CMenus::DoSliderWithScaledValue(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, int Scale, const IScrollbarScale *pScale, unsigned Flags, const char *pSuffix)

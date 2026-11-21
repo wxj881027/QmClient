@@ -86,6 +86,17 @@ inline ColorRGBA ResolveConfiguredTextColor()
 	return ResolveUiTextColor(g_Config.m_QmUiTextColorMode, g_Config.m_QmUiTextCustomColor, UiRainbowTextPhase());
 }
 
+// 游戏内界面表面（计分板、投票 HUD、绑定菜单等）与菜单共用 qm_ui_color / qm_ui_opacity。
+// ColorScale 只改变同一配置色的明暗档，不另行引入一套角色色；所有需要与计分板
+// 保持同一底色的 HUD 都从这一个入口取，避免面板之间出现两种透明度或色相。
+inline ColorRGBA ResolveConfiguredInterfaceSurface(float AlphaScale = 1.0f, float ColorScale = 1.0f)
+{
+	const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor)).WithAlpha(1.0f);
+	ColorRGBA Surface = ui_token::color::UiColorSurface(Base, 1.0f, ColorScale);
+	Surface.a = std::clamp(AlphaScale * (g_Config.m_QmUiOpacity / 100.0f), 0.0f, 1.0f);
+	return Surface;
+}
+
 // 反馈独立叠加，不修改基础表面的用户颜色或按钮几何。
 inline ColorRGBA ResolveUiIconButtonFeedback(ColorRGBA Surface, bool Enabled, bool Hovered, bool Pressed)
 {

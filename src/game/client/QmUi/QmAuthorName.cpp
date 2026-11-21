@@ -34,7 +34,8 @@ void CQmAuthorName::Reset(IGraphics *pGraphics)
 	m_Redacted = false;
 }
 
-void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthors::SAuthor &Author, const CUIRect &Label, float FontSize, bool PointerActive) try
+void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthors::SAuthor &Author, const CUIRect &Label, float FontSize, bool PointerActive)
+try
 {
 	if(pUi->DrawingSuppressed() || Label.w <= 0.0f || Label.h <= 0.0f)
 		return;
@@ -42,7 +43,9 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 		Reset(pGraphics);
 	if(!pUi->AnimationsBlocked())
 	{
-		const uint64_t Frame = pUi->Client()->PerfFrame();
+		// 用 UI 帧时钟而不是主循环 PerfFrame：异步渲染会让两次可见绘制
+		// 相隔多个主循环帧，旧判断会把正常的连续悬停误判成隔了一帧。
+		const uint64_t Frame = pUi->PopupSourceFrame();
 		if(Frame != m_LastRenderFrame && Frame != m_LastRenderFrame + 1)
 			m_Redacted = false;
 		m_LastRenderFrame = Frame;

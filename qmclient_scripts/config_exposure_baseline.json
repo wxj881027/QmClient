@@ -37,9 +37,24 @@
 			"note": "由按键绑定自动探测，不是用户手设项"
 		},
 		{
+			"name": "qm_ddstats_skin_download_url",
+			"category": "internal",
+			"note": "DDStats 皮肤下载端点，设置页只切换来源，不提供 URL 编辑入口"
+		},
+		{
 			"name": "qm_defaults_profile_version",
 			"category": "internal",
 			"note": "默认外观配置迁移版本号，代码内部状态"
+		},
+		{
+			"name": "qm_dummy_skin_queue_length",
+			"category": "internal",
+			"note": "分身皮肤预览队列深度，由渲染缓存自适应，不设用户入口"
+		},
+		{
+			"name": "qm_dummy_skin_queue_rotate_map",
+			"category": "internal",
+			"note": "分身皮肤预览队列的换图策略，跟随地图刷新，不设用户入口"
 		},
 		{
 			"name": "qm_echo_merge_window_ms",
@@ -125,6 +140,16 @@
 			"name": "qm_showhud_dummy_speed",
 			"category": "pending-ui",
 			"note": "HUD 页：分身速度"
+		},
+		{
+			"name": "qm_skin_queue_length",
+			"category": "internal",
+			"note": "皮肤预览队列深度，由渲染缓存自适应，不设用户入口"
+		},
+		{
+			"name": "qm_skin_queue_rotate_map",
+			"category": "internal",
+			"note": "皮肤预览队列的换图策略，跟随地图刷新，不设用户入口"
 		},
 		{
 			"name": "qm_translate_color_alpha_migrated",

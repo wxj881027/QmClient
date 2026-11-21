@@ -88,7 +88,8 @@ namespace qm_card_registry
 		return true;
 	}
 
-	ETClientMainCardsMigrationResult MigrateTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model, char *pSerialized, const int SerializedSize) try
+	ETClientMainCardsMigrationResult MigrateTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model, char *pSerialized, const int SerializedSize)
+	try
 	{
 		if(!IsTClientMainCardsLegacyLeft(Model))
 		{
@@ -149,6 +150,7 @@ namespace qm_card_registry
 			{"qm:better_scoreboard", "function", false, "Better scoreboard", "更好的计分板 genghao jifenban better scoreboard 计分板查分 chafen 计分板积分检查 jifenban jifen jiancha scoreboard point check 游玩时间 youwan shijian 累计小时 leiji xiaoshi playtime DDStats qm_scoreboard_playtime 显示死亡后计分板 死亡后显示计分板 siwang hou xianshi jifenban show scoreboard after death 滚动计分板 gundong jifenban fixed-size scoreboard rows mouse wheel 计分板筛选 jifenban shaixuan scoreboard filter 计分板Qm标识 qm biaoshi scoreboard badge function", "Scoreboard"},
 			{"qm:mini_features", "function", false, "Mini features", "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 聊天框淡出 liaotian danchu 聊天指令补全 zhiling buquan 命令补全 mingling buquan command completion autocomplete qm_chat_command_completion 聊天表情补全 liaotian biaoqing buquan emoji completion qm_chat_emoji_completion 表情选择 biaoqing xuanze 动画优化 donghua youhua 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 连击 lianji combo 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 更新 gengxin 版本 banben 过旧 guojiu 提示 tishi outdated version warning 新版UI xinban ui settings page shezhi yemian 候选栏 houxuanlan 进程优先级 jincheng youxianji 协作制图 xiezuo zhitu 多人制图 duoren zhitu tune zone 区域着色 quyu zhaose 地图着色 ditu zhaose function", "Only what you can't imagine, nothing Dream can't do"},
 			{"qm:self_kill_protection", "function", false, "Client-side self-kill protection", "自杀保护 zisha baohu 客户端侧自杀 kehu duan ce 自杀 kehuduan zisha 自杀开关 关闭自杀 kaiguan 开启自杀 自动开启 zidong kaiqi 自动拦截 开局 jukaishi 延迟 yanchi 分钟 fenzhong 自动 跑图 shuatu fangwuchu 防误触 拦截 lanjie K键 K jian kill 命令 mingling selfkill self kill protection client-side bind qm_self_kill_off qm_self_kill_on qm_self_kill_enabled qm_self_kill_auto_delay", "Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game"},
+			{"qm:fast_practice", "function", false, "Fast practice", "快速练习 kuaisu lianxi fast practice 分支世界 fenzhi shijie branch world 主世界影子 zhushijie yingzi main world ghost 影子透明度 yingzi toumingdu opacity 计时 jishi timer 用时 yongshi 救援 jiuyuan rescue 检查点 jianchadian checkpoint 重生点 chongshengdian respawn 重开 chongkai restart 传送 chuansong teleport 录制 luzhi record 快捷菜单 kuaijie caidan practice menu 绑定 bangding bind qm_fast_practice_show_main_world qm_fast_practice_main_world_alpha qm_fast_practice_timer", "Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands"},
 			{"qm:ime", "function", false, "IME", "输入法 shurufa ime 候选栏 houxuanlan 新版输入法 xinban shurufa 自动管理 zidong guanli 背景 beijing 颜色 yanse 透明度 toumingdu 高斯模糊 gaosi mohu function", "Configure the IME candidate bar"},
 			{"qm:jump_hint", "function", false, "Jump hint", "位置跳跃提示 tiaoyue tishi jump hint position edge jump color yanse 颜色 horizontal position shuiping weizhi vertical position chuizhi weizhi font size ziti function", "Customize the position jump hint"},
 			{"qm:weapon_trajectory", "function", false, "Weapon trajectory", "武器辅助线 wuqi fuzhuxian weapon trajectory 弹道辅助线 dandao fuzhuxian 手枪辅助线 shouqiang fuzhuxian pistol guide line 预测忍者路径 yuce renzhe lujing predict ninja path 线宽 xian kuan 透明度 toumingdu 始终显示 shizhong xianshi 按键显示 anjian xianshi function", "Show grenade and laser trajectory preview"},
@@ -213,7 +215,7 @@ namespace qm_card_registry
 			{"deck:global-search-results", "global-search", true, "Search", "global search result cards", "Open a matching settings card directly"},
 			{"deck:general-game", "general", false, Localizable("Game"), "general game camera weapon 动态镜头 dongtai jingtou 平滑 pinghua 拾取切枪 shiqu qieqiang 弹药 danyao", "Configure camera, weapon, and gameplay defaults"},
 			{"deck:general-language", "general", false, Localizable("Language"), "general language localization 语言 yuyan 中文 zhongwen 英文 yingwen", "Choose the language used by the client"},
-			{"deck:general-client", "general", false, Localizable("Client"), "general client theme files 主菜单 zhucaidan 主题 zhuti 配置目录 peizhi mulu 存档 cundang 崩溃报告 bengkui baogao", "Manage client theme and menu preferences"},
+			{"deck:general-client", "general", false, Localizable("Client"), "general client theme files 主菜单 zhucaidan 更新频率 gengxin pinlv 省电 shengdian 主题 zhuti 配置目录 peizhi mulu 存档 cundang 崩溃报告 bengkui baogao", "Manage client theme and menu preferences"},
 			{"deck:general-recording", "general", false, Localizable("Demo"), "general demo screenshot video directory path csv recording 自动录像 zidong luxiang 回放保存目录 路径 截图 jietu 视频导出 计分板 jifenban 导出 daochu", "Automate demos, screenshots, and match exports"},
 			{"deck:tclient-info-files", "general", false, "Config Files", "config files settings profiles war list chat binds 配置文件 peizhi wenjian 配置方案 peizhi fangan 战争列表 zhanzheng liebiao 聊天绑定 liaotian bangding", "Open TClient configuration file locations"},
 			{"deck:player-identity", "player", false, Localizable("Player"), "player dummy name clan identity", "Edit player and dummy identity information"},
@@ -246,15 +248,15 @@ namespace qm_card_registry
 			{"tclient:input", "ddnet-prediction", false, "Input", "input tclient 输入 快速输入 子 tick 瞄准 输入量", "Configure input helpers and cursor behavior"},
 			{"tclient:anti-latency-tools", "ddnet-prediction", false, "Anti latency tools", "anti latency tools tclient 延迟补偿工具 预测余量 冻结预测 解冻 延迟", "Control latency compensation tools"},
 			{"tclient:improved-anti-ping", "ddnet-prediction", false, "Improved anti ping", "improved anti ping tclient 改进版延迟补偿 平滑算法 稳定方向 不确定性 Gores", "Fine-tune improved anti-ping prediction"},
-			{"deck:tclient-bind-wheel-editor", "tclient-bind-wheel", false, "Bind Wheel", "bind wheel tclient", "Assign commands and labels to wheel slots"},
-			{"deck:tclient-bind-wheel-preview", "tclient-bind-wheel", false, "Preview", "preview bind wheel tclient", "Preview the bind wheel layout and selection"},
+			{"deck:tclient-bind-wheel-editor", "tclient-bind-wheel", false, "Bind Menus", "bind menu wheel panel identity chat custom assets preset skin tclient 绑定菜单 轮盘 面板 身份 语录 自定义 资源 贴图 皮肤 预设", "Configure identity, chat, assets, and custom bind menus"},
+			{"deck:tclient-bind-wheel-preview", "tclient-bind-wheel", false, "Preview", "preview bind menu wheel panel tclient", "Preview the bind menu layout and entries"},
 			{"deck:tclient-status-bar-settings", "tclient-status-bar", false, "Status Bar", "status bar tclient", "Adjust status bar position and text style"},
 			{"deck:tclient-status-bar-preview", "tclient-status-bar", false, "Preview", "preview status bar tclient", "Preview the composed status bar output"},
 			{"deck:tclient-chat-binds-kaomoji", "tclient-chat-binds", false, "Kaomoji", "chat binds kaomoji tclient", "Manage kaomoji chat shortcuts"},
 			{"deck:tclient-chat-binds-warlist", "tclient-chat-binds", false, "Warlist", "chat binds warlist tclient", "Manage hostile-list chat shortcuts"},
 			{"deck:tclient-chat-binds-other", "tclient-chat-binds", false, "Other", "chat binds other tclient", "Manage additional custom chat shortcuts"},
 			{"deck:tclient-warlist", "tclient-warlist", true, "War List", "enemy hostile war list entries groups players settings tclient", "Manage hostile players, groups, and display rules"},
-			{"deck:tclient-profiles", "tclient-profiles", true, "Profiles", "profiles save load delete name identity chat assets bind wheel 配置 身份 昵称 语录 资源 轮盘", "Manage profiles and bind wheel presets"},
+			{"deck:tclient-profiles", "tclient-profiles", true, "Profiles", "profiles save load delete name identity chat assets bind menu 配置 身份 昵称 语录 资源 菜单", "Manage profiles and add identity entries to bind menus"},
 			{"deck:tclient-configs-actions", "tclient-configs", true, "Configuration", "configs changes filters variables values reset", "Review and reset changed configuration values"},
 			{"deck:appearance-hud-main", "appearance-hud", false, "HUD", "appearance hud main", "Configure health, ammo, timer, and race HUD"},
 			{"deck:appearance-hud-ddrace", "appearance-hud", false, "DDRace HUD", "appearance ddrace hud", "Adjust DDRace-specific HUD indicators"},

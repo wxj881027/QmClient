@@ -23,7 +23,7 @@ namespace
 		{
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
-			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::CONFIG_DRAFTS_DIR));
 		}
 
 		void Write(const std::string &Text)

@@ -1,6 +1,6 @@
 ## What this controls
 
-The skin browser: search box, All / Favorites / Recent tabs, sorting, and a thumbnail grid that applies skins directly.
+The skin browser: search box, All / Favorites / Recent tabs, item count, source and sort dropdowns, and a thumbnail grid that applies skins directly.
 
 ## In game
 
@@ -23,6 +23,8 @@ Skins change looks only, never hitboxes. Cells stay empty until a skin file has 
 | Plus / square minus | Adds or removes this skin together with its colors in the queue |
 
 Right of the search box, four tool buttons in order: skin database, skin directory, edit skin texture, refresh; refresh also works with F5 or Ctrl+R.
+
+The count beside the collection tabs shows how many skins the current tab, search text and "Data source" filter produce. "Data source" filters by catalog membership: All / Official / Community / DDStats / Custom URL / Vanilla. The same skin can belong to several catalogs at once and appears in every matching filter. Download switches in Skin options only control future requests; catalog entries remain listed before they are downloaded.
 
 ## Watch out
 

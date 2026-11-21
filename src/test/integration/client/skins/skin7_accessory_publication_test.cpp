@@ -40,6 +40,17 @@ namespace
 			ASSERT_TRUE(CImageLoader::SavePng(File, pPath, Image));
 		}
 
+		// 官方 xmas_hat.png 随 data 目录分发，删存档副本仍会被回退读到；
+		// 用不可解码的存档副本遮蔽它，模拟附件不可用的机器。
+		void BreakAccessory(const char *pPath)
+		{
+			IOHANDLE File = m_pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			ASSERT_NE(File, nullptr);
+			const char aGarbage[16] = {0x1, 0x2, 0x3};
+			ASSERT_EQ(io_write(File, aGarbage, sizeof(aGarbage)), sizeof(aGarbage));
+			io_close(File);
+		}
+
 		bool Reload()
 		{
 			m_pJob = std::make_shared<CQmSkin7InfoJob>(m_pStorage.get());
@@ -234,7 +245,8 @@ TEST_F(CQmSkin7AccessoryPublicationTest, MissingHatClearsOldTextureWithoutUsingU
 {
 	SeedOldHat();
 	const auto Old = m_aTargets[0];
-	ASSERT_TRUE(m_pStorage->RemoveFile("skins7/xmas_hat.png", IStorage::TYPE_SAVE));
+	BreakAccessory("skins7/xmas_hat.png");
+	ASSERT_FALSE(HasFatalFailure());
 	ASSERT_TRUE(Reload());
 	m_Limiter.OnFrameStart(0);
 	EXPECT_TRUE(PublishNext());
@@ -252,7 +264,8 @@ TEST_F(CQmSkin7AccessoryPublicationTest, MissingHatClearsOldTextureWithoutUsingU
 TEST_F(CQmSkin7AccessoryPublicationTest, MissingImageUnloadFailureKeepsCursorUntilOldTextureReleased)
 {
 	SeedOldHat();
-	ASSERT_TRUE(m_pStorage->RemoveFile("skins7/xmas_hat.png", IStorage::TYPE_SAVE));
+	BreakAccessory("skins7/xmas_hat.png");
+	ASSERT_FALSE(HasFatalFailure());
 	ASSERT_TRUE(Reload());
 	m_Graphics.m_FailUnload = true;
 	EXPECT_FALSE(PublishNext());

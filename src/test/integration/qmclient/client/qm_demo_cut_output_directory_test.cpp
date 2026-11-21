@@ -1,8 +1,7 @@
 #include <game/client/components/menus.h>
 
-#include <test/test.h>
-
 #include <gtest/gtest.h>
+#include <test/test.h>
 
 #include <filesystem>
 

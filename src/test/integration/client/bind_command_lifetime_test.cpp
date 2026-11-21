@@ -59,8 +59,7 @@ TEST(BindCommandSerialization, EscapedBindingRoundTripsThroughConsole)
 	pConsole->Register("bind", "s[key] ?r[command]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUser) {
 		auto &vArguments = *static_cast<std::vector<std::string> *>(pUser);
 		vArguments.emplace_back(pResult->GetString(0));
-		vArguments.emplace_back(pResult->GetString(1));
-	}, &vReloaded, "");
+		vArguments.emplace_back(pResult->GetString(1)); }, &vReloaded, "");
 
 	const std::string Command = R"(say "路径\文件"; +hook)" + std::string(12000, 'x');
 	const auto Line = CBinds::FormatBindLine("ctrl+shift+q", Command);

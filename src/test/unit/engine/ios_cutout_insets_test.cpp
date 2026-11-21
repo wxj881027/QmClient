@@ -1,9 +1,8 @@
 #include <base/detect.h>
 
 #if defined(CONF_PLATFORM_IOS)
-#include <ios/ios_main.h>
-
 #include <gtest/gtest.h>
+#include <ios/ios_main.h>
 
 TEST(IosCutoutInsets, MissingNativeWindowUsesZeroInsets)
 {

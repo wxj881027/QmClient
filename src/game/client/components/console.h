@@ -205,8 +205,6 @@ private:
 		bool OnInput(const IInput::CEvent &Event);
 		void PrintLine(const char *pLine, int Len, ColorRGBA PrintColor, const SColorSpan *pColorSpans = nullptr, size_t NumColorSpans = 0, std::shared_ptr<const QmChatExport::SMetadata> pChatMetadata = nullptr, bool CommandEcho = false) REQUIRES(!m_BacklogPendingLock);
 		int GetLinesToScroll(int Direction, int LinesToScroll);
-		// 滚轮每档滚动的行数，按 qm_ui_scroll_step 与当前行高折算。
-		int GetWheelLinesToScroll() const;
 		void ScrollToCenter(int StartLine, int EndLine);
 		void Dump() REQUIRES(!m_BacklogPendingLock);
 		void SetChatExportMode(bool Enable) REQUIRES(!m_BacklogPendingLock);
@@ -355,6 +353,7 @@ public:
 	void Toggle(int Type);
 	bool ConsoleSettingsOpen() const { return Ui()->IsPopupOpen(&m_SettingsPopupId); }
 	bool IsActive() const { return m_ConsoleState != CONSOLE_CLOSED; }
+	bool IsClosing() const { return m_ConsoleState == CONSOLE_CLOSING; }
 	void RegisterStartMenuToggle(const void *pButtonId, const CUIRect &Rect);
 	bool StartMenuToggleHovered() const { return m_StartMenuToggleHovered; }
 

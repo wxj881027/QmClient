@@ -109,7 +109,7 @@ namespace
 		{
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
-			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::STATE_MAPS_DIR));
 			Store(qm_map_history_storage::FILE_PATH, m_Old);
 			m_History.RecordVisit("New map with \"quotes\" and 新地图", "path:maps/new.map", 123, "2026-11-01");
 			m_History.AddDeath("path:maps/new.map", 3);

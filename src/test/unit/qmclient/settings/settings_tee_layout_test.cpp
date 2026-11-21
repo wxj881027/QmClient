@@ -132,9 +132,19 @@ TEST(SettingsTeeLayout, LibraryToolbarWrapsWithoutShrinkingIconTargets)
 		const CUIRect Bounds{10.0f, 20.0f, Width, Layout.m_Height};
 		ExpectInside(Bounds, Layout.m_Search);
 		ExpectInside(Bounds, Layout.m_Collection);
+		ExpectInside(Bounds, Layout.m_Count);
+		ExpectInside(Bounds, Layout.m_FilterLabel);
+		ExpectInside(Bounds, Layout.m_Filter);
+		ExpectInside(Bounds, Layout.m_SortLabel);
 		ExpectInside(Bounds, Layout.m_Sort);
 		ExpectSeparate(Layout.m_Search, Layout.m_Collection);
 		ExpectSeparate(Layout.m_Collection, Layout.m_Sort);
+		ExpectSeparate(Layout.m_Collection, Layout.m_Count);
+		ExpectSeparate(Layout.m_Collection, Layout.m_Filter);
+		ExpectSeparate(Layout.m_Count, Layout.m_Filter);
+		ExpectSeparate(Layout.m_FilterLabel, Layout.m_Filter);
+		ExpectSeparate(Layout.m_SortLabel, Layout.m_Sort);
+		ExpectSeparate(Layout.m_Filter, Layout.m_Sort);
 		for(const auto &Tool : Layout.m_aTools)
 		{
 			ExpectInside(Bounds, Tool);
@@ -143,6 +153,17 @@ TEST(SettingsTeeLayout, LibraryToolbarWrapsWithoutShrinkingIconTargets)
 			EXPECT_FLOAT_EQ(Tool.h, Metrics.m_ButtonHeight);
 		}
 	}
+}
+
+TEST(SettingsTeeLayout, WideLibraryToolbarCapsCollectionAndKeepsCountBesideIt)
+{
+	const SSettingsContentMetrics Metrics;
+	const auto Layout = ResolveSettingsTeeToolbarLayout({10.0f, 20.0f, 1400.0f, 0.0f}, Metrics);
+	EXPECT_LE(Layout.m_Collection.w, 360.0f * Metrics.m_UiScale + 0.01f);
+	EXPECT_FLOAT_EQ(Layout.m_Count.y, Layout.m_Collection.y);
+	EXPECT_GE(Layout.m_Count.x, Layout.m_Collection.x + Layout.m_Collection.w);
+	EXPECT_FLOAT_EQ(Layout.m_Filter.y, Layout.m_Collection.y);
+	EXPECT_FLOAT_EQ(Layout.m_Sort.y, Layout.m_Collection.y);
 }
 
 TEST(SettingsTeeLayout, SkinOptionsAndAppearanceGroupsFitTheirMeasuredBounds)

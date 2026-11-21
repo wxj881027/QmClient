@@ -318,10 +318,7 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 		return;
 
 	const bool CurrentReady = m_Loaded && !m_ImageBackground && !m_VideoBackground && IsMapLoaded() && !m_MapPreparation.HasFailed();
-	if(!PrepareMenuBackgroundChange(CurrentReady, m_PreviousRetiring,
-		   [this] { return ReleasePreviousBackground(); },
-		   [this] { return PreserveCurrentBackground(); },
-		   [this] { return ReleaseCurrentMapResources(); }))
+	if(!PrepareMenuBackgroundChange(CurrentReady, m_PreviousRetiring, [this] { return ReleasePreviousBackground(); }, [this] { return PreserveCurrentBackground(); }, [this] { return ReleaseCurrentMapResources(); }))
 		return;
 
 	m_Loaded = false;

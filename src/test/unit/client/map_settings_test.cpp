@@ -1,6 +1,6 @@
-#include <gtest/gtest.h>
-
 #include <game/client/map_settings.h>
+
+#include <gtest/gtest.h>
 
 #include <string_view>
 #include <vector>

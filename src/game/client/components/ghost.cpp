@@ -18,9 +18,13 @@
 #include <game/client/components/players.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/ghost_start_detection.h>
+#include <game/client/components/qmclient/ghost_team_metadata.h>
 #include <game/client/components/qmclient/ghost_timeline.h>
+#include <game/client/components/qmclient/practice_timeline.h>
 #include <game/client/components/qmclient/race_timing.h>
+#include <game/client/components/qmclient/rank_view_timeline.h>
 #include <game/client/components/skins.h>
+#include <game/client/components/tclient/fast_practice.h>
 #include <game/client/gameclient.h>
 #include <game/client/race.h>
 
@@ -44,15 +48,12 @@ void CGhost::GetGhostCharacter(CGhostCharacter *pGhostChar, const CNetObj_Charac
 	pGhostChar->m_X = pChar->m_X;
 	pGhostChar->m_Y = pChar->m_Y;
 	pGhostChar->m_VelX = pChar->m_VelX;
-	pGhostChar->m_VelY = 0;
+	// m_VelY 不参与回放插值，改作显式冻结标记（见 ghost_freeze_bar.h）：
+	// 旧版文件没有标记位，播放侧才回退到“武器=忍者”的历史判定。
+	pGhostChar->m_VelY = QmEncodeGhostFreezeMarker(pDDnetChar != nullptr ? QmGhostFreezeTicksFromEnd(pDDnetChar->m_FreezeEnd, pChar->m_Tick) : 0);
 	pGhostChar->m_Angle = pChar->m_Angle;
-	pGhostChar->m_Direction = pChar->m_Direction;
-	int Weapon = pChar->m_Weapon;
-	if(pDDnetChar != nullptr && pDDnetChar->m_FreezeEnd != 0)
-	{
-		Weapon = WEAPON_NINJA;
-	}
-	pGhostChar->m_Weapon = Weapon;
+	pGhostChar->m_Direction = QmEncodeGhostDirection(pChar->m_Direction, pDDnetChar != nullptr ? pDDnetChar->m_StrongWeakId : 0);
+	pGhostChar->m_Weapon = pChar->m_Weapon;
 	pGhostChar->m_HookState = pChar->m_HookState;
 	pGhostChar->m_HookX = pChar->m_HookX;
 	pGhostChar->m_HookY = pChar->m_HookY;
@@ -68,7 +69,7 @@ void CGhost::GetNetObjCharacter(CNetObj_Character *pChar, const CGhostCharacter 
 	pChar->m_VelX = pGhostChar->m_VelX;
 	pChar->m_VelY = 0;
 	pChar->m_Angle = pGhostChar->m_Angle;
-	pChar->m_Direction = pGhostChar->m_Direction;
+	pChar->m_Direction = QmDecodeGhostDirection(pGhostChar->m_Direction);
 	pChar->m_Weapon = pGhostChar->m_Weapon;
 	pChar->m_HookState = pGhostChar->m_HookState;
 	pChar->m_HookX = pGhostChar->m_HookX;
@@ -141,6 +142,16 @@ int CGhost::FreeSlots() const
 		if(ActiveGhost.Empty())
 			Num++;
 	return Num;
+}
+
+bool CGhost::IsSlotActive(int Slot) const
+{
+	return Slot >= 0 && Slot < MAX_ACTIVE_GHOSTS && !m_aActiveGhosts[Slot].Empty();
+}
+
+bool CGhost::IsSlotLoadedWith(int Slot, const char *pFilename) const
+{
+	return IsSlotActive(Slot) && pFilename != nullptr && str_comp_nocase(m_aActiveGhosts[Slot].m_aFilename, pFilename) == 0;
 }
 
 void CGhost::CheckStart()
@@ -256,6 +267,200 @@ void CGhost::OnNewPredictedSnapshot()
 		CheckStartLocal(true);
 }
 
+// 练习组里的交互时间线：与 Rank 1 查看模式读取的 .qmevt 完全同格式
+// （事件 / 开关状态 / 消息 三段）。消息段练习里没有，写 0 条。
+static bool WritePracticeViewTimeline(IStorage *pStorage, const char *pGroupDir,
+	const std::vector<SLocalActorEvent> &vEvents, const std::vector<SLocalSwitchState> &vSwitchStates)
+{
+	char aPath[IO_MAX_PATH_LENGTH];
+	str_format(aPath, sizeof(aPath), "%s/events.qmevt", pGroupDir);
+	char aTmpPath[IO_MAX_PATH_LENGTH];
+	str_format(aTmpPath, sizeof(aTmpPath), "%s.tmp_%d", aPath, pid());
+	pStorage->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
+	IOHANDLE File = pStorage->OpenFile(aTmpPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(File == nullptr)
+		return false;
+
+	// 写出逻辑统一在 rank_view_timeline：练习只负责把中性轨迹适配成查看格式。
+	const qmclient::rank_ghost::SViewTimeline Timeline = QmBuildPracticeViewTimeline(vEvents, vSwitchStates);
+	const bool Written = qmclient::rank_ghost::WriteViewTimeline(File, Timeline);
+	const bool Closed = io_close(File) == 0;
+	if(!Written || !Closed)
+	{
+		log_error("ghost", "failed to write practice view timeline '%s'", aTmpPath);
+		pStorage->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
+		return false;
+	}
+	// RenameFile 在 Windows 上带替换语义；先删旧文件会在改名失败时丢掉可用时间线。
+	if(!pStorage->RenameFile(aTmpPath, aPath, IStorage::TYPE_SAVE))
+	{
+		log_error("ghost", "failed to publish practice view timeline '%s'", aPath);
+		pStorage->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
+		return false;
+	}
+	return true;
+}
+
+bool CGhost::SavePracticeTrack(const char *pName, const SLocalSegment &Segment)
+{
+	if(Segment.m_vTracks.empty() || Segment.m_vTracks.front().m_vFrames.empty() || GhostRecorder()->IsRecording())
+		return false;
+
+	const auto &vMainFrames = Segment.m_vTracks.front().m_vFrames;
+	// 这里的"时间"只是影子页的可读标签（这段练习跑了多久），不是竞速成绩。
+	const int TickSpeed = std::max(1, Client()->GameTickSpeed());
+	const int TimeMs = std::max(1, (int)((vMainFrames.back().m_Tick - Segment.m_StartTick) * 1000.0f / TickSpeed));
+
+	// 练习线路不是成绩：玩家名带 [P]，且整条路径都不经过 StopRecord 的
+	// GetOwnGhost / cl_race_ghost_save_best 比较，不会顶掉个人最佳。
+	char aBaseName[MAX_NAME_LENGTH];
+	if(pName && pName[0])
+		str_format(aBaseName, sizeof(aBaseName), "[P] %s", pName);
+	else
+		str_copy(aBaseName, "[P] practice");
+
+	// 组目录名沿用标准 ghost 命名（地图 / 名字 / 时长 / 时间戳 / sha），
+	// 去掉 .gho 后缀即是 Rank 1 组回放认的目录；LoadGhostGroup 会扫其中所有轨。
+	char aGroupFile[IO_MAX_PATH_LENGTH];
+	GetPath(aGroupFile, sizeof(aGroupFile), aBaseName, TimeMs);
+	char aGroupDir[IO_MAX_PATH_LENGTH];
+	str_copy(aGroupDir, aGroupFile, sizeof(aGroupDir));
+	const size_t Len = str_length(aGroupDir);
+	if(Len <= 4 || !str_endswith(aGroupDir, ".gho"))
+		return false;
+	aGroupDir[Len - 4] = '\0';
+	if(!Storage()->CreateFolder(aGroupDir, IStorage::TYPE_SAVE) && !Storage()->FolderExists(aGroupDir, IStorage::TYPE_SAVE))
+		return false;
+
+	// 皮肤取本地 Tee；两条轨共用一套皮肤，回放成员靠名字区分。
+	// 停止录制可以从控制台命令直接触发，快照失效帧里 m_LocalClientId 可能是 -1；
+	// 拿不到本地皮肤时退回默认皮肤，不能拿 -1 直接索引 m_aClients。
+	CGhostSkin Skin;
+	const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
+	if(LocalClientId >= 0 && LocalClientId < MAX_CLIENTS)
+	{
+		const CGameClient::CClientData *pData = &GameClient()->m_aClients[LocalClientId];
+		SetGhostSkinData(&Skin, pData->m_aSkinName, pData->m_UseCustomColor, pData->m_ColorBody, pData->m_ColorFeet);
+	}
+	else
+	{
+		SetGhostSkinData(&Skin, "default", 0, 0, 0);
+	}
+
+	std::vector<SGhostTeamEntry> vTeamEntries;
+	for(size_t TrackIndex = 0; TrackIndex < Segment.m_vTracks.size(); TrackIndex++)
+	{
+		const SLocalTrack &Track = Segment.m_vTracks[TrackIndex];
+		if(Track.m_vFrames.empty())
+			continue;
+
+		char aPlayer[MAX_NAME_LENGTH];
+		if(TrackIndex == 0)
+			str_copy(aPlayer, aBaseName, sizeof(aPlayer));
+		else
+			str_format(aPlayer, sizeof(aPlayer), "%s (dummy)", aBaseName);
+
+		char aFinal[IO_MAX_PATH_LENGTH];
+		str_format(aFinal, sizeof(aFinal), "%s/track%d.gho", aGroupDir, (int)TrackIndex);
+		if(GhostRecorder()->Start(aFinal, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), aPlayer) != 0)
+			return false;
+
+		GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &Segment.m_StartTick, sizeof(int));
+		GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &Skin, sizeof(CGhostSkin));
+		for(const SLocalActorFrame &LocalFrame : Track.m_vFrames)
+		{
+			CNetObj_Character Obj = QmLocalWorldFrameToNetObj(LocalFrame);
+			CGhostCharacter GhostChar;
+			GetGhostCharacter(&GhostChar, &Obj, nullptr);
+			// 练习轨没有 DDNetCharacter，冻结信息直接取录制帧里的剩余 tick。
+			GhostChar.m_VelY = QmEncodeGhostFreezeMarker(LocalFrame.m_FreezeTicks);
+			GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, &GhostChar, sizeof(CGhostCharacter));
+		}
+		if(!GhostRecorder()->Stop((int)Track.m_vFrames.size(), TimeMs))
+		{
+			log_error("ghost", "failed to publish practice track '%s'", aFinal);
+			return false;
+		}
+		if(Track.m_Team >= TEAM_FLOCK && Track.m_Team < NUM_DDRACE_TEAMS)
+		{
+			char aTrackName[32];
+			str_format(aTrackName, sizeof(aTrackName), "track%d.gho", (int)TrackIndex);
+			vTeamEntries.push_back({aTrackName, Track.m_Team});
+		}
+	}
+
+	char aTeamPath[IO_MAX_PATH_LENGTH];
+	str_format(aTeamPath, sizeof(aTeamPath), "%s/%s", aGroupDir, QmGhostTeamMetadataName());
+	if(!QmWriteGhostTeamMetadata(Storage(), aTeamPath, vTeamEntries))
+		log_error("ghost", "failed to write practice ghost team metadata '%s'", aTeamPath);
+	return WritePracticeViewTimeline(Storage(), aGroupDir, Segment.m_vEvents, Segment.m_vSwitchStates);
+}
+
+namespace
+{
+	struct SPracticeGroupScanContext
+	{
+		IStorage *m_pStorage = nullptr;
+		IGhostLoader *m_pLoader = nullptr;
+		// ms_pGhostDir 是私有静态成员，由 ListPracticeGroups 传进来，回调不直接碰。
+		const char *m_pGhostDir = nullptr;
+		const char *m_pMap = nullptr;
+		SHA256_DIGEST m_MapSha256{};
+		unsigned m_MapCrc = 0;
+		std::vector<CGhost::SPracticeGroup> *m_pOut = nullptr;
+	};
+
+	int PracticeGroupScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
+	{
+		(void)StorageType;
+		auto *pCtx = static_cast<SPracticeGroupScanContext *>(pUser);
+		if(!IsDir)
+			return 0;
+
+		char aDir[IO_MAX_PATH_LENGTH];
+		char aEvents[IO_MAX_PATH_LENGTH];
+		char aMain[IO_MAX_PATH_LENGTH];
+		str_format(aDir, sizeof(aDir), "%s/%s", pCtx->m_pGhostDir, pInfo->m_pName);
+		str_format(aEvents, sizeof(aEvents), "%s/events.qmevt", aDir);
+		str_format(aMain, sizeof(aMain), "%s/track0.gho", aDir);
+		if(!pCtx->m_pStorage->FileExists(aEvents, IStorage::TYPE_SAVE))
+			return 0;
+
+		CGhostInfo Info;
+		if(!pCtx->m_pLoader->GetGhostInfo(aMain, &Info, pCtx->m_pMap, pCtx->m_MapSha256, pCtx->m_MapCrc))
+			return 0;
+
+		CGhost::SPracticeGroup Group;
+		str_copy(Group.m_aDir, aDir);
+		str_copy(Group.m_aOwner, Info.m_aOwner);
+		Group.m_Time = Info.m_Time;
+		Group.m_TimeModified = pInfo->m_TimeModified;
+		pCtx->m_pOut->push_back(Group);
+		return 0;
+	}
+} // namespace
+
+void CGhost::ListPracticeGroups(std::vector<SPracticeGroup> &vOut) const
+{
+	vOut.clear();
+	if(!m_pGhostLoader || !GameClient()->Map())
+		return;
+
+	SPracticeGroupScanContext Ctx;
+	Ctx.m_pStorage = Storage();
+	Ctx.m_pLoader = m_pGhostLoader;
+	Ctx.m_pGhostDir = ms_pGhostDir;
+	Ctx.m_pMap = Client()->GetCurrentMap();
+	Ctx.m_MapSha256 = GameClient()->Map()->Sha256();
+	Ctx.m_MapCrc = GameClient()->Map()->Crc();
+	Ctx.m_pOut = &vOut;
+	Storage()->ListDirectoryInfo(IStorage::TYPE_SAVE, ms_pGhostDir, PracticeGroupScanCallback, &Ctx);
+	// 目录遍历顺序由文件系统决定，菜单要稳定顺序：最近的组排前面。
+	std::sort(vOut.begin(), vOut.end(), [](const SPracticeGroup &Left, const SPracticeGroup &Right) {
+		return Left.m_TimeModified > Right.m_TimeModified;
+	});
+}
+
 void CGhost::OnRender()
 {
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
@@ -296,8 +501,13 @@ void CGhost::OnRender()
 	}
 	else
 	{
-		PlaybackTick = Client()->PredGameTick(g_Config.m_ClDummy);
-		PlaybackOrigin = m_StartRenderTick;
+		// 快速练习接管了客户端侧权威世界：它的时钟在暂停/冻结时会与
+		// PredGameTick 分叉，幽灵必须跟着分支世界走，否则会凭空超前。
+		if(!GameClient()->m_FastPractice.ResolvePracticePlaybackTick(PlaybackTick))
+		{
+			PlaybackTick = Client()->PredGameTick(g_Config.m_ClDummy);
+			PlaybackOrigin = m_StartRenderTick;
+		}
 	}
 
 	CScreenRect ScreenRect = Graphics()->GetScreen();
@@ -344,6 +554,8 @@ void CGhost::OnRender()
 		Draw.m_Slot = Slot;
 		GetNetObjCharacter(&Draw.m_Player, Ghost.m_Path.Get(CurPos));
 		GetNetObjCharacter(&Draw.m_Prev, Ghost.m_Path.Get(PrevPos));
+		Draw.m_StrongWeakId = QmDecodeGhostStrongWeak(Ghost.m_Path.Get(CurPos)->m_Direction);
+		Draw.m_HasStrongWeak = Draw.m_StrongWeakId >= 0;
 
 		const int64_t TickDiff = static_cast<int64_t>(Draw.m_Player.m_Tick) - Draw.m_Prev.m_Tick;
 		if(TickDiff > 0)
@@ -354,18 +566,32 @@ void CGhost::OnRender()
 			Draw.m_IntraTick = (GhostTick - Draw.m_Prev.m_Tick - 1 + IntraPhase) / TickDiff;
 		}
 
-		int AttackTick;
-		if(!qm_ghost_timeline::MapAttack(Draw.m_Player.m_AttackTick, GhostTick,
-			   Client()->GameTick(g_Config.m_ClDummy), Client()->PrevGameTick(g_Config.m_ClDummy), AttackTick))
-			continue;
-		Draw.m_Player.m_AttackTick = AttackTick;
+		if(m_ManualMode)
+		{
+			// 查看模式：挥锤/开枪相位只跟回放播放头走。实时游戏 tick 在暂停时仍在推进，
+			// 沿用它会让暂停画面里的锤子一直上下摆动。
+			const double PlaybackPhase = static_cast<double>(GhostTick - Draw.m_Prev.m_AttackTick) + ManualRenderIntra();
+			Draw.m_AttackTimeOverride = static_cast<float>(maximum(0.0, (PlaybackPhase - 1.0) / maximum(1, Client()->GameTickSpeed())));
+			Draw.m_Player.m_AttackTick = Client()->PrevGameTick(g_Config.m_ClDummy);
+		}
+		else
+		{
+			int AttackTick;
+			if(!qm_ghost_timeline::MapAttack(Draw.m_Player.m_AttackTick, GhostTick,
+				   Client()->GameTick(g_Config.m_ClDummy), Client()->PrevGameTick(g_Config.m_ClDummy), AttackTick))
+				continue;
+			Draw.m_Player.m_AttackTick = AttackTick;
+		}
 		if(!qm_ghost_render::Position(Draw.m_Prev, Draw.m_Player, Draw.m_IntraTick, Draw.m_Pos))
 			continue;
 
-		// QmClient：转换侧以 WEAPON_NINJA 标记冻结段（幽灵格式无独立冻结字段）。
-		// 冻结表现完全复刻 demo 播放的玩家渲染（players.cpp）：冰冻着色 + 隐藏武器、
-		// 旧版卡塔纳手随 TClient 的 qm_frozen_katana、忍者皮肤随 cl_show_ninja
-		const bool GhostFrozen = Draw.m_Player.m_Weapon == WEAPON_NINJA;
+		// QmClient：新格式在 m_VelY 写显式冻结标记；旧格式没有标记位时才回退到
+		// WEAPON_NINJA 判定（兼容旧幽灵文件，代价是旧文件里的真实忍者帧仍会被
+		// 当作冻结）。冻结表现完全复刻 demo 播放的玩家渲染（players.cpp）：
+		// 冰冻着色 + 隐藏武器、旧版卡塔纳手随 TClient 的 qm_frozen_katana、
+		// 忍者皮肤随 cl_show_ninja
+		const CGhostCharacter *pCurFrame = Ghost.m_Path.Get(CurPos);
+		const bool GhostFrozen = QmGhostFrameFrozen(pCurFrame->m_VelY, pCurFrame->m_Weapon == WEAPON_NINJA);
 		unsigned FrozenFlags = 0;
 		int RenderWeapon = Draw.m_Player.m_Weapon;
 		if(GhostFrozen)
@@ -450,7 +676,17 @@ void CGhost::OnRender()
 	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
 	{
 		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
-		GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
+		GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick, Draw.m_AttackTimeOverride);
+	}
+	int PrimaryStrongWeakId = -1;
+	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
+	{
+		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
+		if(Draw.m_Slot == m_ManualPlan.m_PrimarySlot && Draw.m_HasStrongWeak)
+		{
+			PrimaryStrongWeakId = Draw.m_StrongWeakId;
+			break;
+		}
 	}
 
 	// QmClient: 查看模式下为每个虚影标注名字（多轨回放的信息可读性，对齐 demo 播放器）
@@ -460,13 +696,52 @@ void CGhost::OnRender()
 		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
 		const CGhostItem &Ghost = m_aActiveGhosts[Draw.m_Slot];
 		const vec2 TeePos = Draw.m_Pos;
+		float NameWidth = 0.0f;
 		if(g_Config.m_ClNamePlates && Ghost.m_aPlayer[0] != '\0')
 		{
 			const float NameFontSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
-			const float NameWidth = TextRender()->TextWidth(NameFontSize, Ghost.m_aPlayer, -1);
+			NameWidth = TextRender()->TextWidth(NameFontSize, Ghost.m_aPlayer, -1);
 			TextRender()->TextColor(1, 1, 1, 1);
 			TextRender()->TextOutlineColor(0, 0, 0, 0.6f);
 			TextRender()->Text(TeePos.x - NameWidth / 2, TeePos.y - 56.0f, NameFontSize, Ghost.m_aPlayer);
+		}
+
+		// 强弱钩与官方 demo 名字牌同语义：主选手作为参照，其它成员显示强/弱钩。
+		const auto DisplaySettings = qm_demo_display::Resolve(g_Config, true, false);
+		if(Draw.m_HasStrongWeak && PrimaryStrongWeakId >= 0 && DisplaySettings.StrongWeakEnabled())
+		{
+			const bool Own = Draw.m_Slot == m_ManualPlan.m_PrimarySlot;
+			int State = 0;
+			if(!Own)
+				State = PrimaryStrongWeakId > Draw.m_StrongWeakId ? 1 : -1;
+			const bool Strong = State > 0;
+			const bool Weak = State < 0;
+			if(DisplaySettings.ShowStrongWeak(Own, Strong, Weak))
+			{
+				const float StrongSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesStrongSize / 100.0f;
+				const vec2 IconPos(
+					TeePos.x - (NameWidth > 0.0f ? NameWidth * 0.5f + StrongSize * 0.75f + 4.0f : 0.0f),
+					TeePos.y - 56.0f);
+				const ColorRGBA StrongColor = State > 0 ?
+								      color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmNameplateStrongHookColor)) :
+							      State < 0 ? color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmNameplateWeakHookColor)) :
+									  ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+				Graphics()->TextureSet(g_pData->m_aImages[IMAGE_STRONGWEAK].m_Id);
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(StrongColor);
+				Graphics()->SelectSprite(State > 0 ? SPRITE_HOOK_STRONG : State < 0 ? SPRITE_HOOK_WEAK :
+												      SPRITE_HOOK_ICON);
+				Graphics()->DrawSprite(IconPos.x, IconPos.y, StrongSize, StrongSize);
+				Graphics()->QuadsEnd();
+				if(DisplaySettings.ShowStrongWeakId())
+				{
+					char aStrongWeakId[4];
+					str_format(aStrongWeakId, sizeof(aStrongWeakId), "%d", Draw.m_StrongWeakId);
+					TextRender()->TextColor(StrongColor);
+					TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.6f);
+					TextRender()->Text(IconPos.x + StrongSize * 0.7f, IconPos.y - StrongSize * 0.45f, StrongSize * 0.8f, aStrongWeakId);
+				}
+			}
 		}
 
 		// 查看模式使用共用 demo 的方向显示配置，主选手作为回放的自身成员。
@@ -505,6 +780,33 @@ void CGhost::OnRender()
 		}
 		Graphics()->QuadsEnd();
 		Graphics()->QuadsSetRotation(0.0f);
+	}
+
+	// 自由视角或镜头过渡时，主选手可能在屏幕外：边缘箭头持续指向影子，
+	// 玩家不用逐个拖动镜头寻找。
+	if(m_ManualFocusSlot >= 0 && m_aManualRenderPosValid[m_ManualFocusSlot])
+	{
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		const vec2 Focus = m_aManualRenderPos[m_ManualFocusSlot];
+		const float Margin = 28.0f;
+		if(Focus.x < ScreenX0 + Margin || Focus.x > ScreenX1 - Margin || Focus.y < ScreenY0 + Margin || Focus.y > ScreenY1 - Margin)
+		{
+			const vec2 Center = GameClient()->m_Camera.m_Center;
+			const vec2 Direction = normalize(Focus - Center);
+			const vec2 MarkerPos(
+				std::clamp(Focus.x, ScreenX0 + Margin, ScreenX1 - Margin),
+				std::clamp(Focus.y, ScreenY0 + Margin, ScreenY1 - Margin));
+			const float MarkerSize = 22.0f;
+			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_ARROW].m_Id);
+			Graphics()->QuadsBegin();
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.85f);
+			Graphics()->QuadsSetRotation(angle(Direction));
+			IGraphics::CQuadItem Quad(MarkerPos.x - MarkerSize * 0.5f, MarkerPos.y - MarkerSize * 0.5f, MarkerSize, MarkerSize);
+			Graphics()->QuadsDrawTL(&Quad, 1);
+			Graphics()->QuadsEnd();
+			Graphics()->QuadsSetRotation(0.0f);
+		}
 	}
 }
 
@@ -562,7 +864,10 @@ void CGhost::StopRecord(int Time)
 	{
 		CMenus::CGhostItem Item;
 		if(SavedToFile)
+		{
 			str_copy(Item.m_aFilename, aFilename);
+			str_copy(m_CurGhost.m_aFilename, aFilename);
+		}
 		str_copy(Item.m_aPlayer, m_CurGhost.m_aPlayer);
 		Item.m_Time = Time;
 		Item.m_Date = std::time(nullptr);
@@ -598,8 +903,50 @@ void CGhost::StopRender()
 	m_Rendering = false;
 	m_NewRenderTick = -1;
 	m_ManualMode = false;
+	m_ManualFocusSlot = -1;
 	m_ManualClock.SetPlaying(false, Client()->LocalTime());
 	std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
+	for(auto &vSpans : m_aManualFreezeSpans)
+		vSpans.clear();
+}
+
+bool CGhost::BuildManualFreezeSpans(const std::array<bool, MAX_ACTIVE_GHOSTS> &aSlots, TManualFreezeSpans &aFreezeSpans) const
+try
+{
+	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
+	{
+		if(!aSlots[Slot])
+			continue;
+		const CGhostItem &Ghost = m_aActiveGhosts[Slot];
+		if(Ghost.Empty())
+			continue;
+		// 连续冻结帧 = 一个冻结段。新文件用 m_VelY 显式标记，旧文件回退到
+		// NINJA 判定（见 ghost_freeze_bar.h）；断档只出现在解除冻结或轨迹分段，
+		// 按帧序号还原起止即可。
+		std::vector<int> vRelativeTicks;
+		std::vector<unsigned char> vFrozen;
+		vRelativeTicks.reserve(Ghost.m_Path.Size());
+		vFrozen.reserve(Ghost.m_Path.Size());
+		for(int Index = 0; Index < Ghost.m_Path.Size(); ++Index)
+		{
+			const CGhostCharacter *pFrame = Ghost.m_Path.Get(Index);
+			const int64_t RelativeTick = static_cast<int64_t>(pFrame->m_Tick) - Ghost.m_StartTick;
+			if(!qm_ghost_timeline::FitsInt(RelativeTick))
+				return false;
+			vRelativeTicks.push_back(static_cast<int>(RelativeTick));
+			vFrozen.push_back(QmGhostFrameFrozen(pFrame->m_VelY, pFrame->m_Weapon == WEAPON_NINJA) ? 1 : 0);
+		}
+		QmCollectGhostFreezeSpans(vRelativeTicks, vFrozen, aFreezeSpans[Slot]);
+	}
+	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }
 
 void CGhost::ManualSetSpeed(float Speed)
@@ -608,15 +955,42 @@ void CGhost::ManualSetSpeed(float Speed)
 		m_ManualClock.SetSpeed(Speed, Client()->LocalTime());
 }
 
+void CGhost::ManualSetFocusSlot(int Slot)
+{
+	if(m_ManualMode && Slot >= 0 && Slot < MAX_ACTIVE_GHOSTS && m_ManualPlan.m_aSlots[Slot])
+		m_ManualFocusSlot = Slot;
+}
+
+void CGhost::RenderManualFreezeBars()
+{
+	if(!m_ManualMode)
+		return;
+	const int PlaybackTick = ManualPlaybackTick();
+	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
+	{
+		if(!m_ManualPlan.m_aSlots[Slot] || !m_aManualRenderPosValid[Slot])
+			continue;
+		const float FreezeProgress = QmGhostFreezeProgress(m_aManualFreezeSpans[Slot], PlaybackTick);
+		if(FreezeProgress <= 0.0f)
+			continue;
+		GameClient()->m_FreezeBars.RenderBarAt(m_aManualRenderPos[Slot], FreezeProgress);
+	}
+}
+
 bool CGhost::StartRenderManual(const std::vector<int> &vSlots, int FirstTick)
 {
 	qm_ghost_manual::CPlan<MAX_ACTIVE_GHOSTS> Candidate;
 	if(!Candidate.Prepare(vSlots, [this](int Slot) { return &m_aActiveGhosts[Slot]; }, FirstTick))
 		return false;
+	TManualFreezeSpans aFreezeSpans;
+	if(!BuildManualFreezeSpans(Candidate.m_aSlots, aFreezeSpans))
+		return false;
 	// 所有分配和时间映射检查完成后，才替换播放状态。
 	static_assert(std::is_nothrow_move_assignable_v<decltype(m_ManualPlan)>);
 	StopRender();
 	m_ManualPlan = std::move(Candidate);
+	m_aManualFreezeSpans = std::move(aFreezeSpans);
+	m_ManualFocusSlot = m_ManualPlan.m_PrimarySlot;
 	for(size_t Slot = 0; Slot < m_ManualPlan.m_aSlots.size(); ++Slot)
 		if(m_ManualPlan.m_aSlots[Slot] && !m_aActiveGhosts[Slot].Empty())
 			m_aActiveGhosts[Slot].m_PlaybackPos = 0;
@@ -636,6 +1010,40 @@ int CGhost::ManualPlaybackTick() const
 float CGhost::ManualRenderIntra() const
 {
 	return m_ManualMode ? m_ManualClock.Intra(Client()->LocalTime()) : 0.0f;
+}
+
+bool CGhost::GetManualRenderPosAtTick(int Slot, int Tick, vec2 *pOut) const
+{
+	if(pOut == nullptr || Slot < 0 || Slot >= MAX_ACTIVE_GHOSTS)
+		return false;
+	const CGhostItem &Ghost = m_aActiveGhosts[Slot];
+	if(Ghost.Empty())
+		return false;
+	const int Size = Ghost.m_Path.Size();
+	if(Size <= 0)
+		return false;
+
+	const int64_t TargetTick = qm_ghost_timeline::OffsetTick(Ghost.m_StartTick, std::clamp(Tick, 0, ManualEndTick()), 0);
+	int Lo = 0;
+	int Hi = Size - 1;
+	while(Lo < Hi)
+	{
+		const int Mid = (Lo + Hi) / 2;
+		if(Ghost.m_Path.Get(Mid)->m_Tick < TargetTick)
+			Lo = Mid + 1;
+		else
+			Hi = Mid;
+	}
+	const CGhostCharacter *pCur = Ghost.m_Path.Get(Lo);
+	const CGhostCharacter *pPrev = Ghost.m_Path.Get(maximum(0, Lo - 1));
+	if(Lo == 0 || pCur->m_Tick <= pPrev->m_Tick)
+	{
+		*pOut = vec2(pCur->m_X, pCur->m_Y);
+		return true;
+	}
+	const float Ratio = std::clamp((TargetTick - pPrev->m_Tick) / (float)(static_cast<int64_t>(pCur->m_Tick) - pPrev->m_Tick), 0.0f, 1.0f);
+	*pOut = mix(vec2(pPrev->m_X, pPrev->m_Y), vec2(pCur->m_X, pCur->m_Y), Ratio);
+	return true;
 }
 
 void CGhost::ManualSetPlaying(bool Playing)
@@ -775,7 +1183,17 @@ int CGhost::Load(const char *pFilename)
 	{
 		SetGhostSkinData(&Candidate.m_Skin, "default", 0, 0, 0);
 	}
+	str_copy(Candidate.m_aFilename, pFilename);
 	return ghost_run::Prepare(m_aActiveGhosts[Slot], Candidate, [this](const CGhostItem &Ghost) { return CreateRenderInfo(Ghost); }) ? Slot : -1;
+}
+
+bool CGhost::CanLoad(const char *pFilename)
+{
+	auto *pMap = GameClient()->Map();
+	if(pFilename == nullptr || pMap == nullptr)
+		return false;
+	CGhostInfo Info{};
+	return GhostLoader()->GetGhostInfo(pFilename, &Info, Client()->GetCurrentMap(), pMap->Sha256(), pMap->Crc());
 }
 
 void CGhost::PublishFinishedBest()
@@ -793,9 +1211,7 @@ void CGhost::PublishFinishedBest()
 	}
 	const int PreviousSlot = pPrevious ? pPrevious->m_Slot : -1;
 	const int FreeSlot = PreviousSlot < 0 ? GetSlot() : -1;
-	const bool Published = m_PersonalBest.Publish(m_aActiveGhosts, PreviousSlot, FreeSlot,
-		[&Menus](const CMenus::CGhostItem &Item) { return Menus.UpdateOwnGhost(Item); },
-		[this](int Slot) { ClearSlot(Slot); });
+	const bool Published = m_PersonalBest.Publish(m_aActiveGhosts, PreviousSlot, FreeSlot, [&Menus](const CMenus::CGhostItem &Item) { return Menus.UpdateOwnGhost(Item); }, [this](int Slot) { ClearSlot(Slot); });
 	if(!Published)
 		m_NextBestRetry = time_get_nanoseconds() + std::chrono::seconds(1);
 }
@@ -868,6 +1284,7 @@ void CGhost::SaveGhost(CMenus::CGhostItem *pItem)
 		ForgetUnsavedBest(*pItem);
 		pItem->m_InMemoryBest = false;
 		str_copy(pItem->m_aFilename, aFilename);
+		str_copy(pGhost->m_aFilename, aFilename);
 	}
 }
 

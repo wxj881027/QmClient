@@ -64,7 +64,7 @@ namespace
 		if(Prepared.m_Path.empty())
 			Prepared.m_Path = DefaultHelperPath(Source != "soda");
 		if(Prepared.m_Path.empty())
-			Prepared.m_PathError = GetLastError();
+			Prepared.m_PathError = ERROR_FILE_NOT_FOUND;
 		else
 		{
 			const std::wstring CommandLine = L"\"" + Prepared.m_Path + L"\" --parent-pid " + std::to_wstring(GetCurrentProcessId()) +
@@ -164,7 +164,11 @@ try
 	if(!SourceChanged && Now < m_pImpl->m_NextLaunchTick)
 		return true;
 	std::string PreparedSource(Source);
+#if !defined(CONF_QMCLIENT_TEST_STORAGE)
 	auto Prepared = PrepareHelperLaunch(pHelperPath, PreparedSource);
+#else
+	(void)pHelperPath;
+#endif
 	// 仅完整准备后才退休旧句柄、切来源并开始一次实际启动的节流。
 	if(SourceChanged)
 	{
@@ -177,11 +181,13 @@ try
 		m_pImpl->m_hHelperProcess = nullptr;
 	}
 	m_pImpl->m_NextLaunchTick = Now + HELPER_RETRY_MS;
+#if !defined(CONF_QMCLIENT_TEST_STORAGE)
 	DWORD Error = Prepared.m_PathError;
 	m_pImpl->m_hHelperProcess = Prepared.m_Path.empty() ? nullptr : LaunchPreparedHelper(Prepared.m_Path, Prepared.m_CommandLine, Error);
 	if(m_pImpl->m_hHelperProcess == nullptr)
 		PublishLaunchError(m_pImpl->m_Error, Prepared.m_Error, "歌词采集器启动失败（Windows 错误 %lu）", Error);
 	else
+#endif
 		m_pImpl->m_Error.clear();
 	return true;
 }
@@ -198,6 +204,10 @@ catch(const std::length_error &)
 bool CQmSodaHookProvider::RunKugouSetup(bool Restore)
 try
 {
+#if defined(CONF_QMCLIENT_TEST_STORAGE)
+	(void)Restore;
+	return false;
+#endif
 	const std::wstring Path = DefaultHelperPath(true);
 	if(Path.empty())
 		return false;

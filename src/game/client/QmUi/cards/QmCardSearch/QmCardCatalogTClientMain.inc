@@ -118,6 +118,7 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_ghost_tools[] = {
 		{Localizable("Ghost tools"), nullptr, "影子工具"},
 		{Localizable("Hide ghosts of frozen players"), nullptr, "隐藏冻结玩家的影子"},
+		{Localizable("Replay ghost sounds and effects"), nullptr, "影子回放音效 幽灵特效 回放音效"},
 		{Localizable("Predicted ghost opacity"), nullptr, "预测影子不透明度"},
 		{Localizable("Render ghosts as circles"), nullptr, "将影子渲染为圆圈"},
 		{Localizable("Show unpredicted ghosts for other players"), nullptr, "显示其他玩家未预测的影子"},
@@ -125,6 +126,7 @@ namespace
 		{Localizable("Toggle ghost key"), nullptr, "切换影子键"},
 		{Localizable("Unpredicted ghost opacity"), nullptr, "未预测影子不透明度"},
 		{nullptr, "qm_hide_frozen_ghosts", nullptr},
+		{nullptr, "qm_ghost_view_feedback", nullptr},
 		{nullptr, "qm_pred_ghosts_alpha", nullptr},
 		{nullptr, "qm_render_ghost_as_circle", nullptr},
 		{nullptr, "qm_show_others_ghosts", nullptr},

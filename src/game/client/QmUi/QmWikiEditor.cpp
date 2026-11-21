@@ -5,6 +5,8 @@
 
 #include <base/system.h>
 
+#include <engine/shared/qm_storage_layout.h>
+
 #include <game/localization.h>
 
 void SWikiEditorState::Load(const char *pId, const SWikiDocument &Fallback, const bool IsCard)
@@ -96,7 +98,7 @@ bool SWikiEditorState::Save()
 	m_Draft = m_Content.m_Markdown;
 	m_ResetEditScroll = false;
 	char aStatus[256];
-	str_format(aStatus, sizeof(aStatus), "%s: wiki/%s/%s.md", Localize("Saved"), qm_wiki_store::LanguageDir(), m_Content.m_RelativePath.c_str());
+	str_format(aStatus, sizeof(aStatus), "%s: %s/%s/%s.md", Localize("Saved"), qm_storage::CONTENT_WIKI_DIR, qm_wiki_store::LanguageDir(), m_Content.m_RelativePath.c_str());
 	SetStatus(aStatus, false);
 	return true;
 }

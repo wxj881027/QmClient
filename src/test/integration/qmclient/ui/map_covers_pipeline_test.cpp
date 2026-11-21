@@ -260,6 +260,8 @@ namespace
 			ASSERT_NE(m_pStorage, nullptr);
 			// 计数与各故障预算从相同目录状态开始，建目录不进入 native-new 故障域。
 			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient/cache", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient/cache/maps", IStorage::TYPE_SAVE));
 			ASSERT_TRUE(m_pStorage->CreateFolder(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE));
 			unsigned char aPixel[] = {80, 120, 160, 255};
 			CImageInfo Image;

@@ -492,8 +492,8 @@ void CCollisionHitbox::RenderPickupHitboxes()
 	const ColorRGBA ShieldColor(1.0f, 1.0f, 0.0f, Alpha);
 
 	const bool IsSuper = GameClient()->IsLocalCharSuper();
-	const int SwitcherTeam = GameClient()->SwitchStateTeam();
-	auto &aSwitchers = GameClient()->Switchers();
+	const int PlayableSwitcherTeam = GameClient()->SwitchStateTeam();
+	auto &aSwitchers = GameClient()->PlayableSwitchers();
 	const int Ticks = Client()->GameTick(g_Config.m_ClDummy) % Client()->GameTickSpeed();
 	const bool BlinkingPickup = (Ticks % 22) < 4;
 
@@ -513,7 +513,7 @@ void CCollisionHitbox::RenderPickupHitboxes()
 			continue;
 
 		const bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() &&
-				      !aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
+				      !aSwitchers[Data.m_SwitchNumber].m_aStatus[PlayableSwitcherTeam];
 		if(Inactive && BlinkingPickup)
 			continue;
 
@@ -581,8 +581,8 @@ void CCollisionHitbox::RenderProjectileHitboxes()
 	const float Alpha = HitboxAlpha();
 	static constexpr float ExplosionRadius = 135.0f;
 	static constexpr float ExplosionInnerRadius = 48.0f;
-	const auto &aSwitchers = GameClient()->Switchers();
-	const int SwitcherTeam = std::clamp(GameClient()->SwitchStateTeam(), 0, NUM_DDRACE_TEAMS - 1);
+	const auto &aSwitchers = GameClient()->PlayableSwitchers();
+	const int PlayableSwitcherTeam = std::clamp(GameClient()->SwitchStateTeam(), 0, NUM_DDRACE_TEAMS - 1);
 	const bool IsSuper = GameClient()->IsLocalCharSuper();
 
 	for(const CSnapEntities &Ent : GameClient()->SnapEntities())
@@ -592,7 +592,7 @@ void CCollisionHitbox::RenderProjectileHitboxes()
 			continue;
 
 		const CProjectileData Data = ExtractProjectileInfo(Item.m_Type, Item.m_pData, &GameClient()->m_GameWorld, Ent.m_pDataEx);
-		const bool FreezeActive = IsSuper || Data.m_SwitchNumber <= 0 || Data.m_SwitchNumber >= (int)aSwitchers.size() || aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
+		const bool FreezeActive = IsSuper || Data.m_SwitchNumber <= 0 || Data.m_SwitchNumber >= (int)aSwitchers.size() || aSwitchers[Data.m_SwitchNumber].m_aStatus[PlayableSwitcherTeam];
 		const SQmProjectileHitboxDisplay Display = ResolveQmProjectileHitboxDisplay(Data, g_Config.m_QmHitboxShowProjectiles != 0, g_Config.m_QmHitboxShowFreezeProjectiles != 0, FreezeActive);
 		if(!Display.m_ShowTrail && Display.m_FreezeRadius <= 0.0f)
 			continue;
@@ -640,8 +640,8 @@ void CCollisionHitbox::RenderLaserHitboxes()
 	if(Alpha <= 0.0f)
 		return;
 
-	const auto &aSwitchers = GameClient()->Switchers();
-	const int SwitcherTeam = std::clamp(GameClient()->SwitchStateTeam(), 0, NUM_DDRACE_TEAMS - 1);
+	const auto &aSwitchers = GameClient()->PlayableSwitchers();
+	const int PlayableSwitcherTeam = std::clamp(GameClient()->SwitchStateTeam(), 0, NUM_DDRACE_TEAMS - 1);
 	const bool IsSuper = GameClient()->IsLocalCharSuper();
 	const auto IsFreezeLaser = [](const CLaserData &Data) {
 		return Data.m_Type == LASERTYPE_FREEZE ||
@@ -664,7 +664,7 @@ void CCollisionHitbox::RenderLaserHitboxes()
 		const bool FreezeLaser = IsFreezeLaser(Data);
 		if((FreezeLaser && !g_Config.m_QmHitboxShowFreezeLasers) || (!FreezeLaser && !g_Config.m_QmHitboxShowLasers))
 			continue;
-		if(Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !IsSuper && !aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam])
+		if(Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !IsSuper && !aSwitchers[Data.m_SwitchNumber].m_aStatus[PlayableSwitcherTeam])
 			continue;
 
 		const float ScreenMargin = FreezeLaser ? CCharacterCore::PhysicalSize() : 16.0f;
@@ -755,13 +755,13 @@ void CCollisionHitbox::RenderWeaponHitboxes()
 
 	Graphics()->TextureClear();
 	Graphics()->LinesBegin();
-	if(!GameClient()->m_RankGhost.IsViewModeActive() && g_Config.m_QmHitboxShowHammer)
+	if(!GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_QmHitboxShowHammer)
 		RenderHammerHitboxes();
 	if(g_Config.m_QmHitboxShowProjectiles || g_Config.m_QmHitboxShowFreezeProjectiles)
 		RenderProjectileHitboxes();
 	if(g_Config.m_QmHitboxShowLasers || g_Config.m_QmHitboxShowFreezeLasers)
 		RenderLaserHitboxes();
-	if(!GameClient()->m_RankGhost.IsViewModeActive() && g_Config.m_QmHitboxShowHook)
+	if(!GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_QmHitboxShowHook)
 		RenderHookHitboxes();
 	Graphics()->LinesEnd();
 }
@@ -782,7 +782,7 @@ void CCollisionHitbox::OnRender()
 
 #if defined(CONF_VIDEORECORDER)
 	// 回放/导出跟随回放显示配置，普通录制跟随 cl_video_showhud，避免碰撞箱被一起录进视频。
-	if(IVideo::Current() && !qm_demo_display::Resolve(g_Config, State == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), true).m_Hud)
+	if(IVideo::Current() && !qm_demo_display::Resolve(g_Config, State == IClient::STATE_DEMOPLAYBACK || GameClient()->ReplaySessionStatus().ViewMode(), true).m_Hud)
 		return;
 #endif
 
@@ -808,7 +808,7 @@ void CCollisionHitbox::OnRender()
 		RenderTileHitboxes();
 	}
 
-	if(!GameClient()->m_RankGhost.IsViewModeActive() && (LegacyMode || g_Config.m_QmHitboxShowTeeCollision || g_Config.m_QmHitboxShowTeeFreeze || g_Config.m_QmHitboxShowTeeDeath))
+	if(!GameClient()->ReplaySessionStatus().ViewMode() && (LegacyMode || g_Config.m_QmHitboxShowTeeCollision || g_Config.m_QmHitboxShowTeeFreeze || g_Config.m_QmHitboxShowTeeDeath))
 	{
 		// 按 Tee↔Tee、Tee↔Freeze 和 Tee↔Death 语义分别绘制。
 		RenderTeeHitboxes();

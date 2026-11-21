@@ -20,12 +20,12 @@ class CEnvelope;
 
 namespace EnvelopeEditor
 {
-inline int RoundFixedPoint(double Value)
-{
-	if(std::isnan(Value))
-		return 0;
-	return static_cast<int>(std::clamp(std::round(Value), (double)std::numeric_limits<int>::min(), (double)std::numeric_limits<int>::max()));
-}
+	inline int RoundFixedPoint(double Value)
+	{
+		if(std::isnan(Value))
+			return 0;
+		return static_cast<int>(std::clamp(std::round(Value), (double)std::numeric_limits<int>::min(), (double)std::numeric_limits<int>::max()));
+	}
 }
 
 class CEnvelopeEditor : public CEditorComponent

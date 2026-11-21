@@ -13,12 +13,17 @@ class CQmSkinUploadFrameBudget
 {
 public:
 	// 多次逻辑更新共享真实上传时间；允许在同一帧内继续上传多个精灵。
-	bool CanUpload() const { return m_UploadTime < std::chrono::milliseconds(1); }
+	bool CanUpload() const { return m_UploadTime < m_Limit; }
 	void RecordUpload(std::chrono::nanoseconds Duration) { m_UploadTime += Duration; }
-	void Reset() { m_UploadTime = {}; }
+	void Reset(std::chrono::nanoseconds Limit = std::chrono::milliseconds(1))
+	{
+		m_UploadTime = {};
+		m_Limit = Limit;
+	}
 
 private:
 	std::chrono::nanoseconds m_UploadTime{};
+	std::chrono::nanoseconds m_Limit = std::chrono::milliseconds(1);
 };
 
 #endif

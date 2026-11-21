@@ -8,6 +8,7 @@
 #include <engine/friends.h>
 #include <engine/http.h>
 #include <engine/shared/jobs.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <atomic>
@@ -19,7 +20,7 @@
 
 namespace
 {
-	constexpr const char *CACHE_FILE = "qm_friend_last_seen.json";
+	constexpr const char *CACHE_FILE = qm_storage::FRIEND_LAST_SEEN_CACHE_FILE;
 
 	struct SCandidateCleanup
 	{
@@ -234,6 +235,7 @@ bool CQmFriendLastSeenService::Save(IStorage &Storage) const
 	char aTargetPath[IO_MAX_PATH_LENGTH * 2] = {};
 	try
 	{
+		qm_storage::EnsureFolder(&Storage, qm_storage::CACHE_SOCIAL_DIR);
 		Storage.GetCompletePath(IStorage::TYPE_SAVE, CACHE_FILE, aTargetPath, sizeof(aTargetPath));
 	}
 	catch(const std::bad_alloc &)

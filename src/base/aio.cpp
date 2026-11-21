@@ -59,12 +59,12 @@ static void aio_wake_unlocked(ASYNCIO *aio) REQUIRES(aio->lock)
 static void aio_thread(void *user)
 {
 	ASYNCIO *aio = (ASYNCIO *)user;
+	unsigned char local_buffer[ASYNC_LOCAL_BUFSIZE];
 
 	aio->lock.lock();
 	while(true)
 	{
 		int result_io_error;
-		unsigned char local_buffer[ASYNC_LOCAL_BUFSIZE];
 
 		if(aio->buffer.Empty())
 		{

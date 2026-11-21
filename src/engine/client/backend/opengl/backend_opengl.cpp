@@ -199,9 +199,10 @@ static bool ParseVersionString(EBackendType BackendType, const char *pStr, int &
 	// If the backend is GLES, the version string starts with `OpenGL ES ` or `OpenGL ES-CM ` for older contexts, rest is the same.
 	if(BackendType == BACKEND_TYPE_OPENGL_ES)
 	{
-		const char *pSkippedPrefix;
-		if((pSkippedPrefix = str_startswith(pStr, "OpenGL ES ")) != nullptr ||
-			(pSkippedPrefix = str_startswith(pStr, "OpenGL ES-CM ")) != nullptr)
+		const char *pSkippedPrefix = str_startswith(pStr, "OpenGL ES ");
+		if(pSkippedPrefix == nullptr)
+			pSkippedPrefix = str_startswith(pStr, "OpenGL ES-CM ");
+		if(pSkippedPrefix != nullptr)
 		{
 			pStr = pSkippedPrefix;
 		}
@@ -620,7 +621,7 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 	if(pCommand->m_pCapabilities->m_RenderTargets)
 	{
 		pCommand->m_pCapabilities->m_RenderTargets = glGenFramebuffers != nullptr && glBindFramebuffer != nullptr &&
-				glFramebufferTexture2D != nullptr && glCheckFramebufferStatus != nullptr && glDeleteFramebuffers != nullptr;
+							     glFramebufferTexture2D != nullptr && glCheckFramebufferStatus != nullptr && glDeleteFramebuffers != nullptr;
 	}
 #endif
 	pCommand->m_pCapabilities->m_RenderTargetMSAA = pCommand->m_pCapabilities->m_RenderTargets && IsNewApi();
@@ -1448,7 +1449,7 @@ bool CCommandProcessorFragment_OpenGL2::InitTileProgram(CGLSLTileProgram *pProgr
 	if(Textured)
 		pProgram->m_LocTextureSampler = pProgram->GetUniformLoc("gTextureSampler");
 	const bool UniformsAvailable = pProgram->m_LocPos >= 0 && pProgram->m_LocColor >= 0 &&
-			(!Border || (pProgram->m_LocOffset >= 0 && pProgram->m_LocScale >= 0)) && (!Textured || pProgram->m_LocTextureSampler >= 0);
+				       (!Border || (pProgram->m_LocOffset >= 0 && pProgram->m_LocScale >= 0)) && (!Textured || pProgram->m_LocTextureSampler >= 0);
 	if(!UniformsAvailable)
 		log_warn("gfx/opengl/shader", "Tile shader is missing required uniforms (border=%d, textured=%d).", Border, Textured);
 	return UniformsAvailable;

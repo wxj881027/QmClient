@@ -83,8 +83,20 @@ CTestInfo::CTestInfo()
 			break;
 		}
 	}
-	str_format(m_aFilenamePrefix, sizeof(m_aFilenamePrefix), "%s.%s-%d",
-		aTestCaseName, pTestInfo->name(), pid());
+	// 存档根改为绝对路径后，过长的测试名会在 Windows 的 260 字符上限处触发
+	// 「文件名或扩展名太长」，这里保留可读前缀并用内容哈希维持同名截断后的唯一性。
+	char aFullName[192];
+	str_format(aFullName, sizeof(aFullName), "%s.%s", aTestCaseName, pTestInfo->name());
+	uint32_t NameHash = 2166136261u;
+	for(const char *pCursor = aFullName; *pCursor != '\0'; pCursor++)
+	{
+		NameHash ^= (unsigned char)*pCursor;
+		NameHash *= 16777619u;
+	}
+	char aShortName[33];
+	str_copy(aShortName, aFullName, sizeof(aShortName));
+	str_format(m_aFilenamePrefix, sizeof(m_aFilenamePrefix), "%s-%08x-%d",
+		aShortName, NameHash, pid());
 	Filename(m_aFilename, sizeof(m_aFilename), ".tmp");
 	str_format(m_aStoragePath, sizeof(m_aStoragePath), "tmp/tests/%s", m_aFilename);
 }
@@ -96,6 +108,18 @@ void CTestInfo::Filename(char *pBuffer, size_t BufferLength, const char *pSuffix
 
 std::unique_ptr<IStorage> CTestInfo::CreateTestStorage()
 {
+	// 隔离存储的存档根用绝对路径：客户端实际的 $USERDIR/$EXEDIR 也是绝对路径，
+	// 相对根会让 GetCompletePath 的结果再喂回 storage 时被二次拼接。
+	if(fs_is_relative_path(m_aStoragePath))
+	{
+		char aCurrentDir[IO_MAX_PATH_LENGTH];
+		char aAbsolute[IO_MAX_PATH_LENGTH];
+		if(fs_getcwd(aCurrentDir, sizeof(aCurrentDir)) &&
+			str_format(aAbsolute, sizeof(aAbsolute), "%s/%s", aCurrentDir, m_aStoragePath) < (int)sizeof(aAbsolute))
+		{
+			str_copy(m_aStoragePath, aAbsolute);
+		}
+	}
 	fs_makedir_rec_for(m_aStoragePath);
 	bool Error = fs_makedir(m_aStoragePath);
 	EXPECT_FALSE(Error);
@@ -164,21 +188,35 @@ void TestDeleteTestStorageFiles(const char *pPath)
 	Data.m_pvEntries = &vEntries;
 	fs_listdir(Data.m_aCurrentDir, TestCollect, 0, &Data);
 
+	// 只用 m_aFilename 写文件的用例里，这条路径是文件而不是存档目录。
 	CTestInfoPath Path;
-	Path.m_IsDirectory = true;
+	Path.m_IsDirectory = fs_is_dir(Data.m_aCurrentDir);
 	str_copy(Path.m_aData, Data.m_aCurrentDir, sizeof(Path.m_aData));
 	vEntries.push_back(Path);
 
-	// Sorts directories after files.
-	std::sort(vEntries.begin(), vEntries.end());
+	// 先文件后目录；目录按路径长度降序，保证子目录先于父目录删除。
+	std::sort(vEntries.begin(), vEntries.end(), [](const CTestInfoPath &Left, const CTestInfoPath &Right) {
+		if(Left.m_IsDirectory != Right.m_IsDirectory)
+			return !Left.m_IsDirectory;
+		if(Left.m_IsDirectory)
+			return str_length(Left.m_aData) > str_length(Right.m_aData);
+		return str_comp(Left.m_aData, Right.m_aData) < 0;
+	});
 
-	// Don't delete too many files.
-	ASSERT_LE(vEntries.size(), 10);
+	// 只删除本次测试目录内的条目；前缀不符说明路径解析异常，中止以免误删其他目录。
+	const size_t PathLength = str_length(pPath);
+	for(const auto &Entry : vEntries)
+	{
+		if(str_length(Entry.m_aData) == PathLength)
+			continue; // 根目录自身。
+		ASSERT_EQ(str_comp_num(Entry.m_aData, pPath, (int)PathLength), 0) << Entry.m_aData;
+		ASSERT_GT(str_length(Entry.m_aData), PathLength) << Entry.m_aData;
+	}
 	for(auto &Entry : vEntries)
 	{
 		if(Entry.m_IsDirectory)
 		{
-			ASSERT_FALSE(fs_removedir(Entry.m_aData));
+			ASSERT_FALSE(fs_removedir(Entry.m_aData)) << Entry.m_aData;
 		}
 		else
 		{

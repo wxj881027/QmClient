@@ -13,6 +13,7 @@
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <base/windows.h>
+
 #include <windows.h>
 #endif
 
@@ -407,8 +408,7 @@ TEST(Filesystem, ListsDirectoryWithExtendedWindowsPath)
 	fs_listdir_fileinfo(Directory.c_str(), [](const CFsFileInfo *pInfo, int IsDir, int, void *pUser) {
 		if(!IsDir && str_comp(pInfo->m_pName, "entry.txt") == 0)
 			++*static_cast<int *>(pUser);
-		return 0;
-	}, 0, &Found);
+		return 0; }, 0, &Found);
 	EXPECT_EQ(Found, 1);
 }
 

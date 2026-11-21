@@ -1,4 +1,6 @@
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
+
 #include <game/client/components/qmclient/local_map_tags.h>
 
 #include <gtest/gtest.h>
@@ -12,7 +14,7 @@
 
 namespace
 {
-	constexpr char TAGS_FILE[] = "qm_local_map_tags.txt";
+	constexpr const char *TAGS_FILE = qm_storage::LOCAL_MAP_TAGS_FILE;
 	constexpr char SAVED_TAGS[] = "community\tmap\tfirst\ncommunity\tmap\tsecond\n";
 	constexpr size_t FILE_LIMIT = 256 * 1024;
 	constexpr size_t ROW_SIZE = 64;
@@ -41,6 +43,7 @@ namespace
 		{
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
+			ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::STATE_MAPS_DIR));
 		}
 
 		void Write(const char *pPath, std::string_view Content)

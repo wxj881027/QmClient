@@ -256,8 +256,14 @@ void CMovingTiles::OnRender()
 		return true;
 	};
 
-	auto RenderPass = [&]() {
+	auto RenderPass = [&](int ViewTick, float ViewIntraTick, float AlphaScale, bool GameplayOnly) {
 		constexpr float ColorConv = 1.0f / 255.0f;
+		const auto EvalEnvelope = [&](int Offset, int Index, ColorRGBA &Result, size_t Channels) {
+			if(ViewTick >= 0)
+				m_EnvEvaluator.EnvelopeEvalAtTick(Offset, Index, Result, Channels, ViewTick, ViewIntraTick);
+			else
+				m_EnvEvaluator.EnvelopeEval(Offset, Index, Result, Channels);
+		};
 
 		size_t QuadStart = 0;
 		while(QuadStart < m_vQuads.size())
@@ -295,13 +301,17 @@ void CMovingTiles::OnRender()
 				const CQuadData &QuadData = m_vQuads[QuadIndex];
 				if(QuadData.m_RequiresAxiomOrGores && !RenderMovingWater)
 					continue;
+				// 影子叠加只画会挡人/冻结/钩人的动态块，避免把整张装饰地图复制一遍。
+				if(GameplayOnly && QuadData.m_Type == EQType::NONE)
+					continue;
 
 				const CQuad *pQuad = QuadData.m_pQuad;
 				if(!pQuad)
 					continue;
 
 				ColorRGBA Color(1.0f, 1.0f, 1.0f, 1.0f);
-				m_EnvEvaluator.EnvelopeEval(pQuad->m_ColorEnvOffset, pQuad->m_ColorEnv, Color, 4);
+				EvalEnvelope(pQuad->m_ColorEnvOffset, pQuad->m_ColorEnv, Color, 4);
+				Color.a *= AlphaScale;
 				if(Color.a <= 0.0f)
 					continue;
 
@@ -312,7 +322,7 @@ void CMovingTiles::OnRender()
 					fx2f(pQuad->m_aTexcoords[3].x), fx2f(pQuad->m_aTexcoords[3].y));
 
 				ColorRGBA PositionEval(0.0f, 0.0f, 0.0f, 0.0f);
-				m_EnvEvaluator.EnvelopeEval(pQuad->m_PosEnvOffset, pQuad->m_PosEnv, PositionEval, 3);
+				EvalEnvelope(pQuad->m_PosEnvOffset, pQuad->m_PosEnv, PositionEval, 3);
 
 				const vec2 Offset(PositionEval.r, PositionEval.g);
 				const float Rotation = PositionEval.b / 180.0f * pi + QuadData.m_Angle;
@@ -350,7 +360,10 @@ void CMovingTiles::OnRender()
 	};
 
 	// 移动方块统一走透明通道，避免空的不透明遍历。
-	RenderPass();
+	// 主流仍按主世界时钟绘制；查看模式再叠加一层半透明的影子机关，绝不改主世界相位。
+	RenderPass(-1, 0.0f, 1.0f, false);
+	if(m_ViewTick >= 0)
+		RenderPass(m_ViewTick, m_ViewIntraTick, 0.45f, true);
 	Graphics()->ClipDisable();
 	Graphics()->MapScreen(SavedScreenX0, SavedScreenY0, SavedScreenX1, SavedScreenY1);
 }

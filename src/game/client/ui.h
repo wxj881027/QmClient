@@ -11,8 +11,8 @@
 #include "QmUi/QmPopupSource.h"
 #include "QmUi/QmUiLifetime.h"
 #include "QmUi/UiTokens.h"
-#include "lineinput.h"
 #include "components/tooltips.h"
+#include "lineinput.h"
 #include "ui_rect.h"
 
 #include <base/borrowed_allocator.h>
@@ -952,6 +952,12 @@ private:
 	unsigned m_UpdatedMouseButtons = 0;
 	unsigned m_MouseButtons = 0;
 	unsigned m_LastMouseButtons = 0;
+	// 异步渲染期间 UI 更新可能跨过多个主循环。鼠标按下/抬起若只靠 Update
+	// 轮询，完整点击可能落在两次可见帧之间而丢失；在 OnInput 里锁存边沿，
+	// 下一次 Update 至少输出一个按下脉冲，再在下一可见帧释放。
+	unsigned m_LatchedMouseButtons = 0;
+	unsigned m_MouseEventButtons = 0;
+	unsigned m_PendingMousePresses = 0;
 	// 每帧最多激活一个按钮：触摸按下导致页面切换后，原位置的另一个按钮
 	// 会在同一帧读到同一次按下/抬起，产生双重点击。
 	bool m_ButtonActivatedThisFrame = false;
@@ -1168,7 +1174,12 @@ public:
 	void SetEnabled(bool Enabled)
 	{
 		if(m_Enabled && !Enabled)
+		{
 			CancelTouchInput();
+			m_LatchedMouseButtons = 0;
+			m_MouseEventButtons = 0;
+			m_PendingMousePresses = 0;
+		}
 		m_Enabled = Enabled;
 	}
 	bool Enabled() const { return m_Enabled; }
@@ -1504,7 +1515,7 @@ public:
 		return DrawQmIcon(Rect, Icon, pFallbackIcon, Color);
 	}
 	CLabelResult DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char *pFallbackIcon, float Size, int Align, const SLabelProperties &LabelProps = {}) const;
-	int DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const ui_widget::SIconButtonIconDraw *pIconDraw = nullptr);
+	int DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const ui_widget::SIconButtonIconDraw *pIconDraw = nullptr, float Radius = -1.0f);
 	// only used for popup menus
 	int DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding = 0.0f, bool TransparentInactive = false, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, float MinimumFontSize = -1.0f, float TextInsetX = 0.0f);
 
@@ -1740,7 +1751,7 @@ public:
 		// 预设色系按钮：每组最多 8 色，按“组号 * 8 + 组内序号”平铺取用。
 		static constexpr int PRESET_MAX_PER_GROUP = 8;
 		CButtonContainer m_aPresetButtons[3 * PRESET_MAX_PER_GROUP];
-		// 莫奈预设组（12 色相 × 4 档）：色表在 `ui_tag::MONET_PALETTE`，这里只留命中容器。
+		// 莫奈预设组（12 色相 × 4 档）：色表在 `ui_token::tag::MONET_PALETTE`，这里只留命中容器。
 		CButtonContainer m_aMonetSwatchButtons[qm_picker_palette::MONET_SWATCHES];
 		CButtonContainer m_aPaletteSwatchButtons[qm_picker_palette::MAX_SWATCHES];
 		// 名字单独一份命中区：点名字进改名，点色块应用颜色。
@@ -1902,6 +1913,53 @@ public:
 	}
 	CUiScopedControlAlphaScale(const CUiScopedControlAlphaScale &) = delete;
 	CUiScopedControlAlphaScale &operator=(const CUiScopedControlAlphaScale &) = delete;
+};
+
+// 连续字号作用域：字形仍按整像素光栅化，但绘制尺寸使用原始浮点字号，
+// 字号随动画连续变化时靠贴图等比缩放平滑过渡，不会在整数档之间跳。
+// 测量与绘制必须同时处于作用域内，否则宽度与居中位置对不上。
+class CUiScopedFloatFontSize
+{
+	ITextRender *m_pTextRender;
+	unsigned m_PreviousFlags;
+
+public:
+	explicit CUiScopedFloatFontSize(ITextRender *pTextRender) :
+		m_pTextRender(pTextRender), m_PreviousFlags(pTextRender != nullptr ? pTextRender->GetRenderFlags() : 0)
+	{
+		if(m_pTextRender != nullptr)
+			m_pTextRender->SetRenderFlags(m_PreviousFlags | TEXT_RENDER_FLAG_QM_FLOAT_FONT_SIZE);
+	}
+	~CUiScopedFloatFontSize()
+	{
+		if(m_pTextRender != nullptr)
+			m_pTextRender->SetRenderFlags(m_PreviousFlags);
+	}
+	CUiScopedFloatFontSize(const CUiScopedFloatFontSize &) = delete;
+	CUiScopedFloatFontSize &operator=(const CUiScopedFloatFontSize &) = delete;
+};
+
+// 关闭整像素对齐：只给随动画连续移动/缩放的文本用。静止文本保持像素对齐，
+// 字形最清晰；动画中若继续对齐，慢速收尾会把亚像素位移攒成逐像素跳变。
+class CUiScopedSubpixelText
+{
+	ITextRender *m_pTextRender;
+	unsigned m_PreviousFlags;
+
+public:
+	CUiScopedSubpixelText(ITextRender *pTextRender, bool Enabled) :
+		m_pTextRender(pTextRender), m_PreviousFlags(pTextRender != nullptr ? pTextRender->GetRenderFlags() : 0)
+	{
+		if(m_pTextRender != nullptr && Enabled)
+			m_pTextRender->SetRenderFlags(m_PreviousFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+	}
+	~CUiScopedSubpixelText()
+	{
+		if(m_pTextRender != nullptr)
+			m_pTextRender->SetRenderFlags(m_PreviousFlags);
+	}
+	CUiScopedSubpixelText(const CUiScopedSubpixelText &) = delete;
+	CUiScopedSubpixelText &operator=(const CUiScopedSubpixelText &) = delete;
 };
 
 #endif

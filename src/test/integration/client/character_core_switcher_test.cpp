@@ -4,9 +4,8 @@
 #include <game/mapitems.h>
 #include <game/teamscore.h>
 
-#include <test/support/prediction_collision_map.h>
-
 #include <gtest/gtest.h>
+#include <test/support/prediction_collision_map.h>
 
 TEST(CharacterCoreSwitchers, SharedDoorOnlyRestrictsWorldsThatKnowItsSwitch)
 {

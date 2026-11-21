@@ -9,8 +9,14 @@ class IClient;
 inline constexpr size_t QM_MENU_TEXT_CACHE_CAPACITY = 4096;
 inline constexpr uint64_t QM_MENU_TEXT_CACHE_MAX_AGE_FRAMES = 600;
 inline constexpr size_t QM_ASSET_METADATA_CACHE_CAPACITY = 512;
-inline constexpr size_t QM_TEE_PREVIEW_CACHE_CAPACITY = 192;
 inline constexpr size_t QM_LANGUAGE_ROW_CACHE_CAPACITY = 128;
+
+// Frame 参数必须是 UI 帧（CUi::PopupSourceFrame），不能传主循环 PerfFrame；
+// 异步渲染下循环帧会在两次可见帧之间跳掉几百个，缓存会被提前清空。
+constexpr bool QmMenuTextCacheEntryExpired(uint64_t CurrentFrame, uint64_t LastUsedFrame)
+{
+	return CurrentFrame > LastUsedFrame && CurrentFrame - LastUsedFrame > QM_MENU_TEXT_CACHE_MAX_AGE_FRAMES;
+}
 
 constexpr bool QmMenuUiScrollPerfActive(bool WheelConsumedThisFrame, bool ScrollbarActive, bool ScrollbarAnimating)
 {

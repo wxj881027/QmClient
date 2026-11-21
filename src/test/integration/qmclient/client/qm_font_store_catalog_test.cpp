@@ -99,7 +99,9 @@ TEST_F(CQmFontStoreCatalog, MalformedCatalogCompletesWithEmptyResult)
 TEST_F(CQmFontStoreCatalog, InvalidUtf8CatalogCompletesWithEmptyResult)
 {
 	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json",
-		R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf","c":")" "\xE9" R"("}]})"));
+		R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf","c":")"
+		"\xE9"
+		R"("}]})"));
 	const auto Result = Load();
 	EXPECT_TRUE(Result.m_vEntries.empty());
 	EXPECT_TRUE(Result.m_vFamilies.empty());
@@ -107,7 +109,8 @@ TEST_F(CQmFontStoreCatalog, InvalidUtf8CatalogCompletesWithEmptyResult)
 
 TEST_F(CQmFontStoreCatalog, RawNullRejectsCatalogWithValidPrefix)
 {
-	const char aCatalog[] = R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf"}]})" "\0padding";
+	const char aCatalog[] = R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf"}]})"
+				"\0padding";
 	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", std::string_view(aCatalog, sizeof(aCatalog) - 1)));
 	const auto Result = Load();
 	EXPECT_TRUE(Result.m_vEntries.empty());

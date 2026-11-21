@@ -57,6 +57,8 @@ namespace
 		void TrianglesBegin() override {}
 		void TrianglesEnd() override {}
 		void QuadsSetSubsetFree(float, float, float, float, float, float, float, float, int) override {}
+		// 地图四边形逐顶点上色；这里只统计立即提交的四边形数量。
+		void SetColorVertex(const CColorVertex *, size_t) override {}
 		void QuadsDrawFreeform(const CFreeformItem *, int Count) override { m_ImmediateQuads += Count; }
 	};
 

@@ -87,7 +87,9 @@ private:
 			TAllocatorBase<T>{pAllocation} {}
 		template<typename U>
 		CAllocator(const CAllocator<U> &Other) noexcept :
-			CAllocator(Other.m_pAllocation) {}
+			CAllocator(Other.m_pAllocation)
+		{
+		}
 		template<typename U>
 		struct rebind
 		{

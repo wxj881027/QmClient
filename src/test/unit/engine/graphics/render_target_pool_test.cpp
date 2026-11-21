@@ -113,7 +113,8 @@ TEST(RenderTargetPool, RetryingDeferredDestructionDoesNotDestroyReusedSlot)
 		if(Id == Second)
 			throw std::bad_alloc();
 		Destroy(Id);
-	}), std::bad_alloc);
+	}),
+		std::bad_alloc);
 	ASSERT_EQ(Pool.Allocate(64, 32), First);
 
 	Pool.FlushDeferred(Destroy);

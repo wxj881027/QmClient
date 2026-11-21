@@ -384,8 +384,8 @@ try
 		{
 			SetStatus(L"无法等待客户端退出。", false);
 			const wchar_t *pMessage = ParentResult == EParentWaitResult::TIMED_OUT ?
-						      L"等待客户端退出超时，更新已取消。" :
-						      L"无法确认客户端已退出，更新已取消。";
+							  L"等待客户端退出超时，更新已取消。" :
+							  L"无法确认客户端已退出，更新已取消。";
 			MessageBoxW(Window, pMessage, WINDOW_TITLE, MB_OK | MB_ICONERROR);
 		}
 		return 1;

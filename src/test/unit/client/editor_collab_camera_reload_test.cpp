@@ -61,8 +61,7 @@ TEST(EditorCollabCameraReload, FailedMapLoadSkipsSecondCapture)
 	int Captures = 0;
 	const bool Loaded = ReloadEditorCollabSnapshot(View, true, [&] {
 		++Captures;
-		return CEditorCollabPlacementSnapshot{};
-	}, [] { return false; });
+		return CEditorCollabPlacementSnapshot{}; }, [] { return false; });
 	EXPECT_FALSE(Loaded);
 	EXPECT_EQ(Captures, 1);
 }
@@ -113,7 +112,8 @@ TEST(EditorCollabCameraReload, UnhandledExceptionRestoresApplyingFlag)
 	bool Applying = false;
 	EXPECT_THROW(EditorCollab::TryApplyingSnapshot(Applying, []() -> bool {
 		throw std::runtime_error("unexpected load error");
-	}), std::runtime_error);
+	}),
+		std::runtime_error);
 	EXPECT_FALSE(Applying);
 }
 

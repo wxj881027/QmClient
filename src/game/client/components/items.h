@@ -20,7 +20,9 @@ class CItems : public CComponent
 	void RenderPickup(const CNetObj_Pickup *pPrev, const CNetObj_Pickup *pCurrent, bool IsPredicted, int Flags);
 	void RenderFlags();
 	void RenderFlag(const CNetObj_Flag *pPrev, const CNetObj_Flag *pCurrent, const CNetObj_GameData *pPrevGameData, const CNetObj_GameData *pCurGameData);
-	void RenderLaser(const CLaserData *pCurrent, bool IsPredicted = false);
+	// ViewTick >= 0：用影子回放播放头计算激光脉动，而不是主世界实时 tick。
+	// AlphaScale：影子机关半透明叠在可玩世界上，避免两条时间线的机关互相盖住。
+	void RenderLaser(const CLaserData *pCurrent, bool IsPredicted = false, float AlphaScale = 1.0f, int ViewTick = -1);
 
 	int m_ItemsQuadContainerIndex;
 

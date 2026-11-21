@@ -41,6 +41,12 @@ TEST(QmWheelPresets, IdentityKeepsDistinctMainAndDummyValues)
 	EXPECT_EQ(Restored->m_aTees[1].m_aValues, Preset.m_aTees[1].m_aValues);
 }
 
+TEST(QmWheelPresets, MixedAssignmentsDoNotCreateACombinedPreset)
+{
+	const auto Preset = ParseCommand("player_skin \"default\"; cl_asset_game \"default\"; say_team \"help\"");
+	EXPECT_FALSE(Preset);
+}
+
 TEST(QmWheelPresets, PartialIdentityDoesNotTurnUnspecifiedFieldsIntoResets)
 {
 	const auto Preset = ParseCommand("player_skin \"default\"; player_clan \"\"");
@@ -166,7 +172,7 @@ TEST(QmWheelPresets, CountryCodesMatchPlayerConfigurationRange)
 
 TEST(QmWheelPresets, CustomScriptsRemainOutsideThePresetEditor)
 {
-	for(const char *pCommand : {"exec DYL.cfg", "say \"hi\"; kill", "say \"hi\"; say \"again\"", "player_name \"one\"; player_name \"two\"", "player_skin \"default\"; cl_asset_game \"default\"", "player_name \"unterminated", "player_default_eyes 6", "player_color_body 16777216", "player_country -1000", "cl_asset_game \"\""})
+	for(const char *pCommand : {"exec DYL.cfg", "say \"hi\"; kill", "say \"hi\"; say \"again\"", "player_name \"one\"; player_name \"two\"", "player_name \"unterminated", "player_default_eyes 6", "player_color_body 16777216", "player_country -1000", "cl_asset_game \"\""})
 	{
 		SCOPED_TRACE(pCommand);
 		EXPECT_FALSE(ParseCommand(pCommand));
@@ -182,4 +188,69 @@ TEST(QmWheelPresets, EmptyPresetsCannotCreateNoOpWheelEntries)
 		Preset.m_Type = Type;
 		EXPECT_FALSE(BuildCommand(Preset, Command));
 	}
+}
+
+TEST(QmWheelPresets, CommandsAreClassifiedIntoVisualMenus)
+{
+	EXPECT_EQ(MenuForType(EType::NAME), qm_bind_menu::EMenu::IDENTITY);
+	EXPECT_EQ(MenuForType(EType::IDENTITY), qm_bind_menu::EMenu::IDENTITY);
+	EXPECT_EQ(MenuForType(EType::CHAT), qm_bind_menu::EMenu::CHAT);
+	EXPECT_EQ(MenuForType(EType::ASSETS), qm_bind_menu::EMenu::ASSETS);
+	EXPECT_STREQ(AssetCategoryName(0), "Entities");
+	EXPECT_STREQ(AssetCategoryName(NUM_ASSETS - 1), "Strong / Weak");
+
+	EXPECT_EQ(MenuForCommand("player_name \"DYL\""), qm_bind_menu::EMenu::IDENTITY);
+	EXPECT_EQ(MenuForCommand("say_team \"ready\""), qm_bind_menu::EMenu::CHAT);
+	EXPECT_EQ(MenuForCommand("cl_asset_game \"gamepack\""), qm_bind_menu::EMenu::ASSETS);
+	EXPECT_EQ(MenuForCommand("exec DYL.cfg"), std::nullopt);
+}
+
+TEST(QmWheelPresets, LegacyConfigKeepsIdentityForVisualPreview)
+{
+	const auto Preset = ParseLegacyConfig(
+		"# old bind wheel identity\n"
+		"player_name \"DYL\"\n"
+		"player_clan \"Wolf\"\n"
+		"player_skin \"default_v2\"\n"
+		"player_use_custom_color 1\n"
+		"player_color_body 1048831\n"
+		"player_color_feet 2603775\n"
+		"cl_asset_game \"gamepack\"\n"
+		"say \"ready\"\n"
+		"unbindall\n");
+	ASSERT_TRUE(Preset);
+	EXPECT_EQ(Preset->m_Type, EType::IDENTITY);
+	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[NAME]);
+	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[NAME], "DYL");
+	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[CLAN]);
+	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[CLAN], "Wolf");
+	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[SKIN]);
+	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[SKIN], "default_v2");
+	EXPECT_EQ(Preset->m_aAssets[1], "gamepack");
+	EXPECT_EQ(Preset->m_Chat, "ready");
+}
+
+TEST(QmWheelPresets, LegacyConfigHonorsQuotedCommentsAndLineSeparators)
+{
+	const auto Preset = ParseLegacyConfig(
+		"player_name \"A#B\" # trailing comment\n"
+		"player_clan \"C\"\r\n"
+		"echo ignored\n");
+	ASSERT_TRUE(Preset);
+	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[NAME]);
+	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[NAME], "A#B");
+	ASSERT_TRUE(Preset->m_aTees[0].m_aValues[CLAN]);
+	EXPECT_EQ(*Preset->m_aTees[0].m_aValues[CLAN], "C");
+}
+
+TEST(QmWheelPresets, ExecPathOnlyAcceptsOneScriptCommand)
+{
+	EXPECT_EQ(ExecPath("exec Binds/主号.cfg"), std::optional<std::string>("Binds/主号.cfg"));
+	EXPECT_EQ(ExecPath("exec \"Binds/name with spaces.cfg\""), std::optional<std::string>("Binds/name with spaces.cfg"));
+	EXPECT_EQ(ExecPath(R"(exec Binds\改名字\改名字_轮盘版\狼ヤミ.cfg)"), std::optional<std::string>(R"(Binds\改名字\改名字_轮盘版\狼ヤミ.cfg)"));
+	EXPECT_EQ(ExecPath(R"(exec "Binds\改名字\改名字_轮盘版\狼ヤミ.cfg")"), std::optional<std::string>(R"(Binds\改名字\改名字_轮盘版\狼ヤミ.cfg)"));
+	EXPECT_FALSE(ExecPath("exec one.cfg; exec two.cfg"));
+	EXPECT_FALSE(ExecPath("exec \"one.cfg\" trailing"));
+	EXPECT_FALSE(ExecPath("exec one.cfg\nsay injected"));
+	EXPECT_FALSE(ExecPath("player_name DYL"));
 }

@@ -35,6 +35,7 @@
 #include "components/players.h"
 #include "components/qmclient/camera_network.h"
 #include "components/qmclient/collision_position.h"
+#include "components/qmclient/dummy_input.h"
 #include "components/qmclient/ime_gradient_probe.h"
 #include "components/qmclient/item_render_math.h"
 #include "components/qmclient/jelly_tee.h"
@@ -49,6 +50,7 @@
 #include "components/qmclient/spectator_selection.h"
 #include "components/qmclient/streamer_word_filter.h"
 #include "components/qmclient/translate/translate_ui_settings.h"
+#include "components/qmclient/world_event_gate.h"
 #include "components/race_demo.h"
 #include "components/scoreboard.h"
 #include "components/settings_resource_jobs.h"
@@ -105,8 +107,6 @@
 
 namespace
 {
-	constexpr int DUMMY_HAMMER_RESENDS = 2;
-
 	void NormalizeSixupSkinName(char *pSkinName, int SkinNameSize)
 	{
 		if(!CSkin::IsValidName(pSkinName))
@@ -550,6 +550,18 @@ const char *CGameClient::DDNetVersionStr() const { return m_aDDNetVersionStr; }
 int CGameClient::ClientVersion7() const { return CLIENT_VERSION7; }
 const char *CGameClient::GetItemName(int Type) const { return m_NetObjHandler.GetObjName(Type); }
 
+qmclient::replay::SReplaySessionStatus CGameClient::ReplaySessionStatus() const
+{
+	qmclient::replay::SReplaySessionInputs Inputs;
+	Inputs.m_ViewModeActive = m_RankGhost.IsViewModeActive();
+	Inputs.m_ManualActive = m_Ghost.ManualModeActive();
+	Inputs.m_ManualPlaying = m_Ghost.ManualPlaying();
+	Inputs.m_ManualTick = m_Ghost.ManualPlaybackTick();
+	Inputs.m_ManualEndTick = m_Ghost.ManualEndTick();
+	Inputs.m_ManualSpeed = m_Ghost.ManualSpeed();
+	return qmclient::replay::QmResolveReplaySessionStatus(Inputs);
+}
+
 bool CGameClient::CanRunRuntimeConfigConchainEffects() const
 {
 	return m_pClient != nullptr && m_pClient->GlobalTime();
@@ -650,6 +662,8 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_NeteaseIntegration, "netease_integration");
 	AddComponent(&m_MusicLyricsIntegration, "music_lyrics_integration");
 	AddComponent(&m_SpotifyIntegration, "spotify_integration");
+	AddComponent(&m_LxMusicIntegration, "lxmusic_integration");
+	AddComponent(&m_LyricsPresentation, "lyrics_presentation");
 	AddComponent(&m_MusicAppWatcher, "music_app_watcher");
 	AddComponent(&m_Players, "players");
 	AddComponent(&m_MovingTilesBackground, "moving_tiles_background");
@@ -658,7 +672,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Outlines, "outlines");
 	AddComponent(&m_CollisionHitbox, "collision_hitbox");
 	AddComponent(&m_QmCheckpointGuide, "checkpoint_guide");
-	AddComponent(&m_LyricsPresentation, "lyrics_presentation");
 	AddComponent(&m_Pet, "pet");
 	AddComponent(&m_Particles.m_RenderExplosions, "particles_explosions");
 	AddComponent(&m_NamePlates, "nameplates");
@@ -822,6 +835,8 @@ void CGameClient::OnConsoleInit()
 	pConsole->Chain("cl_skin_prefix", ConchainRefreshSkins, this);
 	pConsole->Chain("cl_download_skins", ConchainRefreshSkins, this);
 	pConsole->Chain("cl_download_community_skins", ConchainRefreshSkins, this);
+	pConsole->Chain("qm_download_ddstats_skins", ConchainRefreshSkins, this);
+	pConsole->Chain("qm_ddstats_skin_download_url", ConchainRefreshSkins, this);
 	pConsole->Chain("cl_vanilla_skins_only", ConchainRefreshSkins, this);
 	pConsole->Chain("events", ConchainRefreshEventSkins, this);
 
@@ -1614,15 +1629,13 @@ void CGameClient::OnInput(const IInput::CEvent &Event)
 
 void CGameClient::OnDummySwap()
 {
-	if(g_Config.m_ClDummyResetOnSwitch)
+	const int ResetSlot = QmDummyResetSlot(g_Config.m_ClDummyResetOnSwitch, g_Config.m_ClDummy);
+	if(ResetSlot >= 0)
 	{
-		int PlayerOrDummy = (g_Config.m_ClDummyResetOnSwitch == 2) ? g_Config.m_ClDummy : (!g_Config.m_ClDummy);
-		m_Controls.ResetInput(PlayerOrDummy);
-		m_Controls.m_aInputData[PlayerOrDummy].m_Hook = 0;
+		m_Controls.ResetInput(ResetSlot);
+		m_Controls.m_aInputData[ResetSlot].m_Hook = 0;
 	}
-	const int PrevDummyFire = m_DummyInput.m_Fire;
-	m_DummyInput = m_Controls.m_aInputData[!g_Config.m_ClDummy];
-	m_Controls.m_aInputData[g_Config.m_ClDummy].m_Fire = PrevDummyFire;
+	QmApplyDummySwap(m_Controls.m_aInputData[!g_Config.m_ClDummy], m_DummyInput, m_Controls.m_aInputData[g_Config.m_ClDummy]);
 	m_IsDummySwapping = 1;
 }
 
@@ -1643,7 +1656,7 @@ int CGameClient::OnSnapInput(int *pData, bool Dummy, bool Force)
 		m_DummyHammerResends = 0;
 		if(m_DummyFire != 0)
 		{
-			m_DummyInput.m_Fire = (m_HammerInput.m_Fire + 1) & ~1;
+			m_DummyInput.m_Fire = QmReleasedFireState(m_HammerInput.m_Fire);
 			m_DummyFire = 0;
 		}
 
@@ -1656,22 +1669,19 @@ int CGameClient::OnSnapInput(int *pData, bool Dummy, bool Force)
 		return sizeof(m_DummyInput);
 	}
 
-	if(m_DummyFire % 25 != 0)
-	{
-		m_DummyFire++;
-		// 重复发送最新的 Fire counter，避免单个非 Vital 输入包丢失导致吞锤。
-		if(m_DummyHammerResends > 0)
-		{
-			m_DummyHammerResends--;
-			mem_copy(pData, &m_HammerInput, sizeof(m_HammerInput));
-			return sizeof(m_HammerInput);
-		}
+	const SDummyHammerSnapDecision HammerSnap = QmResolveDummyHammerSnap(m_DummyFire, m_DummyHammerResends);
+	m_DummyFire = HammerSnap.m_DummyFire;
+	m_DummyHammerResends = HammerSnap.m_DummyHammerResends;
+	if(HammerSnap.m_Action == EDummyHammerSnapAction::NONE)
 		return 0;
+	if(HammerSnap.m_Action == EDummyHammerSnapAction::RESEND)
+	{
+		// 重复发送最新的 Fire counter，避免单个非 Vital 输入包丢失导致吞锤。
+		mem_copy(pData, &m_HammerInput, sizeof(m_HammerInput));
+		return sizeof(m_HammerInput);
 	}
-	m_DummyFire++;
 
-	m_HammerInput.m_Fire = (m_HammerInput.m_Fire + 1) | 1;
-	m_DummyHammerResends = DUMMY_HAMMER_RESENDS;
+	m_HammerInput.m_Fire = QmPressedFireState(m_HammerInput.m_Fire);
 	m_HammerInput.m_WantedWeapon = WEAPON_HAMMER + 1;
 	if(!g_Config.m_ClDummyRestoreWeapon)
 		m_DummyInput.m_WantedWeapon = WEAPON_HAMMER + 1;
@@ -1785,7 +1795,7 @@ void CGameClient::OnConnected()
 		auto *pComponent = m_vpAll[ComponentIndex];
 		CPerfTimer MapLoadTimer(QmPerfEnabled());
 		const bool PrepareLiveGraphics = Live &&
-			(pComponent == &m_MapImages || pComponent == &m_MapLayersBackground || pComponent == &m_MapLayersForeground);
+						 (pComponent == &m_MapImages || pComponent == &m_MapLayersBackground || pComponent == &m_MapLayersForeground);
 		if(!m_ConnectionResourcePreparation.TryPrepare([&] { pComponent->OnMapLoad(); }, PrepareLiveGraphics))
 			return;
 		pComponent->OnReset();
@@ -1939,6 +1949,8 @@ void CGameClient::OnReset()
 	m_ReceivedDDNetPlayerFinishTimesMillis = false;
 
 	m_Teams.Reset();
+	for(auto &Teams : m_aConnectionTeams)
+		Teams.Reset();
 	m_GameWorld.Clear();
 	m_GameWorld.m_PredictedEvents.clear();
 	m_GameWorld.m_WorldConfig.m_InfiniteAmmo = true;
@@ -1972,13 +1984,7 @@ void CGameClient::OnReset()
 	std::fill(std::begin(m_aLastProcessedEventTick), std::end(m_aLastProcessedEventTick), -1);
 	m_CharOrder.Reset();
 	std::fill(std::begin(m_aSwitchStateTeam), std::end(m_aSwitchStateTeam), -1);
-
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-	{
-		m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-	}
+	m_AutoTeamLock.Reset();
 
 	m_MapBestTimeSeconds = FinishTime::UNSET;
 	m_MapBestTimeMillis = 0;
@@ -2400,6 +2406,8 @@ void CGameClient::OnDummyDisconnect()
 	m_Chat.InvalidateOutgoingConnection(IClient::CONN_DUMMY);
 	TClientComponent().CancelSoloSplit();
 	m_aLocalIds[1] = -1;
+	m_aConnectionTeams[IClient::CONN_DUMMY].Reset();
+	m_AutoTeamLock.ResetConnection(IClient::CONN_DUMMY);
 	m_QmDummyDistanceLink = {};
 	m_aDDRaceMsgSent[1] = false;
 	m_aShowOthers[1] = SHOW_OTHERS_NOT_SET;
@@ -2906,6 +2914,15 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		}
 	}
 
+	if(MsgId == NETMSGTYPE_SV_TEAMSSTATE || MsgId == NETMSGTYPE_SV_TEAMSSTATELEGACY)
+	{
+		ProcessTeamsState(Conn, pUnpacker);
+		m_Ghost.m_AllowRestart = true;
+		m_RaceDemo.m_AllowRestart = true;
+		if(Dummy)
+			return;
+	}
+
 	if(Dummy)
 	{
 		if(MsgId == NETMSGTYPE_SV_READYTOENTER)
@@ -2966,33 +2983,6 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 			if(g_Config.m_SndGame)
 				m_Sounds.Play(CSounds::CHN_GLOBAL, pMsg->m_SoundId, 1.0f);
 		}
-	}
-	else if(MsgId == NETMSGTYPE_SV_TEAMSSTATE || MsgId == NETMSGTYPE_SV_TEAMSSTATELEGACY)
-	{
-		unsigned int i;
-
-		for(i = 0; i < MAX_CLIENTS; i++)
-		{
-			const int Team = pUnpacker->GetInt();
-			if(!pUnpacker->Error() && Team >= TEAM_FLOCK && Team < NUM_DDRACE_TEAMS)
-			{
-				m_Teams.Team(i, Team);
-			}
-			else
-			{
-				m_Teams.Team(i, 0);
-				break;
-			}
-		}
-
-		if(i <= VANILLA_MAX_CLIENTS)
-		{
-			m_Teams.m_IsDDRace16 = true;
-			m_Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
-		}
-
-		m_Ghost.m_AllowRestart = true;
-		m_RaceDemo.m_AllowRestart = true;
 	}
 	else if(MsgId == NETMSGTYPE_SV_KILLMSG)
 	{
@@ -3460,6 +3450,11 @@ void CGameClient::ProcessEvents()
 	if(m_aLastProcessedEventTick[EventDummy] == EventTick)
 		return;
 	m_aLastProcessedEventTick[EventDummy] = EventTick;
+	// 快速练习：服务器快照里的事件属于主世界那条时间线。在分支里播出来
+	// 就是"开枪却冒锤击特效 / 听见另一条世界线的爆炸声"。分支只播自己
+	// 预测世界产生的事件（HandlePredictedEvents），这里只保留上面的记账。
+	if(m_FastPractice.Enabled())
+		return;
 	auto RememberConfirmedEvent = [this, EventTick](int EventId, vec2 Pos, int ExtraInfo = -1) {
 		CGameWorld::CPredictedEvent Event(EventId, Pos, -1, EventTick, ExtraInfo);
 		if(!Event.HasValidPosition())
@@ -3621,6 +3616,13 @@ void CGameClient::ProcessEvents()
 
 void CGameClient::FinalizeHammerHitEvents()
 {
+	// 与 ProcessEvents 同一条世界线边界：练习时服务器确认的锤击事件不能
+	// 在分支里补播，也不能把"已确认"记录写进分支的预测事件队列。
+	if(m_FastPractice.Enabled())
+	{
+		m_PendingHammerHits.Reset();
+		return;
+	}
 	auto RememberConfirmedEvent = [this](vec2 Pos, int AttackerId, int TargetId, int SnapshotTick) {
 		CGameWorld::CPredictedEvent Event(NETEVENTTYPE_HAMMERHIT, Pos, AttackerId, SnapshotTick, TargetId);
 		if(!Event.HasValidPosition())
@@ -4283,15 +4285,18 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 				int Team = std::clamp(Item.m_Id, (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
 
 				int HighestSwitchNumber = std::clamp(std::max(pSwitchStateData->m_HighestSwitchNumber, Collision()->m_HighestSwitchNumber), 0, 255);
-				if(HighestSwitchNumber != maximum(0, (int)Switchers().size() - 1))
+				if(HighestSwitchNumber != maximum(0, (int)m_GameWorld.m_Core.m_vSwitchers.size() - 1))
 				{
 					m_GameWorld.m_Core.InitSwitchers(HighestSwitchNumber);
 					Collision()->m_HighestSwitchNumber = HighestSwitchNumber;
 				}
 
-				for(int j = 0; j < (int)Switchers().size(); j++)
+				// 服务器快照只写服务器世界。练习分支有自己的开关状态，
+				// CGameClient::PlayableSwitchers() 在练习时返回分支那一份，不能被这里覆盖。
+				auto &vServerSwitchers = m_GameWorld.m_Core.m_vSwitchers;
+				for(int j = 0; j < (int)vServerSwitchers.size(); j++)
 				{
-					Switchers()[j].m_aStatus[Team] = (pSwitchStateData->m_aStatus[j / 32] >> (j % 32)) & 1;
+					vServerSwitchers[j].m_aStatus[Team] = (pSwitchStateData->m_aStatus[j / 32] >> (j % 32)) & 1;
 				}
 
 				if(Item.m_DataSize >= 68)
@@ -4301,15 +4306,15 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 					{
 						int SwitchNumber = pSwitchStateData->m_aSwitchNumbers[j];
 						int EndTick = pSwitchStateData->m_aEndTicks[j];
-						if(EndTick > 0 && SwitchNumber >= 0 && SwitchNumber < (int)Switchers().size())
+						if(EndTick > 0 && SwitchNumber >= 0 && SwitchNumber < (int)vServerSwitchers.size())
 						{
-							Switchers()[SwitchNumber].m_aEndTick[Team] = EndTick;
+							vServerSwitchers[SwitchNumber].m_aEndTick[Team] = EndTick;
 						}
 					}
 				}
 
 				// update switch types
-				for(auto &Switcher : Switchers())
+				for(auto &Switcher : vServerSwitchers)
 				{
 					if(Switcher.m_aStatus[Team])
 						Switcher.m_aType[Team] = Switcher.m_aEndTick[Team] ? TILE_SWITCHTIMEDOPEN : TILE_SWITCHOPEN;
@@ -4344,13 +4349,19 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		m_Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
 	else if(m_GameInfo.m_NumDDRaceTeams > 0)
 		m_Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
+	for(auto &Teams : m_aConnectionTeams)
+	{
+		if(Teams.m_IsDDRace16)
+			Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
+		else if(m_GameInfo.m_NumDDRaceTeams > 0)
+			Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
+	}
 
 	LogSnapshotStage("snapshot_decode");
+	RefreshConnectionLocalIds();
 	// setup local pointers
 	if(m_Snap.m_LocalClientId >= 0)
 	{
-		m_aLocalIds[g_Config.m_ClDummy] = m_Snap.m_LocalClientId;
-
 		CSnapState::CCharacterInfo *pChr = &m_Snap.m_aCharacters[m_Snap.m_LocalClientId];
 		if(pChr->m_Active)
 		{
@@ -4834,56 +4845,92 @@ void CGameClient::UpdateAutoTeamLock()
 {
 	if(Client()->State() != IClient::STATE_ONLINE)
 	{
-		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		m_AutoTeamLock.Reset();
+		return;
+	}
+
+	std::array<bool, NUM_DUMMIES> aConnected{};
+	std::array<bool, NUM_DUMMIES> aSuppressLock{};
+	std::array<int, NUM_DUMMIES> aTeams{};
+	std::array<int, NUM_DUMMIES> aTeamSupers{};
+	std::array<int64_t, NUM_DUMMIES> aGameTicks{};
+	const bool SuppressSoloTeams = g_Config.m_QmSoloSplitAutoTeamLock != 0 && m_TClient.IsSoloSplitPending();
+	for(int Connection = 0; Connection < NUM_DUMMIES; ++Connection)
+	{
+		const int ClientId = m_aLocalIds[Connection];
+		aConnected[Connection] = ClientId >= 0 && ClientId < MAX_CLIENTS &&
+					 (Connection == IClient::CONN_MAIN || Client()->DummyConnected());
+		aTeams[Connection] = aConnected[Connection] ? m_aConnectionTeams[Connection].Team(ClientId) : TEAM_FLOCK;
+		aTeamSupers[Connection] = m_aConnectionTeams[Connection].TeamSuper();
+		aGameTicks[Connection] = Client()->GameTick(Connection);
+		aSuppressLock[Connection] = SuppressSoloTeams;
+	}
+
+	const SQmAutoTeamLockPlan Plan = m_AutoTeamLock.Update(
+		g_Config.m_QmAutoTeamLock != 0,
+		g_Config.m_QmAutoTeamLockDelay,
+		Client()->GameTickSpeed(),
+		aTeams,
+		aTeamSupers,
+		aGameTicks,
+		aConnected,
+		aSuppressLock);
+	for(int i = 0; i < Plan.m_RequestCount; ++i)
+	{
+		const SQmAutoTeamLockRequest &Request = Plan.m_aRequests[i];
+		m_Chat.SendChatOnConn(Request.m_Connection, 0, "/lock 1");
+	}
+}
+
+void CGameClient::ProcessTeamsState(int Conn, CUnpacker *pUnpacker)
+{
+	if(Conn < 0 || Conn >= NUM_DUMMIES)
+		return;
+
+	CTeamsCore &Teams = m_aConnectionTeams[Conn];
+	unsigned int i;
+	for(i = 0; i < MAX_CLIENTS; i++)
+	{
+		const int Team = pUnpacker->GetInt();
+		if(!pUnpacker->Error() && Team >= TEAM_FLOCK && Team < NUM_DDRACE_TEAMS)
 		{
-			m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
-			m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-			m_aAutoTeamLockPending[Dummy] = false;
+			Teams.Team(i, Team);
+			if(Conn == g_Config.m_ClDummy)
+				m_Teams.Team(i, Team);
 		}
-		return;
+		else
+		{
+			Teams.Team(i, 0);
+			if(Conn == g_Config.m_ClDummy)
+				m_Teams.Team(i, 0);
+			break;
+		}
 	}
 
-	const int Dummy = g_Config.m_ClDummy;
-	const int ClientId = m_aLocalIds[Dummy];
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+	if(i <= VANILLA_MAX_CLIENTS)
 	{
-		m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-		return;
+		Teams.m_IsDDRace16 = true;
+		Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
+		if(Conn == g_Config.m_ClDummy)
+		{
+			m_Teams.m_IsDDRace16 = true;
+			m_Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
+		}
 	}
-
-	const int Team = m_Teams.Team(ClientId);
-	const bool TeamCanBeLocked = Team > TEAM_FLOCK && Team < TEAM_SUPER;
-	const bool LastTeamCanBeLocked = m_aAutoTeamLockLastTeam[Dummy] > TEAM_FLOCK && m_aAutoTeamLockLastTeam[Dummy] < TEAM_SUPER;
-
-	if(!g_Config.m_QmAutoTeamLock)
+	else if(m_GameInfo.m_NumDDRaceTeams > 0)
 	{
-		m_aAutoTeamLockLastTeam[Dummy] = Team;
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-		return;
+		Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
+		if(Conn == g_Config.m_ClDummy)
+			m_Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
 	}
+}
 
-	if(TeamCanBeLocked && (!LastTeamCanBeLocked || Team != m_aAutoTeamLockLastTeam[Dummy]))
-	{
-		const int DelayTicks = g_Config.m_QmAutoTeamLockDelay * Client()->GameTickSpeed();
-		m_aAutoTeamLockDeadlineTick[Dummy] = (int64_t)Client()->GameTick(Dummy) + DelayTicks;
-		m_aAutoTeamLockPending[Dummy] = true;
-	}
-	else if(!TeamCanBeLocked)
-	{
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-	}
-
-	if(m_aAutoTeamLockPending[Dummy] && TeamCanBeLocked && Client()->GameTick(Dummy) >= m_aAutoTeamLockDeadlineTick[Dummy])
-	{
-		m_Chat.SendChat(0, "/lock 1");
-		m_aAutoTeamLockPending[Dummy] = false;
-	}
-
-	m_aAutoTeamLockLastTeam[Dummy] = Team;
+void CGameClient::RefreshConnectionLocalIds()
+{
+	const int Active = g_Config.m_ClDummy;
+	const int Other = !Active;
+	m_aLocalIds[Active] = m_Snap.m_LocalClientId;
+	m_aLocalIds[Other] = Other == IClient::CONN_DUMMY && !Client()->DummyConnected() ? -1 : Client()->GetLocalClientId(Other);
 }
 
 void CGameClient::UpdateEditorIngameMoved()
@@ -5195,6 +5242,11 @@ void CGameClient::OnPredict()
 	CCharacterCore BeforePrevChar = m_PredictedPrevChar;
 	CCharacterCore BeforeChar = m_PredictedChar;
 
+	// 快速练习是平行世界：全服暂停不冻结练习，先由练习预测接管渲染。
+	// 服务器侧本地角色死亡/短暂失活时也必须继续推进分支，不能先被快照门挡掉。
+	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
+		return;
+
 	// we can't predict without our own id or own character
 	if(m_Snap.m_LocalClientId == -1 || !m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_Active)
 		return;
@@ -5214,9 +5266,6 @@ void CGameClient::OnPredict()
 		}
 		return;
 	}
-
-	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
-		return;
 
 	vec2 aBeforeRender[MAX_CLIENTS];
 	for(int i = 0; i < MAX_CLIENTS; i++)
@@ -6970,6 +7019,20 @@ void CGameClient::UpdateHookCollTargets()
 		Target.m_Super = Data.m_Super;
 		Target.m_Solo = Data.m_Solo;
 		Target.m_HookHitDisabled = Data.m_HookHitDisabled;
+		// 练习参与者不在服务器快照时间线上：位置取分支世界的渲染坐标，
+		// solo 取分支队伍状态。否则辅助线对着另一条时间线的位置做碰撞，
+		// 会从画面里紧挨着的分身身上直接穿过去，颜色也不会切到 Tee 命中色。
+		vec2 PracticePos;
+		bool PracticeSuper;
+		bool PracticeHookHitDisabled;
+		if(m_FastPractice.ResolvePracticeHookCollTarget(i, PracticePos, Target.m_Solo, PracticeSuper, PracticeHookHitDisabled))
+		{
+			Target.m_Valid = true;
+			Target.m_Pos = PracticePos;
+			Target.m_Super = PracticeSuper;
+			Target.m_HookHitDisabled = PracticeHookHitDisabled;
+			continue;
+		}
 		Target.m_Pos = HookCollTargetPosition(i, Intra);
 	}
 }
@@ -7206,7 +7269,7 @@ void CGameClient::UpdatePrediction()
 			int GameTeam = IsTeamPlay() ? m_aClients[i].m_Team : i;
 			m_GameWorld.NetCharAdd(i, &m_Snap.m_aCharacters[i].m_Cur,
 				m_Snap.m_aCharacters[i].m_HasExtendedData ? &m_Snap.m_aCharacters[i].m_ExtendedData : nullptr,
-				GameTeam, IsLocal);
+				GameTeam, IsLocal, false);
 		}
 
 	for(const CSnapEntities &EntData : SnapEntities())
@@ -7389,10 +7452,16 @@ void CGameClient::UpdateRenderedCharacters()
 {
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
-		if(!m_Snap.m_aCharacters[i].m_Active)
+		// 练习参与者不随服务器世界失活：快照里的死亡、暂停或短暂离线只描述主世界，
+		// 分支世界仍在模拟这名 tee。照常发布渲染数据，否则画面上人会消失、碰撞体还在。
+		CCharacter *pPracticeChar = m_FastPractice.ResolvePracticeCharacter(i);
+		if(!m_Snap.m_aCharacters[i].m_Active && pPracticeChar == nullptr)
 			continue;
-		m_aClients[i].m_RenderCur = m_Snap.m_aCharacters[i].m_Cur;
-		m_aClients[i].m_RenderPrev = m_Snap.m_aCharacters[i].m_Prev;
+		if(m_Snap.m_aCharacters[i].m_Active)
+		{
+			m_aClients[i].m_RenderCur = m_Snap.m_aCharacters[i].m_Cur;
+			m_aClients[i].m_RenderPrev = m_Snap.m_aCharacters[i].m_Prev;
+		}
 		m_aClients[i].m_IsPredicted = false;
 		m_aClients[i].m_IsPredictedLocal = false;
 		vec2 UnpredPos = mix(
@@ -7415,6 +7484,19 @@ void CGameClient::UpdateRenderedCharacters()
 			m_aClients[i].m_PrevPredicted.Write(&m_aClients[i].m_RenderPrev);
 
 			m_aClients[i].m_IsPredicted = true;
+
+			// 武器与挥锤相位不在核心字段里，Write 不会带上；练习参与者的这两项
+			// 必须来自分支角色。旁观/暂停时反向预测不再接管，否则渲染会一直沿用
+			// 服务器快照里的武器（分身从锤子跳成手枪）。
+			if(IsPracticeParticipant)
+			{
+				if(pPracticeChar)
+				{
+					m_aClients[i].m_RenderCur.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderPrev.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderCur.m_AttackTick = pPracticeChar->GetAttackTick();
+				}
+			}
 
 			Pos = mix(
 				vec2(m_aClients[i].m_RenderPrev.m_X, m_aClients[i].m_RenderPrev.m_Y),
@@ -7469,6 +7551,51 @@ void CGameClient::UpdateRenderedCharacters()
 					Pos = UnpredPos;
 			}
 		}
+		// 练习中旁观时常规预测停摆，但分支世界仍是权威：参与者的渲染核心
+		// 切回分支世界，镜头跟随与画面才落在练习位置而不是服务器位置。
+		if(IsPracticeParticipant && !Predict())
+		{
+			const CCharacterCore *pPracticeCore = nullptr;
+			int PracticeTick = 0;
+			if(m_FastPractice.ResolvePracticeCharacterCore(i, &pPracticeCore, PracticeTick) && pPracticeCore)
+			{
+				m_aClients[i].m_Predicted = *pPracticeCore;
+				m_aClients[i].m_PrevPredicted = *pPracticeCore;
+				pPracticeCore->Write(&m_aClients[i].m_RenderCur);
+				pPracticeCore->Write(&m_aClients[i].m_RenderPrev);
+				m_aClients[i].m_IsPredicted = true;
+				m_aClients[i].m_IsPredictedLocal = true;
+				Pos = pPracticeCore->m_Pos;
+				// 武器与挥锤相位不在核心字段里：旁观时反向预测（AntiPingGunfire）
+				// 不再接管，RenderCur 会保留服务器快照里的武器，分身会从锤子跳成手枪。
+				if(pPracticeChar)
+				{
+					m_aClients[i].m_RenderCur.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderPrev.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderCur.m_AttackTick = pPracticeChar->GetAttackTick();
+				}
+			}
+		}
+		if(IsPracticeParticipant)
+		{
+			// 表情同样来自服务器快照，但练习输入锁会让服务器把参与者长期判成 AFK，
+			// 快照就固定返回眨眼。渲染统一在预测/旁观数据写完之后覆盖，所有路径一致。
+			const bool ServerActive = m_Snap.m_aCharacters[i].m_Active;
+			const int ServerEmote = ServerActive ? m_Snap.m_aCharacters[i].m_Cur.m_Emote : -1;
+			const int Emote = m_FastPractice.ResolvePracticeEyeEmote(i, ServerEmote, ServerActive, m_aClients[i].m_Afk);
+			m_aClients[i].m_RenderCur.m_Emote = Emote;
+			m_aClients[i].m_RenderPrev.m_Emote = Emote;
+			// 冻结状态也只有分支世界知道：快照里的 FreezeEnd 属于服务器时间线。
+			// players/hud 在渲染阶段统一读 ClientData，因此在这里覆盖一次，冻结隐身、
+			// 解冻进度与 HUD 计数才会和分支里的实际碰撞状态一致。
+			if(pPracticeChar)
+			{
+				const CCharacterCore *pCore = pPracticeChar->Core();
+				m_aClients[i].m_FreezeEnd = pCore->m_FreezeEnd;
+				m_aClients[i].m_DeepFrozen = pCore->m_DeepFrozen;
+				m_aClients[i].m_LiveFrozen = pCore->m_LiveFrozen;
+			}
+		}
 		m_aClients[i].m_RenderPos = Pos;
 		if(Predict() && i == m_Snap.m_LocalClientId)
 			m_LocalCharacterPos = Pos;
@@ -7478,11 +7605,15 @@ void CGameClient::UpdateRenderedCharacters()
 void CGameClient::HandlePredictedEvents(const int Tick)
 {
 	const float Alpha = 1.0f;
+	// 与查看模式回放、练习录制共用同一份音效门控：三处判定一致，
+	// 同一条线路才不会在游玩/练习/回放里播出不同的声音。
+	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 
-	QmProcessPredictedEvents(m_PredictedWorld.m_PredictedEvents, Tick, Client()->GameTickSpeed(), [this, Alpha](const CGameWorld::CPredictedEvent &Event) {
+	QmProcessPredictedEvents(m_PredictedWorld.m_PredictedEvents, Tick, Client()->GameTickSpeed(), [this, Alpha, &Focus](const CGameWorld::CPredictedEvent &Event) {
 		if(Event.m_EventId == NETEVENTTYPE_SOUNDWORLD)
 		{
-			if(m_GameInfo.m_RaceSounds && ((Event.m_ExtraInfo == SOUND_GUN_FIRE && !g_Config.m_SndGun) || (Event.m_ExtraInfo == SOUND_PLAYER_PAIN_LONG && !g_Config.m_SndLongPain)))
+			if(!QmShouldPlayWorldSound(Event.m_ExtraInfo, g_Config.m_SndGame, Focus.m_AirJump.m_PlaySound,
+				   Focus.m_PlayDeathOrSpawnSound, m_GameInfo.m_RaceSounds, g_Config.m_SndGun, g_Config.m_SndLongPain))
 				return false;
 			if(g_Config.m_DbgPredictEvents)
 				dbg_msg("pred_event", "predict-play sound=%d tick=%d pos=%.1f,%.1f", Event.m_ExtraInfo, Event.m_Tick, Event.m_Pos.x, Event.m_Pos.y);
@@ -7751,6 +7882,15 @@ bool CGameClient::IsOtherTeam(int ClientId) const
 {
 	bool Local = m_Snap.m_LocalClientId == ClientId;
 
+	// 快速练习的分支世界有自己的 solo 状态：练习里的 /solo /unsolo 只改预测
+	// 世界，服务器快照的 solo 标志不会跟着变，直接用快照会把分身画成实体。
+	auto SoloOf = [this](int Id) {
+		bool Solo = Id >= 0 && Id < MAX_CLIENTS && m_aClients[Id].m_Solo;
+		if(Id >= 0 && Id < MAX_CLIENTS)
+			m_FastPractice.ResolvePracticeSoloState(Id, Solo);
+		return Solo;
+	};
+
 	if(m_Snap.m_LocalClientId < 0)
 	{
 		return false;
@@ -7765,13 +7905,13 @@ bool CGameClient::IsOtherTeam(int ClientId) const
 		// 跟随视角沿用被旁观者的 solo 语义：任一方处于 solo 即视为其他队伍
 		//（冻结条、碰撞显示等据此隐藏/减淡）；自由视角由外层分支返回 false，仍能看到所有玩家。
 		if(SpectatorId >= 0 && SpectatorId < MAX_CLIENTS && ClientId != SpectatorId &&
-			(m_aClients[SpectatorId].m_Solo || m_aClients[ClientId].m_Solo))
+			(SoloOf(SpectatorId) || SoloOf(ClientId)))
 			return true;
 		if(m_Teams.Team(ClientId) == m_Teams.TeamSuper() || m_Teams.Team(SpectatorId) == m_Teams.TeamSuper())
 			return false;
 		return m_Teams.Team(ClientId) != m_Teams.Team(SpectatorId);
 	}
-	else if((m_aClients[m_Snap.m_LocalClientId].m_Solo || m_aClients[ClientId].m_Solo) && !Local)
+	else if((SoloOf(m_Snap.m_LocalClientId) || SoloOf(ClientId)) && !Local)
 	{
 		return true;
 	}
@@ -7784,6 +7924,11 @@ bool CGameClient::IsOtherTeam(int ClientId) const
 
 int CGameClient::SwitchStateTeam() const
 {
+	// 练习分支世界的开关状态按分支里的队伍取，与服务器快照的队伍无关。
+	// 影子查看队伍只属于只读机关世界，不能覆盖主世界和练习分支的开关判定。
+	const int PracticeTeam = m_FastPractice.PracticeSwitchTeam();
+	if(PracticeTeam >= 0)
+		return PracticeTeam;
 	if(m_aSwitchStateTeam[g_Config.m_ClDummy] >= 0)
 		return m_aSwitchStateTeam[g_Config.m_ClDummy];
 	else if(m_Snap.m_LocalClientId < 0)

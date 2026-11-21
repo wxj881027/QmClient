@@ -86,7 +86,7 @@ namespace QmCheckpointGuide
 		bool StopsAt(const QmMapProgress::STile &Tile) const
 		{
 			return IsReturn(Tile.m_TeleType) || Tile.m_TeleType == TILE_TELEIN || Tile.m_TeleType == TILE_TELEINEVIL ||
-				(Tile.m_TeleType == TILE_TELECHECK && Tile.m_TeleNumber > 0 && Tile.m_TeleNumber < 256 && Tile.m_TeleNumber != m_Checkpoint);
+			       (Tile.m_TeleType == TILE_TELECHECK && Tile.m_TeleNumber > 0 && Tile.m_TeleNumber < 256 && Tile.m_TeleNumber != m_Checkpoint);
 		}
 
 	public:

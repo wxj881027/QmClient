@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import struct
+import time
 import zlib
 
 try:
@@ -44,6 +45,33 @@ def _write_loading_map(path: Path) -> None:
 	path.write_bytes(header + metadata + compressed)
 
 
+def _wait_for_perf_connect_stage(
+	env: ProcessEnvironment, stage: str, description: str, timeout: float
+) -> str:
+	# perf/ 日志被生产 logger 路由到专用文件，不能等 stdout。
+	deadline = time.monotonic() + timeout
+	marker = "perf/connect: "
+	while time.monotonic() < deadline:
+		for path in env.temp_dir.glob("dumps/QmClient_Perf/qm_perf_*.log"):
+			try:
+				lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+			except OSError:
+				continue
+			for line in lines:
+				if marker not in line:
+					continue
+				try:
+					payload = json.loads(line.split(marker, 1)[1])
+				except json.JSONDecodeError:
+					continue
+				if payload.get("stage") == stage:
+					return line
+		if not env.client.is_alive():
+			raise RuntimeError(f"client exited while waiting for {description}")
+		time.sleep(0.05)
+	raise TimeoutError(f"timed out waiting for {description}")
+
+
 def scenario_map_change_during_resource_preparation(env: ProcessEnvironment) -> None:
 	"""旧地图尚未准备完成时切图，新地图仍能进服、聊天并再次切图。"""
 	map_name = "qm_e2e_loading"
@@ -65,11 +93,7 @@ def scenario_map_change_during_resource_preparation(env: ProcessEnvironment) -> 
 		env={"QMCLIENT_TEST_HIDE_DIALOG": "1"},
 		startup_timeout=60,
 	)
-	env.client.wait_for(
-		lambda line: line.startswith("perf/connect: ") and json.loads(line.removeprefix("perf/connect: ")).get("stage") == "connected_total",
-		"map preparation started",
-		60,
-	)
+	_wait_for_perf_connect_stage(env, "connected_total", "map preparation started", 60)
 	entered_before = sum("server: player has entered the game" in line for line in env.server._lines)
 	env.server.command("sv_map Tutorial")
 	# 正向观察中断，避免场景在旧地图已完成准备后退化成普通切图而误报通过。

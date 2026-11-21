@@ -38,30 +38,30 @@ int CPropTrackerHelper::GetDefaultLayerIndex(CEditorMap *)
 
 namespace
 {
-class CObservedPropTracker : public CPropTracker<int, ETilesProp>
-{
-public:
-	CObservedPropTracker() :
-		CPropTracker(nullptr) {}
-
-	int m_NumEdits = 0;
-	int m_Previous = 0;
-	int m_Current = 0;
-	int m_ShiftBy = 1;
-
-protected:
-	int PropToValue(ETilesProp Prop) override
+	class CObservedPropTracker : public CPropTracker<int, ETilesProp>
 	{
-		return m_pObject ? *m_pObject : m_ShiftBy;
-	}
+	public:
+		CObservedPropTracker() :
+			CPropTracker(nullptr) {}
 
-	void OnEnd(ETilesProp Prop, int Value) override
-	{
-		++m_NumEdits;
-		m_Previous = m_OriginalValue;
-		m_Current = Value;
-	}
-};
+		int m_NumEdits = 0;
+		int m_Previous = 0;
+		int m_Current = 0;
+		int m_ShiftBy = 1;
+
+	protected:
+		int PropToValue(ETilesProp Prop) override
+		{
+			return m_pObject ? *m_pObject : m_ShiftBy;
+		}
+
+		void OnEnd(ETilesProp Prop, int Value) override
+		{
+			++m_NumEdits;
+			m_Previous = m_OriginalValue;
+			m_Current = Value;
+		}
+	};
 } // namespace
 
 TEST(EditorPropTracker, OneGoStartsFreshAfterAnUnfinishedDrag)

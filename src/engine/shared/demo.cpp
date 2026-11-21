@@ -27,8 +27,9 @@
 #include <utility>
 
 #if defined(CONF_FAMILY_WINDOWS)
-#include <io.h>
 #include <windows.h>
+
+#include <io.h>
 #else
 #include <sys/stat.h>
 #include <unistd.h>
@@ -106,13 +107,30 @@ bool CDemoRecorder::SeekRaw(IOHANDLE File, int64_t Offset)
 	return !m_WriteError;
 }
 
+void CDemoRecorder::Reset(CSnapshotDelta *pSnapshotDelta, bool NoMapData)
+{
+	dbg_assert(!m_File, "Demo recorder must be stopped before resetting");
+	m_pStorage = nullptr;
+	m_WriteError = false;
+	m_aCurrentFilename[0] = '\0';
+	m_LastTickMarker = -1;
+	m_LastKeyFrame = -1;
+	m_FirstTick = -1;
+	m_pSnapshotDelta = pSnapshotDelta;
+	m_NumTimelineMarkers = 0;
+	m_NoMapData = NoMapData;
+	m_pfnFilter = nullptr;
+	m_pUser = nullptr;
+}
+
 CDemoRecorder::~CDemoRecorder()
 {
 	dbg_assert(m_File == 0, "Demo recorder was not stopped");
 }
 
 // Record
-int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const char *pNetVersion, const char *pMap, const SHA256_DIGEST &Sha256, unsigned Crc, const char *pType, unsigned MapSize, unsigned char *pMapData, IOHANDLE MapFile, DEMOFUNC_FILTER pfnFilter, void *pUser) try
+int CDemoRecorder::Start(class IStorage *pStorage, const char *pFilename, const char *pNetVersion, const char *pMap, const SHA256_DIGEST &Sha256, unsigned Crc, const char *pType, unsigned MapSize, unsigned char *pMapData, IOHANDLE MapFile, DEMOFUNC_FILTER pfnFilter, void *pUser)
+try
 {
 	dbg_assert(m_File == 0, "Demo recorder already recording");
 
@@ -509,7 +527,8 @@ bool demo_output::CCapturedSource::Claim(IOHANDLE Original, const char *pSource)
 	const size_t NameStart = OriginalName.find_last_of("/\\") + 1;
 	// 超长文件名也要能停录；同目录的短名避免超出单段或完整路径限制。
 	const std::string Prefix = OriginalName.size() - NameStart > 240 || OriginalName.size() + sizeof(".saving.63/source.demo") > IO_MAX_PATH_LENGTH ?
-		OriginalName.substr(0, NameStart) + ".qm-replay" : OriginalName + ".saving";
+					   OriginalName.substr(0, NameStart) + ".qm-replay" :
+					   OriginalName + ".saving";
 	for(int Attempt = 0; Attempt < 64; ++Attempt)
 	{
 		const auto Directory = Attempt ? Prefix + "." + std::to_string(Attempt) : Prefix;

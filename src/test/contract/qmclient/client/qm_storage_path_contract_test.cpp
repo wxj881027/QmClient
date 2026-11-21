@@ -11,7 +11,7 @@ TEST(QmStoragePathContract, ExecutableCandidatesPrecedeCurrentDirectoryFallbacks
 	ASSERT_NE(LoadStart, std::string::npos);
 	ASSERT_NE(DataStart, std::string::npos);
 	const size_t ExecutableStorage = Source.find("StoragePathFromExecutable", LoadStart);
-	const size_t CurrentDirectoryStorage = Source.find("io_open(\"storage.cfg\"", LoadStart);
+	const size_t CurrentDirectoryStorage = Source.find("pConfigPath = CONFIG_FILENAME;", LoadStart);
 	const size_t ExecutableData = Source.find("StoragePathFromExecutable", DataStart);
 	const size_t CurrentDirectoryData = Source.find("fs_is_dir(\"data/mapres\"", DataStart);
 	ASSERT_NE(ExecutableStorage, std::string::npos);

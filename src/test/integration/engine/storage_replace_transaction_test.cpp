@@ -97,7 +97,8 @@ namespace
 	class CReplacementStorage final : public IStorage
 	{
 		IStorage &m_Storage;
-		bool RenameWithResult(ERenameResult Result, const char *pOld, const char *pNew, int Type, bool AllowRemoval)
+		template<typename F>
+		bool MoveWithResult(ERenameResult Result, F &&Move)
 		{
 			if(Result == ERenameResult::REJECT)
 				return false;
@@ -105,7 +106,7 @@ namespace
 				throw std::bad_alloc();
 			if(Result == ERenameResult::OTHER_EXCEPTION)
 				throw 7;
-			const bool Moved = m_Storage.RenameFile(pOld, pNew, Type, AllowRemoval);
+			const bool Moved = Move();
 			if(Moved && Result == ERenameResult::MOVE_THEN_THROW)
 				throw std::bad_alloc();
 			return Moved;
@@ -120,7 +121,9 @@ namespace
 		bool m_ThrowRollbackLookup = false;
 		bool m_ThrowCleanup = false;
 		bool m_FailCleanup = false;
+		bool m_ConcurrentBackup = false;
 		bool m_ConcurrentTarget = false;
+		bool m_ConcurrentRollbackTarget = false;
 		bool m_StageAttempted = false;
 		bool m_UsedDestinationRemoval = false;
 		int m_Renames = 0;
@@ -161,22 +164,41 @@ namespace
 		bool RemoveFolder(const char *pName, int Type) override { return m_Storage.RemoveFolder(pName, Type); }
 		bool RenameFile(const char *pOld, const char *pNew, int Type, bool AllowRemoval) override
 		{
-			++m_Renames;
 			m_UsedDestinationRemoval |= AllowRemoval;
+			return MoveWithFaults(pOld, pNew, [&](ERenameResult Result) {
+				return MoveWithResult(Result, [&] { return m_Storage.RenameFile(pOld, pNew, Type, AllowRemoval); });
+			});
+		}
+		bool MoveFileNoReplace(const char *pOld, const char *pNew, int Type) override
+		{
+			return MoveWithFaults(pOld, pNew, [&](ERenameResult Result) {
+				return MoveWithResult(Result, [&] { return m_Storage.MoveFileNoReplace(pOld, pNew, Type); });
+			});
+		}
+		template<typename F>
+		bool MoveWithFaults(const char *pOld, const char *pNew, F &&Move)
+		{
+			++m_Renames;
 			if(std::string_view(pOld) == TARGET && std::string_view(pNew) == BACKUP)
 			{
 				m_StageAttempted = true;
-				return RenameWithResult(m_StageResult, pOld, pNew, Type, AllowRemoval);
+				if(m_ConcurrentBackup)
+					WriteStorageFile(&m_Storage, BACKUP, "concurrent");
+				return Move(m_StageResult);
 			}
 			if(std::string_view(pOld) == CANDIDATE && std::string_view(pNew) == TARGET)
 			{
 				if(m_ConcurrentTarget)
 					WriteStorageFile(&m_Storage, TARGET, "concurrent");
-				return RenameWithResult(m_PromotionResult, pOld, pNew, Type, AllowRemoval);
+				return Move(m_PromotionResult);
 			}
 			if(std::string_view(pOld) == BACKUP && std::string_view(pNew) == TARGET)
-				return RenameWithResult(m_RollbackResult, pOld, pNew, Type, AllowRemoval);
-			return m_Storage.RenameFile(pOld, pNew, Type, AllowRemoval);
+			{
+				if(m_ConcurrentRollbackTarget)
+					WriteStorageFile(&m_Storage, TARGET, "concurrent");
+				return Move(m_RollbackResult);
+			}
+			return Move(ERenameResult::NATIVE);
 		}
 		bool CreateFolder(const char *pName, int Type) override { return m_Storage.CreateFolder(pName, Type); }
 		void GetCompletePath(int Type, const char *pName, char *pBuffer, unsigned Size) override { m_Storage.GetCompletePath(Type, pName, pBuffer, Size); }
@@ -309,6 +331,34 @@ TEST_F(StorageReplaceTransaction, RollbackKeepsTargetPresentAtRecoveryCheck)
 	EXPECT_EQ(ReadStorageFile(m_pStorage.get(), BACKUP), "old");
 	EXPECT_EQ(ReadStorageFile(m_pStorage.get(), CANDIDATE), "new");
 	EXPECT_FALSE(m_pFaults->m_UsedDestinationRemoval);
+}
+
+TEST_F(StorageReplaceTransaction, BackupCreatedAtStagingIsNotOverwritten)
+{
+	m_pFaults->m_ConcurrentBackup = true;
+	EXPECT_FALSE(Replace());
+	EXPECT_EQ(ReadStorageFile(m_pStorage.get(), TARGET), "old");
+	EXPECT_EQ(ReadStorageFile(m_pStorage.get(), BACKUP), "concurrent");
+	EXPECT_EQ(ReadStorageFile(m_pStorage.get(), CANDIDATE), "new");
+}
+
+TEST_F(StorageReplaceTransaction, TargetPublishedAtPromotionIsNotOverwritten)
+{
+	m_pFaults->m_ConcurrentTarget = true;
+	EXPECT_FALSE(Replace());
+	EXPECT_EQ(ReadStorageFile(m_pStorage.get(), TARGET), "concurrent");
+	EXPECT_EQ(ReadStorageFile(m_pStorage.get(), BACKUP), "old");
+	EXPECT_EQ(ReadStorageFile(m_pStorage.get(), CANDIDATE), "new");
+}
+
+TEST_F(StorageReplaceTransaction, TargetPublishedAtRollbackIsNotOverwritten)
+{
+	m_pFaults->m_PromotionResult = ERenameResult::REJECT;
+	m_pFaults->m_ConcurrentRollbackTarget = true;
+	EXPECT_FALSE(Replace());
+	EXPECT_EQ(ReadStorageFile(m_pStorage.get(), TARGET), "concurrent");
+	EXPECT_EQ(ReadStorageFile(m_pStorage.get(), BACKUP), "old");
+	EXPECT_EQ(ReadStorageFile(m_pStorage.get(), CANDIDATE), "new");
 }
 
 TEST_P(StorageReplaceCleanupFailure, CleanupFailureDoesNotChangeSuccessfulCommit)

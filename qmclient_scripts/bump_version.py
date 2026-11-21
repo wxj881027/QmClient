@@ -13,7 +13,7 @@ from pathlib import Path
 if not __package__:
 	sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from qmclient_scripts.versioning import ReleaseVersion, next_preview_tag, parse_version, version_from_header
+from qmclient_scripts.versioning import ReleaseVersion, parse_version, preview_tag_for_build, version_from_header
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -43,6 +43,7 @@ def update_version_h(version: str) -> None:
 	newline = "\r\n" if "\r\n" in content else "\n"
 	definitions = f'''// QmClient
 // 正式版 X.Y；预览版 X.Y-preview.N。预览批次为 0 时是正式版。
+// 预览批次只由发布 CI 按构建序号注入，源码固定为 0。
 #define QMCLIENT_BASE_VERSION "{parsed.base}"
 #define QMCLIENT_PREVIEW_NUMBER {parsed.preview}
 
@@ -80,7 +81,7 @@ def describe(version: ReleaseVersion) -> dict[str, str | int | bool]:
 	}
 
 
-def find_next_preview() -> str:
+def select_ci_preview_tag(build_number: str) -> str:
 	current = version_from_header(VERSION_H_PATH.read_text(encoding="utf-8"))
 	head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True).strip()
 	rows = subprocess.check_output(
@@ -92,7 +93,11 @@ def find_next_preview() -> str:
 	for row in rows.splitlines():
 		fields = row.split()
 		tags.append((fields[0], fields[-1]))
-	return next_preview_tag(current, head, tags)
+	try:
+		number = int(build_number)
+	except ValueError as error:
+		raise ValueError(f"构建序号必须是整数：{build_number}") from error
+	return preview_tag_for_build(current, head, tags, number)
 
 
 def main() -> int:
@@ -102,12 +107,12 @@ def main() -> int:
 	group.add_argument("--version", help="X.Y 或 X.Y-preview.N")
 	group.add_argument("--tag", help="vX.Y 或 vX.Y-preview.N")
 	group.add_argument("--describe", action="store_true", help="输出当前版本的 JSON 元数据")
-	group.add_argument("--field", choices=("version", "display", "android_version_code"))
-	group.add_argument("--next-preview-tag", action="store_true", help="读取当前提交应使用的预览 Tag，不修改文件")
+	group.add_argument("--field", choices=("base", "version", "display", "android_version_code"))
+	group.add_argument("--ci-preview-tag", metavar="BUILD_NUMBER", help="按 CI 构建序号读取本次应使用的预览 Tag，不修改文件")
 	parser.add_argument("--dry-run", action="store_true")
 	args = parser.parse_args()
-	if args.next_preview_tag:
-		print(find_next_preview())
+	if args.ci_preview_tag:
+		print(select_ci_preview_tag(args.ci_preview_tag))
 		return 0
 	if args.describe or args.field:
 		metadata = describe(version_from_header(VERSION_H_PATH.read_text(encoding="utf-8")))

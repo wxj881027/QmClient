@@ -485,8 +485,22 @@ bool CTClient::TryHandleRedPacketAutoClaim(const CNetMsg_Sv_Chat *pMsg)
 	return true;
 }
 
-void CTClient::OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection) try
+void CTClient::OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection)
+try
 {
+	if(Client()->State() == IClient::STATE_ONLINE && pMsg != nullptr && pMsg->m_pMessage != nullptr &&
+		Connection >= 0 && Connection < NUM_DUMMIES)
+	{
+		const char *pLocalName = Connection == IClient::CONN_MAIN ? Client()->PlayerName() : Client()->DummyName();
+		const SQmSoloSplitTeamLockMessage LockMessage = QmParseSoloSplitTeamLockMessage(pMsg->m_pMessage, pLocalName);
+		if(LockMessage.m_Recognized && m_SoloSplitLockHints.ApplyConfirmation(Connection, LockMessage.m_Locked))
+		{
+			log_debug("qm_solo_split", "lock confirmation conn=%d locked=%d", Connection, LockMessage.m_Locked);
+			m_aSoloSplitLockRetryAt[Connection] = 0;
+			m_aSoloSplitLockRetryAttempts[Connection] = 0;
+		}
+	}
+
 	if(Client()->State() != IClient::STATE_ONLINE || pMsg == nullptr || pMsg->m_pMessage == nullptr ||
 		pMsg->m_ClientId < 0 || pMsg->m_ClientId >= MAX_CLIENTS)
 		return;
@@ -836,7 +850,9 @@ void CTClient::SoloSplitToggle()
 	{
 		const int MainId = GameClient()->m_aLocalIds[0];
 		const int DummyId = GameClient()->m_aLocalIds[1];
-		if(MainId >= 0 && DummyId >= 0 && GameClient()->m_Teams.Team(MainId) > 0 && GameClient()->m_Teams.Team(DummyId) > 0 && GameClient()->m_Teams.Team(MainId) != GameClient()->m_Teams.Team(DummyId))
+		const CTeamsCore &MainTeams = GameClient()->m_aConnectionTeams[IClient::CONN_MAIN];
+		const CTeamsCore &DummyTeams = GameClient()->m_aConnectionTeams[IClient::CONN_DUMMY];
+		if(MainId >= 0 && DummyId >= 0 && MainTeams.Team(MainId) > 0 && DummyTeams.Team(DummyId) > 0 && MainTeams.Team(MainId) != DummyTeams.Team(DummyId))
 		{
 			SoloSplitLeave();
 			return;
@@ -859,6 +875,7 @@ void CTClient::SoloSplitStart(int Action)
 {
 	if(m_SoloSplit.Pending() || Client()->State() != IClient::STATE_ONLINE)
 		return;
+	ResetSoloSplitLockRetries();
 	if(!Client()->DummyConnected())
 	{
 		if(Action != 1 || !g_Config.m_QmSoloSplitLinkDummy)
@@ -876,9 +893,11 @@ void CTClient::SoloSplitStart(int Action)
 		return;
 	}
 
-	const int MainTeam = GameClient()->m_Teams.Team(MainId);
-	const int DummyTeam = GameClient()->m_Teams.Team(DummyId);
-	const int TeamSuper = GameClient()->m_Teams.TeamSuper();
+	const CTeamsCore &MainTeams = GameClient()->m_aConnectionTeams[IClient::CONN_MAIN];
+	const CTeamsCore &DummyTeams = GameClient()->m_aConnectionTeams[IClient::CONN_DUMMY];
+	const int MainTeam = MainTeams.Team(MainId);
+	const int DummyTeam = DummyTeams.Team(DummyId);
+	const int TeamSuper = std::min(MainTeams.TeamSuper(), DummyTeams.TeamSuper());
 	const int RestoreTeam = g_Config.m_QmSoloSplitRestoreTeam;
 	if(RestoreTeam < 0 || RestoreTeam >= TeamSuper)
 	{
@@ -891,38 +910,71 @@ void CTClient::SoloSplitStart(int Action)
 	}
 	else
 	{
-		// 进队时找两个未被占用的合法 team（0 是公共队，TEAM_SUPER 保留）。
-		bool aTeamUsed[NUM_DDRACE_TEAMS] = {};
+		// 进队时找两个未被其他玩家占用的合法 team。主号和分身自己的旧队伍
+		// 不能算作占用：否则已经分好的 1/2 队会被跳过，反而把两人挤到后续队伍。
+		std::array<bool, NUM_DDRACE_TEAMS> aTeamUsed{};
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
 			if(!GameClient()->m_aClients[i].m_Active)
 				continue;
-			const int Team = GameClient()->m_Teams.Team(i);
+			if(i == MainId || i == DummyId)
+				continue;
+			const int Team = MainTeams.Team(i);
 			if(Team > 0 && Team < TeamSuper && Team < NUM_DDRACE_TEAMS)
 				aTeamUsed[Team] = true;
 		}
 
-		int First = -1, Second = -1;
-		for(int Team = 1; Team < TeamSuper && Team < NUM_DDRACE_TEAMS; ++Team)
-		{
-			if(aTeamUsed[Team])
-				continue;
-			if(First < 0)
-				First = Team;
-			else if(Second < 0)
-			{
-				Second = Team;
-				break;
-			}
-		}
-		if(First < 0 || Second < 0)
-		{
+		const SQmSoloSplitTeamSelection Selection = QmSelectSoloSplitTeams(MainTeam, DummyTeam, TeamSuper, aTeamUsed);
+		if(!Selection.Valid())
 			return;
-		}
-		aTargetTeams = {First, Second};
+		aTargetTeams = {Selection.m_Main, Selection.m_Dummy};
 	}
 	m_SoloSplit.StartTeams(Action, {MainTeam, DummyTeam}, aTargetTeams, time_get());
 	SoloSplitUpdate();
+}
+
+void CTClient::ResetSoloSplitLockRetries()
+{
+	m_aSoloSplitLockRetryAt.fill(0);
+	m_aSoloSplitLockRetryAttempts.fill(0);
+	m_SoloSplitLockHints.Reset();
+}
+
+void CTClient::ScheduleSoloSplitLockRetry(int Connection, int Team)
+{
+	if(Connection < 0 || Connection >= NUM_DUMMIES || !g_Config.m_QmSoloSplitAutoTeamLock)
+		return;
+	// 同帧 mc; 命令已经尝试锁队；这里只处理服务端聊天冷却把主连接 /lock
+	// 静默丢弃的情况。正常连接会在补发前就显示锁图标，补发是幂等操作。
+	m_SoloSplitLockHints.ExpectLock(Connection, Team);
+	m_aSoloSplitLockRetryAt[Connection] = time_get() + time_freq() * 11 / 10;
+	m_aSoloSplitLockRetryAttempts[Connection] = 1;
+}
+
+void CTClient::UpdateSoloSplitLockRetries()
+{
+	if(Client()->State() != IClient::STATE_ONLINE || !Client()->DummyConnected() || !g_Config.m_QmSoloSplitAutoTeamLock)
+	{
+		ResetSoloSplitLockRetries();
+		return;
+	}
+
+	const int64_t Now = time_get();
+	for(int Conn = 0; Conn < NUM_DUMMIES; ++Conn)
+	{
+		if(m_aSoloSplitLockRetryAttempts[Conn] <= 0 || Now < m_aSoloSplitLockRetryAt[Conn])
+			continue;
+		if(GameClient()->m_Chat.SendChatOnConn(Conn, 0, "/lock 1"))
+		{
+			--m_aSoloSplitLockRetryAttempts[Conn];
+			if(m_aSoloSplitLockRetryAttempts[Conn] > 0)
+				m_aSoloSplitLockRetryAt[Conn] = Now + time_freq() * 11 / 10;
+		}
+		else
+		{
+			m_aSoloSplitLockRetryAt[Conn] = Now + time_freq() / 4;
+		}
+	}
 }
 
 void CTClient::SoloSplitUpdate()
@@ -930,15 +982,22 @@ void CTClient::SoloSplitUpdate()
 	const int MainId = GameClient()->m_aLocalIds[0];
 	const int DummyId = GameClient()->m_aLocalIds[1];
 	const bool PlayerIdsValid = MainId >= 0 && DummyId >= 0;
-	const std::array<int, 2> aCurrentTeams = PlayerIdsValid ? std::array<int, 2>{GameClient()->m_Teams.Team(MainId), GameClient()->m_Teams.Team(DummyId)} : std::array<int, 2>{};
+	const CTeamsCore &MainTeams = GameClient()->m_aConnectionTeams[IClient::CONN_MAIN];
+	const CTeamsCore &DummyTeams = GameClient()->m_aConnectionTeams[IClient::CONN_DUMMY];
+	const std::array<int, 2> aCurrentTeams = PlayerIdsValid ? std::array<int, 2>{MainTeams.Team(MainId), DummyTeams.Team(DummyId)} : std::array<int, 2>{};
 	const auto Teams = m_SoloSplit.UpdateTeams(Client()->State() == IClient::STATE_ONLINE, Client()->DummyConnected(), PlayerIdsValid, aCurrentTeams, time_get(), time_freq());
 	if(Teams.has_value())
 	{
+		const bool LockAfterJoin = g_Config.m_QmSoloSplitAutoTeamLock && m_SoloSplit.LocksEnteredTeams();
 		for(int Conn : {IClient::CONN_MAIN, IClient::CONN_DUMMY})
 		{
-			char aCmd[32];
-			str_format(aCmd, sizeof(aCmd), "/team %d", (*Teams)[Conn]);
-			GameClient()->m_Chat.SendChatOnConn(Conn, 0, aCmd);
+			char aCmd[64];
+			if(QmBuildSoloSplitTeamCommand(aCmd, sizeof(aCmd), (*Teams)[Conn], LockAfterJoin))
+			{
+				const bool Sent = GameClient()->m_Chat.SendChatOnConn(Conn, 0, aCmd);
+				if(Sent && LockAfterJoin)
+					ScheduleSoloSplitLockRetry(Conn, (*Teams)[Conn]);
+			}
 		}
 	}
 }
@@ -1275,6 +1334,7 @@ void CTClient::OnUpdate()
 		SoloSplitStart(SoloSplitAction);
 	else if(m_SoloSplit.Pending() && !m_SoloSplit.WaitingForPlayers())
 		SoloSplitUpdate();
+	UpdateSoloSplitLockRetries();
 	UpdateLocalSaveRestore();
 	TickUpdateLifecycle();
 
@@ -2005,10 +2065,7 @@ void CTClient::HandleFriendEnterMessage(int Sender, int Team, const char *pMessa
 		return Connection == IClient::CONN_MAIN ? g_Config.m_PlayerName : g_Config.m_ClDummyName;
 	};
 	const qm_friend_notify::CEnterNotifier::CSettings Settings{g_Config.m_QmFriendEnterAutoGreet != 0, g_Config.m_QmFriendEnterGreetText[0] != '\0', g_Config.m_QmFriendEnterBroadcast != 0};
-	m_FriendEnterNotifier.OnMessage(Settings, qm_friend_notify::CGreetQueue::CClock::now(),
-		[&](qm_friend_notify::CEnterTracker &Tracker) { return Tracker.OnMessage(Sender, Team, pMessage, *GameClient()->Friends(), LocalName(IClient::CONN_MAIN), LocalName(IClient::CONN_DUMMY)); },
-		[&](const std::string &Name) { return BuildFriendEnterBroadcastText(ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterBroadcastText, s_pFriendEnterBroadcastDefaultText), Name); },
-		[&](const std::string &Text) { GameClient()->m_Broadcast.DoBroadcast(Text.c_str()); });
+	m_FriendEnterNotifier.OnMessage(Settings, qm_friend_notify::CGreetQueue::CClock::now(), [&](qm_friend_notify::CEnterTracker &Tracker) { return Tracker.OnMessage(Sender, Team, pMessage, *GameClient()->Friends(), LocalName(IClient::CONN_MAIN), LocalName(IClient::CONN_DUMMY)); }, [&](const std::string &Name) { return BuildFriendEnterBroadcastText(ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterBroadcastText, s_pFriendEnterBroadcastDefaultText), Name); }, [&](const std::string &Text) { GameClient()->m_Broadcast.DoBroadcast(Text.c_str()); });
 }
 
 void CTClient::QueueAspectApply()
@@ -2177,125 +2234,6 @@ void CTClient::OnNewSnapshot()
 			m_aAirRescuePositions[Dummy].push_front(NewPos);
 		}
 	}
-}
-
-constexpr const char STRIP_CHARS[] = {'-', '=', '+', '_', ' '};
-static bool IsStripChar(char c)
-{
-	return std::any_of(std::begin(STRIP_CHARS), std::end(STRIP_CHARS), [c](char s) {
-		return s == c;
-	});
-}
-
-static void StripStr(const char *pIn, char *pOut, const char *pEnd)
-{
-	if(!pIn)
-	{
-		*pOut = '\0';
-		return;
-	}
-
-	while(*pIn && IsStripChar(*pIn))
-		pIn++;
-
-	// Special behaviour for empty checkbox
-	if((unsigned char)*pIn == 0xE2 && (unsigned char)(*(pIn + 1)) == 0x98 && (unsigned char)(*(pIn + 2)) == 0x90)
-	{
-		pIn += 3;
-		while(*pIn && IsStripChar(*pIn))
-			pIn++;
-	}
-
-	char *pLastValid = nullptr;
-	while(*pIn && pOut < pEnd - 1)
-	{
-		*pOut = *pIn;
-		if(!IsStripChar(*pIn))
-			pLastValid = pOut;
-		pIn++;
-		pOut++;
-	}
-
-	if(pLastValid)
-		*(pLastValid + 1) = '\0';
-	else
-		*pOut = '\0';
-}
-
-void CTClient::RenderMiniVoteHud(bool HudEditorPreview)
-{
-	CUIRect View = {0.0f, 60.0f, 70.0f, 35.0f};
-	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::Voting, View);
-	Ui()->RenderGaussianBlur(View, 1.0f, HudEditorScope.m_Corners, 3.0f);
-	View.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), HudEditorScope.m_Corners, 3.0f);
-	View.Margin(3.0f, &View);
-
-	SLabelProperties Props;
-	Props.m_EllipsisAtEnd = true;
-	Props.m_MaxWidth = View.w;
-
-	CUIRect Row, LeftColumn, RightColumn, ProgressSpinner;
-	char aBuf[256];
-	char aVoteDescription[256];
-	char aVoteReason[256];
-
-	// Vote description
-	View.HSplitTop(6.0f, &Row, &View);
-	if(HudEditorPreview && !GameClient()->m_Voting.IsVoting())
-		str_copy(aVoteDescription, "funvote", sizeof(aVoteDescription));
-	else
-		GameClient()->FormatStreamerVoteText(GameClient()->m_Voting.VoteDescription(), aVoteDescription, sizeof(aVoteDescription));
-	StripStr(aVoteDescription, aBuf, aBuf + sizeof(aBuf));
-	Ui()->DoLabel(&Row, aBuf, 6.0f, TEXTALIGN_ML, Props);
-
-	// Vote reason
-	View.HSplitTop(3.0f, nullptr, &View);
-	View.HSplitTop(4.0f, &Row, &View);
-	if(HudEditorPreview && !GameClient()->m_Voting.IsVoting())
-		str_copy(aVoteReason, "No reason given", sizeof(aVoteReason));
-	else
-		GameClient()->FormatStreamerVoteText(GameClient()->m_Voting.VoteReason(), aVoteReason, sizeof(aVoteReason));
-	Ui()->DoLabel(&Row, aVoteReason, 4.0f, TEXTALIGN_ML, Props);
-
-	// Time left
-	int Seconds = GameClient()->m_Voting.SecondsLeft();
-	if(HudEditorPreview && Seconds < 0)
-		Seconds = 24;
-	str_format(aBuf, sizeof(aBuf), Localize("%ds left"), Seconds);
-	View.HSplitTop(3.0f, nullptr, &View);
-	View.HSplitTop(3.0f, &Row, &View);
-	Row.VSplitLeft(2.0f, nullptr, &Row);
-	Row.VSplitLeft(3.0f, &ProgressSpinner, &Row);
-	Row.VSplitLeft(2.0f, nullptr, &Row);
-
-	SProgressSpinnerProperties ProgressProps;
-	ProgressProps.m_Progress = std::clamp((time() - GameClient()->m_Voting.m_Opentime) / (float)(GameClient()->m_Voting.m_Closetime - GameClient()->m_Voting.m_Opentime), 0.0f, 1.0f);
-	Ui()->RenderProgressSpinner(ProgressSpinner.Center(), ProgressSpinner.h / 2.0f, ProgressProps);
-
-	Ui()->DoLabel(&Row, aBuf, 3.0f, TEXTALIGN_ML);
-
-	// Bars
-	View.HSplitTop(3.0f, nullptr, &View);
-	View.HSplitTop(3.0f, &Row, &View);
-	GameClient()->m_Voting.RenderBars(Row);
-
-	// F3 / F4
-	View.HSplitTop(3.0f, nullptr, &View);
-	View.HSplitTop(0.5f, &Row, &View);
-	Row.VSplitMid(&LeftColumn, &RightColumn, 4.0f);
-
-	char aKey[64];
-	GameClient()->m_Binds.GetKey("vote yes", aKey, sizeof(aKey));
-	TextRender()->TextColor(GameClient()->m_Voting.TakenChoice() == 1 ? ColorRGBA(0.2f, 0.9f, 0.2f, 0.85f) : TextRender()->DefaultTextColor());
-	Ui()->DoLabel(&LeftColumn, aKey[0] == '\0' ? Localize("Agree") : aKey, 0.5f, TEXTALIGN_ML);
-
-	GameClient()->m_Binds.GetKey("vote no", aKey, sizeof(aKey));
-	TextRender()->TextColor(GameClient()->m_Voting.TakenChoice() == -1 ? ColorRGBA(0.95f, 0.25f, 0.25f, 0.85f) : TextRender()->DefaultTextColor());
-	Ui()->DoLabel(&RightColumn, aKey[0] == '\0' ? Localize("Disagree") : aKey, 0.5f, TEXTALIGN_MR);
-
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Voting, {0.0f, 60.0f, 70.0f, 35.0f});
-	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CTClient::RenderCenterLines()

@@ -16,10 +16,11 @@
 // Need to include wtypes.h before wincrypt.h because the latter is missing the former include
 #include <wincrypt.h>
 #else
-#include <cerrno>
-#include <cstdio>
 #include <fcntl.h>
 #include <unistd.h>
+
+#include <cerrno>
+#include <cstdio>
 #endif
 
 struct SECURE_RANDOM_DATA

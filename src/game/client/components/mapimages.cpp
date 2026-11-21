@@ -4,8 +4,8 @@
 
 #include <base/dbg.h>
 #include <base/log.h>
-#include <base/mem.h>
 #include <base/math.h>
+#include <base/mem.h>
 #include <base/perf_timer.h>
 
 #include <engine/engine.h>
@@ -117,7 +117,14 @@ namespace
 				Tile.m_Height = TileHeight;
 				Tile.m_Format = Info.m_Format;
 				size_t TileDataSize = 0;
-				if(!Tile.DataSize(TileDataSize) || TileDataSize == 0 || (Tile.m_pData = static_cast<uint8_t *>(malloc(TileDataSize))) == nullptr)
+				if(!Tile.DataSize(TileDataSize) || TileDataSize == 0)
+				{
+					Info.Free();
+					FreeTiles();
+					return;
+				}
+				Tile.m_pData = static_cast<uint8_t *>(malloc(TileDataSize));
+				if(Tile.m_pData == nullptr)
 				{
 					Info.Free();
 					FreeTiles();
@@ -325,7 +332,8 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 			{
 				Decode = TryStartMapImageDecode([&] {
 					return std::make_shared<CMapImageDecodeJob>(Storage(), aPath, Trace);
-				}, SubmitDecode);
+				},
+					SubmitDecode);
 			}
 			else
 				m_aTextures[i] = Graphics()->LoadTexture(aPath, IStorage::TYPE_ALL, LoadFlag);
@@ -361,7 +369,8 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 						pJob.reset();
 					ReadMs = ReadTimer.ElapsedMs();
 					return pJob;
-				}, SubmitDecode);
+				},
+					SubmitDecode);
 			}
 			if(Decode.m_Result == EDecodeStart::NO_JOB)
 			{

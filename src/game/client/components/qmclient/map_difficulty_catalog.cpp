@@ -12,6 +12,7 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/sqlite.h>
 #include <engine/storage.h>
 
@@ -32,6 +33,12 @@ namespace
 {
 	constexpr const char *MAP_DIFFICULTY_SQL = "qmclient/map_difficulty.sql";
 	constexpr size_t MAX_MAP_DIFFICULTY_SQL_BYTES = 2 * 1024 * 1024;
+	constexpr const char *AXIOM_CACHE_PATH = qm_storage::MAP_DIFFICULTY_CACHE_FILE;
+	// 统一存档布局前的路径；迁移遇到内容冲突时会同时保留两份，这里负责并入缺失条目。
+	constexpr const char *LEGACY_AXIOM_CACHE_PATH = "qmclient/axiom_map_difficulty.json";
+	constexpr unsigned MAX_AXIOM_CACHE_BYTES = 2 * 1024 * 1024;
+	constexpr size_t MAX_AXIOM_ENTRIES = 4096;
+
 	class CScopedFile
 	{
 		IOHANDLE m_File;
@@ -88,26 +95,31 @@ namespace
 		}
 	}
 
-	constexpr const char *AXIOM_CACHE_PATH = "qmclient/axiom_map_difficulty.json";
-	constexpr unsigned MAX_AXIOM_CACHE_BYTES = 2 * 1024 * 1024;
-	constexpr size_t MAX_AXIOM_ENTRIES = 4096;
+	// 玩法只用于隔离同名地图，星级上限由 Axiom 公告自身决定。
+	// Axiom 已把 Gores 的星级从 3 格改为 5 格，不能再用玩法硬编码上限。
+	enum class EAxiomMode
+	{
+		NONE = -1,
+		GORES = 0,
+		AXRACE = 1,
+	};
 
-	int AxiomMaxStars(const CServerInfo &Server)
+	EAxiomMode AxiomMode(const CServerInfo &Server)
 	{
 		if(str_comp_nocase(Server.m_aCommunityId, "axiom") != 0)
-			return 0;
+			return EAxiomMode::NONE;
 		if(str_comp_nocase(Server.m_aGameType, "Gores") == 0)
-			return 3;
+			return EAxiomMode::GORES;
 		if(str_comp_nocase(Server.m_aGameType, "AXRace") == 0)
-			return 5;
+			return EAxiomMode::AXRACE;
 		const bool IsDdrace = str_comp_nocase(Server.m_aGameType, "DDNet") == 0 ||
 				      str_comp_nocase(Server.m_aGameType, "DDRaceNetwork") == 0 ||
 				      str_comp_nocase(Server.m_aGameType, "DDRace") == 0;
 		if(IsDdrace && str_comp_nocase(Server.m_aCommunityType, "Gores") == 0)
-			return 3;
+			return EAxiomMode::GORES;
 		if(IsDdrace && str_comp_nocase(Server.m_aCommunityType, "Other") == 0)
-			return 5;
-		return 0;
+			return EAxiomMode::AXRACE;
+		return EAxiomMode::NONE;
 	}
 
 	bool ValidField(const std::string &Value, size_t MaxLength)
@@ -142,6 +154,91 @@ namespace
 		return Found;
 	}
 
+	bool IsStarGlyph(int Codepoint)
+	{
+		return Codepoint == 0x2605 || Codepoint == 0x2606 || Codepoint == 0x2730;
+	}
+
+	// 只接受 3 格或 5 格星制；实心星必须全部排在空心星之前。
+	bool ParseStars(std::string_view Text, int &Stars, int &MaxStars)
+	{
+		const char *pCursor = Text.data();
+		const char *pEnd = Text.data() + Text.size();
+		int Total = 0;
+		int Filled = 0;
+		bool EmptySeen = false;
+		while(pCursor < pEnd)
+		{
+			const char *pBefore = pCursor;
+			const int Codepoint = str_utf8_decode(&pCursor);
+			if(pCursor <= pBefore)
+				return false;
+			if(Codepoint == 0x2605)
+			{
+				if(EmptySeen)
+					return false;
+				++Filled;
+			}
+			else if(Codepoint == 0x2606 || Codepoint == 0x2730)
+			{
+				EmptySeen = true;
+			}
+			else
+			{
+				return false;
+			}
+			if(++Total > 5)
+				return false;
+		}
+		if(Total != 3 && Total != 5)
+			return false;
+		Stars = Filled;
+		MaxStars = Total;
+		return true;
+	}
+
+	bool IsBlankCodepoint(int Codepoint)
+	{
+		return Codepoint == ' ' || Codepoint == '\t' || Codepoint == '\r' || Codepoint == 0x00a0 || Codepoint == 0x3000;
+	}
+
+	// 新公告写成「难度：疯狂  ★★★✰✰」，类别与星级之间可能有多个空格。
+	bool ParseCombinedDifficulty(std::string_view Text, std::string &Category, int &Stars, int &MaxStars)
+	{
+		size_t CategoryStart = std::string_view::npos;
+		size_t CategoryEnd = 0;
+		size_t StarOffset = std::string_view::npos;
+		for(size_t Offset = 0; Offset < Text.size();)
+		{
+			const char *pCursor = Text.data() + Offset;
+			const char *pBefore = pCursor;
+			const int Codepoint = str_utf8_decode(&pCursor);
+			if(pCursor <= pBefore)
+				return false;
+			if(IsStarGlyph(Codepoint))
+			{
+				StarOffset = Offset;
+				break;
+			}
+			if(!IsBlankCodepoint(Codepoint))
+			{
+				if(CategoryStart == std::string_view::npos)
+					CategoryStart = Offset;
+				CategoryEnd = (size_t)(pCursor - Text.data());
+			}
+			Offset = (size_t)(pCursor - Text.data());
+		}
+		if(StarOffset == std::string_view::npos || CategoryStart == std::string_view::npos)
+			return false;
+		std::string ParsedCategory(Text.substr(CategoryStart, CategoryEnd - CategoryStart));
+		if(!ValidField(ParsedCategory, 64))
+			return false;
+		if(!ParseStars(Text.substr(StarOffset), Stars, MaxStars))
+			return false;
+		Category = std::move(ParsedCategory);
+		return true;
+	}
+
 	bool EntryLess(const CQmMapDifficultyCatalog::SEntry &A, const CQmMapDifficultyCatalog::SEntry &B)
 	{
 		const int MapCompare = str_comp_nocase(A.m_MapName.c_str(), B.m_MapName.c_str());
@@ -165,41 +262,65 @@ const char *CQmMapDifficultyCatalog::SEntry::StarLabel() const
 	return m_MaxStars == 5 ? s_apFive[m_Stars] : "";
 }
 
+void CQmMapDifficultyCatalog::SEntry::CellLabel(const char *pCategoryText, char *pOut, size_t OutSize) const
+{
+	if(pOut == nullptr || OutSize == 0)
+		return;
+	pOut[0] = '\0';
+	const char *pStars = StarLabel();
+	if(pStars[0] == '\0')
+		return;
+	if(pCategoryText == nullptr || pCategoryText[0] == '\0')
+	{
+		str_copy(pOut, pStars, (int)OutSize);
+		return;
+	}
+	str_format(pOut, (int)OutSize, "%s %s", pCategoryText, pStars);
+}
+
 bool CQmMapDifficultyCatalog::RecordAxiomMotd(const CServerInfo &Server, const char *pMotd)
 try
 {
-	const int MaxStars = AxiomMaxStars(Server);
-	if(MaxStars == 0 || pMotd == nullptr || str_length(pMotd) > 4096 || !str_utf8_check(pMotd))
+	const EAxiomMode Mode = AxiomMode(Server);
+	if(Mode == EAxiomMode::NONE || pMotd == nullptr || str_length(pMotd) > 4096 || !str_utf8_check(pMotd))
 		return false;
 	const std::string_view Motd(pMotd);
-	if(Motd.find("Axiom") == std::string_view::npos || Motd.find("当前地图信息") == std::string_view::npos)
+	// 旧公告标题为「当前地图信息」，新公告标题为「当前地图」，共同前缀足以覆盖两者。
+	if(Motd.find("Axiom") == std::string_view::npos || Motd.find("当前地图") == std::string_view::npos)
 		return false;
+
 	SEntry Entry;
+	std::string Difficulty;
+	std::string Category;
 	std::string Stars;
-	if(!MotdField(Motd, "│ 地图：", Entry.m_MapName) || !MotdField(Motd, "│ 类型：", Entry.m_Category) ||
-		!MotdField(Motd, "│ 星级：", Stars) || !ValidField(Entry.m_MapName, MAX_MAP_LENGTH - 1) ||
-		!ValidField(Entry.m_Category, 64) || Entry.m_MapName != Server.m_aMap)
+	if(!MotdField(Motd, "│ 地图：", Entry.m_MapName) || !ValidField(Entry.m_MapName, MAX_MAP_LENGTH - 1))
 		return false;
-	Entry.m_MaxStars = MaxStars;
-	Entry.m_Stars = 0;
-	int Total = 0;
-	const char *pStar = Stars.c_str();
-	bool EmptyStarSeen = false;
-	while(*pStar != '\0')
+
+	// 新格式把类别和星级合并到「难度」一行，旧格式分为「类型」和「星级」两行。
+	// 一份公告里只能出现其中一种，混用或缺失都视为不可信。
+	const bool HasCombined = MotdField(Motd, "│ 难度：", Difficulty);
+	const bool HasCategory = MotdField(Motd, "│ 类型：", Category);
+	const bool HasStars = MotdField(Motd, "│ 星级：", Stars);
+	if(HasCombined == (HasCategory || HasStars))
+		return false;
+	if(HasCombined)
 	{
-		const int Codepoint = str_utf8_decode(&pStar);
-		if(Codepoint == 0x2605 && !EmptyStarSeen)
-			++Entry.m_Stars;
-		else if(Codepoint == 0x2606 || Codepoint == 0x2730)
-			EmptyStarSeen = true;
-		else
-			return false;
-		if(++Total > MaxStars)
+		if(!ParseCombinedDifficulty(Difficulty, Entry.m_Category, Entry.m_Stars, Entry.m_MaxStars))
 			return false;
 	}
-	if(Total != MaxStars)
+	else
+	{
+		if(!HasCategory || !HasStars || !ValidField(Category, 64) ||
+			!ParseStars(Stars, Entry.m_Stars, Entry.m_MaxStars))
+			return false;
+		Entry.m_Category = std::move(Category);
+	}
+
+	// 首次连接或地图仍在下载时，当前地图名可能为空或仍是上一张图；
+	// 此时信任已验证社区的公告，已知地图名时仍要求与公告一致。
+	if(Server.m_aMap[0] != '\0' && Entry.m_MapName != Server.m_aMap)
 		return false;
-	return StoreAxiomEntry(std::move(Entry));
+	return StoreAxiomEntry((int)Mode, std::move(Entry));
 }
 catch(const std::bad_alloc &)
 {
@@ -210,17 +331,19 @@ catch(const std::length_error &)
 	return false;
 }
 
-bool CQmMapDifficultyCatalog::StoreAxiomEntry(SEntry Entry)
+bool CQmMapDifficultyCatalog::StoreAxiomEntry(int ModeId, SEntry Entry)
 try
 {
-	const auto Key = std::make_pair(Entry.m_MaxStars, Entry.m_MapName);
+	const auto Key = std::make_pair(ModeId, Entry.m_MapName);
 	const auto It = m_AxiomEntries.find(Key);
-	if(It != m_AxiomEntries.end() && It->second.m_Stars == Entry.m_Stars && It->second.m_Category == Entry.m_Category)
+	if(It != m_AxiomEntries.end() && It->second.m_Stars == Entry.m_Stars &&
+		It->second.m_MaxStars == Entry.m_MaxStars && It->second.m_Category == Entry.m_Category)
 		return false;
 	if(It == m_AxiomEntries.end() && m_AxiomEntries.size() >= MAX_AXIOM_ENTRIES)
 		return false;
 	m_AxiomEntries.insert_or_assign(Key, std::move(Entry));
 	m_AxiomCacheDirty = true;
+	++m_Revision;
 	return true;
 }
 catch(const std::bad_alloc &)
@@ -241,36 +364,34 @@ void CQmMapDifficultyCatalog::RequestAxiomDifficulty(const CServerInfo &Server, 
 {
 	if(m_AxiomRequests.size() >= 4 || m_AxiomEntries.size() >= MAX_AXIOM_ENTRIES)
 		return;
-	const int MaxStars = AxiomMaxStars(Server);
-	if(!MaxStars || !Server.m_aMap[0])
+	const EAxiomMode Mode = AxiomMode(Server);
+	if(Mode == EAxiomMode::NONE || !Server.m_aMap[0])
 		return;
-	const auto Key = std::make_pair(MaxStars, std::string_view(Server.m_aMap));
+	const auto Key = std::make_pair((int)Mode, std::string_view(Server.m_aMap));
 	if(m_AxiomEntries.contains(Key) || m_AxiomRequests.contains(Key))
 		return;
 	auto Retry = m_AxiomRetryAfter.find(Key);
 	if(Retry != m_AxiomRetryAfter.end() && Now < Retry->second)
 		return;
-
+	const bool HasApiKey = pApiKey && pApiKey[0];
+	if(!Budget.TryStart(Now, HasApiKey))
+		return;
 	std::shared_ptr<IHttpRequest> pRequest;
 	try
 	{
-		if(!Budget.TryStart(Now, pApiKey[0] != '\0'))
-			return;
-
-		// 先备好退避节点，收到失败结果后可以直接归还原表。
 		if(Retry == m_AxiomRetryAfter.end())
-			Retry = m_AxiomRetryAfter.try_emplace(TAxiomKey{MaxStars, Server.m_aMap}, 0).first;
+			Retry = m_AxiomRetryAfter.try_emplace(TAxiomKey{(int)Mode, Server.m_aMap}, 0).first;
 		auto RetryNode = m_AxiomRetryAfter.extract(Retry);
-		const auto Url = QmBuildAxiomMapInfoUrl(RetryNode.key().second.c_str(), MaxStars == 3 ? EQmAxiomMode::GORES : EQmAxiomMode::AXRACE);
+		const EQmAxiomMode ApiMode = Mode == EAxiomMode::GORES ? EQmAxiomMode::GORES : EQmAxiomMode::AXRACE;
+		const auto Url = QmBuildAxiomMapInfoUrl(RetryNode.key().second.c_str(), ApiMode);
 		pRequest = m_CreateRequest(Url.c_str());
 		if(!pRequest)
 			return;
 		pRequest->Timeout({3000, 8000, 0, 0});
 		pRequest->MaxResponseSize(16 * 1024);
 		pRequest->LogProgress(HTTPLOG::NONE);
-		if(pApiKey[0])
+		if(HasApiKey)
 			pRequest->Header((std::string("Authorization: Bearer ") + pApiKey).c_str());
-
 		const auto [Pending, Inserted] = m_AxiomRequests.try_emplace(RetryNode.key());
 		if(!Inserted)
 			return;
@@ -299,6 +420,7 @@ void CQmMapDifficultyCatalog::RequestAxiomDifficulty(const CServerInfo &Server, 
 bool CQmMapDifficultyCatalog::RecordAxiomResponse(const TAxiomKey &Key, const IHttpRequest &Request)
 try
 {
+	constexpr int MaxStars = 5;
 	std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(Request.ResultJson(), json_value_free);
 	if(!pRoot || pRoot->type != json_object)
 		return false;
@@ -310,12 +432,12 @@ try
 	const auto *pStars = json_object_get(pData, "stars");
 	const auto *pCategory = json_object_get(pData, "difficulty");
 	if(pMap->type != json_string || std::string_view(pMap->u.string.ptr, pMap->u.string.length) != Key.second ||
-		pStars->type != json_integer || pStars->u.integer < 0 || pStars->u.integer > Key.first || pCategory->type != json_string)
+		pStars->type != json_integer || pStars->u.integer < 0 || pStars->u.integer > MaxStars || pCategory->type != json_string)
 		return false;
 	std::string Category(pCategory->u.string.ptr, pCategory->u.string.length);
 	if(!ValidField(Key.second, MAX_MAP_LENGTH - 1) || !ValidField(Category, 64))
 		return false;
-	return StoreAxiomEntry({Key.second, std::move(Category), (int)pStars->u.integer, Key.first});
+	return StoreAxiomEntry(Key.first, {Key.second, std::move(Category), (int)pStars->u.integer, MaxStars});
 }
 catch(const std::bad_alloc &)
 {
@@ -341,9 +463,11 @@ bool CQmMapDifficultyCatalog::PollAxiomRequests(CQmAxiomRequestBudget &Budget, i
 		const int Code = Request.CompletedStatusCode();
 		if(Code == 429)
 			Budget.RateLimited(Now);
+		if(m_AxiomEntries.contains(Completed.key()))
+			continue;
 		if(Code == 200 && Request.State() == EHttpState::DONE && RecordAxiomResponse(Completed.key(), Request))
 			Changed = true;
-		else if(!m_AxiomEntries.contains(Completed.key()))
+		else
 		{
 			if(m_AxiomRetryAfter.size() >= MAX_AXIOM_ENTRIES)
 				m_AxiomRetryAfter.erase(m_AxiomRetryAfter.begin());
@@ -367,7 +491,7 @@ void CQmMapDifficultyCatalog::CancelAxiomRequests()
 	m_AxiomRequests.clear();
 }
 
-bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Length)
+bool CQmMapDifficultyCatalog::ParseAxiomCacheJson(const char *pJson, size_t Length, TAxiomEntryMap &Out) const
 try
 {
 	if(pJson == nullptr || Length == 0 || Length > MAX_AXIOM_CACHE_BYTES)
@@ -377,36 +501,109 @@ try
 		return false;
 	const json_value *pVersion = json_object_get(pRoot.get(), "version");
 	const json_value *pEntries = json_object_get(pRoot.get(), "entries");
-	if(pVersion->type != json_integer || pVersion->u.integer != 1 || pEntries->type != json_array || pEntries->u.array.length > MAX_AXIOM_ENTRIES)
+	if(pVersion == nullptr || pEntries == nullptr || pVersion->type != json_integer ||
+		(pVersion->u.integer != 1 && pVersion->u.integer != 2) ||
+		pEntries->type != json_array || pEntries->u.array.length > MAX_AXIOM_ENTRIES)
 		return false;
-	decltype(m_AxiomEntries) Entries;
+	// 版本 1 没有 max_stars，按旧规则还原上限；版本 2 保存公告自己的星制。
+	const bool Legacy = pVersion->u.integer == 1;
+	TAxiomEntryMap Entries;
 	for(unsigned i = 0; i < pEntries->u.array.length; ++i)
 	{
 		const json_value *pItem = pEntries->u.array.values[i];
-		if(pItem->type != json_object)
+		if(pItem == nullptr || pItem->type != json_object)
 			return false;
 		const json_value *pMap = json_object_get(pItem, "map");
 		const json_value *pCategory = json_object_get(pItem, "category");
 		const json_value *pMode = json_object_get(pItem, "mode");
 		const json_value *pStars = json_object_get(pItem, "stars");
-		if(pMap->type != json_string || pCategory->type != json_string || pMode->type != json_string || pStars->type != json_integer)
+		const json_value *pMaxStars = json_object_get(pItem, "max_stars");
+		if(pMap == nullptr || pCategory == nullptr || pMode == nullptr || pStars == nullptr ||
+			pMap->type != json_string || pCategory->type != json_string ||
+			pMode->type != json_string || pStars->type != json_integer)
 			return false;
+		if(!Legacy && (pMaxStars == nullptr || pMaxStars->type != json_integer))
+			return false;
+
 		const std::string Mode(pMode->u.string.ptr, pMode->u.string.length);
+		int ModeId = -1;
+		int MaxStars = 0;
+		if(Mode == "Gores")
+		{
+			ModeId = (int)EAxiomMode::GORES;
+			MaxStars = 3;
+		}
+		else if(Mode == "AXRace")
+		{
+			ModeId = (int)EAxiomMode::AXRACE;
+			MaxStars = 5;
+		}
+		else
+		{
+			return false;
+		}
+		if(!Legacy)
+		{
+			const json_int_t SavedMaxStars = pMaxStars->u.integer;
+			if(SavedMaxStars != 3 && SavedMaxStars != 5)
+				return false;
+			MaxStars = (int)SavedMaxStars;
+		}
+
 		SEntry Entry;
 		Entry.m_MapName.assign(pMap->u.string.ptr, pMap->u.string.length);
 		Entry.m_Category.assign(pCategory->u.string.ptr, pCategory->u.string.length);
-		Entry.m_MaxStars = Mode == "Gores" ? 3 : Mode == "AXRace" ? 5 :
-									    0;
-		if(Entry.m_MaxStars == 0 || !ValidField(Entry.m_MapName, MAX_MAP_LENGTH - 1) || !ValidField(Entry.m_Category, 64) ||
+		Entry.m_MaxStars = MaxStars;
+		if(!ValidField(Entry.m_MapName, MAX_MAP_LENGTH - 1) || !ValidField(Entry.m_Category, 64) ||
 			pStars->u.integer < 0 || pStars->u.integer > Entry.m_MaxStars)
 			return false;
 		Entry.m_Stars = (int)pStars->u.integer;
-		const auto Key = std::make_pair(Entry.m_MaxStars, Entry.m_MapName);
+		const auto Key = std::make_pair(ModeId, Entry.m_MapName);
 		if(!Entries.emplace(Key, std::move(Entry)).second)
 			return false;
 	}
+	Out = std::move(Entries);
+	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
+
+bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Length)
+{
+	TAxiomEntryMap Entries;
+	if(!ParseAxiomCacheJson(pJson, Length, Entries))
+		return false;
 	m_AxiomEntries = std::move(Entries);
 	m_AxiomCacheDirty = false;
+	++m_Revision;
+	return true;
+}
+
+bool CQmMapDifficultyCatalog::MergeAxiomCacheJson(const char *pJson, size_t Length)
+try
+{
+	TAxiomEntryMap Entries;
+	if(!ParseAxiomCacheJson(pJson, Length, Entries))
+		return false;
+	bool Added = false;
+	for(const auto &[Key, Entry] : Entries)
+	{
+		if(m_AxiomEntries.size() >= MAX_AXIOM_ENTRIES)
+			break;
+		if(m_AxiomEntries.emplace(Key, Entry).second)
+			Added = true;
+	}
+	if(Added)
+	{
+		m_AxiomCacheDirty = true;
+		++m_Revision;
+	}
 	return true;
 }
 catch(const std::bad_alloc &)
@@ -423,20 +620,22 @@ std::string CQmMapDifficultyCatalog::SerializeAxiomCache() const
 	CJsonStringWriter Writer;
 	Writer.BeginObject();
 	Writer.WriteAttribute("version");
-	Writer.WriteIntValue(1);
+	Writer.WriteIntValue(2);
 	Writer.WriteAttribute("entries");
 	Writer.BeginArray();
 	for(const auto &[Key, Entry] : m_AxiomEntries)
 	{
 		Writer.BeginObject();
 		Writer.WriteAttribute("mode");
-		Writer.WriteStrValue(Entry.m_MaxStars == 3 ? "Gores" : "AXRace");
+		Writer.WriteStrValue(Key.first == (int)EAxiomMode::GORES ? "Gores" : "AXRace");
 		Writer.WriteAttribute("map");
 		Writer.WriteStrValue(Entry.m_MapName.c_str());
 		Writer.WriteAttribute("category");
 		Writer.WriteStrValue(Entry.m_Category.c_str());
 		Writer.WriteAttribute("stars");
 		Writer.WriteIntValue(Entry.m_Stars);
+		Writer.WriteAttribute("max_stars");
+		Writer.WriteIntValue(Entry.m_MaxStars);
 		Writer.EndObject();
 	}
 	Writer.EndArray();
@@ -449,13 +648,34 @@ try
 {
 	if(pStorage == nullptr)
 		return;
-	void *pRawData = nullptr;
-	unsigned Size = 0;
-	const auto Result = pStorage->ReadFileCheckedBounded(AXIOM_CACHE_PATH, IStorage::TYPE_SAVE, &pRawData, &Size, MAX_AXIOM_CACHE_BYTES);
-	const std::unique_ptr<void, decltype(&free)> pData(pRawData, free);
-	if(Result == IStorage::EReadFileResult::NOT_FOUND)
-		return;
-	if(Result != IStorage::EReadFileResult::SUCCESS || !LoadAxiomCacheJson(static_cast<const char *>(pData.get()), Size))
+	const auto ReadCacheText = [&](const char *pPath, std::string &Out) {
+		void *pRawData = nullptr;
+		unsigned Size = 0;
+		const auto Result = pStorage->ReadFileCheckedBounded(pPath, IStorage::TYPE_SAVE, &pRawData, &Size, MAX_AXIOM_CACHE_BYTES);
+		const std::unique_ptr<void, decltype(&free)> pData(pRawData, free);
+		if(Result != IStorage::EReadFileResult::SUCCESS || pRawData == nullptr)
+			return false;
+		Out.assign(static_cast<const char *>(pData.get()), Size);
+		return true;
+	};
+
+	bool AnyFile = false;
+	bool Loaded = false;
+	std::string Text;
+	if(ReadCacheText(AXIOM_CACHE_PATH, Text))
+	{
+		AnyFile = true;
+		Loaded = LoadAxiomCacheJson(Text.data(), Text.size());
+	}
+	// 旧文件只补缺失条目：新文件里已有的评分优先，避免迁移冲突把旧值盖回来。
+	if(ReadCacheText(LEGACY_AXIOM_CACHE_PATH, Text))
+	{
+		AnyFile = true;
+		const bool Merged = MergeAxiomCacheJson(Text.data(), Text.size());
+		if(!Merged && !Loaded)
+			log_warn("map_difficulty", "ignoring invalid Axiom map cache");
+	}
+	else if(AnyFile && !Loaded)
 		log_warn("map_difficulty", "ignoring invalid Axiom map cache");
 }
 catch(const std::bad_alloc &)
@@ -472,7 +692,7 @@ try
 		return false;
 	// 候选内容先准备，资源失败不能截断候选文件或留下未关闭的句柄。
 	const std::string Json = SerializeAxiomCache();
-	pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	qm_storage::EnsureFolder(pStorage, qm_storage::CACHE_MAPS_DIR);
 	char aTempPath[IO_MAX_PATH_LENGTH];
 	str_format(aTempPath, sizeof(aTempPath), "%s.%d.tmp", AXIOM_CACHE_PATH, pid());
 	SAxiomCacheCandidate Candidate{*pStorage, aTempPath};
@@ -565,6 +785,7 @@ try
 		return false;
 	std::sort(vEntries.begin(), vEntries.end(), EntryLess);
 	m_vEntries.swap(vEntries);
+	++m_Revision;
 	return true;
 }
 catch(...)
@@ -593,7 +814,10 @@ const CQmMapDifficultyCatalog::SEntry *CQmMapDifficultyCatalog::FindForServer(co
 {
 	if(str_comp_nocase(Server.m_aCommunityId, "axiom") == 0)
 	{
-		const auto It = m_AxiomEntries.find(std::make_pair(AxiomMaxStars(Server), std::string_view(Server.m_aMap)));
+		const EAxiomMode Mode = AxiomMode(Server);
+		if(Mode == EAxiomMode::NONE)
+			return nullptr;
+		const auto It = m_AxiomEntries.find(std::make_pair((int)Mode, std::string_view(Server.m_aMap)));
 		return It == m_AxiomEntries.end() ? nullptr : &It->second;
 	}
 	// 随包星级属于 DDNet 地图，不能仅凭同名地图或服务器名称中的难度词跨玩法套用。

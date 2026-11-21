@@ -68,6 +68,8 @@ public:
 	IOHANDLE File() const;
 
 	int GetDataSize(int Index) const;
+	bool IsDataFailed(int Index) const;
+	int GetStoredDataSize(int Index) const;
 	void *GetData(int Index);
 	bool ReadCompressedData(int Index, std::vector<unsigned char> &vData) const;
 	void *GetDataSwapped(int Index); // makes sure that the data is 32bit LE ints when saved

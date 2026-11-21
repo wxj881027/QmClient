@@ -159,8 +159,8 @@ inline std::array<vec2, ROUNDED_SURFACE_OUTLINE_POINTS> ResolveRoundedSurfaceOut
 			const int Sample = Corner == 0 || Corner == 2 ? ROUNDED_SURFACE_CORNER_SEGMENTS - i : i;
 			RoundedCornerCurveDirection(Curve, Shape.m_Amount, Sample, ROUNDED_SURFACE_CORNER_SEGMENTS, X, Y);
 			const vec2 Direction = Corner == 0 ? vec2(-Y, -X) : Corner == 1 ? vec2(Y, -X) :
-									Corner == 2         ? vec2(Y, X) :
-											      vec2(-Y, X);
+								    Corner == 2         ? vec2(Y, X) :
+											  vec2(-Y, X);
 			aOutline[Corner * (ROUNDED_SURFACE_CORNER_SEGMENTS + 1) + i] = Center + Direction * Radius;
 		}
 	}

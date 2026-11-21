@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -69,6 +71,28 @@ TEST(QmRankDemoManifest, ParsesKindTeamFinishersAndUuid)
 	EXPECT_FALSE(qmclient::rank_demo::IsTeamEntry(Entries[1]));
 }
 
+TEST(QmRankDemoManifest, ParsesPlayableGhostSetAndKeepsLegacyEntriesCompatible)
+{
+	const std::string Manifest =
+		std::string(R"({"status":"ok","map":"Map","rank":1,"ts":1700,"demo":"a.demo.gz","cid":0,"ghosts":[0,4]})") +
+		"\n" + R"({"status":"ok","map":"Map","rank":1,"ts":1600,"demo":"b.demo.gz","cid":0,"ghosts":[]})" +
+		"\n" + R"({"status":"ok","map":"Map","rank":1,"ts":1500,"demo":"c.demo.gz","cid":0})";
+	std::vector<qmclient::rank_demo::SEntry> Entries;
+	ASSERT_TRUE(qmclient::rank_demo::ParseManifest(reinterpret_cast<const unsigned char *>(Manifest.data()), Manifest.size(), Entries));
+	ASSERT_EQ(Entries.size(), 3U);
+
+	EXPECT_TRUE(Entries[0].m_HasGhosts);
+	ASSERT_EQ(Entries[0].m_vGhosts.size(), 2U);
+	EXPECT_EQ(Entries[0].m_vGhosts[0], 0);
+	EXPECT_EQ(Entries[0].m_vGhosts[1], 4);
+
+	EXPECT_TRUE(Entries[1].m_HasGhosts);
+	EXPECT_TRUE(Entries[1].m_vGhosts.empty());
+
+	EXPECT_FALSE(Entries[2].m_HasGhosts);
+	EXPECT_TRUE(Entries[2].m_vGhosts.empty());
+}
+
 TEST(QmRankDemoManifest, CollectRankEntriesMergesMembersAndSortsSoloFirst)
 {
 	const std::string Manifest =
@@ -112,6 +136,40 @@ TEST(QmRankDemoManifest, CollectRankEntriesHandlesEmptyInputs)
 	EXPECT_TRUE(Collected.empty());
 	qmclient::rank_demo::CollectRankEntries(Entries, "", 1, Collected);
 	EXPECT_TRUE(Collected.empty());
+}
+
+TEST(QmRankDemoManifest, BrowserDemoFileNameUsesFullEntryIdentity)
+{
+	// 浏览器落盘名必须带 ts 与 demo 名：只按地图前缀复用会把同图其它场次当成当前条目。
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("Map", "uuid-a-hash.demo.gz", 1700, 1),
+		"Map_rank1_1700_uuid-a-hash.demo");
+	EXPECT_NE(qmclient::rank_demo::BrowserDemoFileName("Map", "uuid-a-hash.demo.gz", 1700, 1),
+		qmclient::rank_demo::BrowserDemoFileName("Map", "uuid-b-hash.demo.gz", 1700, 1));
+
+	// 地图与 demo 名中的非法文件名字符统一替换为空格，后缀只去掉一次。
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("A/B:C", "u?x.demo", 0, 1),
+		"A B C_rank1_0_u x.demo");
+
+	// manifest 缺 ts 时按 0 兜底，避免生成异常文件名。
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("Map", "demo.demo.gz", std::numeric_limits<int64_t>::min(), 1),
+		"Map_rank1_0_demo.demo");
+
+	EXPECT_TRUE(qmclient::rank_demo::BrowserDemoFileName(nullptr, "demo.demo.gz", 1, 1).empty());
+	EXPECT_TRUE(qmclient::rank_demo::BrowserDemoFileName("", "demo.demo.gz", 1, 1).empty());
+	EXPECT_TRUE(qmclient::rank_demo::BrowserDemoFileName("Map", "", 1, 1).empty());
+}
+
+TEST(QmRankDemoManifest, BrowserDemoFileNameStripsSuffixIgnoringCase)
+{
+	// 旧版浏览器用 str_endswith_nocase 剥离后缀：大小写不同的 demo 名必须算出
+	// 同一个落盘名，否则升级后同一场次的旧缓存永远命不中，会被重复下载。
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("Map", "uuid.demo.gz", 1700, 1),
+		qmclient::rank_demo::BrowserDemoFileName("Map", "uuid.DEMO.GZ", 1700, 1));
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("Map", "uuid.DEMO.GZ", 1700, 1),
+		"Map_rank1_1700_uuid.demo");
+	// 只剥一层：单独以 .demo 结尾时不再当成 .gz
+	EXPECT_EQ(qmclient::rank_demo::BrowserDemoFileName("Map", "uuid.demo", 1700, 1),
+		"Map_rank1_1700_uuid.demo");
 }
 
 TEST(QmRankDemoManifest, NamePrefixDoesNotSuppressADifferentMember)

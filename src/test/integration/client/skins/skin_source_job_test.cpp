@@ -153,7 +153,7 @@ protected:
 	}
 	std::unique_ptr<CQmSkinDownloadSession> Session(CPrepareBarrier *pBarrier = nullptr)
 	{
-		return std::make_unique<CQmSkinDownloadSession>(m_Http, "https://skins.test/test%20skin.png", "", std::make_shared<CTestSkinJob>(m_pStorage.get()), [this](const char *, bool) { return std::make_shared<CTestSkinRequest>(m_pStorage.get()); }, [this, pBarrier](std::shared_ptr<IHttpRequest> pResponse) {
+		return std::make_unique<CQmSkinDownloadSession>(m_Http, std::vector<CQmSkinDownloadSession::SSource>{{"https://skins.test/test%20skin.png", ESkinSource::OFFICIAL}}, std::make_shared<CTestSkinJob>(m_pStorage.get()), [this](const char *, bool) { return std::make_shared<CTestSkinRequest>(m_pStorage.get()); }, [this, pBarrier](std::shared_ptr<IHttpRequest> pResponse) {
 				m_pDecodedJob = std::make_shared<CTestSkinJob>(m_pStorage.get(), std::move(pResponse), pBarrier);
 				return m_pDecodedJob; }, [this](std::shared_ptr<IJob> pJob) { m_Pool.Add(std::move(pJob)); });
 	}

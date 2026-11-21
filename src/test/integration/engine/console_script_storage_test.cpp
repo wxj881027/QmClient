@@ -158,23 +158,20 @@ TEST_F(CConsoleScriptStorage, FailedScriptStopsItsCommandsAndCanBeRetried)
 	bool Fail = true;
 	Console()->Register("script_may_fail", "", CFGFLAG_CLIENT, [](IConsole::IResult *, void *pUser) {
 		if(*static_cast<bool *>(pUser))
-			throw std::bad_alloc();
-	}, &Fail, "");
+			throw std::bad_alloc(); }, &Fail, "");
 	Write(m_Save / "retry.cfg", "script_value 1\nscript_may_fail\nscript_value 2\n");
 
-	EXPECT_FALSE(Console()->ExecuteFile("retry.cfg"));
+	EXPECT_FALSE(Console()->ExecuteFile("retry.cfg", IConsole::CLIENT_ID_UNSPECIFIED, false, IStorage::TYPE_ALL));
 	EXPECT_EQ(m_vValues, (std::vector<int>{1}));
 
 	Fail = false;
-	EXPECT_TRUE(Console()->ExecuteFile("retry.cfg"));
+	EXPECT_TRUE(Console()->ExecuteFile("retry.cfg", IConsole::CLIENT_ID_UNSPECIFIED, false, IStorage::TYPE_ALL));
 	EXPECT_EQ(m_vValues, (std::vector<int>{1, 1, 2}));
 }
 
 TEST_F(CConsoleScriptStorage, FailingIncludedScriptReturnsControlToItsParent)
 {
-	Console()->Register("script_failure", "", CFGFLAG_CLIENT, [](IConsole::IResult *, void *) {
-		throw std::bad_alloc();
-	}, nullptr, "");
+	Console()->Register("script_failure", "", CFGFLAG_CLIENT, [](IConsole::IResult *, void *) { throw std::bad_alloc(); }, nullptr, "");
 	Write(m_Save / "outer.cfg", "script_value 1\nexec inner.cfg\nscript_value 3\n");
 	Write(m_Save / "inner.cfg", "script_failure\nscript_value 2\n");
 

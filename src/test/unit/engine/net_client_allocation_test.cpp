@@ -2,9 +2,8 @@
 
 #include <engine/shared/network.h>
 
-#include <test/support/prediction_allocation_failure.h>
-
 #include <gtest/gtest.h>
+#include <test/support/prediction_allocation_failure.h>
 
 #include <chrono>
 #include <memory>

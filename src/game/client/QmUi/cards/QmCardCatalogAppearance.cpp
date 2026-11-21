@@ -1060,7 +1060,6 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				{
 					DoAppearanceNumericField(APPEARANCE_TAB_HOOK_COLLISION, "appearance-hook-collision-opacity", &g_Config.m_ClHookCollAlpha, &g_Config.m_ClHookCollAlpha, Button, Localize("Hook collision line opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 				}
-
 				// 旧版单段线：把分段提示线并回一条，恢复原版 DDNet 的观感。
 				if(Flow.Control("appearance-revert-hook-line", LineSize, Button, RowSpacing))
 				{

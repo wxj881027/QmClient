@@ -109,6 +109,14 @@ TEST(QmConsoleLinks, WrappedHitBoxesRejectWhitespaceBetweenAndAfterLines)
 	EXPECT_FALSE(QmConsoleText::ContainsPoint(vQuads, vec2(100.0f, 25.0f)));
 }
 
+TEST(QmConsoleLinks, HoverHighlightRequiresCtrlAndPointInsideLink)
+{
+	const std::vector<IGraphics::CQuadItem> vQuads{{30.0f, 20.0f, 70.0f, 10.0f}};
+	EXPECT_TRUE(QmConsoleText::ShouldHighlightLinkHover(true, vQuads, vec2(31.0f, 25.0f)));
+	EXPECT_FALSE(QmConsoleText::ShouldHighlightLinkHover(false, vQuads, vec2(31.0f, 25.0f)));
+	EXPECT_FALSE(QmConsoleText::ShouldHighlightLinkHover(true, vQuads, vec2(10.0f, 25.0f)));
+}
+
 TEST(QmConsoleText, SearchRangesUseMatchedUtf8Bytes)
 {
 	std::vector<QmConsoleText::SRange> vMatches;

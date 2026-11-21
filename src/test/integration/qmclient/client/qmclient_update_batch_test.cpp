@@ -191,7 +191,8 @@ TEST_F(QmUpdateBatch, FailureBeforeCleanupOwnershipStillCancelsTheRequest)
 	EXPECT_FALSE(Start());
 	ASSERT_EQ(m_vRequests.size(), 2u);
 	ExpectCancelled();
-	EXPECT_STREQ(m_vRequests.back()->Dest(), "");
+	const char *pDest = m_vRequests.back()->Dest();
+	EXPECT_TRUE(pDest == nullptr || pDest[0] == '\0');
 }
 
 TEST_F(QmUpdateBatch, UnknownStartFailureUsesTheSameBatchRollback)

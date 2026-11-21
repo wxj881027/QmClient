@@ -197,19 +197,13 @@ namespace
 		bool Advance() { return m_Preparation.Advance(*m_pCurrent->m_pRenderer); }
 		bool PrepareChange(bool CurrentReady)
 		{
-			return PrepareMenuBackgroundChange(CurrentReady, m_PreviousRetiring,
-				[&] {
+			return PrepareMenuBackgroundChange(CurrentReady, m_PreviousRetiring, [&] {
 					++m_ReleasePreviousCalls;
-					return ReleaseMenuBackgroundResources(m_pPrevious, m_PreviousRetiring);
-				},
-				[&] {
+					return ReleaseMenuBackgroundResources(m_pPrevious, m_PreviousRetiring); }, [&] {
 					++m_PreserveCurrentCalls;
-					return true;
-				},
-				[&] {
+					return true; }, [&] {
 					++m_DiscardCurrentCalls;
-					return m_Preparation.Cancel(*m_pCurrent->m_pRenderer);
-				});
+					return m_Preparation.Cancel(*m_pCurrent->m_pRenderer); });
 		}
 	};
 }

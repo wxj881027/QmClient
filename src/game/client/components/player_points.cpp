@@ -11,6 +11,7 @@
 #include <engine/engine.h>
 #include <engine/http.h>
 #include <engine/shared/json.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/sqlite.h>
 #include <engine/storage.h>
 
@@ -79,10 +80,10 @@ try
 	m_pLoadStmt.reset();
 	m_pDb.reset();
 	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-	m_pDb = SqliteOpen(Storage(), "qmclient/score_cache.sqlite3");
+	m_pDb = SqliteOpen(Storage(), qm_storage::SCORE_CACHE_FILE);
 	if(!m_pDb)
 	{
-		log_warn("player_points", "failed to open qmclient/score_cache.sqlite3");
+		log_warn("player_points", "failed to open %s", qm_storage::SCORE_CACHE_FILE);
 		return;
 	}
 	sqlite3 *pSqlite = m_pDb.get();

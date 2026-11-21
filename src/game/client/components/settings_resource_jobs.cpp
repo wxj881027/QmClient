@@ -493,6 +493,28 @@ bool SettingsSkinBackgroundDrainActive(const SSettingsResourceFrameContext &Cont
 	       Context.m_HighPrioritySettled;
 }
 
+int SettingsSkinUploadTimeBudgetMs(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive, float RenderFrameTimeMs, float TargetFrameMs)
+{
+	if(!TeeSettingsActive)
+		return 1;
+	int BudgetMs = 2;
+	if(Context.m_ScrollActive)
+		BudgetMs = 1;
+	else if(Context.m_PostScrollRecoveryFrames > 0)
+		BudgetMs = SettingsRecoveryBudget(Context, 1, 3);
+	else if(SettingsSkinBackgroundDrainActive(Context, TeeSettingsActive))
+		BudgetMs = 3;
+	// 上传预算必须落在本帧真实余量内，而不是只看一个固定门槛：目标帧间隔
+	// 减去已用渲染时间，再留 0.5ms 给提交与系统调度。144Hz 下渲染 5ms 时
+	// 只剩约 1.4ms，不能仍按 3ms 上传。
+	if(TargetFrameMs <= 0.0f)
+		return 1;
+	const float HeadroomMs = TargetFrameMs - RenderFrameTimeMs - 0.5f;
+	if(HeadroomMs < 1.0f)
+		return 1;
+	return minimum(BudgetMs, (int)HeadroomMs);
+}
+
 int SettingsSkinBackgroundRequestFrameBudget(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive)
 {
 	if(!TeeSettingsActive)
@@ -570,11 +592,19 @@ SSettingsSkinSourceAdmissionOutput SettingsSkinSourceAdmissionDecision(const SSe
 	}
 
 	const bool HighPriority = Input.m_Priority == ESettingsResourcePriority::VISIBLE;
-	if(!SettingsResourceCanUseHighPriorityBudget(
-		   maximum(0, Input.m_Loading),
-		   maximum(0, Input.m_NormalLoadingWindow),
-		   maximum(0, Input.m_VisibleLoadingWindow),
-		   HighPriority))
+	const int Loading = maximum(0, Input.m_Loading);
+	const int VisibleWindow = maximum(0, Input.m_VisibleLoadingWindow);
+	int HighPriorityLimit = VisibleWindow;
+	if(Input.m_CountFuseLimit > 0)
+	{
+		// 当前视窗等待 N 项时允许临时占用到 loading+N，但绝不超过硬上限。
+		// 这样后台预热已占满加载窗时，可见项仍能先完成；平时仍按可见窗限流。
+		HighPriorityLimit = minimum(Input.m_CountFuseLimit, maximum(VisibleWindow, Loading + maximum(0, Input.m_VisibleWaiting)));
+	}
+	const bool CanUseWindow = HighPriority ?
+					  Loading < HighPriorityLimit :
+					  Loading < maximum(0, Input.m_NormalLoadingWindow);
+	if(!CanUseWindow)
 	{
 		Output.m_PromoteAllowed = false;
 		Output.m_BlockReason = HighPriority ?

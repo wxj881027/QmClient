@@ -42,6 +42,24 @@ namespace NeteaseLyrics
 			if(!ParseUnsigned(Value.substr(0, Colon), &Minutes))
 				return false;
 			std::string_view SecondsPart = Value.substr(Colon + 1);
+			// LRC 存在 [mm:ss:xx] 变体(第三段是百分秒),LX Music 自己生成的
+			// 提示行就用这种写法;只在没有 . , 小数分隔符时才按冒号拆分。
+			int64_t CentisecondMs = 0;
+			if(SecondsPart.find_first_of(".,") == std::string_view::npos)
+			{
+				const size_t SecondColon = SecondsPart.find(':');
+				if(SecondColon != std::string_view::npos)
+				{
+					const std::string_view CentiPart = SecondsPart.substr(SecondColon + 1);
+					SecondsPart = SecondsPart.substr(0, SecondColon);
+					if(CentiPart.empty() || CentiPart.size() > 2)
+						return false;
+					int64_t CentiValue = 0;
+					if(!ParseUnsigned(CentiPart, &CentiValue))
+						return false;
+					CentisecondMs = CentiPart.size() == 1 ? CentiValue * 100 : CentiValue * 10;
+				}
+			}
 			const size_t Dot = SecondsPart.find_first_of(".,");
 			std::string_view WholeSeconds = Dot == std::string_view::npos ? SecondsPart : SecondsPart.substr(0, Dot);
 			if(WholeSeconds.empty())
@@ -49,7 +67,7 @@ namespace NeteaseLyrics
 			int64_t Seconds = 0;
 			if(!ParseUnsigned(WholeSeconds, &Seconds) || Seconds >= 60)
 				return false;
-			int64_t FractionMs = 0;
+			int64_t FractionMs = CentisecondMs;
 			if(Dot != std::string_view::npos)
 			{
 				const std::string_view Fraction = SecondsPart.substr(Dot + 1);

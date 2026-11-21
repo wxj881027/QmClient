@@ -25,6 +25,14 @@
 namespace
 {
 	int64_t TestTicks(float Seconds) { return (int64_t)(Seconds * time_freq()); }
+
+	struct SScrollStepScope
+	{
+		int m_Previous;
+		explicit SScrollStepScope(int Step) :
+			m_Previous(g_Config.m_QmUiScrollStep) { g_Config.m_QmUiScrollStep = Step; }
+		~SScrollStepScope() { g_Config.m_QmUiScrollStep = m_Previous; }
+	};
 }
 
 TEST(QmChatMessageMerge, EligibilityUsesExactTextSlidingWindowAndMatchingChannelsOnly)
@@ -621,10 +629,10 @@ TEST(QmChatScrollbar, HoverFeedbackIsAddedOnceAndNeverFightsPublicFeedback)
 
 TEST(QmChatHistoryScroll, WheelImpulseUsesPublicScrollConfigAndConvergesWithoutOvershoot)
 {
-	// 推进档位与手感全部取自公共配置；聊天只把"一档"声明成一行。
+	// 推进档位与手感全部取自公共配置；聊天默认一档 3 行。
 	const SQmScrollConfig PublicConfig = QmChatHistoryScrollConfig();
 	const SQmScrollConfig NativeConfig = QmNativeWheelScrollConfig(1.0f, g_Config.m_UiSmoothScrollTime / 1000.0f);
-	EXPECT_FLOAT_EQ(PublicConfig.m_WheelScale, 1.0f);
+	EXPECT_FLOAT_EQ(PublicConfig.m_WheelScale, 3.0f);
 	EXPECT_EQ(PublicConfig.m_Feel, NativeConfig.m_Feel);
 	EXPECT_FLOAT_EQ(PublicConfig.m_MaxOverscroll, NativeConfig.m_MaxOverscroll);
 	EXPECT_FLOAT_EQ(PublicConfig.m_SpringResponse, NativeConfig.m_SpringResponse);
@@ -645,12 +653,12 @@ TEST(QmChatHistoryScroll, WheelImpulseUsesPublicScrollConfigAndConvergesWithoutO
 	{
 		State.Advance(1.0f / 60.0f, Metrics, Config);
 		EXPECT_GE(State.Offset(), Previous - 0.0001f);
-		EXPECT_LE(State.Offset(), 1.0f + 0.0001f);
+		EXPECT_LE(State.Offset(), 3.0f + 0.0001f);
 		Previous = State.Offset();
 	}
-	EXPECT_NEAR(State.Offset(), 1.0f, 0.001f);
+	EXPECT_NEAR(State.Offset(), 3.0f, 0.001f);
 	EXPECT_FALSE(State.Animating());
-	EXPECT_EQ(QmChatHistoryScrollLine(State.Offset(), Metrics), 1);
+	EXPECT_EQ(QmChatHistoryScrollLine(State.Offset(), Metrics), 3);
 
 	// 行号换算夹在合法范围内：越界偏移不会把可见行推出历史。
 	EXPECT_EQ(QmChatHistoryScrollLine(0.4f, Metrics), 0);
@@ -689,7 +697,7 @@ TEST(QmChatHistoryScroll, WheelPhysicsSharesTheListScrollConfig)
 {
 	// 聊天不自带一套手感：推进档位（原版 / 顺滑 / 弹簧）、弹簧响应与阻尼、橡皮筋距离、
 	// 摩擦与越界回弹刚度全部取自 QmNativeWheelScrollConfig——与列表滚动面同一份配置。
-	// 唯一差别是单位：聊天一档 = 一行（偏移单位是行），列表一档 = 若干像素。
+	// 唯一差别是单位：聊天默认一档 3 行（偏移单位是行），列表一档 = 若干像素。
 	constexpr float LINE_EXTENT = 20.0f;
 	const SQmScrollConfig Chat = QmChatHistoryScrollConfig(LINE_EXTENT);
 	// 列表侧必须用与聊天相同的平滑时长比：默认参数是 0 秒，会把「原生滚轮动画时间」
@@ -708,8 +716,24 @@ TEST(QmChatHistoryScroll, WheelPhysicsSharesTheListScrollConfig)
 	EXPECT_FLOAT_EQ(Chat.m_OverscrollDamping, List.m_OverscrollDamping);
 	EXPECT_FLOAT_EQ(Chat.m_RestVelocity, List.m_RestVelocity);
 	EXPECT_FLOAT_EQ(Chat.m_RestDistance, List.m_RestDistance);
-	// 聊天只把"一档"声明成一行，步长单位由聊天正文的行渲染决定。
-	EXPECT_FLOAT_EQ(Chat.m_WheelScale, 1.0f);
+	// 聊天把"一档"声明成 3 行，步长单位由聊天正文的行渲染决定。
+	EXPECT_FLOAT_EQ(Chat.m_WheelScale, 3.0f);
+}
+
+TEST(QmChatHistoryScroll, VisibleCapacityLowersTheDefaultWheelLines)
+{
+	// 默认 3 行；聊天区只剩 3 行可见时最多滚 2 行，避免一档滚出视口。
+	EXPECT_FLOAT_EQ(QmChatHistoryScrollConfig(20.0f, 0).m_WheelScale, 3.0f);
+	EXPECT_FLOAT_EQ(QmChatHistoryScrollConfig(20.0f, 3).m_WheelScale, 2.0f);
+	EXPECT_FLOAT_EQ(QmChatHistoryScrollConfig(20.0f, 1).m_WheelScale, 1.0f);
+}
+
+TEST(QmChatHistoryScroll, GlobalStepScalesLinesBeforeApplyingSurfaceCaps)
+{
+	const SScrollStepScope StepScope(20);
+	EXPECT_FLOAT_EQ(QmChatHistoryScrollConfig(20.0f, 20).m_WheelScale, 6.0f);
+	EXPECT_FLOAT_EQ(QmChatHistoryScrollConfig(20.0f, 4).m_WheelScale, 3.0f);
+	EXPECT_FLOAT_EQ(QmChatHistoryScrollConfig(20.0f, 1).m_WheelScale, 1.0f);
 }
 
 TEST(QmChatHistoryScroll, BouncePixelsAreConvertedToMessageLineUnits)

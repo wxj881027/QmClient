@@ -1219,7 +1219,7 @@ CUi::EPopupMenuFunctionResult CLayerTiles::RenderCommonProperties(SCommonPropSta
 				const auto SizeFits = [&](const auto &pLayer) {
 					const int MaxCells = MaxTileLayerCells(*pEditorMap, ResizeAffectsGameLayers(*pLayer));
 					return State.m_Width > 0 && State.m_Height > 0 &&
-						TileLayerSizeFits(maximum(State.m_Width, pLayer->m_Width), maximum(State.m_Height, pLayer->m_Height), MaxCells);
+					       TileLayerSizeFits(maximum(State.m_Width, pLayer->m_Width), maximum(State.m_Height, pLayer->m_Height), MaxCells);
 				};
 				if(!std::all_of(vpLayers.begin(), vpLayers.end(), SizeFits))
 				{

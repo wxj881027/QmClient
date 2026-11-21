@@ -234,9 +234,7 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 		}
 		if(ShowProgress)
 			str_format(Job.m_pTranslateResponse->m_Text, sizeof(Job.m_pTranslateResponse->m_Text), Localize("%s translating to %s"), Job.m_pBackend->Name(), Job.m_aTarget);
-		return Job;
-	},
-		Limit);
+		return Job; }, Limit);
 	if(!Accepted)
 	{
 		if(InvalidBackend)

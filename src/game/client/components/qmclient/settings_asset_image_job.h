@@ -146,6 +146,8 @@ public:
 			throw std::invalid_argument("invalid settings asset image input");
 		if(!(pBudget != nullptr ? *pBudget : SettingsAssetMemoryDefaultBudget()).TryAcquire(WorkingBytes, m_WorkingMemory))
 			throw std::bad_alloc();
+		// 取消只改变作业状态；已取得的额度由 worker 或结果所有者释放。
+		Abortable(true);
 	}
 
 	bool IsCompleted() const REQUIRES(!m_Lock)

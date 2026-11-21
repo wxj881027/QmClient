@@ -87,8 +87,7 @@ namespace
 			Frame.m_ScrollbarTrackRect.h = std::max(0.0f, ScrollbarRect.h - ScrollbarMargin * 2.0f);
 			const float TrackSize = std::max(0.0f, Horizontal ? Frame.m_ScrollbarTrackRect.w : Frame.m_ScrollbarTrackRect.h);
 			const float ViewportSize = std::max(0.0f, Horizontal ? ClipRect.w : ClipRect.h);
-			const float RawThumbSize = ContentSize > 0.0f ? ViewportSize / ContentSize * TrackSize : TrackSize;
-			const float ThumbSize = std::min(TrackSize, std::max(0.0f, std::max(Style.m_MinThumbHeight, RawThumbSize)));
+			const float ThumbSize = QmResolveScrollThumbSize(ViewportSize, ContentSize, TrackSize, Style.m_MinThumbHeight, Style.m_ThumbSizeExponent);
 			const float MaxThumbTravel = std::max(0.0f, TrackSize - ThumbSize);
 			const float ScrollbarOffset = std::clamp(Frame.m_Offset, 0.0f, Metrics.MaxOffset());
 			const float ThumbOffset = Metrics.MaxOffset() > 0.0f ? ScrollbarOffset / Metrics.MaxOffset() * MaxThumbTravel : 0.0f;
@@ -111,6 +110,22 @@ namespace
 float SQmScrollMetrics::MaxOffset() const
 {
 	return std::max(0.0f, m_ContentSize - m_ViewportSize);
+}
+
+float QmResolveScrollThumbSize(float ViewportSize, float ContentSize, float TrackSize, float MinThumbSize, float SizeExponent)
+{
+	const float Track = std::max(0.0f, TrackSize);
+	if(Track <= 0.0f)
+		return 0.0f;
+	const float Viewport = std::max(0.0f, ViewportSize);
+	const float Content = std::max(0.0f, ContentSize);
+	if(Viewport <= 0.0f || Content <= Viewport)
+		return Track;
+	const float VisibleFraction = std::clamp(Viewport / Content, 0.0f, 1.0f);
+	const float Exponent = std::clamp(SizeExponent, 0.1f, 4.0f);
+	const float RawThumbSize = Track * std::pow(VisibleFraction, Exponent);
+	const float MinThumb = std::clamp(MinThumbSize, 0.0f, Track);
+	return std::min(Track, std::max(MinThumb, RawThumbSize));
 }
 
 SQmScrollContainerStyle QmScrollContainerStyleForSize(EQmScrollSize Size, float UiScale)
@@ -157,14 +172,32 @@ namespace
 	constexpr float QM_SCROLL_BOUNCE_HOLD_SECONDS = 0.12f;
 } // namespace
 
+float QmWheelStepScale()
+{
+	// 配置范围由 config loader 保证为 2–100；测试环境零初始化时回退默认 10。
+	// 这里返回相对默认步长的倍率，默认 10 -> 1.0，20 -> 2.0。
+	const float Step = g_Config.m_QmUiScrollStep > 0.0f ? static_cast<float>(g_Config.m_QmUiScrollStep) : 10.0f;
+	return std::clamp(Step, 2.0f, 100.0f) / 10.0f;
+}
+
+int QmResolveWheelLineCount(int BaseLines, float StepScale, int VisibleLines, int MaxLines)
+{
+	const int SafeBase = std::max(1, BaseLines);
+	const int SafeMax = std::max(1, MaxLines);
+	const float SafeScale = std::isfinite(StepScale) ? std::max(0.0f, StepScale) : 1.0f;
+	const int ViewportCap = VisibleLines > 0 ? std::max(1, VisibleLines - 1) : SafeMax;
+	const int Cap = std::max(1, std::min(SafeMax, ViewportCap));
+	const float Desired = static_cast<float>(SafeBase) * SafeScale;
+	return std::clamp(static_cast<int>(std::lround(Desired)), 1, Cap);
+}
+
 SQmScrollConfig QmNativeWheelScrollConfig(float UiScale, float SmoothScrollTimeSec)
 {
 	SQmScrollConfig Config;
 	(void)UiScale;
-	// 步长防零回退：生产由 config loader 保证 ≥2，测试环境的 g_Config 是
-	// 零初始化（未跑 loader），0 直接用会把 WheelScale 归零。
-	const float StepPixels = g_Config.m_QmUiScrollStep > 0.0f ? static_cast<float>(g_Config.m_QmUiScrollStep) : 10.0f;
-	Config.m_WheelScale = StepPixels;
+	// 面板级默认一步 10 UI 像素；用户步长只作为倍率，避免各面把原始像素
+	// 当成自己的内容单位（控制台曾因此被 10px ÷ 行高锁成每档 1 行）。
+	Config.m_WheelScale = 10.0f * QmWheelStepScale();
 	Config.m_NativeWheelStep = true;
 	Config.m_Feel = static_cast<EQmScrollFeel>(std::clamp(g_Config.m_QmUiScrollFeel, 0, 2));
 	// 滚动平滑时长统一走引擎动效等级（qm_animation::ApplyMotionLevel，与弹层/
@@ -202,8 +235,7 @@ SQmScrollConfig QmSettingsScrollConfig(float UiScale, float SmoothScrollTimeSec)
 {
 	SQmScrollConfig Config = QmNativeWheelScrollConfig(UiScale, SmoothScrollTimeSec);
 	// 设置卡片行高远大于普通列表行，每档按面板级倍率保持与原版相当的单屏节奏。
-	const float StepPixels = g_Config.m_QmUiScrollStep > 0.0f ? static_cast<float>(g_Config.m_QmUiScrollStep) : 10.0f;
-	Config.m_WheelScale = StepPixels * QmPanelWheelStepMultiplier();
+	Config.m_WheelScale *= QmPanelWheelStepMultiplier();
 	return Config;
 }
 
@@ -214,10 +246,8 @@ SQmResolvedScrollPolicy QmResolveScrollPolicy(const SQmScrollRequest &Request, f
 	Policy.m_Config = QmNativeWheelScrollConfig(UiScale, SmoothScrollTimeSec);
 	const float RowExtent = std::max(0.0f, Request.m_RowExtent);
 	const int RowsPerStep = Request.m_RowsPerStep > 0 ? Request.m_RowsPerStep : 2;
-	// 用户自定义步长（qm_ui_scroll_step，默认 10）作为全站滚轮档位的缩放基准：
-	// 行数档位（列表/网格）此前完全无视该配置——设置页里调了没有任何可感知
-	// 变化。默认值下行为与历史版本逐比特一致，调整后所有滚动面等比缩放。
-	const float StepScale = (g_Config.m_QmUiScrollStep > 0.0f ? (float)g_Config.m_QmUiScrollStep : 10.0f) / 10.0f;
+	// 用户步长只提供一个全站倍率；各面把它乘到自己的内容单位上。
+	const float StepScale = QmWheelStepScale();
 
 	switch(Request.m_Profile)
 	{
@@ -249,6 +279,10 @@ SQmResolvedScrollPolicy QmResolveScrollPolicy(const SQmScrollRequest &Request, f
 	case EQmScrollProfile::SETTINGS_GRID:
 	case EQmScrollProfile::GRID:
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, UiScale);
+		// 目录型网格可能有数千项。纯线性比例加 36px 最小滑块会把 1k 与 7k 内容
+		// 都压成同一长度；平方根压缩仍保持“越短内容越长”的顺序，同时保留可抓取尺寸。
+		Policy.m_Style.m_MinThumbHeight = Policy.m_Style.m_ScrollbarWidth;
+		Policy.m_Style.m_ThumbSizeExponent = 0.5f;
 		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * RowsPerStep * StepScale : Policy.m_Config.m_WheelScale;
 		Policy.m_ContentDragAllowed = false;
 		break;

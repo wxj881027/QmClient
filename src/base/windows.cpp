@@ -8,16 +8,16 @@
 #include "dbg.h"
 #include "str.h"
 
+#include <windows.h>
+
+#include <shlobj.h> // SHChangeNotify
+
 #include <algorithm>
 #include <cwchar>
 #include <memory>
 #include <new>
 #include <stdexcept>
 #include <utility>
-
-#include <windows.h>
-
-#include <shlobj.h> // SHChangeNotify
 
 std::string windows_format_system_message(unsigned long error) noexcept
 try

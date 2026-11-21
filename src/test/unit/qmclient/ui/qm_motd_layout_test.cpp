@@ -1,6 +1,7 @@
 #include <base/str.h>
 
 #include <game/client/QmUi/QmMotdLayout.h>
+#include <game/client/components/motd.h>
 
 #include <gtest/gtest.h>
 
@@ -179,4 +180,20 @@ TEST(QmMotdLayout, DegenerateInputsStayFinite)
 	ASSERT_EQ(FallbackCell.LineCount(), 1);
 	EXPECT_FLOAT_EQ(FallbackCell.m_vLines[0].m_Advance, LINE_HEIGHT);
 	EXPECT_EQ(FallbackCell.m_vLines[0].m_VisibleGlyphCount, 4);
+}
+
+TEST(QmMotdPopup, JoinHideSuppressesAutomaticPopup)
+{
+	// 开关打开时不再自动弹公告；公告正文仍保留给服务器信息面板。
+	EXPECT_FALSE(CMotd::ShouldActivateMotdPopup("motd", 10, true));
+	EXPECT_TRUE(CMotd::ShouldActivateMotdPopup("motd", 10, false));
+}
+
+TEST(QmMotdPopup, ActivationRequiresContentAndPositiveTime)
+{
+	EXPECT_FALSE(CMotd::ShouldActivateMotdPopup(nullptr, 10, false));
+	EXPECT_FALSE(CMotd::ShouldActivateMotdPopup("", 10, false));
+	EXPECT_FALSE(CMotd::ShouldActivateMotdPopup("motd", 0, false));
+	EXPECT_FALSE(CMotd::ShouldActivateMotdPopup("motd", -1, false));
+	EXPECT_TRUE(CMotd::ShouldActivateMotdPopup("motd", 10, false));
 }

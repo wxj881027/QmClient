@@ -152,4 +152,3 @@ TEST(QmListCardLayout, RowAxisReservesGapAndTrailingSlot)
 	EXPECT_FLOAT_EQ(Layout.m_TrailingSlot.w, 20.0f);
 	EXPECT_FLOAT_EQ(Layout.m_Body.w, 164.0f - 40.0f - 4.0f - 20.0f - 4.0f);
 }
-

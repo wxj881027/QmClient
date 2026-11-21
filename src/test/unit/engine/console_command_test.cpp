@@ -329,8 +329,8 @@ TEST(Console, ExecuteFile)
 	IConsole *pConsole = CreateConsole(CFGFLAG_SERVER).release();
 	pKernel->RegisterInterface(pConsole);
 
-	char aFilename[IO_MAX_PATH_LENGTH];
-	str_format(aFilename, sizeof(aFilename), "%s/test_execute_file.cfg", InfoStorage.StoragePath());
+	// 用相对名和存档根写脚本，TYPE_ALL 才能在某个根下命中；绝对路径会被拒绝越界访问。
+	const char *pFilename = "test_execute_file.cfg";
 
 	class CTestUser
 	{
@@ -344,7 +344,7 @@ TEST(Console, ExecuteFile)
 	};
 	pConsole->Register("file_test_cmd", "", CFGFLAG_SERVER, Callback, &User, "test");
 
-	IOHANDLE File = io_open(aFilename, IOFLAG_WRITE);
+	IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	ASSERT_TRUE(File != nullptr);
 	const char *pContent = "file_test_cmd\nfile_test_cmd\n";
 	const unsigned int Size = io_write(File, pContent, str_length(pContent));
@@ -352,13 +352,13 @@ TEST(Console, ExecuteFile)
 	io_close(File);
 
 	// 没有注册 storage 时 ExecuteFile 必须失败且不执行文件内容。
-	bool Success = pConsole->ExecuteFile(aFilename, IConsole::CLIENT_ID_UNSPECIFIED, true, IStorage::TYPE_ALL);
+	bool Success = pConsole->ExecuteFile(pFilename, IConsole::CLIENT_ID_UNSPECIFIED, true, IStorage::TYPE_ALL);
 	EXPECT_FALSE(Success);
 	EXPECT_EQ(User.m_Count, 0);
 
 	pEngine->Init();
 	pConsole->Init();
-	Success = pConsole->ExecuteFile(aFilename, IConsole::CLIENT_ID_UNSPECIFIED, true, IStorage::TYPE_ALL);
+	Success = pConsole->ExecuteFile(pFilename, IConsole::CLIENT_ID_UNSPECIFIED, true, IStorage::TYPE_ALL);
 	EXPECT_TRUE(Success);
 	EXPECT_EQ(User.m_Count, 2);
 }

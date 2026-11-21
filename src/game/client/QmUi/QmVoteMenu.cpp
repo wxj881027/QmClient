@@ -810,7 +810,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		ui_widget::InputField(Ctx, &m_CallvoteReasonInput, Reason, InputOptions);
 	}
 	const bool CanCall = pSelected != nullptr && !Voting.IsVoting() &&
-		(!Axiom || (!Voting.IsReceivingOptions() && State.m_AxiomRevision == Voting.OptionsRevision() && pSelected->m_VoteOption >= 0));
+			     (!Axiom || (!Voting.IsReceivingOptions() && State.m_AxiomRevision == Voting.OptionsRevision() && pSelected->m_VoteOption >= 0));
 	Label(Bottom, pSelected != nullptr ? pSelected->m_Name.c_str() : Localize("Select a map"), 12.0f, TEXTALIGN_ML, true);
 	static CButtonContainer s_Call;
 	if((ui_widget::PrimaryButton(ui_widget::ControlContext(Ui()), &s_Call, Localize("Call vote"), CallButton, !CanCall) || Activated) && CanCall)

@@ -246,7 +246,7 @@ bool CQmMobileSpectator::ScoreboardOnlyControls() const
 
 bool CQmMobileSpectator::FreeViewActive() const
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 		return GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::FREE;
 	if(GameClient()->m_MultiViewActivated)
 		return false;
@@ -561,7 +561,7 @@ bool CQmMobileSpectator::OnTouchState(std::vector<IInput::CTouchFingerState> &vF
 		{
 			if((Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_DemoSpecId != SPEC_FREEVIEW) ||
 				GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW ||
-				(GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_RankGhost.ViewCameraMode() != CRankGhost::EViewCameraMode::FREE))
+				(GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_RankGhost.ViewCameraMode() != CRankGhost::EViewCameraMode::FREE))
 				GameClient()->m_Spectator.Spectate(SPEC_FREEVIEW);
 		}
 		// 等旁观目标切换完成，再按自由视角的世界坐标移动，避免跟随期间改变瞄准偏移。

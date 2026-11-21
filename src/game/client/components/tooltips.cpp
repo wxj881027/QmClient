@@ -106,6 +106,13 @@ void CTooltips::DoToolTipForRect(const void *pId, const CUIRect *pNearRect, cons
 	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : ui_token::tooltip::FONT_SIZE, Small, true);
 }
 
+void CTooltips::DoToolTipForRectForced(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint)
+{
+	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : ui_token::tooltip::FONT_SIZE,
+		Small, true, true, false, nullptr, EQmTooltipPlacement::AUTO, true);
+}
+
 void CTooltips::DoToolTipFromSide(const void *pId, const CUIRect *pNearRect, const char *pText, EQmTooltipPlacement Placement, float WidthHint)
 {
 	// 侧向布局只用于普通气泡；设置页的紧凑提示保持即时小字，不引入方向差异。
@@ -200,7 +207,7 @@ void CTooltips::DoSettingsToolTipForConfig(const void *pId, const CUIRect *pRect
 	DoToolTip(pId, pRect, pKey != nullptr ? Localize(pKey) : nullptr, -1.0f, FontSize, true, true, true, true, pAnchor);
 }
 
-void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, const float FontSize, const bool SmallInstant, const bool HoverByRect, const bool Immediate, const bool Fallback, const CUIRect *pAnchor, const EQmTooltipPlacement Placement)
+void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, const float FontSize, const bool SmallInstant, const bool HoverByRect, const bool Immediate, const bool Fallback, const CUIRect *pAnchor, const EQmTooltipPlacement Placement, const bool ForceHover)
 {
 	if(Ui()->RenderOnly())
 		return;
@@ -257,11 +264,12 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 	Tooltip.m_Immediate = Immediate;
 	Tooltip.m_SmallInstant = SmallInstant;
 	Tooltip.m_Fallback = Fallback;
+	Tooltip.m_ForcedHover = ForceHover;
 	Tooltip.m_Placement = Placement;
 	Tooltip.m_RegisteredFrame = m_Frame;
 	Tooltip.m_RegisteredContext = GameClient()->m_Menus.TooltipContext();
 	Tooltip.m_FromPopup = Ui()->RenderingPopupMenus();
-	Tooltip.m_OnScreen = QmTooltipHovered(Tooltip, *Ui());
+	Tooltip.m_OnScreen = ForceHover || QmTooltipHovered(Tooltip, *Ui());
 
 	if(Tooltip.m_OnScreen)
 		SetActiveTooltip(Tooltip);

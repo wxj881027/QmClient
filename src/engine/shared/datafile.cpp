@@ -184,6 +184,11 @@ public:
 		return m_pDataSizes[Index];
 	}
 
+	bool IsDataFailed(int Index) const
+	{
+		return Index >= 0 && Index < m_Header.m_NumRawData && m_pDataSizes[Index] < 0;
+	}
+
 	void *GetData(int Index, bool Swap) const
 	{
 		// Invalid data indices may appear in map items
@@ -798,6 +803,16 @@ int CDataFileReader::GetDataSize(int Index) const
 	dbg_assert(m_pDataFile != nullptr, "File not open");
 
 	return m_pDataFile->GetDataSize(Index);
+}
+
+bool CDataFileReader::IsDataFailed(int Index) const
+{
+	return m_pDataFile != nullptr && m_pDataFile->IsDataFailed(Index);
+}
+
+int CDataFileReader::GetStoredDataSize(int Index) const
+{
+	return m_pDataFile && Index >= 0 && Index < m_pDataFile->m_Header.m_NumRawData ? m_pDataFile->GetFileDataSize(Index) : 0;
 }
 
 bool CDataFileReader::ReadCompressedData(int Index, std::vector<unsigned char> &vData) const

@@ -69,8 +69,8 @@ namespace qm_tclient_map_data
 		const char *m_pKey;
 	};
 
-	inline constexpr SFile NOTES{"qmclient/map_notes.json", "notes"};
-	inline constexpr SFile CATEGORIES{"qmclient/map_categories.json", "maps"};
+	inline constexpr SFile NOTES{qm_storage::MAP_NOTES_FILE, "notes"};
+	inline constexpr SFile CATEGORIES{qm_storage::MAP_CATEGORIES_FILE, "maps"};
 
 	inline bool FormatFavoriteCommand(const char *pMapName, char (&aLine)[IConsole::CMDLINE_LENGTH])
 	{
@@ -94,7 +94,8 @@ namespace qm_tclient_map_data
 		return true;
 	}
 
-	inline bool Save(IStorage &Storage, const SFile &File, const std::unordered_map<std::string, std::string> &Entries, bool &Dirty) noexcept try
+	inline bool Save(IStorage &Storage, const SFile &File, const std::unordered_map<std::string, std::string> &Entries, bool &Dirty) noexcept
+	try
 	{
 		char aCandidate[IO_MAX_PATH_LENGTH];
 		IStorage::FormatTmpPath(aCandidate, sizeof(aCandidate), File.m_pPath);
@@ -102,7 +103,7 @@ namespace qm_tclient_map_data
 		Storage.GetCompletePath(IStorage::TYPE_SAVE, "", aRoot, sizeof(aRoot));
 		if(str_length(aRoot) + str_length(aCandidate) >= IO_MAX_PATH_LENGTH)
 			return false;
-		Storage.CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		qm_storage::EnsureFolder(&Storage, qm_storage::STATE_MAPS_DIR);
 		qm_map_history_storage::STemporaryFile Candidate{Storage, aCandidate};
 		std::unique_ptr<void, decltype(&io_close)> pFile(Storage.OpenFile(aCandidate, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE), io_close);
 		if(!pFile)
@@ -243,7 +244,13 @@ class CTClient : public CComponent
 	void SoloSplitLeave();
 	void SoloSplitStart(int Action);
 	void SoloSplitUpdate();
+	void ResetSoloSplitLockRetries();
+	void ScheduleSoloSplitLockRetry(int Connection, int Team);
+	void UpdateSoloSplitLockRetries();
 	CQmSoloSplitState m_SoloSplit;
+	CQmSoloSplitLockHints m_SoloSplitLockHints;
+	std::array<int64_t, NUM_DUMMIES> m_aSoloSplitLockRetryAt = {};
+	std::array<int, NUM_DUMMIES> m_aSoloSplitLockRetryAttempts = {};
 
 	int m_EmoteCycle = 0;
 	static void ConEmoteCycle(IConsole::IResult *pResult, void *pUserData);
@@ -556,7 +563,13 @@ public:
 		m_VoteCallerId = -1;
 	}
 	void SetVoteCallerId(int ClientId) { m_VoteCallerId = ClientId; }
-	void CancelSoloSplit() { m_SoloSplit.Reset(); }
+	void CancelSoloSplit()
+	{
+		m_SoloSplit.Reset();
+		ResetSoloSplitLockRetries();
+	}
+	bool IsSoloSplitPending() const { return m_SoloSplit.Pending(); }
+	bool IsSoloSplitTeamLocked(int Team) const { return m_SoloSplitLockHints.IsTeamLocked(Team); }
 	void OnShutdown() override;
 	void OnWindowResize() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
@@ -612,7 +625,6 @@ public:
 		return m_UpdateSurvey.Running() || m_UpdateDownloadTasks.Any();
 	}
 
-	void RenderMiniVoteHud(bool HudEditorPreview = false);
 	void RenderCenterLines();
 	void RenderCtfFlag(vec2 Pos, float Alpha);
 

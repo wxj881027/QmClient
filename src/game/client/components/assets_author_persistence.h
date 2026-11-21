@@ -5,9 +5,11 @@
 #include "assets_resource_registry.h"
 #include "background.h"
 
+#include <engine/shared/qm_storage_layout.h>
+
 #include <string>
 
-inline constexpr const char *LOCAL_ASSET_AUTHOR_CACHE_FILENAME = "qmclient/workshop/local_asset_authors.json";
+inline constexpr const char *LOCAL_ASSET_AUTHOR_CACHE_FILENAME = qm_storage::WORKSHOP_AUTHOR_CACHE_FILE;
 
 inline bool SupportsPersistedLocalAssetAuthorCategory(const char *pCategoryId)
 {

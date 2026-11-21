@@ -14,6 +14,7 @@
 
 #include <game/client/components/chat.h>
 #include <game/client/components/console.h>
+#include <game/client/components/qmclient/playback_shortcuts.h>
 #include <game/client/gameclient.h>
 
 #include <string>
@@ -169,6 +170,13 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 	if((Event.m_Flags & (IInput::FLAG_PRESS | IInput::FLAG_RELEASE)) == 0)
 		return false;
 
+	// Rank 1 查看模式仍连着服务器，绑定层照常执行。回放快捷键必须在这里让路，
+	// 否则按 K 暂停会顺带触发默认的 kill 绑定、把玩家自己的 tee 杀掉。
+	// 只截按键按下，释放事件继续放行，避免 +jump 这类按住类绑定卡住。
+	if((Event.m_Flags & IInput::FLAG_PRESS) != 0 && QmPlaybackShortcutKey(Event.m_Key) &&
+		GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_Menus.PlaybackShortcutsActive())
+		return false;
+
 	const int KeyModifierMask = GetModifierMaskOfKey(Event.m_Key);
 	const int ModifierMask = GetModifierMask(Input()) & ~KeyModifierMask;
 
@@ -253,9 +261,11 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 
 			// Prevent binds from being deactivated while chat, console and menus are open, as these components will
 			// still allow key release events to be forwarded to this component, so the active binds can be cleared.
+			// 菜单收起期间输入已经交回游戏，释放事件必须正常执行；只有仍在
+			// 接收输入的浮层才延迟到它们关闭时统一 OnRelease。
 			if(GameClient()->m_Chat.IsActive() ||
-				GameClient()->m_GameConsole.IsActive() ||
-				GameClient()->m_Menus.IsActive())
+				(GameClient()->m_GameConsole.IsActive() && !GameClient()->m_GameConsole.IsClosing()) ||
+				(GameClient()->m_Menus.IsActive() && !GameClient()->m_Menus.IsClosing()))
 			{
 				return false;
 			}

@@ -1,5 +1,4 @@
 #include "QmCardCatalog.h"
-
 #include "QmKeywordReplyCardPersistence.h"
 
 #include <engine/graphics.h>
@@ -129,7 +128,8 @@ static bool IsAutoReplyRuleRowHalfFilled(const SAutoReplyRuleInputRow &Row)
 	return HasTrigger != HasReply;
 }
 
-static ESaveResult SaveAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows) try
+static ESaveResult SaveAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows)
+try
 {
 	return qm_keyword_reply_card::SaveRules(CollectCompleteAutoReplyRules(vRows), g_Config.m_QmKeywordReplyRules);
 }

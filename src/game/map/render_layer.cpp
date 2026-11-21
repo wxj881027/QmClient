@@ -25,6 +25,19 @@
 
 namespace
 {
+	template<typename T>
+	T &QmCheckedOptional(std::optional<T> &Opt)
+	{
+		dbg_assert(Opt.has_value(), "optional must contain a value");
+		return *Opt; // NOLINT(bugprone-unchecked-optional-access)
+	}
+
+	template<typename T>
+	const T &QmCheckedOptional(const std::optional<T> &Opt)
+	{
+		dbg_assert(Opt.has_value(), "optional must contain a value");
+		return *Opt; // NOLINT(bugprone-unchecked-optional-access)
+	}
 
 	/************************
 	 * Render Buffer Helper *
@@ -347,7 +360,7 @@ CRenderLayerTile::CRenderLayerTile(int GroupId, int LayerId, int Flags, CMapItem
 
 void CRenderLayerTile::RenderTileLayer(const ColorRGBA &Color, const CRenderLayerParams &Params, CTileLayerVisuals *pTileLayerVisuals)
 {
-	CTileLayerVisuals &Visuals = pTileLayerVisuals ? *pTileLayerVisuals : m_VisualTiles.value();
+	CTileLayerVisuals &Visuals = pTileLayerVisuals ? *pTileLayerVisuals : QmCheckedOptional(m_VisualTiles);
 	if(Visuals.m_BufferContainerIndex == -1)
 		return; // no visuals were created
 
@@ -370,7 +383,7 @@ void CRenderLayerTile::RenderTileLayer(const ColorRGBA &Color, const CRenderLaye
 		float VisibleY1 = ScreenY1;
 		if(m_LayerClip.has_value())
 		{
-			const CClipRegion &Clip = m_LayerClip.value();
+			const CClipRegion &Clip = QmCheckedOptional(m_LayerClip);
 			VisibleX0 = std::max(VisibleX0, Clip.m_X);
 			VisibleY0 = std::max(VisibleY0, Clip.m_Y);
 			VisibleX1 = std::min(VisibleX1, Clip.m_X + Clip.m_Width);
@@ -518,7 +531,7 @@ void CRenderLayerTile::RenderTileBorder(const ColorRGBA &Color, int BorderX0, in
 
 void CRenderLayerTile::RenderKillTileBorder(const ColorRGBA &Color)
 {
-	CTileLayerVisuals &Visuals = m_VisualTiles.value();
+	CTileLayerVisuals &Visuals = QmCheckedOptional(m_VisualTiles);
 	if(Visuals.m_BufferContainerIndex == -1)
 		return; // no visuals were created
 
@@ -606,7 +619,7 @@ void CRenderLayerTile::Render(const CRenderLayerParams &Params)
 
 	if(Params.m_DebugRenderTileClips && m_LayerClip.has_value())
 	{
-		const CClipRegion &Clip = m_LayerClip.value();
+		const CClipRegion &Clip = QmCheckedOptional(m_LayerClip);
 		char aDebugText[32];
 		str_format(aDebugText, sizeof(aDebugText), "Group %d LayerId %d", m_GroupId, m_LayerId);
 		RenderMap()->RenderDebugClip(Clip.m_X, Clip.m_Y, Clip.m_Width, Clip.m_Height, ColorRGBA(1.0f, 0.5f, 0.0f, 1.0f), Params.m_Zoom, aDebugText);
@@ -686,7 +699,7 @@ CMapLoadTask CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &
 	CTileLayerVisuals v;
 	v.OnInit(this);
 	VisualsOptional = v;
-	CTileLayerVisuals &Visuals = VisualsOptional.value();
+	CTileLayerVisuals &Visuals = QmCheckedOptional(VisualsOptional);
 
 	if(!Visuals.Init(m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height))
 		co_return;
@@ -812,15 +825,15 @@ CMapLoadTask CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &
 		if(DrawLeft > DrawRight || DrawTop > DrawBottom)
 		{
 			// we are drawing nothing, layer is empty
-			m_LayerClip->m_Height = 0.0f;
-			m_LayerClip->m_Width = 0.0f;
+			QmCheckedOptional(m_LayerClip).m_Height = 0.0f;
+			QmCheckedOptional(m_LayerClip).m_Width = 0.0f;
 		}
 		else
 		{
-			m_LayerClip->m_X = DrawLeft * 32.0f;
-			m_LayerClip->m_Y = DrawTop * 32.0f;
-			m_LayerClip->m_Width = (DrawRight - DrawLeft + 1) * 32.0f;
-			m_LayerClip->m_Height = (DrawBottom - DrawTop + 1) * 32.0f;
+			QmCheckedOptional(m_LayerClip).m_X = DrawLeft * 32.0f;
+			QmCheckedOptional(m_LayerClip).m_Y = DrawTop * 32.0f;
+			QmCheckedOptional(m_LayerClip).m_Width = (DrawRight - DrawLeft + 1) * 32.0f;
+			QmCheckedOptional(m_LayerClip).m_Height = (DrawBottom - DrawTop + 1) * 32.0f;
 		}
 	}
 
@@ -835,7 +848,7 @@ CMapLoadTask CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &
 	// CTileVisual 的第 28 位存储绘制标记，索引的字节偏移也必须能用 offset_ptr 表示。
 	constexpr uint64_t MaxTileOffset = std::min<uint64_t>(0x0fffffff, std::numeric_limits<offset_ptr>::max() / (6 * sizeof(uint32_t)));
 	const uint64_t TotalTiles = static_cast<uint64_t>(vTmpTiles.size()) + vTmpBorderCorners.size() +
-		vTmpBorderTopTiles.size() + vTmpBorderBottomTiles.size() + vTmpBorderLeftTiles.size() + vTmpBorderRightTiles.size();
+				    vTmpBorderTopTiles.size() + vTmpBorderBottomTiles.size() + vTmpBorderLeftTiles.size() + vTmpBorderRightTiles.size();
 	if(TotalTiles > MaxTileOffset)
 	{
 		log_error("map/render", "Tile layer exceeds the buffered index range.");
@@ -1097,7 +1110,7 @@ CRenderLayerQuads::CRenderLayerQuads(int GroupId, int LayerId, int Flags, CMapIt
 
 void CRenderLayerQuads::RenderQuadLayer(float Alpha, const CRenderLayerParams &Params)
 {
-	CQuadLayerVisuals &Visuals = m_VisualQuad.value();
+	CQuadLayerVisuals &Visuals = QmCheckedOptional(m_VisualQuad);
 	if(Visuals.m_BufferContainerIndex == -1)
 		return; // no visuals were created
 
@@ -1221,7 +1234,7 @@ CMapLoadTask CRenderLayerQuads::Init()
 	CQuadLayerVisuals v;
 	v.OnInit(this);
 	m_VisualQuad = v;
-	CQuadLayerVisuals *pQLayerVisuals = &(m_VisualQuad.value());
+	CQuadLayerVisuals *pQLayerVisuals = &QmCheckedOptional(m_VisualQuad);
 
 	const bool Textured = GetTexture().IsValid();
 
@@ -1528,12 +1541,13 @@ CMapLoadTask CRenderLayerQuads::CalculateClipping(CQuadCluster &QuadCluster)
 	}
 	else
 	{
-		float ClipRight = std::max(ClipRegion->m_X + ClipRegion->m_Width, m_LayerClip->m_X + m_LayerClip->m_Width);
-		float ClipBottom = std::max(ClipRegion->m_Y + ClipRegion->m_Height, m_LayerClip->m_Y + m_LayerClip->m_Height);
-		m_LayerClip->m_X = std::min(ClipRegion->m_X, m_LayerClip->m_X);
-		m_LayerClip->m_Y = std::min(ClipRegion->m_Y, m_LayerClip->m_Y);
-		m_LayerClip->m_Width = ClipRight - m_LayerClip->m_X;
-		m_LayerClip->m_Height = ClipBottom - m_LayerClip->m_Y;
+		auto &LayerClip = QmCheckedOptional(m_LayerClip);
+		float ClipRight = std::max(ClipRegion->m_X + ClipRegion->m_Width, LayerClip.m_X + LayerClip.m_Width);
+		float ClipBottom = std::max(ClipRegion->m_Y + ClipRegion->m_Height, LayerClip.m_Y + LayerClip.m_Height);
+		LayerClip.m_X = std::min(ClipRegion->m_X, LayerClip.m_X);
+		LayerClip.m_Y = std::min(ClipRegion->m_Y, LayerClip.m_Y);
+		LayerClip.m_Width = ClipRight - LayerClip.m_X;
+		LayerClip.m_Height = ClipBottom - LayerClip.m_Y;
 	}
 }
 
@@ -1558,7 +1572,8 @@ void CRenderLayerQuads::Render(const CRenderLayerParams &Params)
 	{
 		char aDebugText[64];
 		str_format(aDebugText, sizeof(aDebugText), "Group %d, quad layer %d", m_GroupId, m_LayerId);
-		RenderMap()->RenderDebugClip(m_LayerClip->m_X, m_LayerClip->m_Y, m_LayerClip->m_Width, m_LayerClip->m_Height, ColorRGBA(1.0f, 0.0f, 0.5f, 1.0f), Params.m_Zoom, aDebugText);
+		const auto &LayerClip = QmCheckedOptional(m_LayerClip);
+		RenderMap()->RenderDebugClip(LayerClip.m_X, LayerClip.m_Y, LayerClip.m_Width, LayerClip.m_Height, ColorRGBA(1.0f, 0.0f, 0.5f, 1.0f), Params.m_Zoom, aDebugText);
 	}
 }
 
@@ -1783,7 +1798,7 @@ void CRenderLayerEntityGame::RenderTileLayerWithTileBuffer(const ColorRGBA &Colo
 	auto RenderFiltered = [&](std::optional<CTileLayerVisuals> &Visuals, float Alpha) {
 		if(!Visuals.has_value() || Alpha <= 0.0f)
 			return;
-		RenderTileLayer(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Params, &Visuals.value());
+		RenderTileLayer(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Params, &QmCheckedOptional(Visuals));
 	};
 
 	RenderFiltered(m_VisualTilesDeath, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeathAlpha));
@@ -1915,7 +1930,7 @@ void CRenderLayerEntityFront::RenderTileLayerWithTileBuffer(const ColorRGBA &Col
 	auto RenderFiltered = [&](std::optional<CTileLayerVisuals> &Visuals, float Alpha) {
 		if(!Visuals.has_value() || Alpha <= 0.0f)
 			return;
-		RenderTileLayer(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Params, &Visuals.value());
+		RenderTileLayer(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Params, &QmCheckedOptional(Visuals));
 	};
 
 	RenderFiltered(m_VisualTilesDeath, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeathAlpha));
@@ -2036,13 +2051,13 @@ void CRenderLayerEntityTele::RenderTileLayerWithTileBuffer(const ColorRGBA &Colo
 	if(TeleAlpha > 0.0f)
 		RenderTileLayer(TeleColor, Params);
 	if(CheckpointAlpha > 0.0f && m_VisualCheckpointTiles.has_value())
-		RenderTileLayer(CheckpointColor, Params, &m_VisualCheckpointTiles.value());
+		RenderTileLayer(CheckpointColor, Params, &QmCheckedOptional(m_VisualCheckpointTiles));
 	if(Params.m_RenderText && BindTileNumberTexture(*Graphics(), m_pMapImages->GetOverlayCenter()))
 	{
 		if(TeleAlpha > 0.0f && m_VisualTeleNumbers.has_value())
-			RenderTileLayer(TeleColor, Params, &m_VisualTeleNumbers.value());
+			RenderTileLayer(TeleColor, Params, &QmCheckedOptional(m_VisualTeleNumbers));
 		if(CheckpointAlpha > 0.0f && m_VisualCheckpointNumbers.has_value())
-			RenderTileLayer(CheckpointColor, Params, &m_VisualCheckpointNumbers.value());
+			RenderTileLayer(CheckpointColor, Params, &QmCheckedOptional(m_VisualCheckpointNumbers));
 	}
 }
 
@@ -2152,9 +2167,9 @@ void CRenderLayerEntitySpeedup::RenderTileLayerWithTileBuffer(const ColorRGBA &C
 	if(Params.m_RenderText)
 	{
 		if(BindTileNumberTexture(*Graphics(), m_pMapImages->GetOverlayBottom()))
-			RenderTileLayer(Color, Params, &m_VisualForce.value());
+			RenderTileLayer(Color, Params, &QmCheckedOptional(m_VisualForce));
 		if(BindTileNumberTexture(*Graphics(), m_pMapImages->GetOverlayTop()))
-			RenderTileLayer(Color, Params, &m_VisualMaxSpeed.value());
+			RenderTileLayer(Color, Params, &QmCheckedOptional(m_VisualMaxSpeed));
 	}
 }
 
@@ -2323,7 +2338,7 @@ void CRenderLayerEntitySwitch::RenderTileLayerWithTileBuffer(const ColorRGBA &Co
 	auto RenderFiltered = [&](std::optional<CTileLayerVisuals> &Visuals, float Alpha) {
 		if(!Visuals.has_value() || Alpha <= 0.0f)
 			return;
-		RenderTileLayer(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Params, &Visuals.value());
+		RenderTileLayer(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Params, &QmCheckedOptional(Visuals));
 	};
 
 	RenderFiltered(m_VisualTilesFreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayFreezeAlpha));
@@ -2334,9 +2349,9 @@ void CRenderLayerEntitySwitch::RenderTileLayerWithTileBuffer(const ColorRGBA &Co
 	if(SwitchAlpha > 0.0f && Params.m_RenderText && m_pMapImages && m_VisualSwitchNumberTop.has_value() && m_VisualSwitchNumberBottom.has_value())
 	{
 		if(BindTileNumberTexture(*Graphics(), m_pMapImages->GetOverlayTop()))
-			RenderTileLayer(SwitchColor, Params, &m_VisualSwitchNumberTop.value());
+			RenderTileLayer(SwitchColor, Params, &QmCheckedOptional(m_VisualSwitchNumberTop));
 		if(BindTileNumberTexture(*Graphics(), m_pMapImages->GetOverlayBottom()))
-			RenderTileLayer(SwitchColor, Params, &m_VisualSwitchNumberBottom.value());
+			RenderTileLayer(SwitchColor, Params, &QmCheckedOptional(m_VisualSwitchNumberBottom));
 	}
 }
 

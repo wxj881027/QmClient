@@ -93,7 +93,10 @@ TEST(MapHistoryText, InvalidUtf8OptionalDateKeepsTheRecordWithAnEmptyDate)
 TEST(MapHistoryText, ValidUnicodeEscapesAndQuotesKeepTheirCompleteValues)
 {
 	CMapHistory History;
-	ASSERT_TRUE(History.FromJson(R"({"entries":[{"map_name":"地图 \"甲\" \ud83d\ude00","map_id":"path:maps/地图.map","last_played_date":"2026-11-01"}]})"));
+	// 源码保持纯 ASCII：地图/甲 用 UTF-8 字节转义，JSON 的引号与代理对保持文本转义，
+	// 避免旧版 MSVC 在宏参数里的 raw string 上误判转义序列。
+	const char *pJson = "{\"entries\":[{\"map_name\":\"\xE5\x9C\xB0\xE5\x9B\xBE \\\"\xE7\x94\xB2\\\" \\ud83d\\ude00\",\"map_id\":\"path:maps/\xE5\x9C\xB0\xE5\x9B\xBE.map\",\"last_played_date\":\"2026-11-01\"}]}";
+	ASSERT_TRUE(History.FromJson(pJson));
 	const auto *pRecord = History.Find("path:maps/地图.map");
 	ASSERT_NE(pRecord, nullptr);
 	EXPECT_EQ(pRecord->m_MapName, "地图 \"甲\" 😀");

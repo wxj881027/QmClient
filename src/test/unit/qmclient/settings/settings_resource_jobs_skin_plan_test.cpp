@@ -73,16 +73,16 @@ TEST(SettingsResourceJobsSkinPlan, ViewportPriorityExpiresUnlessRepublished)
 {
 	CSettingsSkinLoadViewport Viewport;
 	Viewport.BeginFrame();
-	Viewport.Publish({"cat", "default"});
+	EXPECT_TRUE(Viewport.Publish({"cat", "default"}));
 	EXPECT_TRUE(Viewport.Contains("cat"));
 	Viewport.BeginFrame();
 	EXPECT_FALSE(Viewport.Contains("cat"));
-	Viewport.Publish({"cat", "default"});
+	EXPECT_FALSE(Viewport.Publish({"cat", "default"}));
 	EXPECT_TRUE(Viewport.Contains("cat"));
-	Viewport.Publish({"dog"});
+	EXPECT_TRUE(Viewport.Publish({"dog"}));
 	EXPECT_FALSE(Viewport.Contains("cat"));
 	EXPECT_TRUE(Viewport.Contains("dog"));
-	Viewport.Publish({});
+	EXPECT_TRUE(Viewport.Publish({}));
 	EXPECT_FALSE(Viewport.Contains("dog"));
 }
 
@@ -90,14 +90,56 @@ TEST(SettingsResourceJobsSkinPlan, MeasurementDoesNotReplaceRealViewport)
 {
 	CSettingsSkinLoadViewport Viewport;
 	Viewport.BeginFrame();
-	Viewport.Publish({"cat"});
-	Viewport.Publish({"dog"}, true);
+	EXPECT_TRUE(Viewport.Publish({"cat"}));
+	EXPECT_FALSE(Viewport.Publish({"dog"}, true));
 	EXPECT_TRUE(Viewport.Contains("cat"));
 	EXPECT_FALSE(Viewport.Contains("dog"));
 	Viewport.BeginFrame();
-	Viewport.Publish({"dog"}, true);
+	EXPECT_FALSE(Viewport.Publish({"dog"}, true));
 	EXPECT_FALSE(Viewport.Contains("cat"));
 	EXPECT_FALSE(Viewport.Contains("dog"));
+}
+
+TEST(SettingsResourceJobsSkinPlan, ViewportPublishReportsOnlyRealChanges)
+{
+	CSettingsSkinLoadViewport Viewport;
+	Viewport.BeginFrame();
+	EXPECT_TRUE(Viewport.Publish({"cat"}));
+	EXPECT_FALSE(Viewport.Publish({"cat"}));
+	EXPECT_TRUE(Viewport.Publish({"cat", "dog"}));
+	EXPECT_FALSE(Viewport.Publish({"cat", "dog"}));
+	EXPECT_EQ(Viewport.PublishedNames(), (std::vector<std::string>{"cat", "dog"}));
+}
+
+TEST(SettingsResourceJobsSkinPlan, StaleViewportRequestsReleaseOnlyTransientNonActiveLoads)
+{
+	constexpr bool PendingOrLoading = true;
+	EXPECT_TRUE(SettingsSkinShouldReleaseViewportRequest(false, false, false, ESettingsResourcePriority::VISIBLE, PendingOrLoading));
+	EXPECT_FALSE(SettingsSkinShouldReleaseViewportRequest(true, false, false, ESettingsResourcePriority::VISIBLE, PendingOrLoading));
+	EXPECT_FALSE(SettingsSkinShouldReleaseViewportRequest(false, true, false, ESettingsResourcePriority::VISIBLE, PendingOrLoading));
+	EXPECT_FALSE(SettingsSkinShouldReleaseViewportRequest(false, false, true, ESettingsResourcePriority::VISIBLE, PendingOrLoading));
+	EXPECT_FALSE(SettingsSkinShouldReleaseViewportRequest(false, false, false, ESettingsResourcePriority::BACKGROUND, PendingOrLoading));
+	EXPECT_FALSE(SettingsSkinShouldReleaseViewportRequest(false, false, false, ESettingsResourcePriority::VISIBLE, false));
+}
+
+TEST(SettingsResourceJobsSkinPlan, DownloadSessionLimitAndWaitLoggingAreBounded)
+{
+	EXPECT_TRUE(SettingsSkinCanStartDownloadSession(0, 48));
+	EXPECT_TRUE(SettingsSkinCanStartDownloadSession(47, 48));
+	EXPECT_FALSE(SettingsSkinCanStartDownloadSession(48, 48));
+	EXPECT_TRUE(SettingsSkinCanStartDownloadSession(999, 0));
+
+	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(10, 0, 10));
+	EXPECT_FALSE(SettingsSkinWaitLogShouldEmit(19, 10, 10));
+	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(20, 10, 10));
+	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(11, 0, 10));
+}
+
+TEST(SettingsResourceJobsSkinPlan, LeavingSettingsUsesBoundedResidency)
+{
+	EXPECT_EQ(SettingsSkinInactiveResidencyLimit(512), (size_t)128);
+	EXPECT_EQ(SettingsSkinInactiveResidencyLimit(64), (size_t)64);
+	EXPECT_EQ(SettingsSkinInactiveResidencyLimit(0), (size_t)0);
 }
 
 TEST(SettingsResourceJobsSkinPlan, ActualViewportExcludesFullyClippedAndMeasurementRows)
@@ -218,6 +260,51 @@ TEST(SettingsResourceJobsSkinPlan, SourceAdmissionUsesVisibleReserveForVisibleRe
 	EXPECT_FALSE(Decision.m_PromoteAllowed);
 	EXPECT_EQ(Decision.m_BlockReason, ESettingsSkinSourceAdmissionBlockReason::VISIBLE_RESERVE);
 	EXPECT_FALSE(Decision.m_CountFuseApplies);
+}
+
+TEST(SettingsResourceJobsSkinPlan, VisibleRequestsCanUseBoundedOverflowAboveBackgroundWindow)
+{
+	const auto Decision = SettingsSkinSourceAdmissionDecision({
+		true,
+		ESettingsResourcePriority::VISIBLE,
+		false,
+		249,
+		64,
+		128,
+		35,
+		512,
+	});
+
+	EXPECT_TRUE(Decision.m_PromoteAllowed);
+	EXPECT_EQ(Decision.m_PromotePriority, ESettingsResourcePriority::VISIBLE);
+	EXPECT_EQ(Decision.m_BlockReason, ESettingsSkinSourceAdmissionBlockReason::NONE);
+	EXPECT_FALSE(Decision.m_CountFuseApplies);
+}
+
+TEST(SettingsResourceJobsSkinPlan, VisibleRequestsRemainBoundedByCountFuse)
+{
+	const auto Decision = SettingsSkinSourceAdmissionDecision({
+		true,
+		ESettingsResourcePriority::VISIBLE,
+		false,
+		512,
+		64,
+		128,
+		35,
+		512,
+	});
+
+	EXPECT_FALSE(Decision.m_PromoteAllowed);
+	EXPECT_EQ(Decision.m_BlockReason, ESettingsSkinSourceAdmissionBlockReason::VISIBLE_RESERVE);
+	EXPECT_FALSE(Decision.m_CountFuseApplies);
+}
+
+TEST(SettingsResourceJobsSkinPlan, FallbackSweepOnlyRunsWithoutExplicitQueues)
+{
+	EXPECT_TRUE(SettingsSkinFallbackSweepShouldRun(false, false));
+	EXPECT_FALSE(SettingsSkinFallbackSweepShouldRun(true, false));
+	EXPECT_FALSE(SettingsSkinFallbackSweepShouldRun(false, true));
+	EXPECT_FALSE(SettingsSkinFallbackSweepShouldRun(true, true));
 }
 
 TEST(SettingsResourceJobsSkinPlan, AllVisibleReadyLoggingRequiresVisibleRows)

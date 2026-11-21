@@ -20,16 +20,22 @@
 #include <engine/console.h>
 #include <engine/http.h>
 #include <engine/shared/demo.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/shadow_gun_replay.h>
+#include <game/gamecore.h>
 
+#include <deque>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 class CSnapshot;
 class CTeeRenderInfo;
+class CGameWorld;
 
 namespace qmclient::rank_ghost
 {
@@ -128,8 +134,9 @@ public:
 	void RefreshManifest();
 	// 收集指定地图与名次的条目：同一 demo 的多条成员记录合并为一条，solo 在前
 	std::vector<qmclient::rank_demo::SEntry> CollectRankEntries(const char *pMap, int Rank) const;
-	// 全清单搜索：按地图名子串（大小写不敏感）匹配指定名次的条目，Limit 限制结果数
-	std::vector<qmclient::rank_demo::SEntry> CollectSearchEntries(const char *pQuery, int Rank, int Limit) const;
+	// 全清单搜索：按地图名子串（大小写不敏感）匹配指定名次的条目，按 demo 去重。
+	// 这里不截断结果数：排序必须作用于全部匹配项，展示条数由界面排序后截取。
+	std::vector<qmclient::rank_demo::SEntry> CollectSearchEntries(const char *pQuery, int Rank) const;
 	// 创建 QmClient rank 回放缓存目录（层级创建，可安全重复调用）
 	static void EnsureFolders(IStorage *pStorage);
 	// 按 manifest 的 demo 文件名请求：下载并转换为影子（不退出服务器）
@@ -138,16 +145,41 @@ public:
 	void RequestGhostOff();
 	// 按 manifest 的 demo 文件名仅下载回放到缓存（供回放播放/分享）
 	void RequestDemoDownload(const char *pDemoName);
+	bool IsDemoDownloadQueued(const char *pDemoName) const;
 	// 影子/下载任务是否进行中
 	bool IsBusy() const;
 	// 当前任务的进度描述（下载/转换百分比）；空闲时返回 false
 	bool DescribeTask(char *pBuf, size_t BufSize) const;
 
+	// 条目级任务进度：列表行据此显示下载/转换进度条。
+	// 返回 false 表示当前任务不属于该条目；Phase 为 NONE 时 Percent 无意义。
+	enum class EEntryTaskPhase
+	{
+		NONE,
+		DOWNLOAD,
+		CONVERT,
+	};
+	bool EntryTaskProgress(const qmclient::rank_demo::SEntry &Entry, EEntryTaskPhase &Phase, int &Percent) const;
+
 	// ===== 查看模式：影子按独立时间线播放（游戏内 demo 播放器，不与跑图同步） =====
 	// 请求加载该 demo 的影子并直接进入查看模式；已加载时直接切换
 	void RequestGhostViewForDemo(const char *pDemoName);
+	// 快速练习 /pg 保存的影子组：加载组内所有轨 + events.qmevt，进入同一套查看模式。
+	// 没有源 demo（练习是客户端分叉世界），播放效果与 Rank 1 完全一致。
+	bool ViewPracticeGroup(const char *pGroupDir);
 	bool IsViewModeActive() const;
 	IDemoPlayer *ViewPlayer() { return &m_ViewPlayer; }
+	// 查看模式下的开关状态画布：进入时复制一份服务器世界的开关，回放时间线只改
+	// 这一份。非查看模式返回 nullptr，调用方回落到可玩时间线的权威开关。
+	std::vector<SSwitchers> *ViewSwitchers() { return m_ViewSwitchersActive && IsViewModeActive() ? &m_vViewSwitchers : nullptr; }
+	// 影子机关世界：只读几何，不接受 tick、不写共享碰撞。
+	CGameWorld *ViewMechanismWorld() const;
+	// 回放当前开关状态所属的录制队伍；无记录时返回 -1。
+	int ViewSwitchTeam() const { return IsViewModeActive() ? m_ViewSwitchTeam : -1; }
+	// 影子里最近的可被机关拖拽命中的 Tee；用于补全只读世界的拖拉光束。
+	bool ViewDraggerTarget(vec2 Pos, vec2 *pTarget, bool IgnoreWalls) const;
+	// 影子机关炮的只读等离子球，仅供渲染。
+	const std::vector<qm_shadow_gun::SPlasma> &ViewPlasmas() const { return m_vViewPlasmas; }
 	uint64_t ViewGeneration() const { return m_ViewGeneration; }
 	bool ExportViewCut(const char *pDestination, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pFilter, void *pUser);
 	bool ViewMemberRenderInfo(int Index, CTeeRenderInfo *pInfo) const;
@@ -190,6 +222,8 @@ public:
 	int ViewMemberCount() const { return IsViewModeActive() ? (int)m_vLoadedSlots.size() : 0; }
 	// 成员名字（ghost 文件头的所有者）；Index 越界返回 false
 	bool ViewMemberName(int Index, char *pBuf, size_t BufSize) const;
+	// 成员录制时的队伍号；未知（旧缓存）返回 false
+	bool ViewMemberTeam(int Index, int *pTeam) const;
 	// 当前选中成员的插值位置（供镜头跟随）；false = 暂无可用焦点
 	bool ViewFocus(vec2 *pOut) const;
 	// 是否有影子处于加载激活状态（含查看模式）
@@ -200,8 +234,6 @@ public:
 	int LoadedGhostCountForEntry(const qmclient::rank_demo::SEntry &Entry) const;
 	// 条目缓存状态查询（路径出参返回可读缓存路径）
 	bool IsEntryDemoCached(const qmclient::rank_demo::SEntry &Entry, char *pDemoPath, size_t DemoPathSize) const;
-	// demo 浏览器下载按钮去重：查缓存目录里该图指定名次的最新 demo（false = 未缓存）
-	bool FindCachedRankDemo(const char *pMap, int Rank, char *pDemoPath, size_t DemoPathSize) const;
 	bool IsEntryGhostCached(const qmclient::rank_demo::SEntry &Entry, char *pGhostPath, size_t GhostPathSize) const;
 	// 该条目的影子是否已加载激活
 	bool IsEntryGhostActive(const qmclient::rank_demo::SEntry &Entry) const;
@@ -211,9 +243,9 @@ public:
 	static void BuildEntryCachePaths(const qmclient::rank_demo::SEntry &Entry, char *pDemoPath, size_t DemoPathSize, char *pGhostPath, size_t GhostPathSize);
 
 	// QmClient 专属目录：rank 回放相关数据与玩家自有 ghosts/demos 完全分离
-	static constexpr const char *RANK1_ROOT = "qmclient/rank1";
-	static constexpr const char *GHOST_SUBDIR = "ghosts"; // qmclient/rank1/ghosts
-	static constexpr const char *DEMO_CACHE_DIR = "qmclient/rank1/demos";
+	static constexpr const char *RANK1_ROOT = qm_storage::CONTENT_RANK1_DIR;
+	static constexpr const char *GHOST_SUBDIR = "ghosts";
+	static constexpr const char *DEMO_CACHE_DIR = qm_storage::CONTENT_RANK1_DEMOS_DIR;
 	// 旧版本目录（一次性迁移/清理）
 	static constexpr const char *LEGACY_GHOST_DIR = "ghosts/rank_ghost";
 	static constexpr const char *LEGACY_DEMO_DIR = "demos/rank_ghost";
@@ -258,6 +290,9 @@ private:
 	bool m_StartPending = false;
 	bool m_UnloadPending = false;
 	std::string m_PendingNotify;
+	// demo 下载与影子转换共用同一套网络/解析状态机，因此额外下载按 FIFO 排队，
+	// 当前任务结束后自动启动下一条；影子加载与查看流程不进入这条队列。
+	std::deque<std::string> m_vDemoDownloadQueue;
 
 	// 索引
 	std::vector<SEntry> m_vEntries;
@@ -281,6 +316,10 @@ private:
 	// 已加载的 ghost 槽位与对应存储路径（多轨回放为多条）
 	std::vector<int> m_vLoadedSlots;
 	std::vector<std::string> m_vLoadedGhostPaths;
+	// 与 m_vLoadedSlots 对齐的队伍号；-1 = 旧缓存没有 sidecar
+	std::vector<int> m_vLoadedGhostTeams;
+	// 当前组/单文件 sidecar 的 basename → 队伍号，RegisterLoadedGhost 时查表
+	std::map<std::string, int> m_GhostTeamsByFile;
 	// 组加载期间接受的前缀（目录内所有 .gho 都登记）
 	char m_aLoadingGroupPrefix[IO_MAX_PATH_LENGTH] = "";
 	// 影子已按哪一次跑图（LastRaceTick）对齐过；-1 表示尚未对齐
@@ -306,6 +345,17 @@ private:
 	const char *PlaybackFilename() const override { return m_aViewPlaybackFilename; }
 	IDemoPlayer *PlaybackMetadataReader() const override;
 	bool m_ViewMode = false;
+	// 回放的开关状态独立存放：服务器世界与练习分支世界都是可玩时间线的权威状态，
+	// 回放时间线只改自己的只读画布；主世界与练习机关、命中盒读取
+	// GameClient()->PlayableSwitchers()，两边不能共用同一个 vector。
+	std::vector<SSwitchers> m_vViewSwitchers;
+	bool m_ViewSwitchersActive = false;
+	// 影子机关世界与回放开关共用同一条只读时间线。
+	std::unique_ptr<CGameWorld> m_pViewMechanismWorld;
+	int m_ViewSwitchTeam = -1;
+	std::vector<qm_shadow_gun::SGun> m_vViewGuns;
+	std::vector<qm_shadow_gun::SPlasma> m_vViewPlasmas;
+	int m_ViewGunTick = -1;
 	// 旁观面板选中的跟随成员（多轨顺序索引，0 = 主选手）
 	int m_ViewSelected = 0;
 	COnlineReplayMembers m_ViewMembers;
@@ -351,17 +401,30 @@ private:
 
 	void StartLookup(const char *pMap, int Rank);
 	void StartPendingLookup(const char *pDemoName, EPendingMode Mode);
+	void StartNextQueuedDemoDownload();
 	void LookupInManifest();
+
+	// 下载/转换阶段与百分比只在这里计算一次，状态栏文案与列表行进度条共用，
+	// 避免两套分支对“任务是否已真正开始”给出不同答案。
+	struct STaskProgress
+	{
+		EStage m_Stage = EStage::IDLE;
+		int m_Percent = 0;
+	};
+	STaskProgress TaskProgress() const;
 
 	void StartManifestFetch();
 	void StartDemoFetch();
+	// 仅下载请求：确保选中场次的 demo 落到精确缓存路径，不经过影子缓存/解析
+	void EnsureDemoOnlyReady();
+	// demo 下载完成后的公共收尾：校验并按请求模式收尾（仅下载 → 提示；影子 → 解析）
 	void FinishDemoFetch(const char *pCandidate);
 	void StartParse();
 	void FinishParse();
 
 	// ===== 查看模式时间线：录制 / 缓存 / 回放 =====
 	// 解析时从快照收集交互事件与开关状态
-	void RecordViewTimeline(const CSnapshot *pSnapshot, int RelTick);
+	void RecordViewTimeline(const CSnapshot *pSnapshot, int RelTick, int SwitchTeam);
 	// 解析时从 demo 消息流收集终点/检查点成绩与全局音效
 	void RecordViewMessage(int RelTick, EViewMessageType Type, const int *pData, int NumInts);
 	// 最近一条不晚于 RelTick 的成绩类消息（终点/检查点）；无则返回 nullptr
@@ -393,6 +456,9 @@ private:
 	// 加载成功后的公共收尾：按需进入查看模式
 	void AfterGhostLoaded();
 	void EnterViewMode();
+	// 查看模式收尾的唯一出口：停独立时钟、结束 LocalWorld 查看会话、清回放开关画布。
+	// 换图、引擎清空槽位和显式退出都必须走这里，否则会留下残余会话状态。
+	void EndViewSessionState();
 
 	// 加载后把 Ghost 页列表刷新一遍，并关联我们占用的槽位
 	void RefreshGhostList();
@@ -400,8 +466,12 @@ private:
 	void AlignToCurrentRun();
 	void NotifyLoaded(const char *pOwner, const char *pTimeText);
 
+	// 失败提示：下载/影子两套文案由这里按当前模式选择，调用点只提供文字
+	void Fail(const char *pDownloadMessage, const char *pGhostMessage);
 	void Fail(const char *pMessage);
 	void AbortTask();
+	// 请求到达终态（成功/失败/等待地图）后清空目标，避免清单刷新时重放上次请求
+	void ClearPendingRequest();
 	void Echo(const char *pMessage) const;
 
 	// CDemoPlayer::IListener

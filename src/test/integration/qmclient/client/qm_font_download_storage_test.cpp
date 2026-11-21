@@ -43,7 +43,7 @@ namespace
 	};
 }
 
-TEST_F(CQmFontDownloadStorage, FreshSaveRootCreatesParentsAndUsesDownloadedFonts)
+TEST_F(CQmFontDownloadStorage, FreshSaveRootCreatesParentsAndUsesFontsStore)
 {
 	EXPECT_FALSE(m_pStorage->FolderExists("fonts", IStorage::TYPE_SAVE));
 	ASSERT_TRUE(qm_font_download::EnsureDirectory(*m_pStorage));
@@ -53,7 +53,7 @@ TEST_F(CQmFontDownloadStorage, FreshSaveRootCreatesParentsAndUsesDownloadedFonts
 	EXPECT_STREQ(aTarget, "fonts/fonts_store/用户 Font.ttf");
 	WriteFile(aTarget, "font-bytes");
 	EXPECT_TRUE(qm_font_download::Installed(*m_pStorage, "用户 Font.ttf"));
-	EXPECT_FALSE(m_pStorage->FolderExists("qmclient/fonts", IStorage::TYPE_SAVE));
+	EXPECT_TRUE(m_pStorage->FolderExists("fonts/fonts_store", IStorage::TYPE_SAVE));
 	char aDirectory[IO_MAX_PATH_LENGTH];
 	ASSERT_TRUE(qm_font_download::CompleteDirectoryPath(*m_pStorage, aDirectory, sizeof(aDirectory)));
 	EXPECT_EQ(std::filesystem::path(aDirectory), std::filesystem::path(m_Info.StoragePath()) / "fonts" / "fonts_store");

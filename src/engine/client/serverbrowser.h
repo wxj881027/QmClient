@@ -311,6 +311,11 @@ public:
 	int LoadingProgression() const override;
 	uint64_t FriendListRevision() const override { return m_FriendListRevision; }
 	int GetCurrentClientLocation() const override { return DetermineOwnLocation(); }
+	// 可见行补测：同一 IP 的探测去重窗口（秒）。同一 IP 常挂多个端口实例，
+	// 窗口内只探测其中一个。
+	static constexpr int64_t PING_SAME_IP_DEDUP_SECONDS = 10;
+	void RequestServerPing(const NETADDR &Addr) override;
+	bool IsChineseServer(const CServerInfo &Info) const override;
 	void RequestResort() { m_NeedResort = true; }
 
 	int NumServers() const override { return m_vpServerlist.size(); }
@@ -406,6 +411,11 @@ private:
 	std::vector<CServerEntry *> m_vpServerlist;
 	std::vector<int> m_vSortedServerlist;
 	std::unordered_map<NETADDR, int> m_ByAddr;
+	// 可见行补测延迟：IP（去端口）→ 最近一次探测时间。同一 IP 的多个端口实例
+	// 共用一个测量结果，短窗口只用于避免同 IP 并发重复探测；探测失败由条目自身
+	// 的 m_PingProbeFailed 记录，不会让无响应的端口长期占住整个 IP 的探测机会。
+	// CleanUp 时清空，规模随列表代际有界，不会跨会话无限增长。
+	std::unordered_map<NETADDR, int64_t> m_PingRequestTimeByIp;
 	std::unordered_map<std::string, int> m_QmClientServerCounts;
 
 	std::vector<CCommunity> m_vCommunities;

@@ -50,6 +50,22 @@ void CPlasma::Read(const CLaserData *pData)
 	}
 }
 
+CLaserData CPlasma::RenderData()
+{
+	CLaserData Data = {};
+	Data.m_From = m_Pos;
+	Data.m_To = m_Pos;
+	Data.m_StartTick = m_EvalTick;
+	Data.m_ExtraInfo = true;
+	Data.m_Owner = m_ForClientId;
+	Data.m_Type = LASERTYPE_PLASMA;
+	Data.m_SwitchNumber = m_Number;
+	Data.m_Subtype = (m_Explosive ? 1 : 0) | (m_Freeze ? 2 : 0);
+	Data.m_Predict = false;
+	Data.m_TuneZone = GameWorld()->m_WorldConfig.m_UseTuneZones ? Collision()->IsTune(Collision()->GetMapIndex(m_Pos)) : 0;
+	return Data;
+}
+
 void CPlasma::Reset()
 {
 	m_MarkedForDestroy = true;

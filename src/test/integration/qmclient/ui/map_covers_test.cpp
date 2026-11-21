@@ -170,8 +170,14 @@ TEST_F(MapCovers, OversizedDiskCacheWaitsForReplacementWithoutSubmittingCompose)
 {
 	char aPath[IO_MAX_PATH_LENGTH];
 	ASSERT_TRUE(QmMapCover::ThumbnailCacheFileName(COVER_URL, aPath, sizeof(aPath)));
-	ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
-	ASSERT_TRUE(m_pStorage->CreateFolder(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE));
+	// 缓存目录是多层路径，CreateFolder 只建一级；fs_makedir_rec_for 只补父目录，
+	// 所以借一个占位文件名的目录部分把缓存目录本身建出来。
+	char aCacheDir[IO_MAX_PATH_LENGTH];
+	char aProbe[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, QmMapCover::CACHE_FOLDER, aCacheDir, sizeof(aCacheDir));
+	str_format(aProbe, sizeof(aProbe), "%s/probe", aCacheDir);
+	ASSERT_FALSE(fs_makedir_rec_for(aProbe));
+	ASSERT_TRUE(m_pStorage->FolderExists(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE));
 	const std::vector<uint8_t> vOversized(512 * 1024 + 1, 0);
 	IOHANDLE File = m_pStorage->OpenFile(aPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	ASSERT_NE(File, nullptr);

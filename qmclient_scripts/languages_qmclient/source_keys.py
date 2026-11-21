@@ -369,6 +369,8 @@ def extract_qm_card_registry_records(content: str) -> list[SourceKeyRecord]:
         arg_src = content[open_brace + 1 : close_brace]
         args = _split_top_level_args(arg_src)
         offsets = _locate_arg_offsets(arg_src, args)
+        # SCardDefault 当前布局：stableId、tab、全宽、标题、搜索词、描述、[导航目标…]。
+        # 搜索词（4）与描述（5）都可省略，短行由循环内的下标检查跳过。
         for index in (CARD_REGISTRY_TITLE_FIELD, CARD_REGISTRY_DESCRIPTION_FIELD):
             if index >= len(args):
                 continue
@@ -513,29 +515,6 @@ def extract_known_indirect_records(path: Path, content: str) -> list[SourceKeyRe
                     _line_number(content, match.start()),
                 )
             )
-
-    if normalized.endswith("src/game/client/components/tclient/menus_tclient.cpp"):
-        for match in re.finditer(r"\bAddCard\s*\(", content):
-            if _is_inside_string_literal(content, match.start()):
-                continue
-            open_paren = content.find("(", match.start())
-            close_paren = _find_matching_paren(content, open_paren)
-            if close_paren == -1:
-                continue
-            args = _split_top_level_args(content[open_paren + 1 : close_paren])
-            if len(args) < 2:
-                continue
-            title = _decode_string_argument(args[1])
-            if title:
-                records.append(
-                    SourceKeyRecord(
-                        title,
-                        "indirect",
-                        path,
-                        "",
-                        _line_number(content, match.start()),
-                    )
-                )
 
     if normalized.endswith(
         "src/game/client/components/qmclient/monitoring/monitoring.cpp"
@@ -724,23 +703,6 @@ def extract_known_indirect_records(path: Path, content: str) -> list[SourceKeyRe
                         path,
                         "",
                         _line_number(content, open_paren + 1 + literal_match.start()),
-                    )
-                )
-
-    if normalized.endswith("src/game/client/components/tclient/menus_tclient.cpp"):
-        for pattern in (
-            rf"\bS\.m_pName\s*=\s*{string_literal}",
-            rf"\bRenderBoxedFullSection\(\s*{string_literal}\s*,",
-            rf"\bConfigureSplitCachedStaticLayer\([^;]*,\s*{string_literal}\s*,",
-        ):
-            for match in re.finditer(pattern, content, re.S):
-                records.append(
-                    SourceKeyRecord(
-                        decode_language_key(match.group(1)),
-                        "indirect",
-                        path,
-                        "",
-                        _line_number(content, match.start(1)),
                     )
                 )
 

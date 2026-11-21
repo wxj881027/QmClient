@@ -38,6 +38,7 @@
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
 #include <engine/shared/localization.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <generated/client_data.h>
@@ -75,7 +76,6 @@
 
 [[maybe_unused]] static constexpr const char *TCLIENT_INFO_URL = "http://42.194.185.210:8080/client/version";
 [[maybe_unused]] static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/QmClient/releases/latest/download/DDNet.exe";
-[[maybe_unused]] static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.json";
 [[maybe_unused]] static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 // 本地统计文件的条目上限：异常服务器可能用任意 gametype 制造新条目，
 // 限制文件与内存的增长；达到上限后只更新已有条目，不再新建。
@@ -114,18 +114,18 @@ static void LogQmClientDistributionFailureEvent(const char *pStage, const char *
 	log_warn("qmclient", "distribution %s: %s", pStage, pDetail ? pDetail : "");
 }
 
-static constexpr const char *QMCLIENT_DEVELOPER_TOKEN_FILE = "qmclient/developer_token.txt";
+static constexpr const char *QMCLIENT_DEVELOPER_TOKEN_FILE = qm_storage::DEVELOPER_TOKEN_FILE;
 static constexpr size_t QMCLIENT_CREDENTIAL_FILE_MAX_BYTES = 1024;
 static constexpr int QMCLIENT_DEVELOPER_SYNC_INTERVAL_SECONDS = 5;
 static constexpr const char *QMCLIENT_PLAYTIME_CLIENT_ID_FILE = qm_identity_file::CLIENT_ID_FILE;
 static constexpr const char *QMCLIENT_MACHINE_ID_FALLBACK_FILE = qm_identity_file::MACHINE_ID_FILE;
 // 广播 markdown 的磁盘缓存：界面立即生效，落盘只保留最新完整快照（交给作业完成）。
-static constexpr const char *QMCLIENT_MARKDOWN_BROADCAST_CACHE_FILE = "qmclient/markdown_broadcast.json";
+static constexpr const char *QMCLIENT_MARKDOWN_BROADCAST_CACHE_FILE = qm_storage::BROADCAST_CACHE_FILE;
 static constexpr int QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION = 1;
 static constexpr const char *QMCLIENT_NEWS_PUBLISH_URL = "https://qmclient.icu/api/v1/news/publish";
 static constexpr const char *QMCLIENT_SPONSORS_PUBLISH_URL = "https://qmclient.icu/api/v1/sponsors/publish";
-static constexpr const char *QMCLIENT_SPONSORS_CACHE_FILE = "qmclient/sponsors_cache.json";
-static constexpr const char *QMCLIENT_SPONSORS_DRAFT_FILE = "qmclient/sponsors_draft.md";
+static constexpr const char *QMCLIENT_SPONSORS_CACHE_FILE = qm_storage::SPONSORS_CACHE_FILE;
+static constexpr const char *QMCLIENT_SPONSORS_DRAFT_FILE = qm_storage::SPONSORS_DRAFT_FILE;
 static constexpr int QMCLIENT_SPONSORS_MAX_BYTES = qm_sponsors::MAX_BYTES;
 static constexpr int QMCLIENT_MARKER_FLUSH_INTERVAL_SECONDS = 5;
 static constexpr const char *DDNET_PLAYER_STATS_URL = "https://ddnet.org/players/?json2=";
@@ -133,7 +133,7 @@ static constexpr int64_t QMCLIENT_DDNET_PLAYER_MAX_RESPONSE_BYTES = 8 * 1024 * 1
 static constexpr int QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS = 120;
 static constexpr int QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS = 10;
 static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
-static constexpr const char *QMCLIENT_LOCAL_MODE_STATS_FILE = "qmclient/statistics.json";
+static constexpr const char *QMCLIENT_LOCAL_MODE_STATS_FILE = qm_storage::STATISTICS_FILE;
 
 static bool ParseStrictInt64(const char *pText, int64_t &Out)
 {
@@ -3005,7 +3005,7 @@ static const char *TitleJsonString(const json_value *pRoot, const char *pKey)
 	return qm_json::Text(pValue) ? pValue->u.string.ptr : "";
 }
 
-static constexpr const char *TITLE_TOKEN_FILE = "qmclient/title_token.txt";
+static constexpr const char *TITLE_TOKEN_FILE = qm_storage::TITLE_TOKEN_FILE;
 
 void CQmClient::InitTitleAuthentication()
 {

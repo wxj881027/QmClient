@@ -6,32 +6,32 @@
 
 namespace
 {
-class CRecordedAction : public IEditorAction
-{
-public:
-	CRecordedAction() :
-		IEditorAction(nullptr)
+	class CRecordedAction : public IEditorAction
 	{
-	}
+	public:
+		CRecordedAction() :
+			IEditorAction(nullptr)
+		{
+		}
 
-	void Undo() override { m_Applied = false; }
-	void Redo() override { m_Applied = true; }
+		void Undo() override { m_Applied = false; }
+		void Redo() override { m_Applied = true; }
 
-	bool m_Applied = false;
-};
+		bool m_Applied = false;
+	};
 
-class CImportAction : public CRecordedAction
-{
-public:
-	bool TryRedo() override
+	class CImportAction : public CRecordedAction
 	{
-		if(!m_InputAvailable)
-			return false;
-		return CRecordedAction::TryRedo();
-	}
+	public:
+		bool TryRedo() override
+		{
+			if(!m_InputAvailable)
+				return false;
+			return CRecordedAction::TryRedo();
+		}
 
-	bool m_InputAvailable = false;
-};
+		bool m_InputAvailable = false;
+	};
 } // namespace
 
 TEST(EditorHistory, FailedImportRedoKeepsThePendingActionForRetry)

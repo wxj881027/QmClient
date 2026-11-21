@@ -58,6 +58,12 @@ namespace
 
 	HANDLE LaunchHelper(const char *pHelperPath)
 	{
+#if defined(CONF_QMCLIENT_TEST_STORAGE)
+		// 测试存储构建（集成/冒烟用的隔离客户端）不启动外部 hook 助手：
+		// 它会向玩家正在运行的音乐客户端注入 DLL，既污染测试主机，
+		// 也会因为新生成的无签名可执行文件被系统安全策略拦截而弹窗。
+		return nullptr;
+#endif
 		std::wstring Path = Utf8ToWide(pHelperPath);
 		if(Path.empty())
 			Path = DefaultHelperPath();

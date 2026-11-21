@@ -110,7 +110,7 @@ namespace
 			EXPECT_EQ(Data.m_Song.m_CoverPath, m_Input.m_Cover);
 			EXPECT_EQ(Data.m_Song.m_DurationMs, 3000);
 			EXPECT_TRUE(Data.HasLyrics());
-			EXPECT_FALSE(QmMusicLyrics::HasWordTiming(Data));
+			EXPECT_TRUE(Data.m_Timeline.m_HasTiming);
 			ASSERT_EQ(Data.m_Timeline.m_vLines.size(), 2u);
 			EXPECT_EQ(Data.m_Timeline.m_vLines[0].m_Text, m_Input.m_First);
 			EXPECT_EQ(Data.m_Timeline.m_vLines[0].m_StartMs, 1000);
@@ -147,7 +147,8 @@ TEST_F(QmSodaLyricFileLoad, KrcFilePublishesWordTimingAndSeparateTranslationToge
 	ASSERT_NO_FATAL_FAILURE(PrepareOld(Data));
 	ASSERT_TRUE(QmSodaLyricFile::LoadLyricFile(m_aPath, &Data));
 	EXPECT_EQ(Data.m_Song.m_Title, "K");
-	EXPECT_TRUE(QmMusicLyrics::HasWordTiming(Data));
+	EXPECT_TRUE(Data.m_Timeline.m_HasTiming);
+	ASSERT_EQ(Data.m_Timeline.m_vLines[0].m_vWords.size(), 1u);
 	ASSERT_EQ(Data.m_Timeline.m_vLines.size(), 1u);
 	EXPECT_EQ(Data.m_Timeline.m_vLines[0].m_Text, "word");
 	ASSERT_EQ(Data.m_vTranslations.size(), 1u);

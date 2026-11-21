@@ -144,7 +144,10 @@ void CMotd::OnMessage(int MsgType, void *pRawMsg)
 						str_copy(Server.m_aGameType, pEntry->m_Info.m_aGameType);
 				}
 			}
-			str_copy(Server.m_aMap, Client()->GetCurrentMap());
+			const char *pMap = Client()->MapDownloadName();
+			if(pMap[0] == '\0')
+				pMap = Client()->GetCurrentMap();
+			str_copy(Server.m_aMap, pMap);
 			auto &DifficultyCatalog = GameClient()->m_Menus.MapDifficultyCatalog();
 			if(DifficultyCatalog.RecordAxiomMotd(Server, m_aServerMotd))
 			{
@@ -164,6 +167,8 @@ void CMotd::OnMessage(int MsgType, void *pRawMsg)
 		if(!IsActive())
 			m_ShownSince = time_get_nanoseconds();
 		m_ServerMotdUpdateTime = time();
+		// 开关打开时只抑制“进图自动弹出”，公告正文仍写入 m_aServerMotd，
+		// 之后可从服务器信息面板查看，不会被丢掉。
 		if(ShouldActivateMotdPopup(m_aServerMotd, g_Config.m_ClMotdTime, g_Config.m_QmHideJoinServerInfo != 0))
 			m_ServerMotdTime = m_ServerMotdUpdateTime + time_freq() * g_Config.m_ClMotdTime;
 		else

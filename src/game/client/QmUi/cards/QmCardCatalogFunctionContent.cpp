@@ -27,6 +27,7 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/binds.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/bind_index.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
@@ -44,7 +45,6 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 using namespace FontIcons;
@@ -206,12 +206,12 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 	CUIRect BindLabel, BindKey;
 	SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &BindLabel, &BindKey);
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-gores-mode-key", &BindLabel, Localize("Gores mode key"), BodySize, TEXTALIGN_ML, {}, (int)BindLabel.w);
-	const CBindSlot GoresBind = g_CommandBindCache.Find(GameClient()->m_Binds, "toggle qm_gores 0 1");
+	// 直接读绑定表，键位行与主世界控制页看到的是同一份数据。
+	const CBindSlot GoresBind = QmLookupCommandBind(GameClient()->m_Binds, "toggle qm_gores 0 1");
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonGoresToggle, &s_ClearButtonGoresToggle, &BindKey, GoresBind, false);
 	if(!Flow.Input() || PrewarmOnly || Ui()->RenderOnly() || Result.m_Bind == GoresBind)
 		return;
-	if(GameClient()->m_Binds.Rebind(GoresBind, Result.m_Bind, "toggle qm_gores 0 1"))
-		g_CommandBindCache.Invalidate();
+	GameClient()->m_Binds.Rebind(GoresBind, Result.m_Bind, "toggle qm_gores 0 1");
 	(void)PrewarmOnly;
 }
 
@@ -222,16 +222,13 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 	static CButtonContainer s_ReaderButtonSoloSplitEnter, s_ClearButtonSoloSplitEnter;
 	static CButtonContainer s_ReaderButtonSoloSplitLeave, s_ClearButtonSoloSplitLeave;
 	static const void *s_RestoreTeamInputId = &s_RestoreTeamInputId;
-	// 自动锁队配置与 HJAssist 卡共用 qm_auto_team_lock；HJAssist 已用配置地址作控件 id，
-	// 两卡可能同屏显示，这里改用独立静态地址避免 hot/active 项串扰。
-	static const void *s_AutoTeamLockCheckboxId = &s_AutoTeamLockCheckboxId;
 	CUIRect Row, BindLabel, BindKey, LabelColumn, ControlColumn;
 	auto RenderCheckbox = [&](const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		if(Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			RenderQmFunctionCheckbox(pId, pTextId, Localize(pText), pValue, &Row, PrewarmOnly);
 	};
 	RenderCheckbox(&g_Config.m_QmSoloSplitLinkDummy, "qmclient-solo-split-link-dummy", "Auto-connect dummy", &g_Config.m_QmSoloSplitLinkDummy);
-	RenderCheckbox(s_AutoTeamLockCheckboxId, "qmclient-solo-split-auto-team-lock", "Auto team lock", &g_Config.m_QmAutoTeamLock);
+	RenderCheckbox(&g_Config.m_QmSoloSplitAutoTeamLock, "qmclient-solo-split-auto-team-lock", "Lock both teams immediately when entering solo split mode", &g_Config.m_QmSoloSplitAutoTeamLock);
 	if(Flow.Control("qmclient-solo-split-restore-team", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
@@ -245,26 +242,20 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &BindLabel, &BindKey);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-solo-split-key", &BindLabel, Localize("Solo split key"), BodySize, TEXTALIGN_ML, {}, (int)BindLabel.w);
-		const CBindSlot SoloSplitBind = g_CommandBindCache.Find(GameClient()->m_Binds, "qm_solo_split");
+		const CBindSlot SoloSplitBind = QmLookupCommandBind(GameClient()->m_Binds, "qm_solo_split");
 		const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonSoloSplit, &s_ClearButtonSoloSplit, &BindKey, SoloSplitBind, false);
 		if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly() && Result.m_Bind != SoloSplitBind)
-		{
-			if(GameClient()->m_Binds.Rebind(SoloSplitBind, Result.m_Bind, "qm_solo_split"))
-				g_CommandBindCache.Invalidate();
-		}
+			GameClient()->m_Binds.Rebind(SoloSplitBind, Result.m_Bind, "qm_solo_split");
 	}
 	auto RenderBind = [&](const char *pCommand, const char *pTextId, const char *pText, CButtonContainer &Reader, CButtonContainer &Clear) {
 		if(!Flow.Control(pTextId, LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			return;
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &BindLabel, &BindKey);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &BindLabel, pText, BodySize, TEXTALIGN_ML, {}, (int)BindLabel.w);
-		const CBindSlot Bind = g_CommandBindCache.Find(GameClient()->m_Binds, pCommand);
+		const CBindSlot Bind = QmLookupCommandBind(GameClient()->m_Binds, pCommand);
 		const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&Reader, &Clear, &BindKey, Bind, false);
 		if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly() && Result.m_Bind != Bind)
-		{
-			if(GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand))
-				g_CommandBindCache.Invalidate();
-		}
+			GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand);
 	};
 	RenderBind("qm_solo_split_enter", "qmclient-solo-split-enter-key", Localize("Solo split enter key"), s_ReaderButtonSoloSplitEnter, s_ClearButtonSoloSplitEnter);
 	RenderBind("qm_solo_split_leave", "qmclient-solo-split-leave-key", Localize("Solo split leave key"), s_ReaderButtonSoloSplitLeave, s_ClearButtonSoloSplitLeave);

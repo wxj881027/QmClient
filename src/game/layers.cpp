@@ -137,6 +137,9 @@ CMapLoadTask CLayers::InitTilemapSkip(bool Game, bool Design)
 				continue;
 
 			const CMapItemLayerTilemap *pTilemap = reinterpret_cast<const CMapItemLayerTilemap *>(pLayer);
+			// 服务端只关心 game 层的 skip 表，其余图层建了也不会被读取。
+			if(!Design && pTilemap != m_pGameLayer)
+				continue;
 			// 除 game 层外的物理层把 tile 存在各自的数据索引里，其 m_Data 既不使用也不在地图加载时校验。
 			if((pTilemap->m_Flags & (TILESLAYERFLAG_TELE | TILESLAYERFLAG_SPEEDUP | TILESLAYERFLAG_FRONT | TILESLAYERFLAG_SWITCH | TILESLAYERFLAG_TUNE)) != 0)
 				continue;

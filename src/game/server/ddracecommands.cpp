@@ -1,8 +1,6 @@
 /* (c) Shereef Marzouk. See "licence DDRace.txt" and the readme.txt in the root of the distribution for more information. */
 #include "gamecontext.h"
 
-#include <algorithm>
-
 #include <base/log.h>
 
 #include <engine/antibot.h>
@@ -17,6 +15,8 @@
 #include <game/server/player.h>
 #include <game/server/save.h>
 #include <game/server/teams.h>
+
+#include <algorithm>
 
 static vec2 ClampPlacement(const CCollision *pCollision, vec2 Pos)
 {

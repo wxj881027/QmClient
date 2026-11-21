@@ -437,7 +437,8 @@ namespace qm_card_order
 		return It->second;
 	}
 
-	bool CModel::Serialize(char *pBuf, int BufSize) const try
+	bool CModel::Serialize(char *pBuf, int BufSize) const
+	try
 	{
 		if(pBuf == nullptr || BufSize <= 0)
 			return false;

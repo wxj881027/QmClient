@@ -8,6 +8,7 @@
 #include <base/color.h>
 
 #include <engine/shared/client_brand.h>
+#include <engine/shared/qm_storage_layout.h>
 
 #include <game/client/QmUi/UiTokens.h>
 
@@ -19,9 +20,9 @@
 class IStorage;
 typedef struct _json_value json_value;
 
-inline constexpr char QMCLIENT_LIFECYCLE_MARKER_FILE[] = "qmclient/lifecycle_pending.marker";
+inline constexpr const char *QMCLIENT_LIFECYCLE_MARKER_FILE = qm_storage::LIFECYCLE_MARKER_FILE;
 inline constexpr unsigned QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES = 383;
-inline constexpr char QMCLIENT_NEWS_DRAFT_FILE[] = "qmclient/news_draft.md";
+inline constexpr const char *QMCLIENT_NEWS_DRAFT_FILE = qm_storage::NEWS_DRAFT_FILE;
 inline constexpr std::size_t QMCLIENT_NEWS_MAX_BYTES = 64 * 1024;
 
 // 返回是否有待恢复标记。标记内容不可用时，两个时间都为 0。

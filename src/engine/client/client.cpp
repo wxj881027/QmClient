@@ -40,6 +40,7 @@
 #include <base/windows.h>
 
 #include <engine/client/backend/graphics_backend_contract.h>
+#include <engine/client/input_ring.h>
 #include <engine/config.h>
 #include <engine/console.h>
 #include <engine/discord.h>
@@ -72,6 +73,7 @@
 #include <engine/shared/protocolglue.h>
 #include <engine/shared/qm_default_profile.h>
 #include <engine/shared/qm_removed_config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/shared/rust_version.h>
 #include <engine/shared/snapshot.h>
 #include <engine/shared/uuid_manager.h>
@@ -215,9 +217,9 @@ static bool gs_QmTestMainThreadException = false;
 // 进程回归注入最终清理卡死，验证隐藏窗口后的强制退出。
 static bool gs_QmTestShutdownCleanupStall = false;
 static constexpr const char *gs_pQmCrashDumpDir = "dumps/QmClient_Crash";
-static constexpr const char *gs_pQmLifecycleMarkerFile = "qmclient/lifecycle_pending.marker";
+static constexpr const char *gs_pQmLifecycleMarkerFile = qm_storage::LIFECYCLE_MARKER_FILE;
 #if defined(CONF_FAMILY_WINDOWS)
-static constexpr const char *gs_pQmCrashReporterBaselineFile = "qmclient/crash_reporter_started_at.marker";
+static constexpr const char *gs_pQmCrashReporterBaselineFile = qm_storage::CRASH_REPORTER_MARKER_FILE;
 #endif
 static bool gs_aLoadedPreviousConfigPath[ConfigDomain::NUM] = {};
 
@@ -456,8 +458,12 @@ static void ExportPendingQmMobileCrashReports(IStorage *pStorage)
 
 		char aReportAbsolute[IO_MAX_PATH_LENGTH];
 		pStorage->GetCompletePath(IStorage::TYPE_SAVE, aReportRelative, aReportAbsolute, sizeof(aReportAbsolute));
-		// JNI 侧异步复制并提示结果；失败时保留标记，下次启动重试。
-		if(!ExportAndroidMediaFile(aReportAbsolute))
+		if(!fs_is_file(aReportAbsolute))
+		{
+			pStorage->RemoveFile(Search.m_aaFound[i], IStorage::TYPE_SAVE);
+			continue;
+		}
+		if(!ExportAndroidCrashReport(aReportAbsolute))
 			continue;
 
 		char aExportedMarker[IO_MAX_PATH_LENGTH + 16];
@@ -637,9 +643,9 @@ CClient::CClient() :
 {
 	m_StateStartTime = time_get();
 	for(auto &DemoRecorder : m_aDemoRecorders)
-		DemoRecorder = CDemoRecorder(&m_SnapshotDelta);
+		DemoRecorder.Reset(&m_SnapshotDelta);
 	for(auto &DemoRecorder : m_aDemoRecordersSixup)
-		DemoRecorder = CDemoRecorder(&m_SnapshotDeltaSixup);
+		DemoRecorder.Reset(&m_SnapshotDeltaSixup);
 	m_LastRenderTime = time_get();
 	mem_zero(m_aInputs, sizeof(m_aInputs));
 	mem_zero(m_aapSnapshots, sizeof(m_aapSnapshots));
@@ -1080,16 +1086,10 @@ const char *CClient::LatestVersion() const
 // TODO: OPT: do this a lot smarter!
 int *CClient::GetInput(int Tick, int IsDummy) const
 {
-	int Best = -1;
 	const int d = IsDummy ^ g_Config.m_ClDummy;
-	for(int i = 0; i < 200; i++)
-	{
-		if(m_aInputs[d][i].m_Tick != -1 && m_aInputs[d][i].m_Tick <= Tick && (Best == -1 || m_aInputs[d][Best].m_Tick < m_aInputs[d][i].m_Tick))
-			Best = i;
-	}
-
-	if(Best != -1)
-		return (int *)m_aInputs[d][Best].m_aData;
+	const auto *pRecord = QmLatestInputRecord(m_aInputs[d], Tick);
+	if(pRecord != nullptr)
+		return (int *)pRecord->m_aData;
 	return nullptr;
 }
 
@@ -1731,6 +1731,28 @@ int CClient::SnapNumItems(int SnapId) const
 {
 	const CSnapshot *pSnapshot = SnapshotForGame(SnapId);
 	return pSnapshot ? pSnapshot->NumItems() : 0;
+}
+
+int CClient::GetLocalClientId(int Conn) const
+{
+	if(Conn < 0 || Conn >= NUM_DUMMIES || !m_aapSnapshots[Conn][SNAP_CURRENT])
+		return -1;
+
+	const CSnapshot *pSnapshot = m_aapSnapshots[Conn][SNAP_CURRENT]->m_pAltSnap;
+	if(!pSnapshot)
+		return -1;
+
+	for(int Index = pSnapshot->NumItems() - 1; Index >= 0; --Index)
+	{
+		const CSnapshotItem *pItem = pSnapshot->GetItem(Index);
+		if(pItem->InternalType() != NETOBJTYPE_PLAYERINFO || pSnapshot->GetItemSize(Index) < (int)sizeof(CNetObj_PlayerInfo))
+			continue;
+
+		const auto *pInfo = reinterpret_cast<const CNetObj_PlayerInfo *>(pItem->Data());
+		if(pInfo->m_Local && pInfo->m_ClientId == pItem->Id() && pInfo->m_ClientId < MAX_CLIENTS)
+			return pInfo->m_ClientId;
+	}
+	return -1;
 }
 
 void CClient::SnapSetStaticsize(int ItemType, int Size)
@@ -2843,18 +2865,6 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				DisconnectWithReason(gs_aMapResourcePreparationError);
 				return;
 			}
-			if(m_DummyReconnectOnReload)
-			{
-				m_DummySendConnInfo = true;
-				m_DummyReconnectOnReload = false;
-			}
-#if defined(CONF_PLATFORM_IOS)
-			else if(m_DummyReconnectOnResume)
-			{
-				m_DummyReconnectOnResume = false;
-				DummyConnect();
-			}
-#endif
 		}
 		else if(Conn == CONN_DUMMY && Msg == NETMSG_CON_READY)
 		{
@@ -3117,6 +3127,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 		{
 			// 还不能处理快照。
 			if(State() < IClient::STATE_LOADING ||
+				(State() == IClient::STATE_LOADING && LoadingStateDetail() != IClient::LOADING_STATE_DETAIL_GETTING_READY) ||
 				!m_pMap->IsLoaded())
 			{
 				return;
@@ -3382,9 +3393,9 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 						{
 							PublishSourceSnapshot(false);
 						}
-						SetState(IClient::STATE_ONLINE);
 						if(Conn == CONN_MAIN)
 						{
+							SetState(IClient::STATE_ONLINE);
 							DemoRecorder_HandleAutoStart();
 						}
 					}
@@ -4129,18 +4140,26 @@ void CClient::FinishPoseOffscreenCapture()
 	}
 	// 落盘复用截图管线：同一套 screenshots/ 命名、媒体目录解析、水印与 png/webp 选择。
 	CPerfTimer HandoffTimer;
-	if(Read && m_pGraphics->TakeScreenshotFromImage(std::move(Image), m_aPoseScreenshotPath, [this](CImageInfo &&TakenImage, const char *pPath) { GameClient()->OnScreenshotTaken(std::move(TakenImage), pPath); }, GameClient()->ScreenshotProcessor()))
+	if(Read)
 	{
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "screenshot handoff (texture upload + queue) took %.2f ms", HandoffTimer.ElapsedMs());
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
-		return;
+		CImageInfo Handoff = std::move(Image);
+		if(m_pGraphics->TakeScreenshotFromImage(std::move(Handoff), m_aPoseScreenshotPath, [this](CImageInfo &&TakenImage, const char *pPath) { GameClient()->OnScreenshotTaken(std::move(TakenImage), pPath); }, GameClient()->ScreenshotProcessor()))
+		{
+			char aBuf[128];
+			str_format(aBuf, sizeof(aBuf), "screenshot handoff (texture upload + queue) took %.2f ms", HandoffTimer.ElapsedMs());
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+			return;
+		}
+		Handoff.Free();
+	}
+	else
+	{
+		Image.Free();
 	}
 
 	// 读回失败时不能在本帧退回窗口截图：这一帧整幅画面已经画进离屏目标，
 	// 窗口帧缓冲里没有可用内容（会得到一张空白图）。把请求降级成 1 倍并重新排队，
 	// 下一帧照常画进窗口后再抓，至少保证这次渲染有产物。
-	Image.Free();
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "supersampled capture failed; retrying once at the window resolution");
 	m_PoseScreenshotScale = 1;
 	m_PoseScreenshotPending = true;
@@ -4293,6 +4312,21 @@ void CClient::Update()
 	{
 		DisconnectWithReason(gs_aMapResourcePreparationError);
 		return;
+	}
+	if(State() == IClient::STATE_LOADING && LoadingStateDetail() == IClient::LOADING_STATE_DETAIL_GETTING_READY)
+	{
+		if(m_DummyReconnectOnReload)
+		{
+			m_DummySendConnInfo = true;
+			m_DummyReconnectOnReload = false;
+		}
+#if defined(CONF_PLATFORM_IOS)
+		else if(m_DummyReconnectOnResume)
+		{
+			m_DummyReconnectOnResume = false;
+			DummyConnect();
+		}
+#endif
 	}
 	// 官方 178da1ead：在采集/发送输入之前先更新 editor/gameclient，
 	// 低刷新率下输入能早一个循环发出。
@@ -4773,10 +4807,9 @@ void CClient::QmProbeSaveDirectory()
 	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "", aSaveDir, sizeof(aSaveDir));
 	char aProcess[128];
 	QmProcessTokenDescription(aProcess, sizeof(aProcess));
-	if(!m_pStorage->FolderExists("qmclient", IStorage::TYPE_SAVE))
-		m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	qm_storage::EnsureFolder(m_pStorage, qm_storage::RUNTIME_DIR);
 	char aProbePath[IO_MAX_PATH_LENGTH];
-	str_format(aProbePath, sizeof(aProbePath), "qmclient/.save_probe_%d", pid());
+	str_format(aProbePath, sizeof(aProbePath), "%s/.save_probe_%d", qm_storage::RUNTIME_DIR, pid());
 	IOHANDLE Probe = m_pStorage->OpenFile(aProbePath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	m_QmSaveDirectoryWritable = Probe != nullptr;
 	if(Probe != nullptr)
@@ -6018,7 +6051,7 @@ void CClient::LeavePoseSession(bool RestorePlaybackSnapshot)
 	if(!m_PoseSessionActive)
 		return;
 	const bool RestorePlayback = RestorePlaybackSnapshot && m_PoseCurrentSnapshot >= 0 &&
-		State() == IClient::STATE_DEMOPLAYBACK && m_DemoPlayer.IsPlaying();
+				     State() == IClient::STATE_DEMOPLAYBACK && m_DemoPlayer.IsPlaying();
 	m_PoseSessionActive = false;
 	m_PoseSnapshotSize = 0;
 	m_PoseCaptureKeepSession = false;
@@ -6540,7 +6573,8 @@ void CClient::FinishSegmentedExport()
 }
 
 // 收尾拼接：检查全部段文件在位后在后台线程流复制拼接（libavformat 裸 IO，用绝对路径）。
-void CClient::StartSegmentConcat(const CVideoExportTask *pTask) try
+void CClient::StartSegmentConcat(const CVideoExportTask *pTask)
+try
 {
 	// 仍在拼接时拒绝新请求，避免并发访问同名的段文件和输出文件。
 	if(m_SegmentConcat.Pending())
@@ -8487,6 +8521,8 @@ int main(int argc, const char **argv)
 		}
 	}
 	pKernel->RegisterInterface(pStorage);
+	if(!qm_storage::MigrateStorageLayout(pStorage))
+		log_error("client", "QmClient storage layout migration is incomplete; conflicting files were preserved");
 
 	pFutureAssertionLogger->Set(CreateAssertionLogger(pStorage, GAME_NAME));
 
@@ -8678,6 +8714,21 @@ int main(int argc, const char **argv)
 	pConsole->SetUnknownCommandCallback(UnknownArgumentCallback, pClient);
 	pConsole->ParseArguments(argc - 1, &argv[1]);
 	pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
+
+#if defined(CONF_PLATFORM_ANDROID)
+	if(g_Config.m_QmMobileCrashReportExport != 0)
+	{
+		char aDate[64];
+		str_timestamp(aDate, sizeof(aDate));
+		char aDisplayName[96];
+		str_format(aDisplayName, sizeof(aDisplayName), "QmClient_crash_%s_%d.txt", aDate, pid());
+		const int ReportFd = PrepareAndroidCrashReportSink(aDisplayName);
+		if(ReportFd >= 0)
+			crashdump_set_live_report_fd(ReportFd);
+		else
+			log_info("crash_reporter", "could not pre-open the live crash report; the sandbox copy will be exported on the next launch");
+	}
+#endif
 
 	// 静默在后台启动 Steam，客户端仍由当前进程继续启动。
 	if(g_Config.m_QmSteamAutoLaunch)

@@ -2,6 +2,14 @@
 
 #include <gtest/gtest.h>
 
+TEST(QmDeveloperBadge, CustomTitleTakesPriorityOverDeveloperIdentity)
+{
+	EXPECT_FALSE(QmUseDeveloperBadgeFallback("Custom title", true, true));
+	EXPECT_TRUE(QmUseDeveloperBadgeFallback("", true, true));
+	EXPECT_FALSE(QmUseDeveloperBadgeFallback("", false, true));
+	EXPECT_FALSE(QmUseDeveloperBadgeFallback("", true, false));
+}
+
 TEST(QmDeveloperBadge, ScalingPreservesDesignAspectRatio)
 {
 	const vec2 Small = QmDeveloperBadgeSize(7.0f);

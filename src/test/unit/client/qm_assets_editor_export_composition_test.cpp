@@ -4,16 +4,16 @@
 
 namespace
 {
-CImageInfo ComposeOnePixel()
-{
-	uint8_t aPixel[4] = {10, 20, 30, 255};
-	CImageInfo Source;
-	Source.m_Width = 1;
-	Source.m_Height = 1;
-	Source.m_Format = CImageInfo::FORMAT_RGBA;
-	Source.m_pData = aPixel;
-	return Source.DeepCopy();
-}
+	CImageInfo ComposeOnePixel()
+	{
+		uint8_t aPixel[4] = {10, 20, 30, 255};
+		CImageInfo Source;
+		Source.m_Width = 1;
+		Source.m_Height = 1;
+		Source.m_Format = CImageInfo::FORMAT_RGBA;
+		Source.m_pData = aPixel;
+		return Source.DeepCopy();
+	}
 }
 
 TEST(QmAssetsEditorExportComposition, RejectsAndFreesTheImageWhenAnEditedSlotWasSkipped)

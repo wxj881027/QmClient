@@ -250,42 +250,42 @@ public:
 
 namespace EntityBackgroundMap
 {
-enum class ELoadResult
-{
-	NOT_READY,
-	READY,
-	FAILED,
-};
+	enum class ELoadResult
+	{
+		NOT_READY,
+		READY,
+		FAILED,
+	};
 
-template<typename FStep>
-ELoadResult TryLoadStep(FStep &&Step)
-{
-	try
+	template<typename FStep>
+	ELoadResult TryLoadStep(FStep &&Step)
 	{
-		return std::forward<FStep>(Step)() ? ELoadResult::READY : ELoadResult::NOT_READY;
+		try
+		{
+			return std::forward<FStep>(Step)() ? ELoadResult::READY : ELoadResult::NOT_READY;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return ELoadResult::FAILED;
+		}
+		catch(const std::length_error &)
+		{
+			return ELoadResult::FAILED;
+		}
 	}
-	catch(const std::bad_alloc &)
-	{
-		return ELoadResult::FAILED;
-	}
-	catch(const std::length_error &)
-	{
-		return ELoadResult::FAILED;
-	}
-}
 
-template<typename TRenderer, typename TImages, typename TLayers, typename TMap>
-bool ReleaseResources(TRenderer &Renderer, TImages &Images, TLayers &Layers, TMap &PrivateMap)
-{
-	// 清理持有地图数据的对象后，才能释放地图本身。
-	return TryLoadStep([&] {
-		Renderer.UnloadMap();
-		Images.Unload();
-		Layers.Unload();
-		PrivateMap.Unload();
-		return true;
-	}) == ELoadResult::READY;
-}
+	template<typename TRenderer, typename TImages, typename TLayers, typename TMap>
+	bool ReleaseResources(TRenderer &Renderer, TImages &Images, TLayers &Layers, TMap &PrivateMap)
+	{
+		// 清理持有地图数据的对象后，才能释放地图本身。
+		return TryLoadStep([&] {
+			Renderer.UnloadMap();
+			Images.Unload();
+			Layers.Unload();
+			PrivateMap.Unload();
+			return true;
+		}) == ELoadResult::READY;
+	}
 } // namespace EntityBackgroundMap
 
 class CBackground : public CMapLayers

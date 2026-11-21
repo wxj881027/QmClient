@@ -14,6 +14,11 @@
 
 class CQmTitleBadge;
 
+inline bool QmUseDeveloperBadgeFallback(const char *pTitle, bool HasDeveloperBadge, bool BadgeAvailable)
+{
+	return (!pTitle || !pTitle[0]) && HasDeveloperBadge && BadgeAvailable;
+}
+
 inline vec2 QmDeveloperBadgeSize(float FontSize)
 {
 	const float Height = std::max(FontSize, 0.0f);

@@ -194,9 +194,11 @@ python3 qmclient_scripts/generate_release_notes.py --version vX.Y --current-tag 
 
 ```bash
 python3 qmclient_scripts/bump_version.py --tag vX.Y
-python3 qmclient_scripts/bump_version.py --tag vX.Y-preview.N
+python3 qmclient_scripts/bump_version.py --ci-preview-tag 812
 python3 qmclient_scripts/bump_version.py --describe
 ```
+
+源码固定为「开发中基础版本 + 预览批次 0」，预览批次由发布 CI 按构建序号注入，不手写进仓库。
 
 格式和发布通道以 [版本号与发布通道](../docs/归档/版本号与发布通道.md) 为准。
 

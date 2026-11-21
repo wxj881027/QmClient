@@ -89,7 +89,7 @@ public:
 		m_Info = m_Source.PlaybackInfo();
 		return &m_Info;
 	}
-	bool IsPlaying() const override { return m_Source.PlaybackActive(); }
+	bool IsPlaying() const override { return m_Source.PlaybackActive() && !m_Source.PlaybackInfo().m_Paused; }
 	void Pause() override
 	{
 		m_Source.PlaybackSetPlaying(false);
@@ -123,7 +123,7 @@ public:
 	}
 	bool SetPos(int Tick) override
 	{
-		if(!IsPlaying())
+		if(!m_Source.PlaybackActive())
 			return false;
 		const CInfo Info = *BaseInfo();
 		m_Source.PlaybackSeek(std::clamp(Tick, Info.m_FirstTick, std::max(Info.m_FirstTick, Info.m_LastTick)));
@@ -277,6 +277,13 @@ public:
 	};
 	bool PanelOpen() const { return m_PanelOpen; }
 	void Reset() { *this = {}; }
+	// 隐藏控制卡但不结束回放；点击卡外或按隐藏按钮走这里。
+	void ClosePanel()
+	{
+		m_PanelOpen = false;
+		m_Armed = false;
+		m_PanelBeforeEscape = false;
+	}
 	void ReleaseEscape() { m_EscapeDown = false; }
 	void CancelEscape()
 	{

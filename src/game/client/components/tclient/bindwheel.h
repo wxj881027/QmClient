@@ -6,8 +6,13 @@
 #include <engine/console.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/bind_menu_preview.h>
 #include <game/client/components/qmclient/bindwheel_state.h>
+#include <game/client/components/qmclient/wheel_presets.h>
 
+#include <map>
+#include <optional>
+#include <string>
 #include <vector>
 
 class IConfigManager;
@@ -22,13 +27,24 @@ enum
 class CBindWheel : public CComponent
 {
 	float m_AnimationTime = 0.0f;
-	float m_aAnimationTimeItems[BINDWHEEL_MAX_BINDS] = {0};
 
 	CQmBindWheelState m_State;
 
-	int m_SelectedBind;
+	int m_SelectedBind = -1;
+	int m_ListScroll = 0;
+	bool m_JustOpened = false;
+	qm_bind_menu_preview::SLayout m_LastLayout{};
+	std::vector<int> m_vVisibleBindIndices;
+	struct SResolvedBind
+	{
+		qm_bind_menu::EMenu m_Menu = qm_bind_menu::EMenu::CUSTOM;
+		std::optional<qm_wheel_presets::SPreset> m_Preset;
+		bool m_LegacyScript = false;
+	};
+	std::map<std::string, SResolvedBind> m_ResolvedBinds;
 
 	static void ConOpenBindwheel(IConsole::IResult *pResult, void *pUserData);
+	static void ConOpenBindMenu(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddBindwheelLegacy(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddBindwheel(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveBindwheel(IConsole::IResult *pResult, void *pUserData);
@@ -72,6 +88,24 @@ public:
 	void ExecuteBind(int Bind);
 
 	bool IsActive() const { return m_State.IsActive(); }
+	qm_bind_menu::EMenu MenuForBind(int Index);
+	const qm_wheel_presets::SPreset *PresetForBind(int Index);
+
+private:
+	// 练习菜单条目按当前上下文临时生成，不写入 bind 配置；只在 PRACTICE 菜单打开时使用。
+	std::vector<CBind> m_vPracticeBinds;
+
+	void OpenMenu(qm_bind_menu::EMenu Menu);
+	void ReleaseActiveMenu();
+	const SResolvedBind &ResolveBind(int Index);
+	const std::vector<CBind> &ActiveBinds() const;
+	std::optional<std::string> ReadExecConfig(const char *pPath);
+	void RebuildPracticeBinds();
+	bool InNormalPractice() const;
+	void RebuildVisibleBinds();
+	void ClampListScroll();
+	int CurrentSelection() const;
+	int CurrentSourceIndex() const;
 };
 
 #endif

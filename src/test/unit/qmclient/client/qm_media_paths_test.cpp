@@ -64,7 +64,7 @@ TEST(QmMediaPaths, SimilarPrefixesAndOtherFilesKeepTheirOriginalPaths)
 {
 	CConfig Config = {};
 	str_copy(Config.m_QmDemoDirectory, EXPORT_ROOT);
-	for(const char *pPath : {"demos-old/run.demo", "qmclient/rank1/demos/run.demo", "record/csv/run.csv", "settings.cfg"})
+	for(const char *pPath : {"demos-old/run.demo", "qmclient/content/rank1/demos/run.demo", "record/csv/run.csv", "settings.cfg"})
 		EXPECT_EQ(qmclient::media_paths::Resolve(nullptr, Config, pPath), pPath);
 }
 

@@ -9,6 +9,8 @@
 
 #include <engine/engine.h>
 
+#include <game/client/QmUi/UiTokens.h>
+
 #include <array>
 #include <chrono>
 #include <functional>
@@ -87,7 +89,7 @@ public:
 				Empty.m_Type = Part;
 				Empty.m_Flags = StandardFlags;
 				Empty.m_aName[0] = '\0';
-				Empty.m_BloodColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+				Empty.m_BloodColor = ui_token::color::NEUTRAL_WHITE;
 				Plan.m_aParts[Part].emplace_back(std::move(Empty));
 			}
 			Plan.m_pJob = std::forward<TFactory>(Factory)();

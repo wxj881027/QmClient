@@ -55,12 +55,9 @@ TEST(HttpStartup, MultiHandleCreationFailureReleasesGlobalInitialization)
 	CHttpCurl Http;
 	const bool Failed = CHttpCurlStartupTestPeer::RunWithInitHooks(Http, []() -> CURLM * {
 		MultiInitAttempted = true;
-		return nullptr;
-	},
-		[] {
+		return nullptr; }, [] {
 			++CleanupCalls;
-			curl_global_cleanup();
-		});
+			curl_global_cleanup(); });
 	ASSERT_TRUE(MultiInitAttempted);
 	// 回归时测试补做清理，避免影响后续用例。
 	if(CleanupCalls == 0)

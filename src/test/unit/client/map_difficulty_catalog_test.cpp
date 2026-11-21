@@ -160,6 +160,14 @@ namespace
 		return std::string("   ⌬ Axiom ✦ Gores - ") + pCategory + "\n\n┌──── 当前地图信息\n│ 地图：" + pMap +
 		       "\n│ 作者：Mapper\n│ 类型：" + pCategory + "\n│ 星级：" + pStars + "\n│ 分数：2\n└─────────────────────\n";
 	}
+
+	// 2026-11 起 Axiom 把标题改成「当前地图」，并把类别和星级合并到「难度」一行。
+	std::string AxiomCurrentMotd(const char *pMap, const char *pCategory, const char *pStars)
+	{
+		return std::string("   ⌬ Axiom ✦ 钩累死\n\n┌──── 当前地图\n│ 地图：") + pMap +
+		       "\n│ 作者：Mapper\n│ 难度：" + pCategory + "  " + pStars +
+		       "\n│ 分数：42\n│ 发布：5年8个月前\n│ 平均：25:54\n│ 完赛：73 次 / 63 人\n└─────────────────────\n";
+	}
 }
 
 TEST(MapDifficultyCatalog, AxiomAnnouncementProvidesThreeStarsAndDoesNotReplaceDdraceData)
@@ -177,6 +185,129 @@ TEST(MapDifficultyCatalog, AxiomAnnouncementProvidesThreeStarsAndDoesNotReplaceD
 	EXPECT_STREQ(pEntry->StarLabel(), "★★☆");
 	ASSERT_NE(Catalog.Find("SharedMap", "Novice"), nullptr);
 	EXPECT_EQ(Catalog.Find("SharedMap", "Novice")->m_Stars, 1);
+}
+
+TEST(MapDifficultyCatalog, AxiomCurrentAnnouncementStoresFiveStarGoresRating)
+{
+	CQmMapDifficultyCatalog Catalog;
+	const CServerInfo Server = AxiomServer("Gores", "SharedMap");
+	const std::string Motd = AxiomCurrentMotd("SharedMap", "疯狂", "★★★✰✰");
+	ASSERT_TRUE(Catalog.RecordAxiomMotd(Server, Motd.c_str()));
+	const auto *pEntry = Catalog.FindForServer(Server);
+	ASSERT_NE(pEntry, nullptr);
+	EXPECT_EQ(pEntry->m_Category, "疯狂");
+	EXPECT_EQ(pEntry->m_Stars, 3);
+	EXPECT_EQ(pEntry->m_MaxStars, 5);
+	EXPECT_STREQ(pEntry->StarLabel(), "★★★☆☆");
+	EXPECT_EQ(Catalog.FindForServer(Server, "Novice"), pEntry);
+}
+
+TEST(MapDifficultyCatalog, AxiomCurrentAnnouncementKeepsGoresAndAxraceRatingsIndependent)
+{
+	CQmMapDifficultyCatalog Catalog;
+	const CServerInfo Gores = AxiomServer("Gores");
+	const CServerInfo Race = AxiomServer("AXRace");
+	ASSERT_TRUE(Catalog.RecordAxiomMotd(Gores, AxiomCurrentMotd("SharedMap", "疯狂", "★★★✰✰").c_str()));
+	EXPECT_EQ(Catalog.FindForServer(Race), nullptr);
+	ASSERT_TRUE(Catalog.RecordAxiomMotd(Race, AxiomCurrentMotd("SharedMap", "古典.中阶", "★★★★★").c_str()));
+	const auto *pGores = Catalog.FindForServer(Gores);
+	const auto *pRace = Catalog.FindForServer(Race);
+	ASSERT_NE(pGores, nullptr);
+	ASSERT_NE(pRace, nullptr);
+	EXPECT_EQ(pGores->m_Category, "疯狂");
+	EXPECT_STREQ(pGores->StarLabel(), "★★★☆☆");
+	EXPECT_EQ(pRace->m_Category, "古典.中阶");
+	EXPECT_STREQ(pRace->StarLabel(), "★★★★★");
+}
+
+TEST(MapDifficultyCatalog, AxiomCurrentAnnouncementAcceptsUnknownMapDuringDownload)
+{
+	CQmMapDifficultyCatalog Catalog;
+	CServerInfo Server = AxiomServer();
+	Server.m_aMap[0] = '\0';
+	ASSERT_TRUE(Catalog.RecordAxiomMotd(Server, AxiomCurrentMotd("SharedMap", "普通", "★★☆☆☆").c_str()));
+	ASSERT_NE(Catalog.FindForServer(AxiomServer()), nullptr);
+	EXPECT_STREQ(Catalog.FindForServer(AxiomServer())->StarLabel(), "★★☆☆☆");
+}
+
+TEST(MapDifficultyCatalog, AxiomCurrentAnnouncementRejectsAmbiguousOrMalformedDifficulty)
+{
+	CQmMapDifficultyCatalog Catalog;
+	const CServerInfo Server = AxiomServer();
+	ASSERT_TRUE(Catalog.RecordAxiomMotd(Server, AxiomCurrentMotd("SharedMap", "疯狂", "★★★✰✰").c_str()));
+	const std::string Before = Catalog.SerializeAxiomCache();
+	const std::string LongCategory(65, 'a');
+
+	const std::string aInvalid[] = {
+		AxiomCurrentMotd("SharedMap", "疯狂", "★★★✰✰") + "│ 星级：★★★\n",
+		AxiomCurrentMotd("SharedMap", "疯狂", "★★★✰✰") + "│ 难度：普通  ★★★☆☆\n",
+		AxiomCurrentMotd("SharedMap", "", "★★★✰✰"),
+		AxiomCurrentMotd("SharedMap", "疯狂", "★"),
+		AxiomCurrentMotd("SharedMap", "疯狂", "★★"),
+		AxiomCurrentMotd("SharedMap", "疯狂", "★★★★"),
+		AxiomCurrentMotd("SharedMap", "疯狂", "★★★★★★"),
+		AxiomCurrentMotd("SharedMap", "疯狂", "✰★★✰✰"),
+		AxiomCurrentMotd("SharedMap", "疯狂", "★★bad"),
+		AxiomCurrentMotd("SharedMap", "疯狂", ""),
+		AxiomCurrentMotd("SharedMap", LongCategory.c_str(), "★★★✰✰"),
+		"   ⌬ Axiom\n\n┌──── 当前地图\n│ 地图：SharedMap\n│ 作者：Mapper\n└─────────────────────\n",
+	};
+	for(const std::string &Motd : aInvalid)
+	{
+		SCOPED_TRACE(Motd);
+		EXPECT_FALSE(Catalog.RecordAxiomMotd(Server, Motd.c_str()));
+	}
+	EXPECT_EQ(Catalog.SerializeAxiomCache(), Before);
+}
+
+TEST(MapDifficultyCatalog, AxiomScaleChangeReplacesLegacyRatingForSameMap)
+{
+	CQmMapDifficultyCatalog Catalog;
+	const CServerInfo Server = AxiomServer();
+	ASSERT_TRUE(Catalog.RecordAxiomMotd(Server, AxiomMotd("SharedMap", "★★✰").c_str()));
+	ASSERT_NE(Catalog.FindForServer(Server), nullptr);
+	EXPECT_EQ(Catalog.FindForServer(Server)->m_MaxStars, 3);
+	ASSERT_TRUE(Catalog.RecordAxiomMotd(Server, AxiomCurrentMotd("SharedMap", "疯狂", "★★★✰✰").c_str()));
+	const auto *pEntry = Catalog.FindForServer(Server);
+	ASSERT_NE(pEntry, nullptr);
+	EXPECT_EQ(pEntry->m_Stars, 3);
+	EXPECT_EQ(pEntry->m_MaxStars, 5);
+	const std::string Json = Catalog.SerializeAxiomCache();
+	EXPECT_NE(Json.find("\"max_stars\": 5"), std::string::npos);
+	EXPECT_EQ(Json.find("\"max_stars\": 3"), std::string::npos);
+}
+
+TEST(MapDifficultyCatalog, AxiomCurrentCacheRoundTripPreservesFiveStarScale)
+{
+	CQmMapDifficultyCatalog Original;
+	ASSERT_TRUE(Original.RecordAxiomMotd(AxiomServer(), AxiomCurrentMotd("SharedMap", "疯狂", "★★★✰✰").c_str()));
+	const std::string Json = Original.SerializeAxiomCache();
+	EXPECT_NE(Json.find("\"version\": 2"), std::string::npos);
+	CQmMapDifficultyCatalog Restored;
+	ASSERT_TRUE(Restored.LoadAxiomCacheJson(Json.data(), Json.size()));
+	const auto *pEntry = Restored.FindForServer(AxiomServer());
+	ASSERT_NE(pEntry, nullptr);
+	EXPECT_EQ(pEntry->m_Category, "疯狂");
+	EXPECT_EQ(pEntry->m_MaxStars, 5);
+	EXPECT_STREQ(pEntry->StarLabel(), "★★★☆☆");
+}
+
+TEST(MapDifficultyCatalog, AxiomLegacyCacheVersionOneStillLoads)
+{
+	const char *pJson = R"({"version":1,"entries":[
+		{"map":"SharedMap","category":"Easy","mode":"Gores","stars":2},
+		{"map":"SharedMap","category":"Hard","mode":"AXRace","stars":4}
+	]})";
+	CQmMapDifficultyCatalog Catalog;
+	ASSERT_TRUE(Catalog.LoadAxiomCacheJson(pJson, str_length(pJson)));
+	const auto *pGores = Catalog.FindForServer(AxiomServer());
+	const auto *pRace = Catalog.FindForServer(AxiomServer("AXRace"));
+	ASSERT_NE(pGores, nullptr);
+	ASSERT_NE(pRace, nullptr);
+	EXPECT_EQ(pGores->m_MaxStars, 3);
+	EXPECT_STREQ(pGores->StarLabel(), "★★☆");
+	EXPECT_EQ(pRace->m_MaxStars, 5);
+	EXPECT_STREQ(pRace->StarLabel(), "★★★★☆");
 }
 
 TEST(MapDifficultyCatalog, AxiomModesKeepIndependentRatingsForSameMap)
@@ -237,7 +368,7 @@ TEST(MapDifficultyCatalog, InvalidAxiomAnnouncementPreservesLastKnownRating)
 	const CServerInfo Server = AxiomServer();
 	ASSERT_TRUE(Catalog.RecordAxiomMotd(Server, AxiomMotd("SharedMap", "★★✰").c_str()));
 	const std::string Before = Catalog.SerializeAxiomCache();
-	for(const char *pStars : {"", "★", "★★★★", "★★✰✰✰", "☆★☆", "2", "★bad"})
+	for(const char *pStars : {"", "★", "★★", "★★★★", "★★★★★★", "☆★☆", "2", "★bad"})
 	{
 		SCOPED_TRACE(pStars);
 		EXPECT_FALSE(Catalog.RecordAxiomMotd(Server, AxiomMotd("SharedMap", pStars).c_str()));
@@ -264,6 +395,36 @@ TEST(MapDifficultyCatalog, AxiomCacheRoundTripRestoresBothModesAndUnknownMapsRem
 	EXPECT_EQ(Restored.Find("SharedMap"), nullptr);
 }
 
+TEST(MapDifficultyCatalog, DifficultyCellKeepsCategoryBeforeStars)
+{
+	CQmMapDifficultyCatalog::SEntry Entry;
+	Entry.m_Stars = 3;
+	Entry.m_MaxStars = 5;
+	char aOut[64];
+
+	Entry.CellLabel("疯狂", aOut, sizeof(aOut));
+	EXPECT_STREQ(aOut, "疯狂 ★★★☆☆");
+
+	Entry.CellLabel("古典.中阶", aOut, sizeof(aOut));
+	EXPECT_STREQ(aOut, "古典.中阶 ★★★☆☆");
+
+	Entry.CellLabel("", aOut, sizeof(aOut));
+	EXPECT_STREQ(aOut, "★★★☆☆");
+
+	Entry.CellLabel(nullptr, aOut, sizeof(aOut));
+	EXPECT_STREQ(aOut, "★★★☆☆");
+
+	char aSmall[4];
+	Entry.CellLabel("疯狂", aSmall, sizeof(aSmall));
+	EXPECT_TRUE(str_utf8_check(aSmall));
+	EXPECT_LE(str_length(aSmall), 3);
+
+	Entry.m_MaxStars = 3;
+	Entry.m_Stars = 2;
+	Entry.CellLabel("简单", aOut, sizeof(aOut));
+	EXPECT_STREQ(aOut, "简单 ★★☆");
+}
+
 TEST(MapDifficultyCatalog, InvalidAxiomCacheDoesNotReplaceValidRecords)
 {
 	CQmMapDifficultyCatalog Catalog;
@@ -271,13 +432,21 @@ TEST(MapDifficultyCatalog, InvalidAxiomCacheDoesNotReplaceValidRecords)
 	const std::string Before = Catalog.SerializeAxiomCache();
 	const char *apInvalid[] = {
 		"not json",
-		R"({"version":2,"entries":[]})",
+		R"({"version":3,"entries":[]})",
+		R"({"entries":[]})",
+		R"({"version":2})",
 		R"({"version":1,"entries":[{"map":"SharedMap","category":"Easy","mode":"Gores","stars":4}]})",
 		R"({"version":1,"entries":[{"map":"SharedMap","category":"Easy","mode":"AXRace","stars":-1}]})",
 		R"({"version":1,"entries":[{"map":"SharedMap","category":"Easy","mode":"KoG","stars":2}]})",
 		R"({"version":1,"entries":[{"map":"SharedMap\u0000other","category":"Easy","mode":"Gores","stars":2}]})",
 		R"({"version":1,"entries":[{"map":"SharedMap","category":"Easy","mode":"Gores","stars":"2"}]})",
 		R"({"version":1,"entries":[{"map":"Same","category":"Easy","mode":"Gores","stars":1},{"map":"Same","category":"Easy","mode":"Gores","stars":3}]})",
+		R"({"version":2,"entries":[{"map":"SharedMap","category":"Easy","mode":"Gores","stars":2}]})",
+		R"({"version":2,"entries":[{"map":"SharedMap","category":"Easy","mode":"Gores","stars":2,"max_stars":4}]})",
+		R"({"version":2,"entries":[{"map":"SharedMap","category":"Easy","mode":"Gores","stars":5,"max_stars":3}]})",
+		R"({"version":2,"entries":[1]})",
+		R"({"version":2,"entries":[{"category":"Easy","mode":"Gores","stars":2,"max_stars":5}]})",
+		R"({"version":2,"entries":[{"map":"Same","category":"Easy","mode":"Gores","stars":1,"max_stars":5},{"map":"Same","category":"Easy","mode":"Gores","stars":3,"max_stars":5}]})",
 	};
 	for(const char *pJson : apInvalid)
 	{
@@ -334,4 +503,33 @@ TEST(MapDifficultyCatalog, AxiomCarriageReturnsAndQuotedMapNamesSurviveCacheRoun
 	ASSERT_NE(Restored.FindForServer(Server), nullptr);
 	EXPECT_EQ(Restored.FindForServer(Server)->m_MapName, pMap);
 	EXPECT_STREQ(Restored.FindForServer(Server)->StarLabel(), "★☆☆");
+}
+
+TEST(MapDifficultyCatalog, RevisionAdvancesOnlyWhenEntriesChange)
+{
+	CQmMapDifficultyCatalog Catalog;
+	const uint64_t InitialRevision = Catalog.Revision();
+
+	ASSERT_TRUE(Catalog.LoadSqlText(s_aServerSql, sizeof(s_aServerSql) - 1));
+	const uint64_t SqlRevision = Catalog.Revision();
+	EXPECT_GT(SqlRevision, InitialRevision);
+
+	// 失败的重载保留可用目录，修订号不变，派生缓存不会被无谓清空。
+	EXPECT_FALSE(Catalog.LoadSqlText("CREATE TABLE unrelated (value TEXT);", sizeof("CREATE TABLE unrelated (value TEXT);") - 1));
+	EXPECT_EQ(Catalog.Revision(), SqlRevision);
+
+	const CServerInfo Server = AxiomServer();
+	ASSERT_TRUE(Catalog.RecordAxiomMotd(Server, AxiomMotd("SharedMap", "★★✰").c_str()));
+	const uint64_t AxiomRevision = Catalog.Revision();
+	EXPECT_GT(AxiomRevision, SqlRevision);
+
+	// 内容相同的公告不改变目录，修订号必须保持，否则筛选会反复重算。
+	EXPECT_FALSE(Catalog.RecordAxiomMotd(Server, AxiomMotd("SharedMap", "★★✰").c_str()));
+	EXPECT_EQ(Catalog.Revision(), AxiomRevision);
+
+	const std::string Json = Catalog.SerializeAxiomCache();
+	CQmMapDifficultyCatalog Restored;
+	const uint64_t RestoredInitialRevision = Restored.Revision();
+	ASSERT_TRUE(Restored.LoadAxiomCacheJson(Json.data(), Json.size()));
+	EXPECT_GT(Restored.Revision(), RestoredInitialRevision);
 }

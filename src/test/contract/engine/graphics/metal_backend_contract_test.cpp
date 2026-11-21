@@ -126,7 +126,7 @@ TEST(MetalBackendContract, DrawablePoolUsesTimeoutWithoutApplicationFrameCap)
 	ASSERT_NE(Commit, std::string::npos);
 	EXPECT_EQ(Source.find("PresentBackpressure", Commit), std::string::npos);
 	EXPECT_EQ(Source.find("m_pPresentTracker", Commit), std::string::npos);
-	EXPECT_NE(Source.find("pLayer.allowsNextDrawableTimeout = !m_VSync;"), std::string::npos);
+	EXPECT_NE(Source.find("pLayer.allowsNextDrawableTimeout = YES;"), std::string::npos);
 	EXPECT_NE(Source.find("The drawable pool is finite", 0), std::string::npos);
 }
 
@@ -196,9 +196,11 @@ TEST(MetalBackendContract, DrawableFailureDoesNotContinueOrReportPresent)
 	ASSERT_NE(Commit, std::string::npos);
 	ASSERT_NE(Requested, std::string::npos);
 	ASSERT_NE(Return, std::string::npos);
-	EXPECT_NE(Source.find("const bool PresentationSucceeded = !PresentationRequested || BackbufferPresented;", Requested), std::string::npos);
+	EXPECT_NE(Source.find("const bool PresentationSucceeded = !PresentationRequested || SkippedPresent || BackbufferPresented;", Requested), std::string::npos);
 	EXPECT_NE(Source.find("const bool BackbufferPresented = CanPresent && FrameFinalized;", Requested), std::string::npos);
-	EXPECT_NE(Source.find("if(BackbufferPresented)\n\t\t\tSetCurrentBackbufferHasContents(false);", Requested), std::string::npos);
+	const size_t PresentedReset = Source.find("if(BackbufferPresented || SkippedPresent)", Requested);
+	ASSERT_NE(PresentedReset, std::string::npos);
+	EXPECT_NE(Source.find("SetCurrentBackbufferHasContents(false);", PresentedReset), std::string::npos);
 	EXPECT_LT(Requested, Return);
 }
 
@@ -211,7 +213,7 @@ TEST(MetalBackendContract, DrawableUnavailableCannotReportPresentSuccess)
 	ASSERT_NE(Commit, std::string::npos);
 	ASSERT_NE(Finalize, std::string::npos);
 	ASSERT_NE(Return, std::string::npos);
-	EXPECT_NE(Source.find("const bool PresentationSucceeded = !PresentationRequested || BackbufferPresented;", Finalize), std::string::npos);
+	EXPECT_NE(Source.find("const bool PresentationSucceeded = !PresentationRequested || SkippedPresent || BackbufferPresented;", Finalize), std::string::npos);
 	EXPECT_LT(Finalize, Return);
 }
 
@@ -621,14 +623,14 @@ TEST(MetalBackendContract, PersistentBuffersAreNotMutatedOrReleasedWhileInFlight
 	EXPECT_NE(Source.find("BufferInFlightMask(Buffer, false)"), std::string::npos);
 	EXPECT_NE(Source.find("for(size_t Slot = 0; Slot < gs_FrameSlotCount; ++Slot)"), std::string::npos);
 	EXPECT_NE(Source.find("WaitForBufferIdle(Buffer)", Update), std::string::npos);
-	EXPECT_NE(Source.find("!IsBufferInFlight(Existing)", Recreate), std::string::npos);
+	EXPECT_NE(Source.find("BufferInFlightMask(Existing, Existing.m_Buffer.storageMode == MTLStorageModeShared) == 0", Recreate), std::string::npos);
 	EXPECT_NE(Source.find("m_aLastUsedFrameIds[m_CurrentFrameSlot]", Prepare), std::string::npos);
 }
 
 TEST(MetalBackendContract, DrawableAcquisitionUsesTimeoutAndCompletedSlotsDoNotWait)
 {
 	const std::string Source = ReadTestSourceFile("src/engine/client/backend/metal/backend_metal.mm");
-	EXPECT_NE(Source.find("pLayer.allowsNextDrawableTimeout = !m_VSync;"), std::string::npos);
+	EXPECT_NE(Source.find("pLayer.allowsNextDrawableTimeout = YES;"), std::string::npos);
 	EXPECT_NE(Source.find("m_CurrentDrawable = RetainMetalObject([pLayer nextDrawable]);"), std::string::npos);
 	EXPECT_NE(Source.find("copyFromTexture:CurrentBackbufferTexture() sourceSlice:0 sourceLevel:0 sourceOrigin:MTLOriginMake(0, 0, 0)"), std::string::npos);
 	EXPECT_NE(Source.find("m_SkipCurrentFrame = true;"), std::string::npos);

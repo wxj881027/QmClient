@@ -63,7 +63,7 @@ TEST_F(CQmLifecycleMarkerWriteTest, ReplacementLeavesExistingReaderOnPreviousCom
 
 TEST_F(CQmLifecycleMarkerWriteTest, FailedPublishCleansCandidateAndCanRetry)
 {
-	ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::RUNTIME_DIR));
 	ASSERT_TRUE(m_pStorage->CreateFolder(QMCLIENT_LIFECYCLE_MARKER_FILE, IStorage::TYPE_SAVE));
 
 	EXPECT_FALSE(QmWriteLifecycleMarker(*m_pStorage, OLD_MARKER));
@@ -146,7 +146,7 @@ TEST_F(CQmLifecycleMarkerWriteTest, EmbeddedNullKeepsRecoveryPendingWithoutParti
 {
 	constexpr char CORRUPTED_MARKER[] = "started_at=100\nlast_seen_at=12\0\n";
 	constexpr unsigned Size = sizeof(CORRUPTED_MARKER) - 1;
-	ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::RUNTIME_DIR));
 	IOHANDLE File = m_pStorage->OpenFile(QMCLIENT_LIFECYCLE_MARKER_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	ASSERT_NE(File, nullptr);
 	EXPECT_EQ(io_write(File, CORRUPTED_MARKER, Size), Size);
@@ -172,7 +172,7 @@ TEST_F(CQmLifecycleMarkerWriteTest, EmptyMarkerTriggersRecoveryWithoutKnownTimes
 
 TEST_F(CQmLifecycleMarkerWriteTest, OversizedMarkerTriggersRecoveryWithoutReadingPartialTimes)
 {
-	ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::RUNTIME_DIR));
 	constexpr unsigned Size = QMCLIENT_LIFECYCLE_MARKER_MAX_BYTES + 1;
 	std::string Content = NEW_MARKER;
 	Content.resize(Size, ' ');

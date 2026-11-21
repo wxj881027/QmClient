@@ -633,6 +633,16 @@ public:
 	}
 
 	bool IsActive() const { return m_Mode != MODE_NONE; }
+	// 常驻聊天区由 cl_showchat 控制；输入中必须展开历史，否则 cl_showchat=0
+	// 会在用户准备发言时隐藏刚收到、但在控制台仍可追溯的消息。
+	static bool ShouldShowLargeArea(bool ShowChatHeld, bool InputActive, int ShowChatSetting)
+	{
+		return ShowChatHeld || InputActive || ShowChatSetting == 2;
+	}
+	static bool ShouldRenderHistory(bool DisplayChat, bool InputActive, bool DemoPlayback, bool VideoRendering)
+	{
+		return DisplayChat || (InputActive && !DemoPlayback && !VideoRendering);
+	}
 	const char *GetInputText() const { return m_Input.GetString(); }
 	void AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible = false);
 	void AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible, std::optional<QmHudNotifications::EServerMessageClass> KnownServerMessageClass, int SourceConnection = -1, int TimesRepeated = 0);

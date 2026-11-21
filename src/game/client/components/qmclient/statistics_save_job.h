@@ -3,9 +3,11 @@
 
 #include "statistics_file.h"
 
+#include <base/str.h>
 #include <base/system.h>
 
 #include <engine/shared/jobs.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <memory>
@@ -72,6 +74,9 @@ public:
 		}
 		auto &Operations = m_pOperations ? *m_pOperations : m_DefaultOperations;
 		Operations.CreateFolder(*m_pStorage);
+		const auto ParentEnd = m_Filename.rfind('/');
+		if(ParentEnd != std::string::npos && !qm_storage::EnsureFolder(m_pStorage, m_Filename.substr(0, ParentEnd).c_str()))
+			return false;
 		char aTempFilename[IO_MAX_PATH_LENGTH];
 		IStorage::FormatTmpPath(aTempFilename, sizeof(aTempFilename), m_Filename.c_str());
 		struct STemporary

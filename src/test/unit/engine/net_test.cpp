@@ -130,7 +130,8 @@ namespace
 					return nullptr;
 				--s_AllocationsBeforeFailure;
 				return std::malloc(Size);
-			}, nullptr);
+			},
+				nullptr);
 		}
 
 		~CKcpMtuAllocationFailure()

@@ -10,37 +10,37 @@
 
 namespace
 {
-class COpenGLStartupAccess : public CCommandProcessorFragment_OpenGL3_3
-{
-public:
-	using CCommandProcessorFragment_OpenGL2::AttachProgramStages;
-	using CCommandProcessorFragment_OpenGL2::CreateTileProbePixels;
-	using CCommandProcessorFragment_OpenGL3_3::QuadBatchCapacity;
-};
-
-struct SShader
-{
-	bool m_Loaded = true;
-	unsigned int m_Id = 0;
-
-	bool IsLoaded() const { return m_Loaded; }
-	unsigned int GetShaderId() const { return m_Id; }
-};
-
-struct SProgram
-{
-	unsigned int m_Id = 1;
-	int m_CreateCalls = 0;
-	std::vector<unsigned int> m_vAttached;
-
-	void CreateProgram() { ++m_CreateCalls; }
-	unsigned int GetProgramId() const { return m_Id; }
-	bool AddShader(const SShader *pShader)
+	class COpenGLStartupAccess : public CCommandProcessorFragment_OpenGL3_3
 	{
-		m_vAttached.push_back(pShader->GetShaderId());
-		return true;
-	}
-};
+	public:
+		using CCommandProcessorFragment_OpenGL2::AttachProgramStages;
+		using CCommandProcessorFragment_OpenGL2::CreateTileProbePixels;
+		using CCommandProcessorFragment_OpenGL3_3::QuadBatchCapacity;
+	};
+
+	struct SShader
+	{
+		bool m_Loaded = true;
+		unsigned int m_Id = 0;
+
+		bool IsLoaded() const { return m_Loaded; }
+		unsigned int GetShaderId() const { return m_Id; }
+	};
+
+	struct SProgram
+	{
+		unsigned int m_Id = 1;
+		int m_CreateCalls = 0;
+		std::vector<unsigned int> m_vAttached;
+
+		void CreateProgram() { ++m_CreateCalls; }
+		unsigned int GetProgramId() const { return m_Id; }
+		bool AddShader(const SShader *pShader)
+		{
+			m_vAttached.push_back(pShader->GetShaderId());
+			return true;
+		}
+	};
 } // namespace
 
 TEST(OpenGLStartup, TileProbeReportsAllocationFailure)

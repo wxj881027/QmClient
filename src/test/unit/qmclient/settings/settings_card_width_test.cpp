@@ -1,7 +1,126 @@
+#include <engine/shared/config.h>
+
 #include <game/client/QmUi/SettingsCardDeckLogic.h>
 #include <game/client/QmUi/SettingsCardWidth.h>
 
 #include <gtest/gtest.h>
+
+namespace
+{
+	class CSettingsCardWidthMotionConfig : public testing::Test
+	{
+		int m_PreviousMotionLevel = 0;
+
+	protected:
+		void SetUp() override
+		{
+			m_PreviousMotionLevel = g_Config.m_QmUiMotionLevel;
+		}
+
+		void TearDown() override
+		{
+			g_Config.m_QmUiMotionLevel = m_PreviousMotionLevel;
+		}
+	};
+} // namespace
+
+TEST_F(CSettingsCardWidthMotionConfig, ToggleAnimatesHorizontalSlotFromItsCurrentFrame)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Animation;
+	CSettingsCardWidthMotion Motion;
+	constexpr uint64_t NodeKey = 0x51f5a7ULL;
+	constexpr float Duration = 0.18f;
+	const CUIRect Half{120.0f, 100.0f, 100.0f, 0.0f};
+	const CUIRect Full{0.0f, 100.0f, 220.0f, 0.0f};
+
+	const CUIRect Initial = Motion.Update(&Animation, NodeKey, Half, Duration, false);
+	EXPECT_FLOAT_EQ(Initial.x, Half.x);
+	EXPECT_FLOAT_EQ(Initial.w, Half.w);
+	EXPECT_FALSE(Motion.IsActive());
+
+	const CUIRect Started = Motion.Update(&Animation, NodeKey, Full, Duration, false);
+	EXPECT_FLOAT_EQ(Started.x, Half.x);
+	EXPECT_FLOAT_EQ(Started.w, Half.w);
+	EXPECT_TRUE(Motion.IsActive());
+
+	Animation.Advance(Duration * 0.5f);
+	const CUIRect Middle = Motion.Update(&Animation, NodeKey, Full, Duration, false);
+	EXPECT_LT(Middle.x, Half.x);
+	EXPECT_GT(Middle.x, Full.x);
+	EXPECT_GT(Middle.w, Half.w);
+	EXPECT_LT(Middle.w, Full.w);
+	EXPECT_FLOAT_EQ(Middle.y, Half.y);
+
+	Animation.Advance(Duration);
+	const CUIRect Settled = Motion.Update(&Animation, NodeKey, Full, Duration, false);
+	EXPECT_FLOAT_EQ(Settled.x, Full.x);
+	EXPECT_FLOAT_EQ(Settled.w, Full.w);
+	EXPECT_FALSE(Motion.IsActive());
+}
+
+TEST_F(CSettingsCardWidthMotionConfig, ReverseToggleContinuesFromThePresentedWidth)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Animation;
+	CSettingsCardWidthMotion Motion;
+	constexpr uint64_t NodeKey = 0x94e2c1ULL;
+	constexpr float Duration = 0.18f;
+	const CUIRect Half{120.0f, 100.0f, 100.0f, 0.0f};
+	const CUIRect Full{0.0f, 100.0f, 220.0f, 0.0f};
+
+	Motion.Update(&Animation, NodeKey, Half, Duration, false);
+	Motion.Update(&Animation, NodeKey, Full, Duration, false);
+	Animation.Advance(Duration * 0.4f);
+	const CUIRect BeforeReverse = Motion.Update(&Animation, NodeKey, Full, Duration, false);
+	const CUIRect Reversed = Motion.Update(&Animation, NodeKey, Half, Duration, false);
+	EXPECT_FLOAT_EQ(Reversed.x, BeforeReverse.x);
+	EXPECT_FLOAT_EQ(Reversed.w, BeforeReverse.w);
+
+	Animation.Advance(Duration * 0.2f);
+	const CUIRect Backward = Motion.Update(&Animation, NodeKey, Half, Duration, false);
+	EXPECT_GT(Backward.x, BeforeReverse.x);
+	EXPECT_LT(Backward.w, BeforeReverse.w);
+	EXPECT_TRUE(Motion.IsActive());
+}
+
+TEST_F(CSettingsCardWidthMotionConfig, DisabledAndSnappedWidthTogglesUseTheTargetSlotImmediately)
+{
+	CUiV2AnimationRuntime Animation;
+	CSettingsCardWidthMotion Motion;
+	constexpr uint64_t NodeKey = 0x2451afULL;
+	const CUIRect Half{120.0f, 100.0f, 100.0f, 0.0f};
+	const CUIRect Full{0.0f, 100.0f, 220.0f, 0.0f};
+
+	g_Config.m_QmUiMotionLevel = 2;
+	Motion.Update(&Animation, NodeKey, Half, 0.18f, false);
+	EXPECT_FLOAT_EQ(Motion.Update(&Animation, NodeKey, Full, 0.18f, true).w, Full.w);
+	EXPECT_FALSE(Motion.IsActive());
+	EXPECT_EQ(Animation.ActiveTrackCount(), 0);
+
+	g_Config.m_QmUiMotionLevel = 0;
+	EXPECT_FLOAT_EQ(Motion.Update(&Animation, NodeKey, Half, 0.18f, false).w, Half.w);
+	EXPECT_FALSE(Motion.IsActive());
+	EXPECT_EQ(Animation.ActiveTrackCount(), 0);
+}
+
+TEST_F(CSettingsCardWidthMotionConfig, RuntimeAppearingAfterLayoutStartsFromThePresentedSlot)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Animation;
+	CSettingsCardWidthMotion Motion;
+	constexpr uint64_t NodeKey = 0x76b3d2ULL;
+	constexpr float Duration = 0.18f;
+	const CUIRect Half{120.0f, 100.0f, 100.0f, 0.0f};
+	const CUIRect Full{0.0f, 100.0f, 220.0f, 0.0f};
+
+	EXPECT_FLOAT_EQ(Motion.Update(nullptr, NodeKey, Half, Duration, false).w, Half.w);
+	EXPECT_FLOAT_EQ(Motion.Update(&Animation, NodeKey, Half, Duration, false).w, Half.w);
+	const CUIRect Started = Motion.Update(&Animation, NodeKey, Full, Duration, false);
+	EXPECT_FLOAT_EQ(Started.x, Half.x);
+	EXPECT_FLOAT_EQ(Started.w, Half.w);
+	EXPECT_TRUE(Motion.IsActive());
+}
 
 TEST(SettingsCardWidth, NarrowedFullWidthSlotIgnoresOppositeColumnHeightChanges)
 {

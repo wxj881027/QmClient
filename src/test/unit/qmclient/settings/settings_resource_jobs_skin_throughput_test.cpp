@@ -41,6 +41,40 @@ TEST(SettingsResourceJobsSkinThroughput, TeeSkinSourceLoadWindowCapsActiveDecode
 	EXPECT_EQ(SettingsSkinSourceLoadVisibleWindow(Idle, true, 32), 32);
 }
 
+TEST(SettingsResourceJobsSkinThroughput, UploadTimeBudgetRaisesThroughputOnlyWithFrameHeadroom)
+{
+	const SSettingsResourceFrameContext Idle = SettingsBuildFrameContext(false, false, 0);
+	SSettingsResourceFrameContext Drain = Idle;
+	Drain.m_HighPrioritySettled = true;
+	const SSettingsResourceFrameContext Scroll = SettingsBuildFrameContext(true, false, 0);
+	const SSettingsResourceFrameContext Recovery = SettingsBuildFrameContext(false, false, 2);
+
+	const float Target144 = 1000.0f / 144.0f;
+	const float Target60 = 1000.0f / 60.0f;
+	// 设置页空闲时允许比 1ms 更高的上传预算，后台 drain 最高。
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Idle, true, 1.0f, Target144), 2);
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Drain, true, 1.0f, Target144), 3);
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Scroll, true, 1.0f, Target144), 1);
+	EXPECT_GE(SettingsSkinUploadTimeBudgetMs(Recovery, true, 1.0f, Target144), 1);
+	// 预算必须落在本帧余量内：144Hz 下渲染已用 5ms/6ms 时不能仍批 3ms。
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Drain, true, 5.0f, Target144), 1);
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Drain, true, 6.0f, Target144), 1);
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Drain, true, 4.0f, Target144), 2);
+	// 60Hz 有更多余量，同样渲染耗时可给满 3ms。
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Drain, true, 5.0f, Target60), 3);
+	// 离开设置页仍保持 1ms，不把预览吞吐成本带进对局。
+	EXPECT_EQ(SettingsSkinUploadTimeBudgetMs(Drain, false, 1.0f, Target144), 1);
+}
+
+TEST(SettingsResourceJobsSkinThroughput, LoadingAdmissionRespectsBacklogCap)
+{
+	EXPECT_TRUE(SettingsSkinShouldAdmitLoading(0, SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT));
+	EXPECT_TRUE(SettingsSkinShouldAdmitLoading(SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT - 1, SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT));
+	EXPECT_FALSE(SettingsSkinShouldAdmitLoading(SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT, SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT));
+	EXPECT_FALSE(SettingsSkinShouldAdmitLoading(512, SETTINGS_SKIN_VISIBLE_LOADING_LIMIT));
+	EXPECT_TRUE(SettingsSkinShouldAdmitLoading(512, 0));
+}
+
 TEST(SettingsResourceJobsSkinThroughput, VisibleSkinFinalizeDefersBackgroundSweepsAfterPriorityWork)
 {
 	EXPECT_TRUE(SettingsSkinFinalizeShouldDeferBackgroundSweep(true, 1, 2));

@@ -6,6 +6,7 @@
 #include <base/log.h>
 #include <base/str.h>
 
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <algorithm>
@@ -22,7 +23,7 @@ namespace QmMapTags
 {
 	namespace
 	{
-		constexpr char LOCAL_TAGS_FILE[] = "qm_local_map_tags.txt";
+		constexpr const char *LOCAL_TAGS_FILE = qm_storage::LOCAL_MAP_TAGS_FILE;
 		constexpr int MAX_LOCAL_TAGS_PER_MAP = 16;
 		constexpr unsigned MAX_FILE_BYTES = 256 * 1024;
 		constexpr int MAX_TEMPORARY_ATTEMPTS = 8;
@@ -125,6 +126,7 @@ namespace QmMapTags
 
 	bool CLocalTags::Save(IStorage &Storage, const TTagEntries &vEntries)
 	{
+		qm_storage::EnsureFolder(&Storage, qm_storage::STATE_MAPS_DIR);
 		std::string Content;
 		for(const auto &[Key, Tag] : vEntries)
 		{
@@ -142,13 +144,13 @@ namespace QmMapTags
 				Content.push_back('\n');
 		}
 
-		char aTemporary[sizeof(LOCAL_TAGS_FILE) + 32];
+		char aTemporary[IO_MAX_PATH_LENGTH];
 		char aRoot[IO_MAX_PATH_LENGTH] = "";
 		Storage.GetCompletePath(IStorage::TYPE_SAVE, "", aRoot, sizeof(aRoot));
 
 		std::unique_ptr<void, decltype(&io_close)> pFile(nullptr, &io_close);
 		static std::atomic<unsigned> s_NextTemporary{0};
-		char aBase[sizeof(LOCAL_TAGS_FILE) + 12];
+		char aBase[IO_MAX_PATH_LENGTH];
 		str_copy(aBase, LOCAL_TAGS_FILE);
 		for(int Attempt = 0; Attempt < MAX_TEMPORARY_ATTEMPTS; ++Attempt)
 		{

@@ -491,7 +491,7 @@ const std::vector<int> &CQmAxiomQuadCollision::QueryPoint(vec2 Pos, std::vector<
 	}
 	const double X = std::floor(Pos.x / GRID_SIZE), Y = std::floor(Pos.y / GRID_SIZE);
 	if(!(X >= std::numeric_limits<int>::min() && X <= std::numeric_limits<int>::max() &&
-		Y >= std::numeric_limits<int>::min() && Y <= std::numeric_limits<int>::max()))
+		   Y >= std::numeric_limits<int>::min() && Y <= std::numeric_limits<int>::max()))
 		return vFallback;
 	const auto Cell = m_Grid.find(GridKey(static_cast<int>(X), static_cast<int>(Y)));
 	// 网格索引保持图层顺序，点查询直接借用索引。

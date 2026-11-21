@@ -83,7 +83,7 @@ namespace
 		{
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
-			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::CONFIG_CREDENTIALS_DIR));
 			Store(qm_identity_file::CLIENT_ID_FILE, "qmold\n");
 		}
 		void Store(const char *pPath, const std::string &Content)

@@ -47,6 +47,7 @@
 #include <game/client/components/assets_resource_registry.h>
 #include <game/client/components/community_icons.h>
 #include <game/client/components/mapimages.h>
+#include <game/client/components/menus_close_reset_gate.h>
 #include <game/client/components/menus_ingame_touch_controls.h>
 #include <game/client/components/menus_settings_controls.h>
 #include <game/client/components/menus_start.h>
@@ -98,8 +99,6 @@ struct CDataSprite;
 
 class IHttpRequest;
 class CChat;
-class CProfile;
-struct SQmProfileWheelEditorState;
 struct SSettingsTextPlanProgressView;
 struct SQmFriendCodeUiState;
 namespace qm_card_registry
@@ -143,8 +142,8 @@ enum
 
 // 导航胶囊行高与内容缩放：主菜单导航栏（离线/在线）与游戏内浏览页服务器导航栏
 // 共用同一组尺寸，保证上下两排胶囊导航观感一致。
-	// 与页签胶囊同高同号：ui_token::settings::TAB_HEIGHT(26)，导航选中滑块与页签滑块上下对齐。
-	inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 26.0f;
+// 与页签胶囊同高同号：ui_token::settings::TAB_HEIGHT(26)，导航选中滑块与页签滑块上下对齐。
+inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 26.0f;
 inline constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
 
 class CUIRect;
@@ -279,7 +278,7 @@ private:
 	void RenderQmChatGradientSettings(CUIRect &Content, CChat &Chat, const SSettingsContentMetrics &Metrics);
 
 	void DoLaserPreview(const CUIRect *pRect, ColorHSLA OutlineColor, ColorHSLA InnerColor, int LaserType);
-	int DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align = TEXTALIGN_ML, const SLabelProperties &Props = {});
+	int DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, bool Descending = false, int Align = TEXTALIGN_ML, const SLabelProperties &Props = {});
 	int DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect, float IconFontSize = 0.0f);
 
 	bool m_SkinListScrollToSelected = false;
@@ -1487,6 +1486,9 @@ protected:
 	static void ConchainAssetEmoticons(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainAssetHud(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainAssetExtras(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainAssetArrow(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainAssetGuiCursor(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainAssetStrongWeak(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	void ClearCustomItems(int CurTab);
 	bool RefreshEntityBgHierarchyView();
@@ -1607,6 +1609,8 @@ protected:
 	// 收尾兜底截止时刻（time_get）：轨道因配置/后端变化不收敛时强制关闭，
 	// 避免菜单停在半路既关不掉也不再接受输入。
 	int64_t m_MenuCloseDeadline = 0;
+	// 收起期间输入已交回游戏，只在输入交回前或立即关闭时重置一次。
+	CMenuCloseResetGate m_MenuCloseResetGate;
 	// 点击菜单面板外空白：按下时只登记，等本帧绘制算出 HotItem 再判定，
 	// 避免「快速甩鼠标点击」在同一帧里因 HotItem 还是上一帧的值而误关。
 	bool m_MenuOutsideClickPending = false;
@@ -2027,6 +2031,8 @@ protected:
 	char m_aPendingRankDemoPlayPath[IO_MAX_PATH_LENGTH] = "";
 	// Rank 1 页面：地图搜索（跨全清单查找指定名次的官方回放）
 	CLineInputBuffered<64> m_RankSearchInput;
+	// 影子页面：按玩家名过滤当前影子列表（只影响展示，不改动底层条目）
+	CLineInputBuffered<64> m_GhostSearchInput;
 
 	SDemoSelectionEntry DemoSelectionEntryFromItem(const CDemoItem &Item) const;
 	bool IsDemoItemSelected(const CDemoItem &Item) const;
@@ -2264,6 +2270,8 @@ protected:
 	IDemoPlayer *PlaybackPlayer() const;
 	uint64_t m_OnlineReplayControlsGeneration = 0;
 	bool m_DemoControlsWereOnline = false;
+	// 查看模式控制卡最近一帧的实际矩形（含拖动偏移），供“点外部关闭”判定。
+	CUIRect m_OnlineReplayPanelRect = {};
 	void HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickToSeek = -1);
 	void RenderDemoCard(const CUIRect &Rect);
 	void RenderDemoPlayer(CUIRect MainView);
@@ -2449,6 +2457,7 @@ protected:
 	void DrainIngameUiSnapshotTextRuntime();
 	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
 	void RenderServerControl(CUIRect MainView);
+
 public:
 private:
 	void RenderServerVoteList(CUIRect MainView);
@@ -2509,6 +2518,7 @@ private:
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
 	CQmMapDifficultyCatalog m_MapDifficultyCatalog;
+	// Axiom 难度缓存合批落盘：多次请求结果在同一窗口内只写一次磁盘。
 	int64_t m_NextAxiomDifficultySave = 0;
 	CQmScreenshotManager m_ScreenshotManager;
 	CQmLocalSaveDisplayCache m_LocalSaveDisplay;
@@ -2647,9 +2657,12 @@ public:
 	bool IsInit() const { return m_IsInit; }
 
 	bool OnlineReplayPopupActive() const { return m_DemoPlayerState != DEMOPLAYER_NONE; }
+	bool OnlineReplayPanelContains(vec2 Pos) const { return m_OnlineReplayPanelRect.Inside(Pos); }
 	bool PlaybackShortcutsActive() const;
 	bool ClaimOnlineReplaySpectatorBind(int Key);
 	bool IsActive() const { return m_MenuActive; }
+	// 收起动画期间仍绘制菜单，但输入已经交回游戏；绑定释放不能被当成菜单占用输入。
+	bool IsClosing() const { return m_MenuClosing; }
 	bool IsSettingsPageActive() const;
 	std::array<int, 9> TooltipContext() const
 	{
@@ -2852,11 +2865,14 @@ public:
 		int m_Slot;
 		bool m_Own;
 		bool m_RankGhost;
+		// 快速练习线路组：m_aFilename 指向组目录（内含多轨 .gho + events.qmevt），
+		// 只能走 View 进入 demo 式回放，不能当单文件 Activate。
+		bool m_PracticeGroup = false;
 		bool m_InMemoryBest = false;
 		time_t m_Date;
 
 		CGhostItem() :
-			m_Slot(-1), m_Own(false), m_RankGhost(false) { m_aFilename[0] = 0; }
+			m_Slot(-1), m_Own(false), m_RankGhost(false), m_PracticeGroup(false) { m_aFilename[0] = 0; }
 
 		bool operator<(const CGhostItem &Other) const { return m_Time < Other.m_Time; }
 
@@ -2988,6 +3004,9 @@ public:
 	void DoMenuLabelStreamed(EMenuTextScope Scope, CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr, bool Render = true);
 	int DoIngameMenuTab(CButtonContainer *pButtonContainer, int Page, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Corners);
 	int DoIngameMenuButton(int Page, const char *pTextId, CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, bool Disabled = false);
+	// 游戏内菜单底部动作栏：按文案宽度 + token 内边距从行内切出按钮矩形，
+	// 窄窗口下收敛到剩余宽度。FromRight = false 时从左侧切。
+	CUIRect NextIngameActionButton(CUIRect &Row, const char *pText, bool FromRight = true);
 	int DoIngameMenuCheckBox(int Page, const char *pTextId, const void *pId, const char *pText, int Checked, const CUIRect *pRect);
 	void DoIngameMenuLabel(int Page, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {});
 	void DoIngameMenuTitleLabel(int Page, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {});
@@ -3370,12 +3389,7 @@ private:
 	qm_card_catalog::STClientCardResult RunTClientWarListCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientStatusBarCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientProfilesCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
-	int m_ProfilePresetsTab = 0;
-	std::shared_ptr<SQmProfileWheelEditorState> m_pProfileWheelEditor;
 	std::shared_ptr<SQmFriendCodeUiState> m_pFriendCodeUiState;
-	uint64_t ProfileWheelEditorRevision() const;
-	void RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool ReadOnly);
-	void EditProfileInWheel(const CProfile &Profile, bool Dummy);
 	qm_card_catalog::STClientCardResult RunTClientConfigsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientMainCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	void RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool PrewarmOnly = false);
@@ -3472,6 +3486,8 @@ private:
 	void RenderQmFunctionEmoticonsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
 	// 自杀保护卡的内容渲染：自 MiniFeatures 杂烩卡迁出，独立成 qm:self_kill_protection 卡。
 	void RenderQmSelfKillProtectionContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+	// 快速练习卡：主世界影子开关/透明度、HUD 计时开关与快捷菜单条目的绑定行。
+	void RenderQmFastPracticeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	// 灵动岛倒计时位置开关（卡片目录的桥接入口按本地签名调用）。
 	bool ToggleQmHudCountdownLocation(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);
 	// 歌词卡的内容渲染（音乐 Hook 开关 + 歌词开关；Hook 开关改为遍历 QmMusicHookRegistry）。

@@ -128,7 +128,6 @@ namespace ui_token::color
 	// 拖动磁吸辅助线：淡蓝白半透明，压在深色预览或游戏画面上都能读清，
 	// 又不盖住被拖的内容（名牌自由布局与 HUD 编辑器共用同一档）。
 	inline constexpr ColorRGBA DRAG_GUIDE{0.62f, 0.82f, 1.0f, 0.45f};
-
 	// 自适应对比双色：浅表面用深前景、深表面用浅前景（胶囊导航等明暗推导）。
 	// 成对修改，保持两者的对比关系；透明度由调用点 WithAlpha 决定。
 	inline constexpr ColorRGBA ADAPTIVE_ON_LIGHT{0.09f, 0.10f, 0.12f, 1.0f};
@@ -176,7 +175,137 @@ namespace ui_token::color
 	}
 } // namespace ui_token::color
 
-// 离散滑块档位色板与满档渐变：UiDiscreteSliderStyle.h 与 UiDiscreteSliderLogic.cpp
+// 回放控制卡（demo 播放与 Rank 1 / 练习组查看模式共用）的组件内部角色色。
+// 强调色不在这里：它跟随 UiTheme.m_Accent，也就是 qm_ui_accent_color。
+namespace ui_token::replay
+{
+	// 控制卡外壳：投影、描边、内底；模糊不可用时不透明档兜底。
+	inline constexpr ColorRGBA CARD_SHADOW = color::SURFACE_SHADOW;
+	inline constexpr ColorRGBA CARD_BORDER{0.65f, 0.69f, 0.77f, 0.12f};
+	inline constexpr ColorRGBA CARD_FILL_BLURRED{0.07f, 0.08f, 0.11f, 0.56f};
+	inline constexpr ColorRGBA CARD_FILL_OPAQUE{0.07f, 0.08f, 0.11f, 0.92f};
+	// 传输按钮条、进度槽与标记阴影。
+	inline constexpr ColorRGBA TRANSPORT_BAR{1.0f, 1.0f, 1.0f, 0.045f};
+	// 名称栏里的普通动作按钮底；比常驻提示层亮一档，但仍是中性白。
+	inline constexpr ColorRGBA CONTROL_FILL{1.0f, 1.0f, 1.0f, 0.08f};
+	// 只做分区提示的浅底，例如显示选项里的固定控件槽。
+	inline constexpr ColorRGBA CONTROL_FILL_SUBTLE{1.0f, 1.0f, 1.0f, 0.04f};
+	// “回放显示”胶囊页签的底；比控制卡内底再亮一档，页签边界才读得出来。
+	inline constexpr ColorRGBA DISPLAY_BASE{0.10f, 0.11f, 0.14f, 1.0f};
+	// 进度条播放头：白色高光压到 95%，避免压住其下方的切片标记。
+	inline constexpr ColorRGBA PLAYHEAD{1.0f, 1.0f, 1.0f, 0.95f};
+	inline constexpr ColorRGBA SEEK_TRACK{0.0f, 0.0f, 0.0f, 0.28f};
+	inline constexpr ColorRGBA MARKER_SHADOW{0.15f, 0.10f, 0.0f, 0.75f};
+	// Live 指示：直播红点与不可回直播的灰点。
+	inline constexpr ColorRGBA LIVE_ON{1.0f, 0.0f, 0.0f, 1.0f};
+	inline constexpr ColorRGBA LIVE_OFF{0.6f, 0.6f, 0.6f, 1.0f};
+	// 导出弹窗的压暗层；比 SURFACE_OVERLAY 深一档，保证弹窗文字压得住地图。
+	inline constexpr ColorRGBA POPUP_BACKDROP{0.0f, 0.0f, 0.0f, 0.5f};
+} // namespace ui_token::replay
+
+// 完成摘要卡（结算分享图）的角色色：数字渐变与差值好坏属于成绩语义，
+// 不随界面主题变化，避免同一张成绩图换个主题就读成两种结果。
+namespace ui_token::finish_summary
+{
+	// 大字数字的深色描边；压在浅色渐变上仍然可读。
+	inline constexpr ColorRGBA TEXT_OUTLINE{0.02f, 0.025f, 0.04f, 0.85f};
+	// 数字渐变的浅色两端，与强调色插值出卡片主视觉。
+	inline constexpr ColorRGBA GRADIENT_START{0.68f, 0.84f, 1.0f, 1.0f};
+	inline constexpr ColorRGBA GRADIENT_END{0.94f, 0.98f, 1.0f, 1.0f};
+	inline constexpr ColorRGBA NUMBER_ACCENT_DEEP{0.44f, 0.66f, 0.95f, 1.0f};
+	// 差值好坏：改进用薄荷绿，退步用珊瑚红；与 SUCCESS/DANGER 区分，
+	// 这一档需要压在金色徽章上仍保持柔和。
+	inline constexpr ColorRGBA DIFFERENCE_IMPROVED{0.55f, 0.96f, 0.73f, 1.0f};
+	inline constexpr ColorRGBA DIFFERENCE_REGRESSED{1.0f, 0.66f, 0.60f, 1.0f};
+	// 收益徽章内的深色文字渐变两端。
+	inline constexpr ColorRGBA GAIN_TEXT_DEEP{0.30f, 0.19f, 0.03f, 1.0f};
+	inline constexpr ColorRGBA GAIN_TEXT_SOFT{0.18f, 0.15f, 0.06f, 1.0f};
+} // namespace ui_token::finish_summary
+
+// 地图预览面板：预览框背板与未缓存占位图标始终压在固定深色底上，
+// 不跟随界面主题（地图本身才是主体，背板只负责让地图边缘可读）。
+namespace ui_token::map_preview
+{
+	inline constexpr ColorRGBA BACKDROP{0.055f, 0.065f, 0.085f, 1.0f};
+	inline constexpr ColorRGBA PLACEHOLDER_ICON{0.55f, 0.58f, 0.62f, 1.0f};
+} // namespace ui_token::map_preview
+
+namespace ui_token::tag
+{
+	inline constexpr int MONET_HUE_COUNT = 12;
+	inline constexpr int MONET_VARIANTS_PER_HUE = 4;
+	inline constexpr ColorRGBA MONET_PALETTE[] = {
+		// 罂粟红
+		ColorRGBA(0.630f, 0.449f, 0.421f, 1.0f),
+		ColorRGBA(0.695f, 0.423f, 0.382f, 1.0f),
+		ColorRGBA(0.542f, 0.372f, 0.346f, 1.0f),
+		ColorRGBA(0.614f, 0.344f, 0.302f, 1.0f),
+		// 赭橙
+		ColorRGBA(0.577f, 0.486f, 0.369f, 1.0f),
+		ColorRGBA(0.615f, 0.480f, 0.303f, 1.0f),
+		ColorRGBA(0.484f, 0.409f, 0.310f, 1.0f),
+		ColorRGBA(0.517f, 0.403f, 0.254f, 1.0f),
+		// 麦黄
+		ColorRGBA(0.529f, 0.517f, 0.338f, 1.0f),
+		ColorRGBA(0.542f, 0.524f, 0.267f, 1.0f),
+		ColorRGBA(0.445f, 0.434f, 0.284f, 1.0f),
+		ColorRGBA(0.455f, 0.440f, 0.224f, 1.0f),
+		// 橄榄
+		ColorRGBA(0.467f, 0.546f, 0.349f, 1.0f),
+		ColorRGBA(0.452f, 0.567f, 0.279f, 1.0f),
+		ColorRGBA(0.392f, 0.459f, 0.293f, 1.0f),
+		ColorRGBA(0.380f, 0.476f, 0.235f, 1.0f),
+		// 苔绿
+		ColorRGBA(0.381f, 0.585f, 0.374f, 1.0f),
+		ColorRGBA(0.320f, 0.629f, 0.310f, 1.0f),
+		ColorRGBA(0.320f, 0.491f, 0.314f, 1.0f),
+		ColorRGBA(0.269f, 0.528f, 0.260f, 1.0f),
+		// 灰绿
+		ColorRGBA(0.367f, 0.574f, 0.470f, 1.0f),
+		ColorRGBA(0.301f, 0.610f, 0.455f, 1.0f),
+		ColorRGBA(0.308f, 0.482f, 0.395f, 1.0f),
+		ColorRGBA(0.252f, 0.513f, 0.383f, 1.0f),
+		// 雾青
+		ColorRGBA(0.358f, 0.560f, 0.560f, 1.0f),
+		ColorRGBA(0.290f, 0.589f, 0.589f, 1.0f),
+		ColorRGBA(0.301f, 0.471f, 0.471f, 1.0f),
+		ColorRGBA(0.244f, 0.495f, 0.495f, 1.0f),
+		// 湖蓝
+		ColorRGBA(0.394f, 0.532f, 0.612f, 1.0f),
+		ColorRGBA(0.336f, 0.550f, 0.673f, 1.0f),
+		ColorRGBA(0.330f, 0.447f, 0.516f, 1.0f),
+		ColorRGBA(0.280f, 0.463f, 0.568f, 1.0f),
+		// 群青
+		ColorRGBA(0.442f, 0.502f, 0.643f, 1.0f),
+		ColorRGBA(0.414f, 0.503f, 0.711f, 1.0f),
+		ColorRGBA(0.361f, 0.422f, 0.565f, 1.0f),
+		ColorRGBA(0.323f, 0.423f, 0.657f, 1.0f),
+		// 紫罗兰
+		ColorRGBA(0.505f, 0.467f, 0.659f, 1.0f),
+		ColorRGBA(0.507f, 0.452f, 0.730f, 1.0f),
+		ColorRGBA(0.426f, 0.382f, 0.598f, 1.0f),
+		ColorRGBA(0.428f, 0.364f, 0.687f, 1.0f),
+		// 丁香紫
+		ColorRGBA(0.562f, 0.441f, 0.642f, 1.0f),
+		ColorRGBA(0.591f, 0.413f, 0.711f, 1.0f),
+		ColorRGBA(0.482f, 0.360f, 0.564f, 1.0f),
+		ColorRGBA(0.522f, 0.323f, 0.655f, 1.0f),
+		// 玫瑰粉
+		ColorRGBA(0.628f, 0.418f, 0.586f, 1.0f),
+		ColorRGBA(0.693f, 0.377f, 0.630f, 1.0f),
+		ColorRGBA(0.538f, 0.344f, 0.500f, 1.0f),
+		ColorRGBA(0.608f, 0.300f, 0.546f, 1.0f),
+	};
+	inline constexpr int MONET_PALETTE_SIZE = (int)(sizeof(MONET_PALETTE) / sizeof(MONET_PALETTE[0]));
+}
+
+namespace ui_token::world_lyrics
+{
+	inline constexpr ColorRGBA GLOW{0.4f, 0.75f, 1.0f, 0.14f};
+	inline constexpr ColorRGBA TEXT{0.94f, 0.98f, 1.0f, 1.0f};
+}
+
+// 离散滑块档位色板与满档渐变：UiDiscreteSliderLogic.cpp
 // 共享的唯一来源，禁止在调用文件复制。
 namespace ui_token::discrete_slider
 {
@@ -561,6 +690,48 @@ namespace ui_token::list
 	}
 } // namespace ui_token::list
 
+// 绑定菜单（轮盘 / 计分板式面板）的游戏内叠层几何。面板固定在屏幕正中，
+// 并以最大高度约束条目数；轮盘卡片为
+// 本体/分身两行资料留出高度，超过单环容量后改用内外双环，而不是无限缩卡。
+namespace ui_token::bind_menu
+{
+	inline constexpr float PANEL_WIDTH_RATIO = 0.56f;
+	inline constexpr float PANEL_MIN_WIDTH = 360.0f;
+	inline constexpr float PANEL_MAX_WIDTH = 640.0f;
+	inline constexpr float PANEL_MAX_HEIGHT = 415.0f;
+	inline constexpr int PANEL_MAX_VISIBLE_ROWS = 6;
+	inline constexpr int PREVIEW_MAX_VISIBLE_ROWS = 5;
+	inline constexpr float PREVIEW_HEIGHT_RATIO = 0.68f;
+	inline constexpr float PREVIEW_MIN_HEIGHT = 360.0f;
+	inline constexpr float PREVIEW_MAX_HEIGHT = 560.0f;
+
+	inline constexpr float WHEEL_RADIUS_RATIO = 0.42f;
+	inline constexpr float WHEEL_SCREEN_RADIUS_RATIO = 0.29f;
+	inline constexpr float WHEEL_CARD_WIDTH_RADIUS_RATIO = 0.86f;
+	inline constexpr float WHEEL_CARD_WIDTH_ARC_RATIO = 0.84f;
+	inline constexpr float WHEEL_CARD_WIDTH_MIN = 92.0f;
+	inline constexpr float WHEEL_CARD_WIDTH_MAX = 176.0f;
+	inline constexpr float WHEEL_CARD_HEIGHT_ROWS = 2.8f;
+	inline constexpr float PANEL_ROW_HEIGHT_ROWS = 3.0f;
+	inline constexpr float ASSET_WHEEL_CARD_HEIGHT_ROWS = 3.2f;
+	inline constexpr float ASSET_PANEL_ROW_HEIGHT_ROWS = 3.8f;
+	inline constexpr int WHEEL_SINGLE_RING_MAX = 12;
+	inline constexpr float WHEEL_INNER_RADIUS_RATIO = 0.60f;
+	inline constexpr float WHEEL_INNER_CARD_SCALE = 0.88f;
+	inline constexpr float WHEEL_HUB_RADIUS_RATIO = 0.30f;
+	inline constexpr float WHEEL_HUB_WIDTH_RADIUS_RATIO = 0.76f;
+	inline constexpr float WHEEL_HUB_MIN_WIDTH = 80.0f;
+	inline constexpr float WHEEL_ENTER_SCALE = 0.84f;
+	inline constexpr float PANEL_ENTER_SCALE = 0.94f;
+	inline constexpr int PANEL_SCROLL_ROWS_PER_STEP = 3;
+	inline constexpr float IDENTITY_COLUMN_MIN_WIDTH = 220.0f;
+	inline constexpr float IDENTITY_AVATAR_WIDTH_RATIO = 0.24f;
+	inline constexpr float IDENTITY_AVATAR_HEIGHT_RATIO = 0.86f;
+	inline constexpr float IDENTITY_NAME_HEIGHT_RATIO = 0.56f;
+	inline constexpr float IDENTITY_COMPACT_AVATAR_HEIGHT_RATIO = 0.46f;
+	inline constexpr float IDENTITY_COMPACT_NAME_HEIGHT_RATIO = 0.55f;
+} // namespace ui_token::bind_menu
+
 // 游戏内聊天框（滚动条 + 消息气泡）的尺寸。注意单位：聊天视口由
 // Graphics()->MapScreen(0, 0, W, 300) 映射，这里的长度都是"聊天逻辑单位"
 // （1 单位 ≈ 屏幕高度 / 300），不是 UI 像素。列表滚动条的
@@ -578,9 +749,9 @@ namespace ui_token::chat
 	// 滑块最长占轨道的比例：内容刚超过一屏时，滑块仍要留出可见行程，
 	// 不能几乎铺满整条轨道而看起来没有滚动空间。
 	inline constexpr float SCROLLBAR_MAX_THUMB_RATIO = 0.82f;
-	// 一档滚轮推进多少行：聊天偏移单位是行，所以这里就是行数；
-	// 用户调 qm_ui_scroll_step 时与列表同一份系数等比缩放。
-	inline constexpr float WHEEL_LINES_PER_STEP = 1.0f;
+	// 一档滚轮的基础行数：聊天偏移单位是行，用户调 qm_ui_scroll_step 时
+	// 以这里为基准等比缩放。视口上限与最大行数由公共行数解析器兜底。
+	inline constexpr int WHEEL_LINES_PER_STEP = 3;
 	// 滑块最长占轨道的比例：内容只比一屏多一点时，按「可见/内容」比例算出来的滑块
 	// 轨道与滑块的圆角：胶囊端头，和列表覆盖式滚动条同一档（绘制层按短边一半兜底）。
 	inline constexpr float SCROLLBAR_RADIUS = radius::PILL;
@@ -908,6 +1079,9 @@ namespace ui_token::panel
 	// 面板之间的缝，PADDING 是内容到壳，MARGIN 是壳到窗口。分开后任一档单独调整
 	// 都不会牵动另外两处。
 	inline constexpr float MARGIN = 8.0f;
+	// 游戏内大面板的表面压暗比例：计分板、投票 HUD 与绑定菜单都从界面表面色乘这一档，
+	// 保证两块半透明面板叠在画面上时是同一深度，而不是一个实色、一个玻璃色。
+	inline constexpr float SURFACE_COLOR_SCALE = 0.16f;
 } // namespace ui_token::panel
 
 // 服务器信息页（游戏内「服务器信息」页）的排版档：标题、字段正文、标签列宽与行高。
@@ -1128,7 +1302,56 @@ namespace ui_token::hud::debug_graph
 	inline constexpr float GRAPH_MAX_MS = 2.0f * FRAME_BUDGET_MS;
 	inline constexpr float GUIDE_HEIGHT = 1.0f;
 	inline constexpr float GUIDE_ALPHA = 0.30f;
-}
+} // namespace ui_token::hud::debug_graph
+
+// 投票 HUD 与计分板内投票共用同一套排版：常规与计分板内只改变锚点，不改变行序、
+// 字号、圆角或底色来源；旧版小 HUD 只缩小面板和信息密度，不改变配色族。底色统一
+// 由 ResolveConfiguredInterfaceSurface() 从界面表面配置解析，与计分板保持同一份。
+namespace ui_token::vote_hud
+{
+	// 常规面板宽度。计分板内投票始终使用这一档，不受 qm_mini_vote_hud 影响。
+	inline constexpr float PANEL_WIDTH = 320.0f;
+	inline constexpr float PANEL_HEIGHT = 60.0f;
+	// 旧小投票 HUD 的紧凑几何：保留原来的信息密度，不再套用完整面板的 320×60。
+	inline constexpr float MINI_PANEL_WIDTH = 70.0f;
+	inline constexpr float MINI_PANEL_HEIGHT = 35.0f;
+	inline constexpr float MINI_PADDING = 3.0f;
+	inline constexpr float MINI_DESCRIPTION_HEIGHT = 6.0f;
+	inline constexpr float MINI_DESCRIPTION_GAP = 2.0f;
+	inline constexpr float MINI_REASON_HEIGHT = 5.0f;
+	inline constexpr float MINI_REASON_GAP = 2.0f;
+	inline constexpr float MINI_TIME_HEIGHT = 4.0f;
+	inline constexpr float MINI_TIME_GAP = 2.0f;
+	inline constexpr float MINI_SPINNER_SIZE = 3.0f;
+	inline constexpr float MINI_SPINNER_GAP = 1.0f;
+	inline constexpr float MINI_BARS_HEIGHT = 2.0f;
+	inline constexpr float MINI_BARS_GAP = 1.0f;
+	inline constexpr float MINI_ACTION_GAP = 4.0f;
+	inline constexpr float MINI_DESCRIPTION_FONT_SIZE = 6.0f;
+	inline constexpr float MINI_REASON_FONT_SIZE = 4.5f;
+	inline constexpr float MINI_TIME_FONT_SIZE = 3.5f;
+	inline constexpr float MINI_ACTION_FONT_SIZE = 4.5f;
+	// 面板与屏幕边缘、计分板之间的安全距离。
+	inline constexpr float SCREEN_MARGIN = 6.0f;
+	inline constexpr float PANEL_GAP = 6.0f;
+	// 面板内边距与四行内容的高度。剩余高度全部留给两颗投票按钮。
+	inline constexpr float PADDING = 5.0f;
+	inline constexpr float HEADER_HEIGHT = 10.0f;
+	inline constexpr float HEADER_GAP = 2.0f;
+	inline constexpr float REASON_HEIGHT = 9.0f;
+	inline constexpr float REASON_GAP = 3.0f;
+	inline constexpr float BARS_HEIGHT = 4.0f;
+	inline constexpr float BARS_GAP = 3.0f;
+	inline constexpr float BUTTON_GAP = 5.0f;
+	// 标题（投票内容）与说明行的字号；按钮沿用标题字号。
+	inline constexpr float TITLE_FONT_SIZE = 9.0f;
+	inline constexpr float REASON_FONT_SIZE = 8.0f;
+	inline constexpr float TIME_WIDTH_RATIO = 0.4f;
+	inline constexpr float TIME_GAP = 5.0f;
+	inline constexpr float BUTTON_TEXT_INSET = 3.0f;
+	// 与计分板主面板同一档圆角。
+	inline constexpr float RADIUS = radius::CARD;
+} // namespace ui_token::vote_hud
 
 // 输入法（IME）候选面板：跟随系统输入法浮在光标下方的小面板。
 // 全部尺寸都是「基准值 × SCALE」，改整体大小只动 SCALE，不要逐项改数字。

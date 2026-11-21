@@ -2,6 +2,7 @@
 #include <engine/shared/datafile.h>
 #include <engine/storage.h>
 
+#include <game/gamecore.h>
 #include <game/layers.h>
 #include <game/map/map_load_task.h>
 #include <game/mapitems.h>
@@ -27,6 +28,7 @@ namespace
 		Layer.m_Height = Height;
 		Layer.m_Flags = Flags;
 		Layer.m_Image = -1;
+		StrToInts(Layer.m_aName, std::size(Layer.m_aName), (Flags & TILESLAYERFLAG_GAME) ? "Game" : "Design");
 		Layer.m_Data = Writer.AddData(vTiles.size() * sizeof(CTile), vTiles.data());
 		Writer.AddItem(MAPITEMTYPE_LAYER, Id, sizeof(Layer), &Layer);
 		return Layer.m_Data;
@@ -43,7 +45,8 @@ TEST(MapDesignTileSkips, LivePreparationKeepsGameTileSkipsAndResumesDesignRows)
 	CMapItemVersion Version{};
 	Version.m_Version = 1;
 	Writer.AddItem(MAPITEMTYPE_VERSION, 0, sizeof(Version), &Version);
-	const int GameIndex = WriteLayer(Writer, 0, TILESLAYERFLAG_GAME, 1);
+	// 引擎加载器要求 tile 层至少 2 行，game 层同样受这条校验约束。
+	const int GameIndex = WriteLayer(Writer, 0, TILESLAYERFLAG_GAME, 2);
 	const int DesignIndex = WriteLayer(Writer, 1, 0, 256);
 	CMapItemGroup Group{};
 	Group.m_Version = 3;

@@ -42,8 +42,14 @@ class CQmMapPreviewLayerPreparation
 			// Clear 先销毁失败协程；GPU 删除失败时，图层和 BO 身份仍留在原 owner。
 			pRenderer->UnloadMap();
 		}
-		catch(const std::bad_alloc &) { return false; }
-		catch(const std::length_error &) { return false; }
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
 		pRenderer.reset();
 		return true;
 	}
@@ -61,8 +67,12 @@ public:
 		{
 			return pRenderer->AdvanceMapLoad(1);
 		}
-		catch(const std::bad_alloc &) {}
-		catch(const std::length_error &) {}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
 		m_Failed = true;
 		m_RetryAfterTime = Now + RETRY_DELAY;
 		ReleaseRenderer(pRenderer);
@@ -86,8 +96,12 @@ public:
 			pRenderer = std::move(pCandidate);
 			m_Failed = false;
 		}
-		catch(const std::bad_alloc &) {}
-		catch(const std::length_error &) {}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
 	}
 };
 
@@ -118,8 +132,14 @@ public:
 			m_vHrefs.swap(vCandidate);
 			return true;
 		}
-		catch(const std::bad_alloc &) { return false; }
-		catch(const std::length_error &) { return false; }
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
 	}
 };
 
@@ -273,8 +293,12 @@ public:
 			str_copy(m_aDownloadName, pMapName);
 			return true;
 		}
-		catch(const std::bad_alloc &) {}
-		catch(const std::length_error &) {}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
 		// 失败记录只写固定数组；不能在分配失败的恢复分支再申请字符串。
 		str_copy(m_aFailedName, pMapName);
 		if(!m_IndexLoaded)
@@ -398,8 +422,14 @@ public:
 				Entry.m_pMap->Unload();
 			return true;
 		}
-		catch(const std::bad_alloc &) { return false; }
-		catch(const std::length_error &) { return false; }
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
 	}
 
 	bool Clear()
@@ -454,8 +484,14 @@ public:
 			Initialize(*pEntry);
 			return Insert(std::move(pEntry));
 		}
-		catch(const std::bad_alloc &) { return nullptr; }
-		catch(const std::length_error &) { return nullptr; }
+		catch(const std::bad_alloc &)
+		{
+			return nullptr;
+		}
+		catch(const std::length_error &)
+		{
+			return nullptr;
+		}
 	}
 	void RetryMissing(const char *pMapName)
 	{

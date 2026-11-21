@@ -206,3 +206,7 @@ tags
 
 # Ignore packaged QmClient release outputs.
 /QmClient_Release/
+
+# 本地前端工具链产物（临时脚本用），不入库
+/node_modules/
+/package-lock.json

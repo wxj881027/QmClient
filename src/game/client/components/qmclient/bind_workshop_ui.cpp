@@ -721,13 +721,12 @@ namespace
 			rError = Localize("Cannot install cfg: storage is not ready");
 			return false;
 		}
-		if(!pStorage->FolderExists(CFG_FOLDER, IStorage::TYPE_SAVE))
+		if(!pStorage->FolderExists(CFG_FOLDER, IStorage::TYPE_SAVE) &&
+			!pStorage->CreateFolder(CFG_FOLDER, IStorage::TYPE_SAVE) &&
+			!pStorage->FolderExists(CFG_FOLDER, IStorage::TYPE_SAVE))
 		{
-			if(!pStorage->CreateFolder(CFG_FOLDER, IStorage::TYPE_SAVE) && !pStorage->FolderExists(CFG_FOLDER, IStorage::TYPE_SAVE))
-			{
-				rError = Localize("Cannot create the qm_bind folder in the config directory");
-				return false;
-			}
+			rError = Localize("Cannot create the qm_bind folder in the config directory");
+			return false;
 		}
 		size_t NumWritten = 0;
 		for(size_t Variant = 0; Variant < Preset.m_vVariants.size(); ++Variant)
@@ -893,8 +892,7 @@ void CMenus::RenderSettingsBindWorkshop(CUIRect MainView, const bool PrewarmOnly
 		if(ui_widget::SecondaryButton(Ctx, &State.m_UndoButton, Localize("Undo"), Undo, !Enabled))
 		{
 			CBinds &Binds = GameClient()->m_Binds;
-			const size_t Restored = RestoreUndo(State.m_Undo, [&Binds](const CBindSlot &Slot) { return std::string(Binds.Get(Slot)); },
-				[&Binds](const CBindSlot &Slot, const char *pCommand) { Binds.Bind(Slot.m_Key, pCommand, false, Slot.m_ModifierMask); });
+			const size_t Restored = RestoreUndo(State.m_Undo, [&Binds](const CBindSlot &Slot) { return std::string(Binds.Get(Slot)); }, [&Binds](const CBindSlot &Slot, const char *pCommand) { Binds.Bind(Slot.m_Key, pCommand, false, Slot.m_ModifierMask); });
 			State.m_Undo.Clear();
 			SetStatus(State.m_Status, State.m_StatusTime, Client(), Restored > 0 ? Localize("Restored previous bind") : Localize("Nothing to undo"));
 		}
@@ -1516,8 +1514,7 @@ void CMenus::RenderSettingsBindWorkshop(CUIRect MainView, const bool PrewarmOnly
 		if(ui_widget::PrimaryButton(Ctx, &State.m_ConfirmButton, Localize("Apply"), Confirm, false))
 		{
 			CBinds &Binds = GameClient()->m_Binds;
-			if(ApplyPresetPlan(State.m_PendingPlan, State.m_Undo, [&Binds](const CBindSlot &Slot) { return std::string(Binds.Get(Slot)); },
-				   [&Binds](const CBindSlot &Slot, const char *pCommand) { Binds.Bind(Slot.m_Key, pCommand, false, Slot.m_ModifierMask); }))
+			if(ApplyPresetPlan(State.m_PendingPlan, State.m_Undo, [&Binds](const CBindSlot &Slot) { return std::string(Binds.Get(Slot)); }, [&Binds](const CBindSlot &Slot, const char *pCommand) { Binds.Bind(Slot.m_Key, pCommand, false, Slot.m_ModifierMask); }))
 			{
 				State.m_ConfirmOpen = false;
 				SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Bind applied - undo available"));
@@ -2604,7 +2601,7 @@ void CMenus::RenderSettingsBindBlueprint(CUIRect MainView, const bool PrewarmOnl
 				const int NewId = AddNodeFromTemplate(Graph, Index, State.m_CursorX, State.m_CursorY);
 				if(NewId != 0)
 				{
-				SelectOnly(NewId);
+					SelectOnly(NewId);
 					State.m_EditedNode = -1;
 					SetStatus(State.m_Status, State.m_StatusTime, Client(), Localize("Node created"));
 				}

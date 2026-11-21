@@ -87,6 +87,23 @@ TEST(QmSpectatorFriendPriority, DisablingPriorityRestoresOriginalOrderAndRemoves
 	EXPECT_EQ(vOrder, (std::vector<int>{1, 3, 0, 2}));
 }
 
+TEST(QmSpectatorFriendPriority, GhostRowsStayBehindEveryServerPlayer)
+{
+	// 前四项是服务器玩家，后两项是影子；好友优先只能重排服务器玩家，
+	// 影子必须整体留在尾部，才能由旁观面板另起独立列。
+	const bool aIsFriend[] = {true, false, true, false, false, false};
+	std::vector<int> vOrder(6, -1);
+
+	const int FriendCount = qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, 6, vOrder.data());
+
+	EXPECT_EQ(FriendCount, 2);
+	EXPECT_EQ(vOrder, (std::vector<int>{0, 2, 1, 3, 4, 5}));
+	const int GhostStartOrder = 6 - 2;
+	EXPECT_EQ(GhostStartOrder, 4);
+	EXPECT_EQ(vOrder[GhostStartOrder], 4);
+	EXPECT_EQ(vOrder[GhostStartOrder + 1], 5);
+}
+
 TEST(QmSpectatorFriendPriority, FullColumnIncludesBothGroupTitles)
 {
 	EXPECT_FLOAT_EQ(qm_spectator_friends::MaxColumnHeight(8, 1, 8, 60.0f, 15.0f), 510.0f);

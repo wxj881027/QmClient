@@ -91,6 +91,9 @@ namespace
 		void NextVideoFrameThread() override { ADD_FAILURE() << "unexpected video worker"; }
 		void NextAudioFrame(ISoundMixFunc) override { ADD_FAILURE() << "unexpected audio frame"; }
 		void NextAudioFrameTimeline(ISoundMixFunc) override { ADD_FAILURE() << "unexpected audio timeline"; }
+		int64_t Time() const override { return 0; }
+		float LocalTime() const override { return 0.0f; }
+		void SetLocalStartTime(int64_t) override {}
 	};
 
 	class VideoRecorderLifecycle : public ::testing::Test
@@ -142,7 +145,7 @@ namespace
 		{
 			m_Thread = std::thread([this] {
 				std::unique_lock<std::mutex> Lock(m_Mutex);
-				if(!m_Cond.wait_for(Lock, std::chrono::seconds(2), [this] { return m_Finished; }))
+				if(!m_Cond.wait_for(Lock, std::chrono::seconds(2), [this] { return m_Finished.load(); }))
 					m_State.m_TimedOut = true;
 				++m_State.m_Exited;
 			});

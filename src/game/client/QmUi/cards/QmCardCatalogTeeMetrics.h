@@ -138,7 +138,7 @@ struct SSettingsTeeOptionsLayout
 inline SSettingsTeeOptionsLayout ResolveSettingsTeeOptionsLayout(const CUIRect &View, const SSettingsContentMetrics &Metrics)
 {
 	SSettingsTeeOptionsLayout Layout;
-	const float DownloadsHeight = ResolveSettingsRowsHeight(5, Metrics.m_LineHeight, Metrics.m_LineSpacing);
+	const float DownloadsHeight = ResolveSettingsRowsHeight(4, Metrics.m_LineHeight, Metrics.m_LineSpacing);
 	// 前缀区只有一行（标签 + 输入框 + 预设胶囊同排）。这里曾按改造前的三行布局
 	// 预留 3 行高度，改成单行后测量没跟着收，卡片底部凭空多出两行的空白——
 	// 「最后一行到卡片边框的边距」因此比别的卡大得多。
@@ -164,6 +164,9 @@ struct SSettingsTeeToolbarLayout
 	CUIRect m_Search;
 	std::array<CUIRect, 4> m_aTools;
 	CUIRect m_Collection;
+	CUIRect m_Count;
+	CUIRect m_FilterLabel;
+	CUIRect m_Filter;
 	CUIRect m_SortLabel;
 	CUIRect m_Sort;
 	float m_Height = 0.0f;
@@ -194,23 +197,76 @@ inline SSettingsTeeToolbarLayout ResolveSettingsTeeToolbarLayout(const CUIRect &
 		Tools.VSplitLeft(Button, &Tool, &Tools);
 		Tools.VSplitLeft(std::min(Gap, Tools.w), nullptr, &Tools);
 	}
-	CUIRect FilterRow{View.x, View.y + Layout.m_Height, View.w, Metrics.m_InputHeight};
-	Layout.m_Height += FilterRow.h + Gap;
-	const float SortWidth = 152.0f * Metrics.m_UiScale;
-	CUIRect SortRow;
-	if(View.w < SortWidth + Gap + 210.0f * Metrics.m_UiScale)
+	const float LabelWidth = std::min(76.0f * Metrics.m_UiScale, std::max(0.0f, View.w * 0.32f));
+	const float ChoiceWidth = 152.0f * Metrics.m_UiScale;
+	const float CountWidth = 96.0f * Metrics.m_UiScale;
+	const float CollectionMin = 220.0f * Metrics.m_UiScale;
+	const float CollectionMax = 360.0f * Metrics.m_UiScale;
+	const float FilterGroupWidth = LabelWidth + Gap + ChoiceWidth;
+	const float SortGroupWidth = LabelWidth + Gap + ChoiceWidth;
+	const auto SplitGroup = [&](const CUIRect &Group, CUIRect &Label, CUIRect &Control) {
+		Label = Group;
+		Control = Group;
+		const float LabelPart = std::min(LabelWidth, std::max(0.0f, Group.w - Gap));
+		Label.VSplitLeft(LabelPart, &Label, &Control);
+		Control.VSplitLeft(std::min(Gap, Control.w), nullptr, &Control);
+	};
+
+	const float InlineRequired = CollectionMin + CountWidth + FilterGroupWidth + SortGroupWidth + Gap * 4.0f;
+	if(View.w >= InlineRequired)
 	{
-		Layout.m_Collection = FilterRow;
-		SortRow = {View.x, View.y + Layout.m_Height, View.w, Metrics.m_InputHeight};
-		Layout.m_Height += SortRow.h + Gap;
+		CUIRect Row{View.x, View.y + Layout.m_Height, View.w, Metrics.m_InputHeight};
+		Layout.m_Height += Row.h + Gap;
+		const float CollectionWidth = std::min(CollectionMax, std::max(0.0f, Row.w - (CountWidth + FilterGroupWidth + SortGroupWidth + Gap * 4.0f)));
+		Row.VSplitLeft(CollectionWidth, &Layout.m_Collection, &Row);
+		Row.VSplitLeft(Gap, nullptr, &Row);
+		Row.VSplitLeft(std::min(CountWidth, Row.w), &Layout.m_Count, &Row);
+		Row.VSplitLeft(std::min(Gap, Row.w), nullptr, &Row);
+		CUIRect FilterGroup, SortGroup;
+		Row.VSplitRight(std::min(SortGroupWidth, Row.w), &Row, &SortGroup);
+		Row.VSplitRight(std::min(Gap, Row.w), &Row, nullptr);
+		Row.VSplitRight(std::min(FilterGroupWidth, Row.w), &Row, &FilterGroup);
+		SplitGroup(FilterGroup, Layout.m_FilterLabel, Layout.m_Filter);
+		SplitGroup(SortGroup, Layout.m_SortLabel, Layout.m_Sort);
+		return Layout;
+	}
+
+	CUIRect FirstRow{View.x, View.y + Layout.m_Height, View.w, Metrics.m_InputHeight};
+	Layout.m_Height += FirstRow.h + Gap;
+	if(View.w >= CollectionMin + CountWidth + Gap)
+	{
+		const float CollectionWidth = std::min(CollectionMax, std::max(0.0f, FirstRow.w - CountWidth - Gap));
+		FirstRow.VSplitLeft(CollectionWidth, &Layout.m_Collection, &FirstRow);
+		FirstRow.VSplitLeft(std::min(Gap, FirstRow.w), nullptr, &FirstRow);
+		FirstRow.VSplitLeft(std::min(CountWidth, FirstRow.w), &Layout.m_Count, &FirstRow);
 	}
 	else
 	{
-		FilterRow.VSplitRight(SortWidth, &Layout.m_Collection, &SortRow);
-		Layout.m_Collection.VSplitRight(Gap, &Layout.m_Collection, nullptr);
+		Layout.m_Collection = FirstRow;
+		Layout.m_Count = {View.x, View.y + Layout.m_Height, View.w, Metrics.m_InputHeight};
+		Layout.m_Height += Layout.m_Count.h + Gap;
 	}
-	SortRow.VSplitLeft(std::min(SortRow.w * 0.42f, 68.0f * Metrics.m_UiScale), &Layout.m_SortLabel, &Layout.m_Sort);
-	Layout.m_Sort.VSplitLeft(Gap, nullptr, &Layout.m_Sort);
+
+	CUIRect GroupRow{View.x, View.y + Layout.m_Height, View.w, Metrics.m_InputHeight};
+	if(GroupRow.w >= FilterGroupWidth + SortGroupWidth + Gap)
+	{
+		Layout.m_Height += GroupRow.h + Gap;
+		CUIRect FilterGroup, SortGroup;
+		GroupRow.VSplitRight(SortGroupWidth, &GroupRow, &SortGroup);
+		GroupRow.VSplitRight(Gap, &GroupRow, nullptr);
+		GroupRow.VSplitRight(FilterGroupWidth, &GroupRow, &FilterGroup);
+		SplitGroup(FilterGroup, Layout.m_FilterLabel, Layout.m_Filter);
+		SplitGroup(SortGroup, Layout.m_SortLabel, Layout.m_Sort);
+	}
+	else
+	{
+		CUIRect FilterGroup{View.x, GroupRow.y, std::min(FilterGroupWidth, View.w), Metrics.m_InputHeight};
+		SplitGroup(FilterGroup, Layout.m_FilterLabel, Layout.m_Filter);
+		Layout.m_Height += GroupRow.h + Gap;
+		CUIRect SortGroup{View.x, View.y + Layout.m_Height, std::min(SortGroupWidth, View.w), Metrics.m_InputHeight};
+		SplitGroup(SortGroup, Layout.m_SortLabel, Layout.m_Sort);
+		Layout.m_Height += SortGroup.h + Gap;
+	}
 	return Layout;
 }
 

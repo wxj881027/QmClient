@@ -5,6 +5,7 @@
 #include <base/str.h>
 #include <base/system.h>
 
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/components/tclient/map_history.h>
@@ -17,7 +18,7 @@
 
 namespace qm_map_history_storage
 {
-	inline constexpr const char *FILE_PATH = "qmclient/map_history.json";
+	inline constexpr const char *FILE_PATH = qm_storage::MAP_HISTORY_FILE;
 
 	class CFileOperations
 	{
@@ -138,8 +139,7 @@ namespace qm_map_history_storage
 			if(!aRoot[0] || str_length(aRoot) + str_length(aTemporary) + 1 >= IO_MAX_PATH_LENGTH ||
 				pStorage->FileExists(aTemporary, IStorage::TYPE_SAVE) || pStorage->FolderExists(aTemporary, IStorage::TYPE_SAVE))
 				return false;
-			if(!pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE) && !pStorage->FolderExists("qmclient", IStorage::TYPE_SAVE))
-				return false;
+			qm_storage::EnsureFolder(pStorage, qm_storage::STATE_MAPS_DIR);
 			STemporaryFile Candidate{*pStorage, aTemporary};
 			// 确认不存在后接管创建尝试，打开过程失败也清理本次候选。
 			Candidate.m_Owned = true;

@@ -1,5 +1,3 @@
-# 请抬头享受阳光｜日子很好 我很我---------致咩子
-
 [[message]]
 key = " min"
 [message.translations]
@@ -49,6 +47,22 @@ turkish = "saniye (asla)"
 polish = "sekund (nigdy)"
 
 [[message]]
+key = "%d. %s | main: %s | dummy: %s"
+[message.translations]
+simplified_chinese = "%d. %s | 本体：%s | 分身：%s"
+traditional_chinese = "%d. %s | 本體：%s | 分身：%s"
+japanese = "%d. %s | メイン：%s | ダミー：%s"
+korean = "%d. %s | 본체: %s | 더미: %s"
+russian = "%d. %s | основной: %s | дамми: %s"
+german = "%d. %s | Hauptspieler: %s | Dummy: %s"
+spanish = "%d. %s | principal: %s | dummy: %s"
+french = "%d. %s | principal : %s | dummy : %s"
+brazilian_portuguese = "%d. %s | principal: %s | dummy: %s"
+portuguese = "%d. %s | principal: %s | dummy: %s"
+turkish = "%d. %s | ana oyuncu: %s | kukla: %s"
+polish = "%d. %s | główny: %s | dummy: %s"
+
+[[message]]
 key = "%ds left"
 [message.translations]
 simplified_chinese = "还剩 %d 秒"
@@ -79,6 +93,38 @@ brazilian_portuguese = "%s não encontrado"
 portuguese = "%s não encontrado"
 turkish = "%s bulunamadı"
 polish = "%s nie znaleziono"
+
+[[message]]
+key = "(Follow Chinese font)"
+[message.translations]
+simplified_chinese = "（跟随中文字体）"
+traditional_chinese = "（跟隨中文字型）"
+japanese = "（中国語フォントに従う）"
+korean = "(중국어 글꼴 따르기)"
+russian = "(Как у китайского шрифта)"
+german = "(Chinesischer Schrift folgen)"
+spanish = "(Seguir fuente china)"
+french = "(Suivre la police chinoise)"
+brazilian_portuguese = "(Seguir fonte chinesa)"
+portuguese = "(Seguir a fonte chinesa)"
+turkish = "(Çince yazı tipini izle)"
+polish = "(Zgodnie z czcionką chińską)"
+
+[[message]]
+key = "(Follow English font)"
+[message.translations]
+simplified_chinese = "（跟随英文字体）"
+traditional_chinese = "（跟隨英文字型）"
+japanese = "（英語フォントに従う）"
+korean = "(영어 글꼴 따르기)"
+russian = "(Как у английского шрифта)"
+german = "(Englischer Schrift folgen)"
+spanish = "(Seguir fuente inglesa)"
+french = "(Suivre la police anglaise)"
+brazilian_portuguese = "(Seguir fonte inglesa)"
+portuguese = "(Seguir a fonte inglesa)"
+turkish = "(İngilizce yazı tipini izle)"
+polish = "(Zgodnie z czcionką angielską)"
 
 [[message]]
 key = "+%d more codes"
@@ -143,6 +189,22 @@ brazilian_portuguese = "[%s] %s (mapa: %s, hora: %s)"
 portuguese = "[%s] %s (mapa: %s, hora: %s)"
 turkish = "[%s] %s (harita: %s, zaman: %s)"
 polish = "[%s] %s (mapa: %s, czas: %s)"
+
+[[message]]
+key = "A save is already being restored. Please wait."
+[message.translations]
+simplified_chinese = "正在恢复存档，请稍候。"
+traditional_chinese = "正在恢復存檔，請稍候。"
+japanese = "セーブを復元中です。お待ちください。"
+korean = "저장 데이터를 복원 중입니다. 잠시 기다려 주세요."
+russian = "Сохранение уже восстанавливается. Подождите."
+german = "Ein Spielstand wird bereits wiederhergestellt. Bitte warten."
+spanish = "Ya se está restaurando una partida. Espera."
+french = "Une sauvegarde est déjà en cours de restauration. Patientez."
+brazilian_portuguese = "Um jogo salvo já está sendo restaurado. Aguarde."
+portuguese = "Um jogo guardado já está a ser restaurado. Aguarda."
+turkish = "Bir kayıt zaten geri yükleniyor. Lütfen bekleyin."
+polish = "Trwa już przywracanie zapisu. Poczekaj."
 
 [[message]]
 key = "Add [group] [clan] [reason]:"
@@ -785,6 +847,22 @@ turkish = "Hızlı girdiyi diğer Tee'lere de uygula"
 polish = "Zastosuj szybkie dane wejściowe również do innych Tee"
 
 [[message]]
+key = "Arabic"
+[message.translations]
+simplified_chinese = "阿拉伯文"
+traditional_chinese = "阿拉伯文"
+japanese = "アラビア語"
+korean = "아랍어"
+russian = "Арабский"
+german = "Arabisch"
+spanish = "Árabe"
+french = "Arabe"
+brazilian_portuguese = "Árabe"
+portuguese = "Árabe"
+turkish = "Arapça"
+polish = "Arabski"
+
+[[message]]
 key = "Are you sure that you want to remove '%s' from your war groups?"
 [message.translations]
 simplified_chinese = "您确定要从您的敌对群组中删除 '%s' 吗？"
@@ -799,6 +877,22 @@ brazilian_portuguese = "Tem certeza de que deseja remover '%s' dos seus grupos d
 portuguese = "Tem a certeza que deseja remover '%s' dos seus grupos de guerra?"
 turkish = "'%s' öğesini savaş gruplarınızdan kaldırmak istediğinizden emin misiniz?"
 polish = "Czy na pewno chcesz usunąć '%s' z grup wojennych?"
+
+[[message]]
+key = "Are you sure that you want to remove '%s' from your war list?"
+[message.translations]
+simplified_chinese = "确定要把「%s」从敌对列表里删掉吗？"
+traditional_chinese = "確定要把「%s」從敵對列表中刪除嗎？"
+japanese = "「%s」を敵対リストから削除してもよいですか？"
+korean = "「%s」을(를) 적대 목록에서 삭제할까요?"
+russian = "Удалить «%s» из списка врагов?"
+german = "„%s“ aus der Kriegsliste entfernen?"
+spanish = "¿Quitar «%s» de la lista de enemigos?"
+french = "Retirer « %s » de la liste des ennemis ?"
+brazilian_portuguese = "Remover \"%s\" da lista de inimigos?"
+portuguese = "Remover \"%s\" da lista de inimigos?"
+turkish = "\"%s\" düşman listesinden kaldırılsın mı?"
+polish = "Usunąć „%s” z listy wrogów?"
 
 [[message]]
 key = "Attempt to change your name when near finish"
@@ -1025,6 +1119,22 @@ turkish = "Pencere odak dışındayken otomatik yanıt ver"
 polish = "Automatycznie odpowiadaj, gdy okno jest nieaktywne"
 
 [[message]]
+key = "Available for this bundled font"
+[message.translations]
+simplified_chinese = "该随包字体可用"
+traditional_chinese = "此隨包字型可用"
+japanese = "この同梱フォントで利用可能"
+korean = "이 번들 글꼴에서 사용 가능"
+russian = "Доступно для этого встроенного шрифта"
+german = "Für diese mitgelieferte Schrift verfügbar"
+spanish = "Disponible para esta fuente incluida"
+french = "Disponible pour cette police fournie"
+brazilian_portuguese = "Disponível para esta fonte incluída"
+portuguese = "Disponível para esta fonte incluída"
+turkish = "Bu paketlenmiş yazı tipi için kullanılabilir"
+polish = "Dostępne dla tej dołączonej czcionki"
+
+[[message]]
 key = "Background Draw"
 [message.translations]
 simplified_chinese = "背景绘制"
@@ -1071,6 +1181,60 @@ brazilian_portuguese = "Largura do traço de fundo"
 portuguese = "Largura do traço de fundo"
 turkish = "Arka plan vuruş genişliği"
 polish = "Szerokość pociągnięcia tła"
+
+[[message]]
+key = "Base prediction margin"
+[message.translations]
+simplified_chinese = "基础预测量"
+traditional_chinese = "基礎預測量"
+japanese = "基本予測マージン"
+korean = "기본 예측 여유"
+russian = "Базовый запас предсказания"
+german = "Basisvorhersagespielraum"
+spanish = "Margen de predicción base"
+french = "Marge de prédiction de base"
+brazilian_portuguese = "Margem de previsão base"
+portuguese = "Margem de previsão base"
+turkish = "Temel tahmin payı"
+polish = "Bazowy margines predykcji"
+
+[[message]]
+key = "Bind menu layout (0 = wheel, 1 = panel)"
+[message.translations]
+simplified_chinese = "绑定菜单布局（0 = 轮盘，1 = 面板）"
+traditional_chinese = "綁定選單版面（0 = 輪盤，1 = 面板）"
+
+[[message]]
+key = "Bind menu layout: 0 = radial wheel, 1 = rounded panel"
+[message.translations]
+simplified_chinese = "绑定菜单布局：0 = 径向轮盘，1 = 圆角面板"
+traditional_chinese = "綁定選單佈局：0 = 徑向輪盤，1 = 圓角面板"
+japanese = "バインドメニューのレイアウト: 0 = 放射状ホイール、1 = 角丸パネル"
+korean = "바인드 메뉴 레이아웃: 0 = 방사형 휠, 1 = 둥근 패널"
+russian = "Раскладка меню биндов: 0 = радиальное колесо, 1 = скруглённая панель"
+german = "Bind-Menü-Layout: 0 = Rad-Kreis, 1 = abgerundete Leiste"
+spanish = "Diseño del menú de binds: 0 = rueda radial, 1 = panel redondeado"
+french = "Disposition du menu des binds : 0 = roue radiale, 1 = panneau arrondi"
+brazilian_portuguese = "Layout do menu de binds: 0 = roda radial, 1 = painel arredondado"
+portuguese = "Layout do menu de binds: 0 = roda radial, 1 = painel arredondado"
+turkish = "Bind menüsü düzeni: 0 = radyal tekerlek, 1 = yuvarlatılmış panel"
+polish = "Układ menu bindów: 0 = koło promieniste, 1 = zaokrąglony panel"
+
+[[message]]
+key = "Bind Menus"
+[message.translations]
+simplified_chinese = "绑定菜单"
+traditional_chinese = "綁定選單"
+japanese = "バインドメニュー"
+korean = "바인드 메뉴"
+russian = "Меню биндов"
+german = "Bind-Menüs"
+spanish = "Menús de binds"
+french = "Menus de binds"
+brazilian_portuguese = "Menus de binds"
+portuguese = "Menus de binds"
+turkish = "Bağlama menüleri"
+polish = "Menu bindów"
 
 [[message]]
 key = "Bind Wheel"
@@ -1137,6 +1301,38 @@ turkish = "Siyah"
 polish = "Czarny"
 
 [[message]]
+key = "Blink the active local tee"
+[message.translations]
+simplified_chinese = "让当前本地角色闪烁"
+traditional_chinese = "讓目前本機角色閃爍"
+japanese = "操作中のローカルキャラクターを点滅させる"
+korean = "활성 로컬 캐릭터를 깜박이게 합니다"
+russian = "Заставить активного локального персонажа мигнуть"
+german = "Aktiven lokalen Charakter blinken lassen"
+spanish = "Hacer parpadear al personaje local activo"
+french = "Faire clignoter le personnage local actif"
+brazilian_portuguese = "Fazer o personagem local ativo piscar"
+portuguese = "Fazer a personagem local ativa piscar"
+turkish = "Etkin yerel karakteri yanıp söndür"
+polish = "Mignij aktywną lokalną postacią"
+
+[[message]]
+key = "Block enemy chat"
+[message.translations]
+simplified_chinese = "屏蔽敌对玩家聊天"
+traditional_chinese = "封鎖敵對玩家聊天"
+japanese = "敵対プレイヤーのチャットをブロック"
+korean = "적대 플레이어 채팅 차단"
+russian = "Блокировать чат врагов"
+german = "Gegner-Chat blockieren"
+spanish = "Bloquear el chat de enemigos"
+french = "Bloquer le tchat des ennemis"
+brazilian_portuguese = "Bloquear chat de inimigos"
+portuguese = "Bloquear chat de inimigos"
+turkish = "Düşman sohbetini engelle"
+polish = "Blokuj czat wrogów"
+
+[[message]]
 key = "Blue"
 [message.translations]
 simplified_chinese = "蓝色"
@@ -1151,6 +1347,38 @@ brazilian_portuguese = "Azul"
 portuguese = "Azul"
 turkish = "Mavi"
 polish = "Niebieski"
+
+[[message]]
+key = "Browse font store…"
+[message.translations]
+simplified_chinese = "浏览字体商店…"
+traditional_chinese = "瀏覽字型商店…"
+japanese = "フォントストアを見る…"
+korean = "글꼴 상점 둘러보기…"
+russian = "Открыть магазин шрифтов…"
+german = "Schriftspeicher durchsuchen…"
+spanish = "Explorar la tienda de fuentes…"
+french = "Parcourir la boutique de polices…"
+brazilian_portuguese = "Explorar a loja de fontes…"
+portuguese = "Explorar a loja de tipos de letra…"
+turkish = "Yazı tipi mağazasına göz at…"
+polish = "Przeglądaj sklep z czcionkami…"
+
+[[message]]
+key = "Bundled vector profile:"
+[message.translations]
+simplified_chinese = "随包矢量配置："
+traditional_chinese = "隨包向量設定檔："
+japanese = "同梱ベクタープロファイル:"
+korean = "번들 벡터 프로필:"
+russian = "Встроенный векторный профиль:"
+german = "Mitgeliefertes Vektorprofil:"
+spanish = "Perfil vectorial incluido:"
+french = "Profil vectoriel fourni :"
+brazilian_portuguese = "Perfil vetorial incluído:"
+portuguese = "Perfil vetorial incluído:"
+turkish = "Paketlenmiş vektör profili:"
+polish = "Dołączony profil wektorowy:"
 
 [[message]]
 key = "Camera"
@@ -1281,6 +1509,70 @@ turkish = "Donma durumuna girildiğinde gönderilecek sohbet mesajları, virgül
 polish = "Wiadomości czatu do wysłania przy wejściu w zamrożenie, oddzielone przecinkami (puste=brak)"
 
 [[message]]
+key = "Chinese (Simplified)"
+[message.translations]
+simplified_chinese = "中文（简体）"
+traditional_chinese = "中文（簡體）"
+japanese = "中国語（簡体字）"
+korean = "중국어(간체)"
+russian = "Китайский (упрощённый)"
+german = "Chinesisch (vereinfacht)"
+spanish = "Chino (simplificado)"
+french = "Chinois (simplifié)"
+brazilian_portuguese = "Chinês (simplificado)"
+portuguese = "Chinês (simplificado)"
+turkish = "Çince (Basitleştirilmiş)"
+polish = "Chiński (uproszczony)"
+
+[[message]]
+key = "Chinese (Traditional)"
+[message.translations]
+simplified_chinese = "中文（繁體）"
+traditional_chinese = "中文（繁體）"
+japanese = "中国語（繁体字）"
+korean = "중국어(번체)"
+russian = "Китайский (традиционный)"
+german = "Chinesisch (traditionell)"
+spanish = "Chino (tradicional)"
+french = "Chinois (traditionnel)"
+brazilian_portuguese = "Chinês (tradicional)"
+portuguese = "Chinês (tradicional)"
+turkish = "Çince (Geleneksel)"
+polish = "Chiński (tradycyjny)"
+
+[[message]]
+key = "Chinese font:"
+[message.translations]
+simplified_chinese = "中文字体："
+traditional_chinese = "中文字型："
+japanese = "中国語フォント："
+korean = "중국어 글꼴:"
+russian = "Китайский шрифт:"
+german = "Chinesische Schrift:"
+spanish = "Fuente china:"
+french = "Police chinoise :"
+brazilian_portuguese = "Fonte chinesa:"
+portuguese = "Tipo de letra chinês:"
+turkish = "Çince yazı tipi:"
+polish = "Czcionka chińska:"
+
+[[message]]
+key = "CJK font weight:"
+[message.translations]
+simplified_chinese = "中日韩字体字重："
+traditional_chinese = "中日韓字型字重："
+japanese = "CJK フォントの太さ："
+korean = "CJK 글꼴 굵기:"
+russian = "Насыщенность шрифта CJK:"
+german = "CJK-Schriftstärke:"
+spanish = "Grosor de fuente CJK:"
+french = "Graisse de police CJK :"
+brazilian_portuguese = "Espessura da fonte CJK:"
+portuguese = "Espessura do tipo de letra CJK:"
+turkish = "CJK yazı tipi kalınlığı:"
+polish = "Grubość czcionki CJK:"
+
+[[message]]
 key = "Clamp mouse to screen"
 [message.translations]
 simplified_chinese = "将鼠标限制在屏幕范围内"
@@ -1407,38 +1699,6 @@ brazilian_portuguese = "Cores"
 portuguese = "Cores"
 turkish = "Renkler"
 polish = "Kolory"
-
-[[message]]
-key = "Show enemy colors in chat"
-[message.translations]
-simplified_chinese = "聊天框中显示敌对玩家的颜色"
-traditional_chinese = "在聊天欄中的顏色"
-japanese = "チャット内の色"
-korean = "채팅에서의 색상"
-russian = "Цвета в чате"
-german = "Farben im Chat"
-spanish = "Colores en el chat"
-french = "Couleurs dans le tchat"
-brazilian_portuguese = "Cores no chat"
-portuguese = "Cores no chat"
-turkish = "Sohbetteki renkler"
-polish = "Kolory na czacie"
-
-[[message]]
-key = "Show enemy colors in scoreboard"
-[message.translations]
-simplified_chinese = "计分板中显示敌对玩家的颜色"
-traditional_chinese = "計分板中的顏色"
-japanese = "スコアボード内の色"
-korean = "점수판에서의 색상"
-russian = "Цвета в таблице результатов"
-german = "Farben in der Bestenliste"
-spanish = "Colores en la tabla de puntuaciones"
-french = "Couleurs dans le tableau des scores"
-brazilian_portuguese = "Cores no placar"
-portuguese = "Cores no placar"
-turkish = "Skor tablosundaki renkler"
-polish = "Kolory w tabeli wyników"
 
 [[message]]
 key = "Command executed by qm_mod_weapon, target id appended at end"
@@ -1713,6 +1973,70 @@ turkish = "Özel yazı tipi"
 polish = "Niestandardowa czcionka"
 
 [[message]]
+key = "Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font"
+[message.translations]
+simplified_chinese = "中文 /CJK 文本的自定义字体（字族，或字族 + 样式）；留空则跟随拉丁自定义字体"
+traditional_chinese = "中文/CJK 文字的自訂字型（字族，或字族 + 樣式）；留空則跟隨拉丁自訂字型"
+japanese = "中国語/CJK テキスト用のカスタムフォント（ファミリー、またはファミリー + スタイル）。空欄ならラテン用カスタムフォントに従います"
+korean = "중국어/CJK 텍스트용 사용자 정의 글꼴(패밀리 또는 패밀리 + 스타일), 비우면 라틴 사용자 정의 글꼴을 따릅니다"
+russian = "Свой шрифт для китайского/CJK текста (семейство или семейство + стиль); пусто — как у латинского своего шрифта"
+german = "Eigene Schrift für chinesischen/CJK-Text (Familie oder Familie + Stil); leer = der eigenen lateinischen Schrift folgen"
+spanish = "Fuente personalizada para texto chino/CJK (familia, o familia + estilo); vacío = seguir la fuente personalizada latina"
+french = "Police perso pour le texte chinois/CJK (famille, ou famille + style) ; vide = suivre la police perso latine"
+brazilian_portuguese = "Fonte personalizada para texto chinês/CJK (família, ou família + estilo); vazio = seguir a fonte personalizada latina"
+portuguese = "Tipo de letra personalizado para texto chinês/CJK (família, ou família + estilo); vazio = seguir o tipo de letra personalizado latino"
+turkish = "Çince/CJK metin için özel yazı tipi (aile veya aile + stil); boş = Latin özel yazı tipini izle"
+polish = "Niestandardowa czcionka dla tekstu chińskiego/CJK (rodzina lub rodzina + styl); puste = zgodnie z łacińską czcionką niestandardową"
+
+[[message]]
+key = "Custom font for icon/symbol glyphs; empty = follow CJK or Latin font"
+[message.translations]
+simplified_chinese = "图标/符号字形的自定义字体；留空则跟随中日韩或拉丁字体"
+traditional_chinese = "圖示/符號字形的自訂字型；留空則跟隨中日韓或拉丁字型"
+japanese = "アイコン/記号グリフ用のカスタムフォント。空欄なら CJK またはラテンフォントに従います"
+korean = "아이콘/기호 글리프용 사용자 정의 글꼴, 비우면 CJK 또는 라틴 글꼴을 따릅니다"
+russian = "Свой шрифт для значков и символов; пусто — как у шрифта CJK или латинского"
+german = "Eigene Schrift für Symbol-/Icon-Glyphen; leer = der CJK- oder lateinischen Schrift folgen"
+spanish = "Fuente personalizada para iconos/símbolos; vacío = seguir la fuente CJK o latina"
+french = "Police perso pour les icônes/symboles ; vide = suivre la police CJK ou latine"
+brazilian_portuguese = "Fonte personalizada para ícones/símbolos; vazio = seguir a fonte CJK ou latina"
+portuguese = "Tipo de letra personalizado para ícones/símbolos; vazio = seguir o tipo de letra CJK ou latino"
+turkish = "Simge/sembol glifleri için özel yazı tipi; boş = CJK veya Latin yazı tipini izle"
+polish = "Niestandardowa czcionka dla ikon/symboli; puste = zgodnie z czcionką CJK lub łacińską"
+
+[[message]]
+key = "Custom font for Latin text (family, or family + style)"
+[message.translations]
+simplified_chinese = "拉丁文本的自定义字体（字族，或字族 + 样式）"
+traditional_chinese = "拉丁文字的自訂字型（字族，或字族 + 樣式）"
+japanese = "ラテン文字用のカスタムフォント（ファミリー、またはファミリー + スタイル）"
+korean = "라틴 텍스트용 사용자 정의 글꼴(패밀리 또는 패밀리 + 스타일)"
+russian = "Свой шрифт для латинского текста (семейство или семейство + стиль)"
+german = "Eigene Schrift für lateinischen Text (Familie oder Familie + Stil)"
+spanish = "Fuente personalizada para texto latino (familia, o familia + estilo)"
+french = "Police perso pour le texte latin (famille, ou famille + style)"
+brazilian_portuguese = "Fonte personalizada para texto latino (família, ou família + estilo)"
+portuguese = "Tipo de letra personalizado para texto latino (família, ou família + estilo)"
+turkish = "Latin metin için özel yazı tipi (aile veya aile + stil)"
+polish = "Niestandardowa czcionka dla tekstu łacińskiego (rodzina lub rodzina + styl)"
+
+[[message]]
+key = "Custom font weight (variable fonts)"
+[message.translations]
+simplified_chinese = "自定义字体字重（可变字体）"
+traditional_chinese = "自訂字型字重（可變字型）"
+japanese = "カスタムフォントの太さ（可変フォント）"
+korean = "사용자 지정 글꼴 굵기(가변 글꼴)"
+russian = "Толщина своего шрифта (вариативные шрифты)"
+german = "Schriftstärke der eigenen Schrift (variable Schriften)"
+spanish = "Grosor de la fuente personalizada (fuentes variables)"
+french = "Graisse de la police personnalisée (polices variables)"
+brazilian_portuguese = "Espessura da fonte personalizada (fontes variáveis)"
+portuguese = "Espessura da fonte personalizada (fontes variáveis)"
+turkish = "Özel yazı tipi kalınlığı (değişken yazı tipleri)"
+polish = "Grubość niestandardowej czcionki (czcionki zmienne)"
+
+[[message]]
 key = "Custom Font:"
 [message.translations]
 simplified_chinese = "自定义字体："
@@ -1759,6 +2083,22 @@ brazilian_portuguese = "Percorrer emotes"
 portuguese = "Percorrer emotes"
 turkish = "Emojiler arasında döngü yap"
 polish = "Cykl przez emotki"
+
+[[message]]
+key = "Cyrillic"
+[message.translations]
+simplified_chinese = "西里尔文"
+traditional_chinese = "西里爾文"
+japanese = "キリル文字"
+korean = "키릴 문자"
+russian = "Кириллица"
+german = "Kyrillisch"
+spanish = "Cirílico"
+french = "Cyrillique"
+brazilian_portuguese = "Cirílico"
+portuguese = "Cirílico"
+turkish = "Kiril"
+polish = "Cyrylica"
 
 [[message]]
 key = "Darken Tee color when frozen (0-100)"
@@ -1905,6 +2245,21 @@ turkish = "Derin donma bloğu anahat rengi"
 polish = "Kolor konturu kafelka głębokiego zamrożenia"
 
 [[message]]
+key = "Deep freeze tile outline width"
+[message.translations]
+traditional_chinese = "深層凍結方塊的描邊寬度"
+japanese = "ディープフリーズタイルの輪郭幅"
+korean = "깊은 동결 타일 외곽선 두께"
+russian = "Ширина контура блоков глубокого замораживания"
+german = "Konturbreite der Tiefkühl-Kacheln"
+spanish = "Grosor del contorno de los bloques de congelación profunda"
+french = "Épaisseur du contour des tuiles de gel profond"
+brazilian_portuguese = "Espessura do contorno dos blocos de congelamento profundo"
+portuguese = "Espessura do contorno dos blocos de congelamento profundo"
+turkish = "Derin dondurma karolarının kenar kalınlığı"
+polish = "Grubość obrysu kafelków głębokiego zamrożenia"
+
+[[message]]
 key = "Deep unfreeze color"
 [message.translations]
 simplified_chinese = "深度解冻颜色"
@@ -1935,6 +2290,21 @@ brazilian_portuguese = "Cor do contorno do tile de descongelamento profundo"
 portuguese = "Cor do contorno do tile de unfreeze profundo"
 turkish = "Derin çözülme bloğu anahat rengi"
 polish = "Kolor konturu kafelka głębokiego rozmrożenia"
+
+[[message]]
+key = "Deep unfreeze tile outline width"
+[message.translations]
+traditional_chinese = "深層解凍方塊的描邊寬度"
+japanese = "ディープ解凍タイルの輪郭幅"
+korean = "깊은 해동 타일 외곽선 두께"
+russian = "Ширина контура блоков глубокого размораживания"
+german = "Konturbreite der Tiefauftau-Kacheln"
+spanish = "Grosor del contorno de los bloques de descongelación profunda"
+french = "Épaisseur du contour des tuiles de dégel profond"
+brazilian_portuguese = "Espessura do contorno dos blocos de descongelamento profundo"
+portuguese = "Espessura do contorno dos blocos de descongelamento profundo"
+turkish = "Derin çözme karolarının kenar kalınlığı"
+polish = "Grubość obrysu kafelków głębokiego rozmrożenia"
 
 [[message]]
 key = "Delay"
@@ -1969,20 +2339,20 @@ turkish = "qm_execute_on_join'i yürütmeden önceki gecikme (milisaniye)"
 polish = "Opóźnienie przed wykonaniem qm_execute_on_join (milisekundy)"
 
 [[message]]
-key = "Tick delay before executing qm_execute_on_join"
+key = "Delay before reduction"
 [message.translations]
-simplified_chinese = "执行 qm_execute_on_join 前的延迟（tick）"
-traditional_chinese = "執行 qm_execute_on_join 前的延遲（tick）"
-japanese = "qm_execute_on_join 実行前の遅延（tick）"
-korean = "qm_execute_on_join 실행 전 지연 시간 (tick)"
-russian = "Задержка в тиках перед выполнением qm_execute_on_join"
-german = "Tick-Verzögerung vor Ausführung von qm_execute_on_join"
-spanish = "Retraso en ticks antes de ejecutar qm_execute_on_join"
-french = "Délai en ticks avant l'exécution de qm_execute_on_join"
-brazilian_portuguese = "Atraso em ticks antes de executar qm_execute_on_join"
-portuguese = "Atraso em ticks antes de executar qm_execute_on_join"
-turkish = "qm_execute_on_join yürütülmeden önceki tick gecikmesi"
-polish = "Opóźnienie w tickach przed wykonaniem qm_execute_on_join"
+simplified_chinese = "降低前延迟"
+traditional_chinese = "降低前延遲"
+japanese = "削減前の遅延"
+korean = "감소 전 지연"
+russian = "Задержка перед уменьшением"
+german = "Verzögerung vor der Verringerung"
+spanish = "Retardo antes de reducir"
+french = "Délai avant la réduction"
+brazilian_portuguese = "Atraso antes da redução"
+portuguese = "Atraso antes da redução"
+turkish = "Azaltmadan önce gecikme"
+polish = "Opóźnienie przed zmniejszeniem"
 
 [[message]]
 key = "Deprecated: jump hint color, migrated to qm_jump_hint_color on startup"
@@ -2081,6 +2451,22 @@ turkish = "Kullanımdan kaldırıldı: zıplama ipucu Y konumu, başlangıçta q
 polish = "Przestarzałe: pozycja Y podpowiedzi skoku, migrowane do qm_jump_hint_y przy starcie"
 
 [[message]]
+key = "Disable fast practice mode"
+[message.translations]
+simplified_chinese = "关闭快速练习模式"
+traditional_chinese = "關閉快速練習模式"
+japanese = "高速練習モードを無効にする"
+korean = "빠른 연습 모드 끄기"
+russian = "Отключить режим быстрой практики"
+german = "Schnell-Übungsmodus deaktivieren"
+spanish = "Desactivar modo de práctica rápida"
+french = "Désactiver le mode pratique rapide"
+brazilian_portuguese = "Desativar o modo de prática rápida"
+portuguese = "Desativar o modo de prática rápida"
+turkish = "Hızlı pratik modunu kapat"
+polish = "Wyłącz tryb szybkiej praktyki"
+
+[[message]]
 key = "Disagree"
 [message.translations]
 simplified_chinese = "反对"
@@ -2111,6 +2497,22 @@ brazilian_portuguese = "Desconectado"
 portuguese = "Desligado"
 turkish = "Bağlantı kesildi"
 polish = "Rozłączono"
+
+[[message]]
+key = "Display"
+[message.translations]
+simplified_chinese = "展示体"
+traditional_chinese = "展示體"
+japanese = "ディスプレイ"
+korean = "디스플레이"
+russian = "Акцидентный"
+german = "Display-Schrift"
+spanish = "Exhibición"
+french = "Fantaisie"
+brazilian_portuguese = "Exibição"
+portuguese = "Exibição"
+turkish = "Gösteri"
+polish = "Ozdobna"
 
 [[message]]
 key = "Display your race time"
@@ -2241,22 +2643,6 @@ turkish = "Geçerli yakınlaştırma değerini gösterir"
 polish = "Wyświetla bieżącą wartość przybliżenia"
 
 [[message]]
-key = "Displays your current score"
-[message.translations]
-simplified_chinese = "显示你当前的分数"
-traditional_chinese = "顯示你目前的分數"
-japanese = "現在のスコアを表示"
-korean = "현재 점수 표시"
-russian = "Показывает ваш текущий счет"
-german = "Zeigt deinen aktuellen Punktestand an"
-spanish = "Muestra tu puntuación actual"
-french = "Affiche votre score actuel"
-brazilian_portuguese = "Mostra sua pontuação atual"
-portuguese = "Mostra a sua pontuação atual"
-turkish = "Mevcut skorunuzu gösterir"
-polish = "Wyświetla Twój aktualny wynik"
-
-[[message]]
 key = "Displays DDNet process CPU usage / total system CPU usage"
 [message.translations]
 simplified_chinese = "显示 DDNet 进程 CPU 使用率/系统总 CPU 使用率"
@@ -2367,6 +2753,22 @@ brazilian_portuguese = "Mostra seu ângulo atual em graus"
 portuguese = "Mostra o teu ângulo atual em graus"
 turkish = "Geçerli açınızı derece olarak gösterir"
 polish = "Wyświetla bieżący kąt w stopniach"
+
+[[message]]
+key = "Displays your current score"
+[message.translations]
+simplified_chinese = "显示你当前的分数"
+traditional_chinese = "顯示你目前的分數"
+japanese = "現在のスコアを表示"
+korean = "현재 점수 표시"
+russian = "Показывает ваш текущий счет"
+german = "Zeigt deinen aktuellen Punktestand an"
+spanish = "Muestra tu puntuación actual"
+french = "Affiche votre score actuel"
+brazilian_portuguese = "Mostra sua pontuação atual"
+portuguese = "Mostra a sua pontuação atual"
+turkish = "Mevcut skorunuzu gösterir"
+polish = "Wyświetla Twój aktualny wynik"
 
 [[message]]
 key = "Displays your frames per second"
@@ -2481,6 +2883,38 @@ turkish = "BUNU KULLANMA! ONUN YERİNE add_bindwheel KULLAN!"
 polish = "NIE UŻYWAJ TEGO! UŻYJ add_bindwheel!"
 
 [[message]]
+key = "Download"
+[message.translations]
+simplified_chinese = "下载"
+traditional_chinese = "下載"
+japanese = "ダウンロード"
+korean = "다운로드"
+russian = "Скачать"
+german = "Herunterladen"
+spanish = "Descargar"
+french = "Télécharger"
+brazilian_portuguese = "Baixar"
+portuguese = "Transferir"
+turkish = "İndir"
+polish = "Pobierz"
+
+[[message]]
+key = "Download fonts from the internet instead of shipping them with the client"
+[message.translations]
+simplified_chinese = "从网络下载字体，而不是随客户端一起分发"
+traditional_chinese = "從網路下載字型，而不是隨客戶端一起發布"
+japanese = "フォントをクライアントに同梱せず、インターネットからダウンロードします"
+korean = "글꼴을 클라이언트에 포함하지 않고 인터넷에서 다운로드합니다"
+russian = "Скачивать шрифты из интернета, а не поставлять их вместе с клиентом"
+german = "Schriften aus dem Internet laden, statt sie mit dem Client auszuliefern"
+spanish = "Descargar las fuentes de internet en lugar de incluirlas con el cliente"
+french = "Télécharger les polices depuis Internet au lieu de les fournir avec le client"
+brazilian_portuguese = "Baixar as fontes da internet em vez de incluí-las com o cliente"
+portuguese = "Transferir os tipos de letra da internet em vez de os incluir com o cliente"
+turkish = "Yazı tiplerini istemciyle birlikte göndermek yerine internetten indir"
+polish = "Pobieraj czcionki z internetu zamiast dołączać je do klienta"
+
+[[message]]
 key = "Downloading update..."
 [message.translations]
 simplified_chinese = "正在下载更新……"
@@ -2495,38 +2929,6 @@ brazilian_portuguese = "Baixando atualização..."
 portuguese = "A transferir atualização..."
 turkish = "Güncelleme indiriliyor..."
 polish = "Pobieranie aktualizacji..."
-
-[[message]]
-key = "Blink the active local tee"
-[message.translations]
-japanese = "操作中のローカルキャラクターを点滅させる"
-korean = "활성 로컬 캐릭터를 깜박이게 합니다"
-simplified_chinese = "让当前本地角色闪烁"
-traditional_chinese = "讓目前本機角色閃爍"
-russian = "Заставить активного локального персонажа мигнуть"
-german = "Aktiven lokalen Charakter blinken lassen"
-spanish = "Hacer parpadear al personaje local activo"
-french = "Faire clignoter le personnage local actif"
-brazilian_portuguese = "Fazer o personagem local ativo piscar"
-portuguese = "Fazer a personagem local ativa piscar"
-turkish = "Etkin yerel karakteri yanıp söndür"
-polish = "Mignij aktywną lokalną postacią"
-
-[[message]]
-key = "Installing update. Please wait..."
-[message.translations]
-japanese = "アップデートをインストールしています。お待ちください..."
-korean = "업데이트 설치 중입니다. 잠시 기다려 주세요..."
-simplified_chinese = "正在安装更新，请稍等……"
-traditional_chinese = "正在安裝更新，請稍等..."
-russian = "Установка обновления. Пожалуйста, подождите..."
-german = "Update wird installiert. Bitte warten..."
-spanish = "Instalando la actualización. Espera..."
-french = "Installation de la mise à jour. Veuillez patienter..."
-brazilian_portuguese = "Instalando a atualização. Aguarde..."
-portuguese = "A instalar a atualização. Aguarda..."
-turkish = "Güncelleme yükleniyor. Lütfen bekleyin..."
-polish = "Instalowanie aktualizacji. Proszę czekać..."
 
 [[message]]
 key = "Draw lines showing screen/clickbox center"
@@ -2687,6 +3089,22 @@ brazilian_portuguese = "Habilitar Discord RPC (requer reinicialização)"
 portuguese = "Ativar Discord RPC (requer reinício)"
 turkish = "Discord RPC'yi etkinleştir (yeniden başlatma gerektirir)"
 polish = "Włącz Discord RPC (wymaga restartu)"
+
+[[message]]
+key = "Enable fast practice mode"
+[message.translations]
+simplified_chinese = "开启快速练习模式"
+traditional_chinese = "開啟快速練習模式"
+japanese = "高速練習モードを有効にする"
+korean = "빠른 연습 모드 켜기"
+russian = "Включить режим быстрой практики"
+german = "Schnell-Übungsmodus aktivieren"
+spanish = "Activar modo de práctica rápida"
+french = "Activer le mode pratique rapide"
+brazilian_portuguese = "Ativar o modo de prática rápida"
+portuguese = "Ativar o modo de prática rápida"
+turkish = "Hızlı pratik modunu aç"
+polish = "Włącz tryb szybkiej praktyki"
 
 [[message]]
 key = "Enable Jelly Tee"
@@ -2881,6 +3299,22 @@ turkish = "Savaş listesini etkinleştir"
 polish = "Włącz listę wrogów"
 
 [[message]]
+key = "English font:"
+[message.translations]
+simplified_chinese = "英文字体："
+traditional_chinese = "英文字型："
+japanese = "英語フォント："
+korean = "영어 글꼴:"
+russian = "Английский шрифт:"
+german = "Englische Schrift:"
+spanish = "Fuente inglesa:"
+french = "Police anglaise :"
+brazilian_portuguese = "Fonte inglesa:"
+portuguese = "Tipo de letra inglês:"
+turkish = "İngilizce yazı tipi:"
+polish = "Czcionka angielska:"
+
+[[message]]
 key = "Entity wall outline opacity"
 [message.translations]
 simplified_chinese = "实体墙轮廓透明度"
@@ -2895,6 +3329,22 @@ brazilian_portuguese = "Opacidade do contorno da parede de entidades"
 portuguese = "Opacidade do contorno da parede de entidades"
 turkish = "Varlık duvarı ana hattı opaklığı"
 polish = "Nieprzezroczystość konturu ściany jednostki"
+
+[[message]]
+key = "Entries in it will fall back to none."
+[message.translations]
+simplified_chinese = "里面的条目会回到 none。"
+traditional_chinese = "裡面的條目會回到 none。"
+japanese = "中の項目は none に戻ります。"
+korean = "포함된 항목은 none으로 돌아갑니다."
+russian = "Записи из неё вернутся в none."
+german = "Darin enthaltene Einträge fallen auf none zurück."
+spanish = "Sus entradas pasarán a none."
+french = "Ses entrées passeront à none."
+brazilian_portuguese = "As entradas dela voltam para none."
+portuguese = "As entradas dela voltam para none."
+turkish = "İçindeki kayıtlar none'a döner."
+polish = "Zawarte w niej wpisy wrócą do none."
 
 [[message]]
 key = "Erase items on the in game background"
@@ -3185,6 +3635,22 @@ turkish = "Bitiş İsmi:"
 polish = "Nazwa na mecie:"
 
 [[message]]
+key = "Finish or reset the current race before restoring a save."
+[message.translations]
+simplified_chinese = "请先结束或重置当前比赛，再恢复存档。"
+traditional_chinese = "請先結束或重設目前的比賽，再恢復存檔。"
+japanese = "現在のレースを終了またはリセットしてからセーブを復元してください。"
+korean = "현재 레이스를 끝내거나 초기화한 뒤 저장 데이터를 복원하세요."
+russian = "Завершите или сбросьте текущую гонку перед восстановлением."
+german = "Vor der Wiederherstellung das aktuelle Rennen beenden oder zurücksetzen."
+spanish = "Termina o reinicia la carrera actual antes de restaurar una partida."
+french = "Terminez ou réinitialisez la course actuelle avant de restaurer une sauvegarde."
+brazilian_portuguese = "Termine ou reinicie a corrida atual antes de restaurar um jogo salvo."
+portuguese = "Termina ou reinicia a corrida atual antes de restaurar um jogo guardado."
+turkish = "Bir kaydı geri yüklemeden önce mevcut yarışı bitirin veya sıfırlayın."
+polish = "Zakończ lub zresetuj bieżący wyścig przed przywróceniem zapisu."
+
+[[message]]
 key = "Finished"
 [message.translations]
 simplified_chinese = "已完成"
@@ -3215,6 +3681,86 @@ brazilian_portuguese = "Inverter:"
 portuguese = "Inverter:"
 turkish = "Çevir:"
 polish = "Odwróć:"
+
+[[message]]
+key = "Font store"
+[message.translations]
+simplified_chinese = "字体商店"
+traditional_chinese = "字型商店"
+japanese = "フォントストア"
+korean = "글꼴 상점"
+russian = "Магазин шрифтов"
+german = "Schriftspeicher"
+spanish = "Tienda de fuentes"
+french = "Boutique de polices"
+brazilian_portuguese = "Loja de fontes"
+portuguese = "Loja de tipos de letra"
+turkish = "Yazı tipi mağazası"
+polish = "Sklep z czcionkami"
+
+[[message]]
+key = "Font store:"
+[message.translations]
+simplified_chinese = "字体商店："
+traditional_chinese = "字型商店："
+japanese = "フォントストア："
+korean = "글꼴 상점:"
+russian = "Магазин шрифтов:"
+german = "Schriftspeicher:"
+spanish = "Tienda de fuentes:"
+french = "Boutique de polices :"
+brazilian_portuguese = "Loja de fontes:"
+portuguese = "Loja de tipos de letra:"
+turkish = "Yazı tipi mağazası:"
+polish = "Sklep z czcionkami:"
+
+[[message]]
+key = "Font style:"
+[message.translations]
+simplified_chinese = "字体样式："
+traditional_chinese = "字型樣式："
+japanese = "フォントスタイル:"
+korean = "글꼴 스타일:"
+russian = "Стиль шрифта:"
+german = "Schriftstil:"
+spanish = "Estilo de fuente:"
+french = "Style de police :"
+brazilian_portuguese = "Estilo da fonte:"
+portuguese = "Estilo da fonte:"
+turkish = "Yazı tipi stili:"
+polish = "Styl czcionki:"
+
+[[message]]
+key = "Font weight:"
+[message.translations]
+simplified_chinese = "字体字重："
+traditional_chinese = "字型字重："
+japanese = "フォントの太さ："
+korean = "글꼴 굵기:"
+russian = "Насыщенность шрифта:"
+german = "Schriftstärke:"
+spanish = "Grosor de la fuente:"
+french = "Graisse de la police :"
+brazilian_portuguese = "Espessura da fonte:"
+portuguese = "Espessura do tipo de letra:"
+turkish = "Yazı tipi kalınlığı:"
+polish = "Grubość czcionki:"
+
+[[message]]
+key = "For Gores"
+[message.translations]
+simplified_chinese = "用于 Gores"
+traditional_chinese = "用於 Gores"
+japanese = "Gores 用"
+korean = "Gores용"
+russian = "для Gores"
+german = "für Gores"
+spanish = "para Gores"
+french = "pour les Gores"
+brazilian_portuguese = "para Gores"
+portuguese = "para Gores"
+turkish = "Gores için"
+polish = "dla Gores"
 
 [[message]]
 key = "FPS"
@@ -3297,6 +3843,21 @@ turkish = "Donma döşemesi ana hattı rengi"
 polish = "Kolor konturu kafelka zamrożenia"
 
 [[message]]
+key = "Freeze tile outline width"
+[message.translations]
+traditional_chinese = "凍結方塊的描邊寬度"
+japanese = "フリーズタイルの輪郭幅"
+korean = "동결 타일 외곽선 두께"
+russian = "Ширина контура блоков замораживания"
+german = "Konturbreite der Einfrier-Kacheln"
+spanish = "Grosor del contorno de los bloques de congelación"
+french = "Épaisseur du contour des tuiles de gel"
+brazilian_portuguese = "Espessura do contorno dos blocos de congelamento"
+portuguese = "Espessura do contorno dos blocos de congelamento"
+turkish = "Dondurma karolarının kenar kalınlığı"
+polish = "Grubość obrysu kafelków zamrożenia"
+
+[[message]]
 key = "Freeze/Deep freeze tile outline width"
 [message.translations]
 simplified_chinese = "冻结/深冻图块轮廓宽度"
@@ -3327,6 +3888,22 @@ brazilian_portuguese = "Margem de Congelamento"
 portuguese = "Margem de Congelamento"
 turkish = "Donma Marjı"
 polish = "Margines zamrożenia"
+
+[[message]]
+key = "Frozen prediction margin"
+[message.translations]
+simplified_chinese = "冻结时预测量"
+traditional_chinese = "凍結時預測量"
+japanese = "凍結中の予測マージン"
+korean = "동결 중 예측 여유"
+russian = "Запас предсказания во время заморозки"
+german = "Vorhersagespielraum beim Einfrieren"
+spanish = "Margen de predicción al estar congelado"
+french = "Marge de prédiction en cas de gel"
+brazilian_portuguese = "Margem de previsão enquanto estiver congelado"
+portuguese = "Margem de previsão enquanto estiver congelado"
+turkish = "Donmuşken tahmin payı"
+polish = "Margines predykcji podczas zamrożenia"
 
 [[message]]
 key = "Gap between statusbar items"
@@ -3377,6 +3954,22 @@ turkish = "Github"
 polish = "Github"
 
 [[message]]
+key = "Greek"
+[message.translations]
+simplified_chinese = "希腊文"
+traditional_chinese = "希臘文"
+japanese = "ギリシャ文字"
+korean = "그리스 문자"
+russian = "Греческий"
+german = "Griechisch"
+spanish = "Griego"
+french = "Grec"
+brazilian_portuguese = "Grego"
+portuguese = "Grego"
+turkish = "Yunanca"
+polish = "Grecki"
+
+[[message]]
 key = "Group name"
 [message.translations]
 simplified_chinese = "分组名称"
@@ -3393,6 +3986,22 @@ turkish = "Grup adı"
 polish = "Nazwa grupy"
 
 [[message]]
+key = "Group names are limited to 16 characters"
+[message.translations]
+simplified_chinese = "群组名最多 16 个字符"
+traditional_chinese = "群組名稱最多 16 個字元"
+japanese = "グループ名は最大16文字です"
+korean = "그룹 이름은 최대 16자입니다"
+russian = "Имя группы — не более 16 символов"
+german = "Gruppennamen sind auf 16 Zeichen begrenzt"
+spanish = "Los nombres de grupo admiten hasta 16 caracteres"
+french = "Les noms de groupe sont limités à 16 caractères"
+brazilian_portuguese = "Nomes de grupo têm no máximo 16 caracteres"
+portuguese = "Nomes de grupo têm no máximo 16 caracteres"
+turkish = "Grup adları en fazla 16 karakterdir"
+polish = "Nazwy grup mają maksymalnie 16 znaków"
+
+[[message]]
 key = "Hammer Mode:"
 [message.translations]
 simplified_chinese = "锤子模式："
@@ -3407,6 +4016,22 @@ brazilian_portuguese = "Modo Martelo:"
 portuguese = "Modo Martelo:"
 turkish = "Çekiç Modu:"
 polish = "Tryb młotka:"
+
+[[message]]
+key = "Handwriting"
+[message.translations]
+simplified_chinese = "手写体"
+traditional_chinese = "手寫體"
+japanese = "手書き"
+korean = "손글씨"
+russian = "Рукописный"
+german = "Handschrift"
+spanish = "Manuscrita"
+french = "Manuscrite"
+brazilian_portuguese = "Manuscrita"
+portuguese = "Manuscrito"
+turkish = "El yazısı"
+polish = "Odręczna"
 
 [[message]]
 key = "Helpful for Gores: allow negative internal certainty for more conservative prediction"
@@ -3505,6 +4130,36 @@ turkish = "Kanca çarpışma çizgisi uzunluğu imleç mesafesini takip eder"
 polish = "Długość linii kolizji haka podąża za odległością kursora"
 
 [[message]]
+key = "Hookable tile outline color"
+[message.translations]
+traditional_chinese = "可鉤方塊描邊顏色"
+japanese = "フック可能タイルの輪郭色"
+korean = "갈고리 가능 타일 외곽선 색상"
+russian = "Цвет контура блоков, за которые можно зацепиться"
+german = "Konturfarbe der haktbaren Kacheln"
+spanish = "Color del contorno de los bloques enganchables"
+french = "Couleur du contour des tuiles accrochables"
+brazilian_portuguese = "Cor do contorno dos blocos gancháveis"
+portuguese = "Cor do contorno dos blocos gancháveis"
+turkish = "Kancalanabilir karoların kenar rengi"
+polish = "Kolor obrysu kafelków zaczepialnych"
+
+[[message]]
+key = "Hookable tile outline width"
+[message.translations]
+traditional_chinese = "可鉤方塊描邊寬度"
+japanese = "フック可能タイルの輪郭幅"
+korean = "갈고리 가능 타일 외곽선 두께"
+russian = "Ширина контура блоков, за которые можно зацепиться"
+german = "Konturbreite der haktbaren Kacheln"
+spanish = "Grosor del contorno de los bloques enganchables"
+french = "Épaisseur du contour des tuiles accrochables"
+brazilian_portuguese = "Espessura do contorno dos blocos gancháveis"
+portuguese = "Espessura do contorno dos blocos gancháveis"
+turkish = "Kancalanabilir karoların kenar kalınlığı"
+polish = "Grubość obrysu kafelków zaczepialnych"
+
+[[message]]
 key = "Hookable/Unhookable tile outline color"
 [message.translations]
 simplified_chinese = "可钩/不可钩图块轮廓颜色"
@@ -3567,6 +4222,22 @@ brazilian_portuguese = "Eu te mutei"
 portuguese = "Eu silenciei-te"
 turkish = "Seni sessize aldım"
 polish = "Wyciszyłem cię"
+
+[[message]]
+key = "Icon symbols:"
+[message.translations]
+simplified_chinese = "图标符号："
+traditional_chinese = "圖示符號："
+japanese = "アイコン記号："
+korean = "아이콘 기호:"
+russian = "Значки и символы:"
+german = "Symbolzeichen:"
+spanish = "Símbolos de iconos:"
+french = "Symboles d'icônes :"
+brazilian_portuguese = "Símbolos de ícones:"
+portuguese = "Símbolos de ícones:"
+turkish = "Simge sembolleri:"
+polish = "Symbole ikon:"
 
 [[message]]
 key = "Improved Anti Ping"
@@ -3969,6 +4640,54 @@ turkish = "Giriş"
 polish = "Wejście"
 
 [[message]]
+key = "Installed"
+[message.translations]
+simplified_chinese = "已安装"
+traditional_chinese = "已安裝"
+japanese = "インストール済み"
+korean = "설치됨"
+russian = "Установлен"
+german = "Installiert"
+spanish = "Instalada"
+french = "Installée"
+brazilian_portuguese = "Instalada"
+portuguese = "Instalado"
+turkish = "Yüklü"
+polish = "Zainstalowana"
+
+[[message]]
+key = "Installing update. Please wait..."
+[message.translations]
+simplified_chinese = "正在安装更新，请稍等……"
+traditional_chinese = "正在安裝更新，請稍等..."
+japanese = "アップデートをインストールしています。お待ちください..."
+korean = "업데이트 설치 중입니다. 잠시 기다려 주세요..."
+russian = "Установка обновления. Пожалуйста, подождите..."
+german = "Update wird installiert. Bitte warten..."
+spanish = "Instalando la actualización. Espera..."
+french = "Installation de la mise à jour. Veuillez patienter..."
+brazilian_portuguese = "Instalando a atualização. Aguarde..."
+portuguese = "A instalar a atualização. Aguarda..."
+turkish = "Güncelleme yükleniyor. Lütfen bekleyin..."
+polish = "Instalowanie aktualizacji. Proszę czekać..."
+
+[[message]]
+key = "Invalid save number. Use a number from the save list."
+[message.translations]
+simplified_chinese = "存档序号无效，请使用列表中的序号。"
+traditional_chinese = "存檔序號無效，請使用清單中的序號。"
+japanese = "セーブ番号が無効です。一覧の番号を指定してください。"
+korean = "유효하지 않은 저장 번호입니다. 목록의 번호를 사용하세요."
+russian = "Неверный номер сохранения. Выберите номер из списка."
+german = "Ungültige Spielstandnummer. Bitte eine Nummer aus der Liste verwenden."
+spanish = "Número de partida inválido. Usa un número de la lista."
+french = "Numéro de sauvegarde invalide. Utilisez un numéro de la liste."
+brazilian_portuguese = "Número de jogo salvo inválido. Use um número da lista."
+portuguese = "Número de jogo guardado inválido. Usa um número da lista."
+turkish = "Geçersiz kayıt numarası. Listedeki bir numarayı kullanın."
+polish = "Nieprawidłowy numer zapisu. Użyj numeru z listy."
+
+[[message]]
 key = "Item type"
 [message.translations]
 simplified_chinese = "物品类型"
@@ -3983,6 +4702,22 @@ brazilian_portuguese = "Tipo de item"
 portuguese = "Tipo de item"
 turkish = "Öğe türü"
 polish = "Typ przedmiotu"
+
+[[message]]
+key = "Japanese"
+[message.translations]
+simplified_chinese = "日文"
+traditional_chinese = "日文"
+japanese = "日本語"
+korean = "일본어"
+russian = "Японский"
+german = "Japanisch"
+spanish = "Japonés"
+french = "Japonais"
+brazilian_portuguese = "Japonês"
+portuguese = "Japonês"
+turkish = "Japonca"
+polish = "Japoński"
 
 [[message]]
 key = "Jelly duration"
@@ -4047,6 +4782,22 @@ brazilian_portuguese = "Kaomoji"
 portuguese = "Kaomoji"
 turkish = "Kaomoji"
 polish = "Kaomoji"
+
+[[message]]
+key = "Korean"
+[message.translations]
+simplified_chinese = "韩文"
+traditional_chinese = "韓文"
+japanese = "韓国語"
+korean = "한국어"
+russian = "Корейский"
+german = "Koreanisch"
+spanish = "Coreano"
+french = "Coréen"
+brazilian_portuguese = "Coreano"
+portuguese = "Coreano"
+turkish = "Korece"
+polish = "Koreański"
 
 [[message]]
 key = "L select  R swap  M select only"
@@ -4127,6 +4878,22 @@ brazilian_portuguese = "Variação de latência"
 portuguese = "Variação de latência"
 turkish = "Gecikme dalgalanması"
 polish = "Jitter opóźnienia"
+
+[[message]]
+key = "Legacy realtime WebSocket URL (migrated to qm_websocket_url)"
+[message.translations]
+simplified_chinese = "旧实时 WebSocket 地址（已迁移至 qm_websocket_url）"
+traditional_chinese = "舊即時 WebSocket 位址（已遷移至 qm_websocket_url）"
+japanese = "旧リアルタイム WebSocket URL（qm_websocket_url に移行済み）"
+korean = "기존 실시간 WebSocket URL (qm_websocket_url로 이전됨)"
+russian = "Старый адрес WebSocket для канала реального времени (перенесён в qm_websocket_url)"
+german = "Alte Echtzeit WebSocket URL (nach qm_websocket_url migriert)"
+spanish = "URL WebSocket anterior en tiempo real (migrada a qm_websocket_url)"
+french = "Ancienne URL WebSocket temps réel (migrée vers qm_websocket_url)"
+brazilian_portuguese = "URL WebSocket em tempo real antiga (migrada para qm_websocket_url)"
+portuguese = "URL WebSocket em tempo real antiga (migrada para qm_websocket_url)"
+turkish = "Eski gerçek zamanlı WebSocket URL'si (qm_websocket_url adresine taşındı)"
+polish = "Stary adres WebSocket czasu rzeczywistego (przeniesiony do qm_websocket_url)"
 
 [[message]]
 key = "Lenny:"
@@ -4241,6 +5008,22 @@ turkish = "Yerel Saat"
 polish = "Czas lokalny"
 
 [[message]]
+key = "Magic: Spirit Script"
+[message.translations]
+simplified_chinese = "魔法风：灵文游丝"
+traditional_chinese = "魔法風：靈文游絲"
+japanese = "魔法風：精霊の筆跡"
+korean = "마법풍: 영혼의 문자"
+russian = "Магия: духовное письмо"
+german = "Magie: Geisterschrift"
+spanish = "Magia: escritura espiritual"
+french = "Magie : écriture des esprits"
+brazilian_portuguese = "Magia: escrita espiritual"
+portuguese = "Magia: escrita espiritual"
+turkish = "Büyü: ruh yazısı"
+polish = "Magia: pismo duchów"
+
+[[message]]
 key = "Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)"
 [message.translations]
 simplified_chinese = "让排球模式中的冻结玩家看起来更像排球（0=禁用，1=仅排球地图，2=始终）"
@@ -4255,6 +5038,22 @@ brazilian_portuguese = "Fazer jogadores congelados parecerem mais com bolas de v
 portuguese = "Fazer jogadores congelados parecerem mais com bolas de vôlei (0=Desativado, 1=Apenas mapas de vôlei, 2=Sempre)"
 turkish = "Donmuş oyuncuları daha çok voleybol topuna benzet (0=Devre dışı, 1=Sadece voleybol haritaları, 2=Her zaman)"
 polish = "Spraw, aby zamrożeni gracze wyglądali bardziej jak piłki do siatkówki (0=Wyłączone, 1=Tylko mapy siatkówki, 2=Zawsze)"
+
+[[message]]
+key = "Manga: Ink Slash"
+[message.translations]
+simplified_chinese = "漫画风：墨斩"
+traditional_chinese = "漫畫風：墨斬"
+japanese = "漫画風：墨の斬撃"
+korean = "만화풍: 먹빛 참격"
+russian = "Манга: чернильный разрез"
+german = "Manga: Tuscheschnitt"
+spanish = "Manga: corte de tinta"
+french = "Manga : entaille d'encre"
+brazilian_portuguese = "Mangá: corte de tinta"
+portuguese = "Manga: corte de tinta"
+turkish = "Manga: mürekkep kesiği"
+polish = "Manga: cięcie tuszem"
 
 [[message]]
 key = "Map play history"
@@ -4369,6 +5168,22 @@ turkish = "maksimum"
 polish = "maksimum"
 
 [[message]]
+key = "Maximum reduction"
+[message.translations]
+simplified_chinese = "最大降低量"
+traditional_chinese = "最大降低量"
+japanese = "最大削減量"
+korean = "최대 감소량"
+russian = "Максимальное уменьшение"
+german = "Maximale Verringerung"
+spanish = "Reducción máxima"
+french = "Réduction maximale"
+brazilian_portuguese = "Redução máxima"
+portuguese = "Redução máxima"
+turkish = "Maksimum azaltma"
+polish = "Maksymalne zmniejszenie"
+
+[[message]]
 key = "Maximum rows"
 [message.translations]
 simplified_chinese = "最大行数"
@@ -4447,6 +5262,22 @@ brazilian_portuguese = "Milissegundos para aplicar entrada rápida antecipadamen
 portuguese = "Milissegundos para aplicar entrada rápida antecipadamente"
 turkish = "Hızlı girişi erken uygulamak için milisaniye"
 polish = "Milisekundy do wcześniejszego zastosowania szybkiego wprowadzania"
+
+[[message]]
+key = "Mini debug"
+[message.translations]
+simplified_chinese = "小型调试"
+traditional_chinese = "小型調試"
+japanese = "ミニデバッグ"
+korean = "미니 디버그"
+russian = "мини-отладка"
+german = "Mini-Debug"
+spanish = "mini depuración"
+french = "mini débogage"
+brazilian_portuguese = "mini debug"
+portuguese = "mini debug"
+turkish = "küçük hata ayıklama"
+polish = "mini debug"
 
 [[message]]
 key = "Mini voting UI"
@@ -4529,6 +5360,22 @@ turkish = "Değiştirilmiş"
 polish = "Zmodyfikowane"
 
 [[message]]
+key = "Monospace"
+[message.translations]
+simplified_chinese = "等宽体"
+traditional_chinese = "等寬體"
+japanese = "等幅"
+korean = "고정폭"
+russian = "Моноширинный"
+german = "Monospace-Schrift"
+spanish = "Monoespaciada"
+french = "Chasse fixe"
+brazilian_portuguese = "Monoespaçada"
+portuguese = "Monoespaçado"
+turkish = "Eşaralıklı"
+polish = "Stałopozycyjna"
+
+[[message]]
 key = "More optimistic prediction along Tee's stable direction, reduces delay to stabilize"
 [message.translations]
 simplified_chinese = "沿 Tee 的稳定方向进行更乐观的预测，减少稳定下来所需的延迟"
@@ -4545,6 +5392,38 @@ turkish = "Tee'nin sabit yönü boyunca daha iyimser tahmin, stabilize olma geci
 polish = "Bardziej optymistyczne przewidywanie wzdłuż stabilnego kierunku Tee, zmniejsza opóźnienie stabilizacji"
 
 [[message]]
+key = "Move down"
+[message.translations]
+simplified_chinese = "下移"
+traditional_chinese = "下移"
+japanese = "下へ移動"
+korean = "아래로 이동"
+russian = "Переместить вниз"
+german = "Nach unten"
+spanish = "Bajar"
+french = "Descendre"
+brazilian_portuguese = "Mover para baixo"
+portuguese = "Mover para baixo"
+turkish = "Aşağı taşı"
+polish = "W dół"
+
+[[message]]
+key = "Move up"
+[message.translations]
+simplified_chinese = "上移"
+traditional_chinese = "上移"
+japanese = "上へ移動"
+korean = "위로 이동"
+russian = "Переместить вверх"
+german = "Nach oben"
+spanish = "Subir"
+french = "Monter"
+brazilian_portuguese = "Mover para cima"
+portuguese = "Mover para cima"
+turkish = "Yukarı taşı"
+polish = "W górę"
+
+[[message]]
 key = "Mute:"
 [message.translations]
 simplified_chinese = "禁言："
@@ -4559,6 +5438,22 @@ brazilian_portuguese = "Mutar:"
 portuguese = "Silenciar:"
 turkish = "Sessize Al:"
 polish = "Wycisz:"
+
+[[message]]
+key = "My binds"
+[message.translations]
+simplified_chinese = "我的绑定"
+traditional_chinese = "我的綁定"
+japanese = "自分のバインド"
+korean = "내 바인드"
+russian = "Мои бинды"
+german = "Meine Binds"
+spanish = "Mis binds"
+french = "Mes binds"
+brazilian_portuguese = "Meus binds"
+portuguese = "Os meus binds"
+turkish = "Bindlerim"
+polish = "Moje bindy"
 
 [[message]]
 key = "Name to change to near finish (when qm_change_name_near_finish enabled)"
@@ -4609,6 +5504,22 @@ turkish = "İsim: %s"
 polish = "Nazwa: %s"
 
 [[message]]
+key = "Negative stability buffer"
+[message.translations]
+simplified_chinese = "负稳定性缓冲"
+traditional_chinese = "負穩定性緩衝"
+japanese = "負の安定性バッファ"
+korean = "음수 안정성 버퍼"
+russian = "Буфер отрицательной стабильности"
+german = "Negativer Stabilitätspuffer"
+spanish = "Búfer de estabilidad negativa"
+french = "Tampon de stabilité négative"
+brazilian_portuguese = "Buffer de estabilidade negativa"
+portuguese = "Buffer de estabilidade negativa"
+turkish = "Negatif stabilite tamponu"
+polish = "Bufor ujemnej stabilności"
+
+[[message]]
 key = "Negative stability buffer (for Gores)"
 [message.translations]
 simplified_chinese = "负稳定性缓冲（用于 Gores）"
@@ -4623,6 +5534,38 @@ brazilian_portuguese = "Buffer de estabilidade negativa (para Gores)"
 portuguese = "Buffer de estabilidade negativa (para Gores)"
 turkish = "Negatif stabilite tamponu (Gores için)"
 polish = "Bufor ujemnej stabilności (dla Gores)"
+
+[[message]]
+key = "New"
+[message.translations]
+simplified_chinese = "新建"
+traditional_chinese = "新建"
+japanese = "新規"
+korean = "새로 만들기"
+russian = "Создать"
+german = "Neu"
+spanish = "Nuevo"
+french = "Nouveau"
+brazilian_portuguese = "Novo"
+portuguese = "Novo"
+turkish = "Yeni"
+polish = "Nowy"
+
+[[message]]
+key = "New group"
+[message.translations]
+simplified_chinese = "新建群组"
+traditional_chinese = "新建群組"
+japanese = "新しいグループ"
+korean = "새 그룹"
+russian = "Новая группа"
+german = "Neue Gruppe"
+spanish = "Nuevo grupo"
+french = "Nouveau groupe"
+brazilian_portuguese = "Novo grupo"
+portuguese = "Novo grupo"
+turkish = "Yeni grup"
+polish = "Nowa grupa"
 
 [[message]]
 key = "No changes since last save"
@@ -4673,6 +5616,22 @@ turkish = "Kod yok"
 polish = "Brak kodu"
 
 [[message]]
+key = "No entries yet"
+[message.translations]
+simplified_chinese = "暂无条目"
+traditional_chinese = "暫無條目"
+japanese = "エントリがまだありません"
+korean = "아직 항목이 없습니다"
+russian = "Записей пока нет"
+german = "Noch keine Einträge"
+spanish = "Todavía no hay entradas"
+french = "Aucune entrée pour l'instant"
+brazilian_portuguese = "Nenhuma entrada ainda"
+portuguese = "Nenhuma entrada ainda"
+turkish = "Henüz kayıt yok"
+polish = "Brak wpisów"
+
+[[message]]
 key = "No items to write"
 [message.translations]
 simplified_chinese = "没有可写入的项目"
@@ -4719,6 +5678,22 @@ brazilian_portuguese = "Nenhum histórico de jogos do mapa ainda"
 portuguese = "Ainda sem histórico de reprodução de mapas"
 turkish = "Henüz harita oynama geçmişi yok"
 polish = "Brak jeszcze historii gry na mapach"
+
+[[message]]
+key = "No players match"
+[message.translations]
+simplified_chinese = "没有匹配的玩家"
+traditional_chinese = "沒有符合的玩家"
+japanese = "一致するプレイヤーがいません"
+korean = "일치하는 플레이어가 없습니다"
+russian = "Нет подходящих игроков"
+german = "Keine passenden Spieler"
+spanish = "Ningún jugador coincide"
+french = "Aucun joueur correspondant"
+brazilian_portuguese = "Nenhum jogador correspondente"
+portuguese = "Nenhum jogador correspondente"
+turkish = "Eşleşen oyuncu yok"
+polish = "Brak pasujących graczy"
 
 [[message]]
 key = "No safe position found"
@@ -4785,6 +5760,38 @@ turkish = "Normal"
 polish = "Normalny"
 
 [[message]]
+key = "Not available; FreeType is used"
+[message.translations]
+simplified_chinese = "不可用；将使用 FreeType"
+traditional_chinese = "不可用；將使用 FreeType"
+japanese = "利用できません。FreeType を使用します"
+korean = "사용할 수 없음. FreeType을 사용합니다"
+russian = "Недоступно; используется FreeType"
+german = "Nicht verfügbar; FreeType wird verwendet"
+spanish = "No disponible; se usa FreeType"
+french = "Non disponible ; FreeType est utilisé"
+brazilian_portuguese = "Indisponível; o FreeType é usado"
+portuguese = "Indisponível; o FreeType é usado"
+turkish = "Kullanılamaz; FreeType kullanılır"
+polish = "Niedostępne; używany jest FreeType"
+
+[[message]]
+key = "Not installed"
+[message.translations]
+simplified_chinese = "未安装"
+traditional_chinese = "未安裝"
+japanese = "未インストール"
+korean = "설치되지 않음"
+russian = "Не установлен"
+german = "Nicht installiert"
+spanish = "No instalada"
+french = "Non installée"
+brazilian_portuguese = "Não instalada"
+portuguese = "Não instalado"
+turkish = "Yüklü değil"
+polish = "Niezainstalowana"
+
+[[message]]
 key = "Notify when only one tee is still alive:"
 [message.translations]
 simplified_chinese = "当只剩一名存活者时提示："
@@ -4801,6 +5808,22 @@ turkish = "Yalnızca bir tee hayatta kaldığında bildir:"
 polish = "Powiadom, gdy tylko jeden tee żyje:"
 
 [[message]]
+key = "Online"
+[message.translations]
+simplified_chinese = "在线"
+traditional_chinese = "線上"
+japanese = "オンライン"
+korean = "온라인"
+russian = "В сети"
+german = "Online"
+spanish = "En línea"
+french = "En ligne"
+brazilian_portuguese = "Online"
+portuguese = "Online"
+turkish = "Çevrimiçi"
+polish = "Online"
+
+[[message]]
 key = "Online Players"
 [message.translations]
 simplified_chinese = "在线玩家"
@@ -4815,6 +5838,22 @@ brazilian_portuguese = "Jogadores Online"
 portuguese = "Jogadores Online"
 turkish = "Çevrimiçi Oyuncular"
 polish = "Gracze online"
+
+[[message]]
+key = "Only selected bundled fonts have vector nameplate atlases. Other fonts use FreeType."
+[message.translations]
+simplified_chinese = "只有部分随包字体带有铭牌矢量图集，其他字体会使用 FreeType。"
+traditional_chinese = "只有部分隨包字型帶有名牌向量圖集，其他字型會使用 FreeType。"
+japanese = "一部の同梱フォントのみベクターのネームプレートアトラスを持ちます。それ以外のフォントは FreeType を使用します。"
+korean = "일부 번들 글꼴에만 벡터 이름표 아틀라스가 있습니다. 다른 글꼴은 FreeType을 사용합니다."
+russian = "Только у некоторых встроенных шрифтов есть векторные атласы табличек. Остальные шрифты используют FreeType."
+german = "Nur ausgewählte mitgelieferte Schriften haben Vektor-Namensschildatlanten. Andere Schriften verwenden FreeType."
+spanish = "Solo algunas fuentes incluidas tienen atlas vectoriales de placas. Las demás usan FreeType."
+french = "Seules certaines polices fournies disposent d'atlas vectoriels de plaques. Les autres utilisent FreeType."
+brazilian_portuguese = "Apenas algumas fontes incluídas têm atlas vetoriais de plaquinhas. As demais usam FreeType."
+portuguese = "Apenas algumas fontes incluídas têm atlas vetoriais de placas. As restantes usam FreeType."
+turkish = "Yalnızca seçili paketlenmiş yazı tiplerinde vektör ad plakası atlası vardır. Diğer yazı tipleri FreeType kullanır."
+polish = "Tylko wybrane dołączone czcionki mają wektorowe atlasy tabliczek. Pozostałe używają FreeType."
 
 [[message]]
 key = "Only show after joining a team"
@@ -4849,6 +5888,22 @@ turkish = "Yalnızca varlık katmanında ana hatları göster"
 polish = "Pokaż tylko kontury w warstwie obiektów"
 
 [[message]]
+key = "Open a bind menu (identity, chat, assets, custom)"
+[message.translations]
+simplified_chinese = "打开绑定菜单（身份、语录、资源、自定义）"
+traditional_chinese = "開啟綁定選單（身份、語錄、資源、自訂）"
+japanese = "バインドメニューを開く（アイデンティティ、チャット、アセット、カスタム）"
+korean = "바인드 메뉴 열기 (아이덴티티, 채팅, 에셋, 사용자 지정)"
+russian = "Открыть меню биндов (личность, чат, ресурсы, пользовательское)"
+german = "Bind-Menü öffnen (Identität, Chat, Assets, eigene)"
+spanish = "Abrir un menú de binds (identidad, chat, recursos, personalizado)"
+french = "Ouvrir un menu de binds (identité, chat, ressources, personnalisé)"
+brazilian_portuguese = "Abrir um menu de binds (identidade, chat, recursos, personalizado)"
+portuguese = "Abrir um menu de binds (identidade, chat, recursos, personalizado)"
+turkish = "Bağlama menüsü aç (kimlik, sohbet, varlık, özel)"
+polish = "Otwórz menu bindów (tożsamość, czat, zasoby, własne)"
+
+[[message]]
 key = "Open bindwheel selector"
 [message.translations]
 simplified_chinese = "打开绑定轮盘选择器"
@@ -4865,6 +5920,22 @@ turkish = "Bind tekerleği seçiciyi aç"
 polish = "Otwórz selektor koła wiązań"
 
 [[message]]
+key = "Open the custom bind menu"
+[message.translations]
+simplified_chinese = "打开自定义绑定菜单"
+traditional_chinese = "開啟自訂綁定選單"
+japanese = "カスタムバインドメニューを開く"
+korean = "사용자 지정 바인드 메뉴 열기"
+russian = "Открыть пользовательское меню биндов"
+german = "Eigenes Bind-Menü öffnen"
+spanish = "Abrir el menú de binds personalizado"
+french = "Ouvrir le menu de binds personnalisé"
+brazilian_portuguese = "Abrir o menu de binds personalizado"
+portuguese = "Abrir o menu de binds personalizado"
+turkish = "Özel bağlama menüsünü aç"
+polish = "Otwórz własne menu bindów"
+
+[[message]]
 key = "Optimistic prediction along stable direction"
 [message.translations]
 simplified_chinese = "沿稳定方向更乐观的预测"
@@ -4879,6 +5950,22 @@ brazilian_portuguese = "Predição otimista ao longo da direção estável"
 portuguese = "Predição otimista ao longo da direção estável"
 turkish = "Kararlı yön boyunca iyimser tahmin"
 polish = "Optymistyczne przewidywanie wzdłuż stabilnego kierunku"
+
+[[message]]
+key = "Original"
+[message.translations]
+simplified_chinese = "原版"
+traditional_chinese = "原版"
+japanese = "オリジナル"
+korean = "기본"
+russian = "Оригинал"
+german = "Originalstil"
+spanish = "Estilo original"
+french = "Style d'origine"
+brazilian_portuguese = "Estilo original"
+portuguese = "Estilo original"
+turkish = "Özgün"
+polish = "Oryginalny"
 
 [[message]]
 key = "Outline global opacity"
@@ -4993,6 +6080,22 @@ turkish = "Boş olsa bile klanı üzerine yaz"
 polish = "Nadpisz klan nawet jeśli pusty"
 
 [[message]]
+key = "Pause recording the practice line (the recorded part is kept)"
+[message.translations]
+simplified_chinese = "暂停录制练习线路（已录部分保留）"
+traditional_chinese = "暫停錄製練習線路（已錄部分保留）"
+japanese = "練習ラインの録画を一時停止（録画済み部分は保持）"
+korean = "연습 라인 녹화 일시정지(녹화된 부분은 유지)"
+russian = "Приостановить запись линии практики (записанное сохраняется)"
+german = "Aufzeichnung der Übungslinie pausieren (der aufgenommene Teil bleibt erhalten)"
+spanish = "Pausar la grabación de la línea de práctica (la parte grabada se conserva)"
+french = "Mettre en pause l'enregistrement de la ligne d'entraînement (la partie enregistrée est conservée)"
+brazilian_portuguese = "Pausar a gravação da linha de prática (a parte gravada é mantida)"
+portuguese = "Pausar a gravação da linha de prática (a parte gravada é mantida)"
+turkish = "Pratik hattı kaydını duraklat (kaydedilen kısım korunur)"
+polish = "Wstrzymaj nagrywanie linii ćwiczeń (zapisana część zostaje zachowana)"
+
+[[message]]
 key = "Pet alpha"
 [message.translations]
 simplified_chinese = "宠物透明度"
@@ -5103,6 +6206,38 @@ brazilian_portuguese = "Ping"
 portuguese = "Ping"
 turkish = "Ping"
 polish = "Ping"
+
+[[message]]
+key = "Pixel: Layer Shift"
+[message.translations]
+simplified_chinese = "像素风：层移"
+traditional_chinese = "像素風：層移"
+japanese = "ピクセル風：レイヤーシフト"
+korean = "픽셀풍: 레이어 이동"
+russian = "Пиксели: сдвиг слоёв"
+german = "Pixel: Ebenenversatz"
+spanish = "Píxeles: desplazamiento de capas"
+french = "Pixels : décalage des plans"
+brazilian_portuguese = "Pixels: deslocamento de camadas"
+portuguese = "Píxeis: deslocamento de camadas"
+turkish = "Piksel: katman kayması"
+polish = "Piksele: przesunięcie warstw"
+
+[[message]]
+key = "Play rank ghost replay sounds and hit effects locally"
+[message.translations]
+simplified_chinese = "在本地播放 Rank 1 影子的回放音效和命中特效"
+traditional_chinese = "在本機播放 Rank 1 影子的回放音效和命中特效"
+japanese = "Rank 1 ゴーストリプレイの効果音とヒットエフェクトをローカルで再生"
+korean = "Rank 1 고스트 리플레이의 효과음과 피격 효과를 로컬에서 재생"
+russian = "Локально воспроизводить звуки и эффекты попаданий повтора призрака Rank 1"
+german = "Sound und Treffereffekte der Rank-1-Geisterwiederholung lokal abspielen"
+spanish = "Reproducir localmente los sonidos y efectos de impacto del fantasma Rank 1"
+french = "Lire localement les sons et effets d'impact du fantôme Rank 1"
+brazilian_portuguese = "Reproduzir localmente sons e efeitos de impacto do fantasma Rank 1"
+portuguese = "Reproduzir localmente sons e efeitos de impacto do fantasma Rank 1"
+turkish = "Rank 1 hayalet tekrarının seslerini ve vuruş efektlerini yerel olarak oynat"
+polish = "Odtwarzaj lokalnie dźwięki i efekty trafień ducha Rank 1"
 
 [[message]]
 key = "Player Indicator"
@@ -5217,6 +6352,22 @@ turkish = "Konum"
 polish = "Pozycja"
 
 [[message]]
+key = "Practice ghosts"
+[message.translations]
+simplified_chinese = "练习影子"
+traditional_chinese = "練習影子"
+japanese = "練習ゴースト"
+korean = "연습 고스트"
+russian = "Призраки практики"
+german = "Übungsgeister"
+spanish = "Fantasmas de práctica"
+french = "Fantômes d'entraînement"
+brazilian_portuguese = "Fantasmas de prática"
+portuguese = "Fantasmas de prática"
+turkish = "Pratik hayaletleri"
+polish = "Duchy ćwiczeń"
+
+[[message]]
 key = "Predicted ghost opacity"
 [message.translations]
 simplified_chinese = "预测影子不透明度"
@@ -5327,6 +6478,38 @@ brazilian_portuguese = "Margem de previsão quando congelado"
 portuguese = "Margem de previsão quando congelado"
 turkish = "Donduğunda tahmin marjı"
 polish = "Margines predykcji podczas zamrożenia"
+
+[[message]]
+key = "Preview loading…"
+[message.translations]
+simplified_chinese = "预览加载中…"
+traditional_chinese = "預覽載入中…"
+japanese = "プレビューを読み込み中…"
+korean = "미리보기 불러오는 중…"
+russian = "Загрузка предпросмотра…"
+german = "Vorschau wird geladen…"
+spanish = "Cargando vista previa…"
+french = "Chargement de l'aperçu…"
+brazilian_portuguese = "Carregando visualização…"
+portuguese = "A carregar a pré-visualização…"
+turkish = "Önizleme yükleniyor…"
+polish = "Wczytywanie podglądu…"
+
+[[message]]
+key = "Preview unavailable"
+[message.translations]
+simplified_chinese = "预览不可用"
+traditional_chinese = "預覽無法使用"
+japanese = "プレビューを利用できません"
+korean = "미리보기를 사용할 수 없음"
+russian = "Предпросмотр недоступен"
+german = "Vorschau nicht verfügbar"
+spanish = "Vista previa no disponible"
+french = "Aperçu indisponible"
+brazilian_portuguese = "Visualização indisponível"
+portuguese = "Pré-visualização indisponível"
+turkish = "Önizleme kullanılamıyor"
+polish = "Podgląd niedostępny"
 
 [[message]]
 key = "Print command executed by this name or all chat binds"
@@ -5601,6 +6784,22 @@ turkish = "Oyuncu rengini rastgeleleştir (0 = tümü, 1 = vücut, 2 = ayak, 3 =
 polish = "Losuj kolor gracza (0 = wszystko, 1 = ciało, 2 = stopy, 3 = skóra, 4 = flaga) przykład: 0011 = losuj skórę i flagę [liczba to pozycja]"
 
 [[message]]
+key = "Rank ghost: this replay has no playable tee"
+[message.translations]
+simplified_chinese = "Rank 1 影子：该回放没有可播放的 Tee"
+traditional_chinese = "Rank 1 影子：此回放沒有可播放的 Tee"
+japanese = "Rank 1 ゴースト: このリプレイには再生可能な Tee がありません"
+korean = "Rank 1 고스트: 이 리플레이에는 재생 가능한 Tee가 없습니다"
+russian = "Призрак Rank 1: в этом повторе нет воспроизводимого Tee"
+german = "Rank-1-Geist: Diese Wiederholung enthält kein abspielbares Tee"
+spanish = "Fantasma Rank 1: esta repetición no tiene ningún Tee reproducible"
+french = "Fantôme Rank 1 : cette rediffusion ne contient aucun Tee lisible"
+brazilian_portuguese = "Fantasma Rank 1: esta repetição não tem nenhum Tee reproduzível"
+portuguese = "Fantasma Rank 1: esta repetição não tem nenhum Tee reproduzível"
+turkish = "Rank 1 hayaleti: bu tekrarda oynatılabilir Tee yok"
+polish = "Duch Rank 1: ta powtórka nie zawiera odtwarzalnego Tee"
+
+[[message]]
 key = "Reason"
 [message.translations]
 simplified_chinese = "原因"
@@ -5695,6 +6894,38 @@ brazilian_portuguese = "Reduzir antiping e previsão do jogador quando congelado
 portuguese = "Reduzir antiping e previsão do jogador quando congelado"
 turkish = "Donduğunda antiping ve oyuncu tahminini azalt"
 polish = "Zmniejsz antiping i predykcję gracza podczas zamrożenia"
+
+[[message]]
+key = "Reduce prediction while frozen"
+[message.translations]
+simplified_chinese = "冻结时降低预测量"
+traditional_chinese = "凍結時降低預測量"
+japanese = "凍結中に予測量を減らす"
+korean = "동결 중 예측량 줄이기"
+russian = "Уменьшать предсказание во время заморозки"
+german = "Vorhersage während des Einfrierens verringern"
+spanish = "Reducir la predicción al estar congelado"
+french = "Réduire la prédiction en cas de gel"
+brazilian_portuguese = "Reduzir a previsão enquanto estiver congelado"
+portuguese = "Reduzir a previsão enquanto estiver congelado"
+turkish = "Donmuşken tahmini azalt"
+polish = "Zmniejszaj predykcję podczas zamrożenia"
+
+[[message]]
+key = "Reduce visual latency"
+[message.translations]
+simplified_chinese = "降低视觉延迟"
+traditional_chinese = "降低視覺延遲"
+japanese = "視覚的な遅延を低減"
+korean = "시각적 지연 감소"
+russian = "уменьшает визуальную задержку"
+german = "reduziert visuelle Latenz"
+spanish = "reduce la latencia visual"
+french = "réduit la latence visuelle"
+brazilian_portuguese = "reduz latência visual"
+portuguese = "reduz latência visual"
+turkish = "görsel gecikmeyi azaltır"
+polish = "zmniejsza opóźnienie wizualne"
 
 [[message]]
 key = "Remove [group] [clan]:"
@@ -5985,6 +7216,22 @@ turkish = "Tüm sohbet bağlantılarını kaldırır"
 polish = "Usuwa wszystkie wiązania czatu"
 
 [[message]]
+key = "Rename group"
+[message.translations]
+simplified_chinese = "重命名群组"
+traditional_chinese = "重新命名群組"
+japanese = "グループ名を変更"
+korean = "그룹 이름 변경"
+russian = "Переименовать группу"
+german = "Gruppe umbenennen"
+spanish = "Renombrar grupo"
+french = "Renommer le groupe"
+brazilian_portuguese = "Renomear grupo"
+portuguese = "Renomear grupo"
+turkish = "Grubu yeniden adlandır"
+polish = "Zmień nazwę grupy"
+
+[[message]]
 key = "Render all custom colored feet as white feet skin"
 [message.translations]
 simplified_chinese = "将所有自定义脚部颜色渲染为白色"
@@ -6095,6 +7342,38 @@ brazilian_portuguese = "Repetir a última mensagem do chat"
 portuguese = "Repetir a última mensagem de chat"
 turkish = "En son sohbet mesajını tekrarla"
 polish = "Powtórz ostatnią wiadomość na czacie"
+
+[[message]]
+key = "Replay a saved practice ghost group in demo-style view mode"
+[message.translations]
+simplified_chinese = "以 demo 式查看模式回放已保存的练习影子组"
+traditional_chinese = "以 demo 式檢視模式回放已儲存的練習影子組"
+japanese = "保存済みの練習ゴーストグループをデモ風の表示モードで再生"
+korean = "저장된 연습 고스트 그룹을 데모 방식 보기 모드로 재생"
+russian = "Воспроизвести сохранённую группу призраков практики в режиме просмотра как демо"
+german = "Eine gespeicherte Übungsgeistergruppe im Demo-Ansichtsmodus abspielen"
+spanish = "Reproducir un grupo de fantasmas de práctica guardado en modo de vista tipo demo"
+french = "Rejouer un groupe de fantômes d'entraînement enregistré en mode vue type démo"
+brazilian_portuguese = "Reproduzir um grupo de fantasmas de prática salvo no modo de visualização estilo demo"
+portuguese = "Reproduzir um grupo de fantasmas de prática guardado no modo de visualização tipo demo"
+turkish = "Kaydedilmiş bir pratik hayalet grubunu demo tarzı görüntüleme modunda oynat"
+polish = "Odtwórz zapisaną grupę duchów ćwiczeń w trybie podglądu typu demo"
+
+[[message]]
+key = "Replay ghost sounds and effects"
+[message.translations]
+simplified_chinese = "播放影子回放的音效和命中特效"
+traditional_chinese = "播放影子回放的音效和命中特效"
+japanese = "ゴーストリプレイの効果音とヒットエフェクトを再生"
+korean = "고스트 리플레이 효과음 및 피격 효과 재생"
+russian = "Воспроизводить звуки и эффекты попаданий в повторе призрака"
+german = "Sound und Treffereffekte der Geister-Wiederholung abspielen"
+spanish = "Reproducir sonidos y efectos de impacto de la repetición del fantasma"
+french = "Jouer les sons et effets d'impact de la rediffusion du fantôme"
+brazilian_portuguese = "Reproduzir sons e efeitos de impacto da repetição do fantasma"
+portuguese = "Reproduzir sons e efeitos de impacto da repetição do fantasma"
+turkish = "Hayalet tekrarının seslerini ve vuruş efektlerini oynat"
+polish = "Odtwarzaj dźwięki i efekty trafień powtórki ducha"
 
 [[message]]
 key = "Reply to messages from muted players"
@@ -6209,6 +7488,22 @@ turkish = "Bind tekerleğini açarken farenin konumunu sıfırla"
 polish = "Zresetuj pozycję myszy przy otwieraniu koła wiązań"
 
 [[message]]
+key = "Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses."
+[message.translations]
+simplified_chinese = "是否恢复双人存档？/qm Yes 读取最新一条，/qm Yes 序号 选择其他存档，/qm No 忽略本次提示。"
+traditional_chinese = "是否恢復雙人存檔？/qm Yes 讀取最新一筆，/qm Yes 序號 選擇其他存檔，/qm No 忽略本次提示。"
+japanese = "2人用セーブを復元しますか？ /qm Yes で最新、/qm Yes 番号 で別のセーブを選択、/qm No で閉じます。"
+korean = "2인 저장 데이터를 복원할까요? /qm Yes는 최신 데이터, /qm Yes 번호는 다른 데이터 선택, /qm No는 알림 닫기입니다."
+russian = "Восстановить сохранение для двоих? /qm Yes — последнее, /qm Yes номер — другое, /qm No — отмена."
+german = "Spielstand für zwei Spieler laden? /qm Yes lädt den neuesten, /qm Yes Nummer wählt einen anderen, /qm No lehnt ab."
+spanish = "¿Restaurar una partida de dos jugadores? /qm Yes carga la más reciente; /qm Yes número elige otra; /qm No descarta."
+french = "Restaurer une sauvegarde à deux ? /qm Yes charge la plus récente ; /qm Yes numéro en choisit une autre ; /qm No ignore."
+brazilian_portuguese = "Restaurar um jogo salvo de dois jogadores? /qm Yes carrega o mais recente; /qm Yes número escolhe outro; /qm No dispensa."
+portuguese = "Restaurar um jogo guardado de dois jogadores? /qm Yes carrega o mais recente; /qm Yes número escolhe outro; /qm No ignora."
+turkish = "İki kişilik kayıt geri yüklensin mi? /qm Yes en yeniyi yükler; /qm Yes numara başka kayıt seçer; /qm No kapatır."
+polish = "Przywrócić zapis dla dwóch graczy? /qm Yes wczyta najnowszy; /qm Yes numer wybierze inny; /qm No odrzuci."
+
+[[message]]
 key = "Restore old single-segment hook collision line behavior"
 [message.translations]
 simplified_chinese = "恢复旧版单段钩子辅助线行为"
@@ -6223,6 +7518,70 @@ brazilian_portuguese = "Restaurar comportamento antigo de linha de colisão de g
 portuguese = "Restaurar comportamento antigo da linha de colisão de gancho de segmento único"
 turkish = "Eski tek parçalı kanca çarpışma çizgisi davranışını geri yükle"
 polish = "Przywróć stare zachowanie linii kolizji haka dla pojedynczego segmentu"
+
+[[message]]
+key = "Restore the practice world to the state it had when fast practice was enabled"
+[message.translations]
+simplified_chinese = "把练习世界恢复到开启快速练习时的状态"
+traditional_chinese = "把練習世界恢復到開啟快速練習時的狀態"
+japanese = "練習ワールドを高速練習を開始した時点の状態に戻す"
+korean = "연습 세계를 빠른 연습을 시작한 시점의 상태로 되돌림"
+russian = "Вернуть мир практики в состояние на момент включения быстрой практики"
+german = "Setzt die Übungswelt auf den Zustand beim Aktivieren der schnellen Übung zurück"
+spanish = "Devuelve el mundo de práctica al estado que tenía al activar la práctica rápida"
+french = "Replace le monde d'entraînement dans l'état qu'il avait à l'activation de la pratique rapide"
+brazilian_portuguese = "Restaura o mundo de prática ao estado em que estava quando a prática rápida foi ativada"
+portuguese = "Restaura o mundo de prática ao estado que tinha quando a prática rápida foi ativada"
+turkish = "Pratik dünyasını hızlı pratik açıldığı andaki duruma döndürür"
+polish = "Przywraca świat ćwiczeń do stanu z momentu włączenia szybkiej praktyki"
+
+[[message]]
+key = "Restoring save %d: main '%s', dummy '%s'."
+[message.translations]
+simplified_chinese = "正在恢复存档 %d：本体“%s”，分身“%s”。"
+traditional_chinese = "正在恢復存檔 %d：本體「%s」，分身「%s」。"
+japanese = "セーブ %d を復元中：メイン「%s」、ダミー「%s」。"
+korean = "저장 데이터 %d 복원 중: 본체 '%s', 더미 '%s'."
+russian = "Восстановление сохранения %d: основной '%s', дамми '%s'."
+german = "Spielstand %d wird wiederhergestellt: Hauptspieler '%s', Dummy '%s'."
+spanish = "Restaurando partida %d: principal '%s', dummy '%s'."
+french = "Restauration de la sauvegarde %d : principal '%s', dummy '%s'."
+brazilian_portuguese = "Restaurando jogo salvo %d: principal '%s', dummy '%s'."
+portuguese = "A restaurar o jogo guardado %d: principal '%s', dummy '%s'."
+turkish = "%d numaralı kayıt geri yükleniyor: ana oyuncu '%s', kukla '%s'."
+polish = "Przywracanie zapisu %d: główny '%s', dummy '%s'."
+
+[[message]]
+key = "Retry"
+[message.translations]
+simplified_chinese = "重试"
+traditional_chinese = "重試"
+japanese = "再試行"
+korean = "다시 시도"
+russian = "Повторить"
+german = "Wiederholen"
+spanish = "Reintentar"
+french = "Réessayer"
+brazilian_portuguese = "Tentar de novo"
+portuguese = "Tentar novamente"
+turkish = "Yeniden dene"
+polish = "Ponów"
+
+[[message]]
+key = "Reverse order"
+[message.translations]
+simplified_chinese = "倒序排列"
+traditional_chinese = "倒序排列"
+japanese = "逆順に並べる"
+korean = "역순 정렬"
+russian = "Обратный порядок"
+german = "Umgekehrte Reihenfolge"
+spanish = "Orden inverso"
+french = "Ordre inversé"
+brazilian_portuguese = "Ordem inversa"
+portuguese = "Ordem inversa"
+turkish = "Ters sıra"
+polish = "Odwrotna kolejność"
 
 [[message]]
 key = "Rotate hammer with cursor like other weapons"
@@ -6241,6 +7600,22 @@ turkish = "Çekici diğer silahlar gibi imleçle döndür"
 polish = "Obracaj młotek kursorem jak inne bronie"
 
 [[message]]
+key = "Sans-serif"
+[message.translations]
+simplified_chinese = "无衬线体"
+traditional_chinese = "無襯線體"
+japanese = "サンセリフ"
+korean = "산세리프"
+russian = "Без засечек"
+german = "Serifenlos"
+spanish = "Sin serifa"
+french = "Sans serif"
+brazilian_portuguese = "Sem serifa"
+portuguese = "Sem serifa"
+turkish = "Serifsiz"
+polish = "Bezszeryfowa"
+
+[[message]]
 key = "Save drawings to a given csv file (defaults to map name)"
 [message.translations]
 simplified_chinese = "将绘图保存到给定的 csv 文件（默认为地图名称）"
@@ -6255,6 +7630,102 @@ brazilian_portuguese = "Salvar desenhos em um arquivo csv (padrão é nome do ma
 portuguese = "Guardar desenhos para um ficheiro csv (padrão é nome do mapa)"
 turkish = "Çizimleri verilen bir csv dosyasına kaydet (varsayılan harita adı)"
 polish = "Zapisz rysunki do podanego pliku csv (domyślnie nazwa mapy)"
+
+[[message]]
+key = "Save loaded and marked as used."
+[message.translations]
+simplified_chinese = "存档已载入并标记为已使用。"
+traditional_chinese = "存檔已載入並標記為已使用。"
+japanese = "セーブを読み込み、使用済みとしてマークしました。"
+korean = "세이브를 불러오고 사용됨으로 표시했습니다."
+russian = "Сохранение загружено и помечено как использованное."
+german = "Spielstand geladen und als benutzt markiert."
+spanish = "Guardado cargado y marcado como usado."
+french = "sauvegarde chargée et marquée comme utilisée."
+brazilian_portuguese = "Save carregado e marcado como usado."
+portuguese = "Save carregado e marcado como usado."
+turkish = "Kayıt yüklendi ve kullanıldı olarak işaretlendi."
+polish = "Zapis wczytano i oznaczono jako użyty."
+
+[[message]]
+key = "Save loaded; local record removed."
+[message.translations]
+simplified_chinese = "存档读取成功，已删除本地记录。"
+traditional_chinese = "存檔讀取成功，已刪除本機紀錄。"
+japanese = "セーブを読み込み、ローカルの記録を削除しました。"
+korean = "저장 데이터를 불러왔으며 로컬 기록을 삭제했습니다."
+russian = "Сохранение загружено, локальная запись удалена."
+german = "Spielstand geladen; lokaler Eintrag entfernt."
+spanish = "Partida cargada; registro local eliminado."
+french = "Sauvegarde chargée ; entrée locale supprimée."
+brazilian_portuguese = "Jogo salvo carregado; registro local removido."
+portuguese = "Jogo guardado carregado; registo local removido."
+turkish = "Kayıt yüklendi; yerel kayıt girdisi silindi."
+polish = "Zapis wczytany; lokalny wpis usunięty."
+
+[[message]]
+key = "Save loaded; the local record could not be removed."
+[message.translations]
+simplified_chinese = "存档读取成功，但未能删除本地记录。"
+traditional_chinese = "存檔讀取成功，但未能刪除本機紀錄。"
+japanese = "セーブは読み込まれましたが、ローカルの記録を削除できませんでした。"
+korean = "저장 데이터를 불러왔지만 로컬 기록을 삭제하지 못했습니다."
+russian = "Сохранение загружено, но удалить локальную запись не удалось."
+german = "Spielstand geladen; der lokale Eintrag konnte nicht entfernt werden."
+spanish = "Partida cargada, pero no se pudo eliminar el registro local."
+french = "Sauvegarde chargée, mais l’entrée locale n’a pas pu être supprimée."
+brazilian_portuguese = "Jogo salvo carregado, mas não foi possível remover o registro local."
+portuguese = "Jogo guardado carregado, mas não foi possível remover o registo local."
+turkish = "Kayıt yüklendi ancak yerel kayıt girdisi silinemedi."
+polish = "Zapis wczytany, ale nie udało się usunąć lokalnego wpisu."
+
+[[message]]
+key = "Save restore dismissed."
+[message.translations]
+simplified_chinese = "已取消本次存档恢复。"
+traditional_chinese = "已取消本次存檔恢復。"
+japanese = "セーブの復元をキャンセルしました。"
+korean = "저장 데이터 복원을 취소했습니다."
+russian = "Восстановление сохранения отменено."
+german = "Wiederherstellung abgebrochen."
+spanish = "Restauración descartada."
+french = "Restauration annulée."
+brazilian_portuguese = "Restauração cancelada."
+portuguese = "Restauração cancelada."
+turkish = "Geri yükleme iptal edildi."
+polish = "Przywracanie anulowane."
+
+[[message]]
+key = "Save restore stopped without confirming success. The local record was kept."
+[message.translations]
+simplified_chinese = "未确认读档成功，恢复流程已停止。本地记录已保留。"
+traditional_chinese = "未確認讀檔成功，恢復流程已停止。本機紀錄已保留。"
+japanese = "読み込み成功を確認できなかったため復元を停止しました。ローカルの記録は保持されています。"
+korean = "불러오기 성공을 확인하지 못해 복원을 중단했습니다. 로컬 기록은 유지됩니다."
+russian = "Успешная загрузка не подтверждена, восстановление остановлено. Локальная запись сохранена."
+german = "Ladeerfolg nicht bestätigt. Wiederherstellung beendet und lokaler Eintrag behalten."
+spanish = "No se confirmó la carga. Se detuvo la restauración y se conservó el registro local."
+french = "Le chargement n’a pas été confirmé. Restauration arrêtée et entrée locale conservée."
+brazilian_portuguese = "O carregamento não foi confirmado. A restauração parou e o registro local foi mantido."
+portuguese = "O carregamento não foi confirmado. A restauração parou e o registo local foi mantido."
+turkish = "Yükleme başarısı doğrulanamadı. Geri yükleme durduruldu ve yerel kayıt korundu."
+polish = "Nie potwierdzono wczytania. Przywracanie zatrzymano, a lokalny wpis zachowano."
+
+[[message]]
+key = "Save restore stopped: connection, names or team were not ready. The local record was kept."
+[message.translations]
+simplified_chinese = "连接、名字或队伍尚未就绪，存档恢复已停止。本地记录已保留。"
+traditional_chinese = "連線、名字或隊伍尚未就緒，存檔恢復已停止。本機紀錄已保留。"
+japanese = "接続、名前、またはチームの準備が整わず、復元を停止しました。ローカルの記録は保持されています。"
+korean = "연결, 이름 또는 팀이 준비되지 않아 복원을 중단했습니다. 로컬 기록은 유지됩니다."
+russian = "Восстановление остановлено: соединение, имена или команда не готовы. Локальная запись сохранена."
+german = "Wiederherstellung beendet: Verbindung, Namen oder Team waren nicht bereit. Lokaler Eintrag behalten."
+spanish = "Restauración detenida: la conexión, los nombres o el equipo no estaban listos. Se conservó el registro local."
+french = "Restauration arrêtée : la connexion, les noms ou l’équipe n’étaient pas prêts. Entrée locale conservée."
+brazilian_portuguese = "Restauração interrompida: conexão, nomes ou equipe não estavam prontos. O registro local foi mantido."
+portuguese = "Restauração interrompida: ligação, nomes ou equipa não estavam prontos. O registo local foi mantido."
+turkish = "Bağlantı, adlar veya takım hazır olmadığından geri yükleme durduruldu. Yerel kayıt korundu."
+polish = "Przywracanie zatrzymane: połączenie, nazwy lub drużyna nie były gotowe. Lokalny wpis zachowano."
 
 [[message]]
 key = "Save/Load Clan"
@@ -6465,6 +7936,22 @@ turkish = "Ekran merkez çizgisi genişliği"
 polish = "Szerokość linii środka ekranu"
 
 [[message]]
+key = "Search online fonts…"
+[message.translations]
+simplified_chinese = "搜索在线字体…"
+traditional_chinese = "搜尋線上字型…"
+japanese = "オンラインフォントを検索…"
+korean = "온라인 글꼴 검색…"
+russian = "Поиск шрифтов онлайн…"
+german = "Onlineschriften suchen…"
+spanish = "Buscar fuentes en línea…"
+french = "Rechercher des polices en ligne…"
+brazilian_portuguese = "Pesquisar fontes online…"
+portuguese = "Pesquisar tipos de letra online…"
+turkish = "Çevrimiçi yazı tiplerini ara…"
+polish = "Szukaj czcionek online…"
+
+[[message]]
 key = "Send emote when entering freeze"
 [message.translations]
 simplified_chinese = "进入冻结状态发送表情"
@@ -6511,6 +7998,22 @@ brazilian_portuguese = "Taxa de envio"
 portuguese = "Taxa de envio"
 turkish = "Gönderme hızı"
 polish = "Szybkość wysyłania"
+
+[[message]]
+key = "Serif"
+[message.translations]
+simplified_chinese = "衬线体"
+traditional_chinese = "襯線體"
+japanese = "セリフ"
+korean = "세리프"
+russian = "С засечками"
+german = "Serifenschrift"
+spanish = "Con serifa"
+french = "À empattements"
+brazilian_portuguese = "Serifada"
+portuguese = "Com serifa"
+turkish = "Serifli"
+polish = "Szeryfowa"
 
 [[message]]
 key = "Severe"
@@ -6737,6 +8240,36 @@ turkish = "Ölüm döşemesi ana hatlarını göster"
 polish = "Pokaż kontury kafelków śmierci"
 
 [[message]]
+key = "Show deep freeze tile outlines"
+[message.translations]
+traditional_chinese = "顯示深層凍結方塊描邊"
+japanese = "ディープフリーズタイルの輪郭を表示"
+korean = "깊은 동결 타일 외곽선 표시"
+russian = "Показывать контуры блоков глубокого замораживания"
+german = "Konturen der Tiefkühl-Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques de congelación profunda"
+french = "Afficher le contour des tuiles de gel profond"
+brazilian_portuguese = "Mostrar contorno dos blocos de congelamento profundo"
+portuguese = "Mostrar contorno dos blocos de congelamento profundo"
+turkish = "Derin dondurma karolarının kenarlarını göster"
+polish = "Pokaż obrysy kafelków głębokiego zamrożenia"
+
+[[message]]
+key = "Show deep unfreeze tile outlines"
+[message.translations]
+traditional_chinese = "顯示深層解凍方塊描邊"
+japanese = "ディープ解凍タイルの輪郭を表示"
+korean = "깊은 해동 타일 외곽선 표시"
+russian = "Показывать контуры блоков глубокого размораживания"
+german = "Konturen der Tiefauftau-Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques de descongelación profunda"
+french = "Afficher le contour des tuiles de dégel profond"
+brazilian_portuguese = "Mostrar contorno dos blocos de descongelamento profundo"
+portuguese = "Mostrar contorno dos blocos de descongelamento profundo"
+turkish = "Derin çözme karolarının kenarlarını göster"
+polish = "Pokaż obrysy kafelków głębokiego rozmrożenia"
+
+[[message]]
 key = "Show dummy angle in movement info HUD"
 [message.translations]
 simplified_chinese = "在运动信息 HUD 中显示分身角度"
@@ -6849,6 +8382,38 @@ turkish = "Seyirci menüsünde düşman rengini göster"
 polish = "Pokaż kolor wroga w menu obserwatora"
 
 [[message]]
+key = "Show enemy colors in chat"
+[message.translations]
+simplified_chinese = "聊天框中显示敌对玩家的颜色"
+traditional_chinese = "在聊天欄中的顏色"
+japanese = "チャット内の色"
+korean = "채팅에서의 색상"
+russian = "Цвета в чате"
+german = "Farben im Chat"
+spanish = "Colores en el chat"
+french = "Couleurs dans le tchat"
+brazilian_portuguese = "Cores no chat"
+portuguese = "Cores no chat"
+turkish = "Sohbetteki renkler"
+polish = "Kolory na czacie"
+
+[[message]]
+key = "Show enemy colors in scoreboard"
+[message.translations]
+simplified_chinese = "计分板中显示敌对玩家的颜色"
+traditional_chinese = "計分板中的顏色"
+japanese = "スコアボード内の色"
+korean = "점수판에서의 색상"
+russian = "Цвета в таблице результатов"
+german = "Farben in der Bestenliste"
+spanish = "Colores en la tabla de puntuaciones"
+french = "Couleurs dans le tableau des scores"
+brazilian_portuguese = "Cores no placar"
+portuguese = "Cores no placar"
+turkish = "Skor tablosundaki renkler"
+polish = "Kolory w tabeli wyników"
+
+[[message]]
 key = "Show enemy group players"
 [message.translations]
 simplified_chinese = "显示敌对组玩家"
@@ -6895,6 +8460,21 @@ brazilian_portuguese = "Mostrar bandeira na placa de nome"
 portuguese = "Mostrar bandeira na placa de nome"
 turkish = "İsim plakasında bayrak göster"
 polish = "Pokaż flagę na tabliczce z nazwą"
+
+[[message]]
+key = "Show freeze tile outlines"
+[message.translations]
+traditional_chinese = "顯示凍結方塊描邊"
+japanese = "フリーズタイルの輪郭を表示"
+korean = "동결 타일 외곽선 표시"
+russian = "Показывать контуры блоков замораживания"
+german = "Konturen der Einfrier-Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques de congelación"
+french = "Afficher le contour des tuiles de gel"
+brazilian_portuguese = "Mostrar contorno dos blocos de congelamento"
+portuguese = "Mostrar contorno dos blocos de congelamento"
+turkish = "Dondurma karolarının kenarlarını göster"
+polish = "Pokaż obrysy kafelków zamrożenia"
 
 [[message]]
 key = "Show freeze/deep freeze tile outlines"
@@ -6959,6 +8539,21 @@ brazilian_portuguese = "Mostrar fantasma na posição imprevisível de outros jo
 portuguese = "Mostrar fantasma na posição imprevisível de outros jogadores"
 turkish = "Diğer oyuncuların tahmin edilemeyen konumunda hayalet göster"
 polish = "Pokaż ducha w nieprzewidywalnej pozycji innych graczy"
+
+[[message]]
+key = "Show hookable tile outlines"
+[message.translations]
+traditional_chinese = "顯示可鉤方塊描邊"
+japanese = "フック可能タイルの輪郭を表示"
+korean = "갈고리 가능 타일 외곽선 표시"
+russian = "Показывать контуры блоков, за которые можно зацепиться"
+german = "Konturen der haktbaren Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques enganchables"
+french = "Afficher le contour des tuiles accrochables"
+brazilian_portuguese = "Mostrar contorno dos blocos gancháveis"
+portuguese = "Mostrar contorno dos blocos gancháveis"
+turkish = "Kancalanabilir karoların kenarlarını göster"
+polish = "Pokaż obrysy kafelków zaczepialnych"
 
 [[message]]
 key = "Show hookable/unhookable tile outlines"
@@ -7265,6 +8860,22 @@ turkish = "Oyuncu hitbox'larını göster (1=sadece tahmin edilen, 2=tahmin edil
 polish = "Pokaż hitboxy graczy (1=tylko przewidywane, 2=przewidywane i nieprzewidywane)"
 
 [[message]]
+key = "Show position and angle"
+[message.translations]
+simplified_chinese = "显示位置和角度"
+traditional_chinese = "顯示位置和角度"
+japanese = "位置と角度を表示"
+korean = "위치와 각도 표시"
+russian = "Показывать позицию и угол"
+german = "Position und Winkel anzeigen"
+spanish = "Mostrar posición y ángulo"
+french = "Afficher la position et l'angle"
+brazilian_portuguese = "Mostrar posição e ângulo"
+portuguese = "Mostrar posição e ângulo"
+turkish = "Konum ve açıyı göster"
+polish = "Pokaż pozycję i kąt"
+
+[[message]]
 key = "Show position and angle (mini debug)"
 [message.translations]
 simplified_chinese = "显示位置和角度（小型调试）"
@@ -7569,6 +9180,21 @@ turkish = "Ekran merkez çizgisini göster"
 polish = "Pokaż linię środka ekranu"
 
 [[message]]
+key = "Show unfreeze tile outlines"
+[message.translations]
+traditional_chinese = "顯示解凍方塊描邊"
+japanese = "解凍タイルの輪郭を表示"
+korean = "해동 타일 외곽선 표시"
+russian = "Показывать контуры блоков размораживания"
+german = "Konturen der Auftau-Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques de descongelación"
+french = "Afficher le contour des tuiles de dégel"
+brazilian_portuguese = "Mostrar contorno dos blocos de descongelamento"
+portuguese = "Mostrar contorno dos blocos de descongelamento"
+turkish = "Çözme karolarının kenarlarını göster"
+polish = "Pokaż obrysy kafelków rozmrożenia"
+
+[[message]]
 key = "Show unfreeze/deep unfreeze tile outlines"
 [message.translations]
 simplified_chinese = "显示解冻/深解冻图块轮廓"
@@ -7583,6 +9209,21 @@ brazilian_portuguese = "Mostrar contornos de tiles de descongelamento/descongela
 portuguese = "Mostrar contornos de blocos de descongelamento/descongelamento profundo"
 turkish = "Çözülme/derin çözülme döşemesi anahatlarını göster"
 polish = "Pokaż kontury kafelków odmrożenia/głębokiego odmrożenia"
+
+[[message]]
+key = "Show unhookable tile outlines"
+[message.translations]
+traditional_chinese = "顯示不可鉤方塊描邊"
+japanese = "フック不可タイルの輪郭を表示"
+korean = "갈고리 불가 타일 외곽선 표시"
+russian = "Показывать контуры блоков, за которые нельзя зацепиться"
+german = "Konturen der nicht haktbaren Kacheln anzeigen"
+spanish = "Mostrar el contorno de los bloques no enganchables"
+french = "Afficher le contour des tuiles non accrochables"
+brazilian_portuguese = "Mostrar contorno dos blocos não gancháveis"
+portuguese = "Mostrar contorno dos blocos não gancháveis"
+turkish = "Kancalanamaz karoların kenarlarını göster"
+polish = "Pokaż obrysy kafelków niezaczepialnych"
 
 [[message]]
 key = "Show unpredicted ghosts for other players"
@@ -7762,7 +9403,6 @@ polish = "Nieprzezroczystość konturu stałych kafelków"
 
 [[message]]
 key = "Space"
-# 键名，不是「间隔」。DDNet 的内置键名同样译作空格，这里保持与官方一致。
 [message.translations]
 simplified_chinese = "空格"
 traditional_chinese = "空格"
@@ -7792,6 +9432,22 @@ brazilian_portuguese = "Espectar um jogador pelo ID"
 portuguese = "Espetar um jogador por ID"
 turkish = "ID'ye göre bir oyuncuyu izle"
 polish = "Obserwuj gracza po ID"
+
+[[message]]
+key = "Start or resume recording the practice line"
+[message.translations]
+simplified_chinese = "开始或继续录制练习线路"
+traditional_chinese = "開始或繼續錄製練習線路"
+japanese = "練習ラインの録画を開始または再開"
+korean = "연습 라인 녹화 시작 또는 재개"
+russian = "Начать или продолжить запись линии практики"
+german = "Aufzeichnung der Übungslinie starten oder fortsetzen"
+spanish = "Iniciar o reanudar la grabación de la línea de práctica"
+french = "Démarrer ou reprendre l'enregistrement de la ligne d'entraînement"
+brazilian_portuguese = "Iniciar ou retomar a gravação da linha de prática"
+portuguese = "Iniciar ou retomar a gravação da linha de prática"
+turkish = "Pratik hattı kaydını başlat veya sürdür"
+polish = "Rozpocznij lub wznow nagrywanie linii ćwiczeń"
 
 [[message]]
 key = "Status Bar"
@@ -7984,6 +9640,38 @@ brazilian_portuguese = "Esquema de Status:"
 portuguese = "Esquema de Estado:"
 turkish = "Durum Şeması:"
 polish = "Schemat statusu:"
+
+[[message]]
+key = "Stop recording and save the practice line as a ghost group"
+[message.translations]
+simplified_chinese = "结束录制并把练习线路保存为影子组"
+traditional_chinese = "結束錄製並把練習線路存為影子組"
+japanese = "録画を終了し、練習ラインをゴーストグループとして保存"
+korean = "녹화를 종료하고 연습 라인을 고스트 그룹으로 저장"
+russian = "Завершить запись и сохранить линию практики как группу призраков"
+german = "Aufzeichnung beenden und die Übungslinie als Geistergruppe speichern"
+spanish = "Detener la grabación y guardar la línea de práctica como grupo de fantasmas"
+french = "Arrêter l'enregistrement et enregistrer la ligne d'entraînement comme groupe de fantômes"
+brazilian_portuguese = "Parar a gravação e salvar a linha de prática como grupo de fantasmas"
+portuguese = "Parar a gravação e guardar a linha de prática como grupo de fantasmas"
+turkish = "Kaydı bitir ve pratik hattını hayalet grubu olarak kaydet"
+polish = "Zakończ nagrywanie i zapisz linię ćwiczeń jako grupę duchów"
+
+[[message]]
+key = "Store the current practice tee state as the respawn point"
+[message.translations]
+simplified_chinese = "把当前练习 Tee 状态保存为重生点"
+traditional_chinese = "把目前練習 Tee 狀態存為重生點"
+japanese = "現在の練習 Tee 状態をリスポーン地点として保存"
+korean = "현재 연습 Tee 상태를 리스폰 지점으로 저장"
+russian = "Сохранить текущее состояние Tee в практике как точку возрождения"
+german = "Speichert den aktuellen Übungs-Tee-Zustand als Respawn-Punkt"
+spanish = "Guardar el estado actual del tee de práctica como punto de reaparición"
+french = "Enregistrer l'état actuel du tee d'entraînement comme point de réapparition"
+brazilian_portuguese = "Salvar o estado atual do tee de prática como ponto de renascimento"
+portuguese = "Guardar o estado atual do tee de prática como ponto de renascimento"
+turkish = "Mevcut pratik Tee durumunu yeniden doğma noktası olarak kaydet"
+polish = "Zapisz bieżący stan Tee w ćwiczeniach jako punkt odrodzenia"
 
 [[message]]
 key = "Stroke fade time"
@@ -8226,6 +9914,22 @@ turkish = "Tee izi renk modu (1=Düz, 2=Geçerli Tee rengi, 3=Gökkuşağı, 4=T
 polish = "Tryb koloru śladu Tee (1=Jednolity, 2=Bieżący kolor Tee, 3=Tęcza, 4=Prędkość Tee, 5=Losowy)"
 
 [[message]]
+key = "Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)"
+[message.translations]
+simplified_chinese = "Tee 拖尾样式（0=原版，1=漫画，2=魔法，3=像素，4=旧编号漫画，5=旧编号魔法，6=极光，7=水墨，8=焰灵，9=星链，10=黑闪）"
+traditional_chinese = "Tee 拖尾樣式（0=原版，1=漫畫，2=魔法，3=像素，4=舊編號漫畫，5=舊編號魔法，6=極光，7=水墨，8=焰靈，9=星鏈，10=黑閃）"
+japanese = "Tee トレイルスタイル（0=オリジナル、1=漫画、2=魔法、3=ピクセル、4=旧番号の漫画、5=旧番号の魔法、6=オーロラ、7=墨、8=焔、9=星屑、10=黒閃）"
+korean = "Tee 트레일 스타일(0=기본, 1=만화, 2=마법, 3=픽셀, 4=이전 번호의 만화, 5=이전 번호의 마법, 6=오로라, 7=수묵, 8=불꽃, 9=별가루, 10=흑섬)"
+russian = "Стиль следа Tee (0=Оригинал, 1=Манга, 2=Магия, 3=Пиксели, 4=Старый номер манги, 5=Старый номер магии, 6=Полярное сияние, 7=Тушь, 8=Пламя, 9=Звёздная пыль, 10=Чёрная вспышка)"
+german = "Tee-Spur-Stil (0=Originalstil, 1=Manga, 2=Magie, 3=Pixel, 4=Alte Manga-Nummer, 5=Alte Magie-Nummer, 6=Polarlicht, 7=Tusche, 8=Flamme, 9=Sternenstaub, 10=Schwarzer Blitz)"
+spanish = "Estilo de estela del Tee (0=Original, 1=Manga, 2=Magia, 3=Píxeles, 4=Número antiguo de manga, 5=Número antiguo de magia, 6=Aurora, 7=Tinta, 8=Llama, 9=Polvo estelar, 10=Destello negro)"
+french = "Style de traînée du Tee (0=Original, 1=Manga, 2=Magie, 3=Pixels, 4=Ancien numéro manga, 5=Ancien numéro magie, 6=Aurore, 7=Encre, 8=Flamme, 9=Poussière d’étoiles, 10=Éclair noir)"
+brazilian_portuguese = "Estilo de rastro do Tee (0=Original, 1=Mangá, 2=Magia, 3=Pixels, 4=Número antigo de mangá, 5=Número antigo de magia, 6=Aurora, 7=Tinta, 8=Chama, 9=Poeira estelar, 10=Clarão negro)"
+portuguese = "Estilo de rasto do Tee (0=Original, 1=Manga, 2=Magia, 3=Píxeis, 4=Número antigo de manga, 5=Número antigo de magia, 6=Aurora, 7=Tinta, 8=Chama, 9=Poeira estelar, 10=Clarão negro)"
+turkish = "Tee iz stili (0=Özgün, 1=Manga, 2=Büyü, 3=Piksel, 4=Eski manga numarası, 5=Eski büyü numarası, 6=Kutup ışığı, 7=Mürekkep, 8=Alev, 9=Yıldız tozu, 10=Kara parıltı)"
+polish = "Styl smugi Tee (0=Oryginalny, 1=Manga, 2=Magia, 3=Piksele, 4=Stary numer mangi, 5=Stary numer magii, 6=Zorza, 7=Tusz, 8=Płomień, 9=Gwiezdny pył, 10=Czarny błysk)"
+
+[[message]]
 key = "Tee Trails"
 [message.translations]
 simplified_chinese = "Tee 拖尾"
@@ -8306,6 +10010,118 @@ turkish = "Metin alfası"
 polish = "Przezroczystość tekstu"
 
 [[message]]
+key = "The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved."
+[message.translations]
+simplified_chinese = "旧目录 qmclient/fonts 已停止扫描。请将自定义字体手动移动到配置目录下的 fonts/fonts_store。普通版使用用户配置目录，便携版使用 profile。data/fonts 中随客户端提供的字体无需移动。"
+traditional_chinese = "舊目錄 qmclient/fonts 已停止掃描。請將自訂字型手動移至設定目錄下的 fonts/fonts_store。一般版使用使用者設定目錄，可攜版使用 profile。data/fonts 中隨用戶端提供的字型無須移動。"
+japanese = "旧ディレクトリ qmclient/fonts は読み込まれなくなりました。カスタムフォントを設定ディレクトリ内の fonts/fonts_store に手動で移動してください。通常版はユーザー設定ディレクトリ、ポータブル版は profile を使用します。data/fonts に同梱されているフォントを移動する必要はありません。"
+korean = "이전 qmclient/fonts 폴더는 더 이상 검색하지 않습니다. 사용자 지정 글꼴을 설정 폴더의 fonts/fonts_store로 직접 옮겨 주세요. 일반 버전은 사용자 설정 폴더를, 포터블 버전은 profile을 사용합니다. data/fonts에 포함된 기본 글꼴은 옮길 필요가 없습니다."
+russian = "Старая папка qmclient/fonts больше не сканируется. Вручную переместите свои шрифты в fonts/fonts_store внутри папки настроек. Обычная версия использует пользовательскую папку настроек, переносная — profile. Шрифты, поставляемые в data/fonts, перемещать не нужно."
+german = "Der alte Ordner qmclient/fonts wird nicht mehr durchsucht. Verschiebe eigene Schriftarten manuell nach fonts/fonts_store im Konfigurationsordner. Die normale Version verwendet den Benutzer-Konfigurationsordner, die portable Version profile. Die mitgelieferten Schriftarten in data/fonts müssen nicht verschoben werden."
+spanish = "La carpeta antigua qmclient/fonts ya no se examina. Mueve manualmente tus fuentes personalizadas a fonts/fonts_store dentro de la carpeta de configuración. La versión normal usa la carpeta de configuración del usuario; la portátil usa profile. No es necesario mover las fuentes incluidas en data/fonts."
+french = "L’ancien dossier qmclient/fonts n’est plus analysé. Déplacez manuellement vos polices personnalisées vers fonts/fonts_store dans le dossier de configuration. La version normale utilise le dossier de configuration utilisateur ; la version portable utilise profile. Les polices fournies dans data/fonts n’ont pas besoin d’être déplacées."
+brazilian_portuguese = "A pasta antiga qmclient/fonts não é mais examinada. Mova manualmente suas fontes personalizadas para fonts/fonts_store dentro da pasta de configuração. A versão normal usa a pasta de configuração do usuário; a versão portátil usa profile. As fontes incluídas em data/fonts não precisam ser movidas."
+portuguese = "A pasta antiga qmclient/fonts já não é examinada. Mova manualmente as suas fontes personalizadas para fonts/fonts_store dentro da pasta de configuração. A versão normal usa a pasta de configuração do utilizador; a versão portátil usa profile. As fontes incluídas em data/fonts não precisam de ser movidas."
+turkish = "Eski qmclient/fonts klasörü artık taranmıyor. Özel yazı tiplerinizi yapılandırma klasöründeki fonts/fonts_store konumuna elle taşıyın. Normal sürüm kullanıcı yapılandırma klasörünü, taşınabilir sürüm profile klasörünü kullanır. data/fonts içindeki birlikte gelen yazı tiplerinin taşınması gerekmez."
+polish = "Stary folder qmclient/fonts nie jest już skanowany. Przenieś własne czcionki ręcznie do fonts/fonts_store w folderze konfiguracji. Zwykła wersja używa folderu konfiguracji użytkownika, a przenośna — profile. Nie trzeba przenosić czcionek dostarczanych w data/fonts."
+
+[[message]]
+key = "The update is ready and will be installed when you exit."
+[message.translations]
+simplified_chinese = "更新已准备就绪，将在退出客户端时安装。"
+traditional_chinese = "更新已準備就緒，將在結束用戶端時安裝。"
+japanese = "アップデートの準備ができました。終了時にインストールされます。"
+korean = "업데이트가 준비되었습니다. 종료할 때 설치됩니다."
+russian = "Обновление готово и будет установлено при выходе."
+german = "Das Update ist bereit und wird beim Beenden installiert."
+spanish = "La actualización está lista y se instalará al salir."
+french = "La mise à jour est prête et sera installée à la fermeture."
+brazilian_portuguese = "A atualização está pronta e será instalada ao sair."
+portuguese = "A atualização está pronta e será instalada ao sair."
+turkish = "Güncelleme hazır ve çıkışta kurulacak."
+polish = "Aktualizacja jest gotowa i zostanie zainstalowana przy wyjściu."
+
+[[message]]
+key = "There is no pending save restore prompt."
+[message.translations]
+simplified_chinese = "当前没有待处理的存档恢复提示。"
+traditional_chinese = "目前沒有待處理的存檔恢復提示。"
+japanese = "現在、セーブ復元の確認待ちはありません。"
+korean = "현재 응답을 기다리는 저장 데이터 복원 알림이 없습니다."
+russian = "Сейчас нет запроса на восстановление сохранения."
+german = "Es gibt keine offene Anfrage zur Wiederherstellung."
+spanish = "No hay ninguna solicitud de restauración pendiente."
+french = "Aucune demande de restauration n’est en attente."
+brazilian_portuguese = "Não há solicitação de restauração pendente."
+portuguese = "Não há nenhum pedido de restauração pendente."
+turkish = "Bekleyen bir geri yükleme sorusu yok."
+polish = "Nie ma oczekującego pytania o przywrócenie zapisu."
+
+[[message]]
+key = "This connection cannot change names while connected. Reconnect with the saved names first."
+[message.translations]
+simplified_chinese = "此连接不支持在线改名，请使用存档中的名字重新连接。"
+traditional_chinese = "此連線不支援線上改名，請使用存檔中的名字重新連線。"
+japanese = "この接続では接続中に名前を変更できません。保存された名前で再接続してください。"
+korean = "이 연결에서는 접속 중 이름을 변경할 수 없습니다. 저장된 이름으로 다시 접속하세요."
+russian = "Это соединение не поддерживает смену имени во время игры. Переподключитесь с сохранёнными именами."
+german = "Diese Verbindung erlaubt keine Namensänderung während der Verbindung. Zuerst mit den gespeicherten Namen neu verbinden."
+spanish = "Esta conexión no permite cambiar nombres durante la sesión. Reconéctate con los nombres guardados."
+french = "Cette connexion ne permet pas de changer de nom en cours de session. Reconnectez-vous avec les noms sauvegardés."
+brazilian_portuguese = "Esta conexão não permite mudar nomes durante a sessão. Reconecte com os nomes salvos."
+portuguese = "Esta ligação não permite mudar nomes durante a sessão. Volta a ligar com os nomes guardados."
+turkish = "Bu bağlantıda bağlıyken ad değiştirilemez. Önce kayıtlı adlarla yeniden bağlanın."
+polish = "To połączenie nie pozwala zmieniać nazw w trakcie sesji. Połącz się ponownie z zapisanymi nazwami."
+
+[[message]]
+key = "This font has no bundled vector profile. Nameplates will use FreeType."
+[message.translations]
+simplified_chinese = "该字体没有随包矢量配置，铭牌将使用 FreeType。"
+traditional_chinese = "此字型沒有隨包向量設定檔，名牌將使用 FreeType。"
+japanese = "このフォントには同梱ベクタープロファイルがありません。ネームプレートは FreeType を使用します。"
+korean = "이 글꼴에는 번들 벡터 프로필이 없습니다. 이름표는 FreeType을 사용합니다."
+russian = "У этого шрифта нет встроенного векторного профиля. Таблички будут использовать FreeType."
+german = "Diese Schrift hat kein mitgeliefertes Vektorprofil. Namensschilder verwenden FreeType."
+spanish = "Esta fuente no tiene perfil vectorial incluido. Las placas usarán FreeType."
+french = "Cette police n'a pas de profil vectoriel fourni. Les plaques utiliseront FreeType."
+brazilian_portuguese = "Esta fonte não tem perfil vetorial incluído. As plaquinhas usarão FreeType."
+portuguese = "Esta fonte não tem perfil vetorial incluído. As placas usarão FreeType."
+turkish = "Bu yazı tipinin paketlenmiş vektör profili yok. Ad plakaları FreeType kullanacak."
+polish = "Ta czcionka nie ma dołączonego profilu wektorowego. Tabliczki będą używać FreeType."
+
+[[message]]
+key = "This save is no longer in the local save file."
+[message.translations]
+simplified_chinese = "本地存档文件中已没有这条记录。"
+traditional_chinese = "本機存檔檔案中已沒有這筆紀錄。"
+japanese = "このセーブはローカルのセーブファイルに存在しません。"
+korean = "이 저장 데이터는 로컬 저장 파일에 더 이상 없습니다."
+russian = "Этого сохранения больше нет в локальном файле."
+german = "Dieser Spielstand ist nicht mehr in der lokalen Datei enthalten."
+spanish = "Esta partida ya no está en el archivo local."
+french = "Cette sauvegarde ne figure plus dans le fichier local."
+brazilian_portuguese = "Este jogo salvo não está mais no arquivo local."
+portuguese = "Este jogo guardado já não está no ficheiro local."
+turkish = "Bu kayıt artık yerel kayıt dosyasında bulunmuyor."
+polish = "Tego zapisu nie ma już w lokalnym pliku."
+
+[[message]]
+key = "Tick delay before executing qm_execute_on_join"
+[message.translations]
+simplified_chinese = "执行 qm_execute_on_join 前的延迟（tick）"
+traditional_chinese = "執行 qm_execute_on_join 前的延遲（tick）"
+japanese = "qm_execute_on_join 実行前の遅延（tick）"
+korean = "qm_execute_on_join 실행 전 지연 시간 (tick)"
+russian = "Задержка в тиках перед выполнением qm_execute_on_join"
+german = "Tick-Verzögerung vor Ausführung von qm_execute_on_join"
+spanish = "Retraso en ticks antes de ejecutar qm_execute_on_join"
+french = "Délai en ticks avant l'exécution de qm_execute_on_join"
+brazilian_portuguese = "Atraso em ticks antes de executar qm_execute_on_join"
+portuguese = "Atraso em ticks antes de executar qm_execute_on_join"
+turkish = "qm_execute_on_join yürütülmeden önceki tick gecikmesi"
+polish = "Opóźnienie w tickach przed wykonaniem qm_execute_on_join"
+
+[[message]]
 key = "Ticks after freeze before applying max prediction reduction"
 [message.translations]
 simplified_chinese = "冻结后经过多少 tick 才应用最大预测减少"
@@ -8384,6 +10200,22 @@ brazilian_portuguese = "Alternar tecla de fantasma"
 portuguese = "Alternar tecla de fantasma"
 turkish = "Hayalet tuşunu değiştir"
 polish = "Przełącz klawisz ducha"
+
+[[message]]
+key = "Total fonts:"
+[message.translations]
+simplified_chinese = "字体总数："
+traditional_chinese = "字型總數："
+japanese = "フォント総数："
+korean = "전체 글꼴:"
+russian = "Всего шрифтов:"
+german = "Schriften gesamt:"
+spanish = "Total de fuentes:"
+french = "Nombre total de polices :"
+brazilian_portuguese = "Total de fontes:"
+portuguese = "Total de tipos de letra:"
+turkish = "Toplam yazı tipi:"
+polish = "Łączna liczba czcionek:"
 
 [[message]]
 key = "Total: %d save(s)"
@@ -8562,6 +10394,21 @@ turkish = "Çözülme döşemesi anahat rengi"
 polish = "Kolor konturu kafelków odmrożenia"
 
 [[message]]
+key = "Unfreeze tile outline width"
+[message.translations]
+traditional_chinese = "解凍方塊的描邊寬度"
+japanese = "解凍タイルの輪郭幅"
+korean = "해동 타일 외곽선 두께"
+russian = "Ширина контура блоков размораживания"
+german = "Konturbreite der Auftau-Kacheln"
+spanish = "Grosor del contorno de los bloques de descongelación"
+french = "Épaisseur du contour des tuiles de dégel"
+brazilian_portuguese = "Espessura do contorno dos blocos de descongelamento"
+portuguese = "Espessura do contorno dos blocos de descongelamento"
+turkish = "Çözme karolarının kenar kalınlığı"
+polish = "Grubość obrysu kafelków rozmrożenia"
+
+[[message]]
 key = "Unfreeze/Deep unfreeze tile outline width"
 [message.translations]
 simplified_chinese = "解冻/深解冻图块轮廓宽度"
@@ -8576,6 +10423,36 @@ brazilian_portuguese = "Largura do contorno do tile de descongelamento/descongel
 portuguese = "Largura do contorno do bloco de descongelamento/descongelamento profundo"
 turkish = "Çözülme/derin çözülme döşemesi anahat genişliği"
 polish = "Szerokość konturu kafelków odmrożenia/głębokiego odmrożenia"
+
+[[message]]
+key = "Unhookable tile outline color"
+[message.translations]
+traditional_chinese = "不可鉤方塊描邊顏色"
+japanese = "フック不可タイルの輪郭色"
+korean = "갈고리 불가 타일 외곽선 색상"
+russian = "Цвет контура блоков, за которые нельзя зацепиться"
+german = "Konturfarbe der nicht haktbaren Kacheln"
+spanish = "Color del contorno de los bloques no enganchables"
+french = "Couleur du contour des tuiles non accrochables"
+brazilian_portuguese = "Cor do contorno dos blocos não gancháveis"
+portuguese = "Cor do contorno dos blocos não gancháveis"
+turkish = "Kancalanamaz karoların kenar rengi"
+polish = "Kolor obrysu kafelków niezaczepialnych"
+
+[[message]]
+key = "Unhookable tile outline width"
+[message.translations]
+traditional_chinese = "不可鉤方塊描邊寬度"
+japanese = "フック不可タイルの輪郭幅"
+korean = "갈고리 불가 타일 외곽선 두께"
+russian = "Ширина контура блоков, за которые нельзя зацепиться"
+german = "Konturbreite der nicht haktbaren Kacheln"
+spanish = "Grosor del contorno de los bloques no enganchables"
+french = "Épaisseur du contour des tuiles non accrochables"
+brazilian_portuguese = "Espessura do contorno dos blocos não gancháveis"
+portuguese = "Espessura do contorno dos blocos não gancháveis"
+turkish = "Kancalanamaz karoların kenar kalınlığı"
+polish = "Kolor obrysu kafelków niezaczepialnych"
 
 [[message]]
 key = "Unmute:"
@@ -8706,6 +10583,22 @@ turkish = "Belirli bir savaş grubunu güncelle veya ekle"
 polish = "Zaktualizuj lub dodaj określoną grupę wojenną"
 
 [[message]]
+key = "Use /qm Yes [number] to restore a save, or /qm No to dismiss."
+[message.translations]
+simplified_chinese = "输入 /qm Yes [序号] 恢复存档，或 /qm No 忽略本次提示。"
+traditional_chinese = "輸入 /qm Yes [序號] 恢復存檔，或 /qm No 忽略本次提示。"
+japanese = "/qm Yes [番号] でセーブを復元、/qm No で通知を閉じます。"
+korean = "/qm Yes [번호]로 복원하거나 /qm No로 알림을 닫으세요."
+russian = "Введите /qm Yes [номер] для восстановления или /qm No для отмены."
+german = "Mit /qm Yes [Nummer] einen Spielstand laden oder mit /qm No ablehnen."
+spanish = "Usa /qm Yes [número] para restaurar una partida o /qm No para descartar."
+french = "Utilisez /qm Yes [numéro] pour restaurer une sauvegarde ou /qm No pour ignorer."
+brazilian_portuguese = "Use /qm Yes [número] para restaurar um jogo salvo ou /qm No para dispensar."
+portuguese = "Usa /qm Yes [número] para restaurar um jogo guardado ou /qm No para ignorar."
+turkish = "Geri yüklemek için /qm Yes [numara], kapatmak için /qm No kullanın."
+polish = "Użyj /qm Yes [numer], aby przywrócić zapis, lub /qm No, aby odrzucić."
+
+[[message]]
 key = "Use 12 hour clock"
 [message.translations]
 simplified_chinese = "使用 12 小时制"
@@ -8736,6 +10629,22 @@ brazilian_portuguese = "Usar relógio de 12 horas para hora local"
 portuguese = "Usar relógio de 12 horas para hora local"
 turkish = "Yerel saat için 12 saatlik saat kullan"
 polish = "Użyj 12-godzinnego formatu czasu dla czasu lokalnego"
+
+[[message]]
+key = "Use a fixed prediction margin while frozen"
+[message.translations]
+simplified_chinese = "冻结时使用固定预测量"
+traditional_chinese = "凍結時使用固定預測量"
+japanese = "凍結中は固定の予測マージンを使用する"
+korean = "동결 중 고정 예측 여유 사용"
+russian = "Использовать фиксированный запас предсказания во время заморозки"
+german = "Beim Einfrieren einen festen Vorhersagespielraum verwenden"
+spanish = "Usar un margen de predicción fijo al estar congelado"
+french = "Utiliser une marge de prédiction fixe en cas de gel"
+brazilian_portuguese = "Usar uma margem de previsão fixa enquanto estiver congelado"
+portuguese = "Usar uma margem de previsão fixa enquanto estiver congelado"
+turkish = "Donmuşken sabit tahmin payı kullan"
+polish = "Używaj stałego marginesu predykcji podczas zamrożenia"
 
 [[message]]
 key = "Use alternative antiping smoothing, incompatible with cl_antiping_smooth"
@@ -8914,6 +10823,22 @@ turkish = "Tee donduğunda skin rengi kullan"
 polish = "Użyj koloru skórki, gdy Tee jest zamrożony"
 
 [[message]]
+key = "Use style colors"
+[message.translations]
+simplified_chinese = "使用样式颜色"
+traditional_chinese = "使用樣式顏色"
+japanese = "スタイルの色を使用"
+korean = "스타일 색상 사용"
+russian = "Использовать цвета стиля"
+german = "Stilfarben verwenden"
+spanish = "Usar colores del estilo"
+french = "Utiliser les couleurs du style"
+brazilian_portuguese = "Usar cores do estilo"
+portuguese = "Usar cores do estilo"
+turkish = "Stil renklerini kullan"
+polish = "Użyj kolorów stylu"
+
+[[message]]
 key = "Use Tee icons instead of circles"
 [message.translations]
 simplified_chinese = "用 Tee 图标代替圆圈"
@@ -8928,6 +10853,38 @@ brazilian_portuguese = "Usar ícones de Tee em vez de círculos"
 portuguese = "Usar ícones de Tee em vez de círculos"
 turkish = "Daireler yerine Tee simgeleri kullan"
 polish = "Użyj ikon Tee zamiast kółek"
+
+[[message]]
+key = "Use the selected tee trail style palette"
+[message.translations]
+simplified_chinese = "使用所选 Tee 拖尾样式的色板"
+traditional_chinese = "使用所選 Tee 拖尾樣式的色板"
+japanese = "選択した Tee トレイルスタイルのパレットを使用"
+korean = "선택한 Tee 트레일 스타일 팔레트 사용"
+russian = "Использовать палитру выбранного стиля следа Tee"
+german = "Palette des gewählten Tee-Spur-Stils verwenden"
+spanish = "Usar la paleta del estilo de estela del Tee seleccionado"
+french = "Utiliser la palette du style de traînée du Tee sélectionné"
+brazilian_portuguese = "Usar a paleta do estilo de rastro do Tee selecionado"
+portuguese = "Usar a paleta do estilo de rasto do Tee selecionado"
+turkish = "Seçili Tee iz stili paletini kullan"
+polish = "Użyj palety wybranego stylu smugi Tee"
+
+[[message]]
+key = "Use vector font rendering for nameplates"
+[message.translations]
+simplified_chinese = "使用铭牌矢量字体"
+traditional_chinese = "使用名牌向量字型"
+japanese = "ネームプレートにベクター文字描画を使用"
+korean = "이름표에 벡터 글꼴 렌더링 사용"
+russian = "Использовать векторный шрифт для табличек"
+german = "Vektor-Schriftdarstellung für Namensschilder verwenden"
+spanish = "Usar renderizado de fuente vectorial para las placas"
+french = "Utiliser le rendu de police vectorielle pour les plaques"
+brazilian_portuguese = "Usar renderização de fonte vetorial nas plaquinhas"
+portuguese = "Usar renderização de fonte vetorial nas placas"
+turkish = "Ad plakaları için vektör yazı tipi oluşturmayı kullan"
+polish = "Używaj renderowania czcionki wektorowej dla tabliczek"
 
 [[message]]
 key = "Use warlist colors instead of regular colors"
@@ -8960,6 +10917,70 @@ brazilian_portuguese = "Usar grupos da lista de guerra para o indicador"
 portuguese = "Usar grupos da lista de guerra para o indicador"
 turkish = "Gösterge için savaş listesi gruplarını kullan"
 polish = "Użyj grup listy wrogów dla wskaźnika"
+
+[[message]]
+key = "Variable custom font weight"
+[message.translations]
+simplified_chinese = "可变字体的自定义字重"
+traditional_chinese = "可變字型的自訂字重"
+japanese = "可変フォントのカスタム太さ"
+korean = "가변 글꼴의 사용자 지정 굵기"
+russian = "Толщина вариативного пользовательского шрифта"
+german = "Schriftstärke der variablen eigenen Schrift"
+spanish = "Grosor de la fuente personalizada variable"
+french = "Graisse de la police personnalisée variable"
+brazilian_portuguese = "Espessura da fonte personalizada variável"
+portuguese = "Espessura da fonte personalizada variável"
+turkish = "Değişken özel yazı tipi kalınlığı"
+polish = "Grubość zmiennej niestandardowej czcionki"
+
+[[message]]
+key = "Variable custom font weight for Chinese/CJK text"
+[message.translations]
+simplified_chinese = "中文 /CJK 文本的可变自定义字体字重"
+traditional_chinese = "中文/CJK 文字的可變自訂字型字重"
+japanese = "中国語/CJK テキスト用の可変カスタムフォントの太さ"
+korean = "중국어/CJK 텍스트용 가변 사용자 정의 글꼴 굵기"
+russian = "Насыщенность переменного своего шрифта для китайского/CJK текста"
+german = "Variable eigene Schriftstärke für chinesischen/CJK-Text"
+spanish = "Grosor variable de la fuente personalizada para texto chino/CJK"
+french = "Graisse variable de la police perso pour le texte chinois/CJK"
+brazilian_portuguese = "Espessura variável da fonte personalizada para texto chinês/CJK"
+portuguese = "Espessura variável do tipo de letra personalizado para texto chinês/CJK"
+turkish = "Çince/CJK metin için değişken özel yazı tipi kalınlığı"
+polish = "Zmienna grubość niestandardowej czcionki dla tekstu chińskiego/CJK"
+
+[[message]]
+key = "Variable custom font weight for Latin text"
+[message.translations]
+simplified_chinese = "拉丁文本的可变自定义字体字重"
+traditional_chinese = "拉丁文字的可變自訂字型字重"
+japanese = "ラテン文字用の可変カスタムフォントの太さ"
+korean = "라틴 텍스트용 가변 사용자 정의 글꼴 굵기"
+russian = "Насыщенность переменного своего шрифта для латинского текста"
+german = "Variable eigene Schriftstärke für lateinischen Text"
+spanish = "Grosor variable de la fuente personalizada para texto latino"
+french = "Graisse variable de la police perso pour le texte latin"
+brazilian_portuguese = "Espessura variável da fonte personalizada para texto latino"
+portuguese = "Espessura variável do tipo de letra personalizado para texto latino"
+turkish = "Latin metin için değişken özel yazı tipi kalınlığı"
+polish = "Zmienna grubość niestandardowej czcionki dla tekstu łacińskiego"
+
+[[message]]
+key = "Vector nameplate text"
+[message.translations]
+simplified_chinese = "铭牌矢量字体"
+traditional_chinese = "名牌向量字型"
+japanese = "ネームプレートのベクター文字"
+korean = "이름표 벡터 텍스트"
+russian = "Векторный текст табличек"
+german = "Vektor-Namensschildtext"
+spanish = "Texto vectorial de la placa"
+french = "Texte vectoriel de plaque"
+brazilian_portuguese = "Texto vetorial da plaquinha"
+portuguese = "Texto vetorial da placa"
+turkish = "Vektör ad plakası metni"
+polish = "Tekst wektorowy tabliczki"
 
 [[message]]
 key = "Velocity"
@@ -9072,22 +11093,6 @@ brazilian_portuguese = "Entradas de Guerra"
 portuguese = "Entradas de Guerra"
 turkish = "Savaş Girişleri"
 polish = "Wpisy wojenne"
-
-[[message]]
-key = "No entries yet"
-[message.translations]
-simplified_chinese = "暂无条目"
-traditional_chinese = "暫無條目"
-japanese = "エントリがまだありません"
-korean = "아직 항목이 없습니다"
-russian = "Записей пока нет"
-german = "Noch keine Einträge"
-spanish = "Todavía no hay entradas"
-french = "Aucune entrée pour l'instant"
-brazilian_portuguese = "Nenhuma entrada ainda"
-portuguese = "Nenhuma entrada ainda"
-turkish = "Henüz kayıt yok"
-polish = "Brak wpisów"
 
 [[message]]
 key = "War Groups"
@@ -9366,1740 +11371,3 @@ brazilian_portuguese = "Largura"
 portuguese = "Largura"
 turkish = "Genişlik"
 polish = "Szerokość"
-
-[[message]]
-key = "Block enemy chat"
-[message.translations]
-simplified_chinese = "屏蔽敌对玩家聊天"
-traditional_chinese = "封鎖敵對玩家聊天"
-japanese = "敵対プレイヤーのチャットをブロック"
-korean = "적대 플레이어 채팅 차단"
-russian = "Блокировать чат врагов"
-german = "Gegner-Chat blockieren"
-spanish = "Bloquear el chat de enemigos"
-french = "Bloquer le tchat des ennemis"
-brazilian_portuguese = "Bloquear chat de inimigos"
-portuguese = "Bloquear chat de inimigos"
-turkish = "Düşman sohbetini engelle"
-polish = "Blokuj czat wrogów"
-
-[[message]]
-key = "Base prediction margin"
-[message.translations]
-simplified_chinese = "基础预测量"
-traditional_chinese = "基礎預測量"
-japanese = "基本予測マージン"
-korean = "기본 예측 여유"
-russian = "Базовый запас предсказания"
-german = "Basisvorhersagespielraum"
-spanish = "Margen de predicción base"
-french = "Marge de prédiction de base"
-brazilian_portuguese = "Margem de previsão base"
-portuguese = "Margem de previsão base"
-turkish = "Temel tahmin payı"
-polish = "Bazowy margines predykcji"
-
-[[message]]
-key = "Reduce prediction while frozen"
-[message.translations]
-simplified_chinese = "冻结时降低预测量"
-traditional_chinese = "凍結時降低預測量"
-japanese = "凍結中に予測量を減らす"
-korean = "동결 중 예측량 줄이기"
-russian = "Уменьшать предсказание во время заморозки"
-german = "Vorhersage während des Einfrierens verringern"
-spanish = "Reducir la predicción al estar congelado"
-french = "Réduire la prédiction en cas de gel"
-brazilian_portuguese = "Reduzir a previsão enquanto estiver congelado"
-portuguese = "Reduzir a previsão enquanto estiver congelado"
-turkish = "Donmuşken tahmini azalt"
-polish = "Zmniejszaj predykcję podczas zamrożenia"
-
-[[message]]
-key = "Maximum reduction"
-[message.translations]
-simplified_chinese = "最大降低量"
-traditional_chinese = "最大降低量"
-japanese = "最大削減量"
-korean = "최대 감소량"
-russian = "Максимальное уменьшение"
-german = "Maximale Verringerung"
-spanish = "Reducción máxima"
-french = "Réduction maximale"
-brazilian_portuguese = "Redução máxima"
-portuguese = "Redução máxima"
-turkish = "Maksimum azaltma"
-polish = "Maksymalne zmniejszenie"
-
-[[message]]
-key = "Delay before reduction"
-[message.translations]
-simplified_chinese = "降低前延迟"
-traditional_chinese = "降低前延遲"
-japanese = "削減前の遅延"
-korean = "감소 전 지연"
-russian = "Задержка перед уменьшением"
-german = "Verzögerung vor der Verringerung"
-spanish = "Retardo antes de reducir"
-french = "Délai avant la réduction"
-brazilian_portuguese = "Atraso antes da redução"
-portuguese = "Atraso antes da redução"
-turkish = "Azaltmadan önce gecikme"
-polish = "Opóźnienie przed zmniejszeniem"
-
-[[message]]
-key = "Use a fixed prediction margin while frozen"
-[message.translations]
-simplified_chinese = "冻结时使用固定预测量"
-traditional_chinese = "凍結時使用固定預測量"
-japanese = "凍結中は固定の予測マージンを使用する"
-korean = "동결 중 고정 예측 여유 사용"
-russian = "Использовать фиксированный запас предсказания во время заморозки"
-german = "Beim Einfrieren einen festen Vorhersagespielraum verwenden"
-spanish = "Usar un margen de predicción fijo al estar congelado"
-french = "Utiliser une marge de prédiction fixe en cas de gel"
-brazilian_portuguese = "Usar uma margem de previsão fixa enquanto estiver congelado"
-portuguese = "Usar uma margem de previsão fixa enquanto estiver congelado"
-turkish = "Donmuşken sabit tahmin payı kullan"
-polish = "Używaj stałego marginesu predykcji podczas zamrożenia"
-
-[[message]]
-key = "Frozen prediction margin"
-[message.translations]
-simplified_chinese = "冻结时预测量"
-traditional_chinese = "凍結時預測量"
-japanese = "凍結中の予測マージン"
-korean = "동결 중 예측 여유"
-russian = "Запас предсказания во время заморозки"
-german = "Vorhersagespielraum beim Einfrieren"
-spanish = "Margen de predicción al estar congelado"
-french = "Marge de prédiction en cas de gel"
-brazilian_portuguese = "Margem de previsão enquanto estiver congelado"
-portuguese = "Margem de previsão enquanto estiver congelado"
-turkish = "Donmuşken tahmin payı"
-polish = "Margines predykcji podczas zamrożenia"
-
-[[message]]
-key = "The update is ready and will be installed when you exit."
-[message.translations]
-japanese = "アップデートの準備ができました。終了時にインストールされます。"
-korean = "업데이트가 준비되었습니다. 종료할 때 설치됩니다."
-simplified_chinese = "更新已准备就绪，将在退出客户端时安装。"
-traditional_chinese = "更新已準備就緒，將在結束用戶端時安裝。"
-russian = "Обновление готово и будет установлено при выходе."
-german = "Das Update ist bereit und wird beim Beenden installiert."
-spanish = "La actualización está lista y se instalará al salir."
-french = "La mise à jour est prête et sera installée à la fermeture."
-brazilian_portuguese = "A atualização está pronta e será instalada ao sair."
-portuguese = "A atualização está pronta e será instalada ao sair."
-turkish = "Güncelleme hazır ve çıkışta kurulacak."
-polish = "Aktualizacja jest gotowa i zostanie zainstalowana przy wyjściu."
-
-[[message]]
-key = "Custom font weight (variable fonts)"
-[message.translations]
-simplified_chinese = "自定义字体字重（可变字体）"
-traditional_chinese = "自訂字型字重（可變字型）"
-japanese = "カスタムフォントの太さ（可変フォント）"
-korean = "사용자 지정 글꼴 굵기(가변 글꼴)"
-russian = "Толщина своего шрифта (вариативные шрифты)"
-german = "Schriftstärke der eigenen Schrift (variable Schriften)"
-spanish = "Grosor de la fuente personalizada (fuentes variables)"
-french = "Graisse de la police personnalisée (polices variables)"
-brazilian_portuguese = "Espessura da fonte personalizada (fontes variáveis)"
-portuguese = "Espessura da fonte personalizada (fontes variáveis)"
-turkish = "Özel yazı tipi kalınlığı (değişken yazı tipleri)"
-polish = "Grubość niestandardowej czcionki (czcionki zmienne)"
-
-[[message]]
-key = "Font style:"
-[message.translations]
-simplified_chinese = "字体样式："
-traditional_chinese = "字型樣式："
-japanese = "フォントスタイル:"
-korean = "글꼴 스타일:"
-russian = "Стиль шрифта:"
-german = "Schriftstil:"
-spanish = "Estilo de fuente:"
-french = "Style de police :"
-brazilian_portuguese = "Estilo da fonte:"
-portuguese = "Estilo da fonte:"
-turkish = "Yazı tipi stili:"
-polish = "Styl czcionki:"
-
-[[message]]
-key = "Variable custom font weight"
-[message.translations]
-simplified_chinese = "可变字体的自定义字重"
-traditional_chinese = "可變字型的自訂字重"
-japanese = "可変フォントのカスタム太さ"
-korean = "가변 글꼴의 사용자 지정 굵기"
-russian = "Толщина вариативного пользовательского шрифта"
-german = "Schriftstärke der variablen eigenen Schrift"
-spanish = "Grosor de la fuente personalizada variable"
-french = "Graisse de la police personnalisée variable"
-brazilian_portuguese = "Espessura da fonte personalizada variável"
-portuguese = "Espessura da fonte personalizada variável"
-turkish = "Değişken özel yazı tipi kalınlığı"
-polish = "Grubość zmiennej niestandardowej czcionki"
-
-[[message]]
-key = "Available for this bundled font"
-[message.translations]
-simplified_chinese = "该随包字体可用"
-traditional_chinese = "此隨包字型可用"
-japanese = "この同梱フォントで利用可能"
-korean = "이 번들 글꼴에서 사용 가능"
-russian = "Доступно для этого встроенного шрифта"
-german = "Für diese mitgelieferte Schrift verfügbar"
-spanish = "Disponible para esta fuente incluida"
-french = "Disponible pour cette police fournie"
-brazilian_portuguese = "Disponível para esta fonte incluída"
-portuguese = "Disponível para esta fonte incluída"
-turkish = "Bu paketlenmiş yazı tipi için kullanılabilir"
-polish = "Dostępne dla tej dołączonej czcionki"
-
-[[message]]
-key = "Bundled vector profile:"
-[message.translations]
-simplified_chinese = "随包矢量配置："
-traditional_chinese = "隨包向量設定檔："
-japanese = "同梱ベクタープロファイル:"
-korean = "번들 벡터 프로필:"
-russian = "Встроенный векторный профиль:"
-german = "Mitgeliefertes Vektorprofil:"
-spanish = "Perfil vectorial incluido:"
-french = "Profil vectoriel fourni :"
-brazilian_portuguese = "Perfil vetorial incluído:"
-portuguese = "Perfil vetorial incluído:"
-turkish = "Paketlenmiş vektör profili:"
-polish = "Dołączony profil wektorowy:"
-
-[[message]]
-key = "Not available; FreeType is used"
-[message.translations]
-simplified_chinese = "不可用；将使用 FreeType"
-traditional_chinese = "不可用；將使用 FreeType"
-japanese = "利用できません。FreeType を使用します"
-korean = "사용할 수 없음. FreeType을 사용합니다"
-russian = "Недоступно; используется FreeType"
-german = "Nicht verfügbar; FreeType wird verwendet"
-spanish = "No disponible; se usa FreeType"
-french = "Non disponible ; FreeType est utilisé"
-brazilian_portuguese = "Indisponível; o FreeType é usado"
-portuguese = "Indisponível; o FreeType é usado"
-turkish = "Kullanılamaz; FreeType kullanılır"
-polish = "Niedostępne; używany jest FreeType"
-
-[[message]]
-key = "Only selected bundled fonts have vector nameplate atlases. Other fonts use FreeType."
-[message.translations]
-simplified_chinese = "只有部分随包字体带有铭牌矢量图集，其他字体会使用 FreeType。"
-traditional_chinese = "只有部分隨包字型帶有名牌向量圖集，其他字型會使用 FreeType。"
-japanese = "一部の同梱フォントのみベクターのネームプレートアトラスを持ちます。それ以外のフォントは FreeType を使用します。"
-korean = "일부 번들 글꼴에만 벡터 이름표 아틀라스가 있습니다. 다른 글꼴은 FreeType을 사용합니다."
-russian = "Только у некоторых встроенных шрифтов есть векторные атласы табличек. Остальные шрифты используют FreeType."
-german = "Nur ausgewählte mitgelieferte Schriften haben Vektor-Namensschildatlanten. Andere Schriften verwenden FreeType."
-spanish = "Solo algunas fuentes incluidas tienen atlas vectoriales de placas. Las demás usan FreeType."
-french = "Seules certaines polices fournies disposent d'atlas vectoriels de plaques. Les autres utilisent FreeType."
-brazilian_portuguese = "Apenas algumas fontes incluídas têm atlas vetoriais de plaquinhas. As demais usam FreeType."
-portuguese = "Apenas algumas fontes incluídas têm atlas vetoriais de placas. As restantes usam FreeType."
-turkish = "Yalnızca seçili paketlenmiş yazı tiplerinde vektör ad plakası atlası vardır. Diğer yazı tipleri FreeType kullanır."
-polish = "Tylko wybrane dołączone czcionki mają wektorowe atlasy tabliczek. Pozostałe używają FreeType."
-
-[[message]]
-key = "This font has no bundled vector profile. Nameplates will use FreeType."
-[message.translations]
-simplified_chinese = "该字体没有随包矢量配置，铭牌将使用 FreeType。"
-traditional_chinese = "此字型沒有隨包向量設定檔，名牌將使用 FreeType。"
-japanese = "このフォントには同梱ベクタープロファイルがありません。ネームプレートは FreeType を使用します。"
-korean = "이 글꼴에는 번들 벡터 프로필이 없습니다. 이름표는 FreeType을 사용합니다."
-russian = "У этого шрифта нет встроенного векторного профиля. Таблички будут использовать FreeType."
-german = "Diese Schrift hat kein mitgeliefertes Vektorprofil. Namensschilder verwenden FreeType."
-spanish = "Esta fuente no tiene perfil vectorial incluido. Las placas usarán FreeType."
-french = "Cette police n'a pas de profil vectoriel fourni. Les plaques utiliseront FreeType."
-brazilian_portuguese = "Esta fonte não tem perfil vetorial incluído. As plaquinhas usarão FreeType."
-portuguese = "Esta fonte não tem perfil vetorial incluído. As placas usarão FreeType."
-turkish = "Bu yazı tipinin paketlenmiş vektör profili yok. Ad plakaları FreeType kullanacak."
-polish = "Ta czcionka nie ma dołączonego profilu wektorowego. Tabliczki będą używać FreeType."
-
-[[message]]
-key = "Use vector font rendering for nameplates"
-[message.translations]
-simplified_chinese = "使用铭牌矢量字体"
-traditional_chinese = "使用名牌向量字型"
-japanese = "ネームプレートにベクター文字描画を使用"
-korean = "이름표에 벡터 글꼴 렌더링 사용"
-russian = "Использовать векторный шрифт для табличек"
-german = "Vektor-Schriftdarstellung für Namensschilder verwenden"
-spanish = "Usar renderizado de fuente vectorial para las placas"
-french = "Utiliser le rendu de police vectorielle pour les plaques"
-brazilian_portuguese = "Usar renderização de fonte vetorial nas plaquinhas"
-portuguese = "Usar renderização de fonte vetorial nas placas"
-turkish = "Ad plakaları için vektör yazı tipi oluşturmayı kullan"
-polish = "Używaj renderowania czcionki wektorowej dla tabliczek"
-
-[[message]]
-key = "Vector nameplate text"
-[message.translations]
-simplified_chinese = "铭牌矢量字体"
-traditional_chinese = "名牌向量字型"
-japanese = "ネームプレートのベクター文字"
-korean = "이름표 벡터 텍스트"
-russian = "Векторный текст табличек"
-german = "Vektor-Namensschildtext"
-spanish = "Texto vectorial de la placa"
-french = "Texte vectoriel de plaque"
-brazilian_portuguese = "Texto vetorial da plaquinha"
-portuguese = "Texto vetorial da placa"
-turkish = "Vektör ad plakası metni"
-polish = "Tekst wektorowy tabliczki"
-
-[[message]]
-key = "Manga: Ink Slash"
-[message.translations]
-simplified_chinese = "漫画风：墨斩"
-traditional_chinese = "漫畫風：墨斬"
-japanese = "漫画風：墨の斬撃"
-korean = "만화풍: 먹빛 참격"
-russian = "Манга: чернильный разрез"
-german = "Manga: Tuscheschnitt"
-spanish = "Manga: corte de tinta"
-french = "Manga : entaille d'encre"
-brazilian_portuguese = "Mangá: corte de tinta"
-portuguese = "Manga: corte de tinta"
-turkish = "Manga: mürekkep kesiği"
-polish = "Manga: cięcie tuszem"
-
-
-[[message]]
-key = "Original"
-[message.translations]
-simplified_chinese = "原版"
-traditional_chinese = "原版"
-japanese = "オリジナル"
-korean = "기본"
-russian = "Оригинал"
-german = "Originalstil"
-spanish = "Estilo original"
-french = "Style d'origine"
-brazilian_portuguese = "Estilo original"
-portuguese = "Estilo original"
-turkish = "Özgün"
-polish = "Oryginalny"
-
-[[message]]
-key = "Pixel: Layer Shift"
-[message.translations]
-simplified_chinese = "像素风：层移"
-traditional_chinese = "像素風：層移"
-japanese = "ピクセル風：レイヤーシフト"
-korean = "픽셀풍: 레이어 이동"
-russian = "Пиксели: сдвиг слоёв"
-german = "Pixel: Ebenenversatz"
-spanish = "Píxeles: desplazamiento de capas"
-french = "Pixels : décalage des plans"
-brazilian_portuguese = "Pixels: deslocamento de camadas"
-portuguese = "Píxeis: deslocamento de camadas"
-turkish = "Piksel: katman kayması"
-polish = "Piksele: przesunięcie warstw"
-
-[[message]]
-key = "Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)"
-[message.translations]
-simplified_chinese = "Tee 拖尾样式（0=原版，1=漫画，2=魔法，3=像素，4=旧编号漫画，5=旧编号魔法，6=极光，7=水墨，8=焰灵，9=星链，10=黑闪）"
-traditional_chinese = "Tee 拖尾樣式（0=原版，1=漫畫，2=魔法，3=像素，4=舊編號漫畫，5=舊編號魔法，6=極光，7=水墨，8=焰靈，9=星鏈，10=黑閃）"
-japanese = "Tee トレイルスタイル（0=オリジナル、1=漫画、2=魔法、3=ピクセル、4=旧番号の漫画、5=旧番号の魔法、6=オーロラ、7=墨、8=焔、9=星屑、10=黒閃）"
-korean = "Tee 트레일 스타일(0=기본, 1=만화, 2=마법, 3=픽셀, 4=이전 번호의 만화, 5=이전 번호의 마법, 6=오로라, 7=수묵, 8=불꽃, 9=별가루, 10=흑섬)"
-russian = "Стиль следа Tee (0=Оригинал, 1=Манга, 2=Магия, 3=Пиксели, 4=Старый номер манги, 5=Старый номер магии, 6=Полярное сияние, 7=Тушь, 8=Пламя, 9=Звёздная пыль, 10=Чёрная вспышка)"
-german = "Tee-Spur-Stil (0=Originalstil, 1=Manga, 2=Magie, 3=Pixel, 4=Alte Manga-Nummer, 5=Alte Magie-Nummer, 6=Polarlicht, 7=Tusche, 8=Flamme, 9=Sternenstaub, 10=Schwarzer Blitz)"
-spanish = "Estilo de estela del Tee (0=Original, 1=Manga, 2=Magia, 3=Píxeles, 4=Número antiguo de manga, 5=Número antiguo de magia, 6=Aurora, 7=Tinta, 8=Llama, 9=Polvo estelar, 10=Destello negro)"
-french = "Style de traînée du Tee (0=Original, 1=Manga, 2=Magie, 3=Pixels, 4=Ancien numéro manga, 5=Ancien numéro magie, 6=Aurore, 7=Encre, 8=Flamme, 9=Poussière d’étoiles, 10=Éclair noir)"
-brazilian_portuguese = "Estilo de rastro do Tee (0=Original, 1=Mangá, 2=Magia, 3=Pixels, 4=Número antigo de mangá, 5=Número antigo de magia, 6=Aurora, 7=Tinta, 8=Chama, 9=Poeira estelar, 10=Clarão negro)"
-portuguese = "Estilo de rasto do Tee (0=Original, 1=Manga, 2=Magia, 3=Píxeis, 4=Número antigo de manga, 5=Número antigo de magia, 6=Aurora, 7=Tinta, 8=Chama, 9=Poeira estelar, 10=Clarão negro)"
-turkish = "Tee iz stili (0=Özgün, 1=Manga, 2=Büyü, 3=Piksel, 4=Eski manga numarası, 5=Eski büyü numarası, 6=Kutup ışığı, 7=Mürekkep, 8=Alev, 9=Yıldız tozu, 10=Kara parıltı)"
-polish = "Styl smugi Tee (0=Oryginalny, 1=Manga, 2=Magia, 3=Piksele, 4=Stary numer mangi, 5=Stary numer magii, 6=Zorza, 7=Tusz, 8=Płomień, 9=Gwiezdny pył, 10=Czarny błysk)"
-
-[[message]]
-key = "Use style colors"
-[message.translations]
-simplified_chinese = "使用样式颜色"
-traditional_chinese = "使用樣式顏色"
-japanese = "スタイルの色を使用"
-korean = "스타일 색상 사용"
-russian = "Использовать цвета стиля"
-german = "Stilfarben verwenden"
-spanish = "Usar colores del estilo"
-french = "Utiliser les couleurs du style"
-brazilian_portuguese = "Usar cores do estilo"
-portuguese = "Usar cores do estilo"
-turkish = "Stil renklerini kullan"
-polish = "Użyj kolorów stylu"
-
-[[message]]
-key = "Use the selected tee trail style palette"
-[message.translations]
-simplified_chinese = "使用所选 Tee 拖尾样式的色板"
-traditional_chinese = "使用所選 Tee 拖尾樣式的色板"
-japanese = "選択した Tee トレイルスタイルのパレットを使用"
-korean = "선택한 Tee 트레일 스타일 팔레트 사용"
-russian = "Использовать палитру выбранного стиля следа Tee"
-german = "Palette des gewählten Tee-Spur-Stils verwenden"
-spanish = "Usar la paleta del estilo de estela del Tee seleccionado"
-french = "Utiliser la palette du style de traînée du Tee sélectionné"
-brazilian_portuguese = "Usar a paleta do estilo de rastro do Tee selecionado"
-portuguese = "Usar a paleta do estilo de rasto do Tee selecionado"
-turkish = "Seçili Tee iz stili paletini kullan"
-polish = "Użyj palety wybranego stylu smugi Tee"
-
-[[message]]
-key = "Magic: Spirit Script"
-[message.translations]
-simplified_chinese = "魔法风：灵文游丝"
-traditional_chinese = "魔法風：靈文游絲"
-japanese = "魔法風：精霊の筆跡"
-korean = "마법풍: 영혼의 문자"
-russian = "Магия: духовное письмо"
-german = "Magie: Geisterschrift"
-spanish = "Magia: escritura espiritual"
-french = "Magie : écriture des esprits"
-brazilian_portuguese = "Magia: escrita espiritual"
-portuguese = "Magia: escrita espiritual"
-turkish = "Büyü: ruh yazısı"
-polish = "Magia: pismo duchów"
-
-
-[[message]]
-key = "Save loaded; local record removed."
-[message.translations]
-simplified_chinese = "存档读取成功，已删除本地记录。"
-traditional_chinese = "存檔讀取成功，已刪除本機紀錄。"
-japanese = "セーブを読み込み、ローカルの記録を削除しました。"
-korean = "저장 데이터를 불러왔으며 로컬 기록을 삭제했습니다."
-russian = "Сохранение загружено, локальная запись удалена."
-german = "Spielstand geladen; lokaler Eintrag entfernt."
-spanish = "Partida cargada; registro local eliminado."
-french = "Sauvegarde chargée ; entrée locale supprimée."
-brazilian_portuguese = "Jogo salvo carregado; registro local removido."
-portuguese = "Jogo guardado carregado; registo local removido."
-turkish = "Kayıt yüklendi; yerel kayıt girdisi silindi."
-polish = "Zapis wczytany; lokalny wpis usunięty."
-
-[[message]]
-key = "Save loaded; the local record could not be removed."
-[message.translations]
-simplified_chinese = "存档读取成功，但未能删除本地记录。"
-traditional_chinese = "存檔讀取成功，但未能刪除本機紀錄。"
-japanese = "セーブは読み込まれましたが、ローカルの記録を削除できませんでした。"
-korean = "저장 데이터를 불러왔지만 로컬 기록을 삭제하지 못했습니다."
-russian = "Сохранение загружено, но удалить локальную запись не удалось."
-german = "Spielstand geladen; der lokale Eintrag konnte nicht entfernt werden."
-spanish = "Partida cargada, pero no se pudo eliminar el registro local."
-french = "Sauvegarde chargée, mais l’entrée locale n’a pas pu être supprimée."
-brazilian_portuguese = "Jogo salvo carregado, mas não foi possível remover o registro local."
-portuguese = "Jogo guardado carregado, mas não foi possível remover o registo local."
-turkish = "Kayıt yüklendi ancak yerel kayıt girdisi silinemedi."
-polish = "Zapis wczytany, ale nie udało się usunąć lokalnego wpisu."
-
-[[message]]
-key = "Save restore stopped without confirming success. The local record was kept."
-[message.translations]
-simplified_chinese = "未确认读档成功，恢复流程已停止。本地记录已保留。"
-traditional_chinese = "未確認讀檔成功，恢復流程已停止。本機紀錄已保留。"
-japanese = "読み込み成功を確認できなかったため復元を停止しました。ローカルの記録は保持されています。"
-korean = "불러오기 성공을 확인하지 못해 복원을 중단했습니다. 로컬 기록은 유지됩니다."
-russian = "Успешная загрузка не подтверждена, восстановление остановлено. Локальная запись сохранена."
-german = "Ladeerfolg nicht bestätigt. Wiederherstellung beendet und lokaler Eintrag behalten."
-spanish = "No se confirmó la carga. Se detuvo la restauración y se conservó el registro local."
-french = "Le chargement n’a pas été confirmé. Restauration arrêtée et entrée locale conservée."
-brazilian_portuguese = "O carregamento não foi confirmado. A restauração parou e o registro local foi mantido."
-portuguese = "O carregamento não foi confirmado. A restauração parou e o registo local foi mantido."
-turkish = "Yükleme başarısı doğrulanamadı. Geri yükleme durduruldu ve yerel kayıt korundu."
-polish = "Nie potwierdzono wczytania. Przywracanie zatrzymano, a lokalny wpis zachowano."
-
-[[message]]
-key = "Use /qm Yes [number] to restore a save, or /qm No to dismiss."
-[message.translations]
-simplified_chinese = "输入 /qm Yes [序号] 恢复存档，或 /qm No 忽略本次提示。"
-traditional_chinese = "輸入 /qm Yes [序號] 恢復存檔，或 /qm No 忽略本次提示。"
-japanese = "/qm Yes [番号] でセーブを復元、/qm No で通知を閉じます。"
-korean = "/qm Yes [번호]로 복원하거나 /qm No로 알림을 닫으세요."
-russian = "Введите /qm Yes [номер] для восстановления или /qm No для отмены."
-german = "Mit /qm Yes [Nummer] einen Spielstand laden oder mit /qm No ablehnen."
-spanish = "Usa /qm Yes [número] para restaurar una partida o /qm No para descartar."
-french = "Utilisez /qm Yes [numéro] pour restaurer une sauvegarde ou /qm No pour ignorer."
-brazilian_portuguese = "Use /qm Yes [número] para restaurar um jogo salvo ou /qm No para dispensar."
-portuguese = "Usa /qm Yes [número] para restaurar um jogo guardado ou /qm No para ignorar."
-turkish = "Geri yüklemek için /qm Yes [numara], kapatmak için /qm No kullanın."
-polish = "Użyj /qm Yes [numer], aby przywrócić zapis, lub /qm No, aby odrzucić."
-
-[[message]]
-key = "Save restore dismissed."
-[message.translations]
-simplified_chinese = "已取消本次存档恢复。"
-traditional_chinese = "已取消本次存檔恢復。"
-japanese = "セーブの復元をキャンセルしました。"
-korean = "저장 데이터 복원을 취소했습니다."
-russian = "Восстановление сохранения отменено."
-german = "Wiederherstellung abgebrochen."
-spanish = "Restauración descartada."
-french = "Restauration annulée."
-brazilian_portuguese = "Restauração cancelada."
-portuguese = "Restauração cancelada."
-turkish = "Geri yükleme iptal edildi."
-polish = "Przywracanie anulowane."
-
-[[message]]
-key = "A save is already being restored. Please wait."
-[message.translations]
-simplified_chinese = "正在恢复存档，请稍候。"
-traditional_chinese = "正在恢復存檔，請稍候。"
-japanese = "セーブを復元中です。お待ちください。"
-korean = "저장 데이터를 복원 중입니다. 잠시 기다려 주세요."
-russian = "Сохранение уже восстанавливается. Подождите."
-german = "Ein Spielstand wird bereits wiederhergestellt. Bitte warten."
-spanish = "Ya se está restaurando una partida. Espera."
-french = "Une sauvegarde est déjà en cours de restauration. Patientez."
-brazilian_portuguese = "Um jogo salvo já está sendo restaurado. Aguarde."
-portuguese = "Um jogo guardado já está a ser restaurado. Aguarda."
-turkish = "Bir kayıt zaten geri yükleniyor. Lütfen bekleyin."
-polish = "Trwa już przywracanie zapisu. Poczekaj."
-
-[[message]]
-key = "There is no pending save restore prompt."
-[message.translations]
-simplified_chinese = "当前没有待处理的存档恢复提示。"
-traditional_chinese = "目前沒有待處理的存檔恢復提示。"
-japanese = "現在、セーブ復元の確認待ちはありません。"
-korean = "현재 응답을 기다리는 저장 데이터 복원 알림이 없습니다."
-russian = "Сейчас нет запроса на восстановление сохранения."
-german = "Es gibt keine offene Anfrage zur Wiederherstellung."
-spanish = "No hay ninguna solicitud de restauración pendiente."
-french = "Aucune demande de restauration n’est en attente."
-brazilian_portuguese = "Não há solicitação de restauração pendente."
-portuguese = "Não há nenhum pedido de restauração pendente."
-turkish = "Bekleyen bir geri yükleme sorusu yok."
-polish = "Nie ma oczekującego pytania o przywrócenie zapisu."
-
-[[message]]
-key = "Invalid save number. Use a number from the save list."
-[message.translations]
-simplified_chinese = "存档序号无效，请使用列表中的序号。"
-traditional_chinese = "存檔序號無效，請使用清單中的序號。"
-japanese = "セーブ番号が無効です。一覧の番号を指定してください。"
-korean = "유효하지 않은 저장 번호입니다. 목록의 번호를 사용하세요."
-russian = "Неверный номер сохранения. Выберите номер из списка."
-german = "Ungültige Spielstandnummer. Bitte eine Nummer aus der Liste verwenden."
-spanish = "Número de partida inválido. Usa un número de la lista."
-french = "Numéro de sauvegarde invalide. Utilisez un numéro de la liste."
-brazilian_portuguese = "Número de jogo salvo inválido. Use um número da lista."
-portuguese = "Número de jogo guardado inválido. Usa um número da lista."
-turkish = "Geçersiz kayıt numarası. Listedeki bir numarayı kullanın."
-polish = "Nieprawidłowy numer zapisu. Użyj numeru z listy."
-
-[[message]]
-key = "This save is no longer in the local save file."
-[message.translations]
-simplified_chinese = "本地存档文件中已没有这条记录。"
-traditional_chinese = "本機存檔檔案中已沒有這筆紀錄。"
-japanese = "このセーブはローカルのセーブファイルに存在しません。"
-korean = "이 저장 데이터는 로컬 저장 파일에 더 이상 없습니다."
-russian = "Этого сохранения больше нет в локальном файле."
-german = "Dieser Spielstand ist nicht mehr in der lokalen Datei enthalten."
-spanish = "Esta partida ya no está en el archivo local."
-french = "Cette sauvegarde ne figure plus dans le fichier local."
-brazilian_portuguese = "Este jogo salvo não está mais no arquivo local."
-portuguese = "Este jogo guardado já não está no ficheiro local."
-turkish = "Bu kayıt artık yerel kayıt dosyasında bulunmuyor."
-polish = "Tego zapisu nie ma już w lokalnym pliku."
-
-[[message]]
-key = "This connection cannot change names while connected. Reconnect with the saved names first."
-[message.translations]
-simplified_chinese = "此连接不支持在线改名，请使用存档中的名字重新连接。"
-traditional_chinese = "此連線不支援線上改名，請使用存檔中的名字重新連線。"
-japanese = "この接続では接続中に名前を変更できません。保存された名前で再接続してください。"
-korean = "이 연결에서는 접속 중 이름을 변경할 수 없습니다. 저장된 이름으로 다시 접속하세요."
-russian = "Это соединение не поддерживает смену имени во время игры. Переподключитесь с сохранёнными именами."
-german = "Diese Verbindung erlaubt keine Namensänderung während der Verbindung. Zuerst mit den gespeicherten Namen neu verbinden."
-spanish = "Esta conexión no permite cambiar nombres durante la sesión. Reconéctate con los nombres guardados."
-french = "Cette connexion ne permet pas de changer de nom en cours de session. Reconnectez-vous avec les noms sauvegardés."
-brazilian_portuguese = "Esta conexão não permite mudar nomes durante a sessão. Reconecte com os nomes salvos."
-portuguese = "Esta ligação não permite mudar nomes durante a sessão. Volta a ligar com os nomes guardados."
-turkish = "Bu bağlantıda bağlıyken ad değiştirilemez. Önce kayıtlı adlarla yeniden bağlanın."
-polish = "To połączenie nie pozwala zmieniać nazw w trakcie sesji. Połącz się ponownie z zapisanymi nazwami."
-
-[[message]]
-key = "Finish or reset the current race before restoring a save."
-[message.translations]
-simplified_chinese = "请先结束或重置当前比赛，再恢复存档。"
-traditional_chinese = "請先結束或重設目前的比賽，再恢復存檔。"
-japanese = "現在のレースを終了またはリセットしてからセーブを復元してください。"
-korean = "현재 레이스를 끝내거나 초기화한 뒤 저장 데이터를 복원하세요."
-russian = "Завершите или сбросьте текущую гонку перед восстановлением."
-german = "Vor der Wiederherstellung das aktuelle Rennen beenden oder zurücksetzen."
-spanish = "Termina o reinicia la carrera actual antes de restaurar una partida."
-french = "Terminez ou réinitialisez la course actuelle avant de restaurer une sauvegarde."
-brazilian_portuguese = "Termine ou reinicie a corrida atual antes de restaurar um jogo salvo."
-portuguese = "Termina ou reinicia a corrida atual antes de restaurar um jogo guardado."
-turkish = "Bir kaydı geri yüklemeden önce mevcut yarışı bitirin veya sıfırlayın."
-polish = "Zakończ lub zresetuj bieżący wyścig przed przywróceniem zapisu."
-
-[[message]]
-key = "Restoring save %d: main '%s', dummy '%s'."
-[message.translations]
-simplified_chinese = "正在恢复存档 %d：本体“%s”，分身“%s”。"
-traditional_chinese = "正在恢復存檔 %d：本體「%s」，分身「%s」。"
-japanese = "セーブ %d を復元中：メイン「%s」、ダミー「%s」。"
-korean = "저장 데이터 %d 복원 중: 본체 '%s', 더미 '%s'."
-russian = "Восстановление сохранения %d: основной '%s', дамми '%s'."
-german = "Spielstand %d wird wiederhergestellt: Hauptspieler '%s', Dummy '%s'."
-spanish = "Restaurando partida %d: principal '%s', dummy '%s'."
-french = "Restauration de la sauvegarde %d : principal '%s', dummy '%s'."
-brazilian_portuguese = "Restaurando jogo salvo %d: principal '%s', dummy '%s'."
-portuguese = "A restaurar o jogo guardado %d: principal '%s', dummy '%s'."
-turkish = "%d numaralı kayıt geri yükleniyor: ana oyuncu '%s', kukla '%s'."
-polish = "Przywracanie zapisu %d: główny '%s', dummy '%s'."
-
-[[message]]
-key = "Save restore stopped: connection, names or team were not ready. The local record was kept."
-[message.translations]
-simplified_chinese = "连接、名字或队伍尚未就绪，存档恢复已停止。本地记录已保留。"
-traditional_chinese = "連線、名字或隊伍尚未就緒，存檔恢復已停止。本機紀錄已保留。"
-japanese = "接続、名前、またはチームの準備が整わず、復元を停止しました。ローカルの記録は保持されています。"
-korean = "연결, 이름 또는 팀이 준비되지 않아 복원을 중단했습니다. 로컬 기록은 유지됩니다."
-russian = "Восстановление остановлено: соединение, имена или команда не готовы. Локальная запись сохранена."
-german = "Wiederherstellung beendet: Verbindung, Namen oder Team waren nicht bereit. Lokaler Eintrag behalten."
-spanish = "Restauración detenida: la conexión, los nombres o el equipo no estaban listos. Se conservó el registro local."
-french = "Restauration arrêtée : la connexion, les noms ou l’équipe n’étaient pas prêts. Entrée locale conservée."
-brazilian_portuguese = "Restauração interrompida: conexão, nomes ou equipe não estavam prontos. O registro local foi mantido."
-portuguese = "Restauração interrompida: ligação, nomes ou equipa não estavam prontos. O registo local foi mantido."
-turkish = "Bağlantı, adlar veya takım hazır olmadığından geri yükleme durduruldu. Yerel kayıt korundu."
-polish = "Przywracanie zatrzymane: połączenie, nazwy lub drużyna nie były gotowe. Lokalny wpis zachowano."
-
-[[message]]
-key = "Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses."
-[message.translations]
-simplified_chinese = "是否恢复双人存档？/qm Yes 读取最新一条，/qm Yes 序号 选择其他存档，/qm No 忽略本次提示。"
-traditional_chinese = "是否恢復雙人存檔？/qm Yes 讀取最新一筆，/qm Yes 序號 選擇其他存檔，/qm No 忽略本次提示。"
-japanese = "2人用セーブを復元しますか？ /qm Yes で最新、/qm Yes 番号 で別のセーブを選択、/qm No で閉じます。"
-korean = "2인 저장 데이터를 복원할까요? /qm Yes는 최신 데이터, /qm Yes 번호는 다른 데이터 선택, /qm No는 알림 닫기입니다."
-russian = "Восстановить сохранение для двоих? /qm Yes — последнее, /qm Yes номер — другое, /qm No — отмена."
-german = "Spielstand für zwei Spieler laden? /qm Yes lädt den neuesten, /qm Yes Nummer wählt einen anderen, /qm No lehnt ab."
-spanish = "¿Restaurar una partida de dos jugadores? /qm Yes carga la más reciente; /qm Yes número elige otra; /qm No descarta."
-french = "Restaurer une sauvegarde à deux ? /qm Yes charge la plus récente ; /qm Yes numéro en choisit une autre ; /qm No ignore."
-brazilian_portuguese = "Restaurar um jogo salvo de dois jogadores? /qm Yes carrega o mais recente; /qm Yes número escolhe outro; /qm No dispensa."
-portuguese = "Restaurar um jogo guardado de dois jogadores? /qm Yes carrega o mais recente; /qm Yes número escolhe outro; /qm No ignora."
-turkish = "İki kişilik kayıt geri yüklensin mi? /qm Yes en yeniyi yükler; /qm Yes numara başka kayıt seçer; /qm No kapatır."
-polish = "Przywrócić zapis dla dwóch graczy? /qm Yes wczyta najnowszy; /qm Yes numer wybierze inny; /qm No odrzuci."
-
-[[message]]
-key = "%d. %s | main: %s | dummy: %s"
-[message.translations]
-simplified_chinese = "%d. %s | 本体：%s | 分身：%s"
-traditional_chinese = "%d. %s | 本體：%s | 分身：%s"
-japanese = "%d. %s | メイン：%s | ダミー：%s"
-korean = "%d. %s | 본체: %s | 더미: %s"
-russian = "%d. %s | основной: %s | дамми: %s"
-german = "%d. %s | Hauptspieler: %s | Dummy: %s"
-spanish = "%d. %s | principal: %s | dummy: %s"
-french = "%d. %s | principal : %s | dummy : %s"
-brazilian_portuguese = "%d. %s | principal: %s | dummy: %s"
-portuguese = "%d. %s | principal: %s | dummy: %s"
-turkish = "%d. %s | ana oyuncu: %s | kukla: %s"
-polish = "%d. %s | główny: %s | dummy: %s"
-
-[[message]]
-key = "Legacy realtime WebSocket URL (migrated to qm_websocket_url)"
-[message.translations]
-simplified_chinese = "旧实时 WebSocket 地址（已迁移至 qm_websocket_url）"
-traditional_chinese = "舊即時 WebSocket 位址（已遷移至 qm_websocket_url）"
-japanese = "旧リアルタイム WebSocket URL（qm_websocket_url に移行済み）"
-korean = "기존 실시간 WebSocket URL (qm_websocket_url로 이전됨)"
-russian = "Старый адрес WebSocket для канала реального времени (перенесён в qm_websocket_url)"
-german = "Alte Echtzeit WebSocket URL (nach qm_websocket_url migriert)"
-spanish = "URL WebSocket anterior en tiempo real (migrada a qm_websocket_url)"
-french = "Ancienne URL WebSocket temps réel (migrée vers qm_websocket_url)"
-brazilian_portuguese = "URL WebSocket em tempo real antiga (migrada para qm_websocket_url)"
-portuguese = "URL WebSocket em tempo real antiga (migrada para qm_websocket_url)"
-turkish = "Eski gerçek zamanlı WebSocket URL'si (qm_websocket_url adresine taşındı)"
-polish = "Stary adres WebSocket czasu rzeczywistego (przeniesiony do qm_websocket_url)"
-
-[[message]]
-key = "(Follow Chinese font)"
-[message.translations]
-simplified_chinese = "（跟随中文字体）"
-traditional_chinese = "（跟隨中文字型）"
-japanese = "（中国語フォントに従う）"
-korean = "(중국어 글꼴 따르기)"
-russian = "(Как у китайского шрифта)"
-german = "(Chinesischer Schrift folgen)"
-spanish = "(Seguir fuente china)"
-french = "(Suivre la police chinoise)"
-brazilian_portuguese = "(Seguir fonte chinesa)"
-portuguese = "(Seguir a fonte chinesa)"
-turkish = "(Çince yazı tipini izle)"
-polish = "(Zgodnie z czcionką chińską)"
-
-[[message]]
-key = "(Follow English font)"
-[message.translations]
-simplified_chinese = "（跟随英文字体）"
-traditional_chinese = "（跟隨英文字型）"
-japanese = "（英語フォントに従う）"
-korean = "(영어 글꼴 따르기)"
-russian = "(Как у английского шрифта)"
-german = "(Englischer Schrift folgen)"
-spanish = "(Seguir fuente inglesa)"
-french = "(Suivre la police anglaise)"
-brazilian_portuguese = "(Seguir fonte inglesa)"
-portuguese = "(Seguir a fonte inglesa)"
-turkish = "(İngilizce yazı tipini izle)"
-polish = "(Zgodnie z czcionką angielską)"
-
-[[message]]
-key = "Arabic"
-[message.translations]
-simplified_chinese = "阿拉伯文"
-traditional_chinese = "阿拉伯文"
-japanese = "アラビア語"
-korean = "아랍어"
-russian = "Арабский"
-german = "Arabisch"
-spanish = "Árabe"
-french = "Arabe"
-brazilian_portuguese = "Árabe"
-portuguese = "Árabe"
-turkish = "Arapça"
-polish = "Arabski"
-
-[[message]]
-key = "Browse font store…"
-[message.translations]
-simplified_chinese = "浏览字体商店…"
-traditional_chinese = "瀏覽字型商店…"
-japanese = "フォントストアを見る…"
-korean = "글꼴 상점 둘러보기…"
-russian = "Открыть магазин шрифтов…"
-german = "Schriftspeicher durchsuchen…"
-spanish = "Explorar la tienda de fuentes…"
-french = "Parcourir la boutique de polices…"
-brazilian_portuguese = "Explorar a loja de fontes…"
-portuguese = "Explorar a loja de tipos de letra…"
-turkish = "Yazı tipi mağazasına göz at…"
-polish = "Przeglądaj sklep z czcionkami…"
-
-[[message]]
-key = "Chinese (Simplified)"
-[message.translations]
-simplified_chinese = "中文（简体）"
-traditional_chinese = "中文（簡體）"
-japanese = "中国語（簡体字）"
-korean = "중국어(간체)"
-russian = "Китайский (упрощённый)"
-german = "Chinesisch (vereinfacht)"
-spanish = "Chino (simplificado)"
-french = "Chinois (simplifié)"
-brazilian_portuguese = "Chinês (simplificado)"
-portuguese = "Chinês (simplificado)"
-turkish = "Çince (Basitleştirilmiş)"
-polish = "Chiński (uproszczony)"
-
-[[message]]
-key = "Chinese (Traditional)"
-[message.translations]
-simplified_chinese = "中文（繁體）"
-traditional_chinese = "中文（繁體）"
-japanese = "中国語（繁体字）"
-korean = "중국어(번체)"
-russian = "Китайский (традиционный)"
-german = "Chinesisch (traditionell)"
-spanish = "Chino (tradicional)"
-french = "Chinois (traditionnel)"
-brazilian_portuguese = "Chinês (tradicional)"
-portuguese = "Chinês (tradicional)"
-turkish = "Çince (Geleneksel)"
-polish = "Chiński (tradycyjny)"
-
-[[message]]
-key = "Chinese font:"
-[message.translations]
-simplified_chinese = "中文字体："
-traditional_chinese = "中文字型："
-japanese = "中国語フォント："
-korean = "중국어 글꼴:"
-russian = "Китайский шрифт:"
-german = "Chinesische Schrift:"
-spanish = "Fuente china:"
-french = "Police chinoise :"
-brazilian_portuguese = "Fonte chinesa:"
-portuguese = "Tipo de letra chinês:"
-turkish = "Çince yazı tipi:"
-polish = "Czcionka chińska:"
-
-[[message]]
-key = "CJK font weight:"
-[message.translations]
-simplified_chinese = "中日韩字体字重："
-traditional_chinese = "中日韓字型字重："
-japanese = "CJK フォントの太さ："
-korean = "CJK 글꼴 굵기:"
-russian = "Насыщенность шрифта CJK:"
-german = "CJK-Schriftstärke:"
-spanish = "Grosor de fuente CJK:"
-french = "Graisse de police CJK :"
-brazilian_portuguese = "Espessura da fonte CJK:"
-portuguese = "Espessura do tipo de letra CJK:"
-turkish = "CJK yazı tipi kalınlığı:"
-polish = "Grubość czcionki CJK:"
-
-[[message]]
-key = "Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font"
-[message.translations]
-simplified_chinese = "中文 /CJK 文本的自定义字体（字族，或字族 + 样式）；留空则跟随拉丁自定义字体"
-traditional_chinese = "中文/CJK 文字的自訂字型（字族，或字族 + 樣式）；留空則跟隨拉丁自訂字型"
-japanese = "中国語/CJK テキスト用のカスタムフォント（ファミリー、またはファミリー + スタイル）。空欄ならラテン用カスタムフォントに従います"
-korean = "중국어/CJK 텍스트용 사용자 정의 글꼴(패밀리 또는 패밀리 + 스타일), 비우면 라틴 사용자 정의 글꼴을 따릅니다"
-russian = "Свой шрифт для китайского/CJK текста (семейство или семейство + стиль); пусто — как у латинского своего шрифта"
-german = "Eigene Schrift für chinesischen/CJK-Text (Familie oder Familie + Stil); leer = der eigenen lateinischen Schrift folgen"
-spanish = "Fuente personalizada para texto chino/CJK (familia, o familia + estilo); vacío = seguir la fuente personalizada latina"
-french = "Police perso pour le texte chinois/CJK (famille, ou famille + style) ; vide = suivre la police perso latine"
-brazilian_portuguese = "Fonte personalizada para texto chinês/CJK (família, ou família + estilo); vazio = seguir a fonte personalizada latina"
-portuguese = "Tipo de letra personalizado para texto chinês/CJK (família, ou família + estilo); vazio = seguir o tipo de letra personalizado latino"
-turkish = "Çince/CJK metin için özel yazı tipi (aile veya aile + stil); boş = Latin özel yazı tipini izle"
-polish = "Niestandardowa czcionka dla tekstu chińskiego/CJK (rodzina lub rodzina + styl); puste = zgodnie z łacińską czcionką niestandardową"
-
-[[message]]
-key = "Custom font for icon/symbol glyphs; empty = follow CJK or Latin font"
-[message.translations]
-simplified_chinese = "图标/符号字形的自定义字体；留空则跟随中日韩或拉丁字体"
-traditional_chinese = "圖示/符號字形的自訂字型；留空則跟隨中日韓或拉丁字型"
-japanese = "アイコン/記号グリフ用のカスタムフォント。空欄なら CJK またはラテンフォントに従います"
-korean = "아이콘/기호 글리프용 사용자 정의 글꼴, 비우면 CJK 또는 라틴 글꼴을 따릅니다"
-russian = "Свой шрифт для значков и символов; пусто — как у шрифта CJK или латинского"
-german = "Eigene Schrift für Symbol-/Icon-Glyphen; leer = der CJK- oder lateinischen Schrift folgen"
-spanish = "Fuente personalizada para iconos/símbolos; vacío = seguir la fuente CJK o latina"
-french = "Police perso pour les icônes/symboles ; vide = suivre la police CJK ou latine"
-brazilian_portuguese = "Fonte personalizada para ícones/símbolos; vazio = seguir a fonte CJK ou latina"
-portuguese = "Tipo de letra personalizado para ícones/símbolos; vazio = seguir o tipo de letra CJK ou latino"
-turkish = "Simge/sembol glifleri için özel yazı tipi; boş = CJK veya Latin yazı tipini izle"
-polish = "Niestandardowa czcionka dla ikon/symboli; puste = zgodnie z czcionką CJK lub łacińską"
-
-[[message]]
-key = "Custom font for Latin text (family, or family + style)"
-[message.translations]
-simplified_chinese = "拉丁文本的自定义字体（字族，或字族 + 样式）"
-traditional_chinese = "拉丁文字的自訂字型（字族，或字族 + 樣式）"
-japanese = "ラテン文字用のカスタムフォント（ファミリー、またはファミリー + スタイル）"
-korean = "라틴 텍스트용 사용자 정의 글꼴(패밀리 또는 패밀리 + 스타일)"
-russian = "Свой шрифт для латинского текста (семейство или семейство + стиль)"
-german = "Eigene Schrift für lateinischen Text (Familie oder Familie + Stil)"
-spanish = "Fuente personalizada para texto latino (familia, o familia + estilo)"
-french = "Police perso pour le texte latin (famille, ou famille + style)"
-brazilian_portuguese = "Fonte personalizada para texto latino (família, ou família + estilo)"
-portuguese = "Tipo de letra personalizado para texto latino (família, ou família + estilo)"
-turkish = "Latin metin için özel yazı tipi (aile veya aile + stil)"
-polish = "Niestandardowa czcionka dla tekstu łacińskiego (rodzina lub rodzina + styl)"
-
-[[message]]
-key = "Cyrillic"
-[message.translations]
-simplified_chinese = "西里尔文"
-traditional_chinese = "西里爾文"
-japanese = "キリル文字"
-korean = "키릴 문자"
-russian = "Кириллица"
-german = "Kyrillisch"
-spanish = "Cirílico"
-french = "Cyrillique"
-brazilian_portuguese = "Cirílico"
-portuguese = "Cirílico"
-turkish = "Kiril"
-polish = "Cyrylica"
-
-[[message]]
-key = "Display"
-[message.translations]
-simplified_chinese = "展示体"
-traditional_chinese = "展示體"
-japanese = "ディスプレイ"
-korean = "디스플레이"
-russian = "Акцидентный"
-german = "Display-Schrift"
-spanish = "Exhibición"
-french = "Fantaisie"
-brazilian_portuguese = "Exibição"
-portuguese = "Exibição"
-turkish = "Gösteri"
-polish = "Ozdobna"
-
-[[message]]
-key = "Download"
-[message.translations]
-simplified_chinese = "下载"
-traditional_chinese = "下載"
-japanese = "ダウンロード"
-korean = "다운로드"
-russian = "Скачать"
-german = "Herunterladen"
-spanish = "Descargar"
-french = "Télécharger"
-brazilian_portuguese = "Baixar"
-portuguese = "Transferir"
-turkish = "İndir"
-polish = "Pobierz"
-
-[[message]]
-key = "Download fonts from the internet instead of shipping them with the client"
-[message.translations]
-simplified_chinese = "从网络下载字体，而不是随客户端一起分发"
-traditional_chinese = "從網路下載字型，而不是隨客戶端一起發布"
-japanese = "フォントをクライアントに同梱せず、インターネットからダウンロードします"
-korean = "글꼴을 클라이언트에 포함하지 않고 인터넷에서 다운로드합니다"
-russian = "Скачивать шрифты из интернета, а не поставлять их вместе с клиентом"
-german = "Schriften aus dem Internet laden, statt sie mit dem Client auszuliefern"
-spanish = "Descargar las fuentes de internet en lugar de incluirlas con el cliente"
-french = "Télécharger les polices depuis Internet au lieu de les fournir avec le client"
-brazilian_portuguese = "Baixar as fontes da internet em vez de incluí-las com o cliente"
-portuguese = "Transferir os tipos de letra da internet em vez de os incluir com o cliente"
-turkish = "Yazı tiplerini istemciyle birlikte göndermek yerine internetten indir"
-polish = "Pobieraj czcionki z internetu zamiast dołączać je do klienta"
-
-[[message]]
-key = "English font:"
-[message.translations]
-simplified_chinese = "英文字体："
-traditional_chinese = "英文字型："
-japanese = "英語フォント："
-korean = "영어 글꼴:"
-russian = "Английский шрифт:"
-german = "Englische Schrift:"
-spanish = "Fuente inglesa:"
-french = "Police anglaise :"
-brazilian_portuguese = "Fonte inglesa:"
-portuguese = "Tipo de letra inglês:"
-turkish = "İngilizce yazı tipi:"
-polish = "Czcionka angielska:"
-
-[[message]]
-key = "Font store:"
-[message.translations]
-simplified_chinese = "字体商店："
-traditional_chinese = "字型商店："
-japanese = "フォントストア："
-korean = "글꼴 상점:"
-russian = "Магазин шрифтов:"
-german = "Schriftspeicher:"
-spanish = "Tienda de fuentes:"
-french = "Boutique de polices :"
-brazilian_portuguese = "Loja de fontes:"
-portuguese = "Loja de tipos de letra:"
-turkish = "Yazı tipi mağazası:"
-polish = "Sklep z czcionkami:"
-
-[[message]]
-key = "Font weight:"
-[message.translations]
-simplified_chinese = "字体字重："
-traditional_chinese = "字型字重："
-japanese = "フォントの太さ："
-korean = "글꼴 굵기:"
-russian = "Насыщенность шрифта:"
-german = "Schriftstärke:"
-spanish = "Grosor de la fuente:"
-french = "Graisse de la police :"
-brazilian_portuguese = "Espessura da fonte:"
-portuguese = "Espessura do tipo de letra:"
-turkish = "Yazı tipi kalınlığı:"
-polish = "Grubość czcionki:"
-
-[[message]]
-key = "Greek"
-[message.translations]
-simplified_chinese = "希腊文"
-traditional_chinese = "希臘文"
-japanese = "ギリシャ文字"
-korean = "그리스 문자"
-russian = "Греческий"
-german = "Griechisch"
-spanish = "Griego"
-french = "Grec"
-brazilian_portuguese = "Grego"
-portuguese = "Grego"
-turkish = "Yunanca"
-polish = "Grecki"
-
-[[message]]
-key = "Handwriting"
-[message.translations]
-simplified_chinese = "手写体"
-traditional_chinese = "手寫體"
-japanese = "手書き"
-korean = "손글씨"
-russian = "Рукописный"
-german = "Handschrift"
-spanish = "Manuscrita"
-french = "Manuscrite"
-brazilian_portuguese = "Manuscrita"
-portuguese = "Manuscrito"
-turkish = "El yazısı"
-polish = "Odręczna"
-
-[[message]]
-key = "Icon symbols:"
-[message.translations]
-simplified_chinese = "图标符号："
-traditional_chinese = "圖示符號："
-japanese = "アイコン記号："
-korean = "아이콘 기호:"
-russian = "Значки и символы:"
-german = "Symbolzeichen:"
-spanish = "Símbolos de iconos:"
-french = "Symboles d'icônes :"
-brazilian_portuguese = "Símbolos de ícones:"
-portuguese = "Símbolos de ícones:"
-turkish = "Simge sembolleri:"
-polish = "Symbole ikon:"
-
-[[message]]
-key = "Installed"
-[message.translations]
-simplified_chinese = "已安装"
-traditional_chinese = "已安裝"
-japanese = "インストール済み"
-korean = "설치됨"
-russian = "Установлен"
-german = "Installiert"
-spanish = "Instalada"
-french = "Installée"
-brazilian_portuguese = "Instalada"
-portuguese = "Instalado"
-turkish = "Yüklü"
-polish = "Zainstalowana"
-
-[[message]]
-key = "Japanese"
-[message.translations]
-simplified_chinese = "日文"
-traditional_chinese = "日文"
-japanese = "日本語"
-korean = "일본어"
-russian = "Японский"
-german = "Japanisch"
-spanish = "Japonés"
-french = "Japonais"
-brazilian_portuguese = "Japonês"
-portuguese = "Japonês"
-turkish = "Japonca"
-polish = "Japoński"
-
-[[message]]
-key = "Korean"
-[message.translations]
-simplified_chinese = "韩文"
-traditional_chinese = "韓文"
-japanese = "韓国語"
-korean = "한국어"
-russian = "Корейский"
-german = "Koreanisch"
-spanish = "Coreano"
-french = "Coréen"
-brazilian_portuguese = "Coreano"
-portuguese = "Coreano"
-turkish = "Korece"
-polish = "Koreański"
-
-[[message]]
-key = "Monospace"
-[message.translations]
-simplified_chinese = "等宽体"
-traditional_chinese = "等寬體"
-japanese = "等幅"
-korean = "고정폭"
-russian = "Моноширинный"
-german = "Monospace-Schrift"
-spanish = "Monoespaciada"
-french = "Chasse fixe"
-brazilian_portuguese = "Monoespaçada"
-portuguese = "Monoespaçado"
-turkish = "Eşaralıklı"
-polish = "Stałopozycyjna"
-
-[[message]]
-key = "Not installed"
-[message.translations]
-simplified_chinese = "未安装"
-traditional_chinese = "未安裝"
-japanese = "未インストール"
-korean = "설치되지 않음"
-russian = "Не установлен"
-german = "Nicht installiert"
-spanish = "No instalada"
-french = "Non installée"
-brazilian_portuguese = "Não instalada"
-portuguese = "Não instalado"
-turkish = "Yüklü değil"
-polish = "Niezainstalowana"
-
-[[message]]
-key = "Preview loading…"
-[message.translations]
-simplified_chinese = "预览加载中…"
-traditional_chinese = "預覽載入中…"
-japanese = "プレビューを読み込み中…"
-korean = "미리보기 불러오는 중…"
-russian = "Загрузка предпросмотра…"
-german = "Vorschau wird geladen…"
-spanish = "Cargando vista previa…"
-french = "Chargement de l'aperçu…"
-brazilian_portuguese = "Carregando visualização…"
-portuguese = "A carregar a pré-visualização…"
-turkish = "Önizleme yükleniyor…"
-polish = "Wczytywanie podglądu…"
-
-[[message]]
-key = "Preview unavailable"
-[message.translations]
-simplified_chinese = "预览不可用"
-traditional_chinese = "預覽無法使用"
-japanese = "プレビューを利用できません"
-korean = "미리보기를 사용할 수 없음"
-russian = "Предпросмотр недоступен"
-german = "Vorschau nicht verfügbar"
-spanish = "Vista previa no disponible"
-french = "Aperçu indisponible"
-brazilian_portuguese = "Visualização indisponível"
-portuguese = "Pré-visualização indisponível"
-turkish = "Önizleme kullanılamıyor"
-polish = "Podgląd niedostępny"
-
-[[message]]
-key = "Retry"
-[message.translations]
-simplified_chinese = "重试"
-traditional_chinese = "重試"
-japanese = "再試行"
-korean = "다시 시도"
-russian = "Повторить"
-german = "Wiederholen"
-spanish = "Reintentar"
-french = "Réessayer"
-brazilian_portuguese = "Tentar de novo"
-portuguese = "Tentar novamente"
-turkish = "Yeniden dene"
-polish = "Ponów"
-
-[[message]]
-key = "Sans-serif"
-[message.translations]
-simplified_chinese = "无衬线体"
-traditional_chinese = "無襯線體"
-japanese = "サンセリフ"
-korean = "산세리프"
-russian = "Без засечек"
-german = "Serifenlos"
-spanish = "Sin serifa"
-french = "Sans serif"
-brazilian_portuguese = "Sem serifa"
-portuguese = "Sem serifa"
-turkish = "Serifsiz"
-polish = "Bezszeryfowa"
-
-[[message]]
-key = "Search online fonts…"
-[message.translations]
-simplified_chinese = "搜索在线字体…"
-traditional_chinese = "搜尋線上字型…"
-japanese = "オンラインフォントを検索…"
-korean = "온라인 글꼴 검색…"
-russian = "Поиск шрифтов онлайн…"
-german = "Onlineschriften suchen…"
-spanish = "Buscar fuentes en línea…"
-french = "Rechercher des polices en ligne…"
-brazilian_portuguese = "Pesquisar fontes online…"
-portuguese = "Pesquisar tipos de letra online…"
-turkish = "Çevrimiçi yazı tiplerini ara…"
-polish = "Szukaj czcionek online…"
-
-[[message]]
-key = "Serif"
-[message.translations]
-simplified_chinese = "衬线体"
-traditional_chinese = "襯線體"
-japanese = "セリフ"
-korean = "세리프"
-russian = "С засечками"
-german = "Serifenschrift"
-spanish = "Con serifa"
-french = "À empattements"
-brazilian_portuguese = "Serifada"
-portuguese = "Com serifa"
-turkish = "Serifli"
-polish = "Szeryfowa"
-
-[[message]]
-key = "Total fonts:"
-[message.translations]
-simplified_chinese = "字体总数："
-traditional_chinese = "字型總數："
-japanese = "フォント総数："
-korean = "전체 글꼴:"
-russian = "Всего шрифтов:"
-german = "Schriften gesamt:"
-spanish = "Total de fuentes:"
-french = "Nombre total de polices :"
-brazilian_portuguese = "Total de fontes:"
-portuguese = "Total de tipos de letra:"
-turkish = "Toplam yazı tipi:"
-polish = "Łączna liczba czcionek:"
-
-[[message]]
-key = "Variable custom font weight for Chinese/CJK text"
-[message.translations]
-simplified_chinese = "中文 /CJK 文本的可变自定义字体字重"
-traditional_chinese = "中文/CJK 文字的可變自訂字型字重"
-japanese = "中国語/CJK テキスト用の可変カスタムフォントの太さ"
-korean = "중국어/CJK 텍스트용 가변 사용자 정의 글꼴 굵기"
-russian = "Насыщенность переменного своего шрифта для китайского/CJK текста"
-german = "Variable eigene Schriftstärke für chinesischen/CJK-Text"
-spanish = "Grosor variable de la fuente personalizada para texto chino/CJK"
-french = "Graisse variable de la police perso pour le texte chinois/CJK"
-brazilian_portuguese = "Espessura variável da fonte personalizada para texto chinês/CJK"
-portuguese = "Espessura variável do tipo de letra personalizado para texto chinês/CJK"
-turkish = "Çince/CJK metin için değişken özel yazı tipi kalınlığı"
-polish = "Zmienna grubość niestandardowej czcionki dla tekstu chińskiego/CJK"
-
-[[message]]
-key = "Variable custom font weight for Latin text"
-[message.translations]
-simplified_chinese = "拉丁文本的可变自定义字体字重"
-traditional_chinese = "拉丁文字的可變自訂字型字重"
-japanese = "ラテン文字用の可変カスタムフォントの太さ"
-korean = "라틴 텍스트용 가변 사용자 정의 글꼴 굵기"
-russian = "Насыщенность переменного своего шрифта для латинского текста"
-german = "Variable eigene Schriftstärke für lateinischen Text"
-spanish = "Grosor variable de la fuente personalizada para texto latino"
-french = "Graisse variable de la police perso pour le texte latin"
-brazilian_portuguese = "Espessura variável da fonte personalizada para texto latino"
-portuguese = "Espessura variável do tipo de letra personalizado para texto latino"
-turkish = "Latin metin için değişken özel yazı tipi kalınlığı"
-polish = "Zmienna grubość niestandardowej czcionki dla tekstu łacińskiego"
-
-[[message]]
-key = "Font store"
-[message.translations]
-simplified_chinese = "字体商店"
-traditional_chinese = "字型商店"
-japanese = "フォントストア"
-korean = "글꼴 상점"
-russian = "Магазин шрифтов"
-german = "Schriftspeicher"
-spanish = "Tienda de fuentes"
-french = "Boutique de polices"
-brazilian_portuguese = "Loja de fontes"
-portuguese = "Loja de tipos de letra"
-turkish = "Yazı tipi mağazası"
-polish = "Sklep z czcionkami"
-
-[[message]]
-key = "The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved."
-[message.translations]
-simplified_chinese = "旧目录 qmclient/fonts 已停止扫描。请将自定义字体手动移动到配置目录下的 fonts/fonts_store。普通版使用用户配置目录，便携版使用 profile。data/fonts 中随客户端提供的字体无需移动。"
-traditional_chinese = "舊目錄 qmclient/fonts 已停止掃描。請將自訂字型手動移至設定目錄下的 fonts/fonts_store。一般版使用使用者設定目錄，可攜版使用 profile。data/fonts 中隨用戶端提供的字型無須移動。"
-japanese = "旧ディレクトリ qmclient/fonts は読み込まれなくなりました。カスタムフォントを設定ディレクトリ内の fonts/fonts_store に手動で移動してください。通常版はユーザー設定ディレクトリ、ポータブル版は profile を使用します。data/fonts に同梱されているフォントを移動する必要はありません。"
-korean = "이전 qmclient/fonts 폴더는 더 이상 검색하지 않습니다. 사용자 지정 글꼴을 설정 폴더의 fonts/fonts_store로 직접 옮겨 주세요. 일반 버전은 사용자 설정 폴더를, 포터블 버전은 profile을 사용합니다. data/fonts에 포함된 기본 글꼴은 옮길 필요가 없습니다."
-russian = "Старая папка qmclient/fonts больше не сканируется. Вручную переместите свои шрифты в fonts/fonts_store внутри папки настроек. Обычная версия использует пользовательскую папку настроек, переносная — profile. Шрифты, поставляемые в data/fonts, перемещать не нужно."
-german = "Der alte Ordner qmclient/fonts wird nicht mehr durchsucht. Verschiebe eigene Schriftarten manuell nach fonts/fonts_store im Konfigurationsordner. Die normale Version verwendet den Benutzer-Konfigurationsordner, die portable Version profile. Die mitgelieferten Schriftarten in data/fonts müssen nicht verschoben werden."
-spanish = "La carpeta antigua qmclient/fonts ya no se examina. Mueve manualmente tus fuentes personalizadas a fonts/fonts_store dentro de la carpeta de configuración. La versión normal usa la carpeta de configuración del usuario; la portátil usa profile. No es necesario mover las fuentes incluidas en data/fonts."
-french = "L’ancien dossier qmclient/fonts n’est plus analysé. Déplacez manuellement vos polices personnalisées vers fonts/fonts_store dans le dossier de configuration. La version normale utilise le dossier de configuration utilisateur ; la version portable utilise profile. Les polices fournies dans data/fonts n’ont pas besoin d’être déplacées."
-brazilian_portuguese = "A pasta antiga qmclient/fonts não é mais examinada. Mova manualmente suas fontes personalizadas para fonts/fonts_store dentro da pasta de configuração. A versão normal usa a pasta de configuração do usuário; a versão portátil usa profile. As fontes incluídas em data/fonts não precisam ser movidas."
-portuguese = "A pasta antiga qmclient/fonts já não é examinada. Mova manualmente as suas fontes personalizadas para fonts/fonts_store dentro da pasta de configuração. A versão normal usa a pasta de configuração do utilizador; a versão portátil usa profile. As fontes incluídas em data/fonts não precisam de ser movidas."
-turkish = "Eski qmclient/fonts klasörü artık taranmıyor. Özel yazı tiplerinizi yapılandırma klasöründeki fonts/fonts_store konumuna elle taşıyın. Normal sürüm kullanıcı yapılandırma klasörünü, taşınabilir sürüm profile klasörünü kullanır. data/fonts içindeki birlikte gelen yazı tiplerinin taşınması gerekmez."
-polish = "Stary folder qmclient/fonts nie jest już skanowany. Przenieś własne czcionki ręcznie do fonts/fonts_store w folderze konfiguracji. Zwykła wersja używa folderu konfiguracji użytkownika, a przenośna — profile. Nie trzeba przenosić czcionek dostarczanych w data/fonts."
-
-
-[[message]]
-key = "Show position and angle"
-[message.translations]
-simplified_chinese = "显示位置和角度"
-traditional_chinese = "顯示位置和角度"
-japanese = "位置と角度を表示"
-korean = "위치와 각도 표시"
-russian = "Показывать позицию и угол"
-german = "Position und Winkel anzeigen"
-spanish = "Mostrar posición y ángulo"
-french = "Afficher la position et l'angle"
-brazilian_portuguese = "Mostrar posição e ângulo"
-portuguese = "Mostrar posição e ângulo"
-turkish = "Konum ve açıyı göster"
-polish = "Pokaż pozycję i kąt"
-
-
-[[message]]
-key = "Mini debug"
-[message.translations]
-simplified_chinese = "小型调试"
-traditional_chinese = "小型調試"
-japanese = "ミニデバッグ"
-korean = "미니 디버그"
-russian = "мини-отладка"
-german = "Mini-Debug"
-spanish = "mini depuración"
-french = "mini débogage"
-brazilian_portuguese = "mini debug"
-portuguese = "mini debug"
-turkish = "küçük hata ayıklama"
-polish = "mini debug"
-
-
-[[message]]
-key = "Reduce visual latency"
-[message.translations]
-simplified_chinese = "降低视觉延迟"
-traditional_chinese = "降低視覺延遲"
-japanese = "視覚的な遅延を低減"
-korean = "시각적 지연 감소"
-russian = "уменьшает визуальную задержку"
-german = "reduziert visuelle Latenz"
-spanish = "reduce la latencia visual"
-french = "réduit la latence visuelle"
-brazilian_portuguese = "reduz latência visual"
-portuguese = "reduz latência visual"
-turkish = "görsel gecikmeyi azaltır"
-polish = "zmniejsza opóźnienie wizualne"
-
-
-[[message]]
-key = "Negative stability buffer"
-[message.translations]
-simplified_chinese = "负稳定性缓冲"
-traditional_chinese = "負穩定性緩衝"
-japanese = "負の安定性バッファ"
-korean = "음수 안정성 버퍼"
-russian = "Буфер отрицательной стабильности"
-german = "Negativer Stabilitätspuffer"
-spanish = "Búfer de estabilidad negativa"
-french = "Tampon de stabilité négative"
-brazilian_portuguese = "Buffer de estabilidade negativa"
-portuguese = "Buffer de estabilidade negativa"
-turkish = "Negatif stabilite tamponu"
-polish = "Bufor ujemnej stabilności"
-
-
-[[message]]
-key = "For Gores"
-[message.translations]
-simplified_chinese = "用于 Gores"
-traditional_chinese = "用於 Gores"
-japanese = "Gores 用"
-korean = "Gores용"
-russian = "для Gores"
-german = "für Gores"
-spanish = "para Gores"
-french = "pour les Gores"
-brazilian_portuguese = "para Gores"
-portuguese = "para Gores"
-turkish = "Gores için"
-polish = "dla Gores"
-
-[[message]]
-key = "Save loaded and marked as used."
-[message.translations]
-simplified_chinese = "存档已载入并标记为已使用。"
-traditional_chinese = "存檔已載入並標記為已使用。"
-japanese = "セーブを読み込み、使用済みとしてマークしました。"
-korean = "세이브를 불러오고 사용됨으로 표시했습니다."
-russian = "Сохранение загружено и помечено как использованное."
-german = "Spielstand geladen und als benutzt markiert."
-spanish = "Guardado cargado y marcado como usado."
-french = "sauvegarde chargée et marquée comme utilisée."
-brazilian_portuguese = "Save carregado e marcado como usado."
-portuguese = "Save carregado e marcado como usado."
-turkish = "Kayıt yüklendi ve kullanıldı olarak işaretlendi."
-polish = "Zapis wczytano i oznaczono jako użyty."
-
-[[message]]
-key = "No players match"
-[message.translations]
-simplified_chinese = "没有匹配的玩家"
-traditional_chinese = "沒有符合的玩家"
-japanese = "一致するプレイヤーがいません"
-korean = "일치하는 플레이어가 없습니다"
-russian = "Нет подходящих игроков"
-german = "Keine passenden Spieler"
-spanish = "Ningún jugador coincide"
-french = "Aucun joueur correspondant"
-brazilian_portuguese = "Nenhum jogador correspondente"
-portuguese = "Nenhum jogador correspondente"
-turkish = "Eşleşen oyuncu yok"
-polish = "Brak pasujących graczy"
-
-[[message]]
-key = "New"
-[message.translations]
-simplified_chinese = "新建"
-traditional_chinese = "新建"
-japanese = "新規"
-korean = "새로 만들기"
-russian = "Создать"
-german = "Neu"
-spanish = "Nuevo"
-french = "Nouveau"
-brazilian_portuguese = "Novo"
-portuguese = "Novo"
-turkish = "Yeni"
-polish = "Nowy"
-
-[[message]]
-key = "Online"
-[message.translations]
-simplified_chinese = "在线"
-traditional_chinese = "線上"
-japanese = "オンライン"
-korean = "온라인"
-russian = "В сети"
-german = "Online"
-spanish = "En línea"
-french = "En ligne"
-brazilian_portuguese = "Online"
-portuguese = "Online"
-turkish = "Çevrimiçi"
-polish = "Online"
-
-[[message]]
-key = "New group"
-[message.translations]
-simplified_chinese = "新建群组"
-traditional_chinese = "新建群組"
-japanese = "新しいグループ"
-korean = "새 그룹"
-russian = "Новая группа"
-german = "Neue Gruppe"
-spanish = "Nuevo grupo"
-french = "Nouveau groupe"
-brazilian_portuguese = "Novo grupo"
-portuguese = "Novo grupo"
-turkish = "Yeni grup"
-polish = "Nowa grupa"
-
-[[message]]
-key = "Rename group"
-[message.translations]
-simplified_chinese = "重命名群组"
-traditional_chinese = "重新命名群組"
-japanese = "グループ名を変更"
-korean = "그룹 이름 변경"
-russian = "Переименовать группу"
-german = "Gruppe umbenennen"
-spanish = "Renombrar grupo"
-french = "Renommer le groupe"
-brazilian_portuguese = "Renomear grupo"
-portuguese = "Renomear grupo"
-turkish = "Grubu yeniden adlandır"
-polish = "Zmień nazwę grupy"
-
-[[message]]
-key = "Are you sure that you want to remove '%s' from your war list?"
-[message.translations]
-simplified_chinese = "确定要把「%s」从敌对列表里删掉吗？"
-traditional_chinese = "確定要把「%s」從敵對列表中刪除嗎？"
-japanese = "「%s」を敵対リストから削除してもよいですか？"
-korean = "「%s」을(를) 적대 목록에서 삭제할까요?"
-russian = "Удалить «%s» из списка врагов?"
-german = "„%s“ aus der Kriegsliste entfernen?"
-spanish = "¿Quitar «%s» de la lista de enemigos?"
-french = "Retirer « %s » de la liste des ennemis ?"
-brazilian_portuguese = "Remover \"%s\" da lista de inimigos?"
-portuguese = "Remover \"%s\" da lista de inimigos?"
-turkish = "\"%s\" düşman listesinden kaldırılsın mı?"
-polish = "Usunąć „%s” z listy wrogów?"
-
-[[message]]
-key = "Reverse order"
-[message.translations]
-simplified_chinese = "倒序排列"
-traditional_chinese = "倒序排列"
-japanese = "逆順に並べる"
-korean = "역순 정렬"
-russian = "Обратный порядок"
-german = "Umgekehrte Reihenfolge"
-spanish = "Orden inverso"
-french = "Ordre inversé"
-brazilian_portuguese = "Ordem inversa"
-portuguese = "Ordem inversa"
-turkish = "Ters sıra"
-polish = "Odwrotna kolejność"
-
-[[message]]
-key = "Move up"
-[message.translations]
-simplified_chinese = "上移"
-traditional_chinese = "上移"
-japanese = "上へ移動"
-korean = "위로 이동"
-russian = "Переместить вверх"
-german = "Nach oben"
-spanish = "Subir"
-french = "Monter"
-brazilian_portuguese = "Mover para cima"
-portuguese = "Mover para cima"
-turkish = "Yukarı taşı"
-polish = "W górę"
-
-[[message]]
-key = "Move down"
-[message.translations]
-simplified_chinese = "下移"
-traditional_chinese = "下移"
-japanese = "下へ移動"
-korean = "아래로 이동"
-russian = "Переместить вниз"
-german = "Nach unten"
-spanish = "Bajar"
-french = "Descendre"
-brazilian_portuguese = "Mover para baixo"
-portuguese = "Mover para baixo"
-turkish = "Aşağı taşı"
-polish = "W dół"
-
-[[message]]
-key = "Group names are limited to 16 characters"
-[message.translations]
-simplified_chinese = "群组名最多 16 个字符"
-traditional_chinese = "群組名稱最多 16 個字元"
-japanese = "グループ名は最大16文字です"
-korean = "그룹 이름은 최대 16자입니다"
-russian = "Имя группы — не более 16 символов"
-german = "Gruppennamen sind auf 16 Zeichen begrenzt"
-spanish = "Los nombres de grupo admiten hasta 16 caracteres"
-french = "Les noms de groupe sont limités à 16 caractères"
-brazilian_portuguese = "Nomes de grupo têm no máximo 16 caracteres"
-portuguese = "Nomes de grupo têm no máximo 16 caracteres"
-turkish = "Grup adları en fazla 16 karakterdir"
-polish = "Nazwy grup mają maksymalnie 16 znaków"
-
-[[message]]
-key = "Entries in it will fall back to none."
-[message.translations]
-simplified_chinese = "里面的条目会回到 none。"
-traditional_chinese = "裡面的條目會回到 none。"
-japanese = "中の項目は none に戻ります。"
-korean = "포함된 항목은 none으로 돌아갑니다."
-russian = "Записи из неё вернутся в none."
-german = "Darin enthaltene Einträge fallen auf none zurück."
-spanish = "Sus entradas pasarán a none."
-french = "Ses entrées passeront à none."
-brazilian_portuguese = "As entradas dela voltam para none."
-portuguese = "As entradas dela voltam para none."
-turkish = "İçindeki kayıtlar none'a döner."
-polish = "Zawarte w niej wpisy wrócą do none."
-
-[[message]]
-key = "Deep freeze tile outline width"
-[message.translations]
-traditional_chinese = "深層凍結方塊的描邊寬度"
-japanese = "ディープフリーズタイルの輪郭幅"
-korean = "깊은 동결 타일 외곽선 두께"
-russian = "Ширина контура блоков глубокого замораживания"
-german = "Konturbreite der Tiefkühl-Kacheln"
-spanish = "Grosor del contorno de los bloques de congelación profunda"
-french = "Épaisseur du contour des tuiles de gel profond"
-brazilian_portuguese = "Espessura do contorno dos blocos de congelamento profundo"
-portuguese = "Espessura do contorno dos blocos de congelamento profundo"
-turkish = "Derin dondurma karolarının kenar kalınlığı"
-polish = "Grubość obrysu kafelków głębokiego zamrożenia"
-
-[[message]]
-key = "Deep unfreeze tile outline width"
-[message.translations]
-traditional_chinese = "深層解凍方塊的描邊寬度"
-japanese = "ディープ解凍タイルの輪郭幅"
-korean = "깊은 해동 타일 외곽선 두께"
-russian = "Ширина контура блоков глубокого размораживания"
-german = "Konturbreite der Tiefauftau-Kacheln"
-spanish = "Grosor del contorno de los bloques de descongelación profunda"
-french = "Épaisseur du contour des tuiles de dégel profond"
-brazilian_portuguese = "Espessura do contorno dos blocos de descongelamento profundo"
-portuguese = "Espessura do contorno dos blocos de descongelamento profundo"
-turkish = "Derin çözme karolarının kenar kalınlığı"
-polish = "Grubość obrysu kafelków głębokiego rozmrożenia"
-
-[[message]]
-key = "Freeze tile outline width"
-[message.translations]
-traditional_chinese = "凍結方塊的描邊寬度"
-japanese = "フリーズタイルの輪郭幅"
-korean = "동결 타일 외곽선 두께"
-russian = "Ширина контура блоков замораживания"
-german = "Konturbreite der Einfrier-Kacheln"
-spanish = "Grosor del contorno de los bloques de congelación"
-french = "Épaisseur du contour des tuiles de gel"
-brazilian_portuguese = "Espessura do contorno dos blocos de congelamento"
-portuguese = "Espessura do contorno dos blocos de congelamento"
-turkish = "Dondurma karolarının kenar kalınlığı"
-polish = "Grubość obrysu kafelków zamrożenia"
-
-[[message]]
-key = "Hookable tile outline color"
-[message.translations]
-traditional_chinese = "可鉤方塊描邊顏色"
-japanese = "フック可能タイルの輪郭色"
-korean = "갈고리 가능 타일 외곽선 색상"
-russian = "Цвет контура блоков, за которые можно зацепиться"
-german = "Konturfarbe der haktbaren Kacheln"
-spanish = "Color del contorno de los bloques enganchables"
-french = "Couleur du contour des tuiles accrochables"
-brazilian_portuguese = "Cor do contorno dos blocos gancháveis"
-portuguese = "Cor do contorno dos blocos gancháveis"
-turkish = "Kancalanabilir karoların kenar rengi"
-polish = "Kolor obrysu kafelków zaczepialnych"
-
-[[message]]
-key = "Hookable tile outline width"
-[message.translations]
-traditional_chinese = "可鉤方塊描邊寬度"
-japanese = "フック可能タイルの輪郭幅"
-korean = "갈고리 가능 타일 외곽선 두께"
-russian = "Ширина контура блоков, за которые можно зацепиться"
-german = "Konturbreite der haktbaren Kacheln"
-spanish = "Grosor del contorno de los bloques enganchables"
-french = "Épaisseur du contour des tuiles accrochables"
-brazilian_portuguese = "Espessura do contorno dos blocos gancháveis"
-portuguese = "Espessura do contorno dos blocos gancháveis"
-turkish = "Kancalanabilir karoların kenar kalınlığı"
-polish = "Grubość obrysu kafelków zaczepialnych"
-
-[[message]]
-key = "Show deep freeze tile outlines"
-[message.translations]
-traditional_chinese = "顯示深層凍結方塊描邊"
-japanese = "ディープフリーズタイルの輪郭を表示"
-korean = "깊은 동결 타일 외곽선 표시"
-russian = "Показывать контуры блоков глубокого замораживания"
-german = "Konturen der Tiefkühl-Kacheln anzeigen"
-spanish = "Mostrar el contorno de los bloques de congelación profunda"
-french = "Afficher le contour des tuiles de gel profond"
-brazilian_portuguese = "Mostrar contorno dos blocos de congelamento profundo"
-portuguese = "Mostrar contorno dos blocos de congelamento profundo"
-turkish = "Derin dondurma karolarının kenarlarını göster"
-polish = "Pokaż obrysy kafelków głębokiego zamrożenia"
-
-[[message]]
-key = "Show deep unfreeze tile outlines"
-[message.translations]
-traditional_chinese = "顯示深層解凍方塊描邊"
-japanese = "ディープ解凍タイルの輪郭を表示"
-korean = "깊은 해동 타일 외곽선 표시"
-russian = "Показывать контуры блоков глубокого размораживания"
-german = "Konturen der Tiefauftau-Kacheln anzeigen"
-spanish = "Mostrar el contorno de los bloques de descongelación profunda"
-french = "Afficher le contour des tuiles de dégel profond"
-brazilian_portuguese = "Mostrar contorno dos blocos de descongelamento profundo"
-portuguese = "Mostrar contorno dos blocos de descongelamento profundo"
-turkish = "Derin çözme karolarının kenarlarını göster"
-polish = "Pokaż obrysy kafelków głębokiego rozmrożenia"
-
-[[message]]
-key = "Show freeze tile outlines"
-[message.translations]
-traditional_chinese = "顯示凍結方塊描邊"
-japanese = "フリーズタイルの輪郭を表示"
-korean = "동결 타일 외곽선 표시"
-russian = "Показывать контуры блоков замораживания"
-german = "Konturen der Einfrier-Kacheln anzeigen"
-spanish = "Mostrar el contorno de los bloques de congelación"
-french = "Afficher le contour des tuiles de gel"
-brazilian_portuguese = "Mostrar contorno dos blocos de congelamento"
-portuguese = "Mostrar contorno dos blocos de congelamento"
-turkish = "Dondurma karolarının kenarlarını göster"
-polish = "Pokaż obrysy kafelków zamrożenia"
-
-[[message]]
-key = "Show hookable tile outlines"
-[message.translations]
-traditional_chinese = "顯示可鉤方塊描邊"
-japanese = "フック可能タイルの輪郭を表示"
-korean = "갈고리 가능 타일 외곽선 표시"
-russian = "Показывать контуры блоков, за которые можно зацепиться"
-german = "Konturen der haktbaren Kacheln anzeigen"
-spanish = "Mostrar el contorno de los bloques enganchables"
-french = "Afficher le contour des tuiles accrochables"
-brazilian_portuguese = "Mostrar contorno dos blocos gancháveis"
-portuguese = "Mostrar contorno dos blocos gancháveis"
-turkish = "Kancalanabilir karoların kenarlarını göster"
-polish = "Pokaż obrysy kafelków zaczepialnych"
-
-[[message]]
-key = "Show unfreeze tile outlines"
-[message.translations]
-traditional_chinese = "顯示解凍方塊描邊"
-japanese = "解凍タイルの輪郭を表示"
-korean = "해동 타일 외곽선 표시"
-russian = "Показывать контуры блоков размораживания"
-german = "Konturen der Auftau-Kacheln anzeigen"
-spanish = "Mostrar el contorno de los bloques de descongelación"
-french = "Afficher le contour des tuiles de dégel"
-brazilian_portuguese = "Mostrar contorno dos blocos de descongelamento"
-portuguese = "Mostrar contorno dos blocos de descongelamento"
-turkish = "Çözme karolarının kenarlarını göster"
-polish = "Pokaż obrysy kafelków rozmrożenia"
-
-[[message]]
-key = "Show unhookable tile outlines"
-[message.translations]
-traditional_chinese = "顯示不可鉤方塊描邊"
-japanese = "フック不可タイルの輪郭を表示"
-korean = "갈고리 불가 타일 외곽선 표시"
-russian = "Показывать контуры блоков, за которые нельзя зацепиться"
-german = "Konturen der nicht haktbaren Kacheln anzeigen"
-spanish = "Mostrar el contorno de los bloques no enganchables"
-french = "Afficher le contour des tuiles non accrochables"
-brazilian_portuguese = "Mostrar contorno dos blocos não gancháveis"
-portuguese = "Mostrar contorno dos blocos não gancháveis"
-turkish = "Kancalanamaz karoların kenarlarını göster"
-polish = "Pokaż obrysy kafelków niezaczepialnych"
-
-[[message]]
-key = "Unfreeze tile outline width"
-[message.translations]
-traditional_chinese = "解凍方塊的描邊寬度"
-japanese = "解凍タイルの輪郭幅"
-korean = "해동 타일 외곽선 두께"
-russian = "Ширина контура блоков размораживания"
-german = "Konturbreite der Auftau-Kacheln"
-spanish = "Grosor del contorno de los bloques de descongelación"
-french = "Épaisseur du contour des tuiles de dégel"
-brazilian_portuguese = "Espessura do contorno dos blocos de descongelamento"
-portuguese = "Espessura do contorno dos blocos de descongelamento"
-turkish = "Çözme karolarının kenar kalınlığı"
-polish = "Grubość obrysu kafelków rozmrożenia"
-
-[[message]]
-key = "Unhookable tile outline color"
-[message.translations]
-traditional_chinese = "不可鉤方塊描邊顏色"
-japanese = "フック不可タイルの輪郭色"
-korean = "갈고리 불가 타일 외곽선 색상"
-russian = "Цвет контура блоков, за которые нельзя зацепиться"
-german = "Konturfarbe der nicht haktbaren Kacheln"
-spanish = "Color del contorno de los bloques no enganchables"
-french = "Couleur du contour des tuiles non accrochables"
-brazilian_portuguese = "Cor do contorno dos blocos não gancháveis"
-portuguese = "Cor do contorno dos blocos não gancháveis"
-turkish = "Kancalanamaz karoların kenar rengi"
-polish = "Kolor obrysu kafelków niezaczepialnych"
-
-[[message]]
-key = "Unhookable tile outline width"
-[message.translations]
-traditional_chinese = "不可鉤方塊描邊寬度"
-japanese = "フック不可タイルの輪郭幅"
-korean = "갈고리 불가 타일 외곽선 두께"
-russian = "Ширина контура блоков, за которые нельзя зацепиться"
-german = "Konturbreite der nicht haktbaren Kacheln"
-spanish = "Grosor del contorno de los bloques no enganchables"
-french = "Épaisseur du contour des tuiles non accrochables"
-brazilian_portuguese = "Espessura do contorno dos blocos não gancháveis"
-portuguese = "Espessura do contorno dos blocos não gancháveis"
-turkish = "Kancalanamaz karoların kenar kalınlığı"
-polish = "Kolor obrysu kafelków niezaczepialnych"

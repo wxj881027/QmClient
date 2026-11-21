@@ -219,6 +219,54 @@ inline bool QmPerfPayloadLooksLikeKeyValueStart(const char *pTokenStart)
 	return false;
 }
 
+inline bool QmPerfPayloadHasField(const char *pPayload, const char *pKey)
+{
+	if(pPayload == nullptr || pKey == nullptr || pKey[0] == '\0')
+		return false;
+	const int KeyLength = str_length(pKey);
+	for(const char *pCursor = pPayload; *pCursor != '\0';)
+	{
+		while(*pCursor == ' ')
+			++pCursor;
+		if(*pCursor == '\0')
+			break;
+		const char *pEqual = std::strchr(pCursor, '=');
+		if(pEqual == nullptr)
+			break;
+		if(static_cast<int>(pEqual - pCursor) == KeyLength && str_comp_num(pCursor, pKey, KeyLength) == 0)
+			return true;
+
+		const char *pValueStart = pEqual + 1;
+		const char *pValueEnd = pValueStart;
+		if(*pValueStart == '"')
+		{
+			++pValueStart;
+			pValueEnd = pValueStart;
+			while(*pValueEnd != '\0' && *pValueEnd != '"')
+				++pValueEnd;
+		}
+		else
+		{
+			while(*pValueEnd != '\0')
+			{
+				if(*pValueEnd == ' ')
+				{
+					const char *pNextToken = pValueEnd + 1;
+					while(*pNextToken == ' ')
+						++pNextToken;
+					if(QmPerfPayloadLooksLikeKeyValueStart(pNextToken))
+						break;
+				}
+				++pValueEnd;
+			}
+		}
+		pCursor = pValueEnd;
+		if(*pCursor == '"')
+			++pCursor;
+	}
+	return false;
+}
+
 inline void QmPerfAppendPayloadJsonFields(char *pBuf, int BufSize, bool &First, const char *pPayload)
 {
 	if(BufSize <= 0 || pPayload == nullptr || pPayload[0] == '\0')
@@ -301,11 +349,13 @@ inline void QmPerfLogPayloadUnchecked(const char *pSystem, const char *pPayload,
 	char aSession[64];
 	str_format(aFrame, sizeof(aFrame), "%" PRIu64, QmPerfFrameId(pClient));
 	str_format(aSession, sizeof(aSession), "%" PRIu64, QmPerfSessionId());
-	QmPerfAppendJsonField(aJson, sizeof(aJson), First, "frame", aFrame);
-	QmPerfAppendJsonField(aJson, sizeof(aJson), First, "session", aSession);
-	if(pPage != nullptr && pPage[0] != '\0')
+	if(!QmPerfPayloadHasField(pPayload, "frame"))
+		QmPerfAppendJsonField(aJson, sizeof(aJson), First, "frame", aFrame);
+	if(!QmPerfPayloadHasField(pPayload, "session"))
+		QmPerfAppendJsonField(aJson, sizeof(aJson), First, "session", aSession);
+	if(pPage != nullptr && pPage[0] != '\0' && !QmPerfPayloadHasField(pPayload, "page"))
 		QmPerfAppendJsonField(aJson, sizeof(aJson), First, "page", pPage);
-	if(pTab != nullptr && pTab[0] != '\0')
+	if(pTab != nullptr && pTab[0] != '\0' && !QmPerfPayloadHasField(pPayload, "tab"))
 		QmPerfAppendJsonField(aJson, sizeof(aJson), First, "tab", pTab);
 	QmPerfAppendPayloadJsonFields(aJson, sizeof(aJson), First, pPayload);
 	str_append(aJson, "}", sizeof(aJson));

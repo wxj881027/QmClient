@@ -94,94 +94,94 @@ struct SInvalidSetting
 
 namespace EditorServerSettings
 {
-inline int FindComment(const char *pInput)
-{
-	bool InString = false;
-	bool Escaped = false;
-	for(const char *pIt = pInput; *pIt; ++pIt)
+	inline int FindComment(const char *pInput)
 	{
-		if(!InString && *pIt == '#')
-			return pIt - pInput;
-		if(*pIt == '"' && !Escaped)
-			InString = !InString;
-		Escaped = *pIt == '\\' && !Escaped;
-	}
-	return -1;
-}
-
-inline bool ReadArgument(const char *&pIterator, int &Length)
-{
-	const char *pStart = pIterator;
-	if(*pIterator != '"')
-	{
-		pIterator = str_skip_to_whitespace_const(pIterator);
-		Length = pIterator - pStart;
-		return true;
-	}
-
-	++pIterator;
-	bool Escaped = false;
-	while(*pIterator && (*pIterator != '"' || Escaped))
-	{
-		Escaped = *pIterator == '\\' && !Escaped;
-		++pIterator;
-	}
-	if(*pIterator == '\0')
-	{
-		Length = pIterator - pStart;
-		return false;
-	}
-
-	const char *pEnd = ++pIterator;
-	Length = pEnd - pStart;
-	pIterator = str_skip_to_whitespace_const(pIterator);
-	return pIterator == pEnd;
-}
-
-inline int FindCommandCollision(const char *pName, const std::vector<SCurrentSettingArg> &vArgs, int UniqueArg, const std::vector<CEditorMapSetting> &vSettings)
-{
-	for(int i = 0; i < (int)vSettings.size(); ++i)
-	{
-		char aToken[128];
-		const char *pNext = str_next_token(vSettings[i].m_aCommand, " ", aToken, sizeof(aToken));
-		if(!pNext || str_comp_nocase(aToken, pName) != 0)
-			continue;
-
-		for(int Arg = 0; Arg <= UniqueArg; ++Arg)
+		bool InString = false;
+		bool Escaped = false;
+		for(const char *pIt = pInput; *pIt; ++pIt)
 		{
-			pNext = str_next_token(pNext, " ", aToken, sizeof(aToken));
-			if(!pNext || str_comp_nocase(aToken, vArgs[Arg].m_aValue) != 0)
-				break;
-			if(Arg == UniqueArg)
-				return i;
+			if(!InString && *pIt == '#')
+				return pIt - pInput;
+			if(*pIt == '"' && !Escaped)
+				InString = !InString;
+			Escaped = *pIt == '\\' && !Escaped;
 		}
+		return -1;
 	}
-	return -1;
-}
 
-inline void ApplyLoadedSettingFixes(std::vector<CEditorMapSetting> &vSettings, const std::vector<SInvalidSetting> &vInvalidSettings)
-{
-	std::vector<bool> vDiscard(vSettings.size());
-	for(const auto &Setting : vInvalidSettings)
+	inline bool ReadArgument(const char *&pIterator, int &Length)
 	{
-		if(Setting.m_Context.m_Fixed)
-			str_copy(vSettings[Setting.m_Index].m_aCommand, Setting.m_aSetting);
-		if(Setting.m_Context.m_Deleted)
-			vDiscard[Setting.m_Index] = true;
-		if(Setting.m_Type & SInvalidSetting::TYPE_DUPLICATE)
-			vDiscard[Setting.m_Context.m_Chosen ? Setting.m_CollidingIndex : Setting.m_Index] = true;
+		const char *pStart = pIterator;
+		if(*pIterator != '"')
+		{
+			pIterator = str_skip_to_whitespace_const(pIterator);
+			Length = pIterator - pStart;
+			return true;
+		}
+
+		++pIterator;
+		bool Escaped = false;
+		while(*pIterator && (*pIterator != '"' || Escaped))
+		{
+			Escaped = *pIterator == '\\' && !Escaped;
+			++pIterator;
+		}
+		if(*pIterator == '\0')
+		{
+			Length = pIterator - pStart;
+			return false;
+		}
+
+		const char *pEnd = ++pIterator;
+		Length = pEnd - pStart;
+		pIterator = str_skip_to_whitespace_const(pIterator);
+		return pIterator == pEnd;
 	}
 
-	size_t Kept = 0;
-	for(size_t i = 0; i < vSettings.size(); ++i)
+	inline int FindCommandCollision(const char *pName, const std::vector<SCurrentSettingArg> &vArgs, int UniqueArg, const std::vector<CEditorMapSetting> &vSettings)
 	{
-		if(vDiscard[i])
-			continue;
+		for(int i = 0; i < (int)vSettings.size(); ++i)
+		{
+			char aToken[128];
+			const char *pNext = str_next_token(vSettings[i].m_aCommand, " ", aToken, sizeof(aToken));
+			if(!pNext || str_comp_nocase(aToken, pName) != 0)
+				continue;
 
-		vSettings[Kept++] = vSettings[i];
+			for(int Arg = 0; Arg <= UniqueArg; ++Arg)
+			{
+				pNext = str_next_token(pNext, " ", aToken, sizeof(aToken));
+				if(!pNext || str_comp_nocase(aToken, vArgs[Arg].m_aValue) != 0)
+					break;
+				if(Arg == UniqueArg)
+					return i;
+			}
+		}
+		return -1;
 	}
-	vSettings.erase(vSettings.begin() + Kept, vSettings.end());
-}
+
+	inline void ApplyLoadedSettingFixes(std::vector<CEditorMapSetting> &vSettings, const std::vector<SInvalidSetting> &vInvalidSettings)
+	{
+		std::vector<bool> vDiscard(vSettings.size());
+		for(const auto &Setting : vInvalidSettings)
+		{
+			if(Setting.m_Context.m_Fixed)
+				str_copy(vSettings[Setting.m_Index].m_aCommand, Setting.m_aSetting);
+			if(Setting.m_Context.m_Deleted)
+				vDiscard[Setting.m_Index] = true;
+			if(Setting.m_Type & SInvalidSetting::TYPE_DUPLICATE)
+				vDiscard[Setting.m_Context.m_Chosen ? Setting.m_CollidingIndex : Setting.m_Index] = true;
+		}
+
+		size_t Kept = 0;
+		for(size_t i = 0; i < vSettings.size(); ++i)
+		{
+			if(vDiscard[i])
+				continue;
+
+			vSettings[Kept++] = vSettings[i];
+		}
+		vSettings.erase(vSettings.begin() + Kept, vSettings.end());
+	}
 }
 
 // --------------------------------------

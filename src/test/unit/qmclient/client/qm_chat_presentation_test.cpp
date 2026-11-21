@@ -13,6 +13,27 @@ namespace
 	int64_t TestTicks(float Seconds) { return (int64_t)(Seconds * time_freq()); }
 }
 
+TEST(QmChatPresentation, InputExpandsHistoryIndependentlyOfAmbientChatVisibility)
+{
+	EXPECT_FALSE(CChat::ShouldShowLargeArea(false, false, 0));
+	EXPECT_FALSE(CChat::ShouldShowLargeArea(false, false, 1));
+	EXPECT_TRUE(CChat::ShouldShowLargeArea(false, false, 2));
+	EXPECT_TRUE(CChat::ShouldShowLargeArea(false, true, 0));
+	EXPECT_TRUE(CChat::ShouldShowLargeArea(false, true, 1));
+	EXPECT_TRUE(CChat::ShouldShowLargeArea(true, false, 0));
+}
+
+TEST(QmChatPresentation, InputShowsLiveHistoryWithoutOverridingPlaybackOrExportVisibility)
+{
+	EXPECT_FALSE(CChat::ShouldRenderHistory(false, false, false, false));
+	EXPECT_TRUE(CChat::ShouldRenderHistory(false, true, false, false));
+	EXPECT_FALSE(CChat::ShouldRenderHistory(false, true, true, false));
+	EXPECT_FALSE(CChat::ShouldRenderHistory(false, true, false, true));
+	EXPECT_FALSE(CChat::ShouldRenderHistory(false, true, true, true));
+	EXPECT_TRUE(CChat::ShouldRenderHistory(true, false, true, false));
+	EXPECT_TRUE(CChat::ShouldRenderHistory(true, false, false, true));
+}
+
 TEST(QmChatPresentation, NewLineEntersThenBecomesVisible)
 {
 	CChat::SPresentationState Presentation;

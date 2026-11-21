@@ -4,8 +4,9 @@
 #include <base/str.h>
 #include <base/windows.h>
 
-#include <gtest/gtest.h>
 #include <windows.h>
+
+#include <gtest/gtest.h>
 
 #include <cstdlib>
 #include <functional>

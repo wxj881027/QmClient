@@ -19,8 +19,9 @@
 #include <string>
 
 #if defined(CONF_FAMILY_WINDOWS)
-#include <io.h> // _get_osfhandle
 #include <windows.h> // FlushFileBuffers
+
+#include <io.h> // _get_osfhandle
 #else
 #include <fcntl.h>
 #include <sys/stat.h>

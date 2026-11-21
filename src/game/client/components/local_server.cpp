@@ -17,17 +17,19 @@
 #if defined(CONF_PLATFORM_ANDROID)
 #include <android/android_main.h>
 #elif defined(CONF_FAMILY_UNIX)
-#include <signal.h>
 #include <sys/wait.h>
+
+#include <csignal>
 #endif
 
-namespace {
-// 每个客户端进程独占一个端口文件，避免多开时读到别人的端口。
-const char *PortFile(char *pBuf, unsigned BufSize)
+namespace
 {
-	str_format(pBuf, BufSize, "local_server_port.%d.txt", pid());
-	return pBuf;
-}
+	// 每个客户端进程独占一个端口文件，避免多开时读到别人的端口。
+	const char *PortFile(char *pBuf, unsigned BufSize)
+	{
+		str_format(pBuf, BufSize, "local_server_port.%d.txt", pid());
+		return pBuf;
+	}
 }
 
 void CLocalServer::Reset()

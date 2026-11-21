@@ -68,6 +68,7 @@ TEST(HttpShutdownLifecycle, SkinShutdownClearsLoadAndHttpRequests)
 	EXPECT_NE(ContainerDestructor.find("dbg_assert(m_pLoadJob == nullptr"), std::string::npos);
 	EXPECT_NE(Shutdown.find("m_pSkinDirectoryScanJob = nullptr;"), std::string::npos);
 	EXPECT_NE(Shutdown.find("m_pSkinListPlanJob = nullptr;"), std::string::npos);
-	EXPECT_NE(Shutdown.find("m_pOfficialSkinIndexRequest = nullptr;"), std::string::npos);
+	EXPECT_NE(Shutdown.find("Catalog.m_pRequest->Abort();"), std::string::npos);
+	EXPECT_NE(Shutdown.find("Catalog.m_pRequest.reset();"), std::string::npos);
 	EXPECT_NE(Shutdown.find("pSkinContainer->m_pLoadJob = nullptr;"), std::string::npos);
 }

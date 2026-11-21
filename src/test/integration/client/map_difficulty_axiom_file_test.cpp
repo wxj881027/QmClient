@@ -1,3 +1,4 @@
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
@@ -12,7 +13,7 @@
 namespace
 {
 	using namespace map_difficulty_test;
-	constexpr char CACHE_PATH[] = "qmclient/axiom_map_difficulty.json";
+	constexpr const char *CACHE_PATH = qm_storage::MAP_DIFFICULTY_CACHE_FILE;
 	class CMapDifficultyAxiomFile : public testing::Test
 	{
 		CTestInfo m_Info;
@@ -25,7 +26,7 @@ namespace
 			m_Info.m_DeleteTestStorageFilesOnSuccess = false;
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
-			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::CACHE_MAPS_DIR));
 			ASSERT_NO_FATAL_FAILURE(Write("qmclient/map_difficulty.sql", "CREATE TABLE map_difficulty(map_name,category,stars); INSERT INTO map_difficulty VALUES('Ddrace','Novice',1);"));
 			ASSERT_TRUE(m_Catalog.RecordAxiomMotd(Server(), Motd("Old", "★☆☆").c_str()));
 		}
@@ -130,4 +131,28 @@ TEST_F(CMapDifficultyAxiomFile, FailedPublicationRemovesTheCandidateAndCanRetry)
 	ASSERT_TRUE(Restored.Load(m_pStorage.get(), nullptr));
 	ASSERT_NE(Restored.FindForServer(Server()), nullptr);
 	EXPECT_EQ(Restored.FindForServer(Server())->m_Stars, 1);
+}
+
+TEST_F(CMapDifficultyAxiomFile, MergesLegacyRootCacheIntoTheNewLocation)
+{
+	constexpr char aNewCache[] = R"({"version":2,"entries":[{"mode":"Gores","map":"New","category":"New","stars":2,"max_stars":5}]})";
+	ASSERT_NO_FATAL_FAILURE(Write(CACHE_PATH, aNewCache));
+	ASSERT_NO_FATAL_FAILURE(Write("qmclient/axiom_map_difficulty.json", OLD_CACHE));
+
+	CQmMapDifficultyCatalog Catalog;
+	ASSERT_TRUE(Catalog.Load(m_pStorage.get(), nullptr));
+	ASSERT_NE(Catalog.FindForServer(Server("New")), nullptr);
+	ASSERT_NE(Catalog.FindForServer(Server("Old")), nullptr);
+	EXPECT_EQ(Catalog.FindForServer(Server("New"))->m_Stars, 2);
+	EXPECT_EQ(Catalog.FindForServer(Server("Old"))->m_Stars, 1);
+	// 旧文件补进来的条目需要写回新路径，否则下次启动仍然缺。
+	EXPECT_TRUE(Catalog.AxiomCacheDirty());
+
+	ASSERT_TRUE(Catalog.SaveAxiomCache(m_pStorage.get()));
+	EXPECT_FALSE(Catalog.AxiomCacheDirty());
+	CQmMapDifficultyCatalog Restored;
+	ASSERT_TRUE(Restored.Load(m_pStorage.get(), nullptr));
+	ASSERT_NE(Restored.FindForServer(Server("New")), nullptr);
+	ASSERT_NE(Restored.FindForServer(Server("Old")), nullptr);
+	EXPECT_FALSE(Restored.AxiomCacheDirty());
 }

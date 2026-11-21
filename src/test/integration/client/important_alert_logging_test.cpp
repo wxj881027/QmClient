@@ -7,9 +7,8 @@
 
 #include <game/client/components/important_alert.h>
 
-#include <test/support/qm_ui_test_client.h>
-
 #include <gtest/gtest.h>
+#include <test/support/qm_ui_test_client.h>
 
 #include <memory>
 #include <stdexcept>

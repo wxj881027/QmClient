@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_CONFIG_PACKAGE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_CONFIG_PACKAGE_H
 
+#include <engine/shared/qm_storage_layout.h>
+
 #include <cstddef>
 #include <string>
 #include <string_view>
@@ -14,7 +16,7 @@ namespace qm_config_package
 	inline constexpr size_t MAX_FILE_BYTES = 1024 * 1024;
 	inline constexpr size_t MAX_CONTENT_BYTES = 16 * 1024 * 1024;
 	inline constexpr size_t MAX_PACKAGE_BYTES = 24 * 1024 * 1024;
-	inline constexpr const char *PACKAGE_DIRECTORY = "qmclient/config_packages";
+	inline constexpr const char *PACKAGE_DIRECTORY = qm_storage::CONFIG_PACKAGES_DIR;
 
 	struct SFile
 	{

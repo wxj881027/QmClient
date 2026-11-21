@@ -27,6 +27,9 @@ constexpr float QM_CHAT_SCROLLBAR_RESERVE = QM_CHAT_SCROLLBAR_WIDTH + QM_CHAT_SC
 // 一帧内最多累积的滚轮档数：输入事件可能一帧来好几条，推进要等渲染帧。
 // 上界是为了防止聊天被配置或焦点过滤隐藏时步数无限攒着，重新显示时一次跳掉半屏历史。
 constexpr int QM_CHAT_WHEEL_MAX_PENDING_STEPS = 3;
+// 聊天是行型滚动面：默认每档 3 行，极端大倍率最多 8 行；窄聊天区再按
+// 可见行数压低。用户只调全站滚动倍率，不增加聊天专用速度入口。
+constexpr int QM_CHAT_WHEEL_MAX_LINES = 8;
 
 // 保留聊天整行的横向空间，轨道隐藏、重开或换边时不会被上一帧正文边界挤出屏幕。
 // 输入、按钮和命令提示超出预估宽度时也纳入 HUD 的实际测量范围。
@@ -186,17 +189,16 @@ inline float QmChatHistoryBounceLines(float BouncePixels, float LineExtent)
 }
 
 // 手感档位（原版 / 顺滑 / 弹簧）、弹簧响应与阻尼、橡皮筋、动效等级全部来自
-// 公共配置 QmNativeWheelScrollConfig；聊天只声明"一档 = 一行"，不再自己写
+// 公共配置 QmNativeWheelScrollConfig；聊天只声明"默认一档 3 行"，不再自己写
 // 平滑时长、lerp 系数或阻尼。LineExtent 用于把公共像素配置换算到行单位。
-inline SQmScrollConfig QmChatHistoryScrollConfig(float LineExtent = 1.0f)
+inline SQmScrollConfig QmChatHistoryScrollConfig(float LineExtent = 1.0f, int VisibleLines = 0)
 {
 	SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, g_Config.m_UiSmoothScrollTime / 1000.0f);
-	// 偏移单位是「行」，所以一档的尺度写成行数；步长系数与列表同一份配置
-	// （qm_ui_scroll_step 默认 10 时为 1.0），不再用固定 120 像素一次跳到底。
-	// 防零回退与 QmScroll 同口径：测试环境的 g_Config 是零初始化。
-	const float Step = g_Config.m_QmUiScrollStep > 0.0f ? (float)g_Config.m_QmUiScrollStep : 10.0f;
-	const float StepScale = Step / 10.0f;
-	Config.m_WheelScale = ui_token::chat::WHEEL_LINES_PER_STEP * StepScale;
+	// 偏移单位是「行」，全局步长只作为倍率；基准行数与视口上限由公共行数
+	// 解析器统一兜底，避免把像素步长直接当成聊天行数。
+	const int WheelLines = QmResolveWheelLineCount(
+		ui_token::chat::WHEEL_LINES_PER_STEP, QmWheelStepScale(), VisibleLines, QM_CHAT_WHEEL_MAX_LINES);
+	Config.m_WheelScale = static_cast<float>(WheelLines);
 	Config.m_MaxOverscroll = QmChatHistoryBounceLines((float)g_Config.m_QmUiScrollBounce, LineExtent);
 	return Config;
 }

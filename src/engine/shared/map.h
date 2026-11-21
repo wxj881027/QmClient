@@ -50,6 +50,7 @@ public:
 	void Adopt(CMap &&Other);
 	void Unload() override;
 	bool IsLoaded() const override;
+	bool IsDataFailed(int Index) const override;
 	IOHANDLE File() const override;
 
 	SHA256_DIGEST Sha256() const override;
@@ -70,7 +71,7 @@ private:
 	bool UpgradeAndValidateTilesLayerItem(CDataFileReader &NewDataFile, int GroupIndex, int LayerIndex,
 		CMapItemLayerTilemap_v2 *pLayerTilemapBase, int LayerItemIndex, size_t LayerItemSize);
 	bool ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int GroupIndex, int LayerIndex, const CMapItemLayerTilemap *pLayerTilemap,
-		const CMapItemLayerTilemap &GameLayer, CPreparationIndices &UsedDataIndices);
+		const CMapItemLayerTilemap &GameLayer, CPreparationIndices &UsedDataIndices, int64_t &MapDataBytes);
 };
 
 #endif

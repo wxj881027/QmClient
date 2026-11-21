@@ -1,7 +1,7 @@
 #include <game/client/components/tclient/tclient.h>
-#include <test/test.h>
 
 #include <gtest/gtest.h>
+#include <test/test.h>
 
 #include <cstdlib>
 #include <memory>
@@ -55,7 +55,7 @@ TEST(QmTClientMapDataSave, FailedPublishCleansCandidateAndKeepsPendingCategories
 	CTestInfo Info;
 	auto pStorage = Info.CreateTestStorage();
 	ASSERT_NE(pStorage, nullptr);
-	ASSERT_TRUE(pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(qm_storage::EnsureFolder(pStorage.get(), qm_storage::STATE_MAPS_DIR));
 	ASSERT_TRUE(pStorage->CreateFolder(CATEGORIES.m_pPath, IStorage::TYPE_SAVE));
 
 	bool Dirty = true;

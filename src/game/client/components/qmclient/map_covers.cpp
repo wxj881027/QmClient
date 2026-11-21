@@ -311,10 +311,7 @@ void CQmMapCovers::EnsureCacheFolder()
 		return;
 	if(!m_pStorage->FolderExists(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE))
 	{
-		// 存储接口只创建单层目录，先补父目录再建缓存目录。
-		if(!m_pStorage->FolderExists("qmclient", IStorage::TYPE_SAVE))
-			m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-		m_pStorage->CreateFolder(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE);
+		qm_storage::EnsureFolder(m_pStorage, QmMapCover::CACHE_FOLDER);
 	}
 	m_CacheFolderReady = m_pStorage->FolderExists(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE);
 }

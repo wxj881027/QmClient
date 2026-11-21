@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 namespace QmConsoleAppearance
 {
@@ -48,6 +49,20 @@ namespace QmConsoleAppearance
 	{
 		return {First.r + (Second.r - First.r) * Amount, First.g + (Second.g - First.g) * Amount,
 			First.b + (Second.b - First.b) * Amount, First.a};
+	}
+
+	// 链接悬停只旋转色相，保持饱和度、明度和透明度不变；默认正值让蓝色
+	// 向紫色偏移。角度由玩家配置，渲染与测试共用这一条转换。
+	inline ColorRGBA LinkHoverColor(const ColorRGBA &Link, int HueShiftDegrees)
+	{
+		const int Shift = std::clamp(HueShiftDegrees, -180, 180);
+		if(Shift == 0)
+			return Link;
+		ColorHSLA Hsla = color_cast<ColorHSLA>(Link);
+		Hsla.h = std::fmod(Hsla.h + static_cast<float>(Shift) / 360.0f, 1.0f);
+		if(Hsla.h < 0.0f)
+			Hsla.h += 1.0f;
+		return color_cast<ColorRGBA>(Hsla);
 	}
 
 	// 内置方案编号的起点：0=现代终端、1=经典 PowerShell、2=自定义，
@@ -148,6 +163,7 @@ namespace QmConsoleAppearance
 		Config.m_QmConsoleFontSize = DefaultConfig::QmConsoleFontSize;
 		Config.m_QmConsoleColorScheme = DefaultConfig::QmConsoleColorScheme;
 		Config.m_QmConsoleOpacity = DefaultConfig::QmConsoleOpacity;
+		Config.m_QmConsoleLineSpacing = DefaultConfig::QmConsoleLineSpacing;
 		Config.m_QmConsoleHighlightCommands = DefaultConfig::QmConsoleHighlightCommands;
 		Config.m_QmConsoleBackgroundColor = DefaultConfig::QmConsoleBackgroundColor;
 		Config.m_QmConsoleTextColor = DefaultConfig::QmConsoleTextColor;
@@ -156,6 +172,7 @@ namespace QmConsoleAppearance
 		Config.m_QmConsoleStringColor = DefaultConfig::QmConsoleStringColor;
 		Config.m_QmConsoleNumberColor = DefaultConfig::QmConsoleNumberColor;
 		Config.m_QmConsoleLinkColor = DefaultConfig::QmConsoleLinkColor;
+		Config.m_QmConsoleLinkHoverHueShift = DefaultConfig::QmConsoleLinkHoverHueShift;
 		Config.m_QmConsoleSearchColor = DefaultConfig::QmConsoleSearchColor;
 		Config.m_QmConsoleSearchSelectedColor = DefaultConfig::QmConsoleSearchSelectedColor;
 	}

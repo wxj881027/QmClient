@@ -120,6 +120,26 @@ TEST(QmScoreboardTeamModes, AggregationRequiresDisplayInfoAndCombinesKnownMember
 	EXPECT_TRUE(State.Locked());
 }
 
+TEST(QmScoreboardTeamModes, LockHintOnlyFillsMissingCharacterSnapshot)
+{
+	SQmScoreboardTeamModeState UnknownState;
+	ApplyQmScoreboardTeamLockHint(UnknownState, true);
+	EXPECT_TRUE(UnknownState.m_Known);
+	EXPECT_TRUE(UnknownState.Locked());
+
+	SQmScoreboardTeamModeState KnownUnlockedState;
+	AccumulateQmScoreboardTeamModeState(KnownUnlockedState, true, 0);
+	ApplyQmScoreboardTeamLockHint(KnownUnlockedState, true);
+	EXPECT_TRUE(KnownUnlockedState.m_Known);
+	EXPECT_FALSE(KnownUnlockedState.Locked());
+
+	SQmScoreboardTeamModeState AlreadyLockedState;
+	AccumulateQmScoreboardTeamModeState(AlreadyLockedState, true, CHARACTERFLAG_PRACTICE_MODE | CHARACTERFLAG_LOCK_MODE);
+	ApplyQmScoreboardTeamLockHint(AlreadyLockedState, false);
+	EXPECT_TRUE(AlreadyLockedState.Practice());
+	EXPECT_TRUE(AlreadyLockedState.Locked());
+}
+
 TEST(QmScoreboardRender, TitleTimeUsesTheSharedContentAlpha)
 {
 	const ColorRGBA Color = ScoreboardTitleTimeColor(0.35f);
@@ -129,6 +149,50 @@ TEST(QmScoreboardRender, TitleTimeUsesTheSharedContentAlpha)
 	EXPECT_FLOAT_EQ(Color.a, 0.35f);
 	EXPECT_FLOAT_EQ(ScoreboardTitleTimeColor(0.0f).a, 0.0f);
 	EXPECT_FLOAT_EQ(ScoreboardTitleTimeColor(1.0f).a, 1.0f);
+}
+
+TEST(QmScoreboardRender, TitleFittingStaysSingleLineAndOnlyEllipsizesAtTheMinimum)
+{
+	const SScoreboardTitleFit Fits = ResolveScoreboardTitleFit(20.0f, 10.0f, 180.0f, 360.0f);
+	EXPECT_FLOAT_EQ(Fits.m_FontSize, 20.0f);
+	EXPECT_FALSE(Fits.m_EllipsisAtEnd);
+
+	const SScoreboardTitleFit Shrinks = ResolveScoreboardTitleFit(20.0f, 10.0f, 400.0f, 200.0f);
+	EXPECT_FLOAT_EQ(Shrinks.m_FontSize, 10.0f);
+	EXPECT_FALSE(Shrinks.m_EllipsisAtEnd);
+
+	const SScoreboardTitleFit Ellipsizes = ResolveScoreboardTitleFit(20.0f, 10.0f, 1000.0f, 200.0f);
+	EXPECT_FLOAT_EQ(Ellipsizes.m_FontSize, 10.0f);
+	EXPECT_TRUE(Ellipsizes.m_EllipsisAtEnd);
+
+	const SScoreboardTitleFit Empty = ResolveScoreboardTitleFit(20.0f, 10.0f, 0.0f, 0.0f);
+	EXPECT_FLOAT_EQ(Empty.m_FontSize, 20.0f);
+	EXPECT_FALSE(Empty.m_EllipsisAtEnd);
+
+	// 单行策略只靠禁止显式换行不够：必须同时截断软折行。
+	const SScoreboardTitleLabelStyle FitsStyle = ResolveScoreboardTitleLabelStyle(Fits);
+	EXPECT_TRUE(FitsStyle.m_DisallowNewline);
+	EXPECT_TRUE(FitsStyle.m_StopAtEnd);
+	EXPECT_FALSE(FitsStyle.m_EllipsisAtEnd);
+
+	const SScoreboardTitleLabelStyle EllipsizesStyle = ResolveScoreboardTitleLabelStyle(Ellipsizes);
+	EXPECT_TRUE(EllipsizesStyle.m_StopAtEnd);
+	EXPECT_TRUE(EllipsizesStyle.m_EllipsisAtEnd);
+}
+
+TEST(QmScoreboardRender, VisibleReopenInterruptsWithoutReplayingEntrance)
+{
+	EXPECT_EQ(ResolveScoreboardEntranceAction(true, false), EScoreboardEntranceAction::REPLAY);
+	EXPECT_EQ(ResolveScoreboardEntranceAction(true, true), EScoreboardEntranceAction::INTERRUPT);
+	EXPECT_EQ(ResolveScoreboardEntranceAction(false, false), EScoreboardEntranceAction::NONE);
+	EXPECT_EQ(ResolveScoreboardEntranceAction(false, true), EScoreboardEntranceAction::NONE);
+
+	// 完整重播固定从 0.88 起步；打断只压到 0.95，并且连续打断不会越叠越深。
+	EXPECT_FLOAT_EQ(ResolveScoreboardPopStartScale(EScoreboardEntranceAction::REPLAY, 1.0f), 0.88f);
+	EXPECT_FLOAT_EQ(ResolveScoreboardPopStartScale(EScoreboardEntranceAction::INTERRUPT, 1.0f), 0.95f);
+	EXPECT_FLOAT_EQ(ResolveScoreboardPopStartScale(EScoreboardEntranceAction::INTERRUPT, 0.95f), 0.95f);
+	EXPECT_FLOAT_EQ(ResolveScoreboardPopStartScale(EScoreboardEntranceAction::INTERRUPT, 0.90f), 0.90f);
+	EXPECT_FLOAT_EQ(ResolveScoreboardPopStartScale(EScoreboardEntranceAction::NONE, 0.97f), 0.97f);
 }
 
 TEST(QmScoreboardScroll, ModeRequiresCrowdedNonTeamGames)

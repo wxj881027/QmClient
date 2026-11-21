@@ -100,11 +100,12 @@ class CSettingsSkinLoadViewport
 
 public:
 	void BeginFrame() { ++m_Frame; }
-	void Publish(std::vector<std::string> &&Names, bool MeasurementOnly = false)
+	bool Publish(std::vector<std::string> &&Names, bool MeasurementOnly = false)
 	{
 		if(MeasurementOnly)
-			return;
-		if(Names != m_vNames)
+			return false;
+		const bool Changed = Names != m_vNames;
+		if(Changed)
 		{
 			if(Names.empty())
 				m_Names.clear();
@@ -117,17 +118,19 @@ public:
 				}
 				catch(const std::bad_alloc &)
 				{
-					return;
+					return false;
 				}
 				catch(const std::length_error &)
 				{
-					return;
+					return false;
 				}
 			}
 			m_vNames.swap(Names);
 		}
 		m_PublishedFrame = m_Frame;
+		return Changed;
 	}
+	const std::vector<std::string> &PublishedNames() const { return m_vNames; }
 	bool Contains(const std::string &Name) const { return m_PublishedFrame == m_Frame && m_Names.contains(Name); }
 	static bool RowVisible(bool MeasurementOnly, const CUIRect &Row, const CUIRect *pClip)
 	{
@@ -232,6 +235,8 @@ struct SSettingsSkinSourceAdmissionInput
 	int m_Loading = 0;
 	int m_NormalLoadingWindow = 0;
 	int m_VisibleLoadingWindow = 0;
+	int m_VisibleWaiting = 0;
+	int m_CountFuseLimit = 0;
 };
 
 struct SSettingsSkinSourceAdmissionOutput
@@ -516,6 +521,7 @@ int SettingsSkinGpuUploadUnits(bool TeeSettingsActive);
 int SettingsSkinFinalizeFrameBudget(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinGpuUploadFrameUnits(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinGpuUploadLimiterUnits(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
+int SettingsSkinUploadTimeBudgetMs(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive, float RenderFrameTimeMs, float TargetFrameMs);
 bool SettingsSkinBackgroundDrainActive(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinBackgroundRequestFrameBudget(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 SSettingsSkinBackgroundRequestBudgetOutput SettingsSkinBackgroundRequestBudgetDecision(const SSettingsSkinBackgroundRequestBudgetInput &Input);
@@ -537,6 +543,41 @@ const char *SettingsAdaptiveBudgetReasonName(ESettingsAdaptiveBudgetReason Reaso
 const char *SettingsSkinEffectiveFrameContextName(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 size_t SettingsSkinSourceBytesEstimate(int Width, int Height, int PixelCopies);
 bool SettingsSkinResidencyShouldReclaim(bool BytesBudgetExceeded, bool CountFuseExceeded);
+constexpr size_t SettingsSkinInactiveResidencyLimit(size_t ConfiguredLimit)
+{
+	// 离开 Tee 设置页后仍保留足够覆盖一局常见人数的已加载皮肤，
+	// 但不允许目录滚动留下的几百张预览继续驻留。
+	return minimum(ConfiguredLimit, (size_t)128);
+}
+constexpr bool SettingsSkinShouldReleaseViewportRequest(bool StillVisible, bool ActiveUse, bool AlwaysLoaded,
+	ESettingsResourcePriority Priority, bool PendingOrLoading)
+{
+	return !StillVisible && !ActiveUse && !AlwaysLoaded &&
+	       Priority != ESettingsResourcePriority::BACKGROUND &&
+	       PendingOrLoading;
+}
+constexpr bool SettingsSkinCanStartDownloadSession(int ActiveSessions, int Limit)
+{
+	return Limit <= 0 || ActiveSessions < Limit;
+}
+// 解码/待上传驻留上限：后台预热不能把全部槽位占满。
+constexpr int SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT = 48;
+constexpr int SETTINGS_SKIN_VISIBLE_LOADING_LIMIT = 96;
+constexpr bool SettingsSkinShouldAdmitLoading(int LoadingCount, int Limit)
+{
+	return Limit <= 0 || LoadingCount < Limit;
+}
+// 每个等待原因各自持有时间槽；原因交替出现时也必须分别限流。
+constexpr bool SettingsSkinWaitLogShouldEmit(int64_t Now, int64_t Last, int64_t Interval)
+{
+	return Last == 0 || Now - Last >= Interval;
+}
+constexpr bool SettingsSkinFallbackSweepShouldRun(bool HasUsageRequests, bool HasBackgroundRequests)
+{
+	// fallback 只是显式队列为空时的兜底；显式队列存在时每帧再扫固定 64 项
+	// 既不会推进加载，也会制造虚假的 started 统计。
+	return !HasUsageRequests && !HasBackgroundRequests;
+}
 const char *SettingsWorkshopCatalogSourceName(ESettingsWorkshopCatalogSource Source);
 const char *SettingsWorkshopBytesSourceName(ESettingsWorkshopBytesSource Source);
 void SettingsApplyActiveTeeSkinFrameBudget(SSettingsWarmupFrameBudget &Budget, bool TeeSettingsActive);

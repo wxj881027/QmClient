@@ -42,6 +42,7 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/font_download_storage.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/wheel_presets.h>
 #include <game/client/components/section_loader.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/tclient/bindchat.h>
@@ -279,6 +280,39 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 			GameClient()->m_Skins.RecordRecentSkin(m_Dummy);
 	};
 
+	auto AddSelectedProfileToIdentityMenu = [&]() {
+		const CProfile *pProfile = pConstSelectedProfile();
+		if(!pProfile)
+			return;
+		qm_wheel_presets::SPreset Preset;
+		Preset.m_Type = qm_wheel_presets::EType::IDENTITY;
+		auto &Values = Preset.m_aTees[m_Dummy ? 1 : 0].m_aValues;
+		if(g_Config.m_QmProfileName && pProfile->m_Name[0] != '\0')
+			Values[qm_wheel_presets::NAME] = pProfile->m_Name;
+		if(g_Config.m_QmProfileClan && (pProfile->m_Clan[0] != '\0' || g_Config.m_QmProfileOverwriteClanWithEmpty))
+			Values[qm_wheel_presets::CLAN] = pProfile->m_Clan;
+		if(g_Config.m_QmProfileSkin && pProfile->m_SkinName[0] != '\0')
+			Values[qm_wheel_presets::SKIN] = pProfile->m_SkinName;
+		if(g_Config.m_QmProfileColors && pProfile->m_BodyColor >= 0 && pProfile->m_FeetColor >= 0)
+		{
+			Values[qm_wheel_presets::CUSTOM_COLORS] = "1";
+			Values[qm_wheel_presets::BODY_COLOR] = std::to_string(pProfile->m_BodyColor);
+			Values[qm_wheel_presets::FEET_COLOR] = std::to_string(pProfile->m_FeetColor);
+		}
+		if(g_Config.m_QmProfileFlag && pProfile->m_CountryFlag != -2)
+			Values[qm_wheel_presets::COUNTRY] = std::to_string(pProfile->m_CountryFlag);
+		if(g_Config.m_QmProfileEmote && pProfile->m_Emote != -1)
+			Values[qm_wheel_presets::EYES] = std::to_string(pProfile->m_Emote);
+
+		std::string Command;
+		if(!qm_wheel_presets::BuildCommand(Preset, Command))
+			return;
+		const char *pLabel = pProfile->m_Name[0] ? pProfile->m_Name : Localize("Identity");
+		char aLabel[BINDWHEEL_MAX_NAME];
+		str_copy(aLabel, pLabel);
+		GameClient()->m_BindWheel.SetBind(-1, aLabel, Command.c_str());
+	};
+
 	auto DeleteSelectedProfile = [&]() {
 		if(!IsSelectedProfileValid())
 			return;
@@ -335,8 +369,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 		static CButtonContainer s_WheelButton;
 		if(IsSelectedProfileValid() && Flow.Control("tclient-profile-wheel", ProfileMetrics.m_ButtonHeight, Row, RowSpacing))
 		{
-			if(DoTClientSettingsButton_Menu(&s_WheelButton, "tclient-profile-wheel", Localize("Add to bind wheel"), 0, &Row) && !ReadOnly && !Ui()->RenderOnly())
-				EditProfileInWheel(*pConstSelectedProfile(), m_Dummy != 0);
+			if(DoTClientSettingsButton_Menu(&s_WheelButton, "tclient-profile-wheel", Localize("Add to identity menu"), 0, &Row) && !ReadOnly && !Ui()->RenderOnly())
+				AddSelectedProfileToIdentityMenu();
 		}
 		if(Flow.Control("tclient-profile-enable-deleting", LineSize, Row, RowSpacing))
 			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&s_AllowDelete, "tclient-profile-enable-deleting", Localizable("Enable Deleting"), &s_AllowDelete, &Row, LineSize);
@@ -537,38 +571,18 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 	};
 
 	const bool HasSelectedProfile = pConstSelectedProfile() != nullptr;
-	const uint64_t CardRevision = ((static_cast<uint64_t>(HasSelectedProfile) << 0) | (static_cast<uint64_t>(s_AllowDelete != 0) << 1) | (static_cast<uint64_t>(vProfiles.size()) << 2)) ^ ProfileWheelEditorRevision();
+	const uint64_t CardRevision = (static_cast<uint64_t>(HasSelectedProfile) << 0) | (static_cast<uint64_t>(s_AllowDelete != 0) << 1) | (static_cast<uint64_t>(vProfiles.size()) << 2);
 	if(Pass == qm_card_catalog::ETClientCardPass::REVISION)
 		return {0.0f, CardRevision};
 	if(str_comp(pStableId, "deck:tclient-profiles") == 0)
 	{
 		const float SavedY = Content.y;
 		CSettingsContentLayoutFlow Flow(Content);
-		CUIRect Tabs;
-		if(Flow.Control("profile-tabs", ProfileMetrics.m_ButtonHeight, Tabs))
-		{
-			static CButtonContainer s_aTabs[2];
-			const char *apLabels[] = {Localize("Profiles"), Localize("Bind Wheel")};
-			for(int Index = 0; Index < 2; ++Index)
-			{
-				CUIRect Tab = Tabs;
-				Tab.w = (Tabs.w - RowSpacing) * 0.5f;
-				Tab.x += Index * (Tab.w + RowSpacing);
-				if(DoTClientSettingsButton_Menu(&s_aTabs[Index], Index ? "profile-tab-wheel" : "profile-tab-profiles", apLabels[Index], m_ProfilePresetsTab == Index, &Tab) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
-					m_ProfilePresetsTab = Index;
-			}
-		}
+		RenderActions(Content);
 		Flow.Space(ProfileMetrics.m_SectionGap);
-		if(m_ProfilePresetsTab == 0)
-		{
-			RenderActions(Content);
-			Flow.Space(ProfileMetrics.m_SectionGap);
-			RenderOptions(Content);
-			Flow.Space(ProfileMetrics.m_SectionGap);
-			RenderSavedProfiles(Content);
-		}
-		else
-			RenderProfileWheelEditor(Ctx, Content, ReadOnly);
+		RenderOptions(Content);
+		Flow.Space(ProfileMetrics.m_SectionGap);
+		RenderSavedProfiles(Content);
 		return {Content.y - SavedY, CardRevision};
 	}
 	return {0.0f, CardRevision};

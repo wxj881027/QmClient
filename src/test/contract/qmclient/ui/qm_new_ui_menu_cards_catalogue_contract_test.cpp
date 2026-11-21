@@ -33,7 +33,7 @@ TEST(QmNewUiMenuCardsCatalogueContract, NameplatePreviewRebuildsTextContainerIns
 	const std::string Body = BlockBodyAfter(Source, "void Update(CGameClient &This, const CNamePlateData &Data) override");
 	ASSERT_FALSE(Body.empty());
 
-	const size_t DeletePos = Body.find("This.TextRender()->DeleteTextContainer(m_TextContainerIndex);");
+	const size_t DeletePos = Body.find("m_TextBuild.Run(*This.TextRender(), m_TextContainerIndex");
 	const size_t UpdateTextPos = Body.find("UpdateText(This, Data);");
 	ASSERT_NE(DeletePos, std::string::npos);
 	ASSERT_NE(UpdateTextPos, std::string::npos);

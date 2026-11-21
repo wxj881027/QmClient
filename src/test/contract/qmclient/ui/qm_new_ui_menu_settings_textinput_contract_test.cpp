@@ -108,7 +108,8 @@ TEST(QmNewUiMenuSettingsTextInputContract, BufferedTextUploadsMissingGpuContaine
 	const size_t MissingContainer = Render.find("if(TextContainer.m_StringInfo.m_QuadBufferContainerIndex == -1)", BufferedPath);
 	const size_t UploadMissingContainer = Render.find("UploadTextContainer(TextContainerIndex);", MissingContainer);
 	const size_t BufferedRender = Render.find("Graphics()->RenderText(", UploadMissingContainer);
-	const size_t ImmediateFallback = Render.find("else\n\t\t\t{\n\t\t\t\t// render tiles", BufferedPath);
+	// 缓冲渲染之后是立即四边形回退；空间渐变走同层的另一条立即路径，不再嵌在 buffered 分支里。
+	const size_t ImmediateFallback = Render.find("else\n\t\t\t{\n\t\t\t\tconst float UVScale", BufferedPath);
 	ASSERT_NE(BufferedPath, std::string::npos);
 	ASSERT_NE(MissingContainer, std::string::npos);
 	ASSERT_NE(UploadMissingContainer, std::string::npos);

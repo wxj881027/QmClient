@@ -4,7 +4,6 @@
 
 #include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_init.h>
-
 #include <gtest/gtest.h>
 
 #include <array>

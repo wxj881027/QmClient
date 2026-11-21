@@ -43,17 +43,17 @@ public:
 
 namespace quad_art
 {
-inline void MarkVisitedPixels(std::vector<bool> &vVisited, const CImageInfo &Image, ivec2 Pos, ivec2 Size)
-{
-	// 最后一列或一行可能只剩部分像素，超出的列不能标记到下一行。
-	const int EndY = std::min(Pos.y + Size.y, static_cast<int>(Image.m_Height));
-	const int EndX = std::min(Pos.x + Size.x, static_cast<int>(Image.m_Width));
-	for(int y = Pos.y; y < EndY; y++)
+	inline void MarkVisitedPixels(std::vector<bool> &vVisited, const CImageInfo &Image, ivec2 Pos, ivec2 Size)
 	{
-		for(int x = Pos.x; x < EndX; x++)
-			vVisited[x + y * Image.m_Width] = true;
+		// 最后一列或一行可能只剩部分像素，超出的列不能标记到下一行。
+		const int EndY = std::min(Pos.y + Size.y, static_cast<int>(Image.m_Height));
+		const int EndX = std::min(Pos.x + Size.x, static_cast<int>(Image.m_Width));
+		for(int y = Pos.y; y < EndY; y++)
+		{
+			for(int x = Pos.x; x < EndX; x++)
+				vVisited[x + y * Image.m_Width] = true;
+		}
 	}
-}
 } // namespace quad_art
 
 class CQuadArt

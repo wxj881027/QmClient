@@ -1808,15 +1808,25 @@ namespace
 	static_assert(std::size(s_aPresetMorandi) <= CUi::SColorPickerPopupContext::PRESET_MAX_PER_GROUP, "preset group exceeds button slots");
 	static_assert(std::size(s_aPresetNeon) <= CUi::SColorPickerPopupContext::PRESET_MAX_PER_GROUP, "preset group exceeds button slots");
 
-	// 「莫奈」预设组直接引用标签色板（`ui_tag::MONET_PALETTE`）：标签与取色器共用同一张
+	// 「莫奈」预设组直接引用标签色板（`ui_token::tag::MONET_PALETTE`）：标签与取色器共用同一张
 	// 色表，改了色板两边一起变，不会各自漂移。组内顺序就是数组顺序——按色相分组、
 	// 每个色相四档（浅灰 / 浅艳 / 深灰 / 深艳），8 列布局下一行正好两个色相。
-	static_assert(ui_tag::MONET_PALETTE_SIZE == qm_picker_palette::MONET_SWATCHES, "monet swatch button slots out of sync");
-	static_assert(ui_tag::MONET_VARIANTS_PER_HUE == 4, "monet preset names assume four variants per hue");
-	static_assert(ui_tag::MONET_HUE_COUNT == 12, "monet preset names table sized for twelve hues");
-	const char *const s_apMonetHueNames[ui_tag::MONET_HUE_COUNT] = {
-		"罂粟红", "赭橙", "麦黄", "橄榄", "苔绿", "灰绿",
-		"雾青", "湖蓝", "群青", "紫罗兰", "丁香紫", "玫瑰粉",
+	static_assert(ui_token::tag::MONET_PALETTE_SIZE == qm_picker_palette::MONET_SWATCHES, "monet swatch button slots out of sync");
+	static_assert(ui_token::tag::MONET_VARIANTS_PER_HUE == 4, "monet preset names assume four variants per hue");
+	static_assert(ui_token::tag::MONET_HUE_COUNT == 12, "monet preset names table sized for twelve hues");
+	const char *const s_apMonetHueNames[ui_token::tag::MONET_HUE_COUNT] = {
+		"罂粟红",
+		"赭橙",
+		"麦黄",
+		"橄榄",
+		"苔绿",
+		"灰绿",
+		"雾青",
+		"湖蓝",
+		"群青",
+		"紫罗兰",
+		"丁香紫",
+		"玫瑰粉",
 	};
 
 	ColorRGBA PickerUnpackColor(unsigned Packed)
@@ -2665,10 +2675,10 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			else if(pUI->MouseHovered(&UndoRect))
 				pHint = "撤回上一次删除";
 
-			CUIRect TitleRect = ButtonsRow, HintRect;
-			TitleRect.VSplitLeft(22.0f, &TitleRect, &HintRect);
+			CUIRect PaletteTitleRect = ButtonsRow, HintRect;
+			PaletteTitleRect.VSplitLeft(22.0f, &PaletteTitleRect, &HintRect);
 			HintRect.VSplitLeft(ui_token::spacing::XS, nullptr, &HintRect);
-			pUI->DoLabel(&TitleRect, "调色板", 7.0f, TEXTALIGN_ML);
+			pUI->DoLabel(&PaletteTitleRect, "调色板", 7.0f, TEXTALIGN_ML);
 			pUI->TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
 			pUI->DoLabel(&HintRect, pHint, 6.0f, TEXTALIGN_ML);
 			pUI->TextRender()->TextColor(pUI->TextRender()->DefaultTextColor());
@@ -2844,7 +2854,7 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			CUIRect GroupHeader;
 			Cursor.HSplitTop(PICKER_SECTION_HEADER_HEIGHT, &GroupHeader, &Cursor);
 			pUI->DoLabel(&GroupHeader, "预设 · 莫奈", 6.5f, TEXTALIGN_ML);
-			for(int Row = 0; Row * PICKER_PRESET_COLS < ui_tag::MONET_PALETTE_SIZE; Row++)
+			for(int Row = 0; Row * PICKER_PRESET_COLS < ui_token::tag::MONET_PALETTE_SIZE; Row++)
 			{
 				CUIRect RowRect;
 				Cursor.HSplitTop(PICKER_PRESET_ROW_HEIGHT, &RowRect, &Cursor);
@@ -2854,12 +2864,12 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 				for(int Col = 0; Col < PICKER_PRESET_COLS; Col++)
 				{
 					const int Index = Row * PICKER_PRESET_COLS + Col;
-					if(Index >= ui_tag::MONET_PALETTE_SIZE)
+					if(Index >= ui_token::tag::MONET_PALETTE_SIZE)
 						break;
-					const ColorRGBA PresetColor = ui_tag::MONET_PALETTE[Index];
+					const ColorRGBA PresetColor = ui_token::tag::MONET_PALETTE[Index];
 					// 名字按色相重复四次：连续四格是同一色相的四档，读起来是「一组深浅」，
 					// 而不是四个互不相干的名字（格宽只够放 3~4 个汉字，后缀会被省略号吃掉）。
-					const char *pName = s_apMonetHueNames[Index / ui_tag::MONET_VARIANTS_PER_HUE];
+					const char *pName = s_apMonetHueNames[Index / ui_token::tag::MONET_VARIANTS_PER_HUE];
 					CButtonContainer *pButton = &pColorPicker->m_aMonetSwatchButtons[Index];
 					if(DrawCell(RowRect, Col, PresetColor, false, pName, pButton, nullptr, PresetCell) == 1)
 					{

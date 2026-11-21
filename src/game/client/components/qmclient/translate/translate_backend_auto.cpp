@@ -46,7 +46,10 @@ namespace
 			if(!m_pRequest->Done())
 				return std::nullopt;
 			Out.m_Error = true;
-			if(m_pRequest->State() != EHttpState::DONE)
+			const EHttpState State = m_pRequest->State();
+			// Done() 也覆盖网络失败和中止；此时 StatusCode() 会触发断言。
+			Out.m_HttpStatus = m_pRequest->CompletedStatusCode();
+			if(State != EHttpState::DONE)
 			{
 				Out.m_Notice = ETranslateNotice::NETWORK_ERROR;
 				return false;

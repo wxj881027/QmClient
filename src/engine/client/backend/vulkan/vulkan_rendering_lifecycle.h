@@ -143,16 +143,13 @@ bool CompleteQmVulkanRenderTargetReadback(CImageInfo &Image, const uint8_t *pSou
 	if(pSource == nullptr || !readback_image::GetRgbaLayout(Width, Height, RowPitch, AvailableBytes, Layout))
 		return false;
 
-	screenshot_image::CaptureRgba(Image, Width, Height, screenshot_image::ERowOrder::TOP_DOWN,
-		[&](uint8_t *pPixels, size_t DataBytes) {
+	screenshot_image::CaptureRgba(Image, Width, Height, screenshot_image::ERowOrder::TOP_DOWN, [&](uint8_t *pPixels, size_t DataBytes) {
 			for(size_t Y = 0; Y < Height; ++Y)
 				std::memcpy(pPixels + Y * Layout.m_RowBytes, pSource + Y * Layout.m_RowPitch, Layout.m_RowBytes);
 			if(SwapRedBlue)
 				for(size_t Offset = 0; Offset < DataBytes; Offset += 4)
 					std::swap(pPixels[Offset], pPixels[Offset + 2]);
-			return true;
-		},
-		std::forward<TAllocate>(Allocate), screenshot_image::EAlphaMode::PRESERVE);
+			return true; }, std::forward<TAllocate>(Allocate), screenshot_image::EAlphaMode::PRESERVE);
 	// GPU 已完成。CPU 像素分配失败时留空，由读回队列报告本次请求失败。
 	return true;
 }

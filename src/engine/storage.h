@@ -99,6 +99,7 @@ public:
 	virtual bool RemoveFolder(const char *pFilename, int Type) = 0;
 	// 保存用户配置时禁用目标删除重试；失败后保留原目标文件。
 	virtual bool RenameFile(const char *pOldFilename, const char *pNewFilename, int Type, bool AllowDestinationRemoval = true) = 0;
+	virtual bool MoveFileNoReplace(const char *pOldFilename, const char *pNewFilename, int Type) { return false; }
 	virtual bool CreateFolder(const char *pFoldername, int Type) = 0;
 	virtual void GetCompletePath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize) = 0;
 

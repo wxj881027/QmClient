@@ -96,6 +96,8 @@ public:
 	bool IsEditingTeleNumber() const { return m_Active && m_TeleNumberInput.IsActive(); }
 
 	bool PlaybackControlsActive() const;
+	// 隐藏查看模式控制卡，播放会话保持不变。
+	void CloseReplayPanel() { m_ReplayUi.ClosePanel(); }
 	bool IsActive() const { return m_Active; }
 };
 

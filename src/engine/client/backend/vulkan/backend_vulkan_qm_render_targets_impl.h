@@ -323,10 +323,7 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Destroy(const CCo
 		return true;
 	}
 	// 获取交换链图像时可能因 surface 丢失直接暂停，先前提交的帧仍可能使用此目标。
-	return DestroyQmVulkanRenderTargetAfterUse(m_RenderingPaused, Target.m_Image,
-		[this] { return CheckVulkanResult(DeviceWaitIdle(), GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Waiting for the device before destroying a paused render target failed."); },
-		[this] { return SubmitCurrentCommandsAndRestartSwapPass(); },
-		[this, &Target] { DestroyRenderTarget(Target); });
+	return DestroyQmVulkanRenderTargetAfterUse(m_RenderingPaused, Target.m_Image, [this] { return CheckVulkanResult(DeviceWaitIdle(), GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Waiting for the device before destroying a paused render target failed."); }, [this] { return SubmitCurrentCommandsAndRestartSwapPass(); }, [this, &Target] { DestroyRenderTarget(Target); });
 }
 
 inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Begin(const CCommandBuffer::SCommand_RenderTarget_Begin *pCommand)

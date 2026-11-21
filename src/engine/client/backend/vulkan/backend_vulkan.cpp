@@ -7011,12 +7011,10 @@ public:
 			dbg_msg("vulkan", "swap chain recreated on a fresh surface, rendering resumed.");
 		}
 
-		Ret = ReinitializeQmVulkanFrameResources(Ret, OldSwapChainImageCount != m_SwapChainImageCount,
-			[this] { CleanupVulkan<false>(); }, [this] {
+		Ret = ReinitializeQmVulkanFrameResources(Ret, OldSwapChainImageCount != m_SwapChainImageCount, [this] { CleanupVulkan<false>(); }, [this] {
 				// 下一次获取图像前，清理路径也可能需要访问新数组中的帧槽。
 				m_CurImageIndex = 0;
-				return InitVulkan<false>();
-			});
+				return InitVulkan<false>(); });
 		if(Ret != 0)
 		{
 			m_FramePrepared = false;

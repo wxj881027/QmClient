@@ -177,7 +177,7 @@ TEST(QmSearchAnswers, ChatExportAnswerOpensTheExportDirectory)
 {
 	const auto Result = qm_search_answers::Search("导出聊天记录");
 	ASSERT_NE(Result.m_pAnswer, nullptr);
-	EXPECT_STREQ(Result.m_pAnswer->m_pDirectory, "qmclient/chat_log");
+	EXPECT_STREQ(Result.m_pAnswer->m_pDirectory, "qmclient/content/chat_logs");
 	EXPECT_EQ(Result.m_pAnswer->m_pCommand, nullptr);
 }
 

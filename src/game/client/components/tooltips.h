@@ -206,7 +206,9 @@ struct CTooltip
 	bool m_OnScreen = false; // 登记时的悬浮资格，保留内容裁剪与弹层屏蔽结果。
 	// 登记发生在弹窗渲染过程中：弹窗接管指针时只有这类来源允许继续悬浮，
 	// 被弹窗盖住的下层控件即使矩形重合也不会透出提示。
+	// 弹层关闭后也不能凭旧矩形继续判定悬浮。
 	bool m_FromPopup = false;
+	bool m_ForcedHover = false;
 	float m_FadeTime = 0.75f;
 	float m_FontSize = ui_token::tooltip::FONT_SIZE;
 	bool m_SmallInstant = false;
@@ -498,6 +500,8 @@ inline bool QmTooltipMayUpdate(const CTooltip &Current, uint64_t Frame, bool Fal
 template<typename TUi>
 inline bool QmTooltipHovered(const CTooltip &Tooltip, TUi &Ui)
 {
+	if(Tooltip.m_ForcedHover)
+		return true;
 	bool Hovered;
 	if constexpr(requires { Ui.TooltipSourceHovered(&Tooltip.m_Rect, Tooltip.m_FromPopup); })
 		Hovered = Ui.TooltipSourceHovered(&Tooltip.m_Rect, Tooltip.m_FromPopup);
@@ -538,7 +542,7 @@ class CTooltips : public CComponent
 	 * @param Tooltip A reference to the tooltip that should be active.
 	 */
 	void SetActiveTooltip(CTooltip &Tooltip);
-	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize, bool SmallInstant, bool HoverByRect, bool Immediate = false, bool Fallback = false, const CUIRect *pAnchor = nullptr, EQmTooltipPlacement Placement = EQmTooltipPlacement::AUTO);
+	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize, bool SmallInstant, bool HoverByRect, bool Immediate = false, bool Fallback = false, const CUIRect *pAnchor = nullptr, EQmTooltipPlacement Placement = EQmTooltipPlacement::AUTO, bool ForceHover = false);
 
 	void RecordSource(const void *pId, const CUIRect &Rect);
 	void ClearActiveTooltip();
@@ -562,6 +566,8 @@ public:
 	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
 	// 说明标签不抢占控件的 HotItem，通过可见悬浮区域触发提示。
 	void DoToolTipForRect(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
+	// 游戏内虚拟光标不跟随系统鼠标位置；调用方已判定悬浮时跳过矩形命中检查。
+	void DoToolTipForRectForced(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
 	// 指定气泡首选展开方向：屏幕空间足够时从控件该侧向外弹出，不足则回落默认布局。
 	void DoToolTipFromSide(const void *pId, const CUIRect *pNearRect, const char *pText, EQmTooltipPlacement Placement, float WidthHint = -1.0f);
 	// 控件显式提供配置绑定；后续普通提示会追加同一命令，保留原说明。

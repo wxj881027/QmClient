@@ -12,9 +12,11 @@
 
 CDoor::CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData) :
 	CEntity(pGameWorld, CGameWorld::ENTTYPE_DOOR),
+	m_To(0.0f, 0.0f),
 	m_Direction(0.0f, 0.0f),
 	m_Length(0),
-	m_Active(false)
+	m_Active(false),
+	m_CollisionRegistered(false)
 {
 	m_Id = Id;
 
@@ -30,7 +32,8 @@ CDoor::CDoor(const CDoor &Other) :
 	m_To(Other.m_To),
 	m_Direction(Other.m_Direction),
 	m_Length(Other.m_Length),
-	m_Active(Other.m_Active)
+	m_Active(Other.m_Active),
+	m_CollisionRegistered(false)
 {
 }
 
@@ -104,13 +107,11 @@ std::optional<CDoor::SCollisionGeometry> CDoor::CalcCollisionGeometry(vec2 Pos, 
 	return Geometry;
 }
 
-void CDoor::ResetCollision()
+void CDoor::PrepareRenderGeometry()
 {
+	m_Active = false;
 	if(!QmCollision::CanRoundPosition(m_Pos) || !QmCollision::CanRoundPosition(m_To))
-	{
-		m_Active = false;
 		return;
-	}
 	if(Collision()->GetTile(m_Pos.x, m_Pos.y) || Collision()->GetFrontTile(m_Pos.x, m_Pos.y))
 		return;
 	const vec2 Dir = m_To - m_Pos;
@@ -121,14 +122,17 @@ void CDoor::ResetCollision()
 	const int ConfiguredLength = Side == -1 ? -1 : MapLength(Side);
 	const auto Geometry = CalcCollisionGeometry(m_Pos, m_To, Side, ConfiguredLength, ivec2(Collision()->GetWidth(), Collision()->GetHeight()));
 	if(!Geometry)
-	{
-		m_Active = false;
 		return;
-	}
 	m_Direction = Geometry->m_Direction;
 	m_Length = Geometry->m_Length;
 	m_Active = true;
+}
 
+void CDoor::ResetCollision()
+{
+	PrepareRenderGeometry();
+	if(!m_Active)
+		return;
 	for(int i = 0; i < m_Length - 1; i++)
 	{
 		vec2 CurrentPos = m_Pos + m_Direction * i;
@@ -138,11 +142,12 @@ void CDoor::ResetCollision()
 		else
 			Collision()->SetDoorCollisionAt(CurrentPos.x, CurrentPos.y, TILE_STOPA, 0, m_Number);
 	}
+	m_CollisionRegistered = true;
 }
 
 void CDoor::Destroy()
 {
-	if(m_Active)
+	if(m_CollisionRegistered)
 	{
 		for(int i = 0; i < m_Length - 1; i++)
 		{
@@ -152,6 +157,7 @@ void CDoor::Destroy()
 			else
 				Collision()->SetDoorCollisionAt(CurrentPos.x, CurrentPos.y, TILE_AIR, 0, 0);
 		}
+		m_CollisionRegistered = false;
 	}
 	delete this;
 }
@@ -166,4 +172,26 @@ void CDoor::Read(const CLaserData *pData)
 bool CDoor::Match(const CDoor *pDoor) const
 {
 	return pDoor->m_Pos == m_Pos && pDoor->m_To == m_To && pDoor->m_Number == m_Number;
+}
+
+CLaserData CDoor::RenderData(int Team)
+{
+	const auto &vSwitchers = GameWorld()->Switchers();
+	const bool IsSwitchLayer = m_Layer == LAYER_SWITCH;
+	const bool SwitchStatus = IsSwitchLayer && m_Number > 0 && m_Number < (int)vSwitchers.size() &&
+				  Team >= 0 && Team < NUM_DDRACE_TEAMS && vSwitchers[m_Number].m_aStatus[Team];
+	const bool Active = QmPracticeSwitchActive(IsSwitchLayer, m_Number, Team, (int)vSwitchers.size(), SwitchStatus);
+
+	CLaserData Data = {};
+	Data.m_From = QmPracticeDoorRenderEnd(m_Pos, m_To, m_Direction, m_Length, Active);
+	Data.m_To = m_Pos;
+	Data.m_StartTick = GameWorld()->GameTick();
+	Data.m_ExtraInfo = true;
+	Data.m_Owner = -1;
+	Data.m_Type = LASERTYPE_DOOR;
+	Data.m_SwitchNumber = m_Number;
+	Data.m_Subtype = 0;
+	Data.m_Predict = false;
+	Data.m_TuneZone = GameWorld()->m_WorldConfig.m_UseTuneZones ? Collision()->IsTune(Collision()->GetMapIndex(m_Pos)) : 0;
+	return Data;
 }

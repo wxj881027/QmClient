@@ -54,6 +54,11 @@ namespace EditorMapLoad
 		}
 
 		const auto *pData = static_cast<const char *>(Map.GetData(SettingsIndex));
+		if(Map.IsDataFailed(SettingsIndex))
+		{
+			log_error("editor/load", "Map settings data %d could not be read.", SettingsIndex);
+			return std::nullopt;
+		}
 		// 解压或数据处理器会改变长度，必须在读取后重新查询有符号尺寸。
 		const int DataSize = Map.GetDataSize(SettingsIndex);
 		if(DataSize == 0)

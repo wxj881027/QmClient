@@ -4,8 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import ctypes
-from ctypes import wintypes
 from collections.abc import Callable
 import json
 import os
@@ -52,46 +50,11 @@ def wait_perf_summary(client: Process, profile: Path, offsets: dict[Path, int], 
 	raise TimeoutError(f"timed out waiting for {description} in isolated perf log")
 
 
-def focus_client_window(client: Process) -> bool:
-	# 仅操作本脚本创建的工作区实例；正式客户端窗口不会进入候选集合。
-	user32 = ctypes.WinDLL("user32", use_last_error=True)
-	callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
-	user32.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
-	user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
-	user32.IsWindowVisible.argtypes = [wintypes.HWND]
-	user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
-	user32.SetForegroundWindow.argtypes = [wintypes.HWND]
-	user32.GetForegroundWindow.restype = wintypes.HWND
-	windows = []
-
-	@callback_type
-	def visit(window: int, _: int) -> bool:
-		owner = wintypes.DWORD()
-		user32.GetWindowThreadProcessId(window, ctypes.byref(owner))
-		if owner.value == client._process.pid:
-			windows.append(window)
-		return True
-
-	user32.EnumWindows(visit, 0)
-	for window in windows:
-		user32.ShowWindow(window, 9)
-		user32.SetForegroundWindow(window)
-		if user32.GetForegroundWindow() == window:
-			return True
-	return False
-
-
 def wait_screenshot(client: Process, profile: Path, timeout: float = 20.0) -> None:
-	deadline = time.monotonic() + timeout
-	while time.monotonic() < deadline:
-		if any(profile.rglob("screenshot*.png")):
-			return
-		if not client.is_alive():
-			raise RuntimeError("client exited before screenshot was saved")
-		if focus_client_window(client):
-			client.command("screenshot")
-		time.sleep(0.1)
-	raise TimeoutError("screenshot artifact was not saved")
+	existing = set(profile.rglob("screenshot*.png"))
+	client.take_screenshot(f"icon_smoke_{time.monotonic_ns()}", timeout=timeout)
+	if not any(path not in existing for path in profile.rglob("screenshot*.png")):
+		raise RuntimeError("screenshot command reported success but no image artifact was saved")
 
 
 def icon_summary(line: str) -> dict[str, object] | None:

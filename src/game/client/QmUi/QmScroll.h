@@ -14,9 +14,19 @@ constexpr float QmScrollAltMultiplier()
 	return 3.0f;
 }
 
+// 用户可调的唯一滚轮距离入口：返回相对默认步长 10 的倍率。
+// 各滚动面只把这个倍率乘到自己的语义基准上，不再各自解释像素步长。
+float QmWheelStepScale();
+
+// 行型滚动面（控制台、聊天历史）的每档行数：基准行数 × 全局倍率，
+// 再按可见行数和面自身的上限夹取。VisibleLines <= 0 表示几何未知，
+// 此时只使用 MaxLines，保证启动/测试环境也有可用兜底。
+int QmResolveWheelLineCount(int BaseLines, float StepScale, int VisibleLines, int MaxLines);
+
 // 面板级滚动面（设置主区、wiki 弹窗、统计页等整页容器）的滚轮档位倍率：
-// 这类容器行高远大于列表行，每档 = qm_ui_scroll_step × 该倍率，保持单屏节奏。
-// 全站滚轮档位都由 qm_ui_scroll_step 等比驱动，此处只定义语义倍率，不含第二处 token。
+// 这类容器行高远大于列表行，每档 = 默认 10 × StepScale × 该倍率，保持单屏节奏。
+// 全站滚轮距离都由 qm_ui_scroll_step 的同一位倍率驱动，此处只定义语义倍率，
+// 不含第二处用户可调项。
 constexpr float QmPanelWheelStepMultiplier()
 {
 	return 12.0f;
@@ -102,6 +112,9 @@ struct SQmScrollContainerStyle
 	float m_ScrollbarWidth = 10.0f;
 	float m_ScrollbarMargin = 2.0f;
 	float m_MinThumbHeight = 24.0f;
+	// 1.0 = 线性“视口 / 内容”比例；目录型网格用小于 1 的指数压缩超大内容高度，
+	// 避免几千项的长目录全部坍缩到最小滑块，玩家看不出 1k 与 7k 的规模差异。
+	float m_ThumbSizeExponent = 1.0f;
 	float m_ContentDragThreshold = 6.0f;
 	bool m_ReserveScrollbarSpace = false;
 };
@@ -151,6 +164,9 @@ struct SQmResolvedScrollPolicy
 };
 
 SQmScrollContainerStyle QmScrollContainerStyleForSize(EQmScrollSize Size, float UiScale = 1.0f);
+// 滑块长度的唯一入口：CQmScrollController 与 CScrollRegion 都走这里，避免实机滚动条
+// 和预览/测试使用两套逐渐分叉的夹取规则。
+float QmResolveScrollThumbSize(float ViewportSize, float ContentSize, float TrackSize, float MinThumbSize, float SizeExponent = 1.0f);
 SQmScrollConfig QmNativeWheelScrollConfig(float UiScale, float SmoothScrollTimeSec);
 SQmScrollConfig QmSettingsScrollConfig(float UiScale, float SmoothScrollTimeSec);
 SQmResolvedScrollPolicy QmResolveScrollPolicy(const SQmScrollRequest &Request, float UiScale = 1.0f, float SmoothScrollTimeSec = 0.0f);

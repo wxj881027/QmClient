@@ -51,6 +51,17 @@ TEST(QmMonitoringRuntimeContract, ConnectionGradeTracksDisconnectedState)
 	EXPECT_EQ(QmDetermineConnectionGrade(Net), EQmConnectionGrade::DISCONNECTED);
 }
 
+TEST(QmMonitoringRuntimeContract, MenuTextCacheAgeKeepsTheLastUiFrameAndExpiresOnTheNextAgeStep)
+{
+	// 参数由调用方传 Ui()->PopupSourceFrame()；主循环 PerfFrame 会在异步渲染
+	// 时跳号，不能用它计算菜单文本容器的寿命。
+	EXPECT_FALSE(QmMenuTextCacheEntryExpired(0, 0));
+	EXPECT_FALSE(QmMenuTextCacheEntryExpired(QM_MENU_TEXT_CACHE_MAX_AGE_FRAMES, 0));
+	EXPECT_TRUE(QmMenuTextCacheEntryExpired(QM_MENU_TEXT_CACHE_MAX_AGE_FRAMES + 1, 0));
+	// UI 帧时钟回绕或重置后，旧条目先保留，不能因无符号相减误删。
+	EXPECT_FALSE(QmMenuTextCacheEntryExpired(5, 600));
+}
+
 TEST(QmMonitoringRuntimeContract, ConnectionGradeUsesThresholdTable)
 {
 	SQmNetworkMetrics Net;

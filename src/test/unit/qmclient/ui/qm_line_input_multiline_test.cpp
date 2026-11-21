@@ -3,10 +3,10 @@
 
 #include <game/client/lineinput.h>
 
-#include <optional>
-
 #include <gtest/gtest.h>
 #include <test/support/qm_ui_test_input.h>
+
+#include <optional>
 
 namespace
 {

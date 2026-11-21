@@ -41,6 +41,24 @@ context = "Editor"
 simplified_chinese = "%d秒"
 
 [[message]]
+key = "%s (default: %d)"
+context = "Editor"
+[message.translations]
+simplified_chinese = "%s（默认值：%d）"
+
+[[message]]
+key = "%s (default: %d, min: %d)"
+context = "Editor"
+[message.translations]
+simplified_chinese = "%s（默认值：%d，最小值：%d）"
+
+[[message]]
+key = "%s (default: %d, min: %d, max: %d)"
+context = "Editor"
+[message.translations]
+simplified_chinese = "%s（默认值：%d，最小值：%d，最大值：%d）"
+
+[[message]]
 key = "%s i[value]"
 context = "Editor"
 [message.translations]
@@ -105,6 +123,12 @@ key = "[Ctrl+D] Toggle brush draw mode: preserve or override existing tiles."
 context = "Editor"
 [message.translations]
 simplified_chinese = "[Ctrl+D] 切换画笔绘制模式：保留或覆盖现有图块。"
+
+[[message]]
+key = "[Ctrl+F4] Close the current map."
+context = "Editor"
+[message.translations]
+simplified_chinese = "[Ctrl+F4] 关闭当前地图。"
 
 [[message]]
 key = "[Ctrl+F] Find empty slot."
@@ -237,6 +261,12 @@ key = "[Ctrl+Y] Redo the last command edit."
 context = "Editor"
 [message.translations]
 simplified_chinese = "[Ctrl+Y] 重做上次的命令编辑。"
+
+[[message]]
+key = "[Ctrl+Y] Redo the last undone action."
+context = "Editor"
+[message.translations]
+simplified_chinese = "[Ctrl+Y] 重做上一个被撤销的操作。"
 
 [[message]]
 key = "[Ctrl+Z] Undo the last action."
@@ -509,6 +539,12 @@ context = "Editor"
 simplified_chinese = "所有组合"
 
 [[message]]
+key = "All commands"
+context = "Editor"
+[message.translations]
+simplified_chinese = "全部指令"
+
+[[message]]
 key = "Allow all unknown settings"
 context = "Editor"
 [message.translations]
@@ -549,6 +585,12 @@ key = "Angle "
 context = "Editor"
 [message.translations]
 simplified_chinese = "角度 "
+
+[[message]]
+key = "Append"
+context = "Editor"
+[message.translations]
+simplified_chinese = "添加"
 
 [[message]]
 key = "Append %s"
@@ -663,6 +705,12 @@ key = "Big image"
 context = "Editor"
 [message.translations]
 simplified_chinese = "大图片"
+
+[[message]]
+key = "Blockworlds"
+context = "Editor"
+[message.translations]
+simplified_chinese = "方块世界"
 
 [[message]]
 key = "Blue Check-Tele"
@@ -869,6 +917,12 @@ context = "Editor"
 simplified_chinese = "裁剪纵"
 
 [[message]]
+key = "Close map"
+context = "Editor"
+[message.translations]
+simplified_chinese = "关闭地图"
+
+[[message]]
 key = "Close this dialog."
 context = "Editor"
 [message.translations]
@@ -885,6 +939,12 @@ key = "Collaboration connection cancelled"
 context = "Editor"
 [message.translations]
 simplified_chinese = "已取消协作连接"
+
+[[message]]
+key = "Collaboration connection lost; please try again"
+context = "Editor"
+[message.translations]
+simplified_chinese = "协作连接已断开，请重试"
 
 [[message]]
 key = "Collapse all"
@@ -1385,6 +1445,12 @@ context = "Editor"
 simplified_chinese = "删除该层。"
 
 [[message]]
+key = "Delete the selected channel point."
+context = "Editor"
+[message.translations]
+simplified_chinese = "删除当前轴的关键帧。"
+
+[[message]]
 key = "Delete the selected file."
 context = "Editor"
 [message.translations]
@@ -1439,6 +1505,12 @@ context = "Editor"
 simplified_chinese = "禁用/允许未知或无效命令。"
 
 [[message]]
+key = "Discard changes"
+context = "Editor"
+[message.translations]
+simplified_chinese = "放弃更改"
+
+[[message]]
 key = "Do not perform quad alignment to other quads/points when moving quads."
 context = "Editor"
 [message.translations]
@@ -1469,6 +1541,12 @@ context = "Editor"
 simplified_chinese = "不显示武器、护盾、爱心和旗帜在游戏中的表现。"
 
 [[message]]
+key = "Do not show how weapons, shields, snowflakes and flags appear ingame."
+context = "Editor"
+[message.translations]
+simplified_chinese = "不显示武器、护盾、雪花和旗帜在游戏中的外观。"
+
+[[message]]
 key = "Do not show quad bounds when moving quads."
 context = "Editor"
 [message.translations]
@@ -1479,6 +1557,12 @@ key = "Do not show tile information."
 context = "Editor"
 [message.translations]
 simplified_chinese = "不显示图块编号。"
+
+[[message]]
+key = "Do you want to save your changes before closing this map?\\n\\nYour changes will be lost if you discard them."
+context = "Editor"
+[message.translations]
+simplified_chinese = "关闭此地图前要保存更改吗？\\n\\n如果放弃更改，所有更改都会丢失。"
 
 [[message]]
 key = "Done"
@@ -1497,6 +1581,18 @@ key = "Double click to create a new point. Use shift to change the zoom axis. Pr
 context = "Editor"
 [message.translations]
 simplified_chinese = "双击创建新点。按住 Shift 切换缩放轴，按 S 缩放选中的动画点。"
+
+[[message]]
+key = "Drag a rectangle inside the quad to create a cropped quad."
+context = "Editor"
+[message.translations]
+simplified_chinese = "在 Quad 内拖出矩形，生成裁剪后的 Quad。"
+
+[[message]]
+key = "Drag inside the quad to slice a rectangle. Hold alt to ignore grid. Right click to cancel."
+context = "Editor"
+[message.translations]
+simplified_chinese = "在 Quad 内拖拽进行矩形裁剪。按住 Alt 忽略网格，右键取消。"
 
 [[message]]
 key = "DRAGGING LASER: Grabs and attracts the closest tee to it. Can reach tees through walls but not through LASER BLOCKER. Medium strength."
@@ -1853,6 +1949,18 @@ context = "Editor"
 simplified_chinese = "输入房间码以加入协作房间。"
 
 [[message]]
+key = "Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space to complete at the cursor. Click All commands to browse every command without changing the text until you select one. If the IME reserves the shortcut, use the button."
+context = "Editor"
+[message.translations]
+simplified_chinese = "输入服务器设置。按 Ctrl+Space 或 Ctrl+Shift+Space 补全光标处的内容。点击“全部指令”可浏览所有指令，选择前保留当前文本。输入法占用快捷键时，请使用按钮。"
+
+[[message]]
+key = "Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space, or click ... to show available settings. If the IME reserves the shortcut, use ... ."
+context = "Editor"
+[message.translations]
+simplified_chinese = "输入服务器设置。按 Ctrl+Space、Ctrl+Shift+Space，或点击 ... 显示可用设置。输入法占用快捷键时，请点击 ... 。"
+
+[[message]]
 key = "Enter a server setting. Press ctrl+space to show available settings."
 context = "Editor"
 [message.translations]
@@ -2045,6 +2153,18 @@ context = "Editor"
 simplified_chinese = "错误：动画 %d 的通道数 %d 无效，已更正为 %d。"
 
 [[message]]
+key = "Error: Failed to allocate memory for bezier envelope points."
+context = "Editor"
+[message.translations]
+simplified_chinese = "错误：无法为贝塞尔动画点分配内存。"
+
+[[message]]
+key = "Error: Failed to allocate memory for envelope points."
+context = "Editor"
+[message.translations]
+simplified_chinese = "错误：无法为动画点分配内存。"
+
+[[message]]
 key = "Error: Failed to load external image '%s'."
 context = "Editor"
 [message.translations]
@@ -2087,6 +2207,18 @@ context = "Editor"
 simplified_chinese = "错误：无法读取声音 %d 的名称。"
 
 [[message]]
+key = "Error: Saving is not possible because the bezier envelope point data is too large."
+context = "Editor"
+[message.translations]
+simplified_chinese = "错误：无法保存，因为贝塞尔动画点数据过大。"
+
+[[message]]
+key = "Error: Saving is not possible because the envelope point data is too large."
+context = "Editor"
+[message.translations]
+simplified_chinese = "错误：无法保存，因为动画点数据过大。"
+
+[[message]]
 key = "Error: Saving is not possible because the image '%s' could not be loaded. Remove or replace this image."
 context = "Editor"
 [message.translations]
@@ -2097,6 +2229,12 @@ key = "Error: Saving is not possible because the sound '%s' could not be loaded.
 context = "Editor"
 [message.translations]
 simplified_chinese = "错误：无法保存，因为声音“%s”未能加载。请移除或替换该声音。"
+
+[[message]]
+key = "Error: Saving is not possible because there are too many envelope points."
+context = "Editor"
+[message.translations]
+simplified_chinese = "错误：无法保存，因为动画点数量过多。"
 
 [[message]]
 key = "Error: The image '%s' (size %zu x%zu) has a width or height that is not divisible by 16 and therefore cannot be used for tile layers. The image of group #%zu '%s', layer #%zu '%s', has been unset."
@@ -2435,6 +2573,29 @@ context = "Editor"
 simplified_chinese = "文件夹"
 
 [[message]]
+key = "Follow remote placements"
+context = "Editor"
+[message.translations]
+simplified_chinese = "跟随其他协作者的放置"
+
+[[message]]
+key = "Follow remote placements in the collaborative editor"
+context = "Editor"
+[message.translations]
+simplified_chinese = "协作制图时，将视角移到其他协作者新增或替换的放置区域"
+traditional_chinese = "協作製圖時，將視角移到其他協作者新增或替換的放置區域"
+japanese = "共同編集時に、他の編集者が追加または置換した領域へ視点を移動する"
+korean = "공동 지도 편집 중 다른 편집자가 추가하거나 교체한 영역으로 시점을 이동합니다"
+russian = "При совместном редактировании перемещать вид к области, добавленной или заменённой другим участником"
+german = "Beim gemeinsamen Bearbeiten die Ansicht zu dem Bereich bewegen, in dem andere Inhalte hinzufügen oder ersetzen"
+spanish = "Al editar mapas en colaboración, mover la vista a la zona donde otros añaden o reemplazan contenido"
+french = "Lors de l’édition collaborative, déplacer la vue vers la zone où les autres ajoutent ou remplacent du contenu"
+brazilian_portuguese = "Na edição colaborativa, mover a visão para a área onde outros adicionam ou substituem conteúdo"
+portuguese = "Na edição colaborativa, mover a vista para a área onde outros adicionam ou substituem conteúdo"
+turkish = "Ortak harita düzenlemede görünümü diğer katılımcıların içerik eklediği veya değiştirdiği alana taşı"
+polish = "Podczas wspólnej edycji mapy przenoś widok do obszaru, w którym inni dodają lub zastępują elementy"
+
+[[message]]
 key = "Font typer"
 context = "Editor"
 [message.translations]
@@ -2451,6 +2612,12 @@ key = "Freeze"
 context = "Editor"
 [message.translations]
 simplified_chinese = "冻结"
+
+[[message]]
+key = "Freeze grenade"
+context = "Editor"
+[message.translations]
+simplified_chinese = "冻结榴弹炮"
 
 [[message]]
 key = "FREEZE: Freezes tees for 3 seconds."
@@ -2931,6 +3098,12 @@ key = "Joining collaboration room..."
 context = "Editor"
 [message.translations]
 simplified_chinese = "正在加入协作房间..."
+
+[[message]]
+key = "Jump to beginning of animation."
+context = "Editor"
+[message.translations]
+simplified_chinese = "跳到动画开头。"
 
 [[message]]
 key = "JUMP: Sets defined amount of jumps (default is 2)."
@@ -3515,6 +3688,12 @@ context = "Editor"
 simplified_chinese = "N 边形边数。"
 
 [[message]]
+key = "Official"
+context = "Editor"
+[message.translations]
+simplified_chinese = "官方"
+
+[[message]]
 key = "OLD SPEEDUP: Gives tee defined speed. Arrow shows direction and angle. Deprecated."
 context = "Editor"
 [message.translations]
@@ -3531,6 +3710,12 @@ key = "Open the current directory in the file browser."
 context = "Editor"
 [message.translations]
 simplified_chinese = "在文件浏览器中打开当前目录。"
+
+[[message]]
+key = "Open the directory for automapper rules in the file browser."
+context = "Editor"
+[message.translations]
+simplified_chinese = "在文件浏览器中打开自动映射规则目录。"
 
 [[message]]
 key = "Open the selected file."
@@ -3779,6 +3964,12 @@ context = "Editor"
 simplified_chinese = "四边形"
 
 [[message]]
+key = "Race"
+context = "Editor"
+[message.translations]
+simplified_chinese = "竞速"
+
+[[message]]
 key = "Radius"
 context = "Editor"
 [message.translations]
@@ -3861,6 +4052,12 @@ key = "Red value of the envelope."
 context = "Editor"
 [message.translations]
 simplified_chinese = "动画的红色通道值。"
+
+[[message]]
+key = "Redo"
+context = "Editor"
+[message.translations]
+simplified_chinese = "重做"
 
 [[message]]
 key = "Reference"
@@ -4061,6 +4258,12 @@ context = "Editor"
 simplified_chinese = "正在重启服务器"
 
 [[message]]
+key = "Right click or double click to add points on active channels. Use shift to change the zoom axis. Press S to scale selected points."
+context = "Editor"
+[message.translations]
+simplified_chinese = "右键或双击为亮起的轴添加关键帧。按住 Shift 切换缩放轴，按 S 缩放选中的关键帧。"
+
+[[message]]
 key = "Room %s is in sync (%d/%d people)"
 context = "Editor"
 [message.translations]
@@ -4127,6 +4330,12 @@ context = "Editor"
 simplified_chinese = "另存为"
 
 [[message]]
+key = "Save changes?"
+context = "Editor"
+[message.translations]
+simplified_chinese = "保存更改吗？"
+
+[[message]]
 key = "Save copy"
 context = "Editor"
 [message.translations]
@@ -4191,6 +4400,12 @@ key = "Saving failed: Could not remove old map file '%s'."
 context = "Editor"
 [message.translations]
 simplified_chinese = "保存失败：无法删除旧地图文件“%s”。"
+
+[[message]]
+key = "Saving failed: Could not replace map file '%s'; the previous version was restored or kept at '%s'."
+context = "Editor"
+[message.translations]
+simplified_chinese = "保存失败：无法替换地图文件“%s”；旧版本已恢复或保留在“%s”。"
 
 [[message]]
 key = "saving quads layer"
@@ -4481,6 +4696,12 @@ context = "Editor"
 simplified_chinese = "显示目录"
 
 [[message]]
+key = "Show directory"
+context = "Editor"
+[message.translations]
+simplified_chinese = "显示目录"
+
+[[message]]
 key = "Show envelope editor history."
 context = "Editor"
 [message.translations]
@@ -4491,6 +4712,12 @@ key = "Show how weapons, shields, hearts and flags appear ingame."
 context = "Editor"
 [message.translations]
 simplified_chinese = "显示武器、护盾、爱心和旗帜在游戏中的表现。"
+
+[[message]]
+key = "Show how weapons, shields, snowflakes and flags appear ingame."
+context = "Editor"
+[message.translations]
+simplified_chinese = "显示武器、护盾、雪花和旗帜在游戏中的外观。"
 
 [[message]]
 key = "Show info"
@@ -4577,10 +4804,22 @@ context = "Editor"
 simplified_chinese = "切割"
 
 [[message]]
+key = "Slice rectangle"
+context = "Editor"
+[message.translations]
+simplified_chinese = "矩形裁剪"
+
+[[message]]
 key = "Smooth"
 context = "Editor"
 [message.translations]
 simplified_chinese = "平滑"
+
+[[message]]
+key = "SNOWFLAKE: Works like a FREEZE tile. Freezes tees for 3 seconds by default."
+context = "Editor"
+[message.translations]
+simplified_chinese = "雪花：作用类似冻结砖块，默认将 Tee 冻结 3 秒。"
 
 [[message]]
 key = "Softness "
@@ -4707,6 +4946,18 @@ key = "SPEEDER: Causes weapons, SHIELD, HEART and SPINNING LASER to move slowly.
 context = "Editor"
 [message.translations]
 simplified_chinese = "速度器：使武器、盾牌、冻结心和旋转激光缓慢移动。"
+
+[[message]]
+key = "SPEEDER: Causes weapons, SHIELD, SNOWFLAKE and SPINNING LASER to move quickly."
+context = "Editor"
+[message.translations]
+simplified_chinese = "加速器：使武器、护盾、雪花和旋转激光快速移动。"
+
+[[message]]
+key = "SPEEDER: Causes weapons, SHIELD, SNOWFLAKE and SPINNING LASER to move slowly."
+context = "Editor"
+[message.translations]
+simplified_chinese = "加速器：使武器、护盾、雪花和旋转激光缓慢移动。"
 
 [[message]]
 key = "Speedup"
@@ -5327,6 +5578,12 @@ context = "Editor"
 simplified_chinese = "时间开关：在设定的秒数内禁用相同编号的开关（例如开门）。"
 
 [[message]]
+key = "Timebar. Press left-click to drag. Hold ctrl to be more precise."
+context = "Editor"
+[message.translations]
+simplified_chinese = "时间条：左键拖动，按住 Ctrl 精细调整。"
+
+[[message]]
 key = "Toggle grid"
 context = "Editor"
 [message.translations]
@@ -5453,6 +5710,12 @@ context = "Editor"
 simplified_chinese = "深度解冻：移除深度冻结效果。"
 
 [[message]]
+key = "Undo"
+context = "Editor"
+[message.translations]
+simplified_chinese = "撤销"
+
+[[message]]
 key = "Unfreeze"
 context = "Editor"
 [message.translations]
@@ -5549,16 +5812,34 @@ context = "Editor"
 simplified_chinese = "使用鼠标左键用画笔绘制。右键清空画笔。按住 Alt 将鼠标移动锁定到单轴。"
 
 [[message]]
+key = "Use Shift+Mouse wheel up/down to adjust the angle."
+context = "Editor"
+[message.translations]
+simplified_chinese = "按住 Shift 并向上/向下滚动鼠标滚轮可调整角度。"
+
+[[message]]
 key = "Use shift+mouse wheel up/down to adjust the tele numbers. Use ctrl+f to change all tele numbers to the first unused number."
 context = "Editor"
 [message.translations]
 simplified_chinese = "使用 Shift+鼠标滚轮上下调整传送编号。使用 Ctrl+F 将所有传送编号改为首个未使用编号。"
 
 [[message]]
+key = "Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number."
+context = "Editor"
+[message.translations]
+simplified_chinese = "按住 Shift 并向上/向下滚动鼠标滚轮可调整图块编号。按 Ctrl+F 可将所有图块编号改为第一个未使用的编号。"
+
+[[message]]
 key = "Value:"
 context = "Editor"
 [message.translations]
 simplified_chinese = "数值："
+
+[[message]]
+key = "Vanilla"
+context = "Editor"
+[message.translations]
+simplified_chinese = "原版"
 
 [[message]]
 key = "version"
@@ -5613,6 +5894,12 @@ key = "X: %.1f, Y: %.1f, Z: %.1f, A: %.1f, G: %i  %s"
 context = "Editor"
 [message.translations]
 simplified_chinese = "坐标X：%.1f，坐标Y：%.1f，缩放：%.1f，动画：%.1f，网格：%i  %s"
+
+[[message]]
+key = "X: %.1f, Y: %.1f, Z: %.1f, T: %.1f, A: %.1f, G: %i  %s"
+context = "Editor"
+[message.translations]
+simplified_chinese = "坐标 X：%.1f，坐标 Y：%.1f，缩放：%.1f，时间：%.1f，动画：%.1f，网格：%i  %s"
 
 [[message]]
 key = "Y-axis of the envelope."
@@ -5709,6 +5996,42 @@ key = "Slow"
 context = "Editor curve menu"
 [message.translations]
 simplified_chinese = "慢入"
+
+[[message]]
+key = "B"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "B"
+
+[[message]]
+key = "F"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "F"
+
+[[message]]
+key = "L"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "L"
+
+[[message]]
+key = "M"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "M"
+
+[[message]]
+key = "N"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "N"
+
+[[message]]
+key = "S"
+context = "Editor curve type abbreviation"
+[message.translations]
+simplified_chinese = "S"
 
 [[message]]
 key = "A"
@@ -5889,326 +6212,3 @@ key = "Shift by"
 context = "Editor tile shift amount"
 [message.translations]
 simplified_chinese = "平移量"
-
-[[message]]
-key = "Append"
-context = "Editor"
-[message.translations]
-simplified_chinese = "添加"
-
-[[message]]
-key = "Blockworlds"
-context = "Editor"
-[message.translations]
-simplified_chinese = "方块世界"
-
-[[message]]
-key = "Error: Failed to allocate memory for bezier envelope points."
-context = "Editor"
-[message.translations]
-simplified_chinese = "错误：无法为贝塞尔动画点分配内存。"
-
-[[message]]
-key = "Error: Failed to allocate memory for envelope points."
-context = "Editor"
-[message.translations]
-simplified_chinese = "错误：无法为动画点分配内存。"
-
-[[message]]
-key = "Error: Saving is not possible because the bezier envelope point data is too large."
-context = "Editor"
-[message.translations]
-simplified_chinese = "错误：无法保存，因为贝塞尔动画点数据过大。"
-
-[[message]]
-key = "Error: Saving is not possible because the envelope point data is too large."
-context = "Editor"
-[message.translations]
-simplified_chinese = "错误：无法保存，因为动画点数据过大。"
-
-[[message]]
-key = "Error: Saving is not possible because there are too many envelope points."
-context = "Editor"
-[message.translations]
-simplified_chinese = "错误：无法保存，因为动画点数量过多。"
-
-[[message]]
-key = "Freeze grenade"
-context = "Editor"
-[message.translations]
-simplified_chinese = "冻结榴弹炮"
-
-[[message]]
-key = "Jump to beginning of animation."
-context = "Editor"
-[message.translations]
-simplified_chinese = "跳到动画开头。"
-
-[[message]]
-key = "Official"
-context = "Editor"
-[message.translations]
-simplified_chinese = "官方"
-
-[[message]]
-key = "Race"
-context = "Editor"
-[message.translations]
-simplified_chinese = "竞速"
-
-[[message]]
-key = "Saving failed: Could not replace map file '%s'; the previous version was restored or kept at '%s'."
-context = "Editor"
-[message.translations]
-simplified_chinese = "保存失败：无法替换地图文件“%s”；旧版本已恢复或保留在“%s”。"
-
-[[message]]
-key = "Timebar. Press left-click to drag. Hold ctrl to be more precise."
-context = "Editor"
-[message.translations]
-simplified_chinese = "时间条：左键拖动，按住 Ctrl 精细调整。"
-
-[[message]]
-key = "Vanilla"
-context = "Editor"
-[message.translations]
-simplified_chinese = "原版"
-
-[[message]]
-key = "X: %.1f, Y: %.1f, Z: %.1f, T: %.1f, A: %.1f, G: %i  %s"
-context = "Editor"
-[message.translations]
-simplified_chinese = "坐标 X：%.1f，坐标 Y：%.1f，缩放：%.1f，时间：%.1f，动画：%.1f，网格：%i  %s"
-
-[[message]]
-key = "[Ctrl+F4] Close the current map."
-context = "Editor"
-[message.translations]
-simplified_chinese = "[Ctrl+F4] 关闭当前地图。"
-
-[[message]]
-key = "Close map"
-context = "Editor"
-[message.translations]
-simplified_chinese = "关闭地图"
-
-[[message]]
-key = "Discard changes"
-context = "Editor"
-[message.translations]
-simplified_chinese = "放弃更改"
-
-[[message]]
-key = "Do not show how weapons, shields, snowflakes and flags appear ingame."
-context = "Editor"
-[message.translations]
-simplified_chinese = "不显示武器、护盾、雪花和旗帜在游戏中的外观。"
-
-[[message]]
-key = "Do you want to save your changes before closing this map?\\n\\nYour changes will be lost if you discard them."
-context = "Editor"
-[message.translations]
-simplified_chinese = "关闭此地图前要保存更改吗？\\n\\n如果放弃更改，所有更改都会丢失。"
-
-[[message]]
-key = "Open the directory for automapper rules in the file browser."
-context = "Editor"
-[message.translations]
-simplified_chinese = "在文件浏览器中打开自动映射规则目录。"
-
-[[message]]
-key = "Save changes?"
-context = "Editor"
-[message.translations]
-simplified_chinese = "保存更改吗？"
-
-[[message]]
-key = "Show directory"
-context = "Editor"
-[message.translations]
-simplified_chinese = "显示目录"
-
-[[message]]
-key = "Show how weapons, shields, snowflakes and flags appear ingame."
-context = "Editor"
-[message.translations]
-simplified_chinese = "显示武器、护盾、雪花和旗帜在游戏中的外观。"
-
-[[message]]
-key = "SNOWFLAKE: Works like a FREEZE tile. Freezes tees for 3 seconds by default."
-context = "Editor"
-[message.translations]
-simplified_chinese = "雪花：作用类似冻结砖块，默认将 Tee 冻结 3 秒。"
-
-[[message]]
-key = "SPEEDER: Causes weapons, SHIELD, SNOWFLAKE and SPINNING LASER to move quickly."
-context = "Editor"
-[message.translations]
-simplified_chinese = "加速器：使武器、护盾、雪花和旋转激光快速移动。"
-
-[[message]]
-key = "SPEEDER: Causes weapons, SHIELD, SNOWFLAKE and SPINNING LASER to move slowly."
-context = "Editor"
-[message.translations]
-simplified_chinese = "加速器：使武器、护盾、雪花和旋转激光缓慢移动。"
-
-[[message]]
-key = "Collaboration connection lost; please try again"
-context = "Editor"
-[message.translations]
-simplified_chinese = "协作连接已断开，请重试"
-
-[[message]]
-key = "Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space to complete at the cursor. Click All commands to browse every command without changing the text until you select one. If the IME reserves the shortcut, use the button."
-context = "Editor"
-[message.translations]
-simplified_chinese = "输入服务器设置。按 Ctrl+Space 或 Ctrl+Shift+Space 补全光标处的内容。点击“全部指令”可浏览所有指令，选择前保留当前文本。输入法占用快捷键时，请使用按钮。"
-
-[[message]]
-key = "All commands"
-context = "Editor"
-[message.translations]
-simplified_chinese = "全部指令"
-
-[[message]]
-key = "Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space, or click ... to show available settings. If the IME reserves the shortcut, use ... ."
-context = "Editor"
-[message.translations]
-simplified_chinese = "输入服务器设置。按 Ctrl+Space、Ctrl+Shift+Space，或点击 ... 显示可用设置。输入法占用快捷键时，请点击 ... 。"
-
-[[message]]
-key = "Slice rectangle"
-context = "Editor"
-[message.translations]
-simplified_chinese = "矩形裁剪"
-
-[[message]]
-key = "Drag a rectangle inside the quad to create a cropped quad."
-context = "Editor"
-[message.translations]
-simplified_chinese = "在 Quad 内拖出矩形，生成裁剪后的 Quad。"
-
-[[message]]
-key = "Drag inside the quad to slice a rectangle. Hold alt to ignore grid. Right click to cancel."
-context = "Editor"
-[message.translations]
-simplified_chinese = "在 Quad 内拖拽进行矩形裁剪。按住 Alt 忽略网格，右键取消。"
-
-[[message]]
-key = "Right click or double click to add points on active channels. Use shift to change the zoom axis. Press S to scale selected points."
-context = "Editor"
-[message.translations]
-simplified_chinese = "右键或双击为亮起的轴添加关键帧。按住 Shift 切换缩放轴，按 S 缩放选中的关键帧。"
-
-[[message]]
-key = "Delete the selected channel point."
-context = "Editor"
-[message.translations]
-simplified_chinese = "删除当前轴的关键帧。"
-
-[[message]]
-key = "Follow remote placements"
-context = "Editor"
-[message.translations]
-simplified_chinese = "跟随其他协作者的放置"
-
-[[message]]
-key = "Follow remote placements in the collaborative editor"
-context = "Editor"
-[message.translations]
-simplified_chinese = "协作制图时，将视角移到其他协作者新增或替换的放置区域"
-traditional_chinese = "協作製圖時，將視角移到其他協作者新增或替換的放置區域"
-japanese = "共同編集時に、他の編集者が追加または置換した領域へ視点を移動する"
-korean = "공동 지도 편집 중 다른 편집자가 추가하거나 교체한 영역으로 시점을 이동합니다"
-russian = "При совместном редактировании перемещать вид к области, добавленной или заменённой другим участником"
-german = "Beim gemeinsamen Bearbeiten die Ansicht zu dem Bereich bewegen, in dem andere Inhalte hinzufügen oder ersetzen"
-spanish = "Al editar mapas en colaboración, mover la vista a la zona donde otros añaden o reemplazan contenido"
-french = "Lors de l’édition collaborative, déplacer la vue vers la zone où les autres ajoutent ou remplacent du contenu"
-brazilian_portuguese = "Na edição colaborativa, mover a visão para a área onde outros adicionam ou substituem conteúdo"
-portuguese = "Na edição colaborativa, mover a vista para a área onde outros adicionam ou substituem conteúdo"
-turkish = "Ortak harita düzenlemede görünümü diğer katılımcıların içerik eklediği veya değiştirdiği alana taşı"
-polish = "Podczas wspólnej edycji mapy przenoś widok do obszaru, w którym inni dodają lub zastępują elementy"
-
-[[message]]
-key = "%s (default: %d)"
-context = "Editor"
-[message.translations]
-simplified_chinese = "%s（默认值：%d）"
-
-[[message]]
-key = "%s (default: %d, min: %d)"
-context = "Editor"
-[message.translations]
-simplified_chinese = "%s（默认值：%d，最小值：%d）"
-
-[[message]]
-key = "%s (default: %d, min: %d, max: %d)"
-context = "Editor"
-[message.translations]
-simplified_chinese = "%s（默认值：%d，最小值：%d，最大值：%d）"
-
-[[message]]
-key = "[Ctrl+Y] Redo the last undone action."
-context = "Editor"
-[message.translations]
-simplified_chinese = "[Ctrl+Y] 重做上一个被撤销的操作。"
-
-[[message]]
-key = "Redo"
-context = "Editor"
-[message.translations]
-simplified_chinese = "重做"
-
-[[message]]
-key = "Undo"
-context = "Editor"
-[message.translations]
-simplified_chinese = "撤销"
-
-[[message]]
-key = "Use Shift+Mouse wheel up/down to adjust the angle."
-context = "Editor"
-[message.translations]
-simplified_chinese = "按住 Shift 并向上/向下滚动鼠标滚轮可调整角度。"
-
-[[message]]
-key = "Use Shift+Mouse wheel up/down to adjust the tile numbers. Use Ctrl+F to change all tile numbers to the first unused number."
-context = "Editor"
-[message.translations]
-simplified_chinese = "按住 Shift 并向上/向下滚动鼠标滚轮可调整图块编号。按 Ctrl+F 可将所有图块编号改为第一个未使用的编号。"
-
-[[message]]
-key = "B"
-context = "Editor curve type abbreviation"
-[message.translations]
-simplified_chinese = "B"
-
-[[message]]
-key = "F"
-context = "Editor curve type abbreviation"
-[message.translations]
-simplified_chinese = "F"
-
-[[message]]
-key = "L"
-context = "Editor curve type abbreviation"
-[message.translations]
-simplified_chinese = "L"
-
-[[message]]
-key = "M"
-context = "Editor curve type abbreviation"
-[message.translations]
-simplified_chinese = "M"
-
-[[message]]
-key = "N"
-context = "Editor curve type abbreviation"
-[message.translations]
-simplified_chinese = "N"
-
-[[message]]
-key = "S"
-context = "Editor curve type abbreviation"
-[message.translations]
-simplified_chinese = "S"

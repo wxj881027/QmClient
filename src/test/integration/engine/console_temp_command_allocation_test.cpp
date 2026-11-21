@@ -181,8 +181,7 @@ TEST(ConsoleCompletionOwnership, ArgumentCollectionFailureRejectsTheWholeRefresh
 			const auto &State = *static_cast<SArgumentCollection *>(pUser);
 			if(Index == 1 && State.m_RejectSecond)
 				throw std::bad_alloc();
-			QmConsoleCompletion::CollectSuggestion(Index, pText, State.m_pResult);
-		}, &Collection);
+			QmConsoleCompletion::CollectSuggestion(Index, pText, State.m_pResult); }, &Collection);
 	};
 
 	const auto Original = QmConsoleCompletion::TryCollectSuggestions(Collect);

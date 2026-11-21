@@ -27,6 +27,7 @@
 #include <engine/shared/demo_output.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
@@ -1177,7 +1178,6 @@ static int s_CurCustomTab = ASSETS_TAB_ENTITIES;
 namespace
 {
 	constexpr const char *WORKSHOP_ASSETS_URL = "https://www.ddrace.cn/data/assets.json";
-
 	const char *AssetResourceCategoryIdByTab(int Tab)
 	{
 		if(Tab == ASSETS_TAB_ENTITIES)
@@ -1625,6 +1625,10 @@ namespace
 		if(!Cache.m_Dirty)
 			return true;
 
+		if(pStorage == nullptr)
+			return false;
+		if(!qm_storage::EnsureFolder(pStorage, qm_storage::STATE_WORKSHOP_DIR))
+			return false;
 		std::vector<std::pair<std::string, SPersistedLocalAssetAuthor>> vSortedAuthors(Cache.m_vAuthorsByKey.begin(), Cache.m_vAuthorsByKey.end());
 		std::sort(vSortedAuthors.begin(), vSortedAuthors.end(), [](const auto &Left, const auto &Right) {
 			return Left.first < Right.first;
@@ -1863,9 +1867,7 @@ namespace
 		if(pThumbSourceUrl[0] == '\0' || Asset.m_ThumbRemoteFailed || pHttp == nullptr || pStorage == nullptr)
 			return false;
 
-		pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-		pStorage->CreateFolder("qmclient/workshop", IStorage::TYPE_SAVE);
-		pStorage->CreateFolder("qmclient/workshop/thumbs", IStorage::TYPE_SAVE);
+		qm_storage::EnsureFolder(pStorage, qm_storage::CACHE_WORKSHOP_THUMBS_DIR);
 		char aWebpUrl[IO_MAX_PATH_LENGTH];
 		str_format(aWebpUrl, sizeof(aWebpUrl), "%s!/format/webp", pThumbSourceUrl);
 		auto pThumbTask = HttpGetFile(aWebpUrl, pStorage, Asset.m_ThumbCachePath.c_str(), IStorage::TYPE_SAVE);
@@ -2910,7 +2912,7 @@ namespace
 				str_copy(aSafeId, "asset", sizeof(aSafeId));
 			char aThumbPath[IO_MAX_PATH_LENGTH];
 			// Always use webp for thumbnail cache to save space
-			str_format(aThumbPath, sizeof(aThumbPath), "qmclient/workshop/thumbs/%s.webp", aSafeId);
+			str_format(aThumbPath, sizeof(aThumbPath), "%s/%s.webp", qm_storage::CACHE_WORKSHOP_THUMBS_DIR, aSafeId);
 			Asset.m_ThumbCachePath = aThumbPath;
 			if(!WorkshopAssetHasRequiredDownloadUrl(Category.m_pId, !Asset.m_DownloadUrl.empty()))
 				continue;
@@ -2960,8 +2962,9 @@ namespace
 		if(WorkshopState.m_vAssets.empty())
 			return false;
 
+		qm_storage::EnsureFolder(pStorage, qm_storage::CACHE_WORKSHOP_CATALOG_DIR);
 		char aFullPath[IO_MAX_PATH_LENGTH];
-		str_format(aFullPath, sizeof(aFullPath), "cache/%s", pCachePath);
+		str_format(aFullPath, sizeof(aFullPath), "%s/%s", qm_storage::CACHE_WORKSHOP_CATALOG_DIR, pCachePath);
 
 		IOHANDLE File = pStorage->OpenFile(aFullPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 		if(!File)
@@ -2996,7 +2999,7 @@ namespace
 	{
 		const SAssetResourceCategory *pCategory = AssetResourceCategoryByTab(s_CurCustomTab);
 		char aFullPath[IO_MAX_PATH_LENGTH];
-		str_format(aFullPath, sizeof(aFullPath), "cache/%s", pCachePath);
+		str_format(aFullPath, sizeof(aFullPath), "%s/%s", qm_storage::CACHE_WORKSHOP_CATALOG_DIR, pCachePath);
 
 		IOHANDLE File = pStorage->OpenFile(aFullPath, IOFLAG_READ, IStorage::TYPE_SAVE);
 		if(!File)
@@ -3051,6 +3054,18 @@ namespace
 					Asset.m_ThumbCachePath = pVal->u.string.ptr;
 				else if(str_comp(pKey, "install_path") == 0 && pVal->type == json_string)
 					Asset.m_InstallPath = pVal->u.string.ptr;
+			}
+			// 旧缓存内保存的是迁移前的缩略图路径；身份 id 不变，按当前布局重建。
+			if(!Asset.m_Id.empty())
+			{
+				char aSafeId[80];
+				str_copy(aSafeId, Asset.m_Id.c_str(), sizeof(aSafeId));
+				SanitizeFilenameInPlace(aSafeId);
+				if(aSafeId[0] == '\0')
+					str_copy(aSafeId, "asset", sizeof(aSafeId));
+				char aThumbPath[IO_MAX_PATH_LENGTH];
+				str_format(aThumbPath, sizeof(aThumbPath), "%s/%s.webp", qm_storage::CACHE_WORKSHOP_THUMBS_DIR, aSafeId);
+				Asset.m_ThumbCachePath = aThumbPath;
 			}
 			if(Asset.m_ImageUrl.empty())
 				continue;
@@ -6276,7 +6291,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
 				ResetSelectedAssetToDefault(s_aPendingDeleteName);
 				// 本地 PNG 删除后，商店条目必须回到可下载区；缩略图 webp
-				// 属于商店缓存，保留在 qmclient/workshop/thumbs 下供回迁后的卡片继续预览。
+				// 属于商店缓存，保留在 qmclient/cache/workshop/thumbs 下供回迁后的卡片继续预览。
 				if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab))
 				{
 					for(SWorkshopHudAsset &Asset : pWorkshopState->m_vAssets)
@@ -8174,6 +8189,52 @@ void CMenus::ConchainAssetExtras(IConsole::IResult *pResult, void *pUserData, IC
 
 	pfnCallback(pResult, pCallbackUserData);
 }
+
+void CMenus::ConchainAssetArrow(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	CMenus *pThis = (CMenus *)pUserData;
+	if(pResult->NumArguments() == 1)
+	{
+		const char *pArg = pResult->GetString(0);
+		if(str_comp(pArg, g_Config.m_ClAssetArrow) != 0)
+		{
+			pThis->GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", pArg);
+		}
+	}
+
+	pfnCallback(pResult, pCallbackUserData);
+}
+
+void CMenus::ConchainAssetGuiCursor(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	CMenus *pThis = (CMenus *)pUserData;
+	if(pResult->NumArguments() == 1)
+	{
+		const char *pArg = pResult->GetString(0);
+		if(str_comp(pArg, g_Config.m_ClAssetGuiCursor) != 0)
+		{
+			pThis->GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_CURSOR, "gui_cursor", pArg);
+		}
+	}
+
+	pfnCallback(pResult, pCallbackUserData);
+}
+
+void CMenus::ConchainAssetStrongWeak(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	CMenus *pThis = (CMenus *)pUserData;
+	if(pResult->NumArguments() == 1)
+	{
+		const char *pArg = pResult->GetString(0);
+		if(str_comp(pArg, g_Config.m_ClAssetStrongWeak) != 0)
+		{
+			pThis->GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", pArg);
+		}
+	}
+
+	pfnCallback(pResult, pCallbackUserData);
+}
+
 int CMenus::CurrentSettingsAssetsTab() const
 {
 	return std::clamp(s_CurCustomTab, (int)ASSETS_TAB_ENTITIES, NUMBER_OF_ASSETS_TABS - 1);

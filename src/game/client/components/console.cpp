@@ -18,6 +18,7 @@
 #include <engine/image.h>
 #include <engine/keys.h>
 #include <engine/shared/config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/shared/ringbuffer.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
@@ -70,17 +71,16 @@ static constexpr float CONSOLE_SCROLLBAR_MARGIN = ui_token::list::SCROLLBAR_MARG
 // 滑块最短高度：日志只有几行时也要按得住，取旧实现里写死的 14。
 static constexpr float CONSOLE_SCROLLBAR_MIN_THUMB = 14.0f;
 static constexpr ColorRGBA LINK_TEXT_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 1.0f);
-static constexpr ColorRGBA LINK_UNDERLINE_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 0.9f);
 
 namespace
 {
 	// 控制台特化：一档滚轮 = QmConsoleWheelLines 折算出来的行数，不是设置页那种像素档；
 	// 手感档位、弹簧响应与阻尼、橡皮筋距离仍然全部来自公共配置 QmNativeWheelScrollConfig。
-	SQmScrollConfig ConsoleScrollConfig(float LineHeight)
+	SQmScrollConfig ConsoleScrollConfig(float LineHeight, int VisibleLines)
 	{
 		SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, g_Config.m_UiSmoothScrollTime / 1000.0f);
 		const float SafeLine = maximum(1.0f, LineHeight);
-		Config.m_WheelScale = (float)QmConsoleWheelLines(g_Config.m_QmUiScrollStep, SafeLine) * SafeLine;
+		Config.m_WheelScale = (float)QmConsoleWheelLines(QmWheelStepScale(), VisibleLines) * SafeLine;
 		return Config;
 	}
 } // namespace
@@ -222,11 +222,8 @@ class CQmChatExportJob : public IJob
 	{
 		if(m_Cancelled.load())
 			return;
-		for(const char *pDirectory : {"qmclient", "qmclient/chat_log"})
-		{
-			if(!m_pStorage->CreateFolder(pDirectory, IStorage::TYPE_SAVE) && !m_pStorage->FolderExists(pDirectory, IStorage::TYPE_SAVE))
-				return;
-		}
+		if(!qm_storage::EnsureFolder(m_pStorage, qm_storage::CONTENT_CHAT_LOG_DIR))
+			return;
 		m_Success = QmChatExport::Export(m_pStorage, m_BaseFilename, m_vLines, m_Glyphs, m_Labels, m_Cancelled, m_CompletedPages);
 	}
 
@@ -1097,8 +1094,8 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		}
 		else if(Event.m_Key == KEY_MOUSE_WHEEL_UP)
 		{
-			// 每档滚多行。原先上下都只走一行，控制台滚起来慢得几乎没反应；
-			// 行数按 qm_ui_scroll_step 折算，由公共滚动物理逐帧逼近（见 QmConsoleScroll.h）。
+			// 每档滚多行。行数以控制台语义基准乘全站倍率，再由公共滚动物理逐帧逼近
+			// （见 QmConsoleScroll.h）；不再把 qm_ui_scroll_step 当像素步长除以行高。
 			m_Scroll.Wheel(1, m_pGameConsole->Input()->AltIsPressed());
 			Handled = true;
 		}
@@ -1380,12 +1377,6 @@ void CGameConsole::CInstance::SetChatExportMode(bool Enable)
 		m_MouseIsPress = false;
 	}
 	UpdateBacklogTextAttributes();
-}
-
-// 滚轮每档滚几行：把像素口径的 qm_ui_scroll_step 按当前行高折算成行数（见 console_scroll.h）。
-int CGameConsole::CInstance::GetWheelLinesToScroll() const
-{
-	return QmConsoleWheelLines(g_Config.m_QmUiScrollStep, FontSize() + ConsoleLineSpacing(FontSize()));
 }
 
 int CGameConsole::CInstance::GetLinesToScroll(int Direction, int LinesToScroll)
@@ -1713,7 +1704,7 @@ bool CGameConsole::CInstance::ExportSelectedChat()
 	char aTimestamp[20];
 	str_timestamp(aTimestamp, sizeof(aTimestamp));
 	char aBaseFilename[IO_MAX_PATH_LENGTH];
-	str_format(aBaseFilename, sizeof(aBaseFilename), "qmclient/chat_log/local_chat_export_%s_%lld", aTimestamp, (long long)time_get_nanoseconds().count());
+	str_format(aBaseFilename, sizeof(aBaseFilename), "%s/local_chat_export_%s_%lld", qm_storage::CONTENT_CHAT_LOG_DIR, aTimestamp, (long long)time_get_nanoseconds().count());
 	QmChatExport::SLabels Labels{Localize("QmClient chat log"), Localize("Total"), Localize("Messages")};
 	m_pChatExportJob = std::make_shared<CQmChatExportJob>(m_pGameConsole->Storage(), aBaseFilename, std::move(vLines), std::move(Labels));
 	return true;
@@ -2277,7 +2268,7 @@ void CGameConsole::OnRender()
 		// 命令帮助 + 用法最多占三行；没有提示时日志区一直延伸到底部。
 		const bool ShowSearchMatchInfo = pConsole->m_SearchInput.IsSearching() && !pConsole->m_Input.IsEmpty();
 		const bool ShowCompletionInfo = !pConsole->m_SearchInput.IsSearching() &&
-			(m_ConsoleType == CONSOLETYPE_LOCAL || Client()->RconAuthed()) && !pConsole->m_Input.IsEmpty();
+						(m_ConsoleType == CONSOLETYPE_LOCAL || Client()->RconAuthed()) && !pConsole->m_Input.IsEmpty();
 		char aCommandHelpText[1024] = "";
 		char aCommandUsageText[1024] = "";
 		bool HasCommandHint = false;
@@ -2291,7 +2282,7 @@ void CGameConsole::OnRender()
 		{
 			CompletionSuggestionsReady = pConsole->UpdateCompletionSuggestions();
 			const bool HasSuggestions = CompletionSuggestionsReady &&
-				(!pConsole->m_vCommandSuggestions.empty() || !pConsole->m_vArgumentSuggestions.empty());
+						    (!pConsole->m_vCommandSuggestions.empty() || !pConsole->m_vArgumentSuggestions.empty());
 			if(HasSuggestions)
 			{
 				HintLines = 1;
@@ -2612,7 +2603,7 @@ void CGameConsole::OnRender()
 		// 静止态先把偏移吸到整行，再推进：滚动停下后正文不再带亚行余量，避免闪。
 		if(!pConsole->m_ScrollbarDragging && !pConsole->m_Selection.IsDragging() && !Scroll.Animating())
 			Scroll.SnapToNearestLine();
-		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(Client()->RenderFrameTime(), LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight));
+		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(Client()->RenderFrameTime(), LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight, VisibleBacklogLines));
 		const float SubLine = ScrollFrame.m_SubLine;
 		const int MaxScroll = maximum(0, TotalBacklogLines - VisibleBacklogLines);
 		pConsole->m_BacklogCurLine = std::clamp(ScrollFrame.m_Line, 0, MaxScroll);
@@ -2642,8 +2633,8 @@ void CGameConsole::OnRender()
 			const CUIRect Owner{0.0f, LogTop, Screen.w, LogHeight};
 			const float ConsoleContentHeight = (float)maximum(TotalBacklogLines, 1) * LineHeight;
 			const float MaxOffset = maximum(ScrollFrame.m_MaxOffset, 1.0f);
-			const float Progress = 1.0f - std::clamp(ScrollFrame.m_Offset / MaxOffset, 0.0f, 1.0f);
-			const auto ScrollbarFrame = ui_widget::ResolveOverlayScrollbarFrame(Owner, LogTop, LogHeight, ConsoleContentHeight, Progress, true,
+			const float ScrollProgress = 1.0f - std::clamp(ScrollFrame.m_Offset / MaxOffset, 0.0f, 1.0f);
+			const auto ScrollbarFrame = ui_widget::ResolveOverlayScrollbarFrame(Owner, LogTop, LogHeight, ConsoleContentHeight, ScrollProgress, true,
 				CONSOLE_SCROLLBAR_WIDTH, CONSOLE_SCROLLBAR_MARGIN, CONSOLE_SCROLLBAR_MIN_THUMB);
 			if(ScrollbarFrame.m_Visible)
 			{
@@ -2707,6 +2698,12 @@ void CGameConsole::OnRender()
 		CInstance::CBacklogEntry *pEntry = pConsole->m_Backlog.Last();
 		float OffsetY = pConsole->m_FilterContentMotion.Offset();
 
+		std::vector<QmConsoleText::SRange> vLinkRanges;
+		std::vector<STextColorSplit> vColorLayers;
+		CUiV2AnimationRuntime *pLinkHoverAnim = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled() ?
+								&GameClient()->UiRuntimeV2()->AnimRuntime() :
+								nullptr;
+		const vec2 LinkHoverMouse = GetMousePosition();
 		QmConsoleText::CColorPreparation ColorPreparation;
 		std::vector<STextColorSplit> vPreparedColors;
 
@@ -2887,6 +2884,19 @@ void CGameConsole::OnRender()
 				LinkCursor.m_SelectionEnd = Range.m_EndChar;
 				TextRender()->TextEx(&LinkCursor, pText);
 				// 使用实际换行后的链接矩形，空白处不会被最近字符的光标吸附误判。
+				const bool LinkHovered = !SettingsOpen && QmConsoleText::ShouldHighlightLinkHover(CtrlPressed, LinkCursor.m_vSelectionQuads, LinkHoverMouse);
+				const ColorRGBA LinkBaseColor = LocalConsole ? Palette.m_aColors[QmConsoleAppearance::LINK] : LINK_TEXT_COLOR;
+				const uint64_t LinkHoverNode = BuildUiAnimNodeKey(
+					static_cast<uint64_t>(str_quickhash("qm_console_link_hover")),
+					(static_cast<uint64_t>(pEntry->m_ExportId) << 32) | static_cast<uint32_t>(Range.m_StartByte));
+				const float LinkHoverMix = pLinkHoverAnim != nullptr ?
+								   ResolveUiAnimValue(*pLinkHoverAnim, LinkHoverNode, EUiAnimProperty::ALPHA, LinkHovered ? 1.0f : 0.0f,
+									   ui_token::motion::HOVER_FADE.m_DurationSec, ui_token::motion::HOVER_FADE.m_Easing) :
+								   (LinkHovered ? 1.0f : 0.0f);
+				const ColorRGBA LinkColor = ResolveUiAnimInterpolatedColor(
+					LinkBaseColor, QmConsoleAppearance::LinkHoverColor(LinkBaseColor, g_Config.m_QmConsoleLinkHoverHueShift),
+					std::clamp(LinkHoverMix, 0.0f, 1.0f));
+				vColorLayers.emplace_back(Range.m_StartByte, Range.m_EndByte - Range.m_StartByte, LinkColor);
 				if(HandleLinkClick && QmConsoleText::ContainsPoint(LinkCursor.m_vSelectionQuads, LinkClickPress) &&
 					QmConsoleText::ContainsPoint(LinkCursor.m_vSelectionQuads, LinkClickPos))
 				{
@@ -2908,7 +2918,7 @@ void CGameConsole::OnRender()
 				{
 					const float Height = Quad.m_Height * LINK_UNDERLINE_HEIGHT;
 					const CUIRect Underline = {Quad.m_X, Quad.m_Y + Quad.m_Height - Height, Quad.m_Width, Height};
-					const ColorRGBA UnderlineColor = LocalConsole ? Palette.m_aColors[QmConsoleAppearance::LINK].WithAlpha(0.9f) : LINK_UNDERLINE_COLOR;
+					const ColorRGBA UnderlineColor = LinkColor.WithAlpha(0.9f);
 					QmConsoleUi::DrawPanel(Ui(), Underline, UnderlineColor.WithAlpha(UnderlineColor.a * ContentAlpha));
 				}
 			}
@@ -3132,7 +3142,7 @@ void CGameConsole::OnRender()
 			}
 			const char *pHints = pConsole->m_ChatExportMode ? "Shift+Mouse1  |  Esc" :
 									  (pConsole->m_SearchInput.IsSearching() ? "Enter / Shift+Enter  |  Esc  |  Ctrl+Mouse1" :
-														  (LocalConsole ? "Ctrl+F  |  Alt+1-5  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1" : "Ctrl+F  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1"));
+														   (LocalConsole ? "Ctrl+F  |  Alt+1-5  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1" : "Ctrl+F  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1"));
 			const float HintWidth = TextRender()->TextWidth(FontSize * 0.8f, pHints);
 			const float StatusWidth = TextRender()->TextWidth(FontSize * 0.8f, aStatus);
 			const float HintX = Screen.w - HintWidth - 10.0f;

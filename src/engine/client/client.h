@@ -625,6 +625,7 @@ public:
 	const void *SnapFindItem(int SnapId, int Type, int Id) const override;
 	const CSnapshot *CurrentSnapshotForConnection(int Conn) const override;
 	int SnapNumItems(int SnapId) const override;
+	int GetLocalClientId(int Conn) const override;
 	void SnapSetStaticsize(int ItemType, int Size) override;
 	void SnapSetStaticsize7(int ItemType, int Size) override;
 

@@ -202,7 +202,8 @@ TEST(QmStreamerWordFilter, InvalidUtf8SeparatesAnAdjacentLatinWord)
 {
 	QmStreamerWordFilter::CFilter Filter;
 	ASSERT_TRUE(Filter.SetAdditionalWords({"qzhealthtoken"}));
-	std::string Text = "a\x80" "qzhealthtoken";
+	std::string Text = "a\x80"
+			   "qzhealthtoken";
 	EXPECT_TRUE(Filter.Filter(Text, true));
 	EXPECT_EQ(Text, "a\x80***");
 }

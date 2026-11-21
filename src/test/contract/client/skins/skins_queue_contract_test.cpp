@@ -172,7 +172,7 @@ TEST(SkinsContract, TeeSourcePathCapsActiveLoadingBeforeQueueFuse)
 	EXPECT_NE(StartLoading.find("const int NormalLoadingWindow = TeeSettingsActive ? m_SettingsThroughputControllerOutput.m_NormalLoadingWindow"), std::string::npos);
 	EXPECT_NE(StartLoading.find("const int VisibleLoadingWindow = TeeSettingsActive ? m_SettingsThroughputControllerOutput.m_VisibleLoadingWindow"), std::string::npos);
 	EXPECT_NE(StartLoading.find("m_SettingsSourceAdmissionTelemetry.m_VisibleReserve = TeeSettingsActive ? m_SettingsThroughputControllerOutput.m_VisibleReserve : 8;"), std::string::npos);
-	EXPECT_NE(StartLoading.find("const auto Admission = DetermineAdmission(pSkinContainer, Priority);"), std::string::npos);
+	EXPECT_NE(StartLoading.find("auto Admission = DetermineAdmission(pSkinContainer, Priority);"), std::string::npos);
 	EXPECT_NE(StartLoading.find("const auto SourceAdmission = SettingsSkinSourceAdmissionDecision({"), std::string::npos);
 	EXPECT_NE(StartLoading.find("Admission.m_pBlockReason = SettingsSkinSourceAdmissionBlockReasonName(SourceAdmission.m_BlockReason);"), std::string::npos);
 	EXPECT_NE(StartLoading.find("const bool CountFuseApplies = Admission.m_CountFuseApplies;"), std::string::npos);

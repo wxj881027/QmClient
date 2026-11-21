@@ -38,6 +38,8 @@ namespace
 		{
 			m_pStorage = m_TestInfo.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
+			// 客户端启动时会先建好存档布局；缓存写入需要 qmclient/cache/network 父目录。
+			ASSERT_TRUE(qm_storage::EnsureStorageLayout(m_pStorage.get()));
 			ASSERT_NO_FATAL_FAILURE(WriteInfoDownloadCache(m_pStorage.get(), QMCLIENT_CUSTOM_COMMUNITIES_INFO_FILE, m_Old));
 		}
 		std::shared_ptr<CInfoDownloadTestRequest> Request()

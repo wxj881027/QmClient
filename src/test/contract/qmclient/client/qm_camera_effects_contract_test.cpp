@@ -8,7 +8,7 @@ TEST(QmCameraEffectsContract, DynamicFovAndZoomKeepScopedState)
 	const std::string Source = ReadTextFile("src/game/client/components/camera.cpp");
 	const std::string OnRender = FunctionBody(Source, "void CCamera::OnRender()");
 	const std::string ScaleZoom = FunctionBody(Source, "void CCamera::ScaleZoom(");
-	const std::string ChangeZoom = FunctionBody(Source, "void CCamera::ChangeZoom(");
+	const std::string ChangeZoom = FunctionBody(Source, "CCamera::ChangeZoom(");
 	const std::string UpdateCamera = FunctionBody(Source, "void CCamera::UpdateCamera()");
 	const std::string OnReset = FunctionBody(Source, "void CCamera::OnReset()");
 	const std::string GameClient = ReadTextFile("src/game/client/gameclient.cpp");
@@ -18,7 +18,8 @@ TEST(QmCameraEffectsContract, DynamicFovAndZoomKeepScopedState)
 	EXPECT_NE(ScaleZoom.find("RemoveDynamicFovZoom();"), std::string::npos);
 	EXPECT_NE(ChangeZoom.find("RemoveDynamicFovZoom();"), std::string::npos);
 	EXPECT_NE(UpdateCamera.find("RemoveDynamicFovZoom();"), std::string::npos);
-	EXPECT_NE(OnReset.find("m_DynamicFovAppliedFactor = 1.0f;"), std::string::npos);
+	EXPECT_NE(OnReset.find("m_DynamicFovTarget = 1.0f;"), std::string::npos);
+	EXPECT_NE(OnReset.find("m_DynamicFovCurrent = 1.0f;"), std::string::npos);
 	EXPECT_EQ(UpdateCamera.find("m_aDyncamCurrentCameraOffset[g_Config.m_ClDummy] += m_DriftCurrentOffset;"), std::string::npos);
 	EXPECT_NE(OnRender.find("m_aDyncamCurrentCameraOffset[g_Config.m_ClDummy] + m_DriftCurrentOffset"), std::string::npos);
 	EXPECT_NE(Header.find("float BaseZoom() const"), std::string::npos);

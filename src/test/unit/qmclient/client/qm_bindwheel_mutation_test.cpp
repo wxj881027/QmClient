@@ -16,8 +16,8 @@ namespace
 	CQmBindWheelState Pending(int Index)
 	{
 		CQmBindWheelState State;
-		State.Open();
-		State.Release(Index);
+		State.Open(qm_bind_menu::EMenu::CUSTOM);
+		State.ReleaseActive(Index);
 		return State;
 	}
 }
@@ -108,7 +108,7 @@ TEST(QmBindWheelMutation, AFailedAppendCanBeRetriedWithoutLosingTheOldSelection)
 TEST(QmBindWheelMutation, AllocationFailureDoesNotCloseAnActiveWheel)
 {
 	CQmBindWheelState State;
-	State.Open();
+	State.Open(qm_bind_menu::EMenu::CUSTOM);
 	std::vector<CBindWheel::CBind> vBinds;
 	bool Changed, Triggered;
 	{
@@ -119,7 +119,7 @@ TEST(QmBindWheelMutation, AllocationFailureDoesNotCloseAnActiveWheel)
 	EXPECT_TRUE(Triggered);
 	EXPECT_FALSE(Changed);
 	EXPECT_TRUE(State.IsActive());
-	State.Release(0);
+	State.ReleaseActive(0);
 	EXPECT_EQ(State.TakePendingBind(), 0);
 }
 

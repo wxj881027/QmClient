@@ -140,7 +140,7 @@ namespace ui_widget
 		return Fill;
 	}
 
-	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners, bool Enabled, std::optional<ColorRGBA> Color, bool ShowSlash, bool TransparentInactive, const CUIRect *pHitRect, const SIconButtonIconDraw *pIconDraw, std::optional<bool> HoveredOverride)
+	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners, bool Enabled, std::optional<ColorRGBA> Color, bool ShowSlash, bool TransparentInactive, const CUIRect *pHitRect, const SIconButtonIconDraw *pIconDraw, float Radius, std::optional<bool> HoveredOverride)
 	{
 		if(Ctx.m_pUi == nullptr || pId == nullptr || (Ctx.m_pUi->DrawingSuppressed() && !Ctx.m_pUi->PreLayoutInput()))
 			return 0;
@@ -161,6 +161,8 @@ namespace ui_widget
 		Options.m_Color = Color;
 		Options.m_TransparentInactive = TransparentInactive;
 		Options.m_pHitRect = &HitRect;
+		if(Radius >= 0.0f)
+			Options.m_Radius = Radius;
 		Options.m_HoveredOverride = HoveredOverride;
 		const ColorRGBA SemanticColor = pUi->TextRender()->GetTextColor();
 		const ColorRGBA Fill = DrawButtonSurface(Ctx, pId, ButtonRect, Options);
@@ -209,8 +211,6 @@ namespace ui_widget
 				return false;
 			SButtonSurfaceOptions Options;
 			Options.m_Role = Role;
-			// 长条按钮（宽明显大于高）给胶囊端头；接近方形的按钮仍用小圆角，
-			// 否则方按钮会被压成圆形。
 			const CUIRect &SurfaceRect = pSurfaceRect != nullptr ? *pSurfaceRect : Rect;
 			Options.m_Radius = ResolveUiSurfaceRadius(SurfaceRect, Geometry);
 			if(!DrawBorder)

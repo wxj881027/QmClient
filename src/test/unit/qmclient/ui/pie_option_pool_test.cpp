@@ -102,7 +102,7 @@ TEST(QmPieOptionPool, DragStateResetsToIdle)
 TEST(QmPieOptionPool, DropSlotFollowsChipCenters)
 {
 	CUIRect aRects[3] = {
-		{0.0f, 0.0f, 20.0f, 16.0f},  // 中心 x = 10
+		{0.0f, 0.0f, 20.0f, 16.0f}, // 中心 x = 10
 		{24.0f, 0.0f, 20.0f, 16.0f}, // 中心 x = 34
 		{48.0f, 0.0f, 20.0f, 16.0f}, // 中心 x = 58
 	};

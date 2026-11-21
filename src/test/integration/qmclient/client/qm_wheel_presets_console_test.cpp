@@ -8,6 +8,7 @@
 
 #include <array>
 #include <map>
+#include <vector>
 
 using namespace qm_wheel_presets;
 
@@ -21,6 +22,31 @@ namespace
 		{
 			const auto &Capture = *static_cast<SCapture *>(pUser);
 			(*Capture.m_pValues)[Capture.m_pName] = pResult->GetString(0);
+		}
+	};
+
+	struct SOrderedCapture
+	{
+		std::map<std::string, std::string> *m_pValues;
+		std::vector<std::string> *m_pOrder;
+		const char *m_pName;
+		static void OnCommand(IConsole::IResult *pResult, void *pUser)
+		{
+			const auto &Capture = *static_cast<SOrderedCapture *>(pUser);
+			(*Capture.m_pValues)[Capture.m_pName] = pResult->GetString(0);
+			Capture.m_pOrder->emplace_back(Capture.m_pName);
+		}
+	};
+
+	struct SStrokeCapture
+	{
+		std::string m_Menu;
+		int m_Stroke = -1;
+		static void OnCommand(IConsole::IResult *pResult, void *pUser)
+		{
+			auto &Capture = *static_cast<SStrokeCapture *>(pUser);
+			Capture.m_Stroke = pResult->GetInteger(0);
+			Capture.m_Menu = pResult->GetString(1);
 		}
 	};
 }
@@ -67,6 +93,31 @@ TEST(QmWheelPresetsConsole, ChatTextCannotExecuteAnAdditionalConsoleCommand)
 	EXPECT_EQ(Values["say_team"], Preset.m_Chat);
 }
 
+TEST(QmWheelPresetsConsole, AssetPresetAppliesOnlyAssetCommandsInOrder)
+{
+	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
+	std::map<std::string, std::string> Values;
+	std::vector<std::string> Order;
+	std::array<SOrderedCapture, 2> aCapture{{
+		{&Values, &Order, "cl_asset_game"},
+		{&Values, &Order, "cl_asset_hud"},
+	}};
+	for(auto &Capture : aCapture)
+		pConsole->Register(Capture.m_pName, "s[value]", CFGFLAG_CLIENT, SOrderedCapture::OnCommand, &Capture, "");
+
+	SPreset Preset;
+	Preset.m_Type = EType::ASSETS;
+	Preset.m_aAssets[1] = "gamepack";
+	Preset.m_aAssets[4] = "hudpack";
+	std::string Command;
+	ASSERT_TRUE(BuildCommand(Preset, Command));
+	pConsole->ExecuteLine(Command.c_str());
+
+	EXPECT_EQ(Values["cl_asset_game"], "gamepack");
+	EXPECT_EQ(Values["cl_asset_hud"], "hudpack");
+	EXPECT_EQ(Order, (std::vector<std::string>{"cl_asset_game", "cl_asset_hud"}));
+}
+
 TEST(QmWheelPresetsConsole, WheelConfigRoundTripPreservesQuotedLabelAndCommand)
 {
 	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
@@ -100,4 +151,19 @@ TEST(QmWheelPresetsConsole, FullWheelCommandSurvivesConfigurationEscaping)
 	pConsole->ExecuteLine(qm_bind_editor::WheelConfigLine(Name, Command).c_str());
 	EXPECT_EQ(Restored[0], Name);
 	EXPECT_EQ(Restored[1], Command);
+}
+
+TEST(QmWheelPresetsConsole, PlusBindMenuKeepsStrokeFirstAndMenuSecond)
+{
+	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
+	SStrokeCapture Capture;
+	pConsole->Register("+bindmenu", "s[menu]", CFGFLAG_CLIENT, SStrokeCapture::OnCommand, &Capture, "");
+
+	pConsole->ExecuteLineStroked(1, "+bindmenu identity", IConsole::CLIENT_ID_UNSPECIFIED);
+	EXPECT_EQ(Capture.m_Menu, "identity");
+	EXPECT_EQ(Capture.m_Stroke, 1);
+
+	pConsole->ExecuteLineStroked(0, "+bindmenu identity", IConsole::CLIENT_ID_UNSPECIFIED);
+	EXPECT_EQ(Capture.m_Menu, "identity");
+	EXPECT_EQ(Capture.m_Stroke, 0);
 }

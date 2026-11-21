@@ -35,10 +35,11 @@ namespace QmConsoleSettingsLayout
 
 	inline float ContentHeight(const SSettingsContentMetrics &Metrics, bool Custom, int FontSize)
 	{
-		// 必须和实际占用逐项对齐：TakeRow 每行是 RowStep（行高+行距），
+		// 必须和实际占用逐项对齐：六行通用设置（字号、背景不透明度、行距、
+		// 链接悬停色相、命令高亮、配色标题）每行是 RowStep（行高+行距），
 		// 列表与预览各自额外带一次行距，自定义的九行取色不带行距。
 		// 多算会让面板永远判定"内容溢出"，从而在没有滚动必要时也画出滚动条。
-		return 4.0f * Metrics.m_RowStep + SchemeListHeight(Metrics) + Metrics.m_LineSpacing +
+		return 6.0f * Metrics.m_RowStep + SchemeListHeight(Metrics) + Metrics.m_LineSpacing +
 		       PreviewHeight(FontSize) + Metrics.m_LineSpacing +
 		       (Custom ? 9.0f * ResolveSettingsColorRowLayout({}, Metrics, false).m_ConsumedHeight : 0.0f);
 	}

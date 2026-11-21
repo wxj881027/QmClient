@@ -1,3 +1,5 @@
+#include <engine/shared/config.h>
+
 #include <game/client/components/tclient/tclient.h>
 
 #include <gtest/gtest.h>
@@ -12,9 +14,7 @@ TEST(QmTClientFavoriteMapConsole, SavedCommandRoundTripsQuotesAndBackslashes)
 
 	std::string Restored;
 	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
-	pConsole->Register("add_favorite_map", "s[map]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUser) {
-		*static_cast<std::string *>(pUser) = pResult->GetString(0);
-	}, &Restored, "");
+	pConsole->Register("add_favorite_map", "s[map]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUser) { *static_cast<std::string *>(pUser) = pResult->GetString(0); }, &Restored, "");
 	pConsole->ExecuteLine(aCommand, IConsole::CLIENT_ID_UNSPECIFIED);
 	EXPECT_EQ(Restored, pName);
 }

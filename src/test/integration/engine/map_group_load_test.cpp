@@ -34,7 +34,7 @@ namespace
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
 		}
-		void WriteMap(const char *pName, SGroupFormat GameGroup, int Width = 2, std::optional<SGroupFormat> ExtraGroup = std::nullopt)
+		void WriteMap(const char *pName, SGroupFormat GameGroup, int Width = 2, std::optional<SGroupFormat> ExtraGroup = std::nullopt, int DecorationWidth = 0)
 		{
 			CDataFileWriter Writer;
 			ASSERT_TRUE(Writer.Open(m_pStorage.get(), pName));
@@ -56,6 +56,14 @@ namespace
 			Game.m_Tele = Game.m_Speedup = Game.m_Front = Game.m_Switch = Game.m_Tune = -1;
 			StrToInts(Game.m_aName, std::size(Game.m_aName), "Game");
 			Writer.AddItem(MAPITEMTYPE_LAYER, 0, sizeof(Game), &Game);
+			if(DecorationWidth != 0)
+			{
+				CMapItemLayerTilemap Decoration = Game;
+				Decoration.m_Width = DecorationWidth;
+				Decoration.m_Flags = 0;
+				Decoration.m_Data = Writer.AddData(vTiles.size() * sizeof(CTile), vTiles.data());
+				Writer.AddItem(MAPITEMTYPE_LAYER, 1, sizeof(Decoration), &Decoration);
+			}
 
 			const auto AddGroup = [&](int Id, SGroupFormat Format, bool IsGame) {
 				CMapItemGroup Group{};
@@ -64,7 +72,7 @@ namespace
 				Group.m_OffsetY = 18;
 				Group.m_ParallaxX = 80;
 				Group.m_ParallaxY = 90;
-				Group.m_NumLayers = IsGame ? 1 : 0;
+				Group.m_NumLayers = IsGame ? 1 + (DecorationWidth != 0) : 0;
 				Group.m_UseClipping = 1;
 				Group.m_ClipX = 11;
 				Group.m_ClipY = 22;
@@ -93,6 +101,18 @@ TEST_F(MapGroupLoad, VersionOneBaseHeaderStillInitializesGameLayers)
 	EXPECT_EQ(Layers.GameLayer()->m_Width, 2);
 	EXPECT_EQ(Layers.GameGroup()->m_OffsetX, 0);
 	EXPECT_EQ(Layers.GameGroup()->m_ParallaxX, 100);
+}
+
+TEST_F(MapGroupLoad, OversizedTileLayerDoesNotReplaceLoadedMap)
+{
+	WriteMap("valid.map", {3, sizeof(CMapItemGroup)});
+	WriteMap("oversized.map", {3, sizeof(CMapItemGroup)}, 2, std::nullopt, 40 * 1024 * 1024);
+	CMap Map(m_pStorage.get());
+	ASSERT_TRUE(Map.Load("valid.map", IStorage::TYPE_SAVE));
+	const auto OriginalSha = Map.Sha256();
+	EXPECT_FALSE(Map.Load("oversized.map", IStorage::TYPE_SAVE));
+	EXPECT_TRUE(Map.IsLoaded());
+	EXPECT_EQ(Map.Sha256(), OriginalSha);
 }
 
 TEST_F(MapGroupLoad, VersionTwoWithoutNameStillResetsGameClippingSafely)
