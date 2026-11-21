@@ -85,6 +85,8 @@ TEST_F(CQmStorageLayout, MigratesKnownFilesAndTreesOnce)
 	Write("qmclient/mapcovers/cover.png", "cover");
 	Write("qmclient/chat_log/chat.txt", "chat");
 	Write("qmclient/lyrics/netease/1.yrc", "lyrics");
+	Write("wiki/simplified_chinese/deck/guide.md", "wiki");
+	Write("qm_flash.log", "flash-log");
 	Write("qmclient/fonts/UserFont.ttf", "user-font");
 	Write("qmclient/state/legacy/old_fonts/LegacyUserFont.ttf", "legacy-user-font");
 	Write("qmclient/content/fonts/installed.ttf", "installed-font");
@@ -111,6 +113,8 @@ TEST_F(CQmStorageLayout, MigratesKnownFilesAndTreesOnce)
 	EXPECT_EQ(Read("qmclient/cache/maps/covers/cover.png"), "cover");
 	EXPECT_EQ(Read("qmclient/content/chat_logs/chat.txt"), "chat");
 	EXPECT_EQ(Read("qmclient/content/lyrics/netease/1.yrc"), "lyrics");
+	EXPECT_EQ(Read("qmclient/content/wiki/simplified_chinese/deck/guide.md"), "wiki");
+	EXPECT_EQ(Read("qmclient/runtime/logs/qm_flash.log"), "flash-log");
 	EXPECT_EQ(Read("fonts/UserFont.ttf"), "user-font");
 	EXPECT_EQ(Read("fonts/LegacyUserFont.ttf"), "legacy-user-font");
 	EXPECT_EQ(Read("fonts/fonts_store/installed.ttf"), "installed-font");
@@ -129,21 +133,35 @@ TEST_F(CQmStorageLayout, MigratesKnownFilesAndTreesOnce)
 	EXPECT_EQ(Read("other-info.json.57800.tmp"), "unrelated-temp");
 	EXPECT_FALSE(m_pStorage->FolderExists("qmclient/rank1", IStorage::TYPE_SAVE));
 	EXPECT_FALSE(m_pStorage->FolderExists("qmclient/workshop/thumbs", IStorage::TYPE_SAVE));
+	EXPECT_FALSE(m_pStorage->FolderExists("wiki", IStorage::TYPE_SAVE));
 
 	ASSERT_TRUE(qm_storage::MigrateStorageLayout(m_pStorage.get()));
 	EXPECT_EQ(Read(qm_storage::PROFILES_FILE), "profiles");
 	EXPECT_EQ(Read("qmclient/content/rank1/demos/run.demo"), "demo");
 }
 
-TEST_F(CQmStorageLayout, ConflictingTargetPreservesBothFilesAndSkipsMarker)
+TEST_F(CQmStorageLayout, ConflictingTargetArchivesLegacyAndCompletesMigration)
 {
 	Write("qmclient/statistics.json", "legacy-statistics");
 	Write(qm_storage::STATISTICS_FILE, "current-statistics");
 
-	EXPECT_FALSE(qm_storage::MigrateStorageLayout(m_pStorage.get()));
-	EXPECT_EQ(Read("qmclient/statistics.json"), "legacy-statistics");
+	ASSERT_TRUE(qm_storage::MigrateStorageLayout(m_pStorage.get()));
+	EXPECT_FALSE(m_pStorage->FileExists("qmclient/statistics.json", IStorage::TYPE_SAVE));
 	EXPECT_EQ(Read(qm_storage::STATISTICS_FILE), "current-statistics");
-	EXPECT_FALSE(m_pStorage->FileExists(qm_storage::LAYOUT_MIGRATION_MARKER_FILE, IStorage::TYPE_SAVE));
+	EXPECT_EQ(Read("qmclient/state/legacy/conflicts/qmclient/statistics.json"), "legacy-statistics");
+	EXPECT_TRUE(m_pStorage->FileExists(qm_storage::LAYOUT_MIGRATION_MARKER_FILE, IStorage::TYPE_SAVE));
+}
+
+TEST_F(CQmStorageLayout, WikiConflictsAreArchivedWithoutBlockingTheLayout)
+{
+	Write("wiki/simplified_chinese/deck/guide.md", "legacy-wiki");
+	Write("qmclient/content/wiki/simplified_chinese/deck/guide.md", "current-wiki");
+
+	ASSERT_TRUE(qm_storage::MigrateStorageLayout(m_pStorage.get()));
+	EXPECT_FALSE(m_pStorage->FolderExists("wiki", IStorage::TYPE_SAVE));
+	EXPECT_EQ(Read("qmclient/content/wiki/simplified_chinese/deck/guide.md"), "current-wiki");
+	EXPECT_EQ(Read("qmclient/state/legacy/conflicts/wiki/simplified_chinese/deck/guide.md"), "legacy-wiki");
+	EXPECT_TRUE(m_pStorage->FileExists(qm_storage::LAYOUT_MIGRATION_MARKER_FILE, IStorage::TYPE_SAVE));
 }
 
 TEST_F(CQmStorageLayout, NoReplaceMovePreservesThePublishedFile)

@@ -42,7 +42,7 @@
 
 namespace
 {
-	// 未发布阶段允许在客户端直接改 Wiki 文案（写入用户目录的 wiki/ 覆盖文件）；
+	// 未发布阶段允许在客户端直接改 Wiki 文案（写入用户目录的 qmclient/content/wiki/ 覆盖文件）；
 	// 发布版本把这里改成 false 就变回只读，不需要改其它逻辑。
 	constexpr bool WIKI_AUTHORING_ENABLED = true;
 

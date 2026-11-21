@@ -33,6 +33,7 @@ namespace qm_storage
 	inline constexpr const char *STATE_MAPS_DIR = "qmclient/state/maps";
 	inline constexpr const char *STATE_WORKSHOP_DIR = "qmclient/state/workshop";
 	inline constexpr const char *STATE_LEGACY_DIR = "qmclient/state/legacy";
+	inline constexpr const char *STATE_LEGACY_CONFLICTS_DIR = "qmclient/state/legacy/conflicts";
 
 	inline constexpr const char *CONTENT_DIR = "qmclient/content";
 	inline constexpr const char *CONTENT_RANK1_DIR = "qmclient/content/rank1";
@@ -40,6 +41,8 @@ namespace qm_storage
 	inline constexpr const char *CONTENT_RANK1_GHOSTS_DIR = "qmclient/content/rank1/ghosts";
 	inline constexpr const char *CONTENT_CHAT_LOG_DIR = "qmclient/content/chat_logs";
 	inline constexpr const char *CONTENT_LYRICS_DIR = "qmclient/content/lyrics";
+	inline constexpr const char *CONTENT_WIKI_DIR = "qmclient/content/wiki";
+	inline constexpr const char *CONTENT_WIKI_MEDIA_DIR = "qmclient/content/wiki/media";
 	// 字体沿用 DDNet 用户根目录的 fonts；商店安装到其下独立子目录。
 	inline constexpr const char *FONT_DIR = "fonts";
 	inline constexpr const char *FONT_STORE_DIR = "fonts/fonts_store";
@@ -47,6 +50,8 @@ namespace qm_storage
 	inline constexpr const char *RUNTIME_DIR = "qmclient/runtime";
 	inline constexpr const char *RUNTIME_EDITOR_DIR = "qmclient/runtime/editor";
 	inline constexpr const char *RUNTIME_UPDATES_DIR = "qmclient/runtime/updates";
+	inline constexpr const char *RUNTIME_LOGS_DIR = "qmclient/runtime/logs";
+	inline constexpr const char *RUNTIME_LOG_FILE = "qmclient/runtime/logs/qm_flash.log";
 
 	inline constexpr const char *PROFILES_FILE = "qmclient/config/qmclient_profiles.cfg";
 	inline constexpr const char *CHATBINDS_FILE = "qmclient/config/qmclient_chatbinds.cfg";
@@ -89,7 +94,8 @@ namespace qm_storage
 	bool EnsureStorageLayout(IStorage *pStorage);
 	bool EnsureFolder(IStorage *pStorage, const char *pPath);
 	bool StorageLayoutMigrationPending(IStorage *pStorage);
-	// 只迁移明确归属 QmClient 的文件；目标已存在且内容不同时不覆盖并保留旧文件。
+	// 只迁移明确归属 QmClient 的文件；目标已存在且内容不同时保留目标，把旧文件归档到
+	// state/legacy/conflicts，避免单个历史冲突永久阻塞布局收敛。
 	// 全部旧路径处理完成后才写 marker，可安全重复调用。
 	bool MigrateStorageLayout(IStorage *pStorage);
 }

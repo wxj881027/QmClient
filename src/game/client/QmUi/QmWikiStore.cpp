@@ -8,6 +8,7 @@
 #include <base/system.h>
 
 #include <engine/shared/config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/localization.h>
@@ -65,7 +66,7 @@ namespace
 		if(s_pStorage == nullptr)
 			return EReadResult::NOT_FOUND;
 		char aPath[IO_MAX_PATH_LENGTH];
-		str_format(aPath, sizeof(aPath), "wiki/%s/%s.md", s_aLanguage, RelativePath.c_str());
+		str_format(aPath, sizeof(aPath), "%s/%s/%s.md", qm_storage::CONTENT_WIKI_DIR, s_aLanguage, RelativePath.c_str());
 		void *pData = nullptr;
 		unsigned Size = 0;
 		const EReadResult Result = s_pStorage->ReadFileCheckedBounded(aPath, IStorage::TYPE_ALL, &pData, &Size, WIKI_MAX_MARKDOWN_BYTES);
@@ -151,7 +152,7 @@ bool qm_wiki_store::HasOverride(const char *pRelativePath)
 	if(s_pStorage == nullptr || pRelativePath == nullptr)
 		return false;
 	char aPath[IO_MAX_PATH_LENGTH];
-	str_format(aPath, sizeof(aPath), "wiki/%s/%s.md", LanguageDir(), pRelativePath);
+	str_format(aPath, sizeof(aPath), "%s/%s/%s.md", qm_storage::CONTENT_WIKI_DIR, LanguageDir(), pRelativePath);
 	return s_pStorage->FileExists(aPath, IStorage::TYPE_SAVE);
 }
 
@@ -229,20 +230,33 @@ bool qm_wiki_store::SaveOverride(const char *pRelativePath, const std::string &M
 			*pError = Localize("Wiki storage is not available");
 		return false;
 	}
-	// 逐级建目录：存储层只做单层 fs_makedir，也不会自动创建父目录，
-	// 所以分隔符必须自己补——少了开头的 '/'，第一段目录会被拼成 wiki/<语言><目录>。
+	// 逐级建目录：存储层只做单层 fs_makedir，也不会自动创建父目录。
+	if(!qm_storage::EnsureFolder(s_pStorage, qm_storage::CONTENT_WIKI_DIR))
+	{
+		if(pError != nullptr)
+			*pError = Localize("Cannot write the wiki file");
+		return false;
+	}
 	char aDir[IO_MAX_PATH_LENGTH];
-	str_copy(aDir, "wiki", sizeof(aDir));
-	s_pStorage->CreateFolder(aDir, IStorage::TYPE_SAVE);
-	str_format(aDir, sizeof(aDir), "wiki/%s", LanguageDir());
-	s_pStorage->CreateFolder(aDir, IStorage::TYPE_SAVE);
+	str_format(aDir, sizeof(aDir), "%s/%s", qm_storage::CONTENT_WIKI_DIR, LanguageDir());
+	if(!qm_storage::EnsureFolder(s_pStorage, aDir))
+	{
+		if(pError != nullptr)
+			*pError = Localize("Cannot write the wiki file");
+		return false;
+	}
 	std::string Nested(aDir);
 	Nested += '/';
 	for(const char Ch : std::string(pRelativePath))
 	{
 		if(Ch == '/')
 		{
-			s_pStorage->CreateFolder(Nested.c_str(), IStorage::TYPE_SAVE);
+			if(!qm_storage::EnsureFolder(s_pStorage, Nested.c_str()))
+			{
+				if(pError != nullptr)
+					*pError = Localize("Cannot write the wiki file");
+				return false;
+			}
 			Nested += '/';
 		}
 		else
@@ -252,7 +266,7 @@ bool qm_wiki_store::SaveOverride(const char *pRelativePath, const std::string &M
 	}
 
 	char aPath[IO_MAX_PATH_LENGTH];
-	str_format(aPath, sizeof(aPath), "wiki/%s/%s.md", LanguageDir(), pRelativePath);
+	str_format(aPath, sizeof(aPath), "%s/%s/%s.md", qm_storage::CONTENT_WIKI_DIR, LanguageDir(), pRelativePath);
 	IOHANDLE File = s_pStorage->OpenFile(aPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(File == nullptr)
 	{
@@ -276,7 +290,7 @@ bool qm_wiki_store::DeleteOverride(const char *pRelativePath)
 {
 	if(s_pStorage == nullptr || pRelativePath == nullptr || pRelativePath[0] == '\0')
 		return false;
-	const std::string Path = std::string("wiki/") + LanguageDir() + "/" + pRelativePath + ".md";
+	const std::string Path = std::string(qm_storage::CONTENT_WIKI_DIR) + "/" + LanguageDir() + "/" + pRelativePath + ".md";
 	if(!s_pStorage->RemoveFile(Path.c_str(), IStorage::TYPE_SAVE))
 	{
 		// 只有确认文件不存在才算还原成功，磁盘或权限错误要保留草稿。

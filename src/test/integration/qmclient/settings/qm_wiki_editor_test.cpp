@@ -3,6 +3,7 @@
 // 保存到哪里、还原是否真的删文件、草稿在 Esc 与换文档后如何处理，
 // 这些都不是纯字符串判断能覆盖的，必须走真实 IStorage 与真实解析器。
 #include <engine/shared/config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/QmUi/QmWikiEditor.h>
@@ -64,7 +65,7 @@ namespace
 		std::string ReadOverride(const char *pRelativePath) const
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
-			str_format(aPath, sizeof(aPath), "wiki/simplified_chinese/%s.md", pRelativePath);
+			str_format(aPath, sizeof(aPath), "%s/simplified_chinese/%s.md", qm_storage::CONTENT_WIKI_DIR, pRelativePath);
 			IOHANDLE File = m_pStorage->OpenFile(aPath, IOFLAG_READ, IStorage::TYPE_SAVE);
 			if(File == nullptr)
 				return std::string();
@@ -80,7 +81,7 @@ namespace
 		bool OverrideExists(const char *pRelativePath) const
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
-			str_format(aPath, sizeof(aPath), "wiki/simplified_chinese/%s.md", pRelativePath);
+			str_format(aPath, sizeof(aPath), "%s/simplified_chinese/%s.md", qm_storage::CONTENT_WIKI_DIR, pRelativePath);
 			return m_pStorage->FileExists(aPath, IStorage::TYPE_SAVE);
 		}
 	};
@@ -135,7 +136,7 @@ TEST_F(CQmWikiEditorTest, SavingWritesUnderLanguageDirectoryAndClearsDraft)
 	EXPECT_FALSE(State.m_EditDirty);
 	EXPECT_EQ(State.m_Draft, Draft);
 	EXPECT_FALSE(State.m_StatusIsError);
-	EXPECT_NE(std::string(State.m_aStatus).find("wiki/simplified_chinese/qm/wiki-editor-test.md"), std::string::npos);
+	EXPECT_NE(std::string(State.m_aStatus).find("qmclient/content/wiki/simplified_chinese/qm/wiki-editor-test.md"), std::string::npos);
 }
 
 TEST_F(CQmWikiEditorTest, ResetToBuiltInRemovesOverrideFile)

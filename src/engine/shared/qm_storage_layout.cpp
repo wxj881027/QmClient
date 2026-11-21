@@ -44,17 +44,21 @@ namespace
 		qm_storage::STATE_MAPS_DIR,
 		qm_storage::STATE_WORKSHOP_DIR,
 		qm_storage::STATE_LEGACY_DIR,
+		qm_storage::STATE_LEGACY_CONFLICTS_DIR,
 		qm_storage::CONTENT_DIR,
 		qm_storage::CONTENT_RANK1_DIR,
 		qm_storage::CONTENT_RANK1_DEMOS_DIR,
 		qm_storage::CONTENT_RANK1_GHOSTS_DIR,
 		qm_storage::CONTENT_CHAT_LOG_DIR,
 		qm_storage::CONTENT_LYRICS_DIR,
+		qm_storage::CONTENT_WIKI_DIR,
+		qm_storage::CONTENT_WIKI_MEDIA_DIR,
 		qm_storage::FONT_DIR,
 		qm_storage::FONT_STORE_DIR,
 		qm_storage::RUNTIME_DIR,
 		qm_storage::RUNTIME_EDITOR_DIR,
 		qm_storage::RUNTIME_UPDATES_DIR,
+		qm_storage::RUNTIME_LOGS_DIR,
 	};
 
 	struct SPathMove
@@ -107,6 +111,11 @@ namespace
 		"qmclient/cache/qm-serverlist.json",
 	};
 
+	// 日志不是启动关键数据：文件被旧启动器占用时可以跳过，不能让 marker 永远不生成。
+	constexpr SPathMove OPTIONAL_FILE_MOVES[] = {
+		{"qm_flash.log", qm_storage::RUNTIME_LOG_FILE},
+	};
+
 	constexpr SPathMove DIRECTORY_MOVES[] = {
 		{"qmclient/config_packages", qm_storage::CONFIG_PACKAGES_DIR},
 		{"qmclient/fontcache", qm_storage::CACHE_FONT_PREVIEWS_DIR},
@@ -115,6 +124,7 @@ namespace
 		{"qmclient/rank1", qm_storage::CONTENT_RANK1_DIR},
 		{"qmclient/chat_log", qm_storage::CONTENT_CHAT_LOG_DIR},
 		{"qmclient/lyrics", qm_storage::CONTENT_LYRICS_DIR},
+		{"wiki", qm_storage::CONTENT_WIKI_DIR},
 		{"fonts/downloaded_fonts", "qmclient/state/legacy/old_downloaded_fonts"},
 		{"map_preview_cache", qm_storage::CACHE_MAP_PREVIEWS_DIR},
 	};
@@ -218,6 +228,34 @@ namespace
 		return pStorage->RemoveFile(pFrom, IStorage::TYPE_SAVE);
 	}
 
+	bool MoveFileToConflictArchive(IStorage *pStorage, const char *pFrom)
+	{
+		for(int Index = 0; Index < 100; ++Index)
+		{
+			char aTarget[IO_MAX_PATH_LENGTH];
+			if(Index == 0)
+				str_format(aTarget, sizeof(aTarget), "%s/%s", qm_storage::STATE_LEGACY_CONFLICTS_DIR, pFrom);
+			else
+				str_format(aTarget, sizeof(aTarget), "%s/%s.%d", qm_storage::STATE_LEGACY_CONFLICTS_DIR, pFrom, Index);
+			if(pStorage->FileExists(aTarget, IStorage::TYPE_SAVE) || pStorage->FolderExists(aTarget, IStorage::TYPE_SAVE))
+				continue;
+			if(!EnsureParentFolder(pStorage, aTarget))
+			{
+				log_error("storage_layout", "Could not create the conflict archive folder for '%s'", pFrom);
+				return false;
+			}
+			if(pStorage->MoveFileNoReplace(pFrom, aTarget, IStorage::TYPE_SAVE) || CopyFile(pStorage, pFrom, aTarget))
+			{
+				log_warn("storage_layout", "Migration conflict preserved '%s' at '%s'", pFrom, aTarget);
+				return true;
+			}
+			log_error("storage_layout", "Could not archive conflicting file '%s'", pFrom);
+			return false;
+		}
+		log_error("storage_layout", "No free conflict archive name for '%s'", pFrom);
+		return false;
+	}
+
 	bool MoveFile(IStorage *pStorage, const char *pFrom, const char *pTo)
 	{
 		if(!pStorage->FileExists(pFrom, IStorage::TYPE_SAVE))
@@ -231,8 +269,8 @@ namespace
 		{
 			if(!FilesEqual(pStorage, pFrom, pTo))
 			{
-				log_error("storage_layout", "Migration conflict: both '%s' and '%s' exist with different contents", pFrom, pTo);
-				return false;
+				log_warn("storage_layout", "Migration conflict: keeping '%s' and archiving legacy '%s'", pTo, pFrom);
+				return MoveFileToConflictArchive(pStorage, pFrom);
 			}
 			return pStorage->RemoveFile(pFrom, IStorage::TYPE_SAVE);
 		}
@@ -567,6 +605,13 @@ namespace qm_storage
 		bool Success = true;
 		for(const SPathMove &Move : FILE_MOVES)
 			Success &= MoveFile(pStorage, Move.m_pFrom, Move.m_pTo);
+		for(const SPathMove &Move : OPTIONAL_FILE_MOVES)
+		{
+			if(!pStorage->FileExists(Move.m_pFrom, IStorage::TYPE_SAVE))
+				continue;
+			if(!MoveFile(pStorage, Move.m_pFrom, Move.m_pTo))
+				log_warn("storage_layout", "Optional file '%s' was left in place", Move.m_pFrom);
+		}
 		Success &= MigrateNewestCacheFile(pStorage, SERVERLIST_CACHE_SOURCES, std::size(SERVERLIST_CACHE_SOURCES), SERVERLIST_CACHE_FILE);
 		for(const SPathMove &Move : DIRECTORY_MOVES)
 			Success &= MoveDirectory(pStorage, Move.m_pFrom, Move.m_pTo);
@@ -605,7 +650,7 @@ namespace qm_storage
 			IOHANDLE Marker = pStorage->OpenFile(LAYOUT_MIGRATION_MARKER_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 			if(Marker == nullptr)
 				return false;
-			static constexpr const char *VERSION = "1\n";
+			static constexpr const char *VERSION = "2\n";
 			const bool Written = io_write(Marker, VERSION, str_length(VERSION)) == str_length(VERSION);
 			const bool Closed = io_close(Marker) == 0;
 			if(!Written || !Closed)
