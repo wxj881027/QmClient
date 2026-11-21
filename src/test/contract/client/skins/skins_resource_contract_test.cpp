@@ -241,7 +241,9 @@ TEST(SkinsContract, PrioritizedLoadQueueKeepsOriginalRequestPriority)
 
 	EXPECT_NE(StartLoading.find("StartLoadJob(It->second.get(), It->second->m_LoadPriority)"), std::string::npos);
 	EXPECT_EQ(StartLoading.find("StartLoadJob(It->second.get(), ESettingsResourcePriority::VISIBLE)"), std::string::npos);
-	EXPECT_NE(StartLoading.find("Stats.m_NumPending + Stats.m_NumLoading"), std::string::npos);
+	// 加载窗口只统计未完成项；预算由准入决策统一计算，不再手工相加。
+	EXPECT_NE(StartLoading.find("SettingsSkinSourceAdmissionDecision("), std::string::npos);
+	EXPECT_NE(StartLoading.find("(int)Stats.m_NumLoading,"), std::string::npos);
 	EXPECT_EQ(StartLoading.find("Stats.m_NumPending + Stats.m_NumLoaded + Stats.m_NumLoading"), std::string::npos);
 }
 

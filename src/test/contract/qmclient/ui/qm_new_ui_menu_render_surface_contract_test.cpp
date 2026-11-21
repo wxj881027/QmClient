@@ -197,6 +197,16 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 			Shader.replace(Position, VulkanDataPrefix.size(), OpenGlDataPrefix);
 			Position += OpenGlDataPrefix.size();
 		}
+		// Vulkan 在 UV 分支里必须显式传梯度（textureGrad），OpenGL 用隐式梯度；
+		// 两者像素等价，比较核心前把这段等价写法抹平。
+		const std::string VulkanGradDecl = "\t\t// UV 边界两侧的片元会走不同分支，在判断范围前计算采样梯度。\n\t\tvec2 TexDx = dFdx(TexUV);\n\t\tvec2 TexDy = dFdy(TexUV);\n";
+		const size_t GradDecl = Shader.find(VulkanGradDecl);
+		if(GradDecl != std::string::npos)
+			Shader.erase(GradDecl, VulkanGradDecl.size());
+		const std::string VulkanGradSample = "textureGrad(gTextureSampler, TexUV, TexDx, TexDy)";
+		const size_t GradSample = Shader.find(VulkanGradSample);
+		if(GradSample != std::string::npos)
+			Shader.replace(GradSample, VulkanGradSample.size(), "texture(gTextureSampler, TexUV)");
 		return Shader;
 	};
 	const std::string OpenGlSdfShader = ReadTextFile("data/shader/rounded_rect_sdf.frag");

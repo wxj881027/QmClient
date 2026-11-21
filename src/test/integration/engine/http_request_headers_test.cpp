@@ -109,10 +109,11 @@ TEST(HttpRequestHeadersCurl, InitialAppendFailureCompletesOnceWithoutStartingTra
 	pRequest->Header("Accept: application/json");
 	Http.Run(pRequest);
 	ASSERT_TRUE(Http.Pump());
-	EXPECT_EQ(pRequest->State(), EHttpState::ABORTED);
+	// 追加请求头失败属于本地准备失败，与网络错误同样上报，不伪装成用户取消。
+	EXPECT_EQ(pRequest->State(), EHttpState::ERROR);
 	EXPECT_FALSE(pRequest->IsAbortRequested());
 	EXPECT_EQ(Completion.m_Calls, 1);
-	EXPECT_EQ(Completion.m_State, EHttpState::ABORTED);
+	EXPECT_EQ(Completion.m_State, EHttpState::ERROR);
 	EXPECT_EQ(Http.Running(), 0u);
 	EXPECT_FALSE(Http.Tracked(pRequest.get()));
 	ASSERT_TRUE(Http.Pump());
@@ -150,7 +151,7 @@ TEST_F(HttpRequestHeadersStorage, ContentTypeAppendFailureClosesCandidateAndPres
 	pRequest->m_FailAt = 2;
 	Http.Run(pRequest);
 	ASSERT_TRUE(Http.Pump());
-	EXPECT_EQ(pRequest->State(), EHttpState::ABORTED);
+	EXPECT_EQ(pRequest->State(), EHttpState::ERROR);
 	EXPECT_EQ(pRequest->m_AppendCalls, 2);
 	EXPECT_EQ(pRequest->m_CloseCalls, 1);
 	EXPECT_EQ(fs_is_file(pRequest->TemporaryPath().c_str()), 0);
@@ -169,7 +170,7 @@ TEST_F(HttpRequestHeadersStorage, KnownHeaderFailureRejectsBeforeOpeningCandidat
 	pRequest->Header("Accept: application/json");
 	Http.Run(pRequest);
 	ASSERT_TRUE(Http.Pump());
-	EXPECT_EQ(pRequest->State(), EHttpState::ABORTED);
+	EXPECT_EQ(pRequest->State(), EHttpState::ERROR);
 	EXPECT_EQ(pRequest->m_CloseCalls, 0);
 	EXPECT_EQ(fs_is_file(Candidate.c_str()), 0);
 	EXPECT_FALSE(m_pStorage->FileExists("headers.bin", IStorage::TYPE_SAVE));

@@ -952,6 +952,12 @@ private:
 	unsigned m_UpdatedMouseButtons = 0;
 	unsigned m_MouseButtons = 0;
 	unsigned m_LastMouseButtons = 0;
+	// 异步渲染期间 UI 更新可能跨过多个主循环。鼠标按下/抬起若只靠 Update
+	// 轮询，完整点击可能落在两次可见帧之间而丢失；在 OnInput 里锁存边沿，
+	// 下一次 Update 至少输出一个按下脉冲，再在下一可见帧释放。
+	unsigned m_LatchedMouseButtons = 0;
+	unsigned m_MouseEventButtons = 0;
+	unsigned m_PendingMousePresses = 0;
 	// 每帧最多激活一个按钮：触摸按下导致页面切换后，原位置的另一个按钮
 	// 会在同一帧读到同一次按下/抬起，产生双重点击。
 	bool m_ButtonActivatedThisFrame = false;
@@ -1168,7 +1174,12 @@ public:
 	void SetEnabled(bool Enabled)
 	{
 		if(m_Enabled && !Enabled)
+		{
 			CancelTouchInput();
+			m_LatchedMouseButtons = 0;
+			m_MouseEventButtons = 0;
+			m_PendingMousePresses = 0;
+		}
 		m_Enabled = Enabled;
 	}
 	bool Enabled() const { return m_Enabled; }

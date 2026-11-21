@@ -86,14 +86,20 @@ namespace
 			m_vRequests.front()->Reply(206, std::string_view(m_Body).substr(0, 1), CHttpByteRange{0, 0, static_cast<int64_t>(m_Body.size())});
 			EXPECT_NO_THROW(m_Download->Poll(1));
 		}
+		// 请求上的 ByteRange 只记录首尾，总大小要由响应头补齐；缺 total 会被判为无效分段。
+		CHttpByteRange PayloadRange(size_t Index) const
+		{
+			const auto Range = m_vRequests[Index]->Range();
+			EXPECT_TRUE(Range.has_value());
+			return CHttpByteRange{Range->m_First, Range->m_Last, static_cast<int64_t>(m_Body.size())};
+		}
 		void FinishPayload()
 		{
 			ASSERT_EQ(m_vRequests.size(), 5u);
 			for(size_t Index = 1; Index < m_vRequests.size(); ++Index)
 			{
-				const auto Range = m_vRequests[Index]->Range();
-				ASSERT_TRUE(Range.has_value());
-				m_vRequests[Index]->Reply(206, std::string_view(m_Body).substr(Range->m_First, Range->Length()), Range);
+				const auto Range = PayloadRange(Index);
+				m_vRequests[Index]->Reply(206, std::string_view(m_Body).substr(Range.m_First, Range.Length()), Range);
 			}
 		}
 		void ExpectLocalFailure()
@@ -113,10 +119,12 @@ namespace
 			char aPath[IO_MAX_PATH_LENGTH];
 			for(const auto &Request : m_vRequests)
 			{
-				if(Request->Dest()[0] == '\0')
+				// 探测请求把响应收进内存，没有落盘路径。
+				const char *pDest = Request->Dest();
+				if(!pDest || pDest[0] == '\0')
 					continue;
-				m_Storage->GetCompletePath(IStorage::TYPE_SAVE, Request->Dest(), aPath, sizeof(aPath));
-				EXPECT_FALSE(fs_is_file(aPath)) << Request->Dest();
+				m_Storage->GetCompletePath(IStorage::TYPE_SAVE, pDest, aPath, sizeof(aPath));
+				EXPECT_FALSE(fs_is_file(aPath)) << pDest;
 			}
 			m_Storage->GetCompletePath(IStorage::TYPE_SAVE, "package.tmp", aPath, sizeof(aPath));
 			EXPECT_FALSE(fs_is_file(aPath));
@@ -182,7 +190,7 @@ TEST_F(QmPackagePreparationFailure, LaterPayloadFactoryFailureRemovesLateComplet
 	for(size_t Index = 1; Index < m_vRequests.size(); ++Index)
 	{
 		EXPECT_TRUE(m_vRequests[Index]->IsAbortRequested());
-		m_vRequests[Index]->Reply(206, "late", m_vRequests[Index]->Range());
+		m_vRequests[Index]->Reply(206, "late", PayloadRange(Index));
 	}
 	ExpectNoPackageFiles();
 	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);

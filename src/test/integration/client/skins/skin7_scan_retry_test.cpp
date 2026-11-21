@@ -554,8 +554,9 @@ TEST_F(CQmSkin7ScanRetryTest, DescriptionReadFailureRejectsWholeResultAndRetryRe
 	ASSERT_TRUE(Plan);
 	ASSERT_TRUE(WaitForJobDone(*Plan->m_pJob));
 	EXPECT_TRUE(Plan->m_pJob->Succeeded());
-	ASSERT_EQ(Plan->m_pJob->Entries().size(), 1u);
-	EXPECT_EQ(Plan->m_pJob->Entries()[0].m_Name, "qm_info_fail");
+	// 扫描覆盖所有存档根（含随程序分发的官方皮肤），这里只断言本次写入的条目。
+	const auto &Entries = Plan->m_pJob->Entries();
+	EXPECT_EQ(std::count_if(Entries.begin(), Entries.end(), [](const auto &Entry) { return Entry.m_Name == "qm_info_fail"; }), 1);
 	Plan->m_Callback();
 	EXPECT_EQ(m_Callbacks, 1);
 }
@@ -621,10 +622,14 @@ TEST_F(CQmSkin7ScanRetryTest, NativeAccessoryDirectoryReadFailureDiscardsPreviou
 
 TEST_F(CQmSkin7ScanRetryTest, MissingOptionalImagesKeepSuccessfulScanAndEmptyAccessory)
 {
+	// 随程序分发的 data/skins7 里带官方 xmas_hat.png，删存档副本不会让附件消失；
+	// 这里在读取层强制 NOT_FOUND，模拟附件在任何根下都取不到的机器。
+	m_pFault->m_pFailReadPath = "skins7/xmas_hat.png";
+	m_pFault->m_ForcedReadResult = IStorage::EReadFileResult::NOT_FOUND;
 	Queue();
 	ASSERT_FALSE(HasFatalFailure());
 	ASSERT_TRUE(m_pJob->Succeeded());
-	EXPECT_EQ(m_pJob->Entries().size(), 1u);
+	EXPECT_EQ(std::count_if(m_pJob->Entries().begin(), m_pJob->Entries().end(), [](const auto &Entry) { return Entry.m_Name == "qm_info_fail"; }), 1);
 	int Next = 0, Calls = 0;
 	EXPECT_TRUE(m_pJob->PublishNextAccessory(Next, [&](const CImageInfo &Image, bool Hat) {
 		++Calls;
@@ -644,7 +649,8 @@ TEST_F(CQmSkin7ScanRetryTest, DisappearedDescriptionKeepsExistingSkipPolicy)
 	ASSERT_FALSE(HasFatalFailure());
 	EXPECT_TRUE(m_pFault->m_Triggered);
 	EXPECT_TRUE(m_pJob->Succeeded());
-	EXPECT_TRUE(m_pJob->Entries().empty());
+	// 读取结果 NOT_FOUND 时沿用跳过策略：本次描述文件不产生条目。
+	EXPECT_TRUE(std::none_of(m_pJob->Entries().begin(), m_pJob->Entries().end(), [](const auto &Entry) { return Entry.m_Name == "qm_info_fail"; }));
 }
 
 TEST_F(CQmSkin7ScanRetryTest, UnsupportedCheckedReadIsNotAcceptedAsMissingDescription)

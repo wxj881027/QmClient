@@ -43,7 +43,8 @@ TEST(HttpRequestBodyCurl, AllocationFailureCompletesAndReleasesSchedulerCapacity
 	Http.Run(pFailed);
 	ASSERT_TRUE(Http.Pump());
 	EXPECT_TRUE(pFailed->Done());
-	EXPECT_EQ(pFailed->State(), EHttpState::ABORTED);
+	// 本地准备失败不是用户取消：按错误上报，才能触发失败日志与重试策略。
+	EXPECT_EQ(pFailed->State(), EHttpState::ERROR);
 	EXPECT_FALSE(Http.Tracked(pFailed.get()));
 	EXPECT_EQ(Http.Running(), 0u);
 	EXPECT_TRUE(Http.Pending().empty());
@@ -67,7 +68,7 @@ TEST(HttpRequestBodyCurl, PreparationFailureCompletesConsumerOnceWithoutUserAbor
 	Http.Run(pRequest);
 	ASSERT_TRUE(Http.Pump());
 	EXPECT_EQ(Completion.m_Calls, 1);
-	EXPECT_EQ(Completion.m_State, EHttpState::ABORTED);
+	EXPECT_EQ(Completion.m_State, EHttpState::ERROR);
 	EXPECT_FALSE(pRequest->IsAbortRequested());
 	EXPECT_TRUE(pRequest->Done());
 	ASSERT_TRUE(Http.Pump());

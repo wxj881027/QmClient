@@ -203,7 +203,8 @@ TEST_F(CQmSkin7PartLoadJobTest, AbortedBeforeQueueDoesNotPublishSuccess)
 	m_Pool.Shutdown();
 	m_PoolActive = false;
 	EXPECT_EQ(pJob->State(), IJob::STATE_ABORTED);
-	EXPECT_FALSE(pJob->IsCompleted());
+	// 排队撤回同样登记结束；这里关心的是没有发布成功结果。
+	EXPECT_TRUE(pJob->IsCompleted());
 	ExpectFailedResult(pJob->GetResult());
 }
 

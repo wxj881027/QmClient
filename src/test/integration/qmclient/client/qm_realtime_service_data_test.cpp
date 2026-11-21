@@ -159,7 +159,10 @@ TEST(QmRealtimeServiceData, ProfilePublicationAcceptsOnlyAValidSuccessOrExplicit
 		const auto Input = Message("title_profile", std::string(R"("title":"Title","status":)") + Status);
 		EXPECT_EQ(ReadQmRealtimeServiceData(Input).m_TitleProfileAccepted, Accepted);
 	}
-	const auto InvalidTitle = Message("title_profile", R"("title":"bad\u0000title","status":200)");
+	// 含 NUL 的标题在解析层就被拒绝，这里只要求发布结果保持未接受。
+	const std::string InvalidTitleJson = R"({"type":"title_profile","data":{"title":"bad\u0000title","status":200}})";
+	SQmRealtimeMessage InvalidTitle;
+	ParseQmRealtimeMessage(InvalidTitleJson.data(), InvalidTitleJson.size(), InvalidTitle);
 	EXPECT_FALSE(ReadQmRealtimeServiceData(InvalidTitle).m_TitleProfileAccepted);
 	const auto ShadowedStatus = Message("title_profile", R"("title":"Title","status\u0000extra":401)");
 	EXPECT_FALSE(ReadQmRealtimeServiceData(ShadowedStatus).m_TitleProfileAccepted);
@@ -320,3 +323,4 @@ TEST(QmRealtimeServiceData, PingWithoutPayloadProducesNoServiceChanges)
 	EXPECT_FALSE(Data.m_TitleAddressLimitReached);
 	EXPECT_EQ(Data.m_PlaytimeAction, EQmRealtimePlaytimeAction::NONE);
 }
+

@@ -6,6 +6,58 @@
 #include <cstddef>
 #include <limits>
 
+namespace qm_browser_column
+{
+	enum EId
+	{
+		FLAG_LOCK = 0,
+		FLAG_FAV,
+		COMMUNITY,
+		NAME,
+		DIFFICULTY,
+		GAMETYPE,
+		MAP,
+		FRIENDS,
+		PLAYERS,
+		QM_CLIENTS,
+		PING,
+		COUNT,
+	};
+
+	// 仅配置宽度列使用；锁/收藏/社区图标列由调用方保持固定宽度。
+	inline float MinWidth(EId Id)
+	{
+		switch(Id)
+		{
+		case NAME: return 60.0f;
+		case GAMETYPE: return 62.0f;
+		case MAP: return 90.0f;
+		case DIFFICULTY: return 44.0f;
+		case FRIENDS: return 12.0f;
+		case PLAYERS: return 34.0f;
+		case QM_CLIENTS: return 20.0f;
+		case PING: return 26.0f;
+		default: return 10.0f;
+		}
+	}
+
+	inline float MaxWidth(EId Id)
+	{
+		switch(Id)
+		{
+		case GAMETYPE: return 300.0f;
+		case MAP: return 800.0f;
+		// 难度格显示「类别 + 五星」，旧上限 300 在宽窗口仍会截断「古典 Next ★★★★★」。
+		case DIFFICULTY: return 600.0f;
+		case FRIENDS: return 120.0f;
+		case PLAYERS: return 240.0f;
+		case QM_CLIENTS: return 120.0f;
+		case PING: return 180.0f;
+		default: return 1000.0f;
+		}
+	}
+}
+
 struct SQmBrowserColumnSizing
 {
 	float m_Width;
@@ -166,6 +218,27 @@ inline std::array<SQmBrowserColumnSizing, NumColumns> QmBrowserResizeColumns(con
 }
 
 // 表头共享一次按压的所有权；列边缘命中时调宽优先，直到释放不能换成另一种手势。
+//
+// 生命周期只由“本次渲染是否仍持有输入”决定。不能用 Client::PerfFrame()
+// 之类的循环帧号判断渲染连续性：主循环会在异步渲染期间空转，连续两次菜单
+// 渲染之间可能相隔几十个循环帧，用帧号差会把正常的按压误判成过期。
+struct SQmBrowserHeaderGestureState
+{
+	bool m_Interactive = false;
+	bool m_RestartChanged = false;
+	bool m_Stale = false;
+	bool m_ResizeActive = false;
+	bool m_ActiveItemOwned = false;
+	bool m_ViewportChanged = false;
+};
+
+inline bool QmBrowserHeaderGestureShouldEnd(const SQmBrowserHeaderGestureState &State)
+{
+	if(!State.m_Interactive || State.m_RestartChanged || State.m_Stale)
+		return true;
+	return State.m_ResizeActive && (!State.m_ActiveItemOwned || State.m_ViewportChanged);
+}
+
 class CQmBrowserHeaderGesture
 {
 	int m_ReorderColumn = -1;

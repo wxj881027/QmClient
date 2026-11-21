@@ -36,7 +36,19 @@ namespace
 			m_pConsole->StoreCommands(false);
 		}
 		IConfigManager &Config() { return m_Config; }
-		bool Load() { return m_pConsole->ExecuteFile("qmclient/settings.cfg", IConsole::CLIENT_ID_UNSPECIFIED, false, IStorage::TYPE_SAVE, true); }
+		// 客户端加载配置时会挂上未知命令回调把旧键原样写回，测试同样要建立这条链。
+		static bool StoreUnknownCommand(const char *pCommand, void *pUser)
+		{
+			static_cast<CAllocationConfigSession *>(pUser)->m_Config.StoreUnknownCommand(pCommand, ConfigDomain::QMCLIENT);
+			return true;
+		}
+		bool Load()
+		{
+			m_pConsole->SetUnknownCommandCallback(StoreUnknownCommand, this);
+			const bool Result = m_pConsole->ExecuteFile("qmclient/settings.cfg", IConsole::CLIENT_ID_UNSPECIFIED, false, IStorage::TYPE_SAVE, true);
+			m_pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
+			return Result;
+		}
 	};
 	class ConfigAllocationFailure : public testing::Test
 	{

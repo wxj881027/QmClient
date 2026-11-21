@@ -234,6 +234,61 @@ TEST(ServerBrowserColumnLayout, AllFixedColumnsLeaveUnusedWideViewportSpace)
 	ExpectBrowserColumnWidths(QmBrowserFitColumns(aColumns, 100), std::array{20.0f, 30.0f});
 }
 
+TEST(ServerBrowserColumnLayout, WideViewportKeepsDifficultyResizable)
+{
+	using namespace qm_browser_column;
+	struct SDefaultColumn
+	{
+		EId m_Id;
+		float m_Width;
+	};
+	const SDefaultColumn aDefaults[] = {
+		{FLAG_LOCK, 14.0f},
+		{FLAG_FAV, 20.0f},
+		{COMMUNITY, 28.0f},
+		{NAME, 120.0f},
+		{MAP, 120.0f},
+		{DIFFICULTY, 80.0f},
+		{GAMETYPE, 68.0f},
+		{FRIENDS, 14.0f},
+		{PLAYERS, 40.0f},
+		{QM_CLIENTS, 24.0f},
+		{PING, 30.0f},
+	};
+	// 生产布局数组按默认视觉序传入，列 ID 只用于取配置上下限。
+	constexpr size_t MapIndex = 4;
+	constexpr size_t DifficultyIndex = 5;
+	constexpr size_t GametypeIndex = 6;
+	static_assert(std::size(aDefaults) == COUNT);
+	std::array<SQmBrowserColumnSizing, COUNT> aColumns{};
+	for(size_t i = 0; i < std::size(aDefaults); ++i)
+	{
+		const auto &Column = aDefaults[i];
+		const bool Fixed = Column.m_Id == FLAG_LOCK || Column.m_Id == FLAG_FAV || Column.m_Id == COMMUNITY;
+		aColumns[i] = {Column.m_Width, Fixed ? Column.m_Width : MinWidth(Column.m_Id), Fixed ? Column.m_Width : MaxWidth(Column.m_Id), Column.m_Width};
+	}
+
+	// 3840×2160 窗口在扣除面板、社区栏与滚动条预留后的典型列宽预算。
+	const auto Fitted = QmBrowserFitColumns(aColumns, 2400.0f);
+	EXPECT_LT(Fitted[DifficultyIndex].m_Width, MaxWidth(DIFFICULTY));
+	EXPECT_GT(Fitted[DifficultyIndex].m_Width, 300.0f);
+
+	// 按压帧会测量可见内容，把期望宽度从配置值换成内容宽度。
+	auto Measured = Fitted;
+	Measured[DifficultyIndex].m_PreferredWidth = 260.0f;
+	Measured[GametypeIndex].m_PreferredWidth = 140.0f;
+	Measured[GametypeIndex + 1].m_PreferredWidth = 40.0f;
+	Measured[GametypeIndex + 2].m_PreferredWidth = 70.0f;
+	Measured[GametypeIndex + 3].m_PreferredWidth = 60.0f;
+	Measured[GametypeIndex + 4].m_PreferredWidth = 60.0f;
+
+	const auto FromLeftBoundary = QmBrowserResizeColumns(Measured, MapIndex, -40.0f);
+	EXPECT_GT(FromLeftBoundary[DifficultyIndex].m_Width, Measured[DifficultyIndex].m_Width);
+
+	const auto FromRightBoundary = QmBrowserResizeColumns(Measured, DifficultyIndex, 40.0f);
+	EXPECT_GT(FromRightBoundary[DifficultyIndex].m_Width, Measured[DifficultyIndex].m_Width);
+}
+
 TEST(ServerBrowserColumnLayout, EmptyAndZeroWidthViewportsRemainBounded)
 {
 	const std::array<SQmBrowserColumnSizing, 2> aColumns{{{20, 20, 20, 20}, {80, 40, 300, 100}}};
@@ -343,6 +398,55 @@ TEST(ServerBrowserHeaderGesture, ResizeCannotMarkReorderOrPolluteNextSort)
 	Gesture.Begin(5, -1);
 	EXPECT_TRUE(Gesture.AllowsSort());
 	EXPECT_FALSE(Gesture.ReorderDragged());
+}
+
+TEST(ServerBrowserHeaderGesture, ActiveResizeSurvivesLoopFramesBetweenRenders)
+{
+	// 异步渲染会让主循环在两个可见帧之间空转多圈；按压是否有效只取决于
+	// 这次渲染仍持有输入，不能把循环帧号差当成渲染中断。
+	SQmBrowserHeaderGestureState State;
+	State.m_Interactive = true;
+	State.m_ResizeActive = true;
+	State.m_ActiveItemOwned = true;
+	EXPECT_FALSE(QmBrowserHeaderGestureShouldEnd(State));
+}
+
+TEST(ServerBrowserHeaderGesture, OwnershipLossEndsActiveResize)
+{
+	SQmBrowserHeaderGestureState State;
+	State.m_Interactive = true;
+	State.m_ResizeActive = true;
+	State.m_ActiveItemOwned = false;
+	EXPECT_TRUE(QmBrowserHeaderGestureShouldEnd(State));
+
+	State.m_ActiveItemOwned = true;
+	State.m_ViewportChanged = true;
+	EXPECT_TRUE(QmBrowserHeaderGestureShouldEnd(State));
+}
+
+TEST(ServerBrowserHeaderGesture, NonInteractiveOrRestartedOrStaleRenderEndsGesture)
+{
+	SQmBrowserHeaderGestureState State;
+	State.m_Interactive = false;
+	EXPECT_TRUE(QmBrowserHeaderGestureShouldEnd(State));
+
+	State.m_Interactive = true;
+	State.m_RestartChanged = true;
+	EXPECT_TRUE(QmBrowserHeaderGestureShouldEnd(State));
+
+	State.m_RestartChanged = false;
+	State.m_Stale = true;
+	EXPECT_TRUE(QmBrowserHeaderGestureShouldEnd(State));
+}
+
+TEST(ServerBrowserHeaderGesture, ReorderIsNotTiedToResizeActiveItem)
+{
+	SQmBrowserHeaderGestureState State;
+	State.m_Interactive = true;
+	State.m_ResizeActive = false;
+	State.m_ActiveItemOwned = false;
+	State.m_ViewportChanged = true;
+	EXPECT_FALSE(QmBrowserHeaderGestureShouldEnd(State));
 }
 
 namespace

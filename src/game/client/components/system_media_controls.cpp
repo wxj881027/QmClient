@@ -626,8 +626,8 @@ bool CSystemMediaControls::SyncNeteaseHookConfiguration() noexcept
 	}
 	m_HasNeteaseSnapshot = false;
 	m_NeteaseSnapshot = {};
-	m_LastNeteaseHookReadFrame = 0;
-	m_NeteaseHookReadFrameInitialized = false;
+	m_LastNeteaseHookReadTime = 0;
+	m_NeteaseHookReadTimeInitialized = false;
 	return true;
 }
 
@@ -1658,8 +1658,8 @@ void CSystemMediaControls::OnInit()
 	if(m_Initialized)
 		return;
 	m_Initialized = true;
-	m_LastNeteaseHookReadFrame = 0;
-	m_NeteaseHookReadFrameInitialized = false;
+	m_LastNeteaseHookReadTime = 0;
+	m_NeteaseHookReadTimeInitialized = false;
 	SyncNeteaseHookConfiguration();
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
 	m_BackendEnabled.store(g_Config.m_QmSmtcEnable != 0, std::memory_order_relaxed);
@@ -1681,8 +1681,8 @@ void CSystemMediaControls::OnShutdown()
 	m_LastNeteaseHookHelperPath.clear();
 	m_HasNeteaseSnapshot = false;
 	m_NeteaseSnapshot = {};
-	m_LastNeteaseHookReadFrame = 0;
-	m_NeteaseHookReadFrameInitialized = false;
+	m_LastNeteaseHookReadTime = 0;
+	m_NeteaseHookReadTimeInitialized = false;
 }
 
 void CSystemMediaControls::OnUpdate()
@@ -1699,19 +1699,20 @@ void CSystemMediaControls::OnUpdate()
 			m_HasNeteaseSnapshot = false;
 			m_NeteaseSnapshot = {};
 		}
-		if(m_NeteaseHookReadFrameInitialized)
+		if(m_NeteaseHookReadTimeInitialized)
 		{
-			m_LastNeteaseHookReadFrame = 0;
-			m_NeteaseHookReadFrameInitialized = false;
+			m_LastNeteaseHookReadTime = 0;
+			m_NeteaseHookReadTimeInitialized = false;
 		}
 	}
 	else if(m_pNeteaseHook)
 	{
-		const uint64_t CurrentFrame = Client() != nullptr ? Client()->PerfFrame() : 0;
-		if(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(CurrentFrame, m_LastNeteaseHookReadFrame, m_NeteaseHookReadFrameInitialized))
+		const int64_t Now = time_get();
+		const int64_t RefreshInterval = time_freq() * SystemMediaControls::NETEASE_HOOK_REFRESH_INTERVAL_MS / 1000;
+		if(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(Now, m_LastNeteaseHookReadTime, m_NeteaseHookReadTimeInitialized, RefreshInterval))
 		{
-			m_LastNeteaseHookReadFrame = CurrentFrame;
-			m_NeteaseHookReadFrameInitialized = true;
+			m_LastNeteaseHookReadTime = Now;
+			m_NeteaseHookReadTimeInitialized = true;
 			QmNeteaseHook::SSnapshotV5 Snapshot{};
 			if(m_pNeteaseHook->ReadV5(&Snapshot, g_Config.m_QmNeteaseHookTimeoutMs))
 			{

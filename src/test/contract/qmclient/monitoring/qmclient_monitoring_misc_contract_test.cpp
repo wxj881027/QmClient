@@ -53,7 +53,8 @@ TEST(QmMonitoringMiscContract, DemoBrowserFetchInfoUsesBoundedProgress)
 	EXPECT_NE(FetchAllBody.find("AdvanceDemoBrowserMetadata(2, g_Config.m_BrDemoSort == SORT_DATE ? 4 : 0, \"fetch_info\");"), std::string::npos);
 	EXPECT_NE(EnsureDatesBody.find("AdvanceDemoBrowserMetadata(0, maximum(1, AdaptiveBudget.m_DemoMetadataTokens), \"ensure_dates\");"), std::string::npos);
 	EXPECT_EQ(SortListBody.find("if(EnsureDemoDate(*pItem))"), std::string::npos);
-	EXPECT_NE(SortListBody.find("if(pItem->m_DateLoaded && pItem->m_DateValid)"), std::string::npos);
+	// 排序键改为已取到的 m_Date（未加载时为 0），排序期间不做同步读取。
+	EXPECT_NE(Header.find("if(SortColumn == SORT_DATE)\n\t\t\t\treturn Left.m_Date < Right.m_Date;"), std::string::npos);
 	EXPECT_EQ(DetailsBody.find("!FetchHeader(*pItem)"), std::string::npos);
 	EXPECT_NE(DetailsBody.find("!pItem->m_InfosLoaded"), std::string::npos);
 	EXPECT_NE(Header.find("size_t m_DemoHeaderFetchCursor"), std::string::npos);

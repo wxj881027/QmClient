@@ -278,6 +278,9 @@ void CUi::Init(IKernel *pKernel)
 	m_pGraphics = pKernel->RequestInterface<IGraphics>();
 	m_pInput = pKernel->RequestInterface<IInput>();
 	m_pTextRender = pKernel->RequestInterface<ITextRender>();
+	m_LatchedMouseButtons = 0;
+	m_MouseEventButtons = 0;
+	m_PendingMousePresses = 0;
 	CUIRect::Init(m_pGraphics, this);
 	CLineInput::Init(m_pClient, m_pGraphics, m_pInput, m_pTextRender);
 	CUIElementBase::Init(this);
@@ -984,14 +987,25 @@ void CUi::Update()
 	m_TouchScrollDelta = vec2(0.0f, 0.0f);
 	if(Enabled())
 	{
-		// Update mouse buttons based on mouse keys
+		unsigned SampledMouseButtons = 0;
 		for(int MouseKey = KEY_MOUSE_1; MouseKey <= KEY_MOUSE_3; ++MouseKey)
 		{
 			if(Input()->KeyIsPressed(MouseKey))
-			{
-				m_UpdatedMouseButtons |= 1 << (MouseKey - KEY_MOUSE_1);
-			}
+				SampledMouseButtons |= 1u << (MouseKey - KEY_MOUSE_1);
 		}
+		// 有事件的按钮以事件锁存状态为准；没有事件时仍按物理状态采样。
+		// 待处理按下额外保留一帧，让“按下+抬起”都落在空档时仍能形成一次点击。
+		m_UpdatedMouseButtons = (SampledMouseButtons & ~m_MouseEventButtons) |
+					(m_LatchedMouseButtons & m_MouseEventButtons) |
+					m_PendingMousePresses;
+		m_MouseEventButtons = 0;
+		m_PendingMousePresses = 0;
+	}
+	else
+	{
+		m_LatchedMouseButtons = 0;
+		m_MouseEventButtons = 0;
+		m_PendingMousePresses = 0;
 	}
 	if(Enabled() || m_DirectTouchInput)
 	{
@@ -1448,6 +1462,22 @@ bool CUi::OnInput(const IInput::CEvent &Event)
 {
 	if(!Enabled())
 		return false;
+
+	if(Event.m_Key >= KEY_MOUSE_1 && Event.m_Key <= KEY_MOUSE_3)
+	{
+		const unsigned Button = 1u << (Event.m_Key - KEY_MOUSE_1);
+		if((Event.m_Flags & IInput::FLAG_PRESS) && !(Event.m_Flags & IInput::FLAG_REPEAT))
+		{
+			m_LatchedMouseButtons |= Button;
+			m_MouseEventButtons |= Button;
+			m_PendingMousePresses |= Button;
+		}
+		else if(Event.m_Flags & IInput::FLAG_RELEASE)
+		{
+			m_LatchedMouseButtons &= ~Button;
+			m_MouseEventButtons |= Button;
+		}
+	}
 
 	CLineInput *pActiveInput = CLineInput::GetActiveInput();
 	if(pActiveInput && pActiveInput->ProcessInput(Event))

@@ -632,7 +632,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	static int s_ReorderColIndex = -1;
 	static int s_ReorderInsertSlot = -1;
 	static float s_ReorderPressX = 0.0f;
-	static uint64_t s_LastHeaderFrame = 0;
+	static int64_t s_LastHeaderTime = 0;
 	static int s_LastHeaderRestartSeq = -1;
 	static bool s_WidthsChanged = false;
 	const bool HeaderInteractive = Ui()->Enabled() && !Ui()->RenderOnly() && !Ui()->PointerInputBlocked();
@@ -718,20 +718,17 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		CUIRect m_Rect;
 	};
 
-	enum
-	{
-		COL_FLAG_LOCK = 0,
-		COL_FLAG_FAV,
-		COL_COMMUNITY,
-		COL_NAME,
-		COL_DIFFICULTY,
-		COL_GAMETYPE,
-		COL_MAP,
-		COL_FRIENDS,
-		COL_PLAYERS,
-		COL_QM_CLIENTS,
-		COL_PING,
-	};
+	constexpr int COL_FLAG_LOCK = qm_browser_column::FLAG_LOCK;
+	constexpr int COL_FLAG_FAV = qm_browser_column::FLAG_FAV;
+	constexpr int COL_COMMUNITY = qm_browser_column::COMMUNITY;
+	constexpr int COL_NAME = qm_browser_column::NAME;
+	constexpr int COL_DIFFICULTY = qm_browser_column::DIFFICULTY;
+	constexpr int COL_GAMETYPE = qm_browser_column::GAMETYPE;
+	constexpr int COL_MAP = qm_browser_column::MAP;
+	constexpr int COL_FRIENDS = qm_browser_column::FRIENDS;
+	constexpr int COL_PLAYERS = qm_browser_column::PLAYERS;
+	constexpr int COL_QM_CLIENTS = qm_browser_column::QM_CLIENTS;
+	constexpr int COL_PING = qm_browser_column::PING;
 
 	enum
 	{
@@ -872,40 +869,27 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	};
 
 	auto GetColMinWidth = [](int ColId) {
-		switch(ColId)
-		{
-		case COL_NAME: return 60.0f;
-		case COL_GAMETYPE: return 62.0f;
-		case COL_MAP: return 90.0f;
-		case COL_DIFFICULTY: return 44.0f;
-		case COL_FRIENDS: return 12.0f;
-		case COL_PLAYERS: return 34.0f;
-		case COL_QM_CLIENTS: return 20.0f;
-		case COL_PING: return 26.0f;
-		default: return 10.0f;
-		}
+		return qm_browser_column::MinWidth((qm_browser_column::EId)ColId);
 	};
-
 	auto GetColMaxWidth = [](int ColId) {
-		switch(ColId)
-		{
-		case COL_GAMETYPE: return 300.0f;
-		case COL_MAP: return 800.0f;
-		case COL_DIFFICULTY: return 300.0f;
-		case COL_FRIENDS: return 120.0f;
-		case COL_PLAYERS: return 240.0f;
-		case COL_QM_CLIENTS: return 120.0f;
-		case COL_PING: return 180.0f;
-		default: return 1000.0f;
-		}
+		return qm_browser_column::MaxWidth((qm_browser_column::EId)ColId);
 	};
 
 	// 输入归属或页面失效后取消旧按压；只释放自己的控件，不清掉弹窗的 active item。
 	const int ResizeColumn = s_HeaderGesture.ResizeColumn();
 	const void *pResizeId = ResizeColumn >= 0 ? &s_aCols[ResizeColumn].m_Width : nullptr;
-	if(!HeaderInteractive || s_LastHeaderRestartSeq != m_BrowserListEntryRestartSeq ||
-		Client()->PerfFrame() > s_LastHeaderFrame + 1 ||
-		(ResizeColumn >= 0 && (!Ui()->IsActiveItem(pResizeId) || s_ResizeViewportWidth != Headers.w)))
+	const int64_t HeaderNow = time_get();
+	// 渲染会被空闲节流和异步提交跳过，循环帧号差不能代表两次菜单渲染的间隔。
+	// 只有真正长时间没有回到本页（例如菜单关闭或主线程卡死）才放弃旧按压。
+	const bool HeaderStale = s_LastHeaderTime != 0 && HeaderNow - s_LastHeaderTime > 2 * time_freq();
+	SQmBrowserHeaderGestureState HeaderState;
+	HeaderState.m_Interactive = HeaderInteractive;
+	HeaderState.m_RestartChanged = s_LastHeaderRestartSeq != m_BrowserListEntryRestartSeq;
+	HeaderState.m_Stale = HeaderStale;
+	HeaderState.m_ResizeActive = ResizeColumn >= 0;
+	HeaderState.m_ActiveItemOwned = ResizeColumn >= 0 && Ui()->IsActiveItem(pResizeId);
+	HeaderState.m_ViewportChanged = ResizeColumn >= 0 && s_ResizeViewportWidth != Headers.w;
+	if(QmBrowserHeaderGestureShouldEnd(HeaderState))
 	{
 		if(pResizeId != nullptr && Ui()->IsActiveItem(pResizeId))
 			Ui()->SetActiveItem(nullptr);
@@ -913,7 +897,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		s_ReorderColIndex = -1;
 		s_ReorderInsertSlot = -1;
 	}
-	s_LastHeaderFrame = Client()->PerfFrame();
+	s_LastHeaderTime = HeaderNow;
 	s_LastHeaderRestartSeq = m_BrowserListEntryRestartSeq;
 
 	// 可用宽度包含所有列与间隙；窗口过窄时仅裁剪文字，字号保持不变。
@@ -944,7 +928,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	else
 		for(int i = 0; i < NumCols; ++i)
 			aSizing[i] = s_aLayoutById[s_aCols[i].m_Id];
-	if(HeaderInteractive && s_HeaderGesture.ResizeColumn() >= 0 && Ui()->CheckActiveItem(pResizeId))
+	// 松开帧只负责收尾，不再按当前鼠标位置补一次位移；否则菜单关闭后快速
+	// 重开、按压已失效但 active item 尚未清理时，会把指针跳变写进列宽。
+	if(HeaderInteractive && s_HeaderGesture.ResizeColumn() >= 0 && Ui()->CheckActiveItem(pResizeId) && Ui()->MouseButton(0))
 	{
 		aSizing = QmBrowserResizeColumns(s_aResizeStart, s_HeaderGesture.ResizeColumn(), Ui()->MouseX() - s_ResizePressX);
 		// 所有受影响的列一起保存；取整只影响存档，当前拖动继续使用按下时的浮点快照。

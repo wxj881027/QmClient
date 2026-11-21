@@ -7323,7 +7323,8 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		return m_MenuTextFallbackElement;
 	}
 
-	const uint64_t CurrentFrame = Client()->PerfFrame();
+	// 文本池寿命按可见 UI 帧计；主循环 PerfFrame 在异步渲染时会跳号。
+	const uint64_t CurrentFrame = Ui()->PopupSourceFrame();
 	SyncMenuTextPoolIdentity(CurrentFrame);
 
 	// 命中路径只在栈上格式化一次键，不分配字符串；未命中插入时才复制一次。
@@ -7404,7 +7405,7 @@ int CMenus::TrimMenuTextPoolForInsert(uint64_t CurrentFrame)
 		m_MenuTextLastTrimFrame = CurrentFrame;
 		for(auto It = m_MenuTextPool.begin(); It != m_MenuTextPool.end();)
 		{
-			const bool Expired = CurrentFrame > It->second.m_LastUsedFrame && CurrentFrame - It->second.m_LastUsedFrame > QM_MENU_TEXT_CACHE_MAX_AGE_FRAMES;
+			const bool Expired = QmMenuTextCacheEntryExpired(CurrentFrame, It->second.m_LastUsedFrame);
 			if(!Expired)
 			{
 				++It;
@@ -8190,7 +8191,9 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 	if(Budget <= 0 || Ui()->Screen() == nullptr || SettingsMenuTextPrebuildReady(pOperationOverride))
 		return maximum(Budget, 0);
 
-	const uint64_t CurrentFrame = Client()->PerfFrame();
+	// 预建与正常菜单绘制共用同一套 UI 帧时钟，避免两条路径互相覆盖
+	// 身份哈希缓存后，在每个预建条目上重复做字体路径哈希。
+	const uint64_t CurrentFrame = Ui()->PopupSourceFrame();
 	SyncMenuTextPoolIdentity(CurrentFrame);
 
 	SSettingsAdaptiveBudgetInput Input;

@@ -1218,8 +1218,11 @@ TEST_F(TeeHistorian, PrevGameUuid)
 	}};
 	m_GameInfo.m_PrevGameUuid = PrevGameUuid;
 	Reset(&m_GameInfo);
+	// header 之后是二进制 tick 数据，JSON 包装层会拒绝其中内嵌的 NUL，按 header 自身长度解析。
+	const size_t HeaderSize = m_vBuffer.size();
 	Finish();
-	json_value *pJson = JsonParse((const char *)m_vBuffer.data() + 16, m_vBuffer.size() - 16);
+	// header 以显式 NUL 结尾，JSON 包装层拒绝内嵌 NUL，因此按「去掉结尾终止符」的长度解析。
+	json_value *pJson = JsonParse((const char *)m_vBuffer.data() + 16, HeaderSize - 16 - 1);
 	ASSERT_TRUE(pJson);
 	const json_value &JsonPrevGameUuid = (*pJson)["prev_game_uuid"];
 	ASSERT_EQ(JsonPrevGameUuid.type, json_string);

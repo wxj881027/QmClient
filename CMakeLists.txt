@@ -5171,6 +5171,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/player_points_controller_test.cpp
     src/game/client/components/player_points.cpp
     src/test/support/player_points_component_boundary.cpp
+    # 与独立分配故障目标同一实现：让 testrunner 里的原生分配注入真正生效。
+    src/test/support/allocation_failure_new.cpp
     src/test/unit/qmclient/client/qm_item_render_math_test.cpp
     src/test/unit/qmclient/client/qm_sixup_damage_display_test.cpp
     src/test/unit/qmclient/client/qm_particle_position_test.cpp

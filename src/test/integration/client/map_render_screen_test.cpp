@@ -25,6 +25,8 @@ namespace
 		void MapScreen(float X0, float Y0, float X1, float Y1) override {}
 		void QuadsBegin() override { ++m_Begins; }
 		void QuadsEnd() override { ++m_Ends; }
+		// 立即瓦片按自由 UV 提交贴图角点，计数只关心最终四边形数量。
+		void QuadsSetSubsetFree(float, float, float, float, float, float, float, float, int) override {}
 		void QuadsDrawTL(const CQuadItem *pArray, int Num) override { m_ImmediateDraws += Num; }
 		void RenderTileLayer(int BufferContainerIndex, const ColorRGBA &Color, char **pOffsets, unsigned int *pCounts, size_t Count) override
 		{

@@ -821,6 +821,10 @@ namespace
 				*pResultLen = 0;
 			if(!ppResult || !pResultLen || !pFilename || pFilename[0] == '\0')
 				return EReadFileResult::IO_FAILURE;
+			// 拼路径时的字符串截断会修掉尾部残缺序列，非法名字会悄悄落到另一个文件名上；
+			// 这里先按打开接口的同一判据拒绝，保持各平台一致的「无效路径」语义。
+			if(!str_utf8_check(pFilename))
+				return EReadFileResult::IO_FAILURE;
 			TranslateType(Type, pFilename);
 			if(Type != TYPE_ABSOLUTE)
 			{

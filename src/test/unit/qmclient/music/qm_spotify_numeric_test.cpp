@@ -148,3 +148,5 @@ TEST(QmSpotifyNumeric, LrclibDurationConvertsBoundedSecondsToMilliseconds)
 		EXPECT_EQ(Lyrics.m_Timeline.m_vLines[0].m_Text, "present");
 	}
 }
+
+

@@ -69,7 +69,9 @@ TEST_F(CTranslateServiceCodesTest, MyMemoryFractionalStatusCannotBecomeSuccess)
 
 TEST_F(CTranslateServiceCodesTest, MyMemoryWrongStatusTypeCannotDefaultToSuccess)
 {
-	for(const char *pCode : {R"("200")", "null", "true", "{}"})
+	// 字符串状态码是 MyMemory 的真实形态（错误时回 "403"），必须能解析；
+	// 这里只保留真正无法解析的类型。
+	for(const char *pCode : {"null", "true", "{}"})
 	{
 		SCOPED_TRACE(pCode);
 		const std::string Body = std::string("{\"responseStatus\":") + pCode + ",\"responseData\":{\"translatedText\":\"must not publish\"}}";

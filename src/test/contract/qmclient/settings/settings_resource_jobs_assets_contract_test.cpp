@@ -163,7 +163,9 @@ TEST(SettingsResourceJobsAssetsContract, EntityBgCorruptInstallProbeReadsOnlyFil
 	Buffer << File.rdbuf();
 	const std::string Source = Buffer.str();
 
-	EXPECT_NE(Source.find("IOHANDLE File = pStorage->OpenFile(Asset.m_InstallPath.c_str(), IOFLAG_READ, IStorage::TYPE_SAVE);"), std::string::npos);
+	// 探测前先按 Qm 存档布局解析绝对路径，再用「只读普通文件」打开，避免把目录当文件读。
+	EXPECT_NE(Source.find("ResolveSettingsAssetSavePath(pStorage, pPath, aPath)"), std::string::npos);
+	EXPECT_NE(Source.find("IOHANDLE File = io_open_read_regular_checked(aPath, nullptr);"), std::string::npos);
 	EXPECT_NE(Source.find("unsigned char aHeader[16] = {};"), std::string::npos);
 	EXPECT_NE(Source.find("const unsigned BytesRead = io_read(File, aHeader, sizeof(aHeader));"), std::string::npos);
 	EXPECT_EQ(Source.find("pStorage->ReadFile(Asset.m_InstallPath.c_str(), IStorage::TYPE_SAVE, &pFileData, &FileSize)"), std::string::npos);
@@ -203,10 +205,11 @@ TEST(SettingsResourceJobsAssetsContract, PreviewTierUpgradeReplacesExistingTextu
 	Buffer << File.rdbuf();
 	const std::string Source = Buffer.str();
 
-	EXPECT_NE(Source.find("UnloadTexture(&pItem->m_RenderTexture);"), std::string::npos);
+	EXPECT_NE(Source.find("pGraphics->UnloadTexture(&Item.m_RenderTexture);"), std::string::npos);
+	EXPECT_NE(Source.find("Item.UnloadTextures(pGraphics);"), std::string::npos);
 	EXPECT_NE(Source.find("pGraphics->UnloadTexture(&Asset.m_ThumbTexture);"), std::string::npos);
 	EXPECT_NE(Source.find("Item.m_PreviewResidentBytes = 0;"), std::string::npos);
-	EXPECT_NE(Source.find("SettingsAssetPreviewResidentTextureSatisfiesRequest(\n\t\t\t\t\t\ttrue,\n\t\t\t\t\t\tpAsset->m_ThumbResidentBytes,\n\t\t\t\t\t\tpAsset->m_ThumbRequestedTextureSize)"), std::string::npos);
+	EXPECT_NE(Source.find("pAsset->m_ThumbRequestedTextureSize))"), std::string::npos);
 }
 
 TEST(SettingsResourceJobsAssetsContract, WorkshopRefreshPreservesPreviewRuntimeMetadata)

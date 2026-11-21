@@ -45,12 +45,48 @@ namespace
 			mem_copy(m_aData.data() + SERVERBROWSE_SIZE, m_Input.Data(), m_Input.Size());
 		}
 
+		// CPacker 会把非法 UTF-8 换成替换符，构造不出「线上就是坏字节」的样本；
+		// 这里按 connless 布局手工写入，保留名字的原始字节。
+		void BuildRawPlayerName(const char *pName, int NameLength)
+		{
+			m_aData.fill(0xa5);
+			unsigned char *pCur = m_aData.data() + SERVERBROWSE_SIZE;
+			unsigned char *const pEnd = m_aData.data() + m_aData.size();
+			const auto AddString = [&](const char *pStr, int Length) {
+				ASSERT_LE(pCur + Length + 1, pEnd);
+				mem_copy(pCur, pStr, Length);
+				pCur[Length] = '\0';
+				pCur += Length + 1;
+			};
+			const auto AddInt = [&](int Value) {
+				char aBuf[16];
+				const int Length = str_format(aBuf, sizeof(aBuf), "%d", Value);
+				AddString(aBuf, Length);
+			};
+			AddInt(0x112);
+			AddString("  v0.7", str_length("  v0.7"));
+			AddString("new server", str_length("new server"));
+			AddString("host", str_length("host"));
+			AddString("map", str_length("map"));
+			AddString("DDNet", str_length("DDNet"));
+			AddInt(SERVER_FLAG_PASSWORD);
+			AddInt(2);
+			for(const int Count : {1, 16, 1, 16})
+				AddInt(Count);
+			AddString(pName, NameLength);
+			AddString("clan", str_length("clan"));
+			AddInt(156);
+			AddInt(-123);
+			AddInt(0);
+			m_Size = (int)(pCur - m_aData.data());
+			ASSERT_LE(m_Size, NET_MAX_CONNLESS_PAYLOAD);
+			mem_copy(m_aData.data(), SERVERBROWSE_INFO, SERVERBROWSE_SIZE);
+		}
+
 		bool Convert(int Capacity = NET_MAX_CONNLESS_PAYLOAD)
 		{
 			return sixup_translation::PreprocessConnless(m_aData.data(), m_Size, Capacity);
-		}
-
-		void ReadHeader(bool Extended, std::array<int, 4> Counts)
+		}		void ReadHeader(bool Extended, std::array<int, 4> Counts)
 		{
 			EXPECT_EQ(mem_comp(m_aData.data(), Extended ? SERVERBROWSE_INFO_EXTENDED : SERVERBROWSE_INFO, SERVERBROWSE_SIZE), 0);
 			m_Output.Reset(m_aData.data() + SERVERBROWSE_SIZE, m_Size - SERVERBROWSE_SIZE);
@@ -159,7 +195,9 @@ TEST_F(CSixupConnlessTest, InvalidCountRelationshipsAreRejected)
 
 TEST_F(CSixupConnlessTest, InvalidUtf8PlayerNameIsRejectedWithoutPublishing)
 {
-	Build({1, 16, 1, 16}, 1, 156, -123, 0, "\xc3\x28");
+	// 名字里的 0xC3 后面跟的是非续字节，属于非法 UTF-8。
+	const char aInvalidName[] = "\xc3\x28";
+	BuildRawPlayerName(aInvalidName, 2);
 	const auto Original = m_aData;
 	const int Size = m_Size;
 	EXPECT_FALSE(Convert());
@@ -212,7 +250,9 @@ TEST_F(CSixupConnlessTest, ExpandedResponseBeyondConnectionlessBudgetIsRejected)
 
 TEST_F(CSixupConnlessTest, InsufficientOutputCapacityPreservesInput)
 {
-	Build();
+	// 人数上限超过 64 会走扩展格式，输出比输入多出 CRC、大小与保留字段；
+	// 这样容量等于输入长度时必然不足，才能验证「失败不发布」。
+	Build({1, 128, 1, 128}, 1);
 	const auto Original = m_aData;
 	const int Size = m_Size;
 	EXPECT_FALSE(Convert(Size));
@@ -250,3 +290,4 @@ TEST_F(CSixupConnlessTest, RetryAfterMalformedResponseCanConvertValidResponse)
 	ASSERT_TRUE(Convert());
 	ReadHeader(false, {1, 16, 1, 16});
 }
+

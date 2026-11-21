@@ -284,7 +284,9 @@ TEST(QmChatCommandPreview, OnlyUnescapesQuotesAndBackslashesInAQuotedArgument)
 {
 	char aPreview[256];
 
-	ASSERT_TRUE(QmChatCommandPreview::Build(R"(/save "Route\West \"checkpoint\" \\ team")", nullptr, aPreview, sizeof(aPreview)));
+	// 旧版 MSVC 在宏参数里会把 raw string 的 \" 误当转义并提前结束字面量，先落到变量再比较。
+	const char *pCommand = R"(/save "Route\West \"checkpoint\" \\ team")";
+	ASSERT_TRUE(QmChatCommandPreview::Build(pCommand, nullptr, aPreview, sizeof(aPreview)));
 	EXPECT_STREQ(aPreview, R"(Save the team as Route\West "checkpoint" \ team)");
 }
 

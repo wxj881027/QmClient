@@ -11,12 +11,12 @@ template<typename Record, int Capacity>
 inline const Record *QmLatestInputRecord(const Record (&aRecords)[Capacity], const int Tick)
 {
 	const Record *pBest = nullptr;
-	for(const Record &Record : aRecords)
+	for(const Record &Entry : aRecords)
 	{
-		if(Record.m_Tick == -1 || Record.m_Tick > Tick)
+		if(Entry.m_Tick == -1 || Entry.m_Tick > Tick)
 			continue;
-		if(pBest == nullptr || pBest->m_Tick < Record.m_Tick)
-			pBest = &Record;
+		if(pBest == nullptr || pBest->m_Tick < Entry.m_Tick)
+			pBest = &Entry;
 	}
 	return pBest;
 }
