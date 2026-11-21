@@ -7353,6 +7353,7 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_asset_names_benchmark.cpp
     src/game/client/components/assets_resource_registry.cpp
     src/test/benchmark/qm_startup_info_benchmark.cpp
+    src/test/benchmark/qm_perf_logging_benchmark.cpp
     src/test/benchmark/qm_benchmark_main.cpp
     src/test/benchmark/qm_online_replay_benchmark.cpp
     src/test/benchmark/qm_route_render_cache_benchmark.cpp
