@@ -338,14 +338,13 @@ TEST(SettingsResourceJobsSkinPlan, VisibleSkinListEntriesRequestImmediateLoad)
 
 TEST(SettingsResourceJobsSkinPlan, RuntimeWarmupOnlyRunsOnSettingsPageWhenIdle)
 {
-	EXPECT_TRUE(SettingsRuntimeWarmupShouldRun(true, true, false, false, false, false, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, false, false, false, false, false, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, true, false, false, false, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, true, false, false, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, false, true, false, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, false, false, true, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, false, false, false, true));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(false, true, false, false, false, false, false));
+	EXPECT_TRUE(SettingsRuntimeWarmupShouldRun(true, true, false, false, false, false));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, false, false, false, false, false));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, true, false, false, false));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, true, false, false));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, false, true, false));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, false, false, true));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(false, true, false, false, false, false));
 }
 
 TEST(SettingsResourceJobsSkinPlan, SkinListWarmupCountsCoverVisibleAndPrefetchRows)

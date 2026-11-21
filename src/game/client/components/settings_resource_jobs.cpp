@@ -403,12 +403,11 @@ bool SettingsSkinListShouldRequestImmediateLoad(bool Visible)
 	return SettingsSkinListShouldRequestImmediateLoad(Visible, false);
 }
 
-bool SettingsRuntimeWarmupShouldRun(bool WarmupEnabled, bool SettingsPageVisible, bool HasActiveItem, bool HasHotItem, bool ScrollInputActive, bool SettingsPageSwitchActive, bool SettingsScrollActive)
+bool SettingsRuntimeWarmupShouldRun(bool WarmupEnabled, bool SettingsPageVisible, bool HasActiveItem, bool ScrollInputActive, bool SettingsPageSwitchActive, bool SettingsScrollActive)
 {
 	return WarmupEnabled &&
 	       SettingsPageVisible &&
 	       !HasActiveItem &&
-	       !HasHotItem &&
 	       !ScrollInputActive &&
 	       !SettingsPageSwitchActive &&
 	       !SettingsScrollActive;

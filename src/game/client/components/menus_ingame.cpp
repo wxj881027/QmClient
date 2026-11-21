@@ -1173,9 +1173,6 @@ void CMenus::DrainSnapshotTextContainers()
 void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 {
 	// QmClient: 细分计时定位 prepare 的 20ms 尖峰（plan 收集 vs 同步预建）
-	CPerfTimer PlanEnsureTimer;
-	EnsureSettingsMenuTextPlanReadyForVisible();
-	LogIngamePerfStage(Client(), "ingame_server_info_plan_ensure", PlanEnsureTimer.ElapsedMs(), false, nullptr);
 	CPerfTimer PrebuildTimer;
 	PrebuildIngameEscTextPoolBeforeOpen(16);
 	LogIngamePerfStage(Client(), "ingame_server_info_prebuild", PrebuildTimer.ElapsedMs(), false, nullptr);

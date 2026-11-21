@@ -51,15 +51,41 @@ TEST(QmMonitoringRuntimeContract, ConnectionGradeTracksDisconnectedState)
 	EXPECT_EQ(QmDetermineConnectionGrade(Net), EQmConnectionGrade::DISCONNECTED);
 }
 
-TEST(QmMonitoringRuntimeContract, MenuTextCacheAgeKeepsTheLastUiFrameAndExpiresOnTheNextAgeStep)
+TEST(QmMonitoringRuntimeContract, MenuTextCacheAgeUsesMonotonicWallClock)
 {
-	// 参数由调用方传 Ui()->PopupSourceFrame()；主循环 PerfFrame 会在异步渲染
-	// 时跳号，不能用它计算菜单文本容器的寿命。
+	// 参数由调用方传 time_get()；UI 帧和主循环 PerfFrame 都会随帧率/异步渲染跳号。
 	EXPECT_FALSE(QmMenuTextCacheEntryExpired(0, 0));
-	EXPECT_FALSE(QmMenuTextCacheEntryExpired(QM_MENU_TEXT_CACHE_MAX_AGE_FRAMES, 0));
-	EXPECT_TRUE(QmMenuTextCacheEntryExpired(QM_MENU_TEXT_CACHE_MAX_AGE_FRAMES + 1, 0));
-	// UI 帧时钟回绕或重置后，旧条目先保留，不能因无符号相减误删。
-	EXPECT_FALSE(QmMenuTextCacheEntryExpired(5, 600));
+	EXPECT_FALSE(QmMenuTextCacheEntryExpired(QM_MENU_TEXT_CACHE_MAX_AGE_NS, 1));
+	EXPECT_TRUE(QmMenuTextCacheEntryExpired(QM_MENU_TEXT_CACHE_MAX_AGE_NS + 2, 1));
+	// 时钟回退或条目从未使用过时先保留，不能因负差误删。
+	EXPECT_FALSE(QmMenuTextCacheEntryExpired(5, QM_MENU_TEXT_CACHE_MAX_AGE_NS + 10));
+	EXPECT_FALSE(QmMenuTextCacheEntryExpired(QM_MENU_TEXT_CACHE_MAX_AGE_NS + 10, 0));
+}
+
+TEST(QmMonitoringRuntimeContract, MenuTextCacheTrimRunsOnWallClockCadence)
+{
+	EXPECT_TRUE(QmMenuTextCacheTrimDue(100, 0));
+	EXPECT_FALSE(QmMenuTextCacheTrimDue(QM_MENU_TEXT_CACHE_TRIM_INTERVAL_NS - 1, 1));
+	EXPECT_TRUE(QmMenuTextCacheTrimDue(QM_MENU_TEXT_CACHE_TRIM_INTERVAL_NS + 1, 1));
+	EXPECT_FALSE(QmMenuTextCacheTrimDue(5, QM_MENU_TEXT_CACHE_TRIM_INTERVAL_NS + 10));
+}
+
+TEST(QmMonitoringRuntimeContract, MenuTextBackgroundBudgetOnlyUsesDisplayHeadroom)
+{
+	const float Target60Hz = QmMenuTargetFrameMs(60);
+	const float Target360Hz = QmMenuTargetFrameMs(360);
+	EXPECT_FLOAT_EQ(Target60Hz, 1000.0f / 60.0f);
+	EXPECT_FLOAT_EQ(Target360Hz, 1000.0f / 360.0f);
+	EXPECT_FLOAT_EQ(QmMenuTargetFrameMs(0), 1000.0f / 60.0f);
+
+	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target60Hz, 1.4f, 2.0f), 1.0f);
+	EXPECT_GT(QmMenuTextBackgroundBudgetMs(Target360Hz, 1.4f, 1.8f), 0.0f);
+	EXPECT_LT(QmMenuTextBackgroundBudgetMs(Target360Hz, 1.4f, 1.8f), 1.0f);
+	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target360Hz, 2.8f, 2.9f), 0.0f);
+	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(0.0f, 0.0f, 0.0f), 0.0f);
+	// 加载画面允许阻塞，但运行时后台预热只能吃显示器刷新周期的剩余时间。
+	EXPECT_FLOAT_EQ(QmMenuTextWarmupBudgetMs(true, Target360Hz, 2.8f, 2.9f), QM_MENU_TEXT_LOADING_PREWARM_STEP_MS);
+	EXPECT_FLOAT_EQ(QmMenuTextWarmupBudgetMs(false, Target360Hz, 2.8f, 2.9f), 0.0f);
 }
 
 TEST(QmMonitoringRuntimeContract, ConnectionGradeUsesThresholdTable)

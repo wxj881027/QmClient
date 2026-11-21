@@ -156,6 +156,7 @@ TEST(SettingsWarmupLoadingContract, TextPrebuildPublicApiReplacesVisiblePageWarm
 {
 	const std::string Header = ReadTestSourceFile("src/game/client/components/menus.h");
 	EXPECT_NE(Header.find("PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride"), std::string::npos);
+	EXPECT_NE(Header.find("SScopedBlockingPrewarm BlockingPrewarm(m_MenuTextBlockingPrewarm, true);"), std::string::npos);
 	const std::string UiHeader = ReadTestSourceFile("src/game/client/ui.h");
 	EXPECT_NE(UiHeader.find("void BeginRenderOnly();"), std::string::npos);
 	EXPECT_NE(UiHeader.find("void EndRenderOnly();"), std::string::npos);

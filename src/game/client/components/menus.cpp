@@ -632,11 +632,32 @@ CMenus::SMenuTextStyleKey CMenus::SettingsMenuTextPlanStyleKey(const SMenuTextPl
 
 namespace
 {
-	CUIRect MenuTextSettingsContentView(CUIRect Screen)
+	CUIRect MenuTextSettingsContentView(CUIRect OuterScreen)
 	{
 		CUIRect TabBar, MainView;
-		Screen.HSplitTop(MENU_MENUBAR_HEIGHT_NEW, &TabBar, &MainView);
+		OuterScreen.HSplitTop(MENU_MENUBAR_HEIGHT_NEW, &TabBar, &MainView);
+		QmApplyMenuPageSideInset(&MainView, OuterScreen.w + 16.0f);
 		return MainView;
+	}
+
+	// 设置页与 ESC 计划共用同一套“设置”键：loading/idle/tab-switch 只是采样上下文，
+	// 不应因为操作名变化就丢弃已经收集好的全量文本计划并从头再来。
+	const char *MenuTextPlanOperation(const char *pOperation)
+	{
+		return pOperation != nullptr && str_comp(pOperation, "ingame_esc_open") == 0 ? "ingame_esc_open" : "settings";
+	}
+
+	float MenuTextTargetFrameMs(IGraphics *pGraphics)
+	{
+		int RefreshRate = pGraphics != nullptr ? pGraphics->ScreenRefreshRate() : 0;
+		if(RefreshRate <= 0)
+			RefreshRate = g_Config.m_GfxScreenRefreshRate;
+		return QmMenuTargetFrameMs(RefreshRate);
+	}
+
+	float MenuTextFrameMsP95(const SQmPerformanceMetrics &Performance)
+	{
+		return Performance.m_FrameTimeP95Ms > 0.0f ? Performance.m_FrameTimeP95Ms : Performance.m_FrameTimeMs;
 	}
 
 	const char *MenuTextInvalidationReasonName(ESettingsInvalidationReason Reason)
@@ -4671,7 +4692,6 @@ void CMenus::Render()
 				g_Config.m_QmSettingsPrewarm != 0,
 				m_MenuPage == PAGE_SETTINGS,
 				Ui()->ActiveItem() != nullptr,
-				Ui()->HotItem() != nullptr,
 				ScrollInputActive,
 				m_SettingsPageSwitchActive || TransitionActive,
 				m_SettingsScrollActive);
@@ -4816,7 +4836,6 @@ void CMenus::Render()
 				g_Config.m_QmSettingsPrewarm != 0,
 				m_GamePage == PAGE_SETTINGS,
 				Ui()->ActiveItem() != nullptr,
-				Ui()->HotItem() != nullptr,
 				ScrollInputActive,
 				m_SettingsPageSwitchActive || TransitionActive,
 				m_SettingsScrollActive);
@@ -7323,9 +7342,8 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		return m_MenuTextFallbackElement;
 	}
 
-	// 文本池寿命按可见 UI 帧计；主循环 PerfFrame 在异步渲染时会跳号。
-	const uint64_t CurrentFrame = Ui()->PopupSourceFrame();
-	SyncMenuTextPoolIdentity(CurrentFrame);
+	// 身份缓存仍按 UI 帧更新；寿命和外层 LRU 用单调时钟，不能随帧率变化。
+	SyncMenuTextPoolIdentity(Ui()->PopupSourceFrame());
 
 	// 命中路径只在栈上格式化一次键，不分配字符串；未命中插入时才复制一次。
 	char aKey[MENU_TEXT_CACHE_KEY_SIZE];
@@ -7358,7 +7376,7 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		if(It != m_MenuTextPool.end() && It->second.m_Generation == m_MenuTextPoolGeneration)
 		{
 			++m_MenuTextStablePoolHitsThisFrame;
-			if(It->second.m_Built)
+			if(It->second.m_Element.Rect(0)->m_UITextContainer.Valid())
 				++m_MenuTextStableHitsThisFrame;
 		}
 	}
@@ -7368,11 +7386,8 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		{
 			++m_MenuTextStableMissesThisFrame;
 			LogSettingsTextPoolCoverageGap(Client(), "settings_text_miss", Scope, SettingsPerfStableTextScope(Page), Page, Tab, Subtab, aKey, "missing", HasDescriptor ? (KeyPlanned ? "not_built" : "key_mismatch") : "missing_descriptor", SettingsPerfActiveOperation(), m_MenuTextCoverageFrame);
-			if(!m_MenuTextFallbackElement.IsRegistered())
-				m_MenuTextFallbackElement.Init(Ui(), 1);
-			return m_MenuTextFallbackElement;
 		}
-		TrimMenuTextPoolForInsert(CurrentFrame);
+		TrimMenuTextPoolForInsert(time_get());
 		It = m_MenuTextPool.try_emplace(std::string(Key)).first;
 		It->second.m_Element.Init(Ui(), 1);
 		It->second.m_StyleKey = StyleKey;
@@ -7384,28 +7399,24 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		{
 			++m_MenuTextStableStalesThisFrame;
 			LogSettingsTextPoolCoverageGap(Client(), "settings_text_stale", Scope, SettingsPerfStableTextScope(Page), Page, Tab, Subtab, aKey, m_MenuTextPoolLastStaleReason.empty() ? "style" : m_MenuTextPoolLastStaleReason.c_str(), KeyPlanned ? "stale_generation" : (HasDescriptor ? "key_mismatch" : "missing_descriptor"), SettingsPerfActiveOperation(), m_MenuTextCoverageFrame);
-			if(!m_MenuTextFallbackElement.IsRegistered())
-				m_MenuTextFallbackElement.Init(Ui(), 1);
-			return m_MenuTextFallbackElement;
 		}
 		Ui()->ResetUIElement(It->second.m_Element);
 		It->second.m_StyleKey = StyleKey;
 		It->second.m_Generation = m_MenuTextPoolGeneration;
-		It->second.m_Built = false;
 	}
-	It->second.m_LastUsedFrame = CurrentFrame;
+	It->second.m_LastUsedTime = time_get();
 	return It->second.m_Element;
 }
 
-int CMenus::TrimMenuTextPoolForInsert(uint64_t CurrentFrame)
+int CMenus::TrimMenuTextPoolForInsert(int64_t Now)
 {
 	int Evictions = 0;
-	if(CurrentFrame != m_MenuTextLastTrimFrame)
+	if(QmMenuTextCacheTrimDue(Now, m_MenuTextLastTrimTime))
 	{
-		m_MenuTextLastTrimFrame = CurrentFrame;
+		m_MenuTextLastTrimTime = Now;
 		for(auto It = m_MenuTextPool.begin(); It != m_MenuTextPool.end();)
 		{
-			const bool Expired = QmMenuTextCacheEntryExpired(CurrentFrame, It->second.m_LastUsedFrame);
+			const bool Expired = QmMenuTextCacheEntryExpired(Now, It->second.m_LastUsedTime);
 			if(!Expired)
 			{
 				++It;
@@ -7420,7 +7431,7 @@ int CMenus::TrimMenuTextPoolForInsert(uint64_t CurrentFrame)
 	while(m_MenuTextPool.size() >= QM_MENU_TEXT_CACHE_CAPACITY)
 	{
 		const auto Oldest = std::min_element(m_MenuTextPool.begin(), m_MenuTextPool.end(), [](const auto &A, const auto &B) {
-			return A.second.m_LastUsedFrame < B.second.m_LastUsedFrame;
+			return A.second.m_LastUsedTime < B.second.m_LastUsedTime;
 		});
 		if(Oldest == m_MenuTextPool.end())
 			break;
@@ -7428,6 +7439,13 @@ int CMenus::TrimMenuTextPoolForInsert(uint64_t CurrentFrame)
 		Ui()->ResetUIElement(Oldest->second.m_Element);
 		m_MenuTextPool.erase(Oldest);
 		++Evictions;
+	}
+	// 池里任何条目被墙钟或容量淘汰后，计划游标不能再假装“全部已构建”；
+	// 回卷消费游标让后台预热重建缺失项，已在池内的条目仍会直接跳过。
+	if(Evictions > 0)
+	{
+		m_SettingsMenuTextPlanCollectionDirty = true;
+		SettingsTextPlanProgress().RestartConsumption();
 	}
 	return Evictions;
 }
@@ -7459,19 +7477,6 @@ bool CMenus::MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRe
 		StyleChanged ||
 		pElementRect->m_ReadCursorGlyphCount != ReadCursorGlyphCount;
 	return NeedsBuild;
-}
-
-bool CMenus::RequestMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor)
-{
-	const bool NeedsBuild = MenuTextContainerNeedsBuild(Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor);
-	if(!NeedsBuild)
-		return true;
-	if(m_pSettingsTextPrebuildBudget != nullptr)
-		return *m_pSettingsTextPrebuildBudget > 0;
-	if(m_CurrentSettingsUiFrameBudget.m_TextContainerTokens <= 0)
-		return false;
-	--m_CurrentSettingsUiFrameBudget.m_TextContainerTokens;
-	return true;
 }
 
 void CMenus::QueueMenuTextContainerBuild(EMenuTextScope Scope, CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor)
@@ -7528,19 +7533,7 @@ void CMenus::DrainMenuTextContainerBuildRequests()
 			continue;
 		--FrameBudget.m_TextContainerTokens;
 		DrainMenuTextContainerBuild(*Request.m_pElement, &Request.m_Rect, Request.m_Text.c_str(), Request.m_Size, Request.m_Align, Request.m_LabelProps, Request.m_StrLen, nullptr, false, &TextContainerRecreated);
-		if(TextContainerRecreated)
-		{
-			for(auto &[Key, Entry] : m_MenuTextPool)
-			{
-				(void)Key;
-				if(&Entry.m_Element == Request.m_pElement)
-				{
-					Entry.m_Built = true;
-					Entry.m_Generation = m_MenuTextPoolGeneration;
-					break;
-				}
-			}
-		}
+		(void)TextContainerRecreated;
 	}
 }
 
@@ -7606,7 +7599,39 @@ void CMenus::DoMenuLabelStreamed(EMenuTextScope Scope, CUIElement &Element, cons
 	}
 
 	const bool NeedsBuild = MenuTextContainerNeedsBuild(Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor);
-	if(NeedsBuild && m_pSettingsTextPrebuildBudget == nullptr)
+	if(NeedsBuild && m_MenuTextPoolVisibleGuard && Render && !Ui()->MeasurementOnly())
+	{
+		// 可见页绝不把文字留到后续帧：miss 先插入文本池，再在这里同帧建容器并绘制。
+		// 后台预热的职责是让这里大概率不触发，而不是用空白/旧内容掩盖冷切页。
+		bool TextContainerRecreated = false;
+		DrainMenuTextContainerBuild(Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor, false, &TextContainerRecreated);
+		if(pElementRect->m_UITextContainer.Valid())
+		{
+			++m_MenuTextStableRenderReadyHitsThisFrame;
+			Ui()->RenderLabelTextContainerAligned(*pElementRect, pRect, Align);
+			if(TextContainerRecreated)
+				++m_MenuTextStableTextNewThisFrame;
+			else
+			{
+				++m_MenuTextStableTextReusedThisFrame;
+				++m_MenuTextStableReusedThisFrame;
+			}
+		}
+		else
+		{
+			Ui()->DoLabel(pRect, pText, Size, Align, LabelProps);
+		}
+		if(m_pActiveSettingsTextPerfStats != nullptr)
+		{
+			if(TextContainerRecreated)
+				++m_pActiveSettingsTextPerfStats->m_New;
+			else
+				++m_pActiveSettingsTextPerfStats->m_Reused;
+		}
+		return;
+	}
+
+	if(NeedsBuild)
 	{
 		if(m_MenuTextPoolVisibleGuard)
 			++m_MenuTextStableBuildQueuedThisFrame;
@@ -7626,41 +7651,6 @@ void CMenus::DoMenuLabelStreamed(EMenuTextScope Scope, CUIElement &Element, cons
 			}
 		}
 		return;
-	}
-
-	if(m_pSettingsTextPrebuildBudget != nullptr)
-	{
-		if(MenuTextContainerNeedsBuild(Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor))
-		{
-			SSettingsWarmupFrameBudget Budget{};
-			Budget.m_MaxTextContainers = *m_pSettingsTextPrebuildBudget;
-			if(!SettingsWarmupConsumeBudget(Budget, ESettingsWarmupCost::TEXT_CONTAINER))
-				return;
-			*m_pSettingsTextPrebuildBudget = Budget.m_MaxTextContainers;
-			bool TextContainerRecreated = false;
-			DrainMenuTextContainerBuild(Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor, Render, &TextContainerRecreated);
-			if(TextContainerRecreated)
-			{
-				for(auto &[Key, Entry] : m_MenuTextPool)
-				{
-					(void)Key;
-					if(&Entry.m_Element == &Element)
-					{
-						Entry.m_Built = true;
-						Entry.m_Generation = m_MenuTextPoolGeneration;
-						break;
-					}
-				}
-			}
-			if(m_pActiveSettingsTextPerfStats != nullptr)
-			{
-				if(TextContainerRecreated)
-					++m_pActiveSettingsTextPerfStats->m_New;
-				else
-					++m_pActiveSettingsTextPerfStats->m_Reused;
-			}
-			return;
-		}
 	}
 
 	bool TextContainerRecreated = false;
@@ -7711,13 +7701,6 @@ CMenus::CScopedMenuTextVisibleGuard::CScopedMenuTextVisibleGuard(CMenus *pMenus)
 	m_pMenus(pMenus),
 	m_Previous(pMenus->m_MenuTextPoolVisibleGuard)
 {
-	{
-		const int64_t GuardStart = time_get();
-		m_pMenus->EnsureSettingsMenuTextPlanReadyForVisible();
-		const double GuardMs = (time_get() - GuardStart) * 1000.0 / time_freq();
-		if(GuardMs > 5.0)
-			dbg_msg("perf/menutext", "ensure_plan_ready=%.1fms", GuardMs);
-	}
 	m_pMenus->m_MenuTextPoolVisibleGuard = true;
 	if(!m_Previous)
 	{
@@ -7786,48 +7769,8 @@ bool CMenus::PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &Re
 
 	bool TextContainerRecreated = false;
 	DrainMenuTextContainerBuild(Element, &Item.m_Rect, Item.m_Text.c_str(), Item.m_FontSize, Item.m_Align, Item.m_LabelProps, -1, nullptr, false, &TextContainerRecreated);
-	if(pRect->m_UITextContainer.Valid())
-	{
-		for(auto &[Key, Entry] : m_MenuTextPool)
-		{
-			(void)Key;
-			if(&Entry.m_Element == &Element)
-			{
-				Entry.m_Built = true;
-				Entry.m_Generation = m_MenuTextPoolGeneration;
-				break;
-			}
-		}
-	}
+	(void)TextContainerRecreated;
 	return true;
-}
-
-void CMenus::BuildBaseSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView)
-{
-	static constexpr int s_aBaseSettingsPages[] = {
-		SETTINGS_GENERAL,
-		SETTINGS_TEE,
-		SETTINGS_APPEARANCE,
-		SETTINGS_CONTROLS,
-		SETTINGS_GRAPHICS,
-		SETTINGS_SOUND,
-		SETTINGS_ASSETS,
-		SETTINGS_DDNET,
-	};
-
-	const CSettingsTextPlanValueRestore SettingsPageRestore(g_Config.m_UiSettingsPage);
-	const CSettingsTextPlanCollectionScope CollectionScope(m_MenuTextPlanCollecting, m_pMenuTextPlanCollection, m_MenuTextPlanPendingActive, m_MenuTextPlanPendingItem, vItems);
-	const CSettingsTextPlanValueRestore TextContextPageRestore(m_SettingsTextContextPage);
-	const CSettingsTextPlanValueRestore TextContextTabRestore(m_SettingsTextContextTab);
-	const CSettingsTextPlanValueRestore TextContextSubtabRestore(m_SettingsTextContextSubtab);
-
-	RunSettingsTextPlanMeasurement(Ui(), [&] {
-		for(const int Page : s_aBaseSettingsPages)
-		{
-			g_Config.m_UiSettingsPage = Page;
-			RenderSettings(MainView);
-		}
-	});
 }
 
 void CMenus::BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView)
@@ -7847,6 +7790,8 @@ void CMenus::BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUI
 
 	CUIRect TabBar, ContentView;
 	MainView.HSplitTop(MENU_MENUBAR_HEIGHT_NEW, &TabBar, &ContentView);
+	QmApplyMenuPageSideInset(&TabBar, MainView.w + 16.0f);
+	QmApplyMenuPageSideInset(&ContentView, MainView.w + 16.0f);
 
 	RunSettingsTextPlanMeasurement(Ui(), [&] {
 		m_GamePage = PAGE_SERVER_INFO;
@@ -7855,43 +7800,16 @@ void CMenus::BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUI
 	});
 }
 
-void CMenus::BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems)
+CUIRect CMenus::MenuTextOuterScreen()
 {
-	const CUIRect Screen = Ui()->Screen() != nullptr ? *Ui()->Screen() : CUIRect{0.0f, 0.0f, 900.0f, 700.0f};
-	CUIRect SettingsMainView = MenuTextSettingsContentView(Screen);
-	if(str_comp(SettingsPerfActiveOperation(), "ingame_esc_open") == 0)
-		BuildIngameMenuTextPlan(vItems, Screen);
-	BuildSettingsMenuTextPlan(vItems, SettingsMainView);
-}
-
-void CMenus::BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView)
-{
-	const bool PreferQmClient = SettingsCanonicalPage(m_SettingsRuntimeMetadata.m_LastPage) == SETTINGS_QMCLIENT;
-	if(PreferQmClient)
-	{
-		BuildQmClientSettingsMenuTextPlan(vItems, MainView, m_SettingsRuntimeMetadata.m_LastQmTab);
-		BuildTClientSettingsMenuTextPlan(vItems, MainView, m_SettingsRuntimeMetadata.m_LastTClientTab);
-	}
-	else
-	{
-		BuildTClientSettingsMenuTextPlan(vItems, MainView, m_SettingsRuntimeMetadata.m_LastTClientTab);
-		BuildQmClientSettingsMenuTextPlan(vItems, MainView, m_SettingsRuntimeMetadata.m_LastQmTab);
-	}
-	constexpr int NumTClientTabs = 5; // 与 menus_tclient.cpp 的 NUMBER_OF_TCLIENT_TABS 保持一致
-	for(int Tab = 0; Tab < NumTClientTabs; ++Tab)
-	{
-		if(Tab != CanonicalizeTClientCacheTab(m_SettingsRuntimeMetadata.m_LastTClientTab))
-			BuildTClientSettingsMenuTextPlan(vItems, MainView, Tab);
-	}
-	for(int Tab = 0; Tab < NUMBER_OF_QMCLIENT_SETTINGS_TABS; ++Tab)
-	{
-		// 贡献者页签的枚举值只是持久化占位，不再渲染内容，文本计划按可见页签收集。
-		if(Tab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
-			continue;
-		if(Tab != std::clamp(m_SettingsRuntimeMetadata.m_LastQmTab, 0, NUMBER_OF_QMCLIENT_SETTINGS_TABS - 1))
-			BuildQmClientSettingsMenuTextPlan(vItems, MainView, Tab);
-	}
-	BuildBaseSettingsMenuTextPlan(vItems, MainView);
+	if(Ui()->Screen() == nullptr)
+		return CUIRect{0.0f, 0.0f, 0.0f, 0.0f};
+	CUIRect Screen = *Ui()->Screen();
+	// 与 CMenus::Render 的菜单安全区保持同一条路径；计划按未内缩的 Screen 采样时，
+	// 卡片宽度、字号和 MaxWidth 都会比可见页大一圈，容器键因此永远对不上。
+	if((Client()->State() != IClient::STATE_DEMOPLAYBACK && !(GameClient()->ReplaySessionStatus().ViewMode() && !IsActive())) || m_Popup != POPUP_NONE)
+		Screen.Margin(ui_token::panel::MARGIN, &Screen);
+	return Screen;
 }
 
 SSettingsTextPlanProgressView CMenus::SettingsTextPlanProgress()
@@ -7914,20 +7832,25 @@ bool CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOv
 	try
 	{
 		const char *pOperation = pOperationOverride != nullptr ? pOperationOverride : SettingsPerfActiveOperation();
-		std::string Operation = pOperation != nullptr ? pOperation : "";
+		std::string Operation = MenuTextPlanOperation(pOperation);
 		const bool IngameEscOperation = str_comp(Operation.c_str(), "ingame_esc_open") == 0;
-		if(!m_SettingsMenuTextPlanCollectionDirty &&
-			m_SettingsMenuTextPlanCollectionGeneration == m_MenuTextPoolGeneration &&
-			m_SettingsMenuTextPlanCollectionOperation == Operation &&
-			!m_vSettingsMenuTextPlanCollectionUnits.empty())
-			return true;
-
 		const int CurrentPage = SettingsCanonicalPage(g_Config.m_UiSettingsPage);
 		int CurrentTab = -1;
 		if(CurrentPage == SETTINGS_TCLIENT)
 			CurrentTab = m_TClientSettingsTab;
 		else if(CurrentPage == SETTINGS_QMCLIENT)
 			CurrentTab = m_QmClientSettingsTab;
+		// 当前可见页必须在队首：全量计划未完成时切换页面，先把新页面的首屏预建排到最前，
+		// 不能沿用上一页的可见单元顺序。计划已完成时 SettingsMenuTextPrebuildReady 会在
+		// 更外层提前返回，不会因为单纯切页反复重建。
+		const bool VisibleUnitMatches = !m_vSettingsMenuTextPlanCollectionUnits.empty() &&
+						m_vSettingsMenuTextPlanCollectionUnits.front().m_Kind == (IngameEscOperation ? MENU_TEXT_PLAN_UNIT_INGAME_ESC : MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS) &&
+						(IngameEscOperation || (m_vSettingsMenuTextPlanCollectionUnits.front().m_Page == CurrentPage && m_vSettingsMenuTextPlanCollectionUnits.front().m_Tab == CurrentTab));
+		if(!m_SettingsMenuTextPlanCollectionDirty &&
+			m_SettingsMenuTextPlanCollectionGeneration == m_MenuTextPoolGeneration &&
+			m_SettingsMenuTextPlanCollectionOperation == Operation &&
+			VisibleUnitMatches)
+			return true;
 
 		const bool PreferQmClient = SettingsCanonicalPage(m_SettingsRuntimeMetadata.m_LastPage) == SETTINGS_QMCLIENT;
 		const int LastTClientTab = CanonicalizeTClientCacheTab(m_SettingsRuntimeMetadata.m_LastTClientTab);
@@ -7944,6 +7867,9 @@ bool CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOv
 			SETTINGS_SOUND,
 			SETTINGS_ASSETS,
 			SETTINGS_DDNET,
+			SETTINGS_SEARCH,
+			SETTINGS_CONTRIBUTORS,
+			SETTINGS_PROFILES,
 		};
 		auto vUnits = QmSettingsTextPlanUnits(IngameEscOperation, CurrentPage, CurrentTab,
 			PreferQmClient, SETTINGS_TCLIENT, SETTINGS_QMCLIENT, LastTClientTab, LastQmClientTab,
@@ -7969,7 +7895,7 @@ bool CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOv
 	}
 }
 
-void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView, std::vector<SMenuTextPlanItem> &vItems)
+void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect OuterScreen, CUIRect SettingsMainView, std::vector<SMenuTextPlanItem> &vItems)
 {
 	switch(Unit.m_Kind)
 	{
@@ -7992,7 +7918,7 @@ void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollecti
 		break;
 	}
 	case MENU_TEXT_PLAN_UNIT_INGAME_ESC:
-		BuildIngameMenuTextPlan(vItems, Screen);
+		BuildIngameMenuTextPlan(vItems, OuterScreen);
 		break;
 	}
 }
@@ -8021,13 +7947,13 @@ bool CMenus::AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOper
 		return Prepared && m_SettingsMenuTextPlanCollectionComplete;
 	}
 
-	const CUIRect Screen = *Ui()->Screen();
-	CUIRect SettingsMainView = MenuTextSettingsContentView(Screen);
+	const CUIRect OuterScreen = MenuTextOuterScreen();
+	CUIRect SettingsMainView = MenuTextSettingsContentView(OuterScreen);
 	int RemainingBudget = Budget;
 	bool CollectionFailed = false;
 	while(RemainingBudget > 0 && m_SettingsMenuTextPlanCollectionCursor < m_vSettingsMenuTextPlanCollectionUnits.size() && time_get_nanoseconds().count() < Deadline)
 	{
-		const bool Committed = TryCollectSettingsTextPlan(m_vSettingsMenuTextPrebuildPlan, m_SettingsMenuTextPlannedDescriptors, m_SettingsMenuTextPlannedKeys, [&](std::vector<SMenuTextPlanItem> &vItems) { CollectSettingsMenuTextPlanUnit(m_vSettingsMenuTextPlanCollectionUnits[m_SettingsMenuTextPlanCollectionCursor], Screen, SettingsMainView, vItems); }, [&](const SMenuTextPlanItem &Item) -> std::optional<std::pair<std::string, std::string>> {
+		const bool Committed = TryCollectSettingsTextPlan(m_vSettingsMenuTextPrebuildPlan, m_SettingsMenuTextPlannedDescriptors, m_SettingsMenuTextPlannedKeys, [&](std::vector<SMenuTextPlanItem> &vItems) { CollectSettingsMenuTextPlanUnit(m_vSettingsMenuTextPlanCollectionUnits[m_SettingsMenuTextPlanCollectionCursor], OuterScreen, SettingsMainView, vItems); }, [&](const SMenuTextPlanItem &Item) -> std::optional<std::pair<std::string, std::string>> {
 				if(!SettingsMenuTextPlanItemBuildable(Item))
 					return std::nullopt;
 				const SMenuTextStyleKey StyleKey = SettingsMenuTextPlanStyleKey(Item);
@@ -8083,13 +8009,13 @@ int CMenus::CountMissingSettingsMenuTextPlanItems() const
 
 bool CMenus::SettingsMenuTextPrebuildReady(const char *pOperationOverride) const
 {
-	const char *pOperation = pOperationOverride != nullptr ? pOperationOverride : SettingsPerfActiveOperation();
+	const char *pOperation = MenuTextPlanOperation(pOperationOverride != nullptr ? pOperationOverride : SettingsPerfActiveOperation());
 	return Ui()->Screen() != nullptr &&
 	       s_LastPlanCollectionScreenBucket == round_to_int(Ui()->Screen()->w) &&
 	       !m_SettingsMenuTextPlanCollectionDirty && !m_SettingsMenuTextPlanMetadataDirty &&
 	       m_SettingsMenuTextPlanCollectionGeneration == m_MenuTextPoolGeneration &&
 	       m_SettingsMenuTextPlanGeneration == m_MenuTextPoolGeneration &&
-	       m_SettingsMenuTextPlanCollectionOperation == (pOperation != nullptr ? pOperation : "") &&
+	       m_SettingsMenuTextPlanCollectionOperation == pOperation &&
 	       m_SettingsMenuTextPlanCollectionComplete &&
 	       m_SettingsMenuTextPlanCursor >= m_vSettingsMenuTextPrebuildPlan.size() &&
 	       m_MenuTextPoolGlyphAtlasRevision == TextRender()->GlyphAtlasRevision();
@@ -8125,46 +8051,6 @@ void CMenus::PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride
 	}
 }
 
-void CMenus::EnsureSettingsMenuTextPlanReadyForVisible()
-{
-	if(Ui()->Screen() == nullptr)
-		return;
-	const auto VisibleContext = SettingsTextPlanVisibleContext(str_comp(SettingsPerfActiveOperation(), "ingame_esc_open") == 0);
-	if(!m_SettingsMenuTextPlanMetadataDirty && m_SettingsMenuTextPlanGeneration == m_MenuTextPoolGeneration &&
-		(SettingsTextPlanProgress().VisiblePlanMatches(VisibleContext) || (!m_vSettingsMenuTextPrebuildPlan.empty() && !m_SettingsMenuTextPlannedDescriptors.empty())))
-		return;
-
-	std::vector<SMenuTextPlanItem> vPlan;
-	std::unordered_set<std::string> Descriptors;
-	decltype(m_SettingsMenuTextPlannedKeys) Keys;
-	const bool Prepared = TryCollectSettingsTextPlan(vPlan, Descriptors, Keys, [&](std::vector<SMenuTextPlanItem> &vVisibleItems) {
-			RunSettingsTextPlanMeasurement(Ui(), [&] {
-				const CUIRect Screen = *Ui()->Screen();
-				const CUIRect SettingsMainView = MenuTextSettingsContentView(Screen);
-				if(str_comp(SettingsPerfActiveOperation(), "ingame_esc_open") == 0)
-					BuildIngameMenuTextPlan(vVisibleItems, Screen);
-				else
-					BuildVisibleSettingsMenuTextPlan(vVisibleItems, SettingsMainView);
-			});
-			std::erase_if(vVisibleItems, [](const SMenuTextPlanItem &Item) { return !SettingsMenuTextPlanItemBuildable(Item); }); }, [&](const SMenuTextPlanItem &Item) -> std::optional<std::pair<std::string, std::string>> {
-			const SMenuTextStyleKey StyleKey = SettingsMenuTextPlanStyleKey(Item);
-			return std::make_pair(MenuTextDescriptorKey(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str()), MenuTextCacheKey(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str(), StyleKey)); });
-	if(!Prepared)
-		return;
-	m_vSettingsMenuTextPrebuildPlan.swap(vPlan);
-	m_SettingsMenuTextPlannedDescriptors.swap(Descriptors);
-	m_SettingsMenuTextPlannedKeys.swap(Keys);
-	m_SettingsMenuTextPlanGeneration = m_MenuTextPoolGeneration;
-	m_SettingsMenuTextPlanMetadataDirty = false;
-	SettingsTextPlanProgress().ReplaceVisiblePlan(VisibleContext);
-	m_SettingsMenuTextLastCollectionStats = {};
-	m_SettingsMenuTextLastCollectionStats.m_Dirty = true;
-	m_SettingsMenuTextLastCollectionStats.m_UnitsTotal = SettingsTextPlanPendingUnitCount(m_vSettingsMenuTextPlanCollectionUnits.size(), 0, false);
-	m_SettingsMenuTextLastCollectionStats.m_Remaining = SettingsTextPlanPendingUnitCount(m_vSettingsMenuTextPlanCollectionUnits.size(), 0, true);
-	m_SettingsMenuTextLastPrebuildStats = {};
-	m_SettingsMenuTextLastPrebuildStats.m_Remaining = m_SettingsMenuTextLastCollectionStats.m_Remaining;
-}
-
 void CMenus::PrebuildIngameEscTextPoolBeforeOpen(int Budget)
 {
 	if(Budget <= 0)
@@ -8175,9 +8061,10 @@ void CMenus::PrebuildIngameEscTextPoolBeforeOpen(int Budget)
 	str_copy(Input.m_aPage, "settings", sizeof(Input.m_aPage));
 	str_copy(Input.m_aTab, "ingame_esc", sizeof(Input.m_aTab));
 	str_copy(Input.m_aContext, SettingsPerfContextName(), sizeof(Input.m_aContext));
-	Input.m_FrameMsAverage = (float)GameClient()->m_QmMonitoring.Snapshot().m_Performance.m_FrameTimeMs;
-	Input.m_FrameMsP95 = Input.m_FrameMsAverage;
-	Input.m_TargetFrameMs = 8.333f;
+	const SQmPerformanceMetrics &Performance = GameClient()->m_QmMonitoring.Snapshot().m_Performance;
+	Input.m_FrameMsAverage = (float)Performance.m_FrameTimeMs;
+	Input.m_FrameMsP95 = MenuTextFrameMsP95(Performance);
+	Input.m_TargetFrameMs = MenuTextTargetFrameMs(Graphics());
 	Input.m_BackgroundBacklog = maximum(Budget, 0) + CountMissingSettingsMenuTextPlanItems();
 	Input.m_WindowActive = true;
 	const SSettingsAdaptiveBudgetOutput AdaptiveBudget = BeginSettingsUiFrameScheduler(EFrameSchedulerConsumer::SettingsText, "stable_text_ingame_esc", Input);
@@ -8196,23 +8083,52 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 	const uint64_t CurrentFrame = Ui()->PopupSourceFrame();
 	SyncMenuTextPoolIdentity(CurrentFrame);
 
+	const uint64_t CurrentFrameId = GameClient()->PerfFrameOrOne();
 	SSettingsAdaptiveBudgetInput Input;
-	Input.m_FrameId = GameClient()->PerfFrameOrOne();
+	Input.m_FrameId = CurrentFrameId;
 	str_copy(Input.m_aOperation, pOperationOverride != nullptr ? pOperationOverride : SettingsPerfActiveOperation(), sizeof(Input.m_aOperation));
 	str_copy(Input.m_aPage, "settings", sizeof(Input.m_aPage));
 	str_copy(Input.m_aTab, "stable_text", sizeof(Input.m_aTab));
 	str_copy(Input.m_aContext, GameClient()->ClientStateOnline() ? "online" : "offline", sizeof(Input.m_aContext));
-	Input.m_FrameMsAverage = (float)GameClient()->m_QmMonitoring.Snapshot().m_Performance.m_FrameTimeMs;
-	Input.m_FrameMsP95 = Input.m_FrameMsAverage;
-	Input.m_TargetFrameMs = 8.333f;
+	const SQmPerformanceMetrics &Performance = GameClient()->m_QmMonitoring.Snapshot().m_Performance;
+	Input.m_FrameMsAverage = (float)Performance.m_FrameTimeMs;
+	Input.m_FrameMsP95 = MenuTextFrameMsP95(Performance);
+	Input.m_TargetFrameMs = MenuTextTargetFrameMs(Graphics());
 	Input.m_ScrollActive = m_SettingsScrollActive;
 	Input.m_PostScrollRecoveryFrames = m_SettingsPostScrollRecoveryFrames;
 	Input.m_BackgroundBacklog = maximum(Budget, 0) + CountMissingSettingsMenuTextPlanItems() + SettingsTextPlanCollectionRemaining();
 	Input.m_WindowActive = true;
+
+	// 同一主循环帧内 OnUpdate、菜单渲染和 idle prewarm 可能各调一次；
+	// 共享一份剩余时间，不能每处都各拿 1 ms 叠加成多倍后台开销。
+	const int64_t NowNs = time_get_nanoseconds().count();
+	int64_t PrewarmDeadline;
+	if(m_MenuTextBlockingPrewarm)
+	{
+		const float BudgetMs = QmMenuTextWarmupBudgetMs(true, Input.m_TargetFrameMs, Input.m_FrameMsAverage, Input.m_FrameMsP95);
+		PrewarmDeadline = NowNs + (int64_t)(BudgetMs * 1000.0f * 1000.0f);
+	}
+	else
+	{
+		if(m_MenuTextBackgroundBudgetFrame != CurrentFrameId)
+		{
+			m_MenuTextBackgroundBudgetFrame = CurrentFrameId;
+			const float BudgetMs = QmMenuTextWarmupBudgetMs(false, Input.m_TargetFrameMs, Input.m_FrameMsAverage, Input.m_FrameMsP95);
+			m_MenuTextBackgroundBudgetDeadline = BudgetMs > 0.0f ? NowNs + (int64_t)(BudgetMs * 1000.0f * 1000.0f) : 0;
+		}
+		PrewarmDeadline = m_MenuTextBackgroundBudgetDeadline;
+	}
+	const float WarmupBudgetMs = PrewarmDeadline > NowNs ? (float)(PrewarmDeadline - NowNs) / (1000.0f * 1000.0f) : 0.0f;
+	if(WarmupBudgetMs <= 0.0f)
+	{
+		m_SettingsMenuTextLastPrebuildStats.m_Remaining = CountMissingSettingsMenuTextPlanItems();
+		return Budget;
+	}
+
 	const SSettingsAdaptiveBudgetOutput AdaptiveBudget = BeginSettingsUiFrameScheduler(EFrameSchedulerConsumer::SettingsText, "stable_text_prebuild", Input);
 
 	// 使用不缓存的时钟；计划收集、字形预热和容器构建共用预算，单个工作项结束后再让出。
-	SSettingsTextPrewarmBudget PrewarmBudget{24, (time_get_nanoseconds() + 1ms).count()};
+	SSettingsTextPrewarmBudget PrewarmBudget{24, PrewarmDeadline};
 	const CUiRenderOnlyScope RenderOnly(Ui());
 	const int PlanCollectionBudget = maximum(1, minimum(Budget, AdaptiveBudget.m_TextPrebuildTokens));
 	AdvanceSettingsMenuTextPlanCollection(PlanCollectionBudget, pOperationOverride, PrewarmBudget.m_Deadline);
@@ -8244,7 +8160,7 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 		const SMenuTextStyleKey StyleKey = SettingsMenuTextPlanStyleKey(Item);
 		const std::string Key = MenuTextCacheKey(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str(), StyleKey);
 		const auto It = m_MenuTextPool.find(Key);
-		const bool AlreadyReady = It != m_MenuTextPool.end() && It->second.m_Built && It->second.m_Generation == m_MenuTextPoolGeneration;
+		const bool AlreadyReady = It != m_MenuTextPool.end() && It->second.m_Generation == m_MenuTextPoolGeneration && It->second.m_Element.Rect(0)->m_UITextContainer.Valid();
 		if(AlreadyReady)
 		{
 			++m_SettingsMenuTextLastPrebuildStats.m_Reused;
@@ -8416,7 +8332,7 @@ void CMenus::InvalidateMenuTextPool(const char *pReason)
 			Ui()->ResetUIElement(Entry.m_Element);
 		}
 		m_MenuTextPool.clear();
-		m_MenuTextLastTrimFrame = ~uint64_t{0};
+		m_MenuTextLastTrimTime = 0;
 		m_vSettingsMenuTextPrebuildPlan.clear();
 		m_vSettingsMenuTextPlanCollectionUnits.clear();
 		m_SettingsMenuTextPlannedDescriptors.clear();

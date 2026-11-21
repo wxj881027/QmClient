@@ -513,7 +513,7 @@ bool SettingsSkinListSelectionStillValid(int SelectedIndex, int EntryCount);
 bool SettingsSkinListScrollResetNeeded(int PreviousCount, int CurrentCount, bool ListActive, bool ScrollbarActive);
 bool SettingsSkinListShouldRequestImmediateLoad(bool Visible, bool Prefetched);
 bool SettingsSkinListShouldRequestImmediateLoad(bool Visible);
-bool SettingsRuntimeWarmupShouldRun(bool WarmupEnabled, bool SettingsPageVisible, bool HasActiveItem, bool HasHotItem, bool ScrollInputActive, bool SettingsPageSwitchActive, bool SettingsScrollActive);
+bool SettingsRuntimeWarmupShouldRun(bool WarmupEnabled, bool SettingsPageVisible, bool HasActiveItem, bool ScrollInputActive, bool SettingsPageSwitchActive, bool SettingsScrollActive);
 SSettingsResourceFrameContext SettingsBuildFrameContext(bool PersistentScrollActive, bool ImmediateScrollInput, bool JumpScrollActive, int PostScrollRecoveryFrames);
 SSettingsResourceFrameContext SettingsBuildFrameContext(bool PersistentScrollActive, bool ImmediateScrollInput, int PostScrollRecoveryFrames);
 int SettingsSkinFinalizeMaxPerFrame(bool TeeSettingsActive);

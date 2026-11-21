@@ -349,6 +349,8 @@ protected:
 	void SetRenderScreenSize(int Width, int Height) { m_RenderScreenSize = ivec2(Width, Height); }
 
 public:
+	int ScreenRefreshRate() const { return m_ScreenRefreshRate; }
+
 	static constexpr int MEDIA_ISLAND_SDF_MAX_ITEMS = 12;
 	static constexpr int GAUSSIAN_BLUR_MAX_RADIUS = 10;
 	static constexpr int DUAL_KAWASE_PYRAMID_LEVELS = 2;

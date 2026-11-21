@@ -3032,13 +3032,10 @@ public:
 	bool PrepareSettingsNumericFieldLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect &Rect, const char *pLabel, unsigned Flags, ui_widget::SNumericFieldOptions &Options);
 	ui_widget::SNumericFieldState *GetSettingsNumericFieldState(const void *pId);
 	bool DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &View, const char *pLabelTextId, const char *pLabel, std::vector<CButtonContainer> &vButtonContainers, const std::vector<const char *> &vButtonTextIds, const std::vector<const char *> &vLabels, const std::vector<int> &vValues, int &Value, const SSettingsContentMetrics &Metrics, const int *pOverrideSource = nullptr, const void *pConfigValue = nullptr, const void *pSecondConfigValue = nullptr);
-	void BuildBaseSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
-	void BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems);
-	void BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void BuildVisibleSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	bool PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride);
-	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView, std::vector<SMenuTextPlanItem> &vItems);
+	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect OuterScreen, CUIRect SettingsMainView, std::vector<SMenuTextPlanItem> &vItems);
 	bool AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOperationOverride, int64_t Deadline);
 	bool PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget);
 	void SyncMenuTextPoolIdentity(uint64_t CurrentFrame);
@@ -3048,10 +3045,23 @@ public:
 	int PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride = nullptr);
 	void PrebuildIngameEscTextPoolBeforeOpen(int Budget);
 	void LogSettingsAdaptiveBudget(const char *pSource, const SSettingsAdaptiveBudgetInput &Input, const SSettingsAdaptiveBudgetOutput &Output) const;
-	void PrewarmSettingsTextPoolForLoading(int Budget) { PrebuildSettingsMenuTextPool(Budget, "target_settings", "settings_open"); }
+	void PrewarmSettingsTextPoolForLoading(int Budget)
+	{
+		// 加载画面允许阻塞；不能套用游戏内“只吃显示器刷新周期剩余时间”的后台预算，
+		// 否则加载阶段会把首屏文本留给之后的可见帧现场构建。
+		struct SScopedBlockingPrewarm
+		{
+			bool &m_Blocking;
+			const bool m_Previous;
+			SScopedBlockingPrewarm(bool &Blocking, bool Value) :
+				m_Blocking(Blocking), m_Previous(Blocking) { m_Blocking = Value; }
+			~SScopedBlockingPrewarm() { m_Blocking = m_Previous; }
+		};
+		const SScopedBlockingPrewarm BlockingPrewarm(m_MenuTextBlockingPrewarm, true);
+		PrebuildSettingsMenuTextPool(Budget, "target_settings", "settings_open");
+	}
 	int SettingsTextPrebuildRemaining() const { return m_SettingsMenuTextLastPrebuildStats.m_Remaining; }
 	int SettingsTextPlanCollectionRemaining() const { return m_SettingsMenuTextLastCollectionStats.m_Remaining; }
-	void EnsureSettingsMenuTextPlanReadyForVisible();
 	void InvalidateSettingsTextPool();
 	void InvalidateMenuTextPool(const char *pReason);
 	void InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason Reason);
@@ -3110,8 +3120,7 @@ private:
 		CUIElement m_Element;
 		SMenuTextStyleKey m_StyleKey{};
 		uint64_t m_Generation = 0;
-		uint64_t m_LastUsedFrame = 0;
-		bool m_Built = false;
+		int64_t m_LastUsedTime = 0;
 	};
 
 	struct SSettingsTextPerfStats
@@ -3234,13 +3243,13 @@ private:
 	bool NavigateToSettingsCard(const qm_card_registry::SCardNavigationTarget &Target, const char *pHighlightStableId = nullptr, const std::vector<std::string> &vHighlightKeys = {});
 	void RequestSettingsCardFocus(const char *pStableId);
 	void PrepareSettingsAdaptiveBudgetInput(SSettingsAdaptiveBudgetInput &Input);
+	CUIRect MenuTextOuterScreen();
 	SSettingsAdaptiveBudgetOutput BeginSettingsUiFrameScheduler(EFrameSchedulerConsumer Consumer, const char *pSource, SSettingsAdaptiveBudgetInput Input);
 	bool MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor);
-	bool RequestMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor);
 	void QueueMenuTextContainerBuild(EMenuTextScope Scope, CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor);
 	void DrainMenuTextContainerBuildRequests();
 	void RemoveMenuTextContainerBuildRequest(const CUIElement &Element);
-	int TrimMenuTextPoolForInsert(uint64_t CurrentFrame);
+	int TrimMenuTextPoolForInsert(int64_t Now);
 	void DrainMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor, bool Render, bool *pTextContainerRecreated);
 	void CountMenuTextImmediateFallback();
 	void ClearSettingsAssetsCardMetadataCache();
@@ -3267,9 +3276,11 @@ private:
 	int m_SettingsTextContextPage = -1;
 	int m_SettingsTextContextTab = -1;
 	int m_SettingsTextContextSubtab = -1;
-	int *m_pSettingsTextPrebuildBudget = nullptr;
 	std::unordered_map<std::string, SMenuTextPoolEntry, SMenuTextKeyHash, SMenuTextKeyEqual> m_MenuTextPool;
-	uint64_t m_MenuTextLastTrimFrame = ~uint64_t{0};
+	int64_t m_MenuTextLastTrimTime = 0;
+	bool m_MenuTextBlockingPrewarm = false;
+	uint64_t m_MenuTextBackgroundBudgetFrame = 0;
+	int64_t m_MenuTextBackgroundBudgetDeadline = 0;
 	CUIElement m_MenuTextFallbackElement;
 	uint64_t m_MenuTextPoolGeneration = 1;
 	uint64_t m_MenuTextPoolLanguageHash = 0;
