@@ -323,4 +323,3 @@ TEST(QmRealtimeServiceData, PingWithoutPayloadProducesNoServiceChanges)
 	EXPECT_FALSE(Data.m_TitleAddressLimitReached);
 	EXPECT_EQ(Data.m_PlaytimeAction, EQmRealtimePlaytimeAction::NONE);
 }
-

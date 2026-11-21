@@ -86,7 +86,9 @@ namespace
 		bool Convert(int Capacity = NET_MAX_CONNLESS_PAYLOAD)
 		{
 			return sixup_translation::PreprocessConnless(m_aData.data(), m_Size, Capacity);
-		}		void ReadHeader(bool Extended, std::array<int, 4> Counts)
+		}
+
+		void ReadHeader(bool Extended, std::array<int, 4> Counts)
 		{
 			EXPECT_EQ(mem_comp(m_aData.data(), Extended ? SERVERBROWSE_INFO_EXTENDED : SERVERBROWSE_INFO, SERVERBROWSE_SIZE), 0);
 			m_Output.Reset(m_aData.data() + SERVERBROWSE_SIZE, m_Size - SERVERBROWSE_SIZE);
@@ -280,7 +282,6 @@ TEST_F(CSixupConnlessTest, ExactOutputCapacitySucceeds)
 	EXPECT_EQ(m_Size, OutputSize);
 	ReadHeader(false, {1, 16, 1, 16});
 }
-
 TEST_F(CSixupConnlessTest, RetryAfterMalformedResponseCanConvertValidResponse)
 {
 	Build();
@@ -290,4 +291,3 @@ TEST_F(CSixupConnlessTest, RetryAfterMalformedResponseCanConvertValidResponse)
 	ASSERT_TRUE(Convert());
 	ReadHeader(false, {1, 16, 1, 16});
 }
-

@@ -164,4 +164,3 @@ TEST(MapHistoryJson, SuccessfulCandidateReplacesTheOldCollectionInsteadOfAppendi
 	ASSERT_NE(History.Find("new"), nullptr);
 	EXPECT_EQ(History.Find("new")->m_MapName, "New");
 }
-

@@ -337,4 +337,3 @@ TEST_F(CLayeredCheckedStorageReadDeathTest, EarlierFifoIsFailureAndCannotBeHidde
 		testing::ExitedWithCode(0), "");
 }
 #endif
-
