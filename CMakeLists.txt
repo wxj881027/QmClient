@@ -5303,6 +5303,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/binds_rebind_test.cpp
     src/test/integration/client/binds_rebind_test.cpp
     src/test/unit/client/binds_active_test.cpp
+    src/test/unit/client/menus_close_reset_gate_test.cpp
     src/test/unit/client/countryflags_load_test.cpp
     src/test/integration/client/countryflags_load_job_test.cpp
     src/test/integration/client/bind_command_lifetime_test.cpp

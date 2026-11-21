@@ -47,6 +47,7 @@
 #include <game/client/components/assets_resource_registry.h>
 #include <game/client/components/community_icons.h>
 #include <game/client/components/mapimages.h>
+#include <game/client/components/menus_close_reset_gate.h>
 #include <game/client/components/menus_ingame_touch_controls.h>
 #include <game/client/components/menus_settings_controls.h>
 #include <game/client/components/menus_start.h>
@@ -1608,6 +1609,8 @@ protected:
 	// 收尾兜底截止时刻（time_get）：轨道因配置/后端变化不收敛时强制关闭，
 	// 避免菜单停在半路既关不掉也不再接受输入。
 	int64_t m_MenuCloseDeadline = 0;
+	// 收起期间输入已交回游戏，只在输入交回前或立即关闭时重置一次。
+	CMenuCloseResetGate m_MenuCloseResetGate;
 	// 点击菜单面板外空白：按下时只登记，等本帧绘制算出 HotItem 再判定，
 	// 避免「快速甩鼠标点击」在同一帧里因 HotItem 还是上一帧的值而误关。
 	bool m_MenuOutsideClickPending = false;
@@ -2658,6 +2661,8 @@ public:
 	bool PlaybackShortcutsActive() const;
 	bool ClaimOnlineReplaySpectatorBind(int Key);
 	bool IsActive() const { return m_MenuActive; }
+	// 收起动画期间仍绘制菜单，但输入已经交回游戏；绑定释放不能被当成菜单占用输入。
+	bool IsClosing() const { return m_MenuClosing; }
 	bool IsSettingsPageActive() const;
 	std::array<int, 9> TooltipContext() const
 	{

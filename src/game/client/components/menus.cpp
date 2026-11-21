@@ -6464,10 +6464,7 @@ void CMenus::SetActive(bool Active)
 			m_NeedSendDummyinfo = false;
 		}
 
-		if(Client()->State() == IClient::STATE_ONLINE)
-		{
-			GameClient()->OnRelease();
-		}
+		m_MenuCloseResetGate.Finish(Client()->State() == IClient::STATE_ONLINE, [&] { GameClient()->OnRelease(); });
 	}
 	else if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
@@ -6480,14 +6477,20 @@ void CMenus::BeginMenuClose()
 	if(!m_MenuActive || m_MenuClosing)
 		return;
 
+	const bool Online = Client()->State() == IClient::STATE_ONLINE;
+	const bool Animated = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
+	m_MenuClosing = true;
+	// 收起期间输入已经交回游戏；旧绑定必须现在就释放，
+	// 不能等滑出结束再清，否则会连带清掉期间新按住的计分板。
+	m_MenuCloseResetGate.Begin(Online, Animated, [&] { GameClient()->OnRelease(); });
+
 	// 动效关闭或轨道不可用：立即关闭，不留一帧空转。
-	if(g_Config.m_QmUiMotionLevel <= 0 || !GameClient()->UiRuntimeV2()->Enabled())
+	if(!Animated)
 	{
 		SetActive(false);
 		return;
 	}
 
-	m_MenuClosing = true;
 	m_MenuCloseDeadline = time_get() + time_freq() * 3 / 2; // 兜底 1.5s
 	m_MenuOutsideClickPending = false;
 	m_MenuOutsideClickHadPopup = false;
@@ -8946,6 +8949,7 @@ void CMenus::OnRender()
 			if(m_MenuClosing)
 			{
 				m_MenuClosing = false;
+				m_MenuCloseResetGate.Cancel();
 				StartMenuSlide(GameClient(), Ui(), 0.0f, false);
 			}
 			else

@@ -353,6 +353,7 @@ public:
 	void Toggle(int Type);
 	bool ConsoleSettingsOpen() const { return Ui()->IsPopupOpen(&m_SettingsPopupId); }
 	bool IsActive() const { return m_ConsoleState != CONSOLE_CLOSED; }
+	bool IsClosing() const { return m_ConsoleState == CONSOLE_CLOSING; }
 	void RegisterStartMenuToggle(const void *pButtonId, const CUIRect &Rect);
 	bool StartMenuToggleHovered() const { return m_StartMenuToggleHovered; }
 
