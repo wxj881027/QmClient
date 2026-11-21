@@ -114,6 +114,18 @@ TEST(QmMonitoringSettingsPlanContract, TextPoolEvictionRewindsPrebuildCursor)
 	EXPECT_NE(TrimBody.find("SettingsTextPlanProgress().RestartConsumption();"), std::string::npos);
 }
 
+TEST(QmMonitoringSettingsPlanContract, IdleMenuContinuesSettingsTextPrewarm)
+{
+	const std::string Menus = ReadRepoFile("src/game/client/components/menus.cpp");
+	const std::string UpdateBody = ExtractSourceFunctionBody(Menus, "void CMenus::OnUpdate()");
+	ASSERT_FALSE(UpdateBody.empty());
+
+	// 加载阶段的固定步数可能提前耗尽；主菜单/ESC 空闲帧必须继续补齐，
+	// 否则首次进入设置或切 tab 会在可见帧集中构建文本容器。
+	EXPECT_NE(UpdateBody.find("QmMenuTextIdlePrewarmAllowed("), std::string::npos);
+	EXPECT_NE(UpdateBody.find("PrebuildSettingsMenuTextPool(8, \"target_settings\", \"settings_open\");"), std::string::npos);
+}
+
 TEST(QmMonitoringSettingsPlanContract, SettingsPlanCollectionDoesNotEnterVisibleGuard)
 {
 	const std::string Settings = ReadRepoFile("src/game/client/components/menus_settings.cpp");

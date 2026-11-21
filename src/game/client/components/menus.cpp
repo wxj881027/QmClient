@@ -8681,6 +8681,22 @@ void CMenus::OnUpdate()
 	// 契约（qmclient_monitoring_text_runtime_contract_test）。
 	if(!IsActive() && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		PrebuildSettingsMenuTextPool(2, "target_settings", "ingame_esc_open");
+
+	// 加载阶段只给固定步数，不保证全量设置文本都建完。菜单打开且空闲时继续用
+	// 当前帧刷新率余量补齐，避免用户稍后首次进入设置或切页时在可见帧集中构建。
+	const IClient::EClientState ClientState = Client()->State();
+	const bool ScrollInputActive =
+		Input()->KeyPress(KEY_MOUSE_WHEEL_UP) ||
+		Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN) ||
+		Input()->KeyPress(KEY_MOUSE_WHEEL_LEFT) ||
+		Input()->KeyPress(KEY_MOUSE_WHEEL_RIGHT);
+	const SQmPerformanceMetrics &Performance = GameClient()->m_QmMonitoring.Snapshot().m_Performance;
+	const float TextPrewarmBudgetMs = QmMenuTextBackgroundBudgetMs(MenuTextTargetFrameMs(Graphics()), (float)Performance.m_FrameTimeMs, MenuTextFrameMsP95(Performance));
+	if((ClientState == IClient::STATE_OFFLINE || ClientState == IClient::STATE_ONLINE) &&
+		TextPrewarmBudgetMs > 0.0f &&
+		QmMenuTextIdlePrewarmAllowed(IsActive(), m_Popup != POPUP_NONE, Ui()->ActiveItem() != nullptr,
+			CLineInput::GetActiveInput() != nullptr, GameClient()->m_KeyBinder.IsActive(), Ui()->IsPopupOpen(), ScrollInputActive))
+		PrebuildSettingsMenuTextPool(8, "target_settings", "settings_open");
 }
 
 void CMenus::OnRender()

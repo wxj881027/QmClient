@@ -88,6 +88,18 @@ TEST(QmMonitoringRuntimeContract, MenuTextBackgroundBudgetOnlyUsesDisplayHeadroo
 	EXPECT_FLOAT_EQ(QmMenuTextWarmupBudgetMs(false, Target360Hz, 2.8f, 2.9f), 0.0f);
 }
 
+TEST(QmMonitoringRuntimeContract, MenuTextIdlePrewarmYieldsToInteractiveUi)
+{
+	EXPECT_TRUE(QmMenuTextIdlePrewarmAllowed(true, false, false, false, false, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(false, false, false, false, false, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, true, false, false, false, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, false, true, false, false, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, false, false, true, false, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, false, false, false, true, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, false, false, false, false, true, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, false, false, false, false, false, true));
+}
+
 TEST(QmMonitoringRuntimeContract, ConnectionGradeUsesThresholdTable)
 {
 	SQmNetworkMetrics Net;

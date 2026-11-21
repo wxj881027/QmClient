@@ -61,6 +61,12 @@ constexpr float QmMenuTargetFrameMs(int RefreshRateHz)
 	return 1000.0f / (float)RefreshRate;
 }
 
+// 设置页文本计划允许在菜单空闲时续跑；任何输入/弹层/滚动帧都先让出。
+constexpr bool QmMenuTextIdlePrewarmAllowed(bool MenuActive, bool PopupOpen, bool ActiveItem, bool TextInputActive, bool KeyBinderActive, bool UiPopupOpen, bool ScrollInputActive)
+{
+	return MenuActive && !PopupOpen && !ActiveItem && !TextInputActive && !KeyBinderActive && !UiPopupOpen && !ScrollInputActive;
+}
+
 constexpr bool QmMenuUiScrollPerfActive(bool WheelConsumedThisFrame, bool ScrollbarActive, bool ScrollbarAnimating)
 {
 	return WheelConsumedThisFrame || ScrollbarActive || ScrollbarAnimating;
