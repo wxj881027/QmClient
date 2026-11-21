@@ -504,3 +504,32 @@ TEST(MapDifficultyCatalog, AxiomCarriageReturnsAndQuotedMapNamesSurviveCacheRoun
 	EXPECT_EQ(Restored.FindForServer(Server)->m_MapName, pMap);
 	EXPECT_STREQ(Restored.FindForServer(Server)->StarLabel(), "★☆☆");
 }
+
+TEST(MapDifficultyCatalog, RevisionAdvancesOnlyWhenEntriesChange)
+{
+	CQmMapDifficultyCatalog Catalog;
+	const uint64_t InitialRevision = Catalog.Revision();
+
+	ASSERT_TRUE(Catalog.LoadSqlText(s_aServerSql, sizeof(s_aServerSql) - 1));
+	const uint64_t SqlRevision = Catalog.Revision();
+	EXPECT_GT(SqlRevision, InitialRevision);
+
+	// 失败的重载保留可用目录，修订号不变，派生缓存不会被无谓清空。
+	EXPECT_FALSE(Catalog.LoadSqlText("CREATE TABLE unrelated (value TEXT);", sizeof("CREATE TABLE unrelated (value TEXT);") - 1));
+	EXPECT_EQ(Catalog.Revision(), SqlRevision);
+
+	const CServerInfo Server = AxiomServer();
+	ASSERT_TRUE(Catalog.RecordAxiomMotd(Server, AxiomMotd("SharedMap", "★★✰").c_str()));
+	const uint64_t AxiomRevision = Catalog.Revision();
+	EXPECT_GT(AxiomRevision, SqlRevision);
+
+	// 内容相同的公告不改变目录，修订号必须保持，否则筛选会反复重算。
+	EXPECT_FALSE(Catalog.RecordAxiomMotd(Server, AxiomMotd("SharedMap", "★★✰").c_str()));
+	EXPECT_EQ(Catalog.Revision(), AxiomRevision);
+
+	const std::string Json = Catalog.SerializeAxiomCache();
+	CQmMapDifficultyCatalog Restored;
+	const uint64_t RestoredInitialRevision = Restored.Revision();
+	ASSERT_TRUE(Restored.LoadAxiomCacheJson(Json.data(), Json.size()));
+	EXPECT_GT(Restored.Revision(), RestoredInitialRevision);
+}

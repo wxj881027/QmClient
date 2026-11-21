@@ -56,6 +56,9 @@ public:
 	const SEntry *FindForServer(const CServerInfo &Server, const char *pCategoryHint = nullptr) const;
 	int Size() const { return (int)m_vEntries.size(); }
 	bool Empty() const { return m_vEntries.empty(); }
+	// 目录内容单调递增的修订号；后台补查、缓存载入和 SQL 重载成功时自增。
+	// 调用方用它缓存派生结果，替代按固定周期全量重扫。
+	uint64_t Revision() const { return m_Revision; }
 
 private:
 	void LoadAxiomCache(IStorage *pStorage);
@@ -67,19 +70,24 @@ private:
 	// 键为（玩法，地图名），同名地图不跨玩法共用；星级上限由公告自身决定。
 	using TAxiomKey = std::pair<int, std::string>;
 	using TAxiomRetryMap = std::map<TAxiomKey, int64_t, SAxiomKeyLess>;
+	using TAxiomEntryMap = std::map<TAxiomKey, SEntry, SAxiomKeyLess>;
 	struct SAxiomRequest
 	{
 		std::shared_ptr<IHttpRequest> m_pRequest;
 		TAxiomRetryMap::node_type m_RetryNode;
 	};
+	bool ParseAxiomCacheJson(const char *pJson, size_t Length, TAxiomEntryMap &Out) const;
+	// 旧版本把同一份缓存写在 qmclient 根目录；统一布局后只补充新文件缺失的条目。
+	bool MergeAxiomCacheJson(const char *pJson, size_t Length);
 	bool StoreAxiomEntry(int ModeId, SEntry Entry);
 	bool RecordAxiomResponse(const TAxiomKey &Key, const IHttpRequest &Request);
 	TRequestFactory m_CreateRequest;
 	std::map<TAxiomKey, SAxiomRequest, SAxiomKeyLess> m_AxiomRequests;
 	TAxiomRetryMap m_AxiomRetryAfter;
-	std::map<TAxiomKey, SEntry, SAxiomKeyLess> m_AxiomEntries;
+	TAxiomEntryMap m_AxiomEntries;
 	bool m_AxiomCacheDirty = false;
 	std::vector<SEntry> m_vEntries;
+	uint64_t m_Revision = 0;
 };
 
 #endif

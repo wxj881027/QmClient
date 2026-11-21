@@ -34,6 +34,8 @@ namespace
 	constexpr const char *MAP_DIFFICULTY_SQL = "qmclient/map_difficulty.sql";
 	constexpr size_t MAX_MAP_DIFFICULTY_SQL_BYTES = 2 * 1024 * 1024;
 	constexpr const char *AXIOM_CACHE_PATH = qm_storage::MAP_DIFFICULTY_CACHE_FILE;
+	// 统一存档布局前的路径；迁移遇到内容冲突时会同时保留两份，这里负责并入缺失条目。
+	constexpr const char *LEGACY_AXIOM_CACHE_PATH = "qmclient/axiom_map_difficulty.json";
 	constexpr unsigned MAX_AXIOM_CACHE_BYTES = 2 * 1024 * 1024;
 	constexpr size_t MAX_AXIOM_ENTRIES = 4096;
 
@@ -341,6 +343,7 @@ try
 		return false;
 	m_AxiomEntries.insert_or_assign(Key, std::move(Entry));
 	m_AxiomCacheDirty = true;
+	++m_Revision;
 	return true;
 }
 catch(const std::bad_alloc &)
@@ -488,7 +491,7 @@ void CQmMapDifficultyCatalog::CancelAxiomRequests()
 	m_AxiomRequests.clear();
 }
 
-bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Length)
+bool CQmMapDifficultyCatalog::ParseAxiomCacheJson(const char *pJson, size_t Length, TAxiomEntryMap &Out) const
 try
 {
 	if(pJson == nullptr || Length == 0 || Length > MAX_AXIOM_CACHE_BYTES)
@@ -504,7 +507,7 @@ try
 		return false;
 	// 版本 1 没有 max_stars，按旧规则还原上限；版本 2 保存公告自己的星制。
 	const bool Legacy = pVersion->u.integer == 1;
-	decltype(m_AxiomEntries) Entries;
+	TAxiomEntryMap Entries;
 	for(unsigned i = 0; i < pEntries->u.array.length; ++i)
 	{
 		const json_value *pItem = pEntries->u.array.values[i];
@@ -559,8 +562,48 @@ try
 		if(!Entries.emplace(Key, std::move(Entry)).second)
 			return false;
 	}
+	Out = std::move(Entries);
+	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
+
+bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Length)
+{
+	TAxiomEntryMap Entries;
+	if(!ParseAxiomCacheJson(pJson, Length, Entries))
+		return false;
 	m_AxiomEntries = std::move(Entries);
 	m_AxiomCacheDirty = false;
+	++m_Revision;
+	return true;
+}
+
+bool CQmMapDifficultyCatalog::MergeAxiomCacheJson(const char *pJson, size_t Length)
+try
+{
+	TAxiomEntryMap Entries;
+	if(!ParseAxiomCacheJson(pJson, Length, Entries))
+		return false;
+	bool Added = false;
+	for(const auto &[Key, Entry] : Entries)
+	{
+		if(m_AxiomEntries.size() >= MAX_AXIOM_ENTRIES)
+			break;
+		if(m_AxiomEntries.emplace(Key, Entry).second)
+			Added = true;
+	}
+	if(Added)
+	{
+		m_AxiomCacheDirty = true;
+		++m_Revision;
+	}
 	return true;
 }
 catch(const std::bad_alloc &)
@@ -605,13 +648,34 @@ try
 {
 	if(pStorage == nullptr)
 		return;
-	void *pRawData = nullptr;
-	unsigned Size = 0;
-	const auto Result = pStorage->ReadFileCheckedBounded(AXIOM_CACHE_PATH, IStorage::TYPE_SAVE, &pRawData, &Size, MAX_AXIOM_CACHE_BYTES);
-	const std::unique_ptr<void, decltype(&free)> pData(pRawData, free);
-	if(Result == IStorage::EReadFileResult::NOT_FOUND)
-		return;
-	if(Result != IStorage::EReadFileResult::SUCCESS || !LoadAxiomCacheJson(static_cast<const char *>(pData.get()), Size))
+	const auto ReadCacheText = [&](const char *pPath, std::string &Out) {
+		void *pRawData = nullptr;
+		unsigned Size = 0;
+		const auto Result = pStorage->ReadFileCheckedBounded(pPath, IStorage::TYPE_SAVE, &pRawData, &Size, MAX_AXIOM_CACHE_BYTES);
+		const std::unique_ptr<void, decltype(&free)> pData(pRawData, free);
+		if(Result != IStorage::EReadFileResult::SUCCESS || pRawData == nullptr)
+			return false;
+		Out.assign(static_cast<const char *>(pData.get()), Size);
+		return true;
+	};
+
+	bool AnyFile = false;
+	bool Loaded = false;
+	std::string Text;
+	if(ReadCacheText(AXIOM_CACHE_PATH, Text))
+	{
+		AnyFile = true;
+		Loaded = LoadAxiomCacheJson(Text.data(), Text.size());
+	}
+	// 旧文件只补缺失条目：新文件里已有的评分优先，避免迁移冲突把旧值盖回来。
+	if(ReadCacheText(LEGACY_AXIOM_CACHE_PATH, Text))
+	{
+		AnyFile = true;
+		const bool Merged = MergeAxiomCacheJson(Text.data(), Text.size());
+		if(!Merged && !Loaded)
+			log_warn("map_difficulty", "ignoring invalid Axiom map cache");
+	}
+	else if(AnyFile && !Loaded)
 		log_warn("map_difficulty", "ignoring invalid Axiom map cache");
 }
 catch(const std::bad_alloc &)
@@ -721,6 +785,7 @@ try
 		return false;
 	std::sort(vEntries.begin(), vEntries.end(), EntryLess);
 	m_vEntries.swap(vEntries);
+	++m_Revision;
 	return true;
 }
 catch(...)

@@ -132,3 +132,27 @@ TEST_F(CMapDifficultyAxiomFile, FailedPublicationRemovesTheCandidateAndCanRetry)
 	ASSERT_NE(Restored.FindForServer(Server()), nullptr);
 	EXPECT_EQ(Restored.FindForServer(Server())->m_Stars, 1);
 }
+
+TEST_F(CMapDifficultyAxiomFile, MergesLegacyRootCacheIntoTheNewLocation)
+{
+	constexpr char aNewCache[] = R"({"version":2,"entries":[{"mode":"Gores","map":"New","category":"New","stars":2,"max_stars":5}]})";
+	ASSERT_NO_FATAL_FAILURE(Write(CACHE_PATH, aNewCache));
+	ASSERT_NO_FATAL_FAILURE(Write("qmclient/axiom_map_difficulty.json", OLD_CACHE));
+
+	CQmMapDifficultyCatalog Catalog;
+	ASSERT_TRUE(Catalog.Load(m_pStorage.get(), nullptr));
+	ASSERT_NE(Catalog.FindForServer(Server("New")), nullptr);
+	ASSERT_NE(Catalog.FindForServer(Server("Old")), nullptr);
+	EXPECT_EQ(Catalog.FindForServer(Server("New"))->m_Stars, 2);
+	EXPECT_EQ(Catalog.FindForServer(Server("Old"))->m_Stars, 1);
+	// 旧文件补进来的条目需要写回新路径，否则下次启动仍然缺。
+	EXPECT_TRUE(Catalog.AxiomCacheDirty());
+
+	ASSERT_TRUE(Catalog.SaveAxiomCache(m_pStorage.get()));
+	EXPECT_FALSE(Catalog.AxiomCacheDirty());
+	CQmMapDifficultyCatalog Restored;
+	ASSERT_TRUE(Restored.Load(m_pStorage.get(), nullptr));
+	ASSERT_NE(Restored.FindForServer(Server("New")), nullptr);
+	ASSERT_NE(Restored.FindForServer(Server("Old")), nullptr);
+	EXPECT_FALSE(Restored.AxiomCacheDirty());
+}

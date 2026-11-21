@@ -1245,31 +1245,41 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	};
 	static std::vector<int> s_vVisibleServerIndices;
 	static uint64_t s_VisibleSortedRevision = ~0ull;
+	static uint64_t s_VisibleCatalogRevision = ~0ull;
 	static std::set<std::string> s_VisibleFavoriteMaps;
 	static int s_VisibleSortedCount = -1;
 	static int s_VisibleStarMask = -1;
 	static int s_VisibleCategoryMask = -1;
 	static int s_VisibleFavoriteOnly = -1;
 	static int s_VisibleEmptyOnly = -1;
-	static int64_t s_VisibleRefreshTime = 0;
+	static int64_t s_VisibleRequestScanTime = 0;
 
-	const int64_t VisibleRefreshInterval = time_freq();
-	// 难度目录由后台补齐，没有独立版本号；保留短周期重算以刷新星级与类别筛选。
 	const uint64_t VisibleRevision = ServerBrowser()->FriendListRevision();
+	const uint64_t CatalogRevision = m_MapDifficultyCatalog.Revision();
+	const bool FavoriteOnly = g_Config.m_QmMapBrowserFavoriteOnly != 0;
 	const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
 	const int VisibleSortedCount = ServerBrowser()->NumSortedServers();
 	const bool StaleRevision = s_VisibleSortedRevision != VisibleRevision;
-	const bool StaleFavorites = s_VisibleFavoriteMaps != FavoriteMaps;
+	const bool StaleCatalog = s_VisibleCatalogRevision != CatalogRevision;
+	// 收藏只在“只看收藏”打开时参与可见性；关闭时不比较集合，避免每帧遍历收藏表。
+	const bool StaleFavorites = FavoriteOnly && s_VisibleFavoriteMaps != FavoriteMaps;
 	const bool StaleCount = s_VisibleSortedCount != VisibleSortedCount;
 	const bool StaleStarMask = s_VisibleStarMask != g_Config.m_QmMapBrowserStarMask;
 	const bool StaleCategoryMask = s_VisibleCategoryMask != g_Config.m_QmMapBrowserCategoryMask;
 	const bool StaleFavoriteOnly = s_VisibleFavoriteOnly != g_Config.m_QmMapBrowserFavoriteOnly;
 	const bool StaleEmptyOnly = s_VisibleEmptyOnly != g_Config.m_QmMapBrowserEmptyOnly;
-	const bool StaleTimer = Now - s_VisibleRefreshTime >= VisibleRefreshInterval;
-	if(StaleRevision || StaleFavorites || StaleCount || StaleStarMask || StaleCategoryMask || StaleFavoriteOnly || StaleEmptyOnly || StaleTimer)
+	const bool RebuildVisible = StaleRevision || StaleCatalog || StaleFavorites || StaleCount || StaleStarMask ||
+				    StaleCategoryMask || StaleFavoriteOnly || StaleEmptyOnly;
+	// 失败请求的退避只在再次调用 RequestAxiomDifficulty 时推进；目录未变时仍按秒级
+	// 节奏补查，但不再顺带重建可见索引。
+	const bool RequestScan = RebuildVisible || (NeedDifficultyForList && Now - s_VisibleRequestScanTime >= time_freq());
+	if(RequestScan)
 	{
-		s_vVisibleServerIndices.clear();
-		s_vVisibleServerIndices.reserve(VisibleSortedCount);
+		if(RebuildVisible)
+		{
+			s_vVisibleServerIndices.clear();
+			s_vVisibleServerIndices.reserve(VisibleSortedCount);
+		}
 		for(int SortedIndex = 0; SortedIndex < VisibleSortedCount; ++SortedIndex)
 		{
 			const CServerInfo *pServer = ServerBrowser()->SortedGet(SortedIndex);
@@ -1277,24 +1287,32 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				continue;
 			const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pServer, MapCategoryHintFromServer(pServer));
 			const int Stars = pDifficulty != nullptr ? pDifficulty->m_Stars : -1;
-			const bool IsFavorite = GameClient()->m_TClient.IsFavoriteMap(pServer->m_aMap);
+			// 收藏只参与“只看收藏”分支；关闭时跳过集合查找，避免逐服务器构造字符串。
+			const bool IsFavorite = FavoriteOnly && GameClient()->m_TClient.IsFavoriteMap(pServer->m_aMap);
 			// 星级筛选会隐藏未知地图，需在过滤前补查，否则这些图永远无法进入可见行。
 			if(NeedDifficultyForList && !pDifficulty && (!g_Config.m_QmMapBrowserEmptyOnly || !pServer->m_NumFilteredPlayers) &&
-				(!g_Config.m_QmMapBrowserFavoriteOnly || IsFavorite))
+				(!FavoriteOnly || IsFavorite))
 				RequestDifficulty(*pServer);
+			if(!RebuildVisible)
+				continue;
 			// 目录条目给出权威类别；没有目录收录时退回服务器名/社区类型里解析出的类别。
 			const char *pCategory = pDifficulty != nullptr ? pDifficulty->m_Category.c_str() : MapCategoryHintFromServer(pServer);
-			if(QmMapVotes::MatchesFilter(Stars, pCategory, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserCategoryMask, g_Config.m_QmMapBrowserFavoriteOnly != 0, IsFavorite))
+			if(QmMapVotes::MatchesFilter(Stars, pCategory, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserCategoryMask, FavoriteOnly, IsFavorite))
 				s_vVisibleServerIndices.push_back(SortedIndex);
 		}
-		s_VisibleSortedRevision = ServerBrowser()->FriendListRevision();
-		s_VisibleFavoriteMaps = FavoriteMaps;
-		s_VisibleSortedCount = ServerBrowser()->NumSortedServers();
-		s_VisibleStarMask = g_Config.m_QmMapBrowserStarMask;
-		s_VisibleCategoryMask = g_Config.m_QmMapBrowserCategoryMask;
-		s_VisibleFavoriteOnly = g_Config.m_QmMapBrowserFavoriteOnly;
-		s_VisibleEmptyOnly = g_Config.m_QmMapBrowserEmptyOnly;
-		s_VisibleRefreshTime = Now;
+		if(RebuildVisible)
+		{
+			// 补查期间目录可能同步推进，重新读取修订号，避免把过期结果标成最新。
+			s_VisibleSortedRevision = ServerBrowser()->FriendListRevision();
+			s_VisibleCatalogRevision = m_MapDifficultyCatalog.Revision();
+			s_VisibleFavoriteMaps = FavoriteMaps;
+			s_VisibleSortedCount = ServerBrowser()->NumSortedServers();
+			s_VisibleStarMask = g_Config.m_QmMapBrowserStarMask;
+			s_VisibleCategoryMask = g_Config.m_QmMapBrowserCategoryMask;
+			s_VisibleFavoriteOnly = g_Config.m_QmMapBrowserFavoriteOnly;
+			s_VisibleEmptyOnly = g_Config.m_QmMapBrowserEmptyOnly;
+		}
+		s_VisibleRequestScanTime = Now;
 	}
 	const std::vector<int> &vVisibleServerIndices = s_vVisibleServerIndices;
 	const int NumServers = (int)vVisibleServerIndices.size();
