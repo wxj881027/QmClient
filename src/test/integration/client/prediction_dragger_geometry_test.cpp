@@ -95,7 +95,7 @@ TEST(PredictionDraggerGeometry, ValidIgnoreWallsBeamKeepsNormalAttraction)
 {
 	CScenario S;
 	S.m_pCharacter->m_Pos = vec2(100, 0);
-	S.m_pCharacter->Core()->m_Pos = S.m_pCharacter->m_Pos;
+	EditCharacterCore(S.m_pCharacter, [&](CCharacterCore &Core) { Core.m_Pos = S.m_pCharacter->m_Pos; });
 	auto Data = S.Data(1);
 	Data.m_From = vec2(0, 0);
 	CDragger Dragger(&S.m_World, 7, &Data);
@@ -110,7 +110,7 @@ TEST(PredictionDraggerGeometry, ResetBeamWaitsForNextPeriodicScanBeforeRecovery)
 	CDragger Dragger(&S.m_World, 7, &Data);
 	Dragger.Tick();
 	S.m_pCharacter->m_Pos = Data.m_From - vec2(128, 0);
-	S.m_pCharacter->Core()->m_Pos = S.m_pCharacter->m_Pos;
+	EditCharacterCore(S.m_pCharacter, [&](CCharacterCore &Core) { Core.m_Pos = S.m_pCharacter->m_Pos; });
 	Dragger.Tick();
 	EXPECT_EQ(S.m_pCharacter->Core()->m_Vel, vec2(0, 0));
 	S.m_World.m_GameTick = 105;

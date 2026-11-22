@@ -39,3 +39,4 @@ TEST(PredictionProjectileSnapshot, WorldCopyKeepsPublishedProjectileAfterSourceI
 	EXPECT_EQ(Data.m_SwitchNumber, 2);
 	EXPECT_TRUE(Data.m_Freeze);
 	EXPECT_EQ(Data.m_Bouncing, 1);
+}

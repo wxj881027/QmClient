@@ -6232,6 +6232,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_chat_export_test.cpp
     src/test/integration/qmclient/client/qm_chat_log_jobs_test.cpp
     src/test/test.cpp
+    src/test/test_info.cpp
     src/test/support/qm_test_terminate_diagnostics.cpp
     src/test/test.h
     src/test/unit/client/theme_scan_test.cpp
@@ -6780,6 +6781,22 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/qm/music/qm_kugou_protocol.cpp
       src/qm/music/qm_qqmusic_protocol.cpp
       src/test/support/music_config_test_support.cpp
+      src/base/io.cpp
+      src/base/str.cpp
+      src/base/mem.cpp
+      src/base/dbg.cpp
+      src/base/fs.cpp
+      src/base/aio.cpp
+      src/base/sphore.cpp
+      src/base/thread.cpp
+      src/base/time.cpp
+      src/base/log.cpp
+      src/base/secure.cpp
+      src/base/windows.cpp
+      src/base/unicode/tolower.cpp
+      src/base/unicode/tolower_data.cpp
+      src/game/client/components/qmclient/music_lyrics/music_lyrics_community_format.cpp
+      src/game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
       src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
       src/qm/hooks/netease/qm_netease_frontend_bridge.cpp
       src/test/support/qm_netease_bridge_operations.h
@@ -6808,7 +6825,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
         src/game/client/components/qmclient/netease_hook/qm_netease_hook_v5_writer.cpp
       )
       target_compile_definitions(qm-nmt-tests PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
-      target_link_libraries(qm-nmt-tests bcrypt winhttp ws2_32)
+      target_link_libraries(qm-nmt-tests bcrypt winhttp ws2_32 shlwapi)
     endif()
     if(ZLIB_DEP)
       target_sources(qm-nmt-tests PRIVATE ${ZLIB_DEP})
@@ -6830,6 +6847,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/QmUi/UiDiscreteSlider.cpp
       src/game/client/QmUi/UiDiscreteSliderLogic.cpp
       src/test/test.cpp
+      src/test/test_info.cpp
       src/test/support/qm_test_terminate_diagnostics.cpp
       src/test/support/qm_open_link_probe.cpp
       src/test/support/qm_popup_tooltip_boundary.cpp
@@ -7282,6 +7300,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/laser_data.cpp
       src/game/client/pickup_data.cpp
       src/game/client/projectile_data.cpp
+      src/game/client/skin.cpp
+      src/test/test_info.cpp
       src/generated/client_data.cpp
       src/generated/client_data.h
       $<TARGET_OBJECTS:engine-gfx>

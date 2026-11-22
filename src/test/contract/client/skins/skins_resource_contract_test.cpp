@@ -261,7 +261,7 @@ TEST(SkinsContract, TeeSettingsScrollBudgetFeedsFinalizeAndUploadLimits)
 	const size_t UploadBudget = Source.find("return pGameClient->m_Skins.SettingsGpuUploadFrameBudgetForFrame();");
 	EXPECT_NE(UploadBudget, std::string::npos);
 
-	const size_t ImmediateScrollContext = Source.find("return SettingsBuildFrameContext(PersistentContext.m_ScrollActive, ImmediateScrollInput, PersistentContext.m_PostScrollRecoveryFrames);");
+	const size_t ImmediateScrollContext = Source.find("SettingsBuildFrameContext(PersistentContext.m_ScrollActive, ImmediateScrollInput, PersistentContext.m_PostScrollRecoveryFrames)");
 	EXPECT_NE(ImmediateScrollContext, std::string::npos);
 
 	const size_t ScrollRegionMouseDown = Source.find("(pGameClient->Input()->KeyPress(KEY_MOUSE_1) && pUi->HotScrollRegion() != nullptr)");
