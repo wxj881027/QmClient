@@ -456,48 +456,31 @@ void CEditorMap::SelectPreviousLayer()
 
 void CEditorMap::NormalizeSelection()
 {
-	if(m_vpGroups.empty())
-	{
-		m_SelectedGroup = 0;
-		m_vSelectedLayers.clear();
-		DeselectQuads();
-		DeselectQuadPoints();
-		return;
-	}
+	std::vector<int> vLayerCounts;
+	vLayerCounts.reserve(m_vpGroups.size());
+	for(const auto &pGroup : m_vpGroups)
+		vLayerCounts.push_back((int)pGroup->m_vpLayers.size());
 
-	const int PreviousGroup = m_SelectedGroup;
-	m_SelectedGroup = std::clamp(m_SelectedGroup, 0, (int)m_vpGroups.size() - 1);
-	auto &vLayers = m_vpGroups[m_SelectedGroup]->m_vpLayers;
-	const size_t PreviousLayerCount = m_vSelectedLayers.size();
-	m_vSelectedLayers.erase(
-		std::remove_if(m_vSelectedLayers.begin(), m_vSelectedLayers.end(), [&vLayers](int LayerIndex) {
-			return LayerIndex < 0 || LayerIndex >= (int)vLayers.size();
-		}),
-		m_vSelectedLayers.end());
-	const bool SelectionChanged = PreviousGroup != m_SelectedGroup || PreviousLayerCount != m_vSelectedLayers.size();
-	if(SelectionChanged)
-	{
-		m_SelectedQuadEnvelope = -1;
-		m_CurrentQuadIndex = -1;
-		m_SelectedSoundSource = -1;
-		DeselectQuads();
-		DeselectQuadPoints();
-	}
-	if(m_vSelectedLayers.empty() && !vLayers.empty())
-	{
-		m_vSelectedLayers.push_back((int)vLayers.size() - 1);
-		DeselectQuads();
-		DeselectQuadPoints();
-	}
-
-	if(m_SelectedQuadEnvelope < 0 || m_SelectedQuadEnvelope >= (int)m_vpEnvelopes.size())
-		m_SelectedQuadEnvelope = -1;
-	if(m_SelectedEnvelope < 0 || m_SelectedEnvelope >= (int)m_vpEnvelopes.size())
-		m_SelectedEnvelope = 0;
-	if(m_SelectedImage < 0 || m_SelectedImage >= (int)m_vpImages.size())
-		m_SelectedImage = 0;
-	if(m_SelectedSound < 0 || m_SelectedSound >= (int)m_vpSounds.size())
-		m_SelectedSound = 0;
+	SSelectionState State{
+		m_SelectedGroup,
+		m_vSelectedLayers,
+		vLayerCounts,
+		m_vpEnvelopes.size(),
+		m_vpImages.size(),
+		m_vpSounds.size(),
+		m_vSelectedQuads,
+		m_SelectedQuadPoints,
+		m_SelectedQuadEnvelope,
+		m_CurrentQuadIndex,
+		m_SelectedEnvelope,
+		m_vSelectedEnvelopePoints,
+		m_SelectedTangentInPoint,
+		m_SelectedTangentOutPoint,
+		m_SelectedImage,
+		m_SelectedSound,
+		m_SelectedSoundSource};
+	if(NormalizeSelectionState(State))
+		m_QuadKnifeState.Reset();
 }
 
 void CEditorMap::SelectGameLayer()
