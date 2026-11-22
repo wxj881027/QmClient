@@ -583,6 +583,26 @@ private:
 	int m_QmPerfGpuGlyphs = 0;
 	int m_QmPerfGpuReadbacks = 0;
 	int m_QmPerfGpuFallbacks = 0;
+	struct SQmGlyphBenchmark
+	{
+		static constexpr int FIRST = 0x4E00;
+		static constexpr int COUNT = 256;
+		static constexpr int SIZE = 22;
+		std::array<FT_Face, COUNT> m_aFaces{};
+		std::chrono::nanoseconds m_Start{};
+		uint64_t m_Generation = 0;
+		int m_Mode = 0;
+		int m_GpuGlyphs = 0;
+		int m_GpuFallbacks = 0;
+		int m_WorkerJobs = 0;
+
+		bool Contains(const SGlyph &Glyph) const
+		{
+			return !Glyph.m_Nameplate && Glyph.m_FontSize == SIZE && Glyph.m_Chr >= FIRST && Glyph.m_Chr < FIRST + COUNT &&
+			       Glyph.m_Face == m_aFaces[Glyph.m_Chr - FIRST];
+		}
+	};
+	std::optional<SQmGlyphBenchmark> m_QmGlyphBenchmark;
 	double m_QmPerfGpuPrepareMs = 0.0;
 	double m_QmPerfGpuReadbackMs = 0.0;
 	double m_QmPerfGpuApplyMs = 0.0;
@@ -1697,6 +1717,88 @@ public:
 	size_t QmGlyphWorkerPendingCount() const { return m_QmPendingGlyphTasks.size(); }
 	size_t QmGpuPreparedCount() const { return m_vQmGpuPreparedGlyphs.size(); }
 	int QmGpuBatchActiveCount() const { return m_QmGpuBatch.m_Active ? 1 : 0; }
+	bool QmGlyphBenchmarkActive() const { return m_QmGlyphBenchmark.has_value(); }
+
+	void StartQmGlyphBenchmark(const FontDataMap &FontData, const IClient *pClient)
+	{
+		if(m_QmGlyphBenchmark || !TexturesReady() || !m_QmPendingGlyphTasks.empty() ||
+			(g_Config.m_QmTextRasterMode == 2 && !QmGpuRasterUsable()))
+		{
+			QmPerfLogPayloadForce("perf/text", "event=glyph_benchmark_error reason=pipeline_busy_or_unavailable", pClient);
+			return;
+		}
+		SQmGlyphBenchmark Benchmark;
+		Benchmark.m_Generation = m_QmGlyphGeneration;
+		Benchmark.m_Mode = g_Config.m_QmTextRasterMode;
+		for(int Offset = 0; Offset < Benchmark.COUNT; ++Offset)
+		{
+			const int Chr = Benchmark.FIRST + Offset;
+			FT_Face &Face = Benchmark.m_aFaces[Offset];
+			if(GetCharGlyph(Chr, &Face, false) == 0 || (Offset > 0 && Face != Benchmark.m_aFaces.front()) ||
+				m_Glyphs.find(std::make_tuple(Face, Chr, Benchmark.SIZE, false)) != m_Glyphs.end())
+			{
+				QmPerfLogPayloadForce("perf/text", "event=glyph_benchmark_error reason=expected_cold_keys_in_one_font", pClient);
+				return;
+			}
+		}
+		char aPayload[320];
+		str_format(aPayload, sizeof(aPayload), "event=glyph_benchmark_begin mode=%d count=%d px=%d first=%d family='%s' style='%s'",
+			Benchmark.m_Mode, Benchmark.COUNT, Benchmark.SIZE, Benchmark.FIRST,
+			Benchmark.m_aFaces.front()->family_name ? Benchmark.m_aFaces.front()->family_name : "",
+			Benchmark.m_aFaces.front()->style_name ? Benchmark.m_aFaces.front()->style_name : "");
+		QmPerfLogPayloadForce("perf/text", aPayload, pClient);
+		Benchmark.m_Start = time_get_nanoseconds();
+		m_QmGlyphBenchmark = Benchmark;
+		for(int Offset = 0; Offset < Benchmark.COUNT; ++Offset)
+		{
+			const int Chr = Benchmark.FIRST + Offset;
+			bool Accepted;
+			if(Benchmark.m_Mode == 0)
+			{
+				const SGlyph *pGlyph = GetGlyph(Chr, Benchmark.SIZE);
+				Accepted = pGlyph && pGlyph->m_Chr == Chr && pGlyph->m_Face == Benchmark.m_aFaces[Offset];
+			}
+			else
+				Accepted = QmPrewarmGlyphTask(Chr, Benchmark.SIZE, FontData) == EQmGlyphPrewarmResult::QUEUED;
+			if(!Accepted)
+			{
+				m_QmGlyphBenchmark.reset();
+				QmPerfLogPayloadForce("perf/text", "event=glyph_benchmark_error reason=request_failed", pClient);
+				return;
+			}
+		}
+		if(Benchmark.m_Mode == 0)
+			FinishQmGlyphBenchmark(FlushPendingGlyphUploads(true), pClient);
+	}
+
+	void FinishQmGlyphBenchmark(bool UploadsAccepted, const IClient *pClient)
+	{
+		if(!m_QmGlyphBenchmark)
+			return;
+		const SQmGlyphBenchmark &Benchmark = *m_QmGlyphBenchmark;
+		const auto Now = time_get_nanoseconds();
+		if(Benchmark.m_Generation != m_QmGlyphGeneration || Benchmark.m_Mode != g_Config.m_QmTextRasterMode ||
+			Now - Benchmark.m_Start >= std::chrono::seconds(10))
+		{
+			m_QmGlyphBenchmark.reset();
+			QmPerfLogPayloadForce("perf/text", "event=glyph_benchmark_error reason=invalidated_or_timed_out", pClient);
+			return;
+		}
+		if(!UploadsAccepted)
+			return;
+		for(int Offset = 0; Offset < Benchmark.COUNT; ++Offset)
+		{
+			const auto Found = m_Glyphs.find(std::make_tuple(Benchmark.m_aFaces[Offset], Benchmark.FIRST + Offset, Benchmark.SIZE, false));
+			if(Found == m_Glyphs.end() || Found->second.m_State != SGlyph::EState::RENDERED)
+				return;
+		}
+		char aPayload[240];
+		str_format(aPayload, sizeof(aPayload), "event=glyph_benchmark_done mode=%d ready=%d wall_ms=%.3f worker_jobs=%d gpu_glyphs=%d gpu_fallbacks=%d",
+			Benchmark.m_Mode, Benchmark.COUNT, std::chrono::duration<double, std::milli>(time_get_nanoseconds() - Benchmark.m_Start).count(),
+			Benchmark.m_WorkerJobs, Benchmark.m_GpuGlyphs, Benchmark.m_GpuFallbacks);
+		m_QmGlyphBenchmark.reset();
+		QmPerfLogPayloadForce("perf/text", aPayload, pClient);
+	}
 
 	EQmGlyphPrewarmResult QmPrewarmGlyphTask(int Chr, int FontSize,
 		const std::unordered_map<FT_Face, std::pair<const FT_Byte *, FT_Long>> &FontData)
@@ -1858,6 +1960,8 @@ public:
 				else
 				{
 					++m_QmPerfGlyphWorkerJobs;
+					if(m_QmGlyphBenchmark)
+						++m_QmGlyphBenchmark->m_WorkerJobs;
 					++SubmittedBatches;
 				}
 			}
@@ -1967,6 +2071,8 @@ public:
 			(GlyphIt->second.m_State != SGlyph::EState::QUEUED && GlyphIt->second.m_State != SGlyph::EState::MEASURED))
 			return;
 		SGlyph &Glyph = GlyphIt->second;
+		if(m_QmGlyphBenchmark && m_QmGlyphBenchmark->Contains(Glyph))
+			++m_QmGlyphBenchmark->m_GpuFallbacks;
 		if(g_Config.m_QmTextRasterMode == 0)
 		{
 			m_QmPendingGlyphTasks.erase(Pending);
@@ -2170,7 +2276,11 @@ public:
 				Pending != m_QmPendingGlyphTasks.end() && Pending->second == Placement.m_Generation)
 				m_QmPendingGlyphTasks.erase(Pending);
 			if(Glyph.m_State == SGlyph::EState::RENDERED)
+			{
 				++m_QmPerfGpuGlyphs;
+				if(m_QmGlyphBenchmark && m_QmGlyphBenchmark->Contains(Glyph))
+					++m_QmGlyphBenchmark->m_GpuGlyphs;
+			}
 		}
 		if(m_QmGpuBatch.m_ApplyIndex >= m_QmGpuBatch.m_vPlacements.size())
 		{
@@ -3365,7 +3475,9 @@ class CTextRender : public IEngineTextRender
 
 		// QmClient: 帧末兜底提交——本帧只构建未渲染时（如菜单预构建）脏区
 		// 失败区域每帧末重试一次；先提交再消费统计，包含合批提交成本。
-		m_pGlyphMap->FlushPendingGlyphUploads(true);
+		const bool UploadsAccepted = m_pGlyphMap->FlushPendingGlyphUploads(true);
+		if(m_pGlyphMap->QmGlyphBenchmarkActive())
+			m_pGlyphMap->FinishQmGlyphBenchmark(UploadsAccepted, Kernel()->RequestInterface<IClient>());
 
 		int FrameGlyphNew = 0;
 		int FrameGlyphUploads = 0;
@@ -3741,6 +3853,7 @@ public:
 			m_FTLibrary = Library;
 			m_pGlyphMap = new CGlyphMap(m_pGraphics, m_FTLibrary, Kernel()->RequestInterface<IEngine>());
 			Console()->Register("qm_font_diagnostics", "s[family/style] i[codepoint]", CFGFLAG_CLIENT, ConQmFontDiagnostics, this, "Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled");
+			Console()->Register("qm_glyph_benchmark", "", CFGFLAG_CLIENT, ConQmGlyphBenchmark, this, "Measure a fixed cold glyph batch with performance diagnostics enabled");
 
 			// print freetype version
 			{
@@ -4109,6 +4222,13 @@ public:
 		}
 	}
 	// 仅主动诊断读取字体，不切换配置、不改变 face 大小或现有 glyph slot。
+	static void ConQmGlyphBenchmark(IConsole::IResult *pResult, void *pUser)
+	{
+		auto *pThis = static_cast<CTextRender *>(pUser);
+		if(QmPerfEnabled() && g_Config.m_QmGraphicsTrace >= 1 && pThis->m_pGlyphMap != nullptr)
+			pThis->m_pGlyphMap->StartQmGlyphBenchmark(pThis->m_QmFontFaceData, pThis->Kernel()->RequestInterface<IClient>());
+	}
+
 	static void ConQmFontDiagnostics(IConsole::IResult *pResult, void *pUser)
 	{
 		auto *pThis = static_cast<CTextRender *>(pUser);
