@@ -688,7 +688,10 @@ public:
 	const char *ConnectAddressString() const override { return m_aConnectAddressStr; }
 	const char *MapDownloadName() const override { return m_aMapdownloadName; }
 	int MapDownloadAmount() const override { return !m_pMapdownloadTask ? m_MapdownloadAmount : (int)m_pMapdownloadTask->Current(); }
-	int MapDownloadTotalsize() const override { return !m_pMapdownloadTask ? m_MapdownloadTotalsize : (int)m_pMapdownloadTask->Size(); }
+	int MapDownloadTotalsize() const override
+	{
+		return map_download::ProgressTotalSize(m_pMapdownloadTask != nullptr, (bool)m_MapdownloadFileTemp, m_MapdownloadTotalsize, m_pMapdownloadTask ? (int)m_pMapdownloadTask->Size() : -1);
+	}
 
 	void PumpNetwork();
 

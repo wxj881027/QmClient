@@ -32,3 +32,11 @@ TEST(MapDownloadProgress, LargeValuesUseRemainingBytesWithoutOverflowingSum)
 	EXPECT_FALSE(map_download::CanAppend(Max - 1, 2, Max));
 	EXPECT_FALSE(map_download::CanAppend(Max, Max, Max));
 }
+
+TEST(MapDownloadProgress, TotalSizeIsAvailableOnlyDuringAnActiveTransfer)
+{
+	EXPECT_EQ(map_download::ProgressTotalSize(false, false, 1024 * 1024, -1), -1);
+	EXPECT_EQ(map_download::ProgressTotalSize(true, false, 1024 * 1024, 512 * 1024), 512 * 1024);
+	EXPECT_EQ(map_download::ProgressTotalSize(false, true, 1024 * 1024, -1), 1024 * 1024);
+	EXPECT_EQ(map_download::ProgressTotalSize(false, false, -1, -1), -1);
+}
