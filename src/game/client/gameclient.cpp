@@ -1310,6 +1310,7 @@ void CGameClient::OnConnectionResourceUpdate()
 
 	const bool Trace = QmPerfEnabled();
 	CPerfTimer Timer(Trace);
+	const bool MapSoundsReady = m_MapSounds.PollDecode();
 	const auto Deadline = CMapLoadTask::TClock::now() + std::chrono::milliseconds(2);
 	bool DataReady = false;
 	const auto Prepare = [&] {
@@ -1324,7 +1325,7 @@ void CGameClient::OnConnectionResourceUpdate()
 			if(Trace)
 				QmPerfLogStage("perf/connect", "map_design_tile_skips", SkipTimer.ElapsedMs(), true, Client());
 		}
-		DataReady = m_MapImages.ImagesReady() && m_DesignTileSkips.Done();
+		DataReady = m_MapImages.ImagesReady() && m_DesignTileSkips.Done() && MapSoundsReady;
 		if(DataReady && CMapLoadTask::TClock::now() < Deadline)
 		{
 			if(!m_MapLayersBackground.IsMapLoaded())

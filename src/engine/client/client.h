@@ -46,6 +46,7 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
 // 性能日志文件的运行时开关包装（定义见 client.cpp）：CFutureLogger 只能 Set
 // 一次，游戏内开/关通过切换内部 logger（文件 logger ↔ noop）实现。
@@ -58,6 +59,7 @@ class CUnpacker;
 class IConfigManager;
 class IDiscord;
 class CVideoExportTask;
+class CMapLoadJob;
 class IEngine;
 class IEngineInput;
 class IEngineMap;
@@ -317,6 +319,15 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	char m_aMapdownloadFilename[IO_MAX_PATH_LENGTH] = "";
 	char m_aMapdownloadFilenameTemp[IO_MAX_PATH_LENGTH] = "";
 	char m_aMapdownloadName[256] = "";
+	char m_aMapServerUrl[256] = "";
+	std::shared_ptr<CMapLoadJob> m_pMapLoadJob;
+	enum class EMapLoadSource
+	{
+		LOCAL,
+		HTTP,
+		GAME_SERVER,
+	};
+	EMapLoadSource m_MapLoadSource = EMapLoadSource::LOCAL;
 	CMapDownloadFile m_MapdownloadFileTemp;
 	int m_MapdownloadChunk = 0;
 	int m_MapdownloadCrc = 0;
@@ -474,6 +485,11 @@ private:
 	NETADDR m_aFavoritesGroupAddresses[MAX_SERVER_ADDRESSES];
 
 	void UpdateDemoIntraTimers();
+	void PrepareMapLoad();
+	void StartMapLoad(std::vector<std::string> vPaths, const std::optional<SHA256_DIGEST> &WantedSha256, unsigned WantedCrc, EMapLoadSource Source);
+	void StartMapSearch(const char *pMapName, const std::optional<SHA256_DIGEST> &WantedSha256, unsigned WantedCrc);
+	void StartMapDownload(const char *pMapUrl, int MapSize);
+	void PollMapLoad();
 	int MaxLatencyTicks() const;
 	void ResetAutoPredictionMargin();
 	void UpdatePredictionMargin();
@@ -657,7 +673,7 @@ public:
 	int UnpackAndValidateSnapshot(CSnapshot *pFrom, CSnapshotBuffer *pTo);
 
 	void ResetMapDownload(bool ResetActive);
-	void FinishMapDownload();
+	void FinishMapDownload(EMapLoadSource Source);
 	void ReportMapDownloadSaveFailure(const char *pFilename);
 
 	EInfoState InfoState() const override { return m_InfoState; }

@@ -64,6 +64,8 @@
 #include <engine/shared/demo_output.h>
 #include <engine/shared/fifo.h>
 #include <engine/shared/filecollection.h>
+#include <engine/shared/jobs.h>
+#include <engine/shared/map.h>
 #include <engine/shared/masterserver.h>
 #include <engine/shared/network.h>
 #include <engine/shared/packer.h>
@@ -142,6 +144,79 @@ namespace
 #endif
 
 using namespace std::chrono_literals;
+
+class CMapLoadJob final : public IJob
+{
+	IStorage *m_pStorage;
+	std::vector<std::string> m_vPaths;
+	std::optional<SHA256_DIGEST> m_WantedSha256;
+	unsigned m_WantedCrc;
+	std::unique_ptr<CMap> m_pLoadedMap;
+	std::string m_LoadedPath;
+	std::string m_Error;
+	double m_ElapsedMs = 0.0;
+	bool m_Success = false;
+
+protected:
+	void Run() override
+	{
+		const auto Start = std::chrono::steady_clock::now();
+		try
+		{
+			for(const std::string &Path : m_vPaths)
+			{
+				if(State() == STATE_ABORTED)
+					break;
+				auto pCandidate = std::make_unique<CMap>(m_pStorage);
+				if(!pCandidate->Load(Path.c_str(), IStorage::TYPE_ALL))
+					continue;
+				if(State() == STATE_ABORTED)
+					break;
+
+				if(m_WantedSha256.has_value() && pCandidate->Sha256() != m_WantedSha256.value())
+				{
+					m_Error = "map differs from the server (SHA-256 mismatch)";
+					continue;
+				}
+				if(!m_WantedSha256.has_value() && m_WantedCrc != 0 && pCandidate->Crc() != m_WantedCrc)
+				{
+					m_Error = "map differs from the server (CRC mismatch)";
+					continue;
+				}
+
+				m_LoadedPath = Path;
+				m_pLoadedMap = std::move(pCandidate);
+				m_Success = true;
+				break;
+			}
+		}
+		catch(const std::exception &Error)
+		{
+			m_Error = Error.what();
+		}
+		catch(...)
+		{
+			m_Error = "unknown map loading error";
+		}
+		m_ElapsedMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - Start).count();
+	}
+
+public:
+	CMapLoadJob(IStorage *pStorage, std::vector<std::string> vPaths, const std::optional<SHA256_DIGEST> &WantedSha256, unsigned WantedCrc) :
+		m_pStorage(pStorage),
+		m_vPaths(std::move(vPaths)),
+		m_WantedSha256(WantedSha256),
+		m_WantedCrc(WantedCrc)
+	{
+		Abortable(true);
+	}
+
+	bool Success() const { return m_Success; }
+	const std::string &LoadedPath() const { return m_LoadedPath; }
+	const std::string &Error() const { return m_Error; }
+	double ElapsedMs() const { return m_ElapsedMs; }
+	std::unique_ptr<CMap> TakeMap() { return std::move(m_pLoadedMap); }
+};
 
 static constexpr ColorRGBA gs_ClientNetworkPrintColor{0.7f, 1, 0.7f, 1.0f};
 
@@ -1493,6 +1568,9 @@ void CClient::DisconnectWithReason(const char *pReason)
 	}
 	m_aNetClient[CONN_MAIN].Disconnect(pReason);
 	SetState(IClient::STATE_OFFLINE);
+	if(m_pMapLoadJob)
+		m_pMapLoadJob->Abort();
+	m_pMapLoadJob.reset();
 	m_pMap->Unload();
 	m_CurrentServerPingInfoType = -1;
 	m_CurrentServerPingBasicToken = -1;
@@ -2089,37 +2167,14 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 {
 	static char s_aErrorMsg[128];
 
-	SetState(IClient::STATE_LOADING);
-	GameClient()->OnMapLoadStart();
-	SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_LOADING_MAP);
-	if((bool)m_LoadingCallback)
-		m_LoadingCallback(IClient::LOADING_CALLBACK_DETAIL_MAP);
+	PrepareMapLoad();
 
-	// 加载新地图前停止 demo 录制。
-	for(int Recorder = 0; Recorder < RECORDER_MAX; Recorder++)
-	{
-		DemoRecorder(Recorder)->Stop(Recorder == RECORDER_REPLAYS ? IDemoRecorder::EStopMode::REMOVE_FILE : IDemoRecorder::EStopMode::KEEP_FILE);
-	}
-
-	// 加载新地图前卸载当前地图并重置所有快照，因为快照只对旧地图有效。
-	m_PoseCurrentSnapshot = -1;
-	m_pMap->Unload();
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; Dummy++)
-	{
-		m_aapSnapshots[Dummy][SNAP_CURRENT] = nullptr;
-		m_aapSnapshots[Dummy][SNAP_PREV] = nullptr;
-		m_aSnapshotStorage[Dummy].PurgeAll();
-		m_aReceivedSnapshots[Dummy] = 0;
-		m_aSnapshotStats[Dummy] = {};
-		m_aLastSnapshotTime[Dummy] = 0;
-		m_aLastSnapshotTick[Dummy] = -1;
-		m_aSnapshotParts[Dummy] = 0;
-		m_aSnapshotIncomingDataSize[Dummy] = 0;
-	}
-	m_SnapCrcErrors = 0;
-	GameClient()->InvalidateSnapshot();
-
-	if(!m_pMap->Load(pFilename, IStorage::TYPE_ALL))
+	const bool PerfEnabled = QmPerfEnabled();
+	CPerfTimer MapLoadTimer(PerfEnabled);
+	const bool MapLoaded = m_pMap->Load(pFilename, IStorage::TYPE_ALL);
+	if(PerfEnabled)
+		QmPerfLogStageForce("perf/map", "map_file_parse_validate", MapLoadTimer.ElapsedMs(), this);
+	if(!MapLoaded)
 	{
 		str_format(s_aErrorMsg, sizeof(s_aErrorMsg), "map '%s' not found", pFilename);
 		return s_aErrorMsg;
@@ -2157,6 +2212,39 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 	str_copy(m_aCurrentMapPath, pFilename);
 
 	return nullptr;
+}
+
+void CClient::PrepareMapLoad()
+{
+	SetState(IClient::STATE_LOADING);
+	GameClient()->OnMapLoadStart();
+	SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_LOADING_MAP);
+	if((bool)m_LoadingCallback)
+		m_LoadingCallback(IClient::LOADING_CALLBACK_DETAIL_MAP);
+
+	// 加载新地图前停止 demo 录制。
+	for(int Recorder = 0; Recorder < RECORDER_MAX; Recorder++)
+	{
+		DemoRecorder(Recorder)->Stop(Recorder == RECORDER_REPLAYS ? IDemoRecorder::EStopMode::REMOVE_FILE : IDemoRecorder::EStopMode::KEEP_FILE);
+	}
+
+	// 加载新地图前卸载当前地图并重置所有快照，因为快照只对旧地图有效。
+	m_PoseCurrentSnapshot = -1;
+	m_pMap->Unload();
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; Dummy++)
+	{
+		m_aapSnapshots[Dummy][SNAP_CURRENT] = nullptr;
+		m_aapSnapshots[Dummy][SNAP_PREV] = nullptr;
+		m_aSnapshotStorage[Dummy].PurgeAll();
+		m_aReceivedSnapshots[Dummy] = 0;
+		m_aSnapshotStats[Dummy] = {};
+		m_aLastSnapshotTime[Dummy] = 0;
+		m_aLastSnapshotTick[Dummy] = -1;
+		m_aSnapshotParts[Dummy] = 0;
+		m_aSnapshotIncomingDataSize[Dummy] = 0;
+	}
+	m_SnapCrcErrors = 0;
+	GameClient()->InvalidateSnapshot();
 }
 
 static void FormatMapDownloadFilename(const char *pName, const std::optional<SHA256_DIGEST> &Sha256, int Crc, bool Temp, char *pBuffer, int BufferSize)
@@ -2249,6 +2337,170 @@ const char *CClient::LoadMapSearch(const char *pMapName, const std::optional<SHA
 	static char s_aErrorMsg[256];
 	str_format(s_aErrorMsg, sizeof(s_aErrorMsg), "Could not find map '%s'", pMapName);
 	return s_aErrorMsg;
+}
+
+void CClient::StartMapLoad(std::vector<std::string> vPaths, const std::optional<SHA256_DIGEST> &WantedSha256, unsigned WantedCrc, EMapLoadSource Source)
+{
+	try
+	{
+		m_pMapLoadJob = std::make_shared<CMapLoadJob>(Storage(), std::move(vPaths), WantedSha256, WantedCrc);
+	}
+	catch(const std::bad_alloc &)
+	{
+		DisconnectWithReason("could not allocate map loading job");
+		return;
+	}
+	m_MapLoadSource = Source;
+	if(QmPerfEnabled())
+	{
+		char aPayload[160];
+		str_format(aPayload, sizeof(aPayload), "event=map_parse_worker_start from_download=%d", (int)(Source != EMapLoadSource::LOCAL));
+		QmPerfLogPayloadForce("perf/map", aPayload, this);
+	}
+	if(!Engine()->TryAddJob(m_pMapLoadJob))
+	{
+		m_pMapLoadJob.reset();
+		DisconnectWithReason("map loading worker is unavailable");
+		return;
+	}
+	PollMapLoad();
+}
+
+void CClient::StartMapSearch(const char *pMapName, const std::optional<SHA256_DIGEST> &WantedSha256, unsigned WantedCrc)
+{
+	char aDescription[SHA256_MAXSTRSIZE + 48];
+	if(WantedSha256.has_value())
+	{
+		char aSha256[SHA256_MAXSTRSIZE];
+		sha256_str(WantedSha256.value(), aSha256, sizeof(aSha256));
+		str_format(aDescription, sizeof(aDescription), "sha256=%s ", aSha256);
+	}
+	else
+	{
+		aDescription[0] = '\0';
+	}
+	char aLoadingMessage[512];
+	str_format(aLoadingMessage, sizeof(aLoadingMessage), "loading map, map=%s wanted %scrc=%08x", pMapName, aDescription, WantedCrc);
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aLoadingMessage);
+
+	std::vector<std::string> vPaths;
+	try
+	{
+		char aPath[IO_MAX_PATH_LENGTH];
+		str_format(aPath, sizeof(aPath), "maps/%s.map", pMapName);
+		vPaths.emplace_back(aPath);
+		FormatMapDownloadFilename(pMapName, WantedSha256, WantedCrc, false, aPath, sizeof(aPath));
+		vPaths.emplace_back(aPath);
+		if(WantedSha256.has_value())
+		{
+			FormatMapDownloadFilename(pMapName, std::nullopt, WantedCrc, false, aPath, sizeof(aPath));
+			vPaths.emplace_back(aPath);
+		}
+		char aMapFile[IO_MAX_PATH_LENGTH];
+		str_format(aMapFile, sizeof(aMapFile), "%s.map", pMapName);
+		if(Storage()->FindFile(aMapFile, "maps", IStorage::TYPE_ALL, aPath, sizeof(aPath)))
+			vPaths.emplace_back(aPath);
+	}
+	catch(const std::bad_alloc &)
+	{
+		DisconnectWithReason("could not prepare map search");
+		return;
+	}
+
+	PrepareMapLoad();
+	StartMapLoad(std::move(vPaths), WantedSha256, WantedCrc, EMapLoadSource::LOCAL);
+}
+
+void CClient::StartMapDownload(const char *pMapUrl, int MapSize)
+{
+	FormatMapDownloadFilename(m_aMapdownloadName, m_MapdownloadSha256, m_MapdownloadCrc, false, m_aMapdownloadFilename, sizeof(m_aMapdownloadFilename));
+	FormatMapDownloadFilename(m_aMapdownloadName, m_MapdownloadSha256, m_MapdownloadCrc, true, m_aMapdownloadFilenameTemp, sizeof(m_aMapdownloadFilenameTemp));
+	m_MapdownloadTotalsize = MapSize;
+
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "starting to download map to '%s'", m_aMapdownloadFilenameTemp);
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", aBuf);
+
+	if(m_MapdownloadSha256.has_value())
+	{
+		const bool UseConfigUrl = str_comp(g_Config.m_ClMapDownloadUrl, "https://maps.ddnet.org") != 0 || m_aMapDownloadUrl[0] == '\0';
+		char aSha256[SHA256_MAXSTRSIZE];
+		sha256_str(m_MapdownloadSha256.value(), aSha256, sizeof(aSha256));
+		SQmMapDownloadRequest Request;
+		Request.m_pMapName = m_aMapdownloadName;
+		Request.m_pSha256Hex = aSha256;
+		Request.m_Crc = m_MapdownloadCrc;
+		Request.m_pServerUrl = pMapUrl;
+		Request.m_pBaseUrl = UseConfigUrl ? g_Config.m_ClMapDownloadUrl : m_aMapDownloadUrl;
+		SQmMapDownloadPlan Plan;
+		if(!QmBuildMapDownloadPlan(Request, &Plan) || Plan.m_Url.empty())
+		{
+			log_error("client/network", "failed to resolve map download URL for '%s'", m_aMapdownloadName);
+			SendMapRequest();
+			return;
+		}
+		str_copy(m_aMapdownloadFilename, Plan.m_FileName.c_str(), sizeof(m_aMapdownloadFilename));
+		m_pMapdownloadTask = HttpGetFile(Plan.m_Url.c_str(), Storage(), m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE);
+		m_pMapdownloadTask->Timeout(CTimeout{g_Config.m_ClMapDownloadConnectTimeoutMs, 0, g_Config.m_ClMapDownloadLowSpeedLimit, g_Config.m_ClMapDownloadLowSpeedTime});
+		m_pMapdownloadTask->MaxResponseSize(MapSize);
+		m_pMapdownloadTask->ExpectSha256(m_MapdownloadSha256.value());
+		Http()->Run(m_pMapdownloadTask);
+	}
+	else
+	{
+		SendMapRequest();
+	}
+}
+
+void CClient::PollMapLoad()
+{
+	const std::shared_ptr<CMapLoadJob> pJob = m_pMapLoadJob;
+	if(!pJob || (pJob->State() != IJob::STATE_DONE && pJob->State() != IJob::STATE_FAILED))
+		return;
+	m_pMapLoadJob.reset();
+
+	if(QmPerfEnabled())
+	{
+		QmPerfLogStageForce("perf/map", "map_file_parse_validate", pJob->ElapsedMs(), this);
+		char aPayload[192];
+		str_format(aPayload, sizeof(aPayload), "event=map_parse_worker_complete success=%d from_download=%d duration_ms=%.3f", (int)(pJob->State() == IJob::STATE_DONE && pJob->Success()), (int)(m_MapLoadSource != EMapLoadSource::LOCAL), pJob->ElapsedMs());
+		QmPerfLogPayloadForce("perf/map", aPayload, this);
+	}
+
+	const bool Loaded = pJob->State() == IJob::STATE_DONE && pJob->Success();
+	if(!Loaded)
+	{
+		if(m_MapLoadSource == EMapLoadSource::LOCAL)
+		{
+			StartMapDownload(m_aMapServerUrl[0] ? m_aMapServerUrl : nullptr, m_MapdownloadTotalsize);
+		}
+		else if(m_MapLoadSource == EMapLoadSource::HTTP)
+		{
+			ResetMapDownload(false);
+			SendMapRequest();
+		}
+		else
+		{
+			char aError[256];
+			str_format(aError, sizeof(aError), "could not load downloaded map%s%s", pJob->Error().empty() ? "" : ": ", pJob->Error().c_str());
+			DisconnectWithReason(aError);
+		}
+		return;
+	}
+
+	std::unique_ptr<CMap> pLoadedMap = pJob->TakeMap();
+	dbg_assert(pLoadedMap != nullptr, "Successful map load job must contain a map");
+	static_cast<CMap *>(m_pMap)->Adopt(std::move(*pLoadedMap));
+	str_copy(m_aCurrentMap, m_aMapdownloadName);
+	str_copy(m_aCurrentMapPath, pJob->LoadedPath().c_str());
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "loaded map '%s'", pJob->LoadedPath().c_str());
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aBuf);
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "loading done");
+	if(m_MapLoadSource != EMapLoadSource::LOCAL)
+		ResetMapDownload(true);
+	SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_SENDING_READY);
+	SendReady(CONN_MAIN);
 }
 
 void CClient::ProcessConnlessPacket(CNetChunk *pPacket)
@@ -2691,6 +2943,9 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				DummyDisconnect(nullptr);
 			}
 
+			if(m_pMapLoadJob)
+				m_pMapLoadJob->Abort();
+			m_pMapLoadJob.reset();
 			ResetMapDownload(true);
 
 			std::optional<SHA256_DIGEST> MapSha256;
@@ -2704,59 +2959,12 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				pMapUrl = MapDetails->m_aUrl[0] ? MapDetails->m_aUrl : nullptr;
 			}
 
-			if(LoadMapSearch(pMap, MapSha256, MapCrc) == nullptr)
-			{
-				m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "loading done");
-				SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_SENDING_READY);
-				SendReady(CONN_MAIN);
-			}
-			else
-			{
-				// start map download
-				FormatMapDownloadFilename(pMap, MapSha256, MapCrc, false, m_aMapdownloadFilename, sizeof(m_aMapdownloadFilename));
-				FormatMapDownloadFilename(pMap, MapSha256, MapCrc, true, m_aMapdownloadFilenameTemp, sizeof(m_aMapdownloadFilenameTemp));
-
-				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "starting to download map to '%s'", m_aMapdownloadFilenameTemp);
-				m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", aBuf);
-
-				str_copy(m_aMapdownloadName, pMap);
-				m_MapdownloadSha256 = MapSha256;
-				m_MapdownloadCrc = MapCrc;
-				m_MapdownloadTotalsize = MapSize;
-
-				if(MapSha256.has_value())
-				{
-					bool UseConfigUrl = str_comp(g_Config.m_ClMapDownloadUrl, "https://maps.ddnet.org") != 0 || m_aMapDownloadUrl[0] == '\0';
-					char aSha256[SHA256_MAXSTRSIZE];
-					sha256_str(MapSha256.value(), aSha256, sizeof(aSha256));
-					SQmMapDownloadRequest Request;
-					Request.m_pMapName = pMap;
-					Request.m_pSha256Hex = aSha256;
-					Request.m_Crc = MapCrc;
-					Request.m_pServerUrl = pMapUrl;
-					Request.m_pBaseUrl = UseConfigUrl ? g_Config.m_ClMapDownloadUrl : m_aMapDownloadUrl;
-					SQmMapDownloadPlan Plan;
-					if(!QmBuildMapDownloadPlan(Request, &Plan) || Plan.m_Url.empty())
-					{
-						log_error("client/network", "failed to resolve map download URL for '%s'", pMap);
-						SendMapRequest();
-					}
-					else
-					{
-						str_copy(m_aMapdownloadFilename, Plan.m_FileName.c_str(), sizeof(m_aMapdownloadFilename));
-						m_pMapdownloadTask = HttpGetFile(Plan.m_Url.c_str(), Storage(), m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE);
-						m_pMapdownloadTask->Timeout(CTimeout{g_Config.m_ClMapDownloadConnectTimeoutMs, 0, g_Config.m_ClMapDownloadLowSpeedLimit, g_Config.m_ClMapDownloadLowSpeedTime});
-						m_pMapdownloadTask->MaxResponseSize(MapSize);
-						m_pMapdownloadTask->ExpectSha256(MapSha256.value());
-						Http()->Run(m_pMapdownloadTask);
-					}
-				}
-				else
-				{
-					SendMapRequest();
-				}
-			}
+			str_copy(m_aMapdownloadName, pMap);
+			str_copy(m_aMapServerUrl, pMapUrl ? pMapUrl : "");
+			m_MapdownloadSha256 = MapSha256;
+			m_MapdownloadCrc = MapCrc;
+			m_MapdownloadTotalsize = MapSize;
+			StartMapSearch(pMap, MapSha256, MapCrc);
 		}
 		else if(Conn == CONN_MAIN && Msg == NETMSG_MAP_DATA)
 		{
@@ -2820,7 +3028,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 					ReportMapDownloadSaveFailure(m_aMapdownloadFilenameTemp);
 					return;
 				}
-				FinishMapDownload();
+				FinishMapDownload(EMapLoadSource::GAME_SERVER);
 			}
 			else
 			{
@@ -3564,6 +3772,7 @@ void CClient::ResetMapDownload(bool ResetActive)
 		m_aMapdownloadFilename[0] = '\0';
 		m_aMapdownloadFilenameTemp[0] = '\0';
 		m_aMapdownloadName[0] = '\0';
+		m_aMapServerUrl[0] = '\0';
 	}
 }
 
@@ -3574,31 +3783,31 @@ void CClient::ReportMapDownloadSaveFailure(const char *pFilename)
 	DisconnectWithReason(aError);
 }
 
-void CClient::FinishMapDownload()
+void CClient::FinishMapDownload(EMapLoadSource Source)
 {
 	if(!map_download::Publish(*Storage(), m_aMapdownloadFilenameTemp, m_aMapdownloadFilename))
 	{
+		if(Source == EMapLoadSource::HTTP)
+		{
+			ResetMapDownload(false);
+			SendMapRequest();
+			return;
+		}
 		ReportMapDownloadSaveFailure(m_aMapdownloadFilename);
 		return;
 	}
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "download complete, loading map");
-
-	const char *pError = LoadMap(m_aMapdownloadName, m_aMapdownloadFilename, m_MapdownloadSha256, m_MapdownloadCrc);
-	if(!pError)
+	std::vector<std::string> vPaths;
+	try
 	{
-		ResetMapDownload(true);
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "loading done");
-		SendReady(CONN_MAIN);
+		vPaths.emplace_back(m_aMapdownloadFilename);
 	}
-	else if(m_pMapdownloadTask) // fallback
+	catch(const std::bad_alloc &)
 	{
-		ResetMapDownload(false);
-		SendMapRequest();
+		DisconnectWithReason("could not prepare downloaded map path");
+		return;
 	}
-	else
-	{
-		DisconnectWithReason(pError);
-	}
+	StartMapLoad(std::move(vPaths), m_MapdownloadSha256, m_MapdownloadCrc, Source);
 }
 
 void CClient::ResetDDNetInfoTask()
@@ -4304,6 +4513,7 @@ void CClient::Update()
 	}
 	else
 		PumpNetwork();
+	PollMapLoad();
 
 	UpdateUpstreamRedundancy();
 
@@ -4638,7 +4848,9 @@ void CClient::Update()
 	{
 		if(m_pMapdownloadTask->State() == EHttpState::DONE)
 		{
-			FinishMapDownload();
+			m_MapdownloadAmount = m_MapdownloadTotalsize;
+			m_pMapdownloadTask.reset();
+			FinishMapDownload(EMapLoadSource::HTTP);
 		}
 		else if(m_pMapdownloadTask->State() == EHttpState::ERROR || m_pMapdownloadTask->State() == EHttpState::ABORTED)
 		{
