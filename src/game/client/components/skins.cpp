@@ -345,7 +345,9 @@ static SSettingsResourceFrameContext SettingsFrameContextOrDefault(const CGameCl
 		pGameClient->Input()->KeyPress(KEY_MOUSE_WHEEL_LEFT) ||
 		pGameClient->Input()->KeyPress(KEY_MOUSE_WHEEL_RIGHT) ||
 		(pGameClient->Input()->KeyPress(KEY_MOUSE_1) && pUi->HotScrollRegion() != nullptr);
-	return SettingsBuildFrameContext(PersistentContext.m_ScrollActive, ImmediateScrollInput, PersistentContext.m_PostScrollRecoveryFrames);
+	SSettingsResourceFrameContext Context = SettingsBuildFrameContext(PersistentContext.m_ScrollActive, ImmediateScrollInput, PersistentContext.m_PostScrollRecoveryFrames);
+	Context.m_HighPrioritySettled = PersistentContext.m_HighPrioritySettled;
+	return Context;
 }
 
 static bool ActiveSettingsTeePage(const CGameClient *pGameClient)
@@ -1316,7 +1318,7 @@ static bool LoadSkinSpriteTexture(IGraphics *pGraphics, IGraphics::CTextureHandl
 	return true;
 }
 
-bool CSkins::UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer)
+bool CSkins::UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer, size_t *pPreparedBytes)
 {
 	if(pSkinContainer == nullptr || pSkinContainer->m_pPendingSkin == nullptr)
 		return false;
@@ -1326,8 +1328,13 @@ bool CSkins::UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer)
 	const auto Upload = [&](IGraphics::CTextureHandle &Target, size_t Variant, size_t Index) {
 		const int SpriteId = CQmPreparedSkinTextures::SpriteId(Index);
 		const CImageInfo &Source = Variant == 0 ? Data.m_Info : Data.m_InfoGrayscale;
-		return LoadSkinSpriteTexture(Graphics(), &Target, Data.m_pPreparedTextures->Image(Variant, Index),
-			Source, Data.m_pPreparedTextures->Available(Variant, Index), &g_pData->m_aSprites[SpriteId]);
+		CImageInfo &PreparedImage = Data.m_pPreparedTextures->Image(Variant, Index);
+		const bool Available = Data.m_pPreparedTextures->Available(Variant, Index);
+		const size_t PreparedBytes = pPreparedBytes != nullptr && Available ? PreparedImage.DataSize() : 0;
+		const bool Loaded = LoadSkinSpriteTexture(Graphics(), &Target, PreparedImage, Source, Available, &g_pData->m_aSprites[SpriteId]);
+		if(Loaded && pPreparedBytes != nullptr)
+			*pPreparedBytes = PreparedBytes;
+		return Loaded;
 	};
 	switch(pSkinContainer->m_SettingsPendingUploadSprite)
 	{
@@ -1634,7 +1641,9 @@ void CSkins::OnUpdate()
 	LogStage("list_plan_results");
 
 	// Only update skins periodically to reduce FPS impact
-	const std::chrono::nanoseconds MaxTime = std::chrono::milliseconds(std::clamp(round_to_int(Client()->RenderFrameTime() * 50000.0f), 25, 500));
+	const bool TeeRequestsPending = ActiveSettingsTeePage(GameClient()) &&
+					(m_LoadingStats.m_NumPending > 0 || m_LoadingStats.m_NumBackgroundRequested > 0 || !m_vSkinDownloadNames.empty());
+	const auto MaxTime = QmSkinContainerUpdateInterval(std::chrono::milliseconds(std::clamp(round_to_int(Client()->RenderFrameTime() * 50000.0f), 25, 500)), TeeRequestsPending);
 	if(m_ContainerUpdateTime.has_value() && Now - m_ContainerUpdateTime.value() < MaxTime)
 	{
 		CSkinLoadingStats Stats = LoadingStats();
@@ -1681,6 +1690,15 @@ void CSkins::OnRender()
 	// 未被本帧真实列表重新发布的视窗失效；折叠和离页不能保留最高优先级。
 	m_SettingsLoadViewport.BeginFrame();
 	const bool TeeSettingsActive = ActiveSettingsTeePage(GameClient());
+	if(m_SkinUploadFrameBudget.Attempts() > 0 && QmPerfEnabled())
+	{
+		char aPayload[256];
+		str_format(aPayload, sizeof(aPayload), "event=skin_upload_frame attempts=%d uploads=%d prepared_bytes=%zu submit_ms=%.3f budget_ms=%.3f",
+			m_SkinUploadFrameBudget.Attempts(), m_SkinUploadFrameBudget.Submitted(), m_SkinUploadFrameBudget.PreparedBytes(),
+			std::chrono::duration<double, std::milli>(m_SkinUploadFrameBudget.UploadTime()).count(),
+			std::chrono::duration<double, std::milli>(m_SkinUploadFrameBudget.Limit()).count());
+		QmPerfLogPayload("perf/settings-skin-source", aPayload, Client());
+	}
 	const int UploadBudgetMs = SettingsSkinUploadTimeBudgetMs(
 		SettingsFrameContextOrDefault(GameClient()), TeeSettingsActive,
 		Client()->RenderFrameTime() * 1000.0f, SettingsSkinTargetFrameMs());
@@ -2778,18 +2796,13 @@ CSkins::ESkinProcessResult CSkins::DrainSettingsSkinPreviewUpload(CSkinContainer
 			LogSkinSettingsResourcePerf("upload", 0, MaxSkinsPerFrame, Stats.m_NumLoading, ESettingsWarmupMissReason::GPU_UPLOAD_BUDGET, 0.0);
 			return ESkinProcessResult::BREAK_GPU_LIMIT;
 		}
+		size_t PreparedBytes = 0;
 		const auto UploadStart = time_get_nanoseconds();
-		const bool Uploaded = UploadNextSkinPreviewSprite(pSkinContainer);
+		const bool Uploaded = UploadNextSkinPreviewSprite(pSkinContainer, &PreparedBytes);
+		m_SkinUploadFrameBudget.RecordUpload(time_get_nanoseconds() - UploadStart, Uploaded, PreparedBytes);
 		if(!Uploaded)
-		{
-			m_SkinUploadFrameBudget.RecordUpload(time_get_nanoseconds() - UploadStart);
 			return FailUpload();
-		}
 		SkinPreviewUploadBudget.Commit();
-		LogSettingsSkinSourceStageEvent("preview_uploads", pSkinContainer->Name(),
-			pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth,
-			pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, 0, 0.0, 1);
-		m_SkinUploadFrameBudget.RecordUpload(time_get_nanoseconds() - UploadStart);
 	}
 
 	if(!ReplacingLoadedSkin)

@@ -3078,6 +3078,17 @@ class CTextRender : public IEngineTextRender
 	int m_QmPeakFrameContainerCreates = 0;
 	double m_QmPeakFrameRasterizeMs = 0.0;
 	int m_QmPeakFrameGlyphNew = 0;
+	struct SQmEndedFrameGlyphStats
+	{
+		int m_New = 0;
+		int m_Uploads = 0;
+		int m_UploadBatches = 0;
+		double m_RasterizeMs = 0.0;
+		double m_UploadMs = 0.0;
+		double m_UploadBatchMs = 0.0;
+		int m_MaxNew = 0;
+	};
+	SQmEndedFrameGlyphStats m_QmEndedFrameGlyphStats;
 
 	// TClient
 	std::vector<std::string> m_CustomFontFaces;
@@ -3156,6 +3167,14 @@ class CTextRender : public IEngineTextRender
 		int GlyphUploadBatches = 0;
 		double GlyphUploadBatchMs = 0.0;
 		m_pGlyphMap->ConsumeQmPerfGlyphStats(GlyphNew, GlyphUploads, GlyphRasterizeMs, GlyphUploadMs, GlyphUploadBatches, GlyphUploadBatchMs);
+		const auto Ended = std::exchange(m_QmEndedFrameGlyphStats, {});
+		m_QmTextWindowMaxGlyphNew = std::max({m_QmTextWindowMaxGlyphNew, GlyphNew, Ended.m_MaxNew});
+		GlyphNew += Ended.m_New;
+		GlyphUploads += Ended.m_Uploads;
+		GlyphRasterizeMs += Ended.m_RasterizeMs;
+		GlyphUploadMs += Ended.m_UploadMs;
+		GlyphUploadBatches += Ended.m_UploadBatches;
+		GlyphUploadBatchMs += Ended.m_UploadBatchMs;
 		int WorkerQueued = 0;
 		int WorkerCompleted = 0;
 		int WorkerJobs = 0;
@@ -3192,7 +3211,6 @@ class CTextRender : public IEngineTextRender
 		m_QmTextWindowWorkerApplyMs += WorkerApplyMs;
 		m_QmTextWindowGpuPrepareMs += GpuPrepareMs;
 		m_QmTextWindowGpuApplyMs += GpuApplyMs;
-		m_QmTextWindowMaxGlyphNew = std::max(m_QmTextWindowMaxGlyphNew, GlyphNew);
 		if(!QmPerfEnabled())
 		{
 			m_QmTextWindowStartNs = 0;
@@ -3234,7 +3252,7 @@ class CTextRender : public IEngineTextRender
 				m_pGlyphMap->QmAtlasDimension(), m_pGlyphMap->QmAtlasGrowthCount(),
 				m_QmPerfTextContainerNew, m_QmPerfTextContainerUploads, m_QmPerfTextContainerCreateMs, m_QmPerfTextContainerUploadMs,
 				MainThreadMs, FrameMs);
-			QmPerfLogPayload("perf/text", aPayload);
+			QmPerfLogPayload("perf/text", aPayload, pClient);
 			m_QmTextLastBudgetLogNs = NowNs;
 		}
 		const int64_t WindowNs = NowNs - m_QmTextWindowStartNs;
@@ -3254,7 +3272,7 @@ class CTextRender : public IEngineTextRender
 				m_pGlyphMap->QmAtlasDimension(), m_pGlyphMap->QmAtlasGrowthCount(),
 				m_QmTextWindowTextContainerUploads, MainThreadMs, FrameMs);
 			// 5 秒汇总和分钟级热力图是低帧诊断的主证据，不能被每秒明细限流丢掉。
-			QmPerfLogPayloadForce("perf/text", aPayload);
+			QmPerfLogPayloadForce("perf/text", aPayload, pClient);
 			m_QmTextWindowStartNs = NowNs;
 			m_QmTextWindowFrames = 0;
 			m_QmTextWindowGlyphNew = 0;
@@ -3356,6 +3374,13 @@ class CTextRender : public IEngineTextRender
 		int FrameUploadBatches = 0;
 		double FrameUploadBatchMs = 0.0;
 		m_pGlyphMap->ConsumeQmPerfGlyphStats(FrameGlyphNew, FrameGlyphUploads, FrameRasterizeMs, FrameUploadMs, FrameUploadBatches, FrameUploadBatchMs);
+		m_QmEndedFrameGlyphStats.m_New += FrameGlyphNew;
+		m_QmEndedFrameGlyphStats.m_Uploads += FrameGlyphUploads;
+		m_QmEndedFrameGlyphStats.m_RasterizeMs += FrameRasterizeMs;
+		m_QmEndedFrameGlyphStats.m_UploadMs += FrameUploadMs;
+		m_QmEndedFrameGlyphStats.m_UploadBatches += FrameUploadBatches;
+		m_QmEndedFrameGlyphStats.m_UploadBatchMs += FrameUploadBatchMs;
+		m_QmEndedFrameGlyphStats.m_MaxNew = std::max(m_QmEndedFrameGlyphStats.m_MaxNew, FrameGlyphNew);
 		IKernel *pKernel = Kernel();
 		m_pGlyphMap->QmLogNameplateGlyphCacheFrame(m_QmFrameContainerCreates, QmPerfEnabled() && pKernel != nullptr ? pKernel->RequestInterface<IClient>() : nullptr);
 		constexpr int ContainerCreatesThreshold = 256;
