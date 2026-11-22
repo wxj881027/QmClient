@@ -65,7 +65,7 @@
 
 <div class="meta">
   <span>2026-11-21</span>
-  <span>状态：调研完成，待实施</span>
+  <span>状态：CPU worker 已落地；GPU 光栅化实验待实机验收</span>
   <span>影响面：菜单文本管线 / 字形图集 / 渲染预算</span>
   <span>数据口径：4K · Release · 关 vsync</span>
 </div>
@@ -149,7 +149,7 @@
   <tr><td>图集版本变化</td><td>换字体/语言/<code>Clear()</code> → <code>GlyphAtlasRevision</code> 变</td><td>低频但整池重建</td></tr>
 </table>
 
-<p>按帧过期的寿命：160 Hz 是 3.75 s、600 Hz 是 1 s、1000 Hz 是 0.6 s——正好和「追求高帧率」互相打架。容量 4096 条（<code>QmUiPerf.h:9</code>）本身够用，不应再用帧数过期。</p>
+<p>按帧过期的寿命：160 Hz 是 3.75 s、600 Hz 是 1 s、1000 Hz 是 0.6 s——正好和「追求高帧率」互相打架。现行策略已改为 24 小时墙钟过期、每秒最多修剪一次，容量 8192 条（<code>QmUiPerf.h</code>）；不能用帧数过期。</p>
 
 <h3>2.3 缓存淘汰</h3>
 
@@ -181,6 +181,26 @@
 </table>
 
 <p><code>transition=1</code> 的帧只有 1.73 ms p50 / 2.52 max，<strong>切换动画本身不是尖峰源</strong>。真正的尖峰是「切到目标页后缺文本容器、在渲染帧里同步构建」以及「预案结果一次性应用」。</p>
+
+<p><strong>2026-11-21 18:59 复测（<code>qm_perf_2026-11-21_18-59-50.log</code>）：</strong>设置页首次打开 <code>settings_page_content</code> 5.656 ms；tee 页 <code>skin_catalogs</code> 13.428 ms；graphics 首帧 <code>frame_ms_max</code> 7.714 ms、窗口 p95 5.249 ms，同期 <code>glyph_new=0</code>。这三项都不是字形或图集扩容，分别归卡片 deck、皮肤目录 JSON 解析、页面自身构建，后续单独跟踪。同轮切页日志里 <code>settings_text_miss</code> 的 <code>plan_status</code> 多为 <code>not_built</code>，说明全量预建仍未在 loading 内完成，这是 #645 当前要修的主线。</p>
+
+<p><strong>2026-11-22 10:41 实机日志（<code>qm_perf_2026-11-22_10-41-04.log</code>）：</strong>4096² 图集在语言/贡献者页面后被真实字形集合挤满，<code>IncreaseGlyphMapSize</code> 触发 <code>atlas_dim=8192</code>，同帧 <code>text_container_create_ms=54.060</code>、<code>frame_ms=73.746</code>。这不是容器缓存淘汰，而是整表复制 + 全量 GPU 重传。现已改为按 DXGI 独显预算选择初始尺寸：≥ 2048 MiB 从 8192 起步，低显存/核显保持 4096；启动日志新增 <code>event=glyph_atlas_initial</code>，运行日志继续记录 <code>atlas_growths</code>。</p>
+
+<h3 id="redlines">3.4 不可妥协的渲染红线</h3>
+
+<div class="callout danger">
+  <ul>
+    <li><strong>可见页不得分帧渲染字形。</strong>首次显示、切页、滚动进入视口的文本必须在同一帧完成字形查找、图集分配与容器构建；不允许先画空白或占位符，下一帧再补字形。</li>
+    <li><strong>worker / GPU 只服务不可见预热。</strong>后台任务可以先排队、跨帧完成，但结果进入图集前不能阻塞当前可见帧；可见文本始终保留同步兜底。</li>
+    <li><strong>加载画面的动态背景不得低于显示器刷新率。</strong>进度条可以低频更新，鼠标响应和背景动画必须按实际刷新率呈现；加载阶段的预算是上限，不是必须吃满的配额。</li>
+    <li><strong>预算口径统一。</strong>目标帧取 <code>Graphics()-&gt;ScreenRefreshRate()</code>（回退到 <code>gfx_screen_refresh_rate</code>），已用时间取主线程 CPU 忙时；墙钟帧间隔包含 vsync 休眠，不能拿来判断“是否还有余量”。</li>
+    <li><strong>禁止用扩容掩盖重建。</strong>字形图集的初始尺寸按显存预算选择（低显存 4096；独显预算 ≥ 2048 MiB 时 8192），运行时增长只作兜底；文本容器缓存容量 8192 是容器池上限，不是图集尺寸，两者不能混为一谈。</li>
+  </ul>
+</div>
+
+<p>对应实现入口：<code>QmMenuTextLoadingBudgetMs</code> / <code>QmMenuTextBackgroundBudgetMs</code>（<code>src/game/client/QmUi/QmUiPerf.h</code>）、<code>CMenus::QmUiTargetFrameMs</code> / <code>QmUiCpuMsAverage</code>（<code>src/game/client/components/menus.cpp</code>）、可见容器同步构建与 worker 发布（<code>src/engine/client/text.cpp</code>）。<code>qm_text_raster_mode</code>：<code>0</code> 同步、<code>1</code> CPU worker 预热（默认）、<code>2</code> GPU 覆盖度实验。</p>
+
+<p>计划收集在 <code>CMenus::PrewarmSettingsTextPlanBeforeFirstFrame</code> 中于第一个 loading 帧前完成；单个页面测量可达 13–16 ms，不能放进动态背景帧。之后空闲帧只按 1 ms 预算构建已收集计划，窗口/DPI 变化使计划失效时暂停后台收集，等下一次 blocking 加载阶段重建；可见页仍同步构建。实际使用热力图写入 <code>event=text_glyph_use_heatmap</code>，同时保留 <code>text_glyph_heatmap</code> 的缺字统计。</p>
 
 <h2 id="reference">4. 参考资料与对照数据</h2>
 
@@ -306,7 +326,7 @@
 <p>优先级最高、成本最低的改动：</p>
 
 <ol>
-  <li><strong>600 帧 → 10 s 墙钟 + 容量 LRU。</strong>语言、字体、图集版本变化仍保留强制失效。</li>
+  <li><strong>600 帧 → 24 h 墙钟 + 容量 LRU。</strong>语言、字体、图集版本变化仍保留强制失效。</li>
   <li><strong>切页首屏预热。</strong>把目标页首屏条目排到预案队首，复用现有 24 字形 / 1 ms 预算；扩展 <code>PrebuildSettingsTextPlanItem</code>，不新建队列。</li>
   <li><strong>把同步 miss 也纳入预算。</strong>预热之外若仍触发 <code>RenderGlyph</code>，至少保证一帧只做 N 个，并保留空白/旧容器兜底。</li>
 </ol>

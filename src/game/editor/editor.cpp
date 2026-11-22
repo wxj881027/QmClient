@@ -30,6 +30,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/UiProgressRing.h>
 #include <game/client/components/camera.h>
 #include <game/client/gameclient.h>
 #include <game/client/lineinput.h>
@@ -459,7 +460,7 @@ void CEditor::DoMapTabs(CUIRect MapTabs)
 		if(Saving)
 		{
 			CloseResult = DoButton_Ex(&Map.m_TabCloseButtonId, "", 0, &CloseButton, BUTTONFLAG_RIGHT, "This map is being saved.", IGraphics::CORNER_R);
-			Ui()->RenderProgressSpinner(CloseButton.Center(), 4.0f);
+			ui_widget::DrawProgressRing(Ui(), CloseButton.Center(), CloseButton.h * 0.25f);
 		}
 		else
 		{
@@ -5166,7 +5167,7 @@ void CEditor::RenderSavingIndicator(CUIRect View)
 	View.VSplitRight(TextRender()->TextWidth(FontSize, pText) + 2.0f, &Spinner, &Label);
 	Spinner.VSplitRight(Spinner.h, nullptr, &Spinner);
 	Ui()->DoLabel(&Label, pText, FontSize, TEXTALIGN_MR);
-	Ui()->RenderProgressSpinner(Spinner.Center(), 8.0f);
+	ui_widget::DrawProgressRing(Ui(), Spinner.Center(), Spinner.h * 0.5f);
 }
 
 void CEditor::FreeDynamicPopupMenus()

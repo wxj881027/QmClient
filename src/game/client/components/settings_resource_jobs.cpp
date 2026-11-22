@@ -201,16 +201,10 @@ bool SettingsAssetListJobGenerationMatches(int JobGeneration, int CurrentGenerat
 
 bool SettingsSkinListShouldPublishMergedList(size_t Cursor, size_t Total)
 {
-	return Total == 0 || Cursor >= Total;
-}
-
-bool SettingsSkinListShouldReplacePublishedEntries(int PublishedEntries, int PendingEntries, bool DirectoryScanPending, bool MergeComplete)
-{
-	if(!MergeComplete)
-		return false;
-	if(DirectoryScanPending && PendingEntries <= PublishedEntries)
-		return false;
-	return true;
+	// 首屏只需要第一页加一行预取即可发布；后续条目按计划顺序原位填充，
+	// 不再等待 7k 条全部物化后才让 UI 看到任何皮肤。
+	const size_t FirstPage = (size_t)SettingsSkinListFirstPageEntryCount(SETTINGS_SKIN_LIST_MAX_COLUMNS);
+	return Total == 0 || Cursor >= std::min(Total, FirstPage);
 }
 
 bool SettingsSkinListSkeletonReady(const SSkinListPlanState &State)
@@ -235,16 +229,6 @@ bool SettingsSkinListShouldLogAllVisibleReady(bool VisibleSettled, bool AlreadyL
 	return VisibleSettled && !AlreadyLogged && VisibleRows > 0;
 }
 
-bool SettingsSkinListHasPendingMergeWork(bool HasPendingPlan, size_t PendingNames, size_t PendingEntries, size_t Cursor)
-{
-	if(!HasPendingPlan)
-		return false;
-	return PendingNames == 0 ||
-	       Cursor < PendingNames ||
-	       PendingEntries < PendingNames ||
-	       (Cursor >= PendingNames && PendingEntries >= PendingNames);
-}
-
 int SettingsSkinListFirstPageWarmupEntries(float ListHeight, float RowHeight, int ItemsPerRow, int ExtraRows)
 {
 	if(ListHeight <= 0.0f || RowHeight <= 0.0f || ItemsPerRow <= 0)
@@ -255,19 +239,24 @@ int SettingsSkinListFirstPageWarmupEntries(float ListHeight, float RowHeight, in
 	return WarmRows * ItemsPerRow;
 }
 
+int SettingsSkinListFirstPageEntryCount(int ItemsPerRow)
+{
+	const int Columns = std::clamp(ItemsPerRow, 1, SETTINGS_SKIN_LIST_MAX_COLUMNS);
+	return (SETTINGS_SKIN_LIST_VISIBLE_ROWS + SETTINGS_SKIN_LIST_PREFETCH_ROWS) * Columns;
+}
+
+int SettingsTeeSkinListFirstPageWarmupEntries(float ListHeight, int ItemsPerRow)
+{
+	if(ListHeight <= 0.0f)
+		return 0;
+	return SettingsSkinListFirstPageEntryCount(ItemsPerRow);
+}
+
 int SettingsTeeSkinListFirstPageWarmupEntries(float ListHeight)
 {
-	constexpr float TeeSkinListRowHeight = 50.0f;
-	constexpr int TeeSkinListItemsPerRow = 4;
-	constexpr int TeeSkinListWarmupExtraRows = 1;
-	constexpr int TeeSkinListWarmupMinimumEntries = 24;
-	return maximum(
-		TeeSkinListWarmupMinimumEntries,
-		SettingsSkinListFirstPageWarmupEntries(
-			ListHeight,
-			TeeSkinListRowHeight,
-			TeeSkinListItemsPerRow,
-			TeeSkinListWarmupExtraRows));
+	// menus.cpp 的启动预热只有可用高度，没有列表宽度；按最大 6 列预热，
+	// 窄窗口多出来的只是预取，不会改变列表尺寸。UI 侧用双参版本传实际列数。
+	return SettingsTeeSkinListFirstPageWarmupEntries(ListHeight, SETTINGS_SKIN_LIST_MAX_COLUMNS);
 }
 
 int SettingsLoadingPrewarmMaxAttempts(int BaseWarmupSteps, int TeeFirstPageEntries)
@@ -326,6 +315,13 @@ void SettingsLoadingPrewarmAdvance(SSettingsLoadingPrewarmState &State, int NewT
 	State.m_LastMissingTextPlanItems = MissingTextPlanItems;
 	State.m_LastMissingTextPlanCollectionUnits = MissingTextPlanCollectionUnits;
 	++State.m_CompletedSteps;
+}
+
+int SettingsTextPrewarmTokenBudget(bool BlockingLoading, int RequestedTokens, int AdaptiveTokens)
+{
+	// loading 已经有显式墙钟预算，不能用运行时“每帧 1 token”的保守窗口；
+	// 请求值为 0 时保持 0，避免把调用方的“本步不做事”解释成强制 1 条。
+	return maximum(0, BlockingLoading ? RequestedTokens : AdaptiveTokens);
 }
 
 int SettingsSkinListPrefetchCount(int FirstVisibleIndex, int LastVisibleIndex, int ItemsPerRow, int PrefetchRows, int TotalEntries)

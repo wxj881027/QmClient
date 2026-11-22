@@ -563,13 +563,6 @@ inline float QmFitSingleLineFontSize(float PreferredSize, float MinimumSize, flo
 	return std::clamp(PreferredSize * AvailableWidth / TextWidth, MinimumSize, PreferredSize);
 }
 
-struct SProgressSpinnerProperties
-{
-	float m_Progress = -1.0f; // between 0.0f and 1.0f, or negative for indeterminate progress
-	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-	int m_Segments = 64;
-};
-
 /**
  * Type safe UI ID for popup menus.
  */
@@ -934,7 +927,6 @@ private:
 	const void *m_pLastActiveScrollbar = nullptr;
 	int m_ScrollbarValue = 0;
 	float m_ActiveScrollbarOffset = 0.0f;
-	float m_ProgressSpinnerOffset = 0.0f;
 	class CValueSelectorState
 	{
 	public:
@@ -1550,9 +1542,6 @@ public:
 		CCachedText MillisText;
 		RenderTime(TimeRect, FontSize, Seconds, NotFinished, Millis, TrueMilliseconds, SecondsText, MillisText, Color);
 	}
-
-	// progress spinner
-	void RenderProgressSpinner(vec2 Center, float OuterRadius, const SProgressSpinnerProperties &Props = {}) const;
 
 	// virtual back button
 	void DoBackButton();

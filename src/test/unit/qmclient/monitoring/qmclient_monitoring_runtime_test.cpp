@@ -73,6 +73,7 @@ TEST(QmMonitoringRuntimeContract, MenuTextCacheTrimRunsOnWallClockCadence)
 TEST(QmMonitoringRuntimeContract, MenuTextBackgroundBudgetOnlyUsesDisplayHeadroom)
 {
 	const float Target60Hz = QmMenuTargetFrameMs(60);
+	const float Target160Hz = QmMenuTargetFrameMs(160);
 	const float Target360Hz = QmMenuTargetFrameMs(360);
 	EXPECT_FLOAT_EQ(Target60Hz, 1000.0f / 60.0f);
 	EXPECT_FLOAT_EQ(Target360Hz, 1000.0f / 360.0f);
@@ -82,9 +83,18 @@ TEST(QmMonitoringRuntimeContract, MenuTextBackgroundBudgetOnlyUsesDisplayHeadroo
 	EXPECT_GT(QmMenuTextBackgroundBudgetMs(Target360Hz, 1.4f, 1.8f), 0.0f);
 	EXPECT_LT(QmMenuTextBackgroundBudgetMs(Target360Hz, 1.4f, 1.8f), 1.0f);
 	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target360Hz, 2.8f, 2.9f), 0.0f);
+	// 160Hz：墙钟帧间隔约 7ms，但主循环只忙 1.1ms。后台预算必须看 CPU 忙时，
+	// 否则永远算成 0，预建计划根本跑不起来。
+	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target160Hz, 1.1f, 1.4f), 1.0f);
+	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target160Hz, 5.9f, 6.1f), 0.0f);
 	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(0.0f, 0.0f, 0.0f), 0.0f);
-	// 加载画面允许阻塞，但运行时后台预热只能吃显示器刷新周期的剩余时间。
-	EXPECT_FLOAT_EQ(QmMenuTextWarmupBudgetMs(true, Target360Hz, 2.8f, 2.9f), QM_MENU_TEXT_LOADING_PREWARM_STEP_MS);
+	// 加载画面允许比后台预热吃得更满，但单步仍不能超过显示器剩余时间：
+	// 60Hz 下 8ms 单步上限仍可吃满；160Hz 下要收紧；360Hz 高负载时直接让出。
+	EXPECT_FLOAT_EQ(QmMenuTextLoadingBudgetMs(Target60Hz, 2.0f, 2.4f), QM_MENU_TEXT_LOADING_PREWARM_STEP_MS);
+	EXPECT_NEAR(QmMenuTextLoadingBudgetMs(Target160Hz, 1.1f, 1.4f), 3.85f, 0.01f);
+	EXPECT_NEAR(QmMenuTextLoadingBudgetMs(Target360Hz, 0.5f, 0.6f), Target360Hz - 0.6f - Target360Hz * 0.20f, 0.01f);
+	EXPECT_FLOAT_EQ(QmMenuTextLoadingBudgetMs(Target360Hz, 2.8f, 2.9f), 0.0f);
+	EXPECT_FLOAT_EQ(QmMenuTextWarmupBudgetMs(true, Target360Hz, 2.8f, 2.9f), 0.0f);
 	EXPECT_FLOAT_EQ(QmMenuTextWarmupBudgetMs(false, Target360Hz, 2.8f, 2.9f), 0.0f);
 }
 

@@ -162,8 +162,9 @@ namespace
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
 			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
-			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient/lyrics", IStorage::TYPE_SAVE));
-			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient/lyrics/netease", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient/content", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient/content/lyrics", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient/content/lyrics/netease", IStorage::TYPE_SAVE));
 			m_Source.m_SongId = 42;
 			m_Source.m_Generation = 1;
 			m_Source.m_ProducerPid = 100;

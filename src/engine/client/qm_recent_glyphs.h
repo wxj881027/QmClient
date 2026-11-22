@@ -43,6 +43,7 @@ namespace QmRecentGlyphs
 		}
 		const std::vector<std::pair<int, int>> &Items() const { return m_vItems; }
 		size_t Cursor() const { return m_Cursor; }
+		size_t Remaining() const { return m_Cursor < m_vItems.size() ? m_vItems.size() - m_Cursor : 0; }
 		bool Warming() const { return !m_Recording; }
 		void Swap(CCollection &Other) noexcept
 		{

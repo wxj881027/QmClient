@@ -17,6 +17,17 @@ inline constexpr int64_t QM_MENU_TEXT_CACHE_MAX_AGE_NS = 24LL * 60 * 60 * 1000 *
 inline constexpr int64_t QM_MENU_TEXT_CACHE_TRIM_INTERVAL_NS = 1000 * 1000 * 1000LL;
 inline constexpr size_t QM_ASSET_METADATA_CACHE_CAPACITY = 512;
 inline constexpr size_t QM_LANGUAGE_ROW_CACHE_CAPACITY = 128;
+// 计划收集单元是不可切分的整页测量；运行时/加载阶段单步最多 4 个，
+// 给字形预热、进度条和输入留出余量。启动前阻塞阶段仍由墙钟截止保护。
+inline constexpr int QM_MENU_TEXT_PLAN_UNITS_PER_STEP = 4;
+// 静态字形需求表完成后，最近 miss 热力图每个后台步骤最多补 8 个字形。
+inline constexpr int QM_MENU_TEXT_DYNAMIC_GLYPH_PREWARM_PER_STEP = 8;
+inline constexpr size_t QM_SETTINGS_GLYPH_DEMAND_BATCH_GLYPHS = 64;
+
+constexpr int QmMenuTextPlanCollectionUnitsForStep(int RequestedBudget)
+{
+	return std::clamp(RequestedBudget, 0, QM_MENU_TEXT_PLAN_UNITS_PER_STEP);
+}
 
 // 菜单文本池按单调时钟过期，不能用 UI 帧或主循环 PerfFrame：帧率越高缓存寿命越短，
 // 异步渲染下循环帧又会在两次可见帧之间跳号。
@@ -31,7 +42,8 @@ constexpr bool QmMenuTextCacheTrimDue(int64_t Now, int64_t LastTrim)
 	return LastTrim <= 0 || (Now >= LastTrim && Now - LastTrim >= QM_MENU_TEXT_CACHE_TRIM_INTERVAL_NS);
 }
 
-// 后台预热只吃本帧相对显示器刷新周期的剩余时间；没有余量就完全不跑。
+// 后台预热只吃主线程相对显示器刷新周期的剩余 CPU 时间；没有余量就完全不跑。
+// FrameMsAverage/P95 传主循环 CPU 忙时，不能传墙钟帧间隔：vsync 休眠不是已占用预算。
 constexpr float QmMenuTextBackgroundBudgetMs(float TargetFrameMs, float FrameMsAverage, float FrameMsP95)
 {
 	if(!(TargetFrameMs > 0.0f))
@@ -47,12 +59,27 @@ constexpr float QmMenuTextBackgroundBudgetMs(float TargetFrameMs, float FrameMsA
 	return std::min(1.0f, HeadroomMs);
 }
 
-// 加载画面是可阻塞阶段，不受显示器帧率余量限制；仍按步限时，避免加载界面自身失去响应。
+// 加载画面允许比后台预热吃得更满，但仍必须给动态背景留出一个显示刷新周期。
+// 8 ms 只是单步上限，160 Hz 下实际预算会收紧到约 5 ms，不能把背景拖到 120 Hz。
 inline constexpr float QM_MENU_TEXT_LOADING_PREWARM_STEP_MS = 8.0f;
+
+constexpr float QmMenuTextLoadingBudgetMs(float TargetFrameMs, float FrameMsAverage, float FrameMsP95)
+{
+	if(!(TargetFrameMs > 0.0f))
+		return 0.0f;
+	const float ObservedFrameMs = std::max(0.0f, std::max(FrameMsAverage, FrameMsP95));
+	// 加载阶段也给渲染、输入和进度条留 20%（最多 1 ms），否则单步会把
+	// 一帧直接顶到刷新周期之外。主线程忙时预算自然收缩到 0。
+	const float ReserveMs = std::min(1.0f, TargetFrameMs * 0.20f);
+	const float HeadroomMs = TargetFrameMs - ObservedFrameMs - ReserveMs;
+	if(HeadroomMs < 0.05f)
+		return 0.0f;
+	return std::min(QM_MENU_TEXT_LOADING_PREWARM_STEP_MS, HeadroomMs);
+}
 
 constexpr float QmMenuTextWarmupBudgetMs(bool BlockingLoading, float TargetFrameMs, float FrameMsAverage, float FrameMsP95)
 {
-	return BlockingLoading ? QM_MENU_TEXT_LOADING_PREWARM_STEP_MS : QmMenuTextBackgroundBudgetMs(TargetFrameMs, FrameMsAverage, FrameMsP95);
+	return BlockingLoading ? QmMenuTextLoadingBudgetMs(TargetFrameMs, FrameMsAverage, FrameMsP95) : QmMenuTextBackgroundBudgetMs(TargetFrameMs, FrameMsAverage, FrameMsP95);
 }
 
 constexpr float QmMenuTargetFrameMs(int RefreshRateHz)

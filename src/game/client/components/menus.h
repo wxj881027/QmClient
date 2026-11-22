@@ -3038,13 +3038,16 @@ public:
 	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect OuterScreen, CUIRect SettingsMainView, std::vector<SMenuTextPlanItem> &vItems);
 	bool AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOperationOverride, int64_t Deadline);
 	bool PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget);
+	void BuildSettingsMenuTextGlyphDemand();
 	void SyncMenuTextPoolIdentity(uint64_t CurrentFrame);
 	int CountMissingSettingsMenuTextPlanItems() const;
 	bool SettingsMenuTextPrebuildReady(const char *pOperationOverride) const;
 	void PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride = nullptr, const char *pOperationOverride = nullptr);
 	int PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride = nullptr);
 	void PrebuildIngameEscTextPoolBeforeOpen(int Budget);
+	void PrewarmSettingsTextPlanBeforeFirstFrame();
 	void LogSettingsAdaptiveBudget(const char *pSource, const SSettingsAdaptiveBudgetInput &Input, const SSettingsAdaptiveBudgetOutput &Output) const;
+	void RecordQmTextPrewarmSample(int64_t StartNs, double BudgetMs, int Built);
 	void PrewarmSettingsTextPoolForLoading(int Budget)
 	{
 		// 加载画面允许阻塞；不能套用游戏内“只吃显示器刷新周期剩余时间”的后台预算，
@@ -3244,6 +3247,11 @@ private:
 	void RequestSettingsCardFocus(const char *pStableId);
 	void PrepareSettingsAdaptiveBudgetInput(SSettingsAdaptiveBudgetInput &Input);
 	CUIRect MenuTextOuterScreen();
+	// 所有 UI 自适应预算共用同一口径：目标帧取当前显示器刷新率，
+	// 已用时间取主线程 CPU 忙时，不能把 vsync 休眠算成预算消耗。
+	float QmUiTargetFrameMs();
+	float QmUiCpuMsAverage();
+	float QmUiCpuMsP95();
 	SSettingsAdaptiveBudgetOutput BeginSettingsUiFrameScheduler(EFrameSchedulerConsumer Consumer, const char *pSource, SSettingsAdaptiveBudgetInput Input);
 	bool MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor);
 	void QueueMenuTextContainerBuild(EMenuTextScope Scope, CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor);
@@ -3281,6 +3289,11 @@ private:
 	bool m_MenuTextBlockingPrewarm = false;
 	uint64_t m_MenuTextBackgroundBudgetFrame = 0;
 	int64_t m_MenuTextBackgroundBudgetDeadline = 0;
+	int64_t m_QmTextPrewarmWindowStartNs = 0;
+	int m_QmTextPrewarmWindowFrames = 0;
+	double m_QmTextPrewarmWindowBudgetMs = 0.0;
+	double m_QmTextPrewarmWindowUsedMs = 0.0;
+	int m_QmTextPrewarmWindowBuilt = 0;
 	CUIElement m_MenuTextFallbackElement;
 	uint64_t m_MenuTextPoolGeneration = 1;
 	uint64_t m_MenuTextPoolLanguageHash = 0;
@@ -3325,8 +3338,16 @@ private:
 	std::unordered_set<std::string, SMenuTextKeyHash, SMenuTextKeyEqual> m_SettingsMenuTextPlannedKeys;
 	size_t m_SettingsMenuTextPlanCursor = 0;
 	size_t m_SettingsMenuTextPlanCollectionCursor = 0;
+	size_t m_SettingsMenuTextVisiblePlanItemCount = 0;
 	// 字形预热：每轮共用数量和时间预算，构建容器前完成当前条目的预热。
 	CSettingsTextPrewarm m_MenuTextGlyphPrewarm;
+	// 全部设置计划文本的静态字形需求表；后台只按可见页/频次批次推进。
+	CSettingsGlyphDemandTable m_SettingsMenuTextGlyphDemand;
+	CSettingsTextPrewarm m_SettingsMenuTextGlyphStaticPrewarm;
+	size_t m_SettingsMenuTextGlyphBatchCursor = 0;
+	bool m_SettingsMenuTextGlyphDemandPrepared = false;
+	uint64_t m_SettingsMenuTextGlyphDemandGeneration = 0;
+	std::array<int, 3> m_SettingsMenuTextGlyphDemandVisibleContext{{-1, -1, -1}};
 	// 设置页空闲预热复用缓冲：已就绪后仍会每帧检查，不能每帧重新分配向量。
 	std::vector<int> m_SettingsPrewarmCountryCodes;
 	std::vector<int> m_SettingsPrewarmFlagIndices;
@@ -3428,6 +3449,7 @@ private:
 	void ConfigureSplitCachedStaticLayer(SSettingsSection &Section, const char *pTitle, std::function<float(CUIRect &)> MeasureSection, std::function<float(CUIRect &)> RenderInteractiveSection, float TopMargin);
 	void BuildTClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView, int Tab);
 	void BuildQmClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView, int Tab);
+	void BuildContributorsSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView, int Tab);
 	float LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render);
 	float LayoutTClientAutoReplyCacheSection(CUIRect &CurrentColumn, bool Render);
 	float LayoutTClientPetCacheSection(CUIRect &CurrentColumn, bool Render);

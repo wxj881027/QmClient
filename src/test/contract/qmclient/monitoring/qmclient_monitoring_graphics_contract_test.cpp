@@ -52,7 +52,9 @@ TEST(QmMonitoringHelpers, RenderLoopKeepsConfiguredAsyncPolicyAndDisablesPerfHot
 	const size_t AsyncRenderPolicy = RunBody.find("bool AsyncRenderOld = g_Config.m_GfxAsyncRenderOld;");
 	const size_t GfxRefreshRate = RunBody.find("int GfxRefreshRate = g_Config.m_GfxRefreshRate;", AsyncRenderPolicy);
 	const size_t PerfPolicy = RunBody.find("const bool PerfEnabled = QmPerfEnabled();");
-	const size_t OptionalLoopTimer = RunBody.find("std::optional<CPerfTimer> LoopTimer;");
+	const size_t LoopTimer = RunBody.find("CPerfTimer LoopTimer;");
+	const size_t BusyTime = RunBody.find("const double BusyMs = maximum(0.0, LoopMs - MainThreadSwapMs);", LoopTimer);
+	const size_t MainThreadFrameTime = RunBody.find("m_MainThreadFrameTime = (float)(BusyMs / 1000.0);", BusyTime);
 	ASSERT_NE(AsyncRenderPolicy, std::string::npos);
 	ASSERT_NE(GfxRefreshRate, std::string::npos);
 	const std::string AsyncRenderPolicyBlock = RunBody.substr(AsyncRenderPolicy, GfxRefreshRate - AsyncRenderPolicy);
@@ -60,9 +62,12 @@ TEST(QmMonitoringHelpers, RenderLoopKeepsConfiguredAsyncPolicyAndDisablesPerfHot
 	EXPECT_EQ(AsyncRenderPolicyBlock.find("#if defined(CONF_PLATFORM_MACOS)"), std::string::npos);
 	EXPECT_EQ(AsyncRenderPolicyBlock.find("AsyncRenderOld = false;"), std::string::npos);
 	EXPECT_NE(PerfPolicy, std::string::npos);
-	EXPECT_NE(OptionalLoopTimer, std::string::npos);
-	EXPECT_LT(PerfPolicy, OptionalLoopTimer);
-	EXPECT_EQ(RunBody.find("CPerfTimer LoopTimer;"), std::string::npos);
+	EXPECT_NE(LoopTimer, std::string::npos);
+	EXPECT_LT(PerfPolicy, LoopTimer);
+	EXPECT_EQ(RunBody.find("std::optional<CPerfTimer> LoopTimer;"), std::string::npos);
+	// 主线程忙时始终采样并扣除 Swap 中等待显示器的墙钟时间；诊断日志仍只在 perf 开关下输出。
+	EXPECT_NE(BusyTime, std::string::npos);
+	EXPECT_NE(MainThreadFrameTime, std::string::npos);
 	EXPECT_NE(RunBody.find("int64_t AdditionalTime = GfxRefreshRate ? ((Now - LastRenderTime) - RenderFrameTicks) : 0;"), std::string::npos);
 	EXPECT_NE(RunBody.find("AdditionalTime > (time_freq() / 60)"), std::string::npos);
 }

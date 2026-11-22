@@ -246,6 +246,7 @@ namespace
 		std::unique_ptr<IStorage> m_pRecordingStorage;
 		std::unique_ptr<IConsole> m_pRecordingConsole;
 		std::unique_ptr<IKernel> m_pRecordingEngineKernel;
+		CQmRejectingTestEngine m_RecordingEngine;
 		std::unique_ptr<IEngineTextRender> m_pRecordingText;
 		bool m_RecordingTextInitialized = false;
 		CButtonContainer m_Button;
@@ -291,6 +292,7 @@ namespace
 			m_pRecordingEngineKernel->RegisterInterface<IConsole>(m_pRecordingConsole.get(), false);
 			m_pRecordingEngineKernel->RegisterInterface<IStorage>(m_pRecordingStorage.get(), false);
 			m_pRecordingEngineKernel->RegisterInterface<IGraphics>(&m_Recording, false);
+			m_pRecordingEngineKernel->RegisterInterface<IEngine>(&m_RecordingEngine, false);
 			m_pRecordingText.reset(CreateEngineTextRender());
 			m_pRecordingEngineKernel->RegisterInterface<IEngineTextRender>(m_pRecordingText.get(), false);
 			ASSERT_TRUE(m_pRecordingText->Init());

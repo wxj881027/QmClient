@@ -30,6 +30,7 @@
 #include <game/client/QmUi/QmConsoleUi.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiProgressRing.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/console_scroll.h>
 #include <game/client/components/qmclient/console_slide.h>
@@ -3095,10 +3096,8 @@ void CGameConsole::OnRender()
 						str_append(aLoading, aPercentage);
 					}
 					const float LoadingX = Screen.w / 4.0f + HeaderSlide;
-					SProgressSpinnerProperties ProgressProps;
-					ProgressProps.m_Progress = Percentage;
-					ProgressProps.m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, HeaderPresence);
-					Ui()->RenderProgressSpinner(vec2(LoadingX + FontSize / 2.0f, SecondRowY + HeaderLineHeight / 2.0f), FontSize / 2.0f, ProgressProps);
+					ui_widget::DrawProgressRing(Ui(), vec2(LoadingX + FontSize / 2.0f, SecondRowY + HeaderLineHeight / 2.0f), FontSize / 2.0f,
+						{.m_Progress = Percentage, .m_Color = ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(HeaderPresence)});
 					const float LoadingRight = ShowClientVersion ? Screen.w - ToolbarRightMargin - ClientVersionWidth - 20.0f : Screen.w - 10.0f;
 					const CUIRect LoadingRect = {LoadingX + FontSize + 2.0f, SecondRowY, maximum(0.0f, LoadingRight - LoadingX - FontSize - 12.0f), HeaderLineHeight};
 					SLabelProperties LoadingProps;

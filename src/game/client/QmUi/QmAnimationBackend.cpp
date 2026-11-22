@@ -244,6 +244,17 @@ bool CQmAnimationBackend::StartTrack(const STrackKey &Key, const SUiAnimRequest 
 	}
 
 	const bool IsSpring = Track.m_Transition.m_Driver == EUiAnimDriver::SPRING;
+	// 首次解析目标时当前值就是目标，补间没有必要再挂一帧“从目标到目标”的空轨道。
+	// 弹簧路径下面已有同一判定；补间若漏掉会污染 ActiveTrackCount，也会让只读观察
+	// 误以为页面正在播放过渡。
+	if(!IsSpring && Track.m_Transition.m_DelaySec <= 0.0f &&
+		std::abs(Track.m_Current - Track.m_Target) <= 0.0001f)
+	{
+		StoreValue(Key, Track.m_Target);
+		m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, Track.m_TrackId});
+		CompleteAwaitedTrack(Track.m_TrackId);
+		return false;
+	}
 	if(!IsSpring && Track.m_Transition.m_DurationSec <= 0.0f && Track.m_Transition.m_DelaySec <= 0.0f)
 	{
 		StoreValue(Key, Track.m_Target);

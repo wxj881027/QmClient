@@ -24,6 +24,7 @@
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiProgressRing.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
@@ -112,9 +113,9 @@ namespace
 
 	// 皮肤网格列表（皮肤格子，多列网格）的容器几何：行高、容器内边距与容器高度只在
 	// 这里定义一次，卡片测高与交给 CListBox 的矩形都从它取——内边距只加在一处会把
-	// 最后一行裁掉。可见行数固定 6 行（原来按 300 × UiScale 的固定 viewport 反算，
-	// 与行高 50 × UiScale 等价），两档内边距只让卡片变高，不减少可见行数。
-	constexpr int SETTINGS_TEE_SKIN_LIST_VISIBLE_ROWS = 6;
+	// 最后一行裁掉。可见行数固定 8 行；两档内边距只让卡片变高，不减少可见行数。
+	constexpr int SETTINGS_TEE_SKIN_LIST_VISIBLE_ROWS = 8;
+	static_assert(SETTINGS_TEE_SKIN_LIST_VISIBLE_ROWS == SETTINGS_SKIN_LIST_VISIBLE_ROWS);
 
 	struct SSettingsTeeSkinListGeometry
 	{
@@ -295,6 +296,9 @@ namespace
 
 		std::vector<CSkins::CSkinListEntry> &Resolve(CSkins &Skins, CSkins::CSkinList &Source)
 		{
+			// ALL 直接暴露计划本身的向量：条目会原位填充，缓存副本会停在旧快照。
+			if(m_Collection == ETeeSkinCollection::ALL)
+				return Source.Skins();
 			const SQmRecentTeeSkin Main = QmCurrentTeeSkin(g_Config, false);
 			const SQmRecentTeeSkin Dummy = QmCurrentTeeSkin(g_Config, true);
 			const SQmTeeSkinCollectionRequest Request{Source.Revision(), Skins.RecentSkins().Revision(), m_Collection, g_Config.m_ClSkinFilterString, Main, Dummy};
@@ -740,7 +744,7 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 			Ui()->RegisterPassiveHotItem(&s_aStatusIds[PreviewTarget], &Status);
 			if(Indicator == CSkins::CSkinContainer::EStatusIndicator::LOADING)
 			{
-				Ui()->RenderProgressSpinner(Status.Center(), 5.0f * UiScale);
+				ui_widget::DrawProgressRing(Ui(), Status.Center(), 5.0f * UiScale);
 				GameClient()->m_Tooltips.DoToolTip(&s_aStatusIds[PreviewTarget], &Status, Localize("Skin is loading."));
 			}
 			else
@@ -945,6 +949,24 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	char aBuf[128 + IO_MAX_PATH_LENGTH];
 	CSkins::CSkinList &SkinList = GameClient()->m_Skins.SkinList(QueueDummy);
 	const CSkin *pDefaultSkin = GameClient()->m_Skins.Find("default");
+	const auto RenderDefaultSkinPlaceholder = [&](const CUIRect &PreviewRect) {
+		if(pDefaultSkin == nullptr || Ui()->DrawingSuppressed())
+			return;
+		CTeeRenderInfo Info;
+		Info.Apply(pDefaultSkin);
+		Info.m_Size = 50.0f;
+		float MinX, MinY, MaxX, MaxY;
+		GetSettingsTeePreviewBounds(CAnimState::GetIdle(), Info, MinX, MinY, MaxX, MaxY);
+		Info.m_Size = SettingsSkinPreviewSize(PreviewRect.h, PreviewRect.w, 50.0f, MaxX - MinX, MaxY - MinY);
+		vec2 OffsetToMid;
+		CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &Info, OffsetToMid);
+		CUIRect TeeClip = PreviewRect;
+		TeeClip.Margin(3.0f, &TeeClip);
+		const vec2 TeeRenderPos = vec2(TeeClip.Center().x + SettingsSkinPreviewCenterOffset(MinX, MaxX) * Info.m_Size / 50.0f, TeeClip.Center().y + OffsetToMid.y);
+		Ui()->ClipEnable(&TeeClip);
+		RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, *pEmote, vec2(1.0f, 0.0f), TeeRenderPos);
+		Ui()->ClipDisable();
+	};
 	// Skin loading status
 	const auto &&RenderSkinStatus = [&](CUIRect Parent, const CSkins::CSkinContainer *pSkinContainer, const void *pStatusTooltipId) {
 		if(pSkinContainer != nullptr && pSkinContainer->Skin() != nullptr)
@@ -963,7 +985,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		Ui()->RegisterPassiveHotItem(pStatusTooltipId, &StatusIcon);
 		if(Indicator == CSkins::CSkinContainer::EStatusIndicator::LOADING)
 		{
-			Ui()->RenderProgressSpinner(StatusIcon.Center(), 5.0f);
+			ui_widget::DrawProgressRing(Ui(), StatusIcon.Center(), 5.0f);
 			GameClient()->m_Tooltips.DoToolTip(pStatusTooltipId, &StatusIcon, Localize("Skin is loading."));
 		}
 		else
@@ -1013,6 +1035,8 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	{
 		CommitSettingsTeeSkinEdits();
 		gs_TeeSkinCollection.m_Collection = static_cast<ETeeSkinCollection>(NewCollection);
+		// ALL 不经过缓存；切到收藏/最近时强制按当前已物化前缀重建一次，避免看到旧副本。
+		gs_TeeSkinCollection.m_Cache.Invalidate();
 		s_ListBox.ResetScroll();
 		m_SkinListScrollToSelected = false;
 	}
@@ -1081,29 +1105,35 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	}
 	std::vector<CSkins::CSkinListEntry> &vSkinList = gs_TeeSkinCollection.Resolve(GameClient()->m_Skins, SkinList);
 	char aSkinCount[96];
-	const bool CatalogSettled = GameClient()->m_Skins.SkinListSourceDataReady();
-	if(CatalogSettled || !vSkinList.empty())
-		str_format(aSkinCount, sizeof(aSkinCount), "%s: %d", Localize("Skin"), (int)vSkinList.size());
+	const bool AllSkinsCollection = gs_TeeSkinCollection.m_Collection == ETeeSkinCollection::ALL;
+	const bool PlanKnown = SkinList.PlanKnown();
+	const int PlannedCount = AllSkinsCollection ? SkinList.ItemCount() : (int)vSkinList.size();
+	if(PlanKnown || !vSkinList.empty())
+	{
+		if(AllSkinsCollection && !SkinList.FullIndexMerged())
+			str_format(aSkinCount, sizeof(aSkinCount), "%s: %d/%d", Localize("Skin"), SkinList.MaterializedCount(), PlannedCount);
+		else
+			str_format(aSkinCount, sizeof(aSkinCount), "%s: %d", Localize("Skin"), PlannedCount);
+	}
 	else
 		str_format(aSkinCount, sizeof(aSkinCount), "%s: %s", Localize("Skin"), Localize("Loading…"));
 	DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee_skin_list_count_label", &Toolbar.m_Count, aSkinCount, TeeMetrics.m_SmallSize, TEXTALIGN_ML);
-	const uint64_t ListRevision = gs_TeeSkinCollection.Revision();
+	const uint64_t ListRevision = AllSkinsCollection ? SkinList.Revision() : gs_TeeSkinCollection.Revision();
 	static std::vector<size_t> s_vVisibleSkinIndices;
 	s_vVisibleSkinIndices.clear();
 	if(s_vVisibleSkinIndices.capacity() < 32)
 		s_vVisibleSkinIndices.reserve(32);
 	std::vector<size_t> &vVisibleSkinIndices = s_vVisibleSkinIndices;
 	std::vector<std::string> vCurrentVisibleSkinNames;
-	const SQmPerformanceMetrics &PerfSnapshot = GameClient()->m_QmMonitoring.Snapshot().m_Performance;
 	SSettingsAdaptiveBudgetInput TeeBudgetInput;
 	TeeBudgetInput.m_FrameId = Client()->PerfFrame();
 	str_copy(TeeBudgetInput.m_aOperation, SettingsPerfActiveOperation(), sizeof(TeeBudgetInput.m_aOperation));
 	str_copy(TeeBudgetInput.m_aPage, "settings:tee", sizeof(TeeBudgetInput.m_aPage));
 	str_copy(TeeBudgetInput.m_aTab, "none", sizeof(TeeBudgetInput.m_aTab));
 	str_copy(TeeBudgetInput.m_aContext, SettingsPerfContextName(), sizeof(TeeBudgetInput.m_aContext));
-	TeeBudgetInput.m_FrameMsAverage = PerfSnapshot.m_FrameTimeMs;
-	TeeBudgetInput.m_FrameMsP95 = PerfSnapshot.m_FrameTimeP95Ms > 0.0f ? PerfSnapshot.m_FrameTimeP95Ms : PerfSnapshot.m_FrameTimeMs;
-	TeeBudgetInput.m_TargetFrameMs = 8.333f;
+	TeeBudgetInput.m_FrameMsAverage = QmUiCpuMsAverage();
+	TeeBudgetInput.m_FrameMsP95 = QmUiCpuMsP95();
+	TeeBudgetInput.m_TargetFrameMs = QmUiTargetFrameMs();
 	TeeBudgetInput.m_ScrollActive = m_SettingsScrollActive || s_SkinListScrollCooldownFrames > 0;
 	TeeBudgetInput.m_JumpScrollActive = false;
 	TeeBudgetInput.m_PostScrollRecoveryFrames = s_SkinListPostScrollRecoveryFrames;
@@ -1127,12 +1157,31 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	if(NeedSelectedIndexScan)
 	{
 		gs_TeeSettingsPageState.m_SelectedIndex = -1;
-		for(size_t i = 0; i < vSkinList.size(); ++i)
+		const size_t ScanCount = AllSkinsCollection ? (size_t)SkinList.ItemCount() : vSkinList.size();
+		for(size_t i = 0; i < ScanCount; ++i)
 		{
-			const CSkins::CSkinListEntry &SkinListEntry = vSkinList[i];
-			const auto &ColorKey = SkinListEntry.ColorKey();
-			const std::optional<SSettingsSkinListColorKey> Color = ColorKey.has_value() ? std::make_optional(SSettingsSkinListColorKey{ColorKey->m_UseCustomColor, ColorKey->m_ColorBody, ColorKey->m_ColorFeet}) : std::nullopt;
-			if(SkinListEntry.SkinContainer() != nullptr && SettingsTeeSkinEntryMatches(SkinListEntry.SkinContainer()->Name(), Color, SelectedAppearance))
+			const char *pName = nullptr;
+			std::optional<SSettingsSkinListColorKey> Color;
+			if(AllSkinsCollection)
+			{
+				const SSettingsSkinListEntry *pPlannedEntry = SkinList.PlannedEntry((int)i);
+				if(pPlannedEntry == nullptr)
+					continue;
+				pName = pPlannedEntry->m_Name.c_str();
+				if(pPlannedEntry->m_ColorKey.has_value())
+					Color = SSettingsSkinListColorKey{pPlannedEntry->m_ColorKey->m_UseCustomColor, pPlannedEntry->m_ColorKey->m_ColorBody, pPlannedEntry->m_ColorKey->m_ColorFeet};
+			}
+			else
+			{
+				const CSkins::CSkinListEntry &SkinListEntry = vSkinList[i];
+				if(SkinListEntry.SkinContainer() == nullptr)
+					continue;
+				pName = SkinListEntry.SkinContainer()->Name();
+				const auto &ColorKey = SkinListEntry.ColorKey();
+				if(ColorKey.has_value())
+					Color = SSettingsSkinListColorKey{ColorKey->m_UseCustomColor, ColorKey->m_ColorBody, ColorKey->m_ColorFeet};
+			}
+			if(SettingsTeeSkinEntryMatches(pName, Color, SelectedAppearance))
 			{
 				gs_TeeSettingsPageState.m_SelectedIndex = (int)i;
 				break;
@@ -1142,7 +1191,8 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		gs_TeeSettingsPageState.m_SelectedIndexDummy = m_Dummy ? 1 : 0;
 	}
 	const int OldSelected = gs_TeeSettingsPageState.m_SelectedIndex;
-	const bool NeedFullListSettledScan = NeedFullListSourceState && gs_TeeSettingsPageState.m_FullListSettledRevision != ListRevision;
+	const uint64_t MaterializedRevision = SkinList.MaterializedRevision();
+	const bool NeedFullListSettledScan = NeedFullListSourceState && gs_TeeSettingsPageState.m_FullListSettledRevision != MaterializedRevision;
 	if(NeedFullListSettledScan)
 	{
 		TotalSourceSettledCount = 0;
@@ -1158,7 +1208,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			if(SettingsSkinListEntrySourceSettled(SourceReady, TerminalFailure))
 				++TotalSourceSettledCount;
 		}
-		gs_TeeSettingsPageState.m_FullListSettledRevision = ListRevision;
+		gs_TeeSettingsPageState.m_FullListSettledRevision = MaterializedRevision;
 		gs_TeeSettingsPageState.m_FullListSettledCount = TotalSourceSettledCount;
 	}
 	if(PerfDebugEnabled() && (NeedSelectedIndexScan || NeedFullListSettledScan))
@@ -1170,7 +1220,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			str_format(aPayload, sizeof(aPayload),
 				"event=tee_skin_list_prescan items_total=%d items_scanned=%d selected_scan=%d ready_scan=%d dur_ms=%.3f full_list_ready=%d source_settled_count=%d",
 				(int)vSkinList.size(), PrescanItemsScanned, NeedSelectedIndexScan ? 1 : 0, NeedFullListSettledScan ? 1 : 0, PrescanDurationMs,
-				NeedFullListSourceState && !vSkinList.empty() && TotalSourceSettledCount == (int)vSkinList.size() ? 1 : 0,
+				NeedFullListSourceState && SkinList.FullIndexMerged() && !vSkinList.empty() && TotalSourceSettledCount == (int)vSkinList.size() ? 1 : 0,
 				TotalSourceSettledCount);
 			QmPerfLogPayload("perf/settings-skin-source", aPayload, Client(), "settings:tee");
 		}
@@ -1214,6 +1264,14 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		TeeSkinListItemsPerRow,
 		(int)vSkinList.size(),
 		1);
+	if(AllSkinsCollection)
+	{
+		// 先按实际列数补齐首屏 + 预取，再把当前滚动窗口里的空槽按计划名字物化；
+		// 两个范围都只改对应槽位，不移动已有条目，所以滚动条和列表 ID 不跳。
+		const int FirstPageWarmupEntries = SettingsTeeSkinListFirstPageWarmupEntries(SkinListGeometry.m_Height, TeeSkinListItemsPerRow);
+		GameClient()->m_Skins.MaterializeSkinListRange(0, minimum(SkinList.ItemCount(), FirstPageWarmupEntries), false);
+		GameClient()->m_Skins.MaterializeSkinListRange(VisibleRange.m_FirstItem, VisibleRange.m_EndItem, false);
+	}
 	int RowsIterated = 0;
 	int RowsRendered = 0;
 	int DoubleClickIndex = -1;
@@ -1259,40 +1317,34 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		s_ListBox.SkipItems(VisibleRange.m_FirstItem);
 	for(size_t i = (size_t)VisibleRange.m_FirstItem; i < (size_t)VisibleRange.m_EndItem; ++i)
 	{
-		CSkins::CSkinListEntry &SkinListEntry = vSkinList[i];
 		const bool RowStart = s_ListBox.ItemIndex() % s_ListBox.ItemsPerRow() == 0;
 		if(RowStart)
 			++RowsIterated;
 
-		const CSkins::CSkinContainer *pSkinContainer = vSkinList[i].SkinContainer();
-		if(pSkinContainer == nullptr)
+		const SSettingsSkinListEntry *pPlannedEntry = AllSkinsCollection ? SkinList.PlannedEntry((int)i) : nullptr;
+		CSkins::CSkinListEntry &SkinListEntry = vSkinList[i];
+		const CSkins::CSkinContainer *pSkinContainer = SkinListEntry.SkinContainer();
+		const char *pRowName = pPlannedEntry != nullptr ? pPlannedEntry->m_Name.c_str() : (pSkinContainer != nullptr ? pSkinContainer->Name() : nullptr);
+		if(pRowName == nullptr)
 		{
 			s_ListBox.SkipItems(1);
 			continue;
 		}
 
-		const auto State = pSkinContainer->State();
-		const auto &EntryColorKey = SkinListEntry.ColorKey();
-		const bool EntryUseCustomColor = EntryColorKey.has_value() ? EntryColorKey->m_UseCustomColor : *pUseCustomColor != 0;
-		const int EntryColorBody = EntryColorKey.has_value() ? EntryColorKey->m_ColorBody : (int)*pColorBody;
-		const int EntryColorFeet = EntryColorKey.has_value() ? EntryColorKey->m_ColorFeet : (int)*pColorFeet;
-		const bool SourceReady = pSkinContainer->Skin() != nullptr;
-		const bool TerminalFailure = State == CSkins::CSkinContainer::EState::ERROR || State == CSkins::CSkinContainer::EState::NOT_FOUND;
-		const bool EntryVisualReady = SettingsSkinListEntryVisualReady(SourceReady, TerminalFailure, false);
-		const bool EntrySourceSettled = SettingsSkinListEntrySourceSettled(SourceReady, TerminalFailure);
-		SResourcePreviewState TeeResourcePreviewState;
-		TeeResourcePreviewState.m_TextureReady = EntryVisualReady;
-		TeeResourcePreviewState.m_Failed = TerminalFailure;
-		const ESettingsResourcePreviewDrawResult TeePreviewDrawResult = SettingsResourcePreviewDrawResult(TeeResourcePreviewState);
-
-		const std::optional<SSettingsSkinListColorKey> RowColor = EntryColorKey.has_value() ? std::make_optional(SSettingsSkinListColorKey{EntryColorKey->m_UseCustomColor, EntryColorKey->m_ColorBody, EntryColorKey->m_ColorFeet}) : std::nullopt;
-		CSettingsTeeSkinListState::SIds &RowIds = gs_TeeSkinListState.Resolve(pSkinContainer->Name(), RowColor);
+		std::optional<SSettingsSkinListColorKey> RowColor;
+		if(pPlannedEntry != nullptr && pPlannedEntry->m_ColorKey.has_value())
+			RowColor = SSettingsSkinListColorKey{pPlannedEntry->m_ColorKey->m_UseCustomColor, pPlannedEntry->m_ColorKey->m_ColorBody, pPlannedEntry->m_ColorKey->m_ColorFeet};
+		else if(pSkinContainer != nullptr)
+		{
+			const auto &EntryColorKey = SkinListEntry.ColorKey();
+			if(EntryColorKey.has_value())
+				RowColor = SSettingsSkinListColorKey{EntryColorKey->m_UseCustomColor, EntryColorKey->m_ColorBody, EntryColorKey->m_ColorFeet};
+		}
+		CSettingsTeeSkinListState::SIds &RowIds = gs_TeeSkinListState.Resolve(pRowName, RowColor);
 		const bool ItemActivatedBefore = s_ListBox.WasItemActivated();
 		const CListboxItem Item = s_ListBox.DoNextItem(&RowIds.m_ListItem, OldSelected >= 0 && (size_t)OldSelected == i);
 		if(!Item.m_Visible)
-		{
 			continue;
-		}
 		if(!ItemActivatedBefore && s_ListBox.WasItemActivated() && Ui()->LastMouseButton(0) && !Ui()->MouseButton(0))
 		{
 			DoubleClickIndex = (int)i;
@@ -1311,7 +1363,57 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 
 		vVisibleSkinIndices.push_back(i);
 		if(CSettingsSkinLoadViewport::RowVisible(Ui()->MeasurementOnly(), Item.m_Rect, Ui()->IsClipped() ? Ui()->ClipArea() : nullptr))
-			vCurrentVisibleSkinNames.emplace_back(pSkinContainer->Name());
+			vCurrentVisibleSkinNames.emplace_back(pRowName);
+
+		// 皮肤格是列表卡片的「左右分栏」形态：左侧 60 宽 tee 预览、右侧名称与动作图标。
+		// 几何由 qm_list_card 统一切分（与资源卡、工坊预设卡同一条路径）。
+		qm_list_card::SMetrics SkinCardFrame;
+		SkinCardFrame.m_UiScale = 1.0f;
+		SkinCardFrame.m_Padding = 0.0f;
+		SkinCardFrame.m_Radius = 0.0f;
+		qm_list_card::SOptions SkinCardOptions;
+		SkinCardOptions.m_Axis = qm_list_card::EAxis::ROW;
+		SkinCardOptions.m_LeadingWidth = 60.0f;
+		SkinCardOptions.m_RowGap = 0.0f;
+		const qm_list_card::SLayout SkinCardLayout = qm_list_card::ResolveLayout(Item.m_Rect, SkinCardFrame.Scaled(), SkinCardOptions);
+		Button = SkinCardLayout.m_Leading;
+		Label = SkinCardLayout.m_Body;
+
+		if(pSkinContainer == nullptr)
+		{
+			// 索引尚未物化时仍保留固定格子与滚动范围，预览位显示默认 Tee。
+			++TeePreviewTelemetry.m_PlaceholderCount;
+			++VisibleNonTerminalWaitingCount;
+			RenderDefaultSkinPlaceholder(Button);
+			CUIRect LoadingIndicator{Button.x + 3.0f, Button.y + 3.0f, 10.0f, 10.0f};
+			ui_widget::DrawProgressRing(Ui(), LoadingIndicator.Center(), LoadingIndicator.h * 0.5f);
+			SLabelProperties Props;
+			Props.m_MaxWidth = maximum(0.0f, Label.w - 5.0f);
+			Props.m_DisallowNewline = true;
+			Props.m_EllipsisAtEnd = true;
+			Props.m_MinimumFontSize = BodySize * 0.8f;
+			Props.m_FontSizeStep = 0.5f;
+			if(pPlannedEntry != nullptr && pPlannedEntry->m_NameMatchStart >= 0 && pPlannedEntry->m_NameMatchLength > 0)
+				Props.m_vColorSplits.emplace_back(pPlannedEntry->m_NameMatchStart, pPlannedEntry->m_NameMatchLength, ui_token::color::SEARCH_MATCH_ON_DARK);
+			TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
+			Ui()->DoLabel(&Label, pRowName, BodySize, TEXTALIGN_ML, Props);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+			continue;
+		}
+
+		const auto State = pSkinContainer->State();
+		const auto &EntryColorKey = SkinListEntry.ColorKey();
+		const bool EntryUseCustomColor = EntryColorKey.has_value() ? EntryColorKey->m_UseCustomColor : *pUseCustomColor != 0;
+		const int EntryColorBody = EntryColorKey.has_value() ? EntryColorKey->m_ColorBody : (int)*pColorBody;
+		const int EntryColorFeet = EntryColorKey.has_value() ? EntryColorKey->m_ColorFeet : (int)*pColorFeet;
+		const bool SourceReady = pSkinContainer->Skin() != nullptr;
+		const bool TerminalFailure = State == CSkins::CSkinContainer::EState::ERROR || State == CSkins::CSkinContainer::EState::NOT_FOUND;
+		const bool EntryVisualReady = SettingsSkinListEntryVisualReady(SourceReady, TerminalFailure, false);
+		const bool EntrySourceSettled = SettingsSkinListEntrySourceSettled(SourceReady, TerminalFailure);
+		SResourcePreviewState TeeResourcePreviewState;
+		TeeResourcePreviewState.m_TextureReady = EntryVisualReady;
+		TeeResourcePreviewState.m_Failed = TerminalFailure;
+		const ESettingsResourcePreviewDrawResult TeePreviewDrawResult = SettingsResourcePreviewDrawResult(TeeResourcePreviewState);
 		const bool EntryNonTerminalWaiting = !SourceReady &&
 						     (State == CSkins::CSkinContainer::EState::UNLOADED ||
 							     State == CSkins::CSkinContainer::EState::BACKGROUND_REQUESTED ||
@@ -1335,21 +1437,8 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		if(EntryNonTerminalWaiting)
 			++VisibleNonTerminalWaitingCount;
 		const CSkin *pSkin = pSkinContainer->Skin() != nullptr ? pSkinContainer->Skin().get() : pDefaultSkin;
-		// 皮肤格是列表卡片的「左右分栏」形态：左侧 60 宽 tee 预览、右侧名称与动作图标。
-		// 几何由 qm_list_card 统一切分（与资源卡、工坊预设卡同一条路径），但这里不改
-		// 观感——内边距 0、无圆角、无壳，卡片底与悬浮反馈仍由 CListBox 画。
-		qm_list_card::SMetrics SkinCardFrame;
-		SkinCardFrame.m_UiScale = 1.0f;
-		SkinCardFrame.m_Padding = 0.0f;
-		SkinCardFrame.m_Radius = 0.0f;
-		qm_list_card::SOptions SkinCardOptions;
-		SkinCardOptions.m_Axis = qm_list_card::EAxis::ROW;
-		SkinCardOptions.m_LeadingWidth = 60.0f;
-		SkinCardOptions.m_RowGap = 0.0f;
-		const qm_list_card::SLayout SkinCardLayout = qm_list_card::ResolveLayout(Item.m_Rect, SkinCardFrame.Scaled(), SkinCardOptions);
-		Button = SkinCardLayout.m_Leading;
-		Label = SkinCardLayout.m_Body;
 
+		if(EntryVisualReady)
 		{
 			CTeeRenderInfo Info;
 			Info.Apply(pSkin);
@@ -1368,6 +1457,16 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			Ui()->ClipEnable(&TeeClip);
 			RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, *pEmote, vec2(1.0f, 0.0f), TeeRenderPos);
 			Ui()->ClipDisable();
+		}
+		else
+		{
+			// 目标皮肤尚未就绪时显示默认 Tee，不铺骨架底色。
+			RenderDefaultSkinPlaceholder(Button);
+			if(EntryNonTerminalWaiting)
+			{
+				CUIRect LoadingIndicator{Button.x + 3.0f, Button.y + 3.0f, 10.0f, 10.0f};
+				ui_widget::DrawProgressRing(Ui(), LoadingIndicator.Center(), LoadingIndicator.h * 0.5f);
+			}
 		}
 		// 右上角功能图标条：只按本帧真的会画的动作从右到左排（隐藏的动作不占位），
 		// 出现/消失走同一条缓动；下面的名称/元数据**跟着这条缓动**收缩可用宽度，
@@ -1425,7 +1524,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			if(NameMatch.has_value())
 			{
 				const auto [MatchStart, MatchLength] = NameMatch.value();
-				Props.m_vColorSplits.emplace_back(MatchStart, MatchLength, ColorRGBA(0.4f, 0.4f, 1.0f, 1.0f));
+				Props.m_vColorSplits.emplace_back(MatchStart, MatchLength, ui_token::color::SEARCH_MATCH_ON_DARK);
 			}
 			char aSkinMetadata[96] = "";
 			const int OfficialReleaseDate = pSkinContainer->OfficialReleaseDate();
@@ -1455,9 +1554,10 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 				// 悬浮时队列按钮出现会让 Reserve 变大，作者名就凭空被截掉，右侧明明还空着。
 				MetadataProps.m_MaxWidth = maximum(0.0f, MetadataLine.w - 5.0f);
 				MetadataProps.m_DisallowNewline = true;
-				MetadataProps.m_StopAtEnd = true;
-				// 元数据是辅助信息，不参与悬浮缩字号：小字再缩会糊，且宽度本来够时用不上。
-				MetadataProps.m_MinimumFontSize = TeeMetrics.m_SmallSize;
+				MetadataProps.m_EllipsisAtEnd = true;
+				// 作者较长时逐步缩小字号，仍放不下才显示省略号。
+				MetadataProps.m_MinimumFontSize = TeeMetrics.m_SmallSize * 0.8f;
+				MetadataProps.m_FontSizeStep = 0.5f;
 				TextRender()->TextColor(ColorRGBA(0.8f, 0.8f, 0.8f, 0.8f));
 				Ui()->DoLabel(&MetadataLine, aSkinMetadata, TeeMetrics.m_SmallSize, TEXTALIGN_ML, MetadataProps);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -1468,7 +1568,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			}
 		}
 
-		if(g_Config.m_Debug)
+		if(g_Config.m_Debug && EntryVisualReady)
 		{
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
@@ -1526,7 +1626,12 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	for(auto It = vVisibleSkinIndices.rbegin(); It != vVisibleSkinIndices.rend(); ++It)
 	{
 		if(!Ui()->MeasurementOnly())
-			vSkinList[*It].RequestLoad(ESettingsResourcePriority::VISIBLE);
+		{
+			if(AllSkinsCollection)
+				GameClient()->m_Skins.RequestSkinListLoad((int)*It, ESettingsResourcePriority::VISIBLE);
+			else if((size_t)*It < vSkinList.size() && vSkinList[*It].SkinContainer() != nullptr)
+				vSkinList[*It].RequestLoad(ESettingsResourcePriority::VISIBLE);
+		}
 	}
 	const bool SkinListScrollInteraction = m_SettingsScrollActive || s_ListBox.ScrollbarActive() || s_ListBox.ScrollbarAnimating() || s_SkinListScrollActiveLastFrame;
 	const int PreviousSkinListScrollCooldownFrames = s_SkinListScrollCooldownFrames;
@@ -1600,10 +1705,13 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			}
 
 			const CSkins::CSkinContainer *pBackgroundContainer = vSkinList[BackgroundIndex].SkinContainer();
+			const SSettingsSkinListEntry *pBackgroundPlannedEntry = AllSkinsCollection ? SkinList.PlannedEntry((int)BackgroundIndex) : nullptr;
+			if(pBackgroundContainer == nullptr && pBackgroundPlannedEntry != nullptr)
+				pBackgroundContainer = GameClient()->m_Skins.FindContainerOrNullptr(pBackgroundPlannedEntry->m_Name.c_str(), false);
 			if(pBackgroundContainer == nullptr || pBackgroundContainer->IsCatalogOnly() || pBackgroundContainer->State() != CSkins::CSkinContainer::EState::UNLOADED)
 				continue;
 
-			vSkinList[BackgroundIndex].RequestLoad(ESettingsResourcePriority::BACKGROUND);
+			const_cast<CSkins::CSkinContainer *>(pBackgroundContainer)->RequestLoad(ESettingsResourcePriority::BACKGROUND);
 			++BackgroundRequestsIssued;
 		}
 		if(s_BackgroundRequestCursor >= vSkinList.size())
@@ -1643,16 +1751,30 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		SettingsSkinBackgroundRequestBlockReasonName(BackgroundBudgetDecision.m_BlockReason),
 		sizeof(VisibleSnapshot.m_aRequestBudgetBlockReason));
 	GameClient()->m_Skins.SetSettingsTeeVisibleSnapshot(VisibleSnapshot);
-	const char *pFirstVisibleSkin = !vVisibleSkinIndices.empty() ? vSkinList[vVisibleSkinIndices.front()].SkinContainer()->Name() : "";
+	const auto VisibleRowName = [&](size_t Index) -> const char * {
+		if(Index >= vSkinList.size())
+			return "";
+		if(AllSkinsCollection)
+		{
+			const SSettingsSkinListEntry *pPlannedEntry = SkinList.PlannedEntry((int)Index);
+			if(pPlannedEntry != nullptr)
+				return pPlannedEntry->m_Name.c_str();
+		}
+		const CSkins::CSkinContainer *pContainer = vSkinList[Index].SkinContainer();
+		return pContainer != nullptr ? pContainer->Name() : "";
+	};
+	const char *pFirstVisibleSkin = !vVisibleSkinIndices.empty() ? VisibleRowName(vVisibleSkinIndices.front()) : "";
 	const int FirstVisibleIndex = !vVisibleSkinIndices.empty() ? (int)vVisibleSkinIndices.front() : -1;
 	const int LastVisibleIndex = !vVisibleSkinIndices.empty() ? (int)vVisibleSkinIndices.back() : -1;
 	const bool FirstVisibleReady = !vVisibleSkinIndices.empty() &&
+				       vSkinList[vVisibleSkinIndices.front()].SkinContainer() != nullptr &&
 				       SettingsSkinListEntryVisualReady(
 					       vSkinList[vVisibleSkinIndices.front()].SkinContainer()->Skin() != nullptr,
 					       vSkinList[vVisibleSkinIndices.front()].SkinContainer()->State() == CSkins::CSkinContainer::EState::ERROR ||
 						       vSkinList[vVisibleSkinIndices.front()].SkinContainer()->State() == CSkins::CSkinContainer::EState::NOT_FOUND,
 					       false);
-	const bool FullListReady = NeedFullListSourceState && !vSkinList.empty() && TotalSourceSettledCount == (int)vSkinList.size();
+	const bool FullListReady = NeedFullListSourceState && SkinList.PlanKnown() && SkinList.FullIndexMerged() &&
+				   !vSkinList.empty() && TotalSourceSettledCount == (int)vSkinList.size();
 	const int64_t NowNs = time_get_nanoseconds().count();
 	if(!gs_TeeSettingsPageState.m_TeePageActiveLastFrame)
 	{
@@ -1900,22 +2022,26 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		if(NewSelected >= 0 && NewSelected < (int)vSkinList.size())
 		{
 			CommitSettingsTeeSkinEdits();
-			const CSkins::CSkinListEntry &SelectedSkinEntry = vSkinList[NewSelected];
 			gs_TeeSettingsPageState.m_SelectedIndex = NewSelected;
-			str_copy(pSkinName, SelectedSkinEntry.SkinContainer()->Name(), SkinNameSize);
-			if(SelectedSkinEntry.ColorKey().has_value())
+			GameClient()->m_Skins.MaterializeSkinListEntry(NewSelected);
+			const CSkins::CSkinListEntry &SelectedSkinEntry = vSkinList[NewSelected];
+			if(SelectedSkinEntry.SkinContainer() != nullptr)
 			{
-				const auto &SelectedColorKey = SelectedSkinEntry.ColorKey().value();
-				*pUseCustomColor = SelectedColorKey.m_UseCustomColor ? 1 : 0;
-				if(SelectedColorKey.m_UseCustomColor)
+				str_copy(pSkinName, SelectedSkinEntry.SkinContainer()->Name(), SkinNameSize);
+				if(SelectedSkinEntry.ColorKey().has_value())
 				{
-					*pColorBody = SelectedColorKey.m_ColorBody;
-					*pColorFeet = SelectedColorKey.m_ColorFeet;
+					const auto &SelectedColorKey = SelectedSkinEntry.ColorKey().value();
+					*pUseCustomColor = SelectedColorKey.m_UseCustomColor ? 1 : 0;
+					if(SelectedColorKey.m_UseCustomColor)
+					{
+						*pColorBody = SelectedColorKey.m_ColorBody;
+						*pColorFeet = SelectedColorKey.m_ColorFeet;
+					}
 				}
+				SkinList.ForceRefresh();
+				SetNeedSendInfo();
+				GameClient()->m_Skins.RecordRecentSkin(QueueDummy);
 			}
-			SkinList.ForceRefresh();
-			SetNeedSendInfo();
-			GameClient()->m_Skins.RecordRecentSkin(QueueDummy);
 		}
 	}
 	if(DoubleClickIndex >= 0 && DoubleClickIndex < (int)vSkinList.size())
@@ -1937,7 +2063,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		}
 	}
 
-	if(vSkinList.empty() && !CatalogSettled)
+	if(vSkinList.empty() && !PlanKnown)
 	{
 		DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee_skin_list_loading", &MainView, Localize("Loading…"), BodySize, TEXTALIGN_MC);
 	}
@@ -1973,7 +2099,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	SkinSearchOptions.m_FontSize = BodySize;
 	if(ui_widget::InputField(TeeSkinSearchCtx, &s_SkinFilterInput, QuickSearch, SkinSearchOptions).m_Changed)
 	{
-		SkinList.ForceRefresh();
+		GameClient()->m_Skins.RebuildSkinListPlan();
 	}
 
 	static CButtonContainer s_SkinDatabaseButton;
@@ -2025,7 +2151,8 @@ void CMenus::AdvanceSettingsTeeSkinListOffscreen()
 	}
 	CSkins::CSkinList &SkinList = GameClient()->m_Skins.SkinList(QueueDummy);
 	std::vector<CSkins::CSkinListEntry> &vSkinList = gs_TeeSkinCollection.Resolve(GameClient()->m_Skins, SkinList);
-	const uint64_t ListRevision = gs_TeeSkinCollection.Revision();
+	const bool AllSkinsCollection = gs_TeeSkinCollection.m_Collection == ETeeSkinCollection::ALL;
+	const uint64_t ListRevision = AllSkinsCollection ? SkinList.Revision() : gs_TeeSkinCollection.Revision();
 	if(!gs_TeeSettingsPageState.m_TeePageActiveLastFrame)
 	{
 		gs_TeeListDrainPerfSession.m_Active = false;
@@ -2046,16 +2173,15 @@ void CMenus::AdvanceSettingsTeeSkinListOffscreen()
 	PostScrollRecoveryFrames = SettingsScrollInteractionRecovery(false, PreviousScrollCooldownFrames, ScrollCooldownFrames, PostScrollRecoveryFrames, 2);
 	m_SettingsPostScrollRecoveryFrames = PostScrollRecoveryFrames;
 
-	const SQmPerformanceMetrics &PerfSnapshot = GameClient()->m_QmMonitoring.Snapshot().m_Performance;
 	SSettingsAdaptiveBudgetInput BudgetInput;
 	BudgetInput.m_FrameId = Client()->PerfFrame();
 	str_copy(BudgetInput.m_aOperation, SettingsPerfActiveOperation(), sizeof(BudgetInput.m_aOperation));
 	str_copy(BudgetInput.m_aPage, "settings:tee", sizeof(BudgetInput.m_aPage));
 	str_copy(BudgetInput.m_aTab, "none", sizeof(BudgetInput.m_aTab));
 	str_copy(BudgetInput.m_aContext, SettingsPerfContextName(), sizeof(BudgetInput.m_aContext));
-	BudgetInput.m_FrameMsAverage = PerfSnapshot.m_FrameTimeMs;
-	BudgetInput.m_FrameMsP95 = PerfSnapshot.m_FrameTimeP95Ms > 0.0f ? PerfSnapshot.m_FrameTimeP95Ms : PerfSnapshot.m_FrameTimeMs;
-	BudgetInput.m_TargetFrameMs = 8.333f;
+	BudgetInput.m_FrameMsAverage = QmUiCpuMsAverage();
+	BudgetInput.m_FrameMsP95 = QmUiCpuMsP95();
+	BudgetInput.m_TargetFrameMs = QmUiTargetFrameMs();
 	BudgetInput.m_PostScrollRecoveryFrames = PostScrollRecoveryFrames;
 	BudgetInput.m_BackgroundBacklog = (int)vSkinList.size();
 	BudgetInput.m_WindowActive = true;
@@ -2119,9 +2245,15 @@ void CMenus::AdvanceSettingsTeeSkinListOffscreen()
 			if((int)Index < VisibleTotal)
 				continue;
 			const CSkins::CSkinContainer *pContainer = vSkinList[Index].SkinContainer();
+			if(pContainer == nullptr && AllSkinsCollection)
+			{
+				const SSettingsSkinListEntry *pPlannedEntry = SkinList.PlannedEntry((int)Index);
+				if(pPlannedEntry != nullptr)
+					pContainer = GameClient()->m_Skins.FindContainerOrNullptr(pPlannedEntry->m_Name.c_str(), false);
+			}
 			if(pContainer == nullptr || pContainer->IsCatalogOnly() || pContainer->State() != CSkins::CSkinContainer::EState::UNLOADED)
 				continue;
-			vSkinList[Index].RequestLoad(ESettingsResourcePriority::BACKGROUND);
+			const_cast<CSkins::CSkinContainer *>(pContainer)->RequestLoad(ESettingsResourcePriority::BACKGROUND);
 			--BackgroundBudget;
 		}
 		if(BackgroundCursor >= vSkinList.size())

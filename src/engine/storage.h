@@ -47,6 +47,7 @@ public:
 	{
 		SUCCESS,
 		NOT_FOUND,
+		RESOURCE_ERROR,
 		IO_FAILURE,
 		UNSUPPORTED,
 	};

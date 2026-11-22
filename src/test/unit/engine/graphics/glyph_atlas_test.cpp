@@ -199,6 +199,21 @@ TEST(GlyphAtlas, ClearDiscardsPreviousAllocationsAndSize)
 	EXPECT_FALSE(Atlas.Add(32, 48, X, Y));
 }
 
+TEST(GlyphAtlas, FreeAreaTracksLargeAndMappedFreeSections)
+{
+	CGlyphAtlas<> Atlas;
+	Atlas.Clear(64);
+	EXPECT_EQ(Atlas.FreeArea(), 64u * 64u);
+
+	int X = -1, Y = -1;
+	ASSERT_TRUE(Atlas.Add(32, 64, X, Y));
+	EXPECT_EQ(Atlas.FreeArea(), 32u * 64u);
+	ASSERT_TRUE(Atlas.Add(32, 8, X, Y));
+	EXPECT_EQ(Atlas.FreeArea(), 32u * 56u);
+	ASSERT_TRUE(Atlas.Add(32, 56, X, Y));
+	EXPECT_EQ(Atlas.FreeArea(), 0u);
+}
+
 TEST(GlyphAtlas, ReplacingLargeSectionWithOneCutReusesExistingCapacity)
 {
 	CFailingMemory Memory;

@@ -22,6 +22,10 @@ enum
 	TEXTFLAG_ELLIPSIS_AT_END = 1 << 3,
 };
 
+// 后台字形任务的上限：启动预热、空闲预热和单次文本排队共用同一容量。
+// 队列满时最近字形游标必须停住，不能把 REJECTED 条目当成已处理。
+inline constexpr size_t QM_GLYPH_WORKER_PENDING_CAPACITY = 1024;
+
 enum ETextAlignment
 {
 	TEXTALIGN_LEFT = 0,
@@ -599,9 +603,21 @@ public:
 	// 字形光栅化幂等且可中断，菜单可在构建文本容器前分帧调用，避免一次容器
 	// 创建触发 100+ 新字形导致单帧 20–30ms 尖峰。
 	virtual void QmPrewarmGlyph(int Chr, int FontSize) {}
+	// QmClient: 后台字形预热是否可用；可见文本始终同步构建，不受此开关影响。
+	virtual bool QmGlyphWorkerEnabled() const { return false; }
+	// 返回 true 表示这段文本的字形已经全部可同步构建容器；false 时不可用
+	// 缺失字形的容器顶替可见页，必须下一帧重试。
+	virtual bool QmQueueTextGlyphsForPrewarm(const char *pText, int FontSize, int MaxGlyphs) { return true; }
+	virtual int QmGlyphWorkerPendingCount() const { return 0; }
+	virtual int QmGlyphWorkerActiveCount() const { return 0; }
 	// QmClient: 空闲帧预热“最近缺失字形”（菜单关闭时调用），返回本次实际预热数量。
 	virtual int QmPrewarmRecentGlyphs(int MaxCount) { return 0; }
+	virtual bool QmRecentGlyphPrewarmComplete() const { return true; }
 	virtual int QmRecentGlyphMissCount() const { return 0; }
+	virtual size_t QmRecentGlyphPrewarmRemaining() const { return 0; }
+	// 图集尺寸与扩容次数只用于诊断；扩容是整表重建，不能和普通冷字形混为一谈。
+	virtual size_t QmGlyphAtlasDimension() const { return 0; }
+	virtual int QmGlyphAtlasGrowthCount() const { return 0; }
 	// QmClient: 跨会话持久化缺失字形集合，供下次启动后立即预热（文本格式 "Chr Size"）。
 	virtual void QmLoadRecentGlyphs(class IStorage *pStorage, const char *pPath) {}
 	virtual void QmSaveRecentGlyphs(class IStorage *pStorage, const char *pPath) {}

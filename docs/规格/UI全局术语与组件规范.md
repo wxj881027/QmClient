@@ -358,6 +358,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`ui_widget::DrawToggle` / `ResolveToggleLayout` / `ResolveBooleanControlLayout` / `ResolveSwitchRowLabelColumn`（`UiForms.h`）、设置页包装 `DoSettingsButton_CheckBox`；尺寸 `ui_token::control::SwitchMinWidth` / `SwitchTrackAspect`；悬停描边走 `ResolveUiSecondaryButtonStyle` → `ui_token::feedback::HOVER_BORDER`。
 - 禁止的反面写法：自绘轨道与旋钮；开关行自己算右侧宽度（标签会压到开关）；描边取轨道的自动对比色（开着是亮轨道就描黑边、关着描白边，和按钮的悬停白边割裂）。
 
+### 3.10a 加载环（progress ring）
+
+- 定义：统一承载不定进度旋转环与确定进度环形条；旋转使用墙钟周期，纯测量趟不绘制；形状由程序化环形 SDF 绘制，旧渲染后端回退到同一组件内的扇区几何。
+- 唯一实现：`ui_widget::DrawProgressRing` / `ResolveProgressRingArc`（`src/game/client/QmUi/UiProgressRing.h`）；形状与周期参数分别位于 `ui_token::progress_ring::*`、`ui_token::motion::PROGRESS_RING_PERIOD_NS`。
+- 禁止的反面写法：调用点自绘加载点阵/多段环；将渲染器帧时间作为环动画时钟；绕开组件直接接入渲染器环形管线。
+
 ### 3.11 按钮（Button）
 
 - 定义：按钮底色、描边、按压反馈由同一套样式解析，禁用态只衰减不换色。

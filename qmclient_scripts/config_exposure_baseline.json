@@ -152,6 +152,11 @@
 			"note": "皮肤预览队列的换图策略，跟随地图刷新，不设用户入口"
 		},
 		{
+			"name": "qm_text_raster_mode",
+			"category": "internal",
+			"note": "字形光栅化模式：同步或 CPU worker 后台预热，内部性能开关"
+		},
+		{
 			"name": "qm_translate_color_alpha_migrated",
 			"category": "internal",
 			"note": "翻译色 alpha 迁移标记，代码内部状态"

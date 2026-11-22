@@ -300,6 +300,12 @@ CUi::CUi(IAllocationResource *pPopupCallbackMemory, IAllocationResource *pClipMe
 	m_vClips(CBorrowedAllocator<CUIRect>(pClipMemory)),
 	m_vPopupCloseCallbacks(CBorrowedAllocator<std::shared_ptr<FPopupMenuClosedCallback>>(pPopupCallbackMemory))
 {
+	// 默认构造的 CUi 也常被测试和临时测量作用域使用；未进入 Init 前设备指针
+	// 必须为空，否则 CUIElement 在构造失败回滚时会把未初始化指针当成有效设备。
+	m_pClient = nullptr;
+	m_pGraphics = nullptr;
+	m_pInput = nullptr;
+	m_pTextRender = nullptr;
 	m_Enabled = true;
 #if defined(CONF_PLATFORM_ANDROID)
 	m_DirectTouchInput = true;
@@ -1114,9 +1120,6 @@ void CUi::Update()
 		m_pActiveItem = nullptr;
 		m_pHotScrollRegion = nullptr;
 	}
-
-	m_ProgressSpinnerOffset += Client()->RenderFrameTime() * 1.5f;
-	m_ProgressSpinnerOffset = std::fmod(m_ProgressSpinnerOffset, 1.0f);
 }
 
 void CUi::DebugRender(float X, float Y)
@@ -2138,7 +2141,28 @@ bool CUi::DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Si
 		TextRender()->TextColor(ColorRGBA(1, 1, 1, 1));
 		TextRender()->TextOutlineColor(ColorRGBA(1, 1, 1, 1));
 		TextRender()->SetRenderFlags(Flags);
-		TextRender()->CreateTextContainer(pLabel->m_Container, &Cursor, pText);
+		try
+		{
+			TextRender()->CreateTextContainer(pLabel->m_Container, &Cursor, pText);
+		}
+		catch(...)
+		{
+			// CreateTextContainer 也可能在自动上传阶段失败；失败身份不能留在缓存里。
+			try
+			{
+				TextRender()->DeleteTextContainer(pLabel->m_Container);
+			}
+			catch(...)
+			{
+			}
+			pLabel->m_Container = {};
+			pLabel->m_Size = {};
+			pLabel->m_BiggestCharacterHeight = 0.0f;
+			TextRender()->SetRenderFlags(PreviousFlags);
+			TextRender()->TextColor(PreviousColor);
+			TextRender()->TextOutlineColor(PreviousOutline);
+			throw;
+		}
 		TextRender()->SetRenderFlags(PreviousFlags);
 		TextRender()->TextColor(PreviousColor);
 		TextRender()->TextOutlineColor(PreviousOutline);
@@ -2154,8 +2178,24 @@ bool CUi::DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Si
 	// 被覆盖（用户实测自定义不生效、弱档恒白）。
 	const ColorRGBA Color = QmSignalIconFamily(Icon) ? TextRender()->GetTextColor() : ConfiguredQmUiIconColor(TextRender()->GetTextColor(), Icon);
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
-	FlushQuadBatch();
-	TextRender()->RenderTextContainer(pLabel->m_Container, Color, ConfiguredQmUiIconContrastColor(Color), Pos.x, Pos.y);
+	try
+	{
+		FlushQuadBatch();
+		TextRender()->RenderTextContainer(pLabel->m_Container, Color, ConfiguredQmUiIconContrastColor(Color), Pos.x, Pos.y);
+	}
+	catch(...)
+	{
+		// 绘制中途失败时清掉缓存身份，避免下一帧复用只有半套 GPU 资源的容器。
+		try
+		{
+			TextRender()->DeleteTextContainer(pLabel->m_Container);
+		}
+		catch(...)
+		{
+		}
+		pLabel->m_Container = {};
+		throw;
+	}
 	CQmIconDrawDiagnostics::Record(Count);
 	return true;
 }
@@ -3522,46 +3562,6 @@ void CUi::RenderTime(CUIRect TimeRect, float FontSize, int Seconds, bool NotFini
 	{
 		SecondsText.Render(TextRender(), Cursor, Color);
 	}
-}
-
-void CUi::RenderProgressSpinner(vec2 Center, float OuterRadius, const SProgressSpinnerProperties &Props) const
-{
-	Graphics()->TextureClear();
-	Graphics()->QuadsBegin();
-
-	// The filled and unfilled segments need to begin at the same angle offset
-	// or the differences in pixel alignment will make the filled segments flicker.
-	const float SegmentsAngle = 2.0f * pi / Props.m_Segments;
-	const float InnerRadius = OuterRadius * 0.75f;
-	const float AngleOffset = -0.5f * pi;
-	Graphics()->SetColor(Props.m_Color.WithMultipliedAlpha(0.5f));
-	for(int i = 0; i < Props.m_Segments; ++i)
-	{
-		const vec2 Dir1 = direction(AngleOffset + i * SegmentsAngle);
-		const vec2 Dir2 = direction(AngleOffset + (i + 1) * SegmentsAngle);
-		IGraphics::CFreeformItem Item = IGraphics::CFreeformItem(
-			Center + Dir1 * InnerRadius, Center + Dir2 * InnerRadius,
-			Center + Dir1 * OuterRadius, Center + Dir2 * OuterRadius);
-		Graphics()->QuadsDrawFreeform(&Item, 1);
-	}
-
-	const float FilledRatio = Props.m_Progress < 0.0f ? 0.333f : Props.m_Progress;
-	const int FilledSegmentOffset = Props.m_Progress < 0.0f ? round_to_int(m_ProgressSpinnerOffset * Props.m_Segments) : 0;
-	const int FilledNumSegments = minimum<int>(Props.m_Segments * FilledRatio + (Props.m_Progress < 0.0f ? 0 : 1), Props.m_Segments);
-	Graphics()->SetColor(Props.m_Color);
-	for(int i = 0; i < FilledNumSegments; ++i)
-	{
-		const float Angle1 = AngleOffset + (i + FilledSegmentOffset) * SegmentsAngle;
-		const float Angle2 = AngleOffset + ((i + 1 == FilledNumSegments && Props.m_Progress >= 0.0f) ? (2.0f * pi * Props.m_Progress) : ((i + FilledSegmentOffset + 1) * SegmentsAngle));
-		IGraphics::CFreeformItem Item = IGraphics::CFreeformItem(
-			Center.x + std::cos(Angle1) * InnerRadius, Center.y + std::sin(Angle1) * InnerRadius,
-			Center.x + std::cos(Angle2) * InnerRadius, Center.y + std::sin(Angle2) * InnerRadius,
-			Center.x + std::cos(Angle1) * OuterRadius, Center.y + std::sin(Angle1) * OuterRadius,
-			Center.x + std::cos(Angle2) * OuterRadius, Center.y + std::sin(Angle2) * OuterRadius);
-		Graphics()->QuadsDrawFreeform(&Item, 1);
-	}
-
-	Graphics()->QuadsEnd();
 }
 
 void CUi::DoBackButton()

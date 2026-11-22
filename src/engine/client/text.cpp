@@ -17,8 +17,11 @@
 #include "qm_font_resource_policy.h"
 #include "qm_font_restore.h"
 #include "qm_font_scan_job.h"
+#include "qm_glyph_geometry.h"
+#include "qm_glyph_rasterizer.h"
 #include "qm_recent_glyphs.h"
 #include "qm_system_fonts.h"
+#include "qm_video_memory.h"
 #include "text_container_pool.h"
 #include "text_gradient.h"
 #include "text_layout_string.h"
@@ -27,6 +30,7 @@
 #include "text_word_cursor.h"
 
 #include <base/hash.h>
+#include <base/lock.h>
 #include <base/log.h>
 #include <base/math.h>
 #include <base/system.h>
@@ -35,6 +39,7 @@
 #include <engine/engine.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
+#include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
@@ -46,8 +51,11 @@
 #include FT_FREETYPE_H
 #include FT_MULTIPLE_MASTERS_H
 
+#include <algorithm>
+#include <atomic>
 #include <bitset>
 #include <chrono>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -56,6 +64,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <thread>
 #include <tuple>
@@ -163,6 +172,209 @@ struct SGlyphKeyEquals
 	}
 };
 
+// 后台字形任务只负责 FreeType 光栅化和描边扩张；图集分配、CPU 图集写入和
+// GPU 脏区记录全部回主线程。可见文本永远不会等待这个队列。
+enum class EQmGlyphPrewarmResult
+{
+	READY,
+	QUEUED,
+	UNSUPPORTED,
+	RETRY,
+	REJECTED,
+};
+
+struct SQmGlyphWorkerResult
+{
+	std::tuple<FT_Face, int, int, bool> m_Key;
+	uint64_t m_Generation = 0;
+	EQmGlyphRenderResult m_Status = EQmGlyphRenderResult::RETRY;
+	SQmGlyphBitmap m_Bitmap;
+	SQmGlyphGeometry m_Geometry;
+	bool m_HasGeometry = false;
+	bool m_WasGpuGeometry = false;
+	double m_RasterizeMs = 0.0;
+};
+
+using FontDataMap = std::unordered_map<FT_Face, std::pair<const FT_Byte *, FT_Long>>;
+
+struct SQmGlyphWorkerState
+{
+	mutable std::mutex m_Mutex;
+	std::condition_variable m_Idle;
+	std::vector<SQmGlyphWorkerResult> m_vResults;
+	int m_ActiveJobs = 0;
+	std::atomic<bool> m_Cancelled{false};
+	// worker 结果容器分配失败时置位；主线程据此丢弃代际内的 pending 任务，
+	// 否则丢失的结果会让同一个字形永久停留在 QUEUED。
+	std::atomic<bool> m_ResultOverflow{false};
+
+	~SQmGlyphWorkerState()
+	{
+		WaitIdle();
+	}
+
+	bool Cancelled() const { return m_Cancelled.load(std::memory_order_relaxed); }
+
+	int ActiveJobs() const
+	{
+		const std::lock_guard<std::mutex> Lock(m_Mutex);
+		return m_ActiveJobs;
+	}
+
+	void JobStarted()
+	{
+		const std::lock_guard<std::mutex> Lock(m_Mutex);
+		++m_ActiveJobs;
+	}
+
+	void JobFinished()
+	{
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		--m_ActiveJobs;
+		if(m_ActiveJobs == 0)
+			m_Idle.notify_all();
+	}
+
+	void PushResult(SQmGlyphWorkerResult &&Result) noexcept
+	{
+		try
+		{
+			const std::lock_guard<std::mutex> Lock(m_Mutex);
+			m_vResults.push_back(std::move(Result));
+		}
+		catch(...)
+		{
+			m_ResultOverflow.store(true, std::memory_order_release);
+		}
+	}
+
+	bool ConsumeResultOverflow() noexcept
+	{
+		return m_ResultOverflow.exchange(false, std::memory_order_acq_rel);
+	}
+
+	void DiscardResults() noexcept
+	{
+		const std::lock_guard<std::mutex> Lock(m_Mutex);
+		m_vResults.clear();
+	}
+
+	void TakeResults(std::vector<SQmGlyphWorkerResult> &vOutput, size_t MaxCount)
+	{
+		const std::lock_guard<std::mutex> Lock(m_Mutex);
+		const size_t Count = std::min(MaxCount, m_vResults.size());
+		try
+		{
+			vOutput.insert(vOutput.end(), std::make_move_iterator(m_vResults.begin()), std::make_move_iterator(m_vResults.begin() + Count));
+		}
+		catch(...)
+		{
+			m_ResultOverflow.store(true, std::memory_order_release);
+			throw;
+		}
+		m_vResults.erase(m_vResults.begin(), m_vResults.begin() + Count);
+	}
+
+	void RequeueResults(std::vector<SQmGlyphWorkerResult> &vResults) noexcept
+	{
+		RequeueResults(vResults, 0);
+	}
+
+	void RequeueResults(std::vector<SQmGlyphWorkerResult> &vResults, size_t Start) noexcept
+	{
+		if(Start >= vResults.size())
+			return;
+		if(vResults.empty())
+			return;
+		try
+		{
+			const std::lock_guard<std::mutex> Lock(m_Mutex);
+			m_vResults.insert(m_vResults.end(), std::make_move_iterator(vResults.begin() + Start), std::make_move_iterator(vResults.end()));
+			vResults.clear();
+		}
+		catch(...)
+		{
+			// 结果保留在调用方；若下一次仍无法合入，主线程按溢出路径清理 pending。
+			m_ResultOverflow.store(true, std::memory_order_release);
+		}
+	}
+
+	void CancelAndClear()
+	{
+		m_Cancelled.store(true, std::memory_order_relaxed);
+		const std::lock_guard<std::mutex> Lock(m_Mutex);
+		m_vResults.clear();
+	}
+
+	void WaitIdle()
+	{
+		std::unique_lock<std::mutex> Lock(m_Mutex);
+		m_Idle.wait(Lock, [this] { return m_ActiveJobs == 0; });
+	}
+};
+
+class CQmGlyphRasterJob : public IJob
+{
+	std::shared_ptr<SQmGlyphWorkerState> m_pState;
+	std::vector<SQmGlyphWorkerTask> m_vTasks;
+
+public:
+	CQmGlyphRasterJob(std::shared_ptr<SQmGlyphWorkerState> pState, std::vector<SQmGlyphWorkerTask> &&vTasks) :
+		m_pState(std::move(pState)), m_vTasks(std::move(vTasks))
+	{
+		m_pState->JobStarted();
+	}
+
+	~CQmGlyphRasterJob() override
+	{
+		m_pState->JobFinished();
+	}
+
+private:
+	void Run() override
+	{
+		size_t Index = 0;
+		try
+		{
+			CQmGlyphRasterizer Rasterizer;
+			for(; Index < m_vTasks.size() && !m_pState->Cancelled(); ++Index)
+			{
+				const SQmGlyphWorkerTask &Task = m_vTasks[Index];
+				SQmGlyphWorkerResult Result;
+				Result.m_Key = Task.m_Key;
+				Result.m_Generation = Task.m_Generation;
+				Result.m_WasGpuGeometry = Task.m_GpuGeometry;
+				const auto Start = time_get_nanoseconds();
+				if(Task.m_GpuGeometry)
+				{
+					Result.m_Status = Rasterizer.RasterizeGeometry(Task, Result.m_Geometry);
+					Result.m_HasGeometry = Result.m_Status == EQmGlyphRenderResult::SUCCESS;
+				}
+				else
+					Result.m_Status = Rasterizer.Rasterize(Task, Result.m_Bitmap);
+				Result.m_RasterizeMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - Start).count();
+				m_pState->PushResult(std::move(Result));
+			}
+		}
+		catch(...)
+		{
+			// Run 不能让异常逃逸到线程入口；尚未处理的 key 也要发布失败结果，
+			// 否则主线程的 pending 集合会永久阻塞同一字形再次入队。
+		}
+		if(Index < m_vTasks.size() && !m_pState->Cancelled())
+		{
+			for(; Index < m_vTasks.size(); ++Index)
+			{
+				SQmGlyphWorkerResult Result;
+				Result.m_Key = m_vTasks[Index].m_Key;
+				Result.m_Generation = m_vTasks[Index].m_Generation;
+				Result.m_Status = EQmGlyphRenderResult::RETRY;
+				m_pState->PushResult(std::move(Result));
+			}
+		}
+	}
+};
+
 class CGlyphMap
 {
 public:
@@ -181,14 +393,11 @@ private:
 	 * QmClient: 提高到 4096 (16 MB per texture; NUM_FONT_TEXTURES=2 → 33 MB total，
 	 * 单通道 alpha 纹理)。
 	 * 历史：1024 → 2048 消除了设置页首帧扩容（中文常用字集 ~3500 字）。
-	 * 4096 原因：实测进服后其他玩家名/MOTD/聊天的生僻字形仍会把 2048 (~4000
-	 * 字形) 的图集挤满，触发运行时 IncreaseGlyphMapSize → UnloadTextures +
-	 * 全量重传——该耗时计入 glyph_rasterize_ms，perf 实测单帧 794ms/253ms
-	 * 尖峰，表现为"进服后锤的前几下某一下突然卡顿，之后不再出现"（扩容后
-	 * 图集翻倍不再触发；重启后图集重置，每次进服复现）。4096 容纳约 16000
-	 * 字形，覆盖中文常用字集 + 多人玩家名/聊天字形，从源头消除进服后的
-	 * 运行时扩容。代价：显存 33 MB（比 2048 多 25 MB），现代 GPU 可接受；
-	 * 极端情况仍保留向 8192 的运行时扩容路径。
+	 * 4096 是低显存/核显回退值，容纳约 16000 字形。实测完整设置页 + 语言
+	 * 列表仍会把它挤满，运行时 IncreaseGlyphMapSize 会复制 128 MiB 并全量
+	 * 重传，日志中单帧达到 73.7 ms。独显预算 >= 2048 MiB 时改为从 8192
+	 * 起步（显存约 128 MiB + CPU 镜像 128 MiB），把扩容成本移到首帧前；
+	 * 低显存仍保持 4096，避免常驻显存翻四倍。
 	 */
 	static constexpr int INITIAL_ATLAS_DIMENSION = 4096;
 
@@ -196,7 +405,7 @@ private:
 	 * The maximum dimension of the atlas textures.
 	 * Results in 256 MB of memory being used per texture.
 	 */
-	static constexpr int MAXIMUM_ATLAS_DIMENSION = 16 * 1024;
+	static constexpr int MAXIMUM_ATLAS_DIMENSION = QM_MAX_GLYPH_ATLAS_DIMENSION;
 
 	/**
 	 * The minimum supported font size.
@@ -218,6 +427,7 @@ private:
 	static constexpr int REPLACEMENT_CHARACTER = 0x25a1;
 
 	IGraphics *m_pGraphics;
+	IEngine *m_pEngine;
 	IGraphics *Graphics() { return m_pGraphics; }
 
 	// Atlas textures and data
@@ -303,6 +513,79 @@ private:
 	bool m_QmGlyphUploadFailed = false;
 	int m_QmPerfGlyphUploadBatches = 0;
 	double m_QmPerfGlyphUploadBatchMs = 0.0;
+	// 图集扩容是整表重建 + 全量上传，必须能从日志里直接区分它和普通冷字形。
+	int m_QmAtlasGrowths = 0;
+	// 冷字形热力图：只在缺字路径记录，键为 (FontSize << 32) | Chr，容量有上限。
+	std::unordered_map<uint64_t, uint32_t> m_QmGlyphMissHeat;
+	// 全量字形使用热力图：记录实际进入文本容器的字符和光栅化字号，
+	// 与 miss 热力图分开，避免把“测量宽度”或“预热请求”混进可见覆盖统计。
+	std::unordered_map<uint64_t, uint32_t> m_QmGlyphUseHeat;
+	uint64_t m_QmGlyphUseTotal = 0;
+	// 后台光栅化队列。pending key 只由主线程维护；worker 结果带 generation，
+	// 图集清理或字体状态换代后旧结果直接丢弃。
+	static constexpr size_t QM_MAX_PENDING_GLYPH_TASKS = QM_GLYPH_WORKER_PENDING_CAPACITY;
+	static constexpr size_t QM_GLYPH_JOB_BATCH = 32;
+	// 后台预热不能挤占文件/网络任务，也不能让 job pool 排满后拖慢主线程发布。
+	// 每帧最多提交 2 批，同时最多 4 个批次在 worker 中运行。
+	static constexpr int QM_MAX_GLYPH_SUBMIT_BATCHES_PER_FRAME = 2;
+	static constexpr int QM_MAX_ACTIVE_GLYPH_JOBS = 4;
+	std::shared_ptr<SQmGlyphWorkerState> m_pQmGlyphWorkerState = std::make_shared<SQmGlyphWorkerState>();
+	std::unordered_map<std::tuple<FT_Face, int, int, bool>, uint64_t, SGlyphKeyHash, SGlyphKeyEquals> m_QmPendingGlyphTasks;
+	std::vector<SQmGlyphWorkerTask> m_vQmPendingGlyphTasks;
+	uint64_t m_QmGlyphGeneration = 1;
+	int m_QmPerfGlyphWorkerQueued = 0;
+	int m_QmPerfGlyphWorkerCompleted = 0;
+	int m_QmPerfGlyphWorkerJobs = 0;
+	int m_QmPerfGlyphWorkerOverflows = 0;
+	double m_QmPerfGlyphWorkerRasterizeMs = 0.0;
+	double m_QmPerfGlyphWorkerApplyMs = 0.0;
+	// GPU 实验路径：worker 只生成轮廓几何，主线程把多个字形装进一张白底
+	// 离屏目标，用黑/白简单多边形按 even-odd 嵌套深度绘制，最后异步读回。
+	// 可见文本永远不等待这里的读回，因此不会出现切页字形延迟。
+	struct SQmGpuPreparedGlyph
+	{
+		std::tuple<FT_Face, int, int, bool> m_Key;
+		uint64_t m_Generation = 0;
+		SQmGlyphGeometry m_Geometry;
+	};
+	struct SQmGpuPlacement
+	{
+		std::tuple<FT_Face, int, int, bool> m_Key;
+		uint64_t m_Generation = 0;
+		int m_X = 0;
+		int m_Y = 0;
+		SQmGlyphGeometry m_Geometry;
+	};
+	struct SQmGpuBatch
+	{
+		IGraphics::CRenderTargetHandle m_Target;
+		IGraphics::CRenderTargetReadbackHandle m_Readback;
+		std::vector<SQmGpuPlacement> m_vPlacements;
+		CImageInfo m_Image;
+		size_t m_ApplyIndex = 0;
+		bool m_Active = false;
+		bool m_PendingReadback = false;
+		bool m_ImageReady = false;
+		int m_ReadbackPolls = 0;
+		bool m_FlushRequested = false;
+		EQmGlyphFillRule m_FillRule = EQmGlyphFillRule::NON_ZERO;
+		bool m_FillRuleSet = false;
+	};
+	static constexpr int QM_GPU_TARGET_DIM = 512;
+	static constexpr int QM_GPU_SUPERSAMPLE = 2;
+	static constexpr size_t QM_GPU_MAX_BATCH_GLYPHS = 48;
+	static constexpr size_t QM_GPU_MAX_BATCH_TRIANGLES = 2048;
+	static constexpr size_t QM_GPU_MAX_PREPARED_GLYPHS = QM_GLYPH_WORKER_PENDING_CAPACITY;
+	std::vector<SQmGpuPreparedGlyph> m_vQmGpuPreparedGlyphs;
+	SQmGpuBatch m_QmGpuBatch;
+	bool m_QmGpuRasterUnsupportedLogged = false;
+	int m_QmPerfGpuBatches = 0;
+	int m_QmPerfGpuGlyphs = 0;
+	int m_QmPerfGpuReadbacks = 0;
+	int m_QmPerfGpuFallbacks = 0;
+	double m_QmPerfGpuPrepareMs = 0.0;
+	double m_QmPerfGpuReadbackMs = 0.0;
+	double m_QmPerfGpuApplyMs = 0.0;
 
 	FT_Face GetFaceByName(const char *pFamilyName)
 	{
@@ -373,6 +656,7 @@ private:
 		}
 		m_TextureAtlas = std::move(NewAtlas);
 		m_TextureDimension = NewTextureDimension;
+		++m_QmAtlasGrowths;
 		log_debug("textrender", "Increased atlas dimension to %" PRIzu " (%" PRIzu " MB used for textures)", NewTextureDimension, (NewTextureDimension / 1024) * (NewTextureDimension / 1024) * NUM_FONT_TEXTURES);
 		// 扩容成功后已有纹理完成全量上传，或仍在等待全量恢复；旧脏区均不再需要。
 		DiscardPendingGlyphUploads();
@@ -491,15 +775,6 @@ private:
 		if(pError != nullptr)
 			*pError = Error;
 		return Success;
-	}
-
-	int AdjustOutlineThicknessToFontSize(int OutlineThickness, int FontSize) const
-	{
-		if(FontSize > 48)
-			OutlineThickness *= 4;
-		else if(FontSize >= 18)
-			OutlineThickness *= 2;
-		return OutlineThickness;
 	}
 
 	void UploadGlyph(int TextureIndex, int PosX, int PosY, size_t Width, size_t Height, const uint8_t *pData)
@@ -632,6 +907,66 @@ private:
 		return m_TextureAtlas.Add(Width, Height, PosX, PosY);
 	}
 
+	EQmGlyphRenderResult CommitRasterizedGlyph(SGlyph &Glyph, int Width, int Height, int CharWidth, int CharHeight,
+		float OffsetX, float OffsetY, float AdvanceX, float LayoutWidth, float LayoutBearingX,
+		const uint8_t *pFill, const uint8_t *pOutline, bool AllowGrow = true)
+	{
+		if(!AllowGrow && Width > 0 && Height > 0)
+		{
+			// 后台预热最多占用图集的 3/4；剩余空间留给接下来必须同步构建的
+			// 可见文本，避免最近字形把 4096 图集填满后触发 8192 整表扩容。
+			const size_t GlyphArea = static_cast<size_t>(Width) * static_cast<size_t>(Height);
+			const size_t ReserveArea = (m_TextureDimension * m_TextureDimension) / 4;
+			if(m_TextureAtlas.FreeArea() < ReserveArea + GlyphArea)
+				return EQmGlyphRenderResult::RETRY;
+		}
+		int X = 0;
+		int Y = 0;
+		if(Width > 0 && Height > 0)
+		{
+			while(!FitGlyph(Width, Height, X, Y))
+			{
+				// 后台预热只能填当前图集的空闲区；满了就留给可见文本的同步
+				// 路径扩容。否则历史字形会把图集从 4096 推到 8192，反而增加
+				// 显存和整表上传成本，且后台预热无权改变可见文本的启动行为。
+				if(!AllowGrow)
+					return EQmGlyphRenderResult::RETRY;
+				if(m_TextureDimension >= MAXIMUM_ATLAS_DIMENSION)
+					return EQmGlyphRenderResult::UNSUPPORTED;
+				if(!IncreaseGlyphMapSize())
+				{
+					log_debug("textrender", "Cannot fit glyph into atlas or grow it. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
+					return EQmGlyphRenderResult::RETRY;
+				}
+			}
+			UploadGlyph(FONT_TEXTURE_FILL, X, Y, Width, Height, pFill);
+			UploadGlyph(FONT_TEXTURE_OUTLINE, X, Y, Width, Height, pOutline);
+		}
+
+		Glyph.m_Height = Height;
+		Glyph.m_Width = Width;
+		Glyph.m_CharHeight = CharHeight;
+		Glyph.m_CharWidth = CharWidth;
+		Glyph.m_OffsetX = OffsetX;
+		Glyph.m_OffsetY = OffsetY;
+		Glyph.m_AdvanceX = AdvanceX;
+		Glyph.m_LayoutWidth = LayoutWidth;
+		Glyph.m_LayoutBearingX = LayoutBearingX;
+		Glyph.m_aUVs[0] = X;
+		Glyph.m_aUVs[1] = Y;
+		Glyph.m_aUVs[2] = Glyph.m_aUVs[0] + Width;
+		Glyph.m_aUVs[3] = Glyph.m_aUVs[1] + Height;
+		if(QmPerfEnabled())
+			++m_QmPerfGlyphNew;
+		if(Glyph.m_Nameplate)
+		{
+			m_QmNameplateGlyphSizes.set(Glyph.m_FontSize);
+			++m_QmNameplateGlyphCount;
+			++m_QmNameplateFrameGlyphNew;
+		}
+		return EQmGlyphRenderResult::SUCCESS;
+	}
+
 	EQmGlyphRenderResult RenderGlyph(SGlyph &Glyph)
 	{
 		const auto RasterizeStart = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
@@ -680,7 +1015,7 @@ private:
 		int y = 0;
 		if(RealWidth > 0)
 		{
-			OutlineRadius = Glyph.m_Nameplate ? QmNameplateGlyphOutlineRadius(Glyph.m_FontSize) : float(AdjustOutlineThicknessToFontSize(1, Glyph.m_FontSize));
+			OutlineRadius = Glyph.m_Nameplate ? QmNameplateGlyphOutlineRadius(Glyph.m_FontSize) : float(QmAdjustOutlineThicknessToFontSize(1, Glyph.m_FontSize));
 			OutlineThickness = static_cast<int>(std::ceil(OutlineRadius));
 			x += (OutlineThickness + 1);
 			y += (OutlineThickness + 1);
@@ -690,9 +1025,6 @@ private:
 			return EQmGlyphRenderResult::UNSUPPORTED;
 		const unsigned Width = RealWidth + x * 2;
 		const unsigned Height = RealHeight + y * 2;
-
-		int X = 0;
-		int Y = 0;
 
 		if(Width > 0 && Height > 0)
 		{
@@ -715,62 +1047,89 @@ private:
 			else
 				QmGrowGlyphOutline(pGlyphDataFill.get(), pGlyphDataOutline.get(), Width, Height, OutlineThickness);
 
-			// 临时像素准备成功后才占用图集，失败重试不会吞掉空闲区。
-			while(!FitGlyph(Width, Height, X, Y))
+			const int OffsetX = Glyph.m_Nameplate ? Glyph.m_Face->glyph->bitmap_left - x : (Glyph.m_Face->glyph->metrics.horiBearingX >> 6);
+			const int OffsetY = Glyph.m_Nameplate ? Glyph.m_Face->glyph->bitmap_top - static_cast<int>(RealHeight) - y : -((Glyph.m_Face->glyph->metrics.height >> 6) - (Glyph.m_Face->glyph->metrics.horiBearingY >> 6));
+			const float AdvanceX = Glyph.m_Nameplate ? Glyph.m_Face->glyph->advance.x / 64.0f : float(Glyph.m_Face->glyph->advance.x >> 6);
+			const float LayoutWidth = Glyph.m_Face->glyph->metrics.width / 64.0f;
+			const float LayoutBearingX = Glyph.m_Face->glyph->metrics.horiBearingX / 64.0f;
+			const EQmGlyphRenderResult Result = CommitRasterizedGlyph(Glyph, Width, Height, RealWidth, RealHeight,
+				OffsetX, OffsetY, AdvanceX, LayoutWidth, LayoutBearingX, pGlyphDataFill.get(), pGlyphDataOutline.get());
+			if(Result == EQmGlyphRenderResult::SUCCESS && QmPerfEnabled())
 			{
-				if(m_TextureDimension >= MAXIMUM_ATLAS_DIMENSION)
-					return EQmGlyphRenderResult::UNSUPPORTED;
-				if(!IncreaseGlyphMapSize())
-				{
-					log_debug("textrender", "Cannot fit glyph into atlas or grow it. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
-					return EQmGlyphRenderResult::RETRY;
-				}
-			}
-
-			// upload the glyph
-			UploadGlyph(FONT_TEXTURE_FILL, X, Y, Width, Height, pGlyphDataFill.get());
-			UploadGlyph(FONT_TEXTURE_OUTLINE, X, Y, Width, Height, pGlyphDataOutline.get());
-		}
-		if(QmPerfEnabled())
-		{
-			++m_QmPerfGlyphNew;
-			m_QmPerfGlyphRasterizeMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - RasterizeStart).count();
-		}
-
-		// set glyph info
-		{
-			Glyph.m_Height = Height;
-			Glyph.m_Width = Width;
-			Glyph.m_CharHeight = RealHeight;
-			Glyph.m_CharWidth = RealWidth;
-			Glyph.m_OffsetX = Glyph.m_Nameplate ? Glyph.m_Face->glyph->bitmap_left - x : (Glyph.m_Face->glyph->metrics.horiBearingX >> 6);
-			Glyph.m_OffsetY = Glyph.m_Nameplate ? Glyph.m_Face->glyph->bitmap_top - static_cast<int>(RealHeight) - y : -((Glyph.m_Face->glyph->metrics.height >> 6) - (Glyph.m_Face->glyph->metrics.horiBearingY >> 6));
-			Glyph.m_AdvanceX = Glyph.m_Nameplate ? Glyph.m_Face->glyph->advance.x / 64.0f : float(Glyph.m_Face->glyph->advance.x >> 6);
-			Glyph.m_LayoutWidth = Glyph.m_Face->glyph->metrics.width / 64.0f;
-			Glyph.m_LayoutBearingX = Glyph.m_Face->glyph->metrics.horiBearingX / 64.0f;
-
-			Glyph.m_aUVs[0] = X;
-			Glyph.m_aUVs[1] = Y;
-			Glyph.m_aUVs[2] = Glyph.m_aUVs[0] + Width;
-			Glyph.m_aUVs[3] = Glyph.m_aUVs[1] + Height;
-
-			if(Glyph.m_Nameplate)
-			{
-				m_QmNameplateGlyphSizes.set(Glyph.m_FontSize);
-				++m_QmNameplateGlyphCount;
-				++m_QmNameplateFrameGlyphNew;
-				if(QmPerfEnabled())
+				m_QmPerfGlyphRasterizeMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - RasterizeStart).count();
+				if(Glyph.m_Nameplate)
 					m_QmNameplateFrameRasterizeMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - RasterizeStart).count();
 			}
+			return Result;
 		}
+		const int OffsetX = Glyph.m_Nameplate ? Glyph.m_Face->glyph->bitmap_left : (Glyph.m_Face->glyph->metrics.horiBearingX >> 6);
+		const int OffsetY = Glyph.m_Nameplate ? Glyph.m_Face->glyph->bitmap_top : -((Glyph.m_Face->glyph->metrics.height >> 6) - (Glyph.m_Face->glyph->metrics.horiBearingY >> 6));
+		const float AdvanceX = Glyph.m_Nameplate ? Glyph.m_Face->glyph->advance.x / 64.0f : float(Glyph.m_Face->glyph->advance.x >> 6);
+		const float LayoutWidth = Glyph.m_Face->glyph->metrics.width / 64.0f;
+		const float LayoutBearingX = Glyph.m_Face->glyph->metrics.horiBearingX / 64.0f;
+		const EQmGlyphRenderResult Result = CommitRasterizedGlyph(Glyph, 0, 0, 0, 0,
+			OffsetX, OffsetY, AdvanceX, LayoutWidth, LayoutBearingX, nullptr, nullptr);
+		if(Result == EQmGlyphRenderResult::SUCCESS && QmPerfEnabled())
+			m_QmPerfGlyphRasterizeMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - RasterizeStart).count();
+		return Result;
+	}
+
+	// 测量只依赖 FreeType 的 metrics/advance，不需要位图、描边扩张或图集写入。
+	// 过去 TextWidth 也会走 GetGlyph -> RenderGlyph，冷页面的文本规划因此被
+	// 字形光栅化污染，一个 20ms 的收集单元里可能夹着几十个首次字形。
+	EQmGlyphRenderResult LoadGlyphMetrics(SGlyph &Glyph)
+	{
+		if(Glyph.m_Nameplate)
+			return EQmGlyphRenderResult::UNSUPPORTED;
+
+		FT_Error Error;
+		if(!EnsureFacePixelSize(Glyph.m_Face, Glyph.m_FontSize, &Error))
+			return Error == FT_Err_Out_Of_Memory ? EQmGlyphRenderResult::RETRY : EQmGlyphRenderResult::UNSUPPORTED;
+
+		// flags 必须与 RenderGlyph 的非名字牌路径一致，否则测量出的 advance
+		// 与实际绘制路径不同，文本会在测量和出图之间跳位。
+		Error = FT_Load_Glyph(Glyph.m_Face, Glyph.m_GlyphIndex, FT_LOAD_NO_BITMAP);
+		if(Error)
+			return Error == FT_Err_Out_Of_Memory ? EQmGlyphRenderResult::RETRY : EQmGlyphRenderResult::UNSUPPORTED;
+
+		const FT_Glyph_Metrics &Metrics = Glyph.m_Face->glyph->metrics;
+		const int RealWidth = static_cast<int>((Metrics.width + 63) >> 6);
+		const int RealHeight = static_cast<int>((Metrics.height + 63) >> 6);
+		int X = 0;
+		int Y = 0;
+		if(RealWidth > 0)
+		{
+			const int OutlineThickness = static_cast<int>(std::ceil(float(QmAdjustOutlineThicknessToFontSize(1, Glyph.m_FontSize))));
+			X = OutlineThickness + 1;
+			Y = X;
+		}
+		// 布局宽度必须和 RenderGlyph 使用的描边留白一致。只用 glyph metrics
+		// 会让 TextWidth 比真实绘制少掉最后一字的 2*(描边+1) 像素，输入框
+		// 光标和测量专用布局会因此错位。
+		Glyph.m_Width = RealWidth > 0 ? RealWidth + X * 2 : 0;
+		Glyph.m_Height = RealWidth > 0 ? RealHeight + Y * 2 : 0;
+		Glyph.m_CharWidth = RealWidth;
+		Glyph.m_CharHeight = RealHeight;
+		Glyph.m_OffsetX = Metrics.horiBearingX >> 6;
+		Glyph.m_OffsetY = -((Metrics.height >> 6) - (Metrics.horiBearingY >> 6));
+		Glyph.m_AdvanceX = float(Glyph.m_Face->glyph->advance.x >> 6);
+		Glyph.m_LayoutWidth = Metrics.width / 64.0f;
+		Glyph.m_LayoutBearingX = Metrics.horiBearingX / 64.0f;
+		Glyph.m_State = SGlyph::EState::MEASURED;
 		return EQmGlyphRenderResult::SUCCESS;
 	}
 
 public:
-	CGlyphMap(IGraphics *pGraphics, FT_Library FtLibrary)
+	CGlyphMap(IGraphics *pGraphics, FT_Library FtLibrary, IEngine *pEngine)
 	{
 		m_FTLibrary = FtLibrary;
 		m_pGraphics = pGraphics;
+		m_pEngine = pEngine;
+		// 4096 在真实使用中仍可能被完整 UI 字形集合挤满，运行时扩容会复制
+		// 128 MiB 并全量重传，实测单帧 73.7 ms。独显预算足够时直接以
+		// 8192 启动，把成本移到首帧前；核显/低显存仍保持 4096。
+		const int VramBudgetMb = QmQueryDedicatedVideoMemoryBudgetMb();
+		m_TextureDimension = QmChooseInitialGlyphAtlasDimension(VramBudgetMb);
 		for(auto &pTextureData : m_apTextureData)
 		{
 			pTextureData = std::make_unique<uint8_t[]>(m_TextureDimension * m_TextureDimension);
@@ -779,10 +1138,18 @@ public:
 		m_TextureAtlas.Clear(m_TextureDimension);
 		if(!UploadTextures())
 			throw std::runtime_error("Failed to create initial glyph atlas textures");
+		dbg_msg("textrender/qm", "event=glyph_atlas_initial dimension=%" PRIzu " vram_budget_mb=%d", m_TextureDimension, VramBudgetMb);
 	}
 
 	~CGlyphMap()
 	{
+		// 后台任务借用字体文件和本对象状态；关闭前先取消并等 worker 退出，
+		// 再释放纹理与字体 collection。
+		m_pQmGlyphWorkerState->CancelAndClear();
+		m_pQmGlyphWorkerState->WaitIdle();
+		DiscardQmGpuWork();
+		if(m_pGraphics != nullptr && m_QmGpuBatch.m_Target.IsValid())
+			m_pGraphics->DestroyRenderTarget(&m_QmGpuBatch.m_Target);
 		UnloadTextures();
 	}
 	// TClient
@@ -811,6 +1178,23 @@ public:
 	{
 		for(auto &Texture : m_aTextures)
 			Texture.Invalidate();
+		DiscardQmGpuWork();
+		m_QmGpuBatch.m_Target.Invalidate();
+		// GPU 结果依赖被销毁的 render target/readback。推进代际并释放 pending，
+		// 否则在途任务永远处于 QUEUED，之后既不能重排也不会进入同步兜底。
+		++m_QmGlyphGeneration;
+		for(const auto &[Key, Generation] : m_QmPendingGlyphTasks)
+		{
+			(void)Generation;
+			const auto It = m_Glyphs.find(Key);
+			if(It != m_Glyphs.end() &&
+				(It->second.m_State == SGlyph::EState::QUEUED || It->second.m_State == SGlyph::EState::MEASURED))
+				It->second.m_State = SGlyph::EState::RETRY;
+		}
+		m_QmPendingGlyphTasks.clear();
+		m_vQmPendingGlyphTasks.clear();
+		if(m_pQmGlyphWorkerState != nullptr)
+			m_pQmGlyphWorkerState->DiscardResults();
 		DiscardPendingGlyphUploads();
 	}
 
@@ -1180,6 +1564,7 @@ public:
 	void Clear()
 	{
 		m_GlyphRenderRetry.Reset();
+		DiscardQmGpuWork();
 		// 已有容器的 UV 随图集清空失效，即使其索引和文字内容仍然有效。
 		++*m_pGlyphAtlasRevision;
 		DiscardPendingGlyphUploads();
@@ -1191,7 +1576,14 @@ public:
 
 		m_TextureAtlas.Clear(m_TextureDimension);
 		m_QmTraceFirstCjkGlyph = true;
+		++m_QmGlyphGeneration;
+		m_QmPendingGlyphTasks.clear();
+		m_vQmPendingGlyphTasks.clear();
 		m_Glyphs.clear();
+		// 字体/语言/图集代际变化后旧热力图不再代表当前字形集合。
+		m_QmGlyphMissHeat.clear();
+		m_QmGlyphUseHeat.clear();
+		m_QmGlyphUseTotal = 0;
 		m_QmNameplateGlyphSizes.reset();
 		m_QmNameplateGlyphCount = 0;
 		m_QmNameplateFrameGlyphNew = 0;
@@ -1204,13 +1596,978 @@ public:
 
 	// QmClient: 记录/消费“最近缺失字形”。预热集合与缓存无关，字体图集重建（语言切换）
 	// 后正好需要重新预热，因此这里不清空集合。
-	void QmRecordRecentGlyphMiss(int Chr, int FontSize) { m_RecentGlyphs.Record(Chr, FontSize); }
+	void QmRecordRecentGlyphMiss(int Chr, int FontSize)
+	{
+		m_RecentGlyphs.Record(Chr, FontSize);
+		if(!QmPerfEnabled() || Chr <= 0)
+			return;
+		const uint64_t Key = (static_cast<uint64_t>(static_cast<uint32_t>(FontSize)) << 32) | static_cast<uint32_t>(Chr);
+		const auto It = m_QmGlyphMissHeat.find(Key);
+		if(It != m_QmGlyphMissHeat.end())
+			++It->second;
+		else if(m_QmGlyphMissHeat.size() < 4096)
+			m_QmGlyphMissHeat.emplace(Key, 1);
+	}
+	void QmRecordGlyphUse(int Chr, int FontSize)
+	{
+		if(!QmPerfEnabled() || Chr <= 0)
+			return;
+		FontSize = std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE);
+		++m_QmGlyphUseTotal;
+		const uint64_t Key = (static_cast<uint64_t>(static_cast<uint32_t>(FontSize)) << 32) | static_cast<uint32_t>(Chr);
+		const auto It = m_QmGlyphUseHeat.find(Key);
+		if(It != m_QmGlyphUseHeat.end())
+			++It->second;
+		else if(m_QmGlyphUseHeat.size() < 8192)
+			m_QmGlyphUseHeat.emplace(Key, 1);
+	}
+	uint64_t QmGlyphUseTotal() const { return m_QmGlyphUseTotal; }
+	size_t QmGlyphUseDistinct() const { return m_QmGlyphUseHeat.size(); }
+	size_t QmAtlasDimension() const { return m_TextureDimension; }
+	int QmAtlasGrowthCount() const { return m_QmAtlasGrowths; }
+	// 输出 "字号:码点:次数" 的 top-N 冷字形，供日志比较预热覆盖和字号分布。
+	void FormatQmGlyphMissHeat(char *pBuffer, size_t BufferSize, int MaxEntries) const
+	{
+		if(pBuffer == nullptr || BufferSize == 0)
+			return;
+		pBuffer[0] = '\0';
+		if(MaxEntries <= 0 || m_QmGlyphMissHeat.empty())
+			return;
+		std::vector<std::pair<uint64_t, uint32_t>> vTop(m_QmGlyphMissHeat.begin(), m_QmGlyphMissHeat.end());
+		const size_t Count = std::min(vTop.size(), static_cast<size_t>(MaxEntries));
+		std::partial_sort(vTop.begin(), vTop.begin() + Count, vTop.end(), [](const auto &A, const auto &B) { return A.second > B.second; });
+		size_t Offset = 0;
+		for(size_t i = 0; i < Count; ++i)
+		{
+			const int FontSize = static_cast<int>(vTop[i].first >> 32);
+			const int Chr = static_cast<int>(vTop[i].first & 0xFFFFFFFFu);
+			const int Written = str_format(&pBuffer[Offset], BufferSize - Offset, "%s%d:%d:%u", i == 0 ? "" : ";", FontSize, Chr, vTop[i].second);
+			if(Written <= 0 || static_cast<size_t>(Written) >= BufferSize - Offset)
+				break;
+			Offset += static_cast<size_t>(Written);
+		}
+	}
+	// 输出 "字号:码点:次数" 的 top-N 实际使用字形。
+	void FormatQmGlyphUseHeat(char *pBuffer, size_t BufferSize, int MaxEntries) const
+	{
+		if(pBuffer == nullptr || BufferSize == 0)
+			return;
+		pBuffer[0] = '\0';
+		if(MaxEntries <= 0 || m_QmGlyphUseHeat.empty())
+			return;
+		std::vector<std::pair<uint64_t, uint32_t>> vTop(m_QmGlyphUseHeat.begin(), m_QmGlyphUseHeat.end());
+		const size_t Count = std::min(vTop.size(), static_cast<size_t>(MaxEntries));
+		std::partial_sort(vTop.begin(), vTop.begin() + Count, vTop.end(), [](const auto &A, const auto &B) { return A.second > B.second; });
+		size_t Offset = 0;
+		for(size_t i = 0; i < Count; ++i)
+		{
+			const int FontSize = static_cast<int>(vTop[i].first >> 32);
+			const int Chr = static_cast<int>(vTop[i].first & 0xFFFFFFFFu);
+			const int Written = str_format(&pBuffer[Offset], BufferSize - Offset, "%s%d:%d:%u", i == 0 ? "" : ";", FontSize, Chr, vTop[i].second);
+			if(Written <= 0 || static_cast<size_t>(Written) >= BufferSize - Offset)
+				break;
+			Offset += static_cast<size_t>(Written);
+		}
+	}
 	size_t QmRecentGlyphMissCount() const { return m_RecentGlyphs.Items().size(); }
+	bool QmRecentGlyphPrewarmComplete() const { return m_RecentGlyphs.Remaining() == 0; }
+	size_t QmRecentGlyphPrewarmRemaining() const { return m_RecentGlyphs.Remaining(); }
 	bool QmLoadRecentGlyphs(IStorage *pStorage, const char *pPath) { return QmRecentGlyphs::LoadFile(pStorage, pPath, m_RecentGlyphs); }
 	bool QmSaveRecentGlyphs(IStorage *pStorage, const char *pPath) const { return QmRecentGlyphs::SaveFile(pStorage, pPath, m_RecentGlyphs); }
 
-	int QmPrewarmRecentGlyphMisses(int MaxCount)
+	bool QmGpuRasterUsable()
 	{
+		if(g_Config.m_QmTextRasterMode != 2 || m_pGraphics == nullptr)
+			return false;
+		// 覆盖度已经用 2x SSAA 离屏绘制，不依赖 MSAA。把单采样目标设备也纳入，
+		// 避免把支持 render target 的核显/老驱动误判为不支持 GPU 字形路径。
+		if(m_pGraphics->IsRenderTargetSupported())
+			return true;
+		if(!m_QmGpuRasterUnsupportedLogged)
+		{
+			m_QmGpuRasterUnsupportedLogged = true;
+			dbg_msg("textrender/qm", "event=gpu_glyph_raster_unsupported render_targets=%d max_samples=%d reason='%s'",
+				m_pGraphics->IsRenderTargetSupported() ? 1 : 0, m_pGraphics->MaxMultisampleRenderTargetSamples(),
+				m_pGraphics->RenderTargetSupportReason());
+		}
+		return false;
+	}
+
+	bool QmGlyphWorkerEnabled() const { return m_pEngine != nullptr && g_Config.m_QmTextRasterMode != 0; }
+	size_t QmGlyphWorkerPendingCount() const { return m_QmPendingGlyphTasks.size(); }
+	size_t QmGpuPreparedCount() const { return m_vQmGpuPreparedGlyphs.size(); }
+	int QmGpuBatchActiveCount() const { return m_QmGpuBatch.m_Active ? 1 : 0; }
+
+	EQmGlyphPrewarmResult QmPrewarmGlyphTask(int Chr, int FontSize,
+		const std::unordered_map<FT_Face, std::pair<const FT_Byte *, FT_Long>> &FontData)
+	{
+		if(!QmGlyphWorkerEnabled() || Chr <= 0)
+			return EQmGlyphPrewarmResult::REJECTED;
+		FontSize = std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE);
+		FT_Face Face = nullptr;
+		const FT_UInt GlyphIndex = GetCharGlyph(Chr, &Face, false);
+		if(GlyphIndex == 0 || Face == nullptr)
+			return EQmGlyphPrewarmResult::UNSUPPORTED;
+
+		const auto Key = std::make_tuple(Face, Chr, FontSize, false);
+		const auto Existing = m_Glyphs.find(Key);
+		if(Existing != m_Glyphs.end())
+		{
+			switch(Existing->second.m_State)
+			{
+			case SGlyph::EState::RENDERED:
+				return EQmGlyphPrewarmResult::READY;
+			case SGlyph::EState::ERROR:
+				return EQmGlyphPrewarmResult::UNSUPPORTED;
+			case SGlyph::EState::QUEUED:
+				// pending 集合缺失说明任务已失败或结果被丢弃；允许重新排队一次。
+				if(m_QmPendingGlyphTasks.find(Key) != m_QmPendingGlyphTasks.end())
+					return EQmGlyphPrewarmResult::QUEUED;
+				Existing->second.m_State = SGlyph::EState::RETRY;
+				return EQmGlyphPrewarmResult::RETRY;
+			case SGlyph::EState::RETRY:
+				return EQmGlyphPrewarmResult::RETRY;
+			case SGlyph::EState::UNINITIALIZED:
+			default:
+				break;
+			}
+		}
+		// 测量路径可能在 worker 尚未完成时把字形状态改成 MEASURED；这里按
+		// pending 集合去重，不能因为状态不是 QUEUED 就重复提交同一 key。
+		if(m_QmPendingGlyphTasks.find(Key) != m_QmPendingGlyphTasks.end())
+			return EQmGlyphPrewarmResult::QUEUED;
+		if(m_QmPendingGlyphTasks.size() >= QM_MAX_PENDING_GLYPH_TASKS)
+			return EQmGlyphPrewarmResult::REJECTED;
+		const auto Source = FontData.find(Face);
+		if(Source == FontData.end() || Source->second.first == nullptr || Source->second.second <= 0)
+			return EQmGlyphPrewarmResult::REJECTED;
+
+		try
+		{
+			SGlyph &Glyph = Existing != m_Glyphs.end() ? Existing->second : m_Glyphs[Key];
+			Glyph.m_State = SGlyph::EState::QUEUED;
+			Glyph.m_FontSize = FontSize;
+			Glyph.m_Nameplate = false;
+			Glyph.m_Face = Face;
+			Glyph.m_Chr = Chr;
+			Glyph.m_GlyphIndex = GlyphIndex;
+
+			SQmGlyphWorkerTask Task;
+			Task.m_Key = Key;
+			Task.m_GlyphIndex = GlyphIndex;
+			Task.m_pFontData = Source->second.first;
+			Task.m_FontDataSize = Source->second.second;
+			Task.m_FaceIndex = Face->face_index;
+			Task.m_FontSize = FontSize;
+			Task.m_Generation = m_QmGlyphGeneration;
+			Task.m_GpuGeometry = QmGpuRasterUsable();
+			const SQmFaceWeightState &WeightState = QmEnsureFaceWeightState(Face);
+			Task.m_vVarCoords = WeightState.m_vAppliedCoords;
+
+			const auto PendingInsert = m_QmPendingGlyphTasks.emplace(Key, m_QmGlyphGeneration);
+			if(!PendingInsert.second)
+				return EQmGlyphPrewarmResult::QUEUED;
+			try
+			{
+				m_vQmPendingGlyphTasks.push_back(std::move(Task));
+			}
+			catch(...)
+			{
+				if(const auto Pending = m_QmPendingGlyphTasks.find(Key); Pending != m_QmPendingGlyphTasks.end() && Pending->second == m_QmGlyphGeneration)
+					m_QmPendingGlyphTasks.erase(Pending);
+				throw;
+			}
+			++m_QmPerfGlyphWorkerQueued;
+			return EQmGlyphPrewarmResult::QUEUED;
+		}
+		catch(const std::bad_alloc &)
+		{
+			if(const auto It = m_Glyphs.find(Key); It != m_Glyphs.end() && It->second.m_State == SGlyph::EState::QUEUED)
+				It->second.m_State = SGlyph::EState::RETRY;
+			return EQmGlyphPrewarmResult::REJECTED;
+		}
+	}
+
+	// 只为不可见文本安排后台预热。返回 true 表示全部字形已可同步构建容器；
+	// 返回 false 时调用方必须保留旧内容或稍后重试，禁止拿缺失字形的容器充数。
+	bool QmQueueTextGlyphsForPrewarm(const char *pText, int FontSize, int MaxGlyphs,
+		const std::unordered_map<FT_Face, std::pair<const FT_Byte *, FT_Long>> &FontData)
+	{
+		if(!QmGlyphWorkerEnabled() || pText == nullptr)
+			return true;
+		FontSize = std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE);
+		int Queued = 0;
+		bool NotReady = false;
+		const char *pCursor = pText;
+		while(*pCursor != '\0')
+		{
+			const int Chr = str_utf8_decode(&pCursor);
+			if(Chr <= 0)
+				break;
+			// 控制字符不产生字形；换行和缩进由布局处理。
+			if(Chr < 0x20)
+				continue;
+			const EQmGlyphPrewarmResult Result = QmPrewarmGlyphTask(Chr, FontSize, FontData);
+			if(Result == EQmGlyphPrewarmResult::READY || Result == EQmGlyphPrewarmResult::UNSUPPORTED)
+				continue;
+			NotReady = true;
+			if(Result == EQmGlyphPrewarmResult::REJECTED)
+				break;
+			if(++Queued >= MaxGlyphs)
+				break;
+		}
+		return !NotReady;
+	}
+
+	// 把主线程收集的任务切成有界批次提交给引擎 job pool。批次限制避免加载阶段
+	// 一次制造上千个 shared_ptr/job 对象，也避免挤占文件与网络任务。
+	void SubmitQmGlyphTasks()
+	{
+		int SubmittedBatches = 0;
+		while(!m_vQmPendingGlyphTasks.empty() && SubmittedBatches < QM_MAX_GLYPH_SUBMIT_BATCHES_PER_FRAME)
+		{
+			if(m_pQmGlyphWorkerState->ActiveJobs() >= QM_MAX_ACTIVE_GLYPH_JOBS)
+				break;
+			const size_t BatchCount = std::min(QM_GLYPH_JOB_BATCH, m_vQmPendingGlyphTasks.size());
+			std::vector<SQmGlyphWorkerTask> vBatch(std::make_move_iterator(m_vQmPendingGlyphTasks.begin()), std::make_move_iterator(m_vQmPendingGlyphTasks.begin() + BatchCount));
+			m_vQmPendingGlyphTasks.erase(m_vQmPendingGlyphTasks.begin(), m_vQmPendingGlyphTasks.begin() + BatchCount);
+			std::vector<std::tuple<FT_Face, int, int, bool>> vKeys;
+			vKeys.reserve(vBatch.size());
+			for(const SQmGlyphWorkerTask &Task : vBatch)
+				vKeys.push_back(Task.m_Key);
+			const auto FailBatch = [&]() {
+				for(const auto &Key : vKeys)
+				{
+					if(const auto Pending = m_QmPendingGlyphTasks.find(Key); Pending != m_QmPendingGlyphTasks.end() && Pending->second == m_QmGlyphGeneration)
+						m_QmPendingGlyphTasks.erase(Pending);
+					const auto It = m_Glyphs.find(Key);
+					if(It != m_Glyphs.end() && It->second.m_State == SGlyph::EState::QUEUED)
+						It->second.m_State = SGlyph::EState::RETRY;
+				}
+			};
+			if(m_pEngine == nullptr)
+			{
+				FailBatch();
+				continue;
+			}
+			try
+			{
+				auto pJob = std::make_shared<CQmGlyphRasterJob>(m_pQmGlyphWorkerState, std::move(vBatch));
+				if(!m_pEngine->TryAddJob(std::move(pJob)))
+					FailBatch();
+				else
+				{
+					++m_QmPerfGlyphWorkerJobs;
+					++SubmittedBatches;
+				}
+			}
+			catch(const std::bad_alloc &)
+			{
+				FailBatch();
+			}
+		}
+	}
+
+	void ApplyQmGlyphWorkerResult(SQmGlyphWorkerResult &Result, const FontDataMap *pFontData)
+	{
+		const auto Pending = m_QmPendingGlyphTasks.find(Result.m_Key);
+		if(Result.m_Generation != m_QmGlyphGeneration)
+		{
+			if(Pending != m_QmPendingGlyphTasks.end() && Pending->second == Result.m_Generation)
+				m_QmPendingGlyphTasks.erase(Pending);
+			return;
+		}
+		const auto It = m_Glyphs.find(Result.m_Key);
+		if(It == m_Glyphs.end() ||
+			(It->second.m_State != SGlyph::EState::QUEUED && It->second.m_State != SGlyph::EState::MEASURED))
+		{
+			if(Pending != m_QmPendingGlyphTasks.end() && Pending->second == Result.m_Generation)
+				m_QmPendingGlyphTasks.erase(Pending);
+			return;
+		}
+		SGlyph &Glyph = It->second;
+		if(Result.m_Status == EQmGlyphRenderResult::UNSUPPORTED)
+		{
+			if(Result.m_WasGpuGeometry)
+			{
+				// GPU 几何失败不是字形本身不可用；必须改排 CPU worker，
+				// 否则预热被标 ERROR，可见页再次同步光栅化。
+				QueueQmGpuCpuFallback(Result.m_Key, Result.m_Generation, pFontData);
+				return;
+			}
+			if(Pending != m_QmPendingGlyphTasks.end() && Pending->second == Result.m_Generation)
+				m_QmPendingGlyphTasks.erase(Pending);
+			Glyph.m_State = SGlyph::EState::ERROR;
+			return;
+		}
+		if(Result.m_Status == EQmGlyphRenderResult::RETRY)
+		{
+			if(Result.m_WasGpuGeometry)
+			{
+				QueueQmGpuCpuFallback(Result.m_Key, Result.m_Generation, pFontData);
+				return;
+			}
+			if(Pending != m_QmPendingGlyphTasks.end() && Pending->second == Result.m_Generation)
+				m_QmPendingGlyphTasks.erase(Pending);
+			Glyph.m_State = SGlyph::EState::RETRY;
+			return;
+		}
+		if(Result.m_HasGeometry)
+		{
+			// 轮廓几何已就绪，但填充覆盖度还要等 GPU 读回；pending 继续占位，
+			// 防止同一字形在 GPU 批次完成前被重复排队。
+			if(Pending == m_QmPendingGlyphTasks.end() || Pending->second != Result.m_Generation)
+			{
+				Glyph.m_State = SGlyph::EState::RETRY;
+				return;
+			}
+			try
+			{
+				m_vQmGpuPreparedGlyphs.push_back({Result.m_Key, Result.m_Generation, std::move(Result.m_Geometry)});
+			}
+			catch(const std::bad_alloc &)
+			{
+				if(Pending != m_QmPendingGlyphTasks.end() && Pending->second == Result.m_Generation)
+					m_QmPendingGlyphTasks.erase(Pending);
+				Glyph.m_State = SGlyph::EState::RETRY;
+			}
+			return;
+		}
+		if(Pending != m_QmPendingGlyphTasks.end() && Pending->second == Result.m_Generation)
+			m_QmPendingGlyphTasks.erase(Pending);
+		try
+		{
+			const EQmGlyphRenderResult CommitResult = CommitRasterizedGlyph(Glyph,
+				Result.m_Bitmap.m_Width, Result.m_Bitmap.m_Height, Result.m_Bitmap.m_CharWidth, Result.m_Bitmap.m_CharHeight,
+				Result.m_Bitmap.m_OffsetX, Result.m_Bitmap.m_OffsetY, Result.m_Bitmap.m_AdvanceX,
+				Result.m_Bitmap.m_LayoutWidth, Result.m_Bitmap.m_LayoutBearingX,
+				Result.m_Bitmap.m_vFill.data(), Result.m_Bitmap.m_vOutline.data(), false);
+			Glyph.m_State = CommitResult == EQmGlyphRenderResult::SUCCESS     ? SGlyph::EState::RENDERED :
+					CommitResult == EQmGlyphRenderResult::UNSUPPORTED ? SGlyph::EState::ERROR :
+											    SGlyph::EState::RETRY;
+			if(Glyph.m_State == SGlyph::EState::RENDERED)
+			{
+				++m_QmPerfGlyphWorkerCompleted;
+				m_QmPerfGlyphWorkerRasterizeMs += Result.m_RasterizeMs;
+			}
+		}
+		catch(const std::bad_alloc &)
+		{
+			Glyph.m_State = SGlyph::EState::RETRY;
+		}
+	}
+
+	void QueueQmGpuCpuFallback(const std::tuple<FT_Face, int, int, bool> &Key, uint64_t Generation, const FontDataMap *pFontData)
+	{
+		const auto Pending = m_QmPendingGlyphTasks.find(Key);
+		if(Pending == m_QmPendingGlyphTasks.end() || Pending->second != Generation || Generation != m_QmGlyphGeneration)
+			return;
+		const auto GlyphIt = m_Glyphs.find(Key);
+		if(GlyphIt == m_Glyphs.end() ||
+			(GlyphIt->second.m_State != SGlyph::EState::QUEUED && GlyphIt->second.m_State != SGlyph::EState::MEASURED))
+			return;
+		SGlyph &Glyph = GlyphIt->second;
+		if(g_Config.m_QmTextRasterMode == 0)
+		{
+			m_QmPendingGlyphTasks.erase(Pending);
+			Glyph.m_State = SGlyph::EState::RETRY;
+			++m_QmPerfGpuFallbacks;
+			return;
+		}
+		FT_Face Face = std::get<0>(Key);
+		if(pFontData == nullptr)
+		{
+			m_QmPendingGlyphTasks.erase(Pending);
+			Glyph.m_State = SGlyph::EState::RETRY;
+			++m_QmPerfGpuFallbacks;
+			return;
+		}
+		const auto Source = pFontData->find(Face);
+		if(Source == pFontData->end() || Source->second.first == nullptr || Source->second.second <= 0)
+		{
+			m_QmPendingGlyphTasks.erase(Pending);
+			Glyph.m_State = SGlyph::EState::RETRY;
+			++m_QmPerfGpuFallbacks;
+			return;
+		}
+		try
+		{
+			SQmGlyphWorkerTask Task;
+			Task.m_Key = Key;
+			Task.m_GlyphIndex = Glyph.m_GlyphIndex;
+			Task.m_pFontData = Source->second.first;
+			Task.m_FontDataSize = Source->second.second;
+			Task.m_FaceIndex = Face->face_index;
+			Task.m_FontSize = Glyph.m_FontSize;
+			Task.m_Generation = Generation;
+			Task.m_GpuGeometry = false;
+			const SQmFaceWeightState &WeightState = QmEnsureFaceWeightState(Face);
+			Task.m_vVarCoords = WeightState.m_vAppliedCoords;
+			Glyph.m_State = SGlyph::EState::QUEUED;
+			m_vQmPendingGlyphTasks.push_back(std::move(Task));
+			++m_QmPerfGpuFallbacks;
+		}
+		catch(const std::bad_alloc &)
+		{
+			m_QmPendingGlyphTasks.erase(Pending);
+			Glyph.m_State = SGlyph::EState::RETRY;
+			++m_QmPerfGpuFallbacks;
+		}
+	}
+
+	void FallbackQmGpuPreparedGlyphs(const FontDataMap *pFontData)
+	{
+		for(const SQmGpuPreparedGlyph &Prepared : m_vQmGpuPreparedGlyphs)
+			QueueQmGpuCpuFallback(Prepared.m_Key, Prepared.m_Generation, pFontData);
+		m_vQmGpuPreparedGlyphs.clear();
+	}
+
+	void FallbackQmGpuUnselectedPrepared(const FontDataMap *pFontData, const std::vector<bool> &vSelected)
+	{
+		for(size_t i = 0; i < m_vQmGpuPreparedGlyphs.size(); ++i)
+		{
+			if(i < vSelected.size() && vSelected[i])
+				continue;
+			const SQmGpuPreparedGlyph &Prepared = m_vQmGpuPreparedGlyphs[i];
+			QueueQmGpuCpuFallback(Prepared.m_Key, Prepared.m_Generation, pFontData);
+		}
+		m_vQmGpuPreparedGlyphs.clear();
+	}
+
+	void FallbackQmGpuPlacements(const FontDataMap *pFontData)
+	{
+		const size_t Start = m_QmGpuBatch.m_ImageReady ? m_QmGpuBatch.m_ApplyIndex : 0;
+		for(size_t i = Start; i < m_QmGpuBatch.m_vPlacements.size(); ++i)
+			QueueQmGpuCpuFallback(m_QmGpuBatch.m_vPlacements[i].m_Key, m_QmGpuBatch.m_vPlacements[i].m_Generation, pFontData);
+		m_QmGpuBatch.m_vPlacements.clear();
+		m_QmGpuBatch.m_Image.Free();
+		m_QmGpuBatch.m_ApplyIndex = 0;
+		m_QmGpuBatch.m_ImageReady = false;
+		if(m_QmGpuBatch.m_Readback.IsValid() && m_pGraphics != nullptr)
+			m_pGraphics->CancelRenderTargetReadback(&m_QmGpuBatch.m_Readback);
+		m_QmGpuBatch.m_Active = false;
+		m_QmGpuBatch.m_PendingReadback = false;
+		m_QmGpuBatch.m_ReadbackPolls = 0;
+		m_QmGpuBatch.m_FlushRequested = false;
+		m_QmGpuBatch.m_FillRuleSet = false;
+	}
+
+	void DiscardQmGpuWork()
+	{
+		m_vQmGpuPreparedGlyphs.clear();
+		if(m_QmGpuBatch.m_Readback.IsValid() && m_pGraphics != nullptr)
+			m_pGraphics->CancelRenderTargetReadback(&m_QmGpuBatch.m_Readback);
+		m_QmGpuBatch.m_vPlacements.clear();
+		m_QmGpuBatch.m_Image.Free();
+		m_QmGpuBatch.m_ApplyIndex = 0;
+		m_QmGpuBatch.m_ImageReady = false;
+		m_QmGpuBatch.m_Active = false;
+		m_QmGpuBatch.m_PendingReadback = false;
+		m_QmGpuBatch.m_ReadbackPolls = 0;
+		m_QmGpuBatch.m_FlushRequested = false;
+		m_QmGpuBatch.m_FillRuleSet = false;
+	}
+
+	void PollQmGpuBatch(const FontDataMap *pFontData)
+	{
+		if(!m_QmGpuBatch.m_Active || m_pGraphics == nullptr)
+			return;
+		const auto PollStart = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
+		if(m_QmGpuBatch.m_PendingReadback)
+		{
+			const IGraphics::ERenderTargetReadbackState State = m_pGraphics->PollRenderTargetReadback(m_QmGpuBatch.m_Readback);
+			if(State == IGraphics::ERenderTargetReadbackState::PENDING)
+			{
+				// OpenGL 的 PBO 读回只启动 DMA，必须由后续 Readback/Flush 命令结算。
+				// 给 DMA 至少一个渲染帧的重叠时间，再让后端 Flush；否则轮询会永远
+				// 停在 PENDING，GPU 预热看似排队但一个字形也不会落进图集。
+				++m_QmGpuBatch.m_ReadbackPolls;
+				if(!m_QmGpuBatch.m_FlushRequested && m_QmGpuBatch.m_ReadbackPolls >= 2)
+				{
+					m_QmGpuBatch.m_FlushRequested = true;
+					if(!m_pGraphics->FlushRenderTargetReadback())
+						FallbackQmGpuPlacements(pFontData);
+				}
+				return;
+			}
+			if(State != IGraphics::ERenderTargetReadbackState::READY ||
+				!m_pGraphics->ResolveRenderTargetReadback(&m_QmGpuBatch.m_Readback, m_QmGpuBatch.m_Image) ||
+				m_QmGpuBatch.m_Image.m_pData == nullptr)
+			{
+				FallbackQmGpuPlacements(pFontData);
+				return;
+			}
+			++m_QmPerfGpuReadbacks;
+			m_QmGpuBatch.m_PendingReadback = false;
+			m_QmGpuBatch.m_ImageReady = true;
+			m_QmGpuBatch.m_ApplyIndex = 0;
+			m_QmGpuBatch.m_ReadbackPolls = 0;
+			m_QmGpuBatch.m_FlushRequested = false;
+		}
+		if(!m_QmGpuBatch.m_ImageReady)
+			return;
+		// 读回后的图集分配、描边扩张和图集写入都留在主线程，但每帧最多
+		// 0.5ms；剩余字形留到下一帧，后台预热不能把当前帧拖到刷新率以下。
+		const auto Deadline = time_get_nanoseconds() + std::chrono::microseconds(500);
+		const size_t StartIndex = m_QmGpuBatch.m_ApplyIndex;
+		while(m_QmGpuBatch.m_ApplyIndex < m_QmGpuBatch.m_vPlacements.size())
+		{
+			if(m_QmGpuBatch.m_ApplyIndex != StartIndex && time_get_nanoseconds() >= Deadline)
+				break;
+			SQmGpuPlacement &Placement = m_QmGpuBatch.m_vPlacements[m_QmGpuBatch.m_ApplyIndex];
+			++m_QmGpuBatch.m_ApplyIndex;
+			const auto GlyphIt = m_Glyphs.find(Placement.m_Key);
+			if(GlyphIt == m_Glyphs.end() || Placement.m_Generation != m_QmGlyphGeneration ||
+				(GlyphIt->second.m_State != SGlyph::EState::QUEUED && GlyphIt->second.m_State != SGlyph::EState::MEASURED))
+			{
+				if(const auto Pending = m_QmPendingGlyphTasks.find(Placement.m_Key);
+					Pending != m_QmPendingGlyphTasks.end() && Pending->second == Placement.m_Generation)
+					m_QmPendingGlyphTasks.erase(Pending);
+				continue;
+			}
+			SGlyph &Glyph = GlyphIt->second;
+			const SQmGlyphGeometry &Geometry = Placement.m_Geometry;
+			if(Geometry.m_Width <= 0 || Geometry.m_Height <= 0)
+			{
+				const EQmGlyphRenderResult Result = CommitRasterizedGlyph(Glyph, 0, 0, 0, 0,
+					Geometry.m_OffsetX, Geometry.m_OffsetY, Geometry.m_AdvanceX,
+					Geometry.m_LayoutWidth, Geometry.m_LayoutBearingX, nullptr, nullptr, false);
+				Glyph.m_State = Result == EQmGlyphRenderResult::SUCCESS ? SGlyph::EState::RENDERED : SGlyph::EState::RETRY;
+				if(const auto Pending = m_QmPendingGlyphTasks.find(Placement.m_Key);
+					Pending != m_QmPendingGlyphTasks.end() && Pending->second == Placement.m_Generation)
+					m_QmPendingGlyphTasks.erase(Pending);
+				continue;
+			}
+			std::vector<uint8_t> vFill;
+			std::vector<uint8_t> vOutline;
+			try
+			{
+				vFill.resize(static_cast<size_t>(Geometry.m_Width) * Geometry.m_Height);
+				vOutline.resize(vFill.size());
+			}
+			catch(const std::bad_alloc &)
+			{
+				QueueQmGpuCpuFallback(Placement.m_Key, Placement.m_Generation, pFontData);
+				continue;
+			}
+			if(!QmDownsampleGpuGlyphCoverage(m_QmGpuBatch.m_Image.m_pData, m_QmGpuBatch.m_Image.m_Width, m_QmGpuBatch.m_Image.m_Height,
+				   Placement.m_X, Placement.m_Y, Geometry.m_Width, Geometry.m_Height, QM_GPU_SUPERSAMPLE,
+				   Geometry.m_FillRule, vFill.data()))
+			{
+				QueueQmGpuCpuFallback(Placement.m_Key, Placement.m_Generation, pFontData);
+				continue;
+			}
+			const int OutlineThickness = static_cast<int>(std::ceil(static_cast<float>(QmAdjustOutlineThicknessToFontSize(1, Glyph.m_FontSize))));
+			QmGrowGlyphOutline(vFill.data(), vOutline.data(), Geometry.m_Width, Geometry.m_Height, OutlineThickness);
+			const EQmGlyphRenderResult Result = CommitRasterizedGlyph(Glyph,
+				Geometry.m_Width, Geometry.m_Height, Geometry.m_CharWidth, Geometry.m_CharHeight,
+				Geometry.m_OffsetX, Geometry.m_OffsetY, Geometry.m_AdvanceX,
+				Geometry.m_LayoutWidth, Geometry.m_LayoutBearingX, vFill.data(), vOutline.data(), false);
+			Glyph.m_State = Result == EQmGlyphRenderResult::SUCCESS     ? SGlyph::EState::RENDERED :
+					Result == EQmGlyphRenderResult::UNSUPPORTED ? SGlyph::EState::ERROR :
+										      SGlyph::EState::RETRY;
+			if(const auto Pending = m_QmPendingGlyphTasks.find(Placement.m_Key);
+				Pending != m_QmPendingGlyphTasks.end() && Pending->second == Placement.m_Generation)
+				m_QmPendingGlyphTasks.erase(Pending);
+			if(Glyph.m_State == SGlyph::EState::RENDERED)
+				++m_QmPerfGpuGlyphs;
+		}
+		if(m_QmGpuBatch.m_ApplyIndex >= m_QmGpuBatch.m_vPlacements.size())
+		{
+			m_QmGpuBatch.m_vPlacements.clear();
+			m_QmGpuBatch.m_Image.Free();
+			m_QmGpuBatch.m_ApplyIndex = 0;
+			m_QmGpuBatch.m_ImageReady = false;
+			m_QmGpuBatch.m_Active = false;
+			m_QmGpuBatch.m_PendingReadback = false;
+			m_QmGpuBatch.m_ReadbackPolls = 0;
+			m_QmGpuBatch.m_FlushRequested = false;
+			m_QmGpuBatch.m_FillRuleSet = false;
+		}
+		if(QmPerfEnabled())
+			m_QmPerfGpuApplyMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - PollStart).count();
+	}
+
+	void SubmitQmGpuBatch(const FontDataMap *pFontData)
+	{
+		if(!QmGpuRasterUsable() || m_pGraphics == nullptr)
+		{
+			// 运行时从 mode 2 切回 0/1 或设备能力消失时，把在途 GPU 工作
+			// 排回 CPU worker 或退回同步路径，不能让 pending 永久停在 QUEUED。
+			if(m_QmGpuBatch.m_Active)
+				FallbackQmGpuPlacements(pFontData);
+			if(!m_vQmGpuPreparedGlyphs.empty())
+				FallbackQmGpuPreparedGlyphs(pFontData);
+			return;
+		}
+		if(m_QmGpuBatch.m_Active || m_vQmGpuPreparedGlyphs.empty())
+			return;
+		if(m_vQmGpuPreparedGlyphs.size() > QM_GPU_MAX_PREPARED_GLYPHS)
+		{
+			FallbackQmGpuPreparedGlyphs(pFontData);
+			return;
+		}
+
+		const int TargetSize = QM_GPU_TARGET_DIM * QM_GPU_SUPERSAMPLE;
+		if(!m_QmGpuBatch.m_Target.IsValid())
+		{
+			// 2x SSAA 已在目标分辨率上完成覆盖度采样，再叠加 MSAA 只会增加
+			// resolve 成本。单采样目标覆盖所有 render target 设备。
+			constexpr int Samples = 1;
+			m_QmGpuBatch.m_Target = m_pGraphics->CreateRenderTarget(TargetSize, TargetSize, Samples);
+			if(!m_QmGpuBatch.m_Target.IsValid())
+			{
+				if(!m_QmGpuRasterUnsupportedLogged)
+				{
+					m_QmGpuRasterUnsupportedLogged = true;
+					dbg_msg("textrender/qm", "event=gpu_glyph_raster_target_failed size=%d samples=%d reason='%s'",
+						TargetSize, Samples, m_pGraphics->RenderTargetSupportReason());
+				}
+				FallbackQmGpuPreparedGlyphs(pFontData);
+				return;
+			}
+		}
+
+		const auto PrepareStart = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
+		std::vector<size_t> vCandidates;
+		try
+		{
+			vCandidates.reserve(m_vQmGpuPreparedGlyphs.size());
+			for(size_t i = 0; i < m_vQmGpuPreparedGlyphs.size(); ++i)
+				vCandidates.push_back(i);
+			std::sort(vCandidates.begin(), vCandidates.end(), [&](size_t A, size_t B) {
+				return m_vQmGpuPreparedGlyphs[A].m_Geometry.m_Height > m_vQmGpuPreparedGlyphs[B].m_Geometry.m_Height;
+			});
+		}
+		catch(const std::bad_alloc &)
+		{
+			FallbackQmGpuPreparedGlyphs(pFontData);
+			return;
+		}
+
+		constexpr int Gutter = 2;
+		int CursorX = Gutter;
+		int CursorY = Gutter;
+		int RowHeight = 0;
+		size_t BatchTriangles = 0;
+		const auto PackDeadline = time_get_nanoseconds() + std::chrono::microseconds(500);
+		std::vector<bool> vSelected;
+		try
+		{
+			vSelected.assign(m_vQmGpuPreparedGlyphs.size(), false);
+			m_QmGpuBatch.m_vPlacements.reserve(std::min(QM_GPU_MAX_BATCH_GLYPHS, m_vQmGpuPreparedGlyphs.size()));
+			for(size_t Index : vCandidates)
+			{
+				// 后台预热不能在同一帧把所有准备项装箱和提交；单帧只给主线程
+				// 0.5ms 的装箱预算，剩余项留到下一帧。
+				if(!m_QmGpuBatch.m_vPlacements.empty() && time_get_nanoseconds() >= PackDeadline)
+					break;
+				if(m_QmGpuBatch.m_vPlacements.size() >= QM_GPU_MAX_BATCH_GLYPHS)
+					break;
+				SQmGpuPreparedGlyph &Prepared = m_vQmGpuPreparedGlyphs[Index];
+				const int CellWidth = Prepared.m_Geometry.m_Width * QM_GPU_SUPERSAMPLE;
+				const int CellHeight = Prepared.m_Geometry.m_Height * QM_GPU_SUPERSAMPLE;
+				if(CellWidth <= 0 || CellHeight <= 0)
+				{
+					// 空白字形不需要离屏目标，直接在图集里登记零尺寸字形。
+					const auto GlyphIt = m_Glyphs.find(Prepared.m_Key);
+					if(GlyphIt != m_Glyphs.end() && Prepared.m_Generation == m_QmGlyphGeneration)
+					{
+						const EQmGlyphRenderResult Result = CommitRasterizedGlyph(GlyphIt->second, 0, 0, 0, 0,
+							Prepared.m_Geometry.m_OffsetX, Prepared.m_Geometry.m_OffsetY, Prepared.m_Geometry.m_AdvanceX,
+							Prepared.m_Geometry.m_LayoutWidth, Prepared.m_Geometry.m_LayoutBearingX, nullptr, nullptr, false);
+						GlyphIt->second.m_State = Result == EQmGlyphRenderResult::SUCCESS ? SGlyph::EState::RENDERED : SGlyph::EState::RETRY;
+					}
+					if(const auto Pending = m_QmPendingGlyphTasks.find(Prepared.m_Key);
+						Pending != m_QmPendingGlyphTasks.end() && Pending->second == Prepared.m_Generation)
+						m_QmPendingGlyphTasks.erase(Pending);
+					vSelected[Index] = true;
+					continue;
+				}
+				size_t GlyphTriangles = 0;
+				for(const SQmGlyphContour &Contour : Prepared.m_Geometry.m_vContours)
+					GlyphTriangles += Contour.m_vTriangles.size();
+				if(GlyphTriangles > QM_GPU_MAX_BATCH_TRIANGLES)
+				{
+					QueueQmGpuCpuFallback(Prepared.m_Key, Prepared.m_Generation, pFontData);
+					vSelected[Index] = true;
+					continue;
+				}
+				if(BatchTriangles + GlyphTriangles > QM_GPU_MAX_BATCH_TRIANGLES)
+					continue;
+				if(!m_QmGpuBatch.m_FillRuleSet)
+				{
+					m_QmGpuBatch.m_FillRule = Prepared.m_Geometry.m_FillRule;
+					m_QmGpuBatch.m_FillRuleSet = true;
+				}
+				else if(Prepared.m_Geometry.m_FillRule != m_QmGpuBatch.m_FillRule)
+					continue;
+				if(CellWidth + Gutter > TargetSize || CellHeight + Gutter > TargetSize)
+				{
+					QueueQmGpuCpuFallback(Prepared.m_Key, Prepared.m_Generation, pFontData);
+					vSelected[Index] = true;
+					continue;
+				}
+				if(CursorX + CellWidth + Gutter > TargetSize)
+				{
+					CursorX = Gutter;
+					CursorY += RowHeight + Gutter;
+					RowHeight = 0;
+				}
+				if(CursorY + CellHeight + Gutter > TargetSize)
+					continue;
+				SQmGpuPlacement Placement;
+				Placement.m_Key = Prepared.m_Key;
+				Placement.m_Generation = Prepared.m_Generation;
+				Placement.m_X = CursorX;
+				Placement.m_Y = CursorY;
+				Placement.m_Geometry = std::move(Prepared.m_Geometry);
+				m_QmGpuBatch.m_vPlacements.push_back(std::move(Placement));
+				vSelected[Index] = true;
+				BatchTriangles += GlyphTriangles;
+				CursorX += CellWidth + Gutter;
+				RowHeight = std::max(RowHeight, CellHeight);
+			}
+		}
+		catch(const std::bad_alloc &)
+		{
+			FallbackQmGpuPlacements(pFontData);
+			FallbackQmGpuUnselectedPrepared(pFontData, vSelected);
+			return;
+		}
+		size_t WriteIndex = 0;
+		for(size_t i = 0; i < m_vQmGpuPreparedGlyphs.size(); ++i)
+			if(!vSelected[i])
+				m_vQmGpuPreparedGlyphs[WriteIndex++] = std::move(m_vQmGpuPreparedGlyphs[i]);
+		m_vQmGpuPreparedGlyphs.erase(m_vQmGpuPreparedGlyphs.begin() + WriteIndex, m_vQmGpuPreparedGlyphs.end());
+		if(m_QmGpuBatch.m_vPlacements.empty())
+		{
+			FallbackQmGpuPreparedGlyphs(pFontData);
+			return;
+		}
+
+		const bool NonZeroFill = m_QmGpuBatch.m_FillRule == EQmGlyphFillRule::NON_ZERO;
+		const ColorRGBA ClearColor = NonZeroFill ? ColorRGBA(0.0f, 0.0f, 0.0f, 1.0f) : ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+		if(!m_pGraphics->BeginRenderTarget(m_QmGpuBatch.m_Target, ClearColor))
+		{
+			FallbackQmGpuPlacements(pFontData);
+			return;
+		}
+		m_pGraphics->MapScreen(0.0f, 0.0f, static_cast<float>(TargetSize), static_cast<float>(TargetSize));
+		if(NonZeroFill)
+			m_pGraphics->BlendAdditive();
+		else
+			m_pGraphics->BlendNone();
+		m_pGraphics->TrianglesBegin();
+		bool DrawFailed = false;
+		try
+		{
+			std::vector<IGraphics::CFreeformItem> vItems;
+			vItems.reserve(256);
+			for(const SQmGpuPlacement &Placement : m_QmGpuBatch.m_vPlacements)
+			{
+				const auto Point = [&](const SQmGlyphPoint &Source) {
+					return vec2(
+						static_cast<float>(Placement.m_X) + Source.m_X * QM_GPU_SUPERSAMPLE,
+						static_cast<float>(Placement.m_Y) + Source.m_Y * QM_GPU_SUPERSAMPLE);
+				};
+				const auto AppendTriangles = [&](const SQmGlyphContour &Contour, std::vector<IGraphics::CFreeformItem> &vOutput) {
+					for(const SQmGlyphTriangle &Triangle : Contour.m_vTriangles)
+					{
+						const vec2 A = Point(Triangle.m_aPoints[0]);
+						const vec2 B = Point(Triangle.m_aPoints[1]);
+						const vec2 C = Point(Triangle.m_aPoints[2]);
+						vOutput.emplace_back(A, B, C, C);
+					}
+				};
+				if(NonZeroFill)
+				{
+					vItems.clear();
+					for(const SQmGlyphContour &Contour : Placement.m_Geometry.m_vContours)
+						if(Contour.m_WindingSign > 0)
+							AppendTriangles(Contour, vItems);
+					if(!vItems.empty())
+					{
+						constexpr float WindingStep = 16.0f / 255.0f;
+						m_pGraphics->SetColor(WindingStep, 0.0f, 0.0f, 1.0f);
+						m_pGraphics->QuadsDrawFreeform(vItems.data(), static_cast<int>(vItems.size()));
+					}
+					vItems.clear();
+					for(const SQmGlyphContour &Contour : Placement.m_Geometry.m_vContours)
+						if(Contour.m_WindingSign < 0)
+							AppendTriangles(Contour, vItems);
+					if(!vItems.empty())
+					{
+						constexpr float WindingStep = 16.0f / 255.0f;
+						m_pGraphics->SetColor(0.0f, WindingStep, 0.0f, 1.0f);
+						m_pGraphics->QuadsDrawFreeform(vItems.data(), static_cast<int>(vItems.size()));
+					}
+					continue;
+				}
+				int MaxDepth = 0;
+				for(const SQmGlyphContour &Contour : Placement.m_Geometry.m_vContours)
+					MaxDepth = std::max(MaxDepth, Contour.m_Depth);
+				for(int Depth = 0; Depth <= MaxDepth; ++Depth)
+				{
+					vItems.clear();
+					for(const SQmGlyphContour &Contour : Placement.m_Geometry.m_vContours)
+					{
+						if(Contour.m_Depth != Depth)
+							continue;
+						AppendTriangles(Contour, vItems);
+					}
+					if(vItems.empty())
+						continue;
+					const float Value = Depth % 2 == 0 ? 0.0f : 1.0f;
+					m_pGraphics->SetColor(Value, Value, Value, 1.0f);
+					m_pGraphics->QuadsDrawFreeform(vItems.data(), static_cast<int>(vItems.size()));
+				}
+			}
+		}
+		catch(const std::bad_alloc &)
+		{
+			DrawFailed = true;
+		}
+		m_pGraphics->TrianglesEnd();
+		m_pGraphics->BlendNormal();
+		m_pGraphics->EndRenderTarget();
+		if(DrawFailed)
+		{
+			FallbackQmGpuPlacements(pFontData);
+			return;
+		}
+		m_QmGpuBatch.m_Readback = m_pGraphics->BeginRenderTargetReadback(m_QmGpuBatch.m_Target);
+		if(!m_QmGpuBatch.m_Readback.IsValid())
+		{
+			FallbackQmGpuPlacements(pFontData);
+			return;
+		}
+		m_QmGpuBatch.m_Active = true;
+		m_QmGpuBatch.m_PendingReadback = true;
+		m_QmGpuBatch.m_ReadbackPolls = 0;
+		m_QmGpuBatch.m_FlushRequested = false;
+		++m_QmPerfGpuBatches;
+		if(QmPerfEnabled())
+			m_QmPerfGpuPrepareMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - PrepareStart).count();
+	}
+
+	void RecoverQmGlyphWorkerOverflow()
+	{
+		if(m_pQmGlyphWorkerState == nullptr || !m_pQmGlyphWorkerState->ConsumeResultOverflow())
+			return;
+
+		// 结果容器无法接收时不能留下“任务已不在 worker、pending 仍占位”的
+		// 永久死锁。推进代际让在途旧结果失效，把当前 pending 字形退回同步
+		// 兜底；已经 RENDERED 的字形和图集不动。
+		++m_QmGlyphGeneration;
+		for(const auto &[Key, Generation] : m_QmPendingGlyphTasks)
+		{
+			(void)Generation;
+			const auto It = m_Glyphs.find(Key);
+			if(It != m_Glyphs.end() &&
+				(It->second.m_State == SGlyph::EState::QUEUED || It->second.m_State == SGlyph::EState::MEASURED))
+				It->second.m_State = SGlyph::EState::RETRY;
+		}
+		m_QmPendingGlyphTasks.clear();
+		m_vQmPendingGlyphTasks.clear();
+		m_vQmGpuPreparedGlyphs.clear();
+		m_pQmGlyphWorkerState->DiscardResults();
+		++m_QmPerfGlyphWorkerOverflows;
+	}
+
+	void PollQmGlyphWorkerResults(const FontDataMap *pFontData)
+	{
+		if(m_pQmGlyphWorkerState == nullptr)
+			return;
+		try
+		{
+			RecoverQmGlyphWorkerOverflow();
+		}
+		catch(...)
+		{
+			// 恢复本身不应申请内存；这里只防止未预期的容器异常穿过帧末钩子。
+			return;
+		}
+		std::vector<SQmGlyphWorkerResult> vResults;
+		try
+		{
+			m_pQmGlyphWorkerState->TakeResults(vResults, 128);
+		}
+		catch(...)
+		{
+			RecoverQmGlyphWorkerOverflow();
+			return;
+		}
+		if(vResults.empty())
+			return;
+		const auto Start = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
+		const auto Deadline = time_get_nanoseconds() + std::chrono::microseconds(500);
+		size_t Applied = 0;
+		for(; Applied < vResults.size() && time_get_nanoseconds() < Deadline; ++Applied)
+			ApplyQmGlyphWorkerResult(vResults[Applied], pFontData);
+		if(Applied < vResults.size())
+			m_pQmGlyphWorkerState->RequeueResults(vResults, Applied);
+		if(QmPerfEnabled())
+			m_QmPerfGlyphWorkerApplyMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - Start).count();
+	}
+
+	void ConsumeQmGlyphWorkerStats(int &Queued, int &Completed, int &Jobs, int &Overflows, double &RasterizeMs, double &ApplyMs)
+	{
+		Queued = m_QmPerfGlyphWorkerQueued;
+		Completed = m_QmPerfGlyphWorkerCompleted;
+		Jobs = m_QmPerfGlyphWorkerJobs;
+		Overflows = m_QmPerfGlyphWorkerOverflows;
+		RasterizeMs = m_QmPerfGlyphWorkerRasterizeMs;
+		ApplyMs = m_QmPerfGlyphWorkerApplyMs;
+		m_QmPerfGlyphWorkerQueued = 0;
+		m_QmPerfGlyphWorkerCompleted = 0;
+		m_QmPerfGlyphWorkerJobs = 0;
+		m_QmPerfGlyphWorkerOverflows = 0;
+		m_QmPerfGlyphWorkerRasterizeMs = 0.0;
+		m_QmPerfGlyphWorkerApplyMs = 0.0;
+	}
+
+	void ConsumeQmGpuStats(int &Batches, int &Glyphs, int &Readbacks, int &Fallbacks, size_t &Prepared, double &PrepareMs, double &ApplyMs)
+	{
+		Batches = m_QmPerfGpuBatches;
+		Glyphs = m_QmPerfGpuGlyphs;
+		Readbacks = m_QmPerfGpuReadbacks;
+		Fallbacks = m_QmPerfGpuFallbacks;
+		Prepared = m_vQmGpuPreparedGlyphs.size();
+		PrepareMs = m_QmPerfGpuPrepareMs;
+		ApplyMs = m_QmPerfGpuApplyMs;
+		m_QmPerfGpuBatches = 0;
+		m_QmPerfGpuGlyphs = 0;
+		m_QmPerfGpuReadbacks = 0;
+		m_QmPerfGpuFallbacks = 0;
+		m_QmPerfGpuPrepareMs = 0.0;
+		m_QmPerfGpuApplyMs = 0.0;
+	}
+
+	int QmGlyphWorkerActiveCount() const { return m_pQmGlyphWorkerState->ActiveJobs(); }
+
+	int QmPrewarmRecentGlyphMisses(int MaxCount, const std::unordered_map<FT_Face, std::pair<const FT_Byte *, FT_Long>> &FontData)
+	{
+		if(MaxCount <= 0)
+			return 0;
+		if(QmGlyphWorkerEnabled())
+		{
+			// 队列满时不能继续推进“最近字形”游标：否则被 REJECTED 的条目
+			// 会永久跳过，下一次仍会重新同步光栅化。只在剩余容量内消费。
+			const size_t Pending = m_QmPendingGlyphTasks.size();
+			if(Pending >= QM_MAX_PENDING_GLYPH_TASKS)
+				return 0;
+			const int Available = static_cast<int>(std::min<size_t>(MaxCount, QM_MAX_PENDING_GLYPH_TASKS - Pending));
+			if(Available <= 0)
+				return 0;
+			return m_RecentGlyphs.Prewarm(Available, [this, &FontData](int Chr, int Size) {
+				const EQmGlyphPrewarmResult Result = QmPrewarmGlyphTask(Chr, Size, FontData);
+				// READY/QUEUED 是已推进的成功路径；字体确实不支持时才允许
+				// 跳过，瞬时 RETRY 或队列拒绝必须保留游标，下一轮再试。
+				return Result == EQmGlyphPrewarmResult::READY || Result == EQmGlyphPrewarmResult::QUEUED ||
+				       Result == EQmGlyphPrewarmResult::UNSUPPORTED;
+			});
+		}
 		return m_RecentGlyphs.Prewarm(MaxCount, [this](int Chr, int Size) { return GetGlyph(Chr, Size) != nullptr; });
 	}
 
@@ -1224,18 +2581,23 @@ public:
 		}
 	}
 
-	const SGlyph *GetGlyph(int Chr, int FontSize, bool Nameplate = false)
+	const SGlyph *GetGlyph(int Chr, int FontSize, bool Nameplate = false, bool Render = true)
 	{
 		FontSize = std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE);
 		const FT_Face LookupFace = m_SelectedFace != nullptr ? m_SelectedFace : m_PreviewFace;
 		if(const SGlyph *pCached = m_GlyphLookupCache.Find(LookupFace, Chr, FontSize, Nameplate))
-			return pCached;
+		{
+			// 快速缓存只保存已渲染字形；测量结果不能进入这里，否则后续绘制
+			// 会拿到没有 UV/位图的对象。
+			if(pCached->m_State == SGlyph::EState::RENDERED || !Render)
+				return pCached;
+		}
 		const auto RememberGlyph = [&](const SGlyph *pGlyph) {
 			m_GlyphLookupCache.Store(LookupFace, Chr, FontSize, pGlyph, Nameplate);
 			return pGlyph;
 		};
 		const auto Replacement = [&]() -> const SGlyph * {
-			return Chr == REPLACEMENT_CHARACTER ? nullptr : GetGlyph(REPLACEMENT_CHARACTER, FontSize, Nameplate);
+			return Chr == REPLACEMENT_CHARACTER ? nullptr : GetGlyph(REPLACEMENT_CHARACTER, FontSize, Nameplate, Render);
 		};
 
 		try
@@ -1243,11 +2605,11 @@ public:
 			FT_Face Face;
 			const FT_UInt GlyphIndex = GetCharGlyph(Chr, &Face, false);
 			if(GlyphIndex == 0)
-				return RememberGlyph(Replacement());
+				return Render ? RememberGlyph(Replacement()) : Replacement();
 
 			const auto Key = std::make_tuple(Face, Chr, FontSize, Nameplate);
 			const auto Existing = m_Glyphs.find(Key);
-			if(Existing == m_Glyphs.end() && m_GlyphRenderRetry.Blocked())
+			if(Render && Existing == m_Glyphs.end() && m_GlyphRenderRetry.Blocked())
 				return Replacement();
 			SGlyph &Glyph = Existing != m_Glyphs.end() ? Existing->second : m_Glyphs[Key];
 			if(Glyph.m_State == SGlyph::EState::RENDERED)
@@ -1257,6 +2619,19 @@ public:
 			Glyph.m_Face = Face;
 			Glyph.m_Chr = Chr;
 			Glyph.m_GlyphIndex = GlyphIndex;
+			if(!Render && !Nameplate)
+			{
+				if(Glyph.m_State == SGlyph::EState::ERROR)
+					return Replacement();
+				if(Glyph.m_State == SGlyph::EState::MEASURED)
+					return &Glyph;
+				const EQmGlyphRenderResult Result = LoadGlyphMetrics(Glyph);
+				if(Result == EQmGlyphRenderResult::SUCCESS)
+					return &Glyph;
+				if(Result == EQmGlyphRenderResult::UNSUPPORTED)
+					Glyph.m_State = SGlyph::EState::ERROR;
+				return Replacement();
+			}
 			const SGlyph *pGlyph = m_GlyphRenderRetry.Resolve(Glyph, time_get_nanoseconds(), [&]() {
 				if(!Nameplate)
 					QmRecordRecentGlyphMiss(Chr, FontSize);
@@ -1674,6 +3049,29 @@ class CTextRender : public IEngineTextRender
 	double m_QmPerfTextContainerCreateMs = 0.0;
 	double m_QmPerfTextContainerUploadMs = 0.0;
 	SQmTextRuntimeBudgetSnapshot m_QmLastTextRuntimeBudgetSnapshot;
+	bool m_QmGlyphWorkerStateLogged = false;
+	// 诊断窗口：逐帧预算日志只在异常帧输出，其余按 5 秒汇总，避免日志本身
+	// 在 700 fps 下变成主要 I/O 开销。
+	int64_t m_QmTextWindowStartNs = 0;
+	int m_QmTextWindowFrames = 0;
+	int m_QmTextWindowGlyphNew = 0;
+	int m_QmTextWindowGlyphUploads = 0;
+	int m_QmTextWindowWorkerQueued = 0;
+	int m_QmTextWindowWorkerCompleted = 0;
+	int m_QmTextWindowWorkerJobs = 0;
+	int m_QmTextWindowWorkerOverflows = 0;
+	int m_QmTextWindowGpuBatches = 0;
+	int m_QmTextWindowGpuGlyphs = 0;
+	int m_QmTextWindowGpuReadbacks = 0;
+	int m_QmTextWindowGpuFallbacks = 0;
+	int m_QmTextWindowTextContainerUploads = 0;
+	double m_QmTextWindowRasterizeMs = 0.0;
+	double m_QmTextWindowWorkerRasterizeMs = 0.0;
+	double m_QmTextWindowWorkerApplyMs = 0.0;
+	double m_QmTextWindowGpuPrepareMs = 0.0;
+	double m_QmTextWindowGpuApplyMs = 0.0;
+	int m_QmTextWindowMaxGlyphNew = 0;
+	int64_t m_QmTextLastBudgetLogNs = 0;
 
 	// QmClient: 单帧文本统计（QmTextFrameEnd 时消费并按阈值打日志）。
 	int m_QmFrameContainerCreates = 0;
@@ -1720,15 +3118,15 @@ class CTextRender : public IEngineTextRender
 		m_QmPerfTextContainerUploadMs = 0.0;
 	}
 
-	bool ShouldLogTextRuntimeBudget(int GlyphNew, int GlyphUploads, double GlyphRasterizeMs, double GlyphUploadMs) const
+	bool ShouldLogTextRuntimeBudget(int GlyphNew, double GlyphRasterizeMs, double WorkerApplyMs) const
 	{
-		const int TextContainerWork = m_QmPerfTextContainerNew + m_QmPerfTextContainerUploads;
-		if(GlyphNew > 0 || GlyphUploads > 0 || m_QmPerfTextContainerUploads > 0)
-			return true;
-		if(GlyphRasterizeMs >= QmPerfThresholdMs() || GlyphUploadMs >= QmPerfThresholdMs() ||
-			m_QmPerfTextContainerCreateMs >= QmPerfThresholdMs() || m_QmPerfTextContainerUploadMs >= QmPerfThresholdMs())
-			return true;
-		return TextContainerWork >= 8;
+		// 只有真正可能造成低帧的帧才逐帧输出；普通冷字形/容器上传进 5 秒汇总。
+		// 之前“glyph_uploads>0 就打印”在 700 fps 下每秒产生约 170 KB 日志，
+		// 既淹没判读又把诊断本身变成 I/O 热点。
+		return GlyphRasterizeMs >= std::max(4.0, QmPerfThresholdMs()) ||
+		       m_QmPerfTextContainerCreateMs >= std::max(2.0, QmPerfThresholdMs()) ||
+		       WorkerApplyMs >= std::max(2.0, QmPerfThresholdMs()) ||
+		       GlyphNew >= 96;
 	}
 
 	void UpdateQmTextRuntimeBudgetSnapshot(int GlyphNew, int GlyphUploads, double GlyphRasterizeMs, double GlyphUploadMs)
@@ -1758,22 +3156,154 @@ class CTextRender : public IEngineTextRender
 		int GlyphUploadBatches = 0;
 		double GlyphUploadBatchMs = 0.0;
 		m_pGlyphMap->ConsumeQmPerfGlyphStats(GlyphNew, GlyphUploads, GlyphRasterizeMs, GlyphUploadMs, GlyphUploadBatches, GlyphUploadBatchMs);
+		int WorkerQueued = 0;
+		int WorkerCompleted = 0;
+		int WorkerJobs = 0;
+		int WorkerOverflows = 0;
+		double WorkerRasterizeMs = 0.0;
+		double WorkerApplyMs = 0.0;
+		m_pGlyphMap->ConsumeQmGlyphWorkerStats(WorkerQueued, WorkerCompleted, WorkerJobs, WorkerOverflows, WorkerRasterizeMs, WorkerApplyMs);
+		int GpuBatches = 0;
+		int GpuGlyphs = 0;
+		int GpuReadbacks = 0;
+		int GpuFallbacks = 0;
+		size_t GpuPrepared = 0;
+		double GpuPrepareMs = 0.0;
+		double GpuApplyMs = 0.0;
+		m_pGlyphMap->ConsumeQmGpuStats(GpuBatches, GpuGlyphs, GpuReadbacks, GpuFallbacks, GpuPrepared, GpuPrepareMs, GpuApplyMs);
 		UpdateQmTextRuntimeBudgetSnapshot(GlyphNew, GlyphUploads, GlyphRasterizeMs, GlyphUploadMs);
+		const int64_t NowNs = time_get_nanoseconds().count();
+		if(m_QmTextWindowStartNs == 0)
+			m_QmTextWindowStartNs = NowNs;
+		++m_QmTextWindowFrames;
+		m_QmTextWindowGlyphNew += GlyphNew;
+		m_QmTextWindowGlyphUploads += GlyphUploads;
+		m_QmTextWindowWorkerQueued += WorkerQueued;
+		m_QmTextWindowWorkerCompleted += WorkerCompleted;
+		m_QmTextWindowWorkerJobs += WorkerJobs;
+		m_QmTextWindowWorkerOverflows += WorkerOverflows;
+		m_QmTextWindowGpuBatches += GpuBatches;
+		m_QmTextWindowGpuGlyphs += GpuGlyphs;
+		m_QmTextWindowGpuReadbacks += GpuReadbacks;
+		m_QmTextWindowGpuFallbacks += GpuFallbacks;
+		m_QmTextWindowTextContainerUploads += m_QmPerfTextContainerUploads;
+		m_QmTextWindowRasterizeMs += GlyphRasterizeMs;
+		m_QmTextWindowWorkerRasterizeMs += WorkerRasterizeMs;
+		m_QmTextWindowWorkerApplyMs += WorkerApplyMs;
+		m_QmTextWindowGpuPrepareMs += GpuPrepareMs;
+		m_QmTextWindowGpuApplyMs += GpuApplyMs;
+		m_QmTextWindowMaxGlyphNew = std::max(m_QmTextWindowMaxGlyphNew, GlyphNew);
 		if(!QmPerfEnabled())
 		{
+			m_QmTextWindowStartNs = 0;
+			m_QmTextWindowFrames = 0;
+			m_QmTextWindowGlyphNew = 0;
+			m_QmTextWindowGlyphUploads = 0;
+			m_QmTextWindowWorkerQueued = 0;
+			m_QmTextWindowWorkerCompleted = 0;
+			m_QmTextWindowWorkerJobs = 0;
+			m_QmTextWindowWorkerOverflows = 0;
+			m_QmTextWindowGpuBatches = 0;
+			m_QmTextWindowGpuGlyphs = 0;
+			m_QmTextWindowGpuReadbacks = 0;
+			m_QmTextWindowGpuFallbacks = 0;
+			m_QmTextWindowTextContainerUploads = 0;
+			m_QmTextWindowRasterizeMs = 0.0;
+			m_QmTextWindowWorkerRasterizeMs = 0.0;
+			m_QmTextWindowWorkerApplyMs = 0.0;
+			m_QmTextWindowGpuPrepareMs = 0.0;
+			m_QmTextWindowGpuApplyMs = 0.0;
+			m_QmTextWindowMaxGlyphNew = 0;
 			ResetQmTextRuntimeBudgetCounters(false);
 			return;
 		}
-		if(!ShouldLogTextRuntimeBudget(GlyphNew, GlyphUploads, GlyphRasterizeMs, GlyphUploadMs))
+		IKernel *pKernel = Kernel();
+		const IClient *pClient = pKernel != nullptr ? pKernel->RequestInterface<IClient>() : nullptr;
+		const float FrameMs = pClient != nullptr ? pClient->RenderFrameTime() * 1000.0f : -1.0f;
+		const float MainThreadMs = pClient != nullptr ? pClient->MainThreadFrameTime() * 1000.0f : -1.0f;
+		const bool Detailed = ShouldLogTextRuntimeBudget(GlyphNew, GlyphRasterizeMs, WorkerApplyMs);
+		if(Detailed && (m_QmTextLastBudgetLogNs == 0 || NowNs - m_QmTextLastBudgetLogNs >= 250 * 1000 * 1000LL))
 		{
-			ResetQmTextRuntimeBudgetCounters(false);
-			return;
+			char aPayload[1536];
+			str_format(aPayload, sizeof(aPayload),
+				"event=text_runtime_budget glyph_new=%d glyph_uploads=%d glyph_upload_batches=%d glyph_rasterize_ms=%.3f glyph_upload_ms=%.3f glyph_upload_batch_ms=%.3f glyph_worker_queued=%d glyph_worker_completed=%d glyph_worker_jobs=%d glyph_worker_overflows=%d glyph_worker_rasterize_ms=%.3f glyph_worker_apply_ms=%.3f glyph_worker_pending=%zu glyph_worker_active=%d gpu_batches=%d gpu_glyphs=%d gpu_readbacks=%d gpu_fallbacks=%d gpu_prepared=%zu gpu_prepare_ms=%.3f gpu_apply_ms=%.3f atlas_dim=%zu atlas_growths=%d text_container_new=%d text_container_uploads=%d text_container_create_ms=%.3f text_container_upload_ms=%.3f main_thread_ms=%.3f frame_ms=%.3f",
+				GlyphNew, GlyphUploads, GlyphUploadBatches, GlyphRasterizeMs, GlyphUploadMs, GlyphUploadBatchMs,
+				WorkerQueued, WorkerCompleted, WorkerJobs, WorkerOverflows, WorkerRasterizeMs, WorkerApplyMs,
+				m_pGlyphMap->QmGlyphWorkerPendingCount(), m_pGlyphMap->QmGlyphWorkerActiveCount(),
+				GpuBatches, GpuGlyphs, GpuReadbacks, GpuFallbacks, GpuPrepared, GpuPrepareMs, GpuApplyMs,
+				m_pGlyphMap->QmAtlasDimension(), m_pGlyphMap->QmAtlasGrowthCount(),
+				m_QmPerfTextContainerNew, m_QmPerfTextContainerUploads, m_QmPerfTextContainerCreateMs, m_QmPerfTextContainerUploadMs,
+				MainThreadMs, FrameMs);
+			QmPerfLogPayload("perf/text", aPayload);
+			m_QmTextLastBudgetLogNs = NowNs;
 		}
-		char aPayload[448];
-		str_format(aPayload, sizeof(aPayload),
-			"event=text_runtime_budget glyph_new=%d glyph_uploads=%d glyph_upload_batches=%d glyph_rasterize_ms=%.3f glyph_upload_ms=%.3f glyph_upload_batch_ms=%.3f text_container_new=%d text_container_uploads=%d text_container_create_ms=%.3f text_container_upload_ms=%.3f",
-			GlyphNew, GlyphUploads, GlyphUploadBatches, GlyphRasterizeMs, GlyphUploadMs, GlyphUploadBatchMs, m_QmPerfTextContainerNew, m_QmPerfTextContainerUploads, m_QmPerfTextContainerCreateMs, m_QmPerfTextContainerUploadMs);
-		QmPerfLogPayload("perf/text", aPayload);
+		const int64_t WindowNs = NowNs - m_QmTextWindowStartNs;
+		if(WindowNs >= 5 * 1000 * 1000 * 1000LL)
+		{
+			const double WindowMs = (double)WindowNs / 1000000.0;
+			const double WindowFps = WindowMs > 0.0 ? (double)m_QmTextWindowFrames * 1000.0 / WindowMs : 0.0;
+			char aPayload[1536];
+			str_format(aPayload, sizeof(aPayload),
+				"event=text_runtime_summary window_ms=%.1f frames=%d fps=%.1f glyph_new=%d glyph_uploads=%d glyph_rasterize_ms=%.3f max_glyph_new=%d glyph_worker_queued=%d glyph_worker_completed=%d glyph_worker_jobs=%d glyph_worker_overflows=%d glyph_worker_rasterize_ms=%.3f glyph_worker_apply_ms=%.3f glyph_worker_pending=%zu glyph_worker_active=%d gpu_batches=%d gpu_glyphs=%d gpu_readbacks=%d gpu_fallbacks=%d gpu_prepared=%zu gpu_prepare_ms=%.3f gpu_apply_ms=%.3f atlas_dim=%zu atlas_growths=%d text_container_uploads=%d main_thread_ms=%.3f frame_ms=%.3f",
+				WindowMs, m_QmTextWindowFrames, WindowFps, m_QmTextWindowGlyphNew, m_QmTextWindowGlyphUploads,
+				m_QmTextWindowRasterizeMs, m_QmTextWindowMaxGlyphNew, m_QmTextWindowWorkerQueued, m_QmTextWindowWorkerCompleted,
+				m_QmTextWindowWorkerJobs, m_QmTextWindowWorkerOverflows, m_QmTextWindowWorkerRasterizeMs, m_QmTextWindowWorkerApplyMs,
+				m_pGlyphMap->QmGlyphWorkerPendingCount(), m_pGlyphMap->QmGlyphWorkerActiveCount(),
+				m_QmTextWindowGpuBatches, m_QmTextWindowGpuGlyphs, m_QmTextWindowGpuReadbacks, m_QmTextWindowGpuFallbacks,
+				m_pGlyphMap->QmGpuPreparedCount(), m_QmTextWindowGpuPrepareMs, m_QmTextWindowGpuApplyMs,
+				m_pGlyphMap->QmAtlasDimension(), m_pGlyphMap->QmAtlasGrowthCount(),
+				m_QmTextWindowTextContainerUploads, MainThreadMs, FrameMs);
+			// 5 秒汇总和分钟级热力图是低帧诊断的主证据，不能被每秒明细限流丢掉。
+			QmPerfLogPayloadForce("perf/text", aPayload);
+			m_QmTextWindowStartNs = NowNs;
+			m_QmTextWindowFrames = 0;
+			m_QmTextWindowGlyphNew = 0;
+			m_QmTextWindowGlyphUploads = 0;
+			m_QmTextWindowWorkerQueued = 0;
+			m_QmTextWindowWorkerCompleted = 0;
+			m_QmTextWindowWorkerJobs = 0;
+			m_QmTextWindowWorkerOverflows = 0;
+			m_QmTextWindowGpuBatches = 0;
+			m_QmTextWindowGpuGlyphs = 0;
+			m_QmTextWindowGpuReadbacks = 0;
+			m_QmTextWindowGpuFallbacks = 0;
+			m_QmTextWindowTextContainerUploads = 0;
+			m_QmTextWindowRasterizeMs = 0.0;
+			m_QmTextWindowWorkerRasterizeMs = 0.0;
+			m_QmTextWindowWorkerApplyMs = 0.0;
+			m_QmTextWindowGpuPrepareMs = 0.0;
+			m_QmTextWindowGpuApplyMs = 0.0;
+			m_QmTextWindowMaxGlyphNew = 0;
+		}
+		// 冷字形热力图只在有新增字形时按分钟采样，避免把逐帧日志撑爆。
+		static int64_t s_QmLastGlyphHeatLog = 0;
+		const int64_t NowTicks = time_get();
+		if(GlyphNew > 0 && (s_QmLastGlyphHeatLog == 0 || NowTicks - s_QmLastGlyphHeatLog >= time_freq() * 60))
+		{
+			s_QmLastGlyphHeatLog = NowTicks;
+			char aHeat[768];
+			m_pGlyphMap->FormatQmGlyphMissHeat(aHeat, sizeof(aHeat), 16);
+			char aHeatPayload[1024];
+			str_format(aHeatPayload, sizeof(aHeatPayload), "event=text_glyph_heatmap atlas_dim=%zu atlas_growths=%d top_misses=%s",
+				m_pGlyphMap->QmAtlasDimension(), m_pGlyphMap->QmAtlasGrowthCount(), aHeat);
+			QmPerfLogPayloadForce("perf/text", aHeatPayload);
+		}
+		// 全量使用热力图独立采样：即使本轮没有新字形，也要能看到当前可见
+		// 文本实际用了哪些字号和字符，供预热计划与未来 8192 图集决策使用。
+		static int64_t s_QmLastGlyphUseHeatLog = 0;
+		if(m_pGlyphMap->QmGlyphUseTotal() > 0 &&
+			(s_QmLastGlyphUseHeatLog == 0 || NowTicks - s_QmLastGlyphUseHeatLog >= time_freq() * 60))
+		{
+			s_QmLastGlyphUseHeatLog = NowTicks;
+			char aHeat[1024];
+			m_pGlyphMap->FormatQmGlyphUseHeat(aHeat, sizeof(aHeat), 24);
+			char aHeatPayload[1280];
+			str_format(aHeatPayload, sizeof(aHeatPayload),
+				"event=text_glyph_use_heatmap atlas_dim=%zu atlas_growths=%d total=%" PRIu64 " distinct=%zu top_used=%s",
+				m_pGlyphMap->QmAtlasDimension(), m_pGlyphMap->QmAtlasGrowthCount(),
+				m_pGlyphMap->QmGlyphUseTotal(), m_pGlyphMap->QmGlyphUseDistinct(), aHeat);
+			QmPerfLogPayloadForce("perf/text", aHeatPayload);
+		}
 		ResetQmTextRuntimeBudgetCounters(false);
 	}
 
@@ -1789,6 +3319,17 @@ class CTextRender : public IEngineTextRender
 	{
 		if(m_pGlyphMap == nullptr)
 			return;
+		if(!m_QmGlyphWorkerStateLogged)
+		{
+			m_QmGlyphWorkerStateLogged = true;
+			IKernel *pKernel = Kernel();
+			const int EngineReady = pKernel != nullptr && pKernel->RequestInterface<IEngine>() != nullptr ? 1 : 0;
+			const int Pending = m_pGlyphMap->QmGlyphWorkerPendingCount();
+			const int Active = m_pGlyphMap->QmGlyphWorkerActiveCount();
+			dbg_msg("textrender/qm", "event=glyph_worker_state enabled=%d engine=%d mode=%d pending=%d active=%d gpu_prepared=%zu gpu_batch_active=%d",
+				m_pGlyphMap->QmGlyphWorkerEnabled() ? 1 : 0, EngineReady, g_Config.m_QmTextRasterMode, Pending, Active,
+				m_pGlyphMap->QmGpuPreparedCount(), m_pGlyphMap->QmGpuBatchActiveCount());
+		}
 		RetryPendingTextContainerDeletions();
 
 		// 失败时至多每秒重试一次，避免每个标签或高帧率循环反复复制整张图集。
@@ -1796,6 +3337,13 @@ class CTextRender : public IEngineTextRender
 			RestoreGraphicsResources();
 		UpdateSystemFontScan();
 		m_pGlyphMap->RetryFailedGlyphs();
+		// 后台字形任务在帧末统一提交与发布；单帧发布有 0.5ms 上限，结果留到下一帧。
+		m_pGlyphMap->SubmitQmGlyphTasks();
+		m_pGlyphMap->PollQmGlyphWorkerResults(&m_QmFontFaceData);
+		// GPU 路线只消费不可见预热：worker 产出轮廓几何，主线程装箱提交，
+		// 读回结果异步落到图集；当前可见页从不等待这条链。
+		m_pGlyphMap->PollQmGpuBatch(&m_QmFontFaceData);
+		m_pGlyphMap->SubmitQmGpuBatch(&m_QmFontFaceData);
 
 		// QmClient: 帧末兜底提交——本帧只构建未渲染时（如菜单预构建）脏区
 		// 失败区域每帧末重试一次；先提交再消费统计，包含合批提交成本。
@@ -1808,7 +3356,8 @@ class CTextRender : public IEngineTextRender
 		int FrameUploadBatches = 0;
 		double FrameUploadBatchMs = 0.0;
 		m_pGlyphMap->ConsumeQmPerfGlyphStats(FrameGlyphNew, FrameGlyphUploads, FrameRasterizeMs, FrameUploadMs, FrameUploadBatches, FrameUploadBatchMs);
-		m_pGlyphMap->QmLogNameplateGlyphCacheFrame(m_QmFrameContainerCreates, QmPerfEnabled() ? Kernel()->RequestInterface<IClient>() : nullptr);
+		IKernel *pKernel = Kernel();
+		m_pGlyphMap->QmLogNameplateGlyphCacheFrame(m_QmFrameContainerCreates, QmPerfEnabled() && pKernel != nullptr ? pKernel->RequestInterface<IClient>() : nullptr);
 		constexpr int ContainerCreatesThreshold = 256;
 		constexpr double RasterizeThresholdMs = 4.0;
 		constexpr int GlyphNewThreshold = 96;
@@ -1848,7 +3397,47 @@ class CTextRender : public IEngineTextRender
 	{
 		if(m_pGlyphMap == nullptr || MaxCount <= 0)
 			return 0;
-		return m_pGlyphMap->QmPrewarmRecentGlyphMisses(MaxCount);
+		return m_pGlyphMap->QmPrewarmRecentGlyphMisses(MaxCount, m_QmFontFaceData);
+	}
+
+	bool QmRecentGlyphPrewarmComplete() const override
+	{
+		return m_pGlyphMap == nullptr || m_pGlyphMap->QmRecentGlyphPrewarmComplete();
+	}
+
+	size_t QmRecentGlyphPrewarmRemaining() const override
+	{
+		return m_pGlyphMap == nullptr ? 0 : m_pGlyphMap->QmRecentGlyphPrewarmRemaining();
+	}
+
+	size_t QmGlyphAtlasDimension() const override
+	{
+		return m_pGlyphMap == nullptr ? 0 : m_pGlyphMap->QmAtlasDimension();
+	}
+
+	int QmGlyphAtlasGrowthCount() const override
+	{
+		return m_pGlyphMap == nullptr ? 0 : m_pGlyphMap->QmAtlasGrowthCount();
+	}
+
+	bool QmGlyphWorkerEnabled() const override
+	{
+		return m_pGlyphMap != nullptr && m_pGlyphMap->QmGlyphWorkerEnabled();
+	}
+
+	bool QmQueueTextGlyphsForPrewarm(const char *pText, int FontSize, int MaxGlyphs) override
+	{
+		return m_pGlyphMap == nullptr || m_pGlyphMap->QmQueueTextGlyphsForPrewarm(pText, FontSize, MaxGlyphs, m_QmFontFaceData);
+	}
+
+	int QmGlyphWorkerPendingCount() const override
+	{
+		return m_pGlyphMap == nullptr ? 0 : static_cast<int>(m_pGlyphMap->QmGlyphWorkerPendingCount());
+	}
+
+	int QmGlyphWorkerActiveCount() const override
+	{
+		return m_pGlyphMap == nullptr ? 0 : m_pGlyphMap->QmGlyphWorkerActiveCount();
 	}
 
 	int QmRecentGlyphMissCount() const override
@@ -2125,7 +3714,7 @@ public:
 				return false;
 			}
 			m_FTLibrary = Library;
-			m_pGlyphMap = new CGlyphMap(m_pGraphics, m_FTLibrary);
+			m_pGlyphMap = new CGlyphMap(m_pGraphics, m_FTLibrary, Kernel()->RequestInterface<IEngine>());
 			Console()->Register("qm_font_diagnostics", "s[family/style] i[codepoint]", CFGFLAG_CLIENT, ConQmFontDiagnostics, this, "Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled");
 
 			// print freetype version
@@ -3217,10 +4806,10 @@ public:
 	{
 		if(!TextContainerIndex.Valid())
 			return;
-		AppendTextContainerImpl(GetTextContainer(TextContainerIndex), pCursor, pText, Length);
+		AppendTextContainerImpl(GetTextContainer(TextContainerIndex), pCursor, pText, Length, true);
 	}
 
-	void AppendTextContainerImpl(STextContainer &TextContainer, CTextCursor *pCursor, const char *pText, int Length = -1)
+	void AppendTextContainerImpl(STextContainer &TextContainer, CTextCursor *pCursor, const char *pText, int Length = -1, bool RecordGlyphUse = false)
 	{
 		if(pText == nullptr)
 			pText = "";
@@ -3538,9 +5127,14 @@ public:
 					}
 				}
 
-				const SGlyph *pGlyph = IsEllipsis ? pEllipsisGlyph : m_pGlyphMap->GetGlyph(Character, ActualSize, Nameplate);
+				// 只有真正出图的趟次才允许写入图集。TextWidth/布局测量走
+				// MEASURED，避免切页规划把几十个冷字形同步光栅化。
+				const bool RenderGlyphData = (pCursor->m_Flags & TEXTFLAG_RENDER) != 0;
+				const SGlyph *pGlyph = IsEllipsis ? pEllipsisGlyph : m_pGlyphMap->GetGlyph(Character, ActualSize, Nameplate, RenderGlyphData);
 				if(pGlyph)
 				{
+					if(RecordGlyphUse && RenderGlyphData)
+						m_pGlyphMap->QmRecordGlyphUse(Character, ActualSize);
 					const float Scale = 1.0f / pGlyph->m_FontSize;
 
 					const bool ApplyBearingX = !(((RenderFlags & TEXT_RENDER_FLAG_NO_X_BEARING) != 0) || (pCursor->m_GlyphCount == 0 && (RenderFlags & TEXT_RENDER_FLAG_NO_FIRST_CHARACTER_X_BEARING) != 0));
@@ -3558,7 +5152,7 @@ public:
 						if(!EllipsisGlyphResolved)
 						{
 							EllipsisGlyphResolved = true;
-							pEllipsisGlyph = m_pGlyphMap->GetGlyph(0x2026, ActualSize, Nameplate); // …
+							pEllipsisGlyph = m_pGlyphMap->GetGlyph(0x2026, ActualSize, Nameplate, RenderGlyphData); // …
 							if(pEllipsisGlyph == nullptr)
 							{
 								// no ellipsis char in font, just stop at end instead

@@ -236,6 +236,21 @@ public:
 		UseSection(m_vSections, SmallestLossIndex, Width, Height, PosX, PosY);
 		return true;
 	}
+
+	// 后台预热用：统计所有空闲分区面积，预留一部分给接下来必须同步构建的
+	// 可见文本。碎片区面积也计入，因此调用方仍需保留足够大的安全余量。
+	size_t FreeArea() const
+	{
+		size_t Area = 0;
+		for(const SSection &Section : m_vSections)
+			Area += Section.m_W * Section.m_H;
+		for(const auto &Entry : m_SectionsMap)
+		{
+			for(const SSection &Section : Entry.second)
+				Area += Section.m_W * Section.m_H;
+		}
+		return Area;
+	}
 };
 
 #endif

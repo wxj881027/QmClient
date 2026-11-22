@@ -115,19 +115,23 @@ namespace
 		}
 	}
 
-	void LogSettingsLoadingPrewarmEvent(const IClient *pClient, const char *pEvent, int CompletedSteps, int MaxAttempts, int TeeWarmupEntries, int ConsecutiveNoProgressSteps, uint64_t UploadsCompleted, uint64_t LoadsCompleted)
+	void LogSettingsLoadingPrewarmEvent(const IClient *pClient, const char *pEvent, int CompletedSteps, int MaxAttempts, int TeeWarmupEntries, int ConsecutiveNoProgressSteps, uint64_t UploadsCompleted, uint64_t LoadsCompleted, int MissingTextPlanItems, int TextPoolEntries, int PlanCollected, float ElapsedMs)
 	{
 		if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
 			return;
-		char aPayload[256];
-		str_format(aPayload, sizeof(aPayload), "event=%s steps=%d max_attempts=%d tee_entries=%d stall_steps=%d uploads_completed=%" PRIu64 " loads_completed=%" PRIu64,
+		char aPayload[384];
+		str_format(aPayload, sizeof(aPayload), "event=%s steps=%d max_attempts=%d tee_entries=%d stall_steps=%d uploads_completed=%" PRIu64 " loads_completed=%" PRIu64 " missing_text_items=%d text_pool_entries=%d plan_collected=%d elapsed_ms=%.2f",
 			pEvent != nullptr ? pEvent : "startup_prewarm",
 			CompletedSteps,
 			MaxAttempts,
 			TeeWarmupEntries,
 			ConsecutiveNoProgressSteps,
 			UploadsCompleted,
-			LoadsCompleted);
+			LoadsCompleted,
+			MissingTextPlanItems,
+			TextPoolEntries,
+			PlanCollected,
+			ElapsedMs);
 		QmPerfLogPayload("perf/settings-warmup", aPayload, pClient, "settings:tee");
 	}
 
@@ -1060,6 +1064,15 @@ void CGameClient::OnInit()
 	// OnInit 已做幂等保护，组件循环里的再次调用不会重复初始化。
 	m_MenuBackground.OnInit();
 	// 主题背景已经就绪，后续组件加载帧可以安全呈现。
+	// 显示模式枚举必须在这里完成：SDL 首次枚举会同步初始化显示后端，放到设置页
+	// 或后台预算里会直接冻结动态加载背景和鼠标响应。此时第一个加载帧尚未呈现，
+	// 阻塞只增加启动绝对耗时，不会制造玩家可见的掉帧。
+	{
+		CPerfTimer VideoModeTimer(QmPerfEnabled());
+		Graphics()->PrewarmVideoModes();
+		if(QmPerfEnabled())
+			QmPerfLogStage("perf/connect", "video_modes_prewarm", VideoModeTimer.ElapsedMs(), true, Client(), "startup");
+	}
 
 	// init all components
 	int SkippedComps = 1;
@@ -1133,6 +1146,11 @@ void CGameClient::OnInit()
 		m_Menus.RenderLoading(pLoadingDDNetCaption, pLoadingMessageAssets, 0);
 		PrewarmQmIconGlyphs(24, time_freq() / 1000);
 	} while(!m_QmIconPrewarm.Complete() && time_get() - IconWarmupStart < time_freq() / 4);
+	// 实体纹理首次进服原本会在资源准备帧同步构建（实测单次约 219ms）。
+	// 现在这里只发起 worker 解码，下面的 loading 泵按刷新率逐层上传；
+	// 超过启动预算的部分留到正常帧继续，GetEntities 仍保留同步兜底。
+	m_Menus.RenderLoading(pLoadingDDNetCaption, pLoadingMessageAssets, 0);
+	m_MapImages.PrewarmEntities();
 	PrewarmSettingsRuntimeCachesDuringLoading(pLoadingDDNetCaption, pLoadingMessageAssets);
 
 	CChecksumData *pChecksum = Client()->ChecksumData();
@@ -1187,40 +1205,85 @@ void CGameClient::OpenSponsorPage()
 
 void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoadingCaption, const char *pLoadingMessage)
 {
-	constexpr int TEXT_PREWARM_BUDGET_PER_STEP = 8;
-	// loading 是可阻塞阶段（有 loading 画面），循环 prebuild 直到 plan collection complete
-	// + prebuild remaining=0。原实现只调一次 budget=8，导致运行时 (ESC 打开/切 tab) 首帧
-	// 仍要现场创建文本容器 (text_new 爆发，实测 settings_page_content 单次 355ms)。
-	// 用 WarmupReady (plan items + units 都 <= 0) 或连续无进展检测退出，避免死循环。
-	constexpr int MAX_TEXT_PREWARM_STEPS = 96;
-	constexpr int MAX_NO_PROGRESS_STEPS = 6;
+	const bool SettingsPrewarmEnabled = g_Config.m_QmSettingsPrewarm != 0;
 
-	if(g_Config.m_QmSettingsPrewarm == 0)
-		return;
-
-	m_Menus.PrewarmSettingsPages();
-
-	SSettingsLoadingPrewarmState State;
-	State.m_LastBuiltTextContainers = m_Menus.SettingsTextContainerCount();
-	State.m_LastMissingTextPlanItems = m_Menus.SettingsTextPrebuildRemaining();
-	State.m_LastMissingTextPlanCollectionUnits = m_Menus.SettingsTextPlanCollectionRemaining();
-	LogSettingsLoadingPrewarmEvent(Client(), "startup_text_prewarm_begin", State.m_CompletedSteps, 1, 0, State.m_ConsecutiveNoProgressSteps, 0, 0);
-
-	for(int Step = 0; Step < MAX_TEXT_PREWARM_STEPS; ++Step)
+	// 全量计划收集和容器构建由菜单 OnUpdate 的逐帧预算继续；这里只保留一个
+	// 有上限的 worker 泵，主线程不做同步字形光栅化，loading 背景仍按刷新率呈现。
+	// 可见页仍由同步路径保证首帧字形完整，worker 只服务不可见预热。
+	if(SettingsPrewarmEnabled)
+		m_Menus.PrewarmSettingsPages();
+	// 这里刷新一次 loading，让上面的缓存初始化有可见反馈。
+	m_Menus.RenderLoading(pLoadingCaption, pLoadingMessage, 0);
+	// 启动阶段只把“上次会话记录过的冷字形”交给 worker。主线程在循环里只做
+	// 提交/发布和 loading 背景呈现，不调同步光栅化；有 250ms 上限，跑不完的
+	// 部分留给正常帧继续，绝不为预热阻塞首帧。
+	const bool WorkerEnabled = SettingsPrewarmEnabled && TextRender()->QmGlyphWorkerEnabled();
+	// 历史集合最多有 4096 项，全部塞进处理器会让图集在启动时就接近满容量。
+	// 启动阶段只取一小批做“首屏命中”，其余留给后续空闲预算，不能让预热
+	// 反过来触发 4096→8192 的整表重建。
+	constexpr int STARTUP_GLYPH_PREWARM_LIMIT = static_cast<int>(QM_GLYPH_WORKER_PENDING_CAPACITY);
+	const int StartupGlyphLimit = SettingsPrewarmEnabled ? STARTUP_GLYPH_PREWARM_LIMIT : 0;
+	int GlyphBatches = 0;
+	int GlyphRequested = 0;
+	int GlyphProcessed = 0;
+	int GlyphQueued = 0;
+	int GlyphPumps = 0;
+	const int64_t GlyphPrewarmStart = time_get_nanoseconds().count();
+	int LoadingRefreshRate = Graphics() != nullptr ? Graphics()->ScreenRefreshRate() : 0;
+	if(!in_range(LoadingRefreshRate, 1, 1000))
+		LoadingRefreshRate = in_range(g_Config.m_GfxScreenRefreshRate, 1, 1000) ? g_Config.m_GfxScreenRefreshRate : 60;
+	// 实体纹理每层都要上传一次，不能因为 0.5ms 轮询就在同一个显示帧里连做四层。
+	// 按显示器刷新周期推进，背景帧和实体构建各自保持稳定节奏。
+	const int64_t EntityStepIntervalNs = 1000000000LL / LoadingRefreshRate;
+	int64_t NextEntityStepNs = 0;
+	constexpr int64_t MAX_STARTUP_PREWARM_NS = 250 * 1000 * 1000LL;
+	while(true)
 	{
+		const int64_t NowNs = time_get_nanoseconds().count();
+		const int GlyphPendingNow = TextRender()->QmGlyphWorkerPendingCount();
+		const bool GlyphSourceExhausted = GlyphRequested >= StartupGlyphLimit || TextRender()->QmRecentGlyphPrewarmComplete();
+		const bool GlyphIdle = !WorkerEnabled || (GlyphPendingNow == 0 && GlyphSourceExhausted);
+		if(GlyphIdle && m_MapImages.EntitiesPrewarmFinished())
+			break;
+		if(NowNs - GlyphPrewarmStart >= MAX_STARTUP_PREWARM_NS)
+			break;
+
+		if(WorkerEnabled && GlyphPendingNow == 0 && GlyphRequested < StartupGlyphLimit &&
+			!TextRender()->QmRecentGlyphPrewarmComplete())
+		{
+			const int Request = minimum(256, StartupGlyphLimit - GlyphRequested);
+			const int PendingBefore = GlyphPendingNow;
+			GlyphProcessed += TextRender()->QmPrewarmRecentGlyphs(Request);
+			const int PendingAfter = TextRender()->QmGlyphWorkerPendingCount();
+			GlyphRequested += Request;
+			GlyphQueued += maximum(0, PendingAfter - PendingBefore);
+			++GlyphBatches;
+		}
+		TextRender()->QmTextFrameEnd();
+		if(NowNs >= NextEntityStepNs)
+		{
+			m_MapImages.AdvanceEntitiesPrewarm();
+			NextEntityStepNs = NowNs + EntityStepIntervalNs;
+		}
 		m_Menus.RenderLoading(pLoadingCaption, pLoadingMessage, 0);
-		m_Menus.PrewarmSettingsTextPoolForLoading(TEXT_PREWARM_BUDGET_PER_STEP);
-		SettingsLoadingPrewarmAdvance(State, m_Menus.SettingsTextContainerCount(), m_Menus.SettingsTextPrebuildRemaining(), m_Menus.SettingsTextPlanCollectionRemaining());
-		if(State.m_WarmupReady)
-			break;
-		if(State.m_ConsecutiveNoProgressSteps >= MAX_NO_PROGRESS_STEPS)
-			break;
+		++GlyphPumps;
+		std::this_thread::sleep_for(std::chrono::microseconds(500));
 	}
-
-	LogSettingsLoadingPrewarmEvent(Client(), "startup_text_prewarm_end", State.m_CompletedSteps, 1, 0, State.m_ConsecutiveNoProgressSteps, 0, 0);
-
-	// ESC 菜单的文本 plan/容器依赖打开后的菜单生命周期，不能在加载阶段预热
-	// ESC 的字形与 plan 现在改由菜单关闭时的空闲帧预热（CMenus::OnUpdate / OnRender）。
+	const int GlyphPending = TextRender()->QmGlyphWorkerPendingCount();
+	const bool GlyphComplete = TextRender()->QmRecentGlyphPrewarmComplete() && GlyphPending == 0;
+	const size_t GlyphRemaining = TextRender()->QmRecentGlyphPrewarmRemaining();
+	const size_t AtlasDimension = TextRender()->QmGlyphAtlasDimension();
+	const int AtlasGrowths = TextRender()->QmGlyphAtlasGrowthCount();
+	const double GlyphElapsedMs = (double)(time_get_nanoseconds().count() - GlyphPrewarmStart) / 1000000.0;
+	char aGlyphPayload[448];
+	str_format(aGlyphPayload, sizeof(aGlyphPayload),
+		"event=startup_glyph_prewarm enabled=%d worker=%d limit=%d requested=%d processed=%d batches=%d queued=%d pumps=%d pending=%d remaining=%zu complete=%d atlas_dim=%zu atlas_growths=%d elapsed_ms=%.2f",
+		SettingsPrewarmEnabled ? 1 : 0, WorkerEnabled ? 1 : 0, StartupGlyphLimit, GlyphRequested, GlyphProcessed, GlyphBatches, GlyphQueued, GlyphPumps,
+		GlyphPending, GlyphRemaining, GlyphComplete ? 1 : 0, AtlasDimension, AtlasGrowths, GlyphElapsedMs);
+	dbg_msg("perf/settings-warmup", "%s", aGlyphPayload);
+	if(QmPerfEnabled())
+		QmPerfLogPayload("perf/settings-warmup", aGlyphPayload, Client(), "settings:tee");
+	LogSettingsLoadingPrewarmEvent(Client(), "startup_text_prewarm_deferred", 0, 1, 0, 0, 0, 0, -1, m_Menus.SettingsTextContainerCount(), 0, GlyphElapsedMs);
 }
 
 void CGameClient::CancelConnectionResourcePreparation()
@@ -1272,7 +1335,11 @@ void CGameClient::OnConnectionResourceUpdate()
 	};
 	if(!m_ConnectionResourcePreparation.TryPrepare(Prepare))
 		return;
-	if(m_ConnectionResourcePreparation.CompleteWhenReady(DataReady, m_MapLayersBackground.IsMapLoaded(), m_MapLayersForeground.IsMapLoaded()))
+	// 实体纹理也是进服首帧的可见资源。若尚未逐层上传完，继续停留在 loading
+	// 画面（背景仍按刷新率推进），不要先进入游戏再在首帧同步补建。
+	const bool EntityResourcesReady = m_MapImages.EntitiesPrewarmFinished();
+	if(m_ConnectionResourcePreparation.CompleteWhenReady(DataReady && EntityResourcesReady,
+		   m_MapLayersBackground.IsMapLoaded(), m_MapLayersForeground.IsMapLoaded()))
 		FinishConnectionResourcePreparation();
 	LogPerfStage(this, "connection_resource_prepare", Timer.ElapsedMs());
 }
@@ -1286,6 +1353,8 @@ void CGameClient::OnUpdate()
 	SyncQmUiIconWeight();
 	SyncQmCustomFontWeight();
 	PrewarmQmIconGlyphs(24, time_freq() / 1000);
+	// 实体纹理解码在 worker，主线程每帧最多构建一层并上传，避免进服首帧长阻塞。
+	m_MapImages.AdvanceEntitiesPrewarm();
 
 	const bool TeeSettingsActive = m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_TEE;
 	const bool AssetsSettingsActive = m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_ASSETS;
@@ -1770,6 +1839,9 @@ void CGameClient::OnConnected()
 	const char *pLoadMapContent = Localize("Initializing map logic");
 	// render loading before skip is calculated
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0);
+	// 直连或命令行走廊没有经过服务器浏览器时，这里按当前已知游戏信息补一次
+	// 实体纹理预热；OnMapLoad 不再取消它，资源准备帧可以继续复用。
+	m_MapImages.PrewarmEntities();
 	LogConnectStage("loading_screen");
 	const bool Live = Client()->State() == IClient::STATE_LOADING;
 	const auto PrepareMapLogic = [&] {
@@ -4233,6 +4305,10 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 				}
 				FoundGameInfoEx = true;
 				m_GameInfo = GetGameInfo((const CNetObj_GameInfoEx *)Item.m_pData, Item.m_DataSize, &ServerInfo);
+				// GAMEINFOEX 才是本局最终的玩法信息；服务器浏览器预热的槽位可能
+				// 与真实服务器不同，确认后切换到实际 entities 资源，避免进服
+				// 资源准备帧再退回同步纹理构建。
+				m_MapImages.PrewarmEntitiesForGameInfo(m_GameInfo);
 			}
 			else if(Item.m_Type == NETOBJTYPE_GAMEDATA)
 			{
@@ -9655,6 +9731,9 @@ void CGameClient::SetConnectInfo(const NETADDR *pAddress)
 	m_ConnectServerInfo = pEntry->m_Info;
 	const CNetObj_GameInfoEx GameInfoEx = {.m_Version = 0};
 	m_GameInfo = GetGameInfo(&GameInfoEx, 0, &*m_ConnectServerInfo);
+	// 服务器浏览器信息已经能确定 entities 槽位；连接和地图下载期间就启动
+	// 预热，避免首次进服在资源准备帧同步构建四层实体纹理。
+	m_MapImages.PrewarmEntitiesForGameInfo(m_GameInfo);
 }
 
 // Q1menG Client Recognition Functions

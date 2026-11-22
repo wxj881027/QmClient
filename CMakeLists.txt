@@ -3256,6 +3256,10 @@ if(CLIENT)
     qm_font_names.h
     qm_font_collection.h
     qm_font_face_registry.h
+    qm_glyph_geometry.h
+    qm_glyph_rasterizer.h
+    qm_video_memory.cpp
+    qm_video_memory.h
     qm_font_file_probe.h
     qm_recent_glyphs.h
     qm_font_restore.h
@@ -5263,6 +5267,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/music/qm_music_hook_protocol_test.cpp
     src/test/contract/qmclient/ui/qm_ui_presentation_contract_test.cpp
     src/test/unit/qmclient/ui/QmUiTokensTest.cpp
+    src/test/unit/qmclient/ui/qm_progress_ring_test.cpp
     src/test/unit/qmclient/ui/qm_ime_candidate_layout_test.cpp
     src/test/unit/qmclient/ui/qm_ime_render_state_test.cpp
     src/test/unit/qmclient/ui/qm_ime_popup_snapshot_test.cpp
@@ -6601,6 +6606,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     $<TARGET_OBJECTS:game-shared>
     $<TARGET_OBJECTS:rust-bridge-shared>
     src/engine/client/text.cpp
+    src/engine/client/qm_video_memory.cpp
     src/generated/client_data.h
     src/generated/client_data7.h
     src/generated/data_types.h
@@ -6850,6 +6856,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/components/qmclient/qm_title_style.cpp
       src/test/integration/qmclient/client/qm_text_bitmap_test.cpp
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
+      src/test/integration/qmclient/client/qm_text_glyph_worker_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
       src/test/integration/engine/recent_glyph_file_test.cpp
       src/test/integration/client/map_difficulty_catalog_file_test.cpp
@@ -6984,6 +6991,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_ui_element_allocation_test.cpp
       src/test/support/allocation_failure_new.cpp
       src/engine/client/text.cpp
+      src/engine/client/qm_video_memory.cpp
       src/engine/client/backend_threaded.cpp
       src/engine/client/graphics_threaded.cpp
       src/engine/client/graphics_threaded_sprites.cpp
@@ -7387,11 +7395,16 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_snapshot_benchmark.cpp
     src/test/benchmark/qm_render_layer_batch_benchmark.cpp
     src/test/benchmark/qm_font_raster_benchmark.cpp
+    src/test/benchmark/qm_glyph_geometry_benchmark.cpp
     src/test/benchmark/qm_font_search_benchmark.cpp
     src/test/benchmark/qm_skin_sort_benchmark.cpp
+    src/test/benchmark/qm_skin_list_benchmark.cpp
+    src/game/client/components/settings_resource_jobs.cpp
+    src/game/client/components/settings_runtime_cache.cpp
     src/game/client/QmUi/QmDropdown.cpp
     src/test/benchmark/qm_icon_render_benchmark.cpp
     src/engine/client/text.cpp
+    src/engine/client/qm_video_memory.cpp
     # 拖尾几何构建（BuildEffect 与样式分派的生产实现；每帧每玩家热路径）
     src/test/benchmark/qm_trail_style_benchmark.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp

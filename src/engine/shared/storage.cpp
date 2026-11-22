@@ -842,9 +842,14 @@ namespace
 				if(!GetPathChecked(Index, pFilename, aPath, sizeof(aPath)))
 					return EReadFileResult::IO_FAILURE;
 				bool NotFound = false;
+				errno = 0;
 				std::unique_ptr<void, decltype(&io_close)> File(MaxBytes ? io_open_read_regular_checked(aPath, &NotFound) : io_open_read_checked(aPath, &NotFound), io_close);
 				if(!File)
+				{
+					if(!NotFound && errno == ENOMEM)
+						return EReadFileResult::RESOURCE_ERROR;
 					return NotFound ? EReadFileResult::NOT_FOUND : EReadFileResult::IO_FAILURE;
+				}
 				std::unique_ptr<void, decltype(&free)> Data(nullptr, free);
 				unsigned Size = 0;
 				bool Read = false;
@@ -857,7 +862,7 @@ namespace
 						return EReadFileResult::IO_FAILURE;
 					Data.reset(malloc(static_cast<size_t>(Expected) + 1));
 					if(!Data)
-						return EReadFileResult::IO_FAILURE;
+						return EReadFileResult::RESOURCE_ERROR;
 					Size = static_cast<unsigned>(Expected);
 					Read = io_read(File.get(), Data.get(), Size + 1) == Size && io_error(File.get()) == 0;
 					static_cast<char *>(Data.get())[Size] = '\0';

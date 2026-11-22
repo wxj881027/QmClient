@@ -24,6 +24,7 @@ public:
 
 	bool Triggered() const { return m_Triggered; }
 	std::size_t Attempts() const { return m_Attempts; }
+	static bool Active() noexcept { return s_pActive != nullptr; }
 	static bool FailNextAllocation() noexcept
 	{
 		if(!s_pActive)

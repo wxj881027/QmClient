@@ -1484,8 +1484,17 @@ namespace ui_token::text_caret
 // 动效令牌：界面所有过渡的时长、曲线与弹簧参数。按「节奏分级」组织——
 // 同一档交互用同一套时长，跨页面拖动感受一致；不要为单个控件新造一条时长。
 // 每个 SUiAnimTransition 同时带 duration 与 easing，需要弹簧时带 m_Spring（ζ 决定回弹）。
+namespace ui_token::progress_ring
+{
+	inline constexpr float BUSY_FRACTION = 0.75f;
+	inline constexpr float TRACK_ALPHA = 0.35f;
+	inline constexpr float OUTER_RADIUS = 0.5f;
+	inline constexpr float INNER_RATIO = 0.75f;
+}
+
 namespace ui_token::motion
 {
+	inline constexpr int64_t PROGRESS_RING_PERIOD_NS = 666'666'667;
 	// 菜单反馈使用独立的语义时长，避免通用预设改变交互节奏。
 	// 悬停淡入/淡出：最短的一档，鼠标扫过时不做拖尾。
 	inline constexpr SUiAnimTransition HOVER_FADE{.m_DurationSec = 0.12f, .m_Easing = EEasing::EASE_OUT_QUART};

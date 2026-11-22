@@ -5037,9 +5037,12 @@ void CClient::Run()
 			m_QmPerfConfigSnapshot.Update(this);
 			m_QmPerfLastConfigCheck = time_get();
 		}
-		std::optional<CPerfTimer> LoopTimer;
-		if(PerfEnabled)
-			LoopTimer.emplace();
+		// 始终测量主循环 CPU 忙时：后台预热必须看真实占用，不能把 vsync 休眠
+		// 当成已用预算，否则高刷显示器上会永远算出 0 余量。
+		CPerfTimer LoopTimer;
+		// Swap 在 vsync 下会把等显示器的时间算进 LoopTimer；单独扣除后才是
+		// 主线程实际可支配的 CPU 忙时。Swap 自身的阶段日志仍保留墙钟耗时。
+		double MainThreadSwapMs = 0.0;
 		++m_PerfFrame;
 		set_new_tick();
 		UpdateHangHeartbeat();
@@ -5435,12 +5438,17 @@ void CClient::Run()
 				{
 					CPerfTimer StageTimer;
 					m_pGraphics->Swap();
+					MainThreadSwapMs = StageTimer.ElapsedMs();
 					char aExtra[96];
 					str_format(aExtra, sizeof(aExtra), "state=%d render_rate=%d throttle=%d", State(), GfxRefreshRate, RequestedRenderThrottleRate);
-					QmPerfLogStage("perf/main_thread", "graphics_swap", StageTimer.ElapsedMs(), false, this, nullptr, nullptr, aExtra);
+					QmPerfLogStage("perf/main_thread", "graphics_swap", MainThreadSwapMs, false, this, nullptr, nullptr, aExtra);
 				}
 				else
+				{
+					CPerfTimer StageTimer;
 					m_pGraphics->Swap();
+					MainThreadSwapMs = StageTimer.ElapsedMs();
+				}
 				// 合影截图：TakeScreenshot 请求已在 Swap 之前提交，由本帧的 ScreenshotDirect
 				// 消费；这里只负责撤掉合成快照，避免假角色留在之后的正常渲染里。
 				if(m_PoseScreenshotHandled)
@@ -5507,8 +5515,15 @@ void CClient::Run()
 		TextRender()->QmTextFrameEnd();
 
 		m_Fifo.Update();
+		const double LoopMs = LoopTimer.ElapsedMs();
+		const double BusyMs = maximum(0.0, LoopMs - MainThreadSwapMs);
+		m_MainThreadFrameTime = (float)(BusyMs / 1000.0);
+		if(m_MainThreadFrameTimeAverage <= 0.0f)
+			m_MainThreadFrameTimeAverage = m_MainThreadFrameTime;
+		else
+			m_MainThreadFrameTimeAverage = m_MainThreadFrameTimeAverage * 0.9f + m_MainThreadFrameTime * 0.1f;
 		if(PerfEnabled)
-			QmPerfLogStage("perf/main_thread", "loop_total", LoopTimer->ElapsedMs(), false, this);
+			QmPerfLogStage("perf/main_thread", "loop_total", LoopMs, false, this);
 
 		if(State() == IClient::STATE_QUITTING || State() == IClient::STATE_RESTARTING)
 			break;

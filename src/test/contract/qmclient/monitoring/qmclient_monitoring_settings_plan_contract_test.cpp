@@ -58,7 +58,7 @@ TEST(QmMonitoringSettingsPlanContract, PlanCollectionUsesTheSameSafeAreaAsVisibl
 
 	EXPECT_NE(OuterScreenBody.find("Screen.Margin(ui_token::panel::MARGIN, &Screen);"), std::string::npos);
 	EXPECT_NE(AdvanceBody.find("const CUIRect OuterScreen = MenuTextOuterScreen();"), std::string::npos);
-	EXPECT_NE(AdvanceBody.find("CollectSettingsMenuTextPlanUnit(m_vSettingsMenuTextPlanCollectionUnits[m_SettingsMenuTextPlanCollectionCursor], OuterScreen, SettingsMainView, vItems);"), std::string::npos);
+	EXPECT_NE(AdvanceBody.find("CollectSettingsMenuTextPlanUnit(Unit, OuterScreen, SettingsMainView, vItems);"), std::string::npos);
 	EXPECT_EQ(AdvanceBody.find("const CUIRect Screen = *Ui()->Screen();"), std::string::npos);
 	EXPECT_EQ(Header.find("void EnsureSettingsMenuTextPlanReadyForVisible();"), std::string::npos);
 	EXPECT_EQ(Menus.find("void CMenus::EnsureSettingsMenuTextPlanReadyForVisible()"), std::string::npos);
@@ -152,10 +152,10 @@ TEST(QmMonitoringSettingsPlanContract, SettingsPlanCollectionDoesNotSynchronousl
 	ASSERT_FALSE(RenderBody.empty());
 	ASSERT_FALSE(EscBody.empty());
 
-	EXPECT_NE(PrewarmBody.find("constexpr int TEXT_PREWARM_BUDGET_PER_STEP = 8;"), std::string::npos);
-	EXPECT_NE(PrewarmBody.find("m_Menus.PrewarmSettingsTextPoolForLoading(TEXT_PREWARM_BUDGET_PER_STEP);"), std::string::npos);
-	EXPECT_EQ(PrewarmBody.find("while(SettingsLoadingPrewarmShouldKeepPumping"), std::string::npos);
-	EXPECT_EQ(PrewarmBody.find("MAX_PREWARM_ATTEMPTS = 128"), std::string::npos);
+	// 启动 loading 只返回非阻塞入口；全量收集和容器构建由主循环逐帧预算继续。
+	EXPECT_NE(PrewarmBody.find("\"startup_text_prewarm_deferred\""), std::string::npos);
+	EXPECT_EQ(PrewarmBody.find("PrewarmSettingsTextPoolForLoading("), std::string::npos);
+	EXPECT_EQ(PrewarmBody.find("for(int Step"), std::string::npos);
 
 	EXPECT_EQ(RenderBody.find("PrebuildIngameEscTextPoolBeforeOpen(96);"), std::string::npos);
 	EXPECT_EQ(RenderBody.find("PrebuildIngameEscTextPoolBeforeOpen(4);"), std::string::npos);

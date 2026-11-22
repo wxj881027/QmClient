@@ -8,6 +8,7 @@
 #include <engine/storage.h>
 
 #include <gtest/gtest.h>
+#include <test/support/prediction_allocation_failure.h>
 #include <test/support/qm_crashdump_process_probe.h>
 #include <test/support/qm_exit_process_probe.h>
 #include <test/support/qm_open_link_probe.h>
@@ -266,6 +267,9 @@ class CTestLogLogger : public ILogger
 public:
 	void Log(const CLogMessage *pMessage) override
 	{
+		// 故障注入期间日志捕获不是被测业务；避免测试后端的容器分配改变预算矩阵。
+		if(CPredictionAllocationFailure::Active())
+			return;
 		std::lock_guard<std::mutex> Lock(m_Mutex);
 		m_vLines.emplace_back(pMessage->m_aLine, pMessage->m_LineLength);
 	}

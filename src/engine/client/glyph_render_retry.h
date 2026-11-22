@@ -7,6 +7,12 @@
 enum class EQmGlyphState
 {
 	UNINITIALIZED,
+	// 只从 FreeType 取排版度量，未写入图集。测量/布局路径不得为了拿宽度
+	// 触发位图光栅化；真正绘制时再升级为 RENDERED。
+	MEASURED,
+	// 后台 worker 已接收任务，结果尚未发布。可见文本命中该状态时仍由主线程
+	// 同步完成，不能等待异步结果，否则切页会出现字形延迟。
+	QUEUED,
 	RENDERED,
 	ERROR,
 	RETRY,

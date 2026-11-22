@@ -10,6 +10,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiProgressRing.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/modes.h>
@@ -692,12 +693,10 @@ void CVoting::RenderMiniVoteHudPanel(const SQmMiniVoteHudLayout &Layout, float A
 	str_format(aBuf, sizeof(aBuf), Localize("%ds left"), Seconds);
 	Ui()->DoLabel(&Layout.m_Time, aBuf, Token::MINI_TIME_FONT_SIZE, TEXTALIGN_ML);
 
-	SProgressSpinnerProperties ProgressProps;
 	float Progress = 0.5f;
 	if(!PreviewVote && m_Closetime > m_Opentime)
 		Progress = std::clamp((time() - m_Opentime) / (float)(m_Closetime - m_Opentime), 0.0f, 1.0f);
-	ProgressProps.m_Progress = Progress;
-	Ui()->RenderProgressSpinner(Layout.m_Spinner.Center(), Layout.m_Spinner.h / 2.0f, ProgressProps);
+	ui_widget::DrawProgressRing(Ui(), Layout.m_Spinner.Center(), Layout.m_Spinner.h * 0.5f, {.m_Progress = Progress, .m_Color = ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(Alpha)});
 
 	RenderBars(Layout.m_Bars, Alpha);
 

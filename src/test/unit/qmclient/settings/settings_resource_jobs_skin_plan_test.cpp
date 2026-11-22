@@ -20,6 +20,30 @@ TEST(SettingsResourceJobsSkinPlan, SkinSnapshotRejectsStaleGeneration)
 	EXPECT_FALSE(SettingsSkinListPlanGenerationMatches(Result, 8));
 }
 
+TEST(SettingsResourceJobsSkinPlan, PlanRetainsMaterializationMetadata)
+{
+	SSettingsSkinListEntry Entry;
+	Entry.m_Name = "match_me";
+	Entry.m_Selected = true;
+	Entry.m_SelectedMain = true;
+	Entry.m_Favorite = true;
+	Entry.m_ColorKey = SSettingsSkinListColorKey{true, 11, 22};
+	Entry.m_NameMatchStart = 6;
+	Entry.m_NameMatchLength = 2;
+
+	const SSettingsSkinListPlan Plan = BuildSettingsSkinListPlan({Entry}, 0);
+	ASSERT_EQ(Plan.m_vEntries.size(), 1u);
+	EXPECT_TRUE(Plan.m_vEntries[0].m_Selected);
+	EXPECT_TRUE(Plan.m_vEntries[0].m_SelectedMain);
+	EXPECT_FALSE(Plan.m_vEntries[0].m_SelectedDummy);
+	EXPECT_TRUE(Plan.m_vEntries[0].m_Favorite);
+	EXPECT_EQ(Plan.m_vEntries[0].m_NameMatchStart, 6);
+	EXPECT_EQ(Plan.m_vEntries[0].m_NameMatchLength, 2);
+	ASSERT_TRUE(Plan.m_vEntries[0].m_ColorKey.has_value());
+	EXPECT_EQ(Plan.m_vEntries[0].m_ColorKey->m_ColorBody, 11);
+	EXPECT_EQ(Plan.m_vEntries[0].m_ColorKey->m_ColorFeet, 22);
+}
+
 TEST(SettingsResourceJobsSkinPlan, CurrentViewportRequestsPrecedeOldVisibleAndPrefetch)
 {
 	const std::vector<int> Requests{0, 1, 2, 3, 4};
@@ -158,28 +182,16 @@ TEST(SettingsResourceJobsSkinPlan, AssetListRejectsStaleJobGeneration)
 	EXPECT_FALSE(SettingsAssetListJobGenerationMatches(4, 5));
 }
 
-TEST(SettingsResourceJobsSkinPlan, SkinListPublishesOnlyCompleteMergedList)
+TEST(SettingsResourceJobsSkinPlan, SkinListPublishesAfterFirstPageAndPrefetch)
 {
 	EXPECT_FALSE(SettingsSkinListShouldPublishMergedList(0, 3));
 	EXPECT_FALSE(SettingsSkinListShouldPublishMergedList(2, 3));
 	EXPECT_TRUE(SettingsSkinListShouldPublishMergedList(3, 3));
 	EXPECT_TRUE(SettingsSkinListShouldPublishMergedList(0, 0));
-}
-
-TEST(SettingsResourceJobsSkinPlan, SkinListReplacesPublishedEntriesAfterStableDirectory)
-{
-	EXPECT_TRUE(SettingsSkinListShouldReplacePublishedEntries(0, 3, true, true));
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(0, 3, false, false));
-	EXPECT_TRUE(SettingsSkinListShouldReplacePublishedEntries(0, 3, false, true));
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(10, 20, false, false));
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(20, 10, false, false));
-}
-
-TEST(SettingsResourceJobsSkinPlan, SkinListKeepsPublishedEntriesUntilDirectoryScanSettles)
-{
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(0, 1, true, false));
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(0, 3, true, false));
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(3, 1, true, false));
+	// 7037 条不再等全量合并：54 条（8 可见行 + 1 预取行 × 6 列）即可发布首屏。
+	EXPECT_FALSE(SettingsSkinListShouldPublishMergedList(53, 7037));
+	EXPECT_TRUE(SettingsSkinListShouldPublishMergedList(54, 7037));
+	EXPECT_TRUE(SettingsSkinListShouldPublishMergedList(7037, 7037));
 }
 
 TEST(SettingsResourceJobsSkinPlan, SkinListSkeletonReadyDoesNotRequirePreviewResources)
@@ -323,13 +335,6 @@ TEST(SettingsResourceJobsSkinPlan, SkeletonReadyPublishedCountMatchesSnapshotCou
 	EXPECT_EQ(static_cast<int>(vPublished.size()), Snapshot.m_ItemCount);
 }
 
-TEST(SettingsResourceJobsSkinPlan, SkinListKeepsPendingPlanAliveUntilPublishGateOpens)
-{
-	EXPECT_TRUE(SettingsSkinListHasPendingMergeWork(true, 3, 3, 3));
-	EXPECT_TRUE(SettingsSkinListHasPendingMergeWork(true, 0, 0, 0));
-	EXPECT_FALSE(SettingsSkinListHasPendingMergeWork(false, 3, 3, 3));
-}
-
 TEST(SettingsResourceJobsSkinPlan, VisibleSkinListEntriesRequestImmediateLoad)
 {
 	EXPECT_TRUE(SettingsSkinListShouldRequestImmediateLoad(true));
@@ -352,8 +357,15 @@ TEST(SettingsResourceJobsSkinPlan, SkinListWarmupCountsCoverVisibleAndPrefetchRo
 	EXPECT_EQ(SettingsSkinListFirstPageWarmupEntries(180.0f, 50.0f, 1, 2), 6);
 	EXPECT_EQ(SettingsSkinListFirstPageWarmupEntries(300.0f, 50.0f, 4, 1), 28);
 	EXPECT_EQ(SettingsSkinListFirstPageWarmupEntries(0.0f, 50.0f, 1, 2), 0);
-	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(300.0f), 28);
-	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(120.0f), 24);
+	EXPECT_EQ(SettingsSkinListFirstPageEntryCount(1), 9);
+	EXPECT_EQ(SettingsSkinListFirstPageEntryCount(4), 36);
+	EXPECT_EQ(SettingsSkinListFirstPageEntryCount(6), 54);
+	EXPECT_EQ(SettingsSkinListFirstPageEntryCount(9), 54);
+	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(300.0f), 54);
+	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(300.0f, 6), 54);
+	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(300.0f, 4), 36);
+	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(300.0f, 1), 9);
+	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(0.0f, 6), 0);
 	EXPECT_EQ(SettingsSkinListPrefetchCount(0, 2, 1, 2, 10), 2);
 	EXPECT_EQ(SettingsSkinListPrefetchCount(7, 9, 1, 2, 10), 0);
 	EXPECT_EQ(SettingsSkinListBackgroundWarmupCount(20, 6), 6);
@@ -376,7 +388,7 @@ TEST(SettingsResourceJobsSkinPlan, SkinBackgroundScanKeepsOneStableStartCursorPe
 TEST(SettingsResourceJobsSkinPlan, LoadingPrewarmAttemptBudgetReservesExtraTeeSourceSettlePasses)
 {
 	EXPECT_EQ(SettingsLoadingPrewarmMaxAttempts(0, 0), 33);
-	EXPECT_EQ(SettingsLoadingPrewarmMaxAttempts(19, 28), 132);
+	EXPECT_EQ(SettingsLoadingPrewarmMaxAttempts(19, 54), 184);
 	EXPECT_EQ(SettingsLoadingPrewarmMaxAttempts(19, 8), 108);
 }
 
