@@ -968,24 +968,20 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		Ui()->ClipDisable();
 	};
 	// Skin loading status
-	const auto &&RenderSkinStatus = [&](CUIRect Parent, const CSkins::CSkinContainer *pSkinContainer, const void *pStatusTooltipId) {
-		if(pSkinContainer != nullptr && pSkinContainer->Skin() != nullptr)
-		{
+	using ESkinStatus = CSkins::CSkinContainer::EStatusIndicator;
+	const auto &&RenderSkinStatus = [&](CUIRect Parent, ESkinStatus Indicator, const void *pStatusTooltipId) {
+		if(Indicator == ESkinStatus::NONE)
 			return;
-		}
 
 		CUIRect StatusIcon;
-		Parent.HSplitTop(20.0f, &StatusIcon, nullptr);
-		StatusIcon.VSplitLeft(20.0f, &StatusIcon, nullptr);
+		const float IconBox = ui_token::control::IconBox(BodySize);
+		Parent.HSplitTop(minimum(Parent.h, IconBox), &StatusIcon, nullptr);
+		StatusIcon.VSplitLeft(minimum(StatusIcon.w, IconBox), &StatusIcon, nullptr);
 
-		const CSkins::CSkinContainer::EStatusIndicator Indicator =
-			pSkinContainer == nullptr ?
-				CSkins::CSkinContainer::EStatusIndicator::ERROR :
-				CSkins::CSkinContainer::StatusIndicator(pSkinContainer->State());
 		Ui()->RegisterPassiveHotItem(pStatusTooltipId, &StatusIcon);
-		if(Indicator == CSkins::CSkinContainer::EStatusIndicator::LOADING)
+		if(Indicator == ESkinStatus::LOADING)
 		{
-			ui_widget::DrawProgressRing(Ui(), StatusIcon.Center(), 5.0f);
+			ui_widget::DrawProgressRing(Ui(), StatusIcon.Center(), minimum(StatusIcon.w, StatusIcon.h) * 0.25f);
 			GameClient()->m_Tooltips.DoToolTip(pStatusTooltipId, &StatusIcon, Localize("Skin is loading."));
 		}
 		else
@@ -994,23 +990,12 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 			// 状态图标字形与同行文字同号：盒子由字号反推，不再写死 12px 盒子。
-			Ui()->DoLabel_QmIcon(&StatusIcon, Indicator == CSkins::CSkinContainer::EStatusIndicator::NOT_FOUND ? EQmIcon::QUESTION : EQmIcon::TRIANGLE_EXCLAMATION, Indicator == CSkins::CSkinContainer::EStatusIndicator::NOT_FOUND ? FONT_ICON_QUESTION : FONT_ICON_TRIANGLE_EXCLAMATION, ui_token::control::IconBox(BodySize), TEXTALIGN_MC);
+			const bool NotFound = Indicator == ESkinStatus::NOT_FOUND;
+			Ui()->DoLabel_QmIcon(&StatusIcon, NotFound ? EQmIcon::QUESTION : EQmIcon::TRIANGLE_EXCLAMATION, NotFound ? FONT_ICON_QUESTION : FONT_ICON_TRIANGLE_EXCLAMATION, minimum(StatusIcon.w, StatusIcon.h), TEXTALIGN_MC);
 			TextRender()->SetRenderFlags(0);
 			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
-			const char *pErrorTooltip;
-			if(pSkinContainer == nullptr)
-			{
-				pErrorTooltip = Localize("This skin name cannot be used.");
-			}
-			else if(Indicator == CSkins::CSkinContainer::EStatusIndicator::ERROR)
-			{
-				pErrorTooltip = Localize("Skin could not be loaded due to an error. Check the local console for details.");
-			}
-			else
-			{
-				pErrorTooltip = Localize("Skin could not be found.");
-			}
+			const char *pErrorTooltip = NotFound ? Localize("Skin could not be found.") : Localize("Skin could not be loaded due to an error. Check the local console for details.");
 			GameClient()->m_Tooltips.DoToolTip(pStatusTooltipId, &StatusIcon, pErrorTooltip);
 		}
 	};
@@ -1385,8 +1370,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			++TeePreviewTelemetry.m_PlaceholderCount;
 			++VisibleNonTerminalWaitingCount;
 			RenderDefaultSkinPlaceholder(Button);
-			CUIRect LoadingIndicator{Button.x + 3.0f, Button.y + 3.0f, 10.0f, 10.0f};
-			ui_widget::DrawProgressRing(Ui(), LoadingIndicator.Center(), LoadingIndicator.h * 0.5f);
+			RenderSkinStatus(Item.m_Rect, ESkinStatus::LOADING, &RowIds.m_ErrorTooltip);
 			SLabelProperties Props;
 			Props.m_MaxWidth = maximum(0.0f, Label.w - 5.0f);
 			Props.m_DisallowNewline = true;
@@ -1414,11 +1398,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		TeeResourcePreviewState.m_TextureReady = EntryVisualReady;
 		TeeResourcePreviewState.m_Failed = TerminalFailure;
 		const ESettingsResourcePreviewDrawResult TeePreviewDrawResult = SettingsResourcePreviewDrawResult(TeeResourcePreviewState);
-		const bool EntryNonTerminalWaiting = !SourceReady &&
-						     (State == CSkins::CSkinContainer::EState::UNLOADED ||
-							     State == CSkins::CSkinContainer::EState::BACKGROUND_REQUESTED ||
-							     State == CSkins::CSkinContainer::EState::PENDING ||
-							     State == CSkins::CSkinContainer::EState::LOADING);
+		const ESkinStatus StatusIndicator = SourceReady ? ESkinStatus::NONE : CSkins::CSkinContainer::StatusIndicator(State);
 		if(EntryVisualReady)
 		{
 			++VisibleVisualReadyCount;
@@ -1434,7 +1414,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			++VisibleSourceSettledCount;
 		if(State == CSkins::CSkinContainer::EState::BACKGROUND_REQUESTED)
 			++VisibleBackgroundRequestedCount;
-		if(EntryNonTerminalWaiting)
+		if(StatusIndicator == ESkinStatus::LOADING)
 			++VisibleNonTerminalWaitingCount;
 		const CSkin *pSkin = pSkinContainer->Skin() != nullptr ? pSkinContainer->Skin().get() : pDefaultSkin;
 
@@ -1462,11 +1442,6 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		{
 			// 目标皮肤尚未就绪时显示默认 Tee，不铺骨架底色。
 			RenderDefaultSkinPlaceholder(Button);
-			if(EntryNonTerminalWaiting)
-			{
-				CUIRect LoadingIndicator{Button.x + 3.0f, Button.y + 3.0f, 10.0f, 10.0f};
-				ui_widget::DrawProgressRing(Ui(), LoadingIndicator.Center(), LoadingIndicator.h * 0.5f);
-			}
 		}
 		// 右上角功能图标条：只按本帧真的会画的动作从右到左排（隐藏的动作不占位），
 		// 出现/消失走同一条缓动；下面的名称/元数据**跟着这条缓动**收缩可用宽度，
@@ -1617,7 +1592,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			}
 		}
 
-		RenderSkinStatus(Item.m_Rect, pSkinContainer, &RowIds.m_ErrorTooltip);
+		RenderSkinStatus(Item.m_Rect, StatusIndicator, &RowIds.m_ErrorTooltip);
 	}
 	const int TailItems = (int)vSkinList.size() - VisibleRange.m_EndItem;
 	if(TailItems > 0)
