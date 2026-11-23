@@ -14,6 +14,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #if defined(CONF_FAMILY_UNIX) && GTEST_HAS_DEATH_TEST && !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN)
 namespace
@@ -39,7 +40,10 @@ namespace
 		ExistingReport.close();
 		ASSERT_TRUE(ExistingReport);
 
-		const char *apArgs[] = {::testing::internal::GetArgvs().front().c_str()};
+		// GetArgvs() 返回的是值，直接对临时 vector 的元素取 c_str() 会立刻悬空
+		// （ASan 报 heap-use-after-free），先把它存下来。
+		const std::vector<std::string> Argvs = ::testing::internal::GetArgvs();
+		const char *apArgs[] = {Argvs.front().c_str()};
 		auto pStorage = CreateTempStorage(SavePath.c_str(), std::size(apArgs), apArgs);
 		ASSERT_NE(pStorage, nullptr);
 		const std::shared_ptr<ILogger> pLogger = CreateAssertionLogger(pStorage.get(), aGameName);

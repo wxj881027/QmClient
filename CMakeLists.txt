@@ -7325,30 +7325,46 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   endif()
 
   # 独立测试目标也进入日常 C++ gate，避免只有注册却从未执行。
-  set(CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS})
+  # 一个二进制失败后仍继续跑其余目标：一次 CI 运行就能拿到全部失败点，
+  # 而不是每轮只暴露链上第一个失败的二进制。
+  set(QM_CXX_TEST_BINARIES $<TARGET_FILE:${TARGET_TESTRUNNER}>)
   set(CXX_TEST_DEPENDS ${TARGET_TESTRUNNER})
   if(TARGET qm-nmt-tests)
-    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-nmt-tests> ${TESTRUNNER_ARGS})
+    list(APPEND QM_CXX_TEST_BINARIES $<TARGET_FILE:qm-nmt-tests>)
     list(APPEND CXX_TEST_DEPENDS qm-nmt-tests)
   endif()
   if(TARGET qm-ui-popup-tests)
-    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-ui-popup-tests> ${TESTRUNNER_ARGS})
+    list(APPEND QM_CXX_TEST_BINARIES $<TARGET_FILE:qm-ui-popup-tests>)
     list(APPEND CXX_TEST_DEPENDS qm-ui-popup-tests)
   endif()
   if(TARGET qm-prediction-tests)
-    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-prediction-tests> ${TESTRUNNER_ARGS})
+    list(APPEND QM_CXX_TEST_BINARIES $<TARGET_FILE:qm-prediction-tests>)
     list(APPEND CXX_TEST_DEPENDS qm-prediction-tests)
   endif()
   if(TARGET qm-script-allocation-tests)
-    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-script-allocation-tests> ${TESTRUNNER_ARGS})
+    list(APPEND QM_CXX_TEST_BINARIES $<TARGET_FILE:qm-script-allocation-tests>)
     list(APPEND CXX_TEST_DEPENDS qm-script-allocation-tests)
   endif()
   if(TARGET qm-tsf-allocation-tests)
-    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-tsf-allocation-tests> ${TESTRUNNER_ARGS})
+    list(APPEND QM_CXX_TEST_BINARIES $<TARGET_FILE:qm-tsf-allocation-tests>)
     list(APPEND CXX_TEST_DEPENDS qm-tsf-allocation-tests)
   endif()
+  set(QM_CXX_TEST_SCRIPT "${CMAKE_BINARY_DIR}/run_cxx_tests.cmake")
+  file(GENERATE OUTPUT "${QM_CXX_TEST_SCRIPT}" CONTENT
+"set(Failed \"\")
+foreach(Binary IN ITEMS ${QM_CXX_TEST_BINARIES})
+  message(STATUS \"Running \${Binary}\")
+  execute_process(COMMAND \"\${Binary}\" RESULT_VARIABLE Result)
+  if(NOT Result EQUAL 0)
+    list(APPEND Failed \"\${Binary}\")
+  endif()
+endforeach()
+if(Failed)
+  message(FATAL_ERROR \"Failed test binaries: \${Failed}\")
+endif()
+")
   add_custom_target(run_cxx_tests
-    ${CXX_TEST_COMMANDS}
+    COMMAND ${CMAKE_COMMAND} -P ${QM_CXX_TEST_SCRIPT}
     COMMENT Running unit tests
     DEPENDS ${CXX_TEST_DEPENDS}
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
