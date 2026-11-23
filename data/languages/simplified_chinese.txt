@@ -5447,9 +5447,6 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == 启用辅助线后，设置它的长度、样式和颜色。
 
-Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
-== 开启高亮和昵称按键显示后，可以分别调整卡锤、卡钩的按下颜色。图标大小跟随按键显示。
-
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == 启用指示器，选择距离模式，并决定敌对列表玩家是否使用不同颜色。
 
@@ -7172,11 +7169,11 @@ Highlight Color
 Highlight console commands
 == 高亮控制台命令
 
-Highlight frozen teammates' hammer and hook inputs
-== 高亮冻结中队友的卡锤和卡钩
-
 Highlight game type
 == 高亮显示游戏类型
+
+Highlight held hammer and hook inputs while frozen
+== 高亮冻结时的卡锤和卡钩
 
 Highlight message text gradient color
 == 提及消息文字渐变色
@@ -7192,9 +7189,6 @@ Highlighted message
 
 Highlighted message color
 == 提及消息颜色
-
-Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
-== 高亮冻结中持续按锤的队友，并在昵称按键显示两侧显示卡锤、卡钩图标。
 
 Hint
 == 提示
@@ -7441,9 +7435,6 @@ Icon symbols:
 
 Icons
 == 图标
-
-Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
-== 松开按键或解冻后隐藏图标。他人按键状态需要服务器支持预输入；不显示当前操控角色的卡键状态。
 
 Identity
 == 身份
@@ -10798,6 +10789,9 @@ overwrites
 
 Own hook line width
 == 自己的钩子辅助线宽度
+
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== 「自己的」包含本体和分身。其他玩家的提示只对同队玩家生效，且需要服务器支持预输入。
 
 p = Ping latency
 == p = Ping 延迟
@@ -14411,6 +14405,9 @@ Show grenade and laser trajectory preview
 Show Grid
 == 显示网格
 
+Show hammer icon
+== 显示锤子图标
+
 Show hammer status
 == 显示锤状态
 
@@ -14428,6 +14425,9 @@ Show Hook Collision
 
 Show hook collision line and drop mouse sensitivity to 66 while held.
 == 显示钩子辅助线，按住时把鼠标灵敏度降到 66。
+
+Show hook icon
+== 显示钩子图标
 
 Show hook strength icon indicator
 == 显示钩子强度图标
@@ -15983,6 +15983,9 @@ Strong hook color
 Strong Weak Hook
 == 强弱钩
 
+Stuck input display scope
+== 显示范围
+
 Style
 == 样式
 
@@ -16606,6 +16609,9 @@ The card only appears while such a bind exists; click its key field to change th
 
 The command is empty, incomplete, or exceeds the local config line limit.
 == 命令为空、不完整或超过本地配置行限制。
+
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== 显示范围同时控制 Tee 变色和图标。两个图标各有独立开关，关掉方向键显示后仍可使用。
 
 The downloaded file is not a valid demo
 == 下载的文件不是有效的演示
@@ -23632,6 +23638,18 @@ AUTO
 [Start menu]
 Play
 == 开始游戏
+
+[Stuck input display scope]
+All
+== 全部的
+
+[Stuck input display scope]
+Others
+== 别人的
+
+[Stuck input display scope]
+Own
+== 自己的
 
 [Team size]
 maximum

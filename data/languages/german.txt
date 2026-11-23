@@ -5270,9 +5270,6 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == Aktiviere die Hilfslinie und lege dann Länge, Stil und Farben fest.
 
-Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
-== Aktiviere die Hervorhebung und die Tastenanzeige am Namensschild und wähle die Farben für gehaltenen Hammer und Haken. Die Symbolgröße folgt der Tastengröße.
-
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == Aktiviere den Indikator, wähle den Entfernungsmodus und ob Spieler auf der war-list eine andere Farbe bekommen.
 
@@ -6929,11 +6926,11 @@ Highlight Color
 Highlight console commands
 == Konsolenbefehle hervorheben
 
-Highlight frozen teammates' hammer and hook inputs
-== Hammer- und Hakeneingaben eingefrorener Teammitglieder hervorheben
-
 Highlight game type
 == Spieltyp hervorheben
+
+Highlight held hammer and hook inputs while frozen
+== Gehaltene Hammer- und Hakeneingaben im eingefrorenen Zustand hervorheben
 
 Highlight message text gradient color
 == Farbverlauf für hervorgehobene Nachrichtentexte
@@ -6949,9 +6946,6 @@ Highlighted message
 
 Highlighted message color
 == Farbe hervorgehobener Nachrichten
-
-Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
-== Hebt eingefrorene Teammitglieder mit gehaltenem Hammer hervor und zeigt Hammer- oder Hakeneingaben neben den Tasten am Namensschild.
 
 Hit feedback
 == Treffer-Feedback
@@ -7183,9 +7177,6 @@ Icon symbols:
 
 Icons
 == Symbole
-
-Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
-== Die Symbole verschwinden beim Loslassen oder Auftauen. Fremde Eingaben erfordern serverseitige Unterstützung für Vorabeingaben; deine aktive Figur ist ausgenommen.
 
 Identity
 == Identität
@@ -10360,6 +10351,9 @@ Overwrite clan even if empty
 
 Own hook line width
 == Eigene Hakenlinienbreite
+
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== Eigene umfasst deinen Haupt-Tee und Dummy. Andere Spieler müssen in deinem Team sein und der Server muss Vorabeingaben unterstützen.
 
 p = Ping latency
 == p = Ping-Latenz
@@ -13895,6 +13889,9 @@ Show grenade and laser trajectory preview
 Show Grid
 == Gitter anzeigen
 
+Show hammer icon
+== Hammersymbol anzeigen
+
 Show hammer status
 == Hammer-Status anzeigen
 
@@ -13909,6 +13906,9 @@ Show hitbox mode
 
 Show Hook Collision
 == Haken-Kollision anzeigen
+
+Show hook icon
+== Hakensymbol anzeigen
 
 Show hook strength icon indicator
 == Hakenstärke-Symbol anzeigen
@@ -15443,6 +15443,9 @@ Strong hook color
 Strong Weak Hook
 == Starker Schwacher Haken
 
+Stuck input display scope
+== Anzeigebereich
+
 Style
 == Stil
 
@@ -16030,6 +16033,9 @@ The card only appears while such a bind exists; click its key field to change th
 
 The command is empty, incomplete, or exceeds the local config line limit.
 == Der Befehl ist leer, unvollständig oder überschreitet die maximale Länge einer lokalen Konfigurationszeile.
+
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== Der Anzeigebereich gilt für Tee-Farben und Symbole. Jedes Symbol ist unabhängig von den Richtungstasten schaltbar.
 
 The downloaded file is not a valid demo
 == Die heruntergeladene Datei ist keine gültige Demo
@@ -18987,6 +18993,18 @@ AUTO
 [Start menu]
 Play
 == Spielen
+
+[Stuck input display scope]
+All
+== Alle
+
+[Stuck input display scope]
+Others
+== Andere Tees
+
+[Stuck input display scope]
+Own
+== Eigen
 
 [Team size]
 maximum

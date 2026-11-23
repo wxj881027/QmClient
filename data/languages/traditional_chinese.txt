@@ -5270,9 +5270,6 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == 啟用輔助線，然後設定長度、樣式與顏色。
 
-Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
-== 開啟高亮和暱稱按鍵顯示後，可以分別調整卡錘、卡鉤的按下顏色。圖示大小跟隨按鍵顯示。
-
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == 啟用指示器；選擇它的距離模式，並設定 war-list 玩家是否使用不同顏色。
 
@@ -6929,11 +6926,11 @@ Highlight Color
 Highlight console commands
 == 醒目顯示控制台命令
 
-Highlight frozen teammates' hammer and hook inputs
-== 高亮凍結中隊友的卡錘和卡鉤
-
 Highlight game type
 == 高亮顯示遊戲類型
+
+Highlight held hammer and hook inputs while frozen
+== 高亮凍結時的卡錘和卡鉤
 
 Highlight message text gradient color
 == 提及訊息文字漸變色
@@ -6949,9 +6946,6 @@ Highlighted message
 
 Highlighted message color
 == 提及訊息顏色
-
-Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
-== 高亮凍結中持續按錘的隊友，並在暱稱按鍵顯示兩側顯示卡錘、卡鉤圖示。
 
 Hit feedback
 == 命中回饋
@@ -7183,9 +7177,6 @@ Icon symbols:
 
 Icons
 == 圖示
-
-Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
-== 放開按鍵或解凍後隱藏圖示。他人按鍵狀態需要伺服器支援預輸入；不顯示目前操控角色的卡鍵狀態。
 
 Identity
 == 身份
@@ -10360,6 +10351,9 @@ Overwrite clan even if empty
 
 Own hook line width
 == 自己的鉤子輔助線寬度
+
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== 「自己的」包含本體和分身。其他玩家的提示只對同隊玩家生效，且需要伺服器支援預輸入。
 
 p = Ping latency
 == p = Ping 延遲
@@ -13895,6 +13889,9 @@ Show grenade and laser trajectory preview
 Show Grid
 == 顯示網格
 
+Show hammer icon
+== 顯示錘子圖示
+
 Show hammer status
 == 顯示錘狀態
 
@@ -13909,6 +13906,9 @@ Show hitbox mode
 
 Show Hook Collision
 == 顯示鉤子輔助線
+
+Show hook icon
+== 顯示鉤子圖示
 
 Show hook strength icon indicator
 == 顯示鉤索強度圖標
@@ -15443,6 +15443,9 @@ Strong hook color
 Strong Weak Hook
 == 強弱鉤
 
+Stuck input display scope
+== 顯示範圍
+
 Style
 == 樣式
 
@@ -16030,6 +16033,9 @@ The card only appears while such a bind exists; click its key field to change th
 
 The command is empty, incomplete, or exceeds the local config line limit.
 == 指令為空、不完整或超過本機設定行限制。
+
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== 顯示範圍同時控制 Tee 變色和圖示。兩個圖示各有獨立開關，關掉方向鍵顯示後仍可使用。
 
 The downloaded file is not a valid demo
 == 下載的檔案不是有效的示範
@@ -18987,6 +18993,18 @@ AUTO
 [Start menu]
 Play
 == 開始遊戲
+
+[Stuck input display scope]
+All
+== 全部的
+
+[Stuck input display scope]
+Others
+== 別人的
+
+[Stuck input display scope]
+Own
+== 自己的
 
 [Team size]
 maximum
