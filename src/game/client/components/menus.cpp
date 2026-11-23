@@ -4517,6 +4517,13 @@ bool CMenus::CanDisplayWarning() const
 
 void CMenus::Render()
 {
+	struct SMenuTextScope
+	{
+		CUi *m_pUi;
+		bool m_Previous;
+		~SMenuTextScope() { m_pUi->SetMenuTextMsdf(m_Previous); }
+	};
+	const SMenuTextScope MenuTextScope{Ui(), Ui()->SetMenuTextMsdf(g_Config.m_QmMenuTextMsdf && TextRender()->PrepareMenuMsdfAtlas())};
 	const int MenuOpenFrame = m_MenuOpenFrame++;
 	// ESC 菜单滑入/滑出：只挂在游戏内壳层（在线/回放）。主菜单常驻，没有「打开」时刻，
 	// 让它走同一套轨道会干扰启动画面与加载流程。

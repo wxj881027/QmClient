@@ -833,8 +833,22 @@ fragment float4 qmclient_tex_array_fragment(SMetalTex3DVertexOut Input [[stage_i
 fragment float4 qmclient_text_fragment(SMetalVertexOut Input [[stage_in]], texture2d<float> TextTexture [[texture(0)]], texture2d<float> OutlineTexture [[texture(1)]], sampler Sampler [[sampler(0)]], constant SMetalTextUniforms &Uniforms [[buffer(1)]])
 {
 	const float2 TexCoord = Input.m_TexCoord / Uniforms.m_Params.x;
-	const float TextAlpha = TextTexture.sample(Sampler, TexCoord).r * Input.m_Color.a;
-	const float OutlineAlpha = OutlineTexture.sample(Sampler, TexCoord).r * Uniforms.m_OutlineColor.a;
+	const float3 Sample = TextTexture.sample(Sampler, TexCoord).rgb;
+	float Fill = Sample.r;
+	float Outline;
+	if(Uniforms.m_Params.y > 0.0)
+	{
+		const float Median = max(min(Sample.r, Sample.g), min(max(Sample.r, Sample.g), Sample.b));
+		const float2 TexelsPerPixel = fwidth(TexCoord) * Uniforms.m_Params.x;
+		const float Range = Uniforms.m_Params.y / max(max(TexelsPerPixel.x, TexelsPerPixel.y), 0.001);
+		const float Distance = (Median - 0.5) * Range;
+		Fill = clamp(Distance + 0.5, 0.0, 1.0);
+		Outline = clamp(Distance + 0.5 + min(1.0, Range * 0.25), 0.0, 1.0);
+	}
+	else
+		Outline = OutlineTexture.sample(Sampler, TexCoord).r;
+	const float TextAlpha = Fill * Input.m_Color.a;
+	const float OutlineAlpha = Outline * Uniforms.m_OutlineColor.a;
 	const float OutlineBlend = 1.0 - TextAlpha;
 	const float3 OutlinePremultiplied = Uniforms.m_OutlineColor.rgb * OutlineAlpha * OutlineBlend;
 	const float3 TextPremultiplied = Input.m_Color.rgb * TextAlpha;

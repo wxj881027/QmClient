@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.16)
+project(qm_menu_msdf_atlas LANGUAGES CXX)
+
+set(QM_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../..")
+set(MSDF_ROOT "${QM_ROOT}/vendor/msdfgen")
+file(GLOB MSDF_CORE "${MSDF_ROOT}/core/*.cpp")
+add_executable(qm-menu-msdf-atlas main.cpp ${MSDF_CORE} "${MSDF_ROOT}/ext/import-font.cpp")
+target_compile_features(qm-menu-msdf-atlas PRIVATE cxx_std_17)
+target_compile_definitions(qm-menu-msdf-atlas PRIVATE MSDFGEN_USE_CPP11 MSDFGEN_PUBLIC= MSDFGEN_DISABLE_VARIABLE_FONTS)
+target_include_directories(qm-menu-msdf-atlas PRIVATE "${MSDF_ROOT}")
+
+if(WIN32)
+  set(FREETYPE_ROOT "${QM_ROOT}/ddnet-libs/freetype")
+  target_include_directories(qm-menu-msdf-atlas PRIVATE "${FREETYPE_ROOT}/include")
+  target_link_libraries(qm-menu-msdf-atlas PRIVATE "${FREETYPE_ROOT}/windows/lib64/freetype.lib")
+  add_custom_command(TARGET qm-menu-msdf-atlas POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FREETYPE_ROOT}/windows/lib64/libfreetype.dll" $<TARGET_FILE_DIR:qm-menu-msdf-atlas>)
+else()
+  find_package(Freetype REQUIRED)
+  target_link_libraries(qm-menu-msdf-atlas PRIVATE Freetype::Freetype)
+endif()

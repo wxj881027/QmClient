@@ -982,6 +982,9 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	const float SavedY = CurrentColumn.y;
 	CSettingsContentLayoutFlow Flow(CurrentColumn);
 
+	if(Flow.Control("tclient-menu-text-msdf", LineSize, Button, RowSpacing))
+		DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_TCLIENT, m_TClientSettingsTab, &g_Config.m_QmMenuTextMsdf, "tclient-menu-text-msdf", Localize("Experimental menu text MSDF"), &g_Config.m_QmMenuTextMsdf, &Button, LineSize, 0.0f, FontSize);
+
 #if defined(CONF_FAMILY_WINDOWS)
 	if(Flow.Control("tclient-show-system-fonts", LineSize, Button, RowSpacing))
 	{

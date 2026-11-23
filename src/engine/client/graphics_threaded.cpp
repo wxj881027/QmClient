@@ -579,6 +579,8 @@ static CCommandBuffer::SCommand_Texture_Create LoadTextureCreateCommand(int Text
 		Cmd.m_Flags |= TextureFlag::NO_2D_TEXTURE;
 	if((Flags & IGraphics::TEXLOAD_NO_MIPMAPS) != 0)
 		Cmd.m_Flags |= TextureFlag::NO_MIPMAPS;
+	if((Flags & IGraphics::TEXLOAD_TEXT_MSDF) != 0)
+		Cmd.m_Flags |= TextureFlag::TEXT_MSDF;
 
 	return Cmd;
 }
@@ -2986,6 +2988,16 @@ void CGraphics_Threaded::RenderQuadLayer(int BufferContainerIndex, SQuadRenderIn
 
 void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor)
 {
+	QueueTextDraw(BufferContainerIndex, TextQuadNum, TextureSize, TextTexture, TextOutlineTexture, TextColor, TextOutlineColor, 0.0f);
+}
+
+void CGraphics_Threaded::RenderTextMsdf(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle Texture, const ColorRGBA &TextColor, const ColorRGBA &OutlineColor, float PxRange)
+{
+	QueueTextDraw(BufferContainerIndex, TextQuadNum, TextureSize, Texture, Texture, TextColor, OutlineColor, PxRange);
+}
+
+void CGraphics_Threaded::QueueTextDraw(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float MsdfPxRange)
+{
 #if defined(CONF_PLATFORM_MACOS)
 	if(m_MacosGraphicsDiagnosticsEnabled)
 	{
@@ -3012,6 +3024,7 @@ void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, i
 	Cmd.m_TextOutlineTextureIndex = TextOutlineTexture.Id();
 	Cmd.m_TextColor = TextColor;
 	Cmd.m_TextOutlineColor = TextOutlineColor;
+	Cmd.m_MsdfPxRange = MsdfPxRange;
 
 	AddCmd(Cmd);
 

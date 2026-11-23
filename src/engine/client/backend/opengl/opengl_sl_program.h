@@ -86,6 +86,8 @@ public:
 	int m_LocOutlineColor;
 	int m_LocTextSampler;
 	int m_LocTextOutlineSampler;
+	int m_LocMsdfPxRange = -1;
+	float m_LastMsdfPxRange = 0.0f;
 	int m_LocTextureSize;
 
 	ColorRGBA m_LastColor;

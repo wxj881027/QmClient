@@ -311,6 +311,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pTextProgram->m_LocTextureSampler = -1;
 		m_pTextProgram->m_LocTextSampler = m_pTextProgram->GetUniformLoc("gTextSampler");
 		m_pTextProgram->m_LocTextOutlineSampler = m_pTextProgram->GetUniformLoc("gTextOutlineSampler");
+		m_pTextProgram->m_LocMsdfPxRange = m_pTextProgram->GetUniformLoc("gMsdfPxRange");
 		m_pTextProgram->m_LocColor = m_pTextProgram->GetUniformLoc("gVertColor");
 		m_pTextProgram->m_LocOutlineColor = m_pTextProgram->GetUniformLoc("gVertOutlineColor");
 		m_pTextProgram->m_LocTextureSize = m_pTextProgram->GetUniformLoc("gTextureSize");
@@ -1199,7 +1200,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderQuadLayer(const CCommandBuff
 	}
 }
 
-void CCommandProcessorFragment_OpenGL3_3::RenderText(const CCommandBuffer::SState &State, int DrawNum, int TextTextureIndex, int TextOutlineTextureIndex, int TextureSize, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor)
+void CCommandProcessorFragment_OpenGL3_3::RenderText(const CCommandBuffer::SState &State, int DrawNum, int TextTextureIndex, int TextOutlineTextureIndex, int TextureSize, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float MsdfPxRange)
 {
 	if(DrawNum == 0)
 	{
@@ -1230,6 +1231,11 @@ void CCommandProcessorFragment_OpenGL3_3::RenderText(const CCommandBuffer::SStat
 	}
 
 	SetState(State, m_pTextProgram);
+	if(m_pTextProgram->m_LastMsdfPxRange != MsdfPxRange)
+	{
+		m_pTextProgram->SetUniform(m_pTextProgram->m_LocMsdfPxRange, MsdfPxRange);
+		m_pTextProgram->m_LastMsdfPxRange = MsdfPxRange;
+	}
 
 	if(m_pTextProgram->m_LastTextureSize != TextureSize)
 	{
@@ -1270,7 +1276,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderText(const CCommandBuffer::S
 		BufferContainer.m_LastIndexBufferBound = m_QuadDrawIndexBufferId;
 	}
 
-	RenderText(pCommand->m_State, pCommand->m_DrawNum, pCommand->m_TextTextureIndex, pCommand->m_TextOutlineTextureIndex, pCommand->m_TextureSize, pCommand->m_TextColor, pCommand->m_TextOutlineColor);
+	RenderText(pCommand->m_State, pCommand->m_DrawNum, pCommand->m_TextTextureIndex, pCommand->m_TextOutlineTextureIndex, pCommand->m_TextureSize, pCommand->m_TextColor, pCommand->m_TextOutlineColor, pCommand->m_MsdfPxRange);
 }
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderQuadContainer(const CCommandBuffer::SCommand_RenderQuadContainer *pCommand)

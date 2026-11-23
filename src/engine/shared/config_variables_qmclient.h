@@ -877,6 +877,7 @@ MACRO_CONFIG_INT(QmSettingsPrewarmMigrated, qm_settings_prewarm_migrated, 0, 0, 
 // 2=可见文本仍同步，后台预热走 worker 轮廓几何 + GPU 离屏覆盖度光栅化。
 // 分帧/异步结果只用于不可见预热，禁止让当前页面等待 worker 后再出现字形。
 MACRO_CONFIG_INT(QmTextRasterMode, qm_text_raster_mode, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)")
+MACRO_CONFIG_INT(QmMenuTextMsdf, qm_menu_text_msdf, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use experimental distance-field rendering for supported menu text")
 
 // Chat Bubble Settings - 聊天气泡
 // 手机端默认把轨道放右侧：左侧边缘更容易被误触和圆角挡住。

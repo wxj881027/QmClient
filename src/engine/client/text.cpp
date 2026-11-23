@@ -19,6 +19,7 @@
 #include "qm_font_scan_job.h"
 #include "qm_glyph_geometry.h"
 #include "qm_glyph_rasterizer.h"
+#include "qm_menu_msdf.h"
 #include "qm_recent_glyphs.h"
 #include "qm_system_fonts.h"
 #include "qm_video_memory.h"
@@ -38,6 +39,7 @@
 #include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/graphics.h>
+#include <engine/gfx/image_loader.h>
 #include <engine/shared/config.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
@@ -74,6 +76,31 @@
 #include <vector>
 
 using namespace std::chrono_literals;
+
+class CQmMenuMsdfLoadJob : public IJob
+{
+	std::string m_Path;
+
+	void Run() override
+	{
+		if(IOHANDLE File = io_open(m_Path.c_str(), IOFLAG_READ))
+		{
+			int PngliteIncompatible = 0;
+			CImageLoader::LoadPng(File, m_Path.c_str(), m_Image, PngliteIncompatible);
+		}
+	}
+
+public:
+	CImageInfo m_Image;
+
+	explicit CQmMenuMsdfLoadJob(const char *pPath) :
+		m_Path(pPath)
+	{
+		Abortable(true);
+	}
+
+	~CQmMenuMsdfLoadJob() override { m_Image.Free(); }
+};
 
 // 屏幕尚未初始化或尺寸异常时，跳过会触发整数溢出的像素对齐。
 static float SafePixelAlign(float Value, float Scale)
@@ -2757,6 +2784,12 @@ public:
 		}
 	}
 
+	FT_Face MenuGlyphFace(int Chr)
+	{
+		FT_Face Face = nullptr;
+		return GetCharGlyph(Chr, &Face, false) != 0 ? Face : nullptr;
+	}
+
 	vec2 Kerning(const SGlyph *pLeft, const SGlyph *pRight) const
 	{
 		if(pLeft != nullptr && pRight != nullptr && pLeft->m_Face == pRight->m_Face && pLeft->m_FontSize == pRight->m_FontSize)
@@ -2956,6 +2989,7 @@ struct STextContainer
 	bool m_ForceCursorRendering;
 	bool m_HasSelection;
 	bool m_HasSpatialGradient;
+	bool m_MenuMsdf;
 
 	bool m_SingleTimeUse;
 
@@ -2980,6 +3014,7 @@ struct STextContainer
 		m_LineWidth = -1.0f;
 
 		m_RenderFlags = 0;
+		m_MenuMsdf = false;
 
 		m_HasCursor = false;
 		m_ForceCursorRendering = false;
@@ -3211,6 +3246,11 @@ class CTextRender : public IEngineTextRender
 	std::unordered_set<std::string> m_QmLoadedFontSources;
 	std::unordered_set<std::string> m_QmLoadedFontContents;
 	std::unordered_map<std::string, std::vector<FT_Face>> m_QmFontContentFaces;
+	std::array<FT_Face, std::size(qm_menu_msdf::s_aFaces)> m_aMenuMsdfFaces{};
+	IGraphics::CTextureHandle m_MenuMsdfTexture;
+	std::shared_ptr<CQmMenuMsdfLoadJob> m_pMenuMsdfLoad;
+	bool m_MenuMsdfLoadAttempted = false;
+	bool m_MenuMsdfDrawReported = false;
 	std::unordered_set<FT_Face> m_QmSystemFontFaces;
 	bool m_QmSystemFontsScanned = false;
 	bool m_QmShowSystemFonts = false;
@@ -3912,6 +3952,12 @@ public:
 		m_pGlyphMap = nullptr;
 
 		m_QmFontFaceData.clear();
+		if(m_pGraphics != nullptr)
+			m_pGraphics->UnloadTexture(&m_MenuMsdfTexture);
+		m_aMenuMsdfFaces.fill(nullptr);
+		m_pMenuMsdfLoad.reset();
+		m_MenuMsdfLoadAttempted = false;
+		m_MenuMsdfDrawReported = false;
 		m_QmFontContentFaces.clear();
 		m_QmSystemFontFaces.clear();
 		m_vpFontCollections.clear();
@@ -4892,6 +4938,78 @@ public:
 		}
 	}
 
+	const qm_menu_msdf::SGlyph *FindMenuMsdfGlyph(FT_Face Face, int Character) const
+	{
+		if(Face != nullptr)
+			for(size_t Index = 0; Index < m_aMenuMsdfFaces.size(); ++Index)
+				if(m_aMenuMsdfFaces[Index] == Face)
+					return qm_menu_msdf::Find(static_cast<int>(Index), Character);
+		return nullptr;
+	}
+
+	bool PrepareMenuMsdfAtlas() override
+	{
+		if(!Graphics()->IsTextBufferingEnabled() || g_Config.m_QmCustomFont[0] != '\0' || g_Config.m_QmCustomFontCjk[0] != '\0')
+			return false;
+
+		if(m_MenuMsdfTexture.IsValid())
+			return true;
+		if(!m_MenuMsdfLoadAttempted)
+		{
+			m_MenuMsdfLoadAttempted = true;
+			for(size_t Index = 0; Index < m_aMenuMsdfFaces.size(); ++Index)
+			{
+				const auto &Source = qm_menu_msdf::s_aFaces[Index];
+				const auto Loaded = m_QmFontContentFaces.find(Source.m_pDigest);
+				if(Loaded != m_QmFontContentFaces.end())
+					for(FT_Face Face : Loaded->second)
+						if(Face->face_index == Source.m_Index)
+							m_aMenuMsdfFaces[Index] = Face;
+			}
+			char aPath[IO_MAX_PATH_LENGTH];
+			if(std::any_of(m_aMenuMsdfFaces.begin(), m_aMenuMsdfFaces.end(), [](FT_Face Face) { return Face != nullptr; }) &&
+				Storage()->GetDataPath("qmclient/menu_msdf.png", aPath, sizeof(aPath)))
+			{
+				auto pJob = std::make_shared<CQmMenuMsdfLoadJob>(aPath);
+				if(Kernel()->RequestInterface<IEngine>()->TryAddJob(pJob))
+					m_pMenuMsdfLoad = std::move(pJob);
+			}
+		}
+		if(!m_pMenuMsdfLoad || !m_pMenuMsdfLoad->Done())
+			return false;
+		CImageInfo &Image = m_pMenuMsdfLoad->m_Image;
+		if(m_pMenuMsdfLoad->State() == IJob::STATE_DONE && Image.m_pData != nullptr &&
+			Image.m_Format == CImageInfo::FORMAT_RGBA && Image.m_Width == qm_menu_msdf::SIZE && Image.m_Height == qm_menu_msdf::SIZE)
+			m_MenuMsdfTexture = Graphics()->LoadTextureRawMove(Image, IGraphics::TEXLOAD_TEXT_MSDF | IGraphics::TEXLOAD_NO_MIPMAPS, "menu-msdf");
+		m_pMenuMsdfLoad.reset();
+		if(g_Config.m_QmGraphicsTrace != 0)
+			log_info("ui/msdf", "atlas_ready=%d verified_faces=%zu", m_MenuMsdfTexture.IsValid(), std::count_if(m_aMenuMsdfFaces.begin(), m_aMenuMsdfFaces.end(), [](FT_Face Face) { return Face != nullptr; }));
+		return m_MenuMsdfTexture.IsValid();
+	}
+
+	bool PrepareMenuMsdf(const CTextCursor &Cursor, const char *pText, int Length)
+	{
+		if((Cursor.m_Flags & (TEXTFLAG_RENDER | TEXTFLAG_QM_MENU_MSDF)) != (TEXTFLAG_RENDER | TEXTFLAG_QM_MENU_MSDF) ||
+			!m_MenuMsdfTexture.IsValid() || m_FontPreset != EFontPreset::DEFAULT_FONT || pText == nullptr || pText[0] == '\0' ||
+			(m_RenderFlags & (TEXT_RENDER_FLAG_NO_Y_BEARING | TEXT_RENDER_FLAG_NO_OVERSIZE)) != 0)
+			return false;
+		const char *pEnd = pText + QmTextLayoutByteLength(pText, Length);
+		const auto Covered = [&](int Chr) { return FindMenuMsdfGlyph(m_pGlyphMap->MenuGlyphFace(Chr), Chr) != nullptr; };
+		while(pText < pEnd)
+		{
+			int Character = DecodeTextLayoutCharacter(pText, pEnd);
+			if(Character == '\n')
+			{
+				if((Cursor.m_Flags & TEXTFLAG_DISALLOW_NEWLINE) == 0)
+					continue;
+				Character = ' ';
+			}
+			if(!Covered(Character))
+				return false;
+		}
+		return (Cursor.m_Flags & TEXTFLAG_ELLIPSIS_AT_END) == 0 || Covered(0x2026);
+	}
+
 	bool CreateTextContainer(STextContainerIndex &TextContainerIndex, CTextCursor *pCursor, const char *pText, int Length = -1) override
 	{
 		dbg_assert(!TextContainerIndex.Valid(), "Text container index was not cleared.");
@@ -4914,8 +5032,8 @@ public:
 
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
 		InitTextContainer(TextContainer, pCursor);
-
-		AppendTextContainer(TextContainerIndex, pCursor, pText, Length);
+		TextContainer.m_MenuMsdf = PrepareMenuMsdf(*pCursor, pText, Length);
+		AppendTextContainerImpl(TextContainer, pCursor, pText, Length, true);
 
 		const bool IsRendered = (pCursor->m_Flags & TEXTFLAG_RENDER) != 0;
 
@@ -5274,7 +5392,7 @@ public:
 
 				// 只有真正出图的趟次才允许写入图集。TextWidth/布局测量走
 				// MEASURED，避免切页规划把几十个冷字形同步光栅化。
-				const bool RenderGlyphData = (pCursor->m_Flags & TEXTFLAG_RENDER) != 0;
+				const bool RenderGlyphData = (pCursor->m_Flags & TEXTFLAG_RENDER) != 0 && !TextContainer.m_MenuMsdf;
 				const SGlyph *pGlyph = IsEllipsis ? pEllipsisGlyph : m_pGlyphMap->GetGlyph(Character, ActualSize, Nameplate, RenderGlyphData);
 				if(pGlyph)
 				{
@@ -5432,6 +5550,7 @@ public:
 					// don't add text that isn't drawn, the color overwrite is used for that
 					if(Color.a != 0.f && IsRendered)
 					{
+						const auto *pMsdf = TextContainer.m_MenuMsdf ? FindMenuMsdfGlyph(pGlyph->m_Face, pGlyph->m_Chr) : nullptr;
 						TextContainer.m_StringInfo.m_vCharacterQuads.emplace_back();
 						if(pCursor->m_TrackLineRanges)
 							TextContainer.m_SweepLayout.AddQuad(LineCount, TextContainer.m_StringInfo.m_vCharacterQuads.size() - 1);
@@ -5472,6 +5591,28 @@ public:
 						TextCharQuad.m_aVertices[3].m_Color.g = (unsigned char)(Color.g * 255.f);
 						TextCharQuad.m_aVertices[3].m_Color.b = (unsigned char)(Color.b * 255.f);
 						TextCharQuad.m_aVertices[3].m_Color.a = (unsigned char)(Color.a * 255.f);
+
+						if(TextContainer.m_MenuMsdf)
+						{
+							// 沿用位图排版的基线与留白，在四周等比例加距离场采样区。
+							const float Padding = (pGlyph->m_Width - pGlyph->m_CharWidth) * 0.5f * Scale * pCursor->m_AlignedFontSize;
+							const float SuppressedBearing = !ApplyBearingX ? pGlyph->m_OffsetX * Scale * pCursor->m_AlignedFontSize : 0.0f;
+							const vec2 Baseline(DrawX + CharKerning + Padding - SuppressedBearing, TmpY - Padding);
+							const vec4 Quad = pMsdf ? qm_menu_msdf::Quad(*pMsdf, Baseline, pCursor->m_AlignedFontSize) : vec4();
+							const float U = pMsdf ? static_cast<float>(pMsdf->m_X) : 0.0f;
+							const float V = pMsdf ? static_cast<float>(pMsdf->m_Y) : 0.0f;
+							const float U1 = U + (pMsdf ? pMsdf->m_Width : 0);
+							const float V1 = V + (pMsdf ? pMsdf->m_Height : 0);
+							auto &aVertices = TextCharQuad.m_aVertices;
+							aVertices[0].m_X = aVertices[3].m_X = Quad.x;
+							aVertices[1].m_X = aVertices[2].m_X = Quad.x + Quad.z;
+							aVertices[0].m_Y = aVertices[1].m_Y = Quad.y + Quad.w;
+							aVertices[2].m_Y = aVertices[3].m_Y = Quad.y;
+							aVertices[0].m_U = aVertices[3].m_U = U;
+							aVertices[1].m_U = aVertices[2].m_U = U1;
+							aVertices[0].m_V = aVertices[1].m_V = V1;
+							aVertices[2].m_V = aVertices[3].m_V = V;
+						}
 
 						if(pCharOffset != nullptr)
 						{
@@ -5787,14 +5928,32 @@ public:
 
 	void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override
 	{
-		if(!TextContainerIndex.Valid() || !m_pGlyphMap->TexturesReady())
+		if(!TextContainerIndex.Valid())
+			return;
+		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
+		if(TextContainer.m_MenuMsdf)
+		{
+			if(!TextContainer.m_StringInfo.m_vCharacterQuads.empty())
+			{
+				if(TextContainer.m_StringInfo.m_QuadBufferContainerIndex == -1)
+					UploadTextContainer(TextContainerIndex);
+				Graphics()->TextureClear();
+				Graphics()->RenderTextMsdf(TextContainer.m_StringInfo.m_QuadBufferContainerIndex, TextContainer.m_StringInfo.m_vCharacterQuads.size(), qm_menu_msdf::SIZE, m_MenuMsdfTexture,
+					TextColor, TextOutlineColor, qm_menu_msdf::PX_RANGE);
+				if(!m_MenuMsdfDrawReported && g_Config.m_QmGraphicsTrace != 0)
+				{
+					m_MenuMsdfDrawReported = true;
+					log_info("ui/msdf", "first_draw quads=%zu", TextContainer.m_StringInfo.m_vCharacterQuads.size());
+				}
+			}
+			return;
+		}
+		if(!m_pGlyphMap->TexturesReady())
 			return;
 		// QmClient: 渲染采样字形纹理前，把本帧积累的字形上传合并提交；
 		// 唯一渲染入口（特效多 pass 也经此函数），脏区为空时零成本。
 		if(!m_pGlyphMap->FlushPendingGlyphUploads())
 			return;
-		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
-
 		if(!TextContainer.m_StringInfo.m_vCharacterQuads.empty())
 		{
 			if(Graphics()->IsTextBufferingEnabled())
@@ -6168,6 +6327,9 @@ public:
 		m_DefaultTextContainerInfo.m_VertBufferBindingIndex = -1;
 		m_TextEffectBufferObject = m_TextEffectBufferContainer = -1;
 		m_vTextEffectQuads.clear();
+		m_MenuMsdfTexture.Invalidate();
+		m_pMenuMsdfLoad.reset();
+		m_MenuMsdfLoadAttempted = false;
 		if(m_pGlyphMap == nullptr)
 			return false;
 		m_pGlyphMap->OnGraphicsResourcesReset();

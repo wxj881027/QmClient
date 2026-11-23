@@ -102,6 +102,7 @@ namespace
 		{Localizable("Not installed"), nullptr, "未安装"},
 		{Localizable("Total fonts:"), nullptr, "字体总数："},
 		{Localizable("Show system fonts"), nullptr, "显示系统字体"},
+		{Localizable("Experimental menu text MSDF"), "qm_menu_text_msdf", "实验性菜单文字距离场"},
 		{nullptr, "cl_text_entities_size", nullptr},
 		{nullptr, "qm_custom_font", nullptr},
 		{nullptr, "qm_custom_font_cjk", nullptr},

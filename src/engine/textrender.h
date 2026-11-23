@@ -20,6 +20,7 @@ enum
 	TEXTFLAG_DISALLOW_NEWLINE = 1 << 1,
 	TEXTFLAG_STOP_AT_END = 1 << 2,
 	TEXTFLAG_ELLIPSIS_AT_END = 1 << 3,
+	TEXTFLAG_QM_MENU_MSDF = 1 << 4,
 };
 
 // 后台字形任务的上限：启动预热、空闲预热和单次文本排队共用同一容量。
@@ -574,6 +575,7 @@ public:
 	virtual unsigned GetRenderFlags() const = 0;
 	// 图集重排或配置字体解析变化时递增；普通上传及保留像素 UV 的扩容不失效。
 	virtual uint64_t GlyphAtlasRevision() const = 0;
+	virtual bool PrepareMenuMsdfAtlas() { return false; }
 
 	ColorRGBA DefaultTextColor() const { return ColorRGBA(1, 1, 1, 1); }
 	ColorRGBA DefaultTextOutlineColor() const { return ColorRGBA(0, 0, 0, 0.3f); }

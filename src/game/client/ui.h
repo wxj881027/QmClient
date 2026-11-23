@@ -28,6 +28,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 class CScrollRegion;
@@ -834,6 +835,7 @@ private:
 
 	bool m_Enabled;
 	int m_RenderOnlyDepth = 0;
+	bool m_MenuTextMsdf = false;
 	int m_BackgroundRenderDepth = 0;
 	int m_ContentDrawDepth = 0;
 	int m_PreLayoutInputDepth = 0;
@@ -1429,6 +1431,7 @@ public:
 	CLabelResult DoLabel(const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}) const;
 	CLabelResult DoLabel_AutoLineSize(const char *pText, float FontSize, int Align, CUIRect *pRect, float LineSize, const SLabelProperties &LabelProps = {}) const;
 	int GetLabelFlagsForProperties(const SLabelProperties &LabelProps, const CTextCursor *pReadCursor = nullptr) const;
+	bool SetMenuTextMsdf(bool Enabled) { return std::exchange(m_MenuTextMsdf, Enabled); }
 
 	struct SEditBoxRenderOptions
 	{

@@ -321,6 +321,14 @@
 
 <p>同一冷切页、同一字号档位，对比 <code>glyph_rasterize_ms</code>、图集页数/占用、容器创建次数、首屏文字就绪延迟。不能只用稳态 FPS 或微基准下结论。</p>
 
+<h3>7.6 菜单标签实验</h3>
+
+<p><code>qm_menu_text_msdf</code> 默认关闭。从字体卡片开启后，菜单标签可使用一张 2048² RGBA 图集。图集用随包 DejaVu Sans 和 Source Han Sans SC 的填充轮廓烘焙，固定 32 px em，距离范围 8 个图集像素，四边各留至少 6 px。字形四边形随字号等比缩放，布局与 kerning 继续使用 FreeType 度量。加载在 worker 解码，主线程提交一次 16 MiB 的纹理上传。</p>
+
+<p>标签按整条检查实际字体和字形。未覆盖的字符、用户字体、图集未就绪、无文字缓冲的后端均沿用 FreeType 位图。图标字体、名称牌和输入框沿用既有入口。该实验覆盖内置英文字体和简体中文子集，其他语言与可变字重继续用位图。</p>
+
+<p>重烘用 <code>qmclient_scripts/menu_msdf</code> 中的离线 CMake 工具，运行 <code>python qmclient_scripts/menu_msdf/build.py &lt;qm-menu-msdf-atlas&gt;</code> 同步 PNG 和字形坐标。普通客户端构建使用已提交的资源。</p>
+
 <h2 id="pool">8. 文本池过期与缓存策略</h2>
 
 <p>优先级最高、成本最低的改动：</p>
