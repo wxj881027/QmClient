@@ -251,3 +251,40 @@ TEST_F(CQmWikiEditorTest, SavingWithoutStorageReportsErrorAndKeepsDraft)
 	EXPECT_TRUE(State.m_EditDirty);
 	EXPECT_EQ(State.m_Draft, "Draft that cannot be saved.");
 }
+
+TEST_F(CQmWikiEditorTest, OfflineCommandResultReturnsTheExactTableRowInBothLanguages)
+{
+	const std::string ExecutablePath = TestSourcePath("qmclient.exe");
+	const char *apArgs[] = {ExecutablePath.c_str()};
+	auto pShippedStorage = CreateTempStorage(m_Info.StoragePath(), 1, apArgs);
+	ASSERT_NE(pShippedStorage, nullptr);
+
+	using namespace qm_wiki_docs;
+	CDdnetWikiIndex Index;
+	const auto vMatches = Index.Search("BAN_REGION 怎么用？", pShippedStorage.get());
+	ASSERT_FALSE(vMatches.empty());
+	const auto &Match = vMatches.front();
+	EXPECT_STREQ(DdnetWikiArticle(Match.m_Article).m_pSlug, "settings-and-commands");
+	ASSERT_TRUE(Match.m_aAvailable[ENGLISH]);
+	ASSERT_TRUE(Match.m_aAvailable[SIMPLIFIED_CHINESE]);
+	EXPECT_NE(Match.m_aExcerpts[ENGLISH].find("Ban player in a region"), std::string::npos);
+	EXPECT_NE(Match.m_aExcerpts[ENGLISH].find("ip|id"), std::string::npos);
+	EXPECT_NE(Match.m_aExcerpts[SIMPLIFIED_CHINESE].find("禁止某个地区的玩家"), std::string::npos);
+}
+
+TEST_F(CQmWikiEditorTest, ChineseHeadingQueryShowsTheExplanationFromTheArticle)
+{
+	const std::string ExecutablePath = TestSourcePath("qmclient.exe");
+	const char *apArgs[] = {ExecutablePath.c_str()};
+	auto pShippedStorage = CreateTempStorage(m_Info.StoragePath(), 1, apArgs);
+	ASSERT_NE(pShippedStorage, nullptr);
+
+	using namespace qm_wiki_docs;
+	CDdnetWikiIndex Index;
+	const auto vMatches = Index.Search("嵌套绑定", pShippedStorage.get());
+	ASSERT_FALSE(vMatches.empty());
+	const auto &Match = vMatches.front();
+	EXPECT_STREQ(DdnetWikiArticle(Match.m_Article).m_pSlug, "binds");
+	EXPECT_GE(Match.m_aBlocks[SIMPLIFIED_CHINESE], 0);
+	EXPECT_NE(Match.m_aExcerpts[SIMPLIFIED_CHINESE].find("反斜杠"), std::string::npos);
+}

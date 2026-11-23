@@ -6,11 +6,61 @@
 
 #include "QmCardWiki.h"
 
-// 弹窗内的 ⓘ 文档：目前只有视频导出（渲染回放）的说明，
-// 文案与设计意图见 docs/规格/2026-10-21-视频导出HUD说明文案.md。
+#include <array>
+#include <optional>
+#include <string>
+#include <vector>
+
+class IStorage;
+
 namespace qm_wiki_docs
 {
 	const SWikiDocument &VideoExport();
+
+	enum EDdnetWikiLanguage
+	{
+		ENGLISH,
+		SIMPLIFIED_CHINESE,
+		NUM_LANGUAGES,
+	};
+	inline constexpr int NUM_DDNET_WIKI_ARTICLES = 2;
+	inline constexpr const char *DDNET_WIKI_SEARCH_CARD_ID = "deck:global-search-ddnet-wiki";
+
+	struct SDdnetWikiArticle
+	{
+		const char *m_pSlug;
+		std::array<const char *, NUM_LANGUAGES> m_apTitles;
+		std::array<const char *, NUM_LANGUAGES> m_apIntroductions;
+	};
+
+	struct SDdnetWikiMatch
+	{
+		int m_Article;
+		std::array<bool, NUM_LANGUAGES> m_aAvailable;
+		std::array<int, NUM_LANGUAGES> m_aBlocks;
+		std::array<std::string, NUM_LANGUAGES> m_aExcerpts;
+	};
+
+	const SDdnetWikiArticle &DdnetWikiArticle(int Article);
+	std::string ReadDdnetWikiArticle(IStorage &Storage, int Article, EDdnetWikiLanguage Language);
+
+	class CDdnetWikiIndex
+	{
+		struct SSearchBlock
+		{
+			std::string m_Text;
+			std::string m_Excerpt;
+			std::string m_Key;
+			int m_Block;
+			bool m_Heading;
+		};
+		using TIndexedTranslation = std::optional<std::vector<SSearchBlock>>;
+		std::array<std::array<TIndexedTranslation, NUM_LANGUAGES>, NUM_DDNET_WIKI_ARTICLES> m_aTranslations;
+		IStorage *m_pStorage = nullptr;
+
+	public:
+		std::vector<SDdnetWikiMatch> Search(const char *pQuery, IStorage *pStorage);
+	};
 }
 
 #endif

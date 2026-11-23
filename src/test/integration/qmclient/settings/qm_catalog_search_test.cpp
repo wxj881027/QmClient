@@ -311,6 +311,63 @@ TEST(QmCatalogSearch, EveryQueryTokenMustMatchTheSameCard)
 	EXPECT_TRUE(qm_card_registry::SearchCards("lyrics zzzznotfound", Model).empty());
 }
 
+TEST(QmCatalogSearch, AspectRatioAliasesFindThePresetRow)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	for(const char *pQuery : {"画面比例", "游戏画面比例", "屏幕比例", "宽高比", "huamian bili", "16:9", "１６：９"})
+	{
+		SCOPED_TRACE(pQuery);
+		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
+		ASSERT_FALSE(Results.empty());
+		EXPECT_STREQ(Results.front().m_pStableId, "qm:camera_view");
+		const auto &vKeys = Results.front().m_vMatchKeys;
+		EXPECT_NE(std::find(vKeys.begin(), vKeys.end(), "Aspect ratio preset"), vKeys.end());
+	}
+}
+
+TEST(QmCatalogSearch, CommonQuestionPhrasingFindsTheReferencedSetting)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	for(const char *pQuery : {"请问画面比例在哪改？", "怎么调整画面比例", "how do I change the aspect ratio?"})
+	{
+		SCOPED_TRACE(pQuery);
+		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
+		const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+			return str_comp(Result.m_pStableId, "qm:camera_view") == 0;
+		});
+		ASSERT_NE(It, Results.end());
+		EXPECT_NE(std::find(It->m_vMatchKeys.begin(), It->m_vMatchKeys.end(), "Aspect ratio preset"), It->m_vMatchKeys.end());
+	}
+}
+
+TEST(QmCatalogSearch, SearchToleratesOneTypoInTheReferencedSetting)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	for(const char *pQuery : {"aspct ratio", "apsect ratio", "画面比列"})
+	{
+		SCOPED_TRACE(pQuery);
+		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
+		const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+			return str_comp(Result.m_pStableId, "qm:camera_view") == 0;
+		});
+		ASSERT_NE(It, Results.end());
+		EXPECT_NE(std::find(It->m_vMatchKeys.begin(), It->m_vMatchKeys.end(), "Aspect ratio preset"), It->m_vMatchKeys.end());
+	}
+}
+
+TEST(QmCatalogSearch, FuzzySearchKeepsUnmatchedWordsAndShortQueriesFromAddingResults)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	EXPECT_TRUE(qm_card_registry::SearchCards("aspct zzzznotfound", Model).empty());
+	EXPECT_TRUE(qm_card_registry::SearchCards("voce zzzznotfound", Model).empty());
+	EXPECT_TRUE(qm_card_registry::SearchCards("眹", Model).empty());
+	EXPECT_TRUE(qm_card_registry::SearchCards("16:8", Model).empty());
+}
+
 TEST(QmCatalogSearch, RemovedConsoleCardDoesNotAppearInResults)
 {
 	qm_card_order::CModel Model;

@@ -2,7 +2,7 @@
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_camera_view[] = {
-		{Localizable("Aspect ratio preset"), nullptr, "纵横比预设"},
+		{Localizable("Aspect ratio preset"), nullptr, "纵横比预设 宽高比 画面比例 游戏画面比例 屏幕比例 huamian bili huamianbili kuangaobi screen aspect ratio 5:4 4:3 3:2 16:9 21:9"},
 		{Localizable("Current aspect ratio:"), nullptr, "当前宽高比："},
 		{Localizable("Current aspect ratio: Show default"), nullptr, "当前宽高比：显示默认"},
 		{Localizable("Custom"), nullptr, "自定义"},

@@ -99,7 +99,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	std::optional<uint64_t> DefinitionsRevision;
 	try
 	{
-		CacheCurrent = s_GlobalSearchCache.TryUpdate(pModuleSearch, g_Config.m_ClLanguagefile, Sixup, m_MenuTextPoolGeneration, SettingsCardOrderModel());
+		CacheCurrent = s_GlobalSearchCache.TryUpdate(pModuleSearch, g_Config.m_ClLanguagefile, Sixup, m_MenuTextPoolGeneration, SettingsCardOrderModel(), Storage());
 		// 更新失败时旧结果可见，交互等查询重试成功后恢复。
 		ResultsReadOnly = ReadOnly || !CacheCurrent;
 		if(s_GlobalSearchCache.HasSnapshot())
@@ -150,11 +150,13 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	const bool HasSnapshot = pSearchResults != nullptr;
 	int SearchMatchedGlobalCardCount = 0;
 	int SearchAnswerCount = 0;
+	int WikiMatchCount = 0;
 	if(HasSnapshot)
 	{
 		SearchMatchedGlobalCardCount = (int)pSearchResults->m_vAllVisibleCards.size();
 		const auto &SearchAnswers = pSearchResults->m_Answers;
 		SearchAnswerCount = SearchAnswers.m_pAnswer != nullptr ? 1 : (int)SearchAnswers.m_vCandidates.size();
+		WikiMatchCount = (int)pSearchResults->m_vWikiMatches.size();
 	}
 
 	const SQmSettingsCardStyle CardStyle = QmSettingsCardStyle(UiScale);
@@ -203,8 +205,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		}
 	}
 	// s_GlobalSearchCardBuild 是函数内静态对象，直接引用即可，无需附加捕获。
-	const auto BuildDefinitions = [this, UiScale, SmallSize, LineHeight, LineSpacing, Metrics, SearchMatchedGlobalCardCount, HasSearchQuery, ReadOnly = ResultsReadOnly, SearchCtx, pSearchResults, SearchAnswerCount](std::vector<SSettingsCardDefinition> &vCards) {
-		vCards.reserve(SearchMatchedGlobalCardCount + 2);
+	const auto BuildDefinitions = [this, UiScale, SmallSize, LineHeight, LineSpacing, Metrics, SearchMatchedGlobalCardCount, HasSearchQuery, ReadOnly = ResultsReadOnly, SearchCtx, pSearchResults, SearchAnswerCount, WikiMatchCount](std::vector<SSettingsCardDefinition> &vCards) {
+		vCards.reserve(SearchMatchedGlobalCardCount + 3);
 		// 搜索输入卡片已脱离卡组，在 RenderCached 之前手动绘制并定位。
 		if(SearchAnswerCount > 0)
 		{
@@ -213,6 +215,13 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 			SSettingsCardDefinition AnswerCard;
 			qm_card_catalog::BuildSearchAnswerCard({Ui(), TextRender(), Input(), Storage(), Client()}, pSearchResults->m_Answers, ReadOnly, Metrics, [this](const char *pQuestion) { m_GlobalCardSearchInput.Set(pQuestion); }, AnswerCard, s_GlobalSearchAnswerCardState);
 			vCards.push_back(std::move(AnswerCard));
+		}
+		if(WikiMatchCount > 0)
+		{
+			const bool PreferChinese = str_find_nocase(g_Config.m_ClLanguagefile, "chinese") != nullptr;
+			SSettingsCardDefinition WikiCard;
+			qm_card_catalog::BuildDdnetWikiSearchCard(SearchCtx, pSearchResults->m_vWikiMatches, PreferChinese, ReadOnly, Metrics, WikiCard);
+			vCards.push_back(std::move(WikiCard));
 		}
 
 		SSettingsCardDefinition EmptyCard;
@@ -226,7 +235,9 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 				Ui()->DoLabel(&Row, pText, SmallSize, TEXTALIGN_ML, Props); }, LineHeight);
 		};
 		qm_settings_content::UseDeclaredContent(EmptyCard, Ui(), TextRender());
-		EmptyCard.m_IsVisible = [HasSearchQuery, SearchMatchedGlobalCardCount, SearchAnswerCount] { return HasSearchQuery && SearchMatchedGlobalCardCount == 0 && SearchAnswerCount == 0; };
+		EmptyCard.m_IsVisible = [HasSearchQuery, SearchMatchedGlobalCardCount, SearchAnswerCount, WikiMatchCount] {
+			return HasSearchQuery && SearchMatchedGlobalCardCount == 0 && SearchAnswerCount == 0 && WikiMatchCount == 0;
+		};
 		vCards.push_back(std::move(EmptyCard));
 
 		for(const SQmGlobalSearchCard &Card : pSearchResults->m_vAllVisibleCards)
@@ -366,7 +377,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		SSettingsCardVisualState InputVisualState;
 		InputVisualState.m_Collapsed = s_GlobalSearchInputCollapsed;
 		InputVisualState.m_ClipContent = true;
-		const auto RenderInputContent = [this, UiScale, SearchInputHeight, SearchInputFontSize, SmallSize, LineHeight, LineSpacing, SearchMatchedGlobalCardCount, SearchAnswerCount, HasSearchQuery, HasSnapshot, ReadOnly](CUIRect Content) {
+		const auto RenderInputContent = [this, UiScale, SearchInputHeight, SearchInputFontSize, SmallSize, LineHeight, LineSpacing, SearchMatchedGlobalCardCount, SearchAnswerCount, WikiMatchCount, HasSearchQuery, HasSnapshot, ReadOnly](CUIRect Content) {
 			if(Content.h <= 0.0f || Content.w <= 0.0f)
 				return;
 			CUIRect Row;
@@ -385,6 +396,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 			char aSearchHint[192];
 			if(!HasSearchQuery)
 				str_copy(aSearchHint, "搜索功能或提问，例如：截图在哪里");
+			else if(WikiMatchCount > 0)
+				str_format(aSearchHint, sizeof(aSearchHint), "%d 个设置卡片 · %d 个常见问题 · %d 篇 DDNet Wiki", SearchMatchedGlobalCardCount, SearchAnswerCount, WikiMatchCount);
 			else
 				str_format(aSearchHint, sizeof(aSearchHint), "%d 个设置卡片 · %d 个常见问题", SearchMatchedGlobalCardCount, SearchAnswerCount);
 			TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);

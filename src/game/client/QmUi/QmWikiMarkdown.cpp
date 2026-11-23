@@ -125,24 +125,30 @@ namespace
 		return HasDash;
 	}
 
+	void ParseInlineInto(const std::string &Text, unsigned BaseStyle, std::vector<SWikiSpan> *pOut, bool TableCell = false);
+
 	void SplitTableRow(const std::string &Trimmed, std::vector<std::vector<SWikiSpan>> *pCells)
 	{
-		std::string Body = Trimmed;
-		if(!Body.empty() && Body.front() == '|')
-			Body.erase(0, 1);
-		if(!Body.empty() && Body.back() == '|')
-			Body.pop_back();
-		size_t Start = 0;
-		while(true)
-		{
-			const size_t End = Body.find('|', Start);
-			const std::string Cell = TrimCopy(Body.substr(Start, End == std::string::npos ? std::string::npos : End - Start));
+		const size_t BodyStart = !Trimmed.empty() && Trimmed.front() == '|' ? 1 : 0;
+		size_t Start = BodyStart;
+		const auto AppendCell = [&](size_t End) {
+			const std::string Cell = TrimCopy(Trimmed.substr(Start, End - Start));
 			pCells->emplace_back();
-			CWikiMarkdown::ParseInline(Cell, &pCells->back());
-			if(End == std::string::npos)
-				break;
-			Start = End + 1;
+			ParseInlineInto(Cell, 0, &pCells->back(), true);
+		};
+		for(size_t Index = BodyStart; Index < Trimmed.size(); ++Index)
+		{
+			// 成对跳过转义字符，偶数个反斜杠后的竖线仍是分隔符。
+			if(Trimmed[Index] == '\\' && Index + 1 < Trimmed.size())
+				++Index;
+			else if(Trimmed[Index] == '|')
+			{
+				AppendCell(Index);
+				Start = Index + 1;
+			}
 		}
+		if(Start < Trimmed.size() || Start == BodyStart)
+			AppendCell(Trimmed.size());
 	}
 
 	std::vector<char> ParseTableAligns(const std::string &Trimmed)
@@ -194,7 +200,31 @@ namespace
 		return MatchListMarker(Trimmed, &Ordered, &Order);
 	}
 
-	void ParseInlineInto(const std::string &Text, unsigned BaseStyle, std::vector<SWikiSpan> *pOut)
+	// 行内代码、公式和链接内容绕过普通行内转义，只解码表格用来保护竖线的写法。
+	std::string InlineLiteral(std::string Literal, bool TableCell)
+	{
+		const size_t FirstPipe = TableCell ? Literal.find('|') : std::string::npos;
+		if(FirstPipe == std::string::npos)
+			return Literal;
+		std::string Result;
+		Result.reserve(Literal.size());
+		size_t Begin = 0;
+		for(size_t Pipe = FirstPipe; Pipe != std::string::npos; Pipe = Literal.find('|', Pipe + 1))
+		{
+			size_t Start = Pipe;
+			while(Start > Begin && Literal[Start - 1] == '\\')
+				--Start;
+			const size_t Backslashes = Pipe - Start;
+			const size_t Escapes = Backslashes % 2 != 0 ? Backslashes / 2 + 1 : 0;
+			Result.append(Literal, Begin, Pipe - Begin - Escapes);
+			Result += '|';
+			Begin = Pipe + 1;
+		}
+		Result.append(Literal, Begin, std::string::npos);
+		return Result;
+	}
+
+	void ParseInlineInto(const std::string &Text, unsigned BaseStyle, std::vector<SWikiSpan> *pOut, bool TableCell)
 	{
 		std::string Plain;
 		const auto FlushPlain = [&]() {
@@ -221,7 +251,7 @@ namespace
 				if(Close != std::string::npos && Close > Index + 2)
 				{
 					FlushPlain();
-					ParseInlineInto(Text.substr(Index + 2, Close - Index - 2), BaseStyle | WIKI_INLINE_BOLD, pOut);
+					ParseInlineInto(Text.substr(Index + 2, Close - Index - 2), BaseStyle | WIKI_INLINE_BOLD, pOut, TableCell);
 					Index = Close + 2;
 					continue;
 				}
@@ -232,7 +262,7 @@ namespace
 				if(Close != std::string::npos && Close > Index + 1)
 				{
 					FlushPlain();
-					pOut->push_back({Text.substr(Index + 1, Close - Index - 1), BaseStyle | WIKI_INLINE_CODE, {}});
+					pOut->push_back({InlineLiteral(Text.substr(Index + 1, Close - Index - 1), TableCell), BaseStyle | WIKI_INLINE_CODE, {}});
 					Index = Close + 1;
 					continue;
 				}
@@ -243,7 +273,7 @@ namespace
 				if(Close != std::string::npos && Close > Index + 1)
 				{
 					FlushPlain();
-					const std::string Source = Text.substr(Index + 1, Close - Index - 1);
+					const std::string Source = InlineLiteral(Text.substr(Index + 1, Close - Index - 1), TableCell);
 					pOut->push_back({Source, BaseStyle | WIKI_INLINE_MATH, Source});
 					Index = Close + 1;
 					continue;
@@ -258,8 +288,8 @@ namespace
 					if(CloseParen != std::string::npos)
 					{
 						FlushPlain();
-						const std::string Label = Text.substr(Index + 1, CloseBracket - Index - 1);
-						const std::string Target = Text.substr(CloseBracket + 2, CloseParen - CloseBracket - 2);
+						const std::string Label = InlineLiteral(Text.substr(Index + 1, CloseBracket - Index - 1), TableCell);
+						const std::string Target = InlineLiteral(Text.substr(CloseBracket + 2, CloseParen - CloseBracket - 2), TableCell);
 						pOut->push_back({Label, BaseStyle | WIKI_INLINE_LINK, Target});
 						Index = CloseParen + 1;
 						continue;
@@ -273,7 +303,7 @@ namespace
 				if(Close != std::string::npos && Close > Index + 1 && static_cast<unsigned char>(Text[Close - 1]) > ' ')
 				{
 					FlushPlain();
-					ParseInlineInto(Text.substr(Index + 1, Close - Index - 1), BaseStyle | WIKI_INLINE_ITALIC, pOut);
+					ParseInlineInto(Text.substr(Index + 1, Close - Index - 1), BaseStyle | WIKI_INLINE_ITALIC, pOut, TableCell);
 					Index = Close + 1;
 					continue;
 				}

@@ -4,17 +4,21 @@
 
 #include <game/client/QmUi/QmCardWikiPanel.h>
 #include <game/client/QmUi/QmWikiDocs.h>
+#include <game/client/QmUi/QmWikiMarkdown.h>
+#include <game/client/QmUi/QmWikiMarkdownRender.h>
 #include <game/client/QmUi/QmWikiMedia.h>
 #include <game/client/QmUi/QmWikiStore.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContext.h>
+#include <game/client/ui_scrollregion.h>
 
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_client.h>
 #include <test/support/qm_ui_test_input.h>
 
 #include <string>
+#include <utility>
 
 namespace
 {
@@ -179,6 +183,61 @@ TEST_F(QmWikiPanel, TocClickScrollsTheTargetSectionTowardsTheTop)
 	for(int Index = 0; Index < 30; ++Index)
 		Render({0.0f, 0.0f}, false);
 	EXPECT_LT(qm_wiki_panel_test::ScrollOffsetY(), -1.0f);
+}
+
+TEST_F(QmWikiPanel, OpeningAnArticleAtAMatchRevealsTheTargetBlock)
+{
+	std::string Markdown = "# Command reference\n\n";
+	for(int Row = 0; Row < 60; ++Row)
+		Markdown += "Command description.\n\n";
+	Markdown += "| Setting | Value |\n| --- | --- |\n| Example command | 1 |\n";
+	CWikiMarkdown Document;
+	ASSERT_TRUE(Document.Parse(Markdown.c_str()));
+	ASSERT_EQ(Document.Blocks().back().m_Type, EWikiBlockType::TABLE);
+	const int Target = static_cast<int>(Document.Blocks().size() - 1);
+
+	OpenWikiMarkdownPopup(MakeContext(), "Command reference", std::move(Markdown), Target);
+	for(int FrameIndex = 0; FrameIndex < 30; ++FrameIndex)
+		Render();
+
+	ASSERT_TRUE(qm_wiki_panel_test::IsOpen());
+	EXPECT_LT(qm_wiki_panel_test::ScrollOffsetY(), -1.0f);
+}
+
+TEST_F(QmWikiPanel, LongTablesKeepFullScrollHeightAndDrawOnlyVisibleRows)
+{
+	std::string Markdown = "| Setting | Value |\n| --- | --- |\n";
+	for(int Row = 0; Row < 4; ++Row)
+		Markdown += "| setting | 1 |\n";
+	CWikiMarkdown ShortTable;
+	ASSERT_TRUE(ShortTable.Parse(Markdown.c_str()));
+	for(int Row = 0; Row < 196; ++Row)
+		Markdown += "| setting | 1 |\n";
+	CWikiMarkdown LongTable;
+	ASSERT_TRUE(LongTable.Parse(Markdown.c_str()));
+
+	const auto DrawTable = [&](const CWikiMarkdown &Document) {
+		Frame({0.0f, 0.0f}, false);
+		CScrollRegion Scroll;
+		CScrollRegionParams Params;
+		Params.m_ScrollbarOverlay = true;
+		CUIRect View{0.0f, 0.0f, 300.0f, 70.0f};
+		vec2 Offset;
+		Scroll.Begin(&View, &Offset, &Params);
+		CUIRect Body = *Scroll.ClipRect();
+		Body.y += Offset.y;
+		qm_wiki_markdown::CTableLayoutCache Cache;
+		m_Graphics.m_vTextSubmissions.clear();
+		const float Height = qm_wiki_markdown::RenderBlocks(MakeContext(), Document.Blocks(), Body, {}, &Scroll, nullptr, -1, &Cache);
+		const size_t DrawCount = m_Graphics.m_vTextSubmissions.size();
+		Scroll.End();
+		return std::pair{Height, DrawCount};
+	};
+	const auto [ShortHeight, ShortDraws] = DrawTable(ShortTable);
+	const auto [LongHeight, LongDraws] = DrawTable(LongTable);
+	EXPECT_GT(LongHeight, ShortHeight);
+	EXPECT_GT(ShortDraws, 0u);
+	EXPECT_EQ(LongDraws, ShortDraws);
 }
 
 TEST_F(QmWikiPanel, ClosingOnLinkClickDropsThePendingNavigation)

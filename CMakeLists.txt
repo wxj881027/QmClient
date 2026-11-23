@@ -2563,6 +2563,10 @@ set(EXPECTED_DATA
   themes/winter_day.map
   themes/winter_night.map
   touch_controls.json
+  wiki/ddnet/english/binds.md
+  wiki/ddnet/english/settings-and-commands.md
+  wiki/ddnet/simplified_chinese/binds.md
+  wiki/ddnet/simplified_chinese/settings-and-commands.md
   wordlist.txt
 )
 
@@ -3462,6 +3466,7 @@ if(CLIENT)
     QmUi/QmWikiMedia.h
     QmUi/QmWikiStore.cpp
     QmUi/QmWikiStore.h
+    QmUi/SettingsSearchQuery.h
     QmUi/MapTagsPanel.cpp
     QmUi/MapTagsPanel.h
     QmUi/QmMotdLayout.h
@@ -7223,6 +7228,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/ui/settings_card_definitions_cache_test.cpp
       src/game/client/components/qmclient/search_answers.cpp
       src/game/client/components/qmclient/settings_global_search_cache.cpp
+      src/game/client/QmUi/QmWikiDocs.cpp
+      src/game/client/QmUi/QmWikiMarkdown.cpp
       src/game/client/QmUi/SettingsCardCollapseState.cpp
       src/game/client/QmUi/QmModuleLayoutAdapter.cpp
       src/game/client/QmUi/QmCardOrderModel.cpp
