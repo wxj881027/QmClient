@@ -135,39 +135,27 @@ void CGameContext::ConSettings(IConsole::IResult *pResult, void *pUserData)
 		}
 		else if(str_comp_nocase(pArg, "cheats") == 0)
 		{
-			log_debug("chatresp", "%s", g_Config.m_SvTestingCommands ?
-					"本服务器已开启作弊功能" :
-					"本服务器已关闭作弊功能");
+			log_debug("chatresp", "%s", g_Config.m_SvTestingCommands ? "本服务器已开启作弊功能" : "本服务器已关闭作弊功能");
 		}
 		else if(str_comp_nocase(pArg, "collision") == 0)
 		{
-			log_debug("chatresp", "%s", ColTemp ?
-					"本服务器允许玩家碰撞" :
-					"本服务器不允许玩家碰撞");
+			log_debug("chatresp", "%s", ColTemp ? "本服务器允许玩家碰撞" : "本服务器不允许玩家碰撞");
 		}
 		else if(str_comp_nocase(pArg, "hooking") == 0)
 		{
-			log_debug("chatresp", "%s", HookTemp ?
-					"本服务器允许玩家互钩" :
-					"本服务器不允许玩家互钩");
+			log_debug("chatresp", "%s", HookTemp ? "本服务器允许玩家互钩" : "本服务器不允许玩家互钩");
 		}
 		else if(str_comp_nocase(pArg, "endlesshooking") == 0)
 		{
-			log_debug("chatresp", "%s", g_Config.m_SvEndlessDrag ?
-					"本服务器的钩子时长不受限制" :
-					"本服务器的钩子时长受限制");
+			log_debug("chatresp", "%s", g_Config.m_SvEndlessDrag ? "本服务器的钩子时长不受限制" : "本服务器的钩子时长受限制");
 		}
 		else if(str_comp_nocase(pArg, "hitting") == 0)
 		{
-			log_debug("chatresp", "%s", g_Config.m_SvHit ?
-					"本服务器允许武器影响其他玩家" :
-					"本服务器的武器不会影响其他玩家");
+			log_debug("chatresp", "%s", g_Config.m_SvHit ? "本服务器允许武器影响其他玩家" : "本服务器的武器不会影响其他玩家");
 		}
 		else if(str_comp_nocase(pArg, "oldlaser") == 0)
 		{
-			log_debug("chatresp", "%s", g_Config.m_SvOldLaser ?
-					"你自己发射的激光也会命中自己，并把你拉向反弹起点（类似 DDRace Beta）" :
-					"你自己发射的激光不会命中自己，激光会把其他玩家拉向发射者");
+			log_debug("chatresp", "%s", g_Config.m_SvOldLaser ? "你自己发射的激光也会命中自己，并把你拉向反弹起点（类似 DDRace Beta）" : "你自己发射的激光不会命中自己，激光会把其他玩家拉向发射者");
 		}
 		else if(str_comp_nocase(pArg, "timeout") == 0)
 		{
@@ -176,30 +164,22 @@ void CGameContext::ConSettings(IConsole::IResult *pResult, void *pUserData)
 		}
 		else if(str_comp_nocase(pArg, "votes") == 0)
 		{
-			log_debug("chatresp", "%s", g_Config.m_SvVoteKick ?
-					"玩家可以通过 Callvote 菜单发起踢人投票" :
-					"玩家不能通过 Callvote 菜单发起踢人投票");
+			log_debug("chatresp", "%s", g_Config.m_SvVoteKick ? "玩家可以通过 Callvote 菜单发起踢人投票" : "玩家不能通过 Callvote 菜单发起踢人投票");
 			if(g_Config.m_SvVoteKick)
 			{
 				str_format(aBuf, sizeof(aBuf),
 					"被投票踢出的玩家会被封禁 %d 分钟", g_Config.m_SvVoteKickBantime);
 
-				log_debug("chatresp", "%s", g_Config.m_SvVoteKickBantime ?
-						aBuf :
-						"被投票踢出的玩家只会被踢出，不会被封禁");
+				log_debug("chatresp", "%s", g_Config.m_SvVoteKickBantime ? aBuf : "被投票踢出的玩家只会被踢出，不会被封禁");
 			}
 		}
 		else if(str_comp_nocase(pArg, "pause") == 0)
 		{
-			log_debug("chatresp", "%s", g_Config.m_SvPauseable ?
-					"输入 /spec 后你会暂停，tee 也会消失" :
-					"输入 /spec 后你会暂停，但 tee 不会消失");
+			log_debug("chatresp", "%s", g_Config.m_SvPauseable ? "输入 /spec 后你会暂停，tee 也会消失" : "输入 /spec 后你会暂停，但 tee 不会消失");
 		}
 		else if(str_comp_nocase(pArg, "scores") == 0)
 		{
-			log_debug("chatresp", "%s", g_Config.m_SvHideScore ?
-					"本服务器的成绩是私密的" :
-					"本服务器的成绩是公开的");
+			log_debug("chatresp", "%s", g_Config.m_SvHideScore ? "本服务器的成绩是私密的" : "本服务器的成绩是公开的");
 		}
 		else
 		{
@@ -1117,9 +1097,7 @@ void CGameContext::AttemptJoinTeam(int ClientId, int Team)
 	}
 	else if(Team != TEAM_FLOCK && m_pController->Teams().TeamLocked(Team) && !m_pController->Teams().IsInvited(Team, ClientId))
 	{
-		log_debug("chatresp", "%s", g_Config.m_SvInvite ?
-				"这个队伍已用 /lock 锁定，只有队伍成员才能用 /lock 解锁" :
-				"这个队伍已用 /lock 锁定，只有队伍成员才能邀请你或用 /lock 解锁");
+		log_debug("chatresp", "%s", g_Config.m_SvInvite ? "这个队伍已用 /lock 锁定，只有队伍成员才能用 /lock 解锁" : "这个队伍已用 /lock 锁定，只有队伍成员才能邀请你或用 /lock 解锁");
 	}
 	else if(Team != TEAM_FLOCK && m_pController->Teams().TeamSize(Team) >= g_Config.m_SvMaxTeamSize && !m_pController->Teams().TeamFlock(Team) && !m_pController->Teams().IsPractice(Team))
 	{
@@ -1368,9 +1346,7 @@ void CGameContext::ConSetEyeEmote(IConsole::IResult *pResult,
 		return;
 	if(pResult->NumArguments() == 0)
 	{
-		log_debug("chatresp", "%s", (pPlayer->m_EyeEmoteEnabled) ?
-				"你现在可以使用预设眼睛表情了。" :
-				"你还没有绑定任何眼睛表情，记得先绑定。");
+		log_debug("chatresp", "%s", (pPlayer->m_EyeEmoteEnabled) ? "你现在可以使用预设眼睛表情了。" : "你还没有绑定任何眼睛表情，记得先绑定。");
 		return;
 	}
 	else if(str_comp_nocase(pResult->GetString(0), "on") == 0)
@@ -1379,9 +1355,7 @@ void CGameContext::ConSetEyeEmote(IConsole::IResult *pResult,
 		pPlayer->m_EyeEmoteEnabled = false;
 	else if(str_comp_nocase(pResult->GetString(0), "toggle") == 0)
 		pPlayer->m_EyeEmoteEnabled = !pPlayer->m_EyeEmoteEnabled;
-	log_debug("chatresp", "%s", (pPlayer->m_EyeEmoteEnabled) ?
-			"你现在可以使用预设眼睛表情了。" :
-			"你还没有绑定任何眼睛表情，记得先绑定。");
+	log_debug("chatresp", "%s", (pPlayer->m_EyeEmoteEnabled) ? "你现在可以使用预设眼睛表情了。" : "你还没有绑定任何眼睛表情，记得先绑定。");
 }
 
 void CGameContext::ConEyeEmote(IConsole::IResult *pResult, void *pUserData)

@@ -349,6 +349,8 @@ protected:
 	void SetRenderScreenSize(int Width, int Height) { m_RenderScreenSize = ivec2(Width, Height); }
 
 public:
+	int ScreenRefreshRate() const { return m_ScreenRefreshRate; }
+
 	static constexpr int MEDIA_ISLAND_SDF_MAX_ITEMS = 12;
 	static constexpr int GAUSSIAN_BLUR_MAX_RADIUS = 10;
 	static constexpr int DUAL_KAWASE_PYRAMID_LEVELS = 2;
@@ -822,6 +824,10 @@ public:
 	virtual bool DualBlurRenderTarget(CRenderTargetHandle Source, CRenderTargetHandle Downsample, CRenderTargetHandle DownsampleTemporary, CRenderTargetHandle DownsampleBlurred, CRenderTargetHandle Destination, const SGaussianBlurParams &Params) = 0;
 	virtual CRenderTargetReadbackHandle BeginRenderTargetReadback(CRenderTargetHandle Target) = 0;
 	virtual ERenderTargetReadbackState PollRenderTargetReadback(CRenderTargetReadbackHandle Handle) = 0;
+	// 后端若把读回延迟到后续命令（例如 OpenGL PBO），主线程在轮询若干帧仍
+	// PENDING 后调用此入口结算；返回 false 表示 Flush 命令未能入队，调用方
+	// 必须取消读回并走失败兜底，不能永久等待。
+	virtual bool FlushRenderTargetReadback() = 0;
 	virtual bool ResolveRenderTargetReadback(CRenderTargetReadbackHandle *pHandle, CImageInfo &Image) = 0;
 	virtual void CancelRenderTargetReadback(CRenderTargetReadbackHandle *pHandle) = 0;
 	virtual bool ReadRenderTarget(CRenderTargetHandle Target, CImageInfo &Image) = 0;
@@ -1184,6 +1190,9 @@ public:
 	// 销毁复用的视频离屏目标；录制结束（或降级回窗口路径）时调用，可重复调用。
 	virtual void StopVideoFrame() {}
 	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen) = 0;
+	// 显示模式枚举首次调用可能触发 SDL 的显示器初始化，必须在主线程且不能落在
+	// 设置页渲染路径。启动阶段调用一次，后续 GetVideoModes 只读缓存。
+	virtual void PrewarmVideoModes() {}
 	virtual bool GetCurrentVideoMode(CVideoMode &CurMode, int Screen) = 0;
 	virtual void Swap() = 0;
 	virtual int GetNumScreens() const = 0;

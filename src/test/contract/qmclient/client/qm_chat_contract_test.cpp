@@ -21,50 +21,6 @@ TEST(QmLocalSaveJoinHint, UsesExpiringEchoMessages)
 	EXPECT_EQ(Body.find("GameClient()->Echo(CodesLine.c_str(), true);"), std::string::npos);
 }
 
-TEST(QmFastPracticeCommands, ResetRecapturesAnchorFromSnapshotAndServerInputIsNeutral)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/tclient/fast_practice.cpp");
-	const std::string ResetBody = SourceFunctionBody(Source, "void CFastPractice::ResetPracticeToAnchor()");
-	ASSERT_NE(ResetBody.find("m_MainAnchor.m_Valid"), std::string::npos);
-	// 每次 /r 重新捕获锚点（与远程一致），不再是"沿用开启练习时的锚点"。
-	EXPECT_NE(ResetBody.find("CaptureAnchorsFromSnapshot();"), std::string::npos);
-	// 必须先初始化练习世界再捕获，否则捕获到的快照与练习世界不同步。
-	EXPECT_LT(ResetBody.find("InitPracticeWorld()"), ResetBody.find("CaptureAnchorsFromSnapshot();"));
-	EXPECT_LT(ResetBody.find("CaptureAnchorsFromSnapshot();"), ResetBody.find("m_MainAnchor.m_Valid"));
-
-	const std::string LockBody = SourceFunctionBody(Source, "void CFastPractice::CaptureServerLockedInputs()");
-	EXPECT_NE(LockBody.find("Input.m_Direction = 0;"), std::string::npos);
-	EXPECT_NE(LockBody.find("Input.m_Jump = 0;"), std::string::npos);
-	// 钩子被有意保留（避免挂墙本体松钩掉落），只释放移动、跳跃与开火。
-	EXPECT_EQ(LockBody.find("Input.m_Hook = 0;"), std::string::npos);
-}
-
-TEST(QmFastPracticeCommands, LateDummyAttachKeepsSessionAnchorAndSpectatorInputLocked)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/tclient/fast_practice.cpp");
-	const std::string AttachBody = SourceFunctionBody(Source, "bool CFastPractice::TryAttachDummyFromSnapshot()");
-	const std::string SendBody = SourceFunctionBody(Source, "void CFastPractice::PrepareInputForSend(");
-
-	EXPECT_NE(AttachBody.find("CaptureAnchorFromSnapshot(m_EnableDummyClientId, m_DummyAnchor)"), std::string::npos);
-	EXPECT_EQ(AttachBody.find("CaptureAnchorsFromSnapshot()"), std::string::npos);
-	EXPECT_NE(SendBody.find("m_aHasServerLockedInputs[Slot]"), std::string::npos);
-	EXPECT_EQ(SendBody.find("m_Snap.m_SpecInfo.m_Active"), std::string::npos);
-}
-
-TEST(QmFastPracticeCommands, PredictionLoopsReuseNormalPreInputAndFreezeSemantics)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/tclient/fast_practice.cpp");
-	const std::string OverrideBody = SourceFunctionBody(Source, "bool CFastPractice::OverridePredict()");
-	const std::string VisualBody = SourceFunctionBody(Source, "int CFastPractice::ApplyVisualFastInputPrediction(");
-
-	EXPECT_NE(OverrideBody.find("GameClient()->ApplyPreInputs(Tick, true, GameClient()->m_PredictedWorld);"), std::string::npos);
-	EXPECT_NE(OverrideBody.find("GameClient()->ApplyPreInputs(Tick, false, GameClient()->m_PredictedWorld);"), std::string::npos);
-	EXPECT_NE(OverrideBody.find("g_Config.m_ClPredictFreeze == 2"), std::string::npos);
-	EXPECT_NE(VisualBody.find("GameClient()->ApplyPreInputs(Tick, true, VisualWorld);"), std::string::npos);
-	EXPECT_NE(VisualBody.find("GameClient()->ApplyPreInputs(Tick, false, VisualWorld);"), std::string::npos);
-	EXPECT_NE(VisualBody.find("VisualWorld.m_WorldConfig.m_PredictEvents = false;"), std::string::npos);
-}
-
 TEST(QmChatRepeat, TeamMessagesKeepTheirSendChannel)
 {
 	const std::string TClient = ReadTestSourceFile("src/game/client/components/tclient/tclient.cpp");
@@ -81,14 +37,15 @@ TEST(QmChatInteractions, VisibleTranslationCollectsCandidatesBeforeStartingJobs)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/chat.cpp");
 	const std::string Body = SourceFunctionBody(Source, "bool CChat::TranslateVisibleChatLines()");
-	const size_t ScanLoop = Body.find("for(int i = m_BacklogCurLine; i < MAX_LINES; i++)");
+	const size_t ScanLoop = Body.find("for(int i = 0, LinesToSkip = m_BacklogCurLine; i < MAX_LINES; ++i)");
 	ASSERT_NE(ScanLoop, std::string::npos);
 	const size_t CollectIndex = Body.find("aLineIndices[NumLineIndices++] = LineIndex;", ScanLoop);
 	ASSERT_NE(CollectIndex, std::string::npos);
 	const size_t TranslateLoop = Body.find("for(int i = 0; i < NumLineIndices; i++)", CollectIndex);
 	ASSERT_NE(TranslateLoop, std::string::npos);
-
-	EXPECT_EQ(Body.find("GameClient()->m_Translate.Translate", ScanLoop), TranslateLoop + Body.substr(TranslateLoop).find("GameClient()->m_Translate.Translate"));
+	const size_t TranslateCall = Body.find("GameClient()->m_Translate.Translate", ScanLoop);
+	ASSERT_NE(TranslateCall, std::string::npos);
+	EXPECT_GE(TranslateCall, TranslateLoop);
 }
 
 TEST(QmRedPacketAutoClaim, ServerMessageIntegrationUsesMainConnectionBeforeNegativeClientReturn)

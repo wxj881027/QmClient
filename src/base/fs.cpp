@@ -22,6 +22,10 @@
 #include <cctype> // tolower
 #include <cstdio> // rename
 #include <cstdlib> // getenv
+#if defined(CONF_PLATFORM_LINUX)
+#include <fcntl.h>
+#include <sys/syscall.h>
+#endif
 #elif defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
 
@@ -853,6 +857,27 @@ int fs_rename(const char *oldname, const char *newname, bool allow_destination_r
 	}
 	log_error("filesystem", "Failed to rename file '%s' to '%s' (%d '%s')", oldname, newname, errno, strerror(errno));
 	return 1;
+#endif
+}
+
+int fs_move_file_no_replace(const char *oldname, const char *newname)
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	const auto wide_oldname = fs_windows_path(oldname);
+	const auto wide_newname = fs_windows_path(newname);
+	if(!wide_oldname || !wide_newname)
+		return 1;
+	return MoveFileExW(wide_oldname->c_str(), wide_newname->c_str(), MOVEFILE_WRITE_THROUGH) == 0;
+#else
+#if defined(CONF_PLATFORM_LINUX) && defined(SYS_renameat2)
+	return syscall(SYS_renameat2, AT_FDCWD, oldname, AT_FDCWD, newname, 1 /* RENAME_NOREPLACE */) != 0;
+#elif defined(CONF_PLATFORM_MACOS) && defined(RENAME_EXCL)
+	return renamex_np(oldname, newname, RENAME_EXCL) != 0;
+#else
+	(void)oldname;
+	(void)newname;
+	return 1;
+#endif
 #endif
 }
 

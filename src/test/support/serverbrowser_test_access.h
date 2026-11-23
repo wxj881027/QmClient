@@ -1,6 +1,8 @@
 #ifndef TEST_SUPPORT_SERVERBROWSER_TEST_ACCESS_H
 #define TEST_SUPPORT_SERVERBROWSER_TEST_ACCESS_H
 
+#include <base/system.h>
+
 #include <engine/client/serverbrowser.h>
 #include <engine/shared/json.h>
 
@@ -68,6 +70,22 @@ public:
 	static uint64_t HttpRevision(const CServerBrowser &Browser) { return Browser.m_HttpRevision; }
 	static bool RefreshPending(const CServerBrowser &Browser) { return Browser.m_RefreshingHttp; }
 	static int NumRequests(const CServerBrowser &Browser) { return Browser.m_NumRequests; }
+	static CServerBrowser::CServerEntry &Entry(CServerBrowser &Browser, int Index) { return *Browser.m_vpServerlist[Index]; }
+	static CServerBrowser::CServerEntry &FirstEntry(CServerBrowser &Browser) { return Entry(Browser, 0); }
+	static void ReleaseQueuedRequest(CServerBrowser &Browser)
+	{
+		if(Browser.m_pFirstReqServer != nullptr)
+			Browser.RemoveRequest(Browser.m_pFirstReqServer);
+	}
+	static void AgePingRequestWindow(CServerBrowser &Browser, const NETADDR &Addr)
+	{
+		NETADDR IpAddr = Addr;
+		IpAddr.type &= ~NETTYPE_TW7;
+		IpAddr.port = 0;
+		auto It = Browser.m_PingRequestTimeByIp.find(IpAddr);
+		if(It != Browser.m_PingRequestTimeByIp.end())
+			It->second -= 2 * CServerBrowser::PING_SAME_IP_DEDUP_SECONDS * time_freq();
+	}
 	static CServerBrowser::CServerEntry *FirstRequest(const CServerBrowser &Browser) { return Browser.m_pFirstReqServer; }
 	static CServerBrowser::CServerEntry *LastRequest(const CServerBrowser &Browser) { return Browser.m_pLastReqServer; }
 	static int MaxRequests(const CServerBrowser &Browser) { return Browser.m_CurrentMaxRequests; }

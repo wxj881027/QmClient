@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>键盘 GPU 实时 3D 渲染通道 · 方案（2026-11-20）</title>
+<style>
+  :root {
+    --bg: #f6f8fc;
+    --panel: #ffffff;
+    --panel-2: #f1f5fb;
+    --border: #dbe4f1;
+    --text: #1b2534;
+    --muted: #5c6b80;
+    --accent: #2f6feb;
+    --warn: #a15c00;
+    --danger: #b42318;
+    --ok: #0d7a4f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.78 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 44px 26px 96px; }
+  h1 { font-size: 29px; line-height: 1.32; margin: 0 0 10px; letter-spacing: -0.2px; }
+  h2 { font-size: 20px; margin: 46px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 26px 0 8px; color: var(--accent); }
+  p { margin: 10px 0; }
+  ul, ol { margin: 10px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  code, pre { font-family: "Cascadia Mono", Consolas, "Courier New", monospace; }
+  code { background: var(--panel-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; font-size: 13px; }
+  pre { background: #0f1724; color: #d7e3f4; padding: 16px 18px; border-radius: 10px; overflow-x: auto; font-size: 13px; line-height: 1.62; }
+  pre code { background: none; border: none; padding: 0; color: inherit; font-size: 13px; }
+  .lead { font-size: 16px; color: var(--muted); margin: 0 0 26px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin: 16px 0; }
+  .card h3 { margin-top: 0; }
+  .meta { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-bottom: 22px; }
+  .meta span { background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 3px 12px; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; background: var(--panel); }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--panel-2); font-weight: 600; color: var(--muted); font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .no { color: var(--danger); font-weight: 600; }
+  .warn { color: var(--warn); font-weight: 600; }
+  .callout { border-left: 3px solid var(--accent); background: var(--panel-2); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+  .callout.danger { border-left-color: var(--danger); background: #fdf3f2; }
+  .callout.warn { border-left-color: var(--warn); background: #fdf8ef; }
+  .toc { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 22px; margin: 22px 0 10px; columns: 2; column-gap: 34px; font-size: 14px; }
+  .toc a { color: var(--text); text-decoration: none; display: block; padding: 3px 0; }
+  .toc a:hover { color: var(--accent); }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); margin-right: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>键盘 GPU 实时 3D 渲染通道 · 方案</h1>
+<p class="lead">在 QmClient 引擎里新增一条通用的 3D 几何渲染通道，让「控制 → 绑定」页面承载一个可自由旋转、有真实光照与逐键 RGB 的键盘模型。</p>
+
+<div class="meta">
+  <span>2026-11-20</span>
+  <span>状态：待评审</span>
+  <span>影响面：引擎图形层 + 新业务模块</span>
+  <span>平台：桌面（GL3 / Vulkan / Metal）</span>
+  <span>回退：配置开关可切回烘焙贴图版</span>
+</div>
+
+<div class="toc">
+  <a href="#why">1 · 为什么必须动引擎</a>
+  <a href="#now">2 · 现状与实测依据</a>
+  <a href="#goal">3 · 目标与非目标</a>
+  <a href="#arch">4 · 总体架构</a>
+  <a href="#api">5 · 引擎接口设计</a>
+  <a href="#backends">6 · 三后端实现</a>
+  <a href="#depth">7 · 深度与合成顺序</a>
+  <a href="#shader">8 · 着色器与光照模型</a>
+  <a href="#model">9 · 键盘模型</a>
+  <a href="#legend">10 · 键名贴图</a>
+  <a href="#pick">11 · 拾取与交互</a>
+  <a href="#page">12 · 页面入口与渲染模式</a>
+  <a href="#perf">13 · 性能预算</a>
+  <a href="#files">14 · 文件清单</a>
+  <a href="#phase">15 · 分阶段实施</a>
+  <a href="#risk">16 · 风险与回退</a>
+  <a href="#accept">17 · 验收标准</a>
+  <a href="#ref">18 · 参考文档</a>
+</div>
+
+<h2 id="why">1 · 为什么必须动引擎</h2>
+
+<p>先说结论：现有的 <code>IGraphics</code> 是<b>纯 2D 屏幕空间光栅接口</b>，无论怎么绕都做不出「可自由旋转 + 真实光照 + 键名贴在斜面」的键盘。这不是工作量问题，是接口形状问题。</p>
+
+<table>
+  <tr><th style="width:210px">需求</th><th style="width:120px">现有能力</th><th>原因</th></tr>
+  <tr><td>顶点做三维变换</td><td class="no">不支持</td><td>顶点结构只有 <code>vec2 pos</code>（屏幕坐标）+ uv + rgba，没有 z、没有法线、没有 MVP</td></tr>
+  <tr><td>逐像素光照</td><td class="no">不支持</td><td>没有法线与光源 uniform，现有的「光照」全是离线烤进顶点色或贴图的</td></tr>
+  <tr><td>遮挡关系</td><td class="warn">伪</td><td>没有深度缓冲，只能画家算法；大面（机身顶面）按质心排序会被误判到键帽之前，必须硬编码层序</td></tr>
+  <tr><td>键名贴到倾斜键帽</td><td class="no">不支持</td><td><code>CFreeformItem</code> 只有 4 个屏幕坐标，UV 是 <code>QuadsSetSubset</code> 的批次级状态，没有逐四边形 UV</td></tr>
+  <tr><td>任意视角</td><td class="warn">可以做但会崩</td><td>CPU 投影 + 画家算法能转，但每帧要重排上千个面，且遮挡错误在斜视角下会暴露</td></tr>
+</table>
+
+<p>另一个方向——把 3D 场景离线渲染成贴图——已经验证过（见 <code>tmp/kb3d/</code>，产出 1800×660 PNG + 102 键四边形表）。它能做到产品图级质感，但相机固定、RGB 是静态的、换视角要重渲。这是「照片」，不是「三维」。</p>
+
+<div class="callout">
+  <b>决策：</b>新增一条 GPU 3D 几何通道。键盘只是第一个使用者，之后的自定义 HUD、皮肤展示、战绩看板都能复用同一条通道。
+</div>
+
+<h2 id="now">2 · 现状与实测依据</h2>
+
+<h3>2.1 现有的「专用通道」范式已经存在</h3>
+
+<p>引擎里已经有若干条绕过通用 2D 管线的专用绘制通道，每一条都是「命令 + 参数结构 + 三后端各自实现」：</p>
+
+<table>
+  <tr><th>命令</th><th>用途</th><th>后端实现</th></tr>
+  <tr><td><code>SCommand_RenderRoundedRectSdf</code></td><td>圆角矩形 SDF 填充/描边</td><td>GL / GLES / Vulkan / Metal 均有</td></tr>
+  <tr><td><code>SCommand_RenderMediaIslandSdf</code></td><td>灵动岛形变 + 背景采样</td><td>同上</td></tr>
+  <tr><td><code>SCommand_RenderProceduralRing</code></td><td>程序化圆环</td><td>同上</td></tr>
+</table>
+
+<p>这意味着「加一条新通道」在本项目里是<b>有既定做法的</b>，不是从零发明：</p>
+
+<ul>
+  <li><code>src/engine/client/graphics_threaded.h</code> 里加 <code>SCommand_*</code> 结构与 <code>IGraphics</code> 虚函数；</li>
+  <li><code>graphics_threaded.cpp</code> 里加 <code>Begin/End</code> 状态机与命令入队；</li>
+  <li>各后端在 <code>*_qm_pipelines*.cpp</code> / <code>backend_vulkan_qm_pipelines_impl.h</code> 里注册 pipeline；</li>
+  <li>shader 放 <code>data/shader/</code>，Vulkan 走 <code>.spv</code>，Metal 走 shader manifest。</li>
+</ul>
+
+<h3>2.2 已经能复用的东西</h3>
+
+<table>
+  <tr><th style="width:240px">能力</th><th>位置</th><th>说明</th></tr>
+  <tr><td>离屏渲染目标</td><td><code>SCommand_RenderTarget_Create</code></td><td>灵动岛的背景采样已经在用；3D 可以渲到独立 target 再当纹理贴回 UI</td></tr>
+  <tr><td>顶点缓冲与批量上传</td><td><code>m_aVertices</code> / <code>QuadsEnd</code></td><td>沿用现成的顶点预算与 flush 机制</td></tr>
+  <tr><td>着色器编译链</td><td><code>glsl_shader_compiler.cpp</code> + <code>data/shader/vulkan/*.spv</code></td><td>GL/Metal 运行时编译，Vulkan 预编译</td></tr>
+  <tr><td>文字图集</td><td><code>CTextRender</code></td><td>只能上屏，不能渲进任意纹理——所以键名要单独烤图集，见第 10 节</td></tr>
+</table>
+
+<h3>2.3 一个容易混淆的点</h3>
+
+<div class="callout warn">
+  Vulkan 后端里已经有 <code>CreateStandard3DGraphicsPipeline("prim3d.vert.spv" …)</code>。这里的 <b>3D 指「2D 数组纹理」</b>（<code>QuadsTex3DBegin</code>，地图图层用），<b>不是三维几何</b>。新通道不要复用这套 pipeline，避免语义混淆。
+</div>
+
+<h2 id="goal">3 · 目标与非目标</h2>
+
+<div class="card">
+  <h3>目标</h3>
+  <ul>
+    <li>像素级正确的三维几何：深度缓冲、正确的遮挡与自遮挡；</li>
+    <li>实时可交互视角：拖拽旋转、滚轮缩放、极角约束；</li>
+    <li>真实的逐像素光照：方向主光 + 半球环境光 + 边缘光 + 高光；</li>
+    <li>逐键 RGB：每个键独立颜色、独立亮度、可做呼吸/波浪动画；</li>
+    <li>键名贴在键帽斜面上，随视角透视变形；</li>
+    <li>鼠标拾取到具体按键，接现有 <code>CBindSlot</code> / <code>CBinds</code>；</li>
+    <li>三后端（OpenGL、Vulkan、Metal）表现一致。</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>非目标</h3>
+  <ul>
+    <li>不做 PBR 全流程（IBL 预过滤、多散射 GGX），首版只做 Lambert + Blinn-Phong + 半球环境；</li>
+    <li>不做实时阴影贴图（用接触阴影 + 屏幕空间 AO 贴图替代）；</li>
+    <li>不做景深 / 运动模糊 / 体积光；</li>
+    <li>不改游戏世界渲染（地图、tee、粒子仍走原 2D 管线）；</li>
+    <li>不做通用场景图/材质系统，通道只接受「一组三角形 + 若干 uniform」，业务层自己管模型。</li>
+    <li><b>不做移动端。</b>Android / iOS 不在本次范围，GLES 后端与移动 GPU 精度适配一律不碰；观战端维持现状。</li>
+  </ul>
+</div>
+
+<h2 id="arch">4 · 总体架构</h2>
+
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│ 业务层  src/game/client/components/qmclient/keyboard3d/      │
+│   model.cpp     程序化生成机身/键帽/轴体，输出网格 + 键表      │
+│   renderer.cpp  相机、光照参数、RGB 求值、每帧提交             │
+│   page.cpp      页面布局、拖拽、拾取、接 bind 状态             │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ IGraphics::Begin3D / DrawMesh3D / End3D
+┌───────────────────────────▼─────────────────────────────────┐
+│ 引擎层  IGraphics（新虚函数）+ SCommand_Render3D              │
+│   · 顶点流：vec3 pos / vec3 normal / vec2 uv / rgba / keyIdx  │
+│   · uniform：MVP、相机位置、主光方向/颜色、环境光、逐键 RGB   │
+│   · 状态：深度测试/写入、面剔除、sRGB、混合                    │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        ▼                   ▼                   ▼
+   OpenGL 3.x          Vulkan                Metal
+   pipeline+shader     pipeline+spv        pipeline+manifest</code></pre>
+
+<h3>4.1 为什么渲到离屏 target 再贴回 UI</h3>
+
+<table>
+  <tr><th style="width:150px">方案</th><th>优点</th><th>缺点</th></tr>
+  <tr><td>直接画进主 framebuffer + scissor</td><td>少一次 resolve，省内存</td><td>深度状态要和 2D UI 共用一块区域；圆角裁剪做不了；3D 区域的背景模糊/发光无法叠加</td></tr>
+  <tr><td class="ok">离屏 target → 当纹理贴回</td><td>3D 区域天然是一个 UI 元素（可圆角、可做 hover 光晕、可淡入淡出）；深度只存在于自己的 target 里，<b>不可能泄漏到 2D UI</b></td><td>多一次 resolve；多一块 RGBA + depth 的显存</td></tr>
+</table>
+
+<p>选后者。理由不只是灵活：<b>深度状态泄漏是这条通道最危险的事故</b>——一旦 3D pass 结束后没关 depth test，整个菜单会变成空白。把 3D 关在自己的 target 里，这类事故从「必然发生」降级为「不可能发生」。</p>
+
+<h2 id="api">5 · 引擎接口设计</h2>
+
+<h3>5.1 新增顶点格式</h3>
+
+<pre><code>struct GL_SVertex3D
+{
+    vec3 m_Pos;        // 模型空间
+    vec3 m_Normal;     // 模型空间单位法线
+    vec2 m_UV;         // 键名图集坐标（无贴图时填 0）
+    uint32_t m_Color;  // RGBA8 albedo
+    float m_KeyIndex;  // 所属按键索引，-1 表示不属于任何键
+};                     // 44 字节</code></pre>
+
+<p><code>m_KeyIndex</code> 是关键设计：它让「每颗键的下压动画」和「逐键 RGB」都能在<b>一次 draw call</b> 里完成——shader 用这个索引去查两个 uniform 数组（<code>uKeyPress[128]</code>、<code>uKeyColor[128]</code>），把偏移加到顶点位置、把颜色加到自发光。否则 102 颗键就是 102 次 draw call。</p>
+
+<h3>5.2 新增接口</h3>
+
+<pre><code>struct S3DView
+{
+    float m_aViewProj[16];   // 列主序
+    vec3  m_CameraPos;
+    vec3  m_LightDir;        // 指向光源
+    vec3  m_LightColor;
+    vec3  m_SkyColor;        // 半球光上半球
+    vec3  m_GroundColor;     // 半球光下半球
+    float m_Exposure;
+    int   m_TargetId;        // 离屏 target，-1 表示主目标
+    int   m_aKeyPress[128];  // 定点数，1/1024 单位
+    uint32_t m_aKeyColor[128];
+    int   m_KeyCount;
+};
+
+struct SMesh3D
+{
+    int   m_VertexBufferId;  // 静态 VAO/VBO，创建一次
+    int   m_VertexCount;
+};
+
+virtual int  CreateMesh3D(const GL_SVertex3D *pVertices, int Num) = 0;
+virtual void DeleteMesh3D(int Id) = 0;
+virtual void Begin3D(const S3DView &View) = 0;
+virtual void DrawMesh3D(int MeshId, const mat4 &Model) = 0;
+virtual void End3D() = 0;</code></pre>
+
+<p>接口刻意保持窄：<b>不做场景图、不做材质系统、不做实例化</b>。业务层想画什么就自己组三角形。这样通道的维护成本与「一条 SDF 通道」同级，而不是「一个小 Unity」。</p>
+
+<h2 id="backends">6 · 三后端实现</h2>
+
+<table>
+  <tr><th style="width:130px">后端</th><th>要加的东西</th><th style="width:110px">难度</th></tr>
+  <tr><td>OpenGL 3.x</td><td>VAO/VBO、<code>glEnable(GL_DEPTH_TEST)</code>、GLSL 330 着色器、深度附件（renderbuffer）</td><td class="ok">低</td></tr>
+  <tr><td>Vulkan</td><td>新 pipeline（顶点输入布局、深度附件格式、动态视口）、descriptor set（uniform buffer）、预编译 spv</td><td class="warn">中高</td></tr>
+  <tr><td>Metal</td><td>新 pipeline state、深度纹理、shader 加进 <code>metal_shader_manifest.h</code></td><td class="warn">中</td></tr>
+</table>
+
+<p>Android 的 GLES 后端不在范围内，所以只需要三条路径。三条里 Vulkan 最费事：要新增一个 descriptor set（MVP + 光照 + 两个数组），还要为深度附件挑格式（<code>D32_SFLOAT</code>）。建议<b>先做 GL，再 Metal，最后 Vulkan</b>——GL 迭代最快，能把 shader 和参数调到满意，再照抄到另外两个。</p>
+
+<h2 id="depth">7 · 深度与合成顺序</h2>
+
+<p>每帧的 3D 部分只有三步，且全部发生在自己的 target 内：</p>
+
+<pre><code>1) 绑定 3D target
+2) clear(color=页面背景色, depth=1.0)
+3) Begin3D(view)
+   DrawMesh3D(body)            // 不透明：depth write on, 无混合
+   DrawMesh3D(keycaps)         // 同上
+   ── 透明阶段 ──
+   DrawMesh3D(ledHalos)        // depth test on, write off, 加色混合
+   End3D()
+4) 解绑 target，作为纹理交给 2D UI 的圆角卡片绘制</code></pre>
+
+<p><b>不需要画家算法</b>：深度缓冲负责遮挡，绘制顺序只剩「不透明→透明」两档。之前 CPU 方案里那些硬编码层序、大面排序的坑全部消失。</p>
+
+<h2 id="shader">8 · 着色器与光照模型</h2>
+
+<pre><code>// 顶点
+vec3 worldPos = (uModel * vec4(aPos, 1.0)).xyz;
+worldPos.z += uKeyPress[int(aKeyIndex + 0.5)] * uPressScale;  // 按键下压
+vec3 n = normalize(mat3(uModel) * aNormal);
+gl_Position = uViewProj * vec4(worldPos, 1.0);
+
+// 片元
+vec3 V = normalize(uCameraPos - worldPos);
+float NdotL = max(dot(n, uLightDir), 0.0);
+vec3 ambient = mix(uGroundColor, uSkyColor, n.y * 0.5 + 0.5) * 0.55;
+vec3 diffuse = uLightColor * NdotL;
+vec3 H = normalize(uLightDir + V);
+float spec = pow(max(dot(n, H), 0.0), 48.0) * 0.35;
+vec3 albedo = texture(uAtlas, vUV).rgb * vColor.rgb;
+vec3 emissive = uKeyColor[keyIndex].rgb * uKeyBrightness;
+vec3 color = albedo * (ambient + diffuse) + spec + emissive;
+color = ACES(color * uExposure);</code></pre>
+
+<p>刻意不做 IBL：半球光 + 一个主光 + 一个 Blinn-Phong 高光，在这个视角范围内已经足够像金属和 PBT。真的需要环境反射时，再加一张 <code>uEnvMap</code>，接口不用改。</p>
+
+<h2 id="model">9 · 键盘模型</h2>
+
+<p>程序化生成，不导入 GLB——理由有三：<b>体积</b>（顶点比模型文件小）、<b>可主题化</b>（颜色走 uniform 不走贴图）、<b>参数化</b>（换布局只改一张 key 表）。</p>
+
+<table>
+  <tr><th style="width:180px">部件</th><th>几何</th><th style="width:110px">三角形</th></tr>
+  <tr><td>机身</td><td>圆角矩形挤出 + 内凹定位板，2 层</td><td>≈ 600</td></tr>
+  <tr><td>键帽 × 102</td><td>4 环 loft（底→腰→肩→顶）+ 顶面碟面，圆角 4 段</td><td>≈ 5 600</td></tr>
+  <tr><td>轴体（可选）</td><td>可见键缝里的轴壳，只用 1 个方柱</td><td>≈ 1 200</td></tr>
+  <tr><td>RGB 灯晕</td><td>每键 1 个四边形，加色混合</td><td>≈ 200</td></tr>
+  <tr><td><b>合计</b></td><td></td><td><b>≈ 7 600</b></td></tr>
+</table>
+
+<p>7 600 三角形对任何 GPU 都是噪声级别。真正的成本在 draw call 数——所以用 <code>m_KeyIndex</code> 把 102 颗键压成 1 个 mesh，全场景 3 个 draw call。</p>
+
+<h3>9.1 键位表从哪来</h3>
+
+<p>已经有现成的：<code>tmp/kb3d/assets/keyboard_ui.json</code> 里 102 个键的 <code>KEY_*</code> 映射，以及 KeyForge 的 <code>keyboardLayouts.ts</code>（<code>code / label / x / y / w / h</code>）。落地时把这张表转成 C++ 常量数组，模型生成器和拾取都用它。</p>
+
+<h2 id="legend">10 · 键名贴图</h2>
+
+<p>这是整个方案里唯一「取巧」的地方，说清楚为什么：</p>
+
+<ul>
+  <li><code>CTextRender</code> 只能把字形画到当前 framebuffer，<b>画不进任意纹理</b>；</li>
+  <li>所以键名不能边画边生成，必须<b>离线烤一张图集</b>；</li>
+  <li>图集：102 个键名 → 1024×512 RGBA，A8 或 RGBA4444 都够，约 0.5 MB；<b>已确认可以新增进 <code>data/</code></b>；</li>
+  <li>每个键帽顶面的 UV 在生成模型时直接写死成图集里对应的矩形，零运行时开销。</li>
+</ul>
+
+<p>图集用现有的 Python 管线生成（<code>tmp/kb3d/render.py</code> 已经在做透视贴字，抽出来改写成图集即可），产物进 <code>data/qmclient/keyboard/keycap_atlas.png</code>。</p>
+
+<div class="callout">
+  <b>备选：</b>如果不想加图集资产，键名可以退化成「屏幕空间文字」，由 2D UI 在 3D 之后叠加。缺点是不随键帽倾斜，视角一斜就露馅。建议一步到位做图集。
+</div>
+
+<h2 id="pick">11 · 拾取与交互</h2>
+
+<pre><code>// 鼠标 → 世界射线 → 逐键 AABB 求交
+vec2 ndc{ (MouseX / w) * 2 - 1, 1 - (MouseY / h) * 2 };
+vec3 dir = normalize(inverse(uViewProj) * vec4(ndc, 1, 0) - cameraPos);
+for (key : keys) if (RayHitsBox(cameraPos, dir, key.aabb)) → 最近的那个</code></pre>
+
+<ul>
+  <li>用 CPU 射线求交，不用深度回读——回读要等 GPU，会掉一帧。</li>
+  <li>每颗键存一个轴对齐包围盒（模型空间 + 世界矩阵），102 次求交可以忽略。</li>
+  <li>命中后转换成 <code>CBindSlot(KEY_W, m_ModifierMask)</code>，<b>直接写进现有的 <code>SBindEditorUiState.m_Selected</code></b>——不新建选中状态，右侧编辑面板一行都不用改。</li>
+  <li>悬停高亮：命中索引通过 <code>uHoverKey</code> 传给 shader，描边在片元里按 UV 到边缘的距离算。</li>
+</ul>
+
+<h2 id="page">12 · 页面入口与渲染模式</h2>
+
+<p>键盘不是一个独立的设置页，而是 <b>Bind 编辑器工作区</b> 的下半部分。入口、形态、渲染模式都按地图编辑器的既有做法来，不新造模式。</p>
+
+<h3>12.1 入口：右侧顶部导航栏</h3>
+
+<p>现在右侧导航是 <code>CapsuleTabBar</code> 的 5 个槽位（截图 / 录像 / 编辑器 / 设置 / 退出，<code>menus.cpp</code> 约 2925 行）。新增一个「Bind 编辑器」槽位，图标沿用笔形或键盘形，<code>MobileSpectator</code> 时不显示——和现在编辑器槽位在移动端的处理一致。</p>
+
+<h3>12.2 形态：独立工作区，全屏接管</h3>
+
+<pre><code>右上角导航「Bind 编辑器」
+┌─ 工具栏：打开 / 保存 / 撤销 / 应用 / 返回 ─────────────┐
+│ 文件与入口键 │ CFG 引用画布（可缩放平移）│ 原文与诊断 │
+│              ├──────────────────────────────────────┤
+│              │ 3D 键盘（可收起，收起后画布铺满）      │
+└──────────────────────────────────────────────────────┘</code></pre>
+
+<p>和 <a href="../规格/2026-11-20-Bind编辑器-现状及改进方案.md">《Bind 编辑器：现状及改进方案》</a>第 2 节的目标布局一致：键盘与画布共享同一个工程、同一个选中项、同一份草稿，点键高亮画布上的绑定，点画布上的绑定反向选中键，全程不切页。</p>
+
+<h3>12.3 渲染模式：打开时其他页面停止渲染</h3>
+
+<div class="callout">
+  <b>硬要求：</b>工作区打开的期间，设置页、浏览器、主菜单一律不再绘制，也不做它们的布局与命中计算。
+</div>
+
+<p>理由有两层：</p>
+<ul>
+  <li><b>正确性</b>：工作区是全屏的，底下页面没有任何可见区域。让它继续画，等于每帧白送一次完整的设置页开销——包括那张 104 键的键面。</li>
+  <li><b>状态干净</b>：设置页现在有一套交互趟 + 背景出图趟的双趟机制，如果两套 UI 同时跑，焦点、滚动、输入捕获会互相抢。</li>
+</ul>
+
+<p>实现上不做新机制：编辑器本来就是 <code>FeedbackPage</code> 之外的全屏状态，进入时切走、退出时回到进入前的页面（返回按钮走的也是这条路）。3D 的离屏 target 在这一段生命周期内创建，退出时销毁——这也顺带满足第 7 节「深度状态不可能泄漏」的前提。</p>
+
+<h3>12.4 与现有绑定页的关系</h3>
+
+<p>「控制 → 绑定」那张平面键面保留，两个入口共享同一份 <code>CBindSlot</code> 选中状态：从绑定页点一颗键，再进工作区，选中的还是那颗；反过来也一样。等 3D 版本稳定后，再决定是否把平面键面降级成「快速选择」。</p>
+
+<h2 id="perf">13 · 性能预算</h2>
+
+<table>
+  <tr><th style="width:230px">项</th><th>估算</th><th>备注</th></tr>
+  <tr><td>3D target 显存</td><td>1280×720 RGBA8 + D32 ≈ 7.4 MB</td><td>可降到 960×540 再放大</td></tr>
+  <tr><td>三角形</td><td>≈ 7 600</td><td>—</td></tr>
+  <tr><td>draw call</td><td>3</td><td>不透明 2 + 加色 1</td></tr>
+  <tr><td>顶点着色</td><td>≈ 15 000 顶点 / 帧</td><td>—</td></tr>
+  <tr><td>CPU 侧</td><td>相机矩阵 + 102 次 AABB + uniform 上传</td><td>&lt; 0.1 ms</td></tr>
+  <tr><td>只在页面可见时渲染</td><td>非可见帧 0 成本</td><td>关闭工作区时释放 target</td></tr>
+</table>
+
+<h2 id="files">14 · 文件清单</h2>
+
+<h3>引擎层（改动）</h3>
+<pre><code>src/engine/graphics.h                         + GL_SVertex3D / S3DView / SMesh3D / 3 个虚函数
+src/engine/client/graphics_threaded.h         + SCommand_Render3D / CreateMesh3D 等实现声明
+src/engine/client/graphics_threaded.cpp       + 命令入队、mesh 生命周期、target 绑定
+src/engine/client/backend/opengl/…            + pipeline、VAO、深度附件
+src/engine/client/backend/vulkan/…            + pipeline、descriptor set、深度附件
+src/engine/client/backend/metal/…             + pipeline state、深度纹理
+data/shader/prim3d_lit.vert / .frag           + GL 着色器
+data/shader/vulkan/prim3d_lit.*.spv           + 预编译
+data/shader/metal/manifest                    + 注册
+data/qmclient/keyboard/keycap_atlas.png       + 键名图集</code></pre>
+
+<h3>业务层（新增）</h3>
+<pre><code>src/game/client/components/qmclient/keyboard3d/model.cpp      键位表 + 网格生成
+src/game/client/components/qmclient/keyboard3d/model.h
+src/game/client/components/qmclient/keyboard3d/renderer.cpp   相机/光照/RGB/提交
+src/game/client/components/qmclient/keyboard3d/renderer.h
+src/game/client/components/qmclient/keyboard3d/page.cpp       页面与交互
+src/game/client/components/qmclient/keyboard3d/page.h</code></pre>
+
+<h2 id="phase">15 · 分阶段实施</h2>
+
+<table>
+  <tr><th style="width:70px">阶段</th><th>内容</th><th style="width:230px">验收</th></tr>
+  <tr><td><b>0</b></td><td>GL 后端打通：新增顶点格式、一条 pipeline、渲染一个自转立方体，直接画进主 framebuffer</td><td>立方体出现、深度正确、退出后 UI 完好（证明状态不泄漏）</td></tr>
+  <tr><td><b>1</b></td><td>离屏 target + 深度附件，立方体当 UI 纹理贴进设置页</td><td>圆角裁剪正确、缩放不糊</td></tr>
+  <tr><td><b>2</b></td><td>模型生成器：机身 + 102 键帽 + 键位表</td><td>能看清每颗键，键缝干净</td></tr>
+  <tr><td><b>3</b></td><td>光照：半球光 + 主光 + 高光 + ACES</td><td>三档曝光下都不死黑/过曝</td></tr>
+  <tr><td><b>4</b></td><td>键名图集 + UV 映射</td><td>任意视角下键名不糊、不歪</td></tr>
+  <tr><td><b>5</b></td><td>逐键 RGB + 下压动画</td><td>改配置能实时变色，按键有位移</td></tr>
+  <tr><td><b>6</b></td><td>相机交互 + 拾取 + 接 <code>CBinds</code></td><td>点键能选中，右侧面板同步</td></tr>
+  <tr><td><b>7</b></td><td>Vulkan + Metal 补齐，三后端对齐</td><td>同一场景截图差异 &lt; 2%</td></tr>
+  <tr><td><b>8</b></td><td>接入右上角导航 + 独立工作区外壳（全屏接管、其他页面停止渲染、退出回到原页）</td><td>进出 200 次无残留；关闭后原页面状态不丢</td></tr>
+  <tr><td><b>9</b></td><td>与 CFG 画布联动（点键高亮绑定、反向选中）、键盘收起/展开</td><td>双向定位原地完成，不切页</td></tr>
+</table>
+
+<p>阶段 0–2 是<b>决策点</b>：如果 GL 上的画质或手感不能接受，此时停手的沉没成本最小。</p>
+
+<h2 id="risk">16 · 风险与回退</h2>
+
+<table>
+  <tr><th style="width:210px">风险</th><th>后果</th><th>对策</th></tr>
+  <tr><td class="warn">深度状态泄漏到 2D UI</td><td>整个菜单空白，线上事故级</td><td>3D 只在自己的 target 内；<code>End3D()</code> 后强制恢复「无深度、无剔除、混合开启」并加断言</td></tr>
+  <tr><td class="warn">三后端表现不一致</td><td>某个平台颜色/高光不同</td><td>同一份 shader 逻辑，参数集中；截图对比脚本纳入验证</td></tr>
+  <tr><td>Vulkan descriptor 绑定错误</td><td>黑屏或验证层报错</td><td>先跑 <code>dbg_gfx 1</code> + Vulkan 验证层，零 VUID 再进阶段 1</td></tr>
+  <tr><td>与现有 blur/render target 通道冲突</td><td>背景模糊串色</td><td>target 生命周期独立，不复用 blur 的中间纹理</td></tr>
+</table>
+
+<div class="callout danger">
+  <b>回退方案：</b>配置项 <code>qm_keyboard3d_mode</code>（0=关闭走烘焙贴图，1=GPU 3D）。烘焙版资产已经在 <code>tmp/kb3d/assets/</code> 验证过可用，页面结构（左导航 / 键盘画布 / 检查器）两者共用，切换只换中间那块绘制。
+</div>
+
+<h2 id="accept">17 · 验收标准</h2>
+
+<ul>
+  <li><b>视觉</b>：任意视角下无穿模、无 Z-fighting、键帽边缘无锯齿（开 MSAA 或 4x 超采样 target）；</li>
+  <li><b>一致性</b>：GL / Vulkan / Metal 同参数截图，逐像素差异 &lt; 2%；</li>
+  <li><b>性能</b>：1080p 下整页渲染增量 &lt; 2 ms；</li>
+  <li><b>状态</b>：进出页面 200 次，UI 无残留、无空白、显存不增长（render target 正确释放）；</li>
+  <li><b>交互</b>：102 键全部可点中，边缘不误判；与旧键面的选中状态双向同步；</li>
+  <li><b>工程</b>：<code>run_cxx_tests</code> + 现有 gate 全绿；新增的网格生成与拾取有单元测试（射线-包围盒、键位表映射）。</li>
+</ul>
+
+<h3>不做完不算完成的部分</h3>
+<ul>
+  <li>三个后端只要有一个没截图对齐，不能宣称「跨平台通过」；</li>
+  <li>构建成功不等于渲染正确，必须有实机截图；</li>
+</ul>
+
+
+<h2 id="ref">18 · 参考文档</h2>
+
+<h3>同任务的功能规格</h3>
+<table>
+  <tr><th style="width:280px">文档</th><th>与本方案的关系</th></tr>
+  <tr><td><a href="../规格/2026-11-20-Bind编辑器-现状及改进方案.md">Bind 编辑器：现状及改进方案</a></td><td>定义工作区布局、CFG 文件模型、蓝图与键盘的联动方式、实施顺序。本篇只补充「键盘这一块怎么渲染」。</td></tr>
+  <tr><td><a href="../规格/2026-11-20-DDNet-Bind指南.md">DDNet Bind 指南</a></td><td>绑定语义的唯一依据：<code>bind</code> 没有独立的按下/松开字段，<code>+cmd</code> 由命令自己处理起止；<code>+toggle_restore</code> / <code>+toggle_exec</code> 是 QmClient 扩展。</td></tr>
+</table>
+
+<h3>3D 模型的来源</h3>
+<p>键盘模型与材质效果来自 KeyForge 3D（公开仓库，可直接 clone）：</p>
+<ul>
+  <li><a href="https://github.com/wuqie-xuanzhao/Keyboards">github.com/wuqie-xuanzhao/Keyboards</a> —— React + three.js，<code>src/three/keyboardBuilder.ts</code> 是参数化建模，<code>keyboardMaterials.ts</code> 是 PBR 材质，<code>availableModels</code> 支持 full104 / tkl80 / compact60 / pro75 / numpad21 / keypadLeft。</li>
+  <li>本篇第 9 节的模型生成器是它的 C++ 降维版：只保留键帽 loft、机身挤出、定位板三层，材质换成 uniform 驱动的单一光照模型。</li>
+</ul>
+
+<h3>相关代码入口</h3>
+<table>
+  <tr><th style="width:330px">位置</th><th>用途</th></tr>
+  <tr><td><code>src/game/client/components/menus.cpp</code>（约 2925 行）</td><td>右侧顶部导航的 5 个槽位，新增入口改这里</td></tr>
+  <tr><td><code>src/game/client/components/qmclient/bind_settings.cpp</code></td><td>现有平面键面、<code>CBindSlot</code> 选中状态、键位表</td></tr>
+  <tr><td><code>src/game/client/components/qmclient/bind_workshop.cpp</code></td><td>蓝图画布：缩放、平移、命中、框选、拓扑排序、CFG 导出</td></tr>
+  <tr><td><code>src/engine/client/backend/*/…qm_pipelines*</code></td><td>新增 3D pipeline 的注册位置</td></tr>
+  <tr><td><code>src/engine/client/graphics_threaded.h</code></td><td><code>SCommand_*</code> 命令结构的既有范式</td></tr>
+</table>
+
+<h3>回退用的烘焙资产</h3>
+<p><code>tmp/kb3d/assets/</code> 里有一版离线渲染的键盘（1800×660 PNG + 102 键四边形表），是 <code>qm_keyboard3d_mode=0</code> 时的绘制来源。取景页源码在 <code>tmp/kb3d/capture/</code>，需要重渲时放进 KeyForge 仓库的根目录即可。</p>
+
+</div>
+</body>
+</html>

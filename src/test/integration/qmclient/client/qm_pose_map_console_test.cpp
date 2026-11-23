@@ -22,15 +22,12 @@ TEST(QmPoseMapConsoleIntegration, RenderPreservesQuotedPathArguments)
 	} Capture{CallCount, aArguments};
 
 	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
-	pConsole->Register("poses_render", "s[poses] ?s[output] ?s[map] ?i[scale] ?i[entities]", CFGFLAG_CLIENT,
-		[](IConsole::IResult *pResult, void *pUser) {
+	pConsole->Register("poses_render", "s[poses] ?s[output] ?s[map] ?i[scale] ?i[entities]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUser) {
 			auto &Result = *static_cast<SCapture *>(pUser);
 			++Result.m_CallCount;
 			ASSERT_EQ(pResult->NumArguments(), static_cast<int>(Result.m_aArguments.size()));
 			for(size_t Index = 0; Index < Result.m_aArguments.size(); ++Index)
-				Result.m_aArguments[Index] = pResult->GetString(static_cast<int>(Index));
-		},
-		&Capture, "");
+				Result.m_aArguments[Index] = pResult->GetString(static_cast<int>(Index)); }, &Capture, "");
 
 	const auto Command = qm_pose_map::BuildCommand(qm_pose_map::EAction::RENDER, POSES, MAP, OUTPUT, qm_pose_map::EOutput::WEBP, 4, true);
 	pConsole->ExecuteLine(Command.c_str(), IConsole::CLIENT_ID_UNSPECIFIED, false);

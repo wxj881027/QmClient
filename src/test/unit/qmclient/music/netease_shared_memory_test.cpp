@@ -112,13 +112,14 @@ TEST(NeteaseSharedMemory, Utf8CopyNeverLeavesPartialCodepoint)
 	EXPECT_STREQ(aBuffer, "中文");
 }
 
-TEST(NeteaseSharedMemory, HookRefreshCadenceHasABoundedRetryInterval)
+TEST(NeteaseSharedMemory, HookRefreshCadenceUsesElapsedTimeNotMainLoopFrames)
 {
-	EXPECT_TRUE(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(0, 0, false));
-	EXPECT_FALSE(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(1, 0, true));
-	EXPECT_FALSE(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(2, 0, true));
-	EXPECT_TRUE(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(3, 0, true));
-	EXPECT_TRUE(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(9, 10, true));
+	constexpr int64_t Interval = 10;
+	EXPECT_TRUE(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(0, 0, false, Interval));
+	EXPECT_FALSE(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(1, 0, true, Interval));
+	EXPECT_FALSE(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(9, 0, true, Interval));
+	EXPECT_TRUE(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(10, 0, true, Interval));
+	EXPECT_TRUE(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(9, 10, true, Interval));
 }
 
 TEST(NeteaseSharedMemory, SmtcSourceChangesForceImmediateMetadataRefresh)

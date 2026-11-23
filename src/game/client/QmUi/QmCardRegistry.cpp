@@ -1,5 +1,7 @@
 #include "QmCardRegistry.h"
 
+#include "SettingsSearchQuery.h"
+
 #include <base/system.h>
 
 #include <engine/shared/config.h>
@@ -9,8 +11,10 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <array>
 #include <iterator>
 #include <new>
+#include <span>
 #include <stdexcept>
 #include <utility>
 
@@ -88,7 +92,8 @@ namespace qm_card_registry
 		return true;
 	}
 
-	ETClientMainCardsMigrationResult MigrateTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model, char *pSerialized, const int SerializedSize) try
+	ETClientMainCardsMigrationResult MigrateTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model, char *pSerialized, const int SerializedSize)
+	try
 	{
 		if(!IsTClientMainCardsLegacyLeft(Model))
 		{
@@ -137,7 +142,7 @@ namespace qm_card_registry
 			{"qm:focus_mode", "visual", false, "Zen Mode", "禅模式 zhuanzhi moshi focus mode zen mode 隐藏 yincang hud 名字 mingzi 特效 texiao 计分板 jifenban 沉浸 chenjing 无干扰 wuganrao 聊天 liaotian chat 非必要UI visual", "Hide UI for focused gameplay"},
 			{"qm:camera_view", "visual", false, "Camera view", "镜头 jingtou camera drift 漂移 piaoyi dynamic fov 动态视野 dongtai shiye 纵横比 zonghengbi aspect ratio preset 预设 yushe 自定义 zidinyi 视野视角 shijiao visual", "Adjust game camera and FOV settings"},
 			{"qm:spectator_mode", "visual", false, Localizable("Spectate mode"), "观战模式 guanzhan moshi spectator freeview 自由视角 ziyou shijiao cinematic camera smooth 平滑 pinghua demo replay 回放 huifang", "Smooth the mouse-driven camera in live and demo free spectating"},
-			{"qm:water_hammer", "visual", false, "?!Stuck keys!?", "水域 shuiyu 死亡 death 冻结 freeze 卡锤 kachui 锤子 chuizi hammer 卡钩 kagou 钩索 gousuo hook 按键 anjian 图标 tubiao 颜色 yanse held preinput teammate 同队 tongdui 高亮 gaoliang 变色 bianse visual", "Highlight frozen teammates' hammer and hook inputs"},
+			{"qm:water_hammer", "visual", false, "?!Stuck keys!?", "水域 shuiyu 死亡 death 冻结 freeze 卡锤 kachui 锤子 chuizi hammer 卡钩 kagou 钩索 gousuo hook 按键 anjian 图标 tubiao 颜色 yanse held preinput teammate 同队 tongdui 高亮 gaoliang 变色 bianse visual", "Highlight held hammer and hook inputs while frozen"},
 			{"qm:weapon_animation", "visual", false, "Weapon animation", "武器动画 wuqi donghua weapon animation 切换武器动画 qiehuan wuqi donghua weapon switch animation 装填动画 zhuangtian donghua reload animation 概率 gailv probability 滑入 huaru 旋转 xuanzhuan visual", "Play a slide-in rotation animation when switching weapons"},
 			{"qm:entity_overlay", "ddnet", false, "Entity layer adjustments", "实体层调整 shiti ceng tiaozheng 实体层颜色 yanse 实体层叠加 diejia entity overlay 文本实体 wenben shiti 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng ddnet", "Adjust opacity of entity layers"},
 			{"qm:collision_hitbox", "visual", false, "Collision hitbox", "碰撞箱模式 pengzhuangxiang moshi 碰撞体积可视化 pengzhuang tiji keshihua collision hitbox hitbox mode 显示碰撞 武器交互 透明度 visual", "Show collision and weapon interaction"},
@@ -149,6 +154,7 @@ namespace qm_card_registry
 			{"qm:better_scoreboard", "function", false, "Better scoreboard", "更好的计分板 genghao jifenban better scoreboard 计分板查分 chafen 计分板积分检查 jifenban jifen jiancha scoreboard point check 游玩时间 youwan shijian 累计小时 leiji xiaoshi playtime DDStats qm_scoreboard_playtime 显示死亡后计分板 死亡后显示计分板 siwang hou xianshi jifenban show scoreboard after death 滚动计分板 gundong jifenban fixed-size scoreboard rows mouse wheel 计分板筛选 jifenban shaixuan scoreboard filter 计分板Qm标识 qm biaoshi scoreboard badge function", "Scoreboard"},
 			{"qm:mini_features", "function", false, "Mini features", "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 聊天框淡出 liaotian danchu 聊天指令补全 zhiling buquan 命令补全 mingling buquan command completion autocomplete qm_chat_command_completion 聊天表情补全 liaotian biaoqing buquan emoji completion qm_chat_emoji_completion 表情选择 biaoqing xuanze 动画优化 donghua youhua 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 连击 lianji combo 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 更新 gengxin 版本 banben 过旧 guojiu 提示 tishi outdated version warning 新版UI xinban ui settings page shezhi yemian 候选栏 houxuanlan 进程优先级 jincheng youxianji 协作制图 xiezuo zhitu 多人制图 duoren zhitu tune zone 区域着色 quyu zhaose 地图着色 ditu zhaose function", "Only what you can't imagine, nothing Dream can't do"},
 			{"qm:self_kill_protection", "function", false, "Client-side self-kill protection", "自杀保护 zisha baohu 客户端侧自杀 kehu duan ce 自杀 kehuduan zisha 自杀开关 关闭自杀 kaiguan 开启自杀 自动开启 zidong kaiqi 自动拦截 开局 jukaishi 延迟 yanchi 分钟 fenzhong 自动 跑图 shuatu fangwuchu 防误触 拦截 lanjie K键 K jian kill 命令 mingling selfkill self kill protection client-side bind qm_self_kill_off qm_self_kill_on qm_self_kill_enabled qm_self_kill_auto_delay", "Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game"},
+			{"qm:fast_practice", "function", false, "Fast practice", "快速练习 kuaisu lianxi fast practice 分支世界 fenzhi shijie branch world 主世界影子 zhushijie yingzi main world ghost 影子透明度 yingzi toumingdu opacity 计时 jishi timer 用时 yongshi 救援 jiuyuan rescue 检查点 jianchadian checkpoint 重生点 chongshengdian respawn 重开 chongkai restart 传送 chuansong teleport 录制 luzhi record 快捷菜单 kuaijie caidan practice menu 绑定 bangding bind qm_fast_practice_show_main_world qm_fast_practice_main_world_alpha qm_fast_practice_timer", "Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands"},
 			{"qm:ime", "function", false, "IME", "输入法 shurufa ime 候选栏 houxuanlan 新版输入法 xinban shurufa 自动管理 zidong guanli 背景 beijing 颜色 yanse 透明度 toumingdu 高斯模糊 gaosi mohu function", "Configure the IME candidate bar"},
 			{"qm:jump_hint", "function", false, "Jump hint", "位置跳跃提示 tiaoyue tishi jump hint position edge jump color yanse 颜色 horizontal position shuiping weizhi vertical position chuizhi weizhi font size ziti function", "Customize the position jump hint"},
 			{"qm:weapon_trajectory", "function", false, "Weapon trajectory", "武器辅助线 wuqi fuzhuxian weapon trajectory 弹道辅助线 dandao fuzhuxian 手枪辅助线 shouqiang fuzhuxian pistol guide line 预测忍者路径 yuce renzhe lujing predict ninja path 线宽 xian kuan 透明度 toumingdu 始终显示 shizhong xianshi 按键显示 anjian xianshi function", "Show grenade and laser trajectory preview"},
@@ -213,7 +219,7 @@ namespace qm_card_registry
 			{"deck:global-search-results", "global-search", true, "Search", "global search result cards", "Open a matching settings card directly"},
 			{"deck:general-game", "general", false, Localizable("Game"), "general game camera weapon 动态镜头 dongtai jingtou 平滑 pinghua 拾取切枪 shiqu qieqiang 弹药 danyao", "Configure camera, weapon, and gameplay defaults"},
 			{"deck:general-language", "general", false, Localizable("Language"), "general language localization 语言 yuyan 中文 zhongwen 英文 yingwen", "Choose the language used by the client"},
-			{"deck:general-client", "general", false, Localizable("Client"), "general client theme files 主菜单 zhucaidan 主题 zhuti 配置目录 peizhi mulu 存档 cundang 崩溃报告 bengkui baogao", "Manage client theme and menu preferences"},
+			{"deck:general-client", "general", false, Localizable("Client"), "general client theme files 主菜单 zhucaidan 更新频率 gengxin pinlv 省电 shengdian 主题 zhuti 配置目录 peizhi mulu 存档 cundang 崩溃报告 bengkui baogao", "Manage client theme and menu preferences"},
 			{"deck:general-recording", "general", false, Localizable("Demo"), "general demo screenshot video directory path csv recording 自动录像 zidong luxiang 回放保存目录 路径 截图 jietu 视频导出 计分板 jifenban 导出 daochu", "Automate demos, screenshots, and match exports"},
 			{"deck:tclient-info-files", "general", false, "Config Files", "config files settings profiles war list chat binds 配置文件 peizhi wenjian 配置方案 peizhi fangan 战争列表 zhanzheng liebiao 聊天绑定 liaotian bangding", "Open TClient configuration file locations"},
 			{"deck:player-identity", "player", false, Localizable("Player"), "player dummy name clan identity", "Edit player and dummy identity information"},
@@ -246,15 +252,15 @@ namespace qm_card_registry
 			{"tclient:input", "ddnet-prediction", false, "Input", "input tclient 输入 快速输入 子 tick 瞄准 输入量", "Configure input helpers and cursor behavior"},
 			{"tclient:anti-latency-tools", "ddnet-prediction", false, "Anti latency tools", "anti latency tools tclient 延迟补偿工具 预测余量 冻结预测 解冻 延迟", "Control latency compensation tools"},
 			{"tclient:improved-anti-ping", "ddnet-prediction", false, "Improved anti ping", "improved anti ping tclient 改进版延迟补偿 平滑算法 稳定方向 不确定性 Gores", "Fine-tune improved anti-ping prediction"},
-			{"deck:tclient-bind-wheel-editor", "tclient-bind-wheel", false, "Bind Wheel", "bind wheel tclient", "Assign commands and labels to wheel slots"},
-			{"deck:tclient-bind-wheel-preview", "tclient-bind-wheel", false, "Preview", "preview bind wheel tclient", "Preview the bind wheel layout and selection"},
+			{"deck:tclient-bind-wheel-editor", "tclient-bind-wheel", false, "Bind Menus", "bind menu wheel panel identity chat custom assets preset skin tclient 绑定菜单 轮盘 面板 身份 语录 自定义 资源 贴图 皮肤 预设", "Configure identity, chat, assets, and custom bind menus"},
+			{"deck:tclient-bind-wheel-preview", "tclient-bind-wheel", false, "Preview", "preview bind menu wheel panel tclient", "Preview the bind menu layout and entries"},
 			{"deck:tclient-status-bar-settings", "tclient-status-bar", false, "Status Bar", "status bar tclient", "Adjust status bar position and text style"},
 			{"deck:tclient-status-bar-preview", "tclient-status-bar", false, "Preview", "preview status bar tclient", "Preview the composed status bar output"},
 			{"deck:tclient-chat-binds-kaomoji", "tclient-chat-binds", false, "Kaomoji", "chat binds kaomoji tclient", "Manage kaomoji chat shortcuts"},
 			{"deck:tclient-chat-binds-warlist", "tclient-chat-binds", false, "Warlist", "chat binds warlist tclient", "Manage hostile-list chat shortcuts"},
 			{"deck:tclient-chat-binds-other", "tclient-chat-binds", false, "Other", "chat binds other tclient", "Manage additional custom chat shortcuts"},
 			{"deck:tclient-warlist", "tclient-warlist", true, "War List", "enemy hostile war list entries groups players settings tclient", "Manage hostile players, groups, and display rules"},
-			{"deck:tclient-profiles", "tclient-profiles", true, "Profiles", "profiles save load delete name identity chat assets bind wheel 配置 身份 昵称 语录 资源 轮盘", "Manage profiles and bind wheel presets"},
+			{"deck:tclient-profiles", "tclient-profiles", true, "Profiles", "profiles save load delete name identity chat assets bind menu 配置 身份 昵称 语录 资源 菜单", "Manage profiles and add identity entries to bind menus"},
 			{"deck:tclient-configs-actions", "tclient-configs", true, "Configuration", "configs changes filters variables values reset", "Review and reset changed configuration values"},
 			{"deck:appearance-hud-main", "appearance-hud", false, "HUD", "appearance hud main", "Configure health, ammo, timer, and race HUD"},
 			{"deck:appearance-hud-ddrace", "appearance-hud", false, "DDRace HUD", "appearance ddrace hud", "Adjust DDRace-specific HUD indicators"},
@@ -406,20 +412,91 @@ namespace qm_card_registry
 			return vTokens;
 		}
 
-		int SearchMatchScore(const char *pText, const std::string &Token, const int Weight)
+		constexpr size_t SEARCH_MAX_FUZZY_TOKEN = 24;
+
+		bool IsFuzzyWordCharacter(int Code)
 		{
-			if(pText == nullptr || pText[0] == '\0')
-				return 0;
-			const char *pMatchEnd = nullptr;
-			const char *pMatch = str_utf8_find_nocase(pText, Token.c_str(), &pMatchEnd);
-			if(pMatch == nullptr)
-				return 0;
-			return pMatch == pText && pMatchEnd[0] == '\0' ? Weight * 2 : Weight;
+			return (Code >= 'a' && Code <= 'z') || (Code >= 0x3400 && Code <= 0x4dbf) || (Code >= 0x4e00 && Code <= 0x9fff);
+		}
+
+		struct SFuzzySearchToken
+		{
+			std::array<int, SEARCH_MAX_FUZZY_TOKEN> m_aCharacters{};
+			size_t m_Length = 0;
+
+			explicit SFuzzySearchToken(const char *pLowerToken)
+			{
+				while(*pLowerToken != '\0')
+				{
+					const int Code = str_utf8_decode(&pLowerToken);
+					if(m_Length == m_aCharacters.size() || !IsFuzzyWordCharacter(Code))
+					{
+						m_Length = 0;
+						return;
+					}
+					m_aCharacters[m_Length++] = Code;
+				}
+				// 单字、短缩写、数字和配置名继续按原有精确匹配规则搜索。
+				if(m_Length < 4)
+					m_Length = 0;
+			}
+		};
+
+		bool MatchesWithOneEdit(std::span<const int> Longer, std::span<const int> Shorter)
+		{
+			if(Longer.size() < Shorter.size())
+				std::swap(Longer, Shorter);
+			if(Longer.size() - Shorter.size() > 1)
+				return false;
+			const auto [FirstLeft, FirstRight] = std::mismatch(Longer.begin(), Longer.end(), Shorter.begin(), Shorter.end());
+			if(Longer.size() != Shorter.size())
+				return std::equal(FirstLeft + 1, Longer.end(), FirstRight, Shorter.end());
+			if(FirstLeft == Longer.end() || std::equal(FirstLeft + 1, Longer.end(), FirstRight + 1, Shorter.end()))
+				return true;
+			return Longer.end() - FirstLeft >= 2 && *FirstLeft == FirstRight[1] && FirstLeft[1] == *FirstRight &&
+			       std::equal(FirstLeft + 2, Longer.end(), FirstRight + 2, Shorter.end());
+		}
+
+		bool FuzzyWordMatch(const char *pText, const SFuzzySearchToken &Token)
+		{
+			std::array<int, SEARCH_MAX_FUZZY_TOKEN + 1> aWord;
+			size_t Length = 0;
+			while(true)
+			{
+				const int Code = str_utf8_tolower_codepoint(str_utf8_decode(&pText));
+				if(IsFuzzyWordCharacter(Code))
+				{
+					if(Length < aWord.size())
+						aWord[Length] = Code;
+					++Length;
+					continue;
+				}
+				if(Length >= Token.m_Length - 1 && Length <= Token.m_Length + 1 &&
+					MatchesWithOneEdit({aWord.data(), Length}, {Token.m_aCharacters.data(), Token.m_Length}))
+					return true;
+				if(Code == 0)
+					return false;
+				Length = 0;
+			}
 		}
 
 		constexpr size_t SEARCH_MAX_MATCH_KEYS = 8;
 		// 长帮助句不是可绘制行：仍参与卡片打分，但不塞进命中列表/定位键。
 		constexpr size_t SEARCH_MAX_MATCH_TEXT = 80;
+
+		int SearchMatchScore(const char *pText, const std::string &Token, int Weight, const SFuzzySearchToken *pFuzzyToken)
+		{
+			if(pText == nullptr || pText[0] == '\0')
+				return 0;
+			const char *pMatchEnd = nullptr;
+			const char *pMatch = str_utf8_find_nocase(pText, Token.c_str(), &pMatchEnd);
+			if(pMatch != nullptr)
+				return pMatch == pText && pMatchEnd[0] == '\0' ? Weight * 2 : Weight;
+			if(pFuzzyToken != nullptr &&
+				(Weight != SEARCH_WEIGHT_LABEL || str_length(pText) <= SEARCH_MAX_MATCH_TEXT) && FuzzyWordMatch(pText, *pFuzzyToken))
+				return Weight / 5;
+			return 0;
+		}
 
 		void AddSearchKey(std::vector<std::string> &vKeys, const char *pText)
 		{
@@ -530,10 +607,9 @@ namespace qm_card_registry
 		return s_vHaystacks;
 	}
 
-	std::vector<SCardSearchResult> SearchCards(const char *pQuery, const qm_card_order::CModel &Model)
+	static std::vector<SCardSearchResult> SearchCardsMatching(const std::vector<std::string> &vTokens, const qm_card_order::CModel &Model, bool AllowFuzzy)
 	{
 		std::vector<SCardSearchResult> vResults;
-		const std::vector<std::string> vTokens = SplitSearchQuery(pQuery);
 		if(vTokens.empty())
 			return vResults;
 
@@ -549,24 +625,41 @@ namespace qm_card_registry
 		vLowerTokens.reserve(vTokens.size());
 		for(const std::string &Token : vTokens)
 			vLowerTokens.push_back(LowerUtf8(Token.c_str()));
+		std::vector<SFuzzySearchToken> vFuzzyTokens;
+		if(AllowFuzzy)
+		{
+			vFuzzyTokens.reserve(vTokens.size());
+			for(const std::string &LowerToken : vLowerTokens)
+				vFuzzyTokens.emplace_back(LowerToken.c_str());
+			if(std::none_of(vFuzzyTokens.begin(), vFuzzyTokens.end(), [](const auto &Token) { return Token.m_Length != 0; }))
+				return vResults;
+		}
 		vCandidates.reserve(vDefaults.size());
 		for(size_t CardIndex = 0; CardIndex < vDefaults.size(); ++CardIndex)
 		{
 			const SCardDefault &Default = vDefaults[CardIndex];
 			if(Default.m_pStableId == nullptr)
 				continue;
-			// 预筛：任一查询词不在整卡检索文本里，就不必进入逐字段打分。
+			// 查询词缺失时只允许一个词进入错字容错，避免把不相干的词分开凑分。
 			bool HaystackMiss = false;
-			for(const std::string &LowerToken : vLowerTokens)
+			size_t FuzzyTokenIndex = vTokens.size();
+			for(size_t Index = 0; Index < vLowerTokens.size(); ++Index)
 			{
-				if(vHaystacks[CardIndex].find(LowerToken) == std::string::npos)
+				if(vHaystacks[CardIndex].find(vLowerTokens[Index]) != std::string::npos)
+					continue;
+				if(!AllowFuzzy || FuzzyTokenIndex != vTokens.size() || vFuzzyTokens[Index].m_Length == 0)
 				{
 					HaystackMiss = true;
 					break;
 				}
+				FuzzyTokenIndex = Index;
 			}
 			if(HaystackMiss)
 				continue;
+			const auto FieldScore = [&](const char *pField, size_t Index, int Weight, bool FuzzyField = true) {
+				const auto *pFuzzyToken = FuzzyField && Index == FuzzyTokenIndex ? &vFuzzyTokens[Index] : nullptr;
+				return SearchMatchScore(pField, vTokens[Index], Weight, pFuzzyToken);
+			};
 			// 搜索时才解析设置表：静态注册器可能晚于 DefaultsTable 的首次构建。
 			const qm_card_registry::SCardSettingSearch *pSettings = nullptr;
 			size_t SettingCount = 0;
@@ -576,21 +669,21 @@ namespace qm_card_registry
 			SCandidate Candidate;
 			int Score = 0;
 			bool MatchesAllTokens = true;
-			for(const std::string &Token : vTokens)
+			for(size_t TokenIndex = 0; TokenIndex < vTokens.size(); ++TokenIndex)
 			{
-				int TokenScore = std::max(SearchMatchScore(pLocalizedTitle, Token, SEARCH_WEIGHT_TITLE), SearchMatchScore(Default.m_pTitle, Token, SEARCH_WEIGHT_TITLE));
-				TokenScore = std::max(TokenScore, SearchMatchScore(Default.m_pSearchKeywords, Token, SEARCH_WEIGHT_KEYWORDS));
-				TokenScore = std::max(TokenScore, SearchMatchScore(pLocalizedDescription, Token, SEARCH_WEIGHT_DESCRIPTION));
-				TokenScore = std::max(TokenScore, SearchMatchScore(Default.m_pDescription, Token, SEARCH_WEIGHT_DESCRIPTION));
+				int TokenScore = std::max(FieldScore(pLocalizedTitle, TokenIndex, SEARCH_WEIGHT_TITLE), FieldScore(Default.m_pTitle, TokenIndex, SEARCH_WEIGHT_TITLE));
+				TokenScore = std::max(TokenScore, FieldScore(Default.m_pSearchKeywords, TokenIndex, SEARCH_WEIGHT_KEYWORDS));
+				TokenScore = std::max(TokenScore, FieldScore(pLocalizedDescription, TokenIndex, SEARCH_WEIGHT_DESCRIPTION, false));
+				TokenScore = std::max(TokenScore, FieldScore(Default.m_pDescription, TokenIndex, SEARCH_WEIGHT_DESCRIPTION, false));
 				for(size_t Index = 0; Index < SettingCount; ++Index)
 				{
 					const SCardSettingSearch &Setting = pSettings[Index];
 					const char *pLocalizedLabel = Setting.m_pLabel != nullptr ? Localize(Setting.m_pLabel, Setting.m_pContext) : nullptr;
-					const int LabelScore = std::max(SearchMatchScore(Setting.m_pLabel, Token, SEARCH_WEIGHT_LABEL), SearchMatchScore(pLocalizedLabel, Token, SEARCH_WEIGHT_LABEL));
-					const int ConfigScore = SearchMatchScore(Setting.m_pConfigName, Token, SEARCH_WEIGHT_CONFIG);
+					const int LabelScore = std::max(FieldScore(Setting.m_pLabel, TokenIndex, SEARCH_WEIGHT_LABEL), FieldScore(pLocalizedLabel, TokenIndex, SEARCH_WEIGHT_LABEL));
+					const int ConfigScore = FieldScore(Setting.m_pConfigName, TokenIndex, SEARCH_WEIGHT_CONFIG, false);
 					TokenScore = std::max(TokenScore, LabelScore);
 					TokenScore = std::max(TokenScore, ConfigScore);
-					TokenScore = std::max(TokenScore, SearchMatchScore(Setting.m_pAliases, Token, SEARCH_WEIGHT_ALIAS));
+					TokenScore = std::max(TokenScore, FieldScore(Setting.m_pAliases, TokenIndex, SEARCH_WEIGHT_ALIAS));
 				}
 				if(TokenScore == 0)
 				{
@@ -617,11 +710,11 @@ namespace qm_card_registry
 				const char *pLabel = pLocalizedLabel != nullptr && pLocalizedLabel[0] != '\0' ? pLocalizedLabel : Setting.m_pLabel;
 				int SettingScore = 0;
 				const char *pDisplay = nullptr;
-				for(const std::string &Token : vTokens)
+				for(size_t TokenIndex = 0; TokenIndex < vTokens.size(); ++TokenIndex)
 				{
-					const int LabelScore = std::max(SearchMatchScore(Setting.m_pLabel, Token, SEARCH_WEIGHT_LABEL), SearchMatchScore(pLocalizedLabel, Token, SEARCH_WEIGHT_LABEL));
-					const int ConfigScore = SearchMatchScore(Setting.m_pConfigName, Token, SEARCH_WEIGHT_CONFIG);
-					SettingScore += std::max({LabelScore, ConfigScore, SearchMatchScore(Setting.m_pAliases, Token, SEARCH_WEIGHT_ALIAS)});
+					const int LabelScore = std::max(FieldScore(Setting.m_pLabel, TokenIndex, SEARCH_WEIGHT_LABEL), FieldScore(pLocalizedLabel, TokenIndex, SEARCH_WEIGHT_LABEL));
+					const int ConfigScore = FieldScore(Setting.m_pConfigName, TokenIndex, SEARCH_WEIGHT_CONFIG, false);
+					SettingScore += std::max({LabelScore, ConfigScore, FieldScore(Setting.m_pAliases, TokenIndex, SEARCH_WEIGHT_ALIAS)});
 					if(LabelScore > 0)
 						pDisplay = pLabel;
 					else if(ConfigScore > 0 && pDisplay == nullptr)
@@ -672,6 +765,28 @@ namespace qm_card_registry
 		for(SCandidate &Candidate : vCandidates)
 			vResults.push_back(std::move(Candidate.m_Result));
 		return vResults;
+	}
+
+	std::vector<SCardSearchResult> SearchCards(const char *pQuery, const qm_card_order::CModel &Model)
+	{
+		if(pQuery == nullptr || !str_utf8_check(pQuery))
+			return {};
+		const auto vTokens = SplitSearchQuery(pQuery);
+		auto vResults = SearchCardsMatching(vTokens, Model, false);
+		if(!vResults.empty() || vTokens.empty())
+			return vResults;
+
+		// 精确输入优先，其次尝试问句中的检索词。两次均无命中才允许错字容错。
+		const std::string Normalized = qm_settings_search::NormalizeQuery(pQuery);
+		const std::string Question(qm_settings_search::StripQuestion(Normalized));
+		const auto vQuestionTokens = SplitSearchQuery(Question.c_str());
+		if(vQuestionTokens != vTokens)
+		{
+			vResults = SearchCardsMatching(vQuestionTokens, Model, false);
+			if(!vResults.empty())
+				return vResults;
+		}
+		return SearchCardsMatching(vQuestionTokens, Model, true);
 	}
 
 	const char *MigrateLegacyKey(const char *pLegacyKey)

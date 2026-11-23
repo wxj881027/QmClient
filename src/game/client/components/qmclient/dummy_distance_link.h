@@ -106,11 +106,17 @@ namespace qm_dummy_link
 	{
 		if(!Main || !Dummy || (Main->m_Frozen && Dummy->m_Frozen))
 			return std::nullopt;
+		constexpr float TileSize = 32.0f;
+		constexpr float FadeStart = 15.0f * TileSize;
+		constexpr float FadeEnd = 30.0f * TileSize;
 		const vec2 Delta = Dummy->m_Pos - Main->m_Pos;
 		const float Distance = length(Delta);
+		if(Distance >= FadeEnd)
+			return std::nullopt;
+		const float Alpha = 0.9f * std::min(1.0f, (FadeEnd - Distance) / (FadeEnd - FadeStart));
 		const float HookDistance = FromDummy ? distance(Dummy->m_Pos, Main->m_HookTargetPos) : distance(Main->m_Pos, Dummy->m_HookTargetPos);
 		return SLink{Main->m_Pos, Dummy->m_Pos, Distance > 0.0f ? Delta / Distance : vec2(0, 0),
-			Distance, 0.36f + 0.54f / (1.0f + Distance / 320.0f),
+			Distance, Alpha,
 			!Main->m_Solo && !Dummy->m_Solo && HookLength > 0.0f && HookDistance < HookLength + QmHookCollTargetRadius};
 	}
 

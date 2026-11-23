@@ -1,5 +1,5 @@
-#include <engine/keys.h>
 #include <engine/client/map_download_resolver.h>
+#include <engine/keys.h>
 
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/components/qmclient/browser_map_preview.h>

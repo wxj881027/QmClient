@@ -79,6 +79,7 @@ TEST(QmNewUiMenuGameplayScoreboardContract, NewColorControlsUseIndependentUiDoma
 	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
 	const std::string BrowserSource = ReadTextFile("src/game/client/components/menus_browser.cpp");
 	const std::string ScoreboardSource = ReadTextFile("src/game/client/components/scoreboard.cpp");
+	const std::string UiThemeSource = ReadTextFile("src/game/client/QmUi/UiTheme.h");
 
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(QmUiColor, qm_ui_color"), std::string::npos);
 	EXPECT_EQ(ConfigSource.find("MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color"), std::string::npos);
@@ -93,7 +94,9 @@ TEST(QmNewUiMenuGameplayScoreboardContract, NewColorControlsUseIndependentUiDoma
 	EXPECT_NE(RenderBackground.find("ms_GuiColor.WithAlpha(1.0f)"), std::string::npos);
 	EXPECT_EQ(RenderBackground.find("g_Config.m_QmUiColor"), std::string::npos);
 	EXPECT_NE(BrowserSource.find("ColorHSLA(g_Config.m_QmUiColor)"), std::string::npos);
-	EXPECT_NE(ScoreboardSource.find("ColorHSLA(g_Config.m_QmUiColor)"), std::string::npos);
+	// 计分板与投票 HUD 通过唯一的界面表面解析器读取同一份配置，不再各自复制颜色公式。
+	EXPECT_NE(ScoreboardSource.find("ResolveConfiguredInterfaceSurface"), std::string::npos);
+	EXPECT_NE(UiThemeSource.find("ColorHSLA(g_Config.m_QmUiColor)"), std::string::npos);
 }
 
 TEST(QmNewUiMenuGameplayScoreboardContract, ScoreboardBackgroundsUseInterfaceOpacity)

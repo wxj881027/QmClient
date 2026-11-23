@@ -6,6 +6,8 @@
 
 #include <game/client/ui_rect.h>
 
+#include <string>
+
 struct IUiContext;
 struct SWikiDocument;
 
@@ -15,6 +17,7 @@ void OpenCardWikiPopup(const IUiContext &Ctx, const char *pStableId, const char 
 
 // 弹窗内 ⓘ 打开的多段说明（视频导出等长文档）；标题走文档自己的 Localize key。
 void OpenWikiDocumentPopup(const IUiContext &Ctx, const SWikiDocument &Document);
+void OpenWikiMarkdownPopup(const IUiContext &Ctx, const char *pTitle, std::string Markdown, int StartBlock);
 
 // ⓘ 图标的点击登记：调用方在**绘制阶段**把刚画出来的图标矩形传进来，
 // 命中即在同一次绘制里打开面板，不需要第二下。

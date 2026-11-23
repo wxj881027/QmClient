@@ -122,6 +122,10 @@ protected:
 	float m_GlobalTime = 0.0f;
 	float m_RenderFrameTime = 0.0001f;
 	float m_FrameTimeAverage = 0.0001f;
+	// 主循环实际 CPU 忙时，不含 vsync/休眠等待。后台预热按它与刷新周期
+	// 的差值决定可吃多少余量；用墙钟帧间隔会把等待时间误当成已占用。
+	float m_MainThreadFrameTime = 0.0f;
+	float m_MainThreadFrameTimeAverage = 0.0f;
 	uint64_t m_PerfFrame = 0;
 	int m_PerfRenderLimit = 0;
 
@@ -208,6 +212,8 @@ public:
 	float RenderFrameTime() const { return m_RenderFrameTime; }
 	// Exponentially weighted average of frame times.
 	float FrameTimeAverage() const { return m_FrameTimeAverage; }
+	// Exponentially weighted average of main-loop CPU time, excluding sleep/vsync wait.
+	float MainThreadFrameTime() const { return m_MainThreadFrameTimeAverage; }
 	uint64_t PerfFrame() const { return m_PerfFrame; }
 	int PerfRenderLimit() const { return m_PerfRenderLimit; }
 
@@ -335,6 +341,8 @@ public:
 	virtual const void *SnapFindItem(int SnapId, int Type, int Id) const = 0;
 	virtual const CSnapshot *CurrentSnapshotForConnection(int Conn) const = 0;
 	virtual CSnapItem SnapGetItem(int SnapId, int Index) const = 0;
+	// 返回指定连接快照中的本地玩家编号，不依赖当前视角切换。
+	virtual int GetLocalClientId(int Conn) const = 0;
 
 	virtual void SnapSetStaticsize(int ItemType, int Size) = 0;
 	virtual void SnapSetStaticsize7(int ItemType, int Size) = 0;

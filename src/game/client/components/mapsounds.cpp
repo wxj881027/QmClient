@@ -3,7 +3,9 @@
 #include <base/log.h>
 
 #include <engine/demo.h>
+#include <engine/engine.h>
 #include <engine/shared/config.h>
+#include <engine/shared/jobs.h>
 #include <engine/sound.h>
 
 #include <game/client/components/camera.h>
@@ -15,13 +17,96 @@
 #include <game/map/map_render_items.h>
 #include <game/mapitems.h>
 
+#include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cstdint>
+#include <string>
+#include <thread>
+#include <utility>
+
+class CQmMapSoundDecodeJob final : public IJob
+{
+public:
+	struct SInput
+	{
+		int m_SoundIndex = -1;
+		std::vector<unsigned char> m_vData;
+		std::string m_Path;
+		std::string m_Name;
+	};
+
+private:
+	ISound *m_pSound;
+	std::vector<SInput> m_vInputs;
+	std::vector<int> m_vSampleIds;
+	std::atomic<bool> m_InlineComplete = false;
+	int64_t m_StartNs = time_get_nanoseconds().count();
+	int64_t m_EndNs = 0;
+
+protected:
+	void Run() override { Decode(); }
+
+public:
+	CQmMapSoundDecodeJob(ISound *pSound, std::vector<SInput> &&vInputs) :
+		m_pSound(pSound),
+		m_vInputs(std::move(vInputs)),
+		m_vSampleIds(m_vInputs.size(), -1)
+	{
+	}
+
+	void Decode()
+	{
+		for(size_t Index = 0; Index < m_vInputs.size(); ++Index)
+		{
+			const SInput &Input = m_vInputs[Index];
+			try
+			{
+				if(!Input.m_Path.empty())
+					m_vSampleIds[Index] = m_pSound->LoadOpus(Input.m_Path.c_str());
+				else if(!Input.m_vData.empty())
+					m_vSampleIds[Index] = m_pSound->LoadOpusFromMem(Input.m_vData.data(), Input.m_vData.size(), false, Input.m_Name.c_str());
+			}
+			catch(...)
+			{
+				m_vSampleIds[Index] = -1;
+			}
+		}
+		m_EndNs = time_get_nanoseconds().count();
+		m_InlineComplete.store(true, std::memory_order_release);
+	}
+
+	bool Ready() const { return m_InlineComplete.load(std::memory_order_acquire) || Finished(); }
+	bool InlineComplete() const { return m_InlineComplete.load(std::memory_order_acquire); }
+	const std::vector<SInput> &Inputs() const { return m_vInputs; }
+	const std::vector<int> &SampleIds() const { return m_vSampleIds; }
+	double ElapsedMs() const { return (m_EndNs - m_StartNs) / 1000000.0; }
+};
 
 static float s_MapSoundTime = 0.0f;
 
 CMapSounds::CMapSounds()
 {
 	m_Count = 0;
+	std::fill(std::begin(m_aSounds), std::end(m_aSounds), -1);
+}
+
+CMapSounds::~CMapSounds()
+{
+	while((m_pDecodeJob && !m_pDecodeJob->Ready()) || std::any_of(m_vRetiredDecodeJobs.begin(), m_vRetiredDecodeJobs.end(), [](const auto &pJob) { return pJob && !pJob->Ready(); }))
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	if(Sound())
+	{
+		for(int Index = 0; Index < m_Count; ++Index)
+			Sound()->UnloadSample(m_aSounds[Index]);
+		if(m_pDecodeJob)
+			for(int SampleId : m_pDecodeJob->SampleIds())
+				Sound()->UnloadSample(SampleId);
+		for(const auto &pJob : m_vRetiredDecodeJobs)
+			if(pJob)
+				for(int SampleId : pJob->SampleIds())
+					Sound()->UnloadSample(SampleId);
+	}
 }
 
 void CMapSounds::Play(int Channel, int SoundId)
@@ -80,8 +165,16 @@ void CMapSounds::OnMapLoad()
 		pMap->UnloadData(DataIndex);
 	};
 
-	// load new samples
+	std::vector<CQmMapSoundDecodeJob::SInput> vInputs;
 	bool ShowWarning = false;
+	try
+	{
+		vInputs.reserve(m_Count);
+	}
+	catch(const std::bad_alloc &)
+	{
+		ShowWarning = true;
+	}
 	for(int i = 0; i < m_Count; i++)
 	{
 		const auto SoundItem = MapRenderItems::ReadSound(*pMap, Start + i);
@@ -113,11 +206,23 @@ void CMapSounds::OnMapLoad()
 			{
 				log_error("mapsounds", "Failed to load map sound %d: external path is too long.", i);
 				m_aSounds[i] = -1;
+				ShowWarning = true;
 			}
 			else
 			{
-				str_format(aBuf, sizeof(aBuf), "mapres/%s.opus", pName);
-				m_aSounds[i] = Sound()->LoadOpus(aBuf);
+				try
+				{
+					str_format(aBuf, sizeof(aBuf), "mapres/%s.opus", pName);
+					CQmMapSoundDecodeJob::SInput Input;
+					Input.m_SoundIndex = i;
+					Input.m_Path = aBuf;
+					Input.m_Name = pName;
+					vInputs.push_back(std::move(Input));
+				}
+				catch(const std::bad_alloc &)
+				{
+					ShowWarning = true;
+				}
 			}
 			ReleaseSoundData(SoundItem->m_SoundName, pName);
 		}
@@ -132,24 +237,139 @@ void CMapSounds::OnMapLoad()
 				continue;
 			}
 			const int SoundDataSize = pMap->GetDataSize(SoundItem->m_SoundData);
-			m_aSounds[i] = Sound()->LoadOpusFromMem(pData, SoundDataSize, false, pName);
+			if(SoundDataSize <= 0)
+			{
+				log_error("mapsounds", "Failed to load map sound %d: invalid data size %d.", i, SoundDataSize);
+				ShowWarning = true;
+				ReleaseSoundData(SoundItem->m_SoundData, pData);
+				continue;
+			}
+			CQmMapSoundDecodeJob::SInput Input;
+			Input.m_SoundIndex = i;
+			const auto *pBytes = static_cast<const unsigned char *>(pData);
+			try
+			{
+				Input.m_Name = pName;
+				Input.m_vData.assign(pBytes, pBytes + SoundDataSize);
+			}
+			catch(const std::bad_alloc &)
+			{
+				ShowWarning = true;
+				ReleaseSoundData(SoundItem->m_SoundData, pData);
+				continue;
+			}
 			ReleaseSoundData(SoundItem->m_SoundData, pData);
+			try
+			{
+				vInputs.push_back(std::move(Input));
+			}
+			catch(const std::bad_alloc &)
+			{
+				ShowWarning = true;
+			}
 		}
-		ShowWarning = ShowWarning || m_aSounds[i] == -1;
 	}
+	m_DecodeWarning = ShowWarning;
+	if(vInputs.empty())
+	{
+		m_DecodeReady = true;
+		if(!PrepareMapSoundSourceQueue(*Layers(), std::span<const int>(m_aSounds, m_Count), m_vSourceQueue))
+			m_DecodeWarning = true;
+		if(m_DecodeWarning)
+		{
+			try
+			{
+				Client()->AddWarning(SWarning(Localize("Some map sounds could not be loaded. Check the local console for details.")));
+			}
+			catch(...)
+			{
+			}
+		}
+		return;
+	}
+	m_DecodeReady = false;
+	try
+	{
+		m_pDecodeJob = std::make_shared<CQmMapSoundDecodeJob>(Sound(), std::move(vInputs));
+	}
+	catch(const std::bad_alloc &)
+	{
+		m_DecodeWarning = true;
+		m_DecodeReady = true;
+	}
+	if(m_pDecodeJob)
+	{
+		if(Client()->State() != IClient::STATE_LOADING || !Engine()->TryAddJob(m_pDecodeJob))
+			m_pDecodeJob->Decode();
+		if(QmPerfEnabled())
+		{
+			char aPayload[192];
+			str_format(aPayload, sizeof(aPayload), "event=map_sounds_decode_start count=%zu", m_pDecodeJob->Inputs().size());
+			QmPerfLogPayloadForce("perf/connect", aPayload, Client());
+		}
+	}
+	if(m_DecodeReady)
+	{
+		if(!PrepareMapSoundSourceQueue(*Layers(), std::span<const int>(m_aSounds, m_Count), m_vSourceQueue))
+			m_DecodeWarning = true;
+		if(m_DecodeWarning)
+		{
+			try
+			{
+				Client()->AddWarning(SWarning(Localize("Some map sounds could not be loaded. Check the local console for details.")));
+			}
+			catch(...)
+			{
+			}
+		}
+	}
+	PollDecode();
+}
+
+bool CMapSounds::PollDecode()
+{
+	for(auto It = m_vRetiredDecodeJobs.begin(); It != m_vRetiredDecodeJobs.end();)
+	{
+		if(!(*It)->Ready())
+		{
+			++It;
+			continue;
+		}
+		for(int SampleId : (*It)->SampleIds())
+			Sound()->UnloadSample(SampleId);
+		if(QmPerfEnabled())
+		{
+			char aPayload[192];
+			str_format(aPayload, sizeof(aPayload), "event=map_sounds_decode_canceled count=%zu duration_ms=%.3f", (*It)->Inputs().size(), (*It)->ElapsedMs());
+			QmPerfLogPayloadForce("perf/connect", aPayload, Client());
+		}
+		It = m_vRetiredDecodeJobs.erase(It);
+	}
+	if(m_DecodeReady || !m_pDecodeJob || !m_pDecodeJob->Ready())
+		return m_DecodeReady;
+	if(!m_pDecodeJob->InlineComplete() && m_pDecodeJob->State() != IJob::STATE_DONE)
+		m_DecodeWarning = true;
+	const auto &vInputs = m_pDecodeJob->Inputs();
+	const auto &vSampleIds = m_pDecodeJob->SampleIds();
+	for(size_t Index = 0; Index < vInputs.size() && Index < vSampleIds.size(); ++Index)
+	{
+		const int SoundIndex = vInputs[Index].m_SoundIndex;
+		if(SoundIndex < 0 || SoundIndex >= m_Count)
+		{
+			Sound()->UnloadSample(vSampleIds[Index]);
+			m_DecodeWarning = true;
+			continue;
+		}
+		m_aSounds[SoundIndex] = vSampleIds[Index];
+		m_DecodeWarning |= m_aSounds[SoundIndex] < 0;
+	}
+	m_DecodeReady = true;
 	if(!PrepareMapSoundSourceQueue(*Layers(), std::span<const int>(m_aSounds, m_Count), m_vSourceQueue))
 	{
-		ShowWarning = true;
-		// 分配失败后的诊断也可能分配，不能再次中断地图加载。
-		try
-		{
-			log_error("mapsounds", "Failed to prepare map sound sources.");
-		}
-		catch(...)
-		{
-		}
+		m_DecodeWarning = true;
+		log_error("mapsounds", "Failed to prepare map sound sources.");
 	}
-	if(ShowWarning)
+	if(m_DecodeWarning)
 	{
 		try
 		{
@@ -159,6 +379,14 @@ void CMapSounds::OnMapLoad()
 		{
 		}
 	}
+	if(QmPerfEnabled())
+	{
+		char aPayload[192];
+		str_format(aPayload, sizeof(aPayload), "event=map_sounds_decode_complete count=%zu duration_ms=%.3f", vInputs.size(), m_pDecodeJob->ElapsedMs());
+		QmPerfLogPayloadForce("perf/connect", aPayload, Client());
+	}
+	m_pDecodeJob.reset();
+	return true;
 }
 
 void CMapSounds::OnRender()
@@ -276,6 +504,29 @@ void CMapSounds::OnRender()
 void CMapSounds::Clear()
 {
 	s_MapSoundTime = 0.0f;
+	if(m_pDecodeJob)
+	{
+		if(m_pDecodeJob->Ready())
+		{
+			for(int SampleId : m_pDecodeJob->SampleIds())
+				Sound()->UnloadSample(SampleId);
+		}
+		else
+		{
+			try
+			{
+				m_vRetiredDecodeJobs.push_back(std::move(m_pDecodeJob));
+			}
+			catch(const std::bad_alloc &)
+			{
+				while(!m_pDecodeJob->Ready())
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				for(int SampleId : m_pDecodeJob->SampleIds())
+					Sound()->UnloadSample(SampleId);
+			}
+		}
+		m_pDecodeJob.reset();
+	}
 	// unload all samples
 	m_vSourceQueue.clear();
 	for(int i = 0; i < m_Count; i++)
@@ -284,6 +535,8 @@ void CMapSounds::Clear()
 		m_aSounds[i] = -1;
 	}
 	m_Count = 0;
+	m_DecodeReady = true;
+	m_DecodeWarning = false;
 }
 
 bool CMapSounds::SoundEnabled() const

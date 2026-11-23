@@ -4,6 +4,7 @@
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsCardInfo.h>
 #include <game/client/QmUi/SettingsMenuPrewarmScope.h>
+#include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/ui_scrollregion.h>
 
@@ -100,7 +101,7 @@ namespace
 			CRealUiFixture::SetUp();
 			ASSERT_FALSE(HasFatalFailure());
 			m_Model.SetEntries({{CARD_A, TAB, 1, 0}, {CARD_B, TAB, 2, 0}});
-			m_Layout = SettingsPageLayout({20, 20, 800, 560}, 1.0f);
+			m_Layout = ResolveSettingsPageLayout({20, 20, 800, 560}, false, 1.0f);
 		}
 		void Frame(vec2 Position = {900, 600}, bool Pressed = false)
 		{
@@ -584,7 +585,7 @@ TEST_F(QmSettingsCardDeckConsumer, ClippedCardHeaderCannotStartDrag)
 {
 	CSettingsCardDeck Deck;
 	CScrollRegion ScrollRegion;
-	m_Layout = SettingsPageLayout({20, 65, 500, 250}, 1.0f);
+	m_Layout = ResolveSettingsPageLayout({20, 65, 500, 250}, false, 1.0f);
 	m_Model.SetEntries({{CARD_A, TAB, 1, 0}, {CARD_B, TAB, 1, 1}});
 	const auto pA = std::make_shared<SCardOwner>(CARD_A, 100);
 	const auto pB = std::make_shared<SCardOwner>(CARD_B, 80);

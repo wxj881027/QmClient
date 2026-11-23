@@ -185,7 +185,7 @@ namespace qm_ui_test
 			return {pPopup->x + pPopup->w - Inset - TitleHeight - 2.0f - AcceptWidth * 0.5f, pPopup->y + Inset + TitleHeight * 0.5f};
 		}
 
-		// 页签行：0=HSVA、1=RGBA、2=HSLA；右端 46px 是方图/色环切换。
+		// 页签行：0=HSVA、1=RGBA、2=HSLA、3=OKLCH；右端 46px 是方图/色环切换。
 		vec2 ModeTabCenter(int ModeIndex) const
 		{
 			const CUIRect *pPopup = PopupRect();
@@ -193,7 +193,7 @@ namespace qm_ui_test
 				return vec2(-1.0e6f, -1.0e6f);
 			const float Inset = m_Ui.PopupMenuContentInset() * 0.5f;
 			const float TabTop = pPopup->y + Inset + 15.0f + 6.0f;
-			return {pPopup->x + Inset + ModeIndex * (36.0f + 2.0f) + 18.0f, TabTop + 7.5f};
+			return {pPopup->x + Inset + ModeIndex * (42.0f + 2.0f) + 21.0f, TabTop + 7.5f};
 		}
 
 		vec2 ShapeToggleCenter() const

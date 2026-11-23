@@ -279,12 +279,16 @@ void CMenusIngameTouchControls::RenderTouchButtonEditor(CUIRect MainView)
 		{
 			qm_ui::Toast(EQmToastKind::WARNING, Localize("Please save your changes before duplicating a button."));
 		}
-		else if(NewButton(GameClient()->m_TouchControls.ShownRect().value(), m_CachedShape))
+		else
 		{
-			m_pNewSelectedButton = GameClient()->m_TouchControls.SelectedButton();
-			SaveCachedSettingsToTarget(m_pNewSelectedButton);
-			UpdateSampleButton();
-			GameClient()->m_TouchControls.SetEditingChanges(true);
+			const CTouchControls::CUnitRect ShownRect = GameClient()->m_TouchControls.ShownRect().value_or(CTouchControls::CUnitRect{});
+			if(NewButton(ShownRect, m_CachedShape))
+			{
+				m_pNewSelectedButton = GameClient()->m_TouchControls.SelectedButton();
+				SaveCachedSettingsToTarget(m_pNewSelectedButton);
+				UpdateSampleButton();
+				GameClient()->m_TouchControls.SetEditingChanges(true);
+			}
 		}
 	}
 

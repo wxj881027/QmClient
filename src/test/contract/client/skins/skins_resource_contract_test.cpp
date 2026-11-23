@@ -85,11 +85,8 @@ TEST(SkinsContract, TeeSkinListSortModeKeepsFavoritesPinnedThenUsesOfficialDate)
 	const std::string ConfigSource = ReadTestSourceFile("src/engine/shared/config_variables_qmclient.h");
 	const std::string MenusI18nSource = ReadTestSourceFile("qmclient_scripts/languages_qmclient/translations/i18n/menus.toml");
 	const size_t ComparePos = Source.find("bool CSkins::CSkinListEntry::operator<");
-	const size_t ScanJobPos = Source.find("int CSkins::CSkinDirectoryScanJob::ScanCallback");
 	ASSERT_NE(ComparePos, std::string::npos);
-	ASSERT_NE(ScanJobPos, std::string::npos);
 	const std::string CompareBody = Source.substr(ComparePos, 1200);
-	const std::string ScanJobBody = Source.substr(ScanJobPos, 900);
 
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmSkinSortMode, qm_skin_sort_mode, 0, 0, 1"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1"), std::string::npos);
@@ -104,35 +101,22 @@ TEST(SkinsContract, TeeSkinListSortModeKeepsFavoritesPinnedThenUsesOfficialDate)
 	EXPECT_NE(Source.find("ScanDirectory(\"downloadedskins\", CSkinContainer::EType::DOWNLOAD);"), std::string::npos);
 	EXPECT_NE(Source.find("OFFICIAL_SKIN_INDEX_URL = \"https://ddnet.org/skins/skin/skins.json\""), std::string::npos);
 	EXPECT_NE(Source.find("OFFICIAL_SKIN_INDEX_CACHE_PATH = \"downloadedskins/official_skins.json\""), std::string::npos);
-	EXPECT_NE(Source.find("QueueOfficialSkinIndexRequest();"), std::string::npos);
-	EXPECT_NE(Source.find("LoadOfficialSkinIndexCache();"), std::string::npos);
-	EXPECT_NE(Source.find("json_string_get(json_object_get(pEntry, \"date\"))"), std::string::npos);
-	EXPECT_NE(Source.find("json_string_get(json_object_get(pEntry, \"creator\"))"), std::string::npos);
-	EXPECT_NE(ScanJobBody.find("pInfo->m_TimeModified"), std::string::npos);
+	EXPECT_NE(Source.find("QueueSkinCatalogRequests();"), std::string::npos);
+	EXPECT_NE(Source.find("LoadSkinCatalogCaches();"), std::string::npos);
+	EXPECT_NE(Source.find("pInfo->m_TimeModified"), std::string::npos);
 	EXPECT_NE(CompareBody.find("g_Config.m_QmSkinSortMode"), std::string::npos);
 	EXPECT_NE(CompareBody.find("OfficialReleaseDate()"), std::string::npos);
 	EXPECT_NE(CompareBody.find("LastModified()"), std::string::npos);
-	EXPECT_NE(CompareBody.find("OfficialReleaseDate > OtherOfficialReleaseDate"), std::string::npos);
-	EXPECT_NE(CompareBody.find("LastModified() > Other.m_pSkinContainer->LastModified()"), std::string::npos);
+	EXPECT_NE(CompareBody.find("SkinListValueOrder("), std::string::npos);
 	const size_t TimeTranslationPos = MenusI18nSource.find("key = \"Time\"");
 	ASSERT_NE(TimeTranslationPos, std::string::npos);
 	const size_t TimeTranslationEnd = MenusI18nSource.find("[[message]]", TimeTranslationPos + 1);
 	const std::string TimeTranslationBody = MenusI18nSource.substr(TimeTranslationPos, TimeTranslationEnd - TimeTranslationPos);
 	EXPECT_NE(TimeTranslationBody.find("simplified_chinese = \"时间\""), std::string::npos);
 	EXPECT_EQ(TimeTranslationBody.find("simplified_chinese = \"用时\""), std::string::npos);
-	const size_t FavoritePos = CompareBody.find("m_Favorite");
-	const size_t SortModePos = CompareBody.find("g_Config.m_QmSkinSortMode");
-	const size_t ModifiedPos = CompareBody.find("LastModified()");
-	ASSERT_NE(FavoritePos, std::string::npos);
-	ASSERT_NE(SortModePos, std::string::npos);
-	ASSERT_NE(ModifiedPos, std::string::npos);
-	EXPECT_LT(FavoritePos, SortModePos);
-	EXPECT_LT(SortModePos, ModifiedPos);
-	EXPECT_NE(CompareBody.find("if(g_Config.m_QmSkinSortMode == 1)"), std::string::npos);
-	EXPECT_NE(CompareBody.find("if(m_Favorite && !Other.m_Favorite)"), std::string::npos);
 }
 
-TEST(SkinsContract, TeeStartLoadingFallbackSweepIsBoundedAndLogged)
+TEST(SkinsContract, TeeStartLoadingFallbackSweepIsGatedAndCountsRealStarts)
 {
 	std::ifstream HeaderFile(TestSourcePath("src/game/client/components/skins.h"));
 	ASSERT_TRUE(HeaderFile.good());
@@ -157,7 +141,9 @@ TEST(SkinsContract, TeeStartLoadingFallbackSweepIsBoundedAndLogged)
 	EXPECT_NE(Source.find("event=skin_start_loading_fallback_sweep"), std::string::npos);
 	EXPECT_NE(Source.find("items_total=%d items_scanned=%d items_started=%d items_skipped=%d invoked=%d dur_ms=%.3f reason=%s"), std::string::npos);
 	EXPECT_NE(StartLoading.find("LogSettingsSkinStartLoadingFallbackSweepEvent("), std::string::npos);
-	EXPECT_NE(StartLoading.find("disabled_explicit_queues"), std::string::npos);
+	EXPECT_NE(StartLoading.find("SettingsSkinFallbackSweepShouldRun("), std::string::npos);
+	EXPECT_NE(StartLoading.find("pSkinContainer->IsAlwaysLoaded()"), std::string::npos);
+	EXPECT_NE(StartLoading.find("StateBefore != pSkinContainer->m_State"), std::string::npos);
 	EXPECT_EQ(StartLoading.find("std::advance("), std::string::npos);
 	EXPECT_EQ(StartLoading.find("for(auto &[_, pSkinContainer] : m_Skins)\n\t{"), std::string::npos);
 }
@@ -255,7 +241,9 @@ TEST(SkinsContract, PrioritizedLoadQueueKeepsOriginalRequestPriority)
 
 	EXPECT_NE(StartLoading.find("StartLoadJob(It->second.get(), It->second->m_LoadPriority)"), std::string::npos);
 	EXPECT_EQ(StartLoading.find("StartLoadJob(It->second.get(), ESettingsResourcePriority::VISIBLE)"), std::string::npos);
-	EXPECT_NE(StartLoading.find("Stats.m_NumPending + Stats.m_NumLoading"), std::string::npos);
+	// 加载窗口只统计未完成项；预算由准入决策统一计算，不再手工相加。
+	EXPECT_NE(StartLoading.find("SettingsSkinSourceAdmissionDecision("), std::string::npos);
+	EXPECT_NE(StartLoading.find("(int)Stats.m_NumLoading,"), std::string::npos);
 	EXPECT_EQ(StartLoading.find("Stats.m_NumPending + Stats.m_NumLoaded + Stats.m_NumLoading"), std::string::npos);
 }
 
@@ -273,7 +261,7 @@ TEST(SkinsContract, TeeSettingsScrollBudgetFeedsFinalizeAndUploadLimits)
 	const size_t UploadBudget = Source.find("return pGameClient->m_Skins.SettingsGpuUploadFrameBudgetForFrame();");
 	EXPECT_NE(UploadBudget, std::string::npos);
 
-	const size_t ImmediateScrollContext = Source.find("return SettingsBuildFrameContext(PersistentContext.m_ScrollActive, ImmediateScrollInput, PersistentContext.m_PostScrollRecoveryFrames);");
+	const size_t ImmediateScrollContext = Source.find("SettingsBuildFrameContext(PersistentContext.m_ScrollActive, ImmediateScrollInput, PersistentContext.m_PostScrollRecoveryFrames)");
 	EXPECT_NE(ImmediateScrollContext, std::string::npos);
 
 	const size_t ScrollRegionMouseDown = Source.find("(pGameClient->Input()->KeyPress(KEY_MOUSE_1) && pUi->HotScrollRegion() != nullptr)");

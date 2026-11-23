@@ -9,6 +9,7 @@
 
 #include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
+#include <test/support/qm_test_engine.h>
 #include <test/test.h>
 
 #include <array>
@@ -77,6 +78,7 @@ namespace
 		std::unique_ptr<IKernel> m_pKernel;
 		std::unique_ptr<IStorage> m_pStorage;
 		CConsole m_Console{CFGFLAG_CLIENT};
+		CQmRejectingTestEngine m_Engine;
 		std::unique_ptr<IEngineTextRender> m_pText;
 
 	protected:
@@ -85,6 +87,8 @@ namespace
 		void SetUp() override
 		{
 			g_Config = CConfig();
+			// 图形渲染测试只注册设备边界，没有作业池；文字引擎走同步字形模式。
+			g_Config.m_QmTextRasterMode = 0;
 			m_Info.m_DeleteTestStorageFilesOnSuccess = false;
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
@@ -93,6 +97,7 @@ namespace
 			m_pKernel->RegisterInterface<IConsole>(&m_Console, false);
 			m_pKernel->RegisterInterface<IStorage>(m_pStorage.get(), false);
 			m_pKernel->RegisterInterface<IGraphics>(&m_Graphics, false);
+			m_pKernel->RegisterInterface<IEngine>(&m_Engine, false);
 			m_pText.reset(CreateEngineTextRender());
 			m_pKernel->RegisterInterface<IEngineTextRender>(m_pText.get(), false);
 			ASSERT_TRUE(m_pText->Init());

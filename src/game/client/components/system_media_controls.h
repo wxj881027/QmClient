@@ -25,13 +25,15 @@
 namespace SystemMediaControls
 {
 	constexpr uint32_t ALBUM_ART_MAX_DIMENSION = 256;
-	constexpr uint64_t NETEASE_HOOK_REFRESH_INTERVAL_FRAMES = 3;
+	// 网易云 Hook 是跨进程共享内存读取，按墙钟限流而不是主循环帧数；
+	// 菜单空闲时主循环可能达到上万 Hz，三帧限流会变成每秒数千次读取。
+	constexpr int64_t NETEASE_HOOK_REFRESH_INTERVAL_MS = 50;
 
-	inline bool ShouldRefreshNeteaseHookSnapshot(uint64_t CurrentFrame, uint64_t LastReadFrame, bool HasReadFrame)
+	inline bool ShouldRefreshNeteaseHookSnapshot(int64_t NowTicks, int64_t LastReadTicks, bool HasRead, int64_t IntervalTicks)
 	{
-		if(!HasReadFrame || CurrentFrame < LastReadFrame)
+		if(!HasRead || NowTicks < LastReadTicks)
 			return true;
-		return CurrentFrame - LastReadFrame >= NETEASE_HOOK_REFRESH_INTERVAL_FRAMES;
+		return NowTicks - LastReadTicks >= IntervalTicks;
 	}
 
 	inline bool MediaSourceChanged(const char *pPrevious, const char *pCurrent)
@@ -276,8 +278,8 @@ private:
 	std::string m_LastNeteaseHookHelperPath;
 	QmNeteaseHook::SSnapshotV5 m_NeteaseSnapshot{};
 	bool m_HasNeteaseSnapshot = false;
-	uint64_t m_LastNeteaseHookReadFrame = 0;
-	bool m_NeteaseHookReadFrameInitialized = false;
+	int64_t m_LastNeteaseHookReadTime = 0;
+	bool m_NeteaseHookReadTimeInitialized = false;
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
 	// 主线程发布开关快照；先析构 worker，再结束后台读取的原子值寿命。
 	std::atomic_bool m_BackendEnabled{false};

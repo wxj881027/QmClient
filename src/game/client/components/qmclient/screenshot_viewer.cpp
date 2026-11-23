@@ -83,8 +83,7 @@ bool OpenQmScreenshotViewer(IClient *pClient, const char *pPath, const char *pEr
 			char **ppEnvironment = environ;
 #endif
 			PROCESS Process = INVALID_PROCESS;
-			return posix_spawnp(&Process, aExecutable, nullptr, nullptr, apArguments, ppEnvironment) == 0 ? Process : INVALID_PROCESS;
-		}, [](PROCESS Process) {
+			return posix_spawnp(&Process, aExecutable, nullptr, nullptr, apArguments, ppEnvironment) == 0 ? Process : INVALID_PROCESS; }, [](PROCESS Process) {
 			while(waitpid(Process, nullptr, 0) < 0 && errno == EINTR)
 			{
 			} });

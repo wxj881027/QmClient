@@ -12,6 +12,7 @@
 #include <engine/http.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/linereader.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <algorithm>
@@ -127,7 +128,10 @@ namespace
 			return false;
 		const bool Written = io_write(File, Body.data(), Body.size()) == Body.size();
 		const int Closed = io_close(File);
-		return Written && Closed == 0 && fs_rename(aTmp, Path.c_str(), false) == 0;
+		if(Written && Closed == 0 && fs_rename(aTmp, Path.c_str(), false) == 0)
+			return true;
+		(void)fs_remove(aTmp);
+		return false;
 	}
 	class CServerListSaveJob : public IJob
 	{
@@ -320,9 +324,9 @@ namespace
 				return;
 			try
 			{
-				m_pStorage->CreateFolder("cache", IStorage::TYPE_SAVE);
+				qm_storage::EnsureFolder(m_pStorage, qm_storage::CACHE_NETWORK_DIR);
 				char aPath[IO_MAX_PATH_LENGTH];
-				m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "cache/qm-serverlist.json", aPath, sizeof(aPath));
+				m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, qm_storage::SERVERLIST_CACHE_FILE, aPath, sizeof(aPath));
 				char aHeader[160];
 				str_format(aHeader, sizeof(aHeader), "QMSL1 %lld %d %s\n", (long long)time_timestamp(), Age, m_SourceHash.c_str());
 				std::string Path(aPath);
@@ -366,7 +370,7 @@ namespace
 		{
 			if(!m_pStorage)
 				return;
-			std::unique_ptr<void, decltype(&io_close)> pFile(m_pStorage->OpenFile("cache/qm-serverlist.json", IOFLAG_READ, IStorage::TYPE_SAVE), io_close);
+			std::unique_ptr<void, decltype(&io_close)> pFile(m_pStorage->OpenFile(qm_storage::SERVERLIST_CACHE_FILE, IOFLAG_READ, IStorage::TYPE_SAVE), io_close);
 			if(!pFile)
 				return;
 			const int64_t Length = io_length(pFile.get());
@@ -381,7 +385,7 @@ namespace
 			const std::string Header = Body.substr(0, End);
 			long long Received;
 			int Age;
-			char aHash[65];
+			char aHash[65] = {};
 			// 刷新失败时沿用上次成功列表：年龄只影响 stale 标记，不再作为丢弃条件；仍拒绝未来时间戳与损坏正文。
 			if(sscanf(Header.c_str(), "QMSL1 %lld %d %64s", &Received, &Age, aHash) != 3 || m_SourceHash != aHash || Age < 0)
 				return;

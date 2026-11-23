@@ -19,9 +19,10 @@
 #if !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN)
 #include "thread.h"
 
+#include <sys/wait.h>
+
 #include <cerrno>
 #include <future>
-#include <sys/wait.h>
 #endif
 
 #include <sys/utsname.h> // uname, utsname
@@ -31,9 +32,10 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 #elif defined(CONF_FAMILY_WINDOWS)
+#include <windows.h>
+
 #include <objbase.h> // required for shellapi.h
 #include <shellapi.h> // ShellExecuteExW
-#include <windows.h>
 
 #include <cfenv> // fesetenv
 #else
@@ -117,7 +119,8 @@ try
 			if(waited < 0 && errno != EINTR)
 				return;
 		}
-	}, result.get(), "open link reaper");
+	},
+		result.get(), "open link reaper");
 	if(!reaper)
 		return 0;
 	result.release();

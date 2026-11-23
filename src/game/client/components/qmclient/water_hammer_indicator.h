@@ -13,7 +13,7 @@
 
 #include <array>
 
-// 结合本地分身输入与 sv_preinput，提供同队可见玩家冻结时的卡锤、卡钩和方向键状态。
+// 冻结时读取本机角色的输入，其他玩家的按键状态取同队 sv_preinput。
 class CQmWaterHammerIndicator : public CComponent
 {
 	std::array<SQmWaterHammerInputState, MAX_CLIENTS> m_aInputs;

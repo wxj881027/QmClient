@@ -8,6 +8,7 @@
 #include <engine/friends.h>
 #include <engine/http.h>
 #include <engine/shared/jobs.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <atomic>
@@ -19,7 +20,7 @@
 
 namespace
 {
-	constexpr const char *CACHE_FILE = "qm_friend_last_seen.json";
+	constexpr const char *CACHE_FILE = qm_storage::FRIEND_LAST_SEEN_CACHE_FILE;
 
 	struct SCandidateCleanup
 	{
@@ -120,9 +121,11 @@ void CQmFriendLastSeenService::Update(const IFriends &Friends, IEngine &Engine, 
 	const uint64_t Revision = Friends.Revision();
 	if(Revision != m_FriendsRevision)
 	{
-		std::unordered_set<std::string> Names;
+		// 容器自身的构造也会分配（MSVC 的 unordered_set 默认构造即取桶数组），
+		// 必须和 reserve 一起放进同一段保护，否则失败会越过这里抛给调用方。
 		try
 		{
+			std::unordered_set<std::string> Names;
 			Names.reserve(Friends.NumFriends());
 			for(int i = 0; i < Friends.NumFriends(); ++i)
 			{
@@ -130,6 +133,8 @@ void CQmFriendLastSeenService::Update(const IFriends &Friends, IEngine &Engine, 
 				if(pName[0] != '\0')
 					Names.emplace(pName);
 			}
+			m_Cache.RetainNames(Names);
+			m_FriendsRevision = Revision;
 		}
 		catch(const std::bad_alloc &)
 		{
@@ -139,8 +144,6 @@ void CQmFriendLastSeenService::Update(const IFriends &Friends, IEngine &Engine, 
 		{
 			return;
 		}
-		m_Cache.RetainNames(Names);
-		m_FriendsRevision = Revision;
 	}
 	if(!Enabled)
 		return;
@@ -234,6 +237,7 @@ bool CQmFriendLastSeenService::Save(IStorage &Storage) const
 	char aTargetPath[IO_MAX_PATH_LENGTH * 2] = {};
 	try
 	{
+		qm_storage::EnsureFolder(&Storage, qm_storage::CACHE_SOCIAL_DIR);
 		Storage.GetCompletePath(IStorage::TYPE_SAVE, CACHE_FILE, aTargetPath, sizeof(aTargetPath));
 	}
 	catch(const std::bad_alloc &)

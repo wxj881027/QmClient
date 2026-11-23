@@ -20,7 +20,19 @@ namespace qm_config_package
 	namespace
 	{
 		constexpr std::array<const char *, 4> MANAGED_PATHS = {
-			"qmclient/settings.cfg", "qmclient/qmclient_profiles.cfg", "qmclient/qmclient_chatbinds.cfg", "qmclient/qmclient_warlist.cfg"};
+			qm_storage::SETTINGS_FILE, qm_storage::PROFILES_FILE, qm_storage::CHATBINDS_FILE, qm_storage::WARLIST_FILE};
+
+		struct SPathAlias
+		{
+			const char *m_pLegacy;
+			const char *m_pCanonical;
+		};
+
+		constexpr std::array<SPathAlias, 3> LEGACY_MANAGED_PATHS = {{
+			{"qmclient/qmclient_profiles.cfg", qm_storage::PROFILES_FILE},
+			{"qmclient/qmclient_chatbinds.cfg", qm_storage::CHATBINDS_FILE},
+			{"qmclient/qmclient_warlist.cfg", qm_storage::WARLIST_FILE},
+		}};
 
 		std::string Lower(std::string_view Text)
 		{
@@ -29,6 +41,18 @@ namespace qm_config_package
 				if(Character >= 'A' && Character <= 'Z')
 					Character += 'a' - 'A';
 			return Result;
+		}
+
+		const char *CanonicalManagedPath(std::string_view Path)
+		{
+			const std::string Normalized = Lower(Path);
+			for(const char *pManaged : MANAGED_PATHS)
+				if(Normalized == Lower(pManaged))
+					return pManaged;
+			for(const SPathAlias &Alias : LEGACY_MANAGED_PATHS)
+				if(Normalized == Lower(Alias.m_pLegacy))
+					return Alias.m_pCanonical;
+			return nullptr;
 		}
 
 		bool RelativePath(std::string_view Path)
@@ -130,7 +154,7 @@ namespace qm_config_package
 
 	bool IsManagedPath(std::string_view Path)
 	{
-		return std::any_of(MANAGED_PATHS.begin(), MANAGED_PATHS.end(), [Path](const char *pManaged) { return Path == pManaged; });
+		return CanonicalManagedPath(Path) != nullptr;
 	}
 
 	bool IsConfigPath(std::string_view Path)
@@ -138,14 +162,13 @@ namespace qm_config_package
 		if(!RelativePath(Path) || Path.size() > 160 || !Lower(Path).ends_with(".cfg"))
 			return false;
 		const std::string Normalized = Lower(Path);
-		if(Normalized.starts_with("qmclient/config_packages/") || Normalized.starts_with("qmclient/builtinscripts/"))
+		if(Normalized.starts_with("qmclient/config/packages/") || Normalized.starts_with("qmclient/config_packages/") || Normalized.starts_with("qmclient/builtinscripts/"))
 			return false;
 		// 旧变量文件和官方共享配置不属于自定义文件，避免恢复时触发旧迁移或覆盖其他客户端。
 		if(Normalized == "settings_ddnet.cfg" || Normalized == "settings_qmclient.cfg" || Normalized == "qmclient/settings_ddnet.cfg" || Normalized == "qmclient/settings_qmclient.cfg" || Normalized == "qmclient_profiles.cfg" || Normalized == "qmclient_chatbinds.cfg" || Normalized == "qmclient_warlist.cfg")
 			return false;
-		for(const char *pManaged : MANAGED_PATHS)
-			if(Normalized == pManaged && Path != pManaged)
-				return false;
+		if(const char *pCanonical = CanonicalManagedPath(Path))
+			return Path == pCanonical;
 		return true;
 	}
 
@@ -248,6 +271,8 @@ namespace qm_config_package
 				return Fail(Error, "Invalid configuration package.");
 			SFile File;
 			File.m_Path.assign(pPath->u.string.ptr, pPath->u.string.length);
+			if(const char *pCanonical = CanonicalManagedPath(File.m_Path))
+				File.m_Path = pCanonical;
 			File.m_Present = pPresent->u.boolean != 0;
 			File.m_Content.resize(pContent->u.string.length / 4 * 3);
 			const int Size = str_base64_decode(File.m_Content.data(), static_cast<int>(File.m_Content.size()), pContent->u.string.ptr);

@@ -85,6 +85,54 @@ TEST(WikiMarkdownTest, ParsesTableRowsAndAlignment)
 	EXPECT_TRUE(HasStyle(Table.m_Rows[2].m_Cells[1], WIKI_INLINE_BOLD, "yes"));
 }
 
+TEST(WikiMarkdownTest, EscapedTablePipesStayInTheirCell)
+{
+	CWikiMarkdown Document;
+	ASSERT_TRUE(Document.Parse("| Type | Description |\n"
+				   "| --- | --- |\n"
+				   "| **i\\|s** | String or integer |\n"
+				   "| Literal pipe | ends with \\|\n"));
+	ASSERT_EQ(Document.Blocks().size(), 1u);
+	const SWikiBlock &Table = Document.Blocks().front();
+	ASSERT_EQ(Table.m_Type, EWikiBlockType::TABLE);
+	ASSERT_EQ(Table.m_Rows.size(), 3u);
+	ASSERT_EQ(Table.m_vAligns.size(), 2u);
+	EXPECT_TRUE(HasStyle(Table.m_Rows[1].m_Cells[0], WIKI_INLINE_BOLD, "i|s"));
+	EXPECT_EQ(JoinSpans(Table.m_Rows[1].m_Cells[1]), "String or integer");
+	EXPECT_EQ(JoinSpans(Table.m_Rows[2].m_Cells[1]), "ends with |");
+}
+
+TEST(WikiMarkdownTest, BackslashPairsDoNotEscapeTableDelimiters)
+{
+	CWikiMarkdown Document;
+	ASSERT_TRUE(Document.Parse("| First | Second |\n"
+				   "| --- | --- |\n"
+				   "| path\\\\| next |\n"));
+	ASSERT_EQ(Document.Blocks().size(), 1u);
+	const SWikiBlock &Table = Document.Blocks().front();
+	ASSERT_EQ(Table.m_Type, EWikiBlockType::TABLE);
+	ASSERT_EQ(Table.m_Rows.size(), 2u);
+	ASSERT_EQ(Table.m_vAligns.size(), 2u);
+	EXPECT_EQ(JoinSpans(Table.m_Rows[1].m_Cells[0]), "path\\");
+	EXPECT_EQ(JoinSpans(Table.m_Rows[1].m_Cells[1]), "next");
+}
+
+TEST(WikiMarkdownTest, TableCodeDecodesOnlyTablePipeEscapes)
+{
+	CWikiMarkdown Document;
+	ASSERT_TRUE(Document.Parse(R"(| Command | Description |
+| --- | --- |
+| `i\|s \" \\\|` | Optional arguments |
+)"));
+	ASSERT_EQ(Document.Blocks().size(), 1u);
+	const SWikiBlock &Table = Document.Blocks().front();
+	ASSERT_EQ(Table.m_Type, EWikiBlockType::TABLE);
+	ASSERT_EQ(Table.m_Rows.size(), 2u);
+	ASSERT_EQ(Table.m_vAligns.size(), 2u);
+	EXPECT_TRUE(HasStyle(Table.m_Rows[1].m_Cells[0], WIKI_INLINE_CODE, R"(i|s \" \|)"));
+	EXPECT_EQ(JoinSpans(Table.m_Rows[1].m_Cells[1]), "Optional arguments");
+}
+
 TEST(WikiMarkdownTest, ParsesMediaCodeMathQuoteAndDivider)
 {
 	CWikiMarkdown Document;

@@ -7,6 +7,7 @@
 #include <game/client/ui_rect.h>
 
 #include <functional>
+#include <memory>
 #include <vector>
 
 struct IUiContext;
@@ -37,10 +38,23 @@ struct SWikiLinkContext
 
 namespace qm_wiki_markdown
 {
+	// 随只读文章会话使用。正文替换或关闭时清空。
+	class CTableLayoutCache
+	{
+		struct SState;
+		std::unique_ptr<SState> m_pState;
+		friend float RenderBlocks(const IUiContext &, const std::vector<SWikiBlock> &, CUIRect &, const SWikiRenderStyle &, CScrollRegion *, SWikiLinkContext *, int, CTableLayoutCache *);
+
+	public:
+		CTableLayoutCache();
+		~CTableLayoutCache();
+		void Clear();
+	};
+
 	// 从 Body 顶部开始排版并绘制全部块；Body 会被推进到内容末尾。
 	// pScroll 为空时直接绘制，否则只有 AddRect 通过的行才绘制。
 	// pLinks 非空时记录可点击区域；ScrollToBlock 对应的块会触发滚动定位（用于目录跳转）。
-	float RenderBlocks(const IUiContext &Ctx, const std::vector<SWikiBlock> &vBlocks, CUIRect &Body, const SWikiRenderStyle &Style, CScrollRegion *pScroll, SWikiLinkContext *pLinks = nullptr, int ScrollToBlock = -1);
+	float RenderBlocks(const IUiContext &Ctx, const std::vector<SWikiBlock> &vBlocks, CUIRect &Body, const SWikiRenderStyle &Style, CScrollRegion *pScroll, SWikiLinkContext *pLinks = nullptr, int ScrollToBlock = -1, CTableLayoutCache *pTableLayouts = nullptr);
 } // namespace qm_wiki_markdown
 
 #endif

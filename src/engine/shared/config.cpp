@@ -13,6 +13,7 @@
 #include <engine/shared/protocol.h>
 #include <engine/shared/qm_legacy_config.h>
 #include <engine/shared/qm_removed_config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <cerrno>
@@ -38,10 +39,6 @@ CConfig g_Config;
 // ----------------------- Config Variables
 namespace
 {
-	// QmClient v3：单一变量文件 qmclient/settings.cfg 存在即视为配置系统已收敛，
-	// 不再需要额外的迁移标记文件。
-	constexpr const char *QM_CONFIG_MAIN_PATH = "qmclient/settings.cfg";
-
 #if !defined(CONF_FAMILY_WINDOWS)
 	// Android 的模拟存储（/sdcard，含应用外部 files 目录）不支持 flock，调用返回 ENOSYS；
 	// 同一路径上 POSIX 记录锁可用，所以 flock 不可用时退回 fcntl，语义同样是排他锁。
@@ -148,7 +145,8 @@ namespace
 	class CConfigSaveFiles
 	{
 		IStorage &m_Storage;
-		IOHANDLE (&m_aFiles)[ConfigDomain::NUM];
+		IOHANDLE(&m_aFiles)
+		[ConfigDomain::NUM];
 		const char (&m_aaPaths)[ConfigDomain::NUM][IO_MAX_PATH_LENGTH];
 		bool m_aOpened[ConfigDomain::NUM] = {};
 		bool m_KeepCandidates = false;
@@ -269,7 +267,7 @@ namespace
 bool QmConfigMigrationPending(IStorage *pStorage)
 {
 	// v3：qmclient/settings.cfg 存在即视为配置已收敛，无需额外标记文件。
-	return pStorage && !pStorage->FileExists(QM_CONFIG_MAIN_PATH, IStorage::TYPE_SAVE);
+	return pStorage && !pStorage->FileExists(qm_storage::SETTINGS_FILE, IStorage::TYPE_SAVE);
 }
 
 // 读取变量配置的候选路径列表（v3 合并语义）：
@@ -282,9 +280,9 @@ void QmGetVariableConfigLoadPaths(IStorage *pStorage, std::vector<const char *> 
 	if(!pStorage)
 		return;
 
-	if(pStorage->FileExists(QM_CONFIG_MAIN_PATH, IStorage::TYPE_SAVE))
+	if(pStorage->FileExists(qm_storage::SETTINGS_FILE, IStorage::TYPE_SAVE))
 	{
-		vOut.push_back(QM_CONFIG_MAIN_PATH);
+		vOut.push_back(qm_storage::SETTINGS_FILE);
 		return;
 	}
 
@@ -332,9 +330,9 @@ bool QmFinalizeConfigMigration(IStorage *pStorage)
 
 	// 安全边界：只有合并文件 qmclient/settings.cfg 已生成（调用方 Save 成功）才清理旧文件，
 	// 防止保存失败时误删用户数据。调用时机在 Save(true) 之后，此时 settings.cfg 应已存在。
-	if(!pStorage->FileExists(QM_CONFIG_MAIN_PATH, IStorage::TYPE_SAVE))
+	if(!pStorage->FileExists(qm_storage::SETTINGS_FILE, IStorage::TYPE_SAVE))
 	{
-		log_error("config", "Cannot finalize config migration because '%s' is missing", QM_CONFIG_MAIN_PATH);
+		log_error("config", "Cannot finalize config migration because '%s' is missing", qm_storage::SETTINGS_FILE);
 		return false;
 	}
 
@@ -972,14 +970,20 @@ try
 			return false;
 		}
 	}
-	if(!EnsureConfigPathFolder(m_pStorage, QM_CONFIG_MAIN_PATH))
+	if(!EnsureConfigPathFolder(m_pStorage, qm_storage::SETTINGS_FILE))
 	{
-		SetSaveError("create_folder", QM_CONFIG_MAIN_PATH);
-		log_error("config", "ERROR: creating config folder for %s failed", QM_CONFIG_MAIN_PATH);
+		SetSaveError("create_folder", qm_storage::SETTINGS_FILE);
+		log_error("config", "ERROR: creating config folder for %s failed", qm_storage::SETTINGS_FILE);
+		return false;
+	}
+	if(!qm_storage::EnsureFolder(m_pStorage, qm_storage::RUNTIME_DIR))
+	{
+		SetSaveError("create_folder", qm_storage::RUNTIME_DIR);
+		log_error("config", "ERROR: creating runtime folder for %s failed", qm_storage::CONFIG_SAVE_LOCK_FILE);
 		return false;
 	}
 	char aLockPath[IO_MAX_PATH_LENGTH];
-	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "qmclient/config_save.lock", aLockPath, sizeof(aLockPath));
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, qm_storage::CONFIG_SAVE_LOCK_FILE, aLockPath, sizeof(aLockPath));
 	const CConfigSaveLock SaveLock(aLockPath);
 	if(!SaveLock.IsLocked())
 	{

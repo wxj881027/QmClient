@@ -1,6 +1,6 @@
-#include <game/client/QmUi/UiTag.h>
-
 #include <engine/shared/config.h>
+
+#include <game/client/QmUi/UiTag.h>
 
 #include <gtest/gtest.h>
 
@@ -65,12 +65,12 @@ TEST(QmUiTag, RandomFixedIsStableAndWellSpread)
 TEST(QmUiTag, RandomFixedUsesMonetPalette)
 {
 	// 色板本身：12 色相 × 4 变体 = 48 色、全部不透明、亮度压在同一档（白字够读）。
-	EXPECT_EQ(ui_tag::MONET_HUE_COUNT, 12);
-	EXPECT_EQ(ui_tag::MONET_VARIANTS_PER_HUE, 4);
-	EXPECT_EQ(ui_tag::MONET_PALETTE_SIZE, 48);
-	for(int Index = 0; Index < ui_tag::MONET_PALETTE_SIZE; ++Index)
+	EXPECT_EQ(ui_token::tag::MONET_HUE_COUNT, 12);
+	EXPECT_EQ(ui_token::tag::MONET_VARIANTS_PER_HUE, 4);
+	EXPECT_EQ(ui_token::tag::MONET_PALETTE_SIZE, 48);
+	for(int Index = 0; Index < ui_token::tag::MONET_PALETTE_SIZE; ++Index)
 	{
-		const ColorRGBA &Color = ui_tag::MONET_PALETTE[Index];
+		const ColorRGBA &Color = ui_token::tag::MONET_PALETTE[Index];
 		EXPECT_FLOAT_EQ(Color.a, 1.0f);
 		EXPECT_GT(ui_tag::RelativeLuminance(Color), 0.40f);
 		EXPECT_LT(ui_tag::RelativeLuminance(Color), 0.52f);
@@ -78,9 +78,9 @@ TEST(QmUiTag, RandomFixedUsesMonetPalette)
 	// 同一个词必须落在色板的某一格上（不是再拿 HSL 现算），且可重复。
 	const ui_tag::SColors Colors = ui_tag::Resolve(ui_tag::EColorMode::RANDOM_FIXED, ColorRGBA(), "hj");
 	bool Matched = false;
-	for(int Index = 0; Index < ui_tag::MONET_PALETTE_SIZE; ++Index)
+	for(int Index = 0; Index < ui_token::tag::MONET_PALETTE_SIZE; ++Index)
 	{
-		const ColorRGBA &Color = ui_tag::MONET_PALETTE[Index];
+		const ColorRGBA &Color = ui_token::tag::MONET_PALETTE[Index];
 		Matched = Matched || (std::fabs(Colors.m_Fill.r - Color.r) < 0.001f && std::fabs(Colors.m_Fill.g - Color.g) < 0.001f && std::fabs(Colors.m_Fill.b - Color.b) < 0.001f);
 	}
 	EXPECT_TRUE(Matched);

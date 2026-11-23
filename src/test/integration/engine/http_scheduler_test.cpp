@@ -345,20 +345,13 @@ TEST(HttpSchedulerFailure, PollFailureCompletesRequestsAndReleasesTransport)
 			}
 			pProbe->m_ActiveAtFailure = pProbe->m_pActive->State();
 			pProbe->m_Http.Run(pProbe->m_pPending);
-			return CURLM_INTERNAL_ERROR;
-		},
-			[](CURL *pHandle) {
+			return CURLM_INTERNAL_ERROR; }, [](CURL *pHandle) {
 				pProbe->m_EasyCleanup = ++pProbe->m_CleanupOrder;
-				curl_easy_cleanup(pHandle);
-			},
-			[](CURLM *pHandle) {
+				curl_easy_cleanup(pHandle); }, [](CURLM *pHandle) {
 				pProbe->m_MultiCleanup = ++pProbe->m_CleanupOrder;
-				return curl_multi_cleanup(pHandle);
-			},
-			[] {
+				return curl_multi_cleanup(pHandle); }, [] {
 				pProbe->m_GlobalCleanup = ++pProbe->m_CleanupOrder;
-				curl_global_cleanup();
-			});
+				curl_global_cleanup(); });
 		pProbe = nullptr;
 
 		EXPECT_EQ(Probe.m_ActiveAtFailure, EHttpState::RUNNING);
@@ -465,9 +458,8 @@ TEST(HttpSchedulerReentry, RunningShutdownCompletionCanSubmitAnotherRequest)
 #include <engine/shared/http_emscripten.h>
 #include <engine/storage.h>
 
-#include <test/test.h>
-
 #include <emscripten/emscripten.h>
+#include <test/test.h>
 
 #include <chrono>
 #include <memory>

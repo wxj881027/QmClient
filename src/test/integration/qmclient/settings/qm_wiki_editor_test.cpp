@@ -3,6 +3,7 @@
 // 保存到哪里、还原是否真的删文件、草稿在 Esc 与换文档后如何处理，
 // 这些都不是纯字符串判断能覆盖的，必须走真实 IStorage 与真实解析器。
 #include <engine/shared/config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/QmUi/QmWikiEditor.h>
@@ -64,7 +65,7 @@ namespace
 		std::string ReadOverride(const char *pRelativePath) const
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
-			str_format(aPath, sizeof(aPath), "wiki/simplified_chinese/%s.md", pRelativePath);
+			str_format(aPath, sizeof(aPath), "%s/simplified_chinese/%s.md", qm_storage::CONTENT_WIKI_DIR, pRelativePath);
 			IOHANDLE File = m_pStorage->OpenFile(aPath, IOFLAG_READ, IStorage::TYPE_SAVE);
 			if(File == nullptr)
 				return std::string();
@@ -80,7 +81,7 @@ namespace
 		bool OverrideExists(const char *pRelativePath) const
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
-			str_format(aPath, sizeof(aPath), "wiki/simplified_chinese/%s.md", pRelativePath);
+			str_format(aPath, sizeof(aPath), "%s/simplified_chinese/%s.md", qm_storage::CONTENT_WIKI_DIR, pRelativePath);
 			return m_pStorage->FileExists(aPath, IStorage::TYPE_SAVE);
 		}
 	};
@@ -135,7 +136,7 @@ TEST_F(CQmWikiEditorTest, SavingWritesUnderLanguageDirectoryAndClearsDraft)
 	EXPECT_FALSE(State.m_EditDirty);
 	EXPECT_EQ(State.m_Draft, Draft);
 	EXPECT_FALSE(State.m_StatusIsError);
-	EXPECT_NE(std::string(State.m_aStatus).find("wiki/simplified_chinese/qm/wiki-editor-test.md"), std::string::npos);
+	EXPECT_NE(std::string(State.m_aStatus).find("qmclient/content/wiki/simplified_chinese/qm/wiki-editor-test.md"), std::string::npos);
 }
 
 TEST_F(CQmWikiEditorTest, ResetToBuiltInRemovesOverrideFile)
@@ -249,4 +250,41 @@ TEST_F(CQmWikiEditorTest, SavingWithoutStorageReportsErrorAndKeepsDraft)
 	EXPECT_GT(str_length(State.m_aStatus), 0);
 	EXPECT_TRUE(State.m_EditDirty);
 	EXPECT_EQ(State.m_Draft, "Draft that cannot be saved.");
+}
+
+TEST_F(CQmWikiEditorTest, OfflineCommandResultReturnsTheExactTableRowInBothLanguages)
+{
+	const std::string ExecutablePath = TestSourcePath("qmclient.exe");
+	const char *apArgs[] = {ExecutablePath.c_str()};
+	auto pShippedStorage = CreateTempStorage(m_Info.StoragePath(), 1, apArgs);
+	ASSERT_NE(pShippedStorage, nullptr);
+
+	using namespace qm_wiki_docs;
+	CDdnetWikiIndex Index;
+	const auto vMatches = Index.Search("BAN_REGION 怎么用？", pShippedStorage.get());
+	ASSERT_FALSE(vMatches.empty());
+	const auto &Match = vMatches.front();
+	EXPECT_STREQ(DdnetWikiArticle(Match.m_Article).m_pSlug, "settings-and-commands");
+	ASSERT_TRUE(Match.m_aAvailable[ENGLISH]);
+	ASSERT_TRUE(Match.m_aAvailable[SIMPLIFIED_CHINESE]);
+	EXPECT_NE(Match.m_aExcerpts[ENGLISH].find("Ban player in a region"), std::string::npos);
+	EXPECT_NE(Match.m_aExcerpts[ENGLISH].find("ip|id"), std::string::npos);
+	EXPECT_NE(Match.m_aExcerpts[SIMPLIFIED_CHINESE].find("禁止某个地区的玩家"), std::string::npos);
+}
+
+TEST_F(CQmWikiEditorTest, ChineseHeadingQueryShowsTheExplanationFromTheArticle)
+{
+	const std::string ExecutablePath = TestSourcePath("qmclient.exe");
+	const char *apArgs[] = {ExecutablePath.c_str()};
+	auto pShippedStorage = CreateTempStorage(m_Info.StoragePath(), 1, apArgs);
+	ASSERT_NE(pShippedStorage, nullptr);
+
+	using namespace qm_wiki_docs;
+	CDdnetWikiIndex Index;
+	const auto vMatches = Index.Search("嵌套绑定", pShippedStorage.get());
+	ASSERT_FALSE(vMatches.empty());
+	const auto &Match = vMatches.front();
+	EXPECT_STREQ(DdnetWikiArticle(Match.m_Article).m_pSlug, "binds");
+	EXPECT_GE(Match.m_aBlocks[SIMPLIFIED_CHINESE], 0);
+	EXPECT_NE(Match.m_aExcerpts[SIMPLIFIED_CHINESE].find("反斜杠"), std::string::npos);
 }

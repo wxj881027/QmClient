@@ -10,6 +10,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.function.BooleanSupplier;
 
 import androidx.core.content.ContextCompat;
@@ -99,6 +100,8 @@ public class ClientActivity extends SDLActivity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+		// 必须在 super.onCreate 之前读：SDL 主线程随后会写入本次预建的条目名。
+		final String previousCrashReport = QmCrashReportSink.takePreviousReportName(this);
 
 		// 手机端默认 GLES：Vulkan 在部分驱动的表面/交换链生命周期上仍不稳定，
 		// 先默认走 GLES；需要 Vulkan 时用 intent extra "gfx-backend=Vulkan" 覆盖。
@@ -119,6 +122,17 @@ public class ClientActivity extends SDLActivity {
 		// 先落系统退出记录：原生搬运逻辑随后就要扫描报告目录，晚于它就得等下次启动。
 		QmCrashExitInfo.collect(this);
 		mediaExporter = new QmMediaExporter(this, savedInstanceState);
+
+		if(previousCrashReport != null) {
+			// MediaStore 查询走 binder，放后台线程，避免拖慢启动。
+			new Thread(() -> {
+				final String confirmed = QmCrashReportSink.confirmCrashReport(this, previousCrashReport);
+				if(confirmed == null)
+					return;
+				final String message = "上次运行发生崩溃，报告已保存到 下载/QmClient/" + confirmed;
+				runOnUiThread(() -> Toast.makeText(this, message, Toast.LENGTH_LONG).show());
+			}).start();
+		}
 	}
 
 	@Override
@@ -158,24 +172,47 @@ public class ClientActivity extends SDLActivity {
 	}
 
 	public boolean exportToDownloads(String path) {
-		final File source = new File(path);
-		if(!source.isFile()) {
-			runOnUiThread(() -> Toast.makeText(this, "导出失败：文件不存在", Toast.LENGTH_LONG).show());
+		if(path == null || path.isEmpty() || !new File(path).isFile()) {
+			showDownloadResult("导出失败：文件不存在");
 			return false;
 		}
-		new Thread(() -> {
-			String message;
-			try {
-				final String saved = QmMediaExporter.copyToDownloads(this, source);
-				message = saved != null ? "已保存到 下载/QmClient/" + saved : "导出失败";
-			} catch(Throwable e) {
-				Log.w("qmclient", "export failed", e);
-				message = "导出失败：" + e.getMessage();
-			}
-			final String text = message;
-			runOnUiThread(() -> Toast.makeText(this, text, Toast.LENGTH_LONG).show());
-		}).start();
+		new Thread(() -> exportFileToDownloads(new File(path))).start();
 		return true;
+	}
+
+	public boolean exportCrashReportToDownloads(String path) {
+		return path != null && !path.isEmpty() && exportFileToDownloads(new File(path));
+	}
+
+	private boolean exportFileToDownloads(File source) {
+		final String saved;
+		try {
+			saved = QmMediaExporter.copyToDownloads(getApplicationContext(), source);
+		} catch(IOException | RuntimeException | OutOfMemoryError error) {
+			Log.w("qmclient", "export failed", error);
+			showDownloadResult("导出失败");
+			return false;
+		}
+		showDownloadResult("已保存到 下载/QmClient/" + saved);
+		return true;
+	}
+
+	private void showDownloadResult(String message) {
+		try {
+			runOnUiThread(() -> {
+				if(!isFinishing() && !isDestroyed())
+					Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+			});
+		} catch(RuntimeException | OutOfMemoryError error) {
+			Log.w("qmclient", "could not show export result", error);
+		}
+	}
+
+	// Called from native code, see android_main.cpp
+	// 预打开「下载/QmClient」里的崩溃报告条目，返回裸 fd；失败返回 -1，
+	// 此时客户端回退到沙盒报告 + 下次启动搬运。
+	public int prepareCrashReport(String displayName) {
+		return QmCrashReportSink.prepare(this, displayName);
 	}
 
 	public void showMediaFiles(String directory, boolean videos, String[] excluded) {
@@ -199,6 +236,8 @@ public class ClientActivity extends SDLActivity {
 					mediaExporter.close();
 			} finally {
 				super.onDestroy();
+				if(isFinishing())
+					QmCrashReportSink.discard(this);
 			}
 		}
 	}

@@ -192,12 +192,14 @@ namespace
 		// 持久化缓存头部与正文由生产格式决定，测试只构造文件内容。
 		void WritePersistentList(const char *pBody, int64_t Received = time_timestamp(), int Age = 0, const char *pSourceKey = "https://one.test/list\n")
 		{
-			m_pStorage->CreateFolder("cache", IStorage::TYPE_SAVE);
+			m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+			m_pStorage->CreateFolder("qmclient/cache", IStorage::TYPE_SAVE);
+			m_pStorage->CreateFolder("qmclient/cache/network", IStorage::TYPE_SAVE);
 			const std::string SourceKey(pSourceKey);
 			char aHash[SHA256_MAXSTRSIZE];
 			sha256_str(sha256(SourceKey.data(), SourceKey.size()), aHash, sizeof(aHash));
 			const std::string Text = "QMSL1 " + std::to_string(Received) + " " + std::to_string(Age) + " " + aHash + "\n" + pBody;
-			IOHANDLE File = m_pStorage->OpenFile("cache/qm-serverlist.json", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			IOHANDLE File = m_pStorage->OpenFile("qmclient/cache/network/serverlist.json", IOFLAG_WRITE, IStorage::TYPE_SAVE);
 			ASSERT_NE(File, nullptr);
 			io_write(File, Text.data(), Text.size());
 			io_close(File);
@@ -884,7 +886,8 @@ TEST_F(QmServerListRecovery, ShutdownDrainsLatestCoalescedSaveAfterBrowserDestru
 	EXPECT_EQ(pWrites->m_vBodies[1].find("Intermediate"), std::string::npos);
 	void *pSaved;
 	unsigned Size;
-	ASSERT_TRUE(m_pStorage->ReadFile("cache/qm-serverlist.json", IStorage::TYPE_SAVE, &pSaved, &Size));
+	ASSERT_TRUE(m_pStorage->ReadFile("qmclient/cache/network/serverlist.json", IStorage::TYPE_SAVE, &pSaved, &Size));
+	EXPECT_FALSE(m_pStorage->FileExists("cache/qm-serverlist.json", IStorage::TYPE_SAVE));
 	const std::string Saved(static_cast<char *>(pSaved), Size);
 	free(pSaved);
 	EXPECT_NE(Saved.find("Latest"), std::string::npos);

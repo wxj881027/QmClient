@@ -93,16 +93,29 @@ TEST(QmDummyDistanceLink, BothTeesFrozenHideLinkUntilEitherWakes)
 	}
 }
 
-TEST(QmDummyDistanceLink, MoreDistantTeesFadeButNeverDisappear)
+TEST(QmDummyDistanceLink, OpacityStaysConstantThroughFifteenTiles)
 {
-	const auto Near = MakeLink(MAIN, SEndpoint{vec2(12, 0), false}, 380);
-	const auto Far = MakeLink(MAIN, SEndpoint{vec2(1800, 0), false}, 380);
-	const auto Farther = MakeLink(MAIN, SEndpoint{vec2(65536, 0), false}, 380);
-	ASSERT_TRUE(Near && Far && Farther);
-	EXPECT_GT(Near->m_Alpha, Far->m_Alpha);
-	EXPECT_GT(Far->m_Alpha, Farther->m_Alpha);
-	EXPECT_GT(Farther->m_Alpha, 0.0f);
-	EXPECT_EQ(Farther->LineEnd(), Farther->m_Dummy);
+	const auto Near = MakeLink(MAIN, SEndpoint{vec2(32.0f, 0.0f), false}, 380);
+	const auto AtFadeStart = MakeLink(MAIN, SEndpoint{vec2(288.0f, 384.0f), false}, 380);
+	ASSERT_TRUE(Near && AtFadeStart);
+	EXPECT_FLOAT_EQ(Near->m_Alpha, 0.9f);
+	EXPECT_FLOAT_EQ(AtFadeStart->m_Alpha, Near->m_Alpha);
+}
+
+TEST(QmDummyDistanceLink, OpacityFadesLinearlyAfterFifteenTiles)
+{
+	const auto Midway = MakeLink(MAIN, SEndpoint{vec2(720.0f, 0.0f), false}, 380);
+	const auto BeforeFadeEnd = MakeLink(MAIN, SEndpoint{vec2(959.0f, 0.0f), false}, 380);
+	ASSERT_TRUE(Midway && BeforeFadeEnd);
+	EXPECT_FLOAT_EQ(Midway->m_Alpha, 0.45f);
+	EXPECT_GT(BeforeFadeEnd->m_Alpha, 0.0f);
+	EXPECT_LT(BeforeFadeEnd->m_Alpha, Midway->m_Alpha);
+}
+
+TEST(QmDummyDistanceLink, LinkIsHiddenAtThirtyTilesAndBeyond)
+{
+	EXPECT_FALSE(MakeLink(MAIN, SEndpoint{vec2(960.0f, 0.0f), false}, 380));
+	EXPECT_FALSE(MakeLink(MAIN, SEndpoint{vec2(961.0f, 0.0f), false}, 380));
 }
 
 TEST(QmDummyDistanceLink, LineConnectsOpposingTipsAndLengthensAsDropsRecede)

@@ -177,7 +177,7 @@ void CQmHudNotifications::OnRender()
 #if defined(CONF_VIDEORECORDER)
 	// 通知内容来自聊天消息（被路由成通知的聊天行会被抑制），因此回放/导出跟随回放聊天显示配置，
 	// 普通录制跟随 cl_video_showchat，避免出现「聊天被抑制但通知又不录」的丢消息。
-	if(!HudEditorPreview && IVideo::Current() && !qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), true).m_Chat)
+	if(!HudEditorPreview && IVideo::Current() && !qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->ReplaySessionStatus().ViewMode(), true).m_Chat)
 		return;
 #endif
 

@@ -20,6 +20,30 @@ TEST(SettingsResourceJobsSkinPlan, SkinSnapshotRejectsStaleGeneration)
 	EXPECT_FALSE(SettingsSkinListPlanGenerationMatches(Result, 8));
 }
 
+TEST(SettingsResourceJobsSkinPlan, PlanRetainsMaterializationMetadata)
+{
+	SSettingsSkinListEntry Entry;
+	Entry.m_Name = "match_me";
+	Entry.m_Selected = true;
+	Entry.m_SelectedMain = true;
+	Entry.m_Favorite = true;
+	Entry.m_ColorKey = SSettingsSkinListColorKey{true, 11, 22};
+	Entry.m_NameMatchStart = 6;
+	Entry.m_NameMatchLength = 2;
+
+	const SSettingsSkinListPlan Plan = BuildSettingsSkinListPlan({Entry}, 0);
+	ASSERT_EQ(Plan.m_vEntries.size(), 1u);
+	EXPECT_TRUE(Plan.m_vEntries[0].m_Selected);
+	EXPECT_TRUE(Plan.m_vEntries[0].m_SelectedMain);
+	EXPECT_FALSE(Plan.m_vEntries[0].m_SelectedDummy);
+	EXPECT_TRUE(Plan.m_vEntries[0].m_Favorite);
+	EXPECT_EQ(Plan.m_vEntries[0].m_NameMatchStart, 6);
+	EXPECT_EQ(Plan.m_vEntries[0].m_NameMatchLength, 2);
+	ASSERT_TRUE(Plan.m_vEntries[0].m_ColorKey.has_value());
+	EXPECT_EQ(Plan.m_vEntries[0].m_ColorKey->m_ColorBody, 11);
+	EXPECT_EQ(Plan.m_vEntries[0].m_ColorKey->m_ColorFeet, 22);
+}
+
 TEST(SettingsResourceJobsSkinPlan, CurrentViewportRequestsPrecedeOldVisibleAndPrefetch)
 {
 	const std::vector<int> Requests{0, 1, 2, 3, 4};
@@ -73,16 +97,16 @@ TEST(SettingsResourceJobsSkinPlan, ViewportPriorityExpiresUnlessRepublished)
 {
 	CSettingsSkinLoadViewport Viewport;
 	Viewport.BeginFrame();
-	Viewport.Publish({"cat", "default"});
+	EXPECT_TRUE(Viewport.Publish({"cat", "default"}));
 	EXPECT_TRUE(Viewport.Contains("cat"));
 	Viewport.BeginFrame();
 	EXPECT_FALSE(Viewport.Contains("cat"));
-	Viewport.Publish({"cat", "default"});
+	EXPECT_FALSE(Viewport.Publish({"cat", "default"}));
 	EXPECT_TRUE(Viewport.Contains("cat"));
-	Viewport.Publish({"dog"});
+	EXPECT_TRUE(Viewport.Publish({"dog"}));
 	EXPECT_FALSE(Viewport.Contains("cat"));
 	EXPECT_TRUE(Viewport.Contains("dog"));
-	Viewport.Publish({});
+	EXPECT_TRUE(Viewport.Publish({}));
 	EXPECT_FALSE(Viewport.Contains("dog"));
 }
 
@@ -90,14 +114,56 @@ TEST(SettingsResourceJobsSkinPlan, MeasurementDoesNotReplaceRealViewport)
 {
 	CSettingsSkinLoadViewport Viewport;
 	Viewport.BeginFrame();
-	Viewport.Publish({"cat"});
-	Viewport.Publish({"dog"}, true);
+	EXPECT_TRUE(Viewport.Publish({"cat"}));
+	EXPECT_FALSE(Viewport.Publish({"dog"}, true));
 	EXPECT_TRUE(Viewport.Contains("cat"));
 	EXPECT_FALSE(Viewport.Contains("dog"));
 	Viewport.BeginFrame();
-	Viewport.Publish({"dog"}, true);
+	EXPECT_FALSE(Viewport.Publish({"dog"}, true));
 	EXPECT_FALSE(Viewport.Contains("cat"));
 	EXPECT_FALSE(Viewport.Contains("dog"));
+}
+
+TEST(SettingsResourceJobsSkinPlan, ViewportPublishReportsOnlyRealChanges)
+{
+	CSettingsSkinLoadViewport Viewport;
+	Viewport.BeginFrame();
+	EXPECT_TRUE(Viewport.Publish({"cat"}));
+	EXPECT_FALSE(Viewport.Publish({"cat"}));
+	EXPECT_TRUE(Viewport.Publish({"cat", "dog"}));
+	EXPECT_FALSE(Viewport.Publish({"cat", "dog"}));
+	EXPECT_EQ(Viewport.PublishedNames(), (std::vector<std::string>{"cat", "dog"}));
+}
+
+TEST(SettingsResourceJobsSkinPlan, StaleViewportRequestsReleaseOnlyTransientNonActiveLoads)
+{
+	constexpr bool PendingOrLoading = true;
+	EXPECT_TRUE(SettingsSkinShouldReleaseViewportRequest(false, false, false, ESettingsResourcePriority::VISIBLE, PendingOrLoading));
+	EXPECT_FALSE(SettingsSkinShouldReleaseViewportRequest(true, false, false, ESettingsResourcePriority::VISIBLE, PendingOrLoading));
+	EXPECT_FALSE(SettingsSkinShouldReleaseViewportRequest(false, true, false, ESettingsResourcePriority::VISIBLE, PendingOrLoading));
+	EXPECT_FALSE(SettingsSkinShouldReleaseViewportRequest(false, false, true, ESettingsResourcePriority::VISIBLE, PendingOrLoading));
+	EXPECT_FALSE(SettingsSkinShouldReleaseViewportRequest(false, false, false, ESettingsResourcePriority::BACKGROUND, PendingOrLoading));
+	EXPECT_FALSE(SettingsSkinShouldReleaseViewportRequest(false, false, false, ESettingsResourcePriority::VISIBLE, false));
+}
+
+TEST(SettingsResourceJobsSkinPlan, DownloadSessionLimitAndWaitLoggingAreBounded)
+{
+	EXPECT_TRUE(SettingsSkinCanStartDownloadSession(0, 48));
+	EXPECT_TRUE(SettingsSkinCanStartDownloadSession(47, 48));
+	EXPECT_FALSE(SettingsSkinCanStartDownloadSession(48, 48));
+	EXPECT_TRUE(SettingsSkinCanStartDownloadSession(999, 0));
+
+	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(10, 0, 10));
+	EXPECT_FALSE(SettingsSkinWaitLogShouldEmit(19, 10, 10));
+	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(20, 10, 10));
+	EXPECT_TRUE(SettingsSkinWaitLogShouldEmit(11, 0, 10));
+}
+
+TEST(SettingsResourceJobsSkinPlan, LeavingSettingsUsesBoundedResidency)
+{
+	EXPECT_EQ(SettingsSkinInactiveResidencyLimit(512), (size_t)128);
+	EXPECT_EQ(SettingsSkinInactiveResidencyLimit(64), (size_t)64);
+	EXPECT_EQ(SettingsSkinInactiveResidencyLimit(0), (size_t)0);
 }
 
 TEST(SettingsResourceJobsSkinPlan, ActualViewportExcludesFullyClippedAndMeasurementRows)
@@ -116,28 +182,16 @@ TEST(SettingsResourceJobsSkinPlan, AssetListRejectsStaleJobGeneration)
 	EXPECT_FALSE(SettingsAssetListJobGenerationMatches(4, 5));
 }
 
-TEST(SettingsResourceJobsSkinPlan, SkinListPublishesOnlyCompleteMergedList)
+TEST(SettingsResourceJobsSkinPlan, SkinListPublishesAfterFirstPageAndPrefetch)
 {
 	EXPECT_FALSE(SettingsSkinListShouldPublishMergedList(0, 3));
 	EXPECT_FALSE(SettingsSkinListShouldPublishMergedList(2, 3));
 	EXPECT_TRUE(SettingsSkinListShouldPublishMergedList(3, 3));
 	EXPECT_TRUE(SettingsSkinListShouldPublishMergedList(0, 0));
-}
-
-TEST(SettingsResourceJobsSkinPlan, SkinListReplacesPublishedEntriesAfterStableDirectory)
-{
-	EXPECT_TRUE(SettingsSkinListShouldReplacePublishedEntries(0, 3, true, true));
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(0, 3, false, false));
-	EXPECT_TRUE(SettingsSkinListShouldReplacePublishedEntries(0, 3, false, true));
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(10, 20, false, false));
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(20, 10, false, false));
-}
-
-TEST(SettingsResourceJobsSkinPlan, SkinListKeepsPublishedEntriesUntilDirectoryScanSettles)
-{
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(0, 1, true, false));
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(0, 3, true, false));
-	EXPECT_FALSE(SettingsSkinListShouldReplacePublishedEntries(3, 1, true, false));
+	// 7037 条不再等全量合并：54 条（8 可见行 + 1 预取行 × 6 列）即可发布首屏。
+	EXPECT_FALSE(SettingsSkinListShouldPublishMergedList(53, 7037));
+	EXPECT_TRUE(SettingsSkinListShouldPublishMergedList(54, 7037));
+	EXPECT_TRUE(SettingsSkinListShouldPublishMergedList(7037, 7037));
 }
 
 TEST(SettingsResourceJobsSkinPlan, SkinListSkeletonReadyDoesNotRequirePreviewResources)
@@ -220,6 +274,51 @@ TEST(SettingsResourceJobsSkinPlan, SourceAdmissionUsesVisibleReserveForVisibleRe
 	EXPECT_FALSE(Decision.m_CountFuseApplies);
 }
 
+TEST(SettingsResourceJobsSkinPlan, VisibleRequestsCanUseBoundedOverflowAboveBackgroundWindow)
+{
+	const auto Decision = SettingsSkinSourceAdmissionDecision({
+		true,
+		ESettingsResourcePriority::VISIBLE,
+		false,
+		249,
+		64,
+		128,
+		35,
+		512,
+	});
+
+	EXPECT_TRUE(Decision.m_PromoteAllowed);
+	EXPECT_EQ(Decision.m_PromotePriority, ESettingsResourcePriority::VISIBLE);
+	EXPECT_EQ(Decision.m_BlockReason, ESettingsSkinSourceAdmissionBlockReason::NONE);
+	EXPECT_FALSE(Decision.m_CountFuseApplies);
+}
+
+TEST(SettingsResourceJobsSkinPlan, VisibleRequestsRemainBoundedByCountFuse)
+{
+	const auto Decision = SettingsSkinSourceAdmissionDecision({
+		true,
+		ESettingsResourcePriority::VISIBLE,
+		false,
+		512,
+		64,
+		128,
+		35,
+		512,
+	});
+
+	EXPECT_FALSE(Decision.m_PromoteAllowed);
+	EXPECT_EQ(Decision.m_BlockReason, ESettingsSkinSourceAdmissionBlockReason::VISIBLE_RESERVE);
+	EXPECT_FALSE(Decision.m_CountFuseApplies);
+}
+
+TEST(SettingsResourceJobsSkinPlan, FallbackSweepOnlyRunsWithoutExplicitQueues)
+{
+	EXPECT_TRUE(SettingsSkinFallbackSweepShouldRun(false, false));
+	EXPECT_FALSE(SettingsSkinFallbackSweepShouldRun(true, false));
+	EXPECT_FALSE(SettingsSkinFallbackSweepShouldRun(false, true));
+	EXPECT_FALSE(SettingsSkinFallbackSweepShouldRun(true, true));
+}
+
 TEST(SettingsResourceJobsSkinPlan, AllVisibleReadyLoggingRequiresVisibleRows)
 {
 	EXPECT_FALSE(SettingsSkinListShouldLogAllVisibleReady(true, false, 0));
@@ -236,13 +335,6 @@ TEST(SettingsResourceJobsSkinPlan, SkeletonReadyPublishedCountMatchesSnapshotCou
 	EXPECT_EQ(static_cast<int>(vPublished.size()), Snapshot.m_ItemCount);
 }
 
-TEST(SettingsResourceJobsSkinPlan, SkinListKeepsPendingPlanAliveUntilPublishGateOpens)
-{
-	EXPECT_TRUE(SettingsSkinListHasPendingMergeWork(true, 3, 3, 3));
-	EXPECT_TRUE(SettingsSkinListHasPendingMergeWork(true, 0, 0, 0));
-	EXPECT_FALSE(SettingsSkinListHasPendingMergeWork(false, 3, 3, 3));
-}
-
 TEST(SettingsResourceJobsSkinPlan, VisibleSkinListEntriesRequestImmediateLoad)
 {
 	EXPECT_TRUE(SettingsSkinListShouldRequestImmediateLoad(true));
@@ -251,14 +343,13 @@ TEST(SettingsResourceJobsSkinPlan, VisibleSkinListEntriesRequestImmediateLoad)
 
 TEST(SettingsResourceJobsSkinPlan, RuntimeWarmupOnlyRunsOnSettingsPageWhenIdle)
 {
-	EXPECT_TRUE(SettingsRuntimeWarmupShouldRun(true, true, false, false, false, false, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, false, false, false, false, false, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, true, false, false, false, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, true, false, false, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, false, true, false, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, false, false, true, false));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, false, false, false, true));
-	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(false, true, false, false, false, false, false));
+	EXPECT_TRUE(SettingsRuntimeWarmupShouldRun(true, true, false, false, false, false));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, false, false, false, false, false));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, true, false, false, false));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, true, false, false));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, false, true, false));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(true, true, false, false, false, true));
+	EXPECT_FALSE(SettingsRuntimeWarmupShouldRun(false, true, false, false, false, false));
 }
 
 TEST(SettingsResourceJobsSkinPlan, SkinListWarmupCountsCoverVisibleAndPrefetchRows)
@@ -266,8 +357,15 @@ TEST(SettingsResourceJobsSkinPlan, SkinListWarmupCountsCoverVisibleAndPrefetchRo
 	EXPECT_EQ(SettingsSkinListFirstPageWarmupEntries(180.0f, 50.0f, 1, 2), 6);
 	EXPECT_EQ(SettingsSkinListFirstPageWarmupEntries(300.0f, 50.0f, 4, 1), 28);
 	EXPECT_EQ(SettingsSkinListFirstPageWarmupEntries(0.0f, 50.0f, 1, 2), 0);
-	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(300.0f), 28);
-	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(120.0f), 24);
+	EXPECT_EQ(SettingsSkinListFirstPageEntryCount(1), 9);
+	EXPECT_EQ(SettingsSkinListFirstPageEntryCount(4), 36);
+	EXPECT_EQ(SettingsSkinListFirstPageEntryCount(6), 54);
+	EXPECT_EQ(SettingsSkinListFirstPageEntryCount(9), 54);
+	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(300.0f), 54);
+	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(300.0f, 6), 54);
+	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(300.0f, 4), 36);
+	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(300.0f, 1), 9);
+	EXPECT_EQ(SettingsTeeSkinListFirstPageWarmupEntries(0.0f, 6), 0);
 	EXPECT_EQ(SettingsSkinListPrefetchCount(0, 2, 1, 2, 10), 2);
 	EXPECT_EQ(SettingsSkinListPrefetchCount(7, 9, 1, 2, 10), 0);
 	EXPECT_EQ(SettingsSkinListBackgroundWarmupCount(20, 6), 6);
@@ -290,7 +388,7 @@ TEST(SettingsResourceJobsSkinPlan, SkinBackgroundScanKeepsOneStableStartCursorPe
 TEST(SettingsResourceJobsSkinPlan, LoadingPrewarmAttemptBudgetReservesExtraTeeSourceSettlePasses)
 {
 	EXPECT_EQ(SettingsLoadingPrewarmMaxAttempts(0, 0), 33);
-	EXPECT_EQ(SettingsLoadingPrewarmMaxAttempts(19, 28), 132);
+	EXPECT_EQ(SettingsLoadingPrewarmMaxAttempts(19, 54), 184);
 	EXPECT_EQ(SettingsLoadingPrewarmMaxAttempts(19, 8), 108);
 }
 

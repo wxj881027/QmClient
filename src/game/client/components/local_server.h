@@ -10,6 +10,7 @@
 #include <game/client/component.h>
 
 #include <chrono>
+#include <string>
 #include <vector>
 
 class CLocalServer : public CComponentInterfaces

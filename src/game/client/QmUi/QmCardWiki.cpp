@@ -426,9 +426,9 @@ namespace
 		},
 		{
 			"deck:tee-skin-options",
-			Localizable("Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants."),
-			Localizable("Tick \"Download skins\", \"Download community skins\" or \"Vanilla skins only\", then type a \"Skin prefix\" or use a preset such as \"kitty\"."),
-			Localizable("\"Vanilla skins only\" hides every custom skin, so turn it off if your skin suddenly turns default."),
+			Localizable("Decides which skins the client downloads and can add a prefix to load prefixed skin variants."),
+			Localizable("Tick the download toggles, then use \"Data source\" in \"Skin search\" to choose which source catalog is shown."),
+			Localizable("\"Data source\" filters catalog membership and stays independent of downloads; the same skin can match several catalogs."),
 		},
 		{
 			"deck:tee-skin-queue",
@@ -549,6 +549,12 @@ namespace
 			Localizable("Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, checkpoint and switch tiles."),
 			Localizable("Drag a slider like \"Death opacity\" or \"Teleport opacity\" from 0 to 100%, or use \"Overlay entities\" to fade the whole entity layer."),
 			Localizable("Fading death and freeze tiles helps you see tees and weapons behind them, but the exact tile edge gets harder to judge."),
+		},
+		{
+			"qm:fast_practice",
+			Localizable("Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands."),
+			Localizable("Turn off \"Show main-world ghost\" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box."),
+			Localizable("Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too."),
 		},
 		{
 			"qm:focus_mode",
@@ -720,9 +726,9 @@ namespace
 		},
 		{
 			"qm:water_hammer",
-			Localizable("Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses."),
-			Localizable("Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size."),
-			Localizable("Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded."),
+			Localizable("Highlight held hammer and hook inputs while frozen"),
+			Localizable("The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys."),
+			Localizable("Own includes your main tee and dummy. Other players must be on your team and require server preinput support."),
 		},
 		{
 			"qm:weapon_animation",

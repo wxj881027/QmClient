@@ -7,12 +7,12 @@
 #include <engine/engine.h>
 
 #if defined(CONF_FAMILY_WINDOWS)
-#include <memory>
-#include <new>
-
 #include <windows.h>
 
 #include <tlhelp32.h>
+
+#include <memory>
+#include <new>
 #endif
 
 namespace

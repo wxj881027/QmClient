@@ -14,6 +14,7 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/csv.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/textrender.h>
 
 #include <generated/protocol.h>
@@ -192,7 +193,7 @@ namespace
 		std::vector<Regex> m_Regexes;
 	};
 
-	static constexpr const char *QM_CHAT_LOG_DIR = "qmclient/chat_log";
+	static constexpr const char *QM_CHAT_LOG_DIR = qm_storage::CONTENT_CHAT_LOG_DIR;
 	static constexpr const char *QM_CHAT_LOG_PREFIX = "auto_chat_";
 	static constexpr const char *QM_CHAT_LOG_EXTENSION = ".txt";
 
@@ -451,12 +452,12 @@ static float ClampPresentationProgress(float Value)
 static bool ShouldCensorChatInput(const char *pInput)
 {
 	return g_Config.m_ClStreamerMode &&
-		(str_startswith(pInput, "/login ") ||
-			str_startswith(pInput, "/register ") ||
-			str_startswith(pInput, "/code ") ||
-			str_startswith(pInput, "/timeout ") ||
-			str_startswith(pInput, "/save ") ||
-			str_startswith(pInput, "/load "));
+	       (str_startswith(pInput, "/login ") ||
+		       str_startswith(pInput, "/register ") ||
+		       str_startswith(pInput, "/code ") ||
+		       str_startswith(pInput, "/timeout ") ||
+		       str_startswith(pInput, "/save ") ||
+		       str_startswith(pInput, "/load "));
 }
 
 CChat::CChat()
@@ -866,7 +867,7 @@ bool CChat::UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit,
 	// 拖动与滚动条是同一语义：直接跟手写进公共滚动状态（SetOffset），松手后
 	// 由 QmScroll 的越界回弹收回合法范围，不再各自维护一份整数偏移。
 	const SQmScrollMetrics Metrics = QmChatHistoryScrollMetrics(TotalVisibleLines, VisibleLineCapacity);
-	const SQmScrollConfig Config = QmChatHistoryScrollConfig(LineHeight);
+	const SQmScrollConfig Config = QmChatHistoryScrollConfig(LineHeight, VisibleLineCapacity);
 	const int CurrentLine = QmChatHistoryScrollLine(m_HistoryScroll.Offset(), Metrics);
 	const int NewBacklogLine = ClampBacklogLine(CurrentLine + Lines, TotalVisibleLines, VisibleLineCapacity);
 	if(NewBacklogLine == m_BacklogCurLine)
@@ -2182,12 +2183,7 @@ void CChat::StoreSave(const char *pText)
 
 static bool EnsureChatLogFolder(IStorage *pStorage)
 {
-	if(!pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE) && !pStorage->FolderExists("qmclient", IStorage::TYPE_SAVE))
-	{
-		log_error("chat", "Failed to create chat log root folder");
-		return false;
-	}
-	if(!pStorage->CreateFolder(QM_CHAT_LOG_DIR, IStorage::TYPE_SAVE) && !pStorage->FolderExists(QM_CHAT_LOG_DIR, IStorage::TYPE_SAVE))
+	if(!qm_storage::EnsureFolder(pStorage, QM_CHAT_LOG_DIR))
 	{
 		log_error("chat", "Failed to create chat log folder '%s'", QM_CHAT_LOG_DIR);
 		return false;
@@ -3004,7 +3000,7 @@ bool CChat::OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea)
 			Line.m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 			TitleHidden = true;
 		}
-		if(Line.m_aQmTitle[0] != '\0' && GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
+		if((Line.m_aQmTitle[0] != '\0' || Line.m_DeveloperBadge) && GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
 		{
 			Line.m_aQmTitle[0] = '\0';
 			Line.m_DeveloperBadge = false;
@@ -3017,7 +3013,7 @@ bool CChat::OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea)
 				Line.m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 				TitleHidden = true;
 			}
-			if(Author.m_aQmTitle[0] != '\0' && GameClient()->ShouldHideStreamerIdentity(Author.m_ClientId))
+			if((Author.m_aQmTitle[0] != '\0' || Author.m_DeveloperBadge) && GameClient()->ShouldHideStreamerIdentity(Author.m_ClientId))
 			{
 				Author.m_aQmTitle[0] = '\0';
 				Author.m_DeveloperBadge = false;
@@ -3027,10 +3023,11 @@ bool CChat::OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea)
 		const bool MergedPlayerMessages = Line.m_TimesRepeated > 0 && !Line.m_vMergedAuthors.empty();
 		const auto HasWavyTitle = [&](const auto &Author) {
 			return Author.m_TitleAppearance.m_TextStyle != 0 && Author.m_TitleAppearance.m_Opacity > 0 &&
-			       !(Author.m_DeveloperBadge && DeveloperBadgeAvailable) && VisibleTitle(Author.m_aQmTitle, Author.m_ClientId)[0] != '\0';
+			       VisibleTitle(Author.m_aQmTitle, Author.m_ClientId)[0] != '\0';
 		};
 		const bool WaveVisible = g_Config.m_QmTitleTextWave && (MergedPlayerMessages ?
-				std::any_of(Line.m_vMergedAuthors.begin(), Line.m_vMergedAuthors.end(), HasWavyTitle) : HasWavyTitle(Line));
+										       std::any_of(Line.m_vMergedAuthors.begin(), Line.m_vMergedAuthors.end(), HasWavyTitle) :
+										       HasWavyTitle(Line));
 		const float TitleBobPadding = WaveVisible ? FontSize * QM_TITLE_TEXT_WAVE_AMPLITUDE : 0.0f;
 		if(LineEmojiLayoutChanged || TitleHidden || TitleBobPadding != Line.m_QmTitleBobPadding)
 		{
@@ -3057,16 +3054,18 @@ bool CChat::OnPrepareLines(float y, bool IsScoreBoardOpen, bool ShowLargeArea)
 		Line.m_vDeveloperBadgeRects.clear();
 		Line.m_vTitleBadges.clear();
 		const auto LayoutTitle = [&](CTextCursor &Cursor, const auto &Author, bool Prepare) {
-			const char *pTitle = VisibleTitle(Author.m_aQmTitle, Author.m_ClientId);
-			if(!pTitle[0])
+			if(!g_Config.m_QmChatSponsorBadges || !GameClient()->m_QmClient.ShouldShowPlayerTitle(Author.m_ClientId))
 				return;
-			if(Author.m_DeveloperBadge && DeveloperBadgeAvailable)
+			const char *pTitle = VisibleTitle(Author.m_aQmTitle, Author.m_ClientId);
+			if(QmUseDeveloperBadgeFallback(pTitle, Author.m_DeveloperBadge, DeveloperBadgeAvailable))
 			{
 				const CUIRect Rect = QmLayoutDeveloperBadge(Cursor);
 				if(Prepare)
 					Line.m_vDeveloperBadgeRects.push_back(Rect);
 				return;
 			}
+			if(!pTitle[0])
+				return;
 
 			const auto &Appearance = Author.m_TitleAppearance;
 			const bool TextOnly = Appearance.m_TextStyle != 0;
@@ -3610,10 +3609,7 @@ void CChat::OnRender()
 
 	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
 	const bool InputActive = m_Mode != MODE_NONE;
-	const bool ShowLargeArea =
-		m_Show ||
-		(InputActive && g_Config.m_ClShowChat == 1) ||
-		g_Config.m_ClShowChat == 2;
+	const bool ShowLargeArea = ShouldShowLargeArea(m_Show, InputActive, g_Config.m_ClShowChat);
 	const bool ExtraAnimations = g_Config.m_QmUiMotionLevel > 0 && GameClient()->UiRuntimeV2()->Enabled();
 	const int64_t Now = time();
 	// 动画与滚动物理必须共用渲染帧的真实步长。time() 只有毫秒精度，
@@ -3926,8 +3922,9 @@ void CChat::OnRender()
 #else
 	const bool VideoRendering = false;
 #endif
-	// 回放/导出走独立显示选项；其余情况沿用 cl_showchat / cl_video_showchat。
-	if(!qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK, VideoRendering).m_Chat)
+	const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
+	const bool DisplayChat = qm_demo_display::Resolve(g_Config, DemoPlayback, VideoRendering).m_Chat;
+	if(!ShouldRenderHistory(DisplayChat, InputActive, DemoPlayback, VideoRendering))
 	{
 		QmRenderChatCommandHud(m_CommandHud, Ui(), TextRender(), GetChatMousePos(), &GameClient()->m_QmChatEmoji);
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
@@ -3986,7 +3983,7 @@ void CChat::OnRender()
 	// 松手后由同一条越界回弹把偏移收回合法范围。聊天不再自己按整数行瞬时跳。
 	const SQmScrollMetrics HistoryScrollMetrics = QmChatHistoryScrollMetrics(TotalVisibleLines, VisibleLineCapacity);
 	const float HistoryFallbackStepExtent = RowHeight + ExtraLineSpacing;
-	const SQmScrollConfig HistoryScrollConfig = QmChatHistoryScrollConfig(HistoryFallbackStepExtent);
+	const SQmScrollConfig HistoryScrollConfig = QmChatHistoryScrollConfig(HistoryFallbackStepExtent, VisibleLineCapacity);
 	if(!InputActive)
 	{
 		m_HistoryScroll.Reset();
@@ -4383,9 +4380,9 @@ void CChat::OnRender()
 	if(ShowChatScrollbar)
 	{
 		// 热项登记走公共按钮逻辑：滑块据此拿到悬浮/按下的几何反馈（变大），
-	// 与控制台、设置页滚动条用同一套，不在聊天里另写放大。
-	Ui()->DoButtonLogic(QmChatScrollbarId(), 0, &ScrollbarFrame.m_Rail, BUTTONFLAG_LEFT);
-	QmDrawChatScrollbar(Ui(), ScrollbarFrame.m_Rail, ScrollbarFrame.m_Thumb, true, ScrollbarHovered, m_ScrollbarDragging);
+		// 与控制台、设置页滚动条用同一套，不在聊天里另写放大。
+		Ui()->DoButtonLogic(QmChatScrollbarId(), 0, &ScrollbarFrame.m_Rail, BUTTONFLAG_LEFT);
+		QmDrawChatScrollbar(Ui(), ScrollbarFrame.m_Rail, ScrollbarFrame.m_Thumb, true, ScrollbarHovered, m_ScrollbarDragging);
 		ExtendBounds(ScrollbarFrame.m_Rail.x, ScrollbarFrame.m_Rail.y, ScrollbarFrame.m_Rail.w, ScrollbarFrame.m_Rail.h);
 	}
 
@@ -4808,23 +4805,19 @@ void CChat::RenderTranslateButton(const CUIRect &ButtonRect)
 bool CChat::TranslateVisibleChatLines()
 {
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
-	const bool FocusHideChat = Focus.m_HidePlayerMessages;
-	const bool FocusHideSystemInfoMessages = Focus.m_HideSystemInfoMessages;
-	const bool FocusHideSystemPromptMessages = Focus.m_HideSystemPromptMessages;
-	const bool FocusHideEcho = Focus.m_HideEchoMessages;
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
-	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
+	const bool InputActive = m_Mode != MODE_NONE;
+	const bool ShowLargeArea = ShouldShowLargeArea(m_Show, InputActive, g_Config.m_ClShowChat);
 
 	int aLineIndices[MAX_LINES];
 	int NumLineIndices = 0;
-	for(int i = m_BacklogCurLine; i < MAX_LINES; i++)
+	for(int i = 0, LinesToSkip = m_BacklogCurLine; i < MAX_LINES; ++i)
 	{
 		const int LineIndex = ((m_CurrentLine - i) + MAX_LINES) % MAX_LINES;
 		CLine &Line = m_aLines[LineIndex];
 		if(!Line.m_Initialized)
 			break;
-		const bool ServerMessageIsBasicInfo = Line.m_ServerMessageClass == QmHudNotifications::EServerMessageClass::BasicInfo;
-		if(!ShouldRenderFocusFilteredChatLine(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, Line.m_ClientId, Line.m_ForceVisible, ServerMessageIsBasicInfo))
+		if(SkipChatHistoryLine(Focus, Line.m_ClientId, Line.m_ForceVisible, Line.m_ServerMessageClass, LinesToSkip))
 			continue;
 		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
 			continue;

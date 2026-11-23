@@ -135,11 +135,11 @@ void RenderQmUiDogfood(const IUiContext &Ctx, const CUIRect &Rect)
 				SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
 				SearchOptions.m_Clearable = true;
 				// 两列共用快捷键，保持右列为焦点目标。
-			if(!s_ModalOpen && Column == COLUMN_COUNT - 1 && !Ctx.m_pUi->IsPopupOpen())
-			{
-				const CUIRect VisibleSearch = Row.Intersection(*Ctx.m_pUi->ClipArea());
-				SearchOptions.m_SearchHotkeyEnabled = VisibleSearch.w > 0.0f && VisibleSearch.h > 0.0f;
-			}
+				if(!s_ModalOpen && Column == COLUMN_COUNT - 1 && !Ctx.m_pUi->IsPopupOpen())
+				{
+					const CUIRect VisibleSearch = Row.Intersection(*Ctx.m_pUi->ClipArea());
+					SearchOptions.m_SearchHotkeyEnabled = VisibleSearch.w > 0.0f && VisibleSearch.h > 0.0f;
+				}
 				SearchOptions.m_FontSize = ui_token::font::BODY * Scale;
 				ui_widget::InputField(Ctx, &s_aSearchField[Column], Row, SearchOptions);
 				Content.HSplitTop(Gap, nullptr, &Content);

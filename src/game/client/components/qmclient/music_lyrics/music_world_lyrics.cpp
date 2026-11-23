@@ -1,7 +1,9 @@
 #include "music_world_lyrics.h"
 
 #include <game/client/QmUi/UiTextRenderState.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/qm_text_effect_render.h>
+#include <game/client/render.h>
 
 #include <new>
 #include <stdexcept>
@@ -44,8 +46,8 @@ namespace QmMusicLyrics
 		};
 		const SRestoreScreen RestoreScreen{Graphics, CScreenRect(vec2(X0, Y0), vec2(X1, Y1))};
 		TextRender.SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_FIRST_CHARACTER_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_LAST_CHARACTER_ADVANCE);
-		TextRender.TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-		TextRender.TextOutlineColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+		TextRender.TextColor(ui_token::color::NEUTRAL_WHITE);
+		TextRender.TextOutlineColor(ui_token::color::NEUTRAL_WHITE);
 		const SWorldLyric *apLines[] = {&State.Previous(), &State.Current()};
 		for(size_t Slot = 0; Slot < m_aaRows.size(); ++Slot)
 		{
@@ -85,7 +87,7 @@ namespace QmMusicLyrics
 					{
 						// 文字渲染器的颜色分段使用 UTF-8 字节位置，不能直接传字符数量。
 						const int VisibleBytes = static_cast<int>(str_utf8_offset_chars_to_bytes(Line.m_aRows[Index].c_str(), VisibleCharacters));
-						Cursor.m_vColorSplits.emplace_back(VisibleBytes, -1, ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f));
+						Cursor.m_vColorSplits.emplace_back(VisibleBytes, -1, ui_token::color::NEUTRAL_WHITE.WithAlpha(0.0f));
 					}
 					// 句柄始终由缓存持有，异常后在下帧先清理再重建。
 					Cache.m_Initialized = false;
@@ -123,8 +125,8 @@ namespace QmMusicLyrics
 			SQmTextEffectRenderStyle Style;
 			Style.m_Effects = QM_TEXT_EFFECT_GLOW;
 			Style.m_GlowRange = 2.0f;
-			Style.m_GlowColor = ColorRGBA(0.4f, 0.75f, 1.0f, 0.14f);
-			Style.m_TextColor = ColorRGBA(0.94f, 0.98f, 1.0f, Visual.m_Alpha * 0.9f);
+			Style.m_GlowColor = ui_token::world_lyrics::GLOW;
+			Style.m_TextColor = ui_token::world_lyrics::TEXT.WithAlpha(Visual.m_Alpha * 0.9f);
 			float Y = TextY;
 			for(int Index = 0; Index < Line.m_RowCount; ++Index)
 			{

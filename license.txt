@@ -20,9 +20,13 @@ freely, subject to the following restrictions:
 
 ------------------------------------------------------------------------
 
-All content under 'data' except the assets, font, language & skin files,
-(which have their own licenses) are released under
-CC-BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0/).
+Content under 'data' is released under CC-BY-SA 3.0
+(https://creativecommons.org/licenses/by-sa/3.0/). Assets, fonts, languages,
+skins and the DDNet Wiki articles have their own licenses.
+
+The DDNet Wiki articles under 'data/wiki/ddnet/' are released under
+CC-BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).
+Each article lists its source revision, contributor history and changes.
 
 DejaVuSans.ttf:
 ---------------

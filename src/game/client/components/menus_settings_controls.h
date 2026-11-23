@@ -41,6 +41,9 @@ public:
 	EBindOptionGroup m_Group;
 	const char *m_pLabel;
 	std::string m_Command;
+	// 控制页悬浮 Tips 的详细说明（Localize key）；nullptr = 只显示命令串。
+	// 放在 m_Command 之后，避免打乱已有的 {Group, Label, Command} 聚合初始化。
+	const char *m_pDescription = nullptr;
 	std::vector<CBindSlotUiElement> m_vCurrentBinds;
 	CButtonContainer m_AddBindButtonContainer;
 	char m_TooltipButtonId;

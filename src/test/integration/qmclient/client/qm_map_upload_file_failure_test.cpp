@@ -17,11 +17,11 @@
 
 #if defined(CONF_PLATFORM_LINUX)
 #include <test/support/prediction_allocation_failure.h>
+#include <unistd.h>
 
 #include <filesystem>
 #include <new>
 #include <system_error>
-#include <unistd.h>
 #endif
 
 namespace

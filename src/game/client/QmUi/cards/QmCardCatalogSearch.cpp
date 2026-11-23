@@ -5,6 +5,7 @@
 #include <base/detect.h>
 
 #include <game/client/QmUi/QmCardSearchRegistry.h>
+#include <game/client/components/qmclient/practice_menu.h>
 #include <game/client/components/qmclient/search_answers.h>
 #include <game/localization.h>
 
@@ -45,7 +46,12 @@ namespace
 // 编译进本聚合器的注册项自带存储，启动时只链接记录。
 #undef QM_CARD_SEARCH_REGISTER
 #define QM_CARD_SEARCH_REGISTER(stable_id, symbol) \
-	SStaticSearchRegistration s_QmSearchRegistrar_##symbol{{stable_id, s_aQmSearch_##symbol, std::size(s_aQmSearch_##symbol)}}
+	SStaticSearchRegistration s_QmSearchRegistrar_##symbol \
+	{ \
+		{ \
+			stable_id, s_aQmSearch_##symbol, std::size(s_aQmSearch_##symbol) \
+		} \
+	}
 
 // 各卡片源文件旁的声明式搜索表，由本聚合器统一编译与注册。
 #include "QmCardSearch/QmCardCatalogAppearance.inc"
@@ -54,6 +60,7 @@ namespace
 #include "QmCardSearch/QmCardCatalogControls.inc"
 #include "QmCardSearch/QmCardCatalogDDNet.inc"
 #include "QmCardSearch/QmCardCatalogFallback.inc"
+#include "QmCardSearch/QmCardCatalogFastPractice.inc"
 #include "QmCardSearch/QmCardCatalogFunction.inc"
 #include "QmCardSearch/QmCardCatalogGeneral.inc"
 #include "QmCardSearch/QmCardCatalogGraphics.inc"

@@ -76,7 +76,7 @@ class IndirectLocalizationContractTest(unittest.TestCase):
         descriptions = {
             "Colors for chat command and emoji completion",
             "QmClient information and project links",
-            "Highlight frozen teammates' hammer and hook inputs",
+            "Highlight held hammer and hook inputs while frozen",
         }
         records = source_keys.collect_file_source_key_records(
             PROJECT_ROOT / CARD_REGISTRY_SOURCE

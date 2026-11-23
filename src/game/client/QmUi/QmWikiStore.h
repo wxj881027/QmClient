@@ -15,7 +15,7 @@ struct SWikiContent
 	bool m_HasUserOverride = false;
 	bool m_HasShippedFile = false;
 	bool m_ReadFailed = false;
-	// 相对 wiki/ 的文档路径（不含语言目录与扩展名），界面上用来提示编辑位置。
+	// 相对 qmclient/content/wiki/ 的文档路径（不含语言目录与扩展名），界面上用来提示编辑位置。
 	std::string m_RelativePath;
 };
 
@@ -25,7 +25,7 @@ namespace qm_wiki_store
 	// 当前语言目录名：取 cl_languagefile 去掉 .txt，例如 simplified_chinese。
 	const char *LanguageDir();
 
-	// 解析顺序：本地覆盖 -> 随包 wiki/<lang>/...md -> 内置文案合成的 Markdown。
+	// 解析顺序：本地覆盖 -> 随包 qmclient/content/wiki/<lang>/...md -> 内置文案合成的 Markdown。
 	SWikiContent ResolveCard(const char *pStableId, const SWikiDocument &Fallback);
 	SWikiContent ResolveDocument(const char *pDocumentId, const SWikiDocument &Fallback);
 

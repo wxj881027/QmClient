@@ -51,6 +51,65 @@ TEST(QmMonitoringRuntimeContract, ConnectionGradeTracksDisconnectedState)
 	EXPECT_EQ(QmDetermineConnectionGrade(Net), EQmConnectionGrade::DISCONNECTED);
 }
 
+TEST(QmMonitoringRuntimeContract, MenuTextCacheAgeUsesMonotonicWallClock)
+{
+	// 参数由调用方传 time_get()；UI 帧和主循环 PerfFrame 都会随帧率/异步渲染跳号。
+	EXPECT_FALSE(QmMenuTextCacheEntryExpired(0, 0));
+	EXPECT_FALSE(QmMenuTextCacheEntryExpired(QM_MENU_TEXT_CACHE_MAX_AGE_NS, 1));
+	EXPECT_TRUE(QmMenuTextCacheEntryExpired(QM_MENU_TEXT_CACHE_MAX_AGE_NS + 2, 1));
+	// 时钟回退或条目从未使用过时先保留，不能因负差误删。
+	EXPECT_FALSE(QmMenuTextCacheEntryExpired(5, QM_MENU_TEXT_CACHE_MAX_AGE_NS + 10));
+	EXPECT_FALSE(QmMenuTextCacheEntryExpired(QM_MENU_TEXT_CACHE_MAX_AGE_NS + 10, 0));
+}
+
+TEST(QmMonitoringRuntimeContract, MenuTextCacheTrimRunsOnWallClockCadence)
+{
+	EXPECT_TRUE(QmMenuTextCacheTrimDue(100, 0));
+	EXPECT_FALSE(QmMenuTextCacheTrimDue(QM_MENU_TEXT_CACHE_TRIM_INTERVAL_NS - 1, 1));
+	EXPECT_TRUE(QmMenuTextCacheTrimDue(QM_MENU_TEXT_CACHE_TRIM_INTERVAL_NS + 1, 1));
+	EXPECT_FALSE(QmMenuTextCacheTrimDue(5, QM_MENU_TEXT_CACHE_TRIM_INTERVAL_NS + 10));
+}
+
+TEST(QmMonitoringRuntimeContract, MenuTextBackgroundBudgetOnlyUsesDisplayHeadroom)
+{
+	const float Target60Hz = QmMenuTargetFrameMs(60);
+	const float Target160Hz = QmMenuTargetFrameMs(160);
+	const float Target360Hz = QmMenuTargetFrameMs(360);
+	EXPECT_FLOAT_EQ(Target60Hz, 1000.0f / 60.0f);
+	EXPECT_FLOAT_EQ(Target360Hz, 1000.0f / 360.0f);
+	EXPECT_FLOAT_EQ(QmMenuTargetFrameMs(0), 1000.0f / 60.0f);
+
+	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target60Hz, 1.4f, 2.0f), 1.0f);
+	EXPECT_GT(QmMenuTextBackgroundBudgetMs(Target360Hz, 1.4f, 1.8f), 0.0f);
+	EXPECT_LT(QmMenuTextBackgroundBudgetMs(Target360Hz, 1.4f, 1.8f), 1.0f);
+	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target360Hz, 2.8f, 2.9f), 0.0f);
+	// 160Hz：墙钟帧间隔约 7ms，但主循环只忙 1.1ms。后台预算必须看 CPU 忙时，
+	// 否则永远算成 0，预建计划根本跑不起来。
+	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target160Hz, 1.1f, 1.4f), 1.0f);
+	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(Target160Hz, 5.9f, 6.1f), 0.0f);
+	EXPECT_FLOAT_EQ(QmMenuTextBackgroundBudgetMs(0.0f, 0.0f, 0.0f), 0.0f);
+	// 加载画面允许比后台预热吃得更满，但单步仍不能超过显示器剩余时间：
+	// 60Hz 下 8ms 单步上限仍可吃满；160Hz 下要收紧；360Hz 高负载时直接让出。
+	EXPECT_FLOAT_EQ(QmMenuTextLoadingBudgetMs(Target60Hz, 2.0f, 2.4f), QM_MENU_TEXT_LOADING_PREWARM_STEP_MS);
+	EXPECT_NEAR(QmMenuTextLoadingBudgetMs(Target160Hz, 1.1f, 1.4f), 3.85f, 0.01f);
+	EXPECT_NEAR(QmMenuTextLoadingBudgetMs(Target360Hz, 0.5f, 0.6f), Target360Hz - 0.6f - Target360Hz * 0.20f, 0.01f);
+	EXPECT_FLOAT_EQ(QmMenuTextLoadingBudgetMs(Target360Hz, 2.8f, 2.9f), 0.0f);
+	EXPECT_FLOAT_EQ(QmMenuTextWarmupBudgetMs(true, Target360Hz, 2.8f, 2.9f), 0.0f);
+	EXPECT_FLOAT_EQ(QmMenuTextWarmupBudgetMs(false, Target360Hz, 2.8f, 2.9f), 0.0f);
+}
+
+TEST(QmMonitoringRuntimeContract, MenuTextIdlePrewarmYieldsToInteractiveUi)
+{
+	EXPECT_TRUE(QmMenuTextIdlePrewarmAllowed(true, false, false, false, false, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(false, false, false, false, false, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, true, false, false, false, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, false, true, false, false, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, false, false, true, false, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, false, false, false, true, false, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, false, false, false, false, true, false));
+	EXPECT_FALSE(QmMenuTextIdlePrewarmAllowed(true, false, false, false, false, false, true));
+}
+
 TEST(QmMonitoringRuntimeContract, ConnectionGradeUsesThresholdTable)
 {
 	SQmNetworkMetrics Net;

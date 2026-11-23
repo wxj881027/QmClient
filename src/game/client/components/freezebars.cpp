@@ -2,29 +2,55 @@
 
 #include <game/client/gameclient.h>
 
+namespace
+{
+	constexpr float FREEZE_BAR_WIDTH = 64.0f;
+	constexpr float FREEZE_BAR_HALF_WIDTH = FREEZE_BAR_WIDTH / 2.0f;
+	constexpr float FREEZE_BAR_HEIGHT = 16.0f;
+	// 与实机冻结条一致的挂点：Tee 中心下方 32 单位（屏幕坐标向下为正）。
+	constexpr float FREEZE_BAR_OFFSET_Y = 32.0f;
+}
+
+void CFreezeBars::RenderBarAt(const vec2 TeePos, const float Progress, const float Alpha)
+{
+	if(!g_Config.m_ClShowFreezeBars)
+		return;
+	RenderFreezeBarPos(TeePos.x - FREEZE_BAR_HALF_WIDTH, TeePos.y + FREEZE_BAR_OFFSET_Y, FREEZE_BAR_WIDTH, FREEZE_BAR_HEIGHT, Progress, Alpha);
+}
+
 void CFreezeBars::RenderFreezeBar(const int ClientId)
 {
-	const float FreezeBarWidth = 64.0f;
-	const float FreezeBarHalfWidth = 32.0f;
-	const float FreezeBarHeight = 16.0f;
+	// 练习参与者（本体/分身）的冻结状态在分支世界里：服务器快照只描述另一条
+	// 世界线，快照的 FreezeEnd 门槛与扩展显示门控都不能拿来判断练习冻结。
+	const CCharacterCore *pPracticeCharacter = nullptr;
+	int PracticeTick = 0;
+	const bool InPractice = GameClient()->m_FastPractice.ResolvePracticeCharacterCore(ClientId, &pPracticeCharacter, PracticeTick);
 
 	// pCharacter contains the predicted character for local players or the last snap for players who are spectated
-	CCharacterCore *pCharacter = &GameClient()->m_aClients[ClientId].m_Predicted;
+	const CCharacterCore *pCharacter = InPractice ? pPracticeCharacter : &GameClient()->m_aClients[ClientId].m_Predicted;
 
-	if(pCharacter->m_FreezeEnd <= 0 || pCharacter->m_FreezeStart == 0 || pCharacter->m_FreezeEnd <= pCharacter->m_FreezeStart || !GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo || (pCharacter->m_IsInFreeze && g_Config.m_ClFreezeBarsAlphaInsideFreeze == 0))
+	if(pCharacter->m_FreezeEnd <= 0 || pCharacter->m_FreezeStart == 0 || pCharacter->m_FreezeEnd <= pCharacter->m_FreezeStart || (pCharacter->m_IsInFreeze && g_Config.m_ClFreezeBarsAlphaInsideFreeze == 0))
 	{
 		return;
 	}
 
-	// 服务端还没确认冻结时不画，避免误预测的冻结条闪现。
-	if(GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_FreezeEnd <= 0)
+	if(!InPractice)
 	{
-		return;
+		if(!GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo)
+			return;
+		// 服务端还没确认冻结时不画，避免误预测的冻结条闪现。
+		if(GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_FreezeEnd <= 0)
+			return;
 	}
 
 	// 预测角色的冻结 tick 位于预测时间轴，要和它被预测到的 tick 比较。
 	int Tick = Client()->GameTick(g_Config.m_ClDummy);
-	if(GameClient()->m_aClients[ClientId].m_IsPredictedLocal)
+	if(InPractice)
+	{
+		// 分支世界有自己的时钟，服务器暂停时两者会分叉。
+		Tick = PracticeTick;
+	}
+	else if(GameClient()->m_aClients[ClientId].m_IsPredictedLocal)
 	{
 		Tick = Client()->PredGameTick(g_Config.m_ClDummy);
 	}
@@ -40,10 +66,6 @@ void CFreezeBars::RenderFreezeBar(const int ClientId)
 		return;
 	}
 
-	vec2 Position = GameClient()->m_aClients[ClientId].m_RenderPos;
-	Position.x -= FreezeBarHalfWidth;
-	Position.y += 32;
-
 	float Alpha = 1.0f;
 	if(GameClient()->IsOtherTeam(ClientId))
 		Alpha = g_Config.m_ClShowOthersAlpha / 100.0f;
@@ -52,7 +74,7 @@ void CFreezeBars::RenderFreezeBar(const int ClientId)
 		Alpha *= g_Config.m_ClFreezeBarsAlphaInsideFreeze / 100.0f;
 	}
 
-	RenderFreezeBarPos(Position.x, Position.y, FreezeBarWidth, FreezeBarHeight, FreezeProgress, Alpha);
+	RenderBarAt(GameClient()->m_aClients[ClientId].m_RenderPos, FreezeProgress, Alpha);
 }
 
 void CFreezeBars::RenderFreezeBarPos(float x, const float y, const float Width, const float Height, float Progress, const float Alpha)
@@ -215,8 +237,12 @@ inline bool CFreezeBars::IsPlayerInfoAvailable(int ClientId) const
 
 void CFreezeBars::OnRender()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
+	{
+		if(g_Config.m_ClShowFreezeBars)
+			GameClient()->m_Ghost.RenderManualFreezeBars();
 		return;
+	}
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 

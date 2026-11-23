@@ -132,9 +132,14 @@ namespace
 				ASSERT_TRUE(pJob->Done());
 			}
 		}
-		std::unique_ptr<CQmSkinDownloadSession> Create(bool CacheValid, bool Community = true, bool SameUrl = false)
+		std::unique_ptr<CQmSkinDownloadSession> Create(bool CacheValid, bool Community = true, bool SameUrl = false, bool DdStats = false, std::string CacheUrl = "https://official.test/test.png")
 		{
-			return std::make_unique<CQmSkinDownloadSession>(m_Http, "https://official.test/test.png", Community ? (SameUrl ? "https://official.test/test.png" : "https://community.test/test.png") : "", std::make_shared<CTestSkinDataJob>(CacheValid), [this](const char *pUrl, bool Unconditional) {
+			std::vector<CQmSkinDownloadSession::SSource> vSources{{"https://official.test/test.png", ESkinSource::OFFICIAL}};
+			if(Community)
+				vSources.push_back({SameUrl ? "https://official.test/test.png" : "https://community.test/test.png", ESkinSource::COMMUNITY});
+			if(DdStats)
+				vSources.push_back({"https://ddstats.test/test.png", ESkinSource::DDSTATS});
+			return std::make_unique<CQmSkinDownloadSession>(m_Http, std::move(vSources), std::make_shared<CTestSkinDataJob>(CacheValid), [this](const char *pUrl, bool Unconditional) {
 					if(++m_RequestCalls == m_RequestThrowAt)
 						throw std::bad_alloc();
 					return std::make_shared<CTestSkinRequest>(pUrl, m_pStorage.get(), Unconditional); }, [this](std::shared_ptr<IHttpRequest>) {
@@ -145,7 +150,7 @@ namespace
 					if(++m_SubmitCalls == m_SubmitThrowAt)
 						throw std::bad_alloc();
 					m_vJobs.push_back(pJob);
-					m_Pool.Add(std::move(pJob)); });
+					m_Pool.Add(std::move(pJob)); }, std::move(CacheUrl));
 		}
 		void WriteCache(const char *pBody)
 		{
@@ -211,9 +216,46 @@ TEST_F(QmSkinDownloadSession, OfficialNotFoundFallsBackToEnabledCommunity)
 	EXPECT_EQ(pSession->Poll(), EResult::WAITING);
 	WaitJobs();
 	EXPECT_EQ(pSession->Poll(), EResult::READY);
+	ASSERT_TRUE(pSession->DownloadedSource().has_value());
+	EXPECT_EQ(pSession->DownloadedSource().value(), ESkinSource::COMMUNITY);
 	EXPECT_NE(pSession->TakeReadyJob(), nullptr);
 	EXPECT_EQ(pSession->Poll(), EResult::DONE);
 	EXPECT_EQ(ReadCache(), "new-valid-image");
+}
+
+TEST_F(QmSkinDownloadSession, FallsBackToDdStatsAfterApprovedSources)
+{
+	auto pSession = Create(false, true, false, true);
+	BeginWithoutCache(*pSession);
+	m_Http.m_vRequests[0]->Finish(404);
+	ASSERT_EQ(pSession->Poll(), EResult::WAITING);
+	ASSERT_EQ(m_Http.m_vRequests.size(), 2u);
+	m_Http.m_vRequests[1]->Finish(404);
+	ASSERT_EQ(pSession->Poll(), EResult::WAITING);
+	ASSERT_EQ(m_Http.m_vRequests.size(), 3u);
+	EXPECT_STREQ(m_Http.m_vRequests[2]->Url(), "https://ddstats.test/test.png");
+	EXPECT_TRUE(m_Http.m_vRequests[2]->Unconditional());
+	m_Http.m_vRequests[2]->Finish(200);
+	ASSERT_EQ(pSession->Poll(), EResult::WAITING);
+	WaitJobs();
+	ASSERT_EQ(pSession->Poll(), EResult::READY);
+	ASSERT_TRUE(pSession->DownloadedSource().has_value());
+	EXPECT_EQ(pSession->DownloadedSource().value(), ESkinSource::DDSTATS);
+	EXPECT_NE(pSession->TakeReadyJob(), nullptr);
+	EXPECT_EQ(pSession->Poll(), EResult::DONE);
+}
+
+TEST_F(QmSkinDownloadSession, DdStatsDisabledStopsAfterApprovedSources)
+{
+	auto pSession = Create(false, true, false, false);
+	BeginWithoutCache(*pSession);
+	m_Http.m_vRequests[0]->Finish(404);
+	ASSERT_EQ(pSession->Poll(), EResult::WAITING);
+	ASSERT_EQ(m_Http.m_vRequests.size(), 2u);
+	m_Http.m_vRequests[1]->Finish(404);
+	EXPECT_EQ(pSession->Poll(), EResult::NOT_FOUND);
+	EXPECT_EQ(m_Http.m_vRequests.size(), 2u);
+	EXPECT_FALSE(pSession->DownloadedSource().has_value());
 }
 
 TEST_F(QmSkinDownloadSession, CommunityDisabledDoesNotFallBack)
@@ -304,6 +346,24 @@ TEST_F(QmSkinDownloadSession, NotModifiedWithInvalidCacheRetriesUnconditionally)
 	EXPECT_EQ(m_Http.m_vRequests.size(), 2u);
 }
 
+TEST_F(QmSkinDownloadSession, CacheFromDifferentUrlIsNotAttributedToAnUnexpectedNotModifiedResponse)
+{
+	WriteCache("old-valid-image");
+	auto pSession = Create(true, true, false, false, "https://community.test/test.png");
+	WaitJobs();
+	ASSERT_EQ(pSession->Poll(), EResult::READY);
+	pSession->TakeReadyJob();
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	EXPECT_TRUE(m_Http.m_vRequests.front()->Unconditional());
+	m_Http.m_vRequests.front()->Finish(304);
+	ASSERT_EQ(pSession->Poll(), EResult::WAITING);
+	ASSERT_EQ(m_Http.m_vRequests.size(), 2u);
+	m_Http.m_vRequests.back()->Finish(304);
+	EXPECT_EQ(pSession->Poll(), EResult::DONE);
+	EXPECT_FALSE(pSession->DownloadedSource().has_value());
+	EXPECT_EQ(ReadCache(), "old-valid-image");
+}
+
 TEST_F(QmSkinDownloadSession, InvalidDownloadedImageDoesNotOverwriteValidCache)
 {
 	WriteCache("old-valid-image");
@@ -347,6 +407,24 @@ TEST_F(QmSkinDownloadSession, ValidUpdateIsDeliveredAfterValidation)
 	EXPECT_EQ(ReadCache(), "new-valid-image");
 	EXPECT_NE(pSession->TakeReadyJob(), nullptr);
 	EXPECT_EQ(pSession->Poll(), EResult::DONE);
+}
+
+TEST_F(QmSkinDownloadSession, FailedCacheCommitDoesNotPublishCandidateOrSource)
+{
+	WriteCache("old-valid-image");
+	auto pSession = Create(true);
+	WaitJobs();
+	ASSERT_EQ(pSession->Poll(), EResult::READY);
+	ASSERT_NE(pSession->TakeReadyJob(), nullptr);
+	m_Http.m_vRequests[0]->Finish(200);
+	ASSERT_EQ(pSession->Poll(), EResult::WAITING);
+	WaitJobs();
+	ASSERT_EQ(fs_remove(m_Http.m_vRequests[0]->TemporaryPath()), 0);
+	EXPECT_EQ(pSession->Poll(), EResult::DONE);
+	EXPECT_EQ(pSession->TakeReadyJob(), nullptr);
+	EXPECT_FALSE(pSession->DownloadedSource().has_value());
+	EXPECT_TRUE(pSession->DownloadedUrl().empty());
+	EXPECT_EQ(ReadCache(), "old-valid-image");
 }
 
 TEST_F(QmSkinDownloadSession, RepeatedPollDoesNotResubmitDecode)

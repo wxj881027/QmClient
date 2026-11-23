@@ -28,6 +28,9 @@ public:
 		int m_MaxStars = 5;
 
 		const char *StarLabel() const;
+		// 难度列单元格文本：类别 + 空格 + 星级；类别为空时只输出星级。
+		// pCategoryText 由调用方按社区决定使用原文或本地化名称。
+		void CellLabel(const char *pCategoryText, char *pOut, size_t OutSize) const;
 	};
 
 	using TRequestFactory = std::unique_ptr<IHttpRequest> (*)(const char *);
@@ -40,7 +43,8 @@ public:
 	bool Load(IStorage *pStorage, IConsole *pConsole);
 	// 供行为测试和生成数据校验使用的 SQL 加载入口。
 	bool LoadSqlText(const char *pSql, size_t Length);
-	// 只记录已确认属于 Axiom 的当前地图公告；资源失败返回 false 并保留旧记录。
+	// 只记录已确认属于 Axiom 的当前地图公告；没有变化或资源失败时返回 false。
+	// 同时支持旧公告的「类型 + 星级」和当前公告的「难度 + 星级」两种写法。
 	bool RecordAxiomMotd(const CServerInfo &Server, const char *pMotd);
 	bool LoadAxiomCacheJson(const char *pJson, size_t Length);
 	std::string SerializeAxiomCache() const;
@@ -52,6 +56,9 @@ public:
 	const SEntry *FindForServer(const CServerInfo &Server, const char *pCategoryHint = nullptr) const;
 	int Size() const { return (int)m_vEntries.size(); }
 	bool Empty() const { return m_vEntries.empty(); }
+	// 目录内容单调递增的修订号；后台补查、缓存载入和 SQL 重载成功时自增。
+	// 调用方用它缓存派生结果，替代按固定周期全量重扫。
+	uint64_t Revision() const { return m_Revision; }
 
 private:
 	void LoadAxiomCache(IStorage *pStorage);
@@ -60,22 +67,27 @@ private:
 		using is_transparent = void;
 		bool operator()(std::pair<int, std::string_view> A, std::pair<int, std::string_view> B) const { return A < B; }
 	};
-	// 星级上限区分 Gores（3）与 AXRace（5），同名地图不跨玩法共用。
+	// 键为（玩法，地图名），同名地图不跨玩法共用；星级上限由公告自身决定。
 	using TAxiomKey = std::pair<int, std::string>;
 	using TAxiomRetryMap = std::map<TAxiomKey, int64_t, SAxiomKeyLess>;
+	using TAxiomEntryMap = std::map<TAxiomKey, SEntry, SAxiomKeyLess>;
 	struct SAxiomRequest
 	{
 		std::shared_ptr<IHttpRequest> m_pRequest;
 		TAxiomRetryMap::node_type m_RetryNode;
 	};
-	bool StoreAxiomEntry(SEntry Entry);
+	bool ParseAxiomCacheJson(const char *pJson, size_t Length, TAxiomEntryMap &Out) const;
+	// 旧版本把同一份缓存写在 qmclient 根目录；统一布局后只补充新文件缺失的条目。
+	bool MergeAxiomCacheJson(const char *pJson, size_t Length);
+	bool StoreAxiomEntry(int ModeId, SEntry Entry);
 	bool RecordAxiomResponse(const TAxiomKey &Key, const IHttpRequest &Request);
 	TRequestFactory m_CreateRequest;
 	std::map<TAxiomKey, SAxiomRequest, SAxiomKeyLess> m_AxiomRequests;
 	TAxiomRetryMap m_AxiomRetryAfter;
-	std::map<TAxiomKey, SEntry, SAxiomKeyLess> m_AxiomEntries;
+	TAxiomEntryMap m_AxiomEntries;
 	bool m_AxiomCacheDirty = false;
 	std::vector<SEntry> m_vEntries;
+	uint64_t m_Revision = 0;
 };
 
 #endif

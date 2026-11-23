@@ -47,6 +47,7 @@
 #include <game/client/components/assets_resource_registry.h>
 #include <game/client/components/community_icons.h>
 #include <game/client/components/mapimages.h>
+#include <game/client/components/menus_close_reset_gate.h>
 #include <game/client/components/menus_ingame_touch_controls.h>
 #include <game/client/components/menus_settings_controls.h>
 #include <game/client/components/menus_start.h>
@@ -98,8 +99,6 @@ struct CDataSprite;
 
 class IHttpRequest;
 class CChat;
-class CProfile;
-struct SQmProfileWheelEditorState;
 struct SSettingsTextPlanProgressView;
 struct SQmFriendCodeUiState;
 namespace qm_card_registry
@@ -143,8 +142,8 @@ enum
 
 // 导航胶囊行高与内容缩放：主菜单导航栏（离线/在线）与游戏内浏览页服务器导航栏
 // 共用同一组尺寸，保证上下两排胶囊导航观感一致。
-	// 与页签胶囊同高同号：ui_token::settings::TAB_HEIGHT(26)，导航选中滑块与页签滑块上下对齐。
-	inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 26.0f;
+// 与页签胶囊同高同号：ui_token::settings::TAB_HEIGHT(26)，导航选中滑块与页签滑块上下对齐。
+inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 26.0f;
 inline constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
 
 class CUIRect;
@@ -279,7 +278,7 @@ private:
 	void RenderQmChatGradientSettings(CUIRect &Content, CChat &Chat, const SSettingsContentMetrics &Metrics);
 
 	void DoLaserPreview(const CUIRect *pRect, ColorHSLA OutlineColor, ColorHSLA InnerColor, int LaserType);
-	int DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align = TEXTALIGN_ML, const SLabelProperties &Props = {});
+	int DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, bool Descending = false, int Align = TEXTALIGN_ML, const SLabelProperties &Props = {});
 	int DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect, float IconFontSize = 0.0f);
 
 	bool m_SkinListScrollToSelected = false;
@@ -1487,6 +1486,9 @@ protected:
 	static void ConchainAssetEmoticons(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainAssetHud(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainAssetExtras(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainAssetArrow(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainAssetGuiCursor(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainAssetStrongWeak(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	void ClearCustomItems(int CurTab);
 	bool RefreshEntityBgHierarchyView();
@@ -1607,6 +1609,8 @@ protected:
 	// 收尾兜底截止时刻（time_get）：轨道因配置/后端变化不收敛时强制关闭，
 	// 避免菜单停在半路既关不掉也不再接受输入。
 	int64_t m_MenuCloseDeadline = 0;
+	// 收起期间输入已交回游戏，只在输入交回前或立即关闭时重置一次。
+	CMenuCloseResetGate m_MenuCloseResetGate;
 	// 点击菜单面板外空白：按下时只登记，等本帧绘制算出 HotItem 再判定，
 	// 避免「快速甩鼠标点击」在同一帧里因 HotItem 还是上一帧的值而误关。
 	bool m_MenuOutsideClickPending = false;
@@ -2027,6 +2031,8 @@ protected:
 	char m_aPendingRankDemoPlayPath[IO_MAX_PATH_LENGTH] = "";
 	// Rank 1 页面：地图搜索（跨全清单查找指定名次的官方回放）
 	CLineInputBuffered<64> m_RankSearchInput;
+	// 影子页面：按玩家名过滤当前影子列表（只影响展示，不改动底层条目）
+	CLineInputBuffered<64> m_GhostSearchInput;
 
 	SDemoSelectionEntry DemoSelectionEntryFromItem(const CDemoItem &Item) const;
 	bool IsDemoItemSelected(const CDemoItem &Item) const;
@@ -2264,6 +2270,8 @@ protected:
 	IDemoPlayer *PlaybackPlayer() const;
 	uint64_t m_OnlineReplayControlsGeneration = 0;
 	bool m_DemoControlsWereOnline = false;
+	// 查看模式控制卡最近一帧的实际矩形（含拖动偏移），供“点外部关闭”判定。
+	CUIRect m_OnlineReplayPanelRect = {};
 	void HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickToSeek = -1);
 	void RenderDemoCard(const CUIRect &Rect);
 	void RenderDemoPlayer(CUIRect MainView);
@@ -2449,6 +2457,7 @@ protected:
 	void DrainIngameUiSnapshotTextRuntime();
 	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
 	void RenderServerControl(CUIRect MainView);
+
 public:
 private:
 	void RenderServerVoteList(CUIRect MainView);
@@ -2509,6 +2518,7 @@ private:
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
 	CQmMapDifficultyCatalog m_MapDifficultyCatalog;
+	// Axiom 难度缓存合批落盘：多次请求结果在同一窗口内只写一次磁盘。
 	int64_t m_NextAxiomDifficultySave = 0;
 	CQmScreenshotManager m_ScreenshotManager;
 	CQmLocalSaveDisplayCache m_LocalSaveDisplay;
@@ -2647,9 +2657,12 @@ public:
 	bool IsInit() const { return m_IsInit; }
 
 	bool OnlineReplayPopupActive() const { return m_DemoPlayerState != DEMOPLAYER_NONE; }
+	bool OnlineReplayPanelContains(vec2 Pos) const { return m_OnlineReplayPanelRect.Inside(Pos); }
 	bool PlaybackShortcutsActive() const;
 	bool ClaimOnlineReplaySpectatorBind(int Key);
 	bool IsActive() const { return m_MenuActive; }
+	// 收起动画期间仍绘制菜单，但输入已经交回游戏；绑定释放不能被当成菜单占用输入。
+	bool IsClosing() const { return m_MenuClosing; }
 	bool IsSettingsPageActive() const;
 	std::array<int, 9> TooltipContext() const
 	{
@@ -2852,11 +2865,14 @@ public:
 		int m_Slot;
 		bool m_Own;
 		bool m_RankGhost;
+		// 快速练习线路组：m_aFilename 指向组目录（内含多轨 .gho + events.qmevt），
+		// 只能走 View 进入 demo 式回放，不能当单文件 Activate。
+		bool m_PracticeGroup = false;
 		bool m_InMemoryBest = false;
 		time_t m_Date;
 
 		CGhostItem() :
-			m_Slot(-1), m_Own(false), m_RankGhost(false) { m_aFilename[0] = 0; }
+			m_Slot(-1), m_Own(false), m_RankGhost(false), m_PracticeGroup(false) { m_aFilename[0] = 0; }
 
 		bool operator<(const CGhostItem &Other) const { return m_Time < Other.m_Time; }
 
@@ -2988,6 +3004,9 @@ public:
 	void DoMenuLabelStreamed(EMenuTextScope Scope, CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr, bool Render = true);
 	int DoIngameMenuTab(CButtonContainer *pButtonContainer, int Page, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Corners);
 	int DoIngameMenuButton(int Page, const char *pTextId, CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, bool Disabled = false);
+	// 游戏内菜单底部动作栏：按文案宽度 + token 内边距从行内切出按钮矩形，
+	// 窄窗口下收敛到剩余宽度。FromRight = false 时从左侧切。
+	CUIRect NextIngameActionButton(CUIRect &Row, const char *pText, bool FromRight = true);
 	int DoIngameMenuCheckBox(int Page, const char *pTextId, const void *pId, const char *pText, int Checked, const CUIRect *pRect);
 	void DoIngameMenuLabel(int Page, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {});
 	void DoIngameMenuTitleLabel(int Page, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {});
@@ -3013,26 +3032,39 @@ public:
 	bool PrepareSettingsNumericFieldLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect &Rect, const char *pLabel, unsigned Flags, ui_widget::SNumericFieldOptions &Options);
 	ui_widget::SNumericFieldState *GetSettingsNumericFieldState(const void *pId);
 	bool DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &View, const char *pLabelTextId, const char *pLabel, std::vector<CButtonContainer> &vButtonContainers, const std::vector<const char *> &vButtonTextIds, const std::vector<const char *> &vLabels, const std::vector<int> &vValues, int &Value, const SSettingsContentMetrics &Metrics, const int *pOverrideSource = nullptr, const void *pConfigValue = nullptr, const void *pSecondConfigValue = nullptr);
-	void BuildBaseSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
-	void BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems);
-	void BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void BuildVisibleSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	bool PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride);
-	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView, std::vector<SMenuTextPlanItem> &vItems);
+	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect OuterScreen, CUIRect SettingsMainView, std::vector<SMenuTextPlanItem> &vItems);
 	bool AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOperationOverride, int64_t Deadline);
 	bool PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget);
+	void BuildSettingsMenuTextGlyphDemand();
 	void SyncMenuTextPoolIdentity(uint64_t CurrentFrame);
 	int CountMissingSettingsMenuTextPlanItems() const;
 	bool SettingsMenuTextPrebuildReady(const char *pOperationOverride) const;
 	void PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride = nullptr, const char *pOperationOverride = nullptr);
 	int PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride = nullptr);
 	void PrebuildIngameEscTextPoolBeforeOpen(int Budget);
+	void PrewarmSettingsTextPlanBeforeFirstFrame();
 	void LogSettingsAdaptiveBudget(const char *pSource, const SSettingsAdaptiveBudgetInput &Input, const SSettingsAdaptiveBudgetOutput &Output) const;
-	void PrewarmSettingsTextPoolForLoading(int Budget) { PrebuildSettingsMenuTextPool(Budget, "target_settings", "settings_open"); }
+	void RecordQmTextPrewarmSample(int64_t StartNs, double BudgetMs, int Built);
+	void PrewarmSettingsTextPoolForLoading(int Budget)
+	{
+		// 加载画面允许阻塞；不能套用游戏内“只吃显示器刷新周期剩余时间”的后台预算，
+		// 否则加载阶段会把首屏文本留给之后的可见帧现场构建。
+		struct SScopedBlockingPrewarm
+		{
+			bool &m_Blocking;
+			const bool m_Previous;
+			SScopedBlockingPrewarm(bool &Blocking, bool Value) :
+				m_Blocking(Blocking), m_Previous(Blocking) { m_Blocking = Value; }
+			~SScopedBlockingPrewarm() { m_Blocking = m_Previous; }
+		};
+		const SScopedBlockingPrewarm BlockingPrewarm(m_MenuTextBlockingPrewarm, true);
+		PrebuildSettingsMenuTextPool(Budget, "target_settings", "settings_open");
+	}
 	int SettingsTextPrebuildRemaining() const { return m_SettingsMenuTextLastPrebuildStats.m_Remaining; }
 	int SettingsTextPlanCollectionRemaining() const { return m_SettingsMenuTextLastCollectionStats.m_Remaining; }
-	void EnsureSettingsMenuTextPlanReadyForVisible();
 	void InvalidateSettingsTextPool();
 	void InvalidateMenuTextPool(const char *pReason);
 	void InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason Reason);
@@ -3091,8 +3123,7 @@ private:
 		CUIElement m_Element;
 		SMenuTextStyleKey m_StyleKey{};
 		uint64_t m_Generation = 0;
-		uint64_t m_LastUsedFrame = 0;
-		bool m_Built = false;
+		int64_t m_LastUsedTime = 0;
 	};
 
 	struct SSettingsTextPerfStats
@@ -3215,13 +3246,18 @@ private:
 	bool NavigateToSettingsCard(const qm_card_registry::SCardNavigationTarget &Target, const char *pHighlightStableId = nullptr, const std::vector<std::string> &vHighlightKeys = {});
 	void RequestSettingsCardFocus(const char *pStableId);
 	void PrepareSettingsAdaptiveBudgetInput(SSettingsAdaptiveBudgetInput &Input);
+	CUIRect MenuTextOuterScreen();
+	// 所有 UI 自适应预算共用同一口径：目标帧取当前显示器刷新率，
+	// 已用时间取主线程 CPU 忙时，不能把 vsync 休眠算成预算消耗。
+	float QmUiTargetFrameMs();
+	float QmUiCpuMsAverage();
+	float QmUiCpuMsP95();
 	SSettingsAdaptiveBudgetOutput BeginSettingsUiFrameScheduler(EFrameSchedulerConsumer Consumer, const char *pSource, SSettingsAdaptiveBudgetInput Input);
 	bool MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor);
-	bool RequestMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor);
 	void QueueMenuTextContainerBuild(EMenuTextScope Scope, CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor);
 	void DrainMenuTextContainerBuildRequests();
 	void RemoveMenuTextContainerBuildRequest(const CUIElement &Element);
-	int TrimMenuTextPoolForInsert(uint64_t CurrentFrame);
+	int TrimMenuTextPoolForInsert(int64_t Now);
 	void DrainMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor, bool Render, bool *pTextContainerRecreated);
 	void CountMenuTextImmediateFallback();
 	void ClearSettingsAssetsCardMetadataCache();
@@ -3248,9 +3284,16 @@ private:
 	int m_SettingsTextContextPage = -1;
 	int m_SettingsTextContextTab = -1;
 	int m_SettingsTextContextSubtab = -1;
-	int *m_pSettingsTextPrebuildBudget = nullptr;
 	std::unordered_map<std::string, SMenuTextPoolEntry, SMenuTextKeyHash, SMenuTextKeyEqual> m_MenuTextPool;
-	uint64_t m_MenuTextLastTrimFrame = ~uint64_t{0};
+	int64_t m_MenuTextLastTrimTime = 0;
+	bool m_MenuTextBlockingPrewarm = false;
+	uint64_t m_MenuTextBackgroundBudgetFrame = 0;
+	int64_t m_MenuTextBackgroundBudgetDeadline = 0;
+	int64_t m_QmTextPrewarmWindowStartNs = 0;
+	int m_QmTextPrewarmWindowFrames = 0;
+	double m_QmTextPrewarmWindowBudgetMs = 0.0;
+	double m_QmTextPrewarmWindowUsedMs = 0.0;
+	int m_QmTextPrewarmWindowBuilt = 0;
 	CUIElement m_MenuTextFallbackElement;
 	uint64_t m_MenuTextPoolGeneration = 1;
 	uint64_t m_MenuTextPoolLanguageHash = 0;
@@ -3295,8 +3338,16 @@ private:
 	std::unordered_set<std::string, SMenuTextKeyHash, SMenuTextKeyEqual> m_SettingsMenuTextPlannedKeys;
 	size_t m_SettingsMenuTextPlanCursor = 0;
 	size_t m_SettingsMenuTextPlanCollectionCursor = 0;
+	size_t m_SettingsMenuTextVisiblePlanItemCount = 0;
 	// 字形预热：每轮共用数量和时间预算，构建容器前完成当前条目的预热。
 	CSettingsTextPrewarm m_MenuTextGlyphPrewarm;
+	// 全部设置计划文本的静态字形需求表；后台只按可见页/频次批次推进。
+	CSettingsGlyphDemandTable m_SettingsMenuTextGlyphDemand;
+	CSettingsTextPrewarm m_SettingsMenuTextGlyphStaticPrewarm;
+	size_t m_SettingsMenuTextGlyphBatchCursor = 0;
+	bool m_SettingsMenuTextGlyphDemandPrepared = false;
+	uint64_t m_SettingsMenuTextGlyphDemandGeneration = 0;
+	std::array<int, 3> m_SettingsMenuTextGlyphDemandVisibleContext{{-1, -1, -1}};
 	// 设置页空闲预热复用缓冲：已就绪后仍会每帧检查，不能每帧重新分配向量。
 	std::vector<int> m_SettingsPrewarmCountryCodes;
 	std::vector<int> m_SettingsPrewarmFlagIndices;
@@ -3370,12 +3421,7 @@ private:
 	qm_card_catalog::STClientCardResult RunTClientWarListCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientStatusBarCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientProfilesCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
-	int m_ProfilePresetsTab = 0;
-	std::shared_ptr<SQmProfileWheelEditorState> m_pProfileWheelEditor;
 	std::shared_ptr<SQmFriendCodeUiState> m_pFriendCodeUiState;
-	uint64_t ProfileWheelEditorRevision() const;
-	void RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool ReadOnly);
-	void EditProfileInWheel(const CProfile &Profile, bool Dummy);
 	qm_card_catalog::STClientCardResult RunTClientConfigsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientMainCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	void RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool PrewarmOnly = false);
@@ -3403,6 +3449,7 @@ private:
 	void ConfigureSplitCachedStaticLayer(SSettingsSection &Section, const char *pTitle, std::function<float(CUIRect &)> MeasureSection, std::function<float(CUIRect &)> RenderInteractiveSection, float TopMargin);
 	void BuildTClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView, int Tab);
 	void BuildQmClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView, int Tab);
+	void BuildContributorsSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView, int Tab);
 	float LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render);
 	float LayoutTClientAutoReplyCacheSection(CUIRect &CurrentColumn, bool Render);
 	float LayoutTClientPetCacheSection(CUIRect &CurrentColumn, bool Render);
@@ -3472,6 +3519,8 @@ private:
 	void RenderQmFunctionEmoticonsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
 	// 自杀保护卡的内容渲染：自 MiniFeatures 杂烩卡迁出，独立成 qm:self_kill_protection 卡。
 	void RenderQmSelfKillProtectionContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+	// 快速练习卡：主世界影子开关/透明度、HUD 计时开关与快捷菜单条目的绑定行。
+	void RenderQmFastPracticeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	// 灵动岛倒计时位置开关（卡片目录的桥接入口按本地签名调用）。
 	bool ToggleQmHudCountdownLocation(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);
 	// 歌词卡的内容渲染（音乐 Hook 开关 + 歌词开关；Hook 开关改为遍历 QmMusicHookRegistry）。

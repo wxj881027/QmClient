@@ -68,8 +68,7 @@ TEST(QmBindWorkshopCfgSave, FailedReplacementLeavesDestinationAndRemovesCandidat
 	pStorage->ListDirectory(IStorage::TYPE_SAVE, "", [](const char *, int IsDir, int, void *pUser) {
 		if(!IsDir)
 			++*static_cast<int *>(pUser);
-		return 0;
-	}, &NumFiles);
+		return 0; }, &NumFiles);
 	EXPECT_EQ(NumFiles, 0);
 }
 

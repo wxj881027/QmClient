@@ -311,19 +311,16 @@ void CQmMapCovers::EnsureCacheFolder()
 		return;
 	if(!m_pStorage->FolderExists(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE))
 	{
-		// 存储接口只创建单层目录，先补父目录再建缓存目录。
-		if(!m_pStorage->FolderExists("qmclient", IStorage::TYPE_SAVE))
-			m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-		m_pStorage->CreateFolder(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE);
+		qm_storage::EnsureFolder(m_pStorage, QmMapCover::CACHE_FOLDER);
 	}
 	m_CacheFolderReady = m_pStorage->FolderExists(QmMapCover::CACHE_FOLDER, IStorage::TYPE_SAVE);
 }
 
 void CQmMapCovers::MarkFailed(const STask &Task, const char *pReason)
 {
-	// 唯一可能分配的冷却登记先完成；失败时队列、结果和 pending 均保持原样。
-	m_vFailedUntil.insert_or_assign(Task.m_Key.m_Url, m_Now + FAILURE_RETRY_SECONDS);
+	// 日志与冷却登记都可能分配；两者全部完成前不改变请求、队列和 pending。
 	log_debug("map_covers", "failed to prepare cover (%s): %s", pReason != nullptr ? pReason : "unknown", Task.m_Key.m_Url.c_str());
+	m_vFailedUntil.insert_or_assign(Task.m_Key.m_Url, m_Now + FAILURE_RETRY_SECONDS);
 	m_PendingKeys.erase(Task.m_PendingKey);
 	// 同一地图的其它用途也一并冷却，避免一个坏 URL 被每个可见行反复排队。
 	for(auto It = m_vQueue.begin(); It != m_vQueue.end();)
@@ -493,6 +490,8 @@ void CQmMapCovers::StartQueued()
 		const auto Read = m_pStorage->ReadFileCheckedBounded(Task.m_CachePath.c_str(), IStorage::TYPE_SAVE, &pFileData, &FileSize, MAX_RESPONSE_BYTES);
 		const std::unique_ptr<void, decltype(&std::free)> FileData(pFileData, &std::free);
 		++Reads;
+		if(Read == IStorage::EReadFileResult::RESOURCE_ERROR)
+			return;
 		if(Read == IStorage::EReadFileResult::SUCCESS)
 		{
 			const bool Valid = pFileData != nullptr && FileSize >= 8 && FileSize <= static_cast<size_t>(MAX_RESPONSE_BYTES) &&
@@ -526,6 +525,7 @@ bool CQmMapCovers::StartDownload(const STask &Task)
 {
 	if(m_pHttp == nullptr || (int)m_vDownloads.size() >= MAX_DOWNLOADS)
 		return false;
+	m_vDownloads.reserve(m_vDownloads.size() + 1);
 	SDownload Download{Task, {}};
 	std::shared_ptr<IHttpRequest> pRequest(m_CreateRequest(Task.m_Key.m_Url.c_str()));
 	if(!pRequest)
@@ -537,7 +537,6 @@ bool CQmMapCovers::StartDownload(const STask &Task)
 	pRequest->ValidateBeforeOverwrite(true);
 	pRequest->LogProgress(HTTPLOG::FAILURE);
 	Download.m_pRequest = pRequest;
-	m_vDownloads.reserve(m_vDownloads.size() + 1);
 	if(!m_DownloadingUrls.insert(Task.m_Key.m_Url).second)
 		return false;
 	static_assert(std::is_nothrow_move_constructible_v<SDownload>);
@@ -557,13 +556,14 @@ bool CQmMapCovers::StartDownload(const STask &Task)
 
 CQmMapCovers::SJob CQmMapCovers::PrepareComposeJob(const STask &Task, const unsigned char *pPngData, size_t PngSize)
 {
+	// 先把登记数组的容量备好；外部引擎接手后只允许无分配的所有权登记。
+	m_vJobs.reserve(m_vJobs.size() + 1);
 	int Width = 0;
 	int Height = 0;
 	ComposeSize(Task.m_Key.m_Role, &Width, &Height);
 	std::vector<unsigned char> Data(pPngData, pPngData + PngSize);
 	auto pJob = std::make_shared<CComposeJob>(std::move(Data), Width, Height, StyleForUrl(Task.m_Key.m_Url.c_str(), Task.m_Key.m_Role));
 	SJob Prepared{Task, std::move(pJob)};
-	m_vJobs.reserve(m_vJobs.size() + 1);
 	return Prepared;
 }
 

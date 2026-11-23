@@ -1,3 +1,5 @@
+#include <engine/shared/qm_storage_layout.h>
+
 #include <game/client/components/qmclient/friend_last_seen.h>
 
 #include <gtest/gtest.h>
@@ -16,7 +18,7 @@
 namespace
 {
 	constexpr int64_t NOW = 1792800000;
-	constexpr const char *CACHE_FILE = "qm_friend_last_seen.json";
+	constexpr const char *CACHE_FILE = qm_storage::FRIEND_LAST_SEEN_CACHE_FILE;
 	constexpr const char *OLD_CACHE = R"({"version":1,"players":[{"name":"Alice","date":"2026-10-20","checked_at":"100"}]})";
 
 	// 同一原生线程在真实解析前启用 new 故障，解析后由报告任务解除；不替换解析输入接口。
@@ -54,6 +56,7 @@ namespace
 		{
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
+			ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::CACHE_SOCIAL_DIR));
 			m_Friends.Set({"Alice"});
 			Write(OLD_CACHE);
 			ASSERT_FALSE(HasFatalFailure());

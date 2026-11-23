@@ -415,8 +415,7 @@ void CPlayers::RenderHookCollLine(
 	if(GameClient()->IsOtherTeam(ClientId))
 		Alpha = g_Config.m_ClShowOthersAlpha / 100.0f;
 	Alpha *= (float)g_Config.m_ClHookCollAlpha / 100;
-	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
-		Alpha = std::min(Alpha, 0.5f);
+	Alpha = GameClient()->m_FastPractice.ServerTeeAlpha(ClientId, Alpha);
 	if(Alpha <= 0.0f)
 		return;
 
@@ -714,7 +713,10 @@ void CPlayers::RenderHook(
 	const int HookedPlayer = pPlayerChar->m_HookedPlayer;
 	if(HookedPlayer != -1 && !in_range(HookedPlayer, MAX_CLIENTS - 1))
 		return;
-	if(HookedPlayer != -1 && !GameClient()->m_Snap.m_aCharacters[HookedPlayer].m_Active)
+	// 服务器快照失活不代表练习分支里没有这个角色：分身被击杀或暂停时，
+	// 钩子仍然挂在分支世界的目标上，不能因为快照门把整条钩绳藏掉。
+	if(HookedPlayer != -1 && !GameClient()->m_Snap.m_aCharacters[HookedPlayer].m_Active &&
+		GameClient()->m_FastPractice.ResolvePracticeCharacter(HookedPlayer) == nullptr)
 		return;
 
 	if(ClientId >= 0)
@@ -726,10 +728,9 @@ void CPlayers::RenderHook(
 	{
 		// QmClient: 查看模式（独立时间线）下回放是主内容，用不透明渲染；
 		// 跑图模式保持半透明参照物语义
-		Alpha = GameClient()->m_Ghost.ManualModeActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
+		Alpha = GameClient()->ReplaySessionStatus().ManualActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
 	}
-	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
-		Alpha = std::min(Alpha, 0.5f);
+	Alpha = GameClient()->m_FastPractice.ServerTeeAlpha(ClientId, Alpha);
 
 	RenderInfo.m_Size = 64.0f;
 
@@ -825,10 +826,9 @@ float CPlayers::PlayerRenderAlpha(int ClientId) const
 	if(ClientId == -2)
 	{
 		// QmClient: 查看模式下回放是主内容，用不透明渲染；跑图模式保持半透明参照物语义。
-		Alpha = GameClient()->m_Ghost.ManualModeActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
+		Alpha = GameClient()->ReplaySessionStatus().ManualActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
 	}
-	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
-		Alpha = std::min(Alpha, 0.5f);
+	Alpha = GameClient()->m_FastPractice.ServerTeeAlpha(ClientId, Alpha);
 	return std::clamp(Alpha, 0.0f, 1.0f);
 }
 
@@ -838,7 +838,9 @@ void CPlayers::RenderPlayer(
 	const CNetObj_Character *pPlayerChar,
 	const CTeeRenderInfo *pRenderInfo,
 	int ClientId,
-	float Intra)
+	float Intra,
+	std::optional<float> AttackTimeOverride,
+	bool PredictWeaponsForOverride)
 {
 	// 禅模式判定只取一次，避免在逐玩家渲染路径里重复解析配置。
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
@@ -854,8 +856,11 @@ void CPlayers::RenderPlayer(
 	RenderTools()->m_LocalTeeRender = Local; // TClient
 
 	const float Alpha = PlayerRenderAlpha(ClientId);
+	// 练习参与者的挂机标记属于服务器世界：分身连接在服务器侧确实没有输入，
+	// 但分支里它可能正在挥锤。服务器挂机不能画成坐姿，菜单挂机照常。
+	const bool ServerAfk = ClientId >= 0 && GameClient()->m_aClients[ClientId].m_Afk && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId);
 	const bool Afk = ClientId >= 0 && IsQmAfkForPresentation(
-						  GameClient()->m_aClients[ClientId].m_Afk,
+						  ServerAfk,
 						  Client()->State() == IClient::STATE_ONLINE,
 						  GameClient()->m_Menus.IsActive(),
 						  ClientId,
@@ -886,6 +891,16 @@ void CPlayers::RenderPlayer(
 		PredictLocalWeapons = true;
 		AttackTime = (Client()->PredIntraGameTick(g_Config.m_ClDummy) + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)Client()->GameTickSpeed();
 		LastAttackTime = (s_LastPredIntraTick + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)Client()->GameTickSpeed();
+	}
+	// 查看模式：挥锤/开枪相位由回放播放头推导。实时 tick 在暂停时仍在走，
+	// 直接沿用会让暂停画面的锤子一直上下摆动。
+	if(AttackTimeOverride.has_value())
+	{
+		// 回放与练习共用相位覆盖；练习参与者的枪口方向必须取分支渲染位置，
+		// 不能退回服务器快照。
+		PredictLocalWeapons = PredictWeaponsForOverride;
+		AttackTime = *AttackTimeOverride;
+		LastAttackTime = *AttackTimeOverride;
 	}
 	float AttackTicksPassed = AttackTime * (float)Client()->GameTickSpeed();
 
@@ -1320,7 +1335,11 @@ void CPlayers::RenderPlayer(
 				vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y),
 				Client()->IntraGameTick(g_Config.m_ClDummy));
 
-		RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, ShadowPosition, g_Config.m_ClUnpredictedShadowAlpha / 100.f, JellyDeform.m_BodyScale, JellyDeform.m_FeetScale, JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle); // render ghost
+		// 服务器时间线上 Tee 的落点影子，练习期间和其它服务器侧 Tee 一起受
+		// 影子开关约束：整组隐藏时不该只剩这一圈残影。
+		const float ShadowAlpha = g_Config.m_ClUnpredictedShadowAlpha / 100.f * GameClient()->m_FastPractice.ServerTeeAlpha(ClientId, 1.0f);
+		if(ShadowAlpha > 0.0f)
+			RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, ShadowPosition, ShadowAlpha, JellyDeform.m_BodyScale, JellyDeform.m_FeetScale, JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle); // render ghost
 	}
 
 	const std::chrono::nanoseconds Now = time_get_nanoseconds();
@@ -1481,7 +1500,9 @@ void CPlayers::RenderPlayerGhost(
 	const CNetObj_Character *pPlayerChar,
 	const CTeeRenderInfo *pRenderInfo,
 	int ClientId,
-	float Intra)
+	float Intra,
+	std::optional<float> AttackTimeOverride,
+	bool PredictWeaponsForOverride)
 {
 	// 禅模式判定只取一次，避免在逐玩家渲染路径里重复解析配置。
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
@@ -1509,8 +1530,14 @@ void CPlayers::RenderPlayerGhost(
 
 	if(!OtherTeam && FrozenSwappingHide)
 		Alpha = 1.0f;
+	// 练习期间非参与者都是服务器时间线上的参照物，与其它渲染路径共用同一组
+	// 影子开关和不透明度；整组隐藏时不必再走后面的残影绘制。
+	Alpha = GameClient()->m_FastPractice.ServerTeeAlpha(ClientId, Alpha);
+	if(Alpha <= 0.0f)
+		return;
+	const bool ServerAfk = ClientId >= 0 && GameClient()->m_aClients[ClientId].m_Afk && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId);
 	const bool Afk = ClientId >= 0 && IsQmAfkForPresentation(
-						  GameClient()->m_aClients[ClientId].m_Afk,
+						  ServerAfk,
 						  Client()->State() == IClient::STATE_ONLINE,
 						  GameClient()->m_Menus.IsActive(),
 						  ClientId,
@@ -1539,6 +1566,12 @@ void CPlayers::RenderPlayerGhost(
 		PredictLocalWeapons = true;
 		AttackTime = (Client()->PredIntraGameTick(g_Config.m_ClDummy) + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)SERVER_TICK_SPEED;
 		LastAttackTime = (s_LastPredIntraTick + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)SERVER_TICK_SPEED;
+	}
+	if(AttackTimeOverride.has_value())
+	{
+		PredictLocalWeapons = PredictWeaponsForOverride;
+		AttackTime = *AttackTimeOverride;
+		LastAttackTime = *AttackTimeOverride;
 	}
 	float AttackTicksPassed = AttackTime * (float)SERVER_TICK_SPEED;
 
@@ -1955,7 +1988,7 @@ bool CPlayers::ShouldRenderWeaponAnimation(int ClientId) const
 
 void CPlayers::OnRender()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 		return;
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
@@ -1964,13 +1997,35 @@ void CPlayers::OnRender()
 	// 必须在任何 RenderHookCollLine 之前完成（本帧内数据不变）。
 	GameClient()->UpdateHookCollTargets();
 
+	// 练习参与者可能不在当前服务器快照里（服务器侧死亡、暂停或短暂离线），
+	// 但分支世界仍在模拟它。可用性以分支角色为准，否则画面上人会消失、碰撞体还在。
+	const auto IsRenderableClient = [&](int ClientId) {
+		return IsPlayerInfoAvailable(ClientId) ||
+		       GameClient()->m_FastPractice.ResolvePracticeCharacter(ClientId) != nullptr;
+	};
+	const auto PracticeAttackTime = [&](int ClientId) -> std::optional<float> {
+		if(!GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
+			return std::nullopt;
+		CCharacter *pPracticeChar = GameClient()->m_FastPractice.ResolvePracticeCharacter(ClientId);
+		const CCharacterCore *pPracticeCore = nullptr;
+		int PracticeTick = 0;
+		if(pPracticeChar == nullptr ||
+			!GameClient()->m_FastPractice.ResolvePracticeCharacterCore(ClientId, &pPracticeCore, PracticeTick) ||
+			pPracticeCore == nullptr)
+			return std::nullopt;
+		// 分支 tick 是整数，补上当前预测帧的小数相位，挥锤/忍者动画才不会 50 Hz 跳变。
+		const float TickSpeed = (float)maximum(1, Client()->GameTickSpeed());
+		return maximum(0.0f, (PracticeTick - 1 - pPracticeChar->GetAttackTick()) / TickSpeed +
+					     Client()->PredIntraGameTick(g_Config.m_ClDummy) / TickSpeed);
+	};
+
 	// update render info for ninja
 	CTeeRenderInfo aRenderInfo[MAX_CLIENTS];
 	CNetObj_Character aRenderCurForTee[MAX_CLIENTS];
 	const bool IsTeamPlay = GameClient()->IsTeamPlay();
 	for(int i = 0; i < MAX_CLIENTS; ++i)
 	{
-		if(!IsPlayerInfoAvailable(i))
+		if(!IsRenderableClient(i))
 			continue;
 		const auto &ClientData = GameClient()->m_aClients[i];
 		aRenderInfo[i] = ClientData.m_RenderInfo;
@@ -2046,7 +2101,7 @@ void CPlayers::OnRender()
 			}
 		}
 
-		// 同队玩家冻结时，身体和脚统一使用当前卡锤或卡钩的按下颜色。
+		// 范围内的角色冻结时，身体和脚使用卡锤或卡钩的按下颜色。
 		if(const auto Color = GameClient()->QmWaterHammerIndicator().HighlightColor(i))
 		{
 			aRenderInfo[i].m_CustomColoredSkin = true;
@@ -2076,13 +2131,13 @@ void CPlayers::OnRender()
 	const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 	{
-		if(ClientId == LocalClientId || !IsPlayerInfoAvailable(ClientId))
+		if(ClientId == LocalClientId || !IsRenderableClient(ClientId))
 		{
 			continue;
 		}
 		RenderHook(ScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &GameClient()->m_aClients[ClientId].m_RenderCur, &aRenderInfo[ClientId], ClientId);
 	}
-	if(LocalClientId != -1 && IsPlayerInfoAvailable(LocalClientId))
+	if(LocalClientId != -1 && IsRenderableClient(LocalClientId))
 	{
 		const CGameClient::CClientData *pLocalClientData = &GameClient()->m_aClients[LocalClientId];
 		RenderHook(ScreenRect, &pLocalClientData->m_RenderPrev, &pLocalClientData->m_RenderCur, &aRenderInfo[LocalClientId], LocalClientId);
@@ -2127,7 +2182,7 @@ void CPlayers::OnRender()
 
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 	{
-		if(ClientId == RenderLastId || !IsPlayerInfoAvailable(ClientId))
+		if(ClientId == RenderLastId || !IsRenderableClient(ClientId))
 		{
 			continue;
 		}
@@ -2156,16 +2211,16 @@ void CPlayers::OnRender()
 
 		// If we are frozen and hiding frozen ghosts and not swapping render only the regular player
 		if(RenderGhost && g_Config.m_QmShowOthersGhosts && !Spec && Client()->State() != IClient::STATE_DEMOPLAYBACK)
-			RenderPlayerGhost(&GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId);
+			RenderPlayerGhost(&GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId, 0.0f, PracticeAttackTime(ClientId), true);
 
-		RenderPlayer(PlayerScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId);
+		RenderPlayer(PlayerScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId, 0.0f, PracticeAttackTime(ClientId), true);
 	}
-	if(RenderLastId != -1 && IsPlayerInfoAvailable(RenderLastId))
+	if(RenderLastId != -1 && IsRenderableClient(RenderLastId))
 	{
 		const CGameClient::CClientData *pClientData = &GameClient()->m_aClients[RenderLastId];
 		RenderHookCollLine(ScreenRect, &pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);
 		RenderWeaponTrajectory(&pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);
-		RenderPlayer(PlayerScreenRect, &pClientData->m_RenderPrev, &aRenderCurForTee[RenderLastId], &aRenderInfo[RenderLastId], RenderLastId);
+		RenderPlayer(PlayerScreenRect, &pClientData->m_RenderPrev, &aRenderCurForTee[RenderLastId], &aRenderInfo[RenderLastId], RenderLastId, 0.0f, PracticeAttackTime(RenderLastId), true);
 	}
 }
 

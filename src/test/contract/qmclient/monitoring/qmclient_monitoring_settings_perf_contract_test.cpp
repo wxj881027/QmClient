@@ -69,7 +69,7 @@ TEST(QmMonitoringSettingsPerfContract, SettingsPerfWindowLogsOnePercentLowFps)
 
 	EXPECT_NE(Header.find("m_FpsOnePctLow"), std::string::npos);
 	EXPECT_EQ(Header.find("m_FpsOnePctLow = m_Summary.m_FrameMsP99 > 0.0f ? 1000.0f / m_Summary.m_FrameMsP99 : 0.0f;"), std::string::npos);
-	EXPECT_NE(Header.find("OnePercentLowFpsFromFrameMs"), std::string::npos);
+	EXPECT_NE(Header.find("OnePercentLowFpsOfSortedFrames"), std::string::npos);
 	EXPECT_NE(Menus.find("fps_1pct_low=%.3f"), std::string::npos);
 	EXPECT_NE(Menus.find("fps_1pct_source=real_sampled"), std::string::npos);
 	EXPECT_NE(Menus.find("window_start_frame=%"), std::string::npos);

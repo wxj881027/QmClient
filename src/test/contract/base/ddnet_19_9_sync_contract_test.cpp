@@ -24,9 +24,10 @@ TEST(DDNet199Sync, UsesLoadedMapForDiscordActivity)
 
 	EXPECT_NE(Client.find("void CClient::SetCurrentServerInfo(const CServerInfo &ServerInfo)"), std::string::npos);
 	EXPECT_NE(Client.find("m_pMap->IsLoaded()"), std::string::npos);
-	EXPECT_NE(Client.find("str_copy(m_CurrentServerInfo.m_aMap, GetCurrentMap());"), std::string::npos);
-	EXPECT_NE(Client.find("m_CurrentServerInfo.m_MapCrc = m_pMap->Crc();"), std::string::npos);
-	EXPECT_NE(Client.find("m_CurrentServerInfo.m_MapSize = m_pMap->Size();"), std::string::npos);
+	EXPECT_NE(Client.find("server_info::Update(m_CurrentServerInfo, ServerInfo"), std::string::npos);
+	EXPECT_NE(Client.find("str_copy(Candidate.m_aMap, GetCurrentMap());"), std::string::npos);
+	EXPECT_NE(Client.find("Candidate.m_MapCrc = m_pMap->Crc();"), std::string::npos);
+	EXPECT_NE(Client.find("Candidate.m_MapSize = m_pMap->Size();"), std::string::npos);
 	EXPECT_EQ(Client.find("GameClient()->Map()"), std::string::npos);
 	EXPECT_NE(Client.find("Discord()->SetGameInfo(m_CurrentServerInfo, Registered);"), std::string::npos);
 	EXPECT_NE(Discord.find("str_copy(m_Activity.state, ServerInfo.m_aMap"), std::string::npos);

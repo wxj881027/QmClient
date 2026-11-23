@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
 class CUi;
 class ITextRender;
@@ -11,9 +12,14 @@ class IStorage;
 class IClient;
 struct SSettingsCardDefinition;
 struct SSettingsContentMetrics;
+struct IUiContext;
 namespace qm_search_answers
 {
 	struct SResult;
+}
+namespace qm_wiki_docs
+{
+	struct SDdnetWikiMatch;
 }
 
 namespace qm_card_catalog
@@ -32,6 +38,7 @@ namespace qm_card_catalog
 
 	inline constexpr const char *SEARCH_ANSWER_CARD_ID = "deck:global-search-answers";
 	void BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, const qm_search_answers::SResult &Result, bool ReadOnly, const SSettingsContentMetrics &Metrics, const std::function<void(const char *)> &SelectQuestion, SSettingsCardDefinition &Out, const std::shared_ptr<SSearchAnswerCardState> &State = {});
+	void BuildDdnetWikiSearchCard(const IUiContext &Ctx, const std::vector<qm_wiki_docs::SDdnetWikiMatch> &vMatches, bool PreferChinese, bool ReadOnly, const SSettingsContentMetrics &Metrics, SSettingsCardDefinition &Out);
 }
 
 #endif

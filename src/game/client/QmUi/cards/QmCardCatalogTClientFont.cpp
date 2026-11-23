@@ -16,6 +16,7 @@
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
 #include <engine/shared/localization.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 #include <engine/warning.h>
@@ -80,7 +81,7 @@ using namespace qm_tclient_cards;
 // 字体族（族名/分类/google/fonts 仓库路径），随包发行且用户目录同名文件可整体
 // 覆盖。字体文件本体不随包——搜索命中后按需下载安装到 fonts/fonts_store（逐文件
 // 串行，镜像链 ghproxy.net → ghfast.top → raw.githubusercontent.com）；预览按需
-// 下载到 qmclient/fontcache 并临时加载为预览面（不进字体族列表）。安装与预览
+// 下载到 qmclient/cache/fonts/previews 并临时加载为预览面（不进字体族列表）。安装与预览
 // 共用“同一时刻最多一个下载”的串行通道，安装任务优先。
 namespace fontstore
 {
@@ -239,8 +240,7 @@ namespace fontstore
 		else
 		{
 			str_format(aDest, sizeof(aDest), "%s/%s", pDir, File.c_str());
-			pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-			pStorage->CreateFolder(pDir, IStorage::TYPE_SAVE);
+			qm_storage::EnsureFolder(pStorage, pDir);
 		}
 		std::shared_ptr<IHttpRequest> pRequest(CreateHttpRequest(vUrls[UrlIndex].c_str()));
 		pRequest->WriteToFile(pStorage, aDest, IStorage::TYPE_SAVE);
@@ -309,7 +309,7 @@ namespace fontstore
 
 	// 商店弹层中可见的字体按帧入队（内部去重）；队列有上限防快速滚动时无限膨胀。
 	// 大文件（CJK/可变/多样式族）同样自动预览：浏览到才入队、一次一个串行下载，
-	// 且 fontcache 跨会话持久缓存（成功文件不删除、重启不重下），CDN 负载可控。
+	// 且预览缓存跨会话持久化（成功文件不删除、重启不重下），CDN 负载可控。
 	void EnsurePreviewQueued(IStorage *pStorage, size_t FamilyIndex)
 	{
 		std::vector<SFamily> &vFamilies = Families(pStorage);
@@ -428,8 +428,8 @@ namespace fontstore
 					continue;
 				const SEntry &Entry = vEntries[Family.m_vEntryIndices.front()];
 				char aCachePath[IO_MAX_PATH_LENGTH];
-				str_format(aCachePath, sizeof(aCachePath), "qmclient/fontcache/%s", Entry.m_File.c_str());
-				// 跨会话缓存命中：fontcache 里已有文件直接本地加载，不再发起网络
+				str_format(aCachePath, sizeof(aCachePath), "%s/%s", qm_storage::CACHE_FONT_PREVIEWS_DIR, Entry.m_File.c_str());
+				// 跨会话缓存命中：预览缓存里已有文件直接本地加载，不再发起网络
 				// 请求（预览文件成功后永不删除，同一 URL 每个客户端只拉一次，
 				// 对 CDN 保持回源友好的行为）；本地解析失败视为半截或坏文件，
 				// 清掉后照常走下载路径重下一次。
@@ -444,7 +444,7 @@ namespace fontstore
 					}
 					pStorage->RemoveFile(aCachePath, IStorage::TYPE_SAVE);
 				}
-				Job.m_pRequest = StartRequest(pHttp, pStorage, "qmclient/fontcache", Entry.m_File, EntryDownloadUrls(Entry), 0);
+				Job.m_pRequest = StartRequest(pHttp, pStorage, qm_storage::CACHE_FONT_PREVIEWS_DIR, Entry.m_File, EntryDownloadUrls(Entry), 0);
 				if(!Job.m_pRequest)
 				{
 					Family.m_PreviewFailed = true;
@@ -460,7 +460,7 @@ namespace fontstore
 			SFamily &Family = vFamilies[s_ActivePreview->m_FamilyIndex];
 			const SEntry &Entry = vEntries[Family.m_vEntryIndices.front()];
 			char aCachePath[IO_MAX_PATH_LENGTH];
-			str_format(aCachePath, sizeof(aCachePath), "qmclient/fontcache/%s", Entry.m_File.c_str());
+			str_format(aCachePath, sizeof(aCachePath), "%s/%s", qm_storage::CACHE_FONT_PREVIEWS_DIR, Entry.m_File.c_str());
 			if(s_ActivePreview->m_pRequest->State() == EHttpState::DONE && pTextRender->QmEnsurePreviewFace(Entry.m_Family.c_str(), aCachePath))
 			{
 				Family.m_PreviewReady = true;
@@ -565,6 +565,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
 	SearchOptions.m_pPlaceholder = Localize("Search online fonts…");
 	SearchOptions.m_Clearable = true;
+	SearchOptions.m_SearchHotkeyEnabled = true;
 	SearchOptions.m_FontSize = SmallFontSize;
 	{
 		// 子层活动时父搜索框只绘制，不能重新激活或覆盖子层的文本焦点。

@@ -10,6 +10,7 @@
 #include <engine/favorites.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
+#include <engine/shared/masterserver.h>
 
 #include <game/client/components/qmclient/browser_column_layout.h>
 #include <game/client/components/qmclient/browser_friend_list.h>
@@ -233,6 +234,61 @@ TEST(ServerBrowserColumnLayout, AllFixedColumnsLeaveUnusedWideViewportSpace)
 	ExpectBrowserColumnWidths(QmBrowserFitColumns(aColumns, 100), std::array{20.0f, 30.0f});
 }
 
+TEST(ServerBrowserColumnLayout, WideViewportKeepsDifficultyResizable)
+{
+	using namespace qm_browser_column;
+	struct SDefaultColumn
+	{
+		EId m_Id;
+		float m_Width;
+	};
+	const SDefaultColumn aDefaults[] = {
+		{FLAG_LOCK, 14.0f},
+		{FLAG_FAV, 20.0f},
+		{COMMUNITY, 28.0f},
+		{NAME, 120.0f},
+		{MAP, 120.0f},
+		{DIFFICULTY, 80.0f},
+		{GAMETYPE, 68.0f},
+		{FRIENDS, 14.0f},
+		{PLAYERS, 40.0f},
+		{QM_CLIENTS, 24.0f},
+		{PING, 30.0f},
+	};
+	// 生产布局数组按默认视觉序传入，列 ID 只用于取配置上下限。
+	constexpr size_t MapIndex = 4;
+	constexpr size_t DifficultyIndex = 5;
+	constexpr size_t GametypeIndex = 6;
+	static_assert(std::size(aDefaults) == COUNT);
+	std::array<SQmBrowserColumnSizing, COUNT> aColumns{};
+	for(size_t i = 0; i < std::size(aDefaults); ++i)
+	{
+		const auto &Column = aDefaults[i];
+		const bool Fixed = Column.m_Id == FLAG_LOCK || Column.m_Id == FLAG_FAV || Column.m_Id == COMMUNITY;
+		aColumns[i] = {Column.m_Width, Fixed ? Column.m_Width : MinWidth(Column.m_Id), Fixed ? Column.m_Width : MaxWidth(Column.m_Id), Column.m_Width};
+	}
+
+	// 3840×2160 窗口在扣除面板、社区栏与滚动条预留后的典型列宽预算。
+	const auto Fitted = QmBrowserFitColumns(aColumns, 2400.0f);
+	EXPECT_LT(Fitted[DifficultyIndex].m_Width, MaxWidth(DIFFICULTY));
+	EXPECT_GT(Fitted[DifficultyIndex].m_Width, 300.0f);
+
+	// 按压帧会测量可见内容，把期望宽度从配置值换成内容宽度。
+	auto Measured = Fitted;
+	Measured[DifficultyIndex].m_PreferredWidth = 260.0f;
+	Measured[GametypeIndex].m_PreferredWidth = 140.0f;
+	Measured[GametypeIndex + 1].m_PreferredWidth = 40.0f;
+	Measured[GametypeIndex + 2].m_PreferredWidth = 70.0f;
+	Measured[GametypeIndex + 3].m_PreferredWidth = 60.0f;
+	Measured[GametypeIndex + 4].m_PreferredWidth = 60.0f;
+
+	const auto FromLeftBoundary = QmBrowserResizeColumns(Measured, MapIndex, -40.0f);
+	EXPECT_GT(FromLeftBoundary[DifficultyIndex].m_Width, Measured[DifficultyIndex].m_Width);
+
+	const auto FromRightBoundary = QmBrowserResizeColumns(Measured, DifficultyIndex, 40.0f);
+	EXPECT_GT(FromRightBoundary[DifficultyIndex].m_Width, Measured[DifficultyIndex].m_Width);
+}
+
 TEST(ServerBrowserColumnLayout, EmptyAndZeroWidthViewportsRemainBounded)
 {
 	const std::array<SQmBrowserColumnSizing, 2> aColumns{{{20, 20, 20, 20}, {80, 40, 300, 100}}};
@@ -344,6 +400,55 @@ TEST(ServerBrowserHeaderGesture, ResizeCannotMarkReorderOrPolluteNextSort)
 	EXPECT_FALSE(Gesture.ReorderDragged());
 }
 
+TEST(ServerBrowserHeaderGesture, ActiveResizeSurvivesLoopFramesBetweenRenders)
+{
+	// 异步渲染会让主循环在两个可见帧之间空转多圈；按压是否有效只取决于
+	// 这次渲染仍持有输入，不能把循环帧号差当成渲染中断。
+	SQmBrowserHeaderGestureState State;
+	State.m_Interactive = true;
+	State.m_ResizeActive = true;
+	State.m_ActiveItemOwned = true;
+	EXPECT_FALSE(QmBrowserHeaderGestureShouldEnd(State));
+}
+
+TEST(ServerBrowserHeaderGesture, OwnershipLossEndsActiveResize)
+{
+	SQmBrowserHeaderGestureState State;
+	State.m_Interactive = true;
+	State.m_ResizeActive = true;
+	State.m_ActiveItemOwned = false;
+	EXPECT_TRUE(QmBrowserHeaderGestureShouldEnd(State));
+
+	State.m_ActiveItemOwned = true;
+	State.m_ViewportChanged = true;
+	EXPECT_TRUE(QmBrowserHeaderGestureShouldEnd(State));
+}
+
+TEST(ServerBrowserHeaderGesture, NonInteractiveOrRestartedOrStaleRenderEndsGesture)
+{
+	SQmBrowserHeaderGestureState State;
+	State.m_Interactive = false;
+	EXPECT_TRUE(QmBrowserHeaderGestureShouldEnd(State));
+
+	State.m_Interactive = true;
+	State.m_RestartChanged = true;
+	EXPECT_TRUE(QmBrowserHeaderGestureShouldEnd(State));
+
+	State.m_RestartChanged = false;
+	State.m_Stale = true;
+	EXPECT_TRUE(QmBrowserHeaderGestureShouldEnd(State));
+}
+
+TEST(ServerBrowserHeaderGesture, ReorderIsNotTiedToResizeActiveItem)
+{
+	SQmBrowserHeaderGestureState State;
+	State.m_Interactive = true;
+	State.m_ResizeActive = false;
+	State.m_ActiveItemOwned = false;
+	State.m_ViewportChanged = true;
+	EXPECT_FALSE(QmBrowserHeaderGestureShouldEnd(State));
+}
+
 namespace
 {
 	void ExpectBrowserRectWithin(const CUIRect &Rect, const CUIRect &Area)
@@ -387,6 +492,33 @@ TEST(ServerBrowserStatusLayout, FreshListDoesNotReserveAnEmptyNoticeRow)
 	EXPECT_FLOAT_EQ(Stale.m_Status.h - Fresh.m_Status.h, NoticeSpace);
 	EXPECT_FLOAT_EQ(Fresh.m_List.h - Stale.m_List.h, NoticeSpace);
 	EXPECT_FLOAT_EQ(Stale.m_Status.y + Stale.m_Status.h, View.y + View.h);
+}
+
+TEST(ServerBrowserNavigationLayout, TabsAndPanelSeparatedByPanelGapToken)
+{
+	const CUIRect View{8.0f, 16.0f, 960.0f, 500.0f};
+	const auto Layout = QmBrowserNavigationLayout(View, 26.0f);
+	EXPECT_FLOAT_EQ(Layout.m_TabBar.h, 26.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Gap.h, ui_token::panel::GAP);
+	EXPECT_FLOAT_EQ(Layout.m_Content.y, Layout.m_TabBar.y + Layout.m_TabBar.h + ui_token::panel::GAP);
+	EXPECT_FLOAT_EQ(Layout.m_Content.h, View.h - 26.0f - ui_token::panel::GAP);
+	EXPECT_FLOAT_EQ(Layout.m_Content.y + Layout.m_Content.h, View.y + View.h);
+}
+
+TEST(ServerBrowserNavigationLayout, ShortViewportBoundsGapAndContentWithoutOverflow)
+{
+	for(const float Height : {0.0f, 1.0f, 20.0f, 26.0f, 30.0f, 33.0f, 34.0f})
+	{
+		SCOPED_TRACE(Height);
+		const CUIRect View{8.0f, 16.0f, 960.0f, Height};
+		const auto Layout = QmBrowserNavigationLayout(View, 26.0f);
+		ExpectBrowserRectWithin(Layout.m_TabBar, View);
+		ExpectBrowserRectWithin(Layout.m_Gap, View);
+		ExpectBrowserRectWithin(Layout.m_Content, View);
+		const float ExpectedGap = std::min(ui_token::panel::GAP, std::max(0.0f, Height - 26.0f));
+		EXPECT_FLOAT_EQ(Layout.m_Content.y - (Layout.m_TabBar.y + Layout.m_TabBar.h), ExpectedGap);
+		EXPECT_FLOAT_EQ(Layout.m_Content.y + Layout.m_Content.h, View.y + View.h);
+	}
 }
 
 TEST(ServerBrowserPanelLayout, DecreasingHeightShrinksListBeforeStatusContent)
@@ -907,6 +1039,235 @@ TEST_F(CServerBrowserStateTest, FriendListRefreshesLatencyAfterPingUpdate)
 	ASSERT_EQ(List.Groups()[Default].size(), 1u);
 	EXPECT_NE(OldLatency, 42);
 	EXPECT_EQ(List.Groups()[Default][0].ServerInfo()->m_Latency, 42);
+}
+
+TEST_F(CServerBrowserStateTest, RequestServerPingQueuesOnceAndRespectsFailureCooldown)
+{
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	AddServer("127.0.0.1:8303", "Server", "Kobra");
+	auto &Entry = CServerBrowserTestAccess::FirstEntry(m_Browser);
+	Entry.m_Info.m_Location = CServerInfo::LOC_CHINA;
+	Entry.m_Info.m_LatencyIsEstimated = true;
+	Entry.m_GotInfo = 1;
+
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
+	EXPECT_EQ(CServerBrowserTestAccess::FirstRequest(m_Browser), &Entry);
+	EXPECT_TRUE(Entry.m_RequestIgnoreInfo);
+	EXPECT_EQ(Entry.m_RequestTime, 0);
+
+	// 重复调用（同一行每帧渲染）不重复入队。
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
+
+	// 请求已发出后超时被释放：条目标记为补测失败，不会立刻重新入队。
+	Entry.m_RequestTime = time_get();
+	CServerBrowserTestAccess::ReleaseQueuedRequest(m_Browser);
+	ASSERT_EQ(CServerBrowserTestAccess::FirstRequest(m_Browser), nullptr);
+	EXPECT_FALSE(Entry.m_PingProbePending);
+	EXPECT_TRUE(Entry.m_PingProbeFailed);
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
+
+	// 已有可用实测值后不再补测。
+	Entry.m_Info.m_LatencyIsEstimated = false;
+	Entry.m_Info.m_Latency = 42;
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
+}
+
+TEST_F(CServerBrowserStateTest, RequestServerPingOnlyMeasuresChinaServers)
+{
+	AddServer("127.0.0.1:8303", "Foreign", "Kobra");
+	auto &Entry = CServerBrowserTestAccess::FirstEntry(m_Browser);
+	Entry.m_Info.m_Location = CServerInfo::LOC_EUROPE;
+	Entry.m_Info.m_LatencyIsEstimated = true;
+	Entry.m_GotInfo = 1;
+
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
+}
+
+TEST_F(CServerBrowserStateTest, RequestServerPingDeduplicatesByIpAddress)
+{
+	// 同一 IP 上的两个端口实例：只排队一个探测请求。
+	AddServer("127.0.0.1:8303", "First", "Kobra");
+	AddServer("127.0.0.1:8304", "Second", "Kobra");
+	for(int Index = 0; Index < 2; Index++)
+	{
+		auto &Entry = CServerBrowserTestAccess::Entry(m_Browser, Index);
+		Entry.m_Info.m_Location = CServerInfo::LOC_CHINA;
+		Entry.m_Info.m_LatencyIsEstimated = true;
+		Entry.m_GotInfo = 1;
+	}
+
+	NETADDR FirstAddress;
+	ASSERT_FALSE(net_addr_from_str(&FirstAddress, "127.0.0.1:8303"));
+	NETADDR SecondAddress;
+	ASSERT_FALSE(net_addr_from_str(&SecondAddress, "127.0.0.1:8304"));
+	m_Browser.RequestServerPing(FirstAddress);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
+	m_Browser.RequestServerPing(SecondAddress);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
+}
+
+TEST_F(CServerBrowserStateTest, PingReplyUpdatesEveryInstanceOnSameIpAndStopsRemeasuring)
+{
+	AddServer("127.0.0.1:8303", "First", "Kobra");
+	AddServer("127.0.0.1:8304", "Second", "Kobra");
+	auto &First = CServerBrowserTestAccess::Entry(m_Browser, 0);
+	auto &Second = CServerBrowserTestAccess::Entry(m_Browser, 1);
+	for(IServerBrowser::CServerEntry *pEntry : {&First, &Second})
+	{
+		pEntry->m_Info.m_Location = CServerInfo::LOC_CHINA;
+		pEntry->m_Info.m_LatencyIsEstimated = true;
+		pEntry->m_Info.m_Latency = 199;
+		pEntry->m_GotInfo = 1;
+	}
+	CServerBrowserTestAccess::SetPingCache(m_Browser, new CTestPingCache());
+
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	m_Browser.RequestServerPing(Address);
+	ASSERT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
+
+	// 模拟 GETINFO 回复：请求约 10ms 前发出，测得延迟应远小于估算值 199。
+	First.m_RequestTime = time_get() - time_freq() / 100;
+	CServerInfo Reply{};
+	Reply.m_Type = SERVERINFO_EXTENDED;
+	m_Browser.OnServerInfoUpdate(Address, CServerBrowserTestAccess::GenerateToken(m_Browser, Address), &Reply);
+
+	// 同一 IP 的所有端口实例都获得实测值并退出估计状态。
+	EXPECT_FALSE(First.m_Info.m_LatencyIsEstimated);
+	EXPECT_FALSE(Second.m_Info.m_LatencyIsEstimated);
+	EXPECT_EQ(First.m_Info.m_Latency, Second.m_Info.m_Latency);
+	EXPECT_NE(First.m_Info.m_Latency, 199);
+	EXPECT_TRUE(CServerInfo::IsUsableLatency(First.m_Info.m_Latency));
+	EXPECT_EQ(CServerBrowserTestAccess::FirstRequest(m_Browser), nullptr);
+	EXPECT_FALSE(First.m_PingProbePending);
+	EXPECT_FALSE(First.m_PingProbeFailed);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
+
+	// 已有实测值后，行再次可见也不会重复测速。
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
+}
+
+TEST_F(CServerBrowserStateTest, FailedProbeLetsSiblingPortOnSameIpTryLater)
+{
+	// 同一 IP 的两个端口：先探测的实例无响应时，不能长期占住整个 IP 的探测机会。
+	AddServer("127.0.0.1:8303", "First", "Kobra");
+	AddServer("127.0.0.1:8304", "Second", "Kobra");
+	for(int Index = 0; Index < 2; Index++)
+	{
+		auto &Entry = CServerBrowserTestAccess::Entry(m_Browser, Index);
+		Entry.m_Info.m_Location = CServerInfo::LOC_CHINA;
+		Entry.m_Info.m_LatencyIsEstimated = true;
+		Entry.m_GotInfo = 1;
+	}
+	auto &First = CServerBrowserTestAccess::Entry(m_Browser, 0);
+	auto &Second = CServerBrowserTestAccess::Entry(m_Browser, 1);
+	NETADDR FirstAddress, SecondAddress;
+	ASSERT_FALSE(net_addr_from_str(&FirstAddress, "127.0.0.1:8303"));
+	ASSERT_FALSE(net_addr_from_str(&SecondAddress, "127.0.0.1:8304"));
+
+	m_Browser.RequestServerPing(FirstAddress);
+	ASSERT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
+	First.m_RequestTime = time_get();
+	CServerBrowserTestAccess::ReleaseQueuedRequest(m_Browser);
+	ASSERT_TRUE(First.m_PingProbeFailed);
+
+	// 同 IP 的去重窗口内仍不重复探测。
+	m_Browser.RequestServerPing(SecondAddress);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
+
+	// 窗口过后，失败实例保持静默，探测机会交给存活的另一个实例。
+	CServerBrowserTestAccess::AgePingRequestWindow(m_Browser, FirstAddress);
+	m_Browser.RequestServerPing(FirstAddress);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 0);
+	m_Browser.RequestServerPing(SecondAddress);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
+	EXPECT_TRUE(Second.m_PingProbePending);
+}
+
+TEST_F(CServerBrowserStateTest, RefreshingServerListClearsProbeState)
+{
+	// 列表刷新会重建条目：失败标记和按 IP 的探测记录都不能残留，否则刷新后
+	// 同一服务器永远不再补测。
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	AddServer("127.0.0.1:8303", "Server", "Kobra");
+	auto &Entry = CServerBrowserTestAccess::FirstEntry(m_Browser);
+	Entry.m_Info.m_Location = CServerInfo::LOC_CHINA;
+	Entry.m_Info.m_LatencyIsEstimated = true;
+	Entry.m_GotInfo = 1;
+	m_Browser.RequestServerPing(Address);
+	ASSERT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
+	Entry.m_RequestTime = time_get();
+	CServerBrowserTestAccess::ReleaseQueuedRequest(m_Browser);
+	ASSERT_TRUE(Entry.m_PingProbeFailed);
+
+	CServerBrowserTestAccess::CleanUp(m_Browser);
+	AddServer("127.0.0.1:8303", "Server", "Kobra");
+	auto &Refreshed = CServerBrowserTestAccess::FirstEntry(m_Browser);
+	Refreshed.m_Info.m_Location = CServerInfo::LOC_CHINA;
+	Refreshed.m_Info.m_LatencyIsEstimated = true;
+	Refreshed.m_GotInfo = 1;
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
+}
+
+TEST_F(CServerBrowserStateTest, RequestServerPingAlsoMeasuresChineseNamedServerWithoutChinaLocation)
+{
+	// 国服也挂在 DDraceNetwork 社区下，master 的 location 可能不是 as:cn；
+	// 名称带 CHN 时同样要补测，与名称列短名使用同一判定口径。
+	AddServer("127.0.0.1:8303", "CHN1 北京", "Kobra");
+	auto &Entry = CServerBrowserTestAccess::FirstEntry(m_Browser);
+	Entry.m_Info.m_Location = CServerInfo::LOC_ASIA;
+	Entry.m_Info.m_LatencyIsEstimated = true;
+	Entry.m_GotInfo = 1;
+
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	m_Browser.RequestServerPing(Address);
+	EXPECT_EQ(CServerBrowserTestAccess::NumRequests(m_Browser), 1);
+}
+
+TEST(ServerBrowserLatencyDisplay, FormatsUsableValuesAndPlaceholder)
+{
+	char aBuffer[8];
+	CServerInfo::FormatLatency(aBuffer, 42);
+	EXPECT_STREQ(aBuffer, "42");
+	CServerInfo::FormatLatency(aBuffer, 199);
+	EXPECT_STREQ(aBuffer, "199");
+	CServerInfo::FormatLatency(aBuffer, CServerInfo::LATENCY_UNKNOWN);
+	EXPECT_STREQ(aBuffer, "--");
+	CServerInfo::FormatLatency(aBuffer, -1);
+	EXPECT_STREQ(aBuffer, "--");
+
+	EXPECT_TRUE(CServerInfo::IsUsableLatency(0));
+	EXPECT_TRUE(CServerInfo::IsUsableLatency(CServerInfo::LATENCY_UNKNOWN - 1));
+	EXPECT_FALSE(CServerInfo::IsUsableLatency(CServerInfo::LATENCY_UNKNOWN));
+	EXPECT_FALSE(CServerInfo::IsUsableLatency(-1));
+}
+
+TEST_F(CServerBrowserStateTest, PingUpdateRequestsResortOnlyWhenOrderDependsOnPing)
+{
+	AddServer("127.0.0.1:8303", "Server", "Kobra");
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	CServerBrowserTestAccess::SetPingCache(m_Browser, new CTestPingCache());
+
+	g_Config.m_BrSort = IServerBrowser::SORT_NAME;
+	CServerBrowserTestAccess::SetLatency(m_Browser, Address, 42);
+	EXPECT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+
+	g_Config.m_BrSort = IServerBrowser::SORT_PING;
+	CServerBrowserTestAccess::SetLatency(m_Browser, Address, 43);
+	EXPECT_TRUE(CServerBrowserTestAccess::NeedsResort(m_Browser));
 }
 
 TEST_F(CServerBrowserStateTest, FriendListIgnoreClanMovesMatchedNameOutOfOffline)

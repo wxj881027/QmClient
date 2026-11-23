@@ -38,6 +38,27 @@ namespace
 			m_Client.AdvanceFrame();
 			m_Ui.Update();
 		}
+		void SkipUiFrames(int Count)
+		{
+			for(int Frame = 0; Frame < Count; ++Frame)
+				m_Client.AdvanceFrame();
+		}
+		void PressMouse(int Key)
+		{
+			m_Input.m_HeldKey = Key;
+			IInput::CEvent Event{};
+			Event.m_Flags = IInput::FLAG_PRESS;
+			Event.m_Key = Key;
+			m_Ui.OnInput(Event);
+		}
+		void ReleaseMouse(int Key)
+		{
+			m_Input.m_HeldKey = 0;
+			IInput::CEvent Event{};
+			Event.m_Flags = IInput::FLAG_RELEASE;
+			Event.m_Key = Key;
+			m_Ui.OnInput(Event);
+		}
 	};
 }
 
@@ -102,4 +123,63 @@ TEST_F(QmOffscreenCursor, EnteringLeavingAndRepeatingExportDoesNotMoveThePointer
 		EXPECT_EQ(m_Graphics.WindowHeight(), 1080);
 		EXPECT_EQ(m_Ui.MousePos(), Before);
 	}
+}
+
+TEST_F(QmOffscreenCursor, MouseClickBetweenVisibleFramesStillActivatesOnce)
+{
+	Update();
+
+	PressMouse(KEY_MOUSE_1);
+	ReleaseMouse(KEY_MOUSE_1);
+	// 按下和抬起都发生在两次可见 UI 帧之间。
+	SkipUiFrames(30);
+	Update();
+	EXPECT_TRUE(m_Ui.MouseButtonClicked(0));
+	EXPECT_TRUE(m_Ui.MouseButton(0));
+
+	// 锁存的点击只保留一个可见帧，下一次 UI 更新正常释放。
+	SkipUiFrames(30);
+	Update();
+	EXPECT_FALSE(m_Ui.MouseButtonClicked(0));
+	EXPECT_FALSE(m_Ui.MouseButton(0));
+	EXPECT_TRUE(m_Ui.LastMouseButton(0));
+}
+
+TEST_F(QmOffscreenCursor, HeldMouseButtonSurvivesSkippedVisibleFrames)
+{
+	Update();
+
+	PressMouse(KEY_MOUSE_1);
+	SkipUiFrames(30);
+	Update();
+	EXPECT_TRUE(m_Ui.MouseButtonClicked(0));
+	EXPECT_TRUE(m_Ui.MouseButton(0));
+
+	SkipUiFrames(30);
+	Update();
+	EXPECT_FALSE(m_Ui.MouseButtonClicked(0));
+	EXPECT_TRUE(m_Ui.MouseButton(0));
+
+	ReleaseMouse(KEY_MOUSE_1);
+	SkipUiFrames(30);
+	Update();
+	EXPECT_FALSE(m_Ui.MouseButtonClicked(0));
+	EXPECT_FALSE(m_Ui.MouseButton(0));
+	EXPECT_TRUE(m_Ui.LastMouseButton(0));
+}
+
+TEST_F(QmOffscreenCursor, DisablingUiDiscardsMouseEdgesBeforeNextVisibleFrame)
+{
+	Update();
+
+	PressMouse(KEY_MOUSE_1);
+	ReleaseMouse(KEY_MOUSE_1);
+	m_Ui.SetEnabled(false);
+	Update();
+	m_Ui.SetEnabled(true);
+	Update();
+
+	EXPECT_FALSE(m_Ui.MouseButtonClicked(0));
+	EXPECT_FALSE(m_Ui.MouseButton(0));
+	EXPECT_FALSE(m_Ui.LastMouseButton(0));
 }

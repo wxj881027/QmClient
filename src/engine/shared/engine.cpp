@@ -32,7 +32,8 @@ namespace
 
 		CJobPool m_JobPool;
 
-		void OpenNetworkLog() try
+		void OpenNetworkLog()
+		try
 		{
 			using CFileOwner = std::unique_ptr<void, decltype(&io_close)>;
 			const auto IsOccupied = [this](const char *pName) {

@@ -278,6 +278,9 @@ void CUi::Init(IKernel *pKernel)
 	m_pGraphics = pKernel->RequestInterface<IGraphics>();
 	m_pInput = pKernel->RequestInterface<IInput>();
 	m_pTextRender = pKernel->RequestInterface<ITextRender>();
+	m_LatchedMouseButtons = 0;
+	m_MouseEventButtons = 0;
+	m_PendingMousePresses = 0;
 	CUIRect::Init(m_pGraphics, this);
 	CLineInput::Init(m_pClient, m_pGraphics, m_pInput, m_pTextRender);
 	CUIElementBase::Init(this);
@@ -297,6 +300,12 @@ CUi::CUi(IAllocationResource *pPopupCallbackMemory, IAllocationResource *pClipMe
 	m_vClips(CBorrowedAllocator<CUIRect>(pClipMemory)),
 	m_vPopupCloseCallbacks(CBorrowedAllocator<std::shared_ptr<FPopupMenuClosedCallback>>(pPopupCallbackMemory))
 {
+	// 默认构造的 CUi 也常被测试和临时测量作用域使用；未进入 Init 前设备指针
+	// 必须为空，否则 CUIElement 在构造失败回滚时会把未初始化指针当成有效设备。
+	m_pClient = nullptr;
+	m_pGraphics = nullptr;
+	m_pInput = nullptr;
+	m_pTextRender = nullptr;
 	m_Enabled = true;
 #if defined(CONF_PLATFORM_ANDROID)
 	m_DirectTouchInput = true;
@@ -984,14 +993,25 @@ void CUi::Update()
 	m_TouchScrollDelta = vec2(0.0f, 0.0f);
 	if(Enabled())
 	{
-		// Update mouse buttons based on mouse keys
+		unsigned SampledMouseButtons = 0;
 		for(int MouseKey = KEY_MOUSE_1; MouseKey <= KEY_MOUSE_3; ++MouseKey)
 		{
 			if(Input()->KeyIsPressed(MouseKey))
-			{
-				m_UpdatedMouseButtons |= 1 << (MouseKey - KEY_MOUSE_1);
-			}
+				SampledMouseButtons |= 1u << (MouseKey - KEY_MOUSE_1);
 		}
+		// 有事件的按钮以事件锁存状态为准；没有事件时仍按物理状态采样。
+		// 待处理按下额外保留一帧，让“按下+抬起”都落在空档时仍能形成一次点击。
+		m_UpdatedMouseButtons = (SampledMouseButtons & ~m_MouseEventButtons) |
+					(m_LatchedMouseButtons & m_MouseEventButtons) |
+					m_PendingMousePresses;
+		m_MouseEventButtons = 0;
+		m_PendingMousePresses = 0;
+	}
+	else
+	{
+		m_LatchedMouseButtons = 0;
+		m_MouseEventButtons = 0;
+		m_PendingMousePresses = 0;
 	}
 	if(Enabled() || m_DirectTouchInput)
 	{
@@ -1100,9 +1120,6 @@ void CUi::Update()
 		m_pActiveItem = nullptr;
 		m_pHotScrollRegion = nullptr;
 	}
-
-	m_ProgressSpinnerOffset += Client()->RenderFrameTime() * 1.5f;
-	m_ProgressSpinnerOffset = std::fmod(m_ProgressSpinnerOffset, 1.0f);
 }
 
 void CUi::DebugRender(float X, float Y)
@@ -1449,6 +1466,22 @@ bool CUi::OnInput(const IInput::CEvent &Event)
 	if(!Enabled())
 		return false;
 
+	if(Event.m_Key >= KEY_MOUSE_1 && Event.m_Key <= KEY_MOUSE_3)
+	{
+		const unsigned Button = 1u << (Event.m_Key - KEY_MOUSE_1);
+		if((Event.m_Flags & IInput::FLAG_PRESS) && !(Event.m_Flags & IInput::FLAG_REPEAT))
+		{
+			m_LatchedMouseButtons |= Button;
+			m_MouseEventButtons |= Button;
+			m_PendingMousePresses |= Button;
+		}
+		else if(Event.m_Flags & IInput::FLAG_RELEASE)
+		{
+			m_LatchedMouseButtons &= ~Button;
+			m_MouseEventButtons |= Button;
+		}
+	}
+
 	CLineInput *pActiveInput = CLineInput::GetActiveInput();
 	if(pActiveInput && pActiveInput->ProcessInput(Event))
 		return true;
@@ -1746,7 +1779,9 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 	// 触摸没有 hover：第一次按下的位置就是当前指针位置，不能再依赖上一帧的
 	// HotItem（否则第一次只点亮、第二次才激活）。鼠标仍走原来的 HotItem 路径，
 	// 避免多控件重叠时按下未悬停的控件。
-	const bool TouchInputActive = !Input()->TouchFingerStates().empty();
+	// 无输入后端的宿主（离屏测量、无输入的测试镜像）没有触摸状态可言，
+	// 与 m_TouchState 的判定保持同一口径：拿不到输入接口就不算触摸活跃。
+	const bool TouchInputActive = Input() != nullptr && !Input()->TouchFingerStates().empty();
 	bool NoRelevantButtonsPressed = true;
 	for(int Button = 0; Button < 3; ++Button)
 	{
@@ -2106,7 +2141,28 @@ bool CUi::DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Si
 		TextRender()->TextColor(ColorRGBA(1, 1, 1, 1));
 		TextRender()->TextOutlineColor(ColorRGBA(1, 1, 1, 1));
 		TextRender()->SetRenderFlags(Flags);
-		TextRender()->CreateTextContainer(pLabel->m_Container, &Cursor, pText);
+		try
+		{
+			TextRender()->CreateTextContainer(pLabel->m_Container, &Cursor, pText);
+		}
+		catch(...)
+		{
+			// CreateTextContainer 也可能在自动上传阶段失败；失败身份不能留在缓存里。
+			try
+			{
+				TextRender()->DeleteTextContainer(pLabel->m_Container);
+			}
+			catch(...)
+			{
+			}
+			pLabel->m_Container = {};
+			pLabel->m_Size = {};
+			pLabel->m_BiggestCharacterHeight = 0.0f;
+			TextRender()->SetRenderFlags(PreviousFlags);
+			TextRender()->TextColor(PreviousColor);
+			TextRender()->TextOutlineColor(PreviousOutline);
+			throw;
+		}
 		TextRender()->SetRenderFlags(PreviousFlags);
 		TextRender()->TextColor(PreviousColor);
 		TextRender()->TextOutlineColor(PreviousOutline);
@@ -2122,8 +2178,24 @@ bool CUi::DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Si
 	// 被覆盖（用户实测自定义不生效、弱档恒白）。
 	const ColorRGBA Color = QmSignalIconFamily(Icon) ? TextRender()->GetTextColor() : ConfiguredQmUiIconColor(TextRender()->GetTextColor(), Icon);
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
-	FlushQuadBatch();
-	TextRender()->RenderTextContainer(pLabel->m_Container, Color, ConfiguredQmUiIconContrastColor(Color), Pos.x, Pos.y);
+	try
+	{
+		FlushQuadBatch();
+		TextRender()->RenderTextContainer(pLabel->m_Container, Color, ConfiguredQmUiIconContrastColor(Color), Pos.x, Pos.y);
+	}
+	catch(...)
+	{
+		// 绘制中途失败时清掉缓存身份，避免下一帧复用只有半套 GPU 资源的容器。
+		try
+		{
+			TextRender()->DeleteTextContainer(pLabel->m_Container);
+		}
+		catch(...)
+		{
+		}
+		pLabel->m_Container = {};
+		throw;
+	}
 	CQmIconDrawDiagnostics::Record(Count);
 	return true;
 }
@@ -2898,9 +2970,9 @@ CLabelResult CUi::DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char 
 	return DoLabel(pRect, pFallbackIcon, Size, Align, LabelProps);
 }
 
-int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive, const ui_widget::SIconButtonIconDraw *pIconDraw)
+int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive, const ui_widget::SIconButtonIconDraw *pIconDraw, float Radius)
 {
-	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw);
+	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw, Radius);
 }
 
 int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize, float TextInsetX)
@@ -3490,46 +3562,6 @@ void CUi::RenderTime(CUIRect TimeRect, float FontSize, int Seconds, bool NotFini
 	{
 		SecondsText.Render(TextRender(), Cursor, Color);
 	}
-}
-
-void CUi::RenderProgressSpinner(vec2 Center, float OuterRadius, const SProgressSpinnerProperties &Props) const
-{
-	Graphics()->TextureClear();
-	Graphics()->QuadsBegin();
-
-	// The filled and unfilled segments need to begin at the same angle offset
-	// or the differences in pixel alignment will make the filled segments flicker.
-	const float SegmentsAngle = 2.0f * pi / Props.m_Segments;
-	const float InnerRadius = OuterRadius * 0.75f;
-	const float AngleOffset = -0.5f * pi;
-	Graphics()->SetColor(Props.m_Color.WithMultipliedAlpha(0.5f));
-	for(int i = 0; i < Props.m_Segments; ++i)
-	{
-		const vec2 Dir1 = direction(AngleOffset + i * SegmentsAngle);
-		const vec2 Dir2 = direction(AngleOffset + (i + 1) * SegmentsAngle);
-		IGraphics::CFreeformItem Item = IGraphics::CFreeformItem(
-			Center + Dir1 * InnerRadius, Center + Dir2 * InnerRadius,
-			Center + Dir1 * OuterRadius, Center + Dir2 * OuterRadius);
-		Graphics()->QuadsDrawFreeform(&Item, 1);
-	}
-
-	const float FilledRatio = Props.m_Progress < 0.0f ? 0.333f : Props.m_Progress;
-	const int FilledSegmentOffset = Props.m_Progress < 0.0f ? round_to_int(m_ProgressSpinnerOffset * Props.m_Segments) : 0;
-	const int FilledNumSegments = minimum<int>(Props.m_Segments * FilledRatio + (Props.m_Progress < 0.0f ? 0 : 1), Props.m_Segments);
-	Graphics()->SetColor(Props.m_Color);
-	for(int i = 0; i < FilledNumSegments; ++i)
-	{
-		const float Angle1 = AngleOffset + (i + FilledSegmentOffset) * SegmentsAngle;
-		const float Angle2 = AngleOffset + ((i + 1 == FilledNumSegments && Props.m_Progress >= 0.0f) ? (2.0f * pi * Props.m_Progress) : ((i + FilledSegmentOffset + 1) * SegmentsAngle));
-		IGraphics::CFreeformItem Item = IGraphics::CFreeformItem(
-			Center.x + std::cos(Angle1) * InnerRadius, Center.y + std::sin(Angle1) * InnerRadius,
-			Center.x + std::cos(Angle2) * InnerRadius, Center.y + std::sin(Angle2) * InnerRadius,
-			Center.x + std::cos(Angle1) * OuterRadius, Center.y + std::sin(Angle1) * OuterRadius,
-			Center.x + std::cos(Angle2) * OuterRadius, Center.y + std::sin(Angle2) * OuterRadius);
-		Graphics()->QuadsDrawFreeform(&Item, 1);
-	}
-
-	Graphics()->QuadsEnd();
 }
 
 void CUi::DoBackButton()

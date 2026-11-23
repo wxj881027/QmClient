@@ -314,6 +314,7 @@ int fs_remove(const char *filename);
  * @remark The strings are treated as null-terminated strings.
  */
 int fs_rename(const char *oldname, const char *newname, bool allow_destination_removal = true);
+int fs_move_file_no_replace(const char *oldname, const char *newname);
 
 /**
  * 取得文件或目录的时间戳。

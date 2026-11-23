@@ -85,7 +85,6 @@ void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollReg
 	// 会被误判成「重新出现」而把用户滚走的视口拉回选中项。
 	m_ReScrollSelection = m_LastDrawTime != 0 && Now - m_LastDrawTime > Frequency / 4;
 	m_LastDrawTime = Now;
-	m_AddRectIndex = 0;
 	if(pParams)
 		m_Params = *pParams;
 	m_ClipRect = *pClipRect;
@@ -175,11 +174,8 @@ void CScrollRegion::End()
 
 bool CScrollRegion::AddRect(const CUIRect &Rect, bool ShouldScrollHere, bool IsSelection)
 {
-	const int RectIndex = m_AddRectIndex++;
-	if(IsSelection)
-		m_SelectionRectIndex = RectIndex;
 	// 重新出现的那一帧，选中项自动滚进视野，调用方不必自己记录「第一次渲染」。
-	const bool ScrollToThisRect = ShouldScrollHere || (m_ReScrollSelection && m_SelectionRectIndex == RectIndex);
+	const bool ScrollToThisRect = ShouldScrollHere || QmScrollRegionShouldRevealSelection(m_ReScrollSelection, IsSelection);
 	m_LastAddedRect = Rect;
 	// 测量必须与调用方布局同源：调用方拿到的偏移就是显示偏移，两者都用它，
 	// 缓动窗口内才能精确抵消。这里不要为橡皮筋做任何夹取——Rect 是随偏移移动的
@@ -688,7 +684,7 @@ void CScrollRegion::DoSlider()
 	const bool CanScroll = ContentOverflows() && ScrollMax > 0.0f && RailSize > 0.0f;
 	const float SliderMaxSize = maximum(0.0f, RailSize);
 	const float SliderMinSize = minimum(m_Params.m_SliderMinSize, SliderMaxSize);
-	const float SliderSize = CanScroll ? std::clamp(ClipSize / m_ContentSize * RailSize, SliderMinSize, SliderMaxSize) : SliderMaxSize;
+	const float SliderSize = CanScroll ? QmResolveScrollThumbSize(ClipSize, m_ContentSize, RailSize, SliderMinSize, m_Params.m_SliderSizeExponent) : SliderMaxSize;
 
 	CUIRect Slider = m_RailRect;
 	float &SliderPos = m_Params.m_ScrollHorizontal ? Slider.x : Slider.y;

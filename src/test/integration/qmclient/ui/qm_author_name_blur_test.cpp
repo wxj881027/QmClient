@@ -3,7 +3,9 @@
 #include <game/client/components/qmclient/qm_sponsor_authors.h>
 
 #include <test/support/qm_real_ui_fixture.h>
+#include <test/support/qm_ui_test_input.h>
 
+#include <algorithm>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -91,6 +93,7 @@ namespace
 	protected:
 		CAuthorNameGraphics m_Graphics;
 		qm_ui_test::CTestUiClient m_Client;
+		qm_ui_test::CTestInput m_Input;
 		CQmAuthorName m_Name;
 		// 鼠标留在原点、名字在旁边；激活指针会提高模糊强度，但不会触发悬停替换。
 		const CUIRect m_Label{2.35f, 2.65f, 70.0f, 24.0f};
@@ -98,6 +101,7 @@ namespace
 
 		qm_ui_test::CRealUiTestGraphics *UiGraphics() override { return &m_Graphics; }
 		IClient *UiClient() override { return &m_Client; }
+		IInput *UiInput() override { return &m_Input; }
 		void SetUp() override
 		{
 			CRealUiFixture::SetUp();
@@ -112,6 +116,20 @@ namespace
 		void RenderName(bool PointerActive)
 		{
 			m_Client.AdvanceFrame();
+			m_Name.Render(&m_Ui, &m_Graphics, QmSponsorAuthors::Authors()[2], m_Label, FONT_SIZE, PointerActive);
+		}
+		void MoveCursorTo(vec2 Position)
+		{
+			const vec2 Pixels = Position * vec2(m_Graphics.WindowWidth(), m_Graphics.WindowHeight()) / m_Ui.Screen()->Size();
+			const vec2 Delta = Pixels - m_Ui.UpdatedMousePos();
+			m_Ui.OnCursorMove(Delta.x, Delta.y);
+		}
+		// 走真实 CUi::Update，让 PopupSourceFrame 推进一个可见 UI 帧。
+		void RenderNameAtUiFrame(vec2 Position, bool PointerActive)
+		{
+			MoveCursorTo(Position);
+			m_Client.AdvanceFrame();
+			m_Ui.Update();
 			m_Name.Render(&m_Ui, &m_Graphics, QmSponsorAuthors::Authors()[2], m_Label, FONT_SIZE, PointerActive);
 		}
 		std::vector<unsigned char> OrdinaryNameGeometry()
@@ -189,6 +207,45 @@ TEST_F(QmAuthorNameBlur, UnsupportedBlurKeepsTheConvolutionCenteredOnTheOrdinary
 		ExpectSameRect(m_Graphics.Projection(), Original);
 	}
 	EXPECT_EQ(m_Graphics.m_TargetsCreated, 0);
+}
+
+TEST_F(QmAuthorNameBlur, RedactedHoverSurvivesMainLoopFramesBetweenVisibleUiFrames)
+{
+	const float NameWidth = std::min(m_Label.w, m_Ui.TextRender()->TextWidth(FONT_SIZE, "夏日"));
+	const float RedactedWidth = std::min(m_Label.w, m_Ui.TextRender()->TextWidth(FONT_SIZE, "[数据删除]"));
+	const float NameLeft = m_Label.x + (m_Label.w - NameWidth) * 0.5f;
+	const float RedactedLeft = m_Label.x + (m_Label.w - RedactedWidth) * 0.5f;
+	const float CenterY = m_Label.y + m_Label.h * 0.5f;
+	const vec2 NameCenter{NameLeft + NameWidth * 0.5f, CenterY};
+	// 替换文字更宽：这个点只在「[数据删除]」范围内，不在原名范围内。
+	const vec2 ExtendedLeft{RedactedLeft + 1.0f, CenterY};
+	ASSERT_LT(ExtendedLeft.x, NameLeft);
+
+	m_Graphics.m_vGeometry.clear();
+	RenderNameAtUiFrame({600.0f, 500.0f}, false);
+	ASSERT_FALSE(m_Graphics.m_vGeometry.empty());
+	const auto OrdinaryGlyphs = m_Graphics.m_vGeometry.back().m_vVertices;
+
+	m_Graphics.m_vGeometry.clear();
+	RenderNameAtUiFrame(NameCenter, true);
+	ASSERT_FALSE(m_Graphics.m_vGeometry.empty());
+	const auto RedactedGlyphs = m_Graphics.m_vGeometry.back().m_vVertices;
+	ASSERT_NE(RedactedGlyphs, OrdinaryGlyphs);
+
+	// 指针仍在替换文字的加宽区域内，悬停迟滞应继续保持替换文本。
+	m_Graphics.m_vGeometry.clear();
+	RenderNameAtUiFrame(ExtendedLeft, true);
+	ASSERT_FALSE(m_Graphics.m_vGeometry.empty());
+	EXPECT_EQ(m_Graphics.m_vGeometry.back().m_vVertices, RedactedGlyphs);
+
+	// 模拟异步渲染：主循环空转多个 PerfFrame，但没有新的可见 UI 帧。
+	// 旧实现用 PerfFrame 判断连续性，会在这里清掉 m_Redacted 并闪回原名。
+	for(int Frame = 0; Frame < 30; ++Frame)
+		m_Client.AdvanceFrame();
+	m_Graphics.m_vGeometry.clear();
+	m_Name.Render(&m_Ui, &m_Graphics, QmSponsorAuthors::Authors()[2], m_Label, FONT_SIZE, true);
+	ASSERT_FALSE(m_Graphics.m_vGeometry.empty());
+	EXPECT_EQ(m_Graphics.m_vGeometry.back().m_vVertices, RedactedGlyphs);
 }
 
 TEST_F(QmAuthorNameBlur, FailedBlurReusesTheSameGlyphsAndRestoresTheProjection)

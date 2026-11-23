@@ -18,7 +18,7 @@ static vec2 DirectionTo(vec2 Src, vec2 Dst)
 
 void CPlayerIndicator::OnRender()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 		return;
 	if(g_Config.m_QmPlayerIndicator != 1)
 		return;
@@ -51,11 +51,11 @@ void CPlayerIndicator::OnRender()
 		auto &WarList = GameClient()->m_WarList;
 		const bool UseWarList = g_Config.m_QmWarListIndicator != 0;
 		const CWarType *pTeamType = UseWarList && g_Config.m_QmWarListIndicatorTeam ?
-			WarList.FindActiveBuiltinWarType(WARLIST_BUILTIN_GROUP_TEAM) :
-			nullptr;
+						    WarList.FindActiveBuiltinWarType(WARLIST_BUILTIN_GROUP_TEAM) :
+						    nullptr;
 		const CWarType *pEnemyType = UseWarList && g_Config.m_QmWarListIndicatorEnemy ?
-			WarList.FindActiveBuiltinWarType(WARLIST_BUILTIN_GROUP_ENEMY) :
-			nullptr;
+						     WarList.FindActiveBuiltinWarType(WARLIST_BUILTIN_GROUP_ENEMY) :
+						     nullptr;
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
 			if(!GameClient()->m_Snap.m_apPlayerInfos[i] || i == LocalClientId)

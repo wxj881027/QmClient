@@ -821,6 +821,10 @@ namespace
 				*pResultLen = 0;
 			if(!ppResult || !pResultLen || !pFilename || pFilename[0] == '\0')
 				return EReadFileResult::IO_FAILURE;
+			// 拼路径时的字符串截断会修掉尾部残缺序列，非法名字会悄悄落到另一个文件名上；
+			// 这里先按打开接口的同一判据拒绝，保持各平台一致的「无效路径」语义。
+			if(!str_utf8_check(pFilename))
+				return EReadFileResult::IO_FAILURE;
 			TranslateType(Type, pFilename);
 			if(Type != TYPE_ABSOLUTE)
 			{
@@ -838,9 +842,14 @@ namespace
 				if(!GetPathChecked(Index, pFilename, aPath, sizeof(aPath)))
 					return EReadFileResult::IO_FAILURE;
 				bool NotFound = false;
+				errno = 0;
 				std::unique_ptr<void, decltype(&io_close)> File(MaxBytes ? io_open_read_regular_checked(aPath, &NotFound) : io_open_read_checked(aPath, &NotFound), io_close);
 				if(!File)
+				{
+					if(!NotFound && errno == ENOMEM)
+						return EReadFileResult::RESOURCE_ERROR;
 					return NotFound ? EReadFileResult::NOT_FOUND : EReadFileResult::IO_FAILURE;
+				}
 				std::unique_ptr<void, decltype(&free)> Data(nullptr, free);
 				unsigned Size = 0;
 				bool Read = false;
@@ -853,7 +862,7 @@ namespace
 						return EReadFileResult::IO_FAILURE;
 					Data.reset(malloc(static_cast<size_t>(Expected) + 1));
 					if(!Data)
-						return EReadFileResult::IO_FAILURE;
+						return EReadFileResult::RESOURCE_ERROR;
 					Size = static_cast<unsigned>(Expected);
 					Read = io_read(File.get(), Data.get(), Size + 1) == Size && io_error(File.get()) == 0;
 					static_cast<char *>(Data.get())[Size] = '\0';
@@ -1060,6 +1069,16 @@ namespace
 			return fs_rename(aOldBuffer, aNewBuffer, AllowDestinationRemoval) == 0;
 		}
 
+		bool MoveFileNoReplace(const char *pOldFilename, const char *pNewFilename, int Type) override
+		{
+			dbg_assert(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths), "Type invalid");
+			char aOldPath[IO_MAX_PATH_LENGTH];
+			char aNewPath[IO_MAX_PATH_LENGTH];
+			return GetPathChecked(Type, pOldFilename, aOldPath, sizeof(aOldPath)) &&
+			       GetPathChecked(Type, pNewFilename, aNewPath, sizeof(aNewPath)) &&
+			       fs_move_file_no_replace(aOldPath, aNewPath) == 0;
+		}
+
 		bool RenameBinaryFile(const char *pOldFilename, const char *pNewFilename) override
 		{
 			char aOldBuffer[IO_MAX_PATH_LENGTH];
@@ -1171,9 +1190,8 @@ bool IStorage::ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, 
 			return;
 		try
 		{
-			// 检查时已有目标则保留，避免覆盖另一位写入者已提交的文件。
 			if(!pStorage->FileExists(pRealFilename, IStorage::TYPE_SAVE) && pStorage->FileExists(pBackupFilename, IStorage::TYPE_SAVE))
-				(void)pStorage->RenameFile(pBackupFilename, pRealFilename, IStorage::TYPE_SAVE, false);
+				(void)pStorage->MoveFileNoReplace(pBackupFilename, pRealFilename, IStorage::TYPE_SAVE);
 		}
 		catch(...)
 		{
@@ -1193,13 +1211,10 @@ bool IStorage::ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, 
 			if(pStorage->FileExists(pBackupFilename, IStorage::TYPE_SAVE))
 				return false;
 			MayHaveBackup = true;
-			if(!pStorage->RenameFile(pRealFilename, pBackupFilename, IStorage::TYPE_SAVE, false))
-			{
-				Restore();
+			if(!pStorage->MoveFileNoReplace(pRealFilename, pBackupFilename, IStorage::TYPE_SAVE))
 				return false;
-			}
 		}
-		if(!pStorage->RenameFile(pTempFilename, pRealFilename, IStorage::TYPE_SAVE, false))
+		if(!pStorage->MoveFileNoReplace(pTempFilename, pRealFilename, IStorage::TYPE_SAVE))
 		{
 			Restore();
 			return false;

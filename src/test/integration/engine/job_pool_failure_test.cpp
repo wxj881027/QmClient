@@ -191,7 +191,8 @@ TEST_F(JobPoolFailure, ShutdownCancellationAfterQueueScanSkipsRun)
 	auto pRunning = std::make_shared<CFunctionJob>([pGate] {
 		pGate->m_Started.set_value();
 		pGate->m_TimedOut = pGate->m_Released.wait_for(std::chrono::seconds(5)) != std::future_status::ready;
-	}, true);
+	},
+		true);
 	ASSERT_TRUE(m_Pool.TryAdd(pRunning));
 	ASSERT_EQ(pGate->m_Started.get_future().wait_for(std::chrono::seconds(2)), std::future_status::ready);
 	auto pRan = std::make_shared<std::atomic<bool>>(false);

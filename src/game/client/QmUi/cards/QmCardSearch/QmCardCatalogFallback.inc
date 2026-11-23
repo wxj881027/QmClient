@@ -439,7 +439,6 @@ namespace
 		{Localizable("Title preview"), nullptr, "头衔成品预览"},
 		{Localizable("Title style"), nullptr, "头衔风格"},
 		{Localizable("Turning this off only changes your display."), nullptr, "关闭后仅影响本机显示。"},
-		{Localizable("Up to 6 Chinese or 12 ASCII characters"), nullptr, "最多 6 个中文或 12 个英文字符"},
 		{nullptr, "qm_nameplate_title_scale", nullptr},
 		{nullptr, "qm_show_dummy_title", nullptr},
 		{nullptr, "qm_show_main_title", nullptr},

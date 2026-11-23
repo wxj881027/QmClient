@@ -12,39 +12,39 @@
 
 namespace
 {
-const CLayer *FindTrackedLayer(const CEditorMap &Map, int GroupIndex, int LayerIndex)
-{
-	if(GroupIndex < 0 || (size_t)GroupIndex >= Map.m_vpGroups.size())
-		return nullptr;
-	const auto &pGroup = Map.m_vpGroups[GroupIndex];
-	if(!pGroup || LayerIndex < 0 || (size_t)LayerIndex >= pGroup->m_vpLayers.size())
-		return nullptr;
-	return pGroup->m_vpLayers[LayerIndex].get();
-}
+	const CLayer *FindTrackedLayer(const CEditorMap &Map, int GroupIndex, int LayerIndex)
+	{
+		if(GroupIndex < 0 || (size_t)GroupIndex >= Map.m_vpGroups.size())
+			return nullptr;
+		const auto &pGroup = Map.m_vpGroups[GroupIndex];
+		if(!pGroup || LayerIndex < 0 || (size_t)LayerIndex >= pGroup->m_vpLayers.size())
+			return nullptr;
+		return pGroup->m_vpLayers[LayerIndex].get();
+	}
 
-bool IsQuadTrackTargetValid(const CEditorMap &Map, const std::shared_ptr<CLayerQuads> &pLayer, int GroupIndex, int LayerIndex, const std::vector<int> &vQuads)
-{
-	if(!pLayer || FindTrackedLayer(Map, GroupIndex, LayerIndex) != pLayer.get())
-		return false;
-	return std::all_of(vQuads.begin(), vQuads.end(), [NumQuads = pLayer->m_vQuads.size()](int QuadIndex) {
-		return QuadIndex >= 0 && (size_t)QuadIndex < NumQuads;
-	});
-}
+	bool IsQuadTrackTargetValid(const CEditorMap &Map, const std::shared_ptr<CLayerQuads> &pLayer, int GroupIndex, int LayerIndex, const std::vector<int> &vQuads)
+	{
+		if(!pLayer || FindTrackedLayer(Map, GroupIndex, LayerIndex) != pLayer.get())
+			return false;
+		return std::all_of(vQuads.begin(), vQuads.end(), [NumQuads = pLayer->m_vQuads.size()](int QuadIndex) {
+			return QuadIndex >= 0 && (size_t)QuadIndex < NumQuads;
+		});
+	}
 
-const CSoundSource *FindTrackedSoundSource(const CEditorMap &Map, int GroupIndex, int LayerIndex, const CSoundSource *pTrackedSource)
-{
-	const CLayer *pLayer = FindTrackedLayer(Map, GroupIndex, LayerIndex);
-	if(!pLayer || pLayer->m_Type != LAYERTYPE_SOUNDS)
-		return nullptr;
+	const CSoundSource *FindTrackedSoundSource(const CEditorMap &Map, int GroupIndex, int LayerIndex, const CSoundSource *pTrackedSource)
+	{
+		const CLayer *pLayer = FindTrackedLayer(Map, GroupIndex, LayerIndex);
+		if(!pLayer || pLayer->m_Type != LAYERTYPE_SOUNDS)
+			return nullptr;
 
-	const auto &vSources = static_cast<const CLayerSounds *>(pLayer)->m_vSources;
-	const int SourceIndex = Map.m_SelectedSoundSource;
-	if(SourceIndex < 0 || (size_t)SourceIndex >= vSources.size())
-		return nullptr;
+		const auto &vSources = static_cast<const CLayerSounds *>(pLayer)->m_vSources;
+		const int SourceIndex = Map.m_SelectedSoundSource;
+		if(SourceIndex < 0 || (size_t)SourceIndex >= vSources.size())
+			return nullptr;
 
-	const CSoundSource *pSource = &vSources[SourceIndex];
-	return pSource == pTrackedSource ? pSource : nullptr;
-}
+		const CSoundSource *pSource = &vSources[SourceIndex];
+		return pSource == pTrackedSource ? pSource : nullptr;
+	}
 }
 
 CQuadEditTracker::CQuadEditTracker(CEditorMap *pMap) :

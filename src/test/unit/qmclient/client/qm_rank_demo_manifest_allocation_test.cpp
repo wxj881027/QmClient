@@ -1,13 +1,13 @@
 #include <game/client/components/qmclient/rank_demo_manifest.h>
 
-#include <test/support/prediction_allocation_failure.h>
-
 #include <gtest/gtest.h>
+#include <test/support/prediction_allocation_failure.h>
 
 TEST(QmRankDemoManifestAllocation, ParseFailureDiscardsPreviouslyParsedRowsAndAllowsRetry)
 {
 	using namespace qmclient::rank_demo;
-	constexpr char FIRST_ROW[] = R"({"status":"ok","map":"Kobra","rank":1,"demo":"first.demo"})" "\n";
+	constexpr char FIRST_ROW[] = R"({"status":"ok","map":"Kobra","rank":1,"demo":"first.demo"})"
+				     "\n";
 	constexpr char SECOND_ROW[] = R"({"status":"ok","map":"Kobra","rank":1,"demo":"second.demo","finishers":[1,2]})";
 	const std::string Manifest = std::string(FIRST_ROW) + SECOND_ROW;
 	std::vector<SEntry> vFirstRow;

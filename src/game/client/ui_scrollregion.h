@@ -30,6 +30,13 @@ constexpr bool QmScrollRegionOverlayFadingOut(bool Overlay, float Reveal)
 	return Overlay && Reveal > 0.001f;
 }
 
+constexpr bool QmScrollRegionShouldRevealSelection(bool ReScrollSelection, bool IsSelection)
+{
+	// 只认本帧真正标记为选中的矩形。不能拿上一帧的矩形序号来猜，
+	// 否则列表在长帧后重绘时会把视窗滚到一条无关的行。
+	return ReScrollSelection && IsSelection;
+}
+
 // 内容区拖动滚动是手机上的主操作：手指按住列表直接带动内容，而不是去够右侧滚动条。
 // 桌面仍以滚轮和滚动条为准，避免和列表内的拖拽交互（卡片排序、滑块）抢同一次按住。
 constexpr bool QmScrollRegionContentDragEnabled()
@@ -74,6 +81,7 @@ struct CScrollRegionParams
 	bool m_AnimateScrollbarReserve;
 	bool m_ScrollbarNoOuterMargin;
 	float m_SliderMinSize;
+	float m_SliderSizeExponent;
 	float m_ScrollUnit;
 	ColorRGBA m_ClipBgColor;
 	ColorRGBA m_ScrollbarBgColor;
@@ -121,6 +129,7 @@ inline CScrollRegionParams QmScrollRegionParamsForSize(EQmScrollSize Size, float
 	Params.m_ScrollbarThickness = Style.m_ScrollbarWidth;
 	Params.m_ScrollbarMargin = Style.m_ScrollbarMargin;
 	Params.m_SliderMinSize = Style.m_MinThumbHeight;
+	Params.m_SliderSizeExponent = Style.m_ThumbSizeExponent;
 	// 整面板级滚动面（wiki 弹窗、统计页、音频包编辑器、控制台卡等）与设置主区
 	// 同口径：每档 = qm_ui_scroll_step × QmPanelWheelStepMultiplier()。此前直接
 	// 取 step 基准值（默认 10px），只有设置页的 1/12，二级面板的滚轮手感因此
@@ -137,6 +146,7 @@ inline CScrollRegionParams QmScrollRegionParamsFromPolicy(const SQmResolvedScrol
 	Params.m_ScrollbarMargin = Policy.m_Style.m_ScrollbarMargin;
 	Params.m_ScrollbarAlwaysReserved = Policy.m_ScrollbarAlwaysReserved;
 	Params.m_SliderMinSize = Policy.m_Style.m_MinThumbHeight;
+	Params.m_SliderSizeExponent = Policy.m_Style.m_ThumbSizeExponent;
 	Params.m_ScrollUnit = Policy.m_Config.m_WheelScale;
 	Params.m_HideScrollbar = Policy.m_RailVisibility == EQmScrollRailVisibility::HIDDEN;
 	Params.m_ScrollHorizontal = Policy.m_Style.m_Axis == EQmScrollAxis::HORIZONTAL;
@@ -153,6 +163,7 @@ inline CScrollRegionParams::CScrollRegionParams()
 	m_AnimateScrollbarReserve = false;
 	m_ScrollbarNoOuterMargin = false;
 	m_SliderMinSize = 25.0f;
+	m_SliderSizeExponent = 1.0f;
 	m_ScrollUnit = Config.m_WheelScale;
 	m_ClipBgColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f);
 	m_ScrollbarBgColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f);
@@ -316,8 +327,6 @@ private:
 	void DoSlider();
 
 	// 列表重新出现时把选中项滚进视野：记录本帧条目序号与「选中项」序号。
-	int m_AddRectIndex = 0;
-	int m_SelectionRectIndex = -1;
 	bool m_ReScrollSelection = false;
 	int64_t m_LastDrawTime = 0;
 };

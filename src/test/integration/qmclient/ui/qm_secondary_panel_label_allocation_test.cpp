@@ -1,6 +1,7 @@
 #include <engine/keys.h>
 
 #include <game/client/QmUi/SecondaryPanel.h>
+#include <game/client/QmUi/UiButtons.h>
 
 #include <test/support/prediction_allocation_failure.h>
 #include <test/support/qm_real_ui_fixture.h>

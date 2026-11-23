@@ -16,8 +16,6 @@
 #include <base/str.h>
 #include <base/system.h>
 
-#include <algorithm>
-
 #include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/map.h>
@@ -41,6 +39,7 @@
 #include <game/mapitems.h>
 #include <game/version.h>
 
+#include <algorithm>
 #include <vector>
 
 // Not thread-safe!

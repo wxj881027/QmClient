@@ -131,10 +131,13 @@ void CEmoticon::ConKeyEmoticon(IConsole::IResult *pResult, void *pUserData)
 		pSelf->SetActive(false);
 		return;
 	}
+	// 表情轮盘和绑定菜单共用同一个触发键语义：按下另一个浮层时直接切换，
+	// 不要求用户先松开旧浮层。这样即使旧状态因失去焦点没有收到释放，也不会卡死。
+	if(pSelf->GameClient()->m_BindWheel.IsActive())
+		pSelf->GameClient()->m_BindWheel.OnRelease();
 	if(!pSelf->GameClient()->m_Scoreboard.IsActive() &&
 		!pSelf->GameClient()->m_Snap.m_SpecInfo.m_Active &&
-		pSelf->Client()->State() == IClient::STATE_ONLINE &&
-		!pSelf->GameClient()->m_BindWheel.IsActive())
+		pSelf->Client()->State() == IClient::STATE_ONLINE)
 		pSelf->SetActive(true);
 }
 
@@ -201,6 +204,17 @@ void CEmoticon::OnReset()
 void CEmoticon::OnRelease()
 {
 	SetActive(false);
+}
+
+void CEmoticon::Cancel()
+{
+	if(!m_Active)
+		return;
+	// 浮层互相切换时只关闭表情轮盘，不提交当前悬停项。
+	m_WasActive = true;
+	m_Active = false;
+	m_TouchPressedOutside = false;
+	m_SuperLaunchPending = false;
 }
 
 void CEmoticon::UpdateSelection()

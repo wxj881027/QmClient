@@ -86,6 +86,14 @@ bool ShowAndroidMediaFiles(const char *pDirectory, bool Videos, const char *cons
 // 把单个文件异步导出到系统「下载/QmClient」。返回 true 表示 Java 后台线程已接手。
 bool ExportAndroidMediaFile(const char *pPath);
 
+// 同步导出崩溃报告。只有公共下载文件发布成功才返回 true。
+bool ExportAndroidCrashReport(const char *pPath);
+
+// 预打开系统「下载/QmClient」里的崩溃报告条目，返回可写裸 fd（失败 -1）。
+// 崩溃处理器只做 ftruncate/write/fsync，报告因此在崩溃后立即可见，
+// 不依赖下一次启动；失败时客户端回退到沙盒报告 + 下次启动搬运。
+int PrepareAndroidCrashReportSink(const char *pDisplayName);
+
 // 用系统文件管理器（DocumentsUI）打开下载目录，替代自绘的文件列表对话框。
 bool OpenAndroidDownloadsFolder();
 

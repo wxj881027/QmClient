@@ -14,6 +14,9 @@
 
 #include <cstdint>
 
+struct SQmVoteHudLayout;
+struct SQmMiniVoteHudLayout;
+
 class CVoting : public CComponent
 {
 	CHeap m_Heap;
@@ -55,11 +58,11 @@ class CVoting : public CComponent
 	void Callvote(const char *pType, const char *pValue, const char *pReason);
 
 	void RenderBars(CUIRect Bars, float Alpha = 1.0f) const;
+	void RenderVoteHudPanel(const SQmVoteHudLayout &Layout, bool Interactive, float Alpha, bool PreviewVote, int Corners);
+	void RenderMiniVoteHudPanel(const SQmMiniVoteHudLayout &Layout, float Alpha, bool PreviewVote, int Corners);
 	void ResetScoreboardVoteInteraction();
 
 public:
-	friend class CTClient; // TClient
-
 	CVoting();
 	int Sizeof() const override { return sizeof(*this); }
 	void OnReset() override;

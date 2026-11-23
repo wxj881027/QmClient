@@ -1011,7 +1011,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					g_Config.m_QmConsoleSlideFeel = NewFeel;
 			});
 
-			// 计分板面板：从 0 缩放到过冲峰值再回落到 100%。
+			// 计分板面板：从略小尺寸弹到过冲峰值再回落到 100%。
 			RowAction("graphics-scoreboard-pop-feel", GraphicsMetrics.m_LineHeight, [&](CUIRect PopRow) {
 				CUIRect Label, Segments;
 				SplitSettingsControlRow(PopRow, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);

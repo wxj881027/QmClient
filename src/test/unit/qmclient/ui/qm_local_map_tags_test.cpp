@@ -1,6 +1,7 @@
-#include <game/client/components/qmclient/local_map_tags.h>
-
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
+
+#include <game/client/components/qmclient/local_map_tags.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
@@ -64,7 +65,8 @@ TEST(QmLocalMapTags, LoadDropsTagsTheUploadEndpointWouldReject)
 	CTestInfo Info;
 	auto pStorage = Info.CreateTestStorage();
 	ASSERT_TRUE(pStorage);
-	IOHANDLE File = pStorage->OpenFile("qm_local_map_tags.txt", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	ASSERT_TRUE(qm_storage::EnsureFolder(pStorage.get(), qm_storage::STATE_MAPS_DIR));
+	IOHANDLE File = pStorage->OpenFile(qm_storage::LOCAL_MAP_TAGS_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	ASSERT_TRUE(File);
 	const char aContent[] = "community\tmap\tvalid\n"
 				"community\tmap\tthis-tag-is-too-long\n"

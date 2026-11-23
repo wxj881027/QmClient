@@ -40,7 +40,7 @@ namespace
 		{
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
-			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::STATE_MAPS_DIR));
 			m_History.RecordVisit("Keep", "keep", 1, "2026-10-31");
 			m_History.MarkFinished("keep", 100, 200);
 			m_History.RecordVisit("Other", "other", 2, "2026-10-31");

@@ -300,7 +300,7 @@ TEST_F(CQmScriptingExecution, GlobalRegexMatchReadsTheOriginalTextAcrossCallback
 
 TEST_F(CQmScriptingExecution, RegexMatchCallbackCanKeepReadOnlyGroups)
 {
-	Write("match.chai", R"(
+	Write("match.chai", R"chai(
 		import("re");
 		var pattern := re.compile("a(b)");
 		var groups := Vector();
@@ -312,7 +312,7 @@ TEST_F(CQmScriptingExecution, RegexMatchCallbackCanKeepReadOnlyGroups)
 		for (var i = 0; i < groups.size(); ++i) {
 			record(groups[i]);
 		}
-	)");
+	)chai");
 
 	ASSERT_NO_THROW(Run("match.chai"));
 	EXPECT_EQ(m_vRecorded, (std::vector<std::string>{"ab", "b"}));

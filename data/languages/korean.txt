@@ -37,6 +37,9 @@
 "Cycle custom Tee hue" only works with custom colors and does nothing while the TClient rainbow Tee option is on.
 == 사용자 지정 Tee 색조 순환은 사용자 지정 색상에서만 동작하며, TClient 무지개 Tee 옵션이 켜져 있으면 아무 효과도 없습니다.
 
+"Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+== "데이터 소스"는 카탈로그 포함 범위만 결정하며 다운로드와는 무관합니다. 같은 스킨이 여러 카탈로그에 속할 수 있습니다.
+
 "Default (software)" is x264: CPU only, best quality, slowest.
 == "Default (software)"는 x264입니다. CPU만 사용하고 화질이 가장 좋지만 가장 느립니다.
 
@@ -66,9 +69,6 @@
 
 "Use original style" hides the color and countdown options below it.
 == 원래 스타일 사용을 켜면 그 아래의 색상과 카운트다운 옵션이 숨겨집니다.
-
-"Vanilla skins only" hides every custom skin, so turn it off if your skin suddenly turns default.
-== 바닐라 스킨만 표시를 켜면 모든 사용자 지정 스킨이 숨겨지니, 스킨이 갑자기 기본이 되면 꺼 두세요.
 
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == 나와 X 정렬 시 강조는 다른 플레이어의 X가 설정한 감지 시간 동안 내 X와 일치하면 색을 입힙니다.
@@ -395,6 +395,9 @@ A key that already has a command is overwritten, so recheck your other binds aft
 A key you assign here replaces whatever action used it before, so check your other keys after changing one.
 == 여기서 지정한 키는 이전에 그 키를 쓰던 동작에서 빠지므로, 하나를 바꾸면 다른 키도 확인하세요.
 
+A keyword rule could not be saved. Check the trigger for => or a reserved prefix.
+== 키워드 규칙을 저장하지 못했습니다. 트리거에 =>가 들어 있거나 예약된 접두사로 시작하는지 확인하세요.
+
 A manual source file takes priority over the selected candidate. Only this variant is replaced.
 == 수동으로 지정한 원본 파일이 선택한 후보보다 우선 적용됩니다. 현재 사운드 변형만 교체됩니다.
 
@@ -569,9 +572,6 @@ Add a type to the exclusion filter for a specific community
 Add a voting option
 == 투표 옵션 추가
 
-Add Bind
-== 바인드 추가
-
 Add category
 == 카테고리 추가
 
@@ -586,9 +586,6 @@ Add current cut to the export list
 
 Add debug dummy to server (Debug build only)
 == 서버에 디버그 더미 추가 (디버그 빌드 전용)
-
-Add default presets
-== 기본 프리셋 추가
 
 Add demo timeline marker
 == 데모 타임라인 마커 추가
@@ -626,6 +623,9 @@ Add options below
 Add or edit entries, then use the bind in chat to send the text.
 == 항목을 추가하거나 편집한 뒤 채팅에서 바인드를 써서 전송하세요.
 
+Add phrase
+== 문구 추가
+
 Add players or groups, then choose which markers and chat highlights apply to them.
 == 플레이어나 그룹을 추가한 뒤 적용할 표시와 채팅 강조를 고릅니다.
 
@@ -641,14 +641,14 @@ Add team name:
 Add to %s
 == %s 에 추가
 
-Add to bind wheel
-== 바인드 휠에 추가
-
 Add to blocked words
 == 차단 단어에 추가
 
 Add to category
 == 카테고리에 추가
+
+Add to identity menu
+== 아이덴티티 메뉴에 추가
 
 Add to queue
 == 대기열에 추가
@@ -667,6 +667,9 @@ Added %d missing required slot(s).
 
 Added %s as friend
 == %s을(를) 친구로 추가했습니다
+
+Added to this bind menu.
+== 이 바인드 메뉴에 추가했습니다.
 
 Additional headers for register endpoint, comma-separated "header:value" pairs
 == 등록 엔드포인트용 추가 헤더, 쉼표로 구분된 "헤더:값" 쌍
@@ -760,9 +763,6 @@ Advanced
 
 Advanced options
 == 고급 옵션
-
-AFR
-== 아프리카
 
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == 업로드에 성공하면 F2로 로그인해 change_map 명령을 실행합니다. 파일은 64 MiB 미만이어야 합니다.
@@ -950,9 +950,6 @@ Angle
 Angle:
 == 각도:
 
-Angry
-== 화남
-
 Angular gradient
 == 각도 그라데이션
 
@@ -1079,9 +1076,6 @@ Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
 == Q弹 Tee 변형을 다른 플레이어에 적용
 
-Apply to
-== 적용 대상
-
 Apply to dummy
 == 더미에 적용
 
@@ -1160,23 +1154,14 @@ Are you sure that you want to restart?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 정말로 스킨을 저장하시겠습니까? 동일한 이름의 스킨이 이미 존재하면 덮어쓰여집니다.
 
-Arrow
-== 방향키 이미지
-
 Arrow assets
 == 화살표 에셋
-
-ASI
-== 아시아
 
 Aspect ratio preset
 == 화면 비율 프리셋
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == 화면 종횡비 프리셋 (0=끄기, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=사용자 정의)
-
-Asset preset
-== 리소스 프리셋
 
 Asset with this name already exists.
 == 같은 이름의 에셋이 이미 존재합니다.
@@ -1192,9 +1177,6 @@ Assets editor
 
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
 == 자살 금지와 자살 허용 키를 각각 지정하세요. 금지 키를 누른 뒤에는 허용 키를 누를 때까지 K가 무시됩니다.
-
-Assign commands and labels to wheel slots
-== Assign commands and labels to wheel slots
 
 Assigns commands and labels to the slots of the radial bind wheel.
 == 원형 바인드 휠의 각 슬롯에 명령과 라벨을 지정합니다.
@@ -1234,9 +1216,6 @@ Audio packs
 
 Aurora: Polar Veil
 == 오로라: 극야의 장막
-
-AUS
-== 호주
 
 Authed name color in scoreboard
 == 점수판에서 인증된 이름 색상
@@ -1348,9 +1327,6 @@ Auto switch weapon on ammo depletion
 
 Auto switch weapon on pickup
 == 획득 시 무기 자동 전환
-
-Auto team lock
-== 자동 팀 잠금
 
 Auto translate received messages
 == 수신 메시지 자동 번역
@@ -1814,6 +1790,12 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == 키를 바인딩하여 명령을 실행하거나 키바인딩을 확인합니다
 
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== 바인드 메뉴 레이아웃: 0 = 방사형 휠, 1 = 둥근 패널
+
+Bind Menus
+== 바인드 메뉴
+
 Bind movement, jump, hook, and fire actions
 == Bind movement, jump, hook, and fire actions
 
@@ -1831,12 +1813,6 @@ Bind voting and server browser actions
 
 Bind weapon selection and switching actions
 == Bind weapon selection and switching actions
-
-Bind Wheel
-== 바인드 휠
-
-Bind Wheel Key
-== 바인드 휠 키
 
 Binds
 == 바인드
@@ -1867,9 +1843,6 @@ Blend mode
 
 Blend strength
 == 혼합 강도
-
-Blink
-== 눈 깜빡임
 
 Blink the active local tee
 == 활성 로컬 캐릭터를 깜박이게 합니다
@@ -2111,8 +2084,14 @@ Cannot join the target player's team
 Cannot open word list file. Previous words remain active.
 == 단어 목록 파일을 열 수 없습니다. 이전 단어 목록을 유지합니다.
 
+Cannot prepare word list. Previous words remain active.
+== Cannot prepare word list. Previous words remain active.
+
 Cannot read complete word list file. Previous words remain active.
 == 단어 목록 파일을 완전히 읽을 수 없습니다. 이전 단어 목록을 유지합니다.
+
+Cannot read the wiki file
+== Cannot read the wiki file
 
 Cannot remove the wiki file
 == Wiki 파일을 삭제할 수 없습니다
@@ -2140,6 +2119,9 @@ Capsule ends
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 == 캡슐 끝: 0 = 일반 원호, 1 = 부드러운 끝, 2 = Apple 연속 곡률
+
+Capture current appearance
+== 현재 모습 캡처
 
 Capture queue
 == 캡처 큐
@@ -2381,9 +2363,6 @@ Check input device, system default mic, and mic permission first
 Check output device, confirm headphones/speakers are still online
 == 먼저 출력 장치를 확인하고 헤드폰/스피커가 여전히 온라인 상태인지 확인
 
-Check the preset fields, label, and wheel capacity (64 entries).
-== 프리셋 내용, 표시 이름, 휠 용량(최대 64개)을 확인하세요.
-
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
 == 임계값을 만지기 전에 장치를 확인하세요. 마이크가 안 들리는 대부분은 입력 장치를 잘못 골랐을 뿐입니다.
 
@@ -2407,9 +2386,6 @@ Chinese (Traditional)
 
 Chinese font:
 == 중국어 글꼴:
-
-CHN
-== 중국
 
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == 플레이어 키 입력 표시를 자신, 다른 플레이어, 모두 중에서 고르고 키 입력 아이콘 크기를 맞춥니다.
@@ -2732,12 +2708,6 @@ Collapse
 Collapse console
 == 콘솔 축소
 
-Collect all players' skins on map join
-== 맵 입장 시 모든 플레이어 스킨 수집
-
-Collect all players' skins on map join; manual edits turn it off.
-== 맵 입장 시 모든 플레이어의 스킨을 수집합니다. 대기열을 수동 편집하면 꺼집니다.
-
 Collect CP %d before teleporting
 == 텔레포트 전에 CP %d에 닿으세요
 
@@ -2805,7 +2775,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == 채팅 입력창의 번역 버튼과 그 버튼으로 여는 언어 메뉴의 색상입니다.
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== 스코어보드 행에 색을 지정합니다: 인증된 플레이어, 같은 클랜 플레이어, 친구, 친구 목록의 클랜 구성원.
+== 점수판 행을 색칠합니다: 인증된 플레이어, 같은 클랜 플레이어, 친구, 친구 목록의 클랜 구성원.
 
 Colors too close to the map background are hard to read while moving.
 == 맵 배경과 너무 비슷한 색은 움직이는 동안 보기 어렵습니다.
@@ -2837,14 +2807,8 @@ Command is not available on solo servers
 Command to run when joining server
 == 서버에 접속할 때 실행할 명령어
 
-Command:
-== 명령어:
-
 Commands
 == 명령어
-
-Commands run in the console
-== 콘솔에서 실행되는 명령어
 
 Commands run once per connection, not on every map change; remove the parts that print errors.
 == 명령어는 연결마다 한 번만 실행되며 맵이 바뀔 때마다 실행되지 않습니다. 오류를 출력하는 부분은 지우세요.
@@ -2989,6 +2953,9 @@ Configure hook range and collision guide lines
 
 Configure HUD island appearance
 == Configure HUD island appearance
+
+Configure identity, chat, assets, and custom bind menus
+== 아이덴티티, 채팅, 에셋, 사용자 지정 바인드 메뉴 구성
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
@@ -3170,6 +3137,9 @@ Console color scheme
 Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
 == 콘솔 색 구성: 0=현대식 터미널, 1=클래식 PowerShell, 2=사용자 지정, 3 이상은 Windows Terminal 색 구성
 
+Console command
+== 콘솔 명령
+
 Console command color
 == 콘솔: 명령어 색상
 
@@ -3181,6 +3151,9 @@ Console line spacing
 
 Console link color
 == 콘솔: 링크 색상
+
+Console link hover hue shift in degrees
+== 콘솔 링크 호버 색조 이동(도)
 
 Console number color
 == 콘솔: 숫자 색상
@@ -3299,6 +3272,9 @@ Converse with the last person you whispered to (private message)
 Convert threads
 == 변환 스레드
 
+Converting %d%%
+== 변환 중 %d%%
+
 Coordinate size on nameplate
 == 이름표에 표시되는 좌표 크기
 
@@ -3355,6 +3331,12 @@ Corner curve
 
 Could not add the player as a friend
 == 플레이어를 친구로 추가할 수 없습니다
+
+Could not add this entry.
+== 이 항목을 추가하지 못했습니다.
+
+Could not apply %s. The console could not parse the value.
+== Could not apply %s. The console could not parse the value.
 
 Could not back up configuration files.
 == 설정 파일을 백업할 수 없습니다.
@@ -3431,6 +3413,9 @@ Could not save configuration package.
 Could not save downloaded map. Try manually deleting this file: %s
 == 다운로드한 맵을 저장할 수 없습니다. 이 파일을 수동으로 삭제해 보세요: %s
 
+Could not save keyword rules. Edit a rule to retry.
+== 키워드 규칙을 저장하지 못했습니다. 규칙 하나를 수정해 다시 시도하세요.
+
 Could not save title credential
 == 칭호 인증 정보를 저장할 수 없습니다
 
@@ -3445,9 +3430,6 @@ Count players only
 
 Countries
 == 국가
-
-Country code
-== 국가/지역 코드
 
 Country flag for grouping this community (ISO 3166-1 numeric)
 == 이 커뮤니티를 그룹화하기 위한 국가 플래그 (ISO 3166-1 숫자)
@@ -3475,9 +3457,6 @@ Create a random skin
 
 Create category
 == 카테고리 생성
-
-Create wheel presets here. Existing wheel entries are kept.
-== 여기서 휠 프리셋을 편집하세요. 기존 항목은 유지됩니다.
 
 Created
 == 생성됨
@@ -3788,6 +3767,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats
+== DDStats
+
 DDStats shows UTC dates, updates daily and matches players by name only.
 == DDStats의 날짜는 UTC 기준으로 매일 갱신되며 플레이어 이름만으로 일치 여부를 확인합니다.
 
@@ -3854,8 +3836,8 @@ Debug tile layer clipping.
 Debug websockets
 == WebSocket 디버그
 
-Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
-== 클라이언트가 내려받고 목록에 표시할 스킨을 정하고, 접두사가 붙은 스킨 변형을 불러올 접두사를 추가할 수 있습니다.
+Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
+== 클라이언트가 다운로드할 스킨을 결정하며, 접두사를 추가해 접두사가 붙은 스킨 변형을 불러올 수 있습니다.
 
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 전용 WebSocket 주소 (비우면 wss://qmclient.icu/ws 사용)
@@ -3988,6 +3970,9 @@ Delete folder
 
 Delete screenshot
 == 스크린샷 삭제
+
+Delete selected
+== 선택 항목 삭제
 
 Delete selected items
 == 선택된 항목 삭제
@@ -4135,6 +4120,9 @@ Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == 클리핑 비활성화
+
+Disable fast practice mode
+== 빠른 연습 모드 끄기
 
 Disable Gores auto-switch when picking up extra weapon
 == 추가 무기 획득 시 Gores 자동 전환 비활성화
@@ -4322,6 +4310,9 @@ Download "%s"?
 Download community skins
 == 커뮤니티 스킨 다운로드
 
+Download DDStats skins (including unapproved skins)
+== DDStats 스킨 다운로드 (미승인 스킨 포함)
+
 Download failed
 == 다운로드 실패
 
@@ -4354,6 +4345,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == 다운로드됨: %.1f MiB (전체 크기 알 수 없음)
+
+Downloading %d%%
+== 다운로드 중 %d%%
 
 Downloading map
 == 맵 다운로드 중
@@ -4685,6 +4679,9 @@ Dummy window size
 Dummy window zoom
 == 더미 창 줌
 
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== 클라이언트 측 세계 상태(연습 분기, 트랙, 스위치, 보기 세션)를 출력
+
 Dump the current savestring
 == 현재 저장 문자열 덤프
 
@@ -4807,9 +4804,6 @@ Edit skin texture
 
 Edit the name and clan fields; the dummy keeps its own values.
 == 이름과 클랜 항목을 편집하세요. 더미는 자기 값을 그대로 유지합니다.
-
-Edit this custom command on the Bind Wheel page.
-== 이 사용자 지정 명령은 바인드 휠 페이지에서 편집하세요.
 
 Edit touch controls
 == 터치 컨트롤 편집
@@ -5030,6 +5024,9 @@ Enable fast input in Gores mode
 Enable fast map download
 == 빠른 맵 다운로드 활성화
 
+Enable fast practice mode
+== 빠른 연습 모드 켜기
+
 Enable fat skin
 == 뚱뚱한 스킨 활성화
 
@@ -5098,6 +5095,12 @@ Enable left swipe offset on chat fade
 
 Enable LLM thinking mode (may increase response time)
 == LLM 사고 모드 활성화 (응답 시간이 늘어날 수 있음)
+
+Enable LX Music lyric integration
+== LX Music 가사 통합 활성화
+
+Enable LX Music lyrics
+== LX Music 가사 활성화
 
 Enable lyrics
 == 가사 활성화
@@ -5279,9 +5282,6 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == 안내선을 켠 다음 길이, 스타일, 색상을 설정하세요.
 
-Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
-== 강조와 이름표 키 표시를 켠 뒤 해머와 훅을 누를 때의 색상을 각각 선택하세요. 아이콘 크기는 키 표시 크기를 따릅니다.
-
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == 표시기를 켜고 거리 모드와 war-list 플레이어에게 다른 색을 적용할지 선택하세요.
 
@@ -5381,6 +5381,9 @@ End bounce
 End marker of replay slice
 == 리플레이 슬라이스의 끝 마커
 
+Endless hook
+== 무한 갈고리
+
 Endless hook has been activated
 == 무한 갈고리가 활성화되었습니다
 
@@ -5405,11 +5408,23 @@ English font:
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice 모드를 입력하거나 재시작하세요. 그렇지 않으면 60초 후에 팀 전체가 사망합니다
 
+Enter a command and keep the menu under 64 entries.
+== 명령을 입력하고 메뉴를 64개 미만으로 유지하세요.
+
 Enter a CP number from 1 to 255.
 == 1~255 사이의 CP 번호를 입력하세요.
 
+Enter a phrase.
+== 문구를 입력하세요.
+
+Enter fast practice
+== 빠른 연습 시작
+
 Enter Password
 == 비밀번호 입력
+
+Enter solo mode
+== 솔로 모드 들어가기
 
 Enter solo split mode
 == 솔로 스플릿 모드 시작
@@ -5498,9 +5513,6 @@ ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
 ESC replay minutes
 == ESC 리플레이 분
 
-EUR
-== 유럽
-
 Evaluate an expression
 == 표현식 평가
 
@@ -5561,8 +5573,14 @@ Existing Player
 Exit and install
 == 종료 후 설치
 
+Exit fast practice
+== 빠른 연습 종료
+
 Exit replay view
 == 리플레이 보기 종료
+
+Exit solo mode
+== 솔로 모드 나가기
 
 Exit spectating on both tees when either is hammered awake by another player
 == 어느 한 Tee가 다른 플레이어의 망치로 해동되면 두 Tee 모두 관전 해제
@@ -5596,6 +5614,9 @@ Export demo cut
 
 Export failed
 == 내보내기 실패
+
+Export failed. Could not compose %d edited slot(s).
+== Export failed. Could not compose %d edited slot(s).
 
 Export name contains invalid characters.
 == 내보내기 이름에 유효하지 않은 문자가 포함되어 있습니다.
@@ -5671,9 +5692,6 @@ Extreme values make movement feel wrong, so change one step at a time.
 
 Extremely slow, for testing only
 == 극도로 느림, 테스트 전용
-
-Eyes
-== 눈
 
 f = Frame rate
 == f = 프레임 속도
@@ -6375,7 +6393,7 @@ General
 == 일반
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== DDNet 일반 표시: 다른 플레이어와 그림자 불투명도, 배경 쿼드, 기본 확대/축소.
+== DDNet 일반 게임플레이 표시: 다른 플레이어와 그림자 불투명도, 배경 쿼드, 기본 줌.
 
 Generated skin outline color
 == 생성된 외곽선 색상
@@ -6385,6 +6403,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == 생성된 외곽선 두께
+
+Get all weapons
+== 모든 무기 얻기
 
 Getting game info
 == 게임 정보를 가져오는 중
@@ -6488,6 +6509,9 @@ Global UI size
 Global UI size percentage
 == 전체 UI 크기 백분율
 
+Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+== 전체 휠 이동 거리 배율(기본값 10). 설정 카드 페이지 스크롤은 이 값의 12배입니다
+
 Glow
 == 글로우
 
@@ -6505,6 +6529,9 @@ Glow offset
 
 Glow range
 == 글로우 범위
+
+Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
+== Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
 
 Go back one marker
 == 이전 마커로 돌아가기
@@ -6653,9 +6680,6 @@ Group names are limited to 16 characters
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 입력 보조 기능을 묶은 항목입니다. 빠른 입력, 자동 여백, 서브 틱 조준, 커서 동작을 포함합니다.
 
-GUI cursor
-== UI 커서
-
 GUI cursor assets
 == GUI 커서 에셋
 
@@ -6697,9 +6721,6 @@ Hammer: %s
 
 Handwriting
 == 손글씨
-
-Happy
-== 행복
 
 Has people playing
 == 플레이 중인 사람 있음
@@ -6920,11 +6941,11 @@ Highlight Color
 Highlight console commands
 == 콘솔 명령어 강조 표시
 
-Highlight frozen teammates' hammer and hook inputs
-== 얼어붙은 팀원의 해머 및 훅 입력 강조
-
 Highlight game type
 == 게임 유형 강조
+
+Highlight held hammer and hook inputs while frozen
+== 얼어 있는 동안 누른 해머와 갈고리 입력 강조
 
 Highlight message text gradient color
 == 강조 메시지 텍스트 그라데이션 색상
@@ -6940,9 +6961,6 @@ Highlighted message
 
 Highlighted message color
 == 강조된 메시지 색상
-
-Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
-== 얼어붙은 상태에서 해머를 누르고 있는 팀원을 강조하고 이름표 키 표시 양옆에 해머와 훅 입력을 표시합니다.
 
 Hit feedback
 == 타격 피드백
@@ -7175,11 +7193,8 @@ Icon symbols:
 Icons
 == 아이콘
 
-Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
-== 키를 놓거나 동결이 풀리면 아이콘이 사라집니다. 다른 플레이어의 입력 표시에는 서버의 사전 입력 지원이 필요하며 현재 조작 중인 캐릭터는 제외됩니다.
-
-Identity preset
-== 프로필 프리셋
+Identity
+== 아이덴티티
 
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == 1이면 연결 시 한 번만 자동 녹화하고, 0이면 게임 종료 후 자동 녹화가 다시 시작됩니다.
@@ -7661,6 +7676,9 @@ Jelly others
 Jelly strength
 == 젤리 강도
 
+Jetpack
+== 제트팩
+
 Join
 == 참가
 
@@ -7773,7 +7791,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == 어두운 배경에는 밝은 글자가 읽기 좋습니다. 기본 모양으로 되돌리려면 도움말 모양 초기화를 누르세요.
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== 팀 색상과 구분하세요. 그렇지 않으면 같은 클랜 이름이 팀 패널에 묻혀 읽기 어려워집니다.
+== 팀 색상과 구분되게 지정하세요. 그렇지 않으면 같은 클랜 이름이 팀 패널에 묻혀 읽기 어려워집니다.
 
 Keep unsent message on chat close
 == 채팅 닫을 때 전송되지 않은 내용 유지
@@ -7909,9 +7927,6 @@ Kugou hook helper path (empty=beside QmClient)
 
 l = Local time
 == l = 로컬 시간
-
-L select  R swap  M select only
-== 좌클릭 선택  우클릭 교체  중간클릭만 선택
 
 Label
 == 레이블
@@ -8095,6 +8110,9 @@ Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-cli
 
 Left/right channel width
 == 좌/우 채널 폭
+
+Legacy bind script
+== 레거시 바인드 스크립트
 
 Legacy option: connections that skip TLS verification are rejected
 == 레거시 옵션: TLS 검증을 건너뛰는 연결은 거부됩니다
@@ -8399,8 +8417,8 @@ Local-only
 Locate
 == 위치 찾기
 
-Lock delay
-== 잠금 지연
+Lock both teams immediately when entering solo split mode
+== 솔로 스플릿 시작 시 두 팀을 즉시 잠금
 
 Lock team
 == 팀 잠금
@@ -8447,6 +8465,9 @@ Low contrast between name and message text makes chat hard to scan in fights.
 Lower means better quality and larger files; 18 is recommended
 == 값이 낮을수록 화질이 좋고 파일이 커집니다. 18 권장
 
+LX Music open API port (0=auto-detect from LX Music config)
+== LX Music 오픈 API 포트 (0=LX Music 설정에서 자동 감지)
+
 LXGW WenKai is available.
 == LXGW WenKai를 사용할 수 있습니다.
 
@@ -8477,11 +8498,8 @@ Main Asset
 Main menu
 == 메인 메뉴
 
-Main Tee
-== 본체
-
-Main Tee and dummy
-== 본체와 더미
+Main-world ghost opacity
+== 메인 월드 고스트 불투명도
 
 Maintains the list of hostile players and groups plus the rules used to display them.
 == 적대 플레이어와 그룹 목록, 그리고 표시에 쓰이는 규칙을 관리합니다.
@@ -8534,8 +8552,8 @@ Manage hostile-list chat shortcuts
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
 
-Manage profiles and bind wheel presets
-== 프로필과 바인드 휠 프리셋 관리
+Manage profiles and add identity entries to bind menus
+== 프로필을 관리하고 아이덴티티 항목을 바인드 메뉴에 추가
 
 Manage the skin rotation queue
 == 스킨 순환 큐 관리
@@ -8780,9 +8798,6 @@ Max Screenshots
 Max size
 == 최대 크기
 
-Max skins in the rotation queue; 0 stops collecting.
-== 로테이션 대기열에 보관할 최대 스킨 수입니다. 0이면 수집을 중지합니다.
-
 Max stroke entries to keep
 == 유지할 최대 스트로크 항목 수
 
@@ -8882,6 +8897,9 @@ may cause delay
 May overload the service
 == 서비스에 과부하가 걸릴 수 있음
 
+Measure a fixed cold glyph batch with performance diagnostics enabled
+== Measure a fixed cold glyph batch with performance diagnostics enabled
+
 Medium
 == 중간
 
@@ -8932,6 +8950,9 @@ Menu panel color
 
 Menu panel opacity
 == 메뉴 패널 불투명도
+
+Menu type
+== 메뉴 유형
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == 이 시간(밀리초) 내에 연속으로 동일한 echo 메시지를 병합합니다(0이면 병합하지 않음)
@@ -9269,9 +9290,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = 예측 지연 시간
 
-NA
-== 북미
-
 Name
 == 이름
 
@@ -9349,9 +9367,6 @@ Name plates size
 
 Name to change to near finish (when qm_change_name_near_finish enabled)
 == 결승선 근처에서 변경할 이름 (qm_change_name_near_finish 활성화 시)
-
-Name:
-== 이름:
 
 Name: %s
 == 이름: %s
@@ -9514,9 +9529,6 @@ New name
 
 New name:
 == 새 이름:
-
-New preset
-== 새 프리셋
 
 New preset name
 == 새 프리셋 이름
@@ -10058,6 +10070,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == 상상할 수 없는 것만 있을 뿐, Dream 이 할 수 없는 것은 없습니다
 
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== 시뮬레이션되는 것은 자신의 세계 복사본뿐입니다. 다른 플레이어는 서버 쪽 Tee이므로 당신이 밟은 스위치는 그들에게 영향을 주지 않습니다. 고스트 표시 전환과 불투명도는 그들에게도 적용됩니다.
+
 Opacity
 == 불투명도
 
@@ -10070,6 +10085,9 @@ Opacity of freeze bars inside freeze
 Opacity of other teams' tees and name plates
 == 다른 팀 Tee와 이름표 불투명도
 
+Open a bind menu (identity, chat, assets, custom)
+== 바인드 메뉴 열기 (아이덴티티, 채팅, 에셋, 사용자 지정)
+
 Open a link to join the community.
 == 링크를 열면 커뮤니티에 참여할 수 있습니다.
 
@@ -10081,9 +10099,6 @@ Open a link to visit the site.
 
 Open a matching settings card directly
 == Open a matching settings card directly
-
-Open bindwheel selector
-== 바인드 휠 선택기 열기
 
 Open DDNet Wiki
 == DDNet Wiki 열기
@@ -10123,6 +10138,9 @@ Open TClient configuration file locations
 
 Open the card and enable only the elements you want; each option explains what it draws.
 == 카드를 열어 필요한 요소만 켜세요. 각 옵션에는 무엇을 그리는지 설명이 있습니다.
+
+Open the custom bind menu
+== 사용자 지정 바인드 메뉴 열기
 
 Open the directory that contains the configuration and user files
 == 설정 및 사용자 파일이 있는 폴더 열기
@@ -10202,14 +10220,17 @@ Optional
 Optional authentication key for the DNSBL provider
 == DNSBL 제공자의 선택적 인증 키
 
-Optional Axiom API key for scoreboard points and vote map details (leave empty for anonymous queries)
-== 점수판 점수와 투표 지도 정보를 조회할 Axiom API 키(선택). 비워 두면 익명으로 조회합니다.
+Optional Axiom API key for scoreboard points and map queries (leave empty for anonymous queries)
+== 스코어보드 포인트와 지도 조회용 Axiom API 키 (선택 사항, 익명 조회 시 비워 두세요)
 
 Optional export range in seconds. Leave empty to export the whole demo.
 == 선택적 내보내기 범위(초)입니다. 비워 두면 전체 데모를 내보냅니다.
 
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 == 선택 사항인 시작·끝 시간(초)입니다. 둘 다 비우면 데모 전체를 내보냅니다.
+
+Options
+== 옵션
 
 Options here affect networking or identity; test on a server before using them in matches.
 == 여기 설정은 네트워크나 신원에 영향을 줍니다. 경기에서 쓰기 전에 서버에서 시험해 보세요.
@@ -10334,9 +10355,6 @@ Override Freeze Tile Entity Alpha (0-100)
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping 추정 위치를 재정의합니다. 사용 가능: auto, af, as, as:cn, eu, na, oc, sa(자동, 아프리카, 아시아, 중국, 유럽, 북미, 오세아니아/호주, 남미)
 
-Override Selected
-== 선택 항목 재정의
-
 Overview
 == 개요
 
@@ -10346,14 +10364,17 @@ Overwrite clan even if empty
 Own hook line width
 == 자신의 갈고리 선 너비
 
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== 자신의 Tee에는 본체와 더미가 포함됩니다. 다른 플레이어를 표시하려면 같은 팀이어야 하며 서버가 사전 입력을 지원해야 합니다.
+
 p = Ping latency
 == p = Ping 지연 시간
 
 Pack name
 == 팩 이름
 
-Pain
-== 아픔
+Panel
+== 패널
 
 Panel opacity
 == 패널 불투명도
@@ -10460,6 +10481,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == 일시정지
 
+Pause recording
+== 녹화 일시정지
+
+Pause recording the practice line (the recorded part is kept)
+== 연습 라인 녹화 일시정지(녹화된 부분은 유지)
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== 지금까지 녹화한 내용을 버리지 않고 일시정지합니다. 다시 시작하면 새 구간으로 기록되므로 일시정지한 구간이 직선으로 그려지지 않습니다.
+
 Pause the current demo
 == 현재 데모 일시 정지
 
@@ -10474,9 +10504,6 @@ Pause/unpause game
 
 Penalty in seconds for saving or swapping positions
 == 위치 저장 또는 교체에 대한 초 단위 패널티
-
-Pending sync
-== 동기화 대기 중
 
 Per-name volume (name=percent)
 == 이름별 개별 볼륨 (name=percent)
@@ -10535,6 +10562,9 @@ Pet Skin:
 Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 == 펫은 순전히 꾸미기용입니다. 추가 렌더링으로 성능이 떨어지면 끄세요.
 
+Phrase
+== 문구
+
 Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
 == 도움말 배경색과 글자색을 고르고, 도움말 글자 크기를 끌어 조절하며, 작게 튀는 효과를 원하면 도움말 튕김 애니메이션을 켜 두세요.
 
@@ -10575,7 +10605,7 @@ Pick a text style or a moon or sun badge, check the preview, then press "Save" t
 == 텍스트 스타일이나 달 또는 해 배지를 선택하고 미리보기를 확인하세요. “저장”을 누르면 다른 플레이어에게도 선택한 스타일이 표시됩니다.
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== 각 색상 행에서 색을 고르세요. 인증 및 같은 클랜 색상은 스코어보드에, 두 목록 색상은 친구 목록에 적용됩니다.
+== 각 색상 행에서 색을 선택하세요. 인증됨 및 같은 클랜 색상은 점수판에, 목록 색상 두 개는 친구 목록에 적용됩니다.
 
 Pick result: %s
 == 추첨 결과: %s
@@ -10654,6 +10684,9 @@ Play back a demo
 
 Play background music
 == 배경 음악 재생
+
+Play rank ghost replay sounds and hit effects locally
+== Rank 1 고스트 리플레이의 효과음과 피격 효과를 로컬에서 재생
 
 Play replay
 == 리플레이 재생
@@ -11033,6 +11066,9 @@ Position jump tip
 Position:
 == 위치:
 
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== 맵을 혼자 연습하고, 메인 월드 고스트를 숨기고, 이번 시간을 표시하며, 연습 명령을 키에 지정합니다.
+
 Practice mode can't be enabled in team 0 mode.
 == 팀 0 모드에서는 연습 모드를 활성화할 수 없습니다
 
@@ -11097,7 +11133,7 @@ Prediction
 == 예측
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== 예측과 지연 보상은 DDNet 페이지의 "네트워크 보상" 하위 탭으로 이동했습니다.
+== 예측 및 지연 보정이 DDNet 페이지의 '네트워크 보정' 하위 탭으로 이동했습니다.
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == 예측 경계 (ms, 지연 시간은 증가하지만 핑 지터는 감소)
@@ -11140,9 +11176,6 @@ Preset %d
 
 Preset bar
 == 프리셋 바
-
-Preset type
-== 프리셋 유형
 
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == libx264로 비디오 인코딩 시 사전 설정, 기본값 5 (medium), 0은 ultrafast, 9는 placebo (가장 느림, 권장하지 않음)
@@ -11261,8 +11294,8 @@ Preview selected file
 Preview spacing does not match every map; check in game before a match.
 == 미리보기의 간격이 모든 맵과 일치하지 않으니 경기 전에 게임에서 확인하세요.
 
-Preview the bind wheel layout and selection
-== Preview the bind wheel layout and selection
+Preview the bind menu layout and entries
+== 바인드 메뉴 레이아웃과 항목 미리보기
 
 Preview the composed status bar output
 == Preview the composed status bar output
@@ -11576,9 +11609,6 @@ Querying...
 Queue is empty
 == 대기열이 비어 있습니다
 
-Queue length
-== 큐 길이
-
 Queue preset: %s
 == 큐 프리셋: %s
 
@@ -11681,12 +11711,6 @@ Rank 1 demo downloaded to '%s'
 Rank 1 replays
 == Rank 1 리플레이
 
-Rank demo already available in the demo browser: %s
-== 해당 리플레이는 이미 데모 브라우저에 있습니다: %s
-
-Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
-== 랭크 데모 다운로드됨: %s. 랭크 1 목록 또는 데모 브라우저에서 재생하세요.
-
 Rank ghost loaded: %s, %s s. It follows your current run.
 == Rank 고스트를 불러왔습니다: %s, %s초. 현재 주행을 따라갑니다.
 
@@ -11764,6 +11788,9 @@ Rank ghost: the replay has an invalid run range
 
 Rank ghost: the replay list is empty or malformed
 == Rank 고스트: 리플레이 목록이 비어 있거나 손상되었습니다
+
+Rank ghost: this replay has no playable tee
+== Rank 1 고스트: 이 리플레이에는 재생 가능한 Tee가 없습니다
 
 Rank ghost: timed out waiting for the map to load
 == Rank 고스트: 맵 로드 대기 시간 초과
@@ -12035,8 +12062,8 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == 투표 옵션 제거
 
-Remove Bind
-== 바인드 제거
+Remove all weapons
+== 모든 무기 제거
 
 Remove chat
 == 채팅 기록 제거
@@ -12082,6 +12109,9 @@ Remove war name:
 
 Removed %s from friends
 == %s 님을 친구에서 제거했습니다
+
+Removed from this bind menu.
+== 이 바인드 메뉴에서 제거했습니다.
 
 Removes all bindwheel binds
 == 모든 바인드휠 바인드 제거
@@ -12269,11 +12299,17 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == 리플레이
 
+Replay a saved practice ghost group in demo-style view mode
+== 저장된 연습 고스트 그룹을 데모 방식 보기 모드로 재생
+
 Replay downloaded
 == 리플레이 다운로드됨
 
 Replay feature is disabled!
 == 리플레이 기능이 비활성화되었습니다!
+
+Replay ghost sounds and effects
+== 고스트 리플레이 효과음 및 피격 효과 재생
 
 Replay list: failed to load, press Refresh to retry
 == 리플레이 목록: 불러오기 실패, 새로 고침으로 재시도
@@ -12328,6 +12364,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == 이 서버에서 Rescue 가 활성화되어 있지 않으며 /practice 가 켜진 팀에도 속해 있지 않습니다. 연습 모드에서는 순위를 얻을 수 없습니다.
+
+Rescue mode
+== 구조 모드
 
 Rescue mode changed to auto.
 == 구조 모드가 auto 로 변경되었습니다.
@@ -12407,9 +12446,6 @@ Reset mouse position when opening bind wheel
 Reset pie menu appearance
 == 원형 메뉴 외관 초기화
 
-Reset position of mouse when opening bindwheel
-== 바인드휠 열 때 마우스 위치 초기화
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == 서버 입장 시 통계 초기화 (0=누적 통계, 1=입장 시마다 초기화)
 
@@ -12476,6 +12512,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == 권장값으로 복원
 
+Restore the practice world to the state it had when fast practice was enabled
+== 연습 세계를 빠른 연습을 시작한 시점의 상태로 되돌림
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== 연습 세계를 빠른 연습을 시작한 시점의 상태로 되돌립니다. 녹화된 라인은 유지되고 새 구간부터 이어집니다.
+
 Restored the built-in content
 == 내장 콘텐츠로 되돌렸습니다
 
@@ -12496,6 +12538,9 @@ Retry remote stats
 
 Retrying…
 == 재시도 중…
+
+Return to respawn point
+== 리스폰 지점으로 돌아가기
 
 Reverse chat gradient colors
 == 그라데이션 색상 반전 (채팅)
@@ -12523,6 +12568,12 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == 기본값과 다른 설정 값을 검토하고 초기화합니다.
+
+Rewind practice world
+== 연습 세계 되돌리기
+
+Rifle
+== 라이플
 
 Rifle Laser Inner Color
 == 라이플 레이저 내부 색상
@@ -12644,8 +12695,8 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == 서버에 연결하면 명령어를 자동으로 실행하며, 연결 단계와 참가 단계로 나뉩니다.
 
-SA
-== 남미
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== 자신만의 맵 복사본을 실행하고 서버의 실제 Tee는 입장했던 위치에 남습니다. 이번 시간 표시와 연습 명령 키 지정도 함께 제공합니다.
 
 Same as "vote no"
 == "투표 반대"와 동일
@@ -12686,6 +12737,9 @@ Save changes
 Save changes back to this preset
 == 변경 사항을 이 프리셋에 저장
 
+Save configuration
+== 설정 저장
+
 Save current queue as a new preset
 == 현재 큐를 새 프리셋으로 저장
 
@@ -12706,6 +12760,9 @@ Save loaded; local record removed.
 
 Save loaded; the local record could not be removed.
 == 저장 데이터를 불러왔지만 로컬 기록을 삭제하지 못했습니다.
+
+Save phrase
+== 문구 저장
 
 Save player names in replay
 == 리플레이에 플레이어 이름 저장
@@ -12769,12 +12826,6 @@ Save/Load Skin
 
 Saved
 == 저장했습니다
-
-Saved to Downloads/QmClient
-== 다운로드/QmClient에 저장됨
-
-Saved to the bind wheel.
-== 바인드 휠에 저장했습니다.
 
 Saved with your title and shared with other QmClient players.
 == 칭호와 함께 저장되며 다른 QmClient 플레이어에게 공유됩니다.
@@ -12943,6 +12994,9 @@ Search country flag…
 
 Search donor asset
 == 기증자 에셋 검색
+
+Search ghosts
+== 고스트 검색
 
 Search main asset
 == 메인 에셋 검색
@@ -13268,6 +13322,9 @@ Server votes
 Server-dependent
 == 서버에 따라 다름
 
+Server-side ghost opacity during fast practice (%)
+== 빠른 연습 중 서버 쪽 고스트 불투명도 (%)
+
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == 배경색과 배경 불투명도를 설정한 뒤 글자색, 선택 글자색, 선택 배경색을 정합니다. 아래에 미리보기가 나옵니다.
 
@@ -13281,7 +13338,7 @@ Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit t
 == 조준은 게임 내 마우스 감도, 메뉴는 UI 마우스 감도로 설정한 뒤 최소 커서 거리와 최대 커서 거리로 커서 위치를 제한합니다.
 
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
-== "예측 여유"를 밀리초로 설정하고 "AntiPing(지연 보상)"을 켠 뒤 무엇을 예측할지 고르세요. 중복 스위치는 실험적이며 손실이 있는 연결에서만 유용합니다.
+== '예측 여유'를 밀리초로 설정하고 'AntiPing(지연 보정)'을 체크한 뒤 예측할 대상을 고르세요. 중복 스위치는 실험적이며 패킷 손실이 있는 연결에서만 유용합니다.
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == 전환 간격을 0으로 두면 시간에 따른 전환이 멈추고, 대기열은 수동 전환이나 맵 입장 시에만 쓰입니다.
@@ -13318,6 +13375,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 
 Set microphone mute state (0=on, 1=mute)
 == 마이크 음소거 상태 설정 (0=켜짐, 1=음소거)
+
+Set practice respawn point
+== 연습 리스폰 지점 설정
 
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == 서버를 싱글플레이어 모드로 설정 (플레이어 상호작용 없음, 맵 로드 전에 설정해야 함)
@@ -13835,6 +13895,9 @@ Show grenade and laser trajectory preview
 Show Grid
 == 그리드 표시
 
+Show hammer icon
+== 해머 아이콘 표시
+
 Show hammer status
 == 망치 상태 표시
 
@@ -13849,6 +13912,9 @@ Show hitbox mode
 
 Show Hook Collision
 == 갈고리 충돌 표시
+
+Show hook icon
+== 갈고리 아이콘 표시
 
 Show hook strength icon indicator
 == 갈고리 강도 아이콘 표시
@@ -14023,6 +14089,9 @@ Show lyrics in Dynamic Island
 
 Show main tee title locally
 == 로컬에서 메인 티 칭호 표시
+
+Show main-world ghost
+== 메인 월드 고스트 표시
 
 Show map details
 == 맵 세부 정보 표시
@@ -14243,6 +14312,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == 위치 및 각도 디버그 정보 표시
 
+Show practice timer
+== 연습 타이머 표시
+
 Show predicted position as ghost, original as unpredictable player
 == 예측 위치를 유령으로, 원본 위치를 예측 불가능한 플레이어로 표시
 
@@ -14296,6 +14368,9 @@ Show server settings
 
 Show server uptime
 == 서버 가동 시간 표시
+
+Show server-side tees as ghosts during fast practice
+== 빠른 연습 중 서버 쪽 Tee를 고스트로 표시합니다
 
 Show settings card borders
 == 설정 카드 테두리 표시
@@ -14419,6 +14494,9 @@ Show the original text locally below translated outgoing messages
 
 Show the pet
 == 펫 표시
+
+Show the practice run timer in the HUD
+== HUD에 이번 연습 시간을 표시합니다
 
 Show the reason in name plates
 == 네임플레이트에 사유 표시
@@ -14683,6 +14761,9 @@ Skin is loading.
 
 Skin list sort mode (0=Name, 1=Release date)
 == 스킨 목록 정렬 모드(0=이름, 1=게시 시간)
+
+Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)
+== 스킨 목록 소스 필터 (0=전체, 1=공식, 2=커뮤니티, 3=DDStats, 4=사용자 지정 URL, 5=바닐라)
 
 Skin options
 == 스킨 옵션
@@ -15170,14 +15251,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == 리플레이 슬라이스의 시작 마커
 
+Start or resume recording the practice line
+== 연습 라인 녹화 시작 또는 재개
+
 Start playback of ghosts
 == 고스트 재생 시작
+
+Start recording
+== 녹화 시작
 
 Start recording a demo
 == 데모 녹화 시작
 
 Start recording a video
 == 비디오 녹화 시작
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== 빠른 연습 라인 녹화를 시작하거나 일시정지 후 이어서 녹화합니다. 녹화는 항상 수동이며, 누르기 전에는 아무것도 기록되지 않습니다.
 
 Start skin queue from a random position when entering a map
 == 맵 입장 시 스킨 큐를 무작위 위치에서 시작
@@ -15269,6 +15359,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == %d명의 후원자 덕분입니다. 보시겠어요?
 
+Stop and save recording
+== 녹화 종료 및 저장
+
 Stop following
 == 따라가기 중지
 
@@ -15299,6 +15392,12 @@ Stop recording a demo
 Stop recording a video
 == 비디오 녹화 중지
 
+Stop recording and save the practice line as a ghost group
+== 녹화를 종료하고 연습 라인을 고스트 그룹으로 저장
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== 녹화를 종료하고 라인을 고스트 그룹으로 즉시 디스크에 저장합니다. 저장된 그룹은 바인드 메뉴나 고스트 페이지에서 재생할 수 있습니다.
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == 편집기 또는 엔티티에서 텍스트 오버레이 렌더링 중지: 높을수록 = 세부 묘사 감소 = 더 빠름
 
@@ -15307,6 +15406,12 @@ Stop server
 
 Stop the current demo
 == 현재 데모 중지
+
+Store the current practice tee state as the respawn point
+== 현재 연습 Tee 상태를 리스폰 지점으로 저장
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== 현재 Tee 상태(위치, 무기, 점프, 이동 상태)를 연습 리스폰 지점으로 저장합니다.
 
 Streamer mode
 == 스트리머 모드
@@ -15338,9 +15443,6 @@ Stroke retention time (0=Never disappear)
 Strokes are local only and vanish when you leave the map; set the fade time to 0 to keep them until you draw again.
 == 획은 로컬에만 남고 맵을 나가면 사라집니다. 사라지는 시간을 0으로 두면 다시 그릴 때까지 유지됩니다.
 
-Strong / Weak
-== 강약 표시 이미지
-
 Strong hook
 == 강력 갈고리
 
@@ -15349,6 +15451,9 @@ Strong hook color
 
 Strong Weak Hook
 == 강약 갈고리
+
+Stuck input display scope
+== 표시 대상
 
 Style
 == 스타일
@@ -15394,9 +15499,6 @@ Support is optional; nothing here changes client behavior.
 
 Support ♥
 == 후원 ♥
-
-Surprise
-== 놀람
 
 Swap
 == 교체
@@ -15764,6 +15866,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == 모든 무기 순간이동 (사용 중단됨, 대신 특수 엔티티 사용)
 
+Teleport back to the practice respawn point
+== 연습 리스폰 지점으로 돌아가기
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== 연습 리스폰 지점으로 돌아가 그곳에 저장된 Tee 상태를 복원합니다. Tee만 되돌리고 세계는 계속 진행됩니다.
+
 Teleport dummy to cursor
 == 더미를 커서 위치로 순간이동
 
@@ -15920,20 +16028,23 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == QmClient를 지원해 주셔서 감사합니다
 
-Thanks!
-== 고마워요!
-
 The audio device couldn't be initialised.
 == 오디오 장치를 초기화할 수 없습니다.
 
 The auth level you need to tele others
 == 다른 플레이어를 순간이동시키는 데 필요한 권한 레벨
 
+The bind menu is full.
+== 바인드 메뉴가 가득 찼습니다.
+
 The card only appears while such a bind exists; click its key field to change the key, and the row label is the command it runs.
 == 그런 바인드가 있을 때만 카드가 나타납니다. 키 칸을 클릭해 키를 바꾸고, 행 이름이 실행되는 명령입니다.
 
 The command is empty, incomplete, or exceeds the local config line limit.
 == 명령이 비어 있거나 불완전하거나 로컬 설정 줄 제한을 초과합니다.
+
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== 표시 대상은 Tee 색상과 아이콘에 모두 적용됩니다. 각 아이콘은 방향키 표시와 별개로 켜거나 끌 수 있습니다.
 
 The downloaded file is not a valid demo
 == 다운로드한 파일은 유효한 데모가 아닙니다
@@ -16018,9 +16129,6 @@ The update-rate and frame-rate caps moved to the Graphics page; they belong next
 
 The watermarked screenshot was saved next to the original
 == 워터마크가 적용된 스크린샷을 원본 옆에 저장했습니다
-
-The wheel changed. Your draft can be added as a new preset.
-== 휠 항목이 변경되었습니다. 초안을 새 프리셋으로 추가할 수 있습니다.
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 텍스처 %s의 너비가 %d로 나누어 떨어지지 않거나 높이가 %d로 나누어 떨어지지 않아 시각적 버그가 발생할 수 있습니다.
@@ -16172,9 +16280,6 @@ Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split ke
 Tick "Debug mode" to turn all options on, then set "Performance debug log threshold (ms)" to choose which frames get logged.
 == 디버그 모드를 켜면 모든 옵션이 켜지며, 그다음 성능 디버그 로그 임계값(ms)으로 기록할 프레임을 정합니다.
 
-Tick "Download skins", "Download community skins" or "Vanilla skins only", then type a "Skin prefix" or use a preset such as "kitty".
-== 스킨 다운로드, 커뮤니티 스킨 다운로드, 바닐라 스킨만 표시 중 하나를 체크하고 스킨 접두사를 입력하거나 kitty 같은 프리셋을 쓰세요.
-
 Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its movement, and the weapon switches are separate rows below.
 == 다이나믹 카메라를 체크하면 켜집니다. 부드러운 다이나믹 카메라는 움직임에 미끄러짐을 더하고, 무기 전환은 아래에 따로 있는 행입니다.
 
@@ -16209,7 +16314,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == 입력 표시를 선택한 다음 키보드 크기, 마우스 크기, 불투명도, 위치 슬라이더로 크기와 위치를 조정하세요.
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== "다른 팀 표시"를 켜면 다른 팀이 반투명하게 그려집니다. 그림자 불투명도는 그 아래 종속 행에서 설정하고, 시야는 "배경 쿼드 표시"와 "기본 확대/축소"로 조정합니다.
+== '다른 플레이어 표시'를 체크하면 다른 팀이 반투명하게 그려집니다. 그 아래 종속 행에서 그림자 불투명도를 설정하고, '배경 쿼드 표시'와 '기본 줌'으로 화면을 조정하세요.
 
 Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
 == "메인 메뉴 건너뛰기"를 켜고 "설정 파일" 또는 "테마 폴더"로 해당 위치를 여세요.
@@ -16222,6 +16327,9 @@ Tick delay before executing qm_execute_on_join
 
 Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"; "Lock delay" and "Spectator opacity" appear below.
 == 해제 시 자동 관전 해제나 자동 팀 잠금 같이 원하는 동작을 체크합니다. 아래에 잠금 지연과 관전자 불투명도가 나타납니다.
+
+Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
+== 다운로드 토글을 켠 뒤 "스킨 검색"의 "데이터 소스"에서 표시할 소스 카탈로그를 선택하세요.
 
 Ticks after freeze before applying max prediction reduction
 == 최대 예측 감소를 적용하기 전 얼어붙은 후 틱 수
@@ -16321,6 +16429,9 @@ Timestamp
 
 Tiny Tee Size
 == 아주 작은 Tee 크기
+
+Title
+== 제목
 
 Title bob angular speed in 1/100 rad/s
 == 칭호 흔들림 각속도 (1/100 rad/s)
@@ -16432,6 +16543,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == 로컬 콘솔 전환
+
+Toggle main-world ghost
+== 메인 월드 고스트 전환
 
 Toggle map preview
 == 맵 미리보기
@@ -16706,6 +16820,9 @@ Translation Settings
 transmits your player name to info.ddnet.org
 == 플레이어 이름을 info.ddnet.org로 전송합니다
 
+Trigger key
+== 트리거 키
+
 Trigger limits
 == 발동 제한
 
@@ -16753,6 +16870,9 @@ Tune variable to value or show current value
 
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 성능이 낮은 기기에서는 끄세요. 카드가 즉시 열리고 스크롤도 즉시 반응합니다. 커서 모양은 겉모양일 뿐이며 세 가지 모두 같은 문자 셀에 들어갑니다.
+
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== "메인 월드 고스트 표시"를 끄면 다른 플레이어를 포함해 서버에서 오는 모든 Tee가 숨겨집니다. 켜 둔 상태에서는 불투명도 슬라이더로 보이는 정도를 정할 수 있습니다. 바인드 행은 연습 메뉴와 같은 명령을 보내므로 채팅창을 열 필요가 없습니다.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == "물에 빠지면 자동 채팅"을 켜고 보낼 "채팅 메시지"를 입력한 뒤, 원하면 "물에 빠지면 이모티콘 보내기"와 이모티콘 ID를 설정하세요.
@@ -16825,6 +16945,9 @@ Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow h
 
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.
 == 무기 교체 애니메이션 또는 재장전 시 뒤집기 애니메이션을 켜고, 애니메이션 범위를 고른 뒤 길이·거리·회전을 조절하세요.
+
+Turn on LX Music open API
+== LX Music 오픈 API 켜기
 
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
 == 한 번에 하나씩 켜세요. Tee 전환이나 채팅 닫기는 아직 쓰던 메시지를 잃게 할 수 있습니다.
@@ -17024,6 +17147,9 @@ Underscore
 Underscore: a line under the character that follows
 == 밑줄: 다음 글자 아래에 그리는 선
 
+Undo deep freeze
+== 깊은 프리즈 해제
+
 Unexpected map upload response.
 == 맵 업로드 응답이 예상과 다릅니다.
 
@@ -17162,11 +17288,11 @@ Untick "Show other players' large emoticons" or "Show other players' launched em
 Untick "Use original style" to reach "Background color", the countdown options and "Always show song title and artist"; "Show team" works in both styles.
 == 원래 스타일 사용을 해제해야 배경색, 카운트다운 옵션, 곡 제목과 아티스트 항상 표시를 설정할 수 있습니다. 팀 표시는 두 스타일 모두에서 동작합니다.
 
+Untitled
+== 제목 없음
+
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
 == 일반적이지 않은 재생률은 티어링을 일으킬 수 있으니 모니터의 기본 재생률을 사용하는 것이 좋습니다.
-
-Up to 6 Chinese or 12 ASCII characters
-== 중국어 6자 또는 ASCII 12자까지
 
 Update
 == 업데이트
@@ -17198,6 +17324,12 @@ Update ready to install
 Update sources are temporarily unavailable
 == 업데이트 서버를 일시적으로 사용할 수 없습니다
 
+Updated this configuration.
+== 이 설정을 업데이트했습니다.
+
+Updated this phrase.
+== 문구를 업데이트했습니다.
+
 Updating preview…
 == 미리보기 업데이트 중…
 
@@ -17218,6 +17350,9 @@ Upstream redundancy (experimental)
 
 URL for downloading community skins
 == 커뮤니티 스킨 다운로드 URL
+
+URL for downloading DDStats skins
+== DDStats 스킨 다운로드 URL
 
 URL for downloading maps (must start with https://)
 == 맵 다운로드 URL (https://로 시작해야 함)
@@ -17320,9 +17455,6 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 높은 대역폭 모드 사용 (서버 대역폭 두 배, LAN 전용)
-
-Use installed asset names. Empty fields keep the current asset.
-== 설치된 리소스 이름을 입력하세요. 빈 항목은 현재 리소스를 유지합니다.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == K 키를 사용하여 죽기(재시작), Q 키를 사용하여 일시 중지 및 다른 플레이어 관전. 다른 키 바인딩은 설정에서 확인하세요.
@@ -17870,17 +18002,14 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 == 무엇인가요
 
+Wheel
+== 휠
+
 Wheel distance per tick; hold Alt for 3x
 == 휠 한 눈금당 이동 거리. Alt는 3배
 
-Wheel label
-== 휠 표시 이름
-
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 == 휠 스크롤 감도: 0=원본(각 틱마다 재시작), 1=부드럽게(속도 유지), 2=스프링
-
-Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
-== 휠 한 눈금당 UI 픽셀 이동량. 설정 카드 페이지는 매 눈금마다 이 값의 12배만큼 이동
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient 무지개 Tee가 켜져 있으면 이 기능은 적용되지 않습니다.
@@ -18296,6 +18425,9 @@ You have requested to swap with %s. Use /cancelswap to cancel the request.
 You have started racing already
 == 이미 레이스를 시작했습니다
 
+You have to be in a team (from 1-127)
+== 팀에 속해 있어야 합니다 (1-127)
+
 You have to be in a team (from 1-63)
 == 팀에 속해 있어야 합니다 (1-63)
 
@@ -18661,6 +18793,62 @@ Hook
 Relative aim
 == 상대 조준
 
+[Editor]
+Could not generate the quad art image.
+== Could not generate the quad art image.
+
+[Editor]
+Drawing tools require the active physics layers.
+== Drawing tools require the active physics layers.
+
+[Editor]
+Failed to write sound to file '%s'.
+== Failed to write sound to file '%s'.
+
+[Editor]
+No image selected.
+== No image selected.
+
+[Editor]
+No sound selected.
+== No sound selected.
+
+[Editor]
+Saving failed: Could not prepare or queue the map.
+== Saving failed: Could not prepare or queue the map.
+
+[Editor]
+Saving failed: Could not write map file '%s'.
+== Saving failed: Could not write map file '%s'.
+
+[Editor]
+Sync interrupted: the map was loaded, but the editor could not refresh it
+== Sync interrupted: the map was loaded, but the editor could not refresh it
+
+[Editor]
+The drawing is too large. Split it into smaller strokes.
+== The drawing is too large. Split it into smaller strokes.
+
+[Editor]
+The drawing preview is too large to display.
+== The drawing preview is too large to display.
+
+[Editor]
+The file path is too long.
+== The file path is too long.
+
+[Editor]
+The game and physics layers must have matching dimensions before they can be extended.
+== The game and physics layers must have matching dimensions before they can be extended.
+
+[Editor]
+The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+== The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+
+[Editor]
+The requested tile layer dimensions are too large.
+== The requested tile layer dimensions are too large.
+
 [Friend auto follow]
 Follow this friend across servers
 == 서버 간 친구 따라가기
@@ -18864,6 +19052,18 @@ AUTO
 [Start menu]
 Play
 == 플레이
+
+[Stuck input display scope]
+All
+== 모두
+
+[Stuck input display scope]
+Others
+== 다른 사람
+
+[Stuck input display scope]
+Own
+== 자신
 
 [Team size]
 maximum

@@ -716,6 +716,10 @@ jobs:
             --normalize-package \
             --output-dir release-assets
 
+      - name: Export short commit hash for the release title
+        shell: bash
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
+
       - name: Generate release notes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -738,7 +742,7 @@ jobs:
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           target_commitish: ${{ github.sha }}
-          name: QmClient ${{ env.RELEASE_TAG }}
+          name: QmClient ${{ env.RELEASE_TAG }} (${{ env.SHORT_SHA }})
           draft: true
           prerelease: ${{ contains(env.RELEASE_TAG, '-preview.') }}
           make_latest: false

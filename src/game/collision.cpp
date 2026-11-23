@@ -541,14 +541,16 @@ static int QuadLineHit(int Tile, vec2 Pos0, vec2 Pos1, float Fraction, vec2 *pOu
 	return Tile;
 }
 
-int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const
+int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, bool *pQmQuadIncomplete) const
 {
+	if(pQmQuadIncomplete)
+		*pQmQuadIncomplete = false;
 	const int End = round_truncate(distance(Pos0, Pos1) + 1.0f);
 	if(!m_pTiles || End <= 0)
 		return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
 
 	float QuadFraction = 2;
-	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
+	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction, nullptr, pQmQuadIncomplete) : 0;
 	const auto PosAtSample = [&](int Sample) {
 		const float Fraction = Sample / (float)End;
 		return mix(Pos0, Pos1, Fraction);
@@ -658,16 +660,18 @@ int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision,
 	return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
 }
 
-int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const
+int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr, bool *pQmQuadIncomplete) const
 {
 	if(pTeleNr)
 		*pTeleNr = 0;
+	if(pQmQuadIncomplete)
+		*pQmQuadIncomplete = false;
 	const int End = round_truncate(distance(Pos0, Pos1) + 1.0f);
 	if(!m_pTiles || End <= 0)
 		return LineMiss(Pos1, pOutCollision, pOutBeforeCollision);
 
 	float QuadFraction = 2;
-	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
+	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction, nullptr, pQmQuadIncomplete) : 0;
 	const auto PosAtSample = [&](int Sample) {
 		const float Fraction = Sample / (float)End;
 		return mix(Pos0, Pos1, Fraction);
@@ -729,10 +733,12 @@ int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollisio
 }
 
 // TODO: OPT: rewrite this smarter!
-void CCollision::MovePoint(vec2 *pInoutPos, vec2 *pInoutVel, float Elasticity, int *pBounces) const
+void CCollision::MovePoint(vec2 *pInoutPos, vec2 *pInoutVel, float Elasticity, int *pBounces, bool *pQmQuadIncomplete) const
 {
 	if(pBounces)
 		*pBounces = 0;
+	if(pQmQuadIncomplete)
+		*pQmQuadIncomplete = false;
 
 	vec2 Pos = *pInoutPos;
 	vec2 Vel = *pInoutVel;
@@ -740,12 +746,13 @@ void CCollision::MovePoint(vec2 *pInoutPos, vec2 *pInoutVel, float Elasticity, i
 	{
 		float Fraction;
 		vec2 Normal;
-		if(m_pQmAxiomQuads->IntersectLine(Pos, Pos + Vel, &Fraction, &Normal))
+		bool Incomplete = false;
+		if(m_pQmAxiomQuads->IntersectLine(Pos, Pos + Vel, &Fraction, &Normal, &Incomplete) && !Incomplete)
 		{
 			vec2 Hit, Before;
-			IntersectLine(Pos, Pos + Vel, &Hit, &Before);
+			IntersectLine(Pos, Pos + Vel, &Hit, &Before, &Incomplete);
 			// 静态图块先命中时沿用原有反弹规则。
-			if(distance(Pos, Hit) + 0.001f >= length(Vel) * Fraction)
+			if(!Incomplete && distance(Pos, Hit) + 0.001f >= length(Vel) * Fraction)
 			{
 				*pInoutPos = Before;
 				*pInoutVel = Vel - Normal * ((1 + Elasticity) * dot(Vel, Normal));
@@ -754,6 +761,10 @@ void CCollision::MovePoint(vec2 *pInoutPos, vec2 *pInoutVel, float Elasticity, i
 				return;
 			}
 		}
+		// 索引不完整时下面的瓦片规则仍可给出一个方向，但它没有把四边形算进去，
+		// 调用方需要知道这次反弹方向不可信。
+		if(Incomplete && pQmQuadIncomplete)
+			*pQmQuadIncomplete = true;
 	}
 	if(CheckPoint(Pos + Vel))
 	{

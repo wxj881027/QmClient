@@ -1,4 +1,5 @@
 #include <game/client/components/qmclient/qm_realtime_service_data.h>
+#include <game/client/components/qmclient/sponsor_chat_style.h>
 
 #include <gtest/gtest.h>
 
@@ -158,7 +159,10 @@ TEST(QmRealtimeServiceData, ProfilePublicationAcceptsOnlyAValidSuccessOrExplicit
 		const auto Input = Message("title_profile", std::string(R"("title":"Title","status":)") + Status);
 		EXPECT_EQ(ReadQmRealtimeServiceData(Input).m_TitleProfileAccepted, Accepted);
 	}
-	const auto InvalidTitle = Message("title_profile", R"("title":"bad\u0000title","status":200)");
+	// 含 NUL 的标题在解析层就被拒绝，这里只要求发布结果保持未接受。
+	const std::string InvalidTitleJson = R"({"type":"title_profile","data":{"title":"bad\u0000title","status":200}})";
+	SQmRealtimeMessage InvalidTitle;
+	ParseQmRealtimeMessage(InvalidTitleJson.data(), InvalidTitleJson.size(), InvalidTitle);
 	EXPECT_FALSE(ReadQmRealtimeServiceData(InvalidTitle).m_TitleProfileAccepted);
 	const auto ShadowedStatus = Message("title_profile", R"("title":"Title","status\u0000extra":401)");
 	EXPECT_FALSE(ReadQmRealtimeServiceData(ShadowedStatus).m_TitleProfileAccepted);
@@ -194,16 +198,26 @@ TEST(QmRealtimeServiceData, MissingProfileFieldsKeepWholeSnapshotDefaults)
 	EXPECT_FALSE(Data.m_AppearanceSupported);
 }
 
-TEST(QmRealtimeServiceData, TitleValidationKeepsExistingWidthAndControlCharacterRules)
+TEST(QmRealtimeServiceData, TitleProfileRejectsOverlongOrNonSingleLineText)
 {
-	for(const char *pTitle : {"", "[bad]", "1234567890123", "bad\\ntext"})
+	for(const char *pTitle : {"", "1234567890123456789012345", "bad\\ntext", "bad\\u0000text", "bad\\u202etext"})
 	{
 		SCOPED_TRACE(pTitle);
 		const auto Input = Message("title_profile", std::string(R"("status":200,"title":")") + pTitle + '"');
 		EXPECT_FALSE(ReadQmRealtimeServiceData(Input).m_TitleAuthenticated);
 	}
-	const auto Input = Message("title_profile", R"("status":200,"title":"123456789012")");
-	EXPECT_TRUE(ReadQmRealtimeServiceData(Input).m_TitleAuthenticated);
+}
+
+TEST(QmRealtimeServiceData, TitleProfilePreservesSupplementaryAndCombiningCodePoints)
+{
+	std::string Title = "[";
+	for(int i = 0; i < 16; ++i)
+		Title += "𠮷";
+	Title += "文e\u0301\U0001f469\u200d\U0001f4bb]";
+	const auto Input = Message("title_profile", std::string(R"("status":200,"title":")") + Title + '"');
+	const auto Data = ReadQmRealtimeServiceData(Input);
+	EXPECT_TRUE(Data.m_TitleAuthenticated);
+	EXPECT_EQ(Title, Data.m_pTitle);
 }
 
 TEST(QmRealtimeServiceData, InvalidOptionalChatStyleDoesNotDiscardValidProfile)
@@ -221,10 +235,10 @@ TEST(QmRealtimeServiceData, InvalidOptionalChatStyleDoesNotDiscardValidProfile)
 
 TEST(QmRealtimeServiceData, ChatStyleUsesExactMemberAndKeepsValidUnknownOrEmptySupport)
 {
-	for(const auto &[Style, Expected] : {std::pair{"soft_glow", EQmSponsorChatStyle::SOFT_GLOW}, std::pair{"platinum", EQmSponsorChatStyle::PLATINUM}, std::pair{"future", EQmSponsorChatStyle::NONE}, std::pair{"", EQmSponsorChatStyle::NONE}})
+	for(const auto &[Style, Expected] : {std::pair{"fluid", EQmSponsorChatStyle::FLUID}, std::pair{"platinum", EQmSponsorChatStyle::PLATINUM}, std::pair{"future", EQmSponsorChatStyle::NONE}, std::pair{"", EQmSponsorChatStyle::NONE}})
 	{
 		SCOPED_TRACE(Style);
-		const auto Input = Message("title_profile", std::string(R"("title":"Title","status":200,"chat_style\u0000extra":"soft_glow","chat_style":")") + Style + '"');
+		const auto Input = Message("title_profile", std::string(R"("title":"Title","status":200,"chat_style\u0000extra":"fluid","chat_style":")") + Style + '"');
 		const auto Data = ReadQmRealtimeServiceData(Input);
 		EXPECT_TRUE(Data.m_ChatStyleSupported);
 		EXPECT_EQ(Data.m_ChatStyle, Expected);

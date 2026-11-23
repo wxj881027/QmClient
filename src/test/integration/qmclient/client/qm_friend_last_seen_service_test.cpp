@@ -1,3 +1,5 @@
+#include <engine/shared/qm_storage_layout.h>
+
 #include <game/client/components/qmclient/friend_last_seen.h>
 
 #include <gtest/gtest.h>
@@ -23,7 +25,8 @@
 namespace
 {
 	constexpr int64_t NOW = 1792800000;
-	constexpr const char *CACHE_FILE = "qm_friend_last_seen.json";
+	constexpr const char *CACHE_FILE = qm_storage::FRIEND_LAST_SEEN_CACHE_FILE;
+	const std::string LEGACY_CANDIDATE = std::string(CACHE_FILE) + ".tmp";
 	constexpr const char *OLD_CACHE = R"({"version":1,"players":[{"name":"Alice","date":"2026-10-20","checked_at":"100"}]})";
 	constexpr const char *RESPONSE = R"({"recent_player_info":[{"name":"Alice","last_seen":"2026-10-23"}]})";
 
@@ -41,6 +44,7 @@ namespace
 		{
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
+			ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::CACHE_SOCIAL_DIR));
 			m_Friends.Set({"Alice", "Bob"});
 		}
 		void Update(int64_t Now = NOW, bool Enabled = true) { m_Service.Update(m_Friends, m_Engine, m_Http, Enabled, Now); }
@@ -404,7 +408,7 @@ TEST_F(CFriendLastSeenServiceTest, SuccessfulLoadCancelsOldTransportEvenIfAbortT
 TEST_F(CFriendLastSeenServiceTest, SaveUsesExclusiveCandidateAndLeavesPreviousFixedTempUntouched)
 {
 	Write(CACHE_FILE, OLD_CACHE);
-	Write("qm_friend_last_seen.json.tmp", "foreign-temp");
+	Write(LEGACY_CANDIDATE.c_str(), "foreign-temp");
 	MakeDirty();
 	ASSERT_FALSE(HasFatalFailure());
 	CFriendLastSeenTestStorage Storage(*m_pStorage);
@@ -413,7 +417,7 @@ TEST_F(CFriendLastSeenServiceTest, SaveUsesExclusiveCandidateAndLeavesPreviousFi
 	EXPECT_FALSE(Storage.m_AllowedDestinationRemoval);
 	EXPECT_EQ(Storage.m_Renames, 1);
 	EXPECT_EQ(Storage.m_Removes, 0);
-	EXPECT_EQ(Read("qm_friend_last_seen.json.tmp"), "foreign-temp");
+	EXPECT_EQ(Read(LEGACY_CANDIDATE.c_str()), "foreign-temp");
 	CQmFriendLastSeenCache Loaded;
 	ASSERT_TRUE(Loaded.Load(Read(CACHE_FILE), NOW));
 	ASSERT_NE(Loaded.Find("Alice"), nullptr);
@@ -586,7 +590,7 @@ TEST_F(CFriendLastSeenServiceDeathTest, PreviousFixedTempFifoCannotBlockSaving)
 	Write(CACHE_FILE, OLD_CACHE);
 	MakeDirty();
 	ASSERT_FALSE(HasFatalFailure());
-	const std::string FifoPath = Path("qm_friend_last_seen.json.tmp");
+	const std::string FifoPath = Path(LEGACY_CANDIDATE.c_str());
 	ASSERT_EQ(mkfifo(FifoPath.c_str(), 0600), 0);
 	EXPECT_EXIT(
 		{

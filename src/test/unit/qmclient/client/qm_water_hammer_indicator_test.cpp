@@ -2,6 +2,39 @@
 
 #include <gtest/gtest.h>
 
+TEST(QmWaterHammerIndicator, OwnScopeShowsLocalTeesAndHidesTeammates)
+{
+	EXPECT_TRUE(QmWaterInputScopeAllows(EQmWaterInputScope::OWN, true));
+	EXPECT_FALSE(QmWaterInputScopeAllows(EQmWaterInputScope::OWN, false));
+}
+
+TEST(QmWaterHammerIndicator, OthersScopeHidesLocalTees)
+{
+	EXPECT_FALSE(QmWaterInputScopeAllows(EQmWaterInputScope::OTHERS, true));
+	EXPECT_TRUE(QmWaterInputScopeAllows(EQmWaterInputScope::OTHERS, false));
+}
+
+TEST(QmWaterHammerIndicator, AllScopeIncludesLocalAndRemoteTees)
+{
+	EXPECT_TRUE(QmWaterInputScopeAllows(EQmWaterInputScope::ALL, true));
+	EXPECT_TRUE(QmWaterInputScopeAllows(EQmWaterInputScope::ALL, false));
+}
+
+TEST(QmWaterHammerIndicator, EachIconCanBeHiddenWithoutChangingHighlightColor)
+{
+	const SQmWaterHeldState Held{true, true};
+	const auto HammerOnly = Held.VisibleIcons(true, false);
+	EXPECT_TRUE(HammerOnly.m_Hammer);
+	EXPECT_FALSE(HammerOnly.m_Hook);
+	const auto HookOnly = Held.VisibleIcons(false, true);
+	EXPECT_FALSE(HookOnly.m_Hammer);
+	EXPECT_TRUE(HookOnly.m_Hook);
+	const auto Hidden = Held.VisibleIcons(false, false);
+	EXPECT_FALSE(Hidden.m_Hammer);
+	EXPECT_FALSE(Hidden.m_Hook);
+	EXPECT_EQ(Held.HighlightColor(0x000000, 0x0000ff), ColorRGBA(0.0f, 0.0f, 0.0f));
+}
+
 TEST(QmWaterHammerIndicator, TimedFreezeAndHammerFireMarksPlayer)
 {
 	EXPECT_TRUE(QmShouldMarkWaterHammer(200, false, true, true));

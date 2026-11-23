@@ -6,6 +6,7 @@
 #include "camera.h"
 
 #include <base/log.h>
+
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
@@ -87,7 +88,7 @@ namespace
 
 bool CSpectator::CanChangeSpectatorId()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 		return true;
 	// don't change SpectatorId when not spectating
 	if(!GameClient()->m_Snap.m_SpecInfo.m_Active)
@@ -102,7 +103,7 @@ bool CSpectator::CanChangeSpectatorId()
 
 void CSpectator::SpectateNext(bool Reverse)
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		const int Count = GameClient()->m_RankGhost.ViewMemberCount();
 		if(Count > 0)
@@ -179,7 +180,7 @@ void CSpectator::ConKeySpectator(IConsole::IResult *pResult, void *pUserData)
 
 	// QmClient：影子查看模式下同样允许打开选择器（成员面板统一入口）
 	if(pSelf->GameClient()->m_Snap.m_SpecInfo.m_Active || pSelf->Client()->State() == IClient::STATE_DEMOPLAYBACK ||
-		pSelf->GameClient()->m_RankGhost.IsViewModeActive())
+		pSelf->GameClient()->ReplaySessionStatus().ViewMode())
 		pSelf->m_Active = pResult->GetInteger(0) != 0;
 	else
 		pSelf->m_Active = false;
@@ -232,7 +233,7 @@ void CSpectator::ConMultiView(IConsole::IResult *pResult, void *pUserData)
 {
 	CSpectator *pSelf = (CSpectator *)pUserData;
 	int Input = pResult->GetInteger(0);
-	if(pSelf->GameClient()->m_RankGhost.IsViewModeActive())
+	if(pSelf->GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		if(Input >= 0)
 			pSelf->GameClient()->m_RankGhost.ViewToggleMultiMember(Input);
@@ -267,7 +268,7 @@ void CSpectator::OnConsoleInit()
 // 否则它们的光标会失灵；控制台与聊天排在前面，会先一步吞掉增量，无需在此判断
 bool CSpectator::GhostFreeCameraCanPan() const
 {
-	if(!GameClient()->m_RankGhost.IsViewModeActive() ||
+	if(!GameClient()->ReplaySessionStatus().ViewMode() ||
 		GameClient()->m_RankGhost.ViewCameraMode() != CRankGhost::EViewCameraMode::FREE ||
 		Client()->State() == IClient::STATE_DEMOPLAYBACK)
 		return false;
@@ -280,7 +281,7 @@ bool CSpectator::GhostFreeCameraCanPan() const
 // 镜头或选择器。与 demo 播放一致：UI 只在面板出现时才占用鼠标，屏幕上也只有一个光标。
 bool CSpectator::PlaybackControlsActive() const
 {
-	if(!GameClient()->m_RankGhost.IsViewModeActive() || Client()->State() == IClient::STATE_DEMOPLAYBACK)
+	if(!GameClient()->ReplaySessionStatus().ViewMode() || Client()->State() == IClient::STATE_DEMOPLAYBACK)
 		return false;
 	if(GameClient()->m_Menus.IsActive() || GameClient()->m_GameConsole.IsActive() || GameClient()->m_HudEditor.IsActive())
 		return false;
@@ -290,7 +291,7 @@ bool CSpectator::PlaybackControlsActive() const
 
 bool CSpectator::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	const bool ViewMode = GameClient()->m_RankGhost.IsViewModeActive();
+	const bool ViewMode = GameClient()->ReplaySessionStatus().ViewMode();
 	const bool GhostFreeCamera = GhostFreeCameraCanPan();
 	if(ViewMode && (GameClient()->m_Menus.IsActive() || GameClient()->m_GameConsole.IsActive() || GameClient()->m_Chat.IsActive()))
 		return false;
@@ -381,7 +382,7 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 	// 控制层与菜单分别处理 Esc，播放会话保持不变。
 	if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_RELEASE))
 		m_ReplayUi.ReleaseEscape();
-	if(GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Chat.IsActive() && !GameClient()->m_Menus.IsActive() && !Ui()->IsPopupOpen() && !GameClient()->m_Menus.OnlineReplayPopupActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Chat.IsActive() && !GameClient()->m_Menus.IsActive() && !Ui()->IsPopupOpen() && !GameClient()->m_Menus.OnlineReplayPopupActive())
 	{
 		if((Event.m_Flags & IInput::FLAG_PRESS) && Event.m_Key == KEY_ESCAPE)
 			return m_ReplayUi.PressEscape(Client()->LocalTime()) != COnlineReplayUiState::EAction::OPEN_MENU;
@@ -389,7 +390,18 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 	else
 		m_ReplayUi.CancelEscape();
 
-	if(!GameClient()->m_RankGhost.IsViewModeActive() && g_Config.m_ClSpectatorMouseclicks)
+	// 控制卡显示时，点击卡外只负责收起卡；下一次点击才恢复成员点选，
+	// 避免“想关面板”顺手切走了镜头。
+	if(PlaybackControlsActive() && (Event.m_Flags & IInput::FLAG_PRESS) &&
+		Event.m_Key >= KEY_MOUSE_1 && Event.m_Key <= KEY_MOUSE_3 &&
+		!Ui()->IsPopupOpen() && !GameClient()->m_Menus.OnlineReplayPopupActive() &&
+		!GameClient()->m_Menus.OnlineReplayPanelContains(Ui()->MousePos()))
+	{
+		CloseReplayPanel();
+		return true;
+	}
+
+	if(!GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_ClSpectatorMouseclicks)
 	{
 		if(GameClient()->m_Snap.m_SpecInfo.m_Active && !IsActive() && !GameClient()->m_MultiViewActivated &&
 			!Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Menus.IsActive())
@@ -405,7 +417,7 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 		}
 	}
 
-	if(!GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Camera.SpectatingPlayer() && GameClient()->m_Camera.CanUseAutoSpecCamera())
+	if(!GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_Camera.SpectatingPlayer() && GameClient()->m_Camera.CanUseAutoSpecCamera())
 	{
 		if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_MOUSE_2)
 		{
@@ -420,48 +432,46 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 
 	// QmClient：查看模式下鼠标归 UI 光标时吞掉鼠标键，点击控制条不再误触发射击/钩爪。
 	// 鼠标事件交给共用播放 HUD，滚轮保持普通 demo 的倍速语义。
-	if(PlaybackControlsActive() || (GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Menus.OnlineReplayPopupActive()))
+	if(PlaybackControlsActive() || (GameClient()->ReplaySessionStatus().ViewMode() && GameClient()->m_Menus.OnlineReplayPopupActive()))
 	{
 		const bool Consumed = Ui()->OnInput(Event);
 		if(Consumed || (Event.m_Key >= KEY_MOUSE_1 && Event.m_Key <= KEY_MOUSE_WHEEL_DOWN))
 			return true;
 	}
 
-	// 共用播放快捷键先取得输入，避免同一方向键同时触发旁观绑定。
-	if(GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Menus.PlaybackShortcutsActive())
+	// 查看模式：左键跟随离镜头中心最近的成员，对齐 demo/旁观的点选习惯。
+	// 控制条、弹窗、选择器与菜单都优先处理鼠标，以上分支已提前返回。
+	if(GameClient()->ReplaySessionStatus().ViewMode() && g_Config.m_ClSpectatorMouseclicks &&
+		(Event.m_Flags & IInput::FLAG_PRESS) && Event.m_Key == KEY_MOUSE_1 &&
+		!GameClient()->m_Menus.IsActive() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Chat.IsActive() &&
+		// PieMenu 与 HudEditor 在组件顺序上排在 Spectator 之后：这里先返回 true
+		// 会把落在它们面板上的点击吞掉，所以打开时同样不接管鼠标。
+		!GameClient()->m_PieMenu.IsActive() && !GameClient()->m_HudEditor.IsActive() &&
+		!Ui()->IsPopupOpen() && !GameClient()->m_Menus.OnlineReplayPopupActive() && !PlaybackControlsActive() && !m_Active)
 	{
-		switch(Event.m_Key)
+		vec2 Center;
+		if(GameClient()->m_RankGhost.ViewFreeCameraCenter(&Center) || GameClient()->m_RankGhost.ViewFocus(&Center))
 		{
-		case KEY_P:
-		case KEY_UP:
-		case KEY_DOWN:
-		case KEY_SPACE:
-		case KEY_RETURN:
-		case KEY_KP_ENTER:
-		case KEY_K:
-		case KEY_LEFT:
-		case KEY_RIGHT:
-		case KEY_J:
-		case KEY_L:
-		case KEY_HOME:
-		case KEY_END:
-		case KEY_PERIOD:
-		case KEY_COMMA:
-		case KEY_0:
-		case KEY_1:
-		case KEY_2:
-		case KEY_3:
-		case KEY_4:
-		case KEY_5:
-		case KEY_6:
-		case KEY_7:
-		case KEY_8:
-		case KEY_9:
-			return true;
-		case KEY_C:
-			return PlaybackControlsActive();
-		default:
-			break;
+			int Closest = -1;
+			float ClosestDistance = 0.0f;
+			for(int Index = 0; Index < GameClient()->m_RankGhost.ViewMemberCount(); Index++)
+			{
+				vec2 Position;
+				if(!GameClient()->m_RankGhost.ViewMemberPosition(Index, &Position))
+					continue;
+				const float MemberDistance = distance(Position, Center);
+				if(Closest < 0 || MemberDistance < ClosestDistance)
+				{
+					Closest = Index;
+					ClosestDistance = MemberDistance;
+				}
+			}
+			if(Closest >= 0)
+			{
+				GameClient()->m_RankGhost.ViewSelectMember(Closest);
+				GameClient()->m_RankGhost.ViewSetCameraMode(CRankGhost::EViewCameraMode::MEMBER);
+				return true;
+			}
 		}
 	}
 
@@ -482,7 +492,7 @@ void CSpectator::OnRender()
 		return;
 	}
 
-	const bool ViewModeActive = GameClient()->m_RankGhost.IsViewModeActive();
+	const bool ViewModeActive = GameClient()->ReplaySessionStatus().ViewMode();
 	if(ViewModeActive && (GameClient()->m_Menus.IsActive() || GameClient()->m_GameConsole.IsActive() || GameClient()->m_Chat.IsActive() || GameClient()->m_Menus.OnlineReplayPopupActive()))
 	{
 		m_Active = false;
@@ -610,31 +620,34 @@ void CSpectator::OnRender()
 		int m_Id;
 		int m_DDTeam;
 		bool m_Friend;
+		bool m_HasTeam;
+		bool m_IsGhost;
 	};
 	SDisplayPlayer aDisplayPlayers[CGhost::MAX_ACTIVE_GHOSTS];
 	bool aIsFriend[CGhost::MAX_ACTIVE_GHOSTS];
 	int aDisplayOrder[CGhost::MAX_ACTIVE_GHOSTS];
 	int DisplayCount = 0;
-	if(ViewModeActive)
+	// 服务器玩家始终占正常队伍分组；影子另起一组，不能把自己的队伍混进正常玩家。
+	for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
 	{
-		DisplayCount = minimum(GameClient()->m_RankGhost.ViewMemberCount(), (int)CGhost::MAX_ACTIVE_GHOSTS);
-		for(int i = 0; i < DisplayCount; ++i)
-		{
-			aDisplayPlayers[i] = {i, TEAM_FLOCK, false};
-			aIsFriend[i] = false;
-		}
+		if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
+			continue;
+		const int Id = pInfo->m_ClientId;
+		aDisplayPlayers[DisplayCount] = {Id, GameClient()->m_Teams.Team(Id), GameClient()->m_aClients[Id].m_Friend, true, false};
+		aIsFriend[DisplayCount] = aDisplayPlayers[DisplayCount].m_Friend;
+		++DisplayCount;
 	}
-	else
-		for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
-		{
-			if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
-				continue;
-			const int Id = pInfo->m_ClientId;
-			aDisplayPlayers[DisplayCount] = {Id, GameClient()->m_Teams.Team(Id), GameClient()->m_aClients[Id].m_Friend};
-			aIsFriend[DisplayCount] = aDisplayPlayers[DisplayCount].m_Friend;
-			++DisplayCount;
-		}
+	const int GhostCount = minimum(GameClient()->m_RankGhost.LoadedGhostCount(), (int)CGhost::MAX_ACTIVE_GHOSTS - DisplayCount);
+	for(int i = 0; i < GhostCount; ++i)
+	{
+		int Team = TEAM_FLOCK;
+		const bool HasTeam = GameClient()->m_RankGhost.ViewMemberTeam(i, &Team);
+		aDisplayPlayers[DisplayCount] = {i, Team, false, HasTeam, true};
+		aIsFriend[DisplayCount] = false;
+		++DisplayCount;
+	}
 	const int FriendCount = qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, DisplayCount, aDisplayOrder, g_Config.m_QmSpectatorFriendsFirst != 0);
+	const int GhostStartOrder = DisplayCount - GhostCount;
 
 	// draw background
 	float Width = 400 * 3.0f * Graphics()->ScreenAspect();
@@ -726,7 +739,10 @@ void CSpectator::OnRender()
 	// 分组标题高度也随行高走：上限跟着 LayoutScale 放大，否则手机上标题永远卡在 15。
 	const float TitleHeight = std::clamp(LineHeight * 0.5f, 12.0f * LayoutScale, 15.0f * LayoutScale);
 	const float TitleFontSize = TitleHeight * 0.8f;
-	const float PlayersBottom = StartY + BoxMove + qm_spectator_friends::MaxColumnHeight(DisplayCount, FriendCount, PerLine, LineHeight, TitleHeight);
+	const int NormalPlayerCount = GhostStartOrder;
+	const float NormalColumnHeight = qm_spectator_friends::MaxColumnHeight(NormalPlayerCount, FriendCount, PerLine, LineHeight, TitleHeight);
+	const float GhostColumnHeight = GhostCount > 0 ? TitleHeight + minimum(GhostCount, PerLine) * LineHeight : 0.0f;
+	const float PlayersBottom = StartY + BoxMove + maximum(NormalColumnHeight, GhostColumnHeight);
 	const auto SelectorLayout = qm_spectator_layout::Build(ScreenCenter, ObjWidth, !ViewModeActive, PlayersBottom, 300.0f * LayoutScale);
 	const CUIRect &SpectatorRect = SelectorLayout.m_Panel;
 	const CUIRect &SpectatorMouseRect = SelectorLayout.m_Mouse;
@@ -879,25 +895,37 @@ void CSpectator::OnRender()
 	};
 
 	int OldDDTeam = -1;
-
+	int ColumnRow = 0;
 	for(int i = 0; i < DisplayCount; ++i)
 	{
-		const int Count = i + 1;
-		if(Count == PerLine + 1 || (Count > PerLine + 1 && (Count - 1) % PerLine == 0))
+		// 影子成员从独立列开始，不与任何服务器玩家的队伍色带连在一起。
+		if(GhostCount > 0 && i == GhostStartOrder && i > 0)
 		{
 			x += ColumnStep;
 			y = StartY;
+			ColumnRow = 0;
+		}
+		else if(ColumnRow >= PerLine)
+		{
+			x += ColumnStep;
+			y = StartY;
+			ColumnRow = 0;
 		}
 
 		if(FriendCount > 0 && i == 0)
 			DrawGroupTitle(Localize("Friends"), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendColor)));
-		else if(FriendCount > 0 && i == FriendCount)
+		else if(FriendCount > 0 && FriendCount < GhostStartOrder && i == FriendCount)
 			DrawGroupTitle(Localize("Others"), ColorRGBA(1.0f, 1.0f, 1.0f, 0.85f));
+		if(GhostCount > 0 && i == GhostStartOrder)
+			DrawGroupTitle(Localize("Ghost"), ColorRGBA(0.85f, 0.9f, 1.0f, 0.75f));
 
 		const SDisplayPlayer *pInfo = &aDisplayPlayers[aDisplayOrder[i]];
 		const int DDTeam = pInfo->m_DDTeam;
-		const bool StartsGroup = i % PerLine == 0 || (FriendCount > 0 && i == FriendCount);
-		const bool EndsGroup = i + 1 == DisplayCount || (i + 1) % PerLine == 0 || (FriendCount > 0 && i + 1 == FriendCount);
+		const bool IsGhost = pInfo->m_IsGhost;
+		const bool StartsGroup = ColumnRow == 0 || (FriendCount > 0 && FriendCount < GhostStartOrder && i == FriendCount) || (GhostCount > 0 && i == GhostStartOrder);
+		const bool EndsGroup = i + 1 == DisplayCount || ColumnRow + 1 >= PerLine ||
+				       (FriendCount > 0 && FriendCount < GhostStartOrder && i + 1 == FriendCount) ||
+				       (GhostCount > 0 && i + 1 == GhostStartOrder);
 		const int NextDDTeam = EndsGroup ? 0 : aDisplayPlayers[aDisplayOrder[i + 1]].m_DDTeam;
 
 		if(DDTeam != TEAM_FLOCK)
@@ -917,7 +945,7 @@ void CSpectator::OnRender()
 		}
 		OldDDTeam = DDTeam;
 
-		if(SelectedId() == pInfo->m_Id)
+		if((IsGhost ? ViewModeActive : !ViewModeActive) && SelectedId() == pInfo->m_Id)
 		{
 			{
 				SRoundedSurfaceParams SelectionSurface;
@@ -928,12 +956,16 @@ void CSpectator::OnRender()
 		}
 
 		bool PlayerSelected = false;
+		const bool CanSelectRow = IsGhost ? ViewModeActive : !ViewModeActive;
 		if(WantActive && m_SelectorMouse.x >= x - RowHitInset && m_SelectorMouse.x < x + RowHitWidth &&
 			m_SelectorMouse.y >= y - (LineHeight / 6.0f) && m_SelectorMouse.y < y + (LineHeight * 5.0f / 6.0f))
 		{
-			m_SelectedSpectatorId = pInfo->m_Id;
-			PlayerSelected = true;
-			if(MousePressed)
+			if(CanSelectRow)
+			{
+				m_SelectedSpectatorId = pInfo->m_Id;
+				PlayerSelected = true;
+			}
+			if(MousePressed && CanSelectRow)
 			{
 				if(ViewModeActive)
 				{
@@ -977,7 +1009,7 @@ void CSpectator::OnRender()
 		}
 		float TeeAlpha;
 		float NameAlpha;
-		if(QmSpectatorSelection::ShouldDimDemoPlayer(Client()->State() == IClient::STATE_DEMOPLAYBACK, ViewModeActive, [&] {
+		if(!IsGhost && QmSpectatorSelection::ShouldDimDemoPlayer(Client()->State() == IClient::STATE_DEMOPLAYBACK, ViewModeActive, [&] {
 			   return GameClient()->m_Snap.m_aCharacters[pInfo->m_Id].m_Active;
 		   }))
 		{
@@ -997,11 +1029,11 @@ void CSpectator::OnRender()
 		NameCursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
 		NameCursor.m_LineWidth = 180.0f * LayoutScale;
 		const int ClientId = pInfo->m_Id;
-		const bool HideIdentity = !ViewModeActive && GameClient()->ShouldHideStreamerIdentity(ClientId);
+		const bool HideIdentity = !ViewModeActive && !IsGhost && GameClient()->ShouldHideStreamerIdentity(ClientId);
 		const bool IsFriend = pInfo->m_Friend;
 		char aNameBuf[MAX_NAME_LENGTH];
 		char aClanBuf[MAX_CLAN_LENGTH];
-		if(ViewModeActive)
+		if(IsGhost)
 		{
 			GameClient()->m_RankGhost.ViewMemberName(ClientId, aNameBuf, sizeof(aNameBuf));
 			aClanBuf[0] = '\0';
@@ -1012,7 +1044,7 @@ void CSpectator::OnRender()
 			GameClient()->FormatStreamerClan(ClientId, aClanBuf, sizeof(aClanBuf));
 		}
 		bool IsSameClan = false;
-		if(aClanBuf[0] != '\0')
+		if(!IsGhost && aClanBuf[0] != '\0')
 		{
 			const int LocalClientId = GameClient()->m_aLocalIds[g_Config.m_ClDummy];
 			if(LocalClientId >= 0 && str_comp(aClanBuf, GameClient()->m_aClients[LocalClientId].m_aClan) == 0)
@@ -1022,7 +1054,7 @@ void CSpectator::OnRender()
 		}
 
 		ColorRGBA NameColor;
-		if(!ViewModeActive && GameClient()->IsLocalClientId(ClientId))
+		if(!ViewModeActive && !IsGhost && GameClient()->IsLocalClientId(ClientId))
 		{
 			const float Time = Client()->GlobalTime();
 			const float Hue = std::fmod(Time * 0.15f, 1.0f);
@@ -1043,7 +1075,7 @@ void CSpectator::OnRender()
 		NameColor.a *= NameAlpha;
 		TextRender()->TextColor(NameColor);
 
-		if(g_Config.m_ClShowIds && !HideIdentity && !ViewModeActive)
+		if(g_Config.m_ClShowIds && !HideIdentity && !ViewModeActive && !IsGhost)
 		{
 			char aClientId[16];
 			GameClient()->FormatClientId(ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
@@ -1051,14 +1083,41 @@ void CSpectator::OnRender()
 		}
 
 		TextRender()->TextEx(&NameCursor, aNameBuf);
-		if(MultiViewActive())
+		if(IsGhost && pInfo->m_HasTeam)
 		{
-			if(ViewModeActive ? GameClient()->m_RankGhost.ViewMultiMemberSelected(pInfo->m_Id) : GameClient()->m_aMultiViewId[pInfo->m_Id])
+			char aTeamBuf[32];
+			str_format(aTeamBuf, sizeof(aTeamBuf), Localize("Team %d"), DDTeam);
+			const float TeamFontSize = maximum(7.0f, FontSize * 0.55f);
+			ColorRGBA TeamColor = DDTeam == TEAM_FLOCK ? ColorRGBA(0.85f, 0.85f, 0.85f, 1.0f) : GameClient()->GetDDTeamColor(DDTeam, 0.8f);
+			TeamColor.a *= NameAlpha;
+			// 压缩布局里两行会互相压住；这种尺寸只保留队伍底色，不硬塞小字。
+			if(LineHeight >= FontSize + TeamFontSize + 2.0f * LayoutScale)
+			{
+				TextRender()->TextColor(TeamColor);
+				TextRender()->Text(CenterX + x + NameOffsetX, CenterY + y + BoxMove + LineHeight - TeamFontSize - 2.0f * LayoutScale, TeamFontSize, aTeamBuf, -1.0f);
+			}
+		}
+		if(IsGhost && ViewModeActive)
+		{
+			if(GameClient()->m_RankGhost.ViewMultiMemberSelected(pInfo->m_Id))
 			{
 				TextRender()->TextColor(0.1f, 1.0f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
 				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "⬤", 220.0f);
 			}
-			else if(ViewModeActive || GameClient()->m_MultiViewTeam == DDTeam)
+			else
+			{
+				TextRender()->TextColor(1.0f, 0.1f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
+				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "◯", 220.0f);
+			}
+		}
+		else if(!IsGhost && !ViewModeActive && MultiViewActive())
+		{
+			if(GameClient()->m_aMultiViewId[pInfo->m_Id])
+			{
+				TextRender()->TextColor(0.1f, 1.0f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
+				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "⬤", 220.0f);
+			}
+			else if(GameClient()->m_MultiViewTeam == DDTeam)
 			{
 				TextRender()->TextColor(1.0f, 0.1f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
 				TextRender()->Text(CenterX + x + NameOffsetX + 180.0f * LayoutScale, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "◯", 220.0f);
@@ -1066,7 +1125,7 @@ void CSpectator::OnRender()
 		}
 
 		// flag
-		if(!ViewModeActive && GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) &&
+		if(!IsGhost && !ViewModeActive && GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) &&
 			GameClient()->m_Snap.m_pGameDataObj && (GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierRed == pInfo->m_Id || GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == pInfo->m_Id))
 		{
 			if(GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == pInfo->m_Id)
@@ -1086,7 +1145,7 @@ void CSpectator::OnRender()
 		}
 
 		CTeeRenderInfo TeeInfo;
-		if(ViewModeActive)
+		if(IsGhost)
 			GameClient()->m_RankGhost.ViewMemberRenderInfo(pInfo->m_Id, &TeeInfo);
 		else
 			TeeInfo = GameClient()->m_aClients[pInfo->m_Id].m_RenderInfo;
@@ -1115,6 +1174,7 @@ void CSpectator::OnRender()
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 		y += LineHeight;
+		++ColumnRow;
 	}
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -1255,7 +1315,7 @@ void CSpectator::OnReset()
 
 void CSpectator::Spectate(int SpectatorId)
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		using EMode = CRankGhost::EViewCameraMode;
 		if(SpectatorId == SPEC_FREEVIEW)
@@ -1310,7 +1370,7 @@ void CSpectator::Spectate(int SpectatorId)
 
 void CSpectator::SpectateClosest()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		QmSpectatorSelection::CClosest Closest(GameClient()->m_Camera.m_Center);
 		for(int Index = 0; Index < GameClient()->m_RankGhost.ViewMemberCount(); ++Index)

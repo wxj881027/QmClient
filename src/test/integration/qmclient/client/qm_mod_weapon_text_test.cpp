@@ -71,16 +71,17 @@ TEST_F(QmModWeaponTextLifetime, DrawingFailureTransfersBothBuffersWithoutChangin
 TEST_F(QmModWeaponTextLifetime, FailedImmediateDeletionIsRetriedByTheExistingTextOwner)
 {
 	Text().SetRenderFlags(TEXT_RENDER_FLAG_KERNING);
-	const size_t Buffers = Graphics().m_Buffers.size();
-	const int Deletes = Graphics().m_DirectBufferObjectDeleteCalls;
-	Graphics().m_BufferObjectDeleteFailure = EDeleteFailure::ALLOCATION;
+	const size_t Buffers = Graphics().m_Buffers.size(), Containers = Graphics().m_Containers.size();
+	// 完整上传后一次性文字拥有 buffer + container 一对资源，删除入口应先删 container；
+	// 直接注入 container 删除失败，验证异常展开把独占槽位交给文字 owner，下一帧再重试。
+	Graphics().m_FailBufferContainerDelete = true;
 	EXPECT_THROW(Draw(), std::bad_alloc);
 	EXPECT_EQ(Text().GetRenderFlags(), TEXT_RENDER_FLAG_KERNING);
 	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers + 1);
-	EXPECT_EQ(Graphics().m_DirectBufferObjectDeleteCalls, Deletes + 1);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers + 1);
 	EXPECT_NO_THROW(Text().QmTextFrameEnd());
 	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
-	EXPECT_EQ(Graphics().m_DirectBufferObjectDeleteCalls, Deletes + 2);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
 }
 
 TEST_F(QmModWeaponTextLifetime, ReclaimingFailedModTextKeepsAnIndependentContainerAlive)

@@ -40,6 +40,7 @@
 #include <base/windows.h>
 
 #include <engine/client/backend/graphics_backend_contract.h>
+#include <engine/client/input_ring.h>
 #include <engine/config.h>
 #include <engine/console.h>
 #include <engine/discord.h>
@@ -63,6 +64,8 @@
 #include <engine/shared/demo_output.h>
 #include <engine/shared/fifo.h>
 #include <engine/shared/filecollection.h>
+#include <engine/shared/jobs.h>
+#include <engine/shared/map.h>
 #include <engine/shared/masterserver.h>
 #include <engine/shared/network.h>
 #include <engine/shared/packer.h>
@@ -72,6 +75,7 @@
 #include <engine/shared/protocolglue.h>
 #include <engine/shared/qm_default_profile.h>
 #include <engine/shared/qm_removed_config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/shared/rust_version.h>
 #include <engine/shared/snapshot.h>
 #include <engine/shared/uuid_manager.h>
@@ -140,6 +144,79 @@ namespace
 #endif
 
 using namespace std::chrono_literals;
+
+class CMapLoadJob final : public IJob
+{
+	IStorage *m_pStorage;
+	std::vector<std::string> m_vPaths;
+	std::optional<SHA256_DIGEST> m_WantedSha256;
+	unsigned m_WantedCrc;
+	std::unique_ptr<CMap> m_pLoadedMap;
+	std::string m_LoadedPath;
+	std::string m_Error;
+	double m_ElapsedMs = 0.0;
+	bool m_Success = false;
+
+protected:
+	void Run() override
+	{
+		const auto Start = std::chrono::steady_clock::now();
+		try
+		{
+			for(const std::string &Path : m_vPaths)
+			{
+				if(State() == STATE_ABORTED)
+					break;
+				auto pCandidate = std::make_unique<CMap>(m_pStorage);
+				if(!pCandidate->Load(Path.c_str(), IStorage::TYPE_ALL))
+					continue;
+				if(State() == STATE_ABORTED)
+					break;
+
+				if(m_WantedSha256.has_value() && pCandidate->Sha256() != m_WantedSha256.value())
+				{
+					m_Error = "map differs from the server (SHA-256 mismatch)";
+					continue;
+				}
+				if(!m_WantedSha256.has_value() && m_WantedCrc != 0 && pCandidate->Crc() != m_WantedCrc)
+				{
+					m_Error = "map differs from the server (CRC mismatch)";
+					continue;
+				}
+
+				m_LoadedPath = Path;
+				m_pLoadedMap = std::move(pCandidate);
+				m_Success = true;
+				break;
+			}
+		}
+		catch(const std::exception &Error)
+		{
+			m_Error = Error.what();
+		}
+		catch(...)
+		{
+			m_Error = "unknown map loading error";
+		}
+		m_ElapsedMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - Start).count();
+	}
+
+public:
+	CMapLoadJob(IStorage *pStorage, std::vector<std::string> vPaths, const std::optional<SHA256_DIGEST> &WantedSha256, unsigned WantedCrc) :
+		m_pStorage(pStorage),
+		m_vPaths(std::move(vPaths)),
+		m_WantedSha256(WantedSha256),
+		m_WantedCrc(WantedCrc)
+	{
+		Abortable(true);
+	}
+
+	bool Success() const { return m_Success; }
+	const std::string &LoadedPath() const { return m_LoadedPath; }
+	const std::string &Error() const { return m_Error; }
+	double ElapsedMs() const { return m_ElapsedMs; }
+	std::unique_ptr<CMap> TakeMap() { return std::move(m_pLoadedMap); }
+};
 
 static constexpr ColorRGBA gs_ClientNetworkPrintColor{0.7f, 1, 0.7f, 1.0f};
 
@@ -215,9 +292,9 @@ static bool gs_QmTestMainThreadException = false;
 // 进程回归注入最终清理卡死，验证隐藏窗口后的强制退出。
 static bool gs_QmTestShutdownCleanupStall = false;
 static constexpr const char *gs_pQmCrashDumpDir = "dumps/QmClient_Crash";
-static constexpr const char *gs_pQmLifecycleMarkerFile = "qmclient/lifecycle_pending.marker";
+static constexpr const char *gs_pQmLifecycleMarkerFile = qm_storage::LIFECYCLE_MARKER_FILE;
 #if defined(CONF_FAMILY_WINDOWS)
-static constexpr const char *gs_pQmCrashReporterBaselineFile = "qmclient/crash_reporter_started_at.marker";
+static constexpr const char *gs_pQmCrashReporterBaselineFile = qm_storage::CRASH_REPORTER_MARKER_FILE;
 #endif
 static bool gs_aLoadedPreviousConfigPath[ConfigDomain::NUM] = {};
 
@@ -456,8 +533,12 @@ static void ExportPendingQmMobileCrashReports(IStorage *pStorage)
 
 		char aReportAbsolute[IO_MAX_PATH_LENGTH];
 		pStorage->GetCompletePath(IStorage::TYPE_SAVE, aReportRelative, aReportAbsolute, sizeof(aReportAbsolute));
-		// JNI 侧异步复制并提示结果；失败时保留标记，下次启动重试。
-		if(!ExportAndroidMediaFile(aReportAbsolute))
+		if(!fs_is_file(aReportAbsolute))
+		{
+			pStorage->RemoveFile(Search.m_aaFound[i], IStorage::TYPE_SAVE);
+			continue;
+		}
+		if(!ExportAndroidCrashReport(aReportAbsolute))
 			continue;
 
 		char aExportedMarker[IO_MAX_PATH_LENGTH + 16];
@@ -637,9 +718,9 @@ CClient::CClient() :
 {
 	m_StateStartTime = time_get();
 	for(auto &DemoRecorder : m_aDemoRecorders)
-		DemoRecorder = CDemoRecorder(&m_SnapshotDelta);
+		DemoRecorder.Reset(&m_SnapshotDelta);
 	for(auto &DemoRecorder : m_aDemoRecordersSixup)
-		DemoRecorder = CDemoRecorder(&m_SnapshotDeltaSixup);
+		DemoRecorder.Reset(&m_SnapshotDeltaSixup);
 	m_LastRenderTime = time_get();
 	mem_zero(m_aInputs, sizeof(m_aInputs));
 	mem_zero(m_aapSnapshots, sizeof(m_aapSnapshots));
@@ -1080,16 +1161,10 @@ const char *CClient::LatestVersion() const
 // TODO: OPT: do this a lot smarter!
 int *CClient::GetInput(int Tick, int IsDummy) const
 {
-	int Best = -1;
 	const int d = IsDummy ^ g_Config.m_ClDummy;
-	for(int i = 0; i < 200; i++)
-	{
-		if(m_aInputs[d][i].m_Tick != -1 && m_aInputs[d][i].m_Tick <= Tick && (Best == -1 || m_aInputs[d][Best].m_Tick < m_aInputs[d][i].m_Tick))
-			Best = i;
-	}
-
-	if(Best != -1)
-		return (int *)m_aInputs[d][Best].m_aData;
+	const auto *pRecord = QmLatestInputRecord(m_aInputs[d], Tick);
+	if(pRecord != nullptr)
+		return (int *)pRecord->m_aData;
 	return nullptr;
 }
 
@@ -1493,6 +1568,9 @@ void CClient::DisconnectWithReason(const char *pReason)
 	}
 	m_aNetClient[CONN_MAIN].Disconnect(pReason);
 	SetState(IClient::STATE_OFFLINE);
+	if(m_pMapLoadJob)
+		m_pMapLoadJob->Abort();
+	m_pMapLoadJob.reset();
 	m_pMap->Unload();
 	m_CurrentServerPingInfoType = -1;
 	m_CurrentServerPingBasicToken = -1;
@@ -1731,6 +1809,28 @@ int CClient::SnapNumItems(int SnapId) const
 {
 	const CSnapshot *pSnapshot = SnapshotForGame(SnapId);
 	return pSnapshot ? pSnapshot->NumItems() : 0;
+}
+
+int CClient::GetLocalClientId(int Conn) const
+{
+	if(Conn < 0 || Conn >= NUM_DUMMIES || !m_aapSnapshots[Conn][SNAP_CURRENT])
+		return -1;
+
+	const CSnapshot *pSnapshot = m_aapSnapshots[Conn][SNAP_CURRENT]->m_pAltSnap;
+	if(!pSnapshot)
+		return -1;
+
+	for(int Index = pSnapshot->NumItems() - 1; Index >= 0; --Index)
+	{
+		const CSnapshotItem *pItem = pSnapshot->GetItem(Index);
+		if(pItem->InternalType() != NETOBJTYPE_PLAYERINFO || pSnapshot->GetItemSize(Index) < (int)sizeof(CNetObj_PlayerInfo))
+			continue;
+
+		const auto *pInfo = reinterpret_cast<const CNetObj_PlayerInfo *>(pItem->Data());
+		if(pInfo->m_Local && pInfo->m_ClientId == pItem->Id() && pInfo->m_ClientId < MAX_CLIENTS)
+			return pInfo->m_ClientId;
+	}
+	return -1;
 }
 
 void CClient::SnapSetStaticsize(int ItemType, int Size)
@@ -2067,37 +2167,14 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 {
 	static char s_aErrorMsg[128];
 
-	SetState(IClient::STATE_LOADING);
-	GameClient()->OnMapLoadStart();
-	SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_LOADING_MAP);
-	if((bool)m_LoadingCallback)
-		m_LoadingCallback(IClient::LOADING_CALLBACK_DETAIL_MAP);
+	PrepareMapLoad();
 
-	// 加载新地图前停止 demo 录制。
-	for(int Recorder = 0; Recorder < RECORDER_MAX; Recorder++)
-	{
-		DemoRecorder(Recorder)->Stop(Recorder == RECORDER_REPLAYS ? IDemoRecorder::EStopMode::REMOVE_FILE : IDemoRecorder::EStopMode::KEEP_FILE);
-	}
-
-	// 加载新地图前卸载当前地图并重置所有快照，因为快照只对旧地图有效。
-	m_PoseCurrentSnapshot = -1;
-	m_pMap->Unload();
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; Dummy++)
-	{
-		m_aapSnapshots[Dummy][SNAP_CURRENT] = nullptr;
-		m_aapSnapshots[Dummy][SNAP_PREV] = nullptr;
-		m_aSnapshotStorage[Dummy].PurgeAll();
-		m_aReceivedSnapshots[Dummy] = 0;
-		m_aSnapshotStats[Dummy] = {};
-		m_aLastSnapshotTime[Dummy] = 0;
-		m_aLastSnapshotTick[Dummy] = -1;
-		m_aSnapshotParts[Dummy] = 0;
-		m_aSnapshotIncomingDataSize[Dummy] = 0;
-	}
-	m_SnapCrcErrors = 0;
-	GameClient()->InvalidateSnapshot();
-
-	if(!m_pMap->Load(pFilename, IStorage::TYPE_ALL))
+	const bool PerfEnabled = QmPerfEnabled();
+	CPerfTimer MapLoadTimer(PerfEnabled);
+	const bool MapLoaded = m_pMap->Load(pFilename, IStorage::TYPE_ALL);
+	if(PerfEnabled)
+		QmPerfLogStageForce("perf/map", "map_file_parse_validate", MapLoadTimer.ElapsedMs(), this);
+	if(!MapLoaded)
 	{
 		str_format(s_aErrorMsg, sizeof(s_aErrorMsg), "map '%s' not found", pFilename);
 		return s_aErrorMsg;
@@ -2135,6 +2212,39 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 	str_copy(m_aCurrentMapPath, pFilename);
 
 	return nullptr;
+}
+
+void CClient::PrepareMapLoad()
+{
+	SetState(IClient::STATE_LOADING);
+	GameClient()->OnMapLoadStart();
+	SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_LOADING_MAP);
+	if((bool)m_LoadingCallback)
+		m_LoadingCallback(IClient::LOADING_CALLBACK_DETAIL_MAP);
+
+	// 加载新地图前停止 demo 录制。
+	for(int Recorder = 0; Recorder < RECORDER_MAX; Recorder++)
+	{
+		DemoRecorder(Recorder)->Stop(Recorder == RECORDER_REPLAYS ? IDemoRecorder::EStopMode::REMOVE_FILE : IDemoRecorder::EStopMode::KEEP_FILE);
+	}
+
+	// 加载新地图前卸载当前地图并重置所有快照，因为快照只对旧地图有效。
+	m_PoseCurrentSnapshot = -1;
+	m_pMap->Unload();
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; Dummy++)
+	{
+		m_aapSnapshots[Dummy][SNAP_CURRENT] = nullptr;
+		m_aapSnapshots[Dummy][SNAP_PREV] = nullptr;
+		m_aSnapshotStorage[Dummy].PurgeAll();
+		m_aReceivedSnapshots[Dummy] = 0;
+		m_aSnapshotStats[Dummy] = {};
+		m_aLastSnapshotTime[Dummy] = 0;
+		m_aLastSnapshotTick[Dummy] = -1;
+		m_aSnapshotParts[Dummy] = 0;
+		m_aSnapshotIncomingDataSize[Dummy] = 0;
+	}
+	m_SnapCrcErrors = 0;
+	GameClient()->InvalidateSnapshot();
 }
 
 static void FormatMapDownloadFilename(const char *pName, const std::optional<SHA256_DIGEST> &Sha256, int Crc, bool Temp, char *pBuffer, int BufferSize)
@@ -2227,6 +2337,170 @@ const char *CClient::LoadMapSearch(const char *pMapName, const std::optional<SHA
 	static char s_aErrorMsg[256];
 	str_format(s_aErrorMsg, sizeof(s_aErrorMsg), "Could not find map '%s'", pMapName);
 	return s_aErrorMsg;
+}
+
+void CClient::StartMapLoad(std::vector<std::string> vPaths, const std::optional<SHA256_DIGEST> &WantedSha256, unsigned WantedCrc, EMapLoadSource Source)
+{
+	try
+	{
+		m_pMapLoadJob = std::make_shared<CMapLoadJob>(Storage(), std::move(vPaths), WantedSha256, WantedCrc);
+	}
+	catch(const std::bad_alloc &)
+	{
+		DisconnectWithReason("could not allocate map loading job");
+		return;
+	}
+	m_MapLoadSource = Source;
+	if(QmPerfEnabled())
+	{
+		char aPayload[160];
+		str_format(aPayload, sizeof(aPayload), "event=map_parse_worker_start from_download=%d", (int)(Source != EMapLoadSource::LOCAL));
+		QmPerfLogPayloadForce("perf/map", aPayload, this);
+	}
+	if(!Engine()->TryAddJob(m_pMapLoadJob))
+	{
+		m_pMapLoadJob.reset();
+		DisconnectWithReason("map loading worker is unavailable");
+		return;
+	}
+	PollMapLoad();
+}
+
+void CClient::StartMapSearch(const char *pMapName, const std::optional<SHA256_DIGEST> &WantedSha256, unsigned WantedCrc)
+{
+	char aDescription[SHA256_MAXSTRSIZE + 48];
+	if(WantedSha256.has_value())
+	{
+		char aSha256[SHA256_MAXSTRSIZE];
+		sha256_str(WantedSha256.value(), aSha256, sizeof(aSha256));
+		str_format(aDescription, sizeof(aDescription), "sha256=%s ", aSha256);
+	}
+	else
+	{
+		aDescription[0] = '\0';
+	}
+	char aLoadingMessage[512];
+	str_format(aLoadingMessage, sizeof(aLoadingMessage), "loading map, map=%s wanted %scrc=%08x", pMapName, aDescription, WantedCrc);
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aLoadingMessage);
+
+	std::vector<std::string> vPaths;
+	try
+	{
+		char aPath[IO_MAX_PATH_LENGTH];
+		str_format(aPath, sizeof(aPath), "maps/%s.map", pMapName);
+		vPaths.emplace_back(aPath);
+		FormatMapDownloadFilename(pMapName, WantedSha256, WantedCrc, false, aPath, sizeof(aPath));
+		vPaths.emplace_back(aPath);
+		if(WantedSha256.has_value())
+		{
+			FormatMapDownloadFilename(pMapName, std::nullopt, WantedCrc, false, aPath, sizeof(aPath));
+			vPaths.emplace_back(aPath);
+		}
+		char aMapFile[IO_MAX_PATH_LENGTH];
+		str_format(aMapFile, sizeof(aMapFile), "%s.map", pMapName);
+		if(Storage()->FindFile(aMapFile, "maps", IStorage::TYPE_ALL, aPath, sizeof(aPath)))
+			vPaths.emplace_back(aPath);
+	}
+	catch(const std::bad_alloc &)
+	{
+		DisconnectWithReason("could not prepare map search");
+		return;
+	}
+
+	PrepareMapLoad();
+	StartMapLoad(std::move(vPaths), WantedSha256, WantedCrc, EMapLoadSource::LOCAL);
+}
+
+void CClient::StartMapDownload(const char *pMapUrl, int MapSize)
+{
+	FormatMapDownloadFilename(m_aMapdownloadName, m_MapdownloadSha256, m_MapdownloadCrc, false, m_aMapdownloadFilename, sizeof(m_aMapdownloadFilename));
+	FormatMapDownloadFilename(m_aMapdownloadName, m_MapdownloadSha256, m_MapdownloadCrc, true, m_aMapdownloadFilenameTemp, sizeof(m_aMapdownloadFilenameTemp));
+	m_MapdownloadTotalsize = MapSize;
+
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "starting to download map to '%s'", m_aMapdownloadFilenameTemp);
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", aBuf);
+
+	if(m_MapdownloadSha256.has_value())
+	{
+		const bool UseConfigUrl = str_comp(g_Config.m_ClMapDownloadUrl, "https://maps.ddnet.org") != 0 || m_aMapDownloadUrl[0] == '\0';
+		char aSha256[SHA256_MAXSTRSIZE];
+		sha256_str(m_MapdownloadSha256.value(), aSha256, sizeof(aSha256));
+		SQmMapDownloadRequest Request;
+		Request.m_pMapName = m_aMapdownloadName;
+		Request.m_pSha256Hex = aSha256;
+		Request.m_Crc = m_MapdownloadCrc;
+		Request.m_pServerUrl = pMapUrl;
+		Request.m_pBaseUrl = UseConfigUrl ? g_Config.m_ClMapDownloadUrl : m_aMapDownloadUrl;
+		SQmMapDownloadPlan Plan;
+		if(!QmBuildMapDownloadPlan(Request, &Plan) || Plan.m_Url.empty())
+		{
+			log_error("client/network", "failed to resolve map download URL for '%s'", m_aMapdownloadName);
+			SendMapRequest();
+			return;
+		}
+		str_copy(m_aMapdownloadFilename, Plan.m_FileName.c_str(), sizeof(m_aMapdownloadFilename));
+		m_pMapdownloadTask = HttpGetFile(Plan.m_Url.c_str(), Storage(), m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE);
+		m_pMapdownloadTask->Timeout(CTimeout{g_Config.m_ClMapDownloadConnectTimeoutMs, 0, g_Config.m_ClMapDownloadLowSpeedLimit, g_Config.m_ClMapDownloadLowSpeedTime});
+		m_pMapdownloadTask->MaxResponseSize(MapSize);
+		m_pMapdownloadTask->ExpectSha256(m_MapdownloadSha256.value());
+		Http()->Run(m_pMapdownloadTask);
+	}
+	else
+	{
+		SendMapRequest();
+	}
+}
+
+void CClient::PollMapLoad()
+{
+	const std::shared_ptr<CMapLoadJob> pJob = m_pMapLoadJob;
+	if(!pJob || (pJob->State() != IJob::STATE_DONE && pJob->State() != IJob::STATE_FAILED))
+		return;
+	m_pMapLoadJob.reset();
+
+	if(QmPerfEnabled())
+	{
+		QmPerfLogStageForce("perf/map", "map_file_parse_validate", pJob->ElapsedMs(), this);
+		char aPayload[192];
+		str_format(aPayload, sizeof(aPayload), "event=map_parse_worker_complete success=%d from_download=%d duration_ms=%.3f", (int)(pJob->State() == IJob::STATE_DONE && pJob->Success()), (int)(m_MapLoadSource != EMapLoadSource::LOCAL), pJob->ElapsedMs());
+		QmPerfLogPayloadForce("perf/map", aPayload, this);
+	}
+
+	const bool Loaded = pJob->State() == IJob::STATE_DONE && pJob->Success();
+	if(!Loaded)
+	{
+		if(m_MapLoadSource == EMapLoadSource::LOCAL)
+		{
+			StartMapDownload(m_aMapServerUrl[0] ? m_aMapServerUrl : nullptr, m_MapdownloadTotalsize);
+		}
+		else if(m_MapLoadSource == EMapLoadSource::HTTP)
+		{
+			ResetMapDownload(false);
+			SendMapRequest();
+		}
+		else
+		{
+			char aError[256];
+			str_format(aError, sizeof(aError), "could not load downloaded map%s%s", pJob->Error().empty() ? "" : ": ", pJob->Error().c_str());
+			DisconnectWithReason(aError);
+		}
+		return;
+	}
+
+	std::unique_ptr<CMap> pLoadedMap = pJob->TakeMap();
+	dbg_assert(pLoadedMap != nullptr, "Successful map load job must contain a map");
+	static_cast<CMap *>(m_pMap)->Adopt(std::move(*pLoadedMap));
+	str_copy(m_aCurrentMap, m_aMapdownloadName);
+	str_copy(m_aCurrentMapPath, pJob->LoadedPath().c_str());
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "loaded map '%s'", pJob->LoadedPath().c_str());
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aBuf);
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "loading done");
+	if(m_MapLoadSource != EMapLoadSource::LOCAL)
+		ResetMapDownload(true);
+	SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_SENDING_READY);
+	SendReady(CONN_MAIN);
 }
 
 void CClient::ProcessConnlessPacket(CNetChunk *pPacket)
@@ -2669,6 +2943,9 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				DummyDisconnect(nullptr);
 			}
 
+			if(m_pMapLoadJob)
+				m_pMapLoadJob->Abort();
+			m_pMapLoadJob.reset();
 			ResetMapDownload(true);
 
 			std::optional<SHA256_DIGEST> MapSha256;
@@ -2682,59 +2959,12 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				pMapUrl = MapDetails->m_aUrl[0] ? MapDetails->m_aUrl : nullptr;
 			}
 
-			if(LoadMapSearch(pMap, MapSha256, MapCrc) == nullptr)
-			{
-				m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "loading done");
-				SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_SENDING_READY);
-				SendReady(CONN_MAIN);
-			}
-			else
-			{
-				// start map download
-				FormatMapDownloadFilename(pMap, MapSha256, MapCrc, false, m_aMapdownloadFilename, sizeof(m_aMapdownloadFilename));
-				FormatMapDownloadFilename(pMap, MapSha256, MapCrc, true, m_aMapdownloadFilenameTemp, sizeof(m_aMapdownloadFilenameTemp));
-
-				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "starting to download map to '%s'", m_aMapdownloadFilenameTemp);
-				m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", aBuf);
-
-				str_copy(m_aMapdownloadName, pMap);
-				m_MapdownloadSha256 = MapSha256;
-				m_MapdownloadCrc = MapCrc;
-				m_MapdownloadTotalsize = MapSize;
-
-				if(MapSha256.has_value())
-				{
-					bool UseConfigUrl = str_comp(g_Config.m_ClMapDownloadUrl, "https://maps.ddnet.org") != 0 || m_aMapDownloadUrl[0] == '\0';
-					char aSha256[SHA256_MAXSTRSIZE];
-					sha256_str(MapSha256.value(), aSha256, sizeof(aSha256));
-					SQmMapDownloadRequest Request;
-					Request.m_pMapName = pMap;
-					Request.m_pSha256Hex = aSha256;
-					Request.m_Crc = MapCrc;
-					Request.m_pServerUrl = pMapUrl;
-					Request.m_pBaseUrl = UseConfigUrl ? g_Config.m_ClMapDownloadUrl : m_aMapDownloadUrl;
-					SQmMapDownloadPlan Plan;
-					if(!QmBuildMapDownloadPlan(Request, &Plan) || Plan.m_Url.empty())
-					{
-						log_error("client/network", "failed to resolve map download URL for '%s'", pMap);
-						SendMapRequest();
-					}
-					else
-					{
-						str_copy(m_aMapdownloadFilename, Plan.m_FileName.c_str(), sizeof(m_aMapdownloadFilename));
-						m_pMapdownloadTask = HttpGetFile(Plan.m_Url.c_str(), Storage(), m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE);
-						m_pMapdownloadTask->Timeout(CTimeout{g_Config.m_ClMapDownloadConnectTimeoutMs, 0, g_Config.m_ClMapDownloadLowSpeedLimit, g_Config.m_ClMapDownloadLowSpeedTime});
-						m_pMapdownloadTask->MaxResponseSize(MapSize);
-						m_pMapdownloadTask->ExpectSha256(MapSha256.value());
-						Http()->Run(m_pMapdownloadTask);
-					}
-				}
-				else
-				{
-					SendMapRequest();
-				}
-			}
+			str_copy(m_aMapdownloadName, pMap);
+			str_copy(m_aMapServerUrl, pMapUrl ? pMapUrl : "");
+			m_MapdownloadSha256 = MapSha256;
+			m_MapdownloadCrc = MapCrc;
+			m_MapdownloadTotalsize = MapSize;
+			StartMapSearch(pMap, MapSha256, MapCrc);
 		}
 		else if(Conn == CONN_MAIN && Msg == NETMSG_MAP_DATA)
 		{
@@ -2798,7 +3028,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 					ReportMapDownloadSaveFailure(m_aMapdownloadFilenameTemp);
 					return;
 				}
-				FinishMapDownload();
+				FinishMapDownload(EMapLoadSource::GAME_SERVER);
 			}
 			else
 			{
@@ -2843,18 +3073,6 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				DisconnectWithReason(gs_aMapResourcePreparationError);
 				return;
 			}
-			if(m_DummyReconnectOnReload)
-			{
-				m_DummySendConnInfo = true;
-				m_DummyReconnectOnReload = false;
-			}
-#if defined(CONF_PLATFORM_IOS)
-			else if(m_DummyReconnectOnResume)
-			{
-				m_DummyReconnectOnResume = false;
-				DummyConnect();
-			}
-#endif
 		}
 		else if(Conn == CONN_DUMMY && Msg == NETMSG_CON_READY)
 		{
@@ -3117,6 +3335,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 		{
 			// 还不能处理快照。
 			if(State() < IClient::STATE_LOADING ||
+				(State() == IClient::STATE_LOADING && LoadingStateDetail() != IClient::LOADING_STATE_DETAIL_GETTING_READY) ||
 				!m_pMap->IsLoaded())
 			{
 				return;
@@ -3382,9 +3601,9 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 						{
 							PublishSourceSnapshot(false);
 						}
-						SetState(IClient::STATE_ONLINE);
 						if(Conn == CONN_MAIN)
 						{
+							SetState(IClient::STATE_ONLINE);
 							DemoRecorder_HandleAutoStart();
 						}
 					}
@@ -3553,6 +3772,7 @@ void CClient::ResetMapDownload(bool ResetActive)
 		m_aMapdownloadFilename[0] = '\0';
 		m_aMapdownloadFilenameTemp[0] = '\0';
 		m_aMapdownloadName[0] = '\0';
+		m_aMapServerUrl[0] = '\0';
 	}
 }
 
@@ -3563,31 +3783,31 @@ void CClient::ReportMapDownloadSaveFailure(const char *pFilename)
 	DisconnectWithReason(aError);
 }
 
-void CClient::FinishMapDownload()
+void CClient::FinishMapDownload(EMapLoadSource Source)
 {
 	if(!map_download::Publish(*Storage(), m_aMapdownloadFilenameTemp, m_aMapdownloadFilename))
 	{
+		if(Source == EMapLoadSource::HTTP)
+		{
+			ResetMapDownload(false);
+			SendMapRequest();
+			return;
+		}
 		ReportMapDownloadSaveFailure(m_aMapdownloadFilename);
 		return;
 	}
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "download complete, loading map");
-
-	const char *pError = LoadMap(m_aMapdownloadName, m_aMapdownloadFilename, m_MapdownloadSha256, m_MapdownloadCrc);
-	if(!pError)
+	std::vector<std::string> vPaths;
+	try
 	{
-		ResetMapDownload(true);
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "loading done");
-		SendReady(CONN_MAIN);
+		vPaths.emplace_back(m_aMapdownloadFilename);
 	}
-	else if(m_pMapdownloadTask) // fallback
+	catch(const std::bad_alloc &)
 	{
-		ResetMapDownload(false);
-		SendMapRequest();
+		DisconnectWithReason("could not prepare downloaded map path");
+		return;
 	}
-	else
-	{
-		DisconnectWithReason(pError);
-	}
+	StartMapLoad(std::move(vPaths), m_MapdownloadSha256, m_MapdownloadCrc, Source);
 }
 
 void CClient::ResetDDNetInfoTask()
@@ -4129,18 +4349,26 @@ void CClient::FinishPoseOffscreenCapture()
 	}
 	// 落盘复用截图管线：同一套 screenshots/ 命名、媒体目录解析、水印与 png/webp 选择。
 	CPerfTimer HandoffTimer;
-	if(Read && m_pGraphics->TakeScreenshotFromImage(std::move(Image), m_aPoseScreenshotPath, [this](CImageInfo &&TakenImage, const char *pPath) { GameClient()->OnScreenshotTaken(std::move(TakenImage), pPath); }, GameClient()->ScreenshotProcessor()))
+	if(Read)
 	{
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "screenshot handoff (texture upload + queue) took %.2f ms", HandoffTimer.ElapsedMs());
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
-		return;
+		CImageInfo Handoff = std::move(Image);
+		if(m_pGraphics->TakeScreenshotFromImage(std::move(Handoff), m_aPoseScreenshotPath, [this](CImageInfo &&TakenImage, const char *pPath) { GameClient()->OnScreenshotTaken(std::move(TakenImage), pPath); }, GameClient()->ScreenshotProcessor()))
+		{
+			char aBuf[128];
+			str_format(aBuf, sizeof(aBuf), "screenshot handoff (texture upload + queue) took %.2f ms", HandoffTimer.ElapsedMs());
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+			return;
+		}
+		Handoff.Free();
+	}
+	else
+	{
+		Image.Free();
 	}
 
 	// 读回失败时不能在本帧退回窗口截图：这一帧整幅画面已经画进离屏目标，
 	// 窗口帧缓冲里没有可用内容（会得到一张空白图）。把请求降级成 1 倍并重新排队，
 	// 下一帧照常画进窗口后再抓，至少保证这次渲染有产物。
-	Image.Free();
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "supersampled capture failed; retrying once at the window resolution");
 	m_PoseScreenshotScale = 1;
 	m_PoseScreenshotPending = true;
@@ -4285,6 +4513,7 @@ void CClient::Update()
 	}
 	else
 		PumpNetwork();
+	PollMapLoad();
 
 	UpdateUpstreamRedundancy();
 
@@ -4293,6 +4522,21 @@ void CClient::Update()
 	{
 		DisconnectWithReason(gs_aMapResourcePreparationError);
 		return;
+	}
+	if(State() == IClient::STATE_LOADING && LoadingStateDetail() == IClient::LOADING_STATE_DETAIL_GETTING_READY)
+	{
+		if(m_DummyReconnectOnReload)
+		{
+			m_DummySendConnInfo = true;
+			m_DummyReconnectOnReload = false;
+		}
+#if defined(CONF_PLATFORM_IOS)
+		else if(m_DummyReconnectOnResume)
+		{
+			m_DummyReconnectOnResume = false;
+			DummyConnect();
+		}
+#endif
 	}
 	// 官方 178da1ead：在采集/发送输入之前先更新 editor/gameclient，
 	// 低刷新率下输入能早一个循环发出。
@@ -4604,7 +4848,9 @@ void CClient::Update()
 	{
 		if(m_pMapdownloadTask->State() == EHttpState::DONE)
 		{
-			FinishMapDownload();
+			m_MapdownloadAmount = m_MapdownloadTotalsize;
+			m_pMapdownloadTask.reset();
+			FinishMapDownload(EMapLoadSource::HTTP);
 		}
 		else if(m_pMapdownloadTask->State() == EHttpState::ERROR || m_pMapdownloadTask->State() == EHttpState::ABORTED)
 		{
@@ -4773,10 +5019,9 @@ void CClient::QmProbeSaveDirectory()
 	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "", aSaveDir, sizeof(aSaveDir));
 	char aProcess[128];
 	QmProcessTokenDescription(aProcess, sizeof(aProcess));
-	if(!m_pStorage->FolderExists("qmclient", IStorage::TYPE_SAVE))
-		m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	qm_storage::EnsureFolder(m_pStorage, qm_storage::RUNTIME_DIR);
 	char aProbePath[IO_MAX_PATH_LENGTH];
-	str_format(aProbePath, sizeof(aProbePath), "qmclient/.save_probe_%d", pid());
+	str_format(aProbePath, sizeof(aProbePath), "%s/.save_probe_%d", qm_storage::RUNTIME_DIR, pid());
 	IOHANDLE Probe = m_pStorage->OpenFile(aProbePath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	m_QmSaveDirectoryWritable = Probe != nullptr;
 	if(Probe != nullptr)
@@ -5004,9 +5249,12 @@ void CClient::Run()
 			m_QmPerfConfigSnapshot.Update(this);
 			m_QmPerfLastConfigCheck = time_get();
 		}
-		std::optional<CPerfTimer> LoopTimer;
-		if(PerfEnabled)
-			LoopTimer.emplace();
+		// 始终测量主循环 CPU 忙时：后台预热必须看真实占用，不能把 vsync 休眠
+		// 当成已用预算，否则高刷显示器上会永远算出 0 余量。
+		CPerfTimer LoopTimer;
+		// Swap 在 vsync 下会把等显示器的时间算进 LoopTimer；单独扣除后才是
+		// 主线程实际可支配的 CPU 忙时。Swap 自身的阶段日志仍保留墙钟耗时。
+		double MainThreadSwapMs = 0.0;
 		++m_PerfFrame;
 		set_new_tick();
 		UpdateHangHeartbeat();
@@ -5402,12 +5650,17 @@ void CClient::Run()
 				{
 					CPerfTimer StageTimer;
 					m_pGraphics->Swap();
+					MainThreadSwapMs = StageTimer.ElapsedMs();
 					char aExtra[96];
 					str_format(aExtra, sizeof(aExtra), "state=%d render_rate=%d throttle=%d", State(), GfxRefreshRate, RequestedRenderThrottleRate);
-					QmPerfLogStage("perf/main_thread", "graphics_swap", StageTimer.ElapsedMs(), false, this, nullptr, nullptr, aExtra);
+					QmPerfLogStage("perf/main_thread", "graphics_swap", MainThreadSwapMs, false, this, nullptr, nullptr, aExtra);
 				}
 				else
+				{
+					CPerfTimer StageTimer;
 					m_pGraphics->Swap();
+					MainThreadSwapMs = StageTimer.ElapsedMs();
+				}
 				// 合影截图：TakeScreenshot 请求已在 Swap 之前提交，由本帧的 ScreenshotDirect
 				// 消费；这里只负责撤掉合成快照，避免假角色留在之后的正常渲染里。
 				if(m_PoseScreenshotHandled)
@@ -5474,8 +5727,15 @@ void CClient::Run()
 		TextRender()->QmTextFrameEnd();
 
 		m_Fifo.Update();
+		const double LoopMs = LoopTimer.ElapsedMs();
+		const double BusyMs = maximum(0.0, LoopMs - MainThreadSwapMs);
+		m_MainThreadFrameTime = (float)(BusyMs / 1000.0);
+		if(m_MainThreadFrameTimeAverage <= 0.0f)
+			m_MainThreadFrameTimeAverage = m_MainThreadFrameTime;
+		else
+			m_MainThreadFrameTimeAverage = m_MainThreadFrameTimeAverage * 0.9f + m_MainThreadFrameTime * 0.1f;
 		if(PerfEnabled)
-			QmPerfLogStage("perf/main_thread", "loop_total", LoopTimer->ElapsedMs(), false, this);
+			QmPerfLogStage("perf/main_thread", "loop_total", LoopMs, false, this);
 
 		if(State() == IClient::STATE_QUITTING || State() == IClient::STATE_RESTARTING)
 			break;
@@ -6018,7 +6278,7 @@ void CClient::LeavePoseSession(bool RestorePlaybackSnapshot)
 	if(!m_PoseSessionActive)
 		return;
 	const bool RestorePlayback = RestorePlaybackSnapshot && m_PoseCurrentSnapshot >= 0 &&
-		State() == IClient::STATE_DEMOPLAYBACK && m_DemoPlayer.IsPlaying();
+				     State() == IClient::STATE_DEMOPLAYBACK && m_DemoPlayer.IsPlaying();
 	m_PoseSessionActive = false;
 	m_PoseSnapshotSize = 0;
 	m_PoseCaptureKeepSession = false;
@@ -6540,7 +6800,8 @@ void CClient::FinishSegmentedExport()
 }
 
 // 收尾拼接：检查全部段文件在位后在后台线程流复制拼接（libavformat 裸 IO，用绝对路径）。
-void CClient::StartSegmentConcat(const CVideoExportTask *pTask) try
+void CClient::StartSegmentConcat(const CVideoExportTask *pTask)
+try
 {
 	// 仍在拼接时拒绝新请求，避免并发访问同名的段文件和输出文件。
 	if(m_SegmentConcat.Pending())
@@ -8487,6 +8748,8 @@ int main(int argc, const char **argv)
 		}
 	}
 	pKernel->RegisterInterface(pStorage);
+	if(!qm_storage::MigrateStorageLayout(pStorage))
+		log_error("client", "QmClient storage layout migration is incomplete; conflicting files were preserved");
 
 	pFutureAssertionLogger->Set(CreateAssertionLogger(pStorage, GAME_NAME));
 
@@ -8678,6 +8941,21 @@ int main(int argc, const char **argv)
 	pConsole->SetUnknownCommandCallback(UnknownArgumentCallback, pClient);
 	pConsole->ParseArguments(argc - 1, &argv[1]);
 	pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
+
+#if defined(CONF_PLATFORM_ANDROID)
+	if(g_Config.m_QmMobileCrashReportExport != 0)
+	{
+		char aDate[64];
+		str_timestamp(aDate, sizeof(aDate));
+		char aDisplayName[96];
+		str_format(aDisplayName, sizeof(aDisplayName), "QmClient_crash_%s_%d.txt", aDate, pid());
+		const int ReportFd = PrepareAndroidCrashReportSink(aDisplayName);
+		if(ReportFd >= 0)
+			crashdump_set_live_report_fd(ReportFd);
+		else
+			log_info("crash_reporter", "could not pre-open the live crash report; the sandbox copy will be exported on the next launch");
+	}
+#endif
 
 	// 静默在后台启动 Steam，客户端仍由当前进程继续启动。
 	if(g_Config.m_QmSteamAutoLaunch)

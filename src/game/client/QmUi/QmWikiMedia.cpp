@@ -7,6 +7,7 @@
 
 #include <engine/gfx/image_loader.h>
 #include <engine/image.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <webp/decode.h>
@@ -51,7 +52,7 @@ namespace
 		if(pRelative[0] == '/' || pRelative[0] == '\\' || (Length > 1 && pRelative[1] == ':') ||
 			str_find(pRelative, "..") != nullptr || str_find(pRelative, "\\") != nullptr)
 			return false;
-		str_format(pBuffer, BufferSize, "wiki/media/%s", pRelative);
+		str_format(pBuffer, BufferSize, "%s/%s", qm_storage::CONTENT_WIKI_MEDIA_DIR, pRelative);
 		return true;
 	}
 

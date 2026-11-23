@@ -28,6 +28,12 @@ constexpr bool QmListBoxInitialScrollRemainsPending(bool InitialScrollPending, i
 	return InitialScrollPending && SelectedIndex < 0;
 }
 
+constexpr bool QmListBoxShouldScrollToSelectionAfterRenderGap(bool AutoScrollOnReentry, bool WasDrawnBefore, int64_t RenderGap, int64_t Frequency, int SelectedIndex)
+{
+	return AutoScrollOnReentry && WasDrawnBefore && SelectedIndex >= 0 &&
+	       RenderGap > maximum<int64_t>(1, Frequency) / 4;
+}
+
 inline CUIRect QmListBoxEntryAnimatedRect(const CUIRect &Rect, float OffsetY)
 {
 	CUIRect AnimatedRect = Rect;
@@ -223,6 +229,9 @@ private:
 	// 默认开启，只有明确需要「跳动式」布局的列表才关掉。
 	bool m_AnimateScrollbarReserve;
 	bool m_InitialScrollPending;
+	// 重入列表时是否自动把选中项滚回视野。皮肤网格会关掉：加载卡顿时
+	// 帧间隔不能当作用户重新打开列表，否则会把正在浏览的位置强行拉走。
+	bool m_AutoScrollSelectionOnReentry = true;
 	// 上一帧绘制时间：列表被隐藏后再次出现时重新把选中项滚进视野。
 	int64_t m_LastDrawTime = 0;
 	float m_EntryAnimationElapsedSec;
@@ -371,6 +380,7 @@ public:
 	// 可见裁剪区：弹层要贴着父容器摆放时用它当边界，避免飞进导航栏。
 	const CUIRect &ClipRect() const { return *m_ScrollRegion.ClipRect(); }
 	void ScrollToSelected() { m_ListBoxUpdateScroll = true; }
+	void SetAutoScrollSelectionOnReentry(bool Enabled) { m_AutoScrollSelectionOnReentry = Enabled; }
 	// 已保存的选中项不一定是本次浏览目标；调用方可取消初始自动定位，显式定位仍有效。
 	void SuppressInitialSelectionScroll() { m_InitialScrollPending = false; }
 	void SkipItems(int Count);

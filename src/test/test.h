@@ -13,6 +13,24 @@ class IStorage;
 std::string TestSourcePath(const char *pRelativePath);
 std::string ReadTestSourceFile(const char *pRelativePath);
 
+class CTestInfoPath
+{
+public:
+	bool m_IsDirectory;
+	char m_aData[IO_MAX_PATH_LENGTH];
+
+	bool operator<(const CTestInfoPath &Other) const
+	{
+		if(m_IsDirectory != Other.m_IsDirectory)
+		{
+			return m_IsDirectory < Other.m_IsDirectory;
+		}
+		return str_comp(m_aData, Other.m_aData) > 0;
+	}
+};
+
+void TestDeleteTestStorageFiles(const char *pPath);
+
 class CTestInfo
 {
 public:

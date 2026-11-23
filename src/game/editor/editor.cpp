@@ -24,11 +24,13 @@
 #include <engine/shared/filecollection.h>
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/UiProgressRing.h>
 #include <game/client/components/camera.h>
 #include <game/client/gameclient.h>
 #include <game/client/lineinput.h>
@@ -55,8 +57,8 @@
 using namespace FontIcons;
 
 static constexpr const char *QM_EDITOR_COLLAB_WS_URL = "wss://qmclient.icu/ws/editor";
-static constexpr const char *QM_EDITOR_COLLAB_SNAPSHOT_PATH = "qmclient/editor_collab_snapshot.map";
-static constexpr const char *QM_EDITOR_COLLAB_INCOMING_PATH = "qmclient/editor_collab_incoming.map";
+static constexpr const char *QM_EDITOR_COLLAB_SNAPSHOT_PATH = qm_storage::EDITOR_COLLAB_SNAPSHOT_FILE;
+static constexpr const char *QM_EDITOR_COLLAB_INCOMING_PATH = qm_storage::EDITOR_COLLAB_INCOMING_FILE;
 static constexpr int QM_EDITOR_COLLAB_MAX_MEMBERS = 4;
 static constexpr int QM_EDITOR_COLLAB_PUSH_DELAY_MS = 1000;
 static constexpr int QM_EDITOR_COLLAB_MAX_MAP_BYTES = 18 * 1024 * 1024;
@@ -458,7 +460,7 @@ void CEditor::DoMapTabs(CUIRect MapTabs)
 		if(Saving)
 		{
 			CloseResult = DoButton_Ex(&Map.m_TabCloseButtonId, "", 0, &CloseButton, BUTTONFLAG_RIGHT, "This map is being saved.", IGraphics::CORNER_R);
-			Ui()->RenderProgressSpinner(CloseButton.Center(), 4.0f);
+			ui_widget::DrawProgressRing(Ui(), CloseButton.Center(), CloseButton.h * 0.25f);
 		}
 		else
 		{
@@ -3950,7 +3952,7 @@ void CEditor::StartCollabSnapshotSave(bool Force)
 	if(!Force && (Map()->m_LastModifiedTime < 0.0f || Map()->m_LastModifiedTime <= m_CollabLastUploadedModifiedTime))
 		return;
 
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	qm_storage::EnsureFolder(Storage(), qm_storage::RUNTIME_EDITOR_DIR);
 	m_CollabSnapshotSavePending = Save(QM_EDITOR_COLLAB_SNAPSHOT_PATH);
 	if(m_CollabSnapshotSavePending)
 	{
@@ -4246,7 +4248,7 @@ bool CEditor::ApplyCollabSnapshotBase64(const char *pMapBase64, int Revision, bo
 	}
 	vDecoded.resize(DecodedSize);
 
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	qm_storage::EnsureFolder(Storage(), qm_storage::RUNTIME_EDITOR_DIR);
 	IOHANDLE File = Storage()->OpenFile(QM_EDITOR_COLLAB_INCOMING_PATH, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)
 	{
@@ -5165,7 +5167,7 @@ void CEditor::RenderSavingIndicator(CUIRect View)
 	View.VSplitRight(TextRender()->TextWidth(FontSize, pText) + 2.0f, &Spinner, &Label);
 	Spinner.VSplitRight(Spinner.h, nullptr, &Spinner);
 	Ui()->DoLabel(&Label, pText, FontSize, TEXTALIGN_MR);
-	Ui()->RenderProgressSpinner(Spinner.Center(), 8.0f);
+	ui_widget::DrawProgressRing(Ui(), Spinner.Center(), Spinner.h * 0.5f);
 }
 
 void CEditor::FreeDynamicPopupMenus()

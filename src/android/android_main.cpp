@@ -271,7 +271,7 @@ bool OpenAndroidDownloadsFolder()
 	return CallAndroidActivityMethod("openDownloadsFolder");
 }
 
-bool ExportAndroidMediaFile(const char *pPath)
+static bool ExportAndroidFile(const char *pMethod, const char *pPath)
 {
 	if(pPath == nullptr || pPath[0] == '\0')
 		return false;
@@ -280,13 +280,44 @@ bool ExportAndroidMediaFile(const char *pPath)
 		const jclass ActivityClass = pEnv->GetObjectClass(Activity);
 		if(!ActivityClass || pEnv->ExceptionCheck())
 			return false;
-		const jmethodID Method = pEnv->GetMethodID(ActivityClass, "exportToDownloads", "(Ljava/lang/String;)Z");
+		const jmethodID Method = pEnv->GetMethodID(ActivityClass, pMethod, "(Ljava/lang/String;)Z");
 		if(!Method || pEnv->ExceptionCheck())
 			return false;
 		const jstring Path = android_jni::MakeString(*pEnv, pPath);
 		if(!Path || pEnv->ExceptionCheck())
 			return false;
 		return pEnv->CallBooleanMethod(Activity, Method, Path) == JNI_TRUE; });
+}
+
+bool ExportAndroidMediaFile(const char *pPath)
+{
+	return ExportAndroidFile("exportToDownloads", pPath);
+}
+
+bool ExportAndroidCrashReport(const char *pPath)
+{
+	return ExportAndroidFile("exportCrashReportToDownloads", pPath);
+}
+
+int PrepareAndroidCrashReportSink(const char *pDisplayName)
+{
+	if(pDisplayName == nullptr || pDisplayName[0] == '\0')
+		return -1;
+	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
+	int Fd = -1;
+	const bool Success = android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) {
+		const jclass ActivityClass = pEnv->GetObjectClass(Activity);
+		if(!ActivityClass || pEnv->ExceptionCheck())
+			return false;
+		const jmethodID Method = pEnv->GetMethodID(ActivityClass, "prepareCrashReport", "(Ljava/lang/String;)I");
+		if(!Method || pEnv->ExceptionCheck())
+			return false;
+		const jstring Name = android_jni::MakeString(*pEnv, pDisplayName);
+		if(!Name || pEnv->ExceptionCheck())
+			return false;
+		Fd = pEnv->CallIntMethod(Activity, Method, Name);
+		return Fd >= 0; });
+	return Success ? Fd : -1;
 }
 
 namespace

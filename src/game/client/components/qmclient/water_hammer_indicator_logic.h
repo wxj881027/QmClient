@@ -13,10 +13,33 @@
 
 #include <optional>
 
+enum class EQmWaterInputScope
+{
+	OWN = 0,
+	OTHERS,
+	ALL,
+};
+
+inline bool QmWaterInputScopeAllows(EQmWaterInputScope Scope, bool IsOwn)
+{
+	switch(Scope)
+	{
+	case EQmWaterInputScope::OWN: return IsOwn;
+	case EQmWaterInputScope::OTHERS: return !IsOwn;
+	case EQmWaterInputScope::ALL: return true;
+	}
+	return false;
+}
+
 struct SQmWaterHeldState
 {
 	bool m_Hammer = false;
 	bool m_Hook = false;
+
+	SQmWaterHeldState VisibleIcons(bool ShowHammer, bool ShowHook) const
+	{
+		return {m_Hammer && ShowHammer, m_Hook && ShowHook};
+	}
 
 	std::optional<ColorRGBA> HighlightColor(unsigned HammerColor, unsigned HookColor) const
 	{

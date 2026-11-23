@@ -218,7 +218,7 @@ void CSkins7::ProcessCompletedJobs()
 			   if(Completion == ECompletion::SKIPPED)
 				   pSkippedAccessory = pName;
 			   return Completion != ECompletion::DEFERRED;
-			   }))
+		   }))
 			break;
 		m_FailedAccessoryUploadAttempts = 0;
 		if(pSkippedAccessory)
@@ -256,7 +256,7 @@ void CSkins7::ProcessCompletedJobs()
 			   LoadedPart = Result.m_PartType;
 			   Skipped = Completion == ECompletion::SKIPPED;
 			   return true;
-			   }))
+		   }))
 			break;
 
 		// 诊断失败不能回滚已提交部件，也不能让同一任务再次上传。

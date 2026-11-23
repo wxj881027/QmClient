@@ -1,4 +1,3 @@
-# 地图标签只维护简体中文，其余语言按本次确认使用英文回退。
 [[message]]
 key = "Add a tag"
 [message.translations]
@@ -20,14 +19,14 @@ key = "Cannot submit this tag. Please retry later."
 simplified_chinese = "无法提交此标签，请稍后重试。"
 
 [[message]]
-key = "Cloud tags:"
-[message.translations]
-simplified_chinese = "云端标签："
-
-[[message]]
 key = "Click to manage this tag, drag to reorder"
 [message.translations]
 simplified_chinese = "点击管理该标签，拖动可调整顺序"
+
+[[message]]
+key = "Cloud tags:"
+[message.translations]
+simplified_chinese = "云端标签："
 
 [[message]]
 key = "Completion records unavailable. Try refreshing."

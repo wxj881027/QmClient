@@ -130,7 +130,8 @@ namespace QmSetup
 		return true;
 	}
 
-	DWORD CSetupEngine::Run(std::vector<std::wstring> vArguments, HWND Window) try
+	DWORD CSetupEngine::Run(std::vector<std::wstring> vArguments, HWND Window)
+	try
 	{
 		const SStagingCleanup StagingCleanup{m_Executable, m_Directory, m_RetainExecutable};
 		bool HasLog = false;

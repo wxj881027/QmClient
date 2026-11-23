@@ -12,7 +12,7 @@ namespace
 	struct SFrame
 	{
 		int m_Tick;
-		int m_AttackTick = 0;
+		int m_AttackTick;
 	};
 	struct STrack
 	{

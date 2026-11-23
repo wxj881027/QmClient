@@ -8,6 +8,7 @@
 #include <engine/storage.h>
 
 #include <gtest/gtest.h>
+#include <test/support/prediction_allocation_failure.h>
 #include <test/support/qm_crashdump_process_probe.h>
 #include <test/support/qm_exit_process_probe.h>
 #include <test/support/qm_open_link_probe.h>
@@ -64,129 +65,6 @@ std::string ReadTestSourceFile(const char *pRelativePath)
 	return Contents;
 }
 
-CTestInfo::CTestInfo()
-{
-	const ::testing::TestInfo *pTestInfo =
-		::testing::UnitTest::GetInstance()->current_test_info();
-
-	// Typed tests have test names like "TestName/0" and "TestName/1", which would result in invalid filenames.
-	// Replace the string after the first slash with the name of the typed test and use hyphen instead of slash.
-	char aTestCaseName[128];
-	str_copy(aTestCaseName, pTestInfo->test_case_name());
-	for(int i = 0; aTestCaseName[i] != '\0'; i++)
-	{
-		if(aTestCaseName[i] == '/')
-		{
-			aTestCaseName[i] = '-';
-			aTestCaseName[i + 1] = '\0';
-			str_append(aTestCaseName, pTestInfo->type_param());
-			break;
-		}
-	}
-	str_format(m_aFilenamePrefix, sizeof(m_aFilenamePrefix), "%s.%s-%d",
-		aTestCaseName, pTestInfo->name(), pid());
-	Filename(m_aFilename, sizeof(m_aFilename), ".tmp");
-	str_format(m_aStoragePath, sizeof(m_aStoragePath), "tmp/tests/%s", m_aFilename);
-}
-
-void CTestInfo::Filename(char *pBuffer, size_t BufferLength, const char *pSuffix)
-{
-	str_format(pBuffer, BufferLength, "%s%s", m_aFilenamePrefix, pSuffix);
-}
-
-std::unique_ptr<IStorage> CTestInfo::CreateTestStorage()
-{
-	fs_makedir_rec_for(m_aStoragePath);
-	bool Error = fs_makedir(m_aStoragePath);
-	EXPECT_FALSE(Error);
-	if(Error)
-	{
-		return nullptr;
-	}
-	m_HasCreatedStoragePath = true;
-	char aTestPath[IO_MAX_PATH_LENGTH];
-	str_copy(aTestPath, ::testing::internal::GetArgvs().front().c_str());
-	const char *apArgs[] = {aTestPath};
-	return CreateTempStorage(m_aStoragePath, std::size(apArgs), apArgs);
-}
-
-class CTestInfoPath
-{
-public:
-	bool m_IsDirectory;
-	char m_aData[IO_MAX_PATH_LENGTH];
-
-	bool operator<(const CTestInfoPath &Other) const
-	{
-		if(m_IsDirectory != Other.m_IsDirectory)
-		{
-			return m_IsDirectory < Other.m_IsDirectory;
-		}
-		return str_comp(m_aData, Other.m_aData) > 0;
-	}
-};
-
-class CTestCollectData
-{
-public:
-	char m_aCurrentDir[IO_MAX_PATH_LENGTH];
-	std::vector<CTestInfoPath> *m_pvEntries;
-};
-
-int TestCollect(const char *pName, int IsDir, int Unused, void *pUser)
-{
-	CTestCollectData *pData = (CTestCollectData *)pUser;
-
-	if(str_comp(pName, ".") == 0 || str_comp(pName, "..") == 0)
-	{
-		return 0;
-	}
-
-	CTestInfoPath Path;
-	Path.m_IsDirectory = IsDir;
-	str_format(Path.m_aData, sizeof(Path.m_aData), "%s/%s", pData->m_aCurrentDir, pName);
-	pData->m_pvEntries->push_back(Path);
-	if(Path.m_IsDirectory)
-	{
-		CTestCollectData DataRecursive;
-		str_copy(DataRecursive.m_aCurrentDir, Path.m_aData, sizeof(DataRecursive.m_aCurrentDir));
-		DataRecursive.m_pvEntries = pData->m_pvEntries;
-		fs_listdir(DataRecursive.m_aCurrentDir, TestCollect, 0, &DataRecursive);
-	}
-	return 0;
-}
-
-void TestDeleteTestStorageFiles(const char *pPath)
-{
-	std::vector<CTestInfoPath> vEntries;
-	CTestCollectData Data;
-	str_copy(Data.m_aCurrentDir, pPath, sizeof(Data.m_aCurrentDir));
-	Data.m_pvEntries = &vEntries;
-	fs_listdir(Data.m_aCurrentDir, TestCollect, 0, &Data);
-
-	CTestInfoPath Path;
-	Path.m_IsDirectory = true;
-	str_copy(Path.m_aData, Data.m_aCurrentDir, sizeof(Path.m_aData));
-	vEntries.push_back(Path);
-
-	// Sorts directories after files.
-	std::sort(vEntries.begin(), vEntries.end());
-
-	// Don't delete too many files.
-	ASSERT_LE(vEntries.size(), 10);
-	for(auto &Entry : vEntries)
-	{
-		if(Entry.m_IsDirectory)
-		{
-			ASSERT_FALSE(fs_removedir(Entry.m_aData));
-		}
-		else
-		{
-			ASSERT_FALSE(fs_remove(Entry.m_aData));
-		}
-	}
-}
-
 static void WriteTestFileOrDir(const char *pBasePath, const char *pRelativePath, bool Directory)
 {
 	char aPath[IO_MAX_PATH_LENGTH];
@@ -210,15 +88,6 @@ static void CreateScopedTestStorageFixture(const std::function<void(CTestInfo &)
 	Body(Info);
 }
 
-CTestInfo::~CTestInfo()
-{
-	if(!::testing::Test::HasFailure() && m_DeleteTestStorageFilesOnSuccess)
-	{
-		const char *pCleanupPath = m_HasCreatedStoragePath ? m_aStoragePath : m_aFilename;
-		TestDeleteTestStorageFiles(pCleanupPath);
-	}
-}
-
 // 默认只在用例失败时输出该用例产生的日志，避免单元测试被海量 info 日志淹没。
 class CTestLogLogger : public ILogger
 {
@@ -228,6 +97,9 @@ class CTestLogLogger : public ILogger
 public:
 	void Log(const CLogMessage *pMessage) override
 	{
+		// 故障注入期间日志捕获不是被测业务；避免测试后端的容器分配改变预算矩阵。
+		if(CPredictionAllocationFailure::Active())
+			return;
 		std::lock_guard<std::mutex> Lock(m_Mutex);
 		m_vLines.emplace_back(pMessage->m_aLine, pMessage->m_LineLength);
 	}

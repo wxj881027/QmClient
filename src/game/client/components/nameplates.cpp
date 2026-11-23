@@ -380,7 +380,7 @@ public:
 	bool m_UseTextEffects;
 	char m_aName[std::max<size_t>(MAX_NAME_LENGTH, protocol7::MAX_NAME_ARRAY_SIZE)];
 	bool m_ShowFriendMark;
-	char m_aQmTitle[64] = "";
+	char m_aQmTitle[QM_TITLE_TEXT_SIZE] = "";
 	SQmTitleAppearance m_TitleAppearance;
 	bool m_DeveloperBadge = false;
 	bool m_ShowClientId;
@@ -405,7 +405,7 @@ public:
 	bool m_DirJump;
 	bool m_DirRight;
 	float m_FontSizeDirection;
-	SQmWaterHeldState m_WaterHeld;
+	SQmWaterHeldState m_WaterIcons;
 	float m_HookStrongWeakRowHeight;
 	bool m_ShowHookStrongWeak;
 	EHookStrongWeakState m_HookStrongWeakState;
@@ -420,7 +420,8 @@ static void SetNameplateTitle(CGameClient &This, CNamePlateData &Data, int Clien
 	const bool ShowTitle = Data.m_ShowName && This.m_QmClient.ShouldShowPlayerTitle(ClientId);
 	str_copy(Data.m_aQmTitle, ShowTitle ? This.m_QmClient.PlayerTitle(ClientId, true) : "");
 	Data.m_TitleAppearance = This.m_QmClient.PlayerTitleAppearance(ClientId, true);
-	Data.m_DeveloperBadge = ShowTitle && This.m_QmClient.PlayerHasDeveloperBadge(ClientId, true) && This.m_QmClient.DeveloperBadge().Available();
+	Data.m_DeveloperBadge = ShowTitle && QmUseDeveloperBadgeFallback(Data.m_aQmTitle,
+						     This.m_QmClient.PlayerHasDeveloperBadge(ClientId, true), This.m_QmClient.DeveloperBadge().Available());
 }
 
 static ColorRGBA NameplateTextColor(const CGameClient &This, int ClientId)
@@ -719,8 +720,7 @@ public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Texture = g_pData->m_aImages[m_Hammer ? IMAGE_QM_WATER_HAMMER : IMAGE_QM_WATER_HOOK].m_Id;
-		m_ShiftOnInvis = Data.m_ShowDirection && g_Config.m_QmWaterHammerHighlight;
-		m_Visible = m_ShiftOnInvis && m_Texture.IsValid() && (m_Hammer ? Data.m_WaterHeld.m_Hammer : Data.m_WaterHeld.m_Hook);
+		m_Visible = m_Texture.IsValid() && (m_Hammer ? Data.m_WaterIcons.m_Hammer : Data.m_WaterIcons.m_Hook);
 		m_Size = vec2(Data.m_FontSizeDirection, Data.m_FontSizeDirection);
 		// 高亮方块与强弱钩同尺寸（图标 + 5px 留白），相邻键位拼起来时边框正好相接。
 		const float BlockSide = Data.m_FontSizeHookStrongWeak + DEFAULT_PADDING;
@@ -828,7 +828,7 @@ public:
 
 class CNamePlatePartTitle : public CNamePlatePartText
 {
-	char m_aText[64] = "";
+	char m_aText[QM_TITLE_TEXT_SIZE] = "";
 	std::string m_DisplayText;
 	CUIRect m_TextVisualBounds{};
 	float m_FontSize = -INFINITY;
@@ -2121,8 +2121,8 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		Alpha *= std::clamp(1.0f - std::pow(distance(GameClient()->m_Controls.m_aTargetPos[g_Config.m_ClDummy], Position) / 200.0f, 16.0f), 0.0f, 1.0f);
 	if(OtherTeam)
 		Alpha *= (float)g_Config.m_ClShowOthersAlpha / 100.0f;
-	if(GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(pPlayerInfo->m_ClientId))
-		Alpha = std::min(Alpha, 0.5f);
+	// 名牌跟着服务器侧 Tee 走：影子整组隐藏时名牌也一起消失。
+	Alpha = GameClient()->m_FastPractice.ServerTeeAlpha(pPlayerInfo->m_ClientId, Alpha);
 	Data.m_CoordXAlignColor.a *= Alpha;
 
 	Data.m_Color = NameplateTextColor(*GameClient(), ClientId);
@@ -2136,7 +2136,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 #endif
 	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK, VideoRendering);
 	const int ShowDirectionConfig = DisplaySettings.m_Direction;
-	Data.m_WaterHeld = GameClient()->QmWaterHammerIndicator().MarkedInputs(ClientId);
+	Data.m_WaterIcons = GameClient()->QmWaterHammerIndicator().MarkedInputs(ClientId).VisibleIcons(g_Config.m_QmWaterHammerIcon, g_Config.m_QmWaterHookIcon);
 	Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = false;
 	switch(ShowDirectionConfig)
 	{
@@ -2342,7 +2342,9 @@ static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, CNamePlat
 		Data.m_ShowDirection = false;
 		dbg_assert_failed("ShowDirectionConfig invalid");
 	}
-	Data.m_WaterHeld = {true, true};
+	// 预览用示例按键状态，便于拖动图标位置。
+	Data.m_WaterIcons = SQmWaterHeldState{g_Config.m_QmWaterHammerHighlight != 0, g_Config.m_QmWaterHammerHighlight != 0}
+				    .VisibleIcons(g_Config.m_QmWaterHammerIcon, g_Config.m_QmWaterHookIcon);
 	Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = true;
 	Data.m_FontSizeDirection = FontSizeDirection;
 
@@ -3087,7 +3089,7 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 
 void CNamePlates::OnRender()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 		return;
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
@@ -3120,7 +3122,8 @@ void CNamePlates::OnRender()
 	const bool RenderStrongWeak = DisplaySettings.StrongWeakEnabled();
 	const bool RenderTClientExtras = g_Config.m_QmNameplatePingCircle || g_Config.m_QmNameplateCountry || g_Config.m_QmNameplateSkins || (g_Config.m_QmWarList && g_Config.m_QmWarListReason);
 	const bool RenderDirection = ShowDirection != 0;
-	const bool RenderNameplates = RenderNames || RenderClan || RenderClientIds || RenderStrongWeak || RenderTClientExtras || RenderDirection || ShowCoords || ShowCoordXAlignHint;
+	const bool RenderWaterIcons = !DemoPlayback && g_Config.m_QmWaterHammerHighlight && (g_Config.m_QmWaterHammerIcon || g_Config.m_QmWaterHookIcon);
+	const bool RenderNameplates = RenderNames || RenderClan || RenderClientIds || RenderStrongWeak || RenderTClientExtras || RenderDirection || RenderWaterIcons || ShowCoords || ShowCoordXAlignHint;
 	const bool RenderChatBubbles = g_Config.m_QmChatBubble != 0 && !FocusModeHidesChat();
 	const bool RenderFreezeWakeupPopups = GameClient()->HasFreezeWakeupPopups();
 	// 自适应特效档位每帧开场算一次，同帧内所有名牌共用，避免同屏不同玩家效果不一致。

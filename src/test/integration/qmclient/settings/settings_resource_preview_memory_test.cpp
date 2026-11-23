@@ -193,7 +193,8 @@ TEST_F(ResourcePreviewMemory, NativeRefusalRetainsQueueQuotaTextureAndFrameBudge
 	EXPECT_EQ(Frame.m_MaxGpuUploads, BeforeFrame);
 	EXPECT_EQ(m_Budget.Used(), 16u);
 	ASSERT_NE(m_Cache.Find(Key), nullptr);
-	EXPECT_EQ(m_Cache.Find(Key)->m_Texture, OldTexture);
+	EXPECT_EQ(m_Cache.Find(Key)->m_Texture.Id(), OldTexture.Id());
+	EXPECT_EQ(m_Cache.Find(Key)->m_Texture.Generation(), OldTexture.Generation());
 	EXPECT_TRUE(m_Cache.Find(Key)->m_TextureReady);
 	EXPECT_EQ(m_Graphics.m_Unloads, 0);
 	m_Graphics.m_Accept = true;
@@ -341,7 +342,8 @@ TEST_F(ResourcePreviewMemory, CpuPressureDiscardPreservesTextureMetadataAndOther
 	EXPECT_EQ(m_Budget.Used(), 32u);
 	ASSERT_NE(m_Cache.Find(Key), nullptr);
 	EXPECT_TRUE(State.m_TextureReady);
-	EXPECT_EQ(State.m_Texture, OldTexture);
+	EXPECT_EQ(State.m_Texture.Id(), OldTexture.Id());
+	EXPECT_EQ(State.m_Texture.Generation(), OldTexture.Generation());
 	EXPECT_TRUE(State.m_MetadataReady);
 	EXPECT_EQ(State.m_AppearStart, 41);
 	EXPECT_FALSE(State.m_PreviewJobPending || State.m_ArtifactReady || State.m_UploadPending || State.m_Failed);

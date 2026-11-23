@@ -7,8 +7,8 @@
 TEST(QmBindWheelGeometry, NanCoordinatesHaveNoSelectedBinding)
 {
 	const float Nan = std::numeric_limits<float>::quiet_NaN();
-	EXPECT_EQ(CQmBindWheelState::SelectedBind(vec2(Nan, 170), 64), -1);
-	EXPECT_EQ(CQmBindWheelState::SelectedBind(vec2(170, Nan), 64), -1);
+	EXPECT_EQ(CQmBindWheelState::SelectedWheel(vec2(Nan, 170), 64), -1);
+	EXPECT_EQ(CQmBindWheelState::SelectedWheel(vec2(170, Nan), 64), -1);
 }
 
 TEST(QmBindWheelGeometry, InfiniteCoordinatesHaveNoSelectedBinding)
@@ -17,16 +17,16 @@ TEST(QmBindWheelGeometry, InfiniteCoordinatesHaveNoSelectedBinding)
 	for(const vec2 Mouse : {vec2(Inf, 0), vec2(-Inf, 0), vec2(0, Inf), vec2(0, -Inf)})
 	{
 		SCOPED_TRACE(::testing::Message() << Mouse.x << ", " << Mouse.y);
-		EXPECT_EQ(CQmBindWheelState::SelectedBind(Mouse, 64), -1);
+		EXPECT_EQ(CQmBindWheelState::SelectedWheel(Mouse, 64), -1);
 	}
 }
 
 TEST(QmBindWheelGeometry, FullPositiveCountDomainDoesNotOverflowIndexWrapping)
 {
 	const int Count = std::numeric_limits<int>::max();
-	EXPECT_EQ(CQmBindWheelState::SelectedBind(vec2(0, 170), Count), 536870912);
-	EXPECT_EQ(CQmBindWheelState::SelectedBind(vec2(-170, 0), Count), 1073741824);
-	EXPECT_EQ(CQmBindWheelState::SelectedBind(vec2(0, -170), Count), 1610612735);
+	EXPECT_EQ(CQmBindWheelState::SelectedWheel(vec2(0, 170), Count), 536870912);
+	EXPECT_EQ(CQmBindWheelState::SelectedWheel(vec2(-170, 0), Count), 1073741824);
+	EXPECT_EQ(CQmBindWheelState::SelectedWheel(vec2(0, -170), Count), 1610612735);
 }
 
 TEST(QmBindWheelGeometry, NonpositiveCountsHaveNoSelection)
@@ -34,7 +34,7 @@ TEST(QmBindWheelGeometry, NonpositiveCountsHaveNoSelection)
 	for(int Count : {0, -1, std::numeric_limits<int>::min()})
 	{
 		SCOPED_TRACE(Count);
-		EXPECT_EQ(CQmBindWheelState::SelectedBind(vec2(170, 0), Count), -1);
+		EXPECT_EQ(CQmBindWheelState::SelectedWheel(vec2(170, 0), Count), -1);
 	}
 }
 
@@ -79,19 +79,19 @@ TEST(QmBindWheelGeometry, OppositeLargeFiniteCoordinatesCanCancelNormally)
 
 TEST(QmBindWheelGeometry, TheActualMaximumWheelSizeKeepsItsCardinalSectors)
 {
-	EXPECT_EQ(CQmBindWheelState::SelectedBind(vec2(170, 0), 64), 0);
-	EXPECT_EQ(CQmBindWheelState::SelectedBind(vec2(0, 170), 64), 16);
-	EXPECT_EQ(CQmBindWheelState::SelectedBind(vec2(-170, 0), 64), 32);
-	EXPECT_EQ(CQmBindWheelState::SelectedBind(vec2(0, -170), 64), 48);
+	EXPECT_EQ(CQmBindWheelState::SelectedWheel(vec2(170, 0), 64), 0);
+	EXPECT_EQ(CQmBindWheelState::SelectedWheel(vec2(0, 170), 64), 16);
+	EXPECT_EQ(CQmBindWheelState::SelectedWheel(vec2(-170, 0), 64), 32);
+	EXPECT_EQ(CQmBindWheelState::SelectedWheel(vec2(0, -170), 64), 48);
 }
 
 TEST(QmBindWheelGeometry, InvalidCursorReleaseDoesNotPoisonTheNextOpen)
 {
 	CQmBindWheelState State;
-	State.Open();
-	State.Release(CQmBindWheelState::SelectedBind(vec2(std::numeric_limits<float>::quiet_NaN(), 170), 64));
+	State.Open(qm_bind_menu::EMenu::CUSTOM);
+	State.ReleaseActive(CQmBindWheelState::SelectedWheel(vec2(std::numeric_limits<float>::quiet_NaN(), 170), 64));
 	EXPECT_EQ(State.TakePendingBind(), -1);
-	State.Open();
-	State.Release(CQmBindWheelState::SelectedBind(vec2(170, 0), 64));
+	State.Open(qm_bind_menu::EMenu::CUSTOM);
+	State.ReleaseActive(CQmBindWheelState::SelectedWheel(vec2(170, 0), 64));
 	EXPECT_EQ(State.TakePendingBind(), 0);
 }

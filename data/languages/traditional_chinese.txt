@@ -37,6 +37,9 @@
 "Cycle custom Tee hue" only works with custom colors and does nothing while the TClient rainbow Tee option is on.
 == 循環自定義 Tee 色調只在用自訂顏色時生效，TClient 的彩虹 Tee 開著時它不起作用。
 
+"Data source" filters catalog membership and stays independent of downloads; the same skin can match several catalogs.
+== 「資料來源」只決定目錄收錄範圍，與是否下載無關；同一皮膚可以同時屬於多個目錄。
+
 "Default (software)" is x264: CPU only, best quality, slowest.
 == 「Default (software)」就是 x264：純 CPU、畫質最好、速度最慢。
 
@@ -66,9 +69,6 @@
 
 "Use original style" hides the color and countdown options below it.
 == 勾選使用原始樣式時，其下方的顏色與倒數選項會被隱藏。
-
-"Vanilla skins only" hides every custom skin, so turn it off if your skin suddenly turns default.
-== 只顯示原生皮膚會把自訂皮膚全部隱藏，皮膚突然變回預設就把它關掉。
 
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == X 與我對齊提示會在另一名玩家的 X 與你的對齊達設定的偵測時間後為其變色。
@@ -395,6 +395,9 @@ A key that already has a command is overwritten, so recheck your other binds aft
 A key you assign here replaces whatever action used it before, so check your other keys after changing one.
 == 這裡綁定的鍵會頂掉之前佔用它的動作，所以改完一個鍵記得回頭檢查其他按鍵。
 
+A keyword rule could not be saved. Check the trigger for => or a reserved prefix.
+== 有一條關鍵詞規則無法儲存。請檢查觸發詞是否含有 => 或以保留前綴開頭。
+
 A manual source file takes priority over the selected candidate. Only this variant is replaced.
 == 手動指定的來源檔案優先於選取的候選檔案。僅替換目前音效變體。
 
@@ -569,9 +572,6 @@ Add a type to the exclusion filter for a specific community
 Add a voting option
 == 添加投票選項
 
-Add Bind
-== 添加綁定
-
 Add category
 == 新增分類
 
@@ -586,9 +586,6 @@ Add current cut to the export list
 
 Add debug dummy to server (Debug build only)
 == 向伺服器新增除錯用分身（僅 Debug 建置）
-
-Add default presets
-== 新增預設項目
 
 Add demo timeline marker
 == 添加回放時間線標記
@@ -626,6 +623,9 @@ Add options below
 Add or edit entries, then use the bind in chat to send the text.
 == 新增或編輯項目，再到聊天中用綁定送出文字。
 
+Add phrase
+== 新增語錄
+
 Add players or groups, then choose which markers and chat highlights apply to them.
 == 新增玩家或群組，再選擇要套用到它們的標記與聊天醒目提示。
 
@@ -641,14 +641,14 @@ Add team name:
 Add to %s
 == 添加到 %s
 
-Add to bind wheel
-== 加入 Bind 輪盤
-
 Add to blocked words
 == 添加到屏蔽詞
 
 Add to category
 == 添加到分類
+
+Add to identity menu
+== 加入身份選單
 
 Add to queue
 == 加入隊列
@@ -667,6 +667,9 @@ Added %d missing required slot(s).
 
 Added %s as friend
 == 已將 %s 添加為好友
+
+Added to this bind menu.
+== 已加入此綁定選單。
 
 Additional headers for register endpoint, comma-separated "header:value" pairs
 == 要發送到寄存器端點的額外標頭，以逗號分隔的“標頭：值”對
@@ -760,9 +763,6 @@ Advanced
 
 Advanced options
 == 高級選項
-
-AFR
-== 非洲
 
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
 == 上傳成功後用 F2 登入並執行 change_map 指令；檔案須小於 64 MiB。
@@ -950,9 +950,6 @@ Angle
 Angle:
 == 角度：
 
-Angry
-== 生氣
-
 Angular gradient
 == 角度漸層
 
@@ -1079,9 +1076,6 @@ Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
 == 將 Q 彈 Tee 形變應用到其他玩家
 
-Apply to
-== 套用至
-
 Apply to dummy
 == 套用至分身
 
@@ -1160,23 +1154,14 @@ Are you sure that you want to restart?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 確定儲存該皮膚？若已有同名皮膚，將被覆蓋。
 
-Arrow
-== 箭頭貼圖
-
 Arrow assets
 == 箭頭資源
-
-ASI
-== 亞洲
 
 Aspect ratio preset
 == 縱橫比預設
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == 畫面縱橫比預設（0=關閉，1=5:4，2=4:3，3=3:2，4=16:9，5=21:9，6=自定義）
-
-Asset preset
-== 資源貼圖預設
 
 Asset with this name already exists.
 == 同名材質已存在。
@@ -1192,9 +1177,6 @@ Assets editor
 
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
 == 分別綁定禁止自殺和允許自殺兩個按鍵；按下禁止鍵後，K 會被忽略，直到你按允許鍵。
-
-Assign commands and labels to wheel slots
-== Assign commands and labels to wheel slots
 
 Assigns commands and labels to the slots of the radial bind wheel.
 == 為環形 Bind 輪盤的各槽位指派指令與標籤。
@@ -1234,9 +1216,6 @@ Audio packs
 
 Aurora: Polar Veil
 == 極光：極夜光幕
-
-AUS
-== 澳洲
 
 Authed name color in scoreboard
 == 管理權限者名字在計分板上的顏色
@@ -1348,9 +1327,6 @@ Auto switch weapon on ammo depletion
 
 Auto switch weapon on pickup
 == 拾取時自動切換武器
-
-Auto team lock
-== 自動鎖隊
 
 Auto translate received messages
 == 自動翻譯收到的消息
@@ -1814,6 +1790,12 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 == 綁定按鍵以執行命令或查看按鍵綁定
 
+Bind menu layout: 0 = radial wheel, 1 = rounded panel
+== 綁定選單佈局：0 = 徑向輪盤，1 = 圓角面板
+
+Bind Menus
+== 綁定選單
+
 Bind movement, jump, hook, and fire actions
 == Bind movement, jump, hook, and fire actions
 
@@ -1831,12 +1813,6 @@ Bind voting and server browser actions
 
 Bind weapon selection and switching actions
 == Bind weapon selection and switching actions
-
-Bind Wheel
-== 綁定輪盤
-
-Bind Wheel Key
-== 喚出滾輪綁鍵
 
 Binds
 == 綁定
@@ -1867,9 +1843,6 @@ Blend mode
 
 Blend strength
 == 混合強度
-
-Blink
-== 眨眼
 
 Blink the active local tee
 == 讓目前本機角色閃爍
@@ -2111,8 +2084,14 @@ Cannot join the target player's team
 Cannot open word list file. Previous words remain active.
 == 無法開啟詞表檔案，繼續使用上次成功載入的詞條。
 
+Cannot prepare word list. Previous words remain active.
+== Cannot prepare word list. Previous words remain active.
+
 Cannot read complete word list file. Previous words remain active.
 == 無法完整讀取詞表檔案，繼續使用上次成功載入的詞條。
+
+Cannot read the wiki file
+== Cannot read the wiki file
 
 Cannot remove the wiki file
 == 無法刪除 Wiki 檔案
@@ -2140,6 +2119,9 @@ Capsule ends
 
 Capsule ends: 0 = plain arc, 1 = silky shoulder, 2 = Apple continuous
 == 膠囊端頭：0 = 普通圓弧，1 = 絲滑端點，2 = 蘋果連續曲率
+
+Capture current appearance
+== 讀取目前外觀
 
 Capture queue
 == 擷取佇列
@@ -2381,9 +2363,6 @@ Check input device, system default mic, and mic permission first
 Check output device, confirm headphones/speakers are still online
 == 建議先檢查輸出設備，確認耳機或揚聲器仍在線
 
-Check the preset fields, label, and wheel capacity (64 entries).
-== 請檢查預設內容、顯示名稱及輪盤容量（最多 64 項）。
-
 Check your devices before tweaking thresholds; most silent-mic cases are simply the wrong input device.
 == 先檢查裝置再調閾值；大多數麥克風沒聲音的情況只是輸入裝置選錯了。
 
@@ -2407,9 +2386,6 @@ Chinese (Traditional)
 
 Chinese font:
 == 中文字型：
-
-CHN
-== 中國
 
 Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Size of key press icons".
 == 把顯示按鍵設為自己的、其他玩家或全部，再調按鍵顯示圖示大小。
@@ -2732,12 +2708,6 @@ Collapse
 Collapse console
 == 收起控制台
 
-Collect all players' skins on map join
-== 進圖時收集所有玩家皮膚
-
-Collect all players' skins on map join; manual edits turn it off.
-== 進圖時收集所有玩家皮膚；手動編輯佇列會自動關閉它。
-
 Collect CP %d before teleporting
 == 請先吃 CP %d，再進入回傳入口
 
@@ -2805,7 +2775,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == 聊天輸入框裡翻譯按鈕的顏色，以及該按鈕開啟的語言選單的顏色。
 
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
-== 為計分板列上色：已認證玩家、同戰隊玩家、好友，以及好友清單裡的戰隊成員。
+== 為計分板各行著色：已認證玩家、同戰隊玩家、好友，以及好友列表中的戰隊成員。
 
 Colors too close to the map background are hard to read while moving.
 == 顏色若太接近地圖背景，移動時會很難看清。
@@ -2837,14 +2807,8 @@ Command is not available on solo servers
 Command to run when joining server
 == 加入伺服器時執行的命令
 
-Command:
-== 指令：
-
 Commands
 == 指令
-
-Commands run in the console
-== 在控制台中執行的命令
 
 Commands run once per connection, not on every map change; remove the parts that print errors.
 == 指令每次連線只執行一次，不是每次更換地圖都執行；會報錯的部分請刪掉。
@@ -2989,6 +2953,9 @@ Configure hook range and collision guide lines
 
 Configure HUD island appearance
 == Configure HUD island appearance
+
+Configure identity, chat, assets, and custom bind menus
+== 設定身份、語錄、資源與自訂綁定選單
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
@@ -3170,6 +3137,9 @@ Console color scheme
 Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
 == 控制台配色：0=現代終端，1=經典 PowerShell, 2=自訂，3 以上為 Windows Terminal 配色
 
+Console command
+== 主控台命令
+
 Console command color
 == 控制台: 命令顏色
 
@@ -3181,6 +3151,9 @@ Console line spacing
 
 Console link color
 == 控制台: 連結顏色
+
+Console link hover hue shift in degrees
+== 主控台連結懸停色相偏移（度）
 
 Console number color
 == 控制台: 數字顏色
@@ -3299,6 +3272,9 @@ Converse with the last person you whispered to (private message)
 Convert threads
 == 轉換執行緒
 
+Converting %d%%
+== 正在轉換 %d%%
+
 Coordinate size on nameplate
 == 銘牌中座標的大小
 
@@ -3355,6 +3331,12 @@ Corner curve
 
 Could not add the player as a friend
 == 無法將該玩家加入好友
+
+Could not add this entry.
+== 無法加入此條目。
+
+Could not apply %s. The console could not parse the value.
+== Could not apply %s. The console could not parse the value.
 
 Could not back up configuration files.
 == 無法備份配置檔案。
@@ -3431,6 +3413,9 @@ Could not save configuration package.
 Could not save downloaded map. Try manually deleting this file: %s
 == 地圖下載失敗，請嘗試手動刪除此文件：%s
 
+Could not save keyword rules. Edit a rule to retry.
+== 無法儲存關鍵詞規則。編輯任一條規則即可重試。
+
 Could not save title credential
 == 無法儲存頭銜憑證，請檢查儲存權限
 
@@ -3445,9 +3430,6 @@ Count players only
 
 Countries
 == 國家
-
-Country code
-== 國家／地區代碼
 
 Country flag for grouping this community (ISO 3166-1 numeric)
 == 將此社區分組的國家/地區標誌（ISO 3166-1 數字）
@@ -3475,9 +3457,6 @@ Create a random skin
 
 Create category
 == 創建分類
-
-Create wheel presets here. Existing wheel entries are kept.
-== 在這裡編輯輪盤預設，保留既有輪盤項目。
 
 Created
 == 創建日期
@@ -3788,6 +3767,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats
+== DDStats
+
 DDStats shows UTC dates, updates daily and matches players by name only.
 == DDStats 的日期使用 UTC，每天更新，且僅按玩家名稱比對。
 
@@ -3854,8 +3836,8 @@ Debug tile layer clipping.
 Debug websockets
 == 偵錯 WebSocket
 
-Decides which skins the client downloads and lists, and can add a prefix to load prefixed skin variants.
-== 決定客戶端下載並列出哪些皮膚，還可以加前綴來載入帶前綴的皮膚變體。
+Decides which skins the client downloads and can add a prefix to load prefixed skin variants.
+== 決定用戶端下載哪些皮膚，並可加上前綴來載入帶前綴的皮膚變體。
 
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 專用 WebSocket 位址（留空使用 wss://qmclient.icu/ws）
@@ -3988,6 +3970,9 @@ Delete folder
 
 Delete screenshot
 == 刪除截圖
+
+Delete selected
+== 刪除選取項
 
 Delete selected items
 == 刪除選中項
@@ -4135,6 +4120,9 @@ Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == 禁用裁剪
+
+Disable fast practice mode
+== 關閉快速練習模式
 
 Disable Gores auto-switch when picking up extra weapon
 == 拿到額外武器時停用 Gores 自動切換
@@ -4322,6 +4310,9 @@ Download "%s"?
 Download community skins
 == 下載社群皮膚
 
+Download DDStats skins (including unapproved skins)
+== 下載 DDStats 皮膚（含未審批皮膚）
+
 Download failed
 == 下載失敗
 
@@ -4354,6 +4345,9 @@ Downloaded "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == 已下載：%.1f MiB（總大小未知）
+
+Downloading %d%%
+== 正在下載 %d%%
 
 Downloading map
 == 正在下載地圖
@@ -4685,6 +4679,9 @@ Dummy window size
 Dummy window zoom
 == 分身小窗縮放
 
+Dump the client-side world state (practice branch, tracks, switchers, view session)
+== 列印用戶端世界狀態（練習分支、軌跡、開關、檢視工作階段）
+
 Dump the current savestring
 == 匯出目前存檔字串
 
@@ -4807,9 +4804,6 @@ Edit skin texture
 
 Edit the name and clan fields; the dummy keeps its own values.
 == 編輯名稱與戰隊欄位；分身保留自己的設定值。
-
-Edit this custom command on the Bind Wheel page.
-== 請至 Bind 輪盤頁面編輯這條自訂命令。
 
 Edit touch controls
 == 編輯觸控設置
@@ -5030,6 +5024,9 @@ Enable fast input in Gores mode
 Enable fast map download
 == 啟用快速地圖下載
 
+Enable fast practice mode
+== 開啟快速練習模式
+
 Enable fat skin
 == 啟用脂肪皮
 
@@ -5098,6 +5095,12 @@ Enable left swipe offset on chat fade
 
 Enable LLM thinking mode (may increase response time)
 == 啟用 LLM 思考模式（可能增加響應時間）
+
+Enable LX Music lyric integration
+== 啟用 LX Music 歌詞整合
+
+Enable LX Music lyrics
+== 啟用 LX Music 歌詞
 
 Enable lyrics
 == 啟用歌詞
@@ -5279,9 +5282,6 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == 啟用輔助線，然後設定長度、樣式與顏色。
 
-Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
-== 開啟高亮和暱稱按鍵顯示後，可以分別調整卡錘、卡鉤的按下顏色。圖示大小跟隨按鍵顯示。
-
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == 啟用指示器；選擇它的距離模式，並設定 war-list 玩家是否使用不同顏色。
 
@@ -5381,6 +5381,9 @@ End bounce
 End marker of replay slice
 == 回放切片的結束標記
 
+Endless hook
+== 無限鉤
+
 Endless hook has been activated
 == 無限鉤已開啟
 
@@ -5405,11 +5408,23 @@ English font:
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == 請輸入 /practice 或重新開始，否則整隊將在 60 秒後被處死
 
+Enter a command and keep the menu under 64 entries.
+== 輸入命令，並確保選單不超過 64 個條目。
+
 Enter a CP number from 1 to 255.
 == 請輸入 1–255 的 CP 編號
 
+Enter a phrase.
+== 請輸入語錄。
+
+Enter fast practice
+== 進入快速練習
+
 Enter Password
 == 輸入密碼
+
+Enter solo mode
+== 進入單人模式
 
 Enter solo split mode
 == 進入單刷模式
@@ -5498,9 +5513,6 @@ ESC menu slide feel: 0=soft, 1=standard, 2=bouncy
 ESC replay minutes
 == ESC 保存回放分鐘數
 
-EUR
-== 歐洲
-
 Evaluate an expression
 == 評估表達式
 
@@ -5561,8 +5573,14 @@ Existing Player
 Exit and install
 == 結束並安裝
 
+Exit fast practice
+== 退出快速練習
+
 Exit replay view
 == 退出回放檢視
+
+Exit solo mode
+== 退出單人模式
 
 Exit spectating on both tees when either is hammered awake by another player
 == 任一方被其他玩家錘醒時，自動讓兩個 Tee 退出旁觀
@@ -5596,6 +5614,9 @@ Export demo cut
 
 Export failed
 == 匯出失敗
+
+Export failed. Could not compose %d edited slot(s).
+== Export failed. Could not compose %d edited slot(s).
 
 Export name contains invalid characters.
 == 導出名稱包含無效字符。
@@ -5671,9 +5692,6 @@ Extreme values make movement feel wrong, so change one step at a time.
 
 Extremely slow, for testing only
 == 極慢，僅測試用
-
-Eyes
-== 眼睛
 
 f = Frame rate
 == f = 幀率
@@ -6375,7 +6393,7 @@ General
 == 常規
 
 General DDNet gameplay display: showing other players and their shadow opacity, background quads and the default zoom.
-== DDNet 通用顯示：顯示其他玩家及其影子不透明度、背景方塊與預設縮放。
+== DDNet 通用玩法顯示：顯示其他玩家及其影子不透明度、背景貼圖和預設縮放。
 
 Generated skin outline color
 == 生成描邊顏色
@@ -6385,6 +6403,9 @@ Generated skin outline opacity
 
 Generated skin outline width
 == 生成描邊寬度
+
+Get all weapons
+== 獲得全部武器
 
 Getting game info
 == 正在獲取遊戲信息
@@ -6488,6 +6509,9 @@ Global UI size
 Global UI size percentage
 == 全域 UI 大小百分比
 
+Global wheel distance scale (10=default); settings card pages scroll 12x this per tick
+== 全域滾輪距離縮放（10 為預設值）；設定卡每格捲動為該值的 12 倍
+
 Glow
 == 輝光
 
@@ -6505,6 +6529,9 @@ Glow offset
 
 Glow range
 == 輝光範圍
+
+Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
+== Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
 
 Go back one marker
 == 返回上一個標記
@@ -6653,9 +6680,6 @@ Group names are limited to 16 characters
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 將輸入輔助集中分組：快速輸入、自動邊距、子 tick 瞄準與游標行為。
 
-GUI cursor
-== 介面游標
-
 GUI cursor assets
 == GUI 光標資源
 
@@ -6697,9 +6721,6 @@ Hammer: %s
 
 Handwriting
 == 手寫體
-
-Happy
-== 開心
 
 Has people playing
 == 有玩家
@@ -6920,11 +6941,11 @@ Highlight Color
 Highlight console commands
 == 醒目顯示控制台命令
 
-Highlight frozen teammates' hammer and hook inputs
-== 高亮凍結中隊友的卡錘和卡鉤
-
 Highlight game type
 == 高亮顯示遊戲類型
+
+Highlight held hammer and hook inputs while frozen
+== 高亮凍結時的卡錘和卡鉤
 
 Highlight message text gradient color
 == 提及訊息文字漸變色
@@ -6940,9 +6961,6 @@ Highlighted message
 
 Highlighted message color
 == 提及訊息顏色
-
-Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
-== 高亮凍結中持續按錘的隊友，並在暱稱按鍵顯示兩側顯示卡錘、卡鉤圖示。
 
 Hit feedback
 == 命中回饋
@@ -7175,11 +7193,8 @@ Icon symbols:
 Icons
 == 圖示
 
-Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
-== 放開按鍵或解凍後隱藏圖示。他人按鍵狀態需要伺服器支援預輸入；不顯示目前操控角色的卡鍵狀態。
-
-Identity preset
-== 身分預設
+Identity
+== 身份
 
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == 若為 1，僅在連接時自動開始錄製一次 demo；若為 0，遊戲結束後也會重新自動開始錄製
@@ -7661,6 +7676,9 @@ Jelly others
 Jelly strength
 == Q 彈強度
 
+Jetpack
+== 噴射背包
+
 Join
 == 進入
 
@@ -7773,7 +7791,7 @@ Keep the text light on a dark background; press "Reset tooltip appearance" to re
 == 深色背景配淺色文字最好讀；想恢復建議樣式就點重設提示外觀。
 
 Keep these apart from the team colors, or same-clan names blend into the team panel and become hard to read.
-== 這些顏色要與隊伍色區分開，否則同戰隊名字會融進隊伍面板、難以辨認。
+== 這些顏色要和隊伍顏色區分開，否則同戰隊名字會融進隊伍面板裡，變得難以辨認。
 
 Keep unsent message on chat close
 == 關閉聊天時保留未發送內容
@@ -7909,9 +7927,6 @@ Kugou hook helper path (empty=beside QmClient)
 
 l = Local time
 == l = 本地時間
-
-L select  R swap  M select only
-== 左鍵選擇 右鍵交換 中鍵僅選擇
 
 Label
 == 標籤
@@ -8095,6 +8110,9 @@ Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-cli
 
 Left/right channel width
 == 左右聲道寬度
+
+Legacy bind script
+== 舊版綁定腳本
 
 Legacy option: connections that skip TLS verification are rejected
 == 舊版選項：跳過 TLS 驗證的連線會被拒絕
@@ -8399,8 +8417,8 @@ Local-only
 Locate
 == 定位
 
-Lock delay
-== 鎖隊延遲
+Lock both teams immediately when entering solo split mode
+== 進入單刷模式時立即鎖定雙方隊伍
 
 Lock team
 == 鎖定隊伍
@@ -8447,6 +8465,9 @@ Low contrast between name and message text makes chat hard to scan in fights.
 Lower means better quality and larger files; 18 is recommended
 == 數字越低越清晰、檔案越大；建議使用 18
 
+LX Music open API port (0=auto-detect from LX Music config)
+== LX Music 開放 API 連接埠（0=自動從 LX Music 設定讀取）
+
 LXGW WenKai is available.
 == 霞鶩文楷可用。
 
@@ -8477,11 +8498,8 @@ Main Asset
 Main menu
 == 主菜單
 
-Main Tee
-== 本體
-
-Main Tee and dummy
-== 本體與分身
+Main-world ghost opacity
+== 主世界影子不透明度
 
 Maintains the list of hostile players and groups plus the rules used to display them.
 == 維護敵對玩家與群組的清單，以及顯示它們所用的規則。
@@ -8534,8 +8552,8 @@ Manage hostile-list chat shortcuts
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
 
-Manage profiles and bind wheel presets
-== 管理設定檔與 Bind 輪盤預設
+Manage profiles and add identity entries to bind menus
+== 管理預設，並將身份條目加入綁定選單
 
 Manage the skin rotation queue
 == 管理皮膚輪換佇列
@@ -8780,9 +8798,6 @@ Max Screenshots
 Max size
 == 最大尺寸
 
-Max skins in the rotation queue; 0 stops collecting.
-== 輪替佇列最多保留多少皮膚；0 表示停止收集。
-
 Max stroke entries to keep
 == 最多保留的描邊條目數
 
@@ -8882,6 +8897,9 @@ may cause delay
 May overload the service
 == 可能導致服務過載
 
+Measure a fixed cold glyph batch with performance diagnostics enabled
+== Measure a fixed cold glyph batch with performance diagnostics enabled
+
 Medium
 == 中
 
@@ -8932,6 +8950,9 @@ Menu panel color
 
 Menu panel opacity
 == 選單面板不透明度
+
+Menu type
+== 選單類型
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == 在此視窗（毫秒）內合併連續相同的 echo 訊息（0 表示不合併）
@@ -9269,9 +9290,6 @@ MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 == n = 預測延遲
 
-NA
-== 北美
-
 Name
 == 名稱
 
@@ -9349,9 +9367,6 @@ Name plates size
 
 Name to change to near finish (when qm_change_name_near_finish enabled)
 == 接近終點時要改成的名字（啟用 qm_change_name_near_finish 時生效）
-
-Name:
-== 名稱：
 
 Name: %s
 == 名稱：%s
@@ -9514,9 +9529,6 @@ New name
 
 New name:
 == 新文件名：
-
-New preset
-== 新增預設
 
 New preset name
 == 新預設名稱
@@ -10058,6 +10070,9 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Only what you can't imagine, nothing Dream can't do
 == 只有你想不到，沒有夢做不到
 
+Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
+== 只有你自己的世界副本在模擬：其他玩家屬於伺服器側的 Tee，你踩到的開關不會影響他們。影子開關與不透明度同樣作用於他們。
+
 Opacity
 == 不透明度
 
@@ -10070,6 +10085,9 @@ Opacity of freeze bars inside freeze
 Opacity of other teams' tees and name plates
 == 其他隊伍玩家與名牌的透明度
 
+Open a bind menu (identity, chat, assets, custom)
+== 開啟綁定選單（身份、語錄、資源、自訂）
+
 Open a link to join the community.
 == 開啟連結即可加入社群。
 
@@ -10081,9 +10099,6 @@ Open a link to visit the site.
 
 Open a matching settings card directly
 == Open a matching settings card directly
-
-Open bindwheel selector
-== 打開綁定輪盤選擇器
 
 Open DDNet Wiki
 == 開啟 DDNet Wiki
@@ -10123,6 +10138,9 @@ Open TClient configuration file locations
 
 Open the card and enable only the elements you want; each option explains what it draws.
 == 展開卡片，只啟用需要的元素；每個選項都說明它會繪製什麼。
+
+Open the custom bind menu
+== 開啟自訂綁定選單
 
 Open the directory that contains the configuration and user files
 == 打開存有配置文件與用戶文件的文件夾路徑
@@ -10202,14 +10220,17 @@ Optional
 Optional authentication key for the DNSBL provider
 == 指定 DNSBL 提供商的可選身份驗證密鑰
 
-Optional Axiom API key for scoreboard points and vote map details (leave empty for anonymous queries)
-== 可選的 Axiom API 金鑰，用於查詢計分板積分與投票地圖詳情（留空則匿名查詢）
+Optional Axiom API key for scoreboard points and map queries (leave empty for anonymous queries)
+== 可選的 Axiom API 金鑰，用於計分板積分與地圖查詢（留空則以匿名方式查詢）
 
 Optional export range in seconds. Leave empty to export the whole demo.
 == 可選的匯出範圍（秒）；留空匯出整個回放。
 
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 == 可選的起止時間，單位是秒。兩個都留空就匯出整段 demo。
+
+Options
+== 選項
 
 Options here affect networking or identity; test on a server before using them in matches.
 == 這裡的選項會影響網路或身分識別；在比賽中使用前，先到伺服器上測試。
@@ -10334,9 +10355,6 @@ Override Freeze Tile Entity Alpha (0-100)
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == 覆寫 Ping 估算位置，可用：auto、af、as、as:cn、eu、na、oc、sa（自動、非洲、亞洲、中國、歐洲、北美洲、大洋洲/澳洲、南美洲）
 
-Override Selected
-== 覆蓋選定項
-
 Overview
 == 概覽
 
@@ -10346,14 +10364,17 @@ Overwrite clan even if empty
 Own hook line width
 == 自己的鉤子輔助線寬度
 
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== 「自己的」包含本體和分身。其他玩家的提示只對同隊玩家生效，且需要伺服器支援預輸入。
+
 p = Ping latency
 == p = Ping 延遲
 
 Pack name
 == 包名
 
-Pain
-== 疼痛
+Panel
+== 面板
 
 Panel opacity
 == 面板不透明度
@@ -10460,6 +10481,15 @@ Path to client key for the MySQL/MariaDB SSL connection
 Pause
 == 暫停
 
+Pause recording
+== 暫停錄製
+
+Pause recording the practice line (the recorded part is kept)
+== 暫停錄製練習線路（已錄部分保留）
+
+Pause recording without discarding what has been recorded so far. Resuming starts a new segment, so the paused stretch is not drawn as a straight line.
+== 暫停錄製，已錄內容不會丟棄。繼續時會開始新的分段，暫停期間的路段不會被畫成一條直線。
+
 Pause the current demo
 == 暫停回放
 
@@ -10474,9 +10504,6 @@ Pause/unpause game
 
 Penalty in seconds for saving or swapping positions
 == 保存或交換位置的懲罰時間（秒）
-
-Pending sync
-== 待同步
 
 Per-name volume (name=percent)
 == 按名字單獨音量（name=percent）
@@ -10535,6 +10562,9 @@ Pet Skin:
 Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
 == 寵物純屬裝飾；如果額外繪製影響效能，就把它們關掉。
 
+Phrase
+== 語錄
+
 Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
 == 分別選提示背景色和提示文字色，拖動提示字號滑條，想要彈出時的小回彈就保持提示回彈動畫開啟。
 
@@ -10575,7 +10605,7 @@ Pick a text style or a moon or sun badge, check the preview, then press "Save" t
 == 選擇文字款、月亮膠囊或太陽膠囊。查看預覽後按「保存」，其他玩家就能看到這款頭銜。
 
 Pick each color row and choose a color; the authed and same-clan colors apply to the scoreboard, the two list colors apply to the friends list.
-== 逐列選擇顏色：已認證與同戰隊顏色作用於計分板，兩個清單顏色作用於好友清單。
+== 逐行選擇顏色；已認證和同戰隊顏色作用於計分板，兩個列表顏色作用於好友列表。
 
 Pick result: %s
 == 抽取結果：%s
@@ -10654,6 +10684,9 @@ Play back a demo
 
 Play background music
 == 播放背景音樂
+
+Play rank ghost replay sounds and hit effects locally
+== 在本機播放 Rank 1 影子的回放音效和命中特效
 
 Play replay
 == 播放回放
@@ -11033,6 +11066,9 @@ Position jump tip
 Position:
 == 座標
 
+Practice a map privately, hide the main-world ghost, show a run timer and bind practice commands
+== 私下練習整張地圖：可隱藏主世界影子、顯示本次用時，並為練習指令綁定快捷鍵。
+
 Practice mode can't be enabled in team 0 mode.
 == 0 隊模式下不能開啟練習模式
 
@@ -11097,7 +11133,7 @@ Prediction
 == 預測
 
 Prediction and latency compensation moved to the "Network compensation" sub-tab of the DDNet page.
-== 預測與延遲補償已移到 DDNet 頁的「網路補償」子頁籤。
+== 預測與延遲補償已移到 DDNet 頁面的「網路補償」子頁籤。
 
 Prediction boundary (ms, increases latency but reduces ping jitter)
 == 預測邊界（單位：毫秒，增加延遲但可減少因 ping 波動導致的卡頓）
@@ -11140,9 +11176,6 @@ Preset %d
 
 Preset bar
 == 預設欄
-
-Preset type
-== 預設類型
 
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == 使用 libx264 編碼視頻時的預設，默認 5（medium），0 為 ultrafast，9 為 placebo（最慢，不推薦）
@@ -11261,8 +11294,8 @@ Preview selected file
 Preview spacing does not match every map; check in game before a match.
 == 預覽的間距不一定符合所有地圖；比賽前請先在遊戲中確認。
 
-Preview the bind wheel layout and selection
-== Preview the bind wheel layout and selection
+Preview the bind menu layout and entries
+== 預覽綁定選單版面與條目
 
 Preview the composed status bar output
 == Preview the composed status bar output
@@ -11576,9 +11609,6 @@ Querying...
 Queue is empty
 == 隊列為空
 
-Queue length
-== 佇列長度
-
 Queue preset: %s
 == 隊列預設：%s
 
@@ -11681,12 +11711,6 @@ Rank 1 demo downloaded to '%s'
 Rank 1 replays
 == Rank 1 回放
 
-Rank demo already available in the demo browser: %s
-== 該回放已存在於 demo 瀏覽器目錄：%s
-
-Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
-== Rank 示範已下載：%s。可從 Rank 1 清單或示範瀏覽器播放。
-
 Rank ghost loaded: %s, %s s. It follows your current run.
 == Rank 影子已載入：%s，%s 秒。正在跟隨你目前的跑圖進度。
 
@@ -11764,6 +11788,9 @@ Rank ghost: the replay has an invalid run range
 
 Rank ghost: the replay list is empty or malformed
 == Rank 影子：回放列表為空或格式有誤
+
+Rank ghost: this replay has no playable tee
+== Rank 1 影子：此回放沒有可播放的 Tee
 
 Rank ghost: timed out waiting for the map to load
 == Rank 影子：等待地圖載入逾時
@@ -12035,8 +12062,8 @@ Remove a type from the exclusion filter for a specific community
 remove a voting option
 == 刪除投票選項
 
-Remove Bind
-== 刪除綁定
+Remove all weapons
+== 移除全部武器
 
 Remove chat
 == 刪除消息記錄
@@ -12082,6 +12109,9 @@ Remove war name:
 
 Removed %s from friends
 == 已將 %s 移出好友
+
+Removed from this bind menu.
+== 已從此綁定選單移除。
 
 Removes all bindwheel binds
 == 移除全部綁定輪盤綁定
@@ -12269,11 +12299,17 @@ Replaces or hides chat lines that match words on your own list before they are s
 Replay
 == 回放
 
+Replay a saved practice ghost group in demo-style view mode
+== 以 demo 式檢視模式回放已儲存的練習影子組
+
 Replay downloaded
 == 回放已下載
 
 Replay feature is disabled!
 == 短時回放功能未啟用！
+
+Replay ghost sounds and effects
+== 播放影子回放的音效和命中特效
 
 Replay list: failed to load, press Refresh to retry
 == 回放清單：載入失敗，按重新整理重試
@@ -12328,6 +12364,9 @@ Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == 本服未開啟救援功能，且你所在隊伍也沒有開啟 /practice。注意：練習模式下無法獲得排名
+
+Rescue mode
+== 救援模式
 
 Rescue mode changed to auto.
 == 救援模式已切換為 auto。
@@ -12407,9 +12446,6 @@ Reset mouse position when opening bind wheel
 Reset pie menu appearance
 == 還原圓盤選單預設外觀
 
-Reset position of mouse when opening bindwheel
-== 打開快捷綁定輪盤時重置鼠標位置
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == 進入伺服器時重置統計（0=累計統計，1=每次進服重置）
 
@@ -12476,6 +12512,12 @@ Restore old single-segment hook collision line behavior
 Restore recommended
 == 恢復建議值
 
+Restore the practice world to the state it had when fast practice was enabled
+== 把練習世界恢復到開啟快速練習時的狀態
+
+Restore the practice world to the state it had when fast practice was enabled. The recorded line is kept and a new segment is started.
+== 把練習世界恢復到開啟快速練習時的狀態。已錄線路保留，並從新分段繼續。
+
 Restored the built-in content
 == 已還原內建內容
 
@@ -12496,6 +12538,9 @@ Retry remote stats
 
 Retrying…
 == 正在重試…
+
+Return to respawn point
+== 回到重生點
 
 Reverse chat gradient colors
 == 反轉漸層顏色 (聊天)
@@ -12523,6 +12568,12 @@ Review the entries and change only what you understand; defaults are tuned for n
 
 Reviews configuration values that differ from their defaults and resets them.
 == 檢查與預設值不同的設定項，並可將其重設。
+
+Rewind practice world
+== 回溯練習世界
+
+Rifle
+== 步槍
 
 Rifle Laser Inner Color
 == 激光槍彈道實心顏色
@@ -12644,8 +12695,8 @@ Run server
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
 == 連線到伺服器時自動執行指令，分成連線階段和加入階段。
 
-SA
-== 南美
+Runs your own copy of the map while the server keeps your real Tee where you entered, with a run timer and keys for the practice commands.
+== 運行屬於你自己的地圖副本，伺服器保留你進入時的真實角色；附帶本次用時與練習指令綁定。
 
 Same as "vote no"
 == 與“投反對票”相同
@@ -12686,6 +12737,9 @@ Save changes
 Save changes back to this preset
 == 將改動保存回此預設
 
+Save configuration
+== 儲存設定
+
 Save current queue as a new preset
 == 一鍵保存當前隊列為新預設
 
@@ -12706,6 +12760,9 @@ Save loaded; local record removed.
 
 Save loaded; the local record could not be removed.
 == 存檔讀取成功，但未能刪除本機紀錄。
+
+Save phrase
+== 儲存語錄
 
 Save player names in replay
 == 在回放中保存玩家名稱
@@ -12769,12 +12826,6 @@ Save/Load Skin
 
 Saved
 == 已儲存
-
-Saved to Downloads/QmClient
-== 已儲存到 下載/QmClient
-
-Saved to the bind wheel.
-== 已儲存至 Bind 輪盤。
 
 Saved with your title and shared with other QmClient players.
 == 隨頭銜一起儲存，並同步給其他 QmClient 玩家。
@@ -12943,6 +12994,9 @@ Search country flag…
 
 Search donor asset
 == 搜索來源材質
+
+Search ghosts
+== 搜尋影子
 
 Search main asset
 == 搜索主材質
@@ -13268,6 +13322,9 @@ Server votes
 Server-dependent
 == 取決於伺服器
 
+Server-side ghost opacity during fast practice (%)
+== 快速練習中伺服器側影子的不透明度（%）
+
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == 設定背景顏色與背景不透明度，再設文字顏色、選取文字顏色與選取背景顏色；下方會即時預覽。
 
@@ -13281,7 +13338,7 @@ Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit t
 == 瞄準用遊戲內鼠標靈敏度，選單用鼠標靈敏度（界面），再用最小光標距離和最大光標距離限制光標位置。
 
 Set "Prediction margin" in milliseconds, tick "AntiPing (latency compensation)" and then choose what to predict; the redundancy switch is experimental and only useful on lossy connections.
-== 以毫秒設定「預測餘量」，勾選「AntiPing（延遲補償）」，再選擇要預測什麼；冗餘開關是實驗性的，只在丟包鏈路上有用。
+== 以毫秒設定「預測餘量」，勾選「延遲補償（AntiPing）」，再選擇要預測的內容；冗餘開關是實驗性的，只在封包遺失嚴重的連線上有用。
 
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
 == 把切換間隔設為 0 就會停止定時切換，佇列留給手動切換或進圖時使用。
@@ -13318,6 +13375,9 @@ Set fullscreen mode: 0=off, 1=exclusive, 2=desktop, 3=windowed fullscreen
 
 Set microphone mute state (0=on, 1=mute)
 == 設置麥克風靜音狀態（0=開啟，1=靜音）
+
+Set practice respawn point
+== 設定練習重生點
 
 Set server to singleplayer mode (no player interaction, must be set before loading map)
 == 將伺服器設置為單人模式（沒有玩家交互，必須在加載地圖之前設置）
@@ -13835,6 +13895,9 @@ Show grenade and laser trajectory preview
 Show Grid
 == 顯示網格
 
+Show hammer icon
+== 顯示錘子圖示
+
 Show hammer status
 == 顯示錘狀態
 
@@ -13849,6 +13912,9 @@ Show hitbox mode
 
 Show Hook Collision
 == 顯示鉤子輔助線
+
+Show hook icon
+== 顯示鉤子圖示
 
 Show hook strength icon indicator
 == 顯示鉤索強度圖標
@@ -14023,6 +14089,9 @@ Show lyrics in Dynamic Island
 
 Show main tee title locally
 == 本機顯示本體頭銜
+
+Show main-world ghost
+== 顯示主世界影子
 
 Show map details
 == 顯示地圖細節
@@ -14243,6 +14312,9 @@ Show position and angle (mini debug)
 Show position and angle debug info
 == 顯示位置和角度調試信息
 
+Show practice timer
+== 顯示練習計時
+
 Show predicted position as ghost, original as unpredictable player
 == 將預測位置顯示為幽靈，原始位置顯示為不可預測玩家
 
@@ -14296,6 +14368,9 @@ Show server settings
 
 Show server uptime
 == 顯示伺服器運作時間
+
+Show server-side tees as ghosts during fast practice
+== 快速練習中把伺服器側的 Tee 顯示為影子
 
 Show settings card borders
 == 顯示設定卡片邊框
@@ -14419,6 +14494,9 @@ Show the original text locally below translated outgoing messages
 
 Show the pet
 == 顯示寵物
+
+Show the practice run timer in the HUD
+== 在 HUD 上顯示本次練習用時
 
 Show the reason in name plates
 == 名牌上顯示敵意原因
@@ -14649,7 +14727,7 @@ Size of entity text data (20% to 100%)
 == 實體文本數據的大小（20% 到 100%）
 
 Size of hook strength icon and number indicator
-== 鉤索強度顯示大小
+== 鉤索強度圖標與數值的大小
 
 Size of key press icons
 == 按鍵顯示圖標大小
@@ -14683,6 +14761,9 @@ Skin is loading.
 
 Skin list sort mode (0=Name, 1=Release date)
 == 皮膚列表排序模式（0=名稱，1=發佈時間）
+
+Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)
+== 皮膚清單來源篩選（0=全部，1=官方，2=社群，3=DDStats，4=自訂 URL，5=原版）
 
 Skin options
 == 皮膚選項
@@ -15170,14 +15251,23 @@ Start holding the hook before loading the savegame to keep the hook
 Start marker of replay slice
 == 回放切片的開始標記
 
+Start or resume recording the practice line
+== 開始或繼續錄製練習線路
+
 Start playback of ghosts
 == 開始播放鬼影
+
+Start recording
+== 開始錄製
 
 Start recording a demo
 == 開始錄製回放
 
 Start recording a video
 == 開始錄製視頻
+
+Start recording the fast-practice line, or resume after a pause. Recording is always manual: nothing is recorded until this is pressed.
+== 開始錄製快速練習線路，或在暫停後繼續。錄製始終是手動的：按下之前不會記錄任何內容。
 
 Start skin queue from a random position when entering a map
 == 進入地圖時從皮膚佇列隨機位置開始
@@ -15269,6 +15359,9 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == 已經靠 %d 位贊助者撐到現在，要看看嗎？
 
+Stop and save recording
+== 結束並儲存錄製
+
 Stop following
 == 停止跟隨
 
@@ -15299,6 +15392,12 @@ Stop recording a demo
 Stop recording a video
 == 停止錄製視頻
 
+Stop recording and save the practice line as a ghost group
+== 結束錄製並把練習線路存為影子組
+
+Stop recording and write the line to disk right away as a ghost group. The saved group can be replayed from the bind menu or the Ghost page.
+== 結束錄製，並立即把線路作為影子組寫入磁碟。儲存後的組可以從綁定選單或影子頁回放。
+
 Stop rendering text overlays in editor or with entities: higher = less detail = faster
 == 停止在編輯器中或使用實體渲染文本覆蓋：高值 = 更少的細節 = 更快的速度
 
@@ -15307,6 +15406,12 @@ Stop server
 
 Stop the current demo
 == 結束回放
+
+Store the current practice tee state as the respawn point
+== 把目前練習 Tee 狀態存為重生點
+
+Store the current tee state (position, weapons, jumps and movement state) as the practice respawn point.
+== 把目前 Tee 狀態（位置、武器、跳躍與移動狀態）存為練習重生點。
 
 Streamer mode
 == 直播模式
@@ -15338,9 +15443,6 @@ Stroke retention time (0=Never disappear)
 Strokes are local only and vanish when you leave the map; set the fade time to 0 to keep them until you draw again.
 == 筆跡只在本機顯示，離開地圖就會消失；把淡出時間設為 0，就能保留到你下次再畫。
 
-Strong / Weak
-== 強弱提示貼圖
-
 Strong hook
 == 強鉤
 
@@ -15349,6 +15451,9 @@ Strong hook color
 
 Strong Weak Hook
 == 強弱鉤
+
+Stuck input display scope
+== 顯示範圍
 
 Style
 == 樣式
@@ -15394,9 +15499,6 @@ Support is optional; nothing here changes client behavior.
 
 Support ♥
 == 支持 ♥
-
-Surprise
-== 驚訝
 
 Swap
 == 交換
@@ -15764,6 +15866,12 @@ Tele
 Teleport all weapons (deprecated, use special entities instead)
 == 所有武器的傳送（已棄用，請使用特殊實體代替）
 
+Teleport back to the practice respawn point
+== 傳送回練習重生點
+
+Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
+== 傳送回練習重生點，並恢復在那裡儲存的 Tee 狀態。只回滾 Tee，世界照常運行。
+
 Teleport dummy to cursor
 == 將分身傳送到光標
 
@@ -15920,20 +16028,23 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == 感謝您為 QmClient 做出的貢獻
 
-Thanks!
-== 謝謝！
-
 The audio device couldn't be initialised.
 == 初始化音頻設備失敗。
 
 The auth level you need to tele others
 == 傳送其他玩家所需的權限等級
 
+The bind menu is full.
+== 綁定選單已滿。
+
 The card only appears while such a bind exists; click its key field to change the key, and the row label is the command it runs.
 == 只有存在這類綁定時卡片才會出現；點它的按鍵欄就能換鍵，列標題就是它執行的命令。
 
 The command is empty, incomplete, or exceeds the local config line limit.
 == 指令為空、不完整或超過本機設定行限制。
+
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== 顯示範圍同時控制 Tee 變色和圖示。兩個圖示各有獨立開關，關掉方向鍵顯示後仍可使用。
 
 The downloaded file is not a valid demo
 == 下載的檔案不是有效的示範
@@ -16018,9 +16129,6 @@ The update-rate and frame-rate caps moved to the Graphics page; they belong next
 
 The watermarked screenshot was saved next to the original
 == 含浮水印的螢幕截圖已儲存到原圖旁
-
-The wheel changed. Your draft can be added as a new preset.
-== 輪盤項目已變更，目前草稿可以作為新預設加入。
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 紋理文件 %s 的寬度無法被 %d 整除，或者高度無法被 %d 整除，這可能會導致顯示錯誤。
@@ -16172,9 +16280,6 @@ Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split ke
 Tick "Debug mode" to turn all options on, then set "Performance debug log threshold (ms)" to choose which frames get logged.
 == 勾選偵錯模式會開啟全部選項，然後設定效能偵錯日誌閾值（ms）來決定記錄哪些幀。
 
-Tick "Download skins", "Download community skins" or "Vanilla skins only", then type a "Skin prefix" or use a preset such as "kitty".
-== 勾選下載官方皮膚、下載社群皮膚或只顯示原生皮膚，然後輸入皮膚名稱前綴，或直接用 kitty 之類的預設。
-
 Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its movement, and the weapon switches are separate rows below.
 == 勾上動態視野即可開啟；平滑動態視野讓鏡頭移動更順滑，武器切換則是下面各自獨立的列。
 
@@ -16209,7 +16314,7 @@ Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "
 == 勾選顯示輸入，然後用鍵盤大小、滑鼠大小、不透明度與位置滑桿調整尺寸與位置。
 
 Tick "Show others" to draw other teams translucently, set their shadow opacity in the dependent row below it, and use "Show background quads" and "Default zoom" for the view.
-== 勾選「顯示其他隊伍」可半透明繪製其他隊伍，其影子不透明度在下方從屬列設定；視野相關還有「顯示背景方塊」和「預設縮放」。
+== 勾選「顯示其他玩家」會半透明繪製其他隊伍，在它下方的依賴行裡設定影子不透明度，並用「顯示背景貼圖」和「預設縮放」調整視圖。
 
 Tick "Skip the main menu", and use "Settings file" or "Themes directory" to open those locations.
 == 勾選「跳過主選單」，用「設定檔」或「主題資料夾」開啟對應位置。
@@ -16222,6 +16327,9 @@ Tick delay before executing qm_execute_on_join
 
 Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"; "Lock delay" and "Spectator opacity" appear below.
 == 勾選想要的動作，例如解凍後自動取消旁觀或自動鎖定隊伍；下方會出現鎖定延遲與旁觀透明度。
+
+Tick the download toggles, then use "Data source" in "Skin search" to choose which source catalog is shown.
+== 勾選下載開關後，在「皮膚搜尋」裡用「資料來源」選擇要顯示哪個來源目錄。
 
 Ticks after freeze before applying max prediction reduction
 == 凍結後經過多少 tick 才應用最大預測減少
@@ -16321,6 +16429,9 @@ Timestamp
 
 Tiny Tee Size
 == 迷你 Tee 大小
+
+Title
+== 標題
 
 Title bob angular speed in 1/100 rad/s
 == 頭銜浮動角速度（1/100 弧度每秒）
@@ -16432,6 +16543,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == 切換本地控制台
+
+Toggle main-world ghost
+== 切換主世界影子
 
 Toggle map preview
 == 地圖預覽
@@ -16706,6 +16820,9 @@ Translation Settings
 transmits your player name to info.ddnet.org
 == 會將玩家暱稱發送到 info.ddnet.org
 
+Trigger key
+== 觸發鍵
+
 Trigger limits
 == 觸發限制
 
@@ -16753,6 +16870,9 @@ Tune variable to value or show current value
 
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 機器較弱時關掉動效，卡片會立刻展開、捲動手感也隨之關閉。游標形狀只是外觀：三種樣式都佔同一個字元格。
+
+Turn off "Show main-world ghost" to hide every Tee from the server, other players included; while it is on, the opacity slider sets how visible they are. The bind rows send the same commands as the practice menu, so a bound key needs no chat box.
+== 關閉「顯示主世界影子」會隱藏所有來自伺服器的 Tee（包含其他玩家）；保持開啟時，不透明度滑桿決定它們有多顯眼。綁定列送出的指令與練習選單一致，按鍵觸發無需開啟聊天框。
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == 開啟「掉水自動發言」，填上想要的聊天內容，想要表情就再開啟「掉水發表情」並選好表情 ID。
@@ -16825,6 +16945,9 @@ Turn on "Team tee glow", then set "Team tee glow intensity" and "Team tee glow h
 
 Turn on "Weapon switch animation" or "Play a flip animation while reloading weapons", then pick an "Animation range" and tune duration, distance and rotation.
 == 開啟武器切換動畫或換彈翻轉動畫，再選動畫範圍，並調整時長、距離和旋轉角度。
+
+Turn on LX Music open API
+== 開啟 LX Music 開放 API
 
 Turn on one option at a time: switching tee or closing chat can throw away a message you are still typing.
 == 一次只開一項：切換 Tee 或關閉聊天可能丟掉你還沒寫完的訊息。
@@ -17024,6 +17147,9 @@ Underscore
 Underscore: a line under the character that follows
 == 底線：畫在下一個字元下方的一條線
 
+Undo deep freeze
+== 解除深凍
+
 Unexpected map upload response.
 == 地圖上傳介面傳回了異常回應。
 
@@ -17162,11 +17288,11 @@ Untick "Show other players' large emoticons" or "Show other players' launched em
 Untick "Use original style" to reach "Background color", the countdown options and "Always show song title and artist"; "Show team" works in both styles.
 == 取消勾選使用原始樣式，才能設定背景色、倒數選項與永遠顯示歌曲標題與歌手；顯示隊伍在兩種樣式下都有效。
 
+Untitled
+== 未命名
+
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
 == 不常見的刷新率可能造成畫面撕裂；建議優先使用顯示器的原生刷新率。
-
-Up to 6 Chinese or 12 ASCII characters
-== 最多 6 個中文或 12 個英文字符
 
 Update
 == 更新
@@ -17198,6 +17324,12 @@ Update ready to install
 Update sources are temporarily unavailable
 == 更新來源暫時無法使用
 
+Updated this configuration.
+== 已更新此設定。
+
+Updated this phrase.
+== 已更新此語錄。
+
 Updating preview…
 == 正在更新預覽…
 
@@ -17218,6 +17350,9 @@ Upstream redundancy (experimental)
 
 URL for downloading community skins
 == 用於下載社區皮膚的 URL
+
+URL for downloading DDStats skins
+== 下載 DDStats 皮膚的 URL
 
 URL for downloading maps (must start with https://)
 == 用於下載地圖的 URL（必須以 https:// 開頭）
@@ -17320,9 +17455,6 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 使用高帶寬模式。伺服器所需的帶寬加倍。僅限局域網使用
-
-Use installed asset names. Empty fields keep the current asset.
-== 填寫已安裝的貼圖名稱；留空表示保留目前貼圖。
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == 使用 K 鍵自殺（重新開始），Q 鍵暫停並旁觀其他玩家。其他按鍵綁定可在設置中查看。
@@ -17870,17 +18002,14 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 == 這是什麼
 
+Wheel
+== 輪盤
+
 Wheel distance per tick; hold Alt for 3x
 == 每格滾輪距離；按住 Alt 為三倍
 
-Wheel label
-== 輪盤顯示名稱
-
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 == 滾輪手感：0=原始（每格重新開始），1=平滑（速度延續），2=彈簧
-
-Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
-== 滾輪每格的介面像素步長；設定卡片頁面每格捲動此值的 12 倍
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已啟用 TClient 彩虹 Tee 時，本功能不會生效。
@@ -18296,6 +18425,9 @@ You have requested to swap with %s. Use /cancelswap to cancel the request.
 You have started racing already
 == 你已經開始比賽了
 
+You have to be in a team (from 1-127)
+== 必須處於 1–127 號隊伍中
+
 You have to be in a team (from 1-63)
 == 必須處於 1–63 號隊伍中
 
@@ -18661,6 +18793,62 @@ Hook
 Relative aim
 == 相對瞄準
 
+[Editor]
+Could not generate the quad art image.
+== Could not generate the quad art image.
+
+[Editor]
+Drawing tools require the active physics layers.
+== Drawing tools require the active physics layers.
+
+[Editor]
+Failed to write sound to file '%s'.
+== Failed to write sound to file '%s'.
+
+[Editor]
+No image selected.
+== No image selected.
+
+[Editor]
+No sound selected.
+== No sound selected.
+
+[Editor]
+Saving failed: Could not prepare or queue the map.
+== Saving failed: Could not prepare or queue the map.
+
+[Editor]
+Saving failed: Could not write map file '%s'.
+== Saving failed: Could not write map file '%s'.
+
+[Editor]
+Sync interrupted: the map was loaded, but the editor could not refresh it
+== Sync interrupted: the map was loaded, but the editor could not refresh it
+
+[Editor]
+The drawing is too large. Split it into smaller strokes.
+== The drawing is too large. Split it into smaller strokes.
+
+[Editor]
+The drawing preview is too large to display.
+== The drawing preview is too large to display.
+
+[Editor]
+The file path is too long.
+== The file path is too long.
+
+[Editor]
+The game and physics layers must have matching dimensions before they can be extended.
+== The game and physics layers must have matching dimensions before they can be extended.
+
+[Editor]
+The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+== The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+
+[Editor]
+The requested tile layer dimensions are too large.
+== The requested tile layer dimensions are too large.
+
 [Friend auto follow]
 Follow this friend across servers
 == 跟隨好友換服
@@ -18864,6 +19052,18 @@ AUTO
 [Start menu]
 Play
 == 開始遊戲
+
+[Stuck input display scope]
+All
+== 全部的
+
+[Stuck input display scope]
+Others
+== 別人的
+
+[Stuck input display scope]
+Own
+== 自己的
 
 [Team size]
 maximum

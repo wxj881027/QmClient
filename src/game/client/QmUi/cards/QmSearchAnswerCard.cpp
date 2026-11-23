@@ -7,12 +7,16 @@
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmCardWikiPanel.h>
+#include <game/client/QmUi/QmWikiDocs.h>
 #include <game/client/QmUi/SettingsCardContentBridge.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiContext.h>
 #include <game/client/components/qmclient/search_answers.h>
 
 #include <algorithm>
+#include <array>
 #include <new>
 #include <stdexcept>
 #include <type_traits>
@@ -148,4 +152,67 @@ void qm_card_catalog::BuildSearchAnswerCard(const SSearchAnswerContext &Ctx, con
 	qm_settings_content::UseDeclaredContent(Candidate, Ctx.m_pUi, Ctx.m_pTextRender);
 	static_assert(std::is_nothrow_move_assignable_v<SSettingsCardDefinition>);
 	Out = std::move(Candidate);
+}
+
+void qm_card_catalog::BuildDdnetWikiSearchCard(const IUiContext &Ctx, const std::vector<qm_wiki_docs::SDdnetWikiMatch> &vMatches, bool PreferChinese, bool ReadOnly, const SSettingsContentMetrics &Metrics, SSettingsCardDefinition &Out)
+{
+	using namespace qm_wiki_docs;
+	Out.m_Spec = {DDNET_WIKI_SEARCH_CARD_ID, "DDNet Wiki", ""};
+	Out.m_RenderMeasured = [Ctx, vMatches, PreferChinese, ReadOnly, Metrics](CUIRect &Content) {
+		static std::array<std::array<CButtonContainer, NUM_LANGUAGES>, NUM_DDNET_WIKI_ARTICLES> s_aOpenButtons{};
+		CSettingsContentLayoutFlow Flow(Content);
+		const bool Interactive = Flow.Input() && !ReadOnly && !Ctx.m_pUi->RenderOnly() && !Ctx.m_pUi->MeasurementOnly() && !Ctx.m_pUi->BackgroundRender() && !Ctx.m_pUi->IsPopupOpen();
+		const float Gap = ui_token::settings::RowGap(Metrics.m_LineSpacing);
+		for(const auto &Match : vMatches)
+		{
+			const auto &Article = DdnetWikiArticle(Match.m_Article);
+			int Language = PreferChinese ? SIMPLIFIED_CHINESE : ENGLISH;
+			const int OtherLanguage = PreferChinese ? ENGLISH : SIMPLIFIED_CHINESE;
+			if(!Match.m_aAvailable[Language] || (Match.m_aExcerpts[Language].empty() && !Match.m_aExcerpts[OtherLanguage].empty()))
+				Language = OtherLanguage;
+			const char *pTitle = Article.m_apTitles[Language];
+			const char *pExcerpt = Match.m_aExcerpts[Language].empty() ? Article.m_apIntroductions[Language] : Match.m_aExcerpts[Language].c_str();
+			const auto DrawText = [Ctx, Metrics](const CUIRect &Rect, const char *pText) {
+				SLabelProperties Props;
+				Props.m_MaxWidth = Rect.w;
+				Props.m_EnableWidthCheck = false;
+				Ctx.m_pUi->DoLabel(&Rect, pText, Metrics.m_BodySize, TEXTALIGN_ML, Props);
+			};
+			char aTitleId[64];
+			char aExcerptId[64];
+			char aOpenId[64];
+			str_format(aTitleId, sizeof(aTitleId), "%s-title", Article.m_pSlug);
+			str_format(aExcerptId, sizeof(aExcerptId), "%s-excerpt", Article.m_pSlug);
+			str_format(aOpenId, sizeof(aOpenId), "%s-open", Article.m_pSlug);
+			Flow.Text(aTitleId, pTitle, 0, Metrics.m_BodySize, Gap, {}, DrawText, Metrics.m_LineHeight);
+			Flow.Text(aExcerptId, pExcerpt, 0, Metrics.m_BodySize, Gap, {}, DrawText, Metrics.m_LineHeight);
+			CUIRect Row;
+			if(Flow.Control(aOpenId, Metrics.m_ButtonHeight, Row))
+			{
+				const int Buttons = Match.m_aAvailable[ENGLISH] + Match.m_aAvailable[SIMPLIFIED_CHINESE];
+				const auto Layout = ResolveSettingsActionGroupLayout(Row, Buttons, Metrics, 0.0f);
+				const char *apLabels[] = {"English", "简体中文"};
+				int ButtonIndex = 0;
+				for(int ArticleLanguage = 0; ArticleLanguage < NUM_LANGUAGES; ++ArticleLanguage)
+				{
+					if(!Match.m_aAvailable[ArticleLanguage])
+						continue;
+					const CUIRect &Button = Layout.m_aButtons[ButtonIndex++];
+					auto &Id = s_aOpenButtons[Match.m_Article][ArticleLanguage];
+					if(Interactive && Ctx.m_pStorage != nullptr && Ctx.m_pUi->DoButtonLogic(&Id, 0, &Button, BUTTONFLAG_LEFT))
+					{
+						std::string Markdown = ReadDdnetWikiArticle(*Ctx.m_pStorage, Match.m_Article, static_cast<EDdnetWikiLanguage>(ArticleLanguage));
+						OpenWikiMarkdownPopup(Ctx, Article.m_apTitles[ArticleLanguage], std::move(Markdown), Match.m_aBlocks[ArticleLanguage]);
+					}
+					if(Flow.Drawing())
+					{
+						ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ctx.m_pUi), &Id, Button);
+						Ctx.m_pUi->DoLabel(&Button, apLabels[ArticleLanguage], Metrics.m_BodySize, TEXTALIGN_MC);
+					}
+				}
+			}
+			Flow.Space(Gap);
+		}
+	};
+	qm_settings_content::UseDeclaredContent(Out, Ctx.m_pUi, Ctx.m_pTextRender);
 }

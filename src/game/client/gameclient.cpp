@@ -35,6 +35,7 @@
 #include "components/players.h"
 #include "components/qmclient/camera_network.h"
 #include "components/qmclient/collision_position.h"
+#include "components/qmclient/dummy_input.h"
 #include "components/qmclient/ime_gradient_probe.h"
 #include "components/qmclient/item_render_math.h"
 #include "components/qmclient/jelly_tee.h"
@@ -49,6 +50,7 @@
 #include "components/qmclient/spectator_selection.h"
 #include "components/qmclient/streamer_word_filter.h"
 #include "components/qmclient/translate/translate_ui_settings.h"
+#include "components/qmclient/world_event_gate.h"
 #include "components/race_demo.h"
 #include "components/scoreboard.h"
 #include "components/settings_resource_jobs.h"
@@ -105,8 +107,6 @@
 
 namespace
 {
-	constexpr int DUMMY_HAMMER_RESENDS = 2;
-
 	void NormalizeSixupSkinName(char *pSkinName, int SkinNameSize)
 	{
 		if(!CSkin::IsValidName(pSkinName))
@@ -115,19 +115,23 @@ namespace
 		}
 	}
 
-	void LogSettingsLoadingPrewarmEvent(const IClient *pClient, const char *pEvent, int CompletedSteps, int MaxAttempts, int TeeWarmupEntries, int ConsecutiveNoProgressSteps, uint64_t UploadsCompleted, uint64_t LoadsCompleted)
+	void LogSettingsLoadingPrewarmEvent(const IClient *pClient, const char *pEvent, int CompletedSteps, int MaxAttempts, int TeeWarmupEntries, int ConsecutiveNoProgressSteps, uint64_t UploadsCompleted, uint64_t LoadsCompleted, int MissingTextPlanItems, int TextPoolEntries, int PlanCollected, float ElapsedMs)
 	{
 		if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
 			return;
-		char aPayload[256];
-		str_format(aPayload, sizeof(aPayload), "event=%s steps=%d max_attempts=%d tee_entries=%d stall_steps=%d uploads_completed=%" PRIu64 " loads_completed=%" PRIu64,
+		char aPayload[384];
+		str_format(aPayload, sizeof(aPayload), "event=%s steps=%d max_attempts=%d tee_entries=%d stall_steps=%d uploads_completed=%" PRIu64 " loads_completed=%" PRIu64 " missing_text_items=%d text_pool_entries=%d plan_collected=%d elapsed_ms=%.2f",
 			pEvent != nullptr ? pEvent : "startup_prewarm",
 			CompletedSteps,
 			MaxAttempts,
 			TeeWarmupEntries,
 			ConsecutiveNoProgressSteps,
 			UploadsCompleted,
-			LoadsCompleted);
+			LoadsCompleted,
+			MissingTextPlanItems,
+			TextPoolEntries,
+			PlanCollected,
+			ElapsedMs);
 		QmPerfLogPayload("perf/settings-warmup", aPayload, pClient, "settings:tee");
 	}
 
@@ -550,6 +554,18 @@ const char *CGameClient::DDNetVersionStr() const { return m_aDDNetVersionStr; }
 int CGameClient::ClientVersion7() const { return CLIENT_VERSION7; }
 const char *CGameClient::GetItemName(int Type) const { return m_NetObjHandler.GetObjName(Type); }
 
+qmclient::replay::SReplaySessionStatus CGameClient::ReplaySessionStatus() const
+{
+	qmclient::replay::SReplaySessionInputs Inputs;
+	Inputs.m_ViewModeActive = m_RankGhost.IsViewModeActive();
+	Inputs.m_ManualActive = m_Ghost.ManualModeActive();
+	Inputs.m_ManualPlaying = m_Ghost.ManualPlaying();
+	Inputs.m_ManualTick = m_Ghost.ManualPlaybackTick();
+	Inputs.m_ManualEndTick = m_Ghost.ManualEndTick();
+	Inputs.m_ManualSpeed = m_Ghost.ManualSpeed();
+	return qmclient::replay::QmResolveReplaySessionStatus(Inputs);
+}
+
 bool CGameClient::CanRunRuntimeConfigConchainEffects() const
 {
 	return m_pClient != nullptr && m_pClient->GlobalTime();
@@ -650,6 +666,8 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_NeteaseIntegration, "netease_integration");
 	AddComponent(&m_MusicLyricsIntegration, "music_lyrics_integration");
 	AddComponent(&m_SpotifyIntegration, "spotify_integration");
+	AddComponent(&m_LxMusicIntegration, "lxmusic_integration");
+	AddComponent(&m_LyricsPresentation, "lyrics_presentation");
 	AddComponent(&m_MusicAppWatcher, "music_app_watcher");
 	AddComponent(&m_Players, "players");
 	AddComponent(&m_MovingTilesBackground, "moving_tiles_background");
@@ -658,7 +676,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Outlines, "outlines");
 	AddComponent(&m_CollisionHitbox, "collision_hitbox");
 	AddComponent(&m_QmCheckpointGuide, "checkpoint_guide");
-	AddComponent(&m_LyricsPresentation, "lyrics_presentation");
 	AddComponent(&m_Pet, "pet");
 	AddComponent(&m_Particles.m_RenderExplosions, "particles_explosions");
 	AddComponent(&m_NamePlates, "nameplates");
@@ -822,6 +839,8 @@ void CGameClient::OnConsoleInit()
 	pConsole->Chain("cl_skin_prefix", ConchainRefreshSkins, this);
 	pConsole->Chain("cl_download_skins", ConchainRefreshSkins, this);
 	pConsole->Chain("cl_download_community_skins", ConchainRefreshSkins, this);
+	pConsole->Chain("qm_download_ddstats_skins", ConchainRefreshSkins, this);
+	pConsole->Chain("qm_ddstats_skin_download_url", ConchainRefreshSkins, this);
 	pConsole->Chain("cl_vanilla_skins_only", ConchainRefreshSkins, this);
 	pConsole->Chain("events", ConchainRefreshEventSkins, this);
 
@@ -1045,6 +1064,15 @@ void CGameClient::OnInit()
 	// OnInit 已做幂等保护，组件循环里的再次调用不会重复初始化。
 	m_MenuBackground.OnInit();
 	// 主题背景已经就绪，后续组件加载帧可以安全呈现。
+	// 显示模式枚举必须在这里完成：SDL 首次枚举会同步初始化显示后端，放到设置页
+	// 或后台预算里会直接冻结动态加载背景和鼠标响应。此时第一个加载帧尚未呈现，
+	// 阻塞只增加启动绝对耗时，不会制造玩家可见的掉帧。
+	{
+		CPerfTimer VideoModeTimer(QmPerfEnabled());
+		Graphics()->PrewarmVideoModes();
+		if(QmPerfEnabled())
+			QmPerfLogStage("perf/connect", "video_modes_prewarm", VideoModeTimer.ElapsedMs(), true, Client(), "startup");
+	}
 
 	// init all components
 	int SkippedComps = 1;
@@ -1118,6 +1146,11 @@ void CGameClient::OnInit()
 		m_Menus.RenderLoading(pLoadingDDNetCaption, pLoadingMessageAssets, 0);
 		PrewarmQmIconGlyphs(24, time_freq() / 1000);
 	} while(!m_QmIconPrewarm.Complete() && time_get() - IconWarmupStart < time_freq() / 4);
+	// 实体纹理首次进服原本会在资源准备帧同步构建（实测单次约 219ms）。
+	// 现在这里只发起 worker 解码，下面的 loading 泵按刷新率逐层上传；
+	// 超过启动预算的部分留到正常帧继续，GetEntities 仍保留同步兜底。
+	m_Menus.RenderLoading(pLoadingDDNetCaption, pLoadingMessageAssets, 0);
+	m_MapImages.PrewarmEntities();
 	PrewarmSettingsRuntimeCachesDuringLoading(pLoadingDDNetCaption, pLoadingMessageAssets);
 
 	CChecksumData *pChecksum = Client()->ChecksumData();
@@ -1172,40 +1205,85 @@ void CGameClient::OpenSponsorPage()
 
 void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoadingCaption, const char *pLoadingMessage)
 {
-	constexpr int TEXT_PREWARM_BUDGET_PER_STEP = 8;
-	// loading 是可阻塞阶段（有 loading 画面），循环 prebuild 直到 plan collection complete
-	// + prebuild remaining=0。原实现只调一次 budget=8，导致运行时 (ESC 打开/切 tab) 首帧
-	// 仍要现场创建文本容器 (text_new 爆发，实测 settings_page_content 单次 355ms)。
-	// 用 WarmupReady (plan items + units 都 <= 0) 或连续无进展检测退出，避免死循环。
-	constexpr int MAX_TEXT_PREWARM_STEPS = 96;
-	constexpr int MAX_NO_PROGRESS_STEPS = 6;
+	const bool SettingsPrewarmEnabled = g_Config.m_QmSettingsPrewarm != 0;
 
-	if(g_Config.m_QmSettingsPrewarm == 0)
-		return;
-
-	m_Menus.PrewarmSettingsPages();
-
-	SSettingsLoadingPrewarmState State;
-	State.m_LastBuiltTextContainers = m_Menus.SettingsTextContainerCount();
-	State.m_LastMissingTextPlanItems = m_Menus.SettingsTextPrebuildRemaining();
-	State.m_LastMissingTextPlanCollectionUnits = m_Menus.SettingsTextPlanCollectionRemaining();
-	LogSettingsLoadingPrewarmEvent(Client(), "startup_text_prewarm_begin", State.m_CompletedSteps, 1, 0, State.m_ConsecutiveNoProgressSteps, 0, 0);
-
-	for(int Step = 0; Step < MAX_TEXT_PREWARM_STEPS; ++Step)
+	// 全量计划收集和容器构建由菜单 OnUpdate 的逐帧预算继续；这里只保留一个
+	// 有上限的 worker 泵，主线程不做同步字形光栅化，loading 背景仍按刷新率呈现。
+	// 可见页仍由同步路径保证首帧字形完整，worker 只服务不可见预热。
+	if(SettingsPrewarmEnabled)
+		m_Menus.PrewarmSettingsPages();
+	// 这里刷新一次 loading，让上面的缓存初始化有可见反馈。
+	m_Menus.RenderLoading(pLoadingCaption, pLoadingMessage, 0);
+	// 启动阶段只把“上次会话记录过的冷字形”交给 worker。主线程在循环里只做
+	// 提交/发布和 loading 背景呈现，不调同步光栅化；有 250ms 上限，跑不完的
+	// 部分留给正常帧继续，绝不为预热阻塞首帧。
+	const bool WorkerEnabled = SettingsPrewarmEnabled && TextRender()->QmGlyphWorkerEnabled();
+	// 历史集合最多有 4096 项，全部塞进处理器会让图集在启动时就接近满容量。
+	// 启动阶段只取一小批做“首屏命中”，其余留给后续空闲预算，不能让预热
+	// 反过来触发 4096→8192 的整表重建。
+	constexpr int STARTUP_GLYPH_PREWARM_LIMIT = static_cast<int>(QM_GLYPH_WORKER_PENDING_CAPACITY);
+	const int StartupGlyphLimit = SettingsPrewarmEnabled ? STARTUP_GLYPH_PREWARM_LIMIT : 0;
+	int GlyphBatches = 0;
+	int GlyphRequested = 0;
+	int GlyphProcessed = 0;
+	int GlyphQueued = 0;
+	int GlyphPumps = 0;
+	const int64_t GlyphPrewarmStart = time_get_nanoseconds().count();
+	int LoadingRefreshRate = Graphics() != nullptr ? Graphics()->ScreenRefreshRate() : 0;
+	if(!in_range(LoadingRefreshRate, 1, 1000))
+		LoadingRefreshRate = in_range(g_Config.m_GfxScreenRefreshRate, 1, 1000) ? g_Config.m_GfxScreenRefreshRate : 60;
+	// 实体纹理每层都要上传一次，不能因为 0.5ms 轮询就在同一个显示帧里连做四层。
+	// 按显示器刷新周期推进，背景帧和实体构建各自保持稳定节奏。
+	const int64_t EntityStepIntervalNs = 1000000000LL / LoadingRefreshRate;
+	int64_t NextEntityStepNs = 0;
+	constexpr int64_t MAX_STARTUP_PREWARM_NS = 250 * 1000 * 1000LL;
+	while(true)
 	{
+		const int64_t NowNs = time_get_nanoseconds().count();
+		const int GlyphPendingNow = TextRender()->QmGlyphWorkerPendingCount();
+		const bool GlyphSourceExhausted = GlyphRequested >= StartupGlyphLimit || TextRender()->QmRecentGlyphPrewarmComplete();
+		const bool GlyphIdle = !WorkerEnabled || (GlyphPendingNow == 0 && GlyphSourceExhausted);
+		if(GlyphIdle && m_MapImages.EntitiesPrewarmFinished())
+			break;
+		if(NowNs - GlyphPrewarmStart >= MAX_STARTUP_PREWARM_NS)
+			break;
+
+		if(WorkerEnabled && GlyphPendingNow == 0 && GlyphRequested < StartupGlyphLimit &&
+			!TextRender()->QmRecentGlyphPrewarmComplete())
+		{
+			const int Request = minimum(256, StartupGlyphLimit - GlyphRequested);
+			const int PendingBefore = GlyphPendingNow;
+			GlyphProcessed += TextRender()->QmPrewarmRecentGlyphs(Request);
+			const int PendingAfter = TextRender()->QmGlyphWorkerPendingCount();
+			GlyphRequested += Request;
+			GlyphQueued += maximum(0, PendingAfter - PendingBefore);
+			++GlyphBatches;
+		}
+		TextRender()->QmTextFrameEnd();
+		if(NowNs >= NextEntityStepNs)
+		{
+			m_MapImages.AdvanceEntitiesPrewarm();
+			NextEntityStepNs = NowNs + EntityStepIntervalNs;
+		}
 		m_Menus.RenderLoading(pLoadingCaption, pLoadingMessage, 0);
-		m_Menus.PrewarmSettingsTextPoolForLoading(TEXT_PREWARM_BUDGET_PER_STEP);
-		SettingsLoadingPrewarmAdvance(State, m_Menus.SettingsTextContainerCount(), m_Menus.SettingsTextPrebuildRemaining(), m_Menus.SettingsTextPlanCollectionRemaining());
-		if(State.m_WarmupReady)
-			break;
-		if(State.m_ConsecutiveNoProgressSteps >= MAX_NO_PROGRESS_STEPS)
-			break;
+		++GlyphPumps;
+		std::this_thread::sleep_for(std::chrono::microseconds(500));
 	}
-
-	LogSettingsLoadingPrewarmEvent(Client(), "startup_text_prewarm_end", State.m_CompletedSteps, 1, 0, State.m_ConsecutiveNoProgressSteps, 0, 0);
-
-	// ESC 菜单的文本 plan/容器依赖打开后的菜单生命周期，不能在加载阶段预热
-	// ESC 的字形与 plan 现在改由菜单关闭时的空闲帧预热（CMenus::OnUpdate / OnRender）。
+	const int GlyphPending = TextRender()->QmGlyphWorkerPendingCount();
+	const bool GlyphComplete = TextRender()->QmRecentGlyphPrewarmComplete() && GlyphPending == 0;
+	const size_t GlyphRemaining = TextRender()->QmRecentGlyphPrewarmRemaining();
+	const size_t AtlasDimension = TextRender()->QmGlyphAtlasDimension();
+	const int AtlasGrowths = TextRender()->QmGlyphAtlasGrowthCount();
+	const double GlyphElapsedMs = (double)(time_get_nanoseconds().count() - GlyphPrewarmStart) / 1000000.0;
+	char aGlyphPayload[448];
+	str_format(aGlyphPayload, sizeof(aGlyphPayload),
+		"event=startup_glyph_prewarm enabled=%d worker=%d limit=%d requested=%d processed=%d batches=%d queued=%d pumps=%d pending=%d remaining=%zu complete=%d atlas_dim=%zu atlas_growths=%d elapsed_ms=%.2f",
+		SettingsPrewarmEnabled ? 1 : 0, WorkerEnabled ? 1 : 0, StartupGlyphLimit, GlyphRequested, GlyphProcessed, GlyphBatches, GlyphQueued, GlyphPumps,
+		GlyphPending, GlyphRemaining, GlyphComplete ? 1 : 0, AtlasDimension, AtlasGrowths, GlyphElapsedMs);
+	dbg_msg("perf/settings-warmup", "%s", aGlyphPayload);
+	if(QmPerfEnabled())
+		QmPerfLogPayload("perf/settings-warmup", aGlyphPayload, Client(), "settings:tee");
+	LogSettingsLoadingPrewarmEvent(Client(), "startup_text_prewarm_deferred", 0, 1, 0, 0, 0, 0, -1, m_Menus.SettingsTextContainerCount(), 0, GlyphElapsedMs);
 }
 
 void CGameClient::CancelConnectionResourcePreparation()
@@ -1232,6 +1310,7 @@ void CGameClient::OnConnectionResourceUpdate()
 
 	const bool Trace = QmPerfEnabled();
 	CPerfTimer Timer(Trace);
+	const bool MapSoundsReady = m_MapSounds.PollDecode();
 	const auto Deadline = CMapLoadTask::TClock::now() + std::chrono::milliseconds(2);
 	bool DataReady = false;
 	const auto Prepare = [&] {
@@ -1246,7 +1325,7 @@ void CGameClient::OnConnectionResourceUpdate()
 			if(Trace)
 				QmPerfLogStage("perf/connect", "map_design_tile_skips", SkipTimer.ElapsedMs(), true, Client());
 		}
-		DataReady = m_MapImages.ImagesReady() && m_DesignTileSkips.Done();
+		DataReady = m_MapImages.ImagesReady() && m_DesignTileSkips.Done() && MapSoundsReady;
 		if(DataReady && CMapLoadTask::TClock::now() < Deadline)
 		{
 			if(!m_MapLayersBackground.IsMapLoaded())
@@ -1257,7 +1336,11 @@ void CGameClient::OnConnectionResourceUpdate()
 	};
 	if(!m_ConnectionResourcePreparation.TryPrepare(Prepare))
 		return;
-	if(m_ConnectionResourcePreparation.CompleteWhenReady(DataReady, m_MapLayersBackground.IsMapLoaded(), m_MapLayersForeground.IsMapLoaded()))
+	// 实体纹理也是进服首帧的可见资源。若尚未逐层上传完，继续停留在 loading
+	// 画面（背景仍按刷新率推进），不要先进入游戏再在首帧同步补建。
+	const bool EntityResourcesReady = m_MapImages.EntitiesPrewarmFinished();
+	if(m_ConnectionResourcePreparation.CompleteWhenReady(DataReady && EntityResourcesReady,
+		   m_MapLayersBackground.IsMapLoaded(), m_MapLayersForeground.IsMapLoaded()))
 		FinishConnectionResourcePreparation();
 	LogPerfStage(this, "connection_resource_prepare", Timer.ElapsedMs());
 }
@@ -1271,6 +1354,8 @@ void CGameClient::OnUpdate()
 	SyncQmUiIconWeight();
 	SyncQmCustomFontWeight();
 	PrewarmQmIconGlyphs(24, time_freq() / 1000);
+	// 实体纹理解码在 worker，主线程每帧最多构建一层并上传，避免进服首帧长阻塞。
+	m_MapImages.AdvanceEntitiesPrewarm();
 
 	const bool TeeSettingsActive = m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_TEE;
 	const bool AssetsSettingsActive = m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_ASSETS;
@@ -1614,15 +1699,13 @@ void CGameClient::OnInput(const IInput::CEvent &Event)
 
 void CGameClient::OnDummySwap()
 {
-	if(g_Config.m_ClDummyResetOnSwitch)
+	const int ResetSlot = QmDummyResetSlot(g_Config.m_ClDummyResetOnSwitch, g_Config.m_ClDummy);
+	if(ResetSlot >= 0)
 	{
-		int PlayerOrDummy = (g_Config.m_ClDummyResetOnSwitch == 2) ? g_Config.m_ClDummy : (!g_Config.m_ClDummy);
-		m_Controls.ResetInput(PlayerOrDummy);
-		m_Controls.m_aInputData[PlayerOrDummy].m_Hook = 0;
+		m_Controls.ResetInput(ResetSlot);
+		m_Controls.m_aInputData[ResetSlot].m_Hook = 0;
 	}
-	const int PrevDummyFire = m_DummyInput.m_Fire;
-	m_DummyInput = m_Controls.m_aInputData[!g_Config.m_ClDummy];
-	m_Controls.m_aInputData[g_Config.m_ClDummy].m_Fire = PrevDummyFire;
+	QmApplyDummySwap(m_Controls.m_aInputData[!g_Config.m_ClDummy], m_DummyInput, m_Controls.m_aInputData[g_Config.m_ClDummy]);
 	m_IsDummySwapping = 1;
 }
 
@@ -1643,7 +1726,7 @@ int CGameClient::OnSnapInput(int *pData, bool Dummy, bool Force)
 		m_DummyHammerResends = 0;
 		if(m_DummyFire != 0)
 		{
-			m_DummyInput.m_Fire = (m_HammerInput.m_Fire + 1) & ~1;
+			m_DummyInput.m_Fire = QmReleasedFireState(m_HammerInput.m_Fire);
 			m_DummyFire = 0;
 		}
 
@@ -1656,22 +1739,19 @@ int CGameClient::OnSnapInput(int *pData, bool Dummy, bool Force)
 		return sizeof(m_DummyInput);
 	}
 
-	if(m_DummyFire % 25 != 0)
-	{
-		m_DummyFire++;
-		// 重复发送最新的 Fire counter，避免单个非 Vital 输入包丢失导致吞锤。
-		if(m_DummyHammerResends > 0)
-		{
-			m_DummyHammerResends--;
-			mem_copy(pData, &m_HammerInput, sizeof(m_HammerInput));
-			return sizeof(m_HammerInput);
-		}
+	const SDummyHammerSnapDecision HammerSnap = QmResolveDummyHammerSnap(m_DummyFire, m_DummyHammerResends);
+	m_DummyFire = HammerSnap.m_DummyFire;
+	m_DummyHammerResends = HammerSnap.m_DummyHammerResends;
+	if(HammerSnap.m_Action == EDummyHammerSnapAction::NONE)
 		return 0;
+	if(HammerSnap.m_Action == EDummyHammerSnapAction::RESEND)
+	{
+		// 重复发送最新的 Fire counter，避免单个非 Vital 输入包丢失导致吞锤。
+		mem_copy(pData, &m_HammerInput, sizeof(m_HammerInput));
+		return sizeof(m_HammerInput);
 	}
-	m_DummyFire++;
 
-	m_HammerInput.m_Fire = (m_HammerInput.m_Fire + 1) | 1;
-	m_DummyHammerResends = DUMMY_HAMMER_RESENDS;
+	m_HammerInput.m_Fire = QmPressedFireState(m_HammerInput.m_Fire);
 	m_HammerInput.m_WantedWeapon = WEAPON_HAMMER + 1;
 	if(!g_Config.m_ClDummyRestoreWeapon)
 		m_DummyInput.m_WantedWeapon = WEAPON_HAMMER + 1;
@@ -1760,6 +1840,9 @@ void CGameClient::OnConnected()
 	const char *pLoadMapContent = Localize("Initializing map logic");
 	// render loading before skip is calculated
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0);
+	// 直连或命令行走廊没有经过服务器浏览器时，这里按当前已知游戏信息补一次
+	// 实体纹理预热；OnMapLoad 不再取消它，资源准备帧可以继续复用。
+	m_MapImages.PrewarmEntities();
 	LogConnectStage("loading_screen");
 	const bool Live = Client()->State() == IClient::STATE_LOADING;
 	const auto PrepareMapLogic = [&] {
@@ -1785,7 +1868,7 @@ void CGameClient::OnConnected()
 		auto *pComponent = m_vpAll[ComponentIndex];
 		CPerfTimer MapLoadTimer(QmPerfEnabled());
 		const bool PrepareLiveGraphics = Live &&
-			(pComponent == &m_MapImages || pComponent == &m_MapLayersBackground || pComponent == &m_MapLayersForeground);
+						 (pComponent == &m_MapImages || pComponent == &m_MapLayersBackground || pComponent == &m_MapLayersForeground);
 		if(!m_ConnectionResourcePreparation.TryPrepare([&] { pComponent->OnMapLoad(); }, PrepareLiveGraphics))
 			return;
 		pComponent->OnReset();
@@ -1939,6 +2022,8 @@ void CGameClient::OnReset()
 	m_ReceivedDDNetPlayerFinishTimesMillis = false;
 
 	m_Teams.Reset();
+	for(auto &Teams : m_aConnectionTeams)
+		Teams.Reset();
 	m_GameWorld.Clear();
 	m_GameWorld.m_PredictedEvents.clear();
 	m_GameWorld.m_WorldConfig.m_InfiniteAmmo = true;
@@ -1972,13 +2057,7 @@ void CGameClient::OnReset()
 	std::fill(std::begin(m_aLastProcessedEventTick), std::end(m_aLastProcessedEventTick), -1);
 	m_CharOrder.Reset();
 	std::fill(std::begin(m_aSwitchStateTeam), std::end(m_aSwitchStateTeam), -1);
-
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-	{
-		m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-	}
+	m_AutoTeamLock.Reset();
 
 	m_MapBestTimeSeconds = FinishTime::UNSET;
 	m_MapBestTimeMillis = 0;
@@ -2400,6 +2479,8 @@ void CGameClient::OnDummyDisconnect()
 	m_Chat.InvalidateOutgoingConnection(IClient::CONN_DUMMY);
 	TClientComponent().CancelSoloSplit();
 	m_aLocalIds[1] = -1;
+	m_aConnectionTeams[IClient::CONN_DUMMY].Reset();
+	m_AutoTeamLock.ResetConnection(IClient::CONN_DUMMY);
 	m_QmDummyDistanceLink = {};
 	m_aDDRaceMsgSent[1] = false;
 	m_aShowOthers[1] = SHOW_OTHERS_NOT_SET;
@@ -2906,6 +2987,15 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		}
 	}
 
+	if(MsgId == NETMSGTYPE_SV_TEAMSSTATE || MsgId == NETMSGTYPE_SV_TEAMSSTATELEGACY)
+	{
+		ProcessTeamsState(Conn, pUnpacker);
+		m_Ghost.m_AllowRestart = true;
+		m_RaceDemo.m_AllowRestart = true;
+		if(Dummy)
+			return;
+	}
+
 	if(Dummy)
 	{
 		if(MsgId == NETMSGTYPE_SV_READYTOENTER)
@@ -2966,33 +3056,6 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 			if(g_Config.m_SndGame)
 				m_Sounds.Play(CSounds::CHN_GLOBAL, pMsg->m_SoundId, 1.0f);
 		}
-	}
-	else if(MsgId == NETMSGTYPE_SV_TEAMSSTATE || MsgId == NETMSGTYPE_SV_TEAMSSTATELEGACY)
-	{
-		unsigned int i;
-
-		for(i = 0; i < MAX_CLIENTS; i++)
-		{
-			const int Team = pUnpacker->GetInt();
-			if(!pUnpacker->Error() && Team >= TEAM_FLOCK && Team < NUM_DDRACE_TEAMS)
-			{
-				m_Teams.Team(i, Team);
-			}
-			else
-			{
-				m_Teams.Team(i, 0);
-				break;
-			}
-		}
-
-		if(i <= VANILLA_MAX_CLIENTS)
-		{
-			m_Teams.m_IsDDRace16 = true;
-			m_Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
-		}
-
-		m_Ghost.m_AllowRestart = true;
-		m_RaceDemo.m_AllowRestart = true;
 	}
 	else if(MsgId == NETMSGTYPE_SV_KILLMSG)
 	{
@@ -3460,6 +3523,11 @@ void CGameClient::ProcessEvents()
 	if(m_aLastProcessedEventTick[EventDummy] == EventTick)
 		return;
 	m_aLastProcessedEventTick[EventDummy] = EventTick;
+	// 快速练习：服务器快照里的事件属于主世界那条时间线。在分支里播出来
+	// 就是"开枪却冒锤击特效 / 听见另一条世界线的爆炸声"。分支只播自己
+	// 预测世界产生的事件（HandlePredictedEvents），这里只保留上面的记账。
+	if(m_FastPractice.Enabled())
+		return;
 	auto RememberConfirmedEvent = [this, EventTick](int EventId, vec2 Pos, int ExtraInfo = -1) {
 		CGameWorld::CPredictedEvent Event(EventId, Pos, -1, EventTick, ExtraInfo);
 		if(!Event.HasValidPosition())
@@ -3621,6 +3689,13 @@ void CGameClient::ProcessEvents()
 
 void CGameClient::FinalizeHammerHitEvents()
 {
+	// 与 ProcessEvents 同一条世界线边界：练习时服务器确认的锤击事件不能
+	// 在分支里补播，也不能把"已确认"记录写进分支的预测事件队列。
+	if(m_FastPractice.Enabled())
+	{
+		m_PendingHammerHits.Reset();
+		return;
+	}
 	auto RememberConfirmedEvent = [this](vec2 Pos, int AttackerId, int TargetId, int SnapshotTick) {
 		CGameWorld::CPredictedEvent Event(NETEVENTTYPE_HAMMERHIT, Pos, AttackerId, SnapshotTick, TargetId);
 		if(!Event.HasValidPosition())
@@ -4231,6 +4306,10 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 				}
 				FoundGameInfoEx = true;
 				m_GameInfo = GetGameInfo((const CNetObj_GameInfoEx *)Item.m_pData, Item.m_DataSize, &ServerInfo);
+				// GAMEINFOEX 才是本局最终的玩法信息；服务器浏览器预热的槽位可能
+				// 与真实服务器不同，确认后切换到实际 entities 资源，避免进服
+				// 资源准备帧再退回同步纹理构建。
+				m_MapImages.PrewarmEntitiesForGameInfo(m_GameInfo);
 			}
 			else if(Item.m_Type == NETOBJTYPE_GAMEDATA)
 			{
@@ -4283,15 +4362,18 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 				int Team = std::clamp(Item.m_Id, (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
 
 				int HighestSwitchNumber = std::clamp(std::max(pSwitchStateData->m_HighestSwitchNumber, Collision()->m_HighestSwitchNumber), 0, 255);
-				if(HighestSwitchNumber != maximum(0, (int)Switchers().size() - 1))
+				if(HighestSwitchNumber != maximum(0, (int)m_GameWorld.m_Core.m_vSwitchers.size() - 1))
 				{
 					m_GameWorld.m_Core.InitSwitchers(HighestSwitchNumber);
 					Collision()->m_HighestSwitchNumber = HighestSwitchNumber;
 				}
 
-				for(int j = 0; j < (int)Switchers().size(); j++)
+				// 服务器快照只写服务器世界。练习分支有自己的开关状态，
+				// CGameClient::PlayableSwitchers() 在练习时返回分支那一份，不能被这里覆盖。
+				auto &vServerSwitchers = m_GameWorld.m_Core.m_vSwitchers;
+				for(int j = 0; j < (int)vServerSwitchers.size(); j++)
 				{
-					Switchers()[j].m_aStatus[Team] = (pSwitchStateData->m_aStatus[j / 32] >> (j % 32)) & 1;
+					vServerSwitchers[j].m_aStatus[Team] = (pSwitchStateData->m_aStatus[j / 32] >> (j % 32)) & 1;
 				}
 
 				if(Item.m_DataSize >= 68)
@@ -4301,15 +4383,15 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 					{
 						int SwitchNumber = pSwitchStateData->m_aSwitchNumbers[j];
 						int EndTick = pSwitchStateData->m_aEndTicks[j];
-						if(EndTick > 0 && SwitchNumber >= 0 && SwitchNumber < (int)Switchers().size())
+						if(EndTick > 0 && SwitchNumber >= 0 && SwitchNumber < (int)vServerSwitchers.size())
 						{
-							Switchers()[SwitchNumber].m_aEndTick[Team] = EndTick;
+							vServerSwitchers[SwitchNumber].m_aEndTick[Team] = EndTick;
 						}
 					}
 				}
 
 				// update switch types
-				for(auto &Switcher : Switchers())
+				for(auto &Switcher : vServerSwitchers)
 				{
 					if(Switcher.m_aStatus[Team])
 						Switcher.m_aType[Team] = Switcher.m_aEndTick[Team] ? TILE_SWITCHTIMEDOPEN : TILE_SWITCHOPEN;
@@ -4344,13 +4426,19 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		m_Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
 	else if(m_GameInfo.m_NumDDRaceTeams > 0)
 		m_Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
+	for(auto &Teams : m_aConnectionTeams)
+	{
+		if(Teams.m_IsDDRace16)
+			Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
+		else if(m_GameInfo.m_NumDDRaceTeams > 0)
+			Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
+	}
 
 	LogSnapshotStage("snapshot_decode");
+	RefreshConnectionLocalIds();
 	// setup local pointers
 	if(m_Snap.m_LocalClientId >= 0)
 	{
-		m_aLocalIds[g_Config.m_ClDummy] = m_Snap.m_LocalClientId;
-
 		CSnapState::CCharacterInfo *pChr = &m_Snap.m_aCharacters[m_Snap.m_LocalClientId];
 		if(pChr->m_Active)
 		{
@@ -4834,56 +4922,92 @@ void CGameClient::UpdateAutoTeamLock()
 {
 	if(Client()->State() != IClient::STATE_ONLINE)
 	{
-		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		m_AutoTeamLock.Reset();
+		return;
+	}
+
+	std::array<bool, NUM_DUMMIES> aConnected{};
+	std::array<bool, NUM_DUMMIES> aSuppressLock{};
+	std::array<int, NUM_DUMMIES> aTeams{};
+	std::array<int, NUM_DUMMIES> aTeamSupers{};
+	std::array<int64_t, NUM_DUMMIES> aGameTicks{};
+	const bool SuppressSoloTeams = g_Config.m_QmSoloSplitAutoTeamLock != 0 && m_TClient.IsSoloSplitPending();
+	for(int Connection = 0; Connection < NUM_DUMMIES; ++Connection)
+	{
+		const int ClientId = m_aLocalIds[Connection];
+		aConnected[Connection] = ClientId >= 0 && ClientId < MAX_CLIENTS &&
+					 (Connection == IClient::CONN_MAIN || Client()->DummyConnected());
+		aTeams[Connection] = aConnected[Connection] ? m_aConnectionTeams[Connection].Team(ClientId) : TEAM_FLOCK;
+		aTeamSupers[Connection] = m_aConnectionTeams[Connection].TeamSuper();
+		aGameTicks[Connection] = Client()->GameTick(Connection);
+		aSuppressLock[Connection] = SuppressSoloTeams;
+	}
+
+	const SQmAutoTeamLockPlan Plan = m_AutoTeamLock.Update(
+		g_Config.m_QmAutoTeamLock != 0,
+		g_Config.m_QmAutoTeamLockDelay,
+		Client()->GameTickSpeed(),
+		aTeams,
+		aTeamSupers,
+		aGameTicks,
+		aConnected,
+		aSuppressLock);
+	for(int i = 0; i < Plan.m_RequestCount; ++i)
+	{
+		const SQmAutoTeamLockRequest &Request = Plan.m_aRequests[i];
+		m_Chat.SendChatOnConn(Request.m_Connection, 0, "/lock 1");
+	}
+}
+
+void CGameClient::ProcessTeamsState(int Conn, CUnpacker *pUnpacker)
+{
+	if(Conn < 0 || Conn >= NUM_DUMMIES)
+		return;
+
+	CTeamsCore &Teams = m_aConnectionTeams[Conn];
+	unsigned int i;
+	for(i = 0; i < MAX_CLIENTS; i++)
+	{
+		const int Team = pUnpacker->GetInt();
+		if(!pUnpacker->Error() && Team >= TEAM_FLOCK && Team < NUM_DDRACE_TEAMS)
 		{
-			m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
-			m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-			m_aAutoTeamLockPending[Dummy] = false;
+			Teams.Team(i, Team);
+			if(Conn == g_Config.m_ClDummy)
+				m_Teams.Team(i, Team);
 		}
-		return;
+		else
+		{
+			Teams.Team(i, 0);
+			if(Conn == g_Config.m_ClDummy)
+				m_Teams.Team(i, 0);
+			break;
+		}
 	}
 
-	const int Dummy = g_Config.m_ClDummy;
-	const int ClientId = m_aLocalIds[Dummy];
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+	if(i <= VANILLA_MAX_CLIENTS)
 	{
-		m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-		return;
+		Teams.m_IsDDRace16 = true;
+		Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
+		if(Conn == g_Config.m_ClDummy)
+		{
+			m_Teams.m_IsDDRace16 = true;
+			m_Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
+		}
 	}
-
-	const int Team = m_Teams.Team(ClientId);
-	const bool TeamCanBeLocked = Team > TEAM_FLOCK && Team < TEAM_SUPER;
-	const bool LastTeamCanBeLocked = m_aAutoTeamLockLastTeam[Dummy] > TEAM_FLOCK && m_aAutoTeamLockLastTeam[Dummy] < TEAM_SUPER;
-
-	if(!g_Config.m_QmAutoTeamLock)
+	else if(m_GameInfo.m_NumDDRaceTeams > 0)
 	{
-		m_aAutoTeamLockLastTeam[Dummy] = Team;
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-		return;
+		Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
+		if(Conn == g_Config.m_ClDummy)
+			m_Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
 	}
+}
 
-	if(TeamCanBeLocked && (!LastTeamCanBeLocked || Team != m_aAutoTeamLockLastTeam[Dummy]))
-	{
-		const int DelayTicks = g_Config.m_QmAutoTeamLockDelay * Client()->GameTickSpeed();
-		m_aAutoTeamLockDeadlineTick[Dummy] = (int64_t)Client()->GameTick(Dummy) + DelayTicks;
-		m_aAutoTeamLockPending[Dummy] = true;
-	}
-	else if(!TeamCanBeLocked)
-	{
-		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
-		m_aAutoTeamLockPending[Dummy] = false;
-	}
-
-	if(m_aAutoTeamLockPending[Dummy] && TeamCanBeLocked && Client()->GameTick(Dummy) >= m_aAutoTeamLockDeadlineTick[Dummy])
-	{
-		m_Chat.SendChat(0, "/lock 1");
-		m_aAutoTeamLockPending[Dummy] = false;
-	}
-
-	m_aAutoTeamLockLastTeam[Dummy] = Team;
+void CGameClient::RefreshConnectionLocalIds()
+{
+	const int Active = g_Config.m_ClDummy;
+	const int Other = !Active;
+	m_aLocalIds[Active] = m_Snap.m_LocalClientId;
+	m_aLocalIds[Other] = Other == IClient::CONN_DUMMY && !Client()->DummyConnected() ? -1 : Client()->GetLocalClientId(Other);
 }
 
 void CGameClient::UpdateEditorIngameMoved()
@@ -5195,6 +5319,11 @@ void CGameClient::OnPredict()
 	CCharacterCore BeforePrevChar = m_PredictedPrevChar;
 	CCharacterCore BeforeChar = m_PredictedChar;
 
+	// 快速练习是平行世界：全服暂停不冻结练习，先由练习预测接管渲染。
+	// 服务器侧本地角色死亡/短暂失活时也必须继续推进分支，不能先被快照门挡掉。
+	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
+		return;
+
 	// we can't predict without our own id or own character
 	if(m_Snap.m_LocalClientId == -1 || !m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_Active)
 		return;
@@ -5214,9 +5343,6 @@ void CGameClient::OnPredict()
 		}
 		return;
 	}
-
-	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
-		return;
 
 	vec2 aBeforeRender[MAX_CLIENTS];
 	for(int i = 0; i < MAX_CLIENTS; i++)
@@ -6970,6 +7096,20 @@ void CGameClient::UpdateHookCollTargets()
 		Target.m_Super = Data.m_Super;
 		Target.m_Solo = Data.m_Solo;
 		Target.m_HookHitDisabled = Data.m_HookHitDisabled;
+		// 练习参与者不在服务器快照时间线上：位置取分支世界的渲染坐标，
+		// solo 取分支队伍状态。否则辅助线对着另一条时间线的位置做碰撞，
+		// 会从画面里紧挨着的分身身上直接穿过去，颜色也不会切到 Tee 命中色。
+		vec2 PracticePos;
+		bool PracticeSuper;
+		bool PracticeHookHitDisabled;
+		if(m_FastPractice.ResolvePracticeHookCollTarget(i, PracticePos, Target.m_Solo, PracticeSuper, PracticeHookHitDisabled))
+		{
+			Target.m_Valid = true;
+			Target.m_Pos = PracticePos;
+			Target.m_Super = PracticeSuper;
+			Target.m_HookHitDisabled = PracticeHookHitDisabled;
+			continue;
+		}
 		Target.m_Pos = HookCollTargetPosition(i, Intra);
 	}
 }
@@ -7206,7 +7346,7 @@ void CGameClient::UpdatePrediction()
 			int GameTeam = IsTeamPlay() ? m_aClients[i].m_Team : i;
 			m_GameWorld.NetCharAdd(i, &m_Snap.m_aCharacters[i].m_Cur,
 				m_Snap.m_aCharacters[i].m_HasExtendedData ? &m_Snap.m_aCharacters[i].m_ExtendedData : nullptr,
-				GameTeam, IsLocal);
+				GameTeam, IsLocal, false);
 		}
 
 	for(const CSnapEntities &EntData : SnapEntities())
@@ -7389,10 +7529,16 @@ void CGameClient::UpdateRenderedCharacters()
 {
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
-		if(!m_Snap.m_aCharacters[i].m_Active)
+		// 练习参与者不随服务器世界失活：快照里的死亡、暂停或短暂离线只描述主世界，
+		// 分支世界仍在模拟这名 tee。照常发布渲染数据，否则画面上人会消失、碰撞体还在。
+		CCharacter *pPracticeChar = m_FastPractice.ResolvePracticeCharacter(i);
+		if(!m_Snap.m_aCharacters[i].m_Active && pPracticeChar == nullptr)
 			continue;
-		m_aClients[i].m_RenderCur = m_Snap.m_aCharacters[i].m_Cur;
-		m_aClients[i].m_RenderPrev = m_Snap.m_aCharacters[i].m_Prev;
+		if(m_Snap.m_aCharacters[i].m_Active)
+		{
+			m_aClients[i].m_RenderCur = m_Snap.m_aCharacters[i].m_Cur;
+			m_aClients[i].m_RenderPrev = m_Snap.m_aCharacters[i].m_Prev;
+		}
 		m_aClients[i].m_IsPredicted = false;
 		m_aClients[i].m_IsPredictedLocal = false;
 		vec2 UnpredPos = mix(
@@ -7415,6 +7561,19 @@ void CGameClient::UpdateRenderedCharacters()
 			m_aClients[i].m_PrevPredicted.Write(&m_aClients[i].m_RenderPrev);
 
 			m_aClients[i].m_IsPredicted = true;
+
+			// 武器与挥锤相位不在核心字段里，Write 不会带上；练习参与者的这两项
+			// 必须来自分支角色。旁观/暂停时反向预测不再接管，否则渲染会一直沿用
+			// 服务器快照里的武器（分身从锤子跳成手枪）。
+			if(IsPracticeParticipant)
+			{
+				if(pPracticeChar)
+				{
+					m_aClients[i].m_RenderCur.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderPrev.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderCur.m_AttackTick = pPracticeChar->GetAttackTick();
+				}
+			}
 
 			Pos = mix(
 				vec2(m_aClients[i].m_RenderPrev.m_X, m_aClients[i].m_RenderPrev.m_Y),
@@ -7469,6 +7628,51 @@ void CGameClient::UpdateRenderedCharacters()
 					Pos = UnpredPos;
 			}
 		}
+		// 练习中旁观时常规预测停摆，但分支世界仍是权威：参与者的渲染核心
+		// 切回分支世界，镜头跟随与画面才落在练习位置而不是服务器位置。
+		if(IsPracticeParticipant && !Predict())
+		{
+			const CCharacterCore *pPracticeCore = nullptr;
+			int PracticeTick = 0;
+			if(m_FastPractice.ResolvePracticeCharacterCore(i, &pPracticeCore, PracticeTick) && pPracticeCore)
+			{
+				m_aClients[i].m_Predicted = *pPracticeCore;
+				m_aClients[i].m_PrevPredicted = *pPracticeCore;
+				pPracticeCore->Write(&m_aClients[i].m_RenderCur);
+				pPracticeCore->Write(&m_aClients[i].m_RenderPrev);
+				m_aClients[i].m_IsPredicted = true;
+				m_aClients[i].m_IsPredictedLocal = true;
+				Pos = pPracticeCore->m_Pos;
+				// 武器与挥锤相位不在核心字段里：旁观时反向预测（AntiPingGunfire）
+				// 不再接管，RenderCur 会保留服务器快照里的武器，分身会从锤子跳成手枪。
+				if(pPracticeChar)
+				{
+					m_aClients[i].m_RenderCur.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderPrev.m_Weapon = pPracticeChar->GetActiveWeapon();
+					m_aClients[i].m_RenderCur.m_AttackTick = pPracticeChar->GetAttackTick();
+				}
+			}
+		}
+		if(IsPracticeParticipant)
+		{
+			// 表情同样来自服务器快照，但练习输入锁会让服务器把参与者长期判成 AFK，
+			// 快照就固定返回眨眼。渲染统一在预测/旁观数据写完之后覆盖，所有路径一致。
+			const bool ServerActive = m_Snap.m_aCharacters[i].m_Active;
+			const int ServerEmote = ServerActive ? m_Snap.m_aCharacters[i].m_Cur.m_Emote : -1;
+			const int Emote = m_FastPractice.ResolvePracticeEyeEmote(i, ServerEmote, ServerActive, m_aClients[i].m_Afk);
+			m_aClients[i].m_RenderCur.m_Emote = Emote;
+			m_aClients[i].m_RenderPrev.m_Emote = Emote;
+			// 冻结状态也只有分支世界知道：快照里的 FreezeEnd 属于服务器时间线。
+			// players/hud 在渲染阶段统一读 ClientData，因此在这里覆盖一次，冻结隐身、
+			// 解冻进度与 HUD 计数才会和分支里的实际碰撞状态一致。
+			if(pPracticeChar)
+			{
+				const CCharacterCore *pCore = pPracticeChar->Core();
+				m_aClients[i].m_FreezeEnd = pCore->m_FreezeEnd;
+				m_aClients[i].m_DeepFrozen = pCore->m_DeepFrozen;
+				m_aClients[i].m_LiveFrozen = pCore->m_LiveFrozen;
+			}
+		}
 		m_aClients[i].m_RenderPos = Pos;
 		if(Predict() && i == m_Snap.m_LocalClientId)
 			m_LocalCharacterPos = Pos;
@@ -7478,11 +7682,15 @@ void CGameClient::UpdateRenderedCharacters()
 void CGameClient::HandlePredictedEvents(const int Tick)
 {
 	const float Alpha = 1.0f;
+	// 与查看模式回放、练习录制共用同一份音效门控：三处判定一致，
+	// 同一条线路才不会在游玩/练习/回放里播出不同的声音。
+	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 
-	QmProcessPredictedEvents(m_PredictedWorld.m_PredictedEvents, Tick, Client()->GameTickSpeed(), [this, Alpha](const CGameWorld::CPredictedEvent &Event) {
+	QmProcessPredictedEvents(m_PredictedWorld.m_PredictedEvents, Tick, Client()->GameTickSpeed(), [this, Alpha, &Focus](const CGameWorld::CPredictedEvent &Event) {
 		if(Event.m_EventId == NETEVENTTYPE_SOUNDWORLD)
 		{
-			if(m_GameInfo.m_RaceSounds && ((Event.m_ExtraInfo == SOUND_GUN_FIRE && !g_Config.m_SndGun) || (Event.m_ExtraInfo == SOUND_PLAYER_PAIN_LONG && !g_Config.m_SndLongPain)))
+			if(!QmShouldPlayWorldSound(Event.m_ExtraInfo, g_Config.m_SndGame, Focus.m_AirJump.m_PlaySound,
+				   Focus.m_PlayDeathOrSpawnSound, m_GameInfo.m_RaceSounds, g_Config.m_SndGun, g_Config.m_SndLongPain))
 				return false;
 			if(g_Config.m_DbgPredictEvents)
 				dbg_msg("pred_event", "predict-play sound=%d tick=%d pos=%.1f,%.1f", Event.m_ExtraInfo, Event.m_Tick, Event.m_Pos.x, Event.m_Pos.y);
@@ -7751,6 +7959,15 @@ bool CGameClient::IsOtherTeam(int ClientId) const
 {
 	bool Local = m_Snap.m_LocalClientId == ClientId;
 
+	// 快速练习的分支世界有自己的 solo 状态：练习里的 /solo /unsolo 只改预测
+	// 世界，服务器快照的 solo 标志不会跟着变，直接用快照会把分身画成实体。
+	auto SoloOf = [this](int Id) {
+		bool Solo = Id >= 0 && Id < MAX_CLIENTS && m_aClients[Id].m_Solo;
+		if(Id >= 0 && Id < MAX_CLIENTS)
+			m_FastPractice.ResolvePracticeSoloState(Id, Solo);
+		return Solo;
+	};
+
 	if(m_Snap.m_LocalClientId < 0)
 	{
 		return false;
@@ -7765,13 +7982,13 @@ bool CGameClient::IsOtherTeam(int ClientId) const
 		// 跟随视角沿用被旁观者的 solo 语义：任一方处于 solo 即视为其他队伍
 		//（冻结条、碰撞显示等据此隐藏/减淡）；自由视角由外层分支返回 false，仍能看到所有玩家。
 		if(SpectatorId >= 0 && SpectatorId < MAX_CLIENTS && ClientId != SpectatorId &&
-			(m_aClients[SpectatorId].m_Solo || m_aClients[ClientId].m_Solo))
+			(SoloOf(SpectatorId) || SoloOf(ClientId)))
 			return true;
 		if(m_Teams.Team(ClientId) == m_Teams.TeamSuper() || m_Teams.Team(SpectatorId) == m_Teams.TeamSuper())
 			return false;
 		return m_Teams.Team(ClientId) != m_Teams.Team(SpectatorId);
 	}
-	else if((m_aClients[m_Snap.m_LocalClientId].m_Solo || m_aClients[ClientId].m_Solo) && !Local)
+	else if((SoloOf(m_Snap.m_LocalClientId) || SoloOf(ClientId)) && !Local)
 	{
 		return true;
 	}
@@ -7784,6 +8001,11 @@ bool CGameClient::IsOtherTeam(int ClientId) const
 
 int CGameClient::SwitchStateTeam() const
 {
+	// 练习分支世界的开关状态按分支里的队伍取，与服务器快照的队伍无关。
+	// 影子查看队伍只属于只读机关世界，不能覆盖主世界和练习分支的开关判定。
+	const int PracticeTeam = m_FastPractice.PracticeSwitchTeam();
+	if(PracticeTeam >= 0)
+		return PracticeTeam;
 	if(m_aSwitchStateTeam[g_Config.m_ClDummy] >= 0)
 		return m_aSwitchStateTeam[g_Config.m_ClDummy];
 	else if(m_Snap.m_LocalClientId < 0)
@@ -9510,6 +9732,9 @@ void CGameClient::SetConnectInfo(const NETADDR *pAddress)
 	m_ConnectServerInfo = pEntry->m_Info;
 	const CNetObj_GameInfoEx GameInfoEx = {.m_Version = 0};
 	m_GameInfo = GetGameInfo(&GameInfoEx, 0, &*m_ConnectServerInfo);
+	// 服务器浏览器信息已经能确定 entities 槽位；连接和地图下载期间就启动
+	// 预热，避免首次进服在资源准备帧同步构建四层实体纹理。
+	m_MapImages.PrewarmEntitiesForGameInfo(m_GameInfo);
 }
 
 // Q1menG Client Recognition Functions

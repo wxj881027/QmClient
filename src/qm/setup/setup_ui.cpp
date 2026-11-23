@@ -843,8 +843,8 @@ namespace
 					m_EngineWindow = nullptr;
 					m_ExitCode = static_cast<DWORD>(WParam);
 					const wchar_t *pFailureStatus = QmSetup::IsCancelled(m_ExitCode, m_CancelRequested) ?
-						L"安装已取消。可以返回安装选项后重试。" :
-						m_pEngine->Error().c_str();
+										L"安装已取消。可以返回安装选项后重试。" :
+										m_pEngine->Error().c_str();
 					ShowPage(m_ExitCode == 0 ? EPage::DONE : EPage::FAILED, pFailureStatus);
 				}
 				return 0;

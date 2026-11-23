@@ -27,6 +27,11 @@ struct SSettingsSkinListEntry
 	std::optional<SSettingsSkinListColorKey> m_ColorKey;
 	int m_OfficialReleaseDate = 0;
 	time_t m_LastModified = 0;
+	// 计划任务已经算好的搜索命中位置与选中目标；物化时直接搬运，避免逐条重扫。
+	int m_NameMatchStart = -1;
+	int m_NameMatchLength = 0;
+	bool m_SelectedMain = false;
+	bool m_SelectedDummy = false;
 };
 
 struct SSettingsSkinListPlan
@@ -100,11 +105,12 @@ class CSettingsSkinLoadViewport
 
 public:
 	void BeginFrame() { ++m_Frame; }
-	void Publish(std::vector<std::string> &&Names, bool MeasurementOnly = false)
+	bool Publish(std::vector<std::string> &&Names, bool MeasurementOnly = false)
 	{
 		if(MeasurementOnly)
-			return;
-		if(Names != m_vNames)
+			return false;
+		const bool Changed = Names != m_vNames;
+		if(Changed)
 		{
 			if(Names.empty())
 				m_Names.clear();
@@ -117,17 +123,19 @@ public:
 				}
 				catch(const std::bad_alloc &)
 				{
-					return;
+					return false;
 				}
 				catch(const std::length_error &)
 				{
-					return;
+					return false;
 				}
 			}
 			m_vNames.swap(Names);
 		}
 		m_PublishedFrame = m_Frame;
+		return Changed;
 	}
+	const std::vector<std::string> &PublishedNames() const { return m_vNames; }
 	bool Contains(const std::string &Name) const { return m_PublishedFrame == m_Frame && m_Names.contains(Name); }
 	static bool RowVisible(bool MeasurementOnly, const CUIRect &Row, const CUIRect *pClip)
 	{
@@ -232,6 +240,8 @@ struct SSettingsSkinSourceAdmissionInput
 	int m_Loading = 0;
 	int m_NormalLoadingWindow = 0;
 	int m_VisibleLoadingWindow = 0;
+	int m_VisibleWaiting = 0;
+	int m_CountFuseLimit = 0;
 };
 
 struct SSettingsSkinSourceAdmissionOutput
@@ -297,7 +307,8 @@ struct SSettingsAdaptiveBudgetInput
 	char m_aContext[32] = "";
 	float m_FrameMsAverage = 0.0f;
 	float m_FrameMsP95 = 0.0f;
-	float m_TargetFrameMs = 8.333f;
+	// 兜底按 60 Hz；所有 UI 调用方都必须用当前显示器刷新率覆盖。
+	float m_TargetFrameMs = 1000.0f / 60.0f;
 	float m_TextContainerCreateMsEwma = 0.0f;
 	float m_TextContainerUploadMsEwma = 0.0f;
 	float m_GlyphRasterizeMsEwma = 0.0f;
@@ -483,20 +494,31 @@ bool SettingsResourceConsumeGpuUpload(SSettingsResourceMergeBudget &Budget, SSet
 bool SettingsResourceConsumeGpuUploads(SSettingsResourceMergeBudget &Budget, SSettingsWarmupFrameBudget *pFrameBudget, int Count);
 bool SettingsSkinListPlanGenerationMatches(const SSettingsSkinListPlanResult &Result, int CurrentGeneration);
 bool SettingsAssetListJobGenerationMatches(int JobGeneration, int CurrentGeneration);
+// 首屏 8+1 行（最多 54 条）就绪即可发布；全量索引随后原位追加。
 bool SettingsSkinListShouldPublishMergedList(size_t Cursor, size_t Total);
-bool SettingsSkinListShouldReplacePublishedEntries(int PublishedEntries, int PendingEntries, bool DirectoryScanPending, bool MergeComplete);
 bool SettingsSkinListSkeletonReady(const SSkinListPlanState &State);
 bool SettingsSkinListResourcesSettled(const SSkinListPlanState &State);
 bool SettingsSkinListShouldLogAllVisibleReady(bool VisibleSettled, bool AlreadyLogged, int VisibleRows);
-bool SettingsSkinListHasPendingMergeWork(bool HasPendingPlan, size_t PendingNames, size_t PendingEntries, size_t Cursor);
+// 列表首屏固定 8 行 + 1 行预取；列数按当前宽度由 UI 解析，最多 6 列。
+constexpr int SETTINGS_SKIN_LIST_VISIBLE_ROWS = 8;
+constexpr int SETTINGS_SKIN_LIST_PREFETCH_ROWS = 1;
+constexpr int SETTINGS_SKIN_LIST_MAX_COLUMNS = 6;
+constexpr int SETTINGS_SKIN_LIST_MERGE_BUDGET_US = 500;
+constexpr int SETTINGS_SKIN_LIST_MERGE_MAX_PER_FRAME = 512;
+int SettingsSkinListFirstPageEntryCount(int ItemsPerRow);
 int SettingsSkinListFirstPageWarmupEntries(float ListHeight, float RowHeight, int ItemsPerRow, int ExtraRows);
 int SettingsTeeSkinListFirstPageWarmupEntries(float ListHeight);
+int SettingsTeeSkinListFirstPageWarmupEntries(float ListHeight, int ItemsPerRow);
 int SettingsLoadingPrewarmMaxAttempts(int BaseWarmupSteps, int TeeFirstPageEntries);
 bool SettingsLoadingPrewarmShouldKeepPumping(bool WarmupReady, int CompletedSteps, int MaxAttempts, int ConsecutiveNoProgressSteps);
 bool SettingsLoadingPrewarmMadeProgress(int PreviousTextPoolEntries, int NewTextPoolEntries);
 bool SettingsLoadingPrewarmMadeProgress(int PreviousTextPoolEntries, int NewTextPoolEntries, int PreviousMissingTextPlanItems, int NewMissingTextPlanItems);
 bool SettingsLoadingPrewarmMadeProgress(int PreviousTextPoolEntries, int NewTextPoolEntries, int PreviousMissingTextPlanItems, int NewMissingTextPlanItems, int PreviousMissingTextPlanCollectionUnits, int NewMissingTextPlanCollectionUnits);
 void SettingsLoadingPrewarmAdvance(SSettingsLoadingPrewarmState &State, int NewTextPoolEntries, int MissingTextPlanItems, int MissingTextPlanCollectionUnits);
+// 加载阶段是可阻塞的，请求预算直接生效；运行时仍由自适应窗口按帧压力收紧。
+// 历史问题：loading 用帧预算的 1 token 上限，96 步只建了 96 条文本，剩余约 604 条
+// 要等空闲预热，冷切页因此仍会现场构建。
+int SettingsTextPrewarmTokenBudget(bool BlockingLoading, int RequestedTokens, int AdaptiveTokens);
 int SettingsSkinListPrefetchCount(int FirstVisibleIndex, int LastVisibleIndex, int ItemsPerRow, int PrefetchRows, int TotalEntries);
 int SettingsSkinListBackgroundWarmupCount(int TotalEntries, int MaxEntriesPerFrame);
 size_t SettingsSkinBackgroundScanIndex(size_t StartCursor, size_t Attempt, size_t ItemCount);
@@ -508,7 +530,7 @@ bool SettingsSkinListSelectionStillValid(int SelectedIndex, int EntryCount);
 bool SettingsSkinListScrollResetNeeded(int PreviousCount, int CurrentCount, bool ListActive, bool ScrollbarActive);
 bool SettingsSkinListShouldRequestImmediateLoad(bool Visible, bool Prefetched);
 bool SettingsSkinListShouldRequestImmediateLoad(bool Visible);
-bool SettingsRuntimeWarmupShouldRun(bool WarmupEnabled, bool SettingsPageVisible, bool HasActiveItem, bool HasHotItem, bool ScrollInputActive, bool SettingsPageSwitchActive, bool SettingsScrollActive);
+bool SettingsRuntimeWarmupShouldRun(bool WarmupEnabled, bool SettingsPageVisible, bool HasActiveItem, bool ScrollInputActive, bool SettingsPageSwitchActive, bool SettingsScrollActive);
 SSettingsResourceFrameContext SettingsBuildFrameContext(bool PersistentScrollActive, bool ImmediateScrollInput, bool JumpScrollActive, int PostScrollRecoveryFrames);
 SSettingsResourceFrameContext SettingsBuildFrameContext(bool PersistentScrollActive, bool ImmediateScrollInput, int PostScrollRecoveryFrames);
 int SettingsSkinFinalizeMaxPerFrame(bool TeeSettingsActive);
@@ -516,6 +538,7 @@ int SettingsSkinGpuUploadUnits(bool TeeSettingsActive);
 int SettingsSkinFinalizeFrameBudget(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinGpuUploadFrameUnits(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinGpuUploadLimiterUnits(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
+int SettingsSkinUploadTimeBudgetMs(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive, float RenderFrameTimeMs, float TargetFrameMs);
 bool SettingsSkinBackgroundDrainActive(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 int SettingsSkinBackgroundRequestFrameBudget(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 SSettingsSkinBackgroundRequestBudgetOutput SettingsSkinBackgroundRequestBudgetDecision(const SSettingsSkinBackgroundRequestBudgetInput &Input);
@@ -537,6 +560,41 @@ const char *SettingsAdaptiveBudgetReasonName(ESettingsAdaptiveBudgetReason Reaso
 const char *SettingsSkinEffectiveFrameContextName(const SSettingsResourceFrameContext &Context, bool TeeSettingsActive);
 size_t SettingsSkinSourceBytesEstimate(int Width, int Height, int PixelCopies);
 bool SettingsSkinResidencyShouldReclaim(bool BytesBudgetExceeded, bool CountFuseExceeded);
+constexpr size_t SettingsSkinInactiveResidencyLimit(size_t ConfiguredLimit)
+{
+	// 离开 Tee 设置页后仍保留足够覆盖一局常见人数的已加载皮肤，
+	// 但不允许目录滚动留下的几百张预览继续驻留。
+	return minimum(ConfiguredLimit, (size_t)128);
+}
+constexpr bool SettingsSkinShouldReleaseViewportRequest(bool StillVisible, bool ActiveUse, bool AlwaysLoaded,
+	ESettingsResourcePriority Priority, bool PendingOrLoading)
+{
+	return !StillVisible && !ActiveUse && !AlwaysLoaded &&
+	       Priority != ESettingsResourcePriority::BACKGROUND &&
+	       PendingOrLoading;
+}
+constexpr bool SettingsSkinCanStartDownloadSession(int ActiveSessions, int Limit)
+{
+	return Limit <= 0 || ActiveSessions < Limit;
+}
+// 解码/待上传驻留上限：后台预热不能把全部槽位占满。
+constexpr int SETTINGS_SKIN_BACKGROUND_LOADING_LIMIT = 48;
+constexpr int SETTINGS_SKIN_VISIBLE_LOADING_LIMIT = 96;
+constexpr bool SettingsSkinShouldAdmitLoading(int LoadingCount, int Limit)
+{
+	return Limit <= 0 || LoadingCount < Limit;
+}
+// 每个等待原因各自持有时间槽；原因交替出现时也必须分别限流。
+constexpr bool SettingsSkinWaitLogShouldEmit(int64_t Now, int64_t Last, int64_t Interval)
+{
+	return Last == 0 || Now - Last >= Interval;
+}
+constexpr bool SettingsSkinFallbackSweepShouldRun(bool HasUsageRequests, bool HasBackgroundRequests)
+{
+	// fallback 只是显式队列为空时的兜底；显式队列存在时每帧再扫固定 64 项
+	// 既不会推进加载，也会制造虚假的 started 统计。
+	return !HasUsageRequests && !HasBackgroundRequests;
+}
 const char *SettingsWorkshopCatalogSourceName(ESettingsWorkshopCatalogSource Source);
 const char *SettingsWorkshopBytesSourceName(ESettingsWorkshopBytesSource Source);
 void SettingsApplyActiveTeeSkinFrameBudget(SSettingsWarmupFrameBudget &Budget, bool TeeSettingsActive);

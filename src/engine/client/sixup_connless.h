@@ -1,6 +1,8 @@
 #ifndef ENGINE_CLIENT_SIXUP_CONNLESS_H
 #define ENGINE_CLIENT_SIXUP_CONNLESS_H
 
+#include <base/str.h>
+
 #include <engine/serverbrowser.h>
 #include <engine/shared/masterserver.h>
 #include <engine/shared/network.h>
@@ -25,16 +27,18 @@ namespace sixup_translation
 		CUnpacker Up;
 		Up.Reset(aInput.data() + SERVERBROWSE_SIZE, Size - SERVERBROWSE_SIZE);
 		CServerInfo Info{};
+		// 服务端字符串会直接进 UI；非法 UTF-8 一律当坏包丢弃，不做「尽力修复」。
 		auto GetString = [&Up](auto &Buf) {
 			str_copy(Buf, Up.GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES));
+			return str_utf8_check(Buf);
 		};
 		int Token = Up.GetInt();
-		GetString(Info.m_aVersion);
-		GetString(Info.m_aName);
+		if(!GetString(Info.m_aVersion) || !GetString(Info.m_aName))
+			return false;
 		str_clean_whitespaces(Info.m_aName);
 		Up.GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES); // 主机名。
-		GetString(Info.m_aMap);
-		GetString(Info.m_aGameType);
+		if(!GetString(Info.m_aMap) || !GetString(Info.m_aGameType))
+			return false;
 		Info.m_Flags = Up.GetInt();
 		Up.GetInt(); // 服务端难度。
 		Info.m_NumPlayers = Up.GetInt();
@@ -79,8 +83,8 @@ namespace sixup_translation
 		{
 			char aName[MAX_NAME_LENGTH];
 			char aClan[MAX_CLAN_LENGTH];
-			GetString(aName);
-			GetString(aClan);
+			if(!GetString(aName) || !GetString(aClan))
+				return false;
 			int Country = Up.GetInt();
 			if(!in_range(Country, CountryCode::MINIMUM, CountryCode::MAXIMUM))
 				Country = CountryCode::DEFAULT;

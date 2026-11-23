@@ -1,6 +1,7 @@
 #include "QmFinishSummaryCover.h"
 
 #include "UiSurface.h"
+#include "UiTokens.h"
 
 #include <engine/client/rounded_rect_geometry.h>
 #include <engine/shared/config.h>
@@ -61,7 +62,7 @@ namespace qm_finish_summary
 		Surface.m_Radius = Radius;
 		Surface.m_PixelSize = Pixel;
 		Surface.m_AlignToPixel = false;
-		if(DrawRoundedImage(&Graphics, Rect, Image, ColorRGBA(0, 0, 0, 0), Surface))
+		if(DrawRoundedImage(&Graphics, Rect, Image, ui_token::color::COLOR_TRANSPARENT, Surface))
 			return;
 		const auto aRows = CoverRows(Rect.w, Rect.h, Radius, g_Config.m_QmUiCornerCurve,
 			QmEffectiveCornerSmoothing(), QmEffectiveCapsuleSeam());

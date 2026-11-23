@@ -1,4 +1,5 @@
 #include <engine/shared/protocol.h>
+
 #include <game/client/components/qmclient/translate/translate_jobs.h>
 
 #include <gtest/gtest.h>

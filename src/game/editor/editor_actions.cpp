@@ -320,7 +320,8 @@ static void DeselectRemovedQuads(CEditorMap *pMap, const std::shared_ptr<CLayerQ
 	auto &vSelected = pMap->m_vSelectedQuads;
 	vSelected.erase(std::remove_if(vSelected.begin(), vSelected.end(), [&](int Index) {
 		return Index < 0 || (size_t)Index >= pLayer->m_vQuads.size();
-	}), vSelected.end());
+	}),
+		vSelected.end());
 	if(vSelected.empty())
 		pMap->DeselectQuadPoints();
 }
@@ -1394,6 +1395,7 @@ void CEditorActionAppendMap::Undo()
 		Map()->m_vpImages.pop_back();
 	}
 
+	Map()->NormalizeSelection();
 	Map()->OnModify();
 }
 
@@ -1452,6 +1454,9 @@ void CEditorActionTileArt::Undo()
 	{
 		Map()->m_vpImages.pop_back();
 	}
+
+	Map()->NormalizeSelection();
+	Map()->OnModify();
 }
 
 bool CEditorActionTileArt::TryRedo()

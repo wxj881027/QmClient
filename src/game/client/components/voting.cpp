@@ -10,6 +10,8 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiProgressRing.h>
+#include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/vote_map_library.h>
@@ -18,6 +20,15 @@
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
+
+namespace
+{
+	// 完整面板与旧版紧凑条共用同一份界面表面色，避免两档投票 HUD 漂成两套配色。
+	ColorRGBA VoteHudSurface(float Alpha)
+	{
+		return ResolveConfiguredInterfaceSurface(Alpha, ui_token::panel::SURFACE_COLOR_SCALE);
+	}
+}
 
 void CVoting::ConCallvote(IConsole::IResult *pResult, void *pUserData)
 {
@@ -512,7 +523,9 @@ void CVoting::Render()
 	// 不再画左下角那个带按键提示的小 HUD，避免同一份票况出现两处。
 	if(QmUiMobilePlatform() && Client()->State() == IClient::STATE_ONLINE && !HudEditorPreview)
 		return;
-	if(!QmVoteHudVisible(IsVoting(), TakenChoice(), ScoreboardActive, g_Config.m_ClShowVotesAfterVoting != 0, HudEditorPreview))
+	const EVoteHudMode Mode = QmVoteHudMode(IsVoting(), TakenChoice(), ScoreboardActive,
+		g_Config.m_ClShowVotesAfterVoting != 0, HudEditorPreview, g_Config.m_QmMiniVoteHud > 0);
+	if(Mode == EVoteHudMode::NONE)
 		return;
 	int Seconds = SecondsLeft();
 	if(Seconds < 0)
@@ -528,41 +541,55 @@ void CVoting::Render()
 		}
 	}
 
-	// TClient
-	if(g_Config.m_QmMiniVoteHud > 0)
-	{
-		GameClient()->m_TClient.RenderMiniVoteHud(HudEditorPreview);
-		return;
-	}
-
 	const bool PreviewVote = HudEditorPreview && !IsVoting();
 	if(PreviewVote)
 		Seconds = 24;
 
-	CUIRect View = {0.0f, 60.0f, 120.0f, 38.0f};
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	const CUIRect *pUiScreen = Ui()->Screen();
+	const float CoordScale = QmVoteHudCoordScale(ScreenX1 - ScreenX0, pUiScreen != nullptr ? pUiScreen->w : 0.0f);
+	const CUIRect View = QmVoteHudDefaultRect(Mode, CoordScale);
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::Voting, View);
-	Ui()->RenderGaussianBlur(View, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
-	View.Draw(ui_token::color::SURFACE_GLASS, HudEditorScope.m_Corners, ui_token::radius::BASE);
-	View.Margin(3.0f, &View);
+	{
+		// 游戏内组件不在菜单的模糊作用域里；用统一作用域让半透明表面自己带上背景模糊。
+		CUiScopedGaussianBlur BlurScope(Ui(), 1.0f);
+		if(Mode == EVoteHudMode::MINI)
+			RenderMiniVoteHudPanel(QmMiniVoteHudLayoutFromRect(View), 1.0f, PreviewVote, HudEditorScope.m_Corners);
+		else
+			RenderVoteHudPanel(QmVoteHudLayoutFromRect(View, CoordScale), false, 1.0f, PreviewVote, HudEditorScope.m_Corners);
+	}
+	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Voting, View);
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
+}
 
-	SLabelProperties Props;
-	Props.m_EllipsisAtEnd = true;
+void CVoting::RenderVoteHudPanel(const SQmVoteHudLayout &Layout, bool Interactive, float Alpha, bool PreviewVote, int Corners)
+{
+	if(Layout.m_Panel.w <= 0.0f || Layout.m_Panel.h <= 0.0f || Layout.m_Scale <= 0.0f)
+		return;
+	namespace Token = ui_token::vote_hud;
 
+	Alpha = std::clamp(Alpha, 0.0f, 1.0f);
+	if(Alpha <= 0.0f)
+		return;
+
+	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
+	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
+	const ColorRGBA TextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(Alpha);
+	TextRender()->TextColor(TextColor);
+	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(Alpha));
+
+	// 与计分板主面板共用 ResolveConfiguredInterfaceSurface() 的底色与透明度；
+	// 投票面板不再持有自己的玻璃色，三种位置因此不会出现三种底色。
+	Layout.m_Panel.Draw(VoteHudSurface(Alpha), Corners, Token::RADIUS * Layout.m_Scale);
+
+	int Seconds = PreviewVote ? 24 : SecondsLeft();
+	if(Seconds < 0)
+		Seconds = 0;
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), Localize("%ds left"), Seconds);
-
-	CUIRect Row, LeftColumn, RightColumn, ProgressSpinner;
-	View.HSplitTop(6.0f, &Row, &View);
-	Row.VSplitRight(TextRender()->TextWidth(6.0f, aBuf), &LeftColumn, &RightColumn);
-	LeftColumn.VSplitRight(2.0f, &LeftColumn, nullptr);
-	LeftColumn.VSplitRight(6.0f, &LeftColumn, &ProgressSpinner);
-	LeftColumn.VSplitRight(2.0f, &LeftColumn, nullptr);
-
-	SProgressSpinnerProperties ProgressProps;
-	ProgressProps.m_Progress = std::clamp((time() - m_Opentime) / (float)(m_Closetime - m_Opentime), 0.0f, 1.0f);
-	Ui()->RenderProgressSpinner(ProgressSpinner.Center(), ProgressSpinner.h / 2.0f, ProgressProps);
-
-	Ui()->DoLabel(&RightColumn, aBuf, 6.0f, TEXTALIGN_MR);
+	const float FontSize = Token::TITLE_FONT_SIZE * Layout.m_Scale;
+	Ui()->DoLabel(&Layout.m_Time, aBuf, FontSize, TEXTALIGN_MR);
 
 	char aDescription[VOTE_DESC_LENGTH];
 	char aReason[VOTE_REASON_LENGTH];
@@ -577,37 +604,113 @@ void CVoting::Render()
 		GameClient()->FormatStreamerVoteText(VoteReason(), aReason, sizeof(aReason));
 	}
 
-	Props.m_MaxWidth = LeftColumn.w;
-	Ui()->DoLabel(&LeftColumn, aDescription, 6.0f, TEXTALIGN_ML, Props);
+	SLabelProperties Props;
+	Props.m_DisallowNewline = true;
+	Props.m_EllipsisAtEnd = true;
+	Props.m_MaxWidth = Layout.m_Description.w;
+	Ui()->DoLabel(&Layout.m_Description, aDescription, FontSize, TEXTALIGN_ML, Props);
 
-	View.HSplitTop(3.0f, nullptr, &View);
-	View.HSplitTop(6.0f, &Row, &View);
 	str_format(aBuf, sizeof(aBuf), "%s %s", Localize("Reason:"), aReason);
-	Props.m_MaxWidth = Row.w;
-	Ui()->DoLabel(&Row, aBuf, 6.0f, TEXTALIGN_ML, Props);
+	Props.m_MaxWidth = Layout.m_Reason.w;
+	Ui()->DoLabel(&Layout.m_Reason, aBuf, Token::REASON_FONT_SIZE * Layout.m_Scale, TEXTALIGN_ML, Props);
+	RenderBars(Layout.m_Bars, Alpha);
 
-	View.HSplitTop(3.0f, nullptr, &View);
-	View.HSplitTop(4.0f, &Row, &View);
-	RenderBars(Row);
+	for(int Index = 0; Index < 2; ++Index)
+	{
+		const int Choice = Index == 0 ? 1 : -1;
+		const CUIRect &Button = Index == 0 ? Layout.m_Yes : Layout.m_No;
+		const void *pButtonId = &m_aScoreboardVoteButtonIds[Index];
+		const bool Selected = TakenChoice() == Choice;
+		const bool Enabled = QmScoreboardVoteCanSubmit(IsVoting(), Interactive && !PreviewVote, TakenChoice(), Choice);
+		const ColorRGBA ChoiceColor = Choice == 1 ? ui_token::color::SUCCESS : ui_token::color::DANGER;
+		ui_widget::SButtonSurfaceOptions Options;
+		Options.m_Enabled = Enabled;
+		Options.m_Radius = ui_token::radius::BASE * Layout.m_Scale;
+		Options.m_Color = (Selected ? ChoiceColor.WithAlpha(0.25f) : ResolveConfiguredControlSurface()).WithMultipliedAlpha(Alpha);
+		ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pButtonId, Button, Options);
 
-	View.HSplitTop(3.0f, nullptr, &View);
-	View.HSplitTop(6.0f, &Row, &View);
-	Row.VSplitMid(&LeftColumn, &RightColumn, 4.0f);
+		char aKey[64];
+		GameClient()->m_Binds.GetKey(Choice == 1 ? "vote yes" : "vote no", aKey, sizeof(aKey));
+		const char *pLabel = Choice == 1 ? Localize("Vote yes") : Localize("Vote no");
+		if(aKey[0] != '\0')
+			str_format(aBuf, sizeof(aBuf), "%s - %s", aKey, pLabel);
+		else
+			str_copy(aBuf, pLabel, sizeof(aBuf));
+		TextRender()->TextColor(Selected ? ChoiceColor.WithMultipliedAlpha(Alpha) : TextColor);
+		CUIRect Label;
+		Button.Margin(Token::BUTTON_TEXT_INSET * Layout.m_Scale, &Label);
+		Props.m_MaxWidth = Label.w;
+		Ui()->DoLabel(&Label, aBuf, FontSize, TEXTALIGN_MC, Props);
+		if(Enabled && Ui()->DoButtonLogic(pButtonId, 0, &Button, BUTTONFLAG_LEFT))
+			Vote(Choice);
+	}
+
+	TextRender()->TextColor(PreviousTextColor);
+	TextRender()->TextOutlineColor(PreviousOutlineColor);
+}
+
+void CVoting::RenderMiniVoteHudPanel(const SQmMiniVoteHudLayout &Layout, float Alpha, bool PreviewVote, int Corners)
+{
+	if(Layout.m_Panel.w <= 0.0f || Layout.m_Panel.h <= 0.0f || Alpha <= 0.0f)
+		return;
+	namespace Token = ui_token::vote_hud;
+
+	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
+	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
+	const ColorRGBA TextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(Alpha);
+	TextRender()->TextColor(TextColor);
+	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(Alpha));
+
+	Layout.m_Panel.Draw(VoteHudSurface(Alpha), Corners, Token::RADIUS);
+
+	int Seconds = PreviewVote ? 24 : SecondsLeft();
+	if(Seconds < 0)
+		Seconds = 0;
+
+	char aDescription[VOTE_DESC_LENGTH];
+	char aReason[VOTE_REASON_LENGTH];
+	if(PreviewVote)
+	{
+		str_copy(aDescription, "funvote", sizeof(aDescription));
+		str_copy(aReason, "No reason given", sizeof(aReason));
+	}
+	else
+	{
+		GameClient()->FormatStreamerVoteText(VoteDescription(), aDescription, sizeof(aDescription));
+		GameClient()->FormatStreamerVoteText(VoteReason(), aReason, sizeof(aReason));
+	}
+
+	SLabelProperties Props;
+	Props.m_DisallowNewline = true;
+	Props.m_EllipsisAtEnd = true;
+	Props.m_MaxWidth = Layout.m_Description.w;
+	Ui()->DoLabel(&Layout.m_Description, aDescription, Token::MINI_DESCRIPTION_FONT_SIZE, TEXTALIGN_ML, Props);
+
+	Props.m_MaxWidth = Layout.m_Reason.w;
+	Ui()->DoLabel(&Layout.m_Reason, aReason, Token::MINI_REASON_FONT_SIZE, TEXTALIGN_ML, Props);
+
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), Localize("%ds left"), Seconds);
+	Ui()->DoLabel(&Layout.m_Time, aBuf, Token::MINI_TIME_FONT_SIZE, TEXTALIGN_ML);
+
+	float Progress = 0.5f;
+	if(!PreviewVote && m_Closetime > m_Opentime)
+		Progress = std::clamp((time() - m_Opentime) / (float)(m_Closetime - m_Opentime), 0.0f, 1.0f);
+	ui_widget::DrawProgressRing(Ui(), Layout.m_Spinner.Center(), Layout.m_Spinner.h * 0.5f, {.m_Progress = Progress, .m_Color = ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(Alpha)});
+
+	RenderBars(Layout.m_Bars, Alpha);
 
 	char aKey[64];
 	GameClient()->m_Binds.GetKey("vote yes", aKey, sizeof(aKey));
-	str_format(aBuf, sizeof(aBuf), "%s - %s", aKey, Localize("Vote yes"));
-	TextRender()->TextColor(!PreviewVote && TakenChoice() == 1 ? ColorRGBA(0.2f, 0.9f, 0.2f, 0.85f) : TextRender()->DefaultTextColor());
-	Ui()->DoLabel(&LeftColumn, aBuf, 6.0f, TEXTALIGN_ML);
+	TextRender()->TextColor(TakenChoice() == 1 ? ui_token::color::SUCCESS.WithMultipliedAlpha(Alpha) : TextColor);
+	Ui()->DoLabel(&Layout.m_Yes, aKey[0] == '\0' ? Localize("Agree") : aKey, Token::MINI_ACTION_FONT_SIZE, TEXTALIGN_ML);
 
 	GameClient()->m_Binds.GetKey("vote no", aKey, sizeof(aKey));
-	str_format(aBuf, sizeof(aBuf), "%s - %s", Localize("Vote no"), aKey);
-	TextRender()->TextColor(!PreviewVote && TakenChoice() == -1 ? ColorRGBA(0.95f, 0.25f, 0.25f, 0.85f) : TextRender()->DefaultTextColor());
-	Ui()->DoLabel(&RightColumn, aBuf, 6.0f, TEXTALIGN_MR);
+	TextRender()->TextColor(TakenChoice() == -1 ? ui_token::color::DANGER.WithMultipliedAlpha(Alpha) : TextColor);
+	Ui()->DoLabel(&Layout.m_No, aKey[0] == '\0' ? Localize("Disagree") : aKey, Token::MINI_ACTION_FONT_SIZE, TEXTALIGN_MR);
 
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Voting, {0.0f, 60.0f, 120.0f, 38.0f});
-	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
+	TextRender()->TextColor(PreviousTextColor);
+	TextRender()->TextOutlineColor(PreviousOutlineColor);
 }
 
 void CVoting::ResetScoreboardVoteInteraction()
@@ -635,7 +738,7 @@ void CVoting::RenderScoreboard(const CUIRect &Scoreboard, bool Interactive, floa
 		return;
 	}
 
-	const SQmScoreboardVoteLayout Layout = QmScoreboardVoteLayout(*Ui()->Screen(), Scoreboard, g_Config.m_QmMiniVoteHud > 0);
+	const SQmVoteHudLayout Layout = QmScoreboardVoteLayout(*Ui()->Screen(), Scoreboard);
 	if(Layout.m_Scale <= 0.0f)
 	{
 		ResetScoreboardVoteInteraction();
@@ -645,65 +748,7 @@ void CVoting::RenderScoreboard(const CUIRect &Scoreboard, bool Interactive, floa
 	const bool CanInteract = Interactive && !Ui()->IsPopupOpen();
 	if(!CanInteract)
 		ResetScoreboardVoteInteraction();
-	Alpha = std::clamp(Alpha, 0.0f, 1.0f);
-	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
-	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
-	const ColorRGBA TextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(Alpha);
-	TextRender()->TextColor(TextColor);
-	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(Alpha));
-	Layout.m_Panel.Draw(ui_token::color::SURFACE_GLASS.WithMultipliedAlpha(Alpha), IGraphics::CORNER_ALL, ui_token::radius::BASE * Layout.m_Scale);
-
-	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), Localize("%ds left"), Seconds);
-	const float FontSize = 9.0f * Layout.m_Scale;
-	CUIRect Description, Time;
-	Layout.m_Header.VSplitRight(std::min(Layout.m_Header.w * 0.4f, TextRender()->TextWidth(FontSize, aBuf)), &Description, &Time);
-	Description.VSplitRight(5.0f * Layout.m_Scale, &Description, nullptr);
-	Ui()->DoLabel(&Time, aBuf, FontSize, TEXTALIGN_MR);
-
-	char aDescription[VOTE_DESC_LENGTH];
-	char aReason[VOTE_REASON_LENGTH];
-	GameClient()->FormatStreamerVoteText(VoteDescription(), aDescription, sizeof(aDescription));
-	GameClient()->FormatStreamerVoteText(VoteReason(), aReason, sizeof(aReason));
-	SLabelProperties Props;
-	Props.m_EllipsisAtEnd = true;
-	Props.m_MaxWidth = Description.w;
-	Ui()->DoLabel(&Description, aDescription, FontSize, TEXTALIGN_ML, Props);
-	str_format(aBuf, sizeof(aBuf), "%s %s", Localize("Reason:"), aReason);
-	Props.m_MaxWidth = Layout.m_Reason.w;
-	Ui()->DoLabel(&Layout.m_Reason, aBuf, 8.0f * Layout.m_Scale, TEXTALIGN_ML, Props);
-	RenderBars(Layout.m_Bars, Alpha);
-
-	for(int Index = 0; Index < 2; ++Index)
-	{
-		const int Choice = Index == 0 ? 1 : -1;
-		const CUIRect &Button = Index == 0 ? Layout.m_Yes : Layout.m_No;
-		const void *pButtonId = &m_aScoreboardVoteButtonIds[Index];
-		const bool Selected = TakenChoice() == Choice;
-		const bool Enabled = QmScoreboardVoteCanSubmit(IsVoting(), CanInteract, TakenChoice(), Choice);
-		const ColorRGBA ChoiceColor = Choice == 1 ? ui_token::color::SUCCESS : ui_token::color::DANGER;
-		ui_widget::SButtonSurfaceOptions Options;
-		Options.m_Enabled = Enabled;
-		Options.m_Radius = ui_token::radius::BASE * Layout.m_Scale;
-		Options.m_Color = (Selected ? ChoiceColor.WithAlpha(0.25f) : ResolveConfiguredControlSurface()).WithMultipliedAlpha(Alpha);
-		ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pButtonId, Button, Options);
-		char aKey[64];
-		GameClient()->m_Binds.GetKey(Choice == 1 ? "vote yes" : "vote no", aKey, sizeof(aKey));
-		const char *pLabel = Choice == 1 ? Localize("Vote yes") : Localize("Vote no");
-		if(aKey[0] != '\0')
-			str_format(aBuf, sizeof(aBuf), "%s - %s", aKey, pLabel);
-		else
-			str_copy(aBuf, pLabel);
-		TextRender()->TextColor(Selected ? ChoiceColor.WithMultipliedAlpha(Alpha) : TextColor);
-		CUIRect Label;
-		Button.VMargin(3.0f * Layout.m_Scale, &Label);
-		Props.m_MaxWidth = Label.w;
-		Ui()->DoLabel(&Label, aBuf, FontSize, TEXTALIGN_MC, Props);
-		if(Enabled && Ui()->DoButtonLogic(pButtonId, 0, &Button, BUTTONFLAG_LEFT))
-			Vote(Choice);
-	}
-	TextRender()->TextColor(PreviousTextColor);
-	TextRender()->TextOutlineColor(PreviousOutlineColor);
+	RenderVoteHudPanel(Layout, CanInteract, Alpha, false, IGraphics::CORNER_ALL);
 }
 
 void CVoting::RenderBars(CUIRect Bars, float Alpha) const

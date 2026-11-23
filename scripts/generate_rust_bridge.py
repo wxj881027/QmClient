@@ -54,5 +54,7 @@ def main():
 			"--output",
 			f"{output_prefix}.h",
 		])
+
+
 if __name__ == "__main__":
 	main()

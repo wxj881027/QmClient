@@ -113,12 +113,14 @@ void CQmMonitoring::ResetHistory()
 	const float InvalidMetric = std::numeric_limits<float>::quiet_NaN();
 	m_aGameTimeMarginHistory.fill(InvalidMetric);
 	m_aFrameTimeHistory.fill(InvalidMetric);
+	m_aMainThreadTimeHistory.fill(InvalidMetric);
 	m_HistoryHead = 0;
 	m_HistoryCount = 0;
 	m_LastSampleTick = 0;
 	m_LastPercentileTick = 0;
 	m_CachedFrameTimeP95Ms = -1.0f;
 	m_CachedFrameTimeP99Ms = -1.0f;
+	m_CachedMainThreadP95Ms = -1.0f;
 	m_CachedFpsOnePctLow = -1.0f;
 	m_CachedLongFrameCount = 0;
 	m_LastSnapshotRateSampleTime = 0;
@@ -158,7 +160,7 @@ void CQmMonitoring::OnRender()
 	if(m_LastSampleTick != 0 && Now - m_LastSampleTick < time_freq() / 20)
 		return;
 
-	PushFrameTimeSample(Client()->RenderFrameTime() * 1000.0f);
+	PushFrameTimeSample(Client()->RenderFrameTime() * 1000.0f, Client()->MainThreadFrameTime() * 1000.0f);
 	UpdateSnapshot();
 	m_aGameTimeMarginHistory[m_HistoryHead] = m_Snapshot.m_Network.m_GameTimeMarginMs;
 	m_HistoryHead = (m_HistoryHead + 1) % QM_MONITORING_HISTORY_CAPACITY;
@@ -288,6 +290,7 @@ void CQmMonitoring::UpdatePerformanceMetrics(SQmPerformanceMetrics &Perf)
 		const int FrameHistoryCount = std::min(m_HistoryCount + 1, (int)m_aFrameTimeHistory.size());
 		m_CachedFrameTimeP95Ms = QmComputeHistoryPercentile(m_aFrameTimeHistory, FrameHistoryHead, FrameHistoryCount, 95.0f);
 		m_CachedFrameTimeP99Ms = QmComputeHistoryPercentile(m_aFrameTimeHistory, FrameHistoryHead, FrameHistoryCount, 99.0f);
+		m_CachedMainThreadP95Ms = QmComputeHistoryPercentile(m_aMainThreadTimeHistory, FrameHistoryHead, FrameHistoryCount, 95.0f);
 		m_CachedFpsOnePctLow = m_CachedFrameTimeP99Ms > 0.0f ? 1000.0f / m_CachedFrameTimeP99Ms : -1.0f;
 		m_CachedLongFrameCount = 0;
 		const int Start = (FrameHistoryHead - FrameHistoryCount + (int)m_aFrameTimeHistory.size()) % (int)m_aFrameTimeHistory.size();
@@ -301,6 +304,8 @@ void CQmMonitoring::UpdatePerformanceMetrics(SQmPerformanceMetrics &Perf)
 	}
 	Perf.m_FrameTimeP95Ms = m_CachedFrameTimeP95Ms;
 	Perf.m_FrameTimeP99Ms = m_CachedFrameTimeP99Ms;
+	Perf.m_MainThreadTimeMs = Client()->MainThreadFrameTime() * 1000.0f;
+	Perf.m_MainThreadTimeP95Ms = m_CachedMainThreadP95Ms;
 	Perf.m_FpsOnePctLow = m_CachedFpsOnePctLow;
 	Perf.m_LongFrameCount = m_CachedLongFrameCount;
 	Perf.m_FrameTimeUs = Client()->FrameTimeAverage() * 1000000.0f;
@@ -372,9 +377,10 @@ void CQmMonitoring::UpdateDiagnosticVerdict(SQmDiagnosticVerdict &Verdict, const
 	Verdict.m_pDetail = LocalizeCauseDetail(Verdict.m_PrimaryCause, Verdict.m_Grade, Net, Perf);
 }
 
-void CQmMonitoring::PushFrameTimeSample(float FrameTimeMs)
+void CQmMonitoring::PushFrameTimeSample(float FrameTimeMs, float MainThreadTimeMs)
 {
 	m_aFrameTimeHistory[m_HistoryHead] = std::isfinite(FrameTimeMs) && FrameTimeMs >= 0.0f ? FrameTimeMs : std::numeric_limits<float>::quiet_NaN();
+	m_aMainThreadTimeHistory[m_HistoryHead] = std::isfinite(MainThreadTimeMs) && MainThreadTimeMs >= 0.0f ? MainThreadTimeMs : std::numeric_limits<float>::quiet_NaN();
 }
 
 void CQmMonitoring::UpdateSnapshot()

@@ -25,7 +25,9 @@
 #include <generated/protocol7.h>
 #include <generated/protocolglue.h>
 
+#include <game/client/components/qmclient/auto_team_lock.h>
 #include <game/client/components/qmclient/connection_resource_preparation.h>
+#include <game/client/components/qmclient/local_world.h>
 #include <game/client/components/qmclient/self_kill_protection.h>
 #include <game/client/components/qmclient/snapshot_entities.h>
 #include <game/client/prediction/gameworld.h>
@@ -80,8 +82,8 @@
 #include "components/qmclient/checkpoint_guide.h"
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
-#include "components/qmclient/dummy_distance_link.h"
 #include "components/qmclient/demo_camera.h"
+#include "components/qmclient/dummy_distance_link.h"
 #include "components/qmclient/finish_summary.h"
 #include "components/qmclient/friend_last_seen.h"
 #include "components/qmclient/hammer_hit_detection.h"
@@ -93,6 +95,7 @@
 #include "components/qmclient/music_app_watcher.h"
 #include "components/qmclient/music_lyrics/music_lyrics_integration.h"
 #include "components/qmclient/music_lyrics/music_lyrics_presentation.h"
+#include "components/qmclient/music_lyrics/qm_lxmusic_integration.h"
 #include "components/qmclient/music_lyrics/qm_spotify_integration.h"
 #include "components/qmclient/netease/netease_integration.h"
 #include "components/qmclient/pending_hammer_hits.h"
@@ -100,6 +103,7 @@
 #include "components/qmclient/qm_hook_coll_spatial_index.h"
 #include "components/qmclient/qmclient.h"
 #include "components/qmclient/rank_ghost.h"
+#include "components/qmclient/replay_session.h"
 #include "components/qmclient/scripting.h"
 #include "components/qmclient/stutter_capture.h"
 #include "components/qmclient/translate/translate.h"
@@ -275,6 +279,7 @@ public:
 	CMusicLyricsIntegration m_MusicLyricsIntegration;
 	CQmMusicAppWatcher m_MusicAppWatcher;
 	CSpotifyIntegration m_SpotifyIntegration;
+	CLxMusicIntegration m_LxMusicIntegration;
 	CQmLyricsPresentation m_LyricsPresentation;
 
 	CDamageInd m_DamageInd;
@@ -300,6 +305,12 @@ public:
 	CRaceDemo m_RaceDemo;
 	CGhost m_Ghost;
 	CHudEditor m_HudEditor;
+
+	// 客户端侧权威世界的公共层（不是 CComponent）。所有"没有服务器"的世界能力
+	// 共用它管理轨迹会话：快速练习是当前的使用方，Rank 1 回放、以后的本地
+	// 场景都可以另起一个实例或共用这一个。放在客户端级而不是练习组件内部，
+	// 是为了让幽灵组件与练习组件共享同一条时间线与轨迹记录。
+	CLocalWorld m_LocalWorld;
 
 	CLocalServer m_LocalServer;
 
@@ -343,6 +354,10 @@ public:
 	CInputOverlay m_InputOverlay;
 	CMovingTiles m_MovingTilesBackground = CMovingTiles{false};
 	CMovingTiles m_MovingTilesForeground = CMovingTiles{true};
+
+	// 回放会话的统一查询入口：HUD、相机、菜单只读这一个状态，
+	// 避免各自组合 CGhost::ManualModeActive 与 CRankGhost::IsViewModeActive。
+	qmclient::replay::SReplaySessionStatus ReplaySessionStatus() const;
 
 private:
 	void UpdateQmAxiomPrediction();
@@ -395,9 +410,11 @@ private:
 	CLayers m_Layers;
 	CCollision m_Collision;
 	CUi m_UI;
+
 public:
 	// 气泡实例统一由 CUi 持有，这里保留引用别名给既有调用点，所有权仍只有一份。
 	CTooltips &m_Tooltips = m_UI.Tooltips();
+
 private:
 	CUiRuntimeV2 m_UiRuntimeV2;
 	CQmIconPrewarmPlan m_QmIconPrewarm;
@@ -1043,6 +1060,8 @@ public:
 	bool m_ReceivedDDNetPlayerFinishTimesMillis;
 
 	CTeamsCore m_Teams;
+	// 主号和分身各自连接收到的队伍状态；UI 与通用锁队按连接读取，避免共享表被当前视角覆盖。
+	CTeamsCore m_aConnectionTeams[NUM_DUMMIES];
 
 	// 钩子碰撞线模拟会以「每 tick 一次」的频率调用 IntersectCharacter，而它每次都要遍历
 	// MAX_CLIENTS 个客户端并读取 m_aClients[i]（CClientData 步长上万字节，几乎每次迭代都会
@@ -1079,15 +1098,15 @@ public:
 
 	int AntiPingPlayers() const
 	{
-		if(m_FastPractice.ForcePredictPlayers())
+		if(m_FastPractice.ForcePredictPractice())
 			return 1;
 		if(g_Config.m_ClAntiPing && g_Config.m_ClAntiPingPlayers && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 			return g_Config.m_ClAntiPingPlayers;
 		return 0;
 	}
-	bool AntiPingGrenade() const { return m_FastPractice.ForcePredictGrenade() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingGrenade && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
-	bool AntiPingWeapons() const { return m_FastPractice.ForcePredictWeapons() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingWeapons && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
-	bool AntiPingGunfire() const { return m_FastPractice.ForcePredictGunfire() || (AntiPingGrenade() && AntiPingWeapons() && g_Config.m_ClAntiPingGunfire); }
+	bool AntiPingGrenade() const { return m_FastPractice.ForcePredictPractice() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingGrenade && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
+	bool AntiPingWeapons() const { return m_FastPractice.ForcePredictPractice() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingWeapons && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
+	bool AntiPingGunfire() const { return m_FastPractice.ForcePredictPractice() || (AntiPingGrenade() && AntiPingWeapons() && g_Config.m_ClAntiPingGunfire); }
 	bool Predict() const;
 	bool PredictDummy() const
 	{
@@ -1128,7 +1147,17 @@ public:
 	CGameWorld m_ExtraPredictedWorld;
 	CGameWorld m_PredSmoothingWorld;
 
-	std::vector<SSwitchers> &Switchers() { return m_GameWorld.m_Core.m_vSwitchers; }
+	// 可玩时间线的开关画布：服务器世界或快速练习分支。
+	// 影子查看只读画布不从这里返回，调用方需要影子状态时显式使用
+	// CRankGhost::ViewSwitchers() 或查看机关世界。
+	std::vector<SSwitchers> &PlayableSwitchers()
+	{
+		// 练习分支世界是当前客户端侧的权威时间线：开关状态读分支那一份，
+		// 服务器快照只写 m_GameWorld，不会把 /setswitch 的结果冲掉。
+		if(auto *pPracticeSwitchers = m_FastPractice.PracticeSwitchers())
+			return *pPracticeSwitchers;
+		return m_GameWorld.m_Core.m_vSwitchers;
+	}
 	std::vector<SSwitchers> &PredSwitchers() { return m_PredictedWorld.m_Core.m_vSwitchers; }
 
 	void DummyResetInput() override;
@@ -1397,6 +1426,8 @@ private:
 	void RepairStaleTeeRenderInfos();
 
 	void UpdateAutoTeamLock();
+	void ProcessTeamsState(int Conn, CUnpacker *pUnpacker);
+	void RefreshConnectionLocalIds();
 	void UpdateLocalTuning();
 	void UpdatePrediction();
 	void UpdateSpectatorCursor();
@@ -1424,9 +1455,7 @@ private:
 	uint64_t m_LastStreamerFriendsRevision = std::numeric_limits<uint64_t>::max();
 	CCharOrder m_CharOrder;
 	int m_aSwitchStateTeam[NUM_DUMMIES];
-	int m_aAutoTeamLockLastTeam[NUM_DUMMIES] = {TEAM_FLOCK, TEAM_FLOCK};
-	int64_t m_aAutoTeamLockDeadlineTick[NUM_DUMMIES] = {0, 0};
-	bool m_aAutoTeamLockPending[NUM_DUMMIES] = {false, false};
+	CQmAutoTeamLockState m_AutoTeamLock;
 	int64_t m_aQ1menGSyncMarkUntil[MAX_CLIENTS] = {0};
 	bool m_aQ1menGSyncFootParticlesEnabled[MAX_CLIENTS] = {false};
 	bool m_aQ1menGSyncRemoteParticlesEnabled[MAX_CLIENTS] = {false};

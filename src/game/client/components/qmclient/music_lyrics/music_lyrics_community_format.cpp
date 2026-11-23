@@ -1,5 +1,7 @@
 #include "music_lyrics_community_format.h"
 
+#include <engine/shared/qm_storage_layout.h>
+
 #include <algorithm>
 #include <charconv>
 #include <utility>
@@ -140,7 +142,7 @@ namespace QmMusicLyrics
 			return {};
 		const char *pDirectory = Song.m_Source == ECommunitySource::NETEASE ? "netease" : Song.m_Source == ECommunitySource::QQMUSIC ? "qqmusic" :
 																	       "spotify";
-		return std::string("qmclient/lyrics/") + pDirectory + "/" + Song.m_Id + ".yrc";
+		return std::string(qm_storage::CONTENT_LYRICS_DIR) + "/" + pDirectory + "/" + Song.m_Id + ".yrc";
 	}
 
 	std::string CommunityUrl(const SCommunitySong &Song)

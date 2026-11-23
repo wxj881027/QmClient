@@ -1219,7 +1219,7 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 	{
 		for(const auto &Item : Resources->m_vAutoMapperConfigs)
 		{
-		const CMapItemAutomapperConfig *pItem = &Item;
+			const CMapItemAutomapperConfig *pItem = &Item;
 			if(pItem->m_Version == 1)
 			{
 				if(pItem->m_GroupId >= 0 && (size_t)pItem->m_GroupId < m_vpGroups.size() &&

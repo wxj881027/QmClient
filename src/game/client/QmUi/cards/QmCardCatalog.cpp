@@ -199,6 +199,8 @@ namespace qm_card_catalog
 			return BuildBindOverviewCard(Ctx, Out);
 		if(str_comp(pStableId, "qm:self_kill_protection") == 0)
 			return BuildSelfKillProtectionCard(Ctx, Out);
+		if(str_comp(pStableId, "qm:fast_practice") == 0)
+			return BuildFastPracticeCard(Ctx, Out);
 		if(ContainsStableId(TitleCardStableIds(), pStableId))
 			return QmCardRenderHook::BuildTitleCard(Ctx, pStableId, Out);
 		if(ContainsStableId(NameplateCardStableIds(), pStableId))

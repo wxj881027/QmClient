@@ -168,6 +168,16 @@ TEST(QmTooltips, RectangleHoverExpiresWhenInputIsBlockedAndRecoversAfterPopupClo
 	EXPECT_FALSE(QmTooltipHovered(Tooltip, Pointer));
 }
 
+TEST(QmTooltips, ForcedHoverIgnoresSystemPointerForVirtualScreens)
+{
+	CTooltip Tooltip{nullptr, CUIRect{0, 0, 20, 20}, "info", 100, true};
+	Tooltip.m_ForcedHover = true;
+	STooltipPointer Pointer;
+	Pointer.m_Position = vec2(200, 200);
+	Pointer.m_InputAvailable = false;
+	EXPECT_TRUE(QmTooltipHovered(Tooltip, Pointer));
+}
+
 TEST(QmConfigHint, ResolvesClientIntegerColorAndStringBindingsWithoutReadingValues)
 {
 	CConfig Config{};

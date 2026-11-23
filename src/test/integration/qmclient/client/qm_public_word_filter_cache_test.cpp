@@ -1,3 +1,4 @@
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/public_word_filter.h>
@@ -17,12 +18,12 @@ namespace
 		{
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
-			ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+			ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::CACHE_REMOTE_DIR));
 		}
 
 		void WriteCache(std::string_view Content)
 		{
-			IOHANDLE File = m_pStorage->OpenFile("qmclient/public_word_filter.txt", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			IOHANDLE File = m_pStorage->OpenFile("qmclient/cache/remote/public_word_filter.txt", IOFLAG_WRITE, IStorage::TYPE_SAVE);
 			ASSERT_NE(File, nullptr);
 			EXPECT_EQ(io_write(File, Content.data(), static_cast<unsigned>(Content.size())), Content.size());
 			EXPECT_EQ(io_close(File), 0);

@@ -173,7 +173,7 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 			{&g_Config.m_QmAutoSwitchOnUnfreeze, Localizable("Auto switch to the tee that got unfrozen"), Localize("Auto switch to the tee that got unfrozen")},
 			{&g_Config.m_QmAutoCloseChatOnUnfreeze, Localizable("Automatically close the current chat after waking from freeze"), Localize("Automatically close the current chat after waking from freeze")},
 			{&g_Config.m_QmFreezeWakeupPopup, Localizable("Show wake-up popup on the other tee"), Localize("Show wake-up popup on the other tee")},
-			{&g_Config.m_QmAutoTeamLock, Localizable("Auto team lock"), Localize("Auto team lock")},
+			{&g_Config.m_QmAutoTeamLock, Localizable("Auto-lock after joining lockable team"), Localize("Auto-lock after joining lockable team")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
@@ -190,7 +190,7 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 		if(Flow.Control("hj-assist-1", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
-			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-hj-assist-lock-delay", &LabelColumn, Localize("Lock delay"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-hj-assist-lock-delay", &LabelColumn, Localize("Auto-lock delay (seconds)"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			static int s_QmAutoTeamLockDelayInputId;
 			RenderQmSettingsSliderWithValueInput(&s_QmAutoTeamLockDelayInputId, ControlColumn, &g_Config.m_QmAutoTeamLockDelay, 0, 30, "s", PrewarmOnly);
 		}

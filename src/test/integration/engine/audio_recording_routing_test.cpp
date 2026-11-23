@@ -33,6 +33,9 @@ namespace
 		void NextVideoFrameThread() override { ADD_FAILURE() << "unexpected video worker"; }
 		void NextAudioFrame(ISoundMixFunc) override { ADD_FAILURE() << "unexpected recorder mix"; }
 		void NextAudioFrameTimeline(ISoundMixFunc) override { ADD_FAILURE() << "unexpected audio timeline"; }
+		int64_t Time() const override { return 0; }
+		float LocalTime() const override { return 0.0f; }
+		void SetLocalStartTime(int64_t) override {}
 	};
 
 	class AudioRecordingRouting : public ::testing::Test

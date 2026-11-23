@@ -4,6 +4,7 @@
 #include <base/str.h>
 #include <base/system.h>
 
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <memory>
@@ -11,8 +12,8 @@
 
 namespace qm_identity_file
 {
-	inline constexpr const char *CLIENT_ID_FILE = "qmclient/playtime_client_id.txt";
-	inline constexpr const char *MACHINE_ID_FILE = "qmclient/voice_machine_id.txt";
+	inline constexpr const char *CLIENT_ID_FILE = qm_storage::PLAYTIME_CLIENT_ID_FILE;
+	inline constexpr const char *MACHINE_ID_FILE = qm_storage::MACHINE_ID_FILE;
 
 	enum class EFile
 	{
@@ -34,7 +35,7 @@ namespace qm_identity_file
 	{
 	public:
 		virtual ~CFileOperations() = default;
-		virtual IOHANDLE Open(IStorage &Storage, const char *pPath) { return Storage.OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE); }
+		virtual IOHANDLE Open(IStorage &Storage, const char *pPath) { return Storage.OpenFile(pPath, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE); }
 		virtual unsigned Write(IOHANDLE File, const void *pData, unsigned Size) { return io_write(File, pData, Size); }
 		virtual int Sync(IOHANDLE File) { return io_sync(File); }
 		virtual int Error(IOHANDLE File) { return io_error(File); }
@@ -87,8 +88,7 @@ namespace qm_identity_file
 			if(!aRoot[0] || str_length(aRoot) + str_length(aTemporary) + 1 >= IO_MAX_PATH_LENGTH ||
 				pStorage->FileExists(aTemporary, IStorage::TYPE_SAVE) || pStorage->FolderExists(aTemporary, IStorage::TYPE_SAVE))
 				return false;
-			if(!pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE) && !pStorage->FolderExists("qmclient", IStorage::TYPE_SAVE))
-				return false;
+			qm_storage::EnsureFolder(pStorage, qm_storage::CONFIG_CREDENTIALS_DIR);
 			char aContent[65];
 			mem_copy(aContent, Value.data(), Value.size());
 			aContent[Value.size()] = '\n';

@@ -22,6 +22,7 @@ struct SWikiEditorState
 	SWikiDocument m_Fallback{};
 	char m_aId[96] = "";
 	bool m_IsCard = true;
+	bool m_ReadOnly = false;
 
 	SWikiContent m_Content;
 	CWikiMarkdown m_Markdown;
@@ -41,6 +42,7 @@ struct SWikiEditorState
 
 	// 换文档：记录 id 并首次解析内容，同时丢掉上一份草稿。
 	void Load(const char *pId, const SWikiDocument &Fallback, bool IsCard);
+	void LoadReadOnly(std::string Markdown);
 	// 用已记录的 id 重新解析（保存、还原之后调用）。
 	void Reload();
 	// 进入编辑：没有未保存草稿才把当前内容变成草稿。
@@ -56,6 +58,9 @@ struct SWikiEditorState
 	// 删除用户覆盖并重新载入内置内容。
 	bool ResetToBuiltIn();
 	void SetStatus(const char *pText, bool Error);
+
+private:
+	void ParseContent();
 };
 
 #endif

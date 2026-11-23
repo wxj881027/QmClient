@@ -8,8 +8,8 @@
 #include "math.h"
 #include "mem.h"
 
-#include <cerrno>
 #include <cctype>
+#include <cerrno>
 #include <charconv> // std::to_chars
 #include <cstdarg>
 #include <cstdio>

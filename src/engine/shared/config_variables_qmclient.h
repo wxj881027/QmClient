@@ -21,19 +21,20 @@ MACRO_CONFIG_INT(QmEditorCollabFollowPlacement, qm_editor_collab_follow_placemen
 MACRO_CONFIG_INT(QmSteamAutoLaunch, qm_steam_auto_launch, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically launch Steam when the client is started externally, so Steam can track your playtime")
 MACRO_CONFIG_STR(QmSteamClientPath, qm_steam_client_path, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Steam client path (leave empty to detect automatically)")
 MACRO_CONFIG_INT(QmConsoleFilterMask, qm_console_filter_mask, 15, 0, 15, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Local console log category filter mask (bit flags)")
-MACRO_CONFIG_INT(QmConsoleFontSize, qm_console_font_size, 10, 1, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console font size")
+MACRO_CONFIG_INT(QmConsoleFontSize, qm_console_font_size, 9, 1, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console font size")
 // 0=现代终端 1=经典 PowerShell 2=自定义；3 起为 Windows Terminal 内置配色
 //（顺序见 console_color_schemes.h，只在末尾追加，不重排）。
-MACRO_CONFIG_INT(QmConsoleColorScheme, qm_console_color_scheme, 0, 0, 18, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes")
-MACRO_CONFIG_INT(QmConsoleOpacity, qm_console_opacity, 96, 20, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console background opacity")
+MACRO_CONFIG_INT(QmConsoleColorScheme, qm_console_color_scheme, 2, 0, 18, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes")
+MACRO_CONFIG_INT(QmConsoleOpacity, qm_console_opacity, 80, 20, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console background opacity")
 MACRO_CONFIG_INT(QmConsoleHighlightCommands, qm_console_highlight_commands, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Highlight console commands")
-MACRO_CONFIG_COL(QmConsoleBackgroundColor, qm_console_background_color, 0x00000C, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console background color")
+MACRO_CONFIG_COL(QmConsoleBackgroundColor, qm_console_background_color, 0x00002C, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console background color")
 MACRO_CONFIG_COL(QmConsoleTextColor, qm_console_text_color, 0x0000CC, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console text color")
 MACRO_CONFIG_COL(QmConsoleCommandColor, qm_console_command_color, 0x26DFCF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console command color")
 MACRO_CONFIG_COL(QmConsoleParameterColor, qm_console_parameter_color, 0x80969C, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console parameter color")
 MACRO_CONFIG_COL(QmConsoleStringColor, qm_console_string_color, 0x4E6AB9, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console string color")
 MACRO_CONFIG_COL(QmConsoleNumberColor, qm_console_number_color, 0xCB8DC5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console number color")
 MACRO_CONFIG_COL(QmConsoleLinkColor, qm_console_link_color, 0x95FFB6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console link color")
+MACRO_CONFIG_INT(QmConsoleLinkHoverHueShift, qm_console_link_hover_hue_shift, 45, -180, 180, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console link hover hue shift in degrees")
 MACRO_CONFIG_COL(QmConsoleSearchColor, qm_console_search_color, 0x07DAB2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console search match color")
 MACRO_CONFIG_COL(QmConsoleSearchSelectedColor, qm_console_search_selected_color, 0x26DFCF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console selected search match color")
 MACRO_CONFIG_INT(QmPerfDebug, qm_perf_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable main thread and render stage performance debug logging")
@@ -54,7 +55,7 @@ MACRO_CONFIG_INT(QmUiMotionLevel, qm_ui_motion_level, 2, 0, 2, CFGFLAG_CLIENT | 
 MACRO_CONFIG_INT(QmMenuSlideFeel, qm_menu_slide_feel, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "ESC menu slide feel: 0=soft, 1=standard, 2=bouncy")
 // 控制台从顶部下拉展开/收回的弹簧手感：0=柔和 1=标准 2=弹性。
 MACRO_CONFIG_INT(QmConsoleSlideFeel, qm_console_slide_feel, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console slide feel: 0=soft, 1=standard, 2=bouncy")
-// 计分板面板入场：0=柔和 1=标准 2=弹性。打开时从 0 缩放到过冲峰值再回落到 100%。
+// 计分板面板入场：0=柔和 1=标准 2=弹性。打开时从略小尺寸弹到过冲峰值再回落到 100%。
 MACRO_CONFIG_INT(QmScoreboardPopFeel, qm_scoreboard_pop_feel, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard entrance feel: 0=soft, 1=standard, 2=bouncy")
 // 计分板入场过冲量（百分比）：6 表示先放大到 106% 再回落到 100%；0 表示不回弹。
 // 上限 15%：过冲同时驱动立即模式布局的字号重排，超过这个量会读作「胀一下再缩回去」。
@@ -75,7 +76,7 @@ MACRO_CONFIG_STR(QmNewsReadContentId, qm_news_read_content_id, 65, "", CFGFLAG_C
 // 默认保持原版手感：每档从静止重新起步、不继承上一档速度，与已发布版本一致。
 // 顺滑（继承速度）与弹簧两档保留在设置里，由玩家主动切换。
 MACRO_CONFIG_INT(QmUiScrollFeel, qm_ui_scroll_feel, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring")
-MACRO_CONFIG_INT(QmUiScrollStep, qm_ui_scroll_step, 10, 2, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick")
+MACRO_CONFIG_INT(QmUiScrollStep, qm_ui_scroll_step, 10, 2, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global wheel distance scale (10=default); settings card pages scroll 12x this per tick")
 MACRO_CONFIG_INT(QmUiScrollBounce, qm_ui_scroll_bounce, 25, 0, 64, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Rubber-band distance in UI pixels when the wheel or a drag pushes past an end (0=off); the content springs back after scrolling stops")
 MACRO_CONFIG_INT(QmUiScrollSpringResponse, qm_ui_scroll_spring_response, 300, 80, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel response time in milliseconds; lower reaches the target sooner")
 MACRO_CONFIG_INT(QmUiScrollSpringDamping, qm_ui_scroll_spring_damping, 90, 50, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spring scroll feel damping ratio in percent; 100 stops without overshoot")
@@ -227,9 +228,12 @@ MACRO_CONFIG_INT(QmImeSelectedGradientRange, qm_ime_selected_gradient_range, 100
 MACRO_CONFIG_INT(QmImeSelectedGradientReverse, qm_ime_selected_gradient_reverse, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Reverse IME gradient colors")
 MACRO_CONFIG_INT(QmAutoSaveHistoryCount, qm_auto_save_history_count, 100, 0, 1000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-save history count (0=disable)")
 MACRO_CONFIG_INT(QmShortServerNames, qm_short_server_names, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show short server names in browser (applies to China community servers)")
-MACRO_CONFIG_INT(QmPingCacheMaxAgeHours, qm_ping_cache_max_age_hours, 72, 0, 8760, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discard cached server pings older than this many hours (0 = never expire)")
+MACRO_CONFIG_INT(QmPingCacheMaxAgeHours, qm_ping_cache_max_age_hours, 0, 0, 8760, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discard cached server pings older than this many hours (0 = never expire)")
 MACRO_CONFIG_INT(QmSkinSortMode, qm_skin_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin list sort mode (0=Name, 1=Release date)")
+MACRO_CONFIG_INT(QmSkinListFilter, qm_skin_list_filter, 0, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin list source filter (0=All, 1=Official, 2=Community, 3=DDStats, 4=Custom URL, 5=Vanilla)")
 MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show skin release date and author")
+MACRO_CONFIG_STR(QmDdStatsSkinDownloadUrl, qm_ddstats_skin_download_url, 100, "https://skins.ddstats.tw/", CFGFLAG_CLIENT | CFGFLAG_SAVE, "URL for downloading DDStats skins")
+MACRO_CONFIG_INT(QmDownloadDdStatsSkins, qm_download_ddstats_skins, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Download DDStats skins (including unapproved skins)")
 MACRO_CONFIG_INT(QmSkinOutlineLocal, qm_skin_outline_local, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show generated skin outline for local tees")
 MACRO_CONFIG_INT(QmSkinOutlineOthers, qm_skin_outline_others, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show generated skin outline for other tees")
 MACRO_CONFIG_COL(QmSkinOutlineColor, qm_skin_outline_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Generated skin outline color")
@@ -237,7 +241,10 @@ MACRO_CONFIG_INT(QmSkinOutlineWidth, qm_skin_outline_width, 2, 1, 6, CFGFLAG_CLI
 MACRO_CONFIG_INT(QmSkinOutlineAlpha, qm_skin_outline_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Generated skin outline opacity")
 MACRO_CONFIG_INT(QmDummyDistanceLink, qm_dummy_distance_link, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show a distance link between main tee and dummy")
 MACRO_CONFIG_INT(QmDummyDistanceLinkStyle, qm_dummy_distance_link_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dummy distance link style: 0 = line, 1 = droplet")
-MACRO_CONFIG_INT(QmWaterHammerHighlight, qm_water_hammer_highlight, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Highlight frozen teammates' hammer and hook inputs")
+MACRO_CONFIG_INT(QmWaterHammerHighlight, qm_water_hammer_highlight, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Highlight held hammer and hook inputs while frozen")
+MACRO_CONFIG_INT(QmWaterInputScope, qm_water_input_scope, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Stuck input display scope")
+MACRO_CONFIG_INT(QmWaterHammerIcon, qm_water_hammer_icon, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show hammer icon")
+MACRO_CONFIG_INT(QmWaterHookIcon, qm_water_hook_icon, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show hook icon")
 MACRO_CONFIG_COL(QmWaterHammerColor, qm_water_hammer_color, 255, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pressed hammer icon color")
 MACRO_CONFIG_COL(QmWaterHookColor, qm_water_hook_color, 255, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pressed hook icon color")
 
@@ -516,6 +523,7 @@ MACRO_CONFIG_INT(QmHudNotificationsShowUnknown, qm_hud_notifications_show_unknow
 MACRO_CONFIG_INT(QmHudNotificationsCompatSolo, qm_hud_notifications_compat_solo, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Compatible with single-player area hints from other servers")
 MACRO_CONFIG_INT(QmSoloSplitRestoreTeam, qm_solo_split_restore_team, 0, 0, 63, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Team used when leaving solo split mode")
 MACRO_CONFIG_INT(QmSoloSplitLinkDummy, qm_solo_split_link_dummy, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Connect dummy automatically for solo split mode")
+MACRO_CONFIG_INT(QmSoloSplitAutoTeamLock, qm_solo_split_auto_team_lock, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Lock both teams immediately when entering solo split mode")
 MACRO_CONFIG_COL(QmHudNotificationsBgColor, qm_hud_notifications_bg_color, 0x99000000, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Notification bar background color")
 MACRO_CONFIG_COL(QmHudNotificationsTextColor, qm_hud_notifications_text_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Notification bar system message text color")
 MACRO_CONFIG_INT(QmHudNotificationsEchoInheritColor, qm_hud_notifications_echo_inherit_color, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Notification bar echo inherits chat echo color")
@@ -865,6 +873,10 @@ MACRO_CONFIG_INT(QmDummySkinQueueRandomJoin, qm_dummy_skin_queue_random_join, 0,
 // 且没有引入新的长帧（最长帧 438ms -> 37ms）。默认打开，仍可手动关闭。
 MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pre-warm settings page on startup and menu idle")
 MACRO_CONFIG_INT(QmSettingsPrewarmMigrated, qm_settings_prewarm_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings prewarm default migration done")
+// 字形光栅化路线：0=只在主线程同步光栅化；1=可见文本仍同步，后台预热交给 worker；
+// 2=可见文本仍同步，后台预热走 worker 轮廓几何 + GPU 离屏覆盖度光栅化。
+// 分帧/异步结果只用于不可见预热，禁止让当前页面等待 worker 后再出现字形。
+MACRO_CONFIG_INT(QmTextRasterMode, qm_text_raster_mode, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)")
 
 // Chat Bubble Settings - 聊天气泡
 // 手机端默认把轨道放右侧：左侧边缘更容易被误触和圆角挡住。
@@ -915,6 +927,8 @@ MACRO_CONFIG_INT(QmDummyMiniViewZoom, qm_dummy_miniview_zoom, 100, 10, 300, CFGF
 // System Media Controls - 系统媒体控件
 MACRO_CONFIG_INT(QmSmtcEnable, qm_smtc_enable, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable system media transport control integration")
 MACRO_CONFIG_INT(QmRankGhostShowDirection, qm_rank_ghost_show_direction, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show direction key indicators above rank ghost members in view mode")
+// 影子回放是另一条时间线：默认只画画面，不把它的音效和命中特效混进玩家正在听的本地世界。
+MACRO_CONFIG_INT(QmGhostViewFeedback, qm_ghost_view_feedback, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Play rank ghost replay sounds and hit effects locally")
 MACRO_CONFIG_INT(QmSmtcShowHud, qm_smtc_show_hud, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show system media info on HUD")
 MACRO_CONFIG_INT(QmNeteaseHookEnable, qm_netease_hook_enable, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Netease Music hook integration")
 MACRO_CONFIG_INT(QmNeteaseHookTimeoutMs, qm_netease_hook_timeout_ms, 1500, 250, 10000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Netease hook heartbeat timeout (milliseconds)")
@@ -954,6 +968,12 @@ MACRO_CONFIG_STR(QmQQMusicHookHelperPath, qm_qqmusic_hook_helper_path, 512, "", 
 // 共享同一套歌词展示开关(qm_lyrics / qm_lyrics_in_media_island)。
 MACRO_CONFIG_INT(QmSpotifyEnable, qm_spotify_enable, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Spotify lyric integration")
 MACRO_CONFIG_STR(QmSpotifySpDc, qm_spotify_sp_dc, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spotify sp_dc cookie (from browser DevTools, long-lived)")
+
+// LX Music 歌词链路(纯本机 HTTP:轮询开放 API 的 /status 与 /lyric-all)。
+// 开放 API 默认关闭,需在 LX Music 设置里手动启用;端口默认从 LX 自己的
+// config_v2.json 读取,用户改了端口也能跟上。qm_lxmusic_port 非 0 时强制覆盖。
+MACRO_CONFIG_INT(QmLxMusicEnable, qm_lxmusic_enable, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable LX Music lyric integration")
+MACRO_CONFIG_INT(QmLxMusicPort, qm_lxmusic_port, 0, 0, 65535, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LX Music open API port (0=auto-detect from LX Music config)")
 
 // Translate - 翻译模块
 MACRO_CONFIG_STR(QmTranslateBackend, qm_translate_backend, 32, "mymemory", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translation service")
@@ -1066,6 +1086,15 @@ MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 0, 0, 1, CFGFLAG_CLIEN
 // 进图后自动开启保护的延迟（分钟）。0 = 不自动开启，保持配置里的默认状态。
 // 自动开启只改本局运行时状态，不写回 qm_self_kill_enabled。
 MACRO_CONFIG_INT(QmSelfKillAutoDelay, qm_self_kill_auto_delay, 0, 0, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-enable self-kill protection this many minutes after joining a game (0 = never)")
+
+// 快速练习：主世界影子是分支世界之外的另一条时间线。除参与者自己以外，其他
+// 客户端的位置全部来自服务器快照，属于同一条时间线，所以这两个开关管的是
+// 整组服务器侧 Tee（含其他玩家），开启时淡显、关闭时整组隐藏。
+MACRO_CONFIG_INT(QmFastPracticeShowMainWorld, qm_fast_practice_show_main_world, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show server-side tees as ghosts during fast practice")
+// 服务器侧影子的不透明度（百分比）。开启时不透明度越高越显眼，0 等同于隐藏。
+MACRO_CONFIG_INT(QmFastPracticeMainWorldAlpha, qm_fast_practice_main_world_alpha, 28, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Server-side ghost opacity during fast practice (%)")
+// 练习计时：分支世界推进的 tick 累计，/r、传送与重开后归零。
+MACRO_CONFIG_INT(QmFastPracticeTimer, qm_fast_practice_timer, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show the practice run timer in the HUD")
 
 // 圆角曲线档位：0 原圆弧（旧外观，不扩展），1 超椭圆，2 五次贝塞尔，3 圆锥贝塞尔。
 // 超椭圆与五次贝塞尔的端点曲率为 0，是真正的连续曲率；圆锥贝塞尔的端点曲率恒为

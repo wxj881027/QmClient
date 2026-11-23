@@ -43,7 +43,13 @@ namespace
 		CNodeFaultResource m_Resource;
 		std::array<int, 3> m_aTokens{};
 		std::unique_ptr<CWebsocketNativeState> m_pState;
-		void SetUp() override { m_pState = std::make_unique<CWebsocketNativeState>(&m_Resource); }
+		// 容器的空构造可能已向内存域申请固定节点（MSVC 的树头），断言以该基线为准。
+		int m_InitialLive = 0;
+		void SetUp() override
+		{
+			m_pState = std::make_unique<CWebsocketNativeState>(&m_Resource);
+			m_InitialLive = m_Resource.m_Live;
+		}
 		void TearDown() override
 		{
 			m_pState.reset();
@@ -65,11 +71,13 @@ namespace
 
 TEST_F(CWebsocketNativeOwnerTest, UnknownLookupDoesNotCreateEntries)
 {
+	// 容器的空构造可能已向内存域申请固定节点（MSVC 的树头），只约束查询不新增分配。
+	const int Calls = m_Resource.m_Calls;
 	EXPECT_EQ(m_pState->Find(Wsi()), nullptr);
 	EXPECT_EQ(m_pState->Find(Addr()), nullptr);
 	EXPECT_EQ(m_pState->SessionCount(), 0u);
 	EXPECT_TRUE(m_pState->Ports().empty());
-	EXPECT_EQ(m_Resource.m_Calls, 0);
+	EXPECT_EQ(m_Resource.m_Calls, Calls);
 }
 
 TEST_F(CWebsocketNativeOwnerTest, RegisteredCppSessionIsFoundByBothIdentities)
@@ -94,11 +102,11 @@ TEST_F(CWebsocketNativeOwnerTest, RepeatedEstablishmentKeepsExistingOwner)
 
 TEST_F(CWebsocketNativeOwnerTest, OwnerNodeFailureLeavesNoRegistrationAndCanRetry)
 {
-	m_Resource.m_FailOnCall = 1;
+	m_Resource.m_FailOnCall = m_Resource.m_Calls + 1;
 	EXPECT_EQ(m_pState->TryRegister(Wsi(), Addr()), nullptr);
 	EXPECT_EQ(m_pState->SessionCount(), 0u);
 	EXPECT_TRUE(m_pState->Ports().empty());
-	EXPECT_EQ(m_Resource.m_Live, 0);
+	EXPECT_EQ(m_Resource.m_Live, m_InitialLive);
 	m_Resource.m_FailOnCall = 0;
 	EXPECT_NE(m_pState->TryRegister(Wsi(), Addr()), nullptr);
 }
@@ -121,10 +129,10 @@ TEST_F(CWebsocketNativeOwnerTest, PortNodeFailureRollsBackCandidateWithoutChangi
 
 TEST_F(CWebsocketNativeOwnerTest, UnknownNodeExceptionAlsoRollsBackRegistration)
 {
-	m_Resource.m_FailOnCall = 2;
+	m_Resource.m_FailOnCall = m_Resource.m_Calls + 2;
 	m_Resource.m_Unknown = true;
 	EXPECT_EQ(m_pState->TryRegister(Wsi(), Addr()), nullptr);
-	EXPECT_EQ(m_Resource.m_Live, 0);
+	EXPECT_EQ(m_Resource.m_Live, m_InitialLive);
 	EXPECT_EQ(m_pState->SessionCount(), 0u);
 	EXPECT_TRUE(m_pState->Ports().empty());
 }
@@ -169,10 +177,11 @@ TEST_F(CWebsocketNativeOwnerTest, ResetClearsOwnersAndIndexesAndAllowsReuse)
 {
 	ASSERT_NE(m_pState->TryRegister(Wsi(), Addr()), nullptr);
 	ASSERT_NE(m_pState->TryRegister(Wsi(1), Addr(8304)), nullptr);
+	ASSERT_GT(m_Resource.m_Live, m_InitialLive);
 	m_pState->Reset();
 	EXPECT_EQ(m_pState->SessionCount(), 0u);
 	EXPECT_TRUE(m_pState->Ports().empty());
-	EXPECT_EQ(m_Resource.m_Live, 0);
+	EXPECT_EQ(m_Resource.m_Live, m_InitialLive);
 	EXPECT_NE(m_pState->TryRegister(Wsi(), Addr()), nullptr);
 }
 
@@ -206,7 +215,7 @@ TEST_F(CWebsocketNativeOwnerTest, ThrowingCallbackRollsBackItsRegistrationBefore
 		-1);
 	EXPECT_EQ(m_pState->Find(Wsi()), nullptr);
 	EXPECT_TRUE(m_pState->Ports().empty());
-	EXPECT_EQ(m_Resource.m_Live, 0);
+	EXPECT_EQ(m_Resource.m_Live, m_InitialLive);
 }
 
 TEST_F(CWebsocketNativeOwnerTest, UnknownCallbackExceptionDoesNotRemoveOtherConnection)
@@ -232,7 +241,8 @@ TEST_F(CWebsocketNativeOwnerTest, CallbackFailureAfterReplacementKeepsNewConnect
 
 TEST_F(CWebsocketNativeOwnerTest, MissingHandleOrInvalidAddressCannotRegister)
 {
+	const int Calls = m_Resource.m_Calls;
 	EXPECT_EQ(m_pState->TryRegister(nullptr, Addr()), nullptr);
 	EXPECT_EQ(m_pState->TryRegister(Wsi(), NETADDR_ZEROED), nullptr);
-	EXPECT_EQ(m_Resource.m_Calls, 0);
+	EXPECT_EQ(m_Resource.m_Calls, Calls);
 }

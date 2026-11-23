@@ -59,7 +59,7 @@ class CQmClient : public CComponent
 	std::shared_ptr<IHttpRequest> m_pTitleOperation;
 	int64_t m_TitleProfileRefreshStarted = -1;
 	char m_aTitleToken[65] = "";
-	char m_aTitleText[64] = "";
+	char m_aTitleText[QM_TITLE_TEXT_SIZE] = "";
 	char m_aTitleBoundName[64] = "";
 	char m_aTitleProfileStyle[64] = "";
 	EQmSponsorChatStyle m_TitleProfileChatStyle = EQmSponsorChatStyle::NONE;
@@ -68,7 +68,7 @@ class CQmClient : public CComponent
 	bool m_TitleTextStyleSupported = false;
 	SQmTitleAppearance m_TitleAppearance;
 	SQmTitleAppearance m_aPlayerTitleAppearances[MAX_CLIENTS];
-	char m_aaPlayerTitles[MAX_CLIENTS][64] = {};
+	char m_aaPlayerTitles[MAX_CLIENTS][QM_TITLE_TEXT_SIZE] = {};
 	char m_aaPlayerTitleStyles[MAX_CLIENTS][48] = {};
 	EQmSponsorChatStyle m_aPlayerChatStyles[MAX_CLIENTS] = {};
 	char m_aaTitleNames[MAX_CLIENTS][MAX_NAME_LENGTH] = {};

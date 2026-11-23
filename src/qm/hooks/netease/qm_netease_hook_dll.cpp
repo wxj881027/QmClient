@@ -1355,7 +1355,7 @@ namespace
 
 		static std::atomic<uint64_t> s_TemporaryId{0};
 		const std::wstring TemporaryPath = Path + L"." + std::to_wstring(GetCurrentProcessId()) + L"." +
-					   std::to_wstring(s_TemporaryId.fetch_add(1, std::memory_order_relaxed)) + L".tmp";
+						   std::to_wstring(s_TemporaryId.fetch_add(1, std::memory_order_relaxed)) + L".tmp";
 		if(!WriteTemporaryCoverFile(TemporaryPath, PngBytes))
 			return;
 		struct CTemporaryFileCleanup
@@ -1477,7 +1477,7 @@ namespace
 	}
 
 	class CBoundedCoverOutputStream : public winrt::implements<CBoundedCoverOutputStream,
-					       Windows::Storage::Streams::IOutputStream, Windows::Foundation::IClosable>
+						  Windows::Storage::Streams::IOutputStream, Windows::Foundation::IClosable>
 	{
 		Windows::Storage::Streams::IOutputStream m_Output;
 		std::mutex m_Mutex;

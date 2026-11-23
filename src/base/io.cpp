@@ -19,8 +19,9 @@
 #include <string>
 
 #if defined(CONF_FAMILY_WINDOWS)
-#include <io.h> // _get_osfhandle
 #include <windows.h> // FlushFileBuffers
+
+#include <io.h> // _get_osfhandle
 #else
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -92,6 +93,7 @@ static IOHANDLE io_open_impl(const char *filename, int flags, bool *pNotFound, b
 	}
 	catch(const std::bad_alloc &)
 	{
+		errno = ENOMEM;
 		return nullptr;
 	}
 	DWORD desired_access;

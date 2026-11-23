@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>菜单文本与 MSDF 性能方案（2026-11-21）</title>
+<style>
+  :root {
+    --bg: #f6f8fc;
+    --panel: #ffffff;
+    --panel-2: #f1f5fb;
+    --border: #dbe4f1;
+    --text: #1b2534;
+    --muted: #5c6b80;
+    --accent: #2f6feb;
+    --warn: #a15c00;
+    --danger: #b42318;
+    --ok: #0d7a4f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.78 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 44px 26px 96px; }
+  h1 { font-size: 29px; line-height: 1.32; margin: 0 0 10px; letter-spacing: -0.2px; }
+  h2 { font-size: 20px; margin: 46px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 26px 0 8px; color: var(--accent); }
+  p { margin: 10px 0; }
+  ul, ol { margin: 10px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  code, pre { font-family: "Cascadia Mono", Consolas, "Courier New", monospace; }
+  code { background: var(--panel-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; font-size: 13px; }
+  pre { background: #0f1724; color: #d7e3f4; padding: 16px 18px; border-radius: 10px; overflow-x: auto; font-size: 13px; line-height: 1.62; }
+  pre code { background: none; border: none; padding: 0; color: inherit; font-size: 13px; }
+  .lead { font-size: 16px; color: var(--muted); margin: 0 0 26px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin: 16px 0; }
+  .card h3 { margin-top: 0; }
+  .meta { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-bottom: 22px; }
+  .meta span { background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 3px 12px; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; background: var(--panel); }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--panel-2); font-weight: 600; color: var(--muted); font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .no { color: var(--danger); font-weight: 600; }
+  .warn { color: var(--warn); font-weight: 600; }
+  .callout { border-left: 3px solid var(--accent); background: var(--panel-2); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+  .callout.danger { border-left-color: var(--danger); background: #fdf3f2; }
+  .callout.warn { border-left-color: var(--warn); background: #fdf8ef; }
+  .toc { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 22px; margin: 22px 0 10px; columns: 2; column-gap: 34px; font-size: 14px; }
+  .toc a { color: var(--text); text-decoration: none; display: block; padding: 3px 0; }
+  .toc a:hover { color: var(--accent); }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); margin-right: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>菜单文本与 MSDF 性能方案</h1>
+<p class="lead">集中保存菜单文本重建、MSDF 烘焙、多线程与后处理链的调研结论、代码核实位置和对照数据，避免信息只散落在性能日志与对话里。</p>
+
+<div class="meta">
+  <span>2026-11-21</span>
+  <span>状态：CPU worker 已落地；GPU 光栅化实验待实机验收</span>
+  <span>影响面：菜单文本管线 / 字形图集 / 渲染预算</span>
+  <span>数据口径：4K · Release · 关 vsync</span>
+</div>
+
+<div class="toc">
+  <a href="#tldr">0. 结论摘要</a>
+  <a href="#sampling">1. 采样口径与数字修正</a>
+  <a href="#pipeline">2. 文本重建由什么触发</a>
+  <a href="#budget">3. 现有预算与尖峰位置</a>
+  <a href="#reference">4. 参考资料与对照数据</a>
+  <a href="#threading">5. 多线程</a>
+  <a href="#postprocess">6. 后处理链与 shader 化 UI 材质</a>
+  <a href="#msdf">7. MSDF 烘焙</a>
+  <a href="#pool">8. 文本池过期与缓存策略</a>
+  <a href="#order">9. 实施顺序</a>
+  <a href="#verify">10. 验证方法</a>
+  <a href="#open">11. 未决问题</a>
+  <a href="#appendix-godot">附录 A：Godot 4K 对照原始记录</a>
+</div>
+
+<h2 id="tldr">0. 结论摘要</h2>
+
+<div class="callout">
+  <p><strong>不是「经常掉帧」。</strong>剔除 160 Hz 空闲节流的 6.25 ms 帧后，p50 1.27、p90 2.04、p99 4.54、p99.9 8.73 ms，&gt;16 ms 只占 0.04%（16 帧），max 305 ms 出现在加载。需要处理的是冷切页、首次进页与加载阶段的一次性成本。</p>
+</div>
+
+<ol>
+  <li><strong>最值得借鉴的是 Godot 的「数据没变就复用」。</strong>服务器列表的行级插桩证明 2.63 ms 花在每帧重建可见索引，行绘制只有 0.12 ms；缓存后同场景 3.31 ms → 0.88–0.94 ms。主目录已迁移（<code>94a8c3b269</code>、<code>cb64f3ce76</code>）。</li>
+  <li><strong>切页首帧靠「池寿命 + 首屏预建」解决，不是靠继续压稳态帧时间。</strong>现有 24 字形 / 1 ms 预热预算可以复用，只需把目标页首屏排到队首。</li>
+  <li><strong>MSDF 能降低字形层重建概率，不会自动消除容器与切页尖峰。</strong>固定 em 后中文不再按字号重复烘；但缺字生成、容器 miss、预案应用仍需单独处理。</li>
+  <li><strong>多线程对平均 FPS 几乎无收益，对 p99.9 有。</strong>优先搬「整形/断行」这类无共享状态的活；字形光栅化受 <code>FT_Face</code> 线程安全约束，放在 MSDF 方案确定之后。</li>
+  <li><strong>后处理链不值得为菜单性能建全套。</strong>只做能同时降 CPU 的两件：SDF 文字与已有的半分辨率 Dual Kawase 模糊。</li>
+  <li><strong>1000 fps 与「绝不超预算」互相矛盾。</strong>单帧预算从 6.25 ms 缩到 1 ms 后，同样一份文本工作更容易越预算；600 fps 反而比 1000 fps 更稳。</li>
+</ol>
+
+<h2 id="sampling">1. 采样口径与数字修正</h2>
+
+<p>数据来源：4K 窗口、RTX 4060 Ti 8G / i5-13600KF / 32G、Windows 11、Release 构建、关闭 vsync。Godot 4.7.2 对照见第 4 节。性能日志带 <code>qm_perf_debug</code> 开销，绝对值略高于真实值，但相对关系可用。</p>
+
+<div class="callout warn">
+  <p><strong>6.15–6.35 ms 不是尖峰，是空闲节流到 160 Hz 的 1/160 s 周期。</strong>原先把它算进分布会高估 p99；剔除后才是真实分布。</p>
+</div>
+
+<table>
+  <tr><th>指标</th><th>剔除 6.25 ms 节流帧后</th><th>说明</th></tr>
+  <tr><td>p50</td><td>1.27 ms</td><td>约 784 fps</td></tr>
+  <tr><td>p90</td><td>2.04 ms</td><td>—</td></tr>
+  <tr><td>p99</td><td>4.54 ms</td><td>—</td></tr>
+  <tr><td>p99.9</td><td>8.73 ms</td><td>仍有优化空间</td></tr>
+  <tr><td>&gt; 16 ms</td><td>0.04%（16 帧）</td><td>不构成「经常掉帧」</td></tr>
+  <tr><td>max</td><td>305 ms</td><td>加载阶段，单独统计</td></tr>
+</table>
+
+<p>另一条容易误读的数字：设置页 p50 1.56 ms / p99 4.54 ms 与全会话接近，说明设置页不是持续慢，而是切页那一两帧慢。切页尖峰与稳态帧率要分开评价。</p>
+
+<h2 id="pipeline">2. 文本重建由什么触发</h2>
+
+<h3>2.1 缓存键的粒度</h3>
+
+<p>菜单文本池键由 <code>FormatMenuTextCacheKey</code>（<code>src/game/client/components/menus.cpp:487</code>）生成：</p>
+
+<pre><code>scope:页:tab:子tab:文本:fs字号:al对齐:mw最大宽度:usUI缩放:hd:cm</code></pre>
+
+<table>
+  <tr><th>段</th><th>来源</th><th>实际粒度</th></tr>
+  <tr><td><code>fs</code></td><td><code>MenuTextBucket</code>（<code>menus.cpp:479</code>）</td><td>按 0.1 精度取整（×10）</td></tr>
+  <tr><td><code>mw</code></td><td><code>UiTextWidthBucket</code>（<code>src/game/client/QmUi/UiCacheQuantization.h:27</code>）</td><td><strong>4 px</strong> 一桶</td></tr>
+  <tr><td><code>us</code></td><td><code>qm_ui_scale</code>（<code>menus.cpp:609</code>）</td><td>50–200 整数</td></tr>
+  <tr><td><code>hd</code></td><td><code>ScreenHiDPIScale()</code>（<code>menus.cpp:611</code>）</td><td>×100 取整</td></tr>
+</table>
+
+<p><strong>结论：</strong>普通布局抖动（差 1 px）不会直接换键，只有跨 4 px 桶、改 UI 缩放或字号档时才漂移。排查「键漂移」应优先看桶边界和 <code>us/hd</code> 变化，而不是假设每帧都在换键。</p>
+
+<h3>2.2 miss 来源</h3>
+
+<table>
+  <tr><th>来源</th><th>触发条件</th><th>性质</th></tr>
+  <tr><td>首次进页</td><td>池里没有这个键，一页几十到上百条一起 miss</td><td>一次性，可用预算摊薄</td></tr>
+  <tr><td>键漂移</td><td>跨 <code>mw</code> 4 px 桶、<code>us</code>/<code>hd</code> 变化、字号档变化</td><td>反复发生，最隐蔽</td></tr>
+  <tr><td>池按帧过期</td><td><code>QM_MENU_TEXT_CACHE_MAX_AGE_FRAMES = 600</code>（<code>src/game/client/QmUi/QmUiPerf.h:10</code>）</td><td>帧率越高寿命越短</td></tr>
+  <tr><td>图集版本变化</td><td>换字体/语言/<code>Clear()</code> → <code>GlyphAtlasRevision</code> 变</td><td>低频但整池重建</td></tr>
+</table>
+
+<p>按帧过期的寿命：160 Hz 是 3.75 s、600 Hz 是 1 s、1000 Hz 是 0.6 s——正好和「追求高帧率」互相打架。现行策略已改为 24 小时墙钟过期、每秒最多修剪一次，容量 8192 条（<code>QmUiPerf.h</code>）；不能用帧数过期。</p>
+
+<h3>2.3 缓存淘汰</h3>
+
+<p><code>CMenus::TrimMenuTextPoolForInsert</code>（<code>menus.cpp:7396</code>）每秒插入时遍历一次池：超过 600 帧未用即淘汰；容量满时淘汰 <code>m_LastUsedFrame</code> 最旧的条目。这是「按帧 + 容量」的混合策略，缺的是墙钟语义。</p>
+
+<h2 id="budget">3. 现有预算与尖峰位置</h2>
+
+<h3>3.1 已经存在的机制</h3>
+
+<ul>
+  <li><strong>容器令牌与队列：</strong><code>DrainMenuTextContainerBuildRequests</code>（<code>menus.cpp:7506</code>），超预算推迟到下一帧。</li>
+  <li><strong>字形预热已在同一份预算内：</strong><code>SSettingsTextPrewarmBudget{24, +1ms}</code>（<code>menus.cpp:8209</code>）；每条待建文本先 <code>Prepare</code> 再 <code>Advance</code>，最后调用 <code>TextRender()-&gt;QmPrewarmGlyph</code>（<code>menus.cpp:8253-8256</code>，<code>src/engine/client/text.cpp:1839</code>）。</li>
+  <li><strong>预案分批合并：</strong><code>PrebuildSettingsTextPlanItem</code>（<code>menus.cpp:7761</code>），不是一次性提交整页。</li>
+</ul>
+
+<h3>3.2 缺口：预热之外的同步 miss</h3>
+
+<p><code>CreateTextContainer</code> 内部仍会走到 <code>GetGlyph</code> → <code>RenderGlyph</code>（<code>src/engine/client/text.cpp:635</code>）。一次 FreeType 光栅化 + 描边扩张 + 图集上传（<code>text.cpp:713-732</code>）全部发生在当前帧。可见的兜底行为是空白或旧容器，而不是掉帧；用户感知更接近「字晚一两帧出现」。</p>
+
+<h3>3.3 尖峰归因（页面切换）</h3>
+
+<table>
+  <tr><th>帧</th><th>loop_total</th><th>归因</th></tr>
+  <tr><td>13733</td><td>26.4 ms</td><td><code>settings_page_content</code> 25.2 ms，<code>page_switch</code> + <code>settings_text_miss</code></td></tr>
+  <tr><td>9971</td><td>17.1 ms</td><td>同上（sound tab 15.2 ms）</td></tr>
+  <tr><td>9239</td><td>7.7 ms</td><td>同上（tee tab 6.8 ms，3 次 miss）</td></tr>
+  <tr><td>1356</td><td>27.4 ms</td><td><code>list_plan_results</code> 25.6 ms（皮肤列表任务结果应用）</td></tr>
+  <tr><td>907–912</td><td>35–37 ms</td><td>只有 <code>loop_total</code>，未被现有阶段覆盖</td></tr>
+</table>
+
+<p><code>transition=1</code> 的帧只有 1.73 ms p50 / 2.52 max，<strong>切换动画本身不是尖峰源</strong>。真正的尖峰是「切到目标页后缺文本容器、在渲染帧里同步构建」以及「预案结果一次性应用」。</p>
+
+<p><strong>2026-11-21 18:59 复测（<code>qm_perf_2026-11-21_18-59-50.log</code>）：</strong>设置页首次打开 <code>settings_page_content</code> 5.656 ms；tee 页 <code>skin_catalogs</code> 13.428 ms；graphics 首帧 <code>frame_ms_max</code> 7.714 ms、窗口 p95 5.249 ms，同期 <code>glyph_new=0</code>。这三项都不是字形或图集扩容，分别归卡片 deck、皮肤目录 JSON 解析、页面自身构建，后续单独跟踪。同轮切页日志里 <code>settings_text_miss</code> 的 <code>plan_status</code> 多为 <code>not_built</code>，说明全量预建仍未在 loading 内完成，这是 #645 当前要修的主线。</p>
+
+<p><strong>2026-11-22 10:41 实机日志（<code>qm_perf_2026-11-22_10-41-04.log</code>）：</strong>4096² 图集在语言/贡献者页面后被真实字形集合挤满，<code>IncreaseGlyphMapSize</code> 触发 <code>atlas_dim=8192</code>，同帧 <code>text_container_create_ms=54.060</code>、<code>frame_ms=73.746</code>。这不是容器缓存淘汰，而是整表复制 + 全量 GPU 重传。现已改为按 DXGI 独显预算选择初始尺寸：≥ 2048 MiB 从 8192 起步，低显存/核显保持 4096；启动日志新增 <code>event=glyph_atlas_initial</code>，运行日志继续记录 <code>atlas_growths</code>。</p>
+
+<h3 id="redlines">3.4 不可妥协的渲染红线</h3>
+
+<div class="callout danger">
+  <ul>
+    <li><strong>可见页不得分帧渲染字形。</strong>首次显示、切页、滚动进入视口的文本必须在同一帧完成字形查找、图集分配与容器构建；不允许先画空白或占位符，下一帧再补字形。</li>
+    <li><strong>worker / GPU 只服务不可见预热。</strong>后台任务可以先排队、跨帧完成，但结果进入图集前不能阻塞当前可见帧；可见文本始终保留同步兜底。</li>
+    <li><strong>加载画面的动态背景不得低于显示器刷新率。</strong>进度条可以低频更新，鼠标响应和背景动画必须按实际刷新率呈现；加载阶段的预算是上限，不是必须吃满的配额。</li>
+    <li><strong>预算口径统一。</strong>目标帧取 <code>Graphics()-&gt;ScreenRefreshRate()</code>（回退到 <code>gfx_screen_refresh_rate</code>），已用时间取主线程 CPU 忙时；墙钟帧间隔包含 vsync 休眠，不能拿来判断“是否还有余量”。</li>
+    <li><strong>禁止用扩容掩盖重建。</strong>字形图集的初始尺寸按显存预算选择（低显存 4096；独显预算 ≥ 2048 MiB 时 8192），运行时增长只作兜底；文本容器缓存容量 8192 是容器池上限，不是图集尺寸，两者不能混为一谈。</li>
+  </ul>
+</div>
+
+<p>对应实现入口：<code>QmMenuTextLoadingBudgetMs</code> / <code>QmMenuTextBackgroundBudgetMs</code>（<code>src/game/client/QmUi/QmUiPerf.h</code>）、<code>CMenus::QmUiTargetFrameMs</code> / <code>QmUiCpuMsAverage</code>（<code>src/game/client/components/menus.cpp</code>）、可见容器同步构建与 worker 发布（<code>src/engine/client/text.cpp</code>）。<code>qm_text_raster_mode</code>：<code>0</code> 同步、<code>1</code> CPU worker 预热（默认）、<code>2</code> GPU 覆盖度实验。</p>
+
+<p>计划收集在 <code>CMenus::PrewarmSettingsTextPlanBeforeFirstFrame</code> 中于第一个 loading 帧前完成；单个页面测量可达 13–16 ms，不能放进动态背景帧。之后空闲帧只按 1 ms 预算构建已收集计划，窗口/DPI 变化使计划失效时暂停后台收集，等下一次 blocking 加载阶段重建；可见页仍同步构建。实际使用热力图写入 <code>event=text_glyph_use_heatmap</code>，同时保留 <code>text_glyph_heatmap</code> 的缺字统计。</p>
+
+<h2 id="reference">4. 参考资料与对照数据</h2>
+
+<h3>4.1 参考资料清单</h3>
+
+<table>
+  <tr><th>资料</th><th>内容</th><th>位置</th></tr>
+  <tr><td>Godot 4K UI 对照基准</td><td>11 轮对照，含本机列表实测与页面切换尖峰</td><td>本文<a href="#appendix-godot">附录 A</a>（原始记录已内嵌）</td></tr>
+  <tr><td>用户提供的性能分析</td><td>文本重建触发、尖峰预算、多线程、MTSDF、效果能力、对照测法六节</td><td>本文第 2、3、5、6、7、10 节已并入</td></tr>
+  <tr><td>字体与图集实现</td><td>字形光栅化、描边扩张、图集上传</td><td><code>src/engine/client/text.cpp</code>、<code>src/engine/client/glyph_outline.h</code></td></tr>
+  <tr><td>菜单文本池与预算</td><td>键、淘汰、令牌、预热、预案</td><td><code>src/game/client/components/menus.cpp</code>、<code>src/game/client/QmUi/QmUiPerf.h</code></td></tr>
+  <tr><td>服务器列表可见索引</td><td>缓存失效条件与修订号</td><td><code>src/game/client/components/menus_browser.cpp</code>、<code>src/game/client/components/qmclient/map_difficulty_catalog.h</code></td></tr>
+</table>
+
+<h3>4.2 列表缓存前后对比</h3>
+
+<table>
+  <tr><th>阶段</th><th>列表合计</th><th>fps</th><th>备注</th></tr>
+  <tr><td>修复前</td><td>3.31 ms</td><td>298</td><td>每帧重建可见索引 2.63 ms</td></tr>
+  <tr><td>修复后（Vulkan）</td><td>0.944 ms</td><td>1059</td><td>p99 1.93 / p99.9 5.24 ms</td></tr>
+  <tr><td>修复后（OpenGL）</td><td>0.877 ms</td><td>1140</td><td>p99 1.90 / p99.9 3.98 ms</td></tr>
+  <tr><td>Godot GL</td><td>1.02 ms</td><td>908</td><td>无背景层/模糊</td></tr>
+  <tr><td>Godot Vulkan</td><td>0.47 ms</td><td>1855</td><td>retained 渲染，静态内容零重建</td></tr>
+</table>
+
+<p>关键证据：行循环整体 0.12 ms（25 行 × 11 列），行循环之前 2.67 ms，其中重建 <code>vVisibleServerIndices</code> 的 O(N) 循环 2.63 ms（1379 台 × 约 1.9 µs）。1080p 与 4K 同速、开关模糊只差 0.02 ms，说明这 2.6 ms 全部是 CPU 文本/筛选工作，不是填充受限。</p>
+
+<h3>4.3 Godot 对照的读法</h3>
+
+<ul>
+  <li>第一轮 Godot 场景太轻（24 行 × 4 列、无描边），后续改成 23 行 × 40 px、11 列、每行 10 次绘制才对齐。</li>
+  <li><code>Time.get_ticks_usec()</code> 的帧间隔不等于真实绘制帧率；需同时统计 <code>Engine.get_frames_drawn()</code>。</li>
+  <li>修复后我们与 Godot GL 基本打平、比 Vulkan 慢约 2 倍；我们的页面还多一层会动的背景和全页模糊。旧的「3.4–7 倍」是修复前数字，不再引用。</li>
+</ul>
+
+<h2 id="threading">5. 多线程</h2>
+
+<p><strong>对平均 FPS 几乎没收益，对 p99.9 有。</strong>把可并行的工作按性价比排序：</p>
+
+<table>
+  <tr><th>候选</th><th>可行性</th><th>主要成本</th></tr>
+  <tr><td>字形光栅化（FreeType）</td><td>最值得，但 <code>FT_Face</code> 不是线程安全的</td><td>每线程独立 face 或串行化；图集写入与 GPU 上传仍需回主线程</td></tr>
+  <tr><td>文本整形 / 断行</td><td>纯 CPU、无共享状态，最好搬</td><td>结果顺序与文本容器生命周期</td></tr>
+  <tr><td>服务器列表解析与过滤</td><td><code>serverbrowser_update</code> 实测 3.4 ms / 1379 条</td><td>结果发布要带修订号，避免覆盖新列表</td></tr>
+  <tr><td>缩略图 / 皮肤解码</td><td>已有异步链路</td><td>继续复用，不为文本另起线程池</td></tr>
+</table>
+
+<p>收益预期：p50 不动，p99.9 从 8.7 ms 掉到 2–3 ms，1% low 好看很多。成本是要处理 face 复用、容器加锁、结果顺序。它不是通往 1000 fps 的路，因为 1000 fps 的瓶颈在 present 和 4K 填充。</p>
+
+<div class="callout warn">
+  <p>字形光栅化多线程应与 MSDF 方案一起决定：如果 MSDF 固定 em 且离线预烘，光栅化次数本身就大幅下降，再为旧路径建线程池会白做。</p>
+</div>
+
+<h2 id="postprocess">6. 后处理链与 shader 化 UI 材质</h2>
+
+<p>「效果能力落后」指没有后处理链（bloom、DOF、色调映射）、没有 shader 化的 UI 材质、没有 GPU 粒子。对这个客户端，实际影响只有三处：</p>
+
+<ol>
+  <li><strong>菜单观感：</strong>毛玻璃、发光、动态渐变、圆角阴影——现在全靠 CPU 生成纹理硬扛，每加一个效果写一份 CPU 代码，CPU 峰值跟着涨。</li>
+  <li><strong>HUD 特效：</strong>击杀光效、连击发光这类。</li>
+  <li><strong>demo / 视频导出的画面处理。</strong></li>
+</ol>
+
+<p><strong>值不值：不值得建全套。</strong>值得做的只有两件，因为它们同时能降 CPU：</p>
+
+<ul>
+  <li><strong>SDF 文字</strong>（第 7 节）：描边/发光由 shader 免费获得。</li>
+  <li><strong>半分辨率背景模糊：</strong>Dual Kawase 已经存在（<code>src/engine/client/graphics_threaded.cpp:1155</code>），一张半分辨率纹理替代 CPU 逐像素，不需要重写。</li>
+</ul>
+
+<p>全套后处理链、材质系统、GPU 粒子不建议为菜单性能而建；每加一个效果就多一份 CPU 峰值和跨后端（GL / Vulkan / Metal）维护成本。是否做某个单独效果，按「能不能同时降低 CPU 或替代现有 CPU 生成纹理」判断。</p>
+
+<h2 id="msdf">7. MSDF 烘焙</h2>
+
+<h3>7.1 当前实现</h3>
+
+<p>每个字形按「填充位图 + 烘死的描边位图」两张图集存放：<code>FT_Load_Glyph</code> 光栅化后 <code>QmGrowGlyphOutline</code> 做 CPU 外扩，再分别 <code>UploadGlyph(FONT_TEXTURE_FILL/OUTLINE)</code>（<code>src/engine/client/text.cpp:713-732</code>）。四边形按「描边半径 + 1 px」扩边（<code>text.cpp:683-687</code>），图集单元的边距也只有这 1 px。</p>
+
+<h3>7.2 为什么「歪」</h3>
+
+<ol>
+  <li><strong>单元内边距不够。</strong>距离场要在字形边界外有 4–8 px 的渐变区间；现在只有 1 px，阈值一变就是锯齿/斜边。</li>
+  <li><strong>把「填充 + 描边」当成一个形状求距离。</strong>单通道场只有一条等值线，无法同时表达填充边界和描边边界；采样阈值一变，描边会塌进填充里。</li>
+  <li><strong>四边形按填充度量、图集块按描边扩边。</strong>两者基准不一致，每个字偏移量不同，整行文字就不齐。</li>
+</ol>
+
+<p>商业引擎的解法是统一的：<strong>只对填充轮廓求距离，描边在 shader 里用第二个阈值画</strong>，不用第二张描边图集。</p>
+
+<table>
+  <tr><th>引擎</th><th>做法</th></tr>
+  <tr><td>Unity TMP</td><td>SDF 图集，<code>_OutlineWidth</code> / <code>_FaceDilate</code> / <code>_GradientScale</code>（padding）在材质里调，描边是一次采样换个阈值</td></tr>
+  <tr><td>Unreal Slate</td><td><code>FSlateFontInfo::OutlineSettings</code>，距离场字体 + 轮廓从同一个场里取</td></tr>
+  <tr><td>Godot 4</td><td>msdfgen 生成 MSDF，<code>outline_size</code> 由 <code>text.glsl</code> 用 <code>px_range</code> 再做一次阈值</td></tr>
+</table>
+
+<h3>7.3 改造硬条件</h3>
+
+<ul>
+  <li>只烘填充轮廓；描边在 shader 里用第二个阈值画。</li>
+  <li>固定 em（32 或 64 px）烘一次，缩放交给采样与 <code>px_range</code>。</li>
+  <li>padding ≥ 描边宽度 + 2 px。</li>
+  <li>四边形按 padding 对称扩边，advance 仍用 FreeType 的度量。</li>
+  <li>图标字体保留现有位图路径，不与正文混用。</li>
+</ul>
+
+<h3>7.4 对首帧尖峰的判断</h3>
+
+<p><strong>会降低字形层的重建概率，但不会自动消除切页尖峰。</strong></p>
+
+<ul>
+  <li>当前字形按「字符 + 像素字号」各存一份，菜单里正文/小字/标题几个档位会重复占图集；固定 em 后一个字符只烘一次，图集占用与 <code>GlyphAtlasRevision</code> 作废概率明显下降。</li>
+  <li>但文本容器 miss、键漂移、预案结果应用都不受 MSDF 影响；切页首帧仍要靠预建解决。</li>
+  <li>如果缺字在运行期才生成，MSDF 只是把「普通位图光栅化」换成「距离场生成」，未必更快；需要把生成放进现有预算或离线预烘。</li>
+  <li>中文覆盖面是主要风险：固定 em 减少重复，不等于覆盖所有字符；必须有缺字回退路径和覆盖率统计。</li>
+</ul>
+
+<h3>7.5 验证方式</h3>
+
+<p>同一冷切页、同一字号档位，对比 <code>glyph_rasterize_ms</code>、图集页数/占用、容器创建次数、首屏文字就绪延迟。不能只用稳态 FPS 或微基准下结论。</p>
+
+<h2 id="pool">8. 文本池过期与缓存策略</h2>
+
+<p>优先级最高、成本最低的改动：</p>
+
+<ol>
+  <li><strong>600 帧 → 24 h 墙钟 + 容量 LRU。</strong>语言、字体、图集版本变化仍保留强制失效。</li>
+  <li><strong>切页首屏预热。</strong>把目标页首屏条目排到预案队首，复用现有 24 字形 / 1 ms 预算；扩展 <code>PrebuildSettingsTextPlanItem</code>，不新建队列。</li>
+  <li><strong>把同步 miss 也纳入预算。</strong>预热之外若仍触发 <code>RenderGlyph</code>，至少保证一帧只做 N 个，并保留空白/旧容器兜底。</li>
+</ol>
+
+<p>验收指标从「帧时间」改为「点击到首屏文字出现」的延迟，配合容器创建次数与 <code>settings_text_miss</code> 日志。预期：切走再切回从「必然重建」变成「大概率命中」；首次进页仍需一次预算内摊薄。</p>
+
+<h2 id="order">9. 实施顺序</h2>
+
+<ol>
+  <li>文本池寿命改时间 + LRU；目标页首屏排队预热。</li>
+  <li>用现有日志把冷切页拆成字形/容器/预案三段，确认尖峰占比。</li>
+  <li>按实测决定是否启动 MSDF 试验；先离线烘一份固定 em 的子集，验证清晰度与图集占用，再谈全量。</li>
+  <li>多线程只搬「整形/断行」这类无共享状态的活；字形光栅化在 MSDF 方案确定后再评估。</li>
+  <li>后处理只做已被证明能替代 CPU 路径的单点效果。</li>
+</ol>
+
+<h2 id="verify">10. 验证方法</h2>
+
+<h3>10.1 场景规格</h3>
+
+<ul>
+  <li>3840×2160 窗口化、关 vsync、Release 构建、关闭一切调试日志（<code>qm_perf_debug 0</code>）。</li>
+  <li>同一场景：100 行服务器列表（可见约 23 行），每行 4 个文本列（名称/地图/玩家/延迟）+ 一张静态背景图，无动画、鼠标不动。</li>
+  <li>预热 5 s 后测 10 s，跑 3 次取中位；报告 <strong>p50 / p90 / p99 / p99.9 + 超过 6.25 ms 的帧比例</strong>，并单列加载帧（&gt; 100 ms 不参与稳态分位）。</li>
+  <li>再做两个对照把成本拆开：①只画文本不画背景 ②只画四边形不画文本。</li>
+  <li>口径对齐：我们这边用 <code>loop_total</code>/<code>frame_batch</code>，Godot 在 <code>_process</code> 里用 <code>Time.get_ticks_usec()</code> 记帧间隔写 CSV；两边都排除加载帧。</li>
+</ul>
+
+<h3>10.2 客户端入口</h3>
+
+<p>使用客户端自带的 <code>benchmark_quit &lt;秒&gt; &lt;文件&gt;</code>（<code>src/engine/client/client.cpp:7917</code>），只写 <code>Frametime N us</code>，不依赖 <code>qm_perf_debug</code>。两个坑：菜单空闲节流会把帧率压到屏幕刷新率；窗口失焦会把更新限到 <code>cl_refresh_rate_inactive</code>，测容量时都要显式关掉。</p>
+
+<h3>10.3 Godot 侧</h3>
+
+<p><code>Control</code> 树 + 每格一个 <code>Label</code>（不要用一个多行 Label，否则批处理行为对不上）+ <code>TextureRect</code> 背景，<code>--resolution 3840x2160</code>，启动参数关 vsync。100 MB 免安装包，半小时能出数。Unity 要装 Hub + 许可证，Unreal 50 GB 起，这两家先不做。</p>
+
+<h2 id="open">11. 未决问题</h2>
+
+<ul>
+  <li>文本池改为时间过期后，长时间挂机再切回的命中率与内存上限取多少。</li>
+  <li>MSDF 固定 em 选 32 还是 64；中文首屏的字形预算是否需要单独一档。</li>
+  <li>图集耗尽时的策略：扩容、淘汰、还是回退位图；当前只有 <code>UNSUPPORTED</code> 返回。</li>
+  <li>多线程字形生成是否需要每线程 FreeType library，还是每线程 face 共享 library。</li>
+  <li>切页「首屏就绪」的可观测点放在容器有效、首个非空文本帧，还是页面动画结束。</li>
+  <li>预案结果一次性应用是否需要按时间切片；现有皮肤列表已按条数分批，文本预案仍需独立计时。</li>
+</ul>
+
+<h2 id="appendix-godot">附录 A：Godot 4K UI 对照基准原始记录</h2>
+
+<p>本附录内嵌 <code>tmp/godot-bench/RESULTS.md</code> 的实验记录，保留 2026-11-20 至 2026-11-21 的逐轮数据、口径修正和异常值说明。原始文件是临时产物，不进入构建；本文正文第 4 节采用最终口径，附录按实验发生顺序保留当时的数据，便于追溯为什么某个“每行成本”后来被推翻。</p>
+
+<h3>A.1 环境与场景</h3>
+
+<ul>
+  <li>Godot 4.7.2 stable，免安装版 <code>Godot_v4.7.2-stable_win64.exe</code>。</li>
+  <li>窗口 3840×2160 borderless（实际客户区 3840×2132，系统工作区裁掉 28 px），vsync 关闭，<code>Engine.max_fps = 0</code>。</li>
+  <li>GPU RTX 4060 Ti 8G / i5-13600KF / 32G，Windows 11 26300；每个配置跑 3 轮，取 p50 中位，预热 5 秒，测量 10 秒。</li>
+  <li>渲染器两种：<code>gl_compatibility</code>（OpenGL 3.3）与 <code>forward_plus</code>（Vulkan）。</li>
+</ul>
+
+<table>
+  <tr><th>场景</th><th>内容</th></tr>
+  <tr><td><code>blank</code></td><td>一个全屏 <code>ColorRect</code>，测每帧地板成本</td></tr>
+  <tr><td><code>ui</code></td><td>24 行服务器列表，每行 4 个 <code>Label</code>（名称/地图/玩家/延迟），微软雅黑 40 px，面板 3480×1860</td></tr>
+  <tr><td><code>world</code></td><td>同一列表 + 3D 背景（1600 个 <code>BoxMesh</code> + 地面 + 平行光，相机缓慢旋转）</td></tr>
+</table>
+
+<h3>A.2 第一轮：基础场景</h3>
+
+<table>
+  <tr><th>渲染器</th><th>场景</th><th>p50</th><th>p90</th><th>p99</th><th>p99.9</th><th>fps(p50)</th></tr>
+  <tr><td><code>gl_compatibility</code></td><td>blank</td><td>0.473</td><td>0.760</td><td>1.316</td><td>2.177</td><td>2114</td></tr>
+  <tr><td><code>gl_compatibility</code></td><td>ui</td><td>0.718</td><td>1.411</td><td>1.677</td><td>2.092</td><td>1393</td></tr>
+  <tr><td><code>gl_compatibility</code></td><td>world</td><td>0.663</td><td>1.440</td><td>2.017</td><td>2.210</td><td>1508</td></tr>
+  <tr><td><code>forward_plus</code></td><td>ui</td><td>0.461</td><td>1.171</td><td>1.356</td><td>1.979</td><td>2169</td></tr>
+  <tr><td><code>forward_plus</code></td><td>world</td><td>1.067</td><td>1.832</td><td>2.439</td><td>2.824</td><td>937</td></tr>
+</table>
+
+<p>同机同分辨率的 QmClient 第一份 perf 日志（2026-11-20 17:11，单次会话，带 <code>qm_perf_debug 1</code> 开销）：</p>
+
+<table>
+  <tr><th>场景</th><th>p50</th><th>p90</th><th>p99</th><th>fps(p50)</th></tr>
+  <tr><td>设置页（626 帧）</td><td>1.56</td><td>2.04</td><td>4.54</td><td>641</td></tr>
+  <tr><td>全会话 44k 帧</td><td>1.27</td><td>2.04</td><td>4.54</td><td>784</td></tr>
+</table>
+
+<p>第一轮的限制：两边负载不完全相同；QmClient 数字带 <code>qm_perf_debug 1</code> 的日志写入开销；Godot 的 blank 地板为 0.47 ms，而 QmClient 4K 空场景约 0.8–1.0 ms，固定成本约为其两倍；有一次 <code>forward_plus ui</code> 的 6.90 ms 异常值，复跑为 0.44–0.46 ms，判定为窗口遮挡/失焦污染，未计入；未测试实时 UI 更新或滚动。</p>
+
+<pre><code>cd tmp/godot-bench
+./Godot_v4.7.2-stable_win64.exe --path . --resolution 3840x2160 --borderless --disable-vsync \
+  --rendering-method gl_compatibility -- --variant=ui --out=out/ui_gl</code></pre>
+
+<p><code>--variant</code> 可取 <code>blank</code> / <code>ui</code> / <code>world</code>；<code>--shot=xxx.png</code> 只截图不测量。</p>
+
+<h3>A.3 第二轮：加重负载与本机列表实测</h3>
+
+<p>第一轮 Godot 场景太轻（24 行 × 4 列、无描边、无页签/过滤/详情面板），改为 32 行 × 8 列、每格 4 px 描边，并补上页签、过滤行、表头和右侧详情面板。</p>
+
+<table>
+  <tr><th>配置</th><th>p50</th><th>p90</th><th>fps(p50)</th></tr>
+  <tr><td>Godot GL，加重列表</td><td>1.16</td><td>2.35</td><td>862</td></tr>
+  <tr><td>Godot Vulkan，加重列表</td><td>0.48</td><td>0.78</td><td>2075</td></tr>
+</table>
+
+<p>同机直接测 wt-2 槽位构建：4K 窗口，关闭空闲节流与失焦限速（<code>gfx_refresh_rate 5000</code>、<code>cl_refresh_rate_inactive 0</code>），不使用 <code>qm_perf_debug</code>。</p>
+
+<table>
+  <tr><th>页面</th><th>p50</th><th>p90</th><th>fps(p50)</th></tr>
+  <tr><td>设置页</td><td>1.23</td><td>1.61</td><td>813</td></tr>
+  <tr><td>服务器列表（满列表）</td><td>4.46</td><td>4.72</td><td>224</td></tr>
+  <tr><td>服务器列表（过滤条件匹配 0 条）</td><td>1.26</td><td>6.64</td><td>796</td></tr>
+</table>
+
+<p>当轮结论：固定成本与 Godot GL 基本持平（1.23 vs 1.16 ms）；满列表与 0 行相差 3.2 ms，初步估算为 23 行 × 8 列的文本成本，约 139 µs/行；该绝对值偏高，因为用户 profile 带 <code>gfx_fsaa_samples 2</code>（MSAA 2×），第三轮隔离 profile 为 3.35 ms / 109 µs/行；后台预热拖慢平均帧的说法不成立，server-browser 更新在 69 秒日志中只有 4 次超过 1 ms（合计 16 ms）。</p>
+
+<h3>A.4 第三轮：隔离 profile 与无边框全屏</h3>
+
+<p>改用隔离存储 <code>tmp/bench/storage.cfg</code> → <code>tmp/bench/userdir</code>（无好友、无账号、无历史，仅保留 <code>serverlist-cache.json</code>）；<code>gfx_fullscreen 3</code>、3840×2160、<code>gfx_vsync 0</code>、<code>gfx_refresh_rate 5000</code>、<code>cl_refresh_rate 0</code>、<code>cl_refresh_rate_inactive 0</code>、<code>qm_perf_debug 0</code>，前台运行 25 秒后由 <code>benchmark_quit</code> 退出。</p>
+
+<p><code>tmp/bench/iso_v3.txt</code> 共 8930 帧；按 <code>Frametime</code> 首次连续 30 帧 &gt; 2 ms 定位列表装载点。</p>
+
+<table>
+  <tr><th>阶段</th><th>帧数</th><th>时长</th><th>p50</th><th>p90</th><th>fps(p50)</th></tr>
+  <tr><td>启动 + 空列表（装载前）</td><td>1603</td><td>1.1 s</td><td>0.71 ms</td><td>—</td><td>1400</td></tr>
+  <tr><td><strong>列表已装载</strong></td><td>5800</td><td>19.4 s</td><td><strong>3.35 ms</strong></td><td>3.71</td><td><strong>298</strong></td></tr>
+  <tr><td>末尾过滤为空（同页面 0 行）</td><td>约 1500</td><td>1.3 s</td><td>0.85 ms</td><td>—</td><td>1176</td></tr>
+</table>
+
+<p>列表阶段：p99 4.24 ms、p99.9 11.0 ms、max 21.9 ms；超过 6.25 ms（160 Hz 一帧）的只有 14 帧（0.19%），超过 16 ms 的 2 帧。298 fps 是稳定值，不是被尖峰拉低的均值。可见行数由 perf 日志的 <code>list_frame rows_visible: 23, rows_rendered: 23</code> 确认；满列表与空列表差 2.5 ms，按 23 行 × 8 列估算约 109 µs/行。3.35 ms 小于 6.25 ms，因此列表页在 160 Hz 上本身不会掉帧，只是跑不出更高帧率。</p>
+
+<h3>A.5 第四轮：字号与行高对齐</h3>
+
+<p>把 Godot 从 32 行 × 28 px 改为 23 行、40 px、行高 76 px，与 QmClient 的 <code>SERVER_LIST_TEXT_SIZE</code> × 2160/600 对齐；Vulkan 的首轮 0.83 ms 受首帧 shader/管线编译污染，取后两轮。</p>
+
+<table>
+  <tr><th>配置</th><th>p50（3 轮）</th><th>fps(p50)</th><th>每行增量</th></tr>
+  <tr><td>Godot GL，23 行 × 40 px</td><td>1.83 ms</td><td>546</td><td>59 µs/行</td></tr>
+  <tr><td>Godot Vulkan，23 行 × 40 px</td><td>0.47 ms</td><td>2110</td><td>约 0（全部合批）</td></tr>
+  <tr><td><strong>QmClient 列表，23 行</strong></td><td><strong>3.35 ms</strong></td><td><strong>298</strong></td><td><strong>109 µs/行</strong></td></tr>
+</table>
+
+<p>当轮结论：每行成本是 GL 路径的 1.9 倍、Vulkan 路径的 4–6 倍；差距在每帧地板（0.71 vs 0.47 ms）与每行文本成本两部分。</p>
+
+<h3>A.6 第五轮：负载对齐与真实绘制帧率</h3>
+
+<p>第四轮有两个缺陷：Godot 只有 8 个文本列、无图标、无背景模糊，而 QmClient 是 11 列、每行 10 次文本/图标绘制、40 px，并套有 <code>CUiScopedGaussianBlur</code>；同时 <code>Time.get_ticks_usec()</code> 的帧间隔不等于真实绘制帧率。Godot 场景已重建为同样的 11 列/每行 10 次绘制，并新增 <code>chrome</code>（页签/过滤/表头，无行）用于分离外壳成本，同时统计 <code>Engine.get_frames_drawn()</code>。</p>
+
+<table>
+  <tr><th>场景</th><th>GL p50</th><th>GL drawn_fps</th><th>Vulkan p50</th><th>Vulkan drawn_fps</th></tr>
+  <tr><td>blank（全屏纯色）</td><td>0.460 ms</td><td>1790</td><td>0.311 ms</td><td>2649</td></tr>
+  <tr><td>chrome（外壳，0 行）</td><td>0.591 ms</td><td>1406</td><td>0.385 ms</td><td>2068</td></tr>
+  <tr><td>ui（23 行 × 10 绘制）</td><td>0.960 ms</td><td>925</td><td>0.471 ms</td><td>1750</td></tr>
+</table>
+
+<p>每行增量：GL (0.960−0.591)/23 = 16 µs/行；Vulkan (0.471−0.385)/23 = 3.7 µs/行。对照 QmClient 的 3.35 ms / 298 fps / 109 µs/行，同负载下是 GL 的 3.5 倍、Vulkan 的 7 倍；但 QmClient 还包含菜单背景层与 Dual Kawase 模糊，在拿到 <code>qm_gaussian_blur 0/1</code> 与 4K/1080p 对照前，这只是上界，不是净值。第四轮 GL 2.15 ms、Vulkan 0.478 ms 那组数据因机器上其他负载漂移作废。</p>
+
+<h3>A.7 第六轮：成本份额拆解</h3>
+
+<p><code>tmp/bench/run_variants.cmd</code> 三次前台运行（<code>benchmark_quit</code>，每次 18 秒，全程不切窗口）：</p>
+
+<table>
+  <tr><th>运行</th><th>分辨率</th><th>模糊</th><th>空列表</th><th>列表 23 行</th><th>行增量</th></tr>
+  <tr><td>r1</td><td>3840×2160</td><td>开</td><td>0.72 ms</td><td><strong>3.31 ms</strong></td><td>2.59 ms</td></tr>
+  <tr><td>r2</td><td>3840×2160</td><td><strong>关</strong></td><td>0.60 ms</td><td><strong>3.29 ms</strong></td><td>2.69 ms</td></tr>
+  <tr><td>r3</td><td>1920×1080</td><td>开</td><td>0.21 ms</td><td><strong>3.50 ms</strong></td><td>3.29 ms</td></tr>
+</table>
+
+<p>当轮判断：模糊不是成本（4K 开/关差 0.02 ms，Dual Kawase 在 GPU 阴影里）；分辨率不影响列表成本（1080p 3.50 ms、4K 3.31 ms）；列表的 2.6 ms 全部是 CPU，23 行 × 10 次绘制约 113 µs/行。由此得出“CPU 受限，不是填充受限”，但“每行 113 µs”后来在第七轮被行级插桩推翻。</p>
+
+<table>
+  <tr><th></th><th>空壳</th><th>行成本</th><th>列表合计</th><th>fps</th></tr>
+  <tr><td>QmClient（CPU 受限）</td><td>0.71 ms</td><td>2.60 ms（113 µs/行）</td><td>3.31 ms</td><td>298</td></tr>
+  <tr><td>Godot GL</td><td>0.59 ms</td><td>0.37 ms（16 µs/行）</td><td>0.96 ms</td><td>925</td></tr>
+  <tr><td>Godot Vulkan</td><td>0.39 ms</td><td>0.09 ms（3.7 µs/行）</td><td>0.47 ms</td><td>1750</td></tr>
+</table>
+
+<h3>A.8 第七轮：行级插桩推翻“每行 113 µs”</h3>
+
+<p>在 wt-2 槽位使用临时插桩（<code>tmp/bench/rowprof.patch</code>，测完已 <code>git checkout</code> 还原并重建）：</p>
+
+<table>
+  <tr><th>位置</th><th>耗时（p50）</th><th>占页面</th></tr>
+  <tr><td>行循环整体（25 行 × 11 列，含 10 次文本/图标）</td><td><strong>0.12 ms</strong></td><td>4%</td></tr>
+  <tr><td>├ <code>DoNextItem</code></td><td>0.00 ms</td><td>—</td></tr>
+  <tr><td>├ 名称列 / 难度列 / 地图列</td><td>0.01 / 0.04 / 0.02 ms</td><td>—</td></tr>
+  <tr><td>└ 其余列（类型/好友/玩家/梦/延迟/锁/收藏）</td><td>0.04 ms</td><td>—</td></tr>
+  <tr><td>行循环之前（<code>pre_ms</code>）</td><td><strong>2.67 ms</strong></td><td>92%</td></tr>
+  <tr><td>└ 其中：重建 <code>vVisibleServerIndices</code> 的 O(N) 循环</td><td><strong>2.63 ms</strong></td><td>91%</td></tr>
+  <tr><td>页面合计 <code>offline_page_content</code></td><td>2.90 ms</td><td>—</td></tr>
+</table>
+
+<p><code>menus_browser.cpp</code> 每帧对全部 1379 个服务器执行 <code>SortedGet</code> → <code>FindForServer</code>（目录二分 + 多次大小写不敏感比较）→ <code>IsFavoriteMap</code> → <code>MapCategoryHintFromServer</code> → <code>QmMapVotes::MatchesFilter</code>，平均 1.9 µs/服务器，合计 2.63 ms。真实行渲染成本约 0.12 ms / 25 行 ≈ 5 µs/行，与 Godot Vulkan 的 3.7 µs/行同量级；前面的 113 µs/行是把这 2.6 ms 错摊到 23 行上。该插桩也解释了过滤为 0 行时回到 1.26 ms、1080p 与 4K 同速、开关模糊无差别。</p>
+
+<h3>A.9 第八轮：Godot 也加载 1379 条数据</h3>
+
+<p>Godot 场景加 <code>--servers=1379</code>，仍只建 23 行节点（虚拟化），三轮中位：</p>
+
+<table>
+  <tr><th>渲染器</th><th>23 条</th><th>1379 条</th></tr>
+  <tr><td>Vulkan p50</td><td>0.471 ms</td><td><strong>0.468 ms</strong></td></tr>
+  <tr><td>Vulkan drawn_fps</td><td>1792</td><td>1855</td></tr>
+  <tr><td>GL p50</td><td>1.020 ms</td><td>1.120 ms</td></tr>
+</table>
+
+<p>结论：有 1379 台服务器本身不花钱；Godot 用 retained + 虚拟化只处理可见的 23 行。QmClient 的 2.63 ms 不是数据量造成的，而是“每帧重新算一遍哪些服务器可见”的实现选择。</p>
+
+<h3>A.10 第九轮：wt-2 可见索引缓存（待实测）</h3>
+
+<ul>
+  <li>失效依据：<code>FriendListRevision()</code>（增删服务器、好友变化、每次 Sort 自增）、收藏数量、<code>NumSortedServers()</code>、四个筛选掩码，以及 1 秒兜底（难度目录由后台补齐，当时没有独立版本号）。</li>
+  <li>命中时每帧只剩一次比较；预期页面 2.90 → 约 0.3 ms，帧 3.31 → 约 0.9 ms（约 1100 fps）。</li>
+  <li>自测受阻：后台运行时窗口被完全遮挡，DDNet 跳过渲染（14 秒仅 3 帧 render），必须前台跑一次。</li>
+</ul>
+
+<h3>A.11 第十轮：修复后实测</h3>
+
+<p><code>tmp/bench/var_fix.txt</code>（Vulkan）与 <code>var_fix_gl.txt</code>（OpenGL），4K、23 行满列表、关闭 perf：</p>
+
+<table>
+  <tr><th>后端</th><th>p50</th><th>p90</th><th>p99</th><th>p99.9</th><th>max</th><th>&gt;6.25 ms</th><th>fps(p50)</th></tr>
+  <tr><td>Vulkan</td><td><strong>0.944 ms</strong></td><td>1.63</td><td>1.93</td><td>5.24</td><td>12.8</td><td>0.04%</td><td><strong>1059</strong></td></tr>
+  <tr><td>OpenGL</td><td><strong>0.877 ms</strong></td><td>1.62</td><td>1.90</td><td>3.98</td><td>19.0</td><td>0.09%</td><td><strong>1140</strong></td></tr>
+</table>
+
+<p>修复前同场景 3.31 ms（298 fps）→ 修复后 3.5–3.8 倍；时间轴全程平坦在 0.85–1.05 ms，没有台阶，说明列表装载前后成本接近（O(N) 重建被摊成每 1 秒一次）。两个后端持平（GL 略快 0.07 ms，在噪声内）；剩余 0.9 ms 没有 GPU 压力，Godot Vulkan 的优势来自 retained 渲染架构，不是图形 API 本身。</p>
+
+<h3>A.12 最终对照</h3>
+
+<table>
+  <tr><th></th><th>列表合计</th><th>fps</th><th>备注</th></tr>
+  <tr><td>QmClient（修复前）</td><td>3.31 ms</td><td>298</td><td>每帧重建可见索引 2.63 ms</td></tr>
+  <tr><td><strong>QmClient（修复后）</strong></td><td><strong>0.88–0.94 ms</strong></td><td><strong>1059–1140</strong></td><td>含菜单背景层 + 双 Kawase 模糊</td></tr>
+  <tr><td>Godot GL</td><td>1.02 ms</td><td>908</td><td>无背景层/模糊</td></tr>
+  <tr><td>Godot Vulkan</td><td>0.47 ms</td><td>1855</td><td>无背景层/模糊</td></tr>
+</table>
+
+<p>修复后与 Godot GL 打平、比 Vulkan 慢约 2 倍；而 QmClient 页面还多一层会动的背景和全页模糊（4K 下约 0.5 ms 填充，由空页面 0.71 vs 1080p 0.21 得出）。只比列表本体时，大致在 0.4 ms 量级。</p>
+
+<h3>A.13 第十一轮：页面切换尖峰</h3>
+
+<p>来源：<code>%APPDATA%/DDNet/dumps/QmClient_Perf/qm_perf_2026-11-21_01-32-58.log</code>，阈值 1 ms（只记慢帧，因此页面 p50 有偏）。<code>loop_total</code> p50 1.26、p99 4.57、p99.9 35.3、max 37.7 ms。</p>
+
+<table>
+  <tr><th>帧</th><th>loop</th><th>归因</th></tr>
+  <tr><td>13733</td><td>26.4 ms</td><td><code>settings_page_content</code> 25.2 ms，事件 <code>page_switch</code> + <code>settings_text_miss</code></td></tr>
+  <tr><td>9971</td><td>17.1 ms</td><td>同上（sound tab，15.2 ms）</td></tr>
+  <tr><td>9239</td><td>7.7 ms</td><td>同上（tee tab，6.8 ms，3 次 <code>settings_text_miss</code>）</td></tr>
+  <tr><td>1356</td><td>27.4 ms</td><td><code>list_plan_results</code> 25.6 ms（一次应用大批文本预案结果）</td></tr>
+  <tr><td>907–912</td><td>35–37 ms</td><td>只有 <code>loop_total</code>，没有阶段——未被覆盖的阻塞</td></tr>
+</table>
+
+<p><code>transition=1</code> 的帧只有 1.73 ms p50 / 2.52 ms max，切换动画本身不是尖峰源。真正的尖峰是切到目标页后缺文本容器、在渲染帧里同步构建，以及预案结果一次性应用；25 ms 约等于 160 Hz 下 4 帧，体感影响远大于稳态的 0.9 ms。</p>
+
+<h3>A.14 已知阻塞</h3>
+
+<p>主目录 <code>cmake-build-release/DDNet.exe</code>（20:21 构建）在 HEAD 之前，启动即断言 <code>component.cpp(9): Component already initialized</code>，无法用于测量；增量重建所需的 <code>tmp/build-locks/&lt;hash&gt;.lock</code> 当时被另一会话的 <code>testrunner</code> 构建占用，改用 wt-2 槽位 11-19 的构建完成测量。该阻塞属于测量环境，不影响本附录的对照数据。</p>
+
+</div>
+</body>
+</html>

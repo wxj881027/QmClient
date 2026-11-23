@@ -23,8 +23,10 @@
 #include <game/editor/quadart.h>
 #include <game/editor/references.h>
 
+#include <algorithm>
 #include <functional>
 #include <memory>
+#include <utility>
 #include <vector>
 
 class CEditor;
@@ -191,6 +193,29 @@ public:
 	void AddSelectedLayer(int LayerIndex);
 	void SelectNextLayer();
 	void SelectPreviousLayer();
+	struct SSelectionState
+	{
+		int &SelectedGroup;
+		std::vector<int> &SelectedLayers;
+		const std::vector<int> &GroupLayerCounts;
+		size_t EnvelopeCount;
+		size_t ImageCount;
+		size_t SoundCount;
+		std::vector<int> &SelectedQuads;
+		int &SelectedQuadPoints;
+		int &SelectedQuadEnvelope;
+		int &CurrentQuadIndex;
+		int &SelectedEnvelope;
+		std::vector<std::pair<int, int>> &SelectedEnvelopePoints;
+		std::pair<int, int> &SelectedTangentInPoint;
+		std::pair<int, int> &SelectedTangentOutPoint;
+		int &SelectedImage;
+		int &SelectedSound;
+		int &SelectedSoundSource;
+	};
+	// 按资源数量夹紧选中状态；选中组或图层变化时返回 true。
+	static bool NormalizeSelectionState(SSelectionState State);
+	void NormalizeSelection();
 	void SelectGameLayer();
 	void MakeGameLayer(const std::shared_ptr<CLayer> &pLayer);
 	void MakeTeleLayer(const std::shared_ptr<CLayer> &pLayer);
@@ -267,5 +292,56 @@ private:
 	std::shared_ptr<CDataFileWriterFinishJob> PrepareSave(const char *pFilename, const FErrorHandler &ErrorHandler);
 	CEditor *m_pEditor;
 };
+
+inline bool CEditorMap::NormalizeSelectionState(SSelectionState State)
+{
+	if(State.GroupLayerCounts.empty())
+	{
+		State.SelectedGroup = 0;
+		State.SelectedLayers.clear();
+		State.SelectedQuads.clear();
+		State.SelectedQuadPoints = 0;
+		State.SelectedEnvelopePoints.clear();
+		State.SelectedTangentInPoint = std::pair(-1, -1);
+		State.SelectedTangentOutPoint = std::pair(-1, -1);
+		return true;
+	}
+
+	const int PreviousGroup = State.SelectedGroup;
+	State.SelectedGroup = std::clamp(State.SelectedGroup, 0, (int)State.GroupLayerCounts.size() - 1);
+	const int LayerCount = State.GroupLayerCounts[State.SelectedGroup];
+	const size_t PreviousLayerCount = State.SelectedLayers.size();
+	State.SelectedLayers.erase(
+		std::remove_if(State.SelectedLayers.begin(), State.SelectedLayers.end(), [LayerCount](int LayerIndex) {
+			return LayerIndex < 0 || LayerIndex >= LayerCount;
+		}),
+		State.SelectedLayers.end());
+	const bool SelectionChanged = PreviousGroup != State.SelectedGroup || PreviousLayerCount != State.SelectedLayers.size();
+	if(SelectionChanged)
+	{
+		State.SelectedQuads.clear();
+		State.SelectedQuadPoints = 0;
+		State.SelectedQuadEnvelope = -1;
+		State.CurrentQuadIndex = -1;
+		State.SelectedSoundSource = -1;
+	}
+	if(State.SelectedLayers.empty() && LayerCount > 0)
+		State.SelectedLayers.push_back(LayerCount - 1);
+
+	if(State.SelectedQuadEnvelope < 0 || State.SelectedQuadEnvelope >= (int)State.EnvelopeCount)
+		State.SelectedQuadEnvelope = -1;
+	if(State.SelectedEnvelope < 0 || State.SelectedEnvelope >= (int)State.EnvelopeCount)
+	{
+		State.SelectedEnvelope = 0;
+		State.SelectedEnvelopePoints.clear();
+		State.SelectedTangentInPoint = std::pair(-1, -1);
+		State.SelectedTangentOutPoint = std::pair(-1, -1);
+	}
+	if(State.SelectedImage < 0 || State.SelectedImage >= (int)State.ImageCount)
+		State.SelectedImage = 0;
+	if(State.SelectedSound < 0 || State.SelectedSound >= (int)State.SoundCount)
+		State.SelectedSound = 0;
+	return SelectionChanged;
+}
 
 #endif

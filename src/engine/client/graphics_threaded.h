@@ -1166,6 +1166,18 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	bool m_RenderEnable;
 	ivec2 m_DesktopSize = ivec2(0, 0);
+	// SDL 首次枚举全屏模式会同步初始化显示后端，实测可达 300ms 以上。
+	// 设置页只读这份缓存，预热入口固定在启动阶段调用。
+	static constexpr int QM_MAX_CACHED_VIDEO_MODES = 256;
+	CVideoMode m_aCachedVideoModes[QM_MAX_CACHED_VIDEO_MODES] = {};
+	int m_NumCachedVideoModes = 0;
+	int m_CachedVideoModeScreen = -1;
+	bool m_CachedVideoModeAll = false;
+	int m_CachedVideoModeFullscreen = -1;
+	int m_CachedVideoModeDesktopWidth = -1;
+	int m_CachedVideoModeDesktopHeight = -1;
+	float m_CachedVideoModeHiDpiScale = -1.0f;
+	void InvalidateVideoModeCache();
 
 	float m_Rotation;
 	CQmQuadRotationCache m_QuadRotationCache;
@@ -1397,6 +1409,7 @@ public:
 	bool DualBlurRenderTarget(CRenderTargetHandle Source, CRenderTargetHandle Downsample, CRenderTargetHandle DownsampleTemporary, CRenderTargetHandle DownsampleBlurred, CRenderTargetHandle Destination, const SGaussianBlurParams &Params) override;
 	CRenderTargetReadbackHandle BeginRenderTargetReadback(CRenderTargetHandle Target) override;
 	ERenderTargetReadbackState PollRenderTargetReadback(CRenderTargetReadbackHandle Handle) override;
+	bool FlushRenderTargetReadback() override { return FlushPendingRenderTargetReadback(); }
 	bool ResolveRenderTargetReadback(CRenderTargetReadbackHandle *pHandle, CImageInfo &Image) override;
 	void CancelRenderTargetReadback(CRenderTargetReadbackHandle *pHandle) override;
 	bool ReadRenderTarget(CRenderTargetHandle Target, CImageInfo &Image) override;
@@ -1759,6 +1772,7 @@ public:
 	bool SetMultiSampling(uint32_t ReqMultiSamplingCount, uint32_t &MultiSamplingCountBackend) override;
 
 	int GetVideoModes(CVideoMode *pModes, int MaxModes, int Index) override;
+	void PrewarmVideoModes() override;
 	bool GetCurrentVideoMode(CVideoMode &CurMode, int Index) override;
 
 	// synchronization

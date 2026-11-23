@@ -148,7 +148,7 @@ namespace qm_card_catalog
 			   Preview.AddServerCommand("info", "", pInfoDescription);
 			   Preview.EndUpdate();
 			   Preview.MoveSelection(1, "/", 1);
-			   }))
+		   }))
 			return {};
 		return Preview;
 	}

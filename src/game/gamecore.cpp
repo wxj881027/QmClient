@@ -22,7 +22,7 @@ const char *CTuningParams::ms_apNames[] =
 #undef MACRO_TUNING_PARAM
 };
 
-static constexpr CTuneParam CTuningParams::* TUNING_PARAM_MEMBERS[] =
+static constexpr CTuneParam CTuningParams::*TUNING_PARAM_MEMBERS[] =
 	{
 #define MACRO_TUNING_PARAM(Name, ScriptName, Value, Description) &CTuningParams::m_##Name,
 #include "tuning.h"

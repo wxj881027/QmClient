@@ -257,23 +257,16 @@ TEST(VulkanRenderTargetLifetime, ATargetDestroyedWhilePausedWaitsForEarlierGpuWo
 {
 	bool Idle = false;
 	bool Destroyed = false;
-	EXPECT_TRUE(DestroyQmVulkanRenderTargetAfterUse(true, Handle<VkImage>(1),
-		[&] { Idle = true; return true; },
-		[] { ADD_FAILURE() << "paused rendering cannot submit a frame"; return false; },
-		[&] {
+	EXPECT_TRUE(DestroyQmVulkanRenderTargetAfterUse(true, Handle<VkImage>(1), [&] { Idle = true; return true; }, [] { ADD_FAILURE() << "paused rendering cannot submit a frame"; return false; }, [&] {
 			EXPECT_TRUE(Idle);
-			Destroyed = true;
-		}));
+			Destroyed = true; }));
 	EXPECT_TRUE(Destroyed);
 }
 
 TEST(VulkanRenderTargetLifetime, FailedIdleWaitKeepsThePausedTargetOwned)
 {
 	bool Waited = false;
-	EXPECT_FALSE(DestroyQmVulkanRenderTargetAfterUse(true, Handle<VkImage>(1),
-		[&] { Waited = true; return false; },
-		[] { ADD_FAILURE() << "paused rendering cannot submit a frame"; return false; },
-		[] { ADD_FAILURE() << "the GPU may still reference the target"; }));
+	EXPECT_FALSE(DestroyQmVulkanRenderTargetAfterUse(true, Handle<VkImage>(1), [&] { Waited = true; return false; }, [] { ADD_FAILURE() << "paused rendering cannot submit a frame"; return false; }, [] { ADD_FAILURE() << "the GPU may still reference the target"; }));
 	EXPECT_TRUE(Waited);
 }
 
@@ -281,13 +274,9 @@ TEST(VulkanRenderTargetLifetime, ActiveFrameSubmitsBeforeDestroyingATarget)
 {
 	bool Submitted = false;
 	bool Destroyed = false;
-	EXPECT_TRUE(DestroyQmVulkanRenderTargetAfterUse(false, Handle<VkImage>(1),
-		[] { ADD_FAILURE() << "the current frame must be submitted before waiting"; return false; },
-		[&] { Submitted = true; return true; },
-		[&] {
+	EXPECT_TRUE(DestroyQmVulkanRenderTargetAfterUse(false, Handle<VkImage>(1), [] { ADD_FAILURE() << "the current frame must be submitted before waiting"; return false; }, [&] { Submitted = true; return true; }, [&] {
 			EXPECT_TRUE(Submitted);
-			Destroyed = true;
-		}));
+			Destroyed = true; }));
 	EXPECT_TRUE(Destroyed);
 }
 

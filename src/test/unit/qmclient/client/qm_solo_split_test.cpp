@@ -9,6 +9,60 @@ namespace
 	const std::array<int, 2> TARGET_TEAMS = {1, 2};
 }
 
+TEST(QmSoloSplitTeamSelection, ReusesDistinctCurrentTeams)
+{
+	const std::array<bool, NUM_DDRACE_TEAMS> aOccupied{};
+	const SQmSoloSplitTeamSelection Selection = QmSelectSoloSplitTeams(5, 6, TEAM_SUPER, aOccupied);
+
+	EXPECT_TRUE(Selection.Valid());
+	EXPECT_EQ(Selection.m_Main, 5);
+	EXPECT_EQ(Selection.m_Dummy, 6);
+}
+
+TEST(QmSoloSplitTeamSelection, KeepsMainTeamAndMovesDummyWhenTheyShare)
+{
+	std::array<bool, NUM_DDRACE_TEAMS> aOccupied{};
+	aOccupied[1] = true;
+	const SQmSoloSplitTeamSelection Selection = QmSelectSoloSplitTeams(5, 5, TEAM_SUPER, aOccupied);
+
+	EXPECT_TRUE(Selection.Valid());
+	EXPECT_EQ(Selection.m_Main, 5);
+	EXPECT_EQ(Selection.m_Dummy, 2);
+}
+
+TEST(QmSoloSplitTeamSelection, ReusesMainTeamAndFindsEmptyDummyTeam)
+{
+	std::array<bool, NUM_DDRACE_TEAMS> aOccupied{};
+	aOccupied[1] = true;
+	aOccupied[2] = true;
+	const SQmSoloSplitTeamSelection Selection = QmSelectSoloSplitTeams(5, TEAM_FLOCK, TEAM_SUPER, aOccupied);
+
+	EXPECT_TRUE(Selection.Valid());
+	EXPECT_EQ(Selection.m_Main, 5);
+	EXPECT_EQ(Selection.m_Dummy, 3);
+}
+
+TEST(QmSoloSplitTeamSelection, IgnoresLocalOldTeamsWhenFindingTwoEmptyTeams)
+{
+	std::array<bool, NUM_DDRACE_TEAMS> aOccupied{};
+	aOccupied[1] = true;
+	const SQmSoloSplitTeamSelection Selection = QmSelectSoloSplitTeams(TEAM_FLOCK, TEAM_FLOCK, TEAM_SUPER, aOccupied);
+
+	EXPECT_TRUE(Selection.Valid());
+	EXPECT_EQ(Selection.m_Main, 2);
+	EXPECT_EQ(Selection.m_Dummy, 3);
+}
+
+TEST(QmSoloSplitTeamSelection, RejectsWhenNoTwoTeamsAreFree)
+{
+	std::array<bool, NUM_DDRACE_TEAMS> aOccupied{};
+	for(int Team = TEAM_FLOCK + 1; Team < TEAM_SUPER; ++Team)
+		aOccupied[Team] = true;
+	const SQmSoloSplitTeamSelection Selection = QmSelectSoloSplitTeams(TEAM_FLOCK, TEAM_FLOCK, TEAM_SUPER, aOccupied);
+
+	EXPECT_FALSE(Selection.Valid());
+}
+
 TEST(QmSoloSplit, ConnectionReadyBeforeSnapshotKeepsRequestedAction)
 {
 	CQmSoloSplitState State;
@@ -81,6 +135,123 @@ TEST(QmSoloSplit, ReachingBothTargetTeamsFinishesWithoutFurtherCommands)
 	ASSERT_TRUE(State.UpdateTeams(true, true, true, PREVIOUS_TEAMS, 0, TICK_FREQUENCY).has_value());
 	EXPECT_FALSE(State.UpdateTeams(true, true, true, TARGET_TEAMS, 1, TICK_FREQUENCY).has_value());
 	EXPECT_FALSE(State.Pending());
+}
+
+TEST(QmSoloSplit, EnterSendsFirstTeamCommandEvenWhenStateAlreadyMatches)
+{
+	CQmSoloSplitState State;
+	State.StartTeams(1, TARGET_TEAMS, TARGET_TEAMS, 0);
+	EXPECT_EQ(State.UpdateTeams(true, true, true, TARGET_TEAMS, 0, TICK_FREQUENCY), TARGET_TEAMS);
+	EXPECT_FALSE(State.UpdateTeams(true, true, true, TARGET_TEAMS, 1, TICK_FREQUENCY).has_value());
+	EXPECT_FALSE(State.Pending());
+}
+
+TEST(QmSoloSplit, ReachedEnterTargetRequiresBothTeamsAndEnterAction)
+{
+	CQmSoloSplitState State;
+	State.StartTeams(1, PREVIOUS_TEAMS, TARGET_TEAMS, 0);
+	EXPECT_FALSE(State.ReachedEnterTarget(PREVIOUS_TEAMS));
+	EXPECT_FALSE(State.ReachedEnterTarget({1, 4}));
+	EXPECT_TRUE(State.ReachedEnterTarget(TARGET_TEAMS));
+
+	State.Reset();
+	State.StartTeams(2, TARGET_TEAMS, PREVIOUS_TEAMS, 0);
+	EXPECT_FALSE(State.ReachedEnterTarget(PREVIOUS_TEAMS));
+}
+
+TEST(QmSoloSplit, EnterTeamCommandIncludesImmediateLock)
+{
+	char aCmd[64];
+
+	ASSERT_TRUE(QmBuildSoloSplitTeamCommand(aCmd, sizeof(aCmd), TARGET_TEAMS[0], true));
+	EXPECT_STREQ(aCmd, "/mc;team 1; lock 1");
+
+	ASSERT_TRUE(QmBuildSoloSplitTeamCommand(aCmd, sizeof(aCmd), TARGET_TEAMS[1], false));
+	EXPECT_STREQ(aCmd, "/team 2");
+}
+
+TEST(QmSoloSplit, ParsesEnglishAndChineseLockConfirmationsForOnlyTheLocalPlayer)
+{
+	const SQmSoloSplitTeamLockMessage EnglishLock = QmParseSoloSplitTeamLockMessage("'SoloMain' locked your team. After the race starts, killing will kill everyone in your team.", "SoloMain");
+	EXPECT_TRUE(EnglishLock.m_Recognized);
+	EXPECT_TRUE(EnglishLock.m_Locked);
+
+	const SQmSoloSplitTeamLockMessage ChineseLock = QmParseSoloSplitTeamLockMessage("'SoloMain' 锁定了你们的队伍。比赛开始后，任何人 kill 都会导致整队死亡", "SoloMain");
+	EXPECT_TRUE(ChineseLock.m_Recognized);
+	EXPECT_TRUE(ChineseLock.m_Locked);
+
+	const SQmSoloSplitTeamLockMessage EnglishUnlock = QmParseSoloSplitTeamLockMessage("'SoloMain' unlocked your team", "SoloMain");
+	EXPECT_TRUE(EnglishUnlock.m_Recognized);
+	EXPECT_FALSE(EnglishUnlock.m_Locked);
+
+	const SQmSoloSplitTeamLockMessage ChineseUnlock = QmParseSoloSplitTeamLockMessage("'SoloMain' 解锁了你们的队伍", "SoloMain");
+	EXPECT_TRUE(ChineseUnlock.m_Recognized);
+	EXPECT_FALSE(ChineseUnlock.m_Locked);
+
+	EXPECT_FALSE(QmParseSoloSplitTeamLockMessage("'SoloDummy' 锁定了你们的队伍", "SoloMain").m_Recognized);
+	EXPECT_FALSE(QmParseSoloSplitTeamLockMessage("'SoloMain' joined team 1", "SoloMain").m_Recognized);
+}
+
+TEST(QmSoloSplit, LockHintsRequireServerConfirmationAndTrackBothConnections)
+{
+	CQmSoloSplitLockHints Hints;
+	Hints.ExpectLock(0, 1);
+	Hints.ExpectLock(1, 2);
+	EXPECT_FALSE(Hints.IsTeamLocked(1));
+	EXPECT_FALSE(Hints.IsTeamLocked(2));
+
+	EXPECT_TRUE(Hints.ApplyConfirmation(0, true));
+	EXPECT_TRUE(Hints.IsTeamLocked(1));
+	EXPECT_FALSE(Hints.IsTeamLocked(2));
+
+	EXPECT_TRUE(Hints.ApplyConfirmation(1, true));
+	EXPECT_TRUE(Hints.IsTeamLocked(2));
+
+	Hints.ExpectLock(0, TEAM_FLOCK);
+	Hints.ExpectLock(0, TEAM_SUPER);
+	EXPECT_FALSE(Hints.ApplyConfirmation(0, false));
+	EXPECT_TRUE(Hints.IsTeamLocked(1));
+
+	Hints.ExpectLock(0, 1);
+	EXPECT_TRUE(Hints.ApplyConfirmation(0, false));
+	EXPECT_FALSE(Hints.IsTeamLocked(1));
+
+	Hints.ResetConnection(1);
+	EXPECT_FALSE(Hints.IsTeamLocked(2));
+}
+
+TEST(QmSoloSplit, LeaveModeNeverLocksRestoredTeam)
+{
+	CQmSoloSplitState State;
+	State.StartTeams(2, TARGET_TEAMS, PREVIOUS_TEAMS, 0);
+	EXPECT_FALSE(State.LocksEnteredTeams());
+
+	State.Reset();
+	State.StartTeams(1, PREVIOUS_TEAMS, TARGET_TEAMS, 0);
+	EXPECT_TRUE(State.LocksEnteredTeams());
+}
+
+TEST(QmSoloSplit, LeavingSplitSendsTeamZeroForBothConnections)
+{
+	CQmSoloSplitState State;
+	const std::array<int, 2> aRestoreTeams = {TEAM_FLOCK, TEAM_FLOCK};
+	State.StartTeams(2, TARGET_TEAMS, aRestoreTeams, 0);
+	const auto Teams = State.UpdateTeams(true, true, true, TARGET_TEAMS, 0, TICK_FREQUENCY);
+	ASSERT_TRUE(Teams.has_value());
+	for(int Team : *Teams)
+	{
+		char aCmd[64];
+		ASSERT_TRUE(QmBuildSoloSplitTeamCommand(aCmd, sizeof(aCmd), Team, State.LocksEnteredTeams()));
+		EXPECT_STREQ(aCmd, "/team 0");
+	}
+	EXPECT_FALSE(State.UpdateTeams(true, true, true, aRestoreTeams, 1, TICK_FREQUENCY).has_value());
+	EXPECT_FALSE(State.Pending());
+}
+
+TEST(QmSoloSplit, CannotBuildLockCommandForTeamZero)
+{
+	char aCmd[64];
+	EXPECT_FALSE(QmBuildSoloSplitTeamCommand(aCmd, sizeof(aCmd), TEAM_FLOCK, true));
 }
 
 TEST(QmSoloSplit, DummyDisconnectCancelsRetryAndCannotResumeOldTeams)

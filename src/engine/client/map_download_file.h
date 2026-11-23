@@ -93,6 +93,13 @@ public:
 
 namespace map_download
 {
+	inline int ProgressTotalSize(bool HttpDownloadActive, bool ServerDownloadActive, int StoredTotalSize, int HttpTotalSize)
+	{
+		if(HttpDownloadActive)
+			return HttpTotalSize;
+		return ServerDownloadActive ? StoredTotalSize : -1;
+	}
+
 	inline bool CanAppend(int Amount, int Size, int Total)
 	{
 		return Amount >= 0 && Total >= Amount && Size > 0 && Size <= Total - Amount;

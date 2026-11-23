@@ -5,6 +5,8 @@
 
 #include <engine/client/qm_festive_message_box.h>
 
+#include <windows.h>
+
 #include <gtest/gtest.h>
 
 #include <atomic>
@@ -15,8 +17,6 @@
 #include <iterator>
 #include <memory>
 #include <thread>
-
-#include <windows.h>
 
 namespace QmFestiveMessageBox
 {
@@ -74,8 +74,7 @@ TEST(QmFestiveMessageBox, ClosingReturnsWhilePlaybackIsBlocked)
 			EnumThreadWindows(ThreadId, FindFestiveWindow, reinterpret_cast<LPARAM>(&Window));
 			pProbe->m_PlaybackWindow.set_value(Window);
 			const bool Released = pProbe->m_ReleasePlayback.wait_for(20s) == std::future_status::ready;
-			pProbe->m_SawCancellation.set_value(Released && Stop.load());
-		}, true);
+			pProbe->m_SawCancellation.set_value(Released && Stop.load()); }, true);
 		pProbe->m_DialogResult.set_value(Result);
 	});
 

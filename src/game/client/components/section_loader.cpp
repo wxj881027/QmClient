@@ -4,6 +4,7 @@
 #include <base/system.h>
 
 #include <engine/shared/config.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/perf_logging.h>
@@ -654,7 +655,9 @@ bool CSectionLoader::SaveSessionCache(const SSessionUiCache &Cache, const char *
 		if(!aRoot[0] || str_length(aRoot) + Temporary.size() >= IO_MAX_PATH_LENGTH ||
 			pStorage->FileExists(Temporary.c_str(), IStorage::TYPE_SAVE) || pStorage->FolderExists(Temporary.c_str(), IStorage::TYPE_SAVE))
 			return false;
-		pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		const auto ParentEnd = Target.rfind('/');
+		if(ParentEnd != std::string::npos && !qm_storage::EnsureFolder(pStorage, Target.substr(0, ParentEnd).c_str()))
+			return false;
 		CSessionCacheFileOperations Default;
 		auto &Operations = pOperations ? *pOperations : Default;
 		SSessionCacheCandidate Candidate{*pStorage, Temporary};

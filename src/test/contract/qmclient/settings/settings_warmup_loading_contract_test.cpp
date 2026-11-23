@@ -95,22 +95,20 @@ TEST(SettingsWarmupLoadingContract, LoadingPrewarmDoesNotPumpResourceWork)
 
 	EXPECT_NE(PrewarmBody.find("m_Menus.PrewarmSettingsPages();"), std::string::npos);
 	EXPECT_NE(PrewarmBody.find("m_Menus.RenderLoading(pLoadingCaption, pLoadingMessage, 0);"), std::string::npos);
-	EXPECT_NE(PrewarmBody.find("m_Menus.PrewarmSettingsTextPoolForLoading(TEXT_PREWARM_BUDGET_PER_STEP);"), std::string::npos);
-	EXPECT_NE(PrewarmBody.find("State.m_LastBuiltTextContainers = m_Menus.SettingsTextContainerCount();"), std::string::npos);
-	EXPECT_NE(PrewarmBody.find("State.m_LastMissingTextPlanItems = m_Menus.SettingsTextPrebuildRemaining();"), std::string::npos);
-	EXPECT_NE(PrewarmBody.find("State.m_LastMissingTextPlanCollectionUnits = m_Menus.SettingsTextPlanCollectionRemaining();"), std::string::npos);
-	EXPECT_NE(PrewarmBody.find("SettingsLoadingPrewarmAdvance(State, m_Menus.SettingsTextContainerCount(), m_Menus.SettingsTextPrebuildRemaining(), m_Menus.SettingsTextPlanCollectionRemaining());"), std::string::npos);
+	EXPECT_EQ(PrewarmBody.find("PrewarmSettingsTextPoolForLoading("), std::string::npos);
+	EXPECT_EQ(PrewarmBody.find("for(int Step"), std::string::npos);
+	EXPECT_NE(PrewarmBody.find("\"startup_text_prewarm_deferred\""), std::string::npos);
 	EXPECT_EQ(PrewarmBody.find("SettingsTextPoolEntryCount()"), std::string::npos);
 	EXPECT_EQ(PrewarmBody.find("(void)pLoadingCaption;"), std::string::npos);
 	EXPECT_EQ(PrewarmBody.find("(void)pLoadingMessage;"), std::string::npos);
-	const size_t DisabledGuard = PrewarmBody.find("if(g_Config.m_QmSettingsPrewarm == 0)");
-	const size_t DisabledReturn = PrewarmBody.find("return;", DisabledGuard);
+	const size_t SettingsEnabled = PrewarmBody.find("const bool SettingsPrewarmEnabled = g_Config.m_QmSettingsPrewarm != 0;");
 	const size_t PagePrewarm = PrewarmBody.find("m_Menus.PrewarmSettingsPages();");
-	ASSERT_NE(DisabledGuard, std::string::npos);
-	ASSERT_NE(DisabledReturn, std::string::npos);
+	ASSERT_NE(SettingsEnabled, std::string::npos);
 	ASSERT_NE(PagePrewarm, std::string::npos);
-	EXPECT_LT(DisabledGuard, DisabledReturn);
-	EXPECT_LT(DisabledReturn, PagePrewarm);
+	EXPECT_LT(SettingsEnabled, PagePrewarm);
+	// 设置预热关闭时仍要推进实体纹理，不能把实体资源准备重新拖回进服首帧。
+	EXPECT_NE(PrewarmBody.find("m_MapImages.EntitiesPrewarmFinished()"), std::string::npos);
+	EXPECT_NE(PrewarmBody.find("m_MapImages.AdvanceEntitiesPrewarm();"), std::string::npos);
 	EXPECT_NE(GameClientSource.find("PrewarmSettingsRuntimeCachesDuringLoading(pLoadingDDNetCaption, pLoadingMessageAssets);"), std::string::npos);
 	EXPECT_EQ(PrewarmBody.find("maximum(CMenus::SettingsRuntimeCacheWarmupSteps() * 4, 1)"), std::string::npos);
 	EXPECT_EQ(PrewarmBody.find("m_Skins.OnUpdate();"), std::string::npos);
@@ -156,6 +154,7 @@ TEST(SettingsWarmupLoadingContract, TextPrebuildPublicApiReplacesVisiblePageWarm
 {
 	const std::string Header = ReadTestSourceFile("src/game/client/components/menus.h");
 	EXPECT_NE(Header.find("PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride"), std::string::npos);
+	EXPECT_NE(Header.find("SScopedBlockingPrewarm BlockingPrewarm(m_MenuTextBlockingPrewarm, true);"), std::string::npos);
 	const std::string UiHeader = ReadTestSourceFile("src/game/client/ui.h");
 	EXPECT_NE(UiHeader.find("void BeginRenderOnly();"), std::string::npos);
 	EXPECT_NE(UiHeader.find("void EndRenderOnly();"), std::string::npos);

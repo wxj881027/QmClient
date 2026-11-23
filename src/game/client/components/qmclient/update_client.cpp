@@ -9,6 +9,7 @@
 #include <engine/engine.h>
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/update_package.h>
@@ -286,11 +287,11 @@ catch(...)
 #if defined(CONF_FAMILY_WINDOWS)
 static bool CreateUpdateAssetDirectory(IStorage &Storage, uint64_t &Session, char (&aDirectory)[IO_MAX_PATH_LENGTH])
 {
-	if(!Storage.CreateFolder("qmclient", IStorage::TYPE_SAVE))
+	if(!qm_storage::EnsureFolder(&Storage, qm_storage::RUNTIME_UPDATES_DIR))
 		return false;
 
 	char aRoot[IO_MAX_PATH_LENGTH];
-	Storage.GetCompletePath(IStorage::TYPE_SAVE, "qmclient", aRoot, sizeof(aRoot));
+	Storage.GetCompletePath(IStorage::TYPE_SAVE, qm_storage::RUNTIME_UPDATES_DIR, aRoot, sizeof(aRoot));
 	const auto Root = std::filesystem::u8path(aRoot);
 	// PID 可能被新客户端复用。只接管本次新建的目录，避开仍归旧安装会话的附件。
 	constexpr int MAX_ATTEMPTS = 16;
@@ -303,7 +304,7 @@ static bool CreateUpdateAssetDirectory(IStorage &Storage, uint64_t &Session, cha
 		std::error_code Error;
 		if(std::filesystem::create_directory(Root / aName, Error))
 		{
-			str_format(aDirectory, sizeof(aDirectory), "qmclient/%s", aName);
+			str_format(aDirectory, sizeof(aDirectory), "%s/%s", qm_storage::RUNTIME_UPDATES_DIR, aName);
 			return true;
 		}
 		if(Error && Error != std::errc::file_exists)

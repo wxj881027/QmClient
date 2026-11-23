@@ -20,7 +20,6 @@
 #include "UiTokens.h"
 
 #include <base/os.h>
-
 #include <base/system.h>
 
 #include <engine/shared/localization.h>
@@ -43,7 +42,7 @@
 
 namespace
 {
-	// 未发布阶段允许在客户端直接改 Wiki 文案（写入用户目录的 wiki/ 覆盖文件）；
+	// 未发布阶段允许在客户端直接改 Wiki 文案（写入用户目录的 qmclient/content/wiki/ 覆盖文件）；
 	// 发布版本把这里改成 false 就变回只读，不需要改其它逻辑。
 	constexpr bool WIKI_AUTHORING_ENABLED = true;
 
@@ -69,6 +68,7 @@ namespace
 
 		// 内容、目录、草稿与保存/还原全部由编辑状态机维护，面板只负责绘制。
 		SWikiEditorState m_Editor;
+		qm_wiki_markdown::CTableLayoutCache m_TableLayouts;
 		// 编辑框是 UI 组件：内容由状态机提供，输入变化回写给状态机。
 		// 缓冲要能装下整页文档：超过这个长度的正文由状态机拒绝进入编辑并报错，
 		// 不再出现「改到一半保存，文件被截短」。
@@ -128,6 +128,7 @@ namespace
 		pPopup->m_IsCard = true;
 		str_copy(pPopup->m_aTitle, pTitleKey != nullptr ? Localize(pTitleKey) : pCopy->m_pStableId, sizeof(pPopup->m_aTitle));
 		pPopup->m_Editor.LeaveEditing();
+		pPopup->m_TableLayouts.Clear();
 		pPopup->m_ResetScroll = true;
 		pPopup->m_TocTarget = -1;
 		pPopup->m_Editor.Load(pCopy->m_pStableId, pPopup->m_Fallback, true);
@@ -207,7 +208,7 @@ namespace
 
 		if(!pPopup->m_Editor.m_Editing)
 		{
-			if(WIKI_AUTHORING_ENABLED)
+			if(WIKI_AUTHORING_ENABLED && !pPopup->m_Editor.m_ReadOnly)
 			{
 				CUIRect EditRect;
 				Buttons.VSplitRight(ButtonWidth, &Buttons, &EditRect);
@@ -395,7 +396,8 @@ namespace
 					gs_WikiPopupContext.m_PendingLink = pTarget != nullptr ? pTarget : "";
 				};
 				static SWikiLinkContext s_Links{&s_OnLink};
-				qm_wiki_markdown::RenderBlocks(Ctx, pPopup->m_Editor.m_Markdown.Blocks(), Body, Style, &gs_WikiScroll, &s_Links, pPopup->m_TocTarget);
+				qm_wiki_markdown::RenderBlocks(Ctx, pPopup->m_Editor.m_Markdown.Blocks(), Body, Style, &gs_WikiScroll, &s_Links, pPopup->m_TocTarget,
+					pPopup->m_Editor.m_ReadOnly ? &pPopup->m_TableLayouts : nullptr);
 				if(!Ctx.m_pUi->RenderOnly())
 					pPopup->m_TocTarget = -1;
 			}
@@ -437,7 +439,7 @@ namespace
 		return CUi::POPUP_KEEP_OPEN;
 	}
 
-	void StartWikiPopup(const IUiContext &Ctx, const SWikiDocument &Fallback, const char *pId, const char *pTitle, ESettingsSecondaryPanelKind Kind, bool IsCard)
+	void StartWikiPopup(const IUiContext &Ctx, const SWikiDocument &Fallback, const char *pId, const char *pTitle, ESettingsSecondaryPanelKind Kind, bool IsCard, std::string *pReadOnlyMarkdown = nullptr, int StartBlock = -1)
 	{
 		gs_WikiPopupContext.m_pUi = Ctx.m_pUi;
 		gs_WikiPopupContext.m_pTextRender = Ctx.m_pTextRender;
@@ -452,12 +454,17 @@ namespace
 		gs_WikiPopupContext.m_EditInput.Clear();
 		gs_WikiPopupContext.m_PendingLink.clear();
 		gs_WikiPopupContext.m_ResetScroll = true;
+		gs_WikiPopupContext.m_TocTarget = StartBlock;
+		gs_WikiPopupContext.m_TableLayouts.Clear();
 		str_copy(gs_WikiPopupContext.m_aTitle, pTitle != nullptr ? pTitle : "");
 
 		qm_wiki_store::Init(Ctx.m_pStorage);
 		if(Ctx.m_pStorage != nullptr && Ctx.m_pUi != nullptr)
 			qm_wiki_media::Init(Ctx.m_pStorage, Ctx.m_pUi->Graphics());
-		gs_WikiPopupContext.m_Editor.Load(pId, Fallback, IsCard);
+		if(pReadOnlyMarkdown != nullptr)
+			gs_WikiPopupContext.m_Editor.LoadReadOnly(std::move(*pReadOnlyMarkdown));
+		else
+			gs_WikiPopupContext.m_Editor.Load(pId, Fallback, IsCard);
 
 		const CUIRect PanelRect = ResolveSettingsSecondaryPanelRect(*Ctx.m_pUi->Screen(), Kind, gs_WikiPopupContext.m_UiScale);
 		// 要求来源每帧刷新（回调里刷新）：菜单失活后回调不再运行，弹层栈会把面板当孤儿收掉，
@@ -465,6 +472,8 @@ namespace
 		SPopupMenuProperties Props = ui_widget::SecondaryPanelProperties();
 		Props.m_RequireSourceRefresh = true;
 		Props.m_SourceFrame = Ctx.m_pUi->PopupSourceFrame();
+		if(pReadOnlyMarkdown != nullptr)
+			Props.m_OnClosed = [] { gs_WikiPopupContext.m_TableLayouts.Clear(); };
 		Ctx.m_pUi->DoPopupMenu(&gs_WikiPopupId, PanelRect.x, PanelRect.y, PanelRect.w, PanelRect.h, &gs_WikiPopupContext, RenderWikiPopup, Props);
 	}
 } // namespace
@@ -491,6 +500,11 @@ void OpenWikiDocumentPopup(const IUiContext &Ctx, const SWikiDocument &Document)
 {
 	// 长文档用公告面板的整屏高度，滚动更长但一屏能看更多。
 	StartWikiPopup(Ctx, Document, Document.m_pId, nullptr, ESettingsSecondaryPanelKind::NEWS, false);
+}
+
+void OpenWikiMarkdownPopup(const IUiContext &Ctx, const char *pTitle, std::string Markdown, int StartBlock)
+{
+	StartWikiPopup(Ctx, {}, nullptr, pTitle, ESettingsSecondaryPanelKind::NEWS, false, &Markdown, StartBlock);
 }
 
 bool DoCardWikiInfoButton(const IUiContext &Ctx, const char *pStableId, const char *pTitle, const CUIRect &Button)

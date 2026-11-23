@@ -223,7 +223,7 @@ namespace
 			m_pPreviousTrace = std::exchange(s_pTrace, &m_Trace);
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
-			for(const char *pFolder : {"qmclient", "qmclient/lyrics", "qmclient/lyrics/netease", "qmclient/lyrics/qqmusic", "qmclient/lyrics/spotify"})
+			for(const char *pFolder : {"qmclient", "qmclient/content", "qmclient/content/lyrics", "qmclient/content/lyrics/netease", "qmclient/content/lyrics/qqmusic", "qmclient/content/lyrics/spotify"})
 				ASSERT_TRUE(m_pStorage->CreateFolder(pFolder, IStorage::TYPE_SAVE));
 			m_Source.m_SongId = 42;
 			m_Source.m_Generation = 1;

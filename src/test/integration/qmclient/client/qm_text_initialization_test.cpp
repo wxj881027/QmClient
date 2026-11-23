@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
+#include <test/support/qm_test_engine.h>
 #include <test/test.h>
 
 #include <memory>
@@ -72,6 +73,7 @@ namespace
 		CTestInfo m_Info;
 		std::unique_ptr<IKernel> m_pKernel;
 		std::unique_ptr<IStorage> m_pStorage;
+		CQmRejectingTestEngine m_Engine;
 
 	protected:
 		CInitializationConsole m_Console;
@@ -81,6 +83,9 @@ namespace
 		void SetUp() override
 		{
 			g_Config = CConfig();
+			// 这个 fixture 只验证纹理初始化的成功/失败边界，不启动作业线程；
+			// 固定走同步字形模式，避免文字引擎在 Init() 时请求不存在的 IEngine。
+			g_Config.m_QmTextRasterMode = 0;
 			m_Info.m_DeleteTestStorageFilesOnSuccess = false;
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
@@ -89,6 +94,7 @@ namespace
 			m_pKernel->RegisterInterface<IConsole>(&m_Console, false);
 			m_pKernel->RegisterInterface<IStorage>(m_pStorage.get(), false);
 			m_pKernel->RegisterInterface<IGraphics>(&m_Graphics, false);
+			m_pKernel->RegisterInterface<IEngine>(&m_Engine, false);
 			m_pText.reset(CreateEngineTextRender());
 			m_pKernel->RegisterInterface<IEngineTextRender>(m_pText.get(), false);
 		}

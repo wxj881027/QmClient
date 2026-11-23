@@ -50,6 +50,14 @@ namespace
 			m_Previous(g_Config.m_QmUiScrollFeel) { g_Config.m_QmUiScrollFeel = Feel; }
 		~SScrollFeelScope() { g_Config.m_QmUiScrollFeel = m_Previous; }
 	};
+
+	struct SScrollStepScope
+	{
+		int m_Previous;
+		explicit SScrollStepScope(int Step) :
+			m_Previous(g_Config.m_QmUiScrollStep) { g_Config.m_QmUiScrollStep = Step; }
+		~SScrollStepScope() { g_Config.m_QmUiScrollStep = m_Previous; }
+	};
 }
 
 TEST(UiV2ScrollPhysics, WheelImpulseDecaysAndClampsToRange)
@@ -412,6 +420,15 @@ TEST(UiV2ScrollPolicy, ScrollbarOverflowIgnoresSubpixelLayoutRemainder)
 	EXPECT_TRUE(QmScrollRegionContentOverflows(100.126f, 100.0f, 0.5f));
 	EXPECT_FALSE(QmScrollRegionContentOverflows(100.0625f, 100.0f, 0.25f));
 	EXPECT_TRUE(QmScrollRegionContentOverflows(100.0626f, 100.0f, 0.25f));
+	// 长帧/重新出现时只能滚动本帧真正标记为选中的行，不能复用上一帧序号。
+	EXPECT_TRUE(QmScrollRegionShouldRevealSelection(true, true));
+	EXPECT_FALSE(QmScrollRegionShouldRevealSelection(true, false));
+	EXPECT_FALSE(QmScrollRegionShouldRevealSelection(false, true));
+	EXPECT_FALSE(QmListBoxShouldScrollToSelectionAfterRenderGap(false, true, 500, 1000, 7));
+	EXPECT_FALSE(QmListBoxShouldScrollToSelectionAfterRenderGap(true, false, 500, 1000, 7));
+	EXPECT_FALSE(QmListBoxShouldScrollToSelectionAfterRenderGap(true, true, 250, 1000, 7));
+	EXPECT_FALSE(QmListBoxShouldScrollToSelectionAfterRenderGap(true, true, 500, 1000, -1));
+	EXPECT_TRUE(QmListBoxShouldScrollToSelectionAfterRenderGap(true, true, 251, 1000, 7));
 }
 TEST(UiV2ScrollPolicy, ListBoxInitialSelectionRequestsOneAnimatedReveal)
 {
@@ -528,6 +545,48 @@ TEST(UiV2ScrollPolicy, ResolvesSharedVisualAndInteractionProfiles)
 	EXPECT_NEAR(PopupPolicy.m_Config.m_WheelScale, 60.0f, 0.01f);
 	EXPECT_FLOAT_EQ(PopupPolicy.m_Style.m_ScrollbarWidth, ui_token::list::SCROLLBAR_WIDTH);
 }
+
+TEST(UiV2ScrollPolicy, GlobalStepIsTheSingleDistanceScaleForEverySurface)
+{
+	{
+		const SScrollStepScope StepScope(10);
+		EXPECT_FLOAT_EQ(QmWheelStepScale(), 1.0f);
+		EXPECT_FLOAT_EQ(QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale, 10.0f);
+		EXPECT_FLOAT_EQ(QmSettingsScrollConfig(1.0f, 0.0f).m_WheelScale, 120.0f);
+		EXPECT_EQ(QmResolveWheelLineCount(3, QmWheelStepScale(), 20, 8), 3);
+	}
+
+	{
+		const SScrollStepScope StepScope(20);
+		EXPECT_FLOAT_EQ(QmWheelStepScale(), 2.0f);
+		EXPECT_FLOAT_EQ(QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale, 20.0f);
+		EXPECT_FLOAT_EQ(QmSettingsScrollConfig(1.0f, 0.0f).m_WheelScale, 240.0f);
+		EXPECT_EQ(QmResolveWheelLineCount(3, QmWheelStepScale(), 20, 8), 6);
+
+		SQmScrollRequest ListRequest;
+		ListRequest.m_Profile = EQmScrollProfile::MENU_LIST;
+		ListRequest.m_RowExtent = 24.0f;
+		ListRequest.m_RowsPerStep = 2;
+		EXPECT_FLOAT_EQ(QmResolveScrollPolicy(ListRequest).m_Config.m_WheelScale, 96.0f);
+	}
+}
+
+TEST(UiV2ScrollPolicy, InvalidGlobalStepFallsBackAndClamps)
+{
+	{
+		const SScrollStepScope StepScope(0);
+		EXPECT_FLOAT_EQ(QmWheelStepScale(), 1.0f);
+	}
+	{
+		const SScrollStepScope StepScope(1);
+		EXPECT_FLOAT_EQ(QmWheelStepScale(), 0.2f);
+	}
+	{
+		const SScrollStepScope StepScope(1000);
+		EXPECT_FLOAT_EQ(QmWheelStepScale(), 10.0f);
+	}
+}
+
 TEST(UiV2ScrollController, SettingsGridShowsRailOnlyWhenContentOverflows)
 {
 	const SQmResolvedScrollPolicy Policy = QmResolveScrollPolicy({EQmScrollProfile::SETTINGS_GRID, EQmScrollAxis::VERTICAL, 40.0f, 2});
@@ -1257,6 +1316,40 @@ TEST(UiV2ScrollContainer, ComputesScrollbarTrackAndThumbGeometry)
 	EXPECT_GE(Frame.m_ScrollbarThumbRect.y, Frame.m_ScrollbarTrackRect.y);
 	EXPECT_LE(Frame.m_ScrollbarThumbRect.y + Frame.m_ScrollbarThumbRect.h, Frame.m_ScrollbarTrackRect.y + Frame.m_ScrollbarTrackRect.h);
 }
+
+TEST(UiV2ScrollContainer, GridScrollbarThumbLengthReflectsCatalogScale)
+{
+	SQmScrollRequest Request;
+	Request.m_Profile = EQmScrollProfile::SETTINGS_GRID;
+	Request.m_RowExtent = 50.0f;
+	Request.m_RowsPerStep = 2;
+	const SQmResolvedScrollPolicy Policy = QmResolveScrollPolicy(Request, 1.0f, 0.0f);
+	EXPECT_FLOAT_EQ(Policy.m_Style.m_MinThumbHeight, Policy.m_Style.m_ScrollbarWidth);
+	EXPECT_FLOAT_EQ(Policy.m_Style.m_ThumbSizeExponent, 0.5f);
+	const CScrollRegionParams Params = QmScrollRegionParamsFromPolicy(Policy);
+	EXPECT_FLOAT_EQ(Params.m_SliderSizeExponent, 0.5f);
+
+	CQmScrollState State;
+	CQmScrollController Controller;
+	const CUIRect View{0.0f, 0.0f, 800.0f, 300.0f};
+	constexpr float ViewportHeight = 300.0f;
+	constexpr float TrackHeight = ViewportHeight - 2.0f * 2.0f;
+	const auto ThumbHeight = [&](int Items, int Columns) {
+		const int Rows = (Items + Columns - 1) / Columns;
+		const float ContentHeight = ui_token::list::RowsHeight(Rows, Request.m_RowExtent, 0.0f);
+		const SQmScrollContainerFrame Frame = Controller.PreviewFrame(State, View, ContentHeight, Policy.m_Style);
+		EXPECT_TRUE(Frame.m_ScrollbarVisible);
+		const float Resolved = QmResolveScrollThumbSize(ViewportHeight, ContentHeight, TrackHeight, Params.m_SliderMinSize, Params.m_SliderSizeExponent);
+		EXPECT_NEAR(Frame.m_ScrollbarThumbRect.h, Resolved, 0.01f);
+		EXPECT_NEAR(QmResolveScrollThumbSize(ViewportHeight, ContentHeight, TrackHeight, Params.m_SliderMinSize, 1.0f), Params.m_SliderMinSize, 0.01f);
+		return Resolved;
+	};
+
+	const float CommunityThumb = ThumbHeight(1171, 5);
+	const float DdStatsThumb = ThumbHeight(7046, 5);
+	EXPECT_GT(CommunityThumb, DdStatsThumb + 10.0f);
+}
+
 TEST(UiV2ScrollContainer, ComputesHorizontalContentRectAndScrollbarGeometry)
 {
 	CQmScrollState State;

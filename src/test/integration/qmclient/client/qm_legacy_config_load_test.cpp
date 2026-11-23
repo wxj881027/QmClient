@@ -150,17 +150,15 @@ TEST_F(CQmLegacyConfigLoad, LegacyToggleRestoreKeepsNewHoldStartedDuringRelease)
 		if(Context.m_StartNewHold && pResult->NumArguments() > 0 && pResult->GetInteger(0) == 0)
 		{
 			Context.m_StartNewHold = false;
-			Context.m_pConsole->ExecuteLineStroked(1, "+toggle_restore tc_jump_hint 1");
-		}
-	},
-		&Context);
+			Context.m_pConsole->ExecuteLineStroked(1, "+toggle_restore tc_jump_hint 1", IConsole::CLIENT_ID_UNSPECIFIED);
+		} }, &Context);
 
 	g_Config.m_QmJumpHint = 0;
-	m_pConsole->ExecuteLineStroked(1, "+toggle_restore tc_jump_hint 1");
+	m_pConsole->ExecuteLineStroked(1, "+toggle_restore tc_jump_hint 1", IConsole::CLIENT_ID_UNSPECIFIED);
 	ASSERT_EQ(g_Config.m_QmJumpHint, 1);
 	Context.m_StartNewHold = true;
-	m_pConsole->ExecuteLineStroked(0, "+toggle_restore tc_jump_hint 1");
+	m_pConsole->ExecuteLineStroked(0, "+toggle_restore tc_jump_hint 1", IConsole::CLIENT_ID_UNSPECIFIED);
 	ASSERT_EQ(g_Config.m_QmJumpHint, 1);
-	m_pConsole->ExecuteLineStroked(0, "+toggle_restore tc_jump_hint 1");
+	m_pConsole->ExecuteLineStroked(0, "+toggle_restore tc_jump_hint 1", IConsole::CLIENT_ID_UNSPECIFIED);
 	EXPECT_EQ(g_Config.m_QmJumpHint, 0);
 }

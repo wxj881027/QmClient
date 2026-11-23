@@ -50,8 +50,14 @@ public:
 		{
 			Renderer.UnloadMap();
 		}
-		catch(const std::bad_alloc &) { return false; }
-		catch(const std::length_error &) { return false; }
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
 		m_State = EState::FAILED;
 		return true;
 	}
@@ -75,8 +81,12 @@ public:
 		{
 			return Renderer.AdvanceMapLoad();
 		}
-		catch(const std::bad_alloc &) {}
-		catch(const std::length_error &) {}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
 		Cancel(Renderer);
 		return false;
 	}
@@ -99,8 +109,14 @@ bool ReleaseMenuBackgroundResources(std::unique_ptr<TPrevious> &pPrevious, bool 
 		if(pPrevious->m_pImages)
 			pPrevious->m_pImages->Unload();
 	}
-	catch(const std::bad_alloc &) { return false; }
-	catch(const std::length_error &) { return false; }
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
 	pPrevious.reset();
 	Retiring = false;
 	return true;

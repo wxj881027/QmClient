@@ -48,3 +48,41 @@ TEST(QmPracticeCursor, FreeviewUsesTheVisibleCenterBeforeCameraSmoothingReachesT
 		EXPECT_EQ(QmPracticeCursorWorldPosition(MouseTarget, Center, Zoom, true), Center);
 	}
 }
+
+TEST(QmPracticeCursor, SpaceFollowsTheViewMode)
+{
+	EXPECT_EQ(QmPracticeCursorSpaceFor(false, false), EQmPracticeCursorSpace::PLAYER);
+	EXPECT_EQ(QmPracticeCursorSpaceFor(false, true), EQmPracticeCursorSpace::PLAYER);
+	EXPECT_EQ(QmPracticeCursorSpaceFor(true, true), EQmPracticeCursorSpace::FOLLOW);
+	EXPECT_EQ(QmPracticeCursorSpaceFor(true, false), EQmPracticeCursorSpace::FREEVIEW);
+}
+
+TEST(QmPracticeCursor, FollowSpaceUsesTheSpectatedWorldPosition)
+{
+	// 跟踪旁观时 m_aTargetPos 以被跟随玩家的世界坐标为基准，镜头是否被动态
+	// 镜头或漂移推开都不影响落点。
+	const vec2 Target(1120.0f, 440.0f);
+	const vec2 SpecPosition(1000.0f, 500.0f);
+	const vec2 CameraCenter(1070.0f, 530.0f);
+	EXPECT_EQ(QmPracticeCursorWorldPosition(Target, CameraCenter, SpecPosition, 2.0f, EQmPracticeCursorSpace::FOLLOW),
+		vec2(1240.0f, 380.0f));
+}
+
+TEST(QmPracticeCursor, FollowSpaceIgnoresCameraOffsetAtUnitZoom)
+{
+	const vec2 Target(1120.0f, 440.0f);
+	const vec2 SpecPosition(1000.0f, 500.0f);
+	EXPECT_EQ(QmPracticeCursorWorldPosition(Target, vec2(1400.0f, 900.0f), SpecPosition, 1.0f, EQmPracticeCursorSpace::FOLLOW),
+		Target);
+}
+
+TEST(QmPracticeCursor, HookIsReleasedOnlyForNonParticipantTargets)
+{
+	EXPECT_FALSE(QmPracticeHookShouldRelease(-1, 3, 7));
+	EXPECT_FALSE(QmPracticeHookShouldRelease(3, 3, 7));
+	EXPECT_FALSE(QmPracticeHookShouldRelease(7, 3, 7));
+	EXPECT_TRUE(QmPracticeHookShouldRelease(5, 3, 7));
+	// 没有分身时 B 为 -1，任何玩家目标都应释放。
+	EXPECT_TRUE(QmPracticeHookShouldRelease(5, 3, -1));
+	EXPECT_FALSE(QmPracticeHookShouldRelease(3, 3, -1));
+}

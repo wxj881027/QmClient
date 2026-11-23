@@ -931,7 +931,8 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	constexpr int BodyRows = 8;
 	constexpr int FeatherRows = CornerRows * 2 + BodyRows;
 	constexpr size_t MaxVertices = std::max(RECT_CORNER_SEGMENTS / 2 * 4 + 9 * ProjectionColumns * ProjectionRows,
-		(FeatherRows + 2) * (ProjectionColumns + 2)) * 4;
+					       (FeatherRows + 2) * (ProjectionColumns + 2)) *
+				       4;
 	CCommandBuffer::SVertex aVertices[MaxVertices];
 	size_t NumVertices = 0;
 	const float InvW = 1.0f / Params.m_W;
@@ -4328,6 +4329,8 @@ int CGraphics_Threaded::InitWindow()
 int CGraphics_Threaded::Init()
 {
 	const bool WasInitialized = m_pBackend != nullptr;
+	// 设备重建后显示器/后端可能已经变化，旧模式缓存不能跨设备沿用。
+	InvalidateVideoModeCache();
 
 	// fetch pointers
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
@@ -4515,6 +4518,7 @@ void CGraphics_Threaded::WarnPngliteIncompatibleImages(bool Warn)
 
 void CGraphics_Threaded::SetWindowParams(int FullscreenMode, bool IsBorderless)
 {
+	InvalidateVideoModeCache();
 	g_Config.m_GfxFullscreen = std::clamp(FullscreenMode, 0, 3);
 	g_Config.m_GfxBorderless = (int)IsBorderless;
 
@@ -4529,6 +4533,7 @@ void CGraphics_Threaded::SetWindowParams(int FullscreenMode, bool IsBorderless)
 
 bool CGraphics_Threaded::SetWindowScreen(int Index, bool MoveToCenter)
 {
+	InvalidateVideoModeCache();
 	if(!m_pBackend->SetWindowScreen(Index, MoveToCenter, &m_DesktopSize))
 	{
 		return false;
@@ -4588,6 +4593,10 @@ void CGraphics_Threaded::Move(int x, int y)
 
 	// Only handling CurScreen != m_GfxScreen doesn't work reliably
 	const int CurScreen = m_pBackend->GetWindowScreen();
+	// 拖动窗口会高频调用 Move()；只有跨屏才改变有效模式集合。不能为每次
+	// 鼠标移动丢掉昂贵的显示模式枚举缓存，否则设置页拖动会再次冻结。
+	if(m_CachedVideoModeScreen >= 0 && m_CachedVideoModeScreen != CurScreen)
+		InvalidateVideoModeCache();
 	if(!m_pBackend->UpdateDisplayMode(CurScreen, &m_DesktopSize))
 		return;
 
@@ -5237,16 +5246,56 @@ TGLBackendReadPresentedImageData &CGraphics_Threaded::GetReadPresentedImageDataF
 
 int CGraphics_Threaded::GetVideoModes(CVideoMode *pModes, int MaxModes, int Index)
 {
-	if(g_Config.m_GfxDisplayAllVideoModes)
+	if(pModes == nullptr || MaxModes <= 0 || m_pBackend == nullptr)
+		return 0;
+
+	const bool DisplayAll = g_Config.m_GfxDisplayAllVideoModes != 0;
+	if(m_CachedVideoModeScreen != Index ||
+		m_CachedVideoModeAll != DisplayAll ||
+		m_CachedVideoModeFullscreen != g_Config.m_GfxFullscreen ||
+		m_CachedVideoModeDesktopWidth != m_DesktopSize.x ||
+		m_CachedVideoModeDesktopHeight != m_DesktopSize.y ||
+		m_CachedVideoModeHiDpiScale != m_ScreenHiDPIScale)
 	{
-		const int Count = minimum<size_t>(std::size(g_aFakeModes), MaxModes);
-		mem_copy(pModes, g_aFakeModes, Count * sizeof(CVideoMode));
-		return Count;
+		m_NumCachedVideoModes = 0;
+		if(DisplayAll)
+		{
+			m_NumCachedVideoModes = minimum<size_t>(std::size(g_aFakeModes), QM_MAX_CACHED_VIDEO_MODES);
+			mem_copy(m_aCachedVideoModes, g_aFakeModes, m_NumCachedVideoModes * sizeof(CVideoMode));
+		}
+		else
+		{
+			m_pBackend->GetVideoModes(m_aCachedVideoModes, QM_MAX_CACHED_VIDEO_MODES, &m_NumCachedVideoModes,
+				m_ScreenHiDPIScale, m_DesktopSize.x, m_DesktopSize.y, Index);
+		}
+		m_CachedVideoModeScreen = Index;
+		m_CachedVideoModeAll = DisplayAll;
+		m_CachedVideoModeFullscreen = g_Config.m_GfxFullscreen;
+		m_CachedVideoModeDesktopWidth = m_DesktopSize.x;
+		m_CachedVideoModeDesktopHeight = m_DesktopSize.y;
+		m_CachedVideoModeHiDpiScale = m_ScreenHiDPIScale;
 	}
 
-	int NumModes = 0;
-	m_pBackend->GetVideoModes(pModes, MaxModes, &NumModes, m_ScreenHiDPIScale, m_DesktopSize.x, m_DesktopSize.y, Index);
-	return NumModes;
+	const int Count = minimum(MaxModes, m_NumCachedVideoModes);
+	mem_copy(pModes, m_aCachedVideoModes, Count * sizeof(CVideoMode));
+	return Count;
+}
+
+void CGraphics_Threaded::InvalidateVideoModeCache()
+{
+	m_NumCachedVideoModes = 0;
+	m_CachedVideoModeScreen = -1;
+	m_CachedVideoModeAll = false;
+	m_CachedVideoModeFullscreen = -1;
+	m_CachedVideoModeDesktopWidth = -1;
+	m_CachedVideoModeDesktopHeight = -1;
+	m_CachedVideoModeHiDpiScale = -1.0f;
+}
+
+void CGraphics_Threaded::PrewarmVideoModes()
+{
+	CVideoMode aModes[QM_MAX_CACHED_VIDEO_MODES];
+	(void)GetVideoModes(aModes, QM_MAX_CACHED_VIDEO_MODES, g_Config.m_GfxScreen);
 }
 
 bool CGraphics_Threaded::GetCurrentVideoMode(CVideoMode &CurMode, int Index)

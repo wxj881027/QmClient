@@ -11,15 +11,18 @@
 #include <game/map/render_interfaces.h>
 #include <game/mapitems.h>
 
+#include <cstdint>
 #include <memory>
 #include <new>
 #include <stdexcept>
 #include <utility>
 
 class CMapImageDecodeJob;
+class CQmEntityPrewarmBuildJob;
 class IJob;
 class CLayers;
 class IMap;
+struct CGameInfo;
 
 struct SMapImageDecodeStart
 {
@@ -96,6 +99,7 @@ class CMapImages : public CComponent, public IMapImages
 
 public:
 	CMapImages();
+	~CMapImages() override;
 	int Sizeof() const override { return sizeof(*this); }
 
 	IGraphics::CTextureHandle Get(int Index) const override { return m_aTextures[Index]; }
@@ -110,6 +114,14 @@ public:
 
 	// DDRace
 	IGraphics::CTextureHandle GetEntities(EMapImageEntityLayerType EntityLayerType) override;
+	// 实体纹理跨地图保留；worker 只做 CPU 解码/复制/着色，主线程逐层提交
+	// 纹理上传，避免首次进服或加载画面出现一次性 219ms 阻塞。
+	void PrewarmEntities();
+	// 服务器浏览器已能确定实际 entities 槽位；在连接/地图下载期间按该
+	// 信息预热，不能被 OnReset 清空的默认 GameInfo 覆盖。
+	void PrewarmEntitiesForGameInfo(const CGameInfo &GameInfo);
+	void AdvanceEntitiesPrewarm();
+	bool EntitiesPrewarmFinished() const;
 	IGraphics::CTextureHandle GetSpeedupArrow() override;
 	IGraphics::CTextureHandle GetTuneColors() override;
 
@@ -156,6 +168,29 @@ private:
 	IGraphics::CTextureHandle m_OverlayCenterTexture;
 	int m_TextureScale;
 
+	enum class EQmEntityPrewarmState
+	{
+		NONE,
+		DECODING,
+		BUILDING,
+		COMPLETE,
+		FAILED,
+	};
+	EQmEntityPrewarmState m_QmEntityPrewarmState = EQmEntityPrewarmState::NONE;
+	std::shared_ptr<CMapImageDecodeJob> m_pQmEntityPrewarmDecode;
+	std::shared_ptr<CImageInfo> m_pQmEntityPrewarmSource;
+	std::shared_ptr<CQmEntityPrewarmBuildJob> m_pQmEntityPrewarmBuildJob;
+	char m_aQmEntityPrewarmPath[IO_MAX_PATH_LENGTH] = "";
+	int m_QmEntityPrewarmModType = -1;
+	bool m_QmEntityPrewarmMasked = false;
+	int m_QmEntityPrewarmNextStep = 0;
+	int m_QmEntityPrewarmTextureLoadFlag = 0;
+	size_t m_QmEntityPrewarmCopyWidth = 0;
+	size_t m_QmEntityPrewarmCopyHeight = 0;
+	int64_t m_QmEntityPrewarmStartNs = 0;
+	int64_t m_QmEntityPrewarmDecodeDoneNs = 0;
+	int64_t m_QmEntityPrewarmNextStepNs = 0;
+
 	// 钩子碰撞预览小图（owner：CMapImages；解码在 worker，纹理上传/卸载仅在主线程）。
 	// 缓存 key = (m_aEntitiesPath, mod type, masked)；key 变化即失效并后台重解码。
 	char m_aHookPreviewEntitiesPath[IO_MAX_PATH_LENGTH] = "";
@@ -173,6 +208,9 @@ private:
 	void HookPreviewKickJob();
 	void HookPreviewPollJob();
 	void HookPreviewInvalidate();
+	void CancelEntitiesPrewarm(bool UnloadPartialTextures = true);
+	bool FinishEntitiesPrewarmDecode();
+	bool AdvanceEntitiesPrewarmStep();
 	IGraphics::CTextureHandle UploadEntityLayerText(int TextureSize, int MaxWidth, int YOffset);
 	void UpdateEntityLayerText(CImageInfo &TextImage, int TextureSize, int MaxWidth, int YOffset, int NumbersPower, int MaxNumber = -1);
 };

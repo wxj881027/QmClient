@@ -98,6 +98,17 @@ bool CLaser::HitCharacter(vec2 From, vec2 To)
 	return true;
 }
 
+void CLaser::Discard()
+{
+	// 碰撞查询无法给出可信结果时，位置与方向都不可用；不能把「没查到」
+	// 当成「没命中」让激光穿墙，直接结束这枚激光由世界在下一帧回收。
+	// m_From 收回到当前位置：这款激光可能已经插进实体表并参与上一帧的绘制，
+	// 留着旧起点会从上一处画出一条不存在的激光。
+	m_From = m_Pos;
+	m_Energy = -1;
+	m_MarkedForDestroy = true;
+}
+
 void CLaser::DoBounce()
 try
 {
@@ -119,7 +130,13 @@ try
 	}
 
 	CCollision *const pCollision = Collision();
-	const int Res = pCollision->IntersectLineTeleWeapon(m_Pos, To, &Coltile, &To);
+	bool Incomplete = false;
+	const int Res = pCollision->IntersectLineTeleWeapon(m_Pos, To, &Coltile, &To, nullptr, &Incomplete);
+	if(Incomplete)
+	{
+		Discard();
+		return;
+	}
 
 	if(Res)
 	{
@@ -142,10 +159,16 @@ try
 				const int Y = round_to_int(Coltile.y);
 				const SRestoreTile Restore{*pCollision, X, Y, pCollision->GetTile(X, Y)};
 				pCollision->SetCollisionAt(X, Y, TILE_SOLID);
-				pCollision->MovePoint(&TempPos, &TempDir, 1.0f, nullptr);
+				pCollision->MovePoint(&TempPos, &TempDir, 1.0f, nullptr, &Incomplete);
 			}
 			else
-				pCollision->MovePoint(&TempPos, &TempDir, 1.0f, nullptr);
+				pCollision->MovePoint(&TempPos, &TempDir, 1.0f, nullptr, &Incomplete);
+
+			if(Incomplete)
+			{
+				Discard();
+				return;
+			}
 
 			m_From = m_Pos;
 			m_Pos = TempPos;
@@ -186,8 +209,7 @@ try
 catch(const std::bad_alloc &)
 {
 	// 查询失败后停止这枚激光，避免回收前再次尝试反弹。
-	m_Energy = -1;
-	m_MarkedForDestroy = true;
+	Discard();
 }
 
 void CLaser::Tick()

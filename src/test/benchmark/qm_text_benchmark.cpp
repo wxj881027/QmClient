@@ -4,6 +4,7 @@
 //  1. qm_font_category 码点分类（分类字体的字体槽路由查表）
 //  2. str_utf8_decode UTF-8 解码（聊天/输入框/文本布局逐字符入口）
 //  3. str_utf8_forward/rewind 光标导航（CLineInput 每键击的左右移动路径）
+//  4. 设置页静态字形需求表计数、排序与预热批次
 // 运行方式：配置时加 -DDOWNLOAD_BENCHMARK=ON，构建 run_cxx_benchmarks 目标
 #include <base/str.h>
 #include <base/system.h>
@@ -13,12 +14,110 @@
 #include <engine/client/text_gradient.h>
 #include <engine/client/text_sweep.h>
 
+#include <game/client/QmUi/QmUiPerf.h>
+#include <game/client/QmUi/SettingsTextPlanUnits.h>
 #include <game/client/components/qmclient/nameplate_density.h>
 #include <game/client/components/qmclient/sponsor_chat_style.h>
 
 #include <benchmark/benchmark.h>
 
+#include <string>
+#include <utility>
+#include <vector>
+
 // main / IsInterrupted 桩统一在 qm_benchmark_main.cpp 提供
+
+namespace
+{
+	constexpr int SETTINGS_GLYPH_BENCHMARK_ITEMS = 10000;
+	constexpr int SETTINGS_GLYPH_BENCHMARK_GLYPHS_PER_ITEM = 10;
+	constexpr int SETTINGS_GLYPH_BENCHMARK_DEMANDS = SETTINGS_GLYPH_BENCHMARK_ITEMS * SETTINGS_GLYPH_BENCHMARK_GLYPHS_PER_ITEM;
+
+	std::vector<std::string> MakeSettingsGlyphDemandTexts()
+	{
+		std::vector<std::string> vTexts;
+		vTexts.reserve(SETTINGS_GLYPH_BENCHMARK_ITEMS);
+		for(int Item = 0; Item < SETTINGS_GLYPH_BENCHMARK_ITEMS; ++Item)
+		{
+			std::string Text;
+			Text.reserve(SETTINGS_GLYPH_BENCHMARK_GLYPHS_PER_ITEM * 4);
+			for(int Glyph = 0; Glyph < SETTINGS_GLYPH_BENCHMARK_GLYPHS_PER_ITEM; ++Glyph)
+			{
+				char aUtf8[5] = {};
+				const int Slot = (Item * 7 + Glyph * 113) % 512;
+				const int Codepoint = Slot < 96 ? ' ' + Slot : 0x4E00 + Slot - 96;
+				const int Length = str_utf8_encode(aUtf8, Codepoint);
+				if(Length > 0)
+					Text.append(aUtf8, Length);
+			}
+			vTexts.push_back(std::move(Text));
+		}
+		return vTexts;
+	}
+
+	std::vector<SSettingsTextPlanGlyphDemandInput> MakeSettingsGlyphDemandInputs(const std::vector<std::string> &vTexts)
+	{
+		std::vector<SSettingsTextPlanGlyphDemandInput> vInputs;
+		vInputs.reserve(vTexts.size());
+		for(size_t Index = 0; Index < vTexts.size(); ++Index)
+			vInputs.push_back({vTexts[Index].c_str(), 12 + (int)(Index % 4) * 6, (uint8_t)(Index % 3)});
+		return vInputs;
+	}
+}
+
+// 冷路径：10k 条 plan item / 100k 个字形需求从文本重新建静态需求表并排序。
+// 文本与输入准备在计时外，计时内只调用生产 helper。
+static void BM_SettingsGlyphDemandBuild10kItemsCold(benchmark::State &State)
+{
+	const auto vTexts = MakeSettingsGlyphDemandTexts();
+	const auto vInputs = MakeSettingsGlyphDemandInputs(vTexts);
+	for(auto _ : State)
+	{
+		CSettingsGlyphDemandTable Table;
+		if(!Table.Build(vInputs, QM_SETTINGS_GLYPH_DEMAND_BATCH_GLYPHS))
+		{
+			State.SkipWithError("static glyph demand build failed");
+			break;
+		}
+		benchmark::DoNotOptimize(Table.TotalGlyphDemands());
+		benchmark::DoNotOptimize(Table.DistinctGlyphs());
+		benchmark::ClobberMemory();
+	}
+	State.SetItemsProcessed(State.iterations() * SETTINGS_GLYPH_BENCHMARK_DEMANDS);
+}
+BENCHMARK(BM_SettingsGlyphDemandBuild10kItemsCold);
+
+// 只测生产 helper 的批次重建，不代表 worker 排队或逐帧光栅化吞吐。
+static void BM_SettingsGlyphDemandBatchRebuild10kItems(benchmark::State &State)
+{
+	const auto vTexts = MakeSettingsGlyphDemandTexts();
+	const auto vInputs = MakeSettingsGlyphDemandInputs(vTexts);
+	CSettingsGlyphDemandTable Table;
+	if(!Table.Build(vInputs, QM_SETTINGS_GLYPH_DEMAND_BATCH_GLYPHS))
+	{
+		State.SkipWithError("static glyph demand build failed");
+		return;
+	}
+	State.counters["distinct_glyphs"] = Table.DistinctGlyphs();
+	State.counters["prewarm_batches"] = Table.PrewarmBatches().size();
+	for(auto _ : State)
+	{
+		if(!Table.BuildPrewarmBatches(QM_SETTINGS_GLYPH_DEMAND_BATCH_GLYPHS))
+		{
+			State.SkipWithError("static glyph demand batch build failed");
+			break;
+		}
+		size_t GlyphCount = 0;
+		for(const SSettingsGlyphPrewarmBatch &Batch : Table.PrewarmBatches())
+		{
+			GlyphCount += Batch.m_GlyphCount;
+			benchmark::DoNotOptimize(Batch.m_Text.data());
+		}
+		benchmark::DoNotOptimize(GlyphCount);
+	}
+	State.SetItemsProcessed(State.iterations() * SETTINGS_GLYPH_BENCHMARK_DEMANDS);
+}
+BENCHMARK(BM_SettingsGlyphDemandBatchRebuild10kItems);
 
 // 混合码点分类：模拟中文 UI 文本（拉丁 / CJK / 图标符号约各占 1/3）
 static void BM_FontCategoryClassify(benchmark::State &State)

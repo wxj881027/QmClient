@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <new>
 #include <stdexcept>
+#include <string>
 
 inline constexpr float QM_TITLE_TEXT_WAVE_AMPLITUDE = 0.08f;
 inline constexpr float QM_TITLE_TEXT_WAVE_FPS = 30.0f;

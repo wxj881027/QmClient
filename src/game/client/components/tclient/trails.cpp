@@ -84,7 +84,7 @@ void CTrails::RenderTeeTrails()
 			const bool UnpredictedInFreeze = g_Config.m_QmUnpredOthersInFreeze && Client()->m_IsLocalFrozen;
 			// 与 UpdateRenderedCharacters 的 ghost 分支对齐，显隐变化也会切换位置来源。
 			const bool SwappedGhostPosition = Data.m_IsPredicted && !Data.m_IsPredictedLocal && !UnpredictedInFreeze &&
-				g_Config.m_QmShowOthersGhosts && g_Config.m_QmSwapGhosts && !(Data.m_FreezeEnd > 0 && g_Config.m_QmHideFrozenGhosts);
+							  g_Config.m_QmShowOthersGhosts && g_Config.m_QmSwapGhosts && !(Data.m_FreezeEnd > 0 && g_Config.m_QmHideFrozenGhosts);
 			const int Source = int(Data.m_IsPredicted) | (g_Config.m_QmRemoveAnti << 1) | (int(UnpredictedInFreeze) << 2) |
 					   (g_Config.m_QmSwapGhosts << 3) | (int(GameClient()->m_TClient.IsFastInputActive()) << 4) | (int(SwappedGhostPosition) << 5);
 			const bool SourceChanged = m_aPositionSources[ClientId] != Source;
@@ -189,7 +189,7 @@ void CTrails::RenderTeeTrails()
 
 void CTrails::OnRender()
 {
-	if(GameClient()->m_RankGhost.IsViewModeActive())
+	if(GameClient()->ReplaySessionStatus().ViewMode())
 	{
 		OnReset();
 		return;

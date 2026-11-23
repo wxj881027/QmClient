@@ -222,6 +222,7 @@ private:
 		bool m_ReflowWasActive = false;
 		bool m_ContentHeightInitialized = false;
 		bool m_ContentHeightWasActive = false;
+		CSettingsCardWidthMotion m_WidthMotion;
 		bool m_CollapsedInitialized = false;
 		bool m_LastCollapsed = false;
 		// 折叠当帧已经关过该卡的交互来源，避免折叠卡每帧关闭（会把 ⓘ 的面板当帧收掉）。

@@ -16,11 +16,16 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/recent_tee_skins.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
+#include <game/client/components/qmclient/skin_catalog_parse.h>
 #include <game/client/components/qmclient/skin_download_session.h>
 #include <game/client/components/qmclient/skin_load_budget.h>
+#include <game/client/components/qmclient/skin_name_index.h>
 #include <game/client/components/qmclient/skin_prepared_textures.h>
 #include <game/client/components/qmclient/skin_prepared_visuals.h>
+#include <game/client/components/qmclient/skin_sort_policy.h>
+#include <game/client/components/qmclient/skin_source.h>
 #include <game/client/components/qmclient/skin_source_job.h>
+#include <game/client/components/qmclient/skin_source_registry.h>
 #include <game/client/components/settings_resource_jobs.h>
 #include <game/client/skin.h>
 
@@ -154,6 +159,16 @@ public:
 		bool IsVanilla() const { return m_Vanilla; }
 		bool IsSpecial() const { return m_Special; }
 		bool IsAlwaysLoaded() const { return m_AlwaysLoaded; }
+		bool IsCatalogOnly() const { return m_CatalogOnly; }
+		void SetCatalogOnly(bool CatalogOnly) { m_CatalogOnly = CatalogOnly; }
+		ESkinSourceMask EffectiveSkinSources() const;
+		ESkinSourceMask EffectiveRequestSources() const;
+		void SetSkinSource(ESkinSource Source) { m_SkinSource = Source; }
+		void SetCatalogSources(ESkinSourceMask DisplaySources, ESkinSourceMask RequestSources)
+		{
+			m_CatalogSources = DisplaySources;
+			m_CatalogRequestSources = RequestSources;
+		}
 		EState State() const { return m_State; }
 		const std::unique_ptr<CSkin> &Skin() const { return m_pSkin; }
 		size_t SettingsSourceApproxBytes() const { return m_SettingsSourceApproxBytes; }
@@ -199,20 +214,56 @@ public:
 		{
 			return OldState == EState::LOADING && NewState != EState::LOADING && NewState != EState::LOADED;
 		}
-		static EState InitialStateForSource(EType Type, bool AlwaysLoaded, bool VanillaAllowed, bool DownloadSkins)
+		static bool SourceDownloadAllowed(ESkinSource Source)
+		{
+			if(Source == ESkinSource::LOCAL)
+				return true;
+			return SourceDownloadAllowed(SkinSourceMaskFromSource(Source));
+		}
+		static bool SourceDownloadAllowed(ESkinSourceMask Sources)
+		{
+			return (g_Config.m_ClDownloadSkins && RequestSourcesAllowDownloadSlot(Sources, ESkinSource::OFFICIAL)) ||
+			       (g_Config.m_ClDownloadCommunitySkins && RequestSourcesAllowDownloadSlot(Sources, ESkinSource::COMMUNITY)) ||
+			       (g_Config.m_QmDownloadDdStatsSkins && RequestSourcesAllowDownloadSlot(Sources, ESkinSource::DDSTATS));
+		}
+		static bool RequestSourcesAllowDownloadSlot(ESkinSourceMask Sources, ESkinSource Slot)
+		{
+			if(Sources == ESkinSourceMask::NONE)
+				return true;
+			switch(Slot)
+			{
+			case ESkinSource::OFFICIAL:
+				return SkinSourceMaskHas(Sources, ESkinSourceMask::OFFICIAL);
+			case ESkinSource::COMMUNITY:
+				return SkinSourceMaskHas(Sources, ESkinSourceMask::COMMUNITY);
+			case ESkinSource::DDSTATS:
+				return SkinSourceMaskHas(Sources, ESkinSourceMask::DDSTATS);
+			case ESkinSource::CUSTOM_OFFICIAL:
+			case ESkinSource::CUSTOM_COMMUNITY:
+			case ESkinSource::LOCAL:
+			case ESkinSource::UNKNOWN:
+				break;
+			}
+			return false;
+		}
+		static EState InitialStateForSource(EType Type, bool AlwaysLoaded, bool VanillaAllowed, bool DownloadAllowed, bool Cached = false, bool CatalogOnly = false)
 		{
 			if(AlwaysLoaded)
 				return EState::PENDING;
-			if(!VanillaAllowed || (Type == EType::DOWNLOAD && !DownloadSkins))
+			if(!VanillaAllowed)
+				return EState::NOT_FOUND;
+			if(CatalogOnly)
+				return EState::UNLOADED;
+			if(Type == EType::DOWNLOAD && !DownloadAllowed && !Cached)
 				return EState::NOT_FOUND;
 			return EState::UNLOADED;
 		}
-		static std::optional<EState> SourceRefreshState(const SQmSkinSourceIdentity &Current, const SQmSkinSourceIdentity &Scanned, EState State, bool AlwaysLoaded, bool VanillaAllowed, bool DownloadSkins)
+		static std::optional<EState> SourceRefreshState(const SQmSkinSourceIdentity &Current, const SQmSkinSourceIdentity &Scanned, EState State, bool AlwaysLoaded, bool VanillaAllowed, bool DownloadAllowed)
 		{
 			if(Current == Scanned)
 				return std::nullopt;
 			// 准入按扫描到的新来源判断，旧 DOWNLOAD 的禁用状态不能阻止本地替换。
-			const EState InitialState = InitialStateForSource(Scanned.m_Download ? EType::DOWNLOAD : EType::LOCAL, AlwaysLoaded, VanillaAllowed, DownloadSkins);
+			const EState InitialState = InitialStateForSource(Scanned.m_Download ? EType::DOWNLOAD : EType::LOCAL, AlwaysLoaded, VanillaAllowed, DownloadAllowed);
 			if(InitialState == EState::NOT_FOUND)
 				return InitialState;
 			if(State == EState::LOADED || State == EState::LOADING || State == EState::PENDING)
@@ -269,11 +320,16 @@ public:
 		std::optional<SQmSkinSourceIdentity> m_LoadedSource;
 		int m_OfficialReleaseDate = 0;
 		char m_aOfficialCreator[MAX_NAME_LENGTH] = {};
+		ESkinSource m_SkinSource = ESkinSource::UNKNOWN;
+		ESkinSourceMask m_CatalogSources = ESkinSourceMask::NONE;
+		ESkinSourceMask m_CatalogRequestSources = ESkinSourceMask::NONE;
+		bool m_CatalogOnly = false;
 		bool m_Vanilla;
 		bool m_Special;
 		bool m_AlwaysLoaded;
 
 		EState m_State = EState::UNLOADED;
+		bool m_StateCounted = false;
 		bool m_UnresolvedNotified = false;
 		ESettingsResourcePriority m_LoadPriority = ESettingsResourcePriority::BACKGROUND;
 		std::unique_ptr<CSkin> m_pSkin = nullptr;
@@ -394,15 +450,40 @@ public:
 
 	public:
 		std::vector<CSkinListEntry> &Skins() { return m_vSkins; }
+		const std::vector<CSkinListEntry> &Skins() const { return m_vSkins; }
 		int UnfilteredCount() const { return m_UnfilteredCount; }
+		// 计划发布后 m_vSkins 就是全量计划长度；未物化槽位为空，UI 用计划元数据画骨架。
+		int ItemCount() const { return (int)m_vSkins.size(); }
+		int MaterializedCount() const { return m_MaterializedCount; }
 		uint64_t Revision() const { return m_Revision; }
+		// 与 Revision 分开：原位填充只推进它，不触发收藏/最近集合的整表重建。
+		uint64_t MaterializedRevision() const { return m_MaterializedRevision; }
+		bool PlanKnown() const { return m_PlanKnown; }
+		bool FullIndexMerged() const { return m_FullIndexMerged; }
+		const SSettingsSkinListEntry *PlannedEntry(int Index) const
+		{
+			return Index >= 0 && (size_t)Index < m_vPlannedEntries.size() ? &m_vPlannedEntries[Index] : nullptr;
+		}
 		void ForceRefresh() { m_NeedsUpdate = true; }
 
 	private:
+		void ResetPlan(std::vector<SSettingsSkinListEntry> &&vPlannedEntries, int UnfilteredCount);
+		void ClearPlan();
+
 		std::vector<CSkinListEntry> m_vSkins;
+		std::vector<SSettingsSkinListEntry> m_vPlannedEntries;
+		size_t m_MergeCursor = 0;
+		int m_MaterializedCount = 0;
 		int m_UnfilteredCount = 0;
 		uint64_t m_Revision = 0;
+		uint64_t m_MaterializedRevision = 0;
+		bool m_PlanKnown = false;
+		bool m_FullIndexMerged = true;
 		int m_Dummy = -1;
+		int m_RequestedDummy = 0;
+		int m_ListFilter = -1;
+		int m_SortMode = -1;
+		std::string m_Search;
 		CSkinListEntry::SColorKey m_MainColorKey;
 		CSkinListEntry::SColorKey m_DummyColorKey;
 		bool m_NeedsUpdate = true;
@@ -419,19 +500,21 @@ public:
 		size_t m_NumError = 0;
 		size_t m_NumNotFound = 0;
 
-		void AddState(CSkinContainer::EState State)
+		size_t &StateCount(CSkinContainer::EState State)
 		{
 			switch(State)
 			{
-			case CSkinContainer::EState::UNLOADED: ++m_NumUnloaded; break;
-			case CSkinContainer::EState::BACKGROUND_REQUESTED: ++m_NumBackgroundRequested; break;
-			case CSkinContainer::EState::PENDING: ++m_NumPending; break;
-			case CSkinContainer::EState::LOADING: ++m_NumLoading; break;
-			case CSkinContainer::EState::LOADED: ++m_NumLoaded; break;
-			case CSkinContainer::EState::ERROR: ++m_NumError; break;
-			case CSkinContainer::EState::NOT_FOUND: ++m_NumNotFound; break;
+			case CSkinContainer::EState::UNLOADED: return m_NumUnloaded;
+			case CSkinContainer::EState::BACKGROUND_REQUESTED: return m_NumBackgroundRequested;
+			case CSkinContainer::EState::PENDING: return m_NumPending;
+			case CSkinContainer::EState::LOADING: return m_NumLoading;
+			case CSkinContainer::EState::LOADED: return m_NumLoaded;
+			case CSkinContainer::EState::ERROR: return m_NumError;
+			case CSkinContainer::EState::NOT_FOUND: return m_NumNotFound;
 			}
+			dbg_assert_failed("Invalid skin state: %d", (int)State);
 		}
+		void AddState(CSkinContainer::EState State) { ++StateCount(State); }
 
 		bool ShouldFinishLoading(bool RefreshUploadPending) const { return m_NumLoading != 0 || RefreshUploadPending; }
 		CSkinContainer::EState FinishLoadingFailure(CSkinContainer::EState State, bool HasPublishedSkin, bool NotFound)
@@ -580,14 +663,16 @@ public:
 	void RebuildSkinListPlan();
 	bool SkinListSkeletonReady() const;
 	bool SkinListReady() const;
+	bool SkinListSourceDataReady();
+	// 计划已知后，任意可见下标都可以按计划名字物化并请求加载；未物化时返回 false。
+	bool MaterializeSkinListEntry(int Index);
+	void MaterializeSkinListRange(int FirstIndex, int EndIndex, bool RequestVisible = false);
+	void RequestSkinListLoad(int Index, ESettingsResourcePriority Priority);
 	uint64_t SettingsSourceUploadsCompleted() const { return m_SettingsSourceUploadsCompleted; }
 	uint64_t SettingsSourceLoadsCompleted() const { return m_SettingsSourceLoadsCompleted; }
 	const SSettingsSourceAdmissionTelemetry &SettingsSourceAdmissionTelemetry() const { return m_SettingsSourceAdmissionTelemetry; }
 	void SetSettingsTeeVisibleSnapshot(const SSettingsTeeVisibleSnapshot &Snapshot) { m_SettingsTeeVisibleSnapshot = Snapshot; }
-	void SetSettingsVisibleSkinLoads(std::vector<std::string> Names, bool MeasurementOnly = false)
-	{
-		m_SettingsLoadViewport.Publish(std::move(Names), MeasurementOnly);
-	}
+	void SetSettingsVisibleSkinLoads(std::vector<std::string> Names, bool MeasurementOnly = false);
 	void PrepareSettingsThroughputForFrame();
 	void UpdateForSettingsWarmup();
 	int SettingsGpuUploadLimiterUnitsForFrame() const { return m_SettingsThroughputControllerOutput.m_GpuUploadLimitUnits; }
@@ -759,25 +844,37 @@ public:
 		}
 		return CSkinContainer::EType::DOWNLOAD;
 	}
+
+	/**
+	 * 扫描到同名皮肤时的来源选择：本地资源高于下载缓存，用户目录高于随包数据。
+	 * 只有来源相同时才用混合大小写名称改善显示，避免随包文件因大小写覆盖用户文件。
+	 */
+	static bool PreferScannedSkin(const char *pExistingName, int ExistingStorageType, int ExistingPriority,
+		const char *pNewName, int NewStorageType, int NewPriority)
+	{
+		if(NewPriority != ExistingPriority)
+			return NewPriority > ExistingPriority;
+		const bool ExistingFromSave = ExistingStorageType == IStorage::TYPE_SAVE;
+		const bool NewFromSave = NewStorageType == IStorage::TYPE_SAVE;
+		if(ExistingFromSave != NewFromSave)
+			return NewFromSave;
+		return !SkinNameHasUpperCase(pExistingName) && SkinNameHasUpperCase(pNewName);
+	}
+
+	/**
+	 * 本地皮肤按磁盘上的 canonical 名称读取；下载容器仍使用请求名生成缓存身份。
+	 */
+	static const char *ResolveLoadName(CSkinContainer::EType Type, const char *pName, const CSkinNameIndex &Index)
+	{
+		if(Type != CSkinContainer::EType::LOCAL)
+			return pName;
+		const char *pCanonical = Index.Find(pName);
+		return pCanonical != nullptr ? pCanonical : pName;
+	}
+
 	static int ParseOfficialSkinReleaseDateKey(const char *pDate)
 	{
-		if(pDate == nullptr)
-			return 0;
-		int Key = 0;
-		for(int i = 0; i < 10; ++i)
-		{
-			const char c = pDate[i];
-			if(i == 4 || i == 7)
-			{
-				if(c != '-')
-					return 0;
-				continue;
-			}
-			if(c < '0' || c > '9')
-				return 0;
-			Key = Key * 10 + (c - '0');
-		}
-		return pDate[10] == '\0' ? Key : 0;
+		return qm_skin_catalog::ParseReleaseDateKey(pDate);
 	}
 
 private:
@@ -966,13 +1063,37 @@ private:
 		IStorage *m_pStorage;
 		SResult m_Result;
 		CSkinContainer::EType m_CurrentScanType = CSkinContainer::EType::LOCAL;
-		std::unordered_set<std::string> m_SeenNames;
+		std::unordered_map<std::string, size_t> m_EntryByKey;
+	};
+
+	struct SSkinCatalogSource
+	{
+		std::string m_Url;
+		std::string m_CachePath;
+		qm_skin_catalog::EFormat m_Format = qm_skin_catalog::EFormat::DIRECTORY_HTML;
+		ESkinSourceMask m_DisplaySources = ESkinSourceMask::NONE;
+		ESkinSourceMask m_RequestSources = ESkinSourceMask::NONE;
+	};
+
+	struct SSkinCatalogSnapshot
+	{
+		bool m_Loaded = false;
+		std::optional<SHA256_DIGEST> m_ContentHash;
+		qm_skin_catalog::TEntryMap m_Entries;
+	};
+
+	struct SSkinCatalogRuntime
+	{
+		SSkinCatalogSource m_Source;
+		SSkinCatalogSnapshot m_Snapshot;
+		std::shared_ptr<IHttpRequest> m_pRequest;
+		bool m_RequestIssued = false;
 	};
 
 	static bool PrepareSkinData(const char *pName, CSkinLoadData &Data);
 	void LoadSkinFinish(CSkinContainer *pSkinContainer, CSkinLoadData &Data);
 	bool BeginSkinPreviewUpload(CSkinContainer *pSkinContainer, CSkinLoadData &&Data);
-	bool UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer);
+	bool UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer, size_t *pPreparedBytes = nullptr);
 	void FinishSkinPreviewUpload(CSkinContainer *pSkinContainer);
 	void DiscardSkinPreviewUpload(CSkinContainer *pSkinContainer);
 	void LoadSkinDirect(const char *pName);
@@ -983,22 +1104,46 @@ private:
 	void UnloadLoadedSkinTextures(CSkinContainer *pSkinContainer);
 	void QueueSkinTexturesUnloaded(const char *pSkinName);
 	bool ReclaimBackgroundSkinForPriorityRequest(const char *pRequesterName, int CountFuseLimit);
+	void ReleaseSettingsSkinRequest(const char *pSkinName);
+	void ReleaseSettingsSkinLoadRequests();
+	bool SkinNameInActiveUse(const char *pSkinName) const;
+	void FlushSkinSourcesSave(std::chrono::nanoseconds Now);
+	const std::vector<std::string> &SettingsSkinNameSnapshot(const std::list<std::string> &Names, bool Reverse = false);
 	void UpdateStartLoading(CSkinLoadingStats &Stats);
 	void UpdateSkinDownloads(CSkinLoadingStats &Stats);
-	std::unique_ptr<CQmSkinDownloadSession> TryCreateTrackedSkinDownloadSession(const char *pName);
+	std::unique_ptr<CQmSkinDownloadSession> TryCreateTrackedSkinDownloadSession(const CSkinContainer *pSkinContainer);
 	std::vector<std::string> m_vSkinDownloadNames;
+	const char *CanonicalSkinName(const char *pName) const
+	{
+		const char *pCanonical = m_SkinNameIndex.Find(pName);
+		return pCanonical == nullptr ? pName : pCanonical;
+	}
 	void UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseconds StartTime, std::chrono::nanoseconds MaxTime);
 	void CollectUnresolvedSkins();
 	size_t LoadedSkinLimit() const;
 	void QueueSkinDirectoryScanJob();
 	void ProcessSkinDirectoryScanJob();
-	void QueueOfficialSkinIndexRequest();
-	void ProcessOfficialSkinIndexRequest();
-	void LoadOfficialSkinIndexCache();
-	bool ApplyOfficialSkinIndexJson(const char *pJson, size_t JsonSize);
+	void BuildSkinCatalogSources();
+	void LoadSkinCatalogCaches();
+	bool LoadSkinCatalogCache(SSkinCatalogRuntime &Catalog);
+	bool ParseSkinCatalog(const SSkinCatalogSource &Source, const void *pFileData, size_t FileSize, SSkinCatalogSnapshot &Snapshot) const;
+	void PublishSkinCatalog(SSkinCatalogRuntime &Catalog, SSkinCatalogSnapshot Snapshot);
+	void QueueSkinCatalogRequests();
+	void ProcessSkinCatalogRequests();
+	void RefreshSkinCatalogSourceMasks();
+	void ProcessPendingSkinCatalogEntries();
+	ESkinSourceMask CatalogSourcesForName(const char *pName, bool RequestSources) const;
+	void ApplyCatalogSources(CSkinContainer *pSkinContainer) const;
+	bool SkinListSourcesPending() const;
+	bool SkinListPlanQueryCurrent() const;
+	void RecordSkinSource(CSkinContainer *pSkinContainer, ESkinSource Source);
 	void QueueSkinListPlanJob(int Dummy);
 	void ProcessSkinListPlanJob();
+	void ApplySkinListPlan(std::vector<SSettingsSkinListEntry> &&vPlannedEntries, int UnfilteredCount);
+	bool MergeSkinListEntries();
+	void FinishSkinListMaterialization();
 	CSkinListEntry MakeSkinListEntry(const CSkinContainer *pSkinContainer, std::optional<CSkinListEntry::SColorKey> ColorKey) const;
+	CSkinListEntry MakeSkinListEntry(const SSettingsSkinListEntry &PlannedEntry, const CSkinContainer *pSkinContainer) const;
 
 	static void ConAddFavoriteSkin(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemFavoriteSkin(IConsole::IResult *pResult, void *pUserData);
@@ -1033,9 +1178,14 @@ private:
 
 	friend class CSkinProfiles;
 
-	std::unordered_map<std::string, std::unique_ptr<CSkinContainer>> m_Skins;
+	std::unordered_map<std::string, std::unique_ptr<CSkinContainer>, SSkinNameHash, SSkinNameEqual> m_Skins;
+	CSkinNameIndex m_SkinNameIndex;
+	CSkinSourceRegistry m_SkinSources;
+	std::unordered_map<std::string, std::pair<std::string, time_t>, SSkinNameHash, SSkinNameEqual> m_VerifiedSkinCacheUrls;
+	std::unordered_set<std::string> m_SkinNotFoundKeys;
+	bool m_HasInitialSkinDirectoryScan = false;
 	std::optional<std::chrono::nanoseconds> m_ContainerUpdateTime;
-	size_t m_NumLoadingSkins = 0;
+	CSkinLoadingStats m_LoadingStats;
 	CQmSkinUploadFrameBudget m_SkinUploadFrameBudget;
 	CUnresolvedSkinScanState m_UnresolvedSkinScanState;
 	std::vector<std::string> m_vSkinsUnresolvedThisFrame;
@@ -1050,12 +1200,10 @@ private:
 	CSkinList m_SkinList;
 	std::shared_ptr<CSkinDirectoryScanJob> m_pSkinDirectoryScanJob;
 	std::shared_ptr<CSkinListPlanJob> m_pSkinListPlanJob;
-	std::shared_ptr<IHttpRequest> m_pOfficialSkinIndexRequest;
-	std::vector<SSettingsSkinListEntry> m_vPendingSkinListMergeEntries;
+	std::vector<SSkinCatalogRuntime> m_vSkinCatalogs;
+	std::vector<qm_skin_catalog::SEntry> m_vPendingSkinCatalogEntries;
+	size_t m_SkinCatalogMergeCursor = 0;
 	std::vector<CSkinListEntry> m_vPendingSkinListEntries;
-	size_t m_SkinListMergeCursor = 0;
-	int m_PendingSkinListUnfilteredCount = 0;
-	bool m_HasPendingSkinListMergePlan = false;
 	int m_SkinListPlanGeneration = 0;
 	std::vector<CSkinDirectoryScanJob::SResult::SEntry> m_vPendingSkinDirectoryEntries;
 	size_t m_SkinDirectoryMergeCursor = 0;
@@ -1083,6 +1231,13 @@ private:
 	SSettingsSourceAdmissionTelemetry m_SettingsSourceAdmissionTelemetry;
 	SSettingsSkinThroughputControllerState m_SettingsThroughputControllerState;
 	SSettingsSkinThroughputControllerOutput m_SettingsThroughputControllerOutput;
+	bool m_SettingsTeePageActiveLastUpdate = false;
+	bool m_SkinSourcesSavePending = false;
+	std::optional<std::chrono::nanoseconds> m_SkinSourcesSaveLast;
+	bool m_SkinListRefreshPending = false;
+	std::optional<std::chrono::nanoseconds> m_SkinListRefreshDirtyAt;
+	std::chrono::nanoseconds m_SettingsFinalizeTimeBudget = std::chrono::milliseconds(1);
+	std::vector<std::string> m_vSettingsSkinNameSnapshot;
 
 	/**
 	 * Maximum number of skins to process per frame in UpdateFinishLoading.

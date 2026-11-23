@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <vector>
 
 template<typename TCharacterInfo, std::size_t N>
@@ -38,19 +39,25 @@ class CPlayers : public CComponent
 	void RenderHand7(const CTeeRenderInfo *pInfo, vec2 HandPos, float HandAngle, float Alpha);
 
 	void RenderHand(const CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir, float AngleOffset, vec2 PostRotOffset, float Alpha);
+	// AttackTimeOverride：查看模式回放的播放头换算出的挥锤/开枪相位（秒）。
+	// 传入后不再用实时游戏 tick 推导，暂停、拖动进度时动画随播放头冻结或跳转。
 	void RenderPlayer(
 		const CScreenRect &ScreenRect,
 		const CNetObj_Character *pPrevChar,
 		const CNetObj_Character *pPlayerChar,
 		const CTeeRenderInfo *pRenderInfo,
 		int ClientId,
-		float Intra = 0.f);
+		float Intra = 0.f,
+		std::optional<float> AttackTimeOverride = std::nullopt,
+		bool PredictWeaponsForOverride = false);
 	void RenderPlayerGhost(
 		const CNetObj_Character *pPrevChar,
 		const CNetObj_Character *pPlayerChar,
 		const CTeeRenderInfo *pRenderInfo,
 		int ClientId,
-		float Intra = 0.f);
+		float Intra = 0.f,
+		std::optional<float> AttackTimeOverride = std::nullopt,
+		bool PredictWeaponsForOverride = false);
 
 	void RenderHook(
 		const CScreenRect &ScreenRect,

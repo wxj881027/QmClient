@@ -20,8 +20,7 @@ TEST(QmSetupResult, InstallCompletionDuringConfirmationKeepsTheFinalState)
 	bool Installing = true;
 	const bool Cancel = QmSetup::ConfirmCancellation([&] { return Installing; }, [&] {
 		Installing = false;
-		return true;
-	});
+		return true; });
 	EXPECT_FALSE(Cancel);
 }
 

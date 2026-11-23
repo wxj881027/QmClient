@@ -44,8 +44,6 @@
 #include <cmath>
 #include <functional>
 #include <memory>
-#include <string>
-#include <unordered_map>
 #include <vector>
 
 using namespace FontIcons;
@@ -401,6 +399,32 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 			SpDcOptions.m_FontSize = CurrentSettingsContentMetrics().m_BodySize;
 			ui_widget::PasswordField(TextInputCtx, &s_SpotifySpDc, InputColumn, &s_SpotifySpDcState, SpDcOptions);
 		}
+	}
+	// LX Music 由本机 HTTP 轮询,连接状态只能靠一行文本反馈:
+	// 端口冲突(常见于 LX 数据同步服务)与开放 API 未开启都在这里说明。
+	if(g_Config.m_QmLxMusicEnable != 0)
+	{
+		CUIRect Row;
+		// 开放 API 已开启时不再显示按钮:点它只会得到「已经是开启状态」。
+		// 写入动作必须由用户触发,因为 LX 退出时会覆盖配置文件。
+		if(GameClient()->m_LxMusicIntegration.NeedsOpenApiSetup() &&
+			Flow.Control("qmclient-lyrics-lxmusic-enable-api", CurrentSettingsContentMetrics().m_LineHeight, Row))
+		{
+			static CButtonContainer s_LxEnableApi;
+			if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD,
+				   &s_LxEnableApi, "qmclient-lyrics-lxmusic-enable-api", Localize("Turn on LX Music open API"), 0, &Row,
+				   BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE) &&
+				!PrewarmOnly && !Ui()->RenderOnly())
+				GameClient()->m_LxMusicIntegration.EnableOpenApi();
+			Flow.Space(LineSpacing);
+		}
+		if(Flow.Control("qmclient-lyrics-lxmusic-status", CurrentSettingsContentMetrics().m_LineHeight, Row))
+		{
+			char aStatus[512] = {};
+			GameClient()->m_LxMusicIntegration.GetStatus(aStatus, sizeof(aStatus));
+			RenderQmHudLabel("qmclient-lyrics-lxmusic-status", &Row, aStatus, ui_token::font::BODY);
+		}
+		Flow.Space(LineSpacing);
 	}
 }
 

@@ -28,6 +28,7 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/binds.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/bind_index.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
@@ -44,8 +45,6 @@
 #include <cmath>
 #include <functional>
 #include <memory>
-#include <string>
-#include <unordered_map>
 #include <vector>
 
 using namespace FontIcons;
@@ -532,13 +531,10 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 	CUIRect BindLabel, BindKey;
 	SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &BindLabel, &BindKey);
 	RenderQmVisualLabel("qmclient-focus-mode-key", &BindLabel, Localize("Zen mode key"), BodySize);
-	const CBindSlot FocusBind = g_CommandBindCache.Find(GameClient()->m_Binds, "toggle qm_focus_mode 0 1");
+	const CBindSlot FocusBind = QmLookupCommandBind(GameClient()->m_Binds, "toggle qm_focus_mode 0 1");
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonFocusToggle, &s_ClearButtonFocusToggle, &BindKey, FocusBind, false);
 	if(Flow.Input() && !Ui()->RenderOnly() && Result.m_Bind != FocusBind)
-	{
-		if(GameClient()->m_Binds.Rebind(FocusBind, Result.m_Bind, "toggle qm_focus_mode 0 1"))
-			g_CommandBindCache.Invalidate();
-	}
+		GameClient()->m_Binds.Rebind(FocusBind, Result.m_Bind, "toggle qm_focus_mode 0 1");
 }
 
 void CMenus::RenderQmVisualSpectatorModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)

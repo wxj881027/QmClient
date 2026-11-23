@@ -214,6 +214,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	static constexpr size_t VERTEX_BUFFER_CACHE_ID = 2;
 	static constexpr size_t IMAGE_BUFFER_CACHE_ID = 3;
 	static constexpr uint32_t FRAME_TIMESTAMP_QUERY_COUNT = 2;
+	static constexpr uint32_t TIMESTAMP_QUERIES_PER_IMAGE = 2 * FRAME_TIMESTAMP_QUERY_COUNT;
 
 	struct SDeviceMemoryBlock
 	{
@@ -1263,6 +1264,13 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	uint64_t m_LastFrameProfileLogFrame = 0;
 	VkQueryPool m_FrameTimestampQueryPool = VK_NULL_HANDLE;
 	std::vector<bool> m_vFrameTimestampQueriesPending;
+	struct SMemoryTimestampQuery
+	{
+		bool m_Recording = false;
+		bool m_Pending = false;
+		uint64_t m_Frame = 0;
+	};
+	std::vector<SMemoryTimestampQuery> m_vMemoryTimestampQueries;
 	float m_FrameTimestampPeriod = 0.0f;
 	uint32_t m_FrameTimestampValidBits = 0;
 	bool m_FrameTimestampQueriesSupported = false;
@@ -2800,6 +2808,7 @@ protected:
 		if(m_vUsedMemoryCommandBuffer[m_CurImageIndex])
 		{
 			auto &MemoryCommandBuffer = m_vMemoryCommandBuffers[m_CurImageIndex];
+			EndMemoryTimestampQuery(MemoryCommandBuffer);
 			VkResult EndCommandBufferResult = vkEndCommandBuffer(MemoryCommandBuffer);
 			if(EndCommandBufferResult != VK_SUCCESS)
 			{
@@ -2850,6 +2859,7 @@ protected:
 				return false;
 			}
 
+			ReadMemoryTimestampQuery(m_CurImageIndex);
 			m_vUsedMemoryCommandBuffer[m_CurImageIndex] = false;
 		}
 		return true;
@@ -2939,6 +2949,7 @@ protected:
 		if(m_vUsedMemoryCommandBuffer[m_CurImageIndex])
 		{
 			auto &MemoryCommandBuffer = m_vMemoryCommandBuffers[m_CurImageIndex];
+			EndMemoryTimestampQuery(MemoryCommandBuffer);
 			VkResult EndMemoryCommandBufferResult = vkEndCommandBuffer(MemoryCommandBuffer);
 			if(EndMemoryCommandBufferResult != VK_SUCCESS)
 			{
@@ -3120,6 +3131,7 @@ protected:
 			return false;
 		}
 		ReadFrameTimestampQuery(m_CurImageIndex);
+		ReadMemoryTimestampQuery(m_CurImageIndex);
 
 		// next frame
 		m_CurFrame++;
@@ -3142,6 +3154,7 @@ protected:
 					return false;
 				}
 				ReadFrameTimestampQuery(FrameImageIndex);
+				ReadMemoryTimestampQuery(FrameImageIndex);
 				ClearFrameData(FrameImageIndex);
 				m_vImageLastFrameCheck[FrameImageIndex] = m_CurFrame;
 			}
@@ -6674,13 +6687,14 @@ public:
 	void CreateFrameTimestampQueries()
 	{
 		m_vFrameTimestampQueriesPending.clear();
+		m_vMemoryTimestampQueries.clear();
 		if(!m_FrameTimestampQueriesSupported)
 			return;
 
 		VkQueryPoolCreateInfo QueryPoolInfo{};
 		QueryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
 		QueryPoolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
-		QueryPoolInfo.queryCount = m_SwapChainImageCount * FRAME_TIMESTAMP_QUERY_COUNT;
+		QueryPoolInfo.queryCount = m_SwapChainImageCount * TIMESTAMP_QUERIES_PER_IMAGE;
 
 		if(vkCreateQueryPool(m_VKDevice, &QueryPoolInfo, nullptr, &m_FrameTimestampQueryPool) != VK_SUCCESS)
 		{
@@ -6694,6 +6708,7 @@ public:
 		}
 
 		m_vFrameTimestampQueriesPending.resize(m_SwapChainImageCount, false);
+		m_vMemoryTimestampQueries.resize(m_SwapChainImageCount);
 	}
 
 	void DestroyFrameTimestampQueries()
@@ -6704,6 +6719,7 @@ public:
 			m_FrameTimestampQueryPool = VK_NULL_HANDLE;
 		}
 		m_vFrameTimestampQueriesPending.clear();
+		m_vMemoryTimestampQueries.clear();
 	}
 
 	[[nodiscard]] bool CreateSyncObjects()
@@ -7011,12 +7027,10 @@ public:
 			dbg_msg("vulkan", "swap chain recreated on a fresh surface, rendering resumed.");
 		}
 
-		Ret = ReinitializeQmVulkanFrameResources(Ret, OldSwapChainImageCount != m_SwapChainImageCount,
-			[this] { CleanupVulkan<false>(); }, [this] {
+		Ret = ReinitializeQmVulkanFrameResources(Ret, OldSwapChainImageCount != m_SwapChainImageCount, [this] { CleanupVulkan<false>(); }, [this] {
 				// 下一次获取图像前，清理路径也可能需要访问新数组中的帧槽。
 				m_CurImageIndex = 0;
-				return InitVulkan<false>();
-			});
+				return InitVulkan<false>(); });
 		if(Ret != 0)
 		{
 			m_FramePrepared = false;
@@ -7758,6 +7772,7 @@ public:
 			BeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 			if(!CheckVulkanResult(vkBeginCommandBuffer(MemCommandBuffer, &BeginInfo), GFX_ERROR_TYPE_RENDER_RECORDING, "vkBeginCommandBuffer (memory) failed."))
 				return false;
+			BeginMemoryTimestampQuery(MemCommandBuffer);
 		}
 		pMemCommandBuffer = &MemCommandBuffer;
 		return true;
@@ -8127,7 +8142,54 @@ public:
 
 	uint32_t FrameTimestampQueryOffset(size_t ImageIndex) const
 	{
-		return static_cast<uint32_t>(ImageIndex * FRAME_TIMESTAMP_QUERY_COUNT);
+		return static_cast<uint32_t>(ImageIndex * TIMESTAMP_QUERIES_PER_IMAGE);
+	}
+
+	void BeginMemoryTimestampQuery(VkCommandBuffer CommandBuffer)
+	{
+		if(g_Config.m_QmGraphicsTrace < 3 || m_CurImageIndex >= m_vMemoryTimestampQueries.size())
+			return;
+		auto &Query = m_vMemoryTimestampQueries[m_CurImageIndex];
+		if(Query.m_Pending)
+			return;
+		const uint32_t Offset = FrameTimestampQueryOffset(m_CurImageIndex) + FRAME_TIMESTAMP_QUERY_COUNT;
+		vkCmdResetQueryPool(CommandBuffer, m_FrameTimestampQueryPool, Offset, FRAME_TIMESTAMP_QUERY_COUNT);
+		vkCmdWriteTimestamp(CommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_FrameTimestampQueryPool, Offset);
+		Query.m_Recording = true;
+	}
+
+	void EndMemoryTimestampQuery(VkCommandBuffer CommandBuffer)
+	{
+		if(m_CurImageIndex >= m_vMemoryTimestampQueries.size())
+			return;
+		auto &Query = m_vMemoryTimestampQueries[m_CurImageIndex];
+		if(!Query.m_Recording)
+			return;
+		const uint32_t Offset = FrameTimestampQueryOffset(m_CurImageIndex) + FRAME_TIMESTAMP_QUERY_COUNT;
+		vkCmdWriteTimestamp(CommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, m_FrameTimestampQueryPool, Offset + 1);
+		Query = {false, true, m_CurFrame};
+	}
+
+	void ReadMemoryTimestampQuery(size_t ImageIndex)
+	{
+		if(ImageIndex >= m_vMemoryTimestampQueries.size())
+			return;
+		auto &Query = m_vMemoryTimestampQueries[ImageIndex];
+		if(!Query.m_Pending)
+			return;
+		std::array<uint64_t, FRAME_TIMESTAMP_QUERY_COUNT> aTimestamps{};
+		const uint32_t Offset = FrameTimestampQueryOffset(ImageIndex) + FRAME_TIMESTAMP_QUERY_COUNT;
+		if(vkGetQueryPoolResults(m_VKDevice, m_FrameTimestampQueryPool, Offset, aTimestamps.size(), sizeof(aTimestamps), aTimestamps.data(), sizeof(uint64_t), VK_QUERY_RESULT_64_BIT) != VK_SUCCESS)
+			return;
+		const uint64_t Delta = TimestampDelta(aTimestamps[0], aTimestamps[1]);
+		dbg_msg("perf/graphics/vulkan", "event=gpu_transfer_batch backend_frame=%" PRIu64 " gpu_transfer_ms=%.6f", Query.m_Frame, (double)Delta * (double)m_FrameTimestampPeriod / 1e6);
+		Query = {};
+	}
+
+	uint64_t TimestampDelta(uint64_t Start, uint64_t End) const
+	{
+		const uint64_t Delta = End - Start;
+		return m_FrameTimestampValidBits < 64 ? Delta & ((uint64_t{1} << m_FrameTimestampValidBits) - 1) : Delta;
 	}
 
 	void ReadFrameTimestampQuery(size_t ImageIndex)
@@ -8142,22 +8204,8 @@ public:
 
 		m_vFrameTimestampQueriesPending[ImageIndex] = false;
 
-		uint64_t StartTimestamp = aTimestamps[0];
-		uint64_t EndTimestamp = aTimestamps[1];
-		uint64_t TimestampDelta;
-		if(m_FrameTimestampValidBits < 64)
-		{
-			const uint64_t ValidBitsMask = (uint64_t{1} << m_FrameTimestampValidBits) - 1;
-			StartTimestamp &= ValidBitsMask;
-			EndTimestamp &= ValidBitsMask;
-			TimestampDelta = (EndTimestamp - StartTimestamp) & ValidBitsMask;
-		}
-		else
-		{
-			TimestampDelta = EndTimestamp - StartTimestamp;
-		}
-
-		m_FrameProfileStats.m_GPUFrameTime = std::chrono::nanoseconds(static_cast<int64_t>((double)TimestampDelta * (double)m_FrameTimestampPeriod));
+		const uint64_t Delta = TimestampDelta(aTimestamps[0], aTimestamps[1]);
+		m_FrameProfileStats.m_GPUFrameTime = std::chrono::nanoseconds(static_cast<int64_t>((double)Delta * (double)m_FrameTimestampPeriod));
 		m_FrameProfileStats.m_HasGPUFrameTime = true;
 	}
 

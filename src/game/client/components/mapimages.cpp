@@ -4,8 +4,8 @@
 
 #include <base/dbg.h>
 #include <base/log.h>
-#include <base/mem.h>
 #include <base/math.h>
+#include <base/mem.h>
 #include <base/perf_timer.h>
 
 #include <engine/engine.h>
@@ -117,7 +117,14 @@ namespace
 				Tile.m_Height = TileHeight;
 				Tile.m_Format = Info.m_Format;
 				size_t TileDataSize = 0;
-				if(!Tile.DataSize(TileDataSize) || TileDataSize == 0 || (Tile.m_pData = static_cast<uint8_t *>(malloc(TileDataSize))) == nullptr)
+				if(!Tile.DataSize(TileDataSize) || TileDataSize == 0)
+				{
+					Info.Free();
+					FreeTiles();
+					return;
+				}
+				Tile.m_pData = static_cast<uint8_t *>(malloc(TileDataSize));
+				if(Tile.m_pData == nullptr)
 				{
 					Info.Free();
 					FreeTiles();
@@ -149,6 +156,66 @@ namespace
 	};
 } // namespace
 
+static bool ResolveEntitiesImagePath(IStorage *pStorage, const char *pEntitiesPath, int ModType, char *pOut, size_t OutSize)
+{
+	if(pStorage == nullptr || pEntitiesPath == nullptr || ModType < 0 || ModType >= MAP_IMAGE_MOD_TYPE_COUNT)
+		return false;
+	const char *pModName = gs_apModEntitiesNames[ModType];
+	str_format(pOut, OutSize, "%s/%s.png", pEntitiesPath, pModName);
+	if(pStorage->FileExists(pOut, IStorage::TYPE_ALL))
+		return true;
+	if(ModType == MAP_IMAGE_MOD_TYPE_DDNET)
+	{
+		str_format(pOut, OutSize, "%s.png", pEntitiesPath);
+		if(pStorage->FileExists(pOut, IStorage::TYPE_ALL))
+			return true;
+	}
+	str_format(pOut, OutSize, "editor/entities_clear/%s.png", pModName);
+	return pStorage->FileExists(pOut, IStorage::TYPE_ALL);
+}
+
+static void LogEntityTexturePrewarm(
+	const IClient *pClient,
+	const char *pState,
+	int Slot,
+	int ModType,
+	bool Masked,
+	bool Blank,
+	int Layer,
+	int Step,
+	int TotalSteps,
+	const CImageInfo *pImage,
+	double DecodeMs,
+	double StepMs,
+	double TotalMs,
+	const char *pPath,
+	const char *pDetail = nullptr)
+{
+	if(!QmPerfEnabled())
+		return;
+
+	const char *pModName = ModType >= 0 && ModType < MAP_IMAGE_MOD_TYPE_COUNT ? gs_apModEntitiesNames[ModType] : "unknown";
+	size_t ImageWidth = 0;
+	size_t ImageHeight = 0;
+	size_t TextureBytes = 0;
+	if(pImage != nullptr)
+	{
+		ImageWidth = pImage->m_Width;
+		ImageHeight = pImage->m_Height;
+		(void)pImage->DataSize(TextureBytes);
+	}
+	char aDetail[128] = "";
+	if(pDetail != nullptr && pDetail[0] != '\0')
+		str_format(aDetail, sizeof(aDetail), " detail=%s", pDetail);
+
+	char aPayload[1024];
+	str_format(aPayload, sizeof(aPayload),
+		"event=entity_texture_prewarm state=%s slot=%d mod=%s masked=%d blank=%d layer=%d step=%d steps=%d image_w=%zu image_h=%zu texture_bytes=%zu decode_ms=%.2f step_ms=%.3f total_ms=%.2f path=\"%s\"%s",
+		pState, Slot, pModName, Masked ? 1 : 0, Blank ? 1 : 0, Layer, Step, TotalSteps,
+		ImageWidth, ImageHeight, TextureBytes, DecodeMs, StepMs, TotalMs, pPath != nullptr ? pPath : "", aDetail);
+	QmPerfLogPayload("perf/connect", aPayload, pClient, "assets");
+}
+
 CMapImages::CMapImages()
 {
 	m_Count = 0;
@@ -159,6 +226,11 @@ CMapImages::CMapImages()
 	str_copy(m_aEntitiesPath, "editor/entities_clear");
 
 	static_assert(std::size(gs_apModEntitiesNames) == MAP_IMAGE_MOD_TYPE_COUNT, "Mod name string count is not equal to mod type count");
+}
+
+CMapImages::~CMapImages()
+{
+	CancelEntitiesPrewarm(false);
 }
 
 void CMapImages::OnInit()
@@ -325,7 +397,8 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 			{
 				Decode = TryStartMapImageDecode([&] {
 					return std::make_shared<CMapImageDecodeJob>(Storage(), aPath, Trace);
-				}, SubmitDecode);
+				},
+					SubmitDecode);
 			}
 			else
 				m_aTextures[i] = Graphics()->LoadTexture(aPath, IStorage::TYPE_ALL, LoadFlag);
@@ -361,7 +434,8 @@ CMapLoadTask CMapImages::LoadMapImages(CLayers *pLayers, IMap *pMap, bool Live)
 						pJob.reset();
 					ReadMs = ReadTimer.ElapsedMs();
 					return pJob;
-				}, SubmitDecode);
+				},
+					SubmitDecode);
 			}
 			if(Decode.m_Result == EDecodeStart::NO_JOB)
 			{
@@ -447,6 +521,9 @@ void CMapImages::OnMapLoad()
 	IMap *pMap = Kernel()->RequestInterface<IMap>();
 	CLayers *pLayers = GameClient()->Layers();
 	Unload();
+	// 实体纹理跨地图保留。OnMapLoad 只卸载地图图片，不能顺带取消启动阶段
+	// 已经开始的实体纹理预热；若此前被配置切换取消，这里按当前游戏信息重新启动。
+	PrewarmEntities();
 	const bool Live = Client()->State() == IClient::STATE_LOADING;
 	m_ImageLoad = LoadMapImages(pLayers, pMap, Live);
 	if(Live)
@@ -523,43 +600,172 @@ static bool IsValidTile(int LayerType, bool EntitiesAreMasked, EMapImageModType 
 	return true;
 }
 
+static std::shared_ptr<CImageInfo> MakeEntityPrewarmImage(CImageInfo &&Image)
+{
+	return std::shared_ptr<CImageInfo>(
+		new CImageInfo(std::move(Image)),
+		[](CImageInfo *pImage) {
+			pImage->Free();
+			delete pImage;
+		});
+}
+
+// 实体纹理的 CPU 构建放在 job 线程，主线程只负责轮询、提交纹理上传。
+// 每层单独一个 job，因此同一时刻最多只保留一份构建输出，不会把四层
+// 4096² 图像同时压在内存里。
+class CQmEntityPrewarmBuildJob final : public IJob
+{
+public:
+	enum class EKind
+	{
+		LAYER,
+		TUNE_COLOR,
+	};
+
+	CQmEntityPrewarmBuildJob(
+		std::shared_ptr<CImageInfo> pSource,
+		int ModType,
+		bool Masked,
+		int LayerType,
+		EKind Kind) :
+		m_pSource(std::move(pSource)),
+		m_ModType(ModType),
+		m_Masked(Masked),
+		m_LayerType(LayerType),
+		m_Kind(Kind)
+	{
+		Abortable(true);
+	}
+
+	~CQmEntityPrewarmBuildJob() override
+	{
+		m_Build.Free();
+	}
+
+	void Run() override
+	{
+		if(State() == STATE_ABORTED || m_pSource == nullptr)
+			return;
+
+		const CImageInfo &Source = *m_pSource;
+		if(Source.m_pData == nullptr || Source.m_Width == 0 || Source.m_Height == 0 ||
+			(Source.m_Format != CImageInfo::FORMAT_RGB && Source.m_Format != CImageInfo::FORMAT_RGBA))
+			return;
+
+		const size_t CopyWidth = Source.m_Width / 16;
+		const size_t CopyHeight = Source.m_Height / 16;
+		if(CopyWidth == 0 || CopyHeight == 0)
+			return;
+
+		m_Build.m_Width = Source.m_Width;
+		m_Build.m_Height = Source.m_Height;
+		m_Build.m_Format = Source.m_Format;
+		size_t BuildDataSize = 0;
+		if(!m_Build.DataSize(BuildDataSize) || BuildDataSize == 0)
+			return;
+		m_Build.m_pData = static_cast<uint8_t *>(malloc(BuildDataSize));
+		if(m_Build.m_pData == nullptr)
+			return;
+		mem_zero(m_Build.m_pData, BuildDataSize);
+
+		if(m_Kind == EKind::TUNE_COLOR)
+		{
+			const size_t TuneTileX = static_cast<size_t>(TILE_TUNE % 16) * CopyWidth;
+			const size_t TuneTileY = static_cast<size_t>(TILE_TUNE / 16) * CopyHeight;
+			for(int TileIndex = 1; TileIndex < 256; ++TileIndex)
+			{
+				if(State() == STATE_ABORTED)
+				{
+					m_Build.Free();
+					return;
+				}
+				const size_t StartX = CopyWidth * (TileIndex % 16);
+				const size_t StartY = CopyHeight * (TileIndex / 16);
+				m_Build.CopyRectFrom(Source, TuneTileX, TuneTileY, CopyWidth, CopyHeight, StartX, StartY);
+				const float Hue = std::fmod((TileIndex - 1) * normalized_golden_angle, 1.0f);
+				ColorizeWithHueRect(m_Build, Hue, 0.75f, StartX, StartY, CopyWidth, CopyHeight);
+			}
+		}
+		else
+		{
+			for(int TileIndex = 0; TileIndex < 256; ++TileIndex)
+			{
+				if(State() == STATE_ABORTED)
+				{
+					m_Build.Free();
+					return;
+				}
+				int SourceTileIndex = TileIndex;
+				if(!IsValidTile(m_LayerType, m_Masked, static_cast<EMapImageModType>(m_ModType), SourceTileIndex))
+					continue;
+				if(m_LayerType == MAP_IMAGE_ENTITY_LAYER_TYPE_SWITCH && SourceTileIndex == TILE_SWITCHTIMEDOPEN)
+					SourceTileIndex = 8;
+				const size_t OffsetX = static_cast<size_t>(SourceTileIndex % 16) * CopyWidth;
+				const size_t OffsetY = static_cast<size_t>(SourceTileIndex / 16) * CopyHeight;
+				m_Build.CopyRectFrom(Source, OffsetX, OffsetY, CopyWidth, CopyHeight, OffsetX, OffsetY);
+			}
+		}
+		m_Success = true;
+	}
+
+	CImageInfo TakeImage()
+	{
+		return std::move(m_Build);
+	}
+
+	bool Succeeded() const
+	{
+		return m_Success;
+	}
+
+private:
+	std::shared_ptr<CImageInfo> m_pSource;
+	CImageInfo m_Build;
+	int m_ModType;
+	bool m_Masked;
+	int m_LayerType;
+	EKind m_Kind;
+	bool m_Success = false;
+};
+
 IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType EntityLayerType)
 {
 	const bool EntitiesAreMasked = !GameClient()->m_GameInfo.m_DontMaskEntities;
 	const EMapImageModType EntitiesModType = GetEntitiesModType(GameClient()->m_GameInfo);
+	const int EntityTextureSlot = (EntitiesModType * 2) + (int)EntitiesAreMasked;
 
-	if(!m_aEntitiesIsLoaded[(EntitiesModType * 2) + (int)EntitiesAreMasked])
+	// 正常路径下启动预热已经跨帧完成；这里只在进服早于预热完成时收尾。
+	// 解码尚未完成则取消预热并回退旧同步路径，保证请求不会等待 job。
+	if(!m_aEntitiesIsLoaded[EntityTextureSlot] &&
+		m_QmEntityPrewarmState != EQmEntityPrewarmState::NONE &&
+		m_QmEntityPrewarmState != EQmEntityPrewarmState::FAILED &&
+		m_QmEntityPrewarmModType == EntitiesModType && m_QmEntityPrewarmMasked == EntitiesAreMasked)
+	{
+		if(m_QmEntityPrewarmState == EQmEntityPrewarmState::DECODING)
+			(void)FinishEntitiesPrewarmDecode();
+		while(m_QmEntityPrewarmState == EQmEntityPrewarmState::BUILDING && AdvanceEntitiesPrewarmStep())
+		{
+		}
+		if(m_QmEntityPrewarmState == EQmEntityPrewarmState::DECODING ||
+			m_QmEntityPrewarmState == EQmEntityPrewarmState::BUILDING)
+			CancelEntitiesPrewarm();
+	}
+
+	if(!m_aEntitiesIsLoaded[EntityTextureSlot])
 	{
 		const bool Trace = QmPerfEnabled() && Client()->State() == IClient::STATE_LOADING;
 		CPerfTimer Timer(Trace);
-		m_aEntitiesIsLoaded[(EntitiesModType * 2) + (int)EntitiesAreMasked] = true;
+		m_aEntitiesIsLoaded[EntityTextureSlot] = true;
 
 		int TextureLoadFlag = 0;
 		if(Graphics()->HasTextureArraysSupport())
 			TextureLoadFlag = (Graphics()->TextureLoadFlags()) | IGraphics::TEXLOAD_NO_2D_TEXTURE;
 
 		CImageInfo ImgInfo;
-		char aPath[IO_MAX_PATH_LENGTH];
-		str_format(aPath, sizeof(aPath), "%s/%s.png", m_aEntitiesPath, gs_apModEntitiesNames[EntitiesModType]);
-		// 先探测存在性再解码：缺失路径不进 LoadPng，避免每次会话刷无害报错
-		if(Storage()->FileExists(aPath, IStorage::TYPE_ALL))
+		char aPath[IO_MAX_PATH_LENGTH] = "";
+		// 先探测存在性再解码：缺失路径不进 LoadPng，避免每次会话刷无害报错。
+		if(ResolveEntitiesImagePath(Storage(), m_aEntitiesPath, EntitiesModType, aPath, sizeof(aPath)))
 			Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
-
-		// try as single ddnet replacement
-		if(ImgInfo.m_pData == nullptr && EntitiesModType == MAP_IMAGE_MOD_TYPE_DDNET)
-		{
-			str_format(aPath, sizeof(aPath), "%s.png", m_aEntitiesPath);
-			if(Storage()->FileExists(aPath, IStorage::TYPE_ALL))
-				Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
-		}
-
-		// try default
-		if(ImgInfo.m_pData == nullptr)
-		{
-			str_format(aPath, sizeof(aPath), "editor/entities_clear/%s.png", gs_apModEntitiesNames[EntitiesModType]);
-			if(Storage()->FileExists(aPath, IStorage::TYPE_ALL))
-				Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
-		}
 
 		// 内置 blank 在关闭回退时按默认实体图尺寸造透明层；开启时保留默认图。
 		if(m_EntitiesIsBlank && ImgInfo.m_pData != nullptr)
@@ -663,7 +869,338 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 			QmPerfLogStage("perf/connect", "entity_texture_prepare", Timer.ElapsedMs(), true, Client());
 	}
 
-	return m_aaEntitiesTextures[(EntitiesModType * 2) + (int)EntitiesAreMasked][EntityLayerType];
+	return m_aaEntitiesTextures[EntityTextureSlot][EntityLayerType];
+}
+
+void CMapImages::PrewarmEntities()
+{
+	if(Engine() == nullptr || Storage() == nullptr)
+		return;
+	const bool Masked = !GameClient()->m_GameInfo.m_DontMaskEntities;
+	const int ModType = GetEntitiesModType(GameClient()->m_GameInfo);
+	if(m_QmEntityPrewarmState == EQmEntityPrewarmState::DECODING ||
+		m_QmEntityPrewarmState == EQmEntityPrewarmState::BUILDING ||
+		m_QmEntityPrewarmState == EQmEntityPrewarmState::COMPLETE)
+	{
+		if(m_QmEntityPrewarmModType == ModType && m_QmEntityPrewarmMasked == Masked)
+			return;
+	}
+	// 启动阶段可能先按默认 GameInfo 预热；后续拿到真实服务器信息时必须允许
+	// 切换目标，不能因为“已有预热”把新的 entities 槽位挡掉。
+	PrewarmEntitiesForGameInfo(GameClient()->m_GameInfo);
+}
+
+void CMapImages::PrewarmEntitiesForGameInfo(const CGameInfo &GameInfo)
+{
+	if(Engine() == nullptr || Storage() == nullptr)
+		return;
+
+	const bool Masked = !GameInfo.m_DontMaskEntities;
+	const int ModType = GetEntitiesModType(GameInfo);
+	const int Slot = (ModType * 2) + (int)Masked;
+	const int TotalSteps = MAP_IMAGE_ENTITY_LAYER_TYPE_COUNT + (Graphics()->HasTextureArraysSupport() ? 1 : 0);
+	const bool SameTarget = m_QmEntityPrewarmModType == ModType && m_QmEntityPrewarmMasked == Masked;
+	if(SameTarget && (m_QmEntityPrewarmState == EQmEntityPrewarmState::DECODING || m_QmEntityPrewarmState == EQmEntityPrewarmState::BUILDING))
+		return;
+	if(SameTarget && m_QmEntityPrewarmState == EQmEntityPrewarmState::COMPLETE)
+		return;
+
+	// 连接信息确认后目标 mod 可能变化。已完成的其他槽位纹理保持跨地图可用，
+	// 但未完成的半成品必须卸载，避免切换目标后留下无主纹理。
+	if(m_QmEntityPrewarmState == EQmEntityPrewarmState::DECODING || m_QmEntityPrewarmState == EQmEntityPrewarmState::BUILDING)
+		CancelEntitiesPrewarm(true);
+	else if(m_QmEntityPrewarmState != EQmEntityPrewarmState::NONE)
+		CancelEntitiesPrewarm(false);
+
+	if(m_aEntitiesIsLoaded[Slot])
+	{
+		m_QmEntityPrewarmState = EQmEntityPrewarmState::COMPLETE;
+		LogEntityTexturePrewarm(Client(), "reuse", Slot, ModType, Masked, m_EntitiesIsBlank,
+			0, 0, TotalSteps, nullptr, 0.0, 0.0, 0.0, m_aEntitiesPath);
+		return;
+	}
+
+	char aPath[IO_MAX_PATH_LENGTH];
+	if(!ResolveEntitiesImagePath(Storage(), m_aEntitiesPath, ModType, aPath, sizeof(aPath)))
+	{
+		m_QmEntityPrewarmState = EQmEntityPrewarmState::FAILED;
+		LogEntityTexturePrewarm(Client(), "missing", Slot, ModType, Masked, m_EntitiesIsBlank,
+			0, 0, TotalSteps, nullptr, 0.0, 0.0, 0.0, m_aEntitiesPath, "no_image");
+		return;
+	}
+
+	try
+	{
+		const int64_t StartNs = time_get_nanoseconds().count();
+		auto pJob = std::make_shared<CMapImageDecodeJob>(Storage(), aPath, false);
+		if(!Engine()->TryAddJob(pJob))
+		{
+			m_QmEntityPrewarmState = EQmEntityPrewarmState::FAILED;
+			LogEntityTexturePrewarm(Client(), "queue_failed", Slot, ModType, Masked, m_EntitiesIsBlank,
+				0, 0, TotalSteps, nullptr, 0.0, 0.0, 0.0, aPath, "job_rejected");
+			return;
+		}
+		m_pQmEntityPrewarmDecode = std::move(pJob);
+		m_pQmEntityPrewarmSource.reset();
+		m_pQmEntityPrewarmBuildJob.reset();
+		str_copy(m_aQmEntityPrewarmPath, aPath, sizeof(m_aQmEntityPrewarmPath));
+		m_QmEntityPrewarmModType = ModType;
+		m_QmEntityPrewarmMasked = Masked;
+		m_QmEntityPrewarmNextStep = 0;
+		m_QmEntityPrewarmTextureLoadFlag = 0;
+		m_QmEntityPrewarmCopyWidth = 0;
+		m_QmEntityPrewarmCopyHeight = 0;
+		m_QmEntityPrewarmStartNs = StartNs;
+		m_QmEntityPrewarmDecodeDoneNs = 0;
+		m_QmEntityPrewarmNextStepNs = 0;
+		m_QmEntityPrewarmState = EQmEntityPrewarmState::DECODING;
+		LogEntityTexturePrewarm(Client(), "start", Slot, ModType, Masked, m_EntitiesIsBlank,
+			0, 0, TotalSteps, nullptr, 0.0, 0.0, 0.0, aPath);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("mapimages", "Failed to start entity texture prewarm: %s", Error.what());
+		m_QmEntityPrewarmState = EQmEntityPrewarmState::FAILED;
+		LogEntityTexturePrewarm(Client(), "start_failed", Slot, ModType, Masked, m_EntitiesIsBlank,
+			0, 0, TotalSteps, nullptr, 0.0, 0.0, 0.0, aPath, "exception");
+	}
+}
+
+void CMapImages::CancelEntitiesPrewarm(bool UnloadPartialTextures)
+{
+	if(m_pQmEntityPrewarmDecode != nullptr)
+	{
+		m_pQmEntityPrewarmDecode->Abort();
+		m_pQmEntityPrewarmDecode.reset();
+	}
+	if(m_pQmEntityPrewarmBuildJob != nullptr)
+	{
+		m_pQmEntityPrewarmBuildJob->Abort();
+		m_pQmEntityPrewarmBuildJob.reset();
+	}
+	if(UnloadPartialTextures && m_QmEntityPrewarmState != EQmEntityPrewarmState::COMPLETE &&
+		m_QmEntityPrewarmModType >= 0 && m_QmEntityPrewarmModType < MAP_IMAGE_MOD_TYPE_COUNT)
+	{
+		const int Slot = (m_QmEntityPrewarmModType * 2) + (int)m_QmEntityPrewarmMasked;
+		for(int LayerType = 0; LayerType < MAP_IMAGE_ENTITY_LAYER_TYPE_COUNT; ++LayerType)
+		{
+			if(m_aaEntitiesTextures[Slot][LayerType].IsValid())
+			{
+				Graphics()->UnloadTexture(&m_aaEntitiesTextures[Slot][LayerType]);
+				m_aaEntitiesTextures[Slot][LayerType].Invalidate();
+			}
+		}
+	}
+	m_pQmEntityPrewarmSource.reset();
+	m_pQmEntityPrewarmBuildJob.reset();
+	m_aQmEntityPrewarmPath[0] = '\0';
+	m_QmEntityPrewarmModType = -1;
+	m_QmEntityPrewarmMasked = false;
+	m_QmEntityPrewarmNextStep = 0;
+	m_QmEntityPrewarmTextureLoadFlag = 0;
+	m_QmEntityPrewarmCopyWidth = 0;
+	m_QmEntityPrewarmCopyHeight = 0;
+	m_QmEntityPrewarmStartNs = 0;
+	m_QmEntityPrewarmDecodeDoneNs = 0;
+	m_QmEntityPrewarmNextStepNs = 0;
+	m_QmEntityPrewarmState = EQmEntityPrewarmState::NONE;
+}
+
+bool CMapImages::FinishEntitiesPrewarmDecode()
+{
+	if(m_QmEntityPrewarmState != EQmEntityPrewarmState::DECODING)
+		return m_QmEntityPrewarmState == EQmEntityPrewarmState::BUILDING || m_QmEntityPrewarmState == EQmEntityPrewarmState::COMPLETE;
+	if(m_pQmEntityPrewarmDecode == nullptr || !m_pQmEntityPrewarmDecode->Done())
+		return false;
+	if(m_pQmEntityPrewarmDecode->State() == IJob::STATE_DONE && m_pQmEntityPrewarmDecode->m_Image.m_pData != nullptr)
+	{
+		m_pQmEntityPrewarmSource = MakeEntityPrewarmImage(std::move(m_pQmEntityPrewarmDecode->m_Image));
+		m_pQmEntityPrewarmDecode.reset();
+		m_QmEntityPrewarmDecodeDoneNs = time_get_nanoseconds().count();
+		if(m_EntitiesIsBlank)
+			ClearImageToTransparent(*m_pQmEntityPrewarmSource);
+		m_QmEntityPrewarmState = EQmEntityPrewarmState::BUILDING;
+		const int Slot = (m_QmEntityPrewarmModType * 2) + (int)m_QmEntityPrewarmMasked;
+		const int TotalSteps = MAP_IMAGE_ENTITY_LAYER_TYPE_COUNT + (Graphics()->HasTextureArraysSupport() ? 1 : 0);
+		const double DecodeMs = m_QmEntityPrewarmStartNs > 0 ? (double)(m_QmEntityPrewarmDecodeDoneNs - m_QmEntityPrewarmStartNs) / 1000000.0 : 0.0;
+		LogEntityTexturePrewarm(Client(), "decoded", Slot, m_QmEntityPrewarmModType, m_QmEntityPrewarmMasked, m_EntitiesIsBlank,
+			-1, 0, TotalSteps, m_pQmEntityPrewarmSource.get(), DecodeMs, 0.0, DecodeMs, m_aQmEntityPrewarmPath);
+		return true;
+	}
+	m_pQmEntityPrewarmDecode.reset();
+	const int Slot = (m_QmEntityPrewarmModType * 2) + (int)m_QmEntityPrewarmMasked;
+	const int TotalSteps = MAP_IMAGE_ENTITY_LAYER_TYPE_COUNT + (Graphics()->HasTextureArraysSupport() ? 1 : 0);
+	const int64_t NowNs = time_get_nanoseconds().count();
+	const double TotalMs = m_QmEntityPrewarmStartNs > 0 ? (double)(NowNs - m_QmEntityPrewarmStartNs) / 1000000.0 : 0.0;
+	LogEntityTexturePrewarm(Client(), "decode_failed", Slot, m_QmEntityPrewarmModType, m_QmEntityPrewarmMasked, m_EntitiesIsBlank,
+		-1, 0, TotalSteps, nullptr, TotalMs, 0.0, TotalMs, m_aQmEntityPrewarmPath);
+	CancelEntitiesPrewarm(true);
+	m_QmEntityPrewarmState = EQmEntityPrewarmState::FAILED;
+	return false;
+}
+
+bool CMapImages::AdvanceEntitiesPrewarmStep()
+{
+	if(m_QmEntityPrewarmState == EQmEntityPrewarmState::DECODING && !FinishEntitiesPrewarmDecode())
+		return false;
+	if(m_QmEntityPrewarmState != EQmEntityPrewarmState::BUILDING)
+		return m_QmEntityPrewarmState == EQmEntityPrewarmState::COMPLETE;
+
+	const int64_t StepStartNs = time_get_nanoseconds().count();
+	try
+	{
+		if(m_pQmEntityPrewarmSource == nullptr)
+			throw std::runtime_error("missing decoded entity image");
+		const CImageInfo &Source = *m_pQmEntityPrewarmSource;
+		const int Slot = (m_QmEntityPrewarmModType * 2) + (int)m_QmEntityPrewarmMasked;
+		const int TotalSteps = MAP_IMAGE_ENTITY_LAYER_TYPE_COUNT + (Graphics()->HasTextureArraysSupport() ? 1 : 0);
+		const double DecodeMs = m_QmEntityPrewarmStartNs > 0 && m_QmEntityPrewarmDecodeDoneNs > 0 ?
+						(double)(m_QmEntityPrewarmDecodeDoneNs - m_QmEntityPrewarmStartNs) / 1000000.0 :
+						0.0;
+
+		if(m_QmEntityPrewarmNextStep == 0 && m_QmEntityPrewarmCopyWidth == 0)
+		{
+			if(Source.m_pData == nullptr || Source.m_Width == 0 || Source.m_Height == 0 ||
+				(Source.m_Format != CImageInfo::FORMAT_RGB && Source.m_Format != CImageInfo::FORMAT_RGBA))
+				throw std::runtime_error("invalid decoded entity image");
+			m_QmEntityPrewarmCopyWidth = Source.m_Width / 16;
+			m_QmEntityPrewarmCopyHeight = Source.m_Height / 16;
+			if(m_QmEntityPrewarmCopyWidth == 0 || m_QmEntityPrewarmCopyHeight == 0)
+				throw std::runtime_error("entity image is smaller than its tile grid");
+
+			const size_t TuneTileX = static_cast<size_t>(TILE_TUNE % 16) * m_QmEntityPrewarmCopyWidth;
+			const size_t TuneTileY = static_cast<size_t>(TILE_TUNE / 16) * m_QmEntityPrewarmCopyHeight;
+			ConvertToGrayscaleRect(*m_pQmEntityPrewarmSource, TuneTileX, TuneTileY, m_QmEntityPrewarmCopyWidth, m_QmEntityPrewarmCopyHeight);
+			m_QmEntityPrewarmTextureLoadFlag = Graphics()->HasTextureArraysSupport() ?
+								   (Graphics()->TextureLoadFlags() | IGraphics::TEXLOAD_NO_2D_TEXTURE) :
+								   0;
+		}
+
+		if(m_pQmEntityPrewarmBuildJob != nullptr)
+		{
+			if(!m_pQmEntityPrewarmBuildJob->Finished())
+			{
+				const auto JobState = m_pQmEntityPrewarmBuildJob->State();
+				if(JobState == IJob::STATE_ABORTED || JobState == IJob::STATE_FAILED)
+				{
+					m_pQmEntityPrewarmBuildJob.reset();
+					throw std::runtime_error("entity texture build job was canceled or failed");
+				}
+				return false;
+			}
+
+			if(m_pQmEntityPrewarmBuildJob->State() != IJob::STATE_DONE || !m_pQmEntityPrewarmBuildJob->Succeeded())
+			{
+				m_pQmEntityPrewarmBuildJob.reset();
+				throw std::runtime_error("entity texture build job failed");
+			}
+
+			CImageInfo BuildImage = m_pQmEntityPrewarmBuildJob->TakeImage();
+			m_pQmEntityPrewarmBuildJob.reset();
+			if(m_QmEntityPrewarmNextStep < MAP_IMAGE_ENTITY_LAYER_TYPE_COUNT)
+			{
+				const int LayerType = m_QmEntityPrewarmNextStep;
+				m_aaEntitiesTextures[Slot][LayerType] = Graphics()->LoadTextureRawMove(
+					BuildImage, m_QmEntityPrewarmTextureLoadFlag, m_aQmEntityPrewarmPath);
+				++m_QmEntityPrewarmNextStep;
+				const int64_t NowNs = time_get_nanoseconds().count();
+				LogEntityTexturePrewarm(Client(), "layer", Slot, m_QmEntityPrewarmModType, m_QmEntityPrewarmMasked, m_EntitiesIsBlank,
+					LayerType, m_QmEntityPrewarmNextStep, TotalSteps, Source.m_pData != nullptr ? m_pQmEntityPrewarmSource.get() : nullptr, DecodeMs,
+					(double)(NowNs - StepStartNs) / 1000000.0,
+					m_QmEntityPrewarmStartNs > 0 ? (double)(NowNs - m_QmEntityPrewarmStartNs) / 1000000.0 : 0.0,
+					m_aQmEntityPrewarmPath);
+				return true;
+			}
+
+			m_TuneColorMapTexture = Graphics()->LoadTextureRawMove(BuildImage, m_QmEntityPrewarmTextureLoadFlag);
+			m_TuneColorsIsLoaded = true;
+			m_QmEntityPrewarmNextStep = TotalSteps;
+		}
+
+		if(m_QmEntityPrewarmNextStep < MAP_IMAGE_ENTITY_LAYER_TYPE_COUNT)
+		{
+			const int LayerType = m_QmEntityPrewarmNextStep;
+			auto pJob = std::make_shared<CQmEntityPrewarmBuildJob>(
+				m_pQmEntityPrewarmSource, m_QmEntityPrewarmModType, m_QmEntityPrewarmMasked,
+				LayerType, CQmEntityPrewarmBuildJob::EKind::LAYER);
+			if(!Engine()->TryAddJob(pJob))
+				throw std::runtime_error("entity texture build queue unavailable");
+			m_pQmEntityPrewarmBuildJob = std::move(pJob);
+			return false;
+		}
+
+		if(Graphics()->HasTextureArraysSupport() && !m_TuneColorsIsLoaded)
+		{
+			auto pJob = std::make_shared<CQmEntityPrewarmBuildJob>(
+				m_pQmEntityPrewarmSource, m_QmEntityPrewarmModType, m_QmEntityPrewarmMasked,
+				-1, CQmEntityPrewarmBuildJob::EKind::TUNE_COLOR);
+			if(!Engine()->TryAddJob(pJob))
+				throw std::runtime_error("tune color build queue unavailable");
+			m_pQmEntityPrewarmBuildJob = std::move(pJob);
+			return false;
+		}
+		if(!Graphics()->HasTextureArraysSupport())
+		{
+			m_TuneColorMapTexture = m_aaEntitiesTextures[Slot][MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH];
+			m_TuneColorsIsLoaded = true;
+		}
+
+		m_aEntitiesIsLoaded[Slot] = true;
+		m_QmEntityPrewarmState = EQmEntityPrewarmState::COMPLETE;
+		const int64_t NowNs = time_get_nanoseconds().count();
+		LogEntityTexturePrewarm(Client(), "complete", Slot, m_QmEntityPrewarmModType, m_QmEntityPrewarmMasked, m_EntitiesIsBlank,
+			-1, TotalSteps, TotalSteps, m_pQmEntityPrewarmSource.get(), DecodeMs,
+			(double)(NowNs - StepStartNs) / 1000000.0,
+			m_QmEntityPrewarmStartNs > 0 ? (double)(NowNs - m_QmEntityPrewarmStartNs) / 1000000.0 : 0.0,
+			m_aQmEntityPrewarmPath);
+		m_pQmEntityPrewarmSource.reset();
+		return true;
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("mapimages", "Failed to prewarm entity textures: %s", Error.what());
+		const int Slot = (m_QmEntityPrewarmModType * 2) + (int)m_QmEntityPrewarmMasked;
+		const int TotalSteps = MAP_IMAGE_ENTITY_LAYER_TYPE_COUNT + (Graphics()->HasTextureArraysSupport() ? 1 : 0);
+		const int64_t NowNs = time_get_nanoseconds().count();
+		LogEntityTexturePrewarm(Client(), "failed", Slot, m_QmEntityPrewarmModType, m_QmEntityPrewarmMasked, m_EntitiesIsBlank,
+			-1, m_QmEntityPrewarmNextStep, TotalSteps, m_pQmEntityPrewarmSource.get(), 0.0,
+			(double)(NowNs - StepStartNs) / 1000000.0,
+			m_QmEntityPrewarmStartNs > 0 ? (double)(NowNs - m_QmEntityPrewarmStartNs) / 1000000.0 : 0.0,
+			m_aQmEntityPrewarmPath, "exception");
+		CancelEntitiesPrewarm(true);
+		m_QmEntityPrewarmState = EQmEntityPrewarmState::FAILED;
+		return false;
+	}
+}
+
+void CMapImages::AdvanceEntitiesPrewarm()
+{
+	if(m_QmEntityPrewarmState == EQmEntityPrewarmState::NONE ||
+		m_QmEntityPrewarmState == EQmEntityPrewarmState::COMPLETE ||
+		m_QmEntityPrewarmState == EQmEntityPrewarmState::FAILED)
+		return;
+	// 解码完成前只轮询，不占用上传预算；构建阶段按显示器刷新周期推进，
+	// 避免进服后的正常帧一帧连做多层纹理上传。
+	if(m_QmEntityPrewarmState == EQmEntityPrewarmState::DECODING)
+	{
+		(void)FinishEntitiesPrewarmDecode();
+		return;
+	}
+	const int64_t NowNs = time_get_nanoseconds().count();
+	if(NowNs < m_QmEntityPrewarmNextStepNs)
+		return;
+	int RefreshRate = Graphics() != nullptr ? Graphics()->ScreenRefreshRate() : 0;
+	if(!in_range(RefreshRate, 1, 1000))
+		RefreshRate = in_range(g_Config.m_GfxScreenRefreshRate, 1, 1000) ? g_Config.m_GfxScreenRefreshRate : 60;
+	(void)AdvanceEntitiesPrewarmStep();
+	m_QmEntityPrewarmNextStepNs = NowNs + 1000000000LL / RefreshRate;
+}
+
+bool CMapImages::EntitiesPrewarmFinished() const
+{
+	return m_QmEntityPrewarmState == EQmEntityPrewarmState::NONE ||
+	       m_QmEntityPrewarmState == EQmEntityPrewarmState::COMPLETE ||
+	       m_QmEntityPrewarmState == EQmEntityPrewarmState::FAILED;
 }
 
 IGraphics::CTextureHandle CMapImages::GetSpeedupArrow()
@@ -709,6 +1246,7 @@ IGraphics::CTextureHandle CMapImages::GetOverlayCenter()
 
 void CMapImages::ChangeEntitiesPath(const char *pPath)
 {
+	CancelEntitiesPrewarm();
 	const auto Selection = ResolveEntitiesAssetSelection(pPath, g_Config.m_QmBlankAssetFallback != 0);
 	str_copy(m_aEntitiesPath, Selection.m_Path.c_str());
 	m_EntitiesIsBlank = Selection.m_IsBlank;
@@ -732,6 +1270,7 @@ void CMapImages::ConchainClTextEntitiesSize(IConsole::IResult *pResult, void *pU
 
 void CMapImages::ReloadEntitiesTextures()
 {
+	CancelEntitiesPrewarm();
 	for(int ModType = 0; ModType < MAP_IMAGE_MOD_TYPE_COUNT * 2; ++ModType)
 	{
 		if(m_aEntitiesIsLoaded[ModType])

@@ -957,7 +957,8 @@ void CTouchControls::OnRender()
 	RenderButtonsGame();
 }
 
-bool CTouchControls::LoadConfigurationFromFile(int StorageType) try
+bool CTouchControls::LoadConfigurationFromFile(int StorageType)
+try
 {
 	void *pFileData;
 	unsigned FileLength;
@@ -990,7 +991,8 @@ bool CTouchControls::SaveConfigurationToFile()
 	return Saved;
 }
 
-void CTouchControls::SaveConfigurationToClipboard() try
+void CTouchControls::SaveConfigurationToClipboard()
+try
 {
 	CJsonStringWriter Writer;
 	WriteConfiguration(&Writer);
@@ -1347,7 +1349,8 @@ vec2 CTouchControls::CalculateScreenSize() const
 	return vec2(ScreenWidth, ScreenHeight);
 }
 
-bool CTouchControls::ParseConfiguration(const void *pFileData, size_t FileLength) try
+bool CTouchControls::ParseConfiguration(const void *pFileData, size_t FileLength)
+try
 {
 	json_settings JsonSettings{};
 	char aError[256];

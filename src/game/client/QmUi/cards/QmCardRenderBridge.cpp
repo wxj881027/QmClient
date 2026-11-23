@@ -306,3 +306,8 @@ void qm_card_catalog::QmCardRenderHook::RenderQmSelfKillProtectionContent(CMenus
 {
 	pMenus->RenderQmSelfKillProtectionContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
 }
+
+void qm_card_catalog::QmCardRenderHook::RenderQmFastPracticeContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	pMenus->RenderQmFastPracticeContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
+}

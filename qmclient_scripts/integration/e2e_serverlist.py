@@ -281,7 +281,7 @@ def scenario_restart_loads_cache_when_network_fails(s: Scenario):
 	s.start()
 	s.list("Persisted")
 	s.quit()
-	cache = s.artifacts / "cache" / "qm-serverlist.json"
+	cache = s.artifacts / "qmclient" / "cache" / "network" / "serverlist.json"
 	assert cache.is_file() and b"Persisted" in cache.read_bytes(), "cache was not persisted on shutdown"
 	s.http.set("/list", 503, b"unavailable")
 	s.start()

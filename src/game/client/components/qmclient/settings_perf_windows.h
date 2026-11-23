@@ -2,6 +2,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_SETTINGS_PERF_WINDOWS_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SETTINGS_PERF_WINDOWS_H
 
+#include <base/math.h>
 #include <base/system.h>
 
 #include <algorithm>

@@ -1,10 +1,13 @@
 #ifndef GAME_CLIENT_QMUI_SETTINGSCARDWIDTH_H
 #define GAME_CLIENT_QMUI_SETTINGSCARDWIDTH_H
 
+#include "QmAnimResolve.h"
 #include "SettingsCardGeometry.h"
 
 #include <algorithm>
 #include <array>
+#include <cmath>
+#include <cstdint>
 #include <vector>
 
 inline int ResolveSettingsCardLayoutColumn(int Column, bool FullWidth, bool DefaultRightColumn)
@@ -23,6 +26,72 @@ inline CUIRect SettingsCardWidthButtonRect(const SSettingsCardFrame &Frame)
 		Rect.h = 0.0f;
 	return Rect;
 }
+
+// 卡片宽度的横向过渡：只补间槽位的水平位置与宽度，纵向仍由列排布和
+// 内容高度过渡负责。目标变化时从当前动画值续接，切换方向不会跳回起点。
+class CSettingsCardWidthMotion
+{
+public:
+	CUIRect Update(CUiV2AnimationRuntime *pAnim, uint64_t NodeKey, const CUIRect &Target, float DurationSec, bool Snap)
+	{
+		const bool InitializedThisFrame = !m_Initialized;
+		const bool TargetChanged = m_Initialized &&
+					   (std::abs(Target.x - m_LastTargetX) > 0.01f || std::abs(Target.w - m_LastTargetW) > 0.01f);
+		CUIRect Out = Target;
+		if(pAnim == nullptr)
+		{
+			m_Initialized = true;
+			m_WasActive = false;
+		}
+		else if(InitializedThisFrame || !m_HasRuntime)
+		{
+			pAnim->SetValue(NodeKey, EUiAnimProperty::POS_X, Target.x);
+			pAnim->SetValue(NodeKey, EUiAnimProperty::WIDTH, Target.w);
+			m_Initialized = true;
+			m_WasActive = false;
+		}
+		else if(Snap || DurationSec <= 0.0f)
+		{
+			if(TargetChanged || m_WasActive)
+			{
+				pAnim->SetValue(NodeKey, EUiAnimProperty::POS_X, Target.x);
+				pAnim->SetValue(NodeKey, EUiAnimProperty::WIDTH, Target.w);
+			}
+			m_WasActive = false;
+		}
+		else if(TargetChanged || m_WasActive)
+		{
+			Out.x = ResolveUiAnimValue(*pAnim, NodeKey, EUiAnimProperty::POS_X, Target.x, DurationSec, EEasing::EASE_OUT_QUART);
+			Out.w = ResolveUiAnimValue(*pAnim, NodeKey, EUiAnimProperty::WIDTH, Target.w, DurationSec, EEasing::EASE_OUT_QUART);
+			m_WasActive = pAnim->HasActiveAnimation(NodeKey, EUiAnimProperty::POS_X) ||
+				      pAnim->HasActiveAnimation(NodeKey, EUiAnimProperty::WIDTH);
+		}
+		else
+		{
+			m_WasActive = false;
+		}
+		m_LastTargetX = Target.x;
+		m_LastTargetW = Target.w;
+		m_HasRuntime = pAnim != nullptr;
+		return Out;
+	}
+
+	void Invalidate()
+	{
+		m_Initialized = false;
+		m_WasActive = false;
+		m_HasRuntime = false;
+	}
+
+	bool IsActive() const { return m_WasActive; }
+
+private:
+	float m_LastTargetX = 0.0f;
+	float m_LastTargetW = 0.0f;
+	bool m_Initialized = false;
+	bool m_WasActive = false;
+	bool m_HasRuntime = false;
+};
 
 struct SSettingsCardWidthPlacement
 {

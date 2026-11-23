@@ -5,12 +5,17 @@
 
 #include <base/system.h>
 
+#include <engine/shared/qm_storage_layout.h>
+
 #include <game/localization.h>
+
+#include <utility>
 
 void SWikiEditorState::Load(const char *pId, const SWikiDocument &Fallback, const bool IsCard)
 {
 	m_Fallback = Fallback;
 	m_IsCard = IsCard;
+	m_ReadOnly = false;
 	str_copy(m_aId, pId != nullptr ? pId : "", sizeof(m_aId));
 	// 换文档时丢掉上一份草稿，否则 A 卡的未保存文字会出现在 B 卡的编辑框里。
 	m_Editing = false;
@@ -21,9 +26,27 @@ void SWikiEditorState::Load(const char *pId, const SWikiDocument &Fallback, cons
 	Reload();
 }
 
+void SWikiEditorState::LoadReadOnly(std::string Markdown)
+{
+	*this = {};
+	m_ReadOnly = true;
+	m_Content.m_HasShippedFile = !Markdown.empty();
+	m_Content.m_Markdown = std::move(Markdown);
+	if(m_Content.m_Markdown.empty())
+		SetStatus(Localize("Cannot read the wiki file"), true);
+	ParseContent();
+}
+
 void SWikiEditorState::Reload()
 {
+	if(m_ReadOnly)
+		return;
 	m_Content = m_IsCard ? qm_wiki_store::ResolveCard(m_aId, m_Fallback) : qm_wiki_store::ResolveDocument(m_aId, m_Fallback);
+	ParseContent();
+}
+
+void SWikiEditorState::ParseContent()
+{
 	m_Markdown.Parse(m_Content.m_Markdown.c_str());
 	m_vTocBlocks.clear();
 	const std::vector<SWikiBlock> &vBlocks = m_Markdown.Blocks();
@@ -38,6 +61,8 @@ void SWikiEditorState::Reload()
 
 bool SWikiEditorState::BeginEditing(const size_t MaxDraftBytes)
 {
+	if(m_ReadOnly)
+		return false;
 	m_aStatus[0] = '\0';
 	m_StatusIsError = false;
 	// 上次退出编辑时有未保存草稿就接着改；草稿本来就来自编辑框，一定放得下。
@@ -84,6 +109,8 @@ void SWikiEditorState::SetDraft(const std::string &Text)
 
 bool SWikiEditorState::Save()
 {
+	if(m_ReadOnly)
+		return false;
 	std::string Error;
 	if(!qm_wiki_store::SaveOverride(m_Content.m_RelativePath.c_str(), m_Draft, &Error))
 	{
@@ -96,13 +123,15 @@ bool SWikiEditorState::Save()
 	m_Draft = m_Content.m_Markdown;
 	m_ResetEditScroll = false;
 	char aStatus[256];
-	str_format(aStatus, sizeof(aStatus), "%s: wiki/%s/%s.md", Localize("Saved"), qm_wiki_store::LanguageDir(), m_Content.m_RelativePath.c_str());
+	str_format(aStatus, sizeof(aStatus), "%s: %s/%s/%s.md", Localize("Saved"), qm_storage::CONTENT_WIKI_DIR, qm_wiki_store::LanguageDir(), m_Content.m_RelativePath.c_str());
 	SetStatus(aStatus, false);
 	return true;
 }
 
 bool SWikiEditorState::ResetToBuiltIn()
 {
+	if(m_ReadOnly)
+		return false;
 	if(!qm_wiki_store::DeleteOverride(m_Content.m_RelativePath.c_str()))
 	{
 		SetStatus(Localize("Cannot remove the wiki file"), true);

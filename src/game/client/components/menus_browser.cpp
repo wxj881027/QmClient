@@ -26,13 +26,13 @@
 #include <game/client/QmUi/QmNeonRainbow.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
-#include <game/client/QmUi/UiTag.h>
 #include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiMotion.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>
+#include <game/client/QmUi/UiTag.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/background.h>
@@ -253,21 +253,27 @@ static const char *FavoriteMapCategoryDisplayName(const char *pType)
 	return Localize("Unknown");
 }
 
-// Axiom 地图同时显示原始分类与模式星级。
-static void FormatMapDifficultyText(const CQmMapDifficultyCatalog::SEntry *pDifficulty, bool ShowCategory, char *pOut, size_t OutSize)
+// Axiom 公告的类别是玩家可见的原文，直接显示，避免「普通」被归并成「简单」。
+static const char *MapDifficultyCategoryText(const CServerInfo &Server, const CQmMapDifficultyCatalog::SEntry &Entry)
+{
+	if(str_comp_nocase(Server.m_aCommunityId, "axiom") == 0)
+		return Entry.m_Category.c_str();
+	const char *pKey = FavoriteMapCategoryKeyFromText(Entry.m_Category.c_str());
+	if(pKey != nullptr)
+		return FavoriteMapCategoryDisplayName(pKey);
+	return Entry.m_Category.c_str();
+}
+
+// 独立难度列显示「类别 + 星级」（如「简单 ★★☆☆☆」）；
+// 无目录条目返回空串，由调用方显示占位符。
+static void FormatMapDifficultyText(const CServerInfo &Server, const CQmMapDifficultyCatalog::SEntry *pDifficulty, char *pOut, size_t OutSize)
 {
 	if(pOut == nullptr || OutSize == 0)
 		return;
 	pOut[0] = '\0';
 	if(pDifficulty == nullptr)
 		return;
-	const char *pStars = pDifficulty->StarLabel();
-	if(pStars[0] == '\0')
-		return;
-	if(ShowCategory)
-		str_format(pOut, OutSize, "%s · %s", pStars, pDifficulty->m_Category.c_str());
-	else
-		str_copy(pOut, pStars, OutSize);
+	pDifficulty->CellLabel(MapDifficultyCategoryText(Server, *pDifficulty), pOut, OutSize);
 }
 
 // 浏览器名称列的区段短名：解析器输出「类别 - 区段」（如「简单 - CHN5 上海」），
@@ -585,33 +591,6 @@ static ColorRGBA PlayerBackgroundColor(bool Friend, bool Clan, bool Afk, bool In
 	return (Afk ? COLORS_AFK[i] : COLORS[i]).WithAlpha(0.3f + (Inside ? 0.15f : 0.0f) + (InSelectedServer ? 0.12f : 0.0f));
 }
 
-template<size_t N>
-static void FormatServerbrowserPing(char (&aBuffer)[N], const CServerInfo *pInfo)
-{
-	if(!pInfo->m_LatencyIsEstimated)
-	{
-		str_format(aBuffer, sizeof(aBuffer), "%d", pInfo->m_Latency);
-		return;
-	}
-	static const char *const LOCATION_NAMES[CServerInfo::NUM_LOCS] = {
-		"", // LOC_UNKNOWN
-		Localizable("AFR"), // LOC_AFRICA
-		Localizable("ASI"), // LOC_ASIA
-		Localizable("AUS"), // LOC_AUSTRALIA
-		Localizable("EUR"), // LOC_EUROPE
-		Localizable("NA"), // LOC_NORTH_AMERICA
-		Localizable("SA"), // LOC_SOUTH_AMERICA
-		Localizable("CHN"), // LOC_CHINA
-	};
-	if(pInfo->m_Location < 0 || pInfo->m_Location >= CServerInfo::NUM_LOCS)
-	{
-		log_warn("serverbrowser", "Invalid estimated ping location %d", pInfo->m_Location);
-		str_copy(aBuffer, Localize(LOCATION_NAMES[CServerInfo::LOC_UNKNOWN]));
-		return;
-	}
-	str_copy(aBuffer, Localize(LOCATION_NAMES[pInfo->m_Location]));
-}
-
 static ColorRGBA GetPingTextColor(int Latency)
 {
 	return color_cast<ColorRGBA>(ColorHSLA((300.0f - std::clamp(Latency, 0, 300)) / 1000.0f, 1.0f, 0.5f));
@@ -630,8 +609,8 @@ static ColorRGBA GetServerListPingColor(const CServerInfo *pInfo, int OwnLocatio
 void CMenus::OpenMapPreviewPopup(const CServerInfo *pItem)
 {
 	const auto *pDifficulty = str_comp_nocase(pItem->m_aCommunityId, "axiom") == 0 ?
-					 m_MapDifficultyCatalog.FindForServer(*pItem) :
-					 m_MapDifficultyCatalog.Find(pItem->m_aMap);
+					  m_MapDifficultyCatalog.FindForServer(*pItem) :
+					  m_MapDifficultyCatalog.Find(pItem->m_aMap);
 	const char *pStars = pDifficulty != nullptr ? pDifficulty->StarLabel() : "";
 	char aCaption[192];
 	if(pStars[0] != '\0')
@@ -653,7 +632,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	static int s_ReorderColIndex = -1;
 	static int s_ReorderInsertSlot = -1;
 	static float s_ReorderPressX = 0.0f;
-	static uint64_t s_LastHeaderFrame = 0;
+	static int64_t s_LastHeaderTime = 0;
 	static int s_LastHeaderRestartSeq = -1;
 	static bool s_WidthsChanged = false;
 	const bool HeaderInteractive = Ui()->Enabled() && !Ui()->RenderOnly() && !Ui()->PointerInputBlocked();
@@ -739,20 +718,17 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		CUIRect m_Rect;
 	};
 
-	enum
-	{
-		COL_FLAG_LOCK = 0,
-		COL_FLAG_FAV,
-		COL_COMMUNITY,
-		COL_NAME,
-		COL_DIFFICULTY,
-		COL_GAMETYPE,
-		COL_MAP,
-		COL_FRIENDS,
-		COL_PLAYERS,
-		COL_QM_CLIENTS,
-		COL_PING,
-	};
+	constexpr int COL_FLAG_LOCK = qm_browser_column::FLAG_LOCK;
+	constexpr int COL_FLAG_FAV = qm_browser_column::FLAG_FAV;
+	constexpr int COL_COMMUNITY = qm_browser_column::COMMUNITY;
+	constexpr int COL_NAME = qm_browser_column::NAME;
+	constexpr int COL_DIFFICULTY = qm_browser_column::DIFFICULTY;
+	constexpr int COL_GAMETYPE = qm_browser_column::GAMETYPE;
+	constexpr int COL_MAP = qm_browser_column::MAP;
+	constexpr int COL_FRIENDS = qm_browser_column::FRIENDS;
+	constexpr int COL_PLAYERS = qm_browser_column::PLAYERS;
+	constexpr int COL_QM_CLIENTS = qm_browser_column::QM_CLIENTS;
+	constexpr int COL_PING = qm_browser_column::PING;
 
 	enum
 	{
@@ -893,40 +869,27 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	};
 
 	auto GetColMinWidth = [](int ColId) {
-		switch(ColId)
-		{
-		case COL_NAME: return 60.0f;
-		case COL_GAMETYPE: return 62.0f;
-		case COL_MAP: return 90.0f;
-		case COL_DIFFICULTY: return 44.0f;
-		case COL_FRIENDS: return 12.0f;
-		case COL_PLAYERS: return 34.0f;
-		case COL_QM_CLIENTS: return 20.0f;
-		case COL_PING: return 26.0f;
-		default: return 10.0f;
-		}
+		return qm_browser_column::MinWidth((qm_browser_column::EId)ColId);
 	};
-
 	auto GetColMaxWidth = [](int ColId) {
-		switch(ColId)
-		{
-		case COL_GAMETYPE: return 300.0f;
-		case COL_MAP: return 800.0f;
-		case COL_DIFFICULTY: return 300.0f;
-		case COL_FRIENDS: return 120.0f;
-		case COL_PLAYERS: return 240.0f;
-		case COL_QM_CLIENTS: return 120.0f;
-		case COL_PING: return 180.0f;
-		default: return 1000.0f;
-		}
+		return qm_browser_column::MaxWidth((qm_browser_column::EId)ColId);
 	};
 
 	// 输入归属或页面失效后取消旧按压；只释放自己的控件，不清掉弹窗的 active item。
 	const int ResizeColumn = s_HeaderGesture.ResizeColumn();
 	const void *pResizeId = ResizeColumn >= 0 ? &s_aCols[ResizeColumn].m_Width : nullptr;
-	if(!HeaderInteractive || s_LastHeaderRestartSeq != m_BrowserListEntryRestartSeq ||
-		Client()->PerfFrame() > s_LastHeaderFrame + 1 ||
-		(ResizeColumn >= 0 && (!Ui()->IsActiveItem(pResizeId) || s_ResizeViewportWidth != Headers.w)))
+	const int64_t HeaderNow = time_get();
+	// 渲染会被空闲节流和异步提交跳过，循环帧号差不能代表两次菜单渲染的间隔。
+	// 只有真正长时间没有回到本页（例如菜单关闭或主线程卡死）才放弃旧按压。
+	const bool HeaderStale = s_LastHeaderTime != 0 && HeaderNow - s_LastHeaderTime > 2 * time_freq();
+	SQmBrowserHeaderGestureState HeaderState;
+	HeaderState.m_Interactive = HeaderInteractive;
+	HeaderState.m_RestartChanged = s_LastHeaderRestartSeq != m_BrowserListEntryRestartSeq;
+	HeaderState.m_Stale = HeaderStale;
+	HeaderState.m_ResizeActive = ResizeColumn >= 0;
+	HeaderState.m_ActiveItemOwned = ResizeColumn >= 0 && Ui()->IsActiveItem(pResizeId);
+	HeaderState.m_ViewportChanged = ResizeColumn >= 0 && s_ResizeViewportWidth != Headers.w;
+	if(QmBrowserHeaderGestureShouldEnd(HeaderState))
 	{
 		if(pResizeId != nullptr && Ui()->IsActiveItem(pResizeId))
 			Ui()->SetActiveItem(nullptr);
@@ -934,7 +897,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		s_ReorderColIndex = -1;
 		s_ReorderInsertSlot = -1;
 	}
-	s_LastHeaderFrame = Client()->PerfFrame();
+	s_LastHeaderTime = HeaderNow;
 	s_LastHeaderRestartSeq = m_BrowserListEntryRestartSeq;
 
 	// 可用宽度包含所有列与间隙；窗口过窄时仅裁剪文字，字号保持不变。
@@ -965,7 +928,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	else
 		for(int i = 0; i < NumCols; ++i)
 			aSizing[i] = s_aLayoutById[s_aCols[i].m_Id];
-	if(HeaderInteractive && s_HeaderGesture.ResizeColumn() >= 0 && Ui()->CheckActiveItem(pResizeId))
+	// 松开帧只负责收尾，不再按当前鼠标位置补一次位移；否则菜单关闭后快速
+	// 重开、按压已失效但 active item 尚未清理时，会把指针跳变写进列宽。
+	if(HeaderInteractive && s_HeaderGesture.ResizeColumn() >= 0 && Ui()->CheckActiveItem(pResizeId) && Ui()->MouseButton(0))
 	{
 		aSizing = QmBrowserResizeColumns(s_aResizeStart, s_HeaderGesture.ResizeColumn(), Ui()->MouseX() - s_ResizePressX);
 		// 所有受影响的列一起保存；取整只影响存档，当前拖动继续使用按下时的浮点快照。
@@ -1130,7 +1095,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		const bool BlockHeaderButton = s_HeaderGesture.ResizeColumn() >= 0 || (HoveredHandle >= 0 && s_HeaderGesture.ReorderColumn() < 0);
 		if(BlockHeaderButton)
 			Ui()->BeginBackgroundRender(true);
-		const bool HeaderClicked = DoButton_GridHeader(&Col.m_Id, pCaption, Checked, &Col.m_Rect, TEXTALIGN_ML, QmBrowserTableLabelProperties(Col.m_Rect.w));
+		const bool HeaderClicked = DoButton_GridHeader(&Col.m_Id, pCaption, Checked, &Col.m_Rect, g_Config.m_BrSortOrder != 0, TEXTALIGN_ML, QmBrowserTableLabelProperties(Col.m_Rect.w));
 		if(BlockHeaderButton)
 			Ui()->EndBackgroundRender(true);
 		if(HeaderClicked)
@@ -1264,25 +1229,78 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		if(!Ui()->RenderOnly())
 			m_MapDifficultyCatalog.RequestAxiomDifficulty(Server, *Http(), GameClient()->m_QmAxiomScores.OpenApiBudget(), g_Config.m_QmAxiomApiKey, Now);
 	};
-	std::vector<int> vVisibleServerIndices;
-	vVisibleServerIndices.reserve(ServerBrowser()->NumSortedServers());
-	for(int SortedIndex = 0; SortedIndex < ServerBrowser()->NumSortedServers(); ++SortedIndex)
+	static std::vector<int> s_vVisibleServerIndices;
+	static uint64_t s_VisibleSortedRevision = ~0ull;
+	static uint64_t s_VisibleCatalogRevision = ~0ull;
+	static std::set<std::string> s_VisibleFavoriteMaps;
+	static int s_VisibleSortedCount = -1;
+	static int s_VisibleStarMask = -1;
+	static int s_VisibleCategoryMask = -1;
+	static int s_VisibleFavoriteOnly = -1;
+	static int s_VisibleEmptyOnly = -1;
+	static int64_t s_VisibleRequestScanTime = 0;
+
+	const uint64_t VisibleRevision = ServerBrowser()->FriendListRevision();
+	const uint64_t CatalogRevision = m_MapDifficultyCatalog.Revision();
+	const bool FavoriteOnly = g_Config.m_QmMapBrowserFavoriteOnly != 0;
+	const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
+	const int VisibleSortedCount = ServerBrowser()->NumSortedServers();
+	const bool StaleRevision = s_VisibleSortedRevision != VisibleRevision;
+	const bool StaleCatalog = s_VisibleCatalogRevision != CatalogRevision;
+	// 收藏只在“只看收藏”打开时参与可见性；关闭时不比较集合，避免每帧遍历收藏表。
+	const bool StaleFavorites = FavoriteOnly && s_VisibleFavoriteMaps != FavoriteMaps;
+	const bool StaleCount = s_VisibleSortedCount != VisibleSortedCount;
+	const bool StaleStarMask = s_VisibleStarMask != g_Config.m_QmMapBrowserStarMask;
+	const bool StaleCategoryMask = s_VisibleCategoryMask != g_Config.m_QmMapBrowserCategoryMask;
+	const bool StaleFavoriteOnly = s_VisibleFavoriteOnly != g_Config.m_QmMapBrowserFavoriteOnly;
+	const bool StaleEmptyOnly = s_VisibleEmptyOnly != g_Config.m_QmMapBrowserEmptyOnly;
+	const bool RebuildVisible = StaleRevision || StaleCatalog || StaleFavorites || StaleCount || StaleStarMask ||
+				    StaleCategoryMask || StaleFavoriteOnly || StaleEmptyOnly;
+	// 失败请求的退避只在再次调用 RequestAxiomDifficulty 时推进；目录未变时仍按秒级
+	// 节奏补查，但不再顺带重建可见索引。
+	const bool RequestScan = RebuildVisible || (NeedDifficultyForList && Now - s_VisibleRequestScanTime >= time_freq());
+	if(RequestScan)
 	{
-		const CServerInfo *pServer = ServerBrowser()->SortedGet(SortedIndex);
-		if(pServer == nullptr)
-			continue;
-		const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pServer, MapCategoryHintFromServer(pServer));
-		const int Stars = pDifficulty != nullptr ? pDifficulty->m_Stars : -1;
-		const bool IsFavorite = GameClient()->m_TClient.IsFavoriteMap(pServer->m_aMap);
-		// 星级筛选会隐藏未知地图，需在过滤前补查，否则这些图永远无法进入可见行。
-		if(NeedDifficultyForList && !pDifficulty && (!g_Config.m_QmMapBrowserEmptyOnly || !pServer->m_NumFilteredPlayers) &&
-			(!g_Config.m_QmMapBrowserFavoriteOnly || IsFavorite))
-			RequestDifficulty(*pServer);
-		// 目录条目给出权威类别；没有目录收录时退回服务器名/社区类型里解析出的类别。
-		const char *pCategory = pDifficulty != nullptr ? pDifficulty->m_Category.c_str() : MapCategoryHintFromServer(pServer);
-		if(QmMapVotes::MatchesFilter(Stars, pCategory, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserCategoryMask, g_Config.m_QmMapBrowserFavoriteOnly != 0, IsFavorite))
-			vVisibleServerIndices.push_back(SortedIndex);
+		if(RebuildVisible)
+		{
+			s_vVisibleServerIndices.clear();
+			s_vVisibleServerIndices.reserve(VisibleSortedCount);
+		}
+		for(int SortedIndex = 0; SortedIndex < VisibleSortedCount; ++SortedIndex)
+		{
+			const CServerInfo *pServer = ServerBrowser()->SortedGet(SortedIndex);
+			if(pServer == nullptr)
+				continue;
+			const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pServer, MapCategoryHintFromServer(pServer));
+			const int Stars = pDifficulty != nullptr ? pDifficulty->m_Stars : -1;
+			// 收藏只参与“只看收藏”分支；关闭时跳过集合查找，避免逐服务器构造字符串。
+			const bool IsFavorite = FavoriteOnly && GameClient()->m_TClient.IsFavoriteMap(pServer->m_aMap);
+			// 星级筛选会隐藏未知地图，需在过滤前补查，否则这些图永远无法进入可见行。
+			if(NeedDifficultyForList && !pDifficulty && (!g_Config.m_QmMapBrowserEmptyOnly || !pServer->m_NumFilteredPlayers) &&
+				(!FavoriteOnly || IsFavorite))
+				RequestDifficulty(*pServer);
+			if(!RebuildVisible)
+				continue;
+			// 目录条目给出权威类别；没有目录收录时退回服务器名/社区类型里解析出的类别。
+			const char *pCategory = pDifficulty != nullptr ? pDifficulty->m_Category.c_str() : MapCategoryHintFromServer(pServer);
+			if(QmMapVotes::MatchesFilter(Stars, pCategory, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserCategoryMask, FavoriteOnly, IsFavorite))
+				s_vVisibleServerIndices.push_back(SortedIndex);
+		}
+		if(RebuildVisible)
+		{
+			// 补查期间目录可能同步推进，重新读取修订号，避免把过期结果标成最新。
+			s_VisibleSortedRevision = ServerBrowser()->FriendListRevision();
+			s_VisibleCatalogRevision = m_MapDifficultyCatalog.Revision();
+			s_VisibleFavoriteMaps = FavoriteMaps;
+			s_VisibleSortedCount = ServerBrowser()->NumSortedServers();
+			s_VisibleStarMask = g_Config.m_QmMapBrowserStarMask;
+			s_VisibleCategoryMask = g_Config.m_QmMapBrowserCategoryMask;
+			s_VisibleFavoriteOnly = g_Config.m_QmMapBrowserFavoriteOnly;
+			s_VisibleEmptyOnly = g_Config.m_QmMapBrowserEmptyOnly;
+		}
+		s_VisibleRequestScanTime = Now;
 	}
+	const std::vector<int> &vVisibleServerIndices = s_vVisibleServerIndices;
 	const int NumServers = (int)vVisibleServerIndices.size();
 
 	// display important messages in the middle of the screen so no
@@ -1463,6 +1481,10 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			continue;
 		}
 
+		// QmClient: 可见行补测延迟。没有可用实测值的行在浏览时排队发一次 GETINFO，
+		// 几秒内把地区估算换成真实数值；结果写入 ping 缓存，之后打开直接显示。
+		// 同一行重复调用由 RequestServerPing 的队列/失败/同 IP 窗口判断去重。
+		ServerBrowser()->RequestServerPing(pItem->m_aAddresses[0]);
 		if(!NeedDifficultyForList)
 			RequestDifficulty(*pItem);
 
@@ -1484,11 +1506,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 		const float FontSize = SERVER_LIST_TEXT_SIZE;
 		char aTemp[64];
-		// 短名仅对国服生效（用户校准：默认开、只对国服）。命中判定：社区 id 含
-		// "chn"（覆盖 chn/ddnet-cn 等命名）**或名称含 "CHN"**——DDNet CHN 系
-		// 国服挂在 DDraceNetwork 社区（id="ddnet"）下，纯 id 门控会全部漏掉。
-		const bool ShortNameAllowed = (pCommunity != nullptr && str_find_nocase(pCommunity->Id(), "chn") != nullptr) ||
-					      str_find_nocase(pItem->m_aName, "CHN") != nullptr;
+		// 短名仅对国服生效（用户校准：默认开、只对国服）。国服判定与可见行
+		// 补测共用 ServerBrowser()->IsChineseServer，避免两处口径分叉。
+		const bool ShortNameAllowed = ServerBrowser()->IsChineseServer(*pItem);
 		char aDisplayServerName[sizeof(pItem->m_aName)];
 		char aParsedShortName[sizeof(pItem->m_aName)];
 		const char *pDisplayServerName = pItem->m_aName;
@@ -1651,9 +1671,10 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_DIFFICULTY)
 			{
+				// 独立难度列显示类别与星级；无目录条目显示占位。
 				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pItem, MapCategoryHintFromServer(pItem));
-				char aDifficulty[96];
-				FormatMapDifficultyText(pDifficulty, str_comp_nocase(pItem->m_aCommunityId, "axiom") == 0, aDifficulty, sizeof(aDifficulty));
+				char aDifficulty[128];
+				FormatMapDifficultyText(*pItem, pDifficulty, aDifficulty, sizeof(aDifficulty));
 				MeasureColumn(Id, aDifficulty[0] != '\0' ? aDifficulty : "--", FontSize);
 				if(aDifficulty[0] != '\0')
 				{
@@ -1812,8 +1833,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			else if(Id == COL_PING)
 			{
 				Button.VMargin(4.0f, &Button);
-				FormatServerbrowserPing(aTemp, pItem);
-				if(g_Config.m_UiColorizePing)
+				CServerInfo::FormatLatency(aTemp, pItem->m_Latency);
+				// 占位符 "--"（地区未知/测量超时）保持默认色，不按 999ms 涂红。
+				if(g_Config.m_UiColorizePing && CServerInfo::IsUsableLatency(pItem->m_Latency))
 				{
 					TextRender()->TextColor(GetServerListPingColor(pItem, ServerBrowser()->GetCurrentClientLocation()));
 				}
@@ -3086,10 +3108,10 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		GameTypeLabelProps.SetColor(pSelectedServer->m_GametypeColor);
 	DrawInfoRow(apLabels[1], pSelectedServer->m_aGameType, RowGap, GameTypeLabelProps);
 	SLabelProperties PingLabelProps;
-	if(g_Config.m_UiColorizePing)
+	if(g_Config.m_UiColorizePing && CServerInfo::IsUsableLatency(pSelectedServer->m_Latency))
 		PingLabelProps.SetColor(GetServerListPingColor(pSelectedServer, ServerBrowser()->GetCurrentClientLocation()));
 	char aPingLabel[8];
-	FormatServerbrowserPing(aPingLabel, pSelectedServer);
+	CServerInfo::FormatLatency(aPingLabel, pSelectedServer->m_Latency);
 	DrawInfoRow(apLabels[2], aPingLabel, RowGap, PingLabelProps);
 	View.HSplitTop(RowGap, nullptr, &View);
 
@@ -3865,7 +3887,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 					// server info text
 					char aLatency[16];
-					FormatServerbrowserPing(aLatency, Friend.ServerInfo());
+					CServerInfo::FormatLatency(aLatency, Friend.ServerInfo()->m_Latency);
 					if(aLatency[0] != '\0')
 						str_format(aBuf, sizeof(aBuf), "%s | %s | %s", Friend.ServerInfo()->m_aMap, Friend.ServerInfo()->m_aGameType, aLatency);
 					else

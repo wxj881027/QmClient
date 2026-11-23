@@ -1,8 +1,7 @@
 #include <game/client/components/qmclient/auto_reply.h>
 
-#include <test/support/prediction_allocation_failure.h>
-
 #include <gtest/gtest.h>
+#include <test/support/prediction_allocation_failure.h>
 
 TEST(QmAutoReplyAllocation, FailedRepeatCachePreparationLeavesReplyEligibleForRetry)
 {

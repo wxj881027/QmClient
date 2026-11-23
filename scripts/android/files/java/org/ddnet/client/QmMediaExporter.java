@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
@@ -200,11 +201,11 @@ public final class QmMediaExporter {
 	// 文件管理器和「下载」应用都能看到），旧版本退回公共 Downloads 直写。
 	// 返回最终文件名，失败抛 IOException。
 	// 崩溃报告是纯文本，用 text/plain 才能被文件管理器直接预览；其余保持二进制类型。
-	public static String copyToDownloads(Activity activity, File source) throws IOException {
+	public static String copyToDownloads(Context context, File source) throws IOException {
 		final String displayName = source.getName();
 		final String mime = displayName.toLowerCase(Locale.ROOT).endsWith(".txt") ? "text/plain" : "application/octet-stream";
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-			final ContentResolver resolver = activity.getContentResolver();
+			final ContentResolver resolver = context.getContentResolver();
 			copyDownload(source, new DownloadTarget() {
 				private Uri uri;
 
@@ -225,7 +226,7 @@ public final class QmMediaExporter {
 				public boolean publish() {
 					ContentValues values = new ContentValues();
 					values.put(MediaStore.MediaColumns.IS_PENDING, 0);
-					return resolver.update(uri, values, null, null) > 0;
+					return resolver.update(uri, values, null, null) == 1;
 				}
 
 				@Override

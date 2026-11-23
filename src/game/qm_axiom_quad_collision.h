@@ -44,7 +44,9 @@ public:
 	int TuneZoneAt(vec2 Pos) const;
 	bool TestBox(vec2 Pos, vec2 HalfSize) const;
 	bool Pushout(vec2 Pos, vec2 HalfSize, vec2 *pPush, vec2 *pNormal) const;
-	int IntersectLine(vec2 From, vec2 To, float *pFraction, vec2 *pNormal = nullptr) const;
+	// pIncomplete 非空时，报告索引查询是否因分配失败而未完成；为真时返回值
+	// 只覆盖常规瓦片，不能当成「没有四边形」。点的查询仍按降级处理。
+	int IntersectLine(vec2 From, vec2 To, float *pFraction, vec2 *pNormal = nullptr, bool *pIncomplete = nullptr) const;
 	bool FindHookAnchor(vec2 Pos, int *pQuadIndex, vec2 *pLocalPos) const;
 	bool HookAnchor(int QuadIndex, vec2 LocalPos, vec2 *pWorldPos) const;
 
@@ -90,7 +92,8 @@ private:
 	void EvalEnvelope(int Index, double Seconds, float *pValues, int Channels) const;
 	void UpdateQuad(int Index);
 	void UpdateQuadIndex(int Index);
-	void QueryBox(vec2 Min, vec2 Max, std::vector<int> &vIndices) const;
+	// 返回 false 表示索引因分配失败而不完整，vIndices 已清空。
+	bool QueryBox(vec2 Min, vec2 Max, std::vector<int> &vIndices) const;
 	const std::vector<int> &QueryPoint(vec2 Pos, std::vector<int> &vFallback) const;
 	static bool BoundsOverlap(const CCollisionQuad &Quad, vec2 Min, vec2 Max);
 	static bool PointInside(vec2 Pos, const std::vector<vec2> &vPolygon);

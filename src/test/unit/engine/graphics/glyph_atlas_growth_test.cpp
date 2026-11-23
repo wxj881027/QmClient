@@ -1,4 +1,5 @@
 #include <engine/client/glyph_atlas_growth.h>
+#include <engine/client/qm_video_memory.h>
 
 #include <gtest/gtest.h>
 
@@ -77,4 +78,13 @@ TEST(GlyphAtlasGrowth, MissingSourceTextureDoesNotAllocateOrReadPartialData)
 	EXPECT_EQ(Allocations, 0);
 	EXPECT_EQ(apNew[0], nullptr);
 	EXPECT_EQ(apNew[1], nullptr);
+}
+
+TEST(GlyphAtlasGrowth, InitialDimensionUsesDedicatedBudgetWithoutGuessing)
+{
+	EXPECT_EQ(QmChooseInitialGlyphAtlasDimension(-1), 4096u);
+	EXPECT_EQ(QmChooseInitialGlyphAtlasDimension(0), 4096u);
+	EXPECT_EQ(QmChooseInitialGlyphAtlasDimension(2047), 4096u);
+	EXPECT_EQ(QmChooseInitialGlyphAtlasDimension(2048), 8192u);
+	EXPECT_EQ(QmChooseInitialGlyphAtlasDimension(7181), 8192u);
 }

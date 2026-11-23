@@ -469,6 +469,10 @@ static char gs_aAndroidCandidatePath[IO_MAX_PATH_LENGTH + 16] = "";
 static char gs_aAndroidPendingPath[IO_MAX_PATH_LENGTH + 16] = "";
 static char gs_aAndroidStartTime[64] = "";
 static bool gs_AndroidHandlersInstalled = false;
+// 预打开的公共「下载/QmClient」报告条目。崩溃处理器里只做 write/fsync，
+// 不碰 MediaStore——那需要 binder 与 Java 调用，都不是 async-signal-safe。
+static std::atomic<int> gs_AndroidLiveReportFd{-1};
+static_assert(std::atomic<int>::is_always_lock_free);
 static std::atomic_flag gs_AndroidReportInProgress = ATOMIC_FLAG_INIT;
 static_assert(std::atomic<const char *>::is_always_lock_free);
 
@@ -528,6 +532,19 @@ static bool AndroidWriteAll(int File, const char *pData, size_t Size)
 		Size -= static_cast<size_t>(Written);
 	}
 	return true;
+}
+
+void crashdump_set_live_report_fd(int File)
+{
+	gs_AndroidLiveReportFd.store(File, std::memory_order_relaxed);
+}
+
+static bool AndroidWriteLiveReport(int File, const char *pData, size_t Size, bool Append)
+{
+	if(File < 0 || lseek(File, 0, Append ? SEEK_END : SEEK_SET) < 0 || !AndroidWriteAll(File, pData, Size))
+		return false;
+	// MediaStore 的 fd 由 FUSE 代理，先写，再截掉末尾可能残留的占位文本。
+	return (Append || ftruncate(File, static_cast<off_t>(Size)) == 0) && fsync(File) == 0;
 }
 
 static bool AndroidPublishReport(const char *pData, size_t Size)
@@ -635,13 +652,19 @@ static void AndroidFatalSignalHandler(int Signal, siginfo_t *pInfo, void *pConte
 	char *pBuffer = gs_aAndroidReportBuffer;
 	const size_t Capacity = sizeof(gs_aAndroidReportBuffer);
 	const size_t Length = crashdump_format_fatal_report(pBuffer, Capacity, Report);
-	if(Length > 0 && AndroidPublishReport(pBuffer, Length))
+	const int LiveFd = gs_AndroidLiveReportFd.load(std::memory_order_relaxed);
+	const bool SandboxWritten = Length > 0 && AndroidPublishReport(pBuffer, Length);
+	const bool LiveWritten = Length > 0 && AndroidWriteLiveReport(LiveFd, pBuffer, Length, false);
+	if(SandboxWritten && !LiveWritten)
 	{
 		// 正文已完整发布。先标记供下次启动导出，回溯失败仍能拿到正文。
 		const int PendingFile = open(gs_aAndroidPendingPath, O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 		if(PendingFile >= 0)
 			close(PendingFile);
+	}
 
+	if(SandboxWritten || LiveWritten)
+	{
 		size_t FullLength = Length;
 #if defined(__arm__)
 		CCrashReportText Text(pBuffer, Capacity, Length);
@@ -654,7 +677,12 @@ static void AndroidFatalSignalHandler(int Signal, siginfo_t *pInfo, void *pConte
 			gs_aAndroidModules, gs_NumAndroidModules, gs_aAndroidLoadBiases);
 #endif
 		if(FullLength > Length)
-			AndroidPublishReport(pBuffer, FullLength);
+		{
+			if(SandboxWritten)
+				AndroidPublishReport(pBuffer, FullLength);
+			if(LiveWritten)
+				AndroidWriteLiveReport(LiveFd, pBuffer + Length, FullLength - Length, true);
+		}
 	}
 
 	AndroidForwardFatalSignal(Signal, pInfo);

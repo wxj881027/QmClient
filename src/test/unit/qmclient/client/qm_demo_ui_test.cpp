@@ -7,25 +7,25 @@
 
 namespace
 {
-class QmDemoBrowserSort : public testing::Test
-{
-	const int m_OriginalSort = g_Config.m_BrDemoSort;
-	const int m_OriginalSortOrder = g_Config.m_BrDemoSortOrder;
-
-protected:
-	struct CMenuAccess : CMenus
+	class QmDemoBrowserSort : public testing::Test
 	{
-		using CMenus::CDemoItem;
-		static constexpr int SORT_BY_MARKERS = SORT_MARKERS;
-		static constexpr int SORT_BY_LENGTH = SORT_LENGTH;
+		const int m_OriginalSort = g_Config.m_BrDemoSort;
+		const int m_OriginalSortOrder = g_Config.m_BrDemoSortOrder;
+
+	protected:
+		struct CMenuAccess : CMenus
+		{
+			using CMenus::CDemoItem;
+			static constexpr int SORT_BY_MARKERS = SORT_MARKERS;
+			static constexpr int SORT_BY_LENGTH = SORT_LENGTH;
+		};
+
+		void TearDown() override
+		{
+			g_Config.m_BrDemoSort = m_OriginalSort;
+			g_Config.m_BrDemoSortOrder = m_OriginalSortOrder;
+		}
 	};
-
-	void TearDown() override
-	{
-		g_Config.m_BrDemoSort = m_OriginalSort;
-		g_Config.m_BrDemoSortOrder = m_OriginalSortOrder;
-	}
-};
 }
 
 TEST_F(QmDemoBrowserSort, MetadataSortKeepsDemosTogetherInEitherDirection)
@@ -33,12 +33,14 @@ TEST_F(QmDemoBrowserSort, MetadataSortKeepsDemosTogetherInEitherDirection)
 	CMenuAccess::CDemoItem Longer{};
 	str_copy(Longer.m_aFilename, "a.demo");
 	Longer.m_InfosLoaded = true;
+	Longer.m_Valid = true;
 	uint_to_bytes_be(Longer.m_Info.m_aLength, 30);
 	uint_to_bytes_be(Longer.m_TimelineMarkers.m_aNumTimelineMarkers, 3);
 
 	CMenuAccess::CDemoItem Shorter{};
 	str_copy(Shorter.m_aFilename, "c.demo");
 	Shorter.m_InfosLoaded = true;
+	Shorter.m_Valid = true;
 	uint_to_bytes_be(Shorter.m_Info.m_aLength, 10);
 	uint_to_bytes_be(Shorter.m_TimelineMarkers.m_aNumTimelineMarkers, 1);
 

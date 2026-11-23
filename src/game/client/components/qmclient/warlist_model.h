@@ -89,8 +89,8 @@ public:
 class CWarDataCache
 {
 public:
-	ColorRGBA m_NameColor = ColorRGBA(1, 1, 1, 1);
-	ColorRGBA m_ClanColor = ColorRGBA(1, 1, 1, 1);
+	ColorRGBA m_NameColor = ui_token::color::NEUTRAL_WHITE;
+	ColorRGBA m_ClanColor = ui_token::color::NEUTRAL_WHITE;
 	bool m_WarName = false;
 	bool m_WarClan = false;
 	std::vector<char> m_WarGroupMatches = {false, false, false};
@@ -113,7 +113,7 @@ public:
 		std::fill_n(m_WarGroupMatches.begin(), std::min(PreviousSize, m_WarGroupMatches.size()), false);
 		m_WarName = m_WarClan = false;
 		m_aReason[0] = '\0';
-		m_NameColor = m_ClanColor = ColorRGBA(1, 1, 1, 1);
+		m_NameColor = m_ClanColor = ui_token::color::NEUTRAL_WHITE;
 		return Prepared;
 	}
 
@@ -141,8 +141,8 @@ class CQmWarListModel
 	uint64_t m_Revision = 0;
 	std::array<CWarType, 3> m_aBuiltinTypes = {
 		CWarType("none", ui_token::color::NEUTRAL_WHITE, false),
-		CWarType("enemy", ColorRGBA(1.0f, 0.2f, 0.2f, 1.0f), true),
-		CWarType("team", ColorRGBA(0.0f, 0.9f, 0.2f, 1.0f), true)};
+		CWarType("enemy", ui_token::color::DANGER, true),
+		CWarType("team", ui_token::color::SUCCESS, true)};
 	std::vector<std::unique_ptr<CWarType>> m_vOwnedTypes;
 	bool m_ConfigIncomplete = false;
 	std::unique_ptr<CWarType> PrepareWarType(const char *pType, ColorRGBA Color);

@@ -14,6 +14,8 @@
 #if defined(CONF_FAMILY_WINDOWS)
 #include <base/windows.h>
 
+#include <windows.h>
+
 #include <process.h>
 #elif defined(CONF_FAMILY_UNIX)
 #include <pthread.h>
