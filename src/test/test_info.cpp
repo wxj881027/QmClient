@@ -143,7 +143,10 @@ void TestDeleteTestStorageFiles(const char *pPath)
 	{
 		if(Entry.m_IsDirectory)
 		{
-			ASSERT_FALSE(fs_removedir(Entry.m_aData)) << Entry.m_aData;
+			// fs_is_dir 跟随符号链接：指向目录的链接在 POSIX 上要用 unlink 删除，
+			// rmdir 会以 ENOTDIR 失败。真目录删除失败时下面的断言仍会报出来。
+			if(fs_removedir(Entry.m_aData) != 0)
+				ASSERT_FALSE(fs_remove(Entry.m_aData)) << Entry.m_aData;
 		}
 		else
 		{
