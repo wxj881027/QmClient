@@ -95,7 +95,13 @@ namespace QmBoundedFileDetail
 				return false;
 			// 独立探测增长，不对已可达 unsigned 上限的长度再加一。
 			char Extra;
-			if(io_read(File, &Extra, 1) != 0 || io_error(File) != 0 || !FileOwner.Close())
+			if(io_read(File, &Extra, 1) != 0 || io_error(File) != 0)
+				return false;
+			// 读取期间文件可能被截断：stdio 会把刚打开的小文件整块缓存在用户态，
+			// 截断之后仍能读回旧内容，所以关文件前再确认一次长度没有变化。
+			if(io_length(File) != Length)
+				return false;
+			if(!FileOwner.Close())
 				return false;
 			Output = std::move(Candidate);
 			return true;
