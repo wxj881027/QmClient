@@ -454,6 +454,35 @@ void CEditorMap::SelectPreviousLayer()
 	SelectLayer(0);
 }
 
+void CEditorMap::NormalizeSelection()
+{
+	std::vector<int> vLayerCounts;
+	vLayerCounts.reserve(m_vpGroups.size());
+	for(const auto &pGroup : m_vpGroups)
+		vLayerCounts.push_back((int)pGroup->m_vpLayers.size());
+
+	SSelectionState State{
+		m_SelectedGroup,
+		m_vSelectedLayers,
+		vLayerCounts,
+		m_vpEnvelopes.size(),
+		m_vpImages.size(),
+		m_vpSounds.size(),
+		m_vSelectedQuads,
+		m_SelectedQuadPoints,
+		m_SelectedQuadEnvelope,
+		m_CurrentQuadIndex,
+		m_SelectedEnvelope,
+		m_vSelectedEnvelopePoints,
+		m_SelectedTangentInPoint,
+		m_SelectedTangentOutPoint,
+		m_SelectedImage,
+		m_SelectedSound,
+		m_SelectedSoundSource};
+	if(NormalizeSelectionState(State))
+		m_QuadKnifeState.Reset();
+}
+
 void CEditorMap::SelectGameLayer()
 {
 	for(size_t g = 0; g < m_vpGroups.size(); g++)
