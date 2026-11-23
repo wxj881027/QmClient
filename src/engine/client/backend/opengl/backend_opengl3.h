@@ -116,7 +116,7 @@ protected:
 	// OpenGL 3 后端需要用同名 helper 替换基类的非虚实现，避免在热路径里改名扩散。
 	void UseProgram(CGLSLTWProgram *pProgram); // NOLINT(bugprone-derived-method-shadowing-base-method)
 	void UploadStreamBufferData(EPrimitiveType PrimitiveType, const void *pVertices, size_t VertSize, unsigned int PrimitiveCount, bool AsTex3D = false);
-	void RenderText(const CCommandBuffer::SState &State, int DrawNum, int TextTextureIndex, int TextOutlineTextureIndex, int TextureSize, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float MsdfPxRange);
+	void RenderText(const CCommandBuffer::SState &State, int DrawNum, int TextTextureIndex, int TextOutlineTextureIndex, int TextureSize, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float MsdfPxRange, float MsdfEffectStrength);
 
 	// These names intentionally match the base API so the OpenGL 3 backend can override the call sites without broader renaming.
 	void TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, CGraphicsUploadData<uint8_t> pTexData); // NOLINT(bugprone-derived-method-shadowing-base-method)

@@ -697,26 +697,17 @@ bool CUi::PrepareGaussianBlur()
 	return true;
 }
 
-void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, float Rounding)
+bool CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, float Rounding)
 {
-	// 调用方（模糊作用域与 HUD 背景）只看作用域，不看 qm_gaussian_blur，因此功能关闭时
-	// 每个半透明矩形仍会走到这里。关闭是用户的正常选择、不是失败，不能打 trace——
-	// 否则 qm_graphics_trace 一开，加载界面/主菜单每帧都会刷满 "prepare failed"。
-	// 预布局输入趟与测量趟只跑逻辑，不能提交任何外观；否则控件底色被 DrawingSuppressed
-	// 拦下后，单独提交的模糊层会留在旧位置，表现为拖拽卡片时左侧出现一条条“骨架”。
-	if(DrawingSuppressed() || m_GaussianBlurSuppressionDepth > 0 || Rect.w <= 0.0f || Rect.h <= 0.0f || Alpha <= 0.0f || !PrepareGaussianBlur())
-	{
-		if(!DrawingSuppressed() && g_Config.m_QmGaussianBlur != 0 && g_Config.m_QmGraphicsTrace >= 1 && m_GaussianBlurSuppressionDepth <= 0 && Rect.w > 0.0f && Rect.h > 0.0f && Alpha > 0.0f)
-			dbg_msg("ui/blur", "blur unavailable this frame (prepare failed)");
-		return;
-	}
+	if(DrawingSuppressed() || m_GaussianBlurSuppressionDepth > 0 || Rect.w <= 0.0f || Rect.h <= 0.0f || Alpha <= 0.0f || g_Config.m_QmGaussianBlur == 0)
+		return false;
 
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	const float MappedWidth = ScreenX1 - ScreenX0;
 	const float MappedHeight = ScreenY1 - ScreenY0;
 	if(MappedWidth <= 0.0f || MappedHeight <= 0.0f)
-		return;
+		return false;
 
 	CUIRect ClippedRect = Rect;
 	if(IsClipped())
@@ -729,7 +720,7 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 		ClippedRect = {Left, Top, Right - Left, Bottom - Top};
 	}
 	if(ClippedRect.w <= 0.0f || ClippedRect.h <= 0.0f)
-		return;
+		return false;
 
 	const float PixelScaleX = Graphics()->ScreenWidth() / MappedWidth;
 	const float PixelScaleY = Graphics()->ScreenHeight() / MappedHeight;
@@ -738,7 +729,9 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 	const int ClipX1 = std::clamp((int)std::ceil((ClippedRect.x + ClippedRect.w - ScreenX0) * PixelScaleX), 0, Graphics()->ScreenWidth());
 	const int ClipY1 = std::clamp((int)std::ceil((ClippedRect.y + ClippedRect.h - ScreenY0) * PixelScaleY), 0, Graphics()->ScreenHeight());
 	if(ClipX1 <= ClipX0 || ClipY1 <= ClipY0)
-		return;
+		return false;
+	if(!PrepareGaussianBlur())
+		return false;
 
 	Graphics()->ClipEnable(ClipX0, ClipY0, ClipX1 - ClipX0, ClipY1 - ClipY0);
 	Graphics()->BlendNormal();
@@ -770,6 +763,7 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 		UpdateClipping();
 	else
 		Graphics()->ClipDisable();
+	return true;
 }
 
 void CUi::OnCursorMove(float X, float Y)

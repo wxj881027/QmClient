@@ -751,6 +751,19 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			// 从属行收起时也保留这一档行距：显隐只影响中间那半档，下一行不会跳。
 			Flow.Space(ui_token::settings::RowGap(GraphicsMetrics.m_LineSpacing));
 
+			RowAction("graphics-material-quality", GraphicsMetrics.m_LineHeight, [&](CUIRect Row) {
+				static CButtonContainer s_aMaterialQualityButtons[3];
+				const char *apLabels[] = {Localize("Off"), Localize("Frosted glass"), Localize("Acrylic")};
+				CUIRect Label, Segments;
+				SplitSettingsControlRow(Row, GraphicsMetrics, &Label, &Segments, ESettingsControlWidth::LONG_CHOICE);
+				Ui()->DoLabel(&Label, Localize("UI material quality"), BodySize, TEXTALIGN_ML);
+				const int Quality = DoSegmentedChoice(s_aMaterialQualityButtons, apLabels, (int)std::size(apLabels), g_Config.m_QmUiMaterialQuality, Segments);
+				if(Quality != g_Config.m_QmUiMaterialQuality)
+					g_Config.m_QmUiMaterialQuality = Quality;
+				GameClient()->m_Tooltips.DoToolTip(&s_aMaterialQualityButtons[0], &Row,
+					Localize("Card materials require Dual Kawase backdrop blur. Acrylic text effects require experimental menu MSDF."));
+			});
+
 			// 聚焦光晕与背景模糊同属「界面效果」，两行挨着放。光晕颜色取强调色，
 			// 这里只有开关，不额外给光晕开一条颜色配置（见 UI 视觉分组与自定义边界）。
 			RowAction("graphics-focus-glow", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {

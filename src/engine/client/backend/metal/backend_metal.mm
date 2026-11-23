@@ -3276,7 +3276,7 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			return false;
 		Uniforms.m_Color = {{Command.m_TextColor.r, Command.m_TextColor.g, Command.m_TextColor.b, Command.m_TextColor.a}};
 		Uniforms.m_OutlineColor = {{Command.m_TextOutlineColor.r, Command.m_TextOutlineColor.g, Command.m_TextOutlineColor.b, Command.m_TextOutlineColor.a}};
-		Uniforms.m_Params = {{static_cast<float>(Command.m_TextureSize), Command.m_MsdfPxRange, 0.0f, 0.0f}};
+		Uniforms.m_Params = {{static_cast<float>(Command.m_TextureSize), Command.m_MsdfPxRange, Command.m_MsdfEffectStrength, 0.0f}};
 		size_t UniformOffset = 0;
 		if(!AllocateUniformData(&Uniforms, sizeof(Uniforms), UniformOffset) || !PrepareContainerPipeline(Command.m_State, PipelineIndex(true, true, static_cast<EMetalBlendMode>(Command.m_State.m_BlendMode)), *pBuffer, UniformOffset))
 			return false;

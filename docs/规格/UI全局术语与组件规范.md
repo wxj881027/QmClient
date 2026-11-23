@@ -92,6 +92,17 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`DrawRoundedSurface(...)`、`DrawRoundedSurfaceGlow(...)`、`ResolveRoundedSurfacePlan(...)`、`ResolveRoundedSurfaceCornerRadii(...)`、`QmCornerSmoothingForCurve` / `QmEffectiveCornerSmoothing`（`src/game/client/QmUi/UiSurface.h`、`UiSurface.cpp`）；无 SDF 回退轮廓的唯一入口是 `ResolveRoundedSurfaceOutline(...)`，每角固定 `ROUNDED_SURFACE_CORNER_SEGMENTS = 24` 段，填充扇、边框环带和外缘羽化都从这一条轮廓生成（`ResolveRoundedSurfaceBorderMesh(...)` 只是它的环带拼装）；圆角档 `ui_token::radius::*`、列表档 `ui_token::list::RowRadius(H)` 与 `ContainerRadius(W,H)`。
 - 禁止的反面写法：用 `Row.Draw(Color, CORNER_ALL, 5.0f)` 写死圆角；自己按 `min(w,h)/2` 算胶囊；两套描边宽度并存；用「矩形放大 + 半径加宽」手拼光晕；回退路径另写正圆、`sqrt(R²-d²)` 或固定 32×16 网格；填充、边框、羽化各取一套几何。
 
+#### 圆角背景材质（rounded backdrop material）
+
+- 定义：由同帧模糊、渐变色层及可选的磨砂、光晕和阴影组成的圆角表面。
+- 唯一实现：`DrawRoundedBackdropMaterial(...)`（`src/game/client/QmUi/UiSurface.cpp`），画质档和合成参数取 `ui_token::material`。
+- 禁止的反面写法：卡片自行捕获交换链、生成磨砂纹理，或在同一帧为每个卡片单独计算模糊。
+
+| 组件 | 使用场景 | 背景和回退 |
+| --- | --- | --- |
+| 圆角表面 | 实色、边框和普通卡片背景 | 可用圆角 SDF 或几何回退 |
+| 圆角背景材质 | 需要显示场景背景的半透明卡片 | 共用帧背板，条件不足时绘制圆角表面 |
+
 ### 2.6 动效运行时（animation runtime）
 
 - 定义：所有过渡走同一套轨道解析器，按属性（值/颜色/透明度）补齐；本地时钟动画只在交互趟推进。

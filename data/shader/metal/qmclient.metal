@@ -538,6 +538,15 @@ fragment float4 qmclient_rounded_rect_sdf_fragment(SMetalVertexOut Input [[stage
 	const float2 GradientExtent = max(InnerHalfSize, float2(0.0));
 	const float2 GradientUV = clamp((Point + GradientExtent) / max(GradientExtent * 2.0, float2(0.0001)), float2(0.0), float2(1.0));
 	FillColor = RoundedRectGradientColor(GradientUV, FillColor, Params);
+	const float GrainStrength = Params[17].z;
+	if(GrainStrength > 0.0)
+	{
+		const uint2 Pixel = uint2(max(floor((Point + HalfSize) / max(RenderParams.y, 0.0001)), float2(0.0)));
+		uint Seed = Pixel.x * 1597334677u ^ Pixel.y * 3812015801u;
+		Seed = (Seed ^ (Seed >> 16u)) * 2246822519u;
+		const float Grain = float((Seed ^ (Seed >> 13u)) & 255u) / 255.0 - 0.5;
+		FillColor.rgb = clamp(FillColor.rgb + float3(Grain * GrainStrength), float3(0.0), float3(1.0));
+	}
 	const float2 BaseHalfSize = max(HalfSize - float2(ShapeExpand), float2(0.5));
 	const float Radius = clamp(RoundedRectCornerRadius(Point, CornerRadii), 0.0, min(BaseHalfSize.x, BaseHalfSize.y));
 	const float OuterDistance = RoundedRectDistance(Point, BaseHalfSize, Radius, CornerSmoothing, CurveType, CornerSeam, clamp(CornerSeam - 1.0, 0.0, 1.0)) - ShapeExpand;
@@ -836,14 +845,27 @@ fragment float4 qmclient_text_fragment(SMetalVertexOut Input [[stage_in]], textu
 	const float3 Sample = TextTexture.sample(Sampler, TexCoord).rgb;
 	float Fill = Sample.r;
 	float Outline;
+	float Glow = 0.0;
+	float Shadow = 0.0;
 	if(Uniforms.m_Params.y > 0.0)
 	{
 		const float Median = max(min(Sample.r, Sample.g), min(max(Sample.r, Sample.g), Sample.b));
-		const float2 TexelsPerPixel = fwidth(TexCoord) * Uniforms.m_Params.x;
+		float2 TextureSize = float2(Uniforms.m_Params.x);
+		float2 PixelUv = fwidth(TexCoord);
+		float2 TexelsPerPixel = PixelUv * TextureSize;
 		const float Range = Uniforms.m_Params.y / max(max(TexelsPerPixel.x, TexelsPerPixel.y), 0.001);
 		const float Distance = (Median - 0.5) * Range;
 		Fill = clamp(Distance + 0.5, 0.0, 1.0);
 		Outline = clamp(Distance + 0.5 + min(1.0, Range * 0.25), 0.0, 1.0);
+		if(Uniforms.m_Params.z > 0.0)
+		{
+			Glow = smoothstep(-min(2.25, Range * 0.40), 0.25, Distance) * Uniforms.m_Params.z * 0.38;
+			float2 Shift = min(PixelUv * float2(0.9, 1.6), float2(Uniforms.m_Params.y * 0.24) / TextureSize);
+			float3 ShadowSample = TextTexture.sample(Sampler, TexCoord - Shift).rgb;
+			float ShadowMedian = max(min(ShadowSample.r, ShadowSample.g), min(max(ShadowSample.r, ShadowSample.g), ShadowSample.b));
+			float ShadowDistance = (ShadowMedian - 0.5) * Range;
+			Shadow = smoothstep(-min(1.8, Range * 0.35), 0.8, ShadowDistance) * Uniforms.m_Params.z * 0.70;
+		}
 	}
 	else
 		Outline = OutlineTexture.sample(Sampler, TexCoord).r;
@@ -852,8 +874,18 @@ fragment float4 qmclient_text_fragment(SMetalVertexOut Input [[stage_in]], textu
 	const float OutlineBlend = 1.0 - TextAlpha;
 	const float3 OutlinePremultiplied = Uniforms.m_OutlineColor.rgb * OutlineAlpha * OutlineBlend;
 	const float3 TextPremultiplied = Input.m_Color.rgb * TextAlpha;
-	const float Alpha = OutlineAlpha * OutlineBlend + TextAlpha;
-	return Alpha > 0.0 ? float4((OutlinePremultiplied + TextPremultiplied) / Alpha, Alpha) : float4(0.0);
+	float Alpha = OutlineAlpha * OutlineBlend + TextAlpha;
+	float3 Premultiplied = OutlinePremultiplied + TextPremultiplied;
+	if(Glow > 0.0 || Shadow > 0.0)
+	{
+		float GlowAlpha = Glow * Input.m_Color.a * (1.0 - Alpha);
+		Premultiplied += Input.m_Color.rgb * GlowAlpha;
+		Alpha += GlowAlpha;
+		float ShadowAlpha = Shadow * Uniforms.m_OutlineColor.a * (1.0 - Alpha);
+		Premultiplied += Uniforms.m_OutlineColor.rgb * ShadowAlpha;
+		Alpha += ShadowAlpha;
+	}
+	return Alpha > 0.0 ? float4(Premultiplied / Alpha, Alpha) : float4(0.0);
 }
 
 struct SMetalTileVertexOut

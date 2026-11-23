@@ -575,7 +575,7 @@ public:
 	virtual unsigned GetRenderFlags() const = 0;
 	// 图集重排或配置字体解析变化时递增；普通上传及保留像素 UV 的扩容不失效。
 	virtual uint64_t GlyphAtlasRevision() const = 0;
-	virtual bool PrepareMenuMsdfAtlas() { return false; }
+	virtual bool PrepareMenuMsdfAtlas(float EffectStrength = 0.0f) { return false; }
 
 	ColorRGBA DefaultTextColor() const { return ColorRGBA(1, 1, 1, 1); }
 	ColorRGBA DefaultTextOutlineColor() const { return ColorRGBA(0, 0, 0, 0.3f); }

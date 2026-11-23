@@ -1160,6 +1160,23 @@ namespace ui_token::elevation
 	inline constexpr float SHADOW_Y_HIGH = 6.0f;
 } // namespace ui_token::elevation
 
+namespace ui_token::material
+{
+	inline constexpr int OFF = 0;
+	inline constexpr int FROSTED = 1;
+	inline constexpr int ACRYLIC = 2;
+	inline constexpr float FROSTED_BACKDROP_OPACITY = 0.70f;
+	inline constexpr float ACRYLIC_BACKDROP_OPACITY = 0.90f;
+	inline constexpr float TINT_OPACITY = 0.61f;
+	inline constexpr float GRADIENT_LIGHTEN = 0.08f;
+	inline constexpr float GRAIN_STRENGTH = 0.075f;
+	inline constexpr float SHADOW_SPREAD = 8.0f;
+	inline constexpr float GLOW_SPREAD = 3.0f;
+	inline constexpr float GLOW_OPACITY = 0.12f;
+	inline constexpr float EDGE_FALLOFF = 1.6f;
+	inline constexpr float TEXT_EFFECT_STRENGTH = 0.64f;
+} // namespace ui_token::material
+
 // 界面字号标尺（未缩放）。层级只有标题、正文、小字三段，其余都是派生档。
 // 需要跟视口缩放的场合请用 ui_token::control::BodySizeFromScale 或
 // SSettingsContentMetrics，不要在这里乘系数。
