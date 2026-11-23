@@ -162,7 +162,8 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 	// Surface 的几何，否则边框获得焦点时会产生一次内缩跳变并重新触发卡片闪动。
 	const float BorderWidth = ResolveSettingsCardBorderWidth(UiScale, PixelSize);
 	if(DrawCardChrome)
-		DrawRoundedSurface(Ctx, ChromeRect, Surface, Border, CardRadius, DrawNormalBorder || DrawAttentionBorder ? BorderWidth : 0.0f);
+		DrawRoundedBackdropMaterial(Ctx, ChromeRect, Surface, Border, Theme.m_Accent, CardRadius,
+			DrawNormalBorder || DrawAttentionBorder ? BorderWidth : 0.0f, DrawState.m_DrawAlpha);
 
 	if(Ctx.m_pUi != nullptr && Ctx.m_pTextRender != nullptr)
 	{

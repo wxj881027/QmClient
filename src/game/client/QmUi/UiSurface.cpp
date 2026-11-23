@@ -98,7 +98,7 @@ bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRG
 		SdfParams.m_GradientParams2.y = Params.m_BorderOnly ? 1.0f : 0.0f;
 		SdfParams.m_GradientParams2.z = std::max(0.0f, Params.m_BorderFalloff);
 		SdfParams.m_GradientParams2.w = CornerSmoothing();
-		SdfParams.m_ShapeParams = vec4(CornerCurveType(), CapsuleSeam(), 0.0f, 0.0f);
+		SdfParams.m_ShapeParams = vec4(CornerCurveType(), CapsuleSeam(), Params.m_GrainStrength, 0.0f);
 		SdfParams.m_TextureParams1.w = Plan.m_Expand;
 		pGraphics->RenderRoundedRectSdf(SdfParams);
 		return true;
@@ -249,6 +249,57 @@ bool DrawRoundedSurfaceGlow(const IUiContext &Ctx, const CUIRect &Rect, const Co
 	return DrawRoundedSurfaceGlow(Ctx.m_pUi, Rect, Color, Params);
 }
 
+bool DrawRoundedBackdropMaterial(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Tint, const ColorRGBA &Border, const ColorRGBA &Accent,
+	float Radius, float BorderWidth, float Alpha)
+{
+	using namespace ui_token::material;
+	CUi *pUi = Ctx.m_pUi;
+	const int Quality = g_Config.m_QmUiMaterialQuality;
+	if(pUi == nullptr || Quality == OFF || Tint.a <= 0.0f || g_Config.m_QmBlurMode != static_cast<int>(IGraphics::EBlurMode::DUAL) ||
+		!pUi->Graphics()->HasRoundedRectSdf())
+		return DrawRoundedSurface(Ctx, Rect, Tint, Border, Radius, BorderWidth);
+
+	const bool Acrylic = Quality == ACRYLIC;
+	const float BackdropOpacity = Acrylic ? ACRYLIC_BACKDROP_OPACITY : FROSTED_BACKDROP_OPACITY;
+	if(!pUi->RenderGaussianBlur(Rect, BackdropOpacity * Alpha, IGraphics::CORNER_ALL, Radius))
+		return DrawRoundedSurface(Ctx, Rect, Tint, Border, Radius, BorderWidth);
+
+	const float PixelSize = pUi->PixelSize();
+	if(Acrylic)
+	{
+		const float Scale = Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f;
+		SRoundedGlowParams Edge;
+		Edge.m_Radius = Radius;
+		Edge.m_PixelSize = PixelSize;
+		Edge.m_Falloff = EDGE_FALLOFF;
+		Edge.m_Spread = SHADOW_SPREAD * Scale;
+		CUIRect Shadow = Rect;
+		Shadow.x += ui_token::elevation::SHADOW_X_LOW * Scale;
+		Shadow.y += ui_token::elevation::SHADOW_Y_LOW * Scale;
+		DrawRoundedSurfaceGlow(Ctx, Shadow, ui_token::color::SURFACE_SHADOW.WithMultipliedAlpha(Alpha), Edge);
+		Edge.m_Spread = GLOW_SPREAD * Scale;
+		DrawRoundedSurfaceGlow(Ctx, Rect, Accent.WithMultipliedAlpha(GLOW_OPACITY * Alpha), Edge);
+	}
+
+	const ColorRGBA Bottom = Tint.WithMultipliedAlpha(TINT_OPACITY);
+	const ColorRGBA Top(
+		mix(Bottom.r, 1.0f, GRADIENT_LIGHTEN),
+		mix(Bottom.g, 1.0f, GRADIENT_LIGHTEN),
+		mix(Bottom.b, 1.0f, GRADIENT_LIGHTEN),
+		Bottom.a);
+	SQmColorGradient Gradient;
+	Gradient.m_NumColors = 2;
+	Gradient.m_Direction = vec2(0.0f, 1.0f);
+	Gradient.m_aColors[0] = Top;
+	Gradient.m_aColors[1] = Bottom;
+	SRoundedSurfaceParams Params;
+	Params.m_Radius = Radius;
+	Params.m_BorderWidth = BorderWidth;
+	Params.m_PixelSize = PixelSize;
+	Params.m_GrainStrength = Acrylic ? GRAIN_STRENGTH : 0.0f;
+	return DrawRoundedGradientSurface(pUi->Graphics(), Rect, Gradient, 1.0f, Border, Params);
+}
+
 // 固定网格一次提交顶点；预览和候选栏共享五种渐变，不生成每帧纹理。
 bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmColorGradient &Gradient,
 	float Alpha, const ColorRGBA &Border, const SRoundedSurfaceParams &Params)
@@ -288,7 +339,7 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 		SdfParams.m_GradientParams2.y = Params.m_BorderOnly ? 1.0f : 0.0f;
 		SdfParams.m_GradientParams2.z = std::max(0.0f, Params.m_BorderFalloff);
 		SdfParams.m_GradientParams2.w = CornerSmoothing();
-		SdfParams.m_ShapeParams = vec4(CornerCurveType(), CapsuleSeam(), 0.0f, 0.0f);
+		SdfParams.m_ShapeParams = vec4(CornerCurveType(), CapsuleSeam(), Params.m_GrainStrength, 0.0f);
 		SdfParams.m_TextureParams1.w = Plan.m_Expand;
 		pGraphics->RenderRoundedRectSdf(SdfParams);
 		return true;

@@ -873,6 +873,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 		ColorRGBA m_TextColor;
 		ColorRGBA m_TextOutlineColor;
 		float m_MsdfPxRange;
+		float m_MsdfEffectStrength;
 	};
 
 	struct SUniformTextFragment
@@ -9411,6 +9412,7 @@ public:
 		FragmentConstants.m_Constants.m_TextColor = pCommand->m_TextColor;
 		FragmentConstants.m_Constants.m_TextOutlineColor = pCommand->m_TextOutlineColor;
 		FragmentConstants.m_Constants.m_MsdfPxRange = pCommand->m_MsdfPxRange;
+		FragmentConstants.m_Constants.m_MsdfEffectStrength = pCommand->m_MsdfEffectStrength;
 		vkCmdPushConstants(CommandBuffer, PipeLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(SUniformGTextPos) + sizeof(SUniformTextGFragmentOffset), sizeof(SUniformTextFragment), &FragmentConstants);
 
 		DrawIndexed(ExecBuffer.m_ThreadIndex, CommandBuffer, static_cast<uint32_t>(pCommand->m_DrawNum), 1, 0, 0, 0);

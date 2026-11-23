@@ -2988,15 +2988,15 @@ void CGraphics_Threaded::RenderQuadLayer(int BufferContainerIndex, SQuadRenderIn
 
 void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor)
 {
-	QueueTextDraw(BufferContainerIndex, TextQuadNum, TextureSize, TextTexture, TextOutlineTexture, TextColor, TextOutlineColor, 0.0f);
+	QueueTextDraw(BufferContainerIndex, TextQuadNum, TextureSize, TextTexture, TextOutlineTexture, TextColor, TextOutlineColor, 0.0f, 0.0f);
 }
 
-void CGraphics_Threaded::RenderTextMsdf(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle Texture, const ColorRGBA &TextColor, const ColorRGBA &OutlineColor, float PxRange)
+void CGraphics_Threaded::RenderTextMsdf(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle Texture, const ColorRGBA &TextColor, const ColorRGBA &OutlineColor, float PxRange, float EffectStrength)
 {
-	QueueTextDraw(BufferContainerIndex, TextQuadNum, TextureSize, Texture, Texture, TextColor, OutlineColor, PxRange);
+	QueueTextDraw(BufferContainerIndex, TextQuadNum, TextureSize, Texture, Texture, TextColor, OutlineColor, PxRange, EffectStrength);
 }
 
-void CGraphics_Threaded::QueueTextDraw(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float MsdfPxRange)
+void CGraphics_Threaded::QueueTextDraw(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float MsdfPxRange, float MsdfEffectStrength)
 {
 #if defined(CONF_PLATFORM_MACOS)
 	if(m_MacosGraphicsDiagnosticsEnabled)
@@ -3025,6 +3025,7 @@ void CGraphics_Threaded::QueueTextDraw(int BufferContainerIndex, int TextQuadNum
 	Cmd.m_TextColor = TextColor;
 	Cmd.m_TextOutlineColor = TextOutlineColor;
 	Cmd.m_MsdfPxRange = MsdfPxRange;
+	Cmd.m_MsdfEffectStrength = MsdfEffectStrength;
 
 	AddCmd(Cmd);
 

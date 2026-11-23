@@ -88,6 +88,8 @@ public:
 	int m_LocTextOutlineSampler;
 	int m_LocMsdfPxRange = -1;
 	float m_LastMsdfPxRange = 0.0f;
+	int m_LocMsdfEffectStrength = -1;
+	float m_LastMsdfEffectStrength = 0.0f;
 	int m_LocTextureSize;
 
 	ColorRGBA m_LastColor;

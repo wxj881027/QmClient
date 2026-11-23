@@ -3251,6 +3251,7 @@ class CTextRender : public IEngineTextRender
 	std::shared_ptr<CQmMenuMsdfLoadJob> m_pMenuMsdfLoad;
 	bool m_MenuMsdfLoadAttempted = false;
 	bool m_MenuMsdfDrawReported = false;
+	float m_MenuMsdfEffectStrength = 0.0f;
 	std::unordered_set<FT_Face> m_QmSystemFontFaces;
 	bool m_QmSystemFontsScanned = false;
 	bool m_QmShowSystemFonts = false;
@@ -4947,8 +4948,9 @@ public:
 		return nullptr;
 	}
 
-	bool PrepareMenuMsdfAtlas() override
+	bool PrepareMenuMsdfAtlas(float EffectStrength) override
 	{
+		m_MenuMsdfEffectStrength = EffectStrength;
 		if(!Graphics()->IsTextBufferingEnabled() || g_Config.m_QmCustomFont[0] != '\0' || g_Config.m_QmCustomFontCjk[0] != '\0')
 			return false;
 
@@ -5939,7 +5941,7 @@ public:
 					UploadTextContainer(TextContainerIndex);
 				Graphics()->TextureClear();
 				Graphics()->RenderTextMsdf(TextContainer.m_StringInfo.m_QuadBufferContainerIndex, TextContainer.m_StringInfo.m_vCharacterQuads.size(), qm_menu_msdf::SIZE, m_MenuMsdfTexture,
-					TextColor, TextOutlineColor, qm_menu_msdf::PX_RANGE);
+					TextColor, TextOutlineColor, qm_menu_msdf::PX_RANGE, m_MenuMsdfEffectStrength);
 				if(!m_MenuMsdfDrawReported && g_Config.m_QmGraphicsTrace != 0)
 				{
 					m_MenuMsdfDrawReported = true;

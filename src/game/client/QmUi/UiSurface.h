@@ -67,6 +67,8 @@ struct SRoundedSurfaceParams
 	// 形状外扩像素：整块形状按距离场向外偏移，而不是「矩形外扩 + 半径加一」。
 	// 叠层（阴影 / 描边 / 填充）只有靠它才是同一条曲线的等距外扩，换成连续曲率后不会错位。
 	float m_ShapeExpand = 0.0f;
+	// 片元填充的静态磨砂强度，零值保持普通表面。
+	float m_GrainStrength = 0.0f;
 	// 连续缩放的表面保留小数几何；抗锯齿仍使用真实物理像素大小。
 	bool m_AlignToPixel = true;
 };
@@ -200,6 +202,9 @@ struct SRoundedImageParams
 	vec2 m_UVOffset{0.0f, 0.0f};
 	float m_Alpha = 1.0f;
 };
+
+bool DrawRoundedBackdropMaterial(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Tint, const ColorRGBA &Border, const ColorRGBA &Accent,
+	float Radius, float BorderWidth, float Alpha);
 
 bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmColorGradient &Gradient, float Alpha, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
 

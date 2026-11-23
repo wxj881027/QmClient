@@ -189,6 +189,7 @@ namespace
 		{Localizable("White"), nullptr, "白色"},
 		{nullptr, "qm_blur_mode", nullptr},
 		{nullptr, "qm_gaussian_blur", nullptr},
+		{Localizable("UI material quality"), "qm_ui_material_quality", "毛玻璃 亚克力 磨砂"},
 		{nullptr, "qm_ui_accent_color", nullptr},
 		{nullptr, "qm_ui_accent_opacity", nullptr},
 		{nullptr, "qm_ui_capsule_apple_strength", nullptr},

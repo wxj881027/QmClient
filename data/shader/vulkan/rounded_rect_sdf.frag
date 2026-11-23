@@ -483,6 +483,15 @@ void main()
 	vec2 GradientExtent = max(InnerHalfSize, vec2(0.0));
 	vec2 GradientUV = clamp((Point + GradientExtent) / max(GradientExtent * 2.0, vec2(0.0001)), vec2(0.0), vec2(1.0));
 	vec4 FillColor = GradientColor(GradientUV, gSdf.gRoundedRectSdfData[1]);
+	float GrainStrength = gSdf.gRoundedRectSdfData[17].z;
+	if(GrainStrength > 0.0)
+	{
+		uvec2 Pixel = uvec2(max(floor((Point + HalfSize) / max(Params.y, 0.0001)), vec2(0.0)));
+		uint Seed = Pixel.x * 1597334677u ^ Pixel.y * 3812015801u;
+		Seed = (Seed ^ (Seed >> 16u)) * 2246822519u;
+		float Grain = float((Seed ^ (Seed >> 13u)) & 255u) / 255.0 - 0.5;
+		FillColor.rgb = clamp(FillColor.rgb + vec3(Grain * GrainStrength), vec3(0.0), vec3(1.0));
+	}
 	vec2 BaseHalfSize = max(HalfSize - vec2(ShapeExpand), vec2(0.5));
 	float Radius = clamp(CornerRadius(Point, CornerRadii), 0.0, min(BaseHalfSize.x, BaseHalfSize.y));
 	float OuterDistance = RoundedRectSdf(Point, BaseHalfSize, Radius, CornerSmoothing, CornerCurveType, CornerSeam) - ShapeExpand;

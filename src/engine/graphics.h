@@ -474,7 +474,7 @@ public:
 		vec4 m_TextureParams1{};
 		// 圆角曲线档位：x = 0 原圆弧（旧外观，不扩展），1 超椭圆，2 五次贝塞尔，
 		// 3 圆锥贝塞尔。连续曲率强度仍在 m_GradientParams2.w，两者正交。
-		// y = 胶囊接缝软化强度（0 = 半圆端头保持硬接缝），z/w 预留。
+		// y = 胶囊接缝软化强度（0 = 半圆端头保持硬接缝），z = 磨砂强度，w 预留。
 		vec4 m_ShapeParams{};
 		// 纹理由 SState 携带（调用方先 TextureSet），不进入 uniform 块，保证结构体是纯 vec4 数组。
 	};
@@ -855,7 +855,7 @@ public:
 	virtual void RenderQuadLayer(int BufferContainerIndex, SQuadRenderInfo *pQuadInfo, size_t QuadNum, int QuadOffset, bool Grouped = false) = 0;
 	// 保留完整纹理句柄，前端校验代数后才生成后端编号命令。
 	virtual void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) = 0;
-	virtual void RenderTextMsdf(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle Texture, const ColorRGBA &TextColor, const ColorRGBA &OutlineColor, float PxRange) {}
+	virtual void RenderTextMsdf(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle Texture, const ColorRGBA &TextColor, const ColorRGBA &OutlineColor, float PxRange, float EffectStrength) {}
 	// Render a media-island SDF quad in a supported programmable backend.
 	// Callers use a geometry approximation when HasMediaIslandSdf() is false.
 	virtual void RenderMediaIslandSdf(const SMediaIslandSdfParams &Params, CRenderTargetHandle Backdrop = CRenderTargetHandle()) = 0;

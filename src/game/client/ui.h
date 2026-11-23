@@ -1158,7 +1158,8 @@ public:
 	void EndGaussianBlurSuppression();
 	bool GaussianBlurScopeActive() const { return !m_vGaussianBlurScopeAlphas.empty() && m_GaussianBlurSuppressionDepth == 0; }
 	float GaussianBlurScopeAlpha() const { return GaussianBlurScopeActive() ? m_vGaussianBlurScopeAlphas.back() : 0.0f; }
-	void RenderGaussianBlur(const CUIRect &Rect, float Alpha = 1.0f, int Corners = IGraphics::CORNER_NONE, float Rounding = 0.0f);
+	// 返回本帧模糊背景是否已合成到该可见区域。
+	bool RenderGaussianBlur(const CUIRect &Rect, float Alpha = 1.0f, int Corners = IGraphics::CORNER_NONE, float Rounding = 0.0f);
 
 	// 供 HUD Dynamic Island 等外部消费者复用同一份模糊结果。准备按 PerfFrame 缓存，
 	// 目标内容在两次准备之间保持不变；句柄随窗口尺寸/开关销毁重建，消费方须每帧重新取用。
