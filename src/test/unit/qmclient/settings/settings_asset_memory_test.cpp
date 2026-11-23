@@ -6,6 +6,7 @@
 
 #include <array>
 #include <atomic>
+#include <cstring>
 #include <limits>
 #include <thread>
 #include <utility>
@@ -340,10 +341,14 @@ TEST(SettingsAssetMemory, EveryValidPixelFormatRetainsTwoRgbaImages)
 TEST(SettingsAssetMemory, InvalidFormatCannotReachPixelSizeLookup)
 {
 	uint8_t Pixel = 0;
-	for(const auto Format : {CImageInfo::FORMAT_UNDEFINED, static_cast<CImageInfo::EImageFormat>(-2), static_cast<CImageInfo::EImageFormat>(4)})
+	// 取值落在枚举之外：真实来源是磁盘上的旧数据或损坏的贴图信息，按原始整数
+	// 写进字段；构造非法的枚举值本身就是 UB（UBSan 会直接报 load of value 4）。
+	for(const int RawFormat : {static_cast<int>(CImageInfo::FORMAT_UNDEFINED), -2, 4})
 	{
-		SCOPED_TRACE(Format);
-		auto Image = BorrowedImage(&Pixel, 1, 1, Format);
+		SCOPED_TRACE(RawFormat);
+		auto Image = BorrowedImage(&Pixel);
+		static_assert(sizeof(CImageInfo::EImageFormat) == sizeof(RawFormat), "EImageFormat must be int-sized");
+		std::memcpy(&Image.m_Format, &RawFormat, sizeof(RawFormat));
 		uint64_t Bytes = 99;
 		EXPECT_FALSE(SettingsAssetMemoryReadyBytes(Image, Bytes));
 		EXPECT_EQ(Bytes, 0u);

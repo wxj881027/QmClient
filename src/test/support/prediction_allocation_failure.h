@@ -25,6 +25,9 @@ public:
 	bool Triggered() const { return m_Triggered; }
 	std::size_t Attempts() const { return m_Attempts; }
 	static bool Active() noexcept { return s_pActive != nullptr; }
+	// 终止现场用：异常逃到 terminate 时，注入是否正在进行、已经数到第几次分配，
+	// 是判断「失败落在枚举之外的第 N 次分配」还是「测试自己显式抛的」的唯一线索。
+	static std::size_t ActiveAttempts() noexcept { return s_pActive ? s_pActive->m_Attempts : 0; }
 	static bool FailNextAllocation() noexcept
 	{
 		if(!s_pActive)

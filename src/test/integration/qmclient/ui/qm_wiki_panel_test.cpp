@@ -227,9 +227,9 @@ TEST_F(QmWikiPanel, LongTablesKeepFullScrollHeightAndDrawOnlyVisibleRows)
 		CUIRect Body = *Scroll.ClipRect();
 		Body.y += Offset.y;
 		qm_wiki_markdown::CTableLayoutCache Cache;
-		m_Graphics.m_vTextSubmissions.clear();
+		Graphics().m_vTextSubmissions.clear();
 		const float Height = qm_wiki_markdown::RenderBlocks(MakeContext(), Document.Blocks(), Body, {}, &Scroll, nullptr, -1, &Cache);
-		const size_t DrawCount = m_Graphics.m_vTextSubmissions.size();
+		const size_t DrawCount = Graphics().m_vTextSubmissions.size();
 		Scroll.End();
 		return std::pair{Height, DrawCount};
 	};

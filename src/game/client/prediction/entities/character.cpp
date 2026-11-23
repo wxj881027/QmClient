@@ -1523,12 +1523,16 @@ void CCharacter::ResetPrediction()
 
 void CCharacter::Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtended, bool IsLocal)
 {
-	CQmAxiomQuadTimeScope QuadTime(*Collision(), GameWorld()->GameTick(), GameWorld()->GameTickSpeed());
+	// 预测世界未必带碰撞对象（只做几何推演的单测世界就是这样），传指针让作用域
+	// 自己判空；这里写 *Collision() 会把空指针绑成引用（UBSan: reference binding
+	// to null pointer of type 'CCollision'）。
+	CQmAxiomQuadTimeScope QuadTime(Collision(), GameWorld()->GameTick(), GameWorld()->GameTickSpeed());
 	// 服务端快照替换钩子位置；世界复制则保留各自的局部锚点。
 	m_QmAxiomHookQuad = -1;
 	m_Core.Read((const CNetObj_CharacterCore *)pChar);
-	if(m_Core.m_HookState == HOOK_GRABBED && m_Core.HookedPlayer() == -1)
-		Collision()->FindQmAxiomHookAnchor(m_Core.m_HookPos, &m_QmAxiomHookQuad, &m_QmAxiomHookLocalPos);
+	CCollision *const pCollision = Collision();
+	if(m_Core.m_HookState == HOOK_GRABBED && m_Core.HookedPlayer() == -1 && pCollision != nullptr)
+		pCollision->FindQmAxiomHookAnchor(m_Core.m_HookPos, &m_QmAxiomHookQuad, &m_QmAxiomHookLocalPos);
 	m_IsLocal = IsLocal;
 
 	if(pExtended)
