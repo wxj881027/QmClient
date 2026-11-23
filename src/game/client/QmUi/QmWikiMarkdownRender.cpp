@@ -20,7 +20,10 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdint>
 #include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace
@@ -89,7 +92,7 @@ namespace
 		bool m_Table = false;
 		float m_CellPad = 0.0f;
 		std::vector<float> m_vColWidths;
-		std::vector<float> m_vRowHeights;
+		std::vector<float> m_vRowEnds;
 		std::vector<std::vector<SLine>> m_vCells;
 		// 图片
 		bool m_HasMedia = false;
@@ -104,6 +107,7 @@ namespace
 	{
 		for(const SWikiSpan &Span : vSpans)
 		{
+			const bool PreserveSpaces = (Span.m_Style & WIKI_INLINE_CODE) != 0;
 			// 行内公式若已有预渲染图，按行高缩放成行内图片，保证和文字基线一致。
 			if((Span.m_Style & WIKI_INLINE_MATH) != 0)
 			{
@@ -140,10 +144,11 @@ namespace
 				const size_t Bytes = static_cast<size_t>(pCursor - pStart);
 				if(Codepoint == ' ')
 				{
-					if(!Word.empty())
+					if(!Word.empty() || PreserveSpaces)
 					{
 						Word += ' ';
-						FlushWord();
+						if(!PreserveSpaces || *pCursor != ' ')
+							FlushWord();
 					}
 					continue;
 				}
@@ -433,14 +438,17 @@ namespace
 	void LayoutTable(const SWikiBlock &Block, float Width, const SWikiRenderStyle &Style, ITextRender *pTextRender, SBlockLayout *pLayout)
 	{
 		const size_t Columns = Block.m_vAligns.size();
-		const float Pad = 7.0f * Style.m_UiScale;
-		const float LineHeight = Style.m_BodySize * LINE_SPACING;
+		if(Columns == 0 || Block.m_Rows.empty())
+			return;
+		const float Available = std::max(1.0f, Width);
+		const float EqualWidth = Available / Columns;
+		const float Pad = std::min(7.0f * Style.m_UiScale, EqualWidth * 0.25f);
+		const float MinContentWidth = std::min(Style.m_BodySize * 3.0f, EqualWidth - Pad * 2.0f);
+		const float MinColumnWidth = MinContentWidth + Pad * 2.0f;
 		pLayout->m_Table = true;
 		pLayout->m_CellPad = Pad;
 		pLayout->m_FontSize = Style.m_BodySize;
-		pLayout->m_LineHeight = LineHeight;
-		if(Columns == 0 || Block.m_Rows.empty())
-			return;
+		pLayout->m_LineHeight = Style.m_BodySize * LINE_SPACING;
 
 		std::vector<float> vDesired(Columns, 0.0f);
 		for(const SWikiTableRow &Row : Block.m_Rows)
@@ -451,31 +459,24 @@ namespace
 				vDesired[Col] = std::max(vDesired[Col], CellWidth);
 			}
 		}
-		const float Available = std::max(1.0f, Width);
-		const float MinColumn = Style.m_BodySize * 3.0f;
-		float SumCells = 0.0f;
-		for(size_t Col = 0; Col < Columns; ++Col)
-			SumCells += std::max(MinColumn, vDesired[Col]) + Pad * 2.0f;
-		float Scale = SumCells > Available ? Available / SumCells : 1.0f;
-
-		std::vector<float> vWidths(Columns, 0.0f);
-		float SumWidths = 0.0f;
-		for(size_t Col = 0; Col < Columns; ++Col)
+		// 先留出每列的内边距和可读宽度，剩余空间按实际内容分配。
+		float TotalWeight = 0.0f;
+		for(float &Desired : vDesired)
 		{
-			vWidths[Col] = std::max(MinColumn, vDesired[Col]) * Scale;
-			SumWidths += vWidths[Col];
+			Desired = std::max(0.0f, Desired - MinContentWidth);
+			TotalWeight += Desired;
 		}
-		const float Extra = Available - SumWidths - Pad * 2.0f * Columns;
-		if(Extra > 0.0f)
+		std::vector<float> &vWidths = pLayout->m_vColWidths;
+		vWidths.resize(Columns, EqualWidth);
+		if(TotalWeight > 0.0f)
 		{
-			const float TotalDesired = std::max(1.0f, SumCells);
+			const float Remaining = std::max(0.0f, Available - MinColumnWidth * Columns);
 			for(size_t Col = 0; Col < Columns; ++Col)
-				vWidths[Col] += Extra * (std::max(MinColumn, vDesired[Col]) / TotalDesired);
+				vWidths[Col] = MinColumnWidth + Remaining * (vDesired[Col] / TotalWeight);
 		}
-		pLayout->m_vColWidths = vWidths;
 
 		pLayout->m_vCells.resize(Block.m_Rows.size() * Columns);
-		pLayout->m_vRowHeights.resize(Block.m_Rows.size(), 0.0f);
+		pLayout->m_vRowEnds.reserve(Block.m_Rows.size());
 		for(size_t Row = 0; Row < Block.m_Rows.size(); ++Row)
 		{
 			float RowHeight = 0.0f;
@@ -490,12 +491,9 @@ namespace
 				RowHeight = std::max(RowHeight, CellLayout.m_Height);
 				pLayout->m_vCells[Row * Columns + Col] = std::move(CellLayout.m_Lines);
 			}
-			pLayout->m_vRowHeights[Row] = RowHeight + Pad * 2.0f;
+			pLayout->m_Height += RowHeight + Pad * 2.0f;
+			pLayout->m_vRowEnds.push_back(pLayout->m_Height);
 		}
-		float Total = 0.0f;
-		for(const float RowHeight : pLayout->m_vRowHeights)
-			Total += RowHeight;
-		pLayout->m_Height = Total;
 	}
 
 	SBlockLayout LayoutBlock(const IUiContext &Ctx, const SWikiBlock &Block, float Width, const SWikiRenderStyle &Style)
@@ -615,7 +613,7 @@ namespace
 		return Layout;
 	}
 
-	void PaintBlock(const IUiContext &Ctx, const SWikiBlock &Block, const SBlockLayout &Layout, const CUIRect &Area, const SWikiRenderStyle &Style, SWikiLinkContext *pLinks)
+	void PaintBlock(const IUiContext &Ctx, const SWikiBlock &Block, const SBlockLayout &Layout, const CUIRect &Area, const SWikiRenderStyle &Style, SWikiLinkContext *pLinks, const CUIRect *pClip)
 	{
 		ITextRender *pTextRender = Ctx.m_pTextRender;
 		if(pTextRender == nullptr)
@@ -735,10 +733,15 @@ namespace
 			if(Layout.m_Table)
 			{
 				const float Pad = Layout.m_CellPad;
-				float Y = Area.y;
-				for(size_t Row = 0; Row < Layout.m_vRowHeights.size(); ++Row)
+				// 行尾累积高度可以直接定位第一条可见行，整表仍只向滚动区登记一个矩形。
+				const float Top = pClip != nullptr ? pClip->y - Area.y : 0.0f;
+				const float Bottom = pClip != nullptr ? pClip->y + pClip->h : Area.y + Area.h;
+				const size_t FirstRow = std::lower_bound(Layout.m_vRowEnds.begin(), Layout.m_vRowEnds.end(), Top) - Layout.m_vRowEnds.begin();
+				for(size_t Row = FirstRow; Row < Layout.m_vRowEnds.size(); ++Row)
 				{
-					const float RowHeight = Layout.m_vRowHeights[Row];
+					const float Y = Area.y + (Row > 0 ? Layout.m_vRowEnds[Row - 1] : 0.0f);
+					if(Y > Bottom)
+						break;
 					if(Row > 0)
 					{
 						CUIRect Line;
@@ -757,7 +760,6 @@ namespace
 						DrawLines(Ctx, vCell, X + Pad, Y + Pad, Layout.m_LineHeight, Style.m_BodySize, Style, Color, pLinks, Align, Layout.m_vColWidths[Col] - Pad * 2.0f);
 						X += Layout.m_vColWidths[Col];
 					}
-					Y += RowHeight;
 				}
 			}
 			break;
@@ -772,26 +774,82 @@ namespace
 	}
 } // namespace
 
-float qm_wiki_markdown::RenderBlocks(const IUiContext &Ctx, const std::vector<SWikiBlock> &vBlocks, CUIRect &Body, const SWikiRenderStyle &Style, CScrollRegion *pScroll, SWikiLinkContext *pLinks, int ScrollToBlock)
+struct qm_wiki_markdown::CTableLayoutCache::SState
+{
+	struct SKey
+	{
+		const ITextRender *m_pTextRender;
+		const SWikiBlock *m_pBlocks;
+		size_t m_BlockCount;
+		float m_Width;
+		float m_StyleSize;
+		float m_UiScale;
+		float m_PixelSize;
+		EFontPreset m_FontPreset;
+		uint64_t m_GlyphAtlasRevision;
+		unsigned m_RenderFlags;
+
+		bool operator==(const SKey &) const = default;
+	};
+
+	SKey m_Key;
+	std::unordered_map<size_t, SBlockLayout> m_Layouts;
+};
+
+qm_wiki_markdown::CTableLayoutCache::CTableLayoutCache() = default;
+qm_wiki_markdown::CTableLayoutCache::~CTableLayoutCache() = default;
+
+void qm_wiki_markdown::CTableLayoutCache::Clear()
+{
+	m_pState.reset();
+}
+
+float qm_wiki_markdown::RenderBlocks(const IUiContext &Ctx, const std::vector<SWikiBlock> &vBlocks, CUIRect &Body, const SWikiRenderStyle &Style, CScrollRegion *pScroll, SWikiLinkContext *pLinks, int ScrollToBlock, CTableLayoutCache *pTableLayouts)
 {
 	if(Ctx.m_pTextRender == nullptr)
 		return 0.0f;
 	const float StartY = Body.y;
 	const float Width = std::max(1.0f, Body.w);
+	if(pTableLayouts != nullptr)
+	{
+		const CTableLayoutCache::SState::SKey Key{
+			Ctx.m_pTextRender, vBlocks.data(), vBlocks.size(), Width, Style.m_BodySize, Style.m_UiScale,
+			Ctx.m_pUi != nullptr ? Ctx.m_pUi->PixelSize() : 0.0f,
+			Ctx.m_pTextRender->GetFontPreset(), Ctx.m_pTextRender->GlyphAtlasRevision(), Ctx.m_pTextRender->GetRenderFlags()};
+		if(pTableLayouts->m_pState == nullptr || pTableLayouts->m_pState->m_Key != Key)
+		{
+			auto pState = std::make_unique<CTableLayoutCache::SState>();
+			pState->m_Key = Key;
+			pTableLayouts->m_pState = std::move(pState);
+		}
+	}
 	for(size_t Index = 0; Index < vBlocks.size(); ++Index)
 	{
 		const SWikiBlock &Block = vBlocks[Index];
 		const float Margin = TopMargin(Block, Style, Index == 0, Index, vBlocks);
 		if(Margin > 0.0f)
 			Body.HSplitTop(Margin, nullptr, &Body);
-		const SBlockLayout Layout = LayoutBlock(Ctx, Block, Width, Style);
-		const float Height = std::max(0.0f, Layout.m_Height);
+		SBlockLayout FrameLayout;
+		const SBlockLayout *pLayout = &FrameLayout;
+		if(pTableLayouts != nullptr && Block.m_Type == EWikiBlockType::TABLE)
+		{
+			auto &Layouts = pTableLayouts->m_pState->m_Layouts;
+			auto It = Layouts.find(Index);
+			if(It == Layouts.end())
+				It = Layouts.emplace(Index, LayoutBlock(Ctx, Block, Width, Style)).first;
+			pLayout = &It->second;
+		}
+		else
+		{
+			FrameLayout = LayoutBlock(Ctx, Block, Width, Style);
+		}
+		const float Height = std::max(0.0f, pLayout->m_Height);
 		CUIRect Slot;
 		Body.HSplitTop(Height, &Slot, &Body);
 		// 目录跳转：AddRect 的第二个参数让滚动区把这一块顶到可视区。
 		const bool Draw = pScroll == nullptr || pScroll->AddRect(Slot, static_cast<int>(Index) == ScrollToBlock);
 		if(Draw)
-			PaintBlock(Ctx, Block, Layout, Slot, Style, pLinks);
+			PaintBlock(Ctx, Block, *pLayout, Slot, Style, pLinks, pScroll != nullptr ? pScroll->ClipRect() : nullptr);
 		const float Bottom = BottomMargin(Block, Style);
 		if(Bottom > 0.0f)
 			Body.HSplitTop(Bottom, nullptr, &Body);

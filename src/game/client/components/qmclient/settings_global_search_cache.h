@@ -4,6 +4,7 @@
 #include "search_answers.h"
 
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmWikiDocs.h>
 
 #include <cstdint>
 #include <deque>
@@ -15,6 +16,7 @@ struct SSettingsGlobalSearchResults
 {
 	std::vector<qm_card_registry::SCardSearchResult> m_vAllVisibleCards;
 	qm_search_answers::SResult m_Answers;
+	std::vector<qm_wiki_docs::SDdnetWikiMatch> m_vWikiMatches;
 
 	SSettingsGlobalSearchResults() = default;
 	SSettingsGlobalSearchResults(const SSettingsGlobalSearchResults &) = delete;
@@ -32,6 +34,7 @@ class CSettingsGlobalSearchCache
 	struct SSnapshot;
 	std::unique_ptr<SSnapshot> m_pSnapshot;
 	uint64_t m_Revision = 0;
+	qm_wiki_docs::CDdnetWikiIndex m_WikiIndex;
 
 public:
 	CSettingsGlobalSearchCache() noexcept;
@@ -39,7 +42,7 @@ public:
 	CSettingsGlobalSearchCache(const CSettingsGlobalSearchCache &) = delete;
 	CSettingsGlobalSearchCache &operator=(const CSettingsGlobalSearchCache &) = delete;
 
-	bool TryUpdate(const char *pQuery, const char *pLanguage, bool Sixup, uint64_t TextGeneration, const qm_card_order::CModel &SourceModel);
+	bool TryUpdate(const char *pQuery, const char *pLanguage, bool Sixup, uint64_t TextGeneration, const qm_card_order::CModel &SourceModel, IStorage *pStorage = nullptr);
 	bool HasSnapshot() const noexcept { return m_pSnapshot != nullptr; }
 	uint64_t Revision() const noexcept { return m_Revision; }
 	const SSettingsGlobalSearchResults &Results() const;

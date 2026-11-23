@@ -1,5 +1,7 @@
 #include "QmCardRegistry.h"
 
+#include "SettingsSearchQuery.h"
+
 #include <base/system.h>
 
 #include <engine/shared/config.h>
@@ -9,8 +11,10 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <array>
 #include <iterator>
 #include <new>
+#include <span>
 #include <stdexcept>
 #include <utility>
 
@@ -409,20 +413,91 @@ namespace qm_card_registry
 			return vTokens;
 		}
 
-		int SearchMatchScore(const char *pText, const std::string &Token, const int Weight)
+		constexpr size_t SEARCH_MAX_FUZZY_TOKEN = 24;
+
+		bool IsFuzzyWordCharacter(int Code)
 		{
-			if(pText == nullptr || pText[0] == '\0')
-				return 0;
-			const char *pMatchEnd = nullptr;
-			const char *pMatch = str_utf8_find_nocase(pText, Token.c_str(), &pMatchEnd);
-			if(pMatch == nullptr)
-				return 0;
-			return pMatch == pText && pMatchEnd[0] == '\0' ? Weight * 2 : Weight;
+			return (Code >= 'a' && Code <= 'z') || (Code >= 0x3400 && Code <= 0x4dbf) || (Code >= 0x4e00 && Code <= 0x9fff);
+		}
+
+		struct SFuzzySearchToken
+		{
+			std::array<int, SEARCH_MAX_FUZZY_TOKEN> m_aCharacters{};
+			size_t m_Length = 0;
+
+			explicit SFuzzySearchToken(const char *pLowerToken)
+			{
+				while(*pLowerToken != '\0')
+				{
+					const int Code = str_utf8_decode(&pLowerToken);
+					if(m_Length == m_aCharacters.size() || !IsFuzzyWordCharacter(Code))
+					{
+						m_Length = 0;
+						return;
+					}
+					m_aCharacters[m_Length++] = Code;
+				}
+				// 单字、短缩写、数字和配置名继续按原有精确匹配规则搜索。
+				if(m_Length < 4)
+					m_Length = 0;
+			}
+		};
+
+		bool MatchesWithOneEdit(std::span<const int> Longer, std::span<const int> Shorter)
+		{
+			if(Longer.size() < Shorter.size())
+				std::swap(Longer, Shorter);
+			if(Longer.size() - Shorter.size() > 1)
+				return false;
+			const auto [FirstLeft, FirstRight] = std::mismatch(Longer.begin(), Longer.end(), Shorter.begin(), Shorter.end());
+			if(Longer.size() != Shorter.size())
+				return std::equal(FirstLeft + 1, Longer.end(), FirstRight, Shorter.end());
+			if(FirstLeft == Longer.end() || std::equal(FirstLeft + 1, Longer.end(), FirstRight + 1, Shorter.end()))
+				return true;
+			return Longer.end() - FirstLeft >= 2 && *FirstLeft == FirstRight[1] && FirstLeft[1] == *FirstRight &&
+			       std::equal(FirstLeft + 2, Longer.end(), FirstRight + 2, Shorter.end());
+		}
+
+		bool FuzzyWordMatch(const char *pText, const SFuzzySearchToken &Token)
+		{
+			std::array<int, SEARCH_MAX_FUZZY_TOKEN + 1> aWord;
+			size_t Length = 0;
+			while(true)
+			{
+				const int Code = str_utf8_tolower_codepoint(str_utf8_decode(&pText));
+				if(IsFuzzyWordCharacter(Code))
+				{
+					if(Length < aWord.size())
+						aWord[Length] = Code;
+					++Length;
+					continue;
+				}
+				if(Length >= Token.m_Length - 1 && Length <= Token.m_Length + 1 &&
+					MatchesWithOneEdit({aWord.data(), Length}, {Token.m_aCharacters.data(), Token.m_Length}))
+					return true;
+				if(Code == 0)
+					return false;
+				Length = 0;
+			}
 		}
 
 		constexpr size_t SEARCH_MAX_MATCH_KEYS = 8;
 		// 长帮助句不是可绘制行：仍参与卡片打分，但不塞进命中列表/定位键。
 		constexpr size_t SEARCH_MAX_MATCH_TEXT = 80;
+
+		int SearchMatchScore(const char *pText, const std::string &Token, int Weight, const SFuzzySearchToken *pFuzzyToken)
+		{
+			if(pText == nullptr || pText[0] == '\0')
+				return 0;
+			const char *pMatchEnd = nullptr;
+			const char *pMatch = str_utf8_find_nocase(pText, Token.c_str(), &pMatchEnd);
+			if(pMatch != nullptr)
+				return pMatch == pText && pMatchEnd[0] == '\0' ? Weight * 2 : Weight;
+			if(pFuzzyToken != nullptr &&
+				(Weight != SEARCH_WEIGHT_LABEL || str_length(pText) <= SEARCH_MAX_MATCH_TEXT) && FuzzyWordMatch(pText, *pFuzzyToken))
+				return Weight / 5;
+			return 0;
+		}
 
 		void AddSearchKey(std::vector<std::string> &vKeys, const char *pText)
 		{
@@ -533,10 +608,9 @@ namespace qm_card_registry
 		return s_vHaystacks;
 	}
 
-	std::vector<SCardSearchResult> SearchCards(const char *pQuery, const qm_card_order::CModel &Model)
+	static std::vector<SCardSearchResult> SearchCardsMatching(const std::vector<std::string> &vTokens, const qm_card_order::CModel &Model, bool AllowFuzzy)
 	{
 		std::vector<SCardSearchResult> vResults;
-		const std::vector<std::string> vTokens = SplitSearchQuery(pQuery);
 		if(vTokens.empty())
 			return vResults;
 
@@ -552,24 +626,41 @@ namespace qm_card_registry
 		vLowerTokens.reserve(vTokens.size());
 		for(const std::string &Token : vTokens)
 			vLowerTokens.push_back(LowerUtf8(Token.c_str()));
+		std::vector<SFuzzySearchToken> vFuzzyTokens;
+		if(AllowFuzzy)
+		{
+			vFuzzyTokens.reserve(vTokens.size());
+			for(const std::string &LowerToken : vLowerTokens)
+				vFuzzyTokens.emplace_back(LowerToken.c_str());
+			if(std::none_of(vFuzzyTokens.begin(), vFuzzyTokens.end(), [](const auto &Token) { return Token.m_Length != 0; }))
+				return vResults;
+		}
 		vCandidates.reserve(vDefaults.size());
 		for(size_t CardIndex = 0; CardIndex < vDefaults.size(); ++CardIndex)
 		{
 			const SCardDefault &Default = vDefaults[CardIndex];
 			if(Default.m_pStableId == nullptr)
 				continue;
-			// 预筛：任一查询词不在整卡检索文本里，就不必进入逐字段打分。
+			// 查询词缺失时只允许一个词进入错字容错，避免把不相干的词分开凑分。
 			bool HaystackMiss = false;
-			for(const std::string &LowerToken : vLowerTokens)
+			size_t FuzzyTokenIndex = vTokens.size();
+			for(size_t Index = 0; Index < vLowerTokens.size(); ++Index)
 			{
-				if(vHaystacks[CardIndex].find(LowerToken) == std::string::npos)
+				if(vHaystacks[CardIndex].find(vLowerTokens[Index]) != std::string::npos)
+					continue;
+				if(!AllowFuzzy || FuzzyTokenIndex != vTokens.size() || vFuzzyTokens[Index].m_Length == 0)
 				{
 					HaystackMiss = true;
 					break;
 				}
+				FuzzyTokenIndex = Index;
 			}
 			if(HaystackMiss)
 				continue;
+			const auto FieldScore = [&](const char *pField, size_t Index, int Weight, bool FuzzyField = true) {
+				const auto *pFuzzyToken = FuzzyField && Index == FuzzyTokenIndex ? &vFuzzyTokens[Index] : nullptr;
+				return SearchMatchScore(pField, vTokens[Index], Weight, pFuzzyToken);
+			};
 			// 搜索时才解析设置表：静态注册器可能晚于 DefaultsTable 的首次构建。
 			const qm_card_registry::SCardSettingSearch *pSettings = nullptr;
 			size_t SettingCount = 0;
@@ -579,21 +670,21 @@ namespace qm_card_registry
 			SCandidate Candidate;
 			int Score = 0;
 			bool MatchesAllTokens = true;
-			for(const std::string &Token : vTokens)
+			for(size_t TokenIndex = 0; TokenIndex < vTokens.size(); ++TokenIndex)
 			{
-				int TokenScore = std::max(SearchMatchScore(pLocalizedTitle, Token, SEARCH_WEIGHT_TITLE), SearchMatchScore(Default.m_pTitle, Token, SEARCH_WEIGHT_TITLE));
-				TokenScore = std::max(TokenScore, SearchMatchScore(Default.m_pSearchKeywords, Token, SEARCH_WEIGHT_KEYWORDS));
-				TokenScore = std::max(TokenScore, SearchMatchScore(pLocalizedDescription, Token, SEARCH_WEIGHT_DESCRIPTION));
-				TokenScore = std::max(TokenScore, SearchMatchScore(Default.m_pDescription, Token, SEARCH_WEIGHT_DESCRIPTION));
+				int TokenScore = std::max(FieldScore(pLocalizedTitle, TokenIndex, SEARCH_WEIGHT_TITLE), FieldScore(Default.m_pTitle, TokenIndex, SEARCH_WEIGHT_TITLE));
+				TokenScore = std::max(TokenScore, FieldScore(Default.m_pSearchKeywords, TokenIndex, SEARCH_WEIGHT_KEYWORDS));
+				TokenScore = std::max(TokenScore, FieldScore(pLocalizedDescription, TokenIndex, SEARCH_WEIGHT_DESCRIPTION, false));
+				TokenScore = std::max(TokenScore, FieldScore(Default.m_pDescription, TokenIndex, SEARCH_WEIGHT_DESCRIPTION, false));
 				for(size_t Index = 0; Index < SettingCount; ++Index)
 				{
 					const SCardSettingSearch &Setting = pSettings[Index];
 					const char *pLocalizedLabel = Setting.m_pLabel != nullptr ? Localize(Setting.m_pLabel, Setting.m_pContext) : nullptr;
-					const int LabelScore = std::max(SearchMatchScore(Setting.m_pLabel, Token, SEARCH_WEIGHT_LABEL), SearchMatchScore(pLocalizedLabel, Token, SEARCH_WEIGHT_LABEL));
-					const int ConfigScore = SearchMatchScore(Setting.m_pConfigName, Token, SEARCH_WEIGHT_CONFIG);
+					const int LabelScore = std::max(FieldScore(Setting.m_pLabel, TokenIndex, SEARCH_WEIGHT_LABEL), FieldScore(pLocalizedLabel, TokenIndex, SEARCH_WEIGHT_LABEL));
+					const int ConfigScore = FieldScore(Setting.m_pConfigName, TokenIndex, SEARCH_WEIGHT_CONFIG, false);
 					TokenScore = std::max(TokenScore, LabelScore);
 					TokenScore = std::max(TokenScore, ConfigScore);
-					TokenScore = std::max(TokenScore, SearchMatchScore(Setting.m_pAliases, Token, SEARCH_WEIGHT_ALIAS));
+					TokenScore = std::max(TokenScore, FieldScore(Setting.m_pAliases, TokenIndex, SEARCH_WEIGHT_ALIAS));
 				}
 				if(TokenScore == 0)
 				{
@@ -620,11 +711,11 @@ namespace qm_card_registry
 				const char *pLabel = pLocalizedLabel != nullptr && pLocalizedLabel[0] != '\0' ? pLocalizedLabel : Setting.m_pLabel;
 				int SettingScore = 0;
 				const char *pDisplay = nullptr;
-				for(const std::string &Token : vTokens)
+				for(size_t TokenIndex = 0; TokenIndex < vTokens.size(); ++TokenIndex)
 				{
-					const int LabelScore = std::max(SearchMatchScore(Setting.m_pLabel, Token, SEARCH_WEIGHT_LABEL), SearchMatchScore(pLocalizedLabel, Token, SEARCH_WEIGHT_LABEL));
-					const int ConfigScore = SearchMatchScore(Setting.m_pConfigName, Token, SEARCH_WEIGHT_CONFIG);
-					SettingScore += std::max({LabelScore, ConfigScore, SearchMatchScore(Setting.m_pAliases, Token, SEARCH_WEIGHT_ALIAS)});
+					const int LabelScore = std::max(FieldScore(Setting.m_pLabel, TokenIndex, SEARCH_WEIGHT_LABEL), FieldScore(pLocalizedLabel, TokenIndex, SEARCH_WEIGHT_LABEL));
+					const int ConfigScore = FieldScore(Setting.m_pConfigName, TokenIndex, SEARCH_WEIGHT_CONFIG, false);
+					SettingScore += std::max({LabelScore, ConfigScore, FieldScore(Setting.m_pAliases, TokenIndex, SEARCH_WEIGHT_ALIAS)});
 					if(LabelScore > 0)
 						pDisplay = pLabel;
 					else if(ConfigScore > 0 && pDisplay == nullptr)
@@ -675,6 +766,28 @@ namespace qm_card_registry
 		for(SCandidate &Candidate : vCandidates)
 			vResults.push_back(std::move(Candidate.m_Result));
 		return vResults;
+	}
+
+	std::vector<SCardSearchResult> SearchCards(const char *pQuery, const qm_card_order::CModel &Model)
+	{
+		if(pQuery == nullptr || !str_utf8_check(pQuery))
+			return {};
+		const auto vTokens = SplitSearchQuery(pQuery);
+		auto vResults = SearchCardsMatching(vTokens, Model, false);
+		if(!vResults.empty() || vTokens.empty())
+			return vResults;
+
+		// 精确输入优先，其次尝试问句中的检索词。两次均无命中才允许错字容错。
+		const std::string Normalized = qm_settings_search::NormalizeQuery(pQuery);
+		const std::string Question(qm_settings_search::StripQuestion(Normalized));
+		const auto vQuestionTokens = SplitSearchQuery(Question.c_str());
+		if(vQuestionTokens != vTokens)
+		{
+			vResults = SearchCardsMatching(vQuestionTokens, Model, false);
+			if(!vResults.empty())
+				return vResults;
+		}
+		return SearchCardsMatching(vQuestionTokens, Model, true);
 	}
 
 	const char *MigrateLegacyKey(const char *pLegacyKey)
