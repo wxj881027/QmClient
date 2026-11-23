@@ -58,8 +58,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Select build matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Choose build legs
+        id: matrix
+        shell: bash
+        # 便携包与常规 Windows 同源同编译器，只差「默认用户目录」开关
+        # （QMCLIENT_PORTABLE）：PR 上重复构建既多占一个并发 runner，也只是把
+        # 同一个「Windows 能否编译」的信号再报一遍，所以在 PR 事件下不排这一格。
+        # 发布（tag 推送、预览日构建走的 workflow_call）与手动派发仍需便携包产物。
+        #
+        # 为什么不在 build 作业上用 `if: !matrix.release_only` 跳过：按文档
+        # jobs.<job_id>.if 只能看到 github/needs/vars/inputs，matrix 不在其中，
+        # 引用它会整份工作流被判无效（GitHub 会生成一个以文件名为标题的失败 run）。
+        # 所以矩阵在这里算好后由 build 用 fromJSON 接过去。
+        run: |
+          python3 - >> "$GITHUB_OUTPUT" <<'PY'
+          import json
+          import os
+
+          legs = [
+              {"name": "Linux", "os": "ubuntu-24.04", "package_ext": "tar.xz",
+               "output_name": "QmClient-ubuntu.tar.xz", "artifact_name": "packaged-linux"},
+              {"name": "Windows", "os": "windows-2022", "package_ext": "zip",
+               "output_name": "QmClient-windows.zip", "artifact_name": "packaged-windows"},
+              {"name": "macOS", "os": "macos-26", "package_ext": "dmg",
+               "output_name": "QmClient-macOS.dmg", "artifact_name": "packaged-macos"},
+          ]
+          if os.environ["GITHUB_EVENT_NAME"] != "pull_request":
+              legs.insert(2, {"name": "Windows Portable", "os": "windows-2022",
+                              "portable": True, "package_ext": "zip",
+                              "output_name": "QmClient-windows-portable.zip",
+                              "artifact_name": "packaged-windows-portable"})
+          print("matrix=" + json.dumps({"include": legs}, separators=(",", ":")))
+          PY
+
   build:
     name: ${{ matrix.name }}
+    needs: plan
     if: github.event_name != 'workflow_dispatch' || inputs.target_platform != 'android' || inputs.release_tag != ''
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
@@ -69,29 +110,7 @@ jobs:
       SCCACHE_GHA_ENABLED: "true"
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: Linux
-            os: ubuntu-24.04
-            package_ext: tar.xz
-            output_name: QmClient-ubuntu.tar.xz
-            artifact_name: packaged-linux
-          - name: Windows
-            os: windows-2022
-            package_ext: zip
-            output_name: QmClient-windows.zip
-            artifact_name: packaged-windows
-          - name: Windows Portable
-            os: windows-2022
-            portable: true
-            package_ext: zip
-            output_name: QmClient-windows-portable.zip
-            artifact_name: packaged-windows-portable
-          - name: macOS
-            os: macos-26
-            package_ext: dmg
-            output_name: QmClient-macOS.dmg
-            artifact_name: packaged-macos
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
 
     steps:
       - name: Free disk space (Linux)
