@@ -407,6 +407,9 @@ A key that already has a command is overwritten, so recheck your other binds aft
 A key you assign here replaces whatever action used it before, so check your other keys after changing one.
 == 这里绑定的键会顶掉之前占用它的动作，所以改完一个键记得回头检查其他按键。
 
+A keyword rule could not be saved. Check the trigger for => or a reserved prefix.
+== 有一条关键词规则无法保存。请检查触发词是否含有 => 或以保留前缀开头。
+
 A manual source file takes priority over the selected candidate. Only this variant is replaced.
 == 手动指定的源文件优先于选中的候选文件。仅替换当前音效变体。
 
@@ -1976,6 +1979,9 @@ Bouncy
 Bound functions
 == 已绑定功能
 
+Bound nickname (leave empty for any name)
+== 绑定昵称（留空则不限昵称）
+
 Bounded capture frame queue depth for demo export (higher values use more memory)
 == demo 导出捕捉帧队列深度上限（数值越大占用内存越多）
 
@@ -2159,8 +2165,14 @@ Cannot load map tags. Please retry.
 Cannot open word list file. Previous words remain active.
 == 无法打开词表文件，继续使用上次成功加载的词条。
 
+Cannot prepare word list. Previous words remain active.
+== Cannot prepare word list. Previous words remain active.
+
 Cannot read complete word list file. Previous words remain active.
 == 无法完整读取词表文件，继续使用上次成功加载的词条。
+
+Cannot read the wiki file
+== Cannot read the wiki file
 
 Cannot remove the wiki file
 == 无法删除 Wiki 文件
@@ -2476,9 +2488,6 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == 选择屏幕位置和字号，再在预览卡片里检查是否换行。
-
-Choose a sponsor title style for your nameplate and chat messages.
-== 选择名牌和聊天中显示的赞助头衔样式。
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == 先选一个目标，再设置它的颜色；实体的激光可以跟随队伍颜色。
@@ -3440,6 +3449,9 @@ Could not add the player as a friend
 Could not add this entry.
 == 无法添加此条目。
 
+Could not apply %s. The console could not parse the value.
+== Could not apply %s. The console could not parse the value.
+
 Could not back up configuration files.
 == 无法备份配置文件。
 
@@ -3514,6 +3526,9 @@ Could not save configuration package.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == 地图下载失败，请尝试手动删除此文件：%s
+
+Could not save keyword rules. Edit a rule to retry.
+== 无法保存关键词规则。编辑任意一条规则可重试。
 
 Could not save title credential
 == 无法保存头衔凭证，请检查存储权限
@@ -4964,9 +4979,6 @@ Edit skin texture
 Edit the name and clan fields; the dummy keeps its own values.
 == 编辑名称和战队字段；分身保留它自己的值。
 
-Edit title style
-== 编辑头衔样式
-
 Edit touch controls
 == 编辑触控设置
 
@@ -5693,9 +5705,6 @@ Every click applies the skin at once, so star the ones you like before you start
 Every wheel tick restarts from rest, matching the original client
 == 每档滚轮都从静止重新起步，与原版客户端一致
 
-Exact bound nickname
-== 要绑定的完整昵称
-
 Example /help settings will display the help about /settings
 == 例如 /help settings 会显示 /settings 的帮助
 
@@ -5797,6 +5806,9 @@ Export demo cut
 
 Export failed
 == 导出失败
+
+Export failed. Could not compose %d edited slot(s).
+== Export failed. Could not compose %d edited slot(s).
 
 Export name contains invalid characters.
 == 导出名称包含无效字符。
@@ -6745,6 +6757,9 @@ Glow offset
 
 Glow range
 == 辉光范围
+
+Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
+== Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
 
 Go back one marker
 == 返回上一个标记
@@ -8432,9 +8447,6 @@ Limit cursor to game window
 Limit information in spectator mode
 == 限制观战模式中的信息
 
-Limit the title to the exact nickname below.
-== 仅在使用下方昵称时显示头衔。
-
 Limiter threshold (percent)
 == 限幅器阈值（百分比）
 
@@ -9217,6 +9229,9 @@ may cause delay
 
 May overload the service
 == 可能导致服务过载
+
+Measure a fixed cold glyph batch with performance diagnostics enabled
+== Measure a fixed cold glyph batch with performance diagnostics enabled
 
 Medium
 == 中
@@ -10475,9 +10490,6 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == 仅当另一个 Tee 不在屏幕上时显示
 
-Only show with this nickname
-== 仅在使用此昵称时显示
-
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == 改动只作用于选中的 Tee，想改 dummy 的颜色要先切到 Dummy。
 
@@ -10934,9 +10946,6 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 == 保存或交换位置的惩罚时间（秒）
 
-Pending sync
-== 待同步
-
 Per-name volume (name=percent)
 == 按名字单独音量（name=percent）
 
@@ -11351,6 +11360,9 @@ Player stats
 Player stats and info display
 == 玩家统计与信息显示
 
+Player titles
+== 玩家头衔
+
 Player to follow across servers until cancelled; empty disables following
 == 持续跨服跟随的玩家，主动取消后停止；留空关闭
 
@@ -11623,9 +11635,6 @@ Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 i
 
 Presets
 == 预设
-
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
-== 任何改动之后都要点保存：头衔和发言样式存在你的账号上，点刷新可以重新载入。
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == 按选择地图挑文件，核对上传显示的目标服务器与玩家，再按上传地图；取消可中止。
@@ -13310,9 +13319,6 @@ Save/Load Skin
 Saved
 == 已保存
 
-Saved to Downloads/QmClient
-== 已保存到 下载 /QmClient
-
 Saved with your title and shared with other QmClient players.
 == 随头衔一起保存，并同步给其他 QmClient 玩家。
 
@@ -14623,6 +14629,9 @@ Show moving tiles in entities
 
 Show moving tiles in entity layer
 == 在实体层显示移动图块
+
+Show my titles locally
+== 在本机显示自己的头衔
 
 Show name
 == 显示昵称
@@ -16652,9 +16661,6 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 The name "default" is reserved.
 == “default” 是保留名称。
 
-The per-character wave setting affects text titles on your screen only.
-== 逐字波动只影响你屏幕上的文字头衔。
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 你正在私聊的玩家尚未重连或已离开。请稍等，或改与他人私聊
 
@@ -17059,9 +17065,6 @@ Title style
 
 Title too long or contains unsupported characters
 == 头衔过长或包含不支持的字符
-
-Title visibility and appearance
-== 头衔可见性与外观
 
 Title wave strength (0-3, 0 = off)
 == 头衔波浪强度（0-3，0 = 关闭）
@@ -17905,9 +17908,6 @@ Untitled flow
 
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
 == 不常见的刷新率可能导致画面撕裂；建议优先使用显示器的原生刷新率。
-
-Up to 6 Chinese or 12 ASCII characters
-== 最多 6 个中文或 12 个英文字符
 
 Update
 == 更新
@@ -19076,6 +19076,9 @@ You have requested to swap with %s. Use /cancelswap to cancel the request.
 You have started racing already
 == 你已经开始比赛了
 
+You have to be in a team (from 1-127)
+== 必须处于 1–127 号队伍中
+
 You have to be in a team (from 1-63)
 == 必须处于 1–63 号队伍中
 
@@ -20164,6 +20167,10 @@ Copy the current collaboration room code.
 == 复制当前协作房间码。
 
 [Editor]
+Could not generate the quad art image.
+== Could not generate the quad art image.
+
+[Editor]
 Could not generate the tile art image.
 == 无法生成图块画图像。
 
@@ -20566,6 +20573,10 @@ Drawing tool: Triangle
 [Editor]
 Drawing tools
 == 绘图工具
+
+[Editor]
+Drawing tools require the active physics layers.
+== Drawing tools require the active physics layers.
 
 [Editor]
 Duplicate
@@ -21030,6 +21041,10 @@ Failed to save map to file '%s'.
 [Editor]
 Failed to write image to file '%s'.
 == 无法将图像写入文件“%s”。
+
+[Editor]
+Failed to write sound to file '%s'.
+== Failed to write sound to file '%s'.
 
 [Editor]
 Falloff
@@ -21800,6 +21815,14 @@ No
 == 否
 
 [Editor]
+No image selected.
+== No image selected.
+
+[Editor]
+No sound selected.
+== No sound selected.
+
+[Editor]
 No tile layer selected
 == 未选择图块层
 
@@ -22300,8 +22323,16 @@ Saving failed: Could not move temporary map file '%s' to '%s'.
 == 保存失败：无法将临时地图文件“%s”移动到“%s”。
 
 [Editor]
+Saving failed: Could not prepare or queue the map.
+== Saving failed: Could not prepare or queue the map.
+
+[Editor]
 Saving failed: Could not replace map file '%s'; the previous version was restored or kept at '%s'.
 == 保存失败：无法替换地图文件“%s”；旧版本已恢复或保留在“%s”。
+
+[Editor]
+Saving failed: Could not write map file '%s'.
+== Saving failed: Could not write map file '%s'.
 
 [Editor]
 saving to '%s'...
@@ -22816,6 +22847,10 @@ Sync interrupted: connection failed
 == 同步中断：连接失败
 
 [Editor]
+Sync interrupted: the map was loaded, but the editor could not refresh it
+== Sync interrupted: the map was loaded, but the editor could not refresh it
+
+[Editor]
 Sync interrupted: the room does not exist or has expired
 == 同步中断：房间不存在或已过期
 
@@ -22916,8 +22951,24 @@ The client only supports 64 images but more would be needed to add the selected 
 == 客户端最多支持 64 个图像，但将所选图像作为图块画添加需要更多图像。
 
 [Editor]
+The drawing is too large. Split it into smaller strokes.
+== The drawing is too large. Split it into smaller strokes.
+
+[Editor]
+The drawing preview is too large to display.
+== The drawing preview is too large to display.
+
+[Editor]
 The file '%s' already exists.\n\nAre you sure that you want to overwrite it?
 == 文件“%s”已存在。\n\n你确定要覆盖它吗？
+
+[Editor]
+The file path is too long.
+== The file path is too long.
+
+[Editor]
+The game and physics layers must have matching dimensions before they can be extended.
+== The game and physics layers must have matching dimensions before they can be extended.
 
 [Editor]
 The map contains unsaved data, you might want to save it before you create a new map.\n\nContinue anyway?
@@ -22938,6 +22989,14 @@ The map isn't saved in the maps/ folder. It must be saved there to load on the s
 [Editor]
 The name of the selected envelope.
 == 当前选中动画的名称。
+
+[Editor]
+The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+== The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+
+[Editor]
+The requested tile layer dimensions are too large.
+== The requested tile layer dimensions are too large.
 
 [Editor]
 The room is full; up to 4 people can collaborate

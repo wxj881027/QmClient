@@ -134,6 +134,7 @@ A grab bag of small convenience switches that do not deserve their own card: cha
 A group frame carries the nodes inside it: drag the frame and the whole group moves with it.
 A key that already has a command is overwritten, so recheck your other binds after assigning keys here.
 A key you assign here replaces whatever action used it before, so check your other keys after changing one.
+A keyword rule could not be saved. Check the trigger for => or a reserved prefix.
 A manual source file takes priority over the selected candidate. Only this variant is replaced.
 A node cannot link to itself
 A pack missing files falls back to the default sounds.
@@ -657,6 +658,7 @@ Bottom right
 Bounce
 Bouncy
 Bound functions
+Bound nickname (leave empty for any name)
 Bounded capture frame queue depth for demo export (higher values use more memory)
 Bounding box of the whole selection; edit geometry with a single node selected.
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
@@ -718,7 +720,9 @@ Cannot install cfg: storage is not ready
 Cannot join the target player's team
 Cannot load map tags. Please retry.
 Cannot open word list file. Previous words remain active.
+Cannot prepare word list. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
+Cannot read the wiki file
 Cannot remove the wiki file
 Cannot submit this tag. Please retry later.
 Cannot swap: the other player is not in your team
@@ -824,7 +828,6 @@ Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Siz
 Choose a position, then adjust width and size; the preview card shows the result.
 Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
 Choose a screen position and font size, then check the preview card for wrapping.
-Choose a sponsor title style for your nameplate and chat messages.
 Choose a target, then set its color; entity lasers can follow team colors.
 Choose colors for weapons and entity lasers
 Choose country flag
@@ -1145,6 +1148,7 @@ Corner curvature
 Corner curve
 Could not add the player as a friend
 Could not add this entry.
+Could not apply %s. The console could not parse the value.
 Could not back up configuration files.
 Could not check for existing player with your name. Check your internet connection.
 Could not connect dummy
@@ -1170,6 +1174,7 @@ Could not read the map file.
 Could not resolve connect address '%s'. See local console for details.
 Could not save configuration package.
 Could not save downloaded map. Try manually deleting this file: %s
+Could not save keyword rules. Edit a rule to retry.
 Could not save title credential
 Could not save touch controls to file. See local console for details.
 Could not stage configuration restore.
@@ -1653,7 +1658,6 @@ Edit note
 Edit player and dummy identity information
 Edit skin texture
 Edit the name and clan fields; the dummy keeps its own values.
-Edit title style
 Edit touch controls
 Editing (all-intra H.264 / MP4)
 Editor
@@ -1896,7 +1900,6 @@ Event
 Event - Press
 Every click applies the skin at once, so star the ones you like before you start browsing.
 Every wheel tick restarts from rest, matching the original client
-Exact bound nickname
 Example /help settings will display the help about /settings
 Example flow
 Example of usage
@@ -1931,6 +1934,7 @@ Export configuration package
 Export cut as a separate demo
 Export demo cut
 Export failed
+Export failed. Could not compose %d edited slot(s).
 Export name contains invalid characters.
 Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
 Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
@@ -2247,6 +2251,7 @@ Glow color
 Glow intensity
 Glow offset
 Glow range
+Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
 Go back one marker
 Go back one tick
 Go back the specified duration
@@ -2809,7 +2814,6 @@ LibreTranslate endpoint
 Light
 Limit cursor to game window
 Limit information in spectator mode
-Limit the title to the exact nickname below.
 Limiter threshold (percent)
 Line
 Line length
@@ -3071,6 +3075,7 @@ Maximum team size.
 Maximum undo steps in editor history (editor, envelope editor, and server settings editor are independent)
 may cause delay
 May overload the service
+Measure a fixed cold glyph batch with performance diagnostics enabled
 Medium
 Mention
 Mention option color
@@ -3490,7 +3495,6 @@ Only show messages related to me
 Only show outlines in the entities layer
 Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
-Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 Only what you can't imagine, nothing Dream can't do
 Only your own copy of the world is simulated: other players are server-side Tees, so switches you hit do not affect them. The ghost toggle and opacity apply to them too.
@@ -3643,7 +3647,6 @@ Pause video rendering when demo playback is paused
 Pause voice when window unfocused
 Pause/unpause game
 Penalty in seconds for saving or swapping positions
-Pending sync
 Per-name volume (name=percent)
 Performance debug log threshold (ms)
 Performance mode
@@ -3782,6 +3785,7 @@ Player spawn
 Player state
 Player stats
 Player stats and info display
+Player titles
 Player to follow across servers until cancelled; empty disables following
 Player: %s
 Players
@@ -3873,7 +3877,6 @@ Preset %d
 Preset bar
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 Presets
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 Press '%s' to show cursor.
 Press a key, do a command: drag from the right dot of one node to the left dot of the next. Double-click a node to edit it, right-click a link to delete it, Ctrl+Z to undo.
@@ -4435,7 +4438,6 @@ Save/Load Flag
 Save/Load Name
 Save/Load Skin
 Saved
-Saved to Downloads/QmClient
 Saved with your title and shared with other QmClient players.
 Saves and loads complete client profiles, including name, chat settings and bind wheel presets.
 Saves file
@@ -4873,6 +4875,7 @@ Show map progress test point route
 Show mention option
 Show moving tiles in entities
 Show moving tiles in entity layer
+Show my titles locally
 Show name
 Show name in team color
 Show name plates
@@ -5549,7 +5552,6 @@ The look of the help bubbles that appear when you hover over buttons, settings a
 The map progress bar only fills on Gores maps; the other three lines work on any server.
 The message is sent on every water death, so keep it short; leaving "Chat message" empty disables sending.
 The name "default" is reserved.
-The per-character wave setting affects text titles on your screen only.
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 The preview does not show every weapon; check in game.
 The preview uses your own name and colors; other players may look different.
@@ -5685,7 +5687,6 @@ Title server unavailable; retry
 Title spatial effect: 0 = polished, 1 = solid, 2 = classic Calamity, 3 = off
 Title style
 Title too long or contains unsupported characters
-Title visibility and appearance
 Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected
@@ -5967,7 +5968,6 @@ Untick "Use original style" to reach "Background color", the countdown options a
 Untitled
 Untitled flow
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
-Up to 6 Chinese or 12 ASCII characters
 Update
 Update a rcon key
 Update a rcon key with prehashed data
@@ -6357,6 +6357,7 @@ You have a jetpack gun
 You have already requested to swap with %s.
 You have requested to swap with %s. Use /cancelswap to cancel the request.
 You have started racing already
+You have to be in a team (from 1-127)
 You have to be in a team (from 1-63)
 You have to be in a team to play on this server
 You have to be in a team to play on this server; if the team is locked, any team member dying will kill the whole team
@@ -6645,6 +6646,7 @@ Zoom to current mouse target
 [Editor]	Construct 'tele' game tiles (x%d)
 [Editor]	Construct game tiles from this layer.
 [Editor]	Copy the current collaboration room code.
+[Editor]	Could not generate the quad art image.
 [Editor]	Could not generate the tile art image.
 [Editor]	Could not replace command
 [Editor]	Create
@@ -6746,6 +6748,7 @@ Zoom to current mouse target
 [Editor]	Drawing tool: Rectangle
 [Editor]	Drawing tool: Triangle
 [Editor]	Drawing tools
+[Editor]	Drawing tools require the active physics layers.
 [Editor]	Duplicate
 [Editor]	Duplicate layer
 [Editor]	Edge softness strength.
@@ -6862,6 +6865,7 @@ Zoom to current mouse target
 [Editor]	Failed to open the link '%s' in the default web browser.
 [Editor]	Failed to save map to file '%s'.
 [Editor]	Failed to write image to file '%s'.
+[Editor]	Failed to write sound to file '%s'.
 [Editor]	Falloff
 [Editor]	favorites
 [Editor]	File
@@ -7054,6 +7058,8 @@ Zoom to current mouse target
 [Editor]	NINJA: Gives you ninja for a period of time.
 [Editor]	NINJA: Makes you invisible in the darkest nights.
 [Editor]	No
+[Editor]	No image selected.
+[Editor]	No sound selected.
 [Editor]	No tile layer selected
 [Editor]	NON-SPINNING LASER: Tile where freezing laser (made with LASER LENGTH) begins.
 [Editor]	None
@@ -7179,7 +7185,9 @@ Zoom to current mouse target
 [Editor]	saving '%s' done
 [Editor]	saving current brush to %d
 [Editor]	Saving failed: Could not move temporary map file '%s' to '%s'.
+[Editor]	Saving failed: Could not prepare or queue the map.
 [Editor]	Saving failed: Could not replace map file '%s'; the previous version was restored or kept at '%s'.
+[Editor]	Saving failed: Could not write map file '%s'.
 [Editor]	saving to '%s'...
 [Editor]	Saving…
 [Editor]	Scale %
@@ -7308,6 +7316,7 @@ Zoom to current mouse target
 [Editor]	Sync failed: the map snapshot data is invalid
 [Editor]	Sync failed: the received map snapshot is too large
 [Editor]	Sync interrupted: connection failed
+[Editor]	Sync interrupted: the map was loaded, but the editor could not refresh it
 [Editor]	Sync interrupted: the room does not exist or has expired
 [Editor]	Sync interrupted: you are no longer in this room
 [Editor]	Sync the current editor map snapshot by room code, with up to 4 people collaborating.
@@ -7333,12 +7342,18 @@ Zoom to current mouse target
 [Editor]	The client only allows a maximum of %zu images.
 [Editor]	The client only allows a maximum of %zu sounds.
 [Editor]	The client only supports 64 images but more would be needed to add the selected image as tileart.
+[Editor]	The drawing is too large. Split it into smaller strokes.
+[Editor]	The drawing preview is too large to display.
 [Editor]	The file '%s' already exists.\n\nAre you sure that you want to overwrite it?
+[Editor]	The file path is too long.
+[Editor]	The game and physics layers must have matching dimensions before they can be extended.
 [Editor]	The map contains unsaved data, you might want to save it before you create a new map.\n\nContinue anyway?
 [Editor]	The map contains unsaved data, you might want to save it before you exit the editor.\n\nContinue anyway?
 [Editor]	The map contains unsaved data, you might want to save it before you load a new map.\n\nContinue anyway?
 [Editor]	The map isn't saved in the maps/ folder. It must be saved there to load on the server.
 [Editor]	The name of the selected envelope.
+[Editor]	The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+[Editor]	The requested tile layer dimensions are too large.
 [Editor]	The room is full; up to 4 people can collaborate
 [Editor]	The selected image contains many colors, which will lead to a big mapfile. You may want to consider reducing the number of colors.\n\nContinue anyway?
 [Editor]	The selected image is big. Converting it to tileart may take some time.\n\nContinue anyway?

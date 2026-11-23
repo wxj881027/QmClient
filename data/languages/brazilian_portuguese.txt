@@ -395,6 +395,9 @@ A key that already has a command is overwritten, so recheck your other binds aft
 A key you assign here replaces whatever action used it before, so check your other keys after changing one.
 == A tecla atribuída aqui é retirada da ação que a usava antes, então confira as outras teclas depois de trocar uma.
 
+A keyword rule could not be saved. Check the trigger for => or a reserved prefix.
+== Não foi possível salvar uma regra de palavra-chave. Verifique se o gatilho contém => ou começa com um prefixo reservado.
+
 A manual source file takes priority over the selected candidate. Only this variant is replaced.
 == Um arquivo de origem manual tem prioridade sobre o candidato selecionado. Apenas esta variante é substituída.
 
@@ -1913,6 +1916,9 @@ Bouncy
 Bound functions
 == Funções atribuídas
 
+Bound nickname (leave empty for any name)
+== Apelido vinculado (deixe em branco para aceitar qualquer apelido)
+
 Bounded capture frame queue depth for demo export (higher values use more memory)
 == Profundidade máxima da fila de quadros de captura para exportação de demo (valores maiores usam mais memória)
 
@@ -2078,8 +2084,14 @@ Cannot join the target player's team
 Cannot open word list file. Previous words remain active.
 == Não foi possível abrir o arquivo. As palavras anteriores continuam ativas.
 
+Cannot prepare word list. Previous words remain active.
+== Cannot prepare word list. Previous words remain active.
+
 Cannot read complete word list file. Previous words remain active.
 == Não foi possível ler o arquivo completo. As palavras anteriores continuam ativas.
+
+Cannot read the wiki file
+== Cannot read the wiki file
 
 Cannot remove the wiki file
 == Não foi possível remover o arquivo do Wiki
@@ -2386,9 +2398,6 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == Escolha a posição na tela e o tamanho da fonte, depois confira no cartão de pré-visualização se o texto quebra linha.
-
-Choose a sponsor title style for your nameplate and chat messages.
-== Escolha o estilo do título de apoiador que aparece na sua placa de nome e nas mensagens do chat.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == Escolha um alvo e defina a cor; os lasers de entidades podem seguir as cores da equipe.
@@ -3326,6 +3335,9 @@ Could not add the player as a friend
 Could not add this entry.
 == Não foi possível adicionar esta entrada.
 
+Could not apply %s. The console could not parse the value.
+== Could not apply %s. The console could not parse the value.
+
 Could not back up configuration files.
 == Não foi possível fazer uma cópia de segurança dos arquivos de configuração.
 
@@ -3400,6 +3412,9 @@ Could not save configuration package.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == Não foi possível salvar o mapa baixado. Tente excluir manualmente este arquivo: %s
+
+Could not save keyword rules. Edit a rule to retry.
+== Não foi possível salvar as regras de palavra-chave. Edite uma regra para tentar novamente.
 
 Could not save title credential
 == Não foi possível salvar as credenciais do título
@@ -4790,9 +4805,6 @@ Edit skin texture
 Edit the name and clan fields; the dummy keeps its own values.
 == Edite os campos de nome e clã; o dummy mantém os próprios valores.
 
-Edit title style
-== Editar estilo do título
-
 Edit touch controls
 == Editar controles de toque
 
@@ -5513,9 +5525,6 @@ Every click applies the skin at once, so star the ones you like before you start
 Every wheel tick restarts from rest, matching the original client
 == Cada passo da roda reinicia do repouso, como no cliente original
 
-Exact bound nickname
-== Apelido exato vinculado
-
 Example /help settings will display the help about /settings
 == Exemplo: /help settings mostrará a ajuda sobre /settings
 
@@ -5605,6 +5614,9 @@ Export demo cut
 
 Export failed
 == Falha ao exportar
+
+Export failed. Could not compose %d edited slot(s).
+== Export failed. Could not compose %d edited slot(s).
 
 Export name contains invalid characters.
 == O nome de exportação contém caracteres inválidos.
@@ -6517,6 +6529,9 @@ Glow offset
 
 Glow range
 == Alcance do brilho
+
+Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
+== Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
 
 Go back one marker
 == Voltar um marcador
@@ -8147,9 +8162,6 @@ Limit cursor to game window
 Limit information in spectator mode
 == Limitar informações no modo espectador
 
-Limit the title to the exact nickname below.
-== Mostrar o título apenas com o apelido exato abaixo.
-
 Limiter threshold (percent)
 == Limiar do limitador (porcentagem)
 
@@ -8884,6 +8896,9 @@ may cause delay
 
 May overload the service
 == pode sobrecarregar o serviço
+
+Measure a fixed cold glyph batch with performance diagnostics enabled
+== Measure a fixed cold glyph batch with performance diagnostics enabled
 
 Medium
 == Média
@@ -10049,9 +10064,6 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == Mostrar apenas quando o outro Tee não estiver na tela
 
-Only show with this nickname
-== Mostrar apenas com este apelido
-
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == Só o Tee selecionado muda, então troque para Dummy antes de editar as cores do seu dummy.
 
@@ -10493,9 +10505,6 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 == Penalidade em segundos para salvar ou trocar posições
 
-Pending sync
-== Aguardando sincronização
-
 Per-name volume (name=percent)
 == Volume individual por nome (nome=porcentagem)
 
@@ -10904,6 +10913,9 @@ Player stats
 Player stats and info display
 == Exibição de estatísticas e informações do jogador
 
+Player titles
+== Títulos de jogador
+
 Player to follow across servers until cancelled; empty disables following
 == Jogador a seguir entre servidores até cancelar; vazio desativa
 
@@ -11167,9 +11179,6 @@ Preset bar
 
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == Predefinição ao codificar vídeo com libx264, padrão 5 (medium), 0 é ultrafast, 9 é placebo (mais lento, não recomendado)
-
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
-== Clique em Salvar depois de qualquer mudança: o título e o estilo de chat ficam na sua conta, e Atualizar recarrega tudo.
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == Pressione selecionar mapa para escolher um arquivo, confira o servidor e o jogador de destino do envio e pressione enviar mapa; cancelar interrompe.
@@ -12818,9 +12827,6 @@ Save/Load Skin
 Saved
 == Salvo
 
-Saved to Downloads/QmClient
-== Salvo em Downloads/QmClient
-
 Saved with your title and shared with other QmClient players.
 == Salvo com seu título e compartilhado com outros jogadores do QmClient.
 
@@ -14104,6 +14110,9 @@ Show moving tiles in entities
 
 Show moving tiles in entity layer
 == Mostrar tiles em movimento na camada de entidades
+
+Show my titles locally
+== Mostrar meus títulos neste dispositivo
 
 Show name
 == Mostrar nome
@@ -16076,9 +16085,6 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 The name "default" is reserved.
 == O nome "default" é reservado.
 
-The per-character wave setting affects text titles on your screen only.
-== A ondulação das letras só afeta os títulos em texto na sua tela.
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == O jogador para quem você sussurrava ainda não se reconectou ou saiu. Aguarde ou sussurre para outra pessoa
 
@@ -16474,9 +16480,6 @@ Title style
 
 Title too long or contains unsupported characters
 == Título muito longo ou com caracteres não aceitos
-
-Title visibility and appearance
-== Visibilidade e aparência dos títulos
 
 Title wave strength (0-3, 0 = off)
 == Intensidade da onda do título (0-3, 0 = desativado)
@@ -17290,9 +17293,6 @@ Untitled
 
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
 == Taxas de atualização incomuns podem causar rasgos na imagem; prefira a taxa nativa do monitor.
-
-Up to 6 Chinese or 12 ASCII characters
-== Até 6 caracteres chineses ou 12 ASCII
 
 Update
 == Atualizar
@@ -18425,6 +18425,9 @@ You have requested to swap with %s. Use /cancelswap to cancel the request.
 You have started racing already
 == Você já começou a correr
 
+You have to be in a team (from 1-127)
+== Você precisa estar em um time (de 1 a 127)
+
 You have to be in a team (from 1-63)
 == Você precisa estar em um time (de 1 a 63)
 
@@ -18789,6 +18792,62 @@ Hook
 [Direct touch input]
 Relative aim
 == Mira relativa
+
+[Editor]
+Could not generate the quad art image.
+== Could not generate the quad art image.
+
+[Editor]
+Drawing tools require the active physics layers.
+== Drawing tools require the active physics layers.
+
+[Editor]
+Failed to write sound to file '%s'.
+== Failed to write sound to file '%s'.
+
+[Editor]
+No image selected.
+== No image selected.
+
+[Editor]
+No sound selected.
+== No sound selected.
+
+[Editor]
+Saving failed: Could not prepare or queue the map.
+== Saving failed: Could not prepare or queue the map.
+
+[Editor]
+Saving failed: Could not write map file '%s'.
+== Saving failed: Could not write map file '%s'.
+
+[Editor]
+Sync interrupted: the map was loaded, but the editor could not refresh it
+== Sync interrupted: the map was loaded, but the editor could not refresh it
+
+[Editor]
+The drawing is too large. Split it into smaller strokes.
+== The drawing is too large. Split it into smaller strokes.
+
+[Editor]
+The drawing preview is too large to display.
+== The drawing preview is too large to display.
+
+[Editor]
+The file path is too long.
+== The file path is too long.
+
+[Editor]
+The game and physics layers must have matching dimensions before they can be extended.
+== The game and physics layers must have matching dimensions before they can be extended.
+
+[Editor]
+The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+== The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+
+[Editor]
+The requested tile layer dimensions are too large.
+== The requested tile layer dimensions are too large.
 
 [Friend auto follow]
 Follow this friend across servers

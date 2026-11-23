@@ -395,6 +395,9 @@ A key that already has a command is overwritten, so recheck your other binds aft
 A key you assign here replaces whatever action used it before, so check your other keys after changing one.
 == 這裡綁定的鍵會頂掉之前佔用它的動作，所以改完一個鍵記得回頭檢查其他按鍵。
 
+A keyword rule could not be saved. Check the trigger for => or a reserved prefix.
+== 有一條關鍵詞規則無法儲存。請檢查觸發詞是否含有 => 或以保留前綴開頭。
+
 A manual source file takes priority over the selected candidate. Only this variant is replaced.
 == 手動指定的來源檔案優先於選取的候選檔案。僅替換目前音效變體。
 
@@ -1913,6 +1916,9 @@ Bouncy
 Bound functions
 == 已綁定功能
 
+Bound nickname (leave empty for any name)
+== 綁定暱稱（留空則不限暱稱）
+
 Bounded capture frame queue depth for demo export (higher values use more memory)
 == demo 匯出擷取影格佇列深度上限（數值越大占用記憶體越多）
 
@@ -2078,8 +2084,14 @@ Cannot join the target player's team
 Cannot open word list file. Previous words remain active.
 == 無法開啟詞表檔案，繼續使用上次成功載入的詞條。
 
+Cannot prepare word list. Previous words remain active.
+== Cannot prepare word list. Previous words remain active.
+
 Cannot read complete word list file. Previous words remain active.
 == 無法完整讀取詞表檔案，繼續使用上次成功載入的詞條。
+
+Cannot read the wiki file
+== Cannot read the wiki file
 
 Cannot remove the wiki file
 == 無法刪除 Wiki 檔案
@@ -2386,9 +2398,6 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == 選擇螢幕位置和字型大小，再確認預覽卡中的換行情況。
-
-Choose a sponsor title style for your nameplate and chat messages.
-== 選擇名牌和聊天中顯示的贊助頭銜樣式。
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == 先選一個目標，再設定它的顏色；實體的雷射可以跟隨隊伍顏色。
@@ -3326,6 +3335,9 @@ Could not add the player as a friend
 Could not add this entry.
 == 無法加入此條目。
 
+Could not apply %s. The console could not parse the value.
+== Could not apply %s. The console could not parse the value.
+
 Could not back up configuration files.
 == 無法備份配置檔案。
 
@@ -3400,6 +3412,9 @@ Could not save configuration package.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == 地圖下載失敗，請嘗試手動刪除此文件：%s
+
+Could not save keyword rules. Edit a rule to retry.
+== 無法儲存關鍵詞規則。編輯任一條規則即可重試。
 
 Could not save title credential
 == 無法儲存頭銜憑證，請檢查儲存權限
@@ -4790,9 +4805,6 @@ Edit skin texture
 Edit the name and clan fields; the dummy keeps its own values.
 == 編輯名稱與戰隊欄位；分身保留自己的設定值。
 
-Edit title style
-== 編輯頭銜樣式
-
 Edit touch controls
 == 編輯觸控設置
 
@@ -5513,9 +5525,6 @@ Every click applies the skin at once, so star the ones you like before you start
 Every wheel tick restarts from rest, matching the original client
 == 每檔滾輪都從靜止重新起步，與原版客戶端一致
 
-Exact bound nickname
-== 要綁定的完整暱稱
-
 Example /help settings will display the help about /settings
 == 例如 /help settings 會顯示 /settings 的說明
 
@@ -5605,6 +5614,9 @@ Export demo cut
 
 Export failed
 == 匯出失敗
+
+Export failed. Could not compose %d edited slot(s).
+== Export failed. Could not compose %d edited slot(s).
 
 Export name contains invalid characters.
 == 導出名稱包含無效字符。
@@ -6517,6 +6529,9 @@ Glow offset
 
 Glow range
 == 輝光範圍
+
+Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
+== Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
 
 Go back one marker
 == 返回上一個標記
@@ -8147,9 +8162,6 @@ Limit cursor to game window
 Limit information in spectator mode
 == 限制觀戰模式中的信息
 
-Limit the title to the exact nickname below.
-== 僅在使用下方暱稱時顯示頭銜。
-
 Limiter threshold (percent)
 == 限幅器閾值（百分比）
 
@@ -8884,6 +8896,9 @@ may cause delay
 
 May overload the service
 == 可能導致服務過載
+
+Measure a fixed cold glyph batch with performance diagnostics enabled
+== Measure a fixed cold glyph batch with performance diagnostics enabled
 
 Medium
 == 中
@@ -10049,9 +10064,6 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == 僅當另一個 Tee 不在屏幕上時顯示
 
-Only show with this nickname
-== 僅在使用此暱稱時顯示
-
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == 改動只作用於選中的 Tee，想改 dummy 的顏色要先切到 Dummy。
 
@@ -10493,9 +10505,6 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 == 保存或交換位置的懲罰時間（秒）
 
-Pending sync
-== 待同步
-
 Per-name volume (name=percent)
 == 按名字單獨音量（name=percent）
 
@@ -10904,6 +10913,9 @@ Player stats
 Player stats and info display
 == 玩家統計與信息顯示
 
+Player titles
+== 玩家頭銜
+
 Player to follow across servers until cancelled; empty disables following
 == 持續跨服跟隨的玩家，主動取消後停止；留空關閉
 
@@ -11167,9 +11179,6 @@ Preset bar
 
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == 使用 libx264 編碼視頻時的預設，默認 5（medium），0 為 ultrafast，9 為 placebo（最慢，不推薦）
-
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
-== 任何改動之後都要點保存：頭銜和發言樣式存在你的帳號上，點刷新可以重新載入。
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == 按選擇地圖挑檔案，核對上傳顯示的目標伺服器與玩家，再按上傳地圖；取消可中止。
@@ -12818,9 +12827,6 @@ Save/Load Skin
 Saved
 == 已儲存
 
-Saved to Downloads/QmClient
-== 已儲存到 下載/QmClient
-
 Saved with your title and shared with other QmClient players.
 == 隨頭銜一起儲存，並同步給其他 QmClient 玩家。
 
@@ -14104,6 +14110,9 @@ Show moving tiles in entities
 
 Show moving tiles in entity layer
 == 在實體層顯示移動圖塊
+
+Show my titles locally
+== 在本機顯示自己的頭銜
 
 Show name
 == 顯示暱稱
@@ -16076,9 +16085,6 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 The name "default" is reserved.
 == “default” 是保留名稱。
 
-The per-character wave setting affects text titles on your screen only.
-== 逐字波動只影響你畫面上的文字頭銜。
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 你正在私聊的玩家尚未重連或已離開。請稍等，或改與他人私聊
 
@@ -16474,9 +16480,6 @@ Title style
 
 Title too long or contains unsupported characters
 == 頭銜過長或包含不支援的字符
-
-Title visibility and appearance
-== 頭銜可見性與外觀
 
 Title wave strength (0-3, 0 = off)
 == 頭銜波浪強度（0-3，0 = 關閉）
@@ -17290,9 +17293,6 @@ Untitled
 
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
 == 不常見的刷新率可能造成畫面撕裂；建議優先使用顯示器的原生刷新率。
-
-Up to 6 Chinese or 12 ASCII characters
-== 最多 6 個中文或 12 個英文字符
 
 Update
 == 更新
@@ -18425,6 +18425,9 @@ You have requested to swap with %s. Use /cancelswap to cancel the request.
 You have started racing already
 == 你已經開始比賽了
 
+You have to be in a team (from 1-127)
+== 必須處於 1–127 號隊伍中
+
 You have to be in a team (from 1-63)
 == 必須處於 1–63 號隊伍中
 
@@ -18789,6 +18792,62 @@ Hook
 [Direct touch input]
 Relative aim
 == 相對瞄準
+
+[Editor]
+Could not generate the quad art image.
+== Could not generate the quad art image.
+
+[Editor]
+Drawing tools require the active physics layers.
+== Drawing tools require the active physics layers.
+
+[Editor]
+Failed to write sound to file '%s'.
+== Failed to write sound to file '%s'.
+
+[Editor]
+No image selected.
+== No image selected.
+
+[Editor]
+No sound selected.
+== No sound selected.
+
+[Editor]
+Saving failed: Could not prepare or queue the map.
+== Saving failed: Could not prepare or queue the map.
+
+[Editor]
+Saving failed: Could not write map file '%s'.
+== Saving failed: Could not write map file '%s'.
+
+[Editor]
+Sync interrupted: the map was loaded, but the editor could not refresh it
+== Sync interrupted: the map was loaded, but the editor could not refresh it
+
+[Editor]
+The drawing is too large. Split it into smaller strokes.
+== The drawing is too large. Split it into smaller strokes.
+
+[Editor]
+The drawing preview is too large to display.
+== The drawing preview is too large to display.
+
+[Editor]
+The file path is too long.
+== The file path is too long.
+
+[Editor]
+The game and physics layers must have matching dimensions before they can be extended.
+== The game and physics layers must have matching dimensions before they can be extended.
+
+[Editor]
+The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+== The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+
+[Editor]
+The requested tile layer dimensions are too large.
+== The requested tile layer dimensions are too large.
 
 [Friend auto follow]
 Follow this friend across servers

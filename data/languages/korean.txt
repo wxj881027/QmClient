@@ -395,6 +395,9 @@ A key that already has a command is overwritten, so recheck your other binds aft
 A key you assign here replaces whatever action used it before, so check your other keys after changing one.
 == 여기서 지정한 키는 이전에 그 키를 쓰던 동작에서 빠지므로, 하나를 바꾸면 다른 키도 확인하세요.
 
+A keyword rule could not be saved. Check the trigger for => or a reserved prefix.
+== 키워드 규칙을 저장하지 못했습니다. 트리거에 =>가 들어 있거나 예약된 접두사로 시작하는지 확인하세요.
+
 A manual source file takes priority over the selected candidate. Only this variant is replaced.
 == 수동으로 지정한 원본 파일이 선택한 후보보다 우선 적용됩니다. 현재 사운드 변형만 교체됩니다.
 
@@ -1913,6 +1916,9 @@ Bouncy
 Bound functions
 == 지정된 기능
 
+Bound nickname (leave empty for any name)
+== 연결할 닉네임 (비워 두면 제한 없음)
+
 Bounded capture frame queue depth for demo export (higher values use more memory)
 == 데모 내보내기 캡처 프레임 큐 깊이 상한 (값이 클수록 메모리를 더 사용)
 
@@ -2078,8 +2084,14 @@ Cannot join the target player's team
 Cannot open word list file. Previous words remain active.
 == 단어 목록 파일을 열 수 없습니다. 이전 단어 목록을 유지합니다.
 
+Cannot prepare word list. Previous words remain active.
+== Cannot prepare word list. Previous words remain active.
+
 Cannot read complete word list file. Previous words remain active.
 == 단어 목록 파일을 완전히 읽을 수 없습니다. 이전 단어 목록을 유지합니다.
+
+Cannot read the wiki file
+== Cannot read the wiki file
 
 Cannot remove the wiki file
 == Wiki 파일을 삭제할 수 없습니다
@@ -2386,9 +2398,6 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == 화면 위치와 글꼴 크기를 고른 뒤 미리 보기 카드에서 줄바꿈을 확인하세요.
-
-Choose a sponsor title style for your nameplate and chat messages.
-== 이름표와 채팅에 표시할 후원자 칭호 스타일을 선택하세요.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == 대상을 고르고 색상을 지정하세요. 엔티티 레이저는 팀 색상을 따르게 할 수 있습니다.
@@ -3326,6 +3335,9 @@ Could not add the player as a friend
 Could not add this entry.
 == 이 항목을 추가하지 못했습니다.
 
+Could not apply %s. The console could not parse the value.
+== Could not apply %s. The console could not parse the value.
+
 Could not back up configuration files.
 == 설정 파일을 백업할 수 없습니다.
 
@@ -3400,6 +3412,9 @@ Could not save configuration package.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == 다운로드한 맵을 저장할 수 없습니다. 이 파일을 수동으로 삭제해 보세요: %s
+
+Could not save keyword rules. Edit a rule to retry.
+== 키워드 규칙을 저장하지 못했습니다. 규칙 하나를 수정해 다시 시도하세요.
 
 Could not save title credential
 == 칭호 인증 정보를 저장할 수 없습니다
@@ -4790,9 +4805,6 @@ Edit skin texture
 Edit the name and clan fields; the dummy keeps its own values.
 == 이름과 클랜 항목을 편집하세요. 더미는 자기 값을 그대로 유지합니다.
 
-Edit title style
-== 칭호 스타일 편집
-
 Edit touch controls
 == 터치 컨트롤 편집
 
@@ -5513,9 +5525,6 @@ Every click applies the skin at once, so star the ones you like before you start
 Every wheel tick restarts from rest, matching the original client
 == 휠 한 칸마다 정지 상태에서 다시 시작해 원본 클라이언트와 같습니다
 
-Exact bound nickname
-== 연결할 정확한 닉네임
-
 Example /help settings will display the help about /settings
 == 예: /help settings 를 입력하면 /settings 의 도움말이 표시됩니다
 
@@ -5605,6 +5614,9 @@ Export demo cut
 
 Export failed
 == 내보내기 실패
+
+Export failed. Could not compose %d edited slot(s).
+== Export failed. Could not compose %d edited slot(s).
 
 Export name contains invalid characters.
 == 내보내기 이름에 유효하지 않은 문자가 포함되어 있습니다.
@@ -6517,6 +6529,9 @@ Glow offset
 
 Glow range
 == 글로우 범위
+
+Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
+== Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
 
 Go back one marker
 == 이전 마커로 돌아가기
@@ -8147,9 +8162,6 @@ Limit cursor to game window
 Limit information in spectator mode
 == 관전자 모드에서 정보 제한
 
-Limit the title to the exact nickname below.
-== 아래 닉네임과 정확히 일치할 때만 칭호를 표시합니다.
-
 Limiter threshold (percent)
 == 리미터 임계값 (백분율)
 
@@ -8884,6 +8896,9 @@ may cause delay
 
 May overload the service
 == 서비스에 과부하가 걸릴 수 있음
+
+Measure a fixed cold glyph batch with performance diagnostics enabled
+== Measure a fixed cold glyph batch with performance diagnostics enabled
 
 Medium
 == 중간
@@ -10049,9 +10064,6 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == 다른 Tee 가 화면에 없을 때만 표시
 
-Only show with this nickname
-== 이 닉네임을 사용할 때만 표시
-
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == 변경은 선택한 Tee에만 적용되니, dummy 색을 바꾸려면 먼저 Dummy로 전환하세요.
 
@@ -10493,9 +10505,6 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 == 위치 저장 또는 교체에 대한 초 단위 패널티
 
-Pending sync
-== 동기화 대기 중
-
 Per-name volume (name=percent)
 == 이름별 개별 볼륨 (name=percent)
 
@@ -10904,6 +10913,9 @@ Player stats
 Player stats and info display
 == 플레이어 통계 및 정보 표시
 
+Player titles
+== 플레이어 칭호
+
 Player to follow across servers until cancelled; empty disables following
 == 취소할 때까지 서버 간 따라갈 플레이어. 비워 두면 해제
 
@@ -11167,9 +11179,6 @@ Preset bar
 
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == libx264로 비디오 인코딩 시 사전 설정, 기본값 5 (medium), 0은 ultrafast, 9는 placebo (가장 느림, 권장하지 않음)
-
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
-== 무엇이든 바꾼 뒤에는 저장을 누르세요. 칭호와 채팅 스타일은 계정에 저장되며 새로고침으로 다시 불러옵니다.
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == 맵 선택으로 파일을 고르고 업로드 대상 서버와 플레이어를 확인한 뒤 맵 업로드를 누릅니다. 취소로 멈출 수 있습니다.
@@ -12818,9 +12827,6 @@ Save/Load Skin
 Saved
 == 저장했습니다
 
-Saved to Downloads/QmClient
-== 다운로드/QmClient에 저장됨
-
 Saved with your title and shared with other QmClient players.
 == 칭호와 함께 저장되며 다른 QmClient 플레이어에게 공유됩니다.
 
@@ -14104,6 +14110,9 @@ Show moving tiles in entities
 
 Show moving tiles in entity layer
 == 엔티티 레이어에 움직이는 타일 표시
+
+Show my titles locally
+== 내 화면에 표시할 내 칭호
 
 Show name
 == 이름 표시
@@ -16076,9 +16085,6 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 The name "default" is reserved.
 == "default" 이름은 예약되어 있습니다.
 
-The per-character wave setting affects text titles on your screen only.
-== 글자 물결 효과는 내 화면에 표시되는 텍스트 칭호에만 적용됩니다.
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 귓속말 상대가 아직 재접속하지 않았거나 게임을 떠났습니다. 잠시 기다리거나 다른 사람에게 귓속말하세요
 
@@ -16474,9 +16480,6 @@ Title style
 
 Title too long or contains unsupported characters
 == 칭호가 너무 길거나 지원하지 않는 문자가 있습니다
-
-Title visibility and appearance
-== 칭호 표시 여부와 외형
 
 Title wave strength (0-3, 0 = off)
 == 칭호 물결 강도 (0-3, 0 = 끔)
@@ -17290,9 +17293,6 @@ Untitled
 
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
 == 일반적이지 않은 재생률은 티어링을 일으킬 수 있으니 모니터의 기본 재생률을 사용하는 것이 좋습니다.
-
-Up to 6 Chinese or 12 ASCII characters
-== 중국어 6자 또는 ASCII 12자까지
 
 Update
 == 업데이트
@@ -18425,6 +18425,9 @@ You have requested to swap with %s. Use /cancelswap to cancel the request.
 You have started racing already
 == 이미 레이스를 시작했습니다
 
+You have to be in a team (from 1-127)
+== 팀에 속해 있어야 합니다 (1-127)
+
 You have to be in a team (from 1-63)
 == 팀에 속해 있어야 합니다 (1-63)
 
@@ -18789,6 +18792,62 @@ Hook
 [Direct touch input]
 Relative aim
 == 상대 조준
+
+[Editor]
+Could not generate the quad art image.
+== Could not generate the quad art image.
+
+[Editor]
+Drawing tools require the active physics layers.
+== Drawing tools require the active physics layers.
+
+[Editor]
+Failed to write sound to file '%s'.
+== Failed to write sound to file '%s'.
+
+[Editor]
+No image selected.
+== No image selected.
+
+[Editor]
+No sound selected.
+== No sound selected.
+
+[Editor]
+Saving failed: Could not prepare or queue the map.
+== Saving failed: Could not prepare or queue the map.
+
+[Editor]
+Saving failed: Could not write map file '%s'.
+== Saving failed: Could not write map file '%s'.
+
+[Editor]
+Sync interrupted: the map was loaded, but the editor could not refresh it
+== Sync interrupted: the map was loaded, but the editor could not refresh it
+
+[Editor]
+The drawing is too large. Split it into smaller strokes.
+== The drawing is too large. Split it into smaller strokes.
+
+[Editor]
+The drawing preview is too large to display.
+== The drawing preview is too large to display.
+
+[Editor]
+The file path is too long.
+== The file path is too long.
+
+[Editor]
+The game and physics layers must have matching dimensions before they can be extended.
+== The game and physics layers must have matching dimensions before they can be extended.
+
+[Editor]
+The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+== The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+
+[Editor]
+The requested tile layer dimensions are too large.
+== The requested tile layer dimensions are too large.
 
 [Friend auto follow]
 Follow this friend across servers

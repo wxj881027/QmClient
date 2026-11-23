@@ -29,5 +29,5 @@ Once QR decoding fails there is no retry; restarting the client decodes again.
 
 ## Related
 
-- [Sponsor title](deck:qmclient-contributors-title)
+- [Player titles](deck:qmclient-contributors-title)
 - [QmClient Community](deck:qmclient-contributors-community)

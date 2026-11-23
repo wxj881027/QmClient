@@ -395,6 +395,9 @@ A key that already has a command is overwritten, so recheck your other binds aft
 A key you assign here replaces whatever action used it before, so check your other keys after changing one.
 == Burada atadığın tuş, onu daha önce kullanan eylemden alınır; birini değiştirdikten sonra diğer tuşları kontrol et.
 
+A keyword rule could not be saved. Check the trigger for => or a reserved prefix.
+== Bir anahtar kelime kuralı kaydedilemedi. Tetikleyicinin => içerip içermediğini veya ayrılmış bir ön ekle başlayıp başlamadığını kontrol edin.
+
 A manual source file takes priority over the selected candidate. Only this variant is replaced.
 == Manuel kaynak dosyası, seçilen aday dosyaya göre önceliklidir. Yalnızca bu varyant değiştirilir.
 
@@ -1913,6 +1916,9 @@ Bouncy
 Bound functions
 == Atanmış işlevler
 
+Bound nickname (leave empty for any name)
+== Bağlı takma ad (her adı kabul etmek için boş bırakın)
+
 Bounded capture frame queue depth for demo export (higher values use more memory)
 == Demo dışa aktarma için yakalama kare kuyruğu derinlik sınırı (yüksek değerler daha çok bellek kullanır)
 
@@ -2078,8 +2084,14 @@ Cannot join the target player's team
 Cannot open word list file. Previous words remain active.
 == Kelime listesi dosyası açılamıyor. Önceki kelimeler etkin kalır.
 
+Cannot prepare word list. Previous words remain active.
+== Cannot prepare word list. Previous words remain active.
+
 Cannot read complete word list file. Previous words remain active.
 == Kelime listesi dosyası tamamen okunamıyor. Önceki kelimeler etkin kalır.
+
+Cannot read the wiki file
+== Cannot read the wiki file
 
 Cannot remove the wiki file
 == Wiki dosyası kaldırılamadı
@@ -2386,9 +2398,6 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 
 Choose a screen position and font size, then check the preview card for wrapping.
 == Ekran konumunu ve yazı boyutunu seç, ardından önizleme kartında satır kayması olup olmadığına bak.
-
-Choose a sponsor title style for your nameplate and chat messages.
-== İsim etiketinde ve sohbet iletilerinde görünecek destekçi unvanının stilini seç.
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == Bir hedef seçin, ardından rengini ayarlayın; varlık lazerleri takım renklerini izleyebilir.
@@ -3326,6 +3335,9 @@ Could not add the player as a friend
 Could not add this entry.
 == Bu giriş eklenemedi.
 
+Could not apply %s. The console could not parse the value.
+== Could not apply %s. The console could not parse the value.
+
 Could not back up configuration files.
 == Yapılandırma dosyaları yedeklenemedi.
 
@@ -3400,6 +3412,9 @@ Could not save configuration package.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == İndirilen harita kaydedilemedi. Bu dosyayı manuel olarak silmeyi deneyin: %s
+
+Could not save keyword rules. Edit a rule to retry.
+== Anahtar kelime kuralları kaydedilemedi. Yeniden denemek için bir kuralı düzenleyin.
 
 Could not save title credential
 == Unvan kimlik bilgileri kaydedilemedi
@@ -4790,9 +4805,6 @@ Edit skin texture
 Edit the name and clan fields; the dummy keeps its own values.
 == Ad ve klan alanlarını düzenleyin; dummy kendi değerlerini korur.
 
-Edit title style
-== Başlık stilini düzenle
-
 Edit touch controls
 == Dokunmatik kontrolleri düzenle
 
@@ -5513,9 +5525,6 @@ Every click applies the skin at once, so star the ones you like before you start
 Every wheel tick restarts from rest, matching the original client
 == Her tekerlek adımı durarak yeniden başlar, orijinal istemcideki gibi
 
-Exact bound nickname
-== Bağlanacak tam takma ad
-
 Example /help settings will display the help about /settings
 == Örnek: /help settings, /settings hakkındaki yardımı gösterir
 
@@ -5605,6 +5614,9 @@ Export demo cut
 
 Export failed
 == Dışa aktarma başarısız
+
+Export failed. Could not compose %d edited slot(s).
+== Export failed. Could not compose %d edited slot(s).
 
 Export name contains invalid characters.
 == Dışa aktarma adı geçersiz karakterler içeriyor.
@@ -6517,6 +6529,9 @@ Glow offset
 
 Glow range
 == Parlama aralığı
+
+Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
+== Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
 
 Go back one marker
 == Bir işaretçi geri git
@@ -8147,9 +8162,6 @@ Limit cursor to game window
 Limit information in spectator mode
 == Seyirci modunda bilgiyi sınırla
 
-Limit the title to the exact nickname below.
-== Unvanı yalnızca aşağıdaki takma adla tam eşleştiğinde göster.
-
 Limiter threshold (percent)
 == Sınırlayıcı eşiği (yüzde)
 
@@ -8884,6 +8896,9 @@ may cause delay
 
 May overload the service
 == hizmeti aşırı yükleyebilir
+
+Measure a fixed cold glyph batch with performance diagnostics enabled
+== Measure a fixed cold glyph batch with performance diagnostics enabled
 
 Medium
 == Orta
@@ -10049,9 +10064,6 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == Yalnızca diğer Tee ekranda olmadığında göster
 
-Only show with this nickname
-== Yalnızca bu takma adla göster
-
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == Yalnızca seçili Tee değişir; dummy'nin renklerini düzenlemeden önce Dummy'ye geç.
 
@@ -10493,9 +10505,6 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 == Konum kaydetme veya değiştirme için saniye cinsinden ceza
 
-Pending sync
-== Eşitleme bekliyor
-
 Per-name volume (name=percent)
 == İsme göre bireysel ses seviyesi (isim=yüzde)
 
@@ -10904,6 +10913,9 @@ Player stats
 Player stats and info display
 == Oyuncu istatistikleri ve bilgi görüntüsü
 
+Player titles
+== Oyuncu unvanları
+
 Player to follow across servers until cancelled; empty disables following
 == İptal edilene kadar sunucular arasında takip edilecek oyuncu; boş bırakmak takibi kapatır
 
@@ -11167,9 +11179,6 @@ Preset bar
 
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == libx264 ile video kodlarken ön ayar, varsayılan 5 (medium), 0 ultrafast, 9 placebo (en yavaş, önerilmez)
-
-Press "Save" after any change: the title and chat style are stored on your account, and "Refresh" reloads them.
-== Her değişiklikten sonra Kaydet'e bas: unvan ve sohbet stili hesabında tutulur, Yenile ise onları yeniden yükler.
 
 Press "Select map" to choose a file, check the target server and player shown for the upload, then press "Upload map"; "Cancel" stops it.
 == Dosya seçmek için harita seç düğmesine basın, yüklemenin hedef sunucusunu ve oyuncusunu kontrol edin, sonra haritayı yükle düğmesine basın; iptal durdurur.
@@ -12818,9 +12827,6 @@ Save/Load Skin
 Saved
 == Kaydedildi
 
-Saved to Downloads/QmClient
-== İndirilenler/QmClient konumuna kaydedildi
-
 Saved with your title and shared with other QmClient players.
 == Unvanınla birlikte kaydedilir ve diğer QmClient oyuncularıyla paylaşılır.
 
@@ -14104,6 +14110,9 @@ Show moving tiles in entities
 
 Show moving tiles in entity layer
 == Varlık katmanında hareket eden döşemeleri göster
+
+Show my titles locally
+== Bu cihazda kendi unvanlarımı göster
 
 Show name
 == İsmi göster
@@ -16076,9 +16085,6 @@ The message is sent on every water death, so keep it short; leaving "Chat messag
 The name "default" is reserved.
 == "default" adı ayrılmıştır.
 
-The per-character wave setting affects text titles on your screen only.
-== Harflerin dalgalanması yalnızca kendi ekranındaki metin unvanlarını etkiler.
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Fısıldadığınız oyuncu henüz yeniden bağlanmadı veya oyundan ayrıldı. Biraz bekleyin ya da başka birine fısıldayın
 
@@ -16474,9 +16480,6 @@ Title style
 
 Title too long or contains unsupported characters
 == Unvan çok uzun veya desteklenmeyen karakterler içeriyor
-
-Title visibility and appearance
-== Unvan görünürlüğü ve görünüşü
 
 Title wave strength (0-3, 0 = off)
 == Unvan dalga gücü (0-3, 0 = kapalı)
@@ -17290,9 +17293,6 @@ Untitled
 
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
 == Sıra dışı yenileme hızları yırtılmaya yol açabilir; monitörün doğal hızını tercih edin.
-
-Up to 6 Chinese or 12 ASCII characters
-== En fazla 6 Çince veya 12 ASCII karakter
 
 Update
 == Güncelle
@@ -18425,6 +18425,9 @@ You have requested to swap with %s. Use /cancelswap to cancel the request.
 You have started racing already
 == Yarışa zaten başladınız
 
+You have to be in a team (from 1-127)
+== Bir takımda olmalısınız (1-127 arası)
+
 You have to be in a team (from 1-63)
 == Bir takımda olmalısınız (1-63 arası)
 
@@ -18789,6 +18792,62 @@ Hook
 [Direct touch input]
 Relative aim
 == Göreli nişan
+
+[Editor]
+Could not generate the quad art image.
+== Could not generate the quad art image.
+
+[Editor]
+Drawing tools require the active physics layers.
+== Drawing tools require the active physics layers.
+
+[Editor]
+Failed to write sound to file '%s'.
+== Failed to write sound to file '%s'.
+
+[Editor]
+No image selected.
+== No image selected.
+
+[Editor]
+No sound selected.
+== No sound selected.
+
+[Editor]
+Saving failed: Could not prepare or queue the map.
+== Saving failed: Could not prepare or queue the map.
+
+[Editor]
+Saving failed: Could not write map file '%s'.
+== Saving failed: Could not write map file '%s'.
+
+[Editor]
+Sync interrupted: the map was loaded, but the editor could not refresh it
+== Sync interrupted: the map was loaded, but the editor could not refresh it
+
+[Editor]
+The drawing is too large. Split it into smaller strokes.
+== The drawing is too large. Split it into smaller strokes.
+
+[Editor]
+The drawing preview is too large to display.
+== The drawing preview is too large to display.
+
+[Editor]
+The file path is too long.
+== The file path is too long.
+
+[Editor]
+The game and physics layers must have matching dimensions before they can be extended.
+== The game and physics layers must have matching dimensions before they can be extended.
+
+[Editor]
+The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+== The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
+
+[Editor]
+The requested tile layer dimensions are too large.
+== The requested tile layer dimensions are too large.
 
 [Friend auto follow]
 Follow this friend across servers

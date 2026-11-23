@@ -210,7 +210,7 @@ namespace qm_card_registry
 			// === 设置 deck · deck:<page>-<card>（原无持久化；tab=归属页/子页，左右列由瀑布分配）===
 			// 贡献者页分两个子页签（credits-qmclient / credits-links）；DDNet/TClient 署名卡并入友链，全卡半宽。
 			{"deck:qmclient-contributors-community", "credits-qmclient", false, "QmClient Community", "community links qmclient", "Find QmClient communities and project links"},
-			{"deck:qmclient-contributors-title", "credits-qmclient", false, Localizable("Sponsor title"), "sponsor title code authentication nickname redeem chat platinum fluid 赞助头衔 兑换 绑定 昵称 发言 柔光 铂金 流体 液体", Localizable("Redeem your code and customize your title")},
+			{"deck:qmclient-contributors-title", "credits-qmclient", false, Localizable("Player titles"), "玩家头衔 头衔显示 头衔样式 头衔大小 星轨 title display title style sponsor title code authentication nickname redeem chat platinum fluid 赞助头衔 兑换 绑定 昵称 发言 柔光 铂金 流体 液体", Localizable("Redeem your code and customize your title")},
 			{"deck:qmclient-contributors-sponsors", "credits-qmclient", false, "Sponsor support", "sponsor support qmclient", "View the people supporting QmClient development"},
 			{"deck:credits-friend-links", "credits-links", false, "Friend links", "friend links ddnet workshop website qmclient homepage axiom teeworlds community", "Project and community websites"},
 			{"deck:qmclient-contributors-ddnet", "credits-links", false, "DDNet", "ddnet contributors credits ddrace ddnet staff ddnet releases", "DDNet contributors and staff credits"},
@@ -274,7 +274,6 @@ namespace qm_card_registry
 			{"deck:appearance-name-plate-hook-strength", "appearance-name-plate", false, Localizable("Hook Strength"), "appearance nameplate hook strength strong weak 钩子强度 强钩 弱钩 gouzi qiangdu", "Show hook strength icon indicator"},
 			{"deck:appearance-name-plate-key-presses", "appearance-name-plate", false, Localizable("Key Presses"), "appearance nameplate key presses direction 按键显示 按键指示 anjian", "Show players' key presses"},
 			{"deck:appearance-name-plate-preview", "appearance-name-plate", false, "Preview", "appearance name plate preview", "Preview player and dummy nameplates"},
-			{"deck:qmclient-contributors-title-display", "appearance-name-plate", false, Localizable("Title display"), "title display nameplate above main dummy moon sun color opacity size scale 头衔显示 名牌 上方 本体 分身 月亮 太阳 星轨 配色 透明度 头衔大小 缩放 qm_nameplate_title_scale qm_show_nameplate_title qm_show_main_title qm_show_dummy_title qm_sponsor_chat_effects qm_title_badge_style qm_title_badge_color qm_title_opacity", Localizable("Title visibility and appearance")},
 			{"deck:appearance-hook-collision-main", "appearance-hook-collision", false, "Hook collision line", "appearance hook collision line", "Configure hook range and collision guide lines"},
 			{"deck:appearance-hook-collision-preview", "appearance-hook-collision", false, "Preview", "appearance hook collision preview", "Preview hook collision colors and line styles"},
 			{"deck:appearance-info-messages", "appearance-info-messages", false, "Info Messages", "appearance info messages", "Style kill, finish, and system messages"},
@@ -1000,38 +999,6 @@ namespace qm_card_registry
 		return Changed;
 	}
 
-	bool RepairLegacyTitleLayout(qm_card_order::CModel &Model)
-	{
-		const std::vector<qm_card_order::SEntry> vLegacy = {
-			{"deck:qmclient-contributors-community", "credits-qmclient", 1, 0},
-			{"deck:qmclient-contributors-title", "credits-qmclient", 1, 1},
-			{"deck:qmclient-contributors-title-display", "credits-qmclient", 2, 1},
-			{"deck:qmclient-contributors-sponsors", "credits-qmclient", 2, 0},
-		};
-		const std::vector<qm_card_order::SEntry> vTarget = {
-			{"deck:qmclient-contributors-community", "credits-qmclient", 1, 1},
-			{"deck:qmclient-contributors-title", "credits-qmclient", 1, 0},
-			{"deck:qmclient-contributors-title-display", "credits-qmclient", 2, 0},
-			{"deck:qmclient-contributors-sponsors", "credits-qmclient", 2, 1},
-		};
-		const std::vector<const char *> vAllowed = {
-			"deck:qmclient-contributors-community",
-			"deck:qmclient-contributors-title",
-			"deck:qmclient-contributors-title-display",
-			"deck:qmclient-contributors-sponsors",
-		};
-		const bool AlreadyCurrent = std::all_of(vTarget.begin(), vTarget.end(), [&](const auto &Expected) {
-			const int Index = Model.FindByStableId(Expected.m_pStableId);
-			if(Index < 0)
-				return false;
-			const auto &Entry = Model.Entry(Index);
-			return Entry.m_pDefaultTab != nullptr && str_comp(Entry.m_pDefaultTab, Expected.m_pDefaultTab) == 0 && Entry.m_Column == Expected.m_Column && Entry.m_OrderInColumn == Expected.m_OrderInColumn;
-		});
-		if(AlreadyCurrent)
-			return false;
-		return qm_card_order::MigrateExactLayout(Model, "credits-qmclient", vLegacy, vTarget, vAllowed);
-	}
-
 	bool RepairLegacyGraphicsVisualCards(qm_card_order::CModel &Model)
 	{
 		// 两张卡的新归属固定来自注册表：tab 是「页」这一个维度，注册表说了算，
@@ -1057,26 +1024,6 @@ namespace qm_card_registry
 			Changed = true;
 		}
 		return Changed;
-	}
-
-	bool RepairLegacyNameplateTitleLayout(qm_card_order::CModel &Model)
-	{
-		const char *pStableId = "deck:qmclient-contributors-title-display";
-		const int Index = Model.FindByStableId(pStableId);
-		if(Index < 0)
-			return false;
-		const auto &Entry = Model.Entry(Index);
-		if(Entry.m_pDefaultTab == nullptr ||
-			(str_comp(Entry.m_pDefaultTab, "credits-qmclient") != 0 && str_comp(Entry.m_pDefaultTab, "qmclient-contributors") != 0) ||
-			Entry.m_Column != 2 || (Entry.m_OrderInColumn != 0 && Entry.m_OrderInColumn != 1))
-			return false;
-		// 先完成旧贡献者页的默认排序，再迁移显示卡；用户自定位置保持不变。
-		RepairLegacyTitleLayout(Model);
-		const qm_card_order::SEntry *pPlacement = FindDefaultPlacement(pStableId);
-		if(pPlacement == nullptr)
-			return false;
-		Model.MoveToTab(pStableId, pPlacement->m_pDefaultTab, pPlacement->m_Column, pPlacement->m_OrderInColumn);
-		return true;
 	}
 
 	bool RepairLegacyChatBubbleTab(qm_card_order::CModel &Model)

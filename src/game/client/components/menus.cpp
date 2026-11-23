@@ -1022,7 +1022,6 @@ qm_card_order::CModel &CMenus::SettingsCardOrderModelForRenderPass()
 		qm_card_registry::RepairLegacyBindTab(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyKeyBindsTab(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardRenderOnlyOrderModel);
-		qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyChatBubbleTab(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyBindStatusHudTab(m_SettingsCardRenderOnlyOrderModel);
@@ -1089,12 +1088,11 @@ void CMenus::LoadSettingsCardOrderModel()
 	const bool LegacyBindTabChanged = qm_card_registry::RepairLegacyBindTab(m_SettingsCardOrderModel);
 	const bool KeyBindsTabChanged = qm_card_registry::RepairLegacyKeyBindsTab(m_SettingsCardOrderModel);
 	const bool CreditsLayoutChanged = qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardOrderModel);
-	const bool NameplateTitleLayoutChanged = qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardOrderModel);
 	const bool TeeLayoutChanged = qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardOrderModel);
 	const bool ChatBubbleTabChanged = qm_card_registry::RepairLegacyChatBubbleTab(m_SettingsCardOrderModel);
 	const bool BindStatusHudTabChanged = qm_card_registry::RepairLegacyBindStatusHudTab(m_SettingsCardOrderModel);
 	const bool PredictionCardTabsChanged = qm_card_registry::RepairLegacyPredictionCardTabs(m_SettingsCardOrderModel);
-	if((ModernTabsChanged || LegacyBindTabChanged || KeyBindsTabChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged || ChatBubbleTabChanged || BindStatusHudTabChanged || PredictionCardTabsChanged) && !PersistCurrentLayout())
+	if((ModernTabsChanged || LegacyBindTabChanged || KeyBindsTabChanged || CreditsLayoutChanged || TeeLayoutChanged || ChatBubbleTabChanged || BindStatusHudTabChanged || PredictionCardTabsChanged) && !PersistCurrentLayout())
 	{
 		m_SettingsCardOrderLoaded = true;
 		return;
@@ -1344,18 +1342,6 @@ void CMenus::LoadSettingsCardOrderModel()
 			return;
 		}
 		g_Config.m_QmCardLayoutVersion = 12;
-	}
-	if(g_Config.m_QmCardLayoutVersion < 13)
-	{
-		qm_card_order::CModel Candidate;
-		MakeCandidate(Candidate);
-		const bool Changed = qm_card_registry::RepairLegacyTitleLayout(Candidate);
-		if(!PersistCandidate(Candidate, Changed, true))
-		{
-			m_SettingsCardOrderLoaded = true;
-			return;
-		}
-		g_Config.m_QmCardLayoutVersion = 13;
 	}
 	if(g_Config.m_QmCardLayoutVersion < 14)
 	{
