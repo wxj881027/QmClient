@@ -2,7 +2,6 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_DEMO_CAMERA_FILE_H
 
 #include "demo_camera_path.h"
-
 #include "qm_json_tracked_allocator.h"
 
 #include <base/system.h>
