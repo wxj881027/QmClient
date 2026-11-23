@@ -62,10 +62,16 @@ jobs:
       id: classify
       shell: bash
       run: |
+        # C++ 的 CodeQL 分析要先跑一次 RelWithDebInfo 全量构建（约 75 分钟）+ 查询（约 15 分钟），
+        # 单次 PR 成本接近 90 分钟，而它查的是整仓既有代码，与本次 diff 无关。
+        # 因此 cpp 只在 master push 与每周定时任务上跑；PR 与 merge queue 只跑 python（约 1 分钟）。
         if [ "${{ github.event_name }}" = "schedule" ]; then
           echo "should_run=true" >> "$GITHUB_OUTPUT"
           echo "should_run_cpp=$( [ '${{ matrix.language }}' = 'cpp' ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
-        elif [ "${{ matrix.language }}" = "cpp" ] && [ "${{ needs.changes.outputs.heavy_changed }}" = "true" ]; then
+        elif [ "${{ matrix.language }}" = "cpp" ] \
+          && [ "${{ github.event_name }}" != "pull_request" ] \
+          && [ "${{ github.event_name }}" != "merge_group" ] \
+          && [ "${{ needs.changes.outputs.heavy_changed }}" = "true" ]; then
           echo "should_run=true" >> "$GITHUB_OUTPUT"
           echo "should_run_cpp=true" >> "$GITHUB_OUTPUT"
         elif [ "${{ matrix.language }}" = "python" ] && [ "${{ needs.changes.outputs.python_changed }}" = "true" ]; then

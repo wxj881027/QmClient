@@ -238,6 +238,12 @@ jobs:
                 -DQMCLIENT_PORTABLE=${{ matrix.portable && 'ON' || 'OFF' }}
                 -DTOOLS=ON
               )
+              # PR 验证不需要 LTO：/GL 让每个 TU 都带上中间表示，链接期再做全程序
+              # 优化，2300+ 个 TU 的构建里有相当大一块时间花在这上面。发版（带 tag）
+              # 仍按发布配置走，LTO 的正确性由预览通道覆盖。
+              if [ -z "${RELEASE_TAG}" ]; then
+                ARGS+=(-DIPO=OFF)
+              fi
               ;;
           esac
           if [ "$RUNNER_OS" = "Windows" ]; then
@@ -275,7 +281,9 @@ jobs:
           retention-days: 7
 
       - name: Run tests
-        if: ${{ env.RELEASE_TAG != '' || !inputs.skip_tests }}
+        # Windows Portable 与 Windows 同源同编译器，只差一个「默认用户目录」开关，
+        # 测试套件与它无关；重复跑一遍要重新编译 1800+ 个测试 TU，纯属浪费。
+        if: ${{ (env.RELEASE_TAG != '' || !inputs.skip_tests) && !matrix.portable }}
         shell: bash
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
@@ -427,7 +435,15 @@ jobs:
 
       - name: Show ccache statistics (Linux/macOS)
         if: always() && runner.os != 'Windows'
-        run: ccache --show-stats || true
+        # --verbose 会列出不可缓存调用的原因（链接/预处理/不支持的选项），
+        # 这是定位「为什么缓存只命中一小部分 TU」的唯一现场证据。
+        run: ccache --show-stats --verbose || true
+
+      - name: Show sccache statistics (Windows)
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Get-Command sccache -ErrorAction SilentlyContinue) { sccache --show-stats } else { "sccache not on PATH" }
 
   build_android:
     name: Android
@@ -435,7 +451,9 @@ jobs:
     timeout-minutes: 180
     env:
       ANDROID_APP_NAME: QmClient
-      ANDROID_BUILD_ARCH: ${{ (startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '') && 'all' || inputs.android_arch || 'all' }}
+      # PR 只验证 arm64（真机主流 ABI）：all 会串行编 4 套 ABI，占掉 40+ 分钟，
+      # 而 32 位/x86 的差异面主要在第三方库，交给发版与手动 dispatch 覆盖。
+      ANDROID_BUILD_ARCH: ${{ (startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '') && 'all' || inputs.android_arch || (github.event_name == 'pull_request' && 'arm64' || 'all') }}
       ANDROID_PACKAGE_NAME: com.qmclient.client
       ANDROID_BUILD_DIR: build-android-release
       ANDROID_NDK_VERSION: "27.3.13750724"
