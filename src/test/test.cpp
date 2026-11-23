@@ -143,7 +143,6 @@ class CTestLogListener : public ::testing::EmptyTestEventListener
 
 int main(int argc, const char **argv)
 {
-	QmInstallMacTestTerminateDiagnostics();
 	CCmdlineFix CmdlineFix(&argc, &argv);
 	if(const auto Result = QmCrashdumpProcessProbe(argc, argv))
 		return *Result;
@@ -166,6 +165,10 @@ int main(int argc, const char **argv)
 			pTest = pInfo->name();
 		}
 		std::fprintf(stderr, "FATAL: uncaught exception while running %s.%s\n", pSuite, pTest);
+		// 分配故障注入的用例在不同标准库上的第 N 次分配会落到不同位置；终止时把
+		// 注入状态一并打出来，才能区分「失败落在枚举之外」与「测试自己显式抛的」。
+		if(CPredictionAllocationFailure::Active())
+			std::fprintf(stderr, "FATAL: allocation injection active, attempts=%zu\n", CPredictionAllocationFailure::ActiveAttempts());
 		if(auto pCurrent = std::current_exception())
 		{
 			try
@@ -197,6 +200,10 @@ int main(int argc, const char **argv)
 		std::fflush(stderr);
 		std::abort();
 	});
+	// macOS 的终止诊断要装在上面这个兜底之后：它会把「安装时刻的处理器」记下来，
+	// 打印完栈与展开信息再链式转交。反过来装就被 set_terminate 顶掉，
+	// 死亡测试再也看不到「QmClient test terminate stack:」这段标记。
+	QmInstallMacTestTerminateDiagnostics();
 #if defined(__APPLE__) || defined(__linux__)
 	// 信号型崩溃（如 dbg_break 的 SIGTRAP）在 CI 上只留下退出码；打印出错 PC 与栈帧后
 	// 恢复默认处理并重新抛出同一信号，death test 仍然能看到原来的信号。

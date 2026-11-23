@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <new>
@@ -262,9 +263,15 @@ inline bool SettingsAssetMemoryReadyBytes(const CImageInfo &Image, uint64_t &Out
 	Out = 0;
 	if(Image.m_pData == nullptr)
 		return true;
+	// 格式字段可能来自磁盘上的旧数据（或损坏的贴图信息），取值落在枚举范围外时
+	// 直接读它本身就是未定义行为（UBSan: load of value 4, which is not a valid
+	// value for type 'EImageFormat'）。按底层整数取值再判范围。
+	static_assert(sizeof(CImageInfo::EImageFormat) == sizeof(int), "EImageFormat must be int-sized");
+	int Format = 0;
+	std::memcpy(&Format, &Image.m_Format, sizeof(Format));
 	if(Image.m_Width == 0 || Image.m_Height == 0 ||
 		Image.m_Width > static_cast<size_t>(std::numeric_limits<int>::max()) || Image.m_Height > static_cast<size_t>(std::numeric_limits<int>::max()) ||
-		Image.m_Format < CImageInfo::FORMAT_RGB || Image.m_Format > CImageInfo::FORMAT_RA)
+		Format < CImageInfo::FORMAT_RGB || Format > CImageInfo::FORMAT_RA)
 		return false;
 	size_t SourceBytes = 0;
 	uint64_t Pixels, Rgba;

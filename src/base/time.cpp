@@ -26,11 +26,18 @@ void set_new_tick()
 
 static_assert(std::chrono::steady_clock::is_steady, "Compiler does not support steady clocks, it might be out of date.");
 static_assert(std::chrono::steady_clock::period::den / std::chrono::steady_clock::period::num >= 1000000000, "Compiler has a bad timer precision and might be out of date.");
-static const std::chrono::time_point<std::chrono::steady_clock> GLOBAL_START_TIME = std::chrono::steady_clock::now();
+// 函数内静态：命名空间作用域的这道动态初始化会跟其他 TU 的全局对象构造抢顺序，
+// 而 UI 层有在构造期就格式化文本（取当前时间）的全局对象，先读后构造就是
+// ASan 的 initialization-order-fiasco。改成首次调用时构造。
+static std::chrono::steady_clock::time_point GlobalStartTime()
+{
+	static const std::chrono::steady_clock::time_point s_Start = std::chrono::steady_clock::now();
+	return s_Start;
+}
 
 std::chrono::nanoseconds time_get_nanoseconds()
 {
-	return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - GLOBAL_START_TIME);
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - GlobalStartTime());
 }
 
 int64_t time_get_impl()
