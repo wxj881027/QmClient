@@ -159,16 +159,15 @@ try
 				const int Y = round_to_int(Coltile.y);
 				const SRestoreTile Restore{*pCollision, X, Y, pCollision->GetTile(X, Y)};
 				pCollision->SetCollisionAt(X, Y, TILE_SOLID);
-				pCollision->MovePoint(&TempPos, &TempDir, 1.0f, nullptr);
+				pCollision->MovePoint(&TempPos, &TempDir, 1.0f, nullptr, &Incomplete);
 			}
 			else
-			{
 				pCollision->MovePoint(&TempPos, &TempDir, 1.0f, nullptr, &Incomplete);
-				if(Incomplete)
-				{
-					Discard();
-					return;
-				}
+
+			if(Incomplete)
+			{
+				Discard();
+				return;
 			}
 
 			m_From = m_Pos;
