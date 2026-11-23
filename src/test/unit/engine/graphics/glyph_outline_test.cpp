@@ -68,6 +68,9 @@ TEST(QmGlyphGeometry, NestedContourBecomesHoleAndTriangulatesIndependently)
 		{192, 192},
 		{192, 64},
 	};
+	// FT_Outline 的 tags/contours 在 FreeType 2.11 之前的头文件里是 char*/short*，
+	// 之后改成 unsigned char*/unsigned short*。本地与 CI 用的版本不一致，
+	// 直接赋值总有一侧是非法隐式转换，按目标字段类型显式转换。
 	unsigned char aTags[] = {
 		FT_CURVE_TAG_ON,
 		FT_CURVE_TAG_ON,
@@ -83,8 +86,8 @@ TEST(QmGlyphGeometry, NestedContourBecomesHoleAndTriangulatesIndependently)
 	Outline.n_contours = 2;
 	Outline.n_points = 8;
 	Outline.points = aPoints;
-	Outline.tags = aTags;
-	Outline.contours = aContours;
+	Outline.tags = reinterpret_cast<decltype(Outline.tags)>(aTags);
+	Outline.contours = reinterpret_cast<decltype(Outline.contours)>(aContours);
 	Outline.flags = FT_OUTLINE_NONE;
 	FT_Glyph_Metrics Metrics{};
 	Metrics.width = 256;
