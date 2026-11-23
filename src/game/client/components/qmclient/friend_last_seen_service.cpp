@@ -121,9 +121,11 @@ void CQmFriendLastSeenService::Update(const IFriends &Friends, IEngine &Engine, 
 	const uint64_t Revision = Friends.Revision();
 	if(Revision != m_FriendsRevision)
 	{
-		std::unordered_set<std::string> Names;
+		// 容器自身的构造也会分配（MSVC 的 unordered_set 默认构造即取桶数组），
+		// 必须和 reserve 一起放进同一段保护，否则失败会越过这里抛给调用方。
 		try
 		{
+			std::unordered_set<std::string> Names;
 			Names.reserve(Friends.NumFriends());
 			for(int i = 0; i < Friends.NumFriends(); ++i)
 			{
@@ -131,6 +133,8 @@ void CQmFriendLastSeenService::Update(const IFriends &Friends, IEngine &Engine, 
 				if(pName[0] != '\0')
 					Names.emplace(pName);
 			}
+			m_Cache.RetainNames(Names);
+			m_FriendsRevision = Revision;
 		}
 		catch(const std::bad_alloc &)
 		{
@@ -140,8 +144,6 @@ void CQmFriendLastSeenService::Update(const IFriends &Friends, IEngine &Engine, 
 		{
 			return;
 		}
-		m_Cache.RetainNames(Names);
-		m_FriendsRevision = Revision;
 	}
 	if(!Enabled)
 		return;

@@ -176,15 +176,22 @@ TEST_F(PredictionEventAllocation, PlayedSoundKeepsOriginalPositionOnCorrection)
 	EXPECT_EQ(m_World.m_PredictedEvents.front().m_Pos, vec2(10, 20));
 }
 
-TEST_F(PredictionEventAllocation, OrdinaryEventsKeepGlobalAndWorldPredictionGates)
+TEST_F(PredictionEventAllocation, OrdinaryEventsFollowWorldPredictionGate)
 {
+	// cl_predict_events 与服务器的 PREDICT_EVENTS 能力由调用方合成进
+	// m_WorldConfig.m_PredictEvents（见 CGameClient 的同步点）；世界层只认这一个开关，
+	// 这样快速练习的分支世界才能独立打开事件预测。
 	g_Config.m_ClPredictEvents = 0;
+	m_World.m_WorldConfig.m_PredictEvents = true;
 	m_World.CreatePredictedExplosionEvent(vec2(10, 20), 3);
-	EXPECT_TRUE(m_World.m_PredictedEvents.empty());
+	EXPECT_EQ(m_World.m_PredictedEvents.size(), 1u);
+	m_World.m_PredictedEvents.clear();
+
 	g_Config.m_ClPredictEvents = 1;
 	m_World.m_WorldConfig.m_PredictEvents = false;
 	m_World.CreatePredictedExplosionEvent(vec2(10, 20), 3);
 	EXPECT_TRUE(m_World.m_PredictedEvents.empty());
+
 	m_World.m_WorldConfig.m_PredictEvents = true;
 	m_World.CreatePredictedExplosionEvent(vec2(10, 20), 3);
 	EXPECT_EQ(m_World.m_PredictedEvents.size(), 1u);

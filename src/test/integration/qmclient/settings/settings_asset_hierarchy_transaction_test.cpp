@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <limits>
 #include <memory>
+#include <new>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -154,7 +155,15 @@ namespace
 			bool Triggered = false;
 			{
 				CPredictionAllocationFailure Failure(BeforeFailure);
-				Candidate = PrepareSynced(Published, Filtered);
+				try
+				{
+					Candidate = PrepareSynced(Published, Filtered);
+				}
+				catch(const std::bad_alloc &)
+				{
+					// 候选从 prepare 迁移到测试持有者的这一步同样会分配；这里的失败
+					// 也必须保持已发布状态不变，并且允许下一次重试。
+				}
 				Triggered = Failure.Triggered();
 			}
 			EXPECT_TRUE(Triggered);
