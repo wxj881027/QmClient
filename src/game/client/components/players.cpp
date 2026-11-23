@@ -2101,7 +2101,7 @@ void CPlayers::OnRender()
 			}
 		}
 
-		// 同队玩家冻结时，身体和脚统一使用当前卡锤或卡钩的按下颜色。
+		// 范围内的角色冻结时，身体和脚使用卡锤或卡钩的按下颜色。
 		if(const auto Color = GameClient()->QmWaterHammerIndicator().HighlightColor(i))
 		{
 			aRenderInfo[i].m_CustomColoredSkin = true;

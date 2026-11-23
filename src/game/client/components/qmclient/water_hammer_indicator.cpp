@@ -67,22 +67,29 @@ bool CQmWaterHammerIndicator::IsInPenaltyArea(const vec2 Position) const
 
 SQmWaterHeldState CQmWaterHammerIndicator::MarkedInputs(const int ClientId) const
 {
-	if(!g_Config.m_QmWaterHammerHighlight || ClientId < 0 || ClientId >= MAX_CLIENTS)
+	if(!g_Config.m_QmWaterHammerHighlight || Client()->State() != IClient::STATE_ONLINE || ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return {};
 
 	const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
-	if(LocalClientId < 0 || LocalClientId >= MAX_CLIENTS || ClientId == LocalClientId)
+	if(LocalClientId < 0 || LocalClientId >= MAX_CLIENTS)
 		return {};
 
 	const CGameClient::CClientData &ClientData = GameClient()->m_aClients[ClientId];
 	if(!ClientData.m_Active || ClientData.m_Spec || !GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
 		return {};
-	if(GameClient()->m_Teams.Team(ClientId) != GameClient()->m_Teams.Team(LocalClientId))
+
+	const bool IsCurrent = ClientId == LocalClientId;
+	const bool IsOtherLocal = Client()->DummyConnected() && ClientId == GameClient()->m_aLocalIds[!g_Config.m_ClDummy];
+	if(!QmWaterInputScopeAllows(static_cast<EQmWaterInputScope>(g_Config.m_QmWaterInputScope), IsCurrent || IsOtherLocal))
 		return {};
 
 	const CNetObj_PlayerInput *pLocalInput = nullptr;
-	if(Client()->DummyConnected() && ClientId == GameClient()->m_aLocalIds[!g_Config.m_ClDummy])
+	if(IsCurrent)
+		pLocalInput = &GameClient()->m_Controls.m_aInputData[g_Config.m_ClDummy];
+	else if(IsOtherLocal)
 		pLocalInput = g_Config.m_ClDummyHammer ? &GameClient()->m_HammerInput : &GameClient()->m_DummyInput;
+	else if(!CanUseRemoteInput(ClientId))
+		return {};
 
 	return {
 		QmShouldMarkWaterHammer(ClientData.m_FreezeEnd, ClientData.m_LiveFrozen, ClientData.m_RenderCur.m_Weapon, m_aInputs[ClientId], pLocalInput),

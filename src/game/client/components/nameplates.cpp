@@ -405,7 +405,7 @@ public:
 	bool m_DirJump;
 	bool m_DirRight;
 	float m_FontSizeDirection;
-	SQmWaterHeldState m_WaterHeld;
+	SQmWaterHeldState m_WaterIcons;
 	float m_HookStrongWeakRowHeight;
 	bool m_ShowHookStrongWeak;
 	EHookStrongWeakState m_HookStrongWeakState;
@@ -720,8 +720,7 @@ public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Texture = g_pData->m_aImages[m_Hammer ? IMAGE_QM_WATER_HAMMER : IMAGE_QM_WATER_HOOK].m_Id;
-		m_ShiftOnInvis = Data.m_ShowDirection && g_Config.m_QmWaterHammerHighlight;
-		m_Visible = m_ShiftOnInvis && m_Texture.IsValid() && (m_Hammer ? Data.m_WaterHeld.m_Hammer : Data.m_WaterHeld.m_Hook);
+		m_Visible = m_Texture.IsValid() && (m_Hammer ? Data.m_WaterIcons.m_Hammer : Data.m_WaterIcons.m_Hook);
 		m_Size = vec2(Data.m_FontSizeDirection, Data.m_FontSizeDirection);
 		// 高亮方块与强弱钩同尺寸（图标 + 5px 留白），相邻键位拼起来时边框正好相接。
 		const float BlockSide = Data.m_FontSizeHookStrongWeak + DEFAULT_PADDING;
@@ -2137,7 +2136,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 #endif
 	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK, VideoRendering);
 	const int ShowDirectionConfig = DisplaySettings.m_Direction;
-	Data.m_WaterHeld = GameClient()->QmWaterHammerIndicator().MarkedInputs(ClientId);
+	Data.m_WaterIcons = GameClient()->QmWaterHammerIndicator().MarkedInputs(ClientId).VisibleIcons(g_Config.m_QmWaterHammerIcon, g_Config.m_QmWaterHookIcon);
 	Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = false;
 	switch(ShowDirectionConfig)
 	{
@@ -2343,7 +2342,9 @@ static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, CNamePlat
 		Data.m_ShowDirection = false;
 		dbg_assert_failed("ShowDirectionConfig invalid");
 	}
-	Data.m_WaterHeld = {true, true};
+	// 预览用示例按键状态，便于拖动图标位置。
+	Data.m_WaterIcons = SQmWaterHeldState{g_Config.m_QmWaterHammerHighlight != 0, g_Config.m_QmWaterHammerHighlight != 0}
+				    .VisibleIcons(g_Config.m_QmWaterHammerIcon, g_Config.m_QmWaterHookIcon);
 	Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = true;
 	Data.m_FontSizeDirection = FontSizeDirection;
 
@@ -3121,7 +3122,8 @@ void CNamePlates::OnRender()
 	const bool RenderStrongWeak = DisplaySettings.StrongWeakEnabled();
 	const bool RenderTClientExtras = g_Config.m_QmNameplatePingCircle || g_Config.m_QmNameplateCountry || g_Config.m_QmNameplateSkins || (g_Config.m_QmWarList && g_Config.m_QmWarListReason);
 	const bool RenderDirection = ShowDirection != 0;
-	const bool RenderNameplates = RenderNames || RenderClan || RenderClientIds || RenderStrongWeak || RenderTClientExtras || RenderDirection || ShowCoords || ShowCoordXAlignHint;
+	const bool RenderWaterIcons = !DemoPlayback && g_Config.m_QmWaterHammerHighlight && (g_Config.m_QmWaterHammerIcon || g_Config.m_QmWaterHookIcon);
+	const bool RenderNameplates = RenderNames || RenderClan || RenderClientIds || RenderStrongWeak || RenderTClientExtras || RenderDirection || RenderWaterIcons || ShowCoords || ShowCoordXAlignHint;
 	const bool RenderChatBubbles = g_Config.m_QmChatBubble != 0 && !FocusModeHidesChat();
 	const bool RenderFreezeWakeupPopups = GameClient()->HasFreezeWakeupPopups();
 	// 自适应特效档位每帧开场算一次，同帧内所有名牌共用，避免同屏不同玩家效果不一致。

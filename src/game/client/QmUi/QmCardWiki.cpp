@@ -732,9 +732,9 @@ namespace
 		},
 		{
 			"qm:water_hammer",
-			Localizable("Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses."),
-			Localizable("Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size."),
-			Localizable("Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded."),
+			Localizable("Highlight held hammer and hook inputs while frozen"),
+			Localizable("The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys."),
+			Localizable("Own includes your main tee and dummy. Other players must be on your team and require server preinput support."),
 		},
 		{
 			"qm:weapon_animation",

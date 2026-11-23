@@ -5270,9 +5270,6 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == Ative a linha-guia e depois defina comprimento, estilo e cores.
 
-Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
-== Ative o destaque e as teclas do nome e escolha as cores do martelo e do gancho pressionados. O tamanho dos ícones acompanha o das teclas.
-
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == Ative o indicador, escolha o modo de distância e se os jogadores da war-list recebem outra cor.
 
@@ -6929,11 +6926,11 @@ Highlight Color
 Highlight console commands
 == Destacar comandos do console
 
-Highlight frozen teammates' hammer and hook inputs
-== Destacar entradas de martelo e gancho dos aliados congelados
-
 Highlight game type
 == Destacar tipo de jogo
+
+Highlight held hammer and hook inputs while frozen
+== Destacar martelo e gancho mantidos durante o congelamento
 
 Highlight message text gradient color
 == Cor gradiente do texto de mensagens destacadas
@@ -6949,9 +6946,6 @@ Highlighted message
 
 Highlighted message color
 == Cor da mensagem destacada
-
-Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
-== Destaca aliados congelados que mantêm o martelo pressionado e mostra suas entradas de martelo ou gancho ao lado das teclas do nome.
 
 Hit feedback
 == Feedback de acerto
@@ -7183,9 +7177,6 @@ Icon symbols:
 
 Icons
 == Ícones
-
-Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
-== Os ícones somem ao soltar a tecla ou descongelar. As entradas de outros jogadores exigem suporte a pré-entrada no servidor; seu personagem ativo fica de fora.
 
 Identity
 == Identidade
@@ -10360,6 +10351,9 @@ Overwrite clan even if empty
 
 Own hook line width
 == Largura da linha de gancho própria
+
+Own includes your main tee and dummy. Other players must be on your team and require server preinput support.
+== Próprios inclui seu Tee principal e seu dummy. Para exibir outros jogadores, eles precisam estar na sua equipe e o servidor deve oferecer suporte a pré-entrada.
 
 p = Ping latency
 == p = Latência de ping
@@ -13895,6 +13889,9 @@ Show grenade and laser trajectory preview
 Show Grid
 == Mostrar grade
 
+Show hammer icon
+== Mostrar ícone do martelo
+
 Show hammer status
 == Mostrar status do martelo
 
@@ -13909,6 +13906,9 @@ Show hitbox mode
 
 Show Hook Collision
 == Mostrar colisão de gancho
+
+Show hook icon
+== Mostrar ícone do gancho
 
 Show hook strength icon indicator
 == Mostrar indicador de ícone de força do gancho
@@ -15443,6 +15443,9 @@ Strong hook color
 Strong Weak Hook
 == Gancho forte fraco
 
+Stuck input display scope
+== Escopo de exibição
+
 Style
 == Estilo
 
@@ -16030,6 +16033,9 @@ The card only appears while such a bind exists; click its key field to change th
 
 The command is empty, incomplete, or exceeds the local config line limit.
 == O comando está vazio, incompleto ou excede o limite da linha de configuração local.
+
+The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys.
+== O escopo se aplica às cores dos Tee e aos ícones. Cada ícone pode ser ativado independentemente das teclas de direção.
 
 The downloaded file is not a valid demo
 == O arquivo baixado não é uma demo válida
@@ -18987,6 +18993,18 @@ AUTO
 [Start menu]
 Play
 == Jogar
+
+[Stuck input display scope]
+All
+== Todos os tees
+
+[Stuck input display scope]
+Others
+== Outros
+
+[Stuck input display scope]
+Own
+== Próprio
 
 [Team size]
 maximum

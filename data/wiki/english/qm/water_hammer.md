@@ -1,14 +1,16 @@
 ## What this controls
 
-Teammate state highlighting: teammates on your team who are frozen while holding the hammer with fire pressed are drawn in orange-red, so you can find who needs a wake-up hammer in a messy fight. It only changes the rendering on your own screen.
+While a tee is frozen, holding fire with the hammer or holding hook changes the tee's color and displays the corresponding icon beside the nameplate.
 
 ## In game
 
-The color applies when a teammate is frozen, holds the hammer (or is switching to it) and has fire held — all three at once; releasing fire or unfreezing restores them at once. Nobody else sees this color, and it cannot serve as a team alert.
+- Own includes the main tee and dummy. Others includes other players on your team. All includes both. This scope controls tee colors and icons.
+- Show hammer icon and Show hook icon can be toggled separately. They also work with direction key icons turned off.
+- The main switch turns off both colors and icons. The indicator clears when the key is released or the tee unfreezes.
 
 ## Watch out
 
-- Your dummy runs on your own local input and can always be judged; other players rely on server-broadcast pre-input, and when the server sends none the highlight never lights up — not a broken setting.
+- The main tee and dummy use local input. Indicators for other players require server preinput support.
 - Team filtering only compares team numbers; on servers where everyone counts as one team it does not tell friend from foe.
 - The check ignores position: a frozen teammate anywhere counts, not only in water.
 

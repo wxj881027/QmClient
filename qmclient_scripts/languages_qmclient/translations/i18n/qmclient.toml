@@ -11269,22 +11269,6 @@ turkish = "Sistem medya iletim kontrol entegrasyonunu etkinleştir"
 polish = "Włącz integrację systemowych kontrolek przesyłania multimediów"
 
 [[message]]
-key = "Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size."
-[message.translations]
-simplified_chinese = "开启高亮和昵称按键显示后，可以分别调整卡锤、卡钩的按下颜色。图标大小跟随按键显示。"
-traditional_chinese = "開啟高亮和暱稱按鍵顯示後，可以分別調整卡錘、卡鉤的按下顏色。圖示大小跟隨按鍵顯示。"
-japanese = "強調とネームプレートのキー表示を有効にして、ハンマーとフックの押下時の色を選びます。アイコンの大きさはキー表示に連動します。"
-korean = "강조와 이름표 키 표시를 켠 뒤 해머와 훅을 누를 때의 색상을 각각 선택하세요. 아이콘 크기는 키 표시 크기를 따릅니다."
-russian = "Включите подсветку и показ клавиш над именем, затем выберите цвета значков зажатого молота и крюка. Их размер соответствует размеру клавиш."
-german = "Aktiviere die Hervorhebung und die Tastenanzeige am Namensschild und wähle die Farben für gehaltenen Hammer und Haken. Die Symbolgröße folgt der Tastengröße."
-spanish = "Activa el resaltado y las teclas del nombre y elige los colores del martillo y el gancho pulsados. Los iconos siguen el tamaño de las teclas."
-french = "Activez le surlignage et les touches du nom, puis choisissez les couleurs du marteau et du grappin maintenus. La taille des icônes suit celle des touches."
-brazilian_portuguese = "Ative o destaque e as teclas do nome e escolha as cores do martelo e do gancho pressionados. O tamanho dos ícones acompanha o das teclas."
-portuguese = "Ativa o destaque e as teclas do nome e escolhe as cores do martelo e do gancho premidos. O tamanho dos ícones acompanha o das teclas."
-turkish = "Vurgulamayı ve isim etiketi tuşlarını açıp basılı çekiç ve kanca simgelerinin renklerini seçin. Simge boyutu tuş boyutunu izler."
-polish = "Włącz wyróżnianie i klawisze przy nazwie, a następnie wybierz kolory przytrzymanego młota i haka. Rozmiar ikon odpowiada rozmiarowi klawiszy."
-
-[[message]]
 key = "Enable thinking mode"
 [message.translations]
 simplified_chinese = "启用思考模式"
@@ -15040,22 +15024,6 @@ turkish = "Konsol komutlarını vurgula"
 polish = "Podświetlaj polecenia konsoli"
 
 [[message]]
-key = "Highlight frozen teammates' hammer and hook inputs"
-[message.translations]
-simplified_chinese = "高亮冻结中队友的卡锤和卡钩"
-traditional_chinese = "高亮凍結中隊友的卡錘和卡鉤"
-japanese = "凍結中の味方のハンマーとフック入力を強調"
-korean = "얼어붙은 팀원의 해머 및 훅 입력 강조"
-russian = "Подсвечивать ввод молота и крюка замороженных союзников"
-german = "Hammer- und Hakeneingaben eingefrorener Teammitglieder hervorheben"
-spanish = "Resaltar entradas de martillo y gancho de compañeros congelados"
-french = "Surligner les entrées de marteau et de grappin des coéquipiers gelés"
-brazilian_portuguese = "Destacar entradas de martelo e gancho dos aliados congelados"
-portuguese = "Destacar entradas de martelo e gancho dos aliados congelados"
-turkish = "Donmuş takım arkadaşlarının çekiç ve kanca girdilerini vurgula"
-polish = "Wyróżniaj użycie młota i haka przez zamrożonych członków drużyny"
-
-[[message]]
 key = "Highlight message text gradient color"
 [message.translations]
 simplified_chinese = "提及消息文字渐变色"
@@ -15134,22 +15102,6 @@ brazilian_portuguese = "Destacar companheiros que seguram o martelo em áreas de
 portuguese = "Destacar companheiros que seguram o martelo em áreas de morte ou congelamento"
 turkish = "Ölüm veya donma alanlarında çekici basılı tutan takım arkadaşlarını vurgula"
 polish = "Podświetlaj sojuszników trzymających młot w strefach śmierci lub zamrożenia"
-
-[[message]]
-key = "Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses."
-[message.translations]
-simplified_chinese = "高亮冻结中持续按锤的队友，并在昵称按键显示两侧显示卡锤、卡钩图标。"
-traditional_chinese = "高亮凍結中持續按錘的隊友，並在暱稱按鍵顯示兩側顯示卡錘、卡鉤圖示。"
-japanese = "凍結中にハンマーを押し続ける味方を強調し、ネームプレートのキー表示の両側にハンマーとフックの入力を表示します。"
-korean = "얼어붙은 상태에서 해머를 누르고 있는 팀원을 강조하고 이름표 키 표시 양옆에 해머와 훅 입력을 표시합니다."
-russian = "Подсвечивает замороженных союзников, удерживающих молот, и показывает зажатый молот или крюк рядом с клавишами над именем."
-german = "Hebt eingefrorene Teammitglieder mit gehaltenem Hammer hervor und zeigt Hammer- oder Hakeneingaben neben den Tasten am Namensschild."
-spanish = "Resalta a los compañeros congelados que mantienen pulsado el martillo y muestra sus entradas de martillo o gancho junto a las teclas del nombre."
-french = "Surligne les coéquipiers gelés qui maintiennent le marteau et affiche leurs entrées de marteau ou de grappin à côté des touches du nom."
-brazilian_portuguese = "Destaca aliados congelados que mantêm o martelo pressionado e mostra suas entradas de martelo ou gancho ao lado das teclas do nome."
-portuguese = "Destaca aliados congelados que mantêm o martelo premido e mostra as suas entradas de martelo ou gancho ao lado das teclas do nome."
-turkish = "Çekici basılı tutan donmuş takım arkadaşlarını vurgular ve çekiç veya kanca girdilerini isim etiketindeki tuşların yanında gösterir."
-polish = "Wyróżnia zamrożonych członków drużyny trzymających młot i pokazuje ich wejścia młota lub haka obok klawiszy przy nazwie."
 
 [[message]]
 key = "Hit feedback"
@@ -15613,22 +15565,6 @@ brazilian_portuguese = "Eu sou um robô"
 portuguese = "Eu sou um robô"
 turkish = "Ben bir robotum"
 polish = "Jestem robotem"
-
-[[message]]
-key = "Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded."
-[message.translations]
-simplified_chinese = "松开按键或解冻后隐藏图标。他人按键状态需要服务器支持预输入；不显示当前操控角色的卡键状态。"
-traditional_chinese = "放開按鍵或解凍後隱藏圖示。他人按鍵狀態需要伺服器支援預輸入；不顯示目前操控角色的卡鍵狀態。"
-japanese = "キーを離すか凍結が解除されるとアイコンは消えます。他のプレイヤーの入力表示にはサーバーの事前入力対応が必要です。操作中の自キャラクターは対象外です。"
-korean = "키를 놓거나 동결이 풀리면 아이콘이 사라집니다. 다른 플레이어의 입력 표시에는 서버의 사전 입력 지원이 필요하며 현재 조작 중인 캐릭터는 제외됩니다."
-russian = "Значки исчезают при отпускании клавиши или разморозке. Для отображения чужого ввода сервер должен поддерживать предввод; текущий управляемый персонаж исключён."
-german = "Die Symbole verschwinden beim Loslassen oder Auftauen. Fremde Eingaben erfordern serverseitige Unterstützung für Vorabeingaben; deine aktive Figur ist ausgenommen."
-spanish = "Los iconos desaparecen al soltar la tecla o descongelarse. Las entradas ajenas requieren que el servidor admita entradas anticipadas; se excluye tu personaje activo."
-french = "Les icônes disparaissent au relâchement ou au dégel. Les entrées des autres joueurs nécessitent la prise en charge des préentrées par le serveur ; votre personnage actif est exclu."
-brazilian_portuguese = "Os ícones somem ao soltar a tecla ou descongelar. As entradas de outros jogadores exigem suporte a pré-entrada no servidor; seu personagem ativo fica de fora."
-portuguese = "Os ícones desaparecem ao soltar a tecla ou descongelar. As entradas de outros jogadores exigem suporte a pré-entrada no servidor; a tua personagem ativa fica de fora."
-turkish = "Tuş bırakıldığında veya donma bittiğinde simgeler kaybolur. Diğer oyuncuların girdileri sunucuda ön girdi desteği gerektirir; etkin karakteriniz kapsam dışıdır."
-polish = "Ikony znikają po zwolnieniu klawisza lub odmrożeniu. Wejścia innych graczy wymagają obsługi wejścia wyprzedzającego na serwerze; aktywna postać gracza jest pomijana."
 
 [[message]]
 key = "Idiot word filter"
@@ -42605,3 +42541,150 @@ brazilian_portuguese = "Usar as cores do estilo"
 portuguese = "Usar as cores do estilo"
 turkish = "Stilin renklerini kullan"
 polish = "Użyj kolorów stylu"
+
+[[message]]
+key = "Highlight held hammer and hook inputs while frozen"
+[message.translations]
+simplified_chinese = "高亮冻结时的卡锤和卡钩"
+traditional_chinese = "高亮凍結時的卡錘和卡鉤"
+japanese = "凍結中に押したままのハンマーとフックを強調表示"
+korean = "얼어 있는 동안 누른 해머와 갈고리 입력 강조"
+russian = "Подсвечивать удержание молотка и крюка при заморозке"
+german = "Gehaltene Hammer- und Hakeneingaben im eingefrorenen Zustand hervorheben"
+spanish = "Resaltar las pulsaciones mantenidas de martillo y gancho al estar congelado"
+french = "Mettre en évidence le marteau et le grappin maintenus pendant le gel"
+brazilian_portuguese = "Destacar martelo e gancho mantidos durante o congelamento"
+portuguese = "Realçar martelo e gancho mantidos durante o congelamento"
+turkish = "Donmuşken basılı tutulan çekiç ve kanca girişlerini vurgula"
+polish = "Podświetlaj przytrzymanie młotka i haka podczas zamrożenia"
+
+[[message]]
+key = "Own includes your main tee and dummy. Other players must be on your team and require server preinput support."
+[message.translations]
+simplified_chinese = "「自己的」包含本体和分身。其他玩家的提示只对同队玩家生效，且需要服务器支持预输入。"
+traditional_chinese = "「自己的」包含本體和分身。其他玩家的提示只對同隊玩家生效，且需要伺服器支援預輸入。"
+japanese = "「自分」にはメイン Tee とダミーが含まれます。他のプレイヤーの表示は同じチームで、サーバーが事前入力に対応している場合に限ります。"
+korean = "자신의 Tee에는 본체와 더미가 포함됩니다. 다른 플레이어를 표시하려면 같은 팀이어야 하며 서버가 사전 입력을 지원해야 합니다."
+russian = "Свои — это основной Tee и двойник. Для показа других игроков они должны быть в вашей команде, а сервер должен поддерживать предварительный ввод."
+german = "Eigene umfasst deinen Haupt-Tee und Dummy. Andere Spieler müssen in deinem Team sein und der Server muss Vorabeingaben unterstützen."
+spanish = "Propios incluye tu Tee principal y tu dummy. Para mostrar a otros jugadores, deben estar en tu equipo y el servidor debe admitir la entrada previa."
+french = "Vos Tee inclut le Tee principal et le double. Les autres joueurs doivent être dans votre équipe et le serveur doit prendre en charge la pré-saisie."
+brazilian_portuguese = "Próprios inclui seu Tee principal e seu dummy. Para exibir outros jogadores, eles precisam estar na sua equipe e o servidor deve oferecer suporte a pré-entrada."
+portuguese = "Próprios inclui o teu Tee principal e o teu dummy. Para mostrar outros jogadores, estes têm de estar na tua equipa e o servidor tem de suportar pré-entrada."
+turkish = "Kendin, ana Tee’ni ve kuklanı kapsar. Diğer oyuncular takımında olmalı ve sunucu ön girdiyi desteklemelidir."
+polish = "Własne obejmuje głównego Tee i dummy. Inni gracze muszą być w twojej drużynie, a serwer musi obsługiwać dane wejściowe z wyprzedzeniem."
+
+[[message]]
+key = "Show hammer icon"
+[message.translations]
+simplified_chinese = "显示锤子图标"
+traditional_chinese = "顯示錘子圖示"
+japanese = "ハンマーアイコンを表示"
+korean = "해머 아이콘 표시"
+russian = "Показывать значок молотка"
+german = "Hammersymbol anzeigen"
+spanish = "Mostrar el icono del martillo"
+french = "Afficher l’icône du marteau"
+brazilian_portuguese = "Mostrar ícone do martelo"
+portuguese = "Mostrar ícone do martelo"
+turkish = "Çekiç simgesini göster"
+polish = "Pokaż ikonę młotka"
+
+[[message]]
+key = "Show hook icon"
+[message.translations]
+simplified_chinese = "显示钩子图标"
+traditional_chinese = "顯示鉤子圖示"
+japanese = "フックアイコンを表示"
+korean = "갈고리 아이콘 표시"
+russian = "Показывать значок крюка"
+german = "Hakensymbol anzeigen"
+spanish = "Mostrar el icono del gancho"
+french = "Afficher l’icône du grappin"
+brazilian_portuguese = "Mostrar ícone do gancho"
+portuguese = "Mostrar ícone do gancho"
+turkish = "Kanca simgesini göster"
+polish = "Pokaż ikonę haka"
+
+[[message]]
+key = "Stuck input display scope"
+[message.translations]
+simplified_chinese = "显示范围"
+traditional_chinese = "顯示範圍"
+japanese = "表示対象"
+korean = "표시 대상"
+russian = "Область отображения"
+german = "Anzeigebereich"
+spanish = "Ámbito de visualización"
+french = "Périmètre d’affichage"
+brazilian_portuguese = "Escopo de exibição"
+portuguese = "Âmbito de apresentação"
+turkish = "Gösterim kapsamı"
+polish = "Zakres wyświetlania"
+
+[[message]]
+key = "The display scope controls both tee colors and icons. Each icon has its own switch, independent of the direction keys."
+[message.translations]
+simplified_chinese = "显示范围同时控制 Tee 变色和图标。两个图标各有独立开关，关掉方向键显示后仍可使用。"
+traditional_chinese = "顯示範圍同時控制 Tee 變色和圖示。兩個圖示各有獨立開關，關掉方向鍵顯示後仍可使用。"
+japanese = "表示対象は Tee の色とアイコンの両方に適用されます。各アイコンは方向キー表示と独立して切り替えられます。"
+korean = "표시 대상은 Tee 색상과 아이콘에 모두 적용됩니다. 각 아이콘은 방향키 표시와 별개로 켜거나 끌 수 있습니다."
+russian = "Область отображения действует на цвет Tee и значки. Каждый значок включается отдельно, независимо от клавиш направления."
+german = "Der Anzeigebereich gilt für Tee-Farben und Symbole. Jedes Symbol ist unabhängig von den Richtungstasten schaltbar."
+spanish = "El ámbito se aplica al color de los Tee y a los iconos. Cada icono puede activarse por separado de las teclas de dirección."
+french = "Le périmètre s’applique à la couleur des Tee et aux icônes. Chaque icône peut être activée indépendamment des touches directionnelles."
+brazilian_portuguese = "O escopo se aplica às cores dos Tee e aos ícones. Cada ícone pode ser ativado independentemente das teclas de direção."
+portuguese = "O âmbito aplica-se às cores dos Tee e aos ícones. Cada ícone pode ser ativado independentemente das teclas de direção."
+turkish = "Gösterim kapsamı Tee renkleri ve simgeler için geçerlidir. Her simge yön tuşu göstergesinden bağımsız olarak açılıp kapatılabilir."
+polish = "Zakres dotyczy kolorów Tee i ikon. Każdą ikonę można włączać niezależnie od wyświetlania klawiszy kierunku."
+
+[[message]]
+key = "All"
+context = "Stuck input display scope"
+[message.translations]
+simplified_chinese = "全部的"
+traditional_chinese = "全部的"
+japanese = "すべて"
+korean = "모두"
+russian = "Все"
+german = "Alle"
+spanish = "Todos los tees"
+french = "Tous"
+brazilian_portuguese = "Todos os tees"
+portuguese = "Todos os tees"
+turkish = "Tümü"
+polish = "Wszystkie Tee"
+
+[[message]]
+key = "Others"
+context = "Stuck input display scope"
+[message.translations]
+simplified_chinese = "别人的"
+traditional_chinese = "別人的"
+japanese = "他人"
+korean = "다른 사람"
+russian = "Другие"
+german = "Andere Tees"
+spanish = "Otros"
+french = "Autres"
+brazilian_portuguese = "Outros"
+portuguese = "Outros"
+turkish = "Başkaları"
+polish = "Inni"
+
+[[message]]
+key = "Own"
+context = "Stuck input display scope"
+[message.translations]
+simplified_chinese = "自己的"
+traditional_chinese = "自己的"
+japanese = "自身"
+korean = "자신"
+russian = "Свой"
+german = "Eigen"
+spanish = "Propio"
+french = "Propre"
+brazilian_portuguese = "Próprio"
+portuguese = "Próprio"
+turkish = "Kendi"
+polish = "Własny"

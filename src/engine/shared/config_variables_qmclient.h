@@ -241,7 +241,10 @@ MACRO_CONFIG_INT(QmSkinOutlineWidth, qm_skin_outline_width, 2, 1, 6, CFGFLAG_CLI
 MACRO_CONFIG_INT(QmSkinOutlineAlpha, qm_skin_outline_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Generated skin outline opacity")
 MACRO_CONFIG_INT(QmDummyDistanceLink, qm_dummy_distance_link, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show a distance link between main tee and dummy")
 MACRO_CONFIG_INT(QmDummyDistanceLinkStyle, qm_dummy_distance_link_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dummy distance link style: 0 = line, 1 = droplet")
-MACRO_CONFIG_INT(QmWaterHammerHighlight, qm_water_hammer_highlight, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Highlight frozen teammates' hammer and hook inputs")
+MACRO_CONFIG_INT(QmWaterHammerHighlight, qm_water_hammer_highlight, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Highlight held hammer and hook inputs while frozen")
+MACRO_CONFIG_INT(QmWaterInputScope, qm_water_input_scope, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Stuck input display scope")
+MACRO_CONFIG_INT(QmWaterHammerIcon, qm_water_hammer_icon, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show hammer icon")
+MACRO_CONFIG_INT(QmWaterHookIcon, qm_water_hook_icon, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show hook icon")
 MACRO_CONFIG_COL(QmWaterHammerColor, qm_water_hammer_color, 255, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pressed hammer icon color")
 MACRO_CONFIG_COL(QmWaterHookColor, qm_water_hook_color, 255, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pressed hook icon color")
 
