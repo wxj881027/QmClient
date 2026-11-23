@@ -480,6 +480,13 @@ namespace ui_token::control
 	}
 	// 开关轨道的宽高比：按行高反推轨道宽度时用（宽 = 高 × 1.65）。
 	inline constexpr float SwitchTrackAspect() { return 1.65f; }
+	// 其余尺寸随实际轨道高度缩放，参考移动版开关的 32 高基准。
+	inline constexpr float SWITCH_KNOB_OFF_RATIO = 16.0f / 32.0f;
+	inline constexpr float SWITCH_KNOB_ON_RATIO = 24.0f / 32.0f;
+	inline constexpr float SWITCH_KNOB_PRESS_RATIO = 28.0f / 32.0f;
+	inline constexpr float SWITCH_HALO_RATIO = 40.0f / 32.0f;
+	inline constexpr float SWITCH_HALO_PRESS_ALPHA = 0.12f;
+	inline constexpr float SWITCH_OUTLINE_RATIO = 2.0f / 32.0f;
 } // namespace ui_token::control
 
 // 圆角标尺集中保存既有用途的数值；调用点选择用途，不再写字面量半径。
@@ -1525,8 +1532,9 @@ namespace ui_token::motion
 	inline constexpr SUiAnimTransition TOOLTIP_FADE{.m_DurationSec = 0.12f, .m_Easing = EEasing::EASE_OUT_QUART};
 	// 导航滑块专用：切换 Tab / 分段时带速度续接地滑过去（ζ≈0.93）。
 	inline constexpr SUiSpringConfig NAVIGATION_SPRING{1.0f, 500.0f, 42.0f, 0.05f, 0.4f};
-	// 开关（switch）拨动：旋钮滑到另一端，阻尼偏高、几乎不回弹。
-	inline constexpr SUiSpringConfig TOGGLE_SPRING{1.0f, 620.0f, 44.0f, 0.01f, 0.05f};
+	// 开关拨动保留轻微过冲；按压形变与光晕走独立的短补间。
+	inline constexpr SUiSpringConfig TOGGLE_SPRING{1.0f, 600.0f, 39.0f, 0.01f, 0.05f};
+	inline constexpr SUiAnimTransition TOGGLE_PRESS{.m_DurationSec = 0.15f, .m_Easing = EEasing::EASE_OUT_QUART};
 	// 卡片重排：拖拽落位后卡片互相让位，刚度高一点让整列同时归位。
 	inline constexpr SUiSpringConfig CARD_REORDER{1.0f, 900.0f, 48.0f, 0.01f, 0.05f};
 	// 离散滑条专用：档位切换时旋钮与填充带阻尼滑过去（ζ≈0.70），悬停/拖动只放大旋钮不改色。

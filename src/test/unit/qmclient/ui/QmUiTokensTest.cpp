@@ -164,11 +164,13 @@ TEST(QmUiTokens, MotionRefsBindToAnimCurves)
 	EXPECT_EQ(ui_token::motion::INPUT_FOCUS_RING.m_Easing, EEasing::EASE_OUT_QUART);
 	EXPECT_EQ(ui_token::motion::TOAST_SLIDE.m_Easing, EEasing::EASE_OUT_QUART);
 	EXPECT_EQ(ui_token::motion::TOOLTIP_FADE.m_Easing, EEasing::EASE_OUT_QUART);
-	EXPECT_NEAR(ui_token::motion::TOGGLE_SPRING.m_Stiffness, 620.0f, 1e-6f);
+	EXPECT_FLOAT_EQ(ui_token::motion::TOGGLE_SPRING.m_Stiffness, 600.0f);
+	EXPECT_FLOAT_EQ(ui_token::motion::TOGGLE_SPRING.m_Damping, 39.0f);
+	EXPECT_EQ(ui_token::motion::TOGGLE_PRESS.m_Easing, EEasing::EASE_OUT_QUART);
 
 	EXPECT_EQ(ui_token::motion::BTN_HOVER.m_Easing, EEasing::EASE_OUT_QUART);
 	EXPECT_EQ(ui_token::motion::MODAL_IN.m_Easing, EEasing::EASE_OUT_QUART);
-	EXPECT_NEAR(ui_token::motion::TOGGLE.m_Stiffness, 620.0f, 1e-6f);
+	EXPECT_EQ(&ui_token::motion::TOGGLE, &ui_token::motion::TOGGLE_SPRING);
 }
 
 TEST(QmUiTokens, QmMotionAppliesUserMotionLevel)
