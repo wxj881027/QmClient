@@ -13,6 +13,7 @@
 
 #include <benchmark/benchmark.h>
 #include <test/support/icon_benchmark_graphics.h>
+#include <test/support/qm_test_engine.h>
 
 #include <array>
 #include <filesystem>
@@ -48,6 +49,7 @@ namespace
 		std::unique_ptr<IKernel> m_pKernel;
 		std::unique_ptr<IConsole> m_pConsole;
 		std::unique_ptr<IStorage> m_pStorage;
+		CQmRejectingTestEngine m_Engine;
 
 	public:
 		CIconBenchmarkGraphics m_Graphics;
@@ -58,6 +60,8 @@ namespace
 		explicit CIconRenderFixture() : m_pKernel(IKernel::Create()), m_pConsole(CreateConsole(CFGFLAG_CLIENT))
 		{
 			g_Config.m_QmPerfDebug = g_Config.m_QmPerfLogfile = g_Config.m_QmPerfStutterDiagnostics = 0;
+			// 该基准没有作业池，测的是主线程字形与绘制成本，固定同步模式。
+			g_Config.m_QmTextRasterMode = 0;
 			g_Config.m_QmUiIconWeight = 0;
 			g_Config.m_QmUiIconColor = 0;
 			g_Config.m_QmUiIconCustomColorEnabled = 0;
@@ -73,6 +77,7 @@ namespace
 			m_pKernel->RegisterInterface<IConsole>(m_pConsole.get(), false);
 			m_pKernel->RegisterInterface<IStorage>(m_pStorage.get(), false);
 			m_pKernel->RegisterInterface<IGraphics>(&m_Graphics, false);
+			m_pKernel->RegisterInterface<IEngine>(&m_Engine, false);
 			for(int i = 0; i < NUM_ICONS; ++i)
 			{
 				char aGlyph[5] = {};

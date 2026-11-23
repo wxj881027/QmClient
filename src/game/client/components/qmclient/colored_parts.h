@@ -104,9 +104,11 @@ public:
 			const char *pMarkerStart = str_find(pRead, "[[");
 			if(!pMarkerStart)
 			{
+				// 这一支已经连同结尾的 '\0' 一起拷完，pWrite 已越过缓冲区里的
+				// 终止符；再走末尾的 *pWrite = '\0' 会写到 Length + 1（越界一字节）。
 				while((*pWrite++ = *pRead++))
 					;
-				break;
+				return;
 			}
 
 			// Copy plain text before the marker
@@ -116,10 +118,10 @@ public:
 			const char *pMarkerEnd = str_find(pMarkerStart + 2, "]]");
 			if(!pMarkerEnd)
 			{
-				// No closing marker, copy rest
+				// No closing marker, copy rest（同上：终止符已写入，不能再多写一次）
 				while((*pWrite++ = *pRead++))
 					;
-				break;
+				return;
 			}
 
 			// Extract marker content

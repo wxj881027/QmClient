@@ -450,14 +450,35 @@ public:
 
 	public:
 		std::vector<CSkinListEntry> &Skins() { return m_vSkins; }
+		const std::vector<CSkinListEntry> &Skins() const { return m_vSkins; }
 		int UnfilteredCount() const { return m_UnfilteredCount; }
+		// 计划发布后 m_vSkins 就是全量计划长度；未物化槽位为空，UI 用计划元数据画骨架。
+		int ItemCount() const { return (int)m_vSkins.size(); }
+		int MaterializedCount() const { return m_MaterializedCount; }
 		uint64_t Revision() const { return m_Revision; }
+		// 与 Revision 分开：原位填充只推进它，不触发收藏/最近集合的整表重建。
+		uint64_t MaterializedRevision() const { return m_MaterializedRevision; }
+		bool PlanKnown() const { return m_PlanKnown; }
+		bool FullIndexMerged() const { return m_FullIndexMerged; }
+		const SSettingsSkinListEntry *PlannedEntry(int Index) const
+		{
+			return Index >= 0 && (size_t)Index < m_vPlannedEntries.size() ? &m_vPlannedEntries[Index] : nullptr;
+		}
 		void ForceRefresh() { m_NeedsUpdate = true; }
 
 	private:
+		void ResetPlan(std::vector<SSettingsSkinListEntry> &&vPlannedEntries, int UnfilteredCount);
+		void ClearPlan();
+
 		std::vector<CSkinListEntry> m_vSkins;
+		std::vector<SSettingsSkinListEntry> m_vPlannedEntries;
+		size_t m_MergeCursor = 0;
+		int m_MaterializedCount = 0;
 		int m_UnfilteredCount = 0;
 		uint64_t m_Revision = 0;
+		uint64_t m_MaterializedRevision = 0;
+		bool m_PlanKnown = false;
+		bool m_FullIndexMerged = true;
 		int m_Dummy = -1;
 		int m_RequestedDummy = 0;
 		int m_ListFilter = -1;
@@ -643,6 +664,10 @@ public:
 	bool SkinListSkeletonReady() const;
 	bool SkinListReady() const;
 	bool SkinListSourceDataReady();
+	// 计划已知后，任意可见下标都可以按计划名字物化并请求加载；未物化时返回 false。
+	bool MaterializeSkinListEntry(int Index);
+	void MaterializeSkinListRange(int FirstIndex, int EndIndex, bool RequestVisible = false);
+	void RequestSkinListLoad(int Index, ESettingsResourcePriority Priority);
 	uint64_t SettingsSourceUploadsCompleted() const { return m_SettingsSourceUploadsCompleted; }
 	uint64_t SettingsSourceLoadsCompleted() const { return m_SettingsSourceLoadsCompleted; }
 	const SSettingsSourceAdmissionTelemetry &SettingsSourceAdmissionTelemetry() const { return m_SettingsSourceAdmissionTelemetry; }
@@ -1068,7 +1093,7 @@ private:
 	static bool PrepareSkinData(const char *pName, CSkinLoadData &Data);
 	void LoadSkinFinish(CSkinContainer *pSkinContainer, CSkinLoadData &Data);
 	bool BeginSkinPreviewUpload(CSkinContainer *pSkinContainer, CSkinLoadData &&Data);
-	bool UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer);
+	bool UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer, size_t *pPreparedBytes = nullptr);
 	void FinishSkinPreviewUpload(CSkinContainer *pSkinContainer);
 	void DiscardSkinPreviewUpload(CSkinContainer *pSkinContainer);
 	void LoadSkinDirect(const char *pName);
@@ -1114,7 +1139,11 @@ private:
 	void RecordSkinSource(CSkinContainer *pSkinContainer, ESkinSource Source);
 	void QueueSkinListPlanJob(int Dummy);
 	void ProcessSkinListPlanJob();
+	void ApplySkinListPlan(std::vector<SSettingsSkinListEntry> &&vPlannedEntries, int UnfilteredCount);
+	bool MergeSkinListEntries();
+	void FinishSkinListMaterialization();
 	CSkinListEntry MakeSkinListEntry(const CSkinContainer *pSkinContainer, std::optional<CSkinListEntry::SColorKey> ColorKey) const;
+	CSkinListEntry MakeSkinListEntry(const SSettingsSkinListEntry &PlannedEntry, const CSkinContainer *pSkinContainer) const;
 
 	static void ConAddFavoriteSkin(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemFavoriteSkin(IConsole::IResult *pResult, void *pUserData);
@@ -1174,11 +1203,7 @@ private:
 	std::vector<SSkinCatalogRuntime> m_vSkinCatalogs;
 	std::vector<qm_skin_catalog::SEntry> m_vPendingSkinCatalogEntries;
 	size_t m_SkinCatalogMergeCursor = 0;
-	std::vector<SSettingsSkinListEntry> m_vPendingSkinListMergeEntries;
 	std::vector<CSkinListEntry> m_vPendingSkinListEntries;
-	size_t m_SkinListMergeCursor = 0;
-	int m_PendingSkinListUnfilteredCount = 0;
-	bool m_HasPendingSkinListMergePlan = false;
 	int m_SkinListPlanGeneration = 0;
 	std::vector<CSkinDirectoryScanJob::SResult::SEntry> m_vPendingSkinDirectoryEntries;
 	size_t m_SkinDirectoryMergeCursor = 0;
@@ -1210,6 +1235,7 @@ private:
 	bool m_SkinSourcesSavePending = false;
 	std::optional<std::chrono::nanoseconds> m_SkinSourcesSaveLast;
 	bool m_SkinListRefreshPending = false;
+	std::optional<std::chrono::nanoseconds> m_SkinListRefreshDirtyAt;
 	std::chrono::nanoseconds m_SettingsFinalizeTimeBudget = std::chrono::milliseconds(1);
 	std::vector<std::string> m_vSettingsSkinNameSnapshot;
 

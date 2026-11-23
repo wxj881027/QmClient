@@ -20,6 +20,10 @@ TEST_F(QmChatCommandHudRender, LabelAllocationFailurePreservesOtherLabelsAndAllo
 	ASSERT_EQ(Hud.Layout().m_VisibleRows, 1);
 
 	auto *pTextRender = m_Ui.TextRender();
+	// CRealUiFixture isolates config from zero; command completion overrides the
+	// theme text color from config, so keep the test text visible.
+	g_Config.m_QmChatCompletionTextColor = CConfig::ms_QmChatCompletionTextColor;
+	g_Config.m_QmChatCompletionSelectedTextColor = CConfig::ms_QmChatCompletionSelectedTextColor;
 	const ColorRGBA CallerColor(0.2f, 0.3f, 0.4f, 0.8f);
 	pTextRender->TextColor(CallerColor);
 	const auto Draw = [&] { QmRenderChatCommandHud(Hud, &m_Ui, pTextRender, vec2(0.0f, 0.0f)); };

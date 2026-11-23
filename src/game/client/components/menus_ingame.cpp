@@ -1173,9 +1173,6 @@ void CMenus::DrainSnapshotTextContainers()
 void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 {
 	// QmClient: 细分计时定位 prepare 的 20ms 尖峰（plan 收集 vs 同步预建）
-	CPerfTimer PlanEnsureTimer;
-	EnsureSettingsMenuTextPlanReadyForVisible();
-	LogIngamePerfStage(Client(), "ingame_server_info_plan_ensure", PlanEnsureTimer.ElapsedMs(), false, nullptr);
 	CPerfTimer PrebuildTimer;
 	PrebuildIngameEscTextPoolBeforeOpen(16);
 	LogIngamePerfStage(Client(), "ingame_server_info_prebuild", PrebuildTimer.ElapsedMs(), false, nullptr);
@@ -1201,9 +1198,9 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 	str_copy(TextBudgetInput.m_aPage, "game", sizeof(TextBudgetInput.m_aPage));
 	str_copy(TextBudgetInput.m_aTab, "server_info", sizeof(TextBudgetInput.m_aTab));
 	str_copy(TextBudgetInput.m_aContext, SettingsPerfContextName(), sizeof(TextBudgetInput.m_aContext));
-	TextBudgetInput.m_FrameMsAverage = (float)GameClient()->m_QmMonitoring.Snapshot().m_Performance.m_FrameTimeMs;
-	TextBudgetInput.m_FrameMsP95 = TextBudgetInput.m_FrameMsAverage;
-	TextBudgetInput.m_TargetFrameMs = 8.333f;
+	TextBudgetInput.m_FrameMsAverage = QmUiCpuMsAverage();
+	TextBudgetInput.m_FrameMsP95 = QmUiCpuMsP95();
+	TextBudgetInput.m_TargetFrameMs = QmUiTargetFrameMs();
 	TextBudgetInput.m_BackgroundBacklog = maximum(1, (int)m_SnapshotTextPending.size() + 1);
 	TextBudgetInput.m_VisibleWaiting = 1;
 	PrepareSettingsAdaptiveBudgetInput(TextBudgetInput);
@@ -1690,9 +1687,9 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	str_copy(TextBudgetInput.m_aPage, "game", sizeof(TextBudgetInput.m_aPage));
 	str_copy(TextBudgetInput.m_aTab, "server_info", sizeof(TextBudgetInput.m_aTab));
 	str_copy(TextBudgetInput.m_aContext, SettingsPerfContextName(), sizeof(TextBudgetInput.m_aContext));
-	TextBudgetInput.m_FrameMsAverage = (float)GameClient()->m_QmMonitoring.Snapshot().m_Performance.m_FrameTimeMs;
-	TextBudgetInput.m_FrameMsP95 = TextBudgetInput.m_FrameMsAverage;
-	TextBudgetInput.m_TargetFrameMs = 8.333f;
+	TextBudgetInput.m_FrameMsAverage = QmUiCpuMsAverage();
+	TextBudgetInput.m_FrameMsP95 = QmUiCpuMsP95();
+	TextBudgetInput.m_TargetFrameMs = QmUiTargetFrameMs();
 	TextBudgetInput.m_BackgroundBacklog = maximum(1, (int)m_SnapshotTextPending.size() + (m_IngameMotdParagraphCache.m_Pending ? 1 : 0));
 	TextBudgetInput.m_VisibleWaiting = m_IngameMotdParagraphCache.m_Pending ? 2 : 1;
 	PrepareSettingsAdaptiveBudgetInput(TextBudgetInput);

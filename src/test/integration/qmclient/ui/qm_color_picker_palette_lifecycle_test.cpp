@@ -2,6 +2,8 @@
 // 走真实弹窗点击与配置串回读，不直接调用内部 lambda。
 #include <engine/keys.h>
 
+#include <game/client/QmUi/ColorPickerColor.h>
+
 #include <test/support/qm_color_picker_ui_fixture.h>
 
 class QmColorPickerPaletteLifecycle : public qm_ui_test::CColorPickerUiFixture
@@ -362,4 +364,39 @@ TEST_F(QmColorPickerPaletteLifecycle, ModeTabsSwitchChannelSemantics)
 	ASSERT_FALSE(HasFatalFailure());
 	Paste(m_Picker.m_aChannelInputs[2], "255");
 	EXPECT_EQ(m_Picker.m_RgbaColor.PackAlphaLast(), 0xffffffffu);
+}
+
+TEST_F(QmColorPickerPaletteLifecycle, OklchModeDrivesTheSameWorkingColor)
+{
+	Open(false);
+	ASSERT_FALSE(HasFatalFailure());
+
+	Click(ModeTabCenter(3));
+	ASSERT_EQ(m_Picker.m_ColorMode, CUi::SColorPickerPopupContext::MODE_OKLCH);
+
+	Focus(m_Picker.m_aChannelInputs[0]);
+	ASSERT_FALSE(HasFatalFailure());
+	Paste(m_Picker.m_aChannelInputs[0], "70");
+	Focus(m_Picker.m_aChannelInputs[1]);
+	ASSERT_FALSE(HasFatalFailure());
+	Paste(m_Picker.m_aChannelInputs[1], "20");
+	Focus(m_Picker.m_aChannelInputs[2]);
+	ASSERT_FALSE(HasFatalFailure());
+	Paste(m_Picker.m_aChannelInputs[2], "180");
+
+	EXPECT_NEAR(m_Picker.m_OklchColor.m_L, 0.70f, 0.001f);
+	EXPECT_NEAR(m_Picker.m_OklchColor.m_C, 0.20f * qm_picker_color::OKLCH_MAX_CHROMA, 0.001f);
+	EXPECT_NEAR(m_Picker.m_OklchColor.m_H, 0.50f, 0.001f);
+	const ColorRGBA Expected = qm_picker_color::ToRgba(m_Picker.m_OklchColor);
+	EXPECT_NEAR(m_Picker.m_RgbaColor.r, Expected.r, 0.001f);
+	EXPECT_NEAR(m_Picker.m_RgbaColor.g, Expected.g, 0.001f);
+	EXPECT_NEAR(m_Picker.m_RgbaColor.b, Expected.b, 0.001f);
+
+	// L=100 在 OKLCH 里就是白色；C/H 再大也必须经过 sRGB 色域映射落到白。
+	Focus(m_Picker.m_aChannelInputs[0]);
+	ASSERT_FALSE(HasFatalFailure());
+	Paste(m_Picker.m_aChannelInputs[0], "100");
+	EXPECT_NEAR(m_Picker.m_RgbaColor.r, 1.0f, 0.001f);
+	EXPECT_NEAR(m_Picker.m_RgbaColor.g, 1.0f, 0.001f);
+	EXPECT_NEAR(m_Picker.m_RgbaColor.b, 1.0f, 0.001f);
 }

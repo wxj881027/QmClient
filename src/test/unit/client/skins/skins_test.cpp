@@ -777,10 +777,19 @@ TEST(SkinUploadBudget, SharesTimeAcrossUpdatesAndResetsForNextFrame)
 {
 	using namespace std::chrono_literals;
 	CQmSkinUploadFrameBudget Budget;
-	Budget.RecordUpload(2ms);
+	Budget.RecordUpload(1200us, true, 4096);
+	Budget.RecordUpload(800us, false, 0);
 	EXPECT_FALSE(Budget.CanUpload());
+	EXPECT_EQ(Budget.Attempts(), 2);
+	EXPECT_EQ(Budget.Submitted(), 1);
+	EXPECT_EQ(Budget.PreparedBytes(), 4096u);
+	EXPECT_EQ(Budget.UploadTime(), 2ms);
 	Budget.Reset();
 	EXPECT_TRUE(Budget.CanUpload());
+	EXPECT_EQ(Budget.Attempts(), 0);
+	EXPECT_EQ(Budget.Submitted(), 0);
+	EXPECT_EQ(Budget.PreparedBytes(), 0u);
+	EXPECT_EQ(Budget.UploadTime(), 0ns);
 }
 
 TEST(SkinUploadBudget, HonorsConfiguredLimit)
@@ -795,6 +804,13 @@ TEST(SkinUploadBudget, HonorsConfiguredLimit)
 	Budget.Reset(3ms);
 	Budget.RecordUpload(2500us);
 	EXPECT_TRUE(Budget.CanUpload());
+}
+
+TEST(SkinUploadBudget, ActiveTeeRequestsUseShortPollingInterval)
+{
+	using namespace std::chrono_literals;
+	EXPECT_EQ(QmSkinContainerUpdateInterval(300ms, true), 25ms);
+	EXPECT_EQ(QmSkinContainerUpdateInterval(300ms, false), 300ms);
 }
 
 TEST(Skins, TimeSortKeepsCatalogOrderStableAfterDownload)

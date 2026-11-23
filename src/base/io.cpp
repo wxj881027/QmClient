@@ -93,6 +93,7 @@ static IOHANDLE io_open_impl(const char *filename, int flags, bool *pNotFound, b
 	}
 	catch(const std::bad_alloc &)
 	{
+		errno = ENOMEM;
 		return nullptr;
 	}
 	DWORD desired_access;

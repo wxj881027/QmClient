@@ -575,6 +575,7 @@ catch(const std::length_error &)
 }
 
 bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Length)
+try
 {
 	TAxiomEntryMap Entries;
 	if(!ParseAxiomCacheJson(pJson, Length, Entries))
@@ -583,6 +584,14 @@ bool CQmMapDifficultyCatalog::LoadAxiomCacheJson(const char *pJson, size_t Lengt
 	m_AxiomCacheDirty = false;
 	++m_Revision;
 	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }
 
 bool CQmMapDifficultyCatalog::MergeAxiomCacheJson(const char *pJson, size_t Length)

@@ -183,7 +183,8 @@ TEST_F(MapPreviewDownloadState, SwitchingAwayAndBackWaitsUntilTheOldSameFileOwne
 	EXPECT_FALSE(pOld->OwnsFile());
 	EXPECT_TRUE(Ensure("A"));
 	ASSERT_EQ(m_Http.m_vRequests.size(), 3U);
-	EXPECT_STREQ(m_Http.m_vRequests[2]->TemporaryPath(), pOld->TemporaryPath());
+	// 每个请求持有独立候选文件；旧 owner 的临时路径不能复用给新 owner。
+	EXPECT_STRNE(m_Http.m_vRequests[2]->TemporaryPath(), pOld->TemporaryPath());
 	EXPECT_TRUE(m_Http.m_vRequests[2]->OwnsFile());
 	EXPECT_FALSE(m_Http.m_OverlappedFileOwners);
 }

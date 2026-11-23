@@ -6,6 +6,7 @@
 
 #include <engine/client.h>
 #include <engine/console.h>
+#include <engine/engine.h>
 #include <engine/input.h>
 #include <engine/kernel.h>
 #include <engine/shared/config.h>
@@ -18,6 +19,7 @@
 
 #include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
+#include <test/support/qm_test_engine.h>
 #include <test/support/qm_ui_test_client.h>
 #include <test/test.h>
 
@@ -61,6 +63,7 @@ namespace qm_ui_test
 		// 只在设备调用前注入一次失败，文字创建/删除仍由真实引擎执行。
 		bool m_FailBufferObjectCreate = false;
 		bool m_FailBufferContainerCreate = false;
+		bool m_FailBufferContainerDelete = false;
 		enum class EDeleteFailure
 		{
 			NONE,
@@ -148,6 +151,12 @@ namespace qm_ui_test
 			if(std::exchange(m_FailBufferContainerCreate, false))
 				throw std::bad_alloc();
 			return CIconBenchmarkGraphics::CreateBufferContainer(pInfo);
+		}
+		void DeleteBufferContainer(int &ContainerIndex, bool DestroyAllBO = true) override
+		{
+			if(std::exchange(m_FailBufferContainerDelete, false))
+				throw std::bad_alloc();
+			CIconBenchmarkGraphics::DeleteBufferContainer(ContainerIndex, DestroyAllBO);
 		}
 		void DeleteBufferObject(int Index) override
 		{
@@ -346,6 +355,8 @@ namespace qm_ui_test
 		std::unique_ptr<IConsole> m_pConsole;
 		std::unique_ptr<IStorage> m_pStorage;
 		CRealUiTestGraphics m_Graphics;
+		CQmRejectingTestEngine m_Engine;
+		CTestUiClient m_DefaultClient;
 		std::unique_ptr<IEngineTextRender> m_pText;
 		std::unique_ptr<CRealUiTestKernel> m_pUiKernel;
 		bool m_TextInitialized = false;
@@ -373,6 +384,7 @@ namespace qm_ui_test
 			g_Config = CConfig();
 			g_Config.m_QmUiMotionLevel = 0;
 			g_Config.m_QmGaussianBlur = 0;
+			g_Config.m_QmTextRasterMode = 0;
 			g_Config.m_QmPerfDebug = g_Config.m_QmPerfLogfile = g_Config.m_QmPerfStutterDiagnostics = 0;
 			m_Info.m_DeleteTestStorageFilesOnSuccess = false;
 			m_pStorage = m_Info.CreateTestStorage();
@@ -384,6 +396,9 @@ namespace qm_ui_test
 			m_pEngineKernel->RegisterInterface<IConsole>(m_pConsole.get(), false);
 			m_pEngineKernel->RegisterInterface<IStorage>(m_pStorage.get(), false);
 			m_pEngineKernel->RegisterInterface<IGraphics>(pGraphics, false);
+			m_pEngineKernel->RegisterInterface<IEngine>(&m_Engine, false);
+			IClient *pClient = UiClient() != nullptr ? UiClient() : &m_DefaultClient;
+			m_pEngineKernel->RegisterInterface<IClient>(pClient, false);
 			m_pText.reset(CreateEngineTextRender());
 			m_pEngineKernel->RegisterInterface<IEngineTextRender>(m_pText.get(), false);
 			ASSERT_TRUE(m_pText->Init());

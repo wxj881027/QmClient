@@ -3,6 +3,7 @@
 #ifndef GAME_CLIENT_UI_H
 #define GAME_CLIENT_UI_H
 
+#include "QmUi/ColorPickerColor.h"
 #include "QmUi/ColorPickerPalette.h"
 #include "QmUi/QmAnimationBackend.h"
 #include "QmUi/QmCardLabelHints.h"
@@ -562,13 +563,6 @@ inline float QmFitSingleLineFontSize(float PreferredSize, float MinimumSize, flo
 	return std::clamp(PreferredSize * AvailableWidth / TextWidth, MinimumSize, PreferredSize);
 }
 
-struct SProgressSpinnerProperties
-{
-	float m_Progress = -1.0f; // between 0.0f and 1.0f, or negative for indeterminate progress
-	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-	int m_Segments = 64;
-};
-
 /**
  * Type safe UI ID for popup menus.
  */
@@ -933,7 +927,6 @@ private:
 	const void *m_pLastActiveScrollbar = nullptr;
 	int m_ScrollbarValue = 0;
 	float m_ActiveScrollbarOffset = 0.0f;
-	float m_ProgressSpinnerOffset = 0.0f;
 	class CValueSelectorState
 	{
 	public:
@@ -1550,9 +1543,6 @@ public:
 		RenderTime(TimeRect, FontSize, Seconds, NotFinished, Millis, TrueMilliseconds, SecondsText, MillisText, Color);
 	}
 
-	// progress spinner
-	void RenderProgressSpinner(vec2 Center, float OuterRadius, const SProgressSpinnerProperties &Props = {}) const;
-
 	// virtual back button
 	void DoBackButton();
 	void RenderBackButton();
@@ -1690,6 +1680,7 @@ public:
 			MODE_HSVA,
 			MODE_RGBA,
 			MODE_HSLA,
+			MODE_OKLCH,
 		};
 		// 主取色区形态：方图（SV 平面 + 竖向色相条）或色环（环选色相 + 环内 SV 方图）。
 		enum EColorPickerShape
@@ -1709,10 +1700,12 @@ public:
 		ColorHSVA m_HsvaColor;
 		ColorRGBA m_RgbaColor;
 		ColorHSLA m_HslaColor;
+		qm_picker_color::SColorOKLCH m_OklchColor;
 		// 打开时快照的初始颜色：确认关闭保持当前值，取消关闭恢复快照。
 		ColorHSVA m_InitialHsvaColor;
 		ColorRGBA m_InitialRgbaColor;
 		ColorHSLA m_InitialHslaColor;
+		qm_picker_color::SColorOKLCH m_InitialOklchColor;
 		// 「我的调色板」工作副本：打开时从 g_Config.m_QmColorPickerPalette 载入，
 		// 每次增删改名即刻序列化回写；全部取色器实例共享同一份配置。
 		std::vector<qm_picker_palette::SSwatch> m_vPalette;
@@ -1744,7 +1737,7 @@ public:
 		CLineInput m_aChannelInputs[4];
 		char m_aHexBuffer[16];
 		CLineInput m_HexInput;
-		CButtonContainer m_aModeButtons[(int)MODE_HSLA + 1];
+		CButtonContainer m_aModeButtons[(int)MODE_OKLCH + 1];
 		CButtonContainer m_ShapeButton;
 		CButtonContainer m_AcceptButton;
 		CButtonContainer m_CloseButton;

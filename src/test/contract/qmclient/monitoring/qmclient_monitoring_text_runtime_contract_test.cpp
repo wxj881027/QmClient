@@ -38,12 +38,18 @@ TEST(QmMonitoringTextRuntimeContract, IngameEscStableTextRegistryCoversMenubar)
 	}
 }
 
-TEST(QmMonitoringTextRuntimeContract, SettingsStableTextMissAndStaleBlockVisibleBuild)
+TEST(QmMonitoringTextRuntimeContract, SettingsStableTextVisibleMissBuildsSynchronously)
 {
 	const std::string Source = ReadRepoFile("src/game/client/components/menus.cpp");
 	EXPECT_TRUE(ContainsAll(Source, {"event=settings_text_miss", "event=settings_text_stale", "m_MenuTextPoolVisibleGuard", "StableTextMiss", "StableTextStale"}));
 	EXPECT_TRUE(ContainsAll(Source, {"event=settings_text_usage", "m_MenuTextStableCandidatesThisFrame", "m_MenuTextStableHitsThisFrame", "m_MenuTextStableReusedThisFrame"}));
 	EXPECT_TRUE(ContainsAll(Source, {"MenuTextPoolSizeForTesting", "CScopedMenuTextVisibleGuard"}));
+	// 可见页文字不能分帧：缓存未命中时同帧构建容器并立即绘制。
+	EXPECT_TRUE(ContainsAll(Source, {
+						"if(NeedsBuild && m_MenuTextPoolVisibleGuard && Render && !Ui()->MeasurementOnly())",
+						"DrainMenuTextContainerBuild(Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor, false, &TextContainerRecreated);",
+						"Ui()->RenderLabelTextContainerAligned(*pElementRect, pRect, Align);",
+					}));
 	EXPECT_EQ(Source.find("context-checkbox-common-"), std::string::npos);
 	EXPECT_TRUE(ContainsAll(Source, {
 						"event=%s scope=%s page=%s tab=%d subtab=%d key=%s reason=%s plan_status=%s operation=%s coverage_frame=%",

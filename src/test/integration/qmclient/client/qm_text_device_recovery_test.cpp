@@ -9,6 +9,7 @@
 
 #include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
+#include <test/support/qm_test_engine.h>
 #include <test/test.h>
 
 #include <algorithm>
@@ -190,6 +191,7 @@ namespace
 		CConsole m_Console{CFGFLAG_CLIENT};
 		std::unique_ptr<IKernel> m_pKernel;
 		std::unique_ptr<IStorage> m_pStorage;
+		CQmRejectingTestEngine m_Engine;
 
 	protected:
 		CRecoveryGraphics m_Graphics;
@@ -199,6 +201,8 @@ namespace
 		void SetUp() override
 		{
 			g_Config = CConfig();
+			// 设备恢复测试不启动作业线程，字形预热必须保持同步模式。
+			g_Config.m_QmTextRasterMode = 0;
 			m_Info.m_DeleteTestStorageFilesOnSuccess = false;
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
@@ -207,6 +211,7 @@ namespace
 			m_pKernel->RegisterInterface<IConsole>(&m_Console, false);
 			m_pKernel->RegisterInterface<IStorage>(m_pStorage.get(), false);
 			m_pKernel->RegisterInterface<IGraphics>(&m_Graphics, false);
+			m_pKernel->RegisterInterface<IEngine>(&m_Engine, false);
 			m_pText.reset(CreateEngineTextRender());
 			m_pKernel->RegisterInterface<IEngineTextRender>(m_pText.get(), false);
 			ASSERT_TRUE(m_pText->Init());

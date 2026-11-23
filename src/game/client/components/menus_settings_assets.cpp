@@ -42,6 +42,7 @@
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
+#include <game/client/QmUi/UiProgressRing.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTag.h>
 #include <game/client/QmUi/UiTokens.h>
@@ -4228,6 +4229,12 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	// Start async loading if list is empty and not already loading
 	if(m_aAssetLoadStates[s_CurCustomTab] == ASSET_LOAD_STATE_UNLOADED && time_get_nanoseconds() >= m_aAssetLoadRetryAt[s_CurCustomTab])
 	{
+		char aGuiCursorBeforeMigration[sizeof(g_Config.m_ClAssetGuiCursor)];
+		char aArrowBeforeMigration[sizeof(g_Config.m_ClAssetArrow)];
+		char aStrongWeakBeforeMigration[sizeof(g_Config.m_ClAssetStrongWeak)];
+		str_copy(aGuiCursorBeforeMigration, g_Config.m_ClAssetGuiCursor);
+		str_copy(aArrowBeforeMigration, g_Config.m_ClAssetArrow);
+		str_copy(aStrongWeakBeforeMigration, g_Config.m_ClAssetStrongWeak);
 		for(const SAssetResourceCategory &Category : GetAssetResourceCategories())
 		{
 			if(Category.m_Kind == EAssetResourceKind::NAMED_SINGLE_FILE)
@@ -4238,9 +4245,17 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			}
 		}
 
-		GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_CURSOR, "gui_cursor", g_Config.m_ClAssetGuiCursor);
-		GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", g_Config.m_ClAssetArrow);
-		GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", g_Config.m_ClAssetStrongWeak);
+		// 迁移可能重写配置里的资源名；只有名字变了或纹理缺失时才需要重载。
+		// 每次进资源页都无条件解码三张图会把文本计划阶段拖出十几毫秒。
+		const auto NamedImageNeedsReload = [](int ImageId, const char *pBefore, const char *pCurrent) {
+			return str_comp(pBefore, pCurrent) != 0 || !g_pData->m_aImages[ImageId].m_Id.IsValid();
+		};
+		if(NamedImageNeedsReload(IMAGE_CURSOR, aGuiCursorBeforeMigration, g_Config.m_ClAssetGuiCursor))
+			GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_CURSOR, "gui_cursor", g_Config.m_ClAssetGuiCursor);
+		if(NamedImageNeedsReload(IMAGE_ARROW, aArrowBeforeMigration, g_Config.m_ClAssetArrow))
+			GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", g_Config.m_ClAssetArrow);
+		if(NamedImageNeedsReload(IMAGE_STRONGWEAK, aStrongWeakBeforeMigration, g_Config.m_ClAssetStrongWeak))
+			GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", g_Config.m_ClAssetStrongWeak);
 
 		bool PreparedList = true;
 		const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(s_CurCustomTab);
@@ -4289,10 +4304,14 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 
 		if(!PreparedList)
+		{
 			return;
+		}
 		// Start async loading job
 		if(!TryStartSettingsAssetListJob(s_CurCustomTab))
+		{
 			return;
+		}
 		LogSettingsResourcePerf(SETTINGS_ASSETS, "queued", 1, 1, 0, ESettingsWarmupMissReason::RESOURCE_PLAN_PENDING, 0.0);
 	}
 
@@ -4574,50 +4593,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 		if(SettingsAssetListShouldShowBlockingLoading(true, VisibleEntries))
 		{
-			// Draw loading spinner in the center of the list area
 			const float SpinnerSize = 40.0f;
-			CUIRect SpinnerRect;
-			SpinnerRect.w = SpinnerSize;
-			SpinnerRect.h = SpinnerSize;
-			SpinnerRect.x = CustomList.x + (CustomList.w - SpinnerSize) / 2.0f;
-			SpinnerRect.y = CustomList.y + (CustomList.h - SpinnerSize) / 2.0f - 20.0f;
-
-			// Use a rotating icon as spinner
-			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-
-			// Calculate rotation angle based on time
-			const float Time = Client()->LocalTime();
-			const float Rotation = Time * 360.0f * 2.0f; // 2 rotations per second
-
-			// Render spinner with rotation
-			Graphics()->TextureClear();
-			Graphics()->QuadsBegin();
-			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.8f);
-
-			// Draw multiple segments to simulate rotation
-			const int NumSegments = 8;
-			const float SegmentAngle = 360.0f / NumSegments;
-			for(int i = 0; i < NumSegments; i++)
-			{
-				float Alpha = 0.1f + 0.9f * ((i + (int)(Rotation / SegmentAngle)) % NumSegments) / (float)(NumSegments - 1);
-				Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
-
-				float Angle = (i * SegmentAngle + Rotation) * (3.14159f / 180.0f);
-				float CenterX = SpinnerRect.x + SpinnerRect.w / 2.0f;
-				float CenterY = SpinnerRect.y + SpinnerRect.h / 2.0f;
-				float Radius = SpinnerRect.w / 3.0f;
-
-				IGraphics::CQuadItem Quad(
-					CenterX + cosf(Angle) * Radius - 3.0f,
-					CenterY + sinf(Angle) * Radius - 3.0f,
-					6.0f, 6.0f);
-				Graphics()->QuadsDrawTL(&Quad, 1);
-			}
-			Graphics()->QuadsEnd();
-
-			TextRender()->SetRenderFlags(0);
-			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+			CUIRect SpinnerRect{CustomList.x + (CustomList.w - SpinnerSize) * 0.5f, CustomList.y + (CustomList.h - SpinnerSize) * 0.5f - 20.0f, SpinnerSize, SpinnerSize};
+			ui_widget::DrawProgressRing(Ui(), SpinnerRect.Center(), SpinnerSize * 0.4f);
 
 			// Loading text
 			CUIRect LoadingTextRect;
@@ -4799,9 +4777,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	str_copy(AdaptiveBudgetInput.m_aPage, "settings:assets", sizeof(AdaptiveBudgetInput.m_aPage));
 	str_copy(AdaptiveBudgetInput.m_aTab, AssetsSettingsTabName(s_CurCustomTab), sizeof(AdaptiveBudgetInput.m_aTab));
 	str_copy(AdaptiveBudgetInput.m_aContext, SettingsPerfContextName(), sizeof(AdaptiveBudgetInput.m_aContext));
-	AdaptiveBudgetInput.m_FrameMsAverage = PerfSnapshot.m_FrameTimeMs;
-	AdaptiveBudgetInput.m_FrameMsP95 = PerfSnapshot.m_FrameTimeP95Ms > 0.0f ? PerfSnapshot.m_FrameTimeP95Ms : PerfSnapshot.m_FrameTimeMs;
-	AdaptiveBudgetInput.m_TargetFrameMs = 8.333f;
+	AdaptiveBudgetInput.m_FrameMsAverage = QmUiCpuMsAverage();
+	AdaptiveBudgetInput.m_FrameMsP95 = QmUiCpuMsP95();
+	AdaptiveBudgetInput.m_TargetFrameMs = QmUiTargetFrameMs();
 	AdaptiveBudgetInput.m_ScrollActive = ResourceFrameContext.m_ScrollActive;
 	AdaptiveBudgetInput.m_JumpScrollActive = ResourceFrameContext.m_JumpScrollActive;
 	AdaptiveBudgetInput.m_TabSwitchFirstFrame = AssetsTabSwitchFirstFrame || AssetsPageSwitchActive;

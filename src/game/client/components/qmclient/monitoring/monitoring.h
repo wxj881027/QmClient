@@ -85,6 +85,9 @@ struct SQmPerformanceMetrics
 	float m_FrameTimeMs = 0.0f;
 	float m_FrameTimeP95Ms = -1.0f;
 	float m_FrameTimeP99Ms = -1.0f;
+	// 主循环 CPU 忙时（不含 vsync/休眠等待）。后台预算看这一组，不能看墙钟帧间隔。
+	float m_MainThreadTimeMs = 0.0f;
+	float m_MainThreadTimeP95Ms = -1.0f;
 	float m_FpsOnePctLow = -1.0f;
 	int m_LongFrameCount = 0;
 	float m_FrameTimeUs = 0.0f;
@@ -443,12 +446,14 @@ class CQmMonitoring : public CComponent
 	SQmMonitoringSnapshot m_Snapshot;
 	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aGameTimeMarginHistory = {};
 	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aFrameTimeHistory = {};
+	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aMainThreadTimeHistory = {};
 	int m_HistoryHead = 0;
 	int m_HistoryCount = 0;
 	int64_t m_LastSampleTick = 0;
 	int64_t m_LastPercentileTick = 0;
 	float m_CachedFrameTimeP95Ms = -1.0f;
 	float m_CachedFrameTimeP99Ms = -1.0f;
+	float m_CachedMainThreadP95Ms = -1.0f;
 	float m_CachedFpsOnePctLow = -1.0f;
 	int m_CachedLongFrameCount = 0;
 	int64_t m_LastSnapshotRateSampleTime = 0;
@@ -467,7 +472,7 @@ class CQmMonitoring : public CComponent
 	void UpdateNetworkMetrics(SQmNetworkMetrics &Net);
 	void UpdatePerformanceMetrics(SQmPerformanceMetrics &Perf);
 	void UpdateDiagnosticVerdict(SQmDiagnosticVerdict &Verdict, const SQmNetworkMetrics &Net, const SQmPerformanceMetrics &Perf);
-	void PushFrameTimeSample(float FrameTimeMs);
+	void PushFrameTimeSample(float FrameTimeMs, float MainThreadTimeMs);
 
 public:
 	int Sizeof() const override { return sizeof(*this); }

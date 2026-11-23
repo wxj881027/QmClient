@@ -2764,9 +2764,9 @@ void CMenus::EnsureAllDemoDates()
 	str_copy(Input.m_aPage, "demo_browser");
 	str_copy(Input.m_aTab, "metadata");
 	str_copy(Input.m_aContext, SettingsPerfContextName());
-	Input.m_FrameMsAverage = (float)GameClient()->m_QmMonitoring.Snapshot().m_Performance.m_FrameTimeMs;
-	Input.m_FrameMsP95 = Input.m_FrameMsAverage;
-	Input.m_TargetFrameMs = 8.333f;
+	Input.m_FrameMsAverage = QmUiCpuMsAverage();
+	Input.m_FrameMsP95 = QmUiCpuMsP95();
+	Input.m_TargetFrameMs = QmUiTargetFrameMs();
 	Input.m_BackgroundBacklog = (int)m_vDemos.size();
 	Input.m_WindowActive = true;
 	const SSettingsAdaptiveBudgetOutput AdaptiveBudget = BeginSettingsUiFrameScheduler(EFrameSchedulerConsumer::DemoBrowser, "demo_browser", Input);
@@ -4044,9 +4044,9 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	str_copy(AdaptiveBudgetInput.m_aPage, "demo_browser");
 	str_copy(AdaptiveBudgetInput.m_aTab, "list");
 	str_copy(AdaptiveBudgetInput.m_aContext, SettingsPerfContextName());
-	AdaptiveBudgetInput.m_FrameMsAverage = (float)GameClient()->m_QmMonitoring.Snapshot().m_Performance.m_FrameTimeMs;
-	AdaptiveBudgetInput.m_FrameMsP95 = AdaptiveBudgetInput.m_FrameMsAverage;
-	AdaptiveBudgetInput.m_TargetFrameMs = 8.333f;
+	AdaptiveBudgetInput.m_FrameMsAverage = QmUiCpuMsAverage();
+	AdaptiveBudgetInput.m_FrameMsP95 = QmUiCpuMsP95();
+	AdaptiveBudgetInput.m_TargetFrameMs = QmUiTargetFrameMs();
 	AdaptiveBudgetInput.m_ScrollActive = DemoListScrollActive;
 	AdaptiveBudgetInput.m_JumpScrollActive = DemoListJumpScrollActive;
 	AdaptiveBudgetInput.m_VisibleWaiting = maximum(0, VisibleRows);

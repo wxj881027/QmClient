@@ -373,6 +373,10 @@ TEST(Net, DualStackBindFailsWhenIpv4AddressInUse)
 	}
 	ASSERT_NE(TcpIpv4Socket, nullptr);
 
+	// 只是 bind 过的 TCP 套接字在 Linux 上还能被 SO_REUSEADDR 再绑一次，
+	// listen 之后端口才算真正被占用，这样才能验到 address_in_use 的判定。
+	ASSERT_EQ(net_tcp_listen(TcpIpv4Socket, 1), 0);
+
 	BindAddr.type = NETTYPE_IPV4 | NETTYPE_IPV6;
 	EXPECT_EQ(net_tcp_create(BindAddr), nullptr);
 	net_tcp_close(TcpIpv4Socket);

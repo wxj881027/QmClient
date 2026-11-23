@@ -171,6 +171,15 @@ TEST_F(QmIconText, FilledIconDrawRestoresCallerFontFlagsAndAllColors)
 	EXPECT_TRUE(DrawDirect());
 	EXPECT_GT(Graphics().m_Draws, Draws);
 	ExpectCallerState();
+	// 图标标签走持久缓存：第一次绘制保留一份容器，后续绘制复用。
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers + 1);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers + 1);
+	const auto CachedBuffers = Graphics().m_Buffers.size();
+	const auto CachedContainers = Graphics().m_Containers.size();
+	EXPECT_TRUE(DrawDirect());
+	EXPECT_EQ(Graphics().m_Buffers.size(), CachedBuffers);
+	EXPECT_EQ(Graphics().m_Containers.size(), CachedContainers);
+	m_Ui.OnElementsReset();
 	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
 	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
 }
@@ -183,12 +192,16 @@ TEST_F(QmIconText, PartialIconUploadRestoresOuterStateBeforeDeferredCleanupAndRe
 	EXPECT_THROW(DrawDirect(), std::bad_alloc);
 	EXPECT_FALSE(Graphics().m_FailBufferContainerCreate);
 	ExpectCallerState();
-	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers + 1);
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
 	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
 	EXPECT_NO_THROW(m_Ui.TextRender()->QmTextFrameEnd());
 	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
 	EXPECT_TRUE(DrawDirect());
 	ExpectCallerState();
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers + 1);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers + 1);
+	m_Ui.OnElementsReset();
 	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
 	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
 }
@@ -201,13 +214,16 @@ TEST_F(QmIconText, IconDrawFailureRestoresOuterStateAndAllowsFollowingFrameToDra
 	EXPECT_THROW(DrawDirect(), std::bad_alloc);
 	EXPECT_FALSE(Graphics().m_FailTextDraw);
 	ExpectCallerState();
-	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers + 1);
-	EXPECT_EQ(Graphics().m_Containers.size(), Containers + 1);
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
 	EXPECT_NO_THROW(m_Ui.TextRender()->QmTextFrameEnd());
 	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
 	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
 	EXPECT_TRUE(DrawDirect());
 	ExpectCallerState();
+	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers + 1);
+	EXPECT_EQ(Graphics().m_Containers.size(), Containers + 1);
+	m_Ui.OnElementsReset();
 	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
 	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
 }

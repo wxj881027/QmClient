@@ -125,6 +125,7 @@ public:
 	bool DualBlurRenderTarget(CRenderTargetHandle Source, CRenderTargetHandle Downsample, CRenderTargetHandle DownsampleTemporary, CRenderTargetHandle DownsampleBlurred, CRenderTargetHandle Destination, const SGaussianBlurParams &Params) override { throw std::logic_error("unexpected graphics boundary: DualBlurRenderTarget"); }
 	CRenderTargetReadbackHandle BeginRenderTargetReadback(CRenderTargetHandle Target) override { throw std::logic_error("unexpected graphics boundary: BeginRenderTargetReadback"); }
 	ERenderTargetReadbackState PollRenderTargetReadback(CRenderTargetReadbackHandle Handle) override { throw std::logic_error("unexpected graphics boundary: PollRenderTargetReadback"); }
+	bool FlushRenderTargetReadback() override { throw std::logic_error("unexpected graphics boundary: FlushRenderTargetReadback"); }
 	bool ResolveRenderTargetReadback(CRenderTargetReadbackHandle *pHandle, CImageInfo &Image) override { throw std::logic_error("unexpected graphics boundary: ResolveRenderTargetReadback"); }
 	void CancelRenderTargetReadback(CRenderTargetReadbackHandle *pHandle) override { throw std::logic_error("unexpected graphics boundary: CancelRenderTargetReadback"); }
 	bool ReadRenderTarget(CRenderTargetHandle Target, CImageInfo &Image) override { throw std::logic_error("unexpected graphics boundary: ReadRenderTarget"); }

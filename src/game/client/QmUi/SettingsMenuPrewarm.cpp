@@ -21,6 +21,19 @@ void CMenus::BuildQmClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &v
 	RunSettingsTextPlanMeasurement(Ui(), [&] { RenderSettings(MainView); });
 }
 
+void CMenus::BuildContributorsSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView, int Tab)
+{
+	Tab = std::clamp(Tab, 0, CREDITS_SETTINGS_TAB_NUM - 1);
+
+	const CSettingsTextPlanValueRestore SettingsPageRestore(g_Config.m_UiSettingsPage);
+	const CSettingsTextPlanValueRestore TabRestore(m_CreditsSettingsTab);
+	const CSettingsTextPlanCollectionScope CollectionScope(m_MenuTextPlanCollecting, m_pMenuTextPlanCollection, m_MenuTextPlanPendingActive, m_MenuTextPlanPendingItem, vItems);
+
+	g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
+	m_CreditsSettingsTab = Tab;
+	RunSettingsTextPlanMeasurement(Ui(), [&] { RenderSettings(MainView); });
+}
+
 void CMenus::BuildTClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView, int Tab)
 {
 	Tab = CanonicalizePersistedTClientTab(Tab);

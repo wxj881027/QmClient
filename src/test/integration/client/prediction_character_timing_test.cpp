@@ -208,7 +208,7 @@ TEST(PredictionCharacterTiming, UnrepresentableFreezeDeadlineKeepsExistingState)
 	CScenario S(std::numeric_limits<int>::max() - 49);
 	S.m_World.m_WorldConfig.m_PredictFreeze = true;
 	S.m_pCharacter->m_FreezeTime = 10;
-	S.m_pCharacter->Core()->m_FreezeEnd = 123;
+	EditCharacterCore(S.m_pCharacter, [](CCharacterCore &Core) { Core.m_FreezeEnd = 123; });
 	EXPECT_FALSE(S.m_pCharacter->Freeze(1));
 	EXPECT_EQ(S.m_pCharacter->m_FreezeTime, 10);
 	EXPECT_EQ(S.m_pCharacter->Core()->m_FreezeStart, 0);
@@ -228,7 +228,7 @@ TEST(PredictionCharacterTiming, DeepFreezeKeepsInfiniteDeadlineAndWideLocalDurat
 {
 	CScenario S;
 	S.m_World.m_WorldConfig.m_PredictFreeze = true;
-	S.m_pCharacter->Core()->m_DeepFrozen = true;
+	EditCharacterCore(S.m_pCharacter, [](CCharacterCore &Core) { Core.m_DeepFrozen = true; });
 	ASSERT_TRUE(S.m_pCharacter->Freeze(std::numeric_limits<int>::max()));
 	EXPECT_EQ(S.m_pCharacter->m_FreezeTime, 107374182350LL);
 	EXPECT_EQ(S.m_pCharacter->Core()->m_FreezeEnd, -1);

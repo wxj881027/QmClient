@@ -1,5 +1,7 @@
 #include <base/str.h>
 
+#include <engine/shared/protocol.h>
+
 #include <game/client/components/tclient/swap_countdown_message.h>
 
 #include <gtest/gtest.h>

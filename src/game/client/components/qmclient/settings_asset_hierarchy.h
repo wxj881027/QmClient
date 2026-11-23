@@ -44,6 +44,10 @@ try
 	Candidate.m_vSourceKinds = vSourceKinds;
 	str_copy(Candidate.m_aCurrentFolder, pCurrentFolder != nullptr ? pCurrentFolder : "");
 	EnsureDefaultAssetVisible(Candidate.m_vSourceNames);
+	// 来源列表可能带重复项（同一资源被多个来源登记）；同步回调只应看到唯一的资源名。
+	Candidate.m_vSourceNames.erase(
+		std::unique(Candidate.m_vSourceNames.begin(), Candidate.m_vSourceNames.end()),
+		Candidate.m_vSourceNames.end());
 	Candidate.m_vSourceKinds["default"] = EEntityBgHierarchyEntrySource::LOCAL;
 	std::forward<TSyncSources>(SyncSources)(Candidate.m_vSourceNames, Candidate.m_vSourceKinds);
 	if(!ShowWorkshop && IsEntityBgWorkshopFolderOrChildPath(Candidate.m_aCurrentFolder))

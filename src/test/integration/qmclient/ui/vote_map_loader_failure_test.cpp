@@ -1,3 +1,4 @@
+#include <base/mem.h>
 #include <base/str.h>
 
 #include <engine/engine.h>

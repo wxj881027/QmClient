@@ -20,7 +20,7 @@ namespace
 		Item.m_Page = 7;
 		Item.m_Tab = 3;
 		Item.m_Rect = {10, 20, 180, 24};
-		Item.m_LabelProps.m_vColorSplits.resize(3);
+		Item.m_LabelProps.m_vColorSplits.assign(3, STextColorSplit(0, 0, ColorRGBA(1, 1, 1, 1)));
 		return Item;
 	}
 	struct SState

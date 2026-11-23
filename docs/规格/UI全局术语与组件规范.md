@@ -358,6 +358,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`ui_widget::DrawToggle` / `ResolveToggleLayout` / `ResolveBooleanControlLayout` / `ResolveSwitchRowLabelColumn`（`UiForms.h`）、设置页包装 `DoSettingsButton_CheckBox`；尺寸 `ui_token::control::SwitchMinWidth` / `SwitchTrackAspect`；悬停描边走 `ResolveUiSecondaryButtonStyle` → `ui_token::feedback::HOVER_BORDER`。
 - 禁止的反面写法：自绘轨道与旋钮；开关行自己算右侧宽度（标签会压到开关）；描边取轨道的自动对比色（开着是亮轨道就描黑边、关着描白边，和按钮的悬停白边割裂）。
 
+### 3.10a 加载环（progress ring）
+
+- 定义：统一承载不定进度旋转环与确定进度环形条；旋转使用墙钟周期，纯测量趟不绘制；形状由程序化环形 SDF 绘制，旧渲染后端回退到同一组件内的扇区几何。
+- 唯一实现：`ui_widget::DrawProgressRing` / `ResolveProgressRingArc`（`src/game/client/QmUi/UiProgressRing.h`）；形状与周期参数分别位于 `ui_token::progress_ring::*`、`ui_token::motion::PROGRESS_RING_PERIOD_NS`。
+- 禁止的反面写法：调用点自绘加载点阵/多段环；将渲染器帧时间作为环动画时钟；绕开组件直接接入渲染器环形管线。
+
 ### 3.11 按钮（Button）
 
 - 定义：按钮底色、描边、按压反馈由同一套样式解析，禁用态只衰减不换色。
@@ -478,6 +484,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 | 模态确认 | 操作请求 | 居中遮罩 | 确认/取消/Esc | `CUi::DoPopupMenu` + `SConfirmPopupContext` |
 | 轻提示 | 事件 | 角落浮层 | 计时结束 | `ui_widget::Toast` |
 | 颜色选择器 | 点色块 | 浮层，锚定指针 | 选中、点外部、Esc | `SettingsColorPicker.h` + `CUi::ShowPopupColorPicker` |
+
+### 3.19a 取色器通道轨道（color picker channel track）
+
+- 定义：取色器与皮肤 HSL 滑条的轨道，应显示「当前其它通道已生效」的真实颜色轴；OKLCH 的 H 轨与色环共用固定参考色，C 轨在 L 过低时按可见下限预览，保证当前色为纯黑时 H/C 仍是可读标尺。颜色值仍以 sRGB 的 `ColorRGBA` 输出，OKLCH 只作为取色器工作空间，不改变配置或皮肤存储格式。
+- 唯一实现：`qm_picker_color::ResolveChannelTrack` / `ToRgba` / `FromRgba`（`src/game/client/QmUi/ColorPickerColor.h`）；取色器接入 `CUi::PopupColorPicker`（`src/game/client/ui_popups.cpp`），皮肤接入 `CMenus::RenderHslaScrollbars`（`src/game/client/components/menus_settings.cpp`）。OKLCH 彩度上限与色域映射走 `OKLCH_MAX_CHROMA`；超出 sRGB 时保持 L/H 降低 C；H/C 可见性走 `OKLCH_HUE_REFERENCE_*` 与 `OKLCH_CHROMA_TRACK_MIN_LIGHTNESS`。
+- 禁止的反面写法：HSL 的 L 轨直接用黑→白线性插值（漏掉中点的饱和色）；HSL 的 S 轨固定用中亮度灰→纯色（无视当前 L）；HSV 的 S/V 轨固定用 V=1 或 S=1 的纯色（无视当前另一通道）；RGB 的 R/G/B 轨从黑→纯通道色（丢掉另外两个通道）；让 L/C/H 等通道轨道继承当前颜色的 alpha（轨道固定不透明，透明度只由 A 轨表达）；把 OKLCH 的 H/C 轨直接绑在当前 L/C 上（当前色为黑时整条轨道变黑）；通道轨道只靠渐变描边而没有固定外描边（纯黑轨道会失去边界）；把 OKLCH 的 C 直接裁到 0..1 或直接裁 RGB；在绘制代码里另写一份 OKLCH 换算。
 
 ### 3.20 公告行级排版（MOTD line layout）
 

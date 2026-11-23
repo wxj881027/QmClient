@@ -16,7 +16,7 @@ namespace
 		Result.m_Page = 1;
 		Result.m_TextId = pId;
 		Result.m_Text = "translated text large enough to require owned heap storage";
-		Result.m_LabelProps.m_vColorSplits.resize(2);
+		Result.m_LabelProps.m_vColorSplits.assign(2, STextColorSplit(0, 0, ColorRGBA(1, 1, 1, 1)));
 		return Result;
 	}
 	std::optional<std::pair<std::string, std::string>> ItemKeys(const TItem &Value)

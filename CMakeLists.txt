@@ -3256,6 +3256,10 @@ if(CLIENT)
     qm_font_names.h
     qm_font_collection.h
     qm_font_face_registry.h
+    qm_glyph_geometry.h
+    qm_glyph_rasterizer.h
+    qm_video_memory.cpp
+    qm_video_memory.h
     qm_font_file_probe.h
     qm_recent_glyphs.h
     qm_font_restore.h
@@ -5117,6 +5121,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/qmclient/client/qm_phosphor_resource_contract_test.cpp
     src/test/contract/qmclient/ui/qm_font_icon_resource_contract_test.cpp
     src/test/unit/qmclient/ui/QmLayoutTest.cpp
+    src/test/unit/qmclient/ui/QmColorPickerColorTest.cpp
     src/test/unit/qmclient/ui/QmColorPickerPaletteTest.cpp
     src/test/unit/qmclient/ui/qm_input_focus_glow_test.cpp
     src/test/unit/qmclient/ui/qm_secondary_button_style_test.cpp
@@ -5263,6 +5268,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/music/qm_music_hook_protocol_test.cpp
     src/test/contract/qmclient/ui/qm_ui_presentation_contract_test.cpp
     src/test/unit/qmclient/ui/QmUiTokensTest.cpp
+    src/test/unit/qmclient/ui/qm_progress_ring_test.cpp
     src/test/unit/qmclient/ui/qm_ime_candidate_layout_test.cpp
     src/test/unit/qmclient/ui/qm_ime_render_state_test.cpp
     src/test/unit/qmclient/ui/qm_ime_popup_snapshot_test.cpp
@@ -6228,6 +6234,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_chat_export_test.cpp
     src/test/integration/qmclient/client/qm_chat_log_jobs_test.cpp
     src/test/test.cpp
+    src/test/test_info.cpp
     src/test/support/qm_test_terminate_diagnostics.cpp
     src/test/test.h
     src/test/unit/client/theme_scan_test.cpp
@@ -6602,6 +6609,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     $<TARGET_OBJECTS:game-shared>
     $<TARGET_OBJECTS:rust-bridge-shared>
     src/engine/client/text.cpp
+    src/engine/client/qm_video_memory.cpp
     src/generated/client_data.h
     src/generated/client_data7.h
     src/generated/data_types.h
@@ -6775,6 +6783,22 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/qm/music/qm_kugou_protocol.cpp
       src/qm/music/qm_qqmusic_protocol.cpp
       src/test/support/music_config_test_support.cpp
+      src/base/io.cpp
+      src/base/str.cpp
+      src/base/mem.cpp
+      src/base/dbg.cpp
+      src/base/fs.cpp
+      src/base/aio.cpp
+      src/base/sphore.cpp
+      src/base/thread.cpp
+      src/base/time.cpp
+      src/base/log.cpp
+      src/base/secure.cpp
+      src/base/windows.cpp
+      src/base/unicode/tolower.cpp
+      src/base/unicode/tolower_data.cpp
+      src/game/client/components/qmclient/music_lyrics/music_lyrics_community_format.cpp
+      src/game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
       src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
       src/qm/hooks/netease/qm_netease_frontend_bridge.cpp
       src/test/support/qm_netease_bridge_operations.h
@@ -6803,7 +6827,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
         src/game/client/components/qmclient/netease_hook/qm_netease_hook_v5_writer.cpp
       )
       target_compile_definitions(qm-nmt-tests PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
-      target_link_libraries(qm-nmt-tests bcrypt winhttp ws2_32)
+      target_link_libraries(qm-nmt-tests bcrypt winhttp ws2_32 shlwapi)
     endif()
     if(ZLIB_DEP)
       target_sources(qm-nmt-tests PRIVATE ${ZLIB_DEP})
@@ -6825,6 +6849,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/QmUi/UiDiscreteSlider.cpp
       src/game/client/QmUi/UiDiscreteSliderLogic.cpp
       src/test/test.cpp
+      src/test/test_info.cpp
       src/test/support/qm_test_terminate_diagnostics.cpp
       src/test/support/qm_open_link_probe.cpp
       src/test/support/qm_popup_tooltip_boundary.cpp
@@ -6851,6 +6876,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/components/qmclient/qm_title_style.cpp
       src/test/integration/qmclient/client/qm_text_bitmap_test.cpp
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
+      src/test/integration/qmclient/client/qm_text_glyph_worker_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
       src/test/integration/engine/recent_glyph_file_test.cpp
       src/test/integration/client/map_difficulty_catalog_file_test.cpp
@@ -6985,6 +7011,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_ui_element_allocation_test.cpp
       src/test/support/allocation_failure_new.cpp
       src/engine/client/text.cpp
+      src/engine/client/qm_video_memory.cpp
       src/engine/client/backend_threaded.cpp
       src/engine/client/graphics_threaded.cpp
       src/engine/client/graphics_threaded_sprites.cpp
@@ -7275,6 +7302,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/laser_data.cpp
       src/game/client/pickup_data.cpp
       src/game/client/projectile_data.cpp
+      src/game/client/skin.cpp
+      src/test/test_info.cpp
       src/generated/client_data.cpp
       src/generated/client_data.h
       $<TARGET_OBJECTS:engine-gfx>
@@ -7298,30 +7327,46 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   endif()
 
   # 独立测试目标也进入日常 C++ gate，避免只有注册却从未执行。
-  set(CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS})
+  # 一个二进制失败后仍继续跑其余目标：一次 CI 运行就能拿到全部失败点，
+  # 而不是每轮只暴露链上第一个失败的二进制。
+  set(QM_CXX_TEST_BINARIES $<TARGET_FILE:${TARGET_TESTRUNNER}>)
   set(CXX_TEST_DEPENDS ${TARGET_TESTRUNNER})
   if(TARGET qm-nmt-tests)
-    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-nmt-tests> ${TESTRUNNER_ARGS})
+    list(APPEND QM_CXX_TEST_BINARIES $<TARGET_FILE:qm-nmt-tests>)
     list(APPEND CXX_TEST_DEPENDS qm-nmt-tests)
   endif()
   if(TARGET qm-ui-popup-tests)
-    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-ui-popup-tests> ${TESTRUNNER_ARGS})
+    list(APPEND QM_CXX_TEST_BINARIES $<TARGET_FILE:qm-ui-popup-tests>)
     list(APPEND CXX_TEST_DEPENDS qm-ui-popup-tests)
   endif()
   if(TARGET qm-prediction-tests)
-    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-prediction-tests> ${TESTRUNNER_ARGS})
+    list(APPEND QM_CXX_TEST_BINARIES $<TARGET_FILE:qm-prediction-tests>)
     list(APPEND CXX_TEST_DEPENDS qm-prediction-tests)
   endif()
   if(TARGET qm-script-allocation-tests)
-    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-script-allocation-tests> ${TESTRUNNER_ARGS})
+    list(APPEND QM_CXX_TEST_BINARIES $<TARGET_FILE:qm-script-allocation-tests>)
     list(APPEND CXX_TEST_DEPENDS qm-script-allocation-tests)
   endif()
   if(TARGET qm-tsf-allocation-tests)
-    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-tsf-allocation-tests> ${TESTRUNNER_ARGS})
+    list(APPEND QM_CXX_TEST_BINARIES $<TARGET_FILE:qm-tsf-allocation-tests>)
     list(APPEND CXX_TEST_DEPENDS qm-tsf-allocation-tests)
   endif()
+  set(QM_CXX_TEST_SCRIPT "${CMAKE_BINARY_DIR}/run_cxx_tests.cmake")
+  file(GENERATE OUTPUT "${QM_CXX_TEST_SCRIPT}" CONTENT
+"set(Failed \"\")
+foreach(Binary IN ITEMS ${QM_CXX_TEST_BINARIES})
+  message(STATUS \"Running \${Binary}\")
+  execute_process(COMMAND \"\${Binary}\" RESULT_VARIABLE Result)
+  if(NOT Result EQUAL 0)
+    list(APPEND Failed \"\${Binary}\")
+  endif()
+endforeach()
+if(Failed)
+  message(FATAL_ERROR \"Failed test binaries: \${Failed}\")
+endif()
+")
   add_custom_target(run_cxx_tests
-    ${CXX_TEST_COMMANDS}
+    COMMAND ${CMAKE_COMMAND} -P ${QM_CXX_TEST_SCRIPT}
     COMMENT Running unit tests
     DEPENDS ${CXX_TEST_DEPENDS}
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
@@ -7388,11 +7433,16 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_snapshot_benchmark.cpp
     src/test/benchmark/qm_render_layer_batch_benchmark.cpp
     src/test/benchmark/qm_font_raster_benchmark.cpp
+    src/test/benchmark/qm_glyph_geometry_benchmark.cpp
     src/test/benchmark/qm_font_search_benchmark.cpp
     src/test/benchmark/qm_skin_sort_benchmark.cpp
+    src/test/benchmark/qm_skin_list_benchmark.cpp
+    src/game/client/components/settings_resource_jobs.cpp
+    src/game/client/components/settings_runtime_cache.cpp
     src/game/client/QmUi/QmDropdown.cpp
     src/test/benchmark/qm_icon_render_benchmark.cpp
     src/engine/client/text.cpp
+    src/engine/client/qm_video_memory.cpp
     # 拖尾几何构建（BuildEffect 与样式分派的生产实现；每帧每玩家热路径）
     src/test/benchmark/qm_trail_style_benchmark.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp

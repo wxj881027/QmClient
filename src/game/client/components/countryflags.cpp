@@ -255,8 +255,15 @@ size_t CCountryFlags::Num() const
 
 const CCountryFlags::CCountryFlag &CCountryFlags::GetByCountryCode(int CountryCode) const
 {
+	// 文本计划测量可能早于 country_flags 组件 OnInit；此时列表和 LUT
+	// 都还没有建立，不能返回空 vector 的越界引用。
+	static const CCountryFlag s_InvalidFlag{};
+	if(m_vCountryFlags.empty())
+		return s_InvalidFlag;
 	CountryCode = QmNormalizeCountryCode(CountryCode);
 	size_t Index = m_aCodeIndexLUT[maximum(0, (CountryCode - CODE_LB) % CODE_RANGE)];
+	if(Index >= m_vCountryFlags.size())
+		return s_InvalidFlag;
 	const_cast<CCountryFlags *>(this)->StartFlagLoadJob(Index);
 	return m_vCountryFlags[Index];
 }

@@ -49,8 +49,10 @@ namespace
 			Input.m_AttackTick = 20;
 			m_pCharacter = new CCharacter(&m_World, 0, &Input);
 			m_World.InsertEntity(m_pCharacter);
-			m_pCharacter->Core()->m_FreezeStart = 10;
-			m_pCharacter->Core()->m_FreezeEnd = 30;
+			EditCharacterCore(m_pCharacter, [](CCharacterCore &Core) {
+				Core.m_FreezeStart = 10;
+				Core.m_FreezeEnd = 30;
+			});
 			m_pCharacter->SetWeaponGot(WEAPON_NINJA, true);
 			m_pCharacter->SetNinjaActivationTick(15);
 			CProjectileData Projectile{};
@@ -150,7 +152,7 @@ TEST(PracticeTickShift, AttackHistoryOverflowKeepsWorldAndEarlierHistory)
 TEST(PracticeTickShift, CharacterFreezeEndOverflowKeepsOtherTimestampKinds)
 {
 	CScenario S;
-	S.m_pCharacter->Core()->m_FreezeEnd = std::numeric_limits<int>::max();
+	EditCharacterCore(S.m_pCharacter, [](CCharacterCore &Core) { Core.m_FreezeEnd = std::numeric_limits<int>::max(); });
 	EXPECT_FALSE(QmPractice::TryShiftTicks(S.m_World, 1, S.m_Attacks));
 	S.ExpectOriginalOtherEntities();
 	EXPECT_EQ(S.m_pCharacter->Core()->m_FreezeStart, 10);
@@ -199,8 +201,10 @@ TEST(PracticeTickShift, SentinelFieldsAreNotShifted)
 	CScenario S;
 	S.m_World.Switchers()[0].m_aEndTick[0] = 0;
 	S.m_World.Switchers()[0].m_aLastUpdateTick[0] = -1;
-	S.m_pCharacter->Core()->m_FreezeStart = 0;
-	S.m_pCharacter->Core()->m_FreezeEnd = -1;
+	EditCharacterCore(S.m_pCharacter, [](CCharacterCore &Core) {
+		Core.m_FreezeStart = 0;
+		Core.m_FreezeEnd = -1;
+	});
 	S.m_pCharacter->SetWeaponGot(WEAPON_NINJA, false);
 	S.m_pCharacter->SetNinjaActivationTick(std::numeric_limits<int>::max());
 	ASSERT_TRUE(QmPractice::TryShiftTicks(S.m_World, 5, S.m_Attacks));
@@ -252,7 +256,7 @@ TEST(PracticeTickShift, CharacterDirectCheckAndFailedCommitLeaveEarlierFieldsUnt
 	CScenario S;
 	ASSERT_TRUE(S.m_pCharacter->ShiftTickBase(5, QmTickShift::EMode::CHECK));
 	EXPECT_EQ(S.m_pCharacter->GetAttackTick(), 20);
-	S.m_pCharacter->Core()->m_FreezeEnd = std::numeric_limits<int>::max();
+	EditCharacterCore(S.m_pCharacter, [](CCharacterCore &Core) { Core.m_FreezeEnd = std::numeric_limits<int>::max(); });
 	EXPECT_FALSE(S.m_pCharacter->ShiftTickBase(5));
 	EXPECT_EQ(S.m_pCharacter->GetAttackTick(), 20);
 	EXPECT_EQ(S.m_pCharacter->Core()->m_FreezeStart, 10);
