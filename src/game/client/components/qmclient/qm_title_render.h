@@ -7,6 +7,7 @@
 #include <base/vmath.h>
 
 #include <game/client/QmUi/UiTokens.h>
+#include <game/client/components/qmclient/qm_title_appearance.h>
 #include <game/client/components/qmclient/qm_title_style.h>
 
 #include <array>
@@ -50,10 +51,9 @@ public:
 			if(str_utf8_decode(&pCurrent) <= 0)
 				break;
 			const int PrefixBytes = (int)(pCurrent - pText);
-			// 与既有 64 字节前缀缓冲的截断边界一致。
 			if(PrefixBytes >= (int)m_aWidths.size())
 				break;
-			char aPrefix[64];
+			char aPrefix[QM_TITLE_TEXT_SIZE + 2];
 			mem_copy(aPrefix, pText, PrefixBytes);
 			aPrefix[PrefixBytes] = '\0';
 			m_aWidths[PrefixBytes] = Measure(aPrefix);
@@ -70,7 +70,7 @@ private:
 	bool m_Valid = false;
 	SContext m_Context;
 	std::string m_Text;
-	std::array<float, 64> m_aWidths = {};
+	std::array<float, QM_TITLE_TEXT_SIZE + 2> m_aWidths = {};
 };
 
 // 头衔动态渲染参数：颜色风格 + 可选的逐字符上下波动或放大凸起。

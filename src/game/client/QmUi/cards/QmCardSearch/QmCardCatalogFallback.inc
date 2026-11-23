@@ -421,7 +421,6 @@ namespace
 		{Localizable("See you at the next checkpoint."), nullptr, "下个检查点见。"},
 		{Localizable("Sponsor code"), nullptr, "认证码"},
 		{Localizable("Sponsor title"), nullptr, "赞助头衔"},
-		{Localizable("Up to 6 Chinese or 12 ASCII characters"), nullptr, "最多 6 个中文或 12 个英文字符"},
 		{nullptr, "qm_sponsor_chat_style", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:qmclient-contributors-title", deck_qmclient_contributors_title);

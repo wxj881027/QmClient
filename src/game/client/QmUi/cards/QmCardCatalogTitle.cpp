@@ -209,7 +209,7 @@ namespace
 	struct SQmTitleProfileDraft
 	{
 		CLineInputBuffered<64> m_Code;
-		CLineInputBuffered<64> m_Title;
+		CLineInputBuffered<QM_TITLE_TEXT_SIZE, QM_TITLE_MAX_CODEPOINTS> m_Title;
 		CLineInputBuffered<64> m_Name;
 		int m_BindName = 0;
 		int m_Revision = -1;
@@ -347,7 +347,9 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 			});
 			RowAction("title-input", [&](CUIRect Row) {
 				ui_widget::InputField(TitleCtx, &Draft.m_Title, Row, Draft.m_Title.GetEmptyText(), BodySize, nullptr, true);
-				Hint(&Draft.m_Title, Row, Localize("Up to 6 Chinese or 12 ASCII characters"));
+				char aCount[16];
+				str_format(aCount, sizeof(aCount), "%d / %d", static_cast<int>(Draft.m_Title.GetNumChars()), QM_TITLE_MAX_CODEPOINTS);
+				Hint(&Draft.m_Title, Row, aCount);
 			});
 			RowAction("title-bind-name", [&](CUIRect Row) {
 				if(pMenus->DoSettingsButton_CheckBox(Page, Tab, -1, &Draft.m_BindName, "qm-title-bind-name", Localize("Only show with this nickname"), Draft.m_BindName, &Row) && Enabled && Auth.TitleAuthenticated())

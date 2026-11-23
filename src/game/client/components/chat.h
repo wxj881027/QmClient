@@ -162,7 +162,7 @@ private:
 		int m_ClientId = -1;
 		char m_aName[MAX_NAME_LENGTH] = "";
 		char m_aPlayerName[MAX_NAME_LENGTH] = "";
-		char m_aQmTitle[64] = "";
+		char m_aQmTitle[QM_TITLE_TEXT_SIZE] = "";
 		bool m_DeveloperBadge = false;
 		SQmTitleAppearance m_TitleAppearance;
 		ColorRGBA m_NameColor;
@@ -184,7 +184,7 @@ private:
 		bool m_Whisper;
 		int m_NameColor;
 		char m_aName[MAX_CLIENTS * (MAX_NAME_LENGTH + 1)];
-		char m_aQmTitle[64] = "";
+		char m_aQmTitle[QM_TITLE_TEXT_SIZE] = "";
 		bool m_DeveloperBadge = false;
 		SQmTitleAppearance m_TitleAppearance;
 		char m_aText[MAX_LINE_LENGTH];

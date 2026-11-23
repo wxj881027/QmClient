@@ -600,16 +600,30 @@ TEST(VoiceCore, ProcessIncomingPingRttRequiresMatchingOutstandingPing)
 	EXPECT_FALSE(VoiceShouldUpdatePingRtt(15, 15, 0));
 }
 
-// 意图：服务器头衔有严格的长度上限，并且只接受当前服务器的有效声明。
-TEST(QmClient, CustomTitleLengthAndPresenceValidation)
+TEST(QmClient, CustomTitleCountsUnicodeCodePoints)
 {
-	EXPECT_TRUE(IsValidQmTitle("一二三四五六"));
-	EXPECT_TRUE(IsValidQmTitle("abcdefghijkl"));
-	EXPECT_FALSE(IsValidQmTitle("一二三四五六七"));
-	EXPECT_FALSE(IsValidQmTitle("abcdefghijklm"));
-	EXPECT_FALSE(IsValidQmTitle("[开发者]"));
-	EXPECT_FALSE(IsValidQmTitle("a\nb"));
-	EXPECT_FALSE(IsValidQmTitle(""));
+	const std::string Ascii(24, 'A');
+	std::string Supplementary;
+	for(int i = 0; i < 24; ++i)
+		Supplementary.append("𠮷");
+	EXPECT_TRUE(IsValidQmTitle(Ascii.c_str()));
+	EXPECT_TRUE(IsValidQmTitle(Supplementary.c_str()));
+	EXPECT_FALSE(IsValidQmTitle((Ascii + "B").c_str()));
+	EXPECT_FALSE(IsValidQmTitle((Supplementary + "😀").c_str()));
+}
+
+TEST(QmClient, CustomTitleAcceptsUnicodeSingleLineText)
+{
+	EXPECT_TRUE(IsValidQmTitle("[e\u0301・𠮷・\U0001f469\u200d\U0001f4bb・\ue000]"));
+	for(const char *pTitle : {"", " leading", "trailing\u3000", "a\nb", "a\u0085b", "a\u2029b", "a\u202eb", "a\u2067b", "a\xed\xa0\x80"})
+	{
+		SCOPED_TRACE(pTitle);
+		EXPECT_FALSE(IsValidQmTitle(pTitle));
+	}
+}
+
+TEST(QmClient, CustomTitlePresenceAcceptsOnlyCurrentServerAndUnexpiredEntries)
+{
 	const char *pJsonText = R"({"server_time":1000,"presences":[{"server_address":"a","player_id":3,"player_name":"Twen","title":"小猫","issued_at":1000,"expires_at":1015},{"server_address":"b","player_id":4,"player_name":"Twen","title":"小猫","issued_at":1000,"expires_at":1015},{"server_address":"a","player_id":5,"player_name":"Twen","title":"小猫","issued_at":900,"expires_at":999}]})";
 	const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(json_parse(pJsonText, str_length(pJsonText)), json_value_free);
 	ASSERT_NE(pJson, nullptr);

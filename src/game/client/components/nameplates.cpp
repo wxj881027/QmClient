@@ -380,7 +380,7 @@ public:
 	bool m_UseTextEffects;
 	char m_aName[std::max<size_t>(MAX_NAME_LENGTH, protocol7::MAX_NAME_ARRAY_SIZE)];
 	bool m_ShowFriendMark;
-	char m_aQmTitle[64] = "";
+	char m_aQmTitle[QM_TITLE_TEXT_SIZE] = "";
 	SQmTitleAppearance m_TitleAppearance;
 	bool m_DeveloperBadge = false;
 	bool m_ShowClientId;
@@ -829,7 +829,7 @@ public:
 
 class CNamePlatePartTitle : public CNamePlatePartText
 {
-	char m_aText[64] = "";
+	char m_aText[QM_TITLE_TEXT_SIZE] = "";
 	std::string m_DisplayText;
 	CUIRect m_TextVisualBounds{};
 	float m_FontSize = -INFINITY;

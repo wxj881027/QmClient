@@ -495,21 +495,27 @@ bool IsQmDeveloperMarkCurrent(bool Active, const char *pMarkedName, const char *
 
 bool IsValidQmTitle(const char *pTitle)
 {
-	if(!pTitle || !pTitle[0] || !str_utf8_check(pTitle))
+	if(!pTitle || !pTitle[0])
 		return false;
-	int Width = 0;
+	// 与中心服 ValidateTitle 的单行规则及首尾空白检查一致。
+	const auto IsEdgeSpace = [](int Code) {
+		return Code == ' ' || Code == 0x00a0 || Code == 0x1680 || (Code >= 0x2000 && Code <= 0x200a) ||
+		       Code == 0x202f || Code == 0x205f || Code == 0x3000;
+	};
+	int Count = 0;
+	int Code = 0;
 	while(*pTitle)
 	{
-		const int Code = str_utf8_decode(&pTitle);
-		if(Code < 32 || (Code >= 127 && Code <= 159) || Code == '[' || Code == ']' ||
-			(Code >= 0x200b && Code <= 0x200f) || (Code >= 0x2028 && Code <= 0x202e) ||
-			(Code >= 0x2060 && Code <= 0x206f) || Code == 0xfeff)
+		Code = str_utf8_decode(&pTitle);
+		if(Code < 0x20 || (Code >= 0x7f && Code <= 0x9f) ||
+			Code == 0x061c || Code == 0x200e || Code == 0x200f ||
+			(Code >= 0x2028 && Code <= 0x202e) || (Code >= 0x2066 && Code <= 0x206f) ||
+			Code == 0xfeff || (Count == 0 && IsEdgeSpace(Code)))
 			return false;
-		Width += Code < 128 ? 1 : 2;
-		if(Width > 12)
+		if(++Count > QM_TITLE_MAX_CODEPOINTS)
 			return false;
 	}
-	return true;
+	return !IsEdgeSpace(Code);
 }
 
 bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out, bool *pTextStyleSupported)
