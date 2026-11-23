@@ -7,7 +7,9 @@
 
 #include <algorithm>
 #include <cmath>
-#include <string>
+
+inline constexpr int QM_TITLE_MAX_CODEPOINTS = 24;
+inline constexpr int QM_TITLE_TEXT_SIZE = 4 * QM_TITLE_MAX_CODEPOINTS + 1;
 
 enum class EQmTitleBadgeStyle
 {
@@ -38,16 +40,6 @@ inline const char *QmTitleBadgeStyleId(EQmTitleBadgeStyle Style)
 inline unsigned QmTitleBadgeDefaultColor(EQmTitleBadgeStyle Style)
 {
 	return Style == EQmTitleBadgeStyle::SUN ? 0xbd862d : 0x9562ba;
-}
-
-inline std::string QmTitleBadgeText(const char *pTitle)
-{
-	if(!pTitle)
-		return {};
-	const int Length = str_length(pTitle);
-	if(Length >= 2 && pTitle[0] == '[' && pTitle[Length - 1] == ']')
-		return std::string(pTitle + 1, Length - 2);
-	return pTitle;
 }
 
 constexpr float QM_TITLE_BADGE_HEIGHT = 24.0f;

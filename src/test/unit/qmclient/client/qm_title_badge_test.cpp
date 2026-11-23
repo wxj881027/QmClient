@@ -16,13 +16,6 @@ namespace
 	}
 }
 
-TEST(QmTitleBadge, CustomTextKeepsContentAndRemovesLegacyBrackets)
-{
-	EXPECT_EQ(QmTitleBadgeText("[我的头衔]"), "我的头衔");
-	EXPECT_EQ(QmTitleBadgeText("Own title"), "Own title");
-	EXPECT_EQ(QmTitleBadgeText(nullptr), "");
-}
-
 TEST(QmTitleBadge, LargerLabelKeepsTheCapsuleHeight)
 {
 	EXPECT_FLOAT_EQ(QmTitleBadgeLabelFontSize(24.0f), 16.0f);
@@ -34,14 +27,15 @@ TEST(QmTitleBadge, LargerLabelKeepsTheCapsuleHeight)
 	EXPECT_FLOAT_EQ(Large.y, 72.0f);
 }
 
-TEST(QmTitleBadge, PlainTextWorksWithBothRawProfilesAndBracketedChatTitles)
+TEST(QmTitleBadge, DisplayTextKeepsLiteralBracketsInBothStyles)
 {
 	SQmTitleAppearance Text;
 	Text.m_TextStyle = 3;
 	EXPECT_EQ(QmTitleDisplayText("猫", Text), "[猫]");
-	EXPECT_EQ(QmTitleDisplayText("[猫]", Text), "[猫]");
-	EXPECT_EQ(QmTitleDisplayText("[猫]", {}), "猫");
+	EXPECT_EQ(QmTitleDisplayText("[猫]", Text), "[[猫]]");
+	EXPECT_EQ(QmTitleDisplayText("[猫]", {}), "[猫]");
 	EXPECT_TRUE(QmTitleDisplayText("", Text).empty());
+	EXPECT_TRUE(QmTitleDisplayText(nullptr, {}).empty());
 }
 
 TEST(QmTitleBadge, TextStylesKeepTheirPaletteWhenLocalWaveChanges)

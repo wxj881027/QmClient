@@ -1594,7 +1594,7 @@ void CQmClient::ApplyQmRealtimeTitles(const SQmRealtimeMessage &Message)
 	for(const auto &Presence : Result.m_vPresences)
 	{
 		str_copy(m_aaTitleNames[Presence.m_PlayerId], Presence.m_PlayerName.c_str());
-		str_format(m_aaPlayerTitles[Presence.m_PlayerId], sizeof(m_aaPlayerTitles[Presence.m_PlayerId]), "[%s]", Presence.m_Title.c_str());
+		str_copy(m_aaPlayerTitles[Presence.m_PlayerId], Presence.m_Title.c_str());
 		str_copy(m_aaPlayerTitleStyles[Presence.m_PlayerId], Presence.m_Style.c_str());
 		m_aPlayerChatStyles[Presence.m_PlayerId] = Presence.m_ChatStyle;
 		m_aPlayerTitleAppearances[Presence.m_PlayerId] = Presence.m_Appearance;

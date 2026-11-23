@@ -198,16 +198,26 @@ TEST(QmRealtimeServiceData, MissingProfileFieldsKeepWholeSnapshotDefaults)
 	EXPECT_FALSE(Data.m_AppearanceSupported);
 }
 
-TEST(QmRealtimeServiceData, TitleValidationKeepsExistingWidthAndControlCharacterRules)
+TEST(QmRealtimeServiceData, TitleProfileRejectsOverlongOrNonSingleLineText)
 {
-	for(const char *pTitle : {"", "[bad]", "1234567890123", "bad\\ntext"})
+	for(const char *pTitle : {"", "1234567890123456789012345", "bad\\ntext", "bad\\u0000text", "bad\\u202etext"})
 	{
 		SCOPED_TRACE(pTitle);
 		const auto Input = Message("title_profile", std::string(R"("status":200,"title":")") + pTitle + '"');
 		EXPECT_FALSE(ReadQmRealtimeServiceData(Input).m_TitleAuthenticated);
 	}
-	const auto Input = Message("title_profile", R"("status":200,"title":"123456789012")");
-	EXPECT_TRUE(ReadQmRealtimeServiceData(Input).m_TitleAuthenticated);
+}
+
+TEST(QmRealtimeServiceData, TitleProfilePreservesSupplementaryAndCombiningCodePoints)
+{
+	std::string Title = "[";
+	for(int i = 0; i < 16; ++i)
+		Title += "𠮷";
+	Title += "文e\u0301\U0001f469\u200d\U0001f4bb]";
+	const auto Input = Message("title_profile", std::string(R"("status":200,"title":")") + Title + '"');
+	const auto Data = ReadQmRealtimeServiceData(Input);
+	EXPECT_TRUE(Data.m_TitleAuthenticated);
+	EXPECT_EQ(Title, Data.m_pTitle);
 }
 
 TEST(QmRealtimeServiceData, InvalidOptionalChatStyleDoesNotDiscardValidProfile)

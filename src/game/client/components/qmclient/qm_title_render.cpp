@@ -88,7 +88,7 @@ namespace
 	{
 		if(pMetrics != nullptr)
 			return pMetrics->PrefixWidth(PrefixBytes, LeftX);
-		char aPrefix[64];
+		char aPrefix[QM_TITLE_TEXT_SIZE + 2];
 		if(PrefixBytes >= (int)sizeof(aPrefix))
 			return LeftX;
 		mem_copy(aPrefix, pText, PrefixBytes);
