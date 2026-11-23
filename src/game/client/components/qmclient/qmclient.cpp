@@ -3235,12 +3235,12 @@ void CQmClient::UpdateTitleAuthentication()
 		const int StatusCode = m_pTitleOperation->StatusCode();
 		const std::unique_ptr<json_value, decltype(&json_value_free)> Root(m_pTitleOperation->ResultJson(), json_value_free);
 		const json_value *pRoot = Root.get();
-		const char *pTitle = TitleJsonString(pRoot, "title");
+		const json_value *pTitle = qm_json::Field(pRoot, "title");
 		const char *pName = TitleJsonString(pRoot, "bound_name");
-		if(StatusCode == 200 && IsValidQmTitle(pTitle))
+		if(StatusCode == 200 && qm_json::Text(pTitle) && IsValidQmTitle(pTitle->u.string.ptr))
 		{
 			m_TitleAuthenticated = true;
-			str_copy(m_aTitleText, pTitle);
+			str_copy(m_aTitleText, pTitle->u.string.ptr);
 			str_copy(m_aTitleBoundName, pName);
 			str_copy(m_aTitleProfileStyle, TitleJsonString(pRoot, "style"));
 			const json_value *pChatStyle = qm_json::Field(pRoot, "chat_style");
