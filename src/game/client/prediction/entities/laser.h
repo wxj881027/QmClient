@@ -31,6 +31,7 @@ public:
 protected:
 	bool HitCharacter(vec2 From, vec2 To);
 	void DoBounce();
+	void Discard();
 
 private:
 	vec2 m_From;

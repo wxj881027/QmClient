@@ -437,12 +437,12 @@ bool CQmAxiomQuadCollision::BoundsOverlap(const CCollisionQuad &Quad, vec2 Min, 
 	return Quad.m_Active && Quad.m_Min.x <= Max.x && Quad.m_Max.x >= Min.x && Quad.m_Min.y <= Max.y && Quad.m_Max.y >= Min.y;
 }
 
-void CQmAxiomQuadCollision::QueryBox(vec2 Min, vec2 Max, std::vector<int> &vIndices) const
+bool CQmAxiomQuadCollision::QueryBox(vec2 Min, vec2 Max, std::vector<int> &vIndices) const
 try
 {
 	vIndices.clear();
 	if(!FinitePoint(Min) || !FinitePoint(Max) || Min.x > Max.x || Min.y > Max.y)
-		return;
+		return true;
 
 	// 先检查网格跨度再转为 int，范围过大则按图层顺序直接收集相交四边形。
 	const double Left = std::floor(Min.x / GRID_SIZE), Top = std::floor(Min.y / GRID_SIZE);
@@ -454,7 +454,7 @@ try
 		for(size_t i = 0; i < m_vQuads.size(); ++i)
 			if(BoundsOverlap(m_vQuads[i], Min, Max))
 				vIndices.push_back(static_cast<int>(i));
-		return;
+		return true;
 	}
 
 	for(int Index : m_vLargeQuads)
@@ -471,15 +471,19 @@ try
 		}
 	std::sort(vIndices.begin(), vIndices.end());
 	vIndices.erase(std::unique(vIndices.begin(), vIndices.end()), vIndices.end());
+	return true;
 }
 catch(const std::bad_alloc &)
 {
-	// 分配失败时丢弃本次不完整的命中，常规瓦片碰撞仍由 CCollision 处理。
+	// 分配失败时丢弃本次不完整的命中；点查询沿用它降级，射线查询由调用方
+	// 决定是否放弃本次判定（见 IntersectLine 的 pIncomplete）。
 	vIndices.clear();
+	return false;
 }
 catch(const std::length_error &)
 {
 	vIndices.clear();
+	return false;
 }
 
 const std::vector<int> &CQmAxiomQuadCollision::QueryPoint(vec2 Pos, std::vector<int> &vFallback) const
@@ -640,12 +644,21 @@ bool CQmAxiomQuadCollision::Pushout(vec2 Pos, vec2 HalfSize, vec2 *pPush, vec2 *
 	return Deepest > 0;
 }
 
-int CQmAxiomQuadCollision::IntersectLine(vec2 From, vec2 To, float *pFraction, vec2 *pNormal) const
+int CQmAxiomQuadCollision::IntersectLine(vec2 From, vec2 To, float *pFraction, vec2 *pNormal, bool *pIncomplete) const
 {
+	if(pIncomplete)
+		*pIncomplete = false;
 	if(!FinitePoint(From) || !FinitePoint(To))
 		return 0;
 	std::vector<int> vIndices;
-	QueryBox(vec2(std::min(From.x, To.x), std::min(From.y, To.y)), vec2(std::max(From.x, To.x), std::max(From.y, To.y)), vIndices);
+	if(!QueryBox(vec2(std::min(From.x, To.x), std::min(From.y, To.y)), vec2(std::max(From.x, To.x), std::max(From.y, To.y)), vIndices))
+	{
+		// 索引不完整时，返回值只反映常规瓦片碰撞；射线是物理判据，
+		// 静默当成「没有四边形」会让子弹穿墙，所以把事实报给调用方。
+		if(pIncomplete)
+			*pIncomplete = true;
+		return 0;
+	}
 	float Best = 2;
 	int Tile = 0;
 	vec2 BestNormal(0, 0), Delta = To - From;
