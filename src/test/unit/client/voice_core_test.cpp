@@ -612,10 +612,16 @@ TEST(QmClient, CustomTitleCountsUnicodeCodePoints)
 	EXPECT_FALSE(IsValidQmTitle((Supplementary + "😀").c_str()));
 }
 
+TEST(QmClient, CustomTitleAllowsAnExplicitEmptyString)
+{
+	EXPECT_TRUE(IsValidQmTitle(""));
+	EXPECT_FALSE(IsValidQmTitle(nullptr));
+}
+
 TEST(QmClient, CustomTitleAcceptsUnicodeSingleLineText)
 {
 	EXPECT_TRUE(IsValidQmTitle("[e\u0301・𠮷・\U0001f469\u200d\U0001f4bb・\ue000]"));
-	for(const char *pTitle : {"", " leading", "trailing\u3000", "a\nb", "a\u0085b", "a\u2029b", "a\u202eb", "a\u2067b", "a\xed\xa0\x80"})
+	for(const char *pTitle : {" leading", "trailing\u3000", "a\nb", "a\u0085b", "a\u2029b", "a\u202eb", "a\u2067b", "a\xed\xa0\x80"})
 	{
 		SCOPED_TRACE(pTitle);
 		EXPECT_FALSE(IsValidQmTitle(pTitle));

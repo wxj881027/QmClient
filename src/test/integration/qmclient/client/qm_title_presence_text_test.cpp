@@ -72,6 +72,16 @@ TEST(QmTitlePresenceText, ValidEmptySnapshotRemainsSuccessfulAndCanClearOldTitle
 	EXPECT_TRUE(Result.m_vPresences.empty());
 }
 
+TEST(QmTitlePresenceText, ClearedTitleStillCarriesThePlayersChatStyle)
+{
+	const auto Json = Snapshot(R"({"chat_style":"platinum",)" + Row("title", "\"\"").substr(1));
+	SQmTitlePresenceParseResult Result;
+	ASSERT_TRUE(Parse(Json, Result));
+	ASSERT_EQ(Result.m_vPresences.size(), 1u);
+	EXPECT_TRUE(Result.m_vPresences.front().m_Title.empty());
+	EXPECT_EQ(Result.m_vPresences.front().m_ChatStyle, EQmSponsorChatStyle::PLATINUM);
+}
+
 TEST(QmTitlePresenceText, RequiredMemberNamesMustMatchCompletely)
 {
 	for(const char *pField : {"server_address", "player_name", "title", "player_id", "issued_at", "expires_at"})

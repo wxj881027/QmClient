@@ -61,13 +61,14 @@ inline SQmRealtimeServiceDataView ReadQmRealtimeServiceData(const SQmRealtimeMes
 	}
 	if(Message.m_Event == EQmRealtimeEvent::TITLE_PROFILE)
 	{
-		Data.m_pTitle = Text("title");
+		const json_value *pTitle = qm_json::Field(pPayload, "title");
+		const bool HasTitle = qm_json::Text(pTitle);
+		Data.m_pTitle = HasTitle ? pTitle->u.string.ptr : "";
 		Data.m_pBoundName = Text("bound_name");
 		Data.m_pStyle = Text("style");
 		const json_value *pStatus = qm_json::Field(pPayload, "status");
-		Data.m_TitleProfileAccepted = pStatus->type == json_integer &&
-					      (pStatus->u.integer == 401 || (pStatus->u.integer == 200 && IsValidQmTitle(Data.m_pTitle)));
-		Data.m_TitleAuthenticated = pStatus->type == json_integer && pStatus->u.integer == 200 && IsValidQmTitle(Data.m_pTitle);
+		Data.m_TitleAuthenticated = pStatus->type == json_integer && pStatus->u.integer == 200 && HasTitle && IsValidQmTitle(Data.m_pTitle);
+		Data.m_TitleProfileAccepted = Data.m_TitleAuthenticated || (pStatus->type == json_integer && pStatus->u.integer == 401);
 		const json_value *pChatStyle = qm_json::Field(pPayload, "chat_style");
 		Data.m_ChatStyleSupported = qm_json::Text(pChatStyle);
 		Data.m_ChatStyle = QmSponsorChatStyleFromId(Data.m_ChatStyleSupported ? pChatStyle->u.string.ptr : "");

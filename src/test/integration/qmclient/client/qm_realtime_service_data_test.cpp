@@ -193,14 +193,26 @@ TEST(QmRealtimeServiceData, MissingProfileFieldsKeepWholeSnapshotDefaults)
 	EXPECT_STREQ(Data.m_pTitle, "");
 	EXPECT_STREQ(Data.m_pBoundName, "");
 	EXPECT_STREQ(Data.m_pStyle, "");
+	EXPECT_FALSE(Data.m_TitleProfileAccepted);
 	EXPECT_FALSE(Data.m_TitleAuthenticated);
 	EXPECT_FALSE(Data.m_ChatStyleSupported);
 	EXPECT_FALSE(Data.m_AppearanceSupported);
 }
 
+TEST(QmRealtimeServiceData, ExplicitEmptyTitleKeepsSponsorProfileAuthenticated)
+{
+	const auto Input = Message("title_profile", R"("status":200,"title":"","chat_style":"platinum")");
+	const auto Data = ReadQmRealtimeServiceData(Input);
+	EXPECT_TRUE(Data.m_TitleProfileAccepted);
+	EXPECT_TRUE(Data.m_TitleAuthenticated);
+	EXPECT_STREQ(Data.m_pTitle, "");
+	EXPECT_TRUE(Data.m_ChatStyleSupported);
+	EXPECT_EQ(Data.m_ChatStyle, EQmSponsorChatStyle::PLATINUM);
+}
+
 TEST(QmRealtimeServiceData, TitleProfileRejectsOverlongOrNonSingleLineText)
 {
-	for(const char *pTitle : {"", "1234567890123456789012345", "bad\\ntext", "bad\\u0000text", "bad\\u202etext"})
+	for(const char *pTitle : {"1234567890123456789012345", "bad\\ntext", "bad\\u0000text", "bad\\u202etext"})
 	{
 		SCOPED_TRACE(pTitle);
 		const auto Input = Message("title_profile", std::string(R"("status":200,"title":")") + pTitle + '"');
