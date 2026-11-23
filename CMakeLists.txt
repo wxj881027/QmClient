@@ -3968,6 +3968,7 @@ if(CLIENT)
     components/qmclient/screenshot_clipboard.h
     components/qmclient/screenshot_image_job.cpp
     components/qmclient/screenshot_image_job.h
+    components/qmclient/screenshot_preview_timing.h
     components/qmclient/theme_icon_load_job.h
     components/qmclient/theme_list_load_request.h
     components/qmclient/theme_catalog.h
@@ -6093,6 +6094,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_config_package_storage_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_clipboard_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_image_policy_test.cpp
+    src/test/unit/qmclient/client/qm_screenshot_preview_timing_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_viewer_viewport_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_viewer_process_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_gallery_viewer_path_test.cpp
