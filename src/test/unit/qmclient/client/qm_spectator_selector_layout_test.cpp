@@ -90,3 +90,68 @@ TEST(QmSpectatorSelectorLayout, TouchStaysUnderFingerWhilePanelMoves)
 		EXPECT_EQ(Relative + Center, Position * ScreenSize);
 	}
 }
+
+TEST(QmSpectatorSelectorLayout, TeamBandMiddleHasStraightSides)
+{
+	for(float Radius : {3.0f, 5.0f, 6.0f, 10.0f, 30.0f})
+	{
+		SCOPED_TRACE(Radius);
+		const auto Surface = qm_spectator_layout::TeamRowSurface(Radius, false, false);
+		const auto Plan = ResolveRoundedSurfacePlan(CUIRect{0.0f, 0.0f, 270.0f, 60.0f}, Surface, true);
+		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.x, 0.0f);
+		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.y, 0.0f);
+		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.z, 0.0f);
+		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.w, 0.0f);
+		EXPECT_FLOAT_EQ(Plan.m_Radius, 0.0f);
+	}
+}
+
+TEST(QmSpectatorSelectorLayout, TeamBandRoundsOnlyExposedEnds)
+{
+	const CUIRect Row{0.0f, 0.0f, 270.0f, 60.0f};
+	const auto First = ResolveRoundedSurfacePlan(Row, qm_spectator_layout::TeamRowSurface(30.0f, true, false), true);
+	EXPECT_FLOAT_EQ(First.m_CornerRadii.x, 30.0f);
+	EXPECT_FLOAT_EQ(First.m_CornerRadii.y, 30.0f);
+	EXPECT_FLOAT_EQ(First.m_CornerRadii.z, 0.0f);
+	EXPECT_FLOAT_EQ(First.m_CornerRadii.w, 0.0f);
+
+	const auto Last = ResolveRoundedSurfacePlan(Row, qm_spectator_layout::TeamRowSurface(30.0f, false, true), true);
+	EXPECT_FLOAT_EQ(Last.m_CornerRadii.x, 0.0f);
+	EXPECT_FLOAT_EQ(Last.m_CornerRadii.y, 0.0f);
+	EXPECT_FLOAT_EQ(Last.m_CornerRadii.z, 30.0f);
+	EXPECT_FLOAT_EQ(Last.m_CornerRadii.w, 30.0f);
+}
+
+TEST(QmSpectatorSelectorLayout, SinglePlayerTeamKeepsAllRoundedCorners)
+{
+	const auto Surface = qm_spectator_layout::TeamRowSurface(30.0f, true, true);
+	const auto Plan = ResolveRoundedSurfacePlan(CUIRect{0.0f, 0.0f, 270.0f, 60.0f}, Surface, true);
+	EXPECT_FLOAT_EQ(Plan.m_CornerRadii.x, 30.0f);
+	EXPECT_FLOAT_EQ(Plan.m_CornerRadii.y, 30.0f);
+	EXPECT_FLOAT_EQ(Plan.m_CornerRadii.z, 30.0f);
+	EXPECT_FLOAT_EQ(Plan.m_CornerRadii.w, 30.0f);
+}
+
+TEST(QmSpectatorSelectorLayout, GroupTitleSeparatesPlayersLabelAndDivider)
+{
+	const vec2 Position(100.0f, 200.0f);
+	const auto Title = qm_spectator_layout::GroupTitle(Position, 270.0f, 15.0f, 1.0f);
+	EXPECT_GT(Title.m_Label.y, Position.y);
+	EXPECT_GT(Title.m_Divider.y, Title.m_Label.y + Title.m_Label.h);
+	EXPECT_GT(Position.y + Title.m_Height, Title.m_Divider.y + Title.m_Divider.h);
+	EXPECT_FLOAT_EQ(Title.m_Label.x, Position.x);
+	EXPECT_FLOAT_EQ(Title.m_Divider.x, Position.x);
+	EXPECT_FLOAT_EQ(Title.m_Divider.w, 270.0f);
+}
+
+TEST(QmSpectatorSelectorLayout, BackgroundAndMouseContainTallPlayersWithoutSearch)
+{
+	const vec2 Center(800.0f, 600.0f);
+	constexpr float PlayersBottom = 370.0f;
+	const auto Layout = qm_spectator_layout::Build(Center, 300.0f, false, PlayersBottom);
+	const CUIRect LastPlayer{Center.x - 270.0f, Center.y + PlayersBottom - 60.0f, 270.0f, 60.0f};
+	ExpectContains(Layout.m_Panel, LastPlayer);
+	ExpectContains(Layout.m_Mouse, LastPlayer);
+	EXPECT_FLOAT_EQ(Layout.m_SearchRow.h, 0.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Status.h, 0.0f);
+}
