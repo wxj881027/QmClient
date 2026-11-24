@@ -1951,8 +1951,8 @@ public:
 	{
 		const int MaxSubmitBatches = m_QmGlyphPrewarmBurst ? 8 : QM_MAX_GLYPH_SUBMIT_BATCHES_PER_FRAME;
 		const int MaxActiveJobs = m_QmGlyphPrewarmBurst ?
-			std::clamp<int>(static_cast<int>(std::thread::hardware_concurrency()) - 1, QM_MAX_ACTIVE_GLYPH_JOBS, 8) :
-			QM_MAX_ACTIVE_GLYPH_JOBS;
+						  std::clamp<int>(static_cast<int>(std::thread::hardware_concurrency()) - 1, QM_MAX_ACTIVE_GLYPH_JOBS, 8) :
+						  QM_MAX_ACTIVE_GLYPH_JOBS;
 		const size_t JobBatch = m_QmGlyphPrewarmBurst ? 64 : QM_GLYPH_JOB_BATCH;
 		int SubmittedBatches = 0;
 		while(!m_vQmPendingGlyphTasks.empty() && SubmittedBatches < MaxSubmitBatches)
@@ -3187,6 +3187,25 @@ class CTextRender : public IEngineTextRender
 	int m_QmPerfTextContainerUploads = 0;
 	double m_QmPerfTextContainerCreateMs = 0.0;
 	double m_QmPerfTextContainerUploadMs = 0.0;
+	// #647 基线：文本整形/断行在容器构建里的占比。顶层布局与断行里的
+	// word-measure 递归分开统计，避免把嵌套 TextEx 算成两份顶层成本。
+	int m_QmPerfLayoutCalls = 0;
+	int m_QmPerfLayoutWordMeasureCalls = 0;
+	double m_QmPerfLayoutMs = 0.0;
+	double m_QmPerfLayoutWordMeasureMs = 0.0;
+	int m_QmPerfLayoutGlyphs = 0;
+	int m_QmPerfLayoutQuads = 0;
+	bool m_QmInWordMeasure = false;
+	struct SQmScopedWordMeasure
+	{
+		bool &m_Flag;
+		const bool m_Previous;
+		explicit SQmScopedWordMeasure(bool &Flag) :
+			m_Flag(Flag), m_Previous(Flag) { m_Flag = true; }
+		~SQmScopedWordMeasure() { m_Flag = m_Previous; }
+		SQmScopedWordMeasure(const SQmScopedWordMeasure &) = delete;
+		SQmScopedWordMeasure &operator=(const SQmScopedWordMeasure &) = delete;
+	};
 	SQmTextRuntimeBudgetSnapshot m_QmLastTextRuntimeBudgetSnapshot;
 	bool m_QmGlyphWorkerStateLogged = false;
 	// 诊断窗口：逐帧预算日志只在异常帧输出，其余按 5 秒汇总，避免日志本身
@@ -3204,6 +3223,12 @@ class CTextRender : public IEngineTextRender
 	int m_QmTextWindowGpuReadbacks = 0;
 	int m_QmTextWindowGpuFallbacks = 0;
 	int m_QmTextWindowTextContainerUploads = 0;
+	int m_QmTextWindowLayoutCalls = 0;
+	int m_QmTextWindowLayoutWordCalls = 0;
+	int m_QmTextWindowLayoutGlyphs = 0;
+	int m_QmTextWindowLayoutQuads = 0;
+	double m_QmTextWindowLayoutMs = 0.0;
+	double m_QmTextWindowLayoutWordMs = 0.0;
 	double m_QmTextWindowRasterizeMs = 0.0;
 	double m_QmTextWindowWorkerRasterizeMs = 0.0;
 	double m_QmTextWindowWorkerApplyMs = 0.0;
@@ -3266,6 +3291,13 @@ class CTextRender : public IEngineTextRender
 		m_QmPerfTextContainerUploads = 0;
 		m_QmPerfTextContainerCreateMs = 0.0;
 		m_QmPerfTextContainerUploadMs = 0.0;
+		m_QmPerfLayoutCalls = 0;
+		m_QmPerfLayoutWordMeasureCalls = 0;
+		m_QmPerfLayoutMs = 0.0;
+		m_QmPerfLayoutWordMeasureMs = 0.0;
+		m_QmPerfLayoutGlyphs = 0;
+		m_QmPerfLayoutQuads = 0;
+		m_QmInWordMeasure = false;
 	}
 
 	bool ShouldLogTextRuntimeBudget(int GlyphNew, double GlyphRasterizeMs, double WorkerApplyMs) const
@@ -3345,6 +3377,12 @@ class CTextRender : public IEngineTextRender
 		m_QmTextWindowGpuReadbacks += GpuReadbacks;
 		m_QmTextWindowGpuFallbacks += GpuFallbacks;
 		m_QmTextWindowTextContainerUploads += m_QmPerfTextContainerUploads;
+		m_QmTextWindowLayoutCalls += m_QmPerfLayoutCalls;
+		m_QmTextWindowLayoutWordCalls += m_QmPerfLayoutWordMeasureCalls;
+		m_QmTextWindowLayoutGlyphs += m_QmPerfLayoutGlyphs;
+		m_QmTextWindowLayoutQuads += m_QmPerfLayoutQuads;
+		m_QmTextWindowLayoutMs += m_QmPerfLayoutMs;
+		m_QmTextWindowLayoutWordMs += m_QmPerfLayoutWordMeasureMs;
 		m_QmTextWindowRasterizeMs += GlyphRasterizeMs;
 		m_QmTextWindowWorkerRasterizeMs += WorkerRasterizeMs;
 		m_QmTextWindowWorkerApplyMs += WorkerApplyMs;
@@ -3365,6 +3403,12 @@ class CTextRender : public IEngineTextRender
 			m_QmTextWindowGpuReadbacks = 0;
 			m_QmTextWindowGpuFallbacks = 0;
 			m_QmTextWindowTextContainerUploads = 0;
+			m_QmTextWindowLayoutCalls = 0;
+			m_QmTextWindowLayoutWordCalls = 0;
+			m_QmTextWindowLayoutGlyphs = 0;
+			m_QmTextWindowLayoutQuads = 0;
+			m_QmTextWindowLayoutMs = 0.0;
+			m_QmTextWindowLayoutWordMs = 0.0;
 			m_QmTextWindowRasterizeMs = 0.0;
 			m_QmTextWindowWorkerRasterizeMs = 0.0;
 			m_QmTextWindowWorkerApplyMs = 0.0;
@@ -3381,15 +3425,16 @@ class CTextRender : public IEngineTextRender
 		const bool Detailed = ShouldLogTextRuntimeBudget(GlyphNew, GlyphRasterizeMs, WorkerApplyMs);
 		if(Detailed && (m_QmTextLastBudgetLogNs == 0 || NowNs - m_QmTextLastBudgetLogNs >= 250 * 1000 * 1000LL))
 		{
-			char aPayload[1536];
+			char aPayload[1792];
 			str_format(aPayload, sizeof(aPayload),
-				"event=text_runtime_budget glyph_new=%d glyph_uploads=%d glyph_upload_batches=%d glyph_rasterize_ms=%.3f glyph_upload_ms=%.3f glyph_upload_batch_ms=%.3f glyph_worker_queued=%d glyph_worker_completed=%d glyph_worker_jobs=%d glyph_worker_overflows=%d glyph_worker_rasterize_ms=%.3f glyph_worker_apply_ms=%.3f glyph_worker_pending=%zu glyph_worker_active=%d gpu_batches=%d gpu_glyphs=%d gpu_readbacks=%d gpu_fallbacks=%d gpu_prepared=%zu gpu_prepare_ms=%.3f gpu_apply_ms=%.3f atlas_dim=%zu atlas_growths=%d text_container_new=%d text_container_uploads=%d text_container_create_ms=%.3f text_container_upload_ms=%.3f main_thread_ms=%.3f frame_ms=%.3f",
+				"event=text_runtime_budget glyph_new=%d glyph_uploads=%d glyph_upload_batches=%d glyph_rasterize_ms=%.3f glyph_upload_ms=%.3f glyph_upload_batch_ms=%.3f glyph_worker_queued=%d glyph_worker_completed=%d glyph_worker_jobs=%d glyph_worker_overflows=%d glyph_worker_rasterize_ms=%.3f glyph_worker_apply_ms=%.3f glyph_worker_pending=%zu glyph_worker_active=%d gpu_batches=%d gpu_glyphs=%d gpu_readbacks=%d gpu_fallbacks=%d gpu_prepared=%zu gpu_prepare_ms=%.3f gpu_apply_ms=%.3f atlas_dim=%zu atlas_growths=%d text_container_new=%d text_container_uploads=%d text_container_create_ms=%.3f text_container_upload_ms=%.3f layout_calls=%d layout_ms=%.3f layout_glyphs=%d layout_quads=%d word_measure_calls=%d word_measure_ms=%.3f main_thread_ms=%.3f frame_ms=%.3f",
 				GlyphNew, GlyphUploads, GlyphUploadBatches, GlyphRasterizeMs, GlyphUploadMs, GlyphUploadBatchMs,
 				WorkerQueued, WorkerCompleted, WorkerJobs, WorkerOverflows, WorkerRasterizeMs, WorkerApplyMs,
 				m_pGlyphMap->QmGlyphWorkerPendingCount(), m_pGlyphMap->QmGlyphWorkerActiveCount(),
 				GpuBatches, GpuGlyphs, GpuReadbacks, GpuFallbacks, GpuPrepared, GpuPrepareMs, GpuApplyMs,
 				m_pGlyphMap->QmAtlasDimension(), m_pGlyphMap->QmAtlasGrowthCount(),
 				m_QmPerfTextContainerNew, m_QmPerfTextContainerUploads, m_QmPerfTextContainerCreateMs, m_QmPerfTextContainerUploadMs,
+				m_QmPerfLayoutCalls, m_QmPerfLayoutMs, m_QmPerfLayoutGlyphs, m_QmPerfLayoutQuads, m_QmPerfLayoutWordMeasureCalls, m_QmPerfLayoutWordMeasureMs,
 				MainThreadMs, FrameMs);
 			QmPerfLogPayload("perf/text", aPayload, pClient);
 			m_QmTextLastBudgetLogNs = NowNs;
@@ -3399,9 +3444,9 @@ class CTextRender : public IEngineTextRender
 		{
 			const double WindowMs = (double)WindowNs / 1000000.0;
 			const double WindowFps = WindowMs > 0.0 ? (double)m_QmTextWindowFrames * 1000.0 / WindowMs : 0.0;
-			char aPayload[1536];
+			char aPayload[1792];
 			str_format(aPayload, sizeof(aPayload),
-				"event=text_runtime_summary window_ms=%.1f frames=%d fps=%.1f glyph_new=%d glyph_uploads=%d glyph_rasterize_ms=%.3f max_glyph_new=%d glyph_worker_queued=%d glyph_worker_completed=%d glyph_worker_jobs=%d glyph_worker_overflows=%d glyph_worker_rasterize_ms=%.3f glyph_worker_apply_ms=%.3f glyph_worker_pending=%zu glyph_worker_active=%d gpu_batches=%d gpu_glyphs=%d gpu_readbacks=%d gpu_fallbacks=%d gpu_prepared=%zu gpu_prepare_ms=%.3f gpu_apply_ms=%.3f atlas_dim=%zu atlas_growths=%d text_container_uploads=%d main_thread_ms=%.3f frame_ms=%.3f",
+				"event=text_runtime_summary window_ms=%.1f frames=%d fps=%.1f glyph_new=%d glyph_uploads=%d glyph_rasterize_ms=%.3f max_glyph_new=%d glyph_worker_queued=%d glyph_worker_completed=%d glyph_worker_jobs=%d glyph_worker_overflows=%d glyph_worker_rasterize_ms=%.3f glyph_worker_apply_ms=%.3f glyph_worker_pending=%zu glyph_worker_active=%d gpu_batches=%d gpu_glyphs=%d gpu_readbacks=%d gpu_fallbacks=%d gpu_prepared=%zu gpu_prepare_ms=%.3f gpu_apply_ms=%.3f atlas_dim=%zu atlas_growths=%d text_container_uploads=%d layout_calls=%d layout_ms=%.3f layout_glyphs=%d layout_quads=%d word_measure_calls=%d word_measure_ms=%.3f main_thread_ms=%.3f frame_ms=%.3f",
 				WindowMs, m_QmTextWindowFrames, WindowFps, m_QmTextWindowGlyphNew, m_QmTextWindowGlyphUploads,
 				m_QmTextWindowRasterizeMs, m_QmTextWindowMaxGlyphNew, m_QmTextWindowWorkerQueued, m_QmTextWindowWorkerCompleted,
 				m_QmTextWindowWorkerJobs, m_QmTextWindowWorkerOverflows, m_QmTextWindowWorkerRasterizeMs, m_QmTextWindowWorkerApplyMs,
@@ -3409,7 +3454,9 @@ class CTextRender : public IEngineTextRender
 				m_QmTextWindowGpuBatches, m_QmTextWindowGpuGlyphs, m_QmTextWindowGpuReadbacks, m_QmTextWindowGpuFallbacks,
 				m_pGlyphMap->QmGpuPreparedCount(), m_QmTextWindowGpuPrepareMs, m_QmTextWindowGpuApplyMs,
 				m_pGlyphMap->QmAtlasDimension(), m_pGlyphMap->QmAtlasGrowthCount(),
-				m_QmTextWindowTextContainerUploads, MainThreadMs, FrameMs);
+				m_QmTextWindowTextContainerUploads,
+				m_QmTextWindowLayoutCalls, m_QmTextWindowLayoutMs, m_QmTextWindowLayoutGlyphs, m_QmTextWindowLayoutQuads, m_QmTextWindowLayoutWordCalls, m_QmTextWindowLayoutWordMs,
+				MainThreadMs, FrameMs);
 			// 5 秒汇总和分钟级热力图是低帧诊断的主证据，不能被每秒明细限流丢掉。
 			QmPerfLogPayloadForce("perf/text", aPayload, pClient);
 			m_QmTextWindowStartNs = NowNs;
@@ -4958,7 +5005,25 @@ public:
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
 		InitTextContainer(TextContainer, pCursor);
 
+		const bool InWordMeasure = m_QmInWordMeasure;
+		const auto LayoutStart = PerfEnabled ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
 		AppendTextContainer(TextContainerIndex, pCursor, pText, Length);
+		if(PerfEnabled)
+		{
+			const double LayoutMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - LayoutStart).count();
+			if(InWordMeasure)
+			{
+				++m_QmPerfLayoutWordMeasureCalls;
+				m_QmPerfLayoutWordMeasureMs += LayoutMs;
+			}
+			else
+			{
+				++m_QmPerfLayoutCalls;
+				m_QmPerfLayoutMs += LayoutMs;
+				m_QmPerfLayoutGlyphs += pCursor->m_GlyphCount;
+				m_QmPerfLayoutQuads += (int)TextContainer.m_StringInfo.m_vCharacterQuads.size();
+			}
+		}
 
 		const bool IsRendered = (pCursor->m_Flags & TEXTFLAG_RENDER) != 0;
 
@@ -5239,7 +5304,10 @@ public:
 				Compare.m_Flags &= ~TEXTFLAG_RENDER;
 				Compare.m_Flags |= TEXTFLAG_DISALLOW_NEWLINE;
 				Compare.m_LineWidth = -1.0f;
-				TextEx(&Compare, pCurrent, Wlen);
+				{
+					const SQmScopedWordMeasure WordMeasure(m_QmInWordMeasure);
+					TextEx(&Compare, pCurrent, Wlen);
+				}
 
 				if(Compare.m_X - DrawX > pCursor->m_LineWidth)
 				{
@@ -5252,7 +5320,10 @@ public:
 					Cutter.m_Flags &= ~TEXTFLAG_RENDER;
 					Cutter.m_Flags |= TEXTFLAG_STOP_AT_END | TEXTFLAG_DISALLOW_NEWLINE;
 
-					TextEx(&Cutter, pCurrent, Wlen);
+					{
+						const SQmScopedWordMeasure WordMeasure(m_QmInWordMeasure);
+						TextEx(&Cutter, pCurrent, Wlen);
+					}
 					Wlen = str_utf8_rewind(pCurrent, Cutter.m_CharCount); // rewind once to skip the last character that did not fit
 					NewLine = true;
 
