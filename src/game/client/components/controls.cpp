@@ -273,9 +273,6 @@ int CControls::SnapInput(int *pData)
 	}
 
 	// TClient
-	if(g_Config.m_QmHideChatBubbles && Client()->RconAuthed())
-		for(auto &InputData : m_aInputData)
-			InputData.m_PlayerFlags &= ~PLAYERFLAG_CHATTING;
 	if(g_Config.m_QmSayNoPop)
 		for(auto &InputData : m_aInputData)
 			InputData.m_PlayerFlags &= ~PLAYERFLAG_CHATTING;

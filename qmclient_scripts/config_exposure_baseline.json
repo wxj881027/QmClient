@@ -52,11 +52,6 @@
 			"note": "渲染管线开关，随性能档位自动选择"
 		},
 		{
-			"name": "qm_hide_chat_bubbles",
-			"category": "internal",
-			"note": "旧 TClient tc_hide_chat_bubbles，仅 rcon 鉴权时隐藏自己的气泡；不设设置页入口"
-		},
-		{
 			"name": "qm_hitbox_show_tees",
 			"category": "internal",
 			"note": "旧碰撞框配置迁移汇总开关，设置页使用细分开关"
