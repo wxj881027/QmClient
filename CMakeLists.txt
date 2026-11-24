@@ -523,7 +523,14 @@ if(NOT MSVC AND NOT HAIKU)
     add_cxx_compiler_flag_if_supported(OUR_FLAGS -fstack-clash-protection)
     # 在目标编译器支持时启用前向控制流保护。
     add_cxx_compiler_flag_if_supported(OUR_FLAGS -fcf-protection=full)
-    add_cxx_compiler_flag_if_supported(OUR_FLAGS -mbranch-protection=standard)
+    # PAC 返回地址签名在 Apple clang 21（Xcode 26.6 / macOS 26 arm64）上会让 C++
+    # 异常无法传播：throw 之后 catch 永不匹配，直接 std::terminate 中止进程。
+    # 最小复现只需 -O3 -mbranch-protection=standard 一条，-mbranch-protection=none
+    # 或去掉该选项即恢复正常。客户端靠 catch 做恢复（JSON 解析、脚本引擎、分配
+    # 失败回退），因此 macOS 不启用返回地址签名，其它平台保持原样。
+    if(NOT TARGET_OS STREQUAL "mac")
+      add_cxx_compiler_flag_if_supported(OUR_FLAGS -mbranch-protection=standard)
+    endif()
     if(MINGW)
       add_linker_flag_if_supported(OUR_FLAGS_LINK -lssp)
     endif()
