@@ -11420,6 +11420,9 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 Playtime (h)
 == 游玩（小时）
 
+Playtime query failed. Retrying shortly.
+== 游玩时长查询失败，稍后重试。
+
 Please add a valid cut first
 == 请先添加有效裁剪片段
 
@@ -12058,6 +12061,9 @@ Query server setting: %s
 
 Query team rank for %s
 == 查询玩家 %s 所在队伍的排名
+
+Querying playtime from DDStats...
+== 正在向 DDStats 查询游玩时长…
 
 Querying points for %s...
 == 正在查询 %s 的积分……
@@ -17284,6 +17290,9 @@ Total hours
 
 Total play time
 == 总时长
+
+Total playtime from DDStats. The last result stays visible while refreshing.
+== DDStats 统计的总游玩时长。后台刷新时保留上次结果。
 
 Total points
 == 总分

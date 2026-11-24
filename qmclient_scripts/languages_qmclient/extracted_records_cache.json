@@ -663,14 +663,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2425
+      "line": 2447
     },
     {
       "key": "%s wins!",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2437
+      "line": 2459
     },
     {
       "key": "%s: %d points",
@@ -2595,7 +2595,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2895
+      "line": 2917
     },
     {
       "key": "Add friends by entering their name below or by clicking their name in the player list.",
@@ -5409,7 +5409,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2029
+      "line": 2050
     },
     {
       "key": "Auto adjust prediction margin (fixed base margin when off)",
@@ -7873,14 +7873,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2522
+      "line": 2544
     },
     {
       "key": "Blue team wins!",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2433
+      "line": 2455
     },
     {
       "key": "BLUE TELEPORT: After falling into this tile, tees appear on TO with the same number. Speed and hook are kept.",
@@ -10855,7 +10855,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 1544
+      "line": 1545
     },
     {
       "key": "Clan color in friends list",
@@ -14082,7 +14082,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2921
+      "line": 2943
     },
     {
       "key": "Copy name option color",
@@ -14117,7 +14117,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2942
+      "line": 2964
     },
     {
       "key": "Copy skin from dummy",
@@ -14138,7 +14138,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2953
+      "line": 2975
     },
     {
       "key": "Copy skin option color",
@@ -15027,21 +15027,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2358
+      "line": 2379
     },
     {
       "key": "Current: Score",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2360
+      "line": 2381
     },
     {
       "key": "Current: Time",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2360
+      "line": 2381
     },
     {
       "key": "Cursor",
@@ -19213,7 +19213,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2443
+      "line": 2465
     },
     {
       "key": "Drawing tool: Drag a rectangle to fill it with the current tile. An empty brush erases to air.",
@@ -27956,7 +27956,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2550
+      "line": 2572
     },
     {
       "key": "Game paused",
@@ -37434,7 +37434,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2027
+      "line": 2048
     },
     {
       "key": "Manual concurrency: %d",
@@ -39926,7 +39926,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2903
+      "line": 2925
     },
     {
       "key": "Mute death/respawn sound in Zen Mode",
@@ -39961,7 +39961,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2912
+      "line": 2934
     },
     {
       "key": "Mute flag sounds",
@@ -40374,7 +40374,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 1541
+      "line": 1542
     },
     {
       "key": "Name",
@@ -46597,7 +46597,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 1547
+      "line": 1548
     },
     {
       "key": "Ping the current server",
@@ -47689,7 +47689,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2391
+      "line": 2413
     },
     {
       "key": "Players are just kicked and not banned if they get voted off",
@@ -47850,7 +47850,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 1508
+      "line": 1509
+    },
+    {
+      "key": "Playtime query failed. Retrying shortly.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/scoreboard.cpp",
+      "context": "",
+      "line": 1816
     },
     {
       "key": "Please add a valid cut first",
@@ -47990,7 +47997,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 1508
+      "line": 1509
     },
     {
       "key": "Points unavailable",
@@ -50373,6 +50380,13 @@
       "line": 168
     },
     {
+      "key": "Querying playtime from DDStats...",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/scoreboard.cpp",
+      "context": "",
+      "line": 1816
+    },
+    {
       "key": "Querying points for %s...",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/pie_menu_actions.cpp",
@@ -50580,7 +50594,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2028
+      "line": 2049
     },
     {
       "key": "Race",
@@ -51693,14 +51707,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2521
+      "line": 2543
     },
     {
       "key": "Red team wins!",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2421
+      "line": 2443
     },
     {
       "key": "RED TELEPORT: After falling into this tile, tees appear on TO with the same number. Speed and hooks are reset.",
@@ -52589,7 +52603,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2895
+      "line": 2917
     },
     {
       "key": "Remove from favorites",
@@ -53513,7 +53527,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2030
+      "line": 2051
     },
     {
       "key": "Replay a saved practice ghost group in demo-style view mode",
@@ -55942,7 +55956,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 1535
+      "line": 1536
     },
     {
       "key": "Score earned",
@@ -56369,14 +56383,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2566
+      "line": 2588
     },
     {
       "key": "Scroll mode: On",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2566
+      "line": 2588
     },
     {
       "key": "Scroll step",
@@ -61647,28 +61661,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2374
+      "line": 2396
     },
     {
       "key": "Show playtime",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2375
+      "line": 2397
     },
     {
       "key": "Show points",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2374
+      "line": 2396
     },
     {
       "key": "Show points",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2375
+      "line": 2397
     },
     {
       "key": "Show position and angle",
@@ -63320,7 +63334,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2940
+      "line": 2962
     },
     {
       "key": "Skin could not be found.",
@@ -63719,7 +63733,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2937
+      "line": 2959
     },
     {
       "key": "Skins directory",
@@ -64825,7 +64839,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2977
+      "line": 2999
     },
     {
       "key": "Spectate a player by Id",
@@ -66519,7 +66533,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 1631
+      "line": 1646
     },
     {
       "key": "SUPER JUMP OFF: You don't have unlimited air jumps.",
@@ -67506,7 +67520,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 1635
+      "line": 1650
     },
     {
       "key": "Team %d",
@@ -67520,7 +67534,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 1633
+      "line": 1648
     },
     {
       "key": "Team 0",
@@ -70509,7 +70523,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 1535
+      "line": 1536
     },
     {
       "key": "Time (in s):",
@@ -71868,6 +71882,13 @@
       "source": "src/game/client/components/menus.cpp",
       "context": "",
       "line": 4188
+    },
+    {
+      "key": "Total playtime from DDStats. The last result stays visible while refreshing.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/scoreboard.cpp",
+      "context": "",
+      "line": 1815
     },
     {
       "key": "Total points",
@@ -74051,14 +74072,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2903
+      "line": 2925
     },
     {
       "key": "Unmute emoticons",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/scoreboard.cpp",
       "context": "",
-      "line": 2912
+      "line": 2934
     },
     {
       "key": "Unmute player with client ID",
