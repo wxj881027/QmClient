@@ -5626,6 +5626,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_streamer_word_filter_test.cpp
     src/test/unit/qmclient/client/qm_map_tags_test.cpp
     src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp
+    src/test/integration/qmclient/client/ddnet_browser_difficulty_test.cpp
     src/test/support/map_http_recorder.h
     src/test/integration/qmclient/client/qm_map_tags_lifecycle_test.cpp
     src/test/unit/qmclient/client/qm_public_word_filter_test.cpp

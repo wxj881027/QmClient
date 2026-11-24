@@ -2518,8 +2518,8 @@ private:
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
 	CQmMapDifficultyCatalog m_MapDifficultyCatalog;
-	// Axiom 难度缓存合批落盘：多次请求结果在同一窗口内只写一次磁盘。
-	int64_t m_NextAxiomDifficultySave = 0;
+	// 难度缓存合批落盘：多次请求结果在同一窗口内只写一次磁盘。
+	int64_t m_NextDifficultySave = 0;
 	CQmScreenshotManager m_ScreenshotManager;
 	CQmLocalSaveDisplayCache m_LocalSaveDisplay;
 	void RenderServerbrowserFavoriteMaps(CUIRect View);

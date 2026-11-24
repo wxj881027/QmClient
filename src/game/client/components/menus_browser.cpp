@@ -1227,7 +1227,10 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	const bool NeedDifficultyForList = g_Config.m_QmMapBrowserStarMask || g_Config.m_QmMapBrowserCategoryMask || g_Config.m_BrSort == IServerBrowser::SORT_DIFFICULTY;
 	auto RequestDifficulty = [&](const CServerInfo &Server) {
 		if(!Ui()->RenderOnly())
+		{
+			m_MapDifficultyCatalog.RequestDdnetDifficulty(Server, *Http(), Now);
 			m_MapDifficultyCatalog.RequestAxiomDifficulty(Server, *Http(), GameClient()->m_QmAxiomScores.OpenApiBudget(), g_Config.m_QmAxiomApiKey, Now);
+		}
 	};
 	static std::vector<int> s_vVisibleServerIndices;
 	static uint64_t s_VisibleSortedRevision = ~0ull;
@@ -1256,7 +1259,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	const bool StaleEmptyOnly = s_VisibleEmptyOnly != g_Config.m_QmMapBrowserEmptyOnly;
 	const bool RebuildVisible = StaleRevision || StaleCatalog || StaleFavorites || StaleCount || StaleStarMask ||
 				    StaleCategoryMask || StaleFavoriteOnly || StaleEmptyOnly;
-	// 失败请求的退避只在再次调用 RequestAxiomDifficulty 时推进；目录未变时仍按秒级
+	// DDNet 和 Axiom 的失败请求需要再次触发补查；目录未变时仍按秒级
 	// 节奏补查，但不再顺带重建可见索引。
 	const bool RequestScan = RebuildVisible || (NeedDifficultyForList && Now - s_VisibleRequestScanTime >= time_freq());
 	if(RequestScan)
