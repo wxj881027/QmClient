@@ -1,3 +1,6 @@
+#include <generated/protocol.h>
+
+#include <game/client/components/qmclient/predicted_event_queue.h>
 #include <game/client/pickup_data.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/client/prediction/entities/pickup.h>
@@ -9,6 +12,7 @@
 #include <test/support/prediction_world.h>
 
 #include <memory>
+#include <vector>
 
 namespace
 {
@@ -190,6 +194,68 @@ TEST(PredictionWorldCopy, NullAndSelfCopyRemainNoOps)
 	EXPECT_EQ(World.m_GameTick, 100);
 	EXPECT_EQ(World.m_pParent, nullptr);
 	EXPECT_EQ(World.m_pChild, nullptr);
+}
+
+TEST(PredictionWorldCopy, FastInputRepredictionPlaysEachHammerSwingAndHitOnce)
+{
+	CPredictionTestWorld Predicted, Regular;
+	Predicted.m_WorldConfig.m_PredictEvents = true;
+	const int SwingTick = Predicted.GameTick();
+	const vec2 AttackerPos(64, 32);
+	const vec2 HitPos(88, 32);
+	const std::vector<int> vSwingEvents{NETEVENTTYPE_SOUNDWORLD, NETEVENTTYPE_HAMMERHIT};
+	auto Swing = [&] {
+		Predicted.CreatePredictedEvent({NETEVENTTYPE_SOUNDWORLD, AttackerPos, 2, Predicted.GameTick(), SOUND_HAMMER_FIRE});
+		Predicted.CreatePredictedHammerHitEvent(HitPos, 2, 3);
+	};
+	std::vector<int> vPlayed;
+	auto PlayEvents = [&](int Tick) {
+		QmProcessPredictedEvents(Predicted.m_PredictedEvents, Tick, SERVER_TICK_SPEED, [&](const CGameWorld::CPredictedEvent &Event) {
+			vPlayed.push_back(Event.m_EventId);
+			return true;
+		});
+	};
+
+	Swing();
+	ASSERT_TRUE(QmFinishRegularPredictionTick(Predicted, Regular, SwingTick, PlayEvents));
+	ASSERT_EQ(vPlayed, vSwingEvents);
+	vPlayed.clear();
+	Predicted.m_GameTick++;
+	ASSERT_TRUE(QmFinishRegularPredictionTick(Predicted, Regular, SwingTick, PlayEvents));
+	ASSERT_TRUE(Predicted.CopyWorld(&Regular));
+	ASSERT_EQ(Predicted.GameTick(), SwingTick);
+
+	Swing();
+	ASSERT_TRUE(QmFinishRegularPredictionTick(Predicted, Regular, SwingTick, PlayEvents));
+	EXPECT_TRUE(vPlayed.empty());
+
+	// 同一位置的下一次挥锤仍要触发挥锤声和命中特效。
+	Predicted.m_GameTick += SERVER_TICK_SPEED;
+	Swing();
+	ASSERT_TRUE(QmFinishRegularPredictionTick(Predicted, Regular, Predicted.GameTick(), PlayEvents));
+	EXPECT_EQ(vPlayed, vSwingEvents);
+}
+
+TEST(PredictionWorldCopy, SnapshotAfterFastInputRestoreRecognizesPlayedGunfire)
+{
+	CPredictionTestWorld Predicted, Regular;
+	Predicted.m_WorldConfig.m_PredictEvents = true;
+	const int FireTick = Predicted.GameTick();
+	const vec2 Pos(64, 32);
+	Predicted.CreatePredictedEvent({NETEVENTTYPE_SOUNDWORLD, Pos, 2, FireTick, SOUND_GUN_FIRE});
+	int Played = 0;
+	ASSERT_TRUE(QmFinishRegularPredictionTick(Predicted, Regular, FireTick, [&](int Tick) {
+		QmProcessPredictedEvents(Predicted.m_PredictedEvents, Tick, SERVER_TICK_SPEED, [&](const CGameWorld::CPredictedEvent &) {
+			++Played;
+			return true;
+		});
+	}));
+	ASSERT_EQ(Played, 1);
+	ASSERT_TRUE(Predicted.CopyWorld(&Regular));
+
+	bool NeedsSnapshotPlayback = true;
+	ASSERT_TRUE(Predicted.CheckPredictedEventHandled({NETEVENTTYPE_SOUNDWORLD, Pos, -1, FireTick + 1, SOUND_GUN_FIRE}, &NeedsSnapshotPlayback));
+	EXPECT_FALSE(NeedsSnapshotPlayback);
 }
 
 namespace
