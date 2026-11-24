@@ -211,9 +211,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 2.8d 控制台顶栏按钮（console toolbar button）
 
-- 定义：控制台筛选与动作按钮的出现、消失都走同一条存在度；同一按钮换文案时复用槽位并平滑过渡宽度，按钮宽度、透明度和命中一起收放，任意两颗实际可见的按钮之间保留同一档固定间距，目标集合决定是否折成两行，选中底色取全局强调色的派生档。
-- 唯一实现：`QmConsoleUi::CToolbarPresenceMotion`、`QmConsoleUi::LayoutToolbarAnimated`、`QmConsoleUi::ToolbarFlowGap`、`QmConsoleUi::ToolbarFlowWidth`、`QmConsoleUi::ResolveToolbarWidth`、`QmConsoleUi::ResolveConsoleButtonFill`、`QmConsoleUi::Button`（`src/game/client/QmUi/QmConsoleUi.h`）；显隐动效取 `ui_token::motion::NAVIGATION_APPEAR`、文案宽度取 `ui_token::motion::TAB_SWITCH`，调用点 `CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
-- 禁止的反面写法：动作集合变化时瞬切按钮或只淡文字不缩宽度；把搜索/取消、展开/收起拆成两颗按钮同时一缩一长；用当前动画宽度决定折行；隐藏槽位吞掉左右按钮之间的间距或让间距随存在度缩到 0；选中底色取控制台命令语法色或在调用点写裸 `ColorRGBA`；显隐和选中共用同一条 `ALPHA` 轨道。
+- 定义：控制台筛选与动作按钮的出现、消失都走同一条存在度；同一按钮换文案时复用槽位并平滑过渡宽度，按钮宽度、透明度和命中一起收放，任意两颗实际可见的按钮之间保留同一档固定间距，目标集合决定是否折成两行，选中底色取全局强调色的派生档。分类筛选为多选：点亮表示保留该类日志，熄灭并显示禁用图标表示排除；「全部」只在四类都保留时点亮，点击后恢复全部；四类可以全部熄灭，此时日志区为空，顶栏按钮仍保留，任一点亮的分类或「全部」都能恢复。
+- 唯一实现：`QmConsoleUi::CToolbarPresenceMotion`、`QmConsoleUi::LayoutToolbarAnimated`、`QmConsoleUi::ToolbarFlowGap`、`QmConsoleUi::ToolbarFlowWidth`、`QmConsoleUi::ResolveToolbarWidth`、`QmConsoleUi::ResolveConsoleButtonFill`、`QmConsoleUi::Button`（`src/game/client/QmUi/QmConsoleUi.h`）；筛选语义 `QmToggleConsoleLogFilterCategory` / `QmConsoleLogFilterButtonActive` / `QmNormalizeConsoleLogFilterMask`（`src/game/client/components/qm_console_log_filter.h`）；显隐动效取 `ui_token::motion::NAVIGATION_APPEAR`、文案宽度取 `ui_token::motion::TAB_SWITCH`，调用点 `CGameConsole::OnRender`（`src/game/client/components/console.cpp`）。
+- 禁止的反面写法：动作集合变化时瞬切按钮或只淡文字不缩宽度；把搜索/取消、展开/收起拆成两颗按钮同时一缩一长；用当前动画宽度决定折行；隐藏槽位吞掉左右按钮之间的间距或让间距随存在度缩到 0；选中底色取控制台命令语法色或在调用点写裸 `ColorRGBA`；显隐和选中共用同一条 `ALPHA` 轨道；把分类筛选退回单选、去掉排除图标，或把空掩码强行回退成全部。
 
 ### 2.8e 控制台类型切换与远程头部（console type switch）
 
