@@ -5,6 +5,9 @@ name: tmp-unwind-probe
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/tmp-unwind-probe.yml"
 
 jobs:
   probe:
