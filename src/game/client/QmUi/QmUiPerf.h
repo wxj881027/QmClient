@@ -73,6 +73,20 @@ constexpr float QmUiRenderDeltaSeconds(float Dt)
 	return std::clamp(Dt, 0.0f, QM_UI_RENDER_DELTA_MAX_SEC);
 }
 
+// 状态动画的逻辑步长：固定 60 Hz，与渲染帧率解耦。长帧最多补 0.1 秒
+// （6 步），避免加载/系统弹窗后的首个可见帧把页切换直接推到终点。
+inline constexpr float QM_UI_LOGIC_STEP_SEC = 1.0f / 60.0f;
+inline constexpr float QM_UI_LOGIC_MAX_CATCHUP_SEC = 0.1f;
+inline float QmUiAdvanceLogicClock(float &AccumulatorSec, float RealDeltaSec)
+{
+	if(!std::isfinite(RealDeltaSec) || RealDeltaSec <= 0.0f)
+		return 0.0f;
+	AccumulatorSec = std::min(AccumulatorSec + std::min(RealDeltaSec, QM_UI_LOGIC_MAX_CATCHUP_SEC * 2.0f), QM_UI_LOGIC_MAX_CATCHUP_SEC);
+	const int Steps = (int)(AccumulatorSec / QM_UI_LOGIC_STEP_SEC);
+	AccumulatorSec -= Steps * QM_UI_LOGIC_STEP_SEC;
+	return Steps * QM_UI_LOGIC_STEP_SEC;
+}
+
 // 加载画面允许比后台预热吃得更满，但仍必须给动态背景留出一个显示刷新周期。
 // 8 ms 只是单步上限，160 Hz 下实际预算会收紧到约 5 ms，不能把背景拖到 120 Hz。
 inline constexpr float QM_MENU_TEXT_LOADING_PREWARM_STEP_MS = 8.0f;

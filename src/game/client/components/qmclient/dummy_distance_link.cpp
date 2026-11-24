@@ -3,6 +3,7 @@
 #include <engine/graphics.h>
 #include <engine/shared/snapshot.h>
 
+#include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/gameclient.h>
 
 #include <array>
@@ -130,7 +131,7 @@ namespace qm_dummy_link
 		if(Link && g_Config.m_QmDummyDistanceLinkStyle != 0)
 		{
 			const uint64_t Frame = GameClient.Client()->PerfFrame();
-			const float Dt = Frame != m_LastDropletFrame ? GameClient.Client()->RenderFrameTime() : 0.0f;
+			const float Dt = Frame != m_LastDropletFrame ? QmUiRenderDeltaSeconds(GameClient.Client()->RenderFrameTime()) : 0.0f;
 			m_LastDropletFrame = Frame;
 			Link->m_Shape = m_Motion.Advance(Link->m_Distance, Dt, g_Config.m_QmUiMotionLevel);
 		}

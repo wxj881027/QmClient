@@ -161,6 +161,15 @@ struct SUiBezier
 	float m_Y2 = 1.0f;
 };
 
+// 状态动画（页切换、页签切换、弹层开合）按固定逻辑步长推进，帧率与长帧
+// 都不会改变它们的节奏；纯视觉插值（hover、淡入、弹簧）仍按截断后的渲染
+// 时间推进，保证高刷屏上的观感连续。
+enum class EUiAnimClock
+{
+	RENDER = 0,
+	LOGIC,
+};
+
 struct SUiAnimTransition
 {
 	float m_DurationSec = 0.18f;
@@ -169,6 +178,7 @@ struct SUiAnimTransition
 	EUiAnimInterruptPolicy m_Interrupt = EUiAnimInterruptPolicy::REPLACE;
 	EEasing m_Easing = EEasing::EASE_OUT;
 	EUiAnimDriver m_Driver = EUiAnimDriver::TWEEN;
+	EUiAnimClock m_Clock = EUiAnimClock::RENDER;
 	SUiSpringConfig m_Spring;
 	SUiBezier m_Bezier;
 	uint32_t m_CustomEasingId = 0;
@@ -209,6 +219,8 @@ public:
 
 	void Reset();
 	void Advance(float Dt);
+	// 分时钟推进：LOGIC 轨道只吃 DtLogic，其余轨道吃 DtVisual。
+	void Advance(float DtVisual, float DtLogic);
 
 	void SetValue(uint64_t NodeKey, EUiAnimProperty Property, float Value);
 	float GetValue(uint64_t NodeKey, EUiAnimProperty Property, float DefaultValue = 0.0f) const;
@@ -268,6 +280,7 @@ private:
 		float m_Velocity = 0.0f;
 		float m_RestTimerSec = 0.0f;
 		SUiAnimTransition m_Transition;
+		EUiAnimClock m_Clock = EUiAnimClock::RENDER;
 		uint32_t m_TrackId = 0;
 		FCustomEasing m_pfnCustomEasing = nullptr;
 		void *m_pCustomEasingUser = nullptr;

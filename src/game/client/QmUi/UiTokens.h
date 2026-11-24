@@ -1504,12 +1504,13 @@ namespace ui_token::motion
 	inline constexpr SUiAnimTransition MODAL_FADE_SCALE{
 		.m_DurationSec = 0.20f,
 		.m_Easing = EEasing::EASE_OUT_QUART,
+		.m_Clock = EUiAnimClock::LOGIC,
 		.m_Spring = {1.0f, 400.0f, 40.0f, 0.001f, 0.01f},
 	};
 	// 页面切换横向滑入：整页位移，比局部反馈长一档才看得出方向。
-	inline constexpr SUiAnimTransition PAGE_SLIDE{.m_DurationSec = 0.22f, .m_Easing = EEasing::EASE_OUT_QUART};
+	inline constexpr SUiAnimTransition PAGE_SLIDE{.m_DurationSec = 0.22f, .m_Easing = EEasing::EASE_OUT_QUART, .m_Clock = EUiAnimClock::LOGIC};
 	// 页签内容切换：只淡入内容区，不位移整页。
-	inline constexpr SUiAnimTransition TAB_SWITCH{.m_DurationSec = 0.16f, .m_Easing = EEasing::EASE_OUT_QUART};
+	inline constexpr SUiAnimTransition TAB_SWITCH{.m_DurationSec = 0.16f, .m_Easing = EEasing::EASE_OUT_QUART, .m_Clock = EUiAnimClock::LOGIC};
 	// 导航滑块出现／消失：比普通悬停反馈长一档，配合由小到大的缩放才读得出「长出来」，
 	// 0.12 秒的纯淡入在整页切换的同一帧里几乎看不见。
 	inline constexpr SUiAnimTransition NAVIGATION_APPEAR{.m_DurationSec = 0.26f, .m_Easing = EEasing::EASE_OUT_QUART};

@@ -11,6 +11,7 @@
 #include <engine/client.h>
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/components/qmclient/perf_logging.h>
 
 #include <cmath>
@@ -64,10 +65,12 @@ void CUiRuntimeV2::OnRender()
 	const bool PerfEnabled = QmPerfEnabled();
 	const bool TimingEnabled = PerfEnabled || g_Config.m_QmUiRuntimeV2Debug != 0;
 	CPerfTimer RenderTimer(TimingEnabled);
-	float Dt = m_pGameClient->Client()->RenderFrameTime();
-	if(!std::isfinite(Dt) || Dt < 0.0f)
-		Dt = 0.0f;
+	const float RealDt = std::clamp(m_pGameClient->Client()->RenderFrameTime(), 0.0f, QM_UI_LOGIC_MAX_CATCHUP_SEC * 2.0f);
+	float Dt = QmUiRenderDeltaSeconds(RealDt);
 	m_FrameDt = Dt;
+	// 状态动画（页/页签切换、弹层开合）走固定逻辑步长；纯视觉插值继续用
+	// 截断后的渲染时间，长帧不会让状态过渡跳帧，也不会让淡入变成瞬切。
+	const float LogicDt = QmUiAdvanceLogicClock(m_LogicClockAccumulatorSec, RealDt);
 
 	float TreeBeginMs = 0.0f;
 	float AnimAdvanceMs = 0.0f;
@@ -76,7 +79,7 @@ void CUiRuntimeV2::OnRender()
 
 	{
 		CPerfTimer StageTimer(TimingEnabled);
-		m_AnimRuntime.Advance(Dt);
+		m_AnimRuntime.Advance(Dt, LogicDt);
 		AnimAdvanceMs = StageTimer.ElapsedMs();
 		LogPerfStage(m_pGameClient->Client(), m_aPerfPage[0] != '\0' ? m_aPerfPage : nullptr, "anim_advance", AnimAdvanceMs);
 	}

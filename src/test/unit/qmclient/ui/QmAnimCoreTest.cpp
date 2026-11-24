@@ -308,3 +308,52 @@ TEST(UiV2Anim, ValueCacheHardPruningKeepsActiveTrackValues)
 	EXPECT_FLOAT_EQ(Runtime.GetValue(ACTIVE_NODE, PROPERTY), 0.25f);
 	EXPECT_FALSE(Runtime.HasValue(2, PROPERTY));
 }
+
+TEST(UiV2Anim, DualClockSeparatesStateAndVisualTracks)
+{
+	CUiV2AnimationRuntime Runtime;
+	Runtime.SetValue(31, EUiAnimProperty::POS_X, 0.0f);
+	Runtime.SetValue(32, EUiAnimProperty::POS_X, 0.0f);
+	SUiAnimRequest Logic = MakeQmAnimRequest(31, EUiAnimProperty::POS_X, 1.0f, 1.0f, 1, EUiAnimInterruptPolicy::REPLACE, 61);
+	Logic.m_Transition.m_Clock = EUiAnimClock::LOGIC;
+	SUiAnimRequest Visual = MakeQmAnimRequest(32, EUiAnimProperty::POS_X, 1.0f, 1.0f, 1, EUiAnimInterruptPolicy::REPLACE, 62);
+	ASSERT_TRUE(Runtime.RequestAnimation(Logic));
+	ASSERT_TRUE(Runtime.RequestAnimation(Visual));
+
+	Runtime.Advance(0.5f, 0.25f);
+
+	EXPECT_NEAR(Runtime.GetValue(31, EUiAnimProperty::POS_X), 0.25f, 0.001f);
+	EXPECT_NEAR(Runtime.GetValue(32, EUiAnimProperty::POS_X), 0.5f, 0.001f);
+}
+
+TEST(UiV2Anim, LogicClockAdvancesWithoutRenderTime)
+{
+	CUiV2AnimationRuntime Runtime;
+	Runtime.SetValue(33, EUiAnimProperty::POS_X, 0.0f);
+	SUiAnimRequest Request = MakeQmAnimRequest(33, EUiAnimProperty::POS_X, 1.0f, 0.5f, 1, EUiAnimInterruptPolicy::REPLACE, 63);
+	Request.m_Transition.m_Clock = EUiAnimClock::LOGIC;
+	ASSERT_TRUE(Runtime.RequestAnimation(Request));
+
+	Runtime.Advance(0.0f, 0.1f);
+
+	EXPECT_NEAR(Runtime.GetValue(33, EUiAnimProperty::POS_X), 0.2f, 0.001f);
+}
+
+TEST(UiV2Anim, QueuedTrackDoesNotBorrowOtherClockRemainder)
+{
+	CUiV2AnimationRuntime Runtime;
+	Runtime.SetValue(34, EUiAnimProperty::POS_X, 0.0f);
+	SUiAnimRequest Logic = MakeQmAnimRequest(34, EUiAnimProperty::POS_X, 1.0f, 0.1f, 1, EUiAnimInterruptPolicy::QUEUE, 64);
+	Logic.m_Transition.m_Clock = EUiAnimClock::LOGIC;
+	SUiAnimRequest Visual = MakeQmAnimRequest(34, EUiAnimProperty::POS_X, 2.0f, 0.4f, 1, EUiAnimInterruptPolicy::QUEUE, 65);
+	ASSERT_TRUE(Runtime.RequestAnimation(Logic));
+	ASSERT_TRUE(Runtime.RequestAnimation(Visual));
+
+	// 逻辑步长 0.2s：第一条逻辑轨道完成后剩余 0.1s，但队列里的下一条是
+	// 渲染时钟，不能借这段时间提前推进，必须等下一帧自己的渲染步长。
+	Runtime.Advance(0.5f, 0.2f);
+	EXPECT_NEAR(Runtime.GetValue(34, EUiAnimProperty::POS_X), 1.0f, 0.001f);
+
+	Runtime.Advance(0.1f, 0.0f);
+	EXPECT_NEAR(Runtime.GetValue(34, EUiAnimProperty::POS_X), 1.25f, 0.001f);
+}

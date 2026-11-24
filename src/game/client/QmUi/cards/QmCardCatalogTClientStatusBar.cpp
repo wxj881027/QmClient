@@ -18,6 +18,8 @@
 #include <engine/shared/localization.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
+
+#include <game/client/QmUi/QmUiPerf.h>
 #include <engine/warning.h>
 
 #include <game/client/QmUi/QmCardOrderModel.h>
@@ -424,7 +426,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 					}
 					if(!ReadOnly)
 					{
-						s_ItemSwaps[i].m_Duration = std::max(0.0f, s_ItemSwaps[i].m_Duration - Client()->RenderFrameTime());
+						s_ItemSwaps[i].m_Duration = std::max(0.0f, s_ItemSwaps[i].m_Duration - QmUiRenderDeltaSeconds(Client()->RenderFrameTime()));
 						if(s_ItemSwaps[i].m_Duration > 0.0f)
 						{
 							const float Progress = std::pow(2.0, -5.0 * (1.0 - s_ItemSwaps[i].m_Duration / 0.15f));

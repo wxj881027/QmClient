@@ -228,6 +228,7 @@ bool CQmAnimationBackend::StartTrack(const STrackKey &Key, const SUiAnimRequest 
 	Track.m_Velocity = StartVelocity;
 	Track.m_RestTimerSec = 0.0f;
 	Track.m_Transition = Request.m_Transition;
+	Track.m_Clock = Track.m_Transition.m_Clock;
 	if(Track.m_Transition.m_DurationSec < 0.0f)
 		Track.m_Transition.m_DurationSec = 0.0f;
 	if(Track.m_Transition.m_DelaySec < 0.0f)
@@ -636,9 +637,18 @@ void CQmAnimationBackend::AdvanceSpring(SActiveTrack &Track, float Dt, EUiAnimPr
 
 void CQmAnimationBackend::Advance(float Dt)
 {
-	if(!std::isfinite(Dt) || Dt <= 0.0f)
+	Advance(Dt, Dt);
+}
+
+void CQmAnimationBackend::Advance(float DtVisual, float DtLogic)
+{
+	if(!std::isfinite(DtVisual) || DtVisual < 0.0f)
+		DtVisual = 0.0f;
+	if(!std::isfinite(DtLogic) || DtLogic < 0.0f)
+		DtLogic = 0.0f;
+	if(DtVisual <= 0.0f && DtLogic <= 0.0f)
 		return;
-	m_TimeSec += Dt;
+	m_TimeSec += DtVisual;
 	// 值缓存的使用时钟按帧推进，与 m_TimeSec 解耦（只在淘汰判据里当"最近第几帧"用）。
 	m_ValueUseCounter++;
 
@@ -681,13 +691,17 @@ void CQmAnimationBackend::Advance(float Dt)
 	{
 		STrackKey m_Key;
 		float m_Remaining;
+		EUiAnimClock m_Clock;
 	};
 	std::deque<SCompletedTrack> vCompleted;
 	for(auto &[Key, Track] : m_ActiveTracks)
 	{
+		const float Elapsed = Track.m_Clock == EUiAnimClock::LOGIC ? DtLogic : DtVisual;
+		if(Elapsed <= 0.0f)
+			continue;
 		float Remaining;
-		if(AdvanceTrack(Key, Track, Dt, Remaining))
-			vCompleted.push_back({Key, Remaining});
+		if(AdvanceTrack(Key, Track, Elapsed, Remaining))
+			vCompleted.push_back({Key, Remaining, Track.m_Clock});
 	}
 
 	for(const SCompletedTrack &Completed : vCompleted)
@@ -702,7 +716,11 @@ void CQmAnimationBackend::Advance(float Dt)
 			ItTrack = m_ActiveTracks.find(Completed.m_Key);
 			if(ItTrack == m_ActiveTracks.end())
 				break;
-			const float Elapsed = Remaining;
+			// 队列续接只在同一时钟内传递剩余时间；跨时钟类别的后续轨道
+			// 从下一帧自己的步长开始，不能用另一条时钟的时间提前推进。
+			const float Elapsed = ItTrack->second.m_Clock == Completed.m_Clock ? Remaining : 0.0f;
+			if(Elapsed <= 0.0f)
+				break;
 			if(!AdvanceTrack(Completed.m_Key, ItTrack->second, Elapsed, Remaining))
 				break;
 		}

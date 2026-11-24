@@ -1954,7 +1954,7 @@ void CUi::DoSmoothScrollLogic(float *pScrollOffset, float *pScrollOffsetChange, 
 	// smooth scrolling
 	if(*pScrollOffsetChange)
 	{
-		const float Delta = *pScrollOffsetChange * std::clamp(Client()->RenderFrameTime() * ScrollSpeed, 0.0f, 1.0f);
+		const float Delta = *pScrollOffsetChange * std::clamp(QmUiRenderDeltaSeconds(Client()->RenderFrameTime()) * ScrollSpeed, 0.0f, 1.0f);
 		*pScrollOffset += Delta;
 		*pScrollOffsetChange -= Delta;
 	}

@@ -43,6 +43,7 @@ private:
 	CUiV2RenderBridge m_RenderBridge;
 	SUiV2PerfStats m_LastStats;
 	float m_FrameDt = 1.0f / 60.0f;
+	float m_LogicClockAccumulatorSec = 0.0f;
 	float m_DebugLogAccumulator = 0.0f;
 	// perf/ui_runtime 逐帧日志降采样计数器（见 OnRender 注释）
 	int m_PerfLogFrameCounter = 0;
