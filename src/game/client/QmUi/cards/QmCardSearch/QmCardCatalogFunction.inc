@@ -534,24 +534,6 @@ namespace
 // 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
 namespace
 {
-	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_translate_ui[] = {
-		{Localizable("Button - Disabled"), nullptr, "按钮 - 未启用"},
-		{Localizable("Button - Enabled"), nullptr, "按钮 - 已启用"},
-		{Localizable("Menu background"), nullptr, "菜单背景"},
-		{Localizable("Menu option - normal"), nullptr, "菜单选项 - 普通"},
-		{Localizable("Menu option - selected"), nullptr, "菜单选项 - 选中"},
-		{nullptr, "qm_translate_btn_color_disabled", nullptr},
-		{nullptr, "qm_translate_btn_color_enabled", nullptr},
-		{nullptr, "qm_translate_menu_bg_color", nullptr},
-		{nullptr, "qm_translate_menu_option_normal", nullptr},
-		{nullptr, "qm_translate_menu_option_selected", nullptr},
-	};
-	QM_CARD_SEARCH_REGISTER("qm:translate_ui", qm_translate_ui);
-}
-
-// 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
-namespace
-{
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_voice[] = {
 		{Localizable("Advanced options"), nullptr, "高级选项"},
 		{Localizable("Allow mic permission in system settings, then reopen voice"), nullptr, "需要在系统设置里允许麦克风权限，然后重新打开语音"},

@@ -31,7 +31,6 @@
 #include <game/client/components/qmclient/qmclient_utils.h>
 #include <game/client/components/qmclient/translate/translate_backend.h>
 #include <game/client/components/qmclient/translate/translate_ui_common.h>
-#include <game/client/components/qmclient/translate/translate_ui_settings.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui_listbox.h>

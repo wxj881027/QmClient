@@ -105,6 +105,7 @@ namespace qm_module
 		case EQmModuleId::FriendNotify: return "qm:friend_notify";
 		case EQmModuleId::BlockWords: return "qm:block_words";
 		case EQmModuleId::Translate: return "qm:translate";
+		// 卡片已移除；保留枚举与 stableId 供旧布局解析，模型里找不到卡时会跳过。
 		case EQmModuleId::TranslateUi: return "qm:translate_ui";
 		case EQmModuleId::QiaFen: return "qm:qiafen"; // 持久化 key，非 UI 名 keyword_reply
 		case EQmModuleId::PieMenu: return "qm:pie_menu";
@@ -118,6 +119,7 @@ namespace qm_module
 		case EQmModuleId::HudNotifications: return "qm:hud_notifications";
 		case EQmModuleId::Voice: return "qm:voice";
 		case EQmModuleId::DynamicIsland: return "qm:dynamic_island";
+		// 已并入灵动岛卡；保留枚举与 stableId 供旧布局解析。
 		case EQmModuleId::SystemMediaControls: return "qm:system_media_controls";
 		case EQmModuleId::Lyrics: return "qm:lyrics";
 		case EQmModuleId::Background3D: return "qm:background_3d";

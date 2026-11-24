@@ -49,7 +49,6 @@
 #include "components/qmclient/screenshot_manager.h"
 #include "components/qmclient/spectator_selection.h"
 #include "components/qmclient/streamer_word_filter.h"
-#include "components/qmclient/translate/translate_ui_settings.h"
 #include "components/qmclient/world_event_gate.h"
 #include "components/race_demo.h"
 #include "components/scoreboard.h"
@@ -878,33 +877,6 @@ static void MigrateNameplateShowScopeConfig()
 	g_Config.m_QmNameplateShowScopeMigrated = 1;
 }
 
-// CFGFLAG_COLALPHA 将这组设置从六位 RGB 改为八位 ARGB。
-// 对已保存的 RGB 值仅迁移一次，恢复各自声明的默认 alpha。
-static void MigrateTranslateUiColorAlphaConfig(const IConfigManager *pConfigManager)
-{
-	bool Migrated = g_Config.m_QmTranslateColorAlphaMigrated != 0;
-	const auto InputAlphaMode = [pConfigManager](const char *pScriptName) {
-		return pConfigManager != nullptr ? pConfigManager->ColorValueInputAlphaMode(pScriptName) : EColorInputAlphaMode::PACKED;
-	};
-	NTranslateUiSettings::MigrateLegacyColorAlphas(Migrated,
-		g_Config.m_QmTranslateBtnColorDisabled,
-		g_Config.m_QmTranslateBtnColorEnabled,
-		g_Config.m_QmTranslateMenuBgColor,
-		g_Config.m_QmTranslateMenuOptionSelected,
-		g_Config.m_QmTranslateMenuOptionNormal,
-		DefaultConfig::QmTranslateBtnColorDisabled,
-		DefaultConfig::QmTranslateBtnColorEnabled,
-		DefaultConfig::QmTranslateMenuBgColor,
-		DefaultConfig::QmTranslateMenuOptionSelected,
-		DefaultConfig::QmTranslateMenuOptionNormal,
-		InputAlphaMode("qm_translate_btn_color_disabled"),
-		InputAlphaMode("qm_translate_btn_color_enabled"),
-		InputAlphaMode("qm_translate_menu_bg_color"),
-		InputAlphaMode("qm_translate_menu_option_selected"),
-		InputAlphaMode("qm_translate_menu_option_normal"));
-	g_Config.m_QmTranslateColorAlphaMigrated = Migrated ? 1 : 0;
-}
-
 static void GenerateTimeoutCode(char *pTimeoutCode)
 {
 	if(pTimeoutCode[0] == '\0' || str_comp(pTimeoutCode, "hGuEYnfxicsXGwFq") == 0)
@@ -948,7 +920,6 @@ void CGameClient::OnInit()
 	MigrateJumpHintConfig();
 	MigrateNameplateShowScopeConfig();
 	MigrateSettingsPrewarmDefault();
-	MigrateTranslateUiColorAlphaConfig(ConfigManager());
 
 	// 启动赞助提醒：跨过阈值才写盘，避免每次启动都重写配置文件。
 	{

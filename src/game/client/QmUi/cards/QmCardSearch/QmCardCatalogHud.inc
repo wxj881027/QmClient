@@ -175,6 +175,8 @@ namespace
 		{Localizable("Show in Dynamic Island"), nullptr, "在灵动岛中显示"},
 		{Localizable("Show team"), nullptr, "显示队伍"},
 		{Localizable("Use original style"), nullptr, "使用原始样式"},
+		{Localizable("Enable system media control"), nullptr, "启用系统媒体控制 系统媒体控制 smtc"},
+		{Localizable("Show system media info on HUD"), nullptr, "在 HUD 上显示系统媒体信息 歌曲信息 歌名"},
 		{nullptr, "qm_hook_countdown", nullptr},
 		{nullptr, "qm_hook_countdown_color", nullptr},
 		{nullptr, "qm_hook_countdown_endless_style", nullptr},
@@ -186,6 +188,8 @@ namespace
 		{nullptr, "qm_hud_island_bg_opacity", nullptr},
 		{nullptr, "qm_hud_island_show_team", nullptr},
 		{nullptr, "qm_hud_island_use_original_style", nullptr},
+		{nullptr, "qm_smtc_enable", nullptr},
+		{nullptr, "qm_smtc_show_hud", nullptr},
 		{nullptr, "qm_switch_countdown", nullptr},
 		{nullptr, "qm_switch_countdown_mode", nullptr},
 	};
@@ -360,16 +364,4 @@ namespace
 		{nullptr, "qm_player_stats_reset_on_join", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("qm:player_stats", qm_player_stats);
-}
-
-// 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
-namespace
-{
-	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_system_media_controls[] = {
-		{Localizable("Enable system media control"), nullptr, "启用系统媒体控制"},
-		{Localizable("Show song info in top-left corner"), nullptr, "在左上角显示歌曲信息"},
-		{nullptr, "qm_smtc_enable", nullptr},
-		{nullptr, "qm_smtc_show_hud", nullptr},
-	};
-	QM_CARD_SEARCH_REGISTER("qm:system_media_controls", qm_system_media_controls);
 }

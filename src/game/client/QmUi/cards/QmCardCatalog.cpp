@@ -224,7 +224,7 @@ namespace qm_card_catalog
 			return BuildVisualCard(Ctx, Id, Out);
 		if(ContainsStableId(FunctionCardStableIds(), pStableId))
 			return BuildFunctionCard(Ctx, Id, Out);
-		if(Id == qm_module::EQmModuleId::SystemMediaControls || Id == qm_module::EQmModuleId::BindStatusHud || ContainsStableId(HudCardStableIds(), pStableId))
+		if(Id == qm_module::EQmModuleId::BindStatusHud || ContainsStableId(HudCardStableIds(), pStableId))
 			return BuildHudCard(Ctx, Id, Out);
 		return false;
 	}

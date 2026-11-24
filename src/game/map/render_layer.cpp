@@ -1600,11 +1600,6 @@ bool CRenderLayerQuads::DoRender(const CRenderLayerParams &Params)
 /****************
  * Entity Layer *
  ****************/
-static float QmOverlayAlpha(int Value)
-{
-	return std::clamp(Value, 0, 100) / 100.0f;
-}
-
 static bool IsFreezeAlphaTile(int Index)
 {
 	return CQmEntityOverlayBuildPlan::Classify(Index) == CQmEntityOverlayBuildPlan::FREEZE;
@@ -1801,11 +1796,11 @@ void CRenderLayerEntityGame::RenderTileLayerWithTileBuffer(const ColorRGBA &Colo
 		RenderTileLayer(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Params, &QmCheckedOptional(Visuals));
 	};
 
-	RenderFiltered(m_VisualTilesDeath, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeathAlpha));
-	RenderFiltered(m_VisualTilesFreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayFreezeAlpha));
-	RenderFiltered(m_VisualTilesUnfreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayUnfreezeAlpha));
-	RenderFiltered(m_VisualTilesDeepFreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepFreezeAlpha));
-	RenderFiltered(m_VisualTilesDeepUnfreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepUnfreezeAlpha));
+	RenderFiltered(m_VisualTilesDeath, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeathAlpha));
+	RenderFiltered(m_VisualTilesFreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayFreezeAlpha));
+	RenderFiltered(m_VisualTilesUnfreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayUnfreezeAlpha));
+	RenderFiltered(m_VisualTilesDeepFreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepFreezeAlpha));
+	RenderFiltered(m_VisualTilesDeepUnfreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepUnfreezeAlpha));
 }
 
 void CRenderLayerEntityGame::RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)
@@ -1830,11 +1825,11 @@ void CRenderLayerEntityGame::RenderTileLayerNoTileBuffer(const ColorRGBA &Color,
 			32.0f, Color.Multiply(GetDeathBorderColor()), TileRenderFlags | LAYERRENDERFLAG_TRANSPARENT);
 	}
 
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeathAlpha)), FilterDeathAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayFreezeAlpha)), FilterFreezeAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayUnfreezeAlpha)), FilterUnfreezeAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepFreezeAlpha)), FilterDeepFreezeAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepUnfreezeAlpha)), FilterDeepUnfreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeathAlpha)), FilterDeathAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayFreezeAlpha)), FilterFreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayUnfreezeAlpha)), FilterUnfreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepFreezeAlpha)), FilterDeepFreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepUnfreezeAlpha)), FilterDeepUnfreezeAlphaTile);
 }
 
 ColorRGBA CRenderLayerEntityGame::GetDeathBorderColor() const
@@ -1933,11 +1928,11 @@ void CRenderLayerEntityFront::RenderTileLayerWithTileBuffer(const ColorRGBA &Col
 		RenderTileLayer(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Params, &QmCheckedOptional(Visuals));
 	};
 
-	RenderFiltered(m_VisualTilesDeath, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeathAlpha));
-	RenderFiltered(m_VisualTilesFreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayFreezeAlpha));
-	RenderFiltered(m_VisualTilesUnfreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayUnfreezeAlpha));
-	RenderFiltered(m_VisualTilesDeepFreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepFreezeAlpha));
-	RenderFiltered(m_VisualTilesDeepUnfreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepUnfreezeAlpha));
+	RenderFiltered(m_VisualTilesDeath, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeathAlpha));
+	RenderFiltered(m_VisualTilesFreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayFreezeAlpha));
+	RenderFiltered(m_VisualTilesUnfreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayUnfreezeAlpha));
+	RenderFiltered(m_VisualTilesDeepFreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepFreezeAlpha));
+	RenderFiltered(m_VisualTilesDeepUnfreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepUnfreezeAlpha));
 }
 
 void CRenderLayerEntityFront::RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)
@@ -1954,11 +1949,11 @@ void CRenderLayerEntityFront::RenderTileLayerNoTileBuffer(const ColorRGBA &Color
 	};
 
 	RenderFiltered(Color, FilterBaseEntityAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeathAlpha)), FilterDeathAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayFreezeAlpha)), FilterFreezeAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayUnfreezeAlpha)), FilterUnfreezeAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepFreezeAlpha)), FilterDeepFreezeAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepUnfreezeAlpha)), FilterDeepUnfreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeathAlpha)), FilterDeathAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayFreezeAlpha)), FilterFreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayUnfreezeAlpha)), FilterUnfreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepFreezeAlpha)), FilterDeepFreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepUnfreezeAlpha)), FilterDeepUnfreezeAlphaTile);
 }
 
 // TELE
@@ -2043,9 +2038,9 @@ void CRenderLayerEntityTele::Unload()
 void CRenderLayerEntityTele::RenderTileLayerWithTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)
 {
 	(void)Color;
-	const float TeleAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlayTeleAlpha);
+	const float TeleAlpha = QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayTeleAlpha);
 	const ColorRGBA TeleColor(1.0f, 1.0f, 1.0f, TeleAlpha);
-	const float CheckpointAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlayTeleCheckpointAlpha);
+	const float CheckpointAlpha = QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayTeleCheckpointAlpha);
 	const ColorRGBA CheckpointColor(1.0f, 1.0f, 1.0f, CheckpointAlpha);
 
 	if(TeleAlpha > 0.0f)
@@ -2064,9 +2059,9 @@ void CRenderLayerEntityTele::RenderTileLayerWithTileBuffer(const ColorRGBA &Colo
 void CRenderLayerEntityTele::RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)
 {
 	(void)Color;
-	const float TeleAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlayTeleAlpha);
+	const float TeleAlpha = QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayTeleAlpha);
 	const ColorRGBA TeleColor(1.0f, 1.0f, 1.0f, TeleAlpha);
-	const float CheckpointAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlayTeleCheckpointAlpha);
+	const float CheckpointAlpha = QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayTeleCheckpointAlpha);
 	const ColorRGBA CheckpointColor(1.0f, 1.0f, 1.0f, CheckpointAlpha);
 	const int TileRenderFlags = ImmediateTileRenderFlags(Params, m_TileAndQuadBuffering);
 
@@ -2330,7 +2325,7 @@ void CRenderLayerEntitySwitch::RenderTileLayerWithTileBuffer(const ColorRGBA &Co
 	if(!m_pSwitchTiles)
 		return;
 
-	const float SwitchAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlaySwitchAlpha);
+	const float SwitchAlpha = QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlaySwitchAlpha);
 	const ColorRGBA SwitchColor(1.0f, 1.0f, 1.0f, SwitchAlpha);
 	if(SwitchAlpha > 0.0f)
 		RenderTileLayer(SwitchColor, Params);
@@ -2341,10 +2336,10 @@ void CRenderLayerEntitySwitch::RenderTileLayerWithTileBuffer(const ColorRGBA &Co
 		RenderTileLayer(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Params, &QmCheckedOptional(Visuals));
 	};
 
-	RenderFiltered(m_VisualTilesFreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayFreezeAlpha));
-	RenderFiltered(m_VisualTilesUnfreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayUnfreezeAlpha));
-	RenderFiltered(m_VisualTilesDeepFreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepFreezeAlpha));
-	RenderFiltered(m_VisualTilesDeepUnfreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepUnfreezeAlpha));
+	RenderFiltered(m_VisualTilesFreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayFreezeAlpha));
+	RenderFiltered(m_VisualTilesUnfreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayUnfreezeAlpha));
+	RenderFiltered(m_VisualTilesDeepFreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepFreezeAlpha));
+	RenderFiltered(m_VisualTilesDeepUnfreeze, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepUnfreezeAlpha));
 
 	if(SwitchAlpha > 0.0f && Params.m_RenderText && m_pMapImages && m_VisualSwitchNumberTop.has_value() && m_VisualSwitchNumberBottom.has_value())
 	{
@@ -2369,15 +2364,15 @@ void CRenderLayerEntitySwitch::RenderTileLayerNoTileBuffer(const ColorRGBA &Colo
 		RenderMap()->RenderSwitchmap(m_pSwitchTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, GroupColor, TileRenderFlags | LAYERRENDERFLAG_TRANSPARENT, Filter);
 	};
 
-	const float SwitchAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlaySwitchAlpha);
+	const float SwitchAlpha = QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlaySwitchAlpha);
 	const ColorRGBA SwitchColor(1.0f, 1.0f, 1.0f, SwitchAlpha);
 	if(SwitchAlpha > 0.0f)
 		RenderFiltered(SwitchColor, FilterBaseSwitchAlphaTile);
 
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayFreezeAlpha)), FilterFreezeAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayUnfreezeAlpha)), FilterUnfreezeAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepFreezeAlpha)), FilterDeepFreezeAlphaTile);
-	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepUnfreezeAlpha)), FilterDeepUnfreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayFreezeAlpha)), FilterFreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayUnfreezeAlpha)), FilterUnfreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepFreezeAlpha)), FilterDeepFreezeAlphaTile);
+	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmComposeEntityOverlayAlpha(Params.m_EntityOverlayVal, g_Config.m_QmEntityOverlayDeepUnfreezeAlpha)), FilterDeepUnfreezeAlphaTile);
 
 	if(SwitchAlpha > 0.0f && Params.m_RenderText)
 	{

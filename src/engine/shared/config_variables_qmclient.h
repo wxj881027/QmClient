@@ -365,6 +365,7 @@ MACRO_CONFIG_COL(QmHitboxColorTee, qm_hitbox_color_tee, 0x0080FF80, CFGFLAG_CLIE
 MACRO_CONFIG_COL(QmHitboxColorWeapon, qm_hitbox_color_weapon, 0x002BFF80, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hitbox Mode Weapon Interaction Color")
 
 // Entity Overlay / 实体叠加
+MACRO_CONFIG_COL(QmEntityOverlayFreezeColor, qm_entity_overlay_freeze_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze/deep freeze tile entity tint color")
 MACRO_CONFIG_INT(QmEntityOverlayDeathAlpha, qm_entity_overlay_death_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Override Death Tile Entity Alpha (0-100)")
 MACRO_CONFIG_INT(QmEntityOverlayFreezeAlpha, qm_entity_overlay_freeze_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Override Freeze Tile Entity Alpha (0-100)")
 MACRO_CONFIG_INT(QmEntityOverlayUnfreezeAlpha, qm_entity_overlay_unfreeze_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Override Entity Alpha for Unfreeze Tiles (0-100)")
@@ -1043,14 +1044,6 @@ MACRO_CONFIG_STR(QmTranslateBaiduKey, qm_translate_baidu_key, 256, "", CFGFLAG_C
 
 // Translate - DeepL - 额度与重置周期由实际订阅决定
 MACRO_CONFIG_STR(QmTranslateDeeplKey, qm_translate_deepl_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "DeepL API Key (free keys end with :fx)")
-
-// Translate Button Colors - 翻译按钮自定义颜色
-MACRO_CONFIG_INT(QmTranslateColorAlphaMigrated, qm_translate_color_alpha_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translation color alpha migration completed flag")
-MACRO_CONFIG_COL(QmTranslateBtnColorDisabled, qm_translate_btn_color_disabled, 0xD1000029, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Translation button cancel color")
-MACRO_CONFIG_COL(QmTranslateBtnColorEnabled, qm_translate_btn_color_enabled, 0xE69E5E86, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Translation button active color")
-MACRO_CONFIG_COL(QmTranslateMenuBgColor, qm_translate_menu_bg_color, 0xF200001F, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Translation menu background color")
-MACRO_CONFIG_COL(QmTranslateMenuOptionSelected, qm_translate_menu_option_selected, 0xE69E5E86, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Translation menu selected color")
-MACRO_CONFIG_COL(QmTranslateMenuOptionNormal, qm_translate_menu_option_normal, 0xE6000033, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Translation menu normal color")
 
 // Jump Hint / 跳跃提示 - 根据位置小数部分显示跳跃速查表（由 qm_jump_hint 迁移而来）
 MACRO_CONFIG_INT(QmJumpHint, qm_jump_hint, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show jump hint based on fractional part of position")

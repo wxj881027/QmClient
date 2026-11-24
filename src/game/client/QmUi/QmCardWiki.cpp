@@ -695,12 +695,6 @@ namespace
 			Localizable("It only changes what you see: your own name, chat and skin are still sent to the server and stay visible to others."),
 		},
 		{
-			"qm:system_media_controls",
-			Localizable("Links the music playing on your system with the system media controls, and can show its title in the top-left HUD."),
-			Localizable("Tick \"Enable system media control\", then \"Show song info in top-left corner\"; the Previous, Play/Pause and Next buttons drive the track."),
-			Localizable("Nothing appears until a media app is playing; use the buttons to check which app the system reports."),
-		},
-		{
 			"qm:tooltip",
 			Localizable("The look of the help bubbles that appear when you hover over buttons, settings and bind rows."),
 			Localizable("Pick \"Tooltip background color\" and \"Tooltip text color\", drag \"Tooltip font size\", and keep \"Tooltip bounce animation\" on for a small pop."),
@@ -711,12 +705,6 @@ namespace
 			Localizable("Shows a translated copy of received chat lines and can translate your own messages before they are sent."),
 			Localizable("Turn on \"Auto translate received messages\", pick a \"Translation service\", set \"Translate received messages to\", then press \"Test translation\"."),
 			Localizable("Each service needs its own API key and network access; run \"Test translation\" after changing keys."),
-		},
-		{
-			"qm:translate_ui",
-			Localizable("Colors of the translate button in the chat input and of the language menu that button opens."),
-			Localizable("Set \"Button - Disabled\" and \"Button - Enabled\" for the button, then \"Menu background\" and the two menu option rows for the popup."),
-			Localizable("\"Button - Enabled\" only shows while automatic outgoing translation is on; \"Reset translation colors\" undoes your changes."),
 		},
 		{
 			"qm:voice",

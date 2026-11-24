@@ -110,6 +110,17 @@ TEST(QmCardRegistry, CoversAllCardsNoDuplicates)
 	}
 }
 
+TEST(QmCardRegistry, RemovedTranslateAndMediaCardsStayUnregistered)
+{
+	for(const char *pStableId : {"qm:translate_ui", "qm:system_media_controls"})
+	{
+		SCOPED_TRACE(pStableId);
+		EXPECT_EQ(qm_card_registry::FindByStableId(pStableId), nullptr);
+		EXPECT_FALSE(qm_card_catalog::HasCardModule(pStableId));
+		EXPECT_EQ(qm_card_registry::FindDefaultPlacement(pStableId), nullptr);
+	}
+}
+
 TEST(QmCardRegistry, BetterScoreboardCardIsRegisteredInFunctionColumn)
 {
 	const auto *pCard = qm_card_registry::FindByStableId("qm:better_scoreboard");
@@ -658,6 +669,54 @@ TEST(QmCardRegistry, DDNetEntityOverlayBelongsToDdnetPage)
 	const auto &vVisualCards = qm_card_catalog::VisualCardStableIds();
 	EXPECT_EQ(std::find_if(vVisualCards.begin(), vVisualCards.end(), [](const char *pStableId) { return std::string(pStableId) == "qm:entity_overlay"; }), vVisualCards.end());
 	EXPECT_TRUE(qm_card_catalog::HasCardModule("qm:entity_overlay"));
+}
+
+// 意图：旧存档把实体层卡留在视觉页时，加载迁移必须把它放回 DDNet 页，
+// 否则视觉页目录不再构建它、DDNet 页又按旧 tab 投影，两页都不显示。
+TEST(QmCardRegistryPlacement, LegacyVisualEntityOverlayIsRestoredToDdnetPage)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	ASSERT_GE(Model.FindByStableId("qm:entity_overlay"), 0);
+	Model.MoveToTab("qm:entity_overlay", "visual", 1, 2);
+
+	ASSERT_TRUE(qm_card_registry::RepairLegacyEntityOverlayTab(Model));
+	const int Index = Model.FindByStableId("qm:entity_overlay");
+	ASSERT_GE(Index, 0);
+	EXPECT_STREQ(Model.Entry(Index).m_pDefaultTab, "ddnet");
+	const qm_card_order::SEntry *pPlacement = qm_card_registry::FindDefaultPlacement("qm:entity_overlay");
+	ASSERT_NE(pPlacement, nullptr);
+	EXPECT_EQ(Model.Entry(Index).m_Column, pPlacement->m_Column);
+
+	// 已迁过一次的布局不能被重复追加。
+	EXPECT_FALSE(qm_card_registry::RepairLegacyEntityOverlayTab(Model));
+}
+
+// 意图：页面定义只从注册表当前默认 tab 派生。旧存档把卡记在其它合法 tab 上时，
+// 两个页面都不会构建它；通用兜底必须把这类卡迁回当前默认页。
+TEST(QmCardRegistryPlacement, MisplacedCardTabsAreRestoredToCurrentPages)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	ASSERT_GE(Model.FindByStableId("qm:key_binds"), 0);
+	ASSERT_GE(Model.FindByStableId("qm:bind_status_hud"), 0);
+	Model.MoveToTab("qm:key_binds", "function", 1, 2);
+	Model.MoveToTab("qm:bind_status_hud", "hud", 2, 3);
+
+	ASSERT_TRUE(qm_card_registry::RepairMisplacedCardTabs(Model));
+	EXPECT_STREQ(Model.Entry(Model.FindByStableId("qm:key_binds")).m_pDefaultTab, "controls");
+	EXPECT_STREQ(Model.Entry(Model.FindByStableId("qm:bind_status_hud")).m_pDefaultTab, "appearance-hud");
+
+	const auto Contains = [](const std::vector<const char *> &vIds, const char *pStableId) {
+		return std::any_of(vIds.begin(), vIds.end(), [pStableId](const char *pId) { return str_comp(pId, pStableId) == 0; });
+	};
+	EXPECT_FALSE(Contains(qm_card_catalog::FunctionCardStableIds(), "qm:key_binds"));
+	EXPECT_TRUE(Contains(qm_card_catalog::ControlsCardStableIds(), "qm:key_binds"));
+	EXPECT_FALSE(Contains(qm_card_catalog::HudCardStableIds(), "qm:bind_status_hud"));
+	EXPECT_TRUE(Contains(qm_card_catalog::CatalogPageStableIds("appearance-hud"), "qm:bind_status_hud"));
+
+	// 已迁过一次的布局不能被重复追加。
+	EXPECT_FALSE(qm_card_registry::RepairMisplacedCardTabs(Model));
 }
 
 // 意图：敌对列表是一个完整编辑器，registry 只能暴露一张全宽卡片，避免卡片化破坏功能布局。

@@ -4770,9 +4770,7 @@ void CChat::RenderTranslateButton(const CUIRect &ButtonRect)
 	ButtonState.m_Hovered = Hovered;
 	ButtonState.m_Pressed = Pressed;
 	ButtonState.m_Selected = IsOpen;
-	const ColorRGBA ButtonSurface = IsEnabled ?
-						color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorEnabled, true)) :
-						color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled, true));
+	const ColorRGBA ButtonSurface = IsEnabled ? Theme.m_Selected : ResolveConfiguredControlSurface();
 	const SUiSecondaryButtonStyle ButtonStyle = ResolveUiButtonStyle(EUiButtonRole::ICON, ButtonSurface, Theme.m_Surface, Theme, ButtonState);
 	DrawRoundedSurface(Ui(), Circle, ButtonStyle.m_Fill, ButtonStyle.m_Border, ui_token::radius::PILL, BorderWidth);
 

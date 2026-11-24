@@ -33,8 +33,6 @@
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
 #include <game/client/components/qmclient/translate/translate_backend.h>
-#include <game/client/components/qmclient/translate/translate_ui_common.h>
-#include <game/client/components/qmclient/translate/translate_ui_settings.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui_listbox.h>
@@ -66,11 +64,6 @@ void CMenus::RenderQmVisualStreamerContent(CUIRect &Content, float LineHeight, f
 	// 组和下面的单词表文件行都改成「行自己声明行距」了：组尾不再补 Space，
 	// 单词表首行自己带行前距，这里不需要边界行距。
 	RenderQmWordFilterFileContent(Content, true, LineHeight, LineSpacing, Metrics.m_BodySize);
-}
-
-void CMenus::RenderQmVisualTranslateUiContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing)
-{
-	NTranslateUiSettings::RenderTranslateUiModule(this, Content, LineHeight, BodySize, LineSpacing);
 }
 
 void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -129,6 +122,12 @@ void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeig
 
 	RenderSlider(&s_QmEntityOverlayDeathAlphaInputId, &g_Config.m_QmEntityOverlayDeathAlpha, "m_QmEntityOverlayDeathAlpha", Localize("Death opacity"));
 	RenderSlider(&s_QmEntityOverlayFreezeAlphaInputId, &g_Config.m_QmEntityOverlayFreezeAlpha, "m_QmEntityOverlayFreezeAlpha", Localize("Freeze opacity"));
+	static CButtonContainer s_QmEntityOverlayFreezeColorId;
+	CUIRect FreezeColorRow;
+	if(Flow.Control("entity-freeze-color", LineHeight, FreezeColorRow, ui_token::settings::RowGap(LineSpacing)))
+	{
+		DoLine_ColorPicker(&s_QmEntityOverlayFreezeColorId, CurrentSettingsContentMetrics(), &FreezeColorRow, Localize("Freeze tile color"), &g_Config.m_QmEntityOverlayFreezeColor, color_cast<ColorRGBA>(ColorHSLA(CConfig::ms_QmEntityOverlayFreezeColor)), false);
+	}
 	RenderSlider(&s_QmEntityOverlayUnfreezeAlphaInputId, &g_Config.m_QmEntityOverlayUnfreezeAlpha, "m_QmEntityOverlayUnfreezeAlpha", Localize("Unfreeze opacity"));
 	RenderSlider(&s_QmEntityOverlayDeepFreezeAlphaInputId, &g_Config.m_QmEntityOverlayDeepFreezeAlpha, "m_QmEntityOverlayDeepFreezeAlpha", Localize("Deep freeze opacity"));
 	RenderSlider(&s_QmEntityOverlayDeepUnfreezeAlphaInputId, &g_Config.m_QmEntityOverlayDeepUnfreezeAlpha, "m_QmEntityOverlayDeepUnfreezeAlpha", Localize("Deep unfreeze opacity"));

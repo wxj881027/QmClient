@@ -1,5 +1,3 @@
-#include <base/color.h>
-
 #include <engine/console.h>
 #include <engine/kernel.h>
 #include <engine/shared/config.h>
@@ -13,7 +11,6 @@
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/route_start_index.h>
 #include <game/client/components/qmclient/statistics_ring_geometry.h>
-#include <game/client/components/qmclient/translate/translate_ui_settings.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
@@ -23,14 +20,6 @@
 #include <limits>
 #include <string>
 #include <vector>
-
-static void ExpectColorNear(const ColorRGBA &Color, const ColorRGBA &Expected)
-{
-	EXPECT_NEAR(Color.r, Expected.r, 0.02f);
-	EXPECT_NEAR(Color.g, Expected.g, 0.02f);
-	EXPECT_NEAR(Color.b, Expected.b, 0.02f);
-	EXPECT_NEAR(Color.a, Expected.a, 0.02f);
-}
 
 TEST(QmLocalSkinSource, DdnetAndAxiomKeepTeeMenuOverride)
 {
@@ -883,189 +872,6 @@ TEST(QmFocusMode, ConfigSnapshotSeparatesChatMessageClasses)
 	EXPECT_TRUE(ShouldRenderFocusFilteredChatLine(Decisions.m_HidePlayerMessages, Decisions.m_HideSystemInfoMessages, Decisions.m_HideSystemPromptMessages, Decisions.m_HideEchoMessages, -1, false, true));
 	EXPECT_FALSE(ShouldRenderFocusFilteredChatLine(Decisions.m_HidePlayerMessages, Decisions.m_HideSystemInfoMessages, Decisions.m_HideSystemPromptMessages, Decisions.m_HideEchoMessages, -1, false, false));
 	EXPECT_FALSE(ShouldRenderFocusFilteredChatLine(Decisions.m_HidePlayerMessages, Decisions.m_HideSystemInfoMessages, Decisions.m_HideSystemPromptMessages, Decisions.m_HideEchoMessages, -2, false, false));
-}
-
-TEST(QmTranslateUiSettings, DefaultColorsMatchSettingsPreviewDefaults)
-{
-	ExpectColorNear(color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmTranslateBtnColorDisabled, true)), ColorRGBA(0.16f, 0.16f, 0.16f, 0.82f));
-	ExpectColorNear(color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmTranslateBtnColorEnabled, true)), ColorRGBA(0.35f, 0.45f, 0.70f, 0.90f));
-	ExpectColorNear(color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmTranslateMenuBgColor, true)), ColorRGBA(0.12f, 0.12f, 0.12f, 0.95f));
-	ExpectColorNear(color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmTranslateMenuOptionSelected, true)), ColorRGBA(0.35f, 0.45f, 0.70f, 0.90f));
-	ExpectColorNear(color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmTranslateMenuOptionNormal, true)), ColorRGBA(0.20f, 0.20f, 0.20f, 0.90f));
-}
-
-TEST(QmTranslateUiSettings, LegacyRgbColorsRestoreDeclaredAlpha)
-{
-	bool Migrated = false;
-	unsigned Disabled = 0x005A6B7Cu;
-	unsigned Enabled = 0x00010203u;
-	unsigned Background = 0x00A1B2C3u;
-	unsigned Selected = 0x00000000u;
-	unsigned Normal = 0x00D4E5F6u;
-	EXPECT_TRUE(NTranslateUiSettings::MigrateLegacyColorAlphas(Migrated, Disabled, Enabled, Background, Selected, Normal,
-		DefaultConfig::QmTranslateBtnColorDisabled, DefaultConfig::QmTranslateBtnColorEnabled, DefaultConfig::QmTranslateMenuBgColor,
-		DefaultConfig::QmTranslateMenuOptionSelected, DefaultConfig::QmTranslateMenuOptionNormal,
-		EColorInputAlphaMode::PACKED, EColorInputAlphaMode::PACKED, EColorInputAlphaMode::PACKED, EColorInputAlphaMode::PACKED, EColorInputAlphaMode::PACKED));
-	EXPECT_TRUE(Migrated);
-	EXPECT_EQ(Disabled, 0xD15A6B7Cu);
-	EXPECT_EQ(Enabled, 0xE6010203u);
-	EXPECT_EQ(Background, 0xF2A1B2C3u);
-	EXPECT_EQ(Selected, 0xE6000000u);
-	EXPECT_EQ(Normal, 0xE6D4E5F6u);
-}
-
-TEST(QmTranslateUiSettings, AlphaAwareColorsAreNotChanged)
-{
-	bool Migrated = false;
-	unsigned Disabled = 0x7F5A6B7Cu;
-	unsigned Enabled = 0x805A6B7Cu;
-	unsigned Background = 0x995A6B7Cu;
-	unsigned Selected = 0xA05A6B7Cu;
-	unsigned Normal = 0xB15A6B7Cu;
-	EXPECT_TRUE(NTranslateUiSettings::MigrateLegacyColorAlphas(Migrated, Disabled, Enabled, Background, Selected, Normal,
-		DefaultConfig::QmTranslateBtnColorDisabled, DefaultConfig::QmTranslateBtnColorEnabled, DefaultConfig::QmTranslateMenuBgColor,
-		DefaultConfig::QmTranslateMenuOptionSelected, DefaultConfig::QmTranslateMenuOptionNormal,
-		EColorInputAlphaMode::EXPLICIT, EColorInputAlphaMode::EXPLICIT, EColorInputAlphaMode::EXPLICIT, EColorInputAlphaMode::EXPLICIT, EColorInputAlphaMode::EXPLICIT));
-	EXPECT_EQ(Disabled, 0x7F5A6B7Cu);
-	EXPECT_EQ(Enabled, 0x805A6B7Cu);
-	EXPECT_EQ(Background, 0x995A6B7Cu);
-	EXPECT_EQ(Selected, 0xA05A6B7Cu);
-	EXPECT_EQ(Normal, 0xB15A6B7Cu);
-}
-
-TEST(QmTranslateUiSettings, PackedColorsWithNonZeroAlphaAreNotChanged)
-{
-	bool Migrated = false;
-	unsigned Disabled = 0x7F5A6B7Cu;
-	unsigned Enabled = 0x805A6B7Cu;
-	unsigned Background = 0x995A6B7Cu;
-	unsigned Selected = 0xA05A6B7Cu;
-	unsigned Normal = 0xB15A6B7Cu;
-	EXPECT_TRUE(NTranslateUiSettings::MigrateLegacyColorAlphas(Migrated, Disabled, Enabled, Background, Selected, Normal,
-		DefaultConfig::QmTranslateBtnColorDisabled, DefaultConfig::QmTranslateBtnColorEnabled, DefaultConfig::QmTranslateMenuBgColor,
-		DefaultConfig::QmTranslateMenuOptionSelected, DefaultConfig::QmTranslateMenuOptionNormal,
-		EColorInputAlphaMode::PACKED, EColorInputAlphaMode::PACKED, EColorInputAlphaMode::PACKED, EColorInputAlphaMode::PACKED, EColorInputAlphaMode::PACKED));
-	EXPECT_EQ(Disabled, 0x7F5A6B7Cu);
-	EXPECT_EQ(Enabled, 0x805A6B7Cu);
-	EXPECT_EQ(Background, 0x995A6B7Cu);
-	EXPECT_EQ(Selected, 0xA05A6B7Cu);
-	EXPECT_EQ(Normal, 0xB15A6B7Cu);
-}
-
-TEST(QmTranslateUiSettings, ImplicitAlphaInputsRestoreDeclaredAlpha)
-{
-	bool Migrated = false;
-	unsigned Disabled = 0xFF5A6B7Cu;
-	unsigned Enabled = 0xFF010203u;
-	unsigned Background = 0xFFA1B2C3u;
-	unsigned Selected = 0xFF000000u;
-	unsigned Normal = 0xFFD4E5F6u;
-	EXPECT_TRUE(NTranslateUiSettings::MigrateLegacyColorAlphas(Migrated, Disabled, Enabled, Background, Selected, Normal,
-		DefaultConfig::QmTranslateBtnColorDisabled, DefaultConfig::QmTranslateBtnColorEnabled, DefaultConfig::QmTranslateMenuBgColor,
-		DefaultConfig::QmTranslateMenuOptionSelected, DefaultConfig::QmTranslateMenuOptionNormal,
-		EColorInputAlphaMode::OMITTED, EColorInputAlphaMode::OMITTED, EColorInputAlphaMode::OMITTED, EColorInputAlphaMode::OMITTED, EColorInputAlphaMode::OMITTED));
-	EXPECT_EQ(Disabled, 0xD15A6B7Cu);
-	EXPECT_EQ(Enabled, 0xE6010203u);
-	EXPECT_EQ(Background, 0xF2A1B2C3u);
-	EXPECT_EQ(Selected, 0xE6000000u);
-	EXPECT_EQ(Normal, 0xE6D4E5F6u);
-}
-
-TEST(QmTranslateUiSettings, ConfigManagerRecordsColorAlphaInputModes)
-{
-	struct SConfigRestore
-	{
-		CConfig m_Config = g_Config;
-		~SConfigRestore() { g_Config = m_Config; }
-	} ConfigRestore;
-	CTestInfo TestInfo;
-	std::unique_ptr<IStorage> pStorage = TestInfo.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr);
-	std::unique_ptr<IKernel> pKernel(IKernel::Create());
-	pKernel->RegisterInterface(pStorage.get(), false);
-	IConsole *pConsole = CreateConsole(CFGFLAG_CLIENT).release();
-	pKernel->RegisterInterface(pConsole);
-	IConfigManager *pConfigManager = CreateConfigManager();
-	pKernel->RegisterInterface(pConfigManager);
-	pConsole->Init();
-	pConfigManager->Init();
-
-	const auto MigrateDisabledColor = [pConfigManager]() {
-		bool Migrated = false;
-		unsigned Disabled = g_Config.m_QmTranslateBtnColorDisabled;
-		unsigned Enabled = DefaultConfig::QmTranslateBtnColorEnabled;
-		unsigned Background = DefaultConfig::QmTranslateMenuBgColor;
-		unsigned Selected = DefaultConfig::QmTranslateMenuOptionSelected;
-		unsigned Normal = DefaultConfig::QmTranslateMenuOptionNormal;
-		EXPECT_TRUE(NTranslateUiSettings::MigrateLegacyColorAlphas(Migrated, Disabled, Enabled, Background, Selected, Normal,
-			DefaultConfig::QmTranslateBtnColorDisabled, DefaultConfig::QmTranslateBtnColorEnabled, DefaultConfig::QmTranslateMenuBgColor,
-			DefaultConfig::QmTranslateMenuOptionSelected, DefaultConfig::QmTranslateMenuOptionNormal,
-			pConfigManager->ColorValueInputAlphaMode("qm_translate_btn_color_disabled"), EColorInputAlphaMode::EXPLICIT, EColorInputAlphaMode::EXPLICIT, EColorInputAlphaMode::EXPLICIT, EColorInputAlphaMode::EXPLICIT));
-		return Disabled;
-	};
-
-	pConsole->ExecuteLine("qm_translate_btn_color_disabled $5A6B7C");
-	EXPECT_EQ(pConfigManager->ColorValueInputAlphaMode("qm_translate_btn_color_disabled"), EColorInputAlphaMode::OMITTED);
-	const unsigned OmittedRgb = g_Config.m_QmTranslateBtnColorDisabled;
-	EXPECT_EQ(MigrateDisabledColor(), (OmittedRgb & ~NTranslateUiSettings::COLOR_ALPHA_MASK) | (DefaultConfig::QmTranslateBtnColorDisabled & NTranslateUiSettings::COLOR_ALPHA_MASK));
-
-	pConsole->ExecuteLine("qm_translate_btn_color_disabled $ABC");
-	EXPECT_EQ(pConfigManager->ColorValueInputAlphaMode("qm_translate_btn_color_disabled"), EColorInputAlphaMode::OMITTED);
-	const unsigned OmittedShortRgb = g_Config.m_QmTranslateBtnColorDisabled;
-	EXPECT_EQ(MigrateDisabledColor(), (OmittedShortRgb & ~NTranslateUiSettings::COLOR_ALPHA_MASK) | (DefaultConfig::QmTranslateBtnColorDisabled & NTranslateUiSettings::COLOR_ALPHA_MASK));
-
-	pConsole->ExecuteLine("qm_translate_btn_color_disabled $5A6B7C7F");
-	EXPECT_EQ(pConfigManager->ColorValueInputAlphaMode("qm_translate_btn_color_disabled"), EColorInputAlphaMode::EXPLICIT);
-	const unsigned ExplicitAlpha = g_Config.m_QmTranslateBtnColorDisabled;
-	EXPECT_EQ(MigrateDisabledColor(), ExplicitAlpha);
-
-	pConsole->ExecuteLine("qm_translate_btn_color_disabled $ABCD");
-	EXPECT_EQ(pConfigManager->ColorValueInputAlphaMode("qm_translate_btn_color_disabled"), EColorInputAlphaMode::EXPLICIT);
-	const unsigned ExplicitShortAlpha = g_Config.m_QmTranslateBtnColorDisabled;
-	EXPECT_EQ(MigrateDisabledColor(), ExplicitShortAlpha);
-
-	pConsole->ExecuteLine("qm_translate_btn_color_disabled $5A6B7C00");
-	EXPECT_EQ(pConfigManager->ColorValueInputAlphaMode("qm_translate_btn_color_disabled"), EColorInputAlphaMode::EXPLICIT);
-	const unsigned ExplicitTransparent = g_Config.m_QmTranslateBtnColorDisabled;
-	EXPECT_EQ(MigrateDisabledColor(), ExplicitTransparent);
-
-	pConsole->ExecuteLine("qm_translate_btn_color_disabled red");
-	EXPECT_EQ(pConfigManager->ColorValueInputAlphaMode("qm_translate_btn_color_disabled"), EColorInputAlphaMode::OMITTED);
-	const unsigned NamedColor = g_Config.m_QmTranslateBtnColorDisabled;
-	EXPECT_EQ(MigrateDisabledColor(), (NamedColor & ~NTranslateUiSettings::COLOR_ALPHA_MASK) | (DefaultConfig::QmTranslateBtnColorDisabled & NTranslateUiSettings::COLOR_ALPHA_MASK));
-
-	pConsole->ExecuteLine("qm_translate_btn_color_disabled -16777216");
-	EXPECT_EQ(pConfigManager->ColorValueInputAlphaMode("qm_translate_btn_color_disabled"), EColorInputAlphaMode::SIGNED_PACKED);
-	EXPECT_EQ(MigrateDisabledColor() & NTranslateUiSettings::COLOR_ALPHA_MASK, DefaultConfig::QmTranslateBtnColorDisabled & NTranslateUiSettings::COLOR_ALPHA_MASK);
-
-	pConsole->ExecuteLine("qm_translate_btn_color_disabled 2153407356");
-	EXPECT_EQ(pConfigManager->ColorValueInputAlphaMode("qm_translate_btn_color_disabled"), EColorInputAlphaMode::PACKED);
-	const unsigned UnsignedPackedAlpha = g_Config.m_QmTranslateBtnColorDisabled;
-	EXPECT_NE(UnsignedPackedAlpha & NTranslateUiSettings::COLOR_ALPHA_MASK, 0u);
-	EXPECT_EQ(MigrateDisabledColor(), UnsignedPackedAlpha);
-
-	pConsole->ExecuteLine("qm_translate_btn_color_disabled +2153407356");
-	EXPECT_EQ(pConfigManager->ColorValueInputAlphaMode("qm_translate_btn_color_disabled"), EColorInputAlphaMode::PACKED);
-	EXPECT_EQ(MigrateDisabledColor(), g_Config.m_QmTranslateBtnColorDisabled);
-}
-
-TEST(QmTranslateUiSettings, MigrationMarkerPreservesIntentionalTransparentColor)
-{
-	bool Migrated = true;
-	unsigned Disabled = 0x005A6B7Cu;
-	unsigned Enabled = 0x00010203u;
-	unsigned Background = 0x00A1B2C3u;
-	unsigned Selected = 0x00000000u;
-	unsigned Normal = 0x00D4E5F6u;
-	EXPECT_FALSE(NTranslateUiSettings::MigrateLegacyColorAlphas(Migrated, Disabled, Enabled, Background, Selected, Normal,
-		DefaultConfig::QmTranslateBtnColorDisabled, DefaultConfig::QmTranslateBtnColorEnabled, DefaultConfig::QmTranslateMenuBgColor,
-		DefaultConfig::QmTranslateMenuOptionSelected, DefaultConfig::QmTranslateMenuOptionNormal));
-	EXPECT_TRUE(Migrated);
-	EXPECT_EQ(Disabled, 0x005A6B7Cu);
-	EXPECT_EQ(Enabled, 0x00010203u);
-	EXPECT_EQ(Background, 0x00A1B2C3u);
-	EXPECT_EQ(Selected, 0x00000000u);
-	EXPECT_EQ(Normal, 0x00D4E5F6u);
 }
 
 namespace

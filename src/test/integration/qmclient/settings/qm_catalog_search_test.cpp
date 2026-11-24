@@ -109,6 +109,10 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"Enable Netease music Hook", "qm:lyrics"},
 		{"Infinity symbol", "qm:dynamic_island"},
 		{"Hook countdown size", "qm:dynamic_island"},
+		{"qm_smtc_enable", "qm:dynamic_island"},
+		{"qm_smtc_show_hud", "qm:dynamic_island"},
+		{"Enable system media control", "qm:dynamic_island"},
+		{"Show system media info on HUD", "qm:dynamic_island"},
 		{"Selection background color", "qm:chat_completion"},
 		// 索引标签改写后仍按界面当前文案命中：滚动手感改成三档后，旧标签
 		// （Original scroll feel / Restart smooth scrolling…）已在源码中消失。
@@ -142,7 +146,7 @@ TEST(QmCatalogSearch, EntityLayerOptionsResolveToTheirDDNetCard)
 {
 	qm_card_order::CModel Model;
 	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
-	for(const char *pQuery : {"实体层调整", "Overlay entities", "Show text entities", "cl_overlay_entities", "cl_text_entities", "cl_text_entities_size", "qm_entity_overlay_freeze_alpha"})
+	for(const char *pQuery : {"实体层调整", "Overlay entities", "Show text entities", "冻结颜色", "cl_overlay_entities", "cl_text_entities", "cl_text_entities_size", "qm_entity_overlay_freeze_color", "qm_entity_overlay_freeze_alpha"})
 	{
 		SCOPED_TRACE(pQuery);
 		const auto Results = qm_card_catalog::SearchResultEntries(pQuery, Model);
@@ -501,4 +505,19 @@ TEST(QmCatalogSearch, RemovedFavoriteMapsCardHasNoSearchMetadata)
 	size_t Count = 0;
 	EXPECT_FALSE(qm_card_catalog::FindSearchMetadata("qm:favorite_maps", &pSettings, &Count));
 	EXPECT_EQ(qm_card_search::Find("qm:favorite_maps"), nullptr);
+}
+
+TEST(QmCatalogSearch, RemovedTranslateAndMediaCardsHaveNoSearchMetadata)
+{
+	for(const char *pStableId : {"qm:translate_ui", "qm:system_media_controls"})
+	{
+		SCOPED_TRACE(pStableId);
+		const qm_card_registry::SCardSettingSearch *pSettings = nullptr;
+		size_t Count = 0;
+		EXPECT_FALSE(qm_card_catalog::FindSearchMetadata(pStableId, &pSettings, &Count));
+		EXPECT_EQ(qm_card_search::Find(pStableId), nullptr);
+		qm_card_order::CModel Model;
+		Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+		EXPECT_TRUE(qm_card_registry::SearchCards(pStableId, Model).empty());
+	}
 }

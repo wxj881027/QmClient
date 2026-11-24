@@ -1,6 +1,6 @@
 ## What this controls
 
-Appearance and content switches for the Dynamic Island at the top of the screen: the original style, team display, the background color, plus two independent countdowns in the same card — the hook countdown and the switch countdown. Where the island sits on screen is managed by the HUD editor; this card only decides how it is drawn and what it shows.
+Appearance and content switches for the Dynamic Island at the top of the screen: the original style, team display, system media info, the background color, plus two independent countdowns in the same card — the hook countdown and the switch countdown. Where the island sits on screen is managed by the HUD editor; this card only decides how it is drawn and what it shows.
 
 ## In game
 
@@ -8,12 +8,14 @@ Appearance and content switches for the Dynamic Island at the top of the screen:
 - "Enable switch countdown": after you or your dummy step on a timed switch, it shows the remaining seconds — "Follow Tee", "Show in Dynamic Island", or both at once. Switches hit by teammates are not shown.
 - "Show team": on DDRace maps while you are in a team, the island shows your team number.
 - The song title and artist normally expand only for a moment after a track change; tick "Always show song title and artist" to keep them permanently visible.
+- "Enable system media control" reads the Windows system media session (MPRIS on Linux); "Show system media info on HUD" decides whether the title and artist are drawn. One is the source, the other is the display, so they are not equivalent.
 
 ## How to tune it
 
 1. To customize the look, first untick "Use original style", then pick a clearly contrasting base in "Background color"; the A in the color picker is the transparency of the whole plate — at 0 even the outer shadow disappears.
 2. To see the remaining switch time before committing, enable "Enable switch countdown" and then choose the position to your habit.
 3. When neither countdown position is ticked, the master switch is turned off automatically; you then see no countdown — it was not a save failure.
+4. Even when you only use NetEase / Spotify / LX Music, tick "Enable system media control" to read the source first, then "Show system media info on HUD"; with the source switch off, no source is read.
 
 ## Watch out
 

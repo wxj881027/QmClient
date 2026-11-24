@@ -1026,6 +1026,8 @@ qm_card_order::CModel &CMenus::SettingsCardOrderModelForRenderPass()
 		qm_card_registry::RepairLegacyChatBubbleTab(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyBindStatusHudTab(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyPredictionCardTabs(m_SettingsCardRenderOnlyOrderModel);
+		qm_card_registry::RepairLegacyEntityOverlayTab(m_SettingsCardRenderOnlyOrderModel);
+		qm_card_registry::RepairMisplacedCardTabs(m_SettingsCardRenderOnlyOrderModel);
 		m_SettingsCardRenderOnlyOrderSource = g_Config.m_QmGlobalCardOrder;
 		m_SettingsCardRenderOnlyOrderInitialized = true;
 	}
@@ -1092,7 +1094,9 @@ void CMenus::LoadSettingsCardOrderModel()
 	const bool ChatBubbleTabChanged = qm_card_registry::RepairLegacyChatBubbleTab(m_SettingsCardOrderModel);
 	const bool BindStatusHudTabChanged = qm_card_registry::RepairLegacyBindStatusHudTab(m_SettingsCardOrderModel);
 	const bool PredictionCardTabsChanged = qm_card_registry::RepairLegacyPredictionCardTabs(m_SettingsCardOrderModel);
-	if((ModernTabsChanged || LegacyBindTabChanged || KeyBindsTabChanged || CreditsLayoutChanged || TeeLayoutChanged || ChatBubbleTabChanged || BindStatusHudTabChanged || PredictionCardTabsChanged) && !PersistCurrentLayout())
+	const bool EntityOverlayTabChanged = qm_card_registry::RepairLegacyEntityOverlayTab(m_SettingsCardOrderModel);
+	const bool MisplacedCardTabsChanged = qm_card_registry::RepairMisplacedCardTabs(m_SettingsCardOrderModel);
+	if((ModernTabsChanged || LegacyBindTabChanged || KeyBindsTabChanged || CreditsLayoutChanged || TeeLayoutChanged || ChatBubbleTabChanged || BindStatusHudTabChanged || PredictionCardTabsChanged || EntityOverlayTabChanged || MisplacedCardTabsChanged) && !PersistCurrentLayout())
 	{
 		m_SettingsCardOrderLoaded = true;
 		return;

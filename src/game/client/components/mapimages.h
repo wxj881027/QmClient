@@ -3,6 +3,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_MAPIMAGES_H
 #define GAME_CLIENT_COMPONENTS_MAPIMAGES_H
 
+#include <base/color.h>
+
 #include <engine/console.h>
 #include <engine/graphics.h>
 
@@ -185,11 +187,15 @@ private:
 	bool m_QmEntityPrewarmMasked = false;
 	int m_QmEntityPrewarmNextStep = 0;
 	int m_QmEntityPrewarmTextureLoadFlag = 0;
+	ColorRGBA m_QmEntityPrewarmFreezeTint = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 	size_t m_QmEntityPrewarmCopyWidth = 0;
 	size_t m_QmEntityPrewarmCopyHeight = 0;
 	int64_t m_QmEntityPrewarmStartNs = 0;
 	int64_t m_QmEntityPrewarmDecodeDoneNs = 0;
 	int64_t m_QmEntityPrewarmNextStepNs = 0;
+	unsigned m_QmEntityOverlayFreezeColor = 0xFFFFFFFF;
+	unsigned m_QmEntityOverlayPendingFreezeColor = 0xFFFFFFFF;
+	int64_t m_QmEntityOverlayFreezeColorChangedAt = 0;
 
 	// 钩子碰撞预览小图（owner：CMapImages；解码在 worker，纹理上传/卸载仅在主线程）。
 	// 缓存 key = (m_aEntitiesPath, mod type, masked)；key 变化即失效并后台重解码。
