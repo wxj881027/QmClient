@@ -587,7 +587,7 @@ void CTClient::CancelQmClientUpdate()
 	m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_CHECK_INTERVAL;
 }
 
-void CTClient::RunUpdateHttp(std::shared_ptr<IHttpRequest> pRequest)
+void CTClient::RunUpdateHttp(const std::shared_ptr<IHttpRequest> &pRequest)
 {
 	const std::string Url = pRequest->Url();
 	// 镜像固定直连，显式空代理同时屏蔽 curl 的环境代理和系统代理。

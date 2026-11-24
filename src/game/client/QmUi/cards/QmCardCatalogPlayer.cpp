@@ -123,7 +123,7 @@ uint64_t CMenus::BuildPlayerSettingsCards(const qm_card_catalog::SQmCardBuildCon
 		vCards.reserve(2);
 		const SSettingsCardSpec IdentitySpec{pIdentityDefault->m_pStableId, Localize(pIdentityDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pIdentityDefault)};
 		const SSettingsCardSpec CountrySpec{pCountryDefault->m_pStableId, Localize(pCountryDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pCountryDefault)};
-		const auto AddCard = [&vCards, &Ctx](const SSettingsCardSpec &Spec, FSettingsCardRender Render) {
+		const auto AddCard = [&vCards, &Ctx](const SSettingsCardSpec &Spec, const FSettingsCardRender &Render) {
 			SSettingsCardDefinition Definition;
 			Definition.m_Spec = Spec;
 			Definition.m_Render = Render;

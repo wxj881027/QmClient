@@ -663,9 +663,9 @@ public:
 	void RenderCursor(vec2 Center, float Size, float Alpha = 1.0f) const;
 	void RenderResizeCursor(vec2 Center, float Size, float Alpha = 1.0f) const;
 	void RenderIcon(int ImageId, int SpriteId, const CUIRect *pRect, const ColorRGBA *pColor = nullptr) const;
-	void RenderTextContainerWithEffects(STextContainerIndex TextContainerIndex, const SQmTextEffectRenderStyle &Style, float X, float Y) const;
-	void RenderTitleContainerWithPolishedEffects(STextContainerIndex TextContainerIndex, const SQmTitlePolishStyle &Style, float X, float Y) const;
-	void RenderTitleContainerWithCalamityEffects(STextContainerIndex TextContainerIndex, const SQmTitleEffectStyle &Style, float X, float Y) const;
+	void RenderTextContainerWithEffects(const STextContainerIndex &TextContainerIndex, const SQmTextEffectRenderStyle &Style, float X, float Y) const;
+	void RenderTitleContainerWithPolishedEffects(const STextContainerIndex &TextContainerIndex, const SQmTitlePolishStyle &Style, float X, float Y) const;
+	void RenderTitleContainerWithCalamityEffects(const STextContainerIndex &TextContainerIndex, const SQmTitleEffectStyle &Style, float X, float Y) const;
 
 	// larger rendering methods
 	static void GetRenderTeeBodySize(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, vec2 &BodyOffset, float &Width, float &Height);

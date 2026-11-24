@@ -48,7 +48,8 @@ void SettingsAssetQueueDiscardAsset(TQueue &Decode, TQueue &Ready, TSet &ReadyQu
 }
 
 template<typename TQueue>
-void SettingsAssetQueuePromote(TQueue &Queue, typename TQueue::iterator It) noexcept
+// 迭代器本身就是按值传递的小对象，改成引用只是多一层间接。
+void SettingsAssetQueuePromote(TQueue &Queue, typename TQueue::iterator It) noexcept // NOLINT(performance-unnecessary-value-param)
 {
 	using TEntry = typename TQueue::value_type;
 	static_assert(std::is_nothrow_move_constructible_v<TEntry> && std::is_nothrow_move_assignable_v<TEntry>);

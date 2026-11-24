@@ -73,7 +73,8 @@ class CSettingsAssetMemoryLease
 			Context->m_pState->m_Used.fetch_sub(Context->m_Bytes, std::memory_order_relaxed);
 	}
 
-	static bool TryAcquire(std::shared_ptr<SState> pState, uint64_t Bytes, CSettingsAssetMemoryLease &Out) noexcept
+	// 预留失败（下一帧会重试）时不复制所有者，只有成功路径才把引用交给上下文。
+	static bool TryAcquire(const std::shared_ptr<SState> &pState, uint64_t Bytes, CSettingsAssetMemoryLease &Out) noexcept
 	{
 		if(Bytes == 0)
 		{
