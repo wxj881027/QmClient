@@ -69,6 +69,7 @@
 #include <game/client/components/key_binder.h>
 #include <game/client/components/menu_background.h>
 #include <game/client/components/qmclient/bind_index.h>
+#include <game/client/components/qmclient/browser_workspace_route.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/demo_ui.h>
 #include <game/client/components/qmclient/map_history_ui.h>
@@ -3213,8 +3214,8 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	{
 		CUIRect WorkspaceTabs = Window;
 		WorkspaceTabs.h = StatisticsWorkspace.m_TabHeight;
-		const int PickedWorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, StatisticsWorkspace.m_TabHeight * 0.20f, 3, ui_token::settings::TAB_FONT_SIZE);
-		if(PickedWorkspaceTab >= 0 && PickedWorkspaceTab < 3)
+		const int PickedWorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, StatisticsWorkspace.m_TabHeight * 0.20f, QmBrowserWorkspace::TAB_STATISTICS, ui_token::settings::TAB_FONT_SIZE);
+		if(PickedWorkspaceTab >= 0 && PickedWorkspaceTab < QmBrowserWorkspace::TAB_STATISTICS)
 			SetMenuPage(PAGE_FAVORITE_MAPS);
 		Window.HSplitTop(StatisticsWorkspace.m_TabHeight + StatisticsWorkspace.m_SectionGap, nullptr, &Window);
 	}
@@ -9702,6 +9703,10 @@ void CMenus::SetGamePage(int NewPage)
 	const int OldPage = m_GamePage;
 	if(OldPage != NewPage)
 		MarkMenuInteraction();
+	// 统计数据只是「浏览」页里的临时子页，离开该页时收起，避免下次进入浏览页
+	// 仍停在统计页而看不到服务器列表。
+	if(OldPage == PAGE_NETWORK && NewPage != PAGE_NETWORK && m_MenuPage == PAGE_STATS)
+		SetMenuPage(g_Config.m_UiPage);
 	if(PerfDebugEnabled() && OldPage != NewPage)
 	{
 		char aPayload[160];

@@ -5508,6 +5508,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_map_cover_art_test.cpp
     src/test/unit/qmclient/ui/qm_map_cover_result_test.cpp
     src/test/unit/qmclient/ui/vote_map_library_test.cpp
+    src/test/unit/qmclient/ui/browser_workspace_route_test.cpp
     src/test/unit/qmclient/ui/server_vote_list_test.cpp
     src/test/unit/qmclient/ui/qm_scoreboard_team_mode_lifecycle_test.cpp
     src/test/unit/qmclient/ui/vote_menu_mode_test.cpp

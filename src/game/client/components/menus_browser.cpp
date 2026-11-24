@@ -45,6 +45,7 @@
 #include <game/client/components/qmclient/browser_score.h>
 #include <game/client/components/qmclient/browser_selection.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
+#include <game/client/components/qmclient/browser_workspace_route.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/favorite_map_vote.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
@@ -4818,16 +4819,16 @@ int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int Curr
 	m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2,
 		[this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
 
-	char aaTabLabels[4][128];
-	str_format(aaTabLabels[0], sizeof(aaTabLabels[0]), "%s (%d)", Localize("Favorite map"), (int)GameClient()->m_TClient.GetFavoriteMaps().size());
-	str_format(aaTabLabels[1], sizeof(aaTabLabels[1]), "%s (%d)", Localize("Map play history"), (int)GameClient()->m_TClient.GetMapHistory().Entries().size());
-	str_format(aaTabLabels[2], sizeof(aaTabLabels[2]), "%s (%d)", Localize("Local saves"), (int)m_LocalSaveDisplay.Entries().size());
-	str_format(aaTabLabels[3], sizeof(aaTabLabels[3]), "%s", Localize("Statistics"));
-	const char *apTabLabels[4] = {aaTabLabels[0], aaTabLabels[1], aaTabLabels[2], aaTabLabels[3]};
+	char aaTabLabels[QmBrowserWorkspace::TAB_COUNT][128];
+	str_format(aaTabLabels[QmBrowserWorkspace::TAB_FAVORITES], sizeof(aaTabLabels[0]), "%s (%d)", Localize("Favorite map"), (int)GameClient()->m_TClient.GetFavoriteMaps().size());
+	str_format(aaTabLabels[QmBrowserWorkspace::TAB_HISTORY], sizeof(aaTabLabels[0]), "%s (%d)", Localize("Map play history"), (int)GameClient()->m_TClient.GetMapHistory().Entries().size());
+	str_format(aaTabLabels[QmBrowserWorkspace::TAB_SAVES], sizeof(aaTabLabels[0]), "%s (%d)", Localize("Local saves"), (int)m_LocalSaveDisplay.Entries().size());
+	str_format(aaTabLabels[QmBrowserWorkspace::TAB_STATISTICS], sizeof(aaTabLabels[0]), "%s", Localize("Statistics"));
+	const char *apTabLabels[QmBrowserWorkspace::TAB_COUNT] = {aaTabLabels[0], aaTabLabels[1], aaTabLabels[2], aaTabLabels[3]};
 	// 胶囊滑块配色按浏览器面板表面自适应，两个页面都用同一档面板色。
 	const ui_widget::SCapsuleTabBarStyle TabStyle = CapsuleTabBarStyleFor(BrowserPanelColor(0.68f));
-	const int NewTab = DoNavigationTabs(s_aFavoriteMapsWorkspaceTabButtons, apTabLabels, 4, CurrentTab, Segments, Rounding, &TabStyle, FontSize);
-	if(NewTab == 3)
+	const int NewTab = DoNavigationTabs(s_aFavoriteMapsWorkspaceTabButtons, apTabLabels, QmBrowserWorkspace::TAB_COUNT, CurrentTab, Segments, Rounding, &TabStyle, FontSize);
+	if(NewTab == QmBrowserWorkspace::TAB_STATISTICS)
 		SetMenuPage(PAGE_STATS);
 	else if(NewTab != CurrentTab)
 		s_FavoriteMapsWorkspaceTab = NewTab;
