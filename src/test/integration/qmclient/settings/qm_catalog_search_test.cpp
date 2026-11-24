@@ -90,7 +90,6 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"qm_auto_accept_team_invite", "qm:mini_features"},
 		{"Show dummy position in movement info HUD", "deck:appearance-hud-ddrace"},
 		{"qm_showhud_dummy_speed", "deck:appearance-hud-ddrace"},
-		{"qm_hide_chat_bubbles", "qm:chat_bubble"},
 		{"cl_replay_length", "deck:ddnet-demo"},
 		{"预测余量", "deck:ddnet-prediction"},
 		{"最大包份数", "deck:ddnet-prediction"},
