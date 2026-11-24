@@ -613,7 +613,7 @@ namespace
 		return Layout;
 	}
 
-	void PaintBlock(const IUiContext &Ctx, const SWikiBlock &Block, const SBlockLayout &Layout, const CUIRect &Area, const SWikiRenderStyle &Style, SWikiLinkContext *pLinks, const CUIRect *pClip)
+	void PaintBlock(const IUiContext &Ctx, const SWikiBlock &Block, const SBlockLayout &Layout, const CUIRect &Area, const SWikiRenderStyle &Style, SWikiLinkContext *pLinks, const CUIRect *pClip, size_t *pDrawnTableRows = nullptr)
 	{
 		ITextRender *pTextRender = Ctx.m_pTextRender;
 		if(pTextRender == nullptr)
@@ -742,6 +742,8 @@ namespace
 					const float Y = Area.y + (Row > 0 ? Layout.m_vRowEnds[Row - 1] : 0.0f);
 					if(Y > Bottom)
 						break;
+					if(pDrawnTableRows != nullptr)
+						++*pDrawnTableRows;
 					if(Row > 0)
 					{
 						CUIRect Line;
@@ -794,6 +796,9 @@ struct qm_wiki_markdown::CTableLayoutCache::SState
 
 	SKey m_Key;
 	std::unordered_map<size_t, SBlockLayout> m_Layouts;
+	// 上一次 RenderBlocks 真正画出来的表格行数；只由布局和 clip 决定，
+	// 供没有图形设备的测试验证可见行裁剪，不参与渲染决策。
+	size_t m_DrawnTableRows = 0;
 };
 
 qm_wiki_markdown::CTableLayoutCache::CTableLayoutCache() = default;
@@ -802,6 +807,11 @@ qm_wiki_markdown::CTableLayoutCache::~CTableLayoutCache() = default;
 void qm_wiki_markdown::CTableLayoutCache::Clear()
 {
 	m_pState.reset();
+}
+
+size_t qm_wiki_markdown::CTableLayoutCache::LastDrawnTableRows() const
+{
+	return m_pState != nullptr ? m_pState->m_DrawnTableRows : 0;
 }
 
 float qm_wiki_markdown::RenderBlocks(const IUiContext &Ctx, const std::vector<SWikiBlock> &vBlocks, CUIRect &Body, const SWikiRenderStyle &Style, CScrollRegion *pScroll, SWikiLinkContext *pLinks, int ScrollToBlock, CTableLayoutCache *pTableLayouts)
@@ -822,6 +832,7 @@ float qm_wiki_markdown::RenderBlocks(const IUiContext &Ctx, const std::vector<SW
 			pState->m_Key = Key;
 			pTableLayouts->m_pState = std::move(pState);
 		}
+		pTableLayouts->m_pState->m_DrawnTableRows = 0;
 	}
 	for(size_t Index = 0; Index < vBlocks.size(); ++Index)
 	{
@@ -849,7 +860,10 @@ float qm_wiki_markdown::RenderBlocks(const IUiContext &Ctx, const std::vector<SW
 		// 目录跳转：AddRect 的第二个参数让滚动区把这一块顶到可视区。
 		const bool Draw = pScroll == nullptr || pScroll->AddRect(Slot, static_cast<int>(Index) == ScrollToBlock);
 		if(Draw)
-			PaintBlock(Ctx, Block, *pLayout, Slot, Style, pLinks, pScroll != nullptr ? pScroll->ClipRect() : nullptr);
+		{
+			size_t *pDrawnTableRows = pTableLayouts != nullptr && pTableLayouts->m_pState != nullptr ? &pTableLayouts->m_pState->m_DrawnTableRows : nullptr;
+			PaintBlock(Ctx, Block, *pLayout, Slot, Style, pLinks, pScroll != nullptr ? pScroll->ClipRect() : nullptr, pDrawnTableRows);
+		}
 		const float Bottom = BottomMargin(Block, Style);
 		if(Bottom > 0.0f)
 			Body.HSplitTop(Bottom, nullptr, &Body);

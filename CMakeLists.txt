@@ -3914,6 +3914,7 @@ if(CLIENT)
     components/qmclient/qm_markdown_broadcast.h
     components/qmclient/qm_markdown_broadcast_payload.h
     components/qmclient/qm_realtime.cpp
+    components/qmclient/qm_json_tracked_allocator.cpp
     components/qmclient/qm_realtime.h
     components/qmclient/qm_realtime_service_data.h
     components/qmclient/qm_presence_prepare.h
@@ -6467,6 +6468,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/qm_markdown.cpp
     src/game/client/components/qmclient/qm_markdown_broadcast.cpp
     src/game/client/components/qmclient/qm_realtime.cpp
+    src/game/client/components/qmclient/qm_json_tracked_allocator.cpp
     src/game/client/components/qmclient/qm_realtime_users.cpp
     src/game/client/components/qmclient/update_version.cpp
     src/game/client/components/qmclient/update_manifest.cpp
@@ -7219,6 +7221,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/QmUi/QmLineInputMotion.cpp
       src/test/integration/qmclient/client/qm_markdown_broadcast_payload_test.cpp
       src/game/client/components/qmclient/qm_realtime.cpp
+      src/game/client/components/qmclient/qm_json_tracked_allocator.cpp
       src/game/client/components/qmclient/qm_markdown_broadcast.cpp
       src/game/client/components/qmclient/qm_markdown.cpp
       src/game/client/components/qmclient/bind_editor.cpp

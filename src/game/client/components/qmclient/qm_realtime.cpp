@@ -1,6 +1,7 @@
 #include "qm_realtime.h"
 
 #include "qm_json_fields.h"
+#include "qm_json_tracked_allocator.h"
 
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
@@ -11,6 +12,7 @@
 #include <game/client/components/emoticon.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <memory>
 #include <new>
 #include <utility>
@@ -45,6 +47,16 @@ namespace
 		pOut = pValue->u.string.ptr;
 		return true;
 	}
+
+	// 实时消息只在内存里过一遍，分配直接走 libc；记账由基类负责。
+	class CMessageJsonAllocator : public qm_json::CTrackedJsonAllocator
+	{
+	protected:
+		void *Allocate(size_t Size, int Zero) noexcept override
+		{
+			return Zero != 0 ? std::calloc(1, Size) : std::malloc(Size);
+		}
+	};
 }
 
 static bool PrepareQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &OutMessage)
@@ -52,9 +64,15 @@ static bool PrepareQmRealtimeMessage(const char *pData, size_t Size, SQmRealtime
 	OutMessage = {};
 	if(!pData || !Size || Size > QMCLIENT_REALTIME_MAX_BYTES)
 		return false;
+	// 记账分配器：预算拒绝一条密集数组时，json-parser 会把半成品树留在堆上，
+	// 单条 64KB 消息能漏十几 MB；由 allocator 统一回收（见头文件说明）。
+	auto pAllocator = std::make_shared<CMessageJsonAllocator>();
 	json_settings Settings{};
 	Settings.max_memory = static_cast<unsigned long>(QMCLIENT_REALTIME_JSON_MEMORY_BUDGET);
-	std::unique_ptr<json_value, decltype(&json_value_free)> pOwner(json_parse_ex(&Settings, pData, Size, nullptr), json_value_free);
+	pAllocator->Bind(&Settings);
+	std::unique_ptr<json_value, qm_json::STrackedJsonDeleter> pOwner(
+		json_parse_ex(&Settings, pData, Size, nullptr),
+		qm_json::STrackedJsonDeleter{pAllocator, Settings});
 	json_value *pRoot = pOwner.get();
 	if(!pRoot || pRoot->type != json_object)
 		return false;
