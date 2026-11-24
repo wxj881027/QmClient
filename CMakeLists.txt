@@ -7376,6 +7376,8 @@ foreach(Binary IN ITEMS ${QM_CXX_TEST_BINARIES})
   message(STATUS \"Running \${Binary}\")
   execute_process(COMMAND \"\${Binary}\" RESULT_VARIABLE Result)
   if(NOT Result EQUAL 0)
+    # 崩溃的测试二进制只留下退出码，日志里看不出是被信号打死还是断言失败。
+    message(STATUS \"Test binary failed: \${Binary} (exit code \${Result})\")
     list(APPEND Failed \"\${Binary}\")
   endif()
 endforeach()

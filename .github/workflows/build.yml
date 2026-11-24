@@ -311,6 +311,40 @@ jobs:
             cmake --build build --target run_tests --parallel
           fi
 
+      # 测试二进制被信号打死时 ninja 只留一个退出码，日志里看不出崩在哪个用例。
+      # macOS 上的这类崩溃此前只能靠猜，失败时补一次单套件复跑和一次带栈的全量复跑。
+      - name: Diagnose macOS test crash
+        if: failure() && runner.os == 'macOS'
+        timeout-minutes: 25
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p tmp
+          echo "::group::sem_open probe"
+          # 每次 sphore_try_init 都是 sem_open + sem_unlink + sem_close，macOS 的命名
+          # 信号量在长进程里是否会被耗尽，用固定循环直接量一次。
+          printf '#include <errno.h>\n#include <fcntl.h>\n#include <semaphore.h>\n#include <stdio.h>\n#include <sys/stat.h>\n#include <unistd.h>\nint main(void){for(int i=0;i<200000;i++){char n[72];snprintf(n,sizeof n,"/qmp.%%d.%%d",(int)getpid(),i);sem_t*s=sem_open(n,O_CREAT|O_EXCL,S_IRWXU,0);if(s==SEM_FAILED){printf("sem_open failed at %%d errno=%%d\\n",i,errno);return 1;}sem_unlink(n);sem_close(s);}printf("sem_open x200000 ok\\n");return 0;}\n' > tmp/semprobe.c
+          clang -O1 -o tmp/semprobe tmp/semprobe.c && ./tmp/semprobe
+          echo "exit=$?"
+          echo "::endgroup::"
+          echo "::group::DemoEditJobIntegration alone"
+          ./build/testrunner --gtest_filter='DemoEditJobIntegration.*' > tmp/demoedit.log 2>&1
+          echo "exit=$?"
+          tail -40 tmp/demoedit.log
+          echo "::endgroup::"
+          echo "::group::lldb full testrunner"
+          lldb --batch \
+            -o run \
+            -o "thread backtrace all" \
+            -o "process status" \
+            -- ./build/testrunner > tmp/lldb.log 2>&1
+          echo "exit=$?"
+          grep -nE "stop reason|SIG|frame #" tmp/lldb.log | head -100
+          echo "::endgroup::"
+          echo "::group::crash reports"
+          ls -t ~/Library/Logs/DiagnosticReports 2>/dev/null | head -5
+          echo "::endgroup::"
+
       - name: Package
         shell: bash
         run: |
