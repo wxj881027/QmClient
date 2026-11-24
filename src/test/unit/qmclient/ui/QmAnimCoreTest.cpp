@@ -1,3 +1,5 @@
+#include <game/client/QmUi/QmUiPerf.h>
+
 #include <gtest/gtest.h>
 #include <test/support/qm_anim_test_helpers.h>
 
@@ -356,4 +358,17 @@ TEST(UiV2Anim, QueuedTrackDoesNotBorrowOtherClockRemainder)
 
 	Runtime.Advance(0.1f, 0.0f);
 	EXPECT_NEAR(Runtime.GetValue(34, EUiAnimProperty::POS_X), 1.25f, 0.001f);
+}
+
+TEST(UiV2Anim, LogicClockAccumulatorClampsLongFrames)
+{
+	float Accumulator = 0.0f;
+	EXPECT_FLOAT_EQ(QmUiAdvanceLogicClock(Accumulator, QM_UI_LOGIC_STEP_SEC * 0.5f), 0.0f);
+	EXPECT_NEAR(QmUiAdvanceLogicClock(Accumulator, QM_UI_LOGIC_STEP_SEC * 0.5f), QM_UI_LOGIC_STEP_SEC, 0.0001f);
+
+	float LongFrame = 0.0f;
+	EXPECT_NEAR(QmUiAdvanceLogicClock(LongFrame, 5.0f), QM_UI_LOGIC_MAX_CATCHUP_SEC, 0.0001f);
+	EXPECT_LT(LongFrame, QM_UI_LOGIC_STEP_SEC);
+
+	EXPECT_FLOAT_EQ(QmUiAdvanceLogicClock(LongFrame, 0.0f), 0.0f);
 }
