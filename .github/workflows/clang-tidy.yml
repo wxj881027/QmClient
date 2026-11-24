@@ -34,6 +34,11 @@ jobs:
       CARGO_HTTP_MULTIPLEXING: false
       CLANG_VERSION: 22
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      # PR / merge queue 只扫本次改动涉及的 TU（约 8 分钟），全量扫描（约 75 分钟）
+      # 留给 master 推送与定时任务。改动里只要出现头文件或构建脚本，脚本会自动
+      # 退回全量——头文件被许多 TU 包含，只重编改名的那几个 .cpp 会漏掉影响面。
+      CLANG_TIDY_CHANGED_ONLY: ${{ (github.event_name == 'pull_request' || github.event_name == 'merge_group') && '1' || '' }}
+      CLANG_TIDY_DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v6
@@ -62,6 +67,9 @@ jobs:
       run: python3 qmclient_scripts/gate/tools/clang_tidy_build.py
 
     - name: Build Optional Features
+      # 只验证「全套可选特性能否编译」，与本次 diff 无关：PR 上每个组合都重编一遍
+      # 要 17 分钟，收益却由 master 推送覆盖。PR / merge queue 跳过。
+      if: github.event_name != 'pull_request' && github.event_name != 'merge_group'
       run: |
         mkdir clang-tidy
         cd clang-tidy
