@@ -65,7 +65,7 @@ jobs:
               return
             fi
             local out rc
-            out=$(/tmp/probe.bin 2>&1); rc=$?
+            out=$(/tmp/probe.bin 2>&1) && rc=0 || rc=$?
             echo "RESULT ${name} rc=${rc} out=[$(echo "$out" | tr '\n' '|' | cut -c1-160)] flags=[$*]"
           }
           run_variant o0 -O0
