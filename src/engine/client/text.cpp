@@ -529,6 +529,7 @@ private:
 	// 每帧最多提交 2 批，同时最多 4 个批次在 worker 中运行。
 	static constexpr int QM_MAX_GLYPH_SUBMIT_BATCHES_PER_FRAME = 2;
 	static constexpr int QM_MAX_ACTIVE_GLYPH_JOBS = 4;
+	bool m_QmGlyphPrewarmBurst = false;
 	std::shared_ptr<SQmGlyphWorkerState> m_pQmGlyphWorkerState = std::make_shared<SQmGlyphWorkerState>();
 	std::unordered_map<std::tuple<FT_Face, int, int, bool>, uint64_t, SGlyphKeyHash, SGlyphKeyEquals> m_QmPendingGlyphTasks;
 	std::vector<SQmGlyphWorkerTask> m_vQmPendingGlyphTasks;
@@ -1714,6 +1715,7 @@ public:
 	}
 
 	bool QmGlyphWorkerEnabled() const { return m_pEngine != nullptr && g_Config.m_QmTextRasterMode != 0; }
+	void QmSetGlyphPrewarmBurst(bool Burst) { m_QmGlyphPrewarmBurst = Burst; }
 	size_t QmGlyphWorkerPendingCount() const { return m_QmPendingGlyphTasks.size(); }
 	size_t QmGpuPreparedCount() const { return m_vQmGpuPreparedGlyphs.size(); }
 	int QmGpuBatchActiveCount() const { return m_QmGpuBatch.m_Active ? 1 : 0; }
@@ -1893,13 +1895,25 @@ public:
 	// 只为不可见文本安排后台预热。返回 true 表示全部字形已可同步构建容器；
 	// 返回 false 时调用方必须保留旧内容或稍后重试，禁止拿缺失字形的容器充数。
 	bool QmQueueTextGlyphsForPrewarm(const char *pText, int FontSize, int MaxGlyphs,
-		const std::unordered_map<FT_Face, std::pair<const FT_Byte *, FT_Long>> &FontData)
+		const std::unordered_map<FT_Face, std::pair<const FT_Byte *, FT_Long>> &FontData,
+		int *pNewlyQueued = nullptr, bool *pAllScheduled = nullptr)
 	{
+		if(pNewlyQueued != nullptr)
+			*pNewlyQueued = 0;
+		if(pAllScheduled != nullptr)
+			*pAllScheduled = false;
 		if(!QmGlyphWorkerEnabled() || pText == nullptr)
+		{
+			if(pAllScheduled != nullptr)
+				*pAllScheduled = true;
 			return true;
+		}
+		const size_t PendingBefore = m_QmPendingGlyphTasks.size();
 		FontSize = std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE);
 		int Queued = 0;
 		bool NotReady = false;
+		bool Rejected = false;
+		bool RetryPending = false;
 		const char *pCursor = pText;
 		while(*pCursor != '\0')
 		{
@@ -1914,10 +1928,20 @@ public:
 				continue;
 			NotReady = true;
 			if(Result == EQmGlyphPrewarmResult::REJECTED)
+			{
+				Rejected = true;
 				break;
+			}
+			if(Result == EQmGlyphPrewarmResult::RETRY)
+				RetryPending = true;
 			if(++Queued >= MaxGlyphs)
 				break;
 		}
+		const size_t PendingAfter = m_QmPendingGlyphTasks.size();
+		if(pNewlyQueued != nullptr)
+			*pNewlyQueued = PendingAfter > PendingBefore ? static_cast<int>(PendingAfter - PendingBefore) : 0;
+		if(pAllScheduled != nullptr)
+			*pAllScheduled = !Rejected && !RetryPending && *pCursor == '\0';
 		return !NotReady;
 	}
 
@@ -1925,12 +1949,17 @@ public:
 	// 一次制造上千个 shared_ptr/job 对象，也避免挤占文件与网络任务。
 	void SubmitQmGlyphTasks()
 	{
+		const int MaxSubmitBatches = m_QmGlyphPrewarmBurst ? 8 : QM_MAX_GLYPH_SUBMIT_BATCHES_PER_FRAME;
+		const int MaxActiveJobs = m_QmGlyphPrewarmBurst ?
+			std::clamp<int>(static_cast<int>(std::thread::hardware_concurrency()) - 1, QM_MAX_ACTIVE_GLYPH_JOBS, 8) :
+			QM_MAX_ACTIVE_GLYPH_JOBS;
+		const size_t JobBatch = m_QmGlyphPrewarmBurst ? 64 : QM_GLYPH_JOB_BATCH;
 		int SubmittedBatches = 0;
-		while(!m_vQmPendingGlyphTasks.empty() && SubmittedBatches < QM_MAX_GLYPH_SUBMIT_BATCHES_PER_FRAME)
+		while(!m_vQmPendingGlyphTasks.empty() && SubmittedBatches < MaxSubmitBatches)
 		{
-			if(m_pQmGlyphWorkerState->ActiveJobs() >= QM_MAX_ACTIVE_GLYPH_JOBS)
+			if(m_pQmGlyphWorkerState->ActiveJobs() >= MaxActiveJobs)
 				break;
-			const size_t BatchCount = std::min(QM_GLYPH_JOB_BATCH, m_vQmPendingGlyphTasks.size());
+			const size_t BatchCount = std::min(JobBatch, m_vQmPendingGlyphTasks.size());
 			std::vector<SQmGlyphWorkerTask> vBatch(std::make_move_iterator(m_vQmPendingGlyphTasks.begin()), std::make_move_iterator(m_vQmPendingGlyphTasks.begin() + BatchCount));
 			m_vQmPendingGlyphTasks.erase(m_vQmPendingGlyphTasks.begin(), m_vQmPendingGlyphTasks.begin() + BatchCount);
 			std::vector<std::tuple<FT_Face, int, int, bool>> vKeys;
@@ -3562,9 +3591,23 @@ class CTextRender : public IEngineTextRender
 		return m_pGlyphMap != nullptr && m_pGlyphMap->QmGlyphWorkerEnabled();
 	}
 
-	bool QmQueueTextGlyphsForPrewarm(const char *pText, int FontSize, int MaxGlyphs) override
+	void QmSetGlyphPrewarmBurst(bool Burst) override
 	{
-		return m_pGlyphMap == nullptr || m_pGlyphMap->QmQueueTextGlyphsForPrewarm(pText, FontSize, MaxGlyphs, m_QmFontFaceData);
+		if(m_pGlyphMap != nullptr)
+			m_pGlyphMap->QmSetGlyphPrewarmBurst(Burst);
+	}
+
+	bool QmQueueTextGlyphsForPrewarm(const char *pText, int FontSize, int MaxGlyphs, int *pNewlyQueued = nullptr, bool *pAllScheduled = nullptr) override
+	{
+		if(m_pGlyphMap == nullptr)
+		{
+			if(pNewlyQueued != nullptr)
+				*pNewlyQueued = 0;
+			if(pAllScheduled != nullptr)
+				*pAllScheduled = true;
+			return true;
+		}
+		return m_pGlyphMap->QmQueueTextGlyphsForPrewarm(pText, FontSize, MaxGlyphs, m_QmFontFaceData, pNewlyQueued, pAllScheduled);
 	}
 
 	int QmGlyphWorkerPendingCount() const override

@@ -175,7 +175,7 @@ TEST(SettingsWarmupLoadingContract, MenuTextPrebuildLogsRemainingMissingPlanItem
 	EXPECT_NE(Body.find("m_SettingsMenuTextPlanCursor"), std::string::npos);
 	EXPECT_NE(Body.find("const int RemainingMissing = m_SettingsMenuTextLastPrebuildStats.m_Remaining;"), std::string::npos);
 	EXPECT_EQ(Body.find("const int RemainingMissing = CountMissingSettingsMenuTextPlanItems();"), std::string::npos);
-	EXPECT_NE(Body.find("Built, Reused, RemainingMissing, Budget"), std::string::npos);
+	EXPECT_NE(Body.find("Built, Reused, RemainingMissing, PoolMissing, CursorRemaining, CollectionRemaining, Budget, GrantedTokens, pSkipReason"), std::string::npos);
 	EXPECT_EQ(Body.find("Built, Reused, RemainingBudget, Budget"), std::string::npos);
 }
 

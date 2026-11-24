@@ -605,9 +605,20 @@ public:
 	virtual void QmPrewarmGlyph(int Chr, int FontSize) {}
 	// QmClient: 后台字形预热是否可用；可见文本始终同步构建，不受此开关影响。
 	virtual bool QmGlyphWorkerEnabled() const { return false; }
+	// 启动加载阶段允许字形 worker 使用更多并发；只影响后台预热的提交节流。
+	virtual void QmSetGlyphPrewarmBurst(bool Burst) {}
 	// 返回 true 表示这段文本的字形已经全部可同步构建容器；false 时不可用
 	// 缺失字形的容器顶替可见页，必须下一帧重试。
-	virtual bool QmQueueTextGlyphsForPrewarm(const char *pText, int FontSize, int MaxGlyphs) { return true; }
+	// pNewlyQueued 返回主线程本次新排入 worker 的 distinct 字形数；
+	// pAllScheduled 表示这段文本的每个字形都已 ready/unsupported/queued，且没有 retry/reject。
+	virtual bool QmQueueTextGlyphsForPrewarm(const char *pText, int FontSize, int MaxGlyphs, int *pNewlyQueued = nullptr, bool *pAllScheduled = nullptr)
+	{
+		if(pNewlyQueued != nullptr)
+			*pNewlyQueued = 0;
+		if(pAllScheduled != nullptr)
+			*pAllScheduled = true;
+		return true;
+	}
 	virtual int QmGlyphWorkerPendingCount() const { return 0; }
 	virtual int QmGlyphWorkerActiveCount() const { return 0; }
 	// QmClient: 空闲帧预热“最近缺失字形”（菜单关闭时调用），返回本次实际预热数量。

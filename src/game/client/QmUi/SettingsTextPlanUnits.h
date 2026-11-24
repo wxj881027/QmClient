@@ -23,6 +23,7 @@ enum ESettingsMenuTextPlanCollectionUnitKind
 	MENU_TEXT_PLAN_UNIT_CONTRIBUTORS_TAB,
 	MENU_TEXT_PLAN_UNIT_BASE_PAGE,
 	MENU_TEXT_PLAN_UNIT_BASE_PAGE_TAB,
+	MENU_TEXT_PLAN_UNIT_TEE_COMBINATION,
 	MENU_TEXT_PLAN_UNIT_INGAME_ESC,
 };
 struct SSettingsMenuTextPlanSubtabGroup
@@ -35,7 +36,18 @@ struct SSettingsMenuTextPlanCollectionUnit
 	ESettingsMenuTextPlanCollectionUnitKind m_Kind = MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS;
 	int m_Page = -1;
 	int m_Tab = -1;
+	// Tee 页的第二条正交轴（Player/Dummy）；其他页面保持 -1。
+	int m_Subtab = -1;
 };
+
+// 设置计划末尾会附带一个 ingame ESC 单元用于后续 ESC 预热；它不能覆盖
+// 当前设置页的可见上下文，否则首屏优先级、可见缺失计数和字形批次都会
+// 指到 ingame 菜单。只有整份计划本身就是 ingame ESC 时，该单元才提供上下文。
+inline bool QmSettingsTextPlanUnitProvidesVisibleContext(ESettingsMenuTextPlanCollectionUnitKind Kind, ESettingsMenuTextPlanCollectionUnitKind FirstKind)
+{
+	return Kind == MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS ||
+	       (Kind == MENU_TEXT_PLAN_UNIT_INGAME_ESC && FirstKind == MENU_TEXT_PLAN_UNIT_INGAME_ESC);
+}
 
 inline bool QmSettingsTextPlanItemMatchesVisible(int ItemPage, int ItemTab, int VisiblePage, int VisibleTab)
 {
@@ -44,26 +56,42 @@ inline bool QmSettingsTextPlanItemMatchesVisible(int ItemPage, int ItemTab, int 
 	return VisibleTab < 0 ? ItemTab < 0 : ItemTab == VisibleTab;
 }
 
+// 只有真正面向玩家绘制的可见趟才计入候选/命中。纯测量趟、背景模糊副本和
+// 显式预建趟都不使用可见文本池，不能污染覆盖率与首屏就绪指标。
+inline bool QmMenuTextCountsVisibleCoverage(bool VisibleGuard, bool MeasurementOnly, bool BackgroundRender)
+{
+	return VisibleGuard && !MeasurementOnly && !BackgroundRender;
+}
+
+// 首屏文字就绪：本帧所有可见候选都已在当前代际的池中命中，且没有 miss/stale。
+// 这里不要求 render_ready_hit == candidates：同一个标签可能在布局与绘制中各取
+// 一次元素，但两次都命中同一容器，文字仍然完整可见。
+inline bool QmSettingsTextVisibleFrameReady(int Candidates, int PoolHits, int Misses, int Stales)
+{
+	return Candidates > 0 && Misses == 0 && Stales == 0 && PoolHits == Candidates;
+}
+
 inline std::vector<SSettingsMenuTextPlanCollectionUnit> QmSettingsTextPlanUnits(bool IngameEsc, int CurrentPage, int CurrentTab,
 	bool PreferQmClient, int TClientPage, int QmClientPage, int LastTClientTab, int LastQmClientTab,
 	int NumTClientTabs, int NumQmClientTabs, int HiddenQmClientTab,
-	int ContributorsPage, int NumContributorsTabs, std::span<const int> BasePages, std::span<const SSettingsMenuTextPlanSubtabGroup> SubtabGroups = {})
+	int ContributorsPage, int NumContributorsTabs, std::span<const int> BasePages, std::span<const SSettingsMenuTextPlanSubtabGroup> SubtabGroups = {},
+	int TeePage = -1, int NumTeeSubtabs = 0, int NumTeeTargets = 0)
 {
 	// ESC 预热只收集游戏菜单，不能借空闲更新渲染隐藏设置页并触发字体目录等冷加载。
 	if(IngameEsc)
 		return {{MENU_TEXT_PLAN_UNIT_INGAME_ESC, -1, -1}};
 	std::vector<SSettingsMenuTextPlanCollectionUnit> Units;
-	const auto HasUnit = [&Units](int Page, int Tab) {
-		return std::any_of(Units.begin(), Units.end(), [Page, Tab](const SSettingsMenuTextPlanCollectionUnit &Unit) {
-			return Unit.m_Page == Page && Unit.m_Tab == Tab;
+	const auto HasUnit = [&Units](int Page, int Tab, int Subtab) {
+		return std::any_of(Units.begin(), Units.end(), [Page, Tab, Subtab](const SSettingsMenuTextPlanCollectionUnit &Unit) {
+			return Unit.m_Page == Page && Unit.m_Tab == Tab && Unit.m_Subtab == Subtab;
 		});
 	};
-	const auto AddUnit = [&Units, &HasUnit](ESettingsMenuTextPlanCollectionUnitKind Kind, int Page, int Tab) {
+	const auto AddUnit = [&Units, &HasUnit](ESettingsMenuTextPlanCollectionUnitKind Kind, int Page, int Tab, int Subtab = -1) {
 		// 当前可见页会作为独立首单元收集；同一 page/tab 不再按基础页或页签
 		// 重复渲染。单个页面实测可达 13 ms，重复单元直接拖慢计划覆盖速度。
-		if(HasUnit(Page, Tab))
+		if(HasUnit(Page, Tab, Subtab))
 			return;
-		Units.push_back({Kind, Page, Tab});
+		Units.push_back({Kind, Page, Tab, Subtab});
 	};
 	const auto AddTClientTabs = [&]() {
 		for(int Tab = 0; Tab < NumTClientTabs; ++Tab)
@@ -84,6 +112,18 @@ inline std::vector<SSettingsMenuTextPlanCollectionUnit> QmSettingsTextPlanUnits(
 		for(int Tab = 0; Tab < Group.m_NumTabs; ++Tab)
 			AddUnit(MENU_TEXT_PLAN_UNIT_BASE_PAGE_TAB, Group.m_Page, Tab);
 	};
+	const auto AddTeeCombinations = [&AddUnit, TeePage, NumTeeSubtabs, NumTeeTargets, CurrentPage, CurrentTab]() {
+		if(TeePage < 0)
+			return;
+		for(int Subtab = 0; Subtab < NumTeeSubtabs; ++Subtab)
+			for(int Target = 0; Target < NumTeeTargets; ++Target)
+			{
+				// 当前可见 Tee 组合已由首单元覆盖，避免整页重复测量。
+				if(TeePage == CurrentPage && Subtab * NumTeeTargets + Target == CurrentTab)
+					continue;
+				AddUnit(MENU_TEXT_PLAN_UNIT_TEE_COMBINATION, TeePage, Subtab, Target);
+			}
+	};
 
 	AddUnit(MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS, CurrentPage, CurrentTab);
 	// 当前页面自身的兄弟子页签紧跟首屏；切换子页签时其余子页签的 descriptor
@@ -97,6 +137,8 @@ inline std::vector<SSettingsMenuTextPlanCollectionUnit> QmSettingsTextPlanUnits(
 	for(const SSettingsMenuTextPlanSubtabGroup &Group : SubtabGroups)
 		if(CurrentPage == Group.m_Page)
 			AddSubtabGroup(Group);
+	if(CurrentPage == TeePage)
+		AddTeeCombinations();
 	if(PreferQmClient)
 	{
 		AddQmClientTabs();
@@ -111,6 +153,11 @@ inline std::vector<SSettingsMenuTextPlanCollectionUnit> QmSettingsTextPlanUnits(
 	for(int Page : BasePages)
 		if(Page != ContributorsPage)
 		{
+			if(Page == TeePage)
+			{
+				AddTeeCombinations();
+				continue;
+			}
 			const auto Group = std::find_if(SubtabGroups.begin(), SubtabGroups.end(), [Page](const SSettingsMenuTextPlanSubtabGroup &Candidate) { return Candidate.m_Page == Page; });
 			if(Group != SubtabGroups.end())
 			{
@@ -121,6 +168,20 @@ inline std::vector<SSettingsMenuTextPlanCollectionUnit> QmSettingsTextPlanUnits(
 		}
 	AddUnit(MENU_TEXT_PLAN_UNIT_INGAME_ESC, -1, -1);
 	return Units;
+}
+
+inline uint64_t QmSettingsTextPlanLayoutSignature(int ScreenWidth, int ScreenHeight, int UiScale, int HiDpiScaleMilli)
+{
+	uint64_t Signature = 1469598103934665603ULL;
+	const auto Mix = [&Signature](uint64_t Value) {
+		Signature ^= Value;
+		Signature *= 1099511628211ULL;
+	};
+	Mix(static_cast<uint32_t>(ScreenWidth));
+	Mix(static_cast<uint32_t>(ScreenHeight));
+	Mix(static_cast<uint32_t>(UiScale));
+	Mix(static_cast<uint32_t>(HiDpiScaleMilli));
+	return Signature;
 }
 
 struct SSettingsTextPlanGlyphDemandInput

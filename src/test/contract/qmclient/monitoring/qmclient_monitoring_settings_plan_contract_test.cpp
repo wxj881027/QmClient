@@ -32,7 +32,7 @@ TEST(QmMonitoringSettingsPlanContract, VisibleTextMissBuildsAndRendersInTheSameF
 	ASSERT_FALSE(ElementBody.empty());
 	ASSERT_FALSE(LabelBody.empty());
 
-	EXPECT_NE(LabelBody.find("if(NeedsBuild && m_MenuTextPoolVisibleGuard && Render && !Ui()->MeasurementOnly())"), std::string::npos);
+	EXPECT_NE(LabelBody.find("if(NeedsBuild && MenuTextCoverageActive() && Render && !Ui()->MeasurementOnly() && !Ui()->BackgroundRender())"), std::string::npos);
 	EXPECT_NE(LabelBody.find("DrainMenuTextContainerBuild(Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor, false, &TextContainerRecreated);"), std::string::npos);
 	EXPECT_NE(LabelBody.find("Ui()->RenderLabelTextContainerAligned(*pElementRect, pRect, Align);"), std::string::npos);
 
@@ -45,6 +45,48 @@ TEST(QmMonitoringSettingsPlanContract, VisibleTextMissBuildsAndRendersInTheSameF
 	const std::string MissBody = ElementBody.substr(MissBranch, MissBranchEnd - MissBranch);
 	EXPECT_NE(MissBody.find("m_MenuTextPool.try_emplace(std::string(Key)).first;"), std::string::npos);
 	EXPECT_EQ(MissBody.find("return m_MenuTextFallbackElement;"), std::string::npos);
+}
+
+TEST(QmMonitoringSettingsPlanContract, LanguagePlanCollectionCoversEveryLanguageAndDoesNotPolluteVisibleCoverage)
+{
+	const std::string Settings = ReadRepoFile("src/game/client/components/menus_settings.cpp");
+	const std::string PrepareBody = ExtractSourceFunctionBody(Settings, "void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete, const SSettingsContentMetrics *pMetrics)");
+	const std::string LanguageBody = ExtractSourceFunctionBody(Settings, "bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMetrics *pMetrics)");
+	ASSERT_FALSE(PrepareBody.empty());
+	ASSERT_FALSE(LanguageBody.empty());
+
+	// 语言名是静态内容：计划收集必须无视“缓存已完成”直接遍历全部语言，
+	// 同时只能产生 descriptor，不能混入 visible candidates/pool_hit。
+	EXPECT_NE(PrepareBody.find("const bool CollectingPlan = m_MenuTextPlanCollecting;"), std::string::npos);
+	EXPECT_NE(PrepareBody.find("const CScopedMenuTextCoverageSuppression CoverageSuppression(this);"), std::string::npos);
+	EXPECT_NE(PrepareBody.find("if(!CollectingPlan &&"), std::string::npos);
+	EXPECT_NE(PrepareBody.find("if(CollectingPlan)"), std::string::npos);
+
+	// 测量/计划收集不得推进真实滚动区，也不得消费首次滚动到当前语言。
+	EXPECT_NE(LanguageBody.find("const bool MeasurementPass = Ui()->MeasurementOnly();"), std::string::npos);
+	EXPECT_NE(LanguageBody.find("MeasurementPass ? s_MeasurementLanguageScrollRegion : gs_LanguageScrollRegion"), std::string::npos);
+	EXPECT_NE(LanguageBody.find("if(!MeasurementPass)\n\t\ts_ScrollToInitialSelection = false;"), std::string::npos);
+	EXPECT_NE(LanguageBody.find("MeasurementPass ? nullptr : &ScrollRegion"), std::string::npos);
+	EXPECT_NE(LanguageBody.find("SettingsTextElement(SETTINGS_LANGUAGE, -1, LanguageRowTextId(Language))"), std::string::npos);
+}
+
+TEST(QmMonitoringSettingsPlanContract, TextPoolPrebuildMayMutateThePoolInsideRenderOnly)
+{
+	const std::string Menus = ReadRepoFile("src/game/client/components/menus.cpp");
+	const std::string ElementBody = ExtractSourceFunctionBody(Menus, "CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const SMenuTextStyleKey &StyleKey)");
+	const std::string PoolBody = ExtractSourceFunctionBody(Menus, "int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride)");
+	const std::string ItemBody = ExtractSourceFunctionBody(Menus, "bool CMenus::PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget)");
+	ASSERT_FALSE(ElementBody.empty());
+	ASSERT_FALSE(PoolBody.empty());
+	ASSERT_FALSE(ItemBody.empty());
+
+	// 预建借用 RenderOnly 只抑制绘制，但必须写真实文本池；布局测量才走临时元素。
+	EXPECT_NE(ElementBody.find("Ui()->MeasurementOnly() && !m_MenuTextPoolPrebuildActive"), std::string::npos);
+	EXPECT_NE(PoolBody.find("const CScopedMenuTextPoolPrebuild PoolPrebuildScope(this);"), std::string::npos);
+	// 容器创建失败（字形未齐）不能算 built 并跳过，否则首屏仍要现场重建。
+	EXPECT_NE(ItemBody.find("if(!pRect->m_UITextContainer.Valid())"), std::string::npos);
+	EXPECT_NE(ItemBody.find("event=settings_text_prebuild_fail"), std::string::npos);
+	EXPECT_NE(PoolBody.find("const bool Built = PrebuildSettingsTextPlanItem(Item, RemainingBudget);\n\t\tif(!Built)\n\t\t\tbreak;"), std::string::npos);
 }
 
 TEST(QmMonitoringSettingsPlanContract, PlanCollectionUsesTheSameSafeAreaAsVisibleSettings)
@@ -68,7 +110,7 @@ TEST(QmMonitoringSettingsPlanContract, PlanOperationStaysStableAcrossPrewarmCont
 {
 	const std::string Menus = ReadRepoFile("src/game/client/components/menus.cpp");
 	const std::string PrepareBody = ExtractSourceFunctionBody(Menus, "bool CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride)");
-	const std::string ReadyBody = ExtractSourceFunctionBody(Menus, "bool CMenus::SettingsMenuTextPrebuildReady(const char *pOperationOverride) const");
+	const std::string ReadyBody = ExtractSourceFunctionBody(Menus, "bool CMenus::SettingsMenuTextPrebuildReady(const char *pOperationOverride)");
 	ASSERT_FALSE(PrepareBody.empty());
 	ASSERT_FALSE(ReadyBody.empty());
 
@@ -88,6 +130,9 @@ TEST(QmMonitoringSettingsPlanContract, PlanCollectionCoversSearchContributorsAnd
 	EXPECT_NE(PrepareBody.find("SETTINGS_SEARCH,"), std::string::npos);
 	EXPECT_NE(PrepareBody.find("SETTINGS_CONTRIBUTORS,"), std::string::npos);
 	EXPECT_NE(PrepareBody.find("SETTINGS_PROFILES,"), std::string::npos);
+	EXPECT_NE(PrepareBody.find("qm_tclient_cards::NUMBER_OF_TCLIENT_TABS"), std::string::npos);
+	EXPECT_NE(PrepareBody.find("{SETTINGS_CONTROLS, static_cast<int>(CMenusSettingsControls::ETab::NUM)}"), std::string::npos);
+	EXPECT_NE(PrepareBody.find("SETTINGS_TEE, 2, 2"), std::string::npos);
 }
 
 TEST(QmMonitoringSettingsPlanContract, PendingPlanPrioritizesTheCurrentVisiblePage)
@@ -123,7 +168,10 @@ TEST(QmMonitoringSettingsPlanContract, IdleMenuContinuesSettingsTextPrewarm)
 	// 加载阶段的固定步数可能提前耗尽；主菜单/ESC 空闲帧必须继续补齐，
 	// 否则首次进入设置或切 tab 会在可见帧集中构建文本容器。
 	EXPECT_NE(UpdateBody.find("QmMenuTextIdlePrewarmAllowed("), std::string::npos);
+	EXPECT_NE(UpdateBody.find("PrewarmSettingsTextGlyphs(1, 64);"), std::string::npos);
 	EXPECT_NE(UpdateBody.find("PrebuildSettingsMenuTextPool(8, \"target_settings\", \"settings_open\");"), std::string::npos);
+	EXPECT_NE(UpdateBody.find("PrebuildVisibleSettingsMenuTextPool(64);"), std::string::npos);
+	EXPECT_NE(Menus.find("void CMenus::PrebuildVisibleSettingsMenuTextPool(int Budget)"), std::string::npos);
 }
 
 TEST(QmMonitoringSettingsPlanContract, SettingsPlanCollectionDoesNotEnterVisibleGuard)
@@ -154,6 +202,9 @@ TEST(QmMonitoringSettingsPlanContract, SettingsPlanCollectionDoesNotSynchronousl
 
 	// 启动 loading 只返回非阻塞入口；全量收集和容器构建由主循环逐帧预算继续。
 	EXPECT_NE(PrewarmBody.find("\"startup_text_prewarm_deferred\""), std::string::npos);
+	EXPECT_NE(PrewarmBody.find("PrebuildSettingsTextPoolDuringStartup(8)"), std::string::npos);
+	EXPECT_NE(PrewarmBody.find("PrewarmSettingsTextGlyphs(4, Request)"), std::string::npos);
+	EXPECT_NE(PrewarmBody.find("static_queued=%d"), std::string::npos);
 	EXPECT_EQ(PrewarmBody.find("PrewarmSettingsTextPoolForLoading("), std::string::npos);
 	EXPECT_EQ(PrewarmBody.find("for(int Step"), std::string::npos);
 

@@ -1185,19 +1185,50 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 		m_Menus.PrewarmSettingsPages();
 	// 这里刷新一次 loading，让上面的缓存初始化有可见反馈。
 	m_Menus.RenderLoading(pLoadingCaption, pLoadingMessage, 0);
-	// 启动阶段只把“上次会话记录过的冷字形”交给 worker。主线程在循环里只做
-	// 提交/发布和 loading 背景呈现，不调同步光栅化；有 250ms 上限，跑不完的
-	// 部分留给正常帧继续，绝不为预热阻塞首帧。
+	// 启动阶段优先把设置页静态字形需求交给 worker，再补上次会话的最近 miss。
+	// 主线程在循环里只做提交/发布和 loading 背景呈现，不调同步光栅化；有
+	// 250ms 上限，跑不完的部分留给正常帧继续，绝不为预热阻塞首帧。
 	const bool WorkerEnabled = SettingsPrewarmEnabled && TextRender()->QmGlyphWorkerEnabled();
+	// 加载阶段允许 worker 使用更多并发，尽快排空首屏字形；RAII 保证无论
+	// 从哪个分支退出都恢复常规节流，不影响进入游戏后的文件/网络任务。
+	struct SStartupGlyphBurstScope
+	{
+		ITextRender *m_pTextRender;
+		explicit SStartupGlyphBurstScope(ITextRender *pTextRender) :
+			m_pTextRender(pTextRender)
+		{
+			if(m_pTextRender != nullptr)
+				m_pTextRender->QmSetGlyphPrewarmBurst(true);
+		}
+		~SStartupGlyphBurstScope()
+		{
+			if(m_pTextRender != nullptr)
+				m_pTextRender->QmSetGlyphPrewarmBurst(false);
+		}
+	};
+	const SStartupGlyphBurstScope StartupGlyphBurst(WorkerEnabled ? TextRender() : nullptr);
 	// 历史集合最多有 4096 项，全部塞进处理器会让图集在启动时就接近满容量。
 	// 启动阶段只取一小批做“首屏命中”，其余留给后续空闲预算，不能让预热
 	// 反过来触发 4096→8192 的整表重建。
-	constexpr int STARTUP_GLYPH_PREWARM_LIMIT = static_cast<int>(QM_GLYPH_WORKER_PENDING_CAPACITY);
+	// 1024 只是 worker 单波挂起上限，不是启动静态计划的总需求；计划本身约
+	// 1083 个不同字形，按 1024 截断会把首屏标题/卡片字形留到可见帧同步光栅化。
+	// 给到两波（2048），仍远低于历史 4096 的图集风险，但足以覆盖静态计划。
+	constexpr int STARTUP_GLYPH_PREWARM_LIMIT = static_cast<int>(QM_GLYPH_WORKER_PENDING_CAPACITY) * 2;
 	const int StartupGlyphLimit = SettingsPrewarmEnabled ? STARTUP_GLYPH_PREWARM_LIMIT : 0;
 	int GlyphBatches = 0;
 	int GlyphRequested = 0;
 	int GlyphProcessed = 0;
 	int GlyphQueued = 0;
+	int StaticGlyphBatches = 0;
+	int StaticGlyphQueued = 0;
+	int StaticGlyphRemainingBatches = 0;
+	int StaticGlyphCalls = 0;
+	bool StaticGlyphSourceComplete = !WorkerEnabled;
+	int StartupTextSteps = 0;
+	int StartupTextBuilt = 0;
+	int StartupVisibleMissing = -1;
+	int StartupTextNoProgressSteps = 0;
+	const char *pStartupStopReason = "deadline";
 	int GlyphPumps = 0;
 	const int64_t GlyphPrewarmStart = time_get_nanoseconds().count();
 	int LoadingRefreshRate = Graphics() != nullptr ? Graphics()->ScreenRefreshRate() : 0;
@@ -1207,30 +1238,82 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 	// 按显示器刷新周期推进，背景帧和实体构建各自保持稳定节奏。
 	const int64_t EntityStepIntervalNs = 1000000000LL / LoadingRefreshRate;
 	int64_t NextEntityStepNs = 0;
+	int64_t NextTextStepNs = 0;
+	int64_t NextVisibleCheckNs = 0;
 	constexpr int64_t MAX_STARTUP_PREWARM_NS = 250 * 1000 * 1000LL;
 	while(true)
 	{
 		const int64_t NowNs = time_get_nanoseconds().count();
 		const int GlyphPendingNow = TextRender()->QmGlyphWorkerPendingCount();
-		const bool GlyphSourceExhausted = GlyphRequested >= StartupGlyphLimit || TextRender()->QmRecentGlyphPrewarmComplete();
+		const bool GlyphLimitExhausted = GlyphRequested >= StartupGlyphLimit;
+		const bool StaticGlyphExhausted = !WorkerEnabled || StaticGlyphSourceComplete || GlyphLimitExhausted;
+		const bool RecentGlyphExhausted = !WorkerEnabled || TextRender()->QmRecentGlyphPrewarmComplete() || GlyphLimitExhausted;
+		const bool GlyphSourceExhausted = StaticGlyphExhausted && RecentGlyphExhausted;
 		const bool GlyphIdle = !WorkerEnabled || (GlyphPendingNow == 0 && GlyphSourceExhausted);
-		if(GlyphIdle && m_MapImages.EntitiesPrewarmFinished())
-			break;
-		if(NowNs - GlyphPrewarmStart >= MAX_STARTUP_PREWARM_NS)
-			break;
-
-		if(WorkerEnabled && GlyphPendingNow == 0 && GlyphRequested < StartupGlyphLimit &&
-			!TextRender()->QmRecentGlyphPrewarmComplete())
+		if(NowNs >= NextVisibleCheckNs)
 		{
-			const int Request = minimum(256, StartupGlyphLimit - GlyphRequested);
-			const int PendingBefore = GlyphPendingNow;
-			GlyphProcessed += TextRender()->QmPrewarmRecentGlyphs(Request);
-			const int PendingAfter = TextRender()->QmGlyphWorkerPendingCount();
-			GlyphRequested += Request;
-			GlyphQueued += maximum(0, PendingAfter - PendingBefore);
-			++GlyphBatches;
+			StartupVisibleMissing = m_Menus.CountMissingVisibleSettingsMenuTextPoolItems();
+			NextVisibleCheckNs = NowNs + 5 * 1000 * 1000LL;
+		}
+		const bool StartupTextReady = StartupVisibleMissing == 0;
+		if(GlyphIdle && StartupTextReady && m_MapImages.EntitiesPrewarmFinished())
+		{
+			pStartupStopReason = "ready";
+			break;
+		}
+		if(NowNs - GlyphPrewarmStart >= MAX_STARTUP_PREWARM_NS)
+		{
+			pStartupStopReason = "deadline";
+			break;
+		}
+
+		if(WorkerEnabled && !GlyphLimitExhausted)
+		{
+			if(!StaticGlyphSourceComplete)
+			{
+				const int Request = minimum(256, StartupGlyphLimit - GlyphRequested);
+				const CMenus::SSettingsTextGlyphPrewarmStats StaticStats = m_Menus.PrewarmSettingsTextGlyphs(4, Request);
+				++StaticGlyphCalls;
+				StaticGlyphBatches += StaticStats.m_Batches;
+				StaticGlyphQueued += StaticStats.m_NewlyQueued;
+				StaticGlyphRemainingBatches = StaticStats.m_RemainingBatches;
+				GlyphBatches += StaticStats.m_Batches;
+				GlyphRequested += StaticStats.m_NewlyQueued;
+				StaticGlyphSourceComplete = StaticStats.m_Complete;
+			}
+			// 静态计划已排空后再用最近 miss 补剩余容量；两者共用同一上限。
+			if(StaticGlyphSourceComplete && TextRender()->QmGlyphWorkerPendingCount() == 0 &&
+				!TextRender()->QmRecentGlyphPrewarmComplete() && GlyphRequested < StartupGlyphLimit)
+			{
+				const int Request = minimum(256, StartupGlyphLimit - GlyphRequested);
+				const int PendingBefore = TextRender()->QmGlyphWorkerPendingCount();
+				const int Done = TextRender()->QmPrewarmRecentGlyphs(Request);
+				GlyphProcessed += Done;
+				GlyphRequested += Done;
+				if(Done > 0)
+					++GlyphBatches;
+				const int PendingAfter = TextRender()->QmGlyphWorkerPendingCount();
+				GlyphQueued += maximum(0, PendingAfter - PendingBefore);
+			}
 		}
 		TextRender()->QmTextFrameEnd();
+		if(SettingsPrewarmEnabled && NowNs >= NextTextStepNs)
+		{
+			const int Built = m_Menus.PrebuildSettingsTextPoolDuringStartup(8);
+			StartupTextBuilt += Built;
+			StartupTextNoProgressSteps = Built > 0 ? 0 : StartupTextNoProgressSteps + 1;
+			NextTextStepNs = NowNs + EntityStepIntervalNs;
+			++StartupTextSteps;
+			// 可见首屏一直补不齐时不能无限拖住加载画面：字形空闲且连续
+			// 多个显示周期没有新容器，说明计划键或布局已经漂移，留给首帧
+			// 同步路径处理，并把这个状态写进启动日志。
+			if(GlyphIdle && !StartupTextReady && StartupTextNoProgressSteps >= 16)
+			{
+				StartupVisibleMissing = m_Menus.CountMissingVisibleSettingsMenuTextPoolItems();
+				pStartupStopReason = "text_stalled";
+				break;
+			}
+		}
 		if(NowNs >= NextEntityStepNs)
 		{
 			m_MapImages.AdvanceEntitiesPrewarm();
@@ -1241,20 +1324,26 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 		std::this_thread::sleep_for(std::chrono::microseconds(500));
 	}
 	const int GlyphPending = TextRender()->QmGlyphWorkerPendingCount();
-	const bool GlyphComplete = TextRender()->QmRecentGlyphPrewarmComplete() && GlyphPending == 0;
+	const bool GlyphComplete = StaticGlyphSourceComplete && TextRender()->QmRecentGlyphPrewarmComplete() && GlyphPending == 0;
 	const size_t GlyphRemaining = TextRender()->QmRecentGlyphPrewarmRemaining();
 	const size_t AtlasDimension = TextRender()->QmGlyphAtlasDimension();
 	const int AtlasGrowths = TextRender()->QmGlyphAtlasGrowthCount();
 	const double GlyphElapsedMs = (double)(time_get_nanoseconds().count() - GlyphPrewarmStart) / 1000000.0;
-	char aGlyphPayload[448];
+	char aGlyphPayload[896];
 	str_format(aGlyphPayload, sizeof(aGlyphPayload),
-		"event=startup_glyph_prewarm enabled=%d worker=%d limit=%d requested=%d processed=%d batches=%d queued=%d pumps=%d pending=%d remaining=%zu complete=%d atlas_dim=%zu atlas_growths=%d elapsed_ms=%.2f",
-		SettingsPrewarmEnabled ? 1 : 0, WorkerEnabled ? 1 : 0, StartupGlyphLimit, GlyphRequested, GlyphProcessed, GlyphBatches, GlyphQueued, GlyphPumps,
-		GlyphPending, GlyphRemaining, GlyphComplete ? 1 : 0, AtlasDimension, AtlasGrowths, GlyphElapsedMs);
+		"event=startup_glyph_prewarm enabled=%d worker=%d burst=%d limit=%d requested=%d processed=%d batches=%d queued=%d static_calls=%d static_batches=%d static_queued=%d static_remaining_batches=%d static_complete=%d recent_processed=%d recent_remaining=%zu text_steps=%d text_built=%d visible_missing=%d startup_text_ready=%d stop_reason=%s pumps=%d pending=%d complete=%d atlas_dim=%zu atlas_growths=%d elapsed_ms=%.2f",
+		SettingsPrewarmEnabled ? 1 : 0, WorkerEnabled ? 1 : 0, WorkerEnabled ? 1 : 0, StartupGlyphLimit, GlyphRequested, GlyphProcessed, GlyphBatches, GlyphQueued,
+		StaticGlyphCalls, StaticGlyphBatches, StaticGlyphQueued, StaticGlyphRemainingBatches, StaticGlyphSourceComplete ? 1 : 0, GlyphProcessed,
+		GlyphRemaining, StartupTextSteps, StartupTextBuilt, StartupVisibleMissing, StartupVisibleMissing == 0 ? 1 : 0,
+		pStartupStopReason, GlyphPumps, GlyphPending, GlyphComplete ? 1 : 0, AtlasDimension, AtlasGrowths, GlyphElapsedMs);
 	dbg_msg("perf/settings-warmup", "%s", aGlyphPayload);
 	if(QmPerfEnabled())
 		QmPerfLogPayload("perf/settings-warmup", aGlyphPayload, Client(), "settings:tee");
-	LogSettingsLoadingPrewarmEvent(Client(), "startup_text_prewarm_deferred", 0, 1, 0, 0, 0, 0, -1, m_Menus.SettingsTextContainerCount(), 0, GlyphElapsedMs);
+	if(StartupVisibleMissing != 0)
+		m_Menus.LogSettingsStartupVisibleGaps();
+	LogSettingsLoadingPrewarmEvent(Client(), "startup_text_prewarm_deferred", 0, 1, 0, 0, 0, 0,
+		m_Menus.SettingsTextPrebuildRemaining(), m_Menus.SettingsTextContainerCount(),
+		m_Menus.SettingsTextPlanCollectionRemaining() == 0 ? 1 : 0, GlyphElapsedMs);
 }
 
 void CGameClient::CancelConnectionResourcePreparation()
@@ -1318,30 +1407,66 @@ void CGameClient::OnConnectionResourceUpdate()
 
 void CGameClient::OnUpdate()
 {
-	m_LocalServer.Update();
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		m_LocalServer.Update();
+		LogPerfStage(this, "onupdate_local_server", Timer.ElapsedMs());
+	}
 	// 返回客户端后先交接输入，再向组件分发这一帧的事件。
 	m_QmImeManager.SetClientOwnership(true);
 	// 字体配置变化通过统一窗口失效路径清理缓存。
-	SyncQmUiIconWeight();
-	SyncQmCustomFontWeight();
-	PrewarmQmIconGlyphs(24, time_freq() / 1000);
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		SyncQmUiIconWeight();
+		SyncQmCustomFontWeight();
+		LogPerfStage(this, "onupdate_sync_font_weight", Timer.ElapsedMs());
+	}
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		PrewarmQmIconGlyphs(24, time_freq() / 1000);
+		LogPerfStage(this, "onupdate_prewarm_icon_glyphs", Timer.ElapsedMs());
+	}
 	// 实体纹理解码在 worker，主线程每帧最多构建一层并上传，避免进服首帧长阻塞。
-	m_MapImages.AdvanceEntitiesPrewarm();
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		m_MapImages.AdvanceEntitiesPrewarm();
+		LogPerfStage(this, "onupdate_entities_prewarm", Timer.ElapsedMs());
+	}
 
 	const bool TeeSettingsActive = m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_TEE;
 	const bool AssetsSettingsActive = m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_ASSETS;
-	m_Skins.PrepareSettingsThroughputForFrame();
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		m_Skins.PrepareSettingsThroughputForFrame();
+		LogPerfStage(this, "onupdate_skins_prepare", Timer.ElapsedMs());
+	}
 	const int FrameGpuUploadLimit = m_Menus.SettingsGpuUploadLimitForFrame(TeeSettingsActive, AssetsSettingsActive, m_Skins.SettingsGpuUploadLimiterUnitsForFrame());
 	const int FrameSkinUploadBudget = TeeSettingsActive ? m_Skins.SettingsGpuUploadFrameBudgetForFrame() : -1;
 	m_GpuUploadLimiter.OnFrameStart(FrameGpuUploadLimit);
 	m_Menus.ResetSettingsFrameBudgetForFrame(TeeSettingsActive, AssetsSettingsActive, FrameSkinUploadBudget);
 
-	HandleLanguageChanged();
-	RefreshStreamerSkinPrivacyAfterStateChange();
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		HandleLanguageChanged();
+		LogPerfStage(this, "onupdate_language_changed", Timer.ElapsedMs());
+	}
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		RefreshStreamerSkinPrivacyAfterStateChange();
+		LogPerfStage(this, "onupdate_streamer_privacy", Timer.ElapsedMs());
+	}
 	// 自杀保护的自动开启计时：按墙钟推进，与渲染帧率无关。
-	UpdateQmSelfKillProtection();
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		UpdateQmSelfKillProtection();
+		LogPerfStage(this, "onupdate_selfkill_protection", Timer.ElapsedMs());
+	}
 
-	CUIElementBase::Init(Ui()); // update static pointer because game and editor use separate UI
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		CUIElementBase::Init(Ui()); // update static pointer because game and editor use separate UI
+		LogPerfStage(this, "onupdate_ui_element_base", Timer.ElapsedMs());
+	}
 
 	// handle mouse movement
 	float x = 0.0f, y = 0.0f;
@@ -1367,12 +1492,16 @@ void CGameClient::OnUpdate()
 
 	// handle key presses
 	std::fill(std::begin(m_Controls.m_aMouseOnAction), std::end(m_Controls.m_aMouseOnAction), false);
-	Input()->ConsumeEvents([&](const IInput::CEvent &Event) {
-		const bool HadCountingFocus = m_InputOverlay.HasCountingFocus();
-		OnInput(Event);
-		// 打开或关闭聊天、菜单的按键不属于游戏操作，但仍要同步按下状态。
-		m_InputOverlay.ObservePhysicalInput(Event, HadCountingFocus);
-	});
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		Input()->ConsumeEvents([&](const IInput::CEvent &Event) {
+			const bool HadCountingFocus = m_InputOverlay.HasCountingFocus();
+			OnInput(Event);
+			// 打开或关闭聊天、菜单的按键不属于游戏操作，但仍要同步按下状态。
+			m_InputOverlay.ObservePhysicalInput(Event, HadCountingFocus);
+		});
+		LogPerfStage(this, "onupdate_input_events", Timer.ElapsedMs());
+	}
 
 	if(g_Config.m_ClSubTickAiming)
 	{
@@ -1384,26 +1513,45 @@ void CGameClient::OnUpdate()
 		}
 	}
 
-	if(g_Config.m_QmPerfStutterDiagnostics)
 	{
-		m_QmStutterCapture.PrepareComponents(m_vpAll.size());
-		for(size_t i = 0; i < m_vpAll.size(); ++i)
+		CPerfTimer Timer(QmPerfEnabled());
+		if(g_Config.m_QmPerfStutterDiagnostics)
 		{
-			CPerfTimer ComponentTimer;
-			m_vpAll[i]->OnUpdate();
-			m_QmStutterCapture.RecordUpdate(i, ComponentTimer.ElapsedMs());
+			m_QmStutterCapture.PrepareComponents(m_vpAll.size());
+			for(size_t i = 0; i < m_vpAll.size(); ++i)
+			{
+				CPerfTimer ComponentTimer;
+				m_vpAll[i]->OnUpdate();
+				const double ComponentMs = ComponentTimer.ElapsedMs();
+				m_QmStutterCapture.RecordUpdate(i, ComponentMs);
+				if(QmPerfShouldLogDuration(ComponentMs))
+				{
+					char aExtra[192];
+					str_format(aExtra, sizeof(aExtra), "component=%s", i < m_vpAllPerfNames.size() ? m_vpAllPerfNames[i] : "unknown");
+					QmPerfLogStage("perf/gameclient", "onupdate_component", ComponentMs, true, Client(), nullptr, nullptr, aExtra);
+				}
+			}
 		}
-	}
-	else
-	{
-		for(auto &pComponent : m_vpAll)
-			pComponent->OnUpdate();
+		else
+		{
+			for(auto &pComponent : m_vpAll)
+				pComponent->OnUpdate();
+		}
+		LogPerfStage(this, "onupdate_components_total", Timer.ElapsedMs());
 	}
 
 	// 皮肤组件的 OnUpdate 已处理卸载/加载通知，绘制前再修复失效句柄。
-	RepairStaleTeeRenderInfos();
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		RepairStaleTeeRenderInfos();
+		LogPerfStage(this, "onupdate_repair_tee_infos", Timer.ElapsedMs());
+	}
 
-	RefreshPredictionAfterConfigChange();
+	{
+		CPerfTimer Timer(QmPerfEnabled());
+		RefreshPredictionAfterConfigChange();
+		LogPerfStage(this, "onupdate_prediction_refresh", Timer.ElapsedMs());
+	}
 
 	RecordDemoHudState(false);
 	RecordDemoInputState(false);

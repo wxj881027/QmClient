@@ -161,6 +161,18 @@ TEST(SettingsLoadingPrewarm, BasePageSubtabsArePlannedOnceAndVisibleTabLeads)
 	EXPECT_EQ(aDdnetTabs, (std::array<int, 2>{1, 1}));
 }
 
+TEST(SettingsLoadingPrewarm, ControlPageCollectsEveryTabAndSkipsVisibleDuplicate)
+{
+	const int Pages[] = {50};
+	const SSettingsMenuTextPlanSubtabGroup Groups[] = {{50, 4}};
+	const auto Units = QmSettingsTextPlanUnits(false, 50, 2, false, 10, 20, 0, 0, 1, 1, -1, 30, 1, Pages, Groups);
+	std::array<int, 4> aControlTabs{};
+	for(const auto &Unit : Units)
+		if(Unit.m_Kind == MENU_TEXT_PLAN_UNIT_BASE_PAGE_TAB && Unit.m_Page == 50 && Unit.m_Tab >= 0 && Unit.m_Tab < (int)aControlTabs.size())
+			++aControlTabs[Unit.m_Tab];
+	EXPECT_EQ(aControlTabs, (std::array<int, 4>{1, 1, 0, 1}));
+}
+
 TEST(SettingsLoadingPrewarm, CurrentBasePageIsCollectedOnlyOnce)
 {
 	const int Pages[] = {1, 2, 3};
@@ -173,6 +185,60 @@ TEST(SettingsLoadingPrewarm, CurrentBasePageIsCollectedOnlyOnce)
 	ASSERT_GE(Units.size(), 2u);
 	EXPECT_EQ(Units[Units.size() - 2].m_Page, 2);
 	EXPECT_EQ(Units.back().m_Kind, MENU_TEXT_PLAN_UNIT_INGAME_ESC);
+}
+
+TEST(SettingsLoadingPrewarm, TeePagePlansAllOrthogonalCombinations)
+{
+	const int Pages[] = {5, 6};
+	const auto Units = QmSettingsTextPlanUnits(false, 6, -1, false, 10, 20, 0, 0, 1, 1, -1, 30, 1, Pages, {}, 5, 2, 2);
+	int TeeCombinations = 0;
+	for(const auto &Unit : Units)
+	{
+		if(Unit.m_Kind != MENU_TEXT_PLAN_UNIT_TEE_COMBINATION)
+			continue;
+		EXPECT_EQ(Unit.m_Page, 5);
+		EXPECT_GE(Unit.m_Tab, 0);
+		EXPECT_LT(Unit.m_Tab, 2);
+		EXPECT_GE(Unit.m_Subtab, 0);
+		EXPECT_LT(Unit.m_Subtab, 2);
+		++TeeCombinations;
+	}
+	EXPECT_EQ(TeeCombinations, 4);
+}
+
+TEST(SettingsLoadingPrewarm, VisibleTeeCombinationIsNotCollectedTwice)
+{
+	const int Pages[] = {5};
+	const auto Units = QmSettingsTextPlanUnits(false, 5, 3, false, 10, 20, 0, 0, 1, 1, -1, 30, 1, Pages, {}, 5, 2, 2);
+	ASSERT_FALSE(Units.empty());
+	EXPECT_EQ(Units.front().m_Kind, MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS);
+	EXPECT_EQ(Units.front().m_Tab, 3);
+	int TeeCombinations = 0;
+	for(const auto &Unit : Units)
+	{
+		if(Unit.m_Kind != MENU_TEXT_PLAN_UNIT_TEE_COMBINATION)
+			continue;
+		EXPECT_FALSE(Unit.m_Tab == 1 && Unit.m_Subtab == 1);
+		++TeeCombinations;
+	}
+	EXPECT_EQ(TeeCombinations, 3);
+}
+
+TEST(SettingsLoadingPrewarm, LayoutSignatureChangesWithScreenScaleAndDpi)
+{
+	const uint64_t Baseline = QmSettingsTextPlanLayoutSignature(3840, 2160, 100, 1000);
+	EXPECT_EQ(QmSettingsTextPlanLayoutSignature(3840, 2160, 100, 1000), Baseline);
+	EXPECT_NE(QmSettingsTextPlanLayoutSignature(1920, 2160, 100, 1000), Baseline);
+	EXPECT_NE(QmSettingsTextPlanLayoutSignature(3840, 1080, 100, 1000), Baseline);
+	EXPECT_NE(QmSettingsTextPlanLayoutSignature(3840, 2160, 125, 1000), Baseline);
+	EXPECT_NE(QmSettingsTextPlanLayoutSignature(3840, 2160, 100, 1500), Baseline);
+}
+
+TEST(SettingsLoadingPrewarm, AppendedIngameEscUnitDoesNotOverrideSettingsVisibleContext)
+{
+	EXPECT_TRUE(QmSettingsTextPlanUnitProvidesVisibleContext(MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS, MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS));
+	EXPECT_FALSE(QmSettingsTextPlanUnitProvidesVisibleContext(MENU_TEXT_PLAN_UNIT_INGAME_ESC, MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS));
+	EXPECT_TRUE(QmSettingsTextPlanUnitProvidesVisibleContext(MENU_TEXT_PLAN_UNIT_INGAME_ESC, MENU_TEXT_PLAN_UNIT_INGAME_ESC));
 }
 
 TEST(SettingsLoadingPrewarm, VisiblePlanMatcherRequiresMatchingTab)

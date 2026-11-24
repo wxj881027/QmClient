@@ -1,4 +1,5 @@
 #include <game/client/QmUi/SettingsTextPlanCommit.h>
+#include <game/client/QmUi/SettingsTextPlanUnits.h>
 
 #include <gtest/gtest.h>
 #include <test/support/prediction_allocation_failure.h>
@@ -150,4 +151,23 @@ TEST(SettingsTextPlanProgress, LargeRemainingCountSaturatesItsLegacyIntReport)
 	EXPECT_EQ(SettingsTextPlanPendingUnitCount(IntMax + 1, 0, false), std::numeric_limits<int>::max());
 	EXPECT_EQ(SettingsTextPlanPendingUnitCount(std::numeric_limits<size_t>::max(), 0, false), std::numeric_limits<int>::max());
 	EXPECT_EQ(SettingsTextPlanPendingUnitCount(IntMax + 1, IntMax, false), 1);
+}
+
+TEST(SettingsTextPlanProgress, VisibleCoverageIgnoresMeasurementAndBackgroundPasses)
+{
+	EXPECT_TRUE(QmMenuTextCountsVisibleCoverage(true, false, false));
+	EXPECT_FALSE(QmMenuTextCountsVisibleCoverage(false, false, false));
+	EXPECT_FALSE(QmMenuTextCountsVisibleCoverage(true, true, false));
+	EXPECT_FALSE(QmMenuTextCountsVisibleCoverage(true, false, true));
+	EXPECT_FALSE(QmMenuTextCountsVisibleCoverage(true, true, true));
+}
+
+TEST(SettingsTextPlanProgress, VisibleFrameReadinessRequiresAllCandidatesToHitWithoutMissOrStale)
+{
+	EXPECT_TRUE(QmSettingsTextVisibleFrameReady(7, 7, 0, 0));
+	EXPECT_FALSE(QmSettingsTextVisibleFrameReady(0, 0, 0, 0));
+	EXPECT_FALSE(QmSettingsTextVisibleFrameReady(7, 6, 0, 0));
+	EXPECT_FALSE(QmSettingsTextVisibleFrameReady(7, 8, 0, 0));
+	EXPECT_FALSE(QmSettingsTextVisibleFrameReady(7, 7, 1, 0));
+	EXPECT_FALSE(QmSettingsTextVisibleFrameReady(7, 7, 0, 1));
 }

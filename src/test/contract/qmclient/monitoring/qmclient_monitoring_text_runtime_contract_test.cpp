@@ -46,7 +46,7 @@ TEST(QmMonitoringTextRuntimeContract, SettingsStableTextVisibleMissBuildsSynchro
 	EXPECT_TRUE(ContainsAll(Source, {"MenuTextPoolSizeForTesting", "CScopedMenuTextVisibleGuard"}));
 	// 可见页文字不能分帧：缓存未命中时同帧构建容器并立即绘制。
 	EXPECT_TRUE(ContainsAll(Source, {
-						"if(NeedsBuild && m_MenuTextPoolVisibleGuard && Render && !Ui()->MeasurementOnly())",
+						"if(NeedsBuild && MenuTextCoverageActive() && Render && !Ui()->MeasurementOnly() && !Ui()->BackgroundRender())",
 						"DrainMenuTextContainerBuild(Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor, false, &TextContainerRecreated);",
 						"Ui()->RenderLabelTextContainerAligned(*pElementRect, pRect, Align);",
 					}));

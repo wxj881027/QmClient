@@ -48,20 +48,36 @@ constexpr float QmMenuTextBackgroundBudgetMs(float TargetFrameMs, float FrameMsA
 {
 	if(!(TargetFrameMs > 0.0f))
 		return 0.0f;
-	float ObservedFrameMs = std::max(FrameMsAverage, FrameMsP95);
-	if(!(ObservedFrameMs > 0.0f))
-		ObservedFrameMs = TargetFrameMs * 0.5f;
+	const float AverageMs = FrameMsAverage > 0.0f ? FrameMsAverage : TargetFrameMs * 0.5f;
+	const float P95Ms = FrameMsP95 > 0.0f ? std::max(FrameMsP95, AverageMs) : AverageMs;
 	// 预留 15%（最多 0.5 ms）吸收监控窗口滞后与不可切分的单次容器构建。
 	const float ReserveMs = std::min(0.5f, TargetFrameMs * 0.15f);
-	const float HeadroomMs = TargetFrameMs - ObservedFrameMs - ReserveMs;
-	if(HeadroomMs < 0.05f)
+	const float AverageHeadroomMs = TargetFrameMs - AverageMs - ReserveMs;
+	if(AverageHeadroomMs < 0.05f)
 		return 0.0f;
-	return std::min(1.0f, HeadroomMs);
+	const float P95HeadroomMs = TargetFrameMs - P95Ms - ReserveMs;
+	if(P95HeadroomMs < 0.05f)
+	{
+		// p95 恰好贴住刷新周期时不能把后台预热永久归零；均值仍有空间时
+		// 只放一个极小步，既不让单次抖动导致整段会话不预热，也不挤占可见帧。
+		return std::min(0.1f, AverageHeadroomMs);
+	}
+	return std::min(1.0f, std::min(AverageHeadroomMs, P95HeadroomMs));
+}
+
+// UI 动画的呈现时钟：长帧（加载、系统弹窗、一次性资源任务）不能把弹簧和
+// 过渡一次性推进到终点。逻辑状态仍按真实 tick 推进，只有纯呈现插值截断。
+inline constexpr float QM_UI_RENDER_DELTA_MAX_SEC = 1.0f / 20.0f;
+constexpr float QmUiRenderDeltaSeconds(float Dt)
+{
+	return std::clamp(Dt, 0.0f, QM_UI_RENDER_DELTA_MAX_SEC);
 }
 
 // 加载画面允许比后台预热吃得更满，但仍必须给动态背景留出一个显示刷新周期。
 // 8 ms 只是单步上限，160 Hz 下实际预算会收紧到约 5 ms，不能把背景拖到 120 Hz。
 inline constexpr float QM_MENU_TEXT_LOADING_PREWARM_STEP_MS = 8.0f;
+// 启动加载阶段按显示帧小步推进容器构建；字形仍只走 worker，主线程不等待光栅化。
+inline constexpr float QM_MENU_TEXT_STARTUP_PREWARM_STEP_MS = 1.0f;
 
 constexpr float QmMenuTextLoadingBudgetMs(float TargetFrameMs, float FrameMsAverage, float FrameMsP95)
 {
