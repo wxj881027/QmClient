@@ -8306,20 +8306,6 @@ if(ENABLE_IPO AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   endforeach()
 endif()
 
-if(ENABLE_IPO AND TARGET_OS STREQUAL "mac" AND CXX_TEST_DEPENDS)
-  # macOS 的 LTO 会丢掉全局函数的 __eh_frame FDE（LLVM #237789 同源问题）：
-  # 这些函数只剩 encoding=0x03000000 的「use DWARF」compact unwind 条目，却没有
-  # 对应的 FDE，异常一旦穿过它们就 std::terminate。测试里大量 DeathTest 正是靠
-  # 跨帧展开验证分配失败恢复，Release 构建因此在 macOS 上整片变红；产品二进制
-  # 不以异常为控制流，保持原样。
-  foreach(test_target IN LISTS CXX_TEST_DEPENDS)
-    if(TARGET ${test_target})
-      set_property(TARGET ${test_target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE FALSE)
-      set_property(TARGET ${test_target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO FALSE)
-    endif()
-  endforeach()
-endif()
-
 foreach(target ${TARGETS_LINK})
   if(MSVC)
     set_property(TARGET ${target} APPEND PROPERTY LINK_FLAGS /SAFESEH:NO) # Disable SafeSEH because the shipped libraries don't support it (would cause error LNK2026 otherwise).

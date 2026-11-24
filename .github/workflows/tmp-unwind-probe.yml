@@ -1,0 +1,90 @@
+name: tmp-unwind-probe
+
+# 临时诊断工作流：只用 workflow_dispatch 手动触发，用于定位 macOS 上 C++ 异常
+# 无法被 catch 的根因（PR #667 调查用，问题定位后删除）。
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: macos-26
+    steps:
+      - name: Compiler info
+        run: |
+          sw_vers
+          uname -m
+          clang++ --version
+          xcrun --show-sdk-path
+          ld -v
+      - name: Probe exception catching across flag matrix
+        run: |
+          cat > /tmp/probe.cpp <<'CPP'
+          #include <cstdio>
+          #include <new>
+          #include <stdexcept>
+
+          __attribute__((noinline)) void ThrowIt(int Kind)
+          {
+              if(Kind == 0) throw std::bad_alloc();
+              if(Kind == 1) throw std::length_error("probe");
+              throw 7;
+          }
+
+          __attribute__((noinline)) int CatchIt(int Kind)
+          {
+              try { ThrowIt(Kind); }
+              catch(const std::bad_alloc &) { return 1; }
+              catch(const std::length_error &) { return 2; }
+              catch(int) { return 3; }
+              return 0;
+          }
+
+          __attribute__((noinline)) int CatchAll(int Kind)
+          {
+              try { ThrowIt(Kind); } catch(...) { return 9; }
+              return 0;
+          }
+
+          int main()
+          {
+              int Bad = 0;
+              for(int k = 0; k < 3; k++) { if(CatchIt(k) != k + 1) Bad++; }
+              for(int k = 0; k < 3; k++) { if(CatchAll(k) != 9) Bad++; }
+              std::printf("bad=%d\n", Bad);
+              return Bad == 0 ? 0 : 3;
+          }
+          CPP
+          run_variant() {
+            local name="$1"; shift
+            if ! clang++ -std=gnu++20 -stdlib=libc++ "$@" /tmp/probe.cpp -o /tmp/probe.bin 2>/tmp/cc.err; then
+              echo "RESULT ${name} COMPILE_FAILED $(head -2 /tmp/cc.err | tr '\n' ' ')"
+              return
+            fi
+            local out rc
+            out=$(/tmp/probe.bin 2>&1); rc=$?
+            echo "RESULT ${name} rc=${rc} out=[$(echo "$out" | tr '\n' '|' | cut -c1-160)] flags=[$*]"
+          }
+          run_variant o0 -O0
+          run_variant o2 -O2
+          run_variant o3 -O3 -DNDEBUG
+          run_variant o3_deploy11 -O3 -DNDEBUG -mmacosx-version-min=11.0
+          run_variant o3_pac -O3 -DNDEBUG -mbranch-protection=standard
+          run_variant o3_deploy11_pac -O3 -DNDEBUG -mmacosx-version-min=11.0 -mbranch-protection=standard
+          run_variant o3_stack -O3 -DNDEBUG -fstack-protector-strong -fno-omit-frame-pointer
+          run_variant project_full -O3 -DNDEBUG -mmacosx-version-min=11.0 -mbranch-protection=standard -fstack-protector-strong -fno-omit-frame-pointer -ffile-prefix-map=$PWD=/QmClient -fno-ident
+          run_variant project_no_pac -O3 -DNDEBUG -mmacosx-version-min=11.0 -fstack-protector-strong -fno-omit-frame-pointer -ffile-prefix-map=$PWD=/QmClient -fno-ident
+          run_variant project_pac_none -O3 -DNDEBUG -mmacosx-version-min=11.0 -mbranch-protection=none -fstack-protector-strong -fno-omit-frame-pointer
+      - name: Dump unwind sections for project_full
+        run: |
+          clang++ -std=gnu++20 -stdlib=libc++ -O3 -DNDEBUG -mmacosx-version-min=11.0 \
+            -mbranch-protection=standard -fstack-protector-strong -fno-omit-frame-pointer \
+            -ffile-prefix-map=$PWD=/QmClient -fno-ident /tmp/probe.cpp -o /tmp/probe_full
+          echo "== sections"
+          otool -l /tmp/probe_full | grep -E "sectname __(eh_frame|unwind_info)" || echo "no unwind sections found"
+          echo "== eh_frame cfi entries"
+          otool -Iv /tmp/probe_full 2>/dev/null | grep -c "eh_frame" || true
+          echo "== symbols"
+          nm -nm /tmp/probe_full | grep -E "ThrowIt|CatchIt|CatchAll" || true
+          echo "== ld -v"
+          ld -v

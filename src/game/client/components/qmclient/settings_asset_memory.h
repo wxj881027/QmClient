@@ -221,7 +221,7 @@ public:
 				return false;
 			}
 		}
-		return CSettingsAssetMemoryLease::TryAcquire(std::move(State), Bytes, Out);
+		return CSettingsAssetMemoryLease::TryAcquire(State, Bytes, Out);
 	}
 };
 
