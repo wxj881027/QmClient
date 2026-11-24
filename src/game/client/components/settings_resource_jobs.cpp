@@ -79,8 +79,7 @@ bool SettingsSkinListEntryReady(bool SourceReady, bool TerminalFailure, bool Pre
 SSettingsSkinListPlan BuildSettingsSkinListPlan(std::vector<SSettingsSkinListEntry> vEntries, int SortMode)
 {
 	std::stable_sort(vEntries.begin(), vEntries.end(), [SortMode](const SSettingsSkinListEntry &A, const SSettingsSkinListEntry &B) {
-		if(A.m_Selected != B.m_Selected)
-			return A.m_Selected && !B.m_Selected;
+		// 当前角色的首项由视图映射处理，公共目录不随本体、分身的外观重排。
 		if(A.m_Favorite != B.m_Favorite)
 			return A.m_Favorite && !B.m_Favorite;
 		if(SortMode == 1)

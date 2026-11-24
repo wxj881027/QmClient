@@ -4423,9 +4423,6 @@ void CMenus::PrewarmSettingsPages()
 		return;
 
 	EnsureSettingsBindCache();
-
-	// Preload skin list to avoid lag when first entering settings
-	GameClient()->m_Skins.SkinList(0);
 }
 
 void CMenus::PrewarmSettingsTextPlanBeforeFirstFrame()

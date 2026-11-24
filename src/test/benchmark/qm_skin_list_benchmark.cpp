@@ -59,18 +59,18 @@ namespace
 	{
 		if(Plan.m_vNames.size() != static_cast<size_t>(Count) || Plan.m_vEntries.size() != static_cast<size_t>(Count))
 			return false;
-		bool SeenUnselected = false;
+		bool SeenNonFavorite = false;
 		for(size_t Index = 0; Index < Plan.m_vEntries.size(); ++Index)
 		{
 			if(Plan.m_vNames[Index] != Plan.m_vEntries[Index].m_Name)
 				return false;
-			if(Plan.m_vEntries[Index].m_Selected)
+			if(Plan.m_vEntries[Index].m_Favorite)
 			{
-				if(SeenUnselected)
+				if(SeenNonFavorite)
 					return false;
 			}
 			else
-				SeenUnselected = true;
+				SeenNonFavorite = true;
 		}
 		return true;
 	}
