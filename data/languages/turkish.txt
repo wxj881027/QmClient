@@ -18717,6 +18717,42 @@ Inactive
 Unavailable for this player
 == Bu oyuncu için kullanılamaz
 
+[Axiom map difficulty]
+Brutal
+== Zor
+
+[Axiom map difficulty]
+Easy
+== Kolay
+
+[Axiom map difficulty]
+Extreme
+== Aşırı
+
+[Axiom map difficulty]
+Hard
+== Zor
+
+[Axiom map difficulty]
+Insane
+== Çılgın
+
+[Axiom map difficulty]
+Main
+== Normal
+
+[Axiom map difficulty]
+Mod
+== Modlu
+
+[Axiom map difficulty]
+Solo
+== Solo
+
+[Axiom map difficulty]
+Train
+== Antrenman
+
 [Bind keyboard key]
 Menu
 == Menü tuşu

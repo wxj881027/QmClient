@@ -395,6 +395,45 @@ TEST(MapDifficultyCatalog, AxiomCacheRoundTripRestoresBothModesAndUnknownMapsRem
 	EXPECT_EQ(Restored.Find("SharedMap"), nullptr);
 }
 
+TEST(MapDifficultyCatalog, AxiomEnglishCategoryUsesCanonicalLocalizationKey)
+{
+	const struct
+	{
+		const char *m_pCategory;
+		const char *m_pKey;
+	} aCases[] = {
+		{"main", "Main"},
+		{"Easy", "Easy"},
+		{"HARD", "Hard"},
+		{"insane", "Insane"},
+		{"Extreme", "Extreme"},
+		{"Train", "Train"},
+		{"Mod", "Mod"},
+		{"solo", "Solo"},
+		{"Brutal", "Brutal"},
+	};
+	for(const auto &Case : aCases)
+	{
+		SCOPED_TRACE(Case.m_pCategory);
+		CQmMapDifficultyCatalog::SEntry Entry;
+		Entry.m_Category = Case.m_pCategory;
+		EXPECT_STREQ(Entry.AxiomCategoryKey(), Case.m_pKey);
+		EXPECT_EQ(Entry.m_Category, Case.m_pCategory);
+	}
+}
+
+TEST(MapDifficultyCatalog, AxiomAnnouncementAndUnknownCategoryKeepTheirOriginalText)
+{
+	for(const char *pCategory : {"普通", "简单", "古典.中阶", "Main.Special", "Custom", ""})
+	{
+		SCOPED_TRACE(pCategory);
+		CQmMapDifficultyCatalog::SEntry Entry;
+		Entry.m_Category = pCategory;
+		EXPECT_EQ(Entry.AxiomCategoryKey(), nullptr);
+		EXPECT_EQ(Entry.m_Category, pCategory);
+	}
+}
+
 TEST(MapDifficultyCatalog, DifficultyCellKeepsCategoryBeforeStars)
 {
 	CQmMapDifficultyCatalog::SEntry Entry;

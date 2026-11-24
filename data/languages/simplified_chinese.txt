@@ -19374,6 +19374,42 @@ Inactive
 Unavailable for this player
 == 此玩家不可用
 
+[Axiom map difficulty]
+Brutal
+== 高阶
+
+[Axiom map difficulty]
+Easy
+== 简单
+
+[Axiom map difficulty]
+Extreme
+== 极限
+
+[Axiom map difficulty]
+Hard
+== 困难
+
+[Axiom map difficulty]
+Insane
+== 疯狂
+
+[Axiom map difficulty]
+Main
+== 普通
+
+[Axiom map difficulty]
+Mod
+== 模组
+
+[Axiom map difficulty]
+Solo
+== 单人
+
+[Axiom map difficulty]
+Train
+== 训练
+
 [Bind keyboard key]
 Menu
 == 菜单键

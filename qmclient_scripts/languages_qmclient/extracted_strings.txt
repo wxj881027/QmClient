@@ -6448,6 +6448,15 @@ Zoom to current mouse target
 [Auto camera]	Enabled
 [Auto camera]	Inactive
 [Auto camera]	Unavailable for this player
+[Axiom map difficulty]	Brutal
+[Axiom map difficulty]	Easy
+[Axiom map difficulty]	Extreme
+[Axiom map difficulty]	Hard
+[Axiom map difficulty]	Insane
+[Axiom map difficulty]	Main
+[Axiom map difficulty]	Mod
+[Axiom map difficulty]	Solo
+[Axiom map difficulty]	Train
 [Bind keyboard key]	Menu
 [Config help]	%s (default: "%s", max length: %d)
 [Config help]	%s (default: $%0*X)

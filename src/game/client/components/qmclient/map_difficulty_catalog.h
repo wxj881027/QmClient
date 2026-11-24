@@ -28,6 +28,8 @@ public:
 		int m_MaxStars = 5;
 
 		const char *StarLabel() const;
+		// 已知英文类别返回本地化 key；中文公告和未知类别保留原文。
+		const char *AxiomCategoryKey() const;
 		// 难度列单元格文本：类别 + 空格 + 星级；类别为空时只输出星级。
 		// pCategoryText 由调用方按社区决定使用原文或本地化名称。
 		void CellLabel(const char *pCategoryText, char *pOut, size_t OutSize) const;

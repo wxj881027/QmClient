@@ -12,6 +12,7 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
+#include <engine/shared/localization.h>
 #include <engine/shared/qm_storage_layout.h>
 #include <engine/sqlite.h>
 #include <engine/storage.h>
@@ -260,6 +261,27 @@ const char *CQmMapDifficultyCatalog::SEntry::StarLabel() const
 	if(m_MaxStars == 3)
 		return s_apThree[m_Stars];
 	return m_MaxStars == 5 ? s_apFive[m_Stars] : "";
+}
+
+const char *CQmMapDifficultyCatalog::SEntry::AxiomCategoryKey() const
+{
+	static constexpr const char *s_apKeys[] = {
+		Localizable("Main", "Axiom map difficulty"),
+		Localizable("Easy", "Axiom map difficulty"),
+		Localizable("Hard", "Axiom map difficulty"),
+		Localizable("Insane", "Axiom map difficulty"),
+		Localizable("Extreme", "Axiom map difficulty"),
+		Localizable("Train", "Axiom map difficulty"),
+		Localizable("Mod", "Axiom map difficulty"),
+		Localizable("Solo", "Axiom map difficulty"),
+		Localizable("Brutal", "Axiom map difficulty"),
+	};
+	for(const char *pKey : s_apKeys)
+	{
+		if(str_comp_nocase(m_Category.c_str(), pKey) == 0)
+			return pKey;
+	}
+	return nullptr;
 }
 
 void CQmMapDifficultyCatalog::SEntry::CellLabel(const char *pCategoryText, char *pOut, size_t OutSize) const

@@ -1,8 +1,8 @@
 {
   "summary": {
-    "must_i18n": 11341,
-    "business_data": 13589,
-    "test_only": 9533,
+    "must_i18n": 11350,
+    "business_data": 13599,
+    "test_only": 9539,
     "needs_review": 5127,
     "violation": 0
   },
@@ -49345,1099 +49345,1099 @@
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 324,
+      "line": 327,
       "text": "Friends",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 326,
+      "line": 329,
       "text": "Clan Members",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 328,
+      "line": 331,
       "text": "Offline",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 708,
+      "line": 711,
       "text": "Reset column widths",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 764,
+      "line": 767,
       "text": "Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 765,
+      "line": 768,
       "text": "Map",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 766,
-      "text": "Difficulty",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 767,
-      "text": "Type",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
       "line": 769,
-      "text": "Players",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 771,
-      "text": "Ping",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1117,
-      "text": "Sort by number of friends",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1126,
-      "text": "Sort by favorites",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1135,
-      "text": "Sort by number of QmClient players",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1315,
-      "text": "Getting server list from master server",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1328,
-      "text": "No local servers found (ports %d-%d)",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1331,
-      "text": "Start and connect to local server",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1346,
-      "text": "Could not get server list from master server",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1350,
-      "text": "No servers found",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1360,
-      "text": "No servers match your filter criteria",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1362,
-      "text": "Reset filter",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1743,
-      "text": "Toggle map preview",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1782,
-      "text": "Note",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1938,
-      "text": "Favorite maps",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1942,
-      "text": "Server filter",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1957,
-      "text": "Custom",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1959,
-      "text": "No filter",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1969,
       "text": "Difficulty",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1975,
+      "line": 770,
+      "text": "Type",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 772,
       "text": "Players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1986,
-      "text": "Filter empty servers in browser",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1996,
-      "text": "Favorite maps",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2027,
-      "text": "Favorite maps",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2131,
-      "text": "Search",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2136,
-      "text": "Example of usage",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2159,
-      "text": "Exclude",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2164,
-      "text": "Example of usage",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2178,
-      "text": "Exclude",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2198,
-      "text": "%d of %d servers",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2200,
-      "text": "%d of %d server",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2204,
-      "text": "%d players",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2206,
-      "text": "%d player",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2213,
-      "text": "Server address:",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2289,
-      "text": "Are you sure that you want to disconnect and switch to a different server?",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2362,
-      "text": "Countries",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2365,
-      "text": "Types",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2412,
-      "text": "Reset filter",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2649,
-      "text": "Communities",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2660,
-      "text": "Error loading communities",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2718,
-      "text": "Click to add this community to favorites",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2718,
-      "text": "Click to remove this community from favorites",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2819,
-      "text": "Choose country flag",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2834,
-      "text": "Search country flag…",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3022,
-      "text": "No server selected",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3082,
-      "text": "Game type",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3082,
+      "line": 774,
       "text": "Ping",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3082,
-      "text": "Version",
+      "line": 1120,
+      "text": "Sort by number of friends",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3129,
-      "text": "Favorite server",
+      "line": 1129,
+      "text": "Sort by favorites",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3171,
-      "text": "Leak IP",
+      "line": 1138,
+      "text": "Sort by number of QmClient players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3184,
-      "text": "Leaks your IP address to this server by pinging it, also acquiring the latency in the process",
+      "line": 1318,
+      "text": "Getting server list from master server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3195,
-      "text": "Copy info",
+      "line": 1331,
+      "text": "No local servers found (ports %d-%d)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3360,
-      "text": "Follow",
+      "line": 1334,
+      "text": "Start and connect to local server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3631,
-      "text": "Manage categories",
+      "line": 1349,
+      "text": "Could not get server list from master server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3632,
-      "text": "Drag to reorder; right-click or use the gear to manage",
+      "line": 1353,
+      "text": "No servers found",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3709,
-      "text": "Click to select server. Double click to join your friend.",
+      "line": 1363,
+      "text": "No servers match your filter criteria",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3711,
-      "text": "Note:",
+      "line": 1365,
+      "text": "Reset filter",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3717,
-      "text": "Click to select server. Double click to join your friend.",
+      "line": 1746,
+      "text": "Toggle map preview",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3721,
-      "text": "Note:",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3729,
-      "text": "Drag to another category to move this friend.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3735,
-      "text": "DDStats shows UTC dates, updates daily and matches players by name only.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3800,
-      "text": "Follow",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3899,
-      "text": "No record",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3905,
-      "text": "Querying...",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3907,
-      "text": "Unavailable",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3909,
-      "text": "Last seen (DDStats): %s",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3932,
-      "text": "Pin friend",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3932,
-      "text": "Unpin friend",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3962,
-      "text": "Click to copy this clan's name to clipboard",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3962,
-      "text": "Click to copy this player's name to clipboard",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3978,
-      "text": "Follow this friend across servers",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3978,
-      "text": "Stop following this friend",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3988,
-      "text": "Click to remove this clan from your friends list.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3988,
-      "text": "Click to remove this player from your friends list.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4016,
-      "text": "Move to category",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4022,
-      "text": "Edit note",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4026,
-      "text": "Clear note",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4033,
-      "text": "Follow this friend across servers",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4033,
-      "text": "Stop following this friend",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4037,
-      "text": "Remove friend",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4067,
-      "text": "Add friends by entering their name below or by clicking their name in the player list.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4223,
-      "text": "Move to category",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4270,
-      "text": "Move to category",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4367,
-      "text": "Are you sure that you want to remove the clan '%s' from your friends list?",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4367,
-      "text": "Are you sure that you want to remove the player '%s' from your friends list?",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4399,
-      "text": "Name",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4410,
-      "text": "Clan",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4418,
-      "text": "Add to category",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4476,
-      "text": "Create category",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4484,
-      "text": "Add clan",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4486,
-      "text": "Add to %s",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4533,
-      "text": "Add category",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4545,
-      "text": "Rename",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4555,
-      "text": "Delete category",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4568,
-      "text": "Category name",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4568,
-      "text": "New category name",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4581,
-      "text": "Cancel",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4585,
-      "text": "Add",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4585,
-      "text": "Rename",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4627,
-      "text": "Friend note",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4640,
-      "text": "Cancel",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4644,
-      "text": "Save",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4822,
-      "text": "Favorite map",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4823,
-      "text": "Map play history",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4824,
-      "text": "Local saves",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4825,
-      "text": "Statistics",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4867,
-      "text": "Favorite map",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4868,
-      "text": "Map play history",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4869,
-      "text": "Local saves",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4872,
-      "text": "Your favorite maps appear here",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4873,
-      "text": "Unfinished maps are shown first",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4958,
-      "text": "Unknown",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4965,
-      "text": "Unknown",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4973,
-      "text": "Unknown",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5022,
-      "text": "No favorite maps yet",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5033,
-      "text": "Map",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5034,
-      "text": "Category",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5035,
-      "text": "Difficulty stars",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5036,
+      "line": 1785,
       "text": "Note",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5037,
-      "text": "Has save",
+      "line": 1941,
+      "text": "Favorite maps",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5066,
-      "text": "Loading",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5066,
-      "text": "No",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5066,
-      "text": "Yes",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5083,
-      "text": "Click to copy the map name",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5083,
-      "text": "Copied",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5089,
-      "text": "Remove from favorites",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5096,
-      "text": "None",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5148,
-      "text": "Unfinished",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5149,
-      "text": "Finished",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5150,
-      "text": "Recent",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5165,
-      "text": "Clear finished",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5165,
-      "text": "Confirm clear finished",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5178,
-      "text": "Clear all history",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5178,
-      "text": "Confirm clear all",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5206,
-      "text": "Loading",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5210,
-      "text": "No map play history yet",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5210,
-      "text": "No results",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5247,
-      "text": "Unknown",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5277,
-      "text": "Finished",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5277,
-      "text": "Unfinished",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5294,
-      "text": "Time",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5295,
-      "text": "Deaths",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5296,
-      "text": "Last entered",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5301,
-      "text": "Remove from history",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5312,
-      "text": "Loading",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5317,
-      "text": "ddnet-saves.txt not found",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5322,
-      "text": "ddnet-saves.txt is empty",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5416,
+      "line": 1945,
       "text": "Server filter",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5420,
+      "line": 1960,
+      "text": "Custom",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 1962,
+      "text": "No filter",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 1972,
+      "text": "Difficulty",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 1978,
+      "text": "Players",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 1989,
+      "text": "Filter empty servers in browser",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 1999,
+      "text": "Favorite maps",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2030,
+      "text": "Favorite maps",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2134,
+      "text": "Search",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2139,
+      "text": "Example of usage",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2162,
+      "text": "Exclude",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2167,
+      "text": "Example of usage",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2181,
+      "text": "Exclude",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2201,
+      "text": "%d of %d servers",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2203,
+      "text": "%d of %d server",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2207,
+      "text": "%d players",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2209,
+      "text": "%d player",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2216,
+      "text": "Server address:",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2292,
+      "text": "Are you sure that you want to disconnect and switch to a different server?",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2365,
+      "text": "Countries",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2368,
+      "text": "Types",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2415,
+      "text": "Reset filter",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2652,
+      "text": "Communities",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2663,
+      "text": "Error loading communities",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2721,
+      "text": "Click to add this community to favorites",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2721,
+      "text": "Click to remove this community from favorites",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2822,
+      "text": "Choose country flag",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2837,
+      "text": "Search country flag…",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3025,
+      "text": "No server selected",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3085,
+      "text": "Game type",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3085,
+      "text": "Ping",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3085,
+      "text": "Version",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3132,
+      "text": "Favorite server",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3174,
+      "text": "Leak IP",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3187,
+      "text": "Leaks your IP address to this server by pinging it, also acquiring the latency in the process",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3198,
+      "text": "Copy info",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3363,
+      "text": "Follow",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3634,
+      "text": "Manage categories",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3635,
+      "text": "Drag to reorder; right-click or use the gear to manage",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3712,
+      "text": "Click to select server. Double click to join your friend.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3714,
+      "text": "Note:",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3720,
+      "text": "Click to select server. Double click to join your friend.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3724,
+      "text": "Note:",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3732,
+      "text": "Drag to another category to move this friend.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3738,
+      "text": "DDStats shows UTC dates, updates daily and matches players by name only.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3803,
+      "text": "Follow",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3902,
+      "text": "No record",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3908,
+      "text": "Querying...",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3910,
+      "text": "Unavailable",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3912,
+      "text": "Last seen (DDStats): %s",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3935,
+      "text": "Pin friend",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3935,
+      "text": "Unpin friend",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3965,
+      "text": "Click to copy this clan's name to clipboard",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3965,
+      "text": "Click to copy this player's name to clipboard",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3981,
+      "text": "Follow this friend across servers",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3981,
+      "text": "Stop following this friend",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3991,
+      "text": "Click to remove this clan from your friends list.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 3991,
+      "text": "Click to remove this player from your friends list.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4019,
+      "text": "Move to category",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4025,
+      "text": "Edit note",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4029,
+      "text": "Clear note",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4036,
+      "text": "Follow this friend across servers",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4036,
+      "text": "Stop following this friend",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4040,
+      "text": "Remove friend",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4070,
+      "text": "Add friends by entering their name below or by clicking their name in the player list.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4226,
+      "text": "Move to category",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4273,
+      "text": "Move to category",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4370,
+      "text": "Are you sure that you want to remove the clan '%s' from your friends list?",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4370,
+      "text": "Are you sure that you want to remove the player '%s' from your friends list?",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4402,
+      "text": "Name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4413,
+      "text": "Clan",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4421,
+      "text": "Add to category",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4479,
+      "text": "Create category",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4487,
+      "text": "Add clan",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4489,
+      "text": "Add to %s",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4536,
+      "text": "Add category",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4548,
+      "text": "Rename",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4558,
+      "text": "Delete category",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4571,
+      "text": "Category name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4571,
+      "text": "New category name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4584,
+      "text": "Cancel",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4588,
+      "text": "Add",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4588,
+      "text": "Rename",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4630,
+      "text": "Friend note",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4643,
+      "text": "Cancel",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4647,
+      "text": "Save",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4825,
+      "text": "Favorite map",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4826,
+      "text": "Map play history",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4827,
+      "text": "Local saves",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4828,
+      "text": "Statistics",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4870,
+      "text": "Favorite map",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4871,
+      "text": "Map play history",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4872,
+      "text": "Local saves",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4875,
+      "text": "Your favorite maps appear here",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4876,
+      "text": "Unfinished maps are shown first",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4961,
+      "text": "Unknown",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4968,
+      "text": "Unknown",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4976,
+      "text": "Unknown",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5025,
+      "text": "No favorite maps yet",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5036,
+      "text": "Map",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5037,
+      "text": "Category",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5038,
+      "text": "Difficulty stars",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5039,
+      "text": "Note",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5040,
+      "text": "Has save",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5069,
+      "text": "Loading",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5069,
+      "text": "No",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5069,
+      "text": "Yes",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5086,
+      "text": "Click to copy the map name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5086,
+      "text": "Copied",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5092,
+      "text": "Remove from favorites",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5099,
+      "text": "None",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5151,
+      "text": "Unfinished",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5152,
+      "text": "Finished",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5153,
+      "text": "Recent",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5168,
+      "text": "Clear finished",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5168,
+      "text": "Confirm clear finished",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5181,
+      "text": "Clear all history",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5181,
+      "text": "Confirm clear all",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5209,
+      "text": "Loading",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5213,
+      "text": "No map play history yet",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5213,
+      "text": "No results",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5250,
+      "text": "Unknown",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5280,
+      "text": "Finished",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5280,
+      "text": "Unfinished",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5297,
+      "text": "Time",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5298,
+      "text": "Deaths",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5299,
+      "text": "Last entered",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5304,
+      "text": "Remove from history",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5315,
+      "text": "Loading",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5320,
+      "text": "ddnet-saves.txt not found",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5325,
+      "text": "ddnet-saves.txt is empty",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5419,
+      "text": "Server filter",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 5423,
       "text": "Server info",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5424,
+      "line": 5427,
       "text": "Friends",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -63249,6 +63249,69 @@
       "file": "src/game/client/components/qmclient/hud_notifications/hud_notifications.h",
       "line": 323,
       "text": "You are now out of the solo part",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 269,
+      "text": "Main",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 270,
+      "text": "Easy",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 271,
+      "text": "Hard",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 272,
+      "text": "Insane",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 273,
+      "text": "Extreme",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 274,
+      "text": "Train",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 275,
+      "text": "Mod",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 276,
+      "text": "Solo",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 277,
+      "text": "Brutal",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -118619,168 +118682,161 @@
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 284,
+      "line": 262,
+      "text": "Axiom map difficulty",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 287,
       "text": " - ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 322,
+      "line": 325,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 611,
+      "line": 614,
       "text": "axiom",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 614,
+      "line": 617,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 761,
+      "line": 764,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 762,
+      "line": 765,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 763,
+      "line": 766,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 768,
+      "line": 771,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 798,
+      "line": 801,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 829,
+      "line": 832,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1315,
+      "line": 1318,
       "text": "%s%.*s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1315,
+      "line": 1318,
       "text": "......",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1678,
+      "line": 1681,
       "text": "--",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1698,
+      "line": 1701,
       "text": "--",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1782,
+      "line": 1785,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1799,
+      "line": 1802,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1811,
+      "line": 1814,
       "text": "%i/%i",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1826,
+      "line": 1829,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1868,
+      "line": 1871,
       "text": "event=list_frame page=server_browser items_total=%d rows_visible=%d rows_rendered=%d rows_iterated=%d rows_skipped=%d dur_ms=%.3f source=server_browser",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1870,
+      "line": 1873,
       "text": "perf/interaction",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1870,
+      "line": 1873,
       "text": "server_browser",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1875,
-      "text": "server_browser",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1875,
-      "text": "server_browser_scroll",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1877,
+      "line": 1878,
       "text": "server_browser",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -118794,84 +118850,91 @@
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1933,
+      "line": 1880,
+      "text": "server_browser",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 1881,
+      "text": "server_browser_scroll",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 1936,
       "text": "server_browser_map_filter",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1975,
+      "line": 1978,
       "text": "0 %s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2131,
+      "line": 2134,
       "text": "%s:",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2136,
+      "line": 2139,
       "text": "%s: \"solo; nameless tee; kobra 2\"",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2145,
+      "line": 2148,
       "text": "server_browser_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2159,
+      "line": 2162,
       "text": "%s:",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2164,
+      "line": 2167,
       "text": "%s: \"CHN; [A]\"",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2173,
+      "line": 2176,
       "text": "server_browser_exclude",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2217,
+      "line": 2220,
       "text": "server_browser_address",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2235,
+      "line": 2238,
       "text": "%s%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2369,
-      "text": "browser_filter_tab_switch",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2370,
+      "line": 2372,
       "text": "browser_filter_tab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -118885,213 +118948,213 @@
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2412,
+      "line": 2376,
+      "text": "browser_filter_tab_switch",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2415,
       "text": "server_browser_filter_reset",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2698,
+      "line": 2701,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2830,
+      "line": 2833,
       "text": "browser_country_flag_popup_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2969,
-      "text": "background/measurement pass must not advance the transition",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2970,
-      "text": "background/measurement pass must not advance the transition",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2971,
-      "text": "interactive pass must restart the transition when the target changes",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
       "line": 2972,
-      "text": "unchanged target must not restart the transition",
+      "text": "background/measurement pass must not advance the transition",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
       "line": 2973,
-      "text": "progress must start at From",
+      "text": "background/measurement pass must not advance the transition",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
       "line": 2974,
-      "text": "progress must reach To after one duration",
+      "text": "interactive pass must restart the transition when the target changes",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
       "line": 2975,
-      "text": "progress must clamp to To past the duration",
+      "text": "unchanged target must not restart the transition",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
       "line": 2976,
-      "text": "progress must be about halfway at half duration",
+      "text": "progress must start at From",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
       "line": 2977,
+      "text": "progress must reach To after one duration",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2978,
+      "text": "progress must clamp to To past the duration",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2979,
+      "text": "progress must be about halfway at half duration",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2980,
       "text": "equal From/To must return the resting value",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3037,
+      "line": 3040,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3129,
+      "line": 3132,
       "text": "Favorite",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3195,
+      "line": 3198,
       "text": "server_browser_info_copy",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3200,
+      "line": 3203,
       "text": "Address: ddnet://%s\\n",
       "category": "business_data",
       "reason": "server browser category, rating, clipboard, or source expression data"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3201,
+      "line": 3204,
       "text": "Map: %s\\n",
       "category": "business_data",
       "reason": "server browser category, rating, clipboard, or source expression data"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3380,
+      "line": 3383,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3614,
+      "line": 3617,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3679,
+      "line": 3682,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3712,
+      "line": 3715,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3722,
+      "line": 3725,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3765,
+      "line": 3768,
       "text": "browser_friend_follow_tag",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3766,
+      "line": 3769,
       "text": "browser_friend_action_fade",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3892,
+      "line": 3895,
       "text": "%s | %s | %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3894,
+      "line": 3897,
       "text": "%s | %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3978,
+      "line": 3981,
       "text": "Friend auto follow",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4033,
+      "line": 4036,
       "text": "Friend auto follow",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4044,
+      "line": 4047,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4248,
-      "text": "friends_scroll",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
@@ -119102,175 +119165,182 @@
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4399,
+      "line": 4254,
+      "text": "friends_scroll",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4402,
       "text": "%s:",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4403,
+      "line": 4406,
       "text": "server_browser_add_friend_text_inputs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4410,
+      "line": 4413,
       "text": "%s:",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4418,
+      "line": 4421,
       "text": "%s:",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4572,
+      "line": 4575,
       "text": "server_browser_friends_category_text_input",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4631,
+      "line": 4634,
       "text": "server_browser_friend_note_text_input",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4791,
+      "line": 4794,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4822,
-      "text": "%s (%d)",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4823,
-      "text": "%s (%d)",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4824,
-      "text": "%s (%d)",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
       "line": 4825,
+      "text": "%s (%d)",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4826,
+      "text": "%s (%d)",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4827,
+      "text": "%s (%d)",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 4828,
       "text": "%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4971,
+      "line": 4974,
       "text": "%d/5 ★",
       "category": "business_data",
       "reason": "server browser category, rating, clipboard, or source expression data"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5148,
+      "line": 5151,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5149,
+      "line": 5152,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5150,
+      "line": 5153,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5239,
+      "line": 5242,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5354,
+      "line": 5357,
       "text": "[%s] %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5359,
+      "line": 5362,
       "text": "-",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5407,
+      "line": 5410,
       "text": "browser_toolbox_tabs_capsule",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5437,
+      "line": 5440,
       "text": "browser_toolbox_tab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5438,
+      "line": 5441,
       "text": "browser_toolbox_tab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5442,
+      "line": 5445,
       "text": "browser_toolbox_tab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5525,
+      "line": 5528,
       "text": "ui_page invalid for RenderServerbrowser: %d",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5565,
+      "line": 5568,
       "text": "browser_page_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5648,
+      "line": 5651,
       "text": "' && aFilterStrTrimmed[FilterLen - 1] == '",
       "category": "business_data",
       "reason": "server browser category, rating, clipboard, or source expression data"
@@ -137428,266 +137498,329 @@
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 34,
+      "line": 35,
       "text": "qmclient/map_difficulty.sql",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 38,
+      "line": 39,
       "text": "qmclient/axiom_map_difficulty.json",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 81,
+      "line": 82,
       "text": "failed to load '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 81,
+      "line": 82,
       "text": "map_difficulty",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 90,
+      "line": 91,
       "text": "map_difficulty",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 109,
+      "line": 110,
       "text": "axiom",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 111,
+      "line": 112,
       "text": "Gores",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 113,
+      "line": 114,
       "text": "AXRace",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 115,
-      "text": "DDNet",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
       "line": 116,
-      "text": "DDRaceNetwork",
+      "text": "DDNet",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
       "line": 117,
-      "text": "DDRace",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 118,
-      "text": "Gores",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 120,
-      "text": "Other",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 259,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 262,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 278,
-      "text": "%s %s",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 394,
-      "text": "Authorization: Bearer ",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 520,
-      "text": "max_stars",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 631,
-      "text": "version",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 633,
-      "text": "entries",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 638,
-      "text": "mode",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 640,
-      "text": "map",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 642,
-      "text": "category",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 644,
-      "text": "stars",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 646,
-      "text": "max_stars",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 685,
-      "text": "ignoring invalid Axiom map cache",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 685,
-      "text": "map_difficulty",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 688,
-      "text": "ignoring invalid Axiom map cache",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 688,
-      "text": "map_difficulty",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 706,
-      "text": "%s.%d.tmp",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 749,
-      "text": "failed to load SQL: %s",
-      "category": "business_data",
-      "reason": "diagnostic or assertion message"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 749,
-      "text": "map_difficulty",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 824,
-      "text": "axiom",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 833,
-      "text": "DDNet",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 834,
       "text": "DDRaceNetwork",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 835,
+      "line": 118,
       "text": "DDRace",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 837,
+      "line": 119,
+      "text": "Gores",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 121,
+      "text": "Other",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 260,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 263,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 269,
+      "text": "Axiom map difficulty",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 270,
+      "text": "Axiom map difficulty",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 271,
+      "text": "Axiom map difficulty",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 272,
+      "text": "Axiom map difficulty",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 273,
+      "text": "Axiom map difficulty",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 274,
+      "text": "Axiom map difficulty",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 275,
+      "text": "Axiom map difficulty",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 276,
+      "text": "Axiom map difficulty",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 277,
+      "text": "Axiom map difficulty",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 300,
+      "text": "%s %s",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 416,
+      "text": "Authorization: Bearer ",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 542,
+      "text": "max_stars",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 653,
+      "text": "version",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 655,
+      "text": "entries",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 660,
+      "text": "mode",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 662,
+      "text": "map",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 664,
+      "text": "category",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 666,
+      "text": "stars",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 668,
+      "text": "max_stars",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 707,
+      "text": "ignoring invalid Axiom map cache",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 707,
+      "text": "map_difficulty",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 710,
+      "text": "ignoring invalid Axiom map cache",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 710,
+      "text": "map_difficulty",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 728,
+      "text": "%s.%d.tmp",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 771,
+      "text": "failed to load SQL: %s",
+      "category": "business_data",
+      "reason": "diagnostic or assertion message"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 771,
+      "text": "map_difficulty",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 846,
+      "text": "axiom",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 855,
+      "text": "DDNet",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 856,
+      "text": "DDRaceNetwork",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 857,
+      "text": "DDRace",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
+      "line": 859,
       "text": "gores",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 837,
+      "line": 859,
       "text": "kog",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
@@ -195096,42 +195229,63 @@
     },
     {
       "file": "src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp",
-      "line": 57,
+      "line": 59,
       "text": "Two Words",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp",
-      "line": 70,
+      "line": 72,
       "text": "Second room",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp",
-      "line": 96,
+      "line": 111,
+      "text": "Axiom 当前地图\\n│ 地图：Two Words\\n│ 难度：普通 ★★☆\\n",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp",
+      "line": 119,
+      "text": "普通",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp",
+      "line": 133,
       "text": "Authorization: Bearer example",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp",
-      "line": 124,
-      "text": "Axiom 当前地图\\n│ 地图：Two Words\\n│ 难度：Hard ★★★★☆\\n",
+      "line": 161,
+      "text": "Axiom 当前地图\\n│ 地图：Two Words\\n│ 难度：普通 ★★☆\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp",
-      "line": 187,
+      "line": 166,
+      "text": "普通",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp",
+      "line": 224,
       "text": "Other Map",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/client/axiom_browser_difficulty_test.cpp",
-      "line": 200,
+      "line": 237,
       "text": "test queue capacity",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -208613,84 +208767,105 @@
     },
     {
       "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 405,
-      "text": "疯狂",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 406,
-      "text": "疯狂 ★★★☆☆",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 408,
+      "line": 427,
       "text": "古典.中阶",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 409,
-      "text": "古典.中阶 ★★★☆☆",
+      "line": 427,
+      "text": "普通",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 418,
-      "text": "疯狂",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 424,
+      "line": 427,
       "text": "简单",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 425,
+      "line": 444,
+      "text": "疯狂",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
+      "line": 445,
+      "text": "疯狂 ★★★☆☆",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
+      "line": 447,
+      "text": "古典.中阶",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
+      "line": 448,
+      "text": "古典.中阶 ★★★☆☆",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
+      "line": 457,
+      "text": "疯狂",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
+      "line": 463,
+      "text": "简单",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
+      "line": 464,
       "text": "简单 ★★☆",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 434,
+      "line": 473,
       "text": "not json",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 493,
+      "line": 532,
       "text": "Map's \"quote\"",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 495,
+      "line": 534,
       "text": "Axiom\\r\\n┌──── 当前地图信息\\r\\n│ 地图：",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 496,
+      "line": 535,
       "text": "\\r\\n│ 类型：单人\\r\\n│ 星级：★✰✰\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/map_difficulty_catalog_test.cpp",
-      "line": 518,
+      "line": 557,
       "text": "CREATE TABLE unrelated (value TEXT);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -254591,14 +254766,14 @@
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 617,
+      "line": 620,
       "text": "%s · %s · %d/%d",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 619,
+      "line": 622,
       "text": "%s · %d/%d",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
@@ -257909,63 +258084,63 @@
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 90,
+      "line": 91,
       "text": "map difficulty SQL is unavailable or invalid",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 138,
+      "line": 139,
       "text": " \\t\\r",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 146,
+      "line": 147,
       "text": " \\t\\r",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 289,
+      "line": 311,
       "text": "当前地图",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 296,
+      "line": 318,
       "text": "│ 地图：",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 301,
+      "line": 323,
       "text": "│ 难度：",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 302,
+      "line": 324,
       "text": "│ 类型：",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 303,
+      "line": 325,
       "text": "│ 星级：",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/map_difficulty_catalog.cpp",
-      "line": 754,
+      "line": 776,
       "text": "SELECT map_name, category, stars FROM map_difficulty ORDER BY map_name COLLATE NOCASE, category COLLATE NOCASE",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
