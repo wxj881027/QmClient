@@ -1,4 +1,5 @@
 #include <game/client/components/qmclient/spectator_selector_layout.h>
+#include <game/client/components/qmclient/spectator_friend_priority.h>
 
 #include <gtest/gtest.h>
 
@@ -154,4 +155,65 @@ TEST(QmSpectatorSelectorLayout, BackgroundAndMouseContainTallPlayersWithoutSearc
 	ExpectContains(Layout.m_Mouse, LastPlayer);
 	EXPECT_FLOAT_EQ(Layout.m_SearchRow.h, 0.0f);
 	EXPECT_FLOAT_EQ(Layout.m_Status.h, 0.0f);
+}
+
+TEST(QmSpectatorSelectorLayout, EveryDensityFitsGroupedRowsAndSearchOnScreen)
+{
+	for(int Count : {1, 8, 9, 16, 17, 32, 33, 64, 65, 96, 97, 128, 129, 256})
+	{
+		SCOPED_TRACE(Count);
+		const auto Density = qm_spectator_layout::Density(Count);
+		const float TitleHeight = std::clamp(Density.m_RowHeight * 0.5f, 12.0f, 15.0f);
+		const float TitleBlock = qm_spectator_layout::GroupTitle({}, 270.0f, TitleHeight, 1.0f).m_Height;
+		const float PlayersBottom = -190.0f + Density.m_BoxMove +
+			qm_spectator_friends::MaxColumnHeight(Count, 1, Density.m_RowsPerColumn, Density.m_RowHeight, TitleBlock);
+		const auto Layout = qm_spectator_layout::Build({1066.0f, 600.0f}, Density.m_HalfWidth, true, PlayersBottom);
+		EXPECT_LT(Density.m_FontSize, Density.m_RowHeight);
+		EXPECT_GE(Layout.m_SearchRow.y, 600.0f + PlayersBottom + 20.0f);
+		EXPECT_LE(Layout.m_Panel.y + Layout.m_Panel.h, 1200.0f);
+		ExpectContains(Layout.m_Mouse, Layout.m_SearchRow);
+		ExpectContains(Layout.m_Mouse, Layout.m_Status);
+	}
+}
+
+TEST(QmSpectatorSelectorLayout, TallSkinsStayInsideEveryDensityRow)
+{
+	struct SRestoreConfig
+	{
+		int m_Fat = g_Config.m_ClFatSkins;
+		~SRestoreConfig() { g_Config.m_ClFatSkins = m_Fat; }
+	} RestoreConfig;
+	for(int Fat : {0, 1})
+		for(int Count : {1, 16, 17, 32, 33, 64, 65, 96, 97, 128, 129, 256})
+		{
+			SCOPED_TRACE(Fat);
+			SCOPED_TRACE(Count);
+			g_Config.m_ClFatSkins = Fat;
+			const auto Density = qm_spectator_layout::Density(Count);
+			CTeeRenderInfo Info;
+			Info.m_Size = 64.0f * Density.m_TeeSizeMod;
+			auto &Body = Info.m_SkinMetrics.m_Body;
+			Body.m_Width = Body.m_Height = Body.m_MaxWidth = Body.m_MaxHeight = 128;
+			Body.m_OffsetX = Body.m_OffsetY = 0;
+			auto &Feet = Info.m_SkinMetrics.m_Feet;
+			Feet.m_Width = Feet.m_MaxWidth = 64;
+			Feet.m_Height = Feet.m_MaxHeight = 32;
+			Feet.m_OffsetX = Feet.m_OffsetY = 0;
+			qm_spectator_layout::FitTeeToRow(Info, Density.m_RowHeight);
+			const auto *pIdle = CAnimState::GetIdle();
+			vec2 Offset, BodyOffset, FeetOffset;
+			float BodyWidth, BodyHeight, FeetWidth, FeetHeight;
+			CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdle, &Info, Offset);
+			CRenderTools::GetRenderTeeBodySize(pIdle, &Info, BodyOffset, BodyWidth, BodyHeight);
+			CRenderTools::GetRenderTeeFeetSize(pIdle, &Info, FeetOffset, FeetWidth, FeetHeight);
+			const float Scale = Info.m_Size / 64.0f;
+			const float BodyTop = Offset.y + (pIdle->GetBody()->m_Y - 32.0f) * Scale + BodyOffset.y;
+			EXPECT_GT(BodyTop, -Density.m_RowHeight / 2.0f);
+			EXPECT_LT(BodyTop + BodyHeight, Density.m_RowHeight / 2.0f);
+			for(const auto *pFoot : {pIdle->GetFrontFoot(), pIdle->GetBackFoot()})
+			{
+				const float Bottom = Offset.y + (pFoot->m_Y - 16.0f) * Scale + FeetOffset.y + FeetHeight;
+				EXPECT_LT(Bottom, Density.m_RowHeight / 2.0f);
+			}
+		}
 }

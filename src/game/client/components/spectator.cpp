@@ -652,61 +652,18 @@ void CSpectator::OnRender()
 	// draw background
 	float Width = 400 * 3.0f * Graphics()->ScreenAspect();
 	float Height = 400 * 3.0f;
-	float ObjWidth = 300.0f;
-	float FontSize = 20.0f;
+	const auto Density = qm_spectator_layout::Density(DisplayCount);
+	float ObjWidth = Density.m_HalfWidth;
+	float FontSize = Density.m_FontSize;
 	float BigFontSize = 20.0f;
 	float StartY = -190.0f;
-	float LineHeight = 60.0f;
-	float TeeSizeMod = 1.0f;
-	float RoundRadius = 30.0f;
+	float LineHeight = Density.m_RowHeight;
+	float TeeSizeMod = Density.m_TeeSizeMod;
+	float RoundRadius = Density.m_Radius;
 	bool MultiViewSelected = false;
-	int PerLine = 8;
-	float BoxMove = -10.0f;
-	float BoxOffset = 0.0f;
-
-	if(DisplayCount > 128)
-	{
-		PerLine = (DisplayCount + 3) / 4;
-		LineHeight = 500.0f / PerLine;
-		FontSize = maximum(6.0f, LineHeight - 1.0f);
-		TeeSizeMod = LineHeight / 60.0f;
-		RoundRadius = 3.0f;
-		BoxMove = 0.0f;
-	}
-	else if(DisplayCount > 96)
-	{
-		FontSize = 15.0f;
-		LineHeight = 15.0f;
-		TeeSizeMod = 0.3f;
-		PerLine = 32;
-		RoundRadius = 5.0f;
-		BoxMove = 3.0f;
-		BoxOffset = 6.0f;
-	}
-	else if(DisplayCount > 64)
-	{
-		FontSize = 16.0f;
-		LineHeight = 19.0f;
-		TeeSizeMod = 0.45f;
-		PerLine = 24;
-		RoundRadius = 6.0f;
-		BoxMove = 3.0f;
-		BoxOffset = 6.0f;
-	}
-	else if(DisplayCount > 32)
-	{
-		FontSize = 18.0f;
-		LineHeight = 30.0f;
-		TeeSizeMod = 0.7f;
-		PerLine = 16;
-		RoundRadius = 10.0f;
-		BoxMove = 3.0f;
-		BoxOffset = 6.0f;
-	}
-	if(DisplayCount > 16)
-	{
-		ObjWidth = 600.0f;
-	}
+	const int PerLine = Density.m_RowsPerColumn;
+	float BoxMove = Density.m_BoxMove;
+	float BoxOffset = Density.m_BoxOffset;
 
 	// 手机：这套选择器按桌面鼠标密度调过，手机上字小、Tee 小、行也点不准。
 	// 整块等比放大（行距、字号、Tee、列宽、行点击框、面板高度一起放大），
@@ -952,7 +909,7 @@ void CSpectator::OnRender()
 		bool PlayerSelected = false;
 		const bool CanSelectRow = IsGhost ? ViewModeActive : !ViewModeActive;
 		if(WantActive && m_SelectorMouse.x >= x - RowHitInset && m_SelectorMouse.x < x + RowHitWidth &&
-			m_SelectorMouse.y >= y - (LineHeight / 6.0f) && m_SelectorMouse.y < y + (LineHeight * 5.0f / 6.0f))
+			m_SelectorMouse.y >= y + BoxMove && m_SelectorMouse.y < y + BoxMove + LineHeight)
 		{
 			if(CanSelectRow)
 			{
@@ -1144,6 +1101,7 @@ void CSpectator::OnRender()
 		else
 			TeeInfo = GameClient()->m_aClients[pInfo->m_Id].m_RenderInfo;
 		TeeInfo.m_Size *= TeeSizeMod;
+		qm_spectator_layout::FitTeeToRow(TeeInfo, LineHeight);
 
 		RenderTools()->RenderIdleTeeAtCenter(&TeeInfo, vec2(CenterX + x + TeeOffsetX, CenterY + y + BoxMove + LineHeight / 2.0f), EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeAlpha);
 

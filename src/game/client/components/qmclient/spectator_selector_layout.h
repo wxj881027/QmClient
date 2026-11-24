@@ -1,14 +1,79 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_SPECTATOR_SELECTOR_LAYOUT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SPECTATOR_SELECTOR_LAYOUT_H
 
+#include <engine/shared/config.h>
+
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
+#include <game/client/animstate.h>
+#include <game/client/render.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
 
 namespace qm_spectator_layout
 {
+	struct SDensity
+	{
+		float m_HalfWidth = 300.0f;
+		float m_FontSize = 20.0f;
+		float m_RowHeight = 60.0f;
+		float m_TeeSizeMod = 1.0f;
+		float m_Radius = 30.0f;
+		int m_RowsPerColumn = 8;
+		float m_BoxMove = -10.0f;
+		float m_BoxOffset = 0.0f;
+	};
+
+	inline SDensity Density(int PlayerCount)
+	{
+		SDensity Result;
+		if(PlayerCount > 128)
+		{
+			Result.m_RowsPerColumn = (PlayerCount + 3) / 4;
+			Result.m_RowHeight = 576.0f / Result.m_RowsPerColumn;
+			Result.m_FontSize = std::max(6.0f, Result.m_RowHeight - ui_token::spacing::XS);
+			Result.m_TeeSizeMod = Result.m_RowHeight / 60.0f;
+			Result.m_Radius = 3.0f;
+			Result.m_BoxMove = 0.0f;
+		}
+		else if(PlayerCount > 32)
+		{
+			// 各密度档保留原列容量，增加行高；面板和 CP 底栏由内容高度扩展。
+			Result.m_RowsPerColumn = PlayerCount > 96 ? 32 : (PlayerCount > 64 ? 24 : 16);
+			Result.m_RowHeight = 576.0f / Result.m_RowsPerColumn;
+			Result.m_FontSize = PlayerCount > 96 ? 15.0f : (PlayerCount > 64 ? 16.0f : 18.0f);
+			Result.m_TeeSizeMod = PlayerCount > 96 ? 0.3f : (PlayerCount > 64 ? 0.45f : 0.7f);
+			Result.m_Radius = PlayerCount > 96 ? 5.0f : (PlayerCount > 64 ? 6.0f : 10.0f);
+			Result.m_BoxMove = 3.0f;
+			Result.m_BoxOffset = 6.0f;
+		}
+		if(PlayerCount > 16)
+			Result.m_HalfWidth = 600.0f;
+		return Result;
+	}
+
+	inline void FitTeeToRow(CTeeRenderInfo &Info, float RowHeight)
+	{
+		const CAnimState *pIdle = CAnimState::GetIdle();
+		float RenderedHeight;
+		if(Info.m_aSixup[g_Config.m_ClDummy].PartTexture(protocol7::SKINPART_BODY).IsValid())
+			RenderedHeight = Info.m_Size * 1.24f;
+		else
+		{
+			vec2 Offset, BodyOffset;
+			float BodyWidth, BodyHeight;
+			CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdle, &Info, Offset);
+			CRenderTools::GetRenderTeeBodySize(pIdle, &Info, BodyOffset, BodyWidth, BodyHeight);
+			const float BodyTop = (pIdle->GetBody()->m_Y - 32.0f) * Info.m_Size / 64.0f + BodyOffset.y;
+			RenderedHeight = -2.0f * (BodyTop + Offset.y);
+		}
+		// 按皮肤实际墨迹缩放，包含胖皮肤和脚部；上下各留出一成行高。
+		const float AvailableHeight = RowHeight * 0.8f;
+		if(RenderedHeight > AvailableHeight)
+			Info.m_Size *= AvailableHeight / RenderedHeight;
+	}
+
 	struct SSelectorLayout
 	{
 		CUIRect m_Panel;
