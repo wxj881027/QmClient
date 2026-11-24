@@ -157,11 +157,6 @@
 			"note": "字形光栅化模式：同步或 CPU worker 后台预热，内部性能开关"
 		},
 		{
-			"name": "qm_translate_color_alpha_migrated",
-			"category": "internal",
-			"note": "翻译色 alpha 迁移标记，代码内部状态"
-		},
-		{
 			"name": "qm_ui_corner_smoothing",
 			"category": "internal",
 			"note": "UI 圆角平滑算法选择，随主题固定"
