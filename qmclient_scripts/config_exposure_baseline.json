@@ -2,34 +2,19 @@
 	"version": 1,
 	"entries": [
 		{
-			"name": "qm_auto_accept_team_invite",
-			"category": "pending-ui",
-			"note": "聊天页：自动接受组队邀请"
-		},
-		{
-			"name": "qm_chat_anim_fade_duration_ms",
-			"category": "pending-ui",
-			"note": "聊天页：淡出时长"
-		},
-		{
-			"name": "qm_chat_anim_slide_out",
-			"category": "pending-ui",
-			"note": "聊天页：滑出动画"
-		},
-		{
 			"name": "qm_color_picker_palette",
 			"category": "internal",
 			"note": "取色器调色板序列化数据，由弹层读写"
 		},
 		{
 			"name": "qm_color_picker_shape",
-			"category": "pending-ui",
-			"note": "视觉页：取色器形状"
+			"category": "in-context",
+			"note": "取色器弹层内部“方图/色环”按钮"
 		},
 		{
 			"name": "qm_console_filter_mask",
-			"category": "pending-ui",
-			"note": "控制台页：日志分类过滤"
+			"category": "in-context",
+			"note": "控制台内部日志分类按钮"
 		},
 		{
 			"name": "qm_deepfly_mode",
@@ -67,19 +52,14 @@
 			"note": "渲染管线开关，随性能档位自动选择"
 		},
 		{
-			"name": "qm_hide_chat_bubbles",
-			"category": "pending-ui",
-			"note": "HUD 页：隐藏聊天气泡"
-		},
-		{
 			"name": "qm_hitbox_show_tees",
-			"category": "pending-ui",
-			"note": "视觉页：碰撞框显示 Tee"
+			"category": "internal",
+			"note": "旧碰撞框配置迁移汇总开关，设置页使用细分开关"
 		},
 		{
 			"name": "qm_hitbox_show_weapons",
-			"category": "pending-ui",
-			"note": "视觉页：碰撞框显示武器"
+			"category": "internal",
+			"note": "旧碰撞框配置迁移汇总开关，设置页使用细分开关"
 		},
 		{
 			"name": "qm_jump_hint_defaults_migrated",
@@ -93,8 +73,8 @@
 		},
 		{
 			"name": "qm_mobile_crash_report_export",
-			"category": "pending-ui",
-			"note": "诊断页：移动端导出崩溃报告"
+			"category": "console-only",
+			"note": "仅移动端下次启动导出崩溃报告，桌面设置页不提供入口"
 		},
 		{
 			"name": "qm_nameplate_show_scope_migrated",
@@ -112,34 +92,14 @@
 			"note": "服务器 ping 缓存过期策略，内部参数"
 		},
 		{
-			"name": "qm_rect_corner_segments",
-			"category": "pending-ui",
-			"note": "视觉页：圆角分段精度"
-		},
-		{
 			"name": "qm_scoreboard_sort_mode",
-			"category": "pending-ui",
-			"note": "计分板：排序模式开关"
+			"category": "in-context",
+			"note": "计分板标题栏排序按钮"
 		},
 		{
 			"name": "qm_settings_prewarm_migrated",
 			"category": "internal",
 			"note": "设置页预热迁移标记，代码内部状态"
-		},
-		{
-			"name": "qm_showhud_dummy_angle",
-			"category": "pending-ui",
-			"note": "HUD 页：分身角度"
-		},
-		{
-			"name": "qm_showhud_dummy_position",
-			"category": "pending-ui",
-			"note": "HUD 页：分身坐标"
-		},
-		{
-			"name": "qm_showhud_dummy_speed",
-			"category": "pending-ui",
-			"note": "HUD 页：分身速度"
 		},
 		{
 			"name": "qm_skin_queue_length",

@@ -323,6 +323,7 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmChatBubble, "qmclient-chat-bubble-enable", Localize("Show chat bubbles above players"), &g_Config.m_QmChatBubble);
 	if(!g_Config.m_QmChatBubble)
 		return;
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHideChatBubbles, "qmclient-chat-bubble-hide-own", Localize("Hide own chat bubble (only when authenticated in remote console)"), &g_Config.m_QmHideChatBubbles);
 
 	CUIRect StyleRow, StyleLabel, StyleControl;
 	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。

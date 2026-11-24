@@ -108,6 +108,9 @@ namespace
 		{Localizable("Show DDRace HUD"), nullptr, "显示 DDRace HUD"},
 		{Localizable("Show client IDs (scoreboard, chat, spectating)"), nullptr, "显示客户端 ID（计分板、聊天、观战）"},
 		{Localizable("Show dummy actions"), nullptr, "显示分身状态"},
+		{Localizable("Show dummy angle in movement info HUD"), nullptr, "在运动信息 HUD 中显示分身角度"},
+		{Localizable("Show dummy position in movement info HUD"), nullptr, "在运动信息 HUD 中显示分身坐标"},
+		{Localizable("Show dummy velocity in movement info HUD"), nullptr, "在运动信息 HUD 中显示分身速度"},
 		{Localizable("Show freeze bars"), nullptr, "显示解冻进度条"},
 		{Localizable("Show jumps indicator"), nullptr, "显示可跳跃次数"},
 		{Localizable("Show number of spectators"), nullptr, "显示旁观者人数"},
@@ -125,6 +128,9 @@ namespace
 		{nullptr, "cl_showhud_player_position", nullptr},
 		{nullptr, "cl_showhud_player_speed", nullptr},
 		{nullptr, "cl_showhud_spectator_count", nullptr},
+		{nullptr, "qm_showhud_dummy_angle", nullptr},
+		{nullptr, "qm_showhud_dummy_position", nullptr},
+		{nullptr, "qm_showhud_dummy_speed", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:appearance-hud-ddrace", deck_appearance_hud_ddrace);
 }

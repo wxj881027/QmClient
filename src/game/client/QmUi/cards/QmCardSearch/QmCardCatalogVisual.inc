@@ -46,6 +46,7 @@ namespace
 		{Localizable("Dissolve"), nullptr, "消散"},
 		{Localizable("Duration"), nullptr, "持续时间"},
 		{Localizable("Font size"), nullptr, "字体大小"},
+		{Localizable("Hide own chat bubble (only when authenticated in remote console)"), nullptr, "隐藏自己的聊天气泡（仅在远程控制台已鉴权时生效）"},
 		{Localizable("Show chat bubbles above players"), nullptr, "在玩家头顶显示聊天气泡"},
 		{Localizable("Shrink"), nullptr, "收缩"},
 		{Localizable("Text color"), nullptr, "文本颜色"},
@@ -59,6 +60,7 @@ namespace
 		{nullptr, "qm_chat_bubble_font_size", nullptr},
 		{nullptr, "qm_chat_bubble_style", nullptr},
 		{nullptr, "qm_chat_bubble_text_color", nullptr},
+		{nullptr, "qm_hide_chat_bubbles", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("qm:chat_bubble", qm_chat_bubble);
 }

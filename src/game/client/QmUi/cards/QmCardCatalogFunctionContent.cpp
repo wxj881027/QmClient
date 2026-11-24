@@ -438,6 +438,9 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 			{&g_Config.m_QmChatEmojiCompletion, "Chat emoji completion", Localize("Chat emoji completion")}},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
+		{{&g_Config.m_QmAutoAcceptTeamInvite, "Auto-accept team invites", Localize("Auto-accept team invites")}},
+		CurrentSettingsContentMetrics(), !PrewarmOnly);
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
 			{&g_Config.m_QmClientShowBadge, "Show Qm badge", Localize("Show Qm badge")},
 		},

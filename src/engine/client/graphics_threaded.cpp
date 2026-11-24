@@ -54,9 +54,13 @@ static std::thread::id gs_MainThreadId;
 static bool gs_MainThreadIdInitialized = false;
 // 圆角段数上限（栈数组大小）与预计算表的上限保持同一来源，避免两侧不一致。
 static constexpr int RECT_CORNER_SEGMENTS = CQmRoundedRectDirections::MAX_SEGMENTS;
+static constexpr int DEFAULT_ROUNDED_RECT_SEGMENTS = 16;
 static inline int RoundedRectSegmentCount()
 {
-	return std::clamp(g_Config.m_QmRectCornerSegments & ~1, CQmRoundedRectDirections::MIN_SEGMENTS, RECT_CORNER_SEGMENTS);
+	static_assert(DEFAULT_ROUNDED_RECT_SEGMENTS >= CQmRoundedRectDirections::MIN_SEGMENTS);
+	static_assert(DEFAULT_ROUNDED_RECT_SEGMENTS <= RECT_CORNER_SEGMENTS);
+	static_assert(DEFAULT_ROUNDED_RECT_SEGMENTS % 2 == 0);
+	return DEFAULT_ROUNDED_RECT_SEGMENTS;
 }
 static constexpr float RECT_ANTIALIAS_PIXEL_SIZE = 1.25f;
 

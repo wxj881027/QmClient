@@ -311,8 +311,26 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				CheckboxRow(&g_Config.m_ClShowhudDummyActions, "appearance-show-dummy-actions", Localize("Show dummy actions"), &g_Config.m_ClShowhudDummyActions);
 				// 卡键、锤子、分身控制与同步状态由同页的 DDRace HUD Pro 卡片提供。
 				CheckboxRow(&g_Config.m_ClShowhudPlayerPosition, "appearance-show-player-position", Localize("Show player position"), &g_Config.m_ClShowhudPlayerPosition);
+				static CSettingsConditionalRows s_DummyPositionRows;
+				if(s_DummyPositionRows.Update(g_Config.m_ClShowhudPlayerPosition != 0, FrameDt, MotionLevel))
+				{
+					const CSettingsContentRevealScope DummyPositionScope(Ui(), Flow, s_DummyPositionRows.Fade(MotionLevel));
+					CheckboxRow(&g_Config.m_QmShowhudDummyPosition, "appearance-show-dummy-position", Localize("Show dummy position in movement info HUD"), &g_Config.m_QmShowhudDummyPosition);
+				}
 				CheckboxRow(&g_Config.m_ClShowhudPlayerSpeed, "appearance-show-player-speed", Localize("Show player speed"), &g_Config.m_ClShowhudPlayerSpeed);
+				static CSettingsConditionalRows s_DummySpeedRows;
+				if(s_DummySpeedRows.Update(g_Config.m_ClShowhudPlayerSpeed != 0, FrameDt, MotionLevel))
+				{
+					const CSettingsContentRevealScope DummySpeedScope(Ui(), Flow, s_DummySpeedRows.Fade(MotionLevel));
+					CheckboxRow(&g_Config.m_QmShowhudDummySpeed, "appearance-show-dummy-speed", Localize("Show dummy velocity in movement info HUD"), &g_Config.m_QmShowhudDummySpeed);
+				}
 				CheckboxRow(&g_Config.m_ClShowhudPlayerAngle, "appearance-show-player-target-angle", Localize("Show player target angle"), &g_Config.m_ClShowhudPlayerAngle);
+				static CSettingsConditionalRows s_DummyAngleRows;
+				if(s_DummyAngleRows.Update(g_Config.m_ClShowhudPlayerAngle != 0, FrameDt, MotionLevel))
+				{
+					const CSettingsContentRevealScope DummyAngleScope(Ui(), Flow, s_DummyAngleRows.Fade(MotionLevel));
+					CheckboxRow(&g_Config.m_QmShowhudDummyAngle, "appearance-show-dummy-target-angle", Localize("Show dummy angle in movement info HUD"), &g_Config.m_QmShowhudDummyAngle);
+				}
 				CheckboxRow(&g_Config.m_QmShowLocalTimeSeconds, "appearance-show-local-time-seconds", Localize("Show seconds in local time"), &g_Config.m_QmShowLocalTimeSeconds);
 				CheckboxRow(&g_Config.m_QmCountryFlagAnim, "appearance-animate-country-flags", Localize("Animate country flags"), &g_Config.m_QmCountryFlagAnim);
 				LogPerfStage(Client(), "appearance_hud_ddrace_section", HudDdraceTimer.ElapsedMs(), false, "page=appearance tab=hud section=ddrace");

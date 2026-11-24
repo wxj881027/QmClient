@@ -280,6 +280,7 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_mini_features[] = {
+		{Localizable("Auto-accept team invites"), nullptr, "自动接受组队邀请"},
 		{Localizable("Automatic updates"), nullptr, "自动更新"},
 		{Localizable("Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)"), nullptr, "自定义资源的贴图全透明时自动回退到默认资源；关闭后空白贴图保持不可见（可用于屏蔽特效）"},
 		{Localizable("Blank asset auto fallback"), nullptr, "空白资源自动回退"},
@@ -299,6 +300,7 @@ namespace
 		{Localizable("Sponsor reminder"), nullptr, "赞助提醒"},
 		{Localizable("Show command completion in chat"), nullptr, "聊天中显示命令补全"},
 		{Localizable("Chat emoji completion"), nullptr, "聊天表情补全"},
+		{nullptr, "qm_auto_accept_team_invite", nullptr},
 		{nullptr, "qm_auto_update", nullptr},
 		{nullptr, "qm_blank_asset_fallback", nullptr},
 		{nullptr, "qm_client_show_badge", nullptr},

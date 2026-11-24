@@ -61,7 +61,7 @@ TEST(QmPerfDiagnostics, SensitiveConfigIsDetectedByAnyKeywordPart)
 	const char *apPlain[] = {
 		"qm_perf_debug",
 		"cl_showfps",
-		"qm_rect_corner_segments",
+		"qm_ui_corner_curve",
 		"tc_hook_coll_alpha",
 	};
 	for(const char *pName : apPlain)

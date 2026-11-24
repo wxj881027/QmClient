@@ -377,7 +377,6 @@ CChat::CLine::CLine()
 	m_BodyTextContainerIndex.Reset();
 	m_TextYOffset = 0.0f;
 	m_ContentWidth = 0.0f;
-	m_CutOffProgress = 0.0f;
 	CChat::ResetPresentationState(m_Presentation);
 	m_DiagnosticPresentationState = -1;
 	m_DiagnosticCollapsedSkipLogged = false;
@@ -420,7 +419,6 @@ void CChat::CLine::Reset(CChat &This)
 	m_Layout = {};
 	m_TextYOffset = 0.0f;
 	m_ContentWidth = 0.0f;
-	m_CutOffProgress = 0.0f;
 	CChat::ResetPresentationState(m_Presentation);
 	m_DiagnosticPresentationState = -1;
 	m_DiagnosticCollapsedSkipLogged = false;
@@ -500,13 +498,6 @@ CChat::CChat()
 
 	m_EmojiCompletionListLength = 0;
 	m_aEmojiCompletionColon[0] = '\0';
-}
-
-float CChat::CalculateCutOffOffsetX(float Progress)
-{
-	if(!g_Config.m_QmChatAnimSlideOut)
-		return 0.0f;
-	return -24.0f * std::clamp(Progress, 0.0f, 1.0f);
 }
 
 void CChat::RegisterCommand(const char *pName, const char *pParams, const char *pHelpText)
@@ -663,7 +654,6 @@ void CChat::RebuildChat()
 		Line.m_Layout = {};
 		Line.m_ChatEmojiRect = {};
 		Line.m_ContentWidth = 0.0f;
-		Line.m_CutOffProgress = 0.0f;
 		Line.m_Presentation.m_RenderYInitialized = false;
 	}
 }
@@ -2726,7 +2716,6 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		PreviousLine.m_Layout = {};
 		PreviousLine.m_ChatEmojiRect = {};
 		PreviousLine.m_ContentWidth = 0.0f;
-		PreviousLine.m_CutOffProgress = 0.0f;
 		BeginLinePresentation(PreviousLine.m_Presentation, PreviousLine.m_Time, true);
 
 		CGameClient::CClientData &ClientData = GameClient()->m_aClients[ClientId];
@@ -3615,8 +3604,6 @@ void CChat::OnRender()
 	// 动画与滚动物理必须共用渲染帧的真实步长。time() 只有毫秒精度，
 	// 60 Hz 下会在 15/16/17 ms 之间跳，弹簧每帧推进不均匀，滚动看起来一顿一顿。
 	float DeltaSeconds = std::clamp(Client()->RenderFrameTime(), 0.0f, CHAT_PRESENTATION_MAX_DELTA_SECONDS);
-	const float ChatFadeDurationSeconds = g_Config.m_QmChatAnimFadeDurationMs / 1000.0f;
-	(void)ChatFadeDurationSeconds;
 	if(HudEditorPreview)
 		DeltaSeconds = 0.0f;
 	else
@@ -4213,7 +4200,6 @@ void CChat::OnRender()
 		// Don't abort the full render pass on a single malformed line.
 		if(!LineHeightValid)
 		{
-			Line.m_CutOffProgress = 0.0f;
 			continue;
 		}
 
@@ -4226,9 +4212,8 @@ void CChat::OnRender()
 			Line.m_Presentation.m_RenderY = SmoothPresentationY(Line.m_Presentation.m_RenderY, Line.m_Presentation.m_TargetY, DeltaSeconds);
 
 		const float RenderY = Line.m_Presentation.m_RenderY + Line.m_Presentation.m_RenderOffsetY;
-		Line.m_CutOffProgress = 0.0f;
 		const float AnimAlpha = ClampPresentationProgress(Line.m_Presentation.m_RenderAlpha);
-		const float AnimOffsetX = Line.m_Presentation.m_RenderOffsetX + CalculateCutOffOffsetX(Line.m_CutOffProgress);
+		const float AnimOffsetX = Line.m_Presentation.m_RenderOffsetX;
 		const float AnimOffsetY = (RenderY + RealMsgPaddingY / 2.0f) - Line.m_TextYOffset;
 
 		if(AnimAlpha <= 0.001f)
@@ -4822,8 +4807,6 @@ bool CChat::TranslateVisibleChatLines()
 		if(!ShowLargeArea && Line.m_Presentation.m_LayoutVisibility <= 0.001f && Line.m_Presentation.m_RenderAlpha <= 0.001f)
 			continue;
 		if(Line.m_Layout.HeightFor(IsScoreBoardOpen, ShowLargeArea) < 0.0f)
-			continue;
-		if(Line.m_CutOffProgress >= 1.0f)
 			continue;
 		if(!QmChatEmojiShouldTranslate(Line.m_ChatEmoji))
 			continue;
