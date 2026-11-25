@@ -73,9 +73,10 @@ constexpr float QmUiRenderDeltaSeconds(float Dt)
 	return std::clamp(Dt, 0.0f, QM_UI_RENDER_DELTA_MAX_SEC);
 }
 
-// 状态动画的逻辑步长：固定 60 Hz，与渲染帧率解耦。长帧最多补 0.1 秒
-// （6 步），避免加载/系统弹窗后的首个可见帧把页切换直接推到终点。
-inline constexpr float QM_UI_LOGIC_STEP_SEC = 1.0f / 60.0f;
+// 固定 120 Hz：0.22 s 的过渡有 26 个状态点，300 fps 下每 2.5 帧一个状态步；
+// 插值仍按渲染帧补齐，观感不变，成本仍是每秒 120 次积分。长帧最多补 0.1 秒
+// （12 步），避免加载/系统弹窗后的首个可见帧把页切换直接推到终点。
+inline constexpr float QM_UI_LOGIC_STEP_SEC = 1.0f / 120.0f;
 inline constexpr float QM_UI_LOGIC_MAX_CATCHUP_SEC = 0.1f;
 struct SQmUiLogicStep
 {
