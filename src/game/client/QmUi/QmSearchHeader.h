@@ -48,6 +48,30 @@ namespace qm_search_header
 	};
 	inline constexpr int NUM_SPLASHES = sizeof(SPLASHES) / sizeof(SPLASHES[0]);
 
+	inline constexpr const char *SEARCH_PLACEHOLDERS[] = {
+		"截图保存在哪里",
+		"灵动岛歌词",
+		"碰撞箱",
+		"武器弹道辅助线",
+		"八角定位",
+		"计分板怎么呼出鼠标",
+		"快速练习",
+		"怎么更换客户端字体",
+		"聊天翻译",
+		"怎么给皮肤调色",
+		"钩子倒计时",
+		"绑定轮盘",
+		"鼠标灵敏度",
+		"旁观模式按键",
+		"怎么防止误按自杀键",
+		"录制回放",
+		"聊天记录在哪里",
+		"聊天气泡",
+		"语音没有声音怎么办",
+		"客户端ID",
+	};
+	inline constexpr int NUM_SEARCH_PLACEHOLDERS = sizeof(SEARCH_PLACEHOLDERS) / sizeof(SEARCH_PLACEHOLDERS[0]);
+
 	struct SLogo
 	{
 		int m_Left;
@@ -70,27 +94,34 @@ namespace qm_search_header
 		uint64_t m_DisplayCycle = 0;
 		int m_Index = -1;
 		int m_LogoIndex = 0;
+		int m_PlaceholderIndex = -1;
 		bool m_Entered = false;
+
+		static int PickDifferentIndex(int Choice, int ChoiceCount, int PreviousIndex)
+		{
+			const int Index = std::clamp(Choice, 0, ChoiceCount - 1);
+			return PreviousIndex >= 0 && Index >= PreviousIndex ? Index + 1 : Index;
+		}
 
 	public:
 		bool NeedsEntry(uint64_t DisplayCycle) const { return !m_Entered || m_DisplayCycle != DisplayCycle; }
 		int ChoiceCount() const { return m_Index < 0 ? NUM_SPLASHES : NUM_SPLASHES - 1; }
-		void Enter(uint64_t DisplayCycle, int Choice, int LogoChoice)
+		int PlaceholderChoiceCount() const { return m_PlaceholderIndex < 0 ? NUM_SEARCH_PLACEHOLDERS : NUM_SEARCH_PLACEHOLDERS - 1; }
+		void Enter(uint64_t DisplayCycle, int Choice, int LogoChoice, int PlaceholderChoice = 0)
 		{
 			if(!NeedsEntry(DisplayCycle))
 				return;
-			// 在其余文案中等概率选择，避免连续两次进入仍显示同一句。
-			int Index = std::clamp(Choice, 0, ChoiceCount() - 1);
-			if(m_Index >= 0 && Index >= m_Index)
-				++Index;
-			m_Index = Index;
+			// 略过上次的标语和搜索词，其余候选仍可等概率选中。
+			m_Index = PickDifferentIndex(Choice, ChoiceCount(), m_Index);
 			m_LogoIndex = std::clamp(LogoChoice, 0, NUM_LOGOS - 1);
+			m_PlaceholderIndex = PickDifferentIndex(PlaceholderChoice, PlaceholderChoiceCount(), m_PlaceholderIndex);
 			m_DisplayCycle = DisplayCycle;
 			m_Entered = true;
 		}
 		void Leave() { m_Entered = false; }
 		const char *Text() const { return SPLASHES[std::max(0, m_Index)]; }
 		int LogoIndex() const { return m_LogoIndex; }
+		const char *Placeholder() const { return SEARCH_PLACEHOLDERS[std::max(0, m_PlaceholderIndex)]; }
 	};
 
 	struct SLayout
