@@ -182,6 +182,45 @@ TEST(QmMotdLayout, DegenerateInputsStayFinite)
 	EXPECT_EQ(FallbackCell.m_vLines[0].m_VisibleGlyphCount, 4);
 }
 
+TEST(QmMotdLayout, FirstAnnouncementShowsPartialTextBeforeCompletion)
+{
+	EXPECT_EQ(SelectParagraphSource(false, false, false), EParagraphSource::NONE);
+	EXPECT_EQ(SelectParagraphSource(false, true, false), EParagraphSource::BUILDING);
+	EXPECT_EQ(SelectParagraphSource(true, false, false), EParagraphSource::COMPLETE);
+}
+
+TEST(QmMotdLayout, UpdatedTextTakesOverWhenItsFirstPartIsReady)
+{
+	EXPECT_EQ(SelectParagraphSource(true, false, false), EParagraphSource::COMPLETE);
+	EXPECT_EQ(SelectParagraphSource(true, true, false), EParagraphSource::BUILDING);
+}
+
+TEST(QmMotdLayout, SameTextKeepsTheCompleteParagraphDuringRelayout)
+{
+	EXPECT_EQ(SelectParagraphSource(true, true, true), EParagraphSource::COMPLETE);
+}
+
+TEST(QmMotdLayout, VisibleAnnouncementAdvancesWithoutBackgroundBudget)
+{
+	EXPECT_TRUE(CanAdvanceParagraph(true, true, 0));
+	EXPECT_TRUE(CanAdvanceParagraph(true, false, 0));
+}
+
+TEST(QmMotdLayout, BackgroundAnnouncementWaitsForALaterFrameWithBudget)
+{
+	EXPECT_FALSE(CanAdvanceParagraph(false, true, 1));
+	EXPECT_FALSE(CanAdvanceParagraph(false, false, 0));
+	EXPECT_TRUE(CanAdvanceParagraph(false, false, 1));
+}
+
+TEST(QmMotdLayout, PartialAnnouncementReservesHeightForTheRemainingRows)
+{
+	const auto Layout = Build("First\nSecond\n──", 100.0f, NATURAL_CELL, LINE_HEIGHT);
+	EXPECT_FLOAT_EQ(Layout.PreviewHeight(1, LINE_HEIGHT, 0), 3.0f * LINE_HEIGHT);
+	EXPECT_FLOAT_EQ(Layout.PreviewHeight(1, LINE_HEIGHT, 2), 4.0f * LINE_HEIGHT);
+	EXPECT_FLOAT_EQ(Layout.PreviewHeight(3, 4.0f * LINE_HEIGHT, 0), 4.0f * LINE_HEIGHT);
+}
+
 TEST(QmMotdPopup, JoinHideSuppressesAutomaticPopup)
 {
 	// 开关打开时不再自动弹公告；公告正文仍保留给服务器信息面板。

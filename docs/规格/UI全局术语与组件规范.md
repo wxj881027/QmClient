@@ -526,7 +526,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 3.20 公告行级排版（MOTD line layout）
 
 - 定义：服务端公告按行分类，整行都是框线/制表字符的行按统一格子推进（一格一字形、字间距为 0，相邻横线首尾相接），其余行沿用普通文本排版；格宽与行高由字体实测，不写死像素。
-- 唯一实现：`QmMotdLayout::Build` / `QmMotdLayout::IsBoxDrawingLine` / `QmMotdLayout::IsBoxDrawingCodepoint`（`src/game/client/QmUi/QmMotdLayout.h`）；接入点 `CMenus::DrainIngameMotdParagraphCache` 与 `CMenus::RenderIngameMotdStableParagraphCache`（`src/game/client/components/menus_ingame.cpp`，逐行排版与整段文本容器共用同一套请求/预算节奏）；字号与压缩下限走 `ui_token::motd::FONT_SIZE`、`ui_token::motd::BOX_CELL_MIN_RATIO`。
+- 唯一实现：`QmMotdLayout::Build` / `QmMotdLayout::IsBoxDrawingLine` / `QmMotdLayout::IsBoxDrawingCodepoint`（`src/game/client/QmUi/QmMotdLayout.h`）；接入点 `CMenus::DrainIngameMotdParagraphCache` 与 `CMenus::RenderIngameMotdParagraph`（`src/game/client/components/menus_ingame.cpp`，正文逐段排版，页面可见时每帧推进一段。首次显示或正文变化时可以绘制已完成的部分）；字号与压缩下限走 `ui_token::motd::FONT_SIZE`、`ui_token::motd::BOX_CELL_MIN_RATIO`。
 - 禁止的反面写法：把框线行交给普通文本排版（字距把横线切成一节一节）；用固定像素当格宽或行高（换字号就错位）；超宽时继续压缩到笔画互相吞掉而不是截断可见字数；在渲染趟逐字形即时绘制（每帧重建文本容器）。
 
 ### 3.21 回放控制卡（Replay transport card）
