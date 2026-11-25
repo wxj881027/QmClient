@@ -81,7 +81,7 @@ vec2 CQmSlotReflow::Track(const char *pKey, int Slot, float StepX, float StepY)
 	return Track(m_States[pKey], Slot, StepX, StepY);
 }
 
-vec2 CQmSlotReflow::Track(CItem &State, int Slot, float StepX, float StepY)
+vec2 CQmSlotReflow::Track(CItem &State, int Slot, float StepX, float StepY) const
 {
 	if(State.m_LastFrame == m_Frame && State.m_Slot == Slot)
 		return State.m_DisplayedOffset;

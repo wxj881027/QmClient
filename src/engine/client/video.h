@@ -54,7 +54,7 @@ public:
 	~CVideo() override;
 
 	bool Start() override REQUIRES(!m_WriteLock);
-	void Stop() override;
+	void Stop() override REQUIRES(!m_WriteLock);
 	void Pause(bool Pause) override;
 	bool IsRecording() const override { return m_Recording && !HasError(); }
 	bool HasError() const override { return m_FrameCapture.HasError() || m_EncodeError.load(std::memory_order_acquire); }

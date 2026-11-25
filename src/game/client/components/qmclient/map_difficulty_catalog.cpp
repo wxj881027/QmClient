@@ -429,8 +429,17 @@ CQmMapDifficultyCatalog::CQmMapDifficultyCatalog(TRequestFactory CreateRequest) 
 
 bool CQmMapDifficultyCatalog::SDdnetKeyLess::operator()(std::string_view A, std::string_view B) const
 {
-	const int Compare = str_comp_nocase_num(A.data(), B.data(), (int)std::min(A.size(), B.size()));
-	return Compare < 0 || (Compare == 0 && A.size() < B.size());
+	// 不能把 data() 直接喂给 str_comp_nocase_num：string_view 不保证以 '\0' 结尾，
+	// 这里按字节逐位比较（与 str_comp_nocase_num 的 ASCII 大小写规则一致）。
+	const size_t Length = std::min(A.size(), B.size());
+	for(size_t Index = 0; Index < Length; ++Index)
+	{
+		const int CharA = str_utf8_tolower_codepoint((unsigned char)A[Index]);
+		const int CharB = str_utf8_tolower_codepoint((unsigned char)B[Index]);
+		if(CharA != CharB)
+			return CharA < CharB;
+	}
+	return A.size() < B.size();
 }
 
 void CQmMapDifficultyCatalog::RequestDdnetDifficulty(const CServerInfo &Server, IHttp &Http, int64_t Now)
