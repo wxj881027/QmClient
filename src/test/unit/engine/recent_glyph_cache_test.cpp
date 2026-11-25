@@ -182,7 +182,10 @@ TEST(RecentGlyphCollection, NullGlyphKeepsTheExistingSkipRuleAndDoesNotUseSucces
 	Collection.Record(67, 16);
 	std::array<int, 3> Calls{};
 	int Count = 0;
-	const auto Warm = [&](int Chr, int) { Calls.at(Count++) = Chr; return Chr != 66; };
+	const auto Warm = [&](int Chr, int) {
+		Calls.at(Count++) = Chr;
+		return Chr != 66 ? QmRecentGlyphs::EPrewarmResult::READY : QmRecentGlyphs::EPrewarmResult::SKIP;
+	};
 	EXPECT_EQ(Collection.Prewarm(1, Warm), 1);
 	EXPECT_EQ(Collection.Cursor(), 1u);
 	EXPECT_EQ(Collection.Prewarm(1, Warm), 1);
@@ -190,11 +193,28 @@ TEST(RecentGlyphCollection, NullGlyphKeepsTheExistingSkipRuleAndDoesNotUseSucces
 	EXPECT_EQ(Calls, (std::array<int, 3>{65, 66, 67}));
 }
 
+TEST(RecentGlyphCollection, RetryRetainsCurrentEntryUntilItCanBeWarmed)
+{
+	CCollection Collection;
+	Collection.Record(65, 16);
+	Collection.Record(66, 16);
+	int Attempts = 0;
+	EXPECT_EQ(Collection.Prewarm(2, [&](int, int) {
+		++Attempts;
+		return QmRecentGlyphs::EPrewarmResult::RETRY;
+	}),
+		0);
+	EXPECT_EQ(Collection.Cursor(), 0u);
+	EXPECT_EQ(Attempts, 1);
+	EXPECT_EQ(Collection.Prewarm(2, [](int, int) { return QmRecentGlyphs::EPrewarmResult::READY; }), 2);
+	EXPECT_EQ(Collection.Cursor(), 2u);
+}
+
 TEST(RecentGlyphCollection, WarmExceptionRestoresRecordingAndDoesNotConsumeTheEntry)
 {
 	CCollection Collection;
 	Collection.Record(65, 16);
-	EXPECT_EQ(Collection.Prewarm(8, [&](int, int) -> bool { Collection.Record(66, 16); throw 7; }), 0);
+	EXPECT_EQ(Collection.Prewarm(8, [&](int, int) -> QmRecentGlyphs::EPrewarmResult { Collection.Record(66, 16); throw 7; }), 0);
 	EXPECT_FALSE(Collection.Warming());
 	EXPECT_EQ(Collection.Cursor(), 0u);
 	EXPECT_EQ(Collection.Items(), (TItems{{65, 16}}));
@@ -202,7 +222,10 @@ TEST(RecentGlyphCollection, WarmExceptionRestoresRecordingAndDoesNotConsumeTheEn
 	EXPECT_EQ(Collection.Items().size(), 2u);
 	std::array<int, 2> Calls{};
 	int Count = 0;
-	EXPECT_EQ(Collection.Prewarm(2, [&](int Chr, int) { Calls.at(Count++) = Chr; return true; }), 2);
+	EXPECT_EQ(Collection.Prewarm(2, [&](int Chr, int) {
+		Calls.at(Count++) = Chr;
+		return QmRecentGlyphs::EPrewarmResult::READY;
+	}), 2);
 	EXPECT_EQ(Calls, (std::array<int, 2>{65, 66}));
 }
 
@@ -212,9 +235,12 @@ TEST(RecentGlyphCollection, NestedWarmingIsRejectedAndSuccessfulWarmStillRestore
 	Collection.Record(65, 16);
 	int NestedCalls = 0;
 	EXPECT_EQ(Collection.Prewarm(1, [&](int, int) {
-		EXPECT_EQ(Collection.Prewarm(1, [&](int, int) { ++NestedCalls; return true; }), 0);
+		EXPECT_EQ(Collection.Prewarm(1, [&](int, int) {
+			++NestedCalls;
+			return QmRecentGlyphs::EPrewarmResult::READY;
+		}), 0);
 		Collection.Record(66, 16);
-		return true;
+		return QmRecentGlyphs::EPrewarmResult::READY;
 	}),
 		1);
 	EXPECT_EQ(NestedCalls, 0);
@@ -227,7 +253,7 @@ TEST(RecentGlyphLoad, MergesChunkedRecordsAndRetainsPreviousWarmProgress)
 {
 	CCollection Collection;
 	Collection.Record(65, 16);
-	Collection.Prewarm(1, [](int, int) { return true; });
+	Collection.Prewarm(1, [](int, int) { return QmRecentGlyphs::EPrewarmResult::READY; });
 	SInput Input{"66 18\r\n67 20"};
 	Input.m_Chunk = 1;
 	ASSERT_TRUE(QmRecentGlyphs::Load(Input, Collection));

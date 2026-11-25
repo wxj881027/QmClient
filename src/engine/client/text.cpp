@@ -2027,12 +2027,23 @@ public:
 			if(m_pQmGlyphWorkerState->ActiveJobs() >= MaxActiveJobs)
 				break;
 			const size_t BatchCount = std::min(JobBatch, m_vQmPendingGlyphTasks.size());
-			std::vector<SQmGlyphWorkerTask> vBatch(std::make_move_iterator(m_vQmPendingGlyphTasks.begin()), std::make_move_iterator(m_vQmPendingGlyphTasks.begin() + BatchCount));
-			m_vQmPendingGlyphTasks.erase(m_vQmPendingGlyphTasks.begin(), m_vQmPendingGlyphTasks.begin() + BatchCount);
+			std::vector<SQmGlyphWorkerTask> vBatch;
 			std::vector<std::tuple<FT_Face, int, int, bool>> vKeys;
-			vKeys.reserve(vBatch.size());
-			for(const SQmGlyphWorkerTask &Task : vBatch)
-				vKeys.push_back(Task.m_Key);
+			try
+			{
+				vBatch.reserve(BatchCount);
+				vKeys.reserve(BatchCount);
+			}
+			catch(const std::bad_alloc &)
+			{
+				break;
+			}
+			for(size_t Index = 0; Index < BatchCount; ++Index)
+			{
+				vKeys.push_back(m_vQmPendingGlyphTasks[Index].m_Key);
+				vBatch.push_back(std::move(m_vQmPendingGlyphTasks[Index]));
+			}
+			m_vQmPendingGlyphTasks.erase(m_vQmPendingGlyphTasks.begin(), m_vQmPendingGlyphTasks.begin() + BatchCount);
 			const auto FailBatch = [&]() {
 				for(const auto &Key : vKeys)
 				{
@@ -2770,11 +2781,23 @@ public:
 				const EQmGlyphPrewarmResult Result = QmPrewarmGlyphTask(Chr, Size, FontData);
 				// READY/QUEUED 是已推进的成功路径；字体确实不支持时才允许
 				// 跳过，瞬时 RETRY 或队列拒绝必须保留游标，下一轮再试。
-				return Result == EQmGlyphPrewarmResult::READY || Result == EQmGlyphPrewarmResult::QUEUED ||
-				       Result == EQmGlyphPrewarmResult::UNSUPPORTED;
+				switch(Result)
+				{
+				case EQmGlyphPrewarmResult::READY:
+				case EQmGlyphPrewarmResult::QUEUED:
+					return QmRecentGlyphs::EPrewarmResult::READY;
+				case EQmGlyphPrewarmResult::UNSUPPORTED:
+					return QmRecentGlyphs::EPrewarmResult::SKIP;
+				case EQmGlyphPrewarmResult::RETRY:
+				case EQmGlyphPrewarmResult::REJECTED:
+					return QmRecentGlyphs::EPrewarmResult::RETRY;
+				}
+				return QmRecentGlyphs::EPrewarmResult::RETRY;
 			});
 		}
-		return m_RecentGlyphs.Prewarm(MaxCount, [this](int Chr, int Size) { return GetGlyph(Chr, Size) != nullptr; });
+		return m_RecentGlyphs.Prewarm(MaxCount, [this](int Chr, int Size) {
+			return GetGlyph(Chr, Size) != nullptr ? QmRecentGlyphs::EPrewarmResult::READY : QmRecentGlyphs::EPrewarmResult::SKIP;
+		});
 	}
 
 	void RetryFailedGlyphs()
