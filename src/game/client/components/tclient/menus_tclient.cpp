@@ -35,7 +35,7 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 		m_TClientSettingsTab = ActiveTab;
 
 	MainView = TClientSettingsContentView(MainView, &TabBar);
-	const float TabWidth = TabBar.w / NUMBER_OF_TCLIENT_TABS;
+	const float TabWidth = TabBar.w / (float)NUMBER_OF_TCLIENT_TABS;
 	static CButtonContainer s_aPageTabs[NUMBER_OF_TCLIENT_TABS] = {};
 	// 页签文字缓存自有副本：语言文件每次加载都会重建字符串堆，A→B→A 快速切换时
 	// 仅比较文件名会留下指向旧堆的指针，表现为页签乱码。

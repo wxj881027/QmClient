@@ -2,12 +2,14 @@
 #!/usr/bin/env python3
 """QmClient clang-tidy 独立工具。
 
-两个环境变量控制扫描范围：
+三个环境变量控制扫描范围与判据：
 
 - `CLANG_TIDY_CHANGED_ONLY=1`：只扫本次改动涉及的翻译单元（PR / merge queue 用）。
   改动里出现头文件、构建脚本或 `.clang-tidy` 本身时自动退回全量——头文件会被
   许多 TU 包含，只编译「改名的那一个 .cpp」会把影响面漏掉。
 - `CLANG_TIDY_DIFF_BASE`：增量比较的基准（默认 `origin/master`）。
+- `CLANG_TIDY_RATCHET=0`：关掉扫完之后的防回潮判断（默认开启，见
+  `clang_tidy_ratchet.py`）。
 """
 
 import json
@@ -28,6 +30,16 @@ COMPILER_MODE = os.environ.get(
 )
 CHANGED_ONLY = os.environ.get("CLANG_TIDY_CHANGED_ONLY", "").strip() not in ("", "0")
 DIFF_BASE = os.environ.get("CLANG_TIDY_DIFF_BASE", "").strip() or "origin/master"
+RATCHET_ENABLED = os.environ.get("CLANG_TIDY_RATCHET", "").strip() not in ("0", "false", "False")
+UPDATE_BASELINE = os.environ.get("CLANG_TIDY_UPDATE_BASELINE", "").strip() not in ("", "0")
+BASELINE_PATH = REPO_ROOT / os.environ.get(
+    "CLANG_TIDY_BASELINE", "qmclient_scripts/gate/clang_tidy_baseline.json"
+)
+
+TOOLS_DIR = Path(__file__).resolve().parent
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+import clang_tidy_ratchet  # noqa: E402  （同目录工具，需要在 sys.path 调整之后导入）
 
 SOURCE_EXCLUDES = (
     "src/rust-bridge/base/cxx.h",
@@ -39,7 +51,8 @@ SOURCE_SUFFIXES = (".cpp", ".cc", ".cxx", ".c")
 HEADER_SUFFIXES = (".h", ".hpp", ".hh", ".hxx", ".inl", ".inc", ".ipp")
 # 这些文件一变，编译参数、TU 组成或扫描规则就可能整体变化，增量结论不再可信。
 THIS_TOOL = Path(__file__).resolve().relative_to(REPO_ROOT).as_posix()
-FULL_SCAN_TRIGGERS = ("CMakeLists.txt", ".clang-tidy", THIS_TOOL)
+RATCHET_TOOL = "qmclient_scripts/gate/tools/clang_tidy_ratchet.py"
+FULL_SCAN_TRIGGERS = ("CMakeLists.txt", ".clang-tidy", THIS_TOOL, RATCHET_TOOL)
 FULL_SCAN_PREFIXES = ("cmake/",)
 
 
@@ -241,6 +254,66 @@ def run_command(command, cwd=None, log_path=None, log_header=None):
     return 0
 
 
+def apply_ratchet(build_rc, log_path, incremental):
+    """扫完之后判断本次是否引入了新诊断。
+
+    编译失败时日志里的诊断不完整，直接交回构建错误；增量只对改动行负责，全量则
+    与基线比计数——两种判据的取舍写在 `clang_tidy_ratchet.py` 的模块注释里。
+    """
+    if not RATCHET_ENABLED or build_rc != 0:
+        return build_rc
+    if not log_path.is_file():
+        # 构建被外部中断（或测试里 mock 掉）时没有日志，没有可判断的诊断。
+        print(f"[clang-tidy] 日志不存在（{log_path}），跳过防回潮判断", flush=True)
+        return build_rc
+
+    diagnostics = clang_tidy_ratchet.parse_diagnostics(
+        log_path.read_text(encoding="utf-8", errors="replace")
+    )
+    total = len(diagnostics)
+
+    if incremental:
+        added = clang_tidy_ratchet.changed_line_ranges(DIFF_BASE)
+        if added is None:
+            print("[clang-tidy] 改动行不可用，本次跳过防回潮判断", flush=True)
+            return 0
+        hits = clang_tidy_ratchet.filter_added_lines(diagnostics, added)
+        if not hits:
+            print(f"[clang-tidy] 防回潮通过：改动行上没有新诊断（本次 {total} 个唯一位置）")
+            return 0
+        print(f"[clang-tidy] 防回潮失败：改动行上有 {len(hits)} 条诊断", flush=True)
+        for diagnostic in hits:
+            print(clang_tidy_ratchet.format_diagnostic(diagnostic), flush=True)
+        return 1
+
+    counts = clang_tidy_ratchet.count_by_file_check(diagnostics)
+    if UPDATE_BASELINE:
+        clang_tidy_ratchet.write_baseline(
+            counts,
+            BASELINE_PATH,
+            "全量扫描基线更新（CLANG_TIDY_UPDATE_BASELINE=1）",
+            total,
+        )
+        print(f"[clang-tidy] 基线已写入 {BASELINE_PATH}（{total} 个唯一位置）")
+        return 0
+
+    baseline = clang_tidy_ratchet.load_baseline(BASELINE_PATH)
+    violations = clang_tidy_ratchet.compare_with_baseline(counts, baseline)
+    if not violations:
+        print(
+            f"[clang-tidy] 防回潮通过：{total} 个唯一位置，未超出基线"
+            f"（基线 {baseline.get('total_hits', '?')} 个）"
+        )
+        return 0
+    print(f"[clang-tidy] 防回潮失败：{len(violations)} 个 文件|检查 超出基线", flush=True)
+    for violation in violations:
+        print(
+            f"  {violation['key']}: 当前 {violation['current']} > 基线 {violation['baseline']}",
+            flush=True,
+        )
+    return 1
+
+
 def main():
     if COMPILER_MODE == "clang-cl":
         clang_bin = resolve_tool("clang-cl", "CLANG_BIN", versioned=True)
@@ -318,7 +391,8 @@ def main():
         build_command.extend(["-k", "0"])
     else:
         build_command.extend(["--target", BUILD_TARGET, "--", "-k", "0"])
-    return run_command(build_command, cwd=BUILD_DIR, log_path=log_path, log_header=mode_line)
+    build_rc = run_command(build_command, cwd=BUILD_DIR, log_path=log_path, log_header=mode_line)
+    return apply_ratchet(build_rc, log_path, incremental_targets is not None)
 
 
 if __name__ == "__main__":

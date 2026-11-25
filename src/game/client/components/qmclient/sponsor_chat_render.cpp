@@ -35,7 +35,7 @@ void QmSponsorChatAddPlatinumSplits(CTextCursor &Cursor, const char *pText, floa
 	}
 }
 
-void QmRenderSponsorChatText(IGraphics *pGraphics, ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, float Alpha, float X, float Y, float FontSize, const SQmSponsorChatSweep &SweepState, double TimeSeconds)
+void QmRenderSponsorChatText(IGraphics *pGraphics, ITextRender *pTextRender, const STextContainerIndex &Index, EQmSponsorChatStyle Style, float Alpha, float X, float Y, float FontSize, const SQmSponsorChatSweep &SweepState, double TimeSeconds)
 {
 	if(!Index.Valid() || Alpha <= 0.0f)
 		return;

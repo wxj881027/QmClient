@@ -132,7 +132,7 @@ TEST(QmTitlePresenceText, BadOptionalStyleTextFallsBackWithoutDroppingTitle)
 	for(const char *pField : {"style", "chat_style"})
 	{
 		SCOPED_TRACE(pField);
-		for(const std::string Bad : {std::string("platinum\\u0000extra"), std::string("\x80")})
+		for(const std::string &Bad : {std::string("platinum\\u0000extra"), std::string("\x80")})
 		{
 			SCOPED_TRACE(::testing::PrintToString(Bad));
 			SQmTitlePresenceParseResult Result;
@@ -158,7 +158,7 @@ TEST(QmTitlePresenceText, OptionalExactMembersAndAppearanceCannotBeShadowed)
 
 TEST(QmTitlePresenceText, ExistingNameByteLimitAndUnicodeRemainSupported)
 {
-	for(const std::string Name : {std::string(MAX_NAME_LENGTH - 1, 'x'), std::string("玩家😀")})
+	for(const std::string &Name : {std::string(MAX_NAME_LENGTH - 1, 'x'), std::string("玩家😀")})
 	{
 		SQmTitlePresenceParseResult Result;
 		ASSERT_TRUE(Parse(Snapshot(Row("player_name", '"' + Name + '"')), Result));

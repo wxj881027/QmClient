@@ -161,7 +161,7 @@ void CQmCheckpointGuide::OnRender()
 		const CTeleTile &Tele = pCollision->TeleLayer()[Index];
 		const int Restrictions = pCollision->GetMoveRestrictions(IsGuideSwitchActive, pCharacter, *Center, QmCheckpointGuide::MOVE_RESTRICTION_DISTANCE, Index);
 		return QmMapProgress::MakeTile(pCollision->GameLayer()[Index].m_Index,
-			pCollision->FrontLayer() ? pCollision->FrontLayer()[Index].m_Index : TILE_AIR,
+			pCollision->FrontLayer() ? pCollision->FrontLayer()[Index].m_Index : (unsigned char)TILE_AIR,
 			Tele.m_Type, Tele.m_Number, Restrictions);
 	};
 	if(Now >= Player.m_NextSearch)

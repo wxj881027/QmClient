@@ -99,7 +99,7 @@ TEST(QmRealtimeServiceData, ParserAliasesDoNotBecomeNewNativeStatisticsFields)
 
 TEST(QmRealtimeServiceData, InvalidActionTextCannotBecomeStartOrStop)
 {
-	for(const std::string Action : {std::string("start\\u0000extra"), std::string("stop\\u0000extra"), std::string("\x80"), std::string("start\\n"), std::string("")})
+	for(const std::string &Action : {std::string("start\\u0000extra"), std::string("stop\\u0000extra"), std::string("\x80"), std::string("start\\n"), std::string("")})
 	{
 		SCOPED_TRACE(::testing::PrintToString(Action));
 		const auto Input = Message("playtime", R"("total_seconds":5,"action":")" + Action + '"');
@@ -241,7 +241,7 @@ TEST(QmRealtimeServiceData, TitleProfilePreservesSupplementaryAndCombiningCodePo
 
 TEST(QmRealtimeServiceData, InvalidOptionalChatStyleDoesNotDiscardValidProfile)
 {
-	for(const std::string Style : {std::string("soft_glow\\u0000extra"), std::string("platinum\\u0000extra"), std::string("\x80")})
+	for(const std::string &Style : {std::string("soft_glow\\u0000extra"), std::string("platinum\\u0000extra"), std::string("\x80")})
 	{
 		SCOPED_TRACE(::testing::PrintToString(Style));
 		const auto Input = Message("title_profile", R"("status":200,"title":"Title","chat_style":")" + Style + '"');
@@ -302,7 +302,7 @@ TEST(QmRealtimeServiceData, ExactAppearanceCannotBeShadowedAndPreservesZeroValue
 
 TEST(QmRealtimeServiceData, InvalidAppearanceStyleFallsBackWithoutLosingValidTitle)
 {
-	for(const std::string Style : {std::string("sun\\u0000extra"), std::string("moon\\u0000extra"), std::string("\x80")})
+	for(const std::string &Style : {std::string("sun\\u0000extra"), std::string("moon\\u0000extra"), std::string("\x80")})
 	{
 		SCOPED_TRACE(::testing::PrintToString(Style));
 		const auto Input = Message("title_profile", R"("title":"Title","status":200,"appearance":{"style":")" + Style + R"(","color":0,"opacity":0})");

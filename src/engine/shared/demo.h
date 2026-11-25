@@ -58,6 +58,8 @@ private:
 	int m_FirstTick = -1;
 
 	CSnapshotBuffer m_LastSnapshotData;
+	// delta 编码的临时缓冲：128KB，不能做成栈变量（记录会在 512KB 栈的线程上跑）。
+	CSnapshotDeltaBuffer m_DeltaBuffer;
 	CSnapshotDelta *m_pSnapshotDelta = nullptr;
 
 	int m_NumTimelineMarkers = 0;

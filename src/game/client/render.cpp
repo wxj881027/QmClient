@@ -199,12 +199,12 @@ void CRenderTools::RenderIcon(int ImageId, int SpriteId, const CUIRect *pRect, c
 	Graphics()->QuadsEnd();
 }
 
-void CRenderTools::RenderTextContainerWithEffects(STextContainerIndex TextContainerIndex, const SQmTextEffectRenderStyle &Style, float X, float Y) const
+void CRenderTools::RenderTextContainerWithEffects(const STextContainerIndex &TextContainerIndex, const SQmTextEffectRenderStyle &Style, float X, float Y) const
 {
 	QmRenderTextContainerWithEffects(*TextRender(), TextContainerIndex, Style, X, Y);
 }
 
-void CRenderTools::RenderTitleContainerWithPolishedEffects(STextContainerIndex Index, const SQmTitlePolishStyle &Style, float X, float Y) const
+void CRenderTools::RenderTitleContainerWithPolishedEffects(const STextContainerIndex &Index, const SQmTitlePolishStyle &Style, float X, float Y) const
 {
 	if(!Index.Valid())
 		return;
@@ -240,7 +240,7 @@ void CRenderTools::RenderTitleContainerWithPolishedEffects(STextContainerIndex I
 	Draw(ColorRGBA(Base.r, Base.g, Base.b, Alpha), 0.0f, 0.0f);
 }
 
-void CRenderTools::RenderTitleContainerWithCalamityEffects(STextContainerIndex Index, const SQmTitleEffectStyle &Style, float X, float Y) const
+void CRenderTools::RenderTitleContainerWithCalamityEffects(const STextContainerIndex &Index, const SQmTitleEffectStyle &Style, float X, float Y) const
 {
 	if(!Index.Valid())
 		return;

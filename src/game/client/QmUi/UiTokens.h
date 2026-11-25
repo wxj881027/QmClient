@@ -384,7 +384,7 @@ namespace ui_token::glow
 	inline constexpr float FOCUS_CLIP_ALLOWANCE = INPUT_FOCUS_SPREAD_MAX;
 
 	// 光晕宽度：按外壳高度取比例后夹取，调用点不再自己算像素。
-	inline constexpr float InputFocusSpread(const float ShellHeight)
+	constexpr float InputFocusSpread(const float ShellHeight)
 	{
 		return std::clamp(std::max(0.0f, ShellHeight) * INPUT_FOCUS_SPREAD_RATIO, INPUT_FOCUS_SPREAD_MIN, INPUT_FOCUS_SPREAD_MAX);
 	}
@@ -455,31 +455,31 @@ namespace ui_token::control
 	inline constexpr float SUFFIX_RATIO = 0.82f;
 
 	// 控件左右内边距：至少一个 XS，随正文放大（0.5 字号）。
-	inline constexpr float PadX(const float BodySize) { return std::max(spacing::XS, BodySize * 0.5f); }
+	constexpr float PadX(const float BodySize) { return std::max(spacing::XS, BodySize * 0.5f); }
 	// 控件上下内边距：由「行高 - 正文字号」的一半得出，保证文字垂直居中。
-	inline constexpr float PadY(const float LineHeight, const float BodySize) { return std::max(0.0f, (LineHeight - BodySize) * 0.5f); }
+	constexpr float PadY(const float LineHeight, const float BodySize) { return std::max(0.0f, (LineHeight - BodySize) * 0.5f); }
 	// 图标与相邻文字的间距（0.33 字号，最小 XS）。
-	inline constexpr float IconTextGap(const float BodySize) { return std::max(spacing::XS, BodySize * 0.33f); }
+	constexpr float IconTextGap(const float BodySize) { return std::max(spacing::XS, BodySize * 0.33f); }
 	// 左侧标签与右侧控件之间的最小间距（0.5 字号，最小 SM）。
-	inline constexpr float LabelControlGap(const float BodySize) { return std::max(spacing::SM, BodySize * 0.5f); }
+	constexpr float LabelControlGap(const float BodySize) { return std::max(spacing::SM, BodySize * 0.5f); }
 	// 字形 → 盒子（与 QmIconFontSize 互逆）。
-	inline constexpr float IconBox(const float GlyphSize) { return GlyphSize / ICON_INK_RATIO; }
+	constexpr float IconBox(const float GlyphSize) { return GlyphSize / ICON_INK_RATIO; }
 	// 并排动作图标的墨迹高（em 占比）：方框类（SQUARE_PLUS / SQUARE_MINUS…）实测 0.75，
 	// 星形 0.844。**同字号并排 ≠ 视觉等大**，所以并排的一组图标都先取这一档墨迹高，
 	// 再各自按字形墨迹比反算字号（QmIconInkFontSize），盒与间距仍按盒统一。
 	inline constexpr float ACTION_ICON_INK_HEIGHT = 0.75f;
-	inline constexpr float ActionIconInkHeight(const float GlyphSize) { return GlyphSize * ACTION_ICON_INK_HEIGHT; }
+	constexpr float ActionIconInkHeight(const float GlyphSize) { return GlyphSize * ACTION_ICON_INK_HEIGHT; }
 	// 开关轨道最小宽度：2.75 倍正文，@12 得 33，等于原来 max(h*1.65, 30) 在 h=20 的结果。
-	inline constexpr float SwitchMinWidth(const float BodySize) { return 2.75f * BodySize; }
+	constexpr float SwitchMinWidth(const float BodySize) { return 2.75f * BodySize; }
 	// 正文随视口缩放的唯一换算（与设置页度量同一条夹取）：控件拿不到
 	// SSettingsContentMetrics 时用它，保证同一排控件不会一半缩放一半不缩放。
 	// 上下限夹在 10~12：再小读不清，再大挤压行高。
-	inline constexpr float BodySizeFromScale(const float UiScale)
+	constexpr float BodySizeFromScale(const float UiScale)
 	{
 		return std::clamp(12.0f * (UiScale > 0.0f ? UiScale : 1.0f), 10.0f, 12.0f);
 	}
 	// 开关轨道的宽高比：按行高反推轨道宽度时用（宽 = 高 × 1.65）。
-	inline constexpr float SwitchTrackAspect() { return 1.65f; }
+	constexpr float SwitchTrackAspect() { return 1.65f; }
 } // namespace ui_token::control
 
 // 圆角标尺集中保存既有用途的数值；调用点选择用途，不再写字面量半径。
@@ -566,21 +566,21 @@ namespace ui_token::settings
 	//   RowGap     —— 相邻两行（= 页面行距本身）；
 	//   SectionGap —— 卡片内两个分区之间（= 原来的 m_SectionGap，2 倍行距）。
 	// 参数一律传已经算好的 LineSpacing（含 UiScale），这里不再引入新的绝对像素。
-	inline constexpr float SubRowGap(const float LineSpacing) { return LineSpacing * 0.5f; }
-	inline constexpr float RowGap(const float LineSpacing) { return LineSpacing; }
+	constexpr float SubRowGap(const float LineSpacing) { return LineSpacing * 0.5f; }
+	constexpr float RowGap(const float LineSpacing) { return LineSpacing; }
 	// 分区之间：两倍行距（没写进注释清单里的那一条，语义见上方说明）。
-	inline constexpr float SectionGap(const float LineSpacing) { return LineSpacing * 2.0f; }
+	constexpr float SectionGap(const float LineSpacing) { return LineSpacing * 2.0f; }
 	// 卡片底部动作区：比分区再重一档（例如配色列表之后、整卡级「全部设为…」按钮之前）。
 	// 这个档位只该出现在「卡尾动作」，不要拿来当行间或普通分区。
-	inline constexpr float ActionGap(const float LineSpacing) { return LineSpacing * 4.0f; }
+	constexpr float ActionGap(const float LineSpacing) { return LineSpacing * 4.0f; }
 } // namespace ui_token::settings
 
 namespace ui_token::tee_preview
 {
 	// 圆角目标为 50 屏幕像素，窄框仍在两端之间留出直边。
-	inline constexpr float Radius(float ShortSide, float PixelSize) { return std::min(50.0f * PixelSize, ShortSide * 0.4f); }
+	constexpr float Radius(float ShortSide, float PixelSize) { return std::min(50.0f * PixelSize, ShortSide * 0.4f); }
 	// 标题与旗帜至少留出卡片内边距，并避开圆弧的对角线交点。
-	inline constexpr float HeadingInset(float UiScale, float Radius) { return std::max(settings::CARD_PADDING * UiScale, Radius * 0.3f); }
+	constexpr float HeadingInset(float UiScale, float Radius) { return std::max(settings::CARD_PADDING * UiScale, Radius * 0.3f); }
 } // namespace ui_token::tee_preview
 
 // 列表（CListBox）的整行外观与自适应高度：行高、行距、胶囊圆角、行内左右内边距、
@@ -670,7 +670,7 @@ namespace ui_token::list
 
 	// 覆盖式轨道的右侧让位：轨道厚度 + 外边距 + 一条缝。列表行、浏览器面板、弹层共用这一份，
 	// 不要再在调用点写 8+4+4 或 12。
-	inline constexpr float OverlayRailReserve() { return SCROLLBAR_WIDTH + SCROLLBAR_MARGIN + SCROLLBAR_ROW_GAP; }
+	constexpr float OverlayRailReserve() { return SCROLLBAR_WIDTH + SCROLLBAR_MARGIN + SCROLLBAR_ROW_GAP; }
 
 	// 条目数与每行条目数决定可见行数：0 表示空列表不占高度。
 	// MinRows 先夹到 [0, MaxRows]，再用它夹住实际所需行数，保证返回值不越界。
@@ -872,7 +872,7 @@ namespace ui_token::settings::row
 	};
 
 	// 按行类型取尺寸事实的唯一入口；未知类型退回 PRIMARY，调用点不用再判空。
-	inline constexpr SRowMetrics Of(const EType Type)
+	constexpr SRowMetrics Of(const EType Type)
 	{
 		switch(Type)
 		{

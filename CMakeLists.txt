@@ -523,7 +523,14 @@ if(NOT MSVC AND NOT HAIKU)
     add_cxx_compiler_flag_if_supported(OUR_FLAGS -fstack-clash-protection)
     # 在目标编译器支持时启用前向控制流保护。
     add_cxx_compiler_flag_if_supported(OUR_FLAGS -fcf-protection=full)
-    add_cxx_compiler_flag_if_supported(OUR_FLAGS -mbranch-protection=standard)
+    # PAC 返回地址签名在 Apple clang 21（Xcode 26.6 / macOS 26 arm64）上会让 C++
+    # 异常无法传播：throw 之后 catch 永不匹配，直接 std::terminate 中止进程。
+    # 最小复现只需 -O3 -mbranch-protection=standard 一条，-mbranch-protection=none
+    # 或去掉该选项即恢复正常。客户端靠 catch 做恢复（JSON 解析、脚本引擎、分配
+    # 失败回退），因此 macOS 不启用返回地址签名，其它平台保持原样。
+    if(NOT TARGET_OS STREQUAL "mac")
+      add_cxx_compiler_flag_if_supported(OUR_FLAGS -mbranch-protection=standard)
+    endif()
     if(MINGW)
       add_linker_flag_if_supported(OUR_FLAGS_LINK -lssp)
     endif()
@@ -2751,6 +2758,7 @@ set_src(BASE GLOB_RECURSE src/base
   dynamic.h
   fs.cpp
   fs.h
+  fs_path.h
   hash.cpp
   hash.h
   hash_bundled.cpp
@@ -7370,6 +7378,8 @@ foreach(Binary IN ITEMS ${QM_CXX_TEST_BINARIES})
   message(STATUS \"Running \${Binary}\")
   execute_process(COMMAND \"\${Binary}\" RESULT_VARIABLE Result)
   if(NOT Result EQUAL 0)
+    # 崩溃的测试二进制只留下退出码，日志里看不出是被信号打死还是断言失败。
+    message(STATUS \"Test binary failed: \${Binary} (exit code \${Result})\")
     list(APPEND Failed \"\${Binary}\")
   endif()
 endforeach()
@@ -7886,8 +7896,13 @@ if(CLIENT AND DMGBUILD_FOUND)
   set(DMG_TMPDIR pack_${CPACK_PACKAGE_FILE_NAME}_dmg)
   # SDL3 以 framework 形式随包分发；静态链接时期这段为空。
   if(SDL3_COPY_DIRS)
+    # 用 ditto 而不是 cmake -E copy_directory：后者会把 framework 里的符号链接
+    # （顶层 SDL3、Versions/Current、Resources）解引用成实体副本，出来的 bundle
+    # 既不像 app 也不像 framework，codesign 直接报
+    #   "bundle format is ambiguous (could be app or framework)"。
+    # ditto 按原样保留链接与 bundle 结构，是 macOS 上拷 framework 的标准做法。
     set(DMG_SDL3_FRAMEWORK_COPY_COMMANDS
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${EXTRA_SDL3_LIBDIR}/SDL3.framework ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
+      COMMAND ditto ${SDL3_COPY_DIRS} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
     set(DMG_SDL3_FRAMEWORK_SIGN_COMMANDS
       COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
   else()

@@ -1,3 +1,5 @@
+#include <base/fs_path.h>
+
 #include <engine/shared/demo.h>
 #include <engine/storage.h>
 
@@ -167,7 +169,7 @@ namespace
 
 		std::string Absolute(const char *pPath)
 		{
-			const auto Path = (std::filesystem::absolute(std::filesystem::u8path(m_Info.StoragePath())) / std::filesystem::u8path(pPath)).generic_u8string();
+			const auto Path = (std::filesystem::absolute(fs_path_from_utf8(m_Info.StoragePath())) / fs_path_from_utf8(pPath)).generic_u8string();
 			return std::string(reinterpret_cast<const char *>(Path.data()), Path.size());
 		}
 

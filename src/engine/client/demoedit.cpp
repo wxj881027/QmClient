@@ -1,6 +1,7 @@
 #include "demoedit.h"
 
 #include <base/fs.h>
+#include <base/fs_path.h>
 #include <base/log.h>
 #include <base/str.h>
 
@@ -34,7 +35,7 @@ CDemoEdit::CDemoEdit(const char *pNetVersion, CSnapshotDelta *pSnapshotDelta, CS
 		!demo_output::Resolve(*pStorage, pDst, Destination) || !demo_output::ValidDestination(*pStorage, pDst))
 		throw std::invalid_argument("Invalid replay path");
 	std::error_code Error;
-	const bool Same = std::filesystem::equivalent(std::filesystem::u8path(Source), std::filesystem::u8path(Destination), Error);
+	const bool Same = std::filesystem::equivalent(fs_path_from_utf8(Source), fs_path_from_utf8(Destination), Error);
 	if(Same || (Error && Error != std::errc::no_such_file_or_directory))
 		throw std::invalid_argument("Replay destination must differ from its source");
 	m_pSourceFile.reset(io_open_read_regular_checked(Source.c_str(), nullptr));

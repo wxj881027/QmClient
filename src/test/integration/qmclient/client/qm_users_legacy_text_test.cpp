@@ -70,7 +70,7 @@ TEST(QmUsersLegacyText, InvalidUtf8InRequiredIdentitySkipsOnlyThatRow)
 
 TEST(QmUsersLegacyText, InvalidOptionalQidIsIgnoredWhileNormalMarkIsKept)
 {
-	for(const std::string Qid : {std::string("qid\\u0000other"), std::string("bad\x80")})
+	for(const std::string &Qid : {std::string("qid\\u0000other"), std::string("bad\x80")})
 	{
 		const auto Result = Parse(std::string(R"([{"server_address":"one:8303","player_name":"Alice","qid":")") + Qid + R"(","client_type":"arg"}])");
 		EXPECT_EQ(Result.m_OnlineUserCount, 1);
@@ -119,7 +119,7 @@ TEST(QmUsersLegacyText, NullSuffixedRootUsersMemberDoesNotCountAsUsersArray)
 
 TEST(QmUsersLegacyText, RealtimeContextRejectsNullPrefixAndInvalidUtf8Addresses)
 {
-	for(const std::string Address : {std::string("users\\u0000other"), std::string("one:8303\\u0000other"), std::string("bad\x80")})
+	for(const std::string &Address : {std::string("users\\u0000other"), std::string("one:8303\\u0000other"), std::string("bad\x80")})
 	{
 		const auto Json = std::string(R"({"type":"users","data":{"server_address":")") + Address + R"(","users":[]}})";
 		SQmRealtimeMessage Message;

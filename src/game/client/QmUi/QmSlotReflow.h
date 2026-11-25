@@ -42,7 +42,7 @@ public:
 	void BeginFrame(float DtSec, int Columns, bool Snap);
 	// 返回本帧要叠加到布局矩形上的像素偏移。
 	vec2 Track(const char *pKey, int Slot, float StepX, float StepY);
-	vec2 Track(CItem &Item, int Slot, float StepX, float StepY);
+	vec2 Track(CItem &Item, int Slot, float StepX, float StepY) const;
 	void Reset();
 
 private:

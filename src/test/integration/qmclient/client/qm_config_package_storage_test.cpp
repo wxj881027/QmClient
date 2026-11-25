@@ -1,3 +1,5 @@
+#include <base/fs_path.h>
+
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/config_package.h>
@@ -194,7 +196,7 @@ TEST_F(CQmConfigPackageStorage, SymbolicLinkCannotReadOrOverwriteAnAliasedConfig
 	ASSERT_TRUE(m_pFiles->Write("safe/target.cfg", "preserve"));
 	char aRoot[IO_MAX_PATH_LENGTH];
 	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "", aRoot, sizeof(aRoot));
-	const auto Root = std::filesystem::u8path(aRoot);
+	const auto Root = fs_path_from_utf8(aRoot);
 	std::error_code Ec;
 	std::filesystem::create_directory_symlink(Root / "safe", Root / "linked", Ec);
 	if(Ec)

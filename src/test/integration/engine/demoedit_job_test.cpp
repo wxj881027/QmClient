@@ -55,6 +55,9 @@ namespace
 		CJobFileOperations m_Operations;
 		std::shared_ptr<CReplayJobForTest> m_pJob;
 		bool m_Accepted = false;
+		// 池初始化失败要显式报出来：静默 return 会让用例在没有真正跑过 worker 的
+		// 情况下通过，而继续调用 Shutdown 又会在断言上把整个测试进程打死。
+		bool m_PoolInitFailed = false;
 		void Prepare()
 		{
 			m_Data.Create();
@@ -85,13 +88,21 @@ namespace
 		::testing::AssertionResult RunOnWorker()
 		{
 			const auto pState = m_pState;
-			return WaitForAsyncIo([pState] {
+			const auto Result = WaitForAsyncIo([pState] {
 				CJobPool Pool;
 				if(!Pool.TryInit(1))
+				{
+					pState->m_PoolInitFailed = true;
 					return;
+				}
 				pState->m_Accepted = Pool.TryAdd(pState->m_pJob);
 				Pool.Shutdown();
 			});
+			if(!Result)
+				return Result;
+			if(pState->m_PoolInitFailed)
+				return ::testing::AssertionFailure() << "job pool initialization failed";
+			return ::testing::AssertionSuccess();
 		}
 	};
 }

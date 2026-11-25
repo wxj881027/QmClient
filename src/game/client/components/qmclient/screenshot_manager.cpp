@@ -1,5 +1,6 @@
 #include "screenshot_manager.h"
 
+#include <base/fs_path.h>
 #include <base/log.h>
 #include <base/str.h>
 #include <base/system.h>
@@ -786,7 +787,7 @@ namespace
 		if(pPath == nullptr || pPath[0] == '\0')
 			return {};
 		std::error_code Error;
-		const auto Path = std::filesystem::absolute(std::filesystem::u8path(pPath), Error);
+		const auto Path = std::filesystem::absolute(fs_path_from_utf8(pPath), Error);
 		if(Error)
 			return {};
 		const auto Utf8 = Path.u8string();
