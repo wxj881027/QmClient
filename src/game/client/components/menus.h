@@ -21,6 +21,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/AudioPackEditorInput.h>
 #include <game/client/QmUi/MapTagsPanel.h>
 #include <game/client/QmUi/QmAuthorName.h>
 #include <game/client/QmUi/QmAuthorTee.h>
@@ -745,15 +746,6 @@ public:
 		return qm_audio_pack::FindCandidateEntryIndex(vEntries, pPath);
 	}
 
-	static std::string ResolveAudioPackPreviewPath(const char *pSelectedCandidatePath, const char *pManualSourcePath)
-	{
-		if(pSelectedCandidatePath != nullptr && pSelectedCandidatePath[0] != '\0')
-			return pSelectedCandidatePath;
-		if(pManualSourcePath != nullptr && pManualSourcePath[0] != '\0')
-			return pManualSourcePath;
-		return {};
-	}
-
 	static std::string ResolveAudioPackExportSourcePath(const char *pSelectedCandidatePath, const char *pManualSourcePath)
 	{
 		if(pManualSourcePath != nullptr && pManualSourcePath[0] != '\0')
@@ -1431,13 +1423,13 @@ protected:
 	void AssetsEditorOpen(int Type);
 
 private:
-	struct SAudioPackEditorState
+	struct SAudioPackEditorState : public qm_audio_pack::SEditorCandidates
 	{
 		bool m_Open = false;
 		bool m_Initialized = false;
 		int m_SelectedSlotIndex = 0;
 		int m_Category = 0;
-		int m_SelectedCandidateIndex = -1;
+		qm_audio_pack::CEditorListFocus m_ListFocus;
 		CLineInputBuffered<64> m_FilterInput;
 		CLineInputBuffered<64> m_CandidateFilterInput;
 		CLineInputBuffered<64> m_PackNameInput;
@@ -1445,8 +1437,6 @@ private:
 		char m_aStatusMessage[256] = {0};
 		bool m_StatusIsError = false;
 		int m_PreviewSampleId = -1;
-		std::vector<std::string> m_vCandidatePaths;
-		std::vector<SAudioPackCandidateEntry> m_vCandidateEntries;
 	};
 
 	struct SAssetsEditorState
@@ -1503,8 +1493,13 @@ private:
 	void AudioPackEditorRebuildCandidates();
 	void AudioPackEditorStopPreview();
 	bool AudioPackEditorPlayPreview(const char *pFilename, int StorageType);
-	bool AudioPackEditorCopyFileToStorage(const char *pSourcePath, int SourceStorageType, const char *pStoragePath);
+	bool AudioPackEditorValidateSource(const char *pPath, bool Manual);
+	void AudioPackEditorPreviewSource(const char *pPath, bool Manual);
+	void AudioPackEditorReplaceVariant(const SAudioPackSlot &Slot, const char *pCandidate);
+	int RenderAudioPackCatalog(CUIRect View, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics, bool Initialize);
+	bool RenderAudioPackCandidates(CUIRect View, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics, bool ResetScroll, bool Initialize);
 	void RenderAudioPackEditorScreen(CUIRect MainView);
+	void RenderAudioPackEditorContent(CUIRect MainView, const IUiContext &Ctx, const SSettingsContentMetrics &Metrics, bool Initialize);
 	void RenderAssetsEditorScreen(CUIRect MainView);
 	void AssetsEditorClearAssets();
 	void AssetsEditorEnsureAssetsLoadedForType(int Type);

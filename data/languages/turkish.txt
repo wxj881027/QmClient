@@ -8615,6 +8615,9 @@ Manual target
 Map
 == Harita
 
+Map and environment
+== Harita ve çevre
+
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 == Harita tarayıcısı zorluk kategori filtresi bit maskesi (bit 0-14, bkz. map_vote_difficulty.h)
 

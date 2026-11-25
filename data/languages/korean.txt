@@ -8615,6 +8615,9 @@ Manual target
 Map
 == 맵
 
+Map and environment
+== 맵 및 환경
+
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 == 맵 브라우저 난이도 카테고리 필터 비트마스크 (비트 0-14, map_vote_difficulty.h 참고)
 

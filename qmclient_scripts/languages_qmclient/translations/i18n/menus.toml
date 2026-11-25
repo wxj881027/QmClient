@@ -11175,6 +11175,22 @@ turkish = "Manuel hedef"
 polish = "Ręczny cel"
 
 [[message]]
+key = "Map and environment"
+[message.translations]
+simplified_chinese = "地图与环境"
+traditional_chinese = "地圖與環境"
+japanese = "マップと環境"
+korean = "맵 및 환경"
+russian = "Карта и окружение"
+german = "Karte und Umgebung"
+spanish = "Mapa y entorno"
+french = "Carte et environnement"
+brazilian_portuguese = "Mapa e ambiente"
+portuguese = "Mapa e ambiente"
+turkish = "Harita ve çevre"
+polish = "Mapa i otoczenie"
+
+[[message]]
 key = "Map browser color"
 [message.translations]
 simplified_chinese = "地图浏览器颜色"

@@ -1,7 +1,7 @@
 {
   "summary": {
-    "must_i18n": 11353,
-    "business_data": 13602,
+    "must_i18n": 11352,
+    "business_data": 13588,
     "test_only": 9539,
     "needs_review": 5134,
     "violation": 0
@@ -13232,218 +13232,197 @@
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 288,
-      "text": "Edit audio pack",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 294,
-      "text": "Reload",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 299,
-      "text": "Pack name",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 300,
-      "text": "Pack name",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 380,
-      "text": "No sounds match this search.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 436,
-      "text": "Sound variants",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 471,
-      "text": "Current file",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 471,
-      "text": "Default",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 475,
-      "text": "Candidate files",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 517,
-      "text": "Current file",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 526,
-      "text": "No candidate files match this search.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 531,
-      "text": "Manual source file",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 533,
-      "text": "Manual source file",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 535,
-      "text": "A manual source file takes priority over the selected candidate. Only this variant is replaced.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 552,
-      "text": "Preview selected file",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 556,
+      "line": 199,
       "text": "No candidate file selected.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 560,
+      "line": 199,
+      "text": "Source file is empty.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 201,
+      "text": "Only .wv files are supported right now.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 203,
+      "text": "Source file does not exist.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 216,
       "text": "Failed to preview candidate file.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 568,
-      "text": "Preview import file",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 574,
-      "text": "Source file is empty.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 578,
-      "text": "Source file does not exist.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 582,
-      "text": "Only .wv files are supported right now.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 586,
+      "line": 216,
       "text": "Failed to preview import file.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 594,
-      "text": "Replace selected variant",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 603,
-      "text": "No candidate file selected.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 603,
-      "text": "Source file is empty.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 612,
-      "text": "Source file does not exist.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 617,
-      "text": "Only .wv files are supported right now.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 626,
+      "line": 234,
       "text": "Failed to export audio pack file.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 636,
+      "line": 243,
       "text": "Audio pack exported.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 640,
+      "line": 246,
       "text": "Audio file was exported, but reload failed. Restart sound to apply it.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 646,
-      "text": "Failed to export audio pack file.",
+      "line": 296,
+      "text": "Search",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 392,
+      "text": "No sounds match this search.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 448,
+      "text": "No candidate files match this search.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 471,
+      "text": "Current file",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 532,
+      "text": "Edit audio pack",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 534,
+      "text": "Reload",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 536,
+      "text": "Close",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 541,
+      "text": "Pack name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 542,
+      "text": "Pack name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 564,
+      "text": "A manual source file takes priority over the selected candidate. Only this variant is replaced.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 587,
+      "text": "Sound variants",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 611,
+      "text": "Current file",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 611,
+      "text": "Default",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 615,
+      "text": "Preview",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 620,
+      "text": "Candidate files",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 633,
+      "text": "Manual source file",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 636,
+      "text": "Preview import file",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 640,
+      "text": "Preview selected file",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 640,
+      "text": "Replace selected variant",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -55981,672 +55960,686 @@
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 58,
+      "line": 78,
       "text": "All sounds",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 59,
+      "line": 79,
       "text": "Weapons",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 60,
+      "line": 80,
       "text": "Hook",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 61,
+      "line": 81,
       "text": "Movement",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 62,
+      "line": 82,
       "text": "Player state",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 63,
+      "line": 83,
       "text": "Pickups",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 64,
+      "line": 84,
       "text": "Chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 65,
+      "line": 85,
       "text": "Capture the flag",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 66,
+      "line": 86,
       "text": "Music",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 67,
+      "line": 87,
+      "text": "Interface",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "line": 88,
+      "text": "Map and environment",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "line": 89,
       "text": "Other sounds",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 76,
+      "line": 98,
       "text": "Other game modes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 77,
+      "line": 99,
       "text": "Server-dependent",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 85,
+      "line": 107,
       "text": "Gun fire",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 85,
+      "line": 107,
       "text": "Played when firing this weapon.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 86,
+      "line": 108,
       "text": "Played when firing this weapon.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 86,
+      "line": 108,
       "text": "Shotgun fire",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 87,
+      "line": 109,
       "text": "Grenade launch",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 87,
+      "line": 109,
       "text": "Played when firing this weapon.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 88,
+      "line": 110,
       "text": "Hammer swing",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 88,
+      "line": 110,
       "text": "Played when swinging the hammer, even without hitting a player.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 89,
+      "line": 111,
       "text": "Hammer hit",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 89,
+      "line": 111,
       "text": "Played when the hammer hits another player.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 90,
+      "line": 112,
       "text": "Ninja attack",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 90,
+      "line": 112,
       "text": "Played when starting a ninja dash attack.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 91,
+      "line": 113,
       "text": "Grenade explosion",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 91,
+      "line": 113,
       "text": "Played when a grenade explodes.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 92,
+      "line": 114,
       "text": "Ninja hit",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 92,
+      "line": 114,
       "text": "Played when a ninja dash hits another player.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 93,
+      "line": 115,
       "text": "Laser fire",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 93,
+      "line": 115,
       "text": "Played when firing this weapon.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 94,
+      "line": 116,
       "text": "Laser / shotgun bounce",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 94,
+      "line": 116,
       "text": "Played when a laser or DDNet shotgun beam bounces.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 95,
+      "line": 117,
       "text": "Played when switching the active weapon.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 95,
+      "line": 117,
       "text": "Weapon switch",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 96,
+      "line": 118,
       "text": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 96,
+      "line": 118,
       "text": "Short pain voice",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 97,
+      "line": 119,
       "text": "Frozen fire attempt",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 97,
+      "line": 119,
       "text": "Played when pressing fire while frozen.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 98,
+      "line": 120,
       "text": "Landing",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 98,
+      "line": 120,
       "text": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 99,
+      "line": 121,
       "text": "Air jump",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 99,
+      "line": 121,
       "text": "Played when using the second jump in the air.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 100,
+      "line": 122,
       "text": "Ground jump",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 100,
+      "line": 122,
       "text": "Played when jumping from the ground. Left and right foot files belong to this same sound group.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 101,
+      "line": 123,
       "text": "Played when a player dies, including suicide.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 101,
+      "line": 123,
       "text": "Player death",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 102,
+      "line": 124,
       "text": "Played when a player spawns or respawns.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 102,
+      "line": 124,
       "text": "Player spawn",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 103,
+      "line": 125,
       "text": "Played when moving fast on the ground and pressing the opposite direction.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 103,
+      "line": 125,
       "text": "Skidding",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 104,
+      "line": 126,
       "text": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 104,
+      "line": 126,
       "text": "Tee cry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 105,
+      "line": 127,
       "text": "Hook loop",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 105,
+      "line": 127,
       "text": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 106,
+      "line": 128,
       "text": "Hook attaches to ground",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 106,
+      "line": 128,
       "text": "Played when the hook attaches to a hookable surface.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 107,
+      "line": 129,
       "text": "Hook attaches to player",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 107,
+      "line": 129,
       "text": "Played when the hook attaches to another player.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 108,
+      "line": 130,
       "text": "Hook hits unhookable surface",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 108,
+      "line": 130,
       "text": "Played when the hook hits an unhookable surface.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 109,
+      "line": 131,
       "text": "Freeze heart / health pickup",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 109,
+      "line": 131,
       "text": "In DDNet, played when a freeze heart freezes the player. Other modes may use it for health pickups.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 110,
+      "line": 132,
       "text": "In DDNet, played when weapons are removed. Other modes may use it for armor pickups.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 110,
+      "line": 132,
       "text": "Weapon removal / armor pickup",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 111,
+      "line": 133,
       "text": "Grenade pickup",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 111,
+      "line": 133,
       "text": "Played when picking up a grenade weapon.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 112,
+      "line": 134,
       "text": "Played when picking up a shotgun or laser weapon.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 112,
+      "line": 134,
       "text": "Shotgun / laser pickup",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 113,
+      "line": 135,
       "text": "Ninja pickup",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 113,
+      "line": 135,
       "text": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 114,
+      "line": 136,
       "text": "Played when weapon teleportation moves the player in DDNet.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 114,
+      "line": 136,
       "text": "Weapon teleport",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 115,
+      "line": 137,
       "text": "No ammunition",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 115,
+      "line": 137,
       "text": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 116,
+      "line": 138,
       "text": "Hit feedback",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 116,
+      "line": 138,
       "text": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 117,
+      "line": 139,
       "text": "Played for incoming server chat messages when their notification sound is enabled.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 117,
+      "line": 139,
       "text": "Server message",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 118,
+      "line": 140,
       "text": "Played for incoming player chat messages when their notification sound is enabled.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 118,
+      "line": 140,
       "text": "Player chat message",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 119,
+      "line": 141,
       "text": "Chat mention / vote alert",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 119,
+      "line": 141,
       "text": "Played for chat highlights and vote alerts when their notification sound is enabled.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 120,
+      "line": 142,
       "text": "Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 120,
+      "line": 142,
       "text": "Flag dropped",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 121,
+      "line": 143,
       "text": "Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 121,
+      "line": 143,
       "text": "Flag returned",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 122,
+      "line": 144,
       "text": "Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 122,
+      "line": 144,
       "text": "Flag grab: player side",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 123,
+      "line": 145,
       "text": "Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 123,
+      "line": 145,
       "text": "Flag grab: enemy side",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 124,
+      "line": 146,
       "text": "Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 124,
+      "line": 146,
       "text": "Flag captured",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 125,
+      "line": 147,
       "text": "Menu music",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 125,
+      "line": 147,
       "text": "Played while offline when menu music is enabled.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 130,
+      "line": 152,
       "text": "Its use depends on the server or game mode.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 130,
+      "line": 152,
       "text": "Other sounds",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -79545,185 +79538,80 @@
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 74,
+      "line": 79,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 84,
+      "line": 89,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 96,
-      "text": "audio/%s/audio/%s",
-      "category": "business_data",
-      "reason": "path, file name, or URL data"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 123,
+      "line": 129,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 243,
-      "text": "audio_pack_editor",
+      "line": 200,
+      "text": ".wv",
       "category": "business_data",
-      "reason": "command, config, or machine token"
+      "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 294,
-      "text": "audio-pack-reload",
+      "line": 214,
+      "text": "",
       "category": "business_data",
-      "reason": "localization context metadata"
+      "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 317,
-      "text": "audio_pack_sound_search",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 365,
-      "text": "%s [%d]",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 368,
-      "text": "%s · %s",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 431,
-      "text": "%s · %s · %s",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 453,
+      "line": 409,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 467,
-      "text": "",
+      "line": 412,
+      "text": "%s · %s",
       "category": "business_data",
-      "reason": "empty or whitespace literal"
+      "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 471,
+      "line": 525,
+      "text": "audio_pack_editor",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 584,
+      "text": "%s · %s · %s",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "line": 611,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 478,
-      "text": "audio_pack_candidate_search",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 517,
+      "line": 624,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 517,
-      "text": " · ",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 517,
-      "text": "%s%s%s",
-      "category": "business_data",
-      "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 527,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 552,
-      "text": "sound-audio-pack-editor-preview-selected",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 564,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 568,
-      "text": "sound-audio-pack-editor-preview-import",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 571,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 580,
-      "text": ".wv",
-      "category": "business_data",
-      "reason": "HTML or CSS template fragment"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 590,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 594,
-      "text": "sound-audio-pack-editor-export-selected",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "line": 615,
-      "text": ".wv",
-      "category": "business_data",
-      "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/QmUi/ColorPickerColor.h",
@@ -116995,367 +116883,437 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1186,
+      "line": 1121,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1202,
+      "line": 1137,
       "text": "DDmaX",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1204,
+      "line": 1139,
       "text": "Easy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1205,
+      "line": 1140,
       "text": "DDmaX Easy",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1206,
+      "line": 1141,
       "text": "Next",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1207,
+      "line": 1142,
       "text": "DDmaX Next",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1208,
+      "line": 1143,
       "text": "Pro",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1209,
+      "line": 1144,
       "text": "DDmaX Pro",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1210,
+      "line": 1145,
       "text": "Nut",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1211,
+      "line": 1146,
       "text": "DDmaX Nut",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1212,
+      "line": 1147,
       "text": "DDmaX",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1214,
+      "line": 1149,
       "text": "DDmaX",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1214,
+      "line": 1149,
       "text": "古典",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1216,
+      "line": 1151,
       "text": "Easy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1217,
+      "line": 1152,
       "text": "DDmaX Easy",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1218,
+      "line": 1153,
       "text": "Next",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1219,
+      "line": 1154,
       "text": "DDmaX Next",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1220,
+      "line": 1155,
       "text": "Pro",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1221,
+      "line": 1156,
       "text": "DDmaX Pro",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1222,
+      "line": 1157,
       "text": "Nut",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1223,
+      "line": 1158,
       "text": "DDmaX Nut",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1224,
+      "line": 1159,
       "text": "DDmaX",
       "category": "business_data",
       "reason": "server browser normalized game type display name"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1226,
+      "line": 1161,
       "text": "Oldschool",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1226,
+      "line": 1161,
       "text": "传统",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1228,
+      "line": 1163,
       "text": "Novice",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1228,
+      "line": 1163,
       "text": "普通",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1228,
+      "line": 1163,
       "text": "简单",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1230,
+      "line": 1165,
       "text": "Moderate",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1230,
+      "line": 1165,
       "text": "中阶",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1232,
+      "line": 1167,
       "text": "Brutal",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1232,
+      "line": 1167,
       "text": "困难",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1232,
+      "line": 1167,
       "text": "高阶",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1234,
+      "line": 1169,
       "text": "Insane",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1234,
+      "line": 1169,
       "text": "疯狂",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1236,
+      "line": 1171,
       "text": "Dummy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1236,
+      "line": 1171,
       "text": "分身",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1238,
+      "line": 1173,
       "text": "Solo",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1238,
+      "line": 1173,
       "text": "单人",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1241,
+      "line": 1176,
       "text": "Event",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1241,
+      "line": 1176,
       "text": "活动",
       "category": "business_data",
       "reason": "server game type matcher data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1242,
+      "line": 1177,
       "text": "活动",
       "category": "business_data",
       "reason": "server game type matcher data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1243,
+      "line": 1178,
       "text": "极限",
       "category": "business_data",
       "reason": "server game type matcher data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1244,
+      "line": 1179,
       "text": "极限",
       "category": "business_data",
       "reason": "server game type matcher data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1245,
+      "line": 1180,
       "text": "训练",
       "category": "business_data",
       "reason": "server game type matcher data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1246,
+      "line": 1181,
       "text": "训练",
       "category": "business_data",
       "reason": "server game type matcher data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1247,
+      "line": 1182,
       "text": "娱乐",
       "category": "business_data",
       "reason": "server game type matcher data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1248,
+      "line": 1183,
       "text": "娱乐",
       "category": "business_data",
       "reason": "server game type matcher data"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1252,
+      "line": 1187,
       "text": "gores",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1252,
+      "line": 1187,
       "text": "kog",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1256,
+      "line": 1191,
       "text": "kog",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1271,
+      "line": 1206,
       "text": "[kog.tw]",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1279,
+      "line": 1214,
       "text": " #",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1222,
+      "text": " - ",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1235,
+      "text": "%s - %s",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1249,
+      "text": "Axiom",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1252,
+      "text": "axrace",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1255,
+      "text": "Novice",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1255,
+      "text": "普通",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1255,
+      "text": "简单",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1265,
+      "text": "✦",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1278,
+      "text": "Axiom",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1282,
+      "text": " ",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
@@ -117366,6 +117324,20 @@
     },
     {
       "file": "src/game/client/components/menus.h",
+      "line": 1292,
+      "text": " ",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1298,
+      "text": "%s - %s %s",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
       "line": 1300,
       "text": "%s - %s",
       "category": "business_data",
@@ -117373,420 +117345,343 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1314,
-      "text": "Axiom",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1317,
-      "text": "axrace",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1320,
-      "text": "Novice",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1320,
-      "text": "普通",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1320,
-      "text": "简单",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1330,
-      "text": "✦",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1343,
-      "text": "Axiom",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1347,
-      "text": " ",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1352,
-      "text": " - ",
-      "category": "business_data",
-      "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1357,
-      "text": " ",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1363,
-      "text": "%s - %s %s",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1365,
-      "text": "%s - %s",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1370,
+      "line": 1305,
       "text": "CHN",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1370,
+      "line": 1305,
       "text": "CHN DDR",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1370,
+      "line": 1305,
       "text": "DDNet CHN",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1370,
+      "line": 1305,
       "text": "DDNet Taiwan",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1375,
+      "line": 1310,
       "text": "DDNet ",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1377,
+      "line": 1312,
       "text": "CHN DDR ",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1379,
+      "line": 1314,
       "text": " - ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1388,
+      "line": 1323,
       "text": "DDmaX",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1395,
+      "line": 1330,
       "text": "古典",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1401,
+      "line": 1336,
       "text": "%s - %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1407,
+      "line": 1342,
       "text": "%s - %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1415,
+      "line": 1350,
       "text": "%s - %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1436,
+      "line": 1371,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1779,
+      "line": 1441,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 1719,
       "text": ".demo",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1784,
+      "line": 1724,
       "text": ".poses",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1814,
+      "line": 1754,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1816,
+      "line": 1756,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1871,
+      "line": 1811,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1916,
+      "line": 1856,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1917,
+      "line": 1857,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1918,
+      "line": 1858,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1933,
+      "line": 1873,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1953,
+      "line": 1893,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1959,
+      "line": 1899,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1961,
+      "line": 1901,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1962,
+      "line": 1902,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2027,
+      "line": 1967,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2028,
+      "line": 1968,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2029,
+      "line": 1969,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2031,
+      "line": 1971,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2415,
+      "line": 2354,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2424,
+      "line": 2363,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2425,
+      "line": 2364,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2562,
+      "line": 2496,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2597,
+      "line": 2531,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2604,
+      "line": 2538,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2606,
+      "line": 2540,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2607,
+      "line": 2541,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2608,
+      "line": 2542,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2609,
+      "line": 2543,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2620,
+      "line": 2554,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2622,
+      "line": 2556,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2896,
+      "line": 2830,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 3029,
+      "line": 2963,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 3030,
+      "line": 2964,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 3064,
+      "line": 2998,
       "text": "settings_open",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 3064,
+      "line": 2998,
       "text": "target_settings",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 3614,
+      "line": 3545,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -126977,392 +126872,392 @@
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 37,
+      "line": 59,
       "text": "data/audio",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 45,
+      "line": 67,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 49,
+      "line": 71,
       "text": ".wv",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 54,
+      "line": 76,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 66,
+      "line": 88,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 69,
+      "line": 91,
       "text": "audio/%s/",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 73,
+      "line": 95,
       "text": ".wv",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 82,
+      "line": 104,
       "text": "audio/",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 83,
+      "line": 105,
       "text": "audio/",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 210,
+      "line": 232,
       "text": ".",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 210,
+      "line": 232,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 225,
+      "line": 247,
       "text": ".wv",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_candidates.h",
-      "line": 271,
+      "line": 293,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 85,
+      "line": 107,
       "text": "gun_fire",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 86,
+      "line": 108,
       "text": "shotgun_fire",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 87,
+      "line": 109,
       "text": "grenade_fire",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 88,
+      "line": 110,
       "text": "hammer_fire",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 89,
+      "line": 111,
       "text": "hammer_hit",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 90,
+      "line": 112,
       "text": "ninja_fire",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 91,
+      "line": 113,
       "text": "grenade_explode",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 92,
+      "line": 114,
       "text": "ninja_hit",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 93,
+      "line": 115,
       "text": "laser_fire",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 94,
+      "line": 116,
       "text": "laser_bounce",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 95,
+      "line": 117,
       "text": "weapon_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 96,
+      "line": 118,
       "text": "player_pain_short",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 97,
+      "line": 119,
       "text": "player_pain_long",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 98,
+      "line": 120,
       "text": "body_land",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 99,
+      "line": 121,
       "text": "player_airjump",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 100,
+      "line": 122,
       "text": "player_jump",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 101,
+      "line": 123,
       "text": "player_die",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 102,
+      "line": 124,
       "text": "player_spawn",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 103,
+      "line": 125,
       "text": "player_skid",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 104,
+      "line": 126,
       "text": "tee_cry",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 105,
+      "line": 127,
       "text": "hook_loop",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 106,
+      "line": 128,
       "text": "hook_attach_ground",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 107,
+      "line": 129,
       "text": "hook_attach_player",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 108,
+      "line": 130,
       "text": "hook_noattach",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 109,
+      "line": 131,
       "text": "pickup_health",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 110,
+      "line": 132,
       "text": "pickup_armor",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 111,
+      "line": 133,
       "text": "pickup_grenade",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 112,
+      "line": 134,
       "text": "pickup_shotgun",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 113,
+      "line": 135,
       "text": "pickup_ninja",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 114,
+      "line": 136,
       "text": "weapon_spawn",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 115,
+      "line": 137,
       "text": "weapon_noammo",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 117,
+      "line": 139,
       "text": "chat_server",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 118,
+      "line": 140,
       "text": "chat_client",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 119,
+      "line": 141,
       "text": "chat_highlight",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 120,
+      "line": 142,
       "text": "ctf_drop",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 121,
+      "line": 143,
       "text": "ctf_return",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 122,
+      "line": 144,
       "text": "ctf_grab_pl",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 123,
+      "line": 145,
       "text": "ctf_grab_en",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 124,
+      "line": 146,
       "text": "ctf_capture",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 130,
+      "line": 152,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 172,
+      "line": 194,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 174,
+      "line": 196,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "line": 177,
+      "line": 199,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -207465,49 +207360,49 @@
     },
     {
       "file": "src/test/unit/client/audio_pack_editor_test.cpp",
-      "line": 197,
+      "line": 198,
       "text": "Ground jump",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/audio_pack_editor_test.cpp",
-      "line": 198,
+      "line": 199,
       "text": "地面起跳",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/audio_pack_editor_test.cpp",
-      "line": 200,
+      "line": 201,
       "text": "移动",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/audio_pack_editor_test.cpp",
-      "line": 202,
+      "line": 203,
       "text": "左右脚文件在地面跳跃时使用",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/audio_pack_editor_test.cpp",
-      "line": 211,
+      "line": 212,
       "text": "地面起跳",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/audio_pack_editor_test.cpp",
-      "line": 211,
+      "line": 212,
       "text": "左右脚",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/audio_pack_editor_test.cpp",
-      "line": 218,
+      "line": 219,
       "text": "移动",
       "category": "test_only",
       "reason": "test fixture or assertion text"

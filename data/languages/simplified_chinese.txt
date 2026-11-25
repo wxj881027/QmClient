@@ -9030,6 +9030,9 @@ Manual target
 Map
 == 地图
 
+Map and environment
+== 地图与环境
+
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 == 地图浏览器难度分类筛选位掩码（位 0-14，见 map_vote_difficulty.h）
 

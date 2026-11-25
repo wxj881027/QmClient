@@ -748,6 +748,28 @@ inline bool QmTryConsumeWheel(CScrollWheelOwnership &Ownership, const void *pOwn
 {
 	return Ownership.TryConsume(pOwnerId, pDelta);
 }
+class CUiDoubleClickState
+{
+	const void *m_pLastId = nullptr;
+	float m_LastTime = -1.0f;
+	vec2 m_LastPos = vec2(-1.0f, -1.0f);
+
+public:
+	void Reset() { m_pLastId = nullptr; }
+	bool Click(const void *pId, float Time, vec2 Pos, float MaxDistance)
+	{
+		if(m_pLastId == pId && Time - m_LastTime < 0.5f && distance(m_LastPos, Pos) <= MaxDistance)
+		{
+			Reset();
+			return true;
+		}
+		m_pLastId = pId;
+		m_LastTime = Time;
+		m_LastPos = Pos;
+		return false;
+	}
+};
+
 class CUi
 {
 public:
@@ -915,14 +937,7 @@ private:
 
 	int m_ActiveButtonLogicButton = -1;
 	int m_ActiveDraggableButtonLogicButton = -1;
-	class CDoubleClickState
-	{
-	public:
-		const void *m_pLastClickedId = nullptr;
-		float m_LastClickTime = -1.0f;
-		vec2 m_LastClickPos = vec2(-1.0f, -1.0f);
-	};
-	CDoubleClickState m_DoubleClickState;
+	CUiDoubleClickState m_DoubleClickState;
 	const void *m_pLastEditingItem = nullptr;
 	const void *m_pLastActiveScrollbar = nullptr;
 	int m_ScrollbarValue = 0;
@@ -1420,6 +1435,7 @@ public:
 	int DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, unsigned Flags);
 	int DoDraggableButtonLogic(const void *pId, int Checked, const CUIRect *pRect, bool *pClicked, bool *pAbrupted);
 	bool DoDoubleClickLogic(const void *pId);
+	CUiDoubleClickState &DoubleClickState() { return m_DoubleClickState; }
 	EEditState DoPickerLogic(const void *pId, const CUIRect *pRect, float *pX, float *pY);
 	void DoSmoothScrollLogic(float *pScrollOffset, float *pScrollOffsetChange, float ViewPortSize, float TotalSize, bool SmoothClamp = false, float ScrollSpeed = 10.0f) const;
 	static vec2 CalcAlignedCursorPos(const CUIRect *pRect, vec2 TextSize, int Align, const float *pBiggestCharHeight = nullptr);

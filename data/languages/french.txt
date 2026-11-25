@@ -8615,6 +8615,9 @@ Manual target
 Map
 == Carte
 
+Map and environment
+== Carte et environnement
+
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 == Masque de bits du filtre de catégories de difficulté du navigateur de cartes (bits 0-14, voir map_vote_difficulty.h)
 

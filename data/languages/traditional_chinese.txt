@@ -8615,6 +8615,9 @@ Manual target
 Map
 == 地圖
 
+Map and environment
+== 地圖與環境
+
 Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 == 地圖瀏覽器難度分類過濾位元遮罩（位 0-14，見 map_vote_difficulty.h）
 

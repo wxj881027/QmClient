@@ -403,6 +403,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 3.12 列表（List）
 
+#### 列表行尾动作（trailing row action）
+
+- 定义：胶囊行内常驻的单个图标按钮独立接收点击，整行保留选中反馈。
+- 唯一实现：给 `CListBox::DoNextItem` 传入动作边长，用同一边长调用 `CListboxItem::TrailingAction` 排版按钮。`SelectionHitRect` 将行选择与双击限制在按钮左侧。
+- 禁止的反面写法：在整行双击热区上叠放试听按钮，依赖绘制顺序决定是否执行替换。
+
 - 定义：行式或网格式可滚动集合，行反馈（选中/悬浮）由主题派生，容器内边距与「悬浮是否带描边」都是显式能力。
 - 唯一实现：`CListBox`（`src/game/client/ui_listbox.h`）：`SetCapsuleRows`、`SetContainerPadding`、`SetItemSelectionInset`、`SetRowFeedbackBorder`、`SetDeferredItemFeedback` + `DrawItemFeedback`、`SetFillViewportHeight`、`SetWheelStepScale`、`SetVisibleRowRange`、`SetScrollbarOverlay`、`DoAutoSpacing`；入场动画 `CQmListEntryAnimation` + `QmListBoxShouldStartEntryAnimation`（`src/game/client/QmUi/QmListEntryAnimation.h`）；反馈色 `Ui()->QmControlTheme().m_Selected`；悬浮描边 `ui_token::feedback::HOVER_BORDER`；行档 `ui_token::list::RowRadius/RowInsetX/ContainerPadding/PaddedRowsHeight/ROW_SPACING/GRID_SPACING`。`SetWheelStepScale` 只缩放该列表的滚轮位移，不改键盘 PageUp/Down 翻页行数、不改全局 `qm_ui_scroll_step`——高行网格（皮肤列表）用来把「每格两行」降为「每格一行」。`SetDeferredItemFeedback` 让调用方在 `DoNextItem` 之后用**卡片矩形**调 `DrawItemFeedback`（多列网格的格子矩形里含行距与行内退，按格子画反馈会比卡片大一圈）；`SetFillViewportHeight` 让容器**始终占满调用方给的矩形**：条目不足一屏、或最后一行只剩半行，都不收高度（收高度会让面板底部留一条没画到的空档，截图画廊两种情形都撞上过）。**卡片尺寸只由列宽决定**：`QmResolveGalleryRowHeight(CellWidth, CaptionHeight, PreviewAspect)` 按「预览图固定宽高比 + 说明行固定高」算行高，窗口变宽卡片等比变大；面板高度只决定这一屏放得下几行，**末行可以只露一截**（滚动列表的正常形态），超出的内容交给滚动条。禁止按可用高度反推或均分行高去「铺满面板」——那会把卡片拉伸变形，一屏反而只放得下两行（实机反馈「为啥面板只允许两行」）。多列网格的**格间距取 `GRID_SPACING`（12，一档真正的间距）**，不要沿用行胶囊那半档 `ROW_SPACING`（2.5）——卡片是独立视觉件，半档缝会让整片网格贴成一整块；卡片内的文件夹图标先定**墨迹高**（预览区高度的 34%，夹在 18~64）再按 `QmIconInkFontSize` 反算字号，不能拿字号上限当尺寸（旧实现卡 26，大卡片里图标又小又空）。
 - 禁止的反面写法：自绘行背景；给选中态再加一圈描边；把行距折进行高后 `DoAutoSpacing(0)`（组件已按行推行距）；容器内边距与 `PaddedRowsHeight` 不成对（组件会把留白兜底缩回 0）；行列表打开 `SetRowFeedbackBorder`（整行大的白框会把列表读成一排按钮，只有卡片形态才开）；行内并排动作图标自己写 `VSplitRight` 固定槽——走 `ui_widget::CIconActionStrip`（`UiIconActionStrip.h`），文字可用宽度取 `ReserveWidth()`（跟着图标缓动，配合细档缩字号才是连续的悬浮收缩；只有排版确实不能逐帧变宽时才用 `ReserveWidthTarget`），图标条按反馈矩形内缘排版（按整格右缘排会溢出悬浮背景）；并排图标同字号却不按墨迹归一（见 §3.12b）；多列卡片网格把选中/悬浮反馈画在**格子**上而不是卡片上（格子里含行距与行内退，底衬比卡片大一圈，实机看着就是"没对齐"）；卡片内部再套一层暗底板 + 第二层内边距（缩略图像被塞进小框里，卡片最多「卡面 + 内容 + 一行说明」三层）；多列网格沿用 `ROW_SPACING` 当格间距（2.5px 的缝让卡片贴成一整块）；卡片内图标写死字号或字号上限（应按墨迹高反算，否则大卡片里图标明显偏小）。

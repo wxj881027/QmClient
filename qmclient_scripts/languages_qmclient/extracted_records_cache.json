@@ -1874,7 +1874,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 535
+      "line": 564
     },
     {
       "key": "A node cannot link to itself",
@@ -3372,7 +3372,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 99
+      "line": 121
     },
     {
       "key": "Alias of poses_close",
@@ -3785,7 +3785,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 58
+      "line": 78
     },
     {
       "key": "All typefaces",
@@ -5178,7 +5178,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 640
+      "line": 246
     },
     {
       "key": "Audio init failed, check details below and logs",
@@ -5227,7 +5227,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 636
+      "line": 243
     },
     {
       "key": "Audio packets",
@@ -8958,7 +8958,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 475
+      "line": 620
     },
     {
       "key": "Candy gradient",
@@ -9224,42 +9224,42 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 65
+      "line": 85
     },
     {
       "key": "Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 120
+      "line": 142
     },
     {
       "key": "Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 121
+      "line": 143
     },
     {
       "key": "Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 122
+      "line": 144
     },
     {
       "key": "Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 123
+      "line": 145
     },
     {
       "key": "Capture-the-flag event cue, used by CTF servers rather than ordinary DDNet racing.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 124
+      "line": 146
     },
     {
       "key": "Card effects",
@@ -9630,7 +9630,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 64
+      "line": 84
     },
     {
       "key": "Chat",
@@ -10134,7 +10134,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 119
+      "line": 141
     },
     {
       "key": "Chat message",
@@ -11542,6 +11542,13 @@
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
       "line": 879
+    },
+    {
+      "key": "Close",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "context": "",
+      "line": 536
     },
     {
       "key": "Close",
@@ -14943,7 +14950,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 517
+      "line": 611
     },
     {
       "key": "Current path: %s",
@@ -16651,7 +16658,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 471
+      "line": 611
     },
     {
       "key": "Default",
@@ -20592,7 +20599,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 288
+      "line": 532
     },
     {
       "key": "Edit audio pack",
@@ -24981,14 +24988,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 626
-    },
-    {
-      "key": "Failed to export audio pack file.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "context": "",
-      "line": 646
+      "line": 234
     },
     {
       "key": "Failed to export demo cut",
@@ -25205,14 +25205,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 560
+      "line": 216
     },
     {
       "key": "Failed to preview import file.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 586
+      "line": 216
     },
     {
       "key": "Failed to read saves file",
@@ -26360,35 +26360,35 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 124
+      "line": 146
     },
     {
       "key": "Flag dropped",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 120
+      "line": 142
     },
     {
       "key": "Flag grab: enemy side",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 123
+      "line": 145
     },
     {
       "key": "Flag grab: player side",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 122
+      "line": 144
     },
     {
       "key": "Flag returned",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 121
+      "line": 143
     },
     {
       "key": "FLAG: Not used in DDRace. Place where blue team flag is.",
@@ -27228,7 +27228,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 109
+      "line": 131
     },
     {
       "key": "Freeze laser collision volume",
@@ -27683,7 +27683,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 97
+      "line": 119
     },
     {
       "key": "Frozen prediction margin",
@@ -29258,14 +29258,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 91
+      "line": 113
     },
     {
       "key": "Grenade launch",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 87
+      "line": 109
     },
     {
       "key": "GRENADE LAUNCHER: Throws exploding bullets. Also known as rocket.",
@@ -29279,7 +29279,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 111
+      "line": 133
     },
     {
       "key": "GRENADE SHIELD: Takes grenade away.",
@@ -29307,7 +29307,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 100
+      "line": 122
     },
     {
       "key": "Group",
@@ -29426,7 +29426,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 85
+      "line": 107
     },
     {
       "key": "Hammer",
@@ -29461,7 +29461,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 89
+      "line": 111
     },
     {
       "key": "Hammer interaction",
@@ -29517,7 +29517,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 88
+      "line": 110
     },
     {
       "key": "Hammer: %s",
@@ -30560,7 +30560,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 116
+      "line": 138
     },
     {
       "key": "HIT OTHERS: You can activate hitting others for single weapons, using delay number to select which.",
@@ -30735,7 +30735,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 60
+      "line": 80
     },
     {
       "key": "Hook",
@@ -30763,14 +30763,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 106
+      "line": 128
     },
     {
       "key": "Hook attaches to player",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 107
+      "line": 129
     },
     {
       "key": "Hook collision line",
@@ -30889,7 +30889,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 108
+      "line": 130
     },
     {
       "key": "Hook interaction",
@@ -30931,7 +30931,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 105
+      "line": 127
     },
     {
       "key": "HOOK OTHERS OFF: You can't hook others.",
@@ -32184,14 +32184,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 109
+      "line": 131
     },
     {
       "key": "In DDNet, played when weapons are removed. Other modes may use it for armor pickups.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 110
+      "line": 132
     },
     {
       "key": "In group %d, %s %s layer",
@@ -33027,6 +33027,13 @@
       "line": 137
     },
     {
+      "key": "Interface",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 87
+    },
+    {
       "key": "Interface accent color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
@@ -33563,7 +33570,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 130
+      "line": 152
     },
     {
       "key": "j = Latency jitter",
@@ -34592,7 +34599,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 98
+      "line": 120
     },
     {
       "key": "Language",
@@ -34718,7 +34725,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 94
+      "line": 116
     },
     {
       "key": "Laser / shotgun interaction",
@@ -34774,7 +34781,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 93
+      "line": 115
     },
     {
       "key": "Laser glow intensity (0-100)",
@@ -37511,14 +37518,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 531
-    },
-    {
-      "key": "Manual source file",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "context": "",
-      "line": 533
+      "line": 633
     },
     {
       "key": "Manual Steam path is invalid; using automatic detection",
@@ -37638,6 +37638,13 @@
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
       "line": 1312
+    },
+    {
+      "key": "Map and environment",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 88
     },
     {
       "key": "Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)",
@@ -38869,7 +38876,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 125
+      "line": 147
     },
     {
       "key": "Menu opacity (0-100)",
@@ -39807,7 +39814,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 61
+      "line": 81
     },
     {
       "key": "Movement",
@@ -39947,7 +39954,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 66
+      "line": 86
     },
     {
       "key": "Music and game volume are multiplied by master, so raising master alone can clip.",
@@ -41417,21 +41424,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 90
+      "line": 112
     },
     {
       "key": "Ninja hit",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 92
+      "line": 114
     },
     {
       "key": "Ninja pickup",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 113
+      "line": 135
     },
     {
       "key": "NINJA SHIELD: Takes ninja away.",
@@ -41599,7 +41606,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 115
+      "line": 137
     },
     {
       "key": "No animation",
@@ -41697,21 +41704,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 556
-    },
-    {
-      "key": "No candidate file selected.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "context": "",
-      "line": 603
+      "line": 199
     },
     {
       "key": "No candidate files match this search.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 526
+      "line": 448
     },
     {
       "key": "No changes since last save",
@@ -42523,7 +42523,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 380
+      "line": 392
     },
     {
       "key": "No status bar items",
@@ -43986,14 +43986,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 582
-    },
-    {
-      "key": "Only .wv files are supported right now.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "context": "",
-      "line": 617
+      "line": 201
     },
     {
       "key": "Only affects custom Tee colors.",
@@ -44966,7 +44959,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 76
+      "line": 98
     },
     {
       "key": "Other modes",
@@ -45015,14 +45008,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 67
+      "line": 89
     },
     {
       "key": "Other sounds",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 130
+      "line": 152
     },
     {
       "key": "Others",
@@ -45547,14 +45540,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 299
+      "line": 541
     },
     {
       "key": "Pack name",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 300
+      "line": 542
     },
     {
       "key": "Pan",
@@ -46520,7 +46513,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 63
+      "line": 83
     },
     {
       "key": "Pie menu",
@@ -47024,189 +47017,189 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 119
+      "line": 141
     },
     {
       "key": "Played for incoming player chat messages when their notification sound is enabled.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 118
+      "line": 140
     },
     {
       "key": "Played for incoming server chat messages when their notification sound is enabled.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 117
+      "line": 139
     },
     {
       "key": "Played when a grenade explodes.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 91
+      "line": 113
     },
     {
       "key": "Played when a laser or DDNet shotgun beam bounces.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 94
+      "line": 116
     },
     {
       "key": "Played when a ninja dash hits another player.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 92
+      "line": 114
     },
     {
       "key": "Played when a player dies, including suicide.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 101
+      "line": 123
     },
     {
       "key": "Played when a player spawns or respawns.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 102
+      "line": 124
     },
     {
       "key": "Played when firing this weapon.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 85
-    },
-    {
-      "key": "Played when firing this weapon.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 86
-    },
-    {
-      "key": "Played when firing this weapon.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 87
-    },
-    {
-      "key": "Played when firing this weapon.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 93
-    },
-    {
-      "key": "Played when jumping from the ground. Left and right foot files belong to this same sound group.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 100
-    },
-    {
-      "key": "Played when moving fast on the ground and pressing the opposite direction.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 103
-    },
-    {
-      "key": "Played when picking up a grenade weapon.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 111
-    },
-    {
-      "key": "Played when picking up a shotgun or laser weapon.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 112
-    },
-    {
-      "key": "Played when pressing fire while frozen.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 97
-    },
-    {
-      "key": "Played when starting a ninja dash attack.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 90
-    },
-    {
-      "key": "Played when swinging the hammer, even without hitting a player.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 88
-    },
-    {
-      "key": "Played when switching the active weapon.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 95
-    },
-    {
-      "key": "Played when the hammer hits another player.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 89
-    },
-    {
-      "key": "Played when the hook attaches to a hookable surface.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
-      "context": "",
-      "line": 106
-    },
-    {
-      "key": "Played when the hook attaches to another player.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
       "line": 107
     },
     {
-      "key": "Played when the hook hits an unhookable surface.",
+      "key": "Played when firing this weapon.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
       "line": 108
     },
     {
+      "key": "Played when firing this weapon.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 109
+    },
+    {
+      "key": "Played when firing this weapon.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 115
+    },
+    {
+      "key": "Played when jumping from the ground. Left and right foot files belong to this same sound group.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 122
+    },
+    {
+      "key": "Played when moving fast on the ground and pressing the opposite direction.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 125
+    },
+    {
+      "key": "Played when picking up a grenade weapon.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 133
+    },
+    {
+      "key": "Played when picking up a shotgun or laser weapon.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 134
+    },
+    {
+      "key": "Played when pressing fire while frozen.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 119
+    },
+    {
+      "key": "Played when starting a ninja dash attack.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 112
+    },
+    {
+      "key": "Played when swinging the hammer, even without hitting a player.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 110
+    },
+    {
+      "key": "Played when switching the active weapon.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 117
+    },
+    {
+      "key": "Played when the hammer hits another player.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 111
+    },
+    {
+      "key": "Played when the hook attaches to a hookable surface.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 128
+    },
+    {
+      "key": "Played when the hook attaches to another player.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 129
+    },
+    {
+      "key": "Played when the hook hits an unhookable surface.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
+      "context": "",
+      "line": 130
+    },
+    {
       "key": "Played when using the second jump in the air.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 99
+      "line": 121
     },
     {
       "key": "Played when weapon teleportation moves the player in DDNet.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 114
+      "line": 136
     },
     {
       "key": "Played while offline when menu music is enabled.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 125
+      "line": 147
     },
     {
       "key": "Player",
@@ -47325,7 +47318,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 118
+      "line": 140
     },
     {
       "key": "Player clan",
@@ -47360,7 +47353,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 101
+      "line": 123
     },
     {
       "key": "Player decoration color",
@@ -47612,14 +47605,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 102
+      "line": 124
     },
     {
       "key": "Player state",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 62
+      "line": 82
     },
     {
       "key": "Player stats",
@@ -49108,6 +49101,13 @@
     {
       "key": "Preview",
       "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "context": "",
+      "line": 615
+    },
+    {
+      "key": "Preview",
+      "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogTClientFont.cpp",
       "context": "",
       "line": 1349
@@ -49243,7 +49243,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 568
+      "line": 636
     },
     {
       "key": "Preview laser bodies, outlines, and impacts",
@@ -49313,7 +49313,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 552
+      "line": 640
     },
     {
       "key": "Preview spacing does not match every map; check in game before a match.",
@@ -52085,49 +52085,49 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 96
+      "line": 118
     },
     {
       "key": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 98
+      "line": 120
     },
     {
       "key": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 104
+      "line": 126
     },
     {
       "key": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 105
+      "line": 127
     },
     {
       "key": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 113
+      "line": 135
     },
     {
       "key": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 115
+      "line": 137
     },
     {
       "key": "Registered sound; no direct trigger was found in this DDNet server. Other servers may use it.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 116
+      "line": 138
     },
     {
       "key": "Regular",
@@ -52239,7 +52239,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 294
+      "line": 534
     },
     {
       "key": "Reload",
@@ -53492,7 +53492,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 594
+      "line": 640
     },
     {
       "key": "Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.",
@@ -56493,6 +56493,13 @@
     {
       "key": "Search",
       "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/AudioPackEditor.cpp",
+      "context": "",
+      "line": 296
+    },
+    {
+      "key": "Search",
+      "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmServerVoteMenu.cpp",
       "context": "",
       "line": 45
@@ -57902,7 +57909,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 117
+      "line": 139
     },
     {
       "key": "Server name",
@@ -58007,7 +58014,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 77
+      "line": 99
     },
     {
       "key": "Server-side ghost opacity during fast practice (%)",
@@ -58798,7 +58805,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 96
+      "line": 118
     },
     {
       "key": "Short server names",
@@ -58861,14 +58868,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 112
+      "line": 134
     },
     {
       "key": "Shotgun fire",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 86
+      "line": 108
     },
     {
       "key": "Shotgun laser inner color",
@@ -63334,7 +63341,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 103
+      "line": 125
     },
     {
       "key": "Skin",
@@ -64650,7 +64657,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 436
+      "line": 587
     },
     {
       "key": "Sound volume",
@@ -64699,28 +64706,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 578
-    },
-    {
-      "key": "Source file does not exist.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "context": "",
-      "line": 612
+      "line": 203
     },
     {
       "key": "Source file is empty.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/AudioPackEditor.cpp",
       "context": "",
-      "line": 574
-    },
-    {
-      "key": "Source file is empty.",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/AudioPackEditor.cpp",
-      "context": "",
-      "line": 603
+      "line": 199
     },
     {
       "key": "Source language code for translation (auto=auto-detect)",
@@ -68255,7 +68248,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 104
+      "line": 126
     },
     {
       "key": "Tee death probe",
@@ -76893,14 +76886,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 110
+      "line": 132
     },
     {
       "key": "Weapon switch",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 95
+      "line": 117
     },
     {
       "key": "Weapon switch animation",
@@ -77012,7 +77005,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 114
+      "line": 136
     },
     {
       "key": "WEAPON TELEPORT: Teleports bullets shot into it to TELEPORT TO, where it comes out. Direction, angle and length are kept.",
@@ -77103,7 +77096,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/audio_pack_catalog.h",
       "context": "",
-      "line": 59
+      "line": 79
     },
     {
       "key": "Website",
