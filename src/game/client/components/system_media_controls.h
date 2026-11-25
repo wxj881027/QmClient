@@ -131,11 +131,6 @@ namespace SystemMediaControls
 		return SmtcEnabled || NeteaseHookEnabled;
 	}
 
-	inline bool ShouldStopNeteaseHookForConfigurationChange(bool ConfigurationInitialized, bool WasHookEnabled)
-	{
-		return ConfigurationInitialized && WasHookEnabled;
-	}
-
 	struct SAlbumArtDecodeSize
 	{
 		uint32_t m_Width = 0;

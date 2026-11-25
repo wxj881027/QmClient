@@ -8,6 +8,8 @@
 #include <engine/client.h>
 #include <engine/shared/config.h>
 
+#include <game/client/components/qmclient/perf_logging.h>
+
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
 #include <base/perf_timer.h>
 #include <base/str.h>
@@ -18,7 +20,6 @@
 #include <engine/image.h>
 
 #include <game/client/components/qmclient/media_volume_logic.h>
-#include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/player_volume.h>
 #include <game/client/components/qmclient/prepared_media_art.h>
 
@@ -602,16 +603,15 @@ bool CSystemMediaControls::SyncNeteaseHookConfiguration() noexcept
 			if(!m_pNeteaseHook)
 				pPrepared = std::make_unique<CQmNeteaseHookProvider>();
 			auto *pProvider = pPrepared ? pPrepared.get() : m_pNeteaseHook.get();
-			if(m_pNeteaseHook && SystemMediaControls::ShouldStopNeteaseHookForConfigurationChange(m_NeteaseHookConfigInitialized, m_LastNeteaseHookEnabled))
-				m_pNeteaseHook->Stop();
 			pProvider->Start(Path.c_str(), g_Config.m_QmNeteaseHookTimeoutMs);
 			if(pPrepared)
 				m_pNeteaseHook = std::move(pPrepared);
 		}
-		else
+		else if(m_pNeteaseHook)
 		{
-			// provider 的析构会执行 Stop，禁用后不再保留它。
-			m_pNeteaseHook.reset();
+			// 停止也要走后台状态发布：helper 退出可能等待映射确认，
+			// 在设置页关闭开关时不能卡住逻辑帧。
+			m_pNeteaseHook->RequestStop();
 		}
 		m_LastNeteaseHookHelperPath.swap(Path);
 		m_NeteaseHookConfigInitialized = true;
@@ -1689,7 +1689,12 @@ void CSystemMediaControls::OnUpdate()
 {
 	if(!m_Initialized)
 		return;
+	const int64_t EntryStart = time_get_nanoseconds().count();
+	const int64_t HookSyncStart = time_get_nanoseconds().count();
 	const bool HookReady = SyncNeteaseHookConfiguration();
+	const double HookSyncMs = (double)(time_get_nanoseconds().count() - HookSyncStart) * 1000.0 / time_freq();
+	if(HookSyncMs >= 20.0)
+		QmPerfLogStage("perf/system_media_controls", "netease_sync", HookSyncMs, true);
 	// v5 是网易云私有补充数据。只在短帧窗口到期时读取，避免主线程每帧
 	// 重试共享内存、复制快照和计算校验和。
 	if(!HookReady || !m_LastNeteaseHookEnabled)
@@ -1707,14 +1712,19 @@ void CSystemMediaControls::OnUpdate()
 	}
 	else if(m_pNeteaseHook)
 	{
-		const int64_t Now = time_get();
+		const int64_t Now = time_get_nanoseconds().count();
 		const int64_t RefreshInterval = time_freq() * SystemMediaControls::NETEASE_HOOK_REFRESH_INTERVAL_MS / 1000;
 		if(SystemMediaControls::ShouldRefreshNeteaseHookSnapshot(Now, m_LastNeteaseHookReadTime, m_NeteaseHookReadTimeInitialized, RefreshInterval))
 		{
 			m_LastNeteaseHookReadTime = Now;
 			m_NeteaseHookReadTimeInitialized = true;
 			QmNeteaseHook::SSnapshotV5 Snapshot{};
-			if(m_pNeteaseHook->ReadV5(&Snapshot, g_Config.m_QmNeteaseHookTimeoutMs))
+			const int64_t ReadStart = time_get_nanoseconds().count();
+			const bool ReadOk = m_pNeteaseHook->ReadV5(&Snapshot, g_Config.m_QmNeteaseHookTimeoutMs);
+			const double ReadMs = (double)(time_get_nanoseconds().count() - ReadStart) * 1000.0 / time_freq();
+			if(ReadMs >= 20.0)
+				QmPerfLogStage("perf/system_media_controls", "netease_read", ReadMs, true);
+			if(ReadOk)
 			{
 				m_NeteaseSnapshot = Snapshot;
 				m_HasNeteaseSnapshot = true;
@@ -1727,12 +1737,28 @@ void CSystemMediaControls::OnUpdate()
 		}
 	}
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
+	{
+		const double NeteaseTotalMs = (double)(time_get_nanoseconds().count() - EntryStart) * 1000.0 / time_freq();
+		if(NeteaseTotalMs >= 20.0)
+			QmPerfLogStage("perf/system_media_controls", "netease_total", NeteaseTotalMs, true);
+	}
 	const bool BackendEnabled = g_Config.m_QmSmtcEnable != 0;
 	m_BackendEnabled.store(BackendEnabled, std::memory_order_relaxed);
-	EnsureBackendStarted();
+	{
+		const int64_t Start = time_get_nanoseconds().count();
+		EnsureBackendStarted();
+		const double BackendStartMs = (double)(time_get_nanoseconds().count() - Start) * 1000.0 / time_freq();
+		if(BackendStartMs >= 20.0)
+			QmPerfLogStage("perf/system_media_controls", "backend_start", BackendStartMs, true);
+	}
 	auto *pRuntime = Runtime();
 	auto *pShared = pRuntime ? pRuntime->m_pShared.get() : nullptr;
 	SState *pMainState = MainState();
+	{
+		const double RuntimeTotalMs = (double)(time_get_nanoseconds().count() - EntryStart) * 1000.0 / time_freq();
+		if(RuntimeTotalMs >= 20.0)
+			QmPerfLogStage("perf/system_media_controls", "runtime_total", RuntimeTotalMs, true);
+	}
 	if(!pShared || !pMainState)
 		return;
 
@@ -1759,13 +1785,19 @@ void CSystemMediaControls::OnUpdate()
 	TAlbumArtUpdate AlbumArtUpdate;
 #endif
 	{
-		std::scoped_lock Lock(pShared->m_Mutex);
-		SharedState = pShared->m_State;
-		HasMedia = pShared->m_HasMedia;
+		const int64_t LockStart = time_get_nanoseconds().count();
+		{
+			std::scoped_lock Lock(pShared->m_Mutex);
+			SharedState = pShared->m_State;
+			HasMedia = pShared->m_HasMedia;
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-		if(pGraphics)
-			AlbumArtUpdate.swap(pShared->m_AlbumArtUpdate);
+			if(pGraphics)
+				AlbumArtUpdate.swap(pShared->m_AlbumArtUpdate);
 #endif
+		}
+		const double LockMs = (double)(time_get_nanoseconds().count() - LockStart) * 1000.0 / time_freq();
+		if(LockMs >= 20.0)
+			QmPerfLogStage("perf/system_media_controls", "shared_state_lock", LockMs, true);
 	}
 
 	if(!HasMedia)
@@ -1779,6 +1811,7 @@ void CSystemMediaControls::OnUpdate()
 	}
 	else
 	{
+		const int64_t ApplyStart = time_get_nanoseconds().count();
 		SetMainHasMedia(true);
 		ApplySharedState(SharedState, *pMainState);
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
@@ -1786,6 +1819,14 @@ void CSystemMediaControls::OnUpdate()
 		if(pGraphics)
 			ApplyAlbumArtUpdate(pShared, AlbumArtUpdate, *pMainState, pGraphics, Client());
 #endif
+		const double ApplyMs = (double)(time_get_nanoseconds().count() - ApplyStart) * 1000.0 / time_freq();
+		if(ApplyMs >= 20.0)
+			QmPerfLogStage("perf/system_media_controls", "apply_shared_state", ApplyMs, true);
+	}
+	{
+		const double OnUpdateTotalMs = (double)(time_get_nanoseconds().count() - EntryStart) * 1000.0 / time_freq();
+		if(OnUpdateTotalMs >= 20.0)
+			QmPerfLogStage("perf/system_media_controls", "onupdate_total", OnUpdateTotalMs, true);
 	}
 #endif
 }
