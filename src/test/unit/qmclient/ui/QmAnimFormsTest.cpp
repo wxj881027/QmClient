@@ -237,13 +237,32 @@ TEST(ToggleLayout, KnobStaysInsideTrackAcrossEndpointsAndSmallDimensions)
 		for(float Progress : {-1.0f, 0.0f, 0.5f, 1.0f, 2.0f})
 		{
 			SCOPED_TRACE(::testing::Message() << "width=" << Rect.w << " progress=" << Progress);
-			const auto Layout = ui_widget::ResolveToggleLayout(Rect, Progress);
+			const auto Layout = ui_widget::ResolveToggleLayout(Rect, Progress, 1.0f);
 			EXPECT_GE(Layout.m_Knob.w, 0.0f);
 			EXPECT_GE(Layout.m_Knob.x, Layout.m_Track.x);
 			EXPECT_GE(Layout.m_Knob.y, Layout.m_Track.y);
 			EXPECT_LE(Layout.m_Knob.x + Layout.m_Knob.w, Layout.m_Track.x + Layout.m_Track.w + 0.001f);
 			EXPECT_LE(Layout.m_Knob.y + Layout.m_Knob.h, Layout.m_Track.y + Layout.m_Track.h + 0.001f);
 		}
+	}
+}
+
+TEST(ToggleLayout, PressGrowsTheRoundKnobAboutTheRestingCenterInEitherState)
+{
+	const CUIRect Rect{10, 20, 54, 32};
+	const auto Off = ui_widget::ResolveToggleLayout(Rect, 0.0f);
+	const auto On = ui_widget::ResolveToggleLayout(Rect, 1.0f);
+	EXPECT_FLOAT_EQ(Off.m_Knob.w, 16.0f);
+	EXPECT_FLOAT_EQ(On.m_Knob.w, 24.0f);
+	for(const bool Value : {false, true})
+	{
+		const auto &Rest = Value ? On : Off;
+		const auto Pressed = ui_widget::ResolveToggleLayout(Rect, Value ? 1.0f : 0.0f, 1.0f);
+		EXPECT_FLOAT_EQ(Pressed.m_Knob.w, 28.0f);
+		EXPECT_FLOAT_EQ(Pressed.m_Knob.h, Pressed.m_Knob.w);
+		EXPECT_EQ(Pressed.m_Knob.Center(), Rest.m_Knob.Center());
+		EXPECT_EQ(Pressed.m_Halo.Center(), Rest.m_Knob.Center());
+		EXPECT_FLOAT_EQ(Pressed.m_Halo.h, 40.0f);
 	}
 }
 

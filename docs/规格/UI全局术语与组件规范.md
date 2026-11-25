@@ -385,9 +385,9 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 ### 3.10 开关（Toggle）
 
-- 定义：二值开关，轨道与旋钮尺寸按字号派生；开关行的标签列由行级布局决定；悬停描边与按钮同源，固定为白色。
+- 定义：二值开关，轨道尺寸按字号派生，标签列由行级布局决定。圆形滑块关闭时较小、开启时较大，按下时沿圆心放大并出现一层随滑块移动的光晕。轨道填充随位移混合，关闭态内描边随开启进度淡出，关闭态悬停沿用按钮的白色描边。
 - 唯一实现：`ui_widget::DrawToggle` / `ResolveToggleLayout` / `ResolveBooleanControlLayout` / `ResolveSwitchRowLabelColumn`（`UiForms.h`）、设置页包装 `DoSettingsButton_CheckBox`；尺寸 `ui_token::control::SwitchMinWidth` / `SwitchTrackAspect`；悬停描边走 `ResolveUiSecondaryButtonStyle` → `ui_token::feedback::HOVER_BORDER`。
-- 禁止的反面写法：自绘轨道与旋钮；开关行自己算右侧宽度（标签会压到开关）；描边取轨道的自动对比色（开着是亮轨道就描黑边、关着描白边，和按钮的悬停白边割裂）。
+- 禁止的反面写法：自绘轨道与滑块；开关行自己算右侧宽度（标签会压到开关）；为光晕扩大点击区域或用轨道轮廓裁光晕；描边取轨道的自动对比色。
 
 ### 3.10a 加载环（progress ring）
 

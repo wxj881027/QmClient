@@ -56,26 +56,24 @@ namespace ui_widget
 	{
 		CUIRect m_Track;
 		CUIRect m_Knob;
+		CUIRect m_Halo;
 	};
 
-	inline SToggleLayout ResolveToggleLayout(const CUIRect &Rect, float Progress, float Stretch = 0.0f)
+	inline SToggleLayout ResolveToggleLayout(const CUIRect &Rect, float Progress, float Press = 0.0f)
 	{
 		SToggleLayout Layout{};
 		const float Width = std::max(0.0f, Rect.w);
-		// 轨道长宽比与开关最小宽度同源：1.65 只在 SwitchTrackAspect 里定义一次。
 		const float Height = std::min(std::max(0.0f, Rect.h), Width / ui_token::control::SwitchTrackAspect());
 		Layout.m_Track = {Rect.x, Rect.y + (Rect.h - Height) * 0.5f, Width, Height};
-		const float Padding = std::min(Height * 0.15f, 3.0f);
-		const float KnobSize = Height - Padding * 2.0f;
-		const float Travel = std::max(0.0f, Width - KnobSize - Padding * 2.0f);
-		// 液体开关：移动途中滑块沿运动方向拉长（中间最宽、两端回弹收圆），
-		// 以原位置为中心扩展并夹在轨道内，不会顶出边框。
-		const float MaxKnobWidth = std::max(KnobSize, Width - Padding * 2.0f);
-		const float KnobWidth = std::clamp(KnobSize * (1.0f + 0.75f * std::clamp(Stretch, 0.0f, 1.0f)), KnobSize, MaxKnobWidth);
-		const float BaseX = Rect.x + Padding + Travel * std::clamp(Progress, 0.0f, 1.0f);
-		const float Center = BaseX + KnobSize * 0.5f;
-		const float KnobX = std::clamp(Center - KnobWidth * 0.5f, Rect.x + Padding, std::max(Rect.x + Padding, Rect.x + Width - Padding - KnobWidth));
-		Layout.m_Knob = {KnobX, Layout.m_Track.y + Padding, KnobWidth, KnobSize};
+		const float RestRatio = std::lerp(ui_token::control::SWITCH_KNOB_OFF_RATIO, ui_token::control::SWITCH_KNOB_ON_RATIO, std::clamp(Progress, 0.0f, 1.0f));
+		const float KnobSize = Height * std::lerp(RestRatio, ui_token::control::SWITCH_KNOB_PRESS_RATIO, std::clamp(Press, 0.0f, 1.0f));
+		const float KnobRadius = KnobSize * 0.5f;
+		const float HaloSize = Height * ui_token::control::SWITCH_HALO_RATIO;
+		// 滑块绕自身圆心缩放。位移保留小幅过冲，尺寸钳制在轨道内。
+		const float CenterX = Rect.x + std::clamp(std::lerp(Height * 0.5f, Width - Height * 0.5f, Progress), KnobRadius, Width - KnobRadius);
+		const float CenterY = Layout.m_Track.y + Height * 0.5f;
+		Layout.m_Knob = {CenterX - KnobRadius, CenterY - KnobRadius, KnobSize, KnobSize};
+		Layout.m_Halo = {CenterX - HaloSize * 0.5f, CenterY - HaloSize * 0.5f, HaloSize, HaloSize};
 		return Layout;
 	}
 

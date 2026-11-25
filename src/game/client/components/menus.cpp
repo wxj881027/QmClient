@@ -1477,8 +1477,9 @@ ColorRGBA CMenus::SettingsTabbarColor(float AlphaScale) const
 
 int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active, const unsigned Flags)
 {
+	const int Clicked = Active ? Ui()->DoButtonLogic(pId, Checked, pRect, Flags) : 0;
 	ui_widget::DrawToggle(ui_widget::ControlContext(Ui()), pId, Checked != 0, *pRect, Active);
-	return Active ? Ui()->DoButtonLogic(pId, Checked, pRect, Flags) : 0;
+	return Clicked;
 }
 
 int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const CUIRect *pUnscaledRect, const ColorRGBA *pSurfaceColor)
@@ -1975,6 +1976,7 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 	Ui()->DoConfigTooltip(pId, pRect, pId);
 	const bool HasLabel = pText != nullptr && pText[0] != '\0';
 	const bool HasCustomGlyph = MarkedControl || (pBoxText[0] != '\0' && pBoxText[0] != 'X');
+	const int Clicked = ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, Flags) : 0;
 	const IUiContext Context = ui_widget::ControlContext(Ui());
 	// 标签字号就是这一行控件的正文字号：开关轨道宽与标签间距都按它取，
 	// 与文字实际绘制用同一个值，窄窗口下不会出现开关比文字缩得慢。
@@ -2007,7 +2009,7 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 		else
 			Ui()->DoLabel(&Label, pText, FontSize, TEXTALIGN_ML, Props);
 	}
-	return ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, Flags) : 0;
+	return Clicked;
 }
 
 int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect)
@@ -2048,10 +2050,10 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	if(m_MenuTextPlanCollecting)
 		return 0;
 
-	bool ToggleValue = Checked != 0;
+	const int Clicked = ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, BUTTONFLAG_LEFT) : 0;
 	IUiContext Context = SettingsUiContext("settings-switch", CurrentSettingsContentMetrics().m_UiScale);
-	ui_widget::DrawToggle(Context, pId, ToggleValue, ToggleRect, true, ProcessInput, pRect);
-	return ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, BUTTONFLAG_LEFT) : 0;
+	ui_widget::DrawToggle(Context, pId, Checked != 0, ToggleRect, true, ProcessInput, pRect);
+	return Clicked;
 }
 
 int CMenus::DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float RowHeight, float RowSpacing, float BodySize)

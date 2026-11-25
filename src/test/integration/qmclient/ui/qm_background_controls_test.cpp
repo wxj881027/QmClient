@@ -1066,14 +1066,60 @@ TEST_F(QmBackgroundControlsIntegration, BackgroundDoesNotCreateToggleAnimationSt
 	m_Ui.BeginBackgroundRender();
 	ui_widget::DrawToggle(Ctx, &m_Toggle, true, m_Rect, true, true);
 	m_Ui.EndBackgroundRender();
-	EXPECT_FLOAT_EQ(Animation.GetValue(KnobKey, EUiAnimProperty::COLOR_MIX, -17.0f), -17.0f);
+	EXPECT_FLOAT_EQ(Animation.GetValue(KnobKey, EUiAnimProperty::POS_X, -17.0f), -17.0f);
+	EXPECT_FLOAT_EQ(Animation.GetValue(KnobKey, EUiAnimProperty::ALPHA, -17.0f), -17.0f);
 	m_Ui.BeginRenderOnly();
 	ui_widget::DrawToggle(Ctx, &m_Toggle, true, m_Rect, true, true);
 	m_Ui.EndRenderOnly();
-	EXPECT_FLOAT_EQ(Animation.GetValue(KnobKey, EUiAnimProperty::COLOR_MIX, -17.0f), -17.0f);
+	EXPECT_FLOAT_EQ(Animation.GetValue(KnobKey, EUiAnimProperty::POS_X, -17.0f), -17.0f);
+	EXPECT_FLOAT_EQ(Animation.GetValue(KnobKey, EUiAnimProperty::ALPHA, -17.0f), -17.0f);
 	ui_widget::DrawToggle(Ctx, &m_Toggle, true, m_Rect, true, true);
-	EXPECT_NE(Animation.GetValue(KnobKey, EUiAnimProperty::COLOR_MIX, -17.0f), -17.0f);
+	EXPECT_FLOAT_EQ(Animation.GetValue(KnobKey, EUiAnimProperty::POS_X, -17.0f), 1.0f);
+	EXPECT_FLOAT_EQ(Animation.GetValue(KnobKey, EUiAnimProperty::ALPHA, -17.0f), 0.0f);
 	m_Ui.SetQmAnimationRuntime(nullptr);
+}
+
+TEST_F(QmBackgroundControlsIntegration, TogglePressExpandsThumbAndHaloBeforeReleaseInCardDrawPass)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	m_Toggle = false;
+	CUiV2AnimationRuntime Animation;
+	auto Ctx = ui_widget::ControlContext(&m_Ui);
+	Ctx.m_pAnim = &Animation;
+	const CUIRect Switch{20, 20, 33, 20};
+	const vec2 Pixels = Switch.Center() * vec2(m_Recording.WindowWidth(), m_Recording.WindowHeight()) / m_Ui.Screen()->Size();
+	const vec2 Delta = Pixels - m_Ui.UpdatedMousePos();
+	m_Ui.OnCursorMove(Delta.x, Delta.y);
+	const auto Frame = [&](bool Held) {
+		m_Input.m_HeldKey = Held ? KEY_MOUSE_1 : 0;
+		m_Client.AdvanceFrame();
+		m_Ui.Update();
+		Animation.Advance(1.0f / 60.0f);
+		m_Recording.m_vSurfaces.clear();
+		m_Ui.BeginPreLayoutInput();
+		const bool Clicked = ui_widget::Toggle(Ctx, &m_Toggle, &m_Toggle, Switch);
+		m_Ui.EndPreLayoutInput();
+		m_Ui.BeginBackgroundRender(true);
+		ui_widget::DrawToggle(Ctx, &m_Toggle, m_Toggle, Switch);
+		m_Ui.EndBackgroundRender(true);
+		return Clicked;
+	};
+	EXPECT_FALSE(Frame(false));
+	ASSERT_EQ(m_Recording.m_vSurfaces.size(), 2u);
+	const vec4 RestKnob = m_Recording.m_vSurfaces.back().m_Rect;
+	EXPECT_FALSE(Frame(true));
+	EXPECT_FALSE(Frame(true));
+	ASSERT_EQ(m_Recording.m_vSurfaces.size(), 3u);
+	const auto &Track = m_Recording.m_vSurfaces[0];
+	const auto &Halo = m_Recording.m_vSurfaces[1];
+	const vec4 Knob = m_Recording.m_vSurfaces[2].m_Rect;
+	EXPECT_FALSE(m_Toggle);
+	EXPECT_GT(Knob.z, RestKnob.z);
+	EXPECT_FLOAT_EQ(Knob.x + Knob.z * 0.5f, RestKnob.x + RestKnob.z * 0.5f);
+	EXPECT_GT(Halo.m_FillColor.a, 0.0f);
+	EXPECT_GT(Halo.m_Rect.w, Track.m_Rect.w);
+	EXPECT_TRUE(Frame(false));
+	EXPECT_TRUE(m_Toggle);
 }
 
 TEST_F(QmBackgroundControlsIntegration, PageBackgroundOpacityDoesNotMultiplyControlFillOrBorder)
