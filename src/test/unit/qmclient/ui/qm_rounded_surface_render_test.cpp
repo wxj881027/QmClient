@@ -393,10 +393,12 @@ TEST_F(CQmRoundedSurfaceRender, RoundedImageMapsCardPixelsToImageUV)
 		return vec2(Point.x * Params0.y + Params0.w, Point.y * Params0.z + Params1.x);
 	};
 	EXPECT_FLOAT_EQ(Params0.x, 1.0f);
-	EXPECT_FLOAT_EQ(SampleUV(vec2(-CardW * 0.5f, -CardH * 0.5f)).x, 0.0f);
-	EXPECT_FLOAT_EQ(SampleUV(vec2(-CardW * 0.5f, -CardH * 0.5f)).y, 0.0f);
-	EXPECT_FLOAT_EQ(SampleUV(vec2(CardW * 0.5f, CardH * 0.5f)).x, 1.0f);
-	EXPECT_FLOAT_EQ(SampleUV(vec2(CardW * 0.5f, CardH * 0.5f)).y, 1.0f);
+	// UV 是「卡片像素 × 缩放 + 偏移」算出来的，端点会有 1e-7 量级的乘加误差；
+	// 拿 EXPECT_FLOAT_EQ 比 0 在 arm64 上必然误报，这里按 UV 精度比。
+	EXPECT_NEAR(SampleUV(vec2(-CardW * 0.5f, -CardH * 0.5f)).x, 0.0f, 1e-6f);
+	EXPECT_NEAR(SampleUV(vec2(-CardW * 0.5f, -CardH * 0.5f)).y, 0.0f, 1e-6f);
+	EXPECT_NEAR(SampleUV(vec2(CardW * 0.5f, CardH * 0.5f)).x, 1.0f, 1e-6f);
+	EXPECT_NEAR(SampleUV(vec2(CardW * 0.5f, CardH * 0.5f)).y, 1.0f, 1e-6f);
 
 	// 放大到 2 倍宽度并左移半个图片宽：卡片中心转到图片中心，验证锚点换算。
 	const vec2 ZoomScale(2.0f / CardW, 2.0f / CardH);
