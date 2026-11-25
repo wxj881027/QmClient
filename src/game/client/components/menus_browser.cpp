@@ -2281,10 +2281,8 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 	s_StatusScrollRegion.End();
 }
 
-void CMenus::Connect(const char *pAddress, EConnectIntent Intent)
+void CMenus::Connect(const char *pAddress)
 {
-	if(Intent == EConnectIntent::Manual)
-		StopFriendAutoFollow(m_FriendAutoFollowState);
 	if(Client()->State() == IClient::STATE_ONLINE && GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmDisconnectTime && g_Config.m_ClConfirmDisconnectTime >= 0)
 	{
 		str_copy(m_aNextServer, pAddress);
@@ -3382,32 +3380,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	bool OpenRemovePopup = false;
 	static CScrollRegion s_FriendsMoveCategoryPopupScrollRegion;
 	static CScrollRegion s_FriendsActionPopupScrollRegion;
-	bool FollowTargetOnline = false;
-	const char *pFollowTargetAddress = "";
-	if(GameClient()->m_PieMenu.IsFollowing())
-		StopFriendAutoFollow(m_FriendAutoFollowState);
-	for(const auto &vFriends : vvFriends)
-	{
-		for(const auto &Friend : vFriends)
-		{
-			if(Friend.ServerInfo() == nullptr)
-				continue;
-			if(str_comp(Friend.Name(), m_FriendAutoFollowState.m_aName) == 0 && str_comp(Friend.Clan(), m_FriendAutoFollowState.m_aClan) == 0)
-			{
-				FollowTargetOnline = true;
-				pFollowTargetAddress = Friend.ServerInfo()->m_aAddress;
-				break;
-			}
-		}
-		if(FollowTargetOnline)
-			break;
-	}
-	char aFollowConnectAddress[NETADDR_MAXSTRSIZE];
-	if(FriendAutoFollowStep(m_FriendAutoFollowState, FollowTargetOnline, pFollowTargetAddress, Client()->GlobalTime(), g_Config.m_QmFriendAutoFollowDelay, 2, aFollowConnectAddress, sizeof(aFollowConnectAddress)))
-	{
-		str_copy(g_Config.m_UiServerAddress, aFollowConnectAddress);
-		Connect(g_Config.m_UiServerAddress, EConnectIntent::AutoFollow);
-	}
 
 	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedServerIndex);
 	int TotalFriendItems = 0;
@@ -3745,8 +3717,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				}
 				++FriendTooltipIndex;
 				const bool IsOffline = Friend.ServerInfo() == nullptr;
-				const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
-								 (m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
+				const bool CanFollow = Friend.Name()[0] != '\0';
+				const bool FollowingThisFriend = GameClient()->m_CrossServerFollow.IsFollowing(Friend.Name(), Friend.Clan());
 				const bool InSelectedServer = pSelectedServer != nullptr && Friend.ServerInfo() && Friend.ServerInfo()->m_ServerIndex == pSelectedServer->m_ServerIndex;
 				const ColorRGBA Color = PlayerBackgroundColor(Friend.FriendState() == IFriends::FRIEND_PLAYER, Friend.FriendState() == IFriends::FRIEND_CLAN, IsOffline ? true : Friend.IsAfk(), InSelectedServer, Inside);
 				// 只看动效档位：该面板在部分渲染通道里 AnimationsBlocked 为真，
@@ -3955,7 +3927,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 						EQmIcon::STOP, FONT_ICON_STOP,
 						FollowingThisFriend ? 1.0f : 0.0f, str_quickhash("friend-follow-icon"), pFollowButtonId, 0.24f, true);
 					ui_widget::SIconButtonIconDraw FollowDraw{&ui_widget::DrawIconSwapBinding, &FollowBinding};
-					const bool FollowPressed = Friend.ServerInfo() && ui_widget::DoIconButton(Context, pFollowButtonId, EQmIcon::COUNT, nullptr, FollowingThisFriend ? 1 : 0, FollowButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &FollowHit, &FollowDraw) != 0;
+					const bool FollowPressed = CanFollow && ui_widget::DoIconButton(Context, pFollowButtonId, EQmIcon::COUNT, nullptr, FollowingThisFriend ? 1 : 0, FollowButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &FollowHit, &FollowDraw) != 0;
 					const bool CopyPressed = ui_widget::DoIconButton(Context, pCopyButtonId, EQmIcon::COPY, FONT_ICON_COPY, 0, CopyButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &CopyHit) != 0;
 					const bool RemovePressed = ui_widget::DoIconButton(Context, pRemoveButtonId, EQmIcon::TRASH, FONT_ICON_TRASH, 0, RemoveButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &RemoveHit) != 0;
 					if(Inside)
@@ -3968,19 +3940,10 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 						GameClient()->m_Tooltips.DoToolTip(pCopyButtonId, &CopyButton, Friend.FriendState() == IFriends::FRIEND_PLAYER ? Localize("Click to copy this player's name to clipboard") : Localize("Click to copy this clan's name to clipboard"));
 						if(FollowPressed)
 						{
-							if(FollowingThisFriend)
-							{
-								GameClient()->m_PieMenu.CancelFollow();
-								StopFriendAutoFollow(m_FriendAutoFollowState);
-							}
-							else
-							{
-								GameClient()->m_PieMenu.CancelFollow();
-								StartFriendAutoFollow(m_FriendAutoFollowState, Friend.Name(), Friend.Clan(), Friend.ServerInfo()->m_aAddress);
-							}
+							GameClient()->m_CrossServerFollow.Toggle(Friend.Name(), Friend.Clan(), Friend.ServerInfo());
 							ButtonResult = 0;
 						}
-						if(Friend.ServerInfo())
+						if(CanFollow)
 							GameClient()->m_Tooltips.DoToolTip(pFollowButtonId, &FollowButton, FollowingThisFriend ? Localize("Stop following this friend", "Friend auto follow") : Localize("Follow this friend across servers", "Friend auto follow"));
 						if(RemovePressed)
 						{
@@ -3999,7 +3962,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					const CUIRect Hit = FriendActionHitRect(Icon);
 					return Ui()->MouseHovered(&Hit);
 				};
-				const bool InsideFriendAction = (IsPlayerFriend && Ui()->MouseHovered(&PinButton)) || HoverFriendAction(CopyButton) || HoverFriendAction(RemoveButton) || (Friend.ServerInfo() && HoverFriendAction(FollowButton));
+				const bool InsideFriendAction = (IsPlayerFriend && Ui()->MouseHovered(&PinButton)) || HoverFriendAction(CopyButton) || HoverFriendAction(RemoveButton) || (CanFollow && HoverFriendAction(FollowButton));
 				if(IsPlayerFriend && Ui()->MouseButtonClicked(0) && Inside && !InsideFriendAction && !Ui()->IsPopupOpen() && (Ui()->IsActiveItem(pListItemId) || Ui()->ActiveItem() == nullptr))
 				{
 					s_FriendDragState.Begin(pListItemId, Friend.FriendState(), Friend.Name(), Friend.Clan(), GameClient()->Friends()->GetFriendCategory(Friend.Name(), Friend.Clan()), FriendRow, vec2(Ui()->MouseX(), Ui()->MouseY()));
@@ -4034,7 +3997,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 						}
 					}
 
-					if(Friend.ServerInfo())
+					if(CanFollow)
 					{
 						m_FriendsActionPopupContext.m_vEntries.emplace_back(FollowingThisFriend ? Localize("Stop following this friend", "Friend auto follow") : Localize("Follow this friend across servers", "Friend auto follow"));
 						m_vFriendsActionEntries.push_back(FollowingThisFriend ? FRIEND_ACTION_STOP_FOLLOW : FRIEND_ACTION_FOLLOW);
@@ -4306,13 +4269,28 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			}
 			else if(Action == FRIEND_ACTION_FOLLOW)
 			{
-				GameClient()->m_PieMenu.CancelFollow();
-				StartFriendAutoFollow(m_FriendAutoFollowState, m_aFriendActionName, m_aFriendActionClan, m_aFriendActionAddress);
+				const CServerInfo *pHint = nullptr;
+				if(!m_FriendActionServerAddress.empty())
+				{
+					for(const auto &vGroup : vvFriends)
+					{
+						const auto Friend = std::find_if(vGroup.begin(), vGroup.end(), [&](const auto &Item) {
+							return Item.ServerInfo() && m_FriendActionServerAddress == Item.ServerInfo()->m_aAddress &&
+							       str_comp(Item.Name(), m_aFriendActionName) == 0 && str_comp(Item.Clan(), m_aFriendActionClan) == 0;
+						});
+						if(Friend != vGroup.end())
+						{
+							pHint = Friend->ServerInfo();
+							break;
+						}
+					}
+				}
+				GameClient()->m_CrossServerFollow.Start(m_aFriendActionName, m_aFriendActionClan, pHint);
 			}
 			else if(Action == FRIEND_ACTION_STOP_FOLLOW)
 			{
-				GameClient()->m_PieMenu.CancelFollow();
-				StopFriendAutoFollow(m_FriendAutoFollowState);
+				if(GameClient()->m_CrossServerFollow.IsFollowing(m_aFriendActionName, m_aFriendActionClan))
+					GameClient()->m_CrossServerFollow.Stop();
 			}
 			else if(Action == FRIEND_ACTION_REMOVE)
 			{

@@ -1189,7 +1189,7 @@ void CClient::SetState(EClientState State)
 	m_StateStartTime = time_get();
 	GameClient()->OnStateChange(m_State, OldState);
 
-	if(State == IClient::STATE_OFFLINE && m_ReconnectTime == 0)
+	if(State == IClient::STATE_OFFLINE && m_ReconnectTime == 0 && !GameClient()->IsCrossServerFollowing())
 	{
 		if(g_Config.m_ClReconnectFull > 0 && (str_find_nocase(ErrorString(), "full") || str_find_nocase(ErrorString(), "reserved")))
 			m_ReconnectTime = time_get() + time_freq() * g_Config.m_ClReconnectFull;
@@ -1385,6 +1385,13 @@ void CClient::GenerateTimeoutCodes(const NETADDR *pAddrs, int NumAddrs)
 
 void CClient::Connect(const char *pAddress, const char *pPassword)
 {
+	if(GameClient())
+		GameClient()->OnManualConnect(pAddress);
+	ConnectInternal(pAddress, pPassword);
+}
+
+void CClient::ConnectInternal(const char *pAddress, const char *pPassword)
+{
 	// Disconnect will not change the state if we are already quitting/restarting
 	if(m_State == IClient::STATE_QUITTING || m_State == IClient::STATE_RESTARTING)
 		return;
@@ -1395,7 +1402,7 @@ void CClient::Connect(const char *pAddress, const char *pPassword)
 	}
 	const NETADDR *pLastAddr = m_aNetClient[CONN_MAIN].ServerAddress();
 	const NETADDR LastAddr = pLastAddr ? *pLastAddr : NETADDR{};
-	Disconnect();
+	DisconnectInternal();
 	dbg_assert(m_State == IClient::STATE_OFFLINE, "Disconnect must ensure that client is offline");
 
 	if(pAddress != m_aConnectAddressStr)
@@ -1606,6 +1613,13 @@ void CClient::DisconnectWithReason(const char *pReason)
 }
 
 void CClient::Disconnect()
+{
+	if(GameClient())
+		GameClient()->NotifyManualDisconnect();
+	DisconnectInternal();
+}
+
+void CClient::DisconnectInternal()
 {
 	if(m_State != IClient::STATE_OFFLINE)
 	{
@@ -2055,7 +2069,7 @@ void CClient::RecreateBrokenSockets()
 	const bool ReconnectDummy = Reconnect && m_DummyConnected;
 	const bool DeactivateDummy = g_Config.m_ClDummy == 0;
 
-	Disconnect();
+	DisconnectInternal();
 	for(CNetClient &NetClient : m_aNetClient)
 		NetClient.Close();
 	if(!ResetSocket())
@@ -2068,7 +2082,7 @@ void CClient::RecreateBrokenSockets()
 
 	if(Reconnect)
 	{
-		Connect(aConnectAddress);
+		ConnectInternal(aConnectAddress);
 		if(ReconnectDummy)
 		{
 			// 等主连接就绪后再连接分身，沿用既有 dummy 建连流程。
@@ -3175,7 +3189,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 		{
 			if(Conn == CONN_MAIN)
 			{
-				Connect(m_aConnectAddressStr);
+				ConnectInternal(m_aConnectAddressStr);
 			}
 			else
 			{
@@ -3201,7 +3215,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				ServerAddr.port = RedirectPort;
 				char aAddr[NETADDR_MAXSTRSIZE];
 				net_addr_str(&ServerAddr, aAddr, sizeof(aAddr), true);
-				Connect(aAddr);
+				ConnectInternal(aAddr);
 			}
 			else
 			{
@@ -3960,7 +3974,7 @@ void CClient::PumpNetwork()
 			if(m_aNetClient[CONN_MAIN].State() == NETSTATE_OFFLINE)
 			{
 				// This will also disconnect the dummy, so the branch below is an `else if`
-				Disconnect();
+				DisconnectInternal();
 				char aBuf[256];
 				str_format(aBuf, sizeof(aBuf), "offline error='%s'", m_aNetClient[CONN_MAIN].ErrorString());
 				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", aBuf, gs_ClientNetworkErrPrintColor);
@@ -4944,7 +4958,7 @@ void CClient::Update()
 	if(m_ReconnectTime > 0 && time_get() > m_ReconnectTime)
 	{
 		if(State() != STATE_ONLINE)
-			Connect(m_aConnectAddressStr);
+			ConnectInternal(m_aConnectAddressStr);
 		m_ReconnectTime = 0;
 	}
 }
@@ -5763,7 +5777,7 @@ void CClient::Run()
 	}
 
 	GameClient()->RenderShutdownMessage();
-	Disconnect();
+	DisconnectInternal();
 
 	if(!m_pConfigManager->Save())
 	{
@@ -5952,6 +5966,8 @@ void CClient::Con_Disconnect(IConsole::IResult *pResult, void *pUserData)
 void CClient::Con_QmTimeoutDisconnect(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *)pUserData;
+	if(pSelf->GameClient())
+		pSelf->GameClient()->NotifyManualDisconnect();
 	pSelf->DropCurrentServerConnection();
 }
 
@@ -7248,7 +7264,7 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 	if(!Storage()->FileExists(pFilename, StorageType))
 		return Localize("No demo with this filename exists");
 
-	Disconnect();
+	DisconnectInternal();
 	m_aNetClient[CONN_MAIN].ResetErrorString();
 
 	SetState(IClient::STATE_LOADING);

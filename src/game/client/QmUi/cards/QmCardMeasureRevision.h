@@ -59,7 +59,7 @@ namespace qm_card_catalog
 			return Revision;
 		}
 		case EQmModuleId::QiaFen: return Layout.m_KeywordRulesRevision;
-		case EQmModuleId::PieMenu: return g_Config.m_QmPieMenuEnabled ? 1u : 0u;
+		case EQmModuleId::PieMenu: return (g_Config.m_QmPieMenuEnabled ? 1u : 0u) | (Layout.m_CrossServerFollowActive ? 2u : 0u);
 		case EQmModuleId::MapUpload: return 1u;
 		case EQmModuleId::HJAssist: return (g_Config.m_QmAutoTeamLock ? 1u : 0u) | (g_Config.m_QmPausedSpectatorFade ? 2u : 0u) | (g_Config.m_QmDummyDistanceLink ? 4u : 0u);
 		case EQmModuleId::ChatBubble: return (g_Config.m_QmChatBubble ? 1u : 0u) | (g_Config.m_QmChatBubbleCustomColors ? 2u : 0u);

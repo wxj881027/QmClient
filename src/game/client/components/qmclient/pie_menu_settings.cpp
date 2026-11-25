@@ -39,21 +39,21 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	CUIRect Row, LabelColumn, ControlColumn;
 	if(Flow.Control("pie-enabled", LineHeight, Row))
 		RenderQmFunctionCheckbox(&g_Config.m_QmPieMenuEnabled, "Enable pie menu", Localize("Enable pie menu"), &g_Config.m_QmPieMenuEnabled, &Row, !CanCommit);
-	if(g_Config.m_QmPieFollowName[0] != '\0')
+	if(GameClient()->m_CrossServerFollow.IsActive())
 	{
 		if(Flow.Control("pie-follow-status", LineHeight, Row, RowGap))
 		{
 			CUIRect CancelButton;
 			Row.VSplitRight(LineHeight, &Row, &CancelButton);
 			char aStatus[192];
-			str_format(aStatus, sizeof(aStatus), Localize("Following: %s"), g_Config.m_QmPieFollowName);
+			str_format(aStatus, sizeof(aStatus), Localize("Following: %s"), GameClient()->m_CrossServerFollow.TargetName());
 			SLabelProperties Props;
 			Props.m_MaxWidth = maximum(0.0f, Row.w - LineSpacing);
 			Props.m_EllipsisAtEnd = true;
 			Ui()->DoLabel(&Row, aStatus, BodySize, TEXTALIGN_ML, Props);
 			static CButtonContainer s_CancelFollowButton;
 			if(Ui()->DoButton_QmIcon(&s_CancelFollowButton, EQmIcon::CLOSE, FontIcons::FONT_ICON_XMARK, 0, &CancelButton, BUTTONFLAG_LEFT) && CanCommit)
-				GameClient()->m_PieMenu.CancelFollow();
+				GameClient()->m_CrossServerFollow.Stop();
 			if(!PrewarmOnly)
 				GameClient()->m_Tooltips.DoToolTip(&s_CancelFollowButton, &CancelButton, Localize("Stop following"));
 		}

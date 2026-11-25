@@ -3889,7 +3889,9 @@ if(CLIENT)
     components/qmclient/chat_bubble_geometry.h
     components/qmclient/pie_menu_actions.cpp
     components/qmclient/pie_menu_friend_action.h
-    components/qmclient/pie_menu_follow.cpp
+    components/qmclient/cross_server_follow.cpp
+    components/qmclient/cross_server_follow.h
+    components/qmclient/cross_server_follow_logic.h
     components/qmclient/pie_menu_points.h
     components/qmclient/pie_menu_settings.cpp
     components/qmclient/pending_hammer_hits.h
@@ -6126,6 +6128,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_screenshot_thumbnail_upload_test.cpp
     src/test/unit/qmclient/client/qm_image_view_test.cpp
     src/test/unit/qmclient/client/qm_friend_menu_policy_test.cpp
+    src/test/unit/qmclient/client/qm_cross_server_follow_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_geometry_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_render_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_matrix_test.cpp

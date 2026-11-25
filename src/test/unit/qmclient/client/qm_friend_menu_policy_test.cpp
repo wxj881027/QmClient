@@ -34,63 +34,6 @@ TEST(QmNewUiMenuGameplaySocialContract, SecondaryPanelRectClampsNearScreenEdges)
 	EXPECT_GE(Panel.y, 8.0f);
 }
 
-TEST(QmNewUiMenuGameplaySocialContract, FriendAutoFollowDelaysAndStopsAfterTwoJumps)
-{
-	CMenus::SFriendAutoFollowState State;
-	char aConnect[NETADDR_MAXSTRSIZE] = "";
-
-	CMenus::StartFriendAutoFollow(State, "Alice", "Clan", "127.0.0.1:8303");
-	EXPECT_TRUE(State.m_Active);
-	EXPECT_FALSE(CMenus::FriendAutoFollowStep(State, true, "127.0.0.1:8303", 10.0f, 3, 2, aConnect, sizeof(aConnect)));
-
-	EXPECT_FALSE(CMenus::FriendAutoFollowStep(State, true, "127.0.0.1:8304", 11.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_TRUE(State.m_HasPendingAddress);
-	EXPECT_FALSE(CMenus::FriendAutoFollowStep(State, true, "127.0.0.1:8304", 13.9f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_TRUE(CMenus::FriendAutoFollowStep(State, true, "127.0.0.1:8304", 14.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_STREQ(aConnect, "127.0.0.1:8304");
-	EXPECT_TRUE(State.m_Active);
-	EXPECT_EQ(State.m_JumpCount, 1);
-
-	EXPECT_FALSE(CMenus::FriendAutoFollowStep(State, true, "127.0.0.1:8305", 20.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_TRUE(CMenus::FriendAutoFollowStep(State, true, "127.0.0.1:8305", 23.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_STREQ(aConnect, "127.0.0.1:8305");
-	EXPECT_FALSE(State.m_Active);
-	EXPECT_EQ(State.m_JumpCount, 2);
-}
-
-TEST(QmNewUiMenuGameplaySocialContract, FriendAutoFollowCancelsWhenTargetGoesOffline)
-{
-	CMenus::SFriendAutoFollowState State;
-	char aConnect[NETADDR_MAXSTRSIZE] = "";
-
-	CMenus::StartFriendAutoFollow(State, "Alice", "Clan", "127.0.0.1:8303");
-	EXPECT_FALSE(CMenus::FriendAutoFollowStep(State, true, "127.0.0.1:8304", 11.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_TRUE(State.m_HasPendingAddress);
-	EXPECT_FALSE(CMenus::FriendAutoFollowStep(State, false, "", 12.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_FALSE(State.m_Active);
-	EXPECT_FALSE(State.m_HasPendingAddress);
-}
-
-TEST(QmNewUiMenuGameplaySocialContract, FriendAutoFollowCancelsPendingJumpWhenTargetReturns)
-{
-	CMenus::SFriendAutoFollowState State;
-	char aConnect[NETADDR_MAXSTRSIZE] = "";
-	const char *pOriginal = "127.0.0.1:8303";
-	const char *pOther = "127.0.0.1:8304";
-
-	CMenus::StartFriendAutoFollow(State, "Alice", "Clan", pOriginal);
-	EXPECT_FALSE(CMenus::FriendAutoFollowStep(State, true, pOther, 11.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_FALSE(CMenus::FriendAutoFollowStep(State, true, pOriginal, 12.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_FALSE(CMenus::FriendAutoFollowStep(State, true, pOriginal, 14.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_STREQ(aConnect, "");
-	EXPECT_EQ(State.m_JumpCount, 0);
-
-	EXPECT_FALSE(CMenus::FriendAutoFollowStep(State, true, pOther, 15.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_FALSE(CMenus::FriendAutoFollowStep(State, true, pOther, 17.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_TRUE(CMenus::FriendAutoFollowStep(State, true, pOther, 18.0f, 3, 2, aConnect, sizeof(aConnect)));
-	EXPECT_STREQ(aConnect, pOther);
-}
-
 TEST(QmNewUiMenuGameplaySocialContract, ShortServerNamesCoverKnownFamilies)
 {
 	CServerInfo Info{};

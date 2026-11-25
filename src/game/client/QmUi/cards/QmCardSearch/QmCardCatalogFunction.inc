@@ -339,7 +339,6 @@ namespace
 		{Localizable("View points"), nullptr, "查看积分"},
 		{Localizable("Whisper"), nullptr, "私聊"},
 		{nullptr, "qm_perf_debug", nullptr},
-		{nullptr, "qm_pie_follow_name", nullptr},
 		{nullptr, "qm_pie_menu_color_copy_name", nullptr},
 		{nullptr, "qm_pie_menu_color_copy_skin", nullptr},
 		{nullptr, "qm_pie_menu_color_follow", nullptr},

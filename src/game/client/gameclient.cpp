@@ -725,6 +725,7 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Motd, "motd");
 	AddComponent(&m_Menus, "menus");
 	AddComponent(&m_PieMenu, "pie_menu");
+	AddComponent(&m_CrossServerFollow, "cross_server_follow");
 	AddComponent(&m_HudEditor, "hud_editor");
 	AddComponent(&m_Scripting, "scripting");
 	AddComponent(&m_KeyBinder, "key_binder");

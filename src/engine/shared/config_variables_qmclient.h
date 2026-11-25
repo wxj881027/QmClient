@@ -405,8 +405,6 @@ MACRO_CONFIG_INT(QmPieMenuJoinTeamEnabled, qm_pie_menu_join_team_enabled, 1, 0, 
 MACRO_CONFIG_INT(QmPieMenuFollowEnabled, qm_pie_menu_follow_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show cross-server follow option")
 MACRO_CONFIG_INT(QmPieMenuScoreEnabled, qm_pie_menu_score_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show player score option")
 MACRO_CONFIG_INT(QmPieMenuCopyNameEnabled, qm_pie_menu_copy_name_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show copy name option")
-MACRO_CONFIG_STR(QmPieFollowName, qm_pie_follow_name, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Player to follow across servers until cancelled; empty disables following")
-MACRO_CONFIG_STR(QmPieFollowClan, qm_pie_follow_clan, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Clan of the player followed from the pie menu")
 MACRO_CONFIG_INT(QmPieMenuColorInviteTeam, qm_pie_menu_color_invite_team, 0xE67A4DBF, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Invite team option color")
 MACRO_CONFIG_INT(QmPieMenuColorJoinTeam, qm_pie_menu_color_join_team, 0x4D9BE6BF, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Join team option color")
 MACRO_CONFIG_INT(QmPieMenuColorFollow, qm_pie_menu_color_follow, 0x4DBF80BF, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Follow option color")

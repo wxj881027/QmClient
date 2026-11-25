@@ -1115,71 +1115,6 @@ public:
 			return "传统";
 		return AxiomShortTypeDisplayName(pType);
 	}
-	struct SFriendAutoFollowState
-	{
-		bool m_Active = false;
-		char m_aName[MAX_NAME_LENGTH] = {0};
-		char m_aClan[MAX_CLAN_LENGTH] = {0};
-		char m_aLastAddress[NETADDR_MAXSTRSIZE] = {0};
-		char m_aPendingAddress[NETADDR_MAXSTRSIZE] = {0};
-		float m_PendingConnectTime = 0.0f;
-		int m_JumpCount = 0;
-		bool m_HasPendingAddress = false;
-	};
-	static void StartFriendAutoFollow(SFriendAutoFollowState &State, const char *pName, const char *pClan, const char *pAddress)
-	{
-		State = SFriendAutoFollowState();
-		State.m_Active = true;
-		str_copy(State.m_aName, pName);
-		str_copy(State.m_aClan, pClan);
-		str_copy(State.m_aLastAddress, pAddress);
-	}
-	static void StopFriendAutoFollow(SFriendAutoFollowState &State)
-	{
-		State = SFriendAutoFollowState();
-	}
-	static bool FriendAutoFollowStep(SFriendAutoFollowState &State, bool TargetOnline, const char *pAddress, float Now, int DelaySeconds, int MaxJumps, char *pConnectAddress, int ConnectAddressSize)
-	{
-		if(pConnectAddress != nullptr && ConnectAddressSize > 0)
-			pConnectAddress[0] = '\0';
-		if(!State.m_Active)
-			return false;
-		if(!TargetOnline || pAddress == nullptr || pAddress[0] == '\0')
-		{
-			StopFriendAutoFollow(State);
-			return false;
-		}
-		if(State.m_aLastAddress[0] == '\0')
-			str_copy(State.m_aLastAddress, pAddress);
-		if(str_comp(State.m_aLastAddress, pAddress) == 0)
-		{
-			State.m_HasPendingAddress = false;
-			State.m_aPendingAddress[0] = '\0';
-			return false;
-		}
-		if(!State.m_HasPendingAddress || str_comp(State.m_aPendingAddress, pAddress) != 0)
-		{
-			str_copy(State.m_aPendingAddress, pAddress);
-			State.m_PendingConnectTime = Now + maximum(0, DelaySeconds);
-			State.m_HasPendingAddress = true;
-		}
-		if(Now < State.m_PendingConnectTime)
-			return false;
-		if(State.m_JumpCount >= maximum(0, MaxJumps))
-		{
-			StopFriendAutoFollow(State);
-			return false;
-		}
-		str_copy(State.m_aLastAddress, State.m_aPendingAddress);
-		if(pConnectAddress != nullptr && ConnectAddressSize > 0)
-			str_copy(pConnectAddress, State.m_aPendingAddress, ConnectAddressSize);
-		State.m_HasPendingAddress = false;
-		State.m_aPendingAddress[0] = '\0';
-		++State.m_JumpCount;
-		if(State.m_JumpCount >= maximum(0, MaxJumps))
-			State.m_Active = false;
-		return true;
-	}
 	static const char *GetServerbrowserDisplayName(const CServerInfo *pInfo, char *pBuffer, size_t BufferSize)
 	{
 		if(pInfo == nullptr || pBuffer == nullptr || BufferSize == 0)
@@ -2211,7 +2146,7 @@ protected:
 	bool m_HasFriendAction = false;
 	char m_aFriendActionName[MAX_NAME_LENGTH] = {0};
 	char m_aFriendActionClan[MAX_CLAN_LENGTH] = {0};
-	char m_aFriendActionAddress[NETADDR_MAXSTRSIZE] = {0};
+	std::string m_FriendActionServerAddress;
 	int m_FriendActionState = IFriends::FRIEND_NO;
 	class CFriendNotePopupContext : public SPopupMenuId
 	{
@@ -2230,7 +2165,6 @@ protected:
 	char m_aRemoveFriendName[MAX_NAME_LENGTH] = {0};
 	char m_aRemoveFriendClan[MAX_CLAN_LENGTH] = {0};
 	int m_RemoveFriendState = IFriends::FRIEND_NO;
-	SFriendAutoFollowState m_FriendAutoFollowState;
 
 	// found in menus.cpp
 	void Render();
@@ -2475,12 +2409,7 @@ private:
 	void RenderServerbrowserMapFilterSelector(CUIRect Selector);
 	// 地图预览弹窗：行内触发（悬停 200ms / 右键）与弹层内容。
 	void OpenMapPreviewPopup(const CServerInfo *pItem);
-	enum class EConnectIntent
-	{
-		Manual,
-		AutoFollow,
-	};
-	void Connect(const char *pAddress, EConnectIntent Intent = EConnectIntent::Manual);
+	void Connect(const char *pAddress);
 	void PopupConfirmSwitchServer();
 	void RenderServerbrowserFilters(CUIRect View);
 	void RenderServerbrowserFilterForm(CUIRect &View);

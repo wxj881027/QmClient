@@ -77,6 +77,7 @@
 #include "components/player_points.h"
 #include "components/players.h"
 #include "components/qmclient/axiom_auto_login.h"
+#include "components/qmclient/cross_server_follow.h"
 #include "components/qmclient/axiom_scores.h"
 #include "components/qmclient/chat_emoji.h"
 #include "components/qmclient/checkpoint_guide.h"
@@ -351,6 +352,7 @@ public:
 	CPlayerPoints m_PlayerPoints;
 	CCollisionHitbox m_CollisionHitbox;
 	CPieMenu m_PieMenu;
+	CCrossServerFollow m_CrossServerFollow;
 	CInputOverlay m_InputOverlay;
 	CMovingTiles m_MovingTilesBackground = CMovingTiles{false};
 	CMovingTiles m_MovingTilesForeground = CMovingTiles{true};
@@ -966,6 +968,9 @@ public:
 	void ResetDemoPlaybackState() override;
 	void InvalidateSnapshot() override;
 	void OnNewSnapshot(bool DummySwapped) override;
+	void OnManualConnect(const char *pAddress) override { m_CrossServerFollow.OnManualConnect(pAddress); }
+	void NotifyManualDisconnect() override { m_CrossServerFollow.NotifyManualDisconnect(); }
+	bool IsCrossServerFollowing() const override { return m_CrossServerFollow.IsActive(); }
 	void EvolveSnapshotCharacter(CNetObj_Character *pCharacter, int Tick);
 	void OnPredict() override;
 	void OnActivateEditor() override;

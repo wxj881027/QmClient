@@ -66,6 +66,7 @@ namespace qm_card_catalog
 		uint64_t m_KeywordRulesRevision = 1;
 		size_t m_KeywordRulesCount = 0;
 		bool m_KeywordRulesHalfFilled = false;
+		bool m_CrossServerFollowActive = false;
 	};
 
 	void FillKeywordReplyLayoutState(SQmFunctionCardLayoutState &State);
