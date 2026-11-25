@@ -371,14 +371,22 @@ namespace
 		// 同一个按钮里图标比文字小半档，和下拉 chevron 也不同源。
 		const float IconSide = std::min(Text.h, ui_token::control::IconBox(ResolvedTextFontSize));
 		const float Gap = ui_token::control::IconTextGap(ResolvedTextFontSize);
-		float TextWidth = pTextRender->TextWidth(ResolvedTextFontSize, pText);
-		TextWidth = std::clamp(TextWidth, 1.0f, std::max(1.0f, Text.w - IconSide - Gap));
-		const float TotalWidth = IconSide + Gap + TextWidth;
-		const float StartX = Text.x + (Text.w - TotalWidth) * 0.5f;
+		const float TextWidth = pTextRender->TextWidth(ResolvedTextFontSize, pText);
+		const auto Layout = ui_token::control::ResolveIconTextRow(Text, TextWidth, IconSide, Gap);
 		// 图标盒与文字标签共用文本行；盒比行矮时按中间对齐，不能把盒顶贴到行顶，
 		// 否则站点纹理与字体图标都会整体偏上。x 已由整组居中算好，这里只收敛 y。
-		*pIconRect = QmIconLabelRect({StartX, Text.y, IconSide, Text.h}, IconSide, TEXTALIGN_ML);
-		*pTextRect = {StartX + IconSide + Gap, Text.y, TextWidth, Text.h};
+		*pIconRect = QmIconLabelRect(Layout.m_Icon, Layout.m_Icon.w, TEXTALIGN_ML);
+		*pTextRect = Layout.m_Text;
+	}
+
+	// 图标+文字按钮的标签属性：最大宽度按自然宽度留 1px 余量，并锁成单行。
+	// 计划收集与实际绘制都从这里取，避免两边宽度/标志不一致导致文本容器反复重建。
+	SLabelProperties MenuButtonLabelProps(const CUIRect &Text)
+	{
+		SLabelProperties Props;
+		Props.m_MaxWidth = ui_token::control::ResolveTextMaxWidth(Text.w);
+		Props.m_EllipsisAtEnd = true;
+		return Props;
 	}
 
 	bool PerfDebugEnabled()
@@ -1599,12 +1607,10 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 			}
 			if(pTextUiElement != nullptr)
 			{
-				SLabelProperties LabelProps;
-				LabelProps.m_MaxWidth = Text.w;
-				DoSettingsLabelStreamed(*pTextUiElement, &Text, pText, ResolvedTextFontSize, TEXTALIGN_MC, LabelProps);
+				DoSettingsLabelStreamed(*pTextUiElement, &Text, pText, ResolvedTextFontSize, TEXTALIGN_MC, MenuButtonLabelProps(Text));
 			}
 			else
-				Ui()->DoLabel(&Text, pText, ResolvedTextFontSize, TEXTALIGN_MC);
+				Ui()->DoLabel(&Text, pText, ResolvedTextFontSize, TEXTALIGN_MC, MenuButtonLabelProps(Text));
 		}
 		else
 		{
@@ -1625,12 +1631,10 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 		}
 		else if(pTextUiElement != nullptr)
 		{
-			SLabelProperties LabelProps;
-			LabelProps.m_MaxWidth = Text.w;
-			DoSettingsLabelStreamed(*pTextUiElement, &Text, pText, ResolvedTextFontSize, TEXTALIGN_MC, LabelProps);
+			DoSettingsLabelStreamed(*pTextUiElement, &Text, pText, ResolvedTextFontSize, TEXTALIGN_MC, MenuButtonLabelProps(Text));
 		}
 		else
-			Ui()->DoLabel(&Text, pText, ResolvedTextFontSize, TEXTALIGN_MC);
+			Ui()->DoLabel(&Text, pText, ResolvedTextFontSize, TEXTALIGN_MC, MenuButtonLabelProps(Text));
 	}
 
 	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, Flags);
@@ -2198,14 +2202,15 @@ int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContaine
 	const bool HasIcon = Icon != EQmIcon::COUNT || (pIconTexture != nullptr && pIconTexture->IsValid());
 	CUIRect Text = MenuButtonTextRect(pRect, 0.0f, 0.0f);
 	SLabelProperties Props;
-	Props.m_MaxWidth = Text.w;
+	Props.m_MaxWidth = ui_token::control::ResolveTextMaxWidth(Text.w);
+	Props.m_EllipsisAtEnd = true;
 	if(HasIcon && pText != nullptr && pText[0] != '\0')
 	{
 		// 图标+文字组合：整组（图标+间距+文字）居中、图标紧贴文字左侧，
 		// 与 DoButton_MenuInternal 的组合分支共用同一布局函数，计划收集与实际绘制矩形一致。
 		CUIRect IconRect;
 		MenuButtonIconTextLayout(TextRender(), pRect, pText, 0.0f, 0.0f, ResolvedBodySize, &IconRect, &Text);
-		Props.m_MaxWidth = Text.w;
+		Props = MenuButtonLabelProps(Text);
 	}
 	const SMenuTextStyleKey StyleKey = BuildMenuTextStyleKey(&Text, ResolvedBodySize, TEXTALIGN_MC, Props);
 	if(m_MenuTextPlanCollecting)

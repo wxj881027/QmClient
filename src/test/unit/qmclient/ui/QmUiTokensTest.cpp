@@ -96,6 +96,31 @@ TEST(QmUiTokens, QmThemeMirrorsSharedTokens)
 	EXPECT_EQ(qm_theme::IME.m_TextSafePaddingY, ui_token::ime::TEXT_SAFE_PADDING_Y);
 }
 
+TEST(QmUiTokens, IconTextRowKeepsNaturalLabelWidthAndAddsSingleLineSlack)
+{
+	const CUIRect Row{10.0f, 20.0f, 300.0f, 30.0f};
+	const float NaturalWidth = 120.6f;
+	const auto Layout = ui_token::control::ResolveIconTextRow(Row, NaturalWidth, 18.0f, 6.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Text.w, NaturalWidth);
+	EXPECT_FLOAT_EQ(Layout.m_Text.x, Layout.m_Icon.x + Layout.m_Icon.w + 6.0f);
+	EXPECT_NEAR(Layout.m_Icon.x - Row.x, (Row.x + Row.w) - (Layout.m_Text.x + Layout.m_Text.w), 0.001f);
+	EXPECT_GT(ui_token::control::ResolveTextMaxWidth(NaturalWidth), NaturalWidth);
+	EXPECT_FLOAT_EQ(ui_token::control::ResolveTextMaxWidth(NaturalWidth), 122.0f);
+}
+
+TEST(QmUiTokens, IconTextRowClampsOverlongLabelInsideRow)
+{
+	const CUIRect Row{10.0f, 20.0f, 100.0f, 30.0f};
+	const auto Layout = ui_token::control::ResolveIconTextRow(Row, 500.0f, 20.0f, 5.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Text.w, 75.0f);
+	EXPECT_NEAR(Layout.m_Text.x + Layout.m_Text.w, Row.x + Row.w, 0.001f);
+
+	const CUIRect DegenerateRow{0.0f, 0.0f, 4.0f, 10.0f};
+	const auto Degenerate = ui_token::control::ResolveIconTextRow(DegenerateRow, 50.0f, 20.0f, 5.0f);
+	EXPECT_GE(Degenerate.m_Text.w, 0.0f);
+	EXPECT_GE(Degenerate.m_Icon.w, 0.0f);
+}
+
 TEST(QmImeOverlay, InvalidSelectionHighlightsFirstCandidate)
 {
 	EXPECT_EQ(qm_ime_overlay::NormalizeSelectedCandidateIndex(-1, 0), -1);

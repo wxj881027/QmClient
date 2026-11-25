@@ -460,6 +460,31 @@ namespace ui_token::control
 	inline constexpr float PadY(const float LineHeight, const float BodySize) { return std::max(0.0f, (LineHeight - BodySize) * 0.5f); }
 	// 图标与相邻文字的间距（0.33 字号，最小 XS）。
 	inline constexpr float IconTextGap(const float BodySize) { return std::max(spacing::XS, BodySize * 0.33f); }
+	// 标签渲染器按「最大宽度」断行，实测自然宽度原值不安全：绘制时的逐字推进
+	// 可能比测量多出零点几个像素，于是按钮标签会在空格处折成两行并溢出按钮。
+	// 给自然宽度留 1px 并向上取整，保证单行标签不会卡在等宽边界上。
+	inline constexpr float TEXT_WIDTH_SLACK = 1.0f;
+	inline float ResolveTextMaxWidth(const float TextWidth)
+	{
+		return std::ceil(std::max(0.0f, TextWidth) + TEXT_WIDTH_SLACK);
+	}
+	// 「图标 + 文字」的横向布局：整组居中，文字按自然宽度排版；
+	// 行宽真的不够时文字矩形收到可用宽度，调用方配合单行省略号，避免折行撑破按钮。
+	struct SIconTextRowLayout
+	{
+		CUIRect m_Icon;
+		CUIRect m_Text;
+	};
+	inline SIconTextRowLayout ResolveIconTextRow(const CUIRect &Row, const float TextWidth, const float IconSide, const float Gap)
+	{
+		const float ResolvedIconSide = std::clamp(IconSide, 0.0f, std::max(0.0f, Row.w));
+		const float ResolvedGap = std::clamp(Gap, 0.0f, std::max(0.0f, Row.w - ResolvedIconSide));
+		const float Available = std::max(0.0f, Row.w - ResolvedIconSide - ResolvedGap);
+		const float LabelWidth = Available <= 0.0f ? 0.0f : std::clamp(TextWidth, std::min(1.0f, Available), Available);
+		const float GroupWidth = ResolvedIconSide + ResolvedGap + LabelWidth;
+		const float StartX = Row.x + (Row.w - GroupWidth) * 0.5f;
+		return {{StartX, Row.y, ResolvedIconSide, Row.h}, {StartX + ResolvedIconSide + ResolvedGap, Row.y, LabelWidth, Row.h}};
+	}
 	// 左侧标签与右侧控件之间的最小间距（0.5 字号，最小 SM）。
 	inline constexpr float LabelControlGap(const float BodySize) { return std::max(spacing::SM, BodySize * 0.5f); }
 	// 字形 → 盒子（与 QmIconFontSize 互逆）。
