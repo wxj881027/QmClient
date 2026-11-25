@@ -3393,6 +3393,8 @@ private:
 	int m_SettingsTextVisibleLatencyPage = -1;
 	int m_SettingsTextVisibleLatencyTab = -1;
 	int m_SettingsTextVisibleLatencyFrames = 0;
+	int64_t m_SettingsTextVisibleLatencyFirstVisibleNs = 0;
+	int m_SettingsTextVisibleLatencyVisibleFrames = 0;
 	int m_SettingsTextVisibleLatencyFirstFrameNew = -1;
 	const char *m_SettingsTextVisibleLatencySource = "page_switch";
 	int m_LastSettingsUiScale = -1;

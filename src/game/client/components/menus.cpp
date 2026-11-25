@@ -3106,18 +3106,27 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 	struct SScopedLoadingRenderTimer
 	{
 		int64_t m_Start = time_get_nanoseconds().count();
+		int64_t m_BackgroundDone = 0;
+		int64_t m_UiDone = 0;
+		int64_t m_PresentDone = 0;
 		~SScopedLoadingRenderTimer()
 		{
-			const double DurationMs = (double)(time_get_nanoseconds().count() - m_Start) / 1000000.0;
-			if(QmPerfEnabled() && DurationMs >= 4.0)
-			{
-				char aPayload[160];
-				str_format(aPayload, sizeof(aPayload), "event=loading_render duration_ms=%.3f", DurationMs);
-				QmPerfLogPayload("perf/menu", aPayload);
-			}
+			const int64_t End = time_get_nanoseconds().count();
+			const double DurationMs = (double)(End - m_Start) / 1000000.0;
+			if(!QmPerfEnabled() || DurationMs < 4.0)
+				return;
+			const auto SpanMs = [](int64_t From, int64_t To) {
+				return From > 0 && To > From ? (double)(To - From) / 1000000.0 : 0.0;
+			};
+			char aPayload[256];
+			str_format(aPayload, sizeof(aPayload),
+				"event=loading_render duration_ms=%.3f background_ms=%.3f ui_ms=%.3f present_ms=%.3f tail_ms=%.3f partial=%d",
+				DurationMs, SpanMs(m_Start, m_BackgroundDone), SpanMs(m_BackgroundDone, m_UiDone),
+				SpanMs(m_UiDone, m_PresentDone), SpanMs(m_PresentDone, End), m_BackgroundDone == 0 ? 1 : 0);
+			QmPerfLogPayload("perf/menu", aPayload);
 		}
 	};
-	const SScopedLoadingRenderTimer LoadingRenderTimer;
+	SScopedLoadingRenderTimer LoadingRenderTimer;
 	CUiScopedGaussianBlur GaussianBlurScope(Ui());
 	// TODO: not supported right now due to separate render thread
 
@@ -3158,6 +3167,7 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 		RenderBackground();
 	}
 	Ui()->BeginBackgroundFrame();
+	LoadingRenderTimer.m_BackgroundDone = time_get_nanoseconds().count();
 
 	m_LoadingState.m_LastRender = Now;
 
@@ -3187,11 +3197,13 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 	}
 
 	Graphics()->SetColor(1.0, 1.0, 1.0, 1.0);
+	LoadingRenderTimer.m_UiDone = time_get_nanoseconds().count();
 
 	if(g_Config.m_QmGraphicsTrace >= 3)
 		dbg_msg("ui/loading", "loading frame presented: progress=%.2f", Progress.has_value() ? Progress.value() : -1.0f);
 
 	GameClient()->UpdateAndSwapClient();
+	LoadingRenderTimer.m_PresentDone = time_get_nanoseconds().count();
 }
 
 void CMenus::RenderLoading(const char *pCaption, const char *pContent, int IncreaseCounter)
@@ -7235,6 +7247,8 @@ void CMenus::BeginSettingsTextVisibleLatencyProbe(const char *pSource, int64_t S
 	m_SettingsTextVisibleLatencyPage = Context[1];
 	m_SettingsTextVisibleLatencyTab = Context[2];
 	m_SettingsTextVisibleLatencyFrames = 0;
+	m_SettingsTextVisibleLatencyFirstVisibleNs = 0;
+	m_SettingsTextVisibleLatencyVisibleFrames = 0;
 	m_SettingsTextVisibleLatencyFirstFrameNew = -1;
 	m_SettingsTextVisibleLatencySource = pSource != nullptr && pSource[0] != '\0' ? pSource : "page_switch";
 }
@@ -7271,19 +7285,30 @@ void CMenus::LogSettingsTextVisibleLatency()
 		m_SettingsTextVisibleLatencyActive = false;
 		return;
 	}
-	if(!QmSettingsTextVisibleFrameReady(m_MenuTextStableCandidatesThisFrame, m_MenuTextStablePoolHitsThisFrame, m_MenuTextStableMissesThisFrame, m_MenuTextStableStalesThisFrame))
+	const bool TextComplete = QmSettingsTextVisibleFrameReady(m_MenuTextStableCandidatesThisFrame, m_MenuTextStablePoolHitsThisFrame, m_MenuTextStableMissesThisFrame, m_MenuTextStableStalesThisFrame);
+	// 文字“出现”= 本帧所有候选都已从池中拿到完整文字（允许随后仍有一次样式重建）；
+	// 之后还要等零重建才算“就绪”。两个时刻分开记录，才能区分“玩家看到字”
+	// 与“文本成本已消掉”。
+	if(TextComplete && m_SettingsTextVisibleLatencyFirstVisibleNs == 0)
+	{
+		m_SettingsTextVisibleLatencyFirstVisibleNs = NowNs;
+		m_SettingsTextVisibleLatencyVisibleFrames = m_SettingsTextVisibleLatencyFrames;
+	}
+	if(!TextComplete)
 		return;
 	// 首屏就绪还要求本帧没有新建/重建容器：命中池但仍在重建说明预建内容
 	// 与可见布局不一致，此时文字虽可见，但成本还没有真正消掉。
 	if(m_MenuTextStableTextNewThisFrame != 0)
 		return;
 
-	char aPayload[384];
+	char aPayload[448];
 	str_format(aPayload, sizeof(aPayload),
-		"event=settings_text_visible_latency source=%s page=%d tab=%d dur_ms=%.3f frames=%d first_frame_new=%d candidates=%d pool_hit=%d render_ready_hit=%d misses=%d stale=%d text_new=%d text_new_key=%d text_rebuild=%d glyph_revision=%" PRIu64 " graphics_reset=%u start_frame=%" PRIu64 " ready_frame=%" PRIu64,
+		"event=settings_text_visible_latency source=%s page=%d tab=%d visible_ms=%.3f visible_frames=%d dur_ms=%.3f frames=%d first_frame_new=%d candidates=%d pool_hit=%d render_ready_hit=%d misses=%d stale=%d text_new=%d text_new_key=%d text_rebuild=%d glyph_revision=%" PRIu64 " graphics_reset=%u start_frame=%" PRIu64 " ready_frame=%" PRIu64,
 		m_SettingsTextVisibleLatencySource,
 		m_SettingsTextVisibleLatencyPage,
 		m_SettingsTextVisibleLatencyTab,
+		(double)(m_SettingsTextVisibleLatencyFirstVisibleNs - m_SettingsTextVisibleLatencyStartNs) / 1000000.0,
+		m_SettingsTextVisibleLatencyVisibleFrames,
 		(double)(NowNs - m_SettingsTextVisibleLatencyStartNs) / 1000000.0,
 		m_SettingsTextVisibleLatencyFrames,
 		m_SettingsTextVisibleLatencyFirstFrameNew,
@@ -9007,13 +9032,18 @@ void CMenus::PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride
 		s_QmLastSettingsTextLog = Now;
 		float ScreenX0 = 0, ScreenY0 = 0, ScreenX1 = 0, ScreenY1 = 0;
 		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		char aPayload[1024];
+		int LanguagePlanItems = 0;
+		for(const SMenuTextPlanItem &Item : m_vSettingsMenuTextPrebuildPlan)
+			if(Item.m_Page == SETTINGS_LANGUAGE)
+				++LanguagePlanItems;
+		char aPayload[1152];
 		// Keep the emitted contract searchable: phase=before_target scope=target_settings.
-		str_format(aPayload, sizeof(aPayload), "event=settings_text_prebuild built=%d reused=%d remaining=%d pool_missing=%d plan_cursor_remaining=%d collection_remaining=%d budget=%d granted_tokens=%d skip_reason=%s glyph_demand=%" PRIu64 " glyph_distinct=%zu glyph_batches=%zu glyph_batch_cursor=%zu phase=%s scope=%s operation=%s screen=%.0fx%.0f graphics=%dx%d",
+		str_format(aPayload, sizeof(aPayload), "event=settings_text_prebuild built=%d reused=%d remaining=%d pool_missing=%d plan_cursor_remaining=%d collection_remaining=%d budget=%d granted_tokens=%d skip_reason=%s glyph_demand=%" PRIu64 " glyph_distinct=%zu glyph_batches=%zu glyph_batch_cursor=%zu phase=%s scope=%s operation=%s screen=%.0fx%.0f graphics=%dx%d language_plan_items=%d languages=%zu",
 			Built, Reused, RemainingMissing, PoolMissing, CursorRemaining, CollectionRemaining, Budget, GrantedTokens, pSkipReason,
 			m_SettingsMenuTextGlyphDemand.TotalGlyphDemands(), m_SettingsMenuTextGlyphDemand.DistinctGlyphs(),
 			m_SettingsMenuTextGlyphDemand.PrewarmBatches().size(), m_SettingsMenuTextGlyphBatchCursor, pPhase, pScope, pOperation,
-			ScreenX1 - ScreenX0, ScreenY1 - ScreenY0, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
+			ScreenX1 - ScreenX0, ScreenY1 - ScreenY0, Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
+			LanguagePlanItems, g_Localization.Languages().size());
 		QmPerfLogPayload("perf/settings-text", aPayload, Client(), CurrentQmUiPerfPage() != nullptr ? CurrentQmUiPerfPage() : "settings");
 		const double UnitsPerSecond = s_QmSettingsTextPlanCollectionTrace.m_WorkNs > 0 ?
 						      (double)s_QmSettingsTextPlanCollectionTrace.m_Units * 1000000000.0 / (double)s_QmSettingsTextPlanCollectionTrace.m_WorkNs :
