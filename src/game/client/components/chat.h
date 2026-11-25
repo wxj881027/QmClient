@@ -152,8 +152,9 @@ private:
 
 	static constexpr float CHAT_ENTRY_DURATION = 0.22f;
 	static constexpr float CHAT_ENTRY_OFFSET_X = -24.0f;
-	static constexpr float CHAT_RECALL_DURATION = 0.12f;
-	static constexpr float CHAT_RECALL_STAGGER_SECONDS = 0.022f;
+	static constexpr float CHAT_RECALL_TIME_SCALE = 2.5f;
+	static constexpr float CHAT_RECALL_DURATION = 0.12f * CHAT_RECALL_TIME_SCALE;
+	static constexpr float CHAT_RECALL_STAGGER_SECONDS = 0.022f * CHAT_RECALL_TIME_SCALE;
 	static constexpr float CHAT_EXIT_DURATION = 0.20f;
 	static constexpr float CHAT_MESSAGE_VISIBLE_DURATION = 14.0f;
 	static constexpr float CHAT_PRESENTATION_MAX_DELTA_SECONDS = 0.20f;
@@ -879,7 +880,7 @@ inline void CChat::BeginLinePresentation(SPresentationState &Presentation, int64
 inline CChat::SRecallTiming CChat::ResolveRecallTiming(int RecallLineCount)
 {
 	constexpr int BASELINE_LINE_COUNT = 4;
-	constexpr float MIN_DURATION_SECONDS = 0.045f;
+	constexpr float MIN_DURATION_SECONDS = 0.045f * CHAT_RECALL_TIME_SCALE;
 	if(RecallLineCount <= BASELINE_LINE_COUNT)
 		return {};
 
