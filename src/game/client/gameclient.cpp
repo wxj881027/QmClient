@@ -1115,7 +1115,10 @@ void CGameClient::OnInit()
 	do
 	{
 		m_Menus.RenderLoading(pLoadingDDNetCaption, pLoadingMessageAssets, 0);
-		PrewarmQmIconGlyphs(24, time_freq() / 1000);
+		// worker 路径只做排队，单步可以显著放大；同步兜底仍保持 24 个/ms。
+		PrewarmQmIconGlyphs(TextRender()->QmGlyphWorkerEnabled() ? 512 : 24, time_freq() / 1000);
+		// 没有渲染帧可借用时手动提交/发布，让队列在启动期持续排空。
+		TextRender()->QmTextFrameEnd();
 	} while(!m_QmIconPrewarm.Complete() && time_get() - IconWarmupStart < time_freq() / 4);
 	// 实体纹理首次进服原本会在资源准备帧同步构建（实测单次约 219ms）。
 	// 现在这里只发起 worker 解码，下面的 loading 泵按刷新率逐层上传；
@@ -1576,11 +1579,25 @@ void CGameClient::PrewarmQmIconGlyphs(int MaxGlyphs, int64_t BudgetTicks)
 		return;
 	const CUiScopedTextRenderState TextState(*TextRender());
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	const bool Worker = TextRender()->QmGlyphWorkerEnabled();
 	const int64_t Start = time_get();
+	int Count = 0;
 	int Codepoint, PixelSize;
-	for(int Count = 0; Count < MaxGlyphs && m_QmIconPrewarm.Next(Codepoint, PixelSize); ++Count)
+	while(Count < MaxGlyphs && m_QmIconPrewarm.Peek(Codepoint, PixelSize))
 	{
-		TextRender()->QmPrewarmGlyph(Codepoint, PixelSize);
+		if(Worker)
+		{
+			// 后台队列满时停在当前图标，下一轮排空后继续；不能为了推进
+			// 游标退回同步光栅化，否则启动期又会把图集工作压回主线程。
+			if(!TextRender()->QmQueueGlyphForPrewarm(Codepoint, PixelSize))
+				break;
+		}
+		else
+		{
+			TextRender()->QmPrewarmGlyph(Codepoint, PixelSize);
+		}
+		m_QmIconPrewarm.Advance();
+		++Count;
 		if(time_get() - Start >= BudgetTicks)
 			break;
 	}

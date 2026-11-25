@@ -124,6 +124,9 @@ enum
 	FONT_NAME_SIZE = 128,
 };
 
+// 当前正在构建的容器文本。只用于性能诊断，不参与排版逻辑。
+static thread_local const char *g_pQmCurrentRasterText = nullptr;
+
 struct SGlyph
 {
 	using EState = EQmGlyphState;
@@ -496,6 +499,8 @@ private:
 	int m_QmPerfGlyphNew = 0;
 	int m_QmPerfGlyphUploads = 0;
 	double m_QmPerfGlyphRasterizeMs = 0.0;
+	std::unordered_map<int, int> m_QmPerfSyncRasterSizes;
+	std::unordered_map<int, std::string> m_QmPerfSyncRasterSamples;
 	double m_QmPerfGlyphUploadMs = 0.0;
 	// QmClient: 字形上传合批。UploadGlyph 只写 CPU 图集并记录脏区，不再逐字形
 	// 提交驱动上传；FlushPendingGlyphUploads 在渲染前把脏区按行带合并为少量
@@ -988,6 +993,30 @@ private:
 		return EQmGlyphRenderResult::SUCCESS;
 	}
 
+	void RecordQmSyncRaster(const SGlyph &Glyph)
+	{
+		++m_QmPerfSyncRasterSizes[Glyph.m_FontSize];
+		std::string &Samples = m_QmPerfSyncRasterSamples[Glyph.m_FontSize];
+		if(Samples.size() >= 24 || Glyph.m_Chr <= 0)
+			return;
+		if(g_pQmCurrentRasterText != nullptr && g_pQmCurrentRasterText[0] != '\0')
+		{
+			// 记录正在构建的容器文本，直接指出同步光栅化的来源；按 UTF-8
+			// 边界截断，避免输出半个字符。
+			char aText[24];
+			str_utf8_truncate(aText, sizeof(aText), g_pQmCurrentRasterText, 18);
+			if(aText[0] != '\0')
+			{
+				Samples = aText;
+				return;
+			}
+		}
+		char aBuf[8];
+		const int Len = str_utf8_encode(aBuf, Glyph.m_Chr);
+		if(Len > 0 && Samples.size() + (size_t)Len <= 24)
+			Samples.append(aBuf, Len);
+	}
+
 	EQmGlyphRenderResult RenderGlyph(SGlyph &Glyph)
 	{
 		const auto RasterizeStart = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
@@ -1078,6 +1107,7 @@ private:
 			if(Result == EQmGlyphRenderResult::SUCCESS && QmPerfEnabled())
 			{
 				m_QmPerfGlyphRasterizeMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - RasterizeStart).count();
+				RecordQmSyncRaster(Glyph);
 				if(Glyph.m_Nameplate)
 					m_QmNameplateFrameRasterizeMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - RasterizeStart).count();
 			}
@@ -1091,7 +1121,10 @@ private:
 		const EQmGlyphRenderResult Result = CommitRasterizedGlyph(Glyph, 0, 0, 0, 0,
 			OffsetX, OffsetY, AdvanceX, LayoutWidth, LayoutBearingX, nullptr, nullptr);
 		if(Result == EQmGlyphRenderResult::SUCCESS && QmPerfEnabled())
+		{
 			m_QmPerfGlyphRasterizeMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - RasterizeStart).count();
+			RecordQmSyncRaster(Glyph);
+		}
 		return Result;
 	}
 
@@ -1102,6 +1135,11 @@ private:
 	{
 		if(Glyph.m_Nameplate)
 			return EQmGlyphRenderResult::UNSUPPORTED;
+		// 度量已存在时直接复用。尤其是预建/后台刚渲染好的字形：测量若把
+		// RENDERED 降级成 MEASURED，紧接的绘制会再光栅化一次并泄漏旧图集块。
+		if(!QmMeasurementNeedsGlyphMetrics(Glyph.m_State))
+			return Glyph.m_State == EQmGlyphState::ERROR ? EQmGlyphRenderResult::UNSUPPORTED : EQmGlyphRenderResult::SUCCESS;
+		const EQmGlyphState StateBefore = Glyph.m_State;
 
 		FT_Error Error;
 		if(!EnsureFacePixelSize(Glyph.m_Face, Glyph.m_FontSize, &Error))
@@ -1136,7 +1174,7 @@ private:
 		Glyph.m_AdvanceX = float(Glyph.m_Face->glyph->advance.x >> 6);
 		Glyph.m_LayoutWidth = Metrics.width / 64.0f;
 		Glyph.m_LayoutBearingX = Metrics.horiBearingX / 64.0f;
-		Glyph.m_State = SGlyph::EState::MEASURED;
+		Glyph.m_State = QmGlyphStateAfterMeasurement(StateBefore);
 		return EQmGlyphRenderResult::SUCCESS;
 	}
 
@@ -1376,7 +1414,7 @@ public:
 			m_VariantFace = Face;
 			// 字体角色变化也要重算字重；图集已因轴坐标变化清理时不重复清理。
 			if(!ApplyCustomFontWeight())
-				Clear();
+				Clear("variant_face");
 			if(!Face && pFamilyName != nullptr)
 			{
 				log_error("textrender", "The variant font face '%s' could not be found", pFamilyName);
@@ -1527,7 +1565,7 @@ public:
 		// 只有字重坐标真正变化时才重建字形图集；单纯切换字体面不应清空图集，
 		// 否则同一帧内已排版的文本会采样到被清空的纹理而全部消失。
 		if(WeightCoordsChanged)
-			Clear();
+			Clear("font_weight");
 		return WeightCoordsChanged;
 	}
 
@@ -1582,8 +1620,15 @@ public:
 	uint64_t GlyphAtlasRevision() const { return *m_pGlyphAtlasRevision; }
 	std::shared_ptr<const uint64_t> GlyphAtlasRevisionSource() const { return m_pGlyphAtlasRevision; }
 
-	void Clear()
+	void Clear(const char *pReason = "unknown")
 	{
+		// 清空图集会作废所有已预热字形；记录原因和规模，避免启动预建被
+		// 静默浪费（此前只能从首帧同步光栅化反推）。
+		char aClearPayload[192];
+		str_format(aClearPayload, sizeof(aClearPayload), "event=glyph_atlas_clear reason=%s glyphs=%zu generation=%" PRIu64,
+			pReason, m_Glyphs.size(), m_QmGlyphGeneration);
+		dbg_msg("textrender/qm", "%s", aClearPayload);
+		QmPerfLogPayload("perf/text", aClearPayload);
 		m_GlyphRenderRetry.Reset();
 		DiscardQmGpuWork();
 		// 已有容器的 UV 随图集清空失效，即使其索引和文字内容仍然有效。
@@ -1943,6 +1988,17 @@ public:
 		if(pAllScheduled != nullptr)
 			*pAllScheduled = !Rejected && !RetryPending && *pCursor == '\0';
 		return !NotReady;
+	}
+
+	// 图标等单字形预热：只排后台任务，不在这里同步光栅化。
+	// 返回 true 表示已可构建（READY）或已入队；false 时调用方保留游标重试。
+	bool QmQueueGlyphForPrewarm(int Chr, int FontSize, const FontDataMap &FontData)
+	{
+		if(!QmGlyphWorkerEnabled() || Chr <= 0)
+			return false;
+		const EQmGlyphPrewarmResult Result = QmPrewarmGlyphTask(Chr, std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE), FontData);
+		return Result == EQmGlyphPrewarmResult::READY || Result == EQmGlyphPrewarmResult::QUEUED ||
+		       Result == EQmGlyphPrewarmResult::UNSUPPORTED;
 	}
 
 	// 把主线程收集的任务切成有界批次提交给引擎 job pool。批次限制避免加载阶段
@@ -2926,6 +2982,26 @@ public:
 		m_QmPerfGlyphUploadBatches = 0;
 		m_QmPerfGlyphUploadBatchMs = 0.0;
 	}
+
+	// 主线程同步光栅化的字号分布，用来区分“预热字号不对”和“预热结果被丢弃”。
+	void TakeQmPerfSyncRasterSizes(char *pOut, size_t OutSize)
+	{
+		if(pOut == nullptr || OutSize == 0)
+			return;
+		pOut[0] = '\0';
+		std::vector<std::pair<int, int>> vSizes(m_QmPerfSyncRasterSizes.begin(), m_QmPerfSyncRasterSizes.end());
+		std::sort(vSizes.begin(), vSizes.end(), [](const auto &Left, const auto &Right) { return Left.second > Right.second; });
+		for(size_t i = 0; i < vSizes.size() && i < 6; ++i)
+		{
+			char aEntry[32];
+			const auto Sample = m_QmPerfSyncRasterSamples.find(vSizes[i].first);
+			str_format(aEntry, sizeof(aEntry), "%s%d:%d=%s", i == 0 ? "" : ",", vSizes[i].first, vSizes[i].second,
+				Sample != m_QmPerfSyncRasterSamples.end() ? Sample->second.c_str() : "");
+			str_append(pOut, aEntry, (int)OutSize);
+		}
+		m_QmPerfSyncRasterSizes.clear();
+		m_QmPerfSyncRasterSamples.clear();
+	}
 };
 
 typedef vector4_base<unsigned char> STextCharQuadVertexColor;
@@ -3594,14 +3670,23 @@ class CTextRender : public IEngineTextRender
 		if(FrameGlyphNew > m_QmPeakFrameGlyphNew)
 			m_QmPeakFrameGlyphNew = FrameGlyphNew;
 
+		char aSyncSizes[448];
+		m_pGlyphMap->TakeQmPerfSyncRasterSizes(aSyncSizes, sizeof(aSyncSizes));
 		if(QmPerfEnabled() && (m_QmFrameContainerCreates >= ContainerCreatesThreshold ||
 					      FrameRasterizeMs >= RasterizeThresholdMs || FrameGlyphNew >= GlyphNewThreshold))
 		{
-			char aPayload[288];
+			IClient *pClient = pKernel != nullptr ? pKernel->RequestInterface<IClient>() : nullptr;
+			const unsigned long long FrameId = pClient != nullptr ? (unsigned long long)pClient->PerfFrame() : 0;
+			const int ClientState = pClient != nullptr ? (int)pClient->State() : -1;
+			float ScreenX0 = 0, ScreenY0 = 0, ScreenX1 = 0, ScreenY1 = 0;
+			Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+			char aPayload[896];
 			str_format(aPayload, sizeof(aPayload),
-				"event=text_frame_stats container_creates=%d glyph_new=%d glyph_uploads=%d glyph_upload_batches=%d glyph_rasterize_ms=%.3f glyph_upload_batch_ms=%.3f peak_creates=%d peak_rasterize_ms=%.3f peak_glyph_new=%d",
+				"event=text_frame_stats frame=%llu state=%d container_creates=%d glyph_new=%d glyph_uploads=%d glyph_upload_batches=%d glyph_rasterize_ms=%.3f glyph_upload_batch_ms=%.3f peak_creates=%d peak_rasterize_ms=%.3f peak_glyph_new=%d sync_sizes=%s screen=%.0fx%.0f graphics=%dx%d",
+				FrameId, ClientState,
 				m_QmFrameContainerCreates, FrameGlyphNew, FrameGlyphUploads, FrameUploadBatches, FrameRasterizeMs, FrameUploadBatchMs,
-				m_QmPeakFrameContainerCreates, m_QmPeakFrameRasterizeMs, m_QmPeakFrameGlyphNew);
+				m_QmPeakFrameContainerCreates, m_QmPeakFrameRasterizeMs, m_QmPeakFrameGlyphNew, aSyncSizes,
+				ScreenX1 - ScreenX0, ScreenY1 - ScreenY0, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
 			QmPerfLogPayload("perf/text", aPayload);
 		}
 
@@ -3615,6 +3700,13 @@ class CTextRender : public IEngineTextRender
 		if(m_pGlyphMap == nullptr || Chr <= 0)
 			return;
 		m_pGlyphMap->GetGlyph(Chr, FontSize);
+	}
+
+	bool QmQueueGlyphForPrewarm(int Chr, int FontSize) override
+	{
+		if(m_pGlyphMap == nullptr || Chr <= 0)
+			return false;
+		return m_pGlyphMap->QmQueueGlyphForPrewarm(Chr, FontSize, m_QmFontFaceData);
 	}
 
 	// QmClient: 空闲帧预热“最近缺失字形”，返回本次实际预热数量。
@@ -5086,6 +5178,17 @@ public:
 		if(pText == nullptr)
 			pText = "";
 		Length = QmTextLayoutByteLength(pText, Length);
+		// 同步光栅化诊断需要知道当前正在排版哪段文本；作用域结束后恢复，
+		// 嵌套构建（如测量里再建容器）也不会串味。
+		struct SScopedRasterText
+		{
+			const char *&m_pSlot;
+			const char *m_pPrevious;
+			SScopedRasterText(const char *&pSlot, const char *pValue) :
+				m_pSlot(pSlot), m_pPrevious(pSlot) { m_pSlot = pValue; }
+			~SScopedRasterText() { m_pSlot = m_pPrevious; }
+		};
+		const SScopedRasterText RasterTextScope(g_pQmCurrentRasterText, pText);
 		const int DebugLength = str_length(TextContainer.m_aDebugText);
 		str_truncate(TextContainer.m_aDebugText + DebugLength, sizeof(TextContainer.m_aDebugText) - DebugLength, pText, Length);
 

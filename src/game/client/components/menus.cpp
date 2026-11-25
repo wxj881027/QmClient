@@ -3101,6 +3101,23 @@ void CMenus::StartLoading(int Total)
 
 void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std::optional<float> Progress)
 {
+	// 启动期的加载画面在主循环之前也可能被调用；这里记录真正呈现的帧耗时，
+	// 用来判断同步字形光栅化是否落在玩家看得见的一帧里。
+	struct SScopedLoadingRenderTimer
+	{
+		int64_t m_Start = time_get_nanoseconds().count();
+		~SScopedLoadingRenderTimer()
+		{
+			const double DurationMs = (double)(time_get_nanoseconds().count() - m_Start) / 1000000.0;
+			if(QmPerfEnabled() && DurationMs >= 4.0)
+			{
+				char aPayload[160];
+				str_format(aPayload, sizeof(aPayload), "event=loading_render duration_ms=%.3f", DurationMs);
+				QmPerfLogPayload("perf/menu", aPayload);
+			}
+		}
+	};
+	const SScopedLoadingRenderTimer LoadingRenderTimer;
 	CUiScopedGaussianBlur GaussianBlurScope(Ui());
 	// TODO: not supported right now due to separate render thread
 
@@ -8664,10 +8681,13 @@ bool CMenus::AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOper
 						      0.0;
 		if(PerfDebugEnabled())
 		{
-			char aPayload[384];
+			float UnitX0 = 0, UnitY0 = 0, UnitX1 = 0, UnitY1 = 0;
+			Graphics()->GetScreen(&UnitX0, &UnitY0, &UnitX1, &UnitY1);
+			char aPayload[448];
 			str_format(aPayload, sizeof(aPayload),
-				"event=settings_text_plan_unit kind=%d page=%d tab=%d subtab=%d duration_ms=%.3f collect_ms=%.3f commit_ms=%.3f committed=%d budget=%d units_per_sec=%.3f",
-				(int)Unit.m_Kind, Unit.m_Page, Unit.m_Tab, Unit.m_Subtab, UnitMs, CollectMs, maximum(0.0, UnitMs - CollectMs), Committed ? 1 : 0, Budget, UnitsPerSecond);
+				"event=settings_text_plan_unit kind=%d page=%d tab=%d subtab=%d duration_ms=%.3f collect_ms=%.3f commit_ms=%.3f committed=%d budget=%d units_per_sec=%.3f screen=%.0fx%.0f graphics=%dx%d",
+				(int)Unit.m_Kind, Unit.m_Page, Unit.m_Tab, Unit.m_Subtab, UnitMs, CollectMs, maximum(0.0, UnitMs - CollectMs), Committed ? 1 : 0, Budget, UnitsPerSecond,
+				UnitX1 - UnitX0, UnitY1 - UnitY0, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
 			QmPerfLogPayload("perf/settings-text", aPayload, Client(), "settings");
 		}
 		if(!Committed)
@@ -8771,12 +8791,24 @@ void CMenus::BuildSettingsMenuTextGlyphDemand()
 	m_SettingsMenuTextGlyphStaticPrewarm.Reset();
 	if(PerfDebugEnabled())
 	{
-		char aPayload[512];
+		std::unordered_map<int, int> InputsBySize;
+		for(const auto &Input : vInputs)
+			++InputsBySize[Input.m_PixelSize];
+		std::vector<std::pair<int, int>> vSizes(InputsBySize.begin(), InputsBySize.end());
+		std::sort(vSizes.begin(), vSizes.end(), [](const auto &Left, const auto &Right) { return Left.second > Right.second; });
+		char aSizes[160] = "";
+		for(size_t i = 0; i < vSizes.size() && i < 8; ++i)
+		{
+			char aEntry[24];
+			str_format(aEntry, sizeof(aEntry), "%s%d:%d", i == 0 ? "" : ",", vSizes[i].first, vSizes[i].second);
+			str_append(aSizes, aEntry, sizeof(aSizes));
+		}
+		char aPayload[768];
 		str_format(aPayload, sizeof(aPayload),
-			"event=settings_text_glyph_demand inputs=%zu demands=%" PRIu64 " distinct=%zu batches=%zu visible_items=%zu page=%d tab=%d",
+			"event=settings_text_glyph_demand inputs=%zu demands=%" PRIu64 " distinct=%zu batches=%zu visible_items=%zu page=%d tab=%d input_sizes=%s",
 			vInputs.size(), m_SettingsMenuTextGlyphDemand.TotalGlyphDemands(), m_SettingsMenuTextGlyphDemand.DistinctGlyphs(),
 			m_SettingsMenuTextGlyphDemand.PrewarmBatches().size(), VisiblePlanItems,
-			m_SettingsMenuTextVisiblePlanContext[1], m_SettingsMenuTextVisiblePlanContext[2]);
+			m_SettingsMenuTextVisiblePlanContext[1], m_SettingsMenuTextVisiblePlanContext[2], aSizes);
 		QmPerfLogPayload("perf/settings-text", aPayload, Client(), "settings");
 	}
 }
@@ -8973,12 +9005,15 @@ void CMenus::PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride
 	if(PerfDebugEnabled() && (s_QmLastSettingsTextLog == 0 || Now - s_QmLastSettingsTextLog >= time_freq()))
 	{
 		s_QmLastSettingsTextLog = Now;
+		float ScreenX0 = 0, ScreenY0 = 0, ScreenX1 = 0, ScreenY1 = 0;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 		char aPayload[1024];
 		// Keep the emitted contract searchable: phase=before_target scope=target_settings.
-		str_format(aPayload, sizeof(aPayload), "event=settings_text_prebuild built=%d reused=%d remaining=%d pool_missing=%d plan_cursor_remaining=%d collection_remaining=%d budget=%d granted_tokens=%d skip_reason=%s glyph_demand=%" PRIu64 " glyph_distinct=%zu glyph_batches=%zu glyph_batch_cursor=%zu phase=%s scope=%s operation=%s",
+		str_format(aPayload, sizeof(aPayload), "event=settings_text_prebuild built=%d reused=%d remaining=%d pool_missing=%d plan_cursor_remaining=%d collection_remaining=%d budget=%d granted_tokens=%d skip_reason=%s glyph_demand=%" PRIu64 " glyph_distinct=%zu glyph_batches=%zu glyph_batch_cursor=%zu phase=%s scope=%s operation=%s screen=%.0fx%.0f graphics=%dx%d",
 			Built, Reused, RemainingMissing, PoolMissing, CursorRemaining, CollectionRemaining, Budget, GrantedTokens, pSkipReason,
 			m_SettingsMenuTextGlyphDemand.TotalGlyphDemands(), m_SettingsMenuTextGlyphDemand.DistinctGlyphs(),
-			m_SettingsMenuTextGlyphDemand.PrewarmBatches().size(), m_SettingsMenuTextGlyphBatchCursor, pPhase, pScope, pOperation);
+			m_SettingsMenuTextGlyphDemand.PrewarmBatches().size(), m_SettingsMenuTextGlyphBatchCursor, pPhase, pScope, pOperation,
+			ScreenX1 - ScreenX0, ScreenY1 - ScreenY0, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
 		QmPerfLogPayload("perf/settings-text", aPayload, Client(), CurrentQmUiPerfPage() != nullptr ? CurrentQmUiPerfPage() : "settings");
 		const double UnitsPerSecond = s_QmSettingsTextPlanCollectionTrace.m_WorkNs > 0 ?
 						      (double)s_QmSettingsTextPlanCollectionTrace.m_Units * 1000000000.0 / (double)s_QmSettingsTextPlanCollectionTrace.m_WorkNs :

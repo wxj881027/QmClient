@@ -603,6 +603,9 @@ public:
 	// 字形光栅化幂等且可中断，菜单可在构建文本容器前分帧调用，避免一次容器
 	// 创建触发 100+ 新字形导致单帧 20–30ms 尖峰。
 	virtual void QmPrewarmGlyph(int Chr, int FontSize) {}
+	// QmClient: 单字形后台预热（图标等不经过菜单文本计划的路径）。
+	// 返回 false 表示 worker 不可用或队列已满，调用方应保留游标稍后重试。
+	virtual bool QmQueueGlyphForPrewarm(int Chr, int FontSize) { return false; }
 	// QmClient: 后台字形预热是否可用；可见文本始终同步构建，不受此开关影响。
 	virtual bool QmGlyphWorkerEnabled() const { return false; }
 	// 启动加载阶段允许字形 worker 使用更多并发；只影响后台预热的提交节流。
