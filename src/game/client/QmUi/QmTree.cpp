@@ -179,6 +179,9 @@ SUiPresenceResult CUiV2Tree::ResolveSplitPresence(CUiV2AnimationRuntime &AnimRun
 
 			SUiAnimTransition ExitVisual = VisualTransition;
 			ExitVisual.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+			// 退场必须能接管入场轨（入场 ALPHA 以优先级 1 起轨）；否则请求被
+			// MERGE_TARGET 拒绝、phase 却已置 EXITING，节点会永久停留在场上。
+			ExitVisual.m_Priority = std::max(ExitVisual.m_Priority, PRESENCE_EXIT_PRIORITY);
 			AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f, ExitVisual);
 			State.m_Phase = EPresencePhase::EXITING;
 		}

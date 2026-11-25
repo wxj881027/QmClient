@@ -421,3 +421,32 @@ TEST(UiV2TreePresence, SplitTracksKeepLogicAndRenderClocksIndependent)
 	EXPECT_FALSE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::ALPHA));
 	Tree.EndFrame(Runtime);
 }
+
+TEST(UiV2TreePresence, ClosingDuringEntranceStillRemovesSplitNode)
+{
+	CScopedQmFullMotion FullMotion;
+	CUiV2Tree Tree;
+	CUiV2AnimationRuntime Runtime;
+	constexpr uint64_t NodeKey = 1006;
+
+	Tree.BeginFrame();
+	const SUiPresenceResult Entered = Tree.ResolvePresence(Runtime, NodeKey, true, ui_token::motion::MODAL_IN, &ui_token::motion::MODAL_PRESENCE);
+	ASSERT_TRUE(Entered.m_FreshEnter);
+	Tree.EndFrame(Runtime);
+
+	// 入场只推进一点：ALPHA 轨仍带着入场优先级在运行。
+	Runtime.Advance(0.02f, 0.02f, 1.0f);
+
+	Tree.BeginFrame();
+	const SUiPresenceResult Closing = Tree.ResolvePresence(Runtime, NodeKey, false, ui_token::motion::MODAL_IN, &ui_token::motion::MODAL_PRESENCE);
+	EXPECT_TRUE(Closing.m_Render);
+	Tree.EndFrame(Runtime);
+
+	// 退场必须接管入场轨：两条轨道都结束，节点被回收而不是永久驻留。
+	Runtime.Advance(1.0f, 1.0f, 1.0f);
+	Tree.BeginFrame();
+	const SUiPresenceResult Gone = Tree.ResolvePresence(Runtime, NodeKey, false, ui_token::motion::MODAL_IN, &ui_token::motion::MODAL_PRESENCE);
+	EXPECT_FALSE(Gone.m_Render);
+	Tree.EndFrame(Runtime);
+	EXPECT_EQ(Tree.NodeCount(), 0);
+}

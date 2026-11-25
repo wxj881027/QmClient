@@ -735,7 +735,6 @@ namespace ui_token::tclient
 		inline constexpr float STATUS_COLUMN_WIDTH = 64.0f;
 		inline constexpr float STATUS_TEXT_ALPHA = 0.6f;
 		inline constexpr float STATUS_DONE_ALPHA = 0.8f;
-		inline constexpr ColorRGBA ERROR_TEXT{1.0f, 0.4f, 0.4f, 1.0f};
 		// 字形测试板：三行字形 + 两段行距 + 额外高度与内边距。
 		inline constexpr float GLYPH_ROW_COUNT = 3.0f;
 		inline constexpr float GLYPH_ROW_GAP_COUNT = 2.0f;
@@ -866,6 +865,8 @@ namespace ui_token::tclient
 	{
 		// 文本包围盒到下一行的基线余量（0.25 字号）。
 		inline constexpr float TEXT_BASELINE_DESCENT_RATIO = 0.25f;
+		// 卡片内容四周的统一留白。
+		inline constexpr float MARGIN = 10.0f;
 	} // namespace ui_token::tclient::page
 } // namespace ui_token::tclient
 

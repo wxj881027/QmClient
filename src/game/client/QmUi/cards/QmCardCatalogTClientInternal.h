@@ -178,7 +178,7 @@ namespace qm_tclient_cards
 		NUMBER_OF_TCLIENT_TABS
 	};
 
-	inline SLabelProperties TClientFixedLabelProperties(float FontSize, float MaxWidth = -1.0f)
+	inline SLabelProperties TClientFixedLabelProperties(float FontSize, float MaxWidth = ui_token::tclient::NONE)
 	{
 		SLabelProperties Props;
 		Props.m_MaxWidth = MaxWidth;
@@ -220,7 +220,7 @@ namespace qm_tclient_cards
 		float HeadlineHeight = ui_token::font::HEADLINE;
 		float RowSpacing = ui_token::settings::ROW_GAP;
 		float MarginExtraSmall = ui_token::settings::ROW_GAP;
-		float MarginBetweenSections = ui_token::settings::ROW_GAP * 2.0f;
+		float MarginBetweenSections = ui_token::settings::SectionGap(ui_token::settings::ROW_GAP);
 		float ColorPickerLabelSize = ui_token::font::BODY;
 		float ColorPickerLineSpacing = ui_token::settings::ROW_GAP;
 	};
@@ -241,7 +241,7 @@ namespace qm_tclient_cards
 	inline float &MarginBetweenSections = g_TClientCardMetrics.MarginBetweenSections;
 	inline float &ColorPickerLabelSize = g_TClientCardMetrics.ColorPickerLabelSize;
 	inline float &ColorPickerLineSpacing = g_TClientCardMetrics.ColorPickerLineSpacing;
-	const float Margin = 10.0f;
+	const float Margin = ui_token::tclient::page::MARGIN;
 	inline std::vector<CButtonContainer> s_vTinyTeeModeButtons = {{}, {}, {}};
 	inline int s_CountFrozenText = 0;
 	inline CUi::SDropDownState s_TrailDropDownState;

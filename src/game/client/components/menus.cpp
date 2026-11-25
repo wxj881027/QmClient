@@ -1412,7 +1412,9 @@ void CMenus::TriggerUiSwitchAnimation(const uint64_t NodeKey, const float Durati
 
 float CMenus::ReadUiSwitchAnimation(const uint64_t NodeKey) const
 {
-	if(Ui()->RenderOnly())
+	// 只冻结测量趟与纯背景趟。声明式卡片的 DRAW 回放是最终出图趟（两 depth 相等），
+	// 必须和输入趟读到同一过渡值；否则画面瞬切、而输入趟仍按过渡挂起指针。
+	if(Ui()->AnimationsBlocked())
 		return 0.0f;
 
 	const CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();

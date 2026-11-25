@@ -801,7 +801,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 			}
 			else if(pJob != nullptr && pJob->m_Failed)
 			{
-				pTextRender->TextColor(ui_token::tclient::font::ERROR_TEXT);
+				pTextRender->TextColor(ui_token::color::DANGER);
 				pUi->DoLabel(&StatusRect, Localize("Retry"), FontSize, TEXTALIGN_MR);
 				pTextRender->TextColor(pTextRender->DefaultTextColor());
 			}

@@ -71,7 +71,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.1b TClient 页面 Token（TClient page token）
 
 - 定义：TClient 专属页面（字体、档案、配置、战争列表、状态栏、视觉、绑轮盘）的尺寸、比例、透明度与动效节流值只放在 `ui_token::tclient::<页面>`；页面代码只写语义名，不写裸浮点。
-- 唯一实现：`ui_token::tclient`（`src/game/client/QmUi/UiTokens.h`）：`font::*`（筛选框、卡片网格、预览行、状态列、字形板、应用节流）、`profiles::*`（预览缩放、占位十字、卡片高度、列表宽度）、`configs::*`、`warlist::*`、`statusbar::*`、`visual::*`、`bindwheel::*`、`page::*`，以及跨页的 `HALF/DOUBLE/PERCENT/NONE`。静态门禁 `qmclient_scripts/gate/checks/qm_tclient_tokens.py` 扫描 `QmCardCatalogTClient*.cpp`：只放行 `0.0/1.0`，确属物理常量的行用 `// qm-token-allow: <原因>` 标注。
+- 唯一实现：`ui_token::tclient`（`src/game/client/QmUi/UiTokens.h`）：`font::*`（筛选框、卡片网格、预览行、状态列、字形板、应用节流）、`profiles::*`（预览缩放、占位十字、卡片高度、列表宽度）、`configs::*`、`warlist::*`、`statusbar::*`、`visual::*`、`bindwheel::*`、`page::*`，以及跨页的 `HALF/DOUBLE/PERCENT/NONE`。静态门禁 `qmclient_scripts/gate/checks/qm_tclient_tokens.py` 扫描 `QmCardCatalogTClient*.*`（页面 `.cpp` 与公共头 `.h`）：先剥离注释/字符串，只放行 `0.0/1.0`；确属物理常量的行必须在注释中写 `// qm-token-allow: <原因>`（带冒号与非空原因）。
 - 禁止的反面写法：在 TClient 卡片函数里写 `18.0f`、`* 0.28f`、`ColorRGBA(1.0f, 0.4f, 0.4f, 1.0f)`；把页面专属尺寸塞回 `ui_token::settings`；用近似值复制已有 token 而不复用。
 
 ### 2.2 设置内容布局流（settings content flow）
