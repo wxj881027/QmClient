@@ -213,11 +213,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 
 	auto RenderEditor = [&](CUIRect &View) {
 		CSettingsContentLayoutFlow Flow(View);
-		const auto TextRow = [&](const char *pId, const char *pText, const char *pTextId, float Size = -1.0f, float Spacing = -1.0f) {
+		const auto TextRow = [&](const char *pId, const char *pText, const char *pTextId, float Size = ui_token::tclient::NONE, float Spacing = ui_token::tclient::NONE) {
 			CUIRect Row;
 			const float ResolvedSize = Size > 0.0f ? Size : Metrics.m_BodySize;
 			const float ResolvedSpacing = Spacing >= 0.0f ? Spacing : ui_token::settings::RowGap(Metrics.m_LineSpacing);
-			if(!Flow.Control(pId, ResolvedSize * 1.5f, Row, ResolvedSpacing))
+			if(!Flow.Control(pId, ResolvedSize * ui_token::tclient::bindwheel::TEXT_ROW_HEIGHT_RATIO, Row, ResolvedSpacing))
 				return;
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, pTextId, &Row, pText, ResolvedSize, TEXTALIGN_ML);
 		};

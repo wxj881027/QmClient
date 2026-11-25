@@ -68,6 +68,12 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`UiTokens.h` 中的 `ui_token::finish_summary::*`（完成摘要卡数字及差值角色色）、`ui_token::map_preview::*`（预览背板及占位图标）、`ui_token::world_lyrics::*`（世界歌词正文及光晕）和 `ui_token::tag::MONET_PALETTE`（标签与取色器共用的固定预设）；通用色仍走 `ui_token::color`。
 - 禁止的反面写法：在绘制代码里写 `ColorRGBA(...)` 数字字面量；把组件身份色放进 `ui_token::color` 变成全局色；同一组件两处各写一份近似色；用近似值复制已有 token。
 
+### 2.1b TClient 页面 Token（TClient page token）
+
+- 定义：TClient 专属页面（字体、档案、配置、战争列表、状态栏、视觉、绑轮盘）的尺寸、比例、透明度与动效节流值只放在 `ui_token::tclient::<页面>`；页面代码只写语义名，不写裸浮点。
+- 唯一实现：`ui_token::tclient`（`src/game/client/QmUi/UiTokens.h`）：`font::*`（筛选框、卡片网格、预览行、状态列、字形板、应用节流）、`profiles::*`（预览缩放、占位十字、卡片高度、列表宽度）、`configs::*`、`warlist::*`、`statusbar::*`、`visual::*`、`bindwheel::*`、`page::*`，以及跨页的 `HALF/DOUBLE/PERCENT/NONE`。静态门禁 `qmclient_scripts/gate/checks/qm_tclient_tokens.py` 扫描 `QmCardCatalogTClient*.cpp`：只放行 `0.0/1.0`，确属物理常量的行用 `// qm-token-allow: <原因>` 标注。
+- 禁止的反面写法：在 TClient 卡片函数里写 `18.0f`、`* 0.28f`、`ColorRGBA(1.0f, 0.4f, 0.4f, 1.0f)`；把页面专属尺寸塞回 `ui_token::settings`；用近似值复制已有 token 而不复用。
+
 ### 2.2 设置内容布局流（settings content flow）
 
 - 定义：卡片内容按「行」声明：高度、行前间距、ID；同一段代码在声明趟、测量趟、输入趟、绘制趟各跑一次，输出必须一致。
@@ -103,6 +109,24 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 定义：本地时钟动画只在「输入趟」推进，测量趟与只读趟只读，保证过渡不被后台绘制吃掉。
 - 唯一实现：`QmSettingsRevealShouldAdvance(...)`、`QmInteractiveRevealSeconds(...)`、`QmInteractiveRevealProgress(...)`、`QmSettingsRevealCanMeasureContent(...)`（`src/game/client/QmUi/SettingsRowReveal.h`）。
 - 禁止的反面写法：不分趟次直接 `Progress += Dt`；在 `MeasurementOnly` 趟写进度；用进度反推显隐判定。
+
+### 2.7a UI 帧时钟（UI frame clock）
+
+- 定义：每帧只生成一次时间快照：渲染 dt（已按 1/20 s 截断）、逻辑 dt（0 或 N × 1/120 s）与逻辑插值进度。UI 动画一律从这里取 dt，不再各自读 `RenderFrameTime()`。
+- 唯一实现：`SQmUiFrameClock` + `QM_UI_LOGIC_STEP_SEC` / `QM_UI_LOGIC_MAX_CATCHUP_SEC`（`src/game/client/QmUi/QmUiPerf.h`），由 `CUiRuntimeV2::OnRender` 填充，经 `UiRuntimeV2()->FrameClock()` 读取；逻辑步推进用 `QmUiAdvanceLogicClockStep`。
+- 禁止的反面写法：在菜单/HUD/TClient 的 UI 动画里直接调用 `Client()->RenderFrameTime()`；用逻辑 dt 做淡入/弹簧；对 dt 不截断导致长帧一次跳完动画。
+
+### 2.7b 状态动画与视觉动画（state vs visual animation）
+
+- 定义：状态类过渡（页面/页签切换、弹层开合、显隐生命周期）按固定 120 Hz 逻辑步推进；纯视觉插值（淡入淡出、缩放、hover、弹簧、滚动）按截断后的渲染帧推进。两条轨道互不拖累。
+- 唯一实现：`SUiAnimTransition::m_Clock`（`EUiAnimClock::LOGIC/RENDER`，`src/game/client/QmUi/QmAnimationBackend.h`）；`ui_token::motion::PAGE_SLIDE/TAB_SWITCH/MODAL_PRESENCE` 走 LOGIC，`HOVER_FADE/PRESS_SCALE/MODAL_FADE_SCALE/TOAST_SLIDE` 等走 RENDER；模态弹窗用 `AnimatePresence(..., MODAL_IN, &MODAL_PRESENCE)` 把显隐与透明度拆到两条轨道（`UiOverlays.h` + `CUiV2Tree::ResolvePresence`）。
+- 禁止的反面写法：把 hover/弹簧/滚动改挂 LOGIC；用一条 LOGIC 轨道同时承载显隐与透明度；为分类而在调用点手写 `if(Logic) Dt = ...`。
+
+### 2.7c 过渡命中稳定性（transition hit stability）
+
+- 定义：过渡动画中的内容按临时偏移矩形绘制，但命中与按钮状态必须在目标矩形上结算；过渡期间的指针输入直接挂起，已按住的旧点击被释放，不在过渡结束后补发。
+- 唯一实现：`CUiScopedPointerInputSuppression`（`src/game/client/ui.h`）+ `CUi::PointerInputSuppressed()`；`ApplyUiSwitchOffset` 的每个调用点（菜单页切换、服务器浏览器筛选/工具箱、Tee 子页签、触屏菜单）在内容趟内建立该作用域。
+- 禁止的反面写法：把动画中的偏移矩形直接交给 `DoButtonLogic`；在过渡期间允许新按下；把导航栏等目标矩形不受影响的控件一起挂起。
 
 ### 2.8 滚动与让位（scroll and reserve）
 

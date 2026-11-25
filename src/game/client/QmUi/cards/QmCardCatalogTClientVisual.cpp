@@ -446,7 +446,7 @@ float CMenus::LayoutTClientTileOutlinesCard(const qm_card_catalog::SQmCardBuildC
 		CUIRect TypeRow;
 		if(Flow.Control(pId, LineSize, TypeRow, ui_token::settings::row::PRIMARY.m_Spacing))
 		{
-			const float Side = std::min(TypeRow.h, 18.0f);
+			const float Side = std::min(TypeRow.h, ui_token::tclient::visual::TYPE_ICON_SIZE);
 			CUIRect Reset, Swatch, Control;
 			TypeRow.VSplitRight(Side, &Control, &Reset);
 			Control.VSplitRight(MarginExtraSmall, &Control, nullptr);
@@ -476,7 +476,7 @@ float CMenus::LayoutTClientTileOutlinesCard(const qm_card_catalog::SQmCardBuildC
 		if(Flow.Control(WidthId.c_str(), LineSize, TypeRow, ui_token::settings::row::SUB.m_Spacing))
 		{
 			std::optional<CUiScopedControlAlphaScale> RevealFade;
-			if(RevealVisual.m_Fade < 0.999f)
+			if(RevealVisual.m_Fade < ui_token::tclient::visual::FADE_COMPLETE_EPSILON)
 				RevealFade.emplace(Ui(), RevealVisual.m_Fade);
 			TypeRow.h = LineSize;
 			TypeRow.x += SubIndent;
@@ -508,7 +508,7 @@ float CMenus::LayoutTClientTileOutlinesCard(const qm_card_catalog::SQmCardBuildC
 	}
 	Flow.BeginReveal(SectionVisual.m_Fade);
 	std::optional<CUiScopedControlAlphaScale> SectionFade;
-	if(SectionVisual.m_Fade < 0.999f)
+	if(SectionVisual.m_Fade < ui_token::tclient::visual::FADE_COMPLETE_EPSILON)
 		SectionFade.emplace(Ui(), SectionVisual.m_Fade);
 	if(SectionDeclared)
 	{
