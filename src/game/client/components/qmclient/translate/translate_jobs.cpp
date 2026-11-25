@@ -2,9 +2,12 @@
 
 #include <base/system.h>
 
+#include <engine/shared/config.h>
 #include <engine/shared/protocol.h>
 
 #include <algorithm>
+#include <bitset>
+#include <charconv>
 #include <cctype>
 #include <new>
 #include <type_traits>
@@ -75,11 +78,79 @@ bool PrepareOutgoingTranslateRequest(const char *pLine, const char *pFallbackTar
 	return true;
 }
 
-void STranslateJob::StartChatTranslation(IHttp &Http, const char *pText, const char *pBody, const char *pSource, FTranslateRequestFactory pCreateRequest)
+void STranslateJob::StartChatTranslation(IHttp &Http, const char *pText, const char *pBody, const char *pSource, const qm_translate::SPlayerReference *pPlayers, int NumPlayers, FTranslateRequestFactory pCreateRequest)
 {
 	m_AddressPrefix.assign(pText, pBody);
+	m_MentionTokenPrefix.clear();
+	m_vMentions.clear();
+	std::string RequestText;
+	// 自动服务可能转发给 LLM，因此也只发送点名占位符。
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0 || str_comp_nocase(g_Config.m_QmTranslateBackend, "auto") == 0)
+	{
+		const char *pRemaining = pBody;
+		auto Mention = qm_translate::NextChatMention(pRemaining, pPlayers, NumPlayers);
+		if(!Mention.empty())
+		{
+			m_MentionTokenPrefix = qm_translate::CHAT_MENTION_TOKEN_PREFIX;
+			while(str_find(pBody, m_MentionTokenPrefix.c_str()))
+				m_MentionTokenPrefix += '_';
+			do
+			{
+				RequestText.append(pRemaining, Mention.data());
+				RequestText += m_MentionTokenPrefix;
+				RequestText += std::to_string(m_vMentions.size());
+				RequestText += "]]";
+				m_vMentions.emplace_back(Mention);
+				pRemaining = Mention.data() + Mention.size();
+				Mention = qm_translate::NextChatMention(pRemaining, pPlayers, NumPlayers);
+			} while(!Mention.empty());
+			RequestText += pRemaining;
+			pBody = RequestText.c_str();
+		}
+	}
 	m_pBackend = CreateTranslateBackend(Http, pBody, m_aTarget, pSource, pCreateRequest);
 }
+
+namespace
+{
+	bool RestoreChatMentions(const STranslateJob &Job, CTranslateResponse &Response)
+	{
+		if(Job.m_vMentions.empty())
+			return true;
+		char aText[sizeof(Response.m_Text)];
+		std::bitset<sizeof(aText)> Seen;
+		size_t Length = 0;
+		const auto Append = [&](std::string_view Part) {
+			if(Part.size() >= sizeof(aText) - Length)
+				return false;
+			std::copy(Part.begin(), Part.end(), aText + Length);
+			Length += Part.size();
+			return true;
+		};
+		const std::string_view Prefix = Job.m_MentionTokenPrefix;
+		std::string_view Remaining(Response.m_Text);
+		for(size_t Start = Remaining.find(Prefix); Start != std::string_view::npos; Start = Remaining.find(Prefix))
+		{
+			if(!Append(Remaining.substr(0, Start)))
+				return false;
+			Remaining.remove_prefix(Start + Prefix.size());
+			size_t Index = 0;
+			const auto Result = std::from_chars(Remaining.data(), Remaining.data() + Remaining.size(), Index);
+			if(Result.ec != std::errc{} || Index >= Job.m_vMentions.size() || Index >= Seen.size() || Seen.test(Index))
+				return false;
+			Remaining.remove_prefix(Result.ptr - Remaining.data());
+			if(!Remaining.starts_with("]]") || !Append(Job.m_vMentions[Index]))
+				return false;
+			Seen.set(Index);
+			Remaining.remove_prefix(2);
+		}
+		if(Seen.count() != Job.m_vMentions.size() || !Append(Remaining))
+			return false;
+		aText[Length] = '\0';
+		str_copy(Response.m_Text, aText);
+		return true;
+	}
+} // namespace
 
 bool CTranslateJobQueue::CanSubmit(int Limit) const
 {
@@ -132,6 +203,12 @@ std::vector<STranslateCompletion, CBorrowedAllocator<STranslateCompletion>> CTra
 					continue;
 				}
 				bool Success = *Done;
+				if(Success && !RestoreChatMentions(Job, Response))
+				{
+					Success = false;
+					Response.m_Notice = ETranslateNotice::INVALID_RESPONSE;
+					Response.m_Text[0] = '\0';
+				}
 				if(Job.m_Outgoing && Success && Response.m_Text[0] == '\0')
 				{
 					Success = false;

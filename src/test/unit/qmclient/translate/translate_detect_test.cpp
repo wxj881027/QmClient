@@ -60,6 +60,20 @@ TEST(TranslateDetect, KnownNameAddressSkipsChineseBody)
 	EXPECT_TRUE(ShouldTranslate("DYL：help me", aPlayers, 1));
 }
 
+TEST(TranslateDetect, BareOpeningAddressDoesNotAffectTheLanguageRatio)
+{
+	const qm_translate::SPlayerReference aPlayers[] = {{"LongEnglishName", 7}};
+	for(const char *pText : {"LongEnglishName 你好", "longenglishname，你好", "LongEnglishName, 你好"})
+	{
+		SCOPED_TRACE(pText);
+		const auto Stats = qm_translate::AnalyzeLanguage(pText, aPlayers, 1);
+		EXPECT_STREQ(qm_translate::ChatAddressBody(pText, aPlayers, 1), "你好");
+		EXPECT_EQ(Stats.m_Latin, 0);
+		EXPECT_EQ(Stats.m_ScriptTotal, 2);
+		EXPECT_FALSE(ShouldTranslate(pText, aPlayers, 1));
+	}
+}
+
 TEST(TranslateChatAddress, UsesLongestConnectedNameAndKeepsOriginalPrefixBytes)
 {
 	const qm_translate::SPlayerReference aPlayers[] = {{"落凡", 7}, {"落凡:K", 9}};
@@ -96,6 +110,7 @@ TEST(TranslateDetect, MentionMayAppearInMiddleOfMessage)
 {
 	const qm_translate::SPlayerReference aPlayers[] = {{"DYL", 7}};
 	EXPECT_FALSE(ShouldTranslate("好 @DYL！", aPlayers, 1));
+	EXPECT_FALSE(ShouldTranslate("好 @dyl！", aPlayers, 1));
 	EXPECT_FALSE(ShouldTranslate("(@DYL) 泥蛙", aPlayers, 1));
 	EXPECT_TRUE(ShouldTranslate("@DYL help", aPlayers, 1));
 }
@@ -106,7 +121,6 @@ TEST(TranslateDetect, MentionRequiresCompleteNameAndBoundary)
 	EXPECT_TRUE(ShouldTranslate("@DYLabc 好", aPlayers, 1));
 	EXPECT_TRUE(ShouldTranslate("mail@DYL 好", aPlayers, 1));
 	EXPECT_TRUE(ShouldTranslate("@DYL你好", aPlayers, 1));
-	EXPECT_TRUE(ShouldTranslate("DYL 好", aPlayers, 1));
 }
 
 TEST(TranslateDetect, LongestExplicitMentionWins)

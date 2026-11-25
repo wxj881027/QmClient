@@ -2,6 +2,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_TRANSLATE_TRANSLATE_JOBS_H
 
 #include "translate_backend.h"
+#include "translate_detect.h"
 
 #include <base/borrowed_allocator.h>
 
@@ -28,9 +29,11 @@ struct STranslateJob
 	char m_aTarget[16] = "";
 	std::string m_OriginalText;
 	std::string m_AddressPrefix;
+	std::string m_MentionTokenPrefix;
+	std::vector<std::string> m_vMentions;
 
-	// pBody 指向 pText 内的正文起点。后端只接收正文，前缀随任务保留。
-	void StartChatTranslation(IHttp &Http, const char *pText, const char *pBody, const char *pSource, FTranslateRequestFactory pCreateRequest = CreateHttpRequest);
+	// pBody 指向 pText 内的正文起点。点名信息只在本地保存和恢复。
+	void StartChatTranslation(IHttp &Http, const char *pText, const char *pBody, const char *pSource, const qm_translate::SPlayerReference *pPlayers, int NumPlayers, FTranslateRequestFactory pCreateRequest = CreateHttpRequest);
 };
 
 struct STranslateCompletion
