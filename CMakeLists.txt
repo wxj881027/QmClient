@@ -7895,10 +7895,13 @@ if(CLIENT AND DMGBUILD_FOUND)
   set(DMG_TMPDIR pack_${CPACK_PACKAGE_FILE_NAME}_dmg)
   # SDL3 以 framework 形式随包分发；静态链接时期这段为空。
   if(SDL3_COPY_DIRS)
-    # 用 SDL3_COPY_DIRS（FindSDL3 里已绝对化），不要拿 EXTRA_SDL3_LIBDIR 现拼：
-    # 后者是相对源码根的路径，而 copy_directory 在二进制目录里执行。
+    # 用 ditto 而不是 cmake -E copy_directory：后者会把 framework 里的符号链接
+    # （顶层 SDL3、Versions/Current、Resources）解引用成实体副本，出来的 bundle
+    # 既不像 app 也不像 framework，codesign 直接报
+    #   "bundle format is ambiguous (could be app or framework)"。
+    # ditto 按原样保留链接与 bundle 结构，是 macOS 上拷 framework 的标准做法。
     set(DMG_SDL3_FRAMEWORK_COPY_COMMANDS
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${SDL3_COPY_DIRS} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
+      COMMAND ditto ${SDL3_COPY_DIRS} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
     set(DMG_SDL3_FRAMEWORK_SIGN_COMMANDS
       COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
   else()
