@@ -34,7 +34,7 @@
 #include <unistd.h>
 #endif
 
-CConfig g_Config;
+constinit CConfig g_Config = InitialConfigValues();
 
 // ----------------------- Config Variables
 namespace

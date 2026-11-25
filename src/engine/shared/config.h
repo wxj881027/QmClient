@@ -44,9 +44,17 @@ public:
 #undef SET_CONFIG_DOMAIN
 
 	static constexpr int ms_QmPerfDebugThresholdMs = 50;
-	bool m_QmPerfEnabled = false;
-	int m_QmPerfDebugThresholdMs = ms_QmPerfDebugThresholdMs;
+	bool m_QmPerfEnabled;
+	int m_QmPerfDebugThresholdMs;
 };
+
+// 校验和与 TeeHistorian 按字节清零 CConfig，启动默认值由配置实例显式初始化。
+constexpr CConfig InitialConfigValues()
+{
+	CConfig Config{};
+	Config.m_QmPerfDebugThresholdMs = CConfig::ms_QmPerfDebugThresholdMs;
+	return Config;
+}
 
 extern CConfig g_Config;
 
