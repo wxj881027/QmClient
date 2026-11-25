@@ -2,6 +2,7 @@
 #define GAME_CLIENT_QMUI_QMUIPERF_H
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 

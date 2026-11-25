@@ -6890,6 +6890,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/client/map_difficulty_axiom_file_test.cpp
       src/game/client/components/qmclient/map_difficulty_catalog.cpp
       src/game/client/components/qmclient/axiom_scores_data.cpp
+src/game/client/components/settings_runtime_cache.cpp
       src/engine/client/sqlite.cpp
       src/test/integration/qmclient/client/qm_text_temporary_lifetime_test.cpp
       src/test/integration/qmclient/client/qm_text_unbuffered_passes_test.cpp

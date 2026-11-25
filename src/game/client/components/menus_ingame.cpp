@@ -869,6 +869,8 @@ void CMenus::RenderGame(CUIRect MainView)
 		const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 		CUIRect MenuContent = MainView;
 		const CUIRect MenuContentClip = MainView;
+		// 过渡趟只绘制：命中与按钮状态必须在目标矩形上结算。
+		CUiScopedPointerInputSuppression ContentInputSuppression(Ui(), TransitionActive);
 		if(TransitionActive)
 		{
 			Ui()->ClipEnable(&MenuContentClip);

@@ -4898,6 +4898,9 @@ void CMenus::Render()
 			const char *pPageName = MenuPageName(m_MenuPage);
 			if(m_MenuPage != PAGE_SETTINGS)
 				PrepareSettingsTabLabelCache(MainView.w);
+			// 过渡期间内容按动画中的偏移绘制，命中必须在目标矩形上结算；
+			// 内容趟内挂起指针输入，导航栏（已渲染）不受影响。
+			CUiScopedPointerInputSuppression ContentInputSuppression(Ui(), ContentTransitionActive);
 			if(ContentTransitionActive)
 			{
 				const float RelOffset = 0.015f;
@@ -5048,6 +5051,8 @@ void CMenus::Render()
 			str_format(aEscPerfExtra, sizeof(aEscPerfExtra), "operation=%s context=online page=%s tab=none frame=%" PRIu64, pOperationName, pPageName, Client()->PerfFrame());
 			if(m_GamePage != PAGE_SETTINGS)
 				PrepareSettingsTabLabelCache(MainView.w);
+			// 同离线页：过渡趟只允许绘制，指针命中回到目标位置。
+			CUiScopedPointerInputSuppression ContentInputSuppression(Ui(), ContentTransitionActive);
 			if(ContentTransitionActive)
 			{
 				const float RelOffset = 0.015f;

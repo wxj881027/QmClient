@@ -186,3 +186,74 @@ TEST_F(QmVisualHoverVisibility, TextAndIconButtonsAgreeOnHoverVisualInEachPass)
 
 	g_Config.m_QmUiColorInterpolation = SavedInterpolation;
 }
+
+TEST_F(QmVisualHoverVisibility, PointerInputSuppressionOnlyCoversItsScope)
+{
+	const CUIRect Row{40, 40, 240, 24};
+	Frame({80, 50});
+	ASSERT_TRUE(m_Ui.MouseHovered(&Row));
+	ASSERT_FALSE(m_Ui.PointerInputSuppressed());
+
+	{
+		CUiScopedPointerInputSuppression Suppression(&m_Ui, true);
+		EXPECT_TRUE(m_Ui.PointerInputSuppressed());
+		// 命中与按钮状态按未按下处理，绘制与外观判定不受影响。
+		EXPECT_FALSE(m_Ui.MouseHovered(&Row));
+		EXPECT_FALSE(m_Ui.VisualMouseHovered(&Row));
+		EXPECT_TRUE(m_Ui.VisualSurfaceHovered(&Row));
+		EXPECT_EQ(m_Ui.MouseButton(0), 0);
+		EXPECT_EQ(m_Ui.MouseButtonClicked(0), 0);
+	}
+
+	EXPECT_FALSE(m_Ui.PointerInputSuppressed());
+	EXPECT_TRUE(m_Ui.MouseHovered(&Row));
+
+	// 非激活的作用域只占位，不改变任何判定。
+	{
+		CUiScopedPointerInputSuppression Suppression(&m_Ui, false);
+		EXPECT_FALSE(m_Ui.PointerInputSuppressed());
+		EXPECT_TRUE(m_Ui.MouseHovered(&Row));
+	}
+}
+
+TEST_F(QmVisualHoverVisibility, PressInsideSuppressedContentDoesNotActivate)
+{
+	CButtonContainer Button;
+	const CUIRect Row{40, 40, 240, 24};
+	const auto FrameWithButton = [&](bool Pressed) {
+		m_Input.m_HeldKey = Pressed ? KEY_MOUSE_1 : 0;
+		Frame({80, 50});
+	};
+	const auto Click = [&]() {
+		return m_Ui.DoButtonLogic(&Button, 0, &Row, BUTTONFLAG_LEFT);
+	};
+
+	// 按下落在过渡趟内：既不成为活动项，也不会在释放时补发一次点击。
+	FrameWithButton(true);
+	{
+		CUiScopedPointerInputSuppression Suppression(&m_Ui, true);
+		EXPECT_EQ(Click(), 0);
+	}
+	EXPECT_EQ(m_Ui.ActiveItem(), nullptr);
+	FrameWithButton(false);
+	EXPECT_EQ(Click(), 0);
+	EXPECT_EQ(m_Ui.ActiveItem(), nullptr);
+
+	// 过渡开始前已经按住的旧点击同样被取消，不能在过渡结束后补发。
+	FrameWithButton(true);
+	EXPECT_EQ(Click(), 0);
+	ASSERT_EQ(m_Ui.ActiveItem(), static_cast<const void *>(&Button));
+	{
+		CUiScopedPointerInputSuppression Suppression(&m_Ui, true);
+		EXPECT_EQ(Click(), 0);
+	}
+	EXPECT_EQ(m_Ui.ActiveItem(), nullptr);
+	FrameWithButton(false);
+	EXPECT_EQ(Click(), 0);
+
+	// 过渡结束后的普通按下/释放仍然正常激活一次。
+	FrameWithButton(true);
+	EXPECT_EQ(Click(), 0);
+	FrameWithButton(false);
+	EXPECT_EQ(Click(), 1);
+}

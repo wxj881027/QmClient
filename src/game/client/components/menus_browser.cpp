@@ -2381,13 +2381,17 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 			ApplyUiSwitchOffset(AnimatedTabContents, TransitionStrength, s_FilterTabDirection, false, 0.08f, 24.0f, 120.0f);
 		}
 
-		if(s_ActiveTab == FILTERTAB_COUNTRIES)
+		// 内容按动画中的偏移绘制时只允许绘制：命中与按钮状态必须在目标位置结算。
 		{
-			RenderServerbrowserCountriesFilter(AnimatedTabContents);
-		}
-		else if(s_ActiveTab == FILTERTAB_TYPES)
-		{
-			RenderServerbrowserTypesFilter(AnimatedTabContents);
+			CUiScopedPointerInputSuppression ContentInputSuppression(Ui(), TransitionActive);
+			if(s_ActiveTab == FILTERTAB_COUNTRIES)
+			{
+				RenderServerbrowserCountriesFilter(AnimatedTabContents);
+			}
+			else if(s_ActiveTab == FILTERTAB_TYPES)
+			{
+				RenderServerbrowserTypesFilter(AnimatedTabContents);
+			}
 		}
 
 		if(TransitionActive)
@@ -5450,20 +5454,24 @@ void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 		ApplyUiSwitchOffset(ToolBox, TransitionStrength, s_ToolboxDirection, false, 0.08f, 24.0f, 120.0f);
 	}
 
-	switch(g_Config.m_UiToolboxPage)
 	{
-	case UI_TOOLBOX_PAGE_FILTERS:
-		RenderServerbrowserFilters(ToolBox);
-		break;
-	case UI_TOOLBOX_PAGE_INFO:
-		RenderServerbrowserInfo(ToolBox);
-		break;
-	case UI_TOOLBOX_PAGE_FRIENDS:
-		RenderServerbrowserFriends(ToolBox);
-		break;
-	default:
-		RenderServerbrowserFilters(ToolBox);
-		break;
+		// 内容按动画中的偏移绘制时只允许绘制：命中与按钮状态必须在目标位置结算。
+		CUiScopedPointerInputSuppression ContentInputSuppression(Ui(), TransitionActive);
+		switch(g_Config.m_UiToolboxPage)
+		{
+		case UI_TOOLBOX_PAGE_FILTERS:
+			RenderServerbrowserFilters(ToolBox);
+			break;
+		case UI_TOOLBOX_PAGE_INFO:
+			RenderServerbrowserInfo(ToolBox);
+			break;
+		case UI_TOOLBOX_PAGE_FRIENDS:
+			RenderServerbrowserFriends(ToolBox);
+			break;
+		default:
+			RenderServerbrowserFilters(ToolBox);
+			break;
+		}
 	}
 
 	if(TransitionActive)
