@@ -3,6 +3,7 @@ uniform sampler2D gTextOutlineSampler;
 
 uniform vec4 gVertColor;
 uniform vec4 gVertOutlineColor;
+uniform float gMsdfPxRange;
 
 noperspective in vec2 texCoord;
 noperspective in vec4 outVertColor;
@@ -10,8 +11,22 @@ noperspective in vec4 outVertColor;
 out vec4 FragClr;
 void main()
 {
-	vec4 textColor = gVertColor * outVertColor * vec4(1.0, 1.0, 1.0, texture(gTextSampler, texCoord).r);
-	vec4 textOutlineTex = gVertOutlineColor * vec4(1.0, 1.0, 1.0, texture(gTextOutlineSampler, texCoord).r);
+	vec3 Sample = texture(gTextSampler, texCoord).rgb;
+	float Fill = Sample.r;
+	float Outline;
+	if(gMsdfPxRange > 0.0)
+	{
+		float Median = max(min(Sample.r, Sample.g), min(max(Sample.r, Sample.g), Sample.b));
+		vec2 TexelsPerPixel = fwidth(texCoord) * vec2(textureSize(gTextSampler, 0));
+		float Range = gMsdfPxRange / max(max(TexelsPerPixel.x, TexelsPerPixel.y), 0.001);
+		float Distance = (Median - 0.5) * Range;
+		Fill = clamp(Distance + 0.5, 0.0, 1.0);
+		Outline = clamp(Distance + 0.5 + min(1.0, Range * 0.25), 0.0, 1.0);
+	}
+	else
+		Outline = texture(gTextOutlineSampler, texCoord).r;
+	vec4 textColor = gVertColor * outVertColor * vec4(1.0, 1.0, 1.0, Fill);
+	vec4 textOutlineTex = gVertOutlineColor * vec4(1.0, 1.0, 1.0, Outline);
 
 	// ratio between the two textures
 	float OutlineBlend = (1.0 - textColor.a);	

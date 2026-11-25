@@ -2070,7 +2070,8 @@ static int GetFlagsForLabelProperties(const SLabelProperties &LabelProps, const 
 
 int CUi::GetLabelFlagsForProperties(const SLabelProperties &LabelProps, const CTextCursor *pReadCursor) const
 {
-	return GetFlagsForLabelProperties(LabelProps, pReadCursor);
+	const int Flags = GetFlagsForLabelProperties(LabelProps, pReadCursor);
+	return m_MenuTextMsdf && g_Config.m_QmMenuTextMsdf && pReadCursor == nullptr ? Flags | TEXTFLAG_QM_MENU_MSDF : Flags;
 }
 
 vec2 CUi::CalcAlignedCursorPos(const CUIRect *pRect, vec2 TextSize, int Align, const float *pBiggestCharHeight)
@@ -2227,7 +2228,7 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 	if(!DrawingSuppressed() && Icons.m_Count > 0 && pRect->w >= Size * Icons.m_Count && pRect->h >= Size && LabelProps.m_vColorSplits.empty() && LabelProps.m_MaxWidth < 0 && DrawCachedQmIconLabel(*pRect, pText, Size, Align, Icons.m_Count))
 		return CLabelResult{};
 
-	const int Flags = GetFlagsForLabelProperties(LabelProps, nullptr) & (MeasurementOnly() ? ~TEXTFLAG_RENDER : ~0);
+	const int Flags = GetLabelFlagsForProperties(LabelProps) & (MeasurementOnly() ? ~TEXTFLAG_RENDER : ~0);
 	const SCursorAndBoundingBox TextBounds = CalcFontSizeCursorHeightAndBoundingBox(TextRender(), pText, Flags, Size, pRect->w, LabelProps);
 	const vec2 CursorPos = CalcAlignedCursorPos(pRect, TextBounds.m_TextSize, Align, TextBounds.m_LineCount == 1 ? &TextBounds.m_BiggestCharacterHeight : nullptr);
 
@@ -2265,7 +2266,7 @@ void CUi::DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, cons
 	RectEl.m_aQmIcons = Icons.m_aIcons;
 	RectEl.m_NumQmIcons = Icons.m_Count;
 	RectEl.m_FontPreset = TextRender()->GetFontPreset();
-	const int Flags = GetFlagsForLabelProperties(LabelProps, pReadCursor);
+	const int Flags = GetLabelFlagsForProperties(LabelProps, pReadCursor);
 	const SCursorAndBoundingBox TextBounds = CalcFontSizeCursorHeightAndBoundingBox(TextRender(), pText, Flags, Size, pRect->w, LabelProps);
 
 	CTextCursor Cursor;
@@ -2350,7 +2351,7 @@ void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRe
 	const char *pFullText = pText;
 	if(StrLen < 0 && pReadCursor == nullptr)
 		pText = PrepareCardLabel(pRect, pText, Render);
-	const int Flags = GetFlagsForLabelProperties(LabelProps, pReadCursor);
+	const int Flags = GetLabelFlagsForProperties(LabelProps, pReadCursor);
 	const int ReadCursorGlyphCount = pReadCursor == nullptr ? -1 : pReadCursor->m_GlyphCount;
 	bool NeedsRecreate = false;
 	bool ColorChanged = RectEl.m_TextColor != TextRender()->GetTextColor() || RectEl.m_TextOutlineColor != TextRender()->GetTextOutlineColor();

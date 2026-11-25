@@ -872,6 +872,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	{
 		ColorRGBA m_TextColor;
 		ColorRGBA m_TextOutlineColor;
+		float m_MsdfPxRange;
 	};
 
 	struct SUniformTextFragment
@@ -8732,7 +8733,9 @@ public:
 		auto Release = TakeGraphicsUploadRelease(pCommand->m_Release);
 		auto pData = TakeGraphicsUpload(pCommand->m_pData);
 
-		return CreateTextureCMD(Slot, Width, Height, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, Flags, pData);
+		if(!CreateTextureCMD(Slot, Width, Height, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, Flags, pData))
+			return false;
+		return (Flags & TextureFlag::TEXT_MSDF) == 0 || CreateNewTextDescriptorSets(Slot, Slot);
 	}
 
 	[[nodiscard]] bool Cmd_Texture_Update(const CCommandBuffer::SCommand_Texture_Update *pCommand)
@@ -9407,6 +9410,7 @@ public:
 
 		FragmentConstants.m_Constants.m_TextColor = pCommand->m_TextColor;
 		FragmentConstants.m_Constants.m_TextOutlineColor = pCommand->m_TextOutlineColor;
+		FragmentConstants.m_Constants.m_MsdfPxRange = pCommand->m_MsdfPxRange;
 		vkCmdPushConstants(CommandBuffer, PipeLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(SUniformGTextPos) + sizeof(SUniformTextGFragmentOffset), sizeof(SUniformTextFragment), &FragmentConstants);
 
 		DrawIndexed(ExecBuffer.m_ThreadIndex, CommandBuffer, static_cast<uint32_t>(pCommand->m_DrawNum), 1, 0, 0, 0);

@@ -43,6 +43,7 @@ namespace TextureFlag
 	inline constexpr uint32_t TO_3D_TEXTURE = 1 << 1;
 	inline constexpr uint32_t TO_2D_ARRAY_TEXTURE = 1 << 2;
 	inline constexpr uint32_t NO_2D_TEXTURE = 1 << 3;
+	inline constexpr uint32_t TEXT_MSDF = 1 << 4;
 };
 
 enum class EPrimitiveType
@@ -571,6 +572,7 @@ public:
 		int m_DrawNum;
 		ColorRGBA m_TextColor;
 		ColorRGBA m_TextOutlineColor;
+		float m_MsdfPxRange = 0.0f;
 	};
 
 	struct SCommand_RenderQuadContainer : public SCommand
@@ -1708,6 +1710,8 @@ public:
 	void RenderBorderTiles(int BufferContainerIndex, const ColorRGBA &Color, char *pIndexBufferOffset, const vec2 &Offset, const vec2 &Scale, uint32_t DrawNum) override;
 	void RenderQuadLayer(int BufferContainerIndex, SQuadRenderInfo *pQuadInfo, size_t QuadNum, int QuadOffset, bool Grouped = false) override;
 	void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override;
+	void RenderTextMsdf(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle Texture, const ColorRGBA &TextColor, const ColorRGBA &OutlineColor, float PxRange) override;
+	void QueueTextDraw(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float MsdfPxRange);
 	void RenderMediaIslandSdf(const IGraphics::SMediaIslandSdfParams &Params, CRenderTargetHandle Backdrop = CRenderTargetHandle()) override;
 	void RenderRoundedRectSdf(const IGraphics::SRoundedRectSdfParams &Params) override;
 	void DrawRoundedRectAntialias(float x, float y, float w, float h, float Radius, int Corners, const ColorRGBA &Color) override;

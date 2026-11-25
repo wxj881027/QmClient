@@ -2257,6 +2257,7 @@ set(EXPECTED_DATA
   qmclient/chat_emojis/surrender.webp
   qmclient/developer_badge.png
   qmclient/gui_logo.png
+  qmclient/menu_msdf.png
   qmclient/search_logo.png
   qmclient/search_logo_signed.png
   qmclient/search_logo_silver_ear.png
@@ -3267,6 +3268,8 @@ if(CLIENT)
     text_gradient.h
     qm_font_names.h
     qm_font_collection.h
+    qm_menu_msdf.h
+    qm_menu_msdf_data.inc
     qm_font_face_registry.h
     qm_glyph_geometry.h
     qm_glyph_rasterizer.h
@@ -6243,6 +6246,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/text_container_pool_test.cpp
     src/test/unit/engine/graphics/text_layout_string_test.cpp
     src/test/unit/engine/graphics/text_utf8_cursor_test.cpp
+    src/test/unit/engine/graphics/menu_msdf_test.cpp
     src/test/unit/engine/graphics/texture_slot_pool_test.cpp
     src/test/integration/client/texture_handle_lifetime_test.cpp
     src/test/unit/engine/graphics/text_sweep_test.cpp

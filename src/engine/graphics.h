@@ -486,6 +486,7 @@ public:
 		TEXLOAD_TO_2D_ARRAY_TEXTURE = 1 << 1,
 		TEXLOAD_NO_2D_TEXTURE = 1 << 2,
 		TEXLOAD_NO_MIPMAPS = 1 << 3,
+		TEXLOAD_TEXT_MSDF = 1 << 4,
 	};
 
 	class CTextureHandle
@@ -854,6 +855,7 @@ public:
 	virtual void RenderQuadLayer(int BufferContainerIndex, SQuadRenderInfo *pQuadInfo, size_t QuadNum, int QuadOffset, bool Grouped = false) = 0;
 	// 保留完整纹理句柄，前端校验代数后才生成后端编号命令。
 	virtual void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) = 0;
+	virtual void RenderTextMsdf(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle Texture, const ColorRGBA &TextColor, const ColorRGBA &OutlineColor, float PxRange) {}
 	// Render a media-island SDF quad in a supported programmable backend.
 	// Callers use a geometry approximation when HasMediaIslandSdf() is false.
 	virtual void RenderMediaIslandSdf(const SMediaIslandSdfParams &Params, CRenderTargetHandle Backdrop = CRenderTargetHandle()) = 0;
