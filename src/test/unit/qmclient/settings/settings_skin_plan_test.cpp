@@ -5,7 +5,7 @@
 #include <optional>
 #include <vector>
 
-TEST(SettingsSkinPlan, KeepsSelectedFavoritesThenSorted)
+TEST(SettingsSkinPlan, SelectionChangesKeepTheSharedCatalogOrder)
 {
 	std::vector<SSettingsSkinListEntry> vEntries = {
 		{"zeta", false, false},
@@ -14,9 +14,12 @@ TEST(SettingsSkinPlan, KeepsSelectedFavoritesThenSorted)
 	};
 	const SSettingsSkinListPlan Plan = BuildSettingsSkinListPlan(vEntries, 0);
 	ASSERT_EQ(Plan.m_vNames.size(), 3u);
-	EXPECT_EQ(Plan.m_vNames[0], "selected");
-	EXPECT_EQ(Plan.m_vNames[1], "alpha");
+	EXPECT_EQ(Plan.m_vNames[0], "alpha");
+	EXPECT_EQ(Plan.m_vNames[1], "selected");
 	EXPECT_EQ(Plan.m_vNames[2], "zeta");
+	vEntries[2].m_Selected = false;
+	vEntries[0].m_Selected = true;
+	EXPECT_EQ(BuildSettingsSkinListPlan(vEntries, 0).m_vNames, Plan.m_vNames);
 }
 
 TEST(SettingsSkinPlan, TimeSortKeepsFavoritesThenOrdersGroupsByOfficialDate)
@@ -45,9 +48,9 @@ TEST(SettingsSkinPlan, SameNameQueuedColorVariantsRemainDistinctAfterSorting)
 	const auto Plan = BuildSettingsSkinListPlan(vEntries, 0);
 	ASSERT_EQ(Plan.m_vEntries.size(), 3u);
 	ASSERT_EQ(Plan.m_vNames.size(), 3u);
-	const auto &SelectedColor = Plan.m_vEntries[0].m_ColorKey;
-	const auto &QueuedColor = Plan.m_vEntries[1].m_ColorKey;
-	EXPECT_TRUE(Plan.m_vEntries[0].m_Selected);
+	const auto &SelectedColor = Plan.m_vEntries[1].m_ColorKey;
+	const auto &QueuedColor = Plan.m_vEntries[0].m_ColorKey;
+	EXPECT_TRUE(Plan.m_vEntries[1].m_Selected);
 	if(!SelectedColor.has_value())
 	{
 		FAIL() << "Missing selected color variant";

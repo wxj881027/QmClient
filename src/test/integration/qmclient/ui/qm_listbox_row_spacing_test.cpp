@@ -1,6 +1,8 @@
 // 列表行距的步进语义：行距属于「行」而不是「格」。
 // 覆盖 CListBox 与滚动区的协作边界：多列网格每行只推一次行距、可见范围裁剪
 // （SkipItems）与正常步进走同一条路径、单列与显式关闭行距的既有调用点不回归。
+#include <engine/keys.h>
+
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/ui_listbox.h>
 
@@ -54,6 +56,50 @@ namespace
 			return vRects;
 		}
 	};
+
+	TEST_F(QmListBoxRowSpacing, ReflowOffsetsMoveContentAndClippingWithoutChangingRowPitch)
+	{
+		std::array<int, 4> aIds{};
+		CListBox List;
+		List.DoAutoSpacing(0);
+		const CUIRect View{20, 20, 200, 100};
+		List.DoStart(40, 4, 2, 1, -1, &View, false);
+		const auto Moved = List.DoNextItem(&aIds[0], false, -1, vec2(100, 40));
+		const auto Hidden = List.DoNextItem(&aIds[1], false, -1, vec2(0, 200));
+		const auto NextRow = List.DoNextItem(&aIds[2]);
+		List.DoNextItem(&aIds[3]);
+		List.DoEnd();
+		EXPECT_FLOAT_EQ(Moved.m_Rect.x, View.x + 100);
+		EXPECT_FLOAT_EQ(Moved.m_Rect.y, View.y + 40);
+		EXPECT_FLOAT_EQ(Moved.m_ContentRect.y, Moved.m_Rect.y);
+		EXPECT_TRUE(Moved.m_Visible);
+		EXPECT_FALSE(Hidden.m_Visible);
+		EXPECT_FLOAT_EQ(NextRow.m_Rect.y, View.y + 40);
+		EXPECT_FALSE(List.ScrollbarShown());
+	}
+
+	TEST_F(QmListBoxRowSpacing, ReflowHitTestingSelectsTheItemAtItsDisplayedPosition)
+	{
+		std::array<int, 2> aIds{};
+		CListBox List;
+		List.DoAutoSpacing(0);
+		const CUIRect View{20, 20, 200, 40};
+		const auto Frame = [&](bool Pressed) {
+			const vec2 Pixels = vec2(150, 40) * vec2(m_Ui.Graphics()->WindowWidth(), m_Ui.Graphics()->WindowHeight()) / m_Ui.Screen()->Size();
+			const vec2 Delta = Pixels - m_Ui.UpdatedMousePos();
+			m_Ui.OnCursorMove(Delta.x, Delta.y);
+			m_Input.m_HeldKey = Pressed ? KEY_MOUSE_1 : 0;
+			BeginFrame();
+			List.DoStart(40, 2, 2, 1, -1, &View, false);
+			List.DoNextItem(&aIds[0], false, -1, vec2(100, 0));
+			List.DoNextItem(&aIds[1], false, -1, vec2(-100, 0));
+			return List.DoEnd();
+		};
+		Frame(false);
+		Frame(true);
+		EXPECT_EQ(Frame(false), 0);
+		EXPECT_TRUE(List.WasItemSelected());
+	}
 
 	// 多列网格：同一行的格子共享 y，行距只在行首推一次。修复前每格都推一次行距，
 	// 实际行距变成「行高 + 列数 × 行距」。

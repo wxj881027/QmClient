@@ -433,7 +433,7 @@ bool CListBox::BeginRowIfNeeded()
 	return true;
 }
 
-CListboxItem CListBox::DoNextRow()
+CListboxItem CListBox::DoNextRow(vec2 Offset)
 {
 	QmRestoreEntryScope();
 	CListboxItem Item = {};
@@ -473,6 +473,9 @@ CListboxItem CListBox::DoNextRow()
 	if(EntryVisual.m_Fade < 0.999f)
 		m_EntryAlphaScope.emplace(Ui(), EntryVisual.m_Fade);
 	Item.m_Rect = QmListBoxEntryAnimatedRect(Item.m_Rect, m_EntryAnimationFadeOnly ? 0.0f : EntryVisual.m_OffsetY);
+	// 滚动范围已按槽位登记；内容、裁剪、反馈和点击共用移动后的矩形。
+	Item.m_Rect.x += Offset.x;
+	Item.m_Rect.y += Offset.y;
 	// 行内容区：把 token 派生的左右内边距让出来，文字/图标排在这里；行背景与命中区域
 	// 仍是 m_Rect。内退对**所有行**成立（不再只在胶囊行生效），这样非胶囊列表的弹层
 	// 条目也能拿到同一条内退；只用 m_Rect 排版的旧调用点不受影响。
@@ -496,7 +499,7 @@ void CListBox::QmRestoreEntryScope()
 	m_EntryAlphaScope.reset();
 }
 
-CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRadius)
+CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRadius, vec2 Offset)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	// 行距不在这里推进：DoNextRow 在行首统一给（多列网格只有第一格开启新行）。
@@ -511,7 +514,7 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 		m_ListBoxSelectedIndex = ThisItemIndex;
 	}
 
-	CListboxItem Item = DoNextRow();
+	CListboxItem Item = DoNextRow(Offset);
 	Item.m_pUi = Ui();
 	Item.m_GaussianBlurSuppressed = true;
 	const int ItemClicked = Item.m_Visible ? Ui()->DoButtonLogic(pId, 0, &Item.m_Rect, BUTTONFLAG_LEFT) : 0;

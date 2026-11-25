@@ -2075,30 +2075,8 @@ void CPlayers::OnRender()
 
 		if((aRenderCurForTee[i].m_Weapon == WEAPON_NINJA || (Frozen && !GameClient()->m_GameInfo.m_NoSkinChangeForFrozen)) && g_Config.m_ClShowNinja)
 		{
-			// change the skin for the player to the ninja
-			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].Reset();
-			aRenderInfo[i].ApplySkin(NinjaTeeRenderInfo()->TeeRenderInfo());
-			aRenderInfo[i].m_CustomColoredSkin = IsTeamPlay;
-			if(!IsTeamPlay)
-			{
-				aRenderInfo[i].m_ColorBody = ColorRGBA(1, 1, 1);
-				aRenderInfo[i].m_ColorFeet = ColorRGBA(1, 1, 1);
-
-				if(g_Config.m_QmColorFreeze)
-				{
-					bool CustomColor = GameClient()->m_aClients[i].m_RenderInfo.m_CustomColoredSkin;
-					aRenderInfo[i].m_CustomColoredSkin = true;
-
-					aRenderInfo[i].m_ColorFeet = g_Config.m_QmColorFreezeFeet ? GameClient()->m_aClients[i].m_RenderInfo.m_ColorFeet : ColorRGBA(1, 1, 1);
-					float Darken = (g_Config.m_QmColorFreezeDarken / 100.0f) * 0.5f + 0.5f;
-
-					aRenderInfo[i].m_ColorBody = GameClient()->m_aClients[i].m_RenderInfo.m_ColorBody;
-					if(!CustomColor)
-						aRenderInfo[i].m_ColorBody = GameClient()->m_aClients[i].m_RenderInfo.m_BloodColor;
-
-					aRenderInfo[i].m_ColorBody = ColorRGBA(aRenderInfo[i].m_ColorBody.r * Darken, aRenderInfo[i].m_ColorBody.g * Darken, aRenderInfo[i].m_ColorBody.b * Darken, 1.0);
-				}
-			}
+			aRenderInfo[i].ApplyNinjaSkin(NinjaTeeRenderInfo()->TeeRenderInfo(), ClientData.m_RenderInfo, g_Config.m_ClDummy, IsTeamPlay,
+				g_Config.m_QmColorFreeze, g_Config.m_QmColorFreezeFeet, g_Config.m_QmColorFreezeDarken);
 		}
 
 		// 范围内的角色冻结时，身体和脚使用卡锤或卡钩的按下颜色。
