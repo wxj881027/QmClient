@@ -652,7 +652,9 @@ std::unique_ptr<ILogger> log_logger_noop()
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
-void CFutureLogger::Set(std::shared_ptr<ILogger> pLogger)
+// 调用方用 std::move 把共享指针转进来，按值接收是这条上游 API 的既定契约；
+// 只读引用会让每次接管都多一次拷贝。
+void CFutureLogger::Set(std::shared_ptr<ILogger> pLogger) // NOLINT(performance-unnecessary-value-param)
 {
 	const CLockScope LockScope(m_PendingLock);
 	std::shared_ptr<ILogger> pNullLogger;

@@ -52,6 +52,57 @@ namespace
 	};
 }
 
+TEST(TeeNinjaAppearance, DisabledColorFreezeUsesTheOriginalNinjaTextureColors)
+{
+	const CTeeRenderInfo Ninja = MakeInfo();
+	CTeeRenderInfo Info;
+	Info.m_CustomColoredSkin = true;
+	Info.m_ColorBody = ColorRGBA(0.8f, 0.2f, 0.1f, 1);
+	Info.m_ColorFeet = ColorRGBA(0.1f, 0.3f, 0.7f, 1);
+	Info.m_TeeRenderFlags = TEE_EFFECT_FROZEN | TEE_NO_WEAPON;
+	Info.ApplyNinjaSkin(Ninja, Info, 0, false, false, false, 0);
+	EXPECT_FALSE(Info.m_CustomColoredSkin);
+	EXPECT_EQ(Info.m_ColorBody, ColorRGBA(1, 1, 1, 1));
+	EXPECT_EQ(Info.m_ColorFeet, ColorRGBA(1, 1, 1, 1));
+	EXPECT_EQ(Info.m_SkinMetrics.m_Body.m_Width, Ninja.m_SkinMetrics.m_Body.m_Width);
+	EXPECT_EQ(Info.m_TeeRenderFlags, TEE_EFFECT_FROZEN | TEE_NO_WEAPON);
+}
+
+TEST(TeeNinjaAppearance, PreviewAndPlayerShareCustomBodyAndFeetColors)
+{
+	CTeeRenderInfo Original;
+	Original.m_CustomColoredSkin = true;
+	Original.m_ColorBody = ColorRGBA(0.8f, 0.4f, 0.2f, 1);
+	Original.m_ColorFeet = ColorRGBA(0.1f, 0.3f, 0.7f, 1);
+	CTeeRenderInfo Preview = Original;
+	CTeeRenderInfo Player = Original;
+	const CTeeRenderInfo Ninja = MakeInfo();
+	Preview.ApplyNinjaSkin(Ninja, Preview, 0, false, true, true, 0);
+	Player.ApplyNinjaSkin(Ninja, Original, 0, false, true, true, 0);
+	EXPECT_TRUE(Preview.m_CustomColoredSkin);
+	EXPECT_EQ(Preview.m_ColorBody, ColorRGBA(0.4f, 0.2f, 0.1f, 1));
+	EXPECT_EQ(Preview.m_ColorBody, Player.m_ColorBody);
+	EXPECT_EQ(Preview.m_ColorFeet, Original.m_ColorFeet);
+	EXPECT_EQ(Preview.m_ColorFeet, Player.m_ColorFeet);
+}
+
+TEST(TeeNinjaAppearance, OriginalSkinUsesBloodColorAndTeamModeKeepsTeamColors)
+{
+	CTeeRenderInfo Original;
+	Original.m_BloodColor = ColorRGBA(0.6f, 0.4f, 0.2f, 1);
+	CTeeRenderInfo Info = Original;
+	const CTeeRenderInfo Ninja = MakeInfo();
+	Info.ApplyNinjaSkin(Ninja, Info, 1, false, true, false, 0);
+	EXPECT_EQ(Info.m_ColorBody, ColorRGBA(0.3f, 0.2f, 0.1f, 1));
+	EXPECT_EQ(Info.m_ColorFeet, ColorRGBA(1, 1, 1, 1));
+	Info.m_ColorBody = ColorRGBA(1, 0, 0, 1);
+	Info.m_ColorFeet = ColorRGBA(0, 0, 1, 1);
+	Info.ApplyNinjaSkin(Ninja, Original, 1, true, true, false, 0);
+	EXPECT_TRUE(Info.m_CustomColoredSkin);
+	EXPECT_EQ(Info.m_ColorBody, ColorRGBA(1, 0, 0, 1));
+	EXPECT_EQ(Info.m_ColorFeet, ColorRGBA(0, 0, 1, 1));
+}
+
 TEST(TeeRenderGeometry, BaseSizeAndAnimationScaleFollowRequestedSize)
 {
 	const CScopedGeometryConfig Config;

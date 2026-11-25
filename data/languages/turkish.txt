@@ -73,6 +73,9 @@
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == Benimle X hizası ipucu, başka bir oyuncunun X'i ayarlanan algılama süresi boyunca seninkiyle eşleşince onu renklendirir.
 
+%.0f Bps
+== %.0f blok/sn
+
 %.2f KiB
 == %.2f KiB
 
@@ -3263,6 +3266,9 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == Diğer oyuncuların adlarının yanında görünenleri denetler: klan etiketleri, arkadaş işaretleri ve istemci tanımlayıcıları gibi.
 
+Convenience options for chat, the scoreboard and tune zones.
+== Sohbet, skor tablosu ve ayar bölgeleri için kolaylık seçenekleri.
+
 Converse
 == Özel sohbete devam et
 
@@ -4894,6 +4900,9 @@ Enable /team0 mode
 
 Enable 3D background particles
 == 3D arka plan parçacıklarını etkinleştir
+
+Enable a music source to display its lyrics.
+== Şarkı sözlerini göstermek için bir müzik kaynağını etkinleştirin.
 
 Enable absolute controller aiming in game
 == Oyunda mutlak kontrolör nişan almayı etkinleştir
@@ -7082,6 +7091,9 @@ Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 == Yatay konum
 
+Horizontal speed × ramp
+== Yatay hız × çarpan
+
 Hostname of DNSBL provider for IP verification
 == IP doğrulaması için DNSBL sağlayıcısının ana bilgisayar adı
 
@@ -7544,6 +7556,9 @@ Internet (From online source)
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == Geçerli düzenleyici harita kopyasını "auto" klasörüne otomatik kaydetme aralığı (0=kapalı)
 
+Invalid
+== Geçersiz
+
 Invalid Axiom API response
 == Geçersiz Axiom API yanıtı
 
@@ -8000,6 +8015,9 @@ Lasers can hit you if you shot them and they pull you towards the bounce origin 
 Lasers can't hit you if you shot them, and they pull others towards the shooter
 == Kendi attığınız lazerler size isabet etmez ve diğerlerini ateş edene doğru çeker
 
+Last corrected field
+== Son düzeltilen alan
+
 Last entered
 == Son girilen
 
@@ -8452,6 +8470,9 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == Yavaş kareleri ve açılıştaki takılma sürelerini kaydeder, böylece oyunun neden kasıntılı hissettirdiğini bildirebilirsin.
+
+Looks like an update is available
+== Görünüşe göre bir güncelleme var
 
 Lose weapons when teleporting (useful for race maps)
 == Işınlanırken silahları kaybet (yarış haritaları için kullanışlıdır)
@@ -9491,6 +9512,9 @@ Network
 Network compensation
 == Network compensation
 
+Network object corrections
+== Ağ nesnesi düzeltmeleri
+
 Network timeout
 == Ağ zaman aşımı
 
@@ -10418,6 +10442,9 @@ Particle glow
 Particle pulse
 == Parçacık atımı
 
+Particle skin
+== Parçacık görünümü
+
 Particle speed
 == Parçacık hızı
 
@@ -10973,6 +11000,9 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 Playtime (h)
 == Oyun süresi (sa.)
 
+Playtime query failed. Retrying shortly.
+== Oyun süresi sorgulanamadı. Kısa süre sonra yeniden denenecek.
+
 Please add a valid cut first
 == Lütfen önce geçerli bir kesim ekleyin
 
@@ -11062,6 +11092,12 @@ Position jump hint
 
 Position jump tip
 == Konum zıplama ipucu
+
+Position X
+== X koordinatı
+
+Position Y
+== Y koordinatı
 
 Position:
 == Konum:
@@ -11596,6 +11632,9 @@ Query server setting: %s
 
 Query team rank for %s
 == %s oyuncusunun takım sıralamasını sorgula
+
+Querying playtime from DDStats...
+== DDStats üzerinden oyun süresi sorgulanıyor…
 
 Querying points for %s...
 == %s için puanlar sorgulanıyor...
@@ -13829,6 +13868,9 @@ Show flag on name plate
 Show FPS
 == FPS'yi göster
 
+Show FPS, prediction time, and performance graphs
+== FPS, tahmin süresi ve performans grafiklerini göster
+
 Show freeze bar under frozen players indicating thaw time
 == Donmuş oyuncuların altında çözülme süresini belirten donma çubuğunu göster
 
@@ -15065,6 +15107,18 @@ Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == Spam koruması: takım değiştirme, sohbet, skin değiştirme, ifade ve oylama spamını önler
 
+Spawn effects filtered
+== Filtrelenen doğma efektleri
+
+Spawn events received
+== Alınan doğma olayları
+
+Spawn particle failures
+== Doğma parçacığı oluşturma hataları
+
+Spawn particles dispatched
+== Üretilen doğma parçacıkları
+
 Speaker
 == Hoparlör
 
@@ -15551,6 +15605,9 @@ Switch team
 Switch tile overlay alpha (0-100)
 == Anahtar döşemelerin kaplama varlık alfası (0-100)
 
+Switch tile: type=%d delay=%d number=%d (x=%d y=%d)
+== Anahtar karesi: tür=%d gecikme=%d numara=%d (x=%d y=%d)
+
 Switch to grenade
 == Bombaya geç
 
@@ -15871,6 +15928,9 @@ Teleport back to the practice respawn point
 
 Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
 == Pratik yeniden doğma noktasına ışınlar ve orada kayıtlı Tee durumunu geri yükler. Yalnızca Tee geri alınır, dünya akmaya devam eder.
+
+Teleport checkpoint
+== Işınlanma kontrol noktası
 
 Teleport dummy to cursor
 == Dummy'yi imlece ışınla
@@ -16685,6 +16745,9 @@ Total hours
 Total play time
 == Toplam oynama süresi
 
+Total playtime from DDStats. The last result stays visible while refreshing.
+== DDStats toplam oyun süresi. Güncelleme sırasında son sonuç görünür kalır.
+
 Total points
 == Toplam puan
 
@@ -16867,6 +16930,9 @@ Tune variable to value
 
 Tune variable to value or show current value
 == Değişkeni değere ayarla veya geçerli değeri göster
+
+Tune zone (map / override)
+== Ayar bölgesi (harita / geçersiz kılma)
 
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == Zayıf makinelerde kapatın: kartlar anında açılır ve kaydırılır. İmleç biçimi yalnızca görseldir: üç stil de aynı karakter hücresine sığar.
@@ -17399,6 +17465,9 @@ Use animated title style (overrides qm_title_color_mode)
 Use cached or online AMLL community lyrics when the music source has no word timing
 == Müzik kaynağında sözcük zamanlaması yoksa önbellekteki veya çevrimiçi AMLL topluluk şarkı sözlerini kullan
 
+Use cl_show_perf 1 to show the panel.
+== Paneli göstermek için cl_show_perf 1 yazın.
+
 Use colored skins for frozen tees
 == Donmuş teeler için renkli görünümler kullan
 
@@ -17504,6 +17573,9 @@ Use procedural ring pipeline
 Use public word filter
 == Ortak kelime filtresini kullan
 
+Use qm_pref <0|1> [20-400] (milliseconds)
+== Kullanım: qm_pref <0|1> [20-400] (milisaniye)
+
 Use server defaults
 == Sunucu varsayılanlarını kullan
 
@@ -17573,6 +17645,9 @@ VAD release delay (ms)
 VAD threshold (percent)
 == VAD eşiği (yüzde)
 
+Valid
+== Geçerli
+
 Vanilla skins only
 == Sadece orijinal skinler
 
@@ -17585,6 +17660,9 @@ Variable custom font weight for Latin text
 Velocity
 == Hız
 
+Velocity ramp
+== Hız çarpanı
+
 Verifying downloaded update...
 == İndirilen güncelleme doğrulanıyor…
 
@@ -17596,6 +17674,9 @@ Version performing the analysis
 
 Vertical position
 == Dikey konum
+
+Vertical speed
+== Dikey hız
 
 Vertical sync (may cause lag)
 == Dikey senkronizasyon (gecikmeye neden olabilir)
@@ -18716,6 +18797,42 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == Bu oyuncu için kullanılamaz
+
+[Axiom map difficulty]
+Brutal
+== Zor
+
+[Axiom map difficulty]
+Easy
+== Kolay
+
+[Axiom map difficulty]
+Extreme
+== Aşırı
+
+[Axiom map difficulty]
+Hard
+== Zor
+
+[Axiom map difficulty]
+Insane
+== Çılgın
+
+[Axiom map difficulty]
+Main
+== Normal
+
+[Axiom map difficulty]
+Mod
+== Modlu
+
+[Axiom map difficulty]
+Solo
+== Solo
+
+[Axiom map difficulty]
+Train
+== Antrenman
 
 [Bind keyboard key]
 Menu

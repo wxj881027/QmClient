@@ -25,7 +25,7 @@ void CRenderTools::RenderTee(const CAnimState *, const CTeeRenderInfo *, int, ve
 	ADD_FAILURE() << "Unexpected tee render";
 }
 
-void CRenderTools::RenderTextContainerWithEffects(STextContainerIndex, const SQmTextEffectRenderStyle &, float, float) const
+void CRenderTools::RenderTextContainerWithEffects(const STextContainerIndex &, const SQmTextEffectRenderStyle &, float, float) const
 {
 	ADD_FAILURE() << "Unexpected text effect";
 }

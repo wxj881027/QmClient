@@ -227,17 +227,19 @@ TEST_F(QmWikiPanel, LongTablesKeepFullScrollHeightAndDrawOnlyVisibleRows)
 		CUIRect Body = *Scroll.ClipRect();
 		Body.y += Offset.y;
 		qm_wiki_markdown::CTableLayoutCache Cache;
-		Graphics().m_vTextSubmissions.clear();
 		const float Height = qm_wiki_markdown::RenderBlocks(MakeContext(), Document.Blocks(), Body, {}, &Scroll, nullptr, -1, &Cache);
-		const size_t DrawCount = Graphics().m_vTextSubmissions.size();
+		const size_t DrawnRows = Cache.LastDrawnTableRows();
 		Scroll.End();
-		return std::pair{Height, DrawCount};
+		return std::pair{Height, DrawnRows};
 	};
-	const auto [ShortHeight, ShortDraws] = DrawTable(ShortTable);
-	const auto [LongHeight, LongDraws] = DrawTable(LongTable);
+	const auto [ShortHeight, ShortRows] = DrawTable(ShortTable);
+	const auto [LongHeight, LongRows] = DrawTable(LongTable);
+	// 整表高度按全部行累加，滚动区因此能滚到表尾，不会被可视区截断。
 	EXPECT_GT(LongHeight, ShortHeight);
-	EXPECT_GT(ShortDraws, 0u);
-	EXPECT_EQ(LongDraws, ShortDraws);
+	// 两者共用 70px 视口：短表画出可见行，长表行数多两个数量级，绘制行数必须一致，
+	// 否则说明按整表行数画了（每行一次文本提交，滚到表尾要等几百个字形）。
+	EXPECT_GT(ShortRows, 0u);
+	EXPECT_EQ(LongRows, ShortRows);
 }
 
 TEST_F(QmWikiPanel, ClosingOnLinkClickDropsThePendingNavigation)

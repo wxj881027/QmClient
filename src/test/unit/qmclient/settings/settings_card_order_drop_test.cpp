@@ -1,5 +1,6 @@
 #include <game/client/QmUi/QmCardOrderModel.h>
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/SettingsCardDeckLogic.h>
 #include <game/client/components/menus.h>
 
 #include <gtest/gtest.h>
@@ -19,6 +20,19 @@ TEST(SettingsCardOrder, CrossColumnDropMovesOnlyTheGlobalModel)
 	EXPECT_EQ(Model.Entry(Index).m_OrderInColumn, 0);
 	EXPECT_STREQ(Model.Entry(Index).m_pDefaultTab, "graphics");
 	EXPECT_TRUE(Model.IsDirty());
+}
+
+TEST(SettingsCardOrder, HalfWidthVolumeCardCanMoveLeftFromAnOldFullWidthSlot)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries({{"deck:sound-volume", "sound", 0, 0}});
+	const CUIRect Left{0.0f, 0.0f, 100.0f, 100.0f};
+	const CUIRect Right{110.0f, 0.0f, 100.0f, 100.0f};
+	const int LayoutColumn = ResolveSettingsCardLayoutColumn(0, false, true);
+	const int DropColumn = ResolveSettingsCardDeckDropColumn(0, LayoutColumn, 50.0f, Left, Right);
+
+	ASSERT_TRUE(CommitSettingsCardDeckDrop(Model, "sound", "deck:sound-volume", DropColumn, 0));
+	EXPECT_EQ(Model.Entry(Model.FindByStableId("deck:sound-volume")).m_Column, 1);
 }
 
 TEST(SettingsCardOrder, CrossColumnDropUsesVisibleOrderWhenHiddenCardsInterleave)

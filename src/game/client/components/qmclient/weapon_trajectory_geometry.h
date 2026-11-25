@@ -7,10 +7,12 @@
 
 #include <game/collision.h>
 #include <game/gamecore.h>
+#include <game/mapitems.h>
 
 #include <cmath>
 #include <cstddef>
 #include <limits>
+#include <optional>
 #include <vector>
 
 // 只约束显示采样的取整数值域，不改变共享碰撞实现或添加遍历预算。
@@ -59,6 +61,29 @@ inline bool QmTryPredictNinjaEndPosition(CCollision &Collision, vec2 Position, v
 		// TeleOuts在缺少出口条目时也可能分配，失败不发布中途位置。
 		return false;
 	}
+}
+
+struct SQmWeaponTrajectoryHit
+{
+	int m_Tile;
+	vec2 m_Impact;
+	vec2 m_BeforeImpact;
+	std::optional<vec2> m_TeleExit;
+};
+
+inline SQmWeaponTrajectoryHit QmTraceWeaponTrajectorySegment(CCollision &Collision, vec2 From, vec2 To)
+{
+	SQmWeaponTrajectoryHit Hit{};
+	int TeleNumber = 0;
+	Hit.m_Tile = Collision.IntersectLineTeleWeapon(From, To, &Hit.m_Impact, &Hit.m_BeforeImpact, &TeleNumber);
+	if(Hit.m_Tile == TILE_TELEINWEAPON && TeleNumber > 0)
+	{
+		const auto &vExits = Collision.TeleOuts(TeleNumber - 1);
+		// 服务端会随机选出口；辅助线固定预览第一个出口，避免每帧跳动。
+		if(!vExits.empty())
+			Hit.m_TeleExit = vExits.front();
+	}
+	return Hit;
 }
 
 struct SQmWeaponTrajectoryScratch

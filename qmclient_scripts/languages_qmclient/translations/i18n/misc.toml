@@ -31,6 +31,22 @@ turkish = "\"%s\" pnglite ile uyumlu değil ve eski DDNet sürümleri tarafında
 polish = "„%s” nie jest kompatybilne z pnglite i nie może być załadowane przez stare wersje DDNet"
 
 [[message]]
+key = "%.0f Bps"
+[message.translations]
+simplified_chinese = "%.0f 格/秒"
+traditional_chinese = "%.0f 格/秒"
+japanese = "%.0f ブロック/秒"
+korean = "초당 %.0f 블록"
+russian = "%.0f блок/с"
+german = "%.0f Blöcke/s"
+spanish = "%.0f bloques/s"
+french = "%.0f blocs/s"
+brazilian_portuguese = "%.0f blocos/s"
+portuguese = "%.0f blocos/s"
+turkish = "%.0f blok/sn"
+polish = "%.0f bloków/s"
+
+[[message]]
 key = "%c Team %d"
 [message.translations]
 simplified_chinese = "%c 队伍 %d"
@@ -5844,6 +5860,22 @@ turkish = "Kanca S/S: %.0f%%/%.0f%%"
 polish = "Hakowanie L/P: %.0f%%/%.0f%%"
 
 [[message]]
+key = "Horizontal speed × ramp"
+[message.translations]
+simplified_chinese = "横向速度 × 速度倍率"
+traditional_chinese = "橫向速度 × 速度倍率"
+japanese = "水平速度 × 補正倍率"
+korean = "가로 속도 × 보정 배율"
+russian = "Горизонтальная скорость × множитель"
+german = "Horizontalgeschwindigkeit × Faktor"
+spanish = "Velocidad horizontal × factor"
+french = "Vitesse horizontale × facteur"
+brazilian_portuguese = "Velocidade horizontal × fator"
+portuguese = "Velocidade horizontal × fator"
+turkish = "Yatay hız × çarpan"
+polish = "Prędkość pozioma × mnożnik"
+
+[[message]]
 key = "Hover for tooltip"
 [message.translations]
 simplified_chinese = "悬停显示提示"
@@ -6242,6 +6274,22 @@ brazilian_portuguese = "Tema da interface"
 portuguese = "Tema da interface"
 turkish = "Arayüz teması"
 polish = "Motyw interfejsu"
+
+[[message]]
+key = "Invalid"
+[message.translations]
+simplified_chinese = "无效"
+traditional_chinese = "無效"
+japanese = "無効"
+korean = "유효하지 않음"
+russian = "Недействительно"
+german = "Ungültig"
+spanish = "No válido"
+french = "Invalide"
+brazilian_portuguese = "Inválido"
+portuguese = "Inválido"
+turkish = "Geçersiz"
+polish = "Nieprawidłowy"
 
 [[message]]
 key = "Invalid Axiom API response"
@@ -6786,6 +6834,22 @@ brazilian_portuguese = "Seus lasers não podem atingir você e puxam os outros e
 portuguese = "Os teus lasers não te podem atingir e puxam os outros na direção de quem disparou"
 turkish = "Kendi attığınız lazerler size isabet etmez ve diğerlerini ateş edene doğru çeker"
 polish = "Twoje lasery nie mogą cię trafić, a innych przyciągają do strzelającego"
+
+[[message]]
+key = "Last corrected field"
+[message.translations]
+simplified_chinese = "最近修正字段"
+traditional_chinese = "最近修正欄位"
+japanese = "最後に修正したフィールド"
+korean = "마지막으로 수정한 필드"
+russian = "Последнее исправленное поле"
+german = "Zuletzt korrigiertes Feld"
+spanish = "Último campo corregido"
+french = "Dernier champ corrigé"
+brazilian_portuguese = "Último campo corrigido"
+portuguese = "Último campo corrigido"
+turkish = "Son düzeltilen alan"
+polish = "Ostatnio poprawione pole"
 
 [[message]]
 key = "Last page in console"
@@ -8418,6 +8482,22 @@ turkish = "Net"
 polish = "Netto"
 
 [[message]]
+key = "Network object corrections"
+[message.translations]
+simplified_chinese = "网络对象修正次数"
+traditional_chinese = "網路物件修正次數"
+japanese = "ネットワークオブジェクトの修正回数"
+korean = "네트워크 객체 수정 횟수"
+russian = "Исправления сетевых объектов"
+german = "Korrekturen von Netzwerkobjekten"
+spanish = "Correcciones de objetos de red"
+french = "Corrections des objets réseau"
+brazilian_portuguese = "Correções de objetos de rede"
+portuguese = "Correções de objetos de rede"
+turkish = "Ağ nesnesi düzeltmeleri"
+polish = "Korekty obiektów sieciowych"
+
+[[message]]
 key = "new"
 [message.translations]
 simplified_chinese = "新"
@@ -9138,6 +9218,22 @@ turkish = "Panel"
 polish = "Panel"
 
 [[message]]
+key = "Particle skin"
+[message.translations]
+simplified_chinese = "粒子皮肤"
+traditional_chinese = "粒子造型"
+japanese = "パーティクルスキン"
+korean = "파티클 스킨"
+russian = "Скин частиц"
+german = "Partikel-Skin"
+spanish = "Apariencia de partículas"
+french = "Apparence des particules"
+brazilian_portuguese = "Aparência das partículas"
+portuguese = "Aspeto das partículas"
+turkish = "Parçacık görünümü"
+polish = "Wygląd cząsteczek"
+
+[[message]]
 key = "Paste a friend code first."
 [message.translations]
 simplified_chinese = "请先粘贴好友码。"
@@ -9632,6 +9728,38 @@ brazilian_portuguese = "Dica de pulo de posição"
 portuguese = "Dica de salto de posição"
 turkish = "Konum zıplama ipucu"
 polish = "Wskazówka skoku pozycji"
+
+[[message]]
+key = "Position X"
+[message.translations]
+simplified_chinese = "X 坐标"
+traditional_chinese = "X 座標"
+japanese = "X 座標"
+korean = "X 좌표"
+russian = "Координата X"
+german = "X-Koordinate"
+spanish = "Coordenada X"
+french = "Coordonnée X"
+brazilian_portuguese = "Coordenada X"
+portuguese = "Coordenada X"
+turkish = "X koordinatı"
+polish = "Współrzędna X"
+
+[[message]]
+key = "Position Y"
+[message.translations]
+simplified_chinese = "Y 坐标"
+traditional_chinese = "Y 座標"
+japanese = "Y 座標"
+korean = "Y 좌표"
+russian = "Координата Y"
+german = "Y-Koordinate"
+spanish = "Coordenada Y"
+french = "Coordonnée Y"
+brazilian_portuguese = "Coordenada Y"
+portuguese = "Coordenada Y"
+turkish = "Y koordinatı"
+polish = "Współrzędna Y"
 
 [[message]]
 key = "Position:"
@@ -13314,6 +13442,70 @@ turkish = "Ses varyantları"
 polish = "Warianty dźwięku"
 
 [[message]]
+key = "Spawn effects filtered"
+[message.translations]
+simplified_chinese = "过滤的出生特效"
+traditional_chinese = "過濾的出生特效"
+japanese = "除外した出現エフェクト"
+korean = "필터링한 등장 효과"
+russian = "Отфильтрованные эффекты появления"
+german = "Herausgefilterte Spawn-Effekte"
+spanish = "Efectos de aparición filtrados"
+french = "Effets d’apparition filtrés"
+brazilian_portuguese = "Efeitos de aparição filtrados"
+portuguese = "Efeitos de aparecimento filtrados"
+turkish = "Filtrelenen doğma efektleri"
+polish = "Odfiltrowane efekty odrodzenia"
+
+[[message]]
+key = "Spawn events received"
+[message.translations]
+simplified_chinese = "收到的出生事件"
+traditional_chinese = "收到的出生事件"
+japanese = "受信した出現イベント"
+korean = "수신한 생성 이벤트"
+russian = "Полученные события появления"
+german = "Empfangene Spawn-Ereignisse"
+spanish = "Eventos de aparición recibidos"
+french = "Événements d’apparition reçus"
+brazilian_portuguese = "Eventos de aparição recebidos"
+portuguese = "Eventos de aparecimento recebidos"
+turkish = "Alınan doğma olayları"
+polish = "Odebrane zdarzenia odrodzenia"
+
+[[message]]
+key = "Spawn particle failures"
+[message.translations]
+simplified_chinese = "出生粒子添加失败次数"
+traditional_chinese = "出生粒子新增失敗次數"
+japanese = "出現パーティクルの生成失敗"
+korean = "등장 파티클 생성 실패"
+russian = "Ошибки создания частиц появления"
+german = "Fehler beim Erzeugen von Spawn-Partikeln"
+spanish = "Fallos al crear partículas de aparición"
+french = "Échecs de création des particules d’apparition"
+brazilian_portuguese = "Falhas ao criar partículas de aparição"
+portuguese = "Falhas ao criar partículas de aparecimento"
+turkish = "Doğma parçacığı oluşturma hataları"
+polish = "Błędy tworzenia cząsteczek odrodzenia"
+
+[[message]]
+key = "Spawn particles dispatched"
+[message.translations]
+simplified_chinese = "已发出的出生粒子"
+traditional_chinese = "已送出的出生粒子"
+japanese = "生成した出現パーティクル"
+korean = "생성한 등장 파티클"
+russian = "Созданные частицы появления"
+german = "Erzeugte Spawn-Partikel"
+spanish = "Partículas de aparición emitidas"
+french = "Particules d’apparition émises"
+brazilian_portuguese = "Partículas de aparição emitidas"
+portuguese = "Partículas de aparecimento emitidas"
+turkish = "Üretilen doğma parçacıkları"
+polish = "Wyemitowane cząsteczki odrodzenia"
+
+[[message]]
 key = "Specify command accessibility for given access level"
 [message.translations]
 simplified_chinese = "为指定访问级别设置命令可访问性"
@@ -14016,6 +14208,22 @@ turkish = "İzleyici modunu değiştir"
 polish = "Przełącz tryb obserwacji"
 
 [[message]]
+key = "Switch tile: type=%d delay=%d number=%d (x=%d y=%d)"
+[message.translations]
+simplified_chinese = "开关图块：类型=%d 延迟=%d 编号=%d（x=%d y=%d）"
+traditional_chinese = "開關圖塊：類型=%d 延遲=%d 編號=%d（x=%d y=%d）"
+japanese = "スイッチタイル：種類=%d 遅延=%d 番号=%d（x=%d y=%d）"
+korean = "스위치 타일: 유형=%d 지연=%d 번호=%d (x=%d y=%d)"
+russian = "Тайл переключателя: тип=%d задержка=%d номер=%d (x=%d y=%d)"
+german = "Schalterkachel: Typ=%d Verzögerung=%d Nummer=%d (x=%d y=%d)"
+spanish = "Casilla de interruptor: tipo=%d demora=%d número=%d (x=%d y=%d)"
+french = "Case interrupteur : type=%d délai=%d numéro=%d (x=%d y=%d)"
+brazilian_portuguese = "Bloco de interruptor: tipo=%d atraso=%d número=%d (x=%d y=%d)"
+portuguese = "Bloco de interruptor: tipo=%d atraso=%d número=%d (x=%d y=%d)"
+turkish = "Anahtar karesi: tür=%d gecikme=%d numara=%d (x=%d y=%d)"
+polish = "Pole przełącznika: typ=%d opóźnienie=%d numer=%d (x=%d y=%d)"
+
+[[message]]
 key = "Switch to grenade"
 [message.translations]
 simplified_chinese = "切换到榴弹枪"
@@ -14382,6 +14590,22 @@ brazilian_portuguese = "Rastros do Tee"
 portuguese = "Rastros do Tee"
 turkish = "Tee izleri"
 polish = "Ślady Tee"
+
+[[message]]
+key = "Teleport checkpoint"
+[message.translations]
+simplified_chinese = "传送检查点"
+traditional_chinese = "傳送檢查點"
+japanese = "テレポートのチェックポイント"
+korean = "순간이동 체크포인트"
+russian = "Контрольная точка телепортации"
+german = "Teleport-Kontrollpunkt"
+spanish = "Punto de control de teletransporte"
+french = "Point de contrôle de téléportation"
+brazilian_portuguese = "Ponto de controle de teleporte"
+portuguese = "Ponto de controlo de teletransporte"
+turkish = "Işınlanma kontrol noktası"
+polish = "Punkt kontrolny teleportacji"
 
 [[message]]
 key = "Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart"
@@ -15456,6 +15680,22 @@ turkish = "Değişkeni değere ayarla veya geçerli değeri göster"
 polish = "Dostrój zmienną do wartości lub pokaż bieżącą wartość"
 
 [[message]]
+key = "Tune zone (map / override)"
+[message.translations]
+simplified_chinese = "调参区（地图 / 覆盖）"
+traditional_chinese = "調參區（地圖 / 覆寫）"
+japanese = "調整ゾーン（マップ / 上書き）"
+korean = "튜닝 구역 (맵 / 덮어쓰기)"
+russian = "Зона настроек (карта / переопределение)"
+german = "Tuning-Zone (Karte / Überschreibung)"
+spanish = "Zona de ajustes (mapa / anulación)"
+french = "Zone de réglage (carte / remplacement)"
+brazilian_portuguese = "Zona de ajuste (mapa / substituição)"
+portuguese = "Zona de ajuste (mapa / substituição)"
+turkish = "Ayar bölgesi (harita / geçersiz kılma)"
+polish = "Strefa ustawień (mapa / nadpisanie)"
+
+[[message]]
 key = "Type something..."
 [message.translations]
 simplified_chinese = "输入内容……"
@@ -16091,6 +16331,54 @@ brazilian_portuguese = "v = Velocidade"
 portuguese = "v = Velocidade"
 turkish = "v = Hız"
 polish = "v = Prędkość"
+
+[[message]]
+key = "Valid"
+[message.translations]
+simplified_chinese = "有效"
+traditional_chinese = "有效"
+japanese = "有効"
+korean = "유효"
+russian = "Действительно"
+german = "Gültig"
+spanish = "Válido"
+french = "Valide"
+brazilian_portuguese = "Válido"
+portuguese = "Válido"
+turkish = "Geçerli"
+polish = "Prawidłowy"
+
+[[message]]
+key = "Velocity ramp"
+[message.translations]
+simplified_chinese = "速度倍率"
+traditional_chinese = "速度倍率"
+japanese = "速度補正倍率"
+korean = "속도 보정 배율"
+russian = "Множитель скорости"
+german = "Geschwindigkeitsfaktor"
+spanish = "Factor de velocidad"
+french = "Facteur de vitesse"
+brazilian_portuguese = "Fator de velocidade"
+portuguese = "Fator de velocidade"
+turkish = "Hız çarpanı"
+polish = "Mnożnik prędkości"
+
+[[message]]
+key = "Vertical speed"
+[message.translations]
+simplified_chinese = "纵向速度"
+traditional_chinese = "縱向速度"
+japanese = "垂直速度"
+korean = "세로 속도"
+russian = "Вертикальная скорость"
+german = "Vertikalgeschwindigkeit"
+spanish = "Velocidad vertical"
+french = "Vitesse verticale"
+brazilian_portuguese = "Velocidade vertical"
+portuguese = "Velocidade vertical"
+turkish = "Dikey hız"
+polish = "Prędkość pionowa"
 
 [[message]]
 key = "Vertical wave"

@@ -430,7 +430,7 @@ namespace
 
 		const float TeeSize = g_Config.m_QmFrozenHudTeeSize;
 		int MaxTees = (int)(8.3f * (HudWidth / HudHeight) * 13.0f / TeeSize);
-		if(!g_Config.m_ClShowfps && !g_Config.m_ClShowpred && !g_Config.m_ClShowPacketLoss)
+		if(!g_Config.m_ClShowPerf && !g_Config.m_ClShowPacketLoss)
 			MaxTees = (int)(9.5f * (HudWidth / HudHeight) * 13.0f / TeeSize);
 		const int MaxRows = g_Config.m_QmFrozenMaxRows;
 		float StartPos = HudWidth / 2.0f + 38.0f * (HudWidth / HudHeight) / 1.78f;
@@ -2310,12 +2310,12 @@ void CHud::RenderDummyMiniMap()
 
 void CHud::RenderTextInfo()
 {
-	int Showfps = g_Config.m_ClShowfps;
+	int Showfps = g_Config.m_ClShowPerf;
 #if defined(CONF_VIDEORECORDER)
 	if(IVideo::Current())
 		Showfps = 0;
 #endif
-	const bool Showpred = g_Config.m_ClShowpred && Client()->State() != IClient::STATE_DEMOPLAYBACK;
+	const bool Showpred = g_Config.m_ClShowPerf && Client()->State() != IClient::STATE_DEMOPLAYBACK;
 	const bool ShowLoss = g_Config.m_ClShowPacketLoss && Client()->State() != IClient::STATE_DEMOPLAYBACK;
 
 	float MiniX = 0.0f;
@@ -2593,7 +2593,7 @@ void CHud::RenderTextInfo()
 			float progressiveOffset = 0.0f;
 			float TeeSize = g_Config.m_QmFrozenHudTeeSize;
 			int MaxTees = (int)(8.3f * (m_Width / m_Height) * 13.0f / TeeSize);
-			if(!g_Config.m_ClShowfps && !g_Config.m_ClShowpred && !g_Config.m_ClShowPacketLoss)
+			if(!g_Config.m_ClShowPerf && !g_Config.m_ClShowPacketLoss)
 				MaxTees = (int)(9.5f * (m_Width / m_Height) * 13.0f / TeeSize);
 			int MaxRows = g_Config.m_QmFrozenMaxRows;
 			float StartPos = m_Width / 2.0f + 38.0f * (m_Width / m_Height) / 1.78f;
@@ -3956,7 +3956,8 @@ void CHud::RenderMediaIsland()
 		static_cast<float>(static_cast<double>(Now) / static_cast<double>(time_freq())));
 	SSwapCountdownList SwapList;
 	BuildSwapCountdownList(*GameClient(), *Client(), SwapList);
-	std::array<const SSwapCountdownInfo *, NUM_DUMMIES * MAX_CLIENTS> aIncomingSwapInfos{};
+	// 两个不同匿名枚举相乘在 C++20 已弃用，显式转成整数。
+	std::array<const SSwapCountdownInfo *, static_cast<std::size_t>(NUM_DUMMIES) * static_cast<std::size_t>(MAX_CLIENTS)> aIncomingSwapInfos{};
 	int IncomingSwapCount = 0;
 	for(int i = 0; i < SwapList.m_Count && IncomingSwapCount < (int)aIncomingSwapInfos.size(); ++i)
 	{
@@ -7149,7 +7150,7 @@ void CHud::OnNewSnapshot()
 	else if(GameClient()->m_Snap.m_SpecInfo.m_Active)
 		ClientId = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;
 
-	if(ClientId == -1)
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return;
 
 	const CNetObj_Character *pPrevChar = &GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev;
@@ -7784,7 +7785,7 @@ void CHud::RenderRecord()
 
 void CHud::RenderLyricsIsland()
 {
-	if(!g_Config.m_QmLyricsSeparateIsland || !g_Config.m_QmLyrics || !g_Config.m_QmLyricsInMediaIsland ||
+	if(!g_Config.m_QmLyricsSeparateIsland || !g_Config.m_QmLyricsInMediaIsland ||
 		(g_Config.m_QmLyricsIslandFollowWidth && !m_LyricsIslandAnchorValid))
 		return;
 	const auto &Lyrics = GameClient()->m_LyricsPresentation.Frame();

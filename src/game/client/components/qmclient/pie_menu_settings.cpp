@@ -27,21 +27,21 @@
 void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CornerRadius, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+	const float RowGap = ui_token::settings::RowGap(LineSpacing);
 	const bool CanCommit = Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly();
 	CPerfTimer LayoutTimer;
 	IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_pie_menu_text_inputs", UiScale);
 	char aLayoutExtra[96];
 	str_copy(aLayoutExtra, "tab=function module=pie_menu", sizeof(aLayoutExtra));
-	if(CanCommit && g_Config.m_QmPerfDebug)
+	if(CanCommit && g_Config.m_QmPerfEnabled)
 		QmPerfLogStage("perf/qmclient", "pie_menu_layout", LayoutTimer.ElapsedMs(), false, Client(), nullptr, nullptr, aLayoutExtra);
 	CPerfTimer ControlsTimer;
 	CUIRect Row, LabelColumn, ControlColumn;
 	if(Flow.Control("pie-enabled", LineHeight, Row))
 		RenderQmFunctionCheckbox(&g_Config.m_QmPieMenuEnabled, "Enable pie menu", Localize("Enable pie menu"), &g_Config.m_QmPieMenuEnabled, &Row, !CanCommit);
-	Flow.Space(LineSpacing);
 	if(g_Config.m_QmPieFollowName[0] != '\0')
 	{
-		if(Flow.Control("pie-follow-status", LineHeight, Row))
+		if(Flow.Control("pie-follow-status", LineHeight, Row, RowGap))
 		{
 			CUIRect CancelButton;
 			Row.VSplitRight(LineHeight, &Row, &CancelButton);
@@ -57,39 +57,37 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 			if(!PrewarmOnly)
 				GameClient()->m_Tooltips.DoToolTip(&s_CancelFollowButton, &CancelButton, Localize("Stop following"));
 		}
-		Flow.Space(LineSpacing);
 	}
 	if(!g_Config.m_QmPieMenuEnabled)
 	{
-		if(CanCommit && g_Config.m_QmPerfDebug)
+		if(CanCommit && g_Config.m_QmPerfEnabled)
 			QmPerfLogStage("perf/qmclient", "pie_menu_controls", ControlsTimer.ElapsedMs(), false, Client(), nullptr, nullptr, aLayoutExtra);
 		return;
 	}
 
-	auto RenderSlider = [this, &Flow, &Row, &LabelColumn, &ControlColumn, LineHeight, BodySize, LineSpacing, CanCommit](const void *pId, const char *pTextId, const char *pText, int *pValue, int Min, int Max, const char *pSuffix = "") {
-		if(Flow.Control(pTextId, LineHeight, Row))
+	auto RenderSlider = [this, &Flow, &Row, &LabelColumn, &ControlColumn, LineHeight, BodySize, RowGap, CanCommit](const void *pId, const char *pTextId, const char *pText, int *pValue, int Min, int Max, const char *pSuffix = "") {
+		if(Flow.Control(pTextId, LineHeight, Row, RowGap))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			RenderQmSettingsSliderWithValueInput(pId, ControlColumn, pValue, Min, Max, pSuffix, !CanCommit);
 		}
-		Flow.Space(LineSpacing);
 	};
 	static int s_PieMenuScaleInputId, s_PieMenuOpacityInputId, s_PieMenuMaxDistanceInputId;
 	RenderSlider(&s_PieMenuScaleInputId, "qmclient-pie-menu-ui-scale", Localizable("UI scale"), &g_Config.m_QmPieMenuScale, 50, 200, "%");
 	RenderSlider(&s_PieMenuOpacityInputId, "qmclient-pie-menu-opacity", Localizable("Opacity"), &g_Config.m_QmPieMenuOpacity, 0, 100, "%");
 	RenderSlider(&s_PieMenuMaxDistanceInputId, "qmclient-pie-menu-detection-distance", Localizable("Detection distance"), &g_Config.m_QmPieMenuMaxDistance, 100, 2000);
-	if(Flow.Control("pie-effects", LineHeight, Row))
+	if(Flow.Control("pie-effects", LineHeight, Row, RowGap))
 		RenderQmFunctionCheckbox(&g_Config.m_QmPieMenuEffects, "Pie menu effects", Localize("Pie menu effects"), &g_Config.m_QmPieMenuEffects, &Row, !CanCommit);
-	if(Flow.Control("pie-selected-color", ResolveSettingsColorRowLayout({0, 0, Content.w, LineHeight}, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row, LineSpacing))
+	if(Flow.Control("pie-selected-color", ResolveSettingsColorRowLayout({0, 0, Content.w, LineHeight}, CurrentSettingsContentMetrics(), false, false).m_ConsumedHeight, Row, RowGap))
 	{
 		static CButtonContainer s_SelectedColor;
 		CSettingsContentLayoutScope ColorScope;
 		DoLine_ColorPicker(&s_SelectedColor, CurrentSettingsContentMetrics(), &Row, Localize("Pie menu highlight tint"), &g_Config.m_QmPieMenuSelectedColor,
-			color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmPieMenuSelectedColor, true)), false, nullptr, true);
+			color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmPieMenuSelectedColor, true)), false, nullptr, true, false);
 	}
 	static CButtonContainer s_ResetAppearance;
-	if(Flow.Control("pie-reset-appearance", LineHeight, Row) && DoButton_Menu(&s_ResetAppearance, Localize("Reset pie menu appearance"), 0, &Row) && CanCommit)
+	if(Flow.Control("pie-reset-appearance", LineHeight, Row, RowGap) && DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, &s_ResetAppearance, "pie-reset-appearance", Localize("Reset pie menu appearance"), 0, &Row, CurrentSettingsContentMetrics()) && CanCommit)
 	{
 		g_Config.m_QmPieMenuScale = DefaultConfig::QmPieMenuScale;
 		g_Config.m_QmPieMenuOpacity = DefaultConfig::QmPieMenuOpacity;
@@ -108,7 +106,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		g_Config.m_QmPieMenuColorCopyName = DefaultConfig::QmPieMenuColorCopyName;
 	}
 
-	if(Flow.Control("pie-rename-queue", LineHeight, Row, LineSpacing))
+	if(Flow.Control("pie-rename-queue", LineHeight, Row, RowGap))
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-rename-queue", &LabelColumn, Localize("Rename queue"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
@@ -200,7 +198,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	static SQmPieOptionPoolDrag s_PieOptionPoolDrag;
 
 	CUIRect PreviewRow;
-	if(Flow.Control("pie-preview", PreviewBoxHeight, PreviewRow, LineSpacing))
+	if(Flow.Control("pie-preview", PreviewBoxHeight, PreviewRow, RowGap))
 	{
 		const CUIRect PreviewFrame = PreviewRow;
 		if(Flow.Drawing())
@@ -269,11 +267,11 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		// 标题与池容器是两个独立布局行：标题用 <id>-heading，池本身用 <id>。
 		char aHeadingId[96];
 		str_format(aHeadingId, sizeof(aHeadingId), "%s-heading", pPoolId);
-		if(Flow.Control(aHeadingId, BodySize, Row, LineSpacing))
+		if(Flow.Control(aHeadingId, BodySize, Row, RowGap))
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, aHeadingId, &Row, Localize(pHeadingText), BodySize, TEXTALIGN_ML, {}, (int)Row.w);
 		// 说明文本与池容器之间的间距必须是常规行距：写 0 会让标题贴住池的上边框，
 		// 两个池看起来像黏在一起的一整块。
-		if(Flow.Control(pPoolId, PoolHeight, Row, LineSpacing))
+		if(Flow.Control(pPoolId, PoolHeight, Row, RowGap))
 		{
 			OutLayout = QmResolvePieOptionPool(Row, Count, pChipWidths, LineHeight, BodySize);
 			if(Flow.Drawing())
@@ -300,7 +298,6 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 					GameClient()->m_Tooltips.DoToolTip(Entry.m_pColorValue, &OutLayout.m_aChips[Slot].m_Rect, Localize("Drag to the other list to show or hide this option"));
 			}
 		}
-		Flow.Space(LineSpacing);
 	};
 	RenderOptionPool("pie-pool-enabled", "In pie menu", "Drag options here to show them", MeasuredEnabledPool.m_Height, aEnabledOptions, EnabledCount, aEnabledChipWidths, EnabledPoolLayout);
 	RenderOptionPool("pie-pool-disabled", "Not in pie menu", "Drag options here to hide them", MeasuredDisabledPool.m_Height, aDisabledOptions, DisabledCount, aDisabledChipWidths, DisabledPoolLayout);
@@ -414,7 +411,6 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 				color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha)), BodySize, true, true);
 		}
 	}
-	Flow.Space(LineSpacing);
-	if(CanCommit && g_Config.m_QmPerfDebug)
+	if(CanCommit && g_Config.m_QmPerfEnabled)
 		QmPerfLogStage("perf/qmclient", "pie_menu_controls", ControlsTimer.ElapsedMs(), false, Client(), nullptr, nullptr, aLayoutExtra);
 }

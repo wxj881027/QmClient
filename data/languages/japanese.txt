@@ -73,6 +73,9 @@
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == 自分と X が揃ったら強調は、他のプレイヤーの X が設定した検出時間だけあなたと一致した後に色を付けます。
 
+%.0f Bps
+== %.0f ブロック/秒
+
 %.2f KiB
 == %.2f KiB
 
@@ -3263,6 +3266,9 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == 他のプレイヤーの名前の横に表示するもの（クランタグ、フレンドマーク、クライアント識別子など）を制御します。
 
+Convenience options for chat, the scoreboard and tune zones.
+== チャット、スコアボード、調整ゾーンの便利な設定。
+
 Converse
 == 会話を続ける
 
@@ -4894,6 +4900,9 @@ Enable /team0 mode
 
 Enable 3D background particles
 == 3D 背景パーティクルを有効化
+
+Enable a music source to display its lyrics.
+== 歌詞を表示する音楽ソースを有効にします。
 
 Enable absolute controller aiming in game
 == ゲーム内で絶対コントローラー照準を有効にする
@@ -7082,6 +7091,9 @@ Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 == 水平位置
 
+Horizontal speed × ramp
+== 水平速度 × 補正倍率
+
 Hostname of DNSBL provider for IP verification
 == IP 検証用 DNSBL プロバイダーのホスト名
 
@@ -7544,6 +7556,9 @@ Internet (From online source)
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == 現在のエディターマップコピーを「auto」フォルダーに自動保存する間隔（0 = オフ）
 
+Invalid
+== 無効
+
 Invalid Axiom API response
 == Axiom API の応答が無効です
 
@@ -8000,6 +8015,9 @@ Lasers can hit you if you shot them and they pull you towards the bounce origin 
 Lasers can't hit you if you shot them, and they pull others towards the shooter
 == 自分で撃ったレーザーは自分に当たらず、他のプレイヤーを撃った側へ引き寄せます
 
+Last corrected field
+== 最後に修正したフィールド
+
 Last entered
 == 最後に入力
 
@@ -8452,6 +8470,9 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == 遅いフレームや起動時の引っかかりの時間を記録し、もたつきの原因を報告できるようにします。
+
+Looks like an update is available
+== アップデートがあるようです
 
 Lose weapons when teleporting (useful for race maps)
 == テレポート時に武器を失う（レースマップに便利）
@@ -9491,6 +9512,9 @@ Network
 Network compensation
 == Network compensation
 
+Network object corrections
+== ネットワークオブジェクトの修正回数
+
 Network timeout
 == ネットワークタイムアウト
 
@@ -10418,6 +10442,9 @@ Particle glow
 Particle pulse
 == パーティクルのパルス
 
+Particle skin
+== パーティクルスキン
+
 Particle speed
 == パーティクルの速度
 
@@ -10973,6 +11000,9 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 Playtime (h)
 == プレイ時間 (h)
 
+Playtime query failed. Retrying shortly.
+== プレイ時間の取得に失敗しました。まもなく再試行します。
+
 Please add a valid cut first
 == 有効なカットを先に追加してください
 
@@ -11062,6 +11092,12 @@ Position jump hint
 
 Position jump tip
 == 位置ジャンプヒント
+
+Position X
+== X 座標
+
+Position Y
+== Y 座標
 
 Position:
 == 位置：
@@ -11596,6 +11632,9 @@ Query server setting: %s
 
 Query team rank for %s
 == %s のチームランクを照会
+
+Querying playtime from DDStats...
+== DDStats からプレイ時間を取得中…
 
 Querying points for %s...
 == %s のポイントを取得中...
@@ -13829,6 +13868,9 @@ Show flag on name plate
 Show FPS
 == FPS を表示
 
+Show FPS, prediction time, and performance graphs
+== FPS、予測時間、パフォーマンスグラフを表示
+
 Show freeze bar under frozen players indicating thaw time
 == 凍結プレイヤーの下に解凍時間を示すフリーズバーを表示
 
@@ -15065,6 +15107,18 @@ Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == スパム対策：チーム切り替え、チャット、スキン変更、エモート、投票のスパムを防止
 
+Spawn effects filtered
+== 除外した出現エフェクト
+
+Spawn events received
+== 受信した出現イベント
+
+Spawn particle failures
+== 出現パーティクルの生成失敗
+
+Spawn particles dispatched
+== 生成した出現パーティクル
+
 Speaker
 == スピーカー
 
@@ -15551,6 +15605,9 @@ Switch team
 Switch tile overlay alpha (0-100)
 == スイッチタイルのオーバーレイエンティティアルファ（0-100）
 
+Switch tile: type=%d delay=%d number=%d (x=%d y=%d)
+== スイッチタイル：種類=%d 遅延=%d 番号=%d（x=%d y=%d）
+
 Switch to grenade
 == グレネードに切り替え
 
@@ -15871,6 +15928,9 @@ Teleport back to the practice respawn point
 
 Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
 == 練習用リスポーン地点に戻り、そこに保存された Tee の状態を復元します。戻るのは Tee だけで、ワールドはそのまま進行します。
+
+Teleport checkpoint
+== テレポートのチェックポイント
 
 Teleport dummy to cursor
 == ダミーをカーソル位置にテレポート
@@ -16685,6 +16745,9 @@ Total hours
 Total play time
 == 合計プレイ時間
 
+Total playtime from DDStats. The last result stays visible while refreshing.
+== DDStats による総プレイ時間です。更新中も前回の結果を表示します。
+
 Total points
 == 合計ポイント
 
@@ -16867,6 +16930,9 @@ Tune variable to value
 
 Tune variable to value or show current value
 == チューン変数を値に設定するか、現在の値を表示
+
+Tune zone (map / override)
+== 調整ゾーン（マップ / 上書き）
 
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 非力な環境ではオフにしてください。カードは即座に開き、スクロールも即時になります。カーソル形状は見た目だけで、3 種とも同じ文字枠に収まります。
@@ -17399,6 +17465,9 @@ Use animated title style (overrides qm_title_color_mode)
 Use cached or online AMLL community lyrics when the music source has no word timing
 == 音楽ソースに単語ごとのタイミング情報がない場合、キャッシュまたはオンラインの AMLL コミュニティ歌詞を使用する
 
+Use cl_show_perf 1 to show the panel.
+== cl_show_perf 1 を入力するとパネルが表示されます。
+
 Use colored skins for frozen tees
 == 凍結 Tee にカラースキンを使用
 
@@ -17504,6 +17573,9 @@ Use procedural ring pipeline
 Use public word filter
 == 共有NGワードを使用
 
+Use qm_pref <0|1> [20-400] (milliseconds)
+== 使い方：qm_pref <0|1> [20-400]（ミリ秒）
+
 Use server defaults
 == サーバーの既定値を使用
 
@@ -17573,6 +17645,9 @@ VAD release delay (ms)
 VAD threshold (percent)
 == VAD しきい値（パーセント）
 
+Valid
+== 有効
+
 Vanilla skins only
 == バニラスキンのみ
 
@@ -17585,6 +17660,9 @@ Variable custom font weight for Latin text
 Velocity
 == 速度
 
+Velocity ramp
+== 速度補正倍率
+
 Verifying downloaded update...
 == ダウンロードした更新を検証中…
 
@@ -17596,6 +17674,9 @@ Version performing the analysis
 
 Vertical position
 == 垂直位置
+
+Vertical speed
+== 垂直速度
 
 Vertical sync (may cause lag)
 == 垂直同期（ラグの原因になる可能性あり）
@@ -18716,6 +18797,42 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == このプレイヤーには利用できません
+
+[Axiom map difficulty]
+Brutal
+== 高難易度
+
+[Axiom map difficulty]
+Easy
+== 簡単
+
+[Axiom map difficulty]
+Extreme
+== 極限
+
+[Axiom map difficulty]
+Hard
+== 難しい
+
+[Axiom map difficulty]
+Insane
+== インセイン
+
+[Axiom map difficulty]
+Main
+== 通常
+
+[Axiom map difficulty]
+Mod
+== 改造
+
+[Axiom map difficulty]
+Solo
+== ソロ
+
+[Axiom map difficulty]
+Train
+== 練習
 
 [Bind keyboard key]
 Menu

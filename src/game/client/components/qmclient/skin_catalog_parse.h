@@ -271,10 +271,15 @@ namespace qm_skin_catalog
 	{
 		if(pDate == nullptr)
 			return 0;
+		// 先确认长度恰好是 YYYY-MM-DD，后面的定长下标访问才有边界保证；
+		// 调用方可能传入短字面量（如 "2024-1-1"），不能直接读到第 10 个字符。
+		const std::string_view Date(pDate);
+		if(Date.size() != 10)
+			return 0;
 		int Key = 0;
 		for(int Index = 0; Index < 10; ++Index)
 		{
-			const char Character = pDate[Index];
+			const char Character = Date[Index];
 			if(Index == 4 || Index == 7)
 			{
 				if(Character != '-')
@@ -285,7 +290,7 @@ namespace qm_skin_catalog
 				return 0;
 			Key = Key * 10 + (Character - '0');
 		}
-		return pDate[10] == '\0' ? Key : 0;
+		return Key;
 	}
 
 	inline std::vector<SEntry> ParseDdnetJson(const char *pJson, std::size_t JsonSize)

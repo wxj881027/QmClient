@@ -228,7 +228,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 		const SSettingsCardSpec ThemeSpec{pThemeDefault->m_pStableId, Localize(pThemeDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pThemeDefault)};
 		const SSettingsCardSpec IconsSpec{pIconsDefault->m_pStableId, Localize(pIconsDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pIconsDefault)};
 		const SSettingsCardSpec InteractionSpec{pInteractionDefault->m_pStableId, Localize(pInteractionDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pInteractionDefault)};
-		const auto AddCard = [&vCards, &Ctx](const SSettingsCardSpec &Spec, FSettingsCardRender Render) {
+		const auto AddCard = [&vCards, &Ctx](const SSettingsCardSpec &Spec, const FSettingsCardRender &Render) {
 			SSettingsCardDefinition Definition;
 			Definition.m_Spec = Spec;
 			Definition.m_Render = Render;
@@ -444,12 +444,6 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_GfxHighDetail, "High Detail", Localize("High Detail"), g_Config.m_GfxHighDetail, &Button))
 					g_Config.m_GfxHighDetail ^= 1;
 				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_GfxHighDetail, &Button, Localize("Allows maps to render with more detail"));
-			});
-
-			RowAction("graphics-show-fps", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
-				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_ClShowfps, "Show FPS", Localize("Show FPS"), g_Config.m_ClShowfps, &Button))
-					g_Config.m_ClShowfps ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClShowfps, &Button, Localize("Renders your frame rate in the top right"));
 			});
 
 			RowAction("graphics-refresh-rate", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {

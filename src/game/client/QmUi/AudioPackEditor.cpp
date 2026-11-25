@@ -1,5 +1,6 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#include <base/fs_path.h>
 #include <base/system.h>
 
 #include <engine/shared/config.h>
@@ -620,8 +621,8 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 			}
 
 			const std::string ExportPath = BuildAudioPackExportPath(pPackName, SelectedSlot.m_pRelativePath);
-			const auto BuiltinPath = std::filesystem::u8path(BuildAudioPackBuiltinCandidatePath(SelectedSlot.m_pRelativePath));
-			if(std::filesystem::u8path(ExportPath).lexically_normal() == BuiltinPath)
+			const auto BuiltinPath = fs_path_from_utf8(BuildAudioPackBuiltinCandidatePath(SelectedSlot.m_pRelativePath));
+			if(fs_path_from_utf8(ExportPath).lexically_normal() == BuiltinPath)
 			{
 				AudioPackEditorSetStatus(Localize("Failed to export audio pack file."), true);
 				goto AudioPackExportDone;

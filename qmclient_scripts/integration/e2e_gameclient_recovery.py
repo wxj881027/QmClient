@@ -24,7 +24,7 @@ def scenario_missing_language_preserves_previous_selection(env: ProcessEnvironme
 	active_path.write_text(f"{key}\n== {active_text}\n", encoding="utf-8")
 
 	client = env.start_client(
-		["qm_steam_auto_launch 0", "qm_auto_update 0", "cl_show_welcome 0",
+		["qm_steam_auto_launch 0", "cl_show_welcome 0",
 		 "qm_echo_merge_window_ms 0", f'cl_languagefile "{active_file}"'],
 		connect=False,
 	)
@@ -67,7 +67,7 @@ def _assert_invalid_atlas_loads_default(env: ProcessEnvironment, asset: str, exp
 	_write_atlas(env.path(f"{asset}.png"), rgba=True)
 
 	client = env.start_client(
-		["qm_steam_auto_launch 0", "qm_auto_update 0", "cl_show_welcome 0",
+		["qm_steam_auto_launch 0", "cl_show_welcome 0",
 		 "qm_blank_asset_fallback 0", f"cl_asset_{asset} qm_e2e_rgb"],
 		connect=False,
 	)

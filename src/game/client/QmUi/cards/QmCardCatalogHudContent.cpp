@@ -64,12 +64,6 @@ void CMenus::RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, fl
 void CMenus::RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
-	static CButtonContainer s_ReaderButtonDebugGraphToggle;
-	static CButtonContainer s_ClearButtonDebugGraphToggle;
-	CUIRect BindRow;
-	if(Flow.Control("hud-debug-graph-toggle-bind", LineHeight, BindRow, ui_token::settings::RowGap(LineSpacing)))
-		RenderQmHudKeyBindRow(BindRow, s_ReaderButtonDebugGraphToggle, s_ClearButtonDebugGraphToggle, Localize("Global toggle key"), "toggle dbg_graphs 0 1", LineHeight, BodySize, 0.0f, LabelWidth);
-
 	CUIRect Row, LabelColumn, ControlColumn;
 	if(Flow.Control("qmclient-debug-graph-panel-opacity", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 	{
@@ -79,49 +73,6 @@ void CMenus::RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, fl
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmMonitoringHudOpacityInputId, &Row, &g_Config.m_QmMonitoringHudOpacity, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(&s_QmMonitoringHudOpacityInputId, ControlColumn, &g_Config.m_QmMonitoringHudOpacity, 0, 100, "%", PrewarmOnly);
 	}
-}
-
-void CMenus::RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
-{
-	CSettingsContentLayoutFlow Flow(Content);
-	// 调试模式总开关：任一性能开关开启即视为"调试模式"开启；点击时统一开启/关闭三个开关。
-	const bool DebugModeEnabled = g_Config.m_QmPerfDebug != 0 || g_Config.m_QmPerfLogfile != 0 || g_Config.m_QmPerfStutterDiagnostics != 0;
-
-	CUIRect Row, LabelColumn, ControlColumn;
-	if(Flow.Control("hud-debug-mode-enable", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
-	{
-		static int s_QmPerfDebugModeSwitchId;
-		if(DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_QmPerfDebugModeSwitchId, "Debug mode", Localize("Debug mode"), DebugModeEnabled, &Row))
-		{
-			const int NewValue = DebugModeEnabled ? 0 : 1;
-			g_Config.m_QmPerfDebug = NewValue;
-			g_Config.m_QmPerfLogfile = NewValue;
-			g_Config.m_QmPerfStutterDiagnostics = NewValue;
-		}
-	}
-
-	// 调试模式卡片不放个性调整收起区：细调项本身就是排障入口，直接全部可见才能一眼核对状态。
-	// 行距由行自己声明（声明阶段记到上一行末尾），行后不再补 Space。
-	auto RenderCheckbox = [this, &Flow, &Row, LineSpacing](const void *pId, const char *pText, int *pValue) {
-		if(Flow.Control(pText, CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
-		{
-			if(DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, pId, pText, Localize(pText), *pValue, &Row))
-				*pValue ^= 1;
-		}
-	};
-	RenderCheckbox(&g_Config.m_QmPerfDebug, "Enable main thread and render stage performance debug logging", &g_Config.m_QmPerfDebug);
-	RenderCheckbox(&g_Config.m_QmPerfLogfile, "Write performance debug logs to dedicated file", &g_Config.m_QmPerfLogfile);
-
-	if(Flow.Control("hud-QmPerfDebugThresholdMs", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
-	{
-		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
-		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-debug-mode-threshold", &LabelColumn, Localize("Performance debug log threshold (ms)"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
-		static int s_QmPerfDebugThresholdMsInputId;
-		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmPerfDebugThresholdMsInputId, &Row, &g_Config.m_QmPerfDebugThresholdMs, &LabelColumn);
-		RenderQmSettingsSliderWithValueInput(&s_QmPerfDebugThresholdMsInputId, ControlColumn, &g_Config.m_QmPerfDebugThresholdMs, 1, 1000, "ms", PrewarmOnly);
-	}
-
-	RenderCheckbox(&g_Config.m_QmPerfStutterDiagnostics, "Enable client stutter diagnostics at startup", &g_Config.m_QmPerfStutterDiagnostics);
 }
 
 void CMenus::RenderQmHudDummyMiniViewContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool Expanded, bool PrewarmOnly)
@@ -174,7 +125,6 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 		return;
 
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmFinishSummary, "Show finish summary", Localize("Show finish summary"), &g_Config.m_QmFinishSummary);
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmFinishSummaryPreview, "Preview finish summary", Localize("Preview finish summary"), &g_Config.m_QmFinishSummaryPreview);
 
 	// 钩子倒计时是独立开关：钩住玩家时在钩链中点显示倒计时环。
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHookCountdown, "Enable hook countdown", Localize("Enable hook countdown"), &g_Config.m_QmHookCountdown);
@@ -321,8 +271,6 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 				*apHooks[i].m_pEnableConfig = 0;
 		}
 	}
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyrics, "Enable lyrics", Localize("Enable lyrics"), &g_Config.m_QmLyrics);
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsCommunity, "AMLL community lyrics", Localize("AMLL community lyrics"), &g_Config.m_QmLyricsCommunity);
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, Content,
 		{
 			{&g_Config.m_QmWorldLyrics, "World lyrics", Localize("World lyrics"), nullptr, 0, Localize("Show glowing, floating lyrics in the map. Each new line stays where it appears; previous lines rise and fade out")},

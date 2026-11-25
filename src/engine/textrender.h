@@ -622,17 +622,19 @@ public:
 	virtual void QmLoadRecentGlyphs(class IStorage *pStorage, const char *pPath) {}
 	virtual void QmSaveRecentGlyphs(class IStorage *pStorage, const char *pPath) {}
 
+	// 句柄按值传递是渲染接口的既定契约：同族的纯虚函数、后端实现和合同测试都按这个
+	// 签名定位函数，改成引用只会让两边不一致，省下的也只是一次 shared_ptr 引用计数。
 	virtual void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) = 0;
 	virtual void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float X, float Y) = 0;
 	// 扫光只覆盖字形填充，复用容器布局和当前裁剪区域。
-	virtual void RenderTextContainerSweep(STextContainerIndex TextContainerIndex, const STextSweepParams &Params, float X, float Y) {}
+	virtual void RenderTextContainerSweep(STextContainerIndex TextContainerIndex, const STextSweepParams &Params, float X, float Y) {} // NOLINT(performance-unnecessary-value-param)
 	// 同步取色并绘制已有布局的字形填充；采样坐标相对容器起点，不保存回调上下文。
 	virtual void RenderTextContainerFill(STextContainerIndex Index, CTextCursor::FColorSampler pfnSample, const void *pContext, int Columns, int Rows, const ColorRGBA &Tint, float X, float Y)
 	{
-		RenderTextContainer(Index, Tint, ColorRGBA(0, 0, 0, 0), X, Y);
+		RenderTextContainer(Index, Tint, ColorRGBA(0, 0, 0, 0), X, Y); // NOLINT(performance-unnecessary-value-param)
 	}
 	// 排版时启用 m_TrackLineRanges 后，返回包含绘制字形的行数。
-	virtual int GetTextContainerRenderedLineCount(STextContainerIndex TextContainerIndex) { return 0; }
+	virtual int GetTextContainerRenderedLineCount(STextContainerIndex TextContainerIndex) { return 0; } // NOLINT(performance-unnecessary-value-param)
 
 	virtual STextBoundingBox GetBoundingBoxTextContainer(STextContainerIndex TextContainerIndex) = 0;
 

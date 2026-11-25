@@ -275,7 +275,8 @@ class CTClient : public CComponent
 	void FailUpdateMetadataCheck(const char *pMessage, bool NetworkError) noexcept;
 	void StartUpdateSourceSurvey();
 	void PollUpdateRequests();
-	void RunUpdateHttp(std::shared_ptr<IHttpRequest> pRequest);
+	// 请求只被转发给 HTTP 层或被记入代理等待表，两条路径都会自己留引用，不需要再复制一次。
+	void RunUpdateHttp(const std::shared_ptr<IHttpRequest> &pRequest);
 	void PollUpdateProxyRequests();
 	void ResetUpdateDownloadTasks();
 	void RemoveUpdateTempFiles();
@@ -326,17 +327,11 @@ class CTClient : public CComponent
 	char m_aTextPopupFont[256] = "";
 	CQmHammerWakeupActionTracker m_HammerWakeupActionTracker;
 	void CheckHammerWakeupActions();
-	void CheckComboPopup();
 	void AddFreezeWakeupPopup(int WokenDummy);
 	bool EnsureTextPopupCache(int TextType);
 	bool AddTextPopup(int AnchorClientId, int TextType, bool UseRollingColor, ColorRGBA Color);
 	void UnloadTextPopupCaches();
 	void ClearFreezeWakeupPopups();
-	void ResetComboState(int Dummy = -1);
-	int m_aComboPopupCount[NUM_DUMMIES] = {0, 0};
-	int m_aComboLastEventTick[NUM_DUMMIES] = {-1, -1};
-	int m_aaComboLastHammerHitSnapshotTick[NUM_DUMMIES][MAX_CLIENTS] = {};
-	int m_aComboLastHookedPlayer[NUM_DUMMIES] = {-1, -1};
 
 	// Auto Switch on Unfreeze (HJ大佬辅助)
 	bool m_aWasInFreezeForSwitch[NUM_DUMMIES] = {false, false};
@@ -603,7 +598,6 @@ public:
 	std::shared_ptr<IHttpRequest> m_pQmClientUpdateInfoTask = nullptr;
 	qm_update::CDownloadTasks m_UpdateDownloadTasks;
 	std::shared_ptr<qm_update::CPackageDownload> m_pUpdatePackageDownload = nullptr;
-	void InitUpdateLifecycle();
 	void TickUpdateLifecycle();
 	void ShutdownUpdateLifecycle();
 	void RegisterUpdateCommands();
@@ -611,7 +605,6 @@ public:
 	void FetchQmClientUpdateInfo();
 	void FinishQmClientUpdateInfo();
 	void ResetQmClientUpdateInfoTask() noexcept;
-	bool NeedQmClientUpdate();
 	void RequestQmClientUpdateCheck(bool UpdateAfterCheck = false);
 	void RequestQmClientUpdateCheckAndUpdate();
 	bool CanDownloadQmClientUpdate() const;
@@ -632,7 +625,7 @@ public:
 	bool InfoTaskDone() const { return m_pQmClientUpdateInfoTask && m_pQmClientUpdateInfoTask->State() == EHttpState::DONE; }
 	bool m_FetchedQmClientUpdateInfo = false;
 	bool m_QmClientUpdateCheckAttempted = false;
-	bool m_QmClientAutoUpdateAfterCheck = false;
+	bool m_UpdateDownloadAfterCheck = false;
 	char m_aUpdatePackageTmp[IO_MAX_PATH_LENGTH] = "";
 	char m_aUpdatePackageSignatureTmp[IO_MAX_PATH_LENGTH] = "";
 	char m_aUpdateManifestTmp[IO_MAX_PATH_LENGTH] = "";
@@ -665,11 +658,9 @@ public:
 	bool m_UpdateCheckFailed = false;
 	bool m_UpdateNetworkError = false;
 	bool m_UpdateFailureNoticeShown = false;
-	bool m_UpdateAutoEnabled = false;
 	int64_t m_UpdateFailureExitAt = 0;
 	int64_t m_UpdateNextCheck = 0;
 	char m_aUpdateError[256] = "";
-	char m_aQmClientLatestVersionStr[32] = "0";
 
 	Regex m_RegexChatIgnore;
 	void ApplyRegexChatIgnore(const char *pPattern);

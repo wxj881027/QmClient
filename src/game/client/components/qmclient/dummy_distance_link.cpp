@@ -1,5 +1,7 @@
 #include "dummy_distance_link.h"
 
+#include "dummy_distance_link_hook.h"
+
 #include <engine/graphics.h>
 #include <engine/shared/snapshot.h>
 
@@ -16,6 +18,9 @@ namespace qm_dummy_link
 		if(pExtended)
 		{
 			Endpoint.m_Solo = (pExtended->m_Flags & CHARACTERFLAG_SOLO) != 0;
+			Endpoint.m_HookHitDisabled = (pExtended->m_Flags & CHARACTERFLAG_HOOK_HIT_DISABLED) != 0;
+			Endpoint.m_Super = (pExtended->m_Flags & CHARACTERFLAG_SUPER) != 0;
+			Endpoint.m_HookInputDisabled = pExtended->m_FreezeEnd != 0;
 			Endpoint.m_Frozen = pExtended->m_FreezeEnd != 0 || (pExtended->m_Flags & CHARACTERFLAG_MOVEMENTS_DISABLED) != 0;
 		}
 		return Endpoint;
@@ -124,9 +129,32 @@ namespace qm_dummy_link
 			return std::nullopt;
 		}
 		const int Active = g_Config.m_ClDummy;
-		const int ActiveId = GameClient.m_aLocalIds[Active];
-		const CTuningParams &Tuning = GameClient.HookCollTuning(ActiveId);
-		auto Link = MakeLink(CurrentEndpoint(GameClient, IClient::CONN_MAIN), CurrentEndpoint(GameClient, IClient::CONN_DUMMY), Tuning.m_HookLength, Active == IClient::CONN_DUMMY);
+		const int MainId = GameClient.m_aLocalIds[IClient::CONN_MAIN];
+		const int DummyId = GameClient.m_aLocalIds[IClient::CONN_DUMMY];
+		const auto Main = CurrentEndpoint(GameClient, IClient::CONN_MAIN);
+		const auto Dummy = CurrentEndpoint(GameClient, IClient::CONN_DUMMY);
+		const auto Tuning = [&](int Connection) -> const CTuningParams & {
+			const int Id = GameClient.m_aLocalIds[Connection];
+			if(Id >= 0 && Id < MAX_CLIENTS && GameClient.m_aClients[Id].m_IsPredicted)
+				return GameClient.HookCollTuning(Id);
+			return GameClient.m_aTuning[Connection];
+		};
+		auto Link = MakeLink(Main, Dummy);
+		if(Link)
+		{
+			const auto HookReachFrom = [&](const SEndpoint &Source, const SEndpoint &Target, int Connection) {
+				const auto &Params = Tuning(Connection);
+				const bool SameTeam = GameClient.m_aConnectionTeams[Connection].SameTeam(MainId, DummyId);
+				return HookReach(*GameClient.Collision(), Source, Target, Params, SameTeam);
+			};
+			const bool FromDummy = Active == IClient::CONN_DUMMY;
+			const auto ActiveReach = FromDummy ? HookReachFrom(*Dummy, *Main, Active) : HookReachFrom(*Main, *Dummy, Active);
+			auto OtherReach = EHookReach::BLOCKED;
+			if(ActiveReach == EHookReach::BLOCKED)
+				OtherReach = FromDummy ? HookReachFrom(*Main, *Dummy, IClient::CONN_MAIN) : HookReachFrom(*Dummy, *Main, IClient::CONN_DUMMY);
+			if(!ApplyHookReach(*Link, ActiveReach, OtherReach))
+				Link.reset();
+		}
 		if(Link && g_Config.m_QmDummyDistanceLinkStyle != 0)
 		{
 			const uint64_t Frame = GameClient.Client()->PerfFrame();

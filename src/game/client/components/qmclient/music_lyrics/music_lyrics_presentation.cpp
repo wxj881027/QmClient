@@ -134,7 +134,7 @@ QmMusicLyrics::SSourceSnapshot CQmLyricsPresentation::RawSource(int &SourceId) c
 QmMusicLyrics::SSourceSnapshot CQmLyricsPresentation::CurrentSource(int &SourceId) const
 {
 	const auto Source = RawSource(SourceId);
-	return g_Config.m_QmLyricsCommunity ? m_CommunityLyrics.Apply(SourceId, Source) : Source;
+	return m_CommunityLyrics.Apply(SourceId, Source);
 }
 
 void CQmLyricsPresentation::SynchronizeSinging(const QmMusicLyrics::SSourceSnapshot &Source, int SourceId)
@@ -162,15 +162,15 @@ void CQmLyricsPresentation::OnUpdate()
 	{
 		int SourceId;
 		const auto Raw = RawSource(SourceId);
-		const bool NeedsLyrics = g_Config.m_QmWorldLyrics || (g_Config.m_QmLyrics && g_Config.m_QmLyricsInMediaIsland) ||
+		const bool NeedsLyrics = g_Config.m_QmWorldLyrics || g_Config.m_QmLyricsInMediaIsland ||
 					 g_Config.m_QmSinging || g_Config.m_QmHumming;
-		m_CommunityLyrics.Update(SourceId, Raw, g_Config.m_QmLyricsCommunity && NeedsLyrics,
+		m_CommunityLyrics.Update(SourceId, Raw, NeedsLyrics,
 			time_get() / (time_freq() / 1000), Storage(), Engine(), Http());
 		const auto Source = m_CommunityLyrics.Apply(SourceId, Raw);
 		SynchronizeSinging(Source, SourceId);
 
 		m_Frame = {};
-		if(g_Config.m_QmLyrics && g_Config.m_QmLyricsInMediaIsland)
+		if(g_Config.m_QmLyricsInMediaIsland)
 		{
 			m_Frame.m_Active = Source.m_Active && !QmMusicLyrics::IsLyricCredit(Source.m_Original);
 			m_Frame.m_Progress = QmMusicLyrics::LyricProgress(Source);

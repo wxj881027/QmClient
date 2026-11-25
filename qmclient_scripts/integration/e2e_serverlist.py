@@ -135,7 +135,7 @@ class Scenario:
 		env.update({"NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost", "QMCLIENT_TEST_STORAGE_ROOT": str(self.artifacts), "QMCLIENT_TEST_HIDE_DIALOG": "1"})
 		if self.default_sources:
 			env["QMCLIENT_TEST_SERVERLIST_ORIGIN"] = self.http.url
-		config = ["gfx_fullscreen 0", "gfx_screen_width 640", "gfx_screen_height 480", "snd_enable 0", "cl_show_welcome 0", "cl_skip_start_menu 1", "cl_save_settings 0", "cl_menu_map \"\"", "qm_auto_update 0", "qm_steam_auto_launch 0", "http_allow_insecure 1", f"qm_websocket_url ws://127.0.0.1:{self.http.server.server_port}/ws", "minimize"]
+		config = ["gfx_fullscreen 0", "gfx_screen_width 640", "gfx_screen_height 480", "snd_enable 0", "cl_show_welcome 0", "cl_skip_start_menu 1", "cl_save_settings 0", "cl_menu_map \"\"", "qm_steam_auto_launch 0", "http_allow_insecure 1", f"qm_websocket_url ws://127.0.0.1:{self.http.server.server_port}/ws", "minimize"]
 		self.client = Process(f"serverlist-{len(self.clients)}", [str(self.build / f"DDNet{EXE_SUFFIX}"), *config], self.artifacts, fifo_command="cl_input_fifo", pipe_prefix="serverlist_e2e_", env=env)
 		self.clients.append(self.client)
 		self.client.wait_for(lambda line: line.startswith("client: version"), "client startup", 45)

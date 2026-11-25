@@ -1726,7 +1726,9 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 #ifndef BACKEND_AS_OPENGL_ES
 	if(m_HasShaders)
 	{
-		HasAllFunc &= (glUniformMatrix4x2fv != NULL) && (glGenBuffers != NULL);
+		// glGenBuffers 是 GL 1.5 核心函数，在支持的平台上一定是可链接符号，
+		// 与指针态的扩展入口不同，对它做空判断恒为真（-Waddress）。
+		HasAllFunc &= (glUniformMatrix4x2fv != NULL);
 		HasAllFunc &= (glBindBuffer != NULL) && (glBufferData != NULL);
 		HasAllFunc &= (glEnableVertexAttribArray != NULL) && (glVertexAttribPointer != NULL) && (glVertexAttribIPointer != NULL);
 		HasAllFunc &= (glDisableVertexAttribArray != NULL) && (glDeleteBuffers != NULL);

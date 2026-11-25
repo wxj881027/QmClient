@@ -26,6 +26,17 @@ namespace
 	}
 }
 
+TEST(QmKugouPatch, TargetedReleasesResolveToTheirBuildIndependentDirectories)
+{
+	for(const std::wstring_view Series : {L"20.1.17", L"20.1.18", L"20.1.19", L"20.1.20", L"20.1.21", L"20.1.22"})
+	{
+		EXPECT_EQ(KugouSharedPatchReleaseSeries(Series), Series);
+		EXPECT_EQ(KugouSharedPatchReleaseSeries(std::wstring(Series) + L".27795"), Series);
+	}
+	EXPECT_TRUE(KugouSharedPatchReleaseSeries(L"20.1.16.1").empty());
+	EXPECT_TRUE(KugouSharedPatchReleaseSeries(L"20.1.23.1").empty());
+}
+
 TEST(QmKugouPatch, RequiresAllNineKnownFingerprints)
 {
 	ASSERT_EQ(KugouPatches().size(), 9u);

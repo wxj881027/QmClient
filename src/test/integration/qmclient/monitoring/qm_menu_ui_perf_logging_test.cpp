@@ -46,9 +46,7 @@ namespace
 			m_SavedReportSecond = Budget.m_LastReportSecond;
 			Budget.m_Budget = CQmPerfDetailBudget();
 			Budget.m_Session = QmPerfSessionId();
-			g_Config.m_QmPerfDebug = 1;
-			g_Config.m_QmPerfLogfile = 0;
-			g_Config.m_QmPerfStutterDiagnostics = 0;
+			g_Config.m_QmPerfEnabled = true;
 		}
 
 		void TearDown() override
@@ -134,11 +132,11 @@ TEST_F(QmMenuUiPerfLogging, FrameCountersAndDurationsReachStructuredLog)
 TEST_F(QmMenuUiPerfLogging, DisabledLoggingCanResumeWithoutLosingNextFrame)
 {
 	SQmMenuUiFramePerf Frame;
-	g_Config.m_QmPerfDebug = 0;
+	g_Config.m_QmPerfEnabled = false;
 	QmLogMenuUiFramePerf(Frame, nullptr);
 	EXPECT_TRUE(m_Capture.m_vMessages.empty());
 
-	g_Config.m_QmPerfLogfile = 1;
+	g_Config.m_QmPerfEnabled = true;
 	QmLogMenuUiFramePerf(Frame, nullptr);
 	ASSERT_EQ(m_Capture.m_vMessages.size(), 1u);
 	const auto &Message = m_Capture.m_vMessages.front();
@@ -149,10 +147,10 @@ TEST_F(QmMenuUiPerfLogging, DisabledLoggingCanResumeWithoutLosingNextFrame)
 	ExpectInteger(Root.get(), "heap_allocs", -1);
 	ExpectDouble(Root.get(), "ui_ms", -1.0);
 
-	g_Config.m_QmPerfLogfile = 0;
+	g_Config.m_QmPerfEnabled = false;
 	QmLogMenuUiFramePerf(Frame, nullptr);
 	EXPECT_EQ(m_Capture.m_vMessages.size(), 1u);
-	g_Config.m_QmPerfStutterDiagnostics = 1;
+	g_Config.m_QmPerfEnabled = true;
 	QmLogMenuUiFramePerf(Frame, nullptr);
 	EXPECT_EQ(m_Capture.m_vMessages.size(), 2u);
 }

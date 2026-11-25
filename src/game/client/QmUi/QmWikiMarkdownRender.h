@@ -49,6 +49,10 @@ namespace qm_wiki_markdown
 		CTableLayoutCache();
 		~CTableLayoutCache();
 		void Clear();
+		// 上一次 RenderBlocks 中真正进入绘制循环的表格行数（多个表格累加）。
+		// 可见行只由布局与 clip 决定，与后端能否提交文本无关；测试用它在没有
+		// 可提交字形的环境里验证「长表只画可见行」。
+		size_t LastDrawnTableRows() const;
 	};
 
 	// 从 Body 顶部开始排版并绘制全部块；Body 会被推进到内容末尾。

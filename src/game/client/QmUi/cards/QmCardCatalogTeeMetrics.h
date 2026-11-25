@@ -61,6 +61,8 @@ inline SSettingsTeeIdentityFieldsLayout ResolveSettingsTeeIdentityFieldsLayout(c
 struct SSettingsTeeEditorLayout
 {
 	std::array<CUIRect, 2> m_aPreviews;
+	CUIRect m_PreviewMode;
+	CUIRect m_ShowNinja;
 	CUIRect m_TargetLabel;
 	CUIRect m_Identity;
 	CUIRect m_SkinLabel;
@@ -74,6 +76,34 @@ struct SSettingsTeeEditorLayout
 	bool m_StackIdentity = false;
 	float m_Height = 0.0f;
 };
+
+struct SSettingsTeePreviewLayout
+{
+	float m_Radius;
+	CUIRect m_Heading;
+	CUIRect m_Flag;
+	CUIRect m_Tee;
+	CUIRect m_SkinName;
+};
+
+inline SSettingsTeePreviewLayout ResolveSettingsTeePreviewLayout(const CUIRect &Preview, const SSettingsContentMetrics &Metrics, float PixelSize)
+{
+	SSettingsTeePreviewLayout Layout;
+	Layout.m_Radius = ui_token::tee_preview::Radius(std::min(Preview.w, Preview.h), PixelSize);
+	const float Inset = ui_token::tee_preview::HeadingInset(Metrics.m_UiScale, Layout.m_Radius);
+	CUIRect Heading, Body;
+	Preview.HSplitTop(Inset + Metrics.m_LineHeight, &Heading, &Body);
+	Heading.HSplitTop(Inset, nullptr, &Heading);
+	Heading.VMargin(std::min(Inset, Heading.w * 0.25f), &Heading);
+	const float FlagWidth = std::min(Heading.h * 2.0f, Heading.w * 0.5f);
+	Heading.VSplitRight(FlagWidth, &Layout.m_Heading, &Layout.m_Flag);
+	Layout.m_Flag.HMargin((Heading.h - FlagWidth * 0.5f) * 0.5f, &Layout.m_Flag);
+
+	Body.VMargin(Metrics.m_LineSpacing, &Body);
+	Body.HSplitBottom(Metrics.m_LineSpacing, &Body, nullptr);
+	Body.HSplitBottom(Metrics.m_LineHeight, &Layout.m_Tee, &Layout.m_SkinName);
+	return Layout;
+}
 
 inline SSettingsTeeEditorLayout ResolveSettingsTeeEditorLayout(const CUIRect &View, const SSettingsContentMetrics &Metrics, bool CustomColors)
 {
@@ -95,6 +125,8 @@ inline SSettingsTeeEditorLayout ResolveSettingsTeeEditorLayout(const CUIRect &Vi
 	};
 	if(!Wide)
 		Previews = NextRow(112.0f * Metrics.m_UiScale);
+	Layout.m_PreviewMode = NextRow(Metrics.m_LineHeight);
+	Layout.m_ShowNinja = NextRow(Metrics.m_LineHeight);
 	Layout.m_TargetLabel = NextRow(Metrics.m_LineHeight);
 	Layout.m_StackIdentity = Editor.w < 460.0f * Metrics.m_UiScale;
 	const float IdentityHeight = ResolveSettingsTeeIdentityFieldsLayout({Editor.x, Y, Editor.w, 0.0f}, Metrics, Layout.m_StackIdentity).m_Height;

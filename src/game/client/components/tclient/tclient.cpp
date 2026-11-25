@@ -81,9 +81,6 @@ static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION = 2.0f;
 static constexpr float QMCLIENT_TEXT_POPUP_FONT_SIZE = 30.0f;
 static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET = vec2(34.0f, -78.0f);
 static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT = vec2(18.0f, -16.0f);
-static constexpr int QMCLIENT_COMBO_POPUP_WINDOW_SECONDS = 2;
-static constexpr int QMCLIENT_COMBO_FREEZE_PARTICLE_COUNT = 14;
-static constexpr float QMCLIENT_COMBO_FREEZE_PARTICLE_RADIUS = 42.0f;
 static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_FROM = ColorRGBA(0.0f, 1.0f, 1.0f, 1.0f);
 static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_TO = ColorRGBA(1.0f, 0.0f, 1.0f, 1.0f);
 // 好友进服默认文案：英文 source key（extract 靠下方 Localize 字面量收录）
@@ -142,34 +139,6 @@ namespace
 	{
 		(void)TextType;
 		return QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION;
-	}
-
-	void AddComboFreezeParticleRing(CGameClient *pGameClient, vec2 Pos, float Alpha)
-	{
-		CParticle Part;
-		Part.SetDefault();
-		Part.m_Spr = SPRITE_PART_SNOWFLAKE;
-		Part.m_LifeSpan = 0.7f;
-		Part.m_StartSize = 18.0f;
-		Part.m_EndSize = 7.0f;
-		Part.m_UseAlphaFading = true;
-		Part.m_StartAlpha = Alpha;
-		Part.m_EndAlpha = 0.0f;
-		Part.m_Rotspeed = pi;
-		Part.m_Friction = 0.85f;
-		Part.m_FlowAffected = 0.0f;
-		Part.m_Collides = false;
-		Part.m_Color.a = Alpha;
-
-		for(int Index = 0; Index < QMCLIENT_COMBO_FREEZE_PARTICLE_COUNT; ++Index)
-		{
-			const float Angle = 2.0f * pi * Index / QMCLIENT_COMBO_FREEZE_PARTICLE_COUNT;
-			const vec2 Direction = vec2(std::cos(Angle), std::sin(Angle));
-			Part.m_Pos = Pos + Direction * QMCLIENT_COMBO_FREEZE_PARTICLE_RADIUS;
-			Part.m_Vel = Direction * 95.0f;
-			Part.m_Rot = Angle;
-			pGameClient->m_Particles.Add(CParticles::GROUP_EXTRA, &Part);
-		}
 	}
 
 	EFreezeWakeupType DetectFreezeWakeupType(CGameClient *pGameClient, int ClientId, int SnapshotTick)
@@ -252,7 +221,7 @@ static bool HasGoresTeeClearance(const CCollision *pCollision, const CTile *pGam
 	for(const vec2 SampleOffset : aSamples)
 	{
 		const int SampleIndex = pCollision->GetPureMapIndex(Pos + SampleOffset);
-		if(QmMapProgress::IsSolidGround(pGame[SampleIndex].m_Index, pFront ? pFront[SampleIndex].m_Index : TILE_AIR))
+		if(QmMapProgress::IsSolidGround(pGame[SampleIndex].m_Index, pFront ? pFront[SampleIndex].m_Index : (unsigned char)TILE_AIR))
 			return false;
 	}
 	return true;
@@ -362,7 +331,6 @@ void CTClient::OnInit()
 {
 	// 字体配置已在 LoadFonts 中应用，不能等本组件初始化时才切换加载页字体。
 	m_pGraphics = Kernel()->RequestInterface<IEngineGraphics>();
-	InitUpdateLifecycle();
 
 	// 先在 qmclient/ 目录找，找不到再返回上一级目录找
 	const bool MissingQmClientFolder = !Storage()->FolderExists("qmclient", IStorage::TYPE_ALL);
@@ -1373,7 +1341,6 @@ void CTClient::OnUpdate()
 	if(RunGameplayTickChecks)
 	{
 		CheckFreeze();
-		CheckComboPopup();
 		CheckWaterFall();
 		UpdatePlayerStats(); // 更新玩家统计
 		UpdateGoresDrownCounts();
@@ -1654,118 +1621,6 @@ void CTClient::CheckHammerWakeupActions()
 		char aCommand[16];
 		str_format(aCommand, sizeof(aCommand), "cl_dummy %d", Decision.m_SwitchToConnection);
 		Console()->ExecuteLine(aCommand);
-	}
-}
-
-void CTClient::ResetComboState(int Dummy)
-{
-	auto ResetOne = [&](int Index) {
-		m_aComboPopupCount[Index] = 0;
-		m_aComboLastEventTick[Index] = -1;
-		std::fill(std::begin(m_aaComboLastHammerHitSnapshotTick[Index]), std::end(m_aaComboLastHammerHitSnapshotTick[Index]), -1);
-		m_aComboLastHookedPlayer[Index] = -1;
-	};
-
-	if(Dummy >= 0 && Dummy < NUM_DUMMIES)
-	{
-		ResetOne(Dummy);
-		return;
-	}
-
-	for(int Index = 0; Index < NUM_DUMMIES; ++Index)
-		ResetOne(Index);
-}
-
-void CTClient::CheckComboPopup()
-{
-	if(Client()->State() != IClient::STATE_ONLINE)
-		return;
-
-	if(!g_Config.m_QmComboPopup)
-	{
-		ResetComboState();
-		return;
-	}
-
-	const int ComboWindowTicks = maximum(1, Client()->GameTickSpeed() * QMCLIENT_COMBO_POPUP_WINDOW_SECONDS);
-	auto RegisterComboEvent = [&](int Dummy, vec2 AnchorPos, int TargetPlayer, const CCharacter *pTargetChar) {
-		if(TargetPlayer < 0 || TargetPlayer >= MAX_CLIENTS)
-			return;
-
-		const int CurrentTick = Client()->GameTick(Dummy);
-		if(m_aComboLastEventTick[Dummy] >= 0 &&
-			CurrentTick >= m_aComboLastEventTick[Dummy] &&
-			CurrentTick - m_aComboLastEventTick[Dummy] <= ComboWindowTicks)
-		{
-			++m_aComboPopupCount[Dummy];
-		}
-		else
-		{
-			m_aComboPopupCount[Dummy] = 1;
-		}
-		m_aComboLastEventTick[Dummy] = CurrentTick;
-
-		const int ComboCount = m_aComboPopupCount[Dummy];
-		if(ComboCount >= 11)
-		{
-			AddComboFreezeParticleRing(GameClient(), AnchorPos, 1.0f);
-			if(pTargetChar != nullptr)
-				AddComboFreezeParticleRing(GameClient(), pTargetChar->GetPos(), 1.0f);
-		}
-		else if(ComboCount >= 7)
-		{
-			AddComboFreezeParticleRing(GameClient(), AnchorPos, 0.7f);
-		}
-		else if(ComboCount >= 3)
-		{
-			if(pTargetChar != nullptr)
-				AddComboFreezeParticleRing(GameClient(), pTargetChar->GetPos(), 0.4f);
-		}
-	};
-
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-	{
-		if(Dummy == 1 && !Client()->DummyConnected())
-		{
-			ResetComboState(Dummy);
-			continue;
-		}
-
-		const int ClientId = GameClient()->m_aLocalIds[Dummy];
-		if(ClientId < 0 || ClientId >= MAX_CLIENTS ||
-			!GameClient()->m_aClients[ClientId].m_Active ||
-			!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
-		{
-			ResetComboState(Dummy);
-			continue;
-		}
-
-		const CCharacter *pLocalChar = GameClient()->m_PredictedWorld.GetCharacterById(ClientId);
-		const vec2 AnchorPos = pLocalChar != nullptr ? pLocalChar->GetPos() : GameClient()->m_aClients[ClientId].m_RenderPos;
-		const int HookedPlayer = pLocalChar != nullptr ? pLocalChar->Core()->HookedPlayer() : -1;
-		if(HookedPlayer >= 0 && HookedPlayer != ClientId && HookedPlayer != m_aComboLastHookedPlayer[Dummy])
-			RegisterComboEvent(Dummy, AnchorPos, HookedPlayer, GameClient()->m_PredictedWorld.GetCharacterById(HookedPlayer));
-		m_aComboLastHookedPlayer[Dummy] = HookedPlayer >= 0 ? HookedPlayer : -1;
-
-		SQmHammerHitRecord aHits[MAX_CLIENTS];
-		const int MinSnapshotTick = Client()->GameTick(g_Config.m_ClDummy) - 1;
-		const int NumHits = GameClient()->HammerHitTracker().FindLatestTargets(
-			ClientId,
-			MinSnapshotTick,
-			aHits,
-			std::size(aHits),
-			GameClient()->HammerHitConnectionFilter());
-		for(int HitIndex = 0; HitIndex < NumHits; ++HitIndex)
-		{
-			const SQmHammerHitRecord &Hit = aHits[HitIndex];
-			const int TargetId = Hit.m_TargetId;
-			if(TargetId == ClientId)
-				continue;
-			if(Hit.m_SnapshotTick <= m_aaComboLastHammerHitSnapshotTick[Dummy][TargetId])
-				continue;
-			m_aaComboLastHammerHitSnapshotTick[Dummy][TargetId] = Hit.m_SnapshotTick;
-			RegisterComboEvent(Dummy, AnchorPos, TargetId, GameClient()->m_PredictedWorld.GetCharacterById(TargetId));
-		}
 	}
 }
 
@@ -2161,7 +2016,6 @@ void CTClient::OnStateChange(int NewState, int OldState)
 			m_aGoresHammerWakeupFirePendingRelease[i] = false;
 			m_aWasInFreezeForChatClose[i] = false;
 		}
-		ResetComboState();
 		InvalidateGoresDistanceField();
 		m_FriendOnlineNotifier.Reset();
 		m_FriendOnlineScanner.Reset();
@@ -2931,7 +2785,7 @@ void CTClient::StepGoresDistanceFieldTileScan(int Budget)
 	const CTeleTile *pTele = pCollision->TeleLayer();
 	const int MapSize = m_GoresDistanceFieldBuildMapSize;
 	const int Width = m_GoresDistanceFieldWidth;
-	const auto FrontAt = [&](int Index) { return pFront ? pFront[Index].m_Index : TILE_AIR; };
+	const auto FrontAt = [&](int Index) { return pFront ? pFront[Index].m_Index : (unsigned char)TILE_AIR; };
 	const auto IsDeath = [&](int Index) { return pGame[Index].m_Index == TILE_DEATH || FrontAt(Index) == TILE_DEATH; };
 	const int Start = m_GoresDistanceFieldBuildCursor;
 	ConsumeQmBudgetedWork(m_GoresDistanceFieldBuildCursor, MapSize, Budget);
@@ -3250,7 +3104,7 @@ void CTClient::StepGoresDistanceFieldReachableStartCheck(int Budget)
 	for(int Index = m_GoresDistanceFieldBuildCursor; Index < End; ++Index)
 	{
 		const int Tile = pGame[Index].m_Index;
-		const int FrontTile = pFront ? pFront[Index].m_Index : TILE_AIR;
+		const int FrontTile = pFront ? pFront[Index].m_Index : (unsigned char)TILE_AIR;
 		const bool IsStart = Tile == TILE_START || FrontTile == TILE_START;
 		if(IsStart && m_vGoresDistanceToFinish[(size_t)Index].m_Length != DISTANCE_INF)
 		{
@@ -3697,7 +3551,7 @@ void CTClient::UpdateDDraceMapProgress()
 		m_QmDDraceProgressWidth = Width;
 	}
 	const auto ReadTile = [&](int Index) {
-		return QmMapProgress::MakeTile(pGame[Index].m_Index, pFront ? pFront[Index].m_Index : TILE_AIR,
+		return QmMapProgress::MakeTile(pGame[Index].m_Index, pFront ? pFront[Index].m_Index : (unsigned char)TILE_AIR,
 			pTele ? pTele[Index].m_Type : 0, pTele ? pTele[Index].m_Number : 0);
 	};
 	if(m_QmDDraceProgressScanCursor < Size)

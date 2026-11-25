@@ -37,7 +37,11 @@ static std::chrono::steady_clock::time_point GlobalStartTime()
 
 std::chrono::nanoseconds time_get_nanoseconds()
 {
-	return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - GlobalStartTime());
+	// 两个操作数的求值顺序未定义：若先取 now 再初始化 s_Start，首次调用会得到负值。
+	// 负样本会让 time_get 把负数当作已发布的 tick，下一个调用者又用它换取新的正值，
+	// 于是同一 tick 的并发读者拿到不同样本。先显式固化基准，再取样。
+	const std::chrono::steady_clock::time_point Start = GlobalStartTime();
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - Start);
 }
 
 int64_t time_get_impl()

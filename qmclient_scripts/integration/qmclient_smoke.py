@@ -67,7 +67,6 @@ def smoke_startup_console_commands(env: SmokeEnvironment) -> None:
 	)
 	client = env.start_client([
 		"cl_show_welcome 1",
-		"qm_auto_update 0",
 		"qm_steam_auto_launch 0",
 		"poses_open qmclient-startup-missing.poses",
 	], connect=False)
@@ -109,7 +108,6 @@ def smoke_saved_custom_communities_startup(env: SmokeEnvironment) -> None:
 		client_env.update({"NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost"})
 		client = env.start_client([
 			"qm_steam_auto_launch 0",
-			"qm_auto_update 0",
 			"http_allow_insecure 1",
 			f"qm_websocket_url ws://127.0.0.1:{http.server.server_port}/ws",
 			f"qm_custom_communities_url {http.url}{startup_path}",

@@ -7,6 +7,7 @@
 #include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
+#include <game/client/QmUi/UiTextRenderState.h>
 #include <game/client/components/qmclient/scoreboard_scroll.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui_scrollregion.h>
@@ -1164,7 +1165,7 @@ TEST_F(QmBackgroundControlsIntegration, PopupHeaderTextAndBorderFadeWithParentAn
 		m_Recording.m_vSurfaces.clear();
 		m_Recording.m_vQuads.clear();
 		CUiScopedControlAlphaScale Fade(&m_Ui, Alpha);
-		m_Ui.DoButton_PopupMenu(&m_Button, "Scroll mode: On", &m_Rect, 10.0f, TEXTALIGN_MC, 0.0f, false, false, Base);
+		m_Ui.DoButton_PopupMenu(&m_Button, "Scroll mode: On", &m_Rect, 10.0f, TEXTALIGN_MC, 0.0f, false, false, Base, 10.0f, 0.0f, true);
 	};
 	Draw(1.0f);
 	ASSERT_EQ(m_Recording.m_vSurfaces.size(), 1u);
@@ -1195,6 +1196,42 @@ TEST_F(QmBackgroundControlsIntegration, PopupHeaderTextAndBorderFadeWithParentAn
 				EXPECT_FLOAT_EQ(m_Recording.m_vQuads[i].m_Color.a, 0.0f);
 		}
 		EXPECT_FLOAT_EQ(m_Ui.ControlAlphaScale(), 1.0f);
+	}
+}
+
+TEST_F(QmBackgroundControlsIntegration, ScoreboardButtonCentersRenderedGlyphsInItsSurface)
+{
+	UseRecordingTextEngine();
+	ASSERT_FALSE(HasFatalFailure());
+	const CUIRect Button{20.3f, 22.7f, 165.6f, 24.0f};
+	constexpr float FontSize = 11.0f;
+	ITextRender *pText = m_Ui.TextRender();
+	const CUiScopedTextRenderState TextState(*pText);
+	pText->SetRenderFlags(pText->GetRenderFlags() | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+	for(const char *pLabel : {"滚动模式：关", "显示游玩时间", "当前：时间", "Show playtime"})
+	{
+		SCOPED_TRACE(pLabel);
+		m_Recording.m_vQuads.clear();
+		CTextCursor Reference;
+		Reference.m_FontSize = FontSize;
+		Reference.m_LineWidth = Button.w;
+		Reference.m_CalculateVisualBoundingBox = true;
+		pText->TextEx(&Reference, pLabel);
+		ASSERT_TRUE(Reference.m_HasVisualBoundingBox);
+		ASSERT_FALSE(m_Recording.m_vQuads.empty());
+		const auto FirstGlyph = m_Recording.m_vQuads.front().m_RawRect.TopLeft();
+		const auto NumQuads = m_Recording.m_vQuads.size();
+		const vec2 ReferenceCenter((Reference.m_VisualLeft + Reference.m_VisualRight) * 0.5f, (Reference.m_VisualTop + Reference.m_VisualBottom) * 0.5f);
+
+		m_Recording.m_vQuads.clear();
+		m_Recording.m_vSurfaces.clear();
+		m_Ui.DoButton_PopupMenu(&m_Button, pLabel, &Button, FontSize, TEXTALIGN_MC, 0.0f, false, false, std::nullopt, FontSize, 0.0f, true);
+		ASSERT_EQ(m_Recording.m_vSurfaces.size(), 1u);
+		ASSERT_EQ(m_Recording.m_vQuads.size(), NumQuads);
+		const auto Surface = m_Recording.m_vSurfaces.front().m_Rect;
+		const vec2 InkCenter = ReferenceCenter + (m_Recording.m_vQuads.front().m_RawRect.TopLeft() - FirstGlyph);
+		EXPECT_NEAR(InkCenter.x, Surface.x + Surface.z * 0.5f, 0.001f);
+		EXPECT_NEAR(InkCenter.y, Surface.y + Surface.w * 0.5f, 0.001f);
 	}
 }
 

@@ -239,6 +239,7 @@ private:
 	{
 		int m_StateIndex = -1;
 		int m_SourceColumn = 1;
+		int m_SourceLayoutColumn = 1;
 		int m_TargetColumn = 1;
 		int m_TargetOrder = 0;
 		float m_GrabOffsetX = 0.0f;

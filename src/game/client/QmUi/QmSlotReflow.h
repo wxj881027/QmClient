@@ -19,29 +19,36 @@
 class CQmSlotReflow
 {
 public:
+	static constexpr int MAX_ROW_DELTA = 3;
+
+	class CItem
+	{
+		friend class CQmSlotReflow;
+		int m_Slot = -1;
+		int m_LastFrame = -1;
+		float m_OffsetX = 0.0f;
+		float m_OffsetY = 0.0f;
+		float m_VelocityX = 0.0f;
+		float m_VelocityY = 0.0f;
+		vec2 m_DisplayedOffset = vec2(0.0f, 0.0f);
+
+	public:
+		vec2 DisplayedOffset(int Slot) const { return Slot == m_Slot ? m_DisplayedOffset : vec2(0.0f, 0.0f); }
+	};
+
 	// 从 PrevSlot 换到 Slot 时，卡片要停在旧位置的偏移量（像素）。
 	static vec2 SlotDeltaOffset(int PrevSlot, int Slot, int Columns, float StepX, float StepY);
 
 	void BeginFrame(float DtSec, int Columns, bool Snap);
 	// 返回本帧要叠加到布局矩形上的像素偏移。
 	vec2 Track(const char *pKey, int Slot, float StepX, float StepY);
+	vec2 Track(CItem &Item, int Slot, float StepX, float StepY) const;
 	void Reset();
 
 private:
-	struct SState
-	{
-		bool m_Seen = false;
-		int m_Slot = 0;
-		int m_LastFrame = 0;
-		float m_OffsetX = 0.0f;
-		float m_OffsetY = 0.0f;
-		float m_VelocityX = 0.0f;
-		float m_VelocityY = 0.0f;
-	};
-
 	void PruneIfNeeded();
 
-	std::unordered_map<std::string, SState> m_States;
+	std::unordered_map<std::string, CItem> m_States;
 	int m_Columns = 0;
 	int m_Frame = 0;
 	float m_Dt = 0.0f;

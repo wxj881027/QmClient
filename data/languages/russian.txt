@@ -73,6 +73,9 @@
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == Подсказка совпадения X со мной окрашивает X другого игрока, когда он совпадает с вашим в течение заданного времени обнаружения.
 
+%.0f Bps
+== %.0f блок/с
+
 %.2f KiB
 == %.2f KiB
 
@@ -3263,6 +3266,9 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == Определяет, что показывать рядом с именами других игроков: клан-теги, отметки друзей, идентификаторы клиентов.
 
+Convenience options for chat, the scoreboard and tune zones.
+== Дополнительные параметры чата, таблицы счёта и зон настроек.
+
 Converse
 == Продолжить личное сообщение
 
@@ -4894,6 +4900,9 @@ Enable /team0 mode
 
 Enable 3D background particles
 == Включить фоновые 3D-частицы
+
+Enable a music source to display its lyrics.
+== Включите источник музыки для показа текста песни.
 
 Enable absolute controller aiming in game
 == Включить абсолютное прицеливание контроллера в игре
@@ -7082,6 +7091,9 @@ Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 == Горизонтальное положение
 
+Horizontal speed × ramp
+== Горизонтальная скорость × множитель
+
 Hostname of DNSBL provider for IP verification
 == Имя хоста провайдера DNSBL для проверки IP
 
@@ -7544,6 +7556,9 @@ Internet (From online source)
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == Интервал автосохранения копии текущей карты редактора в папку "auto" (0=выкл)
 
+Invalid
+== Недействительно
+
 Invalid Axiom API response
 == Некорректный ответ API Axiom
 
@@ -8000,6 +8015,9 @@ Lasers can hit you if you shot them and they pull you towards the bounce origin 
 Lasers can't hit you if you shot them, and they pull others towards the shooter
 == Ваши лазеры не попадают в вас и притягивают других игроков к стрелявшему
 
+Last corrected field
+== Последнее исправленное поле
+
 Last entered
 == Последние введённые
 
@@ -8452,6 +8470,9 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == Записывает медленные кадры и задержки при запуске, чтобы вы могли сообщить, почему игра тормозила.
+
+Looks like an update is available
+== Похоже, доступно обновление
 
 Lose weapons when teleporting (useful for race maps)
 == Терять оружие при телепортации (полезно для гоночных карт)
@@ -9491,6 +9512,9 @@ Network
 Network compensation
 == Network compensation
 
+Network object corrections
+== Исправления сетевых объектов
+
 Network timeout
 == Тайм-аут сети
 
@@ -10418,6 +10442,9 @@ Particle glow
 Particle pulse
 == Пульсация частиц
 
+Particle skin
+== Скин частиц
+
 Particle speed
 == Скорость частиц
 
@@ -10973,6 +11000,9 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 Playtime (h)
 == Время игры (ч)
 
+Playtime query failed. Retrying shortly.
+== Не удалось получить время игры. Скоро будет повторная попытка.
+
 Please add a valid cut first
 == Сначала добавьте действительный отрезок обрезки
 
@@ -11062,6 +11092,12 @@ Position jump hint
 
 Position jump tip
 == Подсказка о прыжке в позицию
+
+Position X
+== Координата X
+
+Position Y
+== Координата Y
 
 Position:
 == Позиция:
@@ -11596,6 +11632,9 @@ Query server setting: %s
 
 Query team rank for %s
 == Запросить ранг команды игрока %s
+
+Querying playtime from DDStats...
+== Получение времени игры из DDStats…
 
 Querying points for %s...
 == Запрос очков игрока %s...
@@ -13829,6 +13868,9 @@ Show flag on name plate
 Show FPS
 == Показать FPS
 
+Show FPS, prediction time, and performance graphs
+== Показывать FPS, время предсказания и графики производительности
+
 Show freeze bar under frozen players indicating thaw time
 == Показывать полосу заморозки под замороженными игроками, указывающую время разморозки
 
@@ -15065,6 +15107,18 @@ Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == Защита от спама: предотвращает спам при смене команды, в чате, смене скина, эмоциях и голосовании
 
+Spawn effects filtered
+== Отфильтрованные эффекты появления
+
+Spawn events received
+== Полученные события появления
+
+Spawn particle failures
+== Ошибки создания частиц появления
+
+Spawn particles dispatched
+== Созданные частицы появления
+
 Speaker
 == Динамик
 
@@ -15551,6 +15605,9 @@ Switch team
 Switch tile overlay alpha (0-100)
 == Альфа-канал наложения сущностей для переключаемых тайлов (0-100)
 
+Switch tile: type=%d delay=%d number=%d (x=%d y=%d)
+== Тайл переключателя: тип=%d задержка=%d номер=%d (x=%d y=%d)
+
 Switch to grenade
 == Переключиться на гранату
 
@@ -15871,6 +15928,9 @@ Teleport back to the practice respawn point
 
 Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
 == Телепортирует к точке возрождения практики и восстанавливает сохранённое там состояние Tee. Восстанавливается только Tee, мир продолжает идти.
+
+Teleport checkpoint
+== Контрольная точка телепортации
 
 Teleport dummy to cursor
 == Переместить дамми к курсору
@@ -16685,6 +16745,9 @@ Total hours
 Total play time
 == Общее время игры
 
+Total playtime from DDStats. The last result stays visible while refreshing.
+== Общее время игры по DDStats. При обновлении отображается предыдущий результат.
+
 Total points
 == Всего очков
 
@@ -16867,6 +16930,9 @@ Tune variable to value
 
 Tune variable to value or show current value
 == Установить переменную тюнинга в значение или показать текущее значение
+
+Tune zone (map / override)
+== Зона настроек (карта / переопределение)
 
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == На слабых машинах выключите: карточки открываются и прокручиваются сразу. Форма курсора только внешняя: все три стиля занимают одно знакоместо.
@@ -17399,6 +17465,9 @@ Use animated title style (overrides qm_title_color_mode)
 Use cached or online AMLL community lyrics when the music source has no word timing
 == Использовать тексты песен сообщества AMLL из кэша или интернета, если музыкальный источник не предоставляет время для отдельных слов
 
+Use cl_show_perf 1 to show the panel.
+== Введите cl_show_perf 1, чтобы показать панель.
+
 Use colored skins for frozen tees
 == Использовать цветные скины для замороженных ти
 
@@ -17504,6 +17573,9 @@ Use procedural ring pipeline
 Use public word filter
 == Использовать общий фильтр слов
 
+Use qm_pref <0|1> [20-400] (milliseconds)
+== Синтаксис: qm_pref <0|1> [20-400] (миллисекунды)
+
 Use server defaults
 == Использовать настройки сервера
 
@@ -17573,6 +17645,9 @@ VAD release delay (ms)
 VAD threshold (percent)
 == Порог VAD (в процентах)
 
+Valid
+== Действительно
+
 Vanilla skins only
 == Только ванильные скины
 
@@ -17585,6 +17660,9 @@ Variable custom font weight for Latin text
 Velocity
 == Скорость
 
+Velocity ramp
+== Множитель скорости
+
 Verifying downloaded update...
 == Проверка загруженного обновления…
 
@@ -17596,6 +17674,9 @@ Version performing the analysis
 
 Vertical position
 == Вертикальное положение
+
+Vertical speed
+== Вертикальная скорость
 
 Vertical sync (may cause lag)
 == Вертикальная синхронизация (может вызывать задержки)
@@ -18716,6 +18797,42 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == Недоступно для этого игрока
+
+[Axiom map difficulty]
+Brutal
+== Брутал
+
+[Axiom map difficulty]
+Easy
+== Лёгкий
+
+[Axiom map difficulty]
+Extreme
+== Экстремальный
+
+[Axiom map difficulty]
+Hard
+== Сложный
+
+[Axiom map difficulty]
+Insane
+== Безумие
+
+[Axiom map difficulty]
+Main
+== Обычный
+
+[Axiom map difficulty]
+Mod
+== Модификация
+
+[Axiom map difficulty]
+Solo
+== Соло
+
+[Axiom map difficulty]
+Train
+== Тренировка
 
 [Bind keyboard key]
 Menu

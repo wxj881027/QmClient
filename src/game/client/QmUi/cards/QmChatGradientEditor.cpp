@@ -7,6 +7,8 @@
 #include <game/client/components/chat.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/chat_gradient.h>
+#include <game/client/gameclient.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 
@@ -46,7 +48,8 @@ bool CMenus::DoMessageGradientLine(CChat &Chat, CUIRect *pView, int Tab, const c
 		if(pCheckBoxValue == nullptr)
 			DoSettingsMenuLabel(SETTINGS_APPEARANCE, Tab, Tab, pLabelTextId, &Label, pLabel, BodySize, TEXTALIGN_ML);
 
-		if(DoSettingsButton_Menu(SETTINGS_APPEARANCE, Tab, Tab, pResetButton, "appearance-chat-gradient-reset", Localize("Reset"), 0, &TopLayout.m_ResetButtonRect, Metrics, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), 0.1f) && !Ui()->RenderOnly())
+		GameClient()->m_Tooltips.DoToolTip(pResetButton, &TopLayout.m_ResetButtonRect, Localize("Reset"));
+		if(Ui()->DoButton_QmIcon(pResetButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &TopLayout.m_ResetButtonRect, BUTTONFLAG_LEFT) && !Ui()->RenderOnly())
 		{
 			*pBaseColor = color_cast<ColorHSLA>(DefaultColor).Pack(false);
 			CMessageGradient::Reset(pGradient, GradientSize);

@@ -1434,10 +1434,11 @@ float CGameConsole::CInstance::FontSize() const
 	return QmConsoleAppearance::FontSize(g_Config.m_QmConsoleFontSize);
 }
 
-float CGameConsole::CInstance::BacklogLineWidth() const
+QmConsoleUi::SLogTextLayout CGameConsole::CInstance::BacklogTextLayout() const
 {
-	// 始终预留滚动条宽度，确保测量、命中和绘制使用同一套换行位置。
-	return maximum(1.0f, m_pGameConsole->Ui()->Screen()->w - 10.0f - CONSOLE_SCROLLBAR_WIDTH - CONSOLE_SCROLLBAR_MARGIN - (m_ChatExportMode ? 22.0f : 0.0f));
+	const float Width = m_pGameConsole->Ui()->Screen()->w - 10.0f - CONSOLE_SCROLLBAR_WIDTH - CONSOLE_SCROLLBAR_MARGIN;
+	const float Font = FontSize();
+	return QmConsoleUi::LogTextLayout(Width, m_ChatExportMode, Font, ConsoleLineSpacing(Font));
 }
 
 bool CGameConsole::CInstance::ParseEntryColors(const CBacklogEntry *pEntry) const
@@ -1462,7 +1463,7 @@ CQmConsoleSelection::CPosition CGameConsole::CInstance::SelectionPositionAt(vec2
 		}
 		if(First)
 		{
-			EntryBottom += (m_BacklogCurLine - SkippedLines) * LineHeight;
+			EntryBottom += QmConsoleLineStackOffset(m_BacklogCurLine, SkippedLines, LineHeight, 0.0f);
 			First = false;
 		}
 		pOldestEntry = pEntry;
@@ -1470,18 +1471,8 @@ CQmConsoleSelection::CPosition CGameConsole::CInstance::SelectionPositionAt(vec2
 		if(Position.y >= EntryTop)
 		{
 			CColoredParts Text = CColoredParts::ParseOrBorrow(pEntry->m_aText, ParseEntryColors(pEntry));
-			CTextCursor Cursor;
-			Cursor.SetPosition(vec2(0.0f, EntryTop));
-			Cursor.m_FontSize = FontSize();
-			Cursor.m_LineWidth = BacklogLineWidth();
-			Cursor.m_MaxLines = pEntry->m_LineCount;
-			Cursor.m_LineSpacing = ConsoleLineSpacing(FontSize());
-			Cursor.m_Flags = 0;
-			Cursor.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_CALCULATE;
-			Cursor.m_RenderCursor = false;
-			Cursor.m_ReleaseMouse = Position;
-			m_pGameConsole->TextRender()->TextEx(&Cursor, Text.Text());
-			return {pEntry->m_ExportId, maximum(0, Cursor.m_CursorCharacter)};
+			const int Character = BacklogTextLayout().CharacterAt(*m_pGameConsole->TextRender(), Text.Text(), EntryTop, pEntry->m_LineCount, Position);
+			return {pEntry->m_ExportId, Character};
 		}
 		EntryBottom = EntryTop;
 	}
@@ -1506,12 +1497,8 @@ void CGameConsole::CInstance::UpdateEntryTextAttributes(CBacklogEntry *pEntry) c
 {
 	if(pEntry->m_ColorPreparationPending)
 		m_TotalBacklogLinesValid = false;
-	CTextCursor Cursor;
-	Cursor.m_FontSize = FontSize();
+	CTextCursor Cursor = BacklogTextLayout().Cursor(0.0f, 10);
 	Cursor.m_Flags = 0;
-	Cursor.m_LineWidth = BacklogLineWidth();
-	Cursor.m_MaxLines = 10;
-	Cursor.m_LineSpacing = ConsoleLineSpacing(FontSize());
 	const CColoredParts Text = CColoredParts::ParseOrBorrow(pEntry->m_aText, ParseEntryColors(pEntry));
 	m_pGameConsole->TextRender()->TextEx(&Cursor, Text.Text(), -1);
 	pEntry->m_YOffset = Cursor.Height();
@@ -1574,7 +1561,7 @@ void CGameConsole::CInstance::UpdateSearch()
 	const char *pSearchText = m_Input.GetString();
 	const auto Update = m_SearchResults.Prepare(pSearchText, [&](auto &Candidate) {
 		ITextRender *pTextRender = m_pGameConsole->Ui()->TextRender();
-		const float LineWidth = BacklogLineWidth();
+		const float LineWidth = BacklogTextLayout().m_LineWidth;
 		int EntryLine = 0;
 		std::vector<QmConsoleText::SRange> vMatches;
 		for(CBacklogEntry *pEntry = m_Backlog.Last(); pEntry; pEntry = m_Backlog.Prev(pEntry))
@@ -2595,6 +2582,8 @@ void CGameConsole::OnRender()
 		const float LogTop = RowHeight;
 		const float LogBottom = y;
 		const float LogHeight = maximum(0.0f, LogBottom - LogTop);
+		const float ContentAlpha = pConsole->m_FilterContentMotion.Resolve(pConsole->m_LogFilterMask, Client()->GlobalTime(), g_Config.m_QmUiMotionLevel > 0);
+		const float LogTextBottom = LogBottom - pConsole->m_FilterContentMotion.Offset();
 		const int VisibleBacklogLines = maximum(1, (int)std::floor(LogHeight / LineHeight));
 		const int TotalBacklogLines = pConsole->TotalBacklogLines();
 		// 滚动推进：滚轮、翻页、滑块与触控拖动都写进同一份 CQmScrollState（弹簧 + 橡皮筋），
@@ -2618,7 +2607,7 @@ void CGameConsole::OnRender()
 		HandleLinkClick = !SettingsOpen && HandleLinkClick && LogRect.Inside(LinkClickPress) && LogRect.Inside(LinkClickPos);
 		ChatExportClickPending = !SettingsOpen && ChatExportClickPending && LogRect.Inside(pConsole->m_MousePress) && LogRect.Inside(ChatExportClickPos);
 		if(CanSelectLog && MousePressedThisFrame && LogRect.Inside(pConsole->m_MousePress))
-			pConsole->m_Selection.Begin(pConsole->SelectionPositionAt(pConsole->m_MousePress, LogBottom + SubLine, LineHeight));
+			pConsole->m_Selection.Begin(pConsole->SelectionPositionAt(pConsole->m_MousePress, LogTextBottom + SubLine, LineHeight));
 		if(CanSelectLog && pConsole->m_MouseIsPress)
 		{
 			const int ScrollLines = pConsole->m_Selection.AutoScroll(pConsole->m_MouseRelease.y, LogTop, LogBottom, LineHeight, Client()->RenderFrameTime());
@@ -2685,19 +2674,19 @@ void CGameConsole::OnRender()
 			{
 				vec2 SelectionMouse = pConsole->m_MouseRelease;
 				SelectionMouse.y = std::clamp(SelectionMouse.y, LogTop, LogBottom);
-				pConsole->m_Selection.Extend(pConsole->SelectionPositionAt(SelectionMouse, LogBottom + SubLine, LineHeight));
+				pConsole->m_Selection.Extend(pConsole->SelectionPositionAt(SelectionMouse, LogTextBottom + SubLine, LineHeight));
 			}
 			if(!CanSelectLog || !pConsole->m_MouseIsPress)
 				pConsole->m_Selection.Finish();
 		}
 
-		const float ContentAlpha = pConsole->m_FilterContentMotion.Resolve(pConsole->m_LogFilterMask, Client()->GlobalTime(), g_Config.m_QmUiMotionLevel > 0);
 		const ColorRGBA LogOutline = TextRender()->GetTextOutlineColor();
 		TextRender()->TextOutlineColor(LogOutline.WithAlpha(LogOutline.a * ContentAlpha));
 
 		// render console log (current entry, status, wrap lines)
 		CInstance::CBacklogEntry *pEntry = pConsole->m_Backlog.Last();
-		float OffsetY = pConsole->m_FilterContentMotion.Offset();
+		const auto LogTextLayout = pConsole->BacklogTextLayout();
+		float OffsetY = 0.0f;
 
 		std::vector<QmConsoleText::SRange> vLinkRanges;
 		std::vector<STextColorSplit> vColorLayers;
@@ -2753,7 +2742,7 @@ void CGameConsole::OnRender()
 			}
 
 			OffsetY += pEntry->m_YOffset;
-			const float EntryTop = y - OffsetY;
+			const float EntryTop = LogTextBottom - OffsetY;
 			const float EntryBottom = EntryTop + pEntry->m_YOffset;
 
 			// 顶边只要还露出一个像素就继续画；只有整行底边也越过上沿才停止。
@@ -2782,15 +2771,7 @@ void CGameConsole::OnRender()
 				}
 			}
 
-			// 正文左侧留一档内边距：贴屏幕左缘起排的日志读起来顶手，与其它面板同一档。
-			const float EntryTextX = (pConsole->m_ChatExportMode ? 22.0f : 0.0f) + ui_token::panel::PADDING;
-			const float EntryLineWidth = maximum(1.0f, pConsole->BacklogLineWidth() - ui_token::panel::PADDING);
-			CTextCursor EntryCursor;
-			EntryCursor.SetPosition(vec2(EntryTextX, y - OffsetY));
-			EntryCursor.m_FontSize = FontSize;
-			EntryCursor.m_LineWidth = EntryLineWidth;
-			EntryCursor.m_MaxLines = pEntry->m_LineCount;
-			EntryCursor.m_LineSpacing = ConsoleLineSpacing(FontSize);
+			CTextCursor EntryCursor = LogTextLayout.Cursor(EntryTop, pEntry->m_LineCount);
 			const bool ParseColors = pConsole->ParseEntryColors(pEntry);
 
 			CColoredParts ColoredParts = CColoredParts::ParseOrBorrow(pEntry->m_aText, ParseColors);
@@ -2872,12 +2853,7 @@ void CGameConsole::OnRender()
 			}
 			for(const auto &Range : ColorPreparation.Links())
 			{
-				CTextCursor LinkCursor;
-				LinkCursor.SetPosition(vec2(EntryTextX, EntryTop));
-				LinkCursor.m_FontSize = FontSize;
-				LinkCursor.m_LineWidth = EntryLineWidth;
-				LinkCursor.m_MaxLines = pEntry->m_LineCount;
-				LinkCursor.m_LineSpacing = ConsoleLineSpacing(FontSize);
+				CTextCursor LinkCursor = LogTextLayout.Cursor(EntryTop, pEntry->m_LineCount);
 				LinkCursor.m_Flags = 0;
 				LinkCursor.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_SET;
 				LinkCursor.m_RenderSelection = false;
@@ -3049,6 +3025,11 @@ void CGameConsole::OnRender()
 					}
 					case EToolbarAction::SETTINGS: OpenSettings(); break;
 					case EToolbarAction::EXPAND: m_LocalConsoleFullscreen = !m_LocalConsoleFullscreen; break;
+					case EToolbarAction::COUNT:
+						// COUNT 只是数量哨兵（与 TOOLBAR_ACTION_MOTION_COUNT 相等），
+						// 不作为真实工具栏项出现。
+						dbg_assert(false, "toolbar action must not be the COUNT sentinel");
+						break;
 					}
 				}
 				if(Action.m_Presence > 0.001f)

@@ -26,10 +26,13 @@ if not defined VSDEVCMD (
 set "FALLBACK_PYTHON="
 if exist "%USERPROFILE%\scoop\apps\python\current\python.exe" set "FALLBACK_PYTHON=%USERPROFILE%\scoop\apps\python\current\python.exe"
 if not defined FALLBACK_PYTHON if exist "D:\Scoop\apps\python\current\python.exe" set "FALLBACK_PYTHON=D:\Scoop\apps\python\current\python.exe"
+:: 用 findstr 而不是 find：从 Git Bash 里调用 cmd.exe 时，PATH 里的 MSYS GNU find
+:: 会抢在 Windows 的 find.exe 前面，把 /I 当路径去打开，于是这道「排除 Microsoft
+:: Store 占位 python」的过滤整体失效（日志里那两行 find: '/T' 就是它）。
 if not defined FALLBACK_PYTHON (
 	for /f "delims=" %%I in ('where python 2^>nul') do (
 		if not defined FALLBACK_PYTHON (
-			echo %%~fI | find /I "WindowsApps" >nul
+			echo %%~fI | findstr /I /C:"WindowsApps" >nul
 			if errorlevel 1 set "FALLBACK_PYTHON=%%~fI"
 		)
 	)

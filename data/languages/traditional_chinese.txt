@@ -73,6 +73,9 @@
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == X 與我對齊提示會在另一名玩家的 X 與你的對齊達設定的偵測時間後為其變色。
 
+%.0f Bps
+== %.0f 格/秒
+
 %.2f KiB
 == %.2f KiB
 
@@ -3263,6 +3266,9 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == 控制其他玩家名稱旁顯示的內容，例如戰隊標籤、好友標記與客戶端識別碼。
 
+Convenience options for chat, the scoreboard and tune zones.
+== 聊天、計分板和調參區的便利設定。
+
 Converse
 == 繼續私聊
 
@@ -4894,6 +4900,9 @@ Enable /team0 mode
 
 Enable 3D background particles
 == 啟用 3D 背景粒子
+
+Enable a music source to display its lyrics.
+== 啟用一個音樂來源以顯示歌詞。
 
 Enable absolute controller aiming in game
 == 在遊戲中啟用絕對控制器瞄準
@@ -7082,6 +7091,9 @@ Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 == 水平位置
 
+Horizontal speed × ramp
+== 橫向速度 × 速度倍率
+
 Hostname of DNSBL provider for IP verification
 == 用於 IP 驗證的 DNSBL 提供商的主機名
 
@@ -7544,6 +7556,9 @@ Internet (From online source)
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == 當前編輯器地圖副本自動保存到“auto”文件夾的時間間隔（0 表示關閉）
 
+Invalid
+== 無效
+
 Invalid Axiom API response
 == Axiom API 回應無效
 
@@ -8000,6 +8015,9 @@ Lasers can hit you if you shot them and they pull you towards the bounce origin 
 Lasers can't hit you if you shot them, and they pull others towards the shooter
 == 你自己發射的雷射不會命中自己，雷射會把其他玩家拉向發射者
 
+Last corrected field
+== 最近修正欄位
+
 Last entered
 == 最後進入
 
@@ -8452,6 +8470,9 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == 記錄慢幀與啟動卡頓耗時，方便你回報遊戲為何感覺卡頓。
+
+Looks like an update is available
+== 好像有可更新的版本呢
 
 Lose weapons when teleporting (useful for race maps)
 == 傳送時失去武器（對某些競速地圖有用）
@@ -9491,6 +9512,9 @@ Network
 Network compensation
 == Network compensation
 
+Network object corrections
+== 網路物件修正次數
+
 Network timeout
 == 網絡超時
 
@@ -10418,6 +10442,9 @@ Particle glow
 Particle pulse
 == 粒子脈衝
 
+Particle skin
+== 粒子造型
+
 Particle speed
 == 粒子速度
 
@@ -10973,6 +11000,9 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 Playtime (h)
 == 遊玩（小時）
 
+Playtime query failed. Retrying shortly.
+== 遊玩時長查詢失敗，稍後重試。
+
 Please add a valid cut first
 == 請先添加有效裁剪片段
 
@@ -11062,6 +11092,12 @@ Position jump hint
 
 Position jump tip
 == 位置跳轉提示
+
+Position X
+== X 座標
+
+Position Y
+== Y 座標
 
 Position:
 == 座標
@@ -11596,6 +11632,9 @@ Query server setting: %s
 
 Query team rank for %s
 == 查詢玩家 %s 所在隊伍的排名
+
+Querying playtime from DDStats...
+== 正在向 DDStats 查詢遊玩時長…
 
 Querying points for %s...
 == 正在查詢 %s 的積分...
@@ -13389,7 +13428,7 @@ Set timeout protection code s
 == 設置超時保護碼
 
 Set up Kugou lyrics
-== 設定酷狗歌詞接入
+== 設定酷狗歌詞
 
 Set voice input device
 == 設置語音輸入設備
@@ -13828,6 +13867,9 @@ Show flag on name plate
 
 Show FPS
 == 顯示 FPS
+
+Show FPS, prediction time, and performance graphs
+== 顯示 FPS、預測耗時和效能曲線
 
 Show freeze bar under frozen players indicating thaw time
 == 是否在凍結玩家下方顯示凍結條以指示解凍時間
@@ -15065,6 +15107,18 @@ Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == 刷屏保護：防止切換隊伍、聊天、換皮膚、表情和投票的刷屏
 
+Spawn effects filtered
+== 過濾的出生特效
+
+Spawn events received
+== 收到的出生事件
+
+Spawn particle failures
+== 出生粒子新增失敗次數
+
+Spawn particles dispatched
+== 已送出的出生粒子
+
 Speaker
 == 揚聲器
 
@@ -15551,6 +15605,9 @@ Switch team
 Switch tile overlay alpha (0-100)
 == 開關圖塊的覆蓋實體 alpha (0-100)
 
+Switch tile: type=%d delay=%d number=%d (x=%d y=%d)
+== 開關圖塊：類型=%d 延遲=%d 編號=%d（x=%d y=%d）
+
 Switch to grenade
 == 切換到榴彈槍
 
@@ -15871,6 +15928,9 @@ Teleport back to the practice respawn point
 
 Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
 == 傳送回練習重生點，並恢復在那裡儲存的 Tee 狀態。只回滾 Tee，世界照常運行。
+
+Teleport checkpoint
+== 傳送檢查點
 
 Teleport dummy to cursor
 == 將分身傳送到光標
@@ -16685,6 +16745,9 @@ Total hours
 Total play time
 == 總時長
 
+Total playtime from DDStats. The last result stays visible while refreshing.
+== DDStats 統計的總遊玩時長。背景更新時保留上次結果。
+
 Total points
 == 總分
 
@@ -16867,6 +16930,9 @@ Tune variable to value
 
 Tune variable to value or show current value
 == 將變量調到指定值，或顯示當前值
+
+Tune zone (map / override)
+== 調參區（地圖 / 覆寫）
 
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 機器較弱時關掉動效，卡片會立刻展開、捲動手感也隨之關閉。游標形狀只是外觀：三種樣式都佔同一個字元格。
@@ -17399,6 +17465,9 @@ Use animated title style (overrides qm_title_color_mode)
 Use cached or online AMLL community lyrics when the music source has no word timing
 == 音樂來源沒有逐字時間時，使用快取或線上取得的 AMLL 社群歌詞
 
+Use cl_show_perf 1 to show the panel.
+== 輸入 cl_show_perf 1 顯示面板。
+
 Use colored skins for frozen tees
 == 凍結 Tee 使用彩色皮膚
 
@@ -17504,6 +17573,9 @@ Use procedural ring pipeline
 Use public word filter
 == 使用公共屏蔽詞
 
+Use qm_pref <0|1> [20-400] (milliseconds)
+== 用法：qm_pref <0|1> [20-400]（毫秒）
+
 Use server defaults
 == 使用服務預設值
 
@@ -17573,6 +17645,9 @@ VAD release delay (ms)
 VAD threshold (percent)
 == VAD 閾值（百分比）
 
+Valid
+== 有效
+
 Vanilla skins only
 == 只顯示原生皮膚
 
@@ -17585,6 +17660,9 @@ Variable custom font weight for Latin text
 Velocity
 == 速度
 
+Velocity ramp
+== 速度倍率
+
 Verifying downloaded update...
 == 正在驗證已下載的更新…
 
@@ -17596,6 +17674,9 @@ Version performing the analysis
 
 Vertical position
 == 垂直位置
+
+Vertical speed
+== 縱向速度
 
 Vertical sync (may cause lag)
 == 垂直同步（可能會導致延遲）
@@ -18716,6 +18797,42 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == 此玩家不可用
+
+[Axiom map difficulty]
+Brutal
+== 高階
+
+[Axiom map difficulty]
+Easy
+== 簡單
+
+[Axiom map difficulty]
+Extreme
+== 極限
+
+[Axiom map difficulty]
+Hard
+== 困難
+
+[Axiom map difficulty]
+Insane
+== 瘋狂
+
+[Axiom map difficulty]
+Main
+== 普通
+
+[Axiom map difficulty]
+Mod
+== 模組
+
+[Axiom map difficulty]
+Solo
+== 單人
+
+[Axiom map difficulty]
+Train
+== 訓練
 
 [Bind keyboard key]
 Menu

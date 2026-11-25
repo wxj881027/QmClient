@@ -16,7 +16,7 @@
 
 inline bool QmPerfEnabled()
 {
-	return g_Config.m_QmPerfDebug != 0 || g_Config.m_QmPerfLogfile != 0 || g_Config.m_QmPerfStutterDiagnostics != 0;
+	return g_Config.m_QmPerfEnabled;
 }
 
 inline int QmGraphicsTraceLevel()
@@ -35,11 +35,18 @@ inline bool QmMacosGraphicsDiagnosticsEnabled()
 	return QmGraphicsTraceEnabled();
 }
 
+inline bool QmApplyPerfPreferences(int Enabled, int ThresholdMs)
+{
+	if((Enabled != 0 && Enabled != 1) || ThresholdMs < 20 || ThresholdMs > 400)
+		return false;
+	g_Config.m_QmPerfDebugThresholdMs = ThresholdMs;
+	g_Config.m_QmPerfEnabled = Enabled != 0;
+	return true;
+}
+
 inline double QmPerfThresholdMs()
 {
-	const double Configured = g_Config.m_QmPerfDebugThresholdMs > 0 ? g_Config.m_QmPerfDebugThresholdMs : 1.0;
-	const double StutterBudget = 1000.0 / 300.0;
-	return g_Config.m_QmPerfStutterDiagnostics != 0 && Configured > StutterBudget ? StutterBudget : Configured;
+	return g_Config.m_QmPerfDebugThresholdMs;
 }
 
 inline bool QmPerfShouldLogDuration(double DurationMs, bool Force = false)

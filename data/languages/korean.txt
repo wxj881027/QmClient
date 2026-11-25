@@ -73,6 +73,9 @@
 "X alignment hint with me" colors another player's X after it matches yours for the set "Detection time".
 == 나와 X 정렬 시 강조는 다른 플레이어의 X가 설정한 감지 시간 동안 내 X와 일치하면 색을 입힙니다.
 
+%.0f Bps
+== 초당 %.0f 블록
+
 %.2f KiB
 == %.2f KiB
 
@@ -3263,6 +3266,9 @@ Controls the shape and colors shared by the whole interface: corner curve, capsu
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == 다른 플레이어 이름 옆에 표시할 항목(클랜 태그, 친구 표시, 클라이언트 식별자 등)을 제어합니다.
 
+Convenience options for chat, the scoreboard and tune zones.
+== 채팅, 점수판, 튜닝 구역의 편의 설정입니다.
+
 Converse
 == 이어서 귓속말
 
@@ -4894,6 +4900,9 @@ Enable /team0 mode
 
 Enable 3D background particles
 == 3D 배경 입자 활성화
+
+Enable a music source to display its lyrics.
+== 가사를 표시할 음악 소스를 켭니다.
 
 Enable absolute controller aiming in game
 == 게임에서 절대 컨트롤러 조준 활성화
@@ -7082,6 +7091,9 @@ Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 == 수평 위치
 
+Horizontal speed × ramp
+== 가로 속도 × 보정 배율
+
 Hostname of DNSBL provider for IP verification
 == IP 확인용 DNSBL 제공자 호스트명
 
@@ -7544,6 +7556,9 @@ Internet (From online source)
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == 현재 편집기 맵 사본을 "auto" 폴더에 자동 저장하는 간격 (0=끄기)
 
+Invalid
+== 유효하지 않음
+
 Invalid Axiom API response
 == 잘못된 Axiom API 응답
 
@@ -8000,6 +8015,9 @@ Lasers can hit you if you shot them and they pull you towards the bounce origin 
 Lasers can't hit you if you shot them, and they pull others towards the shooter
 == 자신이 쏜 레이저는 자신에게 명중하지 않으며, 다른 플레이어를 발사한 쪽으로 끌어당깁니다
 
+Last corrected field
+== 마지막으로 수정한 필드
+
 Last entered
 == 마지막 입력
 
@@ -8452,6 +8470,9 @@ Logout of rcon
 
 Logs slow frames and startup stutter timings so you can report why the game felt laggy.
 == 느린 프레임과 시작 시 끊김 시간을 기록해 게임이 왜 버벅였는지 신고할 수 있게 합니다.
+
+Looks like an update is available
+== 업데이트가 있는 것 같아요
 
 Lose weapons when teleporting (useful for race maps)
 == 순간이동 시 무기 손실 (레이스 맵에 유용)
@@ -9491,6 +9512,9 @@ Network
 Network compensation
 == Network compensation
 
+Network object corrections
+== 네트워크 객체 수정 횟수
+
 Network timeout
 == 네트워크 타임아웃
 
@@ -10418,6 +10442,9 @@ Particle glow
 Particle pulse
 == 입자 맥동
 
+Particle skin
+== 파티클 스킨
+
 Particle speed
 == 입자 속도
 
@@ -10973,6 +11000,9 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 Playtime (h)
 == 플레이 시간(h)
 
+Playtime query failed. Retrying shortly.
+== 플레이 시간 조회에 실패했습니다. 잠시 후 다시 시도합니다.
+
 Please add a valid cut first
 == 먼저 유효한 잘라내기 구간을 추가하세요
 
@@ -11062,6 +11092,12 @@ Position jump hint
 
 Position jump tip
 == 위치 점프 팁
+
+Position X
+== X 좌표
+
+Position Y
+== Y 좌표
 
 Position:
 == 위치:
@@ -11596,6 +11632,9 @@ Query server setting: %s
 
 Query team rank for %s
 == %s의 팀 순위 조회
+
+Querying playtime from DDStats...
+== DDStats에서 플레이 시간을 조회하는 중…
 
 Querying points for %s...
 == %s 님의 포인트 조회 중...
@@ -13829,6 +13868,9 @@ Show flag on name plate
 Show FPS
 == FPS 표시
 
+Show FPS, prediction time, and performance graphs
+== FPS, 예측 시간 및 성능 그래프 표시
+
 Show freeze bar under frozen players indicating thaw time
 == 얼어붙은 플레이어 아래에 해동 시간을 나타내는 프리즈 바 표시
 
@@ -15065,6 +15107,18 @@ Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == 스팸 방지: 팀 전환, 채팅, 스킨 변경, 이모트, 투표 스팸 방지
 
+Spawn effects filtered
+== 필터링한 등장 효과
+
+Spawn events received
+== 수신한 생성 이벤트
+
+Spawn particle failures
+== 등장 파티클 생성 실패
+
+Spawn particles dispatched
+== 생성한 등장 파티클
+
 Speaker
 == 스피커
 
@@ -15551,6 +15605,9 @@ Switch team
 Switch tile overlay alpha (0-100)
 == 스위치 타일의 오버레이 엔티티 알파 (0-100)
 
+Switch tile: type=%d delay=%d number=%d (x=%d y=%d)
+== 스위치 타일: 유형=%d 지연=%d 번호=%d (x=%d y=%d)
+
 Switch to grenade
 == 유탄 발사기로 전환
 
@@ -15871,6 +15928,9 @@ Teleport back to the practice respawn point
 
 Teleport back to the practice respawn point and restore the tee state saved there. Only the tee is restored; the world keeps running.
 == 연습 리스폰 지점으로 돌아가 그곳에 저장된 Tee 상태를 복원합니다. Tee만 되돌리고 세계는 계속 진행됩니다.
+
+Teleport checkpoint
+== 순간이동 체크포인트
 
 Teleport dummy to cursor
 == 더미를 커서 위치로 순간이동
@@ -16685,6 +16745,9 @@ Total hours
 Total play time
 == 총 플레이 시간
 
+Total playtime from DDStats. The last result stays visible while refreshing.
+== DDStats의 총 플레이 시간입니다. 새로 고치는 동안 이전 결과를 표시합니다.
+
 Total points
 == 총점
 
@@ -16867,6 +16930,9 @@ Tune variable to value
 
 Tune variable to value or show current value
 == 변수를 값으로 조정하거나 현재 값을 표시합니다.
+
+Tune zone (map / override)
+== 튜닝 구역 (맵 / 덮어쓰기)
 
 Turn motion off on weaker machines; cards then open and scroll immediately. The caret shape is cosmetic: all three styles sit in the same character cell.
 == 성능이 낮은 기기에서는 끄세요. 카드가 즉시 열리고 스크롤도 즉시 반응합니다. 커서 모양은 겉모양일 뿐이며 세 가지 모두 같은 문자 셀에 들어갑니다.
@@ -17399,6 +17465,9 @@ Use animated title style (overrides qm_title_color_mode)
 Use cached or online AMLL community lyrics when the music source has no word timing
 == 음악 소스에 단어별 타이밍 정보가 없으면 캐시 또는 온라인의 AMLL 커뮤니티 가사를 사용
 
+Use cl_show_perf 1 to show the panel.
+== cl_show_perf 1을 입력하면 패널이 표시됩니다.
+
 Use colored skins for frozen tees
 == 얼어붙은 티에 컬러 스킨 사용
 
@@ -17504,6 +17573,9 @@ Use procedural ring pipeline
 Use public word filter
 == 공용 금칙어 필터 사용
 
+Use qm_pref <0|1> [20-400] (milliseconds)
+== 사용법: qm_pref <0|1> [20-400] (밀리초)
+
 Use server defaults
 == 서버 기본값 사용
 
@@ -17573,6 +17645,9 @@ VAD release delay (ms)
 VAD threshold (percent)
 == VAD 임계값 (%)
 
+Valid
+== 유효
+
 Vanilla skins only
 == 바닐라 스킨만 표시
 
@@ -17585,6 +17660,9 @@ Variable custom font weight for Latin text
 Velocity
 == 속도
 
+Velocity ramp
+== 속도 보정 배율
+
 Verifying downloaded update...
 == 다운로드한 업데이트 검증 중…
 
@@ -17596,6 +17674,9 @@ Version performing the analysis
 
 Vertical position
 == 세로 위치
+
+Vertical speed
+== 세로 속도
 
 Vertical sync (may cause lag)
 == 수직 동기화 (지연 발생 가능)
@@ -18716,6 +18797,42 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == 이 플레이어에게 사용할 수 없음
+
+[Axiom map difficulty]
+Brutal
+== 브루탈
+
+[Axiom map difficulty]
+Easy
+== 쉬움
+
+[Axiom map difficulty]
+Extreme
+== 극한
+
+[Axiom map difficulty]
+Hard
+== 어려움
+
+[Axiom map difficulty]
+Insane
+== 미친
+
+[Axiom map difficulty]
+Main
+== 보통
+
+[Axiom map difficulty]
+Mod
+== 모드
+
+[Axiom map difficulty]
+Solo
+== 솔로
+
+[Axiom map difficulty]
+Train
+== 훈련
 
 [Bind keyboard key]
 Menu

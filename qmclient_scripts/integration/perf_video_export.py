@@ -70,7 +70,6 @@ def base_config(log_path: Path) -> list[str]:
 		"cl_show_welcome 0",
 		"cl_skip_start_menu 1",
 		"cl_save_settings 0",
-		"qm_auto_update 0",
 		"qm_steam_auto_launch 0",
 		"demo_speed 8",
 		"qm_video_segment_seconds 0",

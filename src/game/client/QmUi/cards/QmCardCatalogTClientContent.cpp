@@ -73,7 +73,9 @@
 using namespace FontIcons;
 using namespace qm_tclient_cards;
 
-void CMenus::ConfigureSettingsCardSection(SSettingsSection &Section, const char *pTitle, const char *pStableCardId, std::function<float(CUIRect &, bool)> LayoutSection, float TopMargin)
+// 调用点一律传临时 lambda，按值接收就只是一次移动；测量和紧凑渲染各要一份自有副本。
+// 改签名要连 menus.h 里的声明一起动，省下的只有那次移动。
+void CMenus::ConfigureSettingsCardSection(SSettingsSection &Section, const char *pTitle, const char *pStableCardId, std::function<float(CUIRect &, bool)> LayoutSection, float TopMargin) // NOLINT(performance-unnecessary-value-param)
 {
 	Section.m_pStableCardId = pStableCardId;
 	// 已声明的内容不再绘制旧节标题，卡片头由公共 Deck 管理。

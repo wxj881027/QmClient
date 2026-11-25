@@ -405,39 +405,46 @@ void CVideo::Stop()
 
 	m_Recording = false;
 
-	// 初始化失败时只释放资源，不能向尚未写入文件头的输出刷新编码帧。
-	if(m_Started)
+	// 转换/音频线程已全部 join，收尾阶段无人再写编码器；这里显式持 m_WriteLock
+	// 是为了让 FinishFrames/SendFrameDraining 的 REQUIRES 在编译期可验证，
+	// 而不是靠"此刻确实没有别的线程"的隐式前提。
 	{
-		FinishFrames(&m_VideoStream);
-		if(m_HasAudio)
-			FinishFrames(&m_AudioStream);
-		// 排空失败同样可能留下无 trailer 的截断文件；失败必须显式落锁，供停录方
-		// 区分"正常收尾"与"收尾期错误"（错误段不得被记成已完成）。
-		if(m_pFormatContext && av_write_trailer(m_pFormatContext) < 0)
+		const CLockScope LockScope(m_WriteLock);
+
+		// 初始化失败时只释放资源，不能向尚未写入文件头的输出刷新编码帧。
+		if(m_Started)
 		{
-			log_error("videorecorder", "Could not write trailer; output may be truncated");
-			m_EncodeError.store(true, std::memory_order_release);
-		}
-	}
-
-	CloseStream(&m_VideoStream);
-
-	if(m_HasAudio)
-		CloseStream(&m_AudioStream);
-
-	if(m_pFormatContext)
-	{
-		if(!(m_pFormat->flags & AVFMT_NOFILE))
-		{
-			// 关闭输出失败同样意味着文件不完整（缓冲未落盘），按收尾失败处理。
-			if(avio_closep(&m_pFormatContext->pb) < 0)
+			FinishFrames(&m_VideoStream);
+			if(m_HasAudio)
+				FinishFrames(&m_AudioStream);
+			// 排空失败同样可能留下无 trailer 的截断文件；失败必须显式落锁，供停录方
+			// 区分"正常收尾"与"收尾期错误"（错误段不得被记成已完成）。
+			if(m_pFormatContext && av_write_trailer(m_pFormatContext) < 0)
 			{
-				log_error("videorecorder", "Could not close output file; output may be incomplete");
+				log_error("videorecorder", "Could not write trailer; output may be truncated");
 				m_EncodeError.store(true, std::memory_order_release);
 			}
 		}
 
-		avformat_free_context(m_pFormatContext);
+		CloseStream(&m_VideoStream);
+
+		if(m_HasAudio)
+			CloseStream(&m_AudioStream);
+
+		if(m_pFormatContext)
+		{
+			if(!(m_pFormat->flags & AVFMT_NOFILE))
+			{
+				// 关闭输出失败同样意味着文件不完整（缓冲未落盘），按收尾失败处理。
+				if(avio_closep(&m_pFormatContext->pb) < 0)
+				{
+					log_error("videorecorder", "Could not close output file; output may be incomplete");
+					m_EncodeError.store(true, std::memory_order_release);
+				}
+			}
+
+			avformat_free_context(m_pFormatContext);
+		}
 	}
 
 	// 初始化失败、录制/收尾失败均不提交；替换失败也必须向分段调用方传播。

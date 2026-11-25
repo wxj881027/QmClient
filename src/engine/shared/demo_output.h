@@ -2,6 +2,7 @@
 #define ENGINE_SHARED_DEMO_OUTPUT_H
 
 #include <base/fs.h>
+#include <base/fs_path.h>
 #include <base/log.h>
 #include <base/str.h>
 #include <base/system.h>
@@ -34,7 +35,7 @@ namespace demo_output
 		char aFull[IO_MAX_PATH_LENGTH];
 		Storage.GetCompletePath(Relative ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE, pPath, aFull, sizeof(aFull));
 		std::error_code Error;
-		const auto Full = std::filesystem::absolute(std::filesystem::u8path(aFull), Error).generic_u8string();
+		const auto Full = std::filesystem::absolute(fs_path_from_utf8(aFull), Error).generic_u8string();
 		if(Error || Full.empty() || Full.size() >= IO_MAX_PATH_LENGTH)
 			return false;
 		Absolute.assign(reinterpret_cast<const char *>(Full.data()), Full.size());
@@ -47,7 +48,7 @@ namespace demo_output
 		if(!Resolve(Storage, pPath, Absolute))
 			return false;
 		std::error_code Error;
-		const auto Status = std::filesystem::status(std::filesystem::u8path(Absolute), Error);
+		const auto Status = std::filesystem::status(fs_path_from_utf8(Absolute), Error);
 		return Error == std::errc::no_such_file_or_directory ||
 		       (!Error && (!std::filesystem::exists(Status) || std::filesystem::is_regular_file(Status)));
 	}
@@ -86,7 +87,7 @@ namespace demo_output
 		virtual ECreate CreateDirectory(const char *pPath)
 		{
 			std::error_code Error;
-			if(std::filesystem::create_directory(std::filesystem::u8path(pPath), Error))
+			if(std::filesystem::create_directory(fs_path_from_utf8(pPath), Error))
 				return ECreate::CREATED;
 			return !Error || Error == std::errc::file_exists ? ECreate::EXISTS : ECreate::FAILED;
 		}
@@ -98,7 +99,7 @@ namespace demo_output
 		virtual bool Remove(const char *pPath)
 		{
 			std::error_code Error;
-			std::filesystem::remove(std::filesystem::u8path(pPath), Error);
+			std::filesystem::remove(fs_path_from_utf8(pPath), Error);
 			return !Error;
 		}
 	};

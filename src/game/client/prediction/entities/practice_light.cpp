@@ -17,7 +17,7 @@ CPracticeLight::CPracticeLight(CGameWorld *pGameWorld, vec2 Pos, float Rotation,
 	m_Core = vec2(0.0f, 0.0f);
 	m_Layer = Layer;
 	m_Number = Number;
-	m_Tick = SERVER_TICK_SPEED * 0.15f;
+	m_Tick = (float)SERVER_TICK_SPEED * 0.15f;
 	m_Pos = Pos;
 	m_Rotation = Rotation;
 	m_Length = Length;

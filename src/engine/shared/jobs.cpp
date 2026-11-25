@@ -219,7 +219,10 @@ bool CJobPool::TryInit(int NumThreads, THREAD_CREATE pfnCreate)
 
 void CJobPool::Shutdown()
 {
-	dbg_assert(!m_Shutdown, "Job pool already shut down");
+	// 幂等收尾：TryInit 可能在线程启动前就失败（信号量创建不出来），此时池从未
+	// 运行过，调用方仍应能无条件调用 Shutdown，而不是让断言把进程打成 SIGILL。
+	if(m_Shutdown)
+		return;
 	m_Shutdown = true;
 
 	// abort queued jobs

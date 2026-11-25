@@ -8,7 +8,7 @@
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_client.h>
 
-#include <cstring>
+#include <bit>
 #include <type_traits>
 #include <vector>
 
@@ -191,9 +191,9 @@ namespace
 			// 私有 ID 值对象无公开构造入口，fake 仅构造有效设备句柄。
 			static_assert(std::is_trivially_copyable_v<CRenderTargetHandle>);
 			static_assert(sizeof(CRenderTargetHandle) == sizeof(int));
-			CRenderTargetHandle Handle;
 			const int Id = m_NextTarget++;
-			std::memcpy(&Handle, &Id, sizeof(Handle));
+			// 用 bit_cast 而不是往对象里 memcpy：句柄虽可平凡复制，但有用户提供的默认构造。
+			const CRenderTargetHandle Handle = std::bit_cast<CRenderTargetHandle>(Id);
 			++m_Created;
 			return Handle;
 		}

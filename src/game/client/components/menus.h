@@ -2452,10 +2452,10 @@ protected:
 	void DrainSnapshotTextContainers();
 	bool RequestIngameMotdParagraphCache(CUIRect Motd, float FontSize);
 	bool IngameMotdParagraphCacheMatches(CUIRect Motd, float FontSize) const;
-	void DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool AllowCurrentFrame = false);
-	bool RenderIngameMotdStableParagraphCache(CUIRect Motd);
+	void DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Visible);
+	bool RenderIngameMotdParagraph(CUIRect Motd);
 	void DrainIngameUiSnapshotTextRuntime();
-	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
+	void DrainIngameUiTextRuntime(bool MotdVisible);
 	void RenderServerControl(CUIRect MainView);
 
 public:
@@ -2518,8 +2518,8 @@ private:
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
 	CQmMapDifficultyCatalog m_MapDifficultyCatalog;
-	// Axiom 难度缓存合批落盘：多次请求结果在同一窗口内只写一次磁盘。
-	int64_t m_NextAxiomDifficultySave = 0;
+	// 难度缓存合批落盘：多次请求结果在同一窗口内只写一次磁盘。
+	int64_t m_NextDifficultySave = 0;
 	CQmScreenshotManager m_ScreenshotManager;
 	CQmLocalSaveDisplayCache m_LocalSaveDisplay;
 	void RenderServerbrowserFavoriteMaps(CUIRect View);
@@ -3545,7 +3545,6 @@ private:
 	void RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
-	void RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudDummyMiniViewContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool Expanded, bool PrewarmOnly);
 	void RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight, float LineSpacing, bool OriginalStyle);

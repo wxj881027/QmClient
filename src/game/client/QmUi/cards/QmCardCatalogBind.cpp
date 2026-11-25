@@ -415,7 +415,7 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 	const bool CanAdd = Enabled && !OpenPicker && State.m_ArgumentsValid && !State.m_CommandInput.IsEmpty();
 	if(Flow.Control("bind-command-add", Metrics.m_ButtonHeight, AddRow, ui_token::settings::RowGap(Metrics.m_LineSpacing)))
 	{
-		const bool Add = DoButton_Menu(&State.m_AddButton, Localize("Add"), CanAdd ? 0 : -1, &AddRow);
+		const bool Add = DoSettingsButton_Menu(SETTINGS_CONTROLS, -1, -1, &State.m_AddButton, "bind-command-add", Localize("Add"), CanAdd ? 0 : -1, &AddRow, Metrics);
 		if(CanAdd && (Add || CommandResult.m_Submitted))
 		{
 			using qm_card_catalog::EBindCommandCommitResult;
@@ -657,7 +657,7 @@ void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
 			}
 		}
 		Filter = Toolbar;
-		if(DoButton_Menu(&State.m_SortButton, State.m_SortByCommand ? Localize("Sort by command") : Localize("Sort by key"), 0, &Sort) && Enabled)
+		if(DoSettingsButton_Menu(SETTINGS_CONTROLS, -1, -1, &State.m_SortButton, "bind-overview-sort", State.m_SortByCommand ? Localize("Sort by command") : Localize("Sort by key"), 0, &Sort, Metrics) && Enabled)
 			State.m_SortByCommand = !State.m_SortByCommand;
 		// 禁用态交给 DoButton_QmIcon 的 Enabled 形参：外观与命中一起关闭，不再用 0 旗标绕过。
 		const bool CopyClicked = Ui()->DoButton_QmIcon(&State.m_CopyButton, EQmIcon::COPY, FontIcons::FONT_ICON_COPY, 0, &Copy, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Enabled) != 0;

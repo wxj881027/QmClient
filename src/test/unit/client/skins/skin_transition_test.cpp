@@ -3,6 +3,23 @@
 
 #include <gtest/gtest.h>
 
+TEST(SkinTransition, PreviewColorsAnimateEnabledPaletteChangesAndIgnoreUnusedValues)
+{
+	CTeeRenderInfo Previous;
+	CTeeRenderInfo Current = Previous;
+	Current.m_ColorBody = ColorRGBA(1, 0, 0, 1);
+	EXPECT_FALSE(SkinPreviewColorsChanged(Previous, Current));
+	Current.m_CustomColoredSkin = true;
+	EXPECT_TRUE(SkinPreviewColorsChanged(Previous, Current));
+	Previous = Current;
+	EXPECT_FALSE(SkinPreviewColorsChanged(Previous, Current));
+	Current.m_ColorFeet = ColorRGBA(0, 0, 1, 1);
+	EXPECT_TRUE(SkinPreviewColorsChanged(Previous, Current));
+	Previous = Current;
+	Current.m_CustomColoredSkin = false;
+	EXPECT_TRUE(SkinPreviewColorsChanged(Previous, Current));
+}
+
 TEST(SkinTransition, DurationMillisecondsMapToExactSeconds)
 {
 	EXPECT_FLOAT_EQ(SkinChangeTransitionDurationSeconds(500), 0.5f);

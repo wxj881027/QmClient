@@ -1,12 +1,14 @@
 #include <base/time.h>
 
 #include <engine/serverbrowser.h>
+#include <engine/storage.h>
 
 #include <game/client/components/qmclient/axiom_scores_data.h>
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
 
 #include <gtest/gtest.h>
 #include <test/support/map_http_recorder.h>
+#include <test/test.h>
 
 #include <functional>
 #include <memory>
@@ -86,6 +88,41 @@ TEST_F(AxiomBrowserDifficulty, RoomsShareRequestAndPersistCategoryAndStars)
 	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
 }
 
+TEST_F(AxiomBrowserDifficulty, AnnouncementReplacesPersistedApiCategoryAndStarScale)
+{
+	CTestInfo Info;
+	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	Request();
+	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
+	m_Http.m_vRequests.front()->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Main"}})");
+	ASSERT_TRUE(Poll());
+	ASSERT_TRUE(m_Catalog.SaveAxiomCache(pStorage.get()));
+
+	CQmMapDifficultyCatalog AfterRestart;
+	// 隔离目录没有 DDNet SQL，Load 仍会载入 Axiom 缓存。
+	AfterRestart.Load(pStorage.get(), nullptr);
+	const auto *pApiEntry = AfterRestart.FindForServer(m_Server);
+	ASSERT_NE(pApiEntry, nullptr);
+	EXPECT_EQ(pApiEntry->m_Category, "Main");
+	EXPECT_STREQ(pApiEntry->StarLabel(), "★★☆☆☆");
+	EXPECT_FALSE(AfterRestart.AxiomCacheDirty());
+
+	ASSERT_TRUE(AfterRestart.RecordAxiomMotd(m_Server, "Axiom 当前地图\n│ 地图：Two Words\n│ 难度：普通 ★★☆\n"));
+	EXPECT_TRUE(AfterRestart.AxiomCacheDirty());
+	ASSERT_TRUE(AfterRestart.SaveAxiomCache(pStorage.get()));
+
+	CQmMapDifficultyCatalog Restored;
+	Restored.Load(pStorage.get(), nullptr);
+	const auto *pMotdEntry = Restored.FindForServer(m_Server);
+	ASSERT_NE(pMotdEntry, nullptr);
+	EXPECT_EQ(pMotdEntry->m_Category, "普通");
+	EXPECT_STREQ(pMotdEntry->StarLabel(), "★★☆");
+	EXPECT_FALSE(Restored.AxiomCacheDirty());
+	Restored.RequestAxiomDifficulty(m_Server, m_Http, m_Budget, "", m_Now);
+	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
+}
+
 TEST_F(AxiomBrowserDifficulty, SameNameUsesSeparateModesAndCommunity)
 {
 	Request();
@@ -121,13 +158,13 @@ TEST_F(AxiomBrowserDifficulty, LateHttpResponseDoesNotReplaceAnnouncement)
 {
 	Request();
 	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
-	ASSERT_TRUE(m_Catalog.RecordAxiomMotd(m_Server, "Axiom 当前地图\n│ 地图：Two Words\n│ 难度：Hard ★★★★☆\n"));
+	ASSERT_TRUE(m_Catalog.RecordAxiomMotd(m_Server, "Axiom 当前地图\n│ 地图：Two Words\n│ 难度：普通 ★★☆\n"));
 	m_Http.m_vRequests.front()->Finish(R"({"code":200,"data":{"map":"Two Words","stars":2,"difficulty":"Easy"}})");
 	EXPECT_FALSE(Poll());
 	const auto *pEntry = m_Catalog.FindForServer(m_Server);
 	ASSERT_NE(pEntry, nullptr);
-	EXPECT_EQ(pEntry->m_Category, "Hard");
-	EXPECT_STREQ(pEntry->StarLabel(), "★★★★☆");
+	EXPECT_EQ(pEntry->m_Category, "普通");
+	EXPECT_STREQ(pEntry->StarLabel(), "★★☆");
 }
 
 TEST_F(AxiomBrowserDifficulty, InvalidResponsesLeaveMapUnknownAndDelayRetry)

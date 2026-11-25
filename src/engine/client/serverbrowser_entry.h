@@ -117,28 +117,31 @@ namespace server_browser
 	{
 		ValidateAddressRange(pAddresses, NumAddresses);
 		ValidateAddressRange(Entry.m_Info.m_aAddresses, Entry.m_Info.m_NumAddresses);
+		// 上面两处校验已保证不超过数组容量；再显式夹一次，让下标上界对优化器可见，
+		// 否则 -Waggressive-loop-optimizations 会把复制循环当成可越界的 UB。
+		const int AddressCount = NumAddresses < MAX_SERVER_ADDRESSES ? NumAddresses : MAX_SERVER_ADDRESSES;
 		CServerInfo Candidate{};
-		for(int Index = 0; Index < NumAddresses; ++Index)
+		for(int Index = 0; Index < AddressCount; ++Index)
 			Candidate.m_aAddresses[Index] = pAddresses[Index];
-		Candidate.m_NumAddresses = NumAddresses;
+		Candidate.m_NumAddresses = AddressCount;
 		Prepare(Candidate);
 		CAddressUpdate Changes(ByAddress);
-		for(int Index = 0; Index < NumAddresses; ++Index)
+		for(int Index = 0; Index < AddressCount; ++Index)
 			Changes.Assign(Candidate.m_aAddresses[Index], Entry.m_Info.m_ServerIndex);
 		for(int OldIndex = 0; OldIndex < Entry.m_Info.m_NumAddresses; ++OldIndex)
 		{
 			const NETADDR &Old = Entry.m_Info.m_aAddresses[OldIndex];
 			bool Retained = false;
-			for(int Index = 0; Index < NumAddresses; ++Index)
+			for(int Index = 0; Index < AddressCount; ++Index)
 				Retained |= Old == Candidate.m_aAddresses[Index];
 			if(!Retained)
 				ByAddress.erase(Old);
 		}
 		// 只替换原 ReplaceEntry 会改变的固定字段，保留玩家存储和其余缓存。
 		CServerInfo &Info = Entry.m_Info;
-		for(int Index = 0; Index < NumAddresses; ++Index)
+		for(int Index = 0; Index < AddressCount; ++Index)
 			Info.m_aAddresses[Index] = Candidate.m_aAddresses[Index];
-		Info.m_NumAddresses = NumAddresses;
+		Info.m_NumAddresses = AddressCount;
 		Info.m_QmClientCount = Candidate.m_QmClientCount;
 		Info.m_Latency = Candidate.m_Latency;
 		Info.m_HasRank = Candidate.m_HasRank;

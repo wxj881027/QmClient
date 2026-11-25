@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstring>
 #include <limits>
 #include <string>
 #include <utility>
@@ -98,7 +99,7 @@ TEST(QmRealtimeServiceData, ParserAliasesDoNotBecomeNewNativeStatisticsFields)
 
 TEST(QmRealtimeServiceData, InvalidActionTextCannotBecomeStartOrStop)
 {
-	for(const std::string Action : {std::string("start\\u0000extra"), std::string("stop\\u0000extra"), std::string("\x80"), std::string("start\\n"), std::string("")})
+	for(const std::string &Action : {std::string("start\\u0000extra"), std::string("stop\\u0000extra"), std::string("\x80"), std::string("start\\n"), std::string("")})
 	{
 		SCOPED_TRACE(::testing::PrintToString(Action));
 		const auto Input = Message("playtime", R"("total_seconds":5,"action":")" + Action + '"');
@@ -212,20 +213,23 @@ TEST(QmRealtimeServiceData, ExplicitEmptyTitleKeepsSponsorProfileAuthenticated)
 
 TEST(QmRealtimeServiceData, TitleProfileRejectsOverlongOrNonSingleLineText)
 {
-	for(const char *pTitle : {"1234567890123456789012345", "bad\\ntext", "bad\\u0000text", "bad\\u202etext"})
+	for(const char *pTitle : {"123456789", "bad\\ntext", "bad\\u0000text", "bad\\u202etext"})
 	{
 		SCOPED_TRACE(pTitle);
-		const auto Input = Message("title_profile", std::string(R"("status":200,"title":")") + pTitle + '"');
-		EXPECT_FALSE(ReadQmRealtimeServiceData(Input).m_TitleAuthenticated);
+		const std::string Json = std::string(R"({"type":"title_profile","data":{"status":200,"title":")") + pTitle + R"("}})";
+		SQmRealtimeMessage Message;
+		const bool Parsed = ParseQmRealtimeMessage(Json.data(), Json.size(), Message);
+		// 嵌入 NUL 的成员由 qm_json::Text 判为非法，整条消息被拒收；其余非法标题
+		// 可以解析成功，再由标题校验拒绝。两条路径都必须导致不可认证。
+		EXPECT_EQ(Parsed, std::strcmp(pTitle, "bad\\u0000text") != 0);
+		if(Parsed)
+			EXPECT_FALSE(ReadQmRealtimeServiceData(Message).m_TitleAuthenticated);
 	}
 }
 
 TEST(QmRealtimeServiceData, TitleProfilePreservesSupplementaryAndCombiningCodePoints)
 {
-	std::string Title = "[";
-	for(int i = 0; i < 16; ++i)
-		Title += "𠮷";
-	Title += "文e\u0301\U0001f469\u200d\U0001f4bb]";
+	const std::string Title = "[𠮷e\u0301\U0001f469\u200d\U0001f4bb]";
 	const auto Input = Message("title_profile", std::string(R"("status":200,"title":")") + Title + '"');
 	const auto Data = ReadQmRealtimeServiceData(Input);
 	EXPECT_TRUE(Data.m_TitleAuthenticated);
@@ -234,7 +238,7 @@ TEST(QmRealtimeServiceData, TitleProfilePreservesSupplementaryAndCombiningCodePo
 
 TEST(QmRealtimeServiceData, InvalidOptionalChatStyleDoesNotDiscardValidProfile)
 {
-	for(const std::string Style : {std::string("soft_glow\\u0000extra"), std::string("platinum\\u0000extra"), std::string("\x80")})
+	for(const std::string &Style : {std::string("soft_glow\\u0000extra"), std::string("platinum\\u0000extra"), std::string("\x80")})
 	{
 		SCOPED_TRACE(::testing::PrintToString(Style));
 		const auto Input = Message("title_profile", R"("status":200,"title":"Title","chat_style":")" + Style + '"');
@@ -295,7 +299,7 @@ TEST(QmRealtimeServiceData, ExactAppearanceCannotBeShadowedAndPreservesZeroValue
 
 TEST(QmRealtimeServiceData, InvalidAppearanceStyleFallsBackWithoutLosingValidTitle)
 {
-	for(const std::string Style : {std::string("sun\\u0000extra"), std::string("moon\\u0000extra"), std::string("\x80")})
+	for(const std::string &Style : {std::string("sun\\u0000extra"), std::string("moon\\u0000extra"), std::string("\x80")})
 	{
 		SCOPED_TRACE(::testing::PrintToString(Style));
 		const auto Input = Message("title_profile", R"("title":"Title","status":200,"appearance":{"style":")" + Style + R"(","color":0,"opacity":0})");

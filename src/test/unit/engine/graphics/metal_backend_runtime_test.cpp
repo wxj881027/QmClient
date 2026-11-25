@@ -196,6 +196,8 @@ namespace
 		CCommandBuffer::SCommand_Render Render;
 		Render.m_State.m_BlendMode = EBlendMode::NONE;
 		Render.m_State.m_Texture = -1;
+		// 铺满整个目标，不需要裁剪；必须显式关闭，别让这个字段继承别的命令的状态。
+		Render.m_State.m_ClipEnable = false;
 		Render.m_State.m_ScreenTL = {0.0f, 0.0f};
 		Render.m_State.m_ScreenBR = {Width, Height};
 		Render.m_PrimType = EPrimitiveType::QUADS;
@@ -227,6 +229,8 @@ namespace
 		Render.m_State.m_BlendMode = EBlendMode::ALPHA;
 		Render.m_State.m_Texture = -1;
 		Render.m_State.m_WrapMode = EWrapMode::CLAMP;
+		// 岛屿铺满整块 32x32，不需要裁剪；显式关闭，避免被零面积的 scissor 整片裁掉。
+		Render.m_State.m_ClipEnable = false;
 		Render.m_State.m_ScreenTL = {0.0f, 0.0f};
 		Render.m_State.m_ScreenBR = {Width, Height};
 		Render.m_Params.Clear();
@@ -324,6 +328,8 @@ namespace
 		CCommandBuffer::SCommand_RenderQuadContainerEx Render;
 		Render.m_State.m_BlendMode = EBlendMode::NONE;
 		Render.m_State.m_Texture = -1;
+		Render.m_State.m_WrapMode = EWrapMode::CLAMP;
+		Render.m_State.m_ClipEnable = false;
 		Render.m_State.m_ScreenTL = {0.0f, 0.0f};
 		Render.m_State.m_ScreenBR = {Width, Height};
 		Render.m_BufferContainerIndex = 0;

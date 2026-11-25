@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <set>
+#include <string_view>
+
 TEST(QmSearchHeader, RepeatedFramesKeepTheSameSplash)
 {
 	qm_search_header::CSession Session;
@@ -33,6 +36,59 @@ TEST(QmSearchHeader, ClosingAndReopeningChangesSplashEvenInSameCycle)
 	EXPECT_TRUE(Session.NeedsEntry(1));
 	Session.Enter(1, 0, 0);
 	EXPECT_STRNE(Session.Text(), pFirst);
+}
+
+TEST(QmSearchHeader, EveryPlaceholderCanBeSelectedOnFirstEntry)
+{
+	for(int Choice = 0; Choice < qm_search_header::NUM_SEARCH_PLACEHOLDERS; ++Choice)
+	{
+		SCOPED_TRACE(Choice);
+		qm_search_header::CSession Session;
+		EXPECT_EQ(Session.PlaceholderChoiceCount(), qm_search_header::NUM_SEARCH_PLACEHOLDERS);
+		Session.Enter(1, 0, 0, Choice);
+		EXPECT_STREQ(Session.Placeholder(), qm_search_header::SEARCH_PLACEHOLDERS[Choice]);
+		EXPECT_STRNE(Session.Placeholder(), "");
+	}
+}
+
+TEST(QmSearchHeader, RepeatedFramesKeepTheSamePlaceholder)
+{
+	qm_search_header::CSession Session;
+	Session.Enter(1, 0, 0, 2);
+	const char *pFirst = Session.Placeholder();
+	Session.Enter(1, 0, 0, 5);
+	EXPECT_STREQ(Session.Placeholder(), pFirst);
+}
+
+TEST(QmSearchHeader, NewCycleCanSelectEveryPlaceholderExceptThePreviousOne)
+{
+	for(int Previous = 0; Previous < qm_search_header::NUM_SEARCH_PLACEHOLDERS; ++Previous)
+	{
+		SCOPED_TRACE(Previous);
+		qm_search_header::CSession FirstEntry;
+		FirstEntry.Enter(1, 0, 0, Previous);
+		const int ChoiceCount = FirstEntry.PlaceholderChoiceCount();
+		ASSERT_EQ(ChoiceCount, qm_search_header::NUM_SEARCH_PLACEHOLDERS - 1);
+		std::set<std::string_view> Selected;
+		for(int Choice = 0; Choice < ChoiceCount; ++Choice)
+		{
+			SCOPED_TRACE(Choice);
+			auto Session = FirstEntry;
+			Session.Enter(2, 0, 0, Choice);
+			EXPECT_STRNE(Session.Placeholder(), FirstEntry.Placeholder());
+			EXPECT_TRUE(Selected.insert(Session.Placeholder()).second);
+		}
+	}
+}
+
+TEST(QmSearchHeader, ClosingAndReopeningChangesPlaceholderEvenInSameCycle)
+{
+	qm_search_header::CSession Session;
+	Session.Enter(1, 0, 0, 0);
+	const char *pFirst = Session.Placeholder();
+	Session.Leave();
+	Session.Enter(1, 0, 0, 0);
+	EXPECT_STRNE(Session.Placeholder(), pFirst);
 }
 
 TEST(QmSearchHeader, QueryRemovesHeaderAndPlacesInputAtTop)

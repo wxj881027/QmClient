@@ -284,7 +284,7 @@ void CQmMonitoring::UpdatePerformanceMetrics(SQmPerformanceMetrics &Perf)
 {
 	Perf.m_FrameTimeMs = Client()->FrameTimeAverage() * 1000.0f;
 	const int64_t Now = time_get();
-	if(g_Config.m_DbgGraphs || m_LastPercentileTick == 0 || Now - m_LastPercentileTick >= time_freq() / 2)
+	if(g_Config.m_ClShowPerf || m_LastPercentileTick == 0 || Now - m_LastPercentileTick >= time_freq() / 2)
 	{
 		const int FrameHistoryHead = (m_HistoryHead + 1) % (int)m_aFrameTimeHistory.size();
 		const int FrameHistoryCount = std::min(m_HistoryCount + 1, (int)m_aFrameTimeHistory.size());

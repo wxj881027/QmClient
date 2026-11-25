@@ -1,5 +1,6 @@
 #include "config_package.h"
 
+#include <base/fs_path.h>
 #include <base/str.h>
 #include <base/system.h>
 
@@ -86,7 +87,7 @@ namespace qm_config_package
 		{
 			char aRoot[IO_MAX_PATH_LENGTH];
 			Storage.GetCompletePath(IStorage::TYPE_SAVE, "", aRoot, sizeof(aRoot));
-			return std::filesystem::u8path(aRoot);
+			return fs_path_from_utf8(aRoot);
 		}
 
 		bool ResolvesInside(const std::filesystem::path &Root, const std::filesystem::path &Path)
@@ -295,9 +296,9 @@ namespace qm_config_package
 		std::error_code Ec;
 		const auto Root = StorageRoot(m_Storage);
 		std::filesystem::path Current = Root;
-		if(!ResolvesInside(Root, Root / std::filesystem::u8path(Path)))
+		if(!ResolvesInside(Root, Root / fs_path_from_utf8(Path)))
 			return false;
-		const auto Relative = std::filesystem::u8path(Path);
+		const auto Relative = fs_path_from_utf8(Path);
 		for(auto Iterator = Relative.begin(); Iterator != Relative.end(); ++Iterator)
 		{
 			Current /= *Iterator;

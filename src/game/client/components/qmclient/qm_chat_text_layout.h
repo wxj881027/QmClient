@@ -42,23 +42,21 @@ struct SQmChatTextBlockLayout
 // 每条消息只有一套绘制容器，行高和正文换行也只保留这套容器对应的布局。
 struct SQmChatLineLayout
 {
-	bool m_Scoreboard = false;
 	bool m_Expanded = false;
 	float m_Height = -1.0f;
 	bool m_MergedMessageInline = false;
 	SQmChatTextBlockLayout m_TextBlocks;
 
-	float HeightFor(bool Scoreboard, bool Expanded) const
+	float HeightFor(bool Expanded) const
 	{
-		return m_Scoreboard == Scoreboard && m_Expanded == Expanded ? m_Height : -1.0f;
+		return m_Expanded == Expanded ? m_Height : -1.0f;
 	}
 
-	void SelectView(bool Scoreboard, bool Expanded)
+	void SelectView(bool Expanded)
 	{
-		if(m_Scoreboard == Scoreboard && m_Expanded == Expanded)
+		if(m_Expanded == Expanded)
 			return;
 		*this = {};
-		m_Scoreboard = Scoreboard;
 		m_Expanded = Expanded;
 	}
 };

@@ -3805,6 +3805,7 @@ Players weapons has no affect on others
 Playing effects
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 Playtime (h)
+Playtime query failed. Retrying shortly.
 Please add a valid cut first
 Please balance teams!
 Please enable finished indicator first
@@ -4018,6 +4019,7 @@ Query points for %s
 Query rank for %s
 Query server setting: %s
 Query team rank for %s
+Querying playtime from DDStats...
 Querying points for %s...
 Querying points...
 Querying...
@@ -5760,6 +5762,7 @@ Total fonts:
 Total friends
 Total hours
 Total play time
+Total playtime from DDStats. The last result stays visible while refreshing.
 Total points
 Total: %d save(s)
 Trail alpha
@@ -6448,6 +6451,15 @@ Zoom to current mouse target
 [Auto camera]	Enabled
 [Auto camera]	Inactive
 [Auto camera]	Unavailable for this player
+[Axiom map difficulty]	Brutal
+[Axiom map difficulty]	Easy
+[Axiom map difficulty]	Extreme
+[Axiom map difficulty]	Hard
+[Axiom map difficulty]	Insane
+[Axiom map difficulty]	Main
+[Axiom map difficulty]	Mod
+[Axiom map difficulty]	Solo
+[Axiom map difficulty]	Train
 [Bind keyboard key]	Menu
 [Config help]	%s (default: "%s", max length: %d)
 [Config help]	%s (default: $%0*X)

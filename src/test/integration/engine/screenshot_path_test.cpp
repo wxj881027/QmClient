@@ -1,3 +1,5 @@
+#include <base/fs_path.h>
+
 #include <engine/client/screenshot_path.h>
 
 #include <gtest/gtest.h>
@@ -23,7 +25,7 @@ namespace
 
 		std::string Absolute(const char *pName)
 		{
-			const auto Path = (std::filesystem::absolute(std::filesystem::u8path(m_Info.StoragePath())) / std::filesystem::u8path(pName)).generic_u8string();
+			const auto Path = (std::filesystem::absolute(fs_path_from_utf8(m_Info.StoragePath())) / fs_path_from_utf8(pName)).generic_u8string();
 			return {reinterpret_cast<const char *>(Path.c_str()), Path.size()};
 		}
 		bool Prepare(const char *pName)

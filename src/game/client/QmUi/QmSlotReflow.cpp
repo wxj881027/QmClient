@@ -19,7 +19,6 @@ namespace
 	// 一次换位跨过太多槽位时不当作「让位」，当作换了一整个列表，直接对齐。
 	// 注意：跨行换位时列号会跳（删掉第 0 列会让后面所有卡片列号减 1 并折行），
 	// 所以只按「槽位数差」和「行差」判断，不按列差。
-	constexpr int SLOT_REFLOW_MAX_ROW_DELTA = 3;
 	constexpr int SLOT_REFLOW_MAX_SLOT_DELTA = 8;
 	constexpr size_t SLOT_REFLOW_MAX_ENTRIES = 400;
 	constexpr int SLOT_REFLOW_ENTRY_TTL_FRAMES = 180;
@@ -79,28 +78,24 @@ vec2 CQmSlotReflow::Track(const char *pKey, int Slot, float StepX, float StepY)
 	if(pKey == nullptr)
 		return vec2(0.0f, 0.0f);
 
-	auto It = m_States.find(pKey);
-	if(It == m_States.end())
-	{
-		SState State;
-		State.m_Seen = true;
-		State.m_Slot = Slot;
-		State.m_LastFrame = m_Frame;
-		m_States.emplace(pKey, State);
-		return vec2(0.0f, 0.0f);
-	}
+	return Track(m_States[pKey], Slot, StepX, StepY);
+}
 
-	SState &State = It->second;
+vec2 CQmSlotReflow::Track(CItem &State, int Slot, float StepX, float StepY) const
+{
+	if(State.m_LastFrame == m_Frame && State.m_Slot == Slot)
+		return State.m_DisplayedOffset;
+	const bool NewItem = State.m_Slot < 0 || State.m_LastFrame < m_Frame - 1;
 	State.m_LastFrame = m_Frame;
-	if(!State.m_Seen || m_Snap)
+	if(NewItem || m_Snap)
 	{
-		State.m_Seen = true;
 		State.m_Slot = Slot;
 		State.m_OffsetX = 0.0f;
 		State.m_OffsetY = 0.0f;
 		State.m_VelocityX = 0.0f;
 		State.m_VelocityY = 0.0f;
-		return vec2(0.0f, 0.0f);
+		State.m_DisplayedOffset = vec2(0.0f, 0.0f);
+		return State.m_DisplayedOffset;
 	}
 
 	if(State.m_Slot != Slot)
@@ -108,7 +103,7 @@ vec2 CQmSlotReflow::Track(const char *pKey, int Slot, float StepX, float StepY)
 		const int Cols = maximum(1, m_Columns);
 		const int RowDelta = std::abs(State.m_Slot / Cols - Slot / Cols);
 		const int SlotDelta = std::abs(State.m_Slot - Slot);
-		if(RowDelta > SLOT_REFLOW_MAX_ROW_DELTA || SlotDelta > SLOT_REFLOW_MAX_SLOT_DELTA)
+		if(RowDelta > MAX_ROW_DELTA || SlotDelta > SLOT_REFLOW_MAX_SLOT_DELTA)
 		{
 			// 跳得太远：多半是换了筛选或换了一整个列表，直接对齐不做动画。
 			State.m_OffsetX = 0.0f;
@@ -127,15 +122,18 @@ vec2 CQmSlotReflow::Track(const char *pKey, int Slot, float StepX, float StepY)
 
 	// 先返回本帧位置再推进弹簧：换位那一帧必须完整停在旧位置，
 	// 否则第一帧就已经挪动了一小段，看起来像「跳了一下才开始滑」。
-	const vec2 Offset(State.m_OffsetX, State.m_OffsetY);
+	State.m_DisplayedOffset = vec2(State.m_OffsetX, State.m_OffsetY);
 	StepSpringStable(State.m_OffsetX, State.m_VelocityX, m_Dt);
 	StepSpringStable(State.m_OffsetY, State.m_VelocityY, m_Dt);
-	return Offset;
+	return State.m_DisplayedOffset;
 }
 
 void CQmSlotReflow::Reset()
 {
 	m_States.clear();
+	// 外置条目也必须在下一帧重新登记，不能接续重置前的偏移。
+	++m_Frame;
+	m_Snap = true;
 }
 
 void CQmSlotReflow::PruneIfNeeded()

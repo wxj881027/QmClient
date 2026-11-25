@@ -57,7 +57,7 @@ void NTranslateUiSettings::RenderTranslateUiModule(CMenus *pMenus, CUIRect &Card
 	if(Flow.Control("translate-appearance-6", LineHeight, Row, LineSpacing))
 	{
 		static CButtonContainer s_ResetAppearance;
-		if(pMenus->DoButton_Menu(&s_ResetAppearance, Localize("Reset translation colors"), 0, &Row) && !pMenus->Ui()->RenderOnly())
+		if(pMenus->DoSettingsButton_Menu(CMenus::SETTINGS_QMCLIENT, CMenus::QMCLIENT_SETTINGS_TAB_FUNCTION, CMenus::QMCLIENT_SETTINGS_TAB_FUNCTION, &s_ResetAppearance, "translate-appearance-reset", Localize("Reset translation colors"), 0, &Row, pMenus->CurrentSettingsContentMetrics()) && !pMenus->Ui()->RenderOnly())
 		{
 			g_Config.m_QmTranslateBtnColorDisabled = DefaultConfig::QmTranslateBtnColorDisabled;
 			g_Config.m_QmTranslateBtnColorEnabled = DefaultConfig::QmTranslateBtnColorEnabled;

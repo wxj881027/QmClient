@@ -36,6 +36,7 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTextRenderState.h>
 #include <game/client/animstate.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
@@ -1342,6 +1343,7 @@ namespace
 		int m_RowByteOffset = 0;
 		float m_RowTop = 0.0f;
 		float m_ContentWidth = 0.0f;
+		bool m_NeedsUpload = false;
 		CTextCursor m_RowCursor;
 	};
 	SIngameMotdLayoutBuild s_IngameMotdLayoutBuild;
@@ -1376,6 +1378,7 @@ namespace
 		Build.m_RowByteOffset = 0;
 		Build.m_RowTop = 0.0f;
 		Build.m_ContentWidth = 0.0f;
+		Build.m_NeedsUpload = false;
 		Build.m_RowCursor = CTextCursor();
 	}
 
@@ -1424,16 +1427,21 @@ namespace
 		return s_IngameMotdLayoutBuild.m_ContentWidth;
 	}
 
-	// 发出一个排版单元：框线行一次发完整行（每个字形显式定位到自己的格子，
-	// 推进相同、字间距为 0），普通行按字节块发出并沿用自然推进与换行。
-	// 返回 false 表示全部行都发完了。
-	bool StepIngameMotdLayout(ITextRender *pTextRender, STextContainerIndex &BuildContainer, const char *pMotd, float Width, float FontSize, int ChunkBytes)
+	// 每步最多追加一段普通正文或一批框线字形。空行只推进行高。
+	void StepIngameMotdLayout(ITextRender *pTextRender, STextContainerIndex &BuildContainer, const char *pMotd, float Width, float FontSize, int ChunkBytes)
 	{
 		SIngameMotdLayoutBuild &Build = s_IngameMotdLayoutBuild;
 		const auto &vLines = Build.m_Layout.m_vLines;
+		while(Build.m_Row < (int)vLines.size() && vLines[Build.m_Row].m_ByteLength == 0)
+		{
+			++Build.m_Row;
+			Build.m_RowTop += Build.m_Layout.m_LineHeight;
+		}
 		if(Build.m_Row >= (int)vLines.size())
-			return false;
+			return;
 
+		const CUiScopedTextRenderState TextState(*pTextRender);
+		pTextRender->SetRenderFlags(pTextRender->GetRenderFlags() | TEXT_RENDER_FLAG_NO_AUTOMATIC_QUAD_UPLOAD);
 		const QmMotdLayout::SLine &Line = vLines[Build.m_Row];
 		if(Line.m_Mode == QmMotdLayout::ELineMode::BOX)
 		{
@@ -1450,20 +1458,21 @@ namespace
 				CTextCursor GlyphCursor;
 				GlyphCursor.m_FontSize = FontSize;
 				GlyphCursor.SetPosition(vec2((float)Build.m_RowGlyph * Line.m_Advance, Build.m_RowTop));
-				pTextRender->CreateOrAppendTextContainer(BuildContainer, &GlyphCursor, pMotd + GlyphOffset, GlyphBytes);
+				if(pTextRender->CreateOrAppendTextContainer(BuildContainer, &GlyphCursor, pMotd + GlyphOffset, GlyphBytes))
+					Build.m_NeedsUpload = true;
 				Build.m_RowByteOffset += GlyphBytes;
 				Build.m_RowGlyph++;
 				++EmittedGlyphs;
 			}
 			// 预算用完但本行还没发完：保持行内进度，下一帧接着发。
 			if(Build.m_RowGlyph < Line.m_VisibleGlyphCount)
-				return true;
+				return;
 			Build.m_ContentWidth = maximum(Build.m_ContentWidth, (float)Line.m_VisibleGlyphCount * Line.m_Advance);
 			Build.m_Row++;
 			Build.m_RowGlyph = 0;
 			Build.m_RowByteOffset = 0;
 			Build.m_RowTop += Build.m_Layout.m_LineHeight;
-			return true;
+			return;
 		}
 
 		// 普通行：沿用文本排版的自然推进与换行，只把预算拆细，不改排版结果。
@@ -1488,7 +1497,8 @@ namespace
 				Build.m_RowCursor.SetPosition(vec2(0.0f, Build.m_RowTop));
 			}
 
-			pTextRender->CreateOrAppendTextContainer(BuildContainer, &Build.m_RowCursor, pMotd + ChunkStart, ChunkLength);
+			if(pTextRender->CreateOrAppendTextContainer(BuildContainer, &Build.m_RowCursor, pMotd + ChunkStart, ChunkLength))
+				Build.m_NeedsUpload = true;
 			Build.m_RowByteOffset += ChunkLength;
 			Build.m_ContentWidth = maximum(Build.m_ContentWidth, Build.m_RowCursor.m_LongestLineWidth);
 
@@ -1500,14 +1510,7 @@ namespace
 				Build.m_Row++;
 				Build.m_RowByteOffset = 0;
 			}
-			return true;
 		}
-
-		// 空行（没有字节可发）：只把行顶往下推一格。
-		Build.m_Row++;
-		Build.m_RowByteOffset = 0;
-		Build.m_RowTop += Build.m_Layout.m_LineHeight;
-		return true;
 	}
 } // namespace
 
@@ -1565,7 +1568,7 @@ bool CMenus::IngameMotdParagraphCacheMatches(CUIRect Motd, float FontSize) const
 	       absolute(m_IngameMotdParagraphCache.m_FontSize - FontSize) < 0.01f;
 }
 
-void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool AllowCurrentFrame)
+void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Visible)
 {
 	const char *pMotd = GameClient()->m_Motd.ServerMotd();
 	const unsigned TextHash = str_quickhash(pMotd);
@@ -1595,7 +1598,7 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 			BudgetBlocked = true;
 		}
 		const int ParagraphLayoutTokens = m_IngameTextFrameBudget.m_ParagraphLayoutTokens;
-		if((!AllowCurrentFrame && Frame <= m_IngameMotdParagraphCache.m_PendingFrame) || ParagraphLayoutTokens <= 0)
+		if(!QmMotdLayout::CanAdvanceParagraph(Visible, Frame <= m_IngameMotdParagraphCache.m_PendingFrame, ParagraphLayoutTokens))
 		{
 			BudgetBlocked = true;
 		}
@@ -1611,7 +1614,9 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 
 			if(IngameMotdLayoutComplete())
 			{
-				// 文本容器不支持多 owner；构建期间继续显示旧容器，完成后再原子替换。
+				if(s_IngameMotdLayoutBuild.m_NeedsUpload)
+					TextRender()->UploadTextContainer(m_IngameMotdParagraphCache.m_BuildTextContainerIndex);
+				// 构建期间保留旧容器，完成后移交新容器的所有权。
 				TextRender()->DeleteTextContainer(m_MotdTextContainerIndex);
 				std::swap(m_MotdTextContainerIndex, m_IngameMotdParagraphCache.m_BuildTextContainerIndex);
 				m_IngameMotdParagraphCache.m_BuildTextContainerIndex.Reset();
@@ -1642,21 +1647,41 @@ void CMenus::DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Al
 	}
 }
 
-bool CMenus::RenderIngameMotdStableParagraphCache(CUIRect Motd)
+bool CMenus::RenderIngameMotdParagraph(CUIRect Motd)
 {
-	if(!m_IngameMotdParagraphCache.m_Valid || !m_MotdTextContainerIndex.Valid())
-		return false;
-	// 内容尺寸取逐行排版提交时记下的实测值：容器里同时有普通行与框线行，
-	// 容器自身的 bounding box 只反映最后一次追加，撑不起整段内容的缩放。
-	const float Scale = QmServerInfoGeometry::FitScale(Motd, s_IngameMotdContentWidth, s_IngameMotdContentHeight);
-	if(Scale <= 0.0f)
+	SIngameMotdLayoutBuild &Build = s_IngameMotdLayoutBuild;
+	auto &Cache = m_IngameMotdParagraphCache;
+	const bool CompleteReady = Cache.m_Valid && m_MotdTextContainerIndex.Valid();
+	const bool PartialReady = Cache.m_Pending && Build.m_Valid && Cache.m_BuildTextContainerIndex.Valid();
+	const auto Source = QmMotdLayout::SelectParagraphSource(CompleteReady, PartialReady, Cache.m_TextHash == Cache.m_PendingTextHash);
+	if(Source == QmMotdLayout::EParagraphSource::NONE)
 		return false;
 
-	// 缩放已有的完整容器，不因高度变化反复排版，也不让旧宽度的容器越过卡片边界。
+	const bool ShowBuild = Source == QmMotdLayout::EParagraphSource::BUILDING;
+	const STextContainerIndex &Container = ShowBuild ? Cache.m_BuildTextContainerIndex : m_MotdTextContainerIndex;
+	float ContentWidth = s_IngameMotdContentWidth;
+	float ContentHeight = s_IngameMotdContentHeight;
+	if(ShowBuild)
+	{
+		// 预留后续行的高度，已知的普通行换行量也计入缩放。
+		const int CurrentRowLineCount = Build.m_RowByteOffset > 0 && Build.m_RowGlyph == 0 ? Build.m_RowCursor.m_LineCount : 1;
+		ContentHeight = Build.m_Layout.PreviewHeight(Build.m_Row, Build.m_RowTop, CurrentRowLineCount);
+		ContentWidth = Build.m_ContentWidth;
+	}
+	const float Scale = QmServerInfoGeometry::FitScale(Motd, ContentWidth, ContentHeight);
+	if(Scale <= 0.0f)
+		return false;
+	if(ShowBuild && Build.m_NeedsUpload)
+	{
+		// 追加框线后的顶点统一上传，避免同一批中的每个字形都重传整个容器。
+		TextRender()->UploadTextContainer(Container);
+		Build.m_NeedsUpload = false;
+	}
+
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	Graphics()->MapScreen((ScreenX0 - Motd.x) / Scale, (ScreenY0 - Motd.y) / Scale, (ScreenX1 - Motd.x) / Scale, (ScreenY1 - Motd.y) / Scale);
-	TextRender()->RenderTextContainer(m_MotdTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), 0.0f, 0.0f);
+	TextRender()->RenderTextContainer(Container, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), 0.0f, 0.0f);
 	Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 	return true;
 }
@@ -1666,12 +1691,12 @@ void CMenus::DrainIngameUiSnapshotTextRuntime()
 	DrainSnapshotTextContainers();
 }
 
-void CMenus::DrainIngameUiTextRuntime(bool AllowCurrentFrame)
+void CMenus::DrainIngameUiTextRuntime(bool MotdVisible)
 {
 	DrainIngameUiSnapshotTextRuntime();
 	if(m_IngameMotdParagraphCache.m_Pending)
 	{
-		DrainIngameMotdParagraphCache(m_IngameMotdParagraphCache.m_PendingRect, m_IngameMotdParagraphCache.m_PendingFontSize, AllowCurrentFrame);
+		DrainIngameMotdParagraphCache(m_IngameMotdParagraphCache.m_PendingRect, m_IngameMotdParagraphCache.m_PendingFontSize, MotdVisible);
 	}
 }
 
@@ -2009,10 +2034,8 @@ void CMenus::RenderServerInfoMotd(CUIRect Motd)
 		return;
 
 	Ui()->ClipEnable(&Motd);
-	const bool RenderedMotdParagraph = RenderIngameMotdStableParagraphCache(Motd);
+	const bool RenderedMotdParagraph = RenderIngameMotdParagraph(Motd);
 	Ui()->ClipDisable();
-	// MOTD 是可延迟通知：未完成时保持旧的完整容器，首次加载则留空，
-	// 不额外光栅化占位文本，也不回退到整段同步 TextEx。
 	if(!RenderedMotdParagraph && QmPerfEnabled())
 	{
 		char aPayload[160];

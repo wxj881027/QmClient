@@ -21,7 +21,7 @@ namespace
 {
 	bool CountryFlagsPerfDebugEnabled()
 	{
-		return g_Config.m_QmPerfDebug != 0;
+		return g_Config.m_QmPerfEnabled;
 	}
 
 	void LogCountryFlagsPerfStage(const char *pStage, const char *pExtra)

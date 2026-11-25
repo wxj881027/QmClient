@@ -100,7 +100,7 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("cl_nameplates*", EConfigTag::VISUAL);
 	RegisterTag("cl_show_hook_coll*", EConfigTag::VISUAL);
 	RegisterTag("cl_show_direction*", EConfigTag::VISUAL);
-	RegisterTag("cl_show_fps*", EConfigTag::VISUAL);
+	RegisterTag("cl_show_perf", EConfigTag::VISUAL);
 
 	// HUD - 界面显示
 	RegisterTag("*hud*", EConfigTag::HUD);

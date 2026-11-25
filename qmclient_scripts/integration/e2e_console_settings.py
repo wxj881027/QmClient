@@ -13,7 +13,7 @@ except ModuleNotFoundError:
 
 def scenario_console_settings_startup(env: ProcessEnvironment) -> None:
 	client = env.start_client(
-		["qm_steam_auto_launch 0", "qm_auto_update 0", "cl_show_welcome 1", "qm_console_settings"],
+		["qm_steam_auto_launch 0", "cl_show_welcome 1", "qm_console_settings"],
 		connect=False,
 	)
 	client.command("echo console_settings_startup_ready")

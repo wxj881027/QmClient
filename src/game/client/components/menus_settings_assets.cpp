@@ -70,6 +70,8 @@
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
+// Windows 的同名宏会覆盖游戏光标的图片编号，导致热切换重载到错误的图片槽。
+#undef IMAGE_CURSOR
 #else
 #include <sys/stat.h>
 #endif
@@ -101,7 +103,7 @@ namespace
 
 	bool AssetsPerfDebugEnabled()
 	{
-		return g_Config.m_QmPerfDebug != 0;
+		return g_Config.m_QmPerfEnabled;
 	}
 
 	void LogAssetsPerfStage(const IClient *pClient, const char *pStage, double DurationMs, bool Force = false, const char *pExtra = nullptr)
