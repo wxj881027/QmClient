@@ -2,7 +2,7 @@
   "summary": {
     "must_i18n": 11346,
     "business_data": 13701,
-    "test_only": 9583,
+    "test_only": 9579,
     "needs_review": 5160,
     "violation": 0
   },
@@ -175952,7 +175952,7 @@
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_indirect_localization_contract.py",
       "line": 32,
-      "text": "Bind Wheel",
+      "text": "Bind Menus",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
@@ -176665,735 +176665,707 @@
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 187,
-      "text": "AddCard(\"deck:tclient-warlist-entries\", \"War Entries\", 360.0f, Render);",
+      "line": 198,
+      "text": "Bind Menus",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 188,
-      "text": "AddCard(\"deck:tclient-info-links\", \"TClient Links\", 100.0f, Render);",
+      "line": 198,
+      "text": "Chat Binds",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 189,
-      "text": "AddCard(\"deck:tclient-settings\", \"Settings\", 100.0f, Render);",
+      "line": 198,
+      "text": "Status Bar",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 197,
-      "text": "TClient Links",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 197,
-      "text": "War Entries",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 204,
-      "text": "static const SQmMusicHookEntry aEntries[] = {",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 205,
-      "text": "{&g_Config.m_QmNeteaseHookEnable, \"Enable Netease music Hook\", \"Enable Netease music Hook\", L\"cloudmusic.exe\"},",
+      "line": 198,
+      "text": "War List",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
       "line": 206,
-      "text": "{&g_Config.m_QmSodaHookEnable, \"Enable SodaMusic Hook\", \"Enable SodaMusic Hook\", L\"SodaMusic.exe\"},",
+      "text": "static const SQmMusicHookEntry aEntries[] = {",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
       "line": 207,
+      "text": "{&g_Config.m_QmNeteaseHookEnable, \"Enable Netease music Hook\", \"Enable Netease music Hook\", L\"cloudmusic.exe\"},",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
+      "line": 208,
+      "text": "{&g_Config.m_QmSodaHookEnable, \"Enable SodaMusic Hook\", \"Enable SodaMusic Hook\", L\"SodaMusic.exe\"},",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
+      "line": 209,
       "text": "{&g_Config.m_QmSpotifyEnable, \"Enable Spotify lyrics\", \"Enable Spotify lyrics\", L\"Spotify.exe\"},",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 216,
+      "line": 218,
       "text": "Enable Netease music Hook",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 216,
+      "line": 218,
       "text": "Enable SodaMusic Hook",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 216,
+      "line": 218,
       "text": "Enable Spotify lyrics",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 220,
+      "line": 222,
       "text": "Localize(\"Demo \" \"Player\");",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 223,
+      "line": 225,
       "text": "Demo ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 234,
+      "line": 236,
       "text": "// Localize(\"Nope\")\\nLocalize(\"Yes\")",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 241,
+      "line": 243,
       "text": "EXPECT_NE(Source.find(\"Localize(\\\"Nope\\\")\"), std::string::npos);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 249,
+      "line": 251,
       "text": "Console()->Register(\"cmd\", \"\", CFGFLAG_CLIENT, Fn, this, \"Help text\");",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 255,
+      "line": 257,
       "text": "Help text",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 260,
+      "line": 262,
       "text": "Console()->Register(\"rules\", \"\", CFGFLAG_CHAT | CFGFLAG_SERVER, Fn, this, \"Show the server rules\");",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 267,
+      "line": 269,
       "text": "Show the server rules",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 275,
+      "line": 277,
       "text": "List all commands which are accessible for users",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 276,
+      "line": 278,
       "text": "列出普通玩家可用的所有命令",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 285,
+      "line": 287,
       "text": "Extra test key",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 299,
+      "line": 301,
       "text": "Register(\"test_echo\", \"\", CFGFLAG_SERVER, Fn, nullptr, \"test\");\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 327,
+      "line": 329,
       "text": "X(\"你正在发起投票，请等当前投票结束后再试\", \"You are running a vote, please try again after the vote is done!\")\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 336,
+      "line": 338,
       "text": "你正在发起投票，请等当前投票结束后再试",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 338,
+      "line": 340,
       "text": "You are running a vote, please try again after the vote is done!",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 357,
+      "line": 359,
       "text": "#define QM_HUD_NOTIFICATION_STATIC_ALIAS_RULES(X) \\\\n\\tX(\"你现在会收到私聊消息\", WhispersOn)\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 365,
+      "line": 367,
       "text": "你现在会收到私聊消息",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 375,
+      "line": 377,
       "text": "dbg_assert_failed(\"Client state %d is invalid for RenderMenubar\");",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 376,
+      "line": 378,
       "text": "static_assert(true, \"Metadata table out of sync\");",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 377,
+      "line": 379,
       "text": "str_format(aCmd, sizeof(aCmd), \"auth_add %s admin %s\", pUser, pPassword);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 387,
+      "line": 389,
       "text": "Client state %d is invalid for RenderMenubar",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 388,
+      "line": 390,
       "text": "Metadata table out of sync",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 389,
+      "line": 391,
       "text": "auth_add %s admin %s",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 406,
+      "line": 408,
       "text": "str_copy(Out.m_aError, \"No choices in response\", sizeof(Out.m_aError));\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 413,
+      "line": 415,
       "text": "No choices in response",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 428,
+      "line": 430,
       "text": "{EBindOptionGroup::MOVEMENT, Localizable(\"Pause\"), \"say /pause\"},\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 436,
+      "line": 438,
       "text": "say /pause",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 445,
+      "line": 447,
       "text": "constexpr const char *pLine1 = \"practice mode\";\\nTextRender()->Text(0.0f, 0.0f, 10.0f, Localize(pLine1), -1.0f);\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 453,
+      "line": 455,
       "text": "practice mode",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 461,
+      "line": 463,
       "text": "static const SPreviewLine s_aPreviewLines[] = {{\"Server\", \"Welcome to QmClient\"}};\\nstr_format(aCount, sizeof(aCount), \"%s（/%s %s）\", pHelp, pName, pParams);\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 469,
+      "line": 471,
       "text": "Welcome to QmClient",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 470,
+      "line": 472,
       "text": "%s（/%s %s）",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 486,
+      "line": 488,
       "text": "Snapshot Latency",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 487,
+      "line": 489,
       "text": "Displays server snapshot latency",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 503,
-      "text": "AddCard(\"visual\", \"Visual: Nameplates\");\\nAddCard(\"status\", \"Tee status bar\");\\n",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 513,
-      "text": "Visual: Nameplates",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 514,
-      "text": "Tee status bar",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 610,
+      "line": 586,
       "text": "Assets editor blend mode",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 611,
+      "line": 587,
       "text": "Assets editor blend mode",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 619,
+      "line": 595,
       "text": "const char *pName = Localize(GetName(), \"Dynamic context\");\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 627,
+      "line": 603,
       "text": "Dynamic context",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 628,
+      "line": 604,
       "text": "Dynamic context",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 636,
+      "line": 612,
       "text": "str_format(aBuf, sizeof(aBuf), \"[%d]  \", Index);\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 644,
+      "line": 620,
       "text": "[%d]  ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 645,
+      "line": 621,
       "text": "[%d]  ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 655,
+      "line": 631,
       "text": "SetPreviewLine(PREVIEW_TEAM, 11, \"Your Teammate\", \"Let\\'s speedrun this!\", FLAG_TEAM, 0);\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 663,
+      "line": 639,
       "text": "Your Teammate",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 664,
+      "line": 640,
       "text": "Let's speedrun this!",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 665,
+      "line": 641,
       "text": "Let's speedrun this!",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 680,
+      "line": 656,
       "text": "const float Width = ComputeToolbarButtonWidth(\"Assets directory\");\\nDoButton_Menu(&s_Id, Localize(\"Assets directory\"), 0, &Button);\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 689,
+      "line": 665,
       "text": "Assets directory",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 690,
+      "line": 666,
       "text": "Assets directory",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 697,
+      "line": 673,
       "text": "EXPECT_STREQ(\"test sample text\", \"test sample text\");\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 702,
+      "line": 678,
       "text": "test sample text",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 709,
+      "line": 685,
       "text": "const char *pLabel = \"Review this user-facing string\";\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 714,
+      "line": 690,
       "text": "Review this user-facing string",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 722,
+      "line": 698,
       "text": "{\"deck:sample\", \"general\", false, \"Sample\", \"sample search keyword\", \"Sample card description\"};\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 732,
+      "line": 708,
       "text": "sample search keyword",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 733,
+      "line": 709,
       "text": "sample search keyword",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 736,
+      "line": 712,
       "text": "Sample card description",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 738,
+      "line": 714,
       "text": "Sample card description",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 746,
+      "line": 722,
       "text": "str_copy(aMotd, \"sv_motd \");\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 748,
+      "line": 724,
       "text": "str_copy(aMotd, \"sv_motd \");\\nconst char *pFragment = \", SettingsPerfContextName(), \";\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 752,
+      "line": 728,
       "text": "StartSettingsPerfScrollWindow(\"server\", SettingsPerfContextName(), \"page\", \"none\");\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 760,
+      "line": 736,
       "text": "sv_motd ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 762,
+      "line": 738,
       "text": "sv_motd ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 773,
+      "line": 749,
       "text": "log_info(\"qmclient\", \"event=sample duration_ms=%.3f\");",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 775,
+      "line": 751,
       "text": "static constexpr const char *PATH = \"qmclient/map_notes.json\";",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 776,
+      "line": 752,
       "text": "const char *pLabel = \"Review this user-facing string\";",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 787,
+      "line": 763,
       "text": "event=sample duration_ms=%.3f",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 790,
+      "line": 766,
       "text": "Review this user-facing string",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 797,
+      "line": 773,
       "text": "Localize(\"中文提示\");\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 802,
+      "line": 778,
       "text": "中文提示",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 826,
+      "line": 802,
       "text": "Play game",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 828,
+      "line": 804,
       "text": "active source key (localize_or_localizable)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 843,
+      "line": 819,
       "text": "Play game",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 853,
+      "line": 829,
       "text": "Localize(\"Keep me\");\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 854,
+      "line": 830,
       "text": "Localize(\"New key\");\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 858,
+      "line": 834,
       "text": "Keep me",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 861,
+      "line": 837,
       "text": "Old key",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 864,
+      "line": 840,
       "text": "Deleted key",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 866,
+      "line": 842,
       "text": "Extra test key",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 872,
+      "line": 848,
       "text": "Extra test key",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 876,
+      "line": 852,
       "text": "Keep me",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 877,
+      "line": 853,
       "text": "New key",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 878,
+      "line": 854,
       "text": "Extra test key",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 879,
+      "line": 855,
       "text": "Old key",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 880,
+      "line": 856,
       "text": "Deleted key",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 911,
+      "line": 887,
       "text": "active source key (localize_or_localizable)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 918,
+      "line": 894,
       "text": "active source key (localize_or_localizable)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 944,
+      "line": 920,
       "text": "Clan Members",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 946,
+      "line": 922,
       "text": "No local servers found (ports %d-%d)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_source_keys.py",
-      "line": 947,
+      "line": 923,
       "text": "Start and connect to local server",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -177513,7 +177485,7 @@
     {
       "file": "qmclient_scripts/languages_qmclient/tests/test_translate_with_local_http.py",
       "line": 146,
-      "text": "钩索",
+      "text": "钩子",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
