@@ -2606,7 +2606,7 @@ void CGameConsole::OnRender()
 		// 静止态先把偏移吸到整行，再推进：滚动停下后正文不再带亚行余量，避免闪。
 		if(!pConsole->m_ScrollbarDragging && !pConsole->m_Selection.IsDragging() && !Scroll.Animating())
 			Scroll.SnapToNearestLine();
-		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(Client()->RenderFrameTime(), LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight, VisibleBacklogLines));
+		const CQmConsoleScrollRuntime::SFrame ScrollFrame = Scroll.Advance(GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt, LogHeight, TotalBacklogLines, LineHeight, ConsoleScrollConfig(LineHeight, VisibleBacklogLines));
 		const float SubLine = ScrollFrame.m_SubLine;
 		const int MaxScroll = maximum(0, TotalBacklogLines - VisibleBacklogLines);
 		pConsole->m_BacklogCurLine = std::clamp(ScrollFrame.m_Line, 0, MaxScroll);
@@ -2623,7 +2623,7 @@ void CGameConsole::OnRender()
 			pConsole->m_Selection.Begin(pConsole->SelectionPositionAt(pConsole->m_MousePress, LogBottom + SubLine, LineHeight));
 		if(CanSelectLog && pConsole->m_MouseIsPress)
 		{
-			const int ScrollLines = pConsole->m_Selection.AutoScroll(pConsole->m_MouseRelease.y, LogTop, LogBottom, LineHeight, Client()->RenderFrameTime());
+			const int ScrollLines = pConsole->m_Selection.AutoScroll(pConsole->m_MouseRelease.y, LogTop, LogBottom, LineHeight, GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt);
 			// 拖选到边缘时的自动滚动按"跟手拖动"推进：每帧把这一帧算出的行数直接落到位移上，
 			// 既不经过弹簧（拖选要贴着指针走），又和滑块拖动共用同一份越界与夹取逻辑。
 			if(ScrollLines != 0)

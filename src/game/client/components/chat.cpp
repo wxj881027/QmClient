@@ -3603,7 +3603,7 @@ void CChat::OnRender()
 	const int64_t Now = time();
 	// 动画与滚动物理必须共用渲染帧的真实步长。time() 只有毫秒精度，
 	// 60 Hz 下会在 15/16/17 ms 之间跳，弹簧每帧推进不均匀，滚动看起来一顿一顿。
-	float DeltaSeconds = std::clamp(Client()->RenderFrameTime(), 0.0f, CHAT_PRESENTATION_MAX_DELTA_SECONDS);
+	float DeltaSeconds = GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt;
 	if(HudEditorPreview)
 		DeltaSeconds = 0.0f;
 	else

@@ -271,7 +271,7 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 	// 本地服务器格：0 = 单按钮「运行服务器」，1 = 已分成「进入 / 停止服务器」两段。
 	// 欠阻尼弹簧（固有响应约 0.34s、阻尼比 0.62）让右段冲过头一点再回稳，切换不是生硬的瞬变。
 	static float s_LocalServerSplit = 0.0f, s_LocalServerSplitVel = 0.0f;
-	QmSpringAdvance(s_LocalServerSplit, s_LocalServerSplitVel, LocalServerRunning ? 1.0f : 0.0f, SUiSpringConfig::FromResponse(0.34f, 0.62f), Client()->RenderFrameTime());
+	QmSpringAdvance(s_LocalServerSplit, s_LocalServerSplitVel, LocalServerRunning ? 1.0f : 0.0f, SUiSpringConfig::FromResponse(0.34f, 0.62f), GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt);
 	// 两段的底色沿用语义色，浓度跟着进度长：整条还是单按钮时不着色。
 	const ColorRGBA ControlSurface = ResolveConfiguredControlSurface();
 	const float SplitTint = std::clamp(s_LocalServerSplit, 0.0f, 1.0f);
@@ -486,7 +486,7 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			const float HoverScale = 1.08f;
 			const float OtherScale = 0.94f;
 			const float Speed = 12.0f;
-			const float Blend = std::clamp(Client()->RenderFrameTime() * Speed, 0.0f, 1.0f);
+			const float Blend = std::clamp(GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt * Speed, 0.0f, 1.0f);
 			for(int i = 0; i < MenuButtonCount; ++i)
 			{
 				float Target = 1.0f;

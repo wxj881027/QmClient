@@ -71,6 +71,10 @@ void CUiRuntimeV2::OnRender()
 	// 状态动画（页/页签切换、弹层开合）走固定逻辑步长；纯视觉插值继续用
 	// 截断后的渲染时间，长帧不会让状态过渡跳帧，也不会让淡入变成瞬切。
 	const SQmUiLogicStep LogicStep = QmUiAdvanceLogicClockStep(m_LogicClockAccumulatorSec, RealDt);
+	m_FrameClock.m_RenderDt = Dt;
+	m_FrameClock.m_LogicDt = LogicStep.m_Seconds;
+	m_FrameClock.m_LogicAlpha = LogicStep.m_Fraction;
+	++m_FrameClock.m_FrameId;
 
 	float TreeBeginMs = 0.0f;
 	float AnimAdvanceMs = 0.0f;

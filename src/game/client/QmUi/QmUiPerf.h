@@ -106,6 +106,16 @@ inline float QmUiAdvanceLogicClock(float &AccumulatorSec, float RealDeltaSec)
 	return QmUiAdvanceLogicClockStep(AccumulatorSec, RealDeltaSec).m_Seconds;
 }
 
+// UI 每帧只计算一次的时间快照。渲染层一律取 m_RenderDt（已按 1/20 s 截断），
+// 状态过渡取 m_LogicDt/m_LogicAlpha；不要再让各个组件各自读 RenderFrameTime。
+struct SQmUiFrameClock
+{
+	float m_RenderDt = 1.0f / 60.0f;
+	float m_LogicDt = 0.0f;
+	float m_LogicAlpha = 1.0f;
+	uint64_t m_FrameId = 0;
+};
+
 // 加载画面允许比后台预热吃得更满，但仍必须给动态背景留出一个显示刷新周期。
 // 8 ms 只是单步上限，160 Hz 下实际预算会收紧到约 5 ms，不能把背景拖到 120 Hz。
 inline constexpr float QM_MENU_TEXT_LOADING_PREWARM_STEP_MS = 8.0f;

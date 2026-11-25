@@ -24,7 +24,7 @@ void CRainbow::OnRender()
 	if(g_Config.m_QmRainbowMode == 0)
 		return;
 
-	m_Time += Client()->RenderFrameTime() * ((float)g_Config.m_QmRainbowSpeed / 100.0f);
+	m_Time += GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt * ((float)g_Config.m_QmRainbowSpeed / 100.0f);
 	float DefTick = std::fmod(m_Time, 1.0f);
 	ColorRGBA Col;
 

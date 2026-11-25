@@ -3173,7 +3173,7 @@ void CHud::RenderFollowSwitchCountdowns()
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
-	const float Delta = Client()->RenderFrameTime();
+	const float Delta = GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt;
 	// Preserve the previous ring's outer footprint while adopting the satellite proportions.
 	constexpr float SatelliteRadius = 9.0f + 2.5f * 0.5f;
 	constexpr float RingRadius = SatelliteRadius * MEDIA_ISLAND_SATELLITE_RING_RADIUS_SCALE;
@@ -3282,7 +3282,7 @@ void CHud::UpdateHookCountdownTracker()
 		Input.m_HookDurationSeconds = GameClient()->m_aTuning[Connection].m_HookDuration;
 		Input.m_EndlessHook = Local.m_IsPredictedLocal ? Local.m_Predicted.m_EndlessHook : Local.m_EndlessHook;
 	}
-	m_HookCountdownRing.Update(Input, Client()->RenderFrameTime());
+	m_HookCountdownRing.Update(Input, GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt);
 }
 
 void CHud::RenderFollowHookCountdown()
@@ -5263,7 +5263,7 @@ void CHud::RenderMediaIsland()
 		const bool HasProgress = Preview || GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
 		const float TargetProgress = Preview ? 0.426f : GameClient()->m_TClient.GetGoresMapProgress(DummyIndex);
 		const int ProgressClientId = Preview ? -1 : GameClient()->m_TClient.GetGoresMapProgressClientId(DummyIndex);
-		const float Progress = m_aIslandMapProgress[DummyIndex].Update(HasProgress, TargetProgress, Client()->RenderFrameTime(), ProgressClientId);
+		const float Progress = m_aIslandMapProgress[DummyIndex].Update(HasProgress, TargetProgress, GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt, ProgressClientId);
 		const float RowY = IslandY + ProgressRows.m_ProgressY;
 		const float RowHeight = std::min(BottomRowLineHeight, std::max(0.0f, IslandY + AnimatedIslandHeight - BottomRowPaddingY - RowY));
 		const float ProgressAlpha = EntranceContentAlpha * (ProgressRows.m_ProgressInHeader ? 1.0f : BottomAlpha);
@@ -6785,7 +6785,7 @@ void CHud::RenderMapProgressBar()
 	auto &ProgressState = m_aMapProgress[DummyIndex];
 	const bool ProgressWasInitialized = ProgressState.IsTracking(ProgressClientId);
 	const float PreviousDisplayedProgress = ProgressState.Displayed();
-	const float DisplayedProgress = ProgressState.Update(HasProgress, TargetProgress, Client()->RenderFrameTime(), ProgressClientId);
+	const float DisplayedProgress = ProgressState.Update(HasProgress, TargetProgress, GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt, ProgressClientId);
 	const bool ProgressIncreased = ProgressWasInitialized && DisplayedProgress > PreviousDisplayedProgress + 0.000001f;
 	const ColorRGBA ConfiguredColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPlayerStatsMapProgressColor, true));
 	const ColorRGBA FillColor = ColorRGBA(ConfiguredColor.r, ConfiguredColor.g, ConfiguredColor.b, std::clamp(maximum(ConfiguredColor.a, 0.65f), 0.0f, 1.0f));

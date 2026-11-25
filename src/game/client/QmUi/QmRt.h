@@ -8,6 +8,7 @@
 #include "QmLayout.h"
 #include "QmRender.h"
 #include "QmTree.h"
+#include "QmUiPerf.h"
 
 struct SUiV2PerfStats
 {
@@ -33,6 +34,8 @@ public:
 	CUiV2AnimationRuntime &AnimRuntime() { return m_AnimRuntime; }
 	const CUiV2AnimationRuntime &AnimRuntime() const { return m_AnimRuntime; }
 	float FrameDt() const { return m_FrameDt; }
+	// 本帧渲染/逻辑时间快照；所有 UI 动画都从这里取 dt。
+	const SQmUiFrameClock &FrameClock() const { return m_FrameClock; }
 	const SUiV2PerfStats &LastStats() const;
 
 private:
@@ -43,6 +46,7 @@ private:
 	CUiV2RenderBridge m_RenderBridge;
 	SUiV2PerfStats m_LastStats;
 	float m_FrameDt = 1.0f / 60.0f;
+	SQmUiFrameClock m_FrameClock;
 	float m_LogicClockAccumulatorSec = 0.0f;
 	float m_DebugLogAccumulator = 0.0f;
 	// perf/ui_runtime 逐帧日志降采样计数器（见 OnRender 注释）

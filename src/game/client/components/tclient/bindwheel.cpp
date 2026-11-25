@@ -501,7 +501,7 @@ void CBindWheel::OnRender()
 	{
 		if(AnimationTime == 0.0f)
 			return;
-		m_AnimationTime -= Client()->RenderFrameTime() * 3.0f;
+		m_AnimationTime -= GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt * 3.0f;
 		if(m_AnimationTime <= 0.0f)
 		{
 			m_AnimationTime = 0.0f;
@@ -510,7 +510,7 @@ void CBindWheel::OnRender()
 	}
 	else
 	{
-		m_AnimationTime += Client()->RenderFrameTime();
+		m_AnimationTime += GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt;
 		if(m_AnimationTime > AnimationTime)
 			m_AnimationTime = AnimationTime;
 	}

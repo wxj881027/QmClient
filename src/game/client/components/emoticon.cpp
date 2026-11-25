@@ -418,7 +418,7 @@ void CEmoticon::OnRender()
 		m_SuperChargeRingCharge = 0.0f;
 	}
 
-	const float RingAnimationStep = Client()->RenderFrameTime() / s_SuperChargeRingAnimationSeconds;
+	const float RingAnimationStep = GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt / s_SuperChargeRingAnimationSeconds;
 	if(m_SuperChargeRingEmote != -1)
 		m_SuperChargeRingPhase = std::min(1.0f, m_SuperChargeRingPhase + RingAnimationStep);
 	if(m_SuperChargeRingExitEmote != -1)
@@ -610,7 +610,7 @@ void CEmoticon::RenderProjectiles()
 			++NumPlayerBoxes;
 		}
 
-	const float FrameTime = std::clamp(Client()->RenderFrameTime(), 0.0f, 0.1f);
+	const float FrameTime = GameClient()->UiRuntimeV2()->FrameClock().m_RenderDt;
 	int BatchEmoticon = -1;
 	for(auto &Projectile : m_aProjectiles)
 	{
