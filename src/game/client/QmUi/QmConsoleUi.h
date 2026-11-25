@@ -248,6 +248,43 @@ namespace QmConsoleUi
 		return {EntryRect.x + LeftInset, EntryRect.y + (Height - Size) * 0.5f, Size, Size};
 	}
 
+	struct SLogTextLayout
+	{
+		float m_Left;
+		float m_LineWidth;
+		float m_FontSize;
+		float m_LineSpacing;
+
+		CTextCursor Cursor(float Top, int MaxLines) const
+		{
+			CTextCursor Cursor;
+			Cursor.SetPosition({m_Left, Top});
+			Cursor.m_FontSize = m_FontSize;
+			Cursor.m_LineWidth = m_LineWidth;
+			Cursor.m_MaxLines = MaxLines;
+			Cursor.m_LineSpacing = m_LineSpacing;
+			return Cursor;
+		}
+
+		int CharacterAt(ITextRender &TextRender, const char *pText, float Top, int MaxLines, vec2 Mouse) const
+		{
+			CTextCursor Hit = Cursor(Top, MaxLines);
+			Hit.m_Flags = 0;
+			Hit.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_CALCULATE;
+			Hit.m_RenderCursor = false;
+			Hit.m_ReleaseMouse = Mouse;
+			TextRender.TextEx(&Hit, pText);
+			return std::max(0, Hit.m_CursorCharacter);
+		}
+	};
+
+	// 日志测量、绘制和命中共用正文原点与换行宽度。
+	inline SLogTextLayout LogTextLayout(float AvailableWidth, bool ChatExportMode, float FontSize, float LineSpacing)
+	{
+		const float Left = ui_token::panel::PADDING + (ChatExportMode ? 22.0f : 0.0f);
+		return {Left, std::max(1.0f, AvailableWidth - Left), FontSize, LineSpacing};
+	}
+
 	// 选区覆盖完整行高，相邻行直接相接；横向保留少量字形余量。
 	inline CUIRect LayoutSelectionBackground(const IGraphics::CQuadItem &Quad, float FontSize)
 	{

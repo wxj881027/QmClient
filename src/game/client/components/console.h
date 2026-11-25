@@ -233,7 +233,7 @@ private:
 		void GetCommand(const char *pInput, char (&aCmd)[IConsole::CMDLINE_LENGTH]);
 
 		void UpdateEntryTextAttributes(CBacklogEntry *pEntry) const;
-		float BacklogLineWidth() const;
+		QmConsoleUi::SLogTextLayout BacklogTextLayout() const;
 		float FontSize() const;
 		bool ParseEntryColors(const CBacklogEntry *pEntry) const;
 		CQmConsoleSelection::CPosition SelectionPositionAt(vec2 Position, float LogBottom, float LineHeight);

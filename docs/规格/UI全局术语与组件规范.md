@@ -289,6 +289,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 
 - 定义：所有输入框共用的光标形态与闪烁相位，样式可配（竖线 / 下划线 / 方块），相位只由绝对时间推导。
 - 唯一实现：`qm_text_caret::ResolveShape` / `BlinkVisible` / `Render`（`src/game/client/QmUi/UiTextCaret.h`、`UiTextCaret.cpp`）；调用点 `CLineInput::RenderCaret`（`src/game/client/lineinput.cpp`）、`QmConsoleUi::DrawCaret`（`QmConsoleUi.h`）；相位与闪烁门控由 `qm_text_caret::NowSeconds` / `ShouldBlink` 统一给出；token `ui_token::text_caret::*`、`ui_token::motion::CARET_BLINK_*`；配置 `qm_text_caret_style`。
+- 控制台日志定位：`QmConsoleUi::LogTextLayout`（`QmConsoleUi.h`）给日志测量、正文绘制和字符命中提供相同的左内边距与换行宽度。点击和拖选沿用正文的滚动与筛选位移，避免鼠标尖指向的字符和光标落点错开。
 - 禁止的反面写法：调用点自己画光标方块（`Graphics()->QuadsDrawTL`）；保存「本框闪烁起点」导致两个输入框相位不同；把时间缓存成静态值或写死 `m_Blink = false` 让光标常亮；写死 0.5 秒闪烁或 2 像素线宽。
 
 ### 3.1 行级七词（继承自 2026-11-11 报告 §9.1，口径不变）
