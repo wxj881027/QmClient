@@ -23,6 +23,8 @@ namespace
 			return Cursor;
 		}
 	};
+
+	using QmConsoleLogTextLayout = qm_ui_test::CRealUiFixture;
 }
 
 TEST_F(QmConsoleButtonTextLayout, ChineseAndLatinLabelsCenterTheirInkAndKeepTheLastCharacter)
@@ -161,4 +163,31 @@ TEST_F(QmConsoleButtonTextLayout, ConsecutiveSelectedLinesCoverTheWholeLineCell)
 	const auto First = QmConsoleUi::LayoutSelectionBackground(Cursor.m_vSelectionQuads[0], 12);
 	const auto Second = QmConsoleUi::LayoutSelectionBackground(Cursor.m_vSelectionQuads[1], 12);
 	EXPECT_NEAR(First.y + First.h, Second.y, 0.001f);
+}
+
+TEST_F(QmConsoleLogTextLayout, ClickingNearThePaddedLeftEdgeHitsTheFirstCharacter)
+{
+	m_Ui.MapScreen();
+	const auto Layout = QmConsoleUi::LogTextLayout(300.0f, false, 14.0f, 1.0f);
+	const float Top = 30.0f;
+	const vec2 Mouse{ui_token::panel::PADDING + 1.0f, Top + 7.0f};
+	EXPECT_EQ(Layout.CharacterAt(*m_Ui.TextRender(), "中文 iii", Top, 1, Mouse), 0);
+}
+
+TEST_F(QmConsoleLogTextLayout, ClickingTheSecondWrappedLineHitsItsFirstCharacter)
+{
+	m_Ui.MapScreen();
+	auto &TextRender = *m_Ui.TextRender();
+	const char *pText = "WWW WWW";
+	const float FontSize = 14.0f;
+	const float Top = 30.0f;
+	// 按未扣内边距的宽度全文能放下，扣除后第二个单词须另起一行。
+	const auto Layout = QmConsoleUi::LogTextLayout(TextRender.TextWidth(FontSize, pText) + 2.0f, false, FontSize, 1.0f);
+	auto Measured = Layout.Cursor(Top, 10);
+	Measured.m_Flags = 0;
+	TextRender.TextEx(&Measured, pText);
+	ASSERT_EQ(Measured.m_LineCount, 2);
+
+	const vec2 Mouse{ui_token::panel::PADDING + 1.0f, Top + Measured.Height() * 0.75f};
+	EXPECT_EQ(Layout.CharacterAt(TextRender, pText, Top, Measured.m_LineCount, Mouse), 4);
 }
