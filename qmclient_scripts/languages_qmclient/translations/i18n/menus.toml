@@ -7687,6 +7687,22 @@ turkish = "Dışa aktar"
 polish = "Eksportuj"
 
 [[message]]
+key = "Export failed. Could not compose %d edited slot(s)."
+[message.translations]
+simplified_chinese = "导出失败：无法合成 %d 个已编辑槽位。"
+traditional_chinese = "匯出失敗：無法合成 %d 個已編輯的插槽。"
+japanese = "エクスポートに失敗しました。編集済みスロット %d 個を合成できませんでした。"
+korean = "내보내기 실패: 편집한 슬롯 %d개를 합성할 수 없습니다."
+russian = "Не удалось экспортировать. Не удалось объединить изменённые слоты: %d."
+german = "Export fehlgeschlagen. %d bearbeitete Slots konnten nicht zusammengesetzt werden."
+spanish = "Error al exportar. No se pudieron componer %d ranuras editadas."
+french = "Échec de l’exportation. Impossible de composer %d emplacements modifiés."
+brazilian_portuguese = "Falha ao exportar. Não foi possível compor %d slots editados."
+portuguese = "Falha ao exportar. Não foi possível compor %d ranhuras editadas."
+turkish = "Dışa aktarma başarısız. Düzenlenen %d yuva birleştirilemedi."
+polish = "Eksport nie powiódł się. Nie można złożyć %d edytowanych slotów."
+
+[[message]]
 key = "Export name contains invalid characters."
 [message.translations]
 simplified_chinese = "导出名称包含无效字符。"
@@ -13465,7 +13481,7 @@ polish = "Po osiągnięciu limitu stare pliki są usuwane, więc skopiuj dema, k
 [[message]]
 key = "Old single-segment hook collision line"
 [message.translations]
-simplified_chinese = "旧版单段钩索碰撞线"
+simplified_chinese = "旧版单段钩子辅助线"
 traditional_chinese = "舊版單段鉤索碰撞線"
 japanese = "旧式の単一セグメントフック衝突線"
 korean = "이전 단일 구간 갈고리 충돌선"

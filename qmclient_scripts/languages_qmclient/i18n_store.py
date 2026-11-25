@@ -103,12 +103,26 @@ def module_name_for_source(source: Path | None) -> str:
         return "loading"
     if "/src/game/editor/" in normalized:
         return "editor"
+    if normalized.endswith(
+        (
+            "/components/qmclient/word_filter_list.cpp",
+            "/components/qmclient/public_word_filter.cpp",
+        )
+    ):
+        return "word_filter"
     if "/components/qmclient/" in normalized:
         return "qmclient"
     if "/components/tclient/" in normalized:
         return "tclient"
     if "/menus_" in normalized or "/menus." in normalized:
         return "menus"
+    if normalized.endswith(
+        (
+            "src/game/client/QmUi/QmWikiEditor.cpp",
+            "src/game/client/QmUi/QmWikiStore.cpp",
+        )
+    ):
+        return "wiki_ui"
     # Wiki 文案与面板文案各归自己的模块，避免新条目散落到 misc。
     if normalized.endswith("src/game/client/QmUi/QmCardWiki.cpp") or normalized.endswith("src/game/client/QmUi/QmCardWikiPanel.cpp"):
         return "card_wiki"

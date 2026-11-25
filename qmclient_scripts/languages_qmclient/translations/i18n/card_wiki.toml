@@ -5106,6 +5106,17 @@ polish = "Szuka ustawień po tytule karty, nazwie funkcji lub słowie kluczowym.
 key = "See freeze and death borders, character check points, shield pickups and weapon ranges."
 [message.translations]
 simplified_chinese = "显示地图上的冻结与死亡边界、角色判定点、护盾拾取范围和武器范围。"
+traditional_chinese = "顯示地圖上的凍結與死亡邊界、角色判定點、護盾拾取範圍和武器範圍。"
+japanese = "マップ上のフリーズ・死亡の境界、キャラクター判定点、シールドの取得範囲、武器範囲を表示します。"
+korean = "지도 위의 얼음 및 사망 경계, 캐릭터 판정점, 보호막 획득 범위와 무기 범위를 표시합니다."
+russian = "Показывает на карте границы заморозки и смерти, точки проверки персонажа, радиус подбора щита и радиусы оружия."
+german = "Zeigt Freeze- und Todesgrenzen, Charakter-Prüfpunkte, Schild-Aufnahmebereiche und Waffenreichweiten auf der Karte."
+spanish = "Muestra en el mapa los bordes de congelación y muerte, los puntos de control del personaje, el alcance de recogida de escudos y los alcances de las armas."
+french = "Affiche sur la carte les bordures de gel et de mort, les points de contrôle du personnage, la portée de ramassage des boucliers et les portées des armes."
+brazilian_portuguese = "Mostra no mapa as bordas de congelamento e morte, os pontos de checagem do personagem, o alcance de coleta de escudos e os alcances das armas."
+portuguese = "Mostra no mapa os limites de congelamento e morte, os pontos de verificação da personagem, o alcance de recolha de escudos e os alcances das armas."
+turkish = "Haritadaki donma ve ölüm sınırlarını, karakter kontrol noktalarını, kalkan alma menzilini ve silah menzillerini gösterir."
+polish = "Pokazuje na mapie granice zamrożenia i śmierci, punkty kontrolne postaci, zasięg podnoszenia tarcz i zasięgi broni."
 
 [[message]]
 key = "Select a body part, change its sprite or color, then save the skin."
@@ -6615,6 +6626,17 @@ polish = "Suwaki intensywności i płynności pojawiają się dopiero po włącz
 key = "Turn on \"Enable collision hitboxes\", choose what to draw, then pick which players to show under \"Show hitboxes for\"."
 [message.translations]
 simplified_chinese = "打开「启用碰撞箱」，勾选想看的项目，再在「显示对象」里选择要显示哪些玩家。"
+traditional_chinese = "開啟「啟用碰撞箱」，勾選想看的項目，再在「顯示對象」裡選擇要顯示哪些玩家。"
+japanese = "「ヒットボックスを有効化」をオンにし、表示したい項目を選んでから、「表示対象」で対象プレイヤーを選びます。"
+korean = "‘히트박스 활성화’를 켜고 표시할 항목을 선택한 뒤, ‘표시 대상’에서 어떤 플레이어의 히트박스를 보여 줄지 고르세요."
+russian = "Включите «Включить хитбоксы», отметьте нужные элементы, затем в «Показывать хитбоксы для» выберите, чьи хитбоксы отображать."
+german = "Aktiviere „Hitboxen aktivieren“, wähle aus, was gezeichnet werden soll, und lege dann unter „Hitboxen anzeigen für“ fest, für welche Spieler die Hitboxen gelten."
+spanish = "Activa «Activar hitboxes», elige qué dibujar y luego, en «Mostrar hitboxes de», selecciona de qué jugadores mostrarlas."
+french = "Activez « Activer les hitboxes », choisissez ce qui doit être dessiné, puis sélectionnez les joueurs à afficher dans « Afficher les hitboxes de »."
+brazilian_portuguese = "Ative “Ativar hitboxes”, escolha o que desenhar e, em “Mostrar hitboxes de”, selecione de quais jogadores exibi-las."
+portuguese = "Ative «Ativar hitboxes», escolha o que desenhar e, em «Mostrar hitboxes de», selecione de que jogadores as mostrar."
+turkish = "‘Hitbox'ları etkinleştir’i açın, çizilecek öğeleri seçin ve ardından ‘Hitbox'ları göster’ altında hangi oyuncuların gösterileceğini belirleyin."
+polish = "Włącz „Włącz hitboxy”, wybierz, co ma być rysowane, a następnie w „Pokaż hitboxy dla” wskaż, których graczy pokazywać."
 
 [[message]]
 key = "Turn on \"Enable controller\", choose the device, pick \"Relative\" or \"Absolute\" under \"Ingame controller mode\", then tick the axes you want under \"Aim bind\"."
@@ -7323,7 +7345,18 @@ polish = "Co ustawia"
 [[message]]
 key = "When racing, you can keep \"Freeze projectiles and lasers\" on and turn off the other weapon ranges to see incoming freeze hazards more clearly."
 [message.translations]
-simplified_chinese = "跑图时可以保留「冻结子弹与激光」，关掉「锤击与钩索范围」和「子弹、爆炸与普通激光」，这样更容易看清迎面而来的冰弹和冰激光。"
+simplified_chinese = "跑图时可以保留「冻结子弹与激光」，关掉「锤击与钩子范围」和「子弹、爆炸与普通激光」，这样更容易看清迎面而来的冰弹和冰激光。"
+traditional_chinese = "跑圖時可以保留「凍結子彈與雷射」，關掉「錘擊與鉤索範圍」和「子彈、爆炸與普通雷射」，這樣更容易看清迎面而來的冰彈和冰雷射。"
+japanese = "レース中は「フリーズ弾とレーザー」をオンのままにして、「ハンマーとフックの範囲」と「発射物、爆発、通常レーザー」をオフにすると、迫ってくるフリーズの危険がより見やすくなります。"
+korean = "레이스 중에는 ‘얼음 발사체 및 레이저’를 켜 두고 ‘해머 및 훅 범위’와 ‘발사체, 폭발 및 일반 레이저’를 끄면 다가오는 얼음 위협을 더 선명하게 볼 수 있습니다."
+russian = "Во время гонок можно оставить включённым пункт «Снаряды и лазеры заморозки», а пункты «Зона удара молотом и крюка» и «Снаряды, взрывы и обычные лазеры» выключить — так приближающиеся угрозы заморозки видны лучше."
+german = "Beim Racen kannst du „Freeze-Projektile und Laser“ aktiviert lassen und „Hammer- und Hakenreichweite“ sowie „Projektile, Explosionen und normale Laser“ deaktivieren, um herannahende Freeze-Gefahren klarer zu sehen."
+spanish = "Mientras corres, puedes dejar activado «Proyectiles y láseres de congelación» y desactivar «Alcance de martillo y gancho» y «Proyectiles, explosiones y láseres normales» para ver con más claridad los peligros de congelación que se acercan."
+french = "En course, vous pouvez laisser « Projectiles et lasers de gel » activé et désactiver « Portée du marteau et du grappin » ainsi que « Projectiles, explosions et lasers ordinaires » pour mieux repérer les dangers de gel qui arrivent."
+brazilian_portuguese = "Durante corridas, você pode manter “Projéteis e lasers de congelamento” ativado e desativar “Alcance de martelo e gancho” e “Projéteis, explosões e lasers normais” para enxergar com mais clareza os perigos de congelamento que se aproximam."
+portuguese = "Durante as corridas, pode manter «Projéteis e lasers de congelamento» ativo e desativar «Alcance do martelo e do gancho» e «Projéteis, explosões e lasers normais» para ver com mais clareza os perigos de congelamento que se aproximam."
+turkish = "Yarışırken ‘Donma mermileri ve lazerleri’ni açık bırakıp ‘Çekiç ve kanca menzili’ ile ‘Mermiler, patlamalar ve normal lazerler’i kapatarak yaklaşan donma tehlikelerini daha net görebilirsiniz."
+polish = "Podczas ścigania możesz pozostawić włączone „Pociski i lasery zamrożenia”, a wyłączyć „Zasięg młota i haka” oraz „Pociski, eksplozje i zwykłe lasery”, aby wyraźniej widzieć nadchodzące zagrożenia zamrożeniem."
 
 [[message]]
 key = "Where your title appears and how it looks: nameplate, style, motion, colors and glow."
@@ -7436,3 +7469,19 @@ brazilian_portuguese = "O modo Zen oculta os balões mesmo com isto ligado, e um
 portuguese = "O modo Zen oculta os balões mesmo com isto ligado, e uma duração longa deixa falas antigas no ecrã."
 turkish = "Zen modu açıkken bu seçenek açık olsa da balonlar görünmez; süreyi çok uzun yaparsan eski satırlar ekranda kalır."
 polish = "Tryb Zen ukrywa dymki nawet przy włączonej opcji, a zbyt długi czas zostawia stare linie na ekranie."
+
+[[message]]
+key = "These options are independent, so enable only the features you use to keep chat and the scoreboard uncluttered."
+[message.translations]
+simplified_chinese = "这些选项彼此独立，只开启会用到的功能，聊天和计分板会更清爽。"
+traditional_chinese = "這些選項彼此獨立，只開啟會用到的功能，聊天和計分板會更清爽。"
+japanese = "これらのオプションは独立しています。使う機能だけを有効にすると、チャットとスコアボードがすっきりします。"
+korean = "이 옵션들은 서로 독립적입니다. 사용하는 기능만 켜 두면 채팅과 점수판이 깔끔해집니다."
+russian = "Эти параметры независимы. Включайте только нужные функции, чтобы чат и таблица счёта оставались чистыми."
+german = "Diese Optionen sind unabhängig voneinander. Aktiviere nur die Funktionen, die du nutzt, damit Chat und Punktetabelle übersichtlich bleiben."
+spanish = "Estas opciones son independientes. Activa solo las funciones que uses para mantener el chat y la tabla de puntuación despejados."
+french = "Ces options sont indépendantes. Activez uniquement les fonctions que vous utilisez pour garder le chat et le tableau des scores épurés."
+brazilian_portuguese = "Estas opções são independentes. Ative apenas os recursos que usa para manter o chat e o placar limpos."
+portuguese = "Estas opções são independentes. Ative apenas as funcionalidades que utiliza para manter o chat e a tabela de pontuação limpos."
+turkish = "Bu seçenekler birbirinden bağımsızdır. Yalnızca kullandığınız özellikleri açarak sohbeti ve puan tablosunu sade tutabilirsiniz."
+polish = "Te opcje są niezależne. Włączaj tylko używane funkcje, aby czat i tabela wyników pozostały przejrzyste."

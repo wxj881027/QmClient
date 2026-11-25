@@ -29,7 +29,7 @@ class IndirectLocalizationContractTest(unittest.TestCase):
                 "Entity Background Image", "Other",
             },
             "src/game/client/components/tclient/menus_tclient.cpp": {
-                "Settings", "Bind Wheel", "War List", "Chat Binds", "Status Bar",
+                "Settings", "Bind Menus", "War List", "Chat Binds", "Status Bar",
             },
         }
         for relative_path, expected in groups.items():

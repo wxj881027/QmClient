@@ -180,21 +180,23 @@ class SourceKeysTest(unittest.TestCase):
                     "Axiom dummy password", "Auto-follow delay", "Auto weapon switch",
                 })
 
-    def test_extracts_tclient_dynamic_card_titles(self):
-        path = Path("src/game/client/components/tclient/menus_tclient.cpp")
-        content = "\n".join(
-            (
-                'AddCard("deck:tclient-warlist-entries", "War Entries", 360.0f, Render);',
-                'AddCard("deck:tclient-info-links", "TClient Links", 100.0f, Render);',
-                'AddCard("deck:tclient-settings", "Settings", 100.0f, Render);',
-            )
+    def test_extracts_tclient_cached_tab_labels(self):
+        path = (
+            source_keys.PROJECT_ROOT
+            / "src/game/client/components/tclient/menus_tclient.cpp"
         )
+        content = source_keys.strip_cpp_comments(source_keys.read_source_text(path))
 
-        records = source_keys.extract_known_indirect_records(path, content)
+        keys = {
+            record.key
+            for record in source_keys.extract_localize_key_records(content)
+        }
 
-        self.assertEqual(
-            {record.key for record in records},
-            {"War Entries", "TClient Links", "Settings"},
+        # 页签文字走 CQmLocalizedLabelCache 缓存，必须仍以 Localizable 字面量登记，
+        # 否则运行时会退化成显示英文或乱码。
+        self.assertLessEqual(
+            {"Settings", "Bind Menus", "War List", "Chat Binds", "Status Bar"},
+            keys,
         )
 
     def test_extracts_qm_music_hook_registry_labels(self):
@@ -486,32 +488,6 @@ class SourceKeysTest(unittest.TestCase):
         self.assertIn("Snapshot Latency", keys)
         self.assertIn("Displays server snapshot latency", keys)
         self.assertNotIn("u", keys)
-
-    def test_extracts_tclient_cached_section_titles(self):
-        with TemporaryDirectory() as temp_dir:
-            path = (
-                Path(temp_dir)
-                / "src"
-                / "game"
-                / "client"
-                / "components"
-                / "tclient"
-                / "menus_tclient.cpp"
-            )
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(
-                'AddCard("visual", "Visual: Nameplates");\n'
-                'AddCard("status", "Tee status bar");\n',
-                encoding="utf-8",
-            )
-            content = source_keys.strip_cpp_comments(
-                source_keys.read_source_text(path)
-            )
-            records = source_keys.extract_known_indirect_records(path, content)
-            keys = {record.key for record in records}
-
-        self.assertIn("Visual: Nameplates", keys)
-        self.assertIn("Tee status bar", keys)
 
     def test_extracts_qmclient_config_descriptions(self):
         path = (

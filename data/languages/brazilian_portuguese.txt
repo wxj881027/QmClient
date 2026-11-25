@@ -28,9 +28,6 @@
 "Advanced options" adds category filters and colors; join, version, rules and help texts still stay in chat.
 == Em opções avançadas há filtros por categoria e cores; textos de entrada, versão, regras e ajuda continuam no chat.
 
-"Button - Enabled" only shows while automatic outgoing translation is on; "Reset translation colors" undoes your changes.
-== Botão - ativado só aparece com a tradução automática de saída ligada; redefinir as cores de tradução desfaz suas mudanças.
-
 "Copy all" only copies the filtered rows, so clear the search first if you want your whole list.
 == Copiar tudo copia apenas as linhas filtradas, então limpe a busca se quiser a lista inteira.
 
@@ -87,6 +84,9 @@
 
 %d / %d maps
 == %d / %d mapas
+
+%d entries
+== %d entradas
 
 %d items selected
 == %d itens selecionados
@@ -163,11 +163,20 @@
 %s has requested to swap with you. To complete the swap process please wait %s seconds and then type /swap %s.
 == %s solicitou trocar de lugar com você. Para completar a troca, aguarde %s segundos e digite /swap %s.
 
+%s is full. Waiting for a slot...
+== %s está cheio. Aguardando uma vaga…
+
 %s joined this server
 == %s entrou neste servidor
 
+%s moved to %s. Following in %d seconds...
+== %s mudou para %s. Seguindo em %d segundos…
+
 %s not found
 == %s não encontrado
+
+%s requires a password. Connect manually to enter it.
+== %s exige uma senha. Conecte-se manualmente para inseri-la.
 
 %s translating to %s
 == %s traduzindo para %s
@@ -250,20 +259,11 @@
 '%s' would have timed out, but can use timeout protection now
 == '%s' teria excedido o tempo limite, mas pode usar a proteção de tempo limite agora
 
-(Fetching Update Info)
-== (Buscando informações de atualização)
-
 (Follow Chinese font)
 == (Seguir fonte chinesa)
 
 (Follow English font)
 == (Seguir fonte inglesa)
-
-(On Latest)
-== (Na versão mais recente)
-
-(Update required)
-== (Atualização necessária)
 
 +%s Rank
 == +%s de ranking
@@ -362,6 +362,10 @@
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (mapa: %s, hora: %s)
 
+[]
+[Clan] %s
+== [Clã] %s
+
 _ or ' ' = blank spacer
 == _ ou ' ' = espaço em branco
 
@@ -388,9 +392,6 @@ A demo with this name already exists
 
 A folder with this name already exists
 == Já existe uma pasta com este nome
-
-A grab bag of small convenience switches that do not deserve their own card: chat completion, the Qm scoreboard badge, tune zone colors, message merging, repeat and combo.
-== Uma coletânea de ajustes pequenos que não merecem um cartão próprio: autocompletar do chat, selo Qm no placar, cores das tune zones, junção de mensagens, repetição e combo.
 
 A key that already has a command is overwritten, so recheck your other binds after assigning keys here.
 == Uma tecla que já tem um comando é sobrescrita, então revise seus outros atalhos depois de atribuir aqui.
@@ -436,6 +437,9 @@ A very large cursor can hide small UI elements underneath it.
 
 A vote is currently active.
 == Uma votação está atualmente ativa.
+
+A war group already has this name
+== Já existe um grupo da lista de guerra com esse nome
 
 Abort
 == Cancelar
@@ -575,6 +579,12 @@ Add a type to the exclusion filter for a specific community
 Add a voting option
 == Adicionar uma opção de votação
 
+Add an entry manually
+== Adicionar uma entrada manualmente
+
+Add by
+== Adicionar por
+
 Add category
 == Adicionar categoria
 
@@ -592,9 +602,6 @@ Add debug dummy to server (Debug build only)
 
 Add demo timeline marker
 == Adicionar marcador de linha do tempo da demo
-
-Add Entry
-== Adicionar Entrada
 
 Add friend
 == Adicionar amigo
@@ -629,6 +636,9 @@ Add or edit entries, then use the bind in chat to send the text.
 Add phrase
 == Adicionar frase
 
+Add player '%s' to '%s'
+== Adicionar o jogador “%s” a “%s”
+
 Add players or groups, then choose which markers and chat highlights apply to them.
 == Adicione jogadores ou grupos e escolha quais marcadores e destaques de chat se aplicam a eles.
 
@@ -640,6 +650,9 @@ Add team clan:
 
 Add team name:
 == Adicionar nome amigo:
+
+Add the entire clan '%s' to '%s'
+== Adicionar todo o clã “%s” a “%s”
 
 Add to %s
 == Adicionar a %s
@@ -655,6 +668,9 @@ Add to identity menu
 
 Add to queue
 == Adicionar à fila
+
+Add to war list
+== Adicionar à lista de guerra
 
 Add war clan:
 == Adicionar clã inimigo:
@@ -839,6 +855,9 @@ All categories
 All combined
 == Todos combinados
 
+All groups
+== Todos os grupos
+
 All items
 == Todos os itens
 
@@ -905,6 +924,12 @@ Allows maps to render with more detail
 Alpha
 == Alfa
 
+Already first (none is the fixed fallback group)
+== Já é o primeiro (none é o grupo de reserva fixo)
+
+Already last
+== Já é o último
+
 Also apply to dummy
 == Aplicar também ao dummy
 
@@ -931,9 +956,6 @@ Always show song title and artist
 
 Always translate
 == Traduzir sempre
-
-AMLL community lyrics
-== Letras da comunidade AMLL
 
 Amount
 == Quantidade
@@ -1181,6 +1203,9 @@ Assets editor
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
 == Atribua "Suicídio desligado" e "Suicídio ligado"; depois da tecla de desligar, K é ignorado até você apertar a de ligar.
 
+Assigned group
+== Grupo atribuído
+
 Assigns commands and labels to the slots of the radial bind wheel.
 == Atribui comandos e rótulos aos espaços da roda radial de binds.
 
@@ -1352,6 +1377,9 @@ Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 Auto weapon switch
 == Troca automática de arma
 
+Auto-accept team invites
+== Aceitar convites de equipe automaticamente
+
 Auto-accept team invites by sending /team <n>
 == Aceitar convites de equipe automaticamente enviando /team <n>
 
@@ -1466,9 +1494,6 @@ Automatic gain control (0=off 1=on)
 Automatic game-end scoreboard screenshot
 == Captura de tela automática da tela de pontuação ao fim do jogo
 
-Automatic updates
-== Atualizações automáticas
-
 Automatic updates require Windows x64
 == As atualizações automáticas exigem Windows x64
 
@@ -1480,9 +1505,6 @@ Automatically adds voting options for all maps
 
 Automatically ban blacklisted addresses
 == Banir automaticamente endereços na lista negra
-
-Automatically check for stable updates and install them on exit
-== Verificar automaticamente atualizações estáveis e instalá-las ao sair
 
 Automatically close the current chat after waking from freeze
 == Fechar automaticamente o chat atual ao acordar do congelamento
@@ -1670,6 +1692,15 @@ Background Draw
 Background draw
 == Desenho de fundo
 
+Background frame rate
+== Taxa de quadros em segundo plano
+
+Background frame rate limit
+== Limite da taxa de quadros em segundo plano
+
+Background frame rate: 0=follow display refresh rate, 1=custom cl_refresh_rate_inactive, 2=unlimited
+== Taxa de quadros em segundo plano: 0=seguir a taxa de atualização do monitor, 1=cl_refresh_rate_inactive personalizado, 2=sem limite
+
 Background image in menu
 == Imagem de fundo no menu
 
@@ -1771,9 +1802,6 @@ Big icons can overlap names and nearby tees, so shrink "Size of key press icons"
 
 Bind
 == Vincular
-
-Bind "Global toggle key" to show or hide the panel, and raise "Panel opacity" if the graphs are hard to read.
-== Vincule a tecla de alternância global para mostrar ou ocultar o painel e aumente a opacidade do painel se os gráficos forem difíceis de ler.
 
 Bind "Zen mode key" before you need it: while Zen mode is on, hidden HUD, chat and scoreboard stay hidden.
 == Defina a tecla do modo Zen antes de precisar: enquanto ele estiver ativo, HUD, chat e placar ocultos continuam ocultos.
@@ -1970,12 +1998,6 @@ Build the status text shown above Tees
 Built-in
 == Integrado
 
-Button - Disabled
-== Botão - Desativado
-
-Button - Enabled
-== Botão - Ativado
-
 Button browser
 == Navegador de botões
 
@@ -1993,6 +2015,18 @@ Buttons with this behavior execute console commands like regular key binds.
 
 Buttons with this behavior execute some predefined actions.
 == Botões com este comportamento executam algumas ações predefinidas.
+
+By clan
+== Por clã
+
+By clan name
+== Por nome do clã
+
+By player
+== Por jogador
+
+By player name
+== Por nome do jogador
 
 By row
 == Por linha
@@ -2088,13 +2122,13 @@ Cannot open word list file. Previous words remain active.
 == Não foi possível abrir o arquivo. As palavras anteriores continuam ativas.
 
 Cannot prepare word list. Previous words remain active.
-== Cannot prepare word list. Previous words remain active.
+== Não foi possível preparar a lista de palavras. As palavras anteriores continuam ativas.
 
 Cannot read complete word list file. Previous words remain active.
 == Não foi possível ler o arquivo completo. As palavras anteriores continuam ativas.
 
 Cannot read the wiki file
-== Cannot read the wiki file
+== Não é possível ler o arquivo do Wiki
 
 Cannot remove the wiki file
 == Não foi possível remover o arquivo do Wiki
@@ -2279,9 +2313,6 @@ Chat export cancelled
 Chat export failed
 == Exportação de chat falhou
 
-Chat fade smooth time (milliseconds)
-== Tempo suave de esmaecimento da mensagem de chat (ms)
-
 Chat font size
 == Tamanho da fonte do chat
 
@@ -2435,6 +2466,9 @@ Choose the menu font and font weight
 Choose the menu map and background colors
 == Choose the menu map and background colors
 
+Choose the new group color
+== Escolher a cor do novo grupo
+
 Choose when recording starts and how demos are named; playback speed and camera follow are separate.
 == Escolha quando a gravação começa e como as demos são nomeadas; velocidade de reprodução e câmera automática são opções à parte.
 
@@ -2489,6 +2523,9 @@ Clan
 Clan color in friends list
 == Cor do clã na lista de amigos
 
+Clan friend
+== Amigo do clã
+
 Clan member entry color in friend list
 == Cor da entrada de membro do clã na lista de amigos
 
@@ -2498,11 +2535,11 @@ Clan Members
 Clan Name
 == Nome do clã
 
+Clan name
+== Nome do clã
+
 Clan name size on nameplate
 == Tamanho do nome do clã na placa de identificação
-
-Clan of the player followed from the pie menu
-== Clã do jogador seguido pelo menu circular
 
 Clan plates size
 == Tamanho das placas de clã
@@ -2774,17 +2811,11 @@ Colors for chat command and emoji completion
 Colors of the hook collision line, in case of a possible collision with:
 == Cores da linha de colisão do gancho, em caso de possível colisão com:
 
-Colors of the translate button in the chat input and of the language menu that button opens.
-== Cores do botão de tradução na caixa de chat e do menu de idiomas que ele abre.
-
 Colors the scoreboard rows: authenticated players, players of the same clan, friends, and clan members in the friends list.
 == Colore as linhas do placar: jogadores autenticados, jogadores do mesmo clã, amigos e membros do clã na lista de amigos.
 
 Colors too close to the map background are hard to read while moving.
 == Cores muito próximas do fundo do mapa são difíceis de ler em movimento.
-
-Combo
-== Combo
 
 Comic dialogue
 == Diálogo de quadrinhos
@@ -3335,14 +3366,11 @@ Corner curvature
 Corner curve
 == Curva do canto
 
-Could not add the player as a friend
-== Não foi possível adicionar o jogador como amigo
-
 Could not add this entry.
 == Não foi possível adicionar esta entrada.
 
 Could not apply %s. The console could not parse the value.
-== Could not apply %s. The console could not parse the value.
+== Não foi possível aplicar %s. O console não conseguiu interpretar o valor.
 
 Could not back up configuration files.
 == Não foi possível fazer uma cópia de segurança dos arquivos de configuração.
@@ -3629,9 +3657,6 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 == Customize the position jump hint
 
-Customize translate button and menu colors
-== Personalizar cores do botão de tradução e menu
-
 Customize vote display and interaction
 == Customize vote display and interaction
 
@@ -3815,9 +3840,6 @@ Debug group clipping.
 Debug HTTP
 == Depuração HTTP
 
-Debug mode
-== Modo de depuração
-
 Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.
 == Modo de depuração ativado. Pressione Ctrl+Shift+D para desativar o modo de depuração.
 
@@ -3971,8 +3993,14 @@ Delete command
 Delete demo
 == Excluir demo
 
+Delete entry
+== Excluir entrada
+
 Delete folder
 == Excluir pasta
+
+Delete group
+== Excluir grupo
 
 Delete screenshot
 == Excluir captura de tela
@@ -4175,8 +4203,14 @@ Discord
 Display
 == Exibição
 
+Display and blocking rules
+== Regras de exibição e bloqueio
+
 Display index
 == Índice de exibição
+
+Display locations and blocking options
+== Locais de exibição e opções de bloqueio
 
 Display mode
 == Modo de exibição
@@ -4462,9 +4496,6 @@ Draws a marker on selected players so you can find them in the world.
 
 Draws a small second view of your other tee in the HUD, so you can watch both tees at the same time.
 == Desenha no HUD uma pequena segunda visão do seu outro tee para acompanhar os dois ao mesmo tempo.
-
-Draws collision and interaction ranges on the map: tee collision, pickups, hammer, hook, lasers and explosions.
-== Desenha no mapa as áreas de colisão e interação: colisão do Tee, itens, martelo, gancho, lasers e explosões.
 
 Draws drifting 3D shapes such as cubes, hearts or rings in the background, with size, speed, color and glow.
 == Desenha formas 3D flutuando no fundo, como cubos, corações ou anéis, com tamanho, velocidade, cor e brilho.
@@ -4820,6 +4851,9 @@ Edit touch controls
 Editing (all-intra H.264 / MP4)
 == Edição (todos intra H.264 / MP4)
 
+Editing: %s
+== Editando: %s
+
 Editor
 == Editor
 
@@ -4964,11 +4998,11 @@ Enable chat with all/team mode
 Enable cheats for your current team's run, but you can't earn a rank
 == Ativar cheats para a corrida atual da sua equipe, mas você não pode ganhar um rank
 
-Enable client stutter diagnostics at startup
-== Ativar o diagnóstico de travamentos do cliente na inicialização
-
 Enable client-initiated self-kill (K key / kill command)
 == Ativa a morte própria iniciada pelo cliente (tecla K / comando kill)
+
+Enable collision hitboxes
+== Ativar hitboxes
 
 Enable colored console output
 == Habilitar saída colorida no console
@@ -5102,9 +5136,6 @@ Enable Kugou Music hook integration
 Enable Kugou Music lyrics
 == Ativar letras do Kugou Music
 
-Enable left swipe offset on chat fade
-== Ativar deslocamento para a esquerda ao esmaecer mensagens de chat
-
 Enable LLM thinking mode (may increase response time)
 == Ativar modo de pensamento LLM (pode aumentar o tempo de resposta)
 
@@ -5116,9 +5147,6 @@ Enable LX Music lyrics
 
 Enable lyrics
 == Ativar letras
-
-Enable main thread and render stage performance debug logging
-== Ativar log de depuração de desempenho da thread principal e fase de renderização
 
 Enable map compatibility mode using the specified bug (example: grenade-doubleexplosion@ddnet.tw)
 == Ativar modo de compatibilidade de mapa usando o bug especificado (exemplo: grenade-doubleexplosion@ddnet.tw)
@@ -5132,9 +5160,6 @@ Enable MySQL backend instead of SQLite (fallback to sv_sqlite_file when no MySQL
 Enable nameplate text effects (master switch)
 == Ativar os efeitos de texto da placa de nome (interruptor principal)
 
-Enable Netease lyric integration
-== Ativar a integração de letras do Netease
-
 Enable Netease music Hook
 == Ativar o Hook do Netease Music
 
@@ -5143,9 +5168,6 @@ Enable Netease Music hook integration
 
 Enable new IME candidate bar
 == Ativar nova barra de candidatos IME
-
-Enable performance debug logging and diagnostics
-== Ativar log de depuração de desempenho e diagnóstico de engasgos
 
 Enable Pie Menu
 == Ativar menu radial
@@ -5306,6 +5328,9 @@ Enable the outlines, choose color and thickness, then test on a map with many di
 Enable the pet, pick its skin and size, then move around to watch how it follows.
 == Ative o mascote, escolha a skin e o tamanho e depois se mova para ver como ele segue.
 
+Enable the war list to change this setting
+== Ative a lista de guerra para alterar esta opção
+
 Enable thinking mode
 == Ativar modo de pensamento
 
@@ -5429,11 +5454,26 @@ Enter a CP number from 1 to 255.
 Enter a phrase.
 == Digite uma frase.
 
+Enter a player or clan name first
+== Digite primeiro o nome de um jogador ou clã
+
+Enter a valid group name (other than none)
+== Digite um nome de grupo válido (diferente de none)
+
+Enter clan name (matches all members)
+== Digite o nome do clã (corresponde a todos os membros)
+
 Enter fast practice
 == Entrar na prática rápida
 
+Enter group name
+== Digite o nome do grupo
+
 Enter Password
 == Digitar senha
+
+Enter player name
+== Digite o nome do jogador
 
 Enter solo mode
 == Entrar no modo solo
@@ -5482,6 +5522,9 @@ entity_bg (Workshop)
 
 Entrance overshoot
 == Ultrapassagem na entrada
+
+Entries and blocking
+== Entradas e bloqueio
 
 Entries in it will fall back to none.
 == As entradas dela voltam para none.
@@ -5585,6 +5628,9 @@ Existing Player
 Exit and install
 == Sair e instalar
 
+Exit editing
+== Sair da edição
+
 Exit fast practice
 == Sair da prática rápida
 
@@ -5628,7 +5674,7 @@ Export failed
 == Falha ao exportar
 
 Export failed. Could not compose %d edited slot(s).
-== Export failed. Could not compose %d edited slot(s).
+== Falha ao exportar. Não foi possível compor %d slots editados.
 
 Export name contains invalid characters.
 == O nome de exportação contém caracteres inválidos.
@@ -5677,9 +5723,6 @@ Exporting chat images: %d
 
 Expose IP to servers by default when adding a favorite (last choice on the server info page)
 == Expõe o IP aos servidores por padrão ao adicionar um favorito (lembra a última escolha da página de informações do servidor)
-
-Expose playback controls to the operating system
-== Expose playback controls to the operating system
 
 External console password. Must be set to enable economy.
 == Senha do console externo. Deve ser definida para habilitar economia.
@@ -5816,6 +5859,9 @@ Fairly fast encode
 Fake CTF flags
 == Bandeiras CTF falsas
 
+Fallback group
+== Grupo de reserva
+
 Fast encode
 == Codificação rápida
 
@@ -5926,6 +5972,9 @@ Fill
 
 Fill in the connect and join command fields, separate several commands with semicolons, and raise the delay if the server is not ready yet.
 == Preencha os campos de comandos de conexão e de entrada, separe vários comandos com ponto e vírgula e aumente o atraso se o servidor ainda não estiver pronto.
+
+Filter by group
+== Filtrar por grupo
 
 Filter chat messages by regular expression
 == Filtrar mensagens do chat por expressão regular
@@ -6053,6 +6102,12 @@ Folder Link
 Follow
 == Seguir
 
+Follow a player across servers for this session
+== Seguir um jogador entre servidores nesta sessão
+
+Follow display
+== Seguir monitor
+
 Follow graphics setting
 == Seguir as configurações gráficas
 
@@ -6082,6 +6137,9 @@ Following
 
 Following %s across servers
 == Seguindo %s entre servidores
+
+Following %s to %s
+== Seguindo %s para %s
 
 Following: %s
 == Seguindo: %s
@@ -6182,11 +6240,14 @@ Freeview cursor opacity
 Freeze
 == Congelar
 
+Freeze and death borders
+== Bordas de congelamento e morte
+
+Freeze and death check points
+== Pontos de checagem de congelamento e morte
+
 Freeze bar opacity (0 invisible, 100 fully visible)
 == Opacidade da barra de congelamento (0 invisível, 100 totalmente visível)
-
-Freeze border color
-== Cor da borda de congelamento
 
 Freeze Collision Border Color
 == Cor da borda de colisão de congelamento
@@ -6194,8 +6255,8 @@ Freeze Collision Border Color
 Freeze heart / health pickup
 == Coração congelante / pegar vida
 
-Freeze laser collision volume
-== Volume de colisão do laser Freeze
+Freeze hitbox color
+== Cor do hitbox de congelamento
 
 Freeze Laser Inner Color
 == Cor interna do laser congelante
@@ -6212,17 +6273,23 @@ Freeze laser outline color
 Freeze opacity
 == Opacidade do congelamento
 
-Freeze projectile collision volume
-== Volume de colisão dos projéteis Freeze
+Freeze projectiles and lasers
+== Projéteis e lasers de congelamento
 
 Freeze stars
 == Estrelas de congelamento
+
+Freeze tile color
+== Cor dos tiles de congelamento
 
 Freeze tile outline color
 == Cor do contorno do bloco de congelamento
 
 Freeze tile outline width
 == Espessura do contorno dos blocos de congelamento
+
+Freeze/deep freeze tile entity tint color
+== Tom das entidades dos tiles de congelamento e congelamento profundo
 
 Frequently asked questions
 == Perguntas frequentes
@@ -6512,9 +6579,6 @@ Global card ordering old config migration completed flag
 Global rank
 == Classificação global
 
-Global toggle key
-== Tecla de alternância global
-
 Global UI size
 == Tamanho geral da interface
 
@@ -6543,7 +6607,7 @@ Glow range
 == Alcance do brilho
 
 Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
-== Glyph rasterization: 0=sync only, 1=background CPU worker prefetch, 2=background GPU coverage prefetch (visible text always sync)
+== Rasterização de glifos: 0=somente síncrona, 1=pré-carregamento com thread de CPU em segundo plano, 2=pré-carregamento com cobertura de GPU em segundo plano (texto visível sempre síncrono)
 
 Go back one marker
 == Voltar um marcador
@@ -6683,11 +6747,14 @@ Grenade pickup
 Ground jump
 == Pulo do chão
 
+Group color
+== Cor do grupo
+
 Group name
 == Nome do grupo
 
-Group names are limited to 16 characters
-== Nomes de grupo têm no máximo 16 caracteres
+Group names can use up to 15 UTF-8 bytes
+== Nomes de grupo podem usar até 15 bytes UTF-8
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Agrupa auxílios de entrada: entrada rápida, margem automática, mira por subtique e comportamento do cursor.
@@ -6713,11 +6780,11 @@ Hammer
 Hammer and gun switching made for Gores (KOG) servers, with optional Axiom login and fast input.
 == Troca de martelo e armas feita para servidores Gores (KOG), com login no Axiom e entrada rápida opcionais.
 
+Hammer and hook range
+== Alcance de martelo e gancho
+
 Hammer hit
 == Acerto de martelo
-
-Hammer interaction
-== Interação do martelo
 
 Hammer Mode
 == Modo martelo
@@ -6866,9 +6933,6 @@ Hide non-friend names/clans and show client ID
 Hide other players' ghosts when frozen
 == Esconder fantasmas de outros jogadores quando congelados
 
-Hide own chat bubble (only when authenticated in remote console)
-== Ocultar próprio balão de chat (só funciona quando o console remoto está autenticado)
-
 Hide player messages
 == Ocultar mensagens de jogadores
 
@@ -6977,23 +7041,11 @@ Highlighted message color
 Hit feedback
 == Feedback de acerto
 
-Hitbox Mode Freeze Border Color
-== Cor da borda Freeze no modo Hitbox
+Hitbox line opacity
+== Opacidade das linhas de hitbox
 
-Hitbox Mode Global Opacity
-== Transparência global do modo Hitbox
-
-Hitbox Mode Override
-== Forçar modo hitbox
-
-Hitbox Mode Player Scope: 0=local, 1=local+clone, 2=all
-== Alcance do modo Hitbox: 0=local, 1=local+Dummy, 2=todos os jogadores
-
-Hitbox Mode Tee Collision Color
-== Cor do corpo do Tee no modo Hitbox
-
-Hitbox Mode Weapon Interaction Color
-== Cor da interação com armas no modo Hitbox
+Hitbox player scope: 0=self only, 1=self and dummy, 2=all players
+== Mostrar hitboxes de: 0=somente você, 1=você e dummy, 2=todos os jogadores
 
 HJ assist
 == Assistente HJ
@@ -7060,9 +7112,6 @@ Hook countdown warning color
 
 Hook hits unhookable surface
 == Gancho atinge superfície não enganchável
-
-Hook interaction
-== Interação do gancho
 
 Hook line tip
 == Ponta da linha de gancho
@@ -7667,9 +7716,6 @@ It only changes your name, not your skin or clan; names that are too long are cu
 It only counts your own team and only appears on your screen; lower the icon size when it covers the crosshair.
 == Ele conta apenas a sua própria equipe e só aparece na sua tela; diminua o tamanho do ícone se ele cobrir a mira.
 
-It stays on for every match, so switch it off before real races to keep the screen and your aim clean.
-== Ele fica ligado em toda partida, então desligue antes de corridas valendo para manter a tela e a mira limpas.
-
 It's recommended that you check the settings to adjust them to your liking before joining a server.
 == É recomendável que você verifique as configurações para ajustá-las ao seu gosto antes de entrar em um servidor.
 
@@ -7982,9 +8028,6 @@ Laser
 Laser / shotgun bounce
 == Ricochete de laser / escopeta
 
-Laser / shotgun interaction
-== Interação do laser / escopeta
-
 Laser colors
 == Cores do laser
 
@@ -8089,9 +8132,6 @@ Learn
 
 Learn "Toggle dummy" first; the other dummy keys only help once you already play with a second tee.
 == Aprenda primeiro Alternar dummy; as outras teclas do dummy só ajudam quando você já joga com um segundo tee.
-
-Leave "Automatic updates" off if you update by hand: it can restart the client to install a build.
-== Se você atualiza manualmente, deixe "Atualizações automáticas" desligado: ele pode reiniciar o cliente para instalar uma versão.
 
 Leave empty to detect automatically
 == vazio para detectar automaticamente
@@ -8206,9 +8246,6 @@ Link style
 
 Links open in the system browser.
 == Os links abrem no navegador do sistema.
-
-Links the music playing on your system with the system media controls, and can show its title in the top-left HUD.
-== Liga a música tocando no sistema aos controles de mídia do sistema e pode mostrar o título no HUD do canto superior esquerdo.
 
 Links to related project and community websites.
 == Links para sites relacionados ao projeto e à comunidade.
@@ -8402,17 +8439,11 @@ Loading…
 Local
 == Local
 
-Local + Dummy
-== Local + Dummy
-
 Local console log category filter mask (bit flags)
 == Máscara de filtro de categorias de log do console local (sinalizadores de bits)
 
 Local game mode statistics
 == Estatísticas de modos de jogo locais
-
-Local only
-== Apenas local
 
 Local saves
 == Saves locais
@@ -8470,9 +8501,6 @@ Logout of econ
 
 Logout of rcon
 == Sair do rcon
-
-Logs slow frames and startup stutter timings so you can report why the game felt laggy.
-== Registra quadros lentos e travadas na inicialização para você relatar por que o jogo parecia travado.
 
 Looks like an update is available
 == Parece que há uma atualização
@@ -8627,9 +8655,6 @@ Map browser: show empty servers only
 Map browser: show favorite maps only
 == Navegador de mapas: mostrar apenas mapas favoritos
 
-Map danger border
-== Borda de perigo do mapa
-
 Map data unavailable; server votes remain available
 == Dados dos mapas indisponíveis; as votações do servidor continuam disponíveis
 
@@ -8765,6 +8790,9 @@ Mark the end of a cut (right click to reset)
 Mark the end of a demo cut
 == Marcar o fim de um corte de demo
 
+Mark the freeze check at the center and the four death checks around each Tee
+== Marcar em cruz o ponto de congelamento no centro e os quatro pontos de morte ao redor de cada Tee
+
 Markers
 == Marcadores
 
@@ -8776,6 +8804,9 @@ Master server URL to register
 
 Match %d of %d
 == Resultado %d de %d
+
+Match by
+== Corresponder por
 
 Match ghost by map version instead of map name
 == Combinar ghost pela versão do mapa em vez do nome do mapa
@@ -8922,7 +8953,7 @@ May overload the service
 == pode sobrecarregar o serviço
 
 Measure a fixed cold glyph batch with performance diagnostics enabled
-== Measure a fixed cold glyph batch with performance diagnostics enabled
+== Medir um lote fixo de glifos frios com os diagnósticos de desempenho ativados
 
 Medium
 == Média
@@ -8935,9 +8966,6 @@ Mention option color
 
 Menu accent panel opacity
 == Opacidade do painel de destaque do menu
-
-Menu background
-== Fundo do menu
 
 Menu button hover
 == Passar o mouse sobre o botão do menu
@@ -8962,12 +8990,6 @@ Menu music
 
 Menu opacity (0-100)
 == Opacidade do menu (Menu opacity 0-100)
-
-Menu option - normal
-== Opção de menu - normal
-
-Menu option - selected
-== Opção de menu - selecionada
 
 Menu panel color
 == Cor do painel do menu
@@ -9164,8 +9186,8 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == Mover uma categoria de amigos para uma posição
 
-Move down
-== Mover para baixo
+Move down (decrease priority)
+== Mover para baixo (reduzir prioridade)
 
 Move left
 == Mover para esquerda
@@ -9182,8 +9204,8 @@ Move the free camera, then add a keyframe at the current demo time.
 Move to category
 == Mover para categoria
 
-Move up
-== Mover para cima
+Move up (increase match color priority)
+== Mover para cima (aumentar prioridade da cor de correspondência)
 
 Movement
 == Movimento
@@ -9539,9 +9561,6 @@ New features
 New features (unread)
 == Novidades (não lidas)
 
-New group
-== Novo grupo
-
 New IME
 == Novo IME
 
@@ -9565,6 +9584,9 @@ New random timeout code
 
 New version available
 == Nova versão disponível
+
+New war group
+== Novo grupo da lista de guerra
 
 Newest first
 == Mais recentes primeiro
@@ -9685,6 +9707,9 @@ No downloadable portable package for this version
 
 No empty team left.
 == Nenhum time vazio restante.
+
+No entries match
+== Nenhuma entrada corresponde
 
 No entries yet
 == Nenhuma entrada ainda
@@ -9913,9 +9938,6 @@ Note
 
 Note:
 == Nota:
-
-Nothing appears until a media app is playing; use the buttons to check which app the system reports.
-== Nada aparece até um app de mídia estar tocando; use os botões para ver qual app o sistema reporta.
 
 Nothing hookable
 == Nada engatável
@@ -10253,6 +10275,9 @@ Optional Axiom API key for scoreboard points and map queries (leave empty for an
 Optional export range in seconds. Leave empty to export the whole demo.
 == Intervalo de exportação opcional em segundos. Deixe vazio para exportar a demo inteira.
 
+Optional reason (can appear under the name plate)
+== Motivo opcional (pode aparecer sob a placa de nome)
+
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 == Início e fim opcionais em segundos. Deixe os dois vazios para exportar a demo inteira.
 
@@ -10319,6 +10344,9 @@ Outline global opacity
 Outline opacity
 == Opacidade do contorno
 
+Outline where freeze, deep freeze and death tiles take effect
+== Contornar as áreas onde os tiles de congelamento, congelamento profundo e morte fazem efeito
+
 Outlines can be distracting in fast maps; lower the opacity instead of disabling them.
 == Em mapas rápidos os contornos podem distrair; diminua a opacidade em vez de desativá-los.
 
@@ -10372,9 +10400,6 @@ Override Death Tile Entity Alpha (0-100)
 
 Override Entity Alpha for Unfreeze Tiles (0-100)
 == Sobrescrever alpha de entidade para tiles descongelados (0-100)
-
-Override Entry
-== Sobrescrever Entrada
 
 Override Freeze Tile Entity Alpha (0-100)
 == Sobrescrever alpha de entidade para tiles congelados (0-100)
@@ -10538,9 +10563,6 @@ Penalty in seconds for saving or swapping positions
 Per-name volume (name=percent)
 == Volume individual por nome (nome=porcentagem)
 
-Performance debug log threshold (ms)
-== Limiar de log de depuração de desempenho (ms)
-
 Performance mode
 == Modo de desempenho
 
@@ -10648,9 +10670,6 @@ Pick the parts to colorize, then choose a gradient mode and colors.
 
 Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 == Escolha a fonte que corresponde ao seu app de música e deixe tocando; a letra acompanha automaticamente.
-
-Pickup range
-== Alcance de coleta
 
 Pickups
 == Itens coletáveis
@@ -10907,9 +10926,6 @@ Player push radius for background 3D particles
 Player push strength for background 3D particles
 == Intensidade das partículas 3D do fundo empurradas pelo jogador
 
-Player range
-== Alcance do jogador
-
 Player skin
 == Pele do jogador
 
@@ -10945,9 +10961,6 @@ Player stats and info display
 
 Player titles
 == Títulos de jogador
-
-Player to follow across servers until cancelled; empty disables following
-== Jogador a seguir entre servidores até cancelar; vazio desativa
 
 Player: %s
 == Jogador: %s
@@ -11429,8 +11442,8 @@ Progress bar width
 Project and community websites
 == Sites do projeto e da comunidade
 
-Projectile / explosion range
-== Alcance do projétil / explosão
+Projectiles, explosions and regular lasers
+== Projéteis, explosões e lasers normais
 
 ProRes profile
 == Perfil ProRes
@@ -11656,6 +11669,9 @@ Queue preset: %s
 
 Quick action menu for players
 == Menu de ação rápida para jogadores
+
+Quick add
+== Adição rápida
 
 Quintic Bezier
 == Bézier quíntica
@@ -12500,9 +12516,6 @@ Reset to defaults
 Reset tooltip appearance
 == Restaurar aparência das dicas
 
-Reset translation colors
-== Restaurar cores da tradução
-
 Reset tuning after each map change
 == Redefinir ajustes após cada mudança de mapa
 
@@ -13037,6 +13050,9 @@ Search country flag…
 Search donor asset
 == Pesquisar asset doador
 
+Search entries or reasons
+== Pesquisar entradas ou motivos
+
 Search ghosts
 == Buscar fantasmas
 
@@ -13103,6 +13119,9 @@ SecretKey
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 == Veja /practicecmdlist para obter a lista de todos os comandos de treino disponíveis. Os mais usados são /telecursor, /lasttp e /rescue
 
+See freeze and death borders, character check points, shield pickups and weapon ranges.
+== Mostra no mapa as bordas de congelamento e morte, os pontos de checagem do personagem, o alcance de coleta de escudos e os alcances das armas.
+
 See you at the next checkpoint.
 == Nos vemos no próximo ponto de controle.
 
@@ -13129,6 +13148,9 @@ Select a result to open its card.
 
 Select a saved .map file (client limit: 64 MiB).
 == Selecione um arquivo .map salvo (limite do cliente: 64 MiB).
+
+Select a target group
+== Selecione um grupo de destino
 
 Select all chat
 == Selecionar todo o chat
@@ -13180,6 +13202,9 @@ Selects the country flag shown for you and for the dummy.
 
 Self
 == Próprio
+
+Self and dummy
+== Você e dummy
 
 Self and friends
 == Próprio e amigos
@@ -13370,9 +13395,6 @@ Server-side ghost opacity during fast practice (%)
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 == Defina a cor de fundo e a opacidade do fundo, depois a cor do texto, a cor do texto selecionado e a cor de fundo da seleção; há uma prévia abaixo.
 
-Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
-== Defina botão - desativado e botão - ativado para o botão, e fundo do menu com as duas linhas de opções para o pop-up.
-
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == Defina o modo de exibição como mostrar na tecla ou sempre mostrar, escolha a linha guia da pistola e a previsão do ninja, e ajuste cor, espessura e opacidade.
 
@@ -13547,6 +13569,9 @@ Share of the server browser name/map split given to the name column (per mille)
 Sharpen
 == Nitidez
 
+Shield pickup range
+== Alcance de coleta de escudo
+
 Short pain voice
 == Grito curto de dor
 
@@ -13703,14 +13728,8 @@ Show client IDs on a separate line
 Show client-generated chat messages, e.g., echo
 == Mostrar mensagens de chat geradas pelo cliente, ex.: echo
 
-Show collision and weapon interaction
-== Mostrar interação de colisão e armas
-
 Show Collision Borders
 == Mostrar borda do volume de colisão
-
-Show combo hint when hooking or hammering player within 2 seconds
-== Mostrar aviso de combo ao acertar um jogador com gancho ou martelo duas vezes em 2 segundos
 
 Show command completion in chat
 == Mostrar conclusão de comandos no chat
@@ -13736,14 +13755,8 @@ Show country flags in nameplates
 Show cross-server follow option
 == Mostrar seguir entre servidores
 
-Show current Netease lyric in Media Island
-== Exibir a letra atual do Netease na Media Island
-
 Show daily message to client
 == Mostrar mensagem diária ao cliente
-
-Show Danger Tiles in Hitbox Mode
-== Mostrar bordas perigosas do mapa no modo Hitbox
 
 Show DDNet config variables
 == Mostrar variáveis de configuração do DDNet
@@ -13868,9 +13881,6 @@ Show finish summary in Dynamic Island
 Show flag on name plate
 == Mostrar bandeira na placa de nome
 
-Show FPS
-== Mostrar FPS
-
 Show FPS, prediction time, and performance graphs
 == Mostrar FPS, tempo de previsão e gráficos de desempenho
 
@@ -13946,14 +13956,17 @@ Show hammer icon
 Show hammer status
 == Mostrar status do martelo
 
+Show hazard borders, character check points and weapon ranges
+== Mostrar bordas de perigo, pontos de checagem do personagem e alcances das armas
+
 Show health, shields and ammo
 == Mostrar vida, escudos e munição
 
 Show hint at random top-left/right of player when main or dummy is hammered awake
 == Quando o corpo principal ou Dummy for acordado com martelo, mostrar um aviso no canto superior esquerdo ou direito aleatório do jogador correspondente
 
-Show hitbox mode
-== Mostrar modo de hitbox
+Show hitboxes for
+== Mostrar hitboxes de
 
 Show Hook Collision
 == Mostrar colisão de gancho
@@ -13987,9 +14000,6 @@ Show important server prompts as notifications
 
 Show in Dynamic Island
 == Mostrar na Dynamic Island
-
-Show in-game FPS
-== Mostrar FPS no jogo
 
 Show in-game HUD
 == Mostrar HUD no jogo
@@ -14050,9 +14060,6 @@ Show in-game HUD when rendering video
 
 Show in-game packet loss rate
 == Mostrar taxa de perda de pacotes no jogo
-
-Show in-game prediction time (in milliseconds)
-== Mostrar tempo de predição no jogo (em milissegundos)
 
 Show indicators only within team
 == Mostrar indicadores apenas dentro da equipe
@@ -14258,9 +14265,6 @@ Show others (own team only)
 Show others' nameplate coordinates
 == Placa de nome mostra coordenadas de outros
 
-Show outdated version warning
-== Mostrar aviso de versão desatualizada
-
 Show outgoing game traffic QoS status
 == Exibir o status de QoS do tráfego de saída do jogo
 
@@ -14297,14 +14301,8 @@ Show pending crash reports on startup
 Show per-character title waves locally
 == Mostrar a ondulação das letras dos títulos na minha tela
 
-Show performance graphs.
-== Mostrar gráficos de desempenho.
-
 Show pet
 == Mostrar pet
-
-Show Pickup Ranges in Hitbox Mode
-== Mostrar alcance de itens coletáveis no modo Hitbox
 
 Show ping colored circle in nameplates
 == Mostrar círculo colorido de ping nas placas de nome
@@ -14435,9 +14433,6 @@ Show skin names in nameplate
 Show skin release date and author
 == Exibir a data de lançamento e o autor da skin
 
-Show song info in top-left corner
-== Mostrar informações da música no canto superior esquerdo
-
 Show spectate option
 == Mostrar opção de assistir
 
@@ -14515,6 +14510,9 @@ Show teleporter tile outlines
 
 Show text entities
 == Mostrar entidades de texto
+
+Show the areas where freeze projectiles and lasers can freeze a Tee
+== Mostrar as áreas onde projéteis e lasers de congelamento podem congelar um Tee
 
 Show the chat scrollbar on the right
 == Mostrar a barra de rolagem do chat à direita
@@ -15584,9 +15582,6 @@ Switch failed
 Switch interval
 == Intervalo de alternância
 
-Switch it off when you are done; these logs are for bug reports, not daily play.
-== Desligue quando terminar; esses logs são para relatórios de bug, não para o jogo do dia a dia.
-
 Switch on only the ones you recognize; chat completion affects the chat input, and "Show Qm badge" adds the Qm marker next to names on the scoreboard.
 == Ligue só o que você reconhece: o autocompletar age na entrada do chat e "Mostrar selo Qm" adiciona uma marca Qm ao lado dos nomes no placar.
 
@@ -15671,9 +15666,6 @@ System default
 System graphics settings
 == Configurações gráficas do sistema
 
-System media controls
-== Controles de mídia do sistema
-
 System message
 == Mensagem do sistema
 
@@ -15697,6 +15689,9 @@ Taper trail ends
 
 Taper trail width
 == Largura do rastro em cone
+
+Target group
+== Grupo de destino
 
 Target language code (e.g. zh, en, ja, zh-TW)
 == Código do idioma de destino da tradução (ex.: zh, en, ja, zh-TW)
@@ -15866,8 +15861,11 @@ Tee appearance
 Tee collision
 == Colisão de Tee
 
-Tee collision (Tee to Tee)
-== Colisão de Tee (Tee contra Tee)
+Tee collision circle
+== Círculo de colisão do Tee
+
+Tee collision color
+== Cor de colisão do Tee
 
 Tee color
 == Cor do tee
@@ -15875,17 +15873,8 @@ Tee color
 Tee cry
 == Choro do Tee
 
-Tee death probe
-== Detecção de morte do Tee
-
 Tee freeze probe
 == Detecção de Freeze do Tee
-
-Tee freeze probe (Tee to Freeze)
-== Detecção de Freeze do Tee (Tee contra Freeze)
-
-Tee hitbox color
-== Cor da hitbox do Tee
 
 Tee icon size in frozen Tee HUD (default 15)
 == Tamanho do ícone do Tee no HUD de Tee congelado (padrão 15)
@@ -16244,6 +16233,9 @@ There's an unsaved map in the editor, you might want to save it.
 These effects are cosmetic and can cost a little performance on weaker GPUs.
 == Esses efeitos são apenas visuais e podem custar um pouco de desempenho em GPUs mais fracas.
 
+These options are independent, so enable only the features you use to keep chat and the scoreboard uncluttered.
+== Estas opções são independentes. Ative apenas os recursos que usa para manter o chat e o placar limpos.
+
 These options only change prediction on your client; what other players see is not affected.
 == Estas opções só mudam a predição no seu cliente; o que os outros jogadores veem não muda.
 
@@ -16265,6 +16257,9 @@ This bind is already over the local config line limit.
 This connection cannot change names while connected. Reconnect with the saved names first.
 == Esta conexão não permite mudar nomes durante a sessão. Reconecte com os nomes salvos.
 
+This friend has no player name. Switch to By clan to add them.
+== Este amigo não tem nome de jogador. Mude para “Por clã” para adicioná-lo.
+
 This ID is not connected
 == Este ID não está conectado
 
@@ -16282,6 +16277,9 @@ This only affects your own screen; votes still follow the server rules.
 
 This person has disabled receiving whispers
 == Esta pessoa desativou o recebimento de sussurros
+
+This player has no clan. Switch to By player to add them.
+== Este jogador não tem clã. Mude para “Por jogador” para adicioná-lo.
 
 This pose file does not record a map. Choose the map used for rendering.
 == Este arquivo de poses não registra um mapa. Escolha o mapa usado para renderizar.
@@ -16340,20 +16338,11 @@ This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split key" to toggle, or use the enter and leave keys.
 == Marque conectar dummy automaticamente para ele se conectar sozinho, depois vincule a tecla de divisão solo como alternância ou use as teclas de entrar e sair.
 
-Tick "Debug mode" to turn all options on, then set "Performance debug log threshold (ms)" to choose which frames get logged.
-== Marque modo de depuração para ligar todas as opções e defina o limite do log de desempenho (ms) para escolher quais quadros são registrados.
-
 Tick "Dynamic Camera" to turn it on; "Smooth Dynamic Camera" adds glide to its movement, and the weapon switches are separate rows below.
 == Marque Câmera dinâmica para ativá-la; a câmera dinâmica suave deixa o movimento deslizante, e as trocas de arma são linhas separadas abaixo.
 
 Tick "Enable 3D background particles", pick a "Particle type", then set "Particle count", "Particle speed" and "Particle color".
 == Marque ativar partículas 3D de fundo, escolha um tipo de partícula e defina quantidade, velocidade e cor das partículas.
-
-Tick "Enable lyrics" and "Show lyrics inside Dynamic Island", then enable one source such as "Enable Netease music Hook" or "Enable Spotify lyrics".
-== Marque ativar letras e mostrar letras no Dynamic Island e ative uma fonte, como ativar o Hook do Netease Music ou ativar letras do Spotify.
-
-Tick "Enable system media control", then "Show song info in top-left corner"; the Previous, Play/Pause and Next buttons drive the track.
-== Marque ativar controle de mídia do sistema e mostrar info da música no canto superior esquerdo; os botões anterior, reproduzir/pausar e próximo controlam a faixa.
 
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == Marque ativar voz, abra as opções avançadas e escolha dispositivo de entrada e dispositivo de saída; reativar o áudio ao falar libera sua tecla de mudo.
@@ -16369,9 +16358,6 @@ Tick "Replace non-friend names with ID", "Replace non-friend skins with default"
 
 Tick "Show Gores drown board"; set "Players shown" and "Card opacity", and add "Show player Tee" for avatars.
 == Marque mostrar painel de afogamentos Gores, defina jogadores exibidos e opacidade do cartão, e adicione mostrar Tee do jogador para avatares.
-
-Tick "Show hitbox mode", choose the ranges you need, then set "Player range" to "Local only", "Local + Dummy" or "All players".
-== Marque mostrar o modo hitbox, escolha as áreas necessárias e defina a área do jogador como só local, local e dummy ou todos os jogadores.
 
 Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "Opacity" and the position sliders.
 == Marque mostrar entradas e ajuste tamanho e posição com tamanho do teclado, tamanho do mouse, opacidade e os controles de posição.
@@ -16802,9 +16788,6 @@ Translate outgoing messages to
 Translate received messages to
 == Traduzir mensagens recebidas para
 
-Translate UI
-== Traduzir interface
-
 Translate:
 == Traduzir:
 
@@ -16823,29 +16806,11 @@ Translated text size
 Translating to %s...
 == Traduzindo para %s...
 
-Translation button active color
-== Cor do botão de tradução quando ativado
-
-Translation button cancel color
-== Cor do botão de tradução quando cancelado
-
 Translation canceled because the sender changed
 == Tradução cancelada porque o remetente mudou
 
-Translation color alpha migration completed flag
-== Indicador de migração de alfa das cores de tradução concluída
-
 Translation diagnostics
 == Diagnóstico de tradução
-
-Translation menu background color
-== Cor de fundo do menu de tradução
-
-Translation menu normal color
-== Cor normal do menu de tradução
-
-Translation menu selected color
-== Cor do menu de tradução quando selecionado
 
 Translation model was not found. Check the model name.
 == Modelo de tradução não encontrado. Verifique o nome do modelo.
@@ -16957,6 +16922,9 @@ Turn on "Better scoreboard", then enable what you need: "Scoreboard point check"
 
 Turn on "Enable camera drift" or "Enable dynamic FOV", then tune "Drift intensity" and "Dynamic FOV intensity"; use "Aspect ratio preset" to force a view shape.
 == Os controles de intensidade e suavidade só aparecem depois de ligar a deriva da câmera ou o FOV dinâmico. A predefinição de proporção fixa o formato da visão e "Personalizado" permite digitar a sua.
+
+Turn on "Enable collision hitboxes", choose what to draw, then pick which players to show under "Show hitboxes for".
+== Ative “Ativar hitboxes”, escolha o que desenhar e, em “Mostrar hitboxes de”, selecione de quais jogadores exibi-las.
 
 Turn on "Enable controller", choose the device, pick "Relative" or "Absolute" under "Ingame controller mode", then tick the axes you want under "Aim bind".
 == Ative Ativar controle, escolha o dispositivo, selecione relativo ou absoluto em Modo de controle no jogo e marque os eixos desejados em Bind de mira.
@@ -17120,9 +17088,6 @@ UI motion level
 UI mouse sens.
 == Sensibilidade do mouse na interface
 
-UI rounded corner segments (even numbers recommended)
-== Segmentos de cantos arredondados da interface (números pares recomendados)
-
 UI scale
 == Escala da interface
 
@@ -17182,6 +17147,9 @@ Unable to save the skin with a reserved name
 
 Unable to save the watermarked screenshot
 == Não foi possível salvar a captura com marca d'água
+
+Unassigned entries fall back to this built-in group. It cannot be edited or deleted.
+== Entradas não atribuídas ficam neste grupo integrado. Ele não pode ser editado ou excluído.
 
 Unavailable
 == Indisponível
@@ -17399,6 +17367,9 @@ Updated this configuration.
 Updated this phrase.
 == Frase atualizada.
 
+Updates per second while the window is inactive; 0 = unlimited
+== Atualizações por segundo enquanto a janela está inativa; 0 = sem limite
+
 Updating preview…
 == Atualizando prévia…
 
@@ -17464,9 +17435,6 @@ Use alternative world tick calculation making hooks behave as if all players hav
 
 Use animated title style (overrides qm_title_color_mode)
 == Usar estilo de título animado (substitui qm_title_color_mode)
-
-Use cached or online AMLL community lyrics when the music source has no word timing
-== Usar letras da comunidade AMLL em cache ou on-line quando a fonte de música não fornecer tempos por palavra
 
 Use cl_show_perf 1 to show the panel.
 == Use cl_show_perf 1 para mostrar o painel.
@@ -18095,6 +18063,9 @@ Wheel distance per tick; hold Alt for 3x
 Wheel scroll feel: 0=Original (each tick restarts), 1=Smooth (velocity carries over), 2=Spring
 == Sensação da roda: 0=Original (reinicia a cada passo), 1=Suave (a velocidade continua), 2=Mola
 
+When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
+== Durante corridas, você pode manter “Projéteis e lasers de congelamento” ativado e desativar “Alcance de martelo e gancho” e “Projéteis, explosões e lasers normais” para enxergar com mais clareza os perigos de congelamento que se aproximam.
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Quando o Tee arco-íris do TClient está ativado, este recurso não tem efeito.
 
@@ -18292,9 +18263,6 @@ World lyrics
 
 Write local console contents to a text file
 == Escrever conteúdo do console local em um arquivo de texto
-
-Write performance debug logs to dedicated file
-== Gravar log de depuração de desempenho em arquivo dedicado
 
 Write remote console contents to a text file
 == Escrever conteúdo do console remoto em um arquivo de texto
@@ -18841,6 +18809,10 @@ Train
 Menu
 == Tecla de menu
 
+[Collision hitbox]
+All players
+== Todos os jogadores
+
 [Config help]
 %s (default: "%s", max length: %d)
 == %s (padrão: "%s", comprimento máximo: %d)
@@ -18912,62 +18884,6 @@ Hook
 [Direct touch input]
 Relative aim
 == Mira relativa
-
-[Editor]
-Could not generate the quad art image.
-== Could not generate the quad art image.
-
-[Editor]
-Drawing tools require the active physics layers.
-== Drawing tools require the active physics layers.
-
-[Editor]
-Failed to write sound to file '%s'.
-== Failed to write sound to file '%s'.
-
-[Editor]
-No image selected.
-== No image selected.
-
-[Editor]
-No sound selected.
-== No sound selected.
-
-[Editor]
-Saving failed: Could not prepare or queue the map.
-== Saving failed: Could not prepare or queue the map.
-
-[Editor]
-Saving failed: Could not write map file '%s'.
-== Saving failed: Could not write map file '%s'.
-
-[Editor]
-Sync interrupted: the map was loaded, but the editor could not refresh it
-== Sync interrupted: the map was loaded, but the editor could not refresh it
-
-[Editor]
-The drawing is too large. Split it into smaller strokes.
-== The drawing is too large. Split it into smaller strokes.
-
-[Editor]
-The drawing preview is too large to display.
-== The drawing preview is too large to display.
-
-[Editor]
-The file path is too long.
-== The file path is too long.
-
-[Editor]
-The game and physics layers must have matching dimensions before they can be extended.
-== The game and physics layers must have matching dimensions before they can be extended.
-
-[Editor]
-The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
-== The quad art is too large. Increase the image pixel size or decrease the quad pixel size.
-
-[Editor]
-The requested tile layer dimensions are too large.
-== The requested tile layer dimensions are too large.
 
 [Friend auto follow]
 Follow this friend across servers

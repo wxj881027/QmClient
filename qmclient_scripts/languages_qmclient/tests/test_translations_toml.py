@@ -289,6 +289,30 @@ japanese = "適用"
             ),
             "qmclient",
         )
+        self.assertEqual(
+            i18n_store.module_name_for_source(
+                Path("src/game/client/components/qmclient/word_filter_list.cpp")
+            ),
+            "word_filter",
+        )
+        self.assertEqual(
+            i18n_store.module_name_for_source(
+                Path("src/game/client/components/qmclient/public_word_filter.cpp")
+            ),
+            "word_filter",
+        )
+        self.assertEqual(
+            i18n_store.module_name_for_source(
+                Path("src/game/client/QmUi/QmWikiEditor.cpp")
+            ),
+            "wiki_ui",
+        )
+        self.assertEqual(
+            i18n_store.module_name_for_source(
+                Path("src/game/client/QmUi/QmWikiStore.cpp")
+            ),
+            "wiki_ui",
+        )
 
     def test_all_config_help_has_simplified_chinese_translation(self):
         config_paths = tuple(
@@ -318,7 +342,7 @@ japanese = "適用"
         self.assertIn("BuildLocalizedConfigHelpText", console_source)
         self.assertIn("ConfigManager()->PossibleConfigVariables", console_source)
         self.assertIn("pVar->m_pHelpLocalizeKey", console_source)
-        self.assertIn('Localize(pCommandHelp)', console_source)
+        self.assertIn("Localize(pVar->m_pHelpLocalizeKey)", console_source)
         self.assertIn(
             'Localize("%s (default: %d, min: %d, max: %d)", "Config help")',
             console_source,
