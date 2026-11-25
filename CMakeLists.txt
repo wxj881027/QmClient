@@ -5082,6 +5082,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/message_repack_test.cpp
     src/test/integration/engine/client_snapshot_ticks_test.cpp
     src/test/unit/engine/map_download_progress_test.cpp
+    src/test/unit/engine/qm_background_refresh_test.cpp
     src/test/unit/engine/unpacker_raw_test.cpp
     src/test/unit/engine/packer_boundary_test.cpp
     src/test/unit/engine/unpacker_boundary_test.cpp

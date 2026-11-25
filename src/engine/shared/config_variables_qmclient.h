@@ -67,6 +67,10 @@ MACRO_CONFIG_INT(QmTextCaretStyle, qm_text_caret_style, 0, 0, 2, CFGFLAG_CLIENT 
 // DDNet 页内子页签：未发布，不做配置迁移，直接给默认值。
 MACRO_CONFIG_INT(QmDdnetTab, qm_ddnet_tab, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "DDNet settings sub-tab: 0=general, 1=network compensation")
 MACRO_CONFIG_INT(QmGraphicsTab, qm_graphics_tab, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Graphics settings sub-tab: 0=display, 1=visual effects")
+// 后台限帧：0=跟随显示器刷新率（默认），1=自定义 cl_refresh_rate_inactive，2=不限。
+// 跟随显示器每帧读 gfx_screen_refresh_rate，切换显示器或刷新率后自动跟上；
+// 显示器刷新率未知或超出合理范围时，按 DDNet 原有的 120 Hz 后台默认值兜底。
+MACRO_CONFIG_INT(QmBackgroundRefreshMode, qm_background_refresh_mode, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Background frame rate: 0=follow display refresh rate, 1=custom cl_refresh_rate_inactive, 2=unlimited")
 MACRO_CONFIG_INT(QmUiScale, qm_ui_scale, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global UI size percentage")
 MACRO_CONFIG_INT(QmMobileCameraMode, qm_mobile_camera_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Mobile spectator camera: 0=joystick pad, 1=drag the view")
 MACRO_CONFIG_INT(QmDefaultsProfileVersion, qm_defaults_profile_version, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Default appearance profile migration version")

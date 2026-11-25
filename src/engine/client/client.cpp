@@ -73,6 +73,7 @@
 #include <engine/shared/protocol7.h>
 #include <engine/shared/protocol_ex.h>
 #include <engine/shared/protocolglue.h>
+#include <engine/shared/qm_background_refresh.h>
 #include <engine/shared/qm_default_profile.h>
 #include <engine/shared/qm_removed_config.h>
 #include <engine/shared/qm_storage_layout.h>
@@ -5418,8 +5419,11 @@ void CClient::Run()
 			bool IsRenderActive = (g_Config.m_GfxBackgroundRender || m_pGraphics->WindowOpen());
 
 			bool AsyncRenderOld = g_Config.m_GfxAsyncRenderOld;
-			Inactive = g_Config.m_ClRefreshRateInactive && !m_pGraphics->WindowActive();
-			const int RefreshRate = Inactive ? g_Config.m_ClRefreshRateInactive : g_Config.m_ClRefreshRate;
+			// 后台节拍按模式解析：跟随显示器 / 自定义 cl_refresh_rate_inactive / 不限。
+			// 每帧重算，切换模式或显示器刷新率变化后无需重启；前台限帧更低时沿用前台值。
+			const int InactiveRefreshRate = QmResolveBackgroundRefreshRate(QmBackgroundRefreshModeFromConfig(g_Config.m_QmBackgroundRefreshMode), g_Config.m_ClRefreshRateInactive, g_Config.m_GfxScreenRefreshRate, g_Config.m_ClRefreshRate);
+			Inactive = InactiveRefreshRate > 0 && !m_pGraphics->WindowActive();
+			const int RefreshRate = Inactive ? InactiveRefreshRate : g_Config.m_ClRefreshRate;
 			bool UpdateDue = true;
 			if(RefreshRate)
 			{

@@ -90,6 +90,7 @@
 #include <engine/shared/config_tags.h>
 #include <engine/shared/csv.h>
 #include <engine/shared/protocol_ex.h>
+#include <engine/shared/qm_background_refresh.h>
 #include <engine/sound.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
@@ -2602,8 +2603,9 @@ CQmStutterCapture::SFrame CGameClient::QmStutterFrameContext()
 		if(g_Config.m_ClRefreshRate > 0 && (ConfiguredLimit == 0 || g_Config.m_ClRefreshRate < ConfiguredLimit))
 			ConfiguredLimit = g_Config.m_ClRefreshRate;
 		IEngineGraphics *pGraphics = Game.Kernel()->RequestInterface<IEngineGraphics>();
+		const int InactiveRefreshRate = QmResolveBackgroundRefreshRate(QmBackgroundRefreshModeFromConfig(g_Config.m_QmBackgroundRefreshMode), g_Config.m_ClRefreshRateInactive, g_Config.m_GfxScreenRefreshRate, g_Config.m_ClRefreshRate);
 		Context.m_LimitCause = QmDetermineStutterLimitCause(g_Config.m_GfxVsync != 0, ConfiguredLimit,
-			g_Config.m_ClRefreshRateInactive, pGraphics == nullptr || pGraphics->WindowActive() != 0, Game.m_Menus.IdleRenderFrameRate());
+			InactiveRefreshRate, pGraphics == nullptr || pGraphics->WindowActive() != 0, Game.m_Menus.IdleRenderFrameRate());
 		return Context;
 	};
 	return Frame;

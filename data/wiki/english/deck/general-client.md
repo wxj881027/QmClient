@@ -16,7 +16,7 @@ Themes only swap the map and icons behind the main menu — invisible once in a 
 
 The update rate, the power-saving switch and the render frame cap are no longer here — they moved to "Graphics display", next to the rendering settings where the difference between the two caps is explained.
 
-When the window moves to the background, the inactive update rate (default 120) takes over; returning to the foreground jumps back to your value.
+When the window moves to the background, the background frame rate from the Graphics display page takes over: it follows the monitor refresh rate by default, can use a custom cap, or stay unlimited; returning to the foreground jumps back to your update rate.
 
 ## Related
 
