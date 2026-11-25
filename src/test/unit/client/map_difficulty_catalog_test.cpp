@@ -9,6 +9,63 @@
 #include <cstddef>
 #include <string>
 
+TEST(DdnetMapDifficultyCache, ApiCacheTakesPrecedenceAndSqlReloadKeepsNewMaps)
+{
+	constexpr char aCache[] = R"({"version":1,"entries":[{"name":"Reef","type":"Brutal","difficulty":4}]})";
+	constexpr char aSql[] = "CREATE TABLE map_difficulty(map_name,category,stars);"
+				"INSERT INTO map_difficulty VALUES('Reef','Moderate',2),('Old','Novice',1);";
+	CQmMapDifficultyCatalog Catalog;
+	ASSERT_TRUE(Catalog.LoadDdnetCacheJson(aCache, sizeof(aCache) - 1));
+	ASSERT_TRUE(Catalog.LoadSqlText(aSql, sizeof(aSql) - 1));
+	const auto *pEntry = Catalog.Find("REEF", "Moderate");
+	ASSERT_NE(pEntry, nullptr);
+	EXPECT_EQ(pEntry->m_Category, "Brutal");
+	EXPECT_EQ(pEntry->m_Stars, 4);
+	EXPECT_NE(Catalog.Find("Old"), nullptr);
+	EXPECT_FALSE(Catalog.DdnetCacheDirty());
+	EXPECT_FALSE(Catalog.Empty());
+}
+
+TEST(DdnetMapDifficultyCache, InvalidReloadDoesNotReplaceUsableEntries)
+{
+	constexpr char aCache[] = R"({"version":1,"entries":[{"name":"Reef","type":"Brutal","difficulty":4}]})";
+	CQmMapDifficultyCatalog Catalog;
+	ASSERT_TRUE(Catalog.LoadDdnetCacheJson(aCache, sizeof(aCache) - 1));
+	const auto *pEntry = Catalog.Find("Reef");
+	const auto Revision = Catalog.Revision();
+	for(const std::string Json : {
+		    R"({"version":2,"entries":[]})",
+		    R"({"version":1,"entries":[{"name":"Bad","type":"Novice","difficulty":2147483648}]})",
+		    R"({"version":1,"entries":[{"name":"Bad","type":"","difficulty":1}]})",
+		    R"({"version":1,"entries":[{"name":"Bad\u0000Map","type":"Novice","difficulty":1}]})",
+		    R"({"version":1,"entries":[{"name":"Same","type":"Novice","difficulty":1},{"name":"same","type":"Brutal","difficulty":4}]})"})
+	{
+		SCOPED_TRACE(Json);
+		EXPECT_FALSE(Catalog.LoadDdnetCacheJson(Json.data(), Json.size()));
+		EXPECT_EQ(Catalog.Find("Reef"), pEntry);
+		EXPECT_EQ(Catalog.Revision(), Revision);
+	}
+	std::string Oversized(2 * 1024 * 1024 + 1, ' ');
+	EXPECT_FALSE(Catalog.LoadDdnetCacheJson(Oversized.data(), Oversized.size()));
+	EXPECT_EQ(Catalog.Find("Reef"), pEntry);
+}
+
+TEST(DdnetMapDifficultyCache, CachedDdnetStarsDoNotLeakAcrossCommunities)
+{
+	constexpr char aCache[] = R"({"version":1,"entries":[{"name":"SharedMap","type":"Brutal","difficulty":4}]})";
+	CQmMapDifficultyCatalog Catalog;
+	ASSERT_TRUE(Catalog.LoadDdnetCacheJson(aCache, sizeof(aCache) - 1));
+	CServerInfo Server{};
+	str_copy(Server.m_aMap, "SharedMap");
+	str_copy(Server.m_aGameType, "DDNet");
+	EXPECT_NE(Catalog.FindForServer(Server), nullptr);
+	str_copy(Server.m_aCommunityId, "axiom");
+	str_copy(Server.m_aCommunityType, "Other");
+	EXPECT_EQ(Catalog.FindForServer(Server), nullptr);
+	str_copy(Server.m_aCommunityId, "kog");
+	EXPECT_EQ(Catalog.FindForServer(Server), nullptr);
+}
+
 TEST(MapDifficultyCatalog, LoadsEntriesAndUsesCategoryHint)
 {
 	constexpr char aSql[] = R"sql(
@@ -393,6 +450,45 @@ TEST(MapDifficultyCatalog, AxiomCacheRoundTripRestoresBothModesAndUnknownMapsRem
 	EXPECT_STREQ(Restored.FindForServer(AxiomServer("AXRace"))->StarLabel(), "★★★★★");
 	EXPECT_EQ(Restored.FindForServer(AxiomServer("Gores", "NeverVisited")), nullptr);
 	EXPECT_EQ(Restored.Find("SharedMap"), nullptr);
+}
+
+TEST(MapDifficultyCatalog, AxiomEnglishCategoryUsesCanonicalLocalizationKey)
+{
+	const struct
+	{
+		const char *m_pCategory;
+		const char *m_pKey;
+	} aCases[] = {
+		{"main", "Main"},
+		{"Easy", "Easy"},
+		{"HARD", "Hard"},
+		{"insane", "Insane"},
+		{"Extreme", "Extreme"},
+		{"Train", "Train"},
+		{"Mod", "Mod"},
+		{"solo", "Solo"},
+		{"Brutal", "Brutal"},
+	};
+	for(const auto &Case : aCases)
+	{
+		SCOPED_TRACE(Case.m_pCategory);
+		CQmMapDifficultyCatalog::SEntry Entry;
+		Entry.m_Category = Case.m_pCategory;
+		EXPECT_STREQ(Entry.AxiomCategoryKey(), Case.m_pKey);
+		EXPECT_EQ(Entry.m_Category, Case.m_pCategory);
+	}
+}
+
+TEST(MapDifficultyCatalog, AxiomAnnouncementAndUnknownCategoryKeepTheirOriginalText)
+{
+	for(const char *pCategory : {"普通", "简单", "古典.中阶", "Main.Special", "Custom", ""})
+	{
+		SCOPED_TRACE(pCategory);
+		CQmMapDifficultyCatalog::SEntry Entry;
+		Entry.m_Category = pCategory;
+		EXPECT_EQ(Entry.AxiomCategoryKey(), nullptr);
+		EXPECT_EQ(Entry.m_Category, pCategory);
+	}
 }
 
 TEST(MapDifficultyCatalog, DifficultyCellKeepsCategoryBeforeStars)

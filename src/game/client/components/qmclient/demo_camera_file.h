@@ -2,6 +2,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_DEMO_CAMERA_FILE_H
 
 #include "demo_camera_path.h"
+#include "qm_json_tracked_allocator.h"
 
 #include <base/system.h>
 
@@ -46,6 +47,29 @@ namespace qm_demo_camera
 		// JSON解析器及引擎校验器以free释放，覆盖实现须返回malloc兼容内存，并遵循Zero清零请求。
 		virtual void *AllocateJson(size_t Size, int Zero) noexcept { return Zero ? std::calloc(1, Size) : std::malloc(Size); }
 		virtual int Close(IOHANDLE File) noexcept { return io_close(File); }
+	};
+
+	// 把 CFileOperations::AllocateJson 接到记账分配器：注入失败后解析器丢下的
+	// 半成品树由它回收，同时保留「这次失败是注入造成的」这一判断依据。
+	class CFileJsonAllocator : public qm_json::CTrackedJsonAllocator
+	{
+	public:
+		explicit CFileJsonAllocator(CFileOperations &Operations) :
+			m_Operations(Operations) {}
+
+		bool Injected() const { return m_Injected; }
+
+	protected:
+		void *Allocate(size_t Size, int Zero) noexcept override
+		{
+			void *pMemory = m_Operations.AllocateJson(Size, Zero);
+			m_Injected |= pMemory == nullptr;
+			return pMemory;
+		}
+
+	private:
+		CFileOperations &m_Operations;
+		bool m_Injected = false;
 	};
 	inline std::string Encode(const SProject &Project)
 	{
@@ -96,24 +120,16 @@ namespace qm_demo_camera
 				return ELoadResult::FAILED;
 			CFileOperations Default;
 			auto &Operations = pOperations ? *pOperations : Default;
-			struct SAllocation
-			{
-				CFileOperations *m_pOperations;
-				bool m_Failed = false;
-			} Allocation{&Operations};
+			// 解析失败（预算或注入）时库只回收得掉能追溯的块，半成品树交给记账分配器处理。
+			auto pAllocator = std::make_shared<CFileJsonAllocator>(Operations);
 			json_settings Settings{};
 			Settings.max_memory = 4 * 1024 * 1024;
-			Settings.user_data = &Allocation;
-			Settings.mem_alloc = [](size_t Size, int Zero, void *pUser) noexcept -> void * {
-				auto &State = *static_cast<SAllocation *>(pUser);
-				void *pMemory = State.m_pOperations->AllocateJson(Size, Zero);
-				State.m_Failed |= pMemory == nullptr;
-				return pMemory;
-			};
-			Settings.mem_free = [](void *pMemory, void *) { std::free(pMemory); };
-			std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(JsonParseEx(&Settings, Json.data(), Json.size(), nullptr), json_value_free);
+			pAllocator->Bind(&Settings);
+			std::unique_ptr<json_value, qm_json::STrackedJsonDeleter> pRoot(
+				JsonParseEx(&Settings, Json.data(), Json.size(), nullptr),
+				qm_json::STrackedJsonDeleter{pAllocator, Settings});
 			if(!pRoot)
-				return Allocation.m_Failed ? ELoadResult::UNAVAILABLE : ELoadResult::FAILED;
+				return pAllocator->Injected() ? ELoadResult::UNAVAILABLE : ELoadResult::FAILED;
 			if(pRoot->type != json_object)
 				return ELoadResult::FAILED;
 			const auto *pVersion = json_object_get(pRoot.get(), "version");

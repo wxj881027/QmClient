@@ -3052,6 +3052,11 @@ void CGameConsole::OnRender()
 					}
 					case EToolbarAction::SETTINGS: OpenSettings(); break;
 					case EToolbarAction::EXPAND: m_LocalConsoleFullscreen = !m_LocalConsoleFullscreen; break;
+					case EToolbarAction::COUNT:
+						// COUNT 只是数量哨兵（与 TOOLBAR_ACTION_MOTION_COUNT 相等），
+						// 不作为真实工具栏项出现。
+						dbg_assert(false, "toolbar action must not be the COUNT sentinel");
+						break;
 					}
 				}
 				if(Action.m_Presence > 0.001f)

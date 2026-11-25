@@ -74,7 +74,9 @@ void CQmWeaponTrajectory::Render(
 		color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClLaserShotgunInnerColor)));
 	TrajectoryColor.a = TrajectoryAlpha;
 
-	vec2 LandingPos;
+	// 轨迹预算不足时 lambda 可能提前返回而不写 LandingPos，光标就画在原点；
+	// 零初始化让这条提前返回的分支行为确定，而不是读栈上残留值。
+	vec2 LandingPos(0.0f, 0.0f);
 	bool HasValidHit = false;
 	const bool Prepared = m_Scratch.TryPrepare([&]() -> bool {
 		// 逐像素碰撞按整段最坏采样数计入这一条预览的预算。

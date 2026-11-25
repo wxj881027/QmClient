@@ -254,11 +254,14 @@ static const char *FavoriteMapCategoryDisplayName(const char *pType)
 	return Localize("Unknown");
 }
 
-// Axiom 公告的类别是玩家可见的原文，直接显示，避免「普通」被归并成「简单」。
+// Axiom 英文类别单独本地化，中文公告保留原文，避免「普通」被归并成「简单」。
 static const char *MapDifficultyCategoryText(const CServerInfo &Server, const CQmMapDifficultyCatalog::SEntry &Entry)
 {
 	if(str_comp_nocase(Server.m_aCommunityId, "axiom") == 0)
-		return Entry.m_Category.c_str();
+	{
+		const char *pKey = Entry.AxiomCategoryKey();
+		return pKey != nullptr ? Localize(pKey, "Axiom map difficulty") : Entry.m_Category.c_str();
+	}
 	const char *pKey = FavoriteMapCategoryKeyFromText(Entry.m_Category.c_str());
 	if(pKey != nullptr)
 		return FavoriteMapCategoryDisplayName(pKey);
@@ -1228,7 +1231,10 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	const bool NeedDifficultyForList = g_Config.m_QmMapBrowserStarMask || g_Config.m_QmMapBrowserCategoryMask || g_Config.m_BrSort == IServerBrowser::SORT_DIFFICULTY;
 	auto RequestDifficulty = [&](const CServerInfo &Server) {
 		if(!Ui()->RenderOnly())
+		{
+			m_MapDifficultyCatalog.RequestDdnetDifficulty(Server, *Http(), Now);
 			m_MapDifficultyCatalog.RequestAxiomDifficulty(Server, *Http(), GameClient()->m_QmAxiomScores.OpenApiBudget(), g_Config.m_QmAxiomApiKey, Now);
+		}
 	};
 	static std::vector<int> s_vVisibleServerIndices;
 	static uint64_t s_VisibleSortedRevision = ~0ull;
@@ -1257,7 +1263,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	const bool StaleEmptyOnly = s_VisibleEmptyOnly != g_Config.m_QmMapBrowserEmptyOnly;
 	const bool RebuildVisible = StaleRevision || StaleCatalog || StaleFavorites || StaleCount || StaleStarMask ||
 				    StaleCategoryMask || StaleFavoriteOnly || StaleEmptyOnly;
-	// 失败请求的退避只在再次调用 RequestAxiomDifficulty 时推进；目录未变时仍按秒级
+	// DDNet 和 Axiom 的失败请求需要再次触发补查；目录未变时仍按秒级
 	// 节奏补查，但不再顺带重建可见索引。
 	const bool RequestScan = RebuildVisible || (NeedDifficultyForList && Now - s_VisibleRequestScanTime >= time_freq());
 	if(RequestScan)

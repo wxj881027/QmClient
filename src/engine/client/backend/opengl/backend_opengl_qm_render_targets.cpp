@@ -313,7 +313,8 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Readback(const CCommandB
 	const int h = Target.m_Height;
 
 	// PBO 双缓冲需要缓冲对象与异步 map；不可用（老 GL/ES2）时退回同步读回，行为与旧版一致。
-	const bool PboSupported = glGenBuffers != nullptr && glMapBufferRange != nullptr;
+	// glGenBuffers 属核心函数、恒可链接，只有扩展入口 glMapBufferRange 需要运行期探测。
+	const bool PboSupported = glMapBufferRange != nullptr;
 	CImageInfo Dimensions;
 	Dimensions.m_Width = w;
 	Dimensions.m_Height = h;

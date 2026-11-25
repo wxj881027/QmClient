@@ -143,6 +143,10 @@ class CTestLogListener : public ::testing::EmptyTestEventListener
 
 int main(int argc, const char **argv)
 {
+	// 测试输出立刻落盘：崩溃或被信号终止时，缓冲区里没刷出的行正是定位崩溃
+	// 用例的唯一线索；macOS 上带缓冲的 gtest 输出曾把崩溃点藏掉几十行。
+	std::setvbuf(stdout, nullptr, _IONBF, 0);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);
 	CCmdlineFix CmdlineFix(&argc, &argv);
 	if(const auto Result = QmCrashdumpProcessProbe(argc, argv))
 		return *Result;

@@ -10973,6 +10973,9 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 Playtime (h)
 == 플레이 시간(h)
 
+Playtime query failed. Retrying shortly.
+== 플레이 시간 조회에 실패했습니다. 잠시 후 다시 시도합니다.
+
 Please add a valid cut first
 == 먼저 유효한 잘라내기 구간을 추가하세요
 
@@ -11596,6 +11599,9 @@ Query server setting: %s
 
 Query team rank for %s
 == %s의 팀 순위 조회
+
+Querying playtime from DDStats...
+== DDStats에서 플레이 시간을 조회하는 중…
 
 Querying points for %s...
 == %s 님의 포인트 조회 중...
@@ -16685,6 +16691,9 @@ Total hours
 Total play time
 == 총 플레이 시간
 
+Total playtime from DDStats. The last result stays visible while refreshing.
+== DDStats의 총 플레이 시간입니다. 새로 고치는 동안 이전 결과를 표시합니다.
+
 Total points
 == 총점
 
@@ -18716,6 +18725,42 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == 이 플레이어에게 사용할 수 없음
+
+[Axiom map difficulty]
+Brutal
+== 브루탈
+
+[Axiom map difficulty]
+Easy
+== 쉬움
+
+[Axiom map difficulty]
+Extreme
+== 극한
+
+[Axiom map difficulty]
+Hard
+== 어려움
+
+[Axiom map difficulty]
+Insane
+== 미친
+
+[Axiom map difficulty]
+Main
+== 보통
+
+[Axiom map difficulty]
+Mod
+== 모드
+
+[Axiom map difficulty]
+Solo
+== 솔로
+
+[Axiom map difficulty]
+Train
+== 훈련
 
 [Bind keyboard key]
 Menu

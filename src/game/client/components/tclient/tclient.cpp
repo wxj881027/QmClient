@@ -252,7 +252,7 @@ static bool HasGoresTeeClearance(const CCollision *pCollision, const CTile *pGam
 	for(const vec2 SampleOffset : aSamples)
 	{
 		const int SampleIndex = pCollision->GetPureMapIndex(Pos + SampleOffset);
-		if(QmMapProgress::IsSolidGround(pGame[SampleIndex].m_Index, pFront ? pFront[SampleIndex].m_Index : TILE_AIR))
+		if(QmMapProgress::IsSolidGround(pGame[SampleIndex].m_Index, pFront ? pFront[SampleIndex].m_Index : (unsigned char)TILE_AIR))
 			return false;
 	}
 	return true;
@@ -2931,7 +2931,7 @@ void CTClient::StepGoresDistanceFieldTileScan(int Budget)
 	const CTeleTile *pTele = pCollision->TeleLayer();
 	const int MapSize = m_GoresDistanceFieldBuildMapSize;
 	const int Width = m_GoresDistanceFieldWidth;
-	const auto FrontAt = [&](int Index) { return pFront ? pFront[Index].m_Index : TILE_AIR; };
+	const auto FrontAt = [&](int Index) { return pFront ? pFront[Index].m_Index : (unsigned char)TILE_AIR; };
 	const auto IsDeath = [&](int Index) { return pGame[Index].m_Index == TILE_DEATH || FrontAt(Index) == TILE_DEATH; };
 	const int Start = m_GoresDistanceFieldBuildCursor;
 	ConsumeQmBudgetedWork(m_GoresDistanceFieldBuildCursor, MapSize, Budget);
@@ -3250,7 +3250,7 @@ void CTClient::StepGoresDistanceFieldReachableStartCheck(int Budget)
 	for(int Index = m_GoresDistanceFieldBuildCursor; Index < End; ++Index)
 	{
 		const int Tile = pGame[Index].m_Index;
-		const int FrontTile = pFront ? pFront[Index].m_Index : TILE_AIR;
+		const int FrontTile = pFront ? pFront[Index].m_Index : (unsigned char)TILE_AIR;
 		const bool IsStart = Tile == TILE_START || FrontTile == TILE_START;
 		if(IsStart && m_vGoresDistanceToFinish[(size_t)Index].m_Length != DISTANCE_INF)
 		{
@@ -3697,7 +3697,7 @@ void CTClient::UpdateDDraceMapProgress()
 		m_QmDDraceProgressWidth = Width;
 	}
 	const auto ReadTile = [&](int Index) {
-		return QmMapProgress::MakeTile(pGame[Index].m_Index, pFront ? pFront[Index].m_Index : TILE_AIR,
+		return QmMapProgress::MakeTile(pGame[Index].m_Index, pFront ? pFront[Index].m_Index : (unsigned char)TILE_AIR,
 			pTele ? pTele[Index].m_Type : 0, pTele ? pTele[Index].m_Number : 0);
 	};
 	if(m_QmDDraceProgressScanCursor < Size)

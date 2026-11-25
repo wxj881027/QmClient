@@ -1,3 +1,4 @@
+#include <base/fs_path.h>
 #include <base/system.h>
 #include <base/windows.h>
 
@@ -46,10 +47,10 @@ namespace
 		void TearDown() override { m_Image.Free(); }
 		std::string Read(const std::string &Path)
 		{
-			std::ifstream Input(std::filesystem::u8path(Path), std::ios::binary);
+			std::ifstream Input(fs_path_from_utf8(Path), std::ios::binary);
 			return {std::istreambuf_iterator<char>(Input), std::istreambuf_iterator<char>()};
 		}
-		void WriteOldExport() { std::ofstream(std::filesystem::u8path(m_Target), std::ios::binary) << "previous export"; }
+		void WriteOldExport() { std::ofstream(fs_path_from_utf8(m_Target), std::ios::binary) << "previous export"; }
 		bool Run(const std::shared_ptr<CQmScreenshotWatermarkJob> &pJob)
 		{
 			CJobPool Pool;
@@ -100,7 +101,7 @@ TEST_F(CQmScreenshotWatermarkJobTest, CancelBeforeCommitKeepsOldFileAndUncommitt
 {
 	WriteOldExport();
 	const std::string Temp = m_Target + ".pending";
-	std::ofstream(std::filesystem::u8path(Temp)) << "new export";
+	std::ofstream(fs_path_from_utf8(Temp)) << "new export";
 	CQmScreenshotExportControl Control;
 	Control.Cancel();
 	EXPECT_FALSE(Control.Commit(Temp, m_Target));
@@ -112,7 +113,7 @@ TEST_F(CQmScreenshotWatermarkJobTest, RemovingACandidatePreservesTheTargetAndAll
 {
 	WriteOldExport();
 	const std::string Candidate = m_Target + ".pending";
-	std::ofstream(std::filesystem::u8path(Candidate), std::ios::binary) << "candidate";
+	std::ofstream(fs_path_from_utf8(Candidate), std::ios::binary) << "candidate";
 	ASSERT_EQ(Read(Candidate), "candidate");
 	ASSERT_TRUE(CQmScreenshotExportControl::TryRemoveCandidate(Candidate));
 	EXPECT_FALSE(m_pStorage->FileExists(Candidate.c_str(), IStorage::TYPE_ABSOLUTE));
@@ -129,7 +130,7 @@ TEST_F(CQmScreenshotWatermarkJobTest, RemovingACandidatePreservesTheTargetAndAll
 TEST_F(CQmScreenshotWatermarkJobTest, FailedDirectoryCleanupPreservesItsContentsAndTheExport)
 {
 	WriteOldExport();
-	const auto Candidate = std::filesystem::u8path(m_Target + ".directory");
+	const auto Candidate = fs_path_from_utf8(m_Target + ".directory");
 	ASSERT_TRUE(std::filesystem::create_directory(Candidate));
 	const auto Child = Candidate / "keep.txt";
 	std::ofstream(Child, std::ios::binary) << "keep";
@@ -202,7 +203,7 @@ TEST_F(CQmScreenshotWatermarkJobTest, ReplacementDeniedByOpenHandlePreservesPrev
 	ASSERT_NE(Handle.m_Handle, INVALID_HANDLE_VALUE);
 	EXPECT_FALSE(CQmScreenshotManager::SavePngAtomically(m_Target, m_Image, ""));
 	EXPECT_EQ(Read(m_Target), "previous export");
-	for(const auto &Entry : std::filesystem::directory_iterator(std::filesystem::u8path(m_Target).parent_path()))
+	for(const auto &Entry : std::filesystem::directory_iterator(fs_path_from_utf8(m_Target).parent_path()))
 		EXPECT_NE(Entry.path().extension(), ".tmp");
 }
 #endif

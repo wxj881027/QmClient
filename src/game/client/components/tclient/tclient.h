@@ -275,7 +275,8 @@ class CTClient : public CComponent
 	void FailUpdateMetadataCheck(const char *pMessage, bool NetworkError) noexcept;
 	void StartUpdateSourceSurvey();
 	void PollUpdateRequests();
-	void RunUpdateHttp(std::shared_ptr<IHttpRequest> pRequest);
+	// 请求只被转发给 HTTP 层或被记入代理等待表，两条路径都会自己留引用，不需要再复制一次。
+	void RunUpdateHttp(const std::shared_ptr<IHttpRequest> &pRequest);
 	void PollUpdateProxyRequests();
 	void ResetUpdateDownloadTasks();
 	void RemoveUpdateTempFiles();

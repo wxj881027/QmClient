@@ -62,6 +62,23 @@ TEST(SettingsTeeSkinListState, SavedColorVariantOnlySelectsTheMatchingAppearance
 	EXPECT_TRUE(SettingsTeeSkinEntryMatches("bluekitty", SSettingsSkinListColorKey{false, 123, 456}, {"bluekitty", false, 789, 987}));
 }
 
+TEST(SettingsTeeSkinListState, SwitchingTargetsOnlyExchangesTheFirstAndSelectedSlots)
+{
+	for(const int Selected : {-1, 0, 2, 7})
+	{
+		for(int Slot = 0; Slot < 8; ++Slot)
+		{
+			const int Source = SettingsTeeSkinSwapFirst(Slot, Selected);
+			EXPECT_EQ(SettingsTeeSkinSwapFirst(Source, Selected), Slot);
+			if(Slot != 0 && Slot != Selected)
+				EXPECT_EQ(Source, Slot);
+		}
+		EXPECT_EQ(SettingsTeeSkinSwapFirst(-1, Selected), -1);
+		if(Selected >= 0)
+			EXPECT_EQ(SettingsTeeSkinSwapFirst(0, Selected), Selected);
+	}
+}
+
 TEST(SettingsTee7SkinDeletion, ConfirmedSkinCanBeHiddenByFilter)
 {
 	std::string PendingName = "local-skin";

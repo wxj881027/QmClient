@@ -1,3 +1,5 @@
+#include <base/fs_path.h>
+
 #include <engine/console.h>
 #include <engine/shared/config.h>
 #include <engine/storage.h>
@@ -343,8 +345,8 @@ TEST_F(CQmScriptingExecution, RegexReplacementCallbackCanKeepReadOnlyGroups)
 TEST_F(CQmScriptingExecution, BuiltInEmoticonPassesOneLiteralMessageToSay)
 {
 	const std::string Source = TestSourcePath("data/qmclient/builtinscripts/sayemoticon.chai");
-	const auto Target = std::filesystem::u8path(m_Info.StoragePath()) / "sayemoticon.chai";
-	ASSERT_TRUE(std::filesystem::copy_file(std::filesystem::u8path(Source), Target));
+	const auto Target = fs_path_from_utf8(m_Info.StoragePath()) / "sayemoticon.chai";
+	ASSERT_TRUE(std::filesystem::copy_file(fs_path_from_utf8(Source), Target));
 
 	std::vector<std::string> vMessages;
 	auto pConsole = CreateConsole(CFGFLAG_CLIENT);

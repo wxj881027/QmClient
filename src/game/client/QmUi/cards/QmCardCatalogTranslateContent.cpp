@@ -199,13 +199,13 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		const bool PendingTest = m_TranslateProbe.Pending();
 		if(PendingTest)
 		{
-			const bool Clicked = DoButton_Menu(&s_CancelTranslationTestButton, Localize("Cancel translation test"), 0, &Row);
+			const bool Clicked = DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, &s_CancelTranslationTestButton, "translate-test-cancel", Localize("Cancel translation test"), 0, &Row, Metrics);
 			if(!PrewarmOnly && !Ui()->RenderOnly() && Clicked)
 				m_TranslateProbe.Cancel();
 		}
 		else
 		{
-			const bool Clicked = DoButton_Menu(&s_TestTranslationButton, Localize("Test translation"), 0, &Row);
+			const bool Clicked = DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, &s_TestTranslationButton, "translate-test-start", Localize("Test translation"), 0, &Row, Metrics);
 			if(!PrewarmOnly && !Ui()->RenderOnly() && Clicked)
 				m_TranslateProbe.Start(*Http(), "Hello, please hook me.", g_Config.m_QmTranslateTarget, "en");
 		}

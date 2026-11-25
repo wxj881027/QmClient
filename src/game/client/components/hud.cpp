@@ -3956,7 +3956,8 @@ void CHud::RenderMediaIsland()
 		static_cast<float>(static_cast<double>(Now) / static_cast<double>(time_freq())));
 	SSwapCountdownList SwapList;
 	BuildSwapCountdownList(*GameClient(), *Client(), SwapList);
-	std::array<const SSwapCountdownInfo *, NUM_DUMMIES * MAX_CLIENTS> aIncomingSwapInfos{};
+	// 两个不同匿名枚举相乘在 C++20 已弃用，显式转成整数。
+	std::array<const SSwapCountdownInfo *, static_cast<std::size_t>(NUM_DUMMIES) * static_cast<std::size_t>(MAX_CLIENTS)> aIncomingSwapInfos{};
 	int IncomingSwapCount = 0;
 	for(int i = 0; i < SwapList.m_Count && IncomingSwapCount < (int)aIncomingSwapInfos.size(); ++i)
 	{
@@ -7149,7 +7150,7 @@ void CHud::OnNewSnapshot()
 	else if(GameClient()->m_Snap.m_SpecInfo.m_Active)
 		ClientId = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;
 
-	if(ClientId == -1)
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return;
 
 	const CNetObj_Character *pPrevChar = &GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev;

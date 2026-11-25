@@ -233,20 +233,23 @@ public:
 		SCommand_Upload *m_pNextUpload = nullptr;
 	};
 
+	// 纯传输结构，构造时一律给出确定的初值：命令结构里的 m_State 是裸成员，
+	// 少数调用点（含测试）只填需要的字段，剩下的若靠栈残留取值，就会表现为
+	// 「同一份绘制代码在某些栈布局下被裁成空、在另一些下正常」的偶发空白。
 	struct SState
 	{
-		EBlendMode m_BlendMode;
-		EWrapMode m_WrapMode;
-		int m_Texture;
-		SPoint m_ScreenTL;
-		SPoint m_ScreenBR;
+		EBlendMode m_BlendMode = EBlendMode::NONE;
+		EWrapMode m_WrapMode = EWrapMode::REPEAT;
+		int m_Texture = -1;
+		SPoint m_ScreenTL = SPoint(0.0f, 0.0f);
+		SPoint m_ScreenBR = SPoint(0.0f, 0.0f);
 
 		// clip
-		bool m_ClipEnable;
-		int m_ClipX;
-		int m_ClipY;
-		int m_ClipW;
-		int m_ClipH;
+		bool m_ClipEnable = false;
+		int m_ClipX = 0;
+		int m_ClipY = 0;
+		int m_ClipW = 0;
+		int m_ClipH = 0;
 	};
 
 	struct SCommand_Clear : public SCommand

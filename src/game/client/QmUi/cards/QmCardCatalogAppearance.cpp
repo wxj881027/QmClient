@@ -591,8 +591,8 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				return maximum(Height, 2.0f * RowSpacing + RealFontSize + RealMsgPaddingY);
 			};
 			AddMeasuredCard(5, MeasureChatPreview, [=, this](CUIRect ContentRect) mutable {
-			if(Ui()->DrawingSuppressed())
-				return;
+				if(Ui()->DrawingSuppressed())
+					return;
 			// 和头衔卡的「发言预览」共用同一份聊天框预览实现。
 				CMenus *pMenus = this;
 			CChat *pChat = &pMenus->GameClient()->m_Chat;

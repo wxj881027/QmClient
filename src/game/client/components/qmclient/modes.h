@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <limits>
 
-struct CConfig;
+class CConfig;
 
 struct SQmStatisticsModeDisplay
 {

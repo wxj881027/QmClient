@@ -1,3 +1,5 @@
+#include <base/fs_path.h>
+
 #include <engine/shared/demo_output.h>
 
 #include <gtest/gtest.h>
@@ -74,7 +76,7 @@ namespace
 			if(Result == ECreate::CREATED && m_BlockFileOpen)
 			{
 				// 在真实暂存目录放置同名空目录，让实际 OpenFile 返回失败。
-				std::filesystem::create_directory(std::filesystem::u8path(pPath) / "output.demo");
+				std::filesystem::create_directory(fs_path_from_utf8(pPath) / "output.demo");
 			}
 			return Result;
 		}
@@ -162,7 +164,7 @@ namespace
 		bool Extract() { return m_Player.ExtractMap(m_State.m_pStorage.get(), &m_OutputOperations, &m_FileOperations); }
 		bool TemporaryExists()
 		{
-			return !m_OutputOperations.m_Directory.empty() && std::filesystem::exists(std::filesystem::u8path(m_OutputOperations.m_Directory));
+			return !m_OutputOperations.m_Directory.empty() && std::filesystem::exists(fs_path_from_utf8(m_OutputOperations.m_Directory));
 		}
 		void ExpectUnchangedPlayback()
 		{

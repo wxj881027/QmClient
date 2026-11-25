@@ -10973,6 +10973,9 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 Playtime (h)
 == 遊玩（小時）
 
+Playtime query failed. Retrying shortly.
+== 遊玩時長查詢失敗，稍後重試。
+
 Please add a valid cut first
 == 請先添加有效裁剪片段
 
@@ -11596,6 +11599,9 @@ Query server setting: %s
 
 Query team rank for %s
 == 查詢玩家 %s 所在隊伍的排名
+
+Querying playtime from DDStats...
+== 正在向 DDStats 查詢遊玩時長…
 
 Querying points for %s...
 == 正在查詢 %s 的積分...
@@ -16685,6 +16691,9 @@ Total hours
 Total play time
 == 總時長
 
+Total playtime from DDStats. The last result stays visible while refreshing.
+== DDStats 統計的總遊玩時長。背景更新時保留上次結果。
+
 Total points
 == 總分
 
@@ -18716,6 +18725,42 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == 此玩家不可用
+
+[Axiom map difficulty]
+Brutal
+== 高階
+
+[Axiom map difficulty]
+Easy
+== 簡單
+
+[Axiom map difficulty]
+Extreme
+== 極限
+
+[Axiom map difficulty]
+Hard
+== 困難
+
+[Axiom map difficulty]
+Insane
+== 瘋狂
+
+[Axiom map difficulty]
+Main
+== 普通
+
+[Axiom map difficulty]
+Mod
+== 模組
+
+[Axiom map difficulty]
+Solo
+== 單人
+
+[Axiom map difficulty]
+Train
+== 訓練
 
 [Bind keyboard key]
 Menu

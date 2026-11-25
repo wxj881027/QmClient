@@ -2447,10 +2447,10 @@ protected:
 	void DrainSnapshotTextContainers();
 	bool RequestIngameMotdParagraphCache(CUIRect Motd, float FontSize);
 	bool IngameMotdParagraphCacheMatches(CUIRect Motd, float FontSize) const;
-	void DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool AllowCurrentFrame = false);
-	bool RenderIngameMotdStableParagraphCache(CUIRect Motd);
+	void DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Visible);
+	bool RenderIngameMotdParagraph(CUIRect Motd);
 	void DrainIngameUiSnapshotTextRuntime();
-	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
+	void DrainIngameUiTextRuntime(bool MotdVisible);
 	void RenderServerControl(CUIRect MainView);
 
 public:
@@ -2513,8 +2513,8 @@ private:
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
 	CQmMapDifficultyCatalog m_MapDifficultyCatalog;
-	// Axiom 难度缓存合批落盘：多次请求结果在同一窗口内只写一次磁盘。
-	int64_t m_NextAxiomDifficultySave = 0;
+	// 难度缓存合批落盘：多次请求结果在同一窗口内只写一次磁盘。
+	int64_t m_NextDifficultySave = 0;
 	CQmScreenshotManager m_ScreenshotManager;
 	CQmLocalSaveDisplayCache m_LocalSaveDisplay;
 	void RenderServerbrowserFavoriteMaps(CUIRect View);
@@ -2989,7 +2989,7 @@ public:
 		float m_MaxWidth = -1.0f;
 	};
 	CUIElement &MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const SMenuTextStyleKey &StyleKey);
-	void CollectMenuTextPlanItem(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect *pRect, float FontSize, int Align, const SLabelProperties &LabelProps, const SMenuTextStyleKey &StyleKey);
+	void CollectMenuTextPlanItem(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect *pRect, float FontSize, int Align, const SLabelProperties &LabelProps, const SMenuTextStyleKey &StyleKey, const char *pSourceTag = nullptr);
 	SMenuTextStyleKey BuildMenuTextStyleKey(const CUIRect *pRect, float FontSize, int Align, const SLabelProperties &LabelProps) const;
 	SMenuTextStyleKey SettingsMenuTextPlanStyleKey(const SMenuTextPlanItem &Item) const;
 	SMenuTextStyleKey BuildSettingsShellTitleTextStyle(const CUIRect &Rect, CUIRect *pOutLabel = nullptr) const;

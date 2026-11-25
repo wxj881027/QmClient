@@ -55,6 +55,14 @@ namespace QmMotdLayout
 		bool HasBoxLines() const { return m_BoxLineCount > 0; }
 		// 按统一行高折算的最小总高度：普通行不换行时就是真实高度。
 		float Height() const { return (float)m_vLines.size() * m_LineHeight; }
+		// 未排到的行先按一行估算，避免正文每追加一行就改一次缩放。
+		float PreviewHeight(int CompletedRows, float CompletedHeight, int CurrentRowLineCount) const
+		{
+			const int RemainingRows = LineCount() - CompletedRows;
+			if(RemainingRows <= 0)
+				return CompletedHeight;
+			return CompletedHeight + (float)(RemainingRows - 1 + std::max(1, CurrentRowLineCount)) * m_LineHeight;
+		}
 		// 框线行占据的最大宽度，用于把整段内容缩放塞进公告栏。
 		float MaxBoxLineWidth() const
 		{
@@ -67,6 +75,26 @@ namespace QmMotdLayout
 			return MaxWidth;
 		}
 	};
+
+	enum class EParagraphSource
+	{
+		NONE,
+		COMPLETE,
+		BUILDING,
+	};
+
+	inline EParagraphSource SelectParagraphSource(bool CompleteReady, bool PartialReady, bool SameText)
+	{
+		if(PartialReady && (!CompleteReady || !SameText))
+			return EParagraphSource::BUILDING;
+		return CompleteReady ? EParagraphSource::COMPLETE : EParagraphSource::NONE;
+	}
+
+	// 可见公告每帧可以推进一段，后台预排仍等待下一帧和空闲预算。
+	inline bool CanAdvanceParagraph(bool Visible, bool FirstPendingFrame, int AvailableTokens)
+	{
+		return Visible || (!FirstPendingFrame && AvailableTokens > 0);
+	}
 
 	// 框线/制表字符：U+2500–U+257F（Box Drawing）与 U+2580–U+259F（Block Elements）。
 	// ├ ┤ ┬ ┴ ┼ 都在 U+2500–U+257F 内，字形常用于画框与分栏。

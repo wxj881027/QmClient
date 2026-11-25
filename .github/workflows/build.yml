@@ -153,20 +153,43 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@23869a5bd66c73db3c0ac40331f3206eb23791dc  # v2.9.1
 
-      - name: Cache Homebrew packages
+      - name: Cache Homebrew bottles
         if: runner.os == 'macOS'
         uses: actions/cache@v5
         with:
-          path: ~/Library/Caches/Homebrew
-          key: homebrew-${{ runner.os }}-${{ hashFiles('.github/workflows/build.yml') }}
-          restore-keys: homebrew-${{ runner.os }}-
+          # 只缓存下载好的 bottle，绝不缓存整个 Caches/Homebrew：
+          #  - api/ 是公式索引，跨镜像复用会让 brew 以为要把 openssl@3、xz、lz4
+          #    「降级」到旧版本；
+          #  - Backup/ 存的是 brew 重链前的硬链备份，旧镜像的
+          #    Backup/bin/openssl 与 /opt/homebrew/bin/openssl 撞上时
+          #    brew install ccache 直接报 "ccache: same file ..." 退出 1，
+          #    job 连 Configure 都到不了。
+          # 同时换掉 key 前缀，避免 restore-keys 命中旧的中毒缓存。
+          path: ~/Library/Caches/Homebrew/downloads
+          key: homebrew-bottles-v1-${{ runner.os }}-${{ hashFiles('.github/workflows/build.yml') }}
+          restore-keys: homebrew-bottles-v1-${{ runner.os }}-
+
+      # 先自己装一次：装好了 ccache-action 走 detect 分支就不会再碰 brew。
+      # 装不上也只是少一层编译缓存，不该让整条流水线红掉。
+      - name: Install ccache (macOS, best effort)
+        if: runner.os == 'macOS'
+        continue-on-error: true
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          if ! command -v ccache >/dev/null 2>&1; then
+            brew install ccache || brew link --overwrite ccache || true
+          fi
+          command -v ccache && ccache --version || true
 
       - name: Setup ccache (Linux/macOS)
         if: runner.os != 'Windows'
+        continue-on-error: true
         uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03  # v1.2.23
         with:
           key: ${{ runner.os }}-${{ runner.arch }}
           max-size: 500M
+          # macOS runner 镜像比索引新时，先刷新一次，免得去重装/降级 openssl。
+          update-package-index: ${{ runner.os == 'macOS' }}
 
       - name: Setup sccache (Windows)
         if: runner.os == 'Windows'
@@ -229,20 +252,30 @@ jobs:
           PYTHON_EXECUTABLE: ${{ steps.setup-python.outputs.python-path }}
         run: |
           ARGS=(-G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DDOWNLOAD_GTEST=ON -DPython3_EXECUTABLE="${PYTHON_EXECUTABLE}")
+          # ccache 只是加速件：只有确实能跑起来才挂到 CMake launcher 上。
+          # 少了这个判断，macOS 上 brew 装 ccache 失败会让 Configure 因为
+          # 找不到 ccache 可执行文件而中断，把一次缓存抖动放大成整条流水线红。
+          LAUNCHER_ARGS=()
+          if [ "$RUNNER_OS" != "Windows" ]; then
+            if ccache --version >/dev/null 2>&1; then
+              LAUNCHER_ARGS=(-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache)
+            else
+              echo "::warning::ccache 不可用，本次构建不启用编译缓存"
+            fi
+          fi
           case "$RUNNER_OS" in
             Linux)
               # Rust doctests link the C++ bridge through lld. GCC LTO objects
               # in rust_test are not consumable by that linker.
               ARGS+=(
-                -DCMAKE_C_COMPILER_LAUNCHER=ccache
-                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+                "${LAUNCHER_ARGS[@]}"
                 -DIPO=OFF
               )
               ;;
             macOS)
               SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
               ARGS+=(
-                -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+                "${LAUNCHER_ARGS[@]}"
                 # macOS 走 brew 系统库（头库同源）：ddnet-libs 的 mac dylib 无法在非 mac 主机维护，
                 # 旧版本产物与新共享 include 会头/库错位，故不优先 bundled。
                 -DPREFER_BUNDLED_LIBS=OFF -DVULKAN=OFF -DMETAL=ON
@@ -300,6 +333,7 @@ jobs:
           retention-days: 7
 
       - name: Run tests
+        id: run-tests
         # Windows Portable 与 Windows 同源同编译器，只差一个「默认用户目录」开关，
         # 测试套件与它无关；重复跑一遍要重新编译 1800+ 个测试 TU，纯属浪费。
         if: ${{ (env.RELEASE_TAG != '' || !inputs.skip_tests) && !matrix.portable }}
@@ -310,6 +344,61 @@ jobs:
           else
             cmake --build build --target run_tests --parallel
           fi
+
+      # 测试二进制被信号打死时 ninja 只留一个退出码，日志里看不出崩在哪个用例。
+      # 这个步骤自己是诊断器，绝不能因为被测进程崩溃就中断：GitHub 的 bash 带 -e，
+      # 一条子命令非零退出会把后面所有证据全吞掉，所以全程 set +e 并逐条 || true。
+      - name: Diagnose macOS test crash
+        # 只在测试步骤真的跑挂了才做现场取证。否则任何前置失败（例如 ccache
+        # 安装抖动）都会触发它，对着还不存在的 build/testrunner 空跑一遍 lldb，
+        # 日志里全是误导性的「找不到可执行文件」。
+        if: failure() && runner.os == 'macOS' && steps.run-tests.outcome == 'failure'
+        timeout-minutes: 25
+        shell: bash
+        run: |
+          set +e
+          mkdir -p tmp
+          echo "::group::limits"
+          echo "main thread stack: $(ulimit -s) KB"
+          sysctl -n hw.memsize 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::sem_open probe"
+          # 每次 sphore_try_init 都是 sem_open + sem_unlink + sem_close，macOS 的命名
+          # 信号量在长进程里是否会被耗尽，用固定循环直接量一次。
+          printf '#include <errno.h>\n#include <fcntl.h>\n#include <semaphore.h>\n#include <stdio.h>\n#include <sys/stat.h>\n#include <unistd.h>\nint main(void){for(int i=0;i<200000;i++){char n[72];snprintf(n,sizeof n,"/qmp.%%d.%%d",(int)getpid(),i);sem_t*s=sem_open(n,O_CREAT|O_EXCL,S_IRWXU,0);if(s==SEM_FAILED){printf("sem_open failed at %%d errno=%%d\\n",i,errno);return 1;}sem_unlink(n);sem_close(s);}printf("sem_open x200000 ok\\n");return 0;}\n' > tmp/semprobe.c
+          clang -O1 -o tmp/semprobe tmp/semprobe.c && ./tmp/semprobe
+          echo "sem probe exit=$?"
+          echo "::endgroup::"
+          echo "::group::crashing test alone"
+          ./build/testrunner --gtest_filter='DemoEditJobIntegration.RealWorkerCompletesBeforePoolShutdownReleasesStorage' > tmp/demoedit.log 2>&1
+          echo "alone exit=$?"
+          tail -40 tmp/demoedit.log || true
+          echo "::endgroup::"
+          echo "::group::crashing test under lldb"
+          # 只跑出事的用例：8ms 就能崩，lldb 负担最小，栈也最干净。
+          lldb --batch \
+            -o "settings set target.process.stop-on-exec false" \
+            -o run \
+            -o "process status" \
+            -o "thread backtrace all" \
+            -o "frame variable" \
+            -o "register read pc sp fp lr" \
+            -- ./build/testrunner --gtest_filter='DemoEditJobIntegration.RealWorkerCompletesBeforePoolShutdownReleasesStorage' > tmp/lldb.log 2>&1
+          echo "lldb exit=$?"
+          # 崩溃原因行（EXC_BAD_ACCESS 的 code=1 是未映射页，code=2 是保护失败=栈溢出）
+          grep -nE "stop reason|SIGBUS|SIGSEGV|SIGILL|abort|EXC_BAD" tmp/lldb.log | head -40 || true
+          sed -n '1,160p' tmp/lldb.log || true
+          echo "::endgroup::"
+          echo "::group::stack frames"
+          grep -nE "frame #|thread #" tmp/lldb.log | head -120 || true
+          echo "::endgroup::"
+          echo "::group::crash report"
+          newest=$(ls -t ~/Library/Logs/DiagnosticReports/*.ips 2>/dev/null | head -1)
+          echo "report: $newest"
+          if [ -n "$newest" ]; then
+            head -c 20000 "$newest"
+          fi
+          echo "::endgroup::"
 
       - name: Package
         shell: bash

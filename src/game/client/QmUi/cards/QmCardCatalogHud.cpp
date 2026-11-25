@@ -137,13 +137,12 @@ void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsCon
 
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmInputOverlayKeyCounts, "Show key press counts", Localize("Show key press counts"), &g_Config.m_QmInputOverlayKeyCounts);
 	CUIRect ResetRow;
-	if(Flow.Control("hud-input-overlay-reset-counts", LineHeight, ResetRow))
+	if(Flow.Control("hud-input-overlay-reset-counts", LineHeight, ResetRow, ui_token::settings::RowGap(LineSpacing)))
 	{
 		static CButtonContainer s_ResetKeyCounts;
-		if(DoButton_Menu(&s_ResetKeyCounts, Localize("Reset key press counts"), 0, &ResetRow) && !PrewarmOnly)
+		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_ResetKeyCounts, "hud-input-overlay-reset-counts", Localize("Reset key press counts"), 0, &ResetRow, Metrics) && !PrewarmOnly)
 			GameClient()->m_InputOverlay.ResetKeyCounts();
 	}
-	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 	float SectionReveal = 0.0f;
 	if(!qm_card_catalog::QmCardRenderHook::PersonalizationReveal(this, Content, "qm:input_overlay", Metrics, &SectionReveal, PrewarmOnly || Ui()->RenderOnly()))
@@ -152,13 +151,12 @@ void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsCon
 
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue) {
-		if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row))
+		if(Flow.Control(pTextId, Metrics.m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
 			RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, "%", PrewarmOnly);
 		}
-		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 	};
 	static int s_QmInputOverlayScaleInputId;
 	static int s_QmInputOverlayMouseScaleInputId;
@@ -175,10 +173,10 @@ void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsCon
 	static CButtonContainer s_CountColor;
 	{
 		CUIRect ColorRow;
-		if(Flow.Control("hud-QmInputOverlayCountColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
+		if(Flow.Control("hud-QmInputOverlayCountColor", Metrics.m_ButtonHeight, ColorRow, ui_token::settings::RowGap(LineSpacing)))
 		{
 			DoLine_ColorPicker(&s_CountColor, Metrics, &ColorRow, Localize("Key press count color"), &g_Config.m_QmInputOverlayCountColor,
-				color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmInputOverlayCountColor, true)), false, nullptr, true);
+				color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmInputOverlayCountColor, true)), false, nullptr, true, false);
 		}
 	}
 	if(Flow.Control("qmclient-input-overlay-count-label", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(CurrentSettingsContentMetrics().m_LineSpacing)))
@@ -188,17 +186,16 @@ void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsCon
 		static CLineInput s_CountLabel(g_Config.m_QmInputOverlayCountLabel, sizeof(g_Config.m_QmInputOverlayCountLabel));
 		ui_widget::InputField(SettingsUiContext("settings_input_overlay_count_label", Metrics.m_UiScale), &s_CountLabel, ControlColumn, "", BodySize);
 	}
-	if(Flow.Control("hud-input-overlay-reset-appearance", CurrentSettingsContentMetrics().m_LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
+	if(Flow.Control("hud-input-overlay-reset-appearance", Metrics.m_LineHeight, Row, ui_token::settings::ActionGap(LineSpacing)))
 	{
 		static CButtonContainer s_CountAppearanceReset;
-		if(DoButton_Menu(&s_CountAppearanceReset, Localize("Reset count appearance"), 0, &Row) && !PrewarmOnly && !Ui()->RenderOnly())
+		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_CountAppearanceReset, "hud-input-overlay-reset-appearance", Localize("Reset count appearance"), 0, &Row, Metrics) && !PrewarmOnly && !Ui()->RenderOnly())
 		{
 			g_Config.m_QmInputOverlayCountColor = DefaultConfig::QmInputOverlayCountColor;
 			g_Config.m_QmInputOverlayCountSize = DefaultConfig::QmInputOverlayCountSize;
 			str_copy(g_Config.m_QmInputOverlayCountLabel, DefaultConfig::QmInputOverlayCountLabel);
 		}
 	}
-	Flow.Space(ui_token::settings::RowGap(LineSpacing));
 }
 
 void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)

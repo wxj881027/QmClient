@@ -137,12 +137,9 @@ TEST(SettingsWarmupLoadingContract, SettingsPageCachePrewarmRespectsDisabledConf
 
 	const size_t DisabledGuard = Body.find("if(g_Config.m_QmSettingsPrewarm == 0)");
 	const size_t BindCacheAccess = Body.find("EnsureSettingsBindCache();");
-	const size_t SkinListAccess = Body.find("GameClient()->m_Skins.SkinList(0);");
 	ASSERT_NE(DisabledGuard, std::string::npos);
 	ASSERT_NE(BindCacheAccess, std::string::npos);
-	ASSERT_NE(SkinListAccess, std::string::npos);
 	EXPECT_LT(DisabledGuard, BindCacheAccess);
-	EXPECT_LT(DisabledGuard, SkinListAccess);
 	EXPECT_NE(Menus.find("void CMenus::EnsureSettingsBindCache()"), std::string::npos);
 	EXPECT_NE(TClient.find("if(!ReadOnly)\n\t\tEnsureSettingsBindCache();"), std::string::npos);
 	// QmClient 包装函数无条件调用（EnsureSettingsBindCache 自身幂等），文本计划收集路径也覆盖。

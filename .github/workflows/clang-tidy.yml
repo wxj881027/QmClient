@@ -64,6 +64,8 @@ jobs:
         sudo ./llvm.sh "$CLANG_VERSION" all
 
     - name: Run clang-tidy
+      # 扫完会自动做防回潮判断：增量只认落在本次改动行上的诊断，全量则与
+      # qmclient_scripts/gate/clang_tidy_baseline.json 的计数比较，超出即失败。
       run: python3 qmclient_scripts/gate/tools/clang_tidy_build.py
 
     - name: Build Optional Features

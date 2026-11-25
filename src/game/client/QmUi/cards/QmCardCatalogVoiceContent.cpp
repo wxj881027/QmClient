@@ -137,8 +137,6 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 
 	if(Flow.Control("voice-enabled", LineHeight, Row))
 		DoQmSettingsCheckboxAuto(&g_Config.m_QmVoiceEnable, "Enable voice", Localize("Enable voice"), &g_Config.m_QmVoiceEnable, &Row, LineHeight);
-	if(g_Config.m_QmVoiceEnable)
-		Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 	static CSettingsConditionalRows s_VoiceEnableRows;
 	if(s_VoiceEnableRows.Update(g_Config.m_QmVoiceEnable, GameClient()->UiRuntimeV2()->FrameDt(), g_Config.m_QmUiMotionLevel))
@@ -292,7 +290,8 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 			const auto Columns = ResolveSettingsControlRowLayout(Content, Metrics);
 			const float PrimaryFraction = Content.w > 0 ? (Columns.m_ControlRect.x - Content.x) / Content.w : 0;
 			const float Gap = Columns.m_ControlRect.x - Columns.m_LabelRect.x - Columns.m_LabelRect.w;
-			Flow.TextColumns(pId, pTitle, pValue, Metrics.m_SmallSize, LineHeight, PrimaryFraction, Gap, ui_token::settings::RowGap(LineSpacing), [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [&](const CUIRect &Column, const char *pText) {
+			Flow.Space(ui_token::settings::RowGap(LineSpacing));
+			Flow.TextColumns(pId, pTitle, pValue, Metrics.m_SmallSize, LineHeight, PrimaryFraction, Gap, 0.0f, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; }, [&](const CUIRect &Column, const char *pText) {
 				// 状态行是「读数据」不是「改设置」：整体左缩进一档、字号取小字、颜色取次要色，
 				// 两列同一套，避免标签比数值还大。
 				CUIRect Indented = Column;
@@ -371,7 +370,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 			}
 		}
 
-		if(Flow.Control("voice-room-password", LineHeight, Row))
+		if(Flow.Control("voice-room-password", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelCol, &ControlCol);
 			DoQmSettingsLabel("qmclient-voice-room-password", &LabelCol, Localize("Room password"), BodySize);
@@ -451,10 +450,9 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 				RenderVoiceStatusRow("voice-status-audio-issue", Localize("Audio issue"), LocalizeVoiceUiAudioIssue(VoiceUiStatus));
 				const char *pPrimaryError = VoiceUtils::VoiceUiPrimaryError(VoiceUiStatus);
 				RenderVoiceStatusRow("voice-status-reason", Localize("Detailed reason"), pPrimaryError[0] != '\0' ? pPrimaryError : Localize("No audio issues detected"));
-				Flow.Space(ui_token::settings::SubRowGap(LineSpacing));
 			}
 
-			if(Flow.Control("voice-server-url", LineHeight, Row))
+			if(Flow.Control("voice-server-url", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			{
 				SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelCol, &ControlCol);
 				DoQmSettingsLabel("qmclient-voice-server-ip", &LabelCol, Localize("Server URL"), BodySize);
@@ -474,9 +472,9 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 				if(Flow.Input() && !ReadOnly && s_InputDevices.m_vEntries.empty())
 					RefreshVoiceDeviceList(Client(), true, g_Config.m_QmVoiceInputDevice, s_InputDevices);
 
-				CUIRect VoiceInputDropDownRect;
-				CUIRect VoiceInputRefreshButton;
-				ControlCol.VSplitRight(LineHeight, &VoiceInputDropDownRect, &VoiceInputRefreshButton);
+				const auto DeviceControls = ResolveSettingsInputActionsLayout(ControlCol, 1, Metrics);
+				CUIRect VoiceInputDropDownRect = DeviceControls.m_Input;
+				const CUIRect VoiceInputRefreshButton = DeviceControls.m_Actions.m_aButtons[0];
 
 				static CButtonContainer s_VoiceInputRefreshButton;
 				if(s_InputDevices.m_vEntries.empty())
@@ -505,9 +503,9 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 				if(Flow.Input() && !ReadOnly && s_OutputDevices.m_vEntries.empty())
 					RefreshVoiceDeviceList(Client(), false, g_Config.m_QmVoiceOutputDevice, s_OutputDevices);
 
-				CUIRect VoiceOutputDropDownRect;
-				CUIRect VoiceOutputRefreshButton;
-				ControlCol.VSplitRight(LineHeight, &VoiceOutputDropDownRect, &VoiceOutputRefreshButton);
+				const auto DeviceControls = ResolveSettingsInputActionsLayout(ControlCol, 1, Metrics);
+				CUIRect VoiceOutputDropDownRect = DeviceControls.m_Input;
+				const CUIRect VoiceOutputRefreshButton = DeviceControls.m_Actions.m_aButtons[0];
 
 				static CButtonContainer s_VoiceOutputRefreshButton;
 				if(s_OutputDevices.m_vEntries.empty())
@@ -568,11 +566,10 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 						g_Config.m_QmVoiceNoiseSuppressEnable = NewNoiseSuppressMode;
 				}
 			}
-			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 			if((g_Config.m_QmVoiceNoiseSuppressEnable == 1 ? 1 : 0) != 0)
 			{
-				if(Flow.Control("voice-noise-strength", LineHeight, Row))
+				if(Flow.Control("voice-noise-strength", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 				{
 					{
 						CUIRect LabelColValue, ControlColValue;
@@ -583,18 +580,16 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 						RenderSliderWithValueInput(&s_QmVoiceNoiseSuppressStrengthInputId, ControlColValue, &g_Config.m_QmVoiceNoiseSuppressStrength, 0, 100, "%");
 					}
 				}
-				Flow.Space(ui_token::settings::RowGap(LineSpacing));
 			}
 
-			if(Flow.Control("voice-agc", LineHeight, Row))
+			if(Flow.Control("voice-agc", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			{
 				DoQmSettingsCheckboxAuto(&g_Config.m_QmVoiceAgcEnable, "Auto gain control for mic (AGC, experimental)", Localize("Auto gain control for mic (AGC, experimental)"), &g_Config.m_QmVoiceAgcEnable, &Row, LineHeight);
 			}
-			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 			if(g_Config.m_QmVoiceVadEnable)
 			{
-				if(Flow.Control("voice-vad-threshold", LineHeight, Row))
+				if(Flow.Control("voice-vad-threshold", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 				{
 					{
 						CUIRect LabelColValue, ControlColValue;
@@ -634,11 +629,10 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 			{
 				DoQmSettingsCheckboxAuto(&g_Config.m_QmVoiceStereo, "Enable stereo positioning", Localize("Enable stereo positioning"), &g_Config.m_QmVoiceStereo, &Row, LineHeight);
 			}
-			Flow.Space(ui_token::settings::RowGap(LineSpacing));
 
 			if(g_Config.m_QmVoiceStereo)
 			{
-				if(Flow.Control("voice-stereo-width", LineHeight, Row))
+				if(Flow.Control("voice-stereo-width", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 				{
 					{
 						CUIRect LabelColValue, ControlColValue;
@@ -648,10 +642,9 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 						RenderSliderWithValueInput(&s_QmVoiceStereoWidthInputId, ControlColValue, &g_Config.m_QmVoiceStereoWidth, 0, 200, "%");
 					}
 				}
-				Flow.Space(ui_token::settings::RowGap(LineSpacing));
 			}
 
-			if(Flow.Control("voice-radius", LineHeight, Row))
+			if(Flow.Control("voice-radius", LineHeight, Row, ui_token::settings::RowGap(LineSpacing)))
 			{
 				{
 					CUIRect LabelColValue, ControlColValue;

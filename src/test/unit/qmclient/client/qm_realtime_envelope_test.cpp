@@ -74,7 +74,7 @@ TEST(QmRealtimeEnvelope, UnknownTypeMemberCannotShadowExactType)
 
 TEST(QmRealtimeEnvelope, ValidUnknownUnicodeAndLongTagsKeepCompleteText)
 {
-	for(const std::string Type : {std::string("新事件😀"), std::string(2048, 'x')})
+	for(const std::string &Type : {std::string("新事件😀"), std::string(2048, 'x')})
 	{
 		SQmRealtimeMessage Message;
 		ASSERT_TRUE(Parse(R"({"type":")" + Type + R"(","data":{"anything":true}})", Message));
@@ -157,7 +157,7 @@ TEST(QmRealtimeEnvelope, InvalidProfileTextRejectsEntireEventAndClearsPreviousOu
 	for(const char *pField : {"title", "bound_name", "style"})
 	{
 		SCOPED_TRACE(pField);
-		for(const std::string Bad : {std::string("text\\u0000extra"), std::string("\x80"), std::string("\xe4\xbd")})
+		for(const std::string &Bad : {std::string("text\\u0000extra"), std::string("\x80"), std::string("\xe4\xbd")})
 		{
 			SCOPED_TRACE(::testing::PrintToString(Bad));
 			ASSERT_TRUE(Parse(R"({"type":"title_profile","data":{"title":"old"}})", Message));
@@ -218,7 +218,7 @@ TEST(QmRealtimeEnvelope, StatusAndAuthenticationFlagsUseOnlyCompleteNames)
 TEST(QmRealtimeEnvelope, InvalidBroadcastTextRejectsAndClearsPreviousOutput)
 {
 	SQmRealtimeMessage Message;
-	for(const std::string Bad : {std::string("hello\\u0000hidden"), std::string("\x80"), std::string("\xc0\xaf")})
+	for(const std::string &Bad : {std::string("hello\\u0000hidden"), std::string("\x80"), std::string("\xc0\xaf")})
 	{
 		SCOPED_TRACE(::testing::PrintToString(Bad));
 		ASSERT_TRUE(Parse(R"({"type":"broadcast","data":{"markdown":"old"}})", Message));
@@ -240,7 +240,7 @@ TEST(QmRealtimeEnvelope, BroadcastMarkdownAndVersionUseCompleteMemberNames)
 
 TEST(QmRealtimeEnvelope, EmptyUnicodeMultilineAndLimitSizeBroadcastsRemainValid)
 {
-	for(const std::string Markdown : {std::string(""), std::string("你好😀"), std::string(64 * 1024, 'x')})
+	for(const std::string &Markdown : {std::string(""), std::string("你好😀"), std::string(64 * 1024, 'x')})
 	{
 		SQmRealtimeMessage Message;
 		ASSERT_TRUE(Parse(R"({"type":"broadcast","data":{"markdown":")" + Markdown + R"("}})", Message));
@@ -267,7 +267,7 @@ TEST(QmRealtimeEnvelope, InvalidEmoticonIdentityRejectsEntireMessage)
 	for(int Field = 0; Field < 3; ++Field)
 	{
 		SCOPED_TRACE(Field);
-		for(const std::string Bad : {std::string("value\\u0000extra"), std::string("\x80"), std::string("\xed\xa0\x80")})
+		for(const std::string &Bad : {std::string("value\\u0000extra"), std::string("\x80"), std::string("\xed\xa0\x80")})
 		{
 			SCOPED_TRACE(::testing::PrintToString(Bad));
 			const std::string Identity = std::string(R"("client_id":")") + (Field == 0 ? Bad : "anon") + R"(","player_name":")" +

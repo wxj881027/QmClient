@@ -24,7 +24,7 @@ class CQmEntityPrewarmBuildJob;
 class IJob;
 class CLayers;
 class IMap;
-struct CGameInfo;
+class CGameInfo;
 
 struct SMapImageDecodeStart
 {

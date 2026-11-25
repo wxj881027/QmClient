@@ -1,3 +1,4 @@
+#include <base/fs_path.h>
 #include <base/system.h>
 
 #include <engine/client/screenshot_save.h>
@@ -41,7 +42,7 @@ namespace
 
 		static std::string Read(const std::string &Path)
 		{
-			std::ifstream Input(std::filesystem::u8path(Path), std::ios::binary);
+			std::ifstream Input(fs_path_from_utf8(Path), std::ios::binary);
 			return {std::istreambuf_iterator<char>(Input), std::istreambuf_iterator<char>()};
 		}
 	};
@@ -58,7 +59,7 @@ TEST(QmPoseCaptureSave, ReportsThePathThatActuallyLandedOnDisk)
 
 	// 界面拿到的就是这条路径：必须真实存在，而且内容就是刚抓的那张图。
 	ASSERT_NE(aWholePath[0], '\0');
-	ASSERT_TRUE(std::filesystem::is_regular_file(std::filesystem::u8path(aWholePath)));
+	ASSERT_TRUE(std::filesystem::is_regular_file(fs_path_from_utf8(aWholePath)));
 
 	const std::string Bytes = CQmPoseCaptureSaveFixture::Read(aWholePath);
 	CImageInfo Loaded;
@@ -79,7 +80,7 @@ TEST(QmPoseCaptureSave, CallbackOnlyRunsAfterTheFileIsOnDisk)
 	bool ExistedInsideCallback = false;
 	const IGraphics::FScreenshotCallback Callback = [&](CImageInfo &&Moved, const char *pPath) {
 		CallbackPath = pPath == nullptr ? "" : pPath;
-		ExistedInsideCallback = !CallbackPath.empty() && std::filesystem::is_regular_file(std::filesystem::u8path(CallbackPath));
+		ExistedInsideCallback = !CallbackPath.empty() && std::filesystem::is_regular_file(fs_path_from_utf8(CallbackPath));
 		Moved.Free();
 	};
 
@@ -87,7 +88,7 @@ TEST(QmPoseCaptureSave, CallbackOnlyRunsAfterTheFileIsOnDisk)
 
 	EXPECT_TRUE(ExistedInsideCallback) << "callback path did not exist yet: " << CallbackPath;
 	ASSERT_FALSE(CallbackPath.empty());
-	EXPECT_TRUE(std::filesystem::is_regular_file(std::filesystem::u8path(CallbackPath)));
+	EXPECT_TRUE(std::filesystem::is_regular_file(fs_path_from_utf8(CallbackPath)));
 	// 回调路径是最终文件名（调用方决定的名字与后缀），不是没解析的请求名。
 	EXPECT_NE(CallbackPath.find("pose_4x.png"), std::string::npos);
 }
@@ -100,7 +101,7 @@ TEST(QmPoseCaptureSave, WebpNameSelectsTheWebpEncoder)
 
 	char aWholePath[IO_MAX_PATH_LENGTH] = "";
 	ASSERT_TRUE(screenshot_save::Save(Fixture.m_pStorage.get(), "screenshots/pose_4x.webp", Fixture.m_Image, nullptr, aWholePath, sizeof(aWholePath)));
-	ASSERT_TRUE(std::filesystem::is_regular_file(std::filesystem::u8path(aWholePath)));
+	ASSERT_TRUE(std::filesystem::is_regular_file(fs_path_from_utf8(aWholePath)));
 
 	const std::string Bytes = CQmPoseCaptureSaveFixture::Read(aWholePath);
 	ASSERT_GE(Bytes.size(), 12u);

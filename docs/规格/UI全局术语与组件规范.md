@@ -89,8 +89,8 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 2.3 内容度量（content metrics）
 
 - 定义：字号、控件高、标签列宽由视口缩放推导，不由各卡片自算。
-- 唯一实现：`SSettingsContentMetrics` + `CurrentSettingsContentMetrics()`（`src/game/client/QmUi/SettingsPageLayout.h`），派生函数 `ResolveSettingsControlHeight`、`ResolveSettingsControlFontSize`、`ResolveSettingsSmallFontSize`、`ResolveSettingsTextScale`、`ResolveSettingsCardLabelWidth`、`ResolveSettingsControlWidth`、`ResolveSettingsContentMetrics`；行切分用 `SplitSettingsControlRow`。
-- 禁止的反面写法：`TextRender()->TextWidth(12.0f, …)` 里写死字号；用 `Row.h * ms_FontmodHeight` 反推控件字号；同一卡片里混用两套 metrics。
+- 唯一实现：`SSettingsContentMetrics` + `CurrentSettingsContentMetrics()`（`src/game/client/QmUi/SettingsPageLayout.h`），派生函数 `ResolveSettingsControlHeight`、`ResolveSettingsControlFontSize`、`ResolveSettingsSmallFontSize`、`ResolveSettingsTextScale`、`ResolveSettingsCardLabelWidth`、`ResolveSettingsControlWidth`、`ResolveSettingsContentMetrics`；行切分用 `SplitSettingsControlRow`；设置卡片文字按钮用 `CMenus::DoSettingsButton_Menu(..., Metrics)`，字号取同一份 `m_BodySize`。
+- 禁止的反面写法：`TextRender()->TextWidth(12.0f, …)` 里写死字号；用 `Row.h * ms_FontmodHeight` 反推控件字号；设置卡片文字按钮直接调用未指定字号的 `DoButton_Menu`；同一卡片里混用两套 metrics。
 
 ### 2.4 行距档位（row gap tiers）
 
@@ -109,6 +109,18 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 定义：所有过渡走同一套轨道解析器，按属性（值/颜色/透明度）补齐；本地时钟动画只在交互趟推进。
 - 唯一实现：`CUiV2AnimationRuntime`（`src/game/client/QmUi/QmAnimationBackend.h`，`GameClient()->UiRuntimeV2()->AnimRuntime()` + `FrameDt()`）、`SUiSpringConfig` / `SUiBezier` / `SUiAnimRequest`；曲线 `src/game/client/QmUi/QmAnimCurves.h`；解析 `QmAnimResolve.h`；时长与弹簧档 `ui_token::motion::*`（`HOVER_FADE/PRESS_SCALE/PAGE_SLIDE/TAB_SWITCH/POPUP_OPEN_SEC/POPUP_CLOSE_SEC/INTERACTIVE_REVEAL_SEC/TOGGLE_SPRING/SLIDER_SPRING` 等）。
 - 禁止的反面写法：手写 `Lerp(Current, Target, 0.2f)`；写死 `0.15f` 时长；在绘制趟推进本地时钟（出图趟跑完动画，交互趟瞬变）；用 `g_Config.m_QmUiMotionLevel` 之外的第二套动效开关。
+
+### 2.6a 列表换位（slot reflow）
+
+- 定义：条目换到新槽位时，从当前显示位置接续移动；滚动范围保持使用最终布局。
+- 唯一实现：`CQmSlotReflow` / `CQmSlotReflow::CItem`（`src/game/client/QmUi/QmSlotReflow.h`）；资源列表用字符串身份，皮肤列表将状态保存在 `CSettingsTeeSkinListState::SIds`。`CListBox::DoNextItem` 的 `Offset` 同步移动内容、反馈、裁剪和命中矩形。`BeginReflow` 每帧只推进一次，后台绘制读取 `DisplayedOffset`；关闭动效、离页重开、切集合或列数变化时直接对齐。
+- 禁止的反面写法：只移动文字和预览、点击仍留在旧格子；把动画偏移计入滚动高度；同帧多趟重复推进；给每款皮肤另写一套弹簧。
+
+| 动效 | 触发 | 布局范围 | 唯一实现 |
+| --- | --- | --- | --- |
+| 列表入场 | 打开列表 | 最终布局 | `CQmListEntryAnimation` |
+| 列表换位 | 已有条目换槽位 | 最终布局，命中随显示位置移动 | `CQmSlotReflow` |
+| 皮肤切换 | 预览皮肤或配色改变 | 预览区 | `RenderTeeWithSkinChangeTransition` |
 
 ### 2.7 交互趟推进守卫（interactive-pass advance）
 
@@ -382,6 +394,18 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 唯一实现：`ui_widget::InputField` / `ReadOnlyTextField` / `PasswordField` / `IntegerField`（`src/game/client/QmUi/UiForms.h`）、`ResolveInputFieldLayout`、`ResolveInputCapsuleRadius`、`ResolveInputFocusGlowLayers`、`ResolveInlineTrailingTextLayout`；光晕 `ui_token::glow::*`。
 - 禁止的反面写法：直接用 `CLineInput` 自绘外壳；单行输入写成方角；聚焦描边跟随强调色之外的第四种颜色；给光晕再开一条颜色配置；用强调色不透明度冒充光晕开关。
 
+### 3.9a 输入框同行动作（input actions row）
+
+- 定义：输入框填充余宽，右侧动作共用行高和间距；窄行保留输入空间，动作等宽收缩。
+- 唯一实现：`ResolveSettingsInputActionsLayout` + `SSettingsInputActionsLayout`（`src/game/client/QmUi/SettingsPageLayout.h`）；输入走 `ui_widget::InputField`，图标走 `CUi::DoButton_QmIcon`。关键词规则同行放重命名、正则与删除，前两项以选中态表示开关值，并提供 tooltip。
+- 禁止的反面写法：调用点用固定像素逐个切右侧按钮；按钮与输入框紧贴；为同行图标另设行高；图标开关缺少选中态或 tooltip。
+
+| 布局 | 主区域 | 右侧区域 | 唯一实现 |
+| --- | --- | --- | --- |
+| 标签与控件 | 设置标签 | 配置控件 | `SplitSettingsControlRow` |
+| 输入与动作 | 可编辑输入框 | 等高动作按钮 | `ResolveSettingsInputActionsLayout` |
+| 纯动作行 | 等分按钮 | 同组按钮 | `ResolveSettingsActionGroupLayout` |
+
 ### 3.10 开关（Toggle）
 
 - 定义：二值开关，轨道与旋钮尺寸按字号派生；开关行的标签列由行级布局决定；悬停描边与按钮同源，固定为白色。
@@ -405,6 +429,14 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 - 定义：行式或网格式可滚动集合，行反馈（选中/悬浮）由主题派生，容器内边距与「悬浮是否带描边」都是显式能力。
 - 唯一实现：`CListBox`（`src/game/client/ui_listbox.h`）：`SetCapsuleRows`、`SetContainerPadding`、`SetItemSelectionInset`、`SetRowFeedbackBorder`、`SetDeferredItemFeedback` + `DrawItemFeedback`、`SetFillViewportHeight`、`SetWheelStepScale`、`SetVisibleRowRange`、`SetScrollbarOverlay`、`DoAutoSpacing`；入场动画 `CQmListEntryAnimation` + `QmListBoxShouldStartEntryAnimation`（`src/game/client/QmUi/QmListEntryAnimation.h`）；反馈色 `Ui()->QmControlTheme().m_Selected`；悬浮描边 `ui_token::feedback::HOVER_BORDER`；行档 `ui_token::list::RowRadius/RowInsetX/ContainerPadding/PaddedRowsHeight/ROW_SPACING/GRID_SPACING`。`SetWheelStepScale` 只缩放该列表的滚轮位移，不改键盘 PageUp/Down 翻页行数、不改全局 `qm_ui_scroll_step`——高行网格（皮肤列表）用来把「每格两行」降为「每格一行」。`SetDeferredItemFeedback` 让调用方在 `DoNextItem` 之后用**卡片矩形**调 `DrawItemFeedback`（多列网格的格子矩形里含行距与行内退，按格子画反馈会比卡片大一圈）；`SetFillViewportHeight` 让容器**始终占满调用方给的矩形**：条目不足一屏、或最后一行只剩半行，都不收高度（收高度会让面板底部留一条没画到的空档，截图画廊两种情形都撞上过）。**卡片尺寸只由列宽决定**：`QmResolveGalleryRowHeight(CellWidth, CaptionHeight, PreviewAspect)` 按「预览图固定宽高比 + 说明行固定高」算行高，窗口变宽卡片等比变大；面板高度只决定这一屏放得下几行，**末行可以只露一截**（滚动列表的正常形态），超出的内容交给滚动条。禁止按可用高度反推或均分行高去「铺满面板」——那会把卡片拉伸变形，一屏反而只放得下两行（实机反馈「为啥面板只允许两行」）。多列网格的**格间距取 `GRID_SPACING`（12，一档真正的间距）**，不要沿用行胶囊那半档 `ROW_SPACING`（2.5）——卡片是独立视觉件，半档缝会让整片网格贴成一整块；卡片内的文件夹图标先定**墨迹高**（预览区高度的 34%，夹在 18~64）再按 `QmIconInkFontSize` 反算字号，不能拿字号上限当尺寸（旧实现卡 26，大卡片里图标又小又空）。
 - 禁止的反面写法：自绘行背景；给选中态再加一圈描边；把行距折进行高后 `DoAutoSpacing(0)`（组件已按行推行距）；容器内边距与 `PaddedRowsHeight` 不成对（组件会把留白兜底缩回 0）；行列表打开 `SetRowFeedbackBorder`（整行大的白框会把列表读成一排按钮，只有卡片形态才开）；行内并排动作图标自己写 `VSplitRight` 固定槽——走 `ui_widget::CIconActionStrip`（`UiIconActionStrip.h`），文字可用宽度取 `ReserveWidth()`（跟着图标缓动，配合细档缩字号才是连续的悬浮收缩；只有排版确实不能逐帧变宽时才用 `ReserveWidthTarget`），图标条按反馈矩形内缘排版（按整格右缘排会溢出悬浮背景）；并排图标同字号却不按墨迹归一（见 §3.12b）；多列卡片网格把选中/悬浮反馈画在**格子**上而不是卡片上（格子里含行距与行内退，底衬比卡片大一圈，实机看着就是"没对齐"）；卡片内部再套一层暗底板 + 第二层内边距（缩略图像被塞进小框里，卡片最多「卡面 + 内容 + 一行说明」三层）；多列网格沿用 `ROW_SPACING` 当格间距（2.5px 的缝让卡片贴成一整块）；卡片内图标写死字号或字号上限（应按墨迹高反算，否则大卡片里图标明显偏小）。
+
+### 3.12a 玩家皮肤预览与共享列表（tee preview and shared catalog）
+
+- 定义：本体和分身共用筛选条件、皮肤目录及浏览位置，预览卡可切换正常与冻结外观。
+- 唯一实现：`RenderSettingsTeeEditor` / `RenderSettingsTeeSkinList`（`QmUi/cards/QmCardCatalogTee.cpp`）；预览几何为 `ResolveSettingsTeePreviewLayout`（`QmCardCatalogTeeMetrics.h`），圆角与标题内边距来自 `ui_token::tee_preview::{Radius, HeadingInset}`，标题和皮肤名共用 `Metrics.m_BodySize`。圆角目标为 50 屏幕像素，按短边限制以保留直边；选中反馈复用 `DrawButtonSurface`，不画底部绿条。
+- 共享列表：`CSkins::SkinList()` 合并两边队列的配色条目，同一配色去重；`BuildSettingsSkinListPlan` 保持收藏与排序顺序，`SettingsTeeSkinSwapFirst` 只交换当前皮肤和首格，最近集合保持最近使用顺序。切换编辑角色不重建目录，不改变数量或滚动位置；数量显示计划总数，不显示索引物化进度。
+- 冻结预览：预览状态默认正常，不写入玩家配置；“显示忍者皮肤”绑定已有 `cl_show_ninja`（默认 1），同时控制游戏内冻结和持刀外观。关闭时冻结预览保留原皮。黑蛋配色由 `CTeeRenderInfo::ApplyNinjaSkin` 与玩家绘制共用，读取现有冻结颜色、脚色和深浅配置。预览卡和列表基础条目的配色变化复用 `RenderTeeWithSkinChangeTransition`；固定配色条目保持自身外观。
+- 禁止的反面写法：切换本体、分身时清空皮肤目录；按当前角色生成两套来源筛选；底层排序与首格映射同时置顶；用小字档显示皮肤名；给黑蛋预览新增与 `cl_show_ninja` 重复的配置。
 
 ### 3.12b 标签缩字号与并排图标（font fitting / action icon strip）
 
@@ -524,7 +556,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
 ### 3.20 公告行级排版（MOTD line layout）
 
 - 定义：服务端公告按行分类，整行都是框线/制表字符的行按统一格子推进（一格一字形、字间距为 0，相邻横线首尾相接），其余行沿用普通文本排版；格宽与行高由字体实测，不写死像素。
-- 唯一实现：`QmMotdLayout::Build` / `QmMotdLayout::IsBoxDrawingLine` / `QmMotdLayout::IsBoxDrawingCodepoint`（`src/game/client/QmUi/QmMotdLayout.h`）；接入点 `CMenus::DrainIngameMotdParagraphCache` 与 `CMenus::RenderIngameMotdStableParagraphCache`（`src/game/client/components/menus_ingame.cpp`，逐行排版与整段文本容器共用同一套请求/预算节奏）；字号与压缩下限走 `ui_token::motd::FONT_SIZE`、`ui_token::motd::BOX_CELL_MIN_RATIO`。
+- 唯一实现：`QmMotdLayout::Build` / `QmMotdLayout::IsBoxDrawingLine` / `QmMotdLayout::IsBoxDrawingCodepoint`（`src/game/client/QmUi/QmMotdLayout.h`）；接入点 `CMenus::DrainIngameMotdParagraphCache` 与 `CMenus::RenderIngameMotdParagraph`（`src/game/client/components/menus_ingame.cpp`，正文逐段排版，页面可见时每帧推进一段。首次显示或正文变化时可以绘制已完成的部分）；字号与压缩下限走 `ui_token::motd::FONT_SIZE`、`ui_token::motd::BOX_CELL_MIN_RATIO`。
 - 禁止的反面写法：把框线行交给普通文本排版（字距把横线切成一节一节）；用固定像素当格宽或行高（换字号就错位）；超宽时继续压缩到笔画互相吞掉而不是截断可见字数；在渲染趟逐字形即时绘制（每帧重建文本容器）。
 
 ### 3.21 回放控制卡（Replay transport card）

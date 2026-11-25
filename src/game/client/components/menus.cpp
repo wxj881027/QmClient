@@ -96,6 +96,7 @@
 #include <chrono>
 #include <cinttypes>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <new>
 #include <stdexcept>
@@ -620,7 +621,43 @@ int CMenus::DoSegmentedChoiceInternal(CButtonContainer *pButtons, const char *co
 	for(int i = 0; i < Layout.m_SegmentCount; ++i)
 	{
 		Ui()->DoConfigTooltip(&pButtons[i], &Layout.m_aSlots[i], pConfigValue, pSecondConfigValue);
-		const bool Clicked = DoButton_MenuTab(&pButtons[i], ppLabels[i], (Navigation ? NewValue : Current) == i, &Layout.m_aSlots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, Rounding, nullptr, nullptr, FontSize, true) != 0;
+		char aTextId[64];
+		CUIElement *pTextElement = nullptr;
+		const std::array<int, 3> Context = SettingsTextPlanVisibleContext(false);
+		const bool SettingsText = m_MenuPage == PAGE_SETTINGS && ppLabels[i] != nullptr && ppLabels[i][0] != '\0';
+		if(SettingsText)
+		{
+			uint32_t TextHash = 2166136261u;
+			for(const unsigned char *pByte = reinterpret_cast<const unsigned char *>(ppLabels[i]); *pByte != '\0'; ++pByte)
+				TextHash = (TextHash ^ *pByte) * 16777619u;
+			str_format(aTextId, sizeof(aTextId), "settings-segment-%llx-%d-%08x", static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(pButtons)), i, TextHash);
+		}
+		if(m_MenuTextPlanCollecting && ppLabels[i] != nullptr && ppLabels[i][0] != '\0')
+		{
+			if(SettingsText)
+			{
+				CUIRect Label;
+				Layout.m_aSlots[i].HMargin(2.0f, &Label);
+				SLabelProperties Props;
+				Props.m_MaxWidth = Label.w;
+				Props.m_MinimumFontSize = FontSize;
+				Props.m_EllipsisAtEnd = true;
+				CollectMenuTextPlanItem(
+					MENU_TEXT_SCOPE_SETTINGS, Context[1], Context[2], -1, aTextId, ppLabels[i], &Label, FontSize,
+					TEXTALIGN_MC, Props, BuildMenuTextStyleKey(&Label, FontSize, TEXTALIGN_MC, Props), "segmented-choice");
+			}
+		}
+		else if(SettingsText)
+		{
+			CUIRect Label;
+			Layout.m_aSlots[i].HMargin(2.0f, &Label);
+			SLabelProperties Props;
+			Props.m_MaxWidth = Label.w;
+			Props.m_MinimumFontSize = FontSize;
+			Props.m_EllipsisAtEnd = true;
+			pTextElement = &MenuTextElement(MENU_TEXT_SCOPE_SETTINGS, Context[1], Context[2], -1, aTextId, BuildMenuTextStyleKey(&Label, FontSize, TEXTALIGN_MC, Props));
+		}
+		const bool Clicked = DoButton_MenuTab(&pButtons[i], ppLabels[i], (Navigation ? NewValue : Current) == i, &Layout.m_aSlots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, Rounding, nullptr, pTextElement, FontSize, true) != 0;
 		if(!Navigation && Clicked)
 			NewValue = i;
 	}
@@ -4489,9 +4526,6 @@ void CMenus::PrewarmSettingsPages()
 		return;
 
 	EnsureSettingsBindCache();
-
-	// Preload skin list to avoid lag when first entering settings
-	GameClient()->m_Skins.SkinList(0);
 }
 
 void CMenus::PrewarmSettingsTextPlanBeforeFirstFrame()
@@ -7354,7 +7388,10 @@ void CMenus::OnReset()
 void CMenus::OnShutdown()
 {
 	ClearDemoCutOverwriteConfirmation();
+	m_MapDifficultyCatalog.CancelDdnetRequests();
 	m_MapDifficultyCatalog.CancelAxiomRequests();
+	if(m_MapDifficultyCatalog.DdnetCacheDirty() && !m_MapDifficultyCatalog.SaveDdnetCache(Storage()))
+		log_warn("map_difficulty", "could not save DDNet map difficulty cache");
 	if(m_MapDifficultyCatalog.AxiomCacheDirty() && !m_MapDifficultyCatalog.SaveAxiomCache(Storage()))
 		log_warn("map_difficulty", "could not save Axiom map difficulty cache");
 	m_QmVoteMenu.m_Loader.Suspend();
@@ -7412,7 +7449,7 @@ CUIElement &CMenus::SettingsTextElement(int Page, int Tab, const char *pTextId, 
 	return MenuTextElement(MENU_TEXT_SCOPE_SETTINGS, Page, Tab, -1, pTextId, StyleKey);
 }
 
-void CMenus::CollectMenuTextPlanItem(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect *pRect, float FontSize, int Align, const SLabelProperties &LabelProps, const SMenuTextStyleKey &StyleKey)
+void CMenus::CollectMenuTextPlanItem(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect *pRect, float FontSize, int Align, const SLabelProperties &LabelProps, const SMenuTextStyleKey &StyleKey, const char *pSourceTag)
 {
 	if(!m_MenuTextPlanCollecting || m_pMenuTextPlanCollection == nullptr || pTextId == nullptr || pTextId[0] == '\0' || pText == nullptr || pText[0] == '\0' || pRect == nullptr || FontSize <= 0.0f || pRect->w <= 0.0f || pRect->h <= 0.0f)
 		return;
@@ -7430,7 +7467,7 @@ void CMenus::CollectMenuTextPlanItem(EMenuTextScope Scope, int Page, int Tab, in
 	Item.m_LabelProps = LabelProps;
 	Item.m_StyleKey = StyleKey;
 	Item.m_StyleMode = MENU_TEXT_STYLE_EXACT;
-	Item.m_SourceTag = "visible-wrapper";
+	Item.m_SourceTag = pSourceTag != nullptr ? pSourceTag : "visible-wrapper";
 	m_pMenuTextPlanCollection->push_back(Item);
 }
 
@@ -10009,16 +10046,20 @@ void CMenus::OnUpdate()
 		InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::DPI_CHANGED);
 	m_LastSettingsUiScale = UiScale;
 	m_LastSettingsHiDpiMilli = HiDpiMilli;
-	if(m_MapDifficultyCatalog.PollAxiomRequests(GameClient()->m_QmAxiomScores.OpenApiBudget(), Now) && g_Config.m_BrSort == IServerBrowser::SORT_DIFFICULTY)
+	bool DifficultyChanged = m_MapDifficultyCatalog.PollDdnetRequests(Now);
+	DifficultyChanged |= m_MapDifficultyCatalog.PollAxiomRequests(GameClient()->m_QmAxiomScores.OpenApiBudget(), Now);
+	if(DifficultyChanged && g_Config.m_BrSort == IServerBrowser::SORT_DIFFICULTY)
 	{
 		if(auto *pBrowser = dynamic_cast<CServerBrowser *>(ServerBrowser()))
 			pBrowser->RequestResort();
 	}
-	if(m_MapDifficultyCatalog.AxiomCacheDirty() && Now >= m_NextAxiomDifficultySave)
+	if((m_MapDifficultyCatalog.DdnetCacheDirty() || m_MapDifficultyCatalog.AxiomCacheDirty()) && Now >= m_NextDifficultySave)
 	{
 		// 多个房间连续返回时合并落盘，写入失败则保留内存数据等待重试。
-		m_NextAxiomDifficultySave = Now + 10 * time_freq();
-		if(!m_MapDifficultyCatalog.SaveAxiomCache(Storage()))
+		m_NextDifficultySave = Now + 10 * time_freq();
+		if(m_MapDifficultyCatalog.DdnetCacheDirty() && !m_MapDifficultyCatalog.SaveDdnetCache(Storage()))
+			log_warn("map_difficulty", "could not save DDNet map difficulty cache");
+		if(m_MapDifficultyCatalog.AxiomCacheDirty() && !m_MapDifficultyCatalog.SaveAxiomCache(Storage()))
 			log_warn("map_difficulty", "could not save Axiom map difficulty cache");
 	}
 

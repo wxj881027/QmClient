@@ -52,7 +52,8 @@ TEST(SkinsContract, PrewarmPlayerPreviewReadyNoLongerBuildsPreviewCacheKeys)
 
 	const size_t PrewarmPos = Source.find("bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool ProgressiveListReady)");
 	ASSERT_NE(PrewarmPos, std::string::npos);
-	const size_t PrewarmEnd = Source.find("void CSkins::QueueSkinListPlanJob(int Dummy)", PrewarmPos);
+	// 队列计划任务不再带 Dummy 参数（皮肤列表改由请求状态驱动），边界函数签名跟着改。
+	const size_t PrewarmEnd = Source.find("void CSkins::QueueSkinListPlanJob()", PrewarmPos);
 	ASSERT_NE(PrewarmEnd, std::string::npos);
 	const std::string PrewarmBody = Source.substr(PrewarmPos, PrewarmEnd - PrewarmPos);
 

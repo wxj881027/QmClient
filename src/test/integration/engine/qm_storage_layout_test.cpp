@@ -1,3 +1,4 @@
+#include <base/fs_path.h>
 #include <base/str.h>
 
 #include <engine/shared/qm_storage_layout.h>
@@ -69,7 +70,7 @@ namespace
 			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, pPath, aAbsolute, sizeof(aAbsolute));
 			ASSERT_NE(aAbsolute[0], '\0') << pPath;
 			std::error_code Error;
-			std::filesystem::last_write_time(std::filesystem::u8path(aAbsolute), std::filesystem::file_time_type::clock::now() - Age, Error);
+			std::filesystem::last_write_time(fs_path_from_utf8(aAbsolute), std::filesystem::file_time_type::clock::now() - Age, Error);
 			ASSERT_FALSE(Error) << pPath << ": " << Error.message();
 		}
 	};

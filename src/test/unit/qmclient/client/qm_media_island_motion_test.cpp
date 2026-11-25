@@ -34,7 +34,7 @@ namespace
 		for(int i = 0; i < Steps; ++i)
 			Runtime.Advance(Dt);
 	}
-	const int StepCount(float Seconds, float FrameSeconds)
+	int StepCount(float Seconds, float FrameSeconds)
 	{
 		if(Seconds <= 0.0f)
 			return 0;

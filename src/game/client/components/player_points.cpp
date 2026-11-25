@@ -74,13 +74,19 @@ namespace
 	};
 }
 void CPlayerPoints::OnInit()
+{
+	InitializeCache(Storage());
+}
+
+void CPlayerPoints::InitializeCache(IStorage *pStorage)
 try
 {
+	m_pStorePlaytimeStmt.reset();
 	m_pStoreStmt.reset();
 	m_pLoadStmt.reset();
 	m_pDb.reset();
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-	m_pDb = SqliteOpen(Storage(), qm_storage::SCORE_CACHE_FILE);
+	qm_storage::EnsureFolder(pStorage, qm_storage::STATE_DIR);
+	m_pDb = SqliteOpen(pStorage, qm_storage::SCORE_CACHE_FILE);
 	if(!m_pDb)
 	{
 		log_warn("player_points", "failed to open %s", qm_storage::SCORE_CACHE_FILE);
@@ -126,10 +132,36 @@ try
 			continue;
 		m_Cache.Load(pName, Points);
 	}
+
+	// 时长和积分分表保存；启动时先展示最后一次成功结果，再按原有节流后台刷新。
+	static const char PLAYTIME_TABLE[] =
+		"CREATE TABLE IF NOT EXISTS player_playtime "
+		"(name TEXT PRIMARY KEY NOT NULL, hours INTEGER NOT NULL CHECK(hours >= 0))";
+	if(SqliteHandleError(sqlite3_exec(pSqlite, PLAYTIME_TABLE, nullptr, nullptr, nullptr), pSqlite, PLAYTIME_TABLE) != SQLITE_OK)
+		return;
+	m_pStorePlaytimeStmt = SqlitePrepare(pSqlite, "INSERT OR REPLACE INTO player_playtime (name, hours) VALUES (?, ?)");
+	const auto pLoadPlaytime = SqlitePrepare(pSqlite, "SELECT name, hours FROM player_playtime");
+	if(!pLoadPlaytime)
+		return;
+	while(true)
+	{
+		const int Step = sqlite3_step(pLoadPlaytime.get());
+		if(Step == SQLITE_DONE)
+			break;
+		if(Step != SQLITE_ROW)
+		{
+			SqliteHandleError(Step, pSqlite, "load playtime");
+			break;
+		}
+		const char *pName = reinterpret_cast<const char *>(sqlite3_column_text(pLoadPlaytime.get(), 0));
+		if(pName && pName[0] != '\0' && sqlite3_column_type(pLoadPlaytime.get(), 1) == SQLITE_INTEGER)
+			m_PlaytimeCache.LoadPlaytime(pName, sqlite3_column_int64(pLoadPlaytime.get(), 1));
+	}
 }
 catch(...)
 {
-	// 可选的磁盘缓存失败不终止客户端；已加载的积分仍可用。
+	// 可选的磁盘缓存失败不终止客户端；已加载的积分和时长仍可用。
+	m_pStorePlaytimeStmt.reset();
 	m_pStoreStmt.reset();
 	m_pLoadStmt.reset();
 	m_pDb.reset();
@@ -170,6 +202,19 @@ void CPlayerPoints::StoreToDb(const char *pPlayerName, int Points)
 		log_warn("player_points", "failed to store points for '%s'", pPlayerName);
 }
 
+void CPlayerPoints::StorePlaytimeToDb(const char *pPlayerName, int64_t Hours)
+{
+	if(!m_pDb || !m_pStorePlaytimeStmt || Hours < 0)
+		return;
+	sqlite3 *pSqlite = m_pDb.get();
+	bool Error = SqliteHandleError(sqlite3_reset(m_pStorePlaytimeStmt.get()), pSqlite, "reset playtime store") != SQLITE_OK;
+	Error = Error || SqliteHandleError(sqlite3_bind_text(m_pStorePlaytimeStmt.get(), 1, pPlayerName, -1, SQLITE_TRANSIENT), pSqlite, "bind playtime name") != SQLITE_OK;
+	Error = Error || SqliteHandleError(sqlite3_bind_int64(m_pStorePlaytimeStmt.get(), 2, Hours), pSqlite, "bind playtime hours") != SQLITE_OK;
+	Error = Error || SqliteHandleError(sqlite3_step(m_pStorePlaytimeStmt.get()), pSqlite, "store playtime") != SQLITE_DONE;
+	if(Error)
+		log_warn("player_points", "failed to store playtime for '%s'", pPlayerName);
+}
+
 void CPlayerPoints::CancelRequests(bool NewServer) noexcept
 {
 	for(auto *pRequests : {&m_ActiveRequests, &m_PlaytimeRequests})
@@ -205,6 +250,10 @@ void CPlayerPoints::OnShutdown()
 	CancelRequests();
 	m_Cache.Clear();
 	m_PlaytimeCache.Clear();
+	m_pStorePlaytimeStmt.reset();
+	m_pStoreStmt.reset();
+	m_pLoadStmt.reset();
+	m_pDb.reset();
 }
 
 void CPlayerPoints::OnReset()
@@ -375,7 +424,8 @@ void CPlayerPoints::ProcessCompletedRequests(TRequests &Requests, CQmPlayerPoint
 			// 计分板显示 0，不再把"查无此人"当成查询失败显示问号并按失败反复重试。
 			if(QmDdStatsPlaytimeMissingRecord(Playtime, pRequest->CompletedStatusCode()))
 			{
-				Cache.CompleteSuccess(Name, Token, 0, Now(), 0);
+				if(Cache.CompleteSuccess(Name, Token, 0, Now(), 0))
+					StorePlaytimeToDb(Name.c_str(), 0);
 				Slot.m_pParseJob.reset();
 				Iter = Requests.erase(Iter);
 				continue;
@@ -445,8 +495,13 @@ void CPlayerPoints::ProcessCompletedRequests(TRequests &Requests, CQmPlayerPoint
 				}
 				else
 				{
-					if(Cache.CompleteSuccess(Name, Token, Result.m_Points, Now(), Result.m_PlaytimeHours) && !Playtime)
-						StoreToDb(Name.c_str(), Result.m_Points);
+					if(Cache.CompleteSuccess(Name, Token, Result.m_Points, Now(), Result.m_PlaytimeHours))
+					{
+						if(Playtime)
+							StorePlaytimeToDb(Name.c_str(), Result.m_PlaytimeHours);
+						else
+							StoreToDb(Name.c_str(), Result.m_Points);
+					}
 					// 成功路径默认不打日志，避免刷屏。
 				}
 			}

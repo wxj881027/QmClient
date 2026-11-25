@@ -3,6 +3,8 @@
 
 #include "media_paths.h"
 
+#include <base/fs_path.h>
+
 #include <game/client/race.h>
 
 #include <chrono>
@@ -33,7 +35,7 @@ namespace qm_race_demo
 			if(Physical.empty())
 				return false;
 			std::error_code Error;
-			const auto Status = std::filesystem::symlink_status(std::filesystem::u8path(Physical), Error);
+			const auto Status = std::filesystem::symlink_status(fs_path_from_utf8(Physical), Error);
 			if(Error && Error != std::errc::no_such_file_or_directory)
 				return false;
 			Present = std::filesystem::exists(Status);
@@ -51,7 +53,7 @@ namespace qm_race_demo
 			if(Physical.empty())
 				return false;
 			std::error_code Error;
-			std::filesystem::directory_iterator Iterator(std::filesystem::u8path(Physical), Error), End;
+			std::filesystem::directory_iterator Iterator(fs_path_from_utf8(Physical), Error), End;
 			if(Error)
 				return false;
 			while(Iterator != End)

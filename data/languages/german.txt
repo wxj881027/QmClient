@@ -10973,6 +10973,9 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 Playtime (h)
 == Spielzeit (h)
 
+Playtime query failed. Retrying shortly.
+== Spielzeit konnte nicht abgerufen werden. Erneuter Versuch folgt in Kürze.
+
 Please add a valid cut first
 == Bitte fügen Sie zuerst einen gültigen Schnitt hinzu
 
@@ -11596,6 +11599,9 @@ Query server setting: %s
 
 Query team rank for %s
 == Teamrang für %s abfragen
+
+Querying playtime from DDStats...
+== Spielzeit wird von DDStats abgerufen…
 
 Querying points for %s...
 == Punkte von %s werden abgefragt...
@@ -16685,6 +16691,9 @@ Total hours
 Total play time
 == Gesamte Spielzeit
 
+Total playtime from DDStats. The last result stays visible while refreshing.
+== Gesamte Spielzeit laut DDStats. Während der Aktualisierung bleibt das letzte Ergebnis sichtbar.
+
 Total points
 == Punkte gesamt
 
@@ -18716,6 +18725,42 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == Für diesen Spieler nicht verfügbar
+
+[Axiom map difficulty]
+Brutal
+== Brutal
+
+[Axiom map difficulty]
+Easy
+== Leicht
+
+[Axiom map difficulty]
+Extreme
+== Extrem
+
+[Axiom map difficulty]
+Hard
+== Schwer
+
+[Axiom map difficulty]
+Insane
+== Irrsinnig
+
+[Axiom map difficulty]
+Main
+== Normal
+
+[Axiom map difficulty]
+Mod
+== Modifikation
+
+[Axiom map difficulty]
+Solo
+== Solo
+
+[Axiom map difficulty]
+Train
+== Training
 
 [Bind keyboard key]
 Menu

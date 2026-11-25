@@ -1102,7 +1102,9 @@ public:
 	// 把内存里的图像按 TakeScreenshot 的命名、目录与水印流程落盘（扩展名决定编码）。
 	// 合影超采样静帧用：图像来自离屏渲染目标，而不是窗口帧缓冲。
 	// 默认实现返回 false，表示后端不支持从外部图像落盘。
-	virtual bool TakeScreenshotFromImage(CImageInfo &&Image, const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor = nullptr)
+	// 虚函数的默认实现什么都不做，但后端实现要把回调 move 进保存任务，
+	// 所以这里保持按值接收，调用方一次移动即可，改成引用反而多一次拷贝。
+	virtual bool TakeScreenshotFromImage(CImageInfo &&Image, const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor = nullptr) // NOLINT(performance-unnecessary-value-param)
 	{
 		(void)Image;
 		(void)pFilename;

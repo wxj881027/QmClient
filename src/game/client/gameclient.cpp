@@ -5636,15 +5636,6 @@ void CGameClient::OnPredict()
 				if(CCharacter *pChar = m_PredictedWorld.GetCharacterById(i))
 					m_aClients[i].m_Predicted = pChar->GetCore();
 		}
-		if(Tick == FinalTickRegular)
-		{
-			if(!m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld))
-				return;
-			for(int i = 0; i < MAX_CLIENTS; i++)
-				if(CCharacter *pChar = m_PredictedWorld.GetCharacterById(i))
-					m_aClients[i].m_RegularPredicted = pChar->GetCore();
-		}
-
 		if(Tick == Client()->PredGameTick(g_Config.m_ClDummy))
 		{
 			m_PredictedChar = pLocalChar->GetCore();
@@ -5720,8 +5711,15 @@ void CGameClient::OnPredict()
 				}
 		}
 
-		if(Tick <= FinalTickRegular)
-			HandlePredictedEvents(Tick);
+		if(!QmFinishRegularPredictionTick(m_PredictedWorld, m_RegularPredictedWorld, FinalTickRegular,
+			   [this](int EventTick) { HandlePredictedEvents(EventTick); }))
+			return;
+		if(Tick == FinalTickRegular)
+		{
+			for(int i = 0; i < MAX_CLIENTS; i++)
+				if(CCharacter *pChar = m_PredictedWorld.GetCharacterById(i))
+					m_aClients[i].m_RegularPredicted = pChar->GetCore();
+		}
 	}
 
 	if(FastInputTicks > 0)
@@ -9134,7 +9132,7 @@ std::shared_ptr<CManagedTeeRenderInfo> CGameClient::CreateManagedTeeRenderInfo(c
 		TeeRenderInfo.m_Size = Client.m_RenderInfo.m_Size;
 		CSkinDescriptor SkinDescriptor;
 		const unsigned ClientSkinDescriptorFlags = Client.ToSkinDescriptor().m_Flags;
-		BuildDefaultSkinDescriptor(SkinDescriptor, ClientSkinDescriptorFlags != 0 ? ClientSkinDescriptorFlags : CSkinDescriptor::FLAG_SIX);
+		BuildDefaultSkinDescriptor(SkinDescriptor, ClientSkinDescriptorFlags != 0 ? ClientSkinDescriptorFlags : (unsigned)CSkinDescriptor::FLAG_SIX);
 		return CreateManagedTeeRenderInfo(TeeRenderInfo, SkinDescriptor);
 	}
 

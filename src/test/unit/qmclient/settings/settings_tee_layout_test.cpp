@@ -34,7 +34,7 @@ TEST(SettingsTeeLayout, EditorControlsStayInsideMeasuredHeightWithoutOverlapping
 			SCOPED_TRACE(Colors);
 			const auto Layout = ResolveSettingsTeeEditorLayout({10.0f, 20.0f, Width, 0.0f}, Metrics, Colors);
 			const CUIRect Bounds{10.0f, 20.0f, Width, Layout.m_Height};
-			std::vector<CUIRect> vControls{Layout.m_aPreviews[0], Layout.m_aPreviews[1], Layout.m_TargetLabel,
+			std::vector<CUIRect> vControls{Layout.m_aPreviews[0], Layout.m_aPreviews[1], Layout.m_PreviewMode, Layout.m_ShowNinja, Layout.m_TargetLabel,
 				Layout.m_Identity, Layout.m_SkinLabel, Layout.m_SkinInput, Layout.m_RandomSkin,
 				Layout.m_Eyes, Layout.m_CustomColors, Layout.m_RandomColors};
 			vControls.insert(vControls.end(), Layout.m_aSkinTransfers.begin(), Layout.m_aSkinTransfers.end());
@@ -55,6 +55,33 @@ TEST(SettingsTeeLayout, EditorControlsStayInsideMeasuredHeightWithoutOverlapping
 			const auto Eyes = ResolveSettingsTeeEmoteSliderLayout(Layout.m_Eyes, Metrics);
 			ExpectInside(Layout.m_Eyes, Eyes.m_TrackRect);
 			ExpectSeparate(Eyes.m_TrackRect, Layout.m_CustomColors);
+		}
+	}
+}
+
+TEST(SettingsTeeLayout, PreviewHeadingClearsRoundedCornersAndReservesTheSkinNameLine)
+{
+	for(const float Scale : {0.75f, 1.0f, 1.5f})
+	{
+		SSettingsContentMetrics Metrics;
+		Metrics.m_UiScale = Scale;
+		Metrics.m_LineHeight *= Scale;
+		Metrics.m_LineSpacing *= Scale;
+		for(const float Width : {80.0f, 160.0f, 360.0f})
+		{
+			const CUIRect Preview{10.0f, 20.0f, Width * Scale, 112.0f * Scale};
+			const auto Layout = ResolveSettingsTeePreviewLayout(Preview, Metrics, Scale);
+			ExpectInside(Preview, Layout.m_Heading);
+			ExpectInside(Preview, Layout.m_Flag);
+			ExpectInside(Preview, Layout.m_Tee);
+			ExpectInside(Preview, Layout.m_SkinName);
+			ExpectSeparate(Layout.m_Heading, Layout.m_Flag);
+			ExpectSeparate(Layout.m_Heading, Layout.m_Tee);
+			ExpectSeparate(Layout.m_Tee, Layout.m_SkinName);
+			EXPECT_GE(Layout.m_Heading.y - Preview.y, ui_token::settings::CARD_PADDING * Scale);
+			EXPECT_GE(Layout.m_Heading.x - Preview.x, Layout.m_Radius * 0.3f);
+			EXPECT_LT(Layout.m_Radius, std::min(Preview.w, Preview.h) * 0.5f);
+			EXPECT_FLOAT_EQ(Layout.m_SkinName.h, Metrics.m_LineHeight);
 		}
 	}
 }

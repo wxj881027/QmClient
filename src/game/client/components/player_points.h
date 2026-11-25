@@ -95,6 +95,7 @@ private:
 	CSqlite m_pDb;
 	CSqliteStmt m_pLoadStmt;
 	CSqliteStmt m_pStoreStmt;
+	CSqliteStmt m_pStorePlaytimeStmt;
 
 	// Helper functions
 	void EnsureRequest(const char *pPlayerName, bool Playtime);
@@ -109,7 +110,9 @@ protected:
 	virtual void SubmitRequest(const std::shared_ptr<IHttpRequest> &pRequest);
 	virtual bool SubmitParseJob(const std::shared_ptr<IJob> &pJob);
 	virtual int64_t Now() const noexcept;
+	void InitializeCache(IStorage *pStorage);
 	virtual void StoreToDb(const char *pPlayerName, int Points);
+	virtual void StorePlaytimeToDb(const char *pPlayerName, int64_t Hours);
 
 public:
 	int Sizeof() const override { return sizeof(*this); }
