@@ -1256,7 +1256,10 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 			NextVisibleCheckNs = NowNs + 5 * 1000 * 1000LL;
 		}
 		const bool StartupTextReady = StartupVisibleMissing == 0;
-		if(GlyphIdle && StartupTextReady && m_MapImages.EntitiesPrewarmFinished())
+		// 字形排空、可见页就绪、整份设置计划也消费完，才算启动预建结束。
+		// 只等可见页会在其它设置页留下冷容器，切页时又回到可见帧现场建。
+		const bool StartupTextPlanDrained = m_Menus.SettingsTextPlanCursorRemaining() == 0;
+		if(GlyphIdle && StartupTextReady && StartupTextPlanDrained && m_MapImages.EntitiesPrewarmFinished())
 		{
 			pStartupStopReason = "ready";
 			break;
@@ -1299,7 +1302,9 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 		TextRender()->QmTextFrameEnd();
 		if(SettingsPrewarmEnabled && NowNs >= NextTextStepNs)
 		{
-			const int Built = m_Menus.PrebuildSettingsTextPoolDuringStartup(8);
+			// 字形已交给 worker，主线程只做容器构建；每步给足 token，
+			// 仍由 1 ms 步预算把关，不会把加载画面拖成低帧。
+			const int Built = m_Menus.PrebuildSettingsTextPoolDuringStartup(32);
 			StartupTextBuilt += Built;
 			StartupTextNoProgressSteps = Built > 0 ? 0 : StartupTextNoProgressSteps + 1;
 			NextTextStepNs = NowNs + EntityStepIntervalNs;

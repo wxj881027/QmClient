@@ -100,6 +100,7 @@
 #include <new>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -4485,11 +4486,54 @@ void CMenus::PrewarmSettingsTextPlanBeforeFirstFrame()
 	const int64_t PrebuildDeadlineNs = PrebuildStartNs + 160 * 1000 * 1000LL;
 	int PrebuildBuilt = 0;
 	int PrebuildIdleSteps = 0;
+	// 字形 worker 的提交/发布在帧末泵里完成；启动阶段没有渲染帧，这里手动
+	// 泵一次并短暂让出 CPU，让光栅化留在后台线程，主线程只等结果。
+	struct SStartupGlyphBurstScope
+	{
+		ITextRender *m_pTextRender = nullptr;
+		explicit SStartupGlyphBurstScope(ITextRender *pTextRender) :
+			m_pTextRender(pTextRender)
+		{
+			if(m_pTextRender != nullptr)
+				m_pTextRender->QmSetGlyphPrewarmBurst(true);
+		}
+		~SStartupGlyphBurstScope()
+		{
+			if(m_pTextRender != nullptr)
+				m_pTextRender->QmSetGlyphPrewarmBurst(false);
+		}
+		SStartupGlyphBurstScope(const SStartupGlyphBurstScope &) = delete;
+		SStartupGlyphBurstScope &operator=(const SStartupGlyphBurstScope &) = delete;
+	};
+	const bool GlyphWorker = TextRender()->QmGlyphWorkerEnabled();
+	const SStartupGlyphBurstScope StartupGlyphBurst(GlyphWorker ? TextRender() : nullptr);
 	while(time_get_nanoseconds().count() < PrebuildDeadlineNs && !SettingsMenuTextPrebuildReady("settings_startup"))
 	{
 		const int Built = PrebuildSettingsTextPoolDuringStartup(8);
 		PrebuildBuilt += Built;
-		PrebuildIdleSteps = Built > 0 ? 0 : PrebuildIdleSteps + 1;
+		if(Built > 0)
+		{
+			PrebuildIdleSteps = 0;
+			continue;
+		}
+		const bool WaitedForGlyph = GlyphWorker && m_SettingsMenuTextLastPrebuildStats.m_pSkipReason != nullptr &&
+					    str_comp(m_SettingsMenuTextLastPrebuildStats.m_pSkipReason, "glyph_wait") == 0;
+		if(WaitedForGlyph)
+		{
+			TextRender()->QmTextFrameEnd();
+			const int InFlight = TextRender()->QmGlyphWorkerPendingCount() + TextRender()->QmGlyphWorkerActiveCount();
+			if(InFlight > 0)
+			{
+				// 还有字形在 worker 里：让出时间片，不把它算成预建失败。
+				std::this_thread::sleep_for(std::chrono::microseconds(200));
+				continue;
+			}
+			// 队列为空但仍未就绪（例如引擎 job pool 尚未接受任务）：不再空转，
+			// 留给加载循环里的持续泵。
+			PrebuildIdleSteps = 8;
+			break;
+		}
+		++PrebuildIdleSteps;
 		if(PrebuildIdleSteps >= 32)
 			break;
 	}
@@ -8302,6 +8346,11 @@ SSettingsTextPlanProgressView CMenus::SettingsTextPlanProgress()
 		m_SettingsMenuTextPlanCollectionDirty, m_SettingsMenuTextPlanCollectionComplete, m_SettingsMenuTextVisiblePlanReady, m_SettingsMenuTextVisiblePlanContext};
 }
 
+int CMenus::SettingsTextPlanCursorRemaining() const
+{
+	return CountMissingSettingsMenuTextPlanItems();
+}
+
 std::array<int, 3> CMenus::SettingsTextPlanVisibleContext(bool Ingame)
 {
 	if(Ingame)
@@ -9280,7 +9329,9 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 			break;
 
 		// 每条待构建文本都先预热，后续条目不能绕过共享的字形预算。
-		if(!m_MenuTextBlockingPrewarm && TextRender()->QmGlyphWorkerEnabled())
+		// 只要字形 worker 可用就走后台排空：启动/阻塞预建也不再把光栅化
+		// 拉回主线程，字形未齐时先跳过，由调用方泵 worker 后重试。
+		if(TextRender()->QmGlyphWorkerEnabled())
 		{
 			// 后台预建不为当前页面等字形：字形未齐时保留旧容器并下一帧重试。
 			// 可见页仍走同步路径，绝不把空白或延迟字形显示给玩家。
@@ -9316,7 +9367,7 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 	if(!StaticGlyphPrewarmComplete && m_SettingsMenuTextGlyphDemandPrepared && PrewarmBudget.HasTime(time_get_nanoseconds().count()))
 	{
 		const SSettingsGlyphPrewarmBatch &Batch = StaticBatches[m_SettingsMenuTextGlyphBatchCursor];
-		if(!m_MenuTextBlockingPrewarm && TextRender()->QmGlyphWorkerEnabled())
+		if(TextRender()->QmGlyphWorkerEnabled())
 		{
 			// 静态批次先按可见页/频次排队；worker 队列未清空前不推进批次游标。
 			bool AllScheduled = false;

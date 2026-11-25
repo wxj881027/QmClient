@@ -202,7 +202,7 @@ TEST(QmMonitoringSettingsPlanContract, SettingsPlanCollectionDoesNotSynchronousl
 
 	// 启动 loading 只返回非阻塞入口；全量收集和容器构建由主循环逐帧预算继续。
 	EXPECT_NE(PrewarmBody.find("\"startup_text_prewarm_deferred\""), std::string::npos);
-	EXPECT_NE(PrewarmBody.find("PrebuildSettingsTextPoolDuringStartup(8)"), std::string::npos);
+	EXPECT_NE(PrewarmBody.find("PrebuildSettingsTextPoolDuringStartup(32)"), std::string::npos);
 	EXPECT_NE(PrewarmBody.find("PrewarmSettingsTextGlyphs(4, Request)"), std::string::npos);
 	EXPECT_NE(PrewarmBody.find("static_queued=%d"), std::string::npos);
 	EXPECT_EQ(PrewarmBody.find("PrewarmSettingsTextPoolForLoading("), std::string::npos);

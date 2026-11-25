@@ -2659,6 +2659,8 @@ public:
 	// 收起动画期间仍绘制菜单，但输入已经交回游戏；绑定释放不能被当成菜单占用输入。
 	bool IsClosing() const { return m_MenuClosing; }
 	bool IsSettingsPageActive() const;
+	// 预建游标还剩多少条（0 表示计划内所有条目都已消费过）。
+	int SettingsTextPlanCursorRemaining() const;
 	std::array<int, 9> TooltipContext() const
 	{
 		return {m_MenuActive, m_MenuPage, m_GamePage, m_Popup, g_Config.m_UiSettingsPage,
