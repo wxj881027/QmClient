@@ -1,5 +1,6 @@
 // 更新检查、下载、验签和退出安装的 CTClient 适配层；策略由独立更新模块负责。
 #include <base/fs.h>
+#include <base/fs_path.h>
 #include <base/hash.h>
 #include <base/log.h>
 #include <base/system.h>
@@ -292,7 +293,7 @@ static bool CreateUpdateAssetDirectory(IStorage &Storage, uint64_t &Session, cha
 
 	char aRoot[IO_MAX_PATH_LENGTH];
 	Storage.GetCompletePath(IStorage::TYPE_SAVE, qm_storage::RUNTIME_UPDATES_DIR, aRoot, sizeof(aRoot));
-	const auto Root = std::filesystem::u8path(aRoot);
+	const auto Root = fs_path_from_utf8(aRoot);
 	// PID 可能被新客户端复用。只接管本次新建的目录，避开仍归旧安装会话的附件。
 	constexpr int MAX_ATTEMPTS = 16;
 	for(int Attempt = 0; Attempt < MAX_ATTEMPTS; ++Attempt)
@@ -872,7 +873,7 @@ void CTClient::FinishUpdateDownloads()
 		Storage()->GetBinaryPathAbsolute("QmClient-Updater.exe", aInstalledHelper, sizeof(aInstalledHelper));
 		str_copy(m_aUpdateInstallerTmp, aInstallerPath);
 		std::error_code CopyError;
-		if(!std::filesystem::copy_file(std::filesystem::u8path(aInstalledHelper), std::filesystem::u8path(aInstallerPath), CopyError))
+		if(!std::filesystem::copy_file(fs_path_from_utf8(aInstalledHelper), fs_path_from_utf8(aInstallerPath), CopyError))
 		{
 			Fail("Failed to prepare the Setup session helper", false);
 			return;
@@ -928,7 +929,7 @@ try
 	char aExecutable[IO_MAX_PATH_LENGTH];
 	if(fs_executable_path(aExecutable, sizeof(aExecutable)) != 0)
 		return false;
-	const auto InstallDirectory = std::filesystem::u8path(aExecutable).parent_path();
+	const auto InstallDirectory = fs_path_from_utf8(aExecutable).parent_path();
 	if(!InstallDirectory.is_absolute())
 		return false;
 
@@ -940,14 +941,14 @@ try
 	const auto AssetPath = [this, &ToUtf8](const char *pRelative) {
 		char aPath[IO_MAX_PATH_LENGTH];
 		Storage()->GetCompletePath(IStorage::TYPE_SAVE, pRelative, aPath, sizeof(aPath));
-		return ToUtf8(std::filesystem::absolute(std::filesystem::u8path(aPath)));
+		return ToUtf8(std::filesystem::absolute(fs_path_from_utf8(aPath)));
 	};
 	const auto PackagePath = AssetPath(m_aUpdatePackageTmp);
 	const auto PackageSignaturePath = AssetPath(m_aUpdatePackageSignatureTmp);
 	const auto ManifestPath = AssetPath(m_aUpdateManifestTmp);
 	const auto ManifestSignaturePath = AssetPath(m_aUpdateManifestSignatureTmp);
 	const auto InstallPath = ToUtf8(InstallDirectory);
-	const auto InstallerPath = ToUtf8(std::filesystem::absolute(std::filesystem::u8path(m_aUpdateInstallerTmp)));
+	const auto InstallerPath = ToUtf8(std::filesystem::absolute(fs_path_from_utf8(m_aUpdateInstallerTmp)));
 
 	char aPid[32];
 	str_format(aPid, sizeof(aPid), "%d", pid());

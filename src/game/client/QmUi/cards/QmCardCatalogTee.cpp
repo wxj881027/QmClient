@@ -804,7 +804,7 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 	EyeInfo.m_Size = EyeRequestedSize;
 	float EyeMinX, EyeMinY, EyeMaxX, EyeMaxY;
 	GetSettingsTeePreviewBounds(CAnimState::GetIdle(), EyeInfo, EyeMinX, EyeMinY, EyeMaxX, EyeMaxY);
-	EyeInfo.m_Size = std::min(EyeRequestedSize, SettingsSkinPreviewSize(Track.h, Track.w / NUM_EMOTES - Gap, EyeRequestedSize, EyeMaxX - EyeMinX, EyeMaxY - EyeMinY));
+	EyeInfo.m_Size = std::min(EyeRequestedSize, SettingsSkinPreviewSize(Track.h, Track.w / (float)NUM_EMOTES - Gap, EyeRequestedSize, EyeMaxX - EyeMinX, EyeMaxY - EyeMinY));
 	static char s_aEyeSliderIds[NUM_DUMMIES];
 	static CButtonContainer s_aEyes[NUM_DUMMIES][NUM_EMOTES];
 	const void *pSliderId = &s_aEyeSliderIds[Target];

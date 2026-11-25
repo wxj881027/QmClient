@@ -142,7 +142,7 @@ TEST(QmDummyMiniViewLayout, VulkanViewportLeavesScissorToPresentedExtent)
 TEST(QmDummyMiniViewLayout, VulkanClipDoesNotAssumeCanvasEqualsPresentedExtent)
 {
 	const QmDummyMiniViewLayout::SViewport Viewport{300, 60, 360, 240};
-	for(const auto Canvas : {std::pair{1800, 900}, std::pair{3840, 2160}, std::pair{1000, 1000}})
+	for(const auto &Canvas : {std::pair{1800, 900}, std::pair{3840, 2160}, std::pair{1000, 1000}})
 	{
 		SCOPED_TRACE(Canvas.first);
 		SCOPED_TRACE(Canvas.second);

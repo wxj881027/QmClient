@@ -8990,7 +8990,7 @@ std::shared_ptr<CManagedTeeRenderInfo> CGameClient::CreateManagedTeeRenderInfo(c
 		TeeRenderInfo.m_Size = Client.m_RenderInfo.m_Size;
 		CSkinDescriptor SkinDescriptor;
 		const unsigned ClientSkinDescriptorFlags = Client.ToSkinDescriptor().m_Flags;
-		BuildDefaultSkinDescriptor(SkinDescriptor, ClientSkinDescriptorFlags != 0 ? ClientSkinDescriptorFlags : CSkinDescriptor::FLAG_SIX);
+		BuildDefaultSkinDescriptor(SkinDescriptor, ClientSkinDescriptorFlags != 0 ? ClientSkinDescriptorFlags : (unsigned)CSkinDescriptor::FLAG_SIX);
 		return CreateManagedTeeRenderInfo(TeeRenderInfo, SkinDescriptor);
 	}
 

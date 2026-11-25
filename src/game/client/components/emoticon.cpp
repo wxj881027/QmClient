@@ -223,9 +223,9 @@ void CEmoticon::UpdateSelection()
 		m_SelectorMouse = normalize(m_SelectorMouse) * 170.0f;
 	const float SelectorAngle = angle(m_SelectorMouse);
 	const auto PositiveMod = [](float x, float y) -> int { return static_cast<int>(std::fmod(x + y, y)); };
-	m_SelectedEmote = length(m_SelectorMouse) > 110.0f ? PositiveMod(std::round(SelectorAngle / (2.0f * pi) * NUM_EMOTICONS), NUM_EMOTICONS) : -1;
+	m_SelectedEmote = length(m_SelectorMouse) > 110.0f ? PositiveMod(std::round(SelectorAngle / (2.0f * pi) * (float)NUM_EMOTICONS), NUM_EMOTICONS) : -1;
 	m_SelectedEyeEmote = m_SelectedEmote == -1 && length(m_SelectorMouse) > 40.0f ?
-				     PositiveMod(std::round(SelectorAngle / (2.0f * pi) * NUM_EMOTES), NUM_EMOTES) :
+				     PositiveMod(std::round(SelectorAngle / (2.0f * pi) * (float)NUM_EMOTES), NUM_EMOTES) :
 				     -1;
 	if(!GameClient()->m_GameInfo.m_AllowEyeWheel || !g_Config.m_ClEyeWheel || GameClient()->m_aLocalIds[g_Config.m_ClDummy] < 0)
 		m_SelectedEyeEmote = -1;
@@ -452,7 +452,7 @@ void CEmoticon::OnRender()
 	Graphics()->WrapClamp();
 	for(int Emote = 0; Emote < NUM_EMOTICONS; Emote++)
 	{
-		float Angle = 2.0f * pi * Emote / NUM_EMOTICONS;
+		float Angle = 2.0f * pi * Emote / (float)NUM_EMOTICONS;
 		if(Angle > pi)
 			Angle -= 2.0f * pi;
 
@@ -510,7 +510,7 @@ void CEmoticon::OnRender()
 
 		for(int Emote = 0; Emote < NUM_EMOTES; Emote++)
 		{
-			float Angle = 2.0f * pi * Emote / NUM_EMOTES;
+			float Angle = 2.0f * pi * Emote / (float)NUM_EMOTES;
 			if(Angle > pi)
 				Angle -= 2.0f * pi;
 

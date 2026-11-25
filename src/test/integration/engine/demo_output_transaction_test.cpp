@@ -1,3 +1,4 @@
+#include <base/fs_path.h>
 #include <base/time.h>
 
 #include <engine/shared/config.h>
@@ -118,7 +119,7 @@ namespace
 		}
 		bool DirectoryExists()
 		{
-			return !m_Operations.m_Directory.empty() && std::filesystem::exists(std::filesystem::u8path(m_Operations.m_Directory));
+			return !m_Operations.m_Directory.empty() && std::filesystem::exists(fs_path_from_utf8(m_Operations.m_Directory));
 		}
 	};
 }

@@ -1,3 +1,4 @@
+#include <base/fs_path.h>
 #include <engine/shared/filecollection.h>
 #include <engine/storage.h>
 
@@ -359,7 +360,7 @@ TEST_F(FileCollectionStorage, AbsoluteDirectoryKeepsRemovalRootAndNewestFile)
 	Seed();
 	char aRoot[IO_MAX_PATH_LENGTH];
 	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "captures", aRoot, sizeof(aRoot));
-	const auto Root = std::filesystem::absolute(std::filesystem::u8path(aRoot)).generic_u8string();
+	const auto Root = std::filesystem::absolute(fs_path_from_utf8(aRoot)).generic_u8string();
 	const std::string Absolute(reinterpret_cast<const char *>(Root.data()), Root.size());
 	m_Collection.Init(m_pFaults.get(), Absolute.c_str(), "autoscreen", ".png", 1);
 	ASSERT_EQ(m_pFaults->m_vRemovals.size(), 2u);

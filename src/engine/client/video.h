@@ -98,7 +98,7 @@ private:
 	AVFrame *AllocAudioFrame(enum AVSampleFormat SampleFmt, uint64_t ChannelLayout, int SampleRate, int NbSamples);
 
 	void WriteFrame(COutputStream *pStream, size_t ThreadIndex) REQUIRES(m_WriteLock);
-	void FinishFrames(COutputStream *pStream);
+	void FinishFrames(COutputStream *pStream) REQUIRES(m_WriteLock);
 	void CloseStream(COutputStream *pStream);
 
 	// 提交一帧到编码器；返回 EAGAIN 时先排空编码器输出再重试（FFmpeg 编码 API 背压约定）。

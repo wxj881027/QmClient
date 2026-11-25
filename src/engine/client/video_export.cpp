@@ -140,9 +140,9 @@ bool CVideoExportTask::ResolveRange(int &FirstTick, int &LastTick, float StartSe
 	const auto Offset = [DemoTicks](float Seconds, int64_t Default) {
 		if(Seconds < 0.0f)
 			return Default;
-		if((double)Seconds >= (double)DemoTicks / SERVER_TICK_SPEED)
+		if((double)Seconds >= (double)DemoTicks / (double)SERVER_TICK_SPEED)
 			return DemoTicks;
-		return (int64_t)std::min((double)(Seconds * SERVER_TICK_SPEED), (double)DemoTicks);
+		return (int64_t)std::min((double)(Seconds * (float)SERVER_TICK_SPEED), (double)DemoTicks);
 	};
 	const int64_t StartOffset = Offset(StartSeconds, 0);
 	const int64_t EndOffset = Offset(EndSeconds, DemoTicks);

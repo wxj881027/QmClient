@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <base/bytes.h>
+#include <base/fs_path.h>
 #include <base/log.h>
 #include <base/math.h>
 #include <base/system.h>
@@ -520,7 +521,7 @@ bool demo_output::CCapturedSource::Claim(IOHANDLE Original, const char *pSource)
 {
 	if(!IsCapturedFile(Original, pSource))
 		return false;
-	m_Original = std::filesystem::u8path(pSource);
+	m_Original = fs_path_from_utf8(pSource);
 	std::error_code Error;
 	const std::string OriginalName(pSource);
 	const size_t NameStart = OriginalName.find_last_of("/\\") + 1;
@@ -534,8 +535,8 @@ bool demo_output::CCapturedSource::Claim(IOHANDLE Original, const char *pSource)
 		m_Filename = Directory + "/source.demo";
 		if(m_Filename.size() >= IO_MAX_PATH_LENGTH)
 			return false;
-		m_Directory = std::filesystem::u8path(Directory);
-		m_Private = std::filesystem::u8path(m_Filename);
+		m_Directory = fs_path_from_utf8(Directory);
+		m_Private = fs_path_from_utf8(m_Filename);
 		m_OwnDirectory = std::filesystem::create_directory(m_Directory, Error);
 		if(m_OwnDirectory || (Error && Error != std::errc::file_exists))
 			break;
@@ -618,7 +619,7 @@ int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilena
 				(!Rename || demo_output::Resolve(*m_pStorage, pTargetFilename, Destination)))
 			{
 				std::error_code Error;
-				SameFile = Rename && (Original == Destination || std::filesystem::equivalent(std::filesystem::u8path(Original), std::filesystem::u8path(Destination), Error));
+				SameFile = Rename && (Original == Destination || std::filesystem::equivalent(fs_path_from_utf8(Original), fs_path_from_utf8(Destination), Error));
 				Claimed = SameFile ? IsCapturedFile(m_File, Original.c_str()) : Source.Claim(m_File, Original.c_str());
 			}
 		}

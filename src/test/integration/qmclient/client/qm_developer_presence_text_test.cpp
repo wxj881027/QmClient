@@ -130,7 +130,7 @@ TEST(QmDeveloperPresenceText, UnknownPrefixedMembersCannotShadowExactRequiredFie
 
 TEST(QmDeveloperPresenceText, ExistingUnicodeAndLongNameSupportIsPreserved)
 {
-	for(const std::string Name : {std::string("玩家😀"), std::string(256, 'x')})
+	for(const std::string &Name : {std::string("玩家😀"), std::string(256, 'x')})
 	{
 		SQmDeveloperPresenceParseResult Result;
 		ASSERT_TRUE(Parse(Snapshot(Row("player_name", '"' + Name + '"')), Result));

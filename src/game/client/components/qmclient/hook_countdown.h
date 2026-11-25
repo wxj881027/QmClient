@@ -83,7 +83,7 @@ inline float QmHookCountdownProgress(float HookTick, float HookDurationSeconds, 
 		return 1.0f;
 	// 与钩子核心使用同一个计数窗口；hook_duration 改变出钩初值，不是收回动画时长。
 	constexpr float MaxHookTicks = SERVER_TICK_SPEED + SERVER_TICK_SPEED / 5;
-	const int StartTick = static_cast<int>(SERVER_TICK_SPEED * (1.25f - HookDurationSeconds));
+	const int StartTick = static_cast<int>((float)SERVER_TICK_SPEED * (1.25f - HookDurationSeconds));
 	const float DurationTicks = std::max(MaxHookTicks - StartTick, 1.0f);
 	return std::clamp((MaxHookTicks - HookTick) / DurationTicks, 0.0f, 1.0f);
 }

@@ -7,7 +7,7 @@
 #include <string>
 
 class CUi;
-struct CUIRect;
+class CUIRect;
 
 // 轻提示语义：文字本身必须能独立读懂，颜色与色条只是辅助
 //（灰度截图下信息不能丢）。

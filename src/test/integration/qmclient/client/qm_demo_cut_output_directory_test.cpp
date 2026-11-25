@@ -1,3 +1,4 @@
+#include <base/fs_path.h>
 #include <game/client/components/menus.h>
 
 #include <gtest/gtest.h>
@@ -13,7 +14,7 @@ TEST(QmDemoCutOutputDirectory, UsesConfiguredDemoDirectoryWhileBrowsingScreensho
 	CConfig Config{};
 	str_copy(Config.m_QmDemoDirectory, "clips");
 
-	const auto ExpectedPath = (std::filesystem::absolute(std::filesystem::u8path(Info.StoragePath())) / "clips").generic_u8string();
+	const auto ExpectedPath = (std::filesystem::absolute(fs_path_from_utf8(Info.StoragePath())) / "clips").generic_u8string();
 	const std::string Expected(reinterpret_cast<const char *>(ExpectedPath.data()), ExpectedPath.size());
 
 	EXPECT_EQ(qmclient::demo_browser::DemoCutOutputDirectory(*pStorage, Config, "screenshots", true), Expected);

@@ -1,4 +1,5 @@
 // 路径策略与真实存储、录像记录器及自动清理协作；所有文件位于测试隔离目录。
+#include <base/fs_path.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/filecollection.h>
 #include <engine/storage.h>
@@ -23,7 +24,7 @@ namespace
 
 		std::string Absolute(const char *pName)
 		{
-			const auto Path = (std::filesystem::absolute(std::filesystem::u8path(m_Info.StoragePath())) / std::filesystem::u8path(pName)).generic_u8string();
+			const auto Path = (std::filesystem::absolute(fs_path_from_utf8(m_Info.StoragePath())) / fs_path_from_utf8(pName)).generic_u8string();
 			return std::string(reinterpret_cast<const char *>(Path.c_str()), Path.size());
 		}
 

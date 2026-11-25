@@ -258,7 +258,7 @@ TEST(QmHummingState, GroupIntervalsStayWithinConfirmedRange)
 		{600000, 600000},
 		{1200000, 1200000},
 		{1500000, 1200000}};
-	for(const auto [Requested, Expected] : aIntervals)
+	for(const auto &[Requested, Expected] : aIntervals)
 	{
 		SCOPED_TRACE(Requested);
 		auto State = DueState();

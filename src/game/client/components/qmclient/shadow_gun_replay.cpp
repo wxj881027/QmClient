@@ -127,7 +127,7 @@ namespace qm_shadow_gun
 			++i;
 		}
 
-		const int MoveInterval = maximum(1, (int)(SERVER_TICK_SPEED * 0.15f));
+		const int MoveInterval = maximum(1, (int)((float)SERVER_TICK_SPEED * 0.15f));
 		if(Tick % MoveInterval == 0)
 		{
 			for(SGun &Gun : vGuns)
@@ -143,7 +143,7 @@ namespace qm_shadow_gun
 			return;
 
 		const int Delay = FireDelay();
-		const int LifeTime = (int)(SERVER_TICK_SPEED * 1.5f);
+		const int LifeTime = (int)((float)SERVER_TICK_SPEED * 1.5f);
 		const auto TargetTeam = [ViewTeam](const STarget &Target) {
 			if(Target.m_Team >= 0 && Target.m_Team < NUM_DDRACE_TEAMS)
 				return Target.m_Team;

@@ -185,7 +185,7 @@ TEST(GraphicsVertexBatches, FlushThatRetainsPendingDataCannotCauseAnUnboundedLoo
 
 TEST(GraphicsVertexBatches, InvalidStateOrPrimitiveSizeDoesNotReachAnyBoundary)
 {
-	for(const auto [PendingValue, Vertices] : {std::pair{-1, 2}, std::pair{9, 2}, std::pair{0, 0}, std::pair{0, -2}, std::pair{0, 9}})
+	for(const auto &[PendingValue, Vertices] : {std::pair{-1, 2}, std::pair{9, 2}, std::pair{0, 0}, std::pair{0, -2}, std::pair{0, 9}})
 	{
 		int Pending = PendingValue, Calls = 0;
 		EXPECT_FALSE(WriteGraphicsVertexBatches<8>(1, Vertices, Pending, [&](size_t, int) { ++Calls; }, [&] { ++Calls; }));

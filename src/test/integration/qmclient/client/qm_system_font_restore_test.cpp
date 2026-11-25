@@ -1,3 +1,4 @@
+#include <base/fs_path.h>
 #include <engine/client/qm_font_file_probe.h>
 #include <engine/client/qm_font_restore.h>
 #include <engine/storage.h>
@@ -61,8 +62,8 @@ TEST(QmSystemFontRestore, ProbeSupportsUnicodeInstallationPaths)
 	CTestInfo Info;
 	const std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
 	ASSERT_NE(pStorage, nullptr);
-	const auto Path = std::filesystem::absolute(Info.StoragePath()) / std::filesystem::u8path("测试字体.ttf");
-	std::filesystem::copy_file(std::filesystem::u8path(TestSourcePath("data/fonts/DejaVuSans.ttf")), Path);
+	const auto Path = std::filesystem::absolute(Info.StoragePath()) / fs_path_from_utf8("测试字体.ttf");
+	std::filesystem::copy_file(fs_path_from_utf8(TestSourcePath("data/fonts/DejaVuSans.ttf")), Path);
 	CQmFontFileProbe Probe;
 	const auto Utf8Path = Path.u8string();
 	const std::string PathString(Utf8Path.begin(), Utf8Path.end());

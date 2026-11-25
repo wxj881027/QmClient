@@ -39,7 +39,8 @@ namespace
 
 		const bool Scrollable = Metrics.MaxOffset() > 0.0f;
 		const bool ScrollbarVisible = Scrollable && RenderRail;
-		CUIRect ScrollbarRect;
+		// 滚动条不可见时不会写 ScrollbarRect，零初始化保证后续读取行为确定。
+		CUIRect ScrollbarRect = {};
 		if(ScrollbarVisible)
 		{
 			if(!Style.m_ReserveScrollbarSpace && Horizontal)

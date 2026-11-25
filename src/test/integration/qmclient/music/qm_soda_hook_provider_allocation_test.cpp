@@ -1,3 +1,4 @@
+#include <base/fs_path.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/music_lyrics/qm_soda_hook_provider.h>
@@ -85,7 +86,7 @@ namespace
 			ASSERT_FALSE(m_pStorage->FileExists("absent-helper.exe", IStorage::TYPE_SAVE));
 			char aPath[IO_MAX_PATH_LENGTH];
 			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "absent-helper.exe", aPath, sizeof(aPath));
-			const auto Path = std::filesystem::absolute(std::filesystem::u8path(aPath)).u8string();
+			const auto Path = std::filesystem::absolute(fs_path_from_utf8(aPath)).u8string();
 			m_MissingHelper.assign(reinterpret_cast<const char *>(Path.data()), Path.size());
 		}
 	};

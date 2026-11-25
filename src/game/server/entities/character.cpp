@@ -1945,8 +1945,6 @@ void CCharacter::HandleTiles(int Index)
 			char aBuf[256];
 			if(NewJumps == -1)
 				str_copy(aBuf, "你现在只有地面跳了");
-			else if(NewJumps == 1)
-				str_format(aBuf, sizeof(aBuf), "你现在可以跳 %d 次", NewJumps);
 			else
 				str_format(aBuf, sizeof(aBuf), "你现在可以跳 %d 次", NewJumps);
 			GameServer()->SendChatTarget(GetPlayer()->GetCid(), aBuf);
