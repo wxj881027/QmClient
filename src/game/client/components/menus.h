@@ -2452,10 +2452,10 @@ protected:
 	void DrainSnapshotTextContainers();
 	bool RequestIngameMotdParagraphCache(CUIRect Motd, float FontSize);
 	bool IngameMotdParagraphCacheMatches(CUIRect Motd, float FontSize) const;
-	void DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool AllowCurrentFrame = false);
-	bool RenderIngameMotdStableParagraphCache(CUIRect Motd);
+	void DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool Visible);
+	bool RenderIngameMotdParagraph(CUIRect Motd);
 	void DrainIngameUiSnapshotTextRuntime();
-	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
+	void DrainIngameUiTextRuntime(bool MotdVisible);
 	void RenderServerControl(CUIRect MainView);
 
 public:
