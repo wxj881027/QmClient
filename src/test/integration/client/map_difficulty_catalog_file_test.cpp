@@ -1,8 +1,13 @@
+#include <base/time.h>
+
+#include <engine/serverbrowser.h>
+#include <engine/shared/qm_storage_layout.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
 
 #include <gtest/gtest.h>
+#include <test/support/map_http_recorder.h>
 #include <test/test.h>
 
 #include <cstring>
@@ -138,4 +143,64 @@ TEST_F(MapDifficultyCatalogFile, NonFileInFirstStorageRootKeepsOldRowsUntilRemov
 	ASSERT_TRUE(pLayered->RemoveFolder(PATH, IStorage::TYPE_SAVE));
 	ASSERT_TRUE(m_Catalog.Load(pLayered.get(), nullptr));
 	EXPECT_NE(m_Catalog.Find("New"), nullptr);
+}
+
+TEST_F(MapDifficultyCatalogFile, DownloadedDifficultySurvivesRestartWithoutBundledSql)
+{
+	MapHttpTest::CHttpRecorder Http;
+	CQmMapDifficultyCatalog Catalog(MapHttpTest::CreateResponse);
+	CServerInfo Server{};
+	str_copy(Server.m_aGameType, "DDNet");
+	str_copy(Server.m_aMap, "New map");
+	Catalog.RequestDdnetDifficulty(Server, Http, time_freq());
+	ASSERT_EQ(Http.m_vRequests.size(), 1u);
+	Http.m_vRequests[0]->Finish(R"({"name":"New map","type":"Brutal","difficulty":4})");
+	ASSERT_TRUE(Catalog.PollDdnetRequests(time_freq()));
+	ASSERT_TRUE(Catalog.SaveDdnetCache(m_pStorage.get()));
+	EXPECT_FALSE(Catalog.DdnetCacheDirty());
+	EXPECT_TRUE(m_pStorage->FileExists(qm_storage::DDNET_MAP_DIFFICULTY_CACHE_FILE, IStorage::TYPE_SAVE));
+
+	CQmMapDifficultyCatalog Restored;
+	ASSERT_TRUE(Restored.Load(m_pStorage.get(), nullptr));
+	ASSERT_NE(Restored.FindForServer(Server), nullptr);
+	EXPECT_EQ(Restored.FindForServer(Server)->m_Stars, 4);
+	EXPECT_FALSE(Restored.DdnetCacheDirty());
+}
+
+TEST_F(MapDifficultyCatalogFile, FailedDdnetSaveRetainsDirtyDataAndCleansCandidateForRetry)
+{
+	MapHttpTest::CHttpRecorder Http;
+	CQmMapDifficultyCatalog Catalog(MapHttpTest::CreateResponse);
+	CServerInfo Server{};
+	str_copy(Server.m_aGameType, "DDNet");
+	str_copy(Server.m_aMap, "New map");
+	Catalog.RequestDdnetDifficulty(Server, Http, time_freq());
+	ASSERT_EQ(Http.m_vRequests.size(), 1u);
+	Http.m_vRequests[0]->Finish(R"({"name":"New map","type":"Brutal","difficulty":4})");
+	ASSERT_TRUE(Catalog.PollDdnetRequests(time_freq()));
+	ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::CACHE_MAPS_DIR));
+	ASSERT_TRUE(m_pStorage->CreateFolder(qm_storage::DDNET_MAP_DIFFICULTY_CACHE_FILE, IStorage::TYPE_SAVE));
+	EXPECT_FALSE(Catalog.SaveDdnetCache(m_pStorage.get()));
+	EXPECT_TRUE(Catalog.DdnetCacheDirty());
+	ASSERT_NE(Catalog.FindForServer(Server), nullptr);
+	char aCandidate[IO_MAX_PATH_LENGTH];
+	str_format(aCandidate, sizeof(aCandidate), "%s.%d.tmp", qm_storage::DDNET_MAP_DIFFICULTY_CACHE_FILE, pid());
+	EXPECT_FALSE(m_pStorage->FileExists(aCandidate, IStorage::TYPE_SAVE));
+	ASSERT_TRUE(m_pStorage->RemoveFolder(qm_storage::DDNET_MAP_DIFFICULTY_CACHE_FILE, IStorage::TYPE_SAVE));
+	ASSERT_TRUE(Catalog.SaveDdnetCache(m_pStorage.get()));
+	EXPECT_FALSE(Catalog.DdnetCacheDirty());
+}
+
+TEST_F(MapDifficultyCatalogFile, CorruptDdnetCacheKeepsSqlFallbackAndCanBeReplaced)
+{
+	ASSERT_TRUE(qm_storage::EnsureFolder(m_pStorage.get(), qm_storage::CACHE_MAPS_DIR));
+	ASSERT_NO_FATAL_FAILURE(Write(SQL));
+	ASSERT_NO_FATAL_FAILURE(Write("invalid cache", qm_storage::DDNET_MAP_DIFFICULTY_CACHE_FILE));
+	ASSERT_TRUE(m_Catalog.Load(m_pStorage.get(), nullptr));
+	ASSERT_NE(m_Catalog.Find("New"), nullptr);
+	EXPECT_EQ(m_Catalog.Find("Reef"), nullptr);
+	ASSERT_NO_FATAL_FAILURE(Write(R"({"version":1,"entries":[{"name":"Reef","type":"Brutal","difficulty":4}]})", qm_storage::DDNET_MAP_DIFFICULTY_CACHE_FILE));
+	ASSERT_TRUE(m_Catalog.Load(m_pStorage.get(), nullptr));
+	ASSERT_NE(m_Catalog.Find("Reef"), nullptr);
+	EXPECT_EQ(m_Catalog.Find("Reef")->m_Stars, 4);
 }

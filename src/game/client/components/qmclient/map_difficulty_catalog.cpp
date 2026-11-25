@@ -33,6 +33,8 @@ namespace
 {
 	constexpr const char *MAP_DIFFICULTY_SQL = "qmclient/map_difficulty.sql";
 	constexpr size_t MAX_MAP_DIFFICULTY_SQL_BYTES = 2 * 1024 * 1024;
+	constexpr unsigned MAX_DDNET_CACHE_BYTES = 2 * 1024 * 1024;
+	constexpr size_t MAX_DDNET_ENTRIES = 4096;
 	constexpr const char *AXIOM_CACHE_PATH = qm_storage::MAP_DIFFICULTY_CACHE_FILE;
 	// 统一存档布局前的路径；迁移遇到内容冲突时会同时保留两份，这里负责并入缺失条目。
 	constexpr const char *LEGACY_AXIOM_CACHE_PATH = "qmclient/axiom_map_difficulty.json";
@@ -53,13 +55,13 @@ namespace
 		bool Close() { return !m_File || io_close(std::exchange(m_File, nullptr)) == 0; }
 	};
 
-	struct SAxiomCacheCandidate
+	struct SCacheCandidate
 	{
 		IStorage &m_Storage;
 		const char *m_pPath;
 		bool m_Owned = false;
 
-		~SAxiomCacheCandidate()
+		~SCacheCandidate()
 		{
 			if(!m_Owned)
 				return;
@@ -73,6 +75,24 @@ namespace
 			}
 		}
 	};
+
+	bool SaveCacheFile(IStorage &Storage, const char *pPath, const std::string &Json)
+	{
+		qm_storage::EnsureFolder(&Storage, qm_storage::CACHE_MAPS_DIR);
+		char aTempPath[IO_MAX_PATH_LENGTH];
+		str_format(aTempPath, sizeof(aTempPath), "%s.%d.tmp", pPath, pid());
+		SCacheCandidate Candidate{Storage, aTempPath};
+		CScopedFile File(Storage.OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE));
+		if(!File.Get())
+			return false;
+		Candidate.m_Owned = true;
+		const bool Written = io_write(File.Get(), Json.data(), (unsigned)Json.size()) == Json.size();
+		const bool Closed = File.Close();
+		if(!Written || !Closed || !Storage.RenameFile(aTempPath, pPath, IStorage::TYPE_SAVE, false))
+			return false;
+		Candidate.m_Owned = false;
+		return true;
+	}
 
 	void ReportLoadFailure(IConsole *pConsole) noexcept
 	{
@@ -126,6 +146,31 @@ namespace
 	{
 		return !Value.empty() && Value.size() <= MaxLength && str_utf8_check(Value.c_str()) &&
 		       std::none_of(Value.begin(), Value.end(), [](unsigned char Ch) { return Ch < 0x20 || Ch == 0x7f; });
+	}
+
+	bool IsDdnetServer(const CServerInfo &Server)
+	{
+		const bool IsDdrace = str_comp_nocase(Server.m_aGameType, "DDNet") == 0 ||
+				      str_comp_nocase(Server.m_aGameType, "DDRaceNetwork") == 0 ||
+				      str_comp_nocase(Server.m_aGameType, "DDRace") == 0;
+		return IsDdrace && str_comp_nocase(Server.m_aCommunityId, "axiom") != 0 &&
+		       str_comp_nocase(Server.m_aCommunityId, "kog") != 0 && str_find_nocase(Server.m_aCommunityType, "gores") == nullptr;
+	}
+
+	bool ParseDdnetEntry(const json_value *pRoot, CQmMapDifficultyCatalog::SEntry &Entry)
+	{
+		if(!pRoot || pRoot->type != json_object)
+			return false;
+		const auto *pName = json_object_get(pRoot, "name");
+		const auto *pType = json_object_get(pRoot, "type");
+		const auto *pDifficulty = json_object_get(pRoot, "difficulty");
+		if(pName->type != json_string || pType->type != json_string || pDifficulty->type != json_integer ||
+			pDifficulty->u.integer < 0 || pDifficulty->u.integer > 5)
+			return false;
+		Entry.m_MapName.assign(pName->u.string.ptr, pName->u.string.length);
+		Entry.m_Category.assign(pType->u.string.ptr, pType->u.string.length);
+		Entry.m_Stars = (int)pDifficulty->u.integer;
+		return ValidField(Entry.m_MapName, MAX_MAP_LENGTH - 1) && ValidField(Entry.m_Category, 64);
 	}
 
 	bool MotdField(std::string_view Motd, std::string_view Prefix, std::string &Out)
@@ -358,6 +403,224 @@ catch(const std::length_error &)
 CQmMapDifficultyCatalog::CQmMapDifficultyCatalog(TRequestFactory CreateRequest) :
 	m_CreateRequest(CreateRequest ? CreateRequest : HttpGet)
 {
+}
+
+bool CQmMapDifficultyCatalog::SDdnetKeyLess::operator()(std::string_view A, std::string_view B) const
+{
+	const int Compare = str_comp_nocase_num(A.data(), B.data(), (int)std::min(A.size(), B.size()));
+	return Compare < 0 || (Compare == 0 && A.size() < B.size());
+}
+
+void CQmMapDifficultyCatalog::RequestDdnetDifficulty(const CServerInfo &Server, IHttp &Http, int64_t Now)
+{
+	if(Now < m_NextDdnetRequestTime || m_DdnetRequests.size() >= 2 || m_DdnetEntries.size() >= MAX_DDNET_ENTRIES ||
+		!IsDdnetServer(Server) || Server.m_aMap[0] == '\0' || Find(Server.m_aMap) || m_DdnetRequests.contains(Server.m_aMap))
+		return;
+	auto Retry = m_DdnetRetryAfter.find(Server.m_aMap);
+	if(Retry != m_DdnetRetryAfter.end() && Now < Retry->second)
+		return;
+	// 多个房间共用地图查询；每秒最多开始一次，失败准备也占用本次额度。
+	m_NextDdnetRequestTime = Now + time_freq();
+	std::shared_ptr<IHttpRequest> pRequest;
+	try
+	{
+		if(Retry == m_DdnetRetryAfter.end())
+		{
+			if(m_DdnetRetryAfter.size() >= MAX_DDNET_ENTRIES)
+				m_DdnetRetryAfter.erase(m_DdnetRetryAfter.begin());
+			Retry = m_DdnetRetryAfter.try_emplace(Server.m_aMap, 0).first;
+		}
+		auto RetryNode = m_DdnetRetryAfter.extract(Retry);
+		if(!ValidField(RetryNode.key(), MAX_MAP_LENGTH - 1))
+			return;
+		char aEscaped[MAX_MAP_LENGTH * 3];
+		EscapeUrl(aEscaped, RetryNode.key().c_str());
+		char aUrl[1024];
+		str_format(aUrl, sizeof(aUrl), "https://ddnet.org/maps/?json=%s", aEscaped);
+		pRequest = m_CreateRequest(aUrl);
+		if(!pRequest)
+			return;
+		pRequest->Timeout({3000, 8000, 0, 0});
+		pRequest->MaxResponseSize(2 * 1024 * 1024);
+		pRequest->LogProgress(HTTPLOG::NONE);
+		const auto [Pending, Inserted] = m_DdnetRequests.try_emplace(RetryNode.key());
+		if(!Inserted)
+			return;
+		Pending->second = {pRequest, std::move(RetryNode)};
+		Http.Run(pRequest);
+		return;
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
+	// 只移除本次提交，保留同步回调期间登记的其他请求。
+	if(pRequest)
+	{
+		pRequest->Abort();
+		const auto Pending = std::find_if(m_DdnetRequests.begin(), m_DdnetRequests.end(), [&](const auto &Entry) {
+			return Entry.second.m_pRequest == pRequest;
+		});
+		if(Pending != m_DdnetRequests.end())
+			m_DdnetRequests.erase(Pending);
+	}
+}
+
+bool CQmMapDifficultyCatalog::RecordDdnetResponse(const std::string &Map, const IHttpRequest &Request)
+try
+{
+	std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(Request.ResultJson(), json_value_free);
+	SEntry Entry;
+	if(!ParseDdnetEntry(pRoot.get(), Entry) || str_comp_nocase(Entry.m_MapName.c_str(), Map.c_str()) != 0)
+		return false;
+	if(m_DdnetEntries.size() >= MAX_DDNET_ENTRIES)
+		return false;
+	m_DdnetEntries.insert_or_assign(Map, std::move(Entry));
+	m_DdnetCacheDirty = true;
+	++m_Revision;
+	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
+
+bool CQmMapDifficultyCatalog::PollDdnetRequests(int64_t Now)
+{
+	bool Changed = false;
+	for(auto It = m_DdnetRequests.begin(); It != m_DdnetRequests.end();)
+	{
+		if(!It->second.m_pRequest->Done())
+		{
+			++It;
+			continue;
+		}
+		auto Completed = m_DdnetRequests.extract(It++);
+		const auto &Request = *Completed.mapped().m_pRequest;
+		const int Code = Request.CompletedStatusCode();
+		if(Code == 429)
+			m_NextDdnetRequestTime = std::max(m_NextDdnetRequestTime, Now + 60 * time_freq());
+		if(Code == 200 && Request.State() == EHttpState::DONE && RecordDdnetResponse(Completed.key(), Request))
+			Changed = true;
+		else
+		{
+			if(m_DdnetRetryAfter.size() >= MAX_DDNET_ENTRIES)
+				m_DdnetRetryAfter.erase(m_DdnetRetryAfter.begin());
+			auto &RetryNode = Completed.mapped().m_RetryNode;
+			RetryNode.mapped() = Now + (Code == 404 ? 600 : 30) * time_freq();
+			m_DdnetRetryAfter.insert(std::move(RetryNode));
+		}
+	}
+	return Changed;
+}
+
+void CQmMapDifficultyCatalog::CancelDdnetRequests()
+{
+	for(const auto &[Key, Request] : m_DdnetRequests)
+		Request.m_pRequest->Abort();
+	m_DdnetRequests.clear();
+}
+
+bool CQmMapDifficultyCatalog::LoadDdnetCacheJson(const char *pJson, size_t Length)
+try
+{
+	if(!pJson || Length == 0 || Length > MAX_DDNET_CACHE_BYTES)
+		return false;
+	std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(JsonParse(pJson, Length), json_value_free);
+	if(!pRoot || pRoot->type != json_object)
+		return false;
+	const auto *pVersion = json_object_get(pRoot.get(), "version");
+	const auto *pEntries = json_object_get(pRoot.get(), "entries");
+	if(pVersion->type != json_integer || pVersion->u.integer != 1 || pEntries->type != json_array ||
+		pEntries->u.array.length > MAX_DDNET_ENTRIES)
+		return false;
+	TDdnetEntryMap Entries;
+	for(unsigned i = 0; i < pEntries->u.array.length; ++i)
+	{
+		SEntry Entry;
+		if(!ParseDdnetEntry(pEntries->u.array.values[i], Entry))
+			return false;
+		const std::string Key = Entry.m_MapName;
+		if(!Entries.emplace(Key, std::move(Entry)).second)
+			return false;
+	}
+	m_DdnetEntries.swap(Entries);
+	m_DdnetCacheDirty = false;
+	++m_Revision;
+	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
+
+std::string CQmMapDifficultyCatalog::SerializeDdnetCache() const
+{
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("version");
+	Writer.WriteIntValue(1);
+	Writer.WriteAttribute("entries");
+	Writer.BeginArray();
+	for(const auto &[Key, Entry] : m_DdnetEntries)
+	{
+		Writer.BeginObject();
+		Writer.WriteAttribute("name");
+		Writer.WriteStrValue(Entry.m_MapName.c_str());
+		Writer.WriteAttribute("type");
+		Writer.WriteStrValue(Entry.m_Category.c_str());
+		Writer.WriteAttribute("difficulty");
+		Writer.WriteIntValue(Entry.m_Stars);
+		Writer.EndObject();
+	}
+	Writer.EndArray();
+	Writer.EndObject();
+	return Writer.GetOutputString();
+}
+
+void CQmMapDifficultyCatalog::LoadDdnetCache(IStorage *pStorage)
+try
+{
+	CQmCheckedFileData Cache;
+	if(pStorage && Cache.Read(*pStorage, qm_storage::DDNET_MAP_DIFFICULTY_CACHE_FILE, IStorage::TYPE_SAVE, MAX_DDNET_CACHE_BYTES) &&
+		!LoadDdnetCacheJson(static_cast<const char *>(Cache.Data()), Cache.Size()))
+		log_warn("map_difficulty", "ignoring invalid DDNet map cache");
+}
+catch(const std::bad_alloc &)
+{
+}
+catch(const std::length_error &)
+{
+}
+
+bool CQmMapDifficultyCatalog::SaveDdnetCache(IStorage *pStorage)
+try
+{
+	if(!pStorage)
+		return false;
+	const std::string Json = SerializeDdnetCache();
+	if(Json.size() > MAX_DDNET_CACHE_BYTES || !SaveCacheFile(*pStorage, qm_storage::DDNET_MAP_DIFFICULTY_CACHE_FILE, Json))
+		return false;
+	m_DdnetCacheDirty = false;
+	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }
 
 void CQmMapDifficultyCatalog::RequestAxiomDifficulty(const CServerInfo &Server, IHttp &Http, CQmAxiomRequestBudget &Budget, const char *pApiKey, int64_t Now)
@@ -701,19 +964,8 @@ try
 		return false;
 	// 候选内容先准备，资源失败不能截断候选文件或留下未关闭的句柄。
 	const std::string Json = SerializeAxiomCache();
-	qm_storage::EnsureFolder(pStorage, qm_storage::CACHE_MAPS_DIR);
-	char aTempPath[IO_MAX_PATH_LENGTH];
-	str_format(aTempPath, sizeof(aTempPath), "%s.%d.tmp", AXIOM_CACHE_PATH, pid());
-	SAxiomCacheCandidate Candidate{*pStorage, aTempPath};
-	CScopedFile File(pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE));
-	if(!File.Get())
+	if(!SaveCacheFile(*pStorage, AXIOM_CACHE_PATH, Json))
 		return false;
-	Candidate.m_Owned = true;
-	const bool Written = io_write(File.Get(), Json.data(), (unsigned)Json.size()) == Json.size();
-	const bool Closed = File.Close();
-	if(!Written || !Closed || !pStorage->RenameFile(aTempPath, AXIOM_CACHE_PATH, IStorage::TYPE_SAVE, false))
-		return false;
-	Candidate.m_Owned = false;
 	m_AxiomCacheDirty = false;
 	return true;
 }
@@ -807,6 +1059,7 @@ bool CQmMapDifficultyCatalog::Load(IStorage *pStorage, IConsole *pConsole)
 	try
 	{
 		LoadAxiomCache(pStorage);
+		LoadDdnetCache(pStorage);
 		CQmCheckedFileData Sql;
 		if(pStorage && Sql.Read(*pStorage, MAP_DIFFICULTY_SQL, IStorage::TYPE_ALL, MAX_MAP_DIFFICULTY_SQL_BYTES) &&
 			LoadSqlText(static_cast<const char *>(Sql.Data()), Sql.Size()))
@@ -816,7 +1069,7 @@ bool CQmMapDifficultyCatalog::Load(IStorage *pStorage, IConsole *pConsole)
 	{
 	}
 	ReportLoadFailure(pConsole);
-	return false;
+	return !m_DdnetEntries.empty();
 }
 
 const CQmMapDifficultyCatalog::SEntry *CQmMapDifficultyCatalog::FindForServer(const CServerInfo &Server, const char *pCategoryHint) const
@@ -829,20 +1082,19 @@ const CQmMapDifficultyCatalog::SEntry *CQmMapDifficultyCatalog::FindForServer(co
 		const auto It = m_AxiomEntries.find(std::make_pair((int)Mode, std::string_view(Server.m_aMap)));
 		return It == m_AxiomEntries.end() ? nullptr : &It->second;
 	}
-	// 随包星级属于 DDNet 地图，不能仅凭同名地图或服务器名称中的难度词跨玩法套用。
-	const bool IsDdrace = str_comp_nocase(Server.m_aGameType, "DDNet") == 0 ||
-			      str_comp_nocase(Server.m_aGameType, "DDRaceNetwork") == 0 ||
-			      str_comp_nocase(Server.m_aGameType, "DDRace") == 0;
-	// 部分 Gores 服使用兼容的游戏类型，社区信息仍应阻止其读取 DDNet 星级。
-	if(!IsDdrace || str_comp_nocase(Server.m_aCommunityId, "kog") == 0 || str_find_nocase(Server.m_aCommunityType, "gores") != nullptr)
+	// 接口缓存和随包星级共用玩法边界，不能把同名 DDNet 地图评分套给 Gores。
+	if(!IsDdnetServer(Server))
 		return nullptr;
 	return Find(Server.m_aMap, pCategoryHint);
 }
 
 const CQmMapDifficultyCatalog::SEntry *CQmMapDifficultyCatalog::Find(const char *pMapName, const char *pCategoryHint) const
 {
-	if(pMapName == nullptr || pMapName[0] == '\0' || m_vEntries.empty())
+	if(pMapName == nullptr || pMapName[0] == '\0')
 		return nullptr;
+	const auto Cached = m_DdnetEntries.find(pMapName);
+	if(Cached != m_DdnetEntries.end())
+		return &Cached->second;
 
 	const auto It = std::lower_bound(m_vEntries.begin(), m_vEntries.end(), pMapName, [](const SEntry &Entry, const char *pName) {
 		return str_comp_nocase(Entry.m_MapName.c_str(), pName) < 0;

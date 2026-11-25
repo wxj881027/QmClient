@@ -72,6 +72,7 @@ namespace qm_storage
 	inline constexpr const char *WORKSHOP_AUTHOR_CACHE_FILE = "qmclient/state/workshop/local_asset_authors.json";
 	inline constexpr const char *FRIEND_LAST_SEEN_CACHE_FILE = "qmclient/cache/social/friend_last_seen.json";
 	inline constexpr const char *MAP_DIFFICULTY_CACHE_FILE = "qmclient/cache/maps/difficulty.json";
+	inline constexpr const char *DDNET_MAP_DIFFICULTY_CACHE_FILE = "qmclient/cache/maps/ddnet_difficulty.json";
 	inline constexpr const char *GLYPH_PREWARM_FILE = "qmclient/cache/settings/glyph_prewarm.txt";
 	inline constexpr const char *SETTINGS_METADATA_FILE = "qmclient/cache/settings/runtime_metadata.cfg";
 
