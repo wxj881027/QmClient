@@ -2,4 +2,4 @@
 // 完整 testrunner 由 config.cpp 提供该对象，不能重复链接本编译单元。
 #include <engine/shared/config.h>
 
-CConfig g_Config;
+constinit CConfig g_Config = InitialConfigValues();
