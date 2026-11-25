@@ -4304,6 +4304,9 @@ Door Laser Outline Color
 Door laser outline color
 == Цвет контура лазера двери.
 
+Double-click to edit note
+== Дважды щёлкните, чтобы изменить заметку
+
 Double-tap the bound key within 400 ms to send the current lyric to public chat
 == Дважды нажмите назначенную клавишу в течение 400 мс, чтобы отправить текущую строку песни в общий чат
 

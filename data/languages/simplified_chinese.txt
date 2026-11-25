@@ -88,6 +88,9 @@
 %d / %d maps
 == %d / %d 张地图
 
+%d entries
+== %d 项
+
 %d items selected
 == 已选择 %d 项
 
@@ -371,6 +374,10 @@
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (地图：%s，时间：%s)
 
+[]
+[Clan] %s
+== [战队] %s
+
 _ or ' ' = blank spacer
 == _ 或 ' ' = 空白间隔
 
@@ -451,6 +458,9 @@ A very large cursor can hide small UI elements underneath it.
 
 A vote is currently active.
 == 已有投票正在进行。
+
+A war group already has this name
+== 已有同名敌对群组
 
 Abort
 == 取消
@@ -599,6 +609,12 @@ Add a type to the exclusion filter for a specific community
 Add a voting option
 == 添加投票选项
 
+Add an entry manually
+== 手动新增条目
+
+Add by
+== 添加方式
+
 Add category
 == 新增分类
 
@@ -653,6 +669,9 @@ Add or edit entries, then use the bind in chat to send the text.
 Add phrase
 == 添加语录
 
+Add player '%s' to '%s'
+== 将玩家「%s」加入「%s」
+
 Add players or groups, then choose which markers and chat highlights apply to them.
 == 添加玩家或分组，再选择对它们生效的标记和聊天高亮。
 
@@ -664,6 +683,9 @@ Add team clan:
 
 Add team name:
 == 添加友好玩家：
+
+Add the entire clan '%s' to '%s'
+== 将整个战队「%s」加入「%s」
 
 Add to %s
 == 添加到 %s
@@ -679,6 +701,9 @@ Add to identity menu
 
 Add to queue
 == 加入队列
+
+Add to war list
+== 添加到敌对列表
 
 Add war clan:
 == 添加敌对战队：
@@ -863,6 +888,9 @@ All categories
 All combined
 == 全部文件
 
+All groups
+== 所有群组
+
 All items
 == 全部项目
 
@@ -931,6 +959,12 @@ Allows maps to render with more detail
 
 Alpha
 == 透明度
+
+Already first (none is the fixed fallback group)
+== 已在最前（none 固定为兜底组）
+
+Already last
+== 已在最后
 
 Also apply to dummy
 == 同时应用到分身
@@ -1219,6 +1253,9 @@ Assets editor
 
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
 == 分别绑定禁止自杀和允许自杀两个按键；按下禁止键后，K 会被忽略，直到你按允许键。
+
+Assigned group
+== 所属群组
 
 Assigns commands and labels to the slots of the radial bind wheel.
 == 为环形绑定轮盘的各个槽位指定指令和标签。
@@ -2063,6 +2100,18 @@ Buttons with this behavior execute console commands like regular key binds.
 Buttons with this behavior execute some predefined actions.
 == 具有此行为的按键会执行部分预设动作。
 
+By clan
+== 按战队
+
+By clan name
+== 按战队名
+
+By player
+== 按玩家
+
+By player name
+== 按玩家名
+
 By row
 == 逐行
 
@@ -2525,6 +2574,9 @@ Choose the menu font and font weight
 Choose the menu map and background colors
 == 选择菜单地图和背景颜色
 
+Choose the new group color
+== 选择新群组的颜色
+
 Choose when recording starts and how demos are named; playback speed and camera follow are separate.
 == 设置录制何时开始以及 demo 的命名方式；回放速度和镜头跟随另行设置。
 
@@ -2582,6 +2634,9 @@ Clan
 Clan color in friends list
 == 好友列表中战队成员条目颜色
 
+Clan friend
+== 战队好友
+
 Clan member entry color in friend list
 == 好友列表中战队成员条目颜色
 
@@ -2589,6 +2644,9 @@ Clan Members
 == 战队成员
 
 Clan Name
+== 战队名称
+
+Clan name
 == 战队名称
 
 Clan name size on nameplate
@@ -4106,8 +4164,14 @@ Delete command
 Delete demo
 == 删除回放
 
+Delete entry
+== 删除条目
+
 Delete folder
 == 删除文件夹
+
+Delete group
+== 删除群组
 
 Delete screenshot
 == 删除截图
@@ -4313,8 +4377,14 @@ Discord
 Display
 == 展示体
 
+Display and blocking rules
+== 显示与屏蔽规则
+
 Display index
 == 画面索引
+
+Display locations and blocking options
+== 显示位置与屏蔽细则
 
 Display mode
 == 显示模式
@@ -4450,6 +4520,9 @@ Double-click empty canvas to add a node
 
 Double-click empty space to add a node, right-click a link to delete it, Delete removes the selection, Ctrl+Z undoes.
 == 双击空白新建节点，右键连线删除，Delete 删除选中，Ctrl+Z 撤销。
+
+Double-click to edit note
+== 双击修改备注
 
 Double-tap the bound key within 400 ms to send the current lyric to public chat
 == 在 400 毫秒内连按两次绑定按键，将当前一句歌词发送到公共聊天
@@ -4615,9 +4688,6 @@ Draws a marker on selected players so you can find them in the world.
 
 Draws a small second view of your other tee in the HUD, so you can watch both tees at the same time.
 == 在 HUD 上画出另一个分身的第二视角小窗，让你能同时盯住两个 Tee。
-
-Draws collision and interaction ranges on the map: tee collision, pickups, hammer, hook, lasers and explosions.
-== 在地图上画出碰撞与交互范围：Tee 碰撞、拾取物、锤子、钩子、激光和爆炸。
 
 Draws drifting 3D shapes such as cubes, hearts or rings in the background, with size, speed, color and glow.
 == 在背景中绘制漂浮的 3D 形状，如立方体、爱心或圆环，可调大小、速度、颜色和辉光。
@@ -4991,6 +5061,9 @@ Edit touch controls
 Editing (all-intra H.264 / MP4)
 == 剪辑 (全帧内 H.264 / MP4)
 
+Editing: %s
+== 正在编辑：%s
+
 Editor
 == 编辑器
 
@@ -5143,6 +5216,9 @@ Enable client stutter diagnostics at startup
 
 Enable client-initiated self-kill (K key / kill command)
 == 启用客户端发起的自杀（K 键 / kill 命令）
+
+Enable collision hitboxes
+== 启用碰撞箱
 
 Enable colored console output
 == 启用控制台彩色输出
@@ -5480,6 +5556,9 @@ Enable the outlines, choose color and thickness, then test on a map with many di
 Enable the pet, pick its skin and size, then move around to watch how it follows.
 == 启用宠物，选好皮肤和大小，再跑动看看它怎么跟随。
 
+Enable the war list to change this setting
+== 请先启用敌对列表
+
 Enable thinking mode
 == 启用思考模式
 
@@ -5603,11 +5682,26 @@ Enter a CP number from 1 to 255.
 Enter a phrase.
 == 请输入语录。
 
+Enter a player or clan name first
+== 请先输入玩家名称或战队名称
+
+Enter a valid group name (other than none)
+== 请输入有效的群组名称（不能为 none）
+
+Enter clan name (matches all members)
+== 输入战队名称（匹配全队成员）
+
 Enter fast practice
 == 进入快速练习
 
+Enter group name
+== 输入群组名称
+
 Enter Password
 == 输入密码
+
+Enter player name
+== 输入玩家名称
 
 Enter solo mode
 == 进入单人模式
@@ -5656,6 +5750,9 @@ entity_bg (Workshop)
 
 Entrance overshoot
 == 入场过冲
+
+Entries and blocking
+== 条目与屏蔽
 
 Entries in it will fall back to none.
 == 里面的条目会回到 none。
@@ -5767,6 +5864,9 @@ Existing Player
 
 Exit and install
 == 退出并安装
+
+Exit editing
+== 退出编辑
 
 Exit fast practice
 == 退出快速练习
@@ -6017,6 +6117,9 @@ Fairly fast encode
 Fake CTF flags
 == 伪 CTF 旗帜
 
+Fallback group
+== 默认兜底
+
 Fast encode
 == 编码快
 
@@ -6127,6 +6230,9 @@ Fill
 
 Fill in the connect and join command fields, separate several commands with semicolons, and raise the delay if the server is not ready yet.
 == 填写连接段和加入段的指令栏，多条指令用分号隔开；服务器还没准备好就调高延迟。
+
+Filter by group
+== 按群组筛选
 
 Filter chat messages by regular expression
 == 按正则表达式过滤聊天消息
@@ -6404,11 +6510,14 @@ Freeview cursor opacity
 Freeze
 == 冻结
 
+Freeze and death borders
+== 冻结与死亡边界
+
+Freeze and death check points
+== 角色冻结与死亡判定点
+
 Freeze bar opacity (0 invisible, 100 fully visible)
 == 冻结条不透明度（0 不可见，100 完全可见）
-
-Freeze border color
-== 冻结边框颜色
 
 Freeze Collision Border Color
 == 冻结碰撞边框颜色
@@ -6416,8 +6525,8 @@ Freeze Collision Border Color
 Freeze heart / health pickup
 == 冻结爱心/拾取生命值
 
-Freeze laser collision volume
-== 冻结激光碰撞体积
+Freeze hitbox color
+== 冻结判定颜色
 
 Freeze Laser Inner Color
 == 冻结激光内色
@@ -6434,8 +6543,8 @@ Freeze laser outline color
 Freeze opacity
 == 冻结不透明度
 
-Freeze projectile collision volume
-== 冻结子弹碰撞体积
+Freeze projectiles and lasers
+== 冻结子弹与激光
 
 Freeze stars
 == 显示冻结效果的星星动画
@@ -6911,6 +7020,9 @@ Ground jump
 Group
 == 分组
 
+Group color
+== 群组颜色
+
 Group frame
 == 分组框
 
@@ -6919,6 +7031,9 @@ Group name
 
 Group names are limited to 16 characters
 == 群组名最多 16 个字符
+
+Group names can use up to 15 UTF-8 bytes
+== 群组名称最多 15 个 UTF-8 字节
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 归集输入辅助功能：快速输入、自动边距、亚 tick 瞄准和光标行为。
@@ -6944,11 +7059,11 @@ Hammer
 Hammer and gun switching made for Gores (KOG) servers, with optional Axiom login and fast input.
 == 为 Gores（KOG）服务器设计的锤子与枪切换，可选 Axiom 登录和快速输入。
 
+Hammer and hook range
+== 锤击与钩索范围
+
 Hammer hit
 == 锤子命中
-
-Hammer interaction
-== 锤子交互
 
 Hammer Mode
 == 锤子模式
@@ -7220,23 +7335,11 @@ Hint
 Hit feedback
 == 命中反馈
 
-Hitbox Mode Freeze Border Color
-== 碰撞箱模式冻结边框颜色
+Hitbox line opacity
+== 线条不透明度
 
-Hitbox Mode Global Opacity
-== 碰撞箱模式全局透明度
-
-Hitbox Mode Override
-== 碰撞箱模式开关
-
-Hitbox Mode Player Scope: 0=local, 1=local+clone, 2=all
-== 碰撞箱模式玩家范围：0=本地 1=本地+分身 2=所有玩家
-
-Hitbox Mode Tee Collision Color
-== 碰撞箱模式 Tee 碰撞体颜色
-
-Hitbox Mode Weapon Interaction Color
-== 碰撞箱模式武器交互颜色
+Hitbox player scope: 0=self only, 1=self and dummy, 2=all players
+== 显示哪些玩家的碰撞箱：0=仅自己，1=自己与分身，2=所有玩家
 
 HJ assist
 == HJ 大佬辅助
@@ -7309,9 +7412,6 @@ Hook countdown warning color
 
 Hook hits unhookable surface
 == 钩到不可钩表面
-
-Hook interaction
-== 钩子交互
 
 Hook line tip
 == 辅助线提示
@@ -7934,9 +8034,6 @@ It only changes your name, not your skin or clan; names that are too long are cu
 It only counts your own team and only appears on your screen; lower the icon size when it covers the crosshair.
 == 它只统计你自己的队伍，也只显示在你的屏幕上；挡住准星时把图标调小。
 
-It stays on for every match, so switch it off before real races to keep the screen and your aim clean.
-== 它对每场比赛都生效，正式比赛前记得关掉，让画面和准星保持干净。
-
 It's recommended that you check the settings to adjust them to your liking before joining a server.
 == 建议你在进入服务器前检查一下设置并根据你的喜好进行调整。
 
@@ -8254,9 +8351,6 @@ Laser
 
 Laser / shotgun bounce
 == 激光/霰弹光束反弹
-
-Laser / shotgun interaction
-== 激光/霰弹枪交互
 
 Laser colors
 == 激光颜色
@@ -8708,17 +8802,11 @@ Loading…
 Local
 == 本地
 
-Local + Dummy
-== 本地 + 分身
-
 Local console log category filter mask (bit flags)
 == 本地控制台日志分类过滤掩码（位标志）
 
 Local game mode statistics
 == 本地游戏模式统计
-
-Local only
-== 仅本地
 
 Local saves
 == 本地存档
@@ -8954,9 +9042,6 @@ Map browser: show empty servers only
 Map browser: show favorite maps only
 == 地图浏览器：仅显示收藏地图
 
-Map danger border
-== 地图危险边界
-
 Map data unavailable; server votes remain available
 == 地图数据暂不可用，仍可使用服务器投票
 
@@ -9095,6 +9180,9 @@ Mark the end of a cut (right click to reset)
 Mark the end of a demo cut
 == 标记回放剪辑终点
 
+Mark the freeze check at the center and the four death checks around each Tee
+== 用十字标出角色中心的冻结判定点和四角的死亡判定点
+
 Markers
 == 标记
 
@@ -9106,6 +9194,9 @@ Master server URL to register
 
 Match %d of %d
 == 匹配 %d/%d
+
+Match by
+== 匹配类型
 
 Match ghost by map version instead of map name
 == 按地图版本而不是地图名称匹配幽灵
@@ -9506,6 +9597,9 @@ Move a friend category to a position
 Move down
 == 下移
 
+Move down (decrease priority)
+== 下移（降低优先级）
+
 Move left
 == 向左移动
 
@@ -9523,6 +9617,9 @@ Move to category
 
 Move up
 == 上移
+
+Move up (increase match color priority)
+== 上移（提高匹配颜色优先级）
 
 Movement
 == 移动
@@ -9923,6 +10020,9 @@ New tag
 New version available
 == 有新版本可用
 
+New war group
+== 新建敌对群组
+
 Newest first
 == 最新发布优先
 
@@ -10051,6 +10151,9 @@ No downloadable portable package for this version
 
 No empty team left.
 == 已经没有空队伍了
+
+No entries match
+== 没有符合筛选条件的条目
 
 No entries yet
 == 暂无条目
@@ -10676,6 +10779,9 @@ Optional Axiom API key for scoreboard points and map queries (leave empty for an
 Optional export range in seconds. Leave empty to export the whole demo.
 == 可选的导出范围（秒）；留空导出整个回放。
 
+Optional reason (can appear under the name plate)
+== 可选：备注原因（可显示在名牌下方）
+
 Optional start and end time in seconds. Leave both empty to export the whole demo.
 == 可选的起止时间，单位是秒。两个都留空就导出整段 demo。
 
@@ -10741,6 +10847,9 @@ Outline global opacity
 
 Outline opacity
 == 描边不透明度
+
+Outline where freeze, deep freeze and death tiles take effect
+== 描出地图上冻结块、深冻块和死亡块生效的边缘
 
 Outlines can be distracting in fast maps; lower the opacity instead of disabling them.
 == 快节奏地图里轮廓容易分散注意，可以调低不透明度而不是关掉。
@@ -11090,9 +11199,6 @@ Pick the parts to colorize, then choose a gradient mode and colors.
 Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 == 选择与你使用的音乐客户端匹配的来源并保持播放，歌词会自动跟随。
 
-Pickup range
-== 拾取物范围
-
 Pickups
 == 拾取物
 
@@ -11350,9 +11456,6 @@ Player push radius for background 3D particles
 
 Player push strength for background 3D particles
 == 玩家推动背景 3D 粒子的强度
-
-Player range
-== 玩家范围
 
 Player skin
 == 玩家皮肤
@@ -11888,8 +11991,8 @@ Progress bar width
 Project and community websites
 == 项目与社区站点入口
 
-Projectile / explosion range
-== 投射物/爆炸范围
+Projectiles, explosions and regular lasers
+== 子弹、爆炸与普通激光
 
 ProRes profile
 == ProRes 档位
@@ -12115,6 +12218,9 @@ Queue preset: %s
 
 Quick action menu for players
 == 对玩家快捷操作菜单
+
+Quick add
+== 快速添加
 
 Quick Hammer
 == 快速切锤
@@ -13529,6 +13635,9 @@ Search country flag…
 Search donor asset
 == 搜索来源材质
 
+Search entries or reasons
+== 搜索敌对条目或备注原因
+
 Search ghosts
 == 搜索影子
 
@@ -13598,6 +13707,9 @@ SecretKey
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 == 输入 /practicecmdlist 可以查看所有可用的练习命令。最常用的是 /telecursor、/lasttp 和 /rescue
 
+See freeze and death borders, character check points, shield pickups and weapon ranges.
+== 显示地图上的冻结与死亡边界、角色判定点、护盾拾取范围和武器范围。
+
 See you at the next checkpoint.
 == 下个检查点见。
 
@@ -13624,6 +13736,9 @@ Select a result to open its card.
 
 Select a saved .map file (client limit: 64 MiB).
 == 选择已保存的 .map 文件（客户端上限：64 MiB）。
+
+Select a target group
+== 请选择目标群组
 
 Select all chat
 == 全选聊天记录
@@ -13678,6 +13793,9 @@ Selects the country flag shown for you and for the dummy.
 
 Self
 == 本体
+
+Self and dummy
+== 自己与分身
 
 Self and friends
 == 自己和好友
@@ -14054,6 +14172,9 @@ Share of the server browser name/map split given to the name column (per mille)
 Sharpen
 == 锐化
 
+Shield pickup range
+== 护盾拾取范围
+
 Short pain voice
 == 短促受伤叫声
 
@@ -14210,9 +14331,6 @@ Show client IDs on a separate line
 Show client-generated chat messages, e.g., echo
 == 显示客户端生成的聊天消息，例如 echo
 
-Show collision and weapon interaction
-== 显示碰撞和武器交互
-
 Show Collision Borders
 == 显示碰撞体积边框
 
@@ -14254,9 +14372,6 @@ Show current Netease lyric in Media Island
 
 Show daily message to client
 == 显示给客户端的每日消息
-
-Show Danger Tiles in Hitbox Mode
-== 碰撞箱模式显示地图危险边界
 
 Show DDNet config variables
 == 显示 DDNet 配置变量
@@ -14459,14 +14574,17 @@ Show hammer icon
 Show hammer status
 == 显示锤状态
 
+Show hazard borders, character check points and weapon ranges
+== 显示地形危险边界、角色判定点与武器范围
+
 Show health, shields and ammo
 == 显示生命、护甲与弹药栏
 
 Show hint at random top-left/right of player when main or dummy is hammered awake
 == 本体或分身被锤醒时，在对应玩家随机的左上或右上角显示提示
 
-Show hitbox mode
-== 显示碰撞箱模式
+Show hitboxes for
+== 显示对象
 
 Show Hook Collision
 == 显示钩子辅助线
@@ -14819,9 +14937,6 @@ Show performance graphs.
 Show pet
 == 显示宠物
 
-Show Pickup Ranges in Hitbox Mode
-== 碰撞箱模式显示拾取物范围
-
 Show ping colored circle in nameplates
 == 在玩家昵称旁显示延迟颜色圆圈
 
@@ -15031,6 +15146,9 @@ Show teleporter tile outlines
 
 Show text entities
 == 显示文本实体
+
+Show the areas where freeze projectiles and lasers can freeze a Tee
+== 显示冰弹和冰激光能冻住角色的范围
 
 Show the chat scrollbar on the right
 == 在右侧显示聊天框滚动条
@@ -16253,6 +16371,9 @@ Taper trail ends
 Taper trail width
 == 锥形拖尾宽度
 
+Target group
+== 目标群组
+
 Target language code (e.g. zh, en, ja, zh-TW)
 == 翻译目标语言代码（如 zh、en、ja、zh-TW）
 
@@ -16430,8 +16551,11 @@ Tee appearance
 Tee collision
 == Tee 碰撞
 
-Tee collision (Tee to Tee)
-== Tee 碰撞（Tee 与 Tee）
+Tee collision circle
+== 角色碰撞圆
+
+Tee collision color
+== 角色碰撞颜色
 
 Tee color
 == Tee 颜色
@@ -16439,17 +16563,8 @@ Tee color
 Tee cry
 == Tee 哭声
 
-Tee death probe
-== Tee 死亡探针
-
 Tee freeze probe
 == Tee 冻结探针
-
-Tee freeze probe (Tee to Freeze)
-== Tee 冻结探针（Tee 与 Freeze）
-
-Tee hitbox color
-== Tee 碰撞箱颜色
 
 Tee icon size in frozen Tee HUD (default 15)
 == 冻结 Tee HUD 中 Tee 图标大小（默认 15）
@@ -16838,6 +16953,9 @@ This bind is already over the local config line limit.
 This connection cannot change names while connected. Reconnect with the saved names first.
 == 此连接不支持在线改名，请使用存档中的名字重新连接。
 
+This friend has no player name. Switch to By clan to add them.
+== 该好友没有玩家名称，请切换为「按战队」添加
+
 This ID is not connected
 == 该 ID 未连接
 
@@ -16855,6 +16973,9 @@ This only affects your own screen; votes still follow the server rules.
 
 This person has disabled receiving whispers
 == 该玩家已关闭接收私聊
+
+This player has no clan. Switch to By player to add them.
+== 该玩家没有战队，请切换为「按玩家」添加
 
 This pose file does not record a map. Choose the map used for rendering.
 == 该合影文件没有记录地图，请选择用于渲染的地图。
@@ -16951,9 +17072,6 @@ Tick "Replace non-friend names with ID", "Replace non-friend skins with default"
 
 Tick "Show Gores drown board"; set "Players shown" and "Card opacity", and add "Show player Tee" for avatars.
 == 勾选显示 Gores 溺水面板；设置显示玩家数和卡片不透明度，并可加上显示玩家 Tee 来展示头像。
-
-Tick "Show hitbox mode", choose the ranges you need, then set "Player range" to "Local only", "Local + Dummy" or "All players".
-== 勾选显示碰撞箱模式，选择需要的范围，再把玩家范围设为仅本地、本地与 dummy 或全部玩家。
 
 Tick "Show inputs", then size and place it with "Keyboard size", "Mouse size", "Opacity" and the position sliders.
 == 勾选显示输入，然后用键盘大小、鼠标大小、不透明度和位置滑块调整尺寸与位置。
@@ -17555,6 +17673,9 @@ Turn on "Better scoreboard", then enable what you need: "Scoreboard point check"
 Turn on "Enable camera drift" or "Enable dynamic FOV", then tune "Drift intensity" and "Dynamic FOV intensity"; use "Aspect ratio preset" to force a view shape.
 == 打开镜头漂移或动态 FOV 后，才会出现对应的强度与平滑度滑条；用宽高比预设固定画面形状，选自定义可自己填比例。
 
+Turn on "Enable collision hitboxes", choose what to draw, then pick which players to show under "Show hitboxes for".
+== 打开「启用碰撞箱」，勾选想看的项目，再在「显示对象」里选择要显示哪些玩家。
+
 Turn on "Enable controller", choose the device, pick "Relative" or "Absolute" under "Ingame controller mode", then tick the axes you want under "Aim bind".
 == 打开启用控制器并选好设备，在游戏内手柄瞄准模式里选相对或绝对，再在操作轴绑定里勾选需要的轴。
 
@@ -17779,6 +17900,9 @@ Unable to save the skin with a reserved name
 
 Unable to save the watermarked screenshot
 == 无法保存带水印的截图
+
+Unassigned entries fall back to this built-in group. It cannot be edited or deleted.
+== 未分配群组的条目归入此处，内置兜底组不可修改或删除
 
 Unavailable
 == 不可用
@@ -18740,6 +18864,9 @@ Wheel to zoom - drag empty space to pan
 Wheel up
 == 滚轮上
 
+When racing, you can keep "Freeze projectiles and lasers" on and turn off the other weapon ranges to see incoming freeze hazards more clearly.
+== 跑图时可以保留「冻结子弹与激光」，关掉「锤击与钩索范围」和「子弹、爆炸与普通激光」，这样更容易看清迎面而来的冰弹和冰激光。
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已启用 TClient 彩虹 Tee 时，本功能不会生效。
 
@@ -19494,6 +19621,10 @@ Train
 [Bind keyboard key]
 Menu
 == 菜单键
+
+[Collision hitbox]
+All players
+== 所有玩家
 
 [Config help]
 %s (default: "%s", max length: %d)

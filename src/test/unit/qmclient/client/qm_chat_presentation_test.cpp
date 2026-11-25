@@ -158,6 +158,86 @@ TEST(QmChatPresentation, ReenablingExtraAnimationsDoesNotReplayExpandedHistory)
 	EXPECT_FLOAT_EQ(Presentation.m_RenderAlpha, 1.0f);
 }
 
+TEST(QmChatPresentation, ShortRecallKeepsOriginalTiming)
+{
+	for(const int Count : {-1, 0, 1, 2, 3, 4})
+	{
+		SCOPED_TRACE(Count);
+		const auto Timing = CChat::ResolveRecallTiming(Count);
+		EXPECT_FLOAT_EQ(Timing.m_StaggerSeconds, 0.022f);
+		EXPECT_FLOAT_EQ(Timing.m_DurationSeconds, 0.12f);
+	}
+}
+
+TEST(QmChatPresentation, LongerRecallReducesStaggerDurationAndTotalTime)
+{
+	auto Previous = CChat::ResolveRecallTiming(4);
+	float PreviousTotal = 3 * Previous.m_StaggerSeconds + Previous.m_DurationSeconds;
+	for(int Count = 5; Count <= 64; ++Count)
+	{
+		SCOPED_TRACE(Count);
+		const auto Timing = CChat::ResolveRecallTiming(Count);
+		const float Total = (Count - 1) * Timing.m_StaggerSeconds + Timing.m_DurationSeconds;
+		EXPECT_GE(Timing.m_StaggerSeconds, 0.002f);
+		EXPECT_GE(Timing.m_DurationSeconds, 0.045f);
+		EXPECT_LT(Timing.m_StaggerSeconds, Previous.m_StaggerSeconds);
+		EXPECT_LT(Timing.m_DurationSeconds, Previous.m_DurationSeconds);
+		EXPECT_LT(Total, PreviousTotal);
+		EXPECT_LT(Total, 0.25f);
+		Previous = Timing;
+		PreviousTotal = Total;
+	}
+}
+
+TEST(QmChatPresentation, MoreHistoryAdvancesTheSameRecallRowFaster)
+{
+	const int64_t Start = TestTicks(40.0f);
+	const int64_t OpenTick = Start + TestTicks(30.0f);
+	constexpr int RecallIndex = 14;
+	const auto UpdateRow = [&](CChat::SPresentationState &Presentation, int Count, float Elapsed) {
+		const auto Timing = CChat::ResolveRecallTiming(Count);
+		CChat::UpdateLinePresentation(Presentation, Start, OpenTick + TestTicks(Elapsed), 0.01f, true, false, OpenTick,
+			RecallIndex * Timing.m_StaggerSeconds, true, CChat::SERVER_MSG, Timing.m_DurationSeconds);
+	};
+
+	CChat::SPresentationState ShorterHistory;
+	CChat::SPresentationState LongerHistory;
+	UpdateRow(ShorterHistory, 15, 0.105f);
+	UpdateRow(LongerHistory, 30, 0.105f);
+	ASSERT_EQ(ShorterHistory.m_State, CChat::EPresentationState::ENTERING);
+	ASSERT_EQ(LongerHistory.m_State, CChat::EPresentationState::ENTERING);
+	EXPECT_GT(ShorterHistory.m_RenderAlpha, 0.0f);
+	EXPECT_GT(LongerHistory.m_RenderAlpha, ShorterHistory.m_RenderAlpha);
+	EXPECT_LT(std::abs(LongerHistory.m_RenderOffsetX), std::abs(ShorterHistory.m_RenderOffsetX));
+
+	UpdateRow(LongerHistory, 30, 0.13f);
+	EXPECT_EQ(LongerHistory.m_State, CChat::EPresentationState::VISIBLE);
+	EXPECT_EQ(LongerHistory.m_RenderAlpha, 1.0f);
+	EXPECT_EQ(LongerHistory.m_RenderOffsetX, 0.0f);
+}
+
+TEST(QmChatPresentation, RecalledRowDiscardsCachedYWhenItFirstOccupiesLayout)
+{
+	CChat::SPresentationState Presentation;
+	const int64_t Start = TestTicks(40.0f);
+	const int64_t OpenTick = Start + TestTicks(30.0f);
+	CChat::BeginLinePresentation(Presentation, Start, false);
+	CChat::UpdateLinePresentation(Presentation, Start, OpenTick, 0.01f, false, false, 0, 0.0f);
+	ASSERT_EQ(Presentation.m_State, CChat::EPresentationState::COLLAPSED);
+	CChat::UpdateLinePresentation(Presentation, Start, OpenTick, 0.01f, true, false, OpenTick, 0.05f);
+	ASSERT_FLOAT_EQ(Presentation.m_LayoutVisibility, 0.0f);
+	EXPECT_EQ(Presentation.m_RenderAlpha, 0.0f);
+	Presentation.m_RenderYInitialized = true;
+
+	CChat::UpdateLinePresentation(Presentation, Start, OpenTick + TestTicks(0.06f), 0.01f, true, false, OpenTick, 0.05f);
+	ASSERT_FLOAT_EQ(Presentation.m_LayoutVisibility, 1.0f);
+	EXPECT_FALSE(Presentation.m_RenderYInitialized);
+
+	Presentation.m_RenderYInitialized = true;
+	CChat::UpdateLinePresentation(Presentation, Start, OpenTick + TestTicks(0.07f), 0.01f, true, false, OpenTick, 0.05f);
+	EXPECT_TRUE(Presentation.m_RenderYInitialized);
+}
+
 TEST(QmChatPresentation, InputKeepsOldLineOpaque)
 {
 	CChat::SPresentationState Presentation;

@@ -605,7 +605,9 @@ public:
 	void OnPostConnect(int Conn);
 
 	void Connect(const char *pAddress, const char *pPassword = nullptr) override;
+	void ConnectInternal(const char *pAddress, const char *pPassword = nullptr);
 	void DisconnectWithReason(const char *pReason);
+	void DisconnectInternal();
 	void Disconnect() override;
 	void DropCurrentServerConnection();
 

@@ -11371,3 +11371,245 @@ brazilian_portuguese = "Largura"
 portuguese = "Largura"
 turkish = "Genişlik"
 polish = "Szerokość"
+
+# 敌对列表工作台
+
+[[message]]
+key = "%d entries"
+[message.translations]
+simplified_chinese = "%d 项"
+
+[[message]]
+key = "[Clan] %s"
+[message.translations]
+simplified_chinese = "[战队] %s"
+
+[[message]]
+key = "A war group already has this name"
+[message.translations]
+simplified_chinese = "已有同名敌对群组"
+
+[[message]]
+key = "Add an entry manually"
+[message.translations]
+simplified_chinese = "手动新增条目"
+
+[[message]]
+key = "Add by"
+[message.translations]
+simplified_chinese = "添加方式"
+
+[[message]]
+key = "Add player '%s' to '%s'"
+[message.translations]
+simplified_chinese = "将玩家「%s」加入「%s」"
+
+[[message]]
+key = "Add the entire clan '%s' to '%s'"
+[message.translations]
+simplified_chinese = "将整个战队「%s」加入「%s」"
+
+[[message]]
+key = "Add to war list"
+[message.translations]
+simplified_chinese = "添加到敌对列表"
+
+[[message]]
+key = "All groups"
+[message.translations]
+simplified_chinese = "所有群组"
+
+[[message]]
+key = "Already first (none is the fixed fallback group)"
+[message.translations]
+simplified_chinese = "已在最前（none 固定为兜底组）"
+
+[[message]]
+key = "Already last"
+[message.translations]
+simplified_chinese = "已在最后"
+
+[[message]]
+key = "Assigned group"
+[message.translations]
+simplified_chinese = "所属群组"
+
+[[message]]
+key = "By clan"
+[message.translations]
+simplified_chinese = "按战队"
+
+[[message]]
+key = "By clan name"
+[message.translations]
+simplified_chinese = "按战队名"
+
+[[message]]
+key = "By player"
+[message.translations]
+simplified_chinese = "按玩家"
+
+[[message]]
+key = "By player name"
+[message.translations]
+simplified_chinese = "按玩家名"
+
+[[message]]
+key = "Choose the new group color"
+[message.translations]
+simplified_chinese = "选择新群组的颜色"
+
+[[message]]
+key = "Clan friend"
+[message.translations]
+simplified_chinese = "战队好友"
+
+[[message]]
+key = "Clan name"
+[message.translations]
+simplified_chinese = "战队名称"
+
+[[message]]
+key = "Delete entry"
+[message.translations]
+simplified_chinese = "删除条目"
+
+[[message]]
+key = "Delete group"
+[message.translations]
+simplified_chinese = "删除群组"
+
+[[message]]
+key = "Display and blocking rules"
+[message.translations]
+simplified_chinese = "显示与屏蔽规则"
+
+[[message]]
+key = "Display locations and blocking options"
+[message.translations]
+simplified_chinese = "显示位置与屏蔽细则"
+
+[[message]]
+key = "Enable the war list to change this setting"
+[message.translations]
+simplified_chinese = "请先启用敌对列表"
+
+[[message]]
+key = "Enter a player or clan name first"
+[message.translations]
+simplified_chinese = "请先输入玩家名称或战队名称"
+
+[[message]]
+key = "Enter a valid group name (other than none)"
+[message.translations]
+simplified_chinese = "请输入有效的群组名称（不能为 none）"
+
+[[message]]
+key = "Enter clan name (matches all members)"
+[message.translations]
+simplified_chinese = "输入战队名称（匹配全队成员）"
+
+[[message]]
+key = "Enter group name"
+[message.translations]
+simplified_chinese = "输入群组名称"
+
+[[message]]
+key = "Enter player name"
+[message.translations]
+simplified_chinese = "输入玩家名称"
+
+[[message]]
+key = "Entries and blocking"
+[message.translations]
+simplified_chinese = "条目与屏蔽"
+
+[[message]]
+key = "Exit editing"
+[message.translations]
+simplified_chinese = "退出编辑"
+
+[[message]]
+key = "Fallback group"
+[message.translations]
+simplified_chinese = "默认兜底"
+
+[[message]]
+key = "Filter by group"
+[message.translations]
+simplified_chinese = "按群组筛选"
+
+[[message]]
+key = "Group color"
+[message.translations]
+simplified_chinese = "群组颜色"
+
+[[message]]
+key = "Group names can use up to 15 UTF-8 bytes"
+[message.translations]
+simplified_chinese = "群组名称最多 15 个 UTF-8 字节"
+
+[[message]]
+key = "Match by"
+[message.translations]
+simplified_chinese = "匹配类型"
+
+[[message]]
+key = "Move down (decrease priority)"
+[message.translations]
+simplified_chinese = "下移（降低优先级）"
+
+[[message]]
+key = "Move up (increase match color priority)"
+[message.translations]
+simplified_chinese = "上移（提高匹配颜色优先级）"
+
+[[message]]
+key = "New war group"
+[message.translations]
+simplified_chinese = "新建敌对群组"
+
+[[message]]
+key = "No entries match"
+[message.translations]
+simplified_chinese = "没有符合筛选条件的条目"
+
+[[message]]
+key = "Optional reason (can appear under the name plate)"
+[message.translations]
+simplified_chinese = "可选：备注原因（可显示在名牌下方）"
+
+[[message]]
+key = "Quick add"
+[message.translations]
+simplified_chinese = "快速添加"
+
+[[message]]
+key = "Search entries or reasons"
+[message.translations]
+simplified_chinese = "搜索敌对条目或备注原因"
+
+[[message]]
+key = "Select a target group"
+[message.translations]
+simplified_chinese = "请选择目标群组"
+
+[[message]]
+key = "Target group"
+[message.translations]
+simplified_chinese = "目标群组"
+
+[[message]]
+key = "This friend has no player name. Switch to By clan to add them."
+[message.translations]
+simplified_chinese = "该好友没有玩家名称，请切换为「按战队」添加"
+
+[[message]]
+key = "This player has no clan. Switch to By player to add them."
+[message.translations]
+simplified_chinese = "该玩家没有战队，请切换为「按玩家」添加"
+
+[[message]]
+key = "Unassigned entries fall back to this built-in group. It cannot be edited or deleted."
+[message.translations]
+simplified_chinese = "未分配群组的条目归入此处，内置兜底组不可修改或删除"

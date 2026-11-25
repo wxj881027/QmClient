@@ -109,7 +109,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		{
 			pSearchResults = &s_GlobalSearchCache.Results();
 			const auto &vVisibleCards = pSearchResults->m_vAllVisibleCards;
-			s_GlobalSearchFunctionCardLayout = ResolveFunctionCardLayoutState();
+			s_GlobalSearchFunctionCardLayout = ResolveFunctionCardLayoutState(GameClient()->m_CrossServerFollow.IsActive());
 			qm_card_catalog::SQmCardBuildContext StandardPrepare;
 			StandardPrepare.m_pMenus = this;
 			StandardPrepare.m_ReadOnly = ResultsReadOnly;

@@ -529,6 +529,9 @@ public:
 	// Render-only idle throttle requested by the game UI; 0 keeps the configured rate.
 	virtual int RenderThrottleRefreshRate() const = 0;
 	virtual void OnStateChange(int NewState, int OldState) = 0;
+	virtual void OnManualConnect(const char *pAddress) {}
+	virtual void NotifyManualDisconnect() {}
+	virtual bool IsCrossServerFollowing() const { return false; }
 	virtual void OnScreenshotTaken(class CImageInfo &&Image, const char *pPath) = 0;
 	virtual IGraphics::FScreenshotProcessor ScreenshotProcessor() = 0;
 	// QmClient 合影文件首次打开时设置自动取景；具体相机实现属于游戏客户端层。

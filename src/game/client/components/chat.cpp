@@ -877,7 +877,7 @@ bool CChat::UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit,
 	return true;
 }
 
-void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations)
+void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations, const SQmFocusModeDecisions &Focus)
 {
 	if(ShowLargeArea && !m_LastPresentationShowLargeArea)
 		m_LargeAreaOpenTick = Now;
@@ -885,6 +885,23 @@ void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowL
 		m_LargeAreaOpenTick = 0;
 	m_LastPresentationShowLargeArea = ShowLargeArea;
 
+	bool aRecallLines[MAX_LINES] = {};
+	int RecallLineCount = 0;
+	if(ExtraAnimations && m_LargeAreaOpenTick > 0)
+	{
+		for(int i = 0; i < MAX_LINES; ++i)
+		{
+			const CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
+			if(!Line.m_Initialized)
+				break;
+			aRecallLines[i] = !Line.m_Presentation.m_AnimationsSuppressed &&
+					  ShouldRecallLine(ShowLargeArea, Line.m_ForceVisible, m_LargeAreaOpenTick, Line.m_Time, Line.m_ClientId) &&
+					  ChatLinePassesFocusFilter(Focus, Line.m_ClientId, Line.m_ForceVisible, Line.m_ServerMessageClass);
+			if(aRecallLines[i])
+				++RecallLineCount;
+		}
+	}
+	const SRecallTiming RecallTiming = ResolveRecallTiming(RecallLineCount);
 	int RecallIndex = 0;
 	for(int i = 0; i < MAX_LINES; ++i)
 	{
@@ -892,7 +909,7 @@ void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowL
 		if(!Line.m_Initialized)
 			break;
 
-		const float RecallDelaySeconds = ShowLargeArea ? RecallIndex++ * CHAT_RECALL_STAGGER_SECONDS : 0.0f;
+		const float RecallDelaySeconds = aRecallLines[i] ? RecallIndex++ * RecallTiming.m_StaggerSeconds : 0.0f;
 		UpdateLinePresentation(
 			Line.m_Presentation,
 			Line.m_Time,
@@ -903,7 +920,8 @@ void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowL
 			m_LargeAreaOpenTick,
 			RecallDelaySeconds,
 			ExtraAnimations,
-			Line.m_ClientId);
+			Line.m_ClientId,
+			RecallTiming.m_DurationSeconds);
 
 		if(Line.m_ClientId == SERVER_MSG && QmMacosGraphicsDiagnosticsEnabled())
 		{
@@ -3616,7 +3634,7 @@ void CChat::OnRender()
 	if(HudEditorPreview)
 		DeltaSeconds = 0.0f;
 	else
-		UpdatePresentationStates(Now, DeltaSeconds, ShowLargeArea, ExtraAnimations);
+		UpdatePresentationStates(Now, DeltaSeconds, ShowLargeArea, ExtraAnimations, Focus);
 
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();

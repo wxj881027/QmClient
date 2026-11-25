@@ -138,6 +138,37 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 	}
 }
 
+TEST(QmCatalogSearch, CollisionHitboxAliasesFindTheMergedSetting)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	struct SCase
+	{
+		const char *m_pQuery;
+		const char *m_pLabel;
+	};
+	const SCase aCases[] = {
+		{"身上十字架", "Freeze and death check points"},
+		{"探针", "Freeze and death check points"},
+		{"冰弹", "Freeze projectiles and lasers"},
+		{"冰激光", "Freeze projectiles and lasers"},
+		{"锤子", "Hammer and hook range"},
+		{"钩子", "Hammer and hook range"},
+		{"盾牌", "Shield pickup range"},
+		{"qm_hitbox_show_projectiles", "Projectiles, explosions and regular lasers"},
+	};
+	for(const auto &Case : aCases)
+	{
+		SCOPED_TRACE(Case.m_pQuery);
+		const auto Results = qm_card_registry::SearchCards(Case.m_pQuery, Model);
+		const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+			return str_comp(Result.m_pStableId, "qm:collision_hitbox") == 0;
+		});
+		ASSERT_NE(It, Results.end());
+		EXPECT_NE(std::find(It->m_vMatchKeys.begin(), It->m_vMatchKeys.end(), Case.m_pLabel), It->m_vMatchKeys.end());
+	}
+}
+
 TEST(QmCatalogSearch, EntityLayerOptionsResolveToTheirDDNetCard)
 {
 	qm_card_order::CModel Model;

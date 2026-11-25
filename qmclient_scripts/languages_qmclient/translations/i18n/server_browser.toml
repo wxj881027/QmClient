@@ -927,6 +927,22 @@ turkish = "Bağlantıyı kes"
 polish = "Rozłącz"
 
 [[message]]
+key = "Double-click to edit note"
+[message.translations]
+simplified_chinese = "双击修改备注"
+traditional_chinese = "雙擊修改備註"
+japanese = "ダブルクリックでメモを編集"
+korean = "더블 클릭하여 메모 편집"
+russian = "Дважды щёлкните, чтобы изменить заметку"
+german = "Notiz per Doppelklick bearbeiten"
+spanish = "Haz doble clic para editar la nota"
+french = "Double-cliquez pour modifier la note"
+brazilian_portuguese = "Clique duas vezes para editar a nota"
+portuguese = "Faça duplo clique para editar a nota"
+turkish = "Notu düzenlemek için çift tıklayın"
+polish = "Kliknij dwukrotnie, aby edytować notatkę"
+
+[[message]]
 key = "Downloading map %d%%"
 [message.translations]
 simplified_chinese = "正在下载地图：%d%%"

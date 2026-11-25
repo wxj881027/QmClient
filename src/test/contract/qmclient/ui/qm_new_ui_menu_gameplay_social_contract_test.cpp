@@ -74,18 +74,6 @@ TEST(QmNewUiMenuGameplaySocialContract, FriendCategoryEditPopupHasRoomForInputAn
 	EXPECT_EQ(Source.find("280.0f, CMenus::FriendsCategoryEditPopupHeight()"), std::string::npos);
 }
 
-TEST(QmNewUiMenuGameplaySocialContract, FriendAutoFollowDistinguishesManualAndAutomaticConnects)
-{
-	const std::string Header = ReadTextFile("src/game/client/components/menus.h");
-	const std::string Source = ReadTextFile("src/game/client/components/menus_browser.cpp");
-
-	EXPECT_NE(Header.find("enum class EConnectIntent"), std::string::npos);
-	EXPECT_NE(Header.find("void Connect(const char *pAddress, EConnectIntent Intent = EConnectIntent::Manual)"), std::string::npos);
-	EXPECT_NE(Source.find("if(Intent == EConnectIntent::Manual)"), std::string::npos);
-	EXPECT_NE(Source.find("StopFriendAutoFollow(m_FriendAutoFollowState);"), std::string::npos);
-	EXPECT_NE(Source.find("Connect(g_Config.m_UiServerAddress, EConnectIntent::AutoFollow)"), std::string::npos);
-}
-
 TEST(QmNewUiMenuGameplaySocialContract, ShortServerNamesKeepDisplayNameHighlightPath)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/menus_browser.cpp");

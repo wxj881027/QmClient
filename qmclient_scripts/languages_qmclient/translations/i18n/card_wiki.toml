@@ -5103,6 +5103,11 @@ turkish = "Ayarları kart başlığına, özellik adına veya anahtar kelimeye g
 polish = "Szuka ustawień po tytule karty, nazwie funkcji lub słowie kluczowym."
 
 [[message]]
+key = "See freeze and death borders, character check points, shield pickups and weapon ranges."
+[message.translations]
+simplified_chinese = "显示地图上的冻结与死亡边界、角色判定点、护盾拾取范围和武器范围。"
+
+[[message]]
 key = "Select a body part, change its sprite or color, then save the skin."
 [message.translations]
 simplified_chinese = "选一个身体部位，改它的贴图或颜色，然后保存皮肤。"
@@ -6607,6 +6612,11 @@ turkish = "Yoğunluk ve yumuşatma kaydırıcıları yalnızca kamera sürüklen
 polish = "Suwaki intensywności i płynności pojawiają się dopiero po włączeniu dryfu kamery lub dynamicznego FOV. Ustawienie proporcji wymusza kształt widoku, a opcja „Własne\" pozwala wpisać własną wartość."
 
 [[message]]
+key = "Turn on \"Enable collision hitboxes\", choose what to draw, then pick which players to show under \"Show hitboxes for\"."
+[message.translations]
+simplified_chinese = "打开「启用碰撞箱」，勾选想看的项目，再在「显示对象」里选择要显示哪些玩家。"
+
+[[message]]
 key = "Turn on \"Enable controller\", choose the device, pick \"Relative\" or \"Absolute\" under \"Ingame controller mode\", then tick the axes you want under \"Aim bind\"."
 [message.translations]
 simplified_chinese = "打开启用控制器并选好设备，在游戏内手柄瞄准模式里选相对或绝对，再在操作轴绑定里勾选需要的轴。"
@@ -7309,6 +7319,11 @@ brazilian_portuguese = "O que ele controla"
 portuguese = "O que controla"
 turkish = "Ne ayarlar"
 polish = "Co ustawia"
+
+[[message]]
+key = "When racing, you can keep \"Freeze projectiles and lasers\" on and turn off the other weapon ranges to see incoming freeze hazards more clearly."
+[message.translations]
+simplified_chinese = "跑图时可以保留「冻结子弹与激光」，关掉「锤击与钩索范围」和「子弹、爆炸与普通激光」，这样更容易看清迎面而来的冰弹和冰激光。"
 
 [[message]]
 key = "Where your title appears and how it looks: nameplate, style, motion, colors and glow."

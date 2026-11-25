@@ -21,7 +21,7 @@ namespace qm_search_answers
 				{"计分板鼠标", "计分板光标", "计分板呼出鼠标", "toggle_scoreboard_cursor"},
 				{"deck:controls-miscellaneous"}, "bind key toggle_scoreboard_cursor"},
 			{"hitbox", "身上的十字架怎么关？",
-				"打开下方的“碰撞箱”卡片，关闭显示碰撞箱的选项。这里控制角色碰撞范围及武器交互的可视化。",
+				"在下方的“碰撞箱”卡片里关闭“角色冻结与死亡判定点”，就能隐藏身上的十字架。要隐藏所有碰撞箱，关闭“启用碰撞箱”。",
 				{"身上十字架", "十字架", "碰撞箱", "碰撞体积", "hitbox"}, {"qm:collision_hitbox"}},
 			{"notifications", "右边黑黑的气泡怎么调整？",
 				"右侧弹出的系统提示可以在“通知栏”卡片中调整。关闭“重要服务器提示显示为通知”和“Echo 消息改走通知栏”可停用这两类通知，也可以调整外观和过滤条件。",

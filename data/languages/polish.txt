@@ -4304,6 +4304,9 @@ Door Laser Outline Color
 Door laser outline color
 == Kolor konturu lasera drzwi
 
+Double-click to edit note
+== Kliknij dwukrotnie, aby edytować notatkę
+
 Double-tap the bound key within 400 ms to send the current lyric to public chat
 == Naciśnij dwukrotnie przypisany klawisz w ciągu 400 ms, aby wysłać bieżący wers piosenki na czat publiczny
 

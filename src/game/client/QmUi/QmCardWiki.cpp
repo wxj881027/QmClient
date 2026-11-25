@@ -504,9 +504,9 @@ namespace
 		},
 		{
 			"qm:collision_hitbox",
-			Localizable("Draws collision and interaction ranges on the map: tee collision, pickups, hammer, hook, lasers and explosions."),
-			Localizable("Tick \"Show hitbox mode\", choose the ranges you need, then set \"Player range\" to \"Local only\", \"Local + Dummy\" or \"All players\"."),
-			Localizable("It stays on for every match, so switch it off before real races to keep the screen and your aim clean."),
+			Localizable("See freeze and death borders, character check points, shield pickups and weapon ranges."),
+			Localizable("Turn on \"Enable collision hitboxes\", choose what to draw, then pick which players to show under \"Show hitboxes for\"."),
+			Localizable("When racing, you can keep \"Freeze projectiles and lasers\" on and turn off the other weapon ranges to see incoming freeze hazards more clearly."),
 		},
 		{
 			"qm:coords",
