@@ -4423,9 +4423,6 @@ void CMenus::PrewarmSettingsPages()
 		return;
 
 	EnsureSettingsBindCache();
-
-	// Preload skin list to avoid lag when first entering settings
-	GameClient()->m_Skins.SkinList(0);
 }
 
 void CMenus::PrewarmSettingsTextPlanBeforeFirstFrame()
@@ -7110,7 +7107,10 @@ void CMenus::OnReset()
 void CMenus::OnShutdown()
 {
 	ClearDemoCutOverwriteConfirmation();
+	m_MapDifficultyCatalog.CancelDdnetRequests();
 	m_MapDifficultyCatalog.CancelAxiomRequests();
+	if(m_MapDifficultyCatalog.DdnetCacheDirty() && !m_MapDifficultyCatalog.SaveDdnetCache(Storage()))
+		log_warn("map_difficulty", "could not save DDNet map difficulty cache");
 	if(m_MapDifficultyCatalog.AxiomCacheDirty() && !m_MapDifficultyCatalog.SaveAxiomCache(Storage()))
 		log_warn("map_difficulty", "could not save Axiom map difficulty cache");
 	m_QmVoteMenu.m_Loader.Suspend();
@@ -9147,16 +9147,20 @@ void CMenus::OnWindowResize()
 void CMenus::OnUpdate()
 {
 	const int64_t Now = time_get();
-	if(m_MapDifficultyCatalog.PollAxiomRequests(GameClient()->m_QmAxiomScores.OpenApiBudget(), Now) && g_Config.m_BrSort == IServerBrowser::SORT_DIFFICULTY)
+	bool DifficultyChanged = m_MapDifficultyCatalog.PollDdnetRequests(Now);
+	DifficultyChanged |= m_MapDifficultyCatalog.PollAxiomRequests(GameClient()->m_QmAxiomScores.OpenApiBudget(), Now);
+	if(DifficultyChanged && g_Config.m_BrSort == IServerBrowser::SORT_DIFFICULTY)
 	{
 		if(auto *pBrowser = dynamic_cast<CServerBrowser *>(ServerBrowser()))
 			pBrowser->RequestResort();
 	}
-	if(m_MapDifficultyCatalog.AxiomCacheDirty() && Now >= m_NextAxiomDifficultySave)
+	if((m_MapDifficultyCatalog.DdnetCacheDirty() || m_MapDifficultyCatalog.AxiomCacheDirty()) && Now >= m_NextDifficultySave)
 	{
 		// 多个房间连续返回时合并落盘，写入失败则保留内存数据等待重试。
-		m_NextAxiomDifficultySave = Now + 10 * time_freq();
-		if(!m_MapDifficultyCatalog.SaveAxiomCache(Storage()))
+		m_NextDifficultySave = Now + 10 * time_freq();
+		if(m_MapDifficultyCatalog.DdnetCacheDirty() && !m_MapDifficultyCatalog.SaveDdnetCache(Storage()))
+			log_warn("map_difficulty", "could not save DDNet map difficulty cache");
+		if(m_MapDifficultyCatalog.AxiomCacheDirty() && !m_MapDifficultyCatalog.SaveAxiomCache(Storage()))
 			log_warn("map_difficulty", "could not save Axiom map difficulty cache");
 	}
 

@@ -10973,6 +10973,9 @@ Plays an animation whenever your skin changes, including skins stolen with the h
 Playtime (h)
 == Tempo de jogo (h)
 
+Playtime query failed. Retrying shortly.
+== Falha ao consultar o tempo de jogo. Será efetuada uma nova tentativa em breve.
+
 Please add a valid cut first
 == Adicione primeiro um corte válido
 
@@ -11596,6 +11599,9 @@ Query server setting: %s
 
 Query team rank for %s
 == Consultar classificação da equipa de %s
+
+Querying playtime from DDStats...
+== A consultar o tempo de jogo no DDStats…
 
 Querying points for %s...
 == A consultar os pontos de %s...
@@ -16684,6 +16690,9 @@ Total hours
 
 Total play time
 == Tempo total de jogo
+
+Total playtime from DDStats. The last result stays visible while refreshing.
+== Tempo total de jogo do DDStats. O último resultado permanece visível durante a atualização.
 
 Total points
 == Pontos totais

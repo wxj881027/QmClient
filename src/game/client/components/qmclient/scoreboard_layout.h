@@ -1,7 +1,44 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_SCOREBOARD_LAYOUT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SCOREBOARD_LAYOUT_H
 
+#include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/scoreboard.h>
+
+inline constexpr float QmScoreboardHeaderFontSize = ui_token::font::SMALL;
+inline constexpr float QmScoreboardHeaderButtonHeight = QmScoreboardHeaderFontSize + 2.0f * ui_token::spacing::XS;
+
+inline float QmScoreboardHeaderButtonWidth(float TextWidth)
+{
+	// 文字宽度、按钮内退和按钮间距同源，避免长标签被单独缩小。
+	return std::ceil(TextWidth) + 2.0f * (ui_token::dropdown::EntryInsetX(QmScoreboardHeaderFontSize, QmScoreboardHeaderButtonHeight) + ui_token::spacing::XS) + 1.0f;
+}
+
+inline CUIRect QmScoreboardHeaderButtonRect(CUIRect Slot)
+{
+	Slot.VMargin(ui_token::spacing::XS, &Slot);
+	const float Height = std::min(Slot.h, QmScoreboardHeaderButtonHeight);
+	Slot.y += (Slot.h - Height) * 0.5f;
+	Slot.h = Height;
+	return Slot;
+}
+
+inline float QmScoreboardTeamBottomPadding(int LastTeam)
+{
+	return LastTeam > TEAM_FLOCK ? ui_token::spacing::SM : 0.0f;
+}
+
+inline SRoundedSurfaceParams QmScoreboardTeamBandSurface(int PreviousTeam, int NextTeam, float Radius)
+{
+	SRoundedSurfaceParams Surface;
+	Surface.m_Corners = IGraphics::CORNER_NONE;
+	if(PreviousTeam == TEAM_FLOCK)
+		Surface.m_Corners |= IGraphics::CORNER_T;
+	if(NextTeam == TEAM_FLOCK)
+		Surface.m_Corners |= IGraphics::CORNER_B;
+	Surface.m_Radius = Surface.m_Corners == IGraphics::CORNER_NONE ? 0.0f : Radius;
+	return Surface;
+}
 
 struct SQmScoreboardRowMetrics
 {

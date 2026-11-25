@@ -41,7 +41,9 @@
 #include <iterator>
 #include <new>
 #include <optional>
+#include <set>
 #include <thread>
+#include <tuple>
 
 using namespace std::chrono_literals;
 
@@ -3062,12 +3064,6 @@ CSkins::CSkinLoadingStats CSkins::LoadingStats() const
 	return m_LoadingStats;
 }
 
-CSkins::CSkinList &CSkins::SkinList(int Dummy)
-{
-	m_SkinList.m_RequestedDummy = Dummy;
-	return m_SkinList;
-}
-
 void CSkins::CSkinList::ResetPlan(std::vector<SSettingsSkinListEntry> &&vPlannedEntries, int UnfilteredCount)
 {
 	m_vPlannedEntries = std::move(vPlannedEntries);
@@ -3149,12 +3145,17 @@ void CSkins::RequestSkinListLoad(int Index, ESettingsResourcePriority Priority)
 		const_cast<CSkinContainer *>(pSkinContainer)->RequestLoad(Priority);
 }
 
+bool CSkins::SkinListFilterCurrent() const
+{
+	return m_SkinList.m_ListFilter == static_cast<int>(ResolveSkinListFilter(g_Config.m_QmSkinListFilter, g_Config.m_ClVanillaSkinsOnly != 0)) &&
+	       m_SkinList.m_SortMode == std::clamp(g_Config.m_QmSkinSortMode, 0, 1) &&
+	       m_SkinList.m_Search == g_Config.m_ClSkinFilterString;
+}
+
 bool CSkins::SkinListPlanQueryCurrent() const
 {
-	return m_SkinList.m_Dummy == m_SkinList.m_RequestedDummy &&
-	       m_SkinList.m_ListFilter == static_cast<int>(ResolveSkinListFilter(g_Config.m_QmSkinListFilter, g_Config.m_ClVanillaSkinsOnly != 0)) &&
-	       m_SkinList.m_SortMode == std::clamp(g_Config.m_QmSkinSortMode, 0, 1) &&
-	       m_SkinList.m_Search == g_Config.m_ClSkinFilterString &&
+	return SkinListFilterCurrent() &&
+	       m_SkinList.m_aSelectedNames[0] == g_Config.m_ClPlayerSkin && m_SkinList.m_aSelectedNames[1] == g_Config.m_ClDummySkin &&
 	       SkinListColorKeyEquals(m_SkinList.m_MainColorKey, MakeSkinListColorKey(0)) &&
 	       SkinListColorKeyEquals(m_SkinList.m_DummyColorKey, MakeSkinListColorKey(1));
 }
@@ -3247,7 +3248,7 @@ bool CSkins::PoseSkinsReady(const std::vector<std::string> &vNames, std::string 
 
 bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool ProgressiveListReady)
 {
-	CSkinList &List = SkinList(Dummy);
+	CSkinList &List = SkinList();
 	const int VisibleTotal = minimum(List.ItemCount(), MaxEntries);
 	const char *pSelectedSkinRaw = Dummy ? g_Config.m_ClDummySkin : g_Config.m_ClPlayerSkin;
 	const char *pSelectedSkin = pSelectedSkinRaw != nullptr && pSelectedSkinRaw[0] != '\0' ? pSelectedSkinRaw : "default";
@@ -3330,34 +3331,27 @@ bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool Progressi
 	return false;
 }
 
-void CSkins::QueueSkinListPlanJob(int Dummy)
+void CSkins::QueueSkinListPlanJob()
 {
 	// 列表重建只登记收藏，不代表这些皮肤当前可见；否则启动便会批量下载所有收藏。
 	for(const auto &FavoriteSkin : m_Favorites)
 		FindContainerOrNullptr(FavoriteSkin.c_str(), false);
 
-	const CSkinListEntry::SColorKey CurrentColorKey = MakeSkinListColorKey(Dummy);
 	const CSkinListEntry::SColorKey MainColorKey = MakeSkinListColorKey(0);
 	const CSkinListEntry::SColorKey DummyColorKey = MakeSkinListColorKey(1);
 	const int ListFilterValue = static_cast<int>(ResolveSkinListFilter(g_Config.m_QmSkinListFilter, g_Config.m_ClVanillaSkinsOnly != 0));
 	const ESkinListFilter ListFilter = SkinListFilterFromInt(ListFilterValue);
 
 	std::vector<SSkinListSnapshotEntry> vEntries;
-	vEntries.reserve(m_Skins.size() + m_aSkinQueue[Dummy].size());
-	const auto HasListEntry = [&](const CSkinContainer *pSkinContainer, const CSkinListEntry::SColorKey &ColorKey) {
-		return std::any_of(vEntries.begin(), vEntries.end(), [&](const SSkinListSnapshotEntry &Entry) {
-			return Entry.m_Name == pSkinContainer->Name() && SkinListColorKeyEquals(Entry.m_ColorKey.value_or(CurrentColorKey), ColorKey);
-		});
-	};
+	vEntries.reserve(m_Skins.size() + m_aSkinQueue[0].size() + m_aSkinQueue[1].size());
 	const auto AddSkinListSnapshotEntry = [&](CSkinContainer *pSkinContainer, std::optional<CSkinListEntry::SColorKey> ColorKey, bool ForceShowNotFound) {
 		if(pSkinContainer->IsSpecial())
 			return;
 
-		const CSkinListEntry::SColorKey EffectiveColorKey = ColorKey.value_or(CurrentColorKey);
 		const bool SelectedMain = str_comp(pSkinContainer->Name(), g_Config.m_ClPlayerSkin) == 0;
 		const bool SelectedDummy = str_comp(pSkinContainer->Name(), g_Config.m_ClDummySkin) == 0;
-		const bool SelectedMainColor = SelectedMain && SkinListColorKeyEquals(EffectiveColorKey, MainColorKey);
-		const bool SelectedDummyColor = SelectedDummy && SkinListColorKeyEquals(EffectiveColorKey, DummyColorKey);
+		const bool SelectedMainColor = SelectedMain && (!ColorKey || SkinListColorKeyEquals(*ColorKey, MainColorKey));
+		const bool SelectedDummyColor = SelectedDummy && (!ColorKey || SkinListColorKeyEquals(*ColorKey, DummyColorKey));
 		const bool Favorite = IsFavorite(pSkinContainer->Name());
 		if(!SkinListFilterMatches(pSkinContainer->EffectiveSkinSources(), ListFilter))
 			return;
@@ -3370,10 +3364,6 @@ void CSkins::QueueSkinListPlanJob(int Dummy)
 		{
 			return;
 		}
-		// 每个基础容器只遍历一次，只有队列的颜色条目需要去重。
-		if(ForceShowNotFound && HasListEntry(pSkinContainer, EffectiveColorKey))
-			return;
-
 		SSkinListSnapshotEntry Entry;
 		Entry.m_Name = pSkinContainer->Name();
 		Entry.m_ColorKey = ColorKey;
@@ -3392,10 +3382,14 @@ void CSkins::QueueSkinListPlanJob(int Dummy)
 	{
 		AddSkinListSnapshotEntry(pSkinContainer.get(), std::nullopt, false);
 	}
-	for(const CSkinQueueEntry &QueueEntry : m_aSkinQueue[Dummy])
-	{
+	// 原皮条目继承正在编辑的角色配色；指定配色的队列条目按外观在两边之间去重。
+	std::set<std::tuple<std::string, bool, int, int>> QueuedVariants;
+	const auto AddQueuedSkin = [&](const CSkinQueueEntry &QueueEntry) {
 		if(!CSkin::IsValidName(QueueEntry.m_SkinName.c_str()))
-			continue;
+			return;
+		const auto QueueColorKey = MakeSkinListColorKey(QueueEntry.m_UseCustomColor, QueueEntry.m_ColorBody, QueueEntry.m_ColorFeet);
+		if(!QueuedVariants.emplace(QueueEntry.m_SkinName, QueueColorKey.m_UseCustomColor, QueueColorKey.m_ColorBody, QueueColorKey.m_ColorFeet).second)
+			return;
 		auto SkinIt = m_Skins.find(QueueEntry.m_SkinName);
 		if(SkinIt == m_Skins.end())
 		{
@@ -3407,15 +3401,19 @@ void CSkins::QueueSkinListPlanJob(int Dummy)
 			pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
 			SkinIt = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;
 		}
-		const CSkinListEntry::SColorKey QueueColorKey = MakeSkinListColorKey(QueueEntry.m_UseCustomColor, QueueEntry.m_ColorBody, QueueEntry.m_ColorFeet);
 		AddSkinListSnapshotEntry(SkinIt->second.get(), QueueColorKey, true);
+	};
+	for(const auto &vQueue : m_aSkinQueue)
+	{
+		for(const auto &QueueEntry : vQueue)
+			AddQueuedSkin(QueueEntry);
 	}
 
 	m_SkinList.m_ListFilter = ListFilterValue;
 	m_SkinList.m_Search = g_Config.m_ClSkinFilterString;
 	m_SkinList.m_SortMode = std::clamp(g_Config.m_QmSkinSortMode, 0, 1);
 	m_pSkinListPlanJob = std::make_shared<CSkinListPlanJob>(std::move(vEntries), m_SkinList.m_Search, ++m_SkinListPlanGeneration, m_SkinList.m_SortMode);
-	m_SkinList.m_Dummy = Dummy;
+	m_SkinList.m_aSelectedNames = {g_Config.m_ClPlayerSkin, g_Config.m_ClDummySkin};
 	m_SkinList.m_MainColorKey = MainColorKey;
 	m_SkinList.m_DummyColorKey = DummyColorKey;
 	Engine()->AddJob(m_pSkinListPlanJob);
@@ -3784,16 +3782,17 @@ void CSkins::ProcessPendingSkinCatalogEntries()
 
 void CSkins::ProcessSkinListPlanJob()
 {
-	if(!SkinListPlanQueryCurrent())
+	const bool QueryCurrent = SkinListPlanQueryCurrent();
+	if(!QueryCurrent)
 	{
 		m_SkinList.ForceRefresh();
 		if(m_pSkinListPlanJob)
 			m_pSkinListPlanJob->Abort();
 		m_pSkinListPlanJob.reset();
 		m_vPendingSkinListEntries.clear();
-		// 查询条件（筛选/搜索/排序/目标角色/颜色）变化时允许一次整体重置；
-		// 同一计划内的目录或下载状态变化只做原位填充，不重排已发布前缀。
-		m_SkinList.ClearPlan();
+		// 更换外观时保留已发布的条目，等新的排序一次性就绪。
+		if(!SkinListFilterCurrent())
+			m_SkinList.ClearPlan();
 	}
 	if(m_pSkinListPlanJob && m_pSkinListPlanJob->Finished() && m_pSkinListPlanJob->State() != IJob::STATE_DONE)
 	{
@@ -3814,11 +3813,11 @@ void CSkins::ProcessSkinListPlanJob()
 			m_SkinList.ForceRefresh();
 	}
 
-	if(m_SkinList.m_NeedsUpdate && m_pSkinListPlanJob == nullptr && m_SkinList.FullIndexMerged() &&
+	if(m_SkinList.m_NeedsUpdate && m_pSkinListPlanJob == nullptr && (m_SkinList.FullIndexMerged() || !QueryCurrent) &&
 		m_HasInitialSkinDirectoryScan && m_vPendingSkinDirectoryEntries.empty() && m_vPendingSkinCatalogEntries.empty())
 	{
 		m_vPendingSkinListEntries.clear();
-		QueueSkinListPlanJob(m_SkinList.m_RequestedDummy);
+		QueueSkinListPlanJob();
 		m_SkinList.m_NeedsUpdate = false;
 		return;
 	}
@@ -3920,14 +3919,13 @@ CSkins::CSkinListEntry CSkins::MakeSkinListEntry(const SSettingsSkinListEntry &P
 		NameMatch);
 }
 
-CSkins::CSkinListEntry CSkins::MakeSkinListEntry(const CSkinContainer *pSkinContainer, std::optional<CSkinListEntry::SColorKey> ColorKey) const
+CSkins::CSkinListEntry CSkins::MakeSkinListEntry(const CSkinContainer *pSkinContainer, const CSkinListEntry::SColorKey &ColorKey) const
 {
-	const CSkinListEntry::SColorKey EffectiveColorKey = ColorKey.value_or(MakeSkinListColorKey(m_SkinList.m_Dummy >= 0 ? m_SkinList.m_Dummy : 0));
 	const CSkinListEntry::SColorKey MainColorKey = MakeSkinListColorKey(0);
 	const CSkinListEntry::SColorKey DummyColorKey = MakeSkinListColorKey(1);
 	const bool Favorite = IsFavorite(pSkinContainer->Name());
-	const bool SelectedMain = str_comp(pSkinContainer->Name(), g_Config.m_ClPlayerSkin) == 0 && SkinListColorKeyEquals(EffectiveColorKey, MainColorKey);
-	const bool SelectedDummy = str_comp(pSkinContainer->Name(), g_Config.m_ClDummySkin) == 0 && SkinListColorKeyEquals(EffectiveColorKey, DummyColorKey);
+	const bool SelectedMain = str_comp(pSkinContainer->Name(), g_Config.m_ClPlayerSkin) == 0 && SkinListColorKeyEquals(ColorKey, MainColorKey);
+	const bool SelectedDummy = str_comp(pSkinContainer->Name(), g_Config.m_ClDummySkin) == 0 && SkinListColorKeyEquals(ColorKey, DummyColorKey);
 
 	std::optional<std::pair<int, int>> NameMatch;
 	if(g_Config.m_ClSkinFilterString[0] != '\0')

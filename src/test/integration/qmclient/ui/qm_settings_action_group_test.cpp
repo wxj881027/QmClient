@@ -146,24 +146,31 @@ TEST_F(QmSettingsActionGroup, NarrowRowKeepsSeparateHitTargetsAndDisabledActionC
 	}
 }
 
-TEST_F(QmSettingsActionGroup, InputAndTwoIconActionsStayInsideEvenATinyControlColumn)
+TEST_F(QmSettingsActionGroup, InputAndIconActionsStayInsideEvenATinyControlColumn)
 {
 	const auto Metrics = ResolveSettingsContentMetrics(1000);
-	for(float Width : {0.0f, 1.0f, 24.0f, 100.0f, 500.0f})
+	// 设备选择用一个动作，关键词规则用三个动作；都保留输入宽度与独立命中区域。
+	for(int Count : {1, 2, 3})
 	{
-		SCOPED_TRACE(Width);
-		const CUIRect Row{40, 40, Width, Metrics.m_LineHeight};
-		const auto Layout = ResolveSettingsInputActionsLayout(Row, 2, Metrics);
-		ASSERT_EQ(Layout.m_Actions.m_Count, 2);
-		EXPECT_GE(Layout.m_Input.w, 0);
-		EXPECT_GE(Layout.m_Input.w, Width * 0.4f);
-		EXPECT_FLOAT_EQ(Layout.m_Actions.m_aButtons[0].w, Layout.m_Actions.m_aButtons[1].w);
-		for(const auto &Button : {Layout.m_Actions.m_aButtons[0], Layout.m_Actions.m_aButtons[1]})
+		SCOPED_TRACE(Count);
+		for(float Width : {0.0f, 1.0f, 24.0f, 100.0f, 500.0f})
 		{
-			EXPECT_GE(Button.w, 0);
-			EXPECT_GE(Button.x, Layout.m_Input.x + Layout.m_Input.w);
-			EXPECT_LE(Button.x + Button.w, Row.x + Row.w + 0.0001f);
-			EXPECT_FLOAT_EQ(Button.h, Row.h);
+			SCOPED_TRACE(Width);
+			const CUIRect Row{40, 40, Width, Metrics.m_LineHeight};
+			const auto Layout = ResolveSettingsInputActionsLayout(Row, Count, Metrics);
+			ASSERT_EQ(Layout.m_Actions.m_Count, Count);
+			EXPECT_GE(Layout.m_Input.w, Width * 0.4f);
+			float PreviousRight = Layout.m_Input.x + Layout.m_Input.w;
+			for(int Index = 0; Index < Count; ++Index)
+			{
+				const auto &Button = Layout.m_Actions.m_aButtons[Index];
+				EXPECT_GE(Button.w, 0);
+				EXPECT_FLOAT_EQ(Button.w, Layout.m_Actions.m_aButtons[0].w);
+				EXPECT_GE(Button.x, PreviousRight);
+				EXPECT_LE(Button.x + Button.w, Row.x + Row.w + 0.0001f);
+				EXPECT_FLOAT_EQ(Button.h, Row.h);
+				PreviousRight = Button.x + Button.w;
+			}
 		}
 	}
 }

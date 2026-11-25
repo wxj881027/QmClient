@@ -77,3 +77,51 @@ brazilian_portuguese = "Mostrar o tempo total de jogo do DDStats no lugar dos po
 portuguese = "Mostrar o tempo total de jogo do DDStats em vez dos pontos no painel"
 turkish = "Skor tablosunda puanlar yerine DDStats toplam oyun süresini göster"
 polish = "Pokazuj w tabeli łączny czas gry z DDStats zamiast punktów"
+
+[[message]]
+key = "Total playtime from DDStats. The last result stays visible while refreshing."
+[message.translations]
+simplified_chinese = "DDStats 统计的总游玩时长。后台刷新时保留上次结果。"
+traditional_chinese = "DDStats 統計的總遊玩時長。背景更新時保留上次結果。"
+japanese = "DDStats による総プレイ時間です。更新中も前回の結果を表示します。"
+korean = "DDStats의 총 플레이 시간입니다. 새로 고치는 동안 이전 결과를 표시합니다."
+russian = "Общее время игры по DDStats. При обновлении отображается предыдущий результат."
+german = "Gesamte Spielzeit laut DDStats. Während der Aktualisierung bleibt das letzte Ergebnis sichtbar."
+spanish = "Tiempo total de juego de DDStats. El último resultado sigue visible durante la actualización."
+french = "Temps de jeu total selon DDStats. Le dernier résultat reste visible pendant l’actualisation."
+brazilian_portuguese = "Tempo total de jogo do DDStats. O último resultado permanece visível durante a atualização."
+portuguese = "Tempo total de jogo do DDStats. O último resultado permanece visível durante a atualização."
+turkish = "DDStats toplam oyun süresi. Güncelleme sırasında son sonuç görünür kalır."
+polish = "Łączny czas gry według DDStats. Podczas odświeżania widoczny jest ostatni wynik."
+
+[[message]]
+key = "Playtime query failed. Retrying shortly."
+[message.translations]
+simplified_chinese = "游玩时长查询失败，稍后重试。"
+traditional_chinese = "遊玩時長查詢失敗，稍後重試。"
+japanese = "プレイ時間の取得に失敗しました。まもなく再試行します。"
+korean = "플레이 시간 조회에 실패했습니다. 잠시 후 다시 시도합니다."
+russian = "Не удалось получить время игры. Скоро будет повторная попытка."
+german = "Spielzeit konnte nicht abgerufen werden. Erneuter Versuch folgt in Kürze."
+spanish = "No se pudo consultar el tiempo de juego. Se reintentará pronto."
+french = "Échec de la récupération du temps de jeu. Nouvelle tentative sous peu."
+brazilian_portuguese = "Falha ao consultar o tempo de jogo. Uma nova tentativa será feita em breve."
+portuguese = "Falha ao consultar o tempo de jogo. Será efetuada uma nova tentativa em breve."
+turkish = "Oyun süresi sorgulanamadı. Kısa süre sonra yeniden denenecek."
+polish = "Nie udało się pobrać czasu gry. Próba zostanie wkrótce ponowiona."
+
+[[message]]
+key = "Querying playtime from DDStats..."
+[message.translations]
+simplified_chinese = "正在向 DDStats 查询游玩时长…"
+traditional_chinese = "正在向 DDStats 查詢遊玩時長…"
+japanese = "DDStats からプレイ時間を取得中…"
+korean = "DDStats에서 플레이 시간을 조회하는 중…"
+russian = "Получение времени игры из DDStats…"
+german = "Spielzeit wird von DDStats abgerufen…"
+spanish = "Consultando el tiempo de juego en DDStats…"
+french = "Récupération du temps de jeu depuis DDStats…"
+brazilian_portuguese = "Consultando o tempo de jogo no DDStats…"
+portuguese = "A consultar o tempo de jogo no DDStats…"
+turkish = "DDStats üzerinden oyun süresi sorgulanıyor…"
+polish = "Pobieranie czasu gry z DDStats…"
