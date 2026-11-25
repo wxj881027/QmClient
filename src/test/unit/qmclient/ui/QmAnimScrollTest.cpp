@@ -911,6 +911,49 @@ TEST(UiV2ScrollPhysics, SpringFeelSettlesOnAccumulatedWheelTarget)
 	EXPECT_NEAR(State.Velocity(), 0.0f, 0.01f);
 	EXPECT_FALSE(State.Animating());
 }
+
+TEST(UiV2ScrollPhysics, SpringProgrammaticScrollWorksWithoutWheelAnimationTime)
+{
+	SMotionLevelScope Motion(2);
+	SScrollFeelScope Feel(static_cast<int>(EQmScrollFeel::SPRING));
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = 100.0f;
+	Metrics.m_ContentSize = 500.0f;
+	// 设置页等面板按设计传 0；弹簧档不能因此静默退化成直接落位。
+	const SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, 0.0f);
+	ASSERT_EQ(Config.m_NativeWheelAnimationTime, 0.0f);
+	ASSERT_GT(Config.m_SpringResponse, 0.0f);
+
+	CQmScrollState State;
+	State.ScrollTo(120.0f, Metrics, Config);
+	EXPECT_TRUE(State.Animating());
+	EXPECT_NEAR(State.Offset(), 0.0f, 0.5f);
+	State.Advance(1.0f / 60.0f, Metrics, Config);
+	EXPECT_GT(State.Offset(), 0.0f);
+	EXPECT_LT(State.Offset(), 120.0f);
+
+	for(int i = 0; i < 240; ++i)
+		State.Advance(1.0f / 60.0f, Metrics, Config);
+	EXPECT_NEAR(State.Offset(), 120.0f, 0.5f);
+	EXPECT_FALSE(State.Animating());
+}
+
+TEST(UiV2ScrollPhysics, SpringProgrammaticScrollSnapsWhenResponseDisabled)
+{
+	SMotionLevelScope Motion(0);
+	SScrollFeelScope Feel(static_cast<int>(EQmScrollFeel::SPRING));
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = 100.0f;
+	Metrics.m_ContentSize = 500.0f;
+	const SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, 0.0f);
+	ASSERT_EQ(Config.m_SpringResponse, 0.0f);
+
+	CQmScrollState State;
+	State.ScrollTo(120.0f, Metrics, Config);
+	EXPECT_FALSE(State.Animating());
+	EXPECT_NEAR(State.Offset(), 120.0f, 0.01f);
+}
+
 TEST(UiV2ScrollPhysics, SpringFeelIsFrameRateIndependent)
 {
 	SQmScrollMetrics Metrics;

@@ -404,7 +404,7 @@ DDNet 原生 UI（`src/game/client/ui.cpp`、`ui_listbox.cpp`、`menus*.cpp` 的
   | 聊天历史 | 行型面 | `QmResolveWheelLineCount(3, StepScale, 可见行数, 8)` 行 |
 
   `CListBox::SetWheelStepScale` 是**单列表**倍率，只乘该列表的 `m_WheelScale`（皮肤列表行高含预览图，取 0.7）。按住 Alt 滚轮额外 `× QmScrollAltMultiplier()`(3)。
-- 手感参数与距离无关：`qm_ui_scroll_feel`（原版 / 平滑 / 弹簧）、`qm_ui_scroll_spring_response`、`qm_ui_scroll_spring_damping`、`qm_ui_scroll_bounce` 只改动画曲线与回弹，不改每格位移。默认档以配置默认值为准（当前原版）；原版与平滑保留为可切回的兜底档。
+- 手感参数与距离无关：`qm_ui_scroll_feel`（原版 / 平滑 / 弹簧）、`qm_ui_scroll_spring_response`、`qm_ui_scroll_spring_damping`、`qm_ui_scroll_bounce` 只改动画曲线与回弹，不改每格位移。默认档以配置默认值为准（当前弹簧）；原版与平滑保留为可切回的兜底档。
 - 禁止的反面写法：调用点直接写绝对滚动像素；用单列表倍率去补全局配置该改的值（会让不同页面失去等比关系）；改 `DoStart` 的 `RowsPerScroll` 来调滚轮速度（它会连带把键盘 PageUp/Down 的 `RowsPerScroll×4` 一起改掉）；面板级再乘一次 `QmPanelWheelStepMultiplier`（`QmSettingsScrollConfig` 已乘过）；给控制台或聊天新增逐面速度配置，或继续用 `qm_ui_scroll_step / 行高` 求行数。
 
 ### 3.12d 游戏内 HUD 背景模糊接入（in-game blur scope）

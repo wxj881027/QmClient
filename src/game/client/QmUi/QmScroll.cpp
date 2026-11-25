@@ -342,7 +342,10 @@ void CQmScrollState::ScrollTo(float TargetOffset, const SQmScrollMetrics &Metric
 	m_Offset = std::clamp(m_Offset, 0.0f, MaxOffset);
 	m_AnimStartOffset = m_Offset;
 	m_AnimTargetOffset = Target;
-	if(Config.m_Feel == EQmScrollFeel::SPRING && Config.m_NativeWheelAnimationTime > 0.0f && std::abs(m_Offset - Target) > 0.5f)
+	// 弹簧档是否瞬移由自己的响应周期决定，不能看平滑时长：设置页等面板
+	// 传入的 SmoothScrollTimeSec 是 0，用动画时长判断会让这些页面静默
+	// 退化成直接落位（与滚轮分支的既有口径保持一致）。
+	if(Config.m_Feel == EQmScrollFeel::SPRING && Config.m_SpringResponse > 0.0f && std::abs(m_Offset - Target) > 0.5f)
 	{
 		// 程序化滚动（列表选中项回看等）与滚轮共用同一手感：只换目标，速度保留，
 		// 因此正在晃动的滚动面会顺着当前方向转向新目标而不是急停。

@@ -1054,7 +1054,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-scroll-feel-label", &Label, Localize("Scroll feel"), BodySize, TEXTALIGN_ML);
 				static CButtonContainer s_aScrollFeelButtons[3];
 				// 展示顺序（原版 → 顺滑 → 弹簧）由这里显式映射，不依赖枚举值大小；
-				// 枚举把生产默认的原版档钉在 0，测试环境的零初始化与线上保持一致。
+				// 枚举把原版钉在 0（零初始化语义），生产默认档由配置默认值决定。
 				static constexpr EQmScrollFeel s_aScrollFeelOrder[] = {EQmScrollFeel::ORIGINAL, EQmScrollFeel::SMOOTH, EQmScrollFeel::SPRING};
 				const char *apScrollFeelLabels[] = {Localize("Original"), Localize("Smooth"), Localize("Spring")};
 				int CurrentScrollFeel = 1;
