@@ -2758,6 +2758,7 @@ set_src(BASE GLOB_RECURSE src/base
   dynamic.h
   fs.cpp
   fs.h
+  fs_path.h
   hash.cpp
   hash.h
   hash_bundled.cpp
@@ -7894,8 +7895,10 @@ if(CLIENT AND DMGBUILD_FOUND)
   set(DMG_TMPDIR pack_${CPACK_PACKAGE_FILE_NAME}_dmg)
   # SDL3 以 framework 形式随包分发；静态链接时期这段为空。
   if(SDL3_COPY_DIRS)
+    # 用 SDL3_COPY_DIRS（FindSDL3 里已绝对化），不要拿 EXTRA_SDL3_LIBDIR 现拼：
+    # 后者是相对源码根的路径，而 copy_directory 在二进制目录里执行。
     set(DMG_SDL3_FRAMEWORK_COPY_COMMANDS
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${EXTRA_SDL3_LIBDIR}/SDL3.framework ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${SDL3_COPY_DIRS} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
     set(DMG_SDL3_FRAMEWORK_SIGN_COMMANDS
       COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
   else()
