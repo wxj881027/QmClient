@@ -3766,6 +3766,7 @@ if(CLIENT)
     components/qmclient/emoticon_commands.h
     components/qmclient/dummy_distance_link.cpp
     components/qmclient/dummy_distance_link.h
+    components/qmclient/dummy_distance_link_hook.h
     components/qmclient/hammer_hit_detection.cpp
     components/qmclient/hammer_hit_detection.h
     components/qmclient/qm_hook_coll_geometry.h
@@ -5603,6 +5604,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_finish_summary_layout_test.cpp
     src/test/unit/qmclient/ui/qm_finish_summary_presentation_test.cpp
     src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
+    src/test/integration/qmclient/client/qm_dummy_distance_link_hook_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_render_test.cpp
