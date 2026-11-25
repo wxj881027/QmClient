@@ -35,6 +35,7 @@ class QmClientE2ERunnerTest(unittest.TestCase):
 				"vector_font_and_icon_resources",
 				"legacy_icon_font_residual_ignored",
 				"map_change_during_resource_preparation",
+				"quit_with_predicted_laser_doors",
 				"http_map_download_enters_game",
 				"current_map_entity_background_during_loading",
 				"menu_background_switch_shutdown",

@@ -1571,7 +1571,9 @@ void CClient::DisconnectWithReason(const char *pReason)
 	if(m_pMapLoadJob)
 		m_pMapLoadJob->Abort();
 	m_pMapLoadJob.reset();
-	m_pMap->Unload();
+	// 退出和重启会跳过离线重置。让 Kernel 先销毁仍借用地图图块的 GameClient，再释放地图。
+	if(m_State != IClient::STATE_QUITTING && m_State != IClient::STATE_RESTARTING)
+		m_pMap->Unload();
 	m_CurrentServerPingInfoType = -1;
 	m_CurrentServerPingBasicToken = -1;
 	m_CurrentServerPingToken = -1;

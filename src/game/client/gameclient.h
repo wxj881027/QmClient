@@ -220,6 +220,10 @@ enum class EClientIdFormat
 
 class CGameClient : public IGameClient
 {
+	// 预测世界和快速练习分支销毁激光门时仍会访问碰撞层。
+	CLayers m_Layers;
+	CCollision m_Collision;
+
 public:
 	struct SDemoHudPlaybackState
 	{
@@ -407,8 +411,6 @@ private:
 #endif
 	class IHttp *m_pHttp = nullptr;
 
-	CLayers m_Layers;
-	CCollision m_Collision;
 	CUi m_UI;
 
 public:

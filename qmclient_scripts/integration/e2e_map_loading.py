@@ -1,10 +1,11 @@
-"""地图资源准备未结束时再次切图的真实进程回归。"""
+"""地图加载与卸载的真实进程回归。"""
 
 from __future__ import annotations
 
 import json
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from itertools import groupby
 from pathlib import Path
 import re
 import struct
@@ -18,20 +19,7 @@ except ModuleNotFoundError:
 	from process_harness import ProcessEnvironment  # type: ignore[no-redef]
 
 
-def _write_loading_map(path: Path, sound_data: bytes) -> None:
-	# 空四边形层仍逐帧初始化；将游戏层放在最后，让外部命令有足够时间中断准备。
-	layer_count = 512
-	# 名称按每字节偏移 128 的整数编码保存，最后一个字节保留为零。
-	empty_name = list(struct.unpack(">3i", b"\x80" * 11 + b"\x00"))
-	items = [
-		(0, 0, [1]),
-		(1, 0, [1, -1, -1, -1, -1]),
-		(4, 0, [3, 0, 0, 100, 100, 0, layer_count, 0, 0, 0, 0, 0, *empty_name]),
-		(4, 1, [3, 0, 0, 100, 100, layer_count, 1, 0, 0, 0, 0, 0, *empty_name]),
-	]
-	items.extend((5, index, [0, 3, 0, 2, 0, -1, -1, *empty_name]) for index in range(layer_count))
-	items.append((5, layer_count, [0, 2, 0, 3, 2, 2, 1, 255, 255, 255, 255, -1, 0, -1, 0, *empty_name, -1, -1, -1, -1, -1]))
-	items.append((7, 0, [1, 0, -1, 1, 0]))
+def _write_map_datafile(path: Path, items: list[tuple[int, int, list[int]]], blocks: list[bytes]) -> None:
 	item_data = bytearray()
 	item_offsets = []
 	for item_type, item_id, values in items:
@@ -39,18 +27,99 @@ def _write_loading_map(path: Path, sound_data: bytes) -> None:
 		payload = struct.pack(f"<{len(values)}i", *values)
 		item_data.extend(struct.pack("<ii", (item_type << 16) | item_id, len(payload)))
 		item_data.extend(payload)
-	item_types = b"".join(struct.pack("<iii", *entry) for entry in ((0, 0, 1), (1, 1, 1), (4, 2, 2), (5, 4, layer_count + 1), (7, 5 + layer_count, 1)))
+	item_types = []
+	first_item = 0
+	for item_type, group in groupby(items, key=lambda item: item[0]):
+		count = sum(1 for _ in group)
+		item_types.append(struct.pack("<iii", item_type, first_item, count))
+		first_item += count
 	# v4 datafile：每个原始数据块独立压缩，偏移指向文件压缩区。
-	tiles = bytes(16)
-	compressed_tiles = zlib.compress(tiles)
-	compressed_sound = zlib.compress(sound_data)
-	compressed = compressed_tiles + compressed_sound
-	data_index = struct.pack("<iiii", 0, len(compressed_tiles), len(tiles), len(sound_data))
-	metadata = item_types + struct.pack(f"<{len(item_offsets)}i", *item_offsets) + data_index + item_data
+	compressed = bytearray()
+	data_offsets = []
+	for block in blocks:
+		data_offsets.append(len(compressed))
+		compressed.extend(zlib.compress(block))
+	data_index = struct.pack(f"<{2 * len(blocks)}i", *data_offsets, *(len(block) for block in blocks))
+	metadata = b"".join(item_types) + struct.pack(f"<{len(item_offsets)}i", *item_offsets) + data_index + item_data
 	swap_size = 36 + len(metadata)
-	header = struct.pack("<4s8i", b"DATA", 4, swap_size + len(compressed) - 16, swap_size - 16, 5, len(items), 2, len(item_data), len(compressed))
+	header = struct.pack("<4s8i", b"DATA", 4, swap_size + len(compressed) - 16, swap_size - 16, len(item_types), len(items), len(blocks), len(item_data), len(compressed))
 	path.parent.mkdir(parents=True, exist_ok=True)
 	path.write_bytes(header + metadata + compressed)
+
+
+_EMPTY_NAME = list(struct.unpack(">3i", b"\x80" * 11 + b"\x00"))
+
+
+def _write_loading_map(path: Path, sound_data: bytes) -> None:
+	# 空四边形层仍逐帧初始化。将游戏层放在最后，外部命令才有足够时间中断准备。
+	layer_count = 512
+	items = [
+		(0, 0, [1]),
+		(1, 0, [1, -1, -1, -1, -1]),
+		(4, 0, [3, 0, 0, 100, 100, 0, layer_count, 0, 0, 0, 0, 0, *_EMPTY_NAME]),
+		(4, 1, [3, 0, 0, 100, 100, layer_count, 1, 0, 0, 0, 0, 0, *_EMPTY_NAME]),
+	]
+	items.extend((5, index, [0, 3, 0, 2, 0, -1, -1, *_EMPTY_NAME]) for index in range(layer_count))
+	items.append((5, layer_count, [0, 2, 0, 3, 2, 2, 1, 255, 255, 255, 255, -1, 0, -1, 0, *_EMPTY_NAME, -1, -1, -1, -1, -1]))
+	items.append((7, 0, [1, 0, -1, 1, 0]))
+	_write_map_datafile(path, items, [bytes(16), sound_data])
+
+
+def _write_laser_door_map(path: Path) -> None:
+	# 使用大图块分配，避免小块堆内存释放后仍可读而掩盖退出时的悬空读取。
+	size = 768
+	center = (size // 2) * (size + 1)
+	entity_offset, spawn, laser_short, door = 191, 1, 19, 49
+	tiles = bytearray(size * size * 4)
+	tiles[center * 4] = entity_offset + spawn
+	floor_start = (center + size - 8) * 4
+	tiles[floor_start:floor_start + 16 * 4:4] = bytes([1]) * 16  # TILE_SOLID
+
+	switches = bytearray(len(tiles))
+	door_offset = (center + 2) * 4
+	switches[door_offset:door_offset + 2] = bytes([1, entity_offset + door])
+	switches[door_offset + 5] = entity_offset + laser_short
+
+	items = [
+		(0, 0, [1]),
+		(4, 0, [3, 0, 0, 100, 100, 0, 2, 0, 0, 0, 0, 0, *_EMPTY_NAME]),
+		(5, 0, [0, 2, 0, 3, size, size, 1, 255, 255, 255, 255, -1, 0, -1, 0, *_EMPTY_NAME, -1, -1, -1, -1, -1]),
+		(5, 1, [0, 2, 0, 3, size, size, 16, 255, 255, 255, 255, -1, 0, -1, -1, *_EMPTY_NAME, -1, -1, -1, 1, -1]),
+	]
+	_write_map_datafile(path, items, [bytes(tiles), bytes(switches)])
+
+
+def scenario_quit_with_predicted_laser_doors(env: ProcessEnvironment) -> None:
+	"""主世界和快速练习都已建立激光门时，客户端仍能完成退出清理。"""
+	map_name = "qm_e2e_laser_door"
+	_write_laser_door_map(env.path("maps", f"{map_name}.map"))
+	env.start_server()
+	env.server.command("stdout_output_level 2")
+	env.server.command(f"sv_map {map_name}")
+	env.server.wait_for(lambda line: f"{map_name}.map sha256 is " in line, "server loaded the laser door map", 15)
+	client = env.start_client(
+		["cl_confirm_quit_time -1", "cl_show_welcome 0", "qm_steam_auto_launch 0", "qm_websocket_url disabled", "minimize"],
+		env={"QMCLIENT_TEST_HIDE_DIALOG": "1"},
+	)
+	env.server.wait_for(lambda line: line.startswith("server: player has entered the game"), "client connection", 15)
+
+	for _ in range(10):
+		client.command("fast_practice_enter")
+		client.command("qm_local_world_dump")
+		try:
+			client.wait_for(lambda line: line.startswith("local_world: practice=1 "), "fast practice active", 1)
+		except TimeoutError:
+			continue  # 角色尚未生成时，进入练习的命令会被忽略。
+		break
+	else:
+		raise AssertionError("fast practice did not activate on the laser door map")
+	client.wait_for(lambda line: line.startswith("local_world: entities main:") and " doors=1 |" in line, "laser door in main world", 5)
+	client.wait_for(lambda line: line.startswith("local_world: entities branch:") and " doors=1 " in line, "laser door in practice world", 5)
+
+	client.command("quit")
+	client.wait_for(lambda line: "shutdown watchdog disarmed after cleanup completed" in line, "final client cleanup", 15)
+	if (code := client.wait_for_exit(5)) != 0:
+		raise AssertionError(f"client exited with {code}")
 
 
 def _wait_for_perf_connect_stage(env: ProcessEnvironment, stage: str, description: str, timeout: float) -> str:
